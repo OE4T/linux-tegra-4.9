@@ -24,10 +24,6 @@
 #ifndef GR_GK20A_H
 #define GR_GK20A_H
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "gr_t19x.h"
-#endif
-
 #include "gr_ctx_gk20a.h"
 #include "mm_gk20a.h"
 
@@ -195,6 +191,12 @@ struct zbc_color_table {
 
 struct zbc_depth_table {
 	u32 depth;
+	u32 format;
+	u32 ref_cnt;
+};
+
+struct zbc_s_table {
+	u32 stencil;
 	u32 format;
 	u32 ref_cnt;
 };
@@ -393,20 +395,14 @@ struct gr_gk20a {
 	struct nvgpu_mutex zbc_lock;
 	struct zbc_color_table zbc_col_tbl[GK20A_ZBC_TABLE_SIZE];
 	struct zbc_depth_table zbc_dep_tbl[GK20A_ZBC_TABLE_SIZE];
-#ifdef CONFIG_TEGRA_19x_GPU
 	struct zbc_s_table zbc_s_tbl[GK20A_ZBC_TABLE_SIZE];
-#endif
 	s32 max_default_color_index;
 	s32 max_default_depth_index;
-#ifdef CONFIG_TEGRA_19x_GPU
 	s32 max_default_s_index;
-#endif
 
 	u32 max_used_color_index;
 	u32 max_used_depth_index;
-#ifdef CONFIG_TEGRA_19x_GPU
 	u32 max_used_s_index;
-#endif
 
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];

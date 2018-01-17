@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,7 +23,6 @@
 #define __GR_CTX_GV100_H__
 
 #include "gk20a/gr_ctx_gk20a.h"
-#include "nvgpu_gpuid_t19x.h"
 
 /* production netlist, one and only one from below */
 #define GV100_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_D

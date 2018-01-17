@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,8 +38,8 @@ int vgpu_gv11b_tsg_bind_channel(struct tsg_gk20a *tsg,
 	msg.handle = vgpu_get_handle(tsg->g);
 	p->tsg_id = tsg->tsgid;
 	p->ch_handle = ch->virt_ctx;
-	p->subctx_id = ch->t19x.subctx_id;
-	p->runqueue_sel = ch->t19x.runqueue_sel;
+	p->subctx_id = ch->subctx_id;
+	p->runqueue_sel = ch->runqueue_sel;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err) {

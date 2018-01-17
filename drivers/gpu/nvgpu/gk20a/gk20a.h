@@ -1342,7 +1342,7 @@ struct gk20a {
 
 	u64 dma_memory_used;
 
-#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+#if defined(CONFIG_TEGRA_GK20A_NVHOST)
 	u64		syncpt_unit_base;
 	size_t		syncpt_unit_size;
 	u32		syncpt_size;
@@ -1479,6 +1479,8 @@ int gk20a_wait_for_idle(struct gk20a *g);
 #define NVGPU_GPUID_GP10B   0x0000013B
 #define NVGPU_GPUID_GP104   0x00000134
 #define NVGPU_GPUID_GP106   0x00000136
+#define NVGPU_GPUID_GV11B   0x0000015B
+#define NVGPU_GPUID_GV100   0x00000140
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 

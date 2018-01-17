@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,16 +35,12 @@
 #include "gm20b/acr_gm20b.h"
 #include "gp106/acr_gp106.h"
 #include "gp106/pmu_gp106.h"
+#include "gv100/acr_gv100.h"
 
 #include "sec2_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#include "acr_t19x.h"
-#endif
 
 /*Defines*/
 #define gp106_dbg_pmu(fmt, arg...) \
@@ -200,17 +196,15 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GP106_FECS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
-#if defined(CONFIG_TEGRA_19x_GPU)
-		case TEGRA_19x_GPUID:
+		case NVGPU_GPUID_GV11B:
 			fecs_sig = nvgpu_request_firmware(g,
 					GM20B_FECS_UCODE_SIG, 0);
 			break;
-		case BIGGPU_19x_GPUID:
+		case NVGPU_GPUID_GV100:
 			fecs_sig = nvgpu_request_firmware(g,
-					BIGGPU_FECS_UCODE_SIG,
+					GV100_FECS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
-#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
@@ -297,17 +291,15 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GP106_GPCCS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
-#if defined(CONFIG_TEGRA_19x_GPU)
-		case TEGRA_19x_GPUID:
+		case NVGPU_GPUID_GV11B:
 			gpccs_sig = nvgpu_request_firmware(g,
 					T18x_GPCCS_UCODE_SIG, 0);
 			break;
-		case BIGGPU_19x_GPUID:
+		case NVGPU_GPUID_GV100:
 			gpccs_sig = nvgpu_request_firmware(g,
-					BIGGPU_GPCCS_UCODE_SIG,
+					GV100_GPCCS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
-#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -577,11 +577,9 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 		}
 	}
 
-#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	if (nvgpu_mem_is_valid(&g->syncpt_mem) && vm->syncpt_ro_map_gpu_va)
 		nvgpu_gmmu_unmap(vm, &g->syncpt_mem,
 				vm->syncpt_ro_map_gpu_va);
-#endif
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 

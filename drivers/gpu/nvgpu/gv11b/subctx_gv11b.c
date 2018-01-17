@@ -1,7 +1,7 @@
 /*
  * Volta GPU series Subcontext
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -103,9 +103,9 @@ static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 	gv11b_subctx_commit_pdb(c, inst_block);
 	gv11b_subctx_commit_valid_mask(c, inst_block);
 
-	nvgpu_log(g, gpu_dbg_info, " subctx %d instblk set", c->t19x.subctx_id);
+	nvgpu_log(g, gpu_dbg_info, " subctx %d instblk set", c->subctx_id);
 	nvgpu_mem_wr32(g, inst_block, ram_in_engine_wfi_veid_w(),
-			ram_in_engine_wfi_veid_f(c->t19x.subctx_id));
+			ram_in_engine_wfi_veid_f(c->subctx_id));
 
 }
 
@@ -206,7 +206,7 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);
 	nvgpu_log(g, gpu_dbg_info, " pdb info lo %x hi %x",
 					format_word, pdb_addr_hi);
-	for (subctx_id = 0; subctx_id < f->t19x.max_subctx_count; subctx_id++) {
+	for (subctx_id = 0; subctx_id < f->max_subctx_count; subctx_id++) {
 		lo = ram_in_sc_page_dir_base_vol_0_w() + (4 * subctx_id);
 		hi = ram_in_sc_page_dir_base_hi_0_w() + (4 * subctx_id);
 		nvgpu_mem_wr32(g, inst_block, lo, format_word);

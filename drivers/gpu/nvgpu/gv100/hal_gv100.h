@@ -1,7 +1,7 @@
 /*
  * GV100 Tegra HAL interface
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,9 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_HAL_GV11B_H
-#define _NVGPU_HAL_GV11B_H
+#ifndef _NVGPU_HAL_GV100_H
+#define _NVGPU_HAL_GV100_H
+
 struct gk20a;
 
 int gv100_init_hal(struct gk20a *gops);
+
 #endif

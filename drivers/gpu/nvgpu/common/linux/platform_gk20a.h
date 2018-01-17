@@ -1,7 +1,7 @@
 /*
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -250,6 +250,7 @@ static inline struct gk20a_platform *gk20a_get_platform(
 #ifdef CONFIG_TEGRA_GK20A
 extern struct gk20a_platform gm20b_tegra_platform;
 extern struct gk20a_platform gp10b_tegra_platform;
+extern struct gk20a_platform gv11b_tegra_platform;
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 extern struct gk20a_platform vgpu_tegra_platform;
 extern struct gk20a_platform gv11b_vgpu_tegra_platform;

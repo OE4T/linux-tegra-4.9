@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,9 +23,6 @@
 #define __NVGPU_IO_H__
 
 #include <nvgpu/types.h>
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <nvgpu/io_t19x.h>
-#endif
 
 /* Legacy defines - should be removed once everybody uses nvgpu_* */
 #define gk20a_writel nvgpu_writel

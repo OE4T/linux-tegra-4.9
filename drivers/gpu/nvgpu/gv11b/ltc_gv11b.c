@@ -1,7 +1,7 @@
 /*
  * GV11B LTC
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -177,9 +177,9 @@ void gv11b_ltc_isr(struct gk20a *g)
 			}
 
 		}
-		g->ecc.ltc.t19x.l2_cache_corrected_err_count.counters[ltc] +=
+		g->ecc.ltc.l2_cache_corrected_err_count.counters[ltc] +=
 			ltc_corrected;
-		g->ecc.ltc.t19x.l2_cache_uncorrected_err_count.counters[ltc] +=
+		g->ecc.ltc.l2_cache_uncorrected_err_count.counters[ltc] +=
 			ltc_uncorrected;
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -77,5 +77,19 @@ struct sync_fence *nvgpu_nvhost_sync_create_fence(
 	struct nvgpu_nvhost_dev *nvhost_dev,
 	u32 id, u32 thresh, const char *name);
 #endif /* CONFIG_SYNC */
+
+#ifdef CONFIG_TEGRA_T19X_GRHOST
+int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+		struct nvgpu_nvhost_dev *nvhost_dev,
+		u64 *base, size_t *size);
+u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
+#else
+static inline int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+		struct nvgpu_nvhost_dev *nvhost_dev,
+		u64 *base, size_t *size) { return -EINVAL; }
+static inline u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id) {
+	return 0;
+}
+#endif
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 #endif /* __NVGPU_NVHOST_H__ */

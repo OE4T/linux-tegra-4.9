@@ -1,7 +1,7 @@
 /*
  * NVIDIA GPU HAL interface.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,10 +27,8 @@
 #include "gm20b/hal_gm20b.h"
 #include "gp10b/hal_gp10b.h"
 #include "gp106/hal_gp106.h"
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#endif
+#include "gv100/hal_gv100.h"
+#include "gv11b/hal_gv11b.h"
 
 #include <nvgpu/log.h>
 
@@ -53,17 +51,15 @@ int gpu_init_hal(struct gk20a *g)
 		if (gp106_init_hal(g))
 			return -ENODEV;
 		break;
-#ifdef CONFIG_TEGRA_19x_GPU
-	case TEGRA_19x_GPUID:
-		if (TEGRA_19x_GPUID_HAL(g))
+	case NVGPU_GPUID_GV11B:
+		if (gv11b_init_hal(g))
 			return -ENODEV;
 		break;
-	case BIGGPU_19x_GPUID:
-		if (BIGGPU_19x_GPUID_HAL(g))
+	case NVGPU_GPUID_GV100:
+		if (gv100_init_hal(g))
 			return -ENODEV;
 		break;
 
-#endif
 	default:
 		nvgpu_err(g, "no support for %x", ver);
 		return -ENODEV;

@@ -1,7 +1,7 @@
 /*
  * GK20A ECC
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,10 +33,6 @@ struct gk20a_ecc_stat {
 #endif
 };
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "ecc_t19x.h"
-#endif
-
 struct ecc_gk20a {
 	/* Stats per engine */
 	struct {
@@ -56,24 +52,44 @@ struct ecc_gk20a {
 		struct gk20a_ecc_stat tex_unique_sec_pipe1_count;
 		struct gk20a_ecc_stat tex_unique_ded_pipe1_count;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-		struct ecc_gr_t19x t19x;
-#endif
+		struct gk20a_ecc_stat sm_l1_tag_corrected_err_count;
+		struct gk20a_ecc_stat sm_l1_tag_uncorrected_err_count;
+		struct gk20a_ecc_stat sm_cbu_corrected_err_count;
+		struct gk20a_ecc_stat sm_cbu_uncorrected_err_count;
+		struct gk20a_ecc_stat sm_l1_data_corrected_err_count;
+		struct gk20a_ecc_stat sm_l1_data_uncorrected_err_count;
+		struct gk20a_ecc_stat sm_icache_corrected_err_count;
+		struct gk20a_ecc_stat sm_icache_uncorrected_err_count;
+		struct gk20a_ecc_stat gcc_l15_corrected_err_count;
+		struct gk20a_ecc_stat gcc_l15_uncorrected_err_count;
+		struct gk20a_ecc_stat fecs_corrected_err_count;
+		struct gk20a_ecc_stat fecs_uncorrected_err_count;
+		struct gk20a_ecc_stat gpccs_corrected_err_count;
+		struct gk20a_ecc_stat gpccs_uncorrected_err_count;
+		struct gk20a_ecc_stat mmu_l1tlb_corrected_err_count;
+		struct gk20a_ecc_stat mmu_l1tlb_uncorrected_err_count;
 	} gr;
 
 	struct {
 		struct gk20a_ecc_stat l2_sec_count;
 		struct gk20a_ecc_stat l2_ded_count;
-#ifdef CONFIG_TEGRA_19x_GPU
-		struct ecc_ltc_t19x t19x;
-#endif
+		struct gk20a_ecc_stat l2_cache_corrected_err_count;
+		struct gk20a_ecc_stat l2_cache_uncorrected_err_count;
 	} ltc;
 
 	struct {
-#ifdef CONFIG_TEGRA_19x_GPU
-		struct ecc_eng_t19x t19x;
-#endif
-	} eng;
+		struct gk20a_ecc_stat mmu_l2tlb_corrected_err_count;
+		struct gk20a_ecc_stat mmu_l2tlb_uncorrected_err_count;
+		struct gk20a_ecc_stat mmu_hubtlb_corrected_err_count;
+		struct gk20a_ecc_stat mmu_hubtlb_uncorrected_err_count;
+		struct gk20a_ecc_stat mmu_fillunit_corrected_err_count;
+		struct gk20a_ecc_stat mmu_fillunit_uncorrected_err_count;
+	} fb;
+
+	struct {
+		struct gk20a_ecc_stat pmu_corrected_err_count;
+		struct gk20a_ecc_stat pmu_uncorrected_err_count;
+	} pmu;
 
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,36 +27,36 @@
  * after the GPU has been turned off. On older chips these reads and writes can
  * also lock the entire CPU up.
  */
-void t19x_lockout_registers(struct gk20a *g)
+void nvgpu_lockout_usermode_registers(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	l->t19x.usermode_regs = NULL;
+	l->usermode_regs = NULL;
 }
 
 /*
  * Undoes t19x_lockout_registers().
  */
-void t19x_restore_registers(struct gk20a *g)
+void nvgpu_restore_usermode_registers(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	l->t19x.usermode_regs = l->t19x.usermode_regs_saved;
+	l->usermode_regs = l->usermode_regs_saved;
 }
 
-void t19x_remove_support(struct gk20a *g)
+void nvgpu_remove_usermode_support(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	if (l->t19x.usermode_regs) {
-		l->t19x.usermode_regs = NULL;
+	if (l->usermode_regs) {
+		l->usermode_regs = NULL;
 	}
 }
 
-void t19x_init_support(struct gk20a *g)
+void nvgpu_init_usermode_support(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	l->t19x.usermode_regs = l->regs + usermode_cfg0_r();
-	l->t19x.usermode_regs_saved = l->t19x.usermode_regs;
+	l->usermode_regs = l->regs + usermode_cfg0_r();
+	l->usermode_regs_saved = l->usermode_regs;
 }

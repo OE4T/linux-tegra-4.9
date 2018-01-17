@@ -79,6 +79,7 @@
 #include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
 #include "gv100/gr_gv100.h"
+#include "gv11b/gr_gv11b.h"
 #include "gv11b/mc_gv11b.h"
 #include "gv11b/ltc_gv11b.h"
 #include "gv11b/gv11b.h"
@@ -106,7 +107,6 @@
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
-#include <nvgpu/enabled_t19x.h>
 #include <nvgpu/ctxsw_trace.h>
 
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>

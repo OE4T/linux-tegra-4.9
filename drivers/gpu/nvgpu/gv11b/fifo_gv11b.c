@@ -30,10 +30,11 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/debug.h>
-#include <nvgpu/nvhost_t19x.h>
+#include <nvgpu/nvhost.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/io_usermode.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -96,7 +97,7 @@ void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 	/* Time being use 0 pbdma sequencer */
 	runlist_entry = ram_rl_entry_type_channel_v() |
 			ram_rl_entry_chan_runqueue_selector_f(
-						c->t19x.runqueue_sel) |
+						c->runqueue_sel) |
 			ram_rl_entry_chan_userd_target_f(
 				nvgpu_aperture_mask(g, &g->fifo.userd,
 				ram_rl_entry_chan_userd_target_sys_mem_ncoh_v(),
@@ -185,7 +186,7 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 
 	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
-			pbdma_set_channel_info_veid_f(c->t19x.subctx_id));
+			pbdma_set_channel_info_veid_f(c->subctx_id));
 
 	gv11b_fifo_init_ramfc_eng_method_buffer(g, c, mem);
 
@@ -215,7 +216,7 @@ static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 
 	gk20a_dbg_info("channel ring door bell %d\n", c->chid);
 
-	gv11b_usermode_writel(c->g, usermode_notify_channel_pending_r(),
+	nvgpu_usermode_writel(c->g, usermode_notify_channel_pending_r(),
 		usermode_notify_channel_pending_id_f(hw_chid));
 }
 
@@ -1782,8 +1783,7 @@ int gv11b_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 
-	f->t19x.max_subctx_count =
-		gr_pri_fe_chip_def_info_max_veid_count_init_v();
+	f->max_subctx_count = gr_pri_fe_chip_def_info_max_veid_count_init_v();
 	return 0;
 }
 
@@ -1794,7 +1794,7 @@ static u32 gv11b_mmu_fault_id_to_gr_veid(struct gk20a *g, u32 gr_eng_fault_id,
 	u32 num_subctx;
 	u32 veid = FIFO_INVAL_VEID;
 
-	num_subctx = f->t19x.max_subctx_count;
+	num_subctx = f->max_subctx_count;
 
 	if (mmu_fault_id >= gr_eng_fault_id &&
 			mmu_fault_id < (gr_eng_fault_id + num_subctx))

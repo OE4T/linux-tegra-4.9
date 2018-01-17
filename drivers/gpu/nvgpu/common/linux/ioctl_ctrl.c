@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,9 +35,6 @@
 #include "ioctl_ctrl.h"
 #include "ioctl_dbg.h"
 #include "ioctl_as.h"
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "common/linux/ioctl_ctrl_t19x.h"
-#endif
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
 #include "gk20a/gk20a.h"
@@ -173,6 +170,8 @@ static struct nvgpu_flags_mapping flags_mapping[] = {
 		NVGPU_ECC_ENABLED_TEX},
 	{NVGPU_GPU_FLAGS_ECC_ENABLED_LTC,
 		NVGPU_ECC_ENABLED_LTC},
+	{NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS,
+		NVGPU_SUPPORT_TSG_SUBCONTEXTS},
 };
 
 static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)
@@ -240,9 +239,7 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	gpu.gpc_mask = (1 << g->gr.gpc_count)-1;
 
 	gpu.flags = nvgpu_ctrl_ioctl_gpu_characteristics_flags(g);
-#ifdef CONFIG_TEGRA_19x_GPU
-	gpu.flags |= nvgpu_ctrl_ioctl_gpu_characteristics_flags_t19x(g);
-#endif
+
 	gpu.arch = g->params.gpu_arch;
 	gpu.impl = g->params.gpu_impl;
 	gpu.rev = g->params.gpu_rev;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,13 +27,11 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "gv11b/fifo_gv11b.h"
 #include "platform_gk20a.h"
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
 #include "os_linux.h"
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "common/linux/ioctl_tsg_t19x.h"
-#endif
 
 struct tsg_private {
 	struct gk20a *g;
@@ -52,6 +50,72 @@ static int gk20a_tsg_bind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
 
 	gk20a_channel_put(ch);
+	return err;
+}
+
+static int gk20a_tsg_ioctl_bind_channel_ex(struct gk20a *g,
+	struct tsg_gk20a *tsg, struct nvgpu_tsg_bind_channel_ex_args *arg)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
+	struct channel_gk20a *ch;
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+
+	nvgpu_mutex_acquire(&sched->control_lock);
+	if (sched->control_locked) {
+		err = -EPERM;
+		goto mutex_release;
+	}
+	err = gk20a_busy(g);
+	if (err) {
+		nvgpu_err(g, "failed to power on gpu");
+		goto mutex_release;
+	}
+
+	ch = gk20a_get_channel_from_file(arg->channel_fd);
+	if (!ch) {
+		err = -EINVAL;
+		goto idle;
+	}
+
+	if (arg->tpc_pg_enabled && (!tsg->tpc_num_initialized)) {
+		if ((arg->num_active_tpcs > gr->max_tpc_count) ||
+				!(arg->num_active_tpcs)) {
+			nvgpu_err(g, "Invalid num of active TPCs");
+			err = -EINVAL;
+			goto ch_put;
+		}
+		tsg->tpc_num_initialized = true;
+		tsg->num_active_tpcs = arg->num_active_tpcs;
+		tsg->tpc_pg_enabled = true;
+	} else {
+		tsg->tpc_pg_enabled = false; nvgpu_log(g, gpu_dbg_info, "dynamic TPC-PG not enabled");
+	}
+
+	if (arg->subcontext_id < g->fifo.max_subctx_count) {
+		ch->subctx_id = arg->subcontext_id;
+	} else {
+		err = -EINVAL;
+		goto ch_put;
+	}
+
+	nvgpu_log(g, gpu_dbg_info, "channel id : %d : subctx: %d",
+				ch->chid, ch->subctx_id);
+
+	/* Use runqueue selector 1 for all ASYNC ids */
+	if (ch->subctx_id > CHANNEL_INFO_VEID0)
+		ch->runqueue_sel = 1;
+
+	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
+ch_put:
+	gk20a_channel_put(ch);
+idle:
+	gk20a_idle(g);
+mutex_release:
+	nvgpu_mutex_release(&sched->control_lock);
 	return err;
 }
 
@@ -478,6 +542,13 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 		}
 
+	case NVGPU_TSG_IOCTL_BIND_CHANNEL_EX:
+	{
+		err = gk20a_tsg_ioctl_bind_channel_ex(g, tsg,
+			(struct nvgpu_tsg_bind_channel_ex_args *)buf);
+		break;
+	}
+
 	case NVGPU_TSG_IOCTL_UNBIND_CHANNEL:
 		/* We do not support explicitly unbinding channel from TSG.
 		 * Channel will be unbounded from TSG when it is closed.
@@ -550,13 +621,9 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 	default:
-#ifdef CONFIG_TEGRA_19x_GPU
-		err = t19x_tsg_ioctl_handler(g, tsg, cmd, buf);
-#else
 		nvgpu_err(g, "unrecognized tsg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;
-#endif
 		break;
 	}
 

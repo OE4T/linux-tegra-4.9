@@ -34,12 +34,6 @@
 #define ZBC_STENCIL_CLEAR_FMT_INVAILD     0
 #define ZBC_STENCIL_CLEAR_FMT_U8          1
 
-struct zbc_s_table {
-	u32 stencil;
-	u32 format;
-	u32 ref_cnt;
-};
-
 struct gk20a;
 struct gr_gk20a;
 struct zbc_entry;

@@ -1,7 +1,7 @@
 /*
  * GV11B MMU
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -273,7 +273,7 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
 u64 gv11b_gpu_phys_addr(struct gk20a *g,
 			       struct nvgpu_gmmu_attrs *attrs, u64 phys)
 {
-	if (attrs && attrs->t19x_attrs.l3_alloc)
+	if (attrs && attrs->l3_alloc)
 		return phys | NVGPU_L3_ALLOC_BIT;
 
 	return phys;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,23 +13,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __NVGPU_PCI_USERMODE_H__
+#define __NVGPU_PCI_USERMODE_H__
 
-#include <linux/nvhost.h>
-#include <linux/nvhost_t194.h>
+struct nvgpu_os_linux;
 
-#include <nvgpu/nvhost_t19x.h>
+void nvgpu_pci_init_usermode_support(struct nvgpu_os_linux *l);
 
-#include "common/linux/nvhost_priv.h"
-
-int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
-		struct nvgpu_nvhost_dev *nvhost_dev,
-		u64 *base, size_t *size)
-{
-	return nvhost_syncpt_unit_interface_get_aperture(
-		nvhost_dev->host1x_pdev, (phys_addr_t *)base, size);
-}
-
-u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id)
-{
-	return nvhost_syncpt_unit_interface_get_byte_offset(syncpt_id);
-}
+#endif

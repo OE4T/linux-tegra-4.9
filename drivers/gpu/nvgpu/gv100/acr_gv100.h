@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,18 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_NVHOST_T19X_H__
-#define __NVGPU_NVHOST_T19X_H__
+#ifndef _NVGPU_ACR_GV100_H_
+#define _NVGPU_ACR_GV100_H_
 
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-#include <nvgpu/types.h>
-
-struct nvgpu_nvhost_dev;
-
-int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
-		struct nvgpu_nvhost_dev *nvhost_dev,
-		u64 *base, size_t *size);
-u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
+#define GV100_FECS_UCODE_SIG "gv100/fecs_sig.bin"
+#define GV100_GPCCS_UCODE_SIG "gv100/gpccs_sig.bin"
 
 #endif
-#endif /* __NVGPU_NVHOST_T19X_H__ */

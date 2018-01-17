@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -142,6 +142,8 @@ struct gk20a;
 
 /* set if ASPM is enabled; only makes sense for PCI */
 #define NVGPU_SUPPORT_ASPM			62
+/* subcontexts are available */
+#define NVGPU_SUPPORT_TSG_SUBCONTEXTS		63
 /*
  * Must be greater than the largest bit offset in the above list.
  */

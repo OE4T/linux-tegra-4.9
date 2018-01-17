@@ -1,7 +1,7 @@
 /*
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -38,10 +38,6 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#endif
 
 #define gk20a_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)

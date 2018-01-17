@@ -128,10 +128,3 @@ config GK20A_VIDMEM
 	  Enable support for using and allocating buffers in a distinct video
 	  memory aperture (in contrast to general system memory), available on
 	  GPUs that have their own banks. PCIe GPUs have this, for example.
-
-config TEGRA_19x_GPU
-	bool "Tegra 19x family GPU"
-	depends on GK20A && ARCH_TEGRA_19x_SOC
-	default y
-	help
-	  Support for NVIDIA Tegra 19x family of GPU

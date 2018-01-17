@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,7 +18,7 @@
 
 #include "common/linux/vgpu/vgpu.h"
 #include "gv11b/fifo_gv11b.h"
-#include <nvgpu/nvhost_t19x.h>
+#include <nvgpu/nvhost.h>
 
 #include <linux/tegra_vgpu.h>
 
@@ -99,7 +99,7 @@ int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	f->t19x.max_subctx_count = priv->constants.max_subctx_count;
+	f->max_subctx_count = priv->constants.max_subctx_count;
 
 	return 0;
 }

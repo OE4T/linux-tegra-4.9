@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,9 +19,9 @@
 
 struct gk20a;
 
-void t19x_init_support(struct gk20a *g);
-void t19x_remove_support(struct gk20a *g);
-void t19x_lockout_registers(struct gk20a *g);
-void t19x_restore_registers(struct gk20a *g);
+void nvgpu_init_usermode_support(struct gk20a *g);
+void nvgpu_remove_usermode_support(struct gk20a *g);
+void nvgpu_lockout_usermode_registers(struct gk20a *g);
+void nvgpu_restore_usermode_registers(struct gk20a *g);
 
 #endif

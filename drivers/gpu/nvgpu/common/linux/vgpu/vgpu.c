@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,10 +46,6 @@
 #include "common/linux/ioctl.h"
 #include "common/linux/scale.h"
 #include "common/linux/driver_common.h"
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <nvgpu_gpuid_t19x.h>
-#endif
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
@@ -436,11 +432,9 @@ static int vgpu_init_hal(struct gk20a *g)
 		gk20a_dbg_info("gp10b detected");
 		err = vgpu_gp10b_init_hal(g);
 		break;
-#ifdef CONFIG_TEGRA_19x_GPU
-	case TEGRA_19x_GPUID:
+	case NVGPU_GPUID_GV11B:
 		err = vgpu_gv11b_init_hal(g);
 		break;
-#endif
 	default:
 		nvgpu_err(g, "no support for %x", ver);
 		err = -ENODEV;

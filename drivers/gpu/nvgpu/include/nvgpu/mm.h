@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -126,13 +128,12 @@ struct mm_gk20a {
 
 	struct nvgpu_mem bar2_desc;
 
-#ifdef CONFIG_TEGRA_19x_GPU
 	struct nvgpu_mem hw_fault_buf[FAULT_TYPE_NUM];
 	unsigned int hw_fault_buf_status[FAULT_TYPE_NUM];
 	struct mmu_fault_info *fault_info[FAULT_TYPE_NUM];
 	struct nvgpu_mutex hub_isr_mutex;
 	u32    hub_intr_types;
-#endif
+
 	/*
 	 * Separate function to cleanup the CE since it requires a channel to
 	 * be closed which must happen before fifo cleanup.

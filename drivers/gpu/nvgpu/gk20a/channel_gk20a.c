@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -700,10 +700,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->has_timedout = false;
 	ch->wdt_enabled = true;
 	ch->obj_class = 0;
-#ifdef CONFIG_TEGRA_19x_GPU
-	memset(&ch->t19x, 0, sizeof(struct channel_t19x));
-#endif
-
+	ch->subctx_id = 0;
+	ch->runqueue_sel = 0;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */

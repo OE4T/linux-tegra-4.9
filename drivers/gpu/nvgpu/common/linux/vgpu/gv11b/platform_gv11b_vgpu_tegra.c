@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,6 @@
 #include "common/linux/os_linux.h"
 
 #include <nvgpu/nvhost.h>
-#include <nvgpu/nvhost_t19x.h>
 
 #include <linux/platform_device.h>
 
@@ -44,12 +43,12 @@ static int gv11b_vgpu_probe(struct device *dev)
 		dev_err(dev, "failed to map usermode regs\n");
 		return PTR_ERR(regs);
 	}
-	l->t19x.usermode_regs = regs;
+	l->usermode_regs = regs;
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	ret = nvgpu_get_nvhost_dev(g);
 	if (ret) {
-		l->t19x.usermode_regs = NULL;
+		l->usermode_regs = NULL;
 		return ret;
 	}
 

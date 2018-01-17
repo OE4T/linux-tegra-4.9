@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,10 +28,6 @@
 
 #include "gk20a/gk20a.h"
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#endif
-
 static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -49,11 +45,9 @@ static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 	case NVGPU_GPUID_GP106:
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
-#if defined(CONFIG_TEGRA_19x_GPU)
-	case TEGRA_19x_GPUID:
+	case NVGPU_GPUID_GV11B:
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
-#endif
 	default:
 		unit_id = PMU_UNIT_INVALID;
 		nvgpu_err(g, "no support for %x", ver);

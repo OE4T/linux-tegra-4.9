@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,7 @@
  */
 
 #include <linux/nvhost.h>
+#include <linux/nvhost_t194.h>
 #include <linux/nvhost_ioctl.h>
 #include <linux/of_platform.h>
 
@@ -210,3 +211,18 @@ struct sync_fence *nvgpu_nvhost_sync_create_fence(
 	return nvhost_sync_create_fence(nvhost_dev->host1x_pdev, &pt, 1, name);
 }
 #endif /* CONFIG_SYNC */
+
+#ifdef CONFIG_TEGRA_T19X_GRHOST
+int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+		struct nvgpu_nvhost_dev *nvhost_dev,
+		u64 *base, size_t *size)
+{
+	return nvhost_syncpt_unit_interface_get_aperture(
+		nvhost_dev->host1x_pdev, (phys_addr_t *)base, size);
+}
+
+u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id)
+{
+	return nvhost_syncpt_unit_interface_get_byte_offset(syncpt_id);
+}
+#endif

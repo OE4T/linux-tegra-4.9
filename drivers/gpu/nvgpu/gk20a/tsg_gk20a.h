@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,9 +28,6 @@
 
 #include "gr_gk20a.h"
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "tsg_t19x.h"
-#endif
 #define NVGPU_INVALID_TSG_ID (-1)
 
 struct channel_gk20a;
@@ -68,9 +65,9 @@ struct tsg_gk20a {
 	u32 runlist_id;
 	pid_t tgid;
 	struct nvgpu_mem *eng_method_buffers;
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct tsg_t19x t19x;
-#endif
+	u32  num_active_tpcs;
+	u8   tpc_pg_enabled;
+	bool tpc_num_initialized;
 
 	struct nvgpu_gr_ctx gr_ctx;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,9 +34,7 @@
 #include "platform_gk20a.h"
 
 #include "pci.h"
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <nvgpu/linux/pci_t19x.h>
-#endif
+#include "pci_usermode.h"
 
 #include "os_linux.h"
 #include "driver_common.h"
@@ -453,9 +451,7 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		goto fail;
 	}
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	t19x_nvgpu_pci_init_support(l);
-#endif
+	nvgpu_pci_init_usermode_support(l);
 
 	return 0;
 

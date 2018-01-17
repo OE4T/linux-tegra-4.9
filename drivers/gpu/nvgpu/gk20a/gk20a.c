@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -47,10 +47,6 @@
 #include "hal.h"
 #include "bus_gk20a.h"
 #include "pstate/pstate.h"
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#endif
 
 void __nvgpu_check_gpu_state(struct gk20a *g)
 {
@@ -127,7 +123,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 int gk20a_finalize_poweron(struct gk20a *g)
 {
 	int err;
-#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+#if defined(CONFIG_TEGRA_GK20A_NVHOST)
 	u32 nr_pages;
 #endif
 
@@ -319,7 +315,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+#if defined(CONFIG_TEGRA_GK20A_NVHOST)
 	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {
 		if (!nvgpu_mem_is_valid(&g->syncpt_mem)) {
 			nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);

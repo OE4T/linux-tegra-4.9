@@ -84,6 +84,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_ARCH_GK100	0x000000E0
 #define NVGPU_GPU_ARCH_GM200	0x00000120
 #define NVGPU_GPU_ARCH_GP100	0x00000130
+#define NVGPU_GPU_ARCH_GV110	0x00000150
+#define NVGPU_GPU_ARCH_GV100	0x00000140
 
 #define NVGPU_GPU_IMPL_GK20A	0x0000000A
 #define NVGPU_GPU_IMPL_GM204	0x00000004
@@ -93,6 +95,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_IMPL_GP104	0x00000004
 #define NVGPU_GPU_IMPL_GP106	0x00000006
 #define NVGPU_GPU_IMPL_GP10B	0x0000000B
+#define NVGPU_GPU_IMPL_GV11B	0x0000000B
+#define NVGPU_GPU_IMPL_GV100	0x00000000
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include <linux/nvgpu-t19x.h>
@@ -142,6 +146,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE		(1ULL << 20)
 /* NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST	(1ULL << 21)
+/*  subcontexts are available */
+#define NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS         (1ULL << 22)
 /* Direct PTE kind control is supported (map_buffer_ex) */
 #define NVGPU_GPU_FLAGS_SUPPORT_MAP_DIRECT_KIND_CTRL	(1ULL << 23)
 /* NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS is available */
@@ -1008,6 +1014,17 @@ struct nvgpu_gpu_set_event_filter_args {
 
 #define NVGPU_TSG_IOCTL_MAGIC 'T'
 
+struct nvgpu_tsg_bind_channel_ex_args {
+	/* in: channel fd */
+	__s32 channel_fd;
+
+	/* in: VEID in Volta */
+	__u32 subcontext_id;
+	__u32 num_active_tpcs;
+	__u8 tpc_pg_enabled;
+	__u8 reserved[11];
+};
+
 #define NVGPU_TSG_IOCTL_BIND_CHANNEL \
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 1, int)
 #define NVGPU_TSG_IOCTL_UNBIND_CHANNEL \
@@ -1026,19 +1043,12 @@ struct nvgpu_gpu_set_event_filter_args {
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 9, struct nvgpu_timeslice_args)
 #define NVGPU_IOCTL_TSG_GET_TIMESLICE \
 	_IOR(NVGPU_TSG_IOCTL_MAGIC, 10, struct nvgpu_timeslice_args)
-
-
-#ifdef CONFIG_TEGRA_19x_GPU
+#define NVGPU_TSG_IOCTL_BIND_CHANNEL_EX \
+	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 11, struct nvgpu_tsg_bind_channel_ex_args)
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
-		NVGPU_TSG_IOCTL_MAX_ARG
+		sizeof(struct nvgpu_tsg_bind_channel_ex_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_TSG_IOCTL_MAX)
-#else
-#define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvgpu_event_id_ctrl_args)
-#define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_IOCTL_TSG_GET_TIMESLICE)
-#endif
+	_IOC_NR(NVGPU_TSG_IOCTL_BIND_CHANNEL_EX)
 
 /*
  * /dev/nvhost-dbg-gpu device

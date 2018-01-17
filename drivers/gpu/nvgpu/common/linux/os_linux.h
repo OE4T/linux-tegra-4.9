@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,9 +20,6 @@
 #include <linux/cdev.h>
 #include <linux/iommu.h>
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <nvgpu/linux/os_linux_t19x.h>
-#endif
 #include "gk20a/gk20a.h"
 #include "cde.h"
 #include "sched.h"
@@ -114,9 +111,8 @@ struct nvgpu_os_linux {
 	void __iomem *bar1;
 	void __iomem *bar1_saved;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct nvgpu_os_linux_t19x t19x;
-#endif
+	void __iomem *usermode_regs;
+	void __iomem *usermode_regs_saved;
 
 	struct nvgpu_os_linux_ops ops;
 

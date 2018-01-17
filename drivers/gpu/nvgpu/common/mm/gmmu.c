@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -700,9 +700,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	if (attrs.ctag)
 		attrs.ctag += buffer_offset & (ctag_granularity - 1U);
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	nvgpu_gmmu_add_t19x_attrs(&attrs, flags);
-#endif
+	attrs.l3_alloc = (bool)(flags & NVGPU_VM_MAP_L3_ALLOC);
 
 	/*
 	 * Only allocate a new GPU VA range if we haven't already been passed a

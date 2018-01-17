@@ -18,6 +18,7 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
 	common/linux/module.o \
+	common/linux/module_usermode.o \
 	common/linux/kmem.o \
 	common/linux/timers.o \
 	common/linux/ioctl.o \
@@ -40,6 +41,7 @@ nvgpu-y := \
 	common/linux/sysfs.o \
 	common/linux/cde.o \
 	common/linux/io.o \
+	common/linux/io_usermode.o \
 	common/linux/rwsem.o \
 	common/linux/cde_gm20b.o \
 	common/linux/cde_gp10b.o \
@@ -148,9 +150,16 @@ endif
 nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
 	common/linux/ctxsw_trace.o
 
-nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gk20a_tegra.o
+nvgpu-$(CONFIG_TEGRA_GK20A) += \
+	common/linux/platform_gk20a_tegra.o \
+	common/linux/platform_gp10b_tegra.o \
+	common/linux/platform_gv11b_tegra.o
+
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
-nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o
+
+nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o \
+	common/linux/pci_usermode.o \
+
 nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
@@ -211,6 +220,32 @@ nvgpu-y += \
 	gp106/regops_gp106.o \
 	gp106/bios_gp106.o \
 	gp106/fuse_gp106.o \
+	gv11b/gv11b.o  \
+	gv11b/css_gr_gv11b.o  \
+	gv11b/dbg_gpu_gv11b.o  \
+	gv11b/mc_gv11b.o  \
+	gv11b/ltc_gv11b.o  \
+	gv11b/hal_gv11b.o \
+	gv11b/gv11b_gating_reglist.o \
+	gv11b/gr_gv11b.o \
+	gv11b/fb_gv11b.o \
+	gv11b/fifo_gv11b.o \
+	gv11b/mm_gv11b.o \
+	gv11b/ce_gv11b.o \
+	gv11b/gr_ctx_gv11b.o \
+	gv11b/pmu_gv11b.o \
+	gv11b/acr_gv11b.o \
+	gv11b/subctx_gv11b.o \
+	gv11b/regops_gv11b.o \
+	gv11b/therm_gv11b.o \
+	gv100/mm_gv100.o \
+	gv100/gr_ctx_gv100.o \
+	gv100/fb_gv100.o \
+	gv100/bios_gv100.o \
+	gv100/fifo_gv100.o \
+	gv100/gr_gv100.o \
+	gv100/regops_gv100.o \
+	gv100/hal_gv100.o \
 	pstate/pstate.o \
 	clk/clk_vin.o \
 	clk/clk_fll.o \
@@ -245,7 +280,6 @@ nvgpu-y += \
 	lpwr/rppg.o \
 	lpwr/lpwr.o
 
-nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gp10b_tegra.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gp10b/vgpu_hal_gp10b.o  \
@@ -253,43 +287,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gp10b/vgpu_fuse_gp10b.o  \
 	common/linux/vgpu/gp10b/vgpu_mm_gp10b.o
 
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-nvgpu-y += \
-	common/mm/gmmu_t19x.o \
-	common/linux/ioctl_tsg_t19x.o \
-	common/linux/ioctl_ctrl_t19x.o \
-	common/linux/io_t19x.o \
-	common/linux/module_t19x.o \
-	common/linux/pci_t19x.o \
-	gv11b/gv11b.o  \
-	gv11b/css_gr_gv11b.o  \
-	gv11b/dbg_gpu_gv11b.o  \
-	gv11b/mc_gv11b.o  \
-	gv11b/ltc_gv11b.o  \
-	gv11b/hal_gv11b.o \
-	gv11b/gv11b_gating_reglist.o \
-	gv11b/gr_gv11b.o \
-	gv11b/fb_gv11b.o \
-	gv11b/fifo_gv11b.o \
-	gv11b/mm_gv11b.o \
-	gv11b/ce_gv11b.o \
-	gv11b/gr_ctx_gv11b.o \
-	gv11b/pmu_gv11b.o \
-	gv11b/acr_gv11b.o \
-	gv11b/subctx_gv11b.o \
-	gv11b/regops_gv11b.o \
-	gv11b/therm_gv11b.o \
-	gv100/mm_gv100.o \
-	gv100/gr_ctx_gv100.o \
-	gv100/fb_gv100.o \
-	gv100/bios_gv100.o \
-	gv100/fifo_gv100.o \
-	gv100/gr_gv100.o \
-	gv100/regops_gv100.o \
-	gv100/hal_gv100.o
-
-nvgpu-$(CONFIG_TEGRA_GK20A) += common/linux/platform_gv11b_tegra.o
-nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost_t19x.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gv11b/platform_gv11b_vgpu_tegra.o \
@@ -299,4 +296,3 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gv11b/vgpu_fifo_gv11b.o \
 	common/linux/vgpu/gv11b/vgpu_subctx_gv11b.o \
 	common/linux/vgpu/gv11b/vgpu_tsg_gv11b.o
-endif

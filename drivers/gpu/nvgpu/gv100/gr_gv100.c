@@ -323,7 +323,7 @@ u32 gr_gv100_get_patch_slots(struct gk20a *g)
 	/*
 	 * We need this for all subcontexts
 	 */
-	size *= f->t19x.max_subctx_count;
+	size *= f->max_subctx_count;
 
 	/*
 	 * Add space for a partition mode change as well

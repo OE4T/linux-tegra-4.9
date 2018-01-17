@@ -1,7 +1,7 @@
 /*
  * GK20A graphics channel
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,9 +40,6 @@ struct fifo_profile_gk20a;
 #include "mm_gk20a.h"
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "channel_t19x.h"
-#endif
 
 /* Flags to be passed to gk20a_channel_alloc_gpfifo() */
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
@@ -237,9 +234,8 @@ struct channel_gk20a {
 	u32 runlist_id;
 
 	bool is_privileged_channel;
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct channel_t19x t19x;
-#endif
+	u32 subctx_id;
+	u32 runqueue_sel;
 
 	struct ctx_header_desc ctx_header;
 

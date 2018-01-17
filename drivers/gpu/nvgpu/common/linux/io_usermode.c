@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,14 +11,19 @@
  * more details.
  */
 
+#include <nvgpu/io.h>
 #include <nvgpu/types.h>
+
+#include "common/linux/os_linux.h"
+#include "gk20a/gk20a.h"
 
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 
-#include "common/linux/os_linux.h"
-
-void t19x_nvgpu_pci_init_support(struct nvgpu_os_linux *l)
+void nvgpu_usermode_writel(struct gk20a *g, u32 r, u32 v)
 {
-	l->t19x.usermode_regs = l->regs + usermode_cfg0_r();
-	l->t19x.usermode_regs_saved = l->t19x.usermode_regs;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	void __iomem *reg = l->usermode_regs + (r - usermode_cfg0_r());
+
+	writel_relaxed(v, reg);
+	gk20a_dbg(gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
 }

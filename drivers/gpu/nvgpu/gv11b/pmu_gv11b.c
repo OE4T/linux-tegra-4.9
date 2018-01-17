@@ -1,7 +1,7 @@
 /*
  * GV11B PMU
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -343,8 +343,8 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 			if (uncorrected_overflow)
 				uncorrected_delta += (0x1UL << pwr_pmu_falcon_ecc_uncorrected_err_count_total_s());
 
-			g->ecc.eng.t19x.pmu_corrected_err_count.counters[0] += corrected_delta;
-			g->ecc.eng.t19x.pmu_uncorrected_err_count.counters[0] += uncorrected_delta;
+			g->ecc.pmu.pmu_corrected_err_count.counters[0] += corrected_delta;
+			g->ecc.pmu.pmu_uncorrected_err_count.counters[0] += uncorrected_delta;
 
 			nvgpu_log(g, gpu_dbg_intr,
 				"pmu ecc interrupt intr1: 0x%x", intr1);
@@ -371,8 +371,8 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 
 			nvgpu_log(g, gpu_dbg_intr,
 				"ecc error count corrected: %d, uncorrected %d",
-				g->ecc.eng.t19x.pmu_corrected_err_count.counters[0],
-				g->ecc.eng.t19x.pmu_uncorrected_err_count.counters[0]);
+				g->ecc.pmu.pmu_corrected_err_count.counters[0],
+				g->ecc.pmu.pmu_uncorrected_err_count.counters[0]);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,10 +28,6 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/lock.h>
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <nvgpu/gmmu_t19x.h>
-#endif
 
 /*
  * This is the GMMU API visible to blocks outside of the GMMU. Basically this
@@ -180,9 +176,7 @@ struct nvgpu_gmmu_attrs {
 	enum nvgpu_aperture	 aperture;
 	bool			 debug;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct nvgpu_gmmu_attrs_t19x t19x_attrs;
-#endif
+	bool			 l3_alloc;
 };
 
 struct gk20a_mmu_level {

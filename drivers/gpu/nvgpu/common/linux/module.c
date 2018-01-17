@@ -46,13 +46,11 @@
 #include "scale.h"
 #include "pci.h"
 #include "module.h"
+#include "module_usermode.h"
 #include "intr.h"
 #include "cde.h"
 #include "ioctl.h"
 #include "sim.h"
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "nvgpu_gpuid_t19x.h"
-#endif
 
 #include "os_linux.h"
 #include "cde_gm20b.h"
@@ -175,9 +173,7 @@ static int gk20a_restore_registers(struct gk20a *g)
 	l->regs = l->regs_saved;
 	l->bar1 = l->bar1_saved;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	t19x_restore_registers(g);
-#endif
+	nvgpu_restore_usermode_registers(g);
 
 	return 0;
 }
@@ -313,9 +309,7 @@ static int gk20a_lockout_registers(struct gk20a *g)
 	l->regs = NULL;
 	l->bar1 = NULL;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	t19x_lockout_registers(g);
-#endif
+	nvgpu_lockout_usermode_registers(g);
 
 	return 0;
 }
@@ -384,13 +378,11 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 		.data = &gm20b_tegra_platform },
 	{ .compatible = "nvidia,tegra186-gp10b",
 		.data = &gp10b_tegra_platform },
-#ifdef CONFIG_TEGRA_19x_GPU
-	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
-		.data = &t19x_gpu_tegra_platform },
+	{ .compatible = "nvidia,gv11b",
+		.data = &gv11b_tegra_platform },
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,gv11b-vgpu",
 		.data = &gv11b_vgpu_tegra_platform},
-#endif
 #endif
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",
@@ -669,9 +661,7 @@ void gk20a_remove_support(struct gk20a *g)
 		l->bar1 = NULL;
 	}
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	t19x_remove_support(g);
-#endif
+	nvgpu_remove_usermode_support(g);
 
 	nvgpu_free_enabled_flags(g);
 }
@@ -721,9 +711,7 @@ static int gk20a_init_support(struct platform_device *dev)
 			goto fail;
 	}
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	t19x_init_support(g);
-#endif
+	nvgpu_init_usermode_support(g);
 
 	return 0;
 

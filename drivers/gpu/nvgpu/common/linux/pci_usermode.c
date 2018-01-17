@@ -1,7 +1,5 @@
 /*
- * GV11B TSG IOCTL handler
- *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,9 +11,14 @@
  * more details.
  */
 
-#ifndef _NVGPU_IOCTL_TSG_T19X
-#define _NVGPU_IOCTL_TSG_T19X
+#include <nvgpu/types.h>
 
-int t19x_tsg_ioctl_handler(struct gk20a *g, struct tsg_gk20a *tsg,
-				unsigned int cmd, u8 *arg);
-#endif
+#include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
+
+#include "common/linux/os_linux.h"
+
+void nvgpu_pci_init_usermode_support(struct nvgpu_os_linux *l)
+{
+	l->usermode_regs = l->regs + usermode_cfg0_r();
+	l->usermode_regs_saved = l->usermode_regs;
+}

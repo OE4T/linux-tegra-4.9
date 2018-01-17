@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/fifo_gk20a.h
- *
  * GK20A graphics fifo (gr host)
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,10 +26,6 @@
 
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
-
-#ifdef CONFIG_TEGRA_19x_GPU
-#include "fifo_t19x.h"
-#endif
 
 #include <nvgpu/kref.h>
 
@@ -213,9 +207,7 @@ struct fifo_gk20a {
 	bool deferred_reset_pending;
 	struct nvgpu_mutex deferred_reset_mutex;
 
-#ifdef CONFIG_TEGRA_19x_GPU
-	struct fifo_t19x t19x;
-#endif
+	u32 max_subctx_count;
 	u32 channel_base;
 };
 

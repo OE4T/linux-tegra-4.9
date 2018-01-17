@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1193,13 +1193,6 @@ enum {
 	POST_CURSOR2_L1 = 1,
 	POST_CURSOR2_L2 = 2,
 	POST_CURSOR2_L3 = 3,
-};
-
-enum {
-	SOR_LINK_SPEED_G1_62 = 6,
-	SOR_LINK_SPEED_G2_7 = 10,
-	SOR_LINK_SPEED_G5_4 = 20,
-	SOR_LINK_SPEED_G8_1 = 30,
 };
 
 struct tegra_dc_dp_lt_settings {

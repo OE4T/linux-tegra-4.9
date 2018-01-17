@@ -1458,23 +1458,22 @@ static int tegra_dp_set_link_bandwidth(struct tegra_dc_dp_data *dp, u8 link_bw)
 	return tegra_dc_dp_dpcd_write(dp, NV_DPCD_LINK_BANDWIDTH_SET, link_bw);
 }
 
-static int tegra_dp_set_enhanced_framing(struct tegra_dc_dp_data *dp,
-						bool enable)
+int tegra_dp_set_enhanced_framing(struct tegra_dc_dp_data *dp, bool enable)
 {
 	int ret;
 
-	if (enable) {
-		tegra_sor_write_field(dp->sor,
-			NV_SOR_DP_LINKCTL(dp->sor->portnum),
-			NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE,
-			NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE);
+	tegra_sor_write_field(dp->sor,
+		NV_SOR_DP_LINKCTL(dp->sor->portnum),
+		NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE,
+		(enable ? NV_SOR_DP_LINKCTL_ENHANCEDFRAME_ENABLE :
+		NV_SOR_DP_LINKCTL_ENHANCEDFRAME_DISABLE));
 
-		ret = tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
-				NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T,
-				NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T);
-		if (ret)
-			return ret;
-	}
+	ret = tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
+			NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T,
+			(enable ? NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_T :
+			NV_DPCD_LANE_COUNT_SET_ENHANCEDFRAMING_F));
+	if (ret)
+		return ret;
 
 	return 0;
 }

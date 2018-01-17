@@ -116,6 +116,18 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 		.dpcd_val = 0, /* unused */
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_HBR2_COMPLIANCE,
 	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT1] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CP2520_PAT1,
+	},
+	[TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT3] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CP2520_PAT3,
+	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_4] = {
 		.chan_coding = true,
 		.scrambling = true,

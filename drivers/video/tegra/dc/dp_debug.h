@@ -1,7 +1,7 @@
 /*
  * dp_debug.h: tegra dp debug interface.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,11 +25,9 @@ struct tegra_dp_test_settings {
 	u8	lanes;
 	u8	bitrate;
 	u8	tpg;
-	u8	dynrange_val;
-	u8    panel_type;
+	u8	panel_type;
 	char	*bitrate_name;
 	char	*patt;
-	char	*dynrange;
 	bool	disable_ssc;
 	bool	disable_tx_pu;
 };

@@ -395,4 +395,5 @@ void tegra_dp_set_max_link_bw(struct tegra_dc_sor_data *sor,
 			      struct tegra_dc_dp_link_config *cfg);
 int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp);
 int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data);
+int tegra_dp_set_enhanced_framing(struct tegra_dc_dp_data *dp, bool enable);
 #endif

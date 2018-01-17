@@ -1,7 +1,7 @@
 /*
  * dp_debug.c: dp debug interface.
  *
- * Copyright (c) 2015-2017 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -35,34 +35,14 @@ struct tegra_dp_test_settings default_dp_test_settings = {
 	DRIVE_CURRENT_L0,
 	PRE_EMPHASIS_L0,
 	4,
-	SOR_LINK_SPEED_G5_4,
+	NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS,
 	TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
-	NV_HEAD_STATE0_DYNRANGE_VESA,
 	0,
-	"hbr2",
+	"rbr",
 	"none",
-	"vesa",
 	false,
 	false,
 };
-
-static inline int parse_dynrange_setting(char *dynrange,
-	struct tegra_dp_test_settings *test_settings)
-{
-	u8 dynrange_val;
-
-	if (!strcmp(dynrange, "vesa"))
-		dynrange_val = NV_HEAD_STATE0_DYNRANGE_VESA;
-	else if (!strcmp(dynrange, "cea"))
-		dynrange_val = NV_HEAD_STATE0_DYNRANGE_CEA;
-	else
-		return -EINVAL;
-
-	test_settings->dynrange = dynrange;
-	test_settings->dynrange_val = dynrange_val;
-
-	return 0;
-}
 
 static inline int parse_bitrate_setting(char *bitrate_name,
 	struct tegra_dp_test_settings *test_settings)
@@ -70,11 +50,13 @@ static inline int parse_bitrate_setting(char *bitrate_name,
 	u8 bitrate;
 
 	if (!strcmp(bitrate_name, "rbr"))
-		bitrate = SOR_LINK_SPEED_G1_62;
+		bitrate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS;
 	else if (!strcmp(bitrate_name, "hbr"))
-		bitrate = SOR_LINK_SPEED_G2_7;
+		bitrate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS;
 	else if (!strcmp(bitrate_name, "hbr2"))
-		bitrate = SOR_LINK_SPEED_G5_4;
+		bitrate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS;
+	else if (!strcmp(bitrate_name, "hbr3"))
+		bitrate = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS;
 	else
 		return -EINVAL;
 
@@ -107,6 +89,12 @@ static inline int parse_patt_setting(char *patt,
 		tpg = TEGRA_DC_DP_TRAINING_PATTERN_CSTM;
 	else if (!strcmp(patt, "hbr2compliance"))
 		tpg = TEGRA_DC_DP_TRAINING_PATTERN_HBR2_COMPLIANCE;
+	else if (!strcmp(patt, "cp2520_pat1"))
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT1;
+	else if (!strcmp(patt, "cp2520_pat3"))
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT3;
+	else if (!strcmp(patt, "t4"))
+		tpg = TEGRA_DC_DP_TRAINING_PATTERN_4;
 	else
 		return -EINVAL;
 
@@ -158,12 +146,6 @@ static int parse_test_settings(const char __user *user_buf, size_t count,
 			continue;
 		}
 
-		if (!strcmp(name, "dynrange")) {
-			if (parse_dynrange_setting(val, test_settings))
-				goto parse_fail;
-			continue;
-		}
-
 		if (kstrtou8(val, 10, &u8_val))
 			goto parse_fail;
 
@@ -206,12 +188,11 @@ static int test_settings_show(struct seq_file *s, void *unused)
 	seq_printf(s, "\tLanes: %d\n", test_settings->lanes);
 	seq_printf(s, "\tBitrate: %s\n", test_settings->bitrate_name);
 	seq_printf(s, "\tTest pattern: %s\n", test_settings->patt);
-	seq_printf(s, "\tDynamic range: %s\n", test_settings->dynrange);
 	seq_printf(s, "\tSSC %sabled\n", test_settings->disable_ssc ?
 							"dis" : "en");
 	seq_printf(s, "\tTX_PU %sabled\n", test_settings->disable_tx_pu ?
 							"dis" : "en");
-	seq_printf(s, "\t Panel type : %s\n", test_settings->panel_type ?
+	seq_printf(s, "\tPanel type : %s\n", test_settings->panel_type ?
 						"Internal" : "External");
 
 	return 0;
@@ -266,11 +247,6 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	cfg->link_bw = test_settings->bitrate;
 	tegra_dp_update_link_config(dp);
 
-	/* configure dynamic color range */
-	tegra_sor_write_field(sor, nv_sor_head_state0(dc->ctrl_num),
-			NV_HEAD_STATE0_DYNRANGE_DEFAULT_MASK,
-			test_settings->dynrange_val);
-
 	/* set drive strength, preemphasis, and postcursor */
 	vs_reg = dp->pdata->lt_data[DP_VS].data[POST_CURSOR2_L0]
 		[test_settings->drive_strength][test_settings->preemphasis];
@@ -320,6 +296,13 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 		tegra_sor_writel(sor, NV_SOR_DP_TPG_CONFIG, 0x00FC);
 	else
 		tegra_sor_writel(sor, NV_SOR_DP_TPG_CONFIG, 0);
+
+	if (test_settings->tpg == TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT1 ||
+		test_settings->tpg == TEGRA_DC_DP_TRAINING_PATTERN_CP2520_PAT3 ||
+		test_settings->tpg == TEGRA_DC_DP_TRAINING_PATTERN_4)
+		tegra_dp_set_enhanced_framing(dp, false);
+	else
+		tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
 
 	tegra_sor_tpg(sor, test_settings->tpg, test_settings->lanes);
 

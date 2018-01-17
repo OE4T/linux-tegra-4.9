@@ -238,6 +238,7 @@ struct nvhost_device_data t19_vi_thi_info = {
 		{"vi-const", UINT_MAX},
 	},
 	.num_channels		= 1,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_vi5_info = {
@@ -256,6 +257,7 @@ struct nvhost_device_data t19_vi5_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.num_ppc		= 8,
 	.aggregate_constraints	= nvhost_vi5_aggregate_constraints,
+	.can_powergate		= true,
 };
 #endif
 
@@ -277,6 +279,7 @@ struct nvhost_device_data t19_nvcsi_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.can_powergate		= true,
 };
 #endif
 
@@ -284,6 +287,7 @@ struct nvhost_device_data t19_nvcsi_info = {
 struct nvhost_device_data t19_isp_thi_info = {
 	.devfs_name		= "isp-thi",
 	.moduleid		= NVHOST_MODULE_ISP,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_isp5_info = {
@@ -297,6 +301,7 @@ struct nvhost_device_data t19_isp5_info = {
 	},
 	.ctrl_ops		= &tegra194_isp5_ctrl_ops,
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.can_powergate		= true,
 };
 #endif
 
@@ -705,6 +710,7 @@ struct nvhost_device_data t19_slvsec_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.can_powergate		= true,
 };
 #endif
 

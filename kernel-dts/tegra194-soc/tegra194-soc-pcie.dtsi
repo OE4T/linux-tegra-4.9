@@ -378,6 +378,8 @@
 		nvidia,controller-id = <0x0>;
 		nvidia,num-lanes = <8>;
 
+		nvidia,margin-port-cap = <0x194>;
+		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
@@ -440,6 +442,8 @@
 		nvidia,controller-id = <0x4>;
 		nvidia,num-lanes = <4>;
 
+		nvidia,margin-port-cap = <0x190>;
+		nvidia,margin-lane-cntrl = <0x194>;
 		nvidia,cfg-link-cap-l1sub = <0x1b0>;
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
@@ -478,6 +482,8 @@
 		nvidia,controller-id = <0x5>;
 		nvidia,num-lanes = <8>;
 
+		nvidia,margin-port-cap = <0x194>;
+		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
@@ -531,6 +537,8 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
+		nvidia,margin-port-cap = <0x194>;
+		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,dl-feature-cap = <0x30c>;
 	};
 
@@ -581,6 +589,8 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,margin-port-cap = <0x180>;
+		nvidia,margin-lane-cntrl = <0x184>;
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
@@ -631,6 +641,8 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,margin-port-cap = <0x180>;
+		nvidia,margin-lane-cntrl = <0x184>;
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
@@ -681,6 +693,8 @@
 		nvidia,cap-pl16g-cap-off = <0x178>;
 		nvidia,event-cntr-ctrl = <0x1a8>;
 		nvidia,event-cntr-data = <0x1ac>;
+		nvidia,margin-port-cap = <0x180>;
+		nvidia,margin-lane-cntrl = <0x184>;
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
@@ -731,6 +745,8 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1c4>;
 		nvidia,event-cntr-data = <0x1c8>;
+		nvidia,margin-port-cap = <0x190>;
+		nvidia,margin-lane-cntrl = <0x194>;
 		nvidia,dl-feature-cap = <0x2f8>;
 	};
 
@@ -785,6 +801,8 @@
 		nvidia,cap-pl16g-cap-off = <0x188>;
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
+		nvidia,margin-port-cap = <0x194>;
+		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,dl-feature-cap = <0x30c>;
 	};
 };

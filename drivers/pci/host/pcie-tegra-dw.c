@@ -453,6 +453,28 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 
 	val = readl(pcie->appl_base + APPL_INTR_STATUS_L0);
 	dev_dbg(pp->dev, "APPL_INTR_STATUS_L0 = 0x%08X\n", val);
+	if (val & APPL_INTR_STATUS_L0_LINK_STATE_INT) {
+		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
+		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_0_0 = 0x%08X\n", val);
+		if (val & APPL_INTR_STATUS_L1_0_0_LINK_REQ_RST_NOT_CHGED) {
+			writel(val, pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
+
+			/* SBR & Surprise Link Down WAR */
+			val = readl(pcie->appl_base + APPL_CAR_RESET_OVRD);
+			val &= ~APPL_CAR_RESET_OVRD_CYA_OVERRIDE_CORE_RST_N;
+			writel(val, pcie->appl_base + APPL_CAR_RESET_OVRD);
+			udelay(1);
+			val = readl(pcie->appl_base + APPL_CAR_RESET_OVRD);
+			val |= APPL_CAR_RESET_OVRD_CYA_OVERRIDE_CORE_RST_N;
+			writel(val, pcie->appl_base + APPL_CAR_RESET_OVRD);
+
+			dw_pcie_cfg_read(pp->dbi_base + PORT_LOGIC_GEN2_CTRL, 4,
+					 &val);
+			val |= PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE;
+			dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_GEN2_CTRL,
+					  4, val);
+		}
+	}
 	if (val & APPL_INTR_STATUS_L0_INT_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_8_0 = 0x%08X\n", val);
@@ -493,28 +515,6 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 			writel(APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS,
 			       pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 			check_apply_link_bad_war(pp);
-		}
-	} else if (val & APPL_INTR_STATUS_L0_LINK_STATE_INT) {
-		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
-		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_0_0 = 0x%08X\n", val);
-		if ((val & APPL_INTR_STATUS_L1_0_0_LINK_REQ_RST_NOT_CHGED) &&
-		    !(val & APPL_INTR_STATUS_L1_0_0_SURPRISE_DOWN_ERR_STATE)) {
-			writel(val, pcie->appl_base + APPL_INTR_STATUS_L1_0_0);
-
-			/* SBR WAR */
-			val = readl(pcie->appl_base + APPL_CAR_RESET_OVRD);
-			val &= ~APPL_CAR_RESET_OVRD_CYA_OVERRIDE_CORE_RST_N;
-			writel(val, pcie->appl_base + APPL_CAR_RESET_OVRD);
-			udelay(1);
-			val = readl(pcie->appl_base + APPL_CAR_RESET_OVRD);
-			val |= APPL_CAR_RESET_OVRD_CYA_OVERRIDE_CORE_RST_N;
-			writel(val, pcie->appl_base + APPL_CAR_RESET_OVRD);
-
-			dw_pcie_cfg_read(pp->dbi_base + PORT_LOGIC_GEN2_CTRL, 4,
-					 &val);
-			val |= PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE;
-			dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_GEN2_CTRL,
-					  4, val);
 		}
 	}
 	val = readl(pcie->appl_base + APPL_INTR_STATUS_L0);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -16,6 +16,7 @@
 #include <linux/compiler.h>
 #else
 #include <stdint.h>
+#include <stdbool.h>
 #ifndef __packed
 #define __packed __attribute__((packed))
 #endif

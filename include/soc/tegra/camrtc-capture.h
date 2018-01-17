@@ -451,8 +451,149 @@ struct capture_descriptor {
 	uint32_t __pad[14];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
+/**
+ * NvPhy attributes
+ */
 
-/** Supported pattern generators */
+/* NvPhy types */
+#define NVPHY_TYPE_CSI		U32_C(0)
+#define NVPHY_TYPE_SLVSEC	U32_C(1)
+
+/**
+ * NvCsi attributes
+ */
+
+/* Number of lanes/trios per brick */
+#define NVCSI_BRICK_NUM_LANES	U32_C(4)
+/* Number of override exception data types */
+#define NVCSI_NUM_NOOVERRIDE_DT	U32_C(5)
+
+/* CSI Phy types */
+#define NVCSI_PHY_TYPE_DPHY	U32_C(0)
+#define NVCSI_PHY_TYPE_CPHY	U32_C(1)
+
+/* NvCsi lane swizzle */
+/* 00000 := A0 A1 B0 B1 -->  A0 A1 B0 B1 */
+#define NVCSI_LANE_SWIZZLE_A0A1B0B1	U32_C(0x00)
+/* 00001 := A0 A1 B0 B1 -->  A0 A1 B1 B0 */
+#define NVCSI_LANE_SWIZZLE_A0A1B1B0	U32_C(0x01)
+/* 00010 := A0 A1 B0 B1 -->  A0 B0 B1 A1 */
+#define NVCSI_LANE_SWIZZLE_A0B0B1A1	U32_C(0x02)
+/* 00011 := A0 A1 B0 B1 -->  A0 B0 A1 B1 */
+#define NVCSI_LANE_SWIZZLE_A0B0A1B1	U32_C(0x03)
+/* 00100 := A0 A1 B0 B1 -->  A0 B1 A1 B0 */
+#define NVCSI_LANE_SWIZZLE_A0B1A1B0	U32_C(0x04)
+/* 00101 := A0 A1 B0 B1 -->  A0 B1 B0 A1 */
+#define NVCSI_LANE_SWIZZLE_A0B1B0A1	U32_C(0x05)
+/* 00110 := A0 A1 B0 B1 -->  A1 A0 B0 B1 */
+#define NVCSI_LANE_SWIZZLE_A1A0B0B1	U32_C(0x06)
+/* 00111 := A0 A1 B0 B1 -->  A1 A0 B1 B0 */
+#define NVCSI_LANE_SWIZZLE_A1A0B1B0	U32_C(0x07)
+/* 01000 := A0 A1 B0 B1 -->  A1 B0 B1 A0 */
+#define NVCSI_LANE_SWIZZLE_A1B0B1A0	U32_C(0x08)
+/* 01001 := A0 A1 B0 B1 -->  A1 B0 A0 B1 */
+#define NVCSI_LANE_SWIZZLE_A1B0A0B1	U32_C(0x09)
+/* 01010 := A0 A1 B0 B1 -->  A1 B1 A0 B0 */
+#define NVCSI_LANE_SWIZZLE_A1B1A0B0	U32_C(0x0A)
+/* 01011 := A0 A1 B0 B1 -->  A1 B1 B0 A0 */
+#define NVCSI_LANE_SWIZZLE_A1B1B0A0	U32_C(0x0B)
+/* 01100 := A0 A1 B0 B1 -->  B0 A1 A0 B1 */
+#define NVCSI_LANE_SWIZZLE_B0A1A0B1	U32_C(0x0C)
+/* 01101 := A0 A1 B0 B1 -->  B0 A1 B1 A0 */
+#define NVCSI_LANE_SWIZZLE_B0A1B1A0	U32_C(0x0D)
+/* 01110 := A0 A1 B0 B1 -->  B0 A0 B1 A1 */
+#define NVCSI_LANE_SWIZZLE_B0A0B1A1	U32_C(0x0E)
+/* 01111 := A0 A1 B0 B1 -->  B0 A0 A1 B1 */
+#define NVCSI_LANE_SWIZZLE_B0A0A1B1	U32_C(0x0F)
+/* 10000 := A0 A1 B0 B1 -->  B0 B1 A1 A0 */
+#define NVCSI_LANE_SWIZZLE_B0B1A1A0	U32_C(0x10)
+/* 10001 := A0 A1 B0 B1 -->  B0 B1 A0 A1 */
+#define NVCSI_LANE_SWIZZLE_B0B1A0A1	U32_C(0x11)
+/* 10010 := A0 A1 B0 B1 -->  B1 A1 B0 A0 */
+#define NVCSI_LANE_SWIZZLE_B1A1B0A0	U32_C(0x12)
+/* 10011 := A0 A1 B0 B1 -->  B1 A1 A0 B0 */
+#define NVCSI_LANE_SWIZZLE_B1A1A0B0	U32_C(0x13)
+/* 10100 := A0 A1 B0 B1 -->  B1 B0 A0 A1 */
+#define NVCSI_LANE_SWIZZLE_B1B0A0A1	U32_C(0x14)
+/* 10101 := A0 A1 B0 B1 -->  B1 B0 A1 A0 */
+#define NVCSI_LANE_SWIZZLE_B1B0A1A0	U32_C(0x15)
+/* 10110 := A0 A1 B0 B1 -->  B1 A0 A1 B0 */
+#define NVCSI_LANE_SWIZZLE_B1A0A1B0	U32_C(0x16)
+/* 10111 := A0 A1 B0 B1 -->  B1 A0 B0 A1 */
+#define NVCSI_LANE_SWIZZLE_B1A0B0A1	U32_C(0x17)
+
+/* NvCsi D-phy polarity */
+#define NVCSI_DPHY_POLARITY_NOSWAP	U32_C(0)
+#define NVCSI_DPHY_POLARITY_SWAP	U32_C(1)
+
+/* NvCsi C-phy polarity */
+#define NVCSI_CPHY_POLARITY_ABC	U32_C(0x00) /* 000 := A B C --> A B C */
+#define NVCSI_CPHY_POLARITY_ACB	U32_C(0x01) /* 001 := A B C --> A C B */
+#define NVCSI_CPHY_POLARITY_BCA	U32_C(0x02) /* 010 := A B C --> B C A */
+#define NVCSI_CPHY_POLARITY_BAC	U32_C(0x03) /* 011 := A B C --> B A C */
+#define NVCSI_CPHY_POLARITY_CAB	U32_C(0x04) /* 100 := A B C --> C A B */
+#define NVCSI_CPHY_POLARITY_CBA	U32_C(0x05) /* 101 := A B C --> C B A */
+
+struct nvcsi_brick_config {
+	/* Select PHY mode for both partitions */
+	uint32_t phy_mode;
+	/* Lane Swizzle control for Bricks.
+	 * Valid in both C-PHY and D-PHY modes */
+	uint32_t lane_swizzle;
+	/* Lane polarity control. Value depends on PhyMode */
+	uint8_t lane_polarity[NVCSI_BRICK_NUM_LANES];
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+struct nvcsi_cil_config {
+	/* Number of data lanes used (0-4) */
+	uint8_t num_lanes;
+	/* LP bypass mode (boolean) */
+	uint8_t lp_bypass_mode;
+	/* Set MIPI THS-SETTLE timing */
+	uint8_t t_hs_settle;
+	/* Set MIPI TCLK-SETTLE timing */
+	uint8_t t_clk_settle;
+	/* NVCSI CIL clock rate [kHz] */
+	uint32_t cil_clock_rate;
+	/* MIPI clock rate for D-Phy. Symbol rate for C-Phy [kHz] */
+	uint32_t mipi_clock_rate;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* NvCsi datatypes */
+#define NVCSI_DATATYPE_UNSPECIFIED	U32_C(0)
+#define NVCSI_DATATYPE_YUV420_8		U32_C(24)
+#define NVCSI_DATATYPE_YUV420_10	U32_C(25)
+#define NVCSI_DATATYPE_LEG_YUV420_8	U32_C(26)
+#define NVCSI_DATATYPE_YUV420CSPS_8	U32_C(28)
+#define NVCSI_DATATYPE_YUV420CSPS_10	U32_C(29)
+#define NVCSI_DATATYPE_YUV422_8		U32_C(30)
+#define NVCSI_DATATYPE_YUV422_10	U32_C(31)
+#define NVCSI_DATATYPE_RGB444		U32_C(32)
+#define NVCSI_DATATYPE_RGB555		U32_C(33)
+#define NVCSI_DATATYPE_RGB565		U32_C(34)
+#define NVCSI_DATATYPE_RGB666		U32_C(35)
+#define NVCSI_DATATYPE_RGB888		U32_C(36)
+#define NVCSI_DATATYPE_RAW6		U32_C(40)
+#define NVCSI_DATATYPE_RAW7		U32_C(41)
+#define NVCSI_DATATYPE_RAW8		U32_C(42)
+#define NVCSI_DATATYPE_RAW10		U32_C(43)
+#define NVCSI_DATATYPE_RAW12		U32_C(44)
+#define NVCSI_DATATYPE_RAW14		U32_C(45)
+#define NVCSI_DATATYPE_RAW16		U32_C(46)
+#define NVCSI_DATATYPE_RAW20		U32_C(47)
+#define NVCSI_DATATYPE_USER_1		U32_C(48)
+#define NVCSI_DATATYPE_USER_2		U32_C(49)
+#define NVCSI_DATATYPE_USER_3		U32_C(50)
+#define NVCSI_DATATYPE_USER_4		U32_C(51)
+#define NVCSI_DATATYPE_USER_5		U32_C(52)
+#define NVCSI_DATATYPE_USER_6		U32_C(53)
+#define NVCSI_DATATYPE_USER_7		U32_C(54)
+#define NVCSI_DATATYPE_USER_8		U32_C(55)
+#define NVCSI_DATATYPE_UNKNOWN		U32_C(64)
+
+/* DEPRECATED - to be removed */
 /** T210 (also exists in T186) */
 #define NVCSI_PATTERN_GENERATOR_T210	U32_C(1)
 /** T186 only */
@@ -460,6 +601,7 @@ struct capture_descriptor {
 /** T194 only */
 #define NVCSI_PATTERN_GENERATOR_T194	U32_C(3)
 
+/* DEPRECATED - to be removed */
 #define NVCSI_DATA_TYPE_Unspecified		U32_C(0)
 #define NVCSI_DATA_TYPE_YUV420_8		U32_C(24)
 #define NVCSI_DATA_TYPE_YUV420_10		U32_C(25)
@@ -483,109 +625,144 @@ struct capture_descriptor {
 #define NVCSI_DATA_TYPE_RAW20			U32_C(47)
 #define NVCSI_DATA_TYPE_Unknown			U32_C(64)
 
-#define NVCSI_TPG_FLAG_PATCH_MODE		U16_C(1)
-#define NVCSI_TPG_FLAG_PHASE_INCREMENT		U16_C(2)
-#define NVCSI_TPG_FLAG_AUTO_STOP		U16_C(4)
+/* NvCsi DPCM ratio */
+#define NVCSI_DPCM_RATIO_BYPASS		U32_C(0)
+#define NVCSI_DPCM_RATIO_10_8_10	U32_C(1)
+#define NVCSI_DPCM_RATIO_10_7_10	U32_C(2)
+#define NVCSI_DPCM_RATIO_10_6_10	U32_C(3)
+#define NVCSI_DPCM_RATIO_12_8_12	U32_C(4)
+#define NVCSI_DPCM_RATIO_12_7_12	U32_C(5)
+#define NVCSI_DPCM_RATIO_12_6_12	U32_C(6)
+#define NVCSI_DPCM_RATIO_14_10_14	U32_C(7)
+#define NVCSI_DPCM_RATIO_14_8_14	U32_C(8)
+#define NVCSI_DPCM_RATIO_12_10_12	U32_C(9)
 
-struct nvcsi_tpg_config_t186
-{
-	/** Enable frame number generation. */
-	uint32_t enable_frame_counter;
+/* NvCsi param type */
+#define NVCSI_PARAM_TYPE_UNSPECIFIED	U32_C(0)
+#define NVCSI_PARAM_TYPE_DPCM		U32_C(1)
+#define NVCSI_PARAM_TYPE_DT_OVERRIDE	U32_C(2)
+#define NVCSI_PARAM_TYPE_WATCHDOG	U32_C(3)
 
-	/** Initial frame number. */
-	uint16_t initial_frame_number;
-
-	/** Virtual channel. */
-	uint8_t virtual_channel;
-
-	/** Stream id. */
-	uint8_t stream;
-
-	/** NVCSI_DATA_TYPE_* */
-	uint32_t data_type;
-
-	/** Size of test image. */
-	uint16_t image_width;
-	uint16_t image_height;
-
-	/** Number of vertical color bars in channel pattern generator. */
-#define NVCSI_NUM_CHANNEL_PG_COLOR_BARS		U32_C(8)
-
-	/** Pixel value for each horizontal color bar (formatted according to DataType). */
-	uint32_t pixel_values[NVCSI_NUM_CHANNEL_PG_COLOR_BARS];
-
+struct nvcsi_dpcm_config {
+	uint32_t dpcm_ratio;
+	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-struct nvcsi_tpg_config_t194
-{
-	/** Virtual channel. */
+struct nvcsi_dt_override_config {
+	uint8_t enable_override;
+	uint8_t __pad8[7];
+	uint32_t override_type;
+	uint32_t exception_type[NVCSI_NUM_NOOVERRIDE_DT];
+} __CAPTURE_IVC_ALIGN;
+
+struct nvcsi_watchdog_config {
+	/* Enable/disable the pixel parser watchdog */
+	uint8_t enable;
+	uint8_t __pad8[3];
+	/* The watchdog timer period */
+	uint32_t period;
+} __CAPTURE_IVC_ALIGN;
+
+/**
+ * NvCsi - TPG attributes
+ */
+
+/* Number of vertical color bars in TPG (t186) */
+#define NVCSI_TPG_NUM_COLOR_BARS U32_C(8)
+
+struct nvcsi_tpg_config_t186 {
+	/* Stream ID */
+	uint8_t stream_id;
+	/* DEPRECATED - to be removed */
+	uint8_t stream;
+	/* Virtual channel ID */
+	uint8_t virtual_channel_id;
+	/* DEPRECATED - to be removed */
 	uint8_t virtual_channel;
-
-	/** NVCSI_DATA_TYPE_* */
-	uint8_t data_type;
-
-	/** NVCSI_TPG_FLAG_* */
-	uint16_t flags;
-
-	/** Frame number generator configuration. */
+	/* Initial frame number */
 	uint16_t initial_frame_number;
-	uint16_t maximum_frame_number;
-
-	/** Size of test image. */
+	uint16_t __pad16;
+	/* Enable frame number generation */
+	uint32_t enable_frame_counter;
+	/* NvCsi datatype */
+	uint32_t datatype;
+	/* DEPRECATED - to be removed */
+	uint32_t data_type;
+	/* Dimensions of test image */
 	uint16_t image_width;
 	uint16_t image_height;
+	/* Pixel value for each horizontal color bar (format according to DT) */
+	uint32_t pixel_values[NVCSI_TPG_NUM_COLOR_BARS];
+} __CAPTURE_IVC_ALIGN;
 
+/* TPG flags for t194 */
+#define NVCSI_TPG_FLAG_PATCH_MODE	U16_C(1)
+#define NVCSI_TPG_FLAG_PHASE_INCREMENT	U16_C(2)
+#define NVCSI_TPG_FLAG_AUTO_STOP	U16_C(4)
+
+struct nvcsi_tpg_config_t194 {
+	/* Virtual channel ID */
+	uint8_t virtual_channel_id;
+	/* DEPRECATED - to be removed */
+	uint8_t virtual_channel;
+	uint16_t __pad16[3];
+	/* NvCsi datatype * */
+	uint8_t datatype;
+	/* DEPRECATED - to be removed */
+	uint8_t data_type;
+	/* NVCSI_TPG_FLAG_* */
+	uint16_t flags;
+	/** Frame number generator configuration */
+	uint16_t initial_frame_number;
+	uint16_t maximum_frame_number;
+	/* Dimensions of test image */
+	uint16_t image_width;
+	uint16_t image_height;
+	/* Embedded data config */
 	uint32_t embedded_line_width;
 	uint32_t embedded_lines_top;
 	uint32_t embedded_lines_bottom;
-
+	/* Lane count */
 	uint32_t lane_count;
-
+	/* Initial phase */
 	uint32_t initial_phase;
-
+	/* Pattern frequency config */
 	uint32_t red_horizontal_init_freq;
 	uint32_t red_vertical_init_freq;
 	uint32_t red_horizontal_freq_rate;
 	uint32_t red_vertical_freq_rate;
-
 	uint32_t green_horizontal_init_freq;
 	uint32_t green_vertical_init_freq;
 	uint32_t green_horizontal_freq_rate;
 	uint32_t green_vertical_freq_rate;
-
 	uint32_t blue_horizontal_init_freq;
 	uint32_t blue_vertical_init_freq;
 	uint32_t blue_horizontal_freq_rate;
 	uint32_t blue_vertical_freq_rate;
 } __CAPTURE_IVC_ALIGN;
 
+union nvcsi_tpg_config {
+	/* T186 pattern generator */
+	struct nvcsi_tpg_config_t186 t186;
+	/* T194 pattern generator */
+	struct nvcsi_tpg_config_t194 t194;
+	/* Reserved size */
+	uint32_t reserved[32];
+};
+
 /*
- * Low level parameters for configuring TPG rate.
+ * TPG rate config, low level parameters
  */
 struct nvcsi_tpg_rate_config {
 	/* Horizontal blanking (clocks) */
 	uint32_t hblank;
-
 	/* Vertical blanking (clocks) */
 	uint32_t vblank;
-
-	/* t194 only: Interval between pixels (clocks) */
+	/* T194 only: Interval between pixels (clocks) */
 	uint32_t pixel_interval;
-
 	/* Reserved for future */
 	uint32_t reserved;
 } __CAPTURE_IVC_ALIGN;
-
-union nvcsi_tpg_config {
-	/** T186 pattern generator */
-	struct nvcsi_tpg_config_t186 t186;
-
-	/** T186 pattern generator */
-	struct nvcsi_tpg_config_t194 t194;
-
-	/** Reserved size */
-	uint32_t reserved[32];
-};
 
 /**
  * ISP capture settings
@@ -735,12 +912,12 @@ struct image_surface {
 	uint32_t offset_hi;
 	uint32_t surface_stride;
 	uint32_t __pad_surf;
-}__CAPTURE_IVC_ALIGN;
+} __CAPTURE_IVC_ALIGN;
 
 struct stats_surface {
 	uint32_t offset;
 	uint32_t offset_hi;
-}__CAPTURE_IVC_ALIGN;
+} __CAPTURE_IVC_ALIGN;
 
 /**
  * Describes ISP capture descriptor
@@ -887,13 +1064,11 @@ struct isp_capture_descriptor {
 
 	/** surfaces related configuration */
 
-	struct
-	{
+	struct {
 		/**
 		 * DEPRECATED. Overfetch information will be moved to ISP program
 		 */
-		struct
-		{
+		struct {
 			uint8_t l_adj_of;
 			uint8_t l_of;
 			uint8_t r_adj_of;
@@ -903,8 +1078,7 @@ struct isp_capture_descriptor {
 		/**
 		 * DEPRECATED. Overfetch information will be moved of ISP program
 		 */
-		struct
-		{
+		struct {
 			uint16_t t_of;
 			uint16_t b_of;
 		} tile_of_config_v CAMRTC_DEPRECATED;
@@ -1020,7 +1194,7 @@ enum isp5_block_enabled {
 	ISP5BLOCK_ENABLED_PRU_HDR = 1U << 2,
 	ISP5BLOCK_ENABLED_AP_DEMOSAIC = 1U << 4,
 	ISP5BLOCK_ENABLED_AP_CAR = 1U << 5,
-	ISP5BLOCK_ENABLED_AP_LTM_MODIFY = 1U <<6,
+	ISP5BLOCK_ENABLED_AP_LTM_MODIFY = 1U << 6,
 	ISP5BLOCK_ENABLED_AP_LTM_STATS = 1U << 7,
 	ISP5BLOCK_ENABLED_AP_FOCUS_METRIC = 1U << 8,
 	ISP5BLOCK_ENABLED_FLICKERBAND = 1U << 9,
@@ -1184,8 +1358,7 @@ struct isp5_program
 	 * ISP extrapolates values outside image borders, so overfetch is needed only
 	 * for borders between tiles.
 	 */
-	struct
-	{
+	struct {
 		/**
 		 * Number of pixels needed from the left side of tile
 		 */

@@ -53,7 +53,6 @@ struct CAPTURE_MSG_HEADER {
 #define CAPTURE_SYNCGEN_DISABLE_REQ		U32_C(0x1C)
 #define CAPTURE_SYNCGEN_DISABLE_RESP		U32_C(0x1D)
 
-
 /**
  * Message types for capture channel messages.
  */
@@ -166,49 +165,6 @@ struct CAPTURE_CHANNEL_RELEASE_RESP_MSG {
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
-/** Setup test pattern generator
- *
- */
-struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG {
-	union nvcsi_tpg_config tpg_config;
-} __CAPTURE_IVC_ALIGN;
-
-struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG {
-	capture_result result;
-	uint32_t __pad;
-} __CAPTURE_IVC_ALIGN;
-
-/** Start test pattern generator
- *
- */
-struct CAPTURE_CHANNEL_TPG_START_REQ_MSG {
-	uint8_t stream;
-	uint8_t channel;
-	uint16_t __pad16;
-	uint32_t __pad;
-	struct nvcsi_tpg_rate_config tpg_rate_config;
-} __CAPTURE_IVC_ALIGN;
-
-struct CAPTURE_CHANNEL_TPG_START_RESP_MSG {
-	capture_result result;
-	uint32_t __pad;
-} __CAPTURE_IVC_ALIGN;
-
-/** Stop test pattern generator
- *
- */
-struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG {
-	uint8_t stream;
-	uint8_t channel;
-	uint16_t __pad16;
-	uint32_t __pad;
-} __CAPTURE_IVC_ALIGN;
-
-struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
-	capture_result result;
-	uint32_t __pad;
-} __CAPTURE_IVC_ALIGN;
-
 /** Configure the piece-wise linear function used by the VI companding module.
  *
  * The companding table is shared by all capture channels and must be
@@ -279,6 +235,167 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 	capture_result result;
 } __CAPTURE_IVC_ALIGN;
 
+/**
+ * Phy IVC messages
+ */
+
+/* Open an Phy stream */
+struct CAPTURE_PHY_STREAM_OPEN_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t __pad8[3];
+	uint32_t phy_type;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_PHY_STREAM_OPEN_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Close an NvPhy stream */
+struct CAPTURE_PHY_STREAM_CLOSE_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t __pad8[3];
+	uint32_t phy_type;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_PHY_STREAM_CLOSE_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Reset an NvPhy stream */
+struct CAPTURE_PHY_STREAM_RESET_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t __pad8[3];
+	uint32_t phy_type;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_PHY_STREAM_RESET_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Debug: Dump Registers for an NvPhy stream */
+struct CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t __pad8[3];
+	uint32_t phy_type;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/**
+ * NvCsi IVC messages
+ */
+
+/* Set config for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t __pad8[7];
+	struct nvcsi_brick_config brick_config;
+	struct nvcsi_cil_config cil_config;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Set DPCM config for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t virtual_channel_id;
+	uint16_t __pad16;
+	uint32_t param_type;
+	union {
+		struct nvcsi_dpcm_config dpcm_config;
+		struct nvcsi_dt_override_config dt_override_config;
+		struct nvcsi_watchdog_config watchdog_config;
+	};
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Set TPG config for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG {
+	union nvcsi_tpg_config tpg_config;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Start TPG for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_TPG_START_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t virtual_channel_id;
+	uint16_t __pad16[3];
+	struct nvcsi_tpg_rate_config tpg_rate_config;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Stop TPG for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t virtual_channel_id;
+	uint16_t __pad16[3];
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* Setup test pattern generator */
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG {
+	union nvcsi_tpg_config tpg_config;
+} __CAPTURE_IVC_ALIGN;
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG {
+	capture_result result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
+/* Start test pattern generator */
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_START_REQ_MSG {
+	uint8_t stream;
+	uint8_t channel;
+	uint16_t __pad16;
+	uint32_t __pad;
+	struct nvcsi_tpg_rate_config tpg_rate_config;
+} __CAPTURE_IVC_ALIGN;
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_START_RESP_MSG {
+	capture_result result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
+/* Stop test pattern generator */
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG {
+	uint8_t stream;
+	uint8_t channel;
+	uint16_t __pad16;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+/* DEPRECATED - to be removed */
+struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
+	capture_result result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
 
 /**
  * Capture ISP channel messages
@@ -303,11 +420,8 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 #define CAPTURE_ISP_PROGRAM_REQUEST_REQ		U32_C(0x05)
 #define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x06)
 
-
-/**
- * Message types for test pattern generator
- */
-
+/* Message types for test pattern generator */
+/* DEPRECATED - to be removed */
 #define CAPTURE_CHANNEL_TPG_SETUP_REQ   U32_C(0x30)
 #define CAPTURE_CHANNEL_TPG_SETUP_RESP  U32_C(0x31)
 #define CAPTURE_CHANNEL_TPG_START_REQ   U32_C(0x32)
@@ -315,6 +429,31 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 #define CAPTURE_CHANNEL_TPG_STOP_REQ    U32_C(0x34)
 #define CAPTURE_CHANNEL_TPG_STOP_RESP   U32_C(0x35)
 
+/**`
+ * Message types for NvPhy
+ */
+#define CAPTURE_PHY_STREAM_OPEN_REQ		U32_C(0x36)
+#define CAPTURE_PHY_STREAM_OPEN_RESP		U32_C(0x37)
+#define CAPTURE_PHY_STREAM_CLOSE_REQ		U32_C(0x38)
+#define CAPTURE_PHY_STREAM_CLOSE_RESP		U32_C(0x39)
+#define CAPTURE_PHY_STREAM_RESET_REQ		U32_C(0x3A)
+#define CAPTURE_PHY_STREAM_RESET_RESP		U32_C(0x3B)
+#define CAPTURE_PHY_STREAM_DUMPREGS_REQ		U32_C(0x3C)
+#define CAPTURE_PHY_STREAM_DUMPREGS_RESP	U32_C(0x3D)
+
+/**
+ * Message types for NvCsi
+ */
+#define CAPTURE_CSI_STREAM_SET_CONFIG_REQ	U32_C(0x40)
+#define CAPTURE_CSI_STREAM_SET_CONFIG_RESP	U32_C(0x41)
+#define CAPTURE_CSI_STREAM_SET_PARAM_REQ	U32_C(0x42)
+#define CAPTURE_CSI_STREAM_SET_PARAM_RESP	U32_C(0x43)
+#define CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ	U32_C(0x44)
+#define CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP	U32_C(0x45)
+#define CAPTURE_CSI_STREAM_TPG_START_REQ	U32_C(0x46)
+#define CAPTURE_CSI_STREAM_TPG_START_RESP	U32_C(0x47)
+#define CAPTURE_CSI_STREAM_TPG_STOP_REQ		U32_C(0x48)
+#define CAPTURE_CSI_STREAM_TPG_STOP_RESP	U32_C(0x49)
 
 /** Set up RTCPU side resources for ISP capture pipe-line.
  *
@@ -374,10 +513,45 @@ struct CAPTURE_CONTROL_MSG {
 		struct CAPTURE_SYNCGEN_DISABLE_REQ_MSG syncgen_disable_req;
 		struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG syncgen_disable_resp;
 
+		struct CAPTURE_PHY_STREAM_OPEN_REQ_MSG phy_stream_open_req;
+		struct CAPTURE_PHY_STREAM_OPEN_RESP_MSG phy_stream_open_resp;
+		struct CAPTURE_PHY_STREAM_CLOSE_REQ_MSG phy_stream_close_req;
+		struct CAPTURE_PHY_STREAM_CLOSE_RESP_MSG phy_stream_close_resp;
+		struct CAPTURE_PHY_STREAM_RESET_REQ_MSG phy_stream_reset_req;
+		struct CAPTURE_PHY_STREAM_RESET_RESP_MSG phy_stream_reset_resp;
+		struct CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG
+			phy_stream_dumpregs_req;
+		struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG
+			phy_stream_dumpregs_resp;
+
+		struct CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG
+			csi_stream_set_config_req;
+		struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG
+			csi_stream_set_config_resp;
+		struct CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG
+			csi_stream_set_param_req;
+		struct CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG
+			csi_stream_set_param_resp;
+		struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG
+			csi_stream_tpg_set_config_req;
+		struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG
+			csi_stream_tpg_set_config_resp;
+		struct CAPTURE_CSI_STREAM_TPG_START_REQ_MSG
+			csi_stream_tpg_start_req;
+		struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG
+			csi_stream_tpg_start_resp;
+		struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG
+			csi_stream_tpg_stop_req;
+		struct CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG
+			csi_stream_tpg_stop_resp;
+
+		/* DEPRECATED - to be removed */
 		struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG tpg_setup_req;
 		struct CAPTURE_CHANNEL_TPG_SETUP_RESP_MSG tpg_setup_resp;
+		/* DEPRECATED - to be removed */
 		struct CAPTURE_CHANNEL_TPG_START_REQ_MSG tpg_start_req;
 		struct CAPTURE_CHANNEL_TPG_START_RESP_MSG tpg_start_resp;
+		/* DEPRECATED - to be removed */
 		struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG tpg_stop_req;
 		struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG tpg_stop_resp;
 
@@ -389,8 +563,6 @@ struct CAPTURE_CONTROL_MSG {
 		CAPTURE_CHANNEL_ISP_RELEASE_RESP_MSG channel_isp_release_resp;
 	};
 } __CAPTURE_IVC_ALIGN;
-
-
 
 /**
  * Enqueue a new capture request on a capture channel.

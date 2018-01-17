@@ -172,7 +172,6 @@ int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
-int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
 u32 gk20a_mm_get_iommu_bit(struct gk20a *g);
 
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,

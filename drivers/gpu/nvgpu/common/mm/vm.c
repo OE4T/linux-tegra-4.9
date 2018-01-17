@@ -60,6 +60,26 @@ int vm_aspace_id(struct vm_gk20a *vm)
 	return vm->as_share ? vm->as_share->id : -1;
 }
 
+/*
+ * Determine how many bits of the address space each last level PDE covers. For
+ * example, for gp10b, with a last level address bit PDE range of 28 to 21 the
+ * amount of memory each last level PDE addresses is 21 bits - i.e 2MB.
+ */
+int nvgpu_vm_pde_coverage_bit_count(struct vm_gk20a *vm)
+{
+	int final_pde_level = 0;
+
+	/*
+	 * Find the second to last level of the page table programming
+	 * heirarchy: the last level is PTEs so we really want the level
+	 * before that which is the last level of PDEs.
+	 */
+	while (vm->mmu_levels[final_pde_level + 2].update_entry)
+		final_pde_level++;
+
+	return vm->mmu_levels[final_pde_level].lo_bit[0];
+}
+
 static void __nvgpu_vm_free_entries(struct vm_gk20a *vm,
 				    struct nvgpu_gmmu_pd *pd,
 				    int level)

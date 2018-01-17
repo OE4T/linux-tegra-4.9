@@ -218,6 +218,8 @@ void nvgpu_vm_put(struct vm_gk20a *vm);
 int vm_aspace_id(struct vm_gk20a *vm);
 int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 
+int nvgpu_vm_pde_coverage_bit_count(struct vm_gk20a *vm);
+
 /* batching eliminates redundant cache flushes and invalidates */
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);
 void nvgpu_vm_mapping_batch_finish(

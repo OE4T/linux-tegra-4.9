@@ -116,11 +116,6 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm)
-{
-	return vm->mmu_levels[0].lo_bit[0];
-}
-
 /* for gk20a the "video memory" apertures here are misnomers. */
 static inline u32 big_valid_pde0_bits(struct gk20a *g,
 				      struct nvgpu_gmmu_pd *pd, u64 addr)

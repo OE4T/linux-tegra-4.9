@@ -165,6 +165,8 @@
 
 #define CFG_LINK_CAP			0x7C
 #define CFG_LINK_CAP_MAX_LINK_SPEED_MASK	0xF
+#define CFG_LINK_CAP_MAX_WIDTH_MASK		0x3F0
+#define CFG_LINK_CAP_MAX_WIDTH_SHIFT		4
 
 #define CFG_LINK_STATUS_CONTROL		0x80
 #define CFG_LINK_STATUS_DLL_ACTIVE	BIT(29)
@@ -1624,6 +1626,12 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	tmp &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
 	tmp |= pcie->max_speed;
 	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, tmp);
+
+	/* Configure Max lane width from DT */
+	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_CAP, 4, &tmp);
+	tmp &= ~CFG_LINK_CAP_MAX_WIDTH_MASK;
+	tmp |= (pp->lanes << CFG_LINK_CAP_MAX_WIDTH_SHIFT);
+	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
 
 	program_gen3_gen4_eq_presets(pp);
 

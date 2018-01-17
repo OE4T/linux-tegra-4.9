@@ -313,7 +313,8 @@ static int si2168_set_frontend(struct dvb_frontend *fe)
 	cmd.args[4] = delivery_system | bandwidth;
 	if (delivery_system == 0xf0)
 		cmd.args[5] |= 2; /* Auto detect DVB-T/T2 */
-	cmd.args[5] |= 1; /* inverted spectrum, eg si2157 */
+	if (dev->spectral_inversion)
+		cmd.args[5] |= 1;
 	cmd.wlen = 6;
 	cmd.rlen = 4;
 	ret = si2168_cmd_execute(client, &cmd);
@@ -762,6 +763,7 @@ static int si2168_probe(struct i2c_client *client,
 	dev->ts_mode = config->ts_mode;
 	dev->ts_clock_inv = config->ts_clock_inv;
 	dev->ts_clock_gapped = config->ts_clock_gapped;
+	dev->spectral_inversion = config->spectral_inversion;
 
 	dev_info(&client->dev, "Silicon Labs Si2168-%c%d%d successfully identified\n",
 		 dev->version >> 24 & 0xff, dev->version >> 16 & 0xff,

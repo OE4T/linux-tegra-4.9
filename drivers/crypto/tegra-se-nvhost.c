@@ -2227,19 +2227,24 @@ static int tegra_se_sha_op(struct ahash_request *req, bool is_last,
 		dev_err(se_dev->dev, "Invalid SHA digest size\n");
 		return -EINVAL;
 	}
-	/* If both the request length and total length are zero, */
-	if (!req->nbytes && !sha_ctx->total_count) {
-		if (is_last) {
+	/* If the request length is zero, */
+	if (!req->nbytes) {
+		if (sha_ctx->total_count) {
+			return 0;	/* allow empty packets */
+		} else {	/* total_count equals zero */
+			if (is_last) {
 			/* If this is the last packet SW WAR for zero
 			 * length SHA operation since SE HW can't accept
 			 * zero length SHA operation.
 			 */
-			mode = sha_ctx->op_mode - SE_AES_OP_MODE_SHA1;
-			memcpy(req->result, zero_vec[mode].digest,
-					zero_vec[mode].size);
-			return 0;
-		} else
-			return 0;	/* empty packets are allowed */
+				mode = sha_ctx->op_mode - SE_AES_OP_MODE_SHA1;
+				memcpy(req->result, zero_vec[mode].digest,
+						zero_vec[mode].size);
+				return 0;
+			} else {
+				return 0;	/* allow empty first packet */
+			}
+		}
 	}
 	mutex_lock(&se_dev->mtx);
 	ret = tegra_se_sha_process_buf(req, is_last, process_cur_req);

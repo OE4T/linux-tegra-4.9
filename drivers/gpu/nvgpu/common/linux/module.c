@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -736,6 +736,11 @@ static int gk20a_pm_railgate(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
+
+	/* if platform is already railgated, then just return */
+	if (platform->is_railgated && platform->is_railgated(dev))
+		return ret;
+
 #ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_gate_start = jiffies;
 

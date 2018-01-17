@@ -2,7 +2,7 @@
  * MC error interrupt handling header file. Various defines and declarations
  * across tegra chips.
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@ struct mc_error {
 #define E_TWO_STATUS (1<<2) /* Two status registers, no addr */
 #define E_VPR        (1<<3) /* VPR violation */
 #define E_ADR_HI_REG (1<<4) /* Hi Addr bits in hi reg */
+#define E_GSC        (1<<5) /* GSC violation */
 
 extern u32 mc_int_mask;
 extern u32  mcerr_silenced;
@@ -141,6 +142,11 @@ struct mcerr_ops {
 
 #define MC_ERR_HI(_sig, _msg, _flags, _stat_reg, _addr_reg, _addr_hi_reg) \
 	{ .sig = _sig, .msg = _msg, .flags = (_flags | E_ADR_HI_REG), \
+	  .stat_reg = _stat_reg, .addr_reg = _addr_reg, \
+	  .addr_hi_reg = _addr_hi_reg}
+
+#define MC_ERR_GSC(_sig, _msg, _flags, _stat_reg, _addr_reg, _addr_hi_reg) \
+	{ .sig = _sig, .msg = _msg, .flags = (_flags | E_GSC), \
 	  .stat_reg = _stat_reg, .addr_reg = _addr_reg, \
 	  .addr_hi_reg = _addr_hi_reg}
 

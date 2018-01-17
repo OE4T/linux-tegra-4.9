@@ -100,6 +100,10 @@ struct bwmgr_ops {
 	unsigned long (*freq_to_bw)(unsigned long freq);
 	unsigned long (*bw_to_freq)(unsigned long bw);
 	u32 (*dvfs_latency)(u32 ufreq);
+	unsigned long (*bwmgr_apply_efficiency)(
+		unsigned long total_bw, unsigned long iso_bw,
+		unsigned long max_rate, u64 usage_flags,
+		unsigned long *iso_bw_min);
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t21x(void);

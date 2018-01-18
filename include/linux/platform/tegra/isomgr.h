@@ -1,7 +1,7 @@
 /*
  * include/mach/isomgr.h
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +20,18 @@
 #ifndef _INCLUDE_MACH_ISOMGR_H
 #define _INCLUDE_MACH_ISOMGR_H
 
+#include <linux/platform/tegra/emc_bwmgr.h>
+
+#define ISOMGR_MAGIC  0x150A1C
+
+/* handle to identify registered client */
+#define tegra_isomgr_handle void *
+
+/* callback to client to renegotiate ISO BW allocation */
+typedef void (*tegra_isomgr_renegotiate)(void *priv,
+					 u32 avail_bw); /* KB/sec */
+
+
 enum tegra_iso_client {
 	TEGRA_ISO_CLIENT_DISP_0,
 	TEGRA_ISO_CLIENT_DISP_1,
@@ -35,12 +47,96 @@ enum tegra_iso_client {
 	TEGRA_ISO_CLIENT_COUNT
 };
 
-/* handle to identify registered client */
-#define tegra_isomgr_handle void *
+struct isoclient_info {
+	enum tegra_iso_client client;
+	char *name;
+	char *dev_name;
+	char *emc_clk_name;
+	enum tegra_bwmgr_client_id bwmgr_id;
+};
 
-/* callback to client to renegotiate ISO BW allocation */
-typedef void (*tegra_isomgr_renegotiate)(void *priv,
-					 u32 avail_bw); /* KB/sec */
+struct isomgr_client {
+	u32 magic;              /* magic to identify handle */
+	struct kref kref;       /* ref counting */
+	s32 dedi_bw;            /* BW dedicated to this client  (KB/sec) */
+	s32 rsvd_bw;            /* BW reserved for this client  (KB/sec) */
+	s32 real_bw;            /* BW realized for this client  (KB/sec) */
+	s32 lti;                /* Client spec'd Latency Tolerance (usec) */
+	s32 lto;                /* MC calculated Latency Tolerance (usec) */
+	s32 rsvd_mf;            /* reserved minimum freq in support of LT */
+	s32 real_mf;            /* realized minimum freq in support of LT */
+	s32 real_mf_rq;         /* real_mf requested */
+	tegra_isomgr_renegotiate renegotiate;   /* ask client to renegotiate */
+	bool realize;           /* bw realization in progress */
+	s32 sleep_bw;           /* sleeping for realize */
+	s32 margin_bw;          /* BW set aside for this client (KB/sec) */
+	u8 limit_bw_percentage; /* Insufficient HW buffers cause BW to be
+				 * limited to this percentage of DRAM BW
+				 */
+	void *priv;             /* client driver's private data */
+	struct completion cmpl; /* so we can sleep waiting for delta BW */
+
+#ifdef CONFIG_COMMON_CLK
+	struct tegra_bwmgr_client *bwmgr_handle;
+#else
+	struct clk *emc_clk;    /* client emc clk for bw */
+#endif
+
+#ifdef CONFIG_TEGRA_ISOMGR_SYSFS
+	struct kobject *client_kobj;
+	struct isomgr_client_attrs {
+		struct kobj_attribute dedi_bw;
+		struct kobj_attribute rsvd_bw;
+		struct kobj_attribute real_bw;
+		struct kobj_attribute lti;
+		struct kobj_attribute lto;
+		struct kobj_attribute rsvd_mf;
+		struct kobj_attribute real_mf;
+		struct kobj_attribute sleep_bw;
+		struct kobj_attribute margin_bw;
+	} client_attrs;
+#endif /* CONFIG_TEGRA_ISOMGR_SYSFS */
+};
+
+struct isomgr {
+	struct mutex lock;              /* to lock ALL isomgr state */
+	struct task_struct *task;       /* check reentrant/mismatched locks */
+
+#ifdef CONFIG_COMMON_CLK
+	struct tegra_bwmgr_client *bwmgr_handle;
+#else
+	struct clk *emc_clk;            /* isomgr emc clock for floor freq */
+#endif
+
+	s32 lt_mf;                      /* min freq to support worst LT */
+	s32 lt_mf_rq;                   /* requested lt_mf */
+	s32 avail_bw;                   /* globally available MC BW */
+	s32 dedi_bw;                    /* total BW 'dedicated' to clients */
+	s32 sleep_bw;                   /* pending bw requirement */
+	u32 max_iso_bw;                 /* max ISO BW MC can accommodate */
+	struct kobject *kobj;           /* for sysfs linkage */
+	struct isomgr_ops *ops;         /* ops structure for isomgr*/
+};
+
+extern struct isoclient_info *isoclient_info;
+extern int isoclients;
+extern bool client_valid[TEGRA_ISO_CLIENT_COUNT];
+extern struct isomgr_client isomgr_clients[TEGRA_ISO_CLIENT_COUNT];
+extern struct isomgr isomgr;
+extern char *cname[];
+
+struct isomgr_ops {
+	void (*isomgr_plat_init)(void);
+	bool (*isomgr_plat_register)(u32 dedi_bw,
+			enum tegra_iso_client client);
+	void (*isomgr_plat_unregister)(struct isomgr_client *cp);
+	bool (*isomgr_plat_reserve)(struct isomgr_client *cp,
+			u32 bw, enum tegra_iso_client client);
+	bool (*isomgr_plat_realize)(struct isomgr_client *cp);
+};
+
+struct isomgr_ops *other_isomgr_init(void);
+struct isomgr_ops *t19x_isomgr_init(void);
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 /* Register an ISO BW client */

@@ -39,6 +39,7 @@
 #define NVLINK_IP_VERSION			2 /* NVLINK VERSION 2.0 */
 #define DEFAULT_LOOP_SLEEP_US			100
 #define DEFAULT_LOOP_TIMEOUT_US			1000000
+#define DEFAULT_IS_NEA				0
 
 struct tegra_nvlink_device {
 	/* base address of SYNC2X */
@@ -71,6 +72,7 @@ struct tegra_nvlink_device {
 	/* Powergate id */
 	int pgid_nvl;
 	struct tegra_prod *prod_list;
+	bool is_nea;
 };
 
 extern const struct single_lane_params entry_100us_sl_params;

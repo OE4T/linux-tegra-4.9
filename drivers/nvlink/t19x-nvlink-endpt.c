@@ -736,6 +736,8 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		goto err_mapping;
 	}
 
+	((struct tegra_nvlink_device *)(ndev->priv))->is_nea = DEFAULT_IS_NEA;
+
 	ndev->irq = platform_get_irq(pdev, 0);
 	if (ndev->irq < 0) {
 		nvlink_err("Couldn't get interrupt listed in device tree");

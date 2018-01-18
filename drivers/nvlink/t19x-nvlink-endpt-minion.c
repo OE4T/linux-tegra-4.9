@@ -750,12 +750,14 @@ int init_nvhs_phy(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-	ret = minion_send_cmd(ndev,
+	if (tdev->is_nea) {
+		ret = minion_send_cmd(ndev,
 				MINION_NVLINK_DL_CMD_COMMAND_SETNEA,
 				0);
-	if (ret < 0) {
-		nvlink_err("Error sending SETNEA command to MINION");
-		goto fail;
+		if (ret < 0) {
+			nvlink_err("Error sending SETNEA command to MINION");
+			goto fail;
+		}
 	}
 
 	reg_val = nvlw_nvl_readl(ndev, NVL_LINK_STATE);

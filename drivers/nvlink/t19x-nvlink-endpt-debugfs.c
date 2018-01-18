@@ -274,6 +274,13 @@ void t19x_nvlink_endpt_debugfs_init(struct nvlink_device *ndev)
 	if (nvlink_single_lane_debugfs_init(ndev) < 0)
 		goto fail;
 
+	if (!debugfs_create_bool("is_nea", (S_IWUSR | S_IRUGO),
+					tdev->tegra_debugfs,
+					&tdev->is_nea)) {
+		nvlink_err("Unable to create debugfs node for is_nea");
+		goto fail;
+	}
+
 	return;
 
 fail:

@@ -55,11 +55,11 @@
 			compatible = "nvidia,tegra194-cpuidle-cluster";
 			cc6 {
 				state-name = "Cluster powergate";
-				wakeup-latency-us = <300>;
-				min-residency-us = <50000>;
+				wakeup-latency-us = <5000>;
+				min-residency-us = <25000>;
 				power = <19>;
 				pmstate = <0x6>;
-				status = "disabled";
+				status = "okay";
 			};
 		};
 
@@ -80,7 +80,7 @@
 
 			thresholds {
 				crossover_c1_c6         = <5000>;
-				crossover_cc1_cc6       = <0>;
+				crossover_cc1_cc6       = <25000>;
 				crossover_cc1_cg7       = <0>;
 			};
 		};

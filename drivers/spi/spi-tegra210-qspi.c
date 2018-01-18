@@ -1,7 +1,7 @@
 /*
  * QSPI driver for NVIDIA's Tegra210 QUAD SPI Controller.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -251,6 +251,7 @@ struct tegra_qspi_data {
 	int					qspi_enable_prod_override;
 	int					qspi_force_pio_mode;
 	int					qspi_force_dma_mode;
+	bool					qspi_force_bus_speed;
 #endif
 };
 
@@ -261,6 +262,9 @@ static void tegra_qspi_clk_disable(struct tegra_qspi_data *tqspi);
 
 static struct tegra_qspi_device_controller_data
 	*tegra_qspi_get_cdata_dt(struct spi_device *spi);
+
+static void set_best_clk_source(struct tegra_qspi_data *tqspi,
+				unsigned long rate);
 
 static unsigned long tegra_qspi_readl(struct tegra_qspi_data *tqspi,
 				      unsigned long reg)
@@ -451,9 +455,14 @@ static ssize_t bus_speed_set(struct device *dev,
 		ret = kstrtol(buf, 10, &speed);
 		if (ret != 0)
 			return -EINVAL;
+		if (speed == 0) {
+			tqspi->qspi_force_bus_speed = false;
+			return count;
+		}
 		if (tqspi->cur_speed != speed) {
 			tqspi->qspi_max_frequency = speed;
 			tqspi->cur_speed = tqspi->qspi_max_frequency;
+			set_best_clk_source(tqspi, speed);
 			ret = clk_set_rate(tqspi->clk, speed);
 			if (ret < 0) {
 				dev_err(tqspi->dev,
@@ -462,17 +471,22 @@ static ssize_t bus_speed_set(struct device *dev,
 				return -EINVAL;
 			}
 			actual_speed = clk_get_rate(tqspi->clk);
-			if (actual_speed > 0) {
+			if (actual_speed <= 0)
+				return -EINVAL;
+			if (tqspi->is_ddr_mode)
 				ret = clk_set_rate(tqspi->sdr_ddr_clk,
 						actual_speed >> 1);
-				if (ret < 0) {
-					dev_err(tqspi->dev,
-							"Failed to set QSPI OUT clock freq: %d\n",
-							ret);
-					return -EINVAL;
-				}
+			else
+				ret = clk_set_rate(tqspi->sdr_ddr_clk,
+						actual_speed);
+			if (ret < 0) {
+				dev_err(tqspi->dev,
+						"Failed to set QSPI OUT clock freq: %d\n",
+						ret);
+				return -EINVAL;
 			}
 		}
+		tqspi->qspi_force_bus_speed = true;
 		return count;
 	}
 
@@ -1260,11 +1274,8 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 					 bool is_single_xfer)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
-	u32 speed;
-
-#ifdef QSPI_BRINGUP
+	u32 speed = 0;
 	u32 actual_speed = 0;
-#endif
 	u8 bits_per_word;
 	unsigned total_fifo_words;
 	int ret;
@@ -1298,7 +1309,8 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	}
 #else
 	num_dummy_cycles = get_dummy_cyl(t->delay_usecs);
-	speed = t->speed_hz;
+	if (!tqspi->qspi_force_bus_speed)
+		speed = t->speed_hz;
 #endif
 	/*
 	 * NOTE:
@@ -1313,7 +1325,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		return ret;
 	if (!speed)
 		speed = tqspi->qspi_max_frequency;
-#ifdef QSPI_BRINGUP
 	if (speed != tqspi->cur_speed) {
 		ret = clk_set_rate(tqspi->clk, speed);
 		if (ret < 0) {
@@ -1337,7 +1348,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		}
 		tqspi->is_ddr_mode = is_ddr;
 	}
-#endif
 	if (is_first_of_msg) {
 		tegra_qspi_clear_status(tqspi);
 
@@ -1921,11 +1931,11 @@ static void tegra_qspi_clk_disable(struct tegra_qspi_data *tqspi)
 	clk_disable_unprepare(tqspi->clk);
 }
 
-static void set_best_clk_source(struct tegra_qspi_data *tqspi)
+static void set_best_clk_source(struct tegra_qspi_data *tqspi,
+				unsigned long rate)
 {
 	long new_rate;
 	unsigned long err_rate;
-	unsigned long rate = tqspi->qspi_max_frequency;
 	unsigned int fin_err = rate;
 	int ret;
 	struct clk *pclk, *fpclk = NULL;
@@ -2170,7 +2180,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		dev_err(tqspi->dev, "Failed to get runtime PM: %d\n", ret);
 		goto exit_pm_disable;
 	}
-	set_best_clk_source(tqspi);
+	set_best_clk_source(tqspi, tqspi->qspi_max_frequency);
 	ret = clk_set_rate(tqspi->clk, tqspi->qspi_max_frequency);
 	if (ret) {
 		dev_err(dev, "Failed to set qspi clk freq %d\n", ret);
@@ -2228,8 +2238,9 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	if (ret  < 0)
 		goto exit_pm_disable;
 
-	return ret;
+	tqspi->qspi_force_bus_speed = false;
 #endif
+	return ret;
 
 exit_pm_disable:
 	pm_runtime_disable(&pdev->dev);

@@ -27,7 +27,7 @@
 					status = "okay";
 					e3377_vi_in0: endpoint {
 						port-index = <0>;
-						bus-width = <4>;
+						bus-width = <8>;
 						remote-endpoint = <&e3377_slvs_ec_out0>;
 					};
 				};
@@ -37,7 +37,11 @@
 		slvs-ec@15ac0000 {
 			status = "okay";
 			streams {
+                                #address-cells = <1>;
+                                #size-cells = <0>;
 				stream@0 {
+                                        reg = <0>;
+                                        lanes = <0 1 2 3 4 5 6 7>;
 					ports {
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -45,7 +49,7 @@
 							reg = <0>;
 							e3377_slvs_ec_in0: endpoint@0 {
 								port-index = <0>;
-								bus-width = <4>;
+								bus-width = <8>;
 								remote-endpoint = <&e3377_imx204_out0>;
 							};
 						};
@@ -96,15 +100,15 @@
 
 			mode0 {
 				mclk_khz = "72000";
-				num_lanes = "2";
+				num_lanes = "8";
 				tegra_sinterface = "serial_a";
 				phy_mode = "SLVS";
 				discontinuous_clk = "no";
 				dpcm_enable = "false";
 				cil_settletime = "0";
 
-				active_w = "1776";
-				active_h = "1318";
+				active_w = "5352";
+				active_h = "3950";
 				pixel_t = "bayer_grbg";
 				readout_orientation = "0";
 				line_length = "6667";
@@ -120,7 +124,6 @@
 				max_framerate = "30";
 				min_exp_time = "13";
 				max_exp_time = "33333";
-				embedded_metadata_height = "1";
 			};
 			ports {
 				#address-cells = <1>;
@@ -129,7 +132,7 @@
 					reg = <0>;
 					e3377_imx204_out0: endpoint {
 						port-index = <0>;
-						bus-width = <4>;
+						bus-width = <8>;
 						remote-endpoint = <&e3377_slvs_ec_in0>;
 					};
 				};
@@ -156,9 +159,9 @@
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
 					/* Driver v4l2 device name */
-					devname = "imx204 spi";
+					devname = "imx204_spi";
 					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/spi@3230000/imx204@0";
+					proc-device-tree = "/proc/device-tree/spi@c260000/imx204@0";
 				};
 			};
 		};

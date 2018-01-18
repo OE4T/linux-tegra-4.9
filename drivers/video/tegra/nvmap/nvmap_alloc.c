@@ -533,7 +533,19 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	nvmap_stats_inc(NS_RELEASE, h->size);
 	nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
 	if (!h->heap_pgalloc) {
+		if (h->vaddr) {
+			struct vm_struct *vm;
+			void *addr = h->vaddr;
+
+			addr -= (h->carveout->base & ~PAGE_MASK);
+			vm = find_vm_area(addr);
+			BUG_ON(!vm);
+			free_vm_area(vm);
+		}
+
 		nvmap_heap_free(h->carveout);
+		nvmap_kmaps_dec(h);
+		h->vaddr = NULL;
 		goto out;
 	} else {
 		int ret = nvmap_heap_pgfree(h);
@@ -548,17 +560,8 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 
 	if (h->vaddr) {
 		nvmap_kmaps_dec(h);
-		if (h->heap_pgalloc) {
-			vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
-		} else {
-			struct vm_struct *vm;
-			void *addr = h->vaddr;
 
-			addr -= (h->carveout->base & ~PAGE_MASK);
-			vm = find_vm_area(addr);
-			BUG_ON(!vm);
-			free_vm_area(vm);
-		}
+		vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
 		h->vaddr = NULL;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,6 +91,69 @@
 						"z IN",			"z Mic";
 					nvidia,dai-link-1 {
 						codec-dai-name = "rt5659-aif1";
+					};
+				};
+			};
+
+			override@7 {
+				target = <&pinmux>;
+				_overlay_ {
+					common {
+						aud_mclk_pbb0 {
+							nvidia,pins = "aud_mclk_pbb0";
+							nvidia,function = "aud";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+						};
+
+						dap1_din_pb1 {
+							nvidia,pins = "dap1_din_pb1";
+							nvidia,function = "i2s1";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+						};
+
+						dap1_dout_pb2 {
+							nvidia,pins = "dap1_dout_pb2";
+							nvidia,function = "i2s1";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+						};
+
+						dap1_fs_pb0 {
+							nvidia,pins = "dap1_fs_pb0";
+							nvidia,function = "i2s1";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+						};
+
+						dap1_sclk_pb3 {
+							nvidia,pins = "dap1_sclk_pb3";
+							nvidia,function = "i2s1";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+						};
+
+						dmic3_clk_pe4 {
+							nvidia,pins = "dmic3_clk_pe4";
+							nvidia,function = "dmic3";
+							nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+						};
+
+						dmic3_dat_pe5 {
+							nvidia,pins = "dmic3_dat_pe5";
+							nvidia,function = "dmic3";
+							nvidia,pull = <TEGRA_PIN_PULL_UP>;
+							nvidia,tristate = <TEGRA_PIN_DISABLE>;
+							nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+						};
 					};
 				};
 			};

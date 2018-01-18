@@ -1,7 +1,7 @@
 /*
  * hdmihdcp.h: hdmi hdcp interface.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -31,6 +31,10 @@
 #define HDCP_RX_STATUS_MSG_REAUTH_REQ	0x0800
 
 #define HDCP_READ_MSG			0x80
+
+#define FUSE_BASE			0x03820000
+#define FUSE_OPT_FT_REV_0		0x128
+#define FUSE_START_SFK			0x5
 
 /* for nvhdcp.state */
 enum tegra_nvhdcp_state {

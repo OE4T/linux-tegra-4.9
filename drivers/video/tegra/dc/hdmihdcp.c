@@ -122,6 +122,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
+void __iomem *g_misc_base;
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -2102,6 +2103,15 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 	if (tegra_platform_is_sim())
 		return;
 
+	if (tegra_dc_is_t19x()) {
+		uint32_t ft_info;
+		/* enable HDCP only if board has SFK */
+		ft_info = readl(g_misc_base + FUSE_OPT_FT_REV_0);
+		/* only fuses with revision id greater than or equal to 0x5 have SFK */
+		if (ft_info < FUSE_START_SFK)
+			return;
+	}
+
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);
 
 	if (hpd) {
@@ -2368,6 +2378,9 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp_head[id] = nvhdcp;
 	nvhdcp_vdbg("%s(): created misc device %s\n", __func__, nvhdcp->name);
 
+	if (tegra_dc_is_t19x())
+		g_misc_base = ioremap(FUSE_BASE, 0x1000);
+
 	return nvhdcp;
 free_workqueue:
 	destroy_workqueue(nvhdcp->downstream_wq);
@@ -2388,6 +2401,8 @@ void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp)
 	i2c_unregister_device(nvhdcp->client);
 	nvhdcp_head[nvhdcp->id] = NULL;
 	kfree(nvhdcp);
+	if (tegra_dc_is_t19x())
+		iounmap(g_misc_base);
 }
 
 #ifdef CONFIG_TEGRA_DEBUG_HDCP

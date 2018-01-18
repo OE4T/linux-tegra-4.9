@@ -542,6 +542,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.enable_snapshot = vgpu_css_enable_snapshot_buffer,
 		.disable_snapshot = vgpu_css_release_snapshot_buffer,
 		.check_data_available = vgpu_css_flush_snapshots,
+		.detach_snapshot = vgpu_css_detach,
 		.set_handled_snapshots = NULL,
 		.allocate_perfmon_ids = NULL,
 		.release_perfmon_ids = NULL,

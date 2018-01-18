@@ -658,6 +658,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.reset_clamp_mask	= BIT(23),
 	.engine_cg_regs		= t19x_nvdla_gating_registers,
 	.engine_can_cg		= true,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
@@ -691,6 +692,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.reset_clamp_mask	= BIT(24),
 	.engine_cg_regs		= t19x_nvdla_gating_registers,
 	.engine_can_cg		= true,
+	.can_powergate		= true,
 };
 #endif
 

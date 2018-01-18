@@ -684,6 +684,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	struct platform_device *pdev = to_platform_device(hda->dev);
 	struct device_node *np = pdev->dev.of_node;
 	int num_codec_slots = 0;
+	struct hdac_bus *bus = azx_bus(chip);
 	int err;
 
 	err = hda_tegra_first_init(chip, pdev);
@@ -693,6 +694,9 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	if (of_property_read_u32(np, "nvidia,max-codec-slot",
 			&num_codec_slots) < 0)
 		num_codec_slots = 0;
+
+	bus->avoid_compact_sdo_bw = of_property_read_bool(np,
+		"nvidia,avoid-compact-sdo-bw");
 
 	/* create codec instances */
 	err = azx_probe_codecs(chip, num_codec_slots);

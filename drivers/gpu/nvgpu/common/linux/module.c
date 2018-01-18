@@ -1105,7 +1105,7 @@ static int nvgpu_read_fuse_overrides(struct gk20a *g)
 
 static int gk20a_probe(struct platform_device *dev)
 {
-	struct nvgpu_os_linux *l;
+	struct nvgpu_os_linux *l = NULL;
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
@@ -1147,15 +1147,17 @@ static int gk20a_probe(struct platform_device *dev)
 
 	err = nvgpu_init_enabled_flags(gk20a);
 	if (err)
-		return err;
+		goto return_err;
 
 	if (nvgpu_platform_is_simulation(gk20a))
 		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);
 
 	gk20a->irq_stall = platform_get_irq(dev, 0);
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);
-	if (gk20a->irq_stall < 0 || gk20a->irq_nonstall < 0)
-		return -ENXIO;
+	if (gk20a->irq_stall < 0 || gk20a->irq_nonstall < 0) {
+		err = -ENXIO;
+		goto return_err;
+	}
 
 	err = devm_request_threaded_irq(&dev->dev,
 			gk20a->irq_stall,
@@ -1166,7 +1168,7 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev,
 			"failed to request stall intr irq @ %d\n",
 				gk20a->irq_stall);
-		return err;
+		goto return_err;
 	}
 	err = devm_request_irq(&dev->dev,
 			gk20a->irq_nonstall,
@@ -1176,7 +1178,7 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev,
 			"failed to request non-stall intr irq @ %d\n",
 				gk20a->irq_nonstall);
-		return err;
+		goto return_err;
 	}
 	disable_irq(gk20a->irq_stall);
 	if (gk20a->irq_stall != gk20a->irq_nonstall)
@@ -1184,7 +1186,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	err = gk20a_init_support(dev);
 	if (err)
-		return err;
+		goto return_err;
 
 	err = nvgpu_read_fuse_overrides(gk20a);
 
@@ -1196,17 +1198,41 @@ static int gk20a_probe(struct platform_device *dev)
 
 	err = nvgpu_probe(gk20a, "gpu.0", INTERFACE_NAME, &nvgpu_class);
 	if (err)
-		return err;
+		goto return_err;
 
 	err = gk20a_pm_init(&dev->dev);
 	if (err) {
 		dev_err(&dev->dev, "pm init failed");
-		return err;
+		goto return_err;
 	}
 
 	gk20a->mm.has_physical_mode = !nvgpu_is_hypervisor_mode(gk20a);
 
 	return 0;
+
+return_err:
+	/*
+	 * Make sure to clean up any memory allocs made in this function -
+	 * especially since we can be called many times due to probe deferal.
+	 */
+	if (gk20a->sim) {
+		struct sim_gk20a_linux *sim_linux;
+		sim_linux = container_of(gk20a->sim,
+					 struct sim_gk20a_linux,
+					 sim);
+		nvgpu_kfree(gk20a, sim_linux);
+	}
+
+	nvgpu_free_enabled_flags(gk20a);
+
+	/*
+	 * Last since the above allocs may use data structures in here.
+	 */
+	nvgpu_kmem_fini(gk20a, NVGPU_KMEM_FINI_FORCE_CLEANUP);
+
+	kfree(l);
+
+	return err;
 }
 
 int nvgpu_remove(struct device *dev, struct class *class)

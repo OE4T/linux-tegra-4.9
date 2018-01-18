@@ -459,8 +459,8 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 		goto out;
 
 	if (isomgr.ops->isomgr_plat_reserve)
-		ret = isomgr.ops->isomgr_plat_reserve(cp, bw
-					(enum tegra_iso_client)client);
+		ret = isomgr.ops->isomgr_plat_reserve(cp, bw,
+				(enum tegra_iso_client)client);
 
 	if (!ret)
 		goto out;
@@ -900,7 +900,11 @@ int __init isomgr_init(void)
 	int i;
 
 	mutex_init(&isomgr.lock);
-	isomgr.ops = other_isomgr_init();
+
+	if (tegra_get_chip_id() == TEGRA194)
+		isomgr.ops = t19x_isomgr_init();
+	else
+		isomgr.ops = other_isomgr_init();
 
 	for (i = 0; ; i++) {
 		if (isoclient_info[i].name)

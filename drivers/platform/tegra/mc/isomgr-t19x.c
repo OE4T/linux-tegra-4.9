@@ -245,5 +245,11 @@ struct isomgr_ops *t19x_isomgr_init(void)
 {
 	isoclient_info = t19x_get_iso_client_info(&isoclients);
 
+	/* On T194, camera cannot tolerate emc frequency changes when active.
+	 * Set emc floor to max when camera is active to avoid
+	 * frequency switching
+	 */
+	isomgr_camera_max_floor_req = 1;
+
 	return &isomgr_ops_t19x;
 }

@@ -86,6 +86,8 @@ char *cname[] = {
 };
 
 struct isoclient_info *isoclient_info;
+/*platform specific flag for requesting max emc floor req for camera client*/
+u8 isomgr_camera_max_floor_req;
 int isoclients;
 bool client_valid[TEGRA_ISO_CLIENT_COUNT];
 struct isomgr_client isomgr_clients[TEGRA_ISO_CLIENT_COUNT];
@@ -144,6 +146,7 @@ static void update_mc_clock(void)
 {
 	int i;
 	u64 floor_freq;
+	unsigned long emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 
 	BUG_ON(mutex_trylock(&isomgr.lock));
 	/* determine worst case freq to satisfy LT */
@@ -171,6 +174,23 @@ static void update_mc_clock(void)
 	}
 
 	for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
+
+		/*max emc floor req when camera is active for t194 */
+		if (i == TEGRA_ISO_CLIENT_TEGRA_CAMERA) {
+			if (isomgr_camera_max_floor_req) {
+				if (isomgr_clients[i].real_mf)
+					tegra_bwmgr_set_emc(
+						isomgr_clients[i].bwmgr_handle,
+						emc_max_rate,
+						TEGRA_BWMGR_SET_EMC_FLOOR);
+				else
+					tegra_bwmgr_set_emc(
+						isomgr_clients[i].bwmgr_handle,
+						0,
+						TEGRA_BWMGR_SET_EMC_FLOOR);
+			}
+		}
+
 		if (isomgr_clients[i].real_mf != isomgr_clients[i].real_mf_rq) {
 			/* Ignore clocks for clients that are non-existent. */
 #ifdef CONFIG_COMMON_CLK

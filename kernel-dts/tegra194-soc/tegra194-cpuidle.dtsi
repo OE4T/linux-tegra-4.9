@@ -32,8 +32,8 @@
 			C6: c6 {
 				compatible = "nvidia,tegra194-cpuidle-core";
 				state-name = "Virtual core powergate";
-				wakeup-latency-us = <190>;
-				min-residency-us = <0xffffffff>;
+				wakeup-latency-us = <2000>;
+				min-residency-us = <5000>;
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;
@@ -79,7 +79,7 @@
 			compatible = "nvidia,tegra194-cpuidle-thresholds";
 
 			thresholds {
-				crossover_c1_c6         = <0>;
+				crossover_c1_c6         = <5000>;
 				crossover_cc1_cc6       = <0>;
 				crossover_cc1_cg7       = <0>;
 			};

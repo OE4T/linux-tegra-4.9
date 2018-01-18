@@ -1,6 +1,6 @@
 /*
  * GV11B MM
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,9 +23,6 @@
 
 #ifndef MM_GV11B_H
 #define MM_GV11B_H
-
-#define HW_FAULT_BUF_STATUS_ALLOC_TRUE	1
-#define HW_FAULT_BUF_STATUS_ALLOC_FALSE	0
 
 struct gk20a;
 struct nvgpu_mem;

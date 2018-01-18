@@ -126,8 +126,6 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 		return;
 	}
 
-	g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] =
-			 HW_FAULT_BUF_STATUS_ALLOC_TRUE;
 	*hub_intr_types |= HUB_INTR_TYPE_NONREPLAY;
 
 	err = nvgpu_dma_alloc_map_sys(vm, fb_size,
@@ -138,8 +136,7 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 		/* Fault will be snapped in pri reg but not in buffer */
 		return;
 	}
-	g->mm.hw_fault_buf_status[REPLAY_REG_INDEX] =
-			 HW_FAULT_BUF_STATUS_ALLOC_TRUE;
+
 	*hub_intr_types |= HUB_INTR_TYPE_REPLAY;
 }
 
@@ -165,21 +162,13 @@ static void gv11b_mm_mmu_hw_fault_buf_deinit(struct gk20a *g)
 						 FAULT_BUF_DISABLED);
 	}
 
-	if (g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] ==
-				 HW_FAULT_BUF_STATUS_ALLOC_TRUE) {
+	if (nvgpu_mem_is_valid(
+		    &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]))
 		nvgpu_dma_unmap_free(vm,
 			 &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]);
-		g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] =
-				 HW_FAULT_BUF_STATUS_ALLOC_FALSE;
-	}
-
-	if (g->mm.hw_fault_buf_status[REPLAY_REG_INDEX] ==
-				 HW_FAULT_BUF_STATUS_ALLOC_TRUE) {
+	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]))
 		nvgpu_dma_unmap_free(vm,
 			 &g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
-		g->mm.hw_fault_buf_status[REPLAY_REG_INDEX] =
-				 HW_FAULT_BUF_STATUS_ALLOC_FALSE;
-	}
 }
 
 void gv11b_mm_remove_bar2_vm(struct gk20a *g)
@@ -196,14 +185,11 @@ void gv11b_mm_remove_bar2_vm(struct gk20a *g)
 
 static void gv11b_mm_mmu_fault_setup_hw(struct gk20a *g)
 {
-	if (g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] ==
-				 HW_FAULT_BUF_STATUS_ALLOC_TRUE) {
+	if (nvgpu_mem_is_valid(
+			&g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]))
 		gv11b_fb_fault_buf_configure_hw(g, NONREPLAY_REG_INDEX);
-	}
-	if (g->mm.hw_fault_buf_status[REPLAY_REG_INDEX] ==
-				 HW_FAULT_BUF_STATUS_ALLOC_TRUE) {
+	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]))
 		gv11b_fb_fault_buf_configure_hw(g, REPLAY_REG_INDEX);
-	}
 }
 
 static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
@@ -213,11 +199,6 @@ static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_init(&g->mm.hub_isr_mutex);
-
-	g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] =
-				 HW_FAULT_BUF_STATUS_ALLOC_FALSE;
-	g->mm.hw_fault_buf_status[REPLAY_REG_INDEX] =
-				 HW_FAULT_BUF_STATUS_ALLOC_FALSE;
 
 	g->mm.hub_intr_types = HUB_INTR_TYPE_ECC_UNCORRECTED;
 

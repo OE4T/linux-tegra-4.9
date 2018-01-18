@@ -35,6 +35,23 @@
 		android {
 			compatible = "android,firmware";
 			hardware = "galen";
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/3460000.sdhci/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro";
+					fsmgr_flags = "wait,slotselect";
+				};
+				odm {
+					compatible = "android,odm";
+					dev = "/dev/block/platform/3460000.sdhci/by-name/odm";
+					type = "ext4";
+					mnt_flags = "ro";
+					fsmgr_flags = "wait,slotselect";
+				};
+			};
 		};
 	};
 

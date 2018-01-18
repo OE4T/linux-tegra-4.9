@@ -695,6 +695,30 @@ void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_bes_crop_debug3_r(), val);
 }
 
+void gr_gp10b_set_bes_crop_debug4(struct gk20a *g, u32 data)
+{
+	u32 val;
+
+	nvgpu_log_fn(g, " ");
+
+	val = gk20a_readl(g, gr_bes_crop_debug4_r());
+	if (data & NVC097_BES_CROP_DEBUG4_CLAMP_FP_BLEND_TO_MAXVAL) {
+		val = set_field(val,
+			gr_bes_crop_debug4_clamp_fp_blend_m(),
+			gr_bes_crop_debug4_clamp_fp_blend_to_maxval_f());
+	} else if (data & NVC097_BES_CROP_DEBUG4_CLAMP_FP_BLEND_TO_INF) {
+		val = set_field(val,
+			gr_bes_crop_debug4_clamp_fp_blend_m(),
+			gr_bes_crop_debug4_clamp_fp_blend_to_inf_f());
+	} else {
+		nvgpu_warn(g,
+			"gr_gp10b_set_bes_crop_debug4: wrong data sent!");
+		return;
+	}
+	gk20a_writel(g, gr_bes_crop_debug4_r(), val);
+}
+
+
 int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -735,6 +759,9 @@ int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_BES_CROP_DEBUG3:
 			g->ops.gr.set_bes_crop_debug3(g, data);
+			break;
+		case NVC097_SET_BES_CROP_DEBUG4:
+			g->ops.gr.set_bes_crop_debug4(g, data);
 			break;
 		default:
 			goto fail;

@@ -49,8 +49,12 @@ enum {
 #define NVC097_SET_CIRCULAR_BUFFER_SIZE		0x1280
 #define NVC097_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC097_SET_BES_CROP_DEBUG3		0x10c4
+#define NVC097_SET_BES_CROP_DEBUG4		0x10b0
 #define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC0C0_SET_RD_COALESCE			0x0228
+
+#define NVC097_BES_CROP_DEBUG4_CLAMP_FP_BLEND_TO_INF	0x0
+#define NVC097_BES_CROP_DEBUG4_CLAMP_FP_BLEND_TO_MAXVAL 0x1
 
 int gr_gp10b_init_fs_state(struct gk20a *g);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
@@ -85,6 +89,7 @@ int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 u32 gr_gp10b_pagepool_default_size(struct gk20a *g);
 int gr_gp10b_calc_global_ctx_buffer_size(struct gk20a *g);
 void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data);
+void gr_gp10b_set_bes_crop_debug4(struct gk20a *g, u32 data);
 int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data);
 void gr_gp10b_cb_size_default(struct gk20a *g);

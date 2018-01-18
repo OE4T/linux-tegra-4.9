@@ -110,6 +110,9 @@ int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 		case NVC097_SET_BES_CROP_DEBUG3:
 			g->ops.gr.set_bes_crop_debug3(g, data);
 			break;
+		case NVC097_SET_BES_CROP_DEBUG4:
+			g->ops.gr.set_bes_crop_debug4(g, data);
+			break;
 		default:
 			goto fail;
 		}

@@ -3732,6 +3732,22 @@ static inline u32 gr_bes_crop_debug3_blendopt_fill_override_enabled_f(void)
 {
 	return 0x4U;
 }
+static inline u32 gr_bes_crop_debug4_r(void)
+{
+	return 0x0040894cU;
+}
+static inline u32 gr_bes_crop_debug4_clamp_fp_blend_m(void)
+{
+	return 0x1U << 18U;
+}
+static inline u32 gr_bes_crop_debug4_clamp_fp_blend_to_inf_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_bes_crop_debug4_clamp_fp_blend_to_maxval_f(void)
+{
+	return 0x40000U;
+}
 static inline u32 gr_bes_crop_settings_r(void)
 {
 	return 0x00408958U;

@@ -609,6 +609,13 @@
 		iommus = <&smmu TEGRA_SID_HDA>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
 		nvidia,max-codec-slot = <8>;
+
+		/* below property is a WAR due to a HW bug, which causes random
+		 * behavior with audio playback, bug 200379206.
+		 * More details in HDA spec(revision 1.0a, section - 5.3.2.3)
+		 */
+		nvidia,avoid-compact-sdo-bw;
+
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			 <&bpmp_clks TEGRA194_CLK_MAUD>,
 			 <&bpmp_clks TEGRA194_CLK_HDA>,

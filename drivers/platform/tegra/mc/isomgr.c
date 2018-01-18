@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/isomgr.c
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,9 +12,6 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #define pr_fmt(fmt)	"%s(): " fmt, __func__
@@ -52,29 +49,6 @@
 #include <trace/events/isomgr.h>
 
 #define ISOMGR_SYSFS_VERSION 0	/* increment on change */
-#define ISOMGR_DEBUG 1
-
-#if ISOMGR_DEBUG
-#define SANITY_CHECK_AVAIL_BW() { \
-	int t = 0; \
-	int idx = 0; \
-	for (idx = 0; idx < TEGRA_ISO_CLIENT_COUNT; idx++) { \
-		if (isomgr_clients[idx].real_bw >= \
-		    isomgr_clients[idx].margin_bw) \
-			t += isomgr_clients[idx].real_bw; \
-		else \
-			t += isomgr_clients[idx].margin_bw; \
-	} \
-	if (t + isomgr.avail_bw != isomgr.max_iso_bw) { \
-		pr_err("bw mismatch, line=%d\n", __LINE__); \
-		pr_err("t+isomgr.avail_bw=%d, isomgr.max_iso_bw=%d\n", \
-			t + isomgr.avail_bw, isomgr.max_iso_bw); \
-		BUG(); \
-	} \
-}
-#else
-#define SANITY_CHECK_AVAIL_BW()
-#endif
 
 #define VALIDATE_HANDLE() \
 do { \
@@ -96,7 +70,7 @@ do { \
 /* To allow test code take over control */
 static bool test_mode;
 
-static char *cname[] = {
+char *cname[] = {
 	"disp_0",
 	"disp_1",
 	"disp_2",
@@ -111,399 +85,17 @@ static char *cname[] = {
 	"unknown"
 };
 
-struct isoclient_info {
-	enum tegra_iso_client client;
-	char *name;
-	char *dev_name;
-	char *emc_clk_name;
-	enum tegra_bwmgr_client_id bwmgr_id;
-};
-
-static struct isoclient_info *isoclient_info;
-static int isoclients;
-static bool client_valid[TEGRA_ISO_CLIENT_COUNT];
-static int iso_bw_percentage = 100;
-
-static struct isoclient_info tegra_null_isoclients[] = {
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra11x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.dev_name = "tegradc.0",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.dev_name = "tegradc.1",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_VI_0,
-		.name = "vi_0",
-		.dev_name = "vi",
-		.emc_clk_name = "emc",
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra14x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.dev_name = "tegradc.0",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.dev_name = "tegradc.1",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_VI_0,
-		.name = "vi_0",
-		.dev_name = "vi",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_BBC_0,
-		.name = "bbc_0",
-		.dev_name = "tegra_bb.0",
-		.emc_clk_name = "emc_bw",
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra12x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.dev_name = "tegradc.0",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.dev_name = "tegradc.1",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_VI_0,
-		.name = "vi_0",
-		.dev_name = "tegra_vi",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_A,
-		.name = "isp_a",
-		.dev_name = "tegra_isp.0",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_B,
-		.name = "isp_b",
-		.dev_name = "tegra_isp.1",
-		.emc_clk_name = "emc",
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
-		.name = "tegra_camera",
-		.dev_name = "tegra_camera_ctrl",
-		.emc_clk_name = "iso.emc",
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra21x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.dev_name = "tegradc.0",
-		.emc_clk_name = "emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP0,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.dev_name = "tegradc.1",
-		.emc_clk_name = "emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP1,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_VI_0,
-		.name = "vi_0",
-		.dev_name = "tegra_vi",
-		.emc_clk_name = "emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_VI,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_A,
-		.name = "isp_a",
-		.dev_name = "tegra_isp.0",
-		.emc_clk_name = "emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_B,
-		.name = "isp_b",
-		.dev_name = "tegra_isp.1",
-		.emc_clk_name = "emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPB,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
-		.name = "tegra_camera",
-		.dev_name = "tegra_camera_ctrl",
-		.emc_clk_name = "iso.emc",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_CAMERA,
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra18x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP0,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP1,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_2,
-		.name = "disp_2",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP2,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_A,
-		.name = "isp_a",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
-		.name = "camera",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_CAMERA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_APE_ADMA,
-		.name = "ape_adma",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_APE_ADMA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_EQOS,
-		.name = "eqos",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_EQOS,
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static struct isoclient_info tegra19x_isoclients[] = {
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_0,
-		.name = "disp_0",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP0,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_1,
-		.name = "disp_1",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP1,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_DISP_2,
-		.name = "disp_2",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP2,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_ISP_A,
-		.name = "isp_a",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
-		.name = "camera",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_CAMERA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_APE_ADMA,
-		.name = "ape_adma",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_APE_ADMA,
-	},
-	{
-		.client = TEGRA_ISO_CLIENT_EQOS,
-		.name = "eqos",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_EQOS,
-	},
-	/* This must be last entry*/
-	{
-		.client = TEGRA_ISO_CLIENT_COUNT,
-		.name = NULL,
-	},
-};
-
-static void isomgr_scatter(int client);
-
-#define ISOMGR_MAGIC  0x150A1C
-static struct isomgr_client {
-	u32 magic;		/* magic to identify handle */
-	struct kref kref;	/* ref counting */
-	s32 dedi_bw;		/* BW dedicated to this client	(KB/sec) */
-	s32 rsvd_bw;		/* BW reserved for this client	(KB/sec) */
-	s32 real_bw;		/* BW realized for this client	(KB/sec) */
-	s32 lti;		/* Client spec'd Latency Tolerance (usec) */
-	s32 lto;		/* MC calculated Latency Tolerance (usec) */
-	s32 rsvd_mf;		/* reserved minimum freq in support of LT */
-	s32 real_mf;		/* realized minimum freq in support of LT */
-	s32 real_mf_rq;		/* real_mf requested */
-	tegra_isomgr_renegotiate renegotiate;	/* ask client to renegotiate */
-	bool realize;		/* bw realization in progress */
-	s32 sleep_bw;		/* sleeping for realize */
-	s32 margin_bw;		/* BW set aside for this client	(KB/sec) */
-	u8 limit_bw_percentage; /* Insufficient HW buffers cause BW to be
-				 * limited to this percentage of DRAM BW
-				 */
-	void *priv;		/* client driver's private data */
-	struct completion cmpl;	/* so we can sleep waiting for delta BW */
-
-#ifdef CONFIG_COMMON_CLK
-	struct tegra_bwmgr_client *bwmgr_handle;
-#else
-	struct clk *emc_clk;	/* client emc clk for bw */
-#endif
-
-#ifdef CONFIG_TEGRA_ISOMGR_SYSFS
-	struct kobject *client_kobj;
-	struct isomgr_client_attrs {
-		struct kobj_attribute dedi_bw;
-		struct kobj_attribute rsvd_bw;
-		struct kobj_attribute real_bw;
-		struct kobj_attribute lti;
-		struct kobj_attribute lto;
-		struct kobj_attribute rsvd_mf;
-		struct kobj_attribute real_mf;
-		struct kobj_attribute sleep_bw;
-		struct kobj_attribute margin_bw;
-	} client_attrs;
-#endif /* CONFIG_TEGRA_ISOMGR_SYSFS */
-} isomgr_clients[TEGRA_ISO_CLIENT_COUNT];
-
-static struct {
-	struct mutex lock;		/* to lock ALL isomgr state */
-	struct task_struct *task;	/* check reentrant/mismatched locks */
-
-#ifdef CONFIG_COMMON_CLK
-	struct tegra_bwmgr_client *bwmgr_handle;
-#else
-	struct clk *emc_clk;		/* isomgr emc clock for floor freq */
-#endif
-
-	s32 lt_mf;			/* min freq to support worst LT */
-	s32 lt_mf_rq;			/* requested lt_mf */
-	s32 avail_bw;			/* globally available MC BW */
-	s32 dedi_bw;			/* total BW 'dedicated' to clients */
-	s32 sleep_bw;			/* pending bw requirement */
-	u32 max_iso_bw;			/* max ISO BW MC can accomodate */
-	struct kobject *kobj;		/* for sysfs linkage */
-} isomgr = {
+struct isoclient_info *isoclient_info;
+int isoclients;
+bool client_valid[TEGRA_ISO_CLIENT_COUNT];
+struct isomgr_client isomgr_clients[TEGRA_ISO_CLIENT_COUNT];
+struct isomgr isomgr = {
 	.max_iso_bw = CONFIG_TEGRA_ISOMGR_POOL_KB_PER_SEC,
 	.avail_bw = CONFIG_TEGRA_ISOMGR_POOL_KB_PER_SEC,
 };
 
-static struct isoclient_info *get_iso_client_info(int *length)
-{
-	enum tegra_chipid cid;
-	struct isoclient_info *cinfo;
-	int i, len;
+static void isomgr_scatter(int client);
 
-	cid = tegra_get_chip_id();
-	switch (cid) {
-	case TEGRA114:
-		cinfo = tegra11x_isoclients;
-		len = ARRAY_SIZE(tegra11x_isoclients);
-		iso_bw_percentage = 50;
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
-			isomgr_clients[i].limit_bw_percentage = 100;
-		break;
-	case TEGRA148:
-		cinfo = tegra14x_isoclients;
-		len = ARRAY_SIZE(tegra14x_isoclients);
-		iso_bw_percentage = 50;
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
-			isomgr_clients[i].limit_bw_percentage = 100;
-		break;
-	case TEGRA124:
-	case TEGRA132:
-		cinfo = tegra12x_isoclients;
-		len = ARRAY_SIZE(tegra12x_isoclients);
-		iso_bw_percentage = 50;
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
-			isomgr_clients[i].limit_bw_percentage = 100;
-		break;
-	case TEGRA210:
-		cinfo = tegra21x_isoclients;
-		iso_bw_percentage = 45; /* Hack: Should be determined based on
-					 * DRAM type
-					 */
-		len = ARRAY_SIZE(tegra21x_isoclients);
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
-			isomgr_clients[i].limit_bw_percentage = 100;
-		break;
-	case TEGRA186:
-		cinfo = tegra18x_isoclients;
-		len = ARRAY_SIZE(tegra18x_isoclients);
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
-			if (i == TEGRA_ISO_CLIENT_TEGRA_CAMERA)
-				isomgr_clients[i].limit_bw_percentage = 10;
-			else
-				isomgr_clients[i].limit_bw_percentage = 100;
-		}
-		break;
-	case TEGRA194:
-		cinfo = tegra19x_isoclients;
-		len = ARRAY_SIZE(tegra19x_isoclients);
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
-			isomgr_clients[i].limit_bw_percentage = 100;
-		break;
-	default:
-		cinfo = tegra_null_isoclients;
-		len = 0;
-		break;
-	}
-
-	if (length)
-		*length = len;
-
-	return cinfo;
-}
 /* get minimum MC frequency for client that can support this BW and LT */
 static inline u32 mc_min_freq(u32 ubw, u32 ult) /* in KB/sec and usec */
 {
@@ -651,10 +243,9 @@ static void unregister_iso_client(struct kref *kref)
 	isomgr_lock();
 	BUG_ON(cp->realize);
 
-	if (cp->real_bw > cp->margin_bw)
-		isomgr.avail_bw += cp->real_bw;
-	else
-		isomgr.avail_bw += cp->margin_bw;
+	if (isomgr.ops->isomgr_plat_unregister)
+		isomgr.ops->isomgr_plat_unregister(cp);
+
 	isomgr.dedi_bw -= cp->dedi_bw;
 	purge_isomgr_client(cp);
 	update_mc_clock();
@@ -735,6 +326,7 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 			tegra_isomgr_renegotiate renegotiate, void *priv)
 {
 	s32 dedi_bw = udedi_bw;
+	bool ret = 0;
 	struct isomgr_client *cp = NULL;
 
 	VALIDATE_CLIENT();
@@ -750,30 +342,11 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 	if (unlikely(atomic_read(&cp->kref.refcount)))
 		goto fail_unlock;
 
-	if (unlikely(dedi_bw > isomgr.max_iso_bw - isomgr.dedi_bw)) {
-#ifdef CONFIG_TEGRA_ISOMGR_MAX_ISO_BW_QUIRK
-		int i;
-		WARN(1, "max_iso_bw is relaxed to %dKB from %dKB",
-			dedi_bw + isomgr.dedi_bw, isomgr.max_iso_bw);
-		isomgr.avail_bw += dedi_bw + isomgr.dedi_bw -
-				   isomgr.max_iso_bw;
-		isomgr.max_iso_bw = dedi_bw + isomgr.dedi_bw;
-		pr_info("ISO BW usage:\n");
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
-			if (!client_valid[i])
-				continue;
-			pr_info("client=%s, iso dedi bw=%dKB\n",
-				cname[i],
-				(client == i) ? dedi_bw :
-				isomgr_clients[i].dedi_bw);
-		}
-		pr_info("revisit BW usage of iso clients\n");
-#else
-		pr_err("iso bandwidth %uKB is not available, client %s\n",
-			dedi_bw, cname[client]);
+	if (isomgr.ops->isomgr_plat_register)
+		ret = isomgr.ops->isomgr_plat_register(dedi_bw, client);
+
+	if (!ret)
 		goto fail_unlock;
-#endif
-	}
 
 	purge_isomgr_client(cp);
 	cp->magic = ISOMGR_MAGIC;
@@ -860,8 +433,8 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 			 u32 ubw, u32 ult)
 {
 	s32 bw = ubw;
-	u64 bw_check;
-	u32 mf, max_emc_bw, dvfs_latency = 0;
+	bool ret = 0;
+	u32 mf, dvfs_latency = 0;
 	struct isomgr_client *cp = (struct isomgr_client *) handle;
 	int client = cp - &isomgr_clients[0];
 
@@ -882,32 +455,16 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 	if (unlikely(cp->realize))
 		goto out;
 
-	if (bw <= cp->margin_bw)
-		goto bw_limit_check;
-
 	if (unlikely(!cp->renegotiate && bw > cp->dedi_bw))
 		goto out;
 
-	if (bw > cp->dedi_bw &&
-	    bw > isomgr.avail_bw + cp->real_bw - isomgr.sleep_bw)
+	if (isomgr.ops->isomgr_plat_reserve)
+		ret = isomgr.ops->isomgr_plat_reserve(cp, bw
+					(enum tegra_iso_client)client);
+
+	if (!ret)
 		goto out;
 
-bw_limit_check:
-	/* During reserve, check if BW request is within limit_bw_percentage%
-	 * of max emc bw. Using max emc bw to find if the request is possible
-	 * when we raise the freq to max possible value. If not, the reserve
-	 * call will fail
-	 */
-#ifdef CONFIG_COMMON_CLK
-	max_emc_bw = bwmgr_freq_to_bw(tegra_bwmgr_get_max_emc_rate() / 1000);
-#else
-	max_emc_bw = tegra_emc_freq_req_to_bw(
-		clk_round_rate(clk_get_parent(isomgr.emc_clk), ULONG_MAX)
-		/ 1000);
-#endif
-	bw_check = ((u64)max_emc_bw * (u64)(cp->limit_bw_percentage) / 100);
-	if (bw > bw_check)
-		goto out;
 	/* Look up MC's min freq that could satisfy requested BW and LT */
 	mf = mc_min_freq(ubw, ult);
 	/* Look up MC's dvfs latency at min freq */
@@ -956,7 +513,7 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 {
 	bool retry = false;
 	u32 dvfs_latency = 0;
-	s32 delta_bw = 0;
+	bool ret = 0;
 	struct isomgr_client *cp = (struct isomgr_client *) handle;
 	int client = cp - &isomgr_clients[0];
 
@@ -975,37 +532,14 @@ retry:
 
 	if (!retry)
 		trace_tegra_isomgr_realize(handle, cname[client], "enter");
-	if (cp->margin_bw < cp->real_bw)
-		isomgr.avail_bw += cp->real_bw - cp->margin_bw;
-	cp->real_bw = 0;
-	cp->realize = true;
-	BUG_ON(isomgr.avail_bw > isomgr.max_iso_bw);
 
-	if (cp->rsvd_bw <= cp->margin_bw) {
-		BUG_ON(cp->sleep_bw);
-		cp->real_bw = cp->rsvd_bw; /* reservation has been realized */
-		cp->real_mf = cp->rsvd_mf; /* minimum frequency realized */
-	} else if (cp->rsvd_bw <= isomgr.avail_bw + cp->margin_bw) {
-		delta_bw = cp->rsvd_bw - cp->margin_bw;
-		isomgr.avail_bw -= delta_bw;
-		cp->real_bw = cp->rsvd_bw; /* reservation has been realized */
-		cp->real_mf = cp->rsvd_mf; /* minimum frequency realized */
-		if (cp->sleep_bw) {
-			isomgr.sleep_bw -= delta_bw;
-			cp->sleep_bw -= delta_bw;
-			BUG_ON(cp->sleep_bw);
-		}
-		BUG_ON(isomgr.avail_bw < 0);
-		SANITY_CHECK_AVAIL_BW();
-	} else {
+	if (isomgr.ops->isomgr_plat_realize)
+		ret = isomgr.ops->isomgr_plat_realize(cp);
+
+	if (!ret) {
 		/* Protection from first scavenge failure */
-		if (!cp->sleep_bw) {
-			delta_bw = cp->rsvd_bw - cp->margin_bw;
-			SANITY_CHECK_AVAIL_BW();
-			isomgr.sleep_bw += delta_bw;
-			BUG_ON(cp->sleep_bw);
-			cp->sleep_bw += delta_bw;
-		}
+		/* This part of the code is only executed for pre t194*/
+		/* This will be removed later*/
 		kref_put(&cp->kref, unregister_iso_client);
 		isomgr_unlock();
 		isomgr_scavenge(client);
@@ -1364,11 +898,9 @@ static inline void isomgr_create_sysfs(void) {};
 int __init isomgr_init(void)
 {
 	int i;
-	unsigned int max_emc_clk;
-	unsigned int max_emc_bw;
 
 	mutex_init(&isomgr.lock);
-	isoclient_info = get_iso_client_info(&isoclients);
+	isomgr.ops = other_isomgr_init();
 
 	for (i = 0; ; i++) {
 		if (isoclient_info[i].name)
@@ -1390,24 +922,7 @@ int __init isomgr_init(void)
 		return 0;
 	}
 
-	if (!isomgr.max_iso_bw) {
-#ifdef CONFIG_COMMON_CLK
-		max_emc_clk = tegra_bwmgr_get_max_emc_rate() / 1000;
-		max_emc_bw = bwmgr_freq_to_bw(max_emc_clk);
-		isomgr.max_iso_bw = max_emc_bw *
-			bwmgr_iso_bw_percentage_max() / 100;
-#else
-		/* With DVFS disabled, bus children cannot get real max emc freq supported
-		 * Only the root parent EMC node is set to max possible rate*/
-		max_emc_clk = clk_round_rate(clk_get_parent(isomgr.emc_clk), ULONG_MAX) / 1000;
-		max_emc_bw = tegra_emc_freq_req_to_bw(max_emc_clk);
-		/* ISO clients can use iso_bw_percentage of max emc bw. */
-		isomgr.max_iso_bw = max_emc_bw * iso_bw_percentage / 100;
-#endif
-		pr_info("iso emc max clk=%dKHz\n", max_emc_clk);
-		pr_info("max_iso_bw=%dKB\n", isomgr.max_iso_bw);
-		isomgr.avail_bw = isomgr.max_iso_bw;
-	}
+	isomgr.ops->isomgr_plat_init();
 
 	for (i = 0; i < isoclients; i++) {
 		if (isoclient_info[i].name) {
@@ -1483,9 +998,9 @@ void test_tegra_isomgr_unregister(tegra_isomgr_handle handle)
 }
 EXPORT_SYMBOL(test_tegra_isomgr_unregister);
 
+/* bw in KB/sec and lt in usec*/
 u32 test_tegra_isomgr_reserve(tegra_isomgr_handle handle,
-			 u32 bw,	/* KB/sec */
-			 u32 lt)	/* usec */
+			 u32 bw, u32 lt)
 {
 	return __tegra_isomgr_reserve(handle, bw, lt);
 }

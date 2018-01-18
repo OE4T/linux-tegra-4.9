@@ -461,6 +461,7 @@ struct tegra_pcie_dw {
 	int pex_wake;
 	u32 tsa_config_addr;
 	bool link_state;
+	bool dma_disable;
 
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
@@ -591,7 +592,8 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 	if (val & APPL_INTR_STATUS_L0_INT_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_8_0 = 0x%08X\n", val);
-		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK) {
+		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK &
+		    !pcie->dma_disable) {
 			val = dma_common_rd(pcie->atu_dma_base,
 					    DMA_WRITE_INT_STATUS_OFF);
 			/* check the status of all busy marked channels */
@@ -1754,6 +1756,44 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 {
 	struct dentry *d;
 
+	d = debugfs_create_u32("target_speed", 0644, pcie->debugfs,
+			       &pcie->target_speed);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for target_speed failed\n");
+
+	d = debugfs_create_file("apply_speed_change", 0444, pcie->debugfs,
+				(void *)pcie, &apply_speed_change_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for apply_speed_change failed\n");
+
+	d = debugfs_create_file("apply_pme_turnoff", 0444, pcie->debugfs,
+				(void *)pcie, &apply_pme_turnoff_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for apply_pme_turnoff failed\n");
+
+	d = debugfs_create_file("apply_sbr", 0444, pcie->debugfs,
+				(void *)pcie, &apply_sbr_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for apply_sbr failed\n");
+
+	d = debugfs_create_file("aspm_state_cnt", 0444, pcie->debugfs,
+				(void *)pcie, &aspm_state_cnt_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for aspm_state_cnt failed\n");
+
+	d = debugfs_create_file("verify_timing_margin", 0444, pcie->debugfs,
+				(void *)pcie, &verify_timing_margin_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for verify_timing_margin failed\n");
+
+	d = debugfs_create_file("verify_voltage_margin", 0444, pcie->debugfs,
+				(void *)pcie, &verify_voltage_margin_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
+
+	if (pcie->dma_disable)
+		return 0;
+
 	/* alloc memory required for RP-DMA testing */
 	pcie->cpu_virt_addr = dma_alloc_coherent(pcie->dev, pcie->dma_size,
 					    &pcie->dma_addr, GFP_KERNEL);
@@ -1800,41 +1840,6 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 				&read_ll_fops);
 	if (!d)
 		dev_err(pcie->dev, "debugfs for read failed\n");
-
-	d = debugfs_create_u32("target_speed", 0644, pcie->debugfs,
-			       &pcie->target_speed);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for target_speed failed\n");
-
-	d = debugfs_create_file("apply_speed_change", 0444, pcie->debugfs,
-				(void *)pcie, &apply_speed_change_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for apply_speed_change failed\n");
-
-	d = debugfs_create_file("apply_pme_turnoff", 0444, pcie->debugfs,
-				(void *)pcie, &apply_pme_turnoff_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for apply_pme_turnoff failed\n");
-
-	d = debugfs_create_file("apply_sbr", 0444, pcie->debugfs,
-				(void *)pcie, &apply_sbr_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for apply_sbr failed\n");
-
-	d = debugfs_create_file("aspm_state_cnt", 0444, pcie->debugfs,
-				(void *)pcie, &aspm_state_cnt_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for aspm_state_cnt failed\n");
-
-	d = debugfs_create_file("verify_timing_margin", 0444, pcie->debugfs,
-				(void *)pcie, &verify_timing_margin_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for verify_timing_margin failed\n");
-
-	d = debugfs_create_file("verify_voltage_margin", 0444, pcie->debugfs,
-				(void *)pcie, &verify_voltage_margin_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
 
 	return 0;
 }
@@ -1930,7 +1935,7 @@ static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
 		val |= APPL_INTR_EN_L1_8_AER_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
 
-	if (!pcie->dma_poll) {
+	if (!pcie->dma_poll && !pcie->dma_disable) {
 		/* Enable Interrupt for DMA completion */
 		val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
 		val |= APPL_INTR_EN_L1_8_EDMA_INT_EN;
@@ -2462,6 +2467,11 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 	else
 		pcie->dma_poll = false;
 
+	if (device_property_read_bool(pcie->dev, "nvidia,dma-disable"))
+		pcie->dma_disable = true;
+	else
+		pcie->dma_disable = false;
+
 	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
 					 &pcie->cid);
 	if (ret) {
@@ -2707,16 +2717,17 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	}
 
 	/* Enable DMA processing engines */
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
-		mutex_init(&pcie->wr_lock[i]);
-		init_completion(&pcie->wr_cpl[i]);
-	}
+	if (!pcie->dma_disable) {
+		for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
+			mutex_init(&pcie->wr_lock[i]);
+			init_completion(&pcie->wr_cpl[i]);
+		}
 
-	for (i = 0; i < DMA_RD_CHNL_NUM; i++) {
-		mutex_init(&pcie->rd_lock[i]);
-		init_completion(&pcie->rd_cpl[i]);
+		for (i = 0; i < DMA_RD_CHNL_NUM; i++) {
+			mutex_init(&pcie->rd_lock[i]);
+			init_completion(&pcie->rd_cpl[i]);
+		}
 	}
-
 	name = kasprintf(GFP_KERNEL, "pcie-%u", pcie->cid);
 	if (!name) {
 		ret = -ENOMEM;
@@ -2732,11 +2743,13 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	return 0;
 
 fail_debugfs:
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
-		mutex_destroy(&pcie->wr_lock[i]);
+	if (!pcie->dma_disable) {
+		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+			mutex_destroy(&pcie->wr_lock[i]);
 
-	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-		mutex_destroy(&pcie->rd_lock[i]);
+		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+			mutex_destroy(&pcie->rd_lock[i]);
+	}
 fail_host_init:
 	pm_runtime_put_sync(pcie->dev);
 	pm_runtime_disable(pcie->dev);
@@ -2802,11 +2815,13 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 
 	debugfs_remove_recursive(pcie->debugfs);
 
-	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
-		mutex_destroy(&pcie->wr_lock[i]);
+	if (!pcie->dma_disable) {
+		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+			mutex_destroy(&pcie->wr_lock[i]);
 
-	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-		mutex_destroy(&pcie->rd_lock[i]);
+		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+			mutex_destroy(&pcie->rd_lock[i]);
+	}
 
 	pm_runtime_put_sync(pcie->dev);
 	pm_runtime_disable(pcie->dev);

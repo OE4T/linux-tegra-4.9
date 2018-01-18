@@ -138,6 +138,8 @@ Optional properties:
     numbers
 - "nvidia,dma-size" : Add this property to provide DMA size input, size will
     set to 1 MB if this property is missing
+- "nvidia,dma-disable" : Add this property to disable DMA specific interrupts
+    and creating DMA specific debugfs entries
 
 Power supplies for Tegra194:
 //TODO

@@ -329,6 +329,8 @@ struct nvgpu_pmu {
 	u32 *ucode_image;
 	bool pmu_ready;
 
+	u32 perfmon_query;
+
 	u32 zbc_save_done;
 
 	u32 stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE];
@@ -362,6 +364,7 @@ struct nvgpu_pmu {
 	u32 sample_buffer;
 	u32 load_shadow;
 	u32 load_avg;
+	u32 load;
 
 	struct nvgpu_mutex isr_mutex;
 	bool isr_enabled;
@@ -432,8 +435,12 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_perfmon_start_sampling_rpc(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_perfmon_stop_sampling_rpc(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_perfmon_get_samples_rpc(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
 	struct pmu_perfmon_msg *msg);
+int nvgpu_pmu_init_perfmon_rpc(struct nvgpu_pmu *pmu);
 int nvgpu_pmu_load_norm(struct gk20a *g, u32 *load);
 int nvgpu_pmu_load_update(struct gk20a *g);
 void nvgpu_pmu_reset_load_counters(struct gk20a *g);

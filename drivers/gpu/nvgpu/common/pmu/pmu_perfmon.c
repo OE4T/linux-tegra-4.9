@@ -221,11 +221,18 @@ int nvgpu_pmu_load_update(struct gk20a *g)
 
 	if (!pmu->perfmon_ready) {
 		pmu->load_shadow = 0;
+		pmu->load = 0;
 		return 0;
 	}
 
-	nvgpu_flcn_copy_from_dmem(pmu->flcn, pmu->sample_buffer,
-		(u8 *)&load, 2, 0);
+	if (g->ops.pmu.pmu_perfmon_get_samples_rpc) {
+		nvgpu_pmu_perfmon_get_samples_rpc(pmu);
+		load = pmu->load;
+	} else {
+		nvgpu_flcn_copy_from_dmem(pmu->flcn, pmu->sample_buffer,
+		(u8 *)&load, 2 * 1, 0);
+	}
+
 	pmu->load_shadow = load / 10;
 	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
 
@@ -288,6 +295,129 @@ int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
 
 	/* restart sampling */
 	if (pmu->perfmon_sampling_enabled)
-		return nvgpu_pmu_perfmon_start_sampling(pmu);
+		return g->ops.pmu.pmu_perfmon_start_sampling(&(g->pmu));
+
 	return 0;
+}
+
+/* Perfmon RPC */
+int nvgpu_pmu_init_perfmon_rpc(struct nvgpu_pmu *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct nv_pmu_rpc_struct_perfmon_init rpc;
+	int status = 0;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
+
+	nvgpu_log_fn(g, " ");
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perfmon_init));
+	pmu->perfmon_ready = 0;
+
+	gk20a_pmu_init_perfmon_counter(g);
+
+	/* microseconds interval between pmu polls perf counters */
+	rpc.sample_periodus = 16700;
+	/* number of sample periods below lower threshold
+	 * before pmu triggers perfmon decrease event
+	 */
+	rpc.to_decrease_count = 15;
+	/* index of base counter, aka. always ticking counter */
+	rpc.base_counter_id = 6;
+	/* moving average window for sample periods */
+	rpc.samples_in_moving_avg = 17;
+	/* number of perfmon counters
+	 * counter #3 (GR and CE2) for gk20a
+	 */
+	rpc.num_counters = 1;
+
+	memset(rpc.counter, 0, sizeof(struct pmu_perfmon_counter_v3) *
+		NV_PMU_PERFMON_MAX_COUNTERS);
+	/* Counter used to count GR busy cycles */
+	rpc.counter[0].index = 3;
+
+	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_INIT");
+	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, INIT, &rpc, 0);
+	if (status) {
+		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+		goto exit;
+	}
+
+exit:
+	return 0;
+}
+
+int nvgpu_pmu_perfmon_start_sampling_rpc(struct nvgpu_pmu *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct nv_pmu_rpc_struct_perfmon_start rpc;
+	int status = 0;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
+
+	nvgpu_log_fn(g, " ");
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perfmon_start));
+	rpc.group_id = PMU_DOMAIN_GROUP_PSTATE;
+	rpc.state_id = pmu->perfmon_state_id[PMU_DOMAIN_GROUP_PSTATE];
+	rpc.flags = PMU_PERFMON_FLAG_ENABLE_INCREASE |
+				PMU_PERFMON_FLAG_ENABLE_DECREASE |
+				PMU_PERFMON_FLAG_CLEAR_PREV;
+
+	rpc.counter[0].upper_threshold = 3000;
+	rpc.counter[0].lower_threshold = 1000;
+
+	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_START\n");
+	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, START, &rpc, 0);
+	if (status)
+		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+
+	return status;
+}
+
+int nvgpu_pmu_perfmon_stop_sampling_rpc(struct nvgpu_pmu *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct nv_pmu_rpc_struct_perfmon_stop rpc;
+	int status = 0;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
+
+	nvgpu_log_fn(g, " ");
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perfmon_stop));
+	/* PERFMON Stop */
+	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_STOP\n");
+	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, STOP, &rpc, 0);
+	if (status)
+		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+
+	return status;
+}
+
+int nvgpu_pmu_perfmon_get_samples_rpc(struct nvgpu_pmu *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct nv_pmu_rpc_struct_perfmon_query rpc;
+	int status = 0;
+
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		return 0;
+
+	nvgpu_log_fn(g, " ");
+	pmu->perfmon_query = 0;
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perfmon_query));
+	/* PERFMON QUERY */
+	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_QUERY\n");
+	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, QUERY, &rpc, 0);
+	if (status)
+		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+
+	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
+				      &pmu->perfmon_query, 1);
+
+	return status;
 }

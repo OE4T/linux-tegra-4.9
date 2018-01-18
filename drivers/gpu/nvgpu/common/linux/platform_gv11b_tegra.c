@@ -208,6 +208,7 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.can_slcg               = false,
 	.can_blcg               = false,
 	.can_elcg               = false,
+	.enable_perfmon         = true,
 
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,

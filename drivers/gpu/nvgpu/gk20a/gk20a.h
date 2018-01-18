@@ -836,6 +836,10 @@ struct gpu_ops {
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_nsbootstrap)(struct nvgpu_pmu *pmu);
+		int (*pmu_init_perfmon)(struct nvgpu_pmu *pmu);
+		int (*pmu_perfmon_start_sampling)(struct nvgpu_pmu *pmu);
+		int (*pmu_perfmon_stop_sampling)(struct nvgpu_pmu *pmu);
+		int (*pmu_perfmon_get_samples_rpc)(struct nvgpu_pmu *pmu);
 		int (*pmu_setup_elpg)(struct gk20a *g);
 		u32 (*pmu_get_queue_head)(u32 i);
 		u32 (*pmu_get_queue_head_size)(void);

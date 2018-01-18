@@ -583,6 +583,9 @@ static const struct gpu_ops gp106_ops = {
 		.is_pmu_supported = gp106_is_pmu_supported,
 		.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list,
 		.pmu_elpg_statistics = gp106_pmu_elpg_statistics,
+		.pmu_init_perfmon = nvgpu_pmu_init_perfmon,
+		.pmu_perfmon_start_sampling = nvgpu_pmu_perfmon_start_sampling,
+		.pmu_perfmon_stop_sampling = nvgpu_pmu_perfmon_stop_sampling,
 		.pmu_mutex_acquire = gk20a_pmu_mutex_acquire,
 		.pmu_is_lpwr_feature_supported =
 			gp106_pmu_is_lpwr_feature_supported,

@@ -925,8 +925,9 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu)
 		nvgpu_pmu_process_init_msg(pmu, &msg);
 		if (g->ops.pmu.init_wpr_region != NULL)
 			g->ops.pmu.init_wpr_region(g);
+
 		if (nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
-			nvgpu_pmu_init_perfmon(pmu);
+			g->ops.pmu.pmu_init_perfmon(pmu);
 
 		return 0;
 	}
@@ -978,6 +979,8 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 handle, u32 status)
 {
 	struct nv_pmu_rpc_header rpc;
+	struct nvgpu_pmu *pmu = &g->pmu;
+        struct nv_pmu_rpc_struct_perfmon_query *rpc_param;
 
 	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_header));
 	if (param)
@@ -990,10 +993,36 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 	}
 
 	switch (msg->hdr.unit_id) {
+	case PMU_UNIT_PERFMON_T18X:
+	case PMU_UNIT_PERFMON:
+		switch (rpc.function) {
+		case NV_PMU_RPC_ID_PERFMON_T18X_INIT:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_PERFMON_INIT");
+			pmu->perfmon_ready = 1;
+			break;
+		case NV_PMU_RPC_ID_PERFMON_T18X_START:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_PERFMON_START");
+			break;
+		case NV_PMU_RPC_ID_PERFMON_T18X_STOP:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_PERFMON_STOP");
+			break;
+		case NV_PMU_RPC_ID_PERFMON_T18X_QUERY:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_PERFMON_QUERY");
+			rpc_param = (struct nv_pmu_rpc_struct_perfmon_query *)param;
+			pmu->load = rpc_param->sample_buffer[0];
+			pmu->perfmon_query = 1;
+			/* set perfmon_query to 1 after load is copied */
+			break;
+		}
+		break;
 		/* TBD case will be added */
 	default:
-			nvgpu_err(g, " Invalid RPC response, stats 0x%x",
-				rpc.flcn_status);
+		nvgpu_err(g, " Invalid RPC response, stats 0x%x",
+			rpc.flcn_status);
 		break;
 	}
 

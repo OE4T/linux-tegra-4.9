@@ -33,24 +33,20 @@ static ssize_t nvlink_refclk_rate_file_read(struct file *file,
 				size_t count, loff_t *offp)
 {
 	struct nvlink_device *nvlink = file->private_data;
-	char *buf;
+	char buf[5];
 	int str_len;
 
 	switch (nvlink->refclk) {
 	case NVLINK_REFCLK_150:
-		buf = "150";
-		str_len = 3;
+		strcpy(buf, "150");
 		break;
 	case NVLINK_REFCLK_156:
-		buf = "156";
-		str_len = 3;
-		break;
 	default:
-		buf = "150";
-		str_len = 3;
+		strcpy(buf, "156");
 		break;
 	}
-
+	strcat(buf, "\n");
+	str_len = strlen(buf);
 	return simple_read_from_buffer(ubuf, count, offp, buf, str_len);
 }
 
@@ -102,24 +98,20 @@ static ssize_t nvlink_speedcontrol_file_read(struct file *file,
 					     loff_t *offp)
 {
 	struct nvlink_device *nvlink = file->private_data;
-	char *buf;
+	char buf[4];
 	int str_len;
 
 	switch (nvlink->speed) {
 	case NVLINK_SPEED_20:
-		buf = "20";
-		str_len = 2;
+		strcpy(buf, "20");
 		break;
 	case NVLINK_SPEED_25:
-		buf = "25";
-		str_len = 2;
-		break;
 	default:
-		buf = "25";
-		str_len = 2;
+		strcpy(buf, "25");
 		break;
 	}
-
+	strcat(buf, "\n");
+	str_len = strlen(buf);
 	return simple_read_from_buffer(ubuf, count, offp, buf, str_len);
 }
 

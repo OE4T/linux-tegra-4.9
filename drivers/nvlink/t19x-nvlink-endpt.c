@@ -840,7 +840,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	}
 
 	ndev->speed = NVLINK_SPEED_25;
-	ndev->refclk = NVLINK_REFCLK_150;
+	ndev->refclk = NVLINK_REFCLK_156;
 	/* Register link with core driver */
 	ret = nvlink_register_link(&ndev->link);
 	if (ret < 0) {

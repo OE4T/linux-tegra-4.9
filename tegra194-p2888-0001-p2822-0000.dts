@@ -73,12 +73,6 @@
 		status = "disabled";
 	};
 
-	pcie_common {
-		status = "okay";
-
-		nvidia,xbar = <1>;
-	};
-
 	pmc@c370000 {
 		nvidia,invert-interrupt;
 	};

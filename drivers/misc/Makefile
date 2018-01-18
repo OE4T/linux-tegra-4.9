@@ -18,6 +18,5 @@ obj-$(CONFIG_EVENTLIB)		+= eventlib/
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 
 obj-$(CONFIG_TEGRA_PCIE_EP_MEM)	+= tegra-pcie-ep-mem.o
-obj-$(CONFIG_TEGRA_PCIE_COMMON)	+= tegra-pcie-common.o
 
 endif

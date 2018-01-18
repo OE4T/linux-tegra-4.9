@@ -84,14 +84,6 @@ config TEGRA_PCIE_EP_MEM
 	 Say Y if Tegra is working in PCIe-End Point mode and a client
 	 driver is required
 
-config TEGRA_PCIE_COMMON
-	tristate "Tegra PCIe common driver for XBAR"
-	depends on PCI
-	depends on PCIE_TEGRA_DW || PCIE_TEGRA_DW_EP
-	help
-	 Say Y if PCIe XBAR needs to be programmed for both root port and end point
-	 mode operation of Tegra PCIe controllers
-
 source "drivers/misc/nvs-dfsh/Kconfig"
 source "drivers/misc/nvs/Kconfig"
 source "drivers/misc/nvs-aonsh/Kconfig"

@@ -2238,6 +2238,12 @@ static inline int iommu_get_num_pf_pages(struct dma_iommu_mapping *mapping,
 	return mapping->num_pf_page;
 }
 
+static inline size_t iommu_get_size_pf_pages(struct dma_iommu_mapping *mapping,
+					 unsigned long attrs)
+{
+	return iommu_get_num_pf_pages(mapping, attrs) << PAGE_SHIFT;
+}
+
 static inline int iommu_gap_pg_count(struct dma_iommu_mapping *mapping,
 				     unsigned long attrs)
 {
@@ -2563,12 +2569,13 @@ ____iommu_create_mapping(struct device *dev, dma_addr_t *req,
 	dma_addr_t dma_addr, iova;
 	int i;
 	bool coherent = is_device_dma_coherent(dev);
+	size_t iova_size;
 
-	size += iommu_get_num_pf_pages(mapping, attrs) << PAGE_SHIFT;
+	iova_size = size + iommu_get_size_pf_pages(mapping, attrs);
 	if (req)
-		dma_addr = arm__alloc_iova_at(dev, *req, size);
+		dma_addr = arm__alloc_iova_at(dev, *req, iova_size);
 	else
-		dma_addr = arm__alloc_iova(dev, size);
+		dma_addr = arm__alloc_iova(dev, iova_size);
 
 	if (dma_addr == DMA_ERROR_CODE)
 		return dma_addr;
@@ -2841,12 +2848,13 @@ static int __map_sg_chunk(struct device *dev, struct scatterlist *sg,
 	int ret = 0;
 	unsigned int count;
 	struct scatterlist *s;
+	size_t iova_size;
 
 	size = PAGE_ALIGN(size);
 	*handle = DMA_ERROR_CODE;
 
-	size += iommu_get_num_pf_pages(mapping, attrs) << PAGE_SHIFT;
-	iova_base = iova = arm__alloc_iova(dev, size);
+	iova_size = size + iommu_get_size_pf_pages(mapping, attrs);
+	iova_base = iova = arm__alloc_iova(dev, iova_size);
 	if (iova == DMA_ERROR_CODE)
 		return -ENOMEM;
 
@@ -3069,6 +3077,7 @@ static dma_addr_t arm_coherent_iommu_map_page(struct device *dev,
 	struct dma_iommu_mapping *mapping = dev->archdata.mapping;
 	dma_addr_t dma_addr;
 	int ret, len = PAGE_ALIGN(size + offset);
+	size_t iova_size;
 	int page_offset;
 	bool coherent = is_device_dma_coherent(dev);
 
@@ -3100,8 +3109,8 @@ static dma_addr_t arm_coherent_iommu_map_page(struct device *dev,
 		BUG_ON(page_offset > (1 << compound_order(compound_head(page)))
 			- ((page - compound_head(page)) << PAGE_SHIFT));
 
-	len += iommu_get_num_pf_pages(mapping, attrs) << PAGE_SHIFT;
-	dma_addr = arm__alloc_iova(dev, len);
+	iova_size = len + iommu_get_size_pf_pages(mapping, attrs);
+	dma_addr = arm__alloc_iova(dev, iova_size);
 	if (dma_addr == DMA_ERROR_CODE)
 		return dma_addr;
 

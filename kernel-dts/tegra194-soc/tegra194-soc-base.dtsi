@@ -1826,7 +1826,7 @@
 		compatible = "nvidia,bwmgr";
 		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
 		clock-names = "emc";
-		status = "disabled";
+		status = "okay";
 	};
 
 	tegra_hv_xhci_debug@0 {

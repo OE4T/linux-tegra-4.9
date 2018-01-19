@@ -120,45 +120,6 @@ static int tegra194_pg_unpowergate_partition(int id)
 	return ret;
 }
 
-static int tegra194_pg_powergate_clk_off(int id)
-{
-	int ret = 0;
-	struct pg_partition_info *partition =
-		&t194_partition_info[id];
-
-	mutex_lock(&partition->pg_mutex);
-	if (partition->refcount) {
-		if (--partition->refcount == 0)
-			ret = pg_set_state(id, PG_STATE_OFF);
-		else if (partition->run_refcount == 1)
-			ret = pg_set_state(id, PG_STATE_ON);
-
-		if (partition->run_refcount)
-			partition->run_refcount--;
-	} else {
-		WARN(1, "partition %s refcount underflow\n",
-		     partition->name);
-	}
-	mutex_unlock(&partition->pg_mutex);
-
-	return ret;
-}
-
-static int tegra194_pg_unpowergate_clk_on(int id)
-{
-	int ret = 0;
-	struct pg_partition_info *partition =
-		&t194_partition_info[id];
-
-	mutex_lock(&partition->pg_mutex);
-	if (partition->refcount++ == 0 || partition->run_refcount == 0)
-		ret = pg_set_state(id, PG_STATE_RUNNING);
-	partition->run_refcount++;
-	mutex_unlock(&partition->pg_mutex);
-
-	return ret;
-}
-
 static const char *tegra194_pg_get_name(int id)
 {
 	return t194_partition_info[id].name;
@@ -207,9 +168,7 @@ static struct tegra_powergate_driver_ops tegra194_pg_ops = {
 	.powergate_init_refcount = tegra194_init_refcount,
 	.powergate_is_powered = tegra194_pg_is_powered,
 	.powergate_partition = tegra194_pg_powergate_partition,
-	.powergate_partition_with_clk_off = tegra194_pg_powergate_clk_off,
 	.unpowergate_partition = tegra194_pg_unpowergate_partition,
-	.unpowergate_partition_with_clk_on = tegra194_pg_unpowergate_clk_on,
 };
 
 struct tegra_powergate_driver_ops *tegra194_powergate_init_chip_support(void)

@@ -21,9 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/kernel.h>
-#include <linux/init.h>
 #include <linux/err.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/version.h>
 #include <soc/tegra/tegra_powergate.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
@@ -116,6 +117,7 @@ static int tegra186_pg_unpowergate_partition(int id)
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 static int tegra186_pg_powergate_clk_off(int id)
 {
 	int ret = 0;
@@ -154,6 +156,7 @@ static int tegra186_pg_unpowergate_clk_on(int id)
 
 	return ret;
 }
+#endif
 
 static const char *tegra186_pg_get_name(int id)
 {
@@ -239,8 +242,10 @@ static struct tegra_powergate_driver_ops tegra186_pg_ops = {
 	.powergate_partition = tegra186_pg_powergate_partition,
 	.unpowergate_partition = tegra186_pg_unpowergate_partition,
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	.powergate_partition_with_clk_off = tegra186_pg_powergate_clk_off,
 	.unpowergate_partition_with_clk_on = tegra186_pg_unpowergate_clk_on,
+#endif
 
 	.powergate_is_powered = tegra186_pg_is_powered,
 	.powergate_init_refcount = tegra186_init_refcount,

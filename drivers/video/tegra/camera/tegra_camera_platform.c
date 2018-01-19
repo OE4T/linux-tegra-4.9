@@ -284,7 +284,7 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 #if defined(CONFIG_TEGRA_BWMGR)
 	/* get bandwidth manager handle if needed */
 	info->bwmgr_handle =
-		tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_CAMERA);
+		tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_CAMERA_NON_ISO);
 
 	/* set the initial rate */
 	if (IS_ERR_OR_NULL(info->bwmgr_handle)) {

@@ -210,6 +210,7 @@ void __init enable_errata_workarounds(void)
 	enable_cpu_capabilities(arm64_errata);
 }
 
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 #define ARM_STD_SVC_VERSION		0x8400ff03
 uint32_t invoke_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3);
 
@@ -228,3 +229,4 @@ void invalidate_btb(void)
 		}
 	}
 }
+#endif

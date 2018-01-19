@@ -41,7 +41,7 @@ int tegra_hda_get_dev_id(struct tegra_dc_sor_data *sor)
 {
 	int dev_id;
 
-	tegra_unpowergate_partition_with_clk_on(sor->powergate_id);
+	tegra_unpowergate_partition(sor->powergate_id);
 	tegra_sor_clk_enable(sor);
 	tegra_dc_io_start(sor->dc);
 	dev_id = tegra_sor_readl_ext(sor, NV_SOR_AUDIO_GEN_CTRL);
@@ -49,7 +49,7 @@ int tegra_hda_get_dev_id(struct tegra_dc_sor_data *sor)
 			NV_SOR_AUDIO_GEN_CTRL_DEV_ID_MASK;
 	tegra_dc_io_end(sor->dc);
 	tegra_sor_clk_disable(sor);
-	tegra_powergate_partition_with_clk_off(sor->powergate_id);
+	tegra_powergate_partition(sor->powergate_id);
 	return dev_id;
 }
 EXPORT_SYMBOL(tegra_hda_get_dev_id);
@@ -186,7 +186,7 @@ int tegra_hdmi_setup_hda_presence(int dev_id)
 		goto err;
 
 	if (*(hda->enabled) && *(hda->eld_valid)) {
-		tegra_unpowergate_partition_with_clk_on(hda->sor->powergate_id);
+		tegra_unpowergate_partition(hda->sor->powergate_id);
 		tegra_sor_clk_enable(hda->sor);
 		tegra_dc_io_start(hda->dc);
 
@@ -200,7 +200,7 @@ int tegra_hdmi_setup_hda_presence(int dev_id)
 
 		tegra_dc_io_end(hda->dc);
 		tegra_sor_clk_disable(hda->sor);
-		tegra_powergate_partition_with_clk_off(hda->sor->powergate_id);
+		tegra_powergate_partition(hda->sor->powergate_id);
 		val = 0;
 	}
 

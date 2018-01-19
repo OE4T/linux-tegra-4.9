@@ -135,7 +135,8 @@ static int csi5_start_streaming(struct tegra_csi_channel *chan,
 		}
 	}
 
-	return err;
+        /* need to return 0 as err can be larger than 0 in above call */
+	return 0;
 }
 
 static void csi5_stop_streaming(struct tegra_csi_channel *chan,

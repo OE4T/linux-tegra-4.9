@@ -2125,12 +2125,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	pp->va_cfg0_base = pp->dbi_base;
 	pp->va_cfg1_base = pp->dbi_base + resource_size(dbi_res) / 2;
 
-	/* Disable SLCG */
-	/* NOTE:- This needs to be removed after initial bringup */
-	val = readl(pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
-	writel(val | APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER,
-	       pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
-
 	/* update CFG base address */
 	writel(dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
 	       pcie->appl_base + APPL_CFG_BASE_ADDR);

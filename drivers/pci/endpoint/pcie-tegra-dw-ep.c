@@ -428,12 +428,6 @@ void pcie_ep_work_fn(struct work_struct *work)
 			return;
 		}
 
-		/* Disable SLCG */
-		/* NOTE:- This needs to be removed after initial bringup */
-		val = readl(pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
-		writel(val | APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER,
-		       pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
-
 		/* clear any stale interrupt statuses */
 		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
 		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);

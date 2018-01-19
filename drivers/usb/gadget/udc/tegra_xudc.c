@@ -3920,8 +3920,7 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		err = -EINVAL;
 		goto disable_clk;
 	}
-	err = tegra_unpowergate_partition_with_clk_on(
-			partition_id_xusba);
+	err = tegra_unpowergate_partition(partition_id_xusba);
 	if (err < 0) {
 		dev_err(xudc->dev, "failed to unpowergate XUSBA partition\n");
 		goto disable_clk;
@@ -3931,8 +3930,7 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		err = -EINVAL;
 		goto powergate_xusba;
 	}
-	err = tegra_unpowergate_partition_with_clk_on(
-			partition_id_xusbb);
+	err = tegra_unpowergate_partition(partition_id_xusbb);
 	if (err < 0) {
 		dev_err(xudc->dev, "failed to unpowergate XUSBB partition\n");
 		goto powergate_xusba;
@@ -4029,9 +4027,9 @@ free_event_ring:
 disable_phy:
 	tegra_xudc_phy_exit(xudc);
 powergate_xusbb:
-	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
+	tegra_powergate_partition(partition_id_xusbb);
 powergate_xusba:
-	tegra_powergate_partition_with_clk_off(partition_id_xusba);
+	tegra_powergate_partition(partition_id_xusba);
 disable_clk:
 	tegra_xudc_clk_disable(xudc);
 disable_regulator:
@@ -4086,8 +4084,8 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 #endif
 	if (partition_id_xusba < 0)
 		return -EINVAL;
-	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
-	tegra_powergate_partition_with_clk_off(partition_id_xusba);
+	tegra_powergate_partition(partition_id_xusbb);
+	tegra_powergate_partition(partition_id_xusba);
 
 	if (tegra_platform_is_silicon())
 		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
@@ -4130,7 +4128,7 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 #endif
 	if (partition_id < 0)
 		return -EINVAL;
-	tegra_powergate_partition_with_clk_off(partition_id);
+	tegra_powergate_partition(partition_id);
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
 #else
@@ -4138,7 +4136,7 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 #endif
 	if (partition_id < 0)
 		return -EINVAL;
-	tegra_powergate_partition_with_clk_off(partition_id);
+	tegra_powergate_partition(partition_id);
 
 	if (tegra_platform_is_silicon())
 		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
@@ -4174,7 +4172,7 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 #endif
 	if (partition_id < 0)
 		return -EINVAL;
-	err = tegra_unpowergate_partition_with_clk_on(partition_id);
+	err = tegra_unpowergate_partition(partition_id);
 	if (err < 0)
 		return err;
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
@@ -4184,7 +4182,7 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 #endif
 	if (partition_id < 0)
 		return -EINVAL;
-	err = tegra_unpowergate_partition_with_clk_on(partition_id);
+	err = tegra_unpowergate_partition(partition_id);
 	if (err < 0)
 		return err;
 

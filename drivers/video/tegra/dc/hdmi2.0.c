@@ -2829,9 +2829,9 @@ static void tegra_hdmi_config_clk_nvdisplay(struct tegra_hdmi *hdmi,
 
 		struct tegra_dc_sor_data *sor = hdmi->sor;
 		int val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
+		long rate = clk_get_rate(sor->ref_clk);
 
 		if (tegra_sor_get_link_rate(hdmi->dc) > 340000000) {
-			long rate = clk_get_rate(sor->ref_clk);
 
 			/* half rate and double vco */
 			val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
@@ -2842,6 +2842,7 @@ static void tegra_hdmi_config_clk_nvdisplay(struct tegra_hdmi *hdmi,
 		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 		usleep_range(250, 300); /* sor brick pll stabilization delay */
 
+		clk_set_rate(sor->pad_clk, rate);
 		clk_set_parent(sor->sor_clk, sor->pad_clk);
 		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
 	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {

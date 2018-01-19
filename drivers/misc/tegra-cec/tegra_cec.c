@@ -325,9 +325,49 @@ out:
 	return IRQ_HANDLED;
 }
 
+static int tegra_cec_dump_registers(struct tegra_cec *cec)
+{
+	int value, i;
+
+	dev_info(cec->dev, "base address = %llx\n", (u64)cec->cec_base);
+	for(i = 0; i <= TEGRA_CEC_HW_SPARE; i+=4)
+	{
+		value = readl(cec->cec_base + i);
+		dev_info(cec->dev, "offset %08x: %08x\n", i, value);
+	}
+	return i;
+
+}
+
+static int tegra_cec_set_rx_snoop(struct tegra_cec *cec, u32 enable)
+{
+	u32 state;
+
+	if (!atomic_read(&cec->init_done))
+		return -EAGAIN;
+	state = readl(cec->cec_base + TEGRA_CEC_HW_CONTROL);
+	if (((state & TEGRA_CEC_HWCTRL_RX_SNOOP) != 0) ^ (enable != 0)) {
+		state ^= TEGRA_CEC_HWCTRL_RX_SNOOP;
+		writel(state, cec->cec_base + TEGRA_CEC_HW_CONTROL);
+	}
+	return 0;
+}
+
+static int tegra_cec_get_rx_snoop(struct tegra_cec *cec, u32 *state)
+{
+	if (!atomic_read(&cec->init_done))
+		return -EAGAIN;
+	*state = (readl(cec->cec_base + TEGRA_CEC_HW_CONTROL) & TEGRA_CEC_HWCTRL_RX_SNOOP) >> 15;
+	return 0;
+}
+
+
 static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		 unsigned long arg)
 {
+	int err;
+	u32 state;
+
 	struct tegra_cec *cec = file->private_data;
 
 	if (_IOC_TYPE(cmd) != TEGRA_CEC_IOC_MAGIC)
@@ -338,6 +378,27 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 		mutex_lock(&cec->recovery_lock);
 		tegra_cec_error_recovery(cec);
 		mutex_unlock(&cec->recovery_lock);
+		break;
+	case TEGRA_CEC_IOCTL_DUMP_REGISTERS:
+		tegra_cec_dump_registers(cec);
+		break;
+	case TEGRA_CEC_IOCTL_SET_RX_SNOOP:
+		err = !access_ok(VERIFY_READ, arg, sizeof(u32));
+		if (err)
+			return -EFAULT;
+		if (copy_from_user((u32 *) &state, (u32 *) arg, sizeof(u32)))
+			return -EFAULT;
+		tegra_cec_set_rx_snoop(cec, state);
+		break;
+	case TEGRA_CEC_IOCTL_GET_RX_SNOOP:
+		err = !access_ok(VERIFY_WRITE, arg, sizeof(u32));
+		if (err)
+			return -EFAULT;
+		err = tegra_cec_get_rx_snoop(cec, &state);
+		if (!err) {
+			if (copy_to_user((u32 *) arg, &state, sizeof(u32)))
+				return -EFAULT;
+		}
 		break;
 	default:
 		dev_err(cec->dev, "unsupported ioctl\n");

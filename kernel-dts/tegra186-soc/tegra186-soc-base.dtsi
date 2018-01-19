@@ -480,11 +480,10 @@
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
-		clocks = <&tegra_car TEGRA186_CLK_PLLU>,
-			<&tegra_car TEGRA186_CLK_XUSB_DEV>,
+		clocks = <&tegra_car TEGRA186_CLK_XUSB_CORE_DEV>,
 			<&tegra_car TEGRA186_CLK_XUSB_SS>,
-			<&tegra_car TEGRA186_CLK_PLLE>;
-		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
+			<&tegra_car TEGRA186_CLK_XUSB_CORE_SS>,
+			<&tegra_car TEGRA186_CLK_XUSB_FS>;
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 	};

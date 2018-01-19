@@ -73,6 +73,7 @@ struct nvhost_queue {
 
 	u32 sequence;
 
+	struct mutex attr_lock;
 	void *attr;
 
 	struct mutex list_lock;

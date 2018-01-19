@@ -549,29 +549,42 @@ err_alloc_vpu_function_table:
 
 }
 
-static void pva_restore_state_handler(struct work_struct *work)
+static void pva_restore_attributes(struct pva * pva)
 {
-	struct pva *pva = container_of(work, struct pva,
-				       pva_restore_state_work);
 	struct nvhost_queue_pool *pool = pva->pool;
-	struct pva_queue_attribute *attr;
+	struct pva_queue_set_attribute set_attr;
+	struct pva_queue_attribute *attrs;
 	unsigned int i = 0;
 	int err;
 
+	set_attr.pva = pva;
+	set_attr.bootup = true;
+
+	mutex_lock(&pool->queue_lock);
 	for_each_set_bit_from(i, &pool->alloc_table, pool->max_queue_cnt) {
 		u32 id;
 
+		mutex_lock(&pool->queues[i].attr_lock);
+		attrs = pool->queues[i].attr;
+		if (attrs == NULL) {
+			mutex_unlock(&pool->queues[i].attr_lock);
+			continue;
+		}
+
 		for (id = 1; id < QUEUE_ATTR_MAX; id++) {
-			attr = pool->queues[i].attr;
+			set_attr.attr = &attrs[id];
 			err = nvhost_queue_set_attr(&pool->queues[i],
-					&attr[id]);
+						    &set_attr);
 			if (err) {
 				dev_err(&pva->pdev->dev,
 					"unable to set attribute %u to queue %u\n",
 					id, i);
 			}
 		}
+
+		mutex_unlock(&pool->queues[i].attr_lock);
 	}
+	mutex_unlock(&pool->queue_lock);
 }
 
 int pva_finalize_poweron(struct platform_device *pdev)
@@ -595,6 +608,9 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	if (err < 0)
 		goto err_poweron;
 
+	/* Restore the attributes */
+	pva_restore_attributes(pva);
+
 	pva->booted = true;
 
 	return err;
@@ -608,8 +624,6 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
-
-	flush_work(&pva->pva_restore_state_work);
 
 	/*
 	 * Disable IRQs. Interrupt handler won't be under execution after the
@@ -664,7 +678,6 @@ static int pva_probe(struct platform_device *pdev)
 	mutex_init(&pva->mailbox_mutex);
 	mutex_init(&pva->ccq_mutex);
 	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
-	INIT_WORK(&pva->pva_restore_state_work, pva_restore_state_handler);
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

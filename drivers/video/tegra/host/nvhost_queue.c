@@ -319,6 +319,10 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 	INIT_LIST_HEAD(&queue->tasklist);
 	mutex_init(&queue->list_lock);
 
+	/* initialize task list */
+	queue->attr = NULL;
+	mutex_init(&queue->attr_lock);
+
 	mutex_unlock(&pool->queue_lock);
 
 	/* Check if the queue should allocate a channel */

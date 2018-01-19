@@ -1280,7 +1280,8 @@ static int pva_queue_submit(struct nvhost_queue *queue, void *args)
 static int pva_queue_set_attribute(struct nvhost_queue *queue, void *args)
 {
 	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
-	struct pva_queue_attribute *attr = args;
+	struct pva_queue_set_attribute *set_attr = args;
+	struct pva_queue_attribute *attr = set_attr->attr;
 	struct pva_mailbox_status_regs status;
 	struct pva_cmd cmd;
 	int err = 0;
@@ -1291,18 +1292,28 @@ static int pva_queue_set_attribute(struct nvhost_queue *queue, void *args)
 			flags);
 
 	/* Submit request to PVA and wait for response */
-	err = pva_mailbox_send_cmd_sync(attr->pva, &cmd, nregs, &status);
+	if (set_attr->bootup)
+		err = pva_mailbox_send_cmd_sync_locked(set_attr->pva,
+						       &cmd,
+						       nregs,
+						       &status);
+	else
+		err = pva_mailbox_send_cmd_sync(set_attr->pva,
+						&cmd,
+						nregs,
+						&status);
 	if (err < 0) {
-		nvhost_warn(&attr->pva->pdev->dev,
-			"Failed to submit task: %d\n", err);
+		nvhost_warn(&set_attr->pva->pdev->dev,
+			    "Failed to set attributes: %d\n",
+			    err);
 		goto end;
 	}
 
 	/* Ensure that response is valid */
 	if (status.error != PVA_ERR_NO_ERROR) {
-		nvhost_warn(&attr->pva->pdev->dev,
-				"PVA Q attribute rejected: %u\n",
-				status.error);
+		nvhost_warn(&set_attr->pva->pdev->dev,
+			    "PVA Q attribute rejected: %u\n",
+			    status.error);
 		err = -EINVAL;
 	}
 

@@ -212,7 +212,6 @@ struct pva {
 	bool timeout_enabled;
 
 	struct work_struct pva_abort_handler_work;
-	struct work_struct pva_restore_state_work;
 	bool booted;
 };
 

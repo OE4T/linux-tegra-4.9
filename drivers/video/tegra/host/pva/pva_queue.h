@@ -130,9 +130,14 @@ struct pva_submit_tasks {
 };
 
 struct pva_queue_attribute {
-	struct pva *pva;
 	enum pva_queue_attr_id id;
 	uint32_t value;
+};
+
+struct pva_queue_set_attribute {
+	struct pva *pva;
+	struct pva_queue_attribute *attr;
+	bool bootup;
 };
 
 void pva_task_remove(struct pva_submit_task *task);

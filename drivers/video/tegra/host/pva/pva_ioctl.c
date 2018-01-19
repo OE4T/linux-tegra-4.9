@@ -276,32 +276,48 @@ static int pva_queue_set_attr(struct pva_private *priv, void *arg)
 {
 	struct pva_ioctl_queue_attr *ioctl_queue_attr =
 		(struct pva_ioctl_queue_attr *)arg;
-	struct pva_queue_attribute *attr;
+	struct pva_queue_attribute *attrs;
+	struct pva_queue_attribute attr;
+	struct pva_queue_set_attribute set_attr;
+	int id = ioctl_queue_attr->id;
+	int val = ioctl_queue_attr->val;
 	int err = 0;
-	int id;
 
 	/* Sanity checks for the task heaader */
-	if (ioctl_queue_attr->id >= QUEUE_ATTR_MAX) {
+	if (id >= QUEUE_ATTR_MAX) {
 		err = -ENOSYS;
 		goto end;
 	}
 
-	id = ioctl_queue_attr->id;
-	attr = priv->queue->attr;
-	attr[id].pva = priv->pva;
-	attr[id].id = id;
-	attr[id].value = ioctl_queue_attr->val;
+	/* Initialize attribute for setting */
+	attr.id = id;
+	attr.value = val;
+
+	/* Update the attribute cache */
+	mutex_lock(&priv->queue->attr_lock);
+	attrs =	priv->queue->attr;
+	if (!attrs) {
+		mutex_unlock(&priv->queue->attr_lock);
+		err = -EINVAL;
+		goto end;
+	}
+	attrs[id] = attr;
+	mutex_unlock(&priv->queue->attr_lock);
 
 	/* Turn on the hardware */
 	err = nvhost_module_busy(priv->pva->pdev);
 	if (err)
 		goto end;
 
-	err = nvhost_queue_set_attr(priv->queue, &attr[id]);
+	/* Set attribute on hardware */
+	set_attr.pva = priv->pva;
+	set_attr.attr = &attr;
+	set_attr.bootup = false;
+	err = nvhost_queue_set_attr(priv->queue, &set_attr);
 
 	/* Drop PM runtime reference of PVA */
 	nvhost_module_idle(priv->pva->pdev);
- end:
+end:
 	return err;
 
 }
@@ -622,10 +638,10 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 }
 
 static struct pva_queue_attribute default_queue_attr[QUEUE_ATTR_MAX] = {
-	{NULL, 0, 0},
-	{NULL, QUEUE_ATTR_PRIORITY, PVA_QUEUE_DEFAULT_PRIORITY},
-	{NULL, QUEUE_ATTR_VPU, PVA_QUEUE_DEFAULT_VPU_MASK},
-	{NULL, QUEUE_ATTR_MISR_TO, 0xFFFFFFFF}
+	{0, 0},
+	{QUEUE_ATTR_PRIORITY, PVA_QUEUE_DEFAULT_PRIORITY},
+	{QUEUE_ATTR_VPU, PVA_QUEUE_DEFAULT_VPU_MASK},
+	{QUEUE_ATTR_MISR_TO, 0xFFFFFFFF}
 };
 
 static void pva_queue_set_default_attr(struct pva_private *priv)
@@ -635,7 +651,6 @@ static void pva_queue_set_default_attr(struct pva_private *priv)
 
 	attr = priv->queue->attr;
 	for (id = 1; id < QUEUE_ATTR_MAX; id++) {
-		attr[id].pva = priv->pva;
 		attr[id].id = default_queue_attr[id].id;
 		attr[id].value = default_queue_attr[id].value;
 	}
@@ -686,9 +701,10 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_buffer;
 	}
 
+	mutex_lock(&priv->queue->attr_lock);
 	priv->queue->attr = attr;
-
 	pva_queue_set_default_attr(priv);
+	mutex_unlock(&priv->queue->attr_lock);
 
 	return nonseekable_open(inode, file);
 
@@ -713,7 +729,10 @@ static int pva_release(struct inode *inode, struct file *file)
 	 * structure. Release the attributes before the queue
 	 * reference.
 	 */
+	mutex_lock(&priv->queue->attr_lock);
 	kfree(priv->queue->attr);
+	priv->queue->attr = NULL;
+	mutex_unlock(&priv->queue->attr_lock);
 
 	/*
 	 * Release handle to the queue (on-going tasks have their

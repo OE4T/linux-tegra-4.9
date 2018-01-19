@@ -2006,11 +2006,13 @@ void gk20a_channel_deterministic_idle(struct gk20a *g)
 		if (!gk20a_channel_get(ch))
 			continue;
 
-		if (ch->deterministic) {
+		if (ch->deterministic && !ch->deterministic_railgate_allowed) {
 			/*
 			 * Drop the power ref taken when setting deterministic
 			 * flag. deterministic_unidle will put this and the
-			 * channel ref back.
+			 * channel ref back. If railgate is allowed separately
+			 * for this channel, the power ref has already been put
+			 * away.
 			 *
 			 * Hold the channel ref: it must not get freed in
 			 * between. A race could otherwise result in lost
@@ -2045,7 +2047,7 @@ void gk20a_channel_deterministic_unidle(struct gk20a *g)
 		 * Deterministic state changes inside deterministic_busy lock,
 		 * which we took in deterministic_idle.
 		 */
-		if (ch->deterministic) {
+		if (ch->deterministic && !ch->deterministic_railgate_allowed) {
 			if (gk20a_busy(g))
 				nvgpu_err(g, "cannot busy() again!");
 			/* Took this in idle() */

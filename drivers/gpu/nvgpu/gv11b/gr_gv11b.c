@@ -321,6 +321,19 @@ void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 		     gr_memfmt_hww_esr_reset_active_f());
 }
 
+void gr_gv11b_fecs_host_int_enable(struct gk20a *g)
+{
+	gk20a_writel(g, gr_fecs_host_int_enable_r(),
+		     gr_fecs_host_int_enable_ctxsw_intr1_enable_f() |
+		     gr_fecs_host_int_enable_fault_during_ctxsw_enable_f() |
+		     gr_fecs_host_int_enable_umimp_firmware_method_enable_f() |
+		     gr_fecs_host_int_enable_umimp_illegal_method_enable_f() |
+		     gr_fecs_host_int_enable_watchdog_enable_f() |
+		     gr_fecs_host_int_enable_flush_when_busy_enable_f() |
+		     gr_fecs_host_int_enable_ecc_corrected_enable_f() |
+		     gr_fecs_host_int_enable_ecc_uncorrected_enable_f());
+}
+
 void gr_gv11b_enable_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -2249,12 +2262,12 @@ int gr_gv11b_handle_fecs_error(struct gk20a *g,
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 	int ret;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
-
-	ret = gr_gp10b_handle_fecs_error(g, __ch, isr_data);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	/* Handle ECC errors */
 	gr_gv11b_handle_fecs_ecc_error(g, gr_fecs_intr);
+
+	ret = gr_gp10b_handle_fecs_error(g, __ch, isr_data);
 
 	return ret;
 }

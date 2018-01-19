@@ -441,6 +441,7 @@ struct gpu_ops {
 		u32 (*get_gpcs_swdx_dss_zbc_z_format_reg)(struct gk20a *g);
 		void (*dump_ctxsw_stats)(struct gk20a *g, struct vm_gk20a *vm,
 					 struct nvgpu_gr_ctx *gr_ctx);
+		void (*fecs_host_int_enable)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

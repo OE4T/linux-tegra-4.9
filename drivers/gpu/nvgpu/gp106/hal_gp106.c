@@ -371,7 +371,8 @@ static const struct gpu_ops gp106_ops = {
 		.set_bes_crop_debug4 = gr_gp10b_set_bes_crop_debug4,
 		.create_gr_sysfs = NULL,
 		.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode,
-		.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode
+		.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode,
+		.fecs_host_int_enable = gr_gk20a_fecs_host_int_enable,
 	},
 	.fb = {
 		.reset = gp106_fb_reset,

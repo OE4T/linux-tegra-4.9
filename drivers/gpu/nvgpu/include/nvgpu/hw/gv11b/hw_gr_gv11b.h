@@ -1988,6 +1988,18 @@ static inline u32 gr_fecs_host_int_enable_watchdog_enable_f(void)
 {
 	return 0x80000U;
 }
+static inline u32 gr_fecs_host_int_enable_flush_when_busy_enable_f(void)
+{
+	return 0x100000U;
+}
+static inline u32 gr_fecs_host_int_enable_ecc_corrected_enable_f(void)
+{
+	return 0x200000U;
+}
+static inline u32 gr_fecs_host_int_enable_ecc_uncorrected_enable_f(void)
+{
+	return 0x400000U;
+}
 static inline u32 gr_fecs_ctxsw_reset_ctl_r(void)
 {
 	return 0x00409614U;

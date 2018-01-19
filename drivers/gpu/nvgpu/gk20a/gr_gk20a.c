@@ -4344,6 +4344,16 @@ void gr_gk20a_enable_hww_exceptions(struct gk20a *g)
 		     gr_memfmt_hww_esr_reset_active_f());
 }
 
+void gr_gk20a_fecs_host_int_enable(struct gk20a *g)
+{
+	gk20a_writel(g, gr_fecs_host_int_enable_r(),
+		     gr_fecs_host_int_enable_ctxsw_intr1_enable_f() |
+		     gr_fecs_host_int_enable_fault_during_ctxsw_enable_f() |
+		     gr_fecs_host_int_enable_umimp_firmware_method_enable_f() |
+		     gr_fecs_host_int_enable_umimp_illegal_method_enable_f() |
+		     gr_fecs_host_int_enable_watchdog_enable_f());
+}
+
 static int gk20a_init_gr_setup_hw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -4407,12 +4417,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_writel(g, gr_intr_en_r(), 0xFFFFFFFF);
 
 	/* enable fecs error interrupts */
-	gk20a_writel(g, gr_fecs_host_int_enable_r(),
-		     gr_fecs_host_int_enable_ctxsw_intr1_enable_f() |
-		     gr_fecs_host_int_enable_fault_during_ctxsw_enable_f() |
-		     gr_fecs_host_int_enable_umimp_firmware_method_enable_f() |
-		     gr_fecs_host_int_enable_umimp_illegal_method_enable_f() |
-		     gr_fecs_host_int_enable_watchdog_enable_f());
+	g->ops.gr.fecs_host_int_enable(g);
 
 	g->ops.gr.enable_hww_exceptions(g);
 	g->ops.gr.set_hww_esr_report_mask(g);
@@ -5124,14 +5129,8 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 	int ret = 0;
 
-	gk20a_dbg_fn("");
-
 	if (!gr_fecs_intr)
 		return 0;
-
-	nvgpu_err(g,
-		   "unhandled fecs error interrupt 0x%08x for channel %u",
-		   gr_fecs_intr, isr_data->chid);
 
 	if (gr_fecs_intr & gr_fecs_host_int_status_umimp_firmware_method_f(1)) {
 		gk20a_gr_set_error_notifier(g, isr_data,
@@ -5141,6 +5140,10 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
 			  isr_data->data_lo);
 		ret = -1;
+	} else {
+		nvgpu_err(g,
+		   "fecs error interrupt 0x%08x for channel %u",
+		   gr_fecs_intr, isr_data->chid);
 	}
 
 	gk20a_writel(g, gr_fecs_host_int_clear_r(), gr_fecs_intr);

@@ -133,6 +133,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 sm, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger);
+void gr_gv11b_fecs_host_int_enable(struct gk20a *g);
 int gr_gv11b_handle_fecs_error(struct gk20a *g,
 				struct channel_gk20a *__ch,
 				struct gr_gk20a_isr_data *isr_data);

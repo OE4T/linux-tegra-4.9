@@ -146,7 +146,7 @@ void pva_mailbox_isr(struct pva *pva)
 	wake_up(&pva->mailbox_waitqueue);
 }
 
-int pva_mailbox_send_cmd_sync(struct pva *pva,
+int pva_mailbox_send_cmd_sync_locked(struct pva *pva,
 			struct pva_cmd *cmd, u32 nregs,
 			struct pva_mailbox_status_regs *mailbox_status_regs)
 {
@@ -156,8 +156,6 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 		err = -EINVAL;
 		goto err_invalid_parameter;
 	}
-
-	mutex_lock(&pva->mailbox_mutex);
 
 	/* Ensure that mailbox state is sane */
 	if (WARN_ON(pva->mailbox_status != PVA_MBOX_STATUS_INVALID)) {
@@ -183,7 +181,6 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 				sizeof(struct pva_mailbox_status_regs));
 
 	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
-	mutex_unlock(&pva->mailbox_mutex);
 
 	return err;
 
@@ -191,8 +188,30 @@ err_wait_response:
 err_send_command:
 	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
 err_check_status:
-	mutex_unlock(&pva->mailbox_mutex);
 err_invalid_parameter:
 	return err;
 }
-EXPORT_SYMBOL(pva_mailbox_send_cmd_sync);
+
+int pva_mailbox_send_cmd_sync(struct pva *pva,
+			struct pva_cmd *cmd, u32 nregs,
+			struct pva_mailbox_status_regs *mailbox_status_regs)
+{
+	int err = 0;
+
+	if (mailbox_status_regs == NULL) {
+		err = -EINVAL;
+		goto err_invalid_parameter;
+	}
+
+	mutex_lock(&pva->mailbox_mutex);
+	err = pva_mailbox_send_cmd_sync_locked(pva,
+					       cmd,
+					       nregs,
+					       mailbox_status_regs);
+	mutex_unlock(&pva->mailbox_mutex);
+
+	return err;
+
+err_invalid_parameter:
+	return err;
+}

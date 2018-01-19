@@ -90,6 +90,26 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 			struct pva_mailbox_status_regs *mb_status_regs);
 
 /**
+ * pva_mailbox_send_cmd_sync_locked() - Send a command and wait for response
+ *
+ * @pva:		Pointer to PVA structure
+ * @pva_cmd:		Pointer to the pva command struct
+ * @nregs:		Number of valid mailbox registers for the command
+ * @mb_status_regs:	Pointer to pva_mailbox_status_regs struct
+ *
+ * Return:	0 on Success or negative error code
+ *
+ * This function called by OS to pass the mailbox commands to
+ * the PVA uCode. The function returns the output status from PVA
+ * firmware once the task is completed. This function must not be
+ * used during runtime without holding the mailbox mutex (i.e.
+ * the function can be called during PVA boot-up).
+ */
+int pva_mailbox_send_cmd_sync_locked(struct pva *pva,
+			struct pva_cmd *cmd, u32 nregs,
+			struct pva_mailbox_status_regs *mailbox_status_regs);
+
+/**
  * pva_mailbox_isr() - Handle interrupt for PVA ISR
  *
  * @pva:	Pointer to PVA structure

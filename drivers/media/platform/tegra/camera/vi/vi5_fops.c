@@ -29,6 +29,7 @@
 #define BPP_MEM			2
 #define VI_CSI_CLK_SCALE	110
 #define PG_BITRATE		32
+#define	STREAM		0U
 
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 
@@ -183,6 +184,12 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan,
 					&setup.iova, GFP_KERNEL);
 	if (chan->request == NULL)
 		dev_err(chan->vi->dev, "dma_alloc_coherent failed\n");
+
+	if (chan->is_slvsec) {
+		setup.channel_flags |= CAPTURE_CHANNEL_FLAG_SLVSEC;
+		setup.slvsec_stream_main = STREAM;
+		setup.slvsec_stream_sub = SLVSEC_STREAM_DISABLED;
+	}
 
 	err = vi_capture_setup(chan->tegra_vi_channel, &setup);
 	if (err) {

@@ -227,6 +227,7 @@ struct tegra_channel {
 	struct nvcsi_deskew_context *deskew_ctx;
 	struct tegra_vi_channel *tegra_vi_channel;
 	struct capture_descriptor *request;
+	bool is_slvsec;
 };
 
 #define to_tegra_channel(vdev) \

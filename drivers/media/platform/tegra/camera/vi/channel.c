@@ -1336,6 +1336,10 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	sd = media_entity_to_v4l2_subdev(entity);
 	v4l2_set_subdev_hostdata(sd, chan);
 	chan->subdev[num_sd++] = sd;
+
+	/* verify if the immediate subdevice is slvsec */
+	chan->is_slvsec = (strstr(sd->name, "slvs") != NULL) ? 1 : 0;
+
 	/* Add subdev name to this video dev name with vi-output tag*/
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s, %s",
 		"vi-output", sd->name);

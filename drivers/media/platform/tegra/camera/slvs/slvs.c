@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra SLVS(-EC) Subdevice for V4L2
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Pekka Pessi <ppessi@nvidia.com>
  *
@@ -49,6 +49,8 @@ struct slvsec_stream_params {
 	u32 symbols;
 
 	struct slvsec_cil_stream_uphy {
+		bool aux_idle_detect_force;
+		bool cal_skip;
 		bool rate_gen_2;
 		bool term_other;
 		bool term_data;
@@ -172,8 +174,10 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 #define SLVS_CIL_LANE_OFFSET	0x31800
 #define SLVS_CIL_LANE_SIZE	0x00400
 
+#define SLVS_HOST1X_INTR_STATUS		0x00b0
 #define SLVS_STRM_CTRL			0x0000
 #define SLVS_STRM_RST_CTRL		0x0004
+#define SLVS_STRM_CLK_CTRL		0x0008
 #define SLVS_STRM_CH0_CFG		0x000C
 #define SLVS_STRM_CH1_CFG		0x0010
 #define SLVS_STRM_CH0_EMBD_CFG		0x0014
@@ -184,6 +188,10 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 #define SLVS_STRM_INTR_MASK_CH1		0x0040
 #define SLVS_STRM_VI_ERR_MASK_CH0	0x0034
 #define SLVS_STRM_VI_ERR_MASK_CH1	0x0038
+#define SLVS_STRM_INTR_STATUS_CH0	0x0048
+#define SLVS_STRM_INTR_STATUS_CH1	0x004C
+#define SLVS_STRM_INTR_STATUS		0x0050
+
 
 #define SLVS_CIL_CTRL			0x00
 #define SLVS_CIL_LANE_SWIZZLE		0x04
@@ -191,6 +199,7 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 #define SLVS_CIL_UPHY_CTRL1		0x0c
 #define SLVS_CIL_UPHY_CTRL2		0x10
 
+#define SLVS_CIL_STRM_CLK_CTRL		0x00
 #define SLVS_CIL_STRM_RST_CTRL		0x04
 #define SLVS_CIL_STRM_CTRL		0x08
 #define SLVS_CIL_STRM_SYM_DEFINE	0x0c
@@ -204,6 +213,7 @@ static int tegra_slvs_s_power(struct v4l2_subdev *sd, int enable)
 #define SLVS_CIL_STRM_CAL_STATUS	0x24
 #define SLVS_CIL_STRM_CAL_STATUS_DONE	BIT(0)
 
+#define SLVS_LANE_CLK_CTRL		0x00
 #define SLVS_LANE_RST_CTRL		0x04
 #define SLVS_LANE_CTRL			0x08
 #define SLVS_LANE_STATUS		0x0C
@@ -330,7 +340,10 @@ static int slvs_cil_stream_uphy_mode(const struct tegra_slvs_stream *stream)
 {
 	const struct slvsec_cil_stream_uphy *uphy = &stream->params.uphy;
 
-	return (uphy->rate_gen_2 << 11) |
+	return
+		(uphy->aux_idle_detect_force << 15) |
+		(uphy->cal_skip << 14) |
+		(uphy->rate_gen_2 << 11) |
 		(uphy->term_other << 10) |
 		(uphy->term_data << 9) |
 		(uphy->aux_term_other << 8) |
@@ -348,8 +361,8 @@ static int slvs_cil_stream_uphy_mode(const struct tegra_slvs_stream *stream)
 
 #define VI_FW_CFG_IO_VGP       		0x4400
 
-#define VI_FW_CFG_ENABLE_XVS(num)	(BIT(26) | ((2 + 2 * (num)) << 17))
-#define VI_FW_CFG_ENABLE_XHS(num)	(BIT(26) | ((3 + 2 * (num)) << 17))
+#define VI_FW_CFG_ENABLE_XVS(num)	(BIT(16) | ((2 + 2 * (num)) << 17))
+#define VI_FW_CFG_ENABLE_XHS(num)	(BIT(16) | ((3 + 2 * (num)) << 17))
 
 #define VI_FW_SYNCGEN_OFFSET		0x4800
 #define VI_FW_SYNCGEN_SIZE		0x0400
@@ -459,9 +472,10 @@ static int slvs_get_syncgen_config(
 	if (width < XSYNC_WIDTH)
 		width = XSYNC_WIDTH;
 
+	cfg->hclk_div_fmt = 0x16;
 	cfg->xhs_width = width;
 	cfg->xvs_width = width;
-	cfg->xvs_to_xhs_delay = 1;
+	cfg->xvs_to_xhs_delay = 3;
 	cfg->xvs_interval = fs->xvs;
 
 	return 0;
@@ -682,7 +696,6 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 {
 	struct tegra_mc_slvs *slvs = stream->slvs;
 	struct tegra_channel *tegra_chan;
-	long timeout = msecs_to_jiffies(5000);
 	u32 id = stream->id;
 	int i, cfg, err;
 	u32 val;
@@ -704,30 +717,67 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 
 	/* XXX - where we should dig embedded data type ? */
 
-	/* Reset stream */
-	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 1);
-	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 0);
+	slvs_core_write(slvs, SLVS_HOST1X_INTR_STATUS, 0x1);
+	slvs_stream_write(slvs, id, SLVS_STRM_INTR_STATUS, 0x9);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_STATUS, 0x1f);
+	slvs_stream_write(slvs, id, SLVS_STRM_INTR_STATUS_CH0, 0xf);
+	slvs_stream_write(slvs, id, SLVS_STRM_INTR_STATUS_CH1, 0xf);
+	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK, 0x2);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK, 0x8);
 
-	/* Reset CIL */
+	/* Reset stream and CIL */
+	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 1);
 	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_RST_CTRL, 1);
+	slvs_stream_write(slvs, id, SLVS_STRM_RST_CTRL, 0);
 	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_RST_CTRL, 0);
 
 	/* Reset all lanes */
-	for (i = 0; i < SLVSEC_NUM_LANES; i++) {
+	for (i = 0; i < SLVSEC_NUM_LANES; i++)
 		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 1);
+	for (i = 0; i < SLVSEC_NUM_LANES; i++)
 		slvs_cil_lane_write(slvs, i, SLVS_LANE_RST_CTRL, 0);
-	}
+
+	/* Calibration */
+	for (i = 0; i < SLVSEC_NUM_LANES; i++)
+		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 1);
+	val = slvs_cil_stream_read(slvs, id, SLVS_CIL_STRM_UPHY_MODE);
+	val |= 1 << 11;
+	val |= SLVS_CIL_STRM_UPHY_CAL_EN;
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
+	val = (stream->params.num_lanes << 1) | 1;
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
+
+	/* Wait for CAL_DONE */
+	usleep_range(100, 110);
+
+	for (i = 0; i < SLVSEC_NUM_LANES; i++)
+		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 0);
+	val = slvs_cil_stream_read(slvs, id, SLVS_CIL_STRM_UPHY_MODE);
+	val &= ~(1 << 3);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, 1);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, 0);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, 1);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, 0);
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CAL_STATUS,
+			SLVS_CIL_STRM_CAL_STATUS_DONE);
+
+	/* Wait for CAL_DONE */
+	usleep_range(100, 110);
 
 	/* Program core */
-	val = (stream->params.enable_header_crc << 2)
-		| ((stream->params.watchdog_period != 0 << 1))
-		| 1;
-	slvs_stream_write(slvs, id, SLVS_STRM_CTRL, val);
 	val = cfg | (stream->params.enable_payload_crc << 28);
 	if (tegra_platform_is_silicon()) {
 		slvs_stream_write(slvs, id, SLVS_STRM_CH0_CFG, val);
-		/* XXX - how this should be configured ? */
-		slvs_stream_write(slvs, id, SLVS_STRM_CH1_CFG, 0x1a800000);
+		slvs_stream_write(slvs, id, SLVS_STRM_CH1_CFG, val);
+		/* write only if embedded data exists */
+		/* TODO: Add proper check */
+		slvs_stream_write(slvs, id, SLVS_STRM_CH0_EMBD_CFG, 0x2b);
+		slvs_stream_write(slvs, id, SLVS_STRM_CH1_EMBD_CFG, 0x2b);
+		/* TODO: Add proper support for this */
+		slvs_stream_write(slvs, id, SLVS_STRM_CTRL, 0x5);
+		slvs_stream_write(slvs, id, SLVS_STRM_TIMEOUT_CTRL, 0xffffffff);
+		slvs_stream_write(slvs, id, SLVS_STRM_CLK_CTRL, 0x0);
 	} else {
 		val = 0x1b200a68;
 		slvs_stream_write(slvs, id, SLVS_STRM_CH0_CFG, val);
@@ -736,49 +786,21 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 		slvs_cil_write(slvs, SLVS_CIL_LANE_SWIZZLE, 0x76543210);
 	}
 
-	/* Mask errors and interrupts */
-	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK, 0xf);
-	slvs_stream_write(slvs, id, SLVS_STRM_VI_ERR_MASK_CH0, 0xf);
-	slvs_stream_write(slvs, id, SLVS_STRM_VI_ERR_MASK_CH1, 0xf);
-	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK_CH0, 0xf);
-	slvs_stream_write(slvs, id, SLVS_STRM_INTR_MASK_CH1, 0xf);
-
-	/* Enable cal done interrupt */
-	if (tegra_platform_is_silicon()) {
-		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CAL_STATUS,
-				SLVS_CIL_STRM_INTR_CAL_DONE);
-		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK,
-				SLVS_CIL_STRM_INTR_CAL_DONE);
-	}
-
-	/* Enable lanes */
-	for (i = 0; i < stream->params.num_lanes; i++) {
-		/* XXX id=1 => STRM1_LANE_BEG_NUM */
-		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 1);
-	}
-
 	/* Program CIL */
 	if (tegra_platform_is_silicon()) {
+		slvs_cil_write(slvs, SLVS_CIL_CTRL, 0x5ff1);
+		slvs_cil_write(slvs, SLVS_CIL_LANE_SWIZZLE, 0x01234567);
+		slvs_cil_write(slvs, SLVS_CIL_UPHY_CTRL0, 0xf0f800f);
+		slvs_cil_write(slvs, SLVS_CIL_UPHY_CTRL1, 0x50580);
 		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_SYM_DEFINE,
 				stream->params.symbols);
-		val = (stream->params.num_lanes << 1) | 1;
-		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
 		val = slvs_cil_stream_uphy_mode(stream);
-		val |= SLVS_CIL_STRM_UPHY_CAL_EN;
 		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
-	} else {
-		val = 0x83f;
-		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_UPHY_MODE, val);
-	}
 
-	/* Wait for CAL_DONE */
-	if (tegra_platform_is_silicon()) {
-		timeout = wait_event_interruptible_timeout(
-			stream->cil_waitq,
-			tegra_slvs_is_cal_done(stream),
-			timeout);
+		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CLK_CTRL, 0);
+		for (i = 0; i < stream->params.num_lanes; i++)
+			slvs_cil_lane_write(slvs, i, SLVS_LANE_CLK_CTRL, 0);
 	}
-	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_INTR_MASK, 0);
 
 	if (!tegra_platform_is_silicon()) {
 		slvs_stream_write(slvs, id, SLVS_STRM_CTRL, 1);
@@ -786,15 +808,21 @@ static int tegra_slvs_start_streaming(struct tegra_slvs_stream *stream)
 		slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
 	}
 
+	/* Enable lanes */
+	slvs_stream_write(slvs, id, SLVS_STRM_CTRL, 0x1);
+	for (i = 0; i < stream->params.num_lanes; i++) {
+		/* XXX id=1 => STRM1_LANE_BEG_NUM */
+		slvs_cil_lane_write(slvs, i, SLVS_LANE_CTRL, 1);
+	}
+
+	val = (stream->params.num_lanes << 1) | 1;
+	slvs_cil_stream_write(slvs, id, SLVS_CIL_STRM_CTRL, val);
+
 	err = tegra_slvs_syncgen_start(stream);
 	if (err < 0)
 		return err;
 
 	dev_info(&slvs->pdev->dev, "%s() (done)\n", __func__);
-
-	if (timeout == 0)
-		return -ETIMEDOUT;
-
 	return 0;
 }
 
@@ -1035,6 +1063,12 @@ static int tegra_slvs_parse_stream_dt(struct tegra_slvs_stream *stream,
 	err = of_property_read_u32(np, "nvidia,symbols", &params->symbols);
 	if (err != 0)
 		params->symbols = 0x000360aa;
+
+	boolparam = of_property_read_bool(np, "nvidia,uphy-aux-idle-force");
+	params->uphy.aux_idle_detect_force = boolparam;
+
+	boolparam = of_property_read_bool(np, "nvidia,uphy-cal-skip");
+	params->uphy.cal_skip = boolparam;
 
 	boolparam = of_property_read_bool(np, "nvidia,uphy-rate-gen2");
 	params->uphy.rate_gen_2 = boolparam;

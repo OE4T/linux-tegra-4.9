@@ -30,6 +30,7 @@
 #include <media/v4l2-common.h>
 
 #include <media/videobuf2-v4l2.h>
+#include <asm/barrier.h>
 
 static int debug;
 module_param(debug, int, 0644);
@@ -167,6 +168,8 @@ static int vb2_queue_or_prepare_buf(struct vb2_queue *q, struct v4l2_buffer *b,
 		dprintk(1, "%s: buffer index out of range\n", opname);
 		return -EINVAL;
 	}
+
+	speculation_barrier();
 
 	if (q->bufs[b->index] == NULL) {
 		/* Should never happen */
@@ -475,6 +478,9 @@ int vb2_querybuf(struct vb2_queue *q, struct v4l2_buffer *b)
 		dprintk(1, "buffer index out of range\n");
 		return -EINVAL;
 	}
+
+	speculation_barrier();
+
 	vb = q->bufs[b->index];
 	ret = __verify_planes_array(vb, b);
 	if (!ret)

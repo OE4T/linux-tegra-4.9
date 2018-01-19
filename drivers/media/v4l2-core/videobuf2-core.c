@@ -28,6 +28,7 @@
 #include <media/v4l2-mc.h>
 
 #include <trace/events/vb2.h>
+#include <asm/barrier.h>
 
 static int debug;
 module_param(debug, int, 0644);
@@ -1837,6 +1838,8 @@ int vb2_core_expbuf(struct vb2_queue *q, int *fd, unsigned int type,
 		dprintk(1, "buffer index out of range\n");
 		return -EINVAL;
 	}
+
+	speculation_barrier();
 
 	vb = q->bufs[index];
 

@@ -30,6 +30,7 @@
 #include <media/v4l2-mc.h>
 
 #include <trace/events/v4l2.h>
+#include <asm/barrier.h>
 
 /* Zero out the end of the struct pointed to by p.  Everything after, but
  * not including, the specified field is cleared. */
@@ -2600,6 +2601,9 @@ bool v4l2_is_known_ioctl(unsigned int cmd)
 {
 	if (_IOC_NR(cmd) >= V4L2_IOCTLS)
 		return false;
+
+	speculation_barrier();
+
 	return v4l2_ioctls[_IOC_NR(cmd)].ioctl == cmd;
 }
 

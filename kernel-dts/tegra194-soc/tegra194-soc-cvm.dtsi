@@ -22,10 +22,6 @@
 / {
 
 	cpus {
-		cpu@0 {
-			status = "okay";
-		};
-
 		cpu@1 {
 			status = "okay";
 		};
@@ -53,6 +49,18 @@
 		cpu@7 {
 			status = "okay";
 		};
+	};
+
+	L2_1: l2-cache1 {
+		status = "okay";
+	};
+
+	L2_2: l2-cache2 {
+		status = "okay";
+	};
+
+	L2_3: l2-cache3 {
+		status = "okay";
 	};
 
 	tegra-carveouts {

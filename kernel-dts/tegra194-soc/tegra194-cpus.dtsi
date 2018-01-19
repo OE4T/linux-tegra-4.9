@@ -67,6 +67,13 @@
 			reg = <0x0 0x10000>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_0>;
 		};
 		cl0_1: cpu@1 {
 			device_type = "cpu";
@@ -74,6 +81,13 @@
 			reg = <0x0 0x10001>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_0>;
 			status = "disabled";
 		};
 		cl1_0: cpu@2 {
@@ -82,6 +96,13 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_1>;
 			status = "disabled";
 		};
 		cl1_1: cpu@3 {
@@ -90,6 +111,13 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_1>;
 			status = "disabled";
 		};
 		cl2_0: cpu@4 {
@@ -98,6 +126,13 @@
 			reg = <0x0 0x200>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_2>;
 			status = "disabled";
 		};
 		cl2_1: cpu@5 {
@@ -106,6 +141,13 @@
 			reg = <0x0 0x201>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_2>;
 			status = "disabled";
 		};
 		cl3_0: cpu@6 {
@@ -114,6 +156,13 @@
 			reg = <0x0 0x10300>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_3>;
 			status = "disabled";
 		};
 		cl3_1: cpu@7 {
@@ -122,8 +171,52 @@
 			reg = <0x0 0x10301>;
 			enable-method = "psci";
 			cpu-idle-states = <&C6 &C7>;
+			i-cache-size = <131072>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <512>;
+			d-cache-size = <65536>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <256>;
+			l2-cache = <&L2_3>;
 			status = "disabled";
 		};
+	};
+
+	L2_0: l2-cache0 {
+		cache-size = <2097152>;
+		cache-line-size = <64>;
+		cache-sets = <2048>;
+		next-level-cache = <&L3>;
+	};
+
+	L2_1: l2-cache1 {
+		cache-size = <2097152>;
+		cache-line-size = <64>;
+		cache-sets = <2048>;
+		next-level-cache = <&L3>;
+		status = "disabled";
+	};
+
+	L2_2: l2-cache2 {
+		cache-size = <2097152>;
+		cache-line-size = <64>;
+		cache-sets = <2048>;
+		next-level-cache = <&L3>;
+		status = "disabled";
+	};
+
+	L2_3: l2-cache3 {
+		cache-size = <2097152>;
+		cache-line-size = <64>;
+		cache-sets = <2048>;
+		next-level-cache = <&L3>;
+		status = "disabled";
+	};
+
+	L3: l3-cache {
+		cache-size = <4194304>;
+		cache-line-size = <64>;
+		cache-sets = <4096>;
 	};
 
        	arm-pmu {

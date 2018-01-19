@@ -2402,7 +2402,7 @@ static inline int tegra_nvdisp_handle_pd_enable(struct tegra_dc_pd_info *pd,
 		int nclks = pd->nclks;
 		int i;
 
-		ret = tegra_unpowergate_partition_with_clk_on(pd->pg_id);
+		ret = tegra_unpowergate_partition(pd->pg_id);
 		if (ret) {
 			pr_err("%s: Failed to unpowergate Head%u pd\n",
 				__func__, pd->head_owner);
@@ -2435,7 +2435,7 @@ static inline int tegra_nvdisp_handle_pd_disable(struct tegra_dc_pd_info *pd,
 		int nclks = pd->nclks;
 		int i;
 
-		ret = tegra_powergate_partition_with_clk_off(pd->pg_id);
+		ret = tegra_powergate_partition(pd->pg_id);
 		if (ret) {
 			pr_err("%s: Failed to powergate Head%u pd\n",
 				__func__, pd->head_owner);

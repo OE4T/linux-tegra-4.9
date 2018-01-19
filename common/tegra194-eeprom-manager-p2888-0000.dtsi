@@ -33,5 +33,12 @@
 				slave-address = <0x57>;
 			};
 		};
+		bus@2 {
+			i2c-bus = <&gen2_i2c>;
+			eeprom@0 {
+				slave-address = <0x52>;
+				label = "cvm";
+			};
+		};
 	};
 };

@@ -411,25 +411,38 @@ pva_buffer_cpy_err:
 static int pva_get_characteristics(struct pva_private *priv,
 		void *arg)
 {
-	/* TO DO :- Will remove these comments after implementation
-	 * call the hw_config request here or on open one time
-	 * This could be a place holder to get the R5 functionTable
-	 * support if it is not set yet
-	 */
-
 	struct pva_characteristics_req pva_char_req;
 	struct pva_characteristics pva_char;
-
 	struct pva_characteristics_req *in_pva_char =
 			(struct pva_characteristics_req *)arg;
-
 	u64 in_size = in_pva_char->characteristics_size;
 	u64 out_size = sizeof(struct pva_characteristics);
+	struct pva_version_info info;
+	struct pva *pva = priv->pva;
 	int err = 0;
+
+	/* check whether the characteristics has NULL pointer */
+	if (!in_pva_char->characteristics) {
+		err = -EINVAL;
+		goto err_check_characteristics_ptr;
+	}
+
+	err = nvhost_module_busy(pva->pdev);
+	if (err < 0)
+		goto err_poweron;
+
+	err = pva_get_firmware_version(pva, &info);
+	if (err < 0)
+		goto err_get_firmware_version;
 
 	memset(&pva_char, 0, out_size);
 	pva_char.num_vpu = 2;
 	pva_char.num_queues = MAX_PVA_QUEUE_COUNT;
+	pva_char.submit_mode = pva->submit_mode;
+	pva_char.pva_r5_version = info.pva_r5_version;
+	pva_char.pva_compat_version = info.pva_compat_version;
+	pva_char.pva_revision = info.pva_revision;
+	pva_char.pva_built_on = info.pva_built_on;
 
 	/* if input_size more than output_size, copy kernel struct size */
 	if (in_size > out_size)
@@ -438,14 +451,14 @@ static int pva_get_characteristics(struct pva_private *priv,
 	/* copy input_size of data to output*/
 	pva_char_req.characteristics_filled = in_size;
 
-	/* check whether the characteristics has NULL pointer */
-	if (!in_pva_char->characteristics)
-		return -EINVAL;
-
 	err = copy_to_user((void __user *)in_pva_char->characteristics,
 			&pva_char,
 			in_size);
 
+err_get_firmware_version:
+	nvhost_module_idle(pva->pdev);
+err_poweron:
+err_check_characteristics_ptr:
 	return err;
 }
 

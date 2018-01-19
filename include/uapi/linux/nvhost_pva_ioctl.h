@@ -48,20 +48,25 @@ struct pva_characteristics_req {
  * @num_vpu: number of vpu per pva
  * @vpu_generation: vpu hardware generation
  * @num_queues: number of queues per pva
- * @reserved: reserved for future use
- * @r5_ucode_version: R5 firmware version
- * @r5_ucode_earliest: 1st version compatible with current running fw
- * @r5_vpu_runtime_earliest: First supported vpu runtime version
+ * @submit_mode: PVA submission mode
+ * @pva_r5_revision: PVA R5 firmware revision
+ * @pva_compat_version: Earliest version supporting the firmware
+ * @pva_revision: PVA revision
+ * @pva_built_on: Firmware build information
  *
  */
 struct pva_characteristics {
 	__u8 num_vpu;
 	__u8 vpu_generation;
 	__u8 num_queues;
-	__u8 reserved[1];
-	__u32 r5_ucode_version;
-	__u32 r5_ucode_earliest;
-	__u32 r5_vpu_runtime_earliest;
+#define PVA_CHARACTERISTCS_IOCTL_SUBMIT_MODE_MAILBOX		0
+#define PVA_CHARACTERISTCS_IOCTL_SUBMIT_MODE_MMIO_CCQ		1
+#define PVA_CHARACTERISTCS_IOCTL_SUBMIT_MODE_CHANNEL_CCQ	2
+	__u8 submit_mode;
+	__u32 pva_r5_version;
+	__u32 pva_compat_version;
+	__u32 pva_revision;
+	__u32 pva_built_on;
 };
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -102,7 +102,7 @@ struct pmu_hdr {
 #define nv_pmu_hdr pmu_hdr
 typedef u8 flcn_status;
 
-#define PMU_DMEM_ALLOC_ALIGNMENT	(4)
+#define PMU_DMEM_ALLOC_ALIGNMENT	(32)
 #define PMU_DMEM_ALIGNMENT		(4)
 
 #define PMU_CMD_FLAGS_PMU_MASK		(0xF0)

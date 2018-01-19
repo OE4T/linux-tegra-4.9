@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,7 +37,7 @@
 
 /* PMU F/W version */
 #define APP_VERSION_GV11B	23355380
-#define APP_VERSION_GV10X	22836594
+#define APP_VERSION_GV10X	23440730
 #define APP_VERSION_GP10X	21308030
 #define APP_VERSION_GP10B	20429989
 #define APP_VERSION_GM20B	20490253
@@ -389,6 +389,11 @@ static void pmu_allocation_set_dmem_offset_v1(struct nvgpu_pmu *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
+static void *get_pmu_msg_pmu_init_msg_ptr_v5(struct pmu_init_msg *init)
+{
+	return (void *)(&(init->pmu_init_v5));
+}
+
 static void *get_pmu_msg_pmu_init_msg_ptr_v4(struct pmu_init_msg *init)
 {
 	return (void *)(&(init->pmu_init_v4));
@@ -397,6 +402,14 @@ static void *get_pmu_msg_pmu_init_msg_ptr_v4(struct pmu_init_msg *init)
 static void *get_pmu_msg_pmu_init_msg_ptr_v3(struct pmu_init_msg *init)
 {
 	return (void *)(&(init->pmu_init_v3));
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_off_v5(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v5 *init =
+		(struct pmu_init_msg_pmu_v5 *)(&init_msg->v5);
+
+	return init->sw_managed_area_offset;
 }
 
 static u16 get_pmu_init_msg_pmu_sw_mg_off_v4(union pmu_init_msg_pmu *init_msg)
@@ -413,6 +426,14 @@ static u16 get_pmu_init_msg_pmu_sw_mg_off_v3(union pmu_init_msg_pmu *init_msg)
 		(struct pmu_init_msg_pmu_v3 *)(&init_msg->v3);
 
 	return init->sw_managed_area_offset;
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_size_v5(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v5 *init =
+		(struct pmu_init_msg_pmu_v5 *)(&init_msg->v5);
+
+	return init->sw_managed_area_size;
 }
 
 static u16 get_pmu_init_msg_pmu_sw_mg_size_v4(union pmu_init_msg_pmu *init_msg)
@@ -856,7 +877,7 @@ static void get_pmu_init_msg_pmu_queue_params_v4(struct pmu_queue *queue,
 static void get_pmu_init_msg_pmu_queue_params_v5(struct pmu_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
-	struct pmu_init_msg_pmu_v4 *init = pmu_init_msg;
+	struct pmu_init_msg_pmu_v5 *init = pmu_init_msg;
 	u32 current_ptr = 0;
 	u8 i;
 	u8 tmp_id = id;
@@ -1249,18 +1270,26 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				pmu_allocation_get_fb_addr_v3;
 		g->ops.pmu_ver.pmu_allocation_get_fb_size =
 				pmu_allocation_get_fb_size_v3;
-		if (pmu->desc->app_version == APP_VERSION_GV10X)
+		if (pmu->desc->app_version == APP_VERSION_GV10X) {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
 				get_pmu_init_msg_pmu_queue_params_v5;
-		else
+			g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
+				get_pmu_msg_pmu_init_msg_ptr_v5;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
+				get_pmu_init_msg_pmu_sw_mg_off_v5;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
+				get_pmu_init_msg_pmu_sw_mg_size_v5;
+		} else {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
 				get_pmu_init_msg_pmu_queue_params_v4;
-		g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
-			get_pmu_msg_pmu_init_msg_ptr_v4;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
-			get_pmu_init_msg_pmu_sw_mg_off_v4;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
-			get_pmu_init_msg_pmu_sw_mg_size_v4;
+			g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
+				get_pmu_msg_pmu_init_msg_ptr_v4;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
+				get_pmu_init_msg_pmu_sw_mg_off_v4;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
+				get_pmu_init_msg_pmu_sw_mg_size_v4;
+		}
+
 		g->ops.pmu_ver.get_pmu_perfmon_cmd_start_size =
 			get_pmu_perfmon_cmd_start_size_v3;
 		g->ops.pmu_ver.get_perfmon_cmd_start_offsetofvar =

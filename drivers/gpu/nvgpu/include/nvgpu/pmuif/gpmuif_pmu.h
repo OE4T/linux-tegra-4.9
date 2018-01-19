@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -141,10 +141,27 @@ struct pmu_init_msg_pmu_v4 {
 	u8 dummy[18];
 };
 
+struct pmu_init_msg_pmu_v5 {
+	u8 msg_type;
+	u8 flcn_status;
+	u8  queue_index[PMU_QUEUE_COUNT_FOR_V4];
+	u16 queue_size[PMU_QUEUE_COUNT_FOR_V4];
+	u16 queue_offset;
+
+	u16 sw_managed_area_offset;
+	u16 sw_managed_area_size;
+
+	u16  os_debug_entry_point;
+
+	u8 dummy[18];
+	u8 pad;
+};
+
 union pmu_init_msg_pmu {
 	struct pmu_init_msg_pmu_v1 v1;
 	struct pmu_init_msg_pmu_v3 v3;
 	struct pmu_init_msg_pmu_v4 v4;
+	struct pmu_init_msg_pmu_v5 v5;
 };
 
 struct pmu_init_msg {
@@ -153,6 +170,7 @@ struct pmu_init_msg {
 		struct pmu_init_msg_pmu_v1 pmu_init_v1;
 		struct pmu_init_msg_pmu_v3 pmu_init_v3;
 		struct pmu_init_msg_pmu_v4 pmu_init_v4;
+		struct pmu_init_msg_pmu_v5 pmu_init_v5;
 	};
 };
 

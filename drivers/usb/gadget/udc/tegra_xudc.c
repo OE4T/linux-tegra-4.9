@@ -522,14 +522,8 @@ struct tegra_xudc {
 
 	struct regulator_bulk_data *supplies;
 
-	struct clk *xusb_core_dev_clk;
-	struct clk *xusb_core_superspeed_clk;
-	struct clk *xusb_fs_dev_clk;
-	struct clk *xusb_ss_dev_clk;
-	struct clk *xusb_ss;
-	struct clk *pll_u_480m;
-	struct clk *clk_m;
-	struct clk *pll_e;
+	struct clk **clks;
+	unsigned int num_clks;
 	bool clk_enabled;
 
 	bool device_mode;
@@ -601,7 +595,6 @@ struct tegra_xudc_soc_data {
 	bool lpm_enable;
 	bool invalid_seq_num;
 	bool pls_quirk;
-	bool init_clks;
 	bool disable_elpg;
 	bool port_reset_quirk;
 };
@@ -3570,153 +3563,83 @@ static void tegra_xudc_phy_exit(struct tegra_xudc *xudc)
 
 static int tegra_xudc_clk_init(struct tegra_xudc *xudc)
 {
-	int err;
+	struct device *dev = xudc->dev;
+	int ret = 0;
+	unsigned int i;
 
-	xudc->pll_e = devm_clk_get(xudc->dev, "pll_e");
-	if (IS_ERR(xudc->pll_e)) {
-		err = PTR_ERR(xudc->pll_e);
-		dev_err(xudc->dev, "failed to get pll_e: %d\n",
-				err);
-		return err;
-	}
+	xudc->num_clks = of_count_phandle_with_args(dev->of_node, "clocks",
+						    "#clock-cells");
+	if (xudc->num_clks <= 0)
+		return 0;
 
-	xudc->clk_m = devm_clk_get(xudc->dev, "clk_m");
-	if (IS_ERR(xudc->clk_m)) {
-		err = PTR_ERR(xudc->clk_m);
-		dev_err(xudc->dev, "failed to get clk_m: %d\n",
-				err);
-		return err;
-	}
+	xudc->clks = devm_kcalloc(dev, xudc->num_clks, sizeof(*xudc->clks),
+				  GFP_KERNEL);
+	if (!xudc->clks)
+		return -ENOMEM;
 
-	xudc->pll_u_480m = devm_clk_get(xudc->dev, "pll_u_480m");
-	if (IS_ERR(xudc->pll_u_480m)) {
-		err = PTR_ERR(xudc->pll_u_480m);
-		dev_err(xudc->dev, "failed to get pll_u_480m: %d\n",
-				err);
-		return err;
-	}
-
-	xudc->xusb_ss = devm_clk_get(xudc->dev, "xusb_ss");
-	if (IS_ERR(xudc->xusb_ss)) {
-		err = PTR_ERR(xudc->xusb_ss);
-		dev_err(xudc->dev, "failed to get xusb_ss: %d\n",
-				err);
-		return err;
-	}
-
-	xudc->xusb_ss_dev_clk = devm_clk_get(xudc->dev, "xusb_ss_dev_clk");
-	if (IS_ERR(xudc->xusb_ss_dev_clk)) {
-		err = PTR_ERR(xudc->xusb_ss_dev_clk);
-		dev_err(xudc->dev, "failed to get xusb_ss_dev_clk: %d\n",
-				err);
-		return err;
-	}
-
-	xudc->xusb_fs_dev_clk = devm_clk_get(xudc->dev, "xusb_fs_dev_clk");
-	if (IS_ERR(xudc->xusb_fs_dev_clk)) {
-		err = PTR_ERR(xudc->xusb_fs_dev_clk);
-		dev_err(xudc->dev, "failed to get xusb_fs_dev_clk: %d\n",
-				err);
-		return err;
-	}
-
-	xudc->xusb_core_superspeed_clk = devm_clk_get(xudc->dev,
-					"xusb_core_superspeed_clk");
-	if (IS_ERR(xudc->xusb_core_superspeed_clk)) {
-		err = PTR_ERR(xudc->xusb_core_superspeed_clk);
-		dev_err(xudc->dev,
-			"failed to get xusb_core_superspeed_clk: %d\n", err);
-		return err;
-	}
-
-	xudc->xusb_core_dev_clk = devm_clk_get(xudc->dev, "xusb_core_dev_clk");
-	if (IS_ERR(xudc->xusb_core_dev_clk)) {
-		err = PTR_ERR(xudc->xusb_core_dev_clk);
-		dev_err(xudc->dev, "failed to get xusb_core_dev_clk: %d\n",
-				err);
-		return err;
+	for (i = 0; i < xudc->num_clks; i++) {
+		xudc->clks[i] = of_clk_get(dev->of_node, i);
+		if (IS_ERR(xudc->clks[i])) {
+			ret = PTR_ERR(xudc->clks[i]);
+			goto error;
+		}
 	}
 
 	return 0;
+
+error:
+	while (i--)
+		clk_put(xudc->clks[i]);
+	xudc->num_clks = 0;
+
+	return ret;
+}
+
+static void tegra_xudc_clk_deinit(struct tegra_xudc *xudc)
+{
+	unsigned int i;
+
+	for (i = 0; i < xudc->num_clks; i++) {
+		clk_put(xudc->clks[i]);
+	}
 }
 
 static int tegra_xudc_clk_enable(struct tegra_xudc *xudc)
 {
-	int err;
+	unsigned int i;
+	int ret = 0;
 
 	if (xudc->clk_enabled)
 		return 0;
 
-	err = clk_prepare_enable(xudc->pll_e);
-	if (err < 0)
-		return err;
-
-	err = clk_prepare_enable(xudc->clk_m);
-	if (err < 0)
-		goto disable_pll_e;
-
-	err = clk_prepare_enable(xudc->pll_u_480m);
-	if (err < 0)
-		goto disable_clk_m;
-
-	err = clk_prepare_enable(xudc->xusb_ss);
-	if (err < 0)
-		goto disable_pll_u_480m;
-
-	err = clk_prepare_enable(xudc->xusb_ss_dev_clk);
-	if (err < 0)
-		goto disable_xusb_ss;
-
-	err = clk_prepare_enable(xudc->xusb_fs_dev_clk);
-	if (err < 0)
-		goto disable_xusb_ss_dev_clk;
-
-	err = clk_prepare_enable(xudc->xusb_core_superspeed_clk);
-	if (err < 0)
-		goto disable_xusb_fs_dev_clk;
-
-	err = clk_prepare_enable(xudc->xusb_core_dev_clk);
-	if (err < 0)
-		goto disable_xusb_core_superspeed_clk;
+	for (i = 0; i < xudc->num_clks; i++) {
+		ret = clk_prepare_enable(xudc->clks[i]);
+		if (ret)
+			goto error;
+	}
 
 	xudc->clk_enabled = true;
 
 	return 0;
 
-disable_xusb_core_superspeed_clk:
-	clk_disable_unprepare(xudc->xusb_core_superspeed_clk);
-disable_xusb_fs_dev_clk:
-	clk_disable_unprepare(xudc->xusb_fs_dev_clk);
-disable_xusb_ss_dev_clk:
-	clk_disable_unprepare(xudc->xusb_ss_dev_clk);
-disable_xusb_ss:
-	clk_disable_unprepare(xudc->xusb_ss);
-disable_pll_u_480m:
-	clk_disable_unprepare(xudc->pll_u_480m);
-disable_clk_m:
-	clk_disable_unprepare(xudc->clk_m);
-disable_pll_e:
-	clk_disable_unprepare(xudc->pll_e);
+error:
+	while (i--)
+		clk_disable_unprepare(xudc->clks[i]);
 
-	return err;
+	return ret;
 }
 
-static int tegra_xudc_clk_disable(struct tegra_xudc *xudc)
+static void tegra_xudc_clk_disable(struct tegra_xudc *xudc)
 {
+	unsigned int i;
+
 	if (!xudc->clk_enabled)
-		return 0;
+		return;
 
-	clk_disable_unprepare(xudc->xusb_core_dev_clk);
-	clk_disable_unprepare(xudc->xusb_core_superspeed_clk);
-	clk_disable_unprepare(xudc->xusb_fs_dev_clk);
-	clk_disable_unprepare(xudc->xusb_ss_dev_clk);
-	clk_disable_unprepare(xudc->xusb_ss);
-	clk_disable_unprepare(xudc->pll_u_480m);
-	clk_disable_unprepare(xudc->clk_m);
-	clk_disable_unprepare(xudc->pll_e);
+	for (i = 0; i < xudc->num_clks; i++)
+		clk_disable(xudc->clks[i]);
+
 	xudc->clk_enabled = false;
-
-	return 0;
 }
 
 static void tegra_xudc_non_std_charger_work(struct work_struct *work)
@@ -3794,7 +3717,6 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.lpm_enable = true,
 	.invalid_seq_num = false,
 	.pls_quirk = false,
-	.init_clks = true,
 	.disable_elpg = false,
 	.port_reset_quirk = false,
 };
@@ -3890,12 +3812,10 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (xudc->soc->init_clks) {
-		err = tegra_xudc_clk_init(xudc);
-		if (err < 0) {
-			dev_err(xudc->dev, "failed to init clocks %d\n", err);
-			return err;
-		}
+	err = tegra_xudc_clk_init(xudc);
+	if (err < 0) {
+		dev_err(xudc->dev, "failed to init clocks %d\n", err);
+		return err;
 	}
 
 	if (tegra_platform_is_silicon()) {
@@ -3992,21 +3912,19 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (xudc->soc->init_clks) {
-		err = tegra_xudc_clk_enable(xudc);
-		if (err < 0)
-			goto disable_regulator;
-	}
+	err = tegra_xudc_clk_enable(xudc);
+	if (err < 0)
+		goto disable_regulator;
 
 	if (partition_id_xusba < 0) {
 		err = -EINVAL;
-		goto disable_regulator;
+		goto disable_clk;
 	}
 	err = tegra_unpowergate_partition_with_clk_on(
 			partition_id_xusba);
 	if (err < 0) {
 		dev_err(xudc->dev, "failed to unpowergate XUSBA partition\n");
-		goto disable_regulator;
+		goto disable_clk;
 	}
 
 	if (partition_id_xusbb < 0) {
@@ -4114,11 +4032,15 @@ powergate_xusbb:
 	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
 powergate_xusba:
 	tegra_powergate_partition_with_clk_off(partition_id_xusba);
+disable_clk:
+	tegra_xudc_clk_disable(xudc);
 disable_regulator:
 	if (tegra_platform_is_silicon())
 		regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
 put_padctl:
 	tegra_xusb_padctl_put(xudc->padctl);
+	tegra_xudc_clk_deinit(xudc);
+
 	return err;
 }
 
@@ -4175,6 +4097,7 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	tegra_xudc_phy_exit(xudc);
 	pm_runtime_disable(xudc->dev);
 	pm_runtime_put(xudc->dev);
+	tegra_xudc_clk_deinit(xudc);
 
 	tegra_xusb_padctl_put(xudc->padctl);
 
@@ -4198,8 +4121,7 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0, CTRL);
 	spin_unlock_irqrestore(&xudc->lock, flags);
 
-	if (xudc->soc->init_clks)
-		tegra_xudc_clk_disable(xudc);
+	tegra_xudc_clk_disable(xudc);
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
@@ -4243,8 +4165,7 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 			return err;
 	}
 
-	if (xudc->soc->init_clks)
-		tegra_xudc_clk_enable(xudc);
+	tegra_xudc_clk_enable(xudc);
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);

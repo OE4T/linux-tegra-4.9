@@ -79,6 +79,7 @@ struct gpio_extcon_info {
 	int cable_detect_jiffies;
 	bool wakeup_source;
 	int last_cstate;
+	unsigned int wakeup_cables;
 };
 
 static void gpio_extcon_scan_work(struct work_struct *work)
@@ -414,12 +415,15 @@ static int gpio_extcon_remove(struct platform_device *pdev)
 static int gpio_extcon_suspend(struct device *dev)
 {
 	struct gpio_extcon_info *gpex = dev_get_drvdata(dev);
-	int i;
+	int i, ret;
 
 	cancel_delayed_work_sync(&gpex->work);
 	if (device_may_wakeup(gpex->dev)) {
-		for (i = 0; i < gpex->pdata->n_gpio; ++i)
-			enable_irq_wake(gpex->pdata->gpios[i].irq);
+		for (i = 0; i < gpex->pdata->n_gpio; ++i) {
+			ret = enable_irq_wake(gpex->pdata->gpios[i].irq);
+			if (!ret)
+				gpex->wakeup_cables |= BIT(i);
+		}
 	}
 
 	return 0;
@@ -431,8 +435,13 @@ static int gpio_extcon_resume(struct device *dev)
 	int i;
 
 	if (device_may_wakeup(gpex->dev)) {
-		for (i = 0; i < gpex->pdata->n_gpio; ++i)
+		for (i = 0; i < gpex->pdata->n_gpio; ++i) {
+			if ((gpex->wakeup_cables & BIT(i)) == 0)
+				continue;
+			gpex->wakeup_cables &= ~BIT(i);
+
 			disable_irq_wake(gpex->pdata->gpios[i].irq);
+		}
 	}
 	gpio_extcon_scan_work(&gpex->work.work);
 

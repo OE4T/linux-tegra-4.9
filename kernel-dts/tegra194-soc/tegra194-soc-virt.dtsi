@@ -192,6 +192,22 @@
 		status = "disabled";
 	};
 
+	cbbnocaxi@c600000 {
+		status = "disabled";
+	};
+
+	cbbnocaxi@d600000 {
+		status = "disabled";
+	};
+
+	cbbnocaxi@be00000 {
+		status = "disabled";
+	};
+
+	cbbnocaxi@b600000 {
+		status = "disabled";
+	};
+
 	/* Disable cpufreq, so that server partitions accidently don't invoke
 	  cpufreq driver(in case if present in server code). In bpmp-server(which
 	  owns cpufreq)DT, cpufreq DT node will be enabled explicitly.

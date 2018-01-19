@@ -2142,6 +2142,11 @@
 			<0x0 0x700d9000 0x0 0x1000>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		interrupts = <0 44 0x4>;
+		clocks = <&tegra_car TEGRA210_CLK_XUSB_DEV>,
+			<&tegra_car TEGRA210_CLK_XUSB_SS>,
+			<&tegra_car TEGRA210_CLK_XUSB_SSP_SRC>,
+			<&tegra_car TEGRA210_CLK_XUSB_HS_SRC>,
+			<&tegra_car TEGRA210_CLK_XUSB_FS_SRC>;
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #else
 		interrupts = <0 44 0x4

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *      Abhinav Site    <asite@nvidia.com>
@@ -210,7 +210,7 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 		if (ufshcd_get_config_desc_lock(hba, &desc_lock)) {
 			dev_err(hba->dev,
 				"%s: Read bConfigDescrLock failed\n", __func__);
-			goto out;
+			goto out_put_sync;
 		}
 
 		if (desc_lock != 0) {
@@ -218,7 +218,7 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 				"%s: Config Desciptor is locked\n"
 				"Cannot program LUNs on the device. Aborting\n"
 				, __func__);
-			goto out;
+			goto out_put_sync;
 		}
 
 		/* Populate Config Desc Header */
@@ -238,7 +238,7 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 			dev_err(hba->dev,
 				"%s: Descriptor Valdiation Failed\n", __func__);
 			ret = err;
-			goto out;
+			goto out_put_sync;
 		}
 
 		/* Program LUN */
@@ -249,16 +249,14 @@ static ssize_t program_lun_debugfs_write(struct file *file,
 			dev_info(hba->dev,
 				"%s: LUN Programming successful\n", __func__);
 		}
+
+out_put_sync:
+		pm_runtime_put_sync(hba->dev);
+
 	} else {
 		dev_info(hba->dev, "%s:Skip programming LUNs\n", __func__);
 	}
 out:
-	err = pm_runtime_put_sync(hba->dev);
-	if (err) {
-		dev_err(hba->dev,
-			"pm_runtime_put_sync failed with error = %d\n", err);
-	}
-
 	devm_kfree(hba->dev, kbuf);
 	return ret;
 }
@@ -330,15 +328,13 @@ static ssize_t program_refclk_debugfs_write(struct file *file,
 		}
 		dev_info(hba->dev, "%s: bRefclkFreq value is %d\n",
 				__func__, ufs_tegra->refclk_value);
+
+		pm_runtime_put_sync(hba->dev);
+
 	} else {
 		dev_info(hba->dev, "%s:Skip progamming refclkfreq\n", __func__);
 	}
 out:
-	err = pm_runtime_put_sync(hba->dev);
-	if (err) {
-		dev_err(hba->dev,
-			"pm_runtime_put_sync failed with error = %d\n", err);
-	}
 
 	devm_kfree(hba->dev, kbuf);
 	return ret;

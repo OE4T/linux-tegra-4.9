@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/io.h>
+#include <linux/hw_random.h>
 
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/common.h>
@@ -186,6 +187,7 @@ void tegra_init_revision(void)
 			break;
 		case 3:
 			revision = TEGRA_REVISION_SIM;
+			add_hwgenerator_randomness(NULL, 0, 1000);
 			break;
 		}
 		goto exit;

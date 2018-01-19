@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <trace/events/gk20a.h>
+
 #include <dt-bindings/memory/tegra-swgroup.h>
 
 #include <nvgpu/ltc.h>
@@ -130,6 +132,99 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gr->gobs_per_comptagline_per_slice = gobs_per_comptagline_per_slice;
 
 	return 0;
+}
+
+int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+		       u32 min, u32 max)
+{
+	struct gr_gk20a *gr = &g->gr;
+	struct nvgpu_timeout timeout;
+	int err = 0;
+	u32 ltc, slice, ctrl1, val, hw_op = 0;
+	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
+				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+	const u32 max_lines = 16384;
+
+	nvgpu_log_fn(g, " ");
+
+	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
+
+	if (gr->compbit_store.mem.size == 0)
+		return 0;
+
+	while (1) {
+		const u32 iter_max = min(min + max_lines - 1, max);
+		bool full_cache_op = true;
+
+		nvgpu_mutex_acquire(&g->mm.l2_op_lock);
+
+		nvgpu_log_info(g, "clearing CBC lines %u..%u", min, iter_max);
+
+		if (op == gk20a_cbc_op_clear) {
+			gk20a_writel(
+				g, ltc_ltcs_ltss_cbc_ctrl2_r(),
+				ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(
+					min));
+			gk20a_writel(
+				g, ltc_ltcs_ltss_cbc_ctrl3_r(),
+				ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(
+					iter_max));
+			hw_op = ltc_ltcs_ltss_cbc_ctrl1_clear_active_f();
+			full_cache_op = false;
+		} else if (op == gk20a_cbc_op_clean) {
+			/* this is full-cache op */
+			hw_op = ltc_ltcs_ltss_cbc_ctrl1_clean_active_f();
+		} else if (op == gk20a_cbc_op_invalidate) {
+			/* this is full-cache op */
+			hw_op = ltc_ltcs_ltss_cbc_ctrl1_invalidate_active_f();
+		} else {
+			nvgpu_err(g, "Unknown op: %u", (unsigned)op);
+			err = -EINVAL;
+			goto out;
+		}
+		gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl1_r(),
+			     gk20a_readl(g,
+					 ltc_ltcs_ltss_cbc_ctrl1_r()) | hw_op);
+
+		for (ltc = 0; ltc < g->ltc_count; ltc++) {
+			for (slice = 0; slice < slices_per_ltc; slice++) {
+
+				ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
+					ltc * ltc_stride + slice * lts_stride;
+
+				nvgpu_timeout_init(g, &timeout, 2000,
+						   NVGPU_TIMER_RETRY_TIMER);
+				do {
+					val = gk20a_readl(g, ctrl1);
+					if (!(val & hw_op))
+						break;
+					nvgpu_udelay(5);
+				} while (!nvgpu_timeout_expired(&timeout));
+
+				if (nvgpu_timeout_peek_expired(&timeout)) {
+					nvgpu_err(g, "comp tag clear timeout");
+					err = -EBUSY;
+					goto out;
+				}
+			}
+		}
+
+		/* are we done? */
+		if (full_cache_op || iter_max == max)
+			break;
+
+		/* note: iter_max is inclusive upper bound */
+		min = iter_max + 1;
+
+		/* give a chance for higher-priority threads to progress */
+		nvgpu_mutex_release(&g->mm.l2_op_lock);
+	}
+out:
+	trace_gk20a_ltc_cbc_ctrl_done(g->name);
+	nvgpu_mutex_release(&g->mm.l2_op_lock);
+	return err;
 }
 
 void gp10b_ltc_isr(struct gk20a *g)

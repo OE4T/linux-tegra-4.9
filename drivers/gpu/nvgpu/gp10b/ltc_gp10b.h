@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,5 +29,7 @@ void gp10b_ltc_isr(struct gk20a *g);
 int gp10b_determine_L2_size_bytes(struct gk20a *g);
 int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr);
 void gp10b_ltc_init_fs_state(struct gk20a *g);
+int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
+		       u32 min, u32 max);
 void gp10b_ltc_set_enabled(struct gk20a *g, bool enabled);
 #endif

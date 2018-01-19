@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.c
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -72,6 +72,12 @@
  * QUERY_REQ_TIMEOUT may not be enough for such devices.
  */
 #define QUERY_FDEVICEINIT_REQ_TIMEOUT 600 /* msec */
+
+/* Query request timeout for Config Descriptor Write
+ * Config Descriptor Write time for some devices is too large so the default
+ * QUERY_REQ_TIMEOUT may not be enough for such devices
+ */
+#define QUERY_CONFIG_DESC_WRITE_TIMEOUT 250 /* msec */
 
 /* Task management command timeout */
 #define TM_CMD_TIMEOUT	100 /* msecs */
@@ -2012,6 +2018,7 @@ static int __ufshcd_query_descriptor(struct ufs_hba *hba,
 	struct ufs_query_req *request = NULL;
 	struct ufs_query_res *response = NULL;
 	int err;
+	int timeout = QUERY_REQ_TIMEOUT;
 
 	BUG_ON(!hba);
 
@@ -2051,7 +2058,12 @@ static int __ufshcd_query_descriptor(struct ufs_hba *hba,
 		goto out_unlock;
 	}
 
-	err = ufshcd_exec_dev_cmd(hba, DEV_CMD_TYPE_QUERY, QUERY_REQ_TIMEOUT);
+	/* Config Desc Write takes longer time. Set timeout accordingly */
+	if ((opcode == UPIU_QUERY_OPCODE_WRITE_DESC) &&
+		(idn == QUERY_DESC_IDN_CONFIGURAION))
+		timeout = QUERY_CONFIG_DESC_WRITE_TIMEOUT;
+
+	err = ufshcd_exec_dev_cmd(hba, DEV_CMD_TYPE_QUERY, timeout);
 
 	if (err) {
 		dev_err(hba->dev, "%s: opcode 0x%.2x for idn %d failed, err = %d\n",

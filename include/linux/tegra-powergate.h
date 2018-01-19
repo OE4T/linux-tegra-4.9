@@ -37,23 +37,6 @@ int tegra_powergate_remove_clamping(int id);
 const char *tegra_powergate_get_name(int id);
 
 /*
- * Functions to powergate/un-powergate partitions.
- * Handle clk management in the API's.
- *
- * tegra_powergate_partition_with_clk_off() can be called with
- * clks ON. It disables all required clks.
- *
- * tegra_unpowergate_partition_with_clk_on() can be called with
- * all required clks OFF. Returns with all clks ON.
- *
- * Warning: In general drivers should take care of the module
- * clks and use tegra_powergate_partition() &
- * tegra_unpowergate_partition() API's.
- */
-int tegra_powergate_partition_with_clk_off(int id);
-int tegra_unpowergate_partition_with_clk_on(int id);
-
-/*
  * Functions to powergate un-powergate partitions.
  * Drivers are responsible for clk enable-disable
  *
@@ -82,14 +65,6 @@ static inline int tegra_powergate_partition(int id)
 }
 
 static inline int tegra_unpowergate_partition(int id)
-{
-	return -ENOSYS;
-}
-static inline int tegra_powergate_partition_with_clk_off(int id)
-{
-	return -ENOSYS;
-}
-static inline int tegra_unpowergate_partition_with_clk_on(int id)
 {
 	return -ENOSYS;
 }

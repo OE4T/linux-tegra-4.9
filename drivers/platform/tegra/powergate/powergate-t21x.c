@@ -1064,8 +1064,7 @@ static int tegra210_powergate_remove_clamping(int id)
 	return 0;
 }
 
-static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info,
-				bool clk_enable)
+static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info)
 {
 	int ret;
 
@@ -1073,19 +1072,13 @@ static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info
 	if (!pg_info->clk_info[0].clk_ptr)
 		get_clk_info(pg_info);
 
-	if (clk_enable) {
-		/*
-		 * Enable clocks only if clocks are not expected to
-		 * be off when power gating is done
-		 */
-		ret = partition_clk_enable(pg_info);
-		if (ret) {
-			WARN(1, "Couldn't enable clock");
-			return ret;
-		}
-
-		udelay(10);
+	ret = partition_clk_enable(pg_info);
+	if (ret) {
+		WARN(1, "Couldn't enable clock");
+		return ret;
 	}
+
+	udelay(10);
 
 	tegra210_pg_mc_flush(id);
 
@@ -1113,11 +1106,10 @@ err_power_off:
 
 static int tegra1xx_powergate(int id, struct powergate_partition_info *pg_info)
 {
-	return __tegra1xx_powergate(id, pg_info, true);
+	return __tegra1xx_powergate(id, pg_info);
 }
 
-static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_info,
-				bool clk_disable)
+static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_info)
 {
 	int ret;
 
@@ -1129,16 +1121,6 @@ static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_in
 		get_slcg_info(pg_info);
 
 	if (tegra210_pg_is_powered(id)) {
-		if (!clk_disable) {
-			ret = partition_clk_enable(pg_info);
-			if (ret)
-				return ret;
-			if (!pg_info->skip_reset) {
-				powergate_partition_assert_reset(pg_info);
-				udelay(10);
-				powergate_partition_deassert_reset(pg_info);
-			}
-		}
 		return 0;
 	}
 
@@ -1183,8 +1165,7 @@ static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_in
 	}
 
 	/* Disable all clks enabled earlier. Drivers should enable clks */
-	if (clk_disable)
-		partition_clk_disable(pg_info);
+	partition_clk_disable(pg_info);
 
 	return 0;
 
@@ -1200,31 +1181,7 @@ err_power:
 static int tegra1xx_unpowergate(int id,
 				struct powergate_partition_info *pg_info)
 {
-	return __tegra1xx_unpowergate(id, pg_info, true);
-}
-
-static int tegra1xx_powergate_partition_with_clk_off(int id,
-		struct powergate_partition_info *pg_info)
-{
-	int ret = 0;
-
-	ret = __tegra1xx_powergate(id, pg_info, false);
-	if (ret)
-		WARN(1, "Could not Powergate Partition %d", id);
-
-	return ret;
-}
-
-static int tegra1xx_unpowergate_partition_with_clk_on(int id,
-	struct powergate_partition_info *pg_info)
-{
-	int ret = 0;
-
-	ret = __tegra1xx_unpowergate(id, pg_info, false);
-	if (ret)
-		WARN(1, "Could not Un-Powergate %d", id);
-
-	return ret;
+	return __tegra1xx_unpowergate(id, pg_info);
 }
 
 static int tegra210_pg_mc_flush(int id)
@@ -1426,60 +1383,6 @@ static int tegra210_pg_unpowergate_partition(int id)
 	return ret;
 }
 
-static int tegra210_pg_powergate_clk_off(int id)
-{
-	int ret = 0;
-	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
-
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
-	mutex_lock(&partition->pg_mutex);
-
-	if (--partition->refcount > 0)
-		goto exit_unlock;
-
-	if ((partition->refcount < 0) || !tegra210_pg_is_powered(id)) {
-		WARN(1, "Partition %s already powergated, refcount and status mismatch\n",
-		     partition->name);
-		goto exit_unlock;
-	}
-
-	if (t210_pg_info[id].part_id == TEGRA210_POWER_DOMAIN_SATA)
-		tegra210_set_sata_pll_seq_sw(true);
-
-	ret = tegra1xx_powergate_partition_with_clk_off(id,
-			t210_pg_info[id].part_info);
-
-exit_unlock:
-	mutex_unlock(&partition->pg_mutex);
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 0, ret);
-
-	return ret;
-}
-
-static int tegra210_pg_unpowergate_clk_on(int id)
-{
-	int ret = 0;
-	struct powergate_partition_info *partition = t210_pg_info[id].part_info;
-
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 1, 0);
-	mutex_lock(&partition->pg_mutex);
-
-	if (partition->refcount++ > 0)
-		goto exit_unlock;
-
-	ret = tegra1xx_unpowergate_partition_with_clk_on(id,
-			t210_pg_info[id].part_info);
-
-	if (t210_pg_info[id].part_id == TEGRA210_POWER_DOMAIN_SATA)
-		tegra210_set_sata_pll_seq_sw(false);
-
-exit_unlock:
-	mutex_unlock(&partition->pg_mutex);
-	trace_powergate(__func__, tegra210_pg_get_name(id), id, 0, ret);
-
-	return ret;
-}
-
 static int tegra210_pg_init_refcount(void)
 {
 	int i;
@@ -1552,9 +1455,6 @@ static struct tegra_powergate_driver_ops tegra210_pg_ops = {
 
 	.powergate_partition = tegra210_pg_powergate_partition,
 	.unpowergate_partition = tegra210_pg_unpowergate_partition,
-
-	.powergate_partition_with_clk_off = tegra210_pg_powergate_clk_off,
-	.unpowergate_partition_with_clk_on = tegra210_pg_unpowergate_clk_on,
 
 	.powergate_mc_flush = tegra210_pg_mc_flush,
 	.powergate_mc_flush_done = tegra210_pg_mc_flush_done,

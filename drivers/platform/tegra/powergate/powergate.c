@@ -215,56 +215,6 @@ int tegra_unpowergate_partition(int id)
 }
 EXPORT_SYMBOL(tegra_unpowergate_partition);
 
-int tegra_powergate_partition_with_clk_off(int id)
-{
-	if (!pg_ops) {
-		WARN_ON_ONCE("This SOC doesn't support powergating\n");
-		return -EINVAL;
-	}
-
-	if (!pg_ops->powergate_id_is_soc_valid(id)) {
-		pr_info("%s: invalid powergate id %d\n", __func__, id);
-		return -EINVAL;
-	}
-
-	if (tegra_powergate_check_skip_list(id))
-		printk_once("%s: %s is in powergate skip list\n", __func__,
-			tegra_powergate_get_name(id));
-
-	if (pg_ops->powergate_partition_with_clk_off)
-		return pg_ops->powergate_partition_with_clk_off(id);
-	else
-		WARN_ON_ONCE("This SOC doesn't support powergating with clk off");
-
-	return -EINVAL;
-}
-EXPORT_SYMBOL(tegra_powergate_partition_with_clk_off);
-
-int tegra_unpowergate_partition_with_clk_on(int id)
-{
-	if (!pg_ops) {
-		WARN_ON_ONCE("This SOC doesn't support powergating\n");
-		return -EINVAL;
-	}
-
-	if (!pg_ops->powergate_id_is_soc_valid(id)) {
-		pr_info("%s: invalid powergate id %d\n", __func__, id);
-		return -EINVAL;
-	}
-
-	if (tegra_powergate_check_skip_list(id))
-		printk_once("%s: %s is in powergate skip list\n", __func__,
-			tegra_powergate_get_name(id));
-
-	if (pg_ops->unpowergate_partition_with_clk_on)
-		return pg_ops->unpowergate_partition_with_clk_on(id);
-	else
-		WARN_ON_ONCE("This SOC doesn't support power un-gating with clk on");
-
-	return -EINVAL;
-}
-EXPORT_SYMBOL(tegra_unpowergate_partition_with_clk_on);
-
 int tegra_powergate_mc_enable(int id)
 {
 	if (!pg_ops) {

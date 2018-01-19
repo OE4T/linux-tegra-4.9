@@ -31,9 +31,6 @@ struct tegra_powergate_driver_ops {
 	int (*powergate_partition)(int);
 	int (*unpowergate_partition)(int id);
 
-	int (*powergate_partition_with_clk_off)(int);
-	int (*unpowergate_partition_with_clk_on)(int);
-
 	int (*powergate_mc_enable)(int id);
 	int (*powergate_mc_disable)(int id);
 

@@ -66,6 +66,10 @@ static void nvgpu_init_vars(struct gk20a *g)
 	dev->dma_parms = &l->dma_parms;
 	dma_set_max_seg_size(dev, UINT_MAX);
 
+	/* 34 bit mask - can be expanded for later chips is needed. */
+	dma_set_mask(dev, DMA_BIT_MASK(34));
+	dma_set_coherent_mask(dev, DMA_BIT_MASK(34));
+
 	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
 

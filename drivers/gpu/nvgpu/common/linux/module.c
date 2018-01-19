@@ -265,7 +265,8 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 
 	/* Initialise scaling: it will initialize scaling drive only once */
-	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ)) {
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ) &&
+			nvgpu_platform_is_silicon(g)) {
 		gk20a_scale_init(dev);
 		if (platform->initscale)
 			platform->initscale(dev);

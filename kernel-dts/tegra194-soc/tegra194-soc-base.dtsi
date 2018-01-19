@@ -1726,18 +1726,10 @@
 		reg = <0x0 0x03550000 0x0 0x8000>,
 			<0x0 0x03558000 0x0 0x1000>;
 		interrupts = <0 166 0x4>;
-
 		clocks = <&bpmp_clks TEGRA194_CLK_XUSB_CORE_DEV>,
-			<&bpmp_clks TEGRA194_CLK_XUSB_CORE_SS>,
-			<&bpmp_clks TEGRA194_CLK_XUSB_FS_DEV>,
-			<&bpmp_clks TEGRA194_CLK_XUSB_SS_DEV>,
 			<&bpmp_clks TEGRA194_CLK_XUSB_SS_SUPERSPEED>,
-			<&bpmp_clks TEGRA194_CLK_UTMIPLL>,
-			<&bpmp_clks TEGRA194_CLK_CLK_M>,
-			<&bpmp_clks TEGRA194_CLK_PLLE>;
-		clock-names = "xusb_core_dev_clk", "xusb_core_superspeed_clk",
-			"xusb_fs_dev_clk", "xusb_ss_dev_clk", "xusb_ss",
-			"pll_u_480m", "clk_m", "pll_e";
+			<&bpmp_clks TEGRA194_CLK_XUSB_SS>,
+			<&bpmp_clks TEGRA194_CLK_XUSB_FS>;
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 		nvidia,xusb-padctl = <&xusb_padctl>;

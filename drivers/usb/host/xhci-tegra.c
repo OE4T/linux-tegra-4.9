@@ -1770,17 +1770,17 @@ static int tegra_xhci_unpowergate_partitions(struct tegra_xusb *tegra)
 {
 	int ret;
 
-	ret = tegra_unpowergate_partition_with_clk_on(tegra->pgid_ss);
+	ret = tegra_unpowergate_partition(tegra->pgid_ss);
 	if (ret) {
 		dev_err(tegra->dev, "can't unpowergate SS partition\n");
 		return ret;
 	}
 
-	ret = tegra_unpowergate_partition_with_clk_on(tegra->pgid_host);
+	ret = tegra_unpowergate_partition(tegra->pgid_host);
 	if (ret) {
 		dev_err(tegra->dev,
 			"can't unpowergate Host partition\n");
-		tegra_powergate_partition_with_clk_off(tegra->pgid_ss);
+		tegra_powergate_partition(tegra->pgid_ss);
 	}
 
 	return ret;
@@ -1791,17 +1791,16 @@ static int tegra_xhci_powergate_partitions(struct tegra_xusb *tegra)
 	int ret;
 	int err;
 
-	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_host);
+	ret = tegra_powergate_partition(tegra->pgid_host);
 	if (ret) {
 		dev_err(tegra->dev, "can't powergate Host partition\n");
 		goto out;
 	}
 
-	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_ss);
+	ret = tegra_powergate_partition(tegra->pgid_ss);
 	if (ret) {
 		dev_err(tegra->dev, "can't powergate SS partition\n");
-		err = tegra_unpowergate_partition_with_clk_on
-						(tegra->pgid_host);
+		err = tegra_unpowergate_partition(tegra->pgid_host);
 		if (err) {
 			dev_err(tegra->dev,
 				"can't unpowergate host partition\n");

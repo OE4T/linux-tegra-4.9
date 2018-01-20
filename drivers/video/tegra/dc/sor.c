@@ -2014,6 +2014,12 @@ void tegra_dc_sor_set_link_bandwidth(struct tegra_dc_sor_data *sor, u8 link_bw)
 {
 	WARN_ON(sor->sor_state == SOR_ATTACHED);
 
+	/* FIXME: does order matter with dettached SOR? */
+	if (tegra_dc_is_nvdisplay()) {
+		/* link rate = fixed pll_dp@270MHz * link_bw / 10 */
+		clk_set_rate(sor->pad_clk, 270000000UL * link_bw / 10);
+	}
+
 	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
 		NV_SOR_CLK_CNTRL_DP_LINK_SPEED_MASK,
 		link_bw << NV_SOR_CLK_CNTRL_DP_LINK_SPEED_SHIFT);

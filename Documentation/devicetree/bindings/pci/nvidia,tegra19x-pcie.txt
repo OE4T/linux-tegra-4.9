@@ -122,6 +122,7 @@ Optional properties:
     data book
 - nvidia,enable-power-down : Enables power down of respective controller and
     corresponding PLLs if they are not shared by any other entity
+- "nvidia,pex-wake" : Add PEX_WAKE gpio number to provide wake support.
 
 Power supplies for Tegra194:
 //TODO

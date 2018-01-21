@@ -354,6 +354,7 @@ struct tegra_pcie_dw {
 	bool cdm_check;
 	u32 cid;
 	u32 msi_ctrl_int;
+	int pex_wake;
 
 	struct regulator *pex_ctl_reg;
 };
@@ -1982,6 +1983,22 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 			ret);
 		pcie->max_speed = 1;
 	}
+	pcie->pex_wake = of_get_named_gpio(np, "nvidia,pex-wake", 0);
+	if (gpio_is_valid(pcie->pex_wake)) {
+		ret = devm_gpio_request(pcie->dev, pcie->pex_wake, "pcie_wake");
+		if (ret < 0) {
+			dev_err(pcie->dev, "pcie_wake gpio_request failed %d\n",
+				ret);
+			return ret;
+		}
+		ret = gpio_direction_input(pcie->pex_wake);
+		if (ret < 0) {
+			dev_err(pcie->dev,
+				"%s: pcie_wake gpio_direction_input failed %d\n",
+				__func__, ret);
+			return ret;
+		}
+	}
 
 	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
 		"nvidia,enable-power-down");
@@ -2319,7 +2336,6 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	int ret = 0;
 
-	/*TODO re verify the sequence with IAS*/
 	/* save MSI interrutp vector*/
 	dw_pcie_cfg_read(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
 			 4, &pcie->msi_ctrl_int);
@@ -2337,6 +2353,11 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 			return ret;
 		}
 	}
+	if (gpio_is_valid(pcie->pex_wake) && device_may_wakeup(dev)) {
+		ret = enable_irq_wake(gpio_to_irq(pcie->pex_wake));
+		if (ret < 0)
+			dev_err(dev, "enable wake irq failed: %d\n", ret);
+	}
 
 	return ret;
 }
@@ -2347,7 +2368,12 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	int ret;
 	u32 val;
 
-	/*TODO re verify the sequence with IAS*/
+	if (gpio_is_valid(pcie->pex_wake) && device_may_wakeup(dev)) {
+		ret = disable_irq_wake(gpio_to_irq(pcie->pex_wake));
+		if (ret < 0)
+			dev_err(dev, "disable wake irq failed: %d\n", ret);
+	}
+
 	if (pcie->cid != CTRL_5) {
 		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
 		if (ret) {

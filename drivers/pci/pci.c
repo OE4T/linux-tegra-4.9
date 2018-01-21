@@ -1224,6 +1224,9 @@ void pci_restore_state(struct pci_dev *dev)
 	pci_restore_pcix_state(dev);
 	pci_restore_l1_pm_ss_state(dev);
 	pci_restore_msi_state(dev);
+#ifdef CONFIG_PCIEAER
+	pci_restore_aer_state(dev);
+#endif
 
 	/* Restore ACS and IOV configuration state */
 	pci_enable_acs(dev);

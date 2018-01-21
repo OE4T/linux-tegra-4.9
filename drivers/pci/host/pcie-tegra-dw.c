@@ -206,6 +206,8 @@
 #define PORT_LOGIC_GEN2_CTRL		0x80C
 #define PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE	BIT(17)
 
+#define PORT_LOGIC_MSI_CTRL_INT_0_EN	0x828
+
 #define GEN3_EQ_CONTROL_OFF	0x8a8
 #define GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT	8
 #define GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK	GENMASK(23, 8)
@@ -351,6 +353,7 @@ struct tegra_pcie_dw {
 	u32 max_speed;
 	bool cdm_check;
 	u32 cid;
+	u32 msi_ctrl_int;
 
 	struct regulator *pex_ctl_reg;
 };
@@ -2317,6 +2320,9 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	int ret = 0;
 
 	/*TODO re verify the sequence with IAS*/
+	/* save MSI interrutp vector*/
+	dw_pcie_cfg_read(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
+			 4, &pcie->msi_ctrl_int);
 	tegra_pcie_dw_pme_turnoff(pcie);
 	reset_control_assert(pcie->core_rst);
 	tegra_pcie_disable_phy(pcie);
@@ -2392,6 +2398,10 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
 	reset_control_deassert(pcie->core_rst);
+
+	/* restore MSI interrutp vector*/
+	dw_pcie_cfg_write(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
+			  4, pcie->msi_ctrl_int);
 
 	tegra_pcie_dw_host_init(&pcie->pp);
 	tegra_pcie_dw_scan_bus(&pcie->pp);

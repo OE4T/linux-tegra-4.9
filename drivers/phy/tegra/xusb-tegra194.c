@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -194,6 +194,14 @@ struct tegra_xusb_fuse_calibration {
 	u32 rpd_ctrl;
 };
 
+struct tegra194_xusb_padctl_context {
+	u32 vbus_id;
+	u32 usb2_pad_mux;
+	u32 usb2_port_cap;
+	u32 ss_port_cap;
+	u32 ss_port_cfg;
+};
+
 struct tegra194_xusb_padctl {
 	struct tegra_xusb_padctl base;
 
@@ -206,6 +214,9 @@ struct tegra194_xusb_padctl {
 	/* utmi bias and tracking */
 	struct clk *usb2_trk_clk;
 	unsigned int bias_pad_enable;
+
+	/* padctl context */
+	struct tegra194_xusb_padctl_context context;
 };
 
 static inline void ao_writel(struct tegra194_xusb_padctl *priv, u32 value,
@@ -1464,6 +1475,50 @@ static void tegra194_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 {
 }
 
+static void tegra194_xusb_padctl_save(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+
+	priv->context.vbus_id = padctl_readl(padctl, USB2_VBUS_ID);
+	priv->context.usb2_pad_mux =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PAD_MUX);
+	priv->context.usb2_port_cap =
+				padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+	priv->context.ss_port_cap =
+				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
+	priv->context.ss_port_cfg =
+				padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
+}
+
+static void tegra194_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+
+	padctl_writel(padctl, priv->context.usb2_pad_mux,
+			XUSB_PADCTL_USB2_PAD_MUX);
+	padctl_writel(padctl, priv->context.usb2_port_cap,
+			XUSB_PADCTL_USB2_PORT_CAP);
+	padctl_writel(padctl, priv->context.ss_port_cap,
+			XUSB_PADCTL_SS_PORT_CAP);
+	padctl_writel(padctl, priv->context.ss_port_cfg,
+			XUSB_PADCTL_SS_PORT_CFG);
+	padctl_writel(padctl, priv->context.vbus_id, USB2_VBUS_ID);
+}
+
+static int tegra194_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)
+{
+	tegra194_xusb_padctl_save(padctl);
+
+	return 0;
+}
+
+static int tegra194_xusb_padctl_resume_noirq(struct tegra_xusb_padctl *padctl)
+{
+	tegra194_xusb_padctl_restore(padctl);
+
+	return 0;
+}
+
 static int tegra194_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 					      bool set)
 {
@@ -1676,6 +1731,8 @@ static int tegra194_xusb_padctl_phy_wake(struct tegra_xusb_padctl *padctl,
 static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 	.probe = tegra194_xusb_padctl_probe,
 	.remove = tegra194_xusb_padctl_remove,
+	.suspend_noirq = tegra194_xusb_padctl_suspend_noirq,
+	.resume_noirq = tegra194_xusb_padctl_resume_noirq,
 	.vbus_override = tegra194_xusb_padctl_vbus_override,
 	.id_override = tegra194_xusb_padctl_id_override,
 	.has_otg_cap = tegra194_xusb_padctl_has_otg_cap,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -413,7 +413,7 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
 	struct nvgpu_page_alloc *alloc = NULL;
-	void *sgl = NULL;
+	struct nvgpu_sgl *sgl = NULL;
 	int err = 0;
 
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)

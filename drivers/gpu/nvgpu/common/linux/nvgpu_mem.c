@@ -499,27 +499,28 @@ int __nvgpu_mem_create_from_phys(struct gk20a *g, struct nvgpu_mem *dest,
 }
 #endif
 
-static void *nvgpu_mem_linux_sgl_next(void *sgl)
+static struct nvgpu_sgl *nvgpu_mem_linux_sgl_next(struct nvgpu_sgl *sgl)
 {
-	return sg_next((struct scatterlist *)sgl);
+	return (struct nvgpu_sgl *)sg_next((struct scatterlist *)sgl);
 }
 
-static u64 nvgpu_mem_linux_sgl_phys(void *sgl)
+static u64 nvgpu_mem_linux_sgl_phys(struct nvgpu_sgl *sgl)
 {
 	return (u64)sg_phys((struct scatterlist *)sgl);
 }
 
-static u64 nvgpu_mem_linux_sgl_dma(void *sgl)
+static u64 nvgpu_mem_linux_sgl_dma(struct nvgpu_sgl *sgl)
 {
 	return (u64)sg_dma_address((struct scatterlist *)sgl);
 }
 
-static u64 nvgpu_mem_linux_sgl_length(void *sgl)
+static u64 nvgpu_mem_linux_sgl_length(struct nvgpu_sgl *sgl)
 {
 	return (u64)((struct scatterlist *)sgl)->length;
 }
 
-static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g, void *sgl,
+static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g,
+					struct nvgpu_sgl *sgl,
 					struct nvgpu_gmmu_attrs *attrs)
 {
 	if (sg_dma_address((struct scatterlist *)sgl) == 0)
@@ -587,7 +588,7 @@ struct nvgpu_sgt *nvgpu_linux_sgt_create(struct gk20a *g, struct sg_table *sgt)
 
 	nvgpu_log(g, gpu_dbg_sgl, "Making Linux SGL!");
 
-	nvgpu_sgt->sgl = sgt->sgl;
+	nvgpu_sgt->sgl = (struct nvgpu_sgl *)linux_sgl;
 	nvgpu_sgt->ops = &nvgpu_linux_sgt_ops;
 
 	return nvgpu_sgt;

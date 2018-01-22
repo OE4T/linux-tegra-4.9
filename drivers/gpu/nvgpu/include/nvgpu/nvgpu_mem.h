@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -54,12 +54,19 @@ enum nvgpu_aperture {
 	APERTURE_VIDMEM
 };
 
+/*
+ * Forward declared opaque placeholder type that does not really exist, but
+ * helps the compiler help us about getting types right. In reality,
+ * implementors of nvgpu_sgt_ops will have some concrete type in place of this.
+ */
+struct nvgpu_sgl;
+
 struct nvgpu_sgt_ops {
-	void *(*sgl_next)(void *sgl);
-	u64   (*sgl_phys)(void *sgl);
-	u64   (*sgl_dma)(void *sgl);
-	u64   (*sgl_length)(void *sgl);
-	u64   (*sgl_gpu_addr)(struct gk20a *g, void *sgl,
+	struct nvgpu_sgl *(*sgl_next)(struct nvgpu_sgl *sgl);
+	u64   (*sgl_phys)(struct nvgpu_sgl *sgl);
+	u64   (*sgl_dma)(struct nvgpu_sgl *sgl);
+	u64   (*sgl_length)(struct nvgpu_sgl *sgl);
+	u64   (*sgl_gpu_addr)(struct gk20a *g, struct nvgpu_sgl *sgl,
 			      struct nvgpu_gmmu_attrs *attrs);
 	/*
 	 * If left NULL then iommuable is assumed to be false.
@@ -85,15 +92,16 @@ struct nvgpu_sgt {
 	/*
 	 * The first node in the scatter gather list.
 	 */
-	void *sgl;
+	struct nvgpu_sgl *sgl;
 };
 
 /*
  * This struct holds the necessary information for describing a struct
  * nvgpu_mem's scatter gather list.
  *
- * Not all nvgpu_sgt's use this particular implementation. Nor is a given OS
- * required to use this at all.
+ * This is one underlying implementation for nvgpu_sgl. Not all nvgpu_sgt's use
+ * this particular implementation. Nor is a given OS required to use this at
+ * all.
  */
 struct nvgpu_mem_sgl {
 	/*
@@ -233,11 +241,13 @@ struct nvgpu_sgt *nvgpu_sgt_create(struct gk20a *g);
 struct nvgpu_sgt *nvgpu_sgt_create_from_mem(struct gk20a *g,
 					    struct nvgpu_mem *mem);
 
-void *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt, void *sgl);
-u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, void *sgl);
-u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, void *sgl);
-u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, void *sgl);
-u64 nvgpu_sgt_get_gpu_addr(struct gk20a *g, struct nvgpu_sgt *sgt, void *sgl,
+struct nvgpu_sgl *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt,
+					  struct nvgpu_sgl *sgl);
+u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl);
+u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl);
+u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl);
+u64 nvgpu_sgt_get_gpu_addr(struct gk20a *g, struct nvgpu_sgt *sgt,
+			   struct nvgpu_sgl *sgl,
 			   struct nvgpu_gmmu_attrs *attrs);
 void nvgpu_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@
 
 /* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
 u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_sgt *sgt, void *sgl, u32 w)
+		       struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl, u32 w)
 {
 	u64 bufbase = nvgpu_sgt_get_phys(sgt, sgl);
 	u64 addr = bufbase + w * sizeof(u32);
@@ -64,7 +64,7 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 }
 
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
-		       void *sgl)
+		       struct nvgpu_sgl *sgl)
 {
 	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, sgl);
 

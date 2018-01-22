@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,27 +28,29 @@
 
 #include "gk20a/gk20a.h"
 
-void *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt, void *sgl)
+struct nvgpu_sgl *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt,
+				     struct nvgpu_sgl *sgl)
 {
 	return sgt->ops->sgl_next(sgl);
 }
 
-u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, void *sgl)
+u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl)
 {
 	return sgt->ops->sgl_phys(sgl);
 }
 
-u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, void *sgl)
+u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl)
 {
 	return sgt->ops->sgl_dma(sgl);
 }
 
-u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, void *sgl)
+u64 nvgpu_sgt_get_length(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl)
 {
 	return sgt->ops->sgl_length(sgl);
 }
 
-u64 nvgpu_sgt_get_gpu_addr(struct gk20a *g, struct nvgpu_sgt *sgt, void *sgl,
+u64 nvgpu_sgt_get_gpu_addr(struct gk20a *g, struct nvgpu_sgt *sgt,
+			   struct nvgpu_sgl *sgl,
 			   struct nvgpu_gmmu_attrs *attrs)
 {
 	return sgt->ops->sgl_gpu_addr(g, sgl, attrs);
@@ -88,7 +90,7 @@ u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys)
 u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 {
 	u64 align = 0, chunk_align = 0;
-	void *sgl;
+	struct nvgpu_sgl *sgl;
 
 	/*
 	 * If this SGT is iommuable and we want to use the IOMMU address then

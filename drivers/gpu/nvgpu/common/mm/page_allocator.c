@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -153,40 +153,41 @@ static void nvgpu_page_release_co(struct nvgpu_allocator *a,
 	nvgpu_alloc_release_carveout(&va->source_allocator, co);
 }
 
-static void *nvgpu_page_alloc_sgl_next(void *sgl)
+static struct nvgpu_sgl *nvgpu_page_alloc_sgl_next(struct nvgpu_sgl *sgl)
 {
-	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
-	return nvgpu_sgl->next;
+	return (struct nvgpu_sgl *)sgl_impl->next;
 }
 
-static u64 nvgpu_page_alloc_sgl_phys(void *sgl)
+static u64 nvgpu_page_alloc_sgl_phys(struct nvgpu_sgl *sgl)
 {
-	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
-	return nvgpu_sgl->phys;
+	return sgl_impl->phys;
 }
 
-static u64 nvgpu_page_alloc_sgl_dma(void *sgl)
+static u64 nvgpu_page_alloc_sgl_dma(struct nvgpu_sgl *sgl)
 {
-	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
-	return nvgpu_sgl->dma;
+	return sgl_impl->dma;
 }
 
-static u64 nvgpu_page_alloc_sgl_length(void *sgl)
+static u64 nvgpu_page_alloc_sgl_length(struct nvgpu_sgl *sgl)
 {
-	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
-	return nvgpu_sgl->length;
+	return sgl_impl->length;
 }
 
-static u64 nvgpu_page_alloc_sgl_gpu_addr(struct gk20a *g, void *sgl,
+static u64 nvgpu_page_alloc_sgl_gpu_addr(struct gk20a *g,
+					 struct nvgpu_sgl *sgl,
 					 struct nvgpu_gmmu_attrs *attrs)
 {
-	struct nvgpu_mem_sgl *nvgpu_sgl = sgl;
+	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
-	return nvgpu_sgl->phys;
+	return sgl_impl->phys;
 }
 
 static void nvgpu_page_alloc_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt)
@@ -229,7 +230,7 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 			       struct nvgpu_page_alloc *alloc,
 			       bool free_buddy_alloc)
 {
-	struct nvgpu_mem_sgl *sgl = alloc->sgt.sgl;
+	struct nvgpu_sgl *sgl = alloc->sgt.sgl;
 
 	if (free_buddy_alloc) {
 		while (sgl) {
@@ -239,7 +240,8 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 		}
 	}
 
-	nvgpu_page_alloc_sgl_proper_free(a->owner->g, sgl);
+	nvgpu_page_alloc_sgl_proper_free(a->owner->g,
+			(struct nvgpu_mem_sgl *)sgl);
 	nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 }
 
@@ -389,7 +391,7 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 	alloc->length = slab_page->slab_size;
 	alloc->base = slab_page->page_addr + (offs * slab_page->slab_size);
 
-	sgl         = alloc->sgt.sgl;
+	sgl         = (struct nvgpu_mem_sgl *)alloc->sgt.sgl;
 	sgl->phys   = alloc->base;
 	sgl->dma    = alloc->base;
 	sgl->length = alloc->length;
@@ -430,7 +432,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 		goto fail;
 	}
 
-	alloc->sgt.sgl = sgl;
+	alloc->sgt.sgl = (struct nvgpu_sgl *)sgl;
 	err = __do_slab_alloc(a, slab, alloc);
 	if (err)
 		goto fail;
@@ -582,7 +584,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 		if (prev_sgl)
 			prev_sgl->next = sgl;
 		else
-			alloc->sgt.sgl = sgl;
+			alloc->sgt.sgl = (struct nvgpu_sgl *)sgl;
 
 		prev_sgl = sgl;
 
@@ -595,7 +597,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 	return alloc;
 
 fail_cleanup:
-	sgl = alloc->sgt.sgl;
+	sgl = (struct nvgpu_mem_sgl *)alloc->sgt.sgl;
 	while (sgl) {
 		struct nvgpu_mem_sgl *next = sgl->next;
 
@@ -614,7 +616,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 	struct nvgpu_page_allocator *a, u64 len)
 {
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct nvgpu_mem_sgl *sgl;
+	struct nvgpu_sgl *sgl;
 	u64 pages;
 	int i = 0;
 
@@ -751,7 +753,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 
 	alloc->nr_chunks = 1;
 	alloc->length = length;
-	alloc->sgt.sgl = sgl;
+	alloc->sgt.sgl = (struct nvgpu_sgl *)sgl;
 
 	sgl->phys   = alloc->base;
 	sgl->dma    = alloc->base;
@@ -776,7 +778,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 {
 	struct nvgpu_page_allocator *a = page_allocator(__a);
 	struct nvgpu_page_alloc *alloc = NULL;
-	struct nvgpu_mem_sgl *sgl;
+	struct nvgpu_sgl *sgl;
 	u64 aligned_len, pages;
 	int i = 0;
 

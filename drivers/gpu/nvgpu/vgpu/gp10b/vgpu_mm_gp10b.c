@@ -76,7 +76,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	void *handle = NULL;
 	size_t oob_size;
 	u8 prot;
-	void *sgl;
+	struct nvgpu_sgl *sgl;
 
 	gk20a_dbg_fn("");
 

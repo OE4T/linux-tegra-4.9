@@ -823,9 +823,10 @@ struct gpu_ops {
 				size_t size);
 	struct {
 		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,
-			struct nvgpu_sgt *sgt, void *sgl, u32 w);
+			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
+			u32 w);
 		void (*exit)(struct gk20a *g, struct nvgpu_mem *mem,
-			void *sgl);
+			struct nvgpu_sgl *sgl);
 		u32 (*data032_r)(u32 i);
 	} pramin;
 	struct {

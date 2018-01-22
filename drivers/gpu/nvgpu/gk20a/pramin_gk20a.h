@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,9 @@ struct nvgpu_mem;
 struct nvgpu_mem_sgl;
 
 u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
-		       struct nvgpu_sgt *sgt, void *sgl, u32 w);
+		       struct nvgpu_sgt *sgt,
+		       struct nvgpu_sgl *sgl,
+		       u32 w);
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
-		       void *sgl);
+		       struct nvgpu_sgl *sgl);
 #endif

@@ -477,7 +477,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 					     struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	void *sgl;
+	struct nvgpu_sgl *sgl;
 	int err = 0;
 
 	if (!sgt) {

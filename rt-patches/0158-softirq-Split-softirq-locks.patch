@@ -1,7 +1,7 @@
-From 6f15e4a55d88a1b16793feaf2d2a15e2d125628d Mon Sep 17 00:00:00 2001
+From dec08fadb90e32f6fa27a0cac7487ce8ba8a9f46 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 158/336] softirq: Split softirq locks
+Subject: [PATCH 158/337] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -114,7 +114,7 @@ index c2bcbd4..127cfbd 100644
  
  extern void open_softirq(int nr, void (*action)(struct softirq_action *));
  extern void softirq_init(void);
-@@ -487,6 +491,7 @@ extern void __raise_softirq_irqoff(unsigned int nr);
+@@ -487,6 +491,7 @@ static inline void do_softirq_own_stack(void)
  
  extern void raise_softirq_irqoff(unsigned int nr);
  extern void raise_softirq(unsigned int nr);
@@ -190,7 +190,7 @@ index 7252e06..d3dd2276 100644
  #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
-@@ -2458,6 +2460,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
+@@ -2458,6 +2460,7 @@ static inline cputime_t task_gtime(struct task_struct *t)
  /*
   * Per process flags
   */
@@ -222,7 +222,7 @@ index 8669000..ec9b361 100644
  #include <linux/irq.h>
  
  #define CREATE_TRACE_POINTS
-@@ -63,6 +64,98 @@ const char * const softirq_to_name[NR_SOFTIRQS] = {
+@@ -63,6 +64,98 @@
  	"TASKLET", "SCHED", "HRTIMER", "RCU"
  };
  
@@ -775,7 +775,7 @@ index 8669000..ec9b361 100644
  void open_softirq(int nr, void (*action)(struct softirq_action *))
  {
  	softirq_vec[nr].action = action;
-@@ -747,23 +1097,7 @@ EXPORT_SYMBOL(tasklet_unlock_wait);
+@@ -747,23 +1097,7 @@ void tasklet_unlock_wait(struct tasklet_struct *t)
  
  static int ksoftirqd_should_run(unsigned int cpu)
  {
@@ -848,5 +848,5 @@ index 1798187..20860f0 100644
  	return err;
  }
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From e00f19046d2a52efcb3f4432b1b6e498bc34a578 Mon Sep 17 00:00:00 2001
+From 7c2c13b1f978a2b08875d05673a341ad8f8a0d44 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:48 +0100
-Subject: [PATCH 005/336] futex: Cleanup variable names for futex_top_waiter()
+Subject: [PATCH 005/337] futex: Cleanup variable names for futex_top_waiter()
 
 Upstream commit 499f5aca2cdd5e958b27e2655e7e7f82524f46b1
 
@@ -119,5 +119,5 @@ index 88bad86..bc48b36 100644
  		 * In case of success wake_futex_pi dropped the hash
  		 * bucket lock.
 -- 
-2.1.4
+1.9.1
 

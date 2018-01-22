@@ -1,7 +1,7 @@
-From 2dec0bdf007e0cabeb29c6127e50b0b80d28a64f Mon Sep 17 00:00:00 2001
+From e6a8bc8b9444e5bb602f296d2f1d87c42d8ae45a Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:37 -0500
-Subject: [PATCH 103/336] mm: page_alloc: rt-friendly per-cpu pages
+Subject: [PATCH 103/337] mm: page_alloc: rt-friendly per-cpu pages
 
 rt-friendly per-cpu pages: convert the irqs-off per-cpu locking
 method into a preemptible, explicit-per-cpu-locks method.
@@ -28,7 +28,7 @@ index e5f55201..2018af5 100644
  #include <linux/page_owner.h>
  #include <linux/kthread.h>
  #include <linux/memcontrol.h>
-@@ -281,6 +282,18 @@ EXPORT_SYMBOL(nr_node_ids);
+@@ -281,6 +282,18 @@ bool pm_suspended_storage(void)
  EXPORT_SYMBOL(nr_online_nodes);
  #endif
  
@@ -205,5 +205,5 @@ index e5f55201..2018af5 100644
  
  #ifdef CONFIG_MEMORY_HOTREMOVE
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 5718bf6324ffe8ed773efbf4f2a4b380e414df37 Mon Sep 17 00:00:00 2001
+From f8155d23a54af8aad27a90383d41ff151188570e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:12:51 +0200
-Subject: [PATCH 133/336] sched: Limit the number of task migrations per batch
+Subject: [PATCH 133/337] sched: Limit the number of task migrations per batch
 
 Put an upper limit on the number of tasks which are migrated per batch
 to avoid large latencies.
@@ -15,7 +15,7 @@ diff --git a/kernel/sched/core.c b/kernel/sched/core.c
 index 0940c10..6f2dd88 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -131,7 +131,11 @@ const_debug unsigned int sysctl_sched_features =
+@@ -131,7 +131,11 @@ void update_rq_clock(struct rq *rq)
   * Number of tasks to iterate in a single balance run.
   * Limited because this is done with IRQs disabled.
   */
@@ -28,5 +28,5 @@ index 0940c10..6f2dd88 100644
  /*
   * period over which we average the RT time consumption, measured
 -- 
-2.1.4
+1.9.1
 

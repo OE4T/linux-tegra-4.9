@@ -1,7 +1,7 @@
-From f152f71c7c3f4ff2f3f2ce17ebd1cb7760641525 Mon Sep 17 00:00:00 2001
+From 9b5c1029bebdb3636bc2a17282432c184548f768 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 7 Apr 2017 09:04:07 +0200
-Subject: [PATCH 028/336] futex: Fix small (and harmless looking)
+Subject: [PATCH 028/337] futex: Fix small (and harmless looking)
  inconsistencies
 
 Upstream commit 94ffac5d847cfd790bb37b7cef1cad803743985e
@@ -59,5 +59,5 @@ index 51455f2..216a642 100644
  
  out_unlock:
 -- 
-2.1.4
+1.9.1
 

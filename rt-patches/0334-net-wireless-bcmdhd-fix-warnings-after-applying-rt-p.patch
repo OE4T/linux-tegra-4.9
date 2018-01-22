@@ -1,7 +1,7 @@
-From 47668001f7032a4f698d538d43c99730b30192b5 Mon Sep 17 00:00:00 2001
+From 5d53f80191f61f713311772afcc2ce08879942af Mon Sep 17 00:00:00 2001
 From: Manikanta <mmaddireddy@nvidia.com>
 Date: Tue, 27 Jun 2017 14:57:52 +0530
-Subject: [PATCH 334/336] net: wireless: bcmdhd: fix warnings after applying
+Subject: [PATCH 334/337] net: wireless: bcmdhd: fix warnings after applying
  rt-patches
 
 Issue: Member type in struct completion is changed from
@@ -20,7 +20,7 @@ diff --git a/drivers/net/wireless/bcmdhd/dhd_pno.c b/drivers/net/wireless/bcmdhd
 index f85e873..be221c3 100644
 --- a/drivers/net/wireless/bcmdhd/dhd_pno.c
 +++ b/drivers/net/wireless/bcmdhd/dhd_pno.c
-@@ -1550,7 +1550,7 @@ _dhd_pno_get_for_batch(dhd_pub_t *dhd, char *buf, int bufsize, int reason)
+@@ -1550,7 +1550,7 @@ void * dhd_pno_get_gscan(dhd_pub_t *dhd, dhd_pno_gscan_cmd_cfg_t type,
  		_params->params_batch.get_batch.bytes_written = err;
  	}
  	mutex_unlock(&_pno_state->pno_mutex);
@@ -29,7 +29,7 @@ index f85e873..be221c3 100644
  		complete(&_pno_state->get_batch_done);
  	return err;
  }
-@@ -1996,7 +1996,7 @@ dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data)
+@@ -1996,7 +1996,7 @@ void * dhd_pno_get_gscan(dhd_pub_t *dhd, dhd_pno_gscan_cmd_cfg_t type,
  	{
  		struct dhd_pno_batch_params *params_batch;
  		params_batch = &_pno_state->pno_params_arr[INDEX_OF_BATCH_PARAMS].params_batch;
@@ -39,5 +39,5 @@ index f85e873..be221c3 100644
  			params_batch->get_batch.buf = NULL;
  			params_batch->get_batch.bufsize = 0;
 -- 
-2.1.4
+1.9.1
 

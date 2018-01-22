@@ -1,7 +1,7 @@
-From 492e6a16c1bf3c827e5d7c98c4aba3e6133310d3 Mon Sep 17 00:00:00 2001
+From 1c818c22a2592af2a7a93f7833355fb52cb53abf Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <grygorii.strashko@ti.com>
 Date: Fri, 9 Oct 2015 09:25:49 -0500
-Subject: [PATCH 239/336] net/core/cpuhotplug: Drain input_pkt_queue lockless
+Subject: [PATCH 239/337] net/core/cpuhotplug: Drain input_pkt_queue lockless
 
 I can constantly see below error report with 4.1 RT-kernel on TI ARM dra7-evm
 if I'm trying to unplug cpu1:
@@ -48,5 +48,5 @@ index c56ec08..1e8b69e 100644
  		input_queue_head_incr(oldsd);
  	}
 -- 
-2.1.4
+1.9.1
 

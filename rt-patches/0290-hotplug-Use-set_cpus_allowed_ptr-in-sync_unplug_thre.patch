@@ -1,7 +1,7 @@
-From 70dd57afb81bb618b5dc3d3685997158938ccb7b Mon Sep 17 00:00:00 2001
+From f0b994985c088389ceec580d4e56862cd8847329 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 24 Mar 2015 08:14:49 +0100
-Subject: [PATCH 290/336] hotplug: Use set_cpus_allowed_ptr() in
+Subject: [PATCH 290/337] hotplug: Use set_cpus_allowed_ptr() in
  sync_unplug_thread()
 
 do_set_cpus_allowed() is not safe vs ->sched_class change.
@@ -49,5 +49,5 @@ index 85dfc83..2f34e63 100644
  	return 0;
  }
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 42ca4169f8d7728f2a2f61170c6ee44cba159f3c Mon Sep 17 00:00:00 2001
+From cc770fbbc18449cfeb681c1e62a65d66836961ac Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 122/336] timers: Prepare for full preemption
+Subject: [PATCH 122/337] timers: Prepare for full preemption
 
 When softirqs can be preempted we need to make sure that cancelling
 the timer from the active thread can not deadlock vs. a running timer
@@ -19,7 +19,7 @@ diff --git a/include/linux/timer.h b/include/linux/timer.h
 index 51d601f..83cea62 100644
 --- a/include/linux/timer.h
 +++ b/include/linux/timer.h
-@@ -241,7 +241,7 @@ extern void add_timer(struct timer_list *timer);
+@@ -241,7 +241,7 @@ static inline void timer_stats_timer_clear_start_info(struct timer_list *timer)
  
  extern int try_to_del_timer_sync(struct timer_list *timer);
  
@@ -62,7 +62,7 @@ diff --git a/kernel/time/timer.c b/kernel/time/timer.c
 index 0e9cb65..b1d2919 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -195,6 +195,9 @@ EXPORT_SYMBOL(jiffies_64);
+@@ -195,6 +195,9 @@
  struct timer_base {
  	raw_spinlock_t		lock;
  	struct timer_list	*running_timer;
@@ -163,5 +163,5 @@ index 0e9cb65..b1d2919 100644
  }
  
 -- 
-2.1.4
+1.9.1
 

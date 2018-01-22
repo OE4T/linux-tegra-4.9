@@ -1,21 +1,21 @@
-From a16f9a2fde6fa974fcbd70494647a776bbc0e4e6 Mon Sep 17 00:00:00 2001
+From b00a1c7df1a726c92c5431a9909d750a46890356 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 19 Sep 2012 14:50:37 +0200
-Subject: [PATCH 251/336] printk: Make rt aware
+Subject: [PATCH 251/337] printk: Make rt aware
 
 Drop the lock before calling the console driver and do not disable
 interrupts while printing to a serial console.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- kernel/printk/printk.c | 25 +++++++++++++++++++++++--
- 1 file changed, 23 insertions(+), 2 deletions(-)
+ kernel/printk/printk.c | 30 +++++++++++++++++++++++++++---
+ 1 file changed, 27 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index fca628a..82c947b 100644
+index ea72844..d91263b 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1632,6 +1632,7 @@ static void call_console_drivers(int level,
+@@ -1629,6 +1629,7 @@ static void call_force_console_drivers(const char *force_text,
  	if (!console_drivers)
  		return;
  
@@ -23,7 +23,23 @@ index fca628a..82c947b 100644
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
  			continue;
-@@ -1647,6 +1648,7 @@ static void call_console_drivers(int level,
+@@ -1643,6 +1644,7 @@ static void call_force_console_drivers(const char *force_text,
+ 		if (con->flags & CON_FORCE_LEVEL)
+ 			con->write(con, force_text, force_len);
+ 	}
++	migrate_enable();
+ }
+ 
+ /*
+@@ -1661,6 +1663,7 @@ static void call_console_drivers(int level,
+ 	if (!console_drivers)
+ 		return;
+ 
++	migrate_disable();
+ 	for_each_console(con) {
+ 		if (exclusive_console && con != exclusive_console)
+ 			continue;
+@@ -1680,6 +1683,7 @@ static void call_console_drivers(int level,
  		else
  			con->write(con, text, len);
  	}
@@ -31,7 +47,7 @@ index fca628a..82c947b 100644
  }
  
  /*
-@@ -1959,13 +1961,23 @@ asmlinkage int vprintk_emit(int facility, int level,
+@@ -1992,13 +1996,23 @@ asmlinkage int vprintk_emit(int facility, int level,
  
  	/* If called from the scheduler, we can not call up(). */
  	if (!in_sched) {
@@ -56,35 +72,45 @@ index fca628a..82c947b 100644
  			console_unlock();
  		lockdep_on();
  	}
-@@ -2357,11 +2369,16 @@ static void console_cont_flush(char *text, size_t size)
- 		goto out;
+@@ -2395,8 +2409,12 @@ static void console_cont_flush(char *text, size_t size)
  
+ 	cons = cont.cons;
  	len = cont_print_text(text, size);
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-+	call_console_drivers(cont.level, NULL, 0, text, len);
 +#else
  	raw_spin_unlock(&logbuf_lock);
  	stop_critical_timings();
++#endif
  	call_console_drivers(cont.level, NULL, 0, text, len);
+ 
+ 	/* Add prefix in case console is with CON_FORCE_LEVEL */
+@@ -2413,9 +2431,10 @@ static void console_cont_flush(char *text, size_t size)
+ 	} else {
+ 		call_force_console_drivers(text, len);
+ 	}
+-
++#ifndef CONFIG_PREEMPT_RT_FULL
  	start_critical_timings();
  	local_irq_restore(flags);
 +#endif
  	return;
  out:
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-@@ -2485,13 +2502,17 @@ void console_unlock(void)
+@@ -2544,6 +2563,11 @@ void console_unlock(void)
  		console_idx = log_next(console_idx);
  		console_seq++;
  		console_prev = msg->flags;
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
 +		call_console_drivers(level, ext_text, ext_len, text, len);
++		call_force_console_drivers(force_text, force_len);
 +#else
  		raw_spin_unlock(&logbuf_lock);
  
  		stop_critical_timings();	/* don't trace print latency */
- 		call_console_drivers(level, ext_text, ext_len, text, len);
+@@ -2551,7 +2575,7 @@ void console_unlock(void)
+ 		call_force_console_drivers(force_text, force_len);
  		start_critical_timings();
  		local_irq_restore(flags);
 -
@@ -93,5 +119,5 @@ index fca628a..82c947b 100644
  			cond_resched();
  	}
 -- 
-2.1.4
+1.9.1
 

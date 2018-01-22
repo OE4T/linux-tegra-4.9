@@ -1,7 +1,7 @@
-From 0141e49f1f77e279fbc7d183a7ef5e60889251f0 Mon Sep 17 00:00:00 2001
+From c96ae4dedd0755b4c121189c19a3ade7b870c783 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 199/336] completion: Use simple wait queues
+Subject: [PATCH 199/337] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -53,7 +53,7 @@ diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode
 index f69dbd4..3b76383 100644
 --- a/drivers/usb/gadget/legacy/inode.c
 +++ b/drivers/usb/gadget/legacy/inode.c
-@@ -347,7 +347,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
+@@ -347,7 +347,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
  	spin_unlock_irq (&epdata->dev->lock);
  
  	if (likely (value == 0)) {
@@ -62,7 +62,7 @@ index f69dbd4..3b76383 100644
  		if (value != 0) {
  			spin_lock_irq (&epdata->dev->lock);
  			if (likely (epdata->ep != NULL)) {
-@@ -356,7 +356,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
+@@ -356,7 +356,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
  				usb_ep_dequeue (epdata->ep, epdata->req);
  				spin_unlock_irq (&epdata->dev->lock);
  
@@ -243,7 +243,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(complete_all);
  
-@@ -62,20 +62,20 @@ do_wait_for_common(struct completion *x,
+@@ -62,20 +62,20 @@ void complete_all(struct completion *x)
  		   long (*action)(long), long timeout, int state)
  {
  	if (!x->done) {
@@ -269,7 +269,7 @@ index 8d0f35d..b62cf64 100644
  		if (!x->done)
  			return timeout;
  	}
-@@ -89,9 +89,9 @@ __wait_for_common(struct completion *x,
+@@ -89,9 +89,9 @@ void complete_all(struct completion *x)
  {
  	might_sleep();
  
@@ -371,5 +371,5 @@ index 82f0dff..e2e224c 100644
  {
  	unsigned long flags;
 -- 
-2.1.4
+1.9.1
 

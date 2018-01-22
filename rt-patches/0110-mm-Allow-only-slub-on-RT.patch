@@ -1,7 +1,7 @@
-From 10f0ebca93d641dc6de164ff810913cde433c11f Mon Sep 17 00:00:00 2001
+From 324b1af394e605778000fc8e258a0f7ddd57e05c Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:44:03 -0500
-Subject: [PATCH 110/336] mm: Allow only slub on RT
+Subject: [PATCH 110/337] mm: Allow only slub on RT
 
 Disable SLAB and SLOB on -RT. Only SLUB is adopted to -RT needs.
 
@@ -32,5 +32,5 @@ index b029390..2b9b2fa 100644
  	   SLOB replaces the stock allocator with a drastically simpler
  	   allocator. SLOB is generally more space efficient but
 -- 
-2.1.4
+1.9.1
 

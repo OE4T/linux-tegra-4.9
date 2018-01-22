@@ -1,7 +1,7 @@
-From 43a2f7bcce3d634e1e06b28ca105b55f761c9513 Mon Sep 17 00:00:00 2001
+From c4e34e66561c4c006238ca63c48b117501a1c2b2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 13 Dec 2011 21:42:19 +0100
-Subject: [PATCH 144/336] sched: ttwu: Return success when only changing the
+Subject: [PATCH 144/337] sched: ttwu: Return success when only changing the
  saved_state value
 
 When a task blocks on a rt lock, it saves the current state in
@@ -23,7 +23,7 @@ diff --git a/kernel/sched/core.c b/kernel/sched/core.c
 index 86b888e..961aca9 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2063,8 +2063,10 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+@@ -2063,8 +2063,10 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
  		 * if the wakeup condition is true.
  		 */
  		if (!(wake_flags & WF_LOCK_SLEEPER)) {
@@ -36,5 +36,5 @@ index 86b888e..961aca9 100644
  		goto out;
  	}
 -- 
-2.1.4
+1.9.1
 

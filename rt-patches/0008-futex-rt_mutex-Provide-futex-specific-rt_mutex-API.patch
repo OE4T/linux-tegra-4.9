@@ -1,7 +1,7 @@
-From 55f370266ea9059464cce9a794d56fe5d7e3a7b9 Mon Sep 17 00:00:00 2001
+From 17ec3dc73937756b2e131e505e166ee06b0d3b92 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
-Subject: [PATCH 008/336] futex,rt_mutex: Provide futex specific rt_mutex API
+Subject: [PATCH 008/337] futex,rt_mutex: Provide futex specific rt_mutex API
 
 Upstream commit 5293c2efda37775346885c7e924d4ef7018ea60b
 
@@ -127,7 +127,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index 1c57ff1..8412d87 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1486,15 +1486,23 @@ EXPORT_SYMBOL_GPL(rt_mutex_lock_interruptible);
+@@ -1486,15 +1486,23 @@ int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
  
  /*
   * Futex variant with full deadlock detection.
@@ -226,5 +226,5 @@ index e317e1c..2441c2d 100644
  
  #ifdef CONFIG_DEBUG_RT_MUTEXES
 -- 
-2.1.4
+1.9.1
 

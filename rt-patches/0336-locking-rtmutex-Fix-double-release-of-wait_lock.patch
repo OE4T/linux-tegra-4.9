@@ -1,7 +1,7 @@
-From a60c48eebb786249802bdd01d10dc3c37b9f51d4 Mon Sep 17 00:00:00 2001
+From 42c5590148adeb393e6cd26d950f85ae50a41340 Mon Sep 17 00:00:00 2001
 From: abhijit <abhijit@nvidia.com>
 Date: Thu, 30 Nov 2017 10:26:38 +0530
-Subject: [PATCH] locking/rtmutex: Fix double release of wait_lock
+Subject: [PATCH 336/337] locking/rtmutex: Fix double release of wait_lock
 
 rtmutex wait_lock was released twice in case pi_blocked_on is already
 set by the task in rt_mutex_start_proxy_lock. This was leading to crash

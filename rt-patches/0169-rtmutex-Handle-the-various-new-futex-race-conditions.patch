@@ -1,7 +1,7 @@
-From ed88b1743aed91917e8fc9c5843cbd1d65fcd22c Mon Sep 17 00:00:00 2001
+From dc567eb58cca2ce4aee58d3c9aa78146ae236235 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 10 Jun 2011 11:04:15 +0200
-Subject: [PATCH 169/336] rtmutex: Handle the various new futex race conditions
+Subject: [PATCH 169/337] rtmutex: Handle the various new futex race conditions
 
 RT opens a few new interesting race conditions in the rtmutex/futex
 combo due to futex hash bucket lock being a 'sleeping' spinlock and
@@ -156,7 +156,7 @@ index 4b6fdcd8..f7c0478 100644
  /*
   * We can speed up the acquire/release, if there's no debugging state to be
   * set up.
-@@ -389,7 +394,8 @@ int max_lock_depth = 1024;
+@@ -389,7 +394,8 @@ static bool rt_mutex_cond_detect_deadlock(struct rt_mutex_waiter *waiter,
  
  static inline struct rt_mutex *task_blocked_on_lock(struct task_struct *p)
  {
@@ -251,5 +251,5 @@ index 722e3cf..be1c017 100644
  extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  				       struct task_struct *proxy_owner);
 -- 
-2.1.4
+1.9.1
 

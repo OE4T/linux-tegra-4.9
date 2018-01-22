@@ -1,7 +1,7 @@
-From 41478e842e2137471fc746395f47a7fd77fd5827 Mon Sep 17 00:00:00 2001
+From 14aa1c711398aa85072ad899337a9a6f236fff2c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 24 Jul 2013 15:26:54 +0200
-Subject: [PATCH 228/336] workqueue: Use normal rcu
+Subject: [PATCH 228/337] workqueue: Use normal rcu
 
 There is no need for sched_rcu. The undocumented reason why sched_rcu
 is used is to avoid a few explicit rcu_read_lock()/unlock() pairs by
@@ -53,7 +53,7 @@ index 296dcca..e6b8a8d 100644
  	 * determined without grabbing wq->mutex.
  	 */
  	struct work_struct	unbound_release_work;
-@@ -356,20 +356,20 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
+@@ -356,20 +356,20 @@ struct workqueue_struct {
  #include <trace/events/workqueue.h>
  
  #define assert_rcu_or_pool_mutex()					\
@@ -80,7 +80,7 @@ index 296dcca..e6b8a8d 100644
  
  #define for_each_cpu_worker_pool(pool, cpu)				\
  	for ((pool) = &per_cpu(cpu_worker_pools, cpu)[0];		\
-@@ -381,7 +381,7 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
+@@ -381,7 +381,7 @@ struct workqueue_struct {
   * @pool: iteration cursor
   * @pi: integer used for iteration
   *
@@ -89,7 +89,7 @@ index 296dcca..e6b8a8d 100644
   * locked.  If the pool needs to be used beyond the locking in effect, the
   * caller is responsible for guaranteeing that the pool stays online.
   *
-@@ -413,7 +413,7 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
+@@ -413,7 +413,7 @@ struct workqueue_struct {
   * @pwq: iteration cursor
   * @wq: the target workqueue
   *
@@ -355,5 +355,5 @@ index 296dcca..e6b8a8d 100644
  	return written;
  }
 -- 
-2.1.4
+1.9.1
 

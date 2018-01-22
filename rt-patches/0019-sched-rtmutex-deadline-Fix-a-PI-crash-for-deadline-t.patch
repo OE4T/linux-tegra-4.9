@@ -1,7 +1,7 @@
-From fc717fb7203c7c4cf6fde53f1500daf287636032 Mon Sep 17 00:00:00 2001
+From fa54505a21437b7cec4bba91957517d15e0b4c99 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/336] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/337] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
@@ -64,7 +64,7 @@ diff --git a/include/linux/init_task.h b/include/linux/init_task.h
 index 325f649..d359b1a 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
-@@ -164,6 +164,7 @@ extern struct task_group root_task_group;
+@@ -164,6 +164,7 @@
  #ifdef CONFIG_RT_MUTEXES
  # define INIT_RT_MUTEXES(tsk)						\
  	.pi_waiters = RB_ROOT,						\
@@ -113,7 +113,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index 440469b..3c4e5bf 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -321,6 +321,19 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+@@ -321,6 +321,19 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
  }
  
  /*
@@ -181,5 +181,5 @@ index 0248523..feb784b 100644
  	oldprio = p->prio;
  
 -- 
-2.1.4
+1.9.1
 

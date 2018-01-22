@@ -1,7 +1,7 @@
-From e8ee3a87383939d360fc8d78f7d411ce00fe5bf2 Mon Sep 17 00:00:00 2001
+From 496c0c0d82e8c60ec39210ee6fac279b8fb6480f Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 093/336] signal/x86: Delay calling signals in atomic
+Subject: [PATCH 093/337] signal/x86: Delay calling signals in atomic
 
 On x86_64 we must disable preemption before we enable interrupts
 for stack faults, int3 and debugging, because the current task is using
@@ -57,7 +57,7 @@ diff --git a/arch/x86/include/asm/signal.h b/arch/x86/include/asm/signal.h
 index 8af22be..c370fba 100644
 --- a/arch/x86/include/asm/signal.h
 +++ b/arch/x86/include/asm/signal.h
-@@ -27,6 +27,19 @@ typedef struct {
+@@ -27,6 +27,19 @@
  #define SA_IA32_ABI	0x02000000u
  #define SA_X32_ABI	0x01000000u
  
@@ -107,7 +107,7 @@ index be97538..99918dc 100644
  {
  	unsigned long int flags;
  	int ret, blocked, ignored;
-@@ -1250,6 +1250,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
+@@ -1250,6 +1250,39 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
  	return ret;
  }
  
@@ -148,5 +148,5 @@ index be97538..99918dc 100644
   * Nuke all other threads in the group.
   */
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 3355cf558a738710bfc49edc106377b940405dd7 Mon Sep 17 00:00:00 2001
+From 5616ea6944772bfa88c06c2e6be64f4f82b279b1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 240/336] net: move xmit_recursion to per-task variable on -RT
+Subject: [PATCH 240/337] net: move xmit_recursion to per-task variable on -RT
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -26,7 +26,7 @@ diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
 index 17e39e7..cc281a9 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2464,14 +2464,53 @@ void netdev_freemem(struct net_device *dev);
+@@ -2464,14 +2464,53 @@ static inline void unregister_netdevice(struct net_device *dev)
  void synchronize_net(void);
  int init_dummy_netdev(struct net_device *dev);
  
@@ -158,5 +158,5 @@ index 5e42e0e..22e5449 100644
  	return ret;
  }
 -- 
-2.1.4
+1.9.1
 

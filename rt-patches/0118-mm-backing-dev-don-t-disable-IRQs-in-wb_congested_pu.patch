@@ -1,7 +1,7 @@
-From d7c871c731613e25f02657b438deefc7049ae34d Mon Sep 17 00:00:00 2001
+From 35b02b27a2102648d59860c0f6abf1e1a2f6566d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 5 Feb 2016 12:17:14 +0100
-Subject: [PATCH 118/336] mm: backing-dev: don't disable IRQs in
+Subject: [PATCH 118/337] mm: backing-dev: don't disable IRQs in
  wb_congested_put()
 
 it triggers:
@@ -44,5 +44,5 @@ index 6ff2d77..b5a91dd 100644
  	}
  
 -- 
-2.1.4
+1.9.1
 

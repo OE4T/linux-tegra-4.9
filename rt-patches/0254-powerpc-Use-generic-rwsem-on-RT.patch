@@ -1,7 +1,7 @@
-From 6453deef35e1bfd06f48176ff1be18a42e7d8881 Mon Sep 17 00:00:00 2001
+From 1129f555b74a5f9192fb785d72c566518da5223f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 254/336] powerpc: Use generic rwsem on RT
+Subject: [PATCH 254/337] powerpc: Use generic rwsem on RT
 
 Use generic code which uses rtmutex
 
@@ -28,5 +28,5 @@ index 8f01f21..e66bc55 100644
  config GENERIC_LOCKBREAK
  	bool
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From af1be50233c4f672907a45d7badfc50c2879c866 Mon Sep 17 00:00:00 2001
+From 8e29cdb83de6e82f56e2de72fde10c7e709dbb69 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
-Subject: [PATCH 285/336] cpu/rt: Rework cpu down for PREEMPT_RT
+Subject: [PATCH 285/337] cpu/rt: Rework cpu down for PREEMPT_RT
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In
@@ -83,7 +83,7 @@ diff --git a/kernel/cpu.c b/kernel/cpu.c
 index 871dc03..44a4980 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -210,16 +210,10 @@ static int cpu_hotplug_disabled;
+@@ -210,16 +210,10 @@ void cpu_maps_update_done(void)
  
  static struct {
  	struct task_struct *active_writer;
@@ -100,7 +100,7 @@ index 871dc03..44a4980 100644
  	/*
  	 * Also blocks the new readers during
  	 * an ongoing cpu hotplug operation.
-@@ -232,24 +226,12 @@ static struct {
+@@ -232,24 +226,12 @@ void cpu_maps_update_done(void)
  } cpu_hotplug = {
  	.active_writer = NULL,
  	.wq = __WAIT_QUEUE_HEAD_INITIALIZER(cpu_hotplug.wq),
@@ -125,7 +125,7 @@ index 871dc03..44a4980 100644
  /* Lockdep annotations for get/put_online_cpus() and cpu_hotplug_begin/end() */
  #define cpuhp_lock_acquire_read() lock_map_acquire_read(&cpu_hotplug.dep_map)
  #define cpuhp_lock_acquire_tryread() \
-@@ -257,12 +239,42 @@ static struct {
+@@ -257,12 +239,42 @@ void cpu_maps_update_done(void)
  #define cpuhp_lock_acquire()      lock_map_acquire(&cpu_hotplug.dep_map)
  #define cpuhp_lock_release()      lock_map_release(&cpu_hotplug.dep_map)
  
@@ -168,7 +168,7 @@ index 871dc03..44a4980 100644
  static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);
  
  /**
-@@ -276,18 +288,39 @@ static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);
+@@ -276,18 +288,39 @@ struct hotplug_pcp {
  void pin_current_cpu(void)
  {
  	struct hotplug_pcp *hp;
@@ -530,5 +530,5 @@ index 04ee06f..27b9803 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.1.4
+1.9.1
 

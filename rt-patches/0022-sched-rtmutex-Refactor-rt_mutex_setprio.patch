@@ -1,7 +1,7 @@
-From f1771c01cca22868d34d3b1d8b44ff985db704cd Mon Sep 17 00:00:00 2001
+From 339659aabf53ddb427f04295b5f62ed9c16b80cc Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
-Subject: [PATCH 022/336] sched/rtmutex: Refactor rt_mutex_setprio()
+Subject: [PATCH 022/337] sched/rtmutex: Refactor rt_mutex_setprio()
 
 Upstream commit acd58620e415aee4a43a808d7d2fd87259ee0001
 
@@ -79,7 +79,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index 7ca8407..6eb6a8a 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -320,67 +320,16 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+@@ -320,67 +320,16 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
  	RB_CLEAR_NODE(&waiter->pi_tree_entry);
  }
  
@@ -272,7 +272,7 @@ diff --git a/kernel/sched/core.c b/kernel/sched/core.c
 index feb784b..9b951fc 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3801,10 +3801,25 @@ EXPORT_SYMBOL(default_wake_function);
+@@ -3801,10 +3801,25 @@ int default_wake_function(wait_queue_t *curr, unsigned mode, int wake_flags,
  
  #ifdef CONFIG_RT_MUTEXES
  
@@ -300,7 +300,7 @@ index feb784b..9b951fc 100644
   *
   * This function changes the 'effective' priority of a task. It does
   * not touch ->normal_prio like __setscheduler().
-@@ -3812,16 +3827,40 @@ EXPORT_SYMBOL(default_wake_function);
+@@ -3812,16 +3827,40 @@ int default_wake_function(wait_queue_t *curr, unsigned mode, int wake_flags,
   * Used by the rt_mutex code to implement priority inheritance
   * logic. Call site only calls if the priority of the task changed.
   */
@@ -398,5 +398,5 @@ index feb784b..9b951fc 100644
  			queue_flags &= ~DEQUEUE_MOVE;
  	}
 -- 
-2.1.4
+1.9.1
 

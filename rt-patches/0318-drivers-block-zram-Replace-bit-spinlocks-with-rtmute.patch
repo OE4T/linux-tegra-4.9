@@ -1,7 +1,7 @@
-From d5fb8a6d9929399d1e7576a4681ce0697d2bd440 Mon Sep 17 00:00:00 2001
+From a4c52f5bbc8abf115349ae895d28da85d6612f8a Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
-Subject: [PATCH 318/336] drivers/block/zram: Replace bit spinlocks with
+Subject: [PATCH 318/337] drivers/block/zram: Replace bit spinlocks with
  rtmutex for -rt
 
 They're nondeterministic, and lead to ___might_sleep() splats in -rt.
@@ -179,5 +179,5 @@ index 74fcf10..fd4020c 100644
 +
  #endif
 -- 
-2.1.4
+1.9.1
 

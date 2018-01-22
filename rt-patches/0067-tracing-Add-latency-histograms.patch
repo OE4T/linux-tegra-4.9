@@ -1,7 +1,7 @@
-From 30b2ba1c0c5a8b6adf9cb341c8a99cf2a4082b0a Mon Sep 17 00:00:00 2001
+From d6f22c74cfb0a3704c03316ea6d555a79afa6cb0 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 067/336] tracing: Add latency histograms
+Subject: [PATCH 067/337] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the
@@ -1782,7 +1782,7 @@ index 03cdff8..0b5947e 100644
  	if (preempt_trace() || irq_trace())
  		stop_critical_timing(CALLER_ADDR0, CALLER_ADDR1);
  }
-@@ -438,6 +441,7 @@ EXPORT_SYMBOL_GPL(stop_critical_timings);
+@@ -438,6 +441,7 @@ void stop_critical_timings(void)
  #ifdef CONFIG_PROVE_LOCKING
  void time_hardirqs_on(unsigned long a0, unsigned long a1)
  {
@@ -1828,7 +1828,7 @@ index 03cdff8..0b5947e 100644
  }
  EXPORT_SYMBOL(trace_hardirqs_off_caller);
  
-@@ -503,12 +512,14 @@ EXPORT_SYMBOL(trace_hardirqs_off_caller);
+@@ -503,12 +512,14 @@ __visible void trace_hardirqs_off_caller(unsigned long caller_addr)
  #ifdef CONFIG_PREEMPT_TRACER
  void trace_preempt_on(unsigned long a0, unsigned long a1)
  {
@@ -1844,5 +1844,5 @@ index 03cdff8..0b5947e 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 85af460ae4fb3bdb6bbd7e9c62e45b559dd778d8 Mon Sep 17 00:00:00 2001
+From 5c4c4273434b730b80b462c96f16e2d4086b2b48 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 126/336] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 126/337] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -95,7 +95,7 @@ diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
 index c84f04b..0ac7cd6 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -718,11 +718,8 @@ static inline int hrtimer_is_hres_enabled(void) { return 0; }
+@@ -718,11 +718,8 @@ void clock_was_set_delayed(void)
  static inline void hrtimer_switch_to_hres(void) { }
  static inline void
  hrtimer_force_reprogram(struct hrtimer_cpu_base *base, int skip_equal) { }
@@ -352,5 +352,5 @@ index 63177be..59fe007 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.1.4
+1.9.1
 

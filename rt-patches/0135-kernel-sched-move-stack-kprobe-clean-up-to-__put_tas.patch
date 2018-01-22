@@ -1,7 +1,7 @@
-From d9256a68044c176ac41ddd451de3b31087f9ddba Mon Sep 17 00:00:00 2001
+From a33f2ca4df05bf4b37f926bb044d8f7c8faa86c2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:31:08 +0100
-Subject: [PATCH 135/336] kernel/sched: move stack + kprobe clean up to
+Subject: [PATCH 135/337] kernel/sched: move stack + kprobe clean up to
  __put_task_struct()
 
 There is no need to free the stack before the task struct. This also
@@ -64,5 +64,5 @@ index 19a0e20..c80df32 100644
  	}
  
 -- 
-2.1.4
+1.9.1
 

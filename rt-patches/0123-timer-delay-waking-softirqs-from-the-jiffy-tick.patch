@@ -1,7 +1,7 @@
-From b4e5a7d9c45e322cc751ca109d46d766133a296f Mon Sep 17 00:00:00 2001
+From 9f4ef4f5a2c308f5198a5916fda5d283357d4c87 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 21 Aug 2009 11:56:45 +0200
-Subject: [PATCH 123/336] timer: delay waking softirqs from the jiffy tick
+Subject: [PATCH 123/337] timer: delay waking softirqs from the jiffy tick
 
 People were complaining about broken balancing with the recent -rt
 series.
@@ -76,5 +76,5 @@ index b1d2919..d8e1c2c 100644
  }
  
 -- 
-2.1.4
+1.9.1
 

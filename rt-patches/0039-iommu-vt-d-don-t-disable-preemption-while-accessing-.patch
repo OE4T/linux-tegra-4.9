@@ -1,7 +1,7 @@
-From d8162632d58b74562f50088ef6453b2875a44baf Mon Sep 17 00:00:00 2001
+From b04a379902aa4194cd10058901dd80f6c5bd1733 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
-Subject: [PATCH 039/336] iommu/vt-d: don't disable preemption while accessing
+Subject: [PATCH 039/337] iommu/vt-d: don't disable preemption while accessing
  deferred_flush()
 
 get_cpu() disables preemption and returns the current CPU number. The
@@ -60,5 +60,5 @@ index 002f8a4..980f41f 100644
  
  static void intel_unmap(struct device *dev, dma_addr_t dev_addr, size_t size)
 -- 
-2.1.4
+1.9.1
 

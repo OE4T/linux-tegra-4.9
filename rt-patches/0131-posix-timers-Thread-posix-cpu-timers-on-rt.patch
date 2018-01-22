@@ -1,7 +1,7 @@
-From 5672c7a474e0c166407966936d5f4409249896ca Mon Sep 17 00:00:00 2001
+From dc6aa9f31e34831cbc488d459a99cc1df9d3029f Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 131/336] posix-timers: Thread posix-cpu-timers on -rt
+Subject: [PATCH 131/337] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.
@@ -21,7 +21,7 @@ diff --git a/include/linux/init_task.h b/include/linux/init_task.h
 index d359b1a..a56e263 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
-@@ -150,6 +150,12 @@ extern struct task_group root_task_group;
+@@ -150,6 +150,12 @@
  # define INIT_PERF_EVENTS(tsk)
  #endif
  
@@ -34,7 +34,7 @@ index d359b1a..a56e263 100644
  #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
  # define INIT_VTIME(tsk)						\
  	.vtime_seqcount = SEQCNT_ZERO(tsk.vtime_seqcount),	\
-@@ -251,6 +257,7 @@ extern struct task_group root_task_group;
+@@ -251,6 +257,7 @@
  	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
  	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),	\
  	.timer_slack_ns = 50000, /* 50 usec default slack */		\
@@ -308,5 +308,5 @@ index 39008d7..633f4ea 100644
   * Set one of the process-wide special case CPU timers or RLIMIT_CPU.
   * The tsk->sighand->siglock must be held by the caller.
 -- 
-2.1.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 821bc2bcaf2d07d7995b1e3faed75fb654837a0c Mon Sep 17 00:00:00 2001
+From 97a838daea4eda44c9edd97b72a04eee4b4c82db Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
-Subject: [PATCH 119/336] mm/zsmalloc: copy with get_cpu_var() and locking
+Subject: [PATCH 119/337] mm/zsmalloc: copy with get_cpu_var() and locking
 
 get_cpu_var() disables preemption and triggers a might_sleep() splat later.
 This is replaced with get_locked_var().
@@ -110,7 +110,7 @@ index 7c7f072..046e454 100644
  }
  
  /* zpool driver */
-@@ -467,6 +504,7 @@ MODULE_ALIAS("zpool-zsmalloc");
+@@ -467,6 +504,7 @@ static u64 zs_zpool_total_size(void *pool)
  
  /* per-cpu VM mapping areas for zspage accesses that cross page boundaries */
  static DEFINE_PER_CPU(struct mapping_area, zs_map_area);
@@ -198,5 +198,5 @@ index 7c7f072..046e454 100644
  	migrate_read_unlock(zspage);
  	unpin_tag(handle);
 -- 
-2.1.4
+1.9.1
 

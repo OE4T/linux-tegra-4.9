@@ -1,7 +1,7 @@
-From 23e25fe4ce0a39fab6297f825ee015812fec4a16 Mon Sep 17 00:00:00 2001
+From ee4684b74d8d39619d45a11bd208f70e02edc59d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 132/336] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 132/337] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -26,7 +26,7 @@ index 25d2d7c..4b76285 100644
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
-@@ -2397,6 +2400,15 @@ extern struct pid *cad_pid;
+@@ -2397,6 +2400,15 @@ static inline int is_global_init(struct task_struct *tsk)
  extern void free_task(struct task_struct *tsk);
  #define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
  
@@ -85,5 +85,5 @@ index 26e3c8a..8022f06 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-2.1.4
+1.9.1
 

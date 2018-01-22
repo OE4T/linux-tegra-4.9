@@ -1,7 +1,7 @@
-From 7d53f9f1b7b3fc9ec175fc2e9e4f7bfdd9545392 Mon Sep 17 00:00:00 2001
+From 9974a5af97d6e71b4836f401e653eb51ae4a1275 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
-Subject: [PATCH 023/336] sched,tracing: Update trace_sched_pi_setprio()
+Subject: [PATCH 023/337] sched,tracing: Update trace_sched_pi_setprio()
 
 Upstream commit b91473ff6e979c0028f02f90e40c844959c736d8
 
@@ -32,7 +32,7 @@ diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
 index 3412605..360b762 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
-@@ -70,7 +70,7 @@ DECLARE_EVENT_CLASS(sched_wakeup_template,
+@@ -70,7 +70,7 @@
  	TP_fast_assign(
  		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
  		__entry->pid		= p->pid;
@@ -41,7 +41,7 @@ index 3412605..360b762 100644
  		__entry->success	= 1; /* rudiment, kill when possible */
  		__entry->target_cpu	= task_cpu(p);
  	),
-@@ -147,6 +147,7 @@ TRACE_EVENT(sched_switch,
+@@ -147,6 +147,7 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
  		memcpy(__entry->prev_comm, prev->comm, TASK_COMM_LEN);
  		__entry->next_pid	= next->pid;
  		__entry->next_prio	= next->prio;
@@ -49,7 +49,7 @@ index 3412605..360b762 100644
  	),
  
  	TP_printk("prev_comm=%s prev_pid=%d prev_prio=%d prev_state=%s%s ==> next_comm=%s next_pid=%d next_prio=%d",
-@@ -181,7 +182,7 @@ TRACE_EVENT(sched_migrate_task,
+@@ -181,7 +182,7 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
  	TP_fast_assign(
  		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
  		__entry->pid		= p->pid;
@@ -58,7 +58,7 @@ index 3412605..360b762 100644
  		__entry->orig_cpu	= task_cpu(p);
  		__entry->dest_cpu	= dest_cpu;
  	),
-@@ -206,7 +207,7 @@ DECLARE_EVENT_CLASS(sched_process_template,
+@@ -206,7 +207,7 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
  	TP_fast_assign(
  		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
  		__entry->pid		= p->pid;
@@ -67,7 +67,7 @@ index 3412605..360b762 100644
  	),
  
  	TP_printk("comm=%s pid=%d prio=%d",
-@@ -253,7 +254,7 @@ TRACE_EVENT(sched_process_wait,
+@@ -253,7 +254,7 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
  	TP_fast_assign(
  		memcpy(__entry->comm, current->comm, TASK_COMM_LEN);
  		__entry->pid		= pid_nr(pid);
@@ -76,7 +76,7 @@ index 3412605..360b762 100644
  	),
  
  	TP_printk("comm=%s pid=%d prio=%d",
-@@ -437,9 +438,9 @@ DEFINE_EVENT(sched_stat_runtime, sched_stat_runtime,
+@@ -437,9 +438,9 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
   */
  TRACE_EVENT(sched_pi_setprio,
  
@@ -88,7 +88,7 @@ index 3412605..360b762 100644
  
  	TP_STRUCT__entry(
  		__array( char,	comm,	TASK_COMM_LEN	)
-@@ -452,7 +453,8 @@ TRACE_EVENT(sched_pi_setprio,
+@@ -452,7 +453,8 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
  		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
  		__entry->pid		= tsk->pid;
  		__entry->oldprio	= tsk->prio;
@@ -112,5 +112,5 @@ index 9b951fc..870b7a9 100644
  
  	if (oldprio == prio)
 -- 
-2.1.4
+1.9.1
 

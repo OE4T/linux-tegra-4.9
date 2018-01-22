@@ -1,7 +1,7 @@
-From f7d4e1385866d8f21cdc8414c980650aa588f16f Mon Sep 17 00:00:00 2001
+From e1b7332fefb67405fc67c50f14b32d8fb8361ffe Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 27 Feb 2015 15:20:37 +0100
-Subject: [PATCH 210/336] x86/mce: use swait queue for mce wakeups
+Subject: [PATCH 210/337] x86/mce: use swait queue for mce wakeups
 
 We had a customer report a lockup on a 3.0-rt kernel that had the
 following backtrace:
@@ -128,7 +128,7 @@ index d9fab64..edcbd18 100644
  /*
   * Notify the user(s) about new machine check events.
   * Can be called from interrupt context, but not from machine check/NMI
-@@ -1390,19 +1441,8 @@ static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
+@@ -1390,19 +1441,8 @@ static void mce_do_trigger(struct work_struct *work)
   */
  int mce_notify_irq(void)
  {
@@ -161,5 +161,5 @@ index d9fab64..edcbd18 100644
  		err = -ENOMEM;
  		goto err_out;
 -- 
-2.1.4
+1.9.1
 

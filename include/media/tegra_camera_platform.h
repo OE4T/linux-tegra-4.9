@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/camera/tegra_camera_common.h
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -19,6 +19,7 @@
 #include <linux/ioctl.h>
 
 #define TEGRA_CAMERA_IOCTL_SET_BW _IOW('o', 1, struct bw_info)
+#define TEGRA_CAMERA_IOCTL_GET_BW _IOR('o', 2, u64)
 
 struct bw_info {
 	u8 is_iso;

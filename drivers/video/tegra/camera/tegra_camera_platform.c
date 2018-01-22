@@ -464,6 +464,33 @@ static long tegra_camera_ioctl(struct file *file,
 		}
 		break;
 	}
+
+	case _IOC_NR(TEGRA_CAMERA_IOCTL_GET_BW):
+	{
+		unsigned long mc_hz = 0;
+		u64 bw = 0;
+
+#if defined(CONFIG_TEGRA_BWMGR)
+		ret = tegra_bwmgr_get_client_info(info->bwmgr_handle, &mc_hz,
+			TEGRA_BWMGR_SET_EMC_SHARED_BW);
+		if (ret)
+			return ret;
+#else
+		mc_hz = clk_get_rate(info->emc);
+#endif
+		bw = bwmgr_freq_to_bw(mc_hz / 1000);
+
+		if (copy_to_user((void __user *)arg, (const void *)&bw,
+			sizeof(bw))) {
+			dev_err(info->dev,
+				"%s:Failed to copy data to user\n",
+				__func__);
+			return -EFAULT;
+		}
+
+		break;
+	}
+
 	default:
 		break;
 	}

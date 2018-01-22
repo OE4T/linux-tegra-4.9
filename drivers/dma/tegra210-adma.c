@@ -745,17 +745,17 @@ static irqreturn_t tegra_adma_isr(int irq, void *dev_id)
 	unsigned long status;
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	raw_spin_lock_irqsave(&tdc->vc.lock, flags);
 
 	status = tegra_adma_irq_clear(tdc);
 	if (status == 0 || !tdc->desc) {
-		spin_unlock_irqrestore(&tdc->vc.lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 		return IRQ_NONE;
 	}
 
 	vchan_cyclic_callback(&tdc->desc->vd);
 
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -765,14 +765,14 @@ static void tegra_adma_issue_pending(struct dma_chan *dc)
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	raw_spin_lock_irqsave(&tdc->vc.lock, flags);
 
 	if (vchan_issue_pending(&tdc->vc)) {
 		if (!tdc->desc)
 			tegra_adma_start(tdc);
 	}
 
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 }
 
 static int tegra_adma_is_paused(struct tegra_adma_chan *tdc)
@@ -824,14 +824,14 @@ static int tegra_adma_terminate_all(struct dma_chan *dc)
 	unsigned long flags;
 	LIST_HEAD(head);
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	raw_spin_lock_irqsave(&tdc->vc.lock, flags);
 
 	if (tdc->desc)
 		tegra_adma_stop(tdc);
 
 	tegra_adma_request_free(tdc);
 	vchan_get_all_descriptors(&tdc->vc, &head);
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 	vchan_dma_desc_free_list(&tdc->vc, &head);
 
 	return 0;
@@ -852,7 +852,7 @@ static enum dma_status tegra_adma_tx_status(struct dma_chan *dc,
 	if (ret == DMA_COMPLETE || !txstate)
 		return ret;
 
-	spin_lock_irqsave(&tdc->vc.lock, flags);
+	raw_spin_lock_irqsave(&tdc->vc.lock, flags);
 
 	vd = vchan_find_desc(&tdc->vc, cookie);
 	if (vd) {
@@ -864,7 +864,7 @@ static enum dma_status tegra_adma_tx_status(struct dma_chan *dc,
 		residual = 0;
 	}
 
-	spin_unlock_irqrestore(&tdc->vc.lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 
 	dma_set_residue(txstate, residual);
 

@@ -1,7 +1,7 @@
 /*
  * NVDLA driver for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -259,7 +259,7 @@ static int nvdla_set_gcov_region(struct platform_device *pdev, bool unset_region
 
 	gcov_region = (struct dla_region_printf *)(gcov_cmd_mem_info.va);
 	gcov_region->region = DLA_REGION_GCOV;
-	if (unset_region)
+	if (pdata->isolate_contexts || unset_region)
 		gcov_region->address = 0;
 	else
 		gcov_region->address = nvdla_dev->gcov_dump_pa;
@@ -382,6 +382,8 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	trace_region->region = DLA_REGION_TRACE;
 	trace_region->address = nvdla_dev->trace_dump_pa;
 	trace_region->size = TRACE_BUFFER_SIZE;
+	if (pdata->isolate_contexts)
+		trace_region->address = 0;
 
 	cmd_data.method_id = DLA_CMD_SET_REGIONS;
 	cmd_data.method_data = ALIGNED_DMA(trace_cmd_mem_info.pa);
@@ -455,6 +457,8 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 #else
 	region->address = ALIGNED_DMA(nvdla_dev->debug_dump_pa);
 #endif
+	if (pdata->isolate_contexts)
+		region->address = 0;
 
 	/* prepare command data */
 	cmd_data.method_id = DLA_CMD_SET_REGIONS;

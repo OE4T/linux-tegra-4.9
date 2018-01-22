@@ -1,7 +1,7 @@
 /*
  * NVDLA debug utils
  *
- * Copyright (c) 2016 - 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016 - 2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -684,6 +684,12 @@ void nvdla_debug_init(struct platform_device *pdev)
 			&nvdla_dev->dbg_mask);
 	debugfs_create_u32("en_trace", S_IRUGO | S_IWUSR, de,
 			&nvdla_dev->en_trace);
+	debugfs_create_u32("submit_mode", S_IRUGO | S_IWUSR, de,
+			&nvdla_dev->submit_mode);
+
+	/* Check if isolate context enabled if submit mode is CHANNEL */
+	nvdla_dev->submit_mode = nvdla_dev->submit_mode &&
+				pdata->isolate_contexts;
 
 	dla_fw_debugfs_init(pdev);
 }

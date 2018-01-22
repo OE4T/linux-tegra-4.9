@@ -1,7 +1,7 @@
 /*
  * NVDLA IOCTL for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -814,18 +814,18 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	if (err < 0)
 		goto err_add_client;
 
-	priv->buffers = nvhost_buffer_init(pdev);
-	if (IS_ERR(priv->buffers)) {
-		err = PTR_ERR(priv->buffers);
-		goto err_alloc_buffer;
-	}
-
 	priv->queue = nvhost_queue_alloc(nvdla_dev->pool,
-					 MAX_NVDLA_TASK_COUNT,
-					 false);
+		MAX_NVDLA_TASK_COUNT,
+		nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;
+	}
+
+	priv->buffers = nvhost_buffer_init(priv->queue->vm_pdev);
+	if (IS_ERR(priv->buffers)) {
+		err = PTR_ERR(priv->buffers);
+		goto err_alloc_buffer;
 	}
 
 	return nonseekable_open(inode, file);

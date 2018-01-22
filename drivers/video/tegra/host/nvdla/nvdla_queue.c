@@ -1,7 +1,7 @@
 /*
  * NVDLA queue and task management for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,6 +36,7 @@
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
 #include "dla_os_interface.h"
+#include "t194/hardware_t194.h"
 
 /* TODO: 1. revisit timeout post silicon
  *       2. when silicon and sim tests go live at same time,
@@ -503,7 +504,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 			}
 
 			/* For postaction also update MSS addr */
-			syncpt_addr = nvhost_syncpt_address(pdev,
+			syncpt_addr = nvhost_syncpt_address(queue->vm_pdev,
 					queue->syncpt_id);
 			next = add_fence_action(next, POSTACTION_SEM,
 					syncpt_addr, 1);
@@ -664,8 +665,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 					nvdla_dbg_info(pdev, "pre i:%d GoS missing for syncfd [%d]",
 							i, id);
-					syncpt_addr = nvhost_syncpt_address(pdev,
-							id);
+					syncpt_addr = nvhost_syncpt_address(
+							queue->vm_pdev, id);
 					nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] mss_dma_addr[%pad]",
 						i, id, &syncpt_addr);
 					next = add_fence_action(next, PREACTION_SEM_GE,
@@ -698,7 +699,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 				nvdla_dbg_info(pdev, "pre i:%d GoS missing", i);
 
-				syncpt_addr = nvhost_syncpt_address(pdev,
+				syncpt_addr = nvhost_syncpt_address(
+					queue->vm_pdev,
 					task->prefences[i].syncpoint_index);
 				nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] dma_addr[%pad]",
 					i,
@@ -859,12 +861,95 @@ fail_to_map_mem:
 	return err;
 }
 
+static int nvdla_send_cmd_channel(struct platform_device *pdev,
+			struct nvhost_queue *queue,
+			struct nvdla_cmd_data *cmd_data,
+			struct nvdla_task *task)
+{
+	unsigned long timeout;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	uint32_t method_id = cmd_data->method_id;
+	uint32_t method_data = cmd_data->method_data;
+	bool wait = cmd_data->wait;
+	u32 syncpt_wait_ids[MAX_NUM_NVDLA_PREFENCES];
+	u32 syncpt_wait_thresh[MAX_NUM_NVDLA_PREFENCES];
+	u32 cmdbuf[3];
+	int err = 0, i;
+
+	nvdla_dbg_info(pdev, "");
+	/*
+	 * enable notification for command completion or error if
+	 * wait if required
+	 */
+	if (wait)
+		method_id |= (1 << DLA_INT_ON_COMPLETE_SHIFT) |
+				(1 << DLA_INT_ON_ERROR_SHIFT);
+
+	nvdla_dev->waiting = 1;
+
+	/* Pick up fences... */
+	for (i = 0; i < task->num_prefences; i++) {
+		/* ..and ensure that we have only syncpoints present */
+		if (task->prefences[i].type != NVDLA_FENCE_TYPE_SYNCPT) {
+			nvdla_dbg_err(pdev, "syncpt only supported");
+			return -EINVAL;
+		}
+
+		nvdla_dbg_info(pdev, "presyncpt[%d] value[%d]\n",
+				task->prefences[i].syncpoint_index,
+				task->prefences[i].syncpoint_value);
+
+		/* Put fences into a separate array */
+		syncpt_wait_ids[i] =
+				task->prefences[i].syncpoint_index;
+		syncpt_wait_thresh[i] =
+				task->prefences[i].syncpoint_value;
+	}
+
+	cmdbuf[0] = nvhost_opcode_incr(NV_DLA_THI_METHOD_ID >> 2, 2);
+	cmdbuf[1] = method_id;
+	cmdbuf[2] = method_data;
+
+	err = nvhost_queue_submit_to_host1x(queue,
+					    cmdbuf,
+					    ARRAY_SIZE(cmdbuf),
+					    1,
+					    syncpt_wait_ids,
+					    syncpt_wait_thresh,
+					    task->num_prefences,
+					    &task->fence);
+	if (err) {
+		nvdla_dbg_err(pdev, "channel submit failed");
+		goto done;
+	}
+
+	nvdla_dbg_info(pdev, "task submitted through channel mode");
+
+	if (!wait)
+		goto done;
+
+	timeout = msecs_to_jiffies(CMD_TIMEOUT_MSEC);
+
+	if (!wait_for_completion_timeout(&nvdla_dev->cmd_completion, timeout)) {
+		nvdla_dbg_err(pdev, "channel mode submit timedout");
+		err = -ETIMEDOUT;
+		goto done;
+	}
+
+done:
+	nvdla_dev->waiting = 0;
+	return 0;
+}
+
 /* Queue management API */
 static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 {
 	struct nvdla_task *task = (struct nvdla_task *)in_task;
 	struct nvdla_task *last_task = NULL;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvdla_cmd_data cmd_data;
 	uint32_t method_data;
 	uint32_t method_id;
@@ -882,6 +967,13 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	/* get task ref and add to list */
 	nvdla_task_get(task);
 
+	/* get fence from nvhost for MMIO mode*/
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
+		task->fence = nvhost_syncpt_incr_max(task->sp,
+						queue->syncpt_id,
+						task->fence_counter);
+	}
+
 	/* update last task desc's next */
 	if (!list_empty(&queue->tasklist)) {
 		last_task = list_last_entry(&queue->tasklist,
@@ -895,10 +987,6 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 
 	nvdla_dbg_info(pdev, "task[%p] added to list", task);
 
-	/* get fence from nvhost */
-	task->fence = nvhost_syncpt_incr_max(task->sp, queue->syncpt_id,
-						task->fence_counter);
-
 	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p] fence_counter[%u]",
 				queue->syncpt_id, task->fence,
 				task, task->fence_counter);
@@ -911,6 +999,21 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 			(1 << DLA_INT_ON_COMPLETE_SHIFT) |
 			(1 << DLA_INT_ON_ERROR_SHIFT);
 	method_data = ALIGNED_DMA(task->task_desc_pa);
+
+	/* prepare command for channel submit */
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL) {
+
+		cmd_data.method_id = method_id;
+		cmd_data.method_data = method_data;
+		cmd_data.wait = true;
+
+		/* submit task to engine */
+		err = nvdla_send_cmd_channel(pdev, queue, &cmd_data, task);
+		if (err) {
+			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
+			goto fail_to_channel_submit;
+		}
+	}
 
 	/* register notifier with fence */
 	err = nvhost_intr_register_notifier(pdev, queue->syncpt_id,
@@ -936,20 +1039,24 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 		}
 	}
 
-	/* prepare command */
-	cmd_data.method_id = method_id;
-	cmd_data.method_data = method_data;
-	cmd_data.wait = true;
+	/* prepare command for MMIO submit */
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
+		cmd_data.method_id = method_id;
+		cmd_data.method_data = method_data;
+		cmd_data.wait = true;
 
-	/* submit task to engine */
-	err = nvdla_send_cmd(pdev, &cmd_data);
-	if (err) {
-		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
-				task->fence);
-		nvdla_dbg_err(pdev, "task[%p] submit failed", task);
+		/* submit task to engine */
+		err = nvdla_send_cmd(pdev, &cmd_data);
+		if (err) {
+			nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
+					task->fence);
+			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
+		}
 	}
 
+
 fail_to_register:
+fail_to_channel_submit:
 	mutex_unlock(&queue->list_lock);
 
 	return err;

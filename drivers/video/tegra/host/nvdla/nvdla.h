@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host NVDLA
  *
- * Copyright (c) 2016-2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -156,6 +156,11 @@ struct nvdla_cmd_data {
 	bool wait;
 };
 
+enum nvdla_submit_mode {
+	NVDLA_SUBMIT_MODE_MMIO		= 0,
+	NVDLA_SUBMIT_MODE_CHANNEL	= 1
+};
+
 /**
  * data structure to keep per DLA engine device data
  *
@@ -163,6 +168,8 @@ struct nvdla_cmd_data {
  * @pool		pointer to queue table
  * @dbg_mask		debug mask for print level
  * @en_trace		flag to enable kernel tracing
+ * @submit_mode		flag to enable task submit mode, default is
+ *				NVDLA_SUBMIT_MODE_MMIO
  * @fw_version		saves current firmware version
  * @cmd_mem		structure to hold command memory pool
  * @trace_enable	to enable/disable the DLA firmware trace
@@ -185,6 +192,7 @@ struct nvdla_device {
 	int waiting;
 	u32 dbg_mask;
 	u32 en_trace;
+	u32 submit_mode;
 	u32 fw_version;
 	struct nvdla_cmd_mem cmd_mem;
 	u32 trace_enable;

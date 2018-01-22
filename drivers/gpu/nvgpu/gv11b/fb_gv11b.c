@@ -760,46 +760,34 @@ static void gv11b_fb_print_fault_info(struct gk20a *g,
 			mmfault->fault_addr_aperture,
 			mmfault->fault_type_desc,
 			fault_access_type_descs_gv11b[mmfault->access_type]);
-		nvgpu_log(g, gpu_dbg_intr, "[MMU FAULT] "
-			"mmu engine id:  %d, "
-			"faulted act eng id if any: 0x%x, "
-			"faulted veid if any: 0x%x, "
-			"faulted pbdma id if any: 0x%x, "
-			"fault addr: 0x%llx, ",
-			mmfault->mmu_engine_id,
-			mmfault->faulted_engine,
-			mmfault->faulted_subid,
-			mmfault->faulted_pbdma,
-			mmfault->fault_addr);
-		nvgpu_log(g, gpu_dbg_intr, "[MMU FAULT] "
-			"fault addr aperture: %d, "
-			"fault type: %s, "
-			"access type: %s, "
-			"inst ptr: 0x%llx, "
-			"inst ptr aperture: %d, ",
-			mmfault->fault_addr_aperture,
-			mmfault->fault_type_desc,
-			fault_access_type_descs_gv11b[mmfault->access_type],
-			mmfault->inst_ptr,
-			mmfault->inst_aperture);
-		nvgpu_log(g, gpu_dbg_intr, "[MMU FAULT] "
-			"ch id:  %d, "
-			"timestamp hi:lo 0x%08x:0x%08x, "
+		nvgpu_err(g, "[MMU FAULT] "
+			"protected mode: %d, "
 			"client type: %s, "
 			"client id:  %s, "
 			"gpc id if client type is gpc: %d, ",
-			mmfault->chid,
-			mmfault->timestamp_hi, mmfault->timestamp_lo,
+			mmfault->protected_mode,
 			mmfault->client_type_desc,
 			mmfault->client_id_desc,
 			mmfault->gpc_id);
+
 		nvgpu_log(g, gpu_dbg_intr, "[MMU FAULT] "
-			"protected mode: %d, "
+			"faulted act eng id if any: 0x%x, "
+			"faulted veid if any: 0x%x, "
+			"faulted pbdma id if any: 0x%x, ",
+			mmfault->faulted_engine,
+			mmfault->faulted_subid,
+			mmfault->faulted_pbdma);
+		nvgpu_log(g, gpu_dbg_intr, "[MMU FAULT] "
+			"inst ptr: 0x%llx, "
+			"inst ptr aperture: %d, "
 			"replayable fault: %d, "
-			"replayable fault en:  %d ",
-			mmfault->protected_mode,
+			"replayable fault en:  %d "
+			"timestamp hi:lo 0x%08x:0x%08x, ",
+			mmfault->inst_ptr,
+			mmfault->inst_aperture,
 			mmfault->replayable_fault,
-			mmfault->replay_fault_en);
+			mmfault->replay_fault_en,
+			mmfault->timestamp_hi, mmfault->timestamp_lo);
 	}
 }
 
@@ -969,7 +957,6 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		 * single context so we need to reset the entire runlist
 		 */
 		id_type = ID_TYPE_UNKNOWN;
-		nvgpu_log(g, gpu_dbg_intr, "UNBOUND INST BLOCK MMU FAULT");
 
 		} else if (mmfault->refch) {
 			if (gk20a_is_channel_marked_as_tsg(mmfault->refch)) {
@@ -1047,7 +1034,7 @@ static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 			"SPURIOUS mmu fault: reg index:%d", index);
 		return;
 	}
-	nvgpu_info(g, "%s MMU FAULT" ,
+	nvgpu_log(g, gpu_dbg_intr, "%s MMU FAULT" ,
 			index == REPLAY_REG_INDEX ? "REPLAY" : "NON-REPLAY");
 
 	nvgpu_log(g, gpu_dbg_intr, "get ptr = %d", get_indx);
@@ -1091,10 +1078,9 @@ static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 			prev_fault_addr = next_fault_addr;
 			next_fault_addr = mmfault->fault_addr;
 			if (prev_fault_addr == next_fault_addr) {
-				nvgpu_log(g, gpu_dbg_intr, "pte is fixed");
+				nvgpu_log(g, gpu_dbg_intr, "pte already scanned");
 				if (mmfault->refch)
 					gk20a_channel_put(mmfault->refch);
-				/* pte already fixed for this addr */
 				continue;
 			}
 		}
@@ -1398,7 +1384,8 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 
 	niso_intr = gk20a_readl(g, fb_niso_intr_r());
 
-	nvgpu_info(g, "enter hub isr, niso_intr = 0x%08x", niso_intr);
+	nvgpu_log(g, gpu_dbg_intr, "enter hub isr, niso_intr = 0x%08x",
+			niso_intr);
 
 	if (niso_intr &
 		 (fb_niso_intr_hub_access_counter_notify_m() |
@@ -1439,7 +1426,7 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 		fb_niso_intr_mmu_nonreplayable_fault_notify_m() |
 		fb_niso_intr_mmu_nonreplayable_fault_overflow_m())) {
 
-		nvgpu_info(g, "MMU Fault");
+		nvgpu_log(g, gpu_dbg_intr, "MMU Fault");
 		gv11b_fb_handle_mmu_fault(g, niso_intr);
 	}
 

@@ -339,7 +339,8 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 
 	default:
 		WARN_ON(true);
-		break;
+		bwmgr_unlock();
+		return -EINVAL;
 	}
 
 	if (update_clk && !clk_update_disabled)
@@ -350,6 +351,65 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_set_emc);
+
+int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
+		unsigned long *out_val,
+		enum tegra_bwmgr_request_type req)
+{
+	if (!bwmgr.emc_clk)
+		return 0;
+
+	if (!bwmgr.status)
+		return 0;
+
+	if (!IS_HANDLE_VALID(handle)) {
+		pr_err("bwmgr: client sent bad handle %p\n",
+				handle);
+		WARN_ON(true);
+		return -EINVAL;
+	}
+
+	if (req >= TEGRA_BWMGR_SET_EMC_REQ_COUNT) {
+		pr_err("bwmgr: client %ld sent bad request type %d\n",
+				handle - bwmgr.bwmgr_client, req);
+		WARN_ON(true);
+		return -EINVAL;
+	}
+
+	bwmgr_lock();
+
+	switch (req) {
+	case TEGRA_BWMGR_SET_EMC_FLOOR:
+		*out_val = handle->floor;
+		break;
+
+	case TEGRA_BWMGR_SET_EMC_CAP:
+		*out_val = handle->cap;
+		break;
+
+	case TEGRA_BWMGR_SET_EMC_ISO_CAP:
+		*out_val = handle->iso_cap;
+		break;
+
+	case TEGRA_BWMGR_SET_EMC_SHARED_BW:
+		*out_val = handle->bw;
+		break;
+
+	case TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO:
+		*out_val = handle->iso_bw;
+		break;
+
+	default:
+		WARN_ON(true);
+		bwmgr_unlock();
+		return -EINVAL;
+	}
+
+	bwmgr_unlock();
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_bwmgr_get_client_info);
 
 int tegra_bwmgr_notifier_register(struct notifier_block *nb)
 {

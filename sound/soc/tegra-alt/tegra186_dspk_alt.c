@@ -1,7 +1,7 @@
 /*
  * tegra186_dspk_alt.c - Tegra186 DSPK driver
  *
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -579,14 +579,14 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		dspk->pin_active_state = pinctrl_lookup_state(dspk->pinctrl,
 									"dap_active");
 		if (IS_ERR(dspk->pin_active_state)) {
-			dev_warn(&pdev->dev, "Missing dap-active state\n");
+			dev_dbg(&pdev->dev, "Missing dap-active state\n");
 			goto err_dap;
 		}
 
 		dspk->pin_idle_state = pinctrl_lookup_state(dspk->pinctrl,
 								"dap_inactive");
 		if (IS_ERR(dspk->pin_idle_state)) {
-			dev_warn(&pdev->dev, "Missing dap-inactive state\n");
+			dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
 			goto err_dap;
 		}
 

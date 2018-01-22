@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.c - Tegra210 DMIC driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -674,14 +674,14 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		dmic->pin_active_state = pinctrl_lookup_state(dmic->pinctrl,
 									"dap_active");
 		if (IS_ERR(dmic->pin_active_state)) {
-			dev_warn(&pdev->dev, "Missing dap-active state\n");
+			dev_dbg(&pdev->dev, "Missing dap-active state\n");
 			goto err_dap;
 		}
 
 		dmic->pin_idle_state = pinctrl_lookup_state(dmic->pinctrl,
 								"dap_inactive");
 		if (IS_ERR(dmic->pin_idle_state)) {
-			dev_warn(&pdev->dev, "Missing dap-inactive state\n");
+			dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
 			goto err_dap;
 		}
 

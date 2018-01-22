@@ -44,6 +44,7 @@ struct tegra_camchar_data {
 	struct mutex io_lock;
 	wait_queue_head_t waitq;
 	bool is_open;
+	bool is_established;
 };
 
 #define DEVICE_COUNT (128)
@@ -67,6 +68,7 @@ static int tegra_camchar_open(struct inode *in, struct file *f)
 		return ret;
 
 	data->is_open = true;
+	data->is_established = false;
 	f->private_data = data->ch;
 
 	return nonseekable_open(in, f);
@@ -166,7 +168,12 @@ static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 		ret = tegra_ivc_write_user(&ch->ivc, buffer, len);
 		mutex_unlock(&dev_data->io_lock);
 
-		if (ret != -ENOMEM)
+		if (ret > 0)
+			dev_data->is_established = true;
+
+		if (ret != -ENOMEM && ret != ECONNRESET)
+			;
+		else if (ret == ECONNRESET && dev_data->is_established)
 			;
 		else if (signal_pending(current))
 			ret = -EINTR;
@@ -177,7 +184,10 @@ static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 
 		finish_wait(&dev_data->waitq, &wait);
 
-	} while (ret == -ENOMEM);
+		if (ret == ECONNRESET && dev_data->is_established)
+			break;
+
+	} while (ret == -ENOMEM || ret == -ECONNRESET);
 
 	return ret;
 }

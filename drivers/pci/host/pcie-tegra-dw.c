@@ -46,6 +46,8 @@
 
 #define APPL_PINMUX				(0X0)
 #define APPL_PINMUX_PEX_RST			BIT(0)
+#define APPL_PINMUX_CLKREQ_OVERRIDE_EN		BIT(2)
+#define APPL_PINMUX_CLKREQ_OVERRIDE		BIT(3)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD_EN		BIT(9)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD		BIT(10)
 
@@ -2510,6 +2512,7 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	struct pci_dev *pdev = NULL;
 	struct pci_bus *child;
 	struct pcie_port *pp = &pcie->pp;
+	u32 data;
 	u16 val;
 
 	if (!tegra_pcie_dw_link_up(&pcie->pp))
@@ -2550,6 +2553,10 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 
 	if (tegra_pcie_try_link_l2(pcie))
 		dev_err(pcie->dev, "Link transition to L2 state failed\n");
+
+	data = readl(pcie->appl_base + APPL_PINMUX);
+	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);
+	writel(data, pcie->appl_base + APPL_PINMUX);
 }
 
 static int tegra_pcie_dw_remove(struct platform_device *pdev)

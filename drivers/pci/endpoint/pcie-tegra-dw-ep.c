@@ -32,6 +32,13 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/pci.h>
 
+#define CTRL_0	(0)
+#define CTRL_1	(1)
+#define CTRL_2	(2)
+#define CTRL_3	(3)
+#define CTRL_4	(4)
+#define CTRL_5	(5)
+
 #define APPL_PINMUX				(0X0)
 #define APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN	BIT(11)
 
@@ -722,11 +729,13 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
-	if (ret) {
-		dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
-			pcie->cid, ret);
-		return ret;
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+		if (ret) {
+			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
 	}
 
 	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");

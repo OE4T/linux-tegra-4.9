@@ -269,14 +269,12 @@ struct pmu_sequence {
 	u32 desc;
 	struct pmu_msg *msg;
 	union {
-		struct pmu_allocation_v0 in_v0;
 		struct pmu_allocation_v1 in_v1;
 		struct pmu_allocation_v2 in_v2;
 		struct pmu_allocation_v3 in_v3;
 	};
 	struct nvgpu_mem *in_mem;
 	union {
-		struct pmu_allocation_v0 out_v0;
 		struct pmu_allocation_v1 out_v1;
 		struct pmu_allocation_v2 out_v2;
 		struct pmu_allocation_v3 out_v3;
@@ -351,7 +349,6 @@ struct nvgpu_pmu {
 
 	union {
 		struct pmu_perfmon_counter_v2 perfmon_counter_v2;
-		struct pmu_perfmon_counter_v0 perfmon_counter_v0;
 	};
 	u32 perfmon_state_id[PMU_DOMAIN_GROUP_NUM];
 
@@ -371,9 +368,6 @@ struct nvgpu_pmu {
 
 	bool zbc_ready;
 	union {
-		struct pmu_cmdline_args_v0 args_v0;
-		struct pmu_cmdline_args_v1 args_v1;
-		struct pmu_cmdline_args_v2 args_v2;
 		struct pmu_cmdline_args_v3 args_v3;
 		struct pmu_cmdline_args_v4 args_v4;
 		struct pmu_cmdline_args_v5 args_v5;

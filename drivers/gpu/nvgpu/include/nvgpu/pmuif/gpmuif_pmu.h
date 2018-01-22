@@ -26,33 +26,6 @@
 #include "gpmuif_cmn.h"
 
 /* Make sure size of this structure is a multiple of 4 bytes */
-struct pmu_cmdline_args_v0 {
-	u32 cpu_freq_hz;
-	u32 falc_trace_size;
-	u32 falc_trace_dma_base;
-	u32 falc_trace_dma_idx;
-	struct pmu_mem_v0 gc6_ctx;
-};
-
-struct pmu_cmdline_args_v1 {
-	u32 cpu_freq_hz;
-	u32 falc_trace_size;
-	u32 falc_trace_dma_base;
-	u32 falc_trace_dma_idx;
-	u8 secure_mode;
-	struct pmu_mem_v1 gc6_ctx;
-};
-
-struct pmu_cmdline_args_v2 {
-	u32 cpu_freq_hz;
-	u32 falc_trace_size;
-	u32 falc_trace_dma_base;
-	u32 falc_trace_dma_idx;
-	u8 secure_mode;
-	u8 raise_priv_sec;
-	struct pmu_mem_v1 gc6_ctx;
-};
-
 struct pmu_cmdline_args_v3 {
 	u32 reserved;
 	u32 cpu_freq_hz;
@@ -118,21 +91,6 @@ enum {
 	PMU_INIT_MSG_TYPE_PMU_INIT = 0,
 };
 
-struct pmu_init_msg_pmu_v0 {
-	u8 msg_type;
-	u8 pad;
-
-	struct {
-		u16 size;
-		u16 offset;
-		u8  index;
-		u8  pad;
-	} queue_info[PMU_QUEUE_COUNT];
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-};
-
 struct pmu_init_msg_pmu_v1 {
 	u8 msg_type;
 	u8 pad;
@@ -147,22 +105,6 @@ struct pmu_init_msg_pmu_v1 {
 
 	u16 sw_managed_area_offset;
 	u16 sw_managed_area_size;
-};
-struct pmu_init_msg_pmu_v2 {
-	u8 msg_type;
-	u8 pad;
-	u16  os_debug_entry_point;
-
-	struct {
-		u16 size;
-		u16 offset;
-		u8  index;
-		u8  pad;
-	} queue_info[PMU_QUEUE_COUNT];
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-	u8 dummy[18];
 };
 
 #define PMU_QUEUE_COUNT_FOR_V4 5
@@ -200,9 +142,7 @@ struct pmu_init_msg_pmu_v4 {
 };
 
 union pmu_init_msg_pmu {
-	struct pmu_init_msg_pmu_v0 v0;
 	struct pmu_init_msg_pmu_v1 v1;
-	struct pmu_init_msg_pmu_v2 v2;
 	struct pmu_init_msg_pmu_v3 v3;
 	struct pmu_init_msg_pmu_v4 v4;
 };
@@ -211,8 +151,6 @@ struct pmu_init_msg {
 	union {
 		u8 msg_type;
 		struct pmu_init_msg_pmu_v1 pmu_init_v1;
-		struct pmu_init_msg_pmu_v0 pmu_init_v0;
-		struct pmu_init_msg_pmu_v2 pmu_init_v2;
 		struct pmu_init_msg_pmu_v3 pmu_init_v3;
 		struct pmu_init_msg_pmu_v4 pmu_init_v4;
 	};

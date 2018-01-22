@@ -44,15 +44,6 @@ enum {
 	PMU_PERFMON_CMD_ID_INIT  = 2
 };
 
-struct pmu_perfmon_counter_v0 {
-	u8 index;
-	u8 flags;
-	u8 group_id;
-	u8 valid;
-	u16 upper_threshold; /* units of 0.01% */
-	u16 lower_threshold; /* units of 0.01% */
-};
-
 struct pmu_perfmon_counter_v2 {
 	u8 index;
 	u8 flags;
@@ -96,14 +87,6 @@ struct pmu_perfmon_cmd_start_v1 {
 	struct pmu_allocation_v1 counter_alloc;
 };
 
-struct pmu_perfmon_cmd_start_v0 {
-	u8 cmd_type;
-	u8 group_id;
-	u8 state_id;
-	u8 flags;
-	struct pmu_allocation_v0 counter_alloc;
-};
-
 struct pmu_perfmon_cmd_stop {
 	u8 cmd_type;
 };
@@ -141,26 +124,13 @@ struct pmu_perfmon_cmd_init_v1 {
 	u16 sample_buffer;
 };
 
-struct pmu_perfmon_cmd_init_v0 {
-	u8 cmd_type;
-	u8 to_decrease_count;
-	u8 base_counter_id;
-	u32 sample_period_us;
-	struct pmu_allocation_v0 counter_alloc;
-	u8 num_counters;
-	u8 samples_in_moving_avg;
-	u16 sample_buffer;
-};
-
 struct pmu_perfmon_cmd {
 	union {
 		u8 cmd_type;
-		struct pmu_perfmon_cmd_start_v0 start_v0;
 		struct pmu_perfmon_cmd_start_v1 start_v1;
 		struct pmu_perfmon_cmd_start_v2 start_v2;
 		struct pmu_perfmon_cmd_start_v3 start_v3;
 		struct pmu_perfmon_cmd_stop stop;
-		struct pmu_perfmon_cmd_init_v0 init_v0;
 		struct pmu_perfmon_cmd_init_v1 init_v1;
 		struct pmu_perfmon_cmd_init_v2 init_v2;
 		struct pmu_perfmon_cmd_init_v3 init_v3;

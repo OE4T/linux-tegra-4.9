@@ -41,21 +41,9 @@ struct falc_dma_addr {
 	u8 dma_offset;
 };
 
-struct pmu_mem_v0 {
-	u32 dma_base;
-	u8  dma_offset;
-	u8  dma_idx;
-};
-
 struct pmu_mem_v1 {
 	u32 dma_base;
 	u8  dma_offset;
-	u8  dma_idx;
-	u16 fb_size;
-};
-
-struct pmu_mem_v2 {
-	struct falc_dma_addr dma_addr;
 	u8  dma_idx;
 	u16 fb_size;
 };
@@ -77,15 +65,6 @@ struct flcn_mem_desc_v0 {
 };
 
 #define nv_flcn_mem_desc flcn_mem_desc_v0
-
-struct pmu_allocation_v0 {
-	u8 pad[3];
-	u8 fb_mem_use;
-	struct {
-		struct pmu_dmem dmem;
-		struct pmu_mem_v0 fb;
-	} alloc;
-};
 
 struct pmu_allocation_v1 {
 	struct {

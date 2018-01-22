@@ -14,8 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LINUX_TEGRA_BPMP_H
-#define _LINUX_TEGRA_BPMP_H
+#ifndef _SOC_TEGRA_TEGRA_BPMP_H
+#define _SOC_TEGRA_TEGRA_BPMP_H
 
 #include <linux/kernel.h>
 
@@ -69,7 +69,7 @@ static inline void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 #ifdef CONFIG_DEBUG_FS
 struct dentry *tegra_bpmp_debugfs_add_file(char *name,
 	umode_t mode, void *data, const struct file_operations *fops)
-{ return -NULL; }
+{ return NULL; }
 #endif
 #endif
 

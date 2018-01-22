@@ -111,3 +111,7 @@
 &dpaux2 {
 	status = "okay";
 };
+
+&tegra_cec {
+	status = "okay";
+};

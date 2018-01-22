@@ -1,7 +1,7 @@
 /*
  * GV11B Therm
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -81,11 +81,17 @@ int gv11b_init_therm_setup_hw(struct gk20a *g)
 	gk20a_writel(g, therm_config2_r(), v);
 
 	gk20a_writel(g, therm_grad_stepping1_r(),
-			therm_grad_stepping1_pdiv_duration_f(0x40));
+			therm_grad_stepping1_pdiv_duration_f(0xbf4));
 
 	v = gk20a_readl(g, therm_grad_stepping0_r());
 	v |= therm_grad_stepping0_feature_enable_f();
 	gk20a_writel(g, therm_grad_stepping0_r(), v);
+
+	/* disable idle clock slowdown */
+	v = therm_clk_slowdown_2_idle_condition_a_select_f(0) |
+		therm_clk_slowdown_2_idle_condition_a_type_never_f() |
+		therm_clk_slowdown_2_idle_condition_b_type_never_f();
+	gk20a_writel(g, therm_clk_slowdown_2_r(0), v);
 
 	return 0;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -331,6 +331,38 @@ static inline u32 therm_clk_slowdown_idle_factor_v(u32 r)
 static inline u32 therm_clk_slowdown_idle_factor_disabled_f(void)
 {
 	return 0x0U;
+}
+static inline u32 therm_clk_slowdown_2_r(u32 i)
+{
+	return 0x000201a0U + i*4U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_a_select_f(u32 v)
+{
+	return (v & 0xfU) << 0U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_a_type_f(u32 v)
+{
+	return (v & 0x7U) << 4U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_a_type_v(u32 r)
+{
+	return (r >> 4U) & 0x7U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_a_type_never_f(void)
+{
+	return 0x40U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_b_type_f(u32 v)
+{
+	return (v & 0x7U) << 12U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_b_type_v(u32 r)
+{
+	return (r >> 12U) & 0x7U;
+}
+static inline u32 therm_clk_slowdown_2_idle_condition_b_type_never_f(void)
+{
+	return 0x4000U;
 }
 static inline u32 therm_grad_stepping_table_r(u32 i)
 {

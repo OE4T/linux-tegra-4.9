@@ -22,7 +22,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			#io-channel-cells = <1>;
-			status = "disabled";
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "GPU";
@@ -48,7 +47,6 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			#io-channel-cells = <1>;
-			status = "disabled";
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "CV";

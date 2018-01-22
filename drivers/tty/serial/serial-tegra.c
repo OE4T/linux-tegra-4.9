@@ -3,7 +3,7 @@
  *
  * High-speed serial driver for NVIDIA Tegra SoCs
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -89,6 +89,9 @@
 #define TEGRA_UART_MAX_RX_CHARS			256
 #define TEGRA_UART_MAX_REPEAT_ERRORS		100
 
+#define UART_TOLERANCE_LOW_RANGE		(-2)
+#define UART_TOLERANCE_HIGH_RANGE		2
+
 /**
  * tegra_uart_chip_data: SOC specific data.
  *
@@ -103,8 +106,6 @@ struct tegra_uart_chip_data {
 	bool	support_clk_src_div;
 	bool	fifo_mode_enable_status;
 	bool	dma_8bytes_burst_only;
-	int	error_tolerance_low_range;
-	int	error_tolerance_high_range;
 };
 
 struct tegra_baud_tolerance {
@@ -164,6 +165,8 @@ struct tegra_uart_port {
 	struct dentry				*debugfs;
 	bool					early_printk_console_instance;
 	bool					rt_flush;
+	int					error_tolerance_low_range;
+	int					error_tolerance_high_range;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -393,8 +396,8 @@ static void tegra_check_rate_in_range(struct tegra_uart_port *tup)
 	diff = ((tup->configured_rate - tup->required_rate) * 10000)
 			/ tup->required_rate;
 	error = diff < 0 ? -diff : diff;
-	if (diff < (tup->cdata->error_tolerance_low_range * 100) ||
-			diff > (tup->cdata->error_tolerance_high_range * 100))
+	if (diff < (tup->error_tolerance_low_range * 100) ||
+			diff > (tup->error_tolerance_high_range * 100))
 		dev_err(tup->uport.dev,
 			"configured rate out of supported range by %c%d.%d %%",
 			(diff < 0) ? '-':'+',
@@ -1627,6 +1630,16 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 
 	tup->rt_flush = of_property_read_bool(np, "rt-flush");
 
+	ret = of_property_read_u32(np, "nvidia,tolerance-low-range",
+				   &tup->error_tolerance_low_range);
+	if (ret)
+		tup->error_tolerance_low_range = UART_TOLERANCE_LOW_RANGE;
+	ret = of_property_read_u32(np, "nvidia,tolerance-high-range",
+				   &tup->error_tolerance_high_range);
+	if (ret)
+		tup->error_tolerance_high_range = UART_TOLERANCE_HIGH_RANGE;
+
+
 	n_entries = of_property_count_u32_elems(np, "nvidia,adjust-baud-rates");
 	if (n_entries > 0) {
 		tup->n_adjustable_baud_rates = n_entries/3;
@@ -1724,8 +1737,6 @@ static struct tegra_uart_chip_data tegra20_uart_chip_data = {
 	.support_clk_src_div		= false,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
-	.error_tolerance_low_range	= 0,
-	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra30_uart_chip_data = {
@@ -1734,8 +1745,6 @@ static struct tegra_uart_chip_data tegra30_uart_chip_data = {
 	.support_clk_src_div		= true,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
-	.error_tolerance_low_range	= 0,
-	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra114_uart_chip_data = {
@@ -1744,8 +1753,6 @@ static struct tegra_uart_chip_data tegra114_uart_chip_data = {
 	.support_clk_src_div            = true,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
-	.error_tolerance_low_range	= 0,
-	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra186_uart_chip_data = {
@@ -1754,8 +1761,6 @@ static struct tegra_uart_chip_data tegra186_uart_chip_data = {
 	.support_clk_src_div		= true,
 	.fifo_mode_enable_status	= true,
 	.dma_8bytes_burst_only		= true,
-	.error_tolerance_low_range	= 0,
-	.error_tolerance_high_range	= 4,
 };
 
 static const struct of_device_id tegra_uart_of_match[] = {

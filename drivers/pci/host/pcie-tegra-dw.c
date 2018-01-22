@@ -170,6 +170,10 @@
 #define CFG_LINK_CAP_MAX_WIDTH_MASK		0x3F0
 #define CFG_LINK_CAP_MAX_WIDTH_SHIFT		4
 
+#define CFG_DEV_STATUS_CONTROL			0x78
+#define CFG_DEV_STATUS_CONTROL_MPS_MASK		0xE0
+#define CFG_DEV_STATUS_CONTROL_MPS_SHIFT	5
+
 #define CFG_LINK_STATUS_CONTROL		0x80
 #define CFG_LINK_STATUS_DLL_ACTIVE	BIT(29)
 #define CFG_LINK_STATUS_LT		BIT(27)
@@ -2054,6 +2058,12 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	tmp |= PORT_LOGIC_GEN2_CTRL_FAST_TRAINING_SEQ_VAL;
 	dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_GEN2_CTRL, 4, tmp);
 
+	/* Set MPS to 256 in DEV_CTL */
+	dw_pcie_cfg_read(pp->dbi_base + CFG_DEV_STATUS_CONTROL, 4, &tmp);
+	tmp &= ~CFG_DEV_STATUS_CONTROL_MPS_MASK;
+	tmp |= 1 << CFG_DEV_STATUS_CONTROL_MPS_SHIFT;
+	dw_pcie_cfg_write(pp->dbi_base + CFG_DEV_STATUS_CONTROL, 4, tmp);
+
 	/* Configure Max Speed from DT */
 	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_CAP, 4, &tmp);
 	tmp &= ~CFG_LINK_CAP_MAX_LINK_SPEED_MASK;
@@ -2293,7 +2303,7 @@ static int tegra_add_pcie_port(struct pcie_port *pp,
 	}
 
 	/* program to use MPS of 256 whereever possible */
-	pcie_bus_config = PCIE_BUS_PERFORMANCE;
+	pcie_bus_config = PCIE_BUS_SAFE;
 
 	pp->root_bus_nr = -1;
 	pp->ops = &tegra_pcie_dw_host_ops;

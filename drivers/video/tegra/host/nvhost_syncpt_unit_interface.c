@@ -183,6 +183,7 @@ int nvhost_syncpt_get_gos(struct platform_device *engine_pdev,
 dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
 				     u32 syncpt_id)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(engine_pdev);
 	u32 gos_id, gos_offset;
 	struct cv_dev_info *cv_dev_info;
 	struct sg_table *sgt;
@@ -191,6 +192,10 @@ dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
 	err = nvhost_syncpt_get_gos(engine_pdev, syncpt_id,
 				    &gos_id, &gos_offset);
 	if (err)
+		return 0;
+
+	/* if context isolation is enabled, GoS is not supported */
+	if (pdata->isolate_contexts)
 		return 0;
 
 	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
@@ -249,6 +254,7 @@ static void nvhost_syncpt_insert_syncpt_backing(struct rb_root *root,
 int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 				     u32 syncpt_id)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(engine_pdev);
 	struct nvhost_master *host = nvhost_get_host(engine_pdev);
 	struct syncpt_gos_backing *syncpt_gos_backing;
 	struct cv_dev_info *cv_dev_info;
@@ -260,6 +266,10 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
 	if (!cv_dev_info)
 		return -EFAULT;
+
+	/* if context isolation is enabled, GoS is not supported */
+	if (pdata->isolate_contexts)
+		return -EINVAL;
 
 	/* check if backing already exists */
 	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);

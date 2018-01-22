@@ -1,7 +1,7 @@
 /*
  * GPIO driver for NVIDIA Tegra186
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -29,6 +29,7 @@
 #include <linux/irqchip/tegra.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/gpio/tegra194-gpio.h>
+#include <linux/version.h>
 
 /* GPIO control registers */
 #define GPIO_ENB_CONFIG_REG			0x00
@@ -882,6 +883,19 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 	return 0;
 }
 
+#if KERNEL_VERSION(4, 13, 0) < LINUX_VERSION_CODE
+static int tegra_gpio_set_config(struct gpio_chip *chip, unsigned offset,
+				   unsigned long config)
+{
+	if (pinconf_to_config_param(config) != PIN_CONFIG_INPUT_DEBOUNCE)
+		return -ENOTSUPP;
+
+	tegra_gpio_set_debounce(chip, offset,
+		       pinconf_to_config_argument(config));
+	return 0;
+}
+#endif
+
 static int tegra_gpio_is_enabled(struct gpio_chip *chip, unsigned offset)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
@@ -1266,7 +1280,11 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi->gc.suspend_configure	= tegra_gpio_suspend_configure;
 	tgi->gc.is_enabled		= tegra_gpio_is_enabled;
 	tgi->gc.to_irq			= tegra_gpio_to_irq;
+#if KERNEL_VERSION(4, 13, 0) < LINUX_VERSION_CODE
+	tgi->gc.set_config		= tegra_gpio_set_config;
+#else
 	tgi->gc.set_debounce		= tegra_gpio_set_debounce;
+#endif
 	tgi->gc.base			= -1;
 	tgi->gc.ngpio			= tgi->soc->nports * 8;
 	tgi->gc.parent			= &pdev->dev;

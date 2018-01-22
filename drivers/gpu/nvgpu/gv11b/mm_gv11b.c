@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/pm_runtime.h>
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>

@@ -29,6 +29,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTA>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -47,6 +49,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTB>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -65,6 +69,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTC>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -83,6 +89,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTD>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -101,6 +109,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTE>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -119,6 +129,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTF>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 
@@ -137,6 +149,8 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTG>;
 		reset-names = "serial";
 		status = "disabled";
+		nvidia,tolerance-low-range = <0>;
+		nvidia,tolerance-high-range = <4>;
 		nvidia,adjust-baud-rates = <115200 115200 100>;
 	};
 

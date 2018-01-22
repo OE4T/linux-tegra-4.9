@@ -1463,7 +1463,6 @@ static void rt5659_jack_detect_intel_hd_header(struct work_struct *work)
 	/* for mic jack */
 	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
 	regmap_write(rt5659->regmap, RT5659_4BTN_IL_CMD_1, value);
-	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
 	mic_flag = (value & 0x2000) ? true : false;
 
 	if (mic_flag != rt5659->mic_state) {
@@ -1471,16 +1470,10 @@ static void rt5659_jack_detect_intel_hd_header(struct work_struct *work)
 		if (mic_flag) {
 			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
 				0x2, 0x2);
-			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
-                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
-                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
 			rt5659->jack_type |= SND_JACK_MICROPHONE;
 		} else {
 			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
 				0x2, 0x0);
-			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
-                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
-
 			rt5659->jack_type = rt5659->jack_type
 				& (~SND_JACK_MICROPHONE);
 		}
@@ -3830,46 +3823,70 @@ static int rt5659_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
+void rt5659_intel_hd_header_probe_setup(struct rt5659_priv *rt5659)
+{
+	struct snd_soc_dapm_context *dapm =
+		snd_soc_codec_get_dapm(rt5659->codec);
+	int value;
+
+	regmap_read(rt5659->regmap, RT5659_GPIO_STA, &value);
+
+	if (!(value & 0x8)) {
+		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1,
+			0x10, 0x0);
+	} else {
+		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_1,
+			0x10, 0x10);
+	}
+
+	regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
+		RT5659_PWR_VREF2 | RT5659_PWR_MB,
+		RT5659_PWR_VREF2 | RT5659_PWR_MB);
+	msleep(20);
+	regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
+		RT5659_PWR_FV2, RT5659_PWR_FV2);
+
+	manage_dapm_pin(rt5659->codec, "LDO2", true);
+	manage_dapm_pin(rt5659->codec, "MICBIAS1", true);
+	manage_dapm_pin(rt5659->codec, "Mic Det Power", true);
+	snd_soc_dapm_sync(dapm);
+
+	msleep(20);
+
+	regmap_update_bits(rt5659->regmap, RT5659_4BTN_IL_CMD_2,
+		RT5659_4BTN_IL_MASK, RT5659_4BTN_IL_EN);
+	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
+	regmap_write(rt5659->regmap, RT5659_4BTN_IL_CMD_1, value);
+	regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
+
+	if (value & 0x2000) {
+		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+			0x2, 0x2);
+		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+			RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+			RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
+	} else {
+		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+			0x2, 0x0);
+		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+			RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
+	}
+	snd_soc_dapm_sync(dapm);
+
+	regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
+		RT5659_IL_IRQ_MASK, RT5659_IL_IRQ_EN);
+}
+
 static int rt5659_probe(struct snd_soc_codec *codec)
 {
 	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
-	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
-	int value;
 
 	rt5659->codec = codec;
 
 	switch (rt5659->pdata.jd_src) {
 	case RT5659_JD_NULL:
-		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
-			RT5659_PWR_VREF2 | RT5659_PWR_MB,
-			RT5659_PWR_VREF2 | RT5659_PWR_MB);
-		msleep(20);
-		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_1,
-			RT5659_PWR_FV2, RT5659_PWR_FV2);
-
-		manage_dapm_pin(rt5659->codec, "LDO2", true);
-		manage_dapm_pin(rt5659->codec, "MICBIAS1", true);
-		manage_dapm_pin(rt5659->codec, "Mic Det Power", true);
-		snd_soc_dapm_sync(dapm);
-
-		msleep(20);
-
-		regmap_update_bits(rt5659->regmap, RT5659_4BTN_IL_CMD_2,
-			RT5659_4BTN_IL_MASK, RT5659_4BTN_IL_EN);
-		regmap_read(rt5659->regmap, RT5659_4BTN_IL_CMD_1, &value);
-		regmap_write(rt5659->regmap, RT5659_4BTN_IL_CMD_1, value);
-
-		regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
-                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
-                                RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
-
-		snd_soc_dapm_sync(dapm);
-
-		regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
-                                RT5659_IL_IRQ_MASK, RT5659_IL_IRQ_EN);
-
+		rt5659_intel_hd_header_probe_setup(rt5659);
 		break;
-
 	default:
 		break;
 	}

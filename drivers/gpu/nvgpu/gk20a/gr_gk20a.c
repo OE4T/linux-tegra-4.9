@@ -524,7 +524,8 @@ int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 
 	if (check == WAIT_UCODE_TIMEOUT) {
 		nvgpu_err(g,
-			   "timeout waiting on ucode response");
+			   "timeout waiting on mailbox=%d value=0x%08x",
+			   mailbox_id, reg);
 		gk20a_fecs_dump_falcon_stats(g);
 		gk20a_gr_debug_dump(g);
 		return -1;

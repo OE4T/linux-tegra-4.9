@@ -119,6 +119,8 @@ struct isomgr {
 };
 
 extern struct isoclient_info *isoclient_info;
+/*platform specific flag for requesting max emc floor req for camera client*/
+extern u8 isomgr_camera_max_floor_req;
 extern int isoclients;
 extern bool client_valid[TEGRA_ISO_CLIENT_COUNT];
 extern struct isomgr_client isomgr_clients[TEGRA_ISO_CLIENT_COUNT];

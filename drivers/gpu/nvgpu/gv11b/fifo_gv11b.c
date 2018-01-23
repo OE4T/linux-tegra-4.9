@@ -482,7 +482,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 		eng_stat = gk20a_readl(g, fifo_engine_status_r(act_eng_id));
 		ctx_stat  = fifo_engine_status_ctx_status_v(eng_stat);
 
-		if (gv11b_mc_is_stall_and_eng_intr_pending(g, act_eng_id)) {
+		if (g->ops.mc.is_stall_and_eng_intr_pending(g, act_eng_id)) {
 			stall_intr = true;
 			nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
 					"stall intr set, "

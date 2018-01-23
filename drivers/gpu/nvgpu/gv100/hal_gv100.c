@@ -51,20 +51,19 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 
-#include "gp10b/fb_gp10b.h"
-#include "gp10b/gr_gp10b.h"
-
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
 #include "gp106/sec2_gp106.h"
 #include "gp106/bios_gp106.h"
-#include "gv100/bios_gv100.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
 #include "gp106/clk_gp106.h"
 #include "gp106/flcn_gp106.h"
+
+#include "gp10b/fb_gp10b.h"
+#include "gp10b/gr_gp10b.h"
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/mc_gp10b.h"
@@ -78,32 +77,33 @@
 #include "gv11b/css_gr_gv11b.h"
 #include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
-#include "gv100/gr_gv100.h"
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mc_gv11b.h"
 #include "gv11b/ltc_gv11b.h"
 #include "gv11b/gv11b.h"
 #include "gv11b/ce_gv11b.h"
-#include "gv100/gr_ctx_gv100.h"
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/pmu_gv11b.h"
 #include "gv11b/fb_gv11b.h"
-#include "gv100/mm_gv100.h"
 #include "gv11b/pmu_gv11b.h"
-#include "gv100/fb_gv100.h"
-#include "gv100/fifo_gv100.h"
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/regops_gv11b.h"
-
 #include "gv11b/gv11b_gating_reglist.h"
-#include "gv100/regops_gv100.h"
 #include "gv11b/subctx_gv11b.h"
 
 #include "gv100.h"
 #include "hal_gv100.h"
+#include "gv100/bios_gv100.h"
 #include "gv100/fb_gv100.h"
+#include "gv100/fifo_gv100.h"
+#include "gv100/flcn_gv100.h"
+#include "gv100/gr_ctx_gv100.h"
+#include "gv100/gr_gv100.h"
+#include "gv100/mc_gv100.h"
 #include "gv100/mm_gv100.h"
 #include "gv100/pmu_gv100.h"
+#include "gv100/nvlink_gv100.h"
+#include "gv100/regops_gv100.h"
 
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
@@ -651,7 +651,7 @@ static const struct gpu_ops gv100_ops = {
 		.apply_smpc_war = gv100_apply_smpc_war,
 	},
 	.mc = {
-		.intr_enable = mc_gv11b_intr_enable,
+		.intr_enable = mc_gv100_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
 		.isr_stall = mc_gp10b_isr_stall,
 		.intr_stall = mc_gp10b_intr_stall,
@@ -666,6 +666,9 @@ static const struct gpu_ops gv100_ops = {
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
 		.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending,
+		.is_intr_nvlink_pending = gv100_mc_is_intr_nvlink_pending,
+		.is_stall_and_eng_intr_pending =
+					gv100_mc_is_stall_and_eng_intr_pending,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,
@@ -712,10 +715,29 @@ static const struct gpu_ops gv100_ops = {
 		.disable_shadow_rom = xve_disable_shadow_rom_gp106,
 	},
 	.falcon = {
-		.falcon_hal_sw_init = gp106_falcon_hal_sw_init,
+		.falcon_hal_sw_init = gv100_falcon_hal_sw_init,
 	},
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
+	},
+	.nvlink = {
+		.discover_ioctrl = gv100_nvlink_discover_ioctrl,
+		.discover_link = gv100_nvlink_discover_link,
+		.init = gv100_nvlink_init,
+		.isr = gv100_nvlink_isr,
+		/* API */
+		.link_early_init = gv100_nvlink_link_early_init,
+		.link_get_state = gv100_nvlink_link_get_state,
+		.link_set_mode = gv100_nvlink_link_set_mode,
+		.link_get_mode = gv100_nvlink_link_get_mode,
+		.get_sublink_mode = gv100_nvlink_link_get_sublink_mode,
+		.get_tx_sublink_state = gv100_nvlink_link_get_tx_sublink_state,
+		.get_rx_sublink_state = gv100_nvlink_link_get_rx_sublink_state,
+		.set_sublink_mode = gv100_nvlink_link_set_sublink_mode,
+		.interface_init = gv100_nvlink_interface_init,
+		.reg_init = gv100_nvlink_reg_init,
+		.shutdown = gv100_nvlink_shutdown,
+		.early_init = gv100_nvlink_early_init,
 	},
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
@@ -751,6 +773,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->xve = gv100_ops.xve;
 	gops->falcon = gv100_ops.falcon;
 	gops->priv_ring = gv100_ops.priv_ring;
+	gops->nvlink = gv100_ops.nvlink;
 
 	/* clocks */
 	gops->clk.init_clk_support = gv100_ops.clk.init_clk_support;

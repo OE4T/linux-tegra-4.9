@@ -40,7 +40,7 @@ static u32 __nvgpu_nvlink_get_link(struct nvlink_device *ndev)
 
 	/* Lets find the detected link */
 	if (g->nvlink.initialized_links)
-		link_id = fls(g->nvlink.initialized_links);
+		link_id = ffs(g->nvlink.initialized_links) - 1;
 	else
 		return NVLINK_MAX_LINKS_SW;
 
@@ -49,6 +49,7 @@ static u32 __nvgpu_nvlink_get_link(struct nvlink_device *ndev)
 
 	return NVLINK_MAX_LINKS_SW;
 }
+
 static int nvgpu_nvlink_early_init(struct nvlink_device *ndev)
 {
 	struct gk20a *g = (struct gk20a *) ndev->priv;
@@ -75,9 +76,10 @@ static int nvgpu_nvlink_link_early_init(struct nvlink_device *ndev)
 	 * First check the topology and setup connectivity
 	 * HACK: we are only enabling one link for now!!!
 	 */
-	link_id = fls(g->nvlink.discovered_links);
+	link_id = ffs(g->nvlink.discovered_links) - 1;
 	g->nvlink.links[link_id].remote_info.is_connected = true;
-
+	g->nvlink.links[link_id].remote_info.device_type =
+							nvgpu_nvlink_endp_tegra;
 	err = g->ops.nvlink.link_early_init(g, BIT(link_id));
 
 	if (err == 0) {
@@ -262,6 +264,7 @@ static u32 nvgpu_nvlink_get_sublink_mode(struct nvlink_device *ndev,
 		return -EINVAL;
 
 	mode = g->ops.nvlink.get_sublink_mode(g, link_id, is_rx_sublink);
+
 	switch (mode) {
 	case nvgpu_nvlink_sublink_tx_hs:
 		return NVLINK_TX_HS;
@@ -386,9 +389,9 @@ static int nvgpu_nvlink_set_sublink_mode(struct nvlink_device *ndev,
 }
 #endif
 
-u32 nvgpu_nvlink_enumerate(struct gk20a *g)
+int nvgpu_nvlink_enumerate(struct gk20a *g)
 {
-	u32 err = -ENODEV;
+	int err = -ENODEV;
 #ifdef CONFIG_TEGRA_NVLINK
 	struct nvlink_device *ndev;
 
@@ -400,9 +403,9 @@ u32 nvgpu_nvlink_enumerate(struct gk20a *g)
 	return err;
 }
 
-u32 nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off)
+int nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off)
 {
-	u32 err = -ENODEV;
+	int err = -ENODEV;
 #ifdef CONFIG_TEGRA_NVLINK
 	struct nvlink_device *ndev;
 
@@ -423,10 +426,10 @@ u32 nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off)
 	return err;
 }
 
-u32 nvgpu_nvlink_probe(struct gk20a *g)
+int nvgpu_nvlink_probe(struct gk20a *g)
 {
 #ifdef CONFIG_TEGRA_NVLINK
-	u32 err = 0;
+	int err = 0;
 	struct device_node *np = nvgpu_get_node(g);
 	struct device_node *nvlink_np = NULL, *endp_np = NULL;
 	struct nvlink_device *ndev;
@@ -435,13 +438,13 @@ u32 nvgpu_nvlink_probe(struct gk20a *g)
 	/* Parse DT */
 	if (np) {
 		nvlink_np = of_get_child_by_name(np, "nvidia,nvlink");
-		if (nvlink_np)
-			endp_np = of_get_child_by_name(np, "endpoint");
+		if (nvlink_np) {
+			endp_np = of_get_child_by_name(nvlink_np, "endpoint");
+		}
 	}
 
 	if (!endp_np) {
-		nvgpu_log(g, gpu_dbg_info | gpu_dbg_nvlink,
-					"No Nvlink DT detected");
+		nvgpu_info(g, "no nvlink DT detected");
 		return -ENODEV;
 	}
 
@@ -466,13 +469,13 @@ u32 nvgpu_nvlink_probe(struct gk20a *g)
 	of_property_read_u32(endp_np, "physical_link",
 				&phys_link_id);
 
-	g->nvlink.topology_connected_links = BIT(phys_link_id);
+	g->nvlink.connected_links = BIT(phys_link_id);
 
 	/* Check that we are in dGPU mode */
 	if (ndev->device_id != NVLINK_ENDPT_GV100) {
 		nvgpu_err(g, "Local nvlink device is not dGPU");
 		err = -EINVAL;
-		goto free_nvlink;
+		goto free_ndev;
 	}
 
 	/* Fill in device struct */
@@ -500,22 +503,27 @@ u32 nvgpu_nvlink_probe(struct gk20a *g)
 	err = nvlink_register_device(ndev);
 	if (err) {
 		nvgpu_err(g, "failed on nvlink device registration");
-		goto free_nvlink;
+		goto free_ndev;
 	}
 
 	/* Register link with core driver */
 	err = nvlink_register_link(&ndev->link);
 	if (err) {
 		nvgpu_err(g, "failed on nvlink link registration");
-		goto free_nvlink;
+		goto unregister_ndev;
 	}
 
 	/* Enable NVLINK support */
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, true);
-free_nvlink:
-	nvgpu_kfree(g, ndev);
-	return err;
+	return 0;
 
+unregister_ndev:
+	nvlink_unregister_device(ndev);
+
+free_ndev:
+	nvgpu_kfree(g, ndev);
+	g->nvlink.priv = NULL;
+	return err;
 #else
 	return -ENODEV;
 #endif

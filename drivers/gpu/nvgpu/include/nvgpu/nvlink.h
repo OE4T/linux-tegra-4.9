@@ -182,11 +182,10 @@ struct nvgpu_nvlink_dev {
 	u8 train_at_boot;
 	u32 ac_coupling_mask;
 
-	u32 init_disabled_links;
 	u32 connected_links;
 	u32 initialized_links;
 	u32 enabled_links;
-	u32 topology_connected_links;
+	u32 init_pll_done;
 
 	enum nvgpu_nvlink_speed speed;
 
@@ -195,12 +194,18 @@ struct nvgpu_nvlink_dev {
 	u32 hshub_config1;
 	u32 hshub_config2;
 	u32 hshub_config6;
+
+	/* tlc cached errors */
+	u32 tlc_rx_err_status_0[NVLINK_MAX_LINKS_SW];
+	u32 tlc_rx_err_status_1[NVLINK_MAX_LINKS_SW];
+	u32 tlc_tx_err_status_0[NVLINK_MAX_LINKS_SW];
+
 	/* priv struct */
 	void *priv;
 };
 
 
-u32 nvgpu_nvlink_enumerate(struct gk20a *g);
-u32 nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off);
-u32 nvgpu_nvlink_probe(struct gk20a *g);
+int nvgpu_nvlink_enumerate(struct gk20a *g);
+int nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off);
+int nvgpu_nvlink_probe(struct gk20a *g);
 #endif

@@ -892,6 +892,14 @@ static inline u32 minion_nvlink_link_intr_code_dlreq_f(void)
 {
 	return 0x2U;
 }
+static inline u32 minion_nvlink_link_intr_code_pmdisabled_v(void)
+{
+	return 0x00000003U;
+}
+static inline u32 minion_nvlink_link_intr_code_pmdisabled_f(void)
+{
+	return 0x3U;
+}
 static inline u32 minion_nvlink_link_intr_subcode_f(u32 v)
 {
 	return (v & 0xffU) << 8U;

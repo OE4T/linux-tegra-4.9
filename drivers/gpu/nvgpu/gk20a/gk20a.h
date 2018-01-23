@@ -967,6 +967,8 @@ struct gpu_ops {
 		void (*isr_stall)(struct gk20a *g);
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
 		bool (*is_intr_nvlink_pending)(struct gk20a *g, u32 mc_intr);
+		bool (*is_stall_and_eng_intr_pending)(struct gk20a *g,
+								u32 act_eng_id);
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);
@@ -1064,10 +1066,10 @@ struct gpu_ops {
 		int (*check_priv_security)(struct gk20a *g);
 	} fuse;
 	struct {
-		u32 (*init)(struct gk20a *g);
-		u32 (*discover_ioctrl)(struct gk20a *g);
-		u32 (*discover_link)(struct gk20a *g);
-		u32 (*isr)(struct gk20a *g);
+		int (*init)(struct gk20a *g);
+		int (*discover_ioctrl)(struct gk20a *g);
+		int (*discover_link)(struct gk20a *g);
+		int (*isr)(struct gk20a *g);
 		/* API */
 		int (*link_early_init)(struct gk20a *g, unsigned long mask);
 		u32 (*link_get_mode)(struct gk20a *g, u32 link_id);

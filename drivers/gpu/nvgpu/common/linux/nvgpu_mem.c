@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -536,6 +536,8 @@ static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g, void *sgl,
 static bool nvgpu_mem_linux_sgt_iommuable(struct gk20a *g,
 					  struct nvgpu_sgt *sgt)
 {
+	if (nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG))
+		return false;
 	return true;
 }
 

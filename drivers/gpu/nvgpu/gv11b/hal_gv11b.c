@@ -658,6 +658,8 @@ static const struct gpu_ops gv11b_ops = {
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
 		.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending,
+		.is_stall_and_eng_intr_pending =
+					gv11b_mc_is_stall_and_eng_intr_pending,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

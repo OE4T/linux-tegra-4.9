@@ -1,7 +1,7 @@
 /*
  * GP10B Tegra Platform Interface
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -97,7 +97,7 @@ int gp10b_tegra_get_clocks(struct device *dev)
 	return 0;
 }
 
-static void gp10b_tegra_scale_init(struct device *dev)
+void gp10b_tegra_scale_init(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
@@ -265,7 +265,7 @@ int gp10b_tegra_reset_deassert(struct device *dev)
 	return ret;
 }
 
-static void gp10b_tegra_prescale(struct device *dev)
+void gp10b_tegra_prescale(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	u32 avg = 0;
@@ -277,7 +277,7 @@ static void gp10b_tegra_prescale(struct device *dev)
 	gk20a_dbg_fn("done");
 }
 
-static void gp10b_tegra_postscale(struct device *pdev,
+void gp10b_tegra_postscale(struct device *pdev,
 					unsigned long freq)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
@@ -286,7 +286,7 @@ static void gp10b_tegra_postscale(struct device *pdev,
 	unsigned long emc_rate;
 
 	gk20a_dbg_fn("");
-	if (profile && !gp10b_tegra_is_railgated(pdev)) {
+	if (profile && !platform->is_railgated(pdev)) {
 		unsigned long emc_scale;
 
 		if (freq <= gp10b_freq_table[0])
@@ -306,7 +306,7 @@ static void gp10b_tegra_postscale(struct device *pdev,
 	gk20a_dbg_fn("done");
 }
 
-static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
+long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_scale_profile *profile = g->scale_profile;
@@ -321,7 +321,7 @@ static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 	return freq_table[max_states - 1];
 }
 
-static int gp10b_clk_get_freqs(struct device *dev,
+int gp10b_clk_get_freqs(struct device *dev,
 				unsigned long **freqs, int *num_freqs)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);

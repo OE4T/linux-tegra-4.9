@@ -23,6 +23,7 @@
 #include <linux/reset.h>
 #include <linux/hashtable.h>
 #include <linux/clk.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <nvgpu/nvhost.h>
 
@@ -34,6 +35,7 @@
 #include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "clk.h"
+#include "scale.h"
 
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
@@ -135,8 +137,15 @@ static int gv11b_tegra_railgate(struct device *dev)
 {
 #ifdef TEGRA194_POWER_DOMAIN_GPU
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a *g = get_gk20a(dev);
 	int i;
+
+	/* remove emc frequency floor */
+	if (profile)
+		tegra_bwmgr_set_emc(
+			(struct tegra_bwmgr_client *)profile->private_data,
+			0, TEGRA_BWMGR_SET_EMC_FLOOR);
 
 	if (tegra_bpmp_running()) {
 		nvgpu_log(g, gpu_dbg_info, "bpmp running");
@@ -164,6 +173,7 @@ static int gv11b_tegra_unrailgate(struct device *dev)
 #ifdef TEGRA194_POWER_DOMAIN_GPU
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	int i;
 
 	if (tegra_bpmp_running()) {
@@ -182,6 +192,13 @@ static int gv11b_tegra_unrailgate(struct device *dev)
 	} else {
 		nvgpu_log(g, gpu_dbg_info, "bpmp not running");
 	}
+
+	/* to start with set emc frequency floor to max rate*/
+	if (profile)
+		tegra_bwmgr_set_emc(
+			(struct tegra_bwmgr_client *)profile->private_data,
+			tegra_bwmgr_get_max_emc_rate(),
+			TEGRA_BWMGR_SET_EMC_FLOOR);
 #endif
 	return ret;
 }
@@ -224,6 +241,17 @@ struct gk20a_platform gv11b_tegra_platform = {
 
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,
+
+	.clk_round_rate = gp10b_round_clk_rate,
+	.get_clk_freqs = gp10b_clk_get_freqs,
+
+	/* frequency scaling configuration */
+	.initscale = gp10b_tegra_scale_init,
+	.prescale = gp10b_tegra_prescale,
+	.postscale = gp10b_tegra_postscale,
+	.devfreq_governor = "nvhost_podgov",
+
+	.qos_notify = gk20a_scale_qos_notify,
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 

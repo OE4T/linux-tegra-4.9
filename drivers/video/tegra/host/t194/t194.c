@@ -687,7 +687,6 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.keepalive		= true,
 	.poweron_reset		= true,
 	.serialize		= true,
-	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,

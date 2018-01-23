@@ -1,7 +1,7 @@
 /*
  * GP10B Platform (SoC) Interface
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -30,10 +30,5 @@ struct device;
 int gp10b_tegra_get_clocks(struct device *dev);
 int gp10b_tegra_reset_assert(struct device *dev);
 int gp10b_tegra_reset_deassert(struct device *dev);
-long gp10b_round_clk_rate(struct device *dev, unsigned long rate);
-int gp10b_clk_get_freqs(struct device *dev,
-			unsigned long **freqs, int *num_freqs);
-void gp10b_tegra_prescale(struct device *dev);
-void gp10b_tegra_postscale(struct device *pdev, unsigned long freq);
-int gp10b_tegra_late_probe(struct device *dev);
+
 #endif

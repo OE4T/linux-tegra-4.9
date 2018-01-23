@@ -63,10 +63,10 @@ void nvgpu_big_free(struct gk20a *g, void *p)
 	 * nvgpu_big_[mz]alloc() will need to remember the size of the alloc
 	 * when freeing.
 	 */
-	if (virt_addr_valid(p))
-		nvgpu_kfree(g, p);
-	else
+	if (is_vmalloc_addr(p))
 		nvgpu_vfree(g, p);
+	else
+		nvgpu_kfree(g, p);
 }
 
 void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)

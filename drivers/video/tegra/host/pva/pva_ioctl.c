@@ -669,6 +669,34 @@ static void pva_queue_set_default_attr(struct pva_private *priv)
 	}
 }
 
+static int pva_open_set_attrs(struct pva_private *priv)
+{
+	struct pva_queue_set_attribute set_attr;
+	unsigned int i;
+	int err = 0;
+
+	/* Turn on the hardware */
+	err = nvhost_module_busy(priv->pva->pdev);
+	if (err < 0)
+		goto end;
+
+	/* Set attribute on hardware */
+	set_attr.pva = priv->pva;
+	set_attr.bootup = false;
+
+	for (i = 1; i < QUEUE_ATTR_MAX; i++) {
+		set_attr.attr = &default_queue_attr[i];
+		err = nvhost_queue_set_attr(priv->queue, &set_attr);
+		if (err < 0)
+			break;
+	}
+
+	nvhost_module_idle(priv->pva->pdev);
+
+end:
+	return err;
+}
+
 static int pva_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
@@ -707,17 +735,22 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_queue;
 	}
 
-
 	priv->buffers = nvhost_buffer_init(priv->queue->vm_pdev);
 	if (IS_ERR(priv->buffers)) {
 		err = PTR_ERR(priv->buffers);
 		goto err_alloc_buffer;
 	}
 
+	/* Ensure that the stashed attributes are valid */
 	mutex_lock(&priv->queue->attr_lock);
 	priv->queue->attr = attr;
 	pva_queue_set_default_attr(priv);
 	mutex_unlock(&priv->queue->attr_lock);
+
+	/* Restore the default attributes in hardware */
+	err = pva_open_set_attrs(priv);
+	if (err < 0)
+		dev_warn(&pdev->dev, "failed to restore queue attributes\n");
 
 	return nonseekable_open(inode, file);
 

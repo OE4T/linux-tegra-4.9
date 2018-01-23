@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoint Integration to linux/sync Framework
  *
- * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -483,6 +483,8 @@ struct sync_fence *nvhost_sync_create_fence(struct platform_device *pdev,
 		}
 	}
 
+	/* prevent speculative access to sp->timeline[idx] */
+	speculation_barrier();
 	for (i = 0; i < num_pts; i++) {
 		struct nvhost_sync_timeline *obj;
 		struct sync_pt *pt;

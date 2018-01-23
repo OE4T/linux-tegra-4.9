@@ -195,6 +195,9 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 	if (err)
 		return err;
 
+	/* prevent speculative access to mod's aperture + offset */
+	speculation_barrier();
+
 	while (count--) {
 		*(values++) = host1x_readl(ndev, offset);
 		offset += 4;
@@ -1189,6 +1192,8 @@ static long nvhost_channelctl(struct file *filp,
 			break;
 		}
 
+		/* prevent speculative access to ctx->syncpts[index] */
+		speculation_barrier();
 		if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE)
 			arg->value = nvhost_ioctl_channel_get_syncpt_instance(
 						priv, pdata, arg->param);
@@ -1235,8 +1240,14 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_get_param_arg *arg =
 			(struct nvhost_get_param_arg *)buf;
 
-		if (arg->param >= NVHOST_MODULE_MAX_MODMUTEXES ||
-		    !pdata->modulemutexes[arg->param]) {
+		if (arg->param >= NVHOST_MODULE_MAX_MODMUTEXES) {
+			err = -EINVAL;
+			break;
+		}
+
+		speculation_barrier();
+
+		if (!pdata->modulemutexes[arg->param]) {
 			err = -EINVAL;
 			break;
 		}

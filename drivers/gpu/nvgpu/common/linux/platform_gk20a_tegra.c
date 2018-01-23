@@ -1,7 +1,7 @@
 /*
  * GK20A Tegra Platform Interface
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -592,6 +592,9 @@ static void gk20a_tegra_scale_init(struct device *dev)
 	if (!profile)
 		return;
 
+	if (profile->private_data)
+		return;
+
 	emc_params = nvgpu_kzalloc(platform->g, sizeof(*emc_params));
 	if (!emc_params)
 		return;
@@ -850,9 +853,6 @@ static int gk20a_tegra_late_probe(struct device *dev)
 	/* Cause early VPR resize */
 	gk20a_tegra_secure_page_alloc(dev);
 
-	/* Initialise tegra specific scaling quirks */
-	gk20a_tegra_scale_init(dev);
-
 	return 0;
 }
 
@@ -958,6 +958,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 #endif
 
 	/* frequency scaling configuration */
+	.initscale = gk20a_tegra_scale_init,
 	.prescale = gk20a_tegra_prescale,
 #ifdef CONFIG_TEGRA_BWMGR
 	.postscale = gm20b_tegra_postscale,

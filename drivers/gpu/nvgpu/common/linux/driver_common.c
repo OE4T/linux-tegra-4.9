@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,7 +27,6 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/sizes.h>
 
-#include "scale.h"
 #include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "module.h"
@@ -225,11 +224,6 @@ int nvgpu_probe(struct gk20a *g,
 	err = gk20a_user_init(dev, interface_name, class);
 	if (err)
 		return err;
-
-
-	/* Initialise scaling */
-	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		gk20a_scale_init(dev);
 
 	if (platform->late_probe) {
 		err = platform->late_probe(dev);

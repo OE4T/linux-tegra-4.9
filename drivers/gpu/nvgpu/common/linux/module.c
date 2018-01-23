@@ -264,6 +264,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
+	/* Initialise scaling: it will initialize scaling drive only once */
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ)) {
+		gk20a_scale_init(dev);
+		if (platform->initscale)
+			platform->initscale(dev);
+	}
+
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
 	err = nvgpu_init_os_linux_ops(l);

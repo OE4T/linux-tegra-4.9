@@ -689,7 +689,7 @@ static int pva_probe(struct platform_device *pdev)
 	init_waitqueue_head(&pva->mailbox_waitqueue);
 	mutex_init(&pva->mailbox_mutex);
 	mutex_init(&pva->ccq_mutex);
-	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
+	pva->submit_mode = PVA_SUBMIT_MODE_MMIO_CCQ;
 	pva->slcg_disable = 0;
 
 	/* Map MMIO range to kernel space */

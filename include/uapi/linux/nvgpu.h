@@ -21,6 +21,7 @@
 
 #if !defined(__KERNEL__)
 #define __user
+#define __packed __attribute__((packed))
 #endif
 
 /*

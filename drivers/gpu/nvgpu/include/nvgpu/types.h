@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/types.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/types.h>
 #else
 #include <nvgpu_rmos/include/types.h>
 #endif

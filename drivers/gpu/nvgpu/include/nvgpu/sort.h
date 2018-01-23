@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/sort.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/sort.h>
 #else
 #include <nvgpu_rmos/include/sort.h>
 #endif

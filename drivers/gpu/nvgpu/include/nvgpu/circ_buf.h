@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/circ_buf.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/circ_buf.h>
 #endif
 
 #endif

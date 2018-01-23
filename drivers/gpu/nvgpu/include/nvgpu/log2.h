@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/log2.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/log2.h>
 #endif
 
 #endif /* __NVGPU_LOG2_H__ */

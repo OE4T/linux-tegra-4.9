@@ -30,6 +30,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/barrier.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/barrier.h>
 #else
 #include <nvgpu_rmos/include/barrier.h>
 #endif

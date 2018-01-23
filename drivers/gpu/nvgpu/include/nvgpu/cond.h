@@ -25,6 +25,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/cond.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/cond.h>
 #else
 #include <nvgpu_rmos/include/cond.h>
 #endif

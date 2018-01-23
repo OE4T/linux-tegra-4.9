@@ -40,6 +40,8 @@ struct gk20a;
  */
 #ifdef __KERNEL__
 #include <nvgpu/linux/kmem.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/kmem.h>
 #else
 #include <nvgpu_rmos/include/kmem.h>
 #endif

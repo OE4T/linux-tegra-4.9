@@ -1,0 +1,34 @@
+################################### tell Emacs this is a -*- makefile-gmake -*-
+#
+# Copyright (c) 2018 NVIDIA CORPORATION.  All Rights Reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+#
+# tmake for SW Mobile component makefile
+#
+###############################################################################
+
+ifdef NV_COMPONENT_FLAG_SHARED_LIBRARY_SECTION
+include $(NV_BUILD_START_COMPONENT)
+
+include $(NV_COMPONENT_DIR)/Makefile.sources
+
+NV_COMPONENT_NAME		:= nvgpu-drv
+NV_COMPONENT_OWN_INTERFACE_DIR	:= .
+NV_COMPONENT_SOURCES		:= $(srcs)
+NV_COMPONENT_INCLUDES		:= . include ../../../include
+NV_COMPONENT_SYSTEM_SHARED_LIBRARIES += pthread
+NV_COMPONENT_CFLAGS		+= -D__NVGPU_POSIX__
+
+include $(NV_BUILD_SHARED_LIBRARY)
+endif
+
+# Local Variables:
+# indent-tabs-mode: t
+# tab-width: 8
+# End:
+# vi: set tabstop=8 noexpandtab:

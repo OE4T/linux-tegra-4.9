@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/bsearch.h>
+#elif defined(__NVGPU_POSIX__)
+#include <stdlib.h>
 #endif
 
 #endif

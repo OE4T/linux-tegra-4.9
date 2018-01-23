@@ -25,9 +25,13 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/thread.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/thread.h>
 #else
 #include <nvgpu_rmos/include/thread.h>
 #endif
+
+#include <nvgpu/types.h>
 
 /**
  * nvgpu_thread_create - Create and run a new thread.

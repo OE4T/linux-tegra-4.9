@@ -25,6 +25,8 @@
 #ifdef __KERNEL__
 #include <linux/bitops.h>
 #include <linux/bitmap.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/bitops.h>
 #else
 #include <nvgpu_rmos/include/bitops.h>
 #endif

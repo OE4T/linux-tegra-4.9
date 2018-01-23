@@ -43,6 +43,8 @@ struct nvgpu_os_buffer;
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/vm.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/vm.h>
 #else
 /* QNX include goes here. */
 #include <nvgpu_rmos/include/vm.h>

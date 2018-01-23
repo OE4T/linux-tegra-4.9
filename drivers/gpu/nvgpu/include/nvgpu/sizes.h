@@ -24,6 +24,8 @@
 
 #ifdef __KERNEL__
 #include <linux/sizes.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/sizes.h>
 #else
 #include <nvgpu_rmos/include/sizes.h>
 #endif

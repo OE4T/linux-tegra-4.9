@@ -13,6 +13,8 @@
  * more details.
  */
 
+#ifdef __KERNEL__
+
 #undef TRACE_SYSTEM
 #define TRACE_SYSTEM gk20a
 
@@ -577,3 +579,26 @@ DEFINE_EVENT(gk20a_cde, gk20a_cde_finished_ctx_cb,
 
 /* This part must be outside protection */
 #include <trace/define_trace.h>
+
+#else /* Not __KERNEL__ */
+
+#define trace_gk20a_mmu_fault(arg...)			((void)(NULL))
+#define trace_gk20a_release_used_channel(arg...)	((void)(NULL))
+#define trace_gk20a_free_channel(arg...)		((void)(NULL))
+#define trace_gk20a_channel_get(arg...)			((void)(NULL))
+#define trace_gk20a_channel_put(arg...)			((void)(NULL))
+#define trace_gk20a_open_new_channel(arg...)		((void)(NULL))
+#define trace_gk20a_channel_update(arg...)		((void)(NULL))
+
+#define trace_gk20a_mm_fb_flush(arg...)			((void)(NULL))
+#define trace_gk20a_mm_fb_flush_done(arg...)		((void)(NULL))
+#define trace_gk20a_mm_l2_invalidate(arg...)		((void)(NULL))
+#define trace_gk20a_mm_l2_invalidate_done(arg...)	((void)(NULL))
+#define trace_gk20a_mm_l2_flush(arg...)			((void)(NULL))
+#define trace_gk20a_mm_l2_flush_done(arg...)		((void)(NULL))
+#define trace_gk20a_mm_tlb_invalidate(arg...)		((void)(NULL))
+#define trace_gk20a_mm_tlb_invalidate_done(arg...)	((void)(NULL))
+#define trace_gk20a_ltc_cbc_ctrl_start(arg...)		((void)(NULL))
+#define trace_gk20a_ltc_cbc_ctrl_done(arg...)		((void)(NULL))
+
+#endif

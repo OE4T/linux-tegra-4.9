@@ -2311,25 +2311,29 @@ static int tegra_se_sha_init(struct ahash_request *req)
 	sha_ctx->is_first = true;
 	sha_ctx->blk_size = crypto_tfm_alg_blocksize(crypto_ahash_tfm(tfm));
 	sha_ctx->residual_bytes = 0;
-	sha_ctx->sha_buf[0] = dma_alloc_coherent(
-			se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-			&sha_ctx->sha_buf_addr[0], GFP_KERNEL);
 	if (!sha_ctx->sha_buf[0]) {
-		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[0]\n");
-		mutex_unlock(&se_dev->mtx);
-		return -ENOMEM;
+		sha_ctx->sha_buf[0] = dma_alloc_coherent(
+				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				&sha_ctx->sha_buf_addr[0], GFP_KERNEL);
+		if (!sha_ctx->sha_buf[0]) {
+			dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[0]\n");
+			mutex_unlock(&se_dev->mtx);
+			return -ENOMEM;
+		}
 	}
-
-	sha_ctx->sha_buf[1] = dma_alloc_coherent(
-			se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-			&sha_ctx->sha_buf_addr[1], GFP_KERNEL);
 	if (!sha_ctx->sha_buf[1]) {
-		dma_free_coherent(
-			se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-			sha_ctx->sha_buf[0], sha_ctx->sha_buf_addr[0]);
-		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[1]\n");
-		mutex_unlock(&se_dev->mtx);
-		return -ENOMEM;
+		sha_ctx->sha_buf[1] = dma_alloc_coherent(
+				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				&sha_ctx->sha_buf_addr[1], GFP_KERNEL);
+		if (!sha_ctx->sha_buf[1]) {
+			dma_free_coherent(
+				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				sha_ctx->sha_buf[0], sha_ctx->sha_buf_addr[0]);
+			sha_ctx->sha_buf[0] = NULL;
+			dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[1]\n");
+			mutex_unlock(&se_dev->mtx);
+			return -ENOMEM;
+		}
 	}
 	mutex_unlock(&se_dev->mtx);
 
@@ -2429,10 +2433,12 @@ static void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
 
 	mutex_lock(&se_dev->mtx);
 	for (i = 0; i < 2; i++) {
-		if (sha_ctx->sha_buf[i])
+		if (sha_ctx->sha_buf[i]) {
 			dma_free_coherent(
 				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
 				sha_ctx->sha_buf[i], sha_ctx->sha_buf_addr[i]);
+			sha_ctx->sha_buf[i] = NULL;
+		}
 	}
 	mutex_unlock(&se_dev->mtx);
 }
@@ -4154,7 +4160,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	err = of_property_read_string(node, "pka0-rsa-name", &rsa_name);
 	if (!err)
-		strcpy(rsa_alg.base.cra_name, rsa_name);
+		strncpy(rsa_alg.base.cra_name, rsa_name,
+				sizeof(rsa_alg.base.cra_name) - 1);
 
 	if (is_algo_supported(node, "rsa")) {
 		err = crypto_register_akcipher(&rsa_alg);

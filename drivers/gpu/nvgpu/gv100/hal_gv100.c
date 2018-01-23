@@ -426,6 +426,7 @@ static const struct gpu_ops gv100_ops = {
 			gr_gv11b_handle_tpc_sm_ecc_exception,
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
 		.fecs_host_int_enable = gr_gv11b_fecs_host_int_enable,
+		.handle_ssync_hww = gr_gv11b_handle_ssync_hww,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

@@ -5895,7 +5895,10 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		if (exception & gr_exception_fe_m()) {
 			u32 fe = gk20a_readl(g, gr_fe_hww_esr_r());
-			nvgpu_err(g, "fe warning %08x", fe);
+			u32 info = gk20a_readl(g, gr_fe_hww_esr_info_r());
+
+			nvgpu_err(g, "fe exception: esr 0x%08x, info 0x%08x",
+					fe, info);
 			gk20a_writel(g, gr_fe_hww_esr_r(),
 				gr_fe_hww_esr_reset_active_f());
 			need_reset |= -EFAULT;
@@ -5903,9 +5906,64 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		if (exception & gr_exception_memfmt_m()) {
 			u32 memfmt = gk20a_readl(g, gr_memfmt_hww_esr_r());
-			nvgpu_err(g, "memfmt exception %08x", memfmt);
+
+			nvgpu_err(g, "memfmt exception: esr %08x", memfmt);
 			gk20a_writel(g, gr_memfmt_hww_esr_r(),
 					gr_memfmt_hww_esr_reset_active_f());
+			need_reset |= -EFAULT;
+		}
+
+		if (exception & gr_exception_pd_m()) {
+			u32 pd = gk20a_readl(g, gr_pd_hww_esr_r());
+
+			nvgpu_err(g, "pd exception: esr 0x%08x", pd);
+			gk20a_writel(g, gr_pd_hww_esr_r(),
+					gr_pd_hww_esr_reset_active_f());
+			need_reset |= -EFAULT;
+		}
+
+		if (exception & gr_exception_scc_m()) {
+			u32 scc = gk20a_readl(g, gr_scc_hww_esr_r());
+
+			nvgpu_err(g, "scc exception: esr 0x%08x", scc);
+			gk20a_writel(g, gr_scc_hww_esr_r(),
+					gr_scc_hww_esr_reset_active_f());
+			need_reset |= -EFAULT;
+		}
+
+		if (exception & gr_exception_ds_m()) {
+			u32 ds = gk20a_readl(g, gr_ds_hww_esr_r());
+
+			nvgpu_err(g, "ds exception: esr: 0x%08x", ds);
+			gk20a_writel(g, gr_ds_hww_esr_r(),
+					 gr_ds_hww_esr_reset_task_f());
+			need_reset |= -EFAULT;
+		}
+
+		if (exception & gr_exception_ssync_m()) {
+			if (g->ops.gr.handle_ssync_hww)
+				need_reset |= g->ops.gr.handle_ssync_hww(g);
+			else
+				nvgpu_err(g, "unhandled ssync exception");
+		}
+
+		if (exception & gr_exception_mme_m()) {
+			u32 mme = gk20a_readl(g, gr_mme_hww_esr_r());
+			u32 info = gk20a_readl(g, gr_mme_hww_esr_info_r());
+
+			nvgpu_err(g, "mme exception: esr 0x%08x info:0x%08x",
+					mme, info);
+			gk20a_writel(g, gr_mme_hww_esr_r(),
+				gr_mme_hww_esr_reset_active_f());
+			need_reset |= -EFAULT;
+		}
+
+		if (exception & gr_exception_sked_m()) {
+			u32 sked = gk20a_readl(g, gr_sked_hww_esr_r());
+
+			nvgpu_err(g, "sked exception: esr 0x%08x", sked);
+			gk20a_writel(g, gr_sked_hww_esr_r(),
+				gr_sked_hww_esr_reset_active_f());
 			need_reset |= -EFAULT;
 		}
 
@@ -5929,22 +5987,6 @@ int gk20a_gr_isr(struct gk20a *g)
 					 post_event && fault_ch) {
 				gk20a_dbg_gpu_post_events(fault_ch);
 			}
-		}
-
-		if (exception & gr_exception_ds_m()) {
-			u32 ds = gk20a_readl(g, gr_ds_hww_esr_r());
-			nvgpu_err(g, "ds exception %08x", ds);
-			gk20a_writel(g, gr_ds_hww_esr_r(),
-					 gr_ds_hww_esr_reset_task_f());
-			need_reset |= -EFAULT;
-		}
-
-		if (exception & gr_exception_sked_m()) {
-			u32 sked = gk20a_readl(g, gr_sked_hww_esr_r());
-
-			nvgpu_err(g, "sked exception %08x", sked);
-			gk20a_writel(g, gr_sked_hww_esr_r(),
-				gr_sked_hww_esr_reset_active_f());
 		}
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());

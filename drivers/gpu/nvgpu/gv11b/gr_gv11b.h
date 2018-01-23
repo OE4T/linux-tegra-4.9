@@ -227,5 +227,6 @@ int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
 void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
                 struct channel_gk20a *ch_ctx,
                 struct nvgpu_mem *mem);
+int gr_gv11b_handle_ssync_hww(struct gk20a *g);
 
 #endif

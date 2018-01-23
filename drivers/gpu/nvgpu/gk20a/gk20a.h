@@ -442,6 +442,7 @@ struct gpu_ops {
 		void (*dump_ctxsw_stats)(struct gk20a *g, struct vm_gk20a *vm,
 					 struct nvgpu_gr_ctx *gr_ctx);
 		void (*fecs_host_int_enable)(struct gk20a *g);
+		int (*handle_ssync_hww)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

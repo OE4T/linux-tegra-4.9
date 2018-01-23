@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -195,6 +195,22 @@ static inline u32 gr_exception_ds_m(void)
 static inline u32 gr_exception_sked_m(void)
 {
 	return 0x1U << 8U;
+}
+static inline u32 gr_exception_pd_m(void)
+{
+	return 0x1U << 2U;
+}
+static inline u32 gr_exception_scc_m(void)
+{
+	return 0x1U << 3U;
+}
+static inline u32 gr_exception_ssync_m(void)
+{
+	return 0x1U << 5U;
+}
+static inline u32 gr_exception_mme_m(void)
+{
+	return 0x1U << 7U;
 }
 static inline u32 gr_exception1_r(void)
 {
@@ -544,6 +560,10 @@ static inline u32 gr_fe_hww_esr_en_enable_f(void)
 {
 	return 0x80000000U;
 }
+static inline u32 gr_fe_hww_esr_info_r(void)
+{
+	return 0x004041b0U;
+}
 static inline u32 gr_fe_go_idle_timeout_r(void)
 {
 	return 0x00404154U;
@@ -591,6 +611,10 @@ static inline u32 gr_mme_hww_esr_reset_active_f(void)
 static inline u32 gr_mme_hww_esr_en_enable_f(void)
 {
 	return 0x80000000U;
+}
+static inline u32 gr_mme_hww_esr_info_r(void)
+{
+	return 0x00404494U;
 }
 static inline u32 gr_memfmt_hww_esr_r(void)
 {

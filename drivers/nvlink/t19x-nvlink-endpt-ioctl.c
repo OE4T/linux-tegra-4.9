@@ -196,10 +196,12 @@ static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
 	status->link_info.phy_version =
 				TEGRA_CTRL_NVLINK_STATUS_NVHS_VERSION_1_0;
 
-	/* TODO: Change nvlink_link_clockKHz after having correct INITPLL */
-	status->link_info.nvlink_link_clockKHz = 24750000;
-	status->link_info.nvlink_ref_clk_speedKHz =
-				clk_get_rate(tdev->clk_pllnvhs) / 1000;
+	status->link_info.nvlink_link_clockKHz = ndev->link_bitrate / 1000;
+	if (tdev->refclk == NVLINK_REFCLK_150)
+		status->link_info.nvlink_ref_clk_speedKHz = 150000;
+	else if (tdev->refclk == NVLINK_REFCLK_156)
+		status->link_info.nvlink_ref_clk_speedKHz = 156250;
+
 	status->link_info.nvlink_common_clock_speedKHz =
 				status->link_info.nvlink_link_clockKHz / 16;
 

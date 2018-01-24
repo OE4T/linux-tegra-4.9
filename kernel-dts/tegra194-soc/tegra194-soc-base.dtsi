@@ -775,8 +775,9 @@
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVDEC>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC>,
-				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
-			clock-names = "nvdec", "kfuse";
+				 <&bpmp_clks TEGRA194_CLK_KFUSE>,
+				 <&bpmp_clks TEGRA194_CLK_FUSE>;
+			clock-names = "nvdec", "kfuse", "efuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC>;
 			dma-coherent;
@@ -788,8 +789,9 @@
 			reg = <0x0 0x15140000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_NVDEC1>;
 			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC1>,
-				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
-			clock-names = "nvdec", "kfuse";
+				 <&bpmp_clks TEGRA194_CLK_KFUSE>,
+				 <&bpmp_clks TEGRA194_CLK_FUSE>;
+			clock-names = "nvdec", "kfuse", "efuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC1>;
 			dma-coherent;

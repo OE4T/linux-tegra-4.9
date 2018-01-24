@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1850,8 +1850,9 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 }
 
 void nvhost_eventlib_log_submit(struct platform_device *pdev,
-			        u32 syncpt_id,
-			        u32 syncpt_thresh)
+				u32 syncpt_id,
+				u32 syncpt_thresh,
+				u64 timestamp)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	union nvhost_event_union event;
@@ -1872,7 +1873,7 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 			&event,
 			sizeof(event),
 			NVHOST_TASK_SUBMIT,
-			0);
+			timestamp);
 }
 #else
 void nvhost_eventlib_log_task(struct platform_device *pdev,
@@ -1884,8 +1885,9 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 }
 
 void nvhost_eventlib_log_submit(struct platform_device *pdev,
-			        u32 syncpt_id,
-			        u32 syncpt_thresh)
+				u32 syncpt_id,
+				u32 syncpt_thresh,
+				u64 timestamp)
 {
 }
 #endif

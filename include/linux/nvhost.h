@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -651,7 +651,8 @@ static inline void nvhost_eventlib_log_task(struct platform_device *pdev,
 
 static inline void nvhost_eventlib_log_submit(struct platform_device *pdev,
 					      u32 syncpt_id,
-					      u32 syncpt_thresh)
+					      u32 syncpt_thresh,
+					      u64 timestamp)
 {
 }
 #else
@@ -763,8 +764,9 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u64 timestamp_end);
 
 void nvhost_eventlib_log_submit(struct platform_device *pdev,
-			        u32 syncpt_id,
-			        u32 syncpt_thresh);
+				u32 syncpt_id,
+				u32 syncpt_thresh,
+				u64 timestamp);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

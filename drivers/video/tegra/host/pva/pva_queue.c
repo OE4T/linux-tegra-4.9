@@ -1148,6 +1148,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 	struct nvhost_queue *queue = task->queue;
 	unsigned int i;
 	u32 thresh = 0;
+	u64 timestamp;
 	int err = 0;
 
 	nvhost_dbg_info("Submitting task %p (0x%llx)", task,
@@ -1162,6 +1163,12 @@ static int pva_task_submit(struct pva_submit_task *task)
 	err = nvhost_module_busy(task->pva->pdev);
 	if (err)
 		goto err_module_busy;
+
+	/*
+	 * TSC timestamp is same as CNTVCT but it's shifted by 5. Shift
+	 * CNTVCT as well to keep all the timestamps consistent.
+	 */
+	timestamp = arch_counter_get_cntvct() << 5;
 
 	/* Choose the submit policy based on the mode */
 	switch (task->pva->submit_mode) {
@@ -1181,9 +1188,12 @@ static int pva_task_submit(struct pva_submit_task *task)
 	if (err < 0)
 		goto err_submit;
 
-	task->syncpt_thresh = thresh;
+	nvhost_eventlib_log_submit(task->pva->pdev,
+				   queue->syncpt_id,
+				   thresh,
+				   timestamp);
 
-	nvhost_eventlib_log_submit(task->pva->pdev, queue->syncpt_id, thresh);
+	task->syncpt_thresh = thresh;
 
 	nvhost_dbg_info("Postfence id=%u, value=%u",
 			queue->syncpt_id, thresh);

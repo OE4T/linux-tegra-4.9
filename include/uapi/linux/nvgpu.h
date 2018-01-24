@@ -1,7 +1,7 @@
 /*
  * NVGPU Public Interface Header
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -892,8 +892,6 @@ struct nvgpu_gpu_set_deterministic_opts_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 18, struct nvgpu_gpu_num_vsms)
 #define NVGPU_GPU_IOCTL_VSMS_MAPPING \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 19, struct nvgpu_gpu_vsms_mapping)
-#define NVGPU_GPU_IOCTL_GET_BUFFER_INFO \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 20, struct nvgpu_gpu_get_buffer_info_args)
 #define NVGPU_GPU_IOCTL_RESUME_FROM_PAUSE \
 	_IO(NVGPU_GPU_IOCTL_MAGIC, 21)
 #define NVGPU_GPU_IOCTL_TRIGGER_SUSPEND \

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,8 +56,5 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 
 int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
 			   u64 offset, struct gk20a_buffer_state **state);
-
-int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
-			     u64 *buffer_id, u64 *buffer_len);
 
 #endif

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -140,7 +140,6 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 {
 	struct gk20a *g = gk20a_get_platform(dev)->g;
 	struct gk20a_dmabuf_priv *priv;
-	static u64 priv_count = 0;
 
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (likely(priv))
@@ -159,7 +158,6 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 
 	nvgpu_mutex_init(&priv->lock);
 	nvgpu_init_list_node(&priv->states);
-	priv->buffer_id = ++priv_count;
 	priv->g = g;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
 
@@ -212,36 +210,5 @@ out:
 	nvgpu_mutex_release(&priv->lock);
 	if (!err)
 		*state = s;
-	return err;
-}
-
-int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
-			     u64 *buffer_id, u64 *buffer_len)
-{
-	struct dma_buf *dmabuf;
-	struct gk20a_dmabuf_priv *priv;
-	int err = 0;
-
-	dmabuf = dma_buf_get(dmabuf_fd);
-	if (IS_ERR(dmabuf)) {
-		dev_warn(dev, "%s: fd %d is not a dmabuf", __func__, dmabuf_fd);
-		return PTR_ERR(dmabuf);
-	}
-
-	err = gk20a_dmabuf_alloc_drvdata(dmabuf, dev);
-	if (err) {
-		dev_warn(dev, "Failed to allocate dmabuf drvdata (err = %d)",
-			 err);
-		goto clean_up;
-	}
-
-	priv = dma_buf_get_drvdata(dmabuf, dev);
-	if (likely(priv)) {
-		*buffer_id = priv->buffer_id;
-		*buffer_len = dmabuf->size;
-	}
-
-clean_up:
-	dma_buf_put(dmabuf);
 	return err;
 }

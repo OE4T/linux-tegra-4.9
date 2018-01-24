@@ -753,13 +753,6 @@ static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
 	return err;
 }
 
-static int gk20a_ctrl_get_buffer_info(
-	struct gk20a *g, struct nvgpu_gpu_get_buffer_info_args *args)
-{
-	return gk20a_mm_get_buffer_info(dev_from_gk20a(g), args->in.dmabuf_fd,
-					&args->out.id, &args->out.length);
-}
-
 static int nvgpu_gpu_get_cpu_time_correlation_info(
 	struct gk20a *g,
 	struct nvgpu_gpu_get_cpu_time_correlation_info_args *args)
@@ -1755,11 +1748,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_VSMS_MAPPING:
 		err = gk20a_ctrl_vsm_mapping(g,
 			(struct nvgpu_gpu_vsms_mapping *)buf);
-		break;
-
-	case NVGPU_GPU_IOCTL_GET_BUFFER_INFO:
-		err = gk20a_ctrl_get_buffer_info(g,
-			(struct nvgpu_gpu_get_buffer_info_args *)buf);
 		break;
 
 	case NVGPU_GPU_IOCTL_GET_CPU_TIME_CORRELATION_INFO:

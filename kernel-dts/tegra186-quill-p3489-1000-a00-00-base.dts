@@ -159,6 +159,37 @@
 	};
 
 	host1x {
+		disp_imp_table {
+			num_settings = <7>;
+
+			disp_imp_settings_6 {
+				/* Calculated with 4 wins on one 1080p head */
+
+				/* Global settings */
+				nvidia,total_disp_bw_with_catchup = <0 2787800>;
+				nvidia,total_disp_bw_without_catchup = <0 2534400>;
+				nvidia,disp_emc_floor = <0 102000000>;
+				nvidia,disp_min_hubclk = <0 49070000>;
+				nvidia,total_win_fetch_slots = /bits/ 16 <1>;
+				nvidia,total_cursor_fetch_slots = /bits/ 16 <1>;
+
+				/* Window settings */
+				nvidia,imp_win_mapping = /bits/ 8 <0 1 2 3 4 5>;
+				nvidia,win_fetch_meter_slots = /bits/ 16 <1 1 1 1 1 1>;
+				nvidia,win_dvfs_watermark_values = <0 0 0 0 0 0 0 0 0 0 0 0>;
+				nvidia,win_pipe_meter_values = <0 0 0 0 0 0>;
+				nvidia,win_mempool_buffer_entries = <0 817 0 817 0 817 0 817 0 817 0 817>;
+				nvidia,win_thread_groups = /bits/ 8 <0 1 2 3 4 5>;
+
+				/* Cursor settings */
+				nvidia,imp_head_mapping = /bits/ 8 <0 1 2>;
+				nvidia,cursor_fetch_meter_slots = /bits/ 16 <1 1 1>;
+				nvidia,cursor_dvfs_watermark_values = <0 0 0 0 0 0>;
+				nvidia,cursor_pipe_meter_values = <0 0 0>;
+				nvidia,cursor_mempool_buffer_entries = <0 16 0 16 0 16>;
+			};
+		};
+
 		sor {
 			status = "disabled";
 			dp-display {

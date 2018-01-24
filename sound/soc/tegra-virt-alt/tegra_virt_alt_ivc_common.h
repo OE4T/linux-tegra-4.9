@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -76,6 +76,8 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE,
 	NVAUDIO_I2S_SET_LOOPBACK_ENABLE,
 	NVAUDIO_I2S_GET_LOOPBACK_ENABLE,
+	NVAUDIO_I2S_GET_RATE,
+	NVAUDIO_I2S_SET_RATE,
 	NVAUDIO_ASRC_SET_RATIO,
 	NVAUDIO_ASRC_GET_RATIO,
 	NVAUDIO_MVC_SET_CURVETYPE,
@@ -99,6 +101,7 @@ struct nvaudio_ivc_t210_amx_info {
 struct nvaudio_ivc_t210_i2s_info {
 	int32_t		i2s_id;
 	uint32_t	i2s_loopback_enable;
+	uint32_t	i2s_rate;
 };
 
 struct nvaudio_ivc_t210_amixer_info {

@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_util_virt_alt.h - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -185,6 +185,12 @@
 	tegra_virt_i2s_get_loopback_enable,	\
 	tegra_virt_i2s_set_loopback_enable)
 
+#define I2S_SET_RATE(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 48000, 0,	\
+	tegra_virt_i2s_get_rate,	\
+	tegra_virt_i2s_set_rate)
+
 #define METADATA_CTRL_DECL(ename) \
 	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
 	.name = ename, .info = tegra_bytes_info, \
@@ -348,6 +354,14 @@ int tegra_virt_i2s_set_loopback_enable(
 int tegra_virt_i2s_get_loopback_enable(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_i2s_set_rate(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_i2s_get_rate(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
 int tegra_metadata_get_init(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);

@@ -220,8 +220,15 @@
 
 #define DL_FEATURE_EXCHANGE_EN		BIT(31)
 
+#define PORT_LOGIC_ACK_F_ASPM_CTRL			0x70C
+#define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_SHIFT	8
+#define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_MASK	0xFF
+#define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_VAL	52
+
 #define PORT_LOGIC_GEN2_CTRL		0x80C
 #define PORT_LOGIC_GEN2_CTRL_DIRECT_SPEED_CHANGE	BIT(17)
+#define PORT_LOGIC_GEN2_CTRL_FAST_TRAINING_SEQ_MASK	0xFF
+#define PORT_LOGIC_GEN2_CTRL_FAST_TRAINING_SEQ_VAL	52
 
 #define PORT_LOGIC_MSI_CTRL_INT_0_EN	0x828
 
@@ -1838,6 +1845,19 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 		tmp |= 19;
 		dw_pcie_cfg_write(pp->dbi_base + AUX_CLK_FREQ, 4, tmp);
 	}
+
+	/* Configure FTS */
+	dw_pcie_cfg_read(pp->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL, 4, &tmp);
+	tmp &= ~(PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_MASK <<
+	       PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_SHIFT);
+	tmp |= PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_VAL <<
+	       PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_SHIFT;
+	dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL, 4, tmp);
+
+	dw_pcie_cfg_read(pp->dbi_base + PORT_LOGIC_GEN2_CTRL, 4, &tmp);
+	tmp &= ~PORT_LOGIC_GEN2_CTRL_FAST_TRAINING_SEQ_MASK;
+	tmp |= PORT_LOGIC_GEN2_CTRL_FAST_TRAINING_SEQ_VAL;
+	dw_pcie_cfg_write(pp->dbi_base + PORT_LOGIC_GEN2_CTRL, 4, tmp);
 
 	/* Configure Max Speed from DT */
 	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_CAP, 4, &tmp);

@@ -524,6 +524,43 @@ static ssize_t debug_dla_fw_reload_set(struct file *file,
 	return count;
 }
 
+static int nvdla_fw_ver_tag_show(struct seq_file *s, void *unused)
+{
+	struct nvdla_device *nvdla_dev;
+	struct platform_device *pdev;
+	int err;
+	unsigned int tag;
+	struct flcn *m;
+
+	nvdla_dev = (struct nvdla_device *)s->private;
+	pdev = nvdla_dev->pdev;
+
+	/* update fw_version if engine is not yet powered on */
+	err = nvhost_module_busy(pdev);
+	if (err)
+		return err;
+
+	m = get_flcn(pdev);
+	tag = m->os.bin_ver_tag;
+
+	nvhost_module_idle(pdev);
+
+	seq_printf(s, "%x\n", tag);
+
+	return 0;
+}
+
+static int nvdla_fw_ver_tag_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, nvdla_fw_ver_tag_show, inode->i_private);
+}
+
+static const struct file_operations nvdla_fw_ver_tag_fops = {
+	.open		= nvdla_fw_ver_tag_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
 static int debug_dla_fw_reload_show(struct seq_file *s, void *data)
 {
 	seq_puts(s, "0\n");
@@ -611,6 +648,10 @@ static void dla_fw_debugfs_init(struct platform_device *pdev)
 
 	if (!debugfs_create_file("version", S_IRUGO, fw_dir,
 			nvdla_dev, &nvdla_fw_ver_fops))
+		goto trace_failed;
+
+	if (!debugfs_create_file("tag", S_IRUGO, fw_dir,
+			nvdla_dev, &nvdla_fw_ver_tag_fops))
 		goto trace_failed;
 
 	if (!debugfs_create_file("reload", 0600, fw_dir,

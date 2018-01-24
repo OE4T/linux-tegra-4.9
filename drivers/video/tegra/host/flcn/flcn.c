@@ -281,6 +281,7 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 	v->os.data_size   = ucode.os_header->os_data_size;
 	v->os.code_size = ucode.os_header->os_code_size;
 	v->os.bin_magic = ucode.bin_header->bin_magic;
+	v->os.bin_ver_tag = ucode.bin_header->bin_ver_tag;
 
 	return 0;
 }

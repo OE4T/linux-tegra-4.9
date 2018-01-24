@@ -33,6 +33,7 @@ struct ucode_bin_header_v1_flcn {
 	u32 fce_bin_header_offset;
 	u32 fce_bin_data_offset;
 	u32 fce_bin_size;
+	u32 bin_ver_tag;
 };
 
 struct ucode_os_code_header_v1_flcn {
@@ -79,6 +80,7 @@ struct flcn {
 		u32 code_size;
 		u32 code_offset;
 		u32 size;
+		u32 bin_ver_tag;
 	} os, fce;
 
 	dma_addr_t dma_addr;

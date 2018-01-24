@@ -17,6 +17,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
+#include "tegra194-balanced-throttle.dtsi"
 
 /* THERMAL gpio definitions */
 #define TEMP_ALERT TEGRA194_MAIN_GPIO(H, 2)
@@ -36,7 +37,7 @@
 			reg = <0x4c>;
 			sensor-name = "tmp451-ext";
 			supported-hwrev = <1>;
-			offset = <(-38)>;
+			offset = <(-34)>;
 			conv-rate = <0x06>;
 			extended-rage = <1>;
 
@@ -53,7 +54,7 @@
 				shutdown-limit = <107>;
 			};
 			ext {
-				shutdown-limit = <85>;
+				shutdown-limit = <113>;
 			};
 		};
 	};
@@ -76,14 +77,77 @@
 		};
 		CPU-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
+
+			thermal-zone-params {
+				governor-name = "step_wise";
+			};
+
+			trips {
+				trip_critical {
+					temperature = <84500>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+				trip_bthrot {
+					temperature = <79000>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/CPU-therm/trips/trip_bthrot}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
 		};
 
 		AUX-therm {
 			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <79000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
 		};
 
 		GPU-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
+
+			thermal-zone-params {
+				governor-name = "step_wise";
+			};
+
+			trips {
+				trip_critical {
+					temperature = <91000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+				trip_bthrot {
+					temperature = <85500>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/GPU-therm/trips/trip_bthrot}>;
+					cdev-type = "gpu-balanced";
+					cooling-device = <&{/bthrot_cdev/gpu_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
+
 		};
 
 		AO-therm {

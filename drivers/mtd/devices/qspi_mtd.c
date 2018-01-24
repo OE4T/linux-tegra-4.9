@@ -266,9 +266,24 @@ static ssize_t force_bus_width_show(struct device *dev,
 		char *buf)
 {
 	struct qspi *flash = dev_get_drvdata(dev);
+	char *bus_width_str = "invalid";
 
-	return sprintf(buf, "%d %d", flash->override_bus_width,
-			flash->qspi_bus_width);
+	switch (flash->qspi_bus_width) {
+	case X1:
+		bus_width_str = "X1";
+		break;
+	case X2:
+		bus_width_str = "X2";
+		break;
+	case X4:
+		bus_width_str = "X4";
+		break;
+	default:
+		bus_width_str = "invalid";
+		break;
+	}
+	return sprintf(buf, "overide = %d bus_width = %s\n",
+		       flash->override_bus_width, bus_width_str);
 
 	return -ENODEV;
 }

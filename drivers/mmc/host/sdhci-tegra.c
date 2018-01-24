@@ -51,6 +51,7 @@
 #define SDHCI_CLOCK_CTRL_TAP_SHIFT			16
 #define SDHCI_CLOCK_CTRL_TRIM_SHIFT			24
 #define SDHCI_CLOCK_CTRL_TRIM_MASK			0x1F
+#define SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE		BIT(6)
 #define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE		BIT(5)
 #define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE		BIT(3)
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE	BIT(2)
@@ -221,6 +222,7 @@ struct sdhci_tegra {
 	bool disable_clk_gate;
 	bool is_rail_enabled;
 	bool vqmmc_always_on;
+	bool slcg_status;
 };
 
 static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
@@ -636,6 +638,9 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 		if (soc_data->nvquirks & SDHCI_MISC_CTRL_ENABLE_SDR50)
 			clk_ctrl |= SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE;
 	}
+
+	tegra_host->slcg_status = !(clk_ctrl &
+				    SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE);
 
 	sdhci_writel(host, misc_ctrl, SDHCI_TEGRA_VENDOR_MISC_CTRL);
 	sdhci_writel(host, clk_ctrl, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
@@ -2172,6 +2177,11 @@ static void sdhci_tegra_debugfs_init(struct sdhci_host *host)
 	/* Create clock debugfs dir under sdhci debugfs dir */
 	clkdir = debugfs_create_dir("clock_data", sdhcidir);
 	if (!clkdir)
+		goto err;
+
+	retval = debugfs_create_bool("slcg_status", S_IRUGO, clkdir,
+				     &tegra_host->slcg_status);
+	if (!retval)
 		goto err;
 
 	retval = debugfs_create_ulong("curr_clk_rate", S_IRUGO, clkdir,

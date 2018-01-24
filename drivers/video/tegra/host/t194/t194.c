@@ -379,6 +379,7 @@ struct nvhost_device_data t19_nvdec_info = {
 	.clocks			= {
 		{"nvdec", UINT_MAX},
 		{"kfuse", 0, 0},
+		{"efuse", 0, 0},
 		{"emc", HOST_NVDEC_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
@@ -413,6 +414,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.clocks			= {
 		{"nvdec", UINT_MAX},
 		{"kfuse", 0, 0},
+		{"efuse", 0, 0},
 		{"emc", HOST_NVDEC_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}

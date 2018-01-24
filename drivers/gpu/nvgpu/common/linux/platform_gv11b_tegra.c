@@ -211,9 +211,6 @@ static int gv11b_tegra_suspend(struct device *dev)
 struct gk20a_platform gv11b_tegra_platform = {
 	.has_syncpoints = true,
 
-	/* no cde. use sysmem compression */
-	.has_cde = false,
-
 	/* ptimer src frequency in hz*/
 	.ptimer_src_freq	= 31250000,
 

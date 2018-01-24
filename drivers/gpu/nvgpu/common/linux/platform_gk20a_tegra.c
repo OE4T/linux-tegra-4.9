@@ -948,7 +948,9 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	.has_cde = true,
+#endif
 
 	.soc_name = "tegra21x",
 

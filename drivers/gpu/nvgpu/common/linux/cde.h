@@ -321,5 +321,6 @@ int gk20a_prepare_compressible_read(
 int gk20a_mark_compressible_write(
 		struct gk20a *g, u32 buffer_fd, u32 valid_compbits, u64 offset,
 		u32 zbc_color);
+int nvgpu_cde_init_ops(struct nvgpu_os_linux *l);
 
 #endif

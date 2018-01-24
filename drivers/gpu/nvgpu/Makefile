@@ -38,12 +38,9 @@ nvgpu-y := \
 	common/linux/vm.o \
 	common/linux/intr.o \
 	common/linux/sysfs.o \
-	common/linux/cde.o \
 	common/linux/io.o \
 	common/linux/io_usermode.o \
 	common/linux/rwsem.o \
-	common/linux/cde_gm20b.o \
-	common/linux/cde_gp10b.o \
 	common/linux/comptags.o \
 	common/linux/dmabuf.o \
 	common/linux/sched.o \
@@ -132,7 +129,6 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	common/linux/debug.o \
 	common/linux/debug_gr.o \
 	common/linux/debug_fifo.o \
-	common/linux/debug_cde.o \
 	common/linux/debug_ce.o \
 	common/linux/debug_pmu.o \
 	common/linux/debug_sched.o \
@@ -301,3 +297,13 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/gv11b/vgpu_fifo_gv11b.o \
 	common/linux/vgpu/gv11b/vgpu_subctx_gv11b.o \
 	common/linux/vgpu/gv11b/vgpu_tsg_gv11b.o
+
+nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
+	common/linux/cde.o \
+	common/linux/cde_gm20b.o \
+	common/linux/cde_gp10b.o
+
+ifeq ($(CONFIG_DEBUG_FS),y)
+nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
+	common/linux/debug_cde.o
+endif

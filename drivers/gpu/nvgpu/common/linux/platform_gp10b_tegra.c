@@ -409,7 +409,9 @@ struct gk20a_platform gp10b_tegra_platform = {
 
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	.has_cde = true,
+#endif
 
 	.clk_round_rate = gp10b_round_clk_rate,
 	.get_clk_freqs = gp10b_clk_get_freqs,

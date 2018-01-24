@@ -148,7 +148,9 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
 	g->has_syncpoints = platform->has_syncpoints;
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	g->has_cde = platform->has_cde;
+#endif
 	g->ptimer_src_freq = platform->ptimer_src_freq;
 	g->support_pmu = support_gk20a_pmu(dev_from_gk20a(g));
 	g->can_railgate = platform->can_railgate_init;

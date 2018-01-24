@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -377,7 +377,9 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 	gr_gk20a_debugfs_init(g);
 	gk20a_pmu_debugfs_init(g);
 	gk20a_railgating_debugfs_init(g);
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	gk20a_cde_debugfs_init(g);
+#endif
 	gk20a_ce_debugfs_init(g);
 	nvgpu_alloc_debugfs_init(g);
 	nvgpu_hal_debugfs_init(g);

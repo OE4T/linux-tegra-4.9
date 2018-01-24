@@ -128,3 +128,10 @@ config GK20A_VIDMEM
 	  Enable support for using and allocating buffers in a distinct video
 	  memory aperture (in contrast to general system memory), available on
 	  GPUs that have their own banks. PCIe GPUs have this, for example.
+
+config NVGPU_SUPPORT_CDE
+	bool "Support extraction of comptags for CDE"
+	depends on GK20A
+	default y
+	help
+	  Enable support for extraction of comptags for CDE.

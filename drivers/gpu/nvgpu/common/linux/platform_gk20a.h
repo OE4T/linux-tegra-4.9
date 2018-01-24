@@ -217,7 +217,9 @@ struct gk20a_platform {
 	/* source frequency for ptimer in hz */
 	u32 ptimer_src_freq;
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	bool has_cde;
+#endif
 
 	/* soc name for finding firmware files */
 	const char *soc_name;

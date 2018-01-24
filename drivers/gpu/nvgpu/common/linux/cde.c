@@ -44,6 +44,8 @@
 #include "os_linux.h"
 #include "dmabuf.h"
 #include "channel.h"
+#include "cde_gm20b.h"
+#include "cde_gp10b.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -1747,5 +1749,26 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 
 	nvgpu_mutex_release(&state->lock);
 	dma_buf_put(dmabuf);
+	return 0;
+}
+
+int nvgpu_cde_init_ops(struct nvgpu_os_linux *l)
+{
+	struct gk20a *g = &l->g;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
+
+	switch (ver) {
+	case GK20A_GPUID_GM20B:
+	case GK20A_GPUID_GM20B_B:
+		l->ops.cde = gm20b_cde_ops.cde;
+		break;
+	case NVGPU_GPUID_GP10B:
+		l->ops.cde = gp10b_cde_ops.cde;
+		break;
+	default:
+		/* CDE is optional, so today ignoring unknown chip is fine */
+		break;
+	}
+
 	return 0;
 }

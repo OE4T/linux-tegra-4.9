@@ -48,16 +48,17 @@
 #include "module.h"
 #include "module_usermode.h"
 #include "intr.h"
-#include "cde.h"
 #include "ioctl.h"
 #include "sim.h"
 
 #include "os_linux.h"
-#include "cde_gm20b.h"
-#include "cde_gp10b.h"
 #include "ctxsw_trace.h"
 #include "driver_common.h"
 #include "channel.h"
+
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
+#include "cde.h"
+#endif
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
@@ -180,23 +181,13 @@ static int gk20a_restore_registers(struct gk20a *g)
 
 static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
 {
-	struct gk20a *g = &l->g;
-	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
+	int err = 0;
 
-	switch (ver) {
-	case GK20A_GPUID_GM20B:
-	case GK20A_GPUID_GM20B_B:
-		l->ops.cde = gm20b_cde_ops.cde;
-		break;
-	case NVGPU_GPUID_GP10B:
-		l->ops.cde = gp10b_cde_ops.cde;
-		break;
-	default:
-		/* CDE is optional, so today ignoring unknown chip is fine */
-		break;
-	}
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
+	err = nvgpu_cde_init_ops(l);
+#endif
 
-	return 0;
+	return err;
 }
 
 int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
@@ -285,8 +276,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_scale_resume(dev_from_gk20a(g));
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	if (platform->has_cde)
 		gk20a_init_cde_support(l);
+#endif
 
 	err = gk20a_sched_ctrl_init(g);
 	if (err) {
@@ -325,7 +318,9 @@ static int gk20a_lockout_registers(struct gk20a *g)
 static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+#endif
 	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	bool irqs_enabled;
@@ -348,7 +343,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	gk20a_scale_suspend(dev);
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	gk20a_cde_suspend(l);
+#endif
 
 	ret = gk20a_prepare_poweroff(g);
 	if (ret)
@@ -1239,7 +1236,9 @@ return_err:
 int nvgpu_remove(struct device *dev, struct class *class)
 {
 	struct gk20a *g = get_gk20a(dev);
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+#endif
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int err;
 
@@ -1251,8 +1250,10 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	if (nvgpu_mem_is_valid(&g->syncpt_mem))
 		nvgpu_dma_free(g, &g->syncpt_mem);
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	if (platform->has_cde)
 		gk20a_cde_destroy(l);
+#endif
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 	gk20a_ctxsw_trace_cleanup(g);

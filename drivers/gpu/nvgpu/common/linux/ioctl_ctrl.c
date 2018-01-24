@@ -333,10 +333,12 @@ static int gk20a_ctrl_prepare_compressible_read(
 		struct gk20a *g,
 		struct nvgpu_gpu_prepare_compressible_read_args *args)
 {
+	int ret = -ENOSYS;
+
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct nvgpu_fence fence;
 	struct gk20a_fence *fence_out = NULL;
-	int ret = 0;
 	int flags = args->submit_flags;
 
 	fence.id = args->fence.syncpt_id;
@@ -377,18 +379,21 @@ static int gk20a_ctrl_prepare_compressible_read(
 		}
 	}
 	gk20a_fence_put(fence_out);
+#endif
 
-	return 0;
+	return ret;
 }
 
 static int gk20a_ctrl_mark_compressible_write(
 		struct gk20a *g,
 		struct nvgpu_gpu_mark_compressible_write_args *args)
 {
-	int ret;
+	int ret = -ENOSYS;
 
+#ifdef CONFIG_NVGPU_SUPPORT_CDE
 	ret = gk20a_mark_compressible_write(g, args->handle,
 			args->valid_compbits, args->offset, args->zbc_color);
+#endif
 
 	return ret;
 }

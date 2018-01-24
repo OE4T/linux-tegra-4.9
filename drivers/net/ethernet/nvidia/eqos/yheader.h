@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1417,6 +1417,8 @@ struct eqos_prv_data {
 	unsigned int oldflow_ctrl;
 
 	struct eqos_hw_features hw_feat;
+
+	u32 ptp_ref_clk_rate;
 
 	/* for sa(source address) insert/replace */
 	u32 tx_sa_ctrl_via_desc;

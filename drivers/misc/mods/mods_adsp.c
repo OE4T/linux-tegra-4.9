@@ -1,7 +1,7 @@
 /*
  * mods_adsp.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -33,8 +33,7 @@ int esc_mods_adsp_start(struct file *pfile)
 
 int esc_mods_adsp_stop(struct file *pfile)
 {
-	nvadsp_os_stop();
-	return OK;
+	return nvadsp_os_suspend();
 }
 
 int esc_mods_adsp_run_app(struct file *pfile, struct MODS_ADSP_RUN_APP_INFO *p)

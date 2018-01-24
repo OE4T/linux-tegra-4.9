@@ -673,6 +673,7 @@ static int vi4_update_clknbw(struct tegra_channel *chan, u8 on)
 	struct v4l2_subdev_frame_interval fie;
 	unsigned long csi_freq = 0;
 	unsigned int ppc_multiplier = 1;
+	u64 pixelclock = 0;
 
 	/* if bytes per pixel is greater than 2, then num_ppc is 4 */
 	/* since num_ppc in nvhost framework is always 8, use multiplier */
@@ -686,22 +687,34 @@ static int vi4_update_clknbw(struct tegra_channel *chan, u8 on)
 				video, g_frame_interval))
 		v4l2_subdev_call(chan->subdev_on_csi, video,
 				g_frame_interval, &fie);
-	else {
-		if (v4l2_subdev_has_op(chan->subdev_on_csi,
+	else if (v4l2_subdev_has_op(chan->subdev_on_csi,
 				video, g_dv_timings)) {
-			u32 total_width;
-			u32 total_height;
-			struct v4l2_dv_timings dvtimings;
-			struct v4l2_bt_timings *timings = &dvtimings.bt;
+		u32 total_width;
+		u32 total_height;
+		struct v4l2_dv_timings dvtimings;
+		struct v4l2_bt_timings *timings = &dvtimings.bt;
 
-			v4l2_subdev_call(chan->subdev_on_csi,
-				video, g_dv_timings, &dvtimings);
-			total_width = timings->width + timings->hfrontporch +
-				timings->hsync + timings->hbackporch;
-			total_height = timings->height + timings->vfrontporch +
-				timings->vsync + timings->vbackporch;
-			fie.interval.denominator = timings->pixelclock /
-				(total_width * total_height);
+		v4l2_subdev_call(chan->subdev_on_csi,
+			video, g_dv_timings, &dvtimings);
+		total_width = timings->width + timings->hfrontporch +
+			timings->hsync + timings->hbackporch;
+		total_height = timings->height + timings->vfrontporch +
+			timings->vsync + timings->vbackporch;
+		fie.interval.denominator = timings->pixelclock /
+			(total_width * total_height);
+		pixelclock = timings->pixelclock;
+	} else {
+		struct v4l2_subdev *sd = chan->subdev_on_csi;
+		struct camera_common_data *s_data =
+			to_camera_common_data(sd->dev);
+		struct sensor_mode_properties *sensor_mode;
+		int idx = s_data->mode_prop_idx;
+
+		idx = s_data->mode_prop_idx;
+		if (idx < s_data->sensor_props.num_modes) {
+			sensor_mode = &s_data->sensor_props.sensor_modes[idx];
+			pixelclock =
+				sensor_mode->signal_properties.pixel_clock.val;
 		}
 	}
 
@@ -715,11 +728,12 @@ static int vi4_update_clknbw(struct tegra_channel *chan, u8 on)
 			request_pixelrate = csi_freq * PG_BITRATE /
 				chan->fmtinfo->width;
 			request_pixelrate *= ppc_multiplier;
+		} else if (pixelclock) {
+			/* use real sensor pixelrate */
+			request_pixelrate = (long long)(pixelclock / 100)
+				* VI_CSI_CLK_SCALE
+				* ppc_multiplier;
 		} else {
-			/**
-			 * TODO: use real sensor pixelrate
-			 * See PowerService code
-			 */
 			request_pixelrate = (long long)(chan->format.width
 				* chan->format.height
 				* fie.interval.denominator / 100)

@@ -27,8 +27,6 @@
 #define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
 #define P2U_PERIODIC_EQ_CTRL_GEN4	0xc4
 #define P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
-#define P2U_SLCG				0xbc
-#define P2U_SLCG_MASTER			BIT(0)
 
 #define P2U_RX_MARGIN_SW_INT_EN				0xe0
 #define P2U_RX_MARGIN_SW_INT_EN_READINESS		BIT(0)
@@ -93,11 +91,6 @@ static int tegra_p2u_power_on(struct phy *x)
 {
 	u32 val;
 	struct tegra_p2u *phy = phy_get_drvdata(x);
-
-	/* Disable SLCG */
-	/* NOTE:- This needs to be removed after initial bringup */
-	val = readl(phy->base + P2U_SLCG);
-	writel(val | P2U_SLCG_MASTER, phy->base + P2U_SLCG);
 
 	val = P2U_RX_MARGIN_SW_INT_EN_READINESS |
 	      P2U_RX_MARGIN_SW_INT_EN_MARGIN_START |

@@ -3193,7 +3193,7 @@ static VOID eqos_config_timer_registers(struct eqos_prv_data *pdata)
 	 * 2^32 * 6250000 ==> (6250000 << 32)
 	 * */
 	temp = (u64) (62500000ULL << 32);
-	pdata->default_addend = div_u64(temp, 125000000);
+	pdata->default_addend = div_u64(temp, pdata->ptp_ref_clk_rate);
 
 	hw_if->config_addend(pdata->default_addend);
 
@@ -3962,7 +3962,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		 * 2^32 * 6250000 ==> (6250000 << 32)
 		 * */
 		temp = (u64) (62500000ULL << 32);
-		pdata->default_addend = div_u64(temp, 125000000);
+		pdata->default_addend = div_u64(temp, pdata->ptp_ref_clk_rate);
 
 		hw_if->config_addend(pdata->default_addend);
 

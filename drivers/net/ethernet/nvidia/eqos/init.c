@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -259,11 +259,16 @@ static int eqos_set_ptp_ref_clk(struct eqos_prv_data *pdata,
 			ptp_ref_clock_speed = 125;
 	}
 
-	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10) {
 		ret = clk_set_rate(pdata->ptp_ref_clk, ptp_ref_clock_speed);
-	else
+		if (!ret)
+			pdata->ptp_ref_clk_rate = ptp_ref_clock_speed;
+	} else {
 		ret = clk_set_rate(pdata->ptp_ref_clk,
 				   ptp_ref_clock_speed * 1000000);
+		if (!ret)
+			pdata->ptp_ref_clk_rate = ptp_ref_clock_speed * 1000000;
+	}
 
 	return ret;
 }

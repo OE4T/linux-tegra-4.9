@@ -37,7 +37,6 @@
 
 #include "t194/t194.h"
 #include "nvhost_queue.h"
-#include "nvhost_cv_pm.h"
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"

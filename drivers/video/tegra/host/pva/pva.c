@@ -41,7 +41,6 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 #include "nvhost_queue.h"
-#include "nvhost_cv_pm.h"
 #include "pva_queue.h"
 #include "pva.h"
 #include "pva_regs.h"

@@ -47,8 +47,7 @@ ifdef CONFIG_TEGRA_T19X_GRHOST
 
 obj-y  += nvhost_queue.o \
 	  nvhost_buffer.o \
-	  nvhost_syncpt_unit_interface.o \
-	  nvhost_cv_pm.o
+	  nvhost_syncpt_unit_interface.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST) += capture/

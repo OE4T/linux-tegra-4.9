@@ -109,12 +109,6 @@ static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)
 	return tegra_emc_bw_to_freq_req((unsigned long)(rate));
 }
 
-static void enable_module_reset_clamp(struct platform_device *dev, bool enable)
-{
-	if (host_device_op().module_reset_clamp)
-		host_device_op().module_reset_clamp(dev, enable);
-}
-
 void nvhost_module_reset(struct platform_device *dev, bool reboot)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
@@ -130,9 +124,7 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 			pdata->prepare_poweroff(dev);
 
 	mutex_lock(&pdata->lock);
-	enable_module_reset_clamp(dev, true);
 	do_module_reset_locked(dev);
-	enable_module_reset_clamp(dev, false);
 	mutex_unlock(&pdata->lock);
 
 	if (reboot) {
@@ -1022,7 +1014,6 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
 	struct nvhost_master *host;
-	struct platform_device *pdev = to_platform_device(dev);
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
@@ -1061,9 +1052,6 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
 
-	if (pdata->cluster_clamp)
-		pdata->cluster_clamp(pdev);
-
 	pdata->power_on = false;
 
 	return 0;
@@ -1079,9 +1067,6 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
-
-	if (pdata->cluster_unclamp)
-		pdata->cluster_unclamp(pdev);
 
 	host = nvhost_get_host(pdata->pdev);
 	/* WAR to bug 1588951: Retry booting 3 times */
@@ -1123,8 +1108,6 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	/* Failed to start the device */
 	if (ret) {
-		if (pdata->cluster_clamp)
-			pdata->cluster_clamp(pdev);
 		goto out;
 	}
 

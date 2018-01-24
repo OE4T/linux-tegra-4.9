@@ -1968,12 +1968,24 @@ static int tegra_pcie_dw_link_up(struct pcie_port *pp)
 	return !!(val & CFG_LINK_STATUS_DLL_ACTIVE);
 }
 
+static void enable_ltr(struct pci_dev *pdev)
+{
+	u16 val = 0;
+	u32 data = 0;
+
+	pcie_capability_read_dword(pdev, PCI_EXP_DEVCAP2, &data);
+	if (data & PCI_EXP_DEVCAP2_LTR) {
+		pcie_capability_read_word(pdev, PCI_EXP_DEVCTL2, &val);
+		val |= PCI_EXP_DEVCTL2_LTR_EN;
+		pcie_capability_write_word(pdev, PCI_EXP_DEVCTL2, val);
+	}
+}
+
 static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 {
 	struct pci_host_bridge *host = pci_find_host_bridge(pp->bus);
 	struct resource_entry *win;
-	struct pci_dev *pdev = NULL;
-	u16 val = 0;
+	struct pci_dev *pdev = NULL, *ppdev = NULL;
 	u32 data = 0, pos = 0;
 	struct pci_bus *child;
 
@@ -2011,17 +2023,9 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 			if (!((data & PCI_L1SS_CAP_ASPM_L12S) ||
 			      (data & PCI_L1SS_CAP_PM_L12S)))
 				continue;
-			pcie_capability_read_dword(pdev, PCI_EXP_DEVCAP2,
-						   &data);
-			if (data & PCI_EXP_DEVCAP2_LTR) {
-				pcie_capability_read_word(pdev,
-							  PCI_EXP_DEVCTL2,
-							  &val);
-				val |= PCI_EXP_DEVCTL2_LTR_EN;
-				pcie_capability_write_word(pdev,
-							   PCI_EXP_DEVCTL2,
-							   val);
-			}
+			ppdev = pci_get_slot(pp->bus, PCI_DEVFN(0, 0));
+			enable_ltr(ppdev);	/* Enable LTR in parent (RP) */
+			enable_ltr(pdev);	/* Enable LTR in child (EP) */
 		}
 	}
 }

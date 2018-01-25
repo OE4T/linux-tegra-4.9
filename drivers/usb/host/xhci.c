@@ -2,7 +2,7 @@
  * xHCI host controller driver
  *
  * Copyright (C) 2008 Intel Corp.
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sarah Sharp
  * Some code borrowed from the Linux EHCI driver.
@@ -4221,6 +4221,13 @@ static int xhci_check_usb2_port_capability(struct xhci_hcd *xhci, int port,
 			/* port offsets starts at 1 */
 			port_offset = XHCI_EXT_PORT_OFF(xhci->ext_caps[i]) - 1;
 			port_count = XHCI_EXT_PORT_COUNT(xhci->ext_caps[i]);
+
+			/* Convert from per hub port number to the xHC Root Hub
+			 * ports number (numbered from 1 to MaxPorts defined in
+			 * HCSPARAMS1 register)
+			 */
+			port += port_offset;
+
 			if (port >= port_offset &&
 			    port < port_offset + port_count)
 				return 1;

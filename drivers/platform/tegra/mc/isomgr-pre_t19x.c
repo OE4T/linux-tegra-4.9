@@ -430,29 +430,9 @@ static bool other_iso_plat_realize(struct isomgr_client *cp)
 static bool other_iso_plat_register(u32 dedi_bw, enum tegra_iso_client client)
 {
 	if (unlikely(dedi_bw > isomgr.max_iso_bw - isomgr.dedi_bw)) {
-#ifdef CONFIG_TEGRA_ISOMGR_MAX_ISO_BW_QUIRK
-		int i;
-
-		WARN(1, "max_iso_bw is relaxed to %dKB from %dKB",
-			dedi_bw + isomgr.dedi_bw, isomgr.max_iso_bw);
-		isomgr.avail_bw += dedi_bw + isomgr.dedi_bw -
-			isomgr.max_iso_bw;
-		isomgr.max_iso_bw = dedi_bw + isomgr.dedi_bw;
-		pr_info("ISO BW usage:\n");
-		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
-			if (!client_valid[i])
-				continue;
-			pr_info("client=%s, iso dedi bw=%dKB\n",
-				cname[i],
-				(client == i) ? dedi_bw :
-				isomgr_clients[i].dedi_bw);
-		}
-		pr_info("revisit BW usage of iso clients\n");
-#else
 		pr_err("iso bandwidth %uKB is not available, client %s\n",
 			dedi_bw, cname[client]);
 		return false;
-#endif
 	}
 	return true;
 }

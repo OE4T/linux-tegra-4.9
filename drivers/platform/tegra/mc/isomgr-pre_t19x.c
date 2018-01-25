@@ -421,16 +421,9 @@ static bool other_iso_plat_realize(struct isomgr_client *cp)
 		BUG_ON(isomgr.avail_bw < 0);
 		SANITY_CHECK_AVAIL_BW();
 	} else {
-		/* Protection from first scavenge failure */
-		if (!cp->sleep_bw) {
-			delta_bw = cp->rsvd_bw - cp->margin_bw;
-			SANITY_CHECK_AVAIL_BW();
-			isomgr.sleep_bw += delta_bw;
-			BUG_ON(cp->sleep_bw);
-			cp->sleep_bw += delta_bw;
-		}
 		return false;
 	}
+
 	return true;
 }
 

@@ -96,8 +96,6 @@ struct isomgr isomgr = {
 	.avail_bw = CONFIG_TEGRA_ISOMGR_POOL_KB_PER_SEC,
 };
 
-static void isomgr_scatter(int client);
-
 /* get minimum MC frequency for client that can support this BW and LT */
 static inline u32 mc_min_freq(u32 ubw, u32 ult) /* in KB/sec and usec */
 {
@@ -271,60 +269,7 @@ static void unregister_iso_client(struct kref *kref)
 	update_mc_clock();
 	isomgr_unlock();
 
-	isomgr_scatter(client); /* share the excess */
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "exit");
-}
-
-static void isomgr_scatter(int client)
-{
-	struct isomgr_client *cp;
-	int i;
-
-	trace_tegra_isomgr_scatter(client, 0, cname[client], "enter");
-	for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; ++i) {
-		cp = &isomgr_clients[i];
-		if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
-			continue;
-		if (cp->renegotiate && i != client) {
-			int avail_bw = cp->real_bw + isomgr.avail_bw -
-					isomgr.sleep_bw;
-			if (avail_bw > cp->dedi_bw) {
-				trace_tegra_isomgr_scatter(client, 0,
-					cname[client], "scatter");
-				/* poke flexibles */
-				cp->renegotiate(cp->priv, avail_bw);
-			}
-		}
-		kref_put(&cp->kref, unregister_iso_client);
-	}
-	trace_tegra_isomgr_scatter(client, 0, cname[client], "exit");
-}
-
-static void isomgr_scavenge(enum tegra_iso_client client)
-{
-	struct isomgr_client *cp;
-	int i;
-
-	trace_tegra_isomgr_scavenge(client, 0, cname[client], "enter");
-	/* ask flexible clients above dedicated BW levels to pitch in */
-	for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; ++i) {
-		cp = &isomgr_clients[i];
-		if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
-			continue;
-		if (cp->renegotiate)
-			if (cp->real_bw > cp->dedi_bw && i != client &&
-			    !cp->realize) {
-				int avail_bw = cp->real_bw + isomgr.avail_bw -
-						isomgr.sleep_bw;
-				avail_bw = avail_bw < cp->dedi_bw ?
-					   cp->dedi_bw : avail_bw;
-				trace_tegra_isomgr_scavenge(client, 0,
-					cname[client], "renego");
-				cp->renegotiate(cp->priv, avail_bw);
-			}
-		kref_put(&cp->kref, unregister_iso_client);
-	}
-	trace_tegra_isomgr_scavenge(client, 0, cname[client], "exit");
 }
 
 static bool is_client_valid(enum tegra_iso_client client)
@@ -531,7 +476,6 @@ EXPORT_SYMBOL(tegra_isomgr_reserve);
 
 static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 {
-	bool retry = false;
 	u32 dvfs_latency = 0;
 	bool ret = 0;
 	struct isomgr_client *cp = (struct isomgr_client *) handle;
@@ -539,7 +483,6 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 
 	VALIDATE_HANDLE();
 
-retry:
 	isomgr_lock();
 	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
 		goto handle_unregistered;
@@ -550,27 +493,19 @@ retry:
 		return cp->lto;
 	}
 
-	if (!retry)
-		trace_tegra_isomgr_realize(handle, cname[client], "enter");
+	trace_tegra_isomgr_realize(handle, cname[client], "enter");
 
 	if (isomgr.ops->isomgr_plat_realize)
 		ret = isomgr.ops->isomgr_plat_realize(cp);
 
-	if (!ret) {
-		/* Protection from first scavenge failure */
-		/* This part of the code is only executed for pre t194*/
-		/* This will be removed later*/
-		kref_put(&cp->kref, unregister_iso_client);
-		isomgr_unlock();
-		isomgr_scavenge(client);
-		retry = true;
-		goto retry;
-	}
+	if (!ret)
+		goto out;
 
 	dvfs_latency = (u32)cp->lto;
 	cp->realize = false;
 	update_mc_clock();
 
+out:
 	kref_put(&cp->kref, unregister_iso_client);
 	isomgr_unlock();
 	trace_tegra_isomgr_realize(handle, cname[client],
@@ -611,7 +546,6 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 	trace_tegra_isomgr_set_margin(client, bw, wait, "enter");
 	VALIDATE_CLIENT();
 
-retry:
 	isomgr_lock();
 	cp = &isomgr_clients[client];
 	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
@@ -636,13 +570,6 @@ retry:
 			isomgr.avail_bw -= bw - high_bw;
 			cp->margin_bw = bw;
 		} else {
-			if (wait) {
-				kref_put(&cp->kref, unregister_iso_client);
-				isomgr_unlock();
-				wait = false;
-				isomgr_scavenge(client);
-				goto retry;
-			}
 			ret = -ENOMEM;
 			goto out;
 		}

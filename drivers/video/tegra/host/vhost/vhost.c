@@ -31,9 +31,8 @@ static inline int vhost_comm_init(struct platform_device *pdev,
 		channel_management_in_guest ?
 		1 : ARRAY_SIZE(queue_sizes);
 
-	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, num_queues,
-				queue_sizes, TEGRA_VHOST_QUEUE_CMD,
-				num_queues);
+	return tegra_gr_comm_init(pdev, num_queues, queue_sizes,
+			TEGRA_VHOST_QUEUE_CMD, num_queues);
 }
 
 static inline void vhost_comm_deinit(bool channel_management_in_guest)
@@ -43,9 +42,7 @@ static inline void vhost_comm_deinit(bool channel_management_in_guest)
 		channel_management_in_guest ?
 		1 : ARRAY_SIZE(queue_sizes);
 
-	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT,
-				  TEGRA_VHOST_QUEUE_CMD,
-				  num_queues);
+	tegra_gr_comm_deinit(TEGRA_VHOST_QUEUE_CMD, num_queues);
 }
 
 int vhost_virt_moduleid(int moduleid)
@@ -131,8 +128,7 @@ int vhost_sendrecv(struct tegra_vhost_cmd_msg *msg)
 	void *data = msg;
 	int err;
 
-	err = tegra_gr_comm_sendrecv(TEGRA_GR_COMM_CTX_CLIENT,
-				tegra_gr_comm_get_server_vmid(),
+	err = tegra_gr_comm_sendrecv(tegra_gr_comm_get_server_vmid(),
 				TEGRA_VHOST_QUEUE_CMD, &handle, &data, &size);
 	if (!err) {
 		WARN_ON(size < size_out);

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host Interrupt Management
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,8 +73,7 @@ static int vhost_intr_handler(void *dev_id)
 		void *handle;
 		size_t size;
 
-		err = tegra_gr_comm_recv(TEGRA_GR_COMM_CTX_CLIENT,
-					TEGRA_VHOST_QUEUE_INTR, &handle,
+		err = tegra_gr_comm_recv(TEGRA_VHOST_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
 		if (err == -ETIME)
 			continue;
@@ -204,8 +203,7 @@ static void vhost_intr_deinit(struct nvhost_intr *intr)
 			nvhost_syncpt_graphics_host_sp(&dev->syncpt));
 
 	msg.event = TEGRA_VHOST_EVENT_ABORT;
-	err = tegra_gr_comm_send(TEGRA_GR_COMM_CTX_CLIENT,
-				TEGRA_GR_COMM_ID_SELF, TEGRA_VHOST_QUEUE_INTR,
+	err = tegra_gr_comm_send(TEGRA_GR_COMM_ID_SELF, TEGRA_VHOST_QUEUE_INTR,
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	kthread_stop(ctx->syncpt_handler);

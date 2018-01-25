@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host cdma for HOST1X
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,8 +32,7 @@ static int vhost_pb_sendrecv(struct tegra_vhost_cmd_msg *msg, size_t size_in,
 	void *data = msg;
 	int err;
 
-	err = tegra_gr_comm_sendrecv(TEGRA_GR_COMM_CTX_CLIENT,
-				tegra_gr_comm_get_server_vmid(),
+	err = tegra_gr_comm_sendrecv(tegra_gr_comm_get_server_vmid(),
 				TEGRA_VHOST_QUEUE_PB, &handle, &data, &size);
 	if (!err) {
 		WARN_ON(size < size_out);

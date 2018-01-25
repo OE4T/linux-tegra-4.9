@@ -2576,7 +2576,7 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	}
 
 	if (tegra_pcie_try_link_l2(pcie))
-		dev_err(pcie->dev, "Link transition to L2 state failed\n");
+		dev_info(pcie->dev, "Link didn't transit to L2 state\n");
 
 	data = readl(pcie->appl_base + APPL_PINMUX);
 	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);

@@ -83,7 +83,8 @@ enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 	}
 }
 
-struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
+struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf,
+			      struct dma_buf_attachment **attachment)
 {
 	struct gk20a_dmabuf_priv *priv;
 
@@ -111,10 +112,12 @@ struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
 
 	priv->pin_count++;
 	nvgpu_mutex_release(&priv->lock);
+	*attachment = priv->attach;
 	return priv->sgt;
 }
 
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
+		    struct dma_buf_attachment *attachment,
 		    struct sg_table *sgt)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
@@ -125,6 +128,7 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 
 	nvgpu_mutex_acquire(&priv->lock);
 	WARN_ON(priv->sgt != sgt);
+	WARN_ON(priv->attach != attachment);
 	priv->pin_count--;
 	WARN_ON(priv->pin_count < 0);
 	dma_addr = sg_dma_address(priv->sgt->sgl);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,11 +41,13 @@ struct nvgpu_vm_area;
 
 struct nvgpu_os_buffer {
 	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attachment;
 	struct device *dev;
 };
 
 struct nvgpu_mapped_buf_priv {
 	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attachment;
 	struct sg_table *sgt;
 };
 

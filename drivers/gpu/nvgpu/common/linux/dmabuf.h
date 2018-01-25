@@ -48,8 +48,10 @@ struct gk20a_dmabuf_priv {
 	u64 buffer_id;
 };
 
-struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf);
+struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf,
+			      struct dma_buf_attachment **attachment);
 void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
+		    struct dma_buf_attachment *attachment,
 		    struct sg_table *sgt);
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);

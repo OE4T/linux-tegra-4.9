@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -150,7 +150,8 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 	 * If we find the mapping here then that means we have mapped it already
 	 * and the prior pin and get must be undone.
 	 */
-	gk20a_mm_unpin(os_buf->dev, os_buf->dmabuf, mapped_buffer->os_priv.sgt);
+	gk20a_mm_unpin(os_buf->dev, os_buf->dmabuf, os_buf->attachment,
+		       mapped_buffer->os_priv.sgt);
 	dma_buf_put(os_buf->dmabuf);
 
 	nvgpu_log(g, gpu_dbg_map,
@@ -184,21 +185,25 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct device *dev = dev_from_gk20a(g);
-	struct nvgpu_os_buffer os_buf = { dmabuf, dev };
+	struct nvgpu_os_buffer os_buf;
 	struct sg_table *sgt;
 	struct nvgpu_sgt *nvgpu_sgt = NULL;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
+	struct dma_buf_attachment *attachment;
 	u64 map_addr = 0ULL;
 	int err = 0;
 
 	if (flags & NVGPU_VM_MAP_FIXED_OFFSET)
 		map_addr = offset_align;
 
-	sgt = gk20a_mm_pin(dev, dmabuf);
+	sgt = gk20a_mm_pin(dev, dmabuf, &attachment);
 	if (IS_ERR(sgt)) {
 		nvgpu_warn(g, "Failed to pin dma_buf!");
 		return PTR_ERR(sgt);
 	}
+	os_buf.dmabuf = dmabuf;
+	os_buf.attachment = attachment;
+	os_buf.dev = dev;
 
 	if (gk20a_dmabuf_aperture(g, dmabuf) == APERTURE_INVALID) {
 		err = -EINVAL;
@@ -232,13 +237,14 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	}
 
 	mapped_buffer->os_priv.dmabuf = dmabuf;
+	mapped_buffer->os_priv.attachment = attachment;
 	mapped_buffer->os_priv.sgt    = sgt;
 
 	*gpu_va = mapped_buffer->addr;
 	return 0;
 
 clean_up:
-	gk20a_mm_unpin(dev, dmabuf, sgt);
+	gk20a_mm_unpin(dev, dmabuf, attachment, sgt);
 
 	return err;
 }
@@ -316,6 +322,7 @@ void nvgpu_vm_unmap_system(struct nvgpu_mapped_buf *mapped_buffer)
 	struct vm_gk20a *vm = mapped_buffer->vm;
 
 	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->os_priv.dmabuf,
+		       mapped_buffer->os_priv.attachment,
 		       mapped_buffer->os_priv.sgt);
 
 	dma_buf_put(mapped_buffer->os_priv.dmabuf);

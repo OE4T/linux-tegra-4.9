@@ -1,7 +1,7 @@
 /*
  * Color decompression engine support
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -984,6 +984,7 @@ __releases(&l->cde_app->mutex)
 	struct gk20a_comptags comptags;
 	struct nvgpu_os_buffer os_buf = {
 		compbits_scatter_buf,
+		NULL,
 		dev_from_gk20a(g)
 	};
 	u64 mapped_compbits_offset = 0;
@@ -999,6 +1000,7 @@ __releases(&l->cde_app->mutex)
 	int err, i;
 	const s16 compbits_kind = 0;
 	u32 submit_op;
+	struct dma_buf_attachment *attachment;
 
 	gk20a_dbg(gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
 		  compbits_byte_offset, scatterbuffer_byte_offset);
@@ -1093,7 +1095,8 @@ __releases(&l->cde_app->mutex)
 
 		gk20a_dbg(gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
 			  surface, scatter_buffer);
-		sgt = gk20a_mm_pin(dev_from_gk20a(g), compbits_scatter_buf);
+		sgt = gk20a_mm_pin(dev_from_gk20a(g), compbits_scatter_buf,
+				   &attachment);
 		if (IS_ERR(sgt)) {
 			nvgpu_warn(g,
 				   "mm_pin failed");
@@ -1106,7 +1109,7 @@ __releases(&l->cde_app->mutex)
 			WARN_ON(err);
 
 			gk20a_mm_unpin(dev_from_gk20a(g), compbits_scatter_buf,
-				       sgt);
+				       attachment, sgt);
 			if (err)
 				goto exit_unmap_surface;
 		}

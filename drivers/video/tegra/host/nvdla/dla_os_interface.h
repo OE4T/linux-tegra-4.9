@@ -1,7 +1,7 @@
 /*
  * NVDLA OS Interface
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -122,6 +122,7 @@
 #define DLA_ERR_INVALID_REGION		11
 #define DLA_ERR_PROCESSOR_BUSY		12
 #define DLA_ERR_RETRY			13
+#define DLA_ERR_TASK_STATUS_MISMATCH	14
 
 #define DLA_MSG_CMD_ERROR		1
 #define DLA_MSG_CMD_COMPLETE		2

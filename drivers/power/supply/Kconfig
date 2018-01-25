@@ -553,6 +553,16 @@ config AXP20X_POWER
 	  This driver provides support for the power supply features of
 	  AXP20x PMIC.
 
+config BATTERY_BQ40Z50
+        tristate "TI BQ40Z50 Fuel Gauge driver"
+        depends on I2C
+        select BATTERY_CHARGER_GAUGE_COMM
+        help
+          BQ40Z50 FG device incorporating impedance track technolody,
+	  is a fully integrated 1-series, 2-series, 3-series,
+	  4-series Li-Ion or Li-Polymer cell battery pack manager
+	  and protection.
+
 config BATTERY_CHARGER_GAUGE_COMM
 	bool "Battery charger and Fuel gauge interface layer"
 	help

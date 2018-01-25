@@ -78,3 +78,4 @@ obj-$(CONFIG_CHARGER_TPS65217)	+= tps65217_charger.o
 obj-$(CONFIG_AXP288_FUEL_GAUGE) += axp288_fuel_gauge.o
 obj-$(CONFIG_AXP288_CHARGER)	+= axp288_charger.o
 obj-$(CONFIG_CHARGER_ISL9238)	+= isl9238_charger.o
+obj-$(CONFIG_BATTERY_BQ40Z50)	+= bq40z50_battery.o

@@ -274,6 +274,10 @@
 		status = "okay";
 	};
 
+	axi2apb@2390000 {
+		status = "okay";
+	};
+
 	actmon@d230000 {
 		status = "okay";
 		mc_all {

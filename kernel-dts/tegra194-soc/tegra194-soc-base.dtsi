@@ -1568,7 +1568,60 @@
 			0x0 0xc300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;
 		status = "disabled";
-        };
+
+		vbus_en0_sfio_tristate_state: vbus_en0_oc_tristate {
+			usb_vbus_en0_pz1 {
+				nvidia,pins = "usb_vbus_en0_pz1";
+				nvidia,function = "usb";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		vbus_en1_sfio_tristate_state: vbus_en1_oc_tristate {
+			usb_vbus_en1_pz2 {
+				nvidia,pins = "usb_vbus_en1_pz2";
+				nvidia,function = "usb";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		vbus_en0_sfio_passthrough_state: vbus_en0_oc_passthrough {
+			usb_vbus_en0_pz1 {
+				nvidia,pins = "usb_vbus_en0_pz1";
+				nvidia,function = "usb";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		vbus_en1_sfio_passthrough_state: vbus_en1_oc_passthrough {
+			usb_vbus_en1_pz2 {
+				nvidia,pins = "usb_vbus_en1_pz2";
+				nvidia,function = "usb";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		vbus_en0_default_state: vbus_en0_default {
+			usb_vbus_en0_pz1 {
+				nvidia,pins = "usb_vbus_en0_pz1";
+				nvidia,function = "rsvd1";
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		vbus_en1_default_state: vbus_en1_default {
+			usb_vbus_en1_pz2 {
+				nvidia,pins = "usb_vbus_en1_pz2";
+				nvidia,function = "rsvd1";
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+			};
+		};
+	};
 
 	tegra_main_gpio: gpio@2200000 {
 		compatible = "nvidia,tegra194-gpio";

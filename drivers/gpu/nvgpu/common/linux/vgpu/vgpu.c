@@ -53,8 +53,7 @@ static inline int vgpu_comm_init(struct platform_device *pdev)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
 
-	return tegra_gr_comm_init(pdev, TEGRA_GR_COMM_CTX_CLIENT, 3,
-				queue_sizes, TEGRA_VGPU_QUEUE_CMD,
+	return tegra_gr_comm_init(pdev, 3, queue_sizes, TEGRA_VGPU_QUEUE_CMD,
 				ARRAY_SIZE(queue_sizes));
 }
 
@@ -62,8 +61,7 @@ static inline void vgpu_comm_deinit(void)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
 
-	tegra_gr_comm_deinit(TEGRA_GR_COMM_CTX_CLIENT, TEGRA_VGPU_QUEUE_CMD,
-			ARRAY_SIZE(queue_sizes));
+	tegra_gr_comm_deinit(TEGRA_VGPU_QUEUE_CMD, ARRAY_SIZE(queue_sizes));
 }
 
 int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
@@ -74,8 +72,7 @@ int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 	void *data = msg;
 	int err;
 
-	err = tegra_gr_comm_sendrecv(TEGRA_GR_COMM_CTX_CLIENT,
-				tegra_gr_comm_get_server_vmid(),
+	err = tegra_gr_comm_sendrecv(tegra_gr_comm_get_server_vmid(),
 				TEGRA_VGPU_QUEUE_CMD, &handle, &data, &size);
 	if (!err) {
 		WARN_ON(size < size_out);
@@ -152,8 +149,7 @@ static int vgpu_intr_thread(void *dev_id)
 		size_t size;
 		int err;
 
-		err = tegra_gr_comm_recv(TEGRA_GR_COMM_CTX_CLIENT,
-					TEGRA_VGPU_QUEUE_INTR, &handle,
+		err = tegra_gr_comm_recv(TEGRA_VGPU_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
 		if (err == -ETIME)
 			continue;
@@ -229,8 +225,7 @@ static void vgpu_remove_support(struct gk20a *g)
 		g->mm.remove_support(&g->mm);
 
 	msg.event = TEGRA_VGPU_EVENT_ABORT;
-	err = tegra_gr_comm_send(TEGRA_GR_COMM_CTX_CLIENT,
-				TEGRA_GR_COMM_ID_SELF, TEGRA_VGPU_QUEUE_INTR,
+	err = tegra_gr_comm_send(TEGRA_GR_COMM_ID_SELF, TEGRA_VGPU_QUEUE_INTR,
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	nvgpu_thread_stop(&priv->intr_handler);

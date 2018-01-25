@@ -95,8 +95,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 		}
 	}
 
-	handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
-					tegra_gr_comm_get_server_vmid(),
+	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
 					TEGRA_VGPU_QUEUE_CMD,
 					(void **)&mem_desc, &oob_size);
 	if (!handle) {

@@ -1121,8 +1121,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
-	handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
-			tegra_gr_comm_get_server_vmid(), TEGRA_VGPU_QUEUE_CMD,
+	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+			TEGRA_VGPU_QUEUE_CMD,
 			(void **)&oob, &oob_size);
 	if (!handle) {
 		err = -EINVAL;
@@ -1238,8 +1238,7 @@ int vgpu_gr_init_sm_id_table(struct gk20a *g)
 		return err;
 	}
 
-	handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
-					   tegra_gr_comm_get_server_vmid(),
+	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
 					   TEGRA_VGPU_QUEUE_CMD,
 					   (void **)&entry, &oob_size);
 	if (!handle)

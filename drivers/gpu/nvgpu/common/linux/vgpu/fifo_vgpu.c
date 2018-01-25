@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Fifo
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -499,8 +499,8 @@ static int vgpu_submit_runlist(struct gk20a *g, u64 handle, u8 runlist_id,
 	void *oob;
 	size_t size, oob_size;
 
-	oob_handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
-			tegra_gr_comm_get_server_vmid(), TEGRA_VGPU_QUEUE_CMD,
+	oob_handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+			TEGRA_VGPU_QUEUE_CMD,
 			&oob, &oob_size);
 	if (!oob_handle)
 		return -EINVAL;

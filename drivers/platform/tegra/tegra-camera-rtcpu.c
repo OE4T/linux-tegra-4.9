@@ -1282,6 +1282,14 @@ bool tegra_camrtc_is_rtcpu_alive(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_alive);
 
+void tegra_camrtc_flush_trace(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+
+	tegra_rtcpu_trace_flush(rtcpu->tracer);
+}
+EXPORT_SYMBOL(tegra_camrtc_flush_trace);
+
 static int tegra_camrtc_halt(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -220,11 +220,11 @@ static int camrtc_ivc_dbg_full_frame_xact(
 				timeout);
 		if (timeout <= 0) {
 			ret = timeout ?: -ETIMEDOUT;
-			goto out;
+			break;
 		}
 		if (tegra_ivc_channel_has_been_reset(ch)) {
 			ret = -ECONNRESET;
-			goto out;
+			break;
 		}
 
 		dev_dbg(&ch->dev, "rx msg\n");
@@ -232,7 +232,7 @@ static int camrtc_ivc_dbg_full_frame_xact(
 		ret = tegra_ivc_read_peek(&ch->ivc, resp, 0, resp_size);
 		if (ret < 0) {
 			dev_err(&ch->dev, "IVC read error: %d\n", ret);
-			goto out;
+			break;
 		}
 
 		tegra_ivc_read_advance(&ch->ivc);
@@ -244,6 +244,7 @@ static int camrtc_ivc_dbg_full_frame_xact(
 
 		dev_err(&ch->dev, "unexpected response\n");
 	}
+
 out:
 	tegra_ivc_channel_runtime_put(ch);
 unlock:
@@ -571,12 +572,24 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 		struct camrtc_dbg_request, run_mem_test_data.timeout,
 		struct camrtc_dbg_request, run_test_data.timeout);
 
+	ret = tegra_ivc_channel_runtime_get(ch);
+	if (ret < 0)
+		return ret;
+
 	req->data.run_test_data.timeout = ns;
 
 	ret = camrtc_ivc_dbg_full_frame_xact(ch, req, req_size,
 					resp, resp_size, timeout);
-	if (ret < 0)
-		return ret;
+
+	tegra_camrtc_flush_trace(camrtc_get_device(ch));
+
+	if (ret < 0) {
+		if (ret != -ECONNRESET) {
+			dev_info(&ch->dev, "rebooting after a failed test run");
+			(void)tegra_camrtc_reboot(&ch->dev);
+		}
+		goto runtime_put;
+	}
 
 	BUILD_BUG_ON_MISMATCH(
 		struct camrtc_dbg_response, run_mem_test_data.timeout,
@@ -592,6 +605,9 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 		seq_write(file, result, nul - result);
 	else
 		seq_write(file, result, result_size);
+
+runtime_put:
+	tegra_ivc_channel_runtime_put(ch);
 
 	return ret;
 }

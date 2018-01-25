@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(
 	struct device *dev,
 	struct camrtc_device_group *camera_devices);
 int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer);
+void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer);
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer);
 
 #endif

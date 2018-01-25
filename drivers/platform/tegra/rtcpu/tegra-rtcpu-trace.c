@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "soc/tegra/camrtc-trace.h"
+
 #include <linux/completion.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
@@ -41,8 +43,6 @@
 #include "rtcpu/device-group.h"
 #endif
 
-#include "soc/tegra/camrtc-trace.h"
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/tegra_rtcpu.h>
 #include <trace/events/freertos.h>
@@ -60,6 +60,7 @@
 struct tegra_rtcpu_trace {
 	struct device *dev;
 	struct device_node *of_node;
+	struct mutex lock;
 
 	/* memory */
 	void *trace_memory;
@@ -992,11 +993,12 @@ static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
 	tracer->copy_last_event = *last_event;
 }
 
-static void rtcpu_trace_worker(struct work_struct *work)
+void tegra_rtcpu_trace_flush(struct tegra_rtcpu_trace *tracer)
 {
-	struct tegra_rtcpu_trace *tracer;
+	if (tracer == NULL)
+		return;
 
-	tracer = container_of(work, struct tegra_rtcpu_trace, work.work);
+	mutex_lock(&tracer->lock);
 
 	/* invalidate the cache line for the pointers */
 	dma_sync_single_for_cpu(tracer->dev, tracer->dma_handle_pointers,
@@ -1005,6 +1007,18 @@ static void rtcpu_trace_worker(struct work_struct *work)
 	/* process exceptions and events */
 	rtcpu_trace_exceptions(tracer);
 	rtcpu_trace_events(tracer);
+
+	mutex_unlock(&tracer->lock);
+}
+EXPORT_SYMBOL(tegra_rtcpu_trace_flush);
+
+static void rtcpu_trace_worker(struct work_struct *work)
+{
+	struct tegra_rtcpu_trace *tracer;
+
+	tracer = container_of(work, struct tegra_rtcpu_trace, work.work);
+
+	tegra_rtcpu_trace_flush(tracer);
 
 	/* reschedule */
 	schedule_delayed_work(&tracer->work, tracer->work_interval_jiffies);
@@ -1149,6 +1163,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 		return NULL;
 
 	tracer->dev = dev;
+	mutex_init(&tracer->lock);
 
 	/* Get the trace memory */
 	ret = rtcpu_trace_setup_memory(tracer);

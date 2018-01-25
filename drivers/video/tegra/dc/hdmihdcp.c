@@ -892,9 +892,7 @@ static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
 	int i;
 	u8 *p;
 	u8 buf[RCVR_ID_LIST_SIZE];
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	unsigned char nonce[HDCP_NONCE_SIZE];
-#endif
 	struct hdcp_verify_vprime_param verify_vprime_param;
 	int e = 0;
 	uint64_t *pkt = NULL;
@@ -912,13 +910,14 @@ static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
 	if (!pkt || !hdcp_context)
 		goto exit;
 
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
-	e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
-	if (e) {
-		nvhdcp_err("Error getting srm signature!\n");
-		goto exit;
+	if (tegra_dc_is_nvdisplay()) {
+		e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
+		if (e) {
+			nvhdcp_err("Error getting srm signature!\n");
+			goto exit;
+		}
 	}
-#endif
+
 	memset(&verify_vprime_param, 0x0,
 		sizeof(struct hdcp_verify_vprime_param));
 	if (!repeater) {

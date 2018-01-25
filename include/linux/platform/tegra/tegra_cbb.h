@@ -51,6 +51,7 @@
 #define  OFF_ERRLOGGER_2_ERRLOG5_0              0x00000128
 #define  OFF_ERRLOGGER_2_STALLEN_0              0x00000138
 
+#define DMAAPB_X_RAW_INTERRUPT_STATUS	0x2ec
 
 #define CBBNOC_BIT(_bit_) (1ULL << (_bit_))
 #define CBBNOC_MASK(_msb_, _lsb_) \
@@ -76,7 +77,6 @@
 #define get_cbb_routeid_targflow(_x_)		CBBNOC_EXTRACT(_x_, 19, 16)
 #define get_cbb_routeid_targsubrange(_x_)	CBBNOC_EXTRACT(_x_, 15, 9)
 #define get_cbb_routeid_seqid(_x_)		CBBNOC_EXTRACT(_x_, 8, 0)
-
 
 struct tegra_cbbnoc_errors {
 	char *errcode;
@@ -124,6 +124,8 @@ struct tegra_cbb_errlog_record {
 	struct          tegra_cbbnoc_errors *errors;
 	struct		tegra_lookup_noc_aperture *noc_aperture;
 	int             max_noc_aperture;
+	u64		*axi2abp_bases;
+	int		apb_bridge_cnt;
 };
 
 struct tegra_lookup_noc_aperture {

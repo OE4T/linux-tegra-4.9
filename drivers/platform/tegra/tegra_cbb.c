@@ -28,6 +28,7 @@
 #include <linux/device.h>
 #include <linux/io.h>
 #include <linux/of_irq.h>
+#include <linux/of_address.h>
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <soc/tegra/chip-id.h>
@@ -139,6 +140,29 @@ static char *tegra_cbb_routeid_targflow[] = {
 	"RESERVED"							/*0xF*/
 };
 
+static char *tegra_axi2apb_errors[] = {
+	"SFIFONE - Status FIFO Not Empty interrupt",
+	"SFIFOF - Status FIFO Full interrupt",
+	"TIM - Timer(Timeout) interrupt",
+	"SLV - SLVERR interrupt",
+	"NULL",
+	"ERBF - Early response buffer Full interrupt",
+	"NULL",
+	"RDFIFOF - Read Response FIFO Full interrupt",
+	"WRFIFOF - Write Response FIFO Full interrupt",
+	"CH0DFIFOF - Ch0 Data FIFO Full interrupt",
+	"CH1DFIFOF - Ch1 Data FIFO Full interrupt",
+	"CH2DFIFOF - Ch2 Data FIFO Full interrupt",
+	"UAT - Unsupported alignment type error",
+	"UBS - Unsupported burst size error",
+	"UBE - Unsupported Byte Enable error",
+	"UBT - Unsupported burst type error",
+	"BFS - Block Firewall security error",
+	"ARFS - Address Range Firewall security error",
+	"CH0RFIFOF - Ch0 Request FIFO Full interrupt",
+	"CH1RFIFOF - Ch1 Request FIFO Full interrupt",
+	"CH2RFIFOF - Ch2 Request FIFO Full interrupt"
+};
 
 static void print_cbbnoc_err(struct seq_file *file, const char *fmt, ...)
 {
@@ -272,6 +296,15 @@ static void print_prot(struct seq_file *file, u32 prot)
 			prot, priv_str, secure_str, data_str);
 }
 
+static unsigned int tegra_axi2apb_errstatus(void __iomem *addr)
+{
+	unsigned int error_status;
+
+	error_status = readl(addr+DMAAPB_X_RAW_INTERRUPT_STATUS);
+	writel(0xFFFFFFFF, addr+DMAAPB_X_RAW_INTERRUPT_STATUS);
+	return error_status;
+}
+
 
 static void print_errlog5(struct seq_file *file, u32 errlog5)
 {
@@ -317,11 +350,11 @@ static void print_errlog3_4(struct seq_file *file, u32 errlog3, u32 errlog4,
 	addr = (addr << 32) | errlog3;
 
 	/*
-	 * if errlog3[7]="1", then it's a joker entry.
+	 * if errlog4[7]="1", then it's a joker entry.
 	 * joker entry is a rare phenomenon and address is not reliable.
 	 * debug should be done using the routeid information alone.
 	 */
-	if (errlog3 & 0x80)
+	if (errlog4 & 0x80)
 		print_cbbnoc_err(file, "\t  debug using routeid alone as below"
 				" address is a joker entry and not-reliable.");
 
@@ -331,13 +364,12 @@ static void print_errlog3_4(struct seq_file *file, u32 errlog3, u32 errlog4,
 	res = locate_resource(&iomem_resource, addr);
 	if (res == NULL)
 		print_cbbnoc_err(file, "\t  Address\t\t: 0x%llx"
-					" (unknown device)\n", addr);
+				" (unknown device)\n", addr);
 	else
 		print_cbbnoc_err(file, "\t  Address\t\t: "
 				"0x%llx -- %s + 0x%llx\n", addr, res->name,
 				addr - res->start);
 }
-
 
 /*
  *  Get RouteId from ErrLog1+ErrLog2 registers and fetch values of
@@ -367,9 +399,21 @@ static void print_errlog1_2(struct seq_file *file, u32 errlog1, u32 errlog2,
 	print_cbbnoc_err(file, "\t  SeqId\t\t\t: %d\n", seqid);
 }
 
-
+/*
+ * Print transcation type, error code and description from ErrLog0 for all
+ * errors. For NOC slave errors, all relevant error info is printed using
+ * ErrLog0 only. But additional information is printed for errors from
+ * APB slaves because for them:
+ *  - All errors are logged as SLV(slave) errors in errlog0 due to APB having
+ *    only single bit pslverr to report all errors.
+ *  - Exact cause is printed by reading DMAAPB_X_RAW_INTERRUPT_STATUS register.
+ *  - The driver prints information showing AXI2APB bridge and exact error
+ *    only if there is error in any AXI2APB slave.
+ *  - There is still no way to disambiguate a DEC error from SLV error type.
+ */
 static void print_errlog0(struct seq_file *file, u32 errlog0,
-				struct tegra_cbbnoc_errors *cbb_errors)
+			struct tegra_cbbnoc_errors *cbb_errors,
+			u64 *axi2abp_bases, int apb_bridge_cnt)
 {
 	struct tegra_noc_packet_header hdr;
 
@@ -387,6 +431,33 @@ static void print_errlog0(struct seq_file *file, u32 errlog0,
 			cbb_errors[hdr.errcode].src);
 	print_cbbnoc_err(file, "\t  Error Description\t: %s\n",
 			cbb_errors[hdr.errcode].type);
+
+	if (!strcmp(cbb_errors[hdr.errcode].errcode, "SLV")) {
+		int i = 0, j = 0;
+		int max_axi2apb_err = ARRAY_SIZE(tegra_axi2apb_errors);
+		u32 bus_status = 0;
+
+		/* For all SLV errors, read DMAAPB_X_RAW_INTERRUPT_STATUS
+		 * register to get error status for all AXI2APB bridges and
+		 * print only if a bit set for any bridge due to error in
+		 * a APB slave. For other NOC slaves, no bit will be set.
+		 * So, below line won't get printed.
+		 */
+
+		for (i = 0; i < apb_bridge_cnt; i++) {
+			bus_status =
+			tegra_axi2apb_errstatus((void __iomem *)axi2abp_bases[i]);
+
+			if (bus_status) {
+				for(j = 0; j < max_axi2apb_err; j++) {
+					if ( bus_status & (1<<j) )
+						print_cbbnoc_err(file, "\t  "
+						"AXI2APB_%d bridge error: %s"
+						, i, tegra_axi2apb_errors[j]);
+				}
+			}
+		}
+	}
 	print_cbbnoc_err(file, "\t  Packet header Lock\t: %d\n", hdr.lock);
 	print_cbbnoc_err(file, "\t  Packet header Len1\t: %d\n", hdr.len1);
 	if (hdr.format)
@@ -433,7 +504,8 @@ static void print_errloggerX_info(
 	}
 
 	print_cbbnoc_err(file, "\tErrLog0\t\t\t: 0x%x\n", errlog->errlog0);
-	print_errlog0(file, errlog->errlog0, errlog->errors);
+	print_errlog0(file, errlog->errlog0, errlog->errors,
+				errlog->axi2abp_bases, errlog->apb_bridge_cnt);
 
 	print_cbbnoc_err(file, "\tErrLog1\t\t\t: 0x%x\n", errlog->errlog1);
 	print_cbbnoc_err(file, "\tErrLog2\t\t\t: 0x%x\n", errlog->errlog2);
@@ -441,8 +513,9 @@ static void print_errloggerX_info(
 
 	print_cbbnoc_err(file, "\tErrLog3\t\t\t: 0x%x\n", errlog->errlog3);
 	print_cbbnoc_err(file, "\tErrLog4\t\t\t: 0x%x\n", errlog->errlog4);
-	print_errlog3_4(file, errlog->errlog3, errlog->errlog4, &noc_trans_info,
-				errlog->noc_aperture, errlog->max_noc_aperture);
+	print_errlog3_4(file, errlog->errlog3, errlog->errlog4,
+				&noc_trans_info, errlog->noc_aperture,
+				errlog->max_noc_aperture);
 
 	print_cbbnoc_err(file, "\tErrLog5\t\t\t: 0x%x\n", errlog->errlog5);
 	print_errlog5(file, errlog->errlog5);
@@ -543,6 +616,11 @@ static struct tegra_cbb_bridge_data tegra194_cbbnocsce_data = {
 	.errors = cbbnoc_errors,
 	.noc_aperture = t194_lookup_noc_aperture,
 	.max_noc_aperture = ARRAY_SIZE(t194_lookup_noc_aperture)
+};
+
+static const struct of_device_id axi2apb_match[] = {
+	{ .compatible = "nvidia,tegra194-AXI2APB-bridge", },
+	{},
 };
 
 static struct of_device_id tegra_cbb_match[] = {
@@ -700,6 +778,8 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	const struct tegra_cbb_bridge_data *bdata;
 	struct serr_hook *callback;
 	unsigned long flags;
+	struct device_node *np;
+	int i = 0;
 	int err = 0;
 
 	/*
@@ -732,6 +812,30 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	errlog->vaddr = devm_ioremap_resource(&pdev->dev, res_base);
 	if (IS_ERR(errlog->vaddr))
 		return -EPERM;
+
+	np = of_find_matching_node(NULL, axi2apb_match);
+	if (!np) {
+		dev_info(&pdev->dev, "No match found for axi2apb\n");
+		return -ENOENT;
+	}
+	errlog->apb_bridge_cnt =
+		(of_property_count_elems_of_size(np, "reg", sizeof(u32)))/4;
+
+	errlog->axi2abp_bases = devm_kzalloc(&pdev->dev,
+			sizeof(u64)*errlog->apb_bridge_cnt, GFP_KERNEL);
+	if (errlog->axi2abp_bases == NULL)
+		return -ENOMEM;
+
+	for (i = 0; i < errlog->apb_bridge_cnt; i++) {
+		void __iomem *base = of_iomap(np, i);
+
+		if (!base) {
+			dev_err(&pdev->dev,
+					"failed to map axi2apb range\n");
+			return -ENOENT;
+		}
+		errlog->axi2abp_bases[i] = (u64)base;
+	}
 
 	errlog->name      = bdata->name;
 	errlog->errvld    = bdata->errvld;

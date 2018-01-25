@@ -20,6 +20,7 @@ gr_fmts = [ r'http://git-master/r/(\d+)',
             r'https://git-master/r/(\d+)',
             r'https://git-master/r/#/c/(\d+)/',
             r'https://git-master.nvidia.com/r/(\d+)',
+            r'https://git-master.nvidia.com/r/#/c/(\d+)',
             r'https://git-master.nvidia.com/r/#/c/(\d+)/' ]
 
 # The user to use. May be overridden but the default comes from the environment.

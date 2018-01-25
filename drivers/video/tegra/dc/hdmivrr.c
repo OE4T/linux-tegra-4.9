@@ -1,7 +1,7 @@
 /*
  * hdmivrr.c: hdmi vrr interface.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -735,10 +735,8 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	if (!vrr)
 		return;
 
-#ifdef VRR_AUTHENTICATION_ENABLED
-	if (!vrr->capability)
+	if (tegra_dc_is_vrr_authentication_enabled() && !vrr->capability)
 		return;
-#endif
 
 	/* Check whether VRR modes were already added */
 	list_for_each(pos, head) {
@@ -808,19 +806,19 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 	/* TODO: Remove this conditional
 	 * once we have support for authentication
 	 * */
-#ifdef VRR_AUTHENTICATION_ENABLED
-	status = tegra_hdmivrr_is_vrr_capable(hdmi);
-	if (status)
-		goto fail;
+	if (tegra_dc_is_vrr_authentication_enabled()) {
+		status = tegra_hdmivrr_is_vrr_capable(hdmi);
+		if (status)
+			goto fail;
 
-	status = tegra_hdmivrr_page_init(hdmi);
-	if (status)
-		goto fail;
+		status = tegra_hdmivrr_page_init(hdmi);
+		if (status)
+			goto fail;
 
-	status = tegra_hdmivrr_authentication(hdmi, vrr);
-	if (status)
-		goto fail;
-#endif
+		status = tegra_hdmivrr_authentication(hdmi, vrr);
+		if (status)
+			goto fail;
+	}
 
 	vrr->capability = 1;
 	goto exit;

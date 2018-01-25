@@ -2875,9 +2875,8 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 
 /* FIXME Bug: 1740464
  * */
-#ifdef VRR_AUTHENTICATION_ENABLED
-		capability = vrr->capability;
-#endif
+		if (tegra_dc_is_vrr_authentication_enabled())
+			capability = vrr->capability;
 
 		if (capability) {
 			mode->upper_margin += 2;

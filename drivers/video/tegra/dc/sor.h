@@ -17,8 +17,6 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 
-#define VRR_AUTHENTICATION_ENABLED (!CONFIG_TEGRA_NVDISPLAY)
-
 #include <soc/tegra/chip-id.h>
 #include <linux/clk/tegra.h>
 #include <linux/reset.h>
@@ -276,6 +274,11 @@ void __attribute__((weak)) tegra_sor_clk_switch_setup_t19x(
 void __attribute__((weak)) tegra_sor_program_fpga_clk_mux_t19x(
 				struct tegra_dc_sor_data *sor);
 u32 __attribute__((weak)) tegra_sor_yuv420_8bpc_pixel_depth_t19x(void);
+
+static inline bool tegra_dc_is_vrr_authentication_enabled(void)
+{
+	return (!tegra_dc_is_nvdisplay());
+}
 
 static inline u32 nv_sor_head_state0(u32 i)
 {

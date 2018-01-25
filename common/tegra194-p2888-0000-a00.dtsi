@@ -106,6 +106,8 @@
 	pcie_c3_rp {
 		status = "okay";
 
+		nvidia,pex-wake = <&tegra_main_gpio TEGRA194_MAIN_GPIO(L, 2)
+					GPIO_ACTIVE_HIGH>;
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
 
 		phys = <&p2u_7>;

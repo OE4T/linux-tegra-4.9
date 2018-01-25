@@ -1,7 +1,7 @@
 /*
  * null_or.c: dc null or interface.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -23,17 +23,18 @@
 #include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
+#include "dsi.h"
 #include "null_or.h"
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#define INT_GIC_BASE                    0
-#define INT_PRI_BASE                    (INT_GIC_BASE + 32)
-#define INT_SEC_BASE                    (INT_PRI_BASE + 32)
-#define INT_TRI_BASE                    (INT_SEC_BASE + 32)
-#define INT_QUAD_BASE                   (INT_TRI_BASE + 32)
-#define INT_QUINT_BASE                  (INT_QUAD_BASE + 32)
-#define INT_DISPLAY_GENERAL            (INT_TRI_BASE + 9)
-#define INT_DPAUX                       (INT_QUINT_BASE + 31)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#define INT_GIC_BASE		0
+#define INT_PRI_BASE		(INT_GIC_BASE + 32)
+#define INT_SEC_BASE		(INT_PRI_BASE + 32)
+#define INT_TRI_BASE		(INT_SEC_BASE + 32)
+#define INT_QUAD_BASE		(INT_TRI_BASE + 32)
+#define INT_QUINT_BASE		(INT_QUAD_BASE + 32)
+#define INT_DISPLAY_GENERAL	(INT_TRI_BASE + 9)
+#define INT_DPAUX		(INT_QUINT_BASE + 31)
 #endif
 
 #define DRIVER_NAME "null_or"
@@ -50,10 +51,6 @@ static struct resource all_disp1_resources[] = {
 	},
 	{
 		.name	= "irq",
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		.start	= INT_DISPLAY_GENERAL,
-		.end	= INT_DISPLAY_GENERAL,
-#endif
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
@@ -64,27 +61,18 @@ static struct resource all_disp1_resources[] = {
 	},
 	{
 		.name	= "ganged_dsia_regs",
-		.start	= TEGRA_DSI_BASE,
-		.end	= TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	{
 		.name	= "ganged_dsib_regs",
-		.start	= TEGRA_DSIB_BASE,
-		.end	= TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	{
 		.name   = "split_dsia_regs",
-		.start  = TEGRA_DSI_BASE,
-		.end    = TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 	{
 		.name   = "split_dsib_regs",
-		.start  = TEGRA_DSIB_BASE,
-		.end    = TEGRA_DSIB_BASE + TEGRA_DSIB_SIZE - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 	{
@@ -94,7 +82,7 @@ static struct resource all_disp1_resources[] = {
 		.flags  = IORESOURCE_MEM,
 	},
 	{
-		.name   = "split_disd_regs",
+		.name   = "split_dsid_regs",
 		.start  = TEGRA_DSID_BASE,
 		.end    = TEGRA_DSID_BASE + TEGRA_DSID_SIZE - 1,
 		.flags  = IORESOURCE_MEM,
@@ -105,12 +93,9 @@ static struct resource all_disp1_resources[] = {
 		.end    = TEGRA_DSI_PADCTL_BASE + TEGRA_DSI_PADCTL_SIZE - 1,
 		.flags  = IORESOURCE_MEM,
 	},
-#endif
 	{
 		/* init with dispa reg base*/
 		.name	= "dsi_regs",
-		.start	= TEGRA_DSI_BASE,
-		.end	= TEGRA_DSI_BASE + TEGRA_DSI_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	{
@@ -139,10 +124,6 @@ static struct resource all_disp1_resources[] = {
 	},
 	{
 		.name	= "irq_dp",
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		.start	= INT_DPAUX,
-		.end	= INT_DPAUX,
-#endif
 		.flags	= IORESOURCE_IRQ,
 	},
 
@@ -229,21 +210,21 @@ static bool tegra_dc_null_mode_filter(const struct tegra_dc *dc,
 /* setup pixel clock for the current mode, return mode's adjusted pclk. */
 static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
-	static char *pllds[] =
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		{"pll_d", "plld2", "plld3"};
-#else
-		{"pll_d_out0", "pll_d2"};
-#endif
+	static const char * const pllds_nvdisplay[] = {"pll_d",
+						       "plld2", "plld3"};
+	static const char * const pllds[] = {"pll_d_out0", "pll_d2"};
 	const char *clk_name = pllds[dc->ndev->id];
-	struct clk *parent_clk =
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_disp_clk_get(&dc->ndev->dev, clk_name);
-#else
-		clk_get_sys(NULL, clk_name);
-#endif
+	struct clk *parent_clk = NULL;
 	struct clk *base_clk;
 	long rate;
+
+	if (tegra_dc_is_nvdisplay()) {
+		clk_name = pllds_nvdisplay[dc->ndev->id];
+		tegra_disp_clk_get(&dc->ndev->dev, clk_name);
+	} else {
+		clk_name = pllds[dc->ndev->id];
+		clk_get_sys(NULL, clk_name);
+	}
 
 	if ((clk == NULL) || (parent_clk == NULL))
 		return 0;
@@ -335,6 +316,51 @@ static int tegra_dc_add_fakedisp_resources(struct platform_device *ndev)
 				all_disp1_resources[0].end  = r->end;
 			} else
 				pr_info("Error - First variable is not fbmem\n");
+		}
+		if (!strcmp(all_disp1_resources[i].name, "irq") &&
+		    tegra_dc_is_t21x()) {
+			all_disp1_resources[i].start = INT_DISPLAY_GENERAL;
+			all_disp1_resources[i].end = INT_DISPLAY_GENERAL;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "irq_dp") &&
+		    tegra_dc_is_t21x()) {
+			all_disp1_resources[i].start = INT_DPAUX;
+			all_disp1_resources[i].end = INT_DPAUX;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "ganged_dsia_regs") ||
+		    !strcmp(all_disp1_resources[i].name, "split_dsia_regs")) {
+			all_disp1_resources[i].start = tegra_dc_get_dsi_base();
+			all_disp1_resources[i].end = tegra_dc_get_dsi_base() +
+						     TEGRA_DSI_SIZE - 1;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "ganged_dsib_regs") ||
+		    !strcmp(all_disp1_resources[i].name, "split_dsib_regs")) {
+			all_disp1_resources[i].start = tegra_dc_get_dsib_base();
+			all_disp1_resources[i].end = tegra_dc_get_dsib_base() +
+						     TEGRA_DSIB_SIZE - 1;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "split_dsic_regs") &&
+		    tegra_dc_is_nvdisplay()) {
+			all_disp1_resources[i].start = TEGRA_DSIC_BASE;
+			all_disp1_resources[i].end = TEGRA_DSIC_BASE +
+						     TEGRA_DSIC_SIZE - 1;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "split_dsid_regs") &&
+		    tegra_dc_is_nvdisplay()) {
+			all_disp1_resources[i].start = TEGRA_DSID_BASE;
+			all_disp1_resources[i].end = TEGRA_DSID_BASE +
+						     TEGRA_DSID_SIZE - 1;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "dsi_pad_reg") &&
+		    tegra_dc_is_nvdisplay()) {
+			all_disp1_resources[i].start = TEGRA_DSI_PADCTL_BASE;
+			all_disp1_resources[i].end = TEGRA_DSI_PADCTL_BASE +
+						     TEGRA_DSI_PADCTL_SIZE - 1;
+		}
+		if (!strcmp(all_disp1_resources[i].name, "dsi_regs")) {
+			all_disp1_resources[i].start = tegra_dc_get_dsi_base();
+			all_disp1_resources[i].end = tegra_dc_get_dsi_base() +
+						     TEGRA_DSI_SIZE - 1;
 		}
 	}
 	ndev->resource = all_disp1_resources;

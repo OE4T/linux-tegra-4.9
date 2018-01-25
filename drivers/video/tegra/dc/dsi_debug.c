@@ -1,7 +1,7 @@
 /*
  * dsi_debug.c: dsi debug interface.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -39,7 +39,7 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	struct tegra_dc *dc;
 	unsigned long i = 0, j = 0;
 	u32 col = 0;
-	u32 base[MAX_DSI_INSTANCE] = {TEGRA_DSI_BASE, TEGRA_DSIB_BASE};
+	u32 base[] = {tegra_dc_get_dsi_base(), tegra_dc_get_dsib_base()};
 
 	dc = ((struct tegra_dc_dsi_data *) s->private)->dc;
 	dsi = (struct tegra_dc_dsi_data *) dc->out_data;

@@ -1,7 +1,7 @@
 /*
  * dsi.c: Functions implementing tegra dsi interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -4502,8 +4502,45 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	if (!IS_ERR_OR_NULL(of_dev))
 		dsi->regs = of_dev->data;
 
-	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
+	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 :
+						tegra_dc_get_max_dsi_instance();
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
+
+	dsi->base = kzalloc(tegra_dc_get_max_dsi_instance() *
+			    sizeof(void __iomem *), GFP_KERNEL);
+	if (!dsi->base) {
+		err = -ENOMEM;
+		goto err_free_dsi;
+	}
+
+	dsi->dsi_clk = kzalloc(tegra_dc_get_max_dsi_instance() *
+			       sizeof(struct clk *), GFP_KERNEL);
+	if (!dsi->dsi_clk) {
+		err = -ENOMEM;
+		goto err_free_dsi_base;
+	}
+
+	dsi->dsi_lp_clk = kzalloc(tegra_dc_get_max_dsi_instance() *
+				  sizeof(struct clk *), GFP_KERNEL);
+	if (!dsi->dsi_lp_clk) {
+		err = -ENOMEM;
+		goto err_free_dsi_clk;
+	}
+
+	dsi->dsi_reset = kzalloc(tegra_dc_get_max_dsi_instance() *
+				 sizeof(struct reset_control *), GFP_KERNEL);
+	if (!dsi->dsi_reset) {
+		err = -ENOMEM;
+		goto err_free_dsi_lp_clk;
+	}
+
+	dsi->dsi_io_padctrl = kzalloc(tegra_dc_get_max_dsi_instance() *
+				      sizeof(struct tegra_dsi_padctrl *),
+				      GFP_KERNEL);
+	if (!dsi->dsi_io_padctrl) {
+		err = -ENOMEM;
+		goto err_free_dsi_reset;
+	}
 
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (is_simple_dsi(dc->out->dsi))
@@ -4514,13 +4551,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		if (!base) {
 			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");
 			err = -ENOENT;
-			goto err_free_dsi;
+			goto err_free_dsi_io_padctrl;
 		}
 
 		dsi_pdata = dc->pdata->default_out->dsi;
 		if (!dsi_pdata) {
 			dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
-			goto err_free_dsi;
+			goto err_free_dsi_io_padctrl;
 		}
 
 		dsi_clk = dsi_pdata->dsi_instance ?
@@ -4640,7 +4677,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	if (!dsi->info.ganged_type && !dsi->info.dsi_csi_loopback &&
 		(dsi->info.controller_vs >= DSI_VS_1)) {
 		int i;
-		for (i = 0; i < MAX_DSI_INSTANCE; i++) {
+		for (i = 0; i < tegra_dc_get_max_dsi_instance(); i++) {
 			if ((dsi->info.dpd_dsi_pads & DSI_DPD_EN(i)) &&
 				dsi->dsi_io_padctrl[i])
 				padctrl_power_disable(dsi->dsi_io_padctrl[i]);
@@ -4673,6 +4710,16 @@ err_dsi_clk_put:
 		if (dsi->dsi_reset[i])
 			reset_control_put(dsi->dsi_reset[i]);
 	}
+err_free_dsi_io_padctrl:
+	kfree(dsi->dsi_io_padctrl);
+err_free_dsi_reset:
+	kfree(dsi->dsi_reset);
+err_free_dsi_lp_clk:
+	kfree(dsi->dsi_lp_clk);
+err_free_dsi_clk:
+	kfree(dsi->dsi_clk);
+err_free_dsi_base:
+	kfree(dsi->base);
 err_free_dsi:
 	kfree(dsi);
 

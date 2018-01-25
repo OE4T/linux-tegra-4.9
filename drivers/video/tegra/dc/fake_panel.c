@@ -157,7 +157,8 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		return -EINVAL;
 	}
 
-	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
+	dsi->max_instances = dc->out->dsi->ganged_type ?
+					tegra_dc_get_max_dsi_instance() : 1;
 
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
@@ -200,7 +201,8 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	/* to avoid misconfigurations when switching between fake DSI types */
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
 
-	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
+	dsi->max_instances = is_simple_dsi(dc->out->dsi) ?
+					1 : tegra_dc_get_max_dsi_instance();
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
 
 	for (i = 0; i < dsi->max_instances; i++) {

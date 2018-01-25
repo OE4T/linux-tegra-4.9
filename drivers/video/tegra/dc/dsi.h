@@ -1,7 +1,7 @@
 /*
  * dsi.h: Functions implementing tegra dsi interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,12 +24,7 @@
 #include <soc/tegra/sysedp.h>
 #endif
 #include "dsi_padctrl.h"
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-#define MAX_DSI_INSTANCE	4
-#else
-#define MAX_DSI_INSTANCE	2
-#endif
+#include "dc_priv.h"
 
 #define DSI_PADCTRL_INDEX	4
 
@@ -92,15 +87,15 @@ struct dsi_regs {
 
 struct tegra_dc_dsi_data {
 	struct tegra_dc *dc;
-	void __iomem *base[MAX_DSI_INSTANCE];
+	void __iomem **base;
 	void __iomem *pad_control_base;
 
 	struct clk *dc_clk;
-	struct clk *dsi_clk[MAX_DSI_INSTANCE];
+	struct clk **dsi_clk;
 	struct clk *dsi_fixed_clk;
-	struct clk *dsi_lp_clk[MAX_DSI_INSTANCE];
+	struct clk **dsi_lp_clk;
 	struct clk *dsc_clk;
-	struct reset_control *dsi_reset[MAX_DSI_INSTANCE];
+	struct reset_control **dsi_reset;
 	bool clk_ref;
 
 	struct mutex lock;
@@ -151,7 +146,7 @@ struct tegra_dc_dsi_data {
 	u32 device_shutdown;
 
 	struct sysedp_consumer *sysedpc;
-	struct padctrl *dsi_io_padctrl[MAX_DSI_INSTANCE];
+	struct padctrl **dsi_io_padctrl;
 
 	struct tegra_dsi_padctrl *pad_ctrl;
 	struct tegra_prod *prod_list;
@@ -467,6 +462,37 @@ T_TASURE_PS_DEFAULT, clk_ps, T_TASURE_HW_INC))
 (DSI_CONVERT_T_PHY_PS_TO_T_PHY( \
 T_TAGET_PS_DEFAULT, clk_ps, T_TAGET_HW_INC))
 
+static inline u32 tegra_dc_get_dsi_base(void)
+{
+	if (tegra_dc_is_nvdisplay())
+		return 0x15300000;
+	else
+		return 0x54300000;
+}
+
+#define TEGRA_DSI_SIZE			SZ_256K
+
+#define TEGRA_VIC_BASE			0x54340000
+#define TEGRA_VIC_SIZE			SZ_256K
+
+static inline u32 tegra_dc_get_dsib_base(void)
+{
+	if (tegra_dc_is_nvdisplay())
+		return 0x15400000;
+	else
+		return 0x54400000;
+}
+
+#define TEGRA_DSIB_SIZE			SZ_256K
+
+/* Used only on Nvdisplay */
+#define TEGRA_DSIC_BASE			0x15900000
+#define TEGRA_DSIC_SIZE			SZ_256K
+#define TEGRA_DSID_BASE			0x15940000
+#define TEGRA_DSID_SIZE			SZ_256K
+#define TEGRA_DSI_PADCTL_BASE		0x15880000
+#define TEGRA_DSI_PADCTL_SIZE		SZ_64K
+
 struct tegra_dsi_out_ops {
 	/* initialize output.  dsi clocks are not on at this point */
 	int (*init)(struct tegra_dc_dsi_data *);
@@ -521,6 +547,14 @@ struct sanity_status {
 	u32 reserved2:1;
 	u32 reserved3:1;
 };
+
+static inline u32 tegra_dc_get_max_dsi_instance(void)
+{
+	if (tegra_dc_is_nvdisplay())
+		return 4;
+	else
+		return 2;
+}
 
 #ifdef CONFIG_DEBUG_FS
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi);

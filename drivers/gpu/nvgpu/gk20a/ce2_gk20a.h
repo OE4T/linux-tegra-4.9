@@ -36,9 +36,8 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 #define NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK 0xffffffff
 #define NVGPU_CE_UPPER_ADDRESS_OFFSET_MASK 0xff
 
-#define NVGPU_CE_COMMAND_BUF_SIZE     8192
-#define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF 256
-#define NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING 8
+#define NVGPU_CE_MAX_INFLIGHT_JOBS 32
+#define NVGPU_CE_MAX_COMMAND_BUFF_BYTES_PER_KICKOFF 256
 
 /* dma launch_flags */
 enum {
@@ -106,11 +105,11 @@ struct gk20a_gpu_ctx {
 
 	/* cmd buf mem_desc */
 	struct nvgpu_mem cmd_buf_mem;
+	struct gk20a_fence *postfences[NVGPU_CE_MAX_INFLIGHT_JOBS];
 
 	struct nvgpu_list_node list;
 
 	u32 cmd_buf_read_queue_offset;
-	u32 cmd_buf_end_queue_offset;
 };
 
 static inline struct gk20a_gpu_ctx *

@@ -103,39 +103,15 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 }
 
 /* static CE app api */
-static void gk20a_ce_free_command_buffer_stored_fence(struct gk20a_gpu_ctx *ce_ctx)
+static void gk20a_ce_put_fences(struct gk20a_gpu_ctx *ce_ctx)
 {
-	u32 cmd_buf_index;
-	u32 cmd_buf_read_offset;
-	u32 fence_index;
-	u32 *cmd_buf_cpu_va;
+	u32 i;
 
-	for (cmd_buf_index = 0;
-		cmd_buf_index < ce_ctx->cmd_buf_end_queue_offset;
-		cmd_buf_index++) {
-		cmd_buf_read_offset = (cmd_buf_index *
-			(NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF / sizeof(u32)));
-
-		/* at end of command buffer has gk20a_fence for command buffer sync */
-		fence_index = (cmd_buf_read_offset +
-			((NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF / sizeof(u32)) -
-			(NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING / sizeof(u32))));
-
-		cmd_buf_cpu_va = (u32 *)ce_ctx->cmd_buf_mem.cpu_va;
-
-		/* 0 is treated as invalid pre-sync */
-		if (cmd_buf_cpu_va[fence_index]) {
-			struct gk20a_fence * ce_cmd_buf_fence_in = NULL;
-
-			memcpy((void *)&ce_cmd_buf_fence_in,
-					(void *)(cmd_buf_cpu_va + fence_index),
-					sizeof(struct gk20a_fence *));
-			gk20a_fence_put(ce_cmd_buf_fence_in);
-			/* Reset the stored last pre-sync */
-			memset((void *)(cmd_buf_cpu_va + fence_index),
-					0,
-					NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING);
-		}
+	for (i = 0; i < NVGPU_CE_MAX_INFLIGHT_JOBS; i++) {
+		struct gk20a_fence **fence = &ce_ctx->postfences[i];
+		if (*fence)
+			gk20a_fence_put(*fence);
+		*fence = NULL;
 	}
 }
 
@@ -148,8 +124,8 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 
 	nvgpu_mutex_acquire(&ce_ctx->gpu_ctx_mutex);
 
-	if (ce_ctx->cmd_buf_mem.cpu_va) {
-		gk20a_ce_free_command_buffer_stored_fence(ce_ctx);
+	if (nvgpu_mem_is_valid(&ce_ctx->cmd_buf_mem)) {
+		gk20a_ce_put_fences(ce_ctx);
 		nvgpu_dma_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
 	}
 
@@ -449,8 +425,6 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	ce_ctx->g = g;
 
 	ce_ctx->cmd_buf_read_queue_offset = 0;
-	ce_ctx->cmd_buf_end_queue_offset =
-		(NVGPU_CE_COMMAND_BUF_SIZE / NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF);
 
 	ce_ctx->vm = g->mm.ce.vm;
 
@@ -491,8 +465,11 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 		goto end;
 	}
 
-	/* allocate command buffer (4096 should be more than enough) from sysmem*/
-	err = nvgpu_dma_alloc_map_sys(ce_ctx->vm, NVGPU_CE_COMMAND_BUF_SIZE, &ce_ctx->cmd_buf_mem);
+	/* allocate command buffer from sysmem */
+	err = nvgpu_dma_alloc_map_sys(ce_ctx->vm,
+			NVGPU_CE_MAX_INFLIGHT_JOBS *
+			NVGPU_CE_MAX_COMMAND_BUFF_BYTES_PER_KICKOFF,
+			&ce_ctx->cmd_buf_mem);
 	 if (err) {
 		nvgpu_err(g,
 			"ce: could not allocate command buffer for CE context");

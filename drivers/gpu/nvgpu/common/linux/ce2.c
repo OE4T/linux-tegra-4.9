@@ -54,7 +54,6 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 	u64 cmd_buf_gpu_va = 0;
 	u32 methodSize;
 	u32 cmd_buf_read_offset;
-	u32 fence_index;
 	u32 dma_copy_class;
 	struct nvgpu_gpfifo gpfifo;
 	struct nvgpu_fence fence = {0,0};
@@ -87,38 +86,22 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 	nvgpu_mutex_acquire(&ce_ctx->gpu_ctx_mutex);
 
-	ce_ctx->cmd_buf_read_queue_offset %= ce_ctx->cmd_buf_end_queue_offset;
+	ce_ctx->cmd_buf_read_queue_offset %= NVGPU_CE_MAX_INFLIGHT_JOBS;
 
 	cmd_buf_read_offset = (ce_ctx->cmd_buf_read_queue_offset *
-			(NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF / sizeof(u32)));
-
-	/* at end of command buffer has gk20a_fence for command buffer sync */
-	fence_index = (cmd_buf_read_offset +
-			((NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF / sizeof(u32)) -
-			(NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING / sizeof(u32))));
-
-	if (sizeof(struct gk20a_fence *) > NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING) {
-		ret = -ENOMEM;
-		goto noop;
-	}
+			(NVGPU_CE_MAX_COMMAND_BUFF_BYTES_PER_KICKOFF / sizeof(u32)));
 
 	cmd_buf_cpu_va = (u32 *)ce_ctx->cmd_buf_mem.cpu_va;
 
-	/* 0 is treated as invalid pre-sync */
-	if (cmd_buf_cpu_va[fence_index]) {
-		struct gk20a_fence * ce_cmd_buf_fence_in = NULL;
+	if (ce_ctx->postfences[ce_ctx->cmd_buf_read_queue_offset]) {
+		struct gk20a_fence **prev_post_fence =
+			&ce_ctx->postfences[ce_ctx->cmd_buf_read_queue_offset];
 
-		memcpy((void *)&ce_cmd_buf_fence_in,
-				(void *)(cmd_buf_cpu_va + fence_index),
-				sizeof(struct gk20a_fence *));
-		ret = gk20a_fence_wait(g, ce_cmd_buf_fence_in,
+		ret = gk20a_fence_wait(g, *prev_post_fence,
 				       gk20a_get_gr_idle_timeout(g));
 
-		gk20a_fence_put(ce_cmd_buf_fence_in);
-		/* Reset the stored last pre-sync */
-		memset((void *)(cmd_buf_cpu_va + fence_index),
-				0,
-				NVGPU_CE_MAX_COMMAND_BUFF_SIZE_FOR_TRACING);
+		gk20a_fence_put(*prev_post_fence);
+		*prev_post_fence = NULL;
 		if (ret)
 			goto noop;
 	}
@@ -130,7 +113,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 					dst_buf,
 					size,
 					&cmd_buf_cpu_va[cmd_buf_read_offset],
-					NVGPU_CE_MAX_COMMAND_BUFF_SIZE_PER_KICKOFF,
+					NVGPU_CE_MAX_COMMAND_BUFF_BYTES_PER_KICKOFF,
 					payload,
 					gk20a_get_valid_launch_flags(g, launch_flags),
 					request_operation,
@@ -154,10 +137,8 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 					&ce_cmd_buf_fence_out, false, NULL);
 
 		if (!ret) {
-			memcpy((void *)(cmd_buf_cpu_va + fence_index),
-					(void *)&ce_cmd_buf_fence_out,
-					sizeof(struct gk20a_fence *));
-
+			ce_ctx->postfences[ce_ctx->cmd_buf_read_queue_offset] =
+				ce_cmd_buf_fence_out;
 			if (gk20a_fence_out) {
 				gk20a_fence_get(ce_cmd_buf_fence_out);
 				*gk20a_fence_out = ce_cmd_buf_fence_out;

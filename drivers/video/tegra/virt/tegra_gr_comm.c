@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Communication Framework
  *
- * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -88,7 +88,7 @@ enum {
 	NUM_MEMPOOL_PROP
 };
 
-static struct gr_comm_context contexts[NUM_CONTEXTS];
+static struct gr_comm_context comm_context;
 static u32 server_vmid;
 
 u32 tegra_gr_comm_get_server_vmid(void)
@@ -97,13 +97,13 @@ u32 tegra_gr_comm_get_server_vmid(void)
 }
 EXPORT_SYMBOL(tegra_gr_comm_get_server_vmid);
 
-static void free_mempool(u32 virt_ctx, u32 queue_start, u32 queue_end)
+static void free_mempool(u32 queue_start, u32 queue_end)
 {
 	int i;
 
 	for (i = queue_start; i < queue_end; ++i) {
 		struct gr_comm_queue *queue =
-					&contexts[virt_ctx].queue[i];
+					&comm_context.queue[i];
 		struct gr_comm_mempool_context *tmp = queue->mempool_ctx;
 
 		if (!tmp)
@@ -120,13 +120,13 @@ static void free_mempool(u32 virt_ctx, u32 queue_start, u32 queue_end)
 	}
 }
 
-static void free_ivc(u32 virt_ctx, u32 queue_start, u32 queue_end)
+static void free_ivc(u32 queue_start, u32 queue_end)
 {
 	int i;
 
 	for (i = queue_start; i < queue_end; ++i) {
 		struct gr_comm_queue *queue =
-					&contexts[virt_ctx].queue[i];
+					&comm_context.queue[i];
 		struct gr_comm_ivc_context *tmp = queue->ivc_ctx;
 
 		if (!tmp)
@@ -209,7 +209,7 @@ static irqreturn_t ivc_intr_thread(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int setup_mempool(u32 virt_ctx, struct platform_device *pdev,
+static int setup_mempool(struct platform_device *pdev,
 		u32 queue_start, u32 queue_end)
 {
 	struct device *dev = &pdev->dev;
@@ -225,7 +225,7 @@ static int setup_mempool(u32 virt_ctx, struct platform_device *pdev,
 			struct device_node *hv_dn;
 			struct gr_comm_mempool_context *ctx;
 			struct gr_comm_queue *queue =
-					&contexts[virt_ctx].queue[i];
+					&comm_context.queue[i];
 
 			hv_dn = of_parse_phandle(dev->of_node, name,
 						PROP_MEMPOOL_NODE);
@@ -261,11 +261,11 @@ static int setup_mempool(u32 virt_ctx, struct platform_device *pdev,
 	return 0;
 
 fail:
-	free_mempool(virt_ctx, queue_start, queue_end);
+	free_mempool(queue_start, queue_end);
 	return ret;
 }
 
-static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
+static int setup_ivc(struct platform_device *pdev,
 		u32 queue_start, u32 queue_end)
 {
 	struct device *dev = &pdev->dev;
@@ -281,7 +281,7 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 			struct device_node *hv_dn;
 			struct gr_comm_ivc_context *ctx;
 			struct gr_comm_queue *queue =
-					&contexts[virt_ctx].queue[i];
+					&comm_context.queue[i];
 			int err;
 
 			hv_dn = of_parse_phandle(dev->of_node, name,
@@ -343,32 +343,30 @@ static int setup_ivc(u32 virt_ctx, struct platform_device *pdev,
 	return 0;
 
 fail:
-	free_ivc(virt_ctx, queue_start, queue_end);
+	free_ivc(queue_start, queue_end);
 	return ret;
 }
 
-int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
+int tegra_gr_comm_init(struct platform_device *pdev, u32 elems,
 		const size_t *queue_sizes, u32 queue_start, u32 num_queues)
 {
-	struct gr_comm_context *ctx;
 	int i = 0, j;
 	int ret = 0;
 	struct device *dev = &pdev->dev;
 	u32 queue_end = queue_start + num_queues;
 
-	if (virt_ctx >= NUM_CONTEXTS || queue_end > NUM_QUEUES)
+	if (queue_end > NUM_QUEUES)
 		return -EINVAL;
 
-	ctx = &contexts[virt_ctx];
 	for (i = queue_start; i < queue_end; ++i) {
 		char name[30];
 		size_t size = queue_sizes[i - queue_start];
-		struct gr_comm_queue *queue = &ctx->queue[i];
+		struct gr_comm_queue *queue = &comm_context.queue[i];
 
 		if (queue->valid)
 			return -EEXIST;
 
-		snprintf(name, sizeof(name), "gr-virt-comm-%d-%d", virt_ctx, i);
+		snprintf(name, sizeof(name), "gr-virt-comm-%d", i);
 		queue->element_cache =
 			kmem_cache_create(name,
 				sizeof(struct gr_comm_element) + size, 0,
@@ -405,13 +403,13 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 		queue->valid = true;
 	}
 
-	ret = setup_ivc(virt_ctx, pdev, queue_start, queue_end);
+	ret = setup_ivc(pdev, queue_start, queue_end);
 	if (ret) {
 		dev_err(dev, "invalid IVC DT data\n");
 		goto fail;
 	}
 
-	ret = setup_mempool(virt_ctx, pdev, queue_start, queue_end);
+	ret = setup_mempool(pdev, queue_start, queue_end);
 	if (ret) {
 		dev_err(dev, "mempool setup failed\n");
 		goto fail;
@@ -422,7 +420,7 @@ int tegra_gr_comm_init(struct platform_device *pdev, u32 virt_ctx, u32 elems,
 fail:
 	for (i = queue_start; i < queue_end; ++i) {
 		struct gr_comm_element *tmp, *next;
-		struct gr_comm_queue *queue = &ctx->queue[i];
+		struct gr_comm_queue *queue = &comm_context.queue[i];
 
 		if (queue->element_cache) {
 			list_for_each_entry_safe(tmp, next, &queue->free,
@@ -434,27 +432,24 @@ fail:
 		}
 	}
 
-	free_ivc(virt_ctx, queue_start, queue_end);
-	free_mempool(virt_ctx, queue_start, queue_end);
+	free_ivc(queue_start, queue_end);
+	free_mempool(queue_start, queue_end);
 	dev_err(dev, "%s insufficient memory\n", __func__);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_gr_comm_init);
 
-void tegra_gr_comm_deinit(u32 virt_ctx, u32 queue_start, u32 num_queues)
+void tegra_gr_comm_deinit(u32 queue_start, u32 num_queues)
 {
-	struct gr_comm_context *ctx;
 	struct gr_comm_element *tmp, *next;
 	u32 queue_end = queue_start + num_queues;
 	int i;
 
-	if (virt_ctx >= NUM_CONTEXTS || queue_end > NUM_QUEUES)
+	if (queue_end > NUM_QUEUES)
 		return;
 
-	ctx = &contexts[virt_ctx];
-
 	for (i = queue_start; i < queue_end; ++i) {
-		struct gr_comm_queue *queue = &ctx->queue[i];
+		struct gr_comm_queue *queue = &comm_context.queue[i];
 
 		if (!queue->valid)
 			continue;
@@ -471,24 +466,22 @@ void tegra_gr_comm_deinit(u32 virt_ctx, u32 queue_start, u32 num_queues)
 		kmem_cache_destroy(queue->element_cache);
 		queue->valid = false;
 	}
-	free_ivc(virt_ctx, queue_start, queue_end);
-	free_mempool(virt_ctx, queue_start, queue_end);
+	free_ivc(queue_start, queue_end);
+	free_mempool(queue_start, queue_end);
 }
 EXPORT_SYMBOL(tegra_gr_comm_deinit);
 
-int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
+int tegra_gr_comm_send(u32 peer, u32 index, void *data,
 		size_t size)
 {
-	struct gr_comm_context *ctx;
 	struct gr_comm_ivc_context *ivc_ctx;
 	struct gr_comm_queue *queue;
 	int ret;
 
-	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
+	if (index >= NUM_QUEUES)
 		return -EINVAL;
 
-	ctx = &contexts[virt_ctx];
-	queue = &ctx->queue[index];
+	queue = &comm_context.queue[index];
 	if (!queue->valid)
 		return -EINVAL;
 
@@ -516,19 +509,17 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 }
 EXPORT_SYMBOL(tegra_gr_comm_send);
 
-int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
+int tegra_gr_comm_recv(u32 index, void **handle, void **data,
 		size_t *size, u32 *sender)
 {
-	struct gr_comm_context *ctx;
 	struct gr_comm_queue *queue;
 	struct gr_comm_element *element;
 	int err;
 
-	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
+	if (index >= NUM_QUEUES)
 		return -EINVAL;
 
-	ctx = &contexts[virt_ctx];
-	queue = &ctx->queue[index];
+	queue = &comm_context.queue[index];
 	if (!queue->valid)
 		return -EINVAL;
 
@@ -550,26 +541,24 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 EXPORT_SYMBOL(tegra_gr_comm_recv);
 
 /* NOTE: tegra_gr_comm_recv() should not be running concurrently */
-int tegra_gr_comm_sendrecv(u32 virt_ctx, u32 peer, u32 index, void **handle,
+int tegra_gr_comm_sendrecv(u32 peer, u32 index, void **handle,
 			void **data, size_t *size)
 {
-	struct gr_comm_context *ctx;
 	struct gr_comm_queue *queue;
 	int err = 0;
 
-	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
+	if (index >= NUM_QUEUES)
 		return -EINVAL;
 
-	ctx = &contexts[virt_ctx];
-	queue = &ctx->queue[index];
+	queue = &comm_context.queue[index];
 	if (!queue->valid)
 		return -EINVAL;
 
 	mutex_lock(&queue->resp_lock);
-	err = tegra_gr_comm_send(virt_ctx, peer, index, *data, *size);
+	err = tegra_gr_comm_send(peer, index, *data, *size);
 	if (err)
 		goto fail;
-	err = tegra_gr_comm_recv(virt_ctx, index, handle, data, size, NULL);
+	err = tegra_gr_comm_recv(index, handle, data, size, NULL);
 	if (unlikely(err))
 		dev_err(&queue->ivc_ctx->pdev->dev,
 			"tegra_gr_comm_recv: timeout for response!\n");
@@ -590,16 +579,16 @@ void tegra_gr_comm_release(void *handle)
 }
 EXPORT_SYMBOL(tegra_gr_comm_release);
 
-void *tegra_gr_comm_oob_get_ptr(u32 virt_ctx, u32 peer, u32 index,
+void *tegra_gr_comm_oob_get_ptr(u32 peer, u32 index,
 				void **ptr, size_t *size)
 {
 	struct gr_comm_mempool_context *mempool_ctx;
 	struct gr_comm_queue *queue;
 
-	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
+	if (index >= NUM_QUEUES)
 		return NULL;
 
-	queue = &contexts[virt_ctx].queue[index];
+	queue = &comm_context.queue[index];
 	if (!queue->valid)
 		return NULL;
 

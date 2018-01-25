@@ -285,6 +285,12 @@ static int pva_queue_set_attr(struct pva_private *priv, void *arg)
 	int val = ioctl_queue_attr->val;
 	int err = 0;
 
+	/* Only root is allowed to update queue attributes */
+	if (current_uid().val != 0) {
+		err = -EINVAL;
+		goto end;
+	}
+
 	/* Sanity checks for the task heaader */
 	if (id >= QUEUE_ATTR_MAX) {
 		err = -ENOSYS;

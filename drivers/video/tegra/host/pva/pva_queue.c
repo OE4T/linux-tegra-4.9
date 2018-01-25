@@ -41,14 +41,48 @@
 #include "hw_cfg_pva.h"
 #include "t194/hardware_t194.h"
 
+#define ACTION_LIST_FENCE_SIZE 13
+#define ACTION_LIST_STATUS_OPERATION_SIZE 11
+#define ACTION_LIST_TERMINATION_SIZE 1
+
+/*
+ * The worst-case input action buffer size:
+ * - Prefences trigger a word memory operation (size 13 bytes)
+ * - Input status reads trigger a half-word memory operation (size 11 bytes)
+ * - Input action list includes a single status write for
+ *   timestamping purpose (size 11 bytes)
+ * - The action list is terminated by a null action (1 byte)
+ */
+#define INPUT_ACTION_BUFFER_SIZE ( \
+	ALIGN(PVA_MAX_PREFENCES * ACTION_LIST_FENCE_SIZE + \
+	      PVA_MAX_INPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
+	      ACTION_LIST_STATUS_OPERATION_SIZE + \
+	      ACTION_LIST_TERMINATION_SIZE, 256))
+
+/*
+ * The worst-case output action buffer size:
+ * - Postfences trigger a word memory operation (size 13 bytes)
+ * - Output status write triggers a half-word memory operation (size 11 bytes)
+ * - Output action list includes a single status write for
+ *   timestamping purpose (size 11 bytes)
+ * - Output action list includes syncpoint and semaphore increments
+ * - The action list is terminated by a null action (1 byte)
+ */
+#define OUTPUT_ACTION_BUFFER_SIZE ( \
+	ALIGN(PVA_MAX_POSTFENCES * ACTION_LIST_FENCE_SIZE + \
+	      PVA_MAX_OUTPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
+	      ACTION_LIST_STATUS_OPERATION_SIZE + \
+	      ACTION_LIST_FENCE_SIZE  * 2 + \
+	      ACTION_LIST_TERMINATION_SIZE, 256))
+
 struct pva_hw_task {
 	struct pva_task task;
 	struct pva_action_list preaction_list;
 	struct pva_action_list postaction_list;
 	struct pva_task_parameter_array input_parameter_array[PVA_PARAM_LAST];
 	struct pva_task_parameter_array output_parameter_array[PVA_PARAM_LAST];
-	u8 preactions[ACTION_BUFFER_SIZE];
-	u8 postactions[ACTION_BUFFER_SIZE];
+	u8 preactions[INPUT_ACTION_BUFFER_SIZE];
+	u8 postactions[OUTPUT_ACTION_BUFFER_SIZE];
 	struct pva_task_parameter_desc input_surface_desc;
 	struct pva_task_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter_desc output_surface_desc;
@@ -564,6 +598,8 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 	hw_task->preaction_list.offset = offsetof(struct pva_hw_task, preactions);
 	hw_task->preaction_list.length = ptr;
 
+	nvhost_dbg_info("preaction buffer alloted size %d: used size %d",
+				INPUT_ACTION_BUFFER_SIZE, ptr);
 	return 0;
 }
 
@@ -641,6 +677,10 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	hw_task->postaction_list.offset = offsetof(struct pva_hw_task,
 						   postactions);
 	hw_task->postaction_list.length = ptr;
+
+	nvhost_dbg_info("postaction buffer alloted size %d: used size %d",
+				OUTPUT_ACTION_BUFFER_SIZE, ptr);
+
 }
 
 static void pva_task_write_output_surfaces(struct pva_submit_task *task,

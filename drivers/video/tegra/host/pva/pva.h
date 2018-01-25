@@ -54,11 +54,6 @@ struct pva_version_info {
 #define MAX_PVA_TASK_COUNT	16
 
 /**
- * Action buffer size
- */
-#define ACTION_BUFFER_SIZE	128
-
-/**
  * Minium PVA frequency (10MHz)
  */
 #define MIN_PVA_FREQUENCY	10000000

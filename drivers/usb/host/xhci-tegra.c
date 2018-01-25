@@ -220,6 +220,12 @@ static struct usb_device_id disable_usb_persist_quirk_list[] = {
 	{ }  /* terminating entry must be last */
 };
 
+static struct usb_device_id max_burst_quirk_list[] = {
+	/* Seagate BUP Slim B */
+	{ USB_DEVICE_SS(0x0bc2, 0xab26) },
+	{ }  /* terminating entry must be last */
+};
+
 static int usb_match_speed(struct usb_device *udev,
 			    const struct usb_device_id *id)
 {
@@ -4213,6 +4219,28 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 	return xhci_update_device(hcd, udev);
 }
 
+int tegra_xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
+				struct usb_host_endpoint *ep)
+{
+	struct usb_endpoint_descriptor *desc = &ep->desc;
+
+	if ((udev->speed >= USB_SPEED_SUPER) &&
+		((desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) ==
+			USB_DIR_OUT)) {
+		const struct usb_device_id *id;
+
+		for (id = max_burst_quirk_list; id->match_flags; id++) {
+			if (usb_match_device(udev, id) &&
+					usb_match_speed(udev, id)) {
+				ep->ss_ep_comp.bMaxBurst = 15;
+				break;
+			}
+		}
+	}
+
+	return xhci_add_endpoint(hcd, udev, ep);
+}
+
 static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
 {
 	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
@@ -4511,6 +4539,7 @@ static int __init tegra_xusb_init(void)
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
 	tegra_xhci_hc_driver.irq = tegra_xhci_irq;
 	tegra_xhci_hc_driver.update_device = tegra_xhci_update_device;
+	tegra_xhci_hc_driver.add_endpoint = tegra_xhci_add_endpoint;
 	tegra_xhci_hc_driver.alloc_dev = tegra_xhci_alloc_dev;
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
 	tegra_xhci_hc_driver.hcd_reinit = tegra_xhci_hcd_reinit;

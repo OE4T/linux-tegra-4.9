@@ -2274,6 +2274,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 				__func__, ret);
 			return ret;
 		}
+		device_init_wakeup(pcie->dev, true);
 	}
 
 	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,

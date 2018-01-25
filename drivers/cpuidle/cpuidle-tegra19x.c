@@ -1,7 +1,7 @@
 /*
  * drivers/cpuidle/cpuidle-tegra19x.c
  *
- * Copyright (C) 2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2017-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 #include <linux/psci.h>
 #include <linux/version.h>
 
+#include <linux/of_gpio.h>
 #include <asm/cpuidle.h>
 #include <asm/suspend.h>
 #include <asm/cputype.h> /* cpuid */
@@ -229,6 +230,8 @@ static void resume_all_device_irqs(void)
 	}
 }
 
+static u64 dbg_gpio;
+
 static struct dentry *cpuidle_debugfs_node;
 
 static int forced_idle_write(void *data, u64 val)
@@ -262,6 +265,9 @@ static int forced_idle_write(void *data, u64 val)
 	tick_program_event(sleep, true);
 
 	pmstate = forced_idle_state;
+	if (dbg_gpio)
+		gpio_set_value(dbg_gpio, 1);
+
 	tegra_mce_update_cstate_info(forced_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == T19x_CPUIDLE_C7_STATE)
@@ -273,6 +279,8 @@ static int forced_idle_write(void *data, u64 val)
 
 	sleep = ktime_sub(ktime_get(), time);
 	time = ktime_sub(sleep, interval);
+	if (dbg_gpio)
+		gpio_set_value(dbg_gpio, 0);
 	trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
 
 	local_irq_enable();
@@ -438,6 +446,11 @@ static int cpuidle_debugfs_init(void)
 
 	dfs_file = debugfs_create_file("deepest_cg_state", 0644,
 		cpuidle_debugfs_node, NULL, &cg_state_fops);
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_u64("dbg_gpio", 0644, cpuidle_debugfs_node,
+					&dbg_gpio);
 	if (!dfs_file)
 		goto err_out;
 

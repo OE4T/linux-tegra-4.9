@@ -1777,9 +1777,7 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 {
 	int i = 0, ret = 0;
 	bool hdr_present = false;
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	bool imp_tag_present = false;
-#endif
 	bool nvdisp_win_csc_present = false;
 
 	for (i = 0; i < nr_user_data; i++) {
@@ -1813,8 +1811,10 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			}
 			break;
 		}
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG:
+			if (!tegra_dc_is_nvdisplay())
+				return -EINVAL;
+
 			if (imp_tag_present) {
 				dev_err(&data->ext->dc->ndev->dev,
 					"only one imp_tag/flip is allowed\n");
@@ -1826,8 +1826,8 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 					flip_user_data[i].imp_tag.session_id;
 			data->imp_dirty = true;
 			break;
-#endif
-		/* Handled in the TEGRA_DC_EXT_FLIP4 ioctl context */
+
+			/* Handled in the TEGRA_DC_EXT_FLIP4 ioctl context */
 		case TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT:
 		case TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO:
 			break;
@@ -2826,11 +2826,11 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		bypass = !!(args.flags & TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		if (!!(user->ext->dc->mode.vmode & FB_VMODE_YUV_MASK) !=
-		    bypass)
-			return -EINVAL;
-#endif
+		if (tegra_dc_is_t21x()) {
+			if (!!(user->ext->dc->mode.vmode & FB_VMODE_YUV_MASK) !=
+					bypass)
+				return -EINVAL;
+		}
 
 		if (bypass != user->ext->dc->yuv_bypass)
 			user->ext->dc->yuv_bypass_dirty = true;
@@ -2922,9 +2922,11 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 	case TEGRA_DC_EXT_GET_IMP_USER_INFO:
 	{
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_ext_imp_user_info *info;
 		int ret = 0;
+
+		if (!tegra_dc_is_nvdisplay())
+			return -EINVAL;
 
 		info = kzalloc(sizeof(*info), GFP_KERNEL);
 		if (!info)
@@ -2948,9 +2950,6 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		kfree(info);
 		return ret;
-#else
-		return -EINVAL;
-#endif
 	}
 
 #ifdef CONFIG_TEGRA_ISOMGR

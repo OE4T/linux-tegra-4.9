@@ -1,7 +1,7 @@
 /*
  * panel-s-wuxga-7-0.c: Panel driver for s-wuxga-7-0 panel.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/regulator/consumer.h>
 
 #include "../dc.h"
+#include "../dc_priv.h"
 #include "board.h"
 #include "board-panel.h"
 
@@ -223,18 +224,17 @@ static int dsi_s_wuxga_7_0_bl_notify(struct device *dev, int brightness)
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
 	if (dc_dev) {
-		if (brightness <= PRISM_THRESHOLD)
-#ifdef CONFIG_TEGRA_NVDISPLAY
-			tegra_sd_enbl_dsbl_prism(dc_dev, false);
-#else
-			nvsd_enbl_dsbl_prism(dc_dev, false);
-#endif
-		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
-#ifdef CONFIG_TEGRA_NVDISPLAY
-			tegra_sd_enbl_dsbl_prism(dc_dev, true);
-#else
-			nvsd_enbl_dsbl_prism(dc_dev, true);
-#endif
+		if (brightness <= PRISM_THRESHOLD) {
+			if (tegra_dc_is_nvdisplay())
+				tegra_sd_enbl_dsbl_prism(dc_dev, false);
+			else
+				nvsd_enbl_dsbl_prism(dc_dev, false);
+		} else if (brightness > PRISM_THRESHOLD + HYST_VAL) {
+			if (tegra_dc_is_nvdisplay())
+				tegra_sd_enbl_dsbl_prism(dc_dev, true);
+			else
+				nvsd_enbl_dsbl_prism(dc_dev, true);
+		}
 	}
 
 	cur_sd_brightness = atomic_read(&sd_brightness);

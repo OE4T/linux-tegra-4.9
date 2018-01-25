@@ -7,6 +7,7 @@ ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/dc/panel
 obj-y += nvdisp.o
 obj-y += nvdisp_win.o
 obj-y += nvdisp_stub.o
+obj-y += nvdisp_sd.o
 obj-y += nvdisp_cursor.o
 obj-y += nvdisp_config.o
 obj-y += nvdisp_sd.o

@@ -8,9 +8,7 @@ ccflags-$(CONFIG_TRUSTED_LITTLE_KERNEL) += -I$(overlay)/security/tlk_driver
 endif
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra
 obj-y += dc_common.o dc.o mode.o clock.o window.o dc_client.o
-ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-y += bandwidth.o
-endif
 obj-y += csc.o
 obj-y += lut.o
 obj-y += cursor.o
@@ -44,9 +42,7 @@ ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
 endif
 obj-y += edid.o edid_disp_id_ext.o edid_quirks.o
-ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
-obj-$(CONFIG_TEGRA_NVSD) += nvsd.o
-endif
+obj-y += nvsd.o
 obj-y += dsi.o
 obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
 obj-$(CONFIG_DEBUG_FS) += tegra_dsi_csi_test.o
@@ -70,16 +66,12 @@ obj-$(CONFIG_TEGRA_HDMIVRR) += hdmivrr.o
 obj-y += panel/
 obj-$(CONFIG_TEGRA_CEC_SUPPORT) += ../../../misc/tegra-cec/
 obj-y += crc.o
-obj-$(CONFIG_TEGRA_NVDISPLAY) += nvdisp/
-
-ifdef CONFIG_ARCH_TEGRA_19x_SOC
 
 GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
 ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/dc
 ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/dc/nvdisp
 
-obj-$(CONFIG_TEGRA_NVDISPLAY) += sor_t19x.o
-obj-$(CONFIG_TEGRA_NVDISPLAY) += nvdisp/
+obj-y += sor_t19x.o
+obj-y += nvdisp/
 
-endif

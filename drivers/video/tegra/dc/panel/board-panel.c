@@ -1,7 +1,7 @@
 /*
  * board-panel.c: Functions definitions for general panel.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@
 #include <soc/tegra/common.h>
 
 #include "../dc.h"
+#include "../dc_priv.h"
 #include "board-panel.h"
 #include "tegra-board-id.h"
 #include "board.h"
@@ -42,7 +43,7 @@
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
-static int tegra_bl_notify(struct device *dev, int brightness)
+int tegra_bl_notify(struct device *dev, int brightness)
 {
 	int cur_sd_brightness;
 
@@ -376,6 +377,10 @@ static void tegra_pwm_bl_ops_reg_based_on_disp_board_id(struct device *dev)
 void tegra_pwm_bl_ops_register(struct device *dev)
 {
 	bool ret = 0;
+
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	ret = tegra_available_pwm_bl_ops_register(dev);
 	if (!ret)
 		tegra_pwm_bl_ops_reg_based_on_disp_board_id(dev);

@@ -1,7 +1,7 @@
 /*
  * panel-s-uhdtv-15-6.c: Panel driver for s-uhdtv-15-6 panel.
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/regulator/consumer.h>
 
 #include "../dc.h"
+#include "../dc_priv.h"
 #include "board.h"
 #include "board-panel.h"
 #include "gpio-names.h"
@@ -50,11 +51,10 @@ static int shield_edp_regulator_get(struct device *dev)
 	if (reg_requested)
 		return 0;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	vdd_ds_1v8 = regulator_get(dev, "dvdd_lcd");
-#else /* !CONFIG_TEGRA_NVDISPLAY */
-	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
-#endif /* CONFIG_TEGRA_NVDISPLAY */
+	if (tegra_dc_is_nvdisplay())
+		vdd_ds_1v8 = regulator_get(dev, "dvdd_lcd");
+	else
+		vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
 
 	if (IS_ERR(vdd_ds_1v8)) {
 		pr_err("vdd_ds_1v8 regulator get failed\n");
@@ -99,17 +99,17 @@ static int shield_edp_regulator_get(struct device *dev)
 		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
 	}
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	avdd_io_edp = NULL;
-#else /* !CONFIG_TEGRA_NVDISPLAY */
-	avdd_io_edp = regulator_get(dev, "avdd_io_edp");
-	if (IS_ERR(avdd_io_edp)) {
-		pr_err("avdd_io_edp regulator get failed\n");
-		err = PTR_ERR(avdd_io_edp);
+	if (tegra_dc_is_nvdisplay()) {
 		avdd_io_edp = NULL;
-		goto fail;
+	} else {
+		avdd_io_edp = regulator_get(dev, "avdd_io_edp");
+		if (IS_ERR(avdd_io_edp)) {
+			pr_err("avdd_io_edp regulator get failed\n");
+			err = PTR_ERR(avdd_io_edp);
+			avdd_io_edp = NULL;
+			goto fail;
+		}
 	}
-#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	reg_requested = true;
 	return 0;

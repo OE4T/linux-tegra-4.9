@@ -1,7 +1,7 @@
 /*
  * dc_sysfs.c: dc driver sysfs interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,11 +151,10 @@ static ssize_t crc_checksum_latched_show(struct device *device,
 		return -EFAULT;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	crc = tegra_nvdisp_sysfs_read_rg_crc(dc);
-#else
-	crc = tegra_dc_sysfs_read_checksum_latched(dc);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		crc = tegra_nvdisp_sysfs_read_rg_crc(dc);
+	else
+		crc = tegra_dc_sysfs_read_checksum_latched(dc);
 
 	return snprintf(buf, PAGE_SIZE, "%u\n", crc);
 }
@@ -179,18 +178,18 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 		return -EINVAL;
 
 	if (val == 1) {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_nvdisp_sysfs_enable_crc(dc);
-#else
-		tegra_dc_sysfs_enable_crc(dc);
-#endif
+		if (tegra_dc_is_nvdisplay())
+			tegra_nvdisp_sysfs_enable_crc(dc);
+		else
+			tegra_dc_sysfs_enable_crc(dc);
+
 		dev_dbg(&dc->ndev->dev, "crc is enabled.\n");
 	} else if (val == 0) {
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_nvdisp_sysfs_disable_crc(dc);
-#else
-		tegra_dc_sysfs_disable_crc(dc);
-#endif
+		if (tegra_dc_is_nvdisplay())
+			tegra_nvdisp_sysfs_disable_crc(dc);
+		else
+			tegra_dc_sysfs_disable_crc(dc);
+
 		dev_dbg(&dc->ndev->dev, "crc is disabled.\n");
 	} else
 		dev_err(&dc->ndev->dev, "Invalid input.\n");
@@ -420,12 +419,12 @@ static ssize_t reserved_bw_show(struct device *dev,
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	u32 reserved_bw = 0;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (dc->ihub_bw_info)
-		reserved_bw = dc->ihub_bw_info->reserved_bw;
-#else
-	reserved_bw = dc->reserved_bw;
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		if (dc->ihub_bw_info)
+			reserved_bw = dc->ihub_bw_info->reserved_bw;
+	} else {
+		reserved_bw = dc->reserved_bw;
+	}
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", reserved_bw);
 }
@@ -482,9 +481,8 @@ static ssize_t win_mask_store(struct device *dev,
 	unsigned long requested_winmask = 0;
 	size_t ret;
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	return -EINVAL;
-#endif /* CONFIG_TEGRA_NVDISPLAY */
+	if (!tegra_dc_is_nvdisplay())
+		return -EINVAL;
 
 	/* try first as decimal, then as hexadecimal */
 	if ((kstrtoul(buf, 10, &requested_winmask) < 0) &&
@@ -532,9 +530,8 @@ void tegra_dc_remove_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_NVSD
 		nvsd_remove_sysfs(dev);
 #endif
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_sd_remove_sysfs(dev);
-#endif
+	if (tegra_dc_is_nvdisplay())
+		tegra_sd_remove_sysfs(dev);
 
 	if (dc->fb)
 		tegra_fb_remove_sysfs(dev);
@@ -580,13 +577,12 @@ void tegra_dc_create_sysfs(struct device *dev)
 		error |= device_create_file(dev, &dev_attr_stereo_mode);
 	}
 
-	if (sd_settings)
-#ifdef CONFIG_TEGRA_NVSD
-		error |= nvsd_create_sysfs(dev);
-#endif
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		error |= tegra_sd_create_sysfs(dev);
-#endif
+	if (sd_settings) {
+		if (tegra_dc_is_nvdisplay())
+			error |= tegra_sd_create_sysfs(dev);
+		else
+			error |= nvsd_create_sysfs(dev);
+	}
 
 	if (vrr)
 #ifdef CONFIG_TEGRA_VRR

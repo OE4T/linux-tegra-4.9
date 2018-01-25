@@ -2,7 +2,7 @@
  * gpio-names.h: Tegra GPIO definitions used by various panel files.
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -267,7 +267,8 @@
 #define TEGRA_GPIO_PEE3		243
 #define TEGRA_GPIO_PEE4		244
 #define TEGRA_GPIO_PEE5		245
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
+
+/* Used only on T21x */
 #define TEGRA_GPIO_PEE6		246
 #define TEGRA_GPIO_PEE7		247
 #define TEGRA_GPIO_PFF0		248
@@ -278,6 +279,6 @@
 #define TEGRA_GPIO_PFF5		253
 #define TEGRA_GPIO_PFF6		254
 #define TEGRA_GPIO_PFF7		255
-#endif
+
 #define TEGRA_MAX_GPIO		TEGRA_NR_GPIOS
 #endif

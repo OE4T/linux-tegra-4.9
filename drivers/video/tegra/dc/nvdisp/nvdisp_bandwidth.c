@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_bandwidth.c
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -357,13 +357,13 @@ void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc)
 }
 
 /*
- * tegra_dc_calc_min_bandwidth - returns the minimum dedicated ISO bw
+ * tegra_nvdisp_calc_min_bandwidth - returns the minimum dedicated ISO bw
  *
  * @dc		dc instance
  *
  * @retval	minimum dedicated ISO bw
  */
-long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
+long tegra_nvdisp_calc_min_bandwidth(struct tegra_dc *dc)
 {
 	return ihub_bw_info.max_config.iso_bw;
 }
@@ -707,7 +707,7 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,
 }
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc) {}
 void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc) {}
-long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
+long tegra_nvdisp_calc_min_bandwidth(struct tegra_dc *dc)
 {
 	return -ENOSYS;
 }
@@ -930,6 +930,9 @@ void tegra_bw_remove_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
 
+	if (!tegra_dc_is_nvdisplay())
+		return;
+
 	/* Directory was only created under the first registered DC instance. */
 	if (ndev && ndev->id)
 		return;
@@ -947,6 +950,9 @@ int tegra_bw_create_sysfs(struct device *dev)
 {
 	struct platform_device *ndev = to_platform_device(dev);
 	int ret = 0;
+
+	if (!tegra_dc_is_nvdisplay())
+		return 0;
 
 	/* Only create the directory under the first registered DC instance. */
 	if (ndev && ndev->id)
@@ -975,20 +981,3 @@ create_sysfs_cleanup:
 	return ret;
 }
 EXPORT_SYMBOL(tegra_bw_create_sysfs);
-
-/* These functions are all NO-OPs in accordance with the new IMP model. */
-void tegra_dc_clear_bandwidth(struct tegra_dc *dc) {}
-void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new) {}
-int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
-			struct tegra_dc_win *windows[],
-			int n)
-{
-	return 0;
-}
-EXPORT_SYMBOL(tegra_dc_bandwidth_negotiate_bw);
-
-unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n)
-{
-	return -ENOSYS;
-}
-EXPORT_SYMBOL(tegra_dc_get_bandwidth);

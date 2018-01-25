@@ -23,11 +23,8 @@ GCOV_PROFILE_panel-p-edp-3000-2000-13-5.o := n
 
 ccflags-y += -Iarch/arm/mach-tegra
 
-ifdef CONFIG_ARCH_TEGRA_210_SOC
-ifndef CONFIG_TEGRA_NVDISPLAY
 obj-y += board-panel.o
-endif
-endif
+
 obj-y += panel-lgd-wxga-7-0.o
 obj-y += panel-p-wuxga-10-1.o
 obj-y += panel-s-wqxga-10-1.o

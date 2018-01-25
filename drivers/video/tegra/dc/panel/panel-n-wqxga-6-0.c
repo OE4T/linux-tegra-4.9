@@ -1,7 +1,7 @@
 /*
  * panel-n-wqxga-6-0.c: Panel driver for n-wqxga-6-0 panel.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/delay.h>
 
 #include "../dc.h"
+#include "../dc_priv.h"
 #include "board-panel.h"
 
 #define DSI_PANEL_RESET	1
@@ -33,11 +34,8 @@ static u16 en_panel_rst;
 static u16 en_panel;
 static struct device *dc_dev;
 static struct i2c_client *dsc_i2c_client;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 static u8 i2c_bus_num = 0;
-#else
-static u8 i2c_bus_num = 1;
-#endif
+static u8 i2c_bus_num_nvdisplay = 1;
 
 enum i2c_transfer_type {
 	I2C_WRITE,
@@ -94,8 +92,13 @@ static struct i2c_client *init_e2256_i2c_slave(struct device *dev)
 		.type = "e2256-dsc-adaptor",
 		.addr = 0x2C,
 	};
-	int bus = i2c_bus_num;
+	int bus = 0;
 	int err = 0;
+
+	if (tegra_dc_is_nvdisplay())
+		bus = i2c_bus_num_nvdisplay;
+	else
+		bus = i2c_bus_num;
 
 	adapter = i2c_get_adapter(bus);
 	if (!adapter) {

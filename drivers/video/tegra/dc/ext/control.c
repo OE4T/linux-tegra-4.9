@@ -182,9 +182,8 @@ static int get_capabilities(struct tegra_dc_ext_control_capabilities *caps)
 			TEGRA_DC_EXT_CAPABILITIES_BLOCKLINEAR |
 			TEGRA_DC_EXT_CAPABILITIES_CURSOR_TWO_COLOR;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	caps->caps |= TEGRA_DC_EXT_CAPABILITIES_NVDISPLAY;
-#endif
+	if (tegra_dc_is_nvdisplay())
+		caps->caps |= TEGRA_DC_EXT_CAPABILITIES_NVDISPLAY;
 
 	return 0;
 }
@@ -328,14 +327,17 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 	}
 	case TEGRA_DC_EXT_CONTROL_SCRNCAPT_PAUSE:
 	/* TODO: Screen Capture support has been verified only for NVDisplay
-	 *       with T18x. Dependency check on CONFIG_TEGRA_NVDISPLAY will
+	 *       with T18x. Dependency check on tegra_dc_is_nvdisplay() will
 	 *       be kept until verification with older DC is made. Check on
 	 *       the pause ioctl would be enough since other ioctl will be
 	 *       rejected without the pause. */
-#if defined(CONFIG_TEGRA_DC_SCREEN_CAPTURE) && defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_TEGRA_DC_SCREEN_CAPTURE)
 	{
 		struct tegra_dc_ext_control_scrncapt_pause  args;
 		int ret;
+
+		if (!tegra_dc_is_nvdisplay())
+			return -EINVAL;
 
 		if (copy_from_user(&args, user_arg, sizeof(args)))
 			return -EFAULT;

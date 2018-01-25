@@ -1,7 +1,7 @@
 /*
  * panel-s-wuxga-8-0.c: Panel driver for s-wuxga-8-0 panel.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/regulator/consumer.h>
 
 #include "../dc.h"
+#include "../dc_priv.h"
 #include "board.h"
 #include "board-panel.h"
 
@@ -279,11 +280,10 @@ static int dsi_s_wuxga_8_0_bl_notify(struct device *dev, int brightness)
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (tegra_dc_is_nvdisplay())
 		tegra_sd_check_prism_thresh(dc_dev, brightness);
-#else
+	else
 		nvsd_check_prism_thresh(dc_dev, brightness);
-#endif
 
 	cur_sd_brightness = atomic_read(&sd_brightness);
 	/* SD brightness is a percentage */

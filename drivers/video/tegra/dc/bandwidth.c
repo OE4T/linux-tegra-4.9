@@ -1,7 +1,7 @@
 /*
  * bandwidth.c: Functions required for dc bandwidth calculations.
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Jon Mayo <jmayo@nvidia.com>
  *
@@ -725,6 +725,9 @@ unsigned long tegra_dc_get_bandwidth(
 {
 	int i;
 
+	if (tegra_dc_is_nvdisplay())
+		return -EINVAL;
+
 	BUG_ON(n > tegra_dc_get_numof_dispwindows());
 
 	/* emc rate and latency allowance both need to know per window
@@ -747,6 +750,9 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 {
 	int latency;
 
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	trace_clear_bandwidth(dc);
 	latency = tegra_isomgr_reserve(dc->isomgr_handle, 0, 1000);
 	if (latency) {
@@ -763,6 +769,9 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 /* to save power, call when display memory clients would be idle */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc)
 {
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	trace_clear_bandwidth(dc);
 	if (tegra_dc_is_clk_enabled(dc->emc_clk))
 		tegra_disp_clk_disable_unprepare(dc->emc_clk);
@@ -797,6 +806,9 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
 
+	if (tegra_dc_is_nvdisplay())
+		return;
+
 	if (!dc->enabled)
 		return;
 
@@ -813,7 +825,7 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 			return;
 
 		/* reserve atleast the minimum bandwidth. */
-		bw = max(bw, tegra_dc_calc_min_bandwidth(dc));
+		bw = max(bw, tegra_calc_min_bandwidth(dc));
 		latency = tegra_isomgr_reserve(dc->isomgr_handle, bw, 1000);
 		if (latency) {
 			dc->reserved_bw = bw;
@@ -887,7 +899,7 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 }
 
 /* return the minimum bandwidth in kbps for display to function */
-long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
+long tegra_calc_min_bandwidth(struct tegra_dc *dc)
 {
 	unsigned  pclk;
 
@@ -927,6 +939,9 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 	u32 bw;
 	int err;
 	int latency;
+
+	if (tegra_dc_is_nvdisplay())
+		return 0;
 
 	mutex_lock(&dc->lock);
 	/*

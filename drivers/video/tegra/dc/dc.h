@@ -1093,13 +1093,12 @@ int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc);
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_width(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_max_pixclock(const struct tegra_dc *dc);
-#ifdef CONFIG_TEGRA_NVDISPLAY
+
 void tegra_sd_check_prism_thresh(struct device *dev, int brightness);
 void tegra_sd_enbl_dsbl_prism(struct device *dev, bool status);
-#else
+
 void nvsd_check_prism_thresh(struct device *dev, int brightness);
 void nvsd_enbl_dsbl_prism(struct device *dev, bool status);
-#endif
 
 /* PM0 and PM1 signal control */
 #define TEGRA_PWM_PM0 0

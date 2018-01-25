@@ -45,16 +45,6 @@
 
 #define BLANK_ALL	(~0)
 
-static inline u32 ALL_UF_INT(void)
-{
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return NVDISP_UF_INT;
-#else
-	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT | HC_UF_INT |
-		WIN_D_UF_INT | WIN_T_UF_INT;
-#endif
-}
-
 #if defined(CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * CONFIG_TEGRA_EMC_TO_DDR_CLOCK)
 #else
@@ -492,21 +482,21 @@ struct tegra_dc {
 	s64				frametime_ns;
 	struct tegra_dc_mode_metadata	mode_metadata;
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
+	/* Used only on T21x */
 	struct tegra_dc_win		windows[DC_N_WINDOWS];
-#endif
+
 	struct tegra_dc_win		shadow_windows[DC_N_WINDOWS];
 
 	struct tegra_dc_blend		blend;
 	int				n_windows;
 	struct tegra_dc_hdr		hdr;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* Used only on Nvdisplay */
 	bool					common_channel_reserved;
 	bool					common_channel_pending;
 	bool					common_channel_intr_enabled;
 	bool					comp_clk_inuse;
-#endif
+
 	bool					imp_dirty;
 	u64					imp_session_id_cntr;
 
@@ -579,9 +569,9 @@ struct tegra_dc {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry			*debugdir;
 	struct dentry			*sor_link;  /*symbolic link to SOR debugfs*/
-#ifdef CONFIG_TEGRA_NVDISPLAY
+
+	/* Used only on Nvdisplay */
 	struct dentry			*debug_common_dir;
-#endif
 #endif
 	struct tegra_dc_topology		boot_topology;
 	struct tegra_dc_topology		current_topology;
@@ -590,9 +580,9 @@ struct tegra_dc {
 	struct delayed_work		one_shot_work;
 	s64				frame_end_timestamp;
 	atomic_t			frame_end_ref;
-#ifdef CONFIG_TEGRA_NVDISPLAY
+
+	/* Nvdisplay specific */
 	struct delayed_work		vrr_work;
-#endif
 
 	bool				mode_dirty;
 	bool				yuv_bypass;

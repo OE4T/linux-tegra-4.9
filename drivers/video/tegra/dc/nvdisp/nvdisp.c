@@ -3077,6 +3077,9 @@ int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 	int timeout = 0;
 	int ret = 0;
 
+	if (!tegra_dc_is_nvdisplay())
+		return 0;
+
 	reservation_wq = &g_imp.common_channel_reservation_wq;
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -3137,6 +3140,9 @@ void tegra_dc_release_common_channel(struct tegra_dc *dc)
 {
 	struct nvdisp_request_wq *reservation_wq;
 
+	if (!tegra_dc_is_nvdisplay())
+		return;
+
 	reservation_wq = &g_imp.common_channel_reservation_wq;
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -3162,9 +3168,15 @@ bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 	 * whichever HEAD set COMMON_ACT_REQ. Notify whichever HEAD is waiting
 	 * if this condition has been met.
 	 */
-	u32 val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-	u32 dirty = !!(val & COMMON_ACT_REQ);
+	u32 val;
+	u32 dirty;
 	bool clear_intr = false;
+
+	if (!tegra_dc_is_nvdisplay())
+		return false;
+
+	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+	dirty = !!(val & COMMON_ACT_REQ);
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -3537,6 +3549,9 @@ int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
 	bool use_v2 = flip_user_data->flags & TEGRA_DC_EXT_FLIP_FLAG_IMP_V2;
 	int ret = 0;
 
+	if (!tegra_dc_is_nvdisplay())
+		return -EINVAL;
+
 	ext_settings_ptr = (void __user *)flip_user_data->imp_ptr.settings;
 	nvdisp_settings = convert_dc_ext_to_nvdisp_imp(flip_user_data,
 						ext_settings_ptr,
@@ -3614,6 +3629,9 @@ int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
 {
 	struct tegra_nvdisp_imp_settings *cur = NULL, *next = NULL;
 	int ret = -EINVAL;
+
+	if (!tegra_dc_is_nvdisplay())
+		return ret;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -3806,6 +3824,9 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_nvdisp_imp_settings *imp_settings;
 	struct tegra_dc_ext_nvdisp_imp_global_entries *global_entries;
+
+	if (!tegra_dc_is_nvdisplay())
+		return;
 
 	if (!dc) {
 		pr_err("%s: DC is NULL\n", __func__);
@@ -4144,6 +4165,9 @@ void tegra_dc_reset_imp_state(void)
 	if (!tegra_platform_is_silicon())
 		return;
 
+	if (!tegra_dc_is_nvdisplay())
+		return;
+
 	/*
 	 * Try to find any registered DC instance. It doesn't matter which one
 	 * since we just need a non-NULL instance to reserve the COMMON channel.
@@ -4251,7 +4275,7 @@ reset_imp_release_common_channel:
 }
 EXPORT_SYMBOL(tegra_dc_reset_imp_state);
 
-void reg_dump(struct tegra_dc *dc, void *data,
+void tegra_nvdisp_reg_dump(struct tegra_dc *dc, void *data,
 		       void (* print)(void *data, const char *str))
 {
 	int i;

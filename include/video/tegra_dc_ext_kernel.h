@@ -1,7 +1,7 @@
 /*
  * tegra_dc_ext_kernel.h: tegra dc ext kernel module interface.
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -167,11 +167,10 @@ struct tegra_dc_win {
 	bool		color_expand_enable;
 	bool		clamp_before_blend;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* Used only on Nvdisplay */
 	bool		precomp_caps_read;
 	u32		precomp_capc;
 	u32		precomp_cape;
-#endif
 };
 
 struct tegra_dc *tegra_dc_get_dc(unsigned idx);

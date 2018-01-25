@@ -150,7 +150,8 @@ int tegra_dc_set_dynamic_emc(struct tegra_dc *dc);
 void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw);
 #endif
 unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n);
-long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc);
+long tegra_calc_min_bandwidth(struct tegra_dc *dc);
+long tegra_nvdisp_calc_min_bandwidth(struct tegra_dc *dc);
 
 /* defined in mode.c, used in dc.c, window.c and hdmi2.0.c */
 int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode);
@@ -270,7 +271,14 @@ void tegra_dc_enable_disable_frame_lock(struct tegra_dc *dc, bool enable);
 void tegra_dc_upd_frame_flip_lock_job_stauts(struct tegra_dc *dc, bool status);
 void tegra_dc_request_trigger_wins(struct tegra_dc *dc);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_TEGRA_ISOMGR
+void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc);
+int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
+				enum tegra_bwmgr_client_id bwmgr_client);
+void tegra_nvdisp_bandwidth_unregister(void);
+#endif
+
+/* Nvdisplay specific */
 int tegra_nvdisp_init(struct tegra_dc *dc);
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
@@ -285,20 +293,15 @@ void tegra_nvdisp_sysfs_disable_crc(struct tegra_dc *dc);
 u32 tegra_nvdisp_sysfs_read_rg_crc(struct tegra_dc *dc);
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
-void reg_dump(struct tegra_dc *dc, void *data,
+void tegra_dc_reg_dump(struct tegra_dc *dc, void *data,
+	void (*print)(void *data, const char *str));
+void tegra_nvdisp_reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 
 int tegra_nvdisp_get_imp_user_info(struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);
-#ifdef CONFIG_TEGRA_ISOMGR
-void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc);
-int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
-				enum tegra_bwmgr_client_id bwmgr_client);
-void tegra_nvdisp_bandwidth_unregister(void);
-#endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
-#endif
 
 int tegra_dc_hw_init(void);
 bool tegra_dc_is_t21x(void);
@@ -360,7 +363,6 @@ int tegra_dc_client_handle_event(struct tegra_dc *dc,
 
 void tegra_dc_activate_general_channel(struct tegra_dc *dc);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
 int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 			    struct tegra_dc_ext_crc_conf *conf);
 int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
@@ -395,110 +397,6 @@ int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
 				    long degamma_flag);
 int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win);
 int tegra_nvdisp_get_imp_caps(struct tegra_dc_ext_imp_caps *imp_caps);
-#else
-static inline int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
-					  struct tegra_dc_ext_crc_conf *conf)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
-					   struct tegra_dc_ext_crc_conf *conf)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
-					   struct tegra_dc_crc_buf_ele *crc_ele)
-{
-	return -ENOTSUPP;
-}
-static inline void tegra_nvdisp_crc_reset(struct tegra_dc *dc)
-{
-}
-static inline void tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
-	struct tegra_dc_ext_nvdisp_cmu *user_nvdisp_cmu, bool new_cmu_values)
-{
-}
-static inline void tegra_nvdisp_set_output_colorspace(struct tegra_dc *dc,
-	u16 colorspace)
-{
-}
-static inline void tegra_nvdisp_set_output_range(struct tegra_dc *dc,
-	u8 lim_range_enable)
-{
-}
-static inline void tegra_nvdisp_set_csc2(struct tegra_dc *dc)
-{
-}
-static inline void tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
-{
-}
-static inline void tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
-	struct tegra_dc_mode *mode)
-{
-}
-static inline void tegra_nvdisp_set_background_color(struct tegra_dc *dc,
-						     u32 background_color)
-{
-}
-
-static inline void tegra_nvdisp_activate_general_channel(struct tegra_dc *dc)
-{
-}
-static inline void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc)
-{
-}
-static inline void nvdisp_dc_feature_register(struct tegra_dc *dc)
-{
-}
-static inline int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
-						    struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_program_mode(struct tegra_dc *dc,
-			struct tegra_dc_mode *mode)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_powergate_dc(struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_unpowergate_dc(struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_is_powered(struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int nvdisp_set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
-{
-	return -ENOTSUPP;
-}
-static inline int nvdisp_set_cursor_colorfmt(struct tegra_dc *dc)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
-						   long degamma_flag)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win)
-{
-	return -ENOTSUPP;
-}
-static inline int tegra_nvdisp_get_imp_caps(
-					struct tegra_dc_ext_imp_caps *imp_caps)
-{
-	return -ENOTSUPP;
-}
-#endif
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {
@@ -519,6 +417,32 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
 	return __clk_get_enable_count(clk);
+}
+
+static inline u32 ALL_UF_INT(void)
+{
+	if (tegra_dc_is_nvdisplay())
+		return NVDISP_UF_INT;
+	else
+		return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT | HC_UF_INT |
+			WIN_D_UF_INT | WIN_T_UF_INT;
+}
+
+static inline long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
+{
+	if (tegra_dc_is_nvdisplay())
+		return tegra_nvdisp_calc_min_bandwidth(dc);
+	else
+		return tegra_calc_min_bandwidth(dc);
+}
+
+static inline void reg_dump(struct tegra_dc *dc, void *data,
+			void (*print)(void *data, const char *str))
+{
+	if (tegra_dc_is_nvdisplay())
+		return tegra_nvdisp_reg_dump(dc, data, print);
+	else
+		return tegra_dc_reg_dump(dc, data, print);
 }
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)

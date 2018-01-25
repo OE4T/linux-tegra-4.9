@@ -122,12 +122,9 @@ int tegra_panel_gpio_get_dt(const char *comp_str,
 int tegra_panel_check_regulator_dt_support(const char *comp_str,
 				struct tegra_panel_of *panel);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-static inline void tegra_pwm_bl_ops_register(struct device *dev)
-{ return; }
-#else
+int tegra_bl_notify(struct device *dev, int brightness);
+
 void tegra_pwm_bl_ops_register(struct device *dev);
-#endif
 
 void ti_lp855x_bl_ops_register(struct device *dev);
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

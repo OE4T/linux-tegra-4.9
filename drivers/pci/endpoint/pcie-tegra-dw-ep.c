@@ -188,6 +188,9 @@
 #define PCIE_ATU_LOWER_TARGET	0x14
 #define PCIE_ATU_UPPER_TARGET	0x18
 
+#define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT (15)
+#define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 (2)
+
 #define LTR_MSG_TIMEOUT (100*1000)
 
 #define NUM_TIMING_STEPS 0x14
@@ -963,7 +966,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	struct pinctrl_state *pin_state = NULL;
 	char *name;
 	int phy_count;
-	u32 i = 0;
+	u32 i = 0, val = 0, addr = 0;
 	int pex_rst_gpio;
 	int irq;
 	int ret = 0;
@@ -1020,6 +1023,18 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
 		return ret;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,tsa-config", &addr);
+	if (!ret) {
+		void __iomem *tsa_addr;
+
+		tsa_addr = ioremap(addr, 4);
+		val = readl(tsa_addr);
+		val |= TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 <<
+		       TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT;
+		writel(val, tsa_addr);
+		iounmap(tsa_addr);
 	}
 
 	pin = devm_pinctrl_get(pcie->dev);

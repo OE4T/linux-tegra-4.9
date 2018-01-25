@@ -337,6 +337,9 @@
 #define DMA_LLP_LOW_OFF_RDCH		(0x1C + 0x100)
 #define DMA_LLP_HIGH_OFF_RDCH		(0x20 + 0x100)
 
+#define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT (15)
+#define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 (2)
+
 #define PME_ACK_TIMEOUT 10000
 
 #define NUM_TIMING_STEPS 0x14
@@ -430,6 +433,7 @@ struct tegra_pcie_dw {
 	u32 cid;
 	u32 msi_ctrl_int;
 	int pex_wake;
+	u32 tsa_config_addr;
 
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
@@ -2309,6 +2313,19 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = of_property_read_u32(np, "nvidia,tsa-config",
+				   &pcie->tsa_config_addr);
+	if (!ret) {
+		void __iomem *tsa_addr;
+
+		tsa_addr = ioremap(pcie->tsa_config_addr, 4);
+		val = readl(tsa_addr);
+		val |= TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 <<
+		       TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT;
+		writel(val, tsa_addr);
+		iounmap(tsa_addr);
+	}
+
 	pin = devm_pinctrl_get(pcie->dev);
 	if (IS_ERR(pin)) {
 		ret = PTR_ERR(pin);
@@ -2665,6 +2682,18 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 		dev_err(dev, "regulator enable failed: %d\n", ret);
 		return ret;
 	}
+
+	if (pcie->tsa_config_addr) {
+		void __iomem *tsa_addr;
+
+		tsa_addr = ioremap(pcie->tsa_config_addr, 4);
+		val = readl(tsa_addr);
+		val |= TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 <<
+		       TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT;
+		writel(val, tsa_addr);
+		iounmap(tsa_addr);
+	}
+
 	ret = clk_prepare_enable(pcie->core_clk);
 	if (ret) {
 		dev_err(dev, "Failed to enable core clock\n");

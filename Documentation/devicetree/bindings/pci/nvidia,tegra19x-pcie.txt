@@ -131,6 +131,8 @@ Optional properties:
 - nvidia,enable-power-down : Enables power down of respective controller and
     corresponding PLLs if they are not shared by any other entity
 - "nvidia,pex-wake" : Add PEX_WAKE gpio number to provide wake support.
+- "nvidia,tsa-config" : Add TSA configuration register address to configure MC
+    with production settings for PCIe. Note:- this is applicable only for C5
 
 Power supplies for Tegra194:
 //TODO

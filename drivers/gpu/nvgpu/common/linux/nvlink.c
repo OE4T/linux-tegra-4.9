@@ -468,18 +468,10 @@ u32 nvgpu_nvlink_probe(struct gk20a *g)
 
 	g->nvlink.topology_connected_links = BIT(phys_link_id);
 
-	mutex_init(&ndev->init_state_mutex);
-
 	/* Check that we are in dGPU mode */
 	if (ndev->device_id != NVLINK_ENDPT_GV100) {
 		nvgpu_err(g, "Local nvlink device is not dGPU");
 		err = -EINVAL;
-		goto free_nvlink;
-	}
-
-	err = nvlink_set_init_state(ndev, NVLINK_DEV_OFF);
-	if (err) {
-		nvgpu_err(g, "Error initalizing device state to OFF");
 		goto free_nvlink;
 	}
 

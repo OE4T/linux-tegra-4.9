@@ -2992,13 +2992,18 @@ static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
 
 	/* Set rate on PARENT */
 	if (!dc->initialized) {
+		/*
+		 * For RGB/YUV444 12bpc, the pclk:orclk ratio should be 2:3.
+		 * The SOR refclk vs. pclk dividers should be in a 2:3 ratio if
+		 * TMDS <= 340, and in a 4:3 ratio if TMDS > 340. Use a PCLK_DIV
+		 * of 3 to comply with these constraints.
+		 */
+		parent_clk_rate = dc->mode.pclk;
 		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-				(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
-			parent_clk_rate = 6 * dc->mode.pclk;
-			clk_set_rate(parent_clk, parent_clk_rate);
-		} else {
-			clk_set_rate(parent_clk, dc->mode.pclk);
-		}
+				(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36)))
+			parent_clk_rate *= 3;
+
+		clk_set_rate(parent_clk, parent_clk_rate);
 
 		if (clk == dc->clk)
 			clk_set_rate(clk, dc->mode.pclk);

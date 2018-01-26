@@ -499,8 +499,10 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 					c->vm,
 					class_num,
 					flags);
-		if (!err)
+		if (!err) {
+			gr_ctx->tsgid = tsg->tsgid;
 			err = vgpu_gr_tsg_bind_gr_ctx(tsg);
+		}
 		if (err) {
 			nvgpu_err(g,
 				"fail to allocate TSG gr ctx buffer, err=%d", err);

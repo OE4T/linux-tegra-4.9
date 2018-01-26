@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010-2012 Google, Inc.
- * Copyright (C) 2013-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2013-2018, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -23,12 +23,14 @@
 
 #define MC_MAX_INTR_COUNT	32
 #define MC_MAX_CHANNELS		16
+#define MC_MAX_MSSNVLINK_HUBS	4
 
 #define MC_BROADCAST_CHANNEL	-1
 
 extern int mc_channels;
 extern int mc_err_channel;
 extern int mc_intstatus_reg;
+extern unsigned int mssnvlink_hubs;
 
 struct mc_client {
 	const char *name;
@@ -39,6 +41,7 @@ struct mc_client {
 
 extern void __iomem *mc;
 extern void __iomem *mc_regs[MC_MAX_CHANNELS];
+extern void __iomem *mssnvlink_regs[MC_MAX_MSSNVLINK_HUBS];
 
 #include <linux/io.h>
 #include <linux/debugfs.h>
@@ -133,6 +136,52 @@ static inline void __mc_raw_writel(int idx, u32 val, u32 reg)
 
 #define mc_readl(reg)       __mc_readl(MC_BROADCAST_CHANNEL, reg)
 #define mc_writel(val, reg) __mc_writel(MC_BROADCAST_CHANNEL, val, reg)
+
+/**
+ * Read from the MSSNVLINK hub.
+ *
+ * @idx The mssnvlink hub ID
+ * @reg The register offset
+ *
+ * Read from the specified MSSNVLINK hub. Reads from
+ * non-existent hubs return 0.
+ */
+static inline u32 mssnvlink_readl(unsigned int idx, u32 reg)
+{
+	if (idx >= mssnvlink_hubs) {
+		WARN(1, "mssnvlink read: invalid hub ID - %u\n", idx);
+		return 0;
+	}
+
+	if (WARN(!mssnvlink_regs[idx], "Read before MSSNVLINK is initialized."))
+		return 0;
+
+	return readl(mssnvlink_regs[idx] + reg);
+}
+
+/**
+ * Write to the MSSNVLINK hub.
+ *
+ * @idx ID of MSSNVLINK hub.
+ * @val Value to write.
+ * @reg Register offset to write.
+ *
+ * Write to the specified MSSNVLINK hub. Writes to
+ * non-existent hubs are dropped.
+ */
+
+static inline void mssnvlink_writel(unsigned int idx, u32 val, u32 reg)
+{
+	if (idx >= mssnvlink_hubs) {
+		WARN(1, "mssnvlink write: invalid hub ID - %u\n", idx);
+		return;
+	}
+
+	if (WARN(!mssnvlink_regs[idx], "Write before MSSNVLINK is initialized."))
+		return;
+
+	writel(val, mssnvlink_regs[idx] + reg);
+}
 
 /*
  * Tegra21 has either dual 32 bit channels (LP4) or a single

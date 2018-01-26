@@ -17,6 +17,8 @@
 #ifndef __ABI_MACH_T194_CLOCK_H
 #define __ABI_MACH_T194_CLOCK_H
 
+/** @file */
+
 /** @brief output of mux controlled by TEGRA194_CLK_SOC_ACTMON */
 #define TEGRA194_CLK_ACTMON			1
 /** @brief output of gate CLK_ENB_ADSP */
@@ -681,5 +683,7 @@
 #define TEGRA194_CLK_PEX1_CORE_5M		324
 /** @brief NVHS UPHY PLL0-based NVLINK TX clock output */
 #define TEGRA194_CLK_NVLINK_PLL_TXCLK		325
+/** @brief PLLE hardware power sequencer (overrides 'manual' programming of PLL) */
+#define TEGRA194_CLK_PLLE_HPS			326
 
 #endif

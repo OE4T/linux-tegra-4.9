@@ -729,6 +729,11 @@ static int nvdec_probe(struct platform_device *dev)
 
 	pdata->pdev = dev;
 
+	if (tegra_platform_is_sim() && tegra_get_chip_id() == TEGRA194) {
+		dev_info(&dev->dev, "context isolation disabled on simulator");
+		pdata->isolate_contexts = false;
+	}
+
 	mutex_init(&pdata->lock);
 
 	platform_set_drvdata(dev, pdata);

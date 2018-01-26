@@ -25,6 +25,7 @@
 #include <linux/uaccess.h>
 #include <linux/tsec.h>
 #include <soc/tegra/kfuse.h>
+#include <soc/tegra/fuse.h>
 
 #include "dc.h"
 #include "dphdcp.h"
@@ -2087,6 +2088,16 @@ static int tegra_dphdcp_renegotiate(struct tegra_dphdcp *dphdcp)
 
 void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd)
 {
+	if (tegra_dc_is_t19x()) {
+		uint32_t ft_info;
+		/* enable HDCP only if board has SFK */
+		tegra_fuse_readl(FUSE_OPT_FT_REV_0, &ft_info);
+		/* only fuses with revision id >= 0x5 have SFK */
+		if (ft_info < FUSE_START_SFK) {
+			dphdcp_err("Device does not have SFK!");
+			return;
+		}
+	}
 	/* ensure all previous values are reset on hotplug */
 	vprime_check_done = false;
 	repeater_flag = false;

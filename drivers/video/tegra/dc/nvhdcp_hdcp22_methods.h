@@ -1,7 +1,7 @@
 /*
  * nvhdcp_hdcp22_methods.h: hdcp 2.2 driver definitions.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,6 +34,9 @@
 #define RCVR_ID_LIST_SIZE               635
 #define TSEC_SRM_REVOCATION_CHECK	(1)
 #define PKT_SIZE			256
+
+/* FUSE details for t19x */
+#define FUSE_START_SFK                  0x5
 
 int tsec_hdcp_readcaps(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_init(struct hdcp_context_t *hdcp_context);

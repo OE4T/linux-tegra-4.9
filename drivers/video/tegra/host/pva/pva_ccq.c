@@ -1,7 +1,7 @@
 /*
  * PVA Command Queue Interface handling
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,7 +41,7 @@ static int pva_ccq_wait(struct pva *pva, int timeout)
 	 */
 
 	while (time_before(jiffies, end_jiffies) ||
-	       !tegra_platform_is_silicon()) {
+	       (pva->timeout_enabled == false)) {
 		u32 val = host1x_readl(pva->pdev, cfg_ccq_status2_r());
 
 		if (val <= MAX_CCQ_ELEMENTS)

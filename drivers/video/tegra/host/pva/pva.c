@@ -94,7 +94,6 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	nvhost_dbg_fn("");
 
-	pva->timeout_enabled = true;
 	priv1_buffer = &fw_info->priv1_buffer;
 	priv2_buffer = &fw_info->priv2_buffer;
 	ucode_ptr = priv1_buffer->va;
@@ -670,9 +669,14 @@ static int pva_probe(struct platform_device *pdev)
 	pva->pdev = pdev;
 
 
-	/* Enable powergating only on silicon */
-	if (!tegra_platform_is_silicon())
+	/* Enable powergating and timeout only on silicon */
+	if (!tegra_platform_is_silicon()) {
 		pdata->can_powergate = false;
+		pva->timeout_enabled = false;
+	} else {
+		pva->timeout_enabled = true;
+	}
+
 
 	/* Initialize nvhost specific data */
 	pdata->pdev = pdev;

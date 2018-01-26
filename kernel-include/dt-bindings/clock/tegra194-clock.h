@@ -681,7 +681,5 @@
 #define TEGRA194_CLK_PEX1_CORE_5M		324
 /** @brief NVHS UPHY PLL0-based NVLINK TX clock output */
 #define TEGRA194_CLK_NVLINK_PLL_TXCLK		325
-/** @brief PLLE hardware power sequencer (overrides 'manual' programming of PLL) */
-#define TEGRA194_CLK_PLLE_HPS			326
 
 #endif

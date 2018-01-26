@@ -1314,6 +1314,7 @@ repeater_auth:
 			*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 			*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
 			*(pkt + 3*HDCP_CMD_OFFSET) = repeater_flag;
+			*(pkt + 4*HDCP_CMD_OFFSET) = dphdcp->dp->sor->ctrl_num;
 			e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, dphdcp->ta_ctx);
 			if (e) {
 				dphdcp_err("te_launch_oper failed with err: %d\n", e);
@@ -1381,6 +1382,7 @@ lost_dp:
 			*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 			*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
 			*(pkt + 3*HDCP_CMD_OFFSET) = repeater_flag;
+			*(pkt + 4*HDCP_CMD_OFFSET) = dphdcp->dp->sor->ctrl_num;
 		}
 		/* a launch operation makes sense only if a valid context exists
 		 * already

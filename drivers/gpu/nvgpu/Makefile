@@ -180,7 +180,8 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/clk_vgpu.o \
 	common/linux/vgpu/css_vgpu.o \
 	common/linux/vgpu/gm20b/vgpu_gr_gm20b.o \
-	common/linux/vgpu/sysfs_vgpu.o
+	common/linux/vgpu/sysfs_vgpu.o \
+	common/linux/vgpu/vgpu_ivc.o
 
 nvgpu-$(CONFIG_COMMON_CLK) += \
 	common/linux/clk.o

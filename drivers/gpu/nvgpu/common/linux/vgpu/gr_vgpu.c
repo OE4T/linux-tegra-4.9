@@ -1121,7 +1121,7 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
-	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+	handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
 			TEGRA_VGPU_QUEUE_CMD,
 			(void **)&oob, &oob_size);
 	if (!handle) {
@@ -1166,7 +1166,7 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 
 done:
 	if (handle)
-		tegra_gr_comm_oob_put_ptr(handle);
+		vgpu_ivc_oob_put_ptr(handle);
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	*ctx_resident_ch_fd = channel_fd;
@@ -1238,7 +1238,7 @@ int vgpu_gr_init_sm_id_table(struct gk20a *g)
 		return err;
 	}
 
-	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+	handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
 					   TEGRA_VGPU_QUEUE_CMD,
 					   (void **)&entry, &oob_size);
 	if (!handle)
@@ -1261,7 +1261,7 @@ int vgpu_gr_init_sm_id_table(struct gk20a *g)
 		sm_info->sm_index = entry->sm_index;
 		sm_info->global_tpc_index = entry->global_tpc_index;
 	}
-	tegra_gr_comm_oob_put_ptr(handle);
+	vgpu_ivc_oob_put_ptr(handle);
 
 	return 0;
 }

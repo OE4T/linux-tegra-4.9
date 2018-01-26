@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Interfaces
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,7 +26,8 @@ struct tegra_vgpu_cmd_msg;
 struct gk20a_platform;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
-#include <linux/tegra_gr_comm.h>
+#include <nvgpu/vgpu/vgpu_ivc.h>
+
 #include <linux/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
 #include "common/linux/platform_gk20a.h"

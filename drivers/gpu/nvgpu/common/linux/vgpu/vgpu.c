@@ -21,6 +21,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_qos.h>
+#include <linux/platform_device.h>
 #include <soc/tegra/chip-id.h>
 #include <uapi/linux/nvgpu.h>
 
@@ -49,11 +50,11 @@
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
-static inline int vgpu_comm_init(struct platform_device *pdev)
+static inline int vgpu_comm_init(struct gk20a *g)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
 
-	return tegra_gr_comm_init(pdev, 3, queue_sizes, TEGRA_VGPU_QUEUE_CMD,
+	return vgpu_ivc_init(g, 3, queue_sizes, TEGRA_VGPU_QUEUE_CMD,
 				ARRAY_SIZE(queue_sizes));
 }
 
@@ -61,7 +62,7 @@ static inline void vgpu_comm_deinit(void)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
 
-	tegra_gr_comm_deinit(TEGRA_VGPU_QUEUE_CMD, ARRAY_SIZE(queue_sizes));
+	vgpu_ivc_deinit(TEGRA_VGPU_QUEUE_CMD, ARRAY_SIZE(queue_sizes));
 }
 
 int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
@@ -72,12 +73,12 @@ int vgpu_comm_sendrecv(struct tegra_vgpu_cmd_msg *msg, size_t size_in,
 	void *data = msg;
 	int err;
 
-	err = tegra_gr_comm_sendrecv(tegra_gr_comm_get_server_vmid(),
+	err = vgpu_ivc_sendrecv(vgpu_ivc_get_server_vmid(),
 				TEGRA_VGPU_QUEUE_CMD, &handle, &data, &size);
 	if (!err) {
 		WARN_ON(size < size_out);
 		memcpy(msg, data, size_out);
-		tegra_gr_comm_release(handle);
+		vgpu_ivc_release(handle);
 	}
 
 	return err;
@@ -149,7 +150,7 @@ static int vgpu_intr_thread(void *dev_id)
 		size_t size;
 		int err;
 
-		err = tegra_gr_comm_recv(TEGRA_VGPU_QUEUE_INTR, &handle,
+		err = vgpu_ivc_recv(TEGRA_VGPU_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
 		if (err == -ETIME)
 			continue;
@@ -157,7 +158,7 @@ static int vgpu_intr_thread(void *dev_id)
 			continue;
 
 		if (msg->event == TEGRA_VGPU_EVENT_ABORT) {
-			tegra_gr_comm_release(handle);
+			vgpu_ivc_release(handle);
 			break;
 		}
 
@@ -193,7 +194,7 @@ static int vgpu_intr_thread(void *dev_id)
 			break;
 		}
 
-		tegra_gr_comm_release(handle);
+		vgpu_ivc_release(handle);
 	}
 
 	while (!nvgpu_thread_should_stop(&priv->intr_handler))
@@ -225,7 +226,7 @@ static void vgpu_remove_support(struct gk20a *g)
 		g->mm.remove_support(&g->mm);
 
 	msg.event = TEGRA_VGPU_EVENT_ABORT;
-	err = tegra_gr_comm_send(TEGRA_GR_COMM_ID_SELF, TEGRA_VGPU_QUEUE_INTR,
+	err = vgpu_ivc_send(vgpu_ivc_get_peer_self(), TEGRA_VGPU_QUEUE_INTR,
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	nvgpu_thread_stop(&priv->intr_handler);
@@ -699,7 +700,7 @@ int vgpu_probe(struct platform_device *pdev)
 		}
 	}
 
-	err = vgpu_comm_init(pdev);
+	err = vgpu_comm_init(gk20a);
 	if (err) {
 		dev_err(dev, "failed to init comm interface\n");
 		return -ENOSYS;

@@ -14,7 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/tegra_gr_comm.h>
+#include <nvgpu/vgpu/vgpu_ivc.h>
+
 #include <linux/tegra_vgpu.h>
 #include <uapi/linux/nvgpu.h>
 
@@ -42,7 +43,7 @@ int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 	gk20a_dbg_fn("");
 	BUG_ON(sizeof(*ops) != sizeof(struct tegra_vgpu_reg_op));
 
-	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+	handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
 					TEGRA_VGPU_QUEUE_CMD,
 					&oob, &oob_size);
 	if (!handle)
@@ -68,7 +69,7 @@ int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 		memcpy(ops, oob, ops_size);
 
 fail:
-	tegra_gr_comm_oob_put_ptr(handle);
+	vgpu_ivc_oob_put_ptr(handle);
 	return err;
 }
 

@@ -95,7 +95,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 		}
 	}
 
-	handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+	handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
 					TEGRA_VGPU_QUEUE_CMD,
 					(void **)&mem_desc, &oob_size);
 	if (!handle) {
@@ -179,11 +179,11 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 
 	/* TLB invalidate handled on server side */
 
-	tegra_gr_comm_oob_put_ptr(handle);
+	vgpu_ivc_oob_put_ptr(handle);
 	return map_offset;
 fail:
 	if (handle)
-		tegra_gr_comm_oob_put_ptr(handle);
+		vgpu_ivc_oob_put_ptr(handle);
 	nvgpu_err(g, "Failed: err=%d, msg.ret=%d", err, msg.ret);
 	nvgpu_err(g,
 		  "  Map: %-5s GPU virt %#-12llx +%#-9llx "

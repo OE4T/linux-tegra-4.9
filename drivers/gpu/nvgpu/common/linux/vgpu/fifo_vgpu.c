@@ -499,7 +499,7 @@ static int vgpu_submit_runlist(struct gk20a *g, u64 handle, u8 runlist_id,
 	void *oob;
 	size_t size, oob_size;
 
-	oob_handle = tegra_gr_comm_oob_get_ptr(tegra_gr_comm_get_server_vmid(),
+	oob_handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
 			TEGRA_VGPU_QUEUE_CMD,
 			&oob, &oob_size);
 	if (!oob_handle)
@@ -523,7 +523,7 @@ static int vgpu_submit_runlist(struct gk20a *g, u64 handle, u8 runlist_id,
 	err = (err || msg.ret) ? -1 : 0;
 
 done:
-	tegra_gr_comm_oob_put_ptr(oob_handle);
+	vgpu_ivc_oob_put_ptr(oob_handle);
 	return err;
 }
 

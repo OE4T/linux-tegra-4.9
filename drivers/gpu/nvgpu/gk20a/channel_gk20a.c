@@ -349,7 +349,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	if (!nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
 		/* abort channel and remove from runlist */
 		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			err = g->ops.fifo.tsg_unbind_channel(ch);
+			err = gk20a_tsg_unbind_channel(ch);
 			if (err)
 				nvgpu_err(g,
 					"failed to unbind channel %d from TSG",

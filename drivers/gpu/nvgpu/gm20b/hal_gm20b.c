@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -427,7 +427,7 @@ static const struct gpu_ops gm20b_ops = {
 		.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0,
 		.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1,
 		.tsg_bind_channel = gk20a_tsg_bind_channel,
-		.tsg_unbind_channel = gk20a_tsg_unbind_channel,
+		.tsg_unbind_channel = gk20a_fifo_tsg_unbind_channel,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

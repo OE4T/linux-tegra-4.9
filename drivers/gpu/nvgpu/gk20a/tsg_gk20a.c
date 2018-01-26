@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -150,7 +150,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 	int err;
 
-	err = gk20a_fifo_tsg_unbind_channel(ch);
+	err = g->ops.fifo.tsg_unbind_channel(ch);
 	if (err) {
 		nvgpu_err(g, "Channel %d unbind failed, tearing down TSG %d",
 			ch->chid, tsg->tsgid);

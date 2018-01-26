@@ -169,7 +169,10 @@ static int tegra_dp_aux_tx_config(struct tegra_dc_dpaux_data *dpaux,
 				u32 cmd, u32 addr, u8 *p_wrdt, u32 size)
 {
 	int i;
-	u32  *data = (u32 *)p_wrdt;
+	union {
+		u32 d32[DP_AUX_MAX_BYTES / sizeof(u32)];
+		u8  d8[DP_AUX_MAX_BYTES];
+	} __packed wdata = {{0}};
 
 	if (size > DP_AUX_MAX_BYTES)
 		goto fail;
@@ -198,9 +201,14 @@ static int tegra_dp_aux_tx_config(struct tegra_dc_dpaux_data *dpaux,
 				DPAUX_DP_AUXCTL_ADDRESS_ONLY_FALSE);
 
 	tegra_dpaux_writel(dpaux, DPAUX_DP_AUXADDR, addr);
-	for (i = 0; size && data && i < (DP_AUX_MAX_BYTES / 4); ++i)
-		tegra_dpaux_writel(dpaux, DPAUX_DP_AUXDATA_WRITE_W(i), data[i]);
+	if ((p_wrdt) && (size)) {
+		for (i = 0; i < size; i++)
+			wdata.d8[i] = *(p_wrdt+i);
 
+		for (i = 0; i < (DP_AUX_MAX_BYTES / sizeof(u32)); ++i)
+			tegra_dpaux_writel(dpaux, DPAUX_DP_AUXDATA_WRITE_W(i),
+				wdata.d32[i]);
+	}
 	return 0;
 fail:
 	return -EINVAL;

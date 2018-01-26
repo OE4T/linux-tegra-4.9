@@ -491,7 +491,7 @@ static bool android_fence_signaled(struct fence *fence)
 
 	ret = parent->ops->has_signaled(pt);
 	if (ret < 0)
-		fence->status = ret;
+		fence->error = ret;
 	return ret;
 }
 
@@ -688,7 +688,7 @@ static int sync_fill_pt_info(struct fence *fence, void *data, int size)
 	strlcpy(info->driver_name, fence->ops->get_driver_name(fence),
 		sizeof(info->driver_name));
 	if (fence_is_signaled(fence))
-		info->status = fence->status >= 0 ? 1 : fence->status;
+		info->status = fence->error >= 0 ? 1 : fence->error;
 	else
 		info->status = 0;
 	info->timestamp_ns = ktime_to_ns(fence->timestamp);

@@ -130,16 +130,15 @@ static inline uint16_t clamp_ndiv(struct mrq_cpu_ndiv_limits_response *nltbl,
 static inline uint16_t map_freq_to_ndiv(struct mrq_cpu_ndiv_limits_response
 	*nltbl, uint32_t freq)
 {
-	uint16_t ndiv;
+	return DIV_ROUND_UP(freq * nltbl->pdiv * nltbl->mdiv,
+			    nltbl->ref_clk_hz / KHZ_TO_HZ);
+}
 
-	ndiv = (freq * KHZ_TO_HZ / nltbl->ref_clk_hz) *
-		nltbl->pdiv * nltbl->mdiv;
-
-	if ((freq * KHZ_TO_HZ % nltbl->ref_clk_hz) *
-		nltbl->pdiv * nltbl->mdiv)
-		ndiv++;
-
-	return ndiv;
+static inline uint32_t map_ndiv_to_freq(struct mrq_cpu_ndiv_limits_response
+	*nltbl, uint16_t ndiv)
+{
+	return nltbl->ref_clk_hz / KHZ_TO_HZ * ndiv /
+		(nltbl->pdiv * nltbl->mdiv);
 }
 
 static void tegra_read_counters(struct work_struct *work)
@@ -887,14 +886,10 @@ static int __init init_freqtbls(struct device_node *dn)
 		for (index = 0, ndiv = nltbl->ndiv_min;
 				ndiv < nltbl->ndiv_max;
 				index++, ndiv += freq_table_step_size)
-			ftbl[index].frequency = (unsigned long)
-				(nltbl->ref_clk_hz / 1000 * ndiv)
-				/ (nltbl->pdiv * nltbl->mdiv);
+			ftbl[index].frequency = map_ndiv_to_freq(nltbl, ndiv);
 
-		ftbl[index++].frequency = (unsigned long)
-			(nltbl->ref_clk_hz / 1000 * nltbl->ndiv_max) /
-			(nltbl->pdiv * nltbl->mdiv);
-
+		ftbl[index++].frequency = map_ndiv_to_freq(nltbl,
+							   nltbl->ndiv_max);
 		ftbl[index].frequency = CPUFREQ_TABLE_END;
 
 		tfreq_data.pcluster[cl].clft = ftbl;

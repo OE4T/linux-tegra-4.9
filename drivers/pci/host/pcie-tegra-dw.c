@@ -169,6 +169,10 @@
 #define PCIE_ATU_DEV(x)			(((x) & 0x1f) << 19)
 #define PCIE_ATU_FUNC(x)		(((x) & 0x7) << 16)
 
+#define CFG_PREF_MEM_LIMIT_BASE				0x24
+#define CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE		BIT(0)
+#define CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE	BIT(16)
+
 #define CFG_LINK_CAP			0x7C
 #define CFG_LINK_CAP_MAX_LINK_SPEED_MASK	0xF
 #define CFG_LINK_CAP_MAX_WIDTH_MASK		0x3F0
@@ -2085,6 +2089,11 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 		tmp |= 19;
 		dw_pcie_cfg_write(pp->dbi_base + AUX_CLK_FREQ, 4, tmp);
 	}
+
+	dw_pcie_cfg_read(pp->dbi_base + CFG_PREF_MEM_LIMIT_BASE, 4, &tmp);
+	tmp |= CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE;
+	tmp |= CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE;
+	dw_pcie_cfg_write(pp->dbi_base + CFG_PREF_MEM_LIMIT_BASE, 4, tmp);
 
 	/* Configure FTS */
 	dw_pcie_cfg_read(pp->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL, 4, &tmp);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,7 +33,6 @@ static struct tegra_hv_ivm_cookie *vgpu_css_reserve_mempool(struct gk20a *g)
 	struct device *dev = dev_from_gk20a(g);
 	struct device_node *np = dev->of_node;
 	struct of_phandle_args args;
-	struct device_node *hv_np;
 	struct tegra_hv_ivm_cookie *cookie;
 	u32 mempool;
 	int err;
@@ -45,9 +44,8 @@ static struct tegra_hv_ivm_cookie *vgpu_css_reserve_mempool(struct gk20a *g)
 		return ERR_PTR(err);
 	}
 
-	hv_np = args.np;
 	mempool = args.args[0];
-	cookie = tegra_hv_mempool_reserve(hv_np, mempool);
+	cookie = tegra_hv_mempool_reserve(mempool);
 	if (IS_ERR_OR_NULL(cookie)) {
 		nvgpu_err(g, "mempool  %u reserve failed", mempool);
 		return ERR_PTR(-EINVAL);

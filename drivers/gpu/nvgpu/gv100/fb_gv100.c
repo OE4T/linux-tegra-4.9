@@ -1,7 +1,7 @@
 /*
  * GV100 FB
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -181,4 +181,54 @@ exit:
 	nvgpu_log_fn(g, "done, status - %d", err);
 
 	return err;
+}
+
+int gv100_fb_init_nvlink(struct gk20a *g)
+{
+	u32 data;
+	u32 mask = g->nvlink.enabled_links;
+
+	/* Map enabled link to SYSMEM */
+	data = nvgpu_readl(g, fb_hshub_config0_r());
+	data = set_field(data, fb_hshub_config0_sysmem_nvlink_mask_m(),
+			fb_hshub_config0_sysmem_nvlink_mask_f(mask));
+	nvgpu_writel(g, fb_hshub_config0_r(), data);
+
+	return 0;
+}
+
+int gv100_fb_enable_nvlink(struct gk20a *g)
+{
+	u32 data;
+
+	nvgpu_log(g, gpu_dbg_nvlink|gpu_dbg_info, "enabling nvlink");
+
+	/* Enable nvlink for NISO FBHUB */
+	data = nvgpu_readl(g, fb_niso_cfg1_r());
+	data = set_field(data, fb_niso_cfg1_sysmem_nvlink_m(),
+		fb_niso_cfg1_sysmem_nvlink_enabled_f());
+	nvgpu_writel(g, fb_niso_cfg1_r(), data);
+
+	/* Setup atomics */
+	data = nvgpu_readl(g, fb_mmu_ctrl_r());
+	data = set_field(data, fb_mmu_ctrl_atomic_capability_mode_m(),
+		fb_mmu_ctrl_atomic_capability_mode_rmw_f());
+	nvgpu_writel(g, fb_mmu_ctrl_r(), data);
+
+	data = nvgpu_readl(g, fb_hsmmu_pri_mmu_ctrl_r());
+	data = set_field(data, fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_m(),
+		    fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_rmw_f());
+	nvgpu_writel(g, fb_hsmmu_pri_mmu_ctrl_r(), data);
+
+	data = nvgpu_readl(g, fb_fbhub_num_active_ltcs_r());
+	data = set_field(data, fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_m(),
+		    fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_f());
+	nvgpu_writel(g, fb_fbhub_num_active_ltcs_r(), data);
+
+	data = nvgpu_readl(g, fb_hshub_num_active_ltcs_r());
+	data = set_field(data, fb_hshub_num_active_ltcs_hub_sys_atomic_mode_m(),
+		    fb_hshub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_f());
+	nvgpu_writel(g, fb_hshub_num_active_ltcs_r(), data);
+
+	return 0;
 }

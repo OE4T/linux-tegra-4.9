@@ -445,6 +445,8 @@ static const struct gpu_ops gv100_ops = {
 		.tlb_invalidate = gk20a_fb_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.mem_unlock = gv100_fb_memory_unlock,
+		.init_nvlink = gv100_fb_init_nvlink,
+		.enable_nvlink = gv100_fb_enable_nvlink,
 	},
 	.fifo = {
 		.get_preempt_timeout = gv100_fifo_get_preempt_timeout,

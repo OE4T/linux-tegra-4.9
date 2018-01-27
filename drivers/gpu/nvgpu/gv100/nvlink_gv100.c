@@ -1638,6 +1638,13 @@ int gv100_nvlink_init(struct gk20a *g)
 
 	/* Set HSHUB and SG_PHY */
 	__nvgpu_set_enabled(g, NVGPU_MM_USE_PHYSICAL_SG, true);
+
+	err = g->ops.fb.enable_nvlink(g);
+	if (err) {
+		nvgpu_err(g, "failed switch to nvlink sysmem");
+		return err;
+	}
+
 	return err;
 }
 
@@ -2142,10 +2149,17 @@ int gv100_nvlink_interface_init(struct gk20a *g)
 {
 	unsigned long mask = g->nvlink.enabled_links;
 	u32 link_id;
+	int err;
 
 	for_each_set_bit(link_id, &mask, 32) {
 		gv100_nvlink_initialize_mif(g, link_id);
 		gv100_nvlink_mif_intr_enable(g, link_id, true);
+	}
+
+	err = g->ops.fb.init_nvlink(g);
+	if (err) {
+		nvgpu_err(g, "failed to setup nvlinks for sysmem");
+		return err;
 	}
 
 	return 0;

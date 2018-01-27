@@ -3,7 +3,7 @@
  *
  * Instantiates virtualization-related resources.
  *
- * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -716,8 +716,7 @@ struct ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck)
 }
 EXPORT_SYMBOL(tegra_hv_ivc_convert_cookie);
 
-struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(struct device_node *dn,
-		unsigned id)
+struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id)
 {
 	uint32_t i;
 	struct hv_mempool *mempool;

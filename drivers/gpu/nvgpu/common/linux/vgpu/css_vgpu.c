@@ -15,7 +15,7 @@
  */
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 
-#include <linux/tegra-ivc.h>
+#include <nvgpu/vgpu/vgpu_ivm.h>
 #include <linux/tegra_vgpu.h>
 #include <uapi/linux/nvgpu.h>
 
@@ -45,7 +45,7 @@ static struct tegra_hv_ivm_cookie *vgpu_css_reserve_mempool(struct gk20a *g)
 	}
 
 	mempool = args.args[0];
-	cookie = tegra_hv_mempool_reserve(mempool);
+	cookie = vgpu_ivm_mempool_reserve(mempool);
 	if (IS_ERR_OR_NULL(cookie)) {
 		nvgpu_err(g, "mempool  %u reserve failed", mempool);
 		return ERR_PTR(-EINVAL);
@@ -61,18 +61,19 @@ u32 vgpu_css_get_buffer_size(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	if (css_cookie) {
-		nvgpu_log_info(g, "buffer size = %llu", css_cookie->size);
-		return (u32)css_cookie->size;
+		size = (u32)vgpu_ivm_get_size(css_cookie);
+		nvgpu_log_info(g, "buffer size = 0x%08x", size);
+		return size;
 	}
 
 	cookie = vgpu_css_reserve_mempool(g);
 	if (IS_ERR(cookie))
 		return 0;
 
-	size = cookie->size;
+	size = vgpu_ivm_get_size(cookie);
 
-	tegra_hv_mempool_unreserve(cookie);
-	nvgpu_log_info(g, "buffer size = %u", size);
+	vgpu_ivm_mempool_unreserve(cookie);
+	nvgpu_log_info(g, "buffer size = 0x%08x", size);
 	return size;
 }
 
@@ -82,6 +83,7 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	struct gk20a_cs_snapshot *data = gr->cs_data;
 	void *buf = NULL;
 	int err;
+	u64 size;
 
 	gk20a_dbg_fn("");
 
@@ -92,15 +94,15 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	if (IS_ERR(css_cookie))
 		return PTR_ERR(css_cookie);
 
+	size = vgpu_ivm_get_size(css_cookie);
 	/* Make sure buffer size is large enough */
-	if (css_cookie->size < CSS_MIN_HW_SNAPSHOT_SIZE) {
-		nvgpu_info(g, "mempool size %lld too small",
-			css_cookie->size);
+	if (size < CSS_MIN_HW_SNAPSHOT_SIZE) {
+		nvgpu_info(g, "mempool size 0x%llx too small", size);
 		err = -ENOMEM;
 		goto fail;
 	}
 
-	buf = ioremap_cache(css_cookie->ipa, css_cookie->size);
+	buf = ioremap_cache(vgpu_ivm_get_ipa(css_cookie), size);
 	if (!buf) {
 		nvgpu_info(g, "ioremap_cache failed");
 		err = -EINVAL;
@@ -109,12 +111,12 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 
 	data->hw_snapshot = buf;
 	data->hw_end = data->hw_snapshot +
-		css_cookie->size / sizeof(struct gk20a_cs_snapshot_fifo_entry);
+		size / sizeof(struct gk20a_cs_snapshot_fifo_entry);
 	data->hw_get = data->hw_snapshot;
-	memset(data->hw_snapshot, 0xff, css_cookie->size);
+	memset(data->hw_snapshot, 0xff, size);
 	return 0;
 fail:
-	tegra_hv_mempool_unreserve(css_cookie);
+	vgpu_ivm_mempool_unreserve(css_cookie);
 	css_cookie = NULL;
 	return err;
 }
@@ -129,7 +131,7 @@ void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 	iounmap(data->hw_snapshot);
 	data->hw_snapshot = NULL;
 
-	tegra_hv_mempool_unreserve(css_cookie);
+	vgpu_ivm_mempool_unreserve(css_cookie);
 	css_cookie = NULL;
 
 	gk20a_dbg_info("cyclestats(vgpu): buffer for snapshots released\n");

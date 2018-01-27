@@ -15,7 +15,6 @@
  */
 
 #include <linux/string.h>
-#include <linux/tegra-ivc.h>
 #include <linux/tegra_vgpu.h>
 
 #include <uapi/linux/nvgpu.h>
@@ -24,6 +23,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/vgpu/vgpu_ivm.h>
 
 #include "gk20a/gk20a.h"
 #include "vgpu.h"
@@ -62,7 +62,7 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
 
 	mempool = args.args[0];
-	vcst->cookie = tegra_hv_mempool_reserve(mempool);
+	vcst->cookie = vgpu_ivm_mempool_reserve(mempool);
 	if (IS_ERR(vcst->cookie)) {
 		dev_info(dev_from_gk20a(g),
 			"mempool  %u reserve failed\n", mempool);
@@ -71,7 +71,8 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 		goto fail;
 	}
 
-	vcst->buf = ioremap_cache(vcst->cookie->ipa, vcst->cookie->size);
+	vcst->buf = ioremap_cache(vgpu_ivm_get_ipa(vcst->cookie),
+			vgpu_ivm_get_size(vcst->cookie));
 	if (!vcst->buf) {
 		dev_info(dev_from_gk20a(g), "ioremap_cache failed\n");
 		err = -EINVAL;
@@ -91,7 +92,7 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 fail:
 	iounmap(vcst->buf);
 	if (vcst->cookie)
-		tegra_hv_mempool_unreserve(vcst->cookie);
+		vgpu_ivm_mempool_unreserve(vcst->cookie);
 	nvgpu_kfree(g, vcst);
 	return err;
 }
@@ -101,7 +102,7 @@ int vgpu_fecs_trace_deinit(struct gk20a *g)
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
 	iounmap(vcst->buf);
-	tegra_hv_mempool_unreserve(vcst->cookie);
+	vgpu_ivm_mempool_unreserve(vcst->cookie);
 	nvgpu_kfree(g, vcst);
 	return 0;
 }
@@ -164,7 +165,7 @@ int vgpu_alloc_user_buffer(struct gk20a *g, void **buf, size_t *size)
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
 	*buf = vcst->buf;
-	*size = vcst->cookie->size;
+	*size = vgpu_ivm_get_size(vcst->cookie);
 	return 0;
 }
 
@@ -176,14 +177,14 @@ int vgpu_free_user_buffer(struct gk20a *g)
 int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
-	unsigned long size = vcst->cookie->size;
+	unsigned long size = vgpu_ivm_get_size(vcst->cookie);
 	unsigned long vsize = vma->vm_end - vma->vm_start;
 
 	size = min(size, vsize);
 	size = round_up(size, PAGE_SIZE);
 
 	return remap_pfn_range(vma, vma->vm_start,
-			vcst->cookie->ipa >> PAGE_SHIFT,
+			vgpu_ivm_get_ipa(vcst->cookie) >> PAGE_SHIFT,
 			size,
 			vma->vm_page_prot);
 }

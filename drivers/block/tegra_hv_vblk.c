@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1374,7 +1374,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		goto free_drvdata;
 	}
 
-	ivmk = tegra_hv_mempool_reserve(NULL, vblkdev->ivm_id);
+	ivmk = tegra_hv_mempool_reserve(vblkdev->ivm_id);
 	if (IS_ERR_OR_NULL(ivmk)) {
 		dev_err(dev, "Failed to reserve IVM channel %d\n",
 			vblkdev->ivm_id);

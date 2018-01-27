@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -269,13 +269,11 @@ int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck);
 
 /**
  * tegra_hv_mempool_reserve - reserve a mempool for use
- * @dn		Ignored
  * @id		Id of the requested mempool.
  *
  * Returns a cookie representing the mempool on success, otherwise an ERR_PTR.
  */
-struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(struct device_node *dn,
-		unsigned id);
+struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id);
 
 /**
  * tegra_hv_mempool_release - release a reserved mempool
@@ -399,8 +397,7 @@ static inline int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck)
 	return -ENODEV;
 }
 
-static inline struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(
-		struct device_node *dn,	unsigned id)
+static inline struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id)
 {
 	return ERR_PTR(-ENODEV);
 }

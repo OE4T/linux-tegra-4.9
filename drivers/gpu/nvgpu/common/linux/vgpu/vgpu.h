@@ -27,13 +27,12 @@ struct gk20a_platform;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 #include <nvgpu/vgpu/vgpu_ivc.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
+#include <nvgpu/thread.h>
 
-#include <linux/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
 #include "common/linux/platform_gk20a.h"
 #include "common/linux/os_linux.h"
-
-#include <nvgpu/thread.h>
 
 struct vgpu_priv_data {
 	u64 virt_handle;

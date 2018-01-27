@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/tegra_vgpu.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
 #include "common/linux/vgpu/vgpu.h"
 

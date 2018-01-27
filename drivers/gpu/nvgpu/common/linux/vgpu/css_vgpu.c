@@ -16,7 +16,7 @@
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 
 #include <nvgpu/vgpu/vgpu_ivm.h>
-#include <linux/tegra_vgpu.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"

@@ -15,8 +15,8 @@
  */
 
 #include <nvgpu/vgpu/vgpu_ivc.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 
-#include <linux/tegra_vgpu.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"

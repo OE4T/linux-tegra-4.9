@@ -19,8 +19,7 @@
 #include "common/linux/vgpu/vgpu.h"
 #include "gv11b/fifo_gv11b.h"
 #include <nvgpu/nvhost.h>
-
-#include <linux/tegra_vgpu.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 

@@ -15,7 +15,6 @@
  */
 
 #include <linux/string.h>
-#include <linux/tegra_vgpu.h>
 
 #include <uapi/linux/nvgpu.h>
 
@@ -24,6 +23,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/vgpu/vgpu_ivm.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "vgpu.h"

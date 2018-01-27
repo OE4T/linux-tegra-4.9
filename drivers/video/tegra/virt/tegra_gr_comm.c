@@ -222,15 +222,9 @@ static int setup_mempool(struct platform_device *pdev,
 		snprintf(name, sizeof(name), "mempool%d", i);
 		if (of_property_read_u32_index(dev->of_node, name,
 				PROP_MEMPOOL_INST, &inst) == 0) {
-			struct device_node *hv_dn;
 			struct gr_comm_mempool_context *ctx;
 			struct gr_comm_queue *queue =
 					&comm_context.queue[i];
-
-			hv_dn = of_parse_phandle(dev->of_node, name,
-						PROP_MEMPOOL_NODE);
-			if (!hv_dn)
-				goto fail;
 
 			ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 			if (!ctx) {
@@ -238,8 +232,7 @@ static int setup_mempool(struct platform_device *pdev,
 				goto fail;
 			}
 
-			ctx->cookie =
-				tegra_hv_mempool_reserve(hv_dn, inst);
+			ctx->cookie = tegra_hv_mempool_reserve(inst);
 			if (IS_ERR_OR_NULL(ctx->cookie)) {
 				ret = PTR_ERR(ctx->cookie);
 				kfree(ctx);

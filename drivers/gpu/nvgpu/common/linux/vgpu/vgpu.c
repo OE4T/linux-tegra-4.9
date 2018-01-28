@@ -17,7 +17,6 @@
  */
 
 #include <linux/mm.h>
-#include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_qos.h>
@@ -198,7 +197,7 @@ static int vgpu_intr_thread(void *dev_id)
 	}
 
 	while (!nvgpu_thread_should_stop(&priv->intr_handler))
-		msleep(10);
+		nvgpu_msleep(10);
 	return 0;
 }
 

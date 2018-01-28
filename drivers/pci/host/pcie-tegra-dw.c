@@ -399,6 +399,7 @@ struct tegra_pcie_dw {
 	struct dentry *debugfs;
 	u32 target_speed;
 	dma_addr_t dma_addr;
+	u32 dma_size;
 	void *cpu_virt_addr;
 	bool disable_clock_request;
 	bool power_down_en;
@@ -409,12 +410,17 @@ struct tegra_pcie_dw {
 	u64 dst;
 	u32 size;
 	u8 channel;
+	bool dma_poll;
 	/* lock for write DMA channel */
 	struct mutex wr_lock[DMA_WR_CHNL_NUM];
 	/* lock for read DMA channel */
 	struct mutex rd_lock[DMA_RD_CHNL_NUM];
 	struct completion wr_cpl[DMA_WR_CHNL_NUM];
 	struct completion rd_cpl[DMA_RD_CHNL_NUM];
+	ktime_t wr_start_time[DMA_WR_CHNL_NUM];
+	ktime_t wr_end_time[DMA_WR_CHNL_NUM];
+	ktime_t rd_start_time[DMA_RD_CHNL_NUM];
+	ktime_t rd_end_time[DMA_RD_CHNL_NUM];
 	unsigned long wr_busy;
 	unsigned long rd_busy;
 
@@ -746,12 +752,13 @@ static int tegra_pcie_dw_rd_other_conf(struct pcie_port *pp,
 
 static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 {
-	u32 val = 0;
+	struct device *dev = pcie->dev;
+	u32 val = 0, bit = 0;
 	int ret = 0;
+	unsigned long now, timeout = msecs_to_jiffies(6000);
 
 	if (tx->channel > 3) {
-		dev_err(pcie->dev,
-			"Invalid Channel number. Should be with in [0~3]\n");
+		dev_err(dev, "Invalid channel num, should be within [0~3]\n");
 		return -EINVAL;
 	}
 
@@ -806,23 +813,64 @@ static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	pcie->wr_busy |= 1 << tx->channel;
 
+	pcie->wr_start_time[tx->channel] = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(pcie->atu_dma_base, pcie->channel,
 		      DMA_WRITE_DOORBELL_OFF);
 
-	/* wait for completion or timeout */
-	ret = wait_for_completion_timeout(&pcie->wr_cpl[tx->channel],
-					  msecs_to_jiffies(5000));
-	if (ret == 0) {
-		dev_err(pcie->dev,
-			"DMA write operation timed out and no interrupt\n");
-		ret = -ETIMEDOUT;
-		/* if timeout, clear the mess, sanitize channel & return err */
-		dma_common_wr(pcie->atu_dma_base,
-			      DMA_WRITE_DOORBELL_OFF_WR_STOP |  pcie->channel,
-			      DMA_WRITE_DOORBELL_OFF);
-		goto exit;
+	if (pcie->dma_poll) {
+		now = jiffies;
+		while (true) {
+			val = dma_common_rd(pcie->atu_dma_base,
+					    DMA_WRITE_INT_STATUS_OFF);
+			/* check the status of all busy marked channels */
+			for_each_set_bit(bit, &pcie->wr_busy, DMA_WR_CHNL_NUM) {
+				if (BIT(bit) & val) {
+					pcie->wr_end_time[bit] = ktime_get();
+					dma_common_wr(pcie->atu_dma_base,
+						      BIT(bit),
+						      DMA_WRITE_INT_CLEAR_OFF);
+					/* clear status */
+					pcie->wr_busy &= ~(BIT(bit));
+				}
+			}
+			if (!pcie->wr_busy)
+				break;
+			if (time_after(jiffies, now + timeout)) {
+				dev_err(dev, "DMA write timed out & poll end\n");
+				ret = -ETIMEDOUT;
+				/* if timeout, clear the mess, sanitize channel
+				 * & return err
+				 */
+				dma_common_wr(pcie->atu_dma_base,
+					      DMA_WRITE_DOORBELL_OFF_WR_STOP |
+					      tx->channel,
+					      DMA_WRITE_DOORBELL_OFF);
+				goto exit;
+			}
+		}
+		dev_info(dev, "DMA write completed. Size: 0x%x bytes, "
+			 "start time: %lld nsec, end time: %lld nsec\n",
+			 tx->size,
+			 ktime_to_ns(pcie->wr_start_time[tx->channel]),
+			 ktime_to_ns(pcie->wr_end_time[tx->channel]));
+	} else {
+		/* wait for completion or timeout */
+		ret = wait_for_completion_timeout(&pcie->wr_cpl[tx->channel],
+						  msecs_to_jiffies(5000));
+		if (ret == 0) {
+			dev_err(dev, "DMA write timed out and no interrupt\n");
+			ret = -ETIMEDOUT;
+			/* if timeout, clear the mess, sanitize channel &
+			 * return err
+			 */
+			dma_common_wr(pcie->atu_dma_base,
+				      DMA_WRITE_DOORBELL_OFF_WR_STOP |
+				      tx->channel,
+				      DMA_WRITE_DOORBELL_OFF);
+			goto exit;
+		}
 	}
 
 exit:
@@ -832,12 +880,13 @@ exit:
 
 static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 {
-	u32 val = 0;
+	struct device *dev = pcie->dev;
+	u32 val = 0, bit = 0;
 	int ret = 0;
+	unsigned long now, timeout = msecs_to_jiffies(6000);
 
 	if (tx->channel > 1) {
-		dev_err(pcie->dev,
-			"Invalid Channel number. Should be with in [0~1]\n");
+		dev_err(dev, "Invalid channel num, should be within [0~1]\n");
 		return -EINVAL;
 	}
 
@@ -893,23 +942,64 @@ static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	pcie->rd_busy |= 1 << tx->channel;
 
+	pcie->rd_start_time[tx->channel] = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(pcie->atu_dma_base, pcie->channel,
 		      DMA_READ_DOORBELL_OFF);
 
-	/* wait for completion or timeout */
-	ret = wait_for_completion_timeout(&pcie->rd_cpl[tx->channel],
-					  msecs_to_jiffies(5000));
-	if (ret == 0) {
-		dev_err(pcie->dev,
-			"DMA read operation timed out and no interrupt\n");
-		ret = -ETIMEDOUT;
-		/* if timeout, clear the mess, sanitize channel & return err */
-		dma_common_wr(pcie->atu_dma_base,
-			      DMA_READ_DOORBELL_OFF_RD_STOP | pcie->channel,
-			      DMA_READ_DOORBELL_OFF);
-		goto exit;
+	if (pcie->dma_poll) {
+		now = jiffies;
+		while (true) {
+			val = dma_common_rd(pcie->atu_dma_base,
+					    DMA_READ_INT_STATUS_OFF);
+			/* check the status of all busy marked channels */
+			for_each_set_bit(bit, &pcie->rd_busy, DMA_RD_CHNL_NUM) {
+				if (BIT(bit) & val) {
+					pcie->rd_end_time[bit] = ktime_get();
+					dma_common_wr(pcie->atu_dma_base,
+						      BIT(bit),
+						      DMA_READ_INT_CLEAR_OFF);
+					/* clear status */
+					pcie->rd_busy &= ~(BIT(bit));
+				}
+			}
+			if (!pcie->rd_busy)
+				break;
+			if (time_after(jiffies, now + timeout)) {
+				dev_err(dev, "DMA read timed out & poll end\n");
+				ret = -ETIMEDOUT;
+				/* if timeout, clear the mess, sanitize channel
+				 * & return err
+				 */
+				dma_common_wr(pcie->atu_dma_base,
+					      DMA_READ_DOORBELL_OFF_RD_STOP |
+					      tx->channel,
+					      DMA_READ_DOORBELL_OFF);
+				goto exit;
+			}
+		}
+		dev_info(dev, "DMA read completed. Size: 0x%x bytes, "
+			 "start time: %lld nsec, end time: %lld nsec\n",
+			 tx->size,
+			 ktime_to_ns(pcie->rd_start_time[tx->channel]),
+			 ktime_to_ns(pcie->rd_end_time[tx->channel]));
+	} else {
+		/* wait for completion or timeout */
+		ret = wait_for_completion_timeout(&pcie->rd_cpl[tx->channel],
+						  msecs_to_jiffies(5000));
+		if (ret == 0) {
+			dev_err(dev, "DMA read timed out and no interrupt\n");
+			ret = -ETIMEDOUT;
+			/* if timeout, clear the mess, sanitize channel
+			 * & return err
+			 */
+			dma_common_wr(pcie->atu_dma_base,
+				      DMA_READ_DOORBELL_OFF_RD_STOP |
+				      tx->channel,
+				      DMA_READ_DOORBELL_OFF);
+			goto exit;
+		}
 	}
 
 exit:
@@ -1501,7 +1591,7 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 	struct dentry *d;
 
 	/* alloc memory required for RP-DMA testing */
-	pcie->cpu_virt_addr = dma_alloc_coherent(pcie->dev, 0x100000,
+	pcie->cpu_virt_addr = dma_alloc_coherent(pcie->dev, pcie->dma_size,
 					    &pcie->dma_addr, GFP_KERNEL);
 	if (!pcie->cpu_virt_addr) {
 		dev_err(pcie->dev,
@@ -1670,10 +1760,12 @@ static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
 		val |= APPL_INTR_EN_L1_8_AER_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
 
-	/* Enable Interrupt for DMA completion */
-	val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
-	val |= APPL_INTR_EN_L1_8_EDMA_INT_EN;
-	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
+	if (!pcie->dma_poll) {
+		/* Enable Interrupt for DMA completion */
+		val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
+		val |= APPL_INTR_EN_L1_8_EDMA_INT_EN;
+		writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
+	}
 }
 
 static void tegra_pcie_enable_msi_interrupts(struct pcie_port *pp)
@@ -2280,6 +2372,16 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
 		"nvidia,enable-power-down");
 	pp->skip_enum = pcie->power_down_en;
+
+	ret = of_property_read_u32(np, "nvidia,dma-size", &pcie->dma_size);
+	if (ret) {
+		dev_dbg(pcie->dev, "Setting default dma size to 1MB\n");
+		pcie->dma_size = SZ_1M;
+	}
+	if (device_property_read_bool(pcie->dev, "nvidia,dma-poll"))
+		pcie->dma_poll = true;
+	else
+		pcie->dma_poll = false;
 
 	if (tegra_platform_is_fpga()) {
 		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;

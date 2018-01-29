@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/mc.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2018, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -50,6 +50,8 @@ static DEFINE_SPINLOCK(tegra_mc_lock);
 int mc_channels;
 void __iomem *mc;
 void __iomem *mc_regs[MC_MAX_CHANNELS];
+unsigned int mssnvlink_hubs;
+void __iomem *mssnvlink_regs[MC_MAX_MSSNVLINK_HUBS];
 
 u32 tegra_mc_readl(u32 reg)
 {
@@ -327,7 +329,6 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 	struct device_node *dn = NULL;
 	void __iomem *regs;
 	int ret = 0, i;
-	u32 nhubs;
 	u32 reg_val;
 
 	/* MSSNVLINK support is available in silicon or fpga only */
@@ -340,7 +341,7 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 		return;
 	}
 
-	ret = of_property_read_u32(dn, "mssnvlink_hubs", &nhubs);
+	ret = of_property_read_u32(dn, "mssnvlink_hubs", &mssnvlink_hubs);
 	if (ret) {
 		dev_err(&pdev->dev, "<mssnvlink_hubs> property missing in %s\n",
 			pdev->dev.of_node->name);
@@ -348,14 +349,20 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 			goto err_out;
 	}
 
-	for (i = 0; i < nhubs; i++) {
+	if (mssnvlink_hubs > MC_MAX_MSSNVLINK_HUBS || mssnvlink_hubs < 1) {
+		pr_err("Invalid number of mssnvlink hubs: %d\n", mssnvlink_hubs);
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	for (i = 0; i < mssnvlink_hubs; i++) {
 		regs = of_iomap(dn, i);
 		if (!regs) {
 			dev_err(&pdev->dev, "Failed to get MSSNVLINK aperture: %d\n", i);
 			ret = PTR_ERR(regs);
 			goto err_out;
 		}
-
+		mssnvlink_regs[i] = regs;
 		reg_val = __raw_readl(regs + MSSNVLINK_CYA_DESIGN_MODES);
 		reg_val |=  MSS_NVLINK_L3_ALLOC_HINT;
 		__raw_writel(reg_val, regs + MSSNVLINK_CYA_DESIGN_MODES);

@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -44,6 +44,8 @@
 #include "nvcsi/nvcsi.h"
 
 #define TPG_CSI_GROUP_ID	10
+
+static s64 queue_init_ts;
 
 static void gang_buffer_offsets(struct tegra_channel *chan)
 {
@@ -307,6 +309,7 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 void free_ring_buffers(struct tegra_channel *chan, int frames)
 {
 	struct vb2_v4l2_buffer *vbuf;
+	s64 frame_arrived_ts = 0;
 
 	while (frames) {
 		vbuf = chan->buffers[chan->free_index];
@@ -330,6 +333,18 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 			chan->buffer_state[chan->free_index] =
 						VB2_BUF_STATE_ERROR;
 #endif
+
+		if (chan->sequence == 1) {
+			/*
+			 * Evaluate the initial capture latency
+			 * between videobuf2 queue and first captured
+			 * frame release to user-space.
+			 */
+			frame_arrived_ts = ktime_to_ms(ktime_get());
+			dev_dbg(&chan->video.dev,
+				"%s:capture init latency is %lld ms\n",
+				__func__, (frame_arrived_ts - queue_init_ts));
+		}
 		vb2_buffer_done(&vbuf->vb2_buf,
 			chan->buffer_state[chan->free_index++]);
 
@@ -502,6 +517,14 @@ static void tegra_channel_buffer_queue(struct vb2_buffer *vb)
 	if (chan->bypass)
 		return;
 
+	if (!queue_init_ts) {
+		/*
+		 * Record videobuf2 queue initial timestamp.
+		 * Note: latency is accurate when streaming is already turned ON
+		 */
+		queue_init_ts = ktime_to_ms(ktime_get());
+	}
+
 	/* Put buffer into the capture queue */
 	spin_lock(&chan->start_lock);
 	list_add_tail(&buf->queue, &chan->capture);
@@ -609,6 +632,9 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 
 	if (vi->fops)
 		vi->fops->vi_stop_streaming(vq);
+
+	/* Clean-up recorded videobuf2 queue initial timestamp */
+	queue_init_ts = 0;
 }
 
 static const struct vb2_ops tegra_channel_queue_qops = {

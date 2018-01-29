@@ -50,7 +50,7 @@
  * added it must be added here as well!!
  */
 #define NVGPU_DMA_STR_SIZE					\
-	sizeof("NO_KERNEL_MAPPING FORCE_CONTIGUOUS READ_ONLY")
+	sizeof("NO_KERNEL_MAPPING FORCE_CONTIGUOUS")
 
 /*
  * The returned string is kmalloc()ed here but must be freed by the caller.
@@ -77,7 +77,6 @@ static char *nvgpu_dma_flags_to_str(struct gk20a *g, unsigned long flags)
 
 	APPEND_FLAG(NVGPU_DMA_NO_KERNEL_MAPPING, "NO_KERNEL_MAPPING ");
 	APPEND_FLAG(NVGPU_DMA_FORCE_CONTIGUOUS,  "FORCE_CONTIGUOUS ");
-	APPEND_FLAG(NVGPU_DMA_READ_ONLY,         "READ_ONLY");
 #undef APPEND_FLAG
 
 	return buf;
@@ -171,8 +170,6 @@ static void nvgpu_dma_flags_to_attrs(struct dma_attrs *attrs,
 		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, ATTR_ARG(attrs));
 	if (flags & NVGPU_DMA_FORCE_CONTIGUOUS)
 		dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, ATTR_ARG(attrs));
-	if (flags & NVGPU_DMA_READ_ONLY)
-		dma_set_attr(DMA_ATTR_READ_ONLY, ATTR_ARG(attrs));
 #undef ATTR_ARG
 }
 

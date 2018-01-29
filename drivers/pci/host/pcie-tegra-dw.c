@@ -175,6 +175,7 @@
 #define CFG_DEV_STATUS_CONTROL_MPS_SHIFT	5
 
 #define CFG_LINK_STATUS_CONTROL		0x80
+#define CFG_LINK_STATUS_BW_MAN_STATUS	BIT(30)
 #define CFG_LINK_STATUS_DLL_ACTIVE	BIT(29)
 #define CFG_LINK_STATUS_LT		BIT(27)
 #define CFG_LINK_CONTROL_LT		BIT(5)
@@ -1304,7 +1305,7 @@ static int apply_speed_change(struct seq_file *s, void *data)
 	for (;;) {
 		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
 				 4, &val);
-		if (!(val & CFG_LINK_STATUS_LT))
+		if (val & CFG_LINK_STATUS_BW_MAN_STATUS)
 			break;
 		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
 			break;

@@ -80,12 +80,6 @@ enum {
 	NVHOST_NUM_EVENT_TYPES = 3
 };
 
-union nvhost_event_union {
-	struct nvhost_task_begin task_begin;
-	struct nvhost_task_end task_end;
-	struct nvhost_task_submit task_submit;
-};
-
 enum {
 	NVHOST_NUM_CUSTOM_FILTER_FLAGS = 0
 };

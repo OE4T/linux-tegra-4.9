@@ -1817,7 +1817,8 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u64 timestamp_end)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	union nvhost_event_union event;
+	struct nvhost_task_begin task_begin;
+	struct nvhost_task_end task_end;
 
 	if (!pdata->eventlib_id)
 		return;
@@ -1825,26 +1826,26 @@ void nvhost_eventlib_log_task(struct platform_device *pdev,
 	/*
 	 * Write task start event
 	 */
-	event.task_begin.syncpt_id = syncpt_id;
-	event.task_begin.syncpt_thresh = syncpt_thresh;
-	event.task_begin.class_id = pdata->class;
+	task_begin.syncpt_id = syncpt_id;
+	task_begin.syncpt_thresh = syncpt_thresh;
+	task_begin.class_id = pdata->class;
 
 	keventlib_write(pdata->eventlib_id,
-			&event,
-			sizeof(event),
+			&task_begin,
+			sizeof(task_begin),
 			NVHOST_TASK_BEGIN,
 			timestamp_start);
 
 	/*
 	 * Write task end event
 	 */
-	event.task_end.syncpt_id = syncpt_id;
-	event.task_end.syncpt_thresh = syncpt_thresh;
-	event.task_end.class_id = pdata->class;
+	task_end.syncpt_id = syncpt_id;
+	task_end.syncpt_thresh = syncpt_thresh;
+	task_end.class_id = pdata->class;
 
 	keventlib_write(pdata->eventlib_id,
-			&event,
-			sizeof(event),
+			&task_end,
+			sizeof(task_end),
 			NVHOST_TASK_END,
 			timestamp_end);
 }
@@ -1855,7 +1856,7 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 				u64 timestamp)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	union nvhost_event_union event;
+	struct nvhost_task_submit task_submit;
 
 	if (!pdata->eventlib_id)
 		return;
@@ -1863,15 +1864,15 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 	/*
 	 * Write task start event
 	 */
-	event.task_submit.syncpt_id = syncpt_id;
-	event.task_submit.syncpt_thresh = syncpt_thresh;
-	event.task_submit.class_id = pdata->class;
-	event.task_submit.pid = current->tgid;
-	event.task_submit.tid = current->pid;
+	task_submit.syncpt_id = syncpt_id;
+	task_submit.syncpt_thresh = syncpt_thresh;
+	task_submit.class_id = pdata->class;
+	task_submit.pid = current->tgid;
+	task_submit.tid = current->pid;
 
 	keventlib_write(pdata->eventlib_id,
-			&event,
-			sizeof(event),
+			&task_submit,
+			sizeof(task_submit),
 			NVHOST_TASK_SUBMIT,
 			timestamp);
 }

@@ -252,7 +252,7 @@ int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 {
 	struct wifi_platform_data *plat_data;
 
-	DHD_ERROR(("%s\n", __FUNCTION__));
+	pr_info("%s\n", __FUNCTION__);
 	if (!buf || !adapter)
 		return -EINVAL;
 	plat_data = adapter->wifi_plat_data;
@@ -504,7 +504,7 @@ static int wifi_platdev_match(struct device *dev, void *data)
 	struct platform_device *pdev = to_platform_device(dev);
 
 	if (strcmp(pdev->name, name) == 0) {
-		DHD_ERROR(("found wifi platform device %s\n", name));
+		pr_info("found wifi platform device %s\n", name);
 		return TRUE;
 	}
 

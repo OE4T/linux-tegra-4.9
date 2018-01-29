@@ -735,8 +735,8 @@ dhdpcie_dongle_attach(dhd_bus_t *bus)
 	if (dhd_dongle_memsize)
 		dhdpcie_bus_dongle_setmemsize(bus, dhd_dongle_memsize);
 
-	DHD_ERROR(("DHD: dongle ram size is set to %d(orig %d) at 0x%x\n",
-	           bus->ramsize, bus->orig_ramsize, bus->dongle_ram_base));
+	pr_info("DHD: dongle ram size is set to %d(orig %d) at 0x%x\n",
+	           bus->ramsize, bus->orig_ramsize, bus->dongle_ram_base);
 
 	bus->srmemsize = si_socram_srmem_size(bus->sih);
 

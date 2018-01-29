@@ -7326,8 +7326,8 @@ dhdsdio_probe_attach(struct dhd_bus *bus, osl_t *osh, void *sdh, void *regsva,
 		if (dhd_dongle_ramsize)
 			dhd_dongle_setramsize(bus, dhd_dongle_ramsize);
 
-		DHD_ERROR(("DHD: dongle ram size is set to %d(orig %d) at 0x%x\n",
-		           bus->ramsize, bus->orig_ramsize, bus->dongle_ram_base));
+		pr_info("DHD: dongle ram size is set to %d(orig %d) at 0x%x\n",
+		           bus->ramsize, bus->orig_ramsize, bus->dongle_ram_base);
 
 		bus->srmemsize = si_socram_srmem_size(bus->sih);
 	}

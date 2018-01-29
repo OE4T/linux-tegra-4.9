@@ -162,7 +162,7 @@ dhd_deferred_work_init(void *dhd_info)
 	}
 
 	work->dhd_info = dhd_info;
-	DHD_ERROR(("%s: work queue initialized \n", __FUNCTION__));
+	pr_info("%s: work queue initialized \n", __FUNCTION__);
 	return work;
 
 return_null:

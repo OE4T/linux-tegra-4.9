@@ -481,7 +481,7 @@ dhdpcie_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		DHD_ERROR(("%s: chipmatch failed!!\n", __FUNCTION__));
 			return -ENODEV;
 	}
-	printf("PCI_PROBE:  bus %X, slot %X,vendor %X, device %X"
+	pr_info("PCI_PROBE:  bus %X, slot %X,vendor %X, device %X"
 		"(good PCI location)\n", pdev->bus->number,
 		PCI_SLOT(pdev->devfn), pdev->vendor, pdev->device);
 
@@ -754,7 +754,7 @@ int dhdpcie_init(struct pci_dev *pdev)
 		adapter = dhd_wifi_platform_get_adapter(PCI_BUS, pdev->bus->number,
 			PCI_SLOT(pdev->devfn));
 		if (adapter != NULL)
-			DHD_ERROR(("%s: found adapter info '%s'\n", __FUNCTION__, adapter->name));
+			pr_info("%s: found adapter info '%s'\n", __FUNCTION__, adapter->name);
 		else
 			DHD_ERROR(("%s: can't find adapter info for this chip\n", __FUNCTION__));
 		osl_static_mem_init(osh, adapter);

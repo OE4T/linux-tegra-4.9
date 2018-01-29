@@ -6188,7 +6188,7 @@ dhd_open(struct net_device *net)
 		atomic_set(&dhd->pend_8021x_cnt, 0);
 #if defined(WL_CFG80211)
 		if (!dhd_download_fw_on_driverload) {
-			DHD_ERROR(("\n%s\n", dhd_version));
+			pr_info("\n%s\n", dhd_version);
 #if defined(USE_INITIAL_SHORT_DWELL_TIME)
 			g_first_broadcast_scan = TRUE;
 #endif 
@@ -9508,7 +9508,7 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 	memcpy(net->dev_addr, temp_addr, ETHER_ADDR_LEN);
 
 	if (ifidx == 0)
-		printf("%s\n", dhd_version);
+		pr_info("%s\n", dhd_version);
 
 	if (need_rtnl_lock)
 		err = register_netdev(net);
@@ -9522,7 +9522,7 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 
 
 
-	printf("Register interface [%s]  MAC: "MACDBG"\n\n", net->name,
+	pr_info("Register interface [%s]  MAC: "MACDBG"\n\n", net->name,
 #if defined(CUSTOMER_HW4_DEBUG)
 		MAC2STRDBG(dhd->pub.mac.octet));
 #else
@@ -9989,7 +9989,7 @@ dhd_module_init(void)
 	int err;
 	int retry = POWERUP_MAX_RETRY;
 
-	DHD_ERROR(("%s in\n", __FUNCTION__));
+	pr_info("%s in\n", __FUNCTION__);
 
 	dhd_buzzz_attach();
 
@@ -10030,7 +10030,7 @@ dhd_module_init(void)
 		}
 	}
 
-	DHD_ERROR(("%s out\n", __FUNCTION__));
+	pr_info("%s out\n", __FUNCTION__);
 
 	return err;
 }

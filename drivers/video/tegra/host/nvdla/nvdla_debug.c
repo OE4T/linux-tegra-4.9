@@ -511,15 +511,9 @@ static ssize_t debug_dla_fw_reload_set(struct file *file,
 
 	nvdla_dbg_info(pdev, "firmware reload requested.\n");
 
-	nvhost_module_idle(pdev); /* hack around ref counting */
-
 	err = flcn_reload_fw(pdev);
 	if (err)
 		return err; /* propagate firmware reload errors */
-
-	err = nvhost_module_busy(pdev);
-	if (err)
-		return err;
 
 	return count;
 }

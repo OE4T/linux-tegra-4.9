@@ -28,6 +28,7 @@
 #include "mm_gk20a.h"
 
 #include <nvgpu/comptags.h>
+#include <nvgpu/cond.h>
 
 #define GR_IDLE_CHECK_DEFAULT		10 /* usec */
 #define GR_IDLE_CHECK_MAX		200 /* usec */

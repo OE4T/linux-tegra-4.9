@@ -31,6 +31,7 @@
 
 #include "vgpu.h"
 #include "mm_vgpu.h"
+#include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gm20b/mm_gm20b.h"
 

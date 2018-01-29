@@ -26,6 +26,7 @@ struct gr_zcull_info;
 struct zbc_entry;
 struct zbc_query_params;
 struct dbg_session_gk20a;
+struct tsg_gk20a;
 
 void vgpu_gr_detect_sm_arch(struct gk20a *g);
 void vgpu_gr_free_channel_ctx(struct channel_gk20a *c, bool is_tsg);

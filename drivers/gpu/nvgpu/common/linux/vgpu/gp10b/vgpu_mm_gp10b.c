@@ -24,6 +24,7 @@
 
 #include <nvgpu/bug.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/vgpu/vgpu_ivc.h>
 
 int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g)
 {

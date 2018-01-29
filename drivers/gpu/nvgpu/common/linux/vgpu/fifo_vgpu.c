@@ -25,11 +25,14 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/vgpu/vgpu_ivc.h>
 
+#include "gk20a/gk20a.h"
 #include "vgpu.h"
 #include "fifo_vgpu.h"
 
 #include "common/linux/channel.h"
+#include "common/linux/os_linux.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Clock Interface
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,8 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "gk20a/gk20a.h"
 #include "vgpu.h"
 #include "clk_vgpu.h"
+#include "ctrl/ctrlclk.h"
+#include "common/linux/platform_gk20a.h"
 
 static unsigned long
 vgpu_freq_table[TEGRA_VGPU_GPU_FREQ_TABLE_SIZE];

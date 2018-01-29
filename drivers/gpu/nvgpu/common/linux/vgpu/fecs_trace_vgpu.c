@@ -24,6 +24,7 @@
 #include <nvgpu/vgpu/tegra_vgpu.h>
 
 #include "gk20a/gk20a.h"
+#include "common/linux/os_linux.h"
 #include "vgpu.h"
 #include "fecs_trace_vgpu.h"
 

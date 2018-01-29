@@ -687,6 +687,7 @@ struct tegra_vgpu_fecs_trace_event_info {
 	u32 type;
 };
 
+#define TEGRA_VGPU_CHANNEL_EVENT_ID_MAX 6
 struct tegra_vgpu_channel_event_info {
 	u32 event_id;
 	u32 is_tsg;

@@ -42,7 +42,7 @@
 
 #include "platform_gk20a.h"
 #include "sysfs.h"
-#include "vgpu/vgpu.h"
+#include "vgpu/vgpu_linux.h"
 #include "scale.h"
 #include "pci.h"
 #include "module.h"

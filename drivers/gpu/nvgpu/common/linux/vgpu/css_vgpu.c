@@ -25,6 +25,7 @@
 #include "common/linux/platform_gk20a.h"
 #include "common/linux/vgpu/vgpu.h"
 #include "common/linux/vgpu/css_vgpu.h"
+#include "common/linux/os_linux.h"
 
 static struct tegra_hv_ivm_cookie *css_cookie;
 

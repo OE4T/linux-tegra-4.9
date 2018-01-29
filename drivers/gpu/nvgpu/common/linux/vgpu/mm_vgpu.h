@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,6 +16,11 @@
 
 #ifndef _MM_VGPU_H_
 #define _MM_VGPU_H_
+
+struct nvgpu_mem;
+struct channel_gk20a;
+struct vm_gk20a_mapping_batch;
+struct gk20a_as_share;
 
 void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 vaddr,

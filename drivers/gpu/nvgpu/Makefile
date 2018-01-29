@@ -20,8 +20,6 @@ ccflags-y += -D__NVGPU_PREVENT_UNTRUSTED_SPECULATION
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
-	common/linux/module.o \
-	common/linux/module_usermode.o \
 	common/linux/kmem.o \
 	common/linux/timers.o \
 	common/linux/ioctl.o \
@@ -34,8 +32,6 @@ nvgpu-y := \
 	common/linux/cond.o \
 	common/linux/nvgpu_mem.o \
 	common/linux/dma.o \
-	common/linux/soc.o \
-	common/linux/fuse.o \
 	common/linux/driver_common.o \
 	common/linux/firmware.o \
 	common/linux/thread.o \
@@ -155,6 +151,10 @@ nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
 	common/linux/ctxsw_trace.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += \
+	common/linux/module.o \
+	common/linux/module_usermode.o \
+	common/linux/soc.o \
+	common/linux/fuse.o \
 	common/linux/platform_gk20a_tegra.o \
 	common/linux/platform_gp10b_tegra.o \
 	common/linux/platform_gv11b_tegra.o

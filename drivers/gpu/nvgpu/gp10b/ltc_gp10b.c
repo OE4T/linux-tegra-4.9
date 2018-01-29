@@ -24,8 +24,6 @@
 
 #include <trace/events/gk20a.h>
 
-#include <dt-bindings/memory/tegra-swgroup.h>
-
 #include <nvgpu/ltc.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
@@ -299,7 +297,7 @@ void gp10b_ltc_init_fs_state(struct gk20a *g)
 	gm20b_ltc_init_fs_state(g);
 
 	gk20a_writel(g, ltc_ltca_g_axi_pctrl_r(),
-			ltc_ltca_g_axi_pctrl_user_sid_f(TEGRA_SID_GPUB));
+			ltc_ltca_g_axi_pctrl_user_sid_f(g->ltc_streamid));
 
 	/* Enable ECC interrupts */
 	ltc_intr = gk20a_readl(g, ltc_ltcs_ltss_intr_r());

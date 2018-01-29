@@ -239,6 +239,9 @@ struct gk20a_platform {
 	u32 ina3221_dcb_index;
 	u32 ina3221_i2c_address;
 	u32 ina3221_i2c_port;
+
+	/* stream id to use */
+	u32 ltc_streamid;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

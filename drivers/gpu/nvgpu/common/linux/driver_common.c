@@ -170,6 +170,13 @@ static void nvgpu_init_vbios_vars(struct gk20a *g)
 	g->vbios_min_version = platform->vbios_min_version;
 }
 
+static void  nvgpu_init_ltc_vars(struct gk20a *g)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
+
+	g->ltc_streamid = platform->ltc_streamid;
+}
+
 static void nvgpu_init_mm_vars(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
@@ -202,6 +209,7 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_timeslice(g);
 	nvgpu_init_pm_vars(g);
 	nvgpu_init_vbios_vars(g);
+	nvgpu_init_ltc_vars(g);
 
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);

@@ -1304,6 +1304,7 @@ struct gk20a {
 	int irq_nonstall;
 	u32 max_ltc_count;
 	u32 ltc_count;
+	u32 ltc_streamid;
 
 	struct gk20a_channel_worker {
 		struct nvgpu_thread poll_task;

@@ -25,6 +25,8 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_powergate.h>
 
+#include <dt-bindings/memory/tegra-swgroup.h>
+
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
@@ -417,6 +419,8 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.soc_name = "tegra18x",
 
 	.unified_memory = true,
+
+	.ltc_streamid = TEGRA_SID_GPUB,
 };
 
 

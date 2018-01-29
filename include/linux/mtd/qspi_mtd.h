@@ -249,6 +249,7 @@ struct qspi {
 	u8			enable_qpi_mode;
 	u8			override_bus_width;
 	u8			qspi_bus_width;
+	u8			qspi_bits_per_word;
 #endif
 };
 

@@ -290,6 +290,60 @@ static ssize_t force_bus_width_show(struct device *dev,
 
 static DEVICE_ATTR(qspi_force_bus_width, 0644, force_bus_width_show,
 		force_bus_width_set);
+
+static ssize_t bits_per_word_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct qspi *flash;
+	u16 bits_per_word;
+	char tmp;
+	int8_t read;
+	/* Read upto a maximum of 3 characters. */
+	const int8_t MAX_READ = 3;
+
+	if (dev == NULL || buf == NULL)
+		return -EINVAL;
+
+	flash = dev_get_drvdata(dev);
+	if (flash == NULL)
+		return -ENODEV;
+
+	bits_per_word = 0;
+	read = (int8_t) ((count <= MAX_READ) ? count : MAX_READ);
+	while (read-- > 0) {
+		tmp = *buf++;
+		if (tmp < '0' || tmp > '9')
+			break;
+
+		bits_per_word = bits_per_word * 10 + (tmp - '0');
+	}
+
+	/* Set iff the input is a valid BPW. */
+	if (bits_per_word == BITS8_PER_WORD ||
+		bits_per_word == BITS16_PER_WORD ||
+		bits_per_word == BITS32_PER_WORD)
+		flash->qspi_bits_per_word = (u8) bits_per_word;
+
+	return count;
+}
+
+static ssize_t bits_per_word_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct qspi *flash;
+
+	if (dev == NULL || buf == NULL)
+		return -EINVAL;
+
+	flash = dev_get_drvdata(dev);
+	if (flash == NULL)
+		return -ENODEV;
+
+	return sprintf(buf, "%u", flash->qspi_bits_per_word);
+}
+
+static DEVICE_ATTR(qspi_bits_per_word, 0644, bits_per_word_show,
+		bits_per_word_set);
 #endif
 /*
  * Set Mode for transfer request
@@ -443,6 +497,7 @@ static int qspi_write_any_reg(struct qspi *flash,
 
 	t[1].tx_buf = &data;
 	t[1].len = 1;
+	t[1].bits_per_word = BITS8_PER_WORD;
 	set_mode(&t[1], cmd_table->qdata.is_ddr,
 		flash->curr_cmd_mode, cmd_table->qcmd.op_code);
 	t[1].cs_change = TRUE;
@@ -483,6 +538,7 @@ static int qspi_read_any_reg(struct qspi *flash,
 	cmd_addr_buf[3] = regaddr & 0xFF;
 
 	t[0].len = 1;
+	t[0].bits_per_word = BITS8_PER_WORD;
 	t[0].tx_buf = &cmd_addr_buf[0];
 	set_mode(&t[0], cmd_table->qcmd.is_ddr,
 		flash->curr_cmd_mode, cmd_table->qcmd.op_code);
@@ -494,12 +550,14 @@ static int qspi_read_any_reg(struct qspi *flash,
 	else
 		t[1].len = cmd_table->qaddr.len + cmd_table->qaddr.dummy_cycles;
 
+	t[1].bits_per_word = BITS8_PER_WORD;
 	t[1].tx_buf = &cmd_addr_buf[1];
 	set_mode(&t[1], cmd_table->qaddr.is_ddr,
 		flash->curr_cmd_mode, cmd_table->qcmd.op_code);
 	spi_message_add_tail(&t[1], &m);
 
 	t[2].len = 1;
+	t[2].bits_per_word = BITS8_PER_WORD;
 	t[2].rx_buf = pdata;
 	set_mode(&t[2], cmd_table->qdata.is_ddr,
 		flash->curr_cmd_mode, cmd_table->qcmd.op_code);
@@ -691,6 +749,7 @@ static int erase_chip(struct qspi *flash)
 	spi_message_init(&m);
 	memset(t, 0, sizeof(t));
 	t[0].len = COMMAND_WIDTH;
+	t[0].bits_per_word = BITS8_PER_WORD;
 	t[0].tx_buf = &cmd_opcode;
 	t[0].cs_change = TRUE;
 	set_mode(&t[0], FALSE,
@@ -755,6 +814,7 @@ static int erase_sector(struct qspi *flash, u32 offset,
 	memset(t, 0, sizeof(t));
 
 	t[0].len = (COMMAND_WIDTH + ADDRESS_WIDTH);
+	t[0].bits_per_word = BITS8_PER_WORD;
 	t[0].tx_buf = cmd_addr_buf;
 
 	t[0].cs_change = TRUE;
@@ -885,6 +945,9 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 	int err;
 	struct tegra_qspi_device_controller_data *cdata
 				= flash->spi->controller_data;
+#ifdef QSPI_BRINGUP_BUILD
+	u8 bytes_per_word = flash->qspi_bits_per_word / 8;
+#endif
 
 	pr_debug("%s: %s from 0x%08x, len %zd\n",
 		dev_name(&flash->spi->dev),
@@ -983,6 +1046,7 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 		t[0].len = (flash->cmd_table.qaddr.len + 1
 			+ (flash->cmd_table.qaddr.dummy_cycles/8));
+		t[0].bits_per_word = BITS8_PER_WORD;
 		t[0].tx_buf = cmd_addr_buf;
 
 		set_mode(&t[0],
@@ -992,6 +1056,13 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 		spi_message_add_tail(&t[0], &m);
 
 		t[1].len = len;
+#ifdef QSPI_BRINGUP_BUILD
+		t[1].bits_per_word = ((t[1].len % bytes_per_word) == 0) ?
+				      flash->qspi_bits_per_word :
+				      BITS8_PER_WORD;
+#else
+		t[1].bits_per_word = BITS8_PER_WORD;
+#endif
 		t[1].rx_buf = buf;
 		set_mode(&t[1],
 			flash->cmd_table.qdata.is_ddr,
@@ -1005,6 +1076,7 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 	} else {
 
 		t[0].len = 1;
+		t[0].bits_per_word = BITS8_PER_WORD;
 		t[0].tx_buf = &cmd_addr_buf[0];
 
 		set_mode(&t[0],
@@ -1016,7 +1088,7 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 		t[1].len = ((flash->cmd_table.qaddr.len +
 			(flash->cmd_table.qaddr.dummy_cycles/8)));
-
+		t[1].bits_per_word = BITS8_PER_WORD;
 		t[1].tx_buf = &cmd_addr_buf[1];
 
 		set_mode(&t[1],
@@ -1027,6 +1099,13 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 		spi_message_add_tail(&t[1], &m);
 
 		t[2].len = len;
+#ifdef QSPI_BRINGUP_BUILD
+		t[2].bits_per_word = ((t[2].len % bytes_per_word) == 0) ?
+				      flash->qspi_bits_per_word :
+				      BITS8_PER_WORD;
+#else
+		t[2].bits_per_word = BITS8_PER_WORD;
+#endif
 		t[2].rx_buf = buf;
 		set_mode(&t[2],
 			flash->cmd_table.qdata.is_ddr,
@@ -1074,6 +1153,9 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 	u32 offset = (unsigned long)to;
 	struct tegra_qspi_device_controller_data *cdata =
 					flash->spi->controller_data;
+#ifdef QSPI_BRINGUP_BUILD
+	u8 bytes_per_word = flash->qspi_bits_per_word / 8;
+#endif
 
 	pr_debug("%s: %s to 0x%08x, len %zd\n", dev_name(&flash->spi->dev),
 			__func__, (u32)to, len);
@@ -1128,6 +1210,13 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 		t[1].tx_buf = buf;
 
 		t[1].len = len;
+#ifdef QSPI_BRINGUP_BUILD
+		t[1].bits_per_word = ((t[1].len % bytes_per_word) == 0) ?
+				      flash->qspi_bits_per_word :
+				      BITS8_PER_WORD;
+#else
+		t[1].bits_per_word = BITS8_PER_WORD;
+#endif
 		set_mode(&t[1], flash->cmd_table.qcmd.is_ddr,
 			flash->cmd_table.qdata.bus_width, opcode);
 
@@ -1184,6 +1273,13 @@ clear_qmode:
 		t[1].tx_buf = buf;
 
 		t[1].len = page_size;
+#ifdef QSPI_BRINGUP_BUILD
+		t[1].bits_per_word = ((t[1].len % bytes_per_word) == 0) ?
+				      flash->qspi_bits_per_word :
+				      BITS8_PER_WORD;
+#else
+		t[1].bits_per_word = BITS8_PER_WORD;
+#endif
 		set_mode(&t[1], flash->cmd_table.qcmd.is_ddr,
 			flash->cmd_table.qdata.bus_width, opcode);
 
@@ -1252,6 +1348,13 @@ clear_qmode:
 
 			t[1].tx_buf = (buf + i);
 			t[1].len = page_size;
+#ifdef QSPI_BRINGUP_BUILD
+			t[1].bits_per_word = ((t[1].len % bytes_per_word) ==
+					      0) ? flash->qspi_bits_per_word :
+					      BITS8_PER_WORD;
+#else
+			t[1].bits_per_word = BITS8_PER_WORD;
+#endif
 			set_mode(&t[1],
 				flash->cmd_table.qcmd.is_ddr,
 				flash->cmd_table.qdata.bus_width,
@@ -1490,6 +1593,7 @@ static int qspi_probe(struct spi_device *spi)
 	device_create_file(&spi->dev, &dev_attr_qspi_mode);
 	device_create_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
 	device_create_file(&spi->dev, &dev_attr_qspi_force_bus_width);
+	device_create_file(&spi->dev, &dev_attr_qspi_bits_per_word);
 #endif
 
 	/* partitions should match sector boundaries; and it may be good to
@@ -1505,6 +1609,9 @@ static int qspi_remove(struct spi_device *spi)
 	struct qspi	*flash = dev_get_drvdata(&spi->dev);
 	int		status;
 
+#ifdef QSPI_BRINGUP_BUILD
+	device_remove_file(&spi->dev, &dev_attr_qspi_bits_per_word);
+#endif
 	/* Clean up MTD stuff. */
 	status = mtd_device_unregister(&flash->mtd);
 	if (status == 0)

@@ -17,64 +17,33 @@
 #include <linux/io.h>
 #include <linux/tegra-mce.h>
 #include "tegra19x_la_ptsa.h"
+#include <linux/platform/tegra/mc.h>
 
 #define FIX_PT(x, y) fixed_point_init(x, y, 32, 32)
 
-/* Non LA/PTSA mmio apertures */
-static void __iomem *t19x_mc_base;
-static void __iomem *t19x_pipe2uphy_xbar_base;
-static void __iomem *t19x_emc_base;
-//static void __iomem *t19x_mssnvlink1_base;
-//static void __iomem *t19x_mssnvlink2_base;
-//static void __iomem *t19x_mssnvlink3_base;
-//static void __iomem *t19x_mssnvlink4_base;
+/* TODO: Get the base address from dtb */
+/* Reuse API from other drivers */
+#define NV_ADDRESS_MAP_EMCB_BASE                    0x02C60000
 
-/* TODO: Re-use APIs from other drivers */
+/* Non LA/PTSA mmio apertures */
+static void __iomem *t19x_pipe2uphy_xbar_base;
 
 /* TODO: Enable MSSNVLINK aperture access */
 
-static inline void emc_writel (unsigned int val, unsigned int offset) {
-	writel(val, t19x_emc_base + offset);
-}
+#define mssnvl1_writel(x, y)	mssnvlink_writel(0, x, y)
+#define mssnvl2_writel(x, y)	mssnvlink_writel(1, x, y)
+#define mssnvl3_writel(x, y)	mssnvlink_writel(2, x, y)
+#define mssnvl4_writel(x, y)	mssnvlink_writel(3, x, y)
 
-static inline void mssnvl1_writel (unsigned int val, unsigned int offset) {
-	//writel(val, t19x_mssnvlink1_base + offset);
-}
-static inline void mssnvl2_writel (unsigned int val, unsigned int offset) {
-	//writel(val, t19x_mssnvlink2_base + offset);
-}
-static inline void mssnvl3_writel (unsigned int val, unsigned int offset) {
-	//writel(val, t19x_mssnvlink3_base + offset);
-}
-static inline void mssnvl4_writel (unsigned int val, unsigned int offset) {
-	//writel(val, t19x_mssnvlink4_base + offset);
-}
+#define mssnvl1_readl(x)	mssnvlink_readl(0, x)
+#define mssnvl2_readl(x)	mssnvlink_readl(1, x)
+#define mssnvl3_readl(x)	mssnvlink_readl(2, x)
+#define mssnvl4_readl(x)	mssnvlink_readl(3, x)
 
 /* TODO: Use pcie driver interface */
 static inline unsigned int pipe2phy_xbar_readl (unsigned int offset) {
 	return readl(t19x_pipe2uphy_xbar_base + offset);
 }
-
-static inline unsigned int emc_readl (unsigned int offset) {
-	return readl(t19x_emc_base + offset);
-}
-static inline unsigned int mssnvl1_readl (unsigned int offset) {
-	//return readl(t19x_mssnvlink1_base + offset);
-	return 0;
-}
-static inline unsigned int mssnvl2_readl (unsigned int offset) {
-	//return readl(t19x_mssnvlink2_base + offset);
-	return 0;
-}
-static inline unsigned int mssnvl3_readl (unsigned int offset) {
-	//return readl(t19x_mssnvlink3_base + offset);
-	return 0;
-}
-static inline unsigned int mssnvl4_readl (unsigned int offset) {
-	//return readl(t19x_mssnvlink4_base + offset);
-	return 0;
-}
-
 
 static struct la_ptsa_core lp;
 static int tegra_gen_to_t19x_la_id[TEGRA_LA_MAX_ID];
@@ -726,10 +695,14 @@ static enum tegra_dram_t t19x_emc_get_dram_type(void)
 {
 	unsigned int dram, ch, mem_type;
 	enum tegra_dram_t dram_type;
+	void __iomem *t19x_emc_base;
 
+	t19x_emc_base = ioremap(NV_ADDRESS_MAP_EMCB_BASE, 0x00010000);
 	dram = readl(t19x_emc_base + EMC_FBIO_CFG5_0) & DRAM_TYPE_MASK;
-	ch = readl(t19x_mc_base + MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0) & DRAM_CH_MASK;
 	mem_type = readl(t19x_emc_base + EMC_PMACRO_PAD_CFG_CTRL_0);
+	iounmap(t19x_emc_base);
+
+	ch = mc_readl(MC_EMEM_ADR_CFG_CHANNEL_ENABLE_0) & DRAM_CH_MASK;
 	mem_type = (mem_type >> MEM_MODE_SHIFT) & MEM_MODE_MASK;
 	la_debug("mem_type: 0x%x, dram reg: 0x%x, channels reg: 0x%x\n", mem_type, dram, ch);
 
@@ -781,16 +754,6 @@ static void tegra_la_init(void)
 }
 
 
-/* TODO: Get the base address from dtb */
-/* Reuse API from other drivers */
-#define NV_ADDRESS_MAP_MC_BASE                      0x02c10000
-#define NV_ADDRESS_MAP_EMCB_BASE                    0x02C60000
-#define NV_ADDRESS_MAP_MSS_NVLINK_0_BASE            0x01F00000
-#define NV_ADDRESS_MAP_MSS_NVLINK_1_BASE            0x01F20000
-#define NV_ADDRESS_MAP_MSS_NVLINK_2_BASE            0x01F40000
-#define NV_ADDRESS_MAP_MSS_NVLINK_3_BASE            0x01F60000
-#define NV_ADDRESS_MAP_MSS_NVLINK_4_BASE            0x01F80000
-
 void tegra_la_get_t19x_specific(struct la_chip_specific *cs_la)
 {
 
@@ -812,23 +775,5 @@ void tegra_la_get_t19x_specific(struct la_chip_specific *cs_la)
 	cs_la->resume = la_resume;
 	cs_la->mc_pcie_init = t19x_mc_pcie_init;
 
-	/* TODO: Get base address from dtb */
-	/* Reuse API from other drivers */
-
-	t19x_mc_base = ioremap(NV_ADDRESS_MAP_MC_BASE, 0x00010000);
-	t19x_emc_base = ioremap(NV_ADDRESS_MAP_EMCB_BASE, 0x00010000);
-//	t19x_mssnvlink1_base = ioremap(NV_ADDRESS_MAP_MSS_NVLINK_1_BASE, 0x00020000);
-//	t19x_mssnvlink2_base = ioremap(NV_ADDRESS_MAP_MSS_NVLINK_2_BASE, 0x00020000);
-//	t19x_mssnvlink3_base = ioremap(NV_ADDRESS_MAP_MSS_NVLINK_3_BASE, 0x00020000);
-//	t19x_mssnvlink4_base = ioremap(NV_ADDRESS_MAP_MSS_NVLINK_4_BASE, 0x00020000);
-
 	tegra_la_init();
-
-	iounmap(t19x_mc_base);
-	iounmap(t19x_emc_base);
-//	iounmap(t19x_mssnvlink1_base);
-//	iounmap(t19x_mssnvlink2_base);
-//	iounmap(t19x_mssnvlink3_base);
-//	iounmap(t19x_mssnvlink4_base);
-
 }

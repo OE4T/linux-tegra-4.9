@@ -266,6 +266,8 @@
 
 #define GEN4_LANE_MARGINING_1	0xb80
 #define GEN4_LANE_MARGINING_1_NUM_TIMING_STEPS_MASK	GENMASK(5, 0)
+#define GEN4_LANE_MARGINING_1_MAX_VOLTAGE_OFFSET_MASK	GENMASK(29, 24)
+#define GEN4_LANE_MARGINING_1_MAX_VOLTAGE_OFFSET_SHIFT	24
 
 #define GEN4_LANE_MARGINING_2	0xb84
 #define GEN4_LANE_MARGINING_2_VOLTAGE_SUPPORTED		BIT(24)
@@ -343,6 +345,7 @@
 #define PME_ACK_TIMEOUT 10000
 
 #define NUM_TIMING_STEPS 0x14
+#define NUM_VOLTAGE_STEPS 0x14
 
 /* Max error count limit is 0x3f, payload=(0xc0 | 0x3f) */
 #define MAX_ERR_CNT_PAYLOAD 0xff
@@ -350,13 +353,19 @@
 #define CLR_ERR_PAYLOAD 0x55
 /* payload[6] = 1 Left step margin
  * payload[6] = 0 Right step margin
+ * payload[7] = 1 down step margin
+ * payload[7] = 0 up step margin
  */
 #define LEFT_STEP_PAYLOAD (0x1 << 6)
 #define RIGHT_STEP_PAYLOAD (0x0 << 6)
+#define DOWN_STEP_PAYLOAD (0x1 << 7)
+#define UP_STEP_PAYLOAD (0x0 << 7)
 
 #define LEFT_STEP 'L'
 #define RIGHT_STEP 'R'
 #define NO_STEP 'N'
+#define DOWN_STEP 'D'
+#define UP_STEP 'U'
 
 /* Receiver number*/
 #define RP_RCV_NO 1
@@ -1504,7 +1513,7 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 	}
 
 	val = readl(pcie->pp.dbi_base + GEN4_LANE_MARGINING_1);
-	val &= GEN4_LANE_MARGINING_1_NUM_TIMING_STEPS_MASK;
+	val &= ~GEN4_LANE_MARGINING_1_NUM_TIMING_STEPS_MASK;
 	val |= NUM_TIMING_STEPS;
 	writel(val, pcie->pp.dbi_base + GEN4_LANE_MARGINING_1);
 
@@ -1563,6 +1572,90 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int verify_voltage_margin(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
+	u32 val = 0;
+	int i = 0;
+
+	val = readl(pcie->pp.dbi_base + pcie->margin_port_cap);
+	if (!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_SW_READY) &&
+		!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_READY)) {
+		seq_puts(s, "Lane margining is not ready\n");
+		return 0;
+	}
+
+	val = readl(pcie->pp.dbi_base + GEN4_LANE_MARGINING_1);
+	val &= ~GEN4_LANE_MARGINING_1_MAX_VOLTAGE_OFFSET_MASK;
+	val |= (NUM_VOLTAGE_STEPS <<
+		GEN4_LANE_MARGINING_1_MAX_VOLTAGE_OFFSET_SHIFT);
+	writel(val, pcie->pp.dbi_base + GEN4_LANE_MARGINING_1);
+
+	val = readl(pcie->pp.dbi_base + PORT_LOGIC_MISC_CONTROL);
+	val |= PORT_LOGIC_MISC_CONTROL_DBI_RO_WR_EN;
+	writel(val, pcie->pp.dbi_base + PORT_LOGIC_MISC_CONTROL);
+	val = readl(pcie->pp.dbi_base + GEN4_LANE_MARGINING_2);
+	val |= GEN4_LANE_MARGINING_2_VOLTAGE_SUPPORTED;
+	writel(val, pcie->pp.dbi_base + GEN4_LANE_MARGINING_2);
+	val = readl(pcie->pp.dbi_base + PORT_LOGIC_MISC_CONTROL);
+	val &= ~PORT_LOGIC_MISC_CONTROL_DBI_RO_WR_EN;
+	writel(val, pcie->pp.dbi_base + PORT_LOGIC_MISC_CONTROL);
+
+	setup_margin_cmd(pcie, MARGIN_SET_ERR_COUNT, RP_RCV_NO,
+			 MAX_ERR_CNT_PAYLOAD);
+	issue_margin_cmd(pcie);
+	msleep(MARGIN_READ_DELAY);
+	read_margin_status(pcie, s, i, NO_STEP);
+
+	for (i = 1; i <= NUM_VOLTAGE_STEPS; i++) {
+		/* Step Margin to voltage offset to down of default
+		 * payload = offset | (0x1 << 7)
+		 */
+		setup_margin_cmd(pcie, MARGIN_SET_Y_OFFSET, RP_RCV_NO,
+				 i | DOWN_STEP_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_WIN_TIME);
+		read_margin_status(pcie, s, i, DOWN_STEP);
+
+		setup_margin_cmd(pcie, MARGIN_SET_NORMAL, RP_RCV_NO,
+				 NORMAL_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_READ_DELAY);
+		read_margin_status(pcie, s, i, NO_STEP);
+
+		setup_margin_cmd(pcie, MARGIN_CLR_ERR, RP_RCV_NO,
+				 CLR_ERR_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_READ_DELAY);
+		read_margin_status(pcie, s, i, NO_STEP);
+	}
+
+	for (i = 1; i <= NUM_VOLTAGE_STEPS; i++) {
+		/* Step Margin to voltage offset to up of default
+		 * payload = offset | (0x00 << 7)
+		 */
+		setup_margin_cmd(pcie, MARGIN_SET_Y_OFFSET, RP_RCV_NO,
+				 i | UP_STEP_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_WIN_TIME);
+		read_margin_status(pcie, s, i, UP_STEP);
+
+		setup_margin_cmd(pcie, MARGIN_SET_NORMAL, RP_RCV_NO,
+				 NORMAL_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_READ_DELAY);
+		read_margin_status(pcie, s, i, NO_STEP);
+
+		setup_margin_cmd(pcie, MARGIN_CLR_ERR, RP_RCV_NO,
+				 CLR_ERR_PAYLOAD);
+		issue_margin_cmd(pcie);
+		msleep(MARGIN_READ_DELAY);
+		read_margin_status(pcie, s, i, NO_STEP);
+	}
+
+	return 0;
+}
+
 #define DEFINE_ENTRY(__name)	\
 static int __name ## _open(struct inode *inode, struct file *file)	\
 {									\
@@ -1585,6 +1678,7 @@ DEFINE_ENTRY(apply_pme_turnoff);
 DEFINE_ENTRY(apply_sbr);
 DEFINE_ENTRY(aspm_state_cnt);
 DEFINE_ENTRY(verify_timing_margin);
+DEFINE_ENTRY(verify_voltage_margin);
 
 static int init_debugfs(struct tegra_pcie_dw *pcie)
 {
@@ -1666,6 +1760,11 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 				(void *)pcie, &verify_timing_margin_fops);
 	if (!d)
 		dev_err(pcie->dev, "debugfs for verify_timing_margin failed\n");
+
+	d = debugfs_create_file("verify_voltage_margin", 0444, pcie->debugfs,
+				(void *)pcie, &verify_voltage_margin_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
 
 	return 0;
 }

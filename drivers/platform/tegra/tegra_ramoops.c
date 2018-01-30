@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,7 +51,6 @@ arch_initcall(display_tegra_dt_info);
 #define RECORD_MEM_SIZE SZ_64K
 #define CONSOLE_MEM_SIZE SZ_512K
 #define FTRACE_MEM_SIZE SZ_512K
-#define RTRACE_MEM_SIZE SZ_512K
 #define PMSG_MEM_SIZE SZ_256K
 
 static struct ramoops_platform_data ramoops_data;
@@ -73,9 +72,6 @@ static int __init ramoops_init(struct reserved_mem *rmem)
 #endif
 #ifdef CONFIG_PSTORE_FTRACE
 	ramoops_data.ftrace_size = FTRACE_MEM_SIZE;
-#endif
-#ifdef CONFIG_PSTORE_RTRACE
-	ramoops_data.rtrace_size = RTRACE_MEM_SIZE;
 #endif
 #ifdef CONFIG_PSTORE_PMSG
 	ramoops_data.pmsg_size = PMSG_MEM_SIZE;

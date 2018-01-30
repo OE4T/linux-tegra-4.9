@@ -16,8 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <nvgpu/vgpu/vgpu.h>
+
 #include "gk20a/gk20a.h"
-#include "vgpu.h"
 #include "clk_vgpu.h"
 #include "ctrl/ctrlclk.h"
 #include "common/linux/platform_gk20a.h"

@@ -32,9 +32,8 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/defaults.h>
 
-#include "vgpu.h"
 #include "vgpu_linux.h"
-#include "fecs_trace_vgpu.h"
+#include "vgpu/fecs_trace_vgpu.h"
 #include "clk_vgpu.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/channel_gk20a.h"

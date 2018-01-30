@@ -22,11 +22,11 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/vgpu/vgpu_ivm.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
+#include <nvgpu/vgpu/vgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "common/linux/os_linux.h"
-#include "vgpu.h"
-#include "fecs_trace_vgpu.h"
+#include "vgpu/fecs_trace_vgpu.h"
 
 struct vgpu_fecs_trace {
 	struct tegra_hv_ivm_cookie *cookie;

@@ -24,7 +24,7 @@ struct platform_device;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 
-#include "vgpu.h"
+#include <nvgpu/vgpu/vgpu.h>
 
 int vgpu_pm_prepare_poweroff(struct device *dev);
 int vgpu_pm_finalize_poweron(struct device *dev);

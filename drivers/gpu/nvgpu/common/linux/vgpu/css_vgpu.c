@@ -18,14 +18,14 @@
 #include <nvgpu/vgpu/vgpu_ivm.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
 #include <uapi/linux/nvgpu.h>
+#include <nvgpu/vgpu/vgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "common/linux/platform_gk20a.h"
-#include "common/linux/vgpu/vgpu.h"
-#include "common/linux/vgpu/css_vgpu.h"
 #include "common/linux/os_linux.h"
+#include "vgpu/css_vgpu.h"
 
 static struct tegra_hv_ivm_cookie *css_cookie;
 

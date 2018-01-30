@@ -449,7 +449,7 @@ int eqos_init_phy(struct net_device *dev)
 
 	if (!phydev) {
 		pr_err("%s: Could not attach to PHY\n", dev->name);
-		return PTR_ERR(phydev);
+		return -ENODEV;
 	}
 
 	if (!pdata->phy_node && phydev->phy_id == 0) {

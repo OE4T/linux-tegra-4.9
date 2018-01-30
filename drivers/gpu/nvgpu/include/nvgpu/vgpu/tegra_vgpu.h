@@ -425,6 +425,8 @@ struct tegra_vgpu_get_timestamps_zipper_params {
 	u32 source_id;
 };
 
+#define TEGRA_VGPU_POWERGATE_MODE_ENABLE	1
+#define TEGRA_VGPU_POWERGATE_MODE_DISABLE	2
 struct tegra_vgpu_set_powergate_params {
 	u32 mode;
 };

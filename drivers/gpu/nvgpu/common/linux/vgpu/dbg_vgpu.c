@@ -17,8 +17,6 @@
 #include <nvgpu/vgpu/vgpu_ivc.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
 
-#include <uapi/linux/nvgpu.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -87,12 +85,12 @@ int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powerga
 		if (dbg_s->is_pg_disabled)
 			return 0;
 		dbg_s->is_pg_disabled = true;
-		mode = NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE;
+		mode = TEGRA_VGPU_POWERGATE_MODE_DISABLE;
 	} else {
 		if (!dbg_s->is_pg_disabled)
 			return 0;
 		dbg_s->is_pg_disabled = false;
-		mode = NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE;
+		mode = TEGRA_VGPU_POWERGATE_MODE_ENABLE;
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_POWERGATE;

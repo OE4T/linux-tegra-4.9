@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>

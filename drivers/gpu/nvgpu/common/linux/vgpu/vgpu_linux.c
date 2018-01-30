@@ -22,7 +22,6 @@
 #include <linux/pm_qos.h>
 #include <linux/platform_device.h>
 #include <soc/tegra/chip-id.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>

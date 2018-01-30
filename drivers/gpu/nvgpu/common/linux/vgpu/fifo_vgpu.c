@@ -17,7 +17,6 @@
  */
 
 #include <trace/events/gk20a.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>

@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include "common/linux/vgpu/vgpu.h"
 #include "vgpu_mm_gp10b.h"
 #include "gk20a/mm_gk20a.h"

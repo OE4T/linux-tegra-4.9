@@ -228,7 +228,8 @@ struct bwmgr_ops *bwmgr_eff_init_t18x(void)
 
 		bwmgr_dram_efficiency = 70;
 		emc_to_dram_freq_factor = 2;
-
+		/* valid ddr configuration */
+		bwmgr_dram_config_supported = 1;
 		break;
 
 	case DRAM_LPDDR3:
@@ -237,6 +238,8 @@ struct bwmgr_ops *bwmgr_eff_init_t18x(void)
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_lpddr3_iso_eff;
 		emc_to_dram_freq_factor = 1;
+		/* valid ddr configuration */
+		bwmgr_dram_config_supported = 1;
 		break;
 
 	case DRAM_DDR3:
@@ -245,21 +248,28 @@ struct bwmgr_ops *bwmgr_eff_init_t18x(void)
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_ddr3_iso_eff;
 		emc_to_dram_freq_factor = 1;
+		/* valid ddr configuration */
+		bwmgr_dram_config_supported = 1;
 		break;
 
 	case DRAM_DDR2:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 		break;
 
 	default:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 	}
 	bwmgr_dram_num_channels = ch_num;
 
-	for (i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1; i >= 0; i--) {
-		if (bwmgr_dram_iso_eff_table[i] > 1) {
-			bwmgr_iso_bw_percentage = bwmgr_dram_iso_eff_table[i];
-			break;
+	if (bwmgr_dram_config_supported) {
+		for (i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1; i >= 0; i--) {
+			if (bwmgr_dram_iso_eff_table[i] > 1) {
+				bwmgr_iso_bw_percentage =
+					bwmgr_dram_iso_eff_table[i];
+				break;
+			}
 		}
 	}
 

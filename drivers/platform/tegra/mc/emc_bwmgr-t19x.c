@@ -293,6 +293,9 @@ static unsigned long get_best_iso_freq(long total_iso_bw, long iso_bw_nvdis,
 	int i;
 	unsigned long dram_freq_mhz = 0;
 
+	if (!bwmgr_dram_config_supported)
+		return dram_freq_mhz;
+
 	/*Input is in Hz, converting into MHz*/
 	total_iso_bw /= 1000000;
 	iso_bw_nvdis /= 1000000;
@@ -634,27 +637,34 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 
 		if (ch_num < 8) {
 			pr_err("bwmgr: Unknown memory channel configuration\n");
-			BUG_ON(true);
+			pr_err("bwmgr: ddr config not supported\n");
+			WARN_ON(true);
+		} else {
+			emc_to_dram_freq_factor = 2;
+			/* valid ddr configuration */
+			bwmgr_dram_config_supported = 1;
 		}
-
-		emc_to_dram_freq_factor = 2;
 
 		break;
 
 	case DRAM_LPDDR3:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 		break;
 
 	case DRAM_DDR3:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 		break;
 
 	case DRAM_DDR2:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 		break;
 
 	default:
-		BUG_ON(true);
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
 	}
 
 	dram_freq_count = ARRAY_SIZE(bwmgr_t194_dram_freq_table);

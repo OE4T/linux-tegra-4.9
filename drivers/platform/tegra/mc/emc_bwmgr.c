@@ -27,6 +27,8 @@
 
 u8 bwmgr_dram_efficiency;
 u8 bwmgr_dram_num_channels;
+/* flag to determine supported memory and channel configuration */
+u8 bwmgr_dram_config_supported;
 u32 *bwmgr_dram_iso_eff_table;
 u32 *bwmgr_dram_noniso_eff_table;
 u32 *bwmgr_max_nvdis_bw_reqd;
@@ -215,7 +217,11 @@ static int bwmgr_update_clk(void)
 
 	/* sizeof(iso_client_flags) */
 	BUILD_BUG_ON(TEGRA_BWMGR_CLIENT_COUNT > 64);
-	BUG_ON(bwmgr.task != current); /* check that lock is held */
+	/* check that lock is held */
+	if (unlikely(bwmgr.task != current)) {
+		pr_err("bwmgr: update_clk called without lock\n");
+		return -EINVAL;
+	}
 
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++) {
 		bw += bwmgr.bwmgr_client[i].bw;
@@ -281,6 +287,12 @@ static int bwmgr_update_clk(void)
 struct tegra_bwmgr_client *tegra_bwmgr_register(
 		enum tegra_bwmgr_client_id client)
 {
+	if (!bwmgr_dram_config_supported) {
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
+		return ERR_PTR(-EINVAL);
+	}
+
 	if ((client >= TEGRA_BWMGR_CLIENT_COUNT) || (client < 0)) {
 		pr_err("bwmgr: invalid client id %d tried to register",
 				client);
@@ -367,6 +379,12 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 
 	if (!bwmgr.status)
 		return 0;
+
+	if (!bwmgr_dram_config_supported) {
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
+		return -EINVAL;
+	}
 
 	if (!IS_HANDLE_VALID(handle)) {
 		pr_err("bwmgr: client sent bad handle %p\n",
@@ -456,6 +474,12 @@ int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
 
 	if (!bwmgr.status)
 		return 0;
+
+	if (!bwmgr_dram_config_supported) {
+		pr_err("bwmgr: ddr config not supported\n");
+		WARN_ON(true);
+		return -EINVAL;
+	}
 
 	if (!IS_HANDLE_VALID(handle)) {
 		pr_err("bwmgr: client sent bad handle %p\n",

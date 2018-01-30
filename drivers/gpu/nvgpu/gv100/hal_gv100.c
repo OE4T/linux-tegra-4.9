@@ -248,6 +248,7 @@ int gv100_init_gpu_characteristics(struct gk20a *g)
 		return err;
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS, true);
 
 	return 0;
 }

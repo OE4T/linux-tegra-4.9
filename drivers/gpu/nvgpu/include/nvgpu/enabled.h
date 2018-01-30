@@ -152,10 +152,14 @@ struct gk20a;
 #define NVGPU_SUPPORT_TSG_SUBCONTEXTS		63
 /* Simultaneous Compute and Graphics (SCG) is available */
 #define NVGPU_SUPPORT_SCG			64
+
+/* GPU_VA address of a syncpoint is supported */
+#define NVGPU_SUPPORT_SYNCPOINT_ADDRESS		65
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			65
+#define NVGPU_MAX_ENABLED_BITS			66
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

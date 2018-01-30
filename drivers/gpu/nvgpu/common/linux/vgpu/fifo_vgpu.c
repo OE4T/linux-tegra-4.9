@@ -31,9 +31,6 @@
 #include "vgpu.h"
 #include "fifo_vgpu.h"
 
-#include "common/linux/channel.h"
-#include "common/linux/os_linux.h"
-
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 
@@ -265,7 +262,6 @@ clean_up_runlist:
 
 static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct fifo_gk20a *f = &g->fifo;
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	unsigned int chid;
@@ -301,8 +297,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 		/* if reduced BAR1 range is specified, use offset of 0
 		 * (server returns offset assuming full BAR1 range)
 		 */
-		if (resource_size(l->bar1_mem) ==
-				(resource_size_t)f->userd.size)
+		if (vgpu_is_reduced_bar1(g))
 			f->userd.gpu_va = 0;
 	}
 

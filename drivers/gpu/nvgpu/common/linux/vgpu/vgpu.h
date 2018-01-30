@@ -99,5 +99,6 @@ int vgpu_read_ptimer(struct gk20a *g, u64 *value);
 int vgpu_get_timestamps_zipper(struct gk20a *g,
 		u32 source_id, u32 count,
 		struct nvgpu_cpu_time_correlation_sample *samples);
+bool vgpu_is_reduced_bar1(struct gk20a *g);
 
 #endif

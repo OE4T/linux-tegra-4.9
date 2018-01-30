@@ -290,8 +290,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	/* bar1 va */
 	if (g->ops.mm.is_bar1_supported(g)) {
-		f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.priv.sgt,
-						f->userd.size);
+		f->userd.gpu_va = vgpu_bar1_map(g, &f->userd);
 		if (!f->userd.gpu_va) {
 			nvgpu_err(g, "gmmu mapping failed");
 			goto clean_up;

@@ -24,6 +24,7 @@ struct tegra_vgpu_gr_intr_info;
 struct tegra_vgpu_fifo_intr_info;
 struct tegra_vgpu_cmd_msg;
 struct gk20a_platform;
+struct nvgpu_mem;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 #include <nvgpu/vgpu/vgpu_ivc.h>
@@ -69,7 +70,7 @@ int vgpu_pm_prepare_poweroff(struct device *dev);
 int vgpu_pm_finalize_poweron(struct device *dev);
 int vgpu_probe(struct platform_device *dev);
 int vgpu_remove(struct platform_device *dev);
-u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size);
+u64 vgpu_bar1_map(struct gk20a *g, struct nvgpu_mem *mem);
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info);
 int vgpu_gr_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_gr_nonstall_intr_info *info);
@@ -125,8 +126,7 @@ static inline int vgpu_remove(struct platform_device *dev)
 {
 	return -ENOSYS;
 }
-static inline u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt,
-				u64 size)
+static inline u64 vgpu_bar1_map(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	return 0;
 }

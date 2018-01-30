@@ -157,9 +157,9 @@ void vgpu_vm_remove(struct vm_gk20a *vm)
 	WARN_ON(err || msg.ret);
 }
 
-u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
+u64 vgpu_bar1_map(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	u64 addr = nvgpu_mem_get_addr_sgl(g, (*sgt)->sgl);
+	u64 addr = nvgpu_mem_get_addr(g, mem);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
 	int err;
@@ -167,7 +167,7 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 	msg.cmd = TEGRA_VGPU_CMD_MAP_BAR1;
 	msg.handle = vgpu_get_handle(g);
 	p->addr = addr;
-	p->size = size;
+	p->size = mem->size;
 	p->iova = 0;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret)

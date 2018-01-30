@@ -63,6 +63,7 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			 struct pva_submit_task *task)
 {
 	int err = 0;
+	int copy_ret = 0;
 
 	if (ioctl_task->num_prefences > PVA_MAX_PREFENCES ||
 	    ioctl_task->num_postfences > PVA_MAX_POSTFENCES ||
@@ -95,11 +96,13 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 
 	/* Copy the user primary_payload */
 	if (task->primary_payload_size) {
-		err = copy_from_user(task->primary_payload,
+		copy_ret = copy_from_user(task->primary_payload,
 				(void __user *)(ioctl_task->primary_payload),
 				ioctl_task->primary_payload_size);
-		if (err < 0)
+		if (copy_ret) {
+			err = -EFAULT;
 			goto err_out;
+		}
 	}
 
 #define COPY_FIELD(dst, src, num, type)					\
@@ -107,10 +110,11 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 		if ((num) == 0) {					\
 			break;						\
 		}							\
-		err = copy_from_user((dst),				\
+		copy_ret = copy_from_user((dst),			\
 				(void __user *)(src),			\
 				(num) * sizeof(type));			\
-		if (err < 0) {						\
+		if (copy_ret) {						\
+			err = -EFAULT;					\
 			goto err_out;					\
 		}							\
 	} while (0)

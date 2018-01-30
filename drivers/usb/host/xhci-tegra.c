@@ -4321,9 +4321,20 @@ static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd)
 	return 0;
 }
 
+static irqreturn_t tegra_xhci_irq(struct usb_hcd *hcd)
+{
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+
+	if (test_bit(FW_LOG_CONTEXT_VALID, &tegra->log.flags))
+		wake_up_interruptible(&tegra->log.intr_wait);
+
+	return xhci_irq(hcd);
+}
+
 static int __init tegra_xusb_init(void)
 {
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
+	tegra_xhci_hc_driver.irq = tegra_xhci_irq;
 	tegra_xhci_hc_driver.update_device = tegra_xhci_update_device;
 	tegra_xhci_hc_driver.alloc_dev = tegra_xhci_alloc_dev;
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;

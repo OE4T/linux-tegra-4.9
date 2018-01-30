@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -900,6 +900,8 @@ static inline void ufshcd_vops_dbg_register_dump(struct ufs_hba *hba)
 
 int ufshcd_get_refclk_value(struct ufs_hba *hba, u32 *value);
 int ufshcd_set_refclk_value(struct ufs_hba *hba, u32 *value);
+int ufshcd_get_bootlun_en_value(struct ufs_hba *hba, u32 *value);
+int ufshcd_set_bootlun_en_value(struct ufs_hba *hba, u32 *value);
 int ufshcd_get_config_desc_lock(struct ufs_hba *hba, u32 *value);
 int ufshcd_set_config_desc(struct ufs_hba *hba, u8 *desc_buf);
 #endif /* End of Header */

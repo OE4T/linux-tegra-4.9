@@ -3,7 +3,7 @@
  *
  * This code is based on drivers/scsi/ufs/ufs.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -138,6 +138,7 @@ enum flag_idn {
 
 /* Attribute idn for Query requests */
 enum attr_idn {
+	QUERY_ATTR_IDN_BOOTLUN_EN	= 0x0,
 	QUERY_ATTR_IDN_ACTIVE_ICC_LVL	= 0x03,
 	QUERY_ATTR_IDN_BKOPS_STATUS	= 0x05,
 	QUERY_ATTR_IDN_REF_CLK_FREQ	= 0x0A,

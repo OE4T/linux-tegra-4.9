@@ -1980,6 +1980,34 @@ int ufshcd_set_refclk_value(struct ufs_hba *hba, u32 *value)
 EXPORT_SYMBOL(ufshcd_set_refclk_value);
 
 /**
+ * ufshcd_get_bootlun_en_value - get programmed bBootLunEn value
+ * @hba: per-adapter instance
+ * @value: variable to store read value
+ *
+ * Get BootLunEn value
+ */
+int ufshcd_get_bootlun_en_value(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_READ_ATTR,
+							 QUERY_ATTR_IDN_BOOTLUN_EN, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_get_bootlun_en_value);
+
+/**
+ * ufshcd_set_bootlun_en_value - Write bBootLunEn value
+ * @hba: per-adapter instance
+ * @value: value to be written
+ *
+ * Set Refclkfreq value
+ */
+int ufshcd_set_bootlun_en_value(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_WRITE_ATTR,
+							 QUERY_ATTR_IDN_BOOTLUN_EN, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_set_bootlun_en_value);
+
+/**
  * ufshcd_get_config_desc_lock - Read configuration descriptor lock
  * @hba: per-adapter instance
  * @value: varibale to store read value

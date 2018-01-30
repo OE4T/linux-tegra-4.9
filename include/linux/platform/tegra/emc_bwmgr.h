@@ -98,6 +98,8 @@ enum bwmgr_dram_types {
 
 extern u8 bwmgr_dram_efficiency;
 extern u8 bwmgr_dram_num_channels;
+/* flag to determine supported memory and channel configuration */
+extern u8 bwmgr_dram_config_supported;
 extern u32 *bwmgr_dram_iso_eff_table;
 extern u32 *bwmgr_dram_noniso_eff_table;
 extern u32 *bwmgr_max_nvdis_bw_reqd;

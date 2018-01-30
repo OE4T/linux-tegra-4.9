@@ -2711,6 +2711,14 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
 
+	/* Disable CBM alpha and beta invalidations for l2 */
+	data = gk20a_readl(g, gr_gpcs_ppcs_cbm_debug_r());
+	data = set_field(data, gr_gpcs_ppcs_cbm_debug_invalidate_alpha_m(),
+			gr_gpcs_ppcs_cbm_debug_invalidate_alpha_disable_f());
+	data = set_field(data, gr_gpcs_ppcs_cbm_debug_invalidate_beta_m(),
+			gr_gpcs_ppcs_cbm_debug_invalidate_beta_disable_f());
+	gk20a_writel(g, gr_gpcs_ppcs_cbm_debug_r(), data);
+
 	data = gk20a_readl(g, gr_gpcs_tpcs_sm_disp_ctrl_r());
 	data = set_field(data, gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(),
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());

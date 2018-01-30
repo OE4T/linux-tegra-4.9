@@ -3636,6 +3636,34 @@ static inline u32 gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(u32 v)
 {
 	return (v & 0xfffU) << 0U;
 }
+static inline u32 gr_gpcs_ppcs_cbm_debug_r(void)
+{
+	return 0x0041bec4U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_alpha_m(void)
+{
+	return 0x1U << 0U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_alpha_disable_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_alpha_enable_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_beta_m(void)
+{
+	return 0x1U << 1U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_beta_disable_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_gpcs_ppcs_cbm_debug_invalidate_beta_enable_f(void)
+{
+	return 0x2U;
+}
 static inline u32 gr_gpcs_swdx_tc_beta_cb_size_r(u32 i)
 {
 	return 0x00418ea0U + i*4U;

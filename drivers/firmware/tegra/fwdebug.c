@@ -806,9 +806,9 @@ static int bpmp_unmount_show(void *data, u64 *val)
 
 DEFINE_SIMPLE_ATTRIBUTE(bpmp_ping_fops, bpmp_ping_show, NULL, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(trace_enable_fops, bpmp_trace_enable_show,
-		bpmp_trace_enable_store, "%lld\n");
+		bpmp_trace_enable_store, "0x%llx\n");
 DEFINE_SIMPLE_ATTRIBUTE(trace_disable_fops, NULL,
-		bpmp_trace_disable_store, "%lld\n");
+		bpmp_trace_disable_store, "0x%llx\n");
 DEFINE_SIMPLE_ATTRIBUTE(bpmp_mount_fops, bpmp_mount_show, NULL, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(bpmp_unmount_fops, bpmp_unmount_show, NULL, "%lld\n");
 

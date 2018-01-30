@@ -85,7 +85,6 @@ static struct {
 
 static void bwmgr_debugfs_init(void);
 
-#if defined(CONFIG_DEBUG_FS) || defined(CONFIG_TRACEPOINTS)
 /* keep in sync with tegra_bwmgr_client_id */
 static const char * const tegra_bwmgr_client_names[] = {
 	"cpu_cluster_0",
@@ -141,7 +140,7 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"null",
 };
 
-#ifdef CONFIG_TRACEPOINTS
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_TRACEPOINTS)
 static const char *bwmgr_req_to_name(enum tegra_bwmgr_request_type req)
 {
 	/* Keep in sync with enum tegra_bwmgr_request_type. */
@@ -160,21 +159,32 @@ static const char *bwmgr_req_to_name(enum tegra_bwmgr_request_type req)
 		return "INVALID_REQUEST";
 	}
 }
-#endif
-#endif /* defined(CONFIG_DEBUG_FS) || defined(CONFIG_TRACEPOINTS) */
+#endif /* defined(CONFIG_DEBUG_FS) && defined(CONFIG_TRACEPOINTS) */
 
-static inline void bwmgr_lock(void)
+static inline bool bwmgr_lock(void)
 {
-	BUG_ON(bwmgr.task == current); /* disallow rentrance, avoid deadlock */
+	/* disallow rentrance, avoid deadlock */
+	if (unlikely(bwmgr.task == current)) {
+		pr_err("bwmgr: %s deadlock ?\n", __func__);
+		dump_stack();
+		return false;
+	}
 	mutex_lock(&bwmgr.lock);
 	bwmgr.task = current;
+	return true;
 }
 
-static inline void bwmgr_unlock(void)
+static inline bool bwmgr_unlock(void)
 {
-	BUG_ON(bwmgr.task != current); /* detect mismatched calls */
+	/* detect mismatched calls */
+	if (unlikely(bwmgr.task != current)) {
+		pr_err("bwmgr: %s mismatch ?\n", __func__);
+		dump_stack();
+		return false;
+	}
 	bwmgr.task = NULL;
 	mutex_unlock(&bwmgr.lock);
+	return true;
 }
 
 /* call with bwmgr lock held except during init*/
@@ -219,7 +229,7 @@ static int bwmgr_update_clk(void)
 	BUILD_BUG_ON(TEGRA_BWMGR_CLIENT_COUNT > 64);
 	/* check that lock is held */
 	if (unlikely(bwmgr.task != current)) {
-		pr_err("bwmgr: update_clk called without lock\n");
+		pr_err("bwmgr: %s called without lock\n", __func__);
 		return -EINVAL;
 	}
 
@@ -300,9 +310,19 @@ struct tegra_bwmgr_client *tegra_bwmgr_register(
 		return ERR_PTR(-EINVAL);
 	}
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__, tegra_bwmgr_client_names[client]);
+		return ERR_PTR(-EINVAL);
+	}
+
 	(bwmgr.bwmgr_client + client)->refcount++;
-	bwmgr_unlock();
+
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__, tegra_bwmgr_client_names[client]);
+		return ERR_PTR(-EINVAL);
+	}
 	return (bwmgr.bwmgr_client + client);
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_register);
@@ -314,7 +334,12 @@ void tegra_bwmgr_unregister(struct tegra_bwmgr_client *handle)
 		return;
 	}
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return;
+	}
 	handle->refcount--;
 
 	if (handle->refcount <= 0) {
@@ -326,7 +351,12 @@ void tegra_bwmgr_unregister(struct tegra_bwmgr_client *handle)
 		purge_client(handle);
 	}
 
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return;
+	}
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_unregister);
 
@@ -400,7 +430,12 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 		return -EINVAL;
 	}
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return -EINVAL;
+	}
 
 #ifdef CONFIG_TRACEPOINTS
 	trace_tegra_bwmgr_set_emc(
@@ -452,14 +487,24 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 
 	default:
 		WARN_ON(true);
-		bwmgr_unlock();
+		if (!bwmgr_unlock()) {
+			pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+			return -EINVAL;
+		}
 		return -EINVAL;
 	}
 
 	if (update_clk && !clk_update_disabled)
 		ret = bwmgr_update_clk();
 
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return -EINVAL;
+	}
 
 	return ret;
 }
@@ -495,7 +540,12 @@ int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
 		return -EINVAL;
 	}
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return -EINVAL;
+	}
 
 	switch (req) {
 	case TEGRA_BWMGR_SET_EMC_FLOOR:
@@ -520,11 +570,21 @@ int tegra_bwmgr_get_client_info(struct tegra_bwmgr_client *handle,
 
 	default:
 		WARN_ON(true);
-		bwmgr_unlock();
+		if (!bwmgr_unlock()) {
+			pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+			return -EINVAL;
+		}
 		return -EINVAL;
 	}
 
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed for client %s\n",
+			__func__,
+			tegra_bwmgr_client_names[handle - bwmgr.bwmgr_client]);
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -644,7 +704,10 @@ static int tegra_bwmgr_update_efficiency(unsigned long cur_state,
 	 * has changed or not. This will be implemented once the bpmp
 	 * IPC's are ready.For now update efficiency.
 	 */
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed\n", __func__);
+		return -EINVAL;
+	}
 
 	if (bwmgr.ops->update_efficiency)
 		bwmgr.ops->update_efficiency(cur_state);
@@ -652,7 +715,10 @@ static int tegra_bwmgr_update_efficiency(unsigned long cur_state,
 	if (!clk_update_disabled)
 		ret = bwmgr_update_clk();
 
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed.\n", __func__);
+		return -EINVAL;
+	}
 
 	return ret;
 }
@@ -953,7 +1019,10 @@ static int bwmgr_clients_info_show(struct seq_file *s, void *data)
 {
 	int i;
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed\n", __func__);
+		return -EINVAL;
+	}
 	seq_printf(s, "%15s%15s%15s%15s%15s%15s (Khz)\n", "Client",
 			"Floor", "SharedBw", "SharedIsoBw", "Cap",
 			"IsoCap");
@@ -989,7 +1058,10 @@ static int bwmgr_clients_info_show(struct seq_file *s, void *data)
 				 debug_info.req_freq / 1000);
 	seq_printf(s, "EMC current rate                                : %lu (Khz)\n",
 				 tegra_bwmgr_get_emc_rate() / 1000);
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed\n", __func__);
+		return -EINVAL;
+	}
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_iso_bw, bwmgr_debugfs_iso_bw_get,
@@ -1056,10 +1128,16 @@ static void bwmgr_debugfs_init(void)
 	} else
 		pr_err("bwmgr: error creating bwmgr debugfs dir.\n");
 
-	bwmgr_lock();
+	if (!bwmgr_lock()) {
+		pr_err("bwmgr: %s failed\n", __func__);
+		return;
+	}
 	debug_info.non_iso_cap = bwmgr.emc_max_rate;
 	debug_info.iso_cap = bwmgr.emc_max_rate;
-	bwmgr_unlock();
+	if (!bwmgr_unlock()) {
+		pr_err("bwmgr: %s failed\n", __func__);
+		return;
+	}
 }
 
 #else

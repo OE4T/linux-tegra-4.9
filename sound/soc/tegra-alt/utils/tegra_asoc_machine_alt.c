@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2842,6 +2842,7 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+#endif
 	[TEGRA186_DAI_LINK_ARAD] = {
 		.name = "ARAD",
 		.stream_name = "ARAD ratio info",
@@ -2853,7 +2854,6 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
-#endif
 };
 
 static struct snd_soc_codec_conf

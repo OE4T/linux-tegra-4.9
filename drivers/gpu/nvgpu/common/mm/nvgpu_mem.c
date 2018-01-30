@@ -96,7 +96,7 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 	 * and double check length of buffer later. Also, since there's an
 	 * IOMMU we know that this DMA address is contiguous.
 	 */
-	if (!g->mm.bypass_smmu &&
+	if (nvgpu_iommuable(g) &&
 	    nvgpu_sgt_iommuable(g, sgt) &&
 	    nvgpu_sgt_get_dma(sgt, sgt->sgl))
 		return 1ULL << __ffs(nvgpu_sgt_get_dma(sgt, sgt->sgl));

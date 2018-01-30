@@ -26,6 +26,7 @@
 #include "cde_gp10b.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/dma.h>
 
 enum gp10b_programs {
 	GP10B_PROG_HPASS              = 0,
@@ -56,10 +57,10 @@ void gp10b_cde_get_program_numbers(struct gk20a *g,
 			hprog = GP10B_PROG_HPASS_DEBUG;
 			vprog = GP10B_PROG_VPASS_DEBUG;
 		}
-		if (g->mm.bypass_smmu) {
+		if (!nvgpu_iommuable(g)) {
 			if (!g->mm.disable_bigpage) {
 				nvgpu_warn(g,
-					   "when bypass_smmu is 1, disable_bigpage must be 1 too");
+					   "When no IOMMU big pages cannot be used");
 			}
 			hprog |= 1;
 			vprog |= 1;
@@ -72,7 +73,7 @@ void gp10b_cde_get_program_numbers(struct gk20a *g,
 
 bool gp10b_need_scatter_buffer(struct gk20a *g)
 {
-	return g->mm.bypass_smmu;
+	return !nvgpu_iommuable(g);
 }
 
 static u8 parity(u32 a)

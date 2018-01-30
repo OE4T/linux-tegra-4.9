@@ -81,8 +81,7 @@ static int gv11b_tegra_probe(struct device *dev)
 	g->has_syncpoints = false;
 #endif
 
-	platform->bypass_smmu = !device_is_iommuable(dev);
-	platform->disable_bigpage = platform->bypass_smmu;
+	platform->disable_bigpage = !device_is_iommuable(dev);
 
 	platform->g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close
 		= false;

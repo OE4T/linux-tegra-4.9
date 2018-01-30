@@ -637,8 +637,13 @@ bool nvgpu_iommuable(struct gk20a *g)
 #ifdef CONFIG_TEGRA_GK20A
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	return device_is_iommuable(l->dev);
-#else
-	return true;
+	/*
+	 * Check against the nvgpu device to see if it's been marked as
+	 * IOMMU'able.
+	 */
+	if (!device_is_iommuable(l->dev))
+		return false;
 #endif
+
+	return true;
 }

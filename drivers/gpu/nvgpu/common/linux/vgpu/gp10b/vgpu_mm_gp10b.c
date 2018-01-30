@@ -23,10 +23,10 @@
 #include "gk20a/mm_gk20a.h"
 
 #include <nvgpu/bug.h>
+#include <nvgpu/dma.h>
 
 int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g)
 {
-	g->mm.bypass_smmu = true;
 	g->mm.disable_bigpage = true;
 	return 0;
 }
@@ -77,7 +77,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 
 	/* FIXME: add support for sparse mappings */
 
-	if (WARN_ON(!sgt) || WARN_ON(!g->mm.bypass_smmu))
+	if (WARN_ON(!sgt) || WARN_ON(nvgpu_iommuable(g)))
 		return 0;
 
 	if (space_to_skip & (page_size - 1))

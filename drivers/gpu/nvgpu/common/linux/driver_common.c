@@ -184,7 +184,6 @@ static void nvgpu_init_mm_vars(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 
-	g->mm.bypass_smmu = platform->bypass_smmu;
 	g->mm.disable_bigpage = platform->disable_bigpage;
 	__nvgpu_set_enabled(g, NVGPU_MM_HONORS_APERTURE,
 			    platform->honors_aperture);

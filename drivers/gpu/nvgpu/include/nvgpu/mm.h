@@ -144,7 +144,6 @@ struct mm_gk20a {
 	bool use_full_comp_tag_line;
 	bool ltc_enabled_current;
 	bool ltc_enabled_target;
-	bool bypass_smmu;
 	bool disable_bigpage;
 	bool has_physical_mode;
 

@@ -1,6 +1,7 @@
 /*
  * USB Type-C Connector System Software Interface driver
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2017, Intel Corporation
  * Author: Heikki Krogerus <heikki.krogerus@linux.intel.com>
  *
@@ -16,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/usb/typec.h>
+#include <linux/usb/class-dual-role.h>
 
 #include "ucsi.h"
 #include "trace.h"
@@ -62,6 +64,10 @@ struct ucsi_connector {
 
 	struct ucsi_connector_status status;
 	struct ucsi_connector_capability cap;
+
+	struct dual_role_phy_instance *dual_role;
+	bool role_switch;
+	struct dual_role_phy_desc *desc;
 };
 
 struct ucsi {
@@ -568,11 +574,133 @@ static struct fwnode_handle *ucsi_find_fwnode(struct ucsi_connector *con)
 	return NULL;
 }
 
+/* -------------------------------------------------------------------------- */
+
+static enum dual_role_property drp_properties[] = {
+	DUAL_ROLE_PROP_MODE,
+	DUAL_ROLE_PROP_PR,
+	DUAL_ROLE_PROP_DR,
+};
+
+/* Callback for "cat /sys/class/dual_role_usb/typec-x/<property>" */
+static int dual_role_get_local_prop(struct dual_role_phy_instance *dual_role,
+			enum dual_role_property prop,
+			unsigned int *val)
+{
+	struct ucsi_connector *con = dual_role_get_drvdata(dual_role);
+	struct ucsi_control ctrl;
+	int ret;
+
+	if (!con)
+		return 0;
+
+	mutex_lock(&con->ucsi->ppm_lock);
+	UCSI_CMD_GET_CONNECTOR_STATUS(ctrl, con->num);
+	ret = ucsi_run_command(con->ucsi, &ctrl, &con->status,
+				sizeof(con->status));
+	if (ret < 0) {
+		dev_err(con->ucsi->dev, "%s: GET_CONNECTOR_STATUS failed (%d)\n",
+			__func__, ret);
+		mutex_unlock(&con->ucsi->ppm_lock);
+		return ret;
+	}
+	mutex_unlock(&con->ucsi->ppm_lock);
+
+	if (prop == DUAL_ROLE_PROP_MODE) {
+		if (con->cap.op_mode & UCSI_CONCAP_OPMODE_DRP)
+			*val = DUAL_ROLE_SUPPORTED_MODES_DFP_AND_UFP;
+		else if (con->cap.op_mode & UCSI_CONCAP_OPMODE_DFP)
+			*val = DUAL_ROLE_SUPPORTED_MODES_DFP;
+		else if (con->cap.op_mode & UCSI_CONCAP_OPMODE_UFP)
+			*val = DUAL_ROLE_SUPPORTED_MODES_UFP;
+	} else if (prop == DUAL_ROLE_PROP_PR) {
+		if (!con->status.connected)
+			*val = DUAL_ROLE_PROP_PR_NONE;
+		else if (con->status.pwr_dir)
+			*val = DUAL_ROLE_PROP_PR_SRC;
+		else
+			*val = DUAL_ROLE_PROP_PR_SNK;
+	} else if (prop == DUAL_ROLE_PROP_DR) {
+		if (!con->status.connected)
+			*val = DUAL_ROLE_PROP_DR_NONE;
+		else if (con->status.partner_type ==
+			       UCSI_CONSTAT_PARTNER_TYPE_UFP)
+			*val = DUAL_ROLE_PROP_DR_HOST;
+		else if (con->status.partner_type ==
+			       UCSI_CONSTAT_PARTNER_TYPE_DFP)
+			*val = DUAL_ROLE_PROP_DR_DEVICE;
+	} else
+		return -EINVAL;
+
+	return 0;
+}
+
+/* Decides whether userspace can change a specific property */
+static int dual_role_is_writeable(struct dual_role_phy_instance *drp,
+				enum dual_role_property prop) {
+	if (prop == DUAL_ROLE_PROP_PR || prop == DUAL_ROLE_PROP_DR)
+		return 1;
+	else
+		return 0;
+}
+
+/* Callback for "echo <value> >
+ *                      /sys/class/dual_role_usb/<name>/<property>"
+ */
+static int dual_role_set_prop(struct dual_role_phy_instance *dual_role,
+				enum dual_role_property prop,
+				const unsigned int *val) {
+	struct ucsi_connector *con = dual_role_get_drvdata(dual_role);
+
+	if (!con)
+		return -EINVAL;
+
+	if (prop == DUAL_ROLE_PROP_DR) {
+		if (*val == DUAL_ROLE_PROP_DR_HOST) {
+			ucsi_dr_swap(&con->typec_cap, TYPEC_HOST);
+			dev_dbg(con->ucsi->dev, "%s: Setting data role to host\n",
+								__func__);
+		} else if (*val == DUAL_ROLE_PROP_DR_DEVICE) {
+			ucsi_dr_swap(&con->typec_cap, TYPEC_DEVICE);
+			dev_dbg(con->ucsi->dev, "%s: Setting data role to device\n",
+								__func__);
+		} else {
+			dev_err(con->ucsi->dev, "%s: Trying to set invalid mode\n",
+								__func__);
+			return -EINVAL;
+		}
+	} else if (prop == DUAL_ROLE_PROP_PR) {
+		if (*val == DUAL_ROLE_PROP_PR_SNK) {
+			ucsi_pr_swap(&con->typec_cap, TYPEC_SINK);
+			dev_dbg(con->ucsi->dev, "%s: Setting power role to sink\n",
+								__func__);
+		} else if (*val == DUAL_ROLE_PROP_PR_SRC) {
+			ucsi_pr_swap(&con->typec_cap, TYPEC_SOURCE);
+			dev_dbg(con->ucsi->dev, "%s: Setting power role to source\n",
+								__func__);
+		} else {
+			dev_err(con->ucsi->dev, "%s: Trying to set invalid mode\n",
+								__func__);
+			return -EINVAL;
+		}
+	} else {
+		dev_err(con->ucsi->dev, "%s: Trying to set invalid prop\n",
+								__func__);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/* -------------------------------------------------------------------------- */
+
 static int ucsi_register_port(struct ucsi *ucsi, int index)
 {
 	struct ucsi_connector *con = &ucsi->connector[index];
 	struct typec_capability *cap = &con->typec_cap;
 	enum typec_accessory *accessory = cap->accessory;
+	struct dual_role_phy_desc *desc;
+	char *str;
 	struct ucsi_control ctrl;
 	int ret;
 
@@ -594,6 +722,34 @@ static int ucsi_register_port(struct ucsi *ucsi, int index)
 	else if (con->cap.op_mode & UCSI_CONCAP_OPMODE_UFP)
 		cap->type = TYPEC_PORT_UFP;
 
+	if (IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF)) {
+		con->desc = devm_kzalloc(ucsi->dev,
+				sizeof(struct dual_role_phy_desc), GFP_KERNEL);
+		if (!con->desc)
+			return -ENOMEM;
+
+		desc = con->desc;
+		str = (char *)devm_kmalloc(ucsi->dev, 8 * sizeof(char),
+				GFP_KERNEL);
+		snprintf(str, 10, "typec-%d", index);
+		desc->name = (const char *)str;
+		if (con->cap.op_mode & UCSI_CONCAP_OPMODE_DRP)
+			desc->supported_modes =
+				DUAL_ROLE_SUPPORTED_MODES_DFP_AND_UFP;
+		else if (con->cap.op_mode & UCSI_CONCAP_OPMODE_DFP)
+			desc->supported_modes = DUAL_ROLE_SUPPORTED_MODES_DFP;
+		else if (con->cap.op_mode & UCSI_CONCAP_OPMODE_UFP)
+			desc->supported_modes = DUAL_ROLE_SUPPORTED_MODES_UFP;
+		desc->properties = drp_properties;
+		desc->num_properties = ARRAY_SIZE(drp_properties);
+		desc->get_property = dual_role_get_local_prop;
+		desc->set_property = dual_role_set_prop;
+		desc->property_is_writeable = dual_role_is_writeable;
+		con->dual_role = devm_dual_role_instance_register(ucsi->dev,
+						desc);
+		con->dual_role->drv_data = con;
+	}
+
 	cap->revision = ucsi->cap.typec_version;
 	cap->pd_revision = ucsi->cap.pd_version;
 	cap->prefer_role = TYPEC_NO_PREFERRED_ROLE;
@@ -609,15 +765,18 @@ static int ucsi_register_port(struct ucsi *ucsi, int index)
 
 	/* Register the connector */
 	con->port = typec_register_port(ucsi->dev, cap);
-	if (!con->port)
-		return -ENODEV;
+	if (!con->port) {
+		ret = -ENODEV;
+		goto err;
+	}
 
 	/* Get the status */
 	UCSI_CMD_GET_CONNECTOR_STATUS(ctrl, con->num);
 	ret = ucsi_run_command(ucsi, &ctrl, &con->status, sizeof(con->status));
 	if (ret < 0) {
 		dev_err(ucsi->dev, "con%d: failed to get status\n", con->num);
-		return 0;
+		ret = 0;
+		goto err;
 	}
 
 	ucsi_pwr_opmode_change(con);
@@ -641,6 +800,11 @@ static int ucsi_register_port(struct ucsi *ucsi, int index)
 	trace_ucsi_register_port(con->num, &con->status);
 
 	return 0;
+
+err:
+	if (IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF))
+		devm_kfree(ucsi->dev, con->desc);
+	return ret;
 }
 
 static void ucsi_init(struct work_struct *work)
@@ -776,6 +940,11 @@ void ucsi_unregister_ppm(struct ucsi *ucsi)
 		cancel_work_sync(&ucsi->connector[i].work);
 		ucsi_unregister_partner(&ucsi->connector[i]);
 		typec_unregister_port(ucsi->connector[i].port);
+		if (IS_ENABLED(CONFIG_DUAL_ROLE_USB_INTF)) {
+			devm_dual_role_instance_unregister(ucsi->dev,
+				       ucsi->connector[i].dual_role);
+			devm_kfree(ucsi->dev, ucsi->connector[i].desc);
+		}
 	}
 
 	ucsi_reset_ppm(ucsi);

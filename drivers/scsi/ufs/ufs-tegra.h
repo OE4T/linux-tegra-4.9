@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *      VenkataJagadish.p	<vjagadish@nvidia.com>
@@ -300,6 +300,10 @@ struct ufs_tegra_host {
 #ifdef CONFIG_DEBUG_FS
 	u32 refclk_value;
 	long program_refclk;
+	u32 bootlun_en_id;
+	long program_bootlun_en_id;
+	u32 boot_enable;
+	u32 descr_access_en;
 	u8 *lun_desc_buf;
 	long program_lun;
 #endif

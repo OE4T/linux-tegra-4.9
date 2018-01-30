@@ -77,6 +77,15 @@
 			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1>;
 		};
 
+		ramoops_reserved: ramoops_carveout {
+			compatible = "nvidia,ramoops";
+			size = <0x0 0x200000>;
+			alignment = <0x0 0x10000>;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+			no-map;
+			status = "disabled";
+		};
+
 	};
 
 	tegra-carveouts {

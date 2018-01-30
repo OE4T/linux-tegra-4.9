@@ -53,21 +53,16 @@ static inline struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
 	return vgpu_get_priv_data_from_dev(dev_from_gk20a(g));
 }
 
-static inline u64 vgpu_get_handle_from_dev(struct device *dev)
+static inline u64 vgpu_get_handle(struct gk20a *g)
 {
-	struct vgpu_priv_data *priv = vgpu_get_priv_data_from_dev(dev);
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	if (unlikely(!priv)) {
-		dev_err(dev, "invalid vgpu_priv_data in %s\n", __func__);
+		nvgpu_err(g, "invalid vgpu_priv_data in %s", __func__);
 		return INT_MAX;
 	}
 
 	return priv->virt_handle;
-}
-
-static inline u64 vgpu_get_handle(struct gk20a *g)
-{
-	return vgpu_get_handle_from_dev(dev_from_gk20a(g));
 }
 
 int vgpu_pm_prepare_poweroff(struct device *dev);

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -98,8 +98,7 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	if (va_allocated) {
 		err = __nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
 		if (err) {
-			dev_err(dev_from_vm(vm),
-				"failed to free va");
+			nvgpu_err(g, "failed to free va");
 			return;
 		}
 	}
@@ -110,8 +109,7 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	p->gpu_va = vaddr;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret)
-		dev_err(dev_from_vm(vm),
-			"failed to update gmmu ptes on unmap");
+		nvgpu_err(g, "failed to update gmmu ptes on unmap");
 
 	/* TLB invalidate handled on server side */
 }

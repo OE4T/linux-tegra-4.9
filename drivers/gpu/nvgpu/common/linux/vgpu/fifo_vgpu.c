@@ -147,7 +147,6 @@ int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 				u32 gpfifo_entries,
 				unsigned long acquire_timeout, u32 flags)
 {
-	struct device __maybe_unused *d = dev_from_gk20a(ch->g);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ramfc_params *p = &msg.params.ramfc;
 	int err;
@@ -211,7 +210,6 @@ int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
 static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct fifo_runlist_info_gk20a *runlist;
-	struct device *d = dev_from_gk20a(g);
 	unsigned int runlist_id = -1;
 	u32 i;
 	u64 runlist_size;
@@ -242,7 +240,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			int err = nvgpu_dma_alloc_sys(g, runlist_size,
 						&runlist->mem[i]);
 			if (err) {
-				dev_err(d, "memory allocation failed\n");
+				nvgpu_err(g, "memory allocation failed");
 				goto clean_up_runlist;
 			}
 		}
@@ -266,7 +264,6 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct fifo_gk20a *f = &g->fifo;
-	struct device *d = dev_from_gk20a(g);
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	unsigned int chid;
 	int err = 0;
@@ -287,7 +284,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	err = nvgpu_dma_alloc_sys(g, f->userd_entry_size * f->num_channels,
 			&f->userd);
 	if (err) {
-		dev_err(d, "memory allocation failed\n");
+		nvgpu_err(g, "memory allocation failed");
 		goto clean_up;
 	}
 
@@ -296,7 +293,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 		f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.priv.sgt,
 						f->userd.size);
 		if (!f->userd.gpu_va) {
-			dev_err(d, "gmmu mapping failed\n");
+			nvgpu_err(g, "gmmu mapping failed");
 			goto clean_up;
 		}
 		/* if reduced BAR1 range is specified, use offset of 0

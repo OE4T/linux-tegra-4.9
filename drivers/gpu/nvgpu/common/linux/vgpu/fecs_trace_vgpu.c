@@ -54,7 +54,7 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 	err = of_parse_phandle_with_fixed_args(np,
 			"mempool-fecs-trace", 1, 0, &args);
 	if (err) {
-		dev_info(dev_from_gk20a(g), "does not support fecs trace\n");
+		nvgpu_info(g, "does not support fecs trace");
 		goto fail;
 	}
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
@@ -62,8 +62,8 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 	mempool = args.args[0];
 	vcst->cookie = vgpu_ivm_mempool_reserve(mempool);
 	if (IS_ERR(vcst->cookie)) {
-		dev_info(dev_from_gk20a(g),
-			"mempool  %u reserve failed\n", mempool);
+		nvgpu_info(g,
+			"mempool  %u reserve failed", mempool);
 		vcst->cookie = NULL;
 		err = -EINVAL;
 		goto fail;
@@ -72,15 +72,14 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 	vcst->buf = ioremap_cache(vgpu_ivm_get_ipa(vcst->cookie),
 			vgpu_ivm_get_size(vcst->cookie));
 	if (!vcst->buf) {
-		dev_info(dev_from_gk20a(g), "ioremap_cache failed\n");
+		nvgpu_info(g, "ioremap_cache failed");
 		err = -EINVAL;
 		goto fail;
 	}
 	vcst->header = vcst->buf;
 	vcst->num_entries = vcst->header->num_ents;
 	if (unlikely(vcst->header->ent_size != sizeof(*vcst->entries))) {
-		dev_err(dev_from_gk20a(g),
-			"entry size mismatch\n");
+		nvgpu_err(g, "entry size mismatch");
 		goto fail;
 	}
 	vcst->entries = vcst->buf + sizeof(*vcst->header);

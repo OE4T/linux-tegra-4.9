@@ -685,29 +685,29 @@ int vgpu_probe(struct platform_device *pdev)
 	err = platform->probe(dev);
 	if (err) {
 		if (err == -EPROBE_DEFER)
-			dev_info(dev, "platform probe failed");
+			nvgpu_info(gk20a, "platform probe failed");
 		else
-			dev_err(dev, "platform probe failed");
+			nvgpu_err(gk20a, "platform probe failed");
 		return err;
 	}
 
 	if (platform->late_probe) {
 		err = platform->late_probe(dev);
 		if (err) {
-			dev_err(dev, "late probe failed");
+			nvgpu_err(gk20a, "late probe failed");
 			return err;
 		}
 	}
 
 	err = vgpu_comm_init(gk20a);
 	if (err) {
-		dev_err(dev, "failed to init comm interface\n");
+		nvgpu_err(gk20a, "failed to init comm interface");
 		return -ENOSYS;
 	}
 
 	priv->virt_handle = vgpu_connect();
 	if (!priv->virt_handle) {
-		dev_err(dev, "failed to connect to server node\n");
+		nvgpu_err(gk20a, "failed to connect to server node");
 		vgpu_comm_deinit();
 		return -ENOSYS;
 	}
@@ -720,7 +720,7 @@ int vgpu_probe(struct platform_device *pdev)
 
 	err = vgpu_pm_init(dev);
 	if (err) {
-		dev_err(dev, "pm init failed");
+		nvgpu_err(gk20a, "pm init failed");
 		return err;
 	}
 

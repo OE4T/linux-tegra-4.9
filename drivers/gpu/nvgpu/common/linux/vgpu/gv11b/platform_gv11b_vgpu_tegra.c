@@ -35,12 +35,12 @@ static int gv11b_vgpu_probe(struct device *dev)
 
 	r = platform_get_resource_byname(pdev, IORESOURCE_MEM, "usermode");
 	if (!r) {
-		dev_err(dev, "failed to get usermode regs\n");
+		nvgpu_err(g, "failed to get usermode regs");
 		return -ENXIO;
 	}
 	regs = devm_ioremap_resource(dev, r);
 	if (IS_ERR(regs)) {
-		dev_err(dev, "failed to map usermode regs\n");
+		nvgpu_err(g, "failed to map usermode regs");
 		return PTR_ERR(regs);
 	}
 	l->usermode_regs = regs;
@@ -56,7 +56,7 @@ static int gv11b_vgpu_probe(struct device *dev)
 							&g->syncpt_unit_base,
 							&g->syncpt_unit_size);
 	if (ret) {
-		dev_err(dev, "Failed to get syncpt interface");
+		nvgpu_err(g, "Failed to get syncpt interface");
 		return -ENOSYS;
 	}
 	g->syncpt_size = nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);

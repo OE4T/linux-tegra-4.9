@@ -205,6 +205,19 @@ struct tegra210_pinctrl_soc {
 #define TEGRA_DRV_PAD_QSPI_LPBK_CONTROL		_PIN(10)
 #define TEGRA_PAD_DSI_AB_CONTROL		_PIN(11)
 #define TEGRA_PAD_DSI_CD_CONTROL		_PIN(12)
+#define TEGRA_PIN_SDMMC2_CLK			_PIN(13)
+#define TEGRA_PIN_SDMMC2_CLKB			_PIN(14)
+#define TEGRA_PIN_SDMMC2_CMD			_PIN(15)
+#define TEGRA_PIN_SDMMC2_DAT0			_PIN(16)
+#define TEGRA_PIN_SDMMC2_DAT1			_PIN(17)
+#define TEGRA_PIN_SDMMC2_DAT2			_PIN(18)
+#define TEGRA_PIN_SDMMC2_DAT3			_PIN(19)
+#define TEGRA_PIN_SDMMC2_DAT4			_PIN(20)
+#define TEGRA_PIN_SDMMC2_DAT5			_PIN(21)
+#define TEGRA_PIN_SDMMC2_DAT6			_PIN(22)
+#define TEGRA_PIN_SDMMC2_DAT7			_PIN(23)
+#define TEGRA_PIN_SDMMC2_DQS			_PIN(24)
+#define TEGRA_PIN_SDMMC2_DQSB			_PIN(25)
 
 static const struct pinctrl_pin_desc tegra210_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_PEX_L0_RST_N_PA0, "PEX_L0_RST_N PA0"),
@@ -289,6 +302,19 @@ static const struct pinctrl_pin_desc tegra210_pins[] = {
 	PINCTRL_PIN(TEGRA_PIN_SDMMC1_DAT2_PM3, "SDMMC1_DAT2 PM3"),
 	PINCTRL_PIN(TEGRA_PIN_SDMMC1_DAT1_PM4, "SDMMC1_DAT1 PM4"),
 	PINCTRL_PIN(TEGRA_PIN_SDMMC1_DAT0_PM5, "SDMMC1_DAT0 PM5"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_CLK, "SDMMC2_CLK"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_CLKB, "SDMMC2_CLKB"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_CMD, "SDMMC2_CMD"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT0, "SDMMC2_DAT0"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT1, "SDMMC2_DAT1"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT2, "SDMMC2_DAT2"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT3, "SDMMC2_DAT3"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT4, "SDMMC2_DAT4"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT5, "SDMMC2_DAT5"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT6, "SDMMC2_DAT6"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DAT7, "SDMMC2_DAT7"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DQS, "SDMMC2_DQS"),
+	PINCTRL_PIN(TEGRA_PIN_SDMMC2_DQSB, "SDMMC2_DQSB"),
 	PINCTRL_PIN(TEGRA_PIN_SDMMC3_CLK_PP0, "SDMMC3_CLK PP0"),
 	PINCTRL_PIN(TEGRA_PIN_SDMMC3_CMD_PP1, "SDMMC3_CMD PP1"),
 	PINCTRL_PIN(TEGRA_PIN_SDMMC3_DAT3_PP2, "SDMMC3_DAT3 PP2"),
@@ -703,6 +729,58 @@ static const unsigned sdmmc1_dat1_pm4_pins[] = {
 
 static const unsigned sdmmc1_dat0_pm5_pins[] = {
 	TEGRA_PIN_SDMMC1_DAT0_PM5,
+};
+
+static const unsigned sdmmc2_clk_pins[] = {
+	TEGRA_PIN_SDMMC2_CLK,
+};
+
+static const unsigned sdmmc2_clkb_pins[] = {
+	TEGRA_PIN_SDMMC2_CLKB,
+};
+
+static const unsigned sdmmc2_cmd_pins[] = {
+	TEGRA_PIN_SDMMC2_CMD,
+};
+
+static const unsigned sdmmc2_dat0_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT0,
+};
+
+static const unsigned sdmmc2_dat1_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT1,
+};
+
+static const unsigned sdmmc2_dat2_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT2,
+};
+
+static const unsigned sdmmc2_dat3_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT3,
+};
+
+static const unsigned sdmmc2_dat4_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT4,
+};
+
+static const unsigned sdmmc2_dat5_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT5,
+};
+
+static const unsigned sdmmc2_dat6_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT6,
+};
+
+static const unsigned sdmmc2_dat7_pins[] = {
+	TEGRA_PIN_SDMMC2_DAT7,
+};
+
+static const unsigned sdmmc2_dqs_pins[] = {
+	TEGRA_PIN_SDMMC2_DQS,
+};
+
+static const unsigned sdmmc2_dqsb_pins[] = {
+	TEGRA_PIN_SDMMC2_DQSB,
 };
 
 static const unsigned sdmmc3_clk_pp0_pins[] = {
@@ -1127,6 +1205,19 @@ static const unsigned drive_sdmmc1_pins[] = {
 };
 
 static const unsigned drive_sdmmc2_pins[] = {
+	TEGRA_PIN_SDMMC2_CLK,
+	TEGRA_PIN_SDMMC2_CLKB,
+	TEGRA_PIN_SDMMC2_CMD,
+	TEGRA_PIN_SDMMC2_DAT0,
+	TEGRA_PIN_SDMMC2_DAT1,
+	TEGRA_PIN_SDMMC2_DAT2,
+	TEGRA_PIN_SDMMC2_DAT3,
+	TEGRA_PIN_SDMMC2_DAT4,
+	TEGRA_PIN_SDMMC2_DAT5,
+	TEGRA_PIN_SDMMC2_DAT6,
+	TEGRA_PIN_SDMMC2_DAT7,
+	TEGRA_PIN_SDMMC2_DQS,
+	TEGRA_PIN_SDMMC2_DQSB,
 };
 
 static const unsigned drive_sdmmc3_pins[] = {
@@ -1201,6 +1292,7 @@ enum tegra_mux {
 	TEGRA_MUX_RSVD3,
 	TEGRA_MUX_SATA,
 	TEGRA_MUX_SDMMC1,
+	TEGRA_MUX_SDMMC2,
 	TEGRA_MUX_SDMMC3,
 	TEGRA_MUX_SHUTDOWN,
 	TEGRA_MUX_SOC,
@@ -1282,6 +1374,7 @@ static struct tegra_function tegra210_functions[] = {
 	FUNCTION(rsvd3),
 	FUNCTION(sata),
 	FUNCTION(sdmmc1),
+	FUNCTION(sdmmc2),
 	FUNCTION(sdmmc3),
 	FUNCTION(shutdown),
 	FUNCTION(soc),
@@ -1449,6 +1542,19 @@ static struct tegra_pingroup tegra210_groups[] = {
 	PINGROUP(sdmmc1_dat2_pm3,      SDMMC1,     SPI3,   RSVD2, RSVD3, 0x300c, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),
 	PINGROUP(sdmmc1_dat1_pm4,      SDMMC1,     SPI3,   RSVD2, RSVD3, 0x3010, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),
 	PINGROUP(sdmmc1_dat0_pm5,      SDMMC1,     RSVD1,  RSVD2, RSVD3, 0x3014, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),
+	PINGROUP(sdmmc2_clk,           SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32b4, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_clkb,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32b8, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_cmd,           SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32bc, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat0,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x3294, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat1,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x3298, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat2,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x329c, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat3,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32a0, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat4,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32a4, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat5,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32a8, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat6,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32ac, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dat7,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32b0, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dqs,           SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32c0, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
+	PINGROUP(sdmmc2_dqsb,          SDMMC2,     RSVD1,  RSVD2, RSVD3, 0x32c4, Y,   Y,       N,       N,      -1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1,     -1),
 	PINGROUP(sdmmc3_clk_pp0,       SDMMC3,     RSVD1,  RSVD2, RSVD3, 0x301c, Y,   Y,       N,       N,	0x8d8,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, 0),
 	PINGROUP(sdmmc3_cmd_pp1,       SDMMC3,     RSVD1,  RSVD2, RSVD3, 0x3020, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),
 	PINGROUP(sdmmc3_dat0_pp5,      SDMMC3,     RSVD1,  RSVD2, RSVD3, 0x3024, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),

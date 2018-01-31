@@ -1984,8 +1984,10 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_NVHS_PLL0_MGMT>,
 				<&bpmp_clks TEGRA194_CLK_NVLINK_SYS>,
 				<&bpmp_clks TEGRA194_CLK_PLLNVHS>,
-				<&bpmp_clks TEGRA194_CLK_NVLINK_TXCLK_CTRL>;
-		clock-names = "nvhs_pll0_mgmt", "nvlink_sys", "pllnvhs", "txclk_ctrl";
+				<&bpmp_clks TEGRA194_CLK_CLK_M>,
+				<&bpmp_clks TEGRA194_CLK_NVLINK_PLL_TXCLK>,
+				<&bpmp_clks TEGRA194_CLK_NVLINK_TX>;
+		clock-names = "nvhs_pll0_mgmt", "nvlink_sys", "pllnvhs", "clk_m", "nvlink_pll_txclk", "nvlink_tx";
 		resets = <&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PM>,
 				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY>,
 				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_PLL0>,

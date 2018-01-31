@@ -513,7 +513,7 @@ static inline struct page *migrate_replace_cma_page(struct page *page)
 	 * Take additional reference to the new page to ensure it won't get
 	 * freed after migration procedure end.
 	 */
-	page_ref_add(newpage, 1);
+	get_page(newpage);
 	if (migrate_replace_page(page, newpage) == 0) {
 		put_page(newpage);
 		return newpage;

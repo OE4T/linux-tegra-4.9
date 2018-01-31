@@ -1745,6 +1745,18 @@ exit:
 	return ret;
 }
 
+#ifdef QSPI_BRINGUP_BUILD
+static void handle_combined_sequence(struct tegra_qspi_data *tqspi)
+{
+	u8 val = 0;
+
+	/* clear combined sequence enable */
+	val = tegra_qspi_readl(tqspi, QSPI_GLOBAL_CONFIG);
+	val &= ~QSPI_CMB_SEQ_EN;
+	tegra_qspi_writel(tqspi, val, QSPI_GLOBAL_CONFIG);
+}
+#endif
+
 static irqreturn_t handle_cpu_based_xfer(struct tegra_qspi_data *tqspi)
 {
 	struct spi_transfer *t = tqspi->curr_xfer;
@@ -1875,6 +1887,10 @@ static irqreturn_t tegra_qspi_isr_thread(int irq, void *context_data)
 {
 	struct tegra_qspi_data *tqspi = context_data;
 
+#ifdef QSPI_BRINGUP_BUILD
+	if (tqspi->qspi_enable_cmbseq_mode)
+		handle_combined_sequence(tqspi);
+#endif
 	if (!tqspi->is_curr_dma_xfer)
 		return handle_cpu_based_xfer(tqspi);
 

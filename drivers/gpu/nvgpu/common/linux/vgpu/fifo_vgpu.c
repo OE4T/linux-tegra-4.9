@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/dma-mapping.h>
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 
@@ -149,7 +148,6 @@ int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 				unsigned long acquire_timeout, u32 flags)
 {
 	struct device __maybe_unused *d = dev_from_gk20a(ch->g);
-	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ramfc_params *p = &msg.params.ramfc;
 	int err;
@@ -162,7 +160,7 @@ int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 	p->gpfifo_va = gpfifo_base;
 	p->num_entries = gpfifo_entries;
 	p->userd_addr = ch->userd_iova;
-	p->iova = mapping ? 1 : 0;
+	p->iova = 0;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
 	return (err || msg.ret) ? -ENOMEM : 0;

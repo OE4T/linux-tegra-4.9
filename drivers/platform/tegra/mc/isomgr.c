@@ -146,7 +146,12 @@ static void update_mc_clock(void)
 	u64 floor_freq;
 	unsigned long emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 
-	BUG_ON(mutex_trylock(&isomgr.lock));
+	/*If we get the lock, it means lock was not taken and hence we return*/
+	if (unlikely(mutex_trylock(&isomgr.lock))) {
+		pr_err("isomgr: %s called without lock\n", __func__);
+		WARN_ON(true);
+		return;
+	}
 	/* determine worst case freq to satisfy LT */
 	isomgr.lt_mf = 0;
 	for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
@@ -259,7 +264,11 @@ static void unregister_iso_client(struct kref *kref)
 
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "enter");
 	isomgr_lock();
-	BUG_ON(cp->realize);
+	if (unlikely(cp->realize)) {
+		pr_err
+		("isomgr: %s called while realize in progress\n", __func__);
+		goto fail_unlock;
+	}
 
 	if (isomgr.ops->isomgr_plat_unregister)
 		isomgr.ops->isomgr_plat_unregister(cp);
@@ -267,9 +276,14 @@ static void unregister_iso_client(struct kref *kref)
 	isomgr.dedi_bw -= cp->dedi_bw;
 	purge_isomgr_client(cp);
 	update_mc_clock();
-	isomgr_unlock();
 
+	isomgr_unlock();
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "exit");
+	return;
+
+fail_unlock:
+	isomgr_unlock();
+	trace_tegra_isomgr_unregister_iso_client(cname[client], "exit fail");
 }
 
 static bool is_client_valid(enum tegra_iso_client client)
@@ -559,10 +573,18 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 			isomgr.avail_bw += cp->margin_bw - cp->real_bw;
 		cp->margin_bw = bw;
 	} else if (bw <= cp->margin_bw) {
-		BUG_ON(cp->margin_bw > cp->real_bw);
+		if (unlikely(cp->margin_bw > cp->real_bw)) {
+			pr_err("isomgr: set_margin: margin_bw > real_bw\n");
+			ret = -EINVAL;
+			goto out;
+		}
 		isomgr.avail_bw += cp->margin_bw - bw;
 		cp->margin_bw = bw;
-		BUG_ON(cp->margin_bw > cp->real_bw);
+		if (unlikely(cp->margin_bw > cp->real_bw)) {
+			pr_err("isomgr: set_margin: margin_bw > real_bw\n");
+			ret = -EINVAL;
+			goto out;
+		}
 	} else if (bw > cp->margin_bw) {
 		high_bw = (cp->margin_bw > cp->real_bw) ?
 				cp->margin_bw : cp->real_bw;
@@ -570,7 +592,7 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 			isomgr.avail_bw -= bw - high_bw;
 			cp->margin_bw = bw;
 		} else {
-			ret = -ENOMEM;
+			ret = -EINVAL;
 			goto out;
 		}
 	}
@@ -800,8 +822,14 @@ static void isomgr_create_client(int client, const char *name)
 	 * in the above array client_attr_list.
 	 */
 	BUILD_BUG_ON(TEGRA_ISO_CLIENT_COUNT > 11);
-	BUG_ON(!isomgr.kobj);
-	BUG_ON(cp->client_kobj);
+	if (unlikely(!isomgr.kobj)) {
+		pr_err("isomgr: create_client failed, isomgr.kobj is null\n");
+		return;
+	}
+	if (unlikely(cp->client_kobj)) {
+		pr_err("isomgr: create_client failed, client_kobj is null\n");
+		return;
+	}
 	cp->client_kobj = kobject_create_and_add(name, isomgr.kobj);
 	if (!cp->client_kobj) {
 		pr_err("failed to create sysfs client dir\n");
@@ -819,7 +847,10 @@ static void isomgr_create_sysfs(void)
 {
 	int i;
 
-	BUG_ON(isomgr.kobj);
+	if (unlikely(isomgr.kobj)) {
+		pr_err("isomgr: create_sysfs failed, isomgr.kobj exists\n");
+		return;
+	}
 	isomgr.kobj = kobject_create_and_add("isomgr", kernel_kobj);
 	if (!isomgr.kobj) {
 		pr_err("failed to create kobject\n");

@@ -49,7 +49,7 @@
 		pr_err("bw mismatch, line=%d\n", __LINE__); \
 		pr_err("t+isomgr.avail_bw=%d, isomgr.max_iso_bw=%d\n", \
 			t + isomgr.avail_bw, isomgr.max_iso_bw); \
-		BUG(); \
+		return false; \
 	} \
 }
 #else
@@ -402,10 +402,17 @@ static bool pre_t19x_iso_plat_realize(struct isomgr_client *cp)
 	cp->real_bw = 0;
 	cp->realize = true;
 
-	BUG_ON(isomgr.avail_bw > isomgr.max_iso_bw);
+	if (unlikely(isomgr.avail_bw > isomgr.max_iso_bw)) {
+		pr_err("isomgr: iso_plat_realize: avail_bw > max_iso_bw\n");
+		return false;
+	}
 
 	if (cp->rsvd_bw <= cp->margin_bw) {
-		BUG_ON(cp->sleep_bw);
+		if (unlikely(cp->sleep_bw)) {
+			pr_err
+			("isomgr_realize: rsvd_bw < margin_bw, sleep_bw = 1\n");
+			return false;
+		}
 		cp->real_bw = cp->rsvd_bw; /* reservation has been realized */
 		cp->real_mf = cp->rsvd_mf; /* minimum frequency realized */
 	} else if (cp->rsvd_bw <= isomgr.avail_bw + cp->margin_bw) {
@@ -416,9 +423,16 @@ static bool pre_t19x_iso_plat_realize(struct isomgr_client *cp)
 		if (cp->sleep_bw) {
 			isomgr.sleep_bw -= delta_bw;
 			cp->sleep_bw -= delta_bw;
-			BUG_ON(cp->sleep_bw);
+			if (unlikely(cp->sleep_bw)) {
+				pr_err
+				("isomgr:rsvd_bw < margin_bw, sleep_bw = 1\n");
+				return false;
+			}
 		}
-		BUG_ON(isomgr.avail_bw < 0);
+		if (unlikely(isomgr.avail_bw < 0)) {
+			pr_err("isomgr: iso_plat_realize: avail_bw < 0\n");
+			return false;
+		}
 		SANITY_CHECK_AVAIL_BW();
 	} else {
 		return false;

@@ -32,8 +32,6 @@
 
 #define HDCP_READ_MSG			0x80
 
-#define FUSE_BASE			0x03820000
-#define FUSE_OPT_FT_REV_0		0x128
 #define FUSE_START_SFK			0x5
 
 /* for nvhdcp.state */

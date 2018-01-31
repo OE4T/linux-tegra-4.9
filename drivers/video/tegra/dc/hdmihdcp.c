@@ -30,6 +30,7 @@
 #include <linux/tsec.h>
 
 #include <soc/tegra/kfuse.h>
+#include <soc/tegra/fuse.h>
 #include <linux/trusty/trusty_ipc.h>
 #include <linux/ote_protocol.h>
 
@@ -122,7 +123,6 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 				 0xAA04F1A1, 0xFFF9059B}
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
-void __iomem *g_misc_base;
 
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
@@ -2154,7 +2154,7 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 	if (tegra_dc_is_t19x()) {
 		uint32_t ft_info;
 		/* enable HDCP only if board has SFK */
-		ft_info = readl(g_misc_base + FUSE_OPT_FT_REV_0);
+		tegra_fuse_readl(FUSE_OPT_FT_REV_0, &ft_info);
 		/* only fuses with revision id greater than or equal to 0x5 have SFK */
 		if (ft_info < FUSE_START_SFK)
 			return;
@@ -2426,9 +2426,6 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp_head[id] = nvhdcp;
 	nvhdcp_vdbg("%s(): created misc device %s\n", __func__, nvhdcp->name);
 
-	if (tegra_dc_is_t19x())
-		g_misc_base = ioremap(FUSE_BASE, 0x1000);
-
 	return nvhdcp;
 free_workqueue:
 	destroy_workqueue(nvhdcp->downstream_wq);
@@ -2449,8 +2446,6 @@ void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp)
 	i2c_unregister_device(nvhdcp->client);
 	nvhdcp_head[nvhdcp->id] = NULL;
 	kfree(nvhdcp);
-	if (tegra_dc_is_t19x())
-		iounmap(g_misc_base);
 }
 
 #ifdef CONFIG_TEGRA_DEBUG_HDCP

@@ -1467,9 +1467,6 @@ int migrate_replace_page(struct page *page, struct page *newpage)
 		return -EAGAIN;
 	}
 
-	/* page is now isolated, so release additional reference */
-	put_page(page);
-
 	for (pass = 0; pass < 10 && ret != 0; pass++) {
 		cond_resched();
 

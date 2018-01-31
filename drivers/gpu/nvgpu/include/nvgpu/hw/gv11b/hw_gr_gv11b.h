@@ -2932,6 +2932,22 @@ static inline u32 gr_ds_num_tpc_per_gpc_r(u32 i)
 {
 	return 0x00405870U + i*4U;
 }
+static inline u32 gr_scc_debug_r(void)
+{
+	return 0x00408000U;
+}
+static inline u32 gr_scc_debug_pagepool_invalidates_m(void)
+{
+	return 0x1U << 9U;
+}
+static inline u32 gr_scc_debug_pagepool_invalidates_disable_f(void)
+{
+	return 0x200U;
+}
+static inline u32 gr_scc_debug_pagepool_invalidates_enable_f(void)
+{
+	return 0x0U;
+}
 static inline u32 gr_scc_bundle_cb_base_r(void)
 {
 	return 0x00408004U;

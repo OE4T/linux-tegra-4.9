@@ -2765,6 +2765,12 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
+	/* Disable SCC pagepool invalidates */
+	data = gk20a_readl(g, gr_scc_debug_r());
+	data = set_field(data, gr_scc_debug_pagepool_invalidates_m(),
+			 gr_scc_debug_pagepool_invalidates_disable_f());
+	gk20a_writel(g, gr_scc_debug_r(), data);
+
 	if (g->gr.fecs_feature_override_ecc_val != 0) {
 		gk20a_writel(g,
 			gr_fecs_feature_override_ecc_r(),

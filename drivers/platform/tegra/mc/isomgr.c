@@ -256,18 +256,25 @@ static void purge_isomgr_client(struct isomgr_client *cp)
 	cp->margin_bw = 0;
 }
 
+/* This function should be called with isomgr lock */
 static void unregister_iso_client(struct kref *kref)
 {
 	struct isomgr_client *cp = container_of(kref,
 					struct isomgr_client, kref);
 	int client = cp - &isomgr_clients[0];
 
+	/*If we get the lock, it means lock was not taken and hence we return*/
+	if (unlikely(mutex_trylock(&isomgr.lock))) {
+		pr_err("isomgr: unregister_iso_client called without lock\n");
+		WARN_ON(true);
+		return;
+	}
+
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "enter");
-	isomgr_lock();
 	if (unlikely(cp->realize)) {
 		pr_err
 		("isomgr: %s called while realize in progress\n", __func__);
-		goto fail_unlock;
+		goto fail;
 	}
 
 	if (isomgr.ops->isomgr_plat_unregister)
@@ -277,12 +284,10 @@ static void unregister_iso_client(struct kref *kref)
 	purge_isomgr_client(cp);
 	update_mc_clock();
 
-	isomgr_unlock();
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "exit");
 	return;
 
-fail_unlock:
-	isomgr_unlock();
+fail:
 	trace_tegra_isomgr_unregister_iso_client(cname[client], "exit fail");
 }
 
@@ -389,8 +394,10 @@ static void __tegra_isomgr_unregister(tegra_isomgr_handle handle)
 	int client = cp - &isomgr_clients[0];
 
 	VALIDATE_HANDLE();
+	isomgr_lock();
 	trace_tegra_isomgr_unregister(handle, cname[client]);
 	kref_put(&cp->kref, unregister_iso_client);
+	isomgr_unlock();
 validation_fail:
 	return;
 }

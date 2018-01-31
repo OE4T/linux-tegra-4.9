@@ -125,18 +125,30 @@ static inline u32 mc_dvfs_latency(u32 ufreq)
 #endif
 }
 
-static inline void isomgr_lock(void)
+static inline bool isomgr_lock(void)
 {
-	BUG_ON(isomgr.task == current); /* disallow rentrance, avoid deadlock */
+	/* disallow rentrance, avoid deadlock */
+	if (unlikely(isomgr.task == current)) {
+		pr_err("isomgr: lock deadlock ?\n");
+		dump_stack();
+		return false;
+	}
 	mutex_lock(&isomgr.lock);
 	isomgr.task = current;
+	return true;
 }
 
-static inline void isomgr_unlock(void)
+static inline bool isomgr_unlock(void)
 {
-	BUG_ON(isomgr.task != current); /* detect mismatched calls */
+	/* detect mismatched calls */
+	if (unlikely(isomgr.task != current)) {
+		pr_err("isomgr: unlock mismatch ?\n");
+		dump_stack();
+		return false;
+	}
 	isomgr.task = NULL;
 	mutex_unlock(&isomgr.lock);
+	return true;
 }
 
 /* call with isomgr_lock held. */
@@ -320,7 +332,11 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 	if (unlikely(!udedi_bw && !renegotiate))
 		goto validation_fail;
 
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	cp = &isomgr_clients[client];
 
 	if (unlikely(atomic_read(&cp->kref.refcount)))
@@ -340,13 +356,20 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 	cp->priv = priv;
 	isomgr.dedi_bw += dedi_bw;
 
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_register(client, dedi_bw, renegotiate,
 		priv, cname[client], "exit");
 	return (tegra_isomgr_handle)cp;
 
 fail_unlock:
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+	}
 validation_fail:
 	trace_tegra_isomgr_register(client, dedi_bw, renegotiate,
 		priv, cname[client], "inv_args_exit");
@@ -394,10 +417,17 @@ static void __tegra_isomgr_unregister(tegra_isomgr_handle handle)
 	int client = cp - &isomgr_clients[0];
 
 	VALIDATE_HANDLE();
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_unregister(handle, cname[client]);
 	kref_put(&cp->kref, unregister_iso_client);
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+	}
 validation_fail:
 	return;
 }
@@ -426,13 +456,21 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 
 	VALIDATE_HANDLE();
 
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
 		goto handle_unregistered;
 
 	if (cp->rsvd_bw == ubw && cp->lti == ult) {
 		kref_put(&cp->kref, unregister_iso_client);
-		isomgr_unlock();
+		if (!isomgr_unlock()) {
+			pr_err("isomgr: %s failed for %s\n",
+				__func__, cname[client]);
+			goto validation_fail;
+		}
 		return cp->lto;
 	}
 
@@ -462,12 +500,20 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 	cp->rsvd_bw = bw;
 out:
 	kref_put(&cp->kref, unregister_iso_client);
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_reserve(handle, ubw, ult, cname[client],
 		dvfs_latency ? "exit" : "rsrv_fail_exit");
 	return dvfs_latency;
 handle_unregistered:
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_reserve(handle, ubw, ult,
 		cname[client], "inv_handle_exit");
 	return dvfs_latency;
@@ -504,13 +550,21 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 
 	VALIDATE_HANDLE();
 
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
 		goto handle_unregistered;
 
 	if (cp->rsvd_bw == cp->real_bw && cp->rsvd_mf == cp->real_mf) {
 		kref_put(&cp->kref, unregister_iso_client);
-		isomgr_unlock();
+		if (!isomgr_unlock()) {
+			pr_err("isomgr: %s failed for %s\n",
+				__func__, cname[client]);
+			goto validation_fail;
+		}
 		return cp->lto;
 	}
 
@@ -528,12 +582,20 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 
 out:
 	kref_put(&cp->kref, unregister_iso_client);
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_realize(handle, cname[client],
 		dvfs_latency ? "exit" : "real_fail_exit");
 	return dvfs_latency;
 handle_unregistered:
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_realize(handle, cname[client], "inv_handle_exit");
 	return dvfs_latency;
 validation_fail:
@@ -567,7 +629,11 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 	trace_tegra_isomgr_set_margin(client, bw, wait, "enter");
 	VALIDATE_CLIENT();
 
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	cp = &isomgr_clients[client];
 	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
 		goto handle_unregistered;
@@ -606,12 +672,19 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 	ret = 0;
 out:
 	kref_put(&cp->kref, unregister_iso_client);
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+		goto validation_fail;
+	}
 	trace_tegra_isomgr_set_margin(client, bw, wait,
 					ret ? "fail_exit" : "exit");
 	return ret;
 handle_unregistered:
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: %s failed for %s\n",
+			__func__, cname[client]);
+	}
 validation_fail:
 	trace_tegra_isomgr_set_margin(client, bw, wait, "inv_arg_fail");
 	return ret;
@@ -956,9 +1029,15 @@ int tegra_isomgr_enable_test_mode(void)
 	int i;
 	struct isomgr_client *cp = NULL;
 
-	isomgr_lock();
+	if (!isomgr_lock()) {
+		pr_err("isomgr: enable_test_mode lock deadlock\n");
+		return -EINVAL;
+	}
 	test_mode = 1;
-	isomgr_unlock();
+	if (!isomgr_unlock()) {
+		pr_err("isomgr: enable_test_mode unlock mismatch\n");
+		return -EINVAL;
+	}
 	for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
 		if (!client_valid[i])
 			continue;

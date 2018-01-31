@@ -513,11 +513,23 @@ static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 		return PTR_ERR(tdev->clk_pllnvhs);
 	}
 
-	tdev->clk_txclk_ctrl = devm_clk_get(tdev->dev,
-			"txclk_ctrl");
-	if (IS_ERR(tdev->clk_txclk_ctrl)) {
-		nvlink_err("missing txclk_ctrl clock");
-		return PTR_ERR(tdev->clk_txclk_ctrl);
+	tdev->clk_m = devm_clk_get(tdev->dev, "clk_m");
+	if (IS_ERR(tdev->clk_m)) {
+		nvlink_err("missing clk_m clock");
+		return PTR_ERR(tdev->clk_m);
+	}
+
+	tdev->clk_nvlink_pll_txclk = devm_clk_get(tdev->dev,
+				"nvlink_pll_txclk");
+	if (IS_ERR(tdev->clk_nvlink_pll_txclk)) {
+		nvlink_err("missing nvlink_pll_txclk clock");
+		return PTR_ERR(tdev->clk_nvlink_pll_txclk);
+	}
+
+	tdev->clk_nvlink_tx = devm_clk_get(tdev->dev, "nvlink_tx");
+	if (IS_ERR(tdev->clk_nvlink_tx)) {
+		nvlink_err("missing nvlink_tx clock");
+		return PTR_ERR(tdev->clk_nvlink_tx);
 	}
 
 	/* Resets */
@@ -607,8 +619,14 @@ static void tegra_nvlink_clk_rst_deinit(struct tnvlink_dev *tdev)
 	if (tdev->clk_pllnvhs)
 		devm_clk_put(tdev->dev, tdev->clk_pllnvhs);
 
-	if (tdev->clk_txclk_ctrl)
-		devm_clk_put(tdev->dev, tdev->clk_txclk_ctrl);
+	if (tdev->clk_m)
+		devm_clk_put(tdev->dev, tdev->clk_m);
+
+	if (tdev->clk_nvlink_pll_txclk)
+		devm_clk_put(tdev->dev, tdev->clk_nvlink_pll_txclk);
+
+	if (tdev->clk_nvlink_tx)
+		devm_clk_put(tdev->dev, tdev->clk_nvlink_tx);
 
 	reset_control_assert(tdev->rst_nvhs_uphy_pm);
 	reset_control_assert(tdev->rst_nvhs_uphy);
@@ -781,6 +799,8 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	}
 	tdev->prod_list = nvlink_prod;
 	tdev->refclk = NVLINK_REFCLK_156;
+	ndev->speed = NVLINK_SPEED_25;
+	ndev->link_bitrate = LINK_BITRATE_156MHZ_25GBPS;
 	tdev->ndev = ndev;
 
 	tdev->tlink.sl_params = entry_100us_sl_params;
@@ -809,7 +829,6 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		ndev->link.remote_dev_info.device_id,
 		ndev->link.remote_dev_info.link_id);
 
-	ndev->speed = NVLINK_SPEED_25;
 	ndev->dev_ops.dev_early_init = t19x_nvlink_dev_early_init;
 	ndev->dev_ops.dev_interface_init = t19x_nvlink_dev_interface_init;
 	ndev->dev_ops.dev_reg_init = t19x_nvlink_dev_reg_init;

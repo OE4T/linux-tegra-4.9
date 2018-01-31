@@ -783,6 +783,8 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 			nvlink_err("Error sending INITPLL_3 command to MINION");
 			goto fail;
 		}
+
+		ndev->link_bitrate = LINK_BITRATE_150MHZ_25GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_150) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
 		ret = minion_send_cmd(tdev,
@@ -792,6 +794,8 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 			nvlink_err("Error sending INITPLL_5 command to MINION");
 			goto fail;
 		}
+
+		ndev->link_bitrate = LINK_BITRATE_150MHZ_20GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
 		ret = minion_send_cmd(tdev,
@@ -801,6 +805,8 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 			nvlink_err("Error sending INITPLL_4 command to MINION");
 			goto fail;
 		}
+
+		ndev->link_bitrate = LINK_BITRATE_156MHZ_20GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			 (ndev->speed == NVLINK_SPEED_25)) {
 		ret = minion_send_cmd(tdev,
@@ -810,10 +816,14 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 			nvlink_err("Error sending INITPLL_2 command to MINION");
 			goto fail;
 		}
+
+		ndev->link_bitrate = LINK_BITRATE_156MHZ_25GBPS;
 	} else {
 		nvlink_err("Invalid speed or refclk");
+		ret = -EINVAL;
 		goto fail;
 	}
+
 	ret = minion_send_cmd(tdev,
 			MINION_NVLINK_DL_CMD_COMMAND_XAVIER_CALIBRATEPLL,
 			0);
@@ -823,10 +833,9 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		goto fail;
 	}
 
-	/* Switch the TX clock from OSC to brick PLL */
-	ret = clk_prepare_enable(tdev->clk_txclk_ctrl);
+	ret = clk_set_rate(tdev->clk_nvlink_pll_txclk, ndev->link_bitrate / 16);
 	if (ret < 0) {
-		nvlink_err("txclk_ctrl's clk_prepare_enable() call failed");
+		nvlink_err("clk_nvlink_pll_txclk's clk_set_rate() call failed");
 
 		/*
 		 * This is not a MINION error condition. We don't need a MINION
@@ -836,7 +845,18 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		goto fail;
 	}
 
-	/* TODO: Enable the CAR PLL sequencer FSM for NVHS brick PLL */
+	/* Switch the TX clock from OSC to brick PLL */
+	ret = clk_set_parent(tdev->clk_nvlink_tx, tdev->clk_nvlink_pll_txclk);
+	if (ret < 0) {
+		nvlink_err("clk_nvlink_tx's clk_set_parent() call failed");
+
+		/*
+		 * This is not a MINION error condition. We don't need a MINION
+		 * debug dump.
+		 */
+		dump_minion = false;
+		goto fail;
+	}
 
 	ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPHY,
@@ -891,7 +911,10 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 	goto success;
 
 undo_clk:
-	clk_disable_unprepare(tdev->clk_txclk_ctrl);
+	/* Switch the TX clock from brick PLL to OSC */
+	ret = clk_set_parent(tdev->clk_nvlink_tx, tdev->clk_m);
+	if (ret < 0)
+		nvlink_err("clk_nvlink_tx's clk_set_parent() call failed");
 fail:
 	nvlink_err("NVHS PHY init failed!");
 

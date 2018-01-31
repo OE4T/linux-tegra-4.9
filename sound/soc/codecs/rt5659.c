@@ -1417,6 +1417,23 @@ static irqreturn_t rt5659_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+irqreturn_t trigger_jack_status_check(struct snd_soc_codec *codec)
+{
+	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
+	irqreturn_t ret;
+
+	switch (rt5659->pdata.jd_src) {
+	case RT5659_JD_NULL:
+		ret = rt5659_irq(0, rt5659);
+		break;
+	default:
+		ret = 0;
+		break;
+	}
+	return ret;
+}
+EXPORT_SYMBOL_GPL(trigger_jack_status_check);
+
 int rt5659_set_jack_detect(struct snd_soc_codec *codec,
 	struct snd_soc_jack *hs_jack)
 {

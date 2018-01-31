@@ -578,7 +578,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,
 	.prepare_poweroff	= pva_prepare_poweroff,
-	.firmware_name		= "nvhost_pva10.fw",
+	.firmware_name		= "nvhost_pva010.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {
 		{0x70000, true, 0},
@@ -606,7 +606,7 @@ struct nvhost_device_data t19_pva0_info = {
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,
 	.prepare_poweroff	= pva_prepare_poweroff,
-	.firmware_name		= "nvhost_pva10.fw",
+	.firmware_name		= "nvhost_pva010.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {
 		{0x70000, true, 0},

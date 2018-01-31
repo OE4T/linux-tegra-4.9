@@ -178,7 +178,6 @@ EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 {
-	struct device_node *hvn;
 	u32 id;
 	struct tegra_hv_ivm_cookie *ivm;
 	struct nvmap_platform_carveout *co;
@@ -204,14 +203,8 @@ int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 		return -EINVAL;
 	}
 
-	hvn = of_find_node_by_phandle(be32_to_cpup(prop++));
-	if (!hvn) {
-		pr_err("failed to parse ivm\n");
-		return -EINVAL;
-	}
-
-	id = of_read_number(prop, 1);
-	ivm = tegra_hv_mempool_reserve(hvn, id);
+	id = of_read_number(prop + 1, 1);
+	ivm = tegra_hv_mempool_reserve(id);
 	if (IS_ERR_OR_NULL(ivm)) {
 		pr_err("failed to reserve IVM memory pool %d\n", id);
 		return -ENOMEM;
@@ -254,7 +247,6 @@ int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 	co->name      = name;
 	nvmap_data.nr_carveouts++;
 
-	of_node_put(hvn);
 	return 0;
 
 fail:

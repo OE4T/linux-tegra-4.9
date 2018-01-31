@@ -75,6 +75,7 @@ struct tegra_machine {
 #ifdef CONFIG_SWITCH
 	int jack_status;
 #endif
+	struct snd_soc_codec *ext_codec;
 };
 
 /* used for soc specific data */
@@ -121,6 +122,7 @@ static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
 static int tegra_machine_pcm_startup(struct snd_pcm_substream *);
 static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
 static int tegra_machine_suspend_pre(struct snd_soc_card *);
+static int tegra_machine_resume_post(struct snd_soc_card *);
 static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *,
 		struct snd_pcm_hw_params *);
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
@@ -356,6 +358,7 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 static struct snd_soc_card snd_soc_tegra_card = {
 	.owner = THIS_MODULE,
 	.suspend_pre = tegra_machine_suspend_pre,
+	.resume_post = tegra_machine_resume_post,
 	.controls = tegra_machine_controls,
 	.num_controls = ARRAY_SIZE(tegra_machine_controls),
 	.dapm_widgets = tegra_machine_dapm_widgets,
@@ -877,6 +880,16 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *card)
 	return 0;
 }
 
+static int tegra_machine_resume_post(struct snd_soc_card *card)
+{
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+
+	if (machine->ext_codec)
+		return trigger_jack_status_check(machine->ext_codec);
+
+	return 0;
+}
+
 static int tegra_machine_dspk_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
@@ -1239,6 +1252,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	machine->pdata = pdata;
 	machine->pcard = card;
+	machine->ext_codec = NULL;
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,
@@ -1270,6 +1284,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 		if (!machine->is_codec_dummy) {
 			/* setup for jack detection only in non-dummy case */
 			rt5659_set_jack_detect(codec, &tegra_machine_hp_jack);
+			machine->ext_codec = codec;
 		}
 	}
 

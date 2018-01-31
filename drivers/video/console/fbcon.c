@@ -2950,11 +2950,19 @@ static void fbcon_set_all_vcs(struct fb_info *info)
 
 	for (i = first_fb_vc; i <= last_fb_vc; i++) {
 		vc = vc_cons[i].d;
-		if (!vc || vc->vc_mode != KD_TEXT ||
-		    registered_fb[con2fb_map[i]] != info)
+
+		/*
+		 * We need to update console parameters for graphical VTs too.
+		 * This will help in cases where a graphical client exits
+		 * abruptly without switching to a fbconsole VT. In such a case,
+		 * VT owned by graphical client is moved to fbconsole. If
+		 * console data is not initialized on that VT, fbconsole might
+		 * enable display controller with invalid/random data (mode).
+		 */
+		if (!vc || registered_fb[con2fb_map[i]] != info)
 			continue;
 
-		if (con_is_visible(vc)) {
+		if (con_is_visible(vc) && vc->vc_mode == KD_TEXT) {
 			fg = i;
 			continue;
 		}

@@ -267,7 +267,7 @@ struct tegra_pcie_dw_ep {
 	u32 bar0_size;
 	u32 cid;
 	u16 device_id;
-	u8 disabled_aspm_states;
+	u32 disabled_aspm_states;
 	u8 init_link_width;
 	dma_addr_t dma_handle;
 	void *cpu_virt;
@@ -619,19 +619,17 @@ void pcie_ep_work_fn(struct work_struct *work)
 		val |= MISC_CONTROL_1_DBI_RO_WR_EN;
 		writel(val, pcie->dbi_base + MISC_CONTROL_1);
 
-		if (pcie->disabled_aspm_states) {
-			if (val & 0x1)
-				disable_aspm_l0s(pcie); /* Disable L0s */
-			if (val & 0x2) {
-				disable_aspm_l10(pcie); /* Disable L1 */
-				disable_aspm_l11(pcie); /* Disable L1.1 */
-				disable_aspm_l12(pcie); /* Disable L1.2 */
-			}
-			if (val & 0x4)
-				disable_aspm_l11(pcie); /* Disable L1.1 */
-			if (val & 0x8)
-				disable_aspm_l12(pcie); /* Disable L1.2 */
+		if (pcie->disabled_aspm_states & 0x1)
+			disable_aspm_l0s(pcie); /* Disable L0s */
+		if (pcie->disabled_aspm_states & 0x2) {
+			disable_aspm_l10(pcie); /* Disable L1 */
+			disable_aspm_l11(pcie); /* Disable L1.1 */
+			disable_aspm_l12(pcie); /* Disable L1.2 */
 		}
+		if (pcie->disabled_aspm_states & 0x4)
+			disable_aspm_l11(pcie); /* Disable L1.1 */
+		if (pcie->disabled_aspm_states & 0x8)
+			disable_aspm_l12(pcie); /* Disable L1.2 */
 
 		writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
 
@@ -1281,8 +1279,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		pcie->update_fc_fixup = true;
 
 	/* Program what ASPM states sould get advertised */
-	of_property_read_u8(np, "nvidia,disable-aspm-states",
-			    &pcie->disabled_aspm_states);
+	of_property_read_u32(np, "nvidia,disable-aspm-states",
+			     &pcie->disabled_aspm_states);
 
 	INIT_WORK(&pcie->pcie_ep_work, pcie_ep_work_fn);
 

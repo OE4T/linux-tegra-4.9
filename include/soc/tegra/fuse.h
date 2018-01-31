@@ -27,6 +27,8 @@
 #define FUSE_SKU_MSB_MASK		0xFF00
 #define FUSE_SKU_MSB_SHIFT		8
 
+#define FUSE_OPT_FT_REV_0		0x28
+
 #define FUSE_SKU_USB_CALIB_0		0xf0
 #define TEGRA_FUSE_SKU_CALIB_0		0xf0
 

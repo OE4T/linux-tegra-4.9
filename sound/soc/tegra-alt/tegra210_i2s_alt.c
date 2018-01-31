@@ -307,11 +307,40 @@ static int tegra210_i2s_resume(struct device *dev)
 }
 #endif
 
+static void tegra210_i2s_set_data_offset(struct tegra210_i2s *i2s,
+					 unsigned int data_offset)
+{
+	unsigned int reg, mask, shift;
+
+	reg = TEGRA210_I2S_AXBAR_TX_CTRL;
+	mask = TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_MASK;
+	shift = TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_SHIFT;
+	regmap_update_bits(i2s->regmap, reg, mask, data_offset << shift);
+
+	reg = TEGRA210_I2S_AXBAR_RX_CTRL;
+	mask = TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_MASK;
+	shift = TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_SHIFT;
+	regmap_update_bits(i2s->regmap, reg, mask, data_offset << shift);
+}
+
+static void tegra210_i2s_set_rjm_offset(struct tegra210_i2s *i2s,
+					unsigned int sample_size)
+{
+	unsigned int data_offset;
+
+	if (i2s->bclk_ratio > 1)
+		data_offset = sample_size * (i2s->bclk_ratio - 1);
+	else
+		data_offset = 0;
+
+	tegra210_i2s_set_data_offset(i2s, data_offset);
+}
+
 static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 				unsigned int fmt)
 {
 	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	unsigned int mask, val, data_offset;
+	unsigned int mask, val;
 
 	mask = TEGRA210_I2S_CTRL_MASTER_EN_MASK;
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -331,29 +360,31 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	case SND_SOC_DAIFMT_DSP_A:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
 		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		data_offset = 1;
+		tegra210_i2s_set_data_offset(i2s, 1);
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE;
 		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		data_offset = 0;
+		tegra210_i2s_set_data_offset(i2s, 0);
 		break;
 	/* I2S mode has data offset of 1 */
 	case SND_SOC_DAIFMT_I2S:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
 		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_LOW;
-		data_offset = 1;
+		tegra210_i2s_set_data_offset(i2s, 1);
 		break;
-	/* LJ/RJ mode assumed to operate at bclk = 64fs */
+	/*
+	 * For RJ mode data offset is dependent on the sample size
+	 * and the bclk ratio, and so is set when hw_params is called.
+	 */
 	case SND_SOC_DAIFMT_RIGHT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
 		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		data_offset = 16;
 		break;
 	case SND_SOC_DAIFMT_LEFT_J:
 		val |= TEGRA210_I2S_CTRL_FRAME_FORMAT_LRCK_MODE;
 		val |= TEGRA210_I2S_CTRL_LRCK_POLARITY_HIGH;
-		data_offset = 0;
+		tegra210_i2s_set_data_offset(i2s, 0);
 		break;
 	default:
 		return -EINVAL;
@@ -384,17 +415,12 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	/* FIXME: global enabling */
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_ENABLE,
 					TEGRA210_I2S_EN_MASK, TEGRA210_I2S_EN);
-	/* set I2S data offset */
-	regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_TX_CTRL,
-		TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_MASK,
-		(data_offset << TEGRA210_I2S_AXBAR_TX_CTRL_DATA_OFFSET_SHIFT));
-	regmap_update_bits(i2s->regmap, TEGRA210_I2S_AXBAR_RX_CTRL,
-		TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_MASK,
-		(data_offset << TEGRA210_I2S_AXBAR_RX_CTRL_DATA_OFFSET_SHIFT));
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
 		TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
 		i2s->fsync_width << TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
 	pm_runtime_put(dai->dev);
+
+	i2s->format = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 
 	return 0;
 }
@@ -661,6 +687,9 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
+
+	if (i2s->format == SND_SOC_DAIFMT_RIGHT_J)
+		tegra210_i2s_set_rjm_offset(i2s, sample_size);
 
 	if (i2s->enable_cya)
 		regmap_write(i2s->regmap, TEGRA210_I2S_CYA, 1);

@@ -150,10 +150,12 @@ struct gk20a;
 #define NVGPU_SUPPORT_ASPM			62
 /* subcontexts are available */
 #define NVGPU_SUPPORT_TSG_SUBCONTEXTS		63
+/* Simultaneous Compute and Graphics (SCG) is available */
+#define NVGPU_SUPPORT_SCG			64
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			64
+#define NVGPU_MAX_ENABLED_BITS			65
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

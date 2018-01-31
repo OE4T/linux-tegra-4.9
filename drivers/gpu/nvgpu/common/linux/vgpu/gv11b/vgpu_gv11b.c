@@ -35,6 +35,7 @@ int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SCG, true);
 
 	return 0;
 }

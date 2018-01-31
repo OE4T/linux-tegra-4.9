@@ -185,7 +185,7 @@ static int bpmp_setup_allocator(struct device *dev)
 		return ret;
 	}
 
-	ivm = tegra_hv_mempool_reserve(dev->of_node, mempool_id);
+	ivm = tegra_hv_mempool_reserve(mempool_id);
 	if (IS_ERR_OR_NULL(ivm)) {
 		if (!IS_ERR(ivm))
 			dev_err(dev, "No mempool found\n");

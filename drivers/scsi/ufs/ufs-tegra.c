@@ -1371,7 +1371,6 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 			goto out_disable_mphylane_clks;
 
 		ufs_tegra_ufs_deassert_reset(ufs_tegra);
-		ufs_tegra_disable_mphy_slcg(ufs_tegra);
 		ufs_tegra_mphy_rx_advgran(ufs_tegra);
 		ufs_tegra_ufs_aux_ref_clk_disable(ufs_tegra);
 		ufs_tegra_aux_reset_enable(ufs_tegra);

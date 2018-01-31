@@ -17,21 +17,6 @@
 #ifndef _MM_VGPU_H_
 #define _MM_VGPU_H_
 
-u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
-				u64 map_offset,
-				struct nvgpu_sgt *sgt,
-				u64 buffer_offset,
-				u64 size,
-				int pgsz_idx,
-				u8 kind_v,
-				u32 ctag_offset,
-				u32 flags,
-				int rw_flag,
-				bool clear_ctags,
-				bool sparse,
-				bool priv,
-				struct vm_gk20a_mapping_batch *batch,
-				enum nvgpu_aperture aperture);
 void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,

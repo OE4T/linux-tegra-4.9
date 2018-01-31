@@ -24,10 +24,8 @@
 #define MC_GP20B_H
 struct gk20a;
 
-enum MC_INTERRUPT_REGLIST {
-	NVGPU_MC_INTR_STALLING = 0,
-	NVGPU_MC_INTR_NONSTALLING,
-};
+#define NVGPU_MC_INTR_STALLING		0U
+#define NVGPU_MC_INTR_NONSTALLING	1U
 
 void mc_gp10b_intr_enable(struct gk20a *g);
 void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,

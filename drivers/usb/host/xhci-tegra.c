@@ -154,6 +154,8 @@ static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
 #define  L2IMEMOP_ACTION_SHIFT			24
 #define  L2IMEMOP_INVALIDATE_ALL		(0x40 << L2IMEMOP_ACTION_SHIFT)
 #define  L2IMEMOP_LOAD_LOCKED_RESULT		(0x11 << L2IMEMOP_ACTION_SHIFT)
+#define XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT	0x00101A18
+#define  L2IMEMOP_RESULT_VLD			(1 << 31)
 #define XUSB_CSB_MP_APMAP			0x10181c
 #define  APMAP_BOOTPATH				BIT(31)
 
@@ -1890,8 +1892,20 @@ static int tegra_xhci_load_firmware(struct tegra_xusb *tegra)
 	csb_writel(tegra, value, XUSB_FALC_IMFILLRNG1);
 
 	csb_writel(tegra, 0, XUSB_FALC_DMACTL);
+	/* wait for RESULT_VLD to get set */
+	timeout = jiffies + msecs_to_jiffies(10);
+	do {
+		value = csb_readl(tegra, XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT);
+		if (value & L2IMEMOP_RESULT_VLD)
+			break;
+		usleep_range(50, 60);
+	} while (time_is_after_jiffies(timeout));
 
-	msleep(50);
+	value = csb_readl(tegra, XUSB_CSB_MEMPOOL_L2IMEMOP_RESULT);
+	if (!(value & L2IMEMOP_RESULT_VLD)) {
+		dev_err(dev, "DMA controller not ready 0x08%x\n", value);
+		return -EFAULT;
+	}
 
 	csb_writel(tegra, le32_to_cpu(header->boot_codetag),
 		   XUSB_FALC_BOOTVEC);

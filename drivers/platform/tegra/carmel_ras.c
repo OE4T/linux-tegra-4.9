@@ -784,13 +784,10 @@ static struct ras_fhi_callback ccplex_fhi_callback = {
 	.fn = carmel_ccplex_fhi_callback
 };
 
-/*
- * This functions allows you to write to ERXPFGCTL resgiter
- * which is used by SW for testing different kinds of RAS errors
- */
-static int pfgctl_put(void *data, u64 val)
+static int scf_iob_cbb_put(void *data, u64 val)
 {
 	unsigned long flags, err_ctl;
+	u64 scf_iob_errx = 1025;
 
 	flags = arch_local_save_flags();
 
@@ -801,6 +798,7 @@ static int pfgctl_put(void *data, u64 val)
 		return 0;
 	}
 
+	ras_write_errselr(scf_iob_errx);
 	pr_info("%s: Error Record Selected = %lld\n",
 		__func__, ras_read_errselr());
 
@@ -826,47 +824,25 @@ static int pfgctl_put(void *data, u64 val)
 	return 0;
 }
 
-static int pfgctl_get(void *data, u64 *val)
+/* This will return the special value to be written to debugfs node
+ * SCF_IOB-CBB_ERR-trip to trigger SCF IOB CBB Error
+ */
+static int scf_iob_cbb_get(void *data, u64 *val)
 {
-	*val = ras_read_pfg_control();
+	*val = 0x4080000042UL;
 	return 0;
 }
 
-static int pfgctl_open(struct inode *inode, struct file *file)
+static int scf_iob_cbb_open(struct inode *inode, struct file *file)
 {
-	return simple_attr_open(inode, file, pfgctl_get, pfgctl_put,
+	return simple_attr_open(inode, file, scf_iob_cbb_get, scf_iob_cbb_put,
 				"0x%08lx");
 }
 
-static const struct file_operations fops_pfgctl = {
+static const struct file_operations fops_scf_iob_cbb = {
 	.read =		simple_attr_read,
 	.write =	simple_attr_write,
-	.open =		pfgctl_open,
-	.llseek =	noop_llseek,
-};
-
-static int errselr_put(void *data, u64 val)
-{
-	ras_write_errselr(val);
-	return 0;
-}
-
-static int errselr_get(void *data, u64 *val)
-{
-	*val = ras_read_errselr();
-	return 0;
-}
-
-static int errselr_open(struct inode *inode, struct file *file)
-{
-	return simple_attr_open(inode, file, errselr_get, errselr_put,
-				"0x%08lx");
-}
-
-static const struct file_operations fops_errselr = {
-	.read =		simple_attr_read,
-	.write =	simple_attr_write,
-	.open =		errselr_open,
+	.open =		scf_iob_cbb_open,
 	.llseek =	noop_llseek,
 };
 
@@ -880,17 +856,10 @@ static int ras_carmel_dbgfs_init(void)
 		return -ENODEV;
 	}
 
-	debugfs_node = debugfs_create_file("ERRSELR", 0600, debugfs_dir, NULL,
-					   &fops_errselr);
+	debugfs_node = debugfs_create_file("SCF_IOB-CBB_ERR-trip", 0600, debugfs_dir, NULL,
+					   &fops_scf_iob_cbb);
 	if (!debugfs_node) {
-		pr_err("Error creating ERRSELR debugfs node.\n");
-		return -ENODEV;
-	}
-
-	debugfs_node = debugfs_create_file("ERXPFGCTL", 0600, debugfs_dir, NULL,
-					   &fops_pfgctl);
-	if (!debugfs_node) {
-		pr_err("Error creating ERXPFGCTL debugfs node.\n");
+		pr_err("Error creating SCF_IOB-CBB_ERR-trip debugfs node.\n");
 		return -ENODEV;
 	}
 	return 0;

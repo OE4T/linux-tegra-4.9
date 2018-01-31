@@ -237,21 +237,11 @@
 		status = "okay";
 	};
 
-	i2c@7000c000 {
-		tegra_nct72: temp-sensor@4c {
-			status = "disabled";
-		};
-	};
-
 	pwm-fan {
 		status = "disabled";
 	};
 
 	thermal-fan-est {
-		status = "disabled";
-	};
-
-	bthrot_cdev {
 		status = "disabled";
 	};
 

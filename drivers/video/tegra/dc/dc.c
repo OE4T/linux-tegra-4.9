@@ -6371,6 +6371,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	struct resource of_fb_res;
 	int hotplug_init_status = -1;
 
+	if (tegra_dc_is_nvdisplay() && !tegra_dc_common_probe_status())
+		return -EPROBE_DEFER;
+
 	/* Specify parameters for the maximum physical segment size. */
 	ndev->dev.dma_parms = &tegra_dc_dma_parameters;
 

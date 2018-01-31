@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_common.h
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Arun Swain <arswain@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -217,4 +217,6 @@ int tegra_dc_common_set_frm_lock_params(
 
 struct nvdisp_imp_table
 	*tegra_dc_common_get_imp_table(void);
+
+bool tegra_dc_common_probe_status(void);
 #endif

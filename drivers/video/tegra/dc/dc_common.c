@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_common.c
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Arun Swain <arswain@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -124,6 +124,16 @@ static struct of_device_id tegra_display_common_of_match[] = {
 static int max_heads;
 static int head_offset;
 static struct tegra_dc_common *dc_common;
+static bool probe_success;
+
+/**
+ * tegra_dc_common_probe_status - Returns status
+ * of dc_common module probe.
+ */
+bool tegra_dc_common_probe_status(void)
+{
+	return probe_success;
+}
 
 /**
  * tegra_dc_common_get_imp_table - Returns a pointer
@@ -1161,6 +1171,8 @@ static int tegra_dc_common_probe(struct platform_device *pdev)
 
 	tegra_dc_common_create_debugfs(dc_common);
 
+	probe_success = true;
+
 	return 0;
 
 err_free_upd_val:
@@ -1190,6 +1202,8 @@ static int tegra_dc_common_remove(struct platform_device *pdev)
 			dc_common->cpuvaddr, dc_common->dma_handle);
 	nvhost_syncpt_put_ref_ext(pdev, dc_common->syncpt_id);
 	nvhost_putchannel(dc_common->channel, 1);
+
+	probe_success = false;
 
 	iounmap(dc_common->base);
 	kfree(dc_common->dsp_cmd_reg_val);

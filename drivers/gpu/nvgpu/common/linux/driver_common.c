@@ -223,6 +223,8 @@ int nvgpu_probe(struct gk20a *g,
 		return err;
 	}
 
+	nvgpu_init_mm_vars(g);
+
 	/* platform probe can defer do user init only if probe succeeds */
 	err = gk20a_user_init(dev, interface_name, class);
 	if (err)
@@ -235,8 +237,6 @@ int nvgpu_probe(struct gk20a *g,
 			return err;
 		}
 	}
-
-	nvgpu_init_mm_vars(g);
 
 	nvgpu_create_sysfs(dev);
 	gk20a_debug_init(g, debugfs_symlink);

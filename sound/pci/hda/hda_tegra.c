@@ -698,6 +698,13 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	bus->avoid_compact_sdo_bw = of_property_read_bool(np,
 		"nvidia,avoid-compact-sdo-bw");
 
+	/* Below code sets watermark registers to maximum   */
+	/* value (same as default); only applicable to T194 */
+	if (of_property_read_bool(np, "nvidia,set-watermark-reg")) {
+		azx_fpci_writel(chip, FIFO_WATERMARK, 0x07070707);
+		azx_fpci_writel(chip, BUFSZ_NUM_OF_FRAMES, 0x000a0a0a);
+	}
+
 	/* create codec instances */
 	err = azx_probe_codecs(chip, num_codec_slots);
 	if (err < 0)

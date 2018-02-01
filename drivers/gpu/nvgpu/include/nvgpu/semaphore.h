@@ -230,28 +230,44 @@ static inline u32 nvgpu_semaphore_read(struct nvgpu_semaphore *s)
 }
 
 /*
- * TODO: handle wrap around... Hmm, how to do this?
+ * Check if "racer" is over "goal" with wraparound handling.
  */
-static inline bool nvgpu_semaphore_is_released(struct nvgpu_semaphore *s)
+static inline bool __nvgpu_semaphore_value_released(u32 goal, u32 racer)
 {
-	u32 sema_val = nvgpu_semaphore_read(s);
-
 	/*
-	 * If the underlying semaphore value is greater than or equal to
-	 * the value of the semaphore then the semaphore has been signaled
-	 * (a.k.a. released).
+	 * Handle wraparound with the same heuristic as the hardware does:
+	 * although the integer will eventually wrap around, consider a sema
+	 * released against a threshold if its value has passed that threshold
+	 * but has not wrapped over half of the u32 range over that threshold;
+	 * such wrapping is unlikely to happen during a sema lifetime.
+	 *
+	 * Values for [goal, goal + 0x7fffffff] are considered signaled; that's
+	 * precisely half of the 32-bit space. If racer == goal + 0x80000000,
+	 * then it needs 0x80000000 increments to wrap again and signal.
+	 *
+	 * Unsigned arithmetic is used because it's well-defined. This is
+	 * effectively the same as: signed_racer - signed_goal > 0.
 	 */
-	return (int)sema_val >= nvgpu_atomic_read(&s->value);
-}
 
-static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
-{
-	return !nvgpu_semaphore_is_released(s);
+	return racer - goal < 0x80000000;
 }
 
 static inline u32 nvgpu_semaphore_get_value(struct nvgpu_semaphore *s)
 {
 	return (u32)nvgpu_atomic_read(&s->value);
+}
+
+static inline bool nvgpu_semaphore_is_released(struct nvgpu_semaphore *s)
+{
+	u32 sema_val = nvgpu_semaphore_read(s);
+	u32 wait_payload = nvgpu_semaphore_get_value(s);
+
+	return __nvgpu_semaphore_value_released(wait_payload, sema_val);
+}
+
+static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
+{
+	return !nvgpu_semaphore_is_released(s);
 }
 
 static inline u32 nvgpu_semaphore_next_value(struct nvgpu_semaphore *s)
@@ -261,14 +277,14 @@ static inline u32 nvgpu_semaphore_next_value(struct nvgpu_semaphore *s)
 
 /*
  * If @force is set then this will not wait for the underlying semaphore to
- * catch up to the passed semaphore.
+ * catch up to the passed semaphore threshold.
  */
 static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 					     bool force)
 {
 	struct nvgpu_semaphore_int *hw_sema = s->hw_sema;
 	u32 current_val;
-	u32 val = nvgpu_semaphore_get_value(s);
+	u32 threshold = nvgpu_semaphore_get_value(s);
 	int attempts = 0;
 
 	/*
@@ -277,7 +293,8 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	 *
 	 * TODO: tune the wait a little better.
 	 */
-	while ((current_val = nvgpu_semaphore_read(s)) < (val - 1)) {
+	while (!__nvgpu_semaphore_value_released(threshold - 1,
+			current_val = nvgpu_semaphore_read(s))) {
 		if (force)
 			break;
 		nvgpu_msleep(100);
@@ -292,13 +309,14 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	 * If the semaphore has already passed the value we would write then
 	 * this is really just a NO-OP.
 	 */
-	if (current_val >= val)
+	if (__nvgpu_semaphore_value_released(threshold, current_val))
 		return;
 
-	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->p->rw_mem, hw_sema->offset, val);
+	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->p->rw_mem, hw_sema->offset,
+			threshold);
 
 	gpu_sema_verbose_dbg(hw_sema->p->sema_sea->gk20a,
-			     "(c=%d) WRITE %u", hw_sema->ch->chid, val);
+			     "(c=%d) WRITE %u", hw_sema->ch->chid, threshold);
 }
 
 static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s)

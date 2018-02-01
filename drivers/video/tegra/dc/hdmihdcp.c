@@ -1777,14 +1777,18 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 	}
-	/* peform vprime verification for repeater or srm revocation check
-	   for receiver */
-	e = verify_vprime(nvhdcp, b_caps & BCAPS_REPEATER);
-	if (e) {
-		nvhdcp_err("get vprime params failed\n");
-		goto failure;
-	} else
-		nvhdcp_vdbg("vprime verification passed\n");
+	/* T210/T214 vprime verification is handled in the upstream lib */
+	if (tegra_dc_is_nvdisplay()) {
+		/* perform vprime verification for repeater or SRM
+		 * revocation check for receiver
+		 */
+		e = verify_vprime(nvhdcp, b_caps & BCAPS_REPEATER);
+		if (e) {
+			nvhdcp_err("get vprime params failed\n");
+			goto failure;
+		} else
+			nvhdcp_vdbg("vprime verification passed\n");
+	}
 
 	mutex_lock(&nvhdcp->lock);
 	nvhdcp->state = STATE_LINK_VERIFY;

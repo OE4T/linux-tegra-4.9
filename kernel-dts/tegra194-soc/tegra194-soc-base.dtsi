@@ -47,6 +47,7 @@
 #include "tegra194-soc/tegra194-aon.dtsi"
 #include "tegra194-soc/tegra194-cpus.dtsi"
 #include "tegra194-soc-thermal.dtsi"
+#include "dt-bindings/soc/tegra-io-pads.h"
 
 / {
 	compatible = "nvidia,tegra186";
@@ -1084,6 +1085,8 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP0>;
+			pad-names = "hdmi-dp0";
 
 			sor0_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1124,6 +1127,8 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP1>;
+			pad-names = "hdmi-dp1";
 
 			sor1_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1164,6 +1169,8 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor2","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP2>;
+			pad-names = "hdmi-dp2";
 
 			sor2_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1204,6 +1211,8 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor3","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP3>;
+			pad-names = "hdmi-dp3";
 
 			sor3_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";

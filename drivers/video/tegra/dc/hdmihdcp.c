@@ -2159,8 +2159,10 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 		/* enable HDCP only if board has SFK */
 		tegra_fuse_readl(FUSE_OPT_FT_REV_0, &ft_info);
 		/* only fuses with revision id greater than or equal to 0x5 have SFK */
-		if (ft_info < FUSE_START_SFK)
+		if (ft_info < FUSE_START_SFK) {
+			nvhdcp_err("device does not have SFK fused\n");
 			return;
+		}
 	}
 
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);

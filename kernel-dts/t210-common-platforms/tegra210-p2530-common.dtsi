@@ -84,10 +84,6 @@
 				pins = "sdmmc1", "sdmmc3";
 				nvidia,enable-voltage-switching;
 			};
-			sdmmc-dpd-enable {
-				pins = "emmc2";
-				low-power-enable;
-			};
 		};
 	};
 

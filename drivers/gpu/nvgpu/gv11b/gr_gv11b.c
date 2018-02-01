@@ -2777,6 +2777,13 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			g->gr.fecs_feature_override_ecc_val);
 	}
 
+	/* Disable SWDX spill buffer invalidates */
+	data = gk20a_readl(g, gr_gpcs_swdx_spill_unit_r());
+	data = set_field(
+		data, gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_m(),
+		gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_disabled_f());
+	gk20a_writel(g, gr_gpcs_swdx_spill_unit_r(), data);
+
 	err = gr_gk20a_init_fs_state(g);
 	if (err)
 		return err;

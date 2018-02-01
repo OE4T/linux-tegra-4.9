@@ -3840,6 +3840,22 @@ static inline u32 gr_gpcs_swdx_dss_zbc_s_01_to_04_format_r(void)
 {
 	return 0x00418198U;
 }
+static inline u32 gr_gpcs_swdx_spill_unit_r(void)
+{
+	return 0x00418e9cU;
+}
+static inline u32 gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_m(void)
+{
+	return 0x1U << 16U;
+}
+static inline u32 gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_disabled_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_enabled_f(void)
+{
+	return 0x10000U;
+}
 static inline u32 gr_gpcs_setup_attrib_cb_base_r(void)
 {
 	return 0x00418810U;

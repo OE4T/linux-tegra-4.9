@@ -1,7 +1,7 @@
 /**
  * camera_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -257,8 +257,10 @@ static inline void msleep_range(unsigned int delay_base)
 static inline struct camera_common_data *to_camera_common_data(
 	const struct device *dev)
 {
-	return container_of(dev_get_drvdata(dev),
-			    struct camera_common_data, subdev);
+	if (sensor_common_parse_num_modes(dev))
+		return container_of(dev_get_drvdata(dev),
+		    struct camera_common_data, subdev);
+	return NULL;
 }
 
 static inline struct camera_common_focuser_data *to_camera_common_focuser_data(

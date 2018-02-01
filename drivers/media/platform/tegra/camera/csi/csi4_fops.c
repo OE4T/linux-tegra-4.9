@@ -197,7 +197,7 @@ static void csi4_phy_config(
 	/* calculate MIPI settling times */
 	if (chan->pg_mode)
 		mipi_clk_mhz = csi->clk_freq / 1000000;
-	else {
+	else if (chan->s_data) {
 		mode_idx = chan->s_data->mode_prop_idx;
 		props =  &chan->s_data->sensor_props;
 		sig_props = &props->sensor_modes[mode_idx].signal_properties;

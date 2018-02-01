@@ -288,6 +288,9 @@ static void deskew_setup(struct tegra_csi_channel *chan,
 	unsigned int csi_lane_start = 0;
 	unsigned int csi_port, csi_lanes;
 
+	if (chan->s_data == NULL)
+		return;
+
 	mode_idx = chan->s_data->mode_prop_idx;
 	props =  &chan->s_data->sensor_props;
 	sig_props = &props->sensor_modes[mode_idx].signal_properties;

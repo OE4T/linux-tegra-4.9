@@ -1118,6 +1118,9 @@ static int tegra_channel_sensorprops_setup(struct tegra_channel *chan)
 	struct v4l2_ctrl *ctrl_dvtimings;
 	u32 i;
 
+	if (!s_data)
+		return 0;
+
 	GET_TEGRA_CAMERA_CTRL(SENSOR_MODES, ctrl_modes);
 	GET_TEGRA_CAMERA_CTRL(SENSOR_SIGNAL_PROPERTIES, ctrl_signalprops);
 	GET_TEGRA_CAMERA_CTRL(SENSOR_IMAGE_PROPERTIES, ctrl_imageprops);

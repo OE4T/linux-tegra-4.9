@@ -1,7 +1,7 @@
 /**
  * sensor_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,6 +43,7 @@ struct sensor_properties {
 	u32 num_modes;
 };
 
+int sensor_common_parse_num_modes(const struct device *dev);
 int sensor_common_init_sensor_properties(
 	struct device *dev, struct device_node *node,
 	struct sensor_properties *sensor);

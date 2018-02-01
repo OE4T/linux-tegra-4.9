@@ -464,6 +464,34 @@ static int sensor_common_parse_control_props(
 	return 0;
 }
 
+int sensor_common_parse_num_modes(const struct device *dev)
+{
+	struct device_node *np;
+	struct device_node *node = NULL;
+	char temp_str[OF_MAX_STR_LEN];
+	int num_modes = 0;
+	int i;
+
+	if (!dev || !dev->of_node)
+		return 0;
+
+	np = dev->of_node;
+
+	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
+		snprintf(temp_str, sizeof(temp_str), "%s%d",
+			OF_SENSORMODE_PREFIX, i);
+		of_node_get(np);
+		node = of_get_child_by_name(np, temp_str);
+		of_node_put(node);
+		if (node == NULL)
+			break;
+		num_modes++;
+	}
+
+	return num_modes;
+}
+EXPORT_SYMBOL(sensor_common_parse_num_modes);
+
 int sensor_common_init_sensor_properties(
 	struct device *dev, struct device_node *np,
 	struct sensor_properties *sensor)

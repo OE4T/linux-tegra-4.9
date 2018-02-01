@@ -769,14 +769,8 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		node = sd->dev->of_node;
 		s_data = to_camera_common_data(sd->dev);
 
-		if (s_data == NULL) {
-			dev_err(&chan->video.dev,
-				"Camera common data missing!\n");
-			return -EINVAL;
-		}
-
 		/* get sensor properties from DT */
-		if (node != NULL) {
+		if (s_data != NULL && node != NULL) {
 			int idx = s_data->mode_prop_idx;
 
 			emb_buf_size = 0;

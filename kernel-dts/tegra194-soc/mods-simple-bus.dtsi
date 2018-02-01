@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -668,11 +668,6 @@
 					<&bpmp_resets TEGRA194_RESET_DPAUX1>,
 					<&bpmp_resets TEGRA194_RESET_DPAUX2>,
 					<&bpmp_resets TEGRA194_RESET_DPAUX3>,
-					<&bpmp_resets TEGRA194_RESET_DSI>,
-					<&bpmp_resets TEGRA194_RESET_DSIB>,
-					<&bpmp_resets TEGRA194_RESET_DSIC>,
-					<&bpmp_resets TEGRA194_RESET_DSID>,
-					<&bpmp_resets TEGRA194_RESET_DSIPADCTL>,
 					<&bpmp_resets TEGRA194_RESET_EQOS>,
 					<&bpmp_resets TEGRA194_RESET_GPCDMA>,
 					<&bpmp_resets TEGRA194_RESET_GPU>,
@@ -819,11 +814,6 @@
 					"dpaux1",
 					"dpaux2",
 					"dpaux3",
-					"dsi",
-					"dsib",
-					"dsic",
-					"dsid",
-					"dsipadctl",
 					"eqos",
 					"gpcdma",
 					"gpu",

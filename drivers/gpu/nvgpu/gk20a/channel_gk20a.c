@@ -518,11 +518,11 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 	size_t i, get;
 	s64 now = nvgpu_current_time_ms();
 	s64 prev = 0;
-	struct device *dev = dev_from_gk20a(ch->g);
+	struct gk20a *g = ch->g;
 
 	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
 
-	dev_info(dev, "ch %d: refs %d. Actions, most recent last:\n",
+	nvgpu_info(g, "ch %d: refs %d. Actions, most recent last:",
 			ch->chid, nvgpu_atomic_read(&ch->ref_count));
 
 	/* start at the oldest possible entry. put is next insertion point */
@@ -536,7 +536,8 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 		struct channel_gk20a_ref_action *act = &ch->ref_actions[get];
 
 		if (act->trace.nr_entries) {
-			dev_info(dev, "%s ref %zu steps ago (age %d ms, diff %d ms)\n",
+			nvgpu_info(g,
+				"%s ref %zu steps ago (age %lld ms, diff %lld ms)",
 				act->type == channel_gk20a_ref_action_get
 					? "GET" : "PUT",
 				GK20A_CHANNEL_REFCOUNT_TRACKING - 1 - i,

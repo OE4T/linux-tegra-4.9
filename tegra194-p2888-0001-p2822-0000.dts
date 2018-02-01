@@ -290,4 +290,10 @@
 	thermal-zones {
 		status = "disabled";
 	};
+
+	reserved-memory {
+		ramoops_carveout {
+			status = "okay";
+		};
+	};
 };

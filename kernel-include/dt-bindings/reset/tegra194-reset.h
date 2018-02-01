@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,11 +28,6 @@
 #define TEGRA194_RESET_DPAUX1			9
 #define TEGRA194_RESET_DPAUX2			10
 #define TEGRA194_RESET_DPAUX3			11
-#define TEGRA194_RESET_DSI			12
-#define TEGRA194_RESET_DSIB			13
-#define TEGRA194_RESET_DSIC			14
-#define TEGRA194_RESET_DSID			15
-#define TEGRA194_RESET_DSIPADCTL		16
 #define TEGRA194_RESET_EQOS			17
 #define TEGRA194_RESET_GPCDMA			18
 #define TEGRA194_RESET_GPU			19

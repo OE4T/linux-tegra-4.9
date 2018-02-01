@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -138,7 +138,8 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 		err = -ENOMEM;
 		goto release_sig;
 	}
-	memcpy(lsf_desc, (void *)pmu_sig->data, sizeof(struct lsf_ucode_desc));
+	memcpy(lsf_desc, (void *)pmu_sig->data,
+			min_t(size_t, sizeof(*lsf_desc), pmu_sig->size));
 	lsf_desc->falcon_id = LSF_FALCON_ID_PMU;
 
 	p_img->desc = pmu->desc;
@@ -177,7 +178,8 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 		err = -ENOMEM;
 		goto rel_sig;
 	}
-	memcpy(lsf_desc, (void *)fecs_sig->data, sizeof(struct lsf_ucode_desc));
+	memcpy(lsf_desc, (void *)fecs_sig->data,
+			min_t(size_t, sizeof(*lsf_desc), fecs_sig->size));
 	lsf_desc->falcon_id = LSF_FALCON_ID_FECS;
 
 	p_img->desc = nvgpu_kzalloc(g, sizeof(struct pmu_ucode_desc));
@@ -248,7 +250,7 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 		goto rel_sig;
 	}
 	memcpy(lsf_desc, (void *)gpccs_sig->data,
-		sizeof(struct lsf_ucode_desc));
+			min_t(size_t, sizeof(*lsf_desc), gpccs_sig->size));
 	lsf_desc->falcon_id = LSF_FALCON_ID_GPCCS;
 
 	p_img->desc = nvgpu_kzalloc(g, sizeof(struct pmu_ucode_desc));

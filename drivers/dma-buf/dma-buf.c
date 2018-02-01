@@ -759,7 +759,8 @@ void dma_buf_detach(struct dma_buf *dmabuf, struct dma_buf_attachment *attach)
 	if (atomic_dec_return(&attach->ref) > 0)
 		return;
 
-	BUG_ON(atomic_read(&attach->maps));
+	if (WARN_ON(atomic_read(&attach->maps)))
+		return;
 
 	if (dmabuf_can_defer_unmap(dmabuf, attach->dev))
 		return;

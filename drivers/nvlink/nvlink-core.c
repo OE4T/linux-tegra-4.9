@@ -61,6 +61,12 @@ struct dentry *nvlink_debugfs;
 
 static struct nvlink_core nvlink_core;
 
+static bool nvlink_is_tegra_loopback(struct nvlink_intranode_conn *conn)
+{
+	return ((conn->ndev0->device_id == NVLINK_ENDPT_T19X) &&
+			(conn->ndev1->device_id == NVLINK_ENDPT_T19X));
+}
+
 int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state)
 {
 	int ret = 0;
@@ -723,18 +729,22 @@ int nvlink_transition_intranode_conn_hs_to_safe(struct nvlink_device *ndev)
 		return ret;
 	}
 
-	/* Disable Single-Lane mode for device 0 */
-	ret = link0->link_ops.set_link_mode(ndev0, NVLINK_LINK_DISABLE_PM);
-	if (ret) {
-		nvlink_err("Failed to disable SL (1/8th) mode for device 0");
-		return ret;
-	}
+	if(nvlink_is_tegra_loopback(&conn)) {
+		/* Disable Single-Lane mode for device 0 */
+		ret = link0->link_ops.set_link_mode(ndev0,
+							NVLINK_LINK_DISABLE_PM);
+		if (ret) {
+			nvlink_err("Failed to disable SL(1/8th) mode for dev0");
+			return ret;
+		}
 
-	/* Disable Single-Lane mode for device 1 */
-	ret = link1->link_ops.set_link_mode(ndev1, NVLINK_LINK_DISABLE_PM);
-	if (ret) {
-		nvlink_err("Failed to disable SL (1/8th) mode for device 1");
-		return ret;
+		/* Disable Single-Lane mode for device 1 */
+		ret = link1->link_ops.set_link_mode(ndev1,
+							NVLINK_LINK_DISABLE_PM);
+		if (ret) {
+			nvlink_err("Failed to disable SL(1/8th) mode for dev1");
+			return ret;
+		}
 	}
 
 	/* Move both ends to SWCFG */
@@ -1056,22 +1066,25 @@ int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev)
 		return ret;
 	}
 
-	/* Enable Single-Lane policy for device 0 */
-	ret = link0->link_ops.set_link_mode(ndev0, NVLINK_LINK_ENABLE_PM);
-	if (ret) {
-		nvlink_err("Error encountered while enabling Single-Lane mode"
-			" policy for device 0");
-		return ret;
-	}
+	if(nvlink_is_tegra_loopback(&conn)) {
+		/* Enable Single-Lane policy for device 0 */
+		ret = link0->link_ops.set_link_mode(ndev0,
+							NVLINK_LINK_ENABLE_PM);
+		if (ret) {
+			nvlink_err("Error encountered while enabling "
+					"Single-Lane mode policy for device 0");
+			return ret;
+		}
 
-	/* Enable Single-Lane policy for device 1 */
-	ret = link1->link_ops.set_link_mode(ndev1, NVLINK_LINK_ENABLE_PM);
-	if (ret) {
-		nvlink_err("Error encountered while enabling Single-Lane mode"
-			" policy for device 1");
-		return ret;
+		/* Enable Single-Lane policy for device 1 */
+		ret = link1->link_ops.set_link_mode(ndev1,
+							NVLINK_LINK_ENABLE_PM);
+		if (ret) {
+			nvlink_err("Error encountered while enabling "
+					"Single-Lane mode policy for device 1");
+			return ret;
+		}
 	}
-
 	nvlink_dbg("Link in High Speed mode!");
 	return ret;
 }

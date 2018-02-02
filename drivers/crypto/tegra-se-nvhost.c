@@ -404,9 +404,9 @@ static int tegra_se_init_cmdbuf_addr(struct tegra_se_dev *se_dev)
 
 	for (i = 0; i < SE_MAX_SUBMIT_CHAIN_SZ; i++) {
 		se_dev->cmdbuf_addr_list[i].cmdbuf_addr =
-			se_dev->aes_cmdbuf_cpuvaddr + (i * SZ_2K);
+			se_dev->aes_cmdbuf_cpuvaddr + (i * SZ_4K);
 		se_dev->cmdbuf_addr_list[i].iova = se_dev->aes_cmdbuf_iova +
-					(i * SZ_2K * SE_WORD_SIZE_BYTES);
+					(i * SZ_4K * SE_WORD_SIZE_BYTES);
 		atomic_set(&se_dev->cmdbuf_addr_list[i].free, 1);
 	}
 
@@ -4273,7 +4273,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (is_algo_supported(node, "drbg") || is_algo_supported(node, "aes") ||
 	    is_algo_supported(node, "cmac")) {
 		se_dev->aes_cmdbuf_cpuvaddr = dma_alloc_attrs(
-			se_dev->dev->parent, SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
+			se_dev->dev->parent, SZ_16K * SE_MAX_SUBMIT_CHAIN_SZ,
 			&se_dev->aes_cmdbuf_iova, GFP_KERNEL,
 			__DMA_ATTR(attrs));
 		if (!se_dev->aes_cmdbuf_cpuvaddr)
@@ -4292,7 +4292,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	return 0;
 dma_free:
-	dma_free_attrs(se_dev->dev->parent, SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
+	dma_free_attrs(se_dev->dev->parent, SZ_16K * SE_MAX_SUBMIT_CHAIN_SZ,
 		       se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 		       __DMA_ATTR(attrs));
 cmd_buf_alloc_fail:
@@ -4324,7 +4324,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 
 	if (se_dev->aes_cmdbuf_cpuvaddr)
 		dma_free_attrs(
-		se_dev->dev->parent, SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
+		se_dev->dev->parent, SZ_16K * SE_MAX_SUBMIT_CHAIN_SZ,
 		se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 		__DMA_ATTR(attrs));
 

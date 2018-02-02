@@ -1,7 +1,7 @@
 /*
  * Header file for Tegra Security Engine
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@
 
 #define TEGRA_SE_CRA_PRIORITY	300
 #define TEGRA_SE_COMPOSITE_PRIORITY 400
-#define TEGRA_SE_CRYPTO_QUEUE_LENGTH 50
+#define TEGRA_SE_CRYPTO_QUEUE_LENGTH 100
 #define SE_MAX_SRC_SG_COUNT		50
 #define SE_MAX_DST_SG_COUNT		50
 
@@ -209,12 +209,12 @@
 
 #define SE_BUFF_SIZE_MASK	0xFF000000
 
-#define SE_MAX_TASKS_PER_SUBMIT		32
+#define SE_MAX_TASKS_PER_SUBMIT		64
 #define SE_MAX_SUBMIT_CHAIN_SZ		10
 #define SE_WORD_SIZE_BYTES		4
 
 #define SE_MAX_MEM_ALLOC		4194304
-#define SE_MAX_GATHER_BUF_SZ		16384
+#define SE_MAX_GATHER_BUF_SZ		32768
 #define SE_MAX_AESBUF_ALLOC	(SE_MAX_MEM_ALLOC / SE_MAX_GATHER_BUF_SZ)
 #define SE_MAX_AESBUF_TIMEOUT		(20 * SE_MAX_AESBUF_ALLOC)
 

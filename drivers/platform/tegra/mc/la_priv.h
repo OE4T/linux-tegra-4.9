@@ -620,6 +620,7 @@ struct la_chip_specific {
 	int (*suspend)(void);
 	void (*resume)(void);
 	void (*mc_pcie_init)(void);
+	void (*la_cleanup)(void);
 };
 
 

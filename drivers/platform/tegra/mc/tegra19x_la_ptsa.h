@@ -459,119 +459,134 @@ struct reg_info {
 struct la_ptsa_core {
 	/* Gets the initial la value given client type and mc settings */
 	unsigned int (*get_init_la)(
-			enum la_client_type client_type,
-			struct mc_settings_info *mc_settings_ptr);
+		enum la_client_type client_type,
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Init la_client_info_array for all clients */
 	void (*la_info_array_init)(
-			struct la_client_info *info_array,
-			int *gen_to_t19x_la_id,
-			int *t19x_to_gen_la_id,
-			int *t19x_la_kern_init,
-			struct mc_settings_info *mc_set);
+		struct la_client_info *info_array,
+		int *gen_to_t19x_la_id,
+		int *t19x_to_gen_la_id,
+		int *t19x_la_kern_init,
+		struct mc_settings_info *mc_set,
+		unsigned int *error);
 
 	/* Updates mc parameters given dram type */
 	void (*mc_settings_init)(
-			enum tegra_dram_t dram_type,
-			struct mc_settings_info *mc_settings_ptr);
+		enum tegra_dram_t dram_type,
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Overrides a mc_settings_info type */
 	void (*mc_settings_override)(
-			struct mc_settings_info info,
-			struct mc_settings_info *mc_settings_ptr);
+		struct mc_settings_info info,
+		struct mc_settings_info *mc_settings_ptr);
 
 	/* Calculates the display read latency allowance given the bw */
 	void (*get_disp_rd_lat_allow_given_disp_bw)(
-			struct mc_settings_info *mc_settings_ptr,
-			struct fixed_point emc_freq_mhz,
-			struct fixed_point dis_bw, /* MBps */
-			int *disp_la,
-			struct fixed_point *drain_time_usec,
-			struct fixed_point *la_bw_up_bnd_usec);
+		struct mc_settings_info *mc_settings_ptr,
+		struct fixed_point emc_freq_mhz,
+		struct fixed_point dis_bw, /* MBps */
+		int *disp_la,
+		struct fixed_point *drain_time_usec,
+		struct fixed_point *la_bw_up_bnd_usec,
+		unsigned int *error);
 
 	/* Init dda_info_array for all clients */
 	void (*dda_info_array_init)(
-			struct dda_info *inf_arr,
-			int info_array_size,
-			struct mc_settings_info *mc_set);
+		struct dda_info *inf_arr,
+		int info_array_size,
+		struct mc_settings_info *mc_set,
+		unsigned int *error);
 
 	/* Updates DDA MIN/MAX values for kernel init */
 	void (*update_new_dda_minmax_kern_init)(
-			struct dda_info *dda_info_array,
-			struct mc_settings_info *mc_settings_ptr);
+		struct dda_info *dda_info_array,
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Updates DDA RATE values for kernel init */
 	void (*update_new_dda_rate_frac_kern_init)(
-			struct dda_info *dda_info_array,
-			struct mc_settings_info *mc_settings_ptr);
+		struct dda_info *dda_info_array,
+		struct mc_settings_info *mc_settings_ptr);
 
 	/* Maps ISO LA to DDA */
 	enum tegra_dda_id (*convert_la2dda_id_for_dyn_ptsa)(
-			enum tegra_la_id la_id);
+		enum tegra_la_id la_id,
+		unsigned int *error);
 
 	/* Init max grant decrement */
 	void (*init_max_gd)(
-			struct mc_settings_info *mc_settings_ptr);
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Init mc/emc same freq threshold */
 	void (*init_mcemc_same_freq_thr)(
-			struct mc_settings_info *mc_settings_ptr);
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Sets up frequency ranges for grant decrement */
 	void (*setup_freq_ranges)(
-			struct mc_settings_info *mc_settings_ptr);
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Gets bytes per DRAM clock */
-	int (*get_bytes_per_dram_clk)(enum tegra_dram_t dram_type);
+	int (*get_bytes_per_dram_clk)(
+		enum tegra_dram_t dram_type,
+		unsigned int *error);
 
 	/* Converts bw to fraction of DRAM bw */
 	struct fixed_point (*bw2fraction)(
-			struct mc_settings_info *mc_settings_ptr,
-			struct fixed_point bw_mbps);
+		struct mc_settings_info *mc_settings_ptr,
+		struct fixed_point bw_mbps,
+		unsigned int *error);
 
 	/* Converts fraction of DRAM bw to bw */
 	unsigned int (*fraction2dda)(
-			struct fixed_point fraction,
-			struct fixed_point div,
-			unsigned int mask,
-			int round_up_or_to_nearest);
+		struct fixed_point fraction,
+		struct fixed_point div,
+		unsigned int mask,
+		int round_up_or_to_nearest,
+		unsigned int *error);
 
 	/* Update DDA rate based on use case */
 	void (*update_new_dda_rate_frac_use_case)(
-			struct dda_info *dda_info_array,
-			struct mc_settings_info *mc_settings_ptr,
-			int clientid,
-			struct fixed_point bw_mbps);
+		struct dda_info *dda_info_array,
+		struct mc_settings_info *mc_settings_ptr,
+		int clientid,
+		struct fixed_point bw_mbps,
+		unsigned int *error);
 
 	/* Init non freq dep kernel init registers */
 	void (*all_reg_info_array_init)(
-			struct reg_info *mc_inf_arr,
-			struct reg_info *mssnvl1_inf_arr,
-			struct reg_info *mssnvl2_inf_arr,
-			struct reg_info *mssnvl3_inf_arr,
-			struct reg_info *mssnvl4_inf_arr);
+		struct reg_info *mc_inf_arr,
+		struct reg_info *mssnvl1_inf_arr,
+		struct reg_info *mssnvl2_inf_arr,
+		struct reg_info *mssnvl3_inf_arr,
+		struct reg_info *mssnvl4_inf_arr);
 
 	/* Write non freq dep kernel init registers */
 	void (*write_perf_regs_kern_init)(
-			struct mc_settings_info *mc_settings_ptr,
-			struct reg_info *mc_inf_arr,
-			struct reg_info *mssnvl1_inf_arr,
-			struct reg_info *mssnvl2_inf_arr,
-			struct reg_info *mssnvl3_inf_arr,
-			struct reg_info *mssnvl4_inf_arr);
+		struct mc_settings_info *mc_settings_ptr,
+		struct reg_info *mc_inf_arr,
+		struct reg_info *mssnvl1_inf_arr,
+		struct reg_info *mssnvl2_inf_arr,
+		struct reg_info *mssnvl3_inf_arr,
+		struct reg_info *mssnvl4_inf_arr);
 
 	/* Init non freq dep kernel init registers */
 	void (*mcpcie_reg_info_array_init)(
-			struct reg_info *inf_arr);
+		struct reg_info *inf_arr);
 
 	void (*update_ord_ids)(
-			struct reg_info *mcpcie_inf_arr,
-			struct mc_settings_info *mc_settings_ptr,
-			unsigned int pcie_xbar_cfg);
+		struct reg_info *mcpcie_inf_arr,
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int pcie_xbar_cfg,
+		unsigned int *error);
 };
 
 void init_la_ptsa_core(struct la_ptsa_core *lp);
-void mc_pcie_init(void);
 
 void tegra_la_get_t19x_specific(struct la_chip_specific *cs_la);
 

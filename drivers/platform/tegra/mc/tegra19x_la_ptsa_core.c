@@ -19,7 +19,7 @@
 
 #define __stringify_1(x...) #x
 #define __stringify(x...) __stringify_1(x)
-#define FIX_PT(x, y) fixed_point_init(x, y, 32, 32)
+#define FIX_PT(x, y, err) fixed_point_init(x, y, 32, 32, err)
 #define MASK(x) \
 	((0xFFFFFFFFUL >> (31 - (1 ? x) + (0 ? x))) << (0 ? x))
 #define SHIFT(x) \
@@ -29,155 +29,178 @@
 #define T19X_ID(id) \
 	TEGRA_T19X_LA_##id##_ID
 
-#define LA_T19X(a, r, i, ct, k)	\
+#define LA_T19X(a, r, i, ct, k)			\
 	do { \
 		gen_to_t19x_la_id[GEN_ID(i)] = T19X_ID(i); \
 		t19x_to_gen_la_id[T19X_ID(i)] = GEN_ID(i); \
 		t19x_la_kern_init[T19X_ID(i)] = k; \
 		la_client_info_init( \
-				&info_array[T19X_ID(i)], \
-				mc_set, \
-				MC_LATENCY_ALLOWANCE_ ## a ## _0, \
-				MASK(r), \
-				SHIFT(r), \
-				GEN_ID(i), \
-				__stringify(i), \
-				TEGRA_LA_ ## ct ## _CLIENT); \
+			&info_array[T19X_ID(i)], \
+			mc_set, \
+			MC_LATENCY_ALLOWANCE_ ## a ## _0, \
+			MASK(r), \
+			SHIFT(r), \
+			GEN_ID(i), \
+			__stringify(i), \
+			TEGRA_LA_ ## ct ## _CLIENT, \
+			error);   \
 	} while (0)
 
-#define GPU_LA_T19X(a, r, i, ct, k)	\
+#define GPU_LA_T19X(a, r, i, ct, k)		\
 	do { \
 		gen_to_t19x_la_id[GEN_ID(i)] = T19X_ID(i); \
 		t19x_to_gen_la_id[T19X_ID(i)] = GEN_ID(i); \
 		t19x_la_kern_init[T19X_ID(i)] = k; \
 		la_client_info_init( \
-				&info_array[T19X_ID(i)], \
-				mc_set, \
-				MC_ ## a ## _LATENCY_ALLOWANCE ## _0, \
-				MASK(r), \
-				SHIFT(r), \
-				GEN_ID(i), \
-				__stringify(i), \
-				TEGRA_LA_ ## ct ## _CLIENT); \
+			&info_array[T19X_ID(i)], \
+			mc_set, \
+			MC_ ## a ## _LATENCY_ALLOWANCE ## _0, \
+			MASK(r), \
+			SHIFT(r), \
+			GEN_ID(i), \
+			__stringify(i), \
+			TEGRA_LA_ ## ct ## _CLIENT, \
+			error);   \
 	} while (0)
-
 
 static unsigned int calc_eff_rowsorter_sz(
-		struct fixed_point emc_clk_mhz,
-		struct mc_settings_info *mc_settings_ptr)
+	struct fixed_point emc_clk_mhz,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error)
 {
 	struct fixed_point term1;
 	struct fixed_point term2;
 	struct fixed_point term3;
 	unsigned int eff_rs_size_bytes;
 
-	term1 = FIX_PT(mc_settings_ptr->row_sorter_sz_bytes, 0);
+	term1 = FIX_PT(mc_settings_ptr->row_sorter_sz_bytes, 0, error);
 	term2 = fixed_point_mult(
-			fixed_point_div(
-				fixed_point_mult(
-					FIX_PT(2, 0),
-					FIX_PT(mc_settings_ptr->dram_width_bits, 0)
-					),
-				FIX_PT(8, 0)
-				),
-			fixed_point_add(
-				emc_clk_mhz,
-				FIX_PT(50, 0)
-				)
-			);
+		fixed_point_div(
+			fixed_point_mult(
+				FIX_PT(2, 0, error),
+				FIX_PT(mc_settings_ptr->dram_width_bits,
+					0,
+					error),
+				error),
+			FIX_PT(8, 0, error),
+			error),
+		fixed_point_add(
+			emc_clk_mhz,
+			FIX_PT(50, 0, error),
+			error),
+		error);
 	term3 = fixed_point_mult(
-			fixed_point_mult(
-				fixed_point_sub(
-					fixed_point_mult(
-						mc_settings_ptr->max_drain_time_usec,
-						emc_clk_mhz
-						),
-					FIX_PT(mc_settings_ptr->stat_lat_snaparb_rs, 0)
-					),
-				FIX_PT(2, 0)
-				),
-			fixed_point_mult(
-				fixed_point_div(
-					FIX_PT(mc_settings_ptr->dram_width_bits, 0),
-					FIX_PT(8, 0)
-					),
-				mc_settings_ptr->cons_mem_eff
-				)
-			);
+		fixed_point_mult(
+			fixed_point_sub(
+				fixed_point_mult(
+					mc_settings_ptr->max_drain_time_usec,
+					emc_clk_mhz,
+					error),
+				FIX_PT(mc_settings_ptr->stat_lat_snaparb_rs,
+					0,
+					error),
+				error),
+			FIX_PT(2, 0, error),
+			error),
+		fixed_point_mult(
+			fixed_point_div(
+				FIX_PT(mc_settings_ptr->dram_width_bits,
+					0,
+					error),
+				FIX_PT(8, 0, error),
+				error),
+			mc_settings_ptr->cons_mem_eff,
+			error),
+		error);
 	eff_rs_size_bytes = (unsigned int)
 		fixed_point_to_int(
-				fixed_point_min(
-					fixed_point_min(term1, term2),
-					term3));
+			fixed_point_min(
+				fixed_point_min(term1, term2, error),
+				term3,
+				error),
+			error);
 
 	return eff_rs_size_bytes;
 }
 
-
 static struct fixed_point calc_drain_time(
-		struct fixed_point emc_clk_mhz,
-		struct mc_settings_info *mc_settings_ptr)
+	struct fixed_point emc_clk_mhz,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error)
 {
 	unsigned int eff_rs_size_bytes;
 	struct fixed_point term1;
 	struct fixed_point drain_time_usec;
 
 	eff_rs_size_bytes =
-		calc_eff_rowsorter_sz(emc_clk_mhz, mc_settings_ptr);
+		calc_eff_rowsorter_sz(emc_clk_mhz, mc_settings_ptr, error);
 
 	term1 = fixed_point_div(
-			FIX_PT(mc_settings_ptr->dram_width_bits, 0),
-			FIX_PT(4, 0));
+		FIX_PT(mc_settings_ptr->dram_width_bits, 0, error),
+		FIX_PT(4, 0, error),
+		error);
 	drain_time_usec =
 		fixed_point_add(
-				fixed_point_div(
-					FIX_PT(eff_rs_size_bytes, 0),
+			fixed_point_div(
+				FIX_PT(eff_rs_size_bytes, 0, error),
+				fixed_point_mult(
 					fixed_point_mult(
-						fixed_point_mult(
-							emc_clk_mhz,
-							term1
-							),
-						mc_settings_ptr->cons_mem_eff
-						)
+						emc_clk_mhz,
+						term1,
+						error
 					),
-				fixed_point_div(
-					FIX_PT(mc_settings_ptr->stat_lat_snaparb_rs, 0),
-					emc_clk_mhz
-					)
-				);
+					mc_settings_ptr->cons_mem_eff,
+					error
+				),
+			error
+			),
+			fixed_point_div(
+				FIX_PT(mc_settings_ptr->stat_lat_snaparb_rs,
+					0,
+					error),
+				emc_clk_mhz,
+				error),
+			error
+		);
 
 	return drain_time_usec;
 }
 
 static unsigned int get_init_la(
-		enum la_client_type client_type,
-		struct mc_settings_info *mc_settings_ptr)
+	enum la_client_type client_type,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error)
 {
 	unsigned int ret_la = 0;
 
 	switch (client_type) {
 	case TEGRA_LA_HUB_READ_CLIENT:
-		{
-			struct fixed_point term1;
-			struct fixed_point term2;
-			struct fixed_point term3;
+	{
+		struct fixed_point term1;
+		struct fixed_point term2;
+		struct fixed_point term3;
 
-			term1 = fixed_point_div(
-					FIX_PT(1000, 0),
-					FIX_PT(1066, 0x80000000) /* 1066.5 */);
-			term2 = fixed_point_mult(
-					FIX_PT(1059, 0),
-					term1);
-			term3 = fixed_point_min(
-					FIX_PT(7650, 0),
-					term2);
-			ret_la = (unsigned int)
-				fixed_point_to_int(
-						fixed_point_div(
-							term3,
-							FIX_PT(30, 0)));
-			break;
-		}
+		term1 = fixed_point_div(
+			FIX_PT(1000, 0, error),
+			FIX_PT(1066, 0x80000000, error) /* 1066.5 */,
+			error);
+		term2 = fixed_point_mult(
+			FIX_PT(1059, 0, error),
+			term1,
+			error);
+		term3 = fixed_point_min(
+			FIX_PT(7650, 0, error),
+			term2,
+			error);
+		ret_la = (unsigned int)
+			fixed_point_to_int(
+				fixed_point_div(
+					term3,
+					FIX_PT(30, 0, error),
+					error),
+				error);
+		break;
+	}
 	case TEGRA_LA_HUB_WRITE_CLIENT:
 		ret_la = 255;
 		break;
@@ -191,70 +214,86 @@ static unsigned int get_init_la(
 		ret_la = 1023;
 		break;
 	case TEGRA_LA_DISPLAY_READ_CLIENT:
-		{
-			struct fixed_point term1;
-			struct fixed_point term2;
-			struct fixed_point max_drain_time_usec;
-			max_drain_time_usec =
-				calc_drain_time(FIX_PT(1066, 0x80000000) /* 1066.5 */,
-						mc_settings_ptr);
-			term1 = fixed_point_min(
-					mc_settings_ptr->max_lat_all_usec,
-					max_drain_time_usec);
-			term2 = fixed_point_div(
-					mc_settings_ptr->ns_per_tick,
-					FIX_PT(1000, 0));
-			ret_la = (unsigned int)
-				fixed_point_ceil(
-						fixed_point_div(
-							term1,
-							term2)); /* 18 */
-			break;
-		}
+	{
+		struct fixed_point term1;
+		struct fixed_point term2;
+		struct fixed_point max_drain_time_usec;
+
+		max_drain_time_usec =
+			calc_drain_time(
+				FIX_PT(1066, 0x80000000, error) /* 1066.5 */,
+				mc_settings_ptr,
+				error);
+		term1 = fixed_point_min(
+			mc_settings_ptr->max_lat_all_usec,
+			max_drain_time_usec,
+			error);
+		term2 = fixed_point_div(
+			mc_settings_ptr->ns_per_tick,
+			FIX_PT(1000, 0, error),
+			error);
+		ret_la = (unsigned int)
+			fixed_point_ceil(
+				fixed_point_div(
+					term1,
+					term2,
+					error),
+				error); /* 18 */
+		break;
+	}
 	case TEGRA_LA_NVLRHP_READ_CLIENT:
 		ret_la = 4;
 		break;
 	case TEGRA_LA_GPU_READ_CLIENT:
-		{
-			struct fixed_point term1;
-			struct fixed_point term2;
-			struct fixed_point term3;
+	{
+		struct fixed_point term1;
+		struct fixed_point term2;
+		struct fixed_point term3;
 
-			term1 = fixed_point_div(
-					FIX_PT(1000, 0),
-					FIX_PT(1066, 0x80000000) /* 1066.5 */);
-			term2 = fixed_point_mult(
-					FIX_PT(1019, 0),
-					term1);
-			term3 = fixed_point_min(
-					FIX_PT(7650, 0),
-					term2);
-			ret_la = (unsigned int)
-				fixed_point_to_int(
-						fixed_point_div(
-							term3,
-							FIX_PT(30, 0)));
-			break;
-		}
+		term1 = fixed_point_div(
+			FIX_PT(1000, 0, error),
+			FIX_PT(1066, 0x80000000, error) /* 1066.5 */,
+			error);
+		term2 = fixed_point_mult(
+			FIX_PT(1019, 0, error),
+			term1,
+			error);
+		term3 = fixed_point_min(
+			FIX_PT(7650, 0, error),
+			term2,
+			error);
+		ret_la = (unsigned int)
+			fixed_point_to_int(
+				fixed_point_div(
+					term3,
+					FIX_PT(30, 0, error),
+					error),
+				error);
+		break;
+	}
 	case TEGRA_LA_NUM_CLIENT_TYPES:
 		ret_la = 0;
 		break;
 	default:
-		BUG_ON(1);
+		pr_err("%s: la_client_type %d not handled\n",
+			__func__, client_type);
+		(*error) |= 1;
+		WARN_ON(1);
 	}
 
 	return ret_la;
 }
 
 static void la_client_info_init(
-		struct la_client_info *entry,
-		struct mc_settings_info *mc_settings_ptr,
-		unsigned int reg_addr,
-		unsigned long mask,
-		unsigned long shift,
-		enum tegra_la_id id,
-		const char *name,
-		enum la_client_type client_type)
+	struct la_client_info *entry,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int reg_addr,
+	unsigned long mask,
+	unsigned long shift,
+	enum tegra_la_id id,
+	const char *name,
+	enum la_client_type client_type,
+	unsigned int *error)
 {
 	entry->reg_addr = reg_addr;
 	entry->mask = mask;
@@ -265,17 +304,18 @@ static void la_client_info_init(
 		strcpy(entry->name, name);
 	}
 	entry->client_type = client_type;
-	entry->init_la = get_init_la(client_type, mc_settings_ptr);
+	entry->init_la = get_init_la(client_type, mc_settings_ptr, error);
 	entry->min_scaling_ratio = 0;
 	entry->la_ref_clk_mhz = 0;
 }
 
 static void la_info_array_init(
-		struct la_client_info *info_array,
-		int *gen_to_t19x_la_id,
-		int *t19x_to_gen_la_id,
-		int *t19x_la_kern_init,
-		struct mc_settings_info *mc_set)
+	struct la_client_info *info_array,
+	int *gen_to_t19x_la_id,
+	int *t19x_to_gen_la_id,
+	int *t19x_la_kern_init,
+	struct mc_settings_info *mc_set,
+	unsigned int *error)
 {
 	int i;
 
@@ -285,14 +325,15 @@ static void la_info_array_init(
 	for (i = 0; i < TEGRA_T19X_LA_MAX_ID; i++) {
 		t19x_to_gen_la_id[i] = TEGRA_LA_MAX_ID;
 		la_client_info_init(
-				&info_array[i],
-				mc_set,
-				0,
-				0,
-				0,
-				TEGRA_LA_MAX_ID,
-				NULL,
-				TEGRA_LA_NUM_CLIENT_TYPES);
+			&info_array[i],
+			mc_set,
+			0,
+			0,
+			0,
+			TEGRA_LA_MAX_ID,
+			NULL,
+			TEGRA_LA_NUM_CLIENT_TYPES,
+			error);
 	}
 
 	LA_T19X(AONDMA_0, 10 : 0, AONDMAR, HUB_READ, 0);
@@ -439,100 +480,121 @@ static void la_info_array_init(
 }
 
 static void init_max_gd(
-		struct mc_settings_info *mc_settings_ptr)
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error
+)
 {
-	struct fixed_point max_gd = FIX_PT(0, 0);
+	struct fixed_point max_gd = FIX_PT(0, 0, error);
 
 	if (mc_settings_ptr->dram_to_emc_freq_ratio == 2) {
 		/* 1.5 - pow(2.0, -1.0 * PTSA_reg_length_bits) */
 		switch (mc_settings_ptr->ptsa_reg_length_bits) {
 		case 8:
 			max_gd = fixed_point_sub(
-					FIX_PT(1, 0x80000000),
-					FIX_PT(0, 0x01000000)); /* 1.49609375 */
+				FIX_PT(1, 0x80000000, error),
+				FIX_PT(0, 0x01000000, error),
+				error); /* 1.49609375 */
 			break;
 		case 12:
 			max_gd = fixed_point_sub(
-					FIX_PT(1, 0x80000000),
-					FIX_PT(0, 0x00100000)); /* 1.499755859*/
+				FIX_PT(1, 0x80000000, error),
+				FIX_PT(0, 0x00100000, error),
+				error); /* 1.499755859*/
 			break;
 		default:
-			BUG_ON(1);
+			pr_err("%s: ptsa_reg_length_bits %d not handled\n",
+				__func__,
+				mc_settings_ptr->ptsa_reg_length_bits);
+			(*error) |= 1;
+			WARN_ON(1);
 		}
 	} else {
 		/* 2 - pow(2.0, -1.0 * PTSA_reg_length_bits) */
 		switch (mc_settings_ptr->ptsa_reg_length_bits) {
 		case 8:
 			max_gd = fixed_point_sub(
-					FIX_PT(2, 0),
-					FIX_PT(0, 0x01000000)); /* 1.99609375 */
+				FIX_PT(2, 0, error),
+				FIX_PT(0, 0x01000000, error),
+				error); /* 1.99609375 */
 			break;
 		case 12:
 			max_gd = fixed_point_sub(
-					FIX_PT(2, 0),
-					FIX_PT(0, 0x00100000)); /* 1.999755859 */
+				FIX_PT(2, 0, error),
+				FIX_PT(0, 0x00100000, error),
+				error); /* 1.999755859 */
 			break;
 		default:
-			BUG_ON(1);
+			pr_err("%s: ptsa_reg_length_bits %d not handled\n",
+				__func__,
+				mc_settings_ptr->ptsa_reg_length_bits);
+			(*error) |= 1;
+			WARN_ON(1);
 		}
 	}
 
 	mc_settings_ptr->max_gd =
 		fixed_point_mult(
-				mc_settings_ptr->grant_dec_multiplier,
-				max_gd);
+			mc_settings_ptr->grant_dec_multiplier,
+			max_gd,
+			error);
 }
 
-
 static void init_mcemc_same_freq_thr(
-		struct mc_settings_info *mc_settings_ptr
-		)
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error
+)
 {
 	struct fixed_point lowest_emc_freq;
 	lowest_emc_freq = fixed_point_div(
-			mc_settings_ptr->lowest_dram_freq,
-			FIX_PT(mc_settings_ptr->dram_to_emc_freq_ratio, 0)
-			);
+		mc_settings_ptr->lowest_dram_freq,
+		FIX_PT(mc_settings_ptr->dram_to_emc_freq_ratio, 0, error),
+		error);
 
 	/* Want 2:1 all throughout, so set mc_emc_same_freq_thr to something */
 	/* below lowest_emc_freq, but don't make it zero. */
 	mc_settings_ptr->mc_emc_same_freq_thr =
 		fixed_point_max(
-				fixed_point_sub(
-					lowest_emc_freq,
-					FIX_PT(1, 0)
-					),
-				FIX_PT(0, 0x1999999A) /* 0.1 */
-				);
+			fixed_point_sub(
+				lowest_emc_freq,
+				FIX_PT(1, 0, error),
+				error
+				),
+			FIX_PT(0, 0x1999999A, error), /* 0.1 */
+			error
+			);
 }
 
 static void mc_settings_init(
-		enum tegra_dram_t dram_type,
-		struct mc_settings_info *mc_settings_ptr)
+	enum tegra_dram_t dram_type,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error)
 {
 	switch (dram_type) {
 	case TEGRA_LP4_8CH:
 	case TEGRA_LP4X_8CH:
 		mc_settings_ptr->num_channels = 8;
 		mc_settings_ptr->bytes_per_dram_clk = 32;
-		mc_settings_ptr->hub_dda_div = FIX_PT(1, 0);
-		mc_settings_ptr->ring0_dda_div = FIX_PT(4, 0);
+		mc_settings_ptr->hub_dda_div = FIX_PT(1, 0, error);
+		mc_settings_ptr->ring0_dda_div = FIX_PT(4, 0, error);
 		mc_settings_ptr->dram_to_emc_freq_ratio = 2;
-		mc_settings_ptr->highest_dram_freq = FIX_PT(2132, 0);
-		mc_settings_ptr->lowest_dram_freq = FIX_PT(25, 0);
+		mc_settings_ptr->highest_dram_freq = FIX_PT(2132, 0, error);
+		mc_settings_ptr->lowest_dram_freq = FIX_PT(25, 0, error);
 		break;
 	case TEGRA_LP4_16CH:
 	case TEGRA_LP4X_16CH:
 		mc_settings_ptr->num_channels = 16;
 		mc_settings_ptr->bytes_per_dram_clk = 64;
-		mc_settings_ptr->hub_dda_div = FIX_PT(1, 0);
-		mc_settings_ptr->ring0_dda_div = FIX_PT(4, 0);
+		mc_settings_ptr->hub_dda_div = FIX_PT(1, 0, error);
+		mc_settings_ptr->ring0_dda_div = FIX_PT(4, 0, error);
 		mc_settings_ptr->dram_to_emc_freq_ratio = 2;
-		mc_settings_ptr->highest_dram_freq = FIX_PT(2132, 0);
-		mc_settings_ptr->lowest_dram_freq = FIX_PT(25, 0);
+		mc_settings_ptr->highest_dram_freq = FIX_PT(2132, 0, error);
+		mc_settings_ptr->lowest_dram_freq = FIX_PT(25, 0, error);
 		break;
 	default:
-		BUG_ON(1);
+		pr_err("%s: tegra_dram_t %d not handled\n",
+			__func__, dram_type);
+		(*error) |= 1;
+		WARN_ON(1);
 	}
 
 	mc_settings_ptr->dram_type = dram_type;
@@ -541,24 +603,26 @@ static void mc_settings_init(
 	mc_settings_ptr->exp_time = 206;
 	mc_settings_ptr->dram_width_bits = EMC_FBIO_DATA_WIDTH *
 		mc_settings_ptr->num_channels;
-	mc_settings_ptr->cons_mem_eff = FIX_PT(0, 0x80000000); /* 0.5 */
+	mc_settings_ptr->cons_mem_eff = FIX_PT(0, 0x80000000, error); /* 0.5 */
 	mc_settings_ptr->stat_lat_snaparb_rs = 54;
 	mc_settings_ptr->row_sorter_sz_bytes =
 		mc_settings_ptr->num_channels *
 		64 * (NV_MC_EMEM_NUM_SLOTS + 1);
-	mc_settings_ptr->max_drain_time_usec = FIX_PT(10, 0);
-	mc_settings_ptr->ns_per_tick = FIX_PT(30, 0);
-	mc_settings_ptr->max_lat_all_usec = FIX_PT(7, 0xA6666666) /* 7.65 */;
+	mc_settings_ptr->max_drain_time_usec = FIX_PT(10, 0, error);
+	mc_settings_ptr->ns_per_tick = FIX_PT(30, 0, error);
+	mc_settings_ptr->max_lat_all_usec =
+		FIX_PT(7, 0xA6666666, error); /* 7.65 */
 	mc_settings_ptr->ring2_dda_rate = 1;
 	mc_settings_ptr->ring2_dda_en = 1;
 	mc_settings_ptr->siso_hp_en = 1;
 	mc_settings_ptr->vi_always_hp = 1;
-	mc_settings_ptr->disp_catchup_factor = FIX_PT(1, 0x1999999A); /* 1.1 */
-	mc_settings_ptr->dda_bw_margin = FIX_PT(1, 0x33333333); /* 1.2 */
+	mc_settings_ptr->disp_catchup_factor =
+		FIX_PT(1, 0x1999999A, error); /* 1.1 */
+	mc_settings_ptr->dda_bw_margin = FIX_PT(1, 0x33333333, error); /* 1.2 */
 	mc_settings_ptr->two_stge_ecc_iso_dda_bw_margin =
-		FIX_PT(1, 0x66666666); /* 1.4 */
+		FIX_PT(1, 0x66666666, error); /* 1.4 */
 	mc_settings_ptr->ptsa_reg_length_bits = NV_MC_EMEM_PTSA_RATE_WIDTH;
-	mc_settings_ptr->grant_dec_multiplier = FIX_PT(1, 0);
+	mc_settings_ptr->grant_dec_multiplier = FIX_PT(1, 0, error);
 	mc_settings_ptr->set_perf_regs = 1;
 	mc_settings_ptr->hub2mcf_dda = 2; /* AUTO */
 	mc_settings_ptr->igpu_mcf_dda = 2; /* AUTO */
@@ -582,30 +646,31 @@ static void mc_settings_init(
 	mc_settings_ptr->hub_vcarb_siso_wt = 4;
 	mc_settings_ptr->hub_vcarb_iso_wt = 31;
 	mc_settings_ptr->iso_tbu_cchk_en_ctrl = 1; /* disable hp iso tbu chk */
-	mc_settings_ptr->freq_range.lo_freq = FIX_PT(0, 0);
-	mc_settings_ptr->freq_range.hi_freq = FIX_PT(0, 0);
-	mc_settings_ptr->freq_range.lo_gd = FIX_PT(0, 0);
-	mc_settings_ptr->freq_range.hi_gd = FIX_PT(0, 0);
+	mc_settings_ptr->freq_range.lo_freq = FIX_PT(0, 0, error);
+	mc_settings_ptr->freq_range.hi_freq = FIX_PT(0, 0, error);
+	mc_settings_ptr->freq_range.lo_gd = FIX_PT(0, 0, error);
+	mc_settings_ptr->freq_range.hi_gd = FIX_PT(0, 0, error);
 	mc_settings_ptr->freq_range.emc_mc_ratio = 0;
 	mc_settings_ptr->freq_range.valid = 0;
-	init_max_gd(mc_settings_ptr);
-	init_mcemc_same_freq_thr(mc_settings_ptr);
+	init_max_gd(mc_settings_ptr, error);
+	init_mcemc_same_freq_thr(mc_settings_ptr, error);
 }
 
 static void mc_settings_override(
-		struct mc_settings_info info,
-		struct mc_settings_info *mc_settings_ptr)
+	struct mc_settings_info info,
+	struct mc_settings_info *mc_settings_ptr)
 {
 	(*mc_settings_ptr) = info;
 }
 
 static void get_disp_rd_lat_allow_given_disp_bw(
-		struct mc_settings_info *mc_settings_ptr,
-		struct fixed_point emc_freq_mhz,
-		struct fixed_point dis_bw, /* MBps */
-		int *disp_la,
-		struct fixed_point *drain_time_usec,
-		struct fixed_point *la_bw_up_bnd_usec)
+	struct mc_settings_info *mc_settings_ptr,
+	struct fixed_point emc_freq_mhz,
+	struct fixed_point dis_bw, /* MBps */
+	int *disp_la,
+	struct fixed_point *drain_time_usec,
+	struct fixed_point *la_bw_up_bnd_usec,
+	unsigned int *error)
 {
 	struct fixed_point mccif_buf_sz_bytes;
 	struct fixed_point lat_allow_usec;
@@ -613,48 +678,57 @@ static void get_disp_rd_lat_allow_given_disp_bw(
 
 	struct fixed_point term1;
 
-	mccif_buf_sz_bytes = FIX_PT(mc_settings_ptr->mccif_buf_sz_bytes, 0);
+	mccif_buf_sz_bytes =
+		FIX_PT(mc_settings_ptr->mccif_buf_sz_bytes, 0, error);
 	term1 = fixed_point_add(
-			FIX_PT(mc_settings_ptr->stat_lat_minus_snaparb2rs, 0),
-			FIX_PT(mc_settings_ptr->exp_time, 0));
+		FIX_PT(mc_settings_ptr->stat_lat_minus_snaparb2rs, 0, error),
+		FIX_PT(mc_settings_ptr->exp_time, 0, error),
+		error);
 	(*la_bw_up_bnd_usec) =
 		fixed_point_sub(
-				fixed_point_div(
-					mccif_buf_sz_bytes,
-					dis_bw
-					),
-				fixed_point_div(
-					term1,
-					emc_freq_mhz
-					)
-				);
+			fixed_point_div(
+				mccif_buf_sz_bytes,
+				dis_bw,
+				error
+			),
+			fixed_point_div(
+				term1,
+				emc_freq_mhz,
+				error
+			),
+			error
+		);
 	lat_allow_usec = fixed_point_min((*la_bw_up_bnd_usec),
-			mc_settings_ptr->max_lat_all_usec);
+		mc_settings_ptr->max_lat_all_usec,
+		error);
 
 	lat_allow_ticks =
 		fixed_point_div(lat_allow_usec,
-				fixed_point_div(
-					mc_settings_ptr->ns_per_tick,
-					FIX_PT(1000, 0)
-					)
-				);
+			fixed_point_div(
+				mc_settings_ptr->ns_per_tick,
+				FIX_PT(1000, 0, error),
+				error),
+			error
+		);
 
-	if (fixed_point_gt(lat_allow_ticks, FIX_PT(255, 0)))
-		lat_allow_ticks = FIX_PT(255, 0);
+	if (fixed_point_gt(lat_allow_ticks, FIX_PT(255, 0, error), error))
+		lat_allow_ticks = FIX_PT(255, 0, error);
 
-	(*disp_la) = fixed_point_ceil(lat_allow_ticks);
-	(*drain_time_usec) = calc_drain_time(emc_freq_mhz, mc_settings_ptr);
+	(*disp_la) = fixed_point_ceil(lat_allow_ticks, error);
+	(*drain_time_usec) =
+		calc_drain_time(emc_freq_mhz, mc_settings_ptr, error);
 }
 
 static void dda_info_init(
-		struct dda_info *entry,
-		const char *name,
-		int ring,
-		enum tegra_iso_t iso_type,
-		unsigned int rate_reg_addr,
-		unsigned long mask,
-		struct fixed_point dda_div
-		)
+	struct dda_info *entry,
+	const char *name,
+	int ring,
+	enum tegra_iso_t iso_type,
+	unsigned int rate_reg_addr,
+	unsigned long mask,
+	struct fixed_point dda_div,
+	unsigned int *error
+)
 {
 	strcpy(entry->name, name);
 	entry->iso_type = iso_type;
@@ -666,39 +740,41 @@ static void dda_info_init(
 	entry->min = -1;
 	entry->max = -1;
 	entry->rate = 0;
-	entry->frac = FIX_PT(0, 0);
+	entry->frac = FIX_PT(0, 0, error);
 	entry->frac_valid = 0;
-	entry->bw = FIX_PT(0, 0);
+	entry->bw = FIX_PT(0, 0, error);
 }
 
 #define INIT_DDA(info_array, NAME, RING, ISO_TYPE, DDA_DIV) \
 	dda_info_init( \
-			&info_array[TEGRA_DDA_##NAME##_ID], \
-			__stringify(TEGRA_DDA_##NAME##_ID), \
-			RING, \
-			ISO_TYPE, \
-			MC_##NAME##_PTSA_RATE_0, \
-			MC_##NAME##_PTSA_RATE_0_PTSA_RATE_##NAME##_DEFAULT_MASK, \
-			DDA_DIV)
+		&info_array[TEGRA_DDA_##NAME##_ID], \
+		__stringify(TEGRA_DDA_##NAME##_ID), \
+		RING, \
+		ISO_TYPE, \
+		MC_##NAME##_PTSA_RATE_0, \
+		MC_##NAME##_PTSA_RATE_0_PTSA_RATE_##NAME##_DEFAULT_MASK, \
+		DDA_DIV, error)
 
 
 static void dda_info_array_init(
-		struct dda_info *inf_arr,
-		int info_array_size,
-		struct mc_settings_info *mc_set
-		)
+	struct dda_info *inf_arr,
+	int info_array_size,
+	struct mc_settings_info *mc_set,
+	unsigned int *error
+)
 {
 	int i;
 
 	for (i = 0; i < info_array_size; i++) {
 		dda_info_init(
-				&inf_arr[i],
-				"",
-				-1,
-				TEGRA_NISO,
-				0,
-				0xffff,
-				FIX_PT(0, 0));
+			&inf_arr[i],
+			"",
+			-1,
+			TEGRA_NISO,
+			0,
+			0xffff,
+			FIX_PT(0, 0, error),
+			error);
 	}
 
 	INIT_DDA(inf_arr, AONPC,        1, TEGRA_SISO, mc_set->hub_dda_div);
@@ -793,58 +869,62 @@ static void dda_info_array_init(
 #undef INIT_DDA
 
 static void update_new_dda_minmax_kern_init(
-		struct dda_info *dda_info_array,
-		struct mc_settings_info *mc_settings_ptr
-		) {
+	struct dda_info *dda_info_array,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error
+) {
 	int clientid;
 
 	for (clientid = 0; clientid < TEGRA_DDA_MAX_ID; clientid++) {
 		if (!mc_settings_ptr->ring2_dda_en &&
-				dda_info_array[clientid].ring == 2) {
+			dda_info_array[clientid].ring == 2) {
 			dda_info_array[clientid].min =
 				dda_info_array[clientid].max = -1;
 		} else if (((mc_settings_ptr->vi_always_hp) &&
 					(clientid == TEGRA_DDA_VE_ID)) ||
-				(clientid == TEGRA_DDA_CIFLL_SISO_ID) ||
-				(clientid == TEGRA_DDA_SMMU_SMMU_ID)
-				) { /* VI always high priority since self limiting */
+				 (clientid == TEGRA_DDA_CIFLL_SISO_ID) ||
+				 (clientid == TEGRA_DDA_SMMU_SMMU_ID)
+			) { /* VI always high priority since self limiting */
 			dda_info_array[clientid].min = 1;
 			dda_info_array[clientid].max = 1;
 		} else if (dda_info_array[clientid].iso_type == TEGRA_HISO ||
-				(dda_info_array[clientid].iso_type == TEGRA_SISO &&
-				 !mc_settings_ptr->siso_hp_en &&
-				 dda_info_array[clientid].ring == 2) ||
-				(clientid == TEGRA_DDA_CIFLL_ISO_ID)
-				){
+			(dda_info_array[clientid].iso_type == TEGRA_SISO &&
+				!mc_settings_ptr->siso_hp_en &&
+				dda_info_array[clientid].ring == 2) ||
+			(clientid == TEGRA_DDA_CIFLL_ISO_ID)
+			){
 			int max_max = (1 << NV_MC_EMEM_PTSA_MINMAX_WIDTH) - 1;
 			dda_info_array[clientid].min = -5;
 			dda_info_array[clientid].max = max_max;
 		} else if (dda_info_array[clientid].iso_type == TEGRA_SISO &&
-				mc_settings_ptr->siso_hp_en &&
-				dda_info_array[clientid].ring == 2) {
+			mc_settings_ptr->siso_hp_en &&
+			dda_info_array[clientid].ring == 2) {
 			dda_info_array[clientid].min =
 				dda_info_array[clientid].max = 1;
 		} else if ((
-					(dda_info_array[clientid].iso_type == TEGRA_NISO) ||
-					(dda_info_array[clientid].iso_type == TEGRA_SISO &&
-					 dda_info_array[clientid].ring == 1) ||
-					(clientid == TEGRA_DDA_RING2_ID) ||
-					(clientid == TEGRA_DDA_CIFLL_NISO_ID) ||
-					(clientid == TEGRA_DDA_CIFLL_RING0X_ID)
-				   )
-				&& (clientid != TEGRA_DDA_MLL_MPCORER_ID)) {
+			(dda_info_array[clientid].iso_type == TEGRA_NISO) ||
+			(dda_info_array[clientid].iso_type == TEGRA_SISO &&
+			dda_info_array[clientid].ring == 1) ||
+			(clientid == TEGRA_DDA_RING2_ID) ||
+			(clientid == TEGRA_DDA_CIFLL_NISO_ID) ||
+			(clientid == TEGRA_DDA_CIFLL_RING0X_ID)
+			)
+			&& (clientid != TEGRA_DDA_MLL_MPCORER_ID)) {
 			dda_info_array[clientid].min = -2;
 			dda_info_array[clientid].max = 0;
-		} else {
-			BUG_ON(clientid != TEGRA_DDA_MLL_MPCORER_ID);
+		} else if (clientid != TEGRA_DDA_MLL_MPCORER_ID) {
+			pr_err("%s: ", __func__);
+			pr_err("clientid != TEGRA_DDA_MLL_MPCORER_ID\n");
+			(*error) |= 1;
+			WARN_ON(1);
 		}
 	}
 }
 
 static void update_new_dda_rate_frac_kern_init(
-		struct dda_info *dda_info_array,
-		struct mc_settings_info *mc_settings_ptr
-		)
+	struct dda_info *dda_info_array,
+	struct mc_settings_info *mc_settings_ptr
+)
 {
 	int clientid;
 
@@ -855,12 +935,12 @@ static void update_new_dda_rate_frac_kern_init(
 		int ring2_hp_siso;
 
 		iso_or_ring2_siso = ((iso_type == TEGRA_HISO) ||
-				((iso_type == TEGRA_SISO) &&
-				 !mc_settings_ptr->siso_hp_en &&
-				 (ring == 2))) ? 1 : 0;
+			((iso_type == TEGRA_SISO) &&
+			!mc_settings_ptr->siso_hp_en &&
+			(ring == 2))) ? 1 : 0;
 		ring2_hp_siso = ((iso_type == TEGRA_SISO) &&
-				mc_settings_ptr->siso_hp_en &&
-				(ring == 2)) ? 1 : 0;
+			mc_settings_ptr->siso_hp_en &&
+			(ring == 2)) ? 1 : 0;
 
 		if (!mc_settings_ptr->ring2_dda_en && (ring == 2)) {
 			dda_info_array[clientid].rate = 0;
@@ -890,7 +970,9 @@ static void update_new_dda_rate_frac_kern_init(
 	dda_info_array[TEGRA_DDA_CIFLL_RING0X_ID].rate = 1;
 }
 
-static enum tegra_dda_id convert_la2dda_id_for_dyn_ptsa(enum tegra_la_id la_id)
+static enum tegra_dda_id convert_la2dda_id_for_dyn_ptsa(
+	enum tegra_la_id la_id,
+	unsigned int *error)
 {
 	enum tegra_dda_id ret_dda_id = TEGRA_DDA_MAX_ID;
 
@@ -918,23 +1000,28 @@ static enum tegra_dda_id convert_la2dda_id_for_dyn_ptsa(enum tegra_la_id la_id)
 		ret_dda_id = TEGRA_DDA_VE_ID;
 		break;
 	default:
-		pr_err("Invalid LA ID: %u", la_id);
-		BUG_ON(1);
+	{
+		pr_err("%s: tegra_la_id %d not handled\n",
+			__func__, la_id);
+		(*error) |= 1;
+		WARN_ON(1);
+	}
 	}
 
 	return ret_dda_id;
 }
 
 /*
-   setupFreqRanges()
-   ====================================================================
-   This function is used to initialize the frequency ranges based on which DDA
-   programming is done.
-   ====================================================================
-   */
+  setupFreqRanges()
+  ====================================================================
+  This function is used to initialize the frequency ranges based on which DDA
+  programming is done.
+  ====================================================================
+*/
 static void setup_freq_ranges(
-		struct mc_settings_info *mc_settings_ptr
-		)
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error
+)
 {
 	struct fixed_point comparison_freq_thr_to_use;
 	struct fixed_point lo_freq;
@@ -943,9 +1030,12 @@ static void setup_freq_ranges(
 	/* below we need to use double MCEMCsameFreqThr */
 	comparison_freq_thr_to_use =
 		fixed_point_mult(
-				mc_settings_ptr->mc_emc_same_freq_thr,
-				FIX_PT(mc_settings_ptr->dram_to_emc_freq_ratio, 0)
-				);
+			mc_settings_ptr->mc_emc_same_freq_thr,
+			FIX_PT(mc_settings_ptr->dram_to_emc_freq_ratio,
+				0,
+				error),
+			error
+			);
 
 	mc_settings_ptr->freq_range.lo_freq =
 		mc_settings_ptr->lowest_dram_freq;
@@ -953,27 +1043,34 @@ static void setup_freq_ranges(
 		mc_settings_ptr->highest_dram_freq;
 	mc_settings_ptr->freq_range.hi_gd = mc_settings_ptr->max_gd;
 	lo_freq = fixed_point_lt(
-			comparison_freq_thr_to_use,
-			mc_settings_ptr->lowest_dram_freq
-			) ? fixed_point_div(
-				mc_settings_ptr->lowest_dram_freq,
-				FIX_PT(2, 0)
-				) : mc_settings_ptr->lowest_dram_freq;
+		comparison_freq_thr_to_use,
+		mc_settings_ptr->lowest_dram_freq,
+		error
+		) ? fixed_point_div(
+			mc_settings_ptr->lowest_dram_freq,
+			FIX_PT(2, 0, error),
+			error
+			) : mc_settings_ptr->lowest_dram_freq;
 	mc_settings_ptr->freq_range.lo_gd =
 		fixed_point_mult(
-				mc_settings_ptr->max_gd,
+			mc_settings_ptr->max_gd,
+			fixed_point_div(
+				lo_freq,
 				fixed_point_div(
-					lo_freq,
-					fixed_point_div(
-						mc_settings_ptr->highest_dram_freq,
-						FIX_PT(2, 0)
-						)
-					)
-				);
+					mc_settings_ptr->highest_dram_freq,
+					FIX_PT(2, 0, error),
+					error
+					),
+				error
+				),
+			error
+			);
 	mc_settings_ptr->freq_range.valid = 1;
 }
 
-static int get_bytes_per_dram_clk(enum tegra_dram_t dram_type)
+static int get_bytes_per_dram_clk(
+	enum tegra_dram_t dram_type,
+	unsigned int *error)
 {
 	int bytes_per_dram_clk = 0;
 
@@ -987,70 +1084,91 @@ static int get_bytes_per_dram_clk(enum tegra_dram_t dram_type)
 		bytes_per_dram_clk = 64;
 		break;
 	default:
-		BUG_ON(1);
+	{
+		pr_err("%s: tegra_dram_t %d not handled\n",
+			__func__, dram_type);
+		(*error) |= 1;
+		WARN_ON(1);
+	}
 	}
 
 	return bytes_per_dram_clk;
 }
 
 static struct fixed_point bw2fraction(
-		struct mc_settings_info *mc_settings_ptr,
-		struct fixed_point bw_mbps
-		)
+	struct mc_settings_info *mc_settings_ptr,
+	struct fixed_point bw_mbps,
+	unsigned int *error
+)
 {
 	struct fixed_point bw_at_lo_freq_mbps;
-	BUG_ON(mc_settings_ptr->freq_range.valid != 1);
+	if (mc_settings_ptr->freq_range.valid != 1) {
+		pr_err("%s: freq_range.valid not 1, but %d\n",
+			__func__, mc_settings_ptr->freq_range.valid);
+		(*error) |= 1;
+		WARN_ON(1);
+	}
 
 	bw_at_lo_freq_mbps =
 		fixed_point_mult(
-				mc_settings_ptr->freq_range.lo_freq,
-				FIX_PT(
-					get_bytes_per_dram_clk(mc_settings_ptr->dram_type),
-					0)
-				);
-	return fixed_point_mult(
-			fixed_point_div(
-				bw_mbps,
-				bw_at_lo_freq_mbps),
-			mc_settings_ptr->freq_range.lo_gd
+			mc_settings_ptr->freq_range.lo_freq,
+			FIX_PT(
+				get_bytes_per_dram_clk(
+					mc_settings_ptr->dram_type,
+					error),
+			0,
+			error),
+			error
 			);
+	return fixed_point_mult(
+		fixed_point_div(
+			bw_mbps,
+			bw_at_lo_freq_mbps,
+			error),
+		mc_settings_ptr->freq_range.lo_gd,
+		error
+		);
 }
 
 /*
-   Method fraction2dda()
-   =================================================================
-   Convert a floating point fraction into a DDA value
-   =================================================================
-   */
+  Method fraction2dda()
+  =================================================================
+  Convert a floating point fraction into a DDA value
+  =================================================================
+*/
 static unsigned int fraction2dda(
-		struct fixed_point fraction,
-		struct fixed_point div,
-		unsigned int mask,
-		int round_up_or_to_nearest)
+	struct fixed_point fraction,
+	struct fixed_point div,
+	unsigned int mask,
+	int round_up_or_to_nearest,
+	unsigned int *error)
 {
 	/* round_up_or_to_nearest determines whether the final calculated
-	   DDA rate is to be rounded up or to nearest. Using this input
-	   to the function we can enable rounding to nearest for NISO client
-	   DDA rates. Rounding up for all other cases to be conservative. */
+	 * DDA rate is to be rounded up or to nearest. Using this input
+	 * to the function we can enable rounding to nearest for NISO client
+	 * DDA rates. Rounding up for all other cases to be conservative.
+	 */
 	int i;
 	unsigned int dda = 0;
-	struct fixed_point f = fixed_point_div(fraction, div);
+	struct fixed_point f = fixed_point_div(fraction, div, error);
 
 	for (i = 0; i < NV_MC_EMEM_PTSA_RATE_WIDTH; i++) {
 		struct fixed_point r;
-		f = fixed_point_mult(f, FIX_PT(2, 0));
-		r = FIX_PT(fixed_point_to_int(f), 0);
-		dda = (dda << 1) | ((unsigned int)fixed_point_to_int(r));
-		f = fixed_point_sub(f, r);
+		f = fixed_point_mult(f, FIX_PT(2, 0, error), error);
+		r = FIX_PT(fixed_point_to_int(f, error), 0, error);
+		dda = (dda << 1) | ((unsigned int)fixed_point_to_int(r, error));
+		f = fixed_point_sub(f, r, error);
 	}
-	if (fixed_point_gt(f, FIX_PT(0, 0))) {
+	if (fixed_point_gt(f, FIX_PT(0, 0, error), error)) {
 		/* Do not round up if the calculated dda is at the mask
-		   value already, it will overflow*/
+		 * value already, it will overflow
+		 */
 		if (dda != mask) {
 			if (round_up_or_to_nearest == 1 ||
-					fixed_point_goet(f,
-						FIX_PT(0, 0x80000000) /* 0.5 */)
-					|| dda == 0) {
+				fixed_point_goet(f,
+					FIX_PT(0, 0x80000000, error) /* 0.5 */,
+					error)
+				|| dda == 0) {
 				dda++; /* to round up dda value */
 			}
 		}
@@ -1060,28 +1178,31 @@ static unsigned int fraction2dda(
 }
 
 static void update_new_dda_rate_frac_use_case(
-		struct dda_info *dda_info_array,
-		struct mc_settings_info *mc_settings_ptr,
-		int clientid,
-		struct fixed_point bw_mbps
-		)
+	struct dda_info *dda_info_array,
+	struct mc_settings_info *mc_settings_ptr,
+	int clientid,
+	struct fixed_point bw_mbps,
+	unsigned int *error
+)
 {
-	dda_info_array[clientid].frac = bw2fraction(mc_settings_ptr, bw_mbps);
+	dda_info_array[clientid].frac =
+		bw2fraction(mc_settings_ptr, bw_mbps, error);
 	dda_info_array[clientid].frac_valid = 1;
 	dda_info_array[clientid].rate =
 		fraction2dda(
-				dda_info_array[clientid].frac,
-				dda_info_array[clientid].dda_div,
-				dda_info_array[clientid].mask,
-				(dda_info_array[clientid].iso_type != TEGRA_NISO));
+			dda_info_array[clientid].frac,
+			dda_info_array[clientid].dda_div,
+			dda_info_array[clientid].mask,
+			(dda_info_array[clientid].iso_type != TEGRA_NISO),
+			error);
 }
 
 static void reg_info_init(
-		struct reg_info *entry,
-		const char *name,
-		unsigned int offset,
-		int dirty
-		)
+	struct reg_info *entry,
+	const char *name,
+	unsigned int offset,
+	int dirty
+)
 {
 	strcpy(entry->name, name);
 	entry->offset = offset;
@@ -1092,23 +1213,23 @@ static void reg_info_init(
 
 #define INIT_REG_INFO(info_array, NAME) \
 	reg_info_init( \
-			&info_array[TEGRA_##NAME##_ID], \
-			__stringify(NAME), \
-			NAME##_0, \
-			0)
+		&info_array[TEGRA_##NAME##_ID], \
+		__stringify(NAME), \
+		NAME##_0, \
+		0)
 
 static void mc_reg_info_array_init(
-		struct reg_info *inf_arr
-		)
+	struct reg_info *inf_arr
+)
 {
 	int i;
 
 	for (i = 0; i < TEGRA_KERN_INIT_MC_MAX_ID; i++) {
 		reg_info_init(
-				&inf_arr[i],
-				"",
-				0,
-				0);
+			&inf_arr[i],
+			"",
+			0,
+			0);
 	}
 
 	INIT_REG_INFO(inf_arr, MC_HUB2MCF_REQ_DDA_ENABLE);
@@ -1150,67 +1271,67 @@ static void mc_reg_info_array_init(
 		strcpy(reg_name, apert_name); \
 		strcat(reg_name, __stringify(_##NAME)); \
 		reg_info_init( \
-				&info_array[TEGRA_##NAME##_ID], \
-				reg_name, \
-				NAME##_0, \
-				0); \
+			&info_array[TEGRA_##NAME##_ID], \
+			reg_name, \
+			NAME##_0, \
+			0); \
 	} while (0)
 
 static void mssnvlink_reg_info_array_init(
-		struct reg_info *inf_arr,
-		const char *apert_name
-		)
+	struct reg_info *inf_arr,
+	const char *apert_name
+)
 {
 	int i;
 	char reg_name[MAX_TEGRA_MC_REG_NAME_SIZE];
 
 	for (i = 0; i < TEGRA_KERN_INIT_MSSNVLINK_MAX_ID; i++) {
 		reg_info_init(
-				&inf_arr[i],
-				"",
-				0,
-				0);
+			&inf_arr[i],
+			"",
+			0,
+			0);
 	}
 
 	INIT_MSSNVLINK_REG_INFO(inf_arr, MSSNVLINK_MASTER_MCF_DDA);
 }
 
 static void all_reg_info_array_init(
-		struct reg_info *mc_inf_arr,
-		struct reg_info *mssnvl1_inf_arr,
-		struct reg_info *mssnvl2_inf_arr,
-		struct reg_info *mssnvl3_inf_arr,
-		struct reg_info *mssnvl4_inf_arr
-		)
+	struct reg_info *mc_inf_arr,
+	struct reg_info *mssnvl1_inf_arr,
+	struct reg_info *mssnvl2_inf_arr,
+	struct reg_info *mssnvl3_inf_arr,
+	struct reg_info *mssnvl4_inf_arr
+)
 {
 	mc_reg_info_array_init(
-			mc_inf_arr);
+	mc_inf_arr);
 	mssnvlink_reg_info_array_init(
-			mssnvl1_inf_arr,
-			"NV_ADDRESS_MAP_MSS_NVLINK_1_BASE");
+	mssnvl1_inf_arr,
+		"NV_ADDRESS_MAP_MSS_NVLINK_1_BASE");
 	mssnvlink_reg_info_array_init(
-			mssnvl2_inf_arr,
-			"NV_ADDRESS_MAP_MSS_NVLINK_2_BASE");
+	mssnvl2_inf_arr,
+		"NV_ADDRESS_MAP_MSS_NVLINK_2_BASE");
 	mssnvlink_reg_info_array_init(
-			mssnvl3_inf_arr,
-			"NV_ADDRESS_MAP_MSS_NVLINK_3_BASE");
+	mssnvl3_inf_arr,
+		"NV_ADDRESS_MAP_MSS_NVLINK_3_BASE");
 	mssnvlink_reg_info_array_init(
-			mssnvl4_inf_arr,
-			"NV_ADDRESS_MAP_MSS_NVLINK_4_BASE");
+	mssnvl4_inf_arr,
+		"NV_ADDRESS_MAP_MSS_NVLINK_4_BASE");
 }
 
 static void mcpcie_reg_info_array_init(
-		struct reg_info *inf_arr
-		)
+	struct reg_info *inf_arr
+)
 {
 	int i;
 
 	for (i = 0; i < TEGRA_KERN_INIT_MCPCIE_MAX_ID; i++) {
 		reg_info_init(
-				&inf_arr[i],
-				"",
-				0,
-				0);
+			&inf_arr[i],
+			"",
+			0,
+			0);
 	}
 
 	INIT_REG_INFO(inf_arr, MC_PCFIFO_CLIENT_CONFIG6);
@@ -1222,72 +1343,72 @@ static void mcpcie_reg_info_array_init(
 #undef INIT_REG_INFO
 
 static unsigned int reg_info_reg_rd(
-		struct reg_info *inf_arr,
-		unsigned int addr
-		)
+	struct reg_info *inf_arr,
+	unsigned int addr
+)
 {
 	return inf_arr[addr].val;
 }
 
 static void reg_info_reg_wr(
-		struct reg_info *inf_arr,
-		unsigned int addr,
-		unsigned int data
-		)
+	struct reg_info *inf_arr,
+	unsigned int addr,
+	unsigned int data
+)
 {
 	inf_arr[addr].val = data;
 	inf_arr[addr].dirty = 1;
 }
 
 static void write_mcf_dda_perf_regs_kern_init(
-		struct mc_settings_info *mc_settings_ptr,
-		struct reg_info *mc_inf_arr,
-		struct reg_info *mssnvl1_inf_arr,
-		struct reg_info *mssnvl2_inf_arr,
-		struct reg_info *mssnvl3_inf_arr,
-		struct reg_info *mssnvl4_inf_arr
-		)
+	struct mc_settings_info *mc_settings_ptr,
+	struct reg_info *mc_inf_arr,
+	struct reg_info *mssnvl1_inf_arr,
+	struct reg_info *mssnvl2_inf_arr,
+	struct reg_info *mssnvl3_inf_arr,
+	struct reg_info *mssnvl4_inf_arr
+)
 {
 	unsigned int data;
 
 	if ((mc_settings_ptr->hub2mcf_dda == 1) ||
-			((mc_settings_ptr->hub2mcf_dda == 2) &&
-			 ((mc_settings_ptr->dram_type == TEGRA_LP4_16CH) ||
-			  (mc_settings_ptr->dram_type == TEGRA_LP4X_16CH)))) {
+	   ((mc_settings_ptr->hub2mcf_dda == 2) &&
+		((mc_settings_ptr->dram_type == TEGRA_LP4_16CH) ||
+		(mc_settings_ptr->dram_type == TEGRA_LP4X_16CH)))) {
 		data = reg_info_reg_rd(mc_inf_arr,
-				TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID);
+			TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID);
 		data = NV_FLD_SET_DRF_DEF(MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUB_DDA_ENABLE,
-				ENABLED,
-				data);
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUB_DDA_ENABLE,
+			ENABLED,
+			data);
 		data = NV_FLD_SET_DRF_DEF(MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUBORD_DDA_ENABLE,
-				ENABLED,
-				data);
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUBORD_DDA_ENABLE,
+			ENABLED,
+			data);
 		data = NV_FLD_SET_DRF_DEF(MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUBINT_DDA_ENABLE,
-				ENABLED,
-				data);
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUBINT_DDA_ENABLE,
+			ENABLED,
+			data);
 		reg_info_reg_wr(mc_inf_arr,
-				TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID,
-				data);
+			TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID,
+			data);
 
 #define WRITE_HUB2MCF_DDA(VAR_NAME, REG_NAME) \
-		do { \
-			reg_info_reg_wr(mc_inf_arr, \
-					TEGRA_MC_##REG_NAME##_HUB2MCF_REQ_DDA_RATE_ID, \
-					mc_settings_ptr->hub2mcf_dda_rate & \
-					MC_##REG_NAME##_HUB2MCF_REQ_DDA_RATE_0_## \
-					REG_NAME##_DDA_RATE_DEFAULT_MASK); \
-			reg_info_reg_wr(mc_inf_arr, \
-					TEGRA_MC_##REG_NAME##_HUB2MCF_REQ_DDA_MAX_ID, \
-					mc_settings_ptr->hub2mcf_dda_max & \
-					MC_##REG_NAME##_HUB2MCF_REQ_DDA_MAX_0_## \
-					REG_NAME##_DDA_MAX_DEFAULT_MASK); \
-		} while (0)
+	do { \
+		reg_info_reg_wr(mc_inf_arr, \
+			TEGRA_MC_##REG_NAME##_HUB2MCF_REQ_DDA_RATE_ID, \
+			mc_settings_ptr->hub2mcf_dda_rate & \
+			MC_##REG_NAME##_HUB2MCF_REQ_DDA_RATE_0_## \
+			REG_NAME##_DDA_RATE_DEFAULT_MASK); \
+		reg_info_reg_wr(mc_inf_arr, \
+			TEGRA_MC_##REG_NAME##_HUB2MCF_REQ_DDA_MAX_ID, \
+			mc_settings_ptr->hub2mcf_dda_max & \
+			MC_##REG_NAME##_HUB2MCF_REQ_DDA_MAX_0_## \
+			REG_NAME##_DDA_MAX_DEFAULT_MASK); \
+	} while (0)
 
 		WRITE_HUB2MCF_DDA(hub, HUB);
 		WRITE_HUB2MCF_DDA(hubord, HUBORD);
@@ -1296,64 +1417,64 @@ static void write_mcf_dda_perf_regs_kern_init(
 #undef WRITE_HUB2MCF_DDA
 	} else {
 		data = reg_info_reg_rd(
-				mc_inf_arr,
-				TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID);
+			mc_inf_arr,
+			TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID);
 		data = NV_FLD_SET_DRF_DEF(
-				MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUB_DDA_ENABLE,
-				DISABLED,
-				data);
+			MC,
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUB_DDA_ENABLE,
+			DISABLED,
+			data);
 		data = NV_FLD_SET_DRF_DEF(
-				MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUBORD_DDA_ENABLE,
-				DISABLED,
-				data);
+			MC,
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUBORD_DDA_ENABLE,
+			DISABLED,
+			data);
 		data = NV_FLD_SET_DRF_DEF(
-				MC,
-				HUB2MCF_REQ_DDA_ENABLE,
-				HUBINT_DDA_ENABLE,
-				DISABLED,
-				data);
+			MC,
+			HUB2MCF_REQ_DDA_ENABLE,
+			HUBINT_DDA_ENABLE,
+			DISABLED,
+			data);
 		reg_info_reg_wr(
-				mc_inf_arr,
-				TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID,
-				data);
+			mc_inf_arr,
+			TEGRA_MC_HUB2MCF_REQ_DDA_ENABLE_ID,
+			data);
 	}
 
 	if ((mc_settings_ptr->igpu_mcf_dda == 1) ||
-			((mc_settings_ptr->igpu_mcf_dda == 2) &&
-			 ((mc_settings_ptr->dram_type == TEGRA_LP4_16CH) ||
-			  (mc_settings_ptr->dram_type == TEGRA_LP4X_16CH)))) {
+	   ((mc_settings_ptr->igpu_mcf_dda == 2) &&
+		((mc_settings_ptr->dram_type == TEGRA_LP4_16CH) ||
+		(mc_settings_ptr->dram_type == TEGRA_LP4X_16CH)))) {
 #define WRITE_MSSNVLINK_MCF_DDA(NVL_NUM) \
-		do { \
-			data = reg_info_reg_rd( \
-					mssnvl##NVL_NUM##_inf_arr, \
-					TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID); \
-			data = NV_FLD_SET_DRF_DEF( \
-					MSSNVLINK, \
-					MASTER_MCF_DDA, \
-					ENBL, \
-					ENABLE, \
-					data); \
-			data = NV_FLD_SET_DRF_NUM( \
-					MSSNVLINK, \
-					MASTER_MCF_DDA, \
-					RATE, \
-					mc_settings_ptr->mssnvlink_mcf_igpu_dda_rate, \
-					data); \
-			data = NV_FLD_SET_DRF_NUM( \
-					MSSNVLINK, \
-					MASTER_MCF_DDA, \
-					MAX, \
-					mc_settings_ptr->mssnvlink_mcf_igpu_dda_max, \
-					data); \
-			reg_info_reg_wr( \
-					mssnvl##NVL_NUM##_inf_arr, \
-					TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID, \
-					data); \
-		} while (0)
+	do { \
+		data = reg_info_reg_rd( \
+			mssnvl##NVL_NUM##_inf_arr, \
+			TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID); \
+		data = NV_FLD_SET_DRF_DEF( \
+			MSSNVLINK, \
+			MASTER_MCF_DDA, \
+			ENBL, \
+			ENABLE, \
+			data); \
+		data = NV_FLD_SET_DRF_NUM( \
+			MSSNVLINK, \
+			MASTER_MCF_DDA, \
+			RATE, \
+			mc_settings_ptr->mssnvlink_mcf_igpu_dda_rate, \
+			data); \
+		data = NV_FLD_SET_DRF_NUM( \
+			MSSNVLINK, \
+			MASTER_MCF_DDA, \
+			MAX, \
+			mc_settings_ptr->mssnvlink_mcf_igpu_dda_max, \
+			data); \
+		reg_info_reg_wr( \
+			mssnvl##NVL_NUM##_inf_arr, \
+			TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID, \
+			data); \
+	} while (0)
 
 		WRITE_MSSNVLINK_MCF_DDA(1);
 		WRITE_MSSNVLINK_MCF_DDA(2);
@@ -1362,21 +1483,21 @@ static void write_mcf_dda_perf_regs_kern_init(
 #undef WRITE_MSSNVLINK_MCF_DDA
 	} else {
 #define DISABLE_MSSNVLINK_MCF_DDA(NVL_NUM) \
-		do { \
-			data = reg_info_reg_rd( \
-					mssnvl##NVL_NUM##_inf_arr, \
-					TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID); \
-			data = NV_FLD_SET_DRF_DEF( \
-					MSSNVLINK, \
-					MASTER_MCF_DDA, \
-					ENBL, \
-					DISABLE, \
-					data); \
-			reg_info_reg_wr( \
-					mssnvl##NVL_NUM##_inf_arr, \
-					TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID, \
-					data); \
-		} while (0)
+	do { \
+		data = reg_info_reg_rd( \
+			mssnvl##NVL_NUM##_inf_arr, \
+			TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID); \
+		data = NV_FLD_SET_DRF_DEF( \
+			MSSNVLINK, \
+			MASTER_MCF_DDA, \
+			ENBL, \
+			DISABLE, \
+			data); \
+		reg_info_reg_wr( \
+			mssnvl##NVL_NUM##_inf_arr, \
+			TEGRA_MSSNVLINK_MASTER_MCF_DDA_ID, \
+			data); \
+	} while (0)
 
 		DISABLE_MSSNVLINK_MCF_DDA(1);
 		DISABLE_MSSNVLINK_MCF_DDA(2);
@@ -1387,14 +1508,14 @@ static void write_mcf_dda_perf_regs_kern_init(
 }
 
 static void disable_pcfifo_interlock(
-		struct reg_info *mc_inf_arr
-		)
+	struct reg_info *mc_inf_arr
+)
 {
 	unsigned int data = 0x0;
 #define DIS_PCFIFO_INT(cfg_num) \
 	reg_info_reg_wr(mc_inf_arr, \
-			TEGRA_MC_PCFIFO_CLIENT_CONFIG##cfg_num##_ID, \
-			data);
+		TEGRA_MC_PCFIFO_CLIENT_CONFIG##cfg_num##_ID, \
+		data);
 
 	DIS_PCFIFO_INT(0);
 	DIS_PCFIFO_INT(1);
@@ -1407,45 +1528,45 @@ static void disable_pcfifo_interlock(
 }
 
 static void wr_pcfifo_interlock_perf_regs(
-		struct reg_info *mc_inf_arr
-		)
+	struct reg_info *mc_inf_arr
+)
 {
 	unsigned int data;
 
 	data = 0;
 	data = NV_FLD_SET_DRF_DEF(
-			MC,
-			PCFIFO_CLIENT_CONFIG2,
-			PCFIFO_XUSB_DEVW_ORDERED_CLIENT,
-			ORDERED,
-			data);
+		MC,
+		PCFIFO_CLIENT_CONFIG2,
+		PCFIFO_XUSB_DEVW_ORDERED_CLIENT,
+		ORDERED,
+		data);
 	reg_info_reg_wr(
-			mc_inf_arr,
-			TEGRA_MC_PCFIFO_CLIENT_CONFIG2_ID,
-			data);
+		mc_inf_arr,
+		TEGRA_MC_PCFIFO_CLIENT_CONFIG2_ID,
+		data);
 
 	data = 0;
 	data = NV_FLD_SET_DRF_DEF(
-			MC,
-			PCFIFO_CLIENT_CONFIG1,
-			PCFIFO_HDAW_ORDERED_CLIENT,
-			ORDERED,
-			data);
+		MC,
+		PCFIFO_CLIENT_CONFIG1,
+		PCFIFO_HDAW_ORDERED_CLIENT,
+		ORDERED,
+		data);
 	data = NV_FLD_SET_DRF_DEF(
-			MC,
-			PCFIFO_CLIENT_CONFIG1,
-			PCFIFO_SATAW_ORDERED_CLIENT,
-			ORDERED,
-			data);
+		MC,
+		PCFIFO_CLIENT_CONFIG1,
+		PCFIFO_SATAW_ORDERED_CLIENT,
+		ORDERED,
+		data);
 	reg_info_reg_wr(
-			mc_inf_arr,
-			TEGRA_MC_PCFIFO_CLIENT_CONFIG1_ID,
-			data);
+		mc_inf_arr,
+		TEGRA_MC_PCFIFO_CLIENT_CONFIG1_ID,
+		data);
 }
 
 static void wr_ord_perf_regs(
-		struct reg_info *mc_inf_arr
-		)
+	struct reg_info *mc_inf_arr
+)
 {
 	unsigned int data = 0;
 
@@ -1489,36 +1610,36 @@ static void wr_ord_perf_regs(
 }
 
 static void wr_ord_id_perf_regs(
-		struct reg_info *mc_inf_arr
-		)
+	struct reg_info *mc_inf_arr
+)
 {
 	unsigned int data;
 
 	data = reg_info_reg_rd(mc_inf_arr,
-			TEGRA_MC_CLIENT_ORDER_ID_9_ID);
+		TEGRA_MC_CLIENT_ORDER_ID_9_ID);
 	data = NV_FLD_SET_DRF_DEF(MC, CLIENT_ORDER_ID_9,
-			XUSB_HOSTW_ORDER_ID, ORDER_ID3, data);
+		XUSB_HOSTW_ORDER_ID, ORDER_ID3, data);
 	reg_info_reg_wr(mc_inf_arr,
-			TEGRA_MC_CLIENT_ORDER_ID_9_ID, data);
+		TEGRA_MC_CLIENT_ORDER_ID_9_ID, data);
 
 	data = reg_info_reg_rd(mc_inf_arr,
-			TEGRA_MC_CLIENT_ORDER_ID_28_ID);
+		TEGRA_MC_CLIENT_ORDER_ID_28_ID);
 	data = NV_FLD_SET_DRF_DEF(MC, CLIENT_ORDER_ID_28,
-			PCIE4W_ORDER_ID, ORDER_ID3, data);
+		PCIE4W_ORDER_ID, ORDER_ID3, data);
 	data = NV_FLD_SET_DRF_DEF(MC, CLIENT_ORDER_ID_28,
-			PCIE5W_ORDER_ID, ORDER_ID1, data);
+		PCIE5W_ORDER_ID, ORDER_ID1, data);
 	reg_info_reg_wr(mc_inf_arr,
-			TEGRA_MC_CLIENT_ORDER_ID_28_ID, data);
+		TEGRA_MC_CLIENT_ORDER_ID_28_ID, data);
 }
 
 static void write_perf_regs_kern_init(
-		struct mc_settings_info *mc_settings_ptr,
-		struct reg_info *mc_inf_arr,
-		struct reg_info *mssnvl1_inf_arr,
-		struct reg_info *mssnvl2_inf_arr,
-		struct reg_info *mssnvl3_inf_arr,
-		struct reg_info *mssnvl4_inf_arr
-		)
+	struct mc_settings_info *mc_settings_ptr,
+	struct reg_info *mc_inf_arr,
+	struct reg_info *mssnvl1_inf_arr,
+	struct reg_info *mssnvl2_inf_arr,
+	struct reg_info *mssnvl3_inf_arr,
+	struct reg_info *mssnvl4_inf_arr
+)
 {
 	unsigned int data;
 
@@ -1526,46 +1647,46 @@ static void write_perf_regs_kern_init(
 		return;
 
 	write_mcf_dda_perf_regs_kern_init(
-			mc_settings_ptr,
-			mc_inf_arr,
-			mssnvl1_inf_arr,
-			mssnvl2_inf_arr,
-			mssnvl3_inf_arr,
-			mssnvl4_inf_arr
-			);
+		mc_settings_ptr,
+	mc_inf_arr,
+	mssnvl1_inf_arr,
+	mssnvl2_inf_arr,
+	mssnvl3_inf_arr,
+	mssnvl4_inf_arr
+		);
 
 	/* Setting GMMU misses to high priority [Bug#200288764] */
 	data = 0x4;
 	reg_info_reg_wr(mc_inf_arr,
-			TEGRA_MC_CIFLL_NVLRHP_LATENCY_ALLOWANCE_ID, data);
+		TEGRA_MC_CIFLL_NVLRHP_LATENCY_ALLOWANCE_ID, data);
 
 	if (mc_settings_ptr->tsa_arb_fix) {
 		data = 0;
 		data = NV_FLD_SET_DRF_DEF(MC,
-				CONFIG_TSA_SINGLE_ARB_ENABLE,
-				SINGLE_ARB_ENABLE, ENABLE, data);
+			CONFIG_TSA_SINGLE_ARB_ENABLE,
+			SINGLE_ARB_ENABLE, ENABLE, data);
 		reg_info_reg_wr(mc_inf_arr,
-				TEGRA_MC_CONFIG_TSA_SINGLE_ARB_ENABLE_ID, data);
+			TEGRA_MC_CONFIG_TSA_SINGLE_ARB_ENABLE_ID, data);
 	}
 
 	/* Setup ISO holdoff clients.
-	   By default, ISO holdoff for DISPLAY is always "on".
-	   ISO holdoff can be turned off completely by setting
-	   the "override" bit. */
+	 * By default, ISO holdoff for DISPLAY is always "on".
+	 * ISO holdoff can be turned off completely by setting
+	 * the "override" bit.
+	 */
 	data = reg_info_reg_rd(mc_inf_arr, TEGRA_MC_EMEM_ARB_OVERRIDE_ID);
 	if (mc_settings_ptr->iso_holdoff_override) {
 		data = NV_FLD_SET_DRF_DEF(MC, EMEM_ARB_OVERRIDE,
-				TS2AA_HOLDOFF_OVERRIDE, ENABLE, data);
+			TS2AA_HOLDOFF_OVERRIDE, ENABLE, data);
 	} else {
 		data = NV_FLD_SET_DRF_DEF(MC, EMEM_ARB_OVERRIDE,
-				TS2AA_HOLDOFF_OVERRIDE, DISABLE, data);
+			TS2AA_HOLDOFF_OVERRIDE, DISABLE, data);
 	}
 	reg_info_reg_wr(mc_inf_arr, TEGRA_MC_EMEM_ARB_OVERRIDE_ID, data);
 
 	disable_pcfifo_interlock(mc_inf_arr);
 	if (mc_settings_ptr->pcfifo_interlock)
 		wr_pcfifo_interlock_perf_regs(mc_inf_arr);
-
 
 	if (mc_settings_ptr->en_ordering)
 		wr_ord_perf_regs(mc_inf_arr);
@@ -1576,95 +1697,96 @@ static void write_perf_regs_kern_init(
 	data = reg_info_reg_rd(mc_inf_arr, TEGRA_MC_FREE_BANK_QUEUES_ID);
 	if (mc_settings_ptr->hp_cpu_throttle_en) {
 		data = NV_FLD_SET_DRF_DEF(MC, FREE_BANK_QUEUES,
-				HP_CPU_THROTTLE_EN, ENABLE, data);
+			HP_CPU_THROTTLE_EN, ENABLE, data);
 	} else {
 		data = NV_FLD_SET_DRF_DEF(MC, FREE_BANK_QUEUES,
-				HP_CPU_THROTTLE_EN, DISABLE, data);
+			HP_CPU_THROTTLE_EN, DISABLE, data);
 	}
 	reg_info_reg_wr(mc_inf_arr, TEGRA_MC_FREE_BANK_QUEUES_ID, data);
 
 	if (mc_settings_ptr->override_isoptc_hub_mapping) {
 		data = reg_info_reg_rd(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE_ID);
+			TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE_ID);
 		data = NV_FLD_SET_DRF_DEF(MC,
-				MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE,
-				PTC22H_REQ_MAPPING_OVERRIDE, ENABLE, data);
+			MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE,
+			PTC22H_REQ_MAPPING_OVERRIDE, ENABLE, data);
 		reg_info_reg_wr(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE_ID, data);
+			TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_OVERRIDE_ID, data);
 
 		data = reg_info_reg_rd(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_ID);
+			TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, MC_SMMU_PTC2H_REQ_MAPPING,
-				PTC22H_REQ_MAPPING,
-				mc_settings_ptr->isoptc_hub_num, data);
+			PTC22H_REQ_MAPPING,
+			mc_settings_ptr->isoptc_hub_num, data);
 		reg_info_reg_wr(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_ID, data);
+			TEGRA_MC_MC_SMMU_PTC2H_REQ_MAPPING_ID, data);
 	}
 
 	if (mc_settings_ptr->override_hub_vcarb_type) {
 		data = reg_info_reg_rd(mc_inf_arr, TEGRA_MC_HUB_VC_ARB_SEL_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, HUB_VC_ARB_SEL, VC_ARB_TYPE,
-				mc_settings_ptr->hub_vcarb_type, data);
+			mc_settings_ptr->hub_vcarb_type, data);
 		reg_info_reg_wr(mc_inf_arr, TEGRA_MC_HUB_VC_ARB_SEL_ID, data);
 	}
 
 	if (mc_settings_ptr->override_hub_vcarb_wt) {
 		data = reg_info_reg_rd(mc_inf_arr, TEGRA_MC_HUB_VC_ARB_SEL_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, HUB_VC_ARB_SEL, NISO_WT,
-				mc_settings_ptr->hub_vcarb_niso_wt, data);
+			mc_settings_ptr->hub_vcarb_niso_wt, data);
 		data = NV_FLD_SET_DRF_NUM(MC, HUB_VC_ARB_SEL, SISO_WT,
-				mc_settings_ptr->hub_vcarb_siso_wt, data);
+			mc_settings_ptr->hub_vcarb_siso_wt, data);
 		data = NV_FLD_SET_DRF_NUM(MC, HUB_VC_ARB_SEL, ISO_WT,
-				mc_settings_ptr->hub_vcarb_iso_wt, data);
+			mc_settings_ptr->hub_vcarb_iso_wt, data);
 		reg_info_reg_wr(mc_inf_arr, TEGRA_MC_HUB_VC_ARB_SEL_ID, data);
 	}
 
 	if (mc_settings_ptr->override_iso_tbu_cchk_en_ctrl) {
 		data = reg_info_reg_rd(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL_ID);
+			TEGRA_MC_MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL_ID);
 		data = NV_FLD_SET_DRF_NUM(MC,
-				MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL,
-				ISO_TBU_CCHK_EN_CTRL,
-				mc_settings_ptr->iso_tbu_cchk_en_ctrl, data);
+			MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL,
+			ISO_TBU_CCHK_EN_CTRL,
+			mc_settings_ptr->iso_tbu_cchk_en_ctrl, data);
 		reg_info_reg_wr(mc_inf_arr,
-				TEGRA_MC_MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL_ID, data);
+			TEGRA_MC_MC_SMMU_ISO_TBU_CCHK_REQ_PRI_CTRL_ID, data);
 	}
+
 }
 
 #undef INIT_MSSNVLINK_REG_INFO
 
 static void set_pcie1_ord_id(
-		struct reg_info *mcpcie_inf_arr,
-		struct mc_settings_info *mc_settings_ptr,
-		int ordered,
-		int id)
+	struct reg_info *mcpcie_inf_arr,
+	struct mc_settings_info *mc_settings_ptr,
+	int ordered,
+	int id)
 {
 	unsigned int data;
 
 	if (mc_settings_ptr->pcfifo_interlock) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
 		if (ordered) {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE1W_ORDERED_CLIENT,
-					ORDERED, data);
+				PCFIFO_PCIE1W_ORDERED_CLIENT,
+				ORDERED, data);
 		} else {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE1W_ORDERED_CLIENT,
-					UNORDERED, data);
+				PCFIFO_PCIE1W_ORDERED_CLIENT,
+				UNORDERED, data);
 		}
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
 	}
 
 	if (mc_settings_ptr->set_order_id) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, CLIENT_ORDER_ID_27,
-				PCIE1W_ORDER_ID,
-				id, data);
+			PCIE1W_ORDER_ID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
 	}
 
 	if (mc_settings_ptr->en_ordering) {
@@ -1690,37 +1812,37 @@ static void set_pcie1_ord_id(
 }
 
 static void set_pcie2_ord_id(
-		struct reg_info *mcpcie_inf_arr,
-		struct mc_settings_info *mc_settings_ptr,
-		int ordered,
-		int id)
+	struct reg_info *mcpcie_inf_arr,
+	struct mc_settings_info *mc_settings_ptr,
+	int ordered,
+	int id)
 {
 	unsigned int data;
 
 	if (mc_settings_ptr->pcfifo_interlock) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
 		if (ordered) {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE2AW_ORDERED_CLIENT,
-					ORDERED, data);
+				PCFIFO_PCIE2AW_ORDERED_CLIENT,
+				ORDERED, data);
 		} else {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE2AW_ORDERED_CLIENT,
-					UNORDERED, data);
+				PCFIFO_PCIE2AW_ORDERED_CLIENT,
+				UNORDERED, data);
 		}
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
 	}
 
 	if (mc_settings_ptr->set_order_id) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, CLIENT_ORDER_ID_27,
-				PCIE2AW_ORDER_ID,
-				id, data);
+			PCIE2AW_ORDER_ID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
 	}
 
 	if (mc_settings_ptr->en_ordering) {
@@ -1747,37 +1869,37 @@ static void set_pcie2_ord_id(
 }
 
 static void set_pcie3_ord_id(
-		struct reg_info *mcpcie_inf_arr,
-		struct mc_settings_info *mc_settings_ptr,
-		int ordered,
-		int id)
+	struct reg_info *mcpcie_inf_arr,
+	struct mc_settings_info *mc_settings_ptr,
+	int ordered,
+	int id)
 {
 	unsigned int data;
 
 	if (mc_settings_ptr->pcfifo_interlock) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID);
 		if (ordered) {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE3W_ORDERED_CLIENT,
-					ORDERED, data);
+				PCFIFO_PCIE3W_ORDERED_CLIENT,
+				ORDERED, data);
 		} else {
 			data = NV_FLD_SET_DRF_DEF(MC, PCFIFO_CLIENT_CONFIG6,
-					PCFIFO_PCIE3W_ORDERED_CLIENT,
-					UNORDERED, data);
+				PCFIFO_PCIE3W_ORDERED_CLIENT,
+				UNORDERED, data);
 		}
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
+			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID, data);
 	}
 
 	if (mc_settings_ptr->set_order_id) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, CLIENT_ORDER_ID_27,
-				PCIE3W_ORDER_ID,
-				id, data);
+			PCIE3W_ORDER_ID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
 	}
 
 	if (mc_settings_ptr->en_ordering) {
@@ -1803,24 +1925,25 @@ static void set_pcie3_ord_id(
 }
 
 static void update_ord_ids(
-		struct reg_info *mcpcie_inf_arr,
-		struct mc_settings_info *mc_settings_ptr,
-		unsigned int pcie_xbar_cfg)
+	struct reg_info *mcpcie_inf_arr,
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int pcie_xbar_cfg,
+	unsigned int *error)
 {
 	unsigned int data;
 
 	data = 0;
 	reg_info_reg_wr(mcpcie_inf_arr,
-			TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID,
-			data);
+		TEGRA_MC_PCFIFO_CLIENT_CONFIG6_ID,
+		data);
 
 	if (mc_settings_ptr->set_order_id) {
 		data = reg_info_reg_rd(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID);
 		data = NV_FLD_SET_DRF_DEF(MC, CLIENT_ORDER_ID_27,
-				PCIE0W_ORDER_ID, ORDER_ID2, data);
+			PCIE0W_ORDER_ID, ORDER_ID2, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
+			TEGRA_MC_CLIENT_ORDER_ID_27_ID, data);
 	}
 
 	switch (pcie_xbar_cfg) { /* PCIE_COMMON_APPL_COMMON_CONTROL_0 */
@@ -1950,7 +2073,12 @@ static void update_ord_ids(
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 3);
 		break;
 	default:
-		BUG_ON(1);
+	{
+		pr_err("%s: pcie_xbar_cfg %d not handled\n",
+			__func__, pcie_xbar_cfg);
+		(*error) |= 1;
+		WARN_ON(1);
+	}
 	}
 }
 

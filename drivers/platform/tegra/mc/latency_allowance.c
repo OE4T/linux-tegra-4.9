@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/moduleparam.h>
 #include <linux/seq_file.h>
@@ -176,7 +177,11 @@ void program_la(struct la_client_info *ci, int la)
 	u32 reg_read;
 	u32 reg_write;
 
-	BUG_ON(la > cs.la_max_value);
+	if (la > cs.la_max_value) {
+		pr_err("la > cs.la_max_value\n");
+		WARN_ON(1);
+		return;
+	}
 
 	spin_lock(&cs.lock);
 	reg_read = mc_readl(ci->reg_addr);
@@ -402,6 +407,7 @@ static __init int tegra_la_syscore_init(void)
 static int __init tegra_latency_allowance_init(void)
 {
 	unsigned int i;
+	int ret = 0;
 
 	init_chip_specific();
 
@@ -409,11 +415,17 @@ static int __init tegra_latency_allowance_init(void)
 		cs.id_to_index[cs.la_info_array[i].id] = i;
 
 	for (i = 0; i < cs.la_info_array_size; i++) {
-		if (cs.set_init_la)
-			cs.set_init_la(cs.la_info_array[i].id, 0);
-		else if (cs.la_info_array[i].init_la)
+		if (cs.set_init_la) {
+			ret = cs.set_init_la(cs.la_info_array[i].id, 0);
+			if (ret < 0) {
+				if (cs.la_cleanup)
+					cs.la_cleanup();
+				return -1;
+			}
+		} else if (cs.la_info_array[i].init_la) {
 			set_la(&cs.la_info_array[i],
 				cs.la_info_array[i].init_la);
+		}
 	}
 
 	if (cs.init_ptsa)
@@ -428,6 +440,13 @@ subsys_initcall(tegra_la_syscore_init);
 
 /* Must happen after MC init which is done by device tree. */
 fs_initcall(tegra_latency_allowance_init);
+
+static void __exit tegra_latency_allowance_exit(void)
+{
+	if (cs.la_cleanup)
+		cs.la_cleanup();
+}
+module_exit(tegra_latency_allowance_exit);
 
 /* Must be called after LA/PTSA init */
 void mc_pcie_init(void)

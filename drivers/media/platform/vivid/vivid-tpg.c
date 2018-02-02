@@ -562,7 +562,6 @@ static void color_to_ycbcr(struct tpg_data *tpg, int r, int g, int b,
 
 	switch (tpg->real_ycbcr_enc) {
 	case V4L2_YCBCR_ENC_601:
-	case V4L2_YCBCR_ENC_SYCC:
 		rgb2ycbcr(full ? bt601_full : bt601, r, g, b, y_offset, y, cb, cr);
 		break;
 	case V4L2_YCBCR_ENC_XV601:
@@ -678,7 +677,6 @@ static void ycbcr_to_color(struct tpg_data *tpg, int y, int cb, int cr,
 
 	switch (tpg->real_ycbcr_enc) {
 	case V4L2_YCBCR_ENC_601:
-	case V4L2_YCBCR_ENC_SYCC:
 		ycbcr2rgb(full ? bt601_full : bt601, y, cb, cr, y_offset, r, g, b);
 		break;
 	case V4L2_YCBCR_ENC_XV601:

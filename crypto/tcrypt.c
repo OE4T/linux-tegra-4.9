@@ -7,7 +7,7 @@
  * Copyright (c) 2002 James Morris <jmorris@intercode.com.au>
  * Copyright (c) 2002 Jean-Francois Dive <jef@linuxbe.org>
  * Copyright (c) 2007 Nokia Siemens Networks
- * Copyright (c) 2016-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation. All Rights Reserved.
  *
  * Updated RFC4106 AES-GCM testing.
  *    Authors: Aidan O'Mahony (aidan.o.mahony@intel.com)
@@ -929,8 +929,8 @@ out:
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE 16
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_MAX_OUTSTANDING_BLOCKS 1024
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS 5
-#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 300
-#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 300
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 390
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 390
 
 #define MAX_AESBUF_TIMEOUT_FACTOR	20
 #define WAIT_UDELAY			500

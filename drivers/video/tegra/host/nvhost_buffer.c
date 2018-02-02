@@ -21,6 +21,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
+#include <linux/cvnas.h>
 
 #include "dev.h"
 #include "nvhost_buffer.h"
@@ -129,9 +130,9 @@ static int nvhost_buffer_map(struct platform_device *pdev,
 				struct dma_buf *dmabuf,
 				struct nvhost_vm_buffer *vm)
 {
-	/* TBD: These should be queried from the CVNAS driver */
-	const dma_addr_t cvnas_begin = 0x50000000;
-	const dma_addr_t cvnas_end = cvnas_begin + 0x400000;
+
+	const dma_addr_t cvnas_begin = nvcvnas_get_cvsram_base();
+	const dma_addr_t cvnas_end = cvnas_begin + nvcvnas_get_cvsram_size();
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	dma_addr_t dma_addr;

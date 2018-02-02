@@ -377,6 +377,22 @@ int nvcvnas_idle(void)
 }
 EXPORT_SYMBOL(nvcvnas_idle);
 
+phys_addr_t nvcvnas_get_cvsram_base(void)
+{
+	struct cvnas_device *cvnas_dev = dev_get_drvdata(&cvnas_plat_dev->dev);
+
+	return cvnas_dev->cvsram_base;
+}
+EXPORT_SYMBOL(nvcvnas_get_cvsram_base);
+
+size_t nvcvnas_get_cvsram_size(void)
+{
+	struct cvnas_device *cvnas_dev = dev_get_drvdata(&cvnas_plat_dev->dev);
+
+	return cvnas_dev->cvsram_size;
+}
+EXPORT_SYMBOL(nvcvnas_get_cvsram_size);
+
 static int nvcvnas_probe(struct platform_device *pdev)
 {
 	struct cvnas_device *cvnas_dev;

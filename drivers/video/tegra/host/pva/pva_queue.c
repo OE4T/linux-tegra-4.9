@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/nvhost.h>
+#include <linux/cvnas.h>
 
 #include <trace/events/nvhost.h>
 
@@ -257,8 +258,8 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 
 static int pva_task_pin_mem(struct pva_submit_task *task)
 {
-	const u32 cvsram_base = 0x50000000;
-	const u32 cvsram_sz = 0x400000;
+	u32 cvsram_base = nvcvnas_get_cvsram_base();
+	u32 cvsram_sz = nvcvnas_get_cvsram_size();
 	int err;
 	int i;
 

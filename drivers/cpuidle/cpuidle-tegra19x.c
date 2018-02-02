@@ -105,7 +105,6 @@ static int t19x_cpu_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
-	uint64_t value;
 
 	if (tegra_platform_is_vdk()) {
 		asm volatile("wfi\n");
@@ -134,12 +133,6 @@ static int t19x_cpu_enter_state(
 		t19x_cpu_enter_c6(wake_time);
 	else
 		asm volatile("wfi\n");
-
-	/* Temp fix. Remove after proper fix available on MTS */
-	/* Reset the pmstate field of actlr_el1 after exit from a cpu power state */
-	asm volatile("mrs %0, actlr_el1" : "=r" (value));
-	value = value & 0xfffffffffffffff0;
-	asm volatile("msr actlr_el1, %0\n" :: "r" (value));
 
 	return index;
 }

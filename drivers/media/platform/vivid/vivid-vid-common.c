@@ -528,9 +528,9 @@ struct vivid_fmt vivid_formats[] = {
 /* There are 6 multiplanar formats in the list */
 #define VIVID_MPLANAR_FORMATS 6
 
-const struct vivid_fmt *vivid_get_format(struct vivid_dev *dev, u32 pixelformat)
+struct vivid_fmt *vivid_get_format(struct vivid_dev *dev, u32 pixelformat)
 {
-	const struct vivid_fmt *fmt;
+	struct vivid_fmt *fmt;
 	unsigned k;
 
 	for (k = 0; k < ARRAY_SIZE(vivid_formats); k++) {

@@ -19,6 +19,7 @@
 #include "common/tegra194-power-tree-p2888-0001-p2822-1000.dtsi"
 #include "t19x-common-platforms/tegra194-comms.dtsi"
 #include "common/tegra194-thermal-p2888.dtsi"
+#include "common/tegra194-p2888-0000-pcie-c5-plugin-manager.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -75,58 +76,6 @@
 		status = "okay";
 
 		nvidia,xbar = <1>;
-	};
-
-	pcie_c0_rp {
-		status = "okay";
-
-		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-		nvidia,disable-aspm-states = <0x8>;
-
-		phys = <&p2u_2>,
-		       <&p2u_3>,
-		       <&p2u_4>,
-		       <&p2u_5>;
-		phy-names = "pcie-p2u-0", "pcie-p2u-1", "pcie-p2u-2", "pcie-p2u-3";
-	};
-
-	pcie_c1_rp {
-		status = "okay";
-
-		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-
-		nvidia,max-speed = <1>;
-
-		phys = <&p2u_0>;
-		phy-names = "pcie-p2u-0";
-	};
-
-	pcie_c3_rp {
-		status = "okay";
-
-		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-
-		phys = <&p2u_7>;
-		phy-names = "pcie-p2u-0";
-	};
-
-	pcie_c5_rp {
-		status = "okay";
-
-		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-		nvidia,disable-aspm-states = <0x8>;
-
-		phys = <&p2u_12>,
-		       <&p2u_13>,
-		       <&p2u_14>,
-		       <&p2u_15>,
-		       <&p2u_16>,
-		       <&p2u_17>,
-		       <&p2u_18>,
-		       <&p2u_19>;
-
-		phy-names = "pcie-p2u-0", "pcie-p2u-1", "pcie-p2u-2", "pcie-p2u-3",
-					"pcie-p2u-4", "pcie-p2u-5", "pcie-p2u-6", "pcie-p2u-7";
 	};
 
 	pmc@c370000 {

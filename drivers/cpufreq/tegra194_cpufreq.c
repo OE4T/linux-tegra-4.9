@@ -44,7 +44,7 @@
 #define KHZ_TO_HZ		1000
 #define REF_CLK_MHZ		408 /* 408 MHz */
 #define US_DELAY		5000
-#define CPUFREQ_TBL_STEP_SIZE	4
+#define CPUFREQ_TBL_STEP_HZ	(50 * KHZ_TO_HZ * KHZ_TO_HZ)
 
 #define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = 0; \
 					cl < MAX_CLUSTERS; cl++)
@@ -823,7 +823,7 @@ static void __exit free_allocated_res_exit(void)
 
 static int __init init_freqtbls(struct device_node *dn)
 {
-	u16 freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
+	u16 freq_table_step_size;
 	u16 dt_freq_table_step_size = 0;
 	struct cpufreq_frequency_table *ftbl;
 	struct mrq_cpu_ndiv_limits_response *nltbl;
@@ -833,19 +833,9 @@ static int __init init_freqtbls(struct device_node *dn)
 
 	if (!of_property_read_u16(dn, "freq_table_step_size",
 					&dt_freq_table_step_size)) {
-		freq_table_step_size = dt_freq_table_step_size;
-		if (!freq_table_step_size) {
-			freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
-			pr_info("cpufreq: Invalid cpu ");
-			pr_info("freq_table_step_size:%d ",
-				dt_freq_table_step_size);
-			pr_info("setting to default value:%d\n",
-				freq_table_step_size);
-		}
+		if (!dt_freq_table_step_size)
+			pr_info("cpufreq: Invalid freq_table_step_size 0\n");
 	}
-
-	pr_debug("cpufreq: CPU frequency table step size: %d\n",
-			freq_table_step_size);
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		if (!tfreq_data.pcluster[cl].configured)
@@ -862,6 +852,28 @@ static int __init init_freqtbls(struct device_node *dn)
 			pr_warn("cluster %d has no ndiv_limits table\n", cl);
 			continue;
 		}
+
+		/*
+		 * Make sure frequency table step is a multiple of mdiv to match
+		 * vhint table granularity.
+		 */
+		freq_table_step_size = nltbl->mdiv * DIV_ROUND_UP(
+			CPUFREQ_TBL_STEP_HZ, nltbl->ref_clk_hz);
+
+		if (dt_freq_table_step_size) {
+			freq_table_step_size = nltbl->mdiv * DIV_ROUND_UP(
+				dt_freq_table_step_size, nltbl->mdiv);
+			if (freq_table_step_size != dt_freq_table_step_size) {
+				pr_info("cpufreq: cluster %d: table step:", cl);
+				pr_info(" dt: %u clipped: %u (to mdiv: %u)\n",
+					dt_freq_table_step_size,
+					freq_table_step_size,
+					nltbl->mdiv);
+			}
+		}
+		pr_debug("cpufreq: cluster %d: frequency table step size: %d\n",
+			 cl, freq_table_step_size);
+
 
 		delta_ndiv = nltbl->ndiv_max - nltbl->ndiv_min;
 		if (unlikely(delta_ndiv == 0))

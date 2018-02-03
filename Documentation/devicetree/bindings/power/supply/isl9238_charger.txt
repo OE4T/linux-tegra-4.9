@@ -9,24 +9,38 @@ Required nodes:
                Enabling voltage supply to vbus port(to enable otg mode)
 
 Optional properties:
-- isl,charge-current-limit: to set the charging current limit
+- isl,charge-current-limit-ma: to set the charging current limit in ma
 
-- isl,max-system-voltage: to set the maximum charging voltage or
+- isl,max-system-voltage-mv: to set the maximum charging voltage or
 			 system regualting voltage
 
-- isl,min-system-voltage: to set the minimum system voltage
+- isl,min-system-voltage-mv: to set the minimum system voltage
 
-- isl,input-voltage-limit: to set input voltage limit
+- isl,input-voltage-limit-mv: to set input voltage limit
 
-- isl,adapter-current-limit1: to se the adapter current limit 1
+- isl,adapter-current-limit1-ma: to se the adapter current limit 1
 
-- isl,adapter-current-limit2: to se the adapter current limit 2
+- isl,adapter-current-limit2-ma: to se the adapter current limit 2
 
 - isl,acprochot-threshold: assertion threshold for adapter overcurrent
 			   condition.
 
 - isl,dcprochot-threshold: assertion threshold for adapter overcurrent
 			   condition.
+
+- isl,trickle-chg-current-ma: to configure trickle charging current
+
+- isl,current-sense-res: current_sense_reister(rs1, rs2) to configure
+			 charging current limit
+			 charging current depends on sense resister value
+
+- isl,adapter-sense-res: adapter_sense_reister(rs1, rs2) to configure
+			 adapter current limit
+			 adapter current depends on sense resister value
+
+- isl,otg-voltage-mv: to set OTG mode output regulation voltage
+
+- isl,otg-current-ma: to set OTG mode curret
 
 - isl,disable-regulation: disable input volatge regulation, by default
 			  input voltage regulation enabled
@@ -39,12 +53,29 @@ Optional properties:
 
 - isl,enable-auto-charging: enable auto charging mode
 
+- isl,enable-battery-ovp: enables Battery OV (Overvoltage) fault protection
+			by default battery ov fault disabled
+
+- isl,enable-trigger-acok: enables trigger PROCHOT# with ACOK
+			by default acok trigger disabled
+
+- isl,enable-prochot-otg-current: enables trigger PROCHOT# with OTGCURRENT
+			by default otgcurrent trigger disabled
+
+- isl,disable-smbus-timer: disable smbus timer(safety timer)
+			by default smbus timer enabled
+			smbus timer used to ensure the SMBus master
+			is active and to prevent overcharging the battery.
+
+- isl,enable-psys-monitor: enables system power monitor PSYS function
+			by default PSYS function is disabled
+
 vbus properties:
 ================
 regulator-name: vbus regulator name.
 
 Example
-isl9238: isl9238@16 {
+bc_isl9238: isl9238@9 {
 	compatible = "isil,isl9238";
 	reg = <0x09>;
 	isl,charge-current-limit = <4096000>;
@@ -54,6 +85,6 @@ isl9238: isl9238@16 {
 	isl,enable-auto-charging;
 
 	vbus {
-		regulator-name = "vbus_regulator";
+		regulator-name = "vbus-regulator";
 	};
 };

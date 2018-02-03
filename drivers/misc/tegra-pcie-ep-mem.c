@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,6 +110,10 @@ struct ep_pvt {
 	struct mutex rd_lock[DMA_RD_CHNL_NUM];	/* read lock */
 	struct completion wr_cpl[DMA_WR_CHNL_NUM];
 	struct completion rd_cpl[DMA_RD_CHNL_NUM];
+	ktime_t wr_start_time;
+	ktime_t wr_end_time;
+	ktime_t rd_start_time;
+	ktime_t rd_end_time;
 	unsigned long wr_busy;
 	unsigned long rd_busy;
 };
@@ -213,13 +217,13 @@ static irqreturn_t ep_isr(int irq, struct ep_pvt *ep)
 
 static int dma_write(struct ep_pvt *ep, struct dma_tx *tx)
 {
+	struct device *dev = &ep->pdev->dev;
 	u32 val = 0;
 	u16 val_16 = 0;
 	int ret = 0;
 
 	if (tx->channel > 3) {
-		dev_err(&ep->pdev->dev,
-			"Invalid Channel. Should be with in [0~3]\n");
+		dev_err(dev, "Invalid Channel. Should be with in [0~3]\n");
 		return -EINVAL;
 	}
 
@@ -290,6 +294,7 @@ static int dma_write(struct ep_pvt *ep, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	ep->wr_busy |= 1 << tx->channel;
 
+	ep->wr_start_time = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(ep->mmio_addr, ep->channel, DMA_WRITE_DOORBELL_OFF);
@@ -297,15 +302,18 @@ static int dma_write(struct ep_pvt *ep, struct dma_tx *tx)
 	/* wait for completion or timeout */
 	ret = wait_for_completion_timeout(&ep->wr_cpl[tx->channel],
 					  msecs_to_jiffies(5000));
+	ep->wr_end_time = ktime_get();
 	if (ret == 0) {
-		dev_err(&ep->pdev->dev,
-			"DMA write operation timed out no interrupt\n");
+		dev_err(dev, "DMA write operation timed out no interrupt\n");
 		ret = -ETIMEDOUT;
 		/* if timeout, clear the mess, sanitize channel */
 		dma_common_wr(ep->mmio_addr, DMA_WRITE_DOORBELL_OFF_WR_STOP |
 			      ep->channel, DMA_WRITE_DOORBELL_OFF);
 		goto exit;
 	}
+	dev_info(dev, "DMA write: Size: %u bytes, Time diff: %lld ns\n",
+		 tx->size,
+		 ktime_to_ns(ep->wr_end_time) - ktime_to_ns(ep->wr_start_time));
 
 exit:
 	mutex_unlock(&ep->wr_lock[tx->channel]);
@@ -314,13 +322,13 @@ exit:
 
 static int dma_read(struct ep_pvt *ep, struct dma_tx *tx)
 {
+	struct device *dev = &ep->pdev->dev;
 	u32 val = 0;
 	u16 val_16 = 0;
 	int ret = 0;
 
 	if (tx->channel > 1) {
-		dev_err(&ep->pdev->dev,
-			"Invalid Channel. Should be with in [0~1]\n");
+		dev_err(dev, "Invalid Channel. Should be with in [0~1]\n");
 		return -EINVAL;
 	}
 
@@ -393,6 +401,7 @@ static int dma_read(struct ep_pvt *ep, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	ep->rd_busy |= 1 << tx->channel;
 
+	ep->rd_start_time = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(ep->mmio_addr, ep->channel, DMA_READ_DOORBELL_OFF);
@@ -400,15 +409,18 @@ static int dma_read(struct ep_pvt *ep, struct dma_tx *tx)
 	/* wait for completion or timeout */
 	ret = wait_for_completion_timeout(&ep->rd_cpl[tx->channel],
 					  msecs_to_jiffies(5000));
+	ep->rd_end_time = ktime_get();
 	if (ret == 0) {
-		dev_err(&ep->pdev->dev,
-			"DMA read operation timed out no interrupt\n");
+		dev_err(dev, "DMA read operation timed out no interrupt\n");
 		ret = -ETIMEDOUT;
 		/* if timeout, clear the mess, sanitize channel */
 		dma_common_wr(ep->mmio_addr, DMA_READ_DOORBELL_OFF_RD_STOP |
 			      ep->channel, DMA_READ_DOORBELL_OFF);
 		goto exit;
 	}
+	dev_info(dev, "DMA read: Size: %u bytes, Time diff: %lld ns",
+		 tx->size,
+		 ktime_to_ns(ep->rd_end_time) - ktime_to_ns(ep->rd_start_time));
 
 exit:
 	mutex_unlock(&ep->rd_lock[tx->channel]);

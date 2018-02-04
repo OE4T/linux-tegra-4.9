@@ -2006,4 +2006,11 @@
 		interrupts = <0 178 0x4>; /* NVLINK2HOST interrupt */
 		status = "disabled";
 	};
+
+	nvpmodel {
+		compatible = "nvidia,nvpmodel";
+		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
+		clock-names = "emc";
+		status = "okay";
+	};
 };

@@ -78,6 +78,7 @@ Optional properties:
 - nvidia,bar0-size: Size of BAR-0 through which memory gets exposed to host
 - "nvidia,tsa-config" : Add TSA configuration register address to configure MC
     with production settings for PCIe. Note:- this is applicable only for C5
+- "nvidia,mods" : Add to indicate NVidia specific MODs configuration
 
 Power supplies for Tegra194:
 //TODO

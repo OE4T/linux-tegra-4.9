@@ -424,7 +424,7 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		return ret;
 	}
 
-	chan->tegra_vi_channel = vi_channel_open_ex(chan->id);
+	chan->tegra_vi_channel = vi_channel_open_ex(chan->id, false);
 	if (IS_ERR(chan->tegra_vi_channel))
 		return PTR_ERR(chan);
 

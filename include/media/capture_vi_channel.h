@@ -3,7 +3,7 @@
  *
  * VI channel driver header
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,14 +46,18 @@ struct tegra_vi_channel {
 	struct rcu_head rcu;
 	struct vi_capture *capture_data;
 	const struct vi_channel_drv_ops *ops;
+	struct device *rtcpu_dev;
 };
 
 int vi_channel_drv_register(struct platform_device *,
 			const struct vi_channel_drv_ops *);
 void vi_channel_drv_unregister(struct device *);
+void vi_capture_request_unpin(struct tegra_vi_channel *chan,
+		uint32_t buffer_index);
 
 /* Internal APIs for VI mode driver */
-struct tegra_vi_channel *vi_channel_open_ex(unsigned channel);
+struct tegra_vi_channel *vi_channel_open_ex(unsigned channel,
+	bool is_mem_pinned);
 int vi_channel_close_ex(unsigned channel, struct tegra_vi_channel *chan);
 
 #endif //__ISP_CHANNEL_H__

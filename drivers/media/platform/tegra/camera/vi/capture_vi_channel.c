@@ -54,81 +54,180 @@ struct vi_channel_drv {
 	struct tegra_vi_channel __rcu *channels[];
 };
 
+void vi_capture_request_unpin(struct tegra_vi_channel *chan,
+		uint32_t buffer_index)
+{
+	struct vi_capture *capture = chan->capture_data;
+	struct capture_common_unpins *unpins;
+	int i = 0;
+
+	mutex_lock(&capture->unpins_list_lock);
+	unpins = capture->unpins_list[buffer_index];
+	if (unpins != NULL) {
+		for (i = 0; i < unpins->num_unpins; i++)
+			capture_common_unpin_memory(&unpins->data[i]);
+		capture->unpins_list[buffer_index] = NULL;
+		kfree(unpins);
+	}
+	mutex_unlock(&capture->unpins_list_lock);
+}
+EXPORT_SYMBOL(vi_capture_request_unpin);
+
 static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct tegra_vi_channel *chan = file->private_data;
+	struct vi_capture *capture = chan->capture_data;
 	void __user *ptr = (void *)arg;
-	long err = -EFAULT;
+	int err = -EFAULT;
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(VI_CAPTURE_SETUP): {
-		struct vi_capture_setup tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		struct vi_capture_setup setup;
+
+		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
-		err = vi_capture_setup(chan, &tmp);
-		if (err)
+
+		/* pin the capture descriptor ring buffer */
+		err = capture_common_pin_memory(capture->rtcpu_dev,
+				setup.mem, &capture->requests);
+		if (err < 0) {
+			dev_err(chan->dev, "%s: memory setup failed\n", __func__);
+			return -EFAULT;
+		}
+
+		/* allocate for unpin list based on queue depth */
+		capture->unpins_list = kcalloc(setup.queue_depth,
+				sizeof(struct capture_common_unpins *),
+				GFP_KERNEL);
+		if (unlikely(capture->unpins_list == NULL)) {
+			dev_err(chan->dev, "failed to allocate unpins array\n");
+			capture_common_unpin_memory(&capture->requests);
+			return -ENOMEM;
+		}
+
+		setup.iova = capture->requests.iova;
+		err = vi_capture_setup(chan, &setup);
+		if (err < 0) {
 			dev_err(chan->dev, "vi capture setup failed\n");
+			kfree(capture->unpins_list);
+			capture_common_unpin_memory(&capture->requests);
+			return err;
+		}
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_RESET): {
-		uint32_t tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		uint32_t reset_flags;
+		int i;
+
+		if (copy_from_user(&reset_flags, ptr, sizeof(reset_flags)))
 			break;
-		err = vi_capture_reset(chan, tmp);
-		if (err)
+
+		err = vi_capture_reset(chan, reset_flags);
+		if (err < 0)
 			dev_err(chan->dev, "vi capture reset failed\n");
+		else {
+			for (i = 0; i < capture->queue_depth; i++)
+				vi_capture_request_unpin(chan, i);
+		}
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_RELEASE): {
-		uint32_t tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		uint32_t reset_flags;
+		int i;
+
+		if (copy_from_user(&reset_flags, ptr, sizeof(reset_flags)))
 			break;
-		err = vi_capture_release(chan, tmp);
-		if (err)
+
+		err = vi_capture_release(chan, reset_flags);
+		if (err < 0)
 			dev_err(chan->dev, "vi capture release failed\n");
+		else {
+			for (i = 0; i < capture->queue_depth; i++)
+				vi_capture_request_unpin(chan, i);
+			capture_common_unpin_memory(&capture->requests);
+			kfree(capture->unpins_list);
+		}
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_GET_INFO): {
-		struct vi_capture_info tmp;
-		err = vi_capture_get_info(chan, &tmp);
-		if (err)
+		struct vi_capture_info info;
+
+		err = vi_capture_get_info(chan, &info);
+		if (err < 0)
 			dev_err(chan->dev, "vi capture get info failed\n");
-		if (copy_to_user(ptr, &tmp, sizeof(tmp)))
+		if (copy_to_user(ptr, &info, sizeof(info)))
 			err = -EFAULT;
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_SET_CONFIG): {
-		struct vi_capture_control_msg tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		struct vi_capture_control_msg msg;
+
+		if (copy_from_user(&msg, ptr, sizeof(msg)))
 			break;
-		err = vi_capture_control_message(chan, &tmp);
-		if (err)
+		err = vi_capture_control_message(chan, &msg);
+		if (err < 0)
 			dev_err(chan->dev, "vi capture set config failed\n");
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_REQUEST): {
-		struct vi_capture_req tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		struct vi_capture_req req;
+		struct capture_common_pin_req cap_common_req = {0};
+
+		if (copy_from_user(&req, ptr, sizeof(req)))
 			break;
-		err = vi_capture_request(chan, &tmp);
-		if (err)
+
+		if (req.num_relocs == 0) {
+			dev_err(chan->dev, "request must have non-zero relocs\n");
+			return -EINVAL;
+		}
+
+		/* pin and reloc */
+		cap_common_req.dev = chan->dev;
+		cap_common_req.rtcpu_dev = capture->rtcpu_dev;
+		cap_common_req.unpins = NULL;
+		cap_common_req.requests = &capture->requests;
+		cap_common_req.requests_dev = NULL;
+		cap_common_req.request_size = capture->request_size;
+		cap_common_req.request_offset = req.buffer_index *
+				capture->request_size;
+		cap_common_req.num_relocs = req.num_relocs;
+		cap_common_req.reloc_user = (uint32_t __user *)
+				(uintptr_t)req.reloc_relatives;
+
+		err = capture_common_request_pin_and_reloc(&cap_common_req);
+		if (err < 0) {
+			dev_err(chan->dev, "request relocation failed\n");
+			return err;
+		}
+
+		/* assign the unpins list to the capture to be unpinned and */
+		/* freed at capture completion (vi_capture_request_unpin) */
+		mutex_lock(&capture->unpins_list_lock);
+		capture->unpins_list[req.buffer_index] = cap_common_req.unpins;
+		mutex_unlock(&capture->unpins_list_lock);
+
+		err = vi_capture_request(chan, &req);
+		if (err < 0) {
 			dev_err(chan->dev,
 				"vi capture request submit failed\n");
+			vi_capture_request_unpin(chan, req.buffer_index);
+		}
 		break;
 	}
 
 	case _IOC_NR(VI_CAPTURE_STATUS): {
-		uint32_t tmp;
-		if (copy_from_user(&tmp, ptr, sizeof(tmp)))
+		uint32_t timeout_ms;
+
+		if (copy_from_user(&timeout_ms, ptr, sizeof(timeout_ms)))
 			break;
-		err = vi_capture_status(chan, tmp);
-		if (err)
+		err = vi_capture_status(chan, timeout_ms);
+		if (err < 0)
 			dev_err(chan->dev,
 				"vi capture get status failed\n");
 		break;
@@ -140,7 +239,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		if (copy_from_user(&compand, ptr, sizeof(compand)))
 			break;
 		err = vi_capture_set_compand(chan, &compand);
-		if (err)
+		if (err < 0)
 			dev_err(chan->dev,
 				"setting compand failed\n");
 		break;
@@ -187,7 +286,7 @@ static void vi_channel_power_off_vi_device(struct tegra_vi_channel *chan)
 	nvhost_module_remove_client(chan->ndev, chan->capture_data);
 }
 
-struct tegra_vi_channel *vi_channel_open_ex(unsigned channel)
+struct tegra_vi_channel *vi_channel_open_ex(unsigned channel, bool is_mem_pinned)
 {
 	struct tegra_vi_channel *chan;
 	struct vi_channel_drv *chan_drv;
@@ -217,7 +316,7 @@ struct tegra_vi_channel *vi_channel_open_ex(unsigned channel)
 	if (err < 0)
 		goto error;
 
-	err = vi_capture_init(chan);
+	err = vi_capture_init(chan, is_mem_pinned);
 	if (err < 0)
 		goto error;
 
@@ -266,7 +365,7 @@ static int vi_channel_open(struct inode *inode, struct file *file)
 	unsigned channel = iminor(inode);
 	struct tegra_vi_channel *chan;
 
-	chan = vi_channel_open_ex(channel);
+	chan = vi_channel_open_ex(channel, true);
 	if (IS_ERR(chan))
 		return PTR_ERR(chan);
 

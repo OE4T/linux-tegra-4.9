@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -21,10 +21,40 @@
 #else
 #include <stdint.h>
 #endif
+#include <media/capture_common.h>
+#include <media/capture_vi_channel.h>
+#include "soc/tegra/camrtc-capture.h"
+#include "soc/tegra/camrtc-capture-messages.h"
 
 #define __VI_CAPTURE_ALIGN __aligned(8)
 
 struct tegra_vi_channel;
+
+struct vi_capture {
+	uint16_t channel_id;
+	struct device *rtcpu_dev;
+	struct tegra_vi_channel *vi_channel;
+	struct capture_common_buf requests;
+	size_t request_buf_size;
+	uint32_t queue_depth;
+	uint32_t request_size;
+	bool is_mem_pinned;
+
+	uint32_t num_gos_tables;
+	const dma_addr_t *gos_tables;
+
+	struct syncpoint_info progress_sp;
+	struct syncpoint_info embdata_sp;
+	struct syncpoint_info linetimer_sp;
+
+	struct completion control_resp;
+	struct completion capture_resp;
+	struct mutex control_msg_lock;
+	struct CAPTURE_CONTROL_MSG control_resp_msg;
+
+	struct mutex unpins_list_lock;
+	struct capture_common_unpins **unpins_list;
+};
 
 struct vi_capture_setup {
 	uint32_t channel_flags;
@@ -34,6 +64,7 @@ struct vi_capture_setup {
 	uint32_t request_size;
 	uint32_t mem;
 	uint32_t __pad_mem;
+	uint64_t iova;
 	uint8_t slvsec_stream_main;
 	uint8_t slvsec_stream_sub;
 	uint16_t __pad_slvsec1;
@@ -78,7 +109,7 @@ struct vi_capture_compand {
 } __VI_CAPTURE_ALIGN;
 
 
-int vi_capture_init(struct tegra_vi_channel *chan);
+int vi_capture_init(struct tegra_vi_channel *chan, bool is_mem_pinned);
 void vi_capture_shutdown(struct tegra_vi_channel *chan);
 int vi_capture_setup(struct tegra_vi_channel *chan,
 		struct vi_capture_setup *setup);

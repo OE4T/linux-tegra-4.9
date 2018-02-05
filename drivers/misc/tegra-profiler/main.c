@@ -60,22 +60,14 @@ static struct quadd_comm_cap_for_cpu *get_capabilities_for_cpu_int(int cpuid)
 	return &per_cpu(per_cpu_caps, cpuid);
 }
 
-static int get_default_properties(void)
+int quadd_mode_is_trace_all(void)
 {
-	ctx.param.freq = 100;
-	ctx.param.ma_freq = 50;
-	ctx.param.backtrace = 1;
-	ctx.param.use_freq = 1;
-	ctx.param.system_wide = 1;
-	ctx.param.power_rate_freq = 0;
-	ctx.param.debug_samples = 0;
+	return ctx.mode_is_trace_all;
+}
 
-	ctx.param.pids[0] = 0;
-	ctx.param.nr_pids = 1;
-	ctx.get_capabilities_for_cpu = get_capabilities_for_cpu_int;
-	ctx.get_pmu_info = get_pmu_info_for_current_cpu;
-
-	return 0;
+int quadd_mode_is_sampling(void)
+{
+	return ctx.mode_is_sampling;
 }
 
 int tegra_profiler_try_lock(void)
@@ -102,19 +94,21 @@ static int start(void)
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
 		preempt_disable();
 
-		if (ctx.pmu) {
-			err = ctx.pmu->enable();
-			if (err) {
-				pr_err("error: pmu enable\n");
-				goto errout_preempt;
+		if (quadd_mode_is_sampling()) {
+			if (ctx.pmu) {
+				err = ctx.pmu->enable();
+				if (err) {
+					pr_err("error: pmu enable\n");
+					goto errout_preempt;
+				}
 			}
-		}
 
-		if (ctx.pl310) {
-			err = ctx.pl310->enable();
-			if (err) {
-				pr_err("error: pl310 enable\n");
-				goto errout_preempt;
+			if (ctx.pl310) {
+				err = ctx.pl310->enable();
+				if (err) {
+					pr_err("error: pl310 enable\n");
+					goto errout_preempt;
+				}
 			}
 		}
 
@@ -208,6 +202,9 @@ set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 	struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
 	struct quadd_event pmu_events[QUADD_MAX_COUNTERS];
 
+	if (!ctx.mode_is_sampling)
+		return -EINVAL;
+
 	if (!pmu_info->is_present)
 		return -ENODEV;
 
@@ -241,117 +238,145 @@ set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 	return err;
 }
 
+static int verify_app(struct quadd_parameters *p, uid_t task_uid)
+{
+	int err;
+	uid_t uid = 0;
+
+	err = quadd_auth_is_debuggable((char *)p->package_name, &uid);
+	if (err < 0) {
+		pr_err("error: app either non-debuggable or not found: %s\n",
+		       p->package_name);
+		return err;
+	}
+
+	pr_info("app \"%s\" is debuggable, uid: %u\n",
+		p->package_name, (unsigned int)uid);
+
+	if (task_uid != uid) {
+		pr_err("error: uids are not matched: %u, %u\n",
+		       (unsigned int)task_uid, (unsigned int)uid);
+		return -EACCES;
+	}
+
+	return 0;
+}
+
 static int
 set_parameters(struct quadd_parameters *p)
 {
-	int i, err, uid = 0;
+	int i, err, nr_pl310 = 0;
 	uid_t task_uid, current_uid;
 	struct quadd_event *pl310_events;
-	int nr_pl310 = 0;
 	struct task_struct *task;
 	u64 *low_addr_p;
+	u32 extra;
 
-	if (!validate_freq(p->freq)) {
-		pr_err("error: incorrect frequency: %u\n", p->freq);
-		return -EINVAL;
+	extra = p->reserved[QUADD_PARAM_IDX_EXTRA];
+
+	ctx.mode_is_sampling =
+		extra & QUADD_PARAM_EXTRA_SAMPLING ? 1 : 0;
+	ctx.mode_is_trace_all = p->trace_all_tasks;
+
+	if (ctx.mode_is_trace_all && !capable(CAP_SYS_ADMIN)) {
+		pr_err("error: trace all tasks mode is allowed only for root\n");
+		return -EACCES;
 	}
-
-	/* Currently only one process */
-	if (p->nr_pids != 1)
-		return -EINVAL;
 
 	p->package_name[sizeof(p->package_name) - 1] = '\0';
-
 	ctx.param = *p;
 
-	rcu_read_lock();
-	task = pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
-	rcu_read_unlock();
-	if (!task) {
-		pr_err("error: process not found: %u\n", p->pids[0]);
-		return -ESRCH;
-	}
-
-	current_uid = from_kuid(&init_user_ns, current_fsuid());
-	task_uid = from_kuid(&init_user_ns, task_uid(task));
-	pr_info("owner/task uids: %u/%u\n", current_uid, task_uid);
-
-	if (!capable(CAP_SYS_ADMIN)) {
-		if (current_uid != task_uid) {
-			pr_info("package: %s\n", p->package_name);
-
-			uid = quadd_auth_is_debuggable((char *)p->package_name);
-			if (uid < 0) {
-				pr_err("error: tegra profiler security service\n");
-				return uid;
-			} else if (uid == 0) {
-				pr_err("error: app is not debuggable\n");
-				return -EACCES;
-			}
-			pr_info("app is debuggable, uid: %u\n", uid);
-
-			if (task_uid != uid) {
-				pr_err("error: uids are not matched\n");
-				return -EACCES;
-			}
+	if (!ctx.mode_is_trace_all) {
+		if (!validate_freq(p->freq)) {
+			pr_err("error: incorrect frequency: %u\n", p->freq);
+			return -EINVAL;
 		}
-		ctx.collect_kernel_ips = 0;
-	} else {
-		ctx.collect_kernel_ips = 1;
-	}
 
-	for (i = 0; i < p->nr_events; i++) {
-		unsigned int type, id;
-		struct quadd_event *event = &p->events[i];
-
-		type = event->type;
-		id = event->id;
-
-		if (type != QUADD_EVENT_TYPE_HARDWARE)
+		/* Currently only one process */
+		if (p->nr_pids != 1)
 			return -EINVAL;
 
-		if (ctx.pl310 &&
-		    ctx.pl310_info.nr_supp_events > 0 &&
-		    is_event_supported(&ctx.pl310_info, event)) {
-			pl310_events = event;
+		rcu_read_lock();
+		task = pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
+		rcu_read_unlock();
+		if (!task) {
+			pr_err("error: process not found: %u\n", p->pids[0]);
+			return -ESRCH;
+		}
 
-			pr_debug("PL310 active event: %s\n",
-				 quadd_get_hw_event_str(id));
+		current_uid = from_kuid(&init_user_ns, current_fsuid());
+		task_uid = from_kuid(&init_user_ns, task_uid(task));
 
-			if (nr_pl310++ > 1) {
-				pr_err("error: multiply pl310 events\n");
+		pr_info("owner/task uids: %u/%u\n", current_uid, task_uid);
+
+		if (!capable(CAP_SYS_ADMIN)) {
+			if (current_uid != task_uid) {
+				err = verify_app(p, task_uid);
+				if (err < 0)
+					return err;
+			}
+			ctx.collect_kernel_ips = 0;
+		} else {
+			ctx.collect_kernel_ips = 1;
+		}
+
+		for (i = 0; i < p->nr_events; i++) {
+			unsigned int type, id;
+			struct quadd_event *event = &p->events[i];
+
+			type = event->type;
+			id = event->id;
+
+			if (type != QUADD_EVENT_TYPE_HARDWARE)
+				return -EINVAL;
+
+			if (ctx.pl310 &&
+			    ctx.pl310_info.nr_supp_events > 0 &&
+			    is_event_supported(&ctx.pl310_info, event)) {
+				pl310_events = event;
+
+				pr_debug("PL310 active event: %s\n",
+					 quadd_get_hw_event_str(id));
+
+				if (nr_pl310++ > 1) {
+					pr_err("error: multiply pl310 events\n");
+					return -EINVAL;
+				}
+			} else {
+				pr_err("Bad event: %s\n",
+				       quadd_get_hw_event_str(id));
 				return -EINVAL;
 			}
-		} else {
-			pr_err("Bad event: %s\n",
-			       quadd_get_hw_event_str(id));
-			return -EINVAL;
 		}
-	}
 
-	if (ctx.pl310) {
-		int cpuid = 0; /* We don't need cpuid for pl310.  */
+		if (ctx.pl310) {
+			int cpuid = 0; /* We don't need cpuid for pl310.  */
 
-		if (nr_pl310 == 1) {
-			err = ctx.pl310->set_events(cpuid, pl310_events, 1);
-			if (err) {
-				pr_info("pl310 set_parameters: error\n");
-				return err;
+			if (nr_pl310 == 1) {
+				err = ctx.pl310->set_events(cpuid,
+							    pl310_events, 1);
+				if (err) {
+					pr_info("pl310 set_parameters: error\n");
+					return err;
+				}
+				ctx.pl310_info.active = 1;
+			} else {
+				ctx.pl310_info.active = 0;
+				ctx.pl310->set_events(cpuid, NULL, 0);
 			}
-			ctx.pl310_info.active = 1;
-		} else {
-			ctx.pl310_info.active = 0;
-			ctx.pl310->set_events(cpuid, NULL, 0);
 		}
+
+		low_addr_p =
+			(u64 *)&p->reserved[QUADD_PARAM_IDX_BT_LOWER_BOUND];
+		ctx.hrt->low_addr = (unsigned long)*low_addr_p;
+		pr_info("bt lower bound: %#lx\n", ctx.hrt->low_addr);
+
+		err = quadd_unwind_start(task);
+		if (err)
+			return err;
+	} else {
+		pr_info("Sampling is disabled\n");
 	}
-
-	low_addr_p = (u64 *)&p->reserved[QUADD_PARAM_IDX_BT_LOWER_BOUND];
-	ctx.hrt->low_addr = (unsigned long)*low_addr_p;
-	pr_info("bt lower bound: %#lx\n", ctx.hrt->low_addr);
-
-	err = quadd_unwind_start(task);
-	if (err)
-		return err;
 
 	pr_info("New parameters have been applied\n");
 
@@ -616,7 +641,8 @@ static int __init quadd_module_init(void)
 	atomic_set(&ctx.started, 0);
 	atomic_set(&ctx.tegra_profiler_lock, 0);
 
-	get_default_properties();
+	ctx.get_capabilities_for_cpu = get_capabilities_for_cpu_int;
+	ctx.get_pmu_info = get_pmu_info_for_current_cpu;
 
 	for_each_possible_cpu(cpuid) {
 		struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);

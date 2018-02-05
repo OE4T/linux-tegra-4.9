@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv8_pmu.c
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -437,6 +437,28 @@ static void quadd_init_pmu(void)
 	disable_all_interrupts();
 }
 
+static void free_events(struct list_head *head)
+{
+	struct quadd_pmu_event_info *entry, *next;
+
+	list_for_each_entry_safe(entry, next, head, list) {
+		list_del(&entry->list);
+		kfree(entry);
+	}
+}
+
+static void free_used_events(void)
+{
+	int cpu_id;
+
+	for_each_possible_cpu(cpu_id) {
+		struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpu_id);
+
+		if (local_pmu_ctx->current_map)
+			free_events(&local_pmu_ctx->used_events);
+	}
+}
+
 static int pmu_enable(void)
 {
 	pr_debug("pmu was reserved\n");
@@ -469,6 +491,7 @@ static void __pmu_disable(void *arg)
 static void pmu_disable(void)
 {
 	on_each_cpu(__pmu_disable, NULL, 1);
+	free_used_events();
 	pr_debug("pmu was released\n");
 }
 
@@ -664,16 +687,6 @@ static void __get_free_counters(void *arg)
 		 smp_processor_id(), pcntrs, ccntr, free_bitmap[0]);
 
 	raw_spin_unlock(&ci->lock);
-}
-
-static void free_events(struct list_head *head)
-{
-	struct quadd_pmu_event_info *entry, *next;
-
-	list_for_each_entry_safe(entry, next, head, list) {
-		list_del(&entry->list);
-		kfree(entry);
-	}
 }
 
 static int
@@ -981,12 +994,5 @@ struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 
 void quadd_armv8_pmu_deinit(void)
 {
-	int cpu_id;
-
-	for_each_possible_cpu(cpu_id) {
-		struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpu_id);
-
-		if (local_pmu_ctx->current_map)
-			free_events(&local_pmu_ctx->used_events);
-	}
+	free_used_events();
 }

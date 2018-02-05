@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -209,6 +209,11 @@ static void put_header(int cpuid)
 		hdr->reserved |= QUADD_HDR_STACK_OFFSET;
 
 	hdr->reserved |= QUADD_HDR_HAS_CPUID;
+
+	if (quadd_mode_is_trace_all())
+		hdr->reserved |= QUADD_HDR_MODE_TRACE_ALL;
+	if (quadd_mode_is_sampling())
+		hdr->reserved |= QUADD_HDR_MODE_SAMPLING;
 
 	if (pmu)
 		nr_events += pmu->get_current_events(cpuid, events + nr_events,
@@ -533,7 +538,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 }
 
 static inline int
-is_sample_process(struct task_struct *task)
+is_profile_process(struct task_struct *task)
 {
 	int i;
 	pid_t pid, profile_pid;
@@ -549,7 +554,15 @@ is_sample_process(struct task_struct *task)
 		if (profile_pid == pid)
 			return 1;
 	}
+
 	return 0;
+}
+
+static inline int
+is_sample_process(struct task_struct *task)
+{
+	return (quadd_mode_is_sampling() &&
+		is_profile_process(task));
 }
 
 static inline int
@@ -564,18 +577,16 @@ is_swapper_task(struct task_struct *task)
 static inline int
 is_trace_process(struct task_struct *task)
 {
-	struct quadd_ctx *ctx = hrt.quadd_ctx;
-
 	if (!task)
 		return 0;
 
 	if (is_swapper_task(task))
 		return 0;
 
-	if (ctx->param.trace_all_tasks)
+	if (quadd_mode_is_trace_all())
 		return 1;
 
-	return is_sample_process(task);
+	return is_profile_process(task);
 }
 
 static int
@@ -774,16 +785,18 @@ int quadd_hrt_start(void)
 			put_header(cpuid);
 	}
 
-	if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
-		err = quadd_get_current_mmap(param->pids[0]);
-		if (err) {
-			pr_err("error: quadd_get_current_mmap\n");
-			return err;
+	if (quadd_mode_is_sampling()) {
+		if (extra & QUADD_PARAM_EXTRA_GET_MMAP) {
+			err = quadd_get_current_mmap(param->pids[0]);
+			if (err) {
+				pr_err("error: quadd_get_current_mmap\n");
+				return err;
+			}
 		}
-	}
 
-	if (ctx->pl310)
-		ctx->pl310->start();
+		if (ctx->pl310)
+			ctx->pl310->start();
+	}
 
 	quadd_ma_start(&hrt);
 

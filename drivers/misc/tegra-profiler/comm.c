@@ -30,6 +30,7 @@
 #include <linux/tegra_profiler.h>
 
 #include "comm.h"
+#include "quadd.h"
 #include "version.h"
 
 struct quadd_ring_buffer {
@@ -74,6 +75,9 @@ rb_write(struct quadd_ring_buffer_hdr *rb_hdr,
 {
 	size_t len, head = rb_hdr->pos_write;
 	const char *s = data;
+
+	if (length == 0)
+		return;
 
 	len = min_t(size_t, rb_hdr->size - head, length);
 
@@ -383,14 +387,17 @@ ready_to_profile(void)
 	if (!comm_ctx.params_ok)
 		return 0;
 
-	for_each_possible_cpu(cpuid) {
-		is_cpu_present = comm_ctx.control->is_cpu_present(cpuid);
+	if (quadd_mode_is_sampling()) {
+		for_each_possible_cpu(cpuid) {
+			is_cpu_present =
+				comm_ctx.control->is_cpu_present(cpuid);
 
-		if (is_cpu_present) {
-			cc = &per_cpu(cpu_ctx, cpuid);
+			if (is_cpu_present) {
+				cc = &per_cpu(cpu_ctx, cpuid);
 
-			if (!cc->params_ok)
-				return 0;
+				if (!cc->params_ok)
+					return 0;
+			}
 		}
 	}
 
@@ -449,6 +456,13 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
+		if (!comm_ctx.params_ok ||
+		    !quadd_mode_is_sampling()) {
+			pr_err("error: incorrect setup ioctl\n");
+			err = -EPERM;
+			goto error_out;
+		}
+
 		cpu_pmu_params = vmalloc(sizeof(*cpu_pmu_params));
 		if (!cpu_pmu_params) {
 			err = -ENOMEM;
@@ -494,7 +508,7 @@ device_ioctl(struct file *file,
 			err = -EBUSY;
 			goto error_out;
 		}
-		comm_ctx.params_ok = 0;
+		reset_params_ok_flag();
 
 		user_params = vmalloc(sizeof(*user_params));
 		if (!user_params) {

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/auth.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -236,9 +236,10 @@ static const struct file_operations auth_fops = {
 	.release	= auth_release,
 };
 
-int quadd_auth_is_debuggable(const char *package_name)
+int quadd_auth_is_debuggable(const char *package_name, uid_t *uid)
 {
-	int uid, response_value;
+	uid_t uid_value;
+	int response_value;
 	struct quadd_auth_data *data = &auth_ctx.data;
 	int pkg_name_length;
 
@@ -271,23 +272,28 @@ int quadd_auth_is_debuggable(const char *package_name)
 	}
 
 	mutex_lock(&auth_ctx.lock);
-	uid = data->debug_app_uid;
+	uid_value = data->debug_app_uid;
 	response_value = data->response_value;
 	mutex_unlock(&auth_ctx.lock);
 
 	switch (response_value) {
 	case QUADD_SECURITY_RESPONSE_DEBUG_FLAG_ON:
-		pr_info("package %s is debuggable, uid: %d\n",
-			package_name, uid);
-		return uid;
+		if (uid_value > 0) {
+			pr_info("package \"%s\" is debuggable, uid: %u\n",
+				package_name, (unsigned int)uid_value);
+			*uid = uid_value;
+			return 0;
+		} else {
+			return -EACCES;
+		}
 
 	case QUADD_SECURITY_RESPONSE_DEBUG_FLAG_OFF:
-		pr_info("package %s is not debuggable\n",
+		pr_info("package \"%s\" is not debuggable\n",
 			package_name);
-		return 0;
+		return -EACCES;
 
 	case QUADD_SECURITY_RESPONSE_PACKAGE_NOT_FOUND:
-		pr_err("Error: package %s not found\n", package_name);
+		pr_err("Error: package \"%s\" not found\n", package_name);
 		return -ESRCH;
 
 	case QUADD_SECURITY_RESPONSE_ERROR:

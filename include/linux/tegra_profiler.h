@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,8 +19,8 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	41
-#define QUADD_IO_VERSION	22
+#define QUADD_SAMPLES_VERSION	42
+#define QUADD_IO_VERSION	23
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -40,6 +40,7 @@
 #define QUADD_IO_VERSION_TRACE_ALL_TASKS	20
 #define QUADD_IO_VERSION_CB_POWER_OF_2		21
 #define QUADD_IO_VERSION_RAW_EVENTS		22
+#define QUADD_IO_VERSION_SAMPLING_MODE		23
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
@@ -64,6 +65,7 @@
 #define QUADD_SAMPLE_VERSION_OVERHEAD_INFO	39
 #define QUADD_SAMPLE_VERSION_REPORT_VPID	40
 #define QUADD_SAMPLE_VERSION_SCHED_REPORT_VPID	41
+#define QUADD_SAMPLE_VERSION_SAMPLING_MODE	42
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -354,6 +356,8 @@ struct quadd_debug_data {
 #define QUADD_HDR_STACK_OFFSET		(1 << 4)
 #define QUADD_HDR_BT_DWARF		(1 << 5)
 #define QUADD_HDR_HAS_CPUID		(1 << 6)
+#define QUADD_HDR_MODE_TRACE_ALL	(1 << 7)
+#define QUADD_HDR_MODE_SAMPLING		(1 << 8)
 
 struct quadd_header_data {
 	u16 magic;
@@ -412,6 +416,7 @@ enum {
 #define QUADD_PARAM_EXTRA_BT_UT_CE		(1 << 6)
 #define QUADD_PARAM_EXTRA_BT_DWARF		(1 << 7)
 #define QUADD_PARAM_EXTRA_PER_PMU_SETUP		(1 << 8)
+#define QUADD_PARAM_EXTRA_SAMPLING		(1 << 9)
 
 enum {
 	QUADD_EVENT_TYPE_RAW		= 0,

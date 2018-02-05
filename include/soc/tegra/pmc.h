@@ -178,12 +178,20 @@ enum tegra_system_reset_reason {
 	TEGRA_RESET_REASON_MAX
 };
 
+enum tegra_system_reset_level {
+	TEGRA_RESET_LEVEL_L0,
+	TEGRA_RESET_LEVEL_L1,
+	TEGRA_RESET_LEVEL_L2,
+	TEGRA_RESET_LEVEL_MAX
+};
+
 int tegra_pmc_set_reboot_reason(u32 reboot_reason);
 int tegra_pmc_clear_reboot_reason(u32 reboot_reason);
 
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val);
 void tegra_pmc_reset_system(void);
 enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void);
+enum tegra_system_reset_level tegra_pmc_get_system_reset_level(void);
 
 #if defined(CONFIG_ARCH_TEGRA) && !defined(CONFIG_TEGRA186_PMC)
 void tegra_pmc_io_dpd_clear(void);

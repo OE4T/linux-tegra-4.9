@@ -907,13 +907,13 @@ int tegra_pmc_cpu_remove_clamping(int cpuid)
  */
 enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void)
 {
-	u32 val, rst_src;
+	u32 reset_reg, rst_src;
 	enum tegra_system_reset_reason tegra_rst_rsn_sts;
 
-	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
+	reset_reg = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
 
 	if (pmc->soc->show_legacy_reset_status) {
-		rst_src = val & T210_PMC_RST_LEVEL_MASK;
+		rst_src = reset_reg & T210_PMC_RST_LEVEL_MASK;
 		switch (rst_src) {
 		case 0:
 			tegra_rst_rsn_sts = TEGRA_POWER_ON_RESET;
@@ -943,7 +943,7 @@ enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void)
 			tegra_rst_rsn_sts = TEGRA_RESET_REASON_MAX;
 		}
 	} else {
-		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+		rst_src = (reset_reg & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
 		tegra_rst_rsn_sts = rst_src;
 	}
 
@@ -951,6 +951,22 @@ enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void)
 }
 EXPORT_SYMBOL(tegra_pmc_get_system_reset_reason);
 
+enum tegra_system_reset_level tegra_pmc_get_system_reset_level(void)
+{
+	u32 rst_lvl, reset_reg;
+	enum tegra_system_reset_level tegra_rst_lvl_sts;
+
+	reset_reg = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
+
+	if (pmc->soc->show_legacy_reset_status) {
+		tegra_rst_lvl_sts = TEGRA_RESET_LEVEL_MAX;
+	} else {
+		rst_lvl = (reset_reg & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
+		tegra_rst_lvl_sts = rst_lvl;
+	}
+
+	return tegra_rst_lvl_sts;
+}
 
 static void tegra_pmc_program_reboot_reason(const char *cmd)
 {
@@ -3616,80 +3632,56 @@ static void tegra_pmc_halt_in_fiq_init(struct tegra_pmc *pmc)
 				  PMC_IMPL_HALT_IN_FIQ_MASK);
 }
 
-static char *t210_pmc_rst_src[] = {
-	"Power on reset",
-	"Watchdog",
-	"Sensor",
-	"Software reset",
-	"LP0",
-	"AOTAG",
+char *pmc_reset_reason_string[] = {
+	"TEGRA_POWER_ON_RESET",
+	"TEGRA_AO_WATCHDOG",
+	"TEGRA_DENVER_WATCHDOG",
+	"TEGRA_BPMP_WATCHDOG",
+	"TEGRA_SCE_WATCHDOG",
+	"TEGRA_SPE_WATCHDOG",
+	"TEGRA_APE_WATCHDOG",
+	"TEGRA_A57_WATCHDOG",
+	"TEGRA_SENSOR",
+	"TEGRA_AOTAG",
+	"TEGRA_VFSENSOR",
+	"TEGRA_SOFTWARE_RESET",
+	"TEGRA_SC7",
+	"TEGRA_HSM",
+	"TEGRA_CSITE",
+	"TEGRA_WATCHDOG",
+	"TEGRA_LP0",
+	"TEGRA_RESET_REASON_MAX"
 };
 
-static char *t186_pmc_rst_src[] = {
-	"Power on reset",
-	"AOWDT",
-	"Denvor watchdog time out",
-	"BPMPWDT",
-	"SCEWDT",
-	"SPEWDT",
-	"APEWDT",
-	"A57 watchdog time out",
-	"SENSOR",
-	"AOTAG",
-	"VFSENSOR",
-	"Software reset",
-	"SC7",
-	"HSM",
-	"CSITE",
-};
-
-static char *pmc_reset_level[] = {
-	"L0",
-	"L1",
-	"L2",
-	"WARM",
+static char *pmc_reset_level_string[] = {
+	"TEGRA_RESET_LEVEL_L0",
+	"TEGRA_RESET_LEVEL_L1",
+	"TEGRA_RESET_LEVEL_L2",
+	"TEGRA_RESET_LEVEL_WARM",
+	"TEGRA_RESET_LEVEL_NOT_SUPPORTED",
 };
 
 static void tegra_pmc_show_reset_status(void)
 {
-	u32 val, rst_src, rst_lvl;
+	u32 reset_reg;
+	enum tegra_system_reset_reason reset_reason = tegra_pmc_get_system_reset_reason();
+	enum tegra_system_reset_level reset_level = tegra_pmc_get_system_reset_level();
 
-	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
+	reset_reg = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
 
-	if (pmc->soc->show_legacy_reset_status) {
-		rst_src = val & T210_PMC_RST_LEVEL_MASK;
-		pr_info("### PMC reset source: %s\n",
-			t210_pmc_rst_src[rst_src]);
-	} else {
-		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
-		rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
-		pr_info("### PMC reset source: %s\n",
-			t186_pmc_rst_src[rst_src]);
-		pr_info("### PMC reset level: %s\n",
-			pmc_reset_level[rst_lvl]);
-	}
-	pr_info("### PMC reset status reg: 0x%x\n", val);
+	pr_info("### PMC reset source: %s\n", pmc_reset_reason_string[reset_reason]);
+	pr_info("### PMC reset level: %s\n", pmc_reset_level_string[reset_level]);
+	pr_info("### PMC reset status reg: 0x%x\n", reset_reg);
 }
 
 #if defined(CONFIG_DEBUG_FS)
 static int pmc_reset_show(struct seq_file *s, void *data)
 {
-	u32 val, rst_src, rst_lvl;
+	enum tegra_system_reset_reason reset_reason = tegra_pmc_get_system_reset_reason();
+	enum tegra_system_reset_level reset_level = tegra_pmc_get_system_reset_level();
 
-	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
-
-	if (pmc->soc->show_legacy_reset_status) {
-		rst_src = val & T210_PMC_RST_LEVEL_MASK;
-		seq_printf(s, "### PMC reset source: %s\n",
-				t210_pmc_rst_src[rst_src]);
-	} else {
-		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
-		rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
-		seq_printf(s, "### PMC reset source: %s\n",
-				t186_pmc_rst_src[rst_src]);
-		seq_printf(s, "### PMC reset level: %s\n",
-				pmc_reset_level[rst_lvl]);
-	}
+	seq_printf(s, "### PMC reset source: %s\n", pmc_reset_reason_string[reset_reason]);
+	seq_printf(s, "### PMC reset level: %s\n", pmc_reset_level_string[reset_level]);
 
 	return 0;
 }
@@ -3717,6 +3709,62 @@ static void tegra_pmc_reset_debugfs_init(struct device *dev)
 }
 #else
 static void tegra_pmc_reset_debugfs_init(struct device *dev)
+{
+}
+#endif
+
+#if defined(CONFIG_SYSFS)
+static ssize_t tegra_reset_reason_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	enum tegra_system_reset_reason reset_status =
+		tegra_pmc_get_system_reset_reason();
+	return sprintf(buf, "%s\n", pmc_reset_reason_string[reset_status]);
+}
+
+static ssize_t tegra_reset_level_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	enum tegra_system_reset_level reset_level =
+		tegra_pmc_get_system_reset_level();
+	return sprintf(buf, "%s\n", pmc_reset_level_string[reset_level]);
+}
+
+static struct kobj_attribute tegra_rst_reason =
+		__ATTR_RO(tegra_reset_reason);
+
+static struct kobj_attribute tegra_rst_level =
+		__ATTR_RO(tegra_reset_level);
+
+static struct attribute *tegra_attributes[] = {
+	&tegra_rst_reason.attr,
+	&tegra_rst_level.attr,
+	NULL,
+};
+
+static const struct attribute_group pmc_attribute_group = {
+	.attrs = tegra_attributes,
+};
+
+static void tegra_pmc_reset_sysfs_init(struct device *dev)
+{
+	int error;
+	static struct kobject *pmc_kobject;
+
+	pmc_kobject = kobject_create_and_add("pmc", kernel_kobj);
+
+	if (!pmc_kobject) {
+		dev_err(dev, "Failed to create sysfs dir - /sys/kernel/pmc\n");
+		return;
+	}
+
+	error = sysfs_create_group(pmc_kobject, &pmc_attribute_group);
+
+	if (error)
+		dev_err(dev, "Failed to create sysfs entries for pmc\n");
+}
+#else
+static void tegra_pmc_reset_sysfs_init(struct device *dev)
 {
 }
 #endif
@@ -3804,6 +3852,7 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	tegra_pmc_show_reset_status();
 	tegra_pmc_reset_debugfs_init(&pdev->dev);
+	tegra_pmc_reset_sysfs_init(&pdev->dev);
 
 	if (IS_ENABLED(CONFIG_DEBUG_FS)) {
 		err = tegra_powergate_debugfs_init();

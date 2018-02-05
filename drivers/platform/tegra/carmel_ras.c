@@ -456,8 +456,7 @@ static int ras_core_serr_callback(struct pt_regs *regs, int reason,
 	raw_spin_lock_irqsave(&core_ras_lock, flags);
 	/* scan all CPU's per core error records */
 	for_each_online_cpu(cpu) {
-		/* skip checking CPU's where RAS is not supported */
-		if (!is_ras_cpu(cpu))
+		if (!tegra_is_cpu_carmel(cpu))
 			continue;
 
 		list_for_each_entry(record, &core_ras_list, node) {
@@ -530,8 +529,7 @@ static void carmel_core_fhi_callback(void)
 		__func__);
 	/* scan all CPU's per core error records */
 	for_each_online_cpu(cpu) {
-		/* skip checking CPU's where RAS is not supported */
-		if (!is_ras_cpu(cpu))
+		if (!tegra_is_cpu_carmel(cpu))
 			continue;
 
 		list_for_each_entry(record, &core_ras_list, node) {
@@ -580,8 +578,7 @@ static int ras_corecluster_serr_callback(struct pt_regs *regs, int reason,
 	raw_spin_lock_irqsave(&corecluster_ras_lock, flags);
 	/* scan all CPU's per core error records */
 	for_each_online_cpu(cpu) {
-		/* skip checking CPU's where RAS is not supported */
-		if (!is_ras_cpu(cpu))
+		if (!tegra_is_cpu_carmel(cpu))
 			continue;
 
 		list_for_each_entry(record, &corecluster_ras_list, node) {
@@ -652,8 +649,7 @@ static void carmel_corecluster_fhi_callback(void)
 	pr_info("%s:Scanning CoreCluster Error Records for Correctable Errors\n",
 		__func__);
 	for_each_online_cpu(cpu) {
-		/* skip checking CPU's where RAS is not supported */
-		if (!is_ras_cpu(cpu))
+		if (!tegra_is_cpu_carmel(cpu))
 			continue;
 
 		list_for_each_entry(record, &corecluster_ras_list, node) {
@@ -940,8 +936,6 @@ static int ras_carmel_probe(struct platform_device *pdev)
 
 	/* Enable RAS on all online CPUs */
 	for_each_online_cpu(cpu) {
-		if (!is_ras_cpu(cpu) || !tegra_is_cpu_carmel(cpu))
-			continue;
 		smp_call_function_single(cpu, carmel_ras_enable, NULL, 1);
 	}
 

@@ -69,6 +69,7 @@
 #define SDHCI_MISC_CTRL_ENABLE_SDR50		0x10
 #define SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300	0x20
 #define SDHCI_MISC_CTRL_ENABLE_DDR50		0x200
+#define SDHCI_MISC_CTRL_SDMMC_SPARE_0_MASK	0xFFFE
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL_1		0x124
 
@@ -482,6 +483,8 @@ static void tegra_sdhci_hs400_enhanced_strobe(struct sdhci_host *host, bool enab
 	else
 		reg &= ~SDHCI_SYS_SW_CTRL_STROBE_EN;
 	sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL);
+	tegra_sdhci_set_tap(host, 0, SET_DEFAULT_TAP);
+
 }
 
 static int tegra_sdhci_get_max_tuning_loop_counter(struct sdhci_host *host)
@@ -1023,23 +1026,48 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	int ret;
 	u8 tap_delay_type;
 	bool tuning_mode = false;
+	bool set_num_tun_iter = false;
+	bool set_trim_delay = false;
+	bool set_padpipe_clk_override = false;
+	bool set_sdmmc_spare_0 = false;
 
-	if ((timing == MMC_TIMING_UHS_DDR50) ||
-		(timing == MMC_TIMING_MMC_DDR52))
-		tegra_host->ddr_signaling = true;
-        else
-            tegra_host->ddr_signaling = false;
-
-	if ((timing == MMC_TIMING_UHS_SDR104) ||
-		(timing == MMC_TIMING_UHS_SDR50) ||
-		(timing == MMC_TIMING_MMC_HS200) ||
-		(timing == MMC_TIMING_MMC_HS400))
-		tuning_mode = true;
+	tegra_host->ddr_signaling = false;
 
 	sdhci_set_uhs_signaling(host, timing);
 
+	switch (timing) {
+	case MMC_TIMING_UHS_SDR50:
+	case MMC_TIMING_UHS_SDR104:
+		tuning_mode = true;
+		break;
+	case MMC_TIMING_MMC_DDR52:
+		set_sdmmc_spare_0 = true;
+	case MMC_TIMING_UHS_DDR50:
+		tegra_host->ddr_signaling = true;
+		set_trim_delay = true;
+		break;
+	case MMC_TIMING_MMC_HS200:
+		tuning_mode = true;
+		set_num_tun_iter = true;
+		set_trim_delay = true;
+		break;
+	case MMC_TIMING_MMC_HS400:
+		tuning_mode = true;
+		set_num_tun_iter = true;
+		set_padpipe_clk_override = true;
+		break;
+	default:
+		break;
+	}
+	if ((timing > tegra_host->timing) &&
+			!tegra_host->set_1v8_calib_offsets) {
+		tegra_sdhci_pad_autocalib(host);
+		tegra_host->set_1v8_calib_offsets = true;
+		tegra_host->timing = timing;
+	}
+
 	/* Set trim delay */
-	if (tegra_host->ddr_signaling || (timing == MMC_TIMING_MMC_HS200)) {
+	if (set_trim_delay) {
 		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
 				prod_device_states[timing], tegra_host->prods,
 				0, SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
@@ -1061,20 +1089,39 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 		tap_delay_type = SET_DEFAULT_TAP;
 	tegra_sdhci_set_tap(host, tegra_host->tuned_tap_delay, tap_delay_type);
 
-	switch (timing) {
-	case MMC_TIMING_UHS_SDR12:
-	case MMC_TIMING_UHS_SDR25:
-	case MMC_TIMING_UHS_DDR50:
-	case MMC_TIMING_UHS_SDR104:
-	case MMC_TIMING_MMC_DDR52:
-	case MMC_TIMING_MMC_HS200:
-	case MMC_TIMING_MMC_HS400:
-		if ((timing > tegra_host->timing) &&
-				!tegra_host->set_1v8_calib_offsets) {
-			tegra_sdhci_pad_autocalib(host);
-			tegra_host->set_1v8_calib_offsets = true;
-			tegra_host->timing = timing;
-		}
+	/*set padpipe_clk_override*/
+	if (set_padpipe_clk_override) {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[timing], tegra_host->prods,
+				0, SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+				SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE);
+		if (ret < 0)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set padpipe clk override value for timing %d, %d\n",
+				timing, ret);
+	}
+	/* Set number of tuning iterations */
+	if (set_num_tun_iter) {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[timing], tegra_host->prods,
+				0, SDHCI_VNDR_TUN_CTRL0_0,
+				SDHCI_TUN_CTRL0_TUNING_ITER_MASK <<
+					SDHCI_TUN_CTRL0_TUNING_ITER_SHIFT);
+		if (ret < 0)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set number of iterations for timing %d, %d\n",
+				timing, ret);
+	}
+	/* Set SDMMC_SPARE_0*/
+	if (set_sdmmc_spare_0) {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[timing], tegra_host->prods,
+				0, SDHCI_TEGRA_VENDOR_MISC_CTRL,
+				 SDHCI_MISC_CTRL_SDMMC_SPARE_0_MASK);
+		if (ret < 0)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set spare0 field for timing %d, %d\n",
+				timing, ret);
 	}
 }
 

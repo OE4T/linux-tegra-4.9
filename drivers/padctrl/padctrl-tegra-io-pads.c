@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -88,6 +88,8 @@ static struct tegra_io_pad_info tegra_io_pads_info[] = {
 	TEGRA_IO_PAD_INFO(DDR_GMI, ddr-gmi),
 	TEGRA_IO_PAD_INFO(DDR_SDMMC2, ddr-sdmmc2),
 	TEGRA_IO_PAD_INFO(DDR_SPI, ddr-spi),
+	TEGRA_IO_PAD_INFO(HDMI_DP2, hdmi-dp2),
+	TEGRA_IO_PAD_INFO(HDMI_DP3, hdmi-dp3),
 };
 
 struct tegra_io_pads_padcontrol {

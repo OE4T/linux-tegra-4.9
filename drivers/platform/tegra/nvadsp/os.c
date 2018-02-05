@@ -42,8 +42,6 @@
 
 #include <asm/uaccess.h>
 
-#include <soc/tegra/chip-id.h>
-
 #include "ape_actmon.h"
 #include "os.h"
 #include "dev.h"
@@ -637,34 +635,12 @@ static void deallocate_memory_for_adsp_os(struct device *dev)
 #endif
 }
 
-static void nvadsp_set_shared_mem(struct platform_device *pdev,
-				  struct nvadsp_shared_mem *shared_mem,
-				  uint32_t dynamic_app_support)
-{
-	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
-	struct nvadsp_os_args *os_args;
-	enum tegra_chipid chip_id;
-
-	shared_mem->os_args.dynamic_app_support = dynamic_app_support;
-	/* set logger strcuture with required properties */
-	priv.logger.debug_ram_rdr = shared_mem->os_args.logger;
-	priv.logger.debug_ram_sz = sizeof(shared_mem->os_args.logger);
-	priv.logger.dev = dev;
-	priv.adsp_os_fw_loaded = true;
-
-	chip_id = tegra_get_chipid();
-	os_args = &shared_mem->os_args;
-	os_args->chip_id = chip_id;
-
-	drv_data->shared_adsp_os_data = shared_mem;
-}
-
 static int __nvadsp_os_secload(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	dma_addr_t addr = drv_data->adsp_mem[ACSR_ADDR];
 	size_t size = drv_data->adsp_mem[ACSR_SIZE];
+	struct nvadsp_shared_mem *shared_mem;
 	struct device *dev = &pdev->dev;
 	void *dram_va;
 
@@ -674,17 +650,48 @@ static int __nvadsp_os_secload(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	nvadsp_set_shared_mem(pdev, dram_va, 0);
+	shared_mem = dram_va;
+	shared_mem->os_args.dynamic_app_support = 0;
+	drv_data->shared_adsp_os_data = shared_mem;
+	/* set logger strcuture with required properties */
+	priv.logger.debug_ram_rdr = shared_mem->os_args.logger;
+	priv.logger.debug_ram_sz = sizeof(shared_mem->os_args.logger);
+	priv.logger.dev = dev;
+	priv.adsp_os_fw_loaded = true;
 
+#ifdef CONFIG_DEBUG_FS
+	wake_up(&priv.logger.wait_queue);
+#endif
 	return 0;
 }
 
-static int nvadsp_firmware_load(struct platform_device *pdev)
+int nvadsp_os_load(void)
 {
 	struct nvadsp_shared_mem *shared_mem;
-	struct device *dev = &pdev->dev;
+	struct nvadsp_drv_data *drv_data;
 	const struct firmware *fw;
+	struct device *dev;
 	int ret = 0;
+
+	if (!priv.pdev) {
+		pr_err("ADSP Driver is not initialized\n");
+		ret = -EINVAL;
+		goto end;
+	}
+
+	mutex_lock(&priv.fw_load_lock);
+	if (priv.adsp_os_fw_loaded)
+		goto end;
+
+	dev = &priv.pdev->dev;
+
+	drv_data = platform_get_drvdata(priv.pdev);
+
+	if (drv_data->adsp_os_secload) {
+		dev_info(dev, "ADSP OS firmware already loaded\n");
+		ret = __nvadsp_os_secload(priv.pdev);
+		goto end;
+	}
 
 	ret = request_firmware(&fw, NVADSP_FIRMWARE, dev);
 	if (ret < 0) {
@@ -705,6 +712,13 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 		goto release_firmware;
 	}
 
+	shared_mem = get_mailbox_shared_region(fw);
+	drv_data->shared_adsp_os_data = shared_mem;
+	/* set logger strcuture with required properties */
+	priv.logger.debug_ram_rdr = shared_mem->os_args.logger;
+	priv.logger.debug_ram_sz = sizeof(shared_mem->os_args.logger);
+	priv.logger.dev = dev;
+
 	dev_info(dev, "Loading ADSP OS firmware %s\n", NVADSP_FIRMWARE);
 
 	ret = nvadsp_os_elf_load(fw);
@@ -713,8 +727,7 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 		goto deallocate_os_memory;
 	}
 
-	shared_mem = get_mailbox_shared_region(fw);
-	nvadsp_set_shared_mem(pdev, shared_mem, 1);
+	shared_mem->os_args.dynamic_app_support = 1;
 
 	ret = dram_app_mem_init(priv.app_alloc_addr, priv.app_size);
 	if (ret) {
@@ -722,50 +735,17 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 		goto deallocate_os_memory;
 	}
 	priv.os_firmware = fw;
-
+	priv.adsp_os_fw_loaded = true;
+#ifdef CONFIG_DEBUG_FS
+	wake_up(&priv.logger.wait_queue);
+#endif
+	mutex_unlock(&priv.fw_load_lock);
 	return 0;
 
 deallocate_os_memory:
 	deallocate_memory_for_adsp_os(dev);
 release_firmware:
 	release_firmware(fw);
-end:
-	return ret;
-
-}
-
-int nvadsp_os_load(void)
-{
-	struct nvadsp_drv_data *drv_data;
-	struct device *dev;
-	int ret = 0;
-
-	if (!priv.pdev) {
-		pr_err("ADSP Driver is not initialized\n");
-		ret = -EINVAL;
-		goto end;
-	}
-
-	mutex_lock(&priv.fw_load_lock);
-	if (priv.adsp_os_fw_loaded)
-		goto end;
-
-	drv_data = platform_get_drvdata(priv.pdev);
-	dev = &priv.pdev->dev;
-
-	if (drv_data->adsp_os_secload) {
-		dev_info(dev, "ADSP OS firmware already loaded\n");
-		ret = __nvadsp_os_secload(priv.pdev);
-	} else {
-		ret = nvadsp_firmware_load(priv.pdev);
-	}
-
-	if (ret == 0) {
-		priv.adsp_os_fw_loaded = true;
-#ifdef CONFIG_DEBUG_FS
-		wake_up(&priv.logger.wait_queue);
-#endif
-	}
 end:
 	mutex_unlock(&priv.fw_load_lock);
 	return ret;

@@ -127,8 +127,7 @@ struct nvadsp_os_args {
 	char		logger[DRAM_DEBUG_LOG_SIZE];
 	uint64_t	adsp_freq_hz;
 	uint32_t        dynamic_app_support;
-	uint32_t	chip_id;
-	char		reserved[120];
+	char		reserved[124];
 } __packed;
 
 /* ARM MODE REGS */

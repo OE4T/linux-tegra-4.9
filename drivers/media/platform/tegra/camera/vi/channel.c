@@ -22,6 +22,7 @@
 #include <linux/of_graph.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/semaphore.h>
 
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
@@ -307,6 +308,8 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 	chan->save_index = 0;
 	chan->free_index = 0;
 	chan->bfirst_fstart = false;
+	chan->capture_descr_index = 0;
+	chan->capture_descr_sequence = 0;
 }
 
 void free_ring_buffers(struct tegra_channel *chan, int frames)
@@ -446,6 +449,24 @@ done:
 	return buf;
 }
 
+struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan)
+{
+	struct tegra_channel_buffer *buf = NULL;
+
+	spin_lock(&chan->dequeue_lock);
+
+	if (list_empty(&chan->dequeue))
+		goto done;
+
+	buf = list_entry(chan->dequeue.next, struct tegra_channel_buffer,
+		queue);
+	list_del_init(&buf->queue);
+
+done:
+	spin_unlock(&chan->dequeue_lock);
+	return buf;
+}
+
 /*
  * -----------------------------------------------------------------------------
  * videobuf2 queue operations
@@ -533,7 +554,7 @@ static void tegra_channel_buffer_queue(struct vb2_buffer *vb)
 	list_add_tail(&buf->queue, &chan->capture);
 	spin_unlock(&chan->start_lock);
 
-	/* Wait up kthread for capture */
+	/* Wake up kthread for capture */
 	wake_up_interruptible(&chan->start_wait);
 }
 
@@ -542,15 +563,22 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state)
 {
 	struct tegra_channel_buffer *buf, *nbuf;
-	spinlock_t *lock = &chan->start_lock;
-	struct list_head *q = &chan->capture;
 
-	spin_lock(lock);
-	list_for_each_entry_safe(buf, nbuf, q, queue) {
+	/* delete capture list */
+	spin_lock(&chan->start_lock);
+	list_for_each_entry_safe(buf, nbuf, &chan->capture, queue) {
 		vb2_buffer_done(&buf->buf.vb2_buf, state);
 		list_del(&buf->queue);
 	}
-	spin_unlock(lock);
+	spin_unlock(&chan->start_lock);
+
+	/* delete dequeue list */
+	spin_lock(&chan->dequeue_lock);
+	list_for_each_entry_safe(buf, nbuf, &chan->dequeue, queue) {
+		vb2_buffer_done(&buf->buf.vb2_buf, state);
+		list_del(&buf->queue);
+	}
+	spin_unlock(&chan->dequeue_lock);
 }
 
 /*
@@ -1769,10 +1797,16 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->size_align = TEGRA_SIZE_ALIGNMENT;
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
+	chan->capture_descr_index = 0;
+	chan->capture_descr_sequence = 0;
 	INIT_LIST_HEAD(&chan->capture);
 	INIT_LIST_HEAD(&chan->entities);
 	init_waitqueue_head(&chan->start_wait);
 	spin_lock_init(&chan->start_lock);
+	INIT_LIST_HEAD(&chan->dequeue);
+	init_waitqueue_head(&chan->dequeue_wait);
+	spin_lock_init(&chan->dequeue_lock);
+	sema_init(&chan->capture_slots, CAPTURE_QUEUE_DEPTH);
 	mutex_init(&chan->stop_kthread_lock);
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);

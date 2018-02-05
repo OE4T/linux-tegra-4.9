@@ -32,14 +32,15 @@
 #include <media/tegra_camera_core.h>
 #include <media/csi.h>
 #include <linux/workqueue.h>
-
+#include <linux/semaphore.h>
 
 #define MAX_FORMAT_NUM	64
 #define	MAX_SUBDEVICES	4
 #define	QUEUED_BUFFERS	4
 #define	ENABLE		1
 #define	DISABLE		0
-#define MAX_SYNCPT_PER_CHANNEL 3
+#define MAX_SYNCPT_PER_CHANNEL	3
+#define CAPTURE_QUEUE_DEPTH	4
 
 #define TEGRA_MEM_FORMAT 0
 #define TEGRA_ISP_FORMAT 1
@@ -62,12 +63,17 @@ enum tegra_vi_pg_mode {
  * @buf: vb2 buffer base object
  * @queue: buffer list entry in the channel queued buffers list
  * @chan: channel that uses the buffer
+ * @vb2_state: V4L2 buffer state (active, done, error)
+ * @capture_descr_index: Index into the VI capture descriptor queue
  * @addr: Tegra IOVA buffer address for VI output
  */
 struct tegra_channel_buffer {
 	struct vb2_v4l2_buffer buf;
 	struct list_head queue;
 	struct tegra_channel *chan;
+
+	unsigned int vb2_state;
+	unsigned int capture_descr_index;
 
 	dma_addr_t addr;
 };
@@ -157,13 +163,20 @@ struct tegra_channel {
 	unsigned int num_buffers;
 	unsigned int released_bufs;
 
+	unsigned int capture_descr_index;
+	unsigned int capture_descr_sequence;
 	struct task_struct *kthread_capture_start;
 	wait_queue_head_t start_wait;
+	struct task_struct *kthread_capture_dequeue;
+	wait_queue_head_t dequeue_wait;
 	struct vb2_queue queue;
 	void *alloc_ctx;
 	bool init_done;
 	struct list_head capture;
+	struct list_head dequeue;
 	spinlock_t start_lock;
+	spinlock_t dequeue_lock;
+	struct semaphore capture_slots;
 	struct work_struct status_work;
 	struct work_struct error_work;
 
@@ -211,8 +224,9 @@ struct tegra_channel {
 	struct device_node *endpoint_node; /* endpoint of_node in vi */
 	unsigned int subdevs_bound;
 	unsigned int link_status;
-
 	struct nvcsi_deskew_context *deskew_ctx;
+	struct tegra_vi_channel *tegra_vi_channel;
+	struct capture_descriptor *request;
 };
 
 #define to_tegra_channel(vdev) \
@@ -325,6 +339,7 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 			       struct vb2_v4l2_buffer *vb,
 			       struct timespec *ts, int state);
 struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
+struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan);
 void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
 void free_ring_buffers(struct tegra_channel *chan, int frames);
 int tegra_channel_set_power(struct tegra_channel *chan, bool on);

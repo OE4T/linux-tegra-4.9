@@ -152,9 +152,12 @@ struct tegra_se_dev {
 	struct workqueue_struct *se_work_q;
 	struct scatterlist aes_sg;
 	bool dynamic_mem;
-	void *total_aes_buf;
+	u32 *total_aes_buf;
+	dma_addr_t total_aes_buf_addr;
 	void *aes_buf;
+	dma_addr_t aes_buf_addr;
 	void *aes_bufs[SE_MAX_AESBUF_ALLOC];
+	dma_addr_t aes_buf_addrs[SE_MAX_AESBUF_ALLOC];
 	atomic_t aes_buf_stat[SE_MAX_AESBUF_ALLOC];
 	dma_addr_t aes_addr;
 	dma_addr_t aes_cur_addr;
@@ -169,6 +172,7 @@ struct tegra_se_dev {
 	struct delayed_work restore_cpufreq_work;
 	unsigned long cpufreq_last_boosted;
 	bool cpufreq_boosted;
+	bool ioc;
 };
 
 static struct tegra_se_dev *se_devices[NUM_SE_ALGO];
@@ -714,7 +718,8 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 		return;
 	}
 
-	dma_sync_single_for_cpu(se_dev->dev, priv_data->buf_addr,
+	if (!se_dev->ioc)
+		dma_sync_single_for_cpu(se_dev->dev, priv_data->buf_addr,
 				priv_data->gather_buf_sz, DMA_BIDIRECTIONAL);
 
 	buf = priv_data->buf;
@@ -739,12 +744,19 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 		req->base.complete(&req->base, 0);
 	}
 
-	dma_unmap_sg(se_dev->dev, &priv_data->sg, 1, DMA_BIDIRECTIONAL);
+	if (!se_dev->ioc)
+		dma_unmap_sg(se_dev->dev, &priv_data->sg, 1, DMA_BIDIRECTIONAL);
 
-	if (unlikely(priv_data->dynmem))
-		kfree(priv_data->buf);
-	else
+	if (unlikely(priv_data->dynmem)) {
+		if (se_dev->ioc)
+			dma_free_coherent(se_dev->dev, priv_data->gather_buf_sz,
+					  priv_data->buf, priv_data->buf_addr);
+		else
+			kfree(priv_data->buf);
+	} else {
 		atomic_set(&se_dev->aes_buf_stat[priv_data->aesbuf_entry], 1);
+	}
+
 	devm_kfree(se_dev->dev, priv_data);
 }
 
@@ -842,7 +854,9 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		priv->se_dev = se_dev;
 		for (i = 0; i < se_dev->req_cnt; i++)
 			priv->reqs[i] = se_dev->reqs[i];
-		priv->sg = se_dev->aes_sg;
+
+		if (!se_dev->ioc)
+			priv->sg = se_dev->aes_sg;
 
 		if (unlikely(se_dev->dynamic_mem)) {
 			priv->buf = se_dev->aes_buf;
@@ -1392,7 +1406,13 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 	unsigned int index = 0;
 
 	if (unlikely(se_dev->dynamic_mem)) {
-		se_dev->aes_buf = kmalloc(se_dev->gather_buf_sz, GFP_KERNEL);
+		if (se_dev->ioc)
+			se_dev->aes_buf = dma_alloc_coherent(
+					se_dev->dev, se_dev->gather_buf_sz,
+					&se_dev->aes_buf_addr, GFP_KERNEL);
+		else
+			se_dev->aes_buf = kmalloc(se_dev->gather_buf_sz,
+						  GFP_KERNEL);
 		if (!se_dev->aes_buf)
 			return -ENOMEM;
 		buf = se_dev->aes_buf;
@@ -1428,25 +1448,34 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 		buf += req->nbytes;
 	}
 
-	if (unlikely(se_dev->dynamic_mem))
-		sg_init_one(&se_dev->aes_sg, se_dev->aes_buf,
-			    se_dev->gather_buf_sz);
-	else
-		sg_init_one(&se_dev->aes_sg, se_dev->aes_bufs[index],
-			    se_dev->gather_buf_sz);
-
-	ret = dma_map_sg(se_dev->dev, &se_dev->aes_sg, 1, DMA_BIDIRECTIONAL);
-	if (!ret) {
-		dev_err(se_dev->dev, "dma_map_sg  error\n");
-
+	if (se_dev->ioc) {
 		if (unlikely(se_dev->dynamic_mem))
-			kfree(se_dev->aes_buf);
+			se_dev->aes_addr = se_dev->aes_buf_addr;
 		else
-			atomic_set(&se_dev->aes_buf_stat[index], 1);
-		return ret;
+			se_dev->aes_addr = se_dev->aes_buf_addrs[index];
+	} else {
+		if (unlikely(se_dev->dynamic_mem))
+			sg_init_one(&se_dev->aes_sg, se_dev->aes_buf,
+				    se_dev->gather_buf_sz);
+		else
+			sg_init_one(&se_dev->aes_sg, se_dev->aes_bufs[index],
+				    se_dev->gather_buf_sz);
+
+		ret = dma_map_sg(se_dev->dev, &se_dev->aes_sg, 1,
+				 DMA_BIDIRECTIONAL);
+		if (!ret) {
+			dev_err(se_dev->dev, "dma_map_sg  error\n");
+
+			if (unlikely(se_dev->dynamic_mem))
+				kfree(se_dev->aes_buf);
+			else
+				atomic_set(&se_dev->aes_buf_stat[index], 1);
+			return ret;
+		}
+
+		se_dev->aes_addr = sg_dma_address(&se_dev->aes_sg);
 	}
 
-	se_dev->aes_addr = sg_dma_address(&se_dev->aes_sg);
 	se_dev->aes_cur_addr = se_dev->aes_addr;
 
 	return 0;
@@ -1768,9 +1797,13 @@ static void tegra_se_init_aesbuf(struct tegra_se_dev *se_dev)
 {
 	int i;
 	void *buf = se_dev->total_aes_buf;
+	dma_addr_t buf_addr = se_dev->total_aes_buf_addr;
 
 	for (i = 0; i < SE_MAX_AESBUF_ALLOC; i++) {
 		se_dev->aes_bufs[i] = buf + (i * SE_MAX_GATHER_BUF_SZ);
+		if (se_dev->ioc)
+			se_dev->aes_buf_addrs[i] = buf_addr +
+						(i * SE_MAX_GATHER_BUF_SZ);
 		atomic_set(&se_dev->aes_buf_stat[i], 1);
 	}
 }
@@ -4056,6 +4089,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	node = of_node_get(se_dev->dev->of_node);
 
+	se_dev->ioc = of_property_read_bool(node, "nvidia,io-coherent");
+
 	err = of_property_read_u32(node, "opcode_addr", &se_dev->opcode_addr);
 	if (err) {
 		dev_err(se_dev->dev, "Missing opcode_addr property\n");
@@ -4220,11 +4255,19 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto aes_buf_alloc_fail;
 	}
 
-	se_dev->total_aes_buf = kzalloc(SE_MAX_MEM_ALLOC, GFP_KERNEL);
+	if (se_dev->ioc)
+		se_dev->total_aes_buf = dma_alloc_coherent(
+						se_dev->dev, SE_MAX_MEM_ALLOC,
+						&se_dev->total_aes_buf_addr,
+						GFP_KERNEL);
+	else
+		se_dev->total_aes_buf = kzalloc(SE_MAX_MEM_ALLOC, GFP_KERNEL);
+
 	if (!se_dev->total_aes_buf) {
 		err = -ENOMEM;
 		goto aes_buf_alloc_fail;
 	}
+
 	tegra_se_init_aesbuf(se_dev);
 
 	if (is_algo_supported(node, "drbg") || is_algo_supported(node, "aes") ||

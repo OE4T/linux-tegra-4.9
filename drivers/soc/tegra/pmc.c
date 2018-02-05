@@ -4437,6 +4437,47 @@ static const unsigned long tegra194_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_NVL_PWRGT_STATUS_0]		= 0x44c,
 };
 
+#define TEGRA194_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)		\
+	_lponly_(0, csia, DPD, 0, UINT_MAX, false)			\
+	_lponly_(1, csib, DPD, 1, UINT_MAX, false)			\
+	_lponly_(2, mipi-bias, DPD, 3, UINT_MAX, false)			\
+	_lponly_(3, pex-clk-bias, DPD, 4, UINT_MAX, false)		\
+	_lponly_(4, pex-clk3, DPD, 5, UINT_MAX, false)			\
+	_lponly_(5, pex-clk2, DPD, 6, UINT_MAX, false)			\
+	_lponly_(6, pex-clk1, DPD, 7, UINT_MAX, false)			\
+	_lponly_(7, uart, DPD, 14, UINT_MAX, false)			\
+	_lponly_(8, audio, DPD, 17, UINT_MAX, false)			\
+	_lp_n_pv_(9, dbg, DPD, 25, E_18V, 4, 1200, 1800, UINT_MAX, false)	\
+	_lponly_(10, hdmi-dp3, DPD, 26, UINT_MAX, false)		\
+	_lponly_(11, hdmi-dp2, DPD, 27, UINT_MAX, false)		\
+	_lponly_(12, hdmi-dp0, DPD, 28, UINT_MAX, false)		\
+	_lponly_(13, hdmi-dp1, DPD, 29, UINT_MAX, false)		\
+	_lponly_(14, pex-ctrl, DPD2, 0, UINT_MAX, false)		\
+	_lponly_(15, sdmmc4, DPD2, 4, UINT_MAX, false)			\
+	_lponly_(16, cam, DPD2, 6, UINT_MAX, false)			\
+	_lponly_(17, csic, DPD2, 11, UINT_MAX, false)			\
+	_lponly_(18, csid, DPD2, 12, UINT_MAX, false)			\
+	_lponly_(19, csie, DPD2, 13, UINT_MAX, false)			\
+	_lponly_(20, csif, DPD2, 14, UINT_MAX, false)			\
+	_lp_n_pv_(21, spi, DPD2, 15, E_18V, 5, 1200, 1800, UINT_MAX, false)	\
+	_lp_n_pv_(22, ufs, DPD2, 17, E_18V, 0, 1200, 1800, UINT_MAX, false)	\
+	_lponly_(23, edp, DPD2, 21, UINT_MAX, false)				\
+	_lp_n_pv_(24, sdmmc1-hv, DPD2, 23, E_33V, 4, 1800, 3300, UINT_MAX, true) \
+	_lp_n_pv_(25, sdmmc3-hv, DPD2, 24, E_33V, 6, 1800, 3300, UINT_MAX, true) \
+	_lponly_(26, conn, DPD2, 28, UINT_MAX, false)				\
+	_lp_n_pv_(27, audio-hv, DPD2, 29, E_33V, 1, 1800, 3300, UINT_MAX, true) \
+	_pvonly_(28, ao-hv, E_33V, 0, 1800, 3300, UINT_MAX, true)
+
+static const struct tegra_pmc_io_pad_soc tegra194_io_pads[] = {
+	TEGRA194_IO_PAD_TABLE(TEGRA186_IO_PAD_LPONLY, TEGRA186_IO_PAD_PVONLY,
+			      TEGRA186_IO_PAD_LP_N_PV)
+};
+
+static const struct pinctrl_pin_desc tegra194_io_pads_pinctrl_desc[] = {
+	TEGRA194_IO_PAD_TABLE(TEGRA186_IO_PAD_DESC_LP, TEGRA186_IO_PAD_DESC_PV,
+			      TEGRA186_IO_PAD_DESC_LP_N_PV)
+};
+
 static const struct tegra_pmc_soc tegra194_pmc_soc = {
 	.has_tsense_reset = false,
 	.has_pclk_clock = false,
@@ -4448,10 +4489,10 @@ static const struct tegra_pmc_soc tegra194_pmc_soc = {
 	.skip_power_gate_debug_fs_init = true,
 	.skip_restart_register = true,
 	.skip_arm_pm_restart = true,
-	.num_io_pads = ARRAY_SIZE(tegra186_io_pads),
-	.io_pads = tegra186_io_pads,
-	.num_descs = ARRAY_SIZE(tegra186_io_pads_pinctrl_desc),
-	.descs = tegra186_io_pads_pinctrl_desc,
+	.num_io_pads = ARRAY_SIZE(tegra194_io_pads),
+	.io_pads = tegra194_io_pads,
+	.num_descs = ARRAY_SIZE(tegra194_io_pads_pinctrl_desc),
+	.descs = tegra194_io_pads_pinctrl_desc,
 	.rmap = tegra194_register_map,
 	.has_ps18 = true,
 	.has_misc_base_address = true,

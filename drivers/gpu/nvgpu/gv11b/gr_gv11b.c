@@ -956,6 +956,8 @@ int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
 		nvgpu_err(g, "invalid zbc stencil table index");
 		return -EINVAL;
 	}
+
+	nvgpu_speculation_barrier();
 	query_params->depth = gr->zbc_s_tbl[index].stencil;
 	query_params->format = gr->zbc_s_tbl[index].format;
 	query_params->ref_cnt = gr->zbc_s_tbl[index].ref_cnt;

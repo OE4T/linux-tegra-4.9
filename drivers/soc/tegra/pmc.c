@@ -902,6 +902,56 @@ int tegra_pmc_cpu_remove_clamping(int cpuid)
 #endif /* CONFIG_SMP */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
+/**
+ * tegra_pmc_get_system_reset_reason() - last reset reason status
+ */
+enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void)
+{
+	u32 val, rst_src;
+	enum tegra_system_reset_reason tegra_rst_rsn_sts;
+
+	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
+
+	if (pmc->soc->show_legacy_reset_status) {
+		rst_src = val & T210_PMC_RST_LEVEL_MASK;
+		switch (rst_src) {
+		case 0:
+			tegra_rst_rsn_sts = TEGRA_POWER_ON_RESET;
+			break;
+
+		case 1:
+			tegra_rst_rsn_sts = TEGRA_WATCHDOG;
+			break;
+
+		case 2:
+			tegra_rst_rsn_sts = TEGRA_SENSOR;
+			break;
+
+		case 3:
+			tegra_rst_rsn_sts = TEGRA_SOFTWARE_RESET;
+			break;
+
+		case 4:
+			tegra_rst_rsn_sts = TEGRA_LP0;
+			break;
+
+		case 5:
+			tegra_rst_rsn_sts = TEGRA_AOTAG;
+			break;
+
+		default:
+			tegra_rst_rsn_sts = TEGRA_RESET_REASON_MAX;
+		}
+	} else {
+		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+		tegra_rst_rsn_sts = rst_src;
+	}
+
+	return tegra_rst_rsn_sts;
+}
+EXPORT_SYMBOL(tegra_pmc_get_system_reset_reason);
+
+
 static void tegra_pmc_program_reboot_reason(const char *cmd)
 {
 	u32 value;

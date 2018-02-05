@@ -157,11 +157,33 @@ static inline int tegra_powergate_sequence_power_up(int id, struct clk *clk,
 #endif /* CONFIG_ARCH_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
+enum tegra_system_reset_reason {
+	TEGRA_POWER_ON_RESET,	/* 0 */
+	TEGRA_AO_WATCHDOG,	/* 1 */
+	TEGRA_DENVER_WATCHDOG,	/* 2 */
+	TEGRA_BPMP_WATCHDOG,	/* 3 */
+	TEGRA_SCE_WATCHDOG,	/* 4 */
+	TEGRA_SPE_WATCHDOG,	/* 5 */
+	TEGRA_APE_WATCHDOG,	/* 6 */
+	TEGRA_A57_WATCHDOG,	/* 7 */
+	TEGRA_SENSOR,		/* 8 */
+	TEGRA_AOTAG,		/* 9 */
+	TEGRA_VFSENSOR,		/* 10 */
+	TEGRA_SOFTWARE_RESET,	/* 11 */
+	TEGRA_SC7,		/* 12 */
+	TEGRA_HSM,		/* 13 */
+	TEGRA_CSITE,		/* 14 */
+	TEGRA_WATCHDOG,		/* 15, T210 */
+	TEGRA_LP0,		/* 16, T210 */
+	TEGRA_RESET_REASON_MAX
+};
+
 int tegra_pmc_set_reboot_reason(u32 reboot_reason);
 int tegra_pmc_clear_reboot_reason(u32 reboot_reason);
 
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val);
 void tegra_pmc_reset_system(void);
+enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void);
 
 #if defined(CONFIG_ARCH_TEGRA) && !defined(CONFIG_TEGRA186_PMC)
 void tegra_pmc_io_dpd_clear(void);

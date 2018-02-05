@@ -1487,10 +1487,15 @@ static void rt5659_jack_detect_intel_hd_header(struct work_struct *work)
 		if (mic_flag) {
 			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
 				0x2, 0x2);
+			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
 			rt5659->jack_type |= SND_JACK_MICROPHONE;
 		} else {
 			regmap_update_bits(rt5659->regmap, RT5659_IRQ_CTRL_2,
 				0x2, 0x0);
+			regmap_update_bits(rt5659->regmap, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
 			rt5659->jack_type = rt5659->jack_type
 				& (~SND_JACK_MICROPHONE);
 		}

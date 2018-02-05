@@ -76,6 +76,11 @@
 					(REG_OFFSET * cpu))
 #define tcpufreq_writel(val, base, cpu)	writel(val, base + \
 					(REG_OFFSET * cpu))
+#define logical_to_phys_map(cpu)	(MPIDR_AFFINITY_LEVEL \
+					(cpu_logical_map(cpu), 0))
+#define logical_to_phys_cluster(cl)	(cl == 1 ? \
+					ARM_CPU_IMP_ARM : \
+					ARM_CPU_IMP_NVIDIA)
 
 #define is_cluster_present(cl)		(cl >= MAX_CLUSTERS ? \
 					false : \
@@ -264,10 +269,13 @@ static unsigned long cpu_to_emc_freq(uint32_t cpu_rate)
 static uint32_t get_cluster_freq(struct cpufreq_policy *policy)
 {
 	uint32_t i, cpu_freq;
+	struct cpumask mask;
 
+	cpumask_and(&mask, policy->cpus, cpu_online_mask);
 	cpu_freq = policy->cur;
-	for_each_cpu(i, policy->cpus)
+	for_each_cpu(i, &mask) {
 		cpu_freq = max(cpu_freq, tfreq_data.cpu_freq[i]);
+	}
 
 	return cpu_freq;
 }
@@ -284,7 +292,7 @@ static void set_cpufreq_to_emcfreq(struct cpufreq_policy *policy)
 
 	emc_freq = cpu_to_emc_freq(cluster_freq);
 
-	cl = topology_physical_package_id(policy->cpu);
+	cl = tegra18_logical_to_cluster(policy->cpu);
 	tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, emc_freq,
 		TEGRA_BWMGR_SET_EMC_FLOOR);
 	pr_debug("cpu: %d, cluster %s, emc freq(KHz): %lu cluster_freq(kHz): %u\n",
@@ -293,7 +301,7 @@ static void set_cpufreq_to_emcfreq(struct cpufreq_policy *policy)
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
 {
-	int cur_cl = topology_physical_package_id(cpu);
+	int cur_cl = tegra18_logical_to_cluster(cpu);
 
 	return tfreq_data.pcluster[cur_cl].clft;
 }
@@ -313,7 +321,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	int8_t vindx;
 	spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
 
-	cur_cl = topology_physical_package_id(cpu);
+	cur_cl = tegra18_logical_to_cluster(cpu);
 	vhtbl = &tfreq_data.pcluster[cur_cl].dvfs_tbl;
 
 	/*
@@ -344,7 +352,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 		vindx = vhtbl->vindex_mult * vindx / vhtbl->vindex_div;
 
 	val |= (vindx << EDVD_COREX_VINDEX_VAL_SHIFT);
-	phy_cpu = topology_core_id(cpu);
+	phy_cpu = logical_to_phys_map(cpu);
 
 	spin_lock(slock);
 	tcpufreq_writel(val, tfreq_data.pcluster[cur_cl].edvd_pub +
@@ -578,8 +586,8 @@ static int set_hint(void *data, u64 val)
 	get_online_cpus();
 	if (cpu_online(cpu)) {
 		spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
-		cur_cl = topology_physical_package_id(cpu);
-		cpu = topology_core_id(cpu);
+		cur_cl = tegra18_logical_to_cluster(cpu);
+		cpu = logical_to_phys_map(cpu);
 		spin_lock(slock);
 		tcpufreq_writel(hint, tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
@@ -601,8 +609,8 @@ static int get_hint(void *data, u64 *hint)
 	/* Take hotplug lock before taking tegra cpufreq lock */
 	get_online_cpus();
 	if (cpu_online(cpu)) {
-		cur_cl = topology_physical_package_id(cpu);
-		cpu = topology_core_id(cpu);
+		cur_cl = tegra18_logical_to_cluster(cpu);
+		cpu = logical_to_phys_map(cpu);
 		pstore_rtrace_set_bypass(1);
 		*hint = tcpufreq_readl(tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
@@ -916,7 +924,7 @@ static int tegra186_cpufreq_exit(struct cpufreq_policy *policy)
 
 	cpufreq_frequency_table_cpuinfo(policy, policy->freq_table);
 
-	cl = topology_physical_package_id(policy->cpu);
+	cl = tegra18_logical_to_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
 		tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, 0,
 			TEGRA_BWMGR_SET_EMC_FLOOR);
@@ -1018,8 +1026,8 @@ static int tegra_cpu_pm_notifier(struct notifier_block *nb,
 			int cur_cl, phy_cpu;
 			spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
 
-			cur_cl = topology_physical_package_id(cpu);
-			phy_cpu = topology_core_id(cpu);
+			cur_cl = tegra18_logical_to_cluster(cpu);
+			phy_cpu = logical_to_phys_map(cpu);
 
 			if (spin_trylock(slock)) {
 				tcpufreq_writel(tfreq_data.last_hint[cpu],
@@ -1286,8 +1294,9 @@ static void set_cpu_mask(void)
 	int cpu_num;
 
 	for_each_possible_cpu(cpu_num) {
-		cpumask_set_cpu(cpu_num, &tfreq_data.pcluster[
-			topology_physical_package_id(cpu_num)].cpu_mask);
+		cpumask_set_cpu(cpu_num,
+			&tfreq_data.pcluster[
+				tegra18_logical_to_cluster(cpu_num)].cpu_mask);
 	}
 }
 
@@ -1356,9 +1365,9 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 	tfreq_data.pcluster[B_CLUSTER].cluster_present = false;
 	tfreq_data.pcluster[M_CLUSTER].cluster_present = false;
 	for_each_possible_cpu(cpu) {
-		if (topology_physical_package_id(cpu) == B_CLUSTER)
+		if (tegra18_logical_to_cluster(cpu) == B_CLUSTER)
 			tfreq_data.pcluster[B_CLUSTER].cluster_present = true;
-		else if (topology_physical_package_id(cpu) == M_CLUSTER)
+		else if (tegra18_logical_to_cluster(cpu) == M_CLUSTER)
 			tfreq_data.pcluster[M_CLUSTER].cluster_present = true;
 	}
 

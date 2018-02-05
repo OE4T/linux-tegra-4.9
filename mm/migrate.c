@@ -1478,11 +1478,8 @@ int migrate_replace_page(struct page *page, struct page *newpage)
 		ret = __unmap_and_move(page, newpage, 1, MIGRATE_SYNC);
 	}
 
-	if (ret == 0) {
-		/* take ownership of newpage and add it to lru */
-		putback_lru_page(newpage);
-	} else {
-		/* restore additional reference to the oldpage */
+	if (ret) {
+		/* restore additional reference to the oldpage if failed */
 		get_page(page);
 	}
 

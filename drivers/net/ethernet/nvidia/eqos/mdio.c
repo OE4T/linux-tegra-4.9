@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -338,8 +338,9 @@ static void eqos_adjust_link(struct net_device *dev)
 				break;
 			case SPEED_10:
 				hw_if->set_mii_speed_10(pdata);
-				/* disable auto calibration */
-				hw_if->disable_pad_cal(pdata);
+				/* disable auto calibration only for MAC4.10 */
+				if (pdata->mac_ver == EQOS_MAC_CORE_4_10)
+					hw_if->disable_pad_cal(pdata);
 				break;
 			}
 			pdata->speed = phydev->speed;

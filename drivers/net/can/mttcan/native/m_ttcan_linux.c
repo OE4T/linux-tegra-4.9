@@ -605,6 +605,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 	struct net_device *dev = napi->dev;
 	struct mttcan_priv *priv = netdev_priv(dev);
 	u32 ir, ack, ttir, ttack, psr;
+
 	ir = priv->irqstatus;
 	ttir = priv->tt_irqstatus;
 
@@ -614,8 +615,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 
 	if (ir) {
 		if (ir & MTTCAN_ERR_INTR) {
-			psr = ttcan_read_psr(priv->ttcan);
-			priv->ttcan->proto_state = psr;
+			psr = priv->ttcan->proto_state;
 			ack = ir & MTTCAN_ERR_INTR;
 			ttcan_ir_write(priv->ttcan, ack);
 			if ((ir & MTT_IR_EW_MASK) && (psr & MTT_PSR_EW_MASK)) {
@@ -1079,6 +1079,10 @@ static irqreturn_t mttcan_isr(int irq, void *dev_id)
 
 	if (!priv->irqstatus && !priv->tt_irqstatus)
 		return IRQ_NONE;
+
+	/* if there is error, read the PSR register now */
+	if (priv->irqstatus & MTTCAN_ERR_INTR)
+		priv->ttcan->proto_state = ttcan_read_psr(priv->ttcan);
 
 	/* If tt_stop > 0, then stop when TT interrupt count > tt_stop */
 	if (priv->tt_param[1] && priv->tt_irqstatus)

@@ -1226,10 +1226,10 @@ success:
 EXPORT_SYMBOL(nvlink_enumerate);
 
 #ifdef CONFIG_DEBUG_FS
-/* TODO: Add debugfs nodes to expose topology, etc */
 void nvlink_core_debugfs_init(void)
 {
 	struct dentry *core_debugfs = NULL;
+	struct dentry *debugfs_node = NULL;
 
 	nvlink_debugfs = debugfs_create_dir(NVLINK_DEBUGFS_ROOT, NULL);
 	if (!nvlink_debugfs) {
@@ -1240,6 +1240,15 @@ void nvlink_core_debugfs_init(void)
 	core_debugfs = debugfs_create_dir(NVLINK_DRV_NAME, nvlink_debugfs);
 	if (!core_debugfs) {
 		nvlink_err("Failed to create NVLINK core driver's debugfs directory");
+		goto fail;
+	}
+
+	debugfs_node = debugfs_create_u32("log_mask",
+					S_IWUSR | S_IRUGO,
+					core_debugfs,
+					&nvlink_log_mask);
+	if (!debugfs_node) {
+		nvlink_err("Failed to create the log_mask debugfs file");
 		goto fail;
 	}
 

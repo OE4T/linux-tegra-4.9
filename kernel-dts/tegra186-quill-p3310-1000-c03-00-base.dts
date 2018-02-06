@@ -77,6 +77,20 @@
 		};
 	};
 
+	i2c@c240000 {
+		bmi160@69 {
+			compatible = "bmi,bmi160";
+			reg = <0x69>;
+			interrupt-parent = <&tegra_aon_gpio>;
+			interrupts = <TEGRA_AON_GPIO(AA, 2) 0x01>;
+			accelerometer_matrix    = [01 00 00 00 01 00 00 00 01];
+			gyroscope_matrix        = [01 00 00 00 01 00 00 00 01];
+			vdd-supply = <&spmic_sd3>;
+			vdd_IO-supply = <&spmic_sd3>;
+			status = "okay";
+		};
+	};
+
 	ahci-sata@3507000 {
 		gpios = <&spmic 7 0>;
 	};

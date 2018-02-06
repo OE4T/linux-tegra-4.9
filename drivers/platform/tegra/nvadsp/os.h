@@ -3,7 +3,7 @@
  *
  * A header file containing data structures shared with ADSP OS
  *
- * Copyright (C) 2014-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -160,7 +160,8 @@ static inline int nvadsp_os_init(struct platform_device *pdev)
 
 int nvadsp_os_probe(struct platform_device *);
 int nvadsp_app_module_probe(struct platform_device *);
-int adsp_add_load_mappings(phys_addr_t, void *, int);
+void *nvadsp_da_to_va_mappings(u64 da, int len);
+int nvadsp_add_load_mappings(phys_addr_t pa, void *mapping, int len);
 struct elf32_shdr *nvadsp_get_section(const struct firmware *, char *);
 struct global_sym_info *find_global_symbol(const char *);
 void update_nvadsp_app_shared_ptr(void *);

@@ -309,7 +309,7 @@ bool is_adsp_dram_addr(u64 addr)
 	return false;
 }
 
-int adsp_add_load_mappings(phys_addr_t pa, void *mapping, int len)
+int nvadsp_add_load_mappings(phys_addr_t pa, void *mapping, int len)
 {
 	if (map_idx >= NM_LOAD_MAPPINGS)
 		return -EINVAL;
@@ -342,7 +342,6 @@ void *nvadsp_da_to_va_mappings(u64 da, int len)
 	}
 	return ptr;
 }
-EXPORT_SYMBOL(nvadsp_da_to_va_mappings);
 
 void *nvadsp_alloc_coherent(size_t size, dma_addr_t *da, gfp_t flags)
 {
@@ -623,7 +622,7 @@ static int allocate_memory_for_adsp_os(void)
 		goto end;
 	}
 #endif
-	adsp_add_load_mappings(addr, dram_va, size);
+	nvadsp_add_load_mappings(addr, dram_va, size);
 end:
 	return ret;
 }

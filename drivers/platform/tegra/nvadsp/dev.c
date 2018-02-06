@@ -3,7 +3,7 @@
  *
  * A device driver for ADSP and APE
  *
- * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -282,7 +282,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 			goto out;
 		}
 		drv_data->base_regs[iter] = base;
-		adsp_add_load_mappings(res->start, base,
+		nvadsp_add_load_mappings(res->start, base,
 						resource_size(res));
 	}
 

@@ -1,0 +1,8 @@
+config NVS_BMI160
+	tristate "Bosch BMI160 IMU"
+	depends on I2C && SYSFS && IIO && IIO_KFIFO_BUF && IIO_TRIGGER && !INV_MPU
+	select NVS_IIO
+	default n
+	help
+	  Enable Bosch BMI160 IMU
+

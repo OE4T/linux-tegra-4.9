@@ -27,6 +27,12 @@ static u32 bwmgr_t194_dram_freq_table[] = { /* MHz */
 
 /* ALL VALUES BELOW CORRESPOND TO FREQ in bwmgr_t194_dram_freq_table */
 
+/* Temp derated 4X refresh co-efficients are not used for now
+ * These will be used later when dram temperature is used to
+ * apply the efficiency.
+ * commenting out for now
+ */
+#if 0
 /* efficiency percentage 8ch ecc 4X 1-rank*/
 static u32 bwmgr_t194_8ch_ecc_4X_1rank_eff[] = { /* % */
 	  20,    20,    20,    20,    20,
@@ -81,6 +87,63 @@ static u32 bwmgr_t194_16ch_4X_2rank_eff[] = { /* % */
 	  30,    30,    30,    30,    30,
 	  30,    35,    35,    35,    65,
 	  65,    65
+};
+#endif
+
+/* efficiency percentage 8ch ecc 1X 1-rank*/
+static u32 bwmgr_t194_8ch_ecc_1X_1rank_eff[] = { /* % */
+	  45,    45,    45,    45,    45,
+	  45,    50,    50,    50,    65,
+	  65,    70
+};
+
+/* efficiency percentage 16ch ecc 1X 1-rank*/
+static u32 bwmgr_t194_16ch_ecc_1X_1rank_eff[] = { /* % */
+	  40,    40,    40,    40,    40,
+	  40,    50,    50,    50,    65,
+	  65,    70
+};
+
+/* efficiency percentage 8ch 1X 1-rank*/
+static u32 bwmgr_t194_8ch_1X_1rank_eff[] = { /* % */
+	  60,    60,    60,    60,    60,
+	  60,    60,    60,    60,    80,
+	  80,    80
+};
+
+/* efficiency percentage 16ch 1X 1-rank*/
+static u32 bwmgr_t194_16ch_1X_1rank_eff[] = { /* % */
+	  60,    60,    60,    60,    60,
+	  60,    60,    60,    60,    80,
+	  80,    80
+};
+
+/* efficiency percentage 8ch ecc 1X 2-rank*/
+static u32 bwmgr_t194_8ch_ecc_1X_2rank_eff[] = { /* % */
+	  40,    40,    40,    40,    40,
+	  40,    45,    45,    45,    60,
+	  55,    55
+};
+
+/* efficiency percentage 16ch ecc 1X 2-rank*/
+static u32 bwmgr_t194_16ch_ecc_1X_2rank_eff[] = { /* % */
+	  40,    40,    40,    40,    40,
+	  40,    50,    50,    50,    60,
+	  55,    55
+};
+
+/* efficiency percentage 8ch 1X 2-rank*/
+static u32 bwmgr_t194_8ch_1X_2rank_eff[] = { /* % */
+	  55,    55,    55,    55,    55,
+	  55,    55,    55,    55,    70,
+	  70,    70
+};
+
+/* efficiency percentage 16ch 1X 2-rank*/
+static u32 bwmgr_t194_16ch_1X_2rank_eff[] = { /* % */
+	  55,    55,    55,    55,    55,
+	  55,    55,    55,    55,    70,
+	  70,    70
 };
 
 /* max nvdis bw req in MHz
@@ -416,10 +479,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_ecc_4X_2rank_eff;
+					bwmgr_t194_16ch_ecc_1X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_ecc_4X_1rank_eff;
+					bwmgr_t194_16ch_ecc_1X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 			bwmgr_t194_lpddr4_16ch_ecc_iso_max_nvdis_bw_reqd;
@@ -438,10 +501,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 					DRAM_TYPE_LPDDR4_8CH_ECC;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_ecc_4X_2rank_eff;
+					bwmgr_t194_8ch_ecc_1X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_ecc_4X_1rank_eff;
+					bwmgr_t194_8ch_ecc_1X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_8ch_ecc_iso_max_nvdis_bw_reqd;
@@ -461,10 +524,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_16CH;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_4X_2rank_eff;
+					bwmgr_t194_16ch_1X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_4X_1rank_eff;
+					bwmgr_t194_16ch_1X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_16ch_iso_max_nvdis_bw_reqd;
@@ -481,10 +544,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_8CH;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_4X_2rank_eff;
+					bwmgr_t194_8ch_1X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_4X_1rank_eff;
+					bwmgr_t194_8ch_1X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_8ch_iso_max_nvdis_bw_reqd;

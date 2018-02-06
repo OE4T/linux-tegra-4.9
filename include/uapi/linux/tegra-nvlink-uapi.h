@@ -366,11 +366,11 @@ struct tegra_nvlink_link_state {
 };
 
 enum tegra_nvlink_conn_train_type {
-	nvlink_train_conn_off_to_swcfg = 0,
-	nvlink_train_conn_swcfg_to_active,
-	nvlink_train_conn_to_off,
-	nvlink_train_conn_active_to_swcfg,
-	nvlink_train_conn_swcfg_to_off,
+	tegra_nvlink_train_conn_off_to_swcfg = 0,
+	tegra_nvlink_train_conn_swcfg_to_active,
+	tegra_nvlink_train_conn_to_off,
+	tegra_nvlink_train_conn_active_to_swcfg,
+	tegra_nvlink_train_conn_swcfg_to_off,
 };
 
 struct tegra_nvlink_train_intranode_conn {
@@ -419,6 +419,7 @@ enum tnvlink_ioctl_num {
 	TNVLINK_IOCTL_TRAIN_INTRANODE_CONN,
 	TNVLINK_IOCTL_GET_LP_COUNTERS,
 	TNVLINK_IOCTL_CLEAR_LP_COUNTERS,
+	TNVLINK_IOCTL_NUM_IOCTLS
 };
 
 /* TODO: choose a unique MAGIC number for ioctl implementation */

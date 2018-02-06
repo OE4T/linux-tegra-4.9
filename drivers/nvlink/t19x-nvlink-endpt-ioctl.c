@@ -24,6 +24,88 @@
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
 
+#define TNVLINK_LINK_ID_TO_MASK(link_id)	BIT(link_id)
+
+static int get_nvlink_caps_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int get_nvlink_status_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int clear_counters_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_counters_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_err_info_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_error_recoveries_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int setup_eom_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int train_intranode_conn_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int get_lp_counters_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int clear_lp_counters_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+
+struct tnvlink_ioctl {
+	const char *const name;
+	const size_t struct_size;
+	int (*handler)(struct tnvlink_dev *, void *);
+};
+
+static const struct tnvlink_ioctl ioctls[] = {
+	[TNVLINK_IOCTL_GET_NVLINK_CAPS] = {
+		.name		= "get_nvlink_caps",
+		.struct_size	= sizeof(struct tegra_nvlink_caps),
+		.handler	= get_nvlink_caps_ioctl,
+	},
+	[TNVLINK_IOCTL_GET_NVLINK_STATUS] = {
+		.name		= "get_nvlink_status",
+		.struct_size	= sizeof(struct tegra_nvlink_status),
+		.handler	= get_nvlink_status_ioctl,
+	},
+	[TNVLINK_IOCTL_CLEAR_COUNTERS] = {
+		.name		= "clear_counters",
+		.struct_size	= sizeof(struct tegra_nvlink_clear_counters),
+		.handler	= clear_counters_ioctl,
+	},
+	[TNVLINK_IOCTL_GET_COUNTERS] = {
+		.name		= "get_counters",
+		.struct_size	= sizeof(struct tegra_nvlink_get_counters),
+		.handler	= get_counters_ioctl,
+	},
+	[TNVLINK_IOCTL_GET_ERR_INFO] = {
+		.name		= "get_err_info",
+		.struct_size	= sizeof(struct tegra_nvlink_get_err_info),
+		.handler	= get_err_info_ioctl,
+	},
+	[TNVLINK_IOCTL_GET_ERROR_RECOVERIES] = {
+		.name		= "get_error_recoveries",
+		.struct_size = sizeof(struct tegra_nvlink_get_error_recoveries),
+		.handler	= get_error_recoveries_ioctl,
+	},
+	[TNVLINK_IOCTL_SETUP_EOM] = {
+		.name		= "setup_eom",
+		.struct_size	= sizeof(struct tegra_nvlink_setup_eom),
+		.handler	= setup_eom_ioctl,
+	},
+	[TNVLINK_IOCTL_TRAIN_INTRANODE_CONN] = {
+		.name		= "train_intranode_conn",
+		.struct_size = sizeof(struct tegra_nvlink_train_intranode_conn),
+		.handler	= train_intranode_conn_ioctl,
+	},
+	[TNVLINK_IOCTL_GET_LP_COUNTERS] = {
+		.name		= "get_lp_counters",
+		.struct_size	= sizeof(struct tegra_nvlink_get_lp_counters),
+		.handler	= get_lp_counters_ioctl,
+	},
+	[TNVLINK_IOCTL_CLEAR_LP_COUNTERS] = {
+		.name		= "clear_lp_counters",
+		.struct_size	= sizeof(struct tegra_nvlink_clear_lp_counters),
+		.handler	= clear_lp_counters_ioctl,
+	},
+};
+
 static bool is_nvlink_loopback_topology(struct tnvlink_dev *tdev)
 {
 	struct nvlink_device *ndev = tdev->ndev;
@@ -36,9 +118,11 @@ static bool is_nvlink_loopback_topology(struct tnvlink_dev *tdev)
 	return false;
 }
 
-static int t19x_nvlink_get_caps(struct tnvlink_dev *tdev,
-			struct tegra_nvlink_caps *caps)
+static int get_nvlink_caps_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
+	struct tegra_nvlink_caps *caps =
+				(struct tegra_nvlink_caps *)ioctl_struct;
+
 	if (is_nvlink_loopback_topology(tdev)) {
 		caps->nvlink_caps |= (TEGRA_CTRL_NVLINK_CAPS_SUPPORTED |
 					TEGRA_CTRL_NVLINK_CAPS_VALID);
@@ -93,17 +177,31 @@ static int t19x_nvlink_get_caps(struct tnvlink_dev *tdev,
 		break;
 	}
 
-	caps->enabled_link_mask = BIT(0);
-	caps->discovered_link_mask = BIT(0);
+	/*
+	 * Discovered = discovered in discovery table
+	 * Enabled = present in discovery table and not disabled through a
+	 *           registry key
+	 *
+	 * Since we don't use the discovery table right now and we don't have
+	 * registry keys for disabling links, just return 0x1 for both the
+	 * disovered and enabled link masks.
+	 * TODO: Set the discovered and enabled link masks based on the
+	 *       discovery table + registry keys (if we implement these)
+	 */
+	caps->discovered_link_mask =
+			TNVLINK_LINK_ID_TO_MASK(0);
+	caps->enabled_link_mask =
+			TNVLINK_LINK_ID_TO_MASK(0);
 
 	return 0;
 }
 
-static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
-				struct tegra_nvlink_status *status)
+static int get_nvlink_status_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
 	struct nvlink_device *ndev = tdev->ndev;
-	struct nvlink_link *link = &ndev->link;
+	struct nvlink_link *nlink = &ndev->link;
+	struct tegra_nvlink_status *status =
+				(struct tegra_nvlink_status *)ioctl_struct;
 	u32 reg_val = 0;
 	u32 state = 0;
 
@@ -114,8 +212,8 @@ static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
 	status->link_info.connected = true;
 
 	status->link_info.remote_device_link_number =
-					link->remote_dev_info.link_id;
-	status->link_info.local_device_link_number = link->link_id;
+					nlink->remote_dev_info.link_id;
+	status->link_info.local_device_link_number = nlink->link_id;
 
 	if (is_nvlink_loopback_topology(tdev)) {
 		status->link_info.caps |= TEGRA_CTRL_NVLINK_CAPS_VALID;
@@ -146,7 +244,8 @@ static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
 		/* TODO: Handle other topologies */
 	}
 
-	status->enabled_link_mask = 1;
+	status->enabled_link_mask =
+			TNVLINK_LINK_ID_TO_MASK(nlink->link_id);
 	status->link_info.phy_type = TEGRA_CTRL_NVLINK_STATUS_PHY_NVHS;
 	status->link_info.sublink_width = 8;
 
@@ -218,11 +317,18 @@ static int t19x_nvlink_get_status(struct tnvlink_dev *tdev,
 	return 0;
 }
 
-static int t19x_nvlink_clear_counters(struct tnvlink_dev *tdev,
-			struct tegra_nvlink_clear_counters *clear_counters)
+static int clear_counters_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
+	struct tegra_nvlink_clear_counters *clear_counters =
+			(struct tegra_nvlink_clear_counters *)ioctl_struct;
 	u32 reg_val = 0;
 	u32 counter_mask = clear_counters->counter_mask;
+
+	if (clear_counters->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
 
 	if ((counter_mask) & (TEGRA_CTRL_NVLINK_COUNTER_TL_TX0 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
@@ -391,13 +497,19 @@ static void t19x_nvlink_get_lane_crc_errors(struct tnvlink_dev *tdev,
 	}
 }
 
-static int t19x_nvlink_get_counters(struct tnvlink_dev *tdev,
-				struct tegra_nvlink_get_counters *get_counters)
+static int get_counters_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
+	struct tegra_nvlink_get_counters *get_counters =
+			(struct tegra_nvlink_get_counters *)ioctl_struct;
 	u32 reg_val = 0;
 	u64 reg_low = 0;
 	u64 reg_hi = 0;
 	u32 counter_mask = get_counters->counter_mask;
+
+	if (get_counters->link_id != tdev->ndev->link.link_id) {
+		nvlink_err("Invalid link ID specified");
+		return -EINVAL;
+	}
 
 	if (counter_mask & (TEGRA_CTRL_NVLINK_COUNTER_TL_TX0 |
 				TEGRA_CTRL_NVLINK_COUNTER_TL_TX1 |
@@ -494,15 +606,17 @@ static int t19x_nvlink_get_counters(struct tnvlink_dev *tdev,
 	return 0;
 }
 
-static int t19x_nvlink_get_err_info(struct tnvlink_dev *tdev,
-				struct tegra_nvlink_get_err_info *get_err_info)
+static int get_err_info_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
 	struct nvlink_device *ndev = tdev->ndev;
+	struct nvlink_link *nlink = &ndev->link;
+	struct tegra_nvlink_get_err_info *get_err_info =
+			(struct tegra_nvlink_get_err_info *)ioctl_struct;
 	u32 reg_val = 0;
 	u32 state = 0;
 	bool excess_err_dl = false;
 
-	get_err_info->link_mask = BIT(0);
+	get_err_info->link_mask = TNVLINK_LINK_ID_TO_MASK(nlink->link_id);
 
 	get_err_info->link_err_info.tl_err_log = 0;
 	get_err_info->link_err_info.tl_intr_en = 0;
@@ -551,9 +665,18 @@ static int t19x_nvlink_get_err_info(struct tnvlink_dev *tdev,
 }
 
 /* Get the number of successful error recoveries */
-static int t19x_nvlink_get_error_recoveries(struct tnvlink_dev *tdev,
-		struct tegra_nvlink_get_error_recoveries *get_err_recoveries)
+static int get_error_recoveries_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct)
 {
+	struct tegra_nvlink_get_error_recoveries *get_err_recoveries =
+		(struct tegra_nvlink_get_error_recoveries *)ioctl_struct;
+
+	if (get_err_recoveries->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
 	get_err_recoveries->num_recoveries = tdev->tlink.error_recoveries;
 	/* Clear the counts */
 	tdev->tlink.error_recoveries = 0;
@@ -561,9 +684,16 @@ static int t19x_nvlink_get_error_recoveries(struct tnvlink_dev *tdev,
 	return 0;
 }
 
-static int t19x_nvlink_setup_eom(struct tnvlink_dev *tdev,
-				struct tegra_nvlink_setup_eom *setup_eom)
+static int setup_eom_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
+	struct tegra_nvlink_setup_eom *setup_eom =
+				(struct tegra_nvlink_setup_eom *)ioctl_struct;
+
+	if (setup_eom->link_id != tdev->ndev->link.link_id) {
+		nvlink_err("Invalid link ID specified");
+		return -EINVAL;
+	}
+
 	return minion_send_cmd(tdev, MINION_NVLINK_DL_CMD_COMMAND_CONFIGEOM,
 			setup_eom->params);
 }
@@ -579,44 +709,55 @@ static void nvlink_get_endpoint_state(struct tnvlink_dev *tdev,
 }
 
 
-static int t19x_nvlink_train_intranode_conn(struct tnvlink_dev *tdev,
-		struct tegra_nvlink_train_intranode_conn *train_intranode_conn)
+static int train_intranode_conn_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct)
 {
 	struct nvlink_device *ndev = tdev->ndev;
+	struct tegra_nvlink_train_intranode_conn *train_intranode_conn =
+		(struct tegra_nvlink_train_intranode_conn *)ioctl_struct;
 	int ret;
 
 	if (train_intranode_conn->src_end_point.node_id !=
-			train_intranode_conn->dst_end_point.node_id)
-		return -EINVAL;
+			train_intranode_conn->dst_end_point.node_id) {
+		nvlink_err("Source and destination node IDs don't match!");
+		ret = -EINVAL;
+		goto exit;
+	}
 
 	if (train_intranode_conn->src_end_point.link_index !=
-			ndev->link.link_id)
-		return -EINVAL;
+			ndev->link.link_id) {
+		nvlink_err("Source link ID mismatch!");
+		ret = -EINVAL;
+		goto exit;
+	}
 
 	if (train_intranode_conn->dst_end_point.link_index !=
-			ndev->link.remote_dev_info.link_id)
-		return -EINVAL;
+			ndev->link.remote_dev_info.link_id) {
+		nvlink_err("Destination link ID mismatch!");
+		ret = -EINVAL;
+		goto exit;
+	}
 
 	switch (train_intranode_conn->train_to) {
-	case nvlink_train_conn_off_to_swcfg:
+	case tegra_nvlink_train_conn_off_to_swcfg:
 		ret = nvlink_transition_intranode_conn_off_to_safe(ndev);
 		break;
 
-	case nvlink_train_conn_swcfg_to_active:
+	case tegra_nvlink_train_conn_swcfg_to_active:
 		ret = nvlink_train_intranode_conn_safe_to_hs(ndev);
 		break;
 
-	case nvlink_train_conn_to_off:
+	case tegra_nvlink_train_conn_to_off:
 		/* OFF state transitions are not supported/tested */
 		nvlink_err("OFF state transitions are not supported");
 		ret = -EINVAL;
 		break;
 
-	case nvlink_train_conn_active_to_swcfg:
+	case tegra_nvlink_train_conn_active_to_swcfg:
 		ret = nvlink_transition_intranode_conn_hs_to_safe(ndev);
 		break;
 
-	case nvlink_train_conn_swcfg_to_off:
+	case tegra_nvlink_train_conn_swcfg_to_off:
 		/* OFF state transitions are not supported/tested */
 		nvlink_err("OFF state transitions are not supported");
 		ret = -EINVAL;
@@ -642,6 +783,8 @@ static int t19x_nvlink_train_intranode_conn(struct tnvlink_dev *tdev,
 		/* Handle other topologies */
 	}
 
+exit:
+	train_intranode_conn->status = ret;
 	return ret;
 }
 
@@ -649,13 +792,19 @@ static int t19x_nvlink_train_intranode_conn(struct tnvlink_dev *tdev,
  * Get count for LP hardware counters that are specified in counter_valid_mask.
  * Clear unsupported ones in counter_valid_mask.
  */
-static int t19x_nvlink_get_lp_counters(struct tnvlink_dev *tdev,
-			struct tegra_nvlink_get_lp_counters *get_lp_counters)
+static int get_lp_counters_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
+	struct tegra_nvlink_get_lp_counters *get_lp_counters =
+			(struct tegra_nvlink_get_lp_counters *)ioctl_struct;
 	u32 counter_valid_mask_out = 0;
 	u32 counter_valid_mask = get_lp_counters->counter_valid_mask;
 	u32 reg_val;
 	u32 cnt_idx;
+
+	if (get_lp_counters->link_id != tdev->ndev->link.link_id) {
+		nvlink_err("Invalid link ID specified");
+		return -EINVAL;
+	}
 
 	cnt_idx = TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_COUNT_TX_NVHS;
 	if (counter_valid_mask & BIT(cnt_idx)) {
@@ -702,10 +851,16 @@ static int t19x_nvlink_get_lp_counters(struct tnvlink_dev *tdev,
 	return 0;
 }
 
-static int t19x_nvlink_clear_lp_counters(struct tnvlink_dev *tdev,
-		struct tegra_nvlink_clear_lp_counters *clear_lp_counters)
+static int clear_lp_counters_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
-	u32 reg_val;
+	struct tegra_nvlink_clear_lp_counters *clear_lp_counters =
+			(struct tegra_nvlink_clear_lp_counters *)ioctl_struct;
+	u32 reg_val = 0;
+
+	if (clear_lp_counters->link_id != tdev->ndev->link.link_id) {
+		nvlink_err("Invalid link ID specified");
+		return -EINVAL;
+	}
 
 	reg_val = nvlw_nvl_readl(tdev, NVL_STATS_CTRL);
 	reg_val |= BIT(NVL_STATS_CTRL_CLEAR_ALL);
@@ -718,259 +873,70 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct tnvlink_dev *tdev = file->private_data;
-	struct tegra_nvlink_caps *caps;
-	struct tegra_nvlink_status *status;
-	struct tegra_nvlink_clear_counters *clear_counters;
-	struct tegra_nvlink_get_counters *get_counters;
-	struct tegra_nvlink_get_err_info *get_err_info;
-	struct tegra_nvlink_get_error_recoveries *get_err_recoveries;
-	struct tegra_nvlink_setup_eom *setup_eom;
-	struct tegra_nvlink_train_intranode_conn *train_intranode_conn;
-	struct tegra_nvlink_get_lp_counters *get_lp_counters;
-	struct tegra_nvlink_clear_lp_counters *clear_lp_counters;
-	int arg_size = _IOC_SIZE(cmd);
-	void *arg_copy;
+	enum tnvlink_ioctl_num ioctl_num = _IOC_NR(cmd);
+	u32 ioc_dir = _IOC_DIR(cmd);
+	u32 arg_size = _IOC_SIZE(cmd);
+	void *arg_copy = NULL;
 	int ret = 0;
 
 	if (!tdev) {
 		nvlink_err("Invalid Tegra nvlink device");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto fail;
 	}
 
-	arg_copy = kzalloc(arg_size, GFP_KERNEL);
-	if (!arg_copy) {
-		nvlink_err("Can't allocate memory for arg_copy, cmd 0x%x", cmd);
-		return -ENOMEM;
-	}
-
-	if (_IOC_DIR(cmd) & _IOC_WRITE) {
-		if (copy_from_user(arg_copy, (void __user *)arg, arg_size)) {
-			nvlink_err("failed to copy ioctl data, cmd 0x%x", cmd);
-			ret = -EFAULT;
-			goto cleanup;
-		}
-	}
-
-	switch (cmd) {
-	case TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS:
-		if (arg_size != sizeof(struct tegra_nvlink_caps)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		caps = (struct tegra_nvlink_caps *) arg_copy;
-		ret = t19x_nvlink_get_caps(tdev, caps);
-		if (ret < 0) {
-			nvlink_err("nvlink get caps failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS:
-		if (arg_size != sizeof(struct tegra_nvlink_status)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		status = (struct tegra_nvlink_status *) arg_copy;
-		ret = t19x_nvlink_get_status(tdev, status);
-		if (ret < 0) {
-			nvlink_err("nvlink get status failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS:
-		if (arg_size != sizeof(struct tegra_nvlink_clear_counters)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		clear_counters =
-			(struct tegra_nvlink_clear_counters *) arg_copy;
-		if (clear_counters->link_mask & 0x1) {
-			ret = t19x_nvlink_clear_counters(tdev, clear_counters);
-			if (ret < 0) {
-				nvlink_err("nvlink clear counters failed");
-				goto cleanup;
-			}
-		} else {
-			nvlink_err("Invalid link mask specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS:
-		if (arg_size != sizeof(struct tegra_nvlink_get_counters)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		get_counters = (struct tegra_nvlink_get_counters *) arg_copy;
-		if (get_counters->link_id != 0) {
-			nvlink_err("Invalid link id specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		ret = t19x_nvlink_get_counters(tdev, get_counters);
-		if (ret < 0) {
-			nvlink_err("nvlink get counters failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO:
-		if (arg_size != sizeof(struct tegra_nvlink_get_err_info)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		get_err_info = (struct tegra_nvlink_get_err_info *) arg_copy;
-		ret = t19x_nvlink_get_err_info(tdev, get_err_info);
-		if (ret < 0) {
-			nvlink_err("nvlink get err info failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES:
-		if (arg_size !=
-			sizeof(struct tegra_nvlink_get_error_recoveries)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		get_err_recoveries =
-			(struct tegra_nvlink_get_error_recoveries *) arg_copy;
-		if (get_err_recoveries->link_mask & 0x1) {
-			ret = t19x_nvlink_get_error_recoveries(tdev,
-							get_err_recoveries);
-			if (ret < 0) {
-				nvlink_err("nvlink get err recoveries failed");
-				goto cleanup;
-			}
-		} else {
-			nvlink_err("Invalid link mask specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_SETUP_EOM:
-		if (arg_size != sizeof(struct tegra_nvlink_setup_eom)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		setup_eom = (struct tegra_nvlink_setup_eom *) arg_copy;
-		if (setup_eom->link_id != 0) {
-			nvlink_err("Invalid link id specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		ret = t19x_nvlink_setup_eom(tdev, setup_eom);
-		if (ret < 0) {
-			nvlink_err("nvlink setup eom failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN:
-		if (arg_size !=
-			sizeof(struct tegra_nvlink_train_intranode_conn)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		train_intranode_conn =
-			(struct tegra_nvlink_train_intranode_conn *) arg_copy;
-		ret = t19x_nvlink_train_intranode_conn(tdev,
-				train_intranode_conn);
-		train_intranode_conn->status = ret;
-		if (ret < 0) {
-			nvlink_err("nvlink train intranode conn failed");
-			break;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS:
-		if (arg_size != sizeof(struct tegra_nvlink_get_lp_counters)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		get_lp_counters =
-			(struct tegra_nvlink_get_lp_counters *) arg_copy;
-		if (get_lp_counters->link_id != 0) {
-			nvlink_err("Invalid link id specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		ret = t19x_nvlink_get_lp_counters(tdev, get_lp_counters);
-		if (ret < 0) {
-			nvlink_err("nvlink get LP counters failed");
-			goto cleanup;
-		}
-
-		break;
-
-	case TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS:
-		if (arg_size != sizeof(struct tegra_nvlink_clear_lp_counters)) {
-			nvlink_err("invalid parameter passed, cmd 0x%x", cmd);
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		clear_lp_counters =
-			(struct tegra_nvlink_clear_lp_counters *) arg_copy;
-		if (clear_lp_counters->link_id != 0) {
-			nvlink_err("Invalid link id specified");
-			ret = -EINVAL;
-			goto cleanup;
-		}
-
-		ret = t19x_nvlink_clear_lp_counters(tdev, clear_lp_counters);
-		if (ret < 0) {
-			nvlink_err("nvlink clear LP counters failed");
-			goto cleanup;
-		}
-
-		break;
-
-	default:
+	if ((_IOC_TYPE(cmd) != TEGRA_NVLINK_IOC_MAGIC) ||
+		(ioctl_num < 0) ||
+		(ioctl_num >= TNVLINK_IOCTL_NUM_IOCTLS)) {
 		nvlink_err("Unsupported IOCTL call");
-		ret = -EINVAL;
-		goto cleanup;
+		return -EINVAL;
 	}
 
-	if (_IOC_DIR(cmd) & _IOC_READ) {
-		if (copy_to_user((void __user *)arg, arg_copy, arg_size)) {
-			nvlink_err("Error while copying to userspace");
-			ret = -EFAULT;
+	if (arg_size != ioctls[ioctl_num].struct_size) {
+		nvlink_err("Invalid IOCTL struct passed from userspace");
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	/* Only allocate a buffer if the IOCTL needs a buffer */
+	if (!(ioc_dir & _IOC_NONE)) {
+		arg_copy = kzalloc(arg_size, GFP_KERNEL);
+		if (!arg_copy) {
+			nvlink_err("Can't allocate memory for kernel IOCTL"
+				" struct");
+			ret = -ENOMEM;
+			goto fail;
 		}
 	}
 
+	if (ioc_dir & _IOC_WRITE) {
+		if (copy_from_user(arg_copy, (void __user *)arg, arg_size)) {
+			nvlink_err("Failed to copy data from userspace IOCTL"
+				" struct into kernel IOCTL struct");
+			ret = -EFAULT;
+			goto fail;
+		}
+	}
+
+	ret = ioctls[ioctl_num].handler(tdev, arg_copy);
+	if (ret < 0)
+		goto fail;
+
+	if (ioc_dir & _IOC_READ) {
+		if (copy_to_user((void __user *)arg, arg_copy, arg_size)) {
+			nvlink_err("Failed to copy data from kernel IOCTL"
+				" struct into userspace IOCTL struct");
+			ret = -EFAULT;
+			goto fail;
+		}
+	}
+
+	nvlink_dbg("The %s IOCTL completed successfully!",
+		ioctls[ioctl_num].name);
+	goto cleanup;
+
+fail:
+	nvlink_err("The %s IOCTL failed!", ioctls[ioctl_num].name);
 cleanup:
 	kfree(arg_copy);
 	return ret;

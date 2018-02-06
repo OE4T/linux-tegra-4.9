@@ -3,7 +3,7 @@
  *
  * memory manager
  *
- * Copyright (C) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -105,7 +105,6 @@ void *mem_request(void *mem_handle, const char *name, size_t size)
 		return new_mc;
 	}
 }
-EXPORT_SYMBOL(mem_request);
 
 /*
  * Find the node with sepcified address and remove it from list
@@ -168,14 +167,12 @@ bool mem_release(void *mem_handle, void *handle)
 	spin_unlock_irqrestore(&mm_info->lock, flags);
 	return false;
 }
-EXPORT_SYMBOL(mem_release);
 
 inline unsigned long mem_get_address(void *handle)
 {
 	struct mem_chunk *mc = (struct mem_chunk *)handle;
 	return mc->address;
 }
-EXPORT_SYMBOL(mem_get_address);
 
 void mem_print(void *mem_handle)
 {
@@ -200,7 +197,6 @@ void mem_print(void *mem_handle)
 
 	pr_info("------------------------------------\n");
 }
-EXPORT_SYMBOL(mem_print);
 
 void mem_dump(void *mem_handle, struct seq_file *s)
 {
@@ -225,7 +221,6 @@ void mem_dump(void *mem_handle, struct seq_file *s)
 
 	seq_puts(s, "---------------------------------------\n");
 }
-EXPORT_SYMBOL(mem_dump);
 
 static void clear_alloc_list(struct mem_manager_info *mm_info)
 {
@@ -300,7 +295,6 @@ free_mm_info:
 
 	return ret;
 }
-EXPORT_SYMBOL(create_mem_manager);
 
 void destroy_mem_manager(void *mem_handle)
 {
@@ -320,4 +314,3 @@ void destroy_mem_manager(void *mem_handle)
 	kfree(mm_info->free_list);
 	kfree(mm_info);
 }
-EXPORT_SYMBOL(destroy_mem_manager);

@@ -3,7 +3,7 @@
  *
  * dram app memory manager for allocating memory for text,bss and data
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,25 +34,21 @@ void dram_app_mem_print(void)
 {
 	mem_print(dram_app_mem_handle);
 }
-EXPORT_SYMBOL(dram_app_mem_print);
 
 void *dram_app_mem_request(const char *name, size_t size)
 {
 	return mem_request(dram_app_mem_handle, name, ALIGN_TO_ADSP_PAGE(size));
 }
-EXPORT_SYMBOL(dram_app_mem_request);
 
 bool dram_app_mem_release(void *handle)
 {
 	return mem_release(dram_app_mem_handle, handle);
 }
-EXPORT_SYMBOL(dram_app_mem_release);
 
 unsigned long dram_app_mem_get_address(void *handle)
 {
 	return mem_get_address(handle);
 }
-EXPORT_SYMBOL(dram_app_mem_get_address);
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *dram_app_mem_dump_debugfs_file;
@@ -97,7 +93,6 @@ int dram_app_mem_init(unsigned long start, unsigned long size)
 #endif
 	return 0;
 }
-EXPORT_SYMBOL(dram_app_mem_init);
 
 void dram_app_mem_exit(void)
 {
@@ -106,5 +101,4 @@ void dram_app_mem_exit(void)
 #endif
 	destroy_mem_manager(dram_app_mem_handle);
 }
-EXPORT_SYMBOL(dram_app_mem_exit);
 

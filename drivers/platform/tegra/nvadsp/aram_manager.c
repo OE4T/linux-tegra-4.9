@@ -3,7 +3,7 @@
  *
  * ARAM manager
  *
- * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,25 +32,21 @@ void nvadsp_aram_print(void)
 {
 	mem_print(aram_handle);
 }
-EXPORT_SYMBOL(nvadsp_aram_print);
 
 void *nvadsp_aram_request(const char *name, size_t size)
 {
 	return mem_request(aram_handle, name, size);
 }
-EXPORT_SYMBOL(nvadsp_aram_request);
 
 bool nvadsp_aram_release(void *handle)
 {
 	return mem_release(aram_handle, handle);
 }
-EXPORT_SYMBOL(nvadsp_aram_release);
 
 unsigned long nvadsp_aram_get_address(void *handle)
 {
 	return mem_get_address(handle);
 }
-EXPORT_SYMBOL(nvadsp_aram_get_address);
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *aram_dump_debugfs_file;

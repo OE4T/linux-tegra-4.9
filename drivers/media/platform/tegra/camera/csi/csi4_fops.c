@@ -112,7 +112,10 @@ static void csi4_phy_config(
 	int cil_config;
 	/* Clocks for the CSI interface */
 	const unsigned int cil_clk_mhz = TEGRA_CSICIL_CLK_MHZ;
-	const unsigned int csi_clk_mhz = csi->clk_freq / 1000000;
+	struct sensor_signal_properties *sig_props;
+	struct sensor_properties *props;
+	int mode_idx = -1;
+	unsigned int mipi_clk_mhz = 0;
 	/* Calculated clock settling times for cil and csi clocks */
 	unsigned int cil_settletime = read_settle_time_from_dt(chan);
 	unsigned int csi_settletime;
@@ -186,8 +189,16 @@ static void csi4_phy_config(
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
 
 	/* calculate MIPI settling times */
+	if (chan->pg_mode)
+		mipi_clk_mhz = csi->clk_freq / 1000000;
+	else {
+		mode_idx = chan->s_data->mode_prop_idx;
+		props =  &chan->s_data->sensor_props;
+		sig_props = &props->sensor_modes[mode_idx].signal_properties;
+		mipi_clk_mhz = sig_props->pixel_clock.val / 1000000;
+	}
 	dev_dbg(csi->dev, "cil core clock: %u, csi clock: %u", cil_clk_mhz,
-		csi_clk_mhz);
+		mipi_clk_mhz);
 
 	csi_settletime = tegra_csi_clk_settling_time(csi, cil_clk_mhz);
 	/* If cil_settletime is 0, calculate a settling time */
@@ -195,7 +206,7 @@ static void csi4_phy_config(
 		dev_dbg(csi->dev, "cil_settingtime was autocalculated");
 		cil_settletime = tegra_csi_ths_settling_time(csi,
 			cil_clk_mhz,
-			csi_clk_mhz);
+			mipi_clk_mhz);
 	}
 
 	dev_dbg(csi->dev, "csi settle time: %u, cil settle time: %u",

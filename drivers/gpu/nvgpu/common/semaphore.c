@@ -1,7 +1,7 @@
 /*
  * Nvgpu Semaphores
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -165,7 +165,6 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 
 	p->page_idx = page_idx;
 	p->sema_sea = sea;
-	nvgpu_init_list_node(&p->hw_semas);
 	nvgpu_init_list_node(&p->pool_list_entry);
 	nvgpu_ref_init(&p->ref);
 
@@ -301,7 +300,6 @@ static void nvgpu_semaphore_pool_free(struct nvgpu_ref *ref)
 	struct nvgpu_semaphore_pool *p =
 		container_of(ref, struct nvgpu_semaphore_pool, ref);
 	struct nvgpu_semaphore_sea *s = p->sema_sea;
-	struct nvgpu_semaphore_int *hw_sema, *tmp;
 
 	/* Freeing a mapped pool is a bad idea. */
 	WARN_ON(p->mapped || p->gpu_va || p->gpu_va_ro);
@@ -311,10 +309,6 @@ static void nvgpu_semaphore_pool_free(struct nvgpu_ref *ref)
 	clear_bit(p->page_idx, s->pools_alloced);
 	s->page_count--;
 	__unlock_sema_sea(s);
-
-	nvgpu_list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas,
-				nvgpu_semaphore_int, hw_sema_list)
-		nvgpu_kfree(p->sema_sea->gk20a, hw_sema);
 
 	nvgpu_mutex_destroy(&p->pool_lock);
 
@@ -376,10 +370,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	hw_sema->idx = hw_sema_idx;
 	hw_sema->offset = SEMAPHORE_SIZE * hw_sema_idx;
 	nvgpu_atomic_set(&hw_sema->next_value, 0);
-	nvgpu_init_list_node(&hw_sema->hw_sema_list);
 	nvgpu_mem_wr(ch->g, &p->rw_mem, hw_sema->offset, 0);
-
-	nvgpu_list_add(&hw_sema->hw_sema_list, &p->hw_semas);
 
 	nvgpu_mutex_release(&p->pool_lock);
 
@@ -406,7 +397,6 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 	clear_bit(ch->hw_sema->idx, p->semas_alloced);
 
 	/* Make sure that when the ch is re-opened it will get a new HW sema. */
-	nvgpu_list_del(&ch->hw_sema->hw_sema_list);
 	nvgpu_kfree(ch->g, ch->hw_sema);
 	ch->hw_sema = NULL;
 

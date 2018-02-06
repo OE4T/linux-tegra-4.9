@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -58,17 +58,8 @@ struct nvgpu_semaphore_int {
 	int idx;			/* Semaphore index. */
 	u32 offset;			/* Offset into the pool. */
 	nvgpu_atomic_t next_value;	/* Next available value. */
-	u32 nr_incrs;			/* Number of increments programmed. */
 	struct nvgpu_semaphore_pool *p;	/* Pool that owns this sema. */
 	struct channel_gk20a *ch;	/* Channel that owns this sema. */
-	struct nvgpu_list_node hw_sema_list;	/* List of HW semaphores. */
-};
-
-static inline struct nvgpu_semaphore_int *
-nvgpu_semaphore_int_from_hw_sema_list(struct nvgpu_list_node *node)
-{
-	return (struct nvgpu_semaphore_int *)
-	 ((uintptr_t)node - offsetof(struct nvgpu_semaphore_int, hw_sema_list));
 };
 
 /*
@@ -94,7 +85,6 @@ struct nvgpu_semaphore_pool {
 	u64 gpu_va_ro;				/* GPU access to the pool. */
 	int page_idx;				/* Index into sea bitmap. */
 
-	struct nvgpu_list_node hw_semas;	/* List of HW semas. */
 	DECLARE_BITMAP(semas_alloced, PAGE_SIZE / SEMAPHORE_SIZE);
 
 	struct nvgpu_semaphore_sea *sema_sea;	/* Sea that owns this pool. */

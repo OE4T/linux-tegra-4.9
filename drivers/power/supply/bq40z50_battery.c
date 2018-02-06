@@ -129,19 +129,12 @@ static const struct regmap_config bq40z50_rmap_config = {
 
 static int bq40z50_read_word(struct bq40z50_chip *chip, u8 reg)
 {
-	unsigned int val;
-	int ret;
-
-	ret = regmap_read(chip->rmap, reg, &val);
-	if (ret < 0)
-		return ret;
-
-	return val;
+	return i2c_smbus_read_word_data(chip->client, reg);
 }
 
 static int bq40z50_write_word(struct bq40z50_chip *chip, u8 reg, u32 val)
 {
-	return regmap_write(chip->rmap, reg, val);
+	return i2c_smbus_write_word_data(chip->client, reg, val);
 }
 
 static int bq40z50_update_soc_voltage(struct bq40z50_chip *chip)
@@ -542,7 +535,7 @@ static int bq40z50_probe(struct i2c_client *client,
 	chip->low_battery_shutdown = 0;
 	chip->shutdown_complete = 0;
 	chip->charge_complete = 0;
-	chip->status			= POWER_SUPPLY_STATUS_DISCHARGING;
+	chip->status		= POWER_SUPPLY_STATUS_DISCHARGING;
 	chip->lasttime_status	= POWER_SUPPLY_STATUS_DISCHARGING;
 	chip->lasttime_soc	= 0;
 	bq40z50_psy_cfg.of_node = client->dev.of_node;

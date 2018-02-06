@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -83,6 +83,8 @@ typedef struct syncpoint_info {
 #define ISP5_STATS_LTM_OFFSET        (ISP5_STATS_OR_OFFSET + ISP5_ALIGN_STAT_OFFSET(ISP5_STATS_OR_MAX_SIZE))
 
 #define ISP5_STATS_TOTAL_SIZE        (ISP5_STATS_LTM_OFFSET + ISP5_STATS_LTM_MAX_SIZE)
+
+#define ISP_NUM_GOS_TABLES	8U
 
 #define VI_NUM_GOS_TABLES	12U
 #define VI_NUM_ATOMP_SURFACES	4
@@ -183,6 +185,12 @@ struct capture_channel_config {
 	uint16_t reserved1;
 
 #define HAVE_VI_GOS_TABLES
+	/*
+	 * GoS tables can only be programmed when there are no
+	 * active channels. For subsequent channels we check that
+	 * the channel configuration matches with the active
+	 * configuration.
+	 */
 	uint32_t num_vi_gos_tables;
 	iova_t vi_gos_tables[VI_NUM_GOS_TABLES];
 
@@ -813,9 +821,19 @@ struct capture_channel_isp_config {
 	iova_t programs;
 	uint32_t program_queue_depth;
 	uint32_t program_size;
-
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info stats_progress_sp;
+
+#define HAVE_ISP_GOS_TABLES
+	/*
+	 * GoS tables can only be programmed when there are no
+	 * active channels. For subsequent channels we check that
+	 * the channel configuration matches with the active
+	 * configuration.
+	 */
+	uint32_t num_isp_gos_tables;
+	uint32_t __pad_chan2;
+	iova_t isp_gos_tables[ISP_NUM_GOS_TABLES];
 } __CAPTURE_IVC_ALIGN;
 
 struct capture_isp_status {

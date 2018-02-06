@@ -27,8 +27,7 @@
 
 #define CAMRTC_TAG_NV_TRACE CAMRTC_TAG64('N','V',' ','T','R','A','C','E')
 
-#define CAMRTC_TAG_NV_COVERAGE \
-	CAMRTC_TAG64('N', 'V', ' ', 'C', 'O', 'V', 'E', 'R')
+#define CAMRTC_TAG_NV_COVERAGE CAMRTC_TAG64('N','V',' ','C','O','V','E','R')
 
 struct camrtc_tlv {
 	uint64_t tag;
@@ -58,5 +57,16 @@ enum {
 	RTCPU_CH_ERR_INVALID_IOVA = U32_C(131),
 	RTCPU_CH_ERR_INVALID_PARAM = U32_C(132),
 };
+
+#ifdef _BullseyeCoverage
+struct camrtc_coverage_memory_header {
+	uint64_t signature;
+	uint64_t length;
+	uint32_t revision;
+	uint32_t coverage_buffer_size;
+	uint32_t coverage_total_bytes;
+	uint32_t reserved; /* alignment */
+} __packed;
+#endif /* _BullseyeCoverage */
 
 #endif /* INCLUDE_CAMRTC_CHANNELS_H */

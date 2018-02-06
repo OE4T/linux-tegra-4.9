@@ -406,8 +406,12 @@ static int ras_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	/* enable FHI */
-	enable_irq(fhi_irq);
+
+	/* Cant enable FHI. MTS doesn't have support for Correctable Errors.
+	 * Bug 200319716
+	 *
+	 * enable_irq(fhi_irq);
+	 */
 
 	/* make sure we have executed everything in the probe
 	 * before setting is_ras_probe_done

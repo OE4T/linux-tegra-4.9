@@ -150,12 +150,16 @@ static int tegra_fuse_probe(struct platform_device *pdev)
 	void __iomem *base = fuse->base;
 	struct resource *res;
 	int err;
+	bool is_clkon_always;
 
 	/* take over the memory region from the early initialization */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	fuse->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(fuse->base))
 		return PTR_ERR(fuse->base);
+
+	is_clkon_always = of_property_read_bool(pdev->dev.of_node,
+						"nvidia,clock-always-on");
 
 	fuse->clk = devm_clk_get(&pdev->dev, "fuse");
 	if (IS_ERR(fuse->clk)) {
@@ -177,7 +181,7 @@ static int tegra_fuse_probe(struct platform_device *pdev)
 				    fuse->soc->info))
 		return -ENODEV;
 
-	if (fuse->soc->is_clkon_always) {
+	if (is_clkon_always) {
 		err = clk_prepare_enable(fuse->clk);
 		if (err < 0) {
 			dev_err(fuse->dev, "failed to enable FUSE clock: %d\n",

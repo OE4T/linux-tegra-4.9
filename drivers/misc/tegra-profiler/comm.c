@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.c
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -638,6 +638,11 @@ device_ioctl(struct file *file,
 		break;
 
 	case IOCTL_SET_SECTIONS_INFO:
+		if (!atomic_read(&comm_ctx.active)) {
+			err = -EPERM;
+			goto error_out;
+		}
+
 		if (copy_from_user(&extabs, (void __user *)ioctl_param,
 				   sizeof(extabs))) {
 			pr_err("error: set_sections_info failed\n");

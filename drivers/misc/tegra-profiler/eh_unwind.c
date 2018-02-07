@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/eh_unwind.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -707,7 +707,7 @@ error_out:
 	raw_spin_unlock(&ctx.lock);
 }
 
-void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+static void mmap_wait_for_close(struct quadd_mmap_area *mmap)
 {
 	int state;
 
@@ -721,7 +721,11 @@ void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
 
 	while (atomic_read(&mmap->state) != QUADD_MMAP_STATE_CLOSED)
 		cpu_relax();
+}
 
+void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+{
+	mmap_wait_for_close(mmap);
 	__quadd_unwind_delete_mmap(mmap);
 }
 
@@ -1435,12 +1439,9 @@ int quadd_unwind_start(struct task_struct *task)
 
 void quadd_unwind_stop(void)
 {
-	int i;
-	unsigned long nr_entries, size;
+	unsigned long i, nr_entries;
 	struct regions_data *rd;
-	struct ex_region_info *ri;
-
-	quadd_dwarf_unwind_stop();
+	struct quadd_mmap_area *mmap;
 
 	raw_spin_lock(&ctx.lock);
 
@@ -1451,11 +1452,11 @@ void quadd_unwind_stop(void)
 		goto out;
 
 	nr_entries = rd->curr_nr;
-	size = rd->size;
 
 	for (i = 0; i < nr_entries; i++) {
-		ri = &rd->entries[i];
-		clean_mmap(rd, ri->mmap, 0);
+		mmap = rd->entries[i].mmap;
+		mmap_wait_for_close(mmap);
+		clean_mmap(rd, mmap, 0);
 	}
 
 	rcu_assign_pointer(ctx.rd, NULL);
@@ -1463,7 +1464,7 @@ void quadd_unwind_stop(void)
 
 out:
 	raw_spin_unlock(&ctx.lock);
-	pr_info("exception tables size: %lu bytes\n", ctx.ex_tables_size);
+	quadd_dwarf_unwind_stop();
 }
 
 int quadd_unwind_init(void)

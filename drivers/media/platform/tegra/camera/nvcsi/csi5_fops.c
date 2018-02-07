@@ -163,7 +163,11 @@ static int csi5_stream_set_config(struct tegra_csi_channel *chan, int csi_port,
 	cil_config.t_clk_settle = is_cphy ? 1 : 33;
 	cil_config.t_hs_settle = cil_settletime;
 	cil_config.cil_clock_rate = NVCSI_CIL_CLOCK_RATE; /* hard-coding */
-	cil_config.mipi_clock_rate = csi->clk_freq / 1000;
+
+	if (s_data && !chan->pg_mode)
+		cil_config.mipi_clock_rate = read_pixel_clk_from_dt(chan)/ 1000;
+	else
+		cil_config.mipi_clock_rate = csi->clk_freq / 1000;
 
 	/* Set NvCsi stream config */
 	memset(&msg, 0, sizeof(msg));

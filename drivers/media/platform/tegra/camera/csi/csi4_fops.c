@@ -118,9 +118,6 @@ static void csi4_phy_config(
 	int cil_config;
 	/* Clocks for the CSI interface */
 	const unsigned int cil_clk_mhz = TEGRA_CSICIL_CLK_MHZ;
-	struct sensor_signal_properties *sig_props;
-	struct sensor_properties *props;
-	int mode_idx = -1;
 	unsigned int mipi_clk_mhz = 0;
 	/* Calculated clock settling times for cil and csi clocks */
 	unsigned int cil_settletime = read_settle_time_from_dt(chan);
@@ -195,14 +192,11 @@ static void csi4_phy_config(
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
 
 	/* calculate MIPI settling times */
-	if (chan->pg_mode)
+	if (chan->pg_mode || !(chan->s_data))
 		mipi_clk_mhz = csi->clk_freq / 1000000;
-	else if (chan->s_data) {
-		mode_idx = chan->s_data->mode_prop_idx;
-		props =  &chan->s_data->sensor_props;
-		sig_props = &props->sensor_modes[mode_idx].signal_properties;
-		mipi_clk_mhz = sig_props->pixel_clock.val / 1000000;
-	}
+	else
+		mipi_clk_mhz = read_pixel_clk_from_dt(chan) / 1000000;
+
 	dev_dbg(csi->dev, "cil core clock: %u, csi clock: %u", cil_clk_mhz,
 		mipi_clk_mhz);
 

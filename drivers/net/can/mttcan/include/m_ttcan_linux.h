@@ -69,12 +69,14 @@
 #define MTTCAN_POLL_TIME	50
 #define MTTCAN_HWTS_ROLLOVER	250
 /* block period in ms */
-#define TX_BLOCK_PERIOD 200
+#define TX_BLOCK_PERIOD		200
+#define TSC_REF_CLK_RATE	31250000
 
 struct tegra_mttcan_soc_info {
 	bool set_can_core_clk;
 	unsigned long can_core_clk_rate;
 	unsigned long can_clk_rate;
+	bool use_external_timer;
 };
 
 struct can_gpio {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -474,6 +474,7 @@ u32 ttcan_get_gfc(struct ttcan_controller *ttcan);
 int ttcan_set_xidam(struct ttcan_controller *ttcan, u32 regval);
 u32 ttcan_get_xidam(struct ttcan_controller *ttcan);
 
+void ttcan_set_timestamp_offset_sel(struct ttcan_controller *ttcan);
 void ttcan_set_time_stamp_conf(struct ttcan_controller *ttcan,
 				u16 timer_prescalar,
 				enum ttcan_timestamp_source time_type);

@@ -27,6 +27,7 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 	int err = 0;
 	u32 ie = 0, ttie = 0, gfc_reg = 0;
 	struct ttcan_controller *ttcan = priv->ttcan;
+
 	ttcan_set_ok(ttcan);
 
 	if (!priv->poll) {
@@ -65,9 +66,12 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 	ttcan_set_std_id_filter_addr(ttcan);
 	ttcan_set_xtd_id_filter_addr(ttcan);
 
-	ttcan_set_time_stamp_conf(ttcan, 9, TS_INTERNAL);
-	ttcan_set_txevt_fifo_conf(ttcan);
+	if (priv->sinfo->use_external_timer)
+		ttcan_set_time_stamp_conf(ttcan, 9, TS_EXTERNAL);
+	else
+		ttcan_set_time_stamp_conf(ttcan, 9, TS_INTERNAL);
 
+	ttcan_set_txevt_fifo_conf(ttcan);
 	ttcan_set_tx_buffer_addr(ttcan);
 
 	if (priv->tt_param[0]) {
@@ -189,12 +193,14 @@ static const struct tegra_mttcan_soc_info t186_mttcan_sinfo = {
 	.set_can_core_clk = false,
 	.can_core_clk_rate = 40000000,
 	.can_clk_rate = 40000000,
+	.use_external_timer = false,
 };
 
 static const struct tegra_mttcan_soc_info t194_mttcan_sinfo = {
 	.set_can_core_clk = true,
 	.can_core_clk_rate = 50000000,
 	.can_clk_rate = 200000000,
+	.use_external_timer = true,
 };
 
 static const struct of_device_id mttcan_of_table[] = {
@@ -356,7 +362,7 @@ static int mttcan_read_rcv_list(struct net_device *dev,
 			stats->rx_bytes += frame->can_dlc;
 		}
 
-		if ((priv->hwts_rx_en) && !(rx->msg.flags & CAN_FD_FLAG))
+		if (priv->hwts_rx_en)
 			mttcan_rx_hwtstamp(priv, skb, rx->msg);
 		kfree(rx);
 		netif_receive_skb(skb);
@@ -1205,6 +1211,7 @@ static int mttcan_close(struct net_device *dev)
 	napi_disable(&priv->napi);
 	mttcan_stop(priv);
 	free_irq(dev->irq, dev);
+	priv->hwts_rx_en = false;
 	close_candev(dev);
 	mttcan_power_down(dev);
 	mttcan_pm_runtime_put_sync(priv);
@@ -1272,6 +1279,27 @@ static int mttcan_change_mtu(struct net_device *dev, int new_mtu)
 	return 0;
 }
 
+static void mttcan_init_cyclecounter(struct mttcan_priv *priv)
+{
+	priv->cc.read = ttcan_read_ts_cntr;
+	priv->cc.mask = CLOCKSOURCE_MASK(16);
+	priv->cc.shift = 0;
+
+	if (priv->sinfo->use_external_timer) {
+		/* external timer is driven by TSC_REF_CLK and uses
+		 * bit [5:20] of that 64 bit timer by default. By
+		 * selecting OFFSET_SEL as 4, we are now using bit
+		 * [9:24] and thats why multiplication by 512 (2^9)
+		 */
+		priv->cc.mult = ((u64)NSEC_PER_SEC * 512) /
+			TSC_REF_CLK_RATE;
+	} else {
+		priv->cc.mult = ((u64)NSEC_PER_SEC *
+				priv->ttcan->ts_prescalar) /
+			priv->ttcan->bt_config.nominal.bitrate;
+	}
+}
+
 static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				      struct ifreq *ifr)
 {
@@ -1305,11 +1333,13 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 		break;
 		/* time stamp any incoming packet */
 	case HWTSTAMP_FILTER_ALL:
-		if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
+		if ((!priv->sinfo->use_external_timer) &&
+		    (priv->can.ctrlmode & CAN_CTRLMODE_FD)) {
 			netdev_err(priv->dev,
-				"HW Timestamp not supported in FD mode\n");
+				   "HW Timestamp not supported in FD mode\n");
 			return -ERANGE;
 		}
+
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
 		if (priv->hwts_rx_en == false)
 			rx_config_chg = true;
@@ -1322,12 +1352,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 	/* Setup hardware time stamping cyclecounter */
 	if (rx_config_chg) {
 		if (config.rx_filter == HWTSTAMP_FILTER_ALL) {
-			priv->cc.read = ttcan_read_ts_cntr;
-			priv->cc.mask = CLOCKSOURCE_MASK(16);
-			priv->cc.mult = ((u64)NSEC_PER_SEC *
-					priv->ttcan->ts_prescalar) /
-				priv->ttcan->bt_config.nominal.bitrate;
-			priv->cc.shift = 0;
+			mttcan_init_cyclecounter(priv);
 
 			raw_spin_lock_irqsave(&priv->tc_lock, flags);
 			ret = get_ptp_hwtime(&tref);
@@ -1341,6 +1366,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			timecounter_init(&priv->tc, &priv->cc, tref);
 			priv->hwts_rx_en = true;
 			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
+
 			mod_timer(&priv->timer, jiffies +
 				(msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 		}

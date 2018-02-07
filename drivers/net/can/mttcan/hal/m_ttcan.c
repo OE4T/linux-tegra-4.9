@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -931,19 +931,35 @@ void ttcan_set_xtd_id_filter_addr(struct ttcan_controller *ttcan)
 
 }
 
+inline void ttcan_set_timestamp_offset_sel(struct ttcan_controller *ttcan)
+{
+	u32 val;
+
+	val = ttcan_xread32(ttcan, ADDR_M_TTCAN_TIME_STAMP);
+	val |= M_TTCAN_TIME_STAMP_OFFSET_SEL;
+	ttcan_xwrite32(ttcan, ADDR_M_TTCAN_TIME_STAMP, val);
+}
+
 void ttcan_set_time_stamp_conf(struct ttcan_controller *ttcan,
 			       u16 timer_prescalar,
 			       enum ttcan_timestamp_source timer_type)
 {
 	u32 tscc = 0;
 
-	if (timer_prescalar > 15)
-		timer_prescalar = 15;
+	if (timer_type == TS_EXTERNAL) {
+		ttcan_set_timestamp_offset_sel(ttcan);
+		tscc = (timer_type << MTT_TSCC_TSS_SHIFT) & MTT_TSCC_TSS_MASK;
+	} else {
+		if (timer_prescalar > 15)
+			timer_prescalar = 15;
 
-	tscc = (timer_prescalar << MTT_TSCC_TCP_SHIFT) & MTT_TSCC_TCP_MASK;
-	tscc |= (timer_type << MTT_TSCC_TSS_SHIFT) & MTT_TSCC_TSS_MASK;
+		tscc = (timer_prescalar << MTT_TSCC_TCP_SHIFT)
+			& MTT_TSCC_TCP_MASK;
+		tscc |= (timer_type << MTT_TSCC_TSS_SHIFT) & MTT_TSCC_TSS_MASK;
+		ttcan->ts_prescalar = timer_prescalar + 1;
+	}
+
 	ttcan_write32(ttcan, ADR_MTTCAN_TSCC, tscc);
-	ttcan->ts_prescalar = timer_prescalar + 1;
 }
 
 void ttcan_set_txevt_fifo_conf(struct ttcan_controller *ttcan)

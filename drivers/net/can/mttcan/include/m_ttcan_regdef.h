@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -874,7 +874,10 @@ struct mttcan_trig_mem_element {
 #define ADDR_M_TTCAN_HSM_MASK0   0x20
 #define ADDR_M_TTCAN_HSM_MASK1   0x24
 #define ADDR_M_TTCAN_EXT_SYC_SLT 0x28
+#define ADDR_M_TTCAN_HSM_SW_OVRD 0x2C
+#define ADDR_M_TTCAN_TIME_STAMP  0x30
 
-#define M_TTCAN_CNTRL_REG_COK (1<<3)
+#define M_TTCAN_CNTRL_REG_COK		(1<<3)
+#define M_TTCAN_TIME_STAMP_OFFSET_SEL	4
 
 #endif /* M_TTCAN_REGDEF_H_ */

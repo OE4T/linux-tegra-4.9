@@ -1,7 +1,7 @@
 /*
  * mods_tegradc.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -144,20 +144,8 @@ int esc_mods_tegra_dc_config_possible(struct file *fp,
 
 #ifdef CONFIG_TEGRA_NVSD
 
-/* TODO Remove these constants and allocate memory dynamically based on
- * tegra_dc_get_numof_dispheads once intermittent crash faced due to dynamic
- * allocation is resolved
- * TODO revisit for future tegra chips which may need more than 3 heads.
- * Hopefully we move to dynamic allocation before that
- */
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define TEGRA_MAX_DC		3
-#else
-#define TEGRA_MAX_DC		2
-#endif
-
-static struct tegra_dc_sd_settings mods_sd_settings[TEGRA_MAX_DC];
-static struct tegra_dc_sd_settings *tegra_dc_saved_sd_settings[TEGRA_MAX_DC];
+static struct tegra_dc_sd_settings *mods_sd_settings;
+static struct tegra_dc_sd_settings **tegra_dc_saved_sd_settings;
 
 /* Cache head count retrieved during mods_init_tegradc. */
 static int cachedHeadCount;
@@ -169,15 +157,19 @@ static int cachedHeadCount;
 int esc_mods_tegra_dc_setup_sd(struct file *fp,
 	struct MODS_TEGRA_DC_SETUP_SD *args)
 {
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	int i;
-	struct tegra_dc *dc = tegra_dc_get_dc(args->head);
-	struct tegra_dc_sd_settings *sd_settings = dc->out->sd_settings;
+	struct tegra_dc *dc;
+	struct tegra_dc_sd_settings *sd_settings;
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC)
 	u32 val;
 #endif
 	u32 bw_idx;
 
+	if (tegra_dc_is_nvdisplay())
+		return 0;
+
+	dc = tegra_dc_get_dc(args->head);
+	sd_settings = dc->out->sd_settings;
 	LOG_ENT();
 
 	BUG_ON(args->head > tegra_dc_get_numof_dispheads());
@@ -274,7 +266,6 @@ int esc_mods_tegra_dc_setup_sd(struct file *fp,
 	}
 
 	LOG_EXT();
-#endif
 	return 0;
 }
 
@@ -287,10 +278,14 @@ int mods_init_tegradc(void)
 	LOG_ENT();
 	nheads = tegra_dc_get_numof_dispheads();
 	cachedHeadCount = nheads;
-	memset(mods_sd_settings, 0,
-	       TEGRA_MAX_DC * sizeof(struct tegra_dc_sd_settings));
 
-	BUG_ON(nheads > TEGRA_MAX_DC);
+	mods_sd_settings = kcalloc(nheads, sizeof(struct tegra_dc_sd_settings),
+				   GFP_KERNEL);
+
+	tegra_dc_saved_sd_settings = kcalloc(nheads,
+					     sizeof(struct
+						    tegra_dc_sd_settings *),
+					     GFP_KERNEL);
 
 	for (i = 0; i < nheads; i++) {
 		struct tegra_dc *dc = tegra_dc_get_dc(i);
@@ -340,5 +335,7 @@ void mods_exit_tegradc(void)
 		if (dc->enabled)
 			nvsd_init(dc, dc->out->sd_settings);
 	}
+	kfree(tegra_dc_saved_sd_settings);
+	kfree(mods_sd_settings);
 #endif
 }

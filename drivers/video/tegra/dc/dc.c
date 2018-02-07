@@ -7600,6 +7600,7 @@ inline bool tegra_dc_is_nvdisplay(void)
 {
 	return (tegra_dc_is_t18x() || tegra_dc_is_t19x());
 }
+EXPORT_SYMBOL(tegra_dc_is_nvdisplay);
 
 static void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 {

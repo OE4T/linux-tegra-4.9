@@ -333,5 +333,9 @@
 
 	cpufreq@d080000 {
 		status = "okay";
+		nvidia,autocc3-freq = <115200>,
+					<115200>,
+					<115200>,
+					<115200>;
 	};
 };

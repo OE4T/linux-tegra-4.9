@@ -341,14 +341,15 @@ static int ucsi_ccg_cmd(struct ucsi_ppm *ppm, struct ucsi_control *ctrl)
 	struct ucsi_ccg *ccg = container_of(ppm, struct ucsi_ccg, ppm);
 	int err;
 
-	ppm->data->ctrl.raw_cmd = ctrl->raw_cmd;
-
 	mutex_lock(&ccg->lock);
+
+	ppm->data->ctrl.raw_cmd = ctrl->raw_cmd;
 	err = ccg_reg_write(ccg, REG_UCSI_CONTROL_CMD,
 			&ppm->data->ctrl.raw_cmd, 8);
-	mutex_unlock(&ccg->lock);
 
 	dev_dbg(ccg->dev, "Raw cmd 0x%08llx\n", ppm->data->ctrl.raw_cmd);
+
+	mutex_unlock(&ccg->lock);
 
 	return err;
 }
@@ -357,6 +358,8 @@ static int ucsi_ccg_sync(struct ucsi_ppm *ppm)
 {
 	struct ucsi_ccg *ccg = container_of(ppm, struct ucsi_ccg, ppm);
 	int err, i;
+
+	mutex_lock(&ccg->lock);
 
 	err = ccg_reg_read(ccg, REG_UCSI_VERSION,
 			   (u8 *)&ppm->data->version, 32);
@@ -372,6 +375,8 @@ static int ucsi_ccg_sync(struct ucsi_ppm *ppm)
 						i, ppm->data->message_in[i]);
 		}
 	}
+
+	mutex_unlock(&ccg->lock);
 
 	return 0;
 }
@@ -577,8 +582,11 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 	}
 
 	/* UCSI event */
-	if ((intval & UCSI_READ_INT) && !test_bit(INIT_PENDING, &ccg->flags))
-		ucsi_ccg_notify(ccg);
+	if (intval & UCSI_READ_INT) {
+		if (!test_bit(INIT_PENDING, &ccg->flags))
+			ucsi_ccg_notify(ccg);
+		intval = UCSI_READ_INT;
+	}
 
 	/* DEV event */
 	if (intval & DEV_INT) {
@@ -616,15 +624,20 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 					"dev resp 0x%04x but no cmd pending\n",
 					ccg->dev_resp.code);
 		}
+		intval = DEV_INT;
 	}
 
 	/* PD port0 event */
-	if (intval & PORT0_INT)
+	if (intval & PORT0_INT) {
 		ccg_pd_event(ccg, 0);
+		intval = PORT0_INT;
+	}
 
 	/* PD port1 event */
-	if (intval & PORT1_INT)
+	if (intval & PORT1_INT) {
 		ccg_pd_event(ccg, 1);
+		intval = PORT1_INT;
+	}
 
 	/* Clear INTR */
 	if (intval && ccg_reg_write(ccg, REG_INTR, &intval, 1))

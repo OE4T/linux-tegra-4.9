@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 #include <asm/fiq_glue.h>
 
 #include "ote_protocol.h"
-
-static DEFINE_MUTEX(fiq_lock);
 
 static struct fiq_glue_handler *current_handler;
 

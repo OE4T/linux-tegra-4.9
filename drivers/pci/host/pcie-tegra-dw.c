@@ -431,10 +431,10 @@ struct tegra_pcie_dw {
 	struct mutex rd_lock[DMA_RD_CHNL_NUM];
 	struct completion wr_cpl[DMA_WR_CHNL_NUM];
 	struct completion rd_cpl[DMA_RD_CHNL_NUM];
-	ktime_t wr_start_time[DMA_WR_CHNL_NUM];
-	ktime_t wr_end_time[DMA_WR_CHNL_NUM];
-	ktime_t rd_start_time[DMA_RD_CHNL_NUM];
-	ktime_t rd_end_time[DMA_RD_CHNL_NUM];
+	ktime_t wr_start_time;
+	ktime_t wr_end_time;
+	ktime_t rd_start_time;
+	ktime_t rd_end_time;
 	unsigned long wr_busy;
 	unsigned long rd_busy;
 
@@ -827,7 +827,7 @@ static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	pcie->wr_busy |= 1 << tx->channel;
 
-	pcie->wr_start_time[tx->channel] = ktime_get();
+	pcie->wr_start_time = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(pcie->atu_dma_base, pcie->channel,
@@ -841,7 +841,7 @@ static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 			/* check the status of all busy marked channels */
 			for_each_set_bit(bit, &pcie->wr_busy, DMA_WR_CHNL_NUM) {
 				if (BIT(bit) & val) {
-					pcie->wr_end_time[bit] = ktime_get();
+					pcie->wr_end_time = ktime_get();
 					dma_common_wr(pcie->atu_dma_base,
 						      BIT(bit),
 						      DMA_WRITE_INT_CLEAR_OFF);
@@ -864,11 +864,9 @@ static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 				goto exit;
 			}
 		}
-		dev_info(dev, "DMA write completed. Size: 0x%x bytes, "
-			 "start time: %lld nsec, end time: %lld nsec\n",
-			 tx->size,
-			 ktime_to_ns(pcie->wr_start_time[tx->channel]),
-			 ktime_to_ns(pcie->wr_end_time[tx->channel]));
+		dev_info(dev, "DMA write. Size: %u bytes, Time diff: %lld ns\n",
+			 tx->size, ktime_to_ns(pcie->wr_end_time) -
+			 ktime_to_ns(pcie->wr_start_time));
 	} else {
 		/* wait for completion or timeout */
 		ret = wait_for_completion_timeout(&pcie->wr_cpl[tx->channel],
@@ -956,7 +954,7 @@ static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 	/* acquire lock for busy-data and mark it as busy and then release */
 	pcie->rd_busy |= 1 << tx->channel;
 
-	pcie->rd_start_time[tx->channel] = ktime_get();
+	pcie->rd_start_time = ktime_get();
 	/* start DMA (ring the door bell) */
 	/* ring the door bell with channel number */
 	dma_common_wr(pcie->atu_dma_base, pcie->channel,
@@ -970,7 +968,7 @@ static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 			/* check the status of all busy marked channels */
 			for_each_set_bit(bit, &pcie->rd_busy, DMA_RD_CHNL_NUM) {
 				if (BIT(bit) & val) {
-					pcie->rd_end_time[bit] = ktime_get();
+					pcie->rd_end_time = ktime_get();
 					dma_common_wr(pcie->atu_dma_base,
 						      BIT(bit),
 						      DMA_READ_INT_CLEAR_OFF);
@@ -993,11 +991,9 @@ static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 				goto exit;
 			}
 		}
-		dev_info(dev, "DMA read completed. Size: 0x%x bytes, "
-			 "start time: %lld nsec, end time: %lld nsec\n",
-			 tx->size,
-			 ktime_to_ns(pcie->rd_start_time[tx->channel]),
-			 ktime_to_ns(pcie->rd_end_time[tx->channel]));
+		dev_info(dev, "DMA read. Size: %u bytes, Time diff: %lld ns\n",
+			 tx->size, ktime_to_ns(pcie->rd_end_time) -
+			 ktime_to_ns(pcie->rd_end_time));
 	} else {
 		/* wait for completion or timeout */
 		ret = wait_for_completion_timeout(&pcie->rd_cpl[tx->channel],

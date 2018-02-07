@@ -928,23 +928,25 @@ fail:
 static int gk20a_pm_runtime_suspend(struct device *dev)
 {
 	int err = 0;
+	struct gk20a *g = get_gk20a(dev);
 
 	if (gk20a_gpu_is_virtual(dev))
 		err = vgpu_pm_prepare_poweroff(dev);
 	else
 		err = gk20a_pm_prepare_poweroff(dev);
-	if (err)
+	if (err) {
+		nvgpu_err(g, "failed to power off, err=%d", err);
 		goto fail;
+	}
 
 	err = gk20a_pm_railgate(dev);
 	if (err)
-		goto fail_railgate;
+		goto fail;
 
 	return 0;
 
-fail_railgate:
-	gk20a_pm_finalize_poweron(dev);
 fail:
+	gk20a_pm_finalize_poweron(dev);
 	pm_runtime_mark_last_busy(dev);
 	return err;
 }

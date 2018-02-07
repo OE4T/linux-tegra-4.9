@@ -800,6 +800,7 @@ error:
 /*
  * List detailed info for all buffers allocated.
  */
+#ifdef CONFIG_NVMAP_DMABUF_STASH
 static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 {
 	struct nvmap_handle_sgt *nvmap_sgt;
@@ -852,6 +853,7 @@ static const struct file_operations nvmap_dmabuf_stashes_fops = {
 	.llseek  = seq_lseek,
 	.release = single_release,
 };
+#endif
 
 #define NVMAP_DMABUF_WO_TRIGGER_NODE(trigger, name)			\
 	DEFINE_SIMPLE_ATTRIBUTE(__nvmap_dmabuf_##name##_fops, NULL,	\
@@ -917,5 +919,7 @@ void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root)
 			return;						\
 	} while (0)
 
+#ifdef CONFIG_NVMAP_DMABUF_STASH
 	DMABUF_INFO_FILE(dmabuf_root, stashes);
+#endif
 }

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -152,10 +152,7 @@ static void stop(void)
 	if (atomic_cmpxchg(&ctx.started, 1, 0)) {
 		preempt_disable();
 
-		quadd_hrt_stop();
-
 		ctx.comm->reset();
-
 		quadd_unwind_stop();
 
 		if (ctx.pmu)
@@ -168,6 +165,7 @@ static void stop(void)
 
 		preempt_enable();
 
+		quadd_hrt_stop();
 		quadd_power_clk_stop();
 	}
 }

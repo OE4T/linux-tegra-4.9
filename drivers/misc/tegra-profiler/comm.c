@@ -759,10 +759,9 @@ static void mmap_close(struct vm_area_struct *vma)
 	else
 		pr_warn("warning: mmap area is uninitialized\n");
 
-	delete_mmap(mmap);
-
 out:
 	raw_spin_unlock(&comm_ctx.mmaps_lock);
+	delete_mmap(mmap);
 }
 
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)

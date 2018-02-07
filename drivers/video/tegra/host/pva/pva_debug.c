@@ -238,4 +238,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				pva, &print_version_fops);
 	if (!ret)
 		nvhost_dbg_info("Failed to create PVA version file");
+
+	ret = debugfs_create_u32("cg_disable", 0644, de,
+				 &pva->slcg_disable);
+	if (!ret)
+		nvhost_dbg_info("Failed to create cg_disable node");
 }

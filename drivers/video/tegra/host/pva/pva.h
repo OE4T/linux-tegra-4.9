@@ -181,6 +181,7 @@ struct pva_func_table {
  * dbg_vpu_app_id	Set the vpu_app id to debug
  * r5_dbg_wait		Set the r5 debugger to wait
  * timeout_enabled	Set pva timeout enabled based on debug
+ * slcg_disable		Second level Clock Gating control variable
  *
  */
 struct pva {
@@ -210,6 +211,7 @@ struct pva {
 	u32 dbg_vpu_app_id;
 	u32 r5_dbg_wait;
 	bool timeout_enabled;
+	u32 slcg_disable;
 
 	struct work_struct pva_abort_handler_work;
 	bool booted;

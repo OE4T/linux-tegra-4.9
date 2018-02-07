@@ -172,6 +172,9 @@ static int pva_init_fw(struct platform_device *pdev)
 		pva->timeout_enabled = false;
 	}
 
+	if (pva->slcg_disable)
+		sema_value |= PVA_CG_DISABLE;
+
 	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT);
 	host1x_writel(pdev, hsp_ss0_set_r(), sema_value);
 
@@ -687,6 +690,7 @@ static int pva_probe(struct platform_device *pdev)
 	mutex_init(&pva->mailbox_mutex);
 	mutex_init(&pva->ccq_mutex);
 	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
+	pva->slcg_disable = 0;
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

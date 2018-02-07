@@ -513,8 +513,6 @@ static void set_nvg_scf_dda(
 {
 	int ret = 0;
 	uint64_t nvg_reg = 0;
-	ret = tegra_mce_read_dda_ctrl(nvg_ch, &nvg_reg);
-	BUG_ON(ret != 0);
 
 	SET_FIELD_IN_64BIT_REG(nvg_reg, 0, 12, rate);
 	SET_FIELD_IN_64BIT_REG(nvg_reg, 12, 11, min);

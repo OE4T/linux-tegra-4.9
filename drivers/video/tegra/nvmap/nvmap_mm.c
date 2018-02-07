@@ -3,7 +3,7 @@
  *
  * Some MM related functionality specific to nvmap.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,12 +50,13 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size)
 	vmas = &handle->vmas;
 	list_for_each_entry(vma_list, vmas, list) {
 		struct nvmap_vma_priv *priv;
-		u32 vm_size = size;
+		size_t vm_size = size;
 
 		vma = vma_list->vma;
 		priv = vma->vm_private_data;
 		if ((offset + size) > (vma->vm_end - vma->vm_start))
 			vm_size = vma->vm_end - vma->vm_start - offset;
+
 		if (priv->offs || vma->vm_pgoff)
 			/* vma mapping starts in the middle of handle memory.
 			 * zapping needs special care. zap entire range for now.
@@ -94,7 +95,7 @@ static int nvmap_prot_handle(struct nvmap_handle *handle, u64 offset,
 	vmas = &handle->vmas;
 	list_for_each_entry(vma_list, vmas, list) {
 		struct nvmap_vma_priv *priv;
-		u32 vm_size = size;
+		size_t vm_size = size;
 		struct vm_area_struct *prev;
 
 		vma = vma_list->vma;
@@ -106,6 +107,7 @@ static int nvmap_prot_handle(struct nvmap_handle *handle, u64 offset,
 		if ((priv->offs || vma->vm_pgoff) ||
 		    (size > (vma->vm_end - vma->vm_start)))
 			vm_size = vma->vm_end - vma->vm_start;
+
 		if (vma->vm_mm != current->mm)
 			down_write(&vma->vm_mm->mmap_sem);
 		switch (op) {

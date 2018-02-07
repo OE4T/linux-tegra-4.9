@@ -1,7 +1,7 @@
-From 9ab0d794d1af3fd764d81afedb65daf7f6b06620 Mon Sep 17 00:00:00 2001
+From 2bc7c873108a224f9142cd42651a9d36967250b2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 17:03:52 +0200
-Subject: [PATCH 143/337] sched: Disable CONFIG_RT_GROUP_SCHED on RT
+Subject: [PATCH 143/356] sched: Disable CONFIG_RT_GROUP_SCHED on RT
 
 Carsten reported problems when running:
 
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index b123780..f602cc5 100644
+index 786230f..cfdefe2 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -1136,6 +1136,7 @@ config CFS_BANDWIDTH
@@ -30,5 +30,5 @@ index b123780..f602cc5 100644
  	help
  	  This feature lets you explicitly allocate real CPU bandwidth
 -- 
-1.9.1
+2.1.4
 

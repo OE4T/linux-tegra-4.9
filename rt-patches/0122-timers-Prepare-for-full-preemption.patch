@@ -1,7 +1,7 @@
-From cc770fbbc18449cfeb681c1e62a65d66836961ac Mon Sep 17 00:00:00 2001
+From 959c7132e2d320b746789ae529e98b316120c92e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 122/337] timers: Prepare for full preemption
+Subject: [PATCH 122/356] timers: Prepare for full preemption
 
 When softirqs can be preempted we need to make sure that cancelling
 the timer from the active thread can not deadlock vs. a running timer
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 48 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/timer.h b/include/linux/timer.h
-index 51d601f..83cea62 100644
+index ec86e4e..8e5b680 100644
 --- a/include/linux/timer.h
 +++ b/include/linux/timer.h
-@@ -241,7 +241,7 @@ static inline void timer_stats_timer_clear_start_info(struct timer_list *timer)
+@@ -241,7 +241,7 @@ extern void add_timer(struct timer_list *timer);
  
  extern int try_to_del_timer_sync(struct timer_list *timer);
  
@@ -29,10 +29,10 @@ index 51d601f..83cea62 100644
  #else
  # define del_timer_sync(t)		del_timer(t)
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 7155596..ada9074 100644
+index 9738876..6722a79 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -539,11 +539,14 @@ void resched_cpu(int cpu)
+@@ -538,11 +538,14 @@ void resched_cpu(int cpu)
   */
  int get_nohz_timer_target(void)
  {
@@ -49,7 +49,7 @@ index 7155596..ada9074 100644
  
  	rcu_read_lock();
  	for_each_domain(cpu, sd) {
-@@ -562,6 +565,8 @@ int get_nohz_timer_target(void)
+@@ -561,6 +564,8 @@ int get_nohz_timer_target(void)
  		cpu = housekeeping_any_cpu();
  unlock:
  	rcu_read_unlock();
@@ -59,10 +59,10 @@ index 7155596..ada9074 100644
  }
  /*
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index 0e9cb65..b1d2919 100644
+index 21ba5c2..0845567 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -195,6 +195,9 @@
+@@ -195,6 +195,9 @@ EXPORT_SYMBOL(jiffies_64);
  struct timer_base {
  	raw_spinlock_t		lock;
  	struct timer_list	*running_timer;
@@ -72,7 +72,7 @@ index 0e9cb65..b1d2919 100644
  	unsigned long		clk;
  	unsigned long		next_expiry;
  	unsigned int		cpu;
-@@ -1170,6 +1173,33 @@ void add_timer_on(struct timer_list *timer, int cpu)
+@@ -1168,6 +1171,33 @@ void add_timer_on(struct timer_list *timer, int cpu)
  }
  EXPORT_SYMBOL_GPL(add_timer_on);
  
@@ -106,7 +106,7 @@ index 0e9cb65..b1d2919 100644
  /**
   * del_timer - deactive a timer.
   * @timer: the timer to be deactivated
-@@ -1227,7 +1257,7 @@ int try_to_del_timer_sync(struct timer_list *timer)
+@@ -1225,7 +1255,7 @@ int try_to_del_timer_sync(struct timer_list *timer)
  }
  EXPORT_SYMBOL(try_to_del_timer_sync);
  
@@ -115,7 +115,7 @@ index 0e9cb65..b1d2919 100644
  /**
   * del_timer_sync - deactivate a timer and wait for the handler to finish.
   * @timer: the timer to be deactivated
-@@ -1287,7 +1317,7 @@ int del_timer_sync(struct timer_list *timer)
+@@ -1285,7 +1315,7 @@ int del_timer_sync(struct timer_list *timer)
  		int ret = try_to_del_timer_sync(timer);
  		if (ret >= 0)
  			return ret;
@@ -124,7 +124,7 @@ index 0e9cb65..b1d2919 100644
  	}
  }
  EXPORT_SYMBOL(del_timer_sync);
-@@ -1352,13 +1382,16 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
+@@ -1350,13 +1380,16 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
  		fn = timer->function;
  		data = timer->data;
  
@@ -142,7 +142,7 @@ index 0e9cb65..b1d2919 100644
  			raw_spin_lock_irq(&base->lock);
  		}
  	}
-@@ -1659,8 +1692,8 @@ static inline void __run_timers(struct timer_base *base)
+@@ -1657,8 +1690,8 @@ static inline void __run_timers(struct timer_base *base)
  		while (levels--)
  			expire_timers(base, heads + levels);
  	}
@@ -152,7 +152,7 @@ index 0e9cb65..b1d2919 100644
  }
  
  /*
-@@ -1895,6 +1928,9 @@ static void __init init_timer_cpu(int cpu)
+@@ -1908,6 +1941,9 @@ static void __init init_timer_cpu(int cpu)
  		base->cpu = cpu;
  		raw_spin_lock_init(&base->lock);
  		base->clk = jiffies;
@@ -163,5 +163,5 @@ index 0e9cb65..b1d2919 100644
  }
  
 -- 
-1.9.1
+2.1.4
 

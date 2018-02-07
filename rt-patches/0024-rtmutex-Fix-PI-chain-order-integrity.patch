@@ -1,7 +1,7 @@
-From b8d13e52bfa887ab64eb2383e21b72518fe5d077 Mon Sep 17 00:00:00 2001
+From 3e4e7c2739490c74eafbf76a1c8e0fb52406e403 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:13 +0100
-Subject: [PATCH 024/337] rtmutex: Fix PI chain order integrity
+Subject: [PATCH 024/356] rtmutex: Fix PI chain order integrity
 
 Upstream commit e0aad5b44ff5d28ac1d6ae70cdf84ca228e889dc
 
@@ -40,7 +40,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index 6eb6a8a..e275b81 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -236,8 +236,7 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
+@@ -236,8 +236,7 @@ rt_mutex_waiter_less(struct rt_mutex_waiter *left,
  	 * then right waiter has a dl_prio() too.
  	 */
  	if (dl_prio(left->prio))
@@ -125,5 +125,5 @@ index d1c0712..722e3cf 100644
  
  /*
 -- 
-1.9.1
+2.1.4
 

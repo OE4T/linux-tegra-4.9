@@ -1,7 +1,7 @@
-From f8139f96ad1cc2c2ddf9e75a208d829ad1ff9088 Mon Sep 17 00:00:00 2001
+From 54a98f96873c9c44aadc833be55745989db15da9 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
-Subject: [PATCH 298/337] crypto: Convert crypto notifier chain to SRCU
+Subject: [PATCH 298/356] crypto: Convert crypto notifier chain to SRCU
 
 The crypto notifier deadlocks on RT. Though this can be a real deadlock
 on mainline as well due to fifo fair rwsems.
@@ -120,10 +120,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/crypto/algapi.c b/crypto/algapi.c
-index 1fad2a6..ecb7315 100644
+index 5c098ff..6a47601 100644
 --- a/crypto/algapi.c
 +++ b/crypto/algapi.c
-@@ -719,13 +719,13 @@ void *crypto_spawn_tfm2(struct crypto_spawn *spawn)
+@@ -731,13 +731,13 @@ EXPORT_SYMBOL_GPL(crypto_spawn_tfm2);
  
  int crypto_register_notifier(struct notifier_block *nb)
  {
@@ -143,7 +143,7 @@ diff --git a/crypto/api.c b/crypto/api.c
 index bbc147c..bc1a848 100644
 --- a/crypto/api.c
 +++ b/crypto/api.c
-@@ -31,7 +31,7 @@
+@@ -31,7 +31,7 @@ EXPORT_SYMBOL_GPL(crypto_alg_list);
  DECLARE_RWSEM(crypto_alg_sem);
  EXPORT_SYMBOL_GPL(crypto_alg_sem);
  
@@ -188,5 +188,5 @@ index 7eefcdb..0ecc7f5 100644
  
  #endif	/* _CRYPTO_INTERNAL_H */
 -- 
-1.9.1
+2.1.4
 

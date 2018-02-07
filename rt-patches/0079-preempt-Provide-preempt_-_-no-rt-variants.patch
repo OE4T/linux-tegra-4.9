@@ -1,7 +1,7 @@
-From 66c1c0565d577fedc538de67cca479e71e330838 Mon Sep 17 00:00:00 2001
+From 4dba3e9bbb11018e8fa08cbdfd9d208134497d01 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 24 Jul 2009 12:38:56 +0200
-Subject: [PATCH 079/337] preempt: Provide preempt_*_(no)rt variants
+Subject: [PATCH 079/356] preempt: Provide preempt_*_(no)rt variants
 
 RT needs a few preempt_disable/enable points which are not necessary
 otherwise. Implement variants to avoid #ifdeffery.
@@ -12,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 17 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index 75e4e30..a15f948 100644
+index 7eeceac..26e0eaa 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
-@@ -154,7 +154,11 @@
+@@ -159,7 +159,11 @@ do { \
  	preempt_count_dec(); \
  } while (0)
  
@@ -28,7 +28,7 @@ index 75e4e30..a15f948 100644
  
  #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
  
-@@ -248,6 +252,18 @@
+@@ -253,6 +257,18 @@ do { \
  		set_preempt_need_resched(); \
  } while (0)
  
@@ -48,5 +48,5 @@ index 75e4e30..a15f948 100644
  
  struct preempt_notifier;
 -- 
-1.9.1
+2.1.4
 

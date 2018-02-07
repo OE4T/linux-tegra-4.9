@@ -1,7 +1,7 @@
-From e73be38f9a878275bd7c8fad679e73b6874e2890 Mon Sep 17 00:00:00 2001
+From 7c66dab62bfda6cba879b9e4f4b36bbbcd183063 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
-Subject: [PATCH 002/337] lockdep: Handle statically initialized PER_CPU locks
+Subject: [PATCH 002/356] lockdep: Handle statically initialized PER_CPU locks
  proper
 
 If a PER_CPU struct which contains a spin_lock is statically initialized
@@ -72,7 +72,7 @@ diff --git a/kernel/locking/lockdep.c b/kernel/locking/lockdep.c
 index 6599c7f..43f06ed 100644
 --- a/kernel/locking/lockdep.c
 +++ b/kernel/locking/lockdep.c
-@@ -658,6 +658,7 @@ static int count_matching_names(struct lock_class *new_class)
+@@ -658,6 +658,7 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
  	struct lockdep_subclass_key *key;
  	struct hlist_head *hash_head;
  	struct lock_class *class;
@@ -80,7 +80,7 @@ index 6599c7f..43f06ed 100644
  
  	if (unlikely(subclass >= MAX_LOCKDEP_SUBCLASSES)) {
  		debug_locks_off();
-@@ -671,10 +672,23 @@ static int count_matching_names(struct lock_class *new_class)
+@@ -671,10 +672,23 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
  
  	/*
  	 * Static locks do not have their class-keys yet - for them the key
@@ -107,7 +107,7 @@ index 6599c7f..43f06ed 100644
  
  	/*
  	 * NOTE: the class-key must be unique. For dynamic locks, a static
-@@ -706,7 +720,7 @@ static int count_matching_names(struct lock_class *new_class)
+@@ -706,7 +720,7 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
  		}
  	}
  
@@ -116,7 +116,7 @@ index 6599c7f..43f06ed 100644
  }
  
  /*
-@@ -724,19 +738,18 @@ static int count_matching_names(struct lock_class *new_class)
+@@ -724,19 +738,18 @@ register_lock_class(struct lockdep_map *lock, unsigned int subclass, int force)
  	DEBUG_LOCKS_WARN_ON(!irqs_disabled());
  
  	class = look_up_lock_class(lock, subclass);
@@ -278,5 +278,5 @@ index f014ceb..9034915 100644
   * @addr: the address to be converted to physical address
   *
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From f0b994985c088389ceec580d4e56862cd8847329 Mon Sep 17 00:00:00 2001
+From 9bb98ba494c0fb80cc50987e44832c40693ca4ca Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 24 Mar 2015 08:14:49 +0100
-Subject: [PATCH 290/337] hotplug: Use set_cpus_allowed_ptr() in
+Subject: [PATCH 290/356] hotplug: Use set_cpus_allowed_ptr() in
  sync_unplug_thread()
 
 do_set_cpus_allowed() is not safe vs ->sched_class change.
@@ -36,7 +36,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 85dfc83..2f34e63 100644
+index c6e284e..481151c 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -418,7 +418,7 @@ static int sync_unplug_thread(void *data)
@@ -49,5 +49,5 @@ index 85dfc83..2f34e63 100644
  	return 0;
  }
 -- 
-1.9.1
+2.1.4
 

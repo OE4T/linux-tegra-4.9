@@ -1,7 +1,7 @@
-From a4c52f5bbc8abf115349ae895d28da85d6612f8a Mon Sep 17 00:00:00 2001
+From d24a6481bfd358bfcfab1ab6dc63c5e5533e7e08 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
-Subject: [PATCH 318/337] drivers/block/zram: Replace bit spinlocks with
+Subject: [PATCH 318/356] drivers/block/zram: Replace bit spinlocks with
  rtmutex for -rt
 
 They're nondeterministic, and lead to ___might_sleep() splats in -rt.
@@ -15,7 +15,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 57 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
-index c9914d6..553954c 100644
+index b7c0b69..2200918 100644
 --- a/drivers/block/zram/zram_drv.c
 +++ b/drivers/block/zram/zram_drv.c
 @@ -528,6 +528,8 @@ static struct zram_meta *zram_meta_alloc(char *pool_name, u64 disksize)
@@ -179,5 +179,5 @@ index 74fcf10..fd4020c 100644
 +
  #endif
 -- 
-1.9.1
+2.1.4
 

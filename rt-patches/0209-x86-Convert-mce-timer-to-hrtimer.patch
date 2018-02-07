@@ -1,7 +1,7 @@
-From 037c37675cd20a212fe5f43a8f5bd86b77067e2e Mon Sep 17 00:00:00 2001
+From b54bc50055dffd812f07d40d5fbe324d3e7e6e0d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 13 Dec 2010 16:33:39 +0100
-Subject: [PATCH 209/337] x86: Convert mce timer to hrtimer
+Subject: [PATCH 209/356] x86: Convert mce timer to hrtimer
 
 mce_timer is started in atomic contexts of cpu bringup. This results
 in might_sleep() warnings on RT. Convert mce_timer to a hrtimer to
@@ -26,7 +26,7 @@ fold in:
  1 file changed, 20 insertions(+), 32 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-index 8ca5f8a..d9fab64 100644
+index fe5cd6e..0e29a95 100644
 --- a/arch/x86/kernel/cpu/mcheck/mce.c
 +++ b/arch/x86/kernel/cpu/mcheck/mce.c
 @@ -41,6 +41,7 @@
@@ -143,7 +143,7 @@ index 8ca5f8a..d9fab64 100644
  	mce_start_timer(cpu, t);
  }
  
-@@ -2464,6 +2452,8 @@ static void mce_disable_cpu(void *h)
+@@ -2469,6 +2457,8 @@ static void mce_disable_cpu(void *h)
  	if (!mce_available(raw_cpu_ptr(&cpu_info)))
  		return;
  
@@ -152,7 +152,7 @@ index 8ca5f8a..d9fab64 100644
  	if (!(action & CPU_TASKS_FROZEN))
  		cmci_clear();
  
-@@ -2486,6 +2476,7 @@ static void mce_reenable_cpu(void *h)
+@@ -2491,6 +2481,7 @@ static void mce_reenable_cpu(void *h)
  		if (b->init)
  			wrmsrl(msr_ops.ctl(i), b->ctl);
  	}
@@ -160,7 +160,7 @@ index 8ca5f8a..d9fab64 100644
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2493,7 +2484,6 @@ static void mce_reenable_cpu(void *h)
+@@ -2498,7 +2489,6 @@ static int
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -168,7 +168,7 @@ index 8ca5f8a..d9fab64 100644
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2513,11 +2503,9 @@ static void mce_reenable_cpu(void *h)
+@@ -2518,11 +2508,9 @@ mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -181,5 +181,5 @@ index 8ca5f8a..d9fab64 100644
  	}
  
 -- 
-1.9.1
+2.1.4
 

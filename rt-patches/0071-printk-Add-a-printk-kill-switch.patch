@@ -1,7 +1,7 @@
-From d4e2f4bb4d155003465ee2b3c2d2494fcb4f35fa Mon Sep 17 00:00:00 2001
+From cb0ff1e6d6f5733402aefe2dc6541dbbdea608ef Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 071/337] printk: Add a printk kill switch
+Subject: [PATCH 071/356] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
@@ -30,7 +30,7 @@ index eac1af8..37e647a 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index f0b7cba..2549b36 100644
+index c130485..ee004be 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -355,6 +355,58 @@ __packed __aligned(4)
@@ -106,7 +106,7 @@ index f0b7cba..2549b36 100644
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -2058,26 +2117,6 @@ static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
+@@ -2058,26 +2117,6 @@ DEFINE_PER_CPU(printk_func_t, printk_func);
  
  #endif /* CONFIG_PRINTK */
  
@@ -168,5 +168,5 @@ index 12b8dd6..4c90d2e 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-1.9.1
+2.1.4
 

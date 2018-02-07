@@ -1,7 +1,7 @@
-From 544fb15fbe2193ace10c27ef7253d40671d7c211 Mon Sep 17 00:00:00 2001
+From 1745abebc1a290d6221f600e0e11589be411aa58 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 7 Jun 2013 22:37:06 +0200
-Subject: [PATCH 287/337] kernel/cpu: fix cpu down problem if kthread's cpu is
+Subject: [PATCH 287/356] kernel/cpu: fix cpu down problem if kthread's cpu is
  going down
 
 If kthread is pinned to CPUx and CPUx is going down then we get into
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 67986bd..d5169ce 100644
+index d107593..5ddf996 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -259,6 +259,7 @@ struct hotplug_pcp {
@@ -88,5 +88,5 @@ index 67986bd..d5169ce 100644
  	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
  	smpboot_park_threads(cpu);
 -- 
-1.9.1
+2.1.4
 

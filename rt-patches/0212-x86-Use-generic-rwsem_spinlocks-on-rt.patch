@@ -1,7 +1,7 @@
-From 46b7e5a32f8d1a5fcd78c41b914c2627ce0af20d Mon Sep 17 00:00:00 2001
+From 1acae83ccbb30cbef3154221447396f073b63897 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 02:21:32 +0200
-Subject: [PATCH 212/337] x86: Use generic rwsem_spinlocks on -rt
+Subject: [PATCH 212/356] x86: Use generic rwsem_spinlocks on -rt
 
 Simplifies the separation of anon_rw_semaphores and rw_semaphores for
 -rt.
@@ -12,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index fa6d982..9bdc8ad 100644
+index 1749c2f..7a78b19 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
-@@ -232,8 +232,11 @@ config ARCH_MAY_HAVE_PC_FDC
+@@ -233,8 +233,11 @@ config ARCH_MAY_HAVE_PC_FDC
  	def_bool y
  	depends on ISA_DMA_API
  
@@ -29,5 +29,5 @@ index fa6d982..9bdc8ad 100644
  config GENERIC_CALIBRATE_DELAY
  	def_bool y
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From 03be0140ac61b4b4effb43f468000f20e3a5cded Mon Sep 17 00:00:00 2001
+From fd4cfb95044ae03dc02f35e903c6e762e0874233 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
-Subject: [PATCH 046/337] NFSv4: replace seqcount_t with a seqlock_t
+Subject: [PATCH 046/356] NFSv4: replace seqcount_t with a seqlock_t
 
 The raw_write_seqcount_begin() in nfs4_reclaim_open_state() bugs me
 because it maps to preempt_disable() in -RT which I can't have at this
@@ -57,10 +57,10 @@ index 1452177..f43b01d 100644
  };
  
 diff --git a/fs/nfs/nfs4proc.c b/fs/nfs/nfs4proc.c
-index a53b8e0..da0a483 100644
+index 4638654..5dd6fd5 100644
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
-@@ -2695,7 +2695,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
+@@ -2691,7 +2691,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
  	unsigned int seq;
  	int ret;
  
@@ -69,7 +69,7 @@ index a53b8e0..da0a483 100644
  
  	ret = _nfs4_proc_open(opendata);
  	if (ret != 0)
-@@ -2733,7 +2733,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
+@@ -2729,7 +2729,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
  
  	if (d_inode(dentry) == state->inode) {
  		nfs_inode_attach_open_context(ctx);
@@ -79,10 +79,10 @@ index a53b8e0..da0a483 100644
  	}
  out:
 diff --git a/fs/nfs/nfs4state.c b/fs/nfs/nfs4state.c
-index 9267191..4403848 100644
+index 71deeae..4be6999 100644
 --- a/fs/nfs/nfs4state.c
 +++ b/fs/nfs/nfs4state.c
-@@ -488,7 +488,7 @@ struct rpc_cred *nfs4_get_clid_cred(struct nfs_client *clp)
+@@ -488,7 +488,7 @@ nfs4_alloc_state_owner(struct nfs_server *server,
  	nfs4_init_seqid_counter(&sp->so_seqid);
  	atomic_set(&sp->so_count, 1);
  	INIT_LIST_HEAD(&sp->so_lru);
@@ -131,5 +131,5 @@ index 9267191..4403848 100644
  }
  
 -- 
-1.9.1
+2.1.4
 

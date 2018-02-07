@@ -1,7 +1,7 @@
-From 43a7e5f13d5f25165095d8ec3fa8726eb5cf638d Mon Sep 17 00:00:00 2001
+From 371ec21c1b2d07ab338b01f59cadb496e8fa487a Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Wed, 14 Dec 2011 13:05:54 +0100
-Subject: [PATCH 195/337] rt: Improve the serial console PASS_LIMIT
+Subject: [PATCH 195/356] rt: Improve the serial console PASS_LIMIT
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -23,7 +23,7 @@ diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_
 index ca05b41..151712b 100644
 --- a/drivers/tty/serial/8250/8250_core.c
 +++ b/drivers/tty/serial/8250/8250_core.c
-@@ -58,7 +58,16 @@
+@@ -58,7 +58,16 @@ static struct uart_driver serial8250_reg;
  
  static unsigned int skip_txen_test; /* force skip of txen test at init time */
  
@@ -42,5 +42,5 @@ index ca05b41..151712b 100644
  #include <asm/serial.h>
  /*
 -- 
-1.9.1
+2.1.4
 

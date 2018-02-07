@@ -1,7 +1,7 @@
-From 4684a5d8bc3d7062651a99e698bd7035e2276994 Mon Sep 17 00:00:00 2001
+From ab9f4ca3e5e8aae71009a2462470076d6255b8da Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 18:51:23 +0200
-Subject: [PATCH 153/337] lockdep: Make it RT aware
+Subject: [PATCH 153/356] lockdep: Make it RT aware
 
 teach lockdep that we don't really do softirqs on -RT.
 
@@ -62,5 +62,5 @@ index 43f06ed..79f8e00 100644
  	if (!debug_locks)
  		print_irqtrace_events(current);
 -- 
-1.9.1
+2.1.4
 

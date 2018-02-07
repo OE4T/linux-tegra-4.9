@@ -1,7 +1,7 @@
-From a6decbe7ea42601f72377fc4931cf3bb0db8e9fc Mon Sep 17 00:00:00 2001
+From a1d942b45e504ea8b9f46ac316db6c888a915020 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 15 Nov 2015 18:40:17 +0100
-Subject: [PATCH 249/337] irqwork: Move irq safe work to irq context
+Subject: [PATCH 249/356] irqwork: Move irq safe work to irq context
 
 On architectures where arch_irq_work_has_interrupt() returns false, we
 end up running the irq safe work from the softirq context. That
@@ -25,7 +25,7 @@ diff --git a/include/linux/irq_work.h b/include/linux/irq_work.h
 index 0e427a9..2543aab 100644
 --- a/include/linux/irq_work.h
 +++ b/include/linux/irq_work.h
-@@ -52,4 +52,10 @@ void init_irq_work(struct irq_work *work, void (*func)(struct irq_work *))
+@@ -52,4 +52,10 @@ static inline bool irq_work_needs_cpu(void) { return false; }
  static inline void irq_work_run(void) { }
  #endif
  
@@ -37,7 +37,7 @@ index 0e427a9..2543aab 100644
 +
  #endif /* _LINUX_IRQ_WORK_H */
 diff --git a/kernel/irq_work.c b/kernel/irq_work.c
-index 0ddaf1e..2899ba0 100644
+index 0ddaf1e..2899ba0d 100644
 --- a/kernel/irq_work.c
 +++ b/kernel/irq_work.c
 @@ -200,8 +200,17 @@ void irq_work_tick(void)
@@ -59,10 +59,10 @@ index 0ddaf1e..2899ba0 100644
  /*
   * Synchronize against the irq_work @entry, ensures the entry is not
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index fad6d60b..3170367 100644
+index df4849d..ec0169f 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -1663,7 +1663,7 @@ void update_process_times(int user_tick)
+@@ -1661,7 +1661,7 @@ void update_process_times(int user_tick)
  	scheduler_tick();
  	run_local_timers();
  	rcu_check_callbacks(user_tick);
@@ -71,7 +71,7 @@ index fad6d60b..3170367 100644
  	if (in_irq())
  		irq_work_tick();
  #endif
-@@ -1716,9 +1716,7 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+@@ -1714,9 +1714,7 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
  	 */
  	base->must_forward_clk = false;
  
@@ -81,7 +81,7 @@ index fad6d60b..3170367 100644
 +	irq_work_tick_soft();
  
  	__run_timers(base);
- 	if (IS_ENABLED(CONFIG_NO_HZ_COMMON) && base->nohz_active)
+ 	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
 -- 
-1.9.1
+2.1.4
 

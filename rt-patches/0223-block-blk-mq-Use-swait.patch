@@ -1,7 +1,7 @@
-From dc89a4b185cab46490812ecec0bbb79f86c4b284 Mon Sep 17 00:00:00 2001
+From 9fb36d80f3ac4138f5d492ca97dfe9b109f84e52 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 223/337] block: blk-mq: Use swait
+Subject: [PATCH 223/356] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -45,10 +45,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index cc14f98..809a1c4 100644
+index 2595747..0a39cb7 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
-@@ -664,7 +664,7 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
+@@ -665,7 +665,7 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
  		if (nowait)
  			return -EBUSY;
  
@@ -57,7 +57,7 @@ index cc14f98..809a1c4 100644
  				!atomic_read(&q->mq_freeze_depth) ||
  				blk_queue_dying(q));
  		if (blk_queue_dying(q))
-@@ -684,7 +684,7 @@ static void blk_queue_usage_counter_release(struct percpu_ref *ref)
+@@ -685,7 +685,7 @@ static void blk_queue_usage_counter_release(struct percpu_ref *ref)
  	struct request_queue *q =
  		container_of(ref, struct request_queue, q_usage_counter);
  
@@ -66,7 +66,7 @@ index cc14f98..809a1c4 100644
  }
  
  static void blk_rq_timed_out_timer(unsigned long data)
-@@ -753,7 +753,7 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
+@@ -755,7 +755,7 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id)
  	q->bypass_depth = 1;
  	__set_bit(QUEUE_FLAG_BYPASS, &q->queue_flags);
  
@@ -76,10 +76,10 @@ index cc14f98..809a1c4 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 2cbfe49..21298c3 100644
+index c4fb0cb..b128944 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
-@@ -72,7 +72,7 @@ void blk_mq_freeze_queue_start(struct request_queue *q)
+@@ -72,7 +72,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
  
  void blk_mq_freeze_queue_wait(struct request_queue *q)
  {
@@ -120,5 +120,5 @@ index 959ae2e..aa0c0ef 100644
  	struct list_head	all_q_node;
  
 -- 
-1.9.1
+2.1.4
 

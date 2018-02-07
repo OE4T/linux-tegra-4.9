@@ -1,7 +1,7 @@
-From 421a52cb4f449a5f76bdafa31c0e51c316653aee Mon Sep 17 00:00:00 2001
+From 36116898a679dae4dd619d85882274a86a3c5e26 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Jul 2011 09:56:44 +0200
-Subject: [PATCH 140/337] sched: Take RT softirq semantics into account in
+Subject: [PATCH 140/356] sched: Take RT softirq semantics into account in
  cond_resched()
 
 The softirq semantics work different on -RT. There is no SOFTIRQ_MASK in
@@ -19,7 +19,7 @@ diff --git a/include/linux/sched.h b/include/linux/sched.h
 index 9d24e39..7252e06 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -3544,12 +3544,16 @@ static inline int signal_pending_state(long state, struct task_struct *p)
+@@ -3544,12 +3544,16 @@ extern int __cond_resched_lock(spinlock_t *lock);
  	__cond_resched_lock(lock);				\
  })
  
@@ -37,10 +37,10 @@ index 9d24e39..7252e06 100644
  static inline void cond_resched_rcu(void)
  {
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index b59d165..86b888e 100644
+index 0f2e8a0..81f35a6 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -5264,6 +5264,7 @@ int __cond_resched_lock(spinlock_t *lock)
+@@ -5263,6 +5263,7 @@ int __cond_resched_lock(spinlock_t *lock)
  }
  EXPORT_SYMBOL(__cond_resched_lock);
  
@@ -48,7 +48,7 @@ index b59d165..86b888e 100644
  int __sched __cond_resched_softirq(void)
  {
  	BUG_ON(!in_softirq());
-@@ -5277,6 +5278,7 @@ int __sched __cond_resched_softirq(void)
+@@ -5276,6 +5277,7 @@ int __sched __cond_resched_softirq(void)
  	return 0;
  }
  EXPORT_SYMBOL(__cond_resched_softirq);
@@ -57,5 +57,5 @@ index b59d165..86b888e 100644
  /**
   * yield - yield the current processor to other threads.
 -- 
-1.9.1
+2.1.4
 

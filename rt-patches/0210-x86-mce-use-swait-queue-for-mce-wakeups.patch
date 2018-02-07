@@ -1,7 +1,7 @@
-From e1b7332fefb67405fc67c50f14b32d8fb8361ffe Mon Sep 17 00:00:00 2001
+From be4193f5ee4148bc2cc6eb4b67af9282fb5c8511 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 27 Feb 2015 15:20:37 +0100
-Subject: [PATCH 210/337] x86/mce: use swait queue for mce wakeups
+Subject: [PATCH 210/356] x86/mce: use swait queue for mce wakeups
 
 We had a customer report a lockup on a 3.0-rt kernel that had the
 following backtrace:
@@ -60,7 +60,7 @@ Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
  1 file changed, 56 insertions(+), 12 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-index d9fab64..edcbd18 100644
+index 0e29a95..e1f8b85 100644
 --- a/arch/x86/kernel/cpu/mcheck/mce.c
 +++ b/arch/x86/kernel/cpu/mcheck/mce.c
 @@ -42,6 +42,7 @@
@@ -128,7 +128,7 @@ index d9fab64..edcbd18 100644
  /*
   * Notify the user(s) about new machine check events.
   * Can be called from interrupt context, but not from machine check/NMI
-@@ -1390,19 +1441,8 @@ static void mce_do_trigger(struct work_struct *work)
+@@ -1390,19 +1441,8 @@ static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
   */
  int mce_notify_irq(void)
  {
@@ -149,7 +149,7 @@ index d9fab64..edcbd18 100644
  		return 1;
  	}
  	return 0;
-@@ -2544,6 +2584,10 @@ static __init int mcheck_init_device(void)
+@@ -2549,6 +2589,10 @@ static __init int mcheck_init_device(void)
  		goto err_out;
  	}
  
@@ -161,5 +161,5 @@ index d9fab64..edcbd18 100644
  		err = -ENOMEM;
  		goto err_out;
 -- 
-1.9.1
+2.1.4
 

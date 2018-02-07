@@ -1,7 +1,7 @@
-From b6e3d617bb658d8ef09dc440d8abcc880445da7c Mon Sep 17 00:00:00 2001
+From 207d92f6f6389753f7b7aac43874946d3bb9634a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
-Subject: [PATCH 281/337] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
+Subject: [PATCH 281/356] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
 
 There are "valid" GFP_ATOMIC allocations such as
 
@@ -46,10 +46,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 9bdc8ad..a9308cc 100644
+index 7a78b19..00ff8d4 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
-@@ -900,7 +900,7 @@ config IOMMU_HELPER
+@@ -914,7 +914,7 @@ config IOMMU_HELPER
  config MAXSMP
  	bool "Enable Maximum number of SMP Processors and NUMA Nodes"
  	depends on X86_64 && SMP && DEBUG_KERNEL
@@ -71,5 +71,5 @@ index 260a80e..b06becb 100644
  	  Use dynamic allocation for cpumask_var_t, instead of putting
  	  them on the stack.  This is a bit more expensive, but avoids
 -- 
-1.9.1
+2.1.4
 

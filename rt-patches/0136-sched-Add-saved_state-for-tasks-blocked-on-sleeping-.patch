@@ -1,7 +1,7 @@
-From 808f70dd9d1aaedda88533b44ed8634895c7d55b Mon Sep 17 00:00:00 2001
+From 6df30cf9cd13808e77ed5c5287c55e3dfe1c2cae Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 25 Jun 2011 09:21:04 +0200
-Subject: [PATCH 136/337] sched: Add saved_state for tasks blocked on sleeping
+Subject: [PATCH 136/356] sched: Add saved_state for tasks blocked on sleeping
  locks
 
 Spinlocks are state preserving in !RT. RT changes the state when a
@@ -29,7 +29,7 @@ index 57d37ac..5603cdc 100644
  	void *stack;
  	atomic_t usage;
  	unsigned int flags;	/* per process flags, defined below */
-@@ -2876,6 +2877,7 @@ static inline struct user_struct *get_uid(struct user_struct *u)
+@@ -2876,6 +2877,7 @@ extern void xtime_update(unsigned long ticks);
  
  extern int wake_up_state(struct task_struct *tsk, unsigned int state);
  extern int wake_up_process(struct task_struct *tsk);
@@ -38,10 +38,10 @@ index 57d37ac..5603cdc 100644
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index c80df32..57ac028 100644
+index cb98210f..0d28a45 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2056,8 +2056,25 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
+@@ -2055,8 +2055,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
  	 */
  	smp_mb__before_spinlock();
  	raw_spin_lock_irqsave(&p->pi_lock, flags);
@@ -68,7 +68,7 @@ index c80df32..57ac028 100644
  
  	trace_sched_waking(p);
  
-@@ -2219,6 +2236,18 @@ int wake_up_process(struct task_struct *p)
+@@ -2218,6 +2235,18 @@ int wake_up_process(struct task_struct *p)
  }
  EXPORT_SYMBOL(wake_up_process);
  
@@ -88,10 +88,10 @@ index c80df32..57ac028 100644
  {
  	return try_to_wake_up(p, state, 0);
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index d1ba1b8..c81cb16 100644
+index 4631b18..da0c61b 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -1216,6 +1216,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
+@@ -1226,6 +1226,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
  #define WF_SYNC		0x01		/* waker goes to sleep after wakeup */
  #define WF_FORK		0x02		/* child wakeup after fork */
  #define WF_MIGRATED	0x4		/* internal use, task got migrated */
@@ -100,5 +100,5 @@ index d1ba1b8..c81cb16 100644
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
 -- 
-1.9.1
+2.1.4
 

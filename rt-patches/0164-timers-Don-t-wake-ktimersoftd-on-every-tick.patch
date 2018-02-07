@@ -1,7 +1,7 @@
-From bb39bbfb15d691e0f9d9b1108a066fe02969ffa1 Mon Sep 17 00:00:00 2001
+From 171cb8b77f4969f5c1da3b9daae11f96149580e5 Mon Sep 17 00:00:00 2001
 From: Haris Okanovic <haris.okanovic@ni.com>
 Date: Fri, 3 Feb 2017 17:26:44 +0100
-Subject: [PATCH 164/337] timers: Don't wake ktimersoftd on every tick
+Subject: [PATCH 164/356] timers: Don't wake ktimersoftd on every tick
 
 We recently upgraded from 4.1 to 4.6 and noticed a minor latency
 regression caused by an additional thread wakeup (ktimersoftd) in
@@ -34,7 +34,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 67 insertions(+), 29 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index d8e1c2c..6482b81 100644
+index f9c2d95..ea878d3 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
 @@ -207,6 +207,8 @@ struct timer_base {
@@ -46,7 +46,7 @@ index d8e1c2c..6482b81 100644
  } ____cacheline_aligned;
  
  static DEFINE_PER_CPU(struct timer_base, timer_bases[NR_BASES]);
-@@ -1366,7 +1368,8 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
+@@ -1364,7 +1366,8 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
  	}
  }
  
@@ -56,7 +56,7 @@ index d8e1c2c..6482b81 100644
  {
  	while (!hlist_empty(head)) {
  		struct timer_list *timer;
-@@ -1397,21 +1400,38 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
+@@ -1395,21 +1398,38 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
  	}
  }
  
@@ -100,7 +100,7 @@ index d8e1c2c..6482b81 100644
  		}
  		/* Is it time to look at the next level? */
  		if (clk & LVL_CLK_MASK)
-@@ -1419,7 +1439,6 @@ static int __collect_expired_timers(struct timer_base *base,
+@@ -1417,7 +1437,6 @@ static int __collect_expired_timers(struct timer_base *base,
  		/* Shift clock for the next level granularity */
  		clk >>= LVL_CLK_SHIFT;
  	}
@@ -108,7 +108,7 @@ index d8e1c2c..6482b81 100644
  }
  
  #ifdef CONFIG_NO_HZ_COMMON
-@@ -1618,8 +1637,7 @@ void timer_clear_idle(void)
+@@ -1616,8 +1635,7 @@ void timer_clear_idle(void)
  	base->is_idle = false;
  }
  
@@ -118,7 +118,7 @@ index d8e1c2c..6482b81 100644
  {
  	/*
  	 * NOHZ optimization. After a long idle sleep we need to forward the
-@@ -1636,20 +1654,49 @@ static int collect_expired_timers(struct timer_base *base,
+@@ -1634,20 +1652,49 @@ static int collect_expired_timers(struct timer_base *base,
  		if (time_after(next, jiffies)) {
  			/* The call site will increment clock! */
  			base->clk = jiffies - 1;
@@ -173,7 +173,7 @@ index d8e1c2c..6482b81 100644
  /*
   * Called from the timer interrupt handler to charge one tick to the current
   * process.  user_tick is 1 if the tick is user time, 0 for system.
-@@ -1676,22 +1723,11 @@ void update_process_times(int user_tick)
+@@ -1674,22 +1721,11 @@ void update_process_times(int user_tick)
   */
  static inline void __run_timers(struct timer_base *base)
  {
@@ -198,13 +198,13 @@ index d8e1c2c..6482b81 100644
  	raw_spin_unlock_irq(&base->lock);
  	wakeup_timer_waiters(base);
  }
-@@ -1730,12 +1766,12 @@ void run_local_timers(void)
+@@ -1728,12 +1764,12 @@ void run_local_timers(void)
  
  	hrtimer_run_queues();
  	/* Raise the softirq only if required. */
 -	if (time_before(jiffies, base->clk)) {
 +	if (time_before(jiffies, base->clk) || !tick_find_expired(base)) {
- 		if (!IS_ENABLED(CONFIG_NO_HZ_COMMON) || !base->nohz_active)
+ 		if (!IS_ENABLED(CONFIG_NO_HZ_COMMON))
  			return;
  		/* CPU is awake, so check the deferrable base. */
  		base++;
@@ -213,7 +213,7 @@ index d8e1c2c..6482b81 100644
  			return;
  	}
  	raise_softirq(TIMER_SOFTIRQ);
-@@ -1905,6 +1941,7 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1918,6 +1954,7 @@ int timers_dead_cpu(unsigned int cpu)
  		raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
  		BUG_ON(old_base->running_timer);
@@ -221,7 +221,7 @@ index d8e1c2c..6482b81 100644
  
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
-@@ -1931,6 +1968,7 @@ static void __init init_timer_cpu(int cpu)
+@@ -1944,6 +1981,7 @@ static void __init init_timer_cpu(int cpu)
  #ifdef CONFIG_PREEMPT_RT_FULL
  		init_swait_queue_head(&base->wait_for_running_timer);
  #endif
@@ -230,5 +230,5 @@ index d8e1c2c..6482b81 100644
  }
  
 -- 
-1.9.1
+2.1.4
 

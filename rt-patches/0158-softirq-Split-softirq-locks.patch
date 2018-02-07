@@ -1,7 +1,7 @@
-From dec08fadb90e32f6fa27a0cac7487ce8ba8a9f46 Mon Sep 17 00:00:00 2001
+From 5d2b45fd0765ef92ff1236f44217169b5404ca1c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 158/337] softirq: Split softirq locks
+Subject: [PATCH 158/356] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -114,7 +114,7 @@ index c2bcbd4..127cfbd 100644
  
  extern void open_softirq(int nr, void (*action)(struct softirq_action *));
  extern void softirq_init(void);
-@@ -487,6 +491,7 @@ static inline void do_softirq_own_stack(void)
+@@ -487,6 +491,7 @@ extern void __raise_softirq_irqoff(unsigned int nr);
  
  extern void raise_softirq_irqoff(unsigned int nr);
  extern void raise_softirq(unsigned int nr);
@@ -136,7 +136,7 @@ index c2bcbd4..127cfbd 100644
   * Autoprobing for irqs:
   *
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index 2b761d0..5f73377 100644
+index 2eed4b5..0c734628 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
 @@ -50,7 +50,11 @@
@@ -169,14 +169,14 @@ index 2b761d0..5f73377 100644
  
  /*
   * Are we doing bottom half or hardware interrupt processing?
-@@ -72,7 +82,6 @@
+@@ -79,7 +89,6 @@
  #define in_irq()		(hardirq_count())
  #define in_softirq()		(softirq_count())
  #define in_interrupt()		(irq_count())
 -#define in_serving_softirq()	(softirq_count() & SOFTIRQ_OFFSET)
- 
- /*
-  * Are we in NMI context?
+ #define in_nmi()		(preempt_count() & NMI_MASK)
+ #define in_task()		(!(preempt_count() & \
+ 				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
 diff --git a/include/linux/sched.h b/include/linux/sched.h
 index 7252e06..d3dd2276 100644
 --- a/include/linux/sched.h
@@ -190,7 +190,7 @@ index 7252e06..d3dd2276 100644
  #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
-@@ -2458,6 +2460,7 @@ static inline cputime_t task_gtime(struct task_struct *t)
+@@ -2458,6 +2460,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
  /*
   * Per process flags
   */
@@ -199,10 +199,10 @@ index 7252e06..d3dd2276 100644
  #define PF_EXITPIDONE	0x00000008	/* pi exit done on shut down */
  #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
 diff --git a/init/main.c b/init/main.c
-index 6065778..57d982c 100644
+index ed8ed74..89363f5 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -506,6 +506,7 @@ asmlinkage __visible void __init start_kernel(void)
+@@ -508,6 +508,7 @@ asmlinkage __visible void __init start_kernel(void)
  	setup_command_line(command_line);
  	setup_nr_cpu_ids();
  	setup_per_cpu_areas();
@@ -222,7 +222,7 @@ index 8669000..ec9b361 100644
  #include <linux/irq.h>
  
  #define CREATE_TRACE_POINTS
-@@ -63,6 +64,98 @@
+@@ -63,6 +64,98 @@ const char * const softirq_to_name[NR_SOFTIRQS] = {
  	"TASKLET", "SCHED", "HRTIMER", "RCU"
  };
  
@@ -775,7 +775,7 @@ index 8669000..ec9b361 100644
  void open_softirq(int nr, void (*action)(struct softirq_action *))
  {
  	softirq_vec[nr].action = action;
-@@ -747,23 +1097,7 @@ void tasklet_unlock_wait(struct tasklet_struct *t)
+@@ -747,23 +1097,7 @@ EXPORT_SYMBOL(tasklet_unlock_wait);
  
  static int ksoftirqd_should_run(unsigned int cpu)
  {
@@ -810,10 +810,10 @@ index 8669000..ec9b361 100644
  	.thread_fn		= run_ksoftirqd,
  	.thread_comm		= "ksoftirqd/%u",
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index c119678..ddf9104 100644
+index 79f10fc..78ef19f 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
-@@ -882,14 +882,7 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
+@@ -897,14 +897,7 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
  		return false;
  
  	if (unlikely(local_softirq_pending() && cpu_online(cpu))) {
@@ -830,10 +830,10 @@ index c119678..ddf9104 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 1798187..20860f0 100644
+index 9dae26b..a686c30 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3867,11 +3867,9 @@ int netif_rx_ni(struct sk_buff *skb)
+@@ -3879,11 +3879,9 @@ int netif_rx_ni(struct sk_buff *skb)
  
  	trace_netif_rx_ni_entry(skb);
  
@@ -848,5 +848,5 @@ index 1798187..20860f0 100644
  	return err;
  }
 -- 
-1.9.1
+2.1.4
 

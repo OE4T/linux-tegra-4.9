@@ -1,7 +1,7 @@
-From 8a5523fd749be81a6732a8020986ecdeaba8960a Mon Sep 17 00:00:00 2001
+From 62775061f2571323a03c36c7ed369109f838b9b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 20:51:03 +0100
-Subject: [PATCH 221/337] rt: Introduce cpu_chill()
+Subject: [PATCH 221/356] rt: Introduce cpu_chill()
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Add cpu_chill() to replace cpu_relax(). cpu_chill()
@@ -102,10 +102,10 @@ index a6ecb34..37caab3 100644
 +
  #endif /* defined(_LINUX_DELAY_H) */
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 4bd08d6..73b6232 100644
+index c5a0bd4..513cb62 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -1778,6 +1778,25 @@ long hrtimer_nanosleep(struct timespec *rqtp, struct timespec __user *rmtp,
+@@ -1780,6 +1780,25 @@ SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
  	return hrtimer_nanosleep(&tu, rmtp, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
  }
  
@@ -132,5 +132,5 @@ index 4bd08d6..73b6232 100644
   * Functions related to boot-time initialization:
   */
 -- 
-1.9.1
+2.1.4
 

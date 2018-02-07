@@ -1,7 +1,7 @@
-From aae7a4f355ae8e119dc6fd5d6cc285d1756d4048 Mon Sep 17 00:00:00 2001
+From 25fa7ba86a3bc1f353a5a98a6919fd01b1305c4b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:50 +0100
-Subject: [PATCH 007/337] futex: Remove rt_mutex_deadlock_account_*()
+Subject: [PATCH 007/356] futex: Remove rt_mutex_deadlock_account_*()
 
 Upstream commit fffa954fb528963c2fb7b0c0084eb77e2be7ab52
 
@@ -79,7 +79,7 @@ index 2c49d76..1c57ff1 100644
  	/*
  	 * We must be careful here if the fast path is enabled. If we
  	 * have no waiters queued we cannot set owner to NULL here
-@@ -1407,11 +1403,10 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1407,11 +1403,10 @@ rt_mutex_fastlock(struct rt_mutex *lock, int state,
  				struct hrtimer_sleeper *timeout,
  				enum rtmutex_chainwalk chwalk))
  {
@@ -94,7 +94,7 @@ index 2c49d76..1c57ff1 100644
  }
  
  static inline int
-@@ -1423,21 +1418,19 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1423,21 +1418,19 @@ rt_mutex_timed_fastlock(struct rt_mutex *lock, int state,
  				      enum rtmutex_chainwalk chwalk))
  {
  	if (chwalk == RT_MUTEX_MIN_CHAINWALK &&
@@ -121,7 +121,7 @@ index 2c49d76..1c57ff1 100644
  	return slowfn(lock);
  }
  
-@@ -1447,19 +1440,18 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1447,19 +1440,18 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh))
  {
  	WAKE_Q(wake_q);
@@ -149,7 +149,7 @@ index 2c49d76..1c57ff1 100644
  }
  
  /**
-@@ -1570,10 +1562,9 @@ void __sched rt_mutex_unlock(struct rt_mutex *lock)
+@@ -1570,10 +1562,9 @@ EXPORT_SYMBOL_GPL(rt_mutex_unlock);
  bool __sched rt_mutex_futex_unlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh)
  {
@@ -192,5 +192,5 @@ index c406058..6607802 100644
  #define debug_rt_mutex_free_waiter(w)			do { } while (0)
  #define debug_rt_mutex_lock(l)				do { } while (0)
 -- 
-1.9.1
+2.1.4
 

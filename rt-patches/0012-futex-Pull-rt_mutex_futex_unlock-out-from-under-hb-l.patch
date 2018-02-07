@@ -1,7 +1,7 @@
-From ca5e84bfd4526073f58f6e8db2dea610f75d9b6e Mon Sep 17 00:00:00 2001
+From 2ef7c20a101515c92ab9ce50ac7256d1355b6f04 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
-Subject: [PATCH 012/337] futex: Pull rt_mutex_futex_unlock() out from under
+Subject: [PATCH 012/356] futex: Pull rt_mutex_futex_unlock() out from under
  hb->lock
 
 Upstream commit 16ffa12d742534d4ff73e8b3a4e81c1de39196f0
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 100 insertions(+), 54 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 81439b9..f238648 100644
+index 6058cc0..a50c17a 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -920,10 +920,12 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -178,7 +178,7 @@ index 81439b9..f238648 100644
  }
  
  /*
-@@ -2231,7 +2228,8 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
+@@ -2234,7 +2231,8 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
  	/*
  	 * We are here either because we stole the rtmutex from the
  	 * previous highest priority waiter or we are the highest priority
@@ -188,7 +188,7 @@ index 81439b9..f238648 100644
  	 * We have to replace the newowner TID in the user space variable.
  	 * This must be atomic as we have to preserve the owner died bit here.
  	 *
-@@ -2248,7 +2246,7 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
+@@ -2251,7 +2249,7 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
  	if (get_futex_value_locked(&uval, uaddr))
  		goto handle_fault;
  
@@ -197,7 +197,7 @@ index 81439b9..f238648 100644
  		newval = (uval & FUTEX_OWNER_DIED) | newtid;
  
  		if (cmpxchg_futex_value_locked(&curval, uaddr, uval, newval))
-@@ -2344,6 +2342,10 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+@@ -2347,6 +2345,10 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  		/*
  		 * Got the lock. We might not be the anticipated owner if we
  		 * did a lock-steal - fix up the PI-state in that case:
@@ -208,7 +208,7 @@ index 81439b9..f238648 100644
  		 */
  		if (q->pi_state->owner != current)
  			ret = fixup_pi_state_owner(uaddr, q, current);
-@@ -2583,6 +2585,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2586,6 +2588,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  			 ktime_t *time, int trylock)
  {
  	struct hrtimer_sleeper timeout, *to = NULL;
@@ -216,7 +216,7 @@ index 81439b9..f238648 100644
  	struct futex_hash_bucket *hb;
  	struct futex_q q = futex_q_init;
  	int res, ret;
-@@ -2669,12 +2672,19 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2672,12 +2675,19 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  	 * If fixup_owner() faulted and was unable to handle the fault, unlock
  	 * it and return the fault to userspace.
  	 */
@@ -238,7 +238,7 @@ index 81439b9..f238648 100644
  	goto out_put_key;
  
  out_unlock_put_key:
-@@ -2737,10 +2747,36 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2740,10 +2750,36 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  	 */
  	top_waiter = futex_top_waiter(hb, &key);
  	if (top_waiter) {
@@ -278,7 +278,7 @@ index 81439b9..f238648 100644
  		 */
  		if (!ret)
  			goto out_putkey;
-@@ -2755,7 +2791,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2758,7 +2794,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  		 * setting the FUTEX_WAITERS bit. Try again.
  		 */
  		if (ret == -EAGAIN) {
@@ -286,7 +286,7 @@ index 81439b9..f238648 100644
  			put_futex_key(&key);
  			goto retry;
  		}
-@@ -2763,7 +2798,7 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2766,7 +2801,7 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  		 * wake_futex_pi has detected invalid state. Tell user
  		 * space.
  		 */
@@ -295,7 +295,7 @@ index 81439b9..f238648 100644
  	}
  
  	/*
-@@ -2773,8 +2808,10 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2776,8 +2811,10 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  	 * preserve the WAITERS bit not the OWNER_DIED one. We are the
  	 * owner.
  	 */
@@ -307,7 +307,7 @@ index 81439b9..f238648 100644
  
  	/*
  	 * If uval has changed, let user space handle it.
-@@ -2788,7 +2825,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
+@@ -2791,7 +2828,6 @@ static int futex_unlock_pi(u32 __user *uaddr, unsigned int flags)
  	return ret;
  
  pi_faulted:
@@ -315,7 +315,7 @@ index 81439b9..f238648 100644
  	put_futex_key(&key);
  
  	ret = fault_in_user_writeable(uaddr);
-@@ -2892,6 +2928,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2895,6 +2931,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  				 u32 __user *uaddr2)
  {
  	struct hrtimer_sleeper timeout, *to = NULL;
@@ -323,7 +323,7 @@ index 81439b9..f238648 100644
  	struct rt_mutex_waiter rt_waiter;
  	struct futex_hash_bucket *hb;
  	union futex_key key2 = FUTEX_KEY_INIT;
-@@ -2976,8 +3013,10 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2979,8 +3016,10 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		if (q.pi_state && (q.pi_state->owner != current)) {
  			spin_lock(q.lock_ptr);
  			ret = fixup_pi_state_owner(uaddr2, &q, current);
@@ -336,7 +336,7 @@ index 81439b9..f238648 100644
  			/*
  			 * Drop the reference to the pi state which
  			 * the requeue_pi() code acquired for us.
-@@ -3016,13 +3055,20 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -3019,13 +3058,20 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 * the fault, unlock the rt_mutex and return the fault to
  		 * userspace.
  		 */
@@ -360,5 +360,5 @@ index 81439b9..f238648 100644
  		/*
  		 * We've already been requeued, but cannot restart by calling
 -- 
-1.9.1
+2.1.4
 

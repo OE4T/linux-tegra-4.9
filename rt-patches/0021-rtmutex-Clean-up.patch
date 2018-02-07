@@ -1,7 +1,7 @@
-From 8b51892b12d3dfad413fb789ebd18c041a8ce43e Mon Sep 17 00:00:00 2001
+From 6e425c30967da74a6906393fd3ffb682281147ca Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
-Subject: [PATCH 021/337] rtmutex: Clean up
+Subject: [PATCH 021/356] rtmutex: Clean up
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 
@@ -25,7 +25,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 18 insertions(+), 19 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index ee247b6..3c5173f 100644
+index 26273b5..7cc718a 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1393,7 +1393,7 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -77,7 +77,7 @@ index f0dc1f6..7ca8407 100644
  }
  
  /*
-@@ -1447,15 +1447,14 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1447,15 +1447,14 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
  }
  
  /*
@@ -96,7 +96,7 @@ index f0dc1f6..7ca8407 100644
  }
  
  static inline void
-@@ -1464,14 +1463,12 @@ void rt_mutex_postunlock(struct wake_q_head *wake_q, bool deboost)
+@@ -1464,14 +1463,12 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh))
  {
  	WAKE_Q(wake_q);
@@ -142,7 +142,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index 6f07357..d1c0712 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -122,7 +122,7 @@ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+@@ -122,7 +122,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
  				 struct wake_q_head *wqh);
  
@@ -152,5 +152,5 @@ index 6f07357..d1c0712 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-1.9.1
+2.1.4
 

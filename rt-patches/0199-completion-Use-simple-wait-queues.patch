@@ -1,7 +1,7 @@
-From c96ae4dedd0755b4c121189c19a3ade7b870c783 Mon Sep 17 00:00:00 2001
+From f543ccd4f80fe251431aa2a46b65e9544ef31ebc Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 199/337] completion: Use simple wait queues
+Subject: [PATCH 199/356] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -17,11 +17,11 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  include/linux/swait.h                              |  1 +
  include/linux/uprobes.h                            |  1 +
  kernel/power/hibernate.c                           |  7 +++++
- kernel/power/suspend.c                             |  5 ++++
+ kernel/power/suspend.c                             |  7 +++++
  kernel/sched/completion.c                          | 32 +++++++++++-----------
  kernel/sched/core.c                                | 10 +++++--
  kernel/sched/swait.c                               | 20 ++++++++++++++
- 12 files changed, 72 insertions(+), 27 deletions(-)
+ 12 files changed, 74 insertions(+), 27 deletions(-)
 
 diff --git a/drivers/net/wireless/intersil/orinoco/orinoco_usb.c b/drivers/net/wireless/intersil/orinoco/orinoco_usb.c
 index bca6935..d7a35ee 100644
@@ -37,7 +37,7 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index ebaf30a..55c7aed 100644
+index d0c236b..1886d16dc 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
 @@ -1594,7 +1594,7 @@ static void ffs_data_put(struct ffs_data *ffs)
@@ -50,10 +50,10 @@ index ebaf30a..55c7aed 100644
  		kfree(ffs);
  	}
 diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode.c
-index f69dbd4..3b76383 100644
+index b8534d3..8fcaf02 100644
 --- a/drivers/usb/gadget/legacy/inode.c
 +++ b/drivers/usb/gadget/legacy/inode.c
-@@ -347,7 +347,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
+@@ -347,7 +347,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
  	spin_unlock_irq (&epdata->dev->lock);
  
  	if (likely (value == 0)) {
@@ -62,7 +62,7 @@ index f69dbd4..3b76383 100644
  		if (value != 0) {
  			spin_lock_irq (&epdata->dev->lock);
  			if (likely (epdata->ep != NULL)) {
-@@ -356,7 +356,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
+@@ -356,7 +356,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
  				usb_ep_dequeue (epdata->ep, epdata->req);
  				spin_unlock_irq (&epdata->dev->lock);
  
@@ -182,7 +182,7 @@ index 72d2d26..968255f 100644
  }
  
 diff --git a/kernel/power/suspend.c b/kernel/power/suspend.c
-index 880c5a2..94f05cb 100644
+index 880c5a2..756ec86 100644
 --- a/kernel/power/suspend.c
 +++ b/kernel/power/suspend.c
 @@ -560,6 +560,8 @@ static void pm_suspend_marker(char *annotation)
@@ -203,11 +203,14 @@ index 880c5a2..94f05cb 100644
  	error = enter_state(state);
  	if (error) {
  		suspend_stats.fail++;
-@@ -583,6 +587,7 @@ int pm_suspend(suspend_state_t state)
+@@ -582,7 +586,10 @@ int pm_suspend(suspend_state_t state)
+ 	} else {
  		suspend_stats.success++;
  	}
++
  	pm_suspend_marker("exit");
 +	pm_in_action = false;
++
  	return error;
  }
  EXPORT_SYMBOL(pm_suspend);
@@ -243,7 +246,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(complete_all);
  
-@@ -62,20 +62,20 @@ void complete_all(struct completion *x)
+@@ -62,20 +62,20 @@ do_wait_for_common(struct completion *x,
  		   long (*action)(long), long timeout, int state)
  {
  	if (!x->done) {
@@ -269,7 +272,7 @@ index 8d0f35d..b62cf64 100644
  		if (!x->done)
  			return timeout;
  	}
-@@ -89,9 +89,9 @@ void complete_all(struct completion *x)
+@@ -89,9 +89,9 @@ __wait_for_common(struct completion *x,
  {
  	might_sleep();
  
@@ -306,10 +309,10 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 29e8e28..813a2d97 100644
+index a11cbc2..00a9c90 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3503,7 +3503,10 @@ void migrate_disable(void)
+@@ -3502,7 +3502,10 @@ void migrate_disable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -321,7 +324,7 @@ index 29e8e28..813a2d97 100644
  #endif
  
  	if (p->migrate_disable) {
-@@ -3530,7 +3533,10 @@ void migrate_enable(void)
+@@ -3529,7 +3532,10 @@ void migrate_enable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -371,5 +374,5 @@ index 82f0dff..e2e224c 100644
  {
  	unsigned long flags;
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From aabf79ce7ea98f59f0f6c88598e9cf56766b2b8c Mon Sep 17 00:00:00 2001
+From 293ec0a539fb6026893c1cc2562c093d6447e48e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
-Subject: [PATCH 014/337] futex,rt_mutex: Restructure
+Subject: [PATCH 014/356] futex,rt_mutex: Restructure
  rt_mutex_finish_proxy_lock()
 
 Upstream commit 38d589f2fd08f1296aea3ce62bebd185125c6d81
@@ -41,10 +41,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 55 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 5708b18..b72be87 100644
+index ea7feb8..da387cc 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -3031,10 +3031,13 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -3034,10 +3034,13 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 */
  		WARN_ON(!q.pi_state);
  		pi_mutex = &q.pi_state->pi_mutex;
@@ -149,7 +149,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index d16de236..fedd5ab 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -107,9 +107,11 @@ extern void rt_mutex_proxy_unlock(struct rt_mutex *lock,
+@@ -107,9 +107,11 @@ extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter);
  extern int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
@@ -165,5 +165,5 @@ index d16de236..fedd5ab 100644
  extern int rt_mutex_timed_futex_lock(struct rt_mutex *l, struct hrtimer_sleeper *to);
  extern int rt_mutex_futex_trylock(struct rt_mutex *l);
 -- 
-1.9.1
+2.1.4
 

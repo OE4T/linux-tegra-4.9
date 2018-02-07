@@ -1,7 +1,7 @@
-From ee4684b74d8d39619d45a11bd208f70e02edc59d Mon Sep 17 00:00:00 2001
+From 95ce44acd91f363bda59e3eba910cc76647523be Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 132/337] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 132/356] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -26,7 +26,7 @@ index 25d2d7c..4b76285 100644
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
-@@ -2397,6 +2400,15 @@ static inline int is_global_init(struct task_struct *tsk)
+@@ -2397,6 +2400,15 @@ extern struct pid *cad_pid;
  extern void free_task(struct task_struct *tsk);
  #define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
  
@@ -51,10 +51,10 @@ index 25d2d7c..4b76285 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 26e3c8a..8022f06 100644
+index 0f564c4..96e9670 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -377,7 +377,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
+@@ -379,7 +379,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
  	if (atomic_dec_and_test(&sig->sigcnt))
  		free_signal_struct(sig);
  }
@@ -65,7 +65,7 @@ index 26e3c8a..8022f06 100644
  void __put_task_struct(struct task_struct *tsk)
  {
  	WARN_ON(!tsk->exit_state);
-@@ -394,7 +396,18 @@ void __put_task_struct(struct task_struct *tsk)
+@@ -396,7 +398,18 @@ void __put_task_struct(struct task_struct *tsk)
  	if (!profile_handoff_task(tsk))
  		free_task(tsk);
  }
@@ -85,5 +85,5 @@ index 26e3c8a..8022f06 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-1.9.1
+2.1.4
 

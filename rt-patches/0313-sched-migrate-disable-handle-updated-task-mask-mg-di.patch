@@ -1,7 +1,7 @@
-From 1e181ea026baba8720d4b93b81afef70637c9947 Mon Sep 17 00:00:00 2001
+From 39810a35cab233c8ddc238d4455ca6564a9407b5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
-Subject: [PATCH 313/337] sched/migrate disable: handle updated task-mask
+Subject: [PATCH 313/356] sched/migrate disable: handle updated task-mask
  mg-dis section
 
 If task's cpumask changes while in the task is in a migrate_disable()
@@ -34,10 +34,10 @@ index fa5ba21..f11549c 100644
  	int migrate_disable_atomic;
  # endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e318524..a5780ed 100644
+index 7acaa62..881b8aa 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1166,18 +1166,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
+@@ -1165,18 +1165,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
  	p->nr_cpus_allowed = cpumask_weight(new_mask);
  }
  
@@ -58,7 +58,7 @@ index e318524..a5780ed 100644
  	queued = task_on_rq_queued(p);
  	running = task_current(rq, p);
  
-@@ -1200,6 +1196,20 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
+@@ -1199,6 +1195,20 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
  		set_curr_task(rq, p);
  }
  
@@ -79,7 +79,7 @@ index e318524..a5780ed 100644
  static DEFINE_PER_CPU(struct cpumask, sched_cpumasks);
  static DEFINE_MUTEX(sched_down_mutex);
  static cpumask_t sched_down_cpumask;
-@@ -3610,6 +3620,43 @@ void migrate_enable(void)
+@@ -3609,6 +3619,43 @@ void migrate_enable(void)
  	 */
  	p->migrate_disable = 0;
  
@@ -124,5 +124,5 @@ index e318524..a5780ed 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-1.9.1
+2.1.4
 

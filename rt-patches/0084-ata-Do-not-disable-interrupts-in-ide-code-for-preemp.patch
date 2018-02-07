@@ -1,7 +1,7 @@
-From cea67063f9a15cbce498f4f7cee7b6bd817836b9 Mon Sep 17 00:00:00 2001
+From 0d46cd927fdf159889a57f78aaab4e6758b11b93 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Fri, 3 Jul 2009 08:44:29 -0500
-Subject: [PATCH 084/337] ata: Do not disable interrupts in ide code for
+Subject: [PATCH 084/356] ata: Do not disable interrupts in ide code for
  preempt-rt
 
 Use the local_irq_*_nort variants.
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/ata/libata-sff.c b/drivers/ata/libata-sff.c
-index 051b615..7ad293b 100644
+index 8d22acd..64fbad7 100644
 --- a/drivers/ata/libata-sff.c
 +++ b/drivers/ata/libata-sff.c
 @@ -678,9 +678,9 @@ unsigned int ata_sff_data_xfer_noirq(struct ata_device *dev, unsigned char *buf,
@@ -66,5 +66,5 @@ index 051b615..7ad293b 100644
  		buf = page_address(page);
  		consumed = ap->ops->sff_data_xfer(dev,  buf + offset,
 -- 
-1.9.1
+2.1.4
 

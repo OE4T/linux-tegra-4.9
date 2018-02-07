@@ -1,7 +1,7 @@
-From c5533f130e6bc3a41828b7f9394b30e37b5b8d6c Mon Sep 17 00:00:00 2001
+From 3f1d9b8d3fd474c8bf7014c40a672c86866ae387 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 16:58:19 +0200
-Subject: [PATCH 038/337] iommu/iova: don't disable preempt around
+Subject: [PATCH 038/356] iommu/iova: don't disable preempt around
  this_cpu_ptr()
 
 Commit 583248e6620a ("iommu/iova: Disable preemption around use of
@@ -38,7 +38,7 @@ index b1ad0a5..e44acfc 100644
  
  static bool iova_rcache_insert(struct iova_domain *iovad,
  			       unsigned long pfn,
-@@ -434,10 +435,8 @@ struct iova *find_iova(struct iova_domain *iovad, unsigned long pfn)
+@@ -434,10 +435,8 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
  
  		/* Try replenishing IOVAs by flushing rcache. */
  		flushed_rcache = true;
@@ -84,5 +84,5 @@ index b1ad0a5..e44acfc 100644
  	return iova_pfn;
  }
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From f1c407307a7edc83143b99dbd55a90a5a52a01b8 Mon Sep 17 00:00:00 2001
+From 1ac3c03f916a04991128c29afa478f2afd56e13a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 23 Dec 2015 20:57:41 +0100
-Subject: [PATCH 125/337] hrtimer: enfore 64byte alignment
+Subject: [PATCH 125/356] hrtimer: enfore 64byte alignment
 
 The patch "hrtimer: Fixup hrtimer callback changes for preempt-rt" adds
 a list_head expired to struct hrtimer_clock_base and with it we run into
@@ -29,5 +29,5 @@ index b71f4b7..b7c2d54 100644
  /**
   * struct hrtimer_clock_base - the timer base for a specific clock
 -- 
-1.9.1
+2.1.4
 

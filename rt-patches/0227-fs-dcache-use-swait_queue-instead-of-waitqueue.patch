@@ -1,7 +1,7 @@
-From aea4889e49b34c2865c76db1a832cba7a0f2aa82 Mon Sep 17 00:00:00 2001
+From 5822a9da468c4ccd53530b3252ba255c7adaa2ab Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
-Subject: [PATCH 227/337] fs/dcache: use swait_queue instead of waitqueue
+Subject: [PATCH 227/356] fs/dcache: use swait_queue instead of waitqueue
 
 __d_lookup_done() invokes wake_up_all() while holding a hlist_bl_lock()
 which disables preemption. As a workaround convert it to swait.
@@ -25,7 +25,7 @@ diff --git a/fs/cifs/readdir.c b/fs/cifs/readdir.c
 index a27fc87..791aecb 100644
 --- a/fs/cifs/readdir.c
 +++ b/fs/cifs/readdir.c
-@@ -80,7 +80,7 @@ static inline void dump_cifs_file_struct(struct file *file, char *label)
+@@ -80,7 +80,7 @@ cifs_prime_dcache(struct dentry *parent, struct qstr *name,
  	struct inode *inode;
  	struct super_block *sb = parent->d_sb;
  	struct cifs_sb_info *cifs_sb = CIFS_SB(sb);
@@ -119,10 +119,10 @@ index 9ab604a..733043c 100644
  	if (unlikely(IS_DEADDIR(dir_inode)))
  		return -ENOENT;
 diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
-index 63ed518..ba90d41 100644
+index 24c0a09..2510f2b 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
-@@ -485,7 +485,7 @@ void nfs_force_use_readdirplus(struct inode *dir)
+@@ -485,7 +485,7 @@ static
  void nfs_prime_dcache(struct dentry *parent, struct nfs_entry *entry)
  {
  	struct qstr filename = QSTR_INIT(entry->name, entry->len);
@@ -131,7 +131,7 @@ index 63ed518..ba90d41 100644
  	struct dentry *dentry;
  	struct dentry *alias;
  	struct inode *dir = d_inode(parent);
-@@ -1491,7 +1491,7 @@ int nfs_atomic_open(struct inode *dir, struct dentry *dentry,
+@@ -1492,7 +1492,7 @@ int nfs_atomic_open(struct inode *dir, struct dentry *dentry,
  		    struct file *file, unsigned open_flags,
  		    umode_t mode, int *opened)
  {
@@ -153,7 +153,7 @@ index 0165a95..58990c8 100644
  #include <linux/namei.h>
  #include <linux/fsnotify.h>
  
-@@ -205,7 +205,7 @@ static int nfs_call_unlink(struct dentry *dentry, struct nfs_unlinkdata *data)
+@@ -205,7 +205,7 @@ nfs_async_unlink(struct dentry *dentry, const struct qstr *name)
  		goto out_free_name;
  	}
  	data->res.dir_attr = &data->dir_attr;
@@ -201,7 +201,7 @@ index ed921bc..403f29c 100644
  	};
  	struct list_head d_child;	/* child of parent list */
  	struct list_head d_subdirs;	/* our children */
-@@ -232,7 +232,7 @@ struct dentry_operations {
+@@ -232,7 +232,7 @@ extern void d_set_d_op(struct dentry *dentry, const struct dentry_operations *op
  extern struct dentry * d_alloc(struct dentry *, const struct qstr *);
  extern struct dentry * d_alloc_pseudo(struct super_block *, const struct qstr *);
  extern struct dentry * d_alloc_parallel(struct dentry *, const struct qstr *,
@@ -236,5 +236,5 @@ index e2e224c..ef027ff 100644
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-1.9.1
+2.1.4
 

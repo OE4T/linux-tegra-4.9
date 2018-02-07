@@ -1,7 +1,7 @@
-From c9ce3dc3c13845e4c411a16f070ea51768854fd9 Mon Sep 17 00:00:00 2001
+From fcf2b65379245483d7ec38cc975d4796860fa8d2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 13 Nov 2011 17:17:09 +0100
-Subject: [PATCH 156/337] softirq: Check preemption after reenabling interrupts
+Subject: [PATCH 156/356] softirq: Check preemption after reenabling interrupts
 
 raise_softirq_irqoff() disables interrupts and wakes the softirq
 daemon, but after reenabling interrupts there is no preemption check,
@@ -49,10 +49,10 @@ index 06cf980..c403426 100644
  
  /**
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index 210bd26..2b761d0 100644
+index f17045b..2eed4b5 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
-@@ -160,8 +160,10 @@
+@@ -165,8 +165,10 @@ do { \
  
  #ifdef CONFIG_PREEMPT_RT_BASE
  # define preempt_enable_no_resched() sched_preempt_enable_no_resched()
@@ -63,7 +63,7 @@ index 210bd26..2b761d0 100644
  #endif
  
  #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
-@@ -232,6 +234,7 @@
+@@ -237,6 +239,7 @@ do { \
  #define preempt_disable_notrace()		barrier()
  #define preempt_enable_no_resched_notrace()	barrier()
  #define preempt_enable_notrace()		barrier()
@@ -116,10 +116,10 @@ index 1d6565e8..b23a797 100644
  	return 0;
  }
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 7f2caad..1798187 100644
+index 67b5d4d..9dae26b 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -2286,6 +2286,7 @@ static void __netif_reschedule(struct Qdisc *q)
+@@ -2287,6 +2287,7 @@ static void __netif_reschedule(struct Qdisc *q)
  	sd->output_queue_tailp = &q->next_sched;
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_restore(flags);
@@ -127,7 +127,7 @@ index 7f2caad..1798187 100644
  }
  
  void __netif_schedule(struct Qdisc *q)
-@@ -2370,6 +2371,7 @@ void __dev_kfree_skb_irq(struct sk_buff *skb, enum skb_free_reason reason)
+@@ -2371,6 +2372,7 @@ void __dev_kfree_skb_irq(struct sk_buff *skb, enum skb_free_reason reason)
  	__this_cpu_write(softnet_data.completion_queue, skb);
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_restore(flags);
@@ -135,7 +135,7 @@ index 7f2caad..1798187 100644
  }
  EXPORT_SYMBOL(__dev_kfree_skb_irq);
  
-@@ -3796,6 +3798,7 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
+@@ -3808,6 +3810,7 @@ static int enqueue_to_backlog(struct sk_buff *skb, int cpu,
  	rps_unlock(sd);
  
  	local_irq_restore(flags);
@@ -143,7 +143,7 @@ index 7f2caad..1798187 100644
  
  	atomic_long_inc(&skb->dev->rx_dropped);
  	kfree_skb(skb);
-@@ -4852,6 +4855,7 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
+@@ -4864,6 +4867,7 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
  		sd->rps_ipi_list = NULL;
  
  		local_irq_enable();
@@ -151,7 +151,7 @@ index 7f2caad..1798187 100644
  
  		/* Send pending IPI's to kick RPS processing on remote cpus. */
  		while (remsd) {
-@@ -4865,6 +4869,7 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
+@@ -4877,6 +4881,7 @@ static void net_rps_action_and_irq_enable(struct softnet_data *sd)
  	} else
  #endif
  		local_irq_enable();
@@ -159,7 +159,7 @@ index 7f2caad..1798187 100644
  }
  
  static bool sd_has_rps_ipi_waiting(struct softnet_data *sd)
-@@ -4942,6 +4947,7 @@ void __napi_schedule(struct napi_struct *n)
+@@ -4954,6 +4959,7 @@ void __napi_schedule(struct napi_struct *n)
  	local_irq_save(flags);
  	____napi_schedule(this_cpu_ptr(&softnet_data), n);
  	local_irq_restore(flags);
@@ -167,7 +167,7 @@ index 7f2caad..1798187 100644
  }
  EXPORT_SYMBOL(__napi_schedule);
  
-@@ -8044,6 +8050,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8056,6 +8062,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -176,5 +176,5 @@ index 7f2caad..1798187 100644
  	/* Process offline CPU's input_pkt_queue */
  	while ((skb = __skb_dequeue(&oldsd->process_queue))) {
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From 8e9b3d4eded2724fcee146cbb08bce37d989d267 Mon Sep 17 00:00:00 2001
+From d865b1d0e7f21064a04e5b703ccd3ea71205f356 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@linaro.org>
 Date: Thu, 10 Dec 2015 10:58:51 -0800
-Subject: [PATCH 094/337] x86/signal: delay calling signals on 32bit
+Subject: [PATCH 094/356] x86/signal: delay calling signals on 32bit
 
 When running some ptrace single step tests on x86-32 machine, the below problem
 is triggered:
@@ -34,7 +34,7 @@ diff --git a/arch/x86/include/asm/signal.h b/arch/x86/include/asm/signal.h
 index c370fba..d132878 100644
 --- a/arch/x86/include/asm/signal.h
 +++ b/arch/x86/include/asm/signal.h
-@@ -36,7 +36,7 @@
+@@ -36,7 +36,7 @@ typedef struct {
   * TIF_NOTIFY_RESUME and set up the signal to be sent on exit of the
   * trap.
   */
@@ -44,5 +44,5 @@ index c370fba..d132878 100644
  #endif
  
 -- 
-1.9.1
+2.1.4
 

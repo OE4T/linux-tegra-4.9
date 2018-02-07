@@ -1,7 +1,7 @@
-From 2fc57a3ed9cea64253531d473c66ce0934b148a8 Mon Sep 17 00:00:00 2001
+From fca26be0fa8c701f7ce2e2f6821b8d6fa796c9d4 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
-Subject: [PATCH 004/337] lockdep: Fix per-cpu static objects
+Subject: [PATCH 004/356] lockdep: Fix per-cpu static objects
 
 Since commit 383776fa7527 ("locking/lockdep: Handle statically initialized
 PER_CPU locks properly") we try to collapse per-cpu locks into a single
@@ -45,7 +45,7 @@ diff --git a/include/linux/smp.h b/include/linux/smp.h
 index 8e0cb7a..68123c1 100644
 --- a/include/linux/smp.h
 +++ b/include/linux/smp.h
-@@ -120,6 +120,13 @@ int smp_call_function_any(const struct cpumask *mask,
+@@ -120,6 +120,13 @@ extern unsigned int setup_max_cpus;
  extern void __init setup_nr_cpu_ids(void);
  extern void __init smp_init(void);
  
@@ -59,7 +59,7 @@ index 8e0cb7a..68123c1 100644
  #else /* !SMP */
  
  static inline void smp_send_stop(void) { }
-@@ -158,6 +165,11 @@ static inline void wake_up_all_idle_cpus(void) {  }
+@@ -158,6 +165,11 @@ static inline void smp_init(void) { up_late_init(); }
  static inline void smp_init(void) { }
  #endif
  
@@ -72,10 +72,10 @@ index 8e0cb7a..68123c1 100644
  
  /*
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 0ada5fb..7a84a7c4 100644
+index d2893b7..c8f2043 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1255,6 +1255,8 @@ static int __init cpu_hotplug_pm_sync_init(void)
+@@ -1255,6 +1255,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
  
  #endif /* CONFIG_PM_SLEEP_SMP */
  
@@ -131,5 +131,5 @@ index 9034915..4e739fc 100644
  		}
  	}
 -- 
-1.9.1
+2.1.4
 

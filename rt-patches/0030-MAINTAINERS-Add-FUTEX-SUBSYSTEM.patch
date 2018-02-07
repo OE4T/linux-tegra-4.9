@@ -1,7 +1,7 @@
-From 496fc7c43aca6151208fdbe4f2842dcd4d91474e Mon Sep 17 00:00:00 2001
+From 31ef82ee89345a1c006e167101edff92d71a77a3 Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:46:08 -0700
-Subject: [PATCH 030/337] MAINTAINERS: Add FUTEX SUBSYSTEM
+Subject: [PATCH 030/356] MAINTAINERS: Add FUTEX SUBSYSTEM
 
 Upstream commit 59cd42c29618c45cd3c56da43402b14f611888dd
 
@@ -51,5 +51,5 @@ index e6275e3..e98019b 100644
  M:	Rik Faith <faith@cs.unc.edu>
  L:	linux-scsi@vger.kernel.org
 -- 
-1.9.1
+2.1.4
 

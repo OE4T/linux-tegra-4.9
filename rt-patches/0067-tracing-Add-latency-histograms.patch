@@ -1,7 +1,7 @@
-From d6f22c74cfb0a3704c03316ea6d555a79afa6cb0 Mon Sep 17 00:00:00 2001
+From 6168468bf3965f8ee9c6edc1dc7271f2bf19f214 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 067/337] tracing: Add latency histograms
+Subject: [PATCH 067/356] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the
@@ -375,7 +375,7 @@ index 0000000..d3f2fbd
 +
 +#endif /* _LATENCY_HIST_H */
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index eeb7f2f..7bed9ce 100644
+index 54fd2fe..89a50cc 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -53,6 +53,7 @@
@@ -386,7 +386,7 @@ index eeb7f2f..7bed9ce 100644
  
  #include "tick-internal.h"
  
-@@ -989,7 +990,16 @@ void hrtimer_start_range_ns(struct hrtimer *timer, ktime_t tim,
+@@ -991,7 +992,16 @@ void hrtimer_start_range_ns(struct hrtimer *timer, ktime_t tim,
  	new_base = switch_hrtimer_base(timer, base, mode & HRTIMER_MODE_PINNED);
  
  	timer_stats_hrtimer_set_start_info(timer);
@@ -403,7 +403,7 @@ index eeb7f2f..7bed9ce 100644
  	leftmost = enqueue_hrtimer(timer, new_base);
  	if (!leftmost)
  		goto unlock;
-@@ -1275,6 +1285,8 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
+@@ -1277,6 +1287,8 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
  	cpu_base->running = NULL;
  }
  
@@ -412,7 +412,7 @@ index eeb7f2f..7bed9ce 100644
  static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
  {
  	struct hrtimer_clock_base *base = cpu_base->clock_base;
-@@ -1294,6 +1306,15 @@ static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
+@@ -1296,6 +1308,15 @@ static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
  
  			timer = container_of(node, struct hrtimer, node);
  
@@ -1782,7 +1782,7 @@ index 03cdff8..0b5947e 100644
  	if (preempt_trace() || irq_trace())
  		stop_critical_timing(CALLER_ADDR0, CALLER_ADDR1);
  }
-@@ -438,6 +441,7 @@ void stop_critical_timings(void)
+@@ -438,6 +441,7 @@ EXPORT_SYMBOL_GPL(stop_critical_timings);
  #ifdef CONFIG_PROVE_LOCKING
  void time_hardirqs_on(unsigned long a0, unsigned long a1)
  {
@@ -1828,7 +1828,7 @@ index 03cdff8..0b5947e 100644
  }
  EXPORT_SYMBOL(trace_hardirqs_off_caller);
  
-@@ -503,12 +512,14 @@ __visible void trace_hardirqs_off_caller(unsigned long caller_addr)
+@@ -503,12 +512,14 @@ EXPORT_SYMBOL(trace_hardirqs_off_caller);
  #ifdef CONFIG_PREEMPT_TRACER
  void trace_preempt_on(unsigned long a0, unsigned long a1)
  {
@@ -1844,5 +1844,5 @@ index 03cdff8..0b5947e 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-1.9.1
+2.1.4
 

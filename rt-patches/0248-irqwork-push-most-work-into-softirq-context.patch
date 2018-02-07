@@ -1,7 +1,7 @@
-From 5069f2d7c0583ca8c88133c419d9aedc9a4d84bd Mon Sep 17 00:00:00 2001
+From 5dea69c0cb8fe0a61c3b5a773bab5b5563b0695e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
-Subject: [PATCH 248/337] irqwork: push most work into softirq context
+Subject: [PATCH 248/356] irqwork: push most work into softirq context
 
 Initially we defered all irqwork into softirq because we didn't want the
 latency spikes if perf or another user was busy and delayed the RT task.
@@ -22,7 +22,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/irq_work.h |  1 +
  kernel/irq_work.c        | 47 ++++++++++++++++++++++++++++++++++-------------
- kernel/sched/rt.c        |  1 +
+ kernel/sched/core.c      |  1 +
  kernel/time/tick-sched.c |  1 +
  kernel/time/timer.c      |  6 +++++-
  5 files changed, 42 insertions(+), 14 deletions(-)
@@ -74,7 +74,7 @@ index bcf107c..0ddaf1e 100644
  		arch_send_call_function_single_ipi(cpu);
  
  	return true;
-@@ -86,6 +94,9 @@ bool irq_work_queue_on(struct irq_work *work, int cpu)
+@@ -86,6 +94,9 @@ EXPORT_SYMBOL_GPL(irq_work_queue_on);
  /* Enqueue the irq work @work on the current CPU */
  bool irq_work_queue(struct irq_work *work)
  {
@@ -146,20 +146,20 @@ index bcf107c..0ddaf1e 100644
  }
  EXPORT_SYMBOL_GPL(irq_work_run);
  
-diff --git a/kernel/sched/rt.c b/kernel/sched/rt.c
-index 5ec4772..8516742 100644
---- a/kernel/sched/rt.c
-+++ b/kernel/sched/rt.c
-@@ -104,6 +104,7 @@ void init_rt_rq(struct rt_rq *rt_rq)
- 	rt_rq->push_cpu = nr_cpu_ids;
- 	raw_spin_lock_init(&rt_rq->push_lock);
- 	init_irq_work(&rt_rq->push_work, push_irq_work_func);
-+	rt_rq->push_work.flags |= IRQ_WORK_HARD_IRQ;
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 43c40f0..ba5737a 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -6203,6 +6203,7 @@ static int init_rootdomain(struct root_domain *rd)
+ 	rd->rto_cpu = -1;
+ 	raw_spin_lock_init(&rd->rto_lock);
+ 	init_irq_work(&rd->rto_push_work, rto_push_irq_work_func);
++	rd->rto_push_work.flags |= IRQ_WORK_HARD_IRQ;
  #endif
- #endif /* CONFIG_SMP */
- 	/* We start is dequeued state, because no RT tasks are queued */
+ 
+ 	init_dl_bw(&rd->dl_bw);
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index ddf9104..4688f82 100644
+index 78ef19f..e8ebd71 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -220,6 +220,7 @@ static void nohz_full_kick_func(struct irq_work *work)
@@ -171,10 +171,10 @@ index ddf9104..4688f82 100644
  
  /*
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index d8e1c2c..fad6d60b 100644
+index f9c2d95..df4849d 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -1663,7 +1663,7 @@ void update_process_times(int user_tick)
+@@ -1661,7 +1661,7 @@ void update_process_times(int user_tick)
  	scheduler_tick();
  	run_local_timers();
  	rcu_check_callbacks(user_tick);
@@ -183,7 +183,7 @@ index d8e1c2c..fad6d60b 100644
  	if (in_irq())
  		irq_work_tick();
  #endif
-@@ -1716,6 +1716,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+@@ -1714,6 +1714,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
  	 */
  	base->must_forward_clk = false;
  
@@ -192,8 +192,8 @@ index d8e1c2c..fad6d60b 100644
 +#endif
 +
  	__run_timers(base);
- 	if (IS_ENABLED(CONFIG_NO_HZ_COMMON) && base->nohz_active)
+ 	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
 -- 
-1.9.1
+2.1.4
 

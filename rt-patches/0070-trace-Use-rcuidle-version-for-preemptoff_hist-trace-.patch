@@ -1,7 +1,7 @@
-From db687812fe6267d12da3503b5785842eb269623d Mon Sep 17 00:00:00 2001
+From 86ad296c0de305483a811b0757d5c06cb533172c Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Tue, 23 Feb 2016 13:23:23 -0800
-Subject: [PATCH 070/337] trace: Use rcuidle version for preemptoff_hist trace
+Subject: [PATCH 070/356] trace: Use rcuidle version for preemptoff_hist trace
  point
 
 When running -rt kernel with both PREEMPT_OFF_HIST and LOCKDEP enabled,
@@ -71,7 +71,7 @@ index 0b5947e..940bd10 100644
  	if (preempt_trace() || irq_trace())
  		stop_critical_timing(CALLER_ADDR0, CALLER_ADDR1);
  }
-@@ -441,7 +441,7 @@ void stop_critical_timings(void)
+@@ -441,7 +441,7 @@ EXPORT_SYMBOL_GPL(stop_critical_timings);
  #ifdef CONFIG_PROVE_LOCKING
  void time_hardirqs_on(unsigned long a0, unsigned long a1)
  {
@@ -90,5 +90,5 @@ index 0b5947e..940bd10 100644
  
  #else /* !CONFIG_PROVE_LOCKING */
 -- 
-1.9.1
+2.1.4
 

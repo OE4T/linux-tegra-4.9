@@ -1,7 +1,7 @@
-From 2130f07713263227202f54bc0b5fb3df69208333 Mon Sep 17 00:00:00 2001
+From 1c6ccf914cf48b0c1aac955f062e9bf139dd2630 Mon Sep 17 00:00:00 2001
 From: Jason Wessel <jason.wessel@windriver.com>
 Date: Thu, 28 Jul 2011 12:42:23 -0500
-Subject: [PATCH 263/337] kgdb/serial: Short term workaround
+Subject: [PATCH 263/356] kgdb/serial: Short term workaround
 
 On 07/27/2011 04:37 PM, Thomas Gleixner wrote:
 >  - KGDB (not yet disabled) is reportedly unusable on -rt right now due
@@ -24,7 +24,7 @@ Jason.
  3 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index 105bbc0..ff9f4e5 100644
+index 004931f..4620b51 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
 @@ -35,6 +35,7 @@
@@ -35,7 +35,7 @@ index 105bbc0..ff9f4e5 100644
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/timer.h>
-@@ -3142,6 +3143,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+@@ -3145,6 +3146,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
  
  	if (port->sysrq || oops_in_progress)
  		locked = 0;
@@ -65,7 +65,7 @@ index 410deca..0861beb 100644
  static inline int kdb_register(char *cmd, kdb_func_t func, char *usage,
  			       char *help, short minlen) { return 0; }
 diff --git a/kernel/debug/kdb/kdb_io.c b/kernel/debug/kdb/kdb_io.c
-index 0b89128..e07e2e9 100644
+index 3990c1f..72c3201 100644
 --- a/kernel/debug/kdb/kdb_io.c
 +++ b/kernel/debug/kdb/kdb_io.c
 @@ -562,7 +562,6 @@ int vkdb_printf(enum kdb_msgsrc src, const char *fmt, va_list ap)
@@ -106,5 +106,5 @@ index 0b89128..e07e2e9 100644
  	return r;
  }
 -- 
-1.9.1
+2.1.4
 

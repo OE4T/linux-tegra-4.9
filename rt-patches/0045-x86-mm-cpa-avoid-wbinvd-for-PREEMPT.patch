@@ -1,7 +1,7 @@
-From 85b0c60c9a6b396a86892882f833cf8cf06c3838 Mon Sep 17 00:00:00 2001
+From 067a7b1c9b0e848eaf003753eed1471d4a68ec7b Mon Sep 17 00:00:00 2001
 From: John Ogness <john.ogness@linutronix.de>
 Date: Mon, 30 Jan 2017 09:41:21 +0100
-Subject: [PATCH 045/337] x86/mm/cpa: avoid wbinvd() for PREEMPT
+Subject: [PATCH 045/356] x86/mm/cpa: avoid wbinvd() for PREEMPT
 
 Although wbinvd() is faster than flushing many individual pages, it
 blocks the memory bus for "long" periods of time (>100us), thus
@@ -20,10 +20,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 8 insertions(+)
 
 diff --git a/arch/x86/mm/pageattr.c b/arch/x86/mm/pageattr.c
-index e3353c9..0166496 100644
+index 73dcb0e1..c1085c7 100644
 --- a/arch/x86/mm/pageattr.c
 +++ b/arch/x86/mm/pageattr.c
-@@ -214,7 +214,15 @@ static void cpa_flush_array(unsigned long *start, int numpages, int cache,
+@@ -215,7 +215,15 @@ static void cpa_flush_array(unsigned long *start, int numpages, int cache,
  			    int in_flags, struct page **pages)
  {
  	unsigned int i, level;
@@ -40,5 +40,5 @@ index e3353c9..0166496 100644
  	BUG_ON(irqs_disabled());
  
 -- 
-1.9.1
+2.1.4
 

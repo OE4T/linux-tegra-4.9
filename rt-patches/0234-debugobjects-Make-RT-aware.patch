@@ -1,7 +1,7 @@
-From 0bb564ec02b351551f315cfdae759327d4b99bf1 Mon Sep 17 00:00:00 2001
+From aa36335a0fe7ff46878585cd5c50244aa19092b3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:41:35 +0200
-Subject: [PATCH 234/337] debugobjects: Make RT aware
+Subject: [PATCH 234/356] debugobjects: Make RT aware
 
 Avoid filling the pool / allocating memory with irqs off().
 
@@ -14,7 +14,7 @@ diff --git a/lib/debugobjects.c b/lib/debugobjects.c
 index 056052dc..d8494e1 100644
 --- a/lib/debugobjects.c
 +++ b/lib/debugobjects.c
-@@ -308,7 +308,10 @@ static void debug_object_is_on_stack(void *addr, int onstack)
+@@ -308,7 +308,10 @@ __debug_object_init(void *addr, struct debug_obj_descr *descr, int onstack)
  	struct debug_obj *obj;
  	unsigned long flags;
  
@@ -27,5 +27,5 @@ index 056052dc..d8494e1 100644
  	db = get_bucket((unsigned long) addr);
  
 -- 
-1.9.1
+2.1.4
 

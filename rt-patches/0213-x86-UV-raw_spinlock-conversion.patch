@@ -1,7 +1,7 @@
-From dee9f3a6c4a93b75c0e50ddfba67f3b1b844d315 Mon Sep 17 00:00:00 2001
+From 28fb46267ecd329e15fef31c592f94a3a78dbef3 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 2 Nov 2014 08:31:37 +0100
-Subject: [PATCH 213/337] x86: UV: raw_spinlock conversion
+Subject: [PATCH 213/356] x86: UV: raw_spinlock conversion
 
 Shrug.  Lots of hobbyists have a beast in their basement, right?
 
@@ -51,7 +51,7 @@ index 57ab86d..35d25e2 100644
  }
  
 diff --git a/arch/x86/platform/uv/tlb_uv.c b/arch/x86/platform/uv/tlb_uv.c
-index 9e42842..5398f97 100644
+index 0f017518..39b5d5b 100644
 --- a/arch/x86/platform/uv/tlb_uv.c
 +++ b/arch/x86/platform/uv/tlb_uv.c
 @@ -748,9 +748,9 @@ static void destination_plugged(struct bau_desc *bau_desc,
@@ -127,7 +127,7 @@ index 9e42842..5398f97 100644
  	return -1;
  }
  
-@@ -1940,9 +1940,9 @@ static void __init init_per_cpu_tunables(void)
+@@ -1939,9 +1939,9 @@ static void __init init_per_cpu_tunables(void)
  		bcp->cong_reps			= congested_reps;
  		bcp->disabled_period		= sec_2_cycles(disabled_period);
  		bcp->giveup_limit		= giveup_limit;
@@ -144,7 +144,7 @@ diff --git a/arch/x86/platform/uv/uv_time.c b/arch/x86/platform/uv/uv_time.c
 index b333fc4..8b85916 100644
 --- a/arch/x86/platform/uv/uv_time.c
 +++ b/arch/x86/platform/uv/uv_time.c
-@@ -57,7 +57,7 @@
+@@ -57,7 +57,7 @@ static DEFINE_PER_CPU(struct clock_event_device, cpu_ced);
  
  /* There is one of these allocated per node */
  struct uv_rtc_timer_head {
@@ -225,5 +225,5 @@ index b333fc4..8b85916 100644
  
  /*
 -- 
-1.9.1
+2.1.4
 

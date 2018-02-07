@@ -1,7 +1,7 @@
-From 3942b238660f78277b0375a15375f70e97ed77aa Mon Sep 17 00:00:00 2001
+From 73c98cc240f1db2b9eb09c1b42ecf353083fe483 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Mon, 16 Sep 2013 14:09:19 -0700
-Subject: [PATCH 202/337] hrtimer: Move schedule_work call to helper thread
+Subject: [PATCH 202/356] hrtimer: Move schedule_work call to helper thread
 
 When run ltp leapsec_timer test, the following call trace is caught:
 
@@ -51,10 +51,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 24 insertions(+)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 0ac7cd6..4bd08d6 100644
+index db457dd..c5a0bd4 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -694,6 +694,29 @@ static void hrtimer_switch_to_hres(void)
+@@ -696,6 +696,29 @@ static void hrtimer_switch_to_hres(void)
  	retrigger_next_event(NULL);
  }
  
@@ -84,7 +84,7 @@ index 0ac7cd6..4bd08d6 100644
  static void clock_was_set_work(struct work_struct *work)
  {
  	clock_was_set();
-@@ -709,6 +732,7 @@ void clock_was_set_delayed(void)
+@@ -711,6 +734,7 @@ void clock_was_set_delayed(void)
  {
  	schedule_work(&hrtimer_work);
  }
@@ -93,5 +93,5 @@ index 0ac7cd6..4bd08d6 100644
  #else
  
 -- 
-1.9.1
+2.1.4
 

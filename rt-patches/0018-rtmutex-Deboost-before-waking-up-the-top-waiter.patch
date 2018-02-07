@@ -1,7 +1,7 @@
-From a33c44d184a11a9cec4f48b80af88cab8e41525c Mon Sep 17 00:00:00 2001
+From fe7b2d2f1714de7ad3c46f1263f4f7580e2d4e3c Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
-Subject: [PATCH 018/337] rtmutex: Deboost before waking up the top waiter
+Subject: [PATCH 018/356] rtmutex: Deboost before waking up the top waiter
 
 Upstream commit 2a1c6029940675abb2217b590512dbf691867ec4
 
@@ -44,7 +44,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 34 insertions(+), 32 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index cdd205a..ee247b6 100644
+index 28dd926..26273b5 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1459,10 +1459,7 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -113,7 +113,7 @@ index 30f08b7..440469b 100644
  	raw_spin_unlock_irqrestore(&lock->wait_lock, flags);
  
  	/* check PI boosting */
-@@ -1440,6 +1433,18 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1440,6 +1433,18 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
  	return slowfn(lock);
  }
  
@@ -132,7 +132,7 @@ index 30f08b7..440469b 100644
  static inline void
  rt_mutex_fastunlock(struct rt_mutex *lock,
  		    bool (*slowfn)(struct rt_mutex *lock,
-@@ -1453,11 +1458,7 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1453,11 +1458,7 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  
  	deboost = slowfn(lock, &wake_q);
  
@@ -175,7 +175,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index 25ccf71..6f07357 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -122,7 +122,7 @@ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+@@ -122,7 +122,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
  				 struct wake_q_head *wqh);
  
@@ -185,5 +185,5 @@ index 25ccf71..6f07357 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-1.9.1
+2.1.4
 

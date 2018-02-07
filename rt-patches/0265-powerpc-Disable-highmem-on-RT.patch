@@ -1,7 +1,7 @@
-From 1c04d2d6cb81583e400c2512f4a211eebe83f375 Mon Sep 17 00:00:00 2001
+From 0d74772981dad4bd60b4cda920642eabe62306ad Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 17:08:34 +0200
-Subject: [PATCH 265/337] powerpc: Disable highmem on RT
+Subject: [PATCH 265/356] powerpc: Disable highmem on RT
 
 The current highmem handling on -RT is not compatible and needs fixups.
 
@@ -11,7 +11,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-index e66bc55..7b9f0a5 100644
+index 1aca48e..cdf9c16 100644
 --- a/arch/powerpc/Kconfig
 +++ b/arch/powerpc/Kconfig
 @@ -322,7 +322,7 @@ menu "Kernel options"
@@ -24,5 +24,5 @@ index e66bc55..7b9f0a5 100644
  source kernel/Kconfig.hz
  source kernel/Kconfig.preempt
 -- 
-1.9.1
+2.1.4
 

@@ -1,7 +1,7 @@
-From 362890ba3a15aa7f6acbd4d3143eb68c968b967d Mon Sep 17 00:00:00 2001
+From fafd75b623ca44d0bea8bb4bc07bda6e26f44caf Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 11:18:08 +0100
-Subject: [PATCH 296/337] net: netfilter: Serialize xt_write_recseq sections on
+Subject: [PATCH 296/356] net: netfilter: Serialize xt_write_recseq sections on
  RT
 
 The netfilter code relies only on the implicit semantics of
@@ -27,7 +27,7 @@ index 2ad1a2b..b4d1015 100644
  #include <uapi/linux/netfilter/x_tables.h>
  
  /* Test a struct->invflags and a boolean for inequality */
-@@ -300,6 +301,8 @@ struct xt_table *xt_find_table_lock(struct net *net, u_int8_t af,
+@@ -300,6 +301,8 @@ void xt_free_table_info(struct xt_table_info *info);
   */
  DECLARE_PER_CPU(seqcount_t, xt_recseq);
  
@@ -55,7 +55,7 @@ index 2ad1a2b..b4d1015 100644
  
  /*
 diff --git a/net/netfilter/core.c b/net/netfilter/core.c
-index 004af03..b64f751 100644
+index d869ea5..5cafa87 100644
 --- a/net/netfilter/core.c
 +++ b/net/netfilter/core.c
 @@ -22,12 +22,18 @@
@@ -78,5 +78,5 @@ index 004af03..b64f751 100644
  
  const struct nf_afinfo __rcu *nf_afinfo[NFPROTO_NUMPROTO] __read_mostly;
 -- 
-1.9.1
+2.1.4
 

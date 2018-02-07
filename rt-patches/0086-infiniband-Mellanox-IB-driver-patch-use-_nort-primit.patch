@@ -1,7 +1,7 @@
-From 962e86dc8aaa028bd5ca423b78f413405fbf24fe Mon Sep 17 00:00:00 2001
+From 22a277a82a7cad9d5a6f8cce2d0db14f09e99908 Mon Sep 17 00:00:00 2001
 From: Sven-Thorsten Dietrich <sdietrich@novell.com>
 Date: Fri, 3 Jul 2009 08:30:35 -0500
-Subject: [PATCH 086/337] infiniband: Mellanox IB driver patch use _nort()
+Subject: [PATCH 086/356] infiniband: Mellanox IB driver patch use _nort()
  primitives
 
 Fixes in_atomic stack-dump, when Mellanox module is loaded into the RT
@@ -42,5 +42,5 @@ index fddff40..cca1bb4 100644
  	/*
  	 * make sure the in-flight joins have finished before we attempt
 -- 
-1.9.1
+2.1.4
 

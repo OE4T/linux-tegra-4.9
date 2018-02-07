@@ -43,6 +43,7 @@
 #include "tegra_cec.h"
 
 #include "../../../../nvidia/drivers/video/tegra/dc/dc.h"
+#include "../../../../nvidia/drivers/video/tegra/dc/dc_priv.h"
 
 #define LOGICAL_ADDRESS_RESERVED2 0xD
 #define LOGICAL_ADDRESS_TV 0x0
@@ -511,9 +512,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 {
 	struct tegra_cec *cec;
 	struct resource *res;
-#if defined(CONFIG_TEGRA_DISPLAY)
-	struct device_node *np = pdev->dev->of_node;
-#endif
+	struct device_node *np = pdev->dev.of_node;
 	int ret = 0;
 
 	cec = devm_kzalloc(&pdev->dev, sizeof(struct tegra_cec), GFP_KERNEL);
@@ -565,21 +564,24 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	mutex_init(&cec->tx_lock);
 	mutex_init(&cec->recovery_lock);
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	ret = tegra_unpowergate_partition(cec->soc->powergate_id);
-	if (ret) {
-		dev_err(&pdev->dev, "Fail to unpowergate DISP: %d.\n", ret);
-		goto clk_error;
+#if defined(CONFIG_TEGRA_POWERGATE)
+	if (tegra_dc_is_nvdisplay()) {
+		ret = tegra_unpowergate_partition(cec->soc->powergate_id);
+		if (ret) {
+			dev_err(&pdev->dev, "Fail to unpowergate DISP: %d.\n",
+				ret);
+			goto clk_error;
+		}
+		dev_info(&pdev->dev, "Unpowergate DISP: %d.\n", ret);
 	}
-	dev_info(&pdev->dev, "Unpowergate DISP: %d.\n", ret);
 #endif
 
-#if defined(CONFIG_TEGRA_DISPLAY)
-    if (np)
-        cec->clk = of_clk_get_by_name(np, "cec");
-#else
-	cec->clk = clk_get(&pdev->dev, "cec");
-#endif
+	if (tegra_dc_is_nvdisplay()) {
+		if (np)
+			cec->clk = of_clk_get_by_name(np, "cec");
+	} else {
+		cec->clk = clk_get(&pdev->dev, "cec");
+	}
 
 	if (IS_ERR_OR_NULL(cec->clk)) {
 		dev_err(&pdev->dev, "can't get clock for CEC\n");
@@ -656,8 +658,9 @@ cec_error:
 	cancel_work_sync(&cec->work);
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_powergate_partition(cec->soc->powergate_id);
+#if defined(CONFIG_TEGRA_POWERGATE)
+	if (tegra_dc_is_nvdisplay())
+		tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 clk_error:
 	return ret;
@@ -669,8 +672,9 @@ static int tegra_cec_remove(struct platform_device *pdev)
 
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_powergate_partition(cec->soc->powergate_id);
+#if defined(CONFIG_TEGRA_POWERGATE)
+	if (tegra_dc_is_nvdisplay())
+		tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	misc_deregister(&cec->misc_dev);
@@ -696,8 +700,9 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 	atomic_set(&cec->init_cancel, 0);
 
 	clk_disable(cec->clk);
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_powergate_partition(cec->soc->powergate_id);
+#if defined(CONFIG_TEGRA_POWERGATE)
+	if (tegra_dc_is_nvdisplay())
+		tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	dev_notice(&pdev->dev, "suspended\n");
@@ -710,8 +715,9 @@ static int tegra_cec_resume(struct platform_device *pdev)
 
 	dev_notice(&pdev->dev, "Resuming\n");
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_unpowergate_partition(cec->soc->powergate_id);
+#if defined(CONFIG_TEGRA_POWERGATE)
+	if (tegra_dc_is_nvdisplay())
+		tegra_unpowergate_partition(cec->soc->powergate_id);
 #endif
 	clk_enable(cec->clk);
 	schedule_work(&cec->work);

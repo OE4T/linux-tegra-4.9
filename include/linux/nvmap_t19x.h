@@ -30,6 +30,7 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 struct cv_dev_info {
 	struct device_node *np;
 	struct sg_table *sgt;
+	void *cpu_addr;
 	struct device offset_dev; /* used to alloc/free semaphore offsets within GoS */
 	int idx; /* index to use by firmware to identify the client */
 	int count; /* number of sgt */

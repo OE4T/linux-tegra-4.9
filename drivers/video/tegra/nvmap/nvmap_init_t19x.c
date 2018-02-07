@@ -57,7 +57,6 @@ EXPORT_SYMBOL(nvmap_register_cvsram_carveout);
 static struct nvmap_platform_carveout gosmem = {
 	.name = "gosmem",
 	.usage_mask = NVMAP_HEAP_CARVEOUT_GOS,
-	.no_cpu_access = true,
 };
 
 static struct cv_dev_info *cvdev_info;
@@ -82,7 +81,8 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	struct of_phandle_args outargs;
 	struct device_node *np;
 	DEFINE_DMA_ATTRS(attrs);
-	phys_addr_t pa;
+	dma_addr_t dma_addr;
+	void *cpu_addr;
 	int ret = 0, i, idx, bytes;
 	struct reserved_mem_ops *rmem_ops =
 		(struct reserved_mem_ops *)rmem->priv;
@@ -107,9 +107,9 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		return -EINVAL;
 	}
 
-	(void)dma_alloc_attrs(gosmem.dma_dev, count * SZ_4K,
-				&pa, DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
-	if (dma_mapping_error(dev, pa)) {
+	cpu_addr = dma_alloc_coherent(gosmem.dma_dev, count * SZ_4K,
+				&dma_addr, GFP_KERNEL);
+	if (!cpu_addr) {
 		pr_err("Failed to allocate from Gos mem carveout\n");
 		return -ENOMEM;
 	}
@@ -145,6 +145,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		cvdev_info[idx].sgt =
 			(struct sg_table *)(cvdev_info + count);
 		cvdev_info[idx].sgt += idx * count;
+		cvdev_info[idx].cpu_addr = cpu_addr + idx * SZ_4K;
 
 		for (i = 0; i < count; i++) {
 			sgt = cvdev_info[idx].sgt + i;
@@ -155,7 +156,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 				goto free;
 			}
 			sg_set_buf(sgt->sgl,
-				phys_to_virt(pa + i * SZ_4K), SZ_4K);
+				(cpu_addr + i * SZ_4K), SZ_4K);
 		}
 	}
 	rmem->priv = &gosmem;
@@ -170,7 +171,7 @@ free:
 free_cvdev:
 	kfree(cvdev_info);
 unmap_dma:
-	dma_free_attrs(gosmem.dma_dev, count * SZ_4K, NULL, pa, __DMA_ATTR(attrs));
+	dma_free_coherent(gosmem.dma_dev, count * SZ_4K, cpu_addr, dma_addr);
 	return ret;
 }
 
@@ -243,7 +244,6 @@ static int nvmap_gosmem_notifier(struct notifier_block *nb,
 
 		dir = DMA_BIDIRECTIONAL;
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 		if (cvdev_info[i].np != dev->of_node) {
 			dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
 			dir = DMA_TO_DEVICE;

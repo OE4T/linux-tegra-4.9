@@ -595,9 +595,7 @@ struct nvhost_device_data t19_pva1_info = {
 	.push_work_done		= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
-	.engine_cg_regs		= t19x_pva_gating_registers,
 	.can_powergate		= true,
-	.engine_can_cg		= true,
 };
 
 struct nvhost_device_data t19_pva0_info = {
@@ -623,9 +621,7 @@ struct nvhost_device_data t19_pva0_info = {
 	.serialize		= true,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
-	.engine_cg_regs		= t19x_pva_gating_registers,
 	.can_powergate		= true,
-	.engine_can_cg		= true,
 };
 #endif
 

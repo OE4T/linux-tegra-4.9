@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,15 +119,6 @@ static struct nvhost_gating_register __attribute__((__unused__))
 	{ .addr = 0x00002330, .prod = 0xffff000e, .disable = 0xffffffff },
 	/* NV_PNVDEC_SLCG_GIP_THROTTLE */
 	{ .addr = 0x00002340, .prod = 0x006db6db, .disable = 0x00ffffff },
-	{}
-};
-
-static struct nvhost_gating_register __attribute__((__unused__))
-	t19x_pva_gating_registers[] = {
-	/* PVA_PM_TCM_CG_BYP_0 */
-	{ .addr = 0x00200050, .prod = 0x00000000, .disable = 0x00000001 },
-	/* PVA_PM_ICG_EN_OVERRIDE_0 */
-	{ .addr = 0x00200054, .prod = 0x00000000, .disable = 0x00000001 },
 	{}
 };
 

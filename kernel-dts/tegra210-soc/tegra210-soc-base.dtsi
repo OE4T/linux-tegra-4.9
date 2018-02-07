@@ -2075,6 +2075,7 @@
 		reg = <0x0 0x7000f800 0x0 0x400>;
 		clocks = <&tegra_car TEGRA210_CLK_FUSE>;
 		clock-names = "fuse";
+		nvidia,clock-always-on;
 		status = "disabled";
 		efuse-burn {
 			compatible = "nvidia,tegra210-efuse-burn";

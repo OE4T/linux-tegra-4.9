@@ -980,9 +980,8 @@ static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port)
 	return 0;
 }
 
-static int do_flash(struct ucsi_ccg *ccg, const char *fw_name)
+static int do_flash(struct ucsi_ccg *ccg, const struct firmware *fw)
 {
-	const struct firmware *fw;
 	struct device *dev = ccg->dev;
 	const char *p, *s;
 	const char *eof;
@@ -992,14 +991,6 @@ static int do_flash(struct ucsi_ccg *ccg, const char *fw_name)
 #ifdef FW_FLASH_READ_VALIDATE
 	u8 *rd_buf;
 #endif
-
-	dev_info(dev, "Start flash %s\n", fw_name);
-
-	err = request_firmware(&fw, fw_name, dev);
-	if (err) {
-		dev_err(dev, "request %s failed err=%d\n", fw_name, err);
-		return err;
-	}
 
 	eof = fw->data + fw->size;
 
@@ -1096,16 +1087,7 @@ static int do_flash(struct ucsi_ccg *ccg, const char *fw_name)
 	dev_info(dev, "%s: Total %d row flashed. Time: %dms\n", __func__,
 		 line_cnt, jiffies_to_msecs(jiffies - start_time));
 
-	if (strncmp(fw_name, FW1_NAME, sizeof(FW1_NAME)))
-		err = ccg_cmd_validate_fw(ccg, FW1);
-	else
-		err = ccg_cmd_validate_fw(ccg, FW2);
-
-	if (err)
-		dev_err(dev, "FW validate failed err=%d\n", err);
-
 release_mem:
-	release_firmware(fw);
 	kfree(wr_buf);
 #ifdef FW_FLASH_READ_VALIDATE
 	kfree(rd_buf);
@@ -1119,26 +1101,44 @@ release_mem:
  * Dual firmware mode allows the CCG device to stay in a PD contract and support
  * USB PD and Type-C functionality while a firmware update is in progress.
  ******************************************************************************/
-static int ccg_fw_update(struct ucsi_ccg *ccg, int flashing_fw)
+static int ccg_fw_update(struct ucsi_ccg *ccg)
 {
+	struct device *dev = ccg->dev;
+	const struct firmware *fw1, *fw2;
 	int err;
 
-	get_fw_info(ccg);
-
-	if (flashing_fw == FW1) {
-		if (ccg->info.fw_mode == FW1)
-			ccg_cmd_jump_boot_mode(ccg, 0); // jump tp ALT FW
-		err = do_flash(ccg, FW1_NAME);
-	} else if (flashing_fw == FW2) {
-		if (ccg->info.fw_mode == FW2)
-			ccg_cmd_jump_boot_mode(ccg, 0);
-		err = do_flash(ccg, FW2_NAME);
-	} else {
-		/* Flash both partiton */
-		ccg_cmd_jump_boot_mode(ccg, 1); // jump to BOOT
-		err = do_flash(ccg, FW1_NAME);
-		err = do_flash(ccg, FW2_NAME);
+	err = request_firmware(&fw1, FW1_NAME, dev);
+	if (err) {
+		dev_err(dev, "request %s failed err=%d\n", FW1_NAME, err);
+		return err;
 	}
+
+	err = request_firmware(&fw2, FW2_NAME, dev);
+	if (err) {
+		dev_err(dev, "request %s failed err=%d\n", FW2_NAME, err);
+		release_firmware(fw1);
+		return err;
+	}
+
+	ccg_cmd_jump_boot_mode(ccg, 1); // jump to BOOT
+
+	dev_info(dev, "Start flash FW1\n");
+	do_flash(ccg, fw1);
+	err = ccg_cmd_validate_fw(ccg, FW1);
+	if (err)
+		dev_err(dev, "FW1 validate failed err=%d\n", err);
+
+	dev_info(dev, "Start flash FW2\n");
+	do_flash(ccg, fw2);
+	err = ccg_cmd_validate_fw(ccg, FW2);
+	if (err)
+		dev_err(dev, "FW2 validate failed err=%d\n", err);
+
+	release_firmware(fw1);
+	release_firmware(fw2);
+
+	dev_info(ccg->dev,
+	"!! Please remove all TypeC cables/adapter to power cycle CCG !!\n");
 
 	return err;
 }
@@ -1188,7 +1188,8 @@ static ssize_t do_flash_store(struct device *dev,
 	if (kstrtouint(buf, 10, &mode))
 		return -EINVAL;
 
-	ccg_fw_update(ccg, mode);
+	if (mode)
+		ccg_fw_update(ccg);
 
 	return n;
 }
@@ -1196,8 +1197,11 @@ static ssize_t do_flash_store(struct device *dev,
 static ssize_t do_flash_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "echo 1: flash FW1.\necho 2: flash FW2.\n"
-			"echo 3: flash both.\n");
+	return sprintf(buf, "[Usage]\n"
+		"1) adb push [FW1_FILE] /vendor/firmware/ccg_1.cyacd\n"
+		"2) adb push [FW2_FILE] /vendor/firmware/ccg_2.cyacd\n"
+		"3) echo 1 > do_flash\n"
+		"4) Remove all TypeC cable/adapter after flashing\n");
 }
 
 static ssize_t test_store(struct device *dev,

@@ -56,7 +56,7 @@
 		ucsi_ccg: ucsi_ccg@8 {
 			compatible = "nvidia,ucsi_ccg";
 			reg = <0x08>;
-			ccg,irqflags = <IRQF_TRIGGER_FALLING>;
+			ccg,irqflags = <IRQF_TRIGGER_LOW>;
 			interrupt-parent = <&tegra_aon_gpio>;
 			interrupts = <TEGRA194_AON_GPIO(BB, 2) 0>;
 			status = "okay";

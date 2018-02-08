@@ -79,6 +79,13 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	if (!sgt)
 		return -ENOMEM;
 
+	/*
+	 * If the GPU is IO coherent and the DMA API is giving us IO coherent
+	 * CPU mappings then we gotta make sure we use the IO coherent aperture.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+		flags |= NVGPU_VM_MAP_IO_COHERENT;
+
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vaddr = g->ops.mm.gmmu_map(vm, addr,
 				   sgt,    /* sg list */

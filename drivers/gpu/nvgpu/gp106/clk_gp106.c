@@ -1,7 +1,7 @@
 /*
  * GP106 Clocks
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -236,7 +236,8 @@ static int gp106_get_rate_show(void *data , u64 *val) {
 	struct namemap_cfg *c = (struct namemap_cfg *) data;
 	struct gk20a *g = c->g;
 
-	*val = c->is_counter ? gp106_get_rate_cntr(g, c) : 0 /* TODO PLL read */;
+	*val = c->is_counter ? (u64)c->scale * gp106_get_rate_cntr(g, c) :
+		0 /* TODO PLL read */;
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(get_rate_fops, gp106_get_rate_show, NULL, "%llu\n");

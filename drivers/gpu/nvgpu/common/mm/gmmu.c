@@ -501,7 +501,9 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 	 * mapping is simple since the "physical" address is actually a virtual
 	 * IO address and will be contiguous.
 	 */
-	if (attrs->aperture == APERTURE_SYSMEM && nvgpu_iommuable(g)) {
+	if (attrs->aperture == APERTURE_SYSMEM &&
+	    nvgpu_iommuable(g) &&
+	    nvgpu_sgt_iommuable(g, sgt)) {
 		u64 io_addr = nvgpu_sgt_get_gpu_addr(g, sgt, sgt->sgl, attrs);
 
 		io_addr += space_to_skip;

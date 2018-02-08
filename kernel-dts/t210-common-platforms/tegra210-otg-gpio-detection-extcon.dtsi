@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,6 +36,11 @@
 				PMC_WAKE_TYPE_GPIO 34 PMC_TRIGGER_TYPE_NONE>;
 		};
 	};
+
+    xusb@70090000 {
+		extcon-cables = <&vbus_gpio_extcon 1>;
+		extcon-cable-names = "id";
+    };
 
 	xudc@700d0000 {
 		extcon-cables = <&vbus_gpio_extcon 0>;

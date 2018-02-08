@@ -24,35 +24,13 @@
 
 #include "nvmap_priv.h"
 
-/* this is basically the L2 cache size but may be tuned as per requirement */
 #ifndef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+/* This is basically the L2 cache size but may be tuned as per requirement */
 size_t cache_maint_inner_threshold = SIZE_MAX;
-#elif defined(CONFIG_ARCH_TEGRA_13x_SOC)
-size_t cache_maint_inner_threshold = SZ_2M * 8;
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
-size_t cache_maint_inner_threshold = SZ_1M;
-#else
-size_t cache_maint_inner_threshold = SZ_2M;
-#endif
-
-#ifndef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-static int nvmap_outer_cache_maint_by_set_ways;
-static size_t cache_maint_outer_threshold = SIZE_MAX;
-#else
-static int nvmap_outer_cache_maint_by_set_ways = 1;
-static size_t cache_maint_outer_threshold = SZ_1M;
-#endif
-
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-int nvmap_cache_maint_by_set_ways = 1;
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
-static int nvmap_cache_maint_by_set_ways_on_one_cpu = 1;
-#else
-static int nvmap_cache_maint_by_set_ways_on_one_cpu;
-#endif
-#else
 int nvmap_cache_maint_by_set_ways;
-static int nvmap_cache_maint_by_set_ways_on_one_cpu;
+#else
+int nvmap_cache_maint_by_set_ways = 1;
+size_t cache_maint_inner_threshold = 8 * SZ_2M;
 #endif
 
 static struct static_key nvmap_disable_vaddr_for_cache_maint;
@@ -80,39 +58,17 @@ inline static void nvmap_flush_dcache_all(void *dummy)
 
 static void nvmap_inner_flush_cache_all(void)
 {
-#if defined(CONFIG_ARM64)
-	if (nvmap_cache_maint_by_set_ways_on_one_cpu)
-		nvmap_flush_dcache_all(NULL);
-	else
-		on_each_cpu(nvmap_flush_dcache_all, NULL, 1);
-#else
-	if (nvmap_cache_maint_by_set_ways_on_one_cpu)
-		on_each_cpu(v7_flush_kern_cache_all, NULL, 1);
-	else
-		v7_flush_kern_cache_all();
-#endif
+	nvmap_flush_dcache_all(NULL);
 }
 void (*inner_flush_cache_all)(void) = nvmap_inner_flush_cache_all;
 
 extern void __clean_dcache_louis(void *);
-extern void v7_clean_kern_cache_louis(void *);
 static void nvmap_inner_clean_cache_all(void)
 {
-#if defined(CONFIG_ARM64)
-	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
-		on_each_cpu(__clean_dcache_louis, NULL, 1);
-		tegra_clean_dcache_all(NULL);
-	} else {
-		on_each_cpu((void *)tegra_clean_dcache_all, NULL, 1);
-	}
-#else
-	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
-		on_each_cpu(v7_clean_kern_cache_louis, NULL, 1);
-		v7_clean_kern_cache_all(NULL);
-	} else {
-		on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
-	}
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
+	on_each_cpu(__clean_dcache_louis, NULL, 1);
 #endif
+	tegra_clean_dcache_all(NULL);
 }
 void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
 
@@ -173,12 +129,7 @@ void nvmap_select_cache_ops(struct device *dev)
  */
 void nvmap_clean_cache_page(struct page *page)
 {
-#if defined(CONFIG_ARM64)
 	__clean_dcache_page(page);
-#else
-	__flush_dcache_page(page_mapping(page), page);
-#endif
-	outer_clean_range(page_to_phys(page), page_to_phys(page) + PAGE_SIZE);
 }
 
 void nvmap_clean_cache(struct page **pages, int numpages)
@@ -213,16 +164,6 @@ void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 		__dma_map_area(vaddr, size, DMA_FROM_DEVICE);
 	else
 		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
-}
-
-void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size)
-{
-	if (op == NVMAP_CACHE_OP_WB_INV)
-		outer_flush_range(paddr, paddr + size);
-	else if (op == NVMAP_CACHE_OP_INV)
-		outer_inv_range(paddr, paddr + size);
-	else
-		outer_clean_range(paddr, paddr + size);
 }
 
 static void heap_page_cache_maint(
@@ -279,24 +220,6 @@ per_page_cache_maint:
 	}
 }
 
-static bool fast_cache_maint_outer(unsigned long start,
-		unsigned long end, unsigned int op)
-{
-	if (!nvmap_outer_cache_maint_by_set_ways)
-		return false;
-
-	if ((op == NVMAP_CACHE_OP_INV) ||
-		((end - start) < cache_maint_outer_threshold))
-		return false;
-
-	if (op == NVMAP_CACHE_OP_WB_INV)
-		outer_flush_all();
-	else if (op == NVMAP_CACHE_OP_WB)
-		outer_clean_all();
-
-	return true;
-}
-
 static inline bool can_fast_cache_maint(unsigned long start,
 			unsigned long end, unsigned int op)
 {
@@ -327,22 +250,6 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 	else if (op == NVMAP_CACHE_OP_WB)
 		inner_clean_cache_all();
 
-	/* outer maintenance */
-	if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE) {
-		if(!fast_cache_maint_outer(start, end, op))
-		{
-			if (h->heap_pgalloc) {
-				heap_page_cache_maint(h, start,
-					end, op, false, true,
-					clean_only_dirty);
-			} else  {
-				phys_addr_t pstart;
-
-				pstart = start + h->carveout->base;
-				outer_cache_maint(op, pstart, end - start);
-			}
-		}
-	}
 	return true;
 }
 
@@ -395,11 +302,6 @@ int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 
 	free_vm_area(area);
 do_outer:
-	if (!outer)
-		return 0;
-
-	if (!fast_cache_maint_outer(pstart, pend, op))
-		outer_cache_maint(op, pstart, pend - pstart);
 	return 0;
 }
 
@@ -621,13 +523,10 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 			}
 		}
 
-		if (op == NVMAP_CACHE_OP_WB) {
+		if (op == NVMAP_CACHE_OP_WB)
 			inner_clean_cache_all();
-			outer_clean_all();
-		} else {
+		else
 			inner_flush_cache_all();
-			outer_flush_all();
-		}
 		nvmap_stats_inc(NS_CFLUSH_RQ, total);
 		nvmap_stats_inc(NS_CFLUSH_DONE, thresh);
 		trace_nvmap_cache_flush(total,
@@ -705,54 +604,6 @@ static const struct file_operations cache_inner_threshold_fops = {
 	.write		= cache_inner_threshold_write,
 };
 
-static int cache_outer_threshold_show(struct seq_file *m, void *v)
-{
-	if (nvmap_outer_cache_maint_by_set_ways)
-		seq_printf(m, "%zuB\n", cache_maint_outer_threshold);
-	else
-		seq_printf(m, "%zuB\n", SIZE_MAX);
-	return 0;
-}
-
-static int cache_outer_threshold_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, cache_outer_threshold_show, inode->i_private);
-}
-
-static ssize_t cache_outer_threshold_write(struct file *file,
-					const char __user *buffer,
-					size_t count, loff_t *pos)
-{
-	int ret;
-	struct seq_file *p = file->private_data;
-	char str[] = "0123456789abcdef";
-
-	count = min_t(size_t, strlen(str), count);
-	if (copy_from_user(str, buffer, count))
-		return -EINVAL;
-
-	if (!nvmap_outer_cache_maint_by_set_ways)
-		return -EINVAL;
-
-	mutex_lock(&p->lock);
-	ret = sscanf(str, "%16zu", &cache_maint_outer_threshold);
-	mutex_unlock(&p->lock);
-	if (ret != 1)
-		return -EINVAL;
-
-	pr_debug("nvmap:cache_maint_outer_threshold is now :%zuB\n",
-			cache_maint_outer_threshold);
-	return count;
-}
-
-static const struct file_operations cache_outer_threshold_fops = {
-	.open		= cache_outer_threshold_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-	.write		= cache_outer_threshold_write,
-};
-
 int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
 {
 	struct dentry *cache_root;
@@ -775,26 +626,6 @@ int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
 			    cache_root,
 			    NULL,
 			    &cache_inner_threshold_fops);
-	}
-
-	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
-		debugfs_create_x32("nvmap_cache_maint_by_set_ways_on_one_cpu",
-				   S_IRUSR | S_IWUSR,
-				   cache_root,
-				   &nvmap_cache_maint_by_set_ways_on_one_cpu);
-	}
-
-	if (nvmap_outer_cache_maint_by_set_ways) {
-		debugfs_create_x32("nvmap_cache_outer_maint_by_set_ways",
-				   S_IRUSR | S_IWUSR,
-				   cache_root,
-				   &nvmap_outer_cache_maint_by_set_ways);
-
-		debugfs_create_file("cache_maint_outer_threshold",
-				    S_IRUSR | S_IWUSR,
-				    cache_root,
-				    NULL,
-				    &cache_outer_threshold_fops);
 	}
 
 	debugfs_create_atomic_t("nvmap_disable_vaddr_for_cache_maint",

@@ -226,9 +226,6 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		if (priv->handle->flags & NVMAP_HANDLE_INNER_CACHEABLE)
 			goto make_dirty;
 
-		/* outer cache maint */
-		outer_cache_maint(NVMAP_CACHE_OP_WB_INV, page_to_phys(page),
-				  PAGE_SIZE);
 make_dirty:
 		nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
 		atomic_inc(&priv->handle->pgalloc.ndirty);
@@ -280,9 +277,6 @@ static bool nvmap_fixup_prot(struct vm_area_struct *vma,
 	if (priv->handle->flags & NVMAP_HANDLE_INNER_CACHEABLE)
 		goto make_dirty;
 
-	/* outer cache maint */
-	outer_cache_maint(NVMAP_CACHE_OP_WB_INV, page_to_phys(page),
-			  PAGE_SIZE);
 make_dirty:
 	nvmap_page_mkdirty(&priv->handle->pgalloc.pages[offs]);
 	atomic_inc(&priv->handle->pgalloc.ndirty);

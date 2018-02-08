@@ -65,22 +65,6 @@ config NVMAP_CACHE_MAINT_BY_SET_WAYS
 	 where inner cache includes only L1. For the systems, where inner cache
 	 includes L1 and L2, keep this option disabled.
 
-config NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
-	bool "Perform cache maint on one cpu only"
-	depends on NVMAP_CACHE_MAINT_BY_SET_WAYS
-	help
-	  Say Y here to avoid cache maint on all CPU's during inner cache maint
-	  by set/ways. When L1 and L2 are inner caches, cache maint on one
-	  CPU is enough. When L1 is inner and L2 is outer, cache maint on
-	  all CPU's is necessary during L1 cache maint by set/ways.
-
-config NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-	bool "Enable outer cache maintenance by set/ways"
-	help
-	  Say Y here if you want to optimize cache maintenance for ranges
-	  bigger than size of outer cache. This option has no effect on
-	  system without outer cache.
-
 config NVMAP_DMABUF_STASH
 	bool "Enable stashing of IOVA maps with dmabuf"
 	default y

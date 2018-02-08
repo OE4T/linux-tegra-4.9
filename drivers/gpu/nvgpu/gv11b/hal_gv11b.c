@@ -236,7 +236,6 @@ static const struct gpu_ops gv11b_ops = {
 		.init_comptags = gp10b_ltc_init_comptags,
 		.cbc_ctrl = gp10b_ltc_cbc_ctrl,
 		.isr = gv11b_ltc_isr,
-		.cbc_fix_config = gv11b_ltc_cbc_fix_config,
 		.flush = gm20b_flush_ltc,
 		.set_enabled = gp10b_ltc_set_enabled,
 	},

@@ -187,15 +187,3 @@ void gv11b_ltc_isr(struct gk20a *g)
 	/* fallback to other interrupts  */
 	gp10b_ltc_isr(g);
 }
-
-u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
-{
-	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
-
-	if (ltc_ltcs_ltss_cbc_num_active_ltcs__v(val) == 2)
-		return base * 2;
-	else if (ltc_ltcs_ltss_cbc_num_active_ltcs__v(val) != 1) {
-		nvgpu_err(g, "Invalid number of active ltcs: %08x", val);
-	}
-	return base;
-}

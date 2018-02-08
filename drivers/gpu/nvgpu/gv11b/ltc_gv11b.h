@@ -29,6 +29,5 @@ void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
 					  u32 index);
 void gv11b_ltc_init_fs_state(struct gk20a *g);
 void gv11b_ltc_isr(struct gk20a *g);
-u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base);
 
 #endif

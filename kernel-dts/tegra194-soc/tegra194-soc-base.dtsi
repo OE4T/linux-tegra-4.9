@@ -1916,10 +1916,14 @@
 		status = "disabled";
 	};
 
-	bwmgr {
+	bwmgr: bwmgr {
 		compatible = "nvidia,bwmgr";
 		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
 		clock-names = "emc";
+		cdev-type = "bwmgr-therm-handler";
+		cooling-min-state = <0>;
+		cooling-max-state = <1>;
+		#cooling-cells = <2>;
 		status = "okay";
 	};
 

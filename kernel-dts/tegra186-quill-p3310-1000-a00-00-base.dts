@@ -39,7 +39,7 @@
 	chosen {
 		board-has-eeprom;
 #if TEGRA_BOOTARGUMENT_VERSION >= DT_VERSION_2
-		bootargs ="console=ttyS0,115200 androidboot.selinux=permissive androidboot.presilicon=true firmware_class.path=/etc/firmware";
+		bootargs ="console=ttyS0,115200 androidboot.presilicon=true firmware_class.path=/etc/firmware";
 #else
 		bootargs ="console=ttyS0,115200";
 #endif

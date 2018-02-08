@@ -1,6 +1,6 @@
 /*
  * SWIOTLB-based DMA API implementation
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Copyright (C) 2012 ARM Ltd.
  * Author: Catalin Marinas <catalin.marinas@arm.com>
@@ -811,6 +811,8 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 		if (!pages)
 			return NULL;
 
+		trace_dmadebug_alloc_attrs(dev, *handle, size, pages[0]);
+
 		if (dma_get_attr(DMA_ATTR_NO_KERNEL_MAPPING, attrs))
 			return pages;
 
@@ -841,7 +843,8 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 			else
 				__free_from_pool(addr, size);
 			addr = NULL;
-		}
+		} else
+			trace_dmadebug_alloc_attrs(dev, *handle, size, page);
 	}
 	return addr;
 }
@@ -852,6 +855,9 @@ static void __iommu_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 	size_t iosize = size;
 
 	size = PAGE_ALIGN(size);
+
+	trace_dmadebug_free_attrs(dev, handle, size, NULL);
+
 	/*
 	 * @cpu_addr will be one of 3 things depending on how it was allocated:
 	 * - A remapped array of pages from iommu_dma_alloc(), for all
@@ -953,6 +959,7 @@ static dma_addr_t __iommu_map_page(struct device *dev, struct page *page,
 	    (UL_ATR(attrs) & DMA_ATTR_SKIP_CPU_SYNC) == 0)
 		__iommu_sync_single_for_device(dev, dev_addr, size, dir);
 
+	trace_dmadebug_map_page(dev, dev_addr + offset, size, page);
 	return dev_addr;
 }
 
@@ -980,6 +987,9 @@ static void __iommu_unmap_page(struct device *dev, dma_addr_t dev_addr,
 	if ((UL_ATR(attrs) & DMA_ATTR_SKIP_CPU_SYNC) == 0)
 		__iommu_sync_single_for_cpu(dev, dev_addr, size, dir);
 
+	trace_dmadebug_unmap_page(dev, dev_addr, size,
+		  phys_to_page(iommu_iova_to_phys(iommu_get_domain_for_dev(dev),
+				 dev_addr)));
 	iommu_dma_unmap_page(dev, dev_addr, size, dir, UL_ATR(attrs));
 }
 

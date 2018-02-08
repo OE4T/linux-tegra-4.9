@@ -1,6 +1,7 @@
 /*
  * A fairly generic DMA-API to IOMMU-API glue layer.
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (C) 2014-2015 ARM Ltd.
  *
  * based in part on arch/arm/mm/dma-mapping.c:
@@ -33,6 +34,8 @@
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-contiguous.h>
+
+#include <trace/events/dmadebug.h>
 
 struct iommu_dma_msi_page {
 	struct list_head	list;
@@ -540,6 +543,8 @@ dma_addr_t iommu_dma_map_at(struct device *dev, dma_addr_t dma_handle,
 		__free_iova(iovad, iova);
 		return DMA_ERROR_CODE;
 	}
+	trace_dmadebug_map_page(dev, dma_handle + iova_off, size,
+					phys_to_page(phys));
 	return dma_addr + iova_off;
 }
 
@@ -694,6 +699,8 @@ int iommu_dma_map_sg(struct device *dev, struct scatterlist *sg,
 	if (iommu_map_sg(domain, dma_addr, sg, nents, prot) < iova_len)
 		goto out_free_iova;
 
+	trace_dmadebug_map_sg(dev, dma_addr, sg_dma_len(sg),
+			      sg_page(sg));
 	return __finalise_sg(dev, sg, nents, dma_addr);
 
 out_free_iova:
@@ -710,6 +717,8 @@ void iommu_dma_unmap_sg(struct device *dev, struct scatterlist *sg, int nents,
 	 * The scatterlist segments are mapped into a single
 	 * contiguous IOVA allocation, so this is incredibly easy.
 	 */
+	trace_dmadebug_unmap_sg(dev, sg_dma_address(sg), sg_dma_len(sg),
+				sg_page(sg));
 	__iommu_dma_unmap(iommu_get_domain_for_dev(dev), sg_dma_address(sg));
 }
 

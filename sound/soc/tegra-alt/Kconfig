@@ -250,17 +250,6 @@ config SND_SOC_TEGRA_T186REF_MOBILE_ALT
 	help
 	  Say Y or M here.
 
-config SND_SOC_TEGRA_MYSTIQUE_ALT
-	tristate "SoC Audio support for Mystique"
-	depends on SND_SOC_TEGRA_T186REF_ALT
-	select SND_SOC_TAS2557_STEREO
-	select TAS2557_REGMAP_STEREO
-	select TAS2557_CODEC_STEREO
-	select TAS2557_MISC_STEREO
-	help
-	  Say Y or M here.
-
-
 config SND_SOC_TEGRA_T210REF_P2382_ALT
 	tristate "SoC Audio support for P2382Ref T210"
 	depends on SND_SOC_TEGRA_ALT

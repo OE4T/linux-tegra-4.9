@@ -1041,7 +1041,7 @@ void fb_edid_to_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 
 struct hdmi_vendor_block {
 	u16 source_physical_address;
-	u8 max_tdms_clock;
+	u8 max_tmds_clock;
 	u8 video_latency;
 	u8 audio_latency;
 	u8 i_video_latency;
@@ -1056,35 +1056,61 @@ struct hdmi_vendor_block {
 	u8 hdmi_2d_detail[MAX_HDMI_3D_LEN];
 };
 
-static void fb_hvd_parse(unsigned char *edid, struct hdmi_vendor_block *hvd,
-	u8 start)
+static void fb_hvd_parse_ext(unsigned char *edid, struct hdmi_vendor_block *hvd,
+	u8 start, u8 len)
 {
 	char mask;
 	int i;
 
-	hvd->source_physical_address = (edid[start + 1] << 8) | edid[start];
-	start += 3;
+	if (len <= 0)
+		return;
 
-	hvd->max_tdms_clock = edid[start++];
-
-	mask = edid[start++];
-	if (mask & LATENCY_PRESENT) {
-		hvd->video_latency = edid[start++];
-		hvd->audio_latency = edid[start++];
-	}
-	if (mask & I_LATENCY_PRESENT) {
-		hvd->i_video_latency = edid[start++];
-		hvd->i_audio_latency = edid[start++];
-	}
 	/* TODO
-	 * Parse 3D masks and structures
+	 * Parse Deep Color bits and DVI_Dual
 	 */
 	start++;
-	hvd->hdmi_vic_len = (edid[start] >> 5) & HDMI_VIC_LEN_MASK;
-	hvd->hdmi_3d_len = edid[start] & HDMI_3D_LEN_MASK;
-	start++;
-	for (i = 0; i < hvd->hdmi_vic_len; i++)
-		hvd->hdmi_vic[i] = edid[start++];
+	len--;
+
+	if (len > 0) {
+		hvd->max_tmds_clock = edid[start++];
+		len--;
+	}
+
+	if (len > 0) {
+
+		mask = edid[start++];
+		len--;
+
+		if ((mask & LATENCY_PRESENT) && (len >= 2)) {
+			hvd->video_latency = edid[start++];
+			hvd->audio_latency = edid[start++];
+			len -= 2;
+		}
+
+		if ((mask & I_LATENCY_PRESENT) && (len >= 2)) {
+			hvd->i_video_latency = edid[start++];
+			hvd->i_audio_latency = edid[start++];
+			len -= 2;
+		}
+
+		if ((mask & HDMI_VIDEO_PRESENT) && (len >= 2)) {
+			/* TODO
+			 * Parse 3D masks and structures
+			 */
+			start++;
+			len--;
+
+			hvd->hdmi_vic_len = (edid[start] >> 5) &
+				HDMI_VIC_LEN_MASK;
+			hvd->hdmi_3d_len = edid[start] & HDMI_3D_LEN_MASK;
+			start++;
+			len--;
+			for (i = 0; i < hvd->hdmi_vic_len && len > 0; i++) {
+				hvd->hdmi_vic[i] = edid[start++];
+				len--;
+			}
+		}
+	}
 }
 
 /**
@@ -1131,9 +1157,11 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			/* Check Vendor Specific Data Block.  For HDMI,
 			   it is always 00-0C-03 for HDMI Licensing, LLC. */
 			if (edid[pos] == 3 && edid[pos + 1] == 0xc &&
-			    edid[pos + 2] == 0) {
+				edid[pos + 2] == 0 && len >= 5) {
 				specs->misc |= FB_MISC_HDMI;
-				fb_hvd_parse(edid, &hvd, pos + 3);
+				hvd.source_physical_address =
+					(edid[pos + 4] << 8) | edid[pos + 3];
+				fb_hvd_parse_ext(edid, &hvd, pos + 5, len - 5);
 				hdmi_num = hvd.hdmi_vic_len;
 			}
 

@@ -628,10 +628,10 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),
 		   attrs->kind_v,
 		   nvgpu_aperture_str(attrs->aperture),
-		   attrs->cacheable ? 'C' : 'c', /* C = cached, V = volatile. */
+		   attrs->cacheable ? 'C' : '-',
 		   attrs->sparse    ? 'S' : '-',
 		   attrs->priv      ? 'P' : '-',
-		   attrs->coherent  ? 'c' : '-',
+		   attrs->coherent  ? 'I' : '-',
 		   attrs->valid     ? 'V' : '-');
 
 	err = __nvgpu_gmmu_do_update_page_table(vm,

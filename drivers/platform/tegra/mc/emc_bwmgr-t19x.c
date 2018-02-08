@@ -27,12 +27,6 @@ static u32 bwmgr_t194_dram_freq_table[] = { /* MHz */
 
 /* ALL VALUES BELOW CORRESPOND TO FREQ in bwmgr_t194_dram_freq_table */
 
-/* Temp derated 4X refresh co-efficients are not used for now
- * These will be used later when dram temperature is used to
- * apply the efficiency.
- * commenting out for now
- */
-#if 0
 /* efficiency percentage 8ch ecc 4X 1-rank*/
 static u32 bwmgr_t194_8ch_ecc_4X_1rank_eff[] = { /* % */
 	  20,    20,    20,    20,    20,
@@ -88,7 +82,6 @@ static u32 bwmgr_t194_16ch_4X_2rank_eff[] = { /* % */
 	  30,    35,    35,    35,    65,
 	  65,    65
 };
-#endif
 
 /* efficiency percentage 8ch ecc 1X 1-rank*/
 static u32 bwmgr_t194_8ch_ecc_1X_1rank_eff[] = { /* % */
@@ -287,6 +280,9 @@ static int dram_freq_count;
 #define DRAM_LPDDR3 2 /* On T186 this value is LPDDR3 */
 #define DRAM_DDR2 3
 
+#define DRAM_REFRESH_1X 0
+#define DRAM_REFRESH_4X 1
+
 static unsigned long get_best_iso_freq(long total_iso_bw, long iso_bw_nvdis,
 						long iso_bw_vi)
 {
@@ -430,12 +426,85 @@ unsigned long t19x_bwmgr_apply_efficiency(
 
 	return max(total_bw, iso_bw);
 }
+
+static void t19x_update_efficiency(unsigned long dram_refresh_rate)
+{
+	if ((dram_refresh_rate != DRAM_REFRESH_4X) &&
+		(dram_refresh_rate != DRAM_REFRESH_1X)) {
+		pr_err("bwmgr:Unknown cooling state. Set 4X refresh co-eff\n");
+		dram_refresh_rate = DRAM_REFRESH_4X;
+	}
+
+	if (dram_refresh_rate == DRAM_REFRESH_4X) {
+		if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_ecc_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_ecc_4X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_ecc_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_ecc_4X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_4X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_4X_1rank_eff;
+		}
+	} else if (dram_refresh_rate == DRAM_REFRESH_1X) {
+		if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_ecc_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_ecc_1X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_ecc_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_ecc_1X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_16ch_1X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_8ch_1X_1rank_eff;
+		}
+	}
+}
+
 static struct bwmgr_ops bwmgr_ops_t19x = {
 	.get_best_iso_freq = get_best_iso_freq,
 	.freq_to_bw = freq_to_bw,
 	.bw_to_freq = bw_to_freq,
 	.dvfs_latency = dvfs_latency,
 	.bwmgr_apply_efficiency = t19x_bwmgr_apply_efficiency,
+	.update_efficiency = t19x_update_efficiency,
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t19x(void)

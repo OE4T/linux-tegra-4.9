@@ -50,6 +50,30 @@ TRACE_EVENT(tegra_bwmgr_set_emc,
 	)
 );
 
+TRACE_EVENT(tegra_bwmgr_update_efficiency,
+	TP_PROTO(
+		unsigned long cur_state,
+		unsigned long prev_state
+	),
+
+	TP_ARGS(cur_state, prev_state),
+
+	TP_STRUCT__entry(
+		__field(unsigned long, cur_state)
+		__field(unsigned long, prev_state)
+	),
+
+	TP_fast_assign(
+		__entry->cur_state = cur_state;
+		__entry->prev_state = prev_state;
+	),
+
+	TP_printk("bwmgr cooling state changed from (%lu) to (%lu)",
+		__entry->prev_state,
+		__entry->cur_state
+	)
+);
+
 #endif /* _TRACE_BWMGR_H */
 
 /* This part must be outside protection */

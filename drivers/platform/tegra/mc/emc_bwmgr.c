@@ -14,10 +14,12 @@
 #include <linux/types.h>
 #include <linux/mutex.h>
 #include <linux/err.h>
+#include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
+#include <linux/thermal.h>
 #include <soc/tegra/chip-id.h>
 
 #define CREATE_TRACE_POINTS
@@ -58,6 +60,12 @@ static struct {
 	bool status;
 	struct bwmgr_ops *ops;
 } bwmgr;
+
+struct dram_refresh_alrt {
+	unsigned long cur_state;
+	u32 max_cooling_state;
+	struct thermal_cooling_device *cdev;
+} *galert_data;
 
 static bool clk_update_disabled;
 
@@ -567,6 +575,90 @@ u32 bwmgr_dvfs_latency(u32 ufreq)
 }
 EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);
 
+/* Get maximum throttle state supported by bwmgr cooling device. */
+static int dram_ref_alert_cdev_max_state(struct thermal_cooling_device *tcd,
+			unsigned long *state)
+{
+	struct dram_refresh_alrt *alert_data = tcd->devdata;
+
+	if (!alert_data)
+		return -EINVAL;
+
+	*state = (unsigned long)alert_data->max_cooling_state;
+	return 0;
+}
+
+/* Get current throttle state of the bwmgr cooling device. */
+static int dram_ref_alert_cdev_cur_state(struct thermal_cooling_device *tcd,
+			unsigned long *state)
+{
+	struct dram_refresh_alrt *alert_data = tcd->devdata;
+
+	if (!alert_data)
+		return -EINVAL;
+
+	*state = alert_data->cur_state;
+	return 0;
+}
+
+static int tegra_bwmgr_update_efficiency(unsigned long cur_state,
+				unsigned long prev_state)
+{
+	int ret = 0;
+
+#ifdef CONFIG_TRACEPOINTS
+	trace_tegra_bwmgr_update_efficiency(
+			cur_state, prev_state);
+#endif /* CONFIG_TRACEPOINTS */
+
+	/* At this point, the thermal framework has indicated that
+	 * the trip point has been crossed for AO-therm zone. However,
+	 * this does not guarantee dram refresh rate has been changed.
+	 * talk to bpmp at this point to find out if dram refresh rate
+	 * has changed or not. This will be implemented once the bpmp
+	 * IPC's are ready.For now update efficiency.
+	 */
+	bwmgr_lock();
+
+	if (bwmgr.ops->update_efficiency)
+		bwmgr.ops->update_efficiency(cur_state);
+
+	if (!clk_update_disabled)
+		ret = bwmgr_update_clk();
+
+	bwmgr_unlock();
+
+	return ret;
+}
+
+/* Set current throttle state of the bwmgr cooling device. */
+static int dram_ref_alert_cdev_set_state(struct thermal_cooling_device *tcd,
+				unsigned long state)
+{
+	int ret = 0;
+	unsigned long prev_state;
+	struct dram_refresh_alrt *alert_data = tcd->devdata;
+
+	if (!alert_data)
+		return -EINVAL;
+
+	prev_state = alert_data->cur_state;
+	alert_data->cur_state = state;
+
+	ret = tegra_bwmgr_update_efficiency(state, prev_state);
+
+	return ret;
+}
+
+/*
+ * Cooling device operations.
+ */
+static struct thermal_cooling_device_ops dram_ref_alert_cdev_ops = {
+	.get_max_state = dram_ref_alert_cdev_max_state,
+	.get_cur_state = dram_ref_alert_cdev_cur_state,
+	.set_cur_state = dram_ref_alert_cdev_set_state,
+};
+
 int __init bwmgr_init(void)
 {
 	int i;
@@ -655,8 +747,67 @@ void __exit bwmgr_exit(void)
 
 	bwmgr.emc_clk = NULL;
 	mutex_destroy(&bwmgr.lock);
+
+	if (galert_data)
+		thermal_cooling_device_unregister(galert_data->cdev);
+
+	kfree(galert_data);
 }
 module_exit(bwmgr_exit);
+
+int __init bwmgr_cooling_init(void)
+{
+	struct device_node *dn;
+	char *cdev_type;
+	const char *str;
+	int ret = 0;
+
+	galert_data = kzalloc(sizeof(struct dram_refresh_alrt),
+					GFP_KERNEL);
+	if (!galert_data)
+		return -ENOMEM;
+
+	dn = of_find_compatible_node(NULL, NULL, "nvidia,bwmgr");
+	if (dn == NULL) {
+		pr_err("bwmgr: dt node not found.\n");
+		ret = -ENODEV;
+		goto error;
+	}
+
+	if (of_property_read_string(dn, "cdev-type", &str) == 0) {
+		cdev_type = (char *)str;
+	} else {
+		pr_info("bwmgr: missing cdev-type property\n");
+		goto error;
+	}
+
+	if (of_property_read_u32(dn, "cooling-max-state",
+				&(galert_data->max_cooling_state))) {
+		pr_err("bwmgr: missing max_cooling_state property\n");
+		ret = -EINVAL;
+		goto error;
+	}
+
+	galert_data->cur_state = 0;
+	galert_data->cdev = thermal_cooling_device_register(cdev_type,
+				galert_data, &dram_ref_alert_cdev_ops);
+
+	if (IS_ERR(galert_data->cdev)) {
+		ret = PTR_ERR(galert_data->cdev);
+		pr_err("bwmgr: failed to register to thermal framework\n");
+		goto error;
+	}
+
+	return 0;
+
+error:
+	kfree(galert_data);
+	return ret;
+}
+late_initcall(bwmgr_cooling_init);
+/* thermal_init is fs_init, make bwmgr_cooling_init late_init as it
+ * depends on thermal_init
+ */
 
 #ifdef CONFIG_DEBUG_FS
 static struct tegra_bwmgr_client *bwmgr_debugfs_client_handle;

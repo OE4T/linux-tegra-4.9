@@ -654,7 +654,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes_info)
 	int err = -1;
 	int i;
 	u32 csi_mask = 0;
-	int is_cphy = lanes_info & 0x1;
+	int is_cphy = lanes_info & CPHY_MASK;
 	u32 lanes = 0;
 
 	for (i = 0; i < mipi->soc->total_cillanes; ++i)

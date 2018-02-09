@@ -665,7 +665,7 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 		dev_err(csi->dev, "Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
-	lanes |= is_cphy ? 0x1 : 0;
+	lanes |= is_cphy ? CPHY_MASK : 0;
 	return tegra_mipi_calibration(lanes);
 }
 struct tegra_csi_fops csi4_fops = {

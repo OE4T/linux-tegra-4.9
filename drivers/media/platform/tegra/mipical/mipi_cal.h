@@ -1,7 +1,7 @@
 /*
  * mipi_cal.h
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@
 #define CSIC	(1 << 22)
 #define CSIB	(1 << 21)
 #define CSIA	(1 << 20)
-#define MIPI_CPHY	1
+#define CPHY_MASK	1
 
 #ifdef CONFIG_TEGRA_MIPI_CAL
 int tegra_mipi_bias_pad_enable(void);

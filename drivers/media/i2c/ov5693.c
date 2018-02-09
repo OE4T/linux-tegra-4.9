@@ -1,7 +1,7 @@
 /*
  * ov5693_v4l2.c - ov5693 sensor driver
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,7 @@
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
 #include <linux/module.h>
+#include <linux/debugfs.h>
 
 #include <linux/seq_file.h>
 #include <linux/of.h>
@@ -80,6 +81,11 @@ struct ov5693 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
+
+	const char			*devname;
+	struct dentry			*debugfs_dir;
+	struct mutex			streaming_lock;
+	bool				streaming;
 
 	s32				group_hold_prev;
 	u32				frame_length;
@@ -541,10 +547,16 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 	if (!enable) {
 		ov5693_update_ctrl_range(priv, OV5693_MAX_FRAME_LENGTH);
 
+		mutex_lock(&priv->streaming_lock);
 		err = ov5693_write_table(priv,
 			mode_table[OV5693_MODE_STOP_STREAM]);
-		if (err)
+		if (err) {
+			mutex_unlock(&priv->streaming_lock);
 			return err;
+		} else {
+			priv->streaming = false;
+			mutex_unlock(&priv->streaming_lock);
+		}
 
 		/*
 		 * Wait for one frame to make sure sensor is set to
@@ -603,9 +615,15 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 				__func__);
 	}
 
+	mutex_lock(&priv->streaming_lock);
 	err = ov5693_write_table(priv, mode_table[OV5693_MODE_START_STREAM]);
-	if (err)
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
 		goto exit;
+	} else {
+		priv->streaming = true;
+		mutex_unlock(&priv->streaming_lock);
+	}
 	if (priv->pdata->v_flip) {
 		ov5693_read_reg(priv->s_data, OV5693_TIMING_REG20, &val);
 		ov5693_write_reg(priv->s_data, OV5693_TIMING_REG20,
@@ -1040,9 +1058,15 @@ static int ov5693_read_otp_bank(struct ov5693 *priv,
 	 */
 
 	usleep_range(10000, 11000);
+	mutex_lock(&priv->streaming_lock);
 	err = ov5693_write_table(priv, mode_table[OV5693_MODE_START_STREAM]);
-	if (err)
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
 		return err;
+	} else {
+		priv->streaming = true;
+		mutex_unlock(&priv->streaming_lock);
+	}
 
 	err = ov5693_write_reg(priv->s_data, OV5693_OTP_BANK_SELECT_ADDR,
 			       0xC0 | bank);
@@ -1059,10 +1083,15 @@ static int ov5693_read_otp_bank(struct ov5693 *priv,
 	if (err)
 		return err;
 
-	err = ov5693_write_table(priv,
-			mode_table[OV5693_MODE_STOP_STREAM]);
-	if (err)
+	mutex_lock(&priv->streaming_lock);
+	err = ov5693_write_table(priv, mode_table[OV5693_MODE_STOP_STREAM]);
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
 		return err;
+	} else {
+		priv->streaming = false;
+		mutex_unlock(&priv->streaming_lock);
+	}
 
 	return 0;
 }
@@ -1361,6 +1390,90 @@ error:
 	return ret;
 }
 
+static int ov5693_debugfs_streaming_show(void *data, u64 *val)
+{
+	struct ov5693 *priv = data;
+
+	mutex_lock(&priv->streaming_lock);
+	*val = priv->streaming;
+	mutex_unlock(&priv->streaming_lock);
+
+	return 0;
+}
+
+static int ov5693_debugfs_streaming_write(void *data, u64 val)
+{
+	int err = 0;
+	struct ov5693 *priv = data;
+	struct i2c_client *client = priv->i2c_client;
+	bool enable = (val != 0);
+	int mode_index = enable ?
+		(OV5693_MODE_START_STREAM) : (OV5693_MODE_STOP_STREAM);
+
+	dev_info(&client->dev, "%s: %s sensor\n",
+			__func__, (enable ? "enabling" : "disabling"));
+
+	mutex_lock(&priv->streaming_lock);
+
+	err = ov5693_write_table(priv, mode_table[mode_index]);
+	if (err) {
+		dev_err(&client->dev, "%s: error setting sensor streaming\n",
+			__func__);
+		goto done;
+	}
+
+	priv->streaming = enable;
+
+done:
+	mutex_unlock(&priv->streaming_lock);
+
+	return err;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(ov5693_debugfs_streaming_fops,
+	ov5693_debugfs_streaming_show,
+	ov5693_debugfs_streaming_write,
+	"%lld\n");
+
+static void ov5693_debugfs_remove(struct ov5693 *priv);
+
+static int ov5693_debugfs_create(struct ov5693 *priv)
+{
+	int err = 0;
+	struct i2c_client *client = priv->i2c_client;
+	const char *devnode;
+	char debugfs_dir[16];
+
+	err = of_property_read_string(client->dev.of_node, "devnode", &devnode);
+	if (err) {
+		dev_err(&client->dev, "devnode not in DT\n");
+		return err;
+	}
+	snprintf(debugfs_dir, sizeof(debugfs_dir), "camera-%s", devnode);
+
+	priv->debugfs_dir = debugfs_create_dir(debugfs_dir, NULL);
+	if (priv->debugfs_dir == NULL)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("streaming", S_IRUGO | S_IWUSR,
+			priv->debugfs_dir, priv,
+			&ov5693_debugfs_streaming_fops))
+		goto error;
+
+	return 0;
+
+error:
+	ov5693_debugfs_remove(priv);
+
+	return -ENOMEM;
+}
+
+static void ov5693_debugfs_remove(struct ov5693 *priv)
+{
+	debugfs_remove_recursive(priv->debugfs_dir);
+	priv->debugfs_dir = NULL;
+}
+
 static int ov5693_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1448,6 +1561,8 @@ static int ov5693_probe(struct i2c_client *client,
 	priv->subdev->dev		= &client->dev;
 	priv->s_data->dev		= &client->dev;
 
+	mutex_init(&priv->streaming_lock);
+
 	err = ov5693_power_get(priv);
 	if (err)
 		return err;
@@ -1490,6 +1605,13 @@ static int ov5693_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
+	err = ov5693_debugfs_create(priv);
+	if (err) {
+		dev_err(&client->dev, "error creating debugfs interface");
+		ov5693_debugfs_remove(priv);
+		return err;
+	}
+
 	dev_dbg(&client->dev, "Detected OV5693 sensor\n");
 
 	return 0;
@@ -1500,6 +1622,8 @@ ov5693_remove(struct i2c_client *client)
 {
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
+
+	ov5693_debugfs_remove(priv);
 
 	v4l2_async_unregister_subdev(priv->subdev);
 #if defined(CONFIG_MEDIA_CONTROLLER)

@@ -272,6 +272,8 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 		dev_set_drvdata(dev, dsi_l_720p_5_loki_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "s-edp,uhdtv-15-6-bl")) {
 		dev_set_drvdata(dev, edp_s_uhdtv_15_6_ops.pwm_bl_ops);
+	} else if (of_device_is_compatible(np_bl, "p-edp,3000-2000-13-5-bl")) {
+		dev_set_drvdata(dev, edp_p_3000_2000_13_5_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-bl")) {
 		dev_set_drvdata(dev, dsi_o_720p_6_0_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-01-bl")) {

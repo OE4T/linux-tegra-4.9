@@ -450,7 +450,11 @@ struct tegra_xusb {
 	struct phy **phys;
 	struct phy **typed_phys[MAX_PHY_TYPES];
 	struct phy **cdp_ext_phys; /* external cdp phys */
-
+	/* Used to store the port to phy mapping in the
+	 * virtualization scenario
+	 */
+	int *port_phy_map;
+	int *port_to_phy[MAX_PHY_TYPES];
 	unsigned int num_phys;
 	unsigned int num_hsic_port; /* count */
 
@@ -504,6 +508,7 @@ struct tegra_xusb {
 	struct work_struct ivc_work;
 	bool hsic_power_on;
 	bool hsic_set_idle;
+	bool xhci_err_init;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -570,7 +575,6 @@ static void tegra_xusb_boost_cpu_deinit(struct tegra_xusb *tegra)
 	mutex_destroy(&tegra->boost_cpufreq_lock);
 }
 
-static bool xhci_err_init;
 static ssize_t show_xhci_stats(struct device *dev,
 		struct device_attribute *attr, char *buf) {
 	struct tegra_xusb *tegra = NULL;
@@ -2563,7 +2567,7 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
 	struct phy *phy;
-	int i, j;
+	int i, j, k;
 	int ret;
 
 	for (i = 0; i < MAX_PHY_TYPES; i++)
@@ -2571,17 +2575,31 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 
 	tegra->phys = devm_kcalloc(&pdev->dev, tegra->num_phys, sizeof(phy),
 				   GFP_KERNEL);
-	if (!tegra->phys)
+
+	if (tegra->soc->is_xhci_vf) {
+		tegra->port_phy_map = devm_kcalloc(&pdev->dev, tegra->num_phys,
+						sizeof(int), GFP_KERNEL);
+	}
+
+	if (!tegra->phys || (tegra->soc->is_xhci_vf && (!tegra->port_phy_map)))
 		return -ENOMEM;
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
-		if (i == 0)
+		if (i == 0) {
 			tegra->typed_phys[0] = &tegra->phys[0];
-		else {
+			if (tegra->soc->is_xhci_vf)
+				tegra->port_to_phy[0] = &tegra->port_phy_map[0];
+		} else {
 			tegra->typed_phys[i] = tegra->typed_phys[i - 1] +
 					      tegra->soc->num_typed_phys[i - 1];
+			if (tegra->soc->is_xhci_vf) {
+				tegra->port_to_phy[i] =
+					tegra->port_to_phy[i - 1] +
+					tegra->soc->num_typed_phys[i - 1];
+			}
 		}
 
+		k = 0;
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			char prop[16];
 
@@ -2604,25 +2622,47 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 				}
 				return ret;
 			} else {
-				if (phy && strstr(prop, "usb3")) {
-					if (tegra_xusb_padctl_has_otg_cap(
-							tegra->padctl, phy))
+				if (phy && strstr(prop, "usb3") &&
+				   tegra_xusb_padctl_has_otg_cap(tegra->padctl,
+									phy)) {
+					if (tegra->soc->is_xhci_vf) {
+						tegra->usb3_otg_port_base_1 =
+									k + 1;
+					} else {
 						tegra->usb3_otg_port_base_1 =
 									j + 1;
+					}
 				}
 
-				if (phy && strstr(prop, "usb2")) {
-					if (tegra_xusb_padctl_has_otg_cap(
-							tegra->padctl, phy))
+				if (phy && strstr(prop, "usb2") &&
+				   tegra_xusb_padctl_has_otg_cap(tegra->padctl,
+								phy)) {
+					if (tegra->soc->is_xhci_vf) {
+						tegra->usb2_otg_port_base_1 =
+									k + 1;
+					} else {
 						tegra->usb2_otg_port_base_1 =
 									j + 1;
+
+					}
 				}
 
 				if (phy && strstr(prop, "hsic"))
 					tegra->num_hsic_port++;
 			}
 
-			tegra->typed_phys[i][j] = phy;
+			if (!tegra->soc->is_xhci_vf) {
+				tegra->typed_phys[i][j] = phy;
+			} else {
+				/* Storing the Phy's in the same order as
+				 * port numbers as seen by the VF's
+				 */
+				if (phy != NULL) {
+					tegra->typed_phys[i][k] = phy;
+					tegra->port_to_phy[i][k] = j;
+					k++;
+				}
+			}
 		}
 	}
 
@@ -2645,7 +2685,21 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 			dev_info(&pdev->dev,
 				"External CDP phy %d registered\n",
 				j);
-			tegra->cdp_ext_phys[i] = phy;
+			if (!tegra->soc->is_xhci_vf) {
+				tegra->cdp_ext_phys[i] = phy;
+			} else {
+				for (j = 0; j <
+				tegra->soc->num_typed_phys[USB2_PHY]; j++) {
+					if (tegra->port_to_phy[USB2_PHY][j]
+									== i)
+						break;
+				}
+				/* Storing the CDP phys according to the port
+				 * number index as seen by the VF
+				 */
+				tegra->cdp_ext_phys[j] = phy;
+			}
+
 			tegra->cdp_enabled = true;
 		}
 	}
@@ -2682,13 +2736,16 @@ static int tegra_sysfs_register(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct device *dev = NULL;
+	struct tegra_xusb *tegra = NULL;
 
-	if (pdev != NULL)
+	if (pdev != NULL) {
 		dev = &pdev->dev;
+		tegra = platform_get_drvdata(pdev);
+	}
 
-	if (!xhci_err_init && dev != NULL) {
+	if (tegra && !tegra->xhci_err_init && dev != NULL) {
 		ret = sysfs_create_group(&dev->kobj, &tegra_sysfs_group_errors);
-		xhci_err_init = true;
+		tegra->xhci_err_init = true;
 	}
 
 	if (ret) {
@@ -3064,10 +3121,15 @@ unregister_extcon:
 		}
 	}
 powergate_partitions:
+	if (tegra->xhci_err_init && tegra->dev != NULL) {
+		sysfs_remove_group(&tegra->dev->kobj,
+				&tegra_sysfs_group_errors);
+		tegra->xhci_err_init = false;
+	}
+	tegra_xusb_debugfs_deinit(tegra);
 	if (!tegra->soc->is_xhci_vf)
 		tegra_xhci_powergate_partitions(tegra);
 disable_phy:
-	tegra_xusb_debugfs_deinit(tegra);
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
 	if (!tegra->soc->is_xhci_vf)
@@ -3095,9 +3157,9 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 
 
-	if (xhci_err_init && dev != NULL) {
+	if (tegra->xhci_err_init && dev != NULL) {
 		sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_errors);
-		xhci_err_init = false;
+		tegra->xhci_err_init = false;
 	}
 
 	if (tegra->soc->handle_oc)
@@ -3736,14 +3798,24 @@ static int tegra_xusb_suspend(struct device *dev)
 		for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
 			set_cdp_enable(tegra, j, false);
 
+			if (!tegra->typed_phys[USB2_PHY][j])
+				continue;
 			/*
 			 * turn off VBUS for CDP enabled case.
 			 * skip vbus off for OTG port when it isn't host role
 			 */
 			if (j != tegra->usb2_otg_port_base_1 - 1 ||
-					tegra->host_mode)
-				tegra_xusb_padctl_vbus_power_off(
-					tegra->padctl, j);
+					tegra->host_mode) {
+
+				if (!tegra->soc->is_xhci_vf) {
+					tegra_xusb_padctl_vbus_power_off(
+							tegra->padctl, j);
+				} else {
+					tegra_xusb_padctl_vbus_power_off(
+					tegra->padctl,
+					tegra->port_to_phy[USB2_PHY][j]);
+				}
+			}
 
 		}
 	}
@@ -3781,11 +3853,20 @@ static int tegra_xhci_resume_common(struct device *dev)
 		for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
 			set_cdp_enable(tegra, j, true);
 
+			if (!tegra->typed_phys[USB2_PHY][j])
+				continue;
 			/* skip vbus on for OTG port when it isn't host role */
 			if (j != tegra->usb2_otg_port_base_1 - 1 ||
-					tegra->host_mode)
-				tegra_xusb_padctl_vbus_power_on(
-					tegra->padctl, j);
+					tegra->host_mode) {
+				if (!tegra->soc->is_xhci_vf) {
+					tegra_xusb_padctl_vbus_power_on(
+						tegra->padctl, j);
+				} else {
+					tegra_xusb_padctl_vbus_power_on(
+					tegra->padctl,
+					tegra->port_to_phy[USB2_PHY][j]);
+				}
+			}
 		}
 	}
 
@@ -4549,7 +4630,16 @@ static void xhci_reinit_work(struct work_struct *work)
 
 	for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
 		/* turn off VBUS to disconnect all devices */
-		tegra_xusb_padctl_vbus_power_off(tegra->padctl, j);
+		if (tegra->typed_phys[USB2_PHY][j]) {
+			if (!tegra->soc->is_xhci_vf) {
+				tegra_xusb_padctl_vbus_power_off(
+						tegra->padctl, j);
+			} else {
+				tegra_xusb_padctl_vbus_power_off(
+				tegra->padctl,
+				tegra->port_to_phy[USB2_PHY][j]);
+			}
+		}
 	}
 
 	target = jiffies + msecs_to_jiffies(5000);

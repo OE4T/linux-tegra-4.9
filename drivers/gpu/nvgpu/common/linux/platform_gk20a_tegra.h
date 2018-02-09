@@ -16,10 +16,8 @@
 #ifndef _NVGPU_PLATFORM_GK20A_TEGRA_H_
 #define _NVGPU_PLATFORM_GK20A_TEGRA_H_
 
-struct device;
-struct gk20a;
+struct gk20a_platform;
 
-void gk20a_tegra_init_secure_alloc(struct gk20a *g);
-int gk20a_tegra_secure_page_alloc(struct device *dev);
+int gk20a_tegra_init_secure_alloc(struct gk20a_platform *platform);
 
 #endif

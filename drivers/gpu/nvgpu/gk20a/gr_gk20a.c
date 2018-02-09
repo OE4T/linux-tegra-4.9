@@ -2532,10 +2532,13 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (g->ops.secure_alloc)
-		g->ops.secure_alloc(g,
+	if (g->ops.secure_alloc) {
+		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[CIRCULAR_VPR],
 				       cb_buffer_size);
+		if (err)
+			goto clean_up;
+	}
 
 	gk20a_dbg_info("pagepool_buffer_size : %d", pagepool_buffer_size);
 
@@ -2544,10 +2547,13 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (g->ops.secure_alloc)
-		g->ops.secure_alloc(g,
+	if (g->ops.secure_alloc) {
+		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[PAGEPOOL_VPR],
 				       pagepool_buffer_size);
+		if (err)
+			goto clean_up;
+	}
 
 	gk20a_dbg_info("attr_buffer_size : %d", attr_buffer_size);
 
@@ -2556,10 +2562,13 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (g->ops.secure_alloc)
-		g->ops.secure_alloc(g,
+	if (g->ops.secure_alloc) {
+		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
+		if (err)
+			goto clean_up;
+	}
 
 	gk20a_dbg_info("golden_image_size : %d",
 		   gr->ctx_vars.golden_image_size);

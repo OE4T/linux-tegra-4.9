@@ -32,7 +32,8 @@ struct gk20a_scale_profile;
 struct secure_page_buffer {
 	void (*destroy)(struct gk20a *, struct secure_page_buffer *);
 	size_t size;
-	u64 iova;
+	dma_addr_t phys;
+	size_t used;
 };
 
 struct gk20a_platform {
@@ -148,6 +149,8 @@ struct gk20a_platform {
 	/* Powerdown platform dependencies */
 	void (*idle)(struct device *dev);
 
+	/* Preallocated VPR buffer for kernel */
+	size_t secure_buffer_size;
 	struct secure_page_buffer secure_buffer;
 
 	/* Device is going to be suspended */

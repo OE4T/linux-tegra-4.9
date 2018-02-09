@@ -137,6 +137,10 @@ static int gp10b_tegra_probe(struct device *dev)
 		return ret;
 #endif
 
+	ret = gk20a_tegra_init_secure_alloc(platform);
+	if (ret)
+		return ret;
+
 	platform->disable_bigpage = !device_is_iommuable(dev);
 
 	platform->g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close
@@ -149,16 +153,12 @@ static int gp10b_tegra_probe(struct device *dev)
 
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
-	gk20a_tegra_init_secure_alloc(platform->g);
 
 	return 0;
 }
 
 static int gp10b_tegra_late_probe(struct device *dev)
 {
-	/* Cause early VPR resize */
-	gk20a_tegra_secure_page_alloc(dev);
-
 	return 0;
 }
 
@@ -422,6 +422,8 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.unified_memory = true,
 
 	.ltc_streamid = TEGRA_SID_GPUB,
+
+	.secure_buffer_size = 401408,
 };
 
 

@@ -81,6 +81,10 @@ static int gv11b_tegra_probe(struct device *dev)
 	g->has_syncpoints = false;
 #endif
 
+	err = gk20a_tegra_init_secure_alloc(platform);
+	if (err)
+		return err;
+
 	platform->disable_bigpage = !device_is_iommuable(dev);
 
 	platform->g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close
@@ -93,15 +97,12 @@ static int gv11b_tegra_probe(struct device *dev)
 
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
-	gk20a_tegra_init_secure_alloc(platform->g);
 
 	return 0;
 }
 
 static int gv11b_tegra_late_probe(struct device *dev)
 {
-	/* Cause early VPR resize */
-	gk20a_tegra_secure_page_alloc(dev);
 	return 0;
 }
 
@@ -263,6 +264,8 @@ struct gk20a_platform gv11b_tegra_platform = {
 
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,
+
+	.secure_buffer_size = 667648,
 };
 
 static struct device_attribute *dev_attr_sm_l1_tag_ecc_corrected_err_count_array;

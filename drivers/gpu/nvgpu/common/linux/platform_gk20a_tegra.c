@@ -103,52 +103,10 @@ static void gk20a_tegra_secure_page_destroy(struct gk20a *g,
 	DEFINE_DMA_ATTRS(attrs);
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
-			(void *)(uintptr_t)secure_buffer->iova,
-			secure_buffer->iova, __DMA_ATTR(attrs));
+			(void *)(uintptr_t)secure_buffer->phys,
+			secure_buffer->phys, __DMA_ATTR(attrs));
 
 	secure_buffer->destroy = NULL;
-}
-
-int gk20a_tegra_secure_page_alloc(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct gk20a *g = get_gk20a(dev);
-	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
-	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t iova;
-	size_t size = PAGE_SIZE;
-
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
-		return -EINVAL;
-
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
-	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      GFP_KERNEL, __DMA_ATTR(attrs));
-	if (dma_mapping_error(&tegra_vpr_dev, iova))
-		return -ENOMEM;
-
-	secure_buffer->size = size;
-	secure_buffer->iova = iova;
-	secure_buffer->destroy = gk20a_tegra_secure_page_destroy;
-
-	return 0;
-}
-
-static void gk20a_tegra_secure_destroy(struct gk20a *g,
-				       struct gr_ctx_buffer_desc *desc)
-{
-	DEFINE_DMA_ATTRS(attrs);
-
-	if (desc->mem.priv.sgt) {
-		u64 pa = nvgpu_mem_get_phys_addr(g, &desc->mem);
-
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
-		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
-			(void *)(uintptr_t)pa,
-			pa, __DMA_ATTR(attrs));
-		nvgpu_free_sgtable(g, &desc->mem.priv.sgt);
-		desc->mem.priv.sgt = NULL;
-	}
 }
 
 static int gk20a_tegra_secure_alloc(struct gk20a *g,
@@ -157,49 +115,49 @@ static int gk20a_tegra_secure_alloc(struct gk20a *g,
 {
 	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t iova;
+	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
+	dma_addr_t phys;
 	struct sg_table *sgt;
 	struct page *page;
 	int err = 0;
+	size_t aligned_size = PAGE_ALIGN(size);
 
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
-	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      GFP_KERNEL, __DMA_ATTR(attrs));
-	if (dma_mapping_error(&tegra_vpr_dev, iova))
+	/* We ran out of preallocated memory */
+	if (secure_buffer->used + aligned_size > secure_buffer->size) {
+		nvgpu_err(platform->g, "failed to alloc %zu bytes of VPR, %zu/%zu used",
+				size, secure_buffer->used, secure_buffer->size);
 		return -ENOMEM;
+	}
+
+	phys = secure_buffer->phys + secure_buffer->used;
 
 	sgt = nvgpu_kzalloc(platform->g, sizeof(*sgt));
 	if (!sgt) {
 		nvgpu_err(platform->g, "failed to allocate memory");
-		goto fail;
+		return -ENOMEM;
 	}
 	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
 	if (err) {
 		nvgpu_err(platform->g, "failed to allocate sg_table");
 		goto fail_sgt;
 	}
-	page = phys_to_page(iova);
+	page = phys_to_page(phys);
 	sg_set_page(sgt->sgl, page, size, 0);
 	/* This bypasses SMMU for VPR during gmmu_map. */
 	sg_dma_address(sgt->sgl) = 0;
 
-	desc->destroy = gk20a_tegra_secure_destroy;
+	desc->destroy = NULL;
 
 	desc->mem.priv.sgt = sgt;
 	desc->mem.size = size;
 	desc->mem.aperture = APERTURE_SYSMEM;
 
-	if (platform->secure_buffer.destroy)
-		platform->secure_buffer.destroy(g, &platform->secure_buffer);
+	secure_buffer->used += aligned_size;
 
 	return err;
 
 fail_sgt:
 	nvgpu_kfree(platform->g, sgt);
-fail:
-	dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
-			(void *)(uintptr_t)iova, iova, __DMA_ATTR(attrs));
 	return err;
 }
 
@@ -664,10 +622,32 @@ void gk20a_tegra_idle(struct device *dev)
 #endif
 }
 
-void gk20a_tegra_init_secure_alloc(struct gk20a *g)
+int gk20a_tegra_init_secure_alloc(struct gk20a_platform *platform)
 {
+	struct gk20a *g = platform->g;
+	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t iova;
+
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+		return 0;
+
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
+	(void)dma_alloc_attrs(&tegra_vpr_dev, platform->secure_buffer_size, &iova,
+				      GFP_KERNEL, __DMA_ATTR(attrs));
+	/* Some platforms disable VPR. In that case VPR allocations always
+	 * fail. Just disable VPR usage in nvgpu in that case. */
+	if (dma_mapping_error(&tegra_vpr_dev, iova))
+		return 0;
+
+	secure_buffer->size = platform->secure_buffer_size;
+	secure_buffer->phys = iova;
+	secure_buffer->destroy = gk20a_tegra_secure_page_destroy;
+
 	g->ops.secure_alloc = gk20a_tegra_secure_alloc;
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_VPR, true);
+
+	return 0;
 }
 
 #ifdef CONFIG_COMMON_CLK
@@ -836,7 +816,9 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	gk20a_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
-	gk20a_tegra_init_secure_alloc(platform->g);
+	ret = gk20a_tegra_init_secure_alloc(platform);
+	if (ret)
+		return ret;
 
 	if (platform->clk_register) {
 		ret = platform->clk_register(platform->g);
@@ -851,9 +833,6 @@ static int gk20a_tegra_probe(struct device *dev)
 
 static int gk20a_tegra_late_probe(struct device *dev)
 {
-	/* Cause early VPR resize */
-	gk20a_tegra_secure_page_alloc(dev);
-
 	return 0;
 }
 
@@ -974,4 +953,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.soc_name = "tegra21x",
 
 	.unified_memory = true,
+
+	.secure_buffer_size = 335872,
 };

@@ -2344,30 +2344,6 @@ static int tegra_se_sha_init(struct ahash_request *req)
 	sha_ctx->is_first = true;
 	sha_ctx->blk_size = crypto_tfm_alg_blocksize(crypto_ahash_tfm(tfm));
 	sha_ctx->residual_bytes = 0;
-	if (!sha_ctx->sha_buf[0]) {
-		sha_ctx->sha_buf[0] = dma_alloc_coherent(
-				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-				&sha_ctx->sha_buf_addr[0], GFP_KERNEL);
-		if (!sha_ctx->sha_buf[0]) {
-			dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[0]\n");
-			mutex_unlock(&se_dev->mtx);
-			return -ENOMEM;
-		}
-	}
-	if (!sha_ctx->sha_buf[1]) {
-		sha_ctx->sha_buf[1] = dma_alloc_coherent(
-				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-				&sha_ctx->sha_buf_addr[1], GFP_KERNEL);
-		if (!sha_ctx->sha_buf[1]) {
-			dma_free_coherent(
-				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
-				sha_ctx->sha_buf[0], sha_ctx->sha_buf_addr[0]);
-			sha_ctx->sha_buf[0] = NULL;
-			dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[1]\n");
-			mutex_unlock(&se_dev->mtx);
-			return -ENOMEM;
-		}
-	}
 	mutex_unlock(&se_dev->mtx);
 
 	return 0;
@@ -2453,8 +2429,40 @@ static int tegra_se_sha_import(struct ahash_request *req, const void *in)
 
 static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
 {
+	struct tegra_se_sha_context *sha_ctx;
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+
 	crypto_ahash_set_reqsize(__crypto_ahash_cast(tfm),
-				 sizeof(struct tegra_se_sha_context));
+			sizeof(struct tegra_se_sha_context));
+	sha_ctx = crypto_tfm_ctx(tfm);
+	if (!sha_ctx) {
+		dev_err(se_dev->dev, "SHA context not valid\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&se_dev->mtx);
+	sha_ctx->sha_buf[0] = dma_alloc_coherent(
+			se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+			&sha_ctx->sha_buf_addr[0], GFP_KERNEL);
+	if (!sha_ctx->sha_buf[0]) {
+		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[0]\n");
+		mutex_unlock(&se_dev->mtx);
+		return -ENOMEM;
+	}
+	sha_ctx->sha_buf[1] = dma_alloc_coherent(
+			se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+			&sha_ctx->sha_buf_addr[1], GFP_KERNEL);
+	if (!sha_ctx->sha_buf[1]) {
+		dma_free_coherent(
+				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				sha_ctx->sha_buf[0], sha_ctx->sha_buf_addr[0]);
+		sha_ctx->sha_buf[0] = NULL;
+		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[1]\n");
+		mutex_unlock(&se_dev->mtx);
+		return -ENOMEM;
+	}
+	mutex_unlock(&se_dev->mtx);
+
 	return 0;
 }
 
@@ -2466,12 +2474,11 @@ static void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
 
 	mutex_lock(&se_dev->mtx);
 	for (i = 0; i < 2; i++) {
-		if (sha_ctx->sha_buf[i]) {
-			dma_free_coherent(
+		/* dma_free_coherent does not panic if addr is NULL */
+		dma_free_coherent(
 				se_dev->dev, (TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
 				sha_ctx->sha_buf[i], sha_ctx->sha_buf_addr[i]);
-			sha_ctx->sha_buf[i] = NULL;
-		}
+		sha_ctx->sha_buf[i] = NULL;
 	}
 	mutex_unlock(&se_dev->mtx);
 }

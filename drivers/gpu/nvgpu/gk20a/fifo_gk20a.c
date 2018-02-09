@@ -28,6 +28,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/semaphore.h>
+#include <nvgpu/enabled.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
@@ -666,11 +667,13 @@ static void fifo_engine_exception_status(struct gk20a *g,
 static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct fifo_runlist_info_gk20a *runlist;
+	struct fifo_engine_info_gk20a *engine_info;
 	unsigned int runlist_id;
 	u32 i;
 	size_t runlist_size;
 	u32 active_engine_id, pbdma_id, engine_id;
-	struct fifo_engine_info_gk20a *engine_info;
+	int flags = nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ?
+		NVGPU_DMA_FORCE_CONTIGUOUS : 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -705,8 +708,9 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			int err = nvgpu_dma_alloc_sys(g, runlist_size,
-					&runlist->mem[i]);
+			int err = nvgpu_dma_alloc_flags_sys(g, flags,
+							    runlist_size,
+							    &runlist->mem[i]);
 			if (err) {
 				nvgpu_err(g, "memory allocation failed");
 				goto clean_up_runlist;

@@ -742,13 +742,13 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 
 static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	u32 ptr = u64_lo32(nvgpu_inst_block_addr(g, inst_block)
-			>> ram_in_base_shift_v());
+	u64 ptr = nvgpu_inst_block_addr(g, inst_block) >>
+		ram_in_base_shift_v();
 	u32 aperture = nvgpu_aperture_mask(g, inst_block,
 			gr_fecs_current_ctx_target_sys_mem_ncoh_f(),
 			gr_fecs_current_ctx_target_vid_mem_f());
 
-	return gr_fecs_current_ctx_ptr_f(ptr) | aperture |
+	return gr_fecs_current_ctx_ptr_f(u64_lo32(ptr)) | aperture |
 		gr_fecs_current_ctx_valid_f(1);
 }
 

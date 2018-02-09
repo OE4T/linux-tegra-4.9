@@ -316,7 +316,8 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
  */
 u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl)
 {
-	if (!nvgpu_iommuable(g))
+	if (nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ||
+	    !nvgpu_iommuable(g))
 		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
 
 	if (sg_dma_address(sgl) == 0)

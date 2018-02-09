@@ -35,6 +35,7 @@
 
 #include "mm_gv11b.h"
 #include "fb_gv11b.h"
+#include "subctx_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
@@ -59,6 +60,8 @@ void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 
 	if (big_page_size && g->ops.mm.set_big_page_size)
 		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
+
+	gv11b_init_subcontext_pdb(vm, inst_block);
 }
 
 bool gv11b_mm_mmu_fault_pending(struct gk20a *g)

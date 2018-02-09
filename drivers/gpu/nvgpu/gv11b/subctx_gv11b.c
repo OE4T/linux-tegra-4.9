@@ -33,12 +33,9 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 
-static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
+static void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block);
-
-static void gv11b_subctx_commit_valid_mask(struct channel_gk20a *c,
-				struct nvgpu_mem *inst_block);
-static void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
+static void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block);
 
 void gv11b_free_subctx_header(struct channel_gk20a *c)
@@ -89,23 +86,15 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 
 		nvgpu_memset(g, &ctx->mem, 0, 0, ctx->mem.size);
 		nvgpu_mem_end(g, &ctx->mem);
-
-		gv11b_init_subcontext_pdb(c, &c->inst_block);
 	}
 	return ret;
 }
 
-static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
+void gv11b_init_subcontext_pdb(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block)
 {
-	struct gk20a *g = c->g;
-
-	gv11b_subctx_commit_pdb(c, inst_block);
-	gv11b_subctx_commit_valid_mask(c, inst_block);
-
-	nvgpu_log(g, gpu_dbg_info, " subctx %d instblk set", c->subctx_id);
-	nvgpu_mem_wr32(g, inst_block, ram_in_engine_wfi_veid_w(),
-			ram_in_engine_wfi_veid_f(c->subctx_id));
+	gv11b_subctx_commit_pdb(vm, inst_block);
+	gv11b_subctx_commit_valid_mask(vm, inst_block);
 
 }
 
@@ -167,22 +156,21 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 	return ret;
 }
 
-void gv11b_subctx_commit_valid_mask(struct channel_gk20a *c,
+void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block)
 {
-	struct gk20a *g = c->g;
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	/* Make all subctx pdbs valid */
 	nvgpu_mem_wr32(g, inst_block, 166, 0xffffffff);
 	nvgpu_mem_wr32(g, inst_block, 167, 0xffffffff);
 }
 
-void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
+void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block)
 {
-	struct gk20a *g = c->g;
+	struct gk20a *g = gk20a_from_vm(vm);
 	struct fifo_gk20a *f = &g->fifo;
-	struct vm_gk20a *vm = c->vm;
 	u32 lo, hi;
 	u32 subctx_id = 0;
 	u32 format_word;

@@ -188,6 +188,9 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	nvgpu_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
 			pbdma_set_channel_info_veid_f(c->subctx_id));
 
+	nvgpu_mem_wr32(g, mem, ram_in_engine_wfi_veid_w(),
+			ram_in_engine_wfi_veid_f(c->subctx_id));
+
 	gv11b_fifo_init_ramfc_eng_method_buffer(g, c, mem);
 
 	if (c->is_privileged_channel) {

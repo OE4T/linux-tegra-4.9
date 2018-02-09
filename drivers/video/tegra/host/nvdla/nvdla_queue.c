@@ -197,9 +197,6 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 		"task[%p] completed. syncpt[%d] fence[%d]",
 		task, queue->syncpt_id, task->fence);
 
-	/* give syncpoint reference */
-	nvhost_syncpt_put_ref(task->sp, queue->syncpt_id);
-
 	/* unmap all memory shared with engine */
 	nvdla_unmap_task_memory(task);
 
@@ -975,9 +972,6 @@ int nvdla_emulator_submit(struct nvhost_queue *queue, struct nvdla_emu_task *tas
 				queue->syncpt_id, task->fence,
 				task, task->fence_counter);
 
-	/* get syncpoint reference */
-	nvhost_syncpt_get_ref(task->sp, queue->syncpt_id);
-
 	/* Update postfences for all */
 	counter = task->fence_counter - 1;
 	for (i = 0; i < task->num_postfences; i++) {
@@ -1023,6 +1017,9 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 
 	/* get task ref and add to list */
 	nvdla_task_get(task);
+
+	if (task->fence_counter == 0)
+		task->fence_counter = 1;
 
 	/* get fence from nvhost for MMIO mode*/
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
@@ -1210,10 +1207,6 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 		/* dump details */
 		nvdla_dbg_info(pdev, "Q id %d reset syncpt[%d] done",
 			queue->id, queue->syncpt_id);
-		nvdla_dbg_info(pdev, "syncpt[%d], min[%u], max[%u]",
-			queue->syncpt_id,
-			nvhost_syncpt_update_min(t->sp, queue->syncpt_id),
-			nvhost_syncpt_read_max(t->sp, queue->syncpt_id));
 	}
 
 done:

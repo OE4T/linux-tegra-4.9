@@ -500,10 +500,7 @@ fail:
 
 size_t nvdla_get_max_task_size(void)
 {
-	return (sizeof(struct nvdla_task) +
-		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) * sizeof(struct nvdla_fence)) +
-		((MAX_NUM_NVDLA_IN_TASK_STATUS + MAX_NUM_NVDLA_OUT_TASK_STATUS) * sizeof(struct nvdla_status_notify)) +
-		(MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct nvdla_mem_handle)));
+	return sizeof(struct nvdla_task);
 }
 
 static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
@@ -578,15 +575,6 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	/* assign memory for local task action lists and buf handles */
 	mem = task;
 	mem += sizeof(struct nvdla_task);
-	task->prefences = mem;
-	mem += task->num_prefences * sizeof(struct nvdla_fence);
-	task->postfences = mem;
-	mem += task->num_postfences * sizeof(struct nvdla_fence);
-	task->in_task_status = mem;
-	mem += task->num_in_task_status * sizeof(struct nvdla_status_notify);
-	task->out_task_status = mem;
-	mem += task->num_out_task_status * sizeof(struct nvdla_status_notify);
-	task->memory_handles = mem;
 
 	/* update local fences into task */
 	err = nvdla_get_actions(local_task, task);

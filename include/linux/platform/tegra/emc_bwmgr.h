@@ -121,6 +121,7 @@ struct bwmgr_ops {
 		unsigned long iso_bw_vi);
 	unsigned long (*get_best_iso_freq)(long iso_bw,
 		long iso_bw_nvdis, long iso_bw_vi);
+	void (*update_efficiency)(unsigned long dram_refresh_rate);
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t21x(void);

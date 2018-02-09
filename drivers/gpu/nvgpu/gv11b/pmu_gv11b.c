@@ -195,9 +195,11 @@ int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 
 	gk20a_writel(g, pwr_pmu_new_instblk_r(),
 		pwr_pmu_new_instblk_ptr_f(
-		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> ALIGN_4KB)
-		| pwr_pmu_new_instblk_valid_f(1)
-		| pwr_pmu_new_instblk_target_sys_ncoh_f());
+		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> ALIGN_4KB) |
+		     pwr_pmu_new_instblk_valid_f(1) |
+		     (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) ?
+		      pwr_pmu_new_instblk_target_sys_coh_f() :
+		      pwr_pmu_new_instblk_target_sys_ncoh_f()));
 
 	/* TBD: load all other surfaces */
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(

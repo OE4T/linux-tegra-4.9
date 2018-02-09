@@ -634,7 +634,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   page_size >> 10,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),
 		   attrs->kind_v,
-		   nvgpu_aperture_str(attrs->aperture),
+		   nvgpu_aperture_str(g, attrs->aperture),
 		   attrs->cacheable ? 'C' : '-',
 		   attrs->sparse    ? 'S' : '-',
 		   attrs->priv      ? 'P' : '-',
@@ -710,6 +710,13 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		attrs.ctag += buffer_offset & (ctag_granularity - 1U);
 
 	attrs.l3_alloc = (bool)(flags & NVGPU_VM_MAP_L3_ALLOC);
+
+	/*
+	 * Handle the IO coherency aperture: make sure the .aperture field is
+	 * correct based on the IO coherency flag.
+	 */
+	if (attrs.coherent && attrs.aperture == APERTURE_SYSMEM)
+		attrs.aperture = __APERTURE_SYSMEM_COH;
 
 	/*
 	 * Only allocate a new GPU VA range if we haven't already been passed a

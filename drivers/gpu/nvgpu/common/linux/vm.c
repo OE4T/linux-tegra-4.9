@@ -166,7 +166,8 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 		  vm->gmmu_page_sizes[mapped_buffer->pgsz_idx] >> 10,
 		  vm_aspace_id(vm),
 		  mapped_buffer->flags,
-		  nvgpu_aperture_str(gk20a_dmabuf_aperture(g, os_buf->dmabuf)));
+		  nvgpu_aperture_str(g,
+				     gk20a_dmabuf_aperture(g, os_buf->dmabuf)));
 
 	return mapped_buffer;
 }

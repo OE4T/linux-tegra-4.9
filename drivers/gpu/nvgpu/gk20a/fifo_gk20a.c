@@ -3240,8 +3240,9 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		gk20a_writel(g, fifo_runlist_base_r(),
 			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
 			nvgpu_aperture_mask(g, &runlist->mem[new_buf],
-			  fifo_runlist_base_target_sys_mem_ncoh_f(),
-			  fifo_runlist_base_target_vid_mem_f()));
+				fifo_runlist_base_target_sys_mem_ncoh_f(),
+				fifo_runlist_base_target_sys_mem_coh_f(),
+				fifo_runlist_base_target_vid_mem_f()));
 	}
 
 	gk20a_writel(g, fifo_runlist_r(),
@@ -3763,8 +3764,9 @@ static int gk20a_fifo_commit_userd(struct channel_gk20a *c)
 	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
 		       nvgpu_aperture_mask(g, &g->fifo.userd,
-			pbdma_userd_target_sys_mem_ncoh_f(),
-			pbdma_userd_target_vid_mem_f()) |
+					   pbdma_userd_target_sys_mem_ncoh_f(),
+					   pbdma_userd_target_sys_mem_coh_f(),
+					   pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
 	nvgpu_mem_wr32(g, &c->inst_block,

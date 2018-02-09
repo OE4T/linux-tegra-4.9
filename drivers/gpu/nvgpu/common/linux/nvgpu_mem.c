@@ -34,30 +34,6 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
-u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
-		u32 sysmem_mask, u32 vidmem_mask)
-{
-	switch (aperture) {
-	case APERTURE_SYSMEM:
-		/* some igpus consider system memory vidmem */
-		return nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE)
-			? sysmem_mask : vidmem_mask;
-	case APERTURE_VIDMEM:
-		/* for dgpus only */
-		return vidmem_mask;
-	case APERTURE_INVALID:
-		WARN_ON("Bad aperture");
-	}
-	return 0;
-}
-
-u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 sysmem_mask, u32 vidmem_mask)
-{
-	return __nvgpu_aperture_mask(g, mem->aperture,
-			sysmem_mask, vidmem_mask);
-}
-
 int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;

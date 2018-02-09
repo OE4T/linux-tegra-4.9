@@ -87,7 +87,7 @@ void nvdla_put_task_mem(struct nvdla_task *task)
 	task = NULL;
 }
 
-static void task_free(struct kref *ref)
+void task_free(struct kref *ref)
 {
 	struct nvdla_task *task = container_of(ref, struct nvdla_task, ref);
 	struct platform_device *pdev = task->queue->pool->pdev;

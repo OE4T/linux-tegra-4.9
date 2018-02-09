@@ -394,5 +394,6 @@ int nvdla_free_gcov_region(struct platform_device *pdev, bool update_region);
 
 int nvdla_emulator_submit(struct nvhost_queue *queue,
 				struct nvdla_emu_task *task);
+void task_free(struct kref *ref);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

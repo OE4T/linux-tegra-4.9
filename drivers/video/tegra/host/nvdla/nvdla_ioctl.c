@@ -816,6 +816,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		err = nvdla_fill_task(queue, buffers, local_tasks + i, task);
 		if (err) {
 			nvdla_dbg_err(pdev, "failed to fill task[%d]", i + 1);
+			kref_put(&task->ref, task_free);
 			goto fail_to_fill_task;
 		}
 		nvdla_dbg_info(pdev, "local task[%d] filled", i + 1);
@@ -847,6 +848,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			goto fail_to_send_postfences;
 		}
 		nvdla_dbg_info(pdev, "postfences of task[%d] sent", i + 1);
+		kref_put(&task->ref, task_free);
 	}
 	nvdla_dbg_fn(pdev, "Task submitted, done!");
 

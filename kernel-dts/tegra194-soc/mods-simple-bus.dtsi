@@ -338,7 +338,8 @@
 					<&bpmp_clks TEGRA194_CLK_EMCSD>,
 					<&bpmp_clks TEGRA194_CLK_PLLC>,
 					<&bpmp_clks TEGRA194_CLK_PLLC2>,
-					<&bpmp_clks TEGRA194_CLK_PLLC3>;
+					<&bpmp_clks TEGRA194_CLK_PLLC3>,
+					<&bpmp_clks TEGRA194_CLK_PLLE_HPS>;
 				clock-names = "actmon",
 					"adsp",
 					"adspneon",
@@ -653,7 +654,8 @@
 					"emcsd",
 					"pll_c",
 					"pll_c2",
-					"pll_c3";
+					"pll_c3",
+					"plle_hps";
 
 				resets = <&bpmp_resets TEGRA194_RESET_ACTMON>,
 					<&bpmp_resets TEGRA194_RESET_ADSP_ALL>,

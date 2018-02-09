@@ -1196,6 +1196,15 @@ int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp)
 	if (dp->test_max_link_bw > 0)
 		max_link_bw = min(max_link_bw, (u8)dp->test_max_link_bw);
 
+	if (max_link_bw >= NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS)
+		max_link_bw = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_8_10_GBPS;
+	else if (max_link_bw >= NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS)
+		max_link_bw = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_5_40_GBPS;
+	else if (max_link_bw >= NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS)
+		max_link_bw = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_2_70_GBPS;
+	else
+		max_link_bw = NV_DPCD_MAX_LINK_BANDWIDTH_VAL_1_62_GBPS;
+
 	return max_link_bw;
 }
 

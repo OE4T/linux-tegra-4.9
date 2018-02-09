@@ -245,4 +245,12 @@
 			status = "okay";
 		};
 	};
+
+	mttcan@c310000 {
+		status = "okay";
+	};
+
+	mttcan@c320000 {
+		status = "okay";
+	};
 };

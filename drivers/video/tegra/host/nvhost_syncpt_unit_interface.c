@@ -1,7 +1,7 @@
 /*
  * Engine side synchronization support
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -260,6 +260,7 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	struct cv_dev_info *cv_dev_info;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t offset;
+	u32 *semaphore;
 	int err;
 
 	/* check if engine supports GoS */
@@ -294,6 +295,10 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	syncpt_gos_backing->gos_id = cv_dev_info->idx;
 	syncpt_gos_backing->gos_offset = (u32)offset;
 	syncpt_gos_backing->offset_dev = &cv_dev_info->offset_dev;
+
+	/* Initialize semaphore in Grid to syncpoint value */
+	semaphore = (u32 *)(cv_dev_info->cpu_addr + (u32)offset);
+	*semaphore = nvhost_syncpt_read_min(&host->syncpt, syncpt_id);
 
 	nvhost_syncpt_insert_syncpt_backing(&host->syncpt_backing_head,
 			      syncpt_gos_backing);

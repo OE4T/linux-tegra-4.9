@@ -2079,7 +2079,7 @@ static int __ufshcd_query_descriptor(struct ufs_hba *hba,
 
 	/* Config Desc Write takes longer time. Set timeout accordingly */
 	if ((opcode == UPIU_QUERY_OPCODE_WRITE_DESC) &&
-		(idn == QUERY_DESC_IDN_CONFIGURAION))
+		(idn == QUERY_DESC_IDN_CONFIGURATION))
 		timeout = QUERY_CONFIG_DESC_WRITE_TIMEOUT;
 
 	err = ufshcd_exec_dev_cmd(hba, DEV_CMD_TYPE_QUERY, timeout);

@@ -4776,9 +4776,11 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	err = g->ops.ltc.init_comptags(g, gr);
-	if (err)
-		goto clean_up;
+	if (g->ops.ltc.init_comptags) {
+		err = g->ops.ltc.init_comptags(g, gr);
+		if (err)
+			goto clean_up;
+	}
 
 	err = gr_gk20a_init_zcull(g, gr);
 	if (err)

@@ -267,7 +267,6 @@ static const struct gpu_ops gv100_ops = {
 		.set_zbc_depth_entry = gm20b_ltc_set_zbc_depth_entry,
 		.init_cbc = NULL,
 		.init_fs_state = gv11b_ltc_init_fs_state,
-		.init_comptags = gp10b_ltc_init_comptags,
 		.cbc_ctrl = gp10b_ltc_cbc_ctrl,
 		.isr = gv11b_ltc_isr,
 		.cbc_fix_config = NULL,

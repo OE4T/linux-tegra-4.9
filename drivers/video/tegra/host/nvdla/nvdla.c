@@ -60,7 +60,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
 
 	if (message == DLA_MSG_DEBUG_PRINT)
-		dev_dbg(&pdev->dev, "falcon: %s",
+		nvdla_dbg_info(pdev, "falcon: %s",
 				(char *)nvdla_dev->debug_dump_va);
 
 	if ((message == DLA_MSG_CMD_COMPLETE ||
@@ -259,7 +259,8 @@ static int nvdla_set_gcov_region(struct platform_device *pdev, bool unset_region
 
 	gcov_region = (struct dla_region_printf *)(gcov_cmd_mem_info.va);
 	gcov_region->region = DLA_REGION_GCOV;
-	if (pdata->isolate_contexts || unset_region)
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL
+		|| unset_region)
 		gcov_region->address = 0;
 	else
 		gcov_region->address = nvdla_dev->gcov_dump_pa;
@@ -382,7 +383,7 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	trace_region->region = DLA_REGION_TRACE;
 	trace_region->address = nvdla_dev->trace_dump_pa;
 	trace_region->size = TRACE_BUFFER_SIZE;
-	if (pdata->isolate_contexts)
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL)
 		trace_region->address = 0;
 
 	cmd_data.method_id = DLA_CMD_SET_REGIONS;
@@ -457,7 +458,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 #else
 	region->address = ALIGNED_DMA(nvdla_dev->debug_dump_pa);
 #endif
-	if (pdata->isolate_contexts)
+	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL)
 		region->address = 0;
 
 	/* prepare command data */
@@ -705,6 +706,7 @@ static int nvdla_probe(struct platform_device *pdev)
 	init_completion(&nvdla_dev->cmd_completion);
 	pdata->private_data = nvdla_dev;
 	platform_set_drvdata(pdev, pdata);
+	nvdla_dev->dbg_mask = debug_err;
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)

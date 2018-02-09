@@ -59,4 +59,13 @@
 			};
 		};
 	};
+	backlight {
+		panel_p_edp_3000_2000_13_5_bl: panel-p-edp-3000-2000-13-5-bl {
+			status = "okay";
+			compatible = "p-edp,3000-2000-13-5-bl";
+			pwms = <&tegra_pwm4 0 40161>;
+			max-brightness = <255>;
+			default-brightness = <224>;
+		};
+	};
 };

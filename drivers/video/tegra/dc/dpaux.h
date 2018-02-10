@@ -22,7 +22,7 @@
 #define DP_AUX_TIMEOUT_MS 1000
 #define DP_AUX_DEFER_MAX_TRIES 7
 #define DP_AUX_TIMEOUT_MAX_TRIES 2
-#define DP_DPCP_RETRY_SLEEP_NS 400
+#define DP_DPCP_RETRY_SLEEP_US 400
 
 struct tegra_dc_dpaux_data {
 	struct tegra_dc *dc;

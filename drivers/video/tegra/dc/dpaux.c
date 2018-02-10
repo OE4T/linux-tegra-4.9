@@ -331,19 +331,21 @@ int tegra_dc_dpaux_read_chunk_locked(struct tegra_dc_dpaux_data *dpaux,
 		return err;
 	}
 
-	if (tegra_platform_is_silicon()) {
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-		if (!(*aux_stat & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-			dev_err(&dpaux->dc->ndev->dev, "dp: HPD is not detected\n");
-			return -EFAULT;
-		}
-	}
-
 	while (1) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
-				DP_DPCP_RETRY_SLEEP_NS << 1);
+			usleep_range(DP_DPCP_RETRY_SLEEP_US,
+				DP_DPCP_RETRY_SLEEP_US << 1);
+
+		if (tegra_platform_is_silicon()) {
+			*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
+			if (!(*aux_stat &
+				DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
+				dev_err(&dpaux->dc->ndev->dev,
+					"dp: HPD is not detected\n");
+				return -EFAULT;
+			}
+		}
 
 		tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
 					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
@@ -447,19 +449,21 @@ int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dpaux_data *dpaux,
 		return err;
 	}
 
-	if (tegra_platform_is_silicon()) {
-		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-		if (!(*aux_stat & DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
-			dev_err(&dpaux->dc->ndev->dev, "dp: HPD is not detected\n");
-			return -EFAULT;
-		}
-	}
-
 	while (1) {
 		if ((timeout_retries != DP_AUX_TIMEOUT_MAX_TRIES) ||
 		    (defer_retries != DP_AUX_DEFER_MAX_TRIES))
-			usleep_range(DP_DPCP_RETRY_SLEEP_NS,
-				DP_DPCP_RETRY_SLEEP_NS << 1);
+			usleep_range(DP_DPCP_RETRY_SLEEP_US,
+				DP_DPCP_RETRY_SLEEP_US << 1);
+
+		if (tegra_platform_is_silicon()) {
+			*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
+			if (!(*aux_stat &
+				DPAUX_DP_AUXSTAT_HPD_STATUS_PLUGGED)) {
+				dev_err(&dpaux->dc->ndev->dev,
+					"dp: HPD is not detected\n");
+				return -EFAULT;
+			}
+		}
 
 		tegra_dpaux_write_field(dpaux, DPAUX_DP_AUXCTL,
 					DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,

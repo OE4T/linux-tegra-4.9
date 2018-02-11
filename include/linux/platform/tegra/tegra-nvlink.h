@@ -81,7 +81,9 @@ enum link_mode {
 	NVLINK_LINK_HS,
 	NVLINK_LINK_SAFE,
 	NVLINK_LINK_FAULT,
-	NVLINK_LINK_RECOVERY,
+	NVLINK_LINK_RCVY_AC,
+	NVLINK_LINK_RCVY_SW,
+	NVLINK_LINK_RCVY_RX,
 	NVLINK_LINK_DETECT,
 	NVLINK_LINK_RESET,
 	NVLINK_LINK_ENABLE_PM,
@@ -180,6 +182,14 @@ struct device_operations {
 	int (*dev_shutdown)(struct nvlink_device *ndev);
 };
 
+struct nvlink_device_pci_info {
+	u16 domain;
+	u16 bus;
+	u16 device;
+	u16 function;
+	u32 pci_device_id;
+};
+
 /*
  * The core-driver maintains the topology information. We use remote_device_info
  * so that the endpoint driver can pass the topology information to the core
@@ -190,6 +200,8 @@ struct remote_device_info {
 	enum nvlink_endpt device_id;
 	/* Link id of the remote link connected */
 	u32 link_id;
+	/* Information about device's PCI connection */
+	struct nvlink_device_pci_info pci_info;
 };
 
 /*
@@ -221,6 +233,8 @@ struct nvlink_link {
 	 * operation from core driver
 	 */
 	struct link_operations link_ops;
+	/* Pointer to parent struct nvlink_device */
+	struct nvlink_device *ndev;
 	/* Pointer to implementations specific private data */
 	void *priv;
 };
@@ -229,6 +243,8 @@ struct nvlink_link {
 struct nvlink_device {
 	/* device_id */
 	enum nvlink_endpt device_id;
+	/* Information about device's PCI connection */
+	struct nvlink_device_pci_info pci_info;
 	/* init state */
 	enum init_state init_state;
 	/* Mutex to protect init_state access */
@@ -262,5 +278,6 @@ int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state);
 int nvlink_enumerate(struct nvlink_device *ndev);
 int nvlink_transition_intranode_conn_off_to_safe(struct nvlink_device *ndev);
 int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev);
+int nvlink_initialize_endpoint(struct nvlink_device *ndev);
 int nvlink_transition_intranode_conn_hs_to_safe(struct nvlink_device *ndev);
 #endif /* TEGRA_NVLINK_H */

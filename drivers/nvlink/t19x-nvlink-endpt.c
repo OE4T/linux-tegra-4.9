@@ -149,10 +149,11 @@ int wait_for_reg_cond_nvlink(
 			struct tnvlink_dev *tdev,
 			u32 reg,
 			u32 bit,
-			int bit_set,
+			bool check_for_bit_set,
 			char *bit_name,
 			u32 (*reg_readl)(struct tnvlink_dev *, u32),
-			u32 *reg_val)
+			u32 *reg_val,
+			u32 timeout_us)
 {
 	u32 elapsed_us = 0;
 
@@ -161,12 +162,12 @@ int wait_for_reg_cond_nvlink(
 		elapsed_us += DEFAULT_LOOP_SLEEP_US;
 
 		*reg_val = reg_readl(tdev, reg);
-		if ((bit_set && (*reg_val & BIT(bit))) ||
-		    (!bit_set && ((*reg_val & BIT(bit)) == 0)))
+		if ((check_for_bit_set && (*reg_val & BIT(bit))) ||
+		    (!check_for_bit_set && ((*reg_val & BIT(bit)) == 0)))
 			break;
-	} while (elapsed_us < DEFAULT_LOOP_TIMEOUT_US);
-	if (elapsed_us >= DEFAULT_LOOP_TIMEOUT_US) {
-		if (bit_set) {
+	} while (elapsed_us < timeout_us);
+	if (elapsed_us >= timeout_us) {
+		if (check_for_bit_set) {
 			nvlink_err("Timeout waiting for the %s bit to get set",
 				bit_name);
 		} else {
@@ -677,6 +678,8 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct device_node *endpt_dt_node = NULL;
 	struct device *dev = NULL;
+	struct nvlink_device_pci_info *local_pci_info;
+	struct nvlink_device_pci_info *remote_pci_info;
 	struct tegra_prod *nvlink_prod;
 
 	if (!np) {
@@ -698,6 +701,12 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_alloc_tdev;
 	}
+
+	/*
+	 * By default the RM shim driver is disabled. The shim driver can be
+	 * enabled if userspace calls the ENABLE_SHIM_DRIVER IOCTL.
+	 */
+	tdev->rm_shim_enabled = false;
 
 	/* Map NVLINK apertures listed in device tree node */
 	tdev->nvlw_tioctrl_base =
@@ -831,21 +840,51 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	tdev->ndev = ndev;
 
 	tdev->tlink.sl_params = entry_100us_sl_params;
+	tdev->tlink.tdev = tdev;
 	tdev->tlink.nlink = &(ndev->link);
 	t19x_nvlink_endpt_debugfs_init(tdev);
 
 	/* Fill in the nvlink_device struct */
 	/* Read NVLINK topology information in device tree */
 	endpt_dt_node = of_get_child_by_name(np, "endpoint");
-	of_property_read_u32(endpt_dt_node, "local_dev_id",
-					&ndev->device_id);
-	of_property_read_u32(endpt_dt_node, "local_link_id",
+	if (endpt_dt_node == NULL) {
+		nvlink_err("Topology information is missing from the"
+			" device tree!");
+		ret = -ENODATA;
+		goto err_topology;
+	}
+	ret = of_property_read_u32(endpt_dt_node, "local_dev_id",
+						&ndev->device_id);
+	if (ret < 0) {
+		nvlink_dbg("Couldn't read the \"local_dev_id\" device tree"
+			" property. Choosing default value"
+			" (i.e. NVLINK_ENDPT_T19X).");
+		ndev->device_id = NVLINK_ENDPT_T19X;
+	}
+	ret = of_property_read_u32(endpt_dt_node, "local_link_id",
 					&ndev->link.link_id);
+	if (ret < 0) {
+		nvlink_dbg("Couldn't read the \"local_link_id\" device tree"
+			" property. Choosing default value (i.e. 0).");
+		ndev->link.link_id = 0;
+	}
 	ndev->is_master = of_property_read_bool(endpt_dt_node, "is_master");
-	of_property_read_u32(endpt_dt_node, "remote_dev_id",
+	ret = of_property_read_u32(endpt_dt_node, "remote_dev_id",
 					&ndev->link.remote_dev_info.device_id);
-	of_property_read_u32(endpt_dt_node, "remote_link_id",
+	if (ret < 0) {
+		nvlink_err("The \"remote_dev_id\" property is missing from the"
+			" device tree!");
+		ret = -ENODATA;
+		goto err_topology;
+	}
+	ret = of_property_read_u32(endpt_dt_node, "remote_link_id",
 					&ndev->link.remote_dev_info.link_id);
+	if (ret < 0) {
+		nvlink_err("The \"remote_link_id\" property is missing from the"
+			" device tree!");
+		ret = -ENODATA;
+		goto err_topology;
+	}
 
 	nvlink_dbg("Device Tree Topology Information:");
 	nvlink_dbg("  - Local Device: Device ID = %d, Link ID = %d, Is master? = %s",
@@ -856,15 +895,44 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 		ndev->link.remote_dev_info.device_id,
 		ndev->link.remote_dev_info.link_id);
 
+	/*
+	 * MODS/RM identifies devices using PCI device information. Tegra
+	 * however, doesn't have any valid PCI information because Tegra
+	 * is not a PCI device. Therefore we use the following bogus PCI
+	 * info for Tegra. We're hoping that this bogus PCI info doesn't
+	 * clash with the PCI info of an actual PCI device.
+	 */
+	local_pci_info = &ndev->pci_info;
+	remote_pci_info = &ndev->link.remote_dev_info.pci_info;
+	local_pci_info->domain = 0;
+	local_pci_info->bus = ~0;
+	local_pci_info->device = ~0;
+	local_pci_info->function = ~0;
+	local_pci_info->pci_device_id = ~0;
+
+	if (ndev->device_id == ndev->link.remote_dev_info.device_id) {
+		/* Tegra loopback topology */
+		/* Local and remote PCI info should be identical */
+		memcpy(remote_pci_info,
+			local_pci_info,
+			sizeof(struct nvlink_device_pci_info));
+	} else {
+		/* Non-loopback topology */
+		/* Set all fields to 0xffff... */
+		memset(remote_pci_info,
+			0xff,
+			sizeof(struct nvlink_device_pci_info));
+	}
+
 	ndev->dev_ops.dev_early_init = t19x_nvlink_dev_early_init;
 	ndev->dev_ops.dev_interface_init = t19x_nvlink_dev_interface_init;
 	ndev->dev_ops.dev_reg_init = t19x_nvlink_dev_reg_init;
+
 	/* Point priv of ndev to the tegra nvlink endpoint device struct */
 	ndev->priv = (void *) tdev;
 
 	/* Fill in the nvlink_link struct */
 	ndev->link.device_id = ndev->device_id;
-	ndev->link.is_connected = true;
 	ndev->link.link_ops.get_link_mode = t19x_nvlink_get_link_mode;
 	ndev->link.link_ops.set_link_mode = t19x_nvlink_set_link_mode;
 	ndev->link.link_ops.get_sublink_mode = t19x_nvlink_get_sublink_mode;
@@ -876,18 +944,19 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 					t19x_nvlink_get_rx_sublink_state;
 	ndev->link.link_ops.link_early_init =
 				t19x_nvlink_link_early_init;
+	ndev->link.ndev = ndev;
 	/* Point priv of ndev->link to the tegra nvlink endpoint link struct */
 	ndev->link.priv = (void *)&(tdev->tlink);
 
 	platform_set_drvdata(pdev, tdev);
 
-	/* Register device with core driver*/
+	/* Register device with the Tegra NVLINK core driver */
 	ret = nvlink_register_device(ndev);
 	if (ret < 0) {
 		goto err_ndev_register;
 	}
 
-	/* Register link with core driver */
+	/* Register link with the Tegra NVLINK core driver */
 	ret = nvlink_register_link(&ndev->link);
 	if (ret < 0) {
 		goto err_nlink_register;
@@ -899,8 +968,9 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 err_nlink_register:
 	nvlink_unregister_device(ndev);
 err_ndev_register:
-	t19x_nvlink_endpt_debugfs_deinit(tdev);
 	tegra_nvlink_clk_rst_deinit(tdev);
+err_topology:
+	t19x_nvlink_endpt_debugfs_deinit(tdev);
 err_clk_rst:
 	device_destroy(&tdev->class, tdev->dev_t);
 err_device:
@@ -950,8 +1020,11 @@ static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 	tdev = platform_get_drvdata(pdev);
 	ndev = tdev->ndev;
 
-	nvlink_unregister_link(&ndev->link);
-	nvlink_unregister_device(ndev);
+	if (!tdev->rm_shim_enabled) {
+		nvlink_unregister_link(&ndev->link);
+		nvlink_unregister_device(ndev);
+	}
+
 	t19x_nvlink_endpt_debugfs_deinit(tdev);
 	tegra_nvlink_clk_rst_deinit(tdev);
 	device_destroy(&tdev->class, tdev->dev_t);

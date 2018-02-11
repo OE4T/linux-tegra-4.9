@@ -22,6 +22,7 @@
 #include "nvlink-hw.h"
 
 #define SUBLINK_TIMEOUT_MS	200 /* msec */
+#define R4TX_TIMEOUT_US		1000 /* usec */
 
 const struct single_lane_params entry_100us_sl_params = {
 	.enabled = true,
@@ -64,9 +65,13 @@ u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev)
 		link_mode = NVLINK_LINK_FAULT;
 		break;
 	case NVL_LINK_STATE_STATE_RCVY_AC:
+		link_mode = NVLINK_LINK_RCVY_AC;
+		break;
 	case NVL_LINK_STATE_STATE_RCVY_SW:
+		link_mode = NVLINK_LINK_RCVY_SW;
+		break;
 	case NVL_LINK_STATE_STATE_RCVY_RX:
-		link_mode = NVLINK_LINK_RECOVERY;
+		link_mode = NVLINK_LINK_RCVY_RX;
 		break;
 	default:
 		link_mode = NVLINK_LINK_OFF;
@@ -164,7 +169,36 @@ void t19x_nvlink_get_rx_sublink_state(struct nvlink_device *ndev,
 			NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_SHIFT;
 }
 
+/* From the point of view of the Tegra endpoint, is the link in SAFE mode? */
+static inline bool is_link_in_safe(struct tnvlink_link *tlink)
+{
+	struct nvlink_device *ndev = tlink->tdev->ndev;
+	enum link_mode link_mode = t19x_nvlink_get_link_mode(ndev);
+	enum tx_mode tx_mode = t19x_nvlink_get_sublink_mode(ndev, false);
+	enum rx_mode rx_mode = t19x_nvlink_get_sublink_mode(ndev, true);
 
+	return ((link_mode == NVLINK_LINK_SAFE) &&
+		(tx_mode == NVLINK_TX_SAFE) &&
+		(rx_mode == NVLINK_RX_SAFE));
+}
+
+/* From the point of view of the Tegra endpoint, is the link in HISPEED mode? */
+static inline bool is_link_in_hs(struct tnvlink_link *tlink)
+{
+	struct nvlink_device *ndev = tlink->tdev->ndev;
+	enum link_mode link_mode = t19x_nvlink_get_link_mode(ndev);
+	enum tx_mode tx_mode = t19x_nvlink_get_sublink_mode(ndev, false);
+	enum rx_mode rx_mode = t19x_nvlink_get_sublink_mode(ndev, true);
+
+	return ((link_mode == NVLINK_LINK_HS) &&
+		(tx_mode == NVLINK_TX_HS || tx_mode == NVLINK_TX_SINGLE_LANE) &&
+		(rx_mode == NVLINK_RX_HS || rx_mode == NVLINK_RX_SINGLE_LANE));
+}
+
+bool is_link_connected(struct tnvlink_link *tlink)
+{
+	return (is_link_in_safe(tlink) || is_link_in_hs(tlink));
+}
 
 /* Configure and Start the PRBS generator */
 static int t19x_nvlink_prbs_gen_en(struct tnvlink_dev *tdev)
@@ -552,6 +586,29 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 
 		break;
 
+	case NVLINK_LINK_RCVY_AC:
+		if (link_state != NVL_LINK_STATE_STATE_ACTIVE) {
+			nvlink_err("Link is not in ACTIVE state. The link can"
+				" only go to RCVY_AC state from ACTIVE.");
+			status = -EPERM;
+			break;
+		}
+
+		nvlink_dbg("Changing link state to RCVY_AC");
+		reg_val = nvlw_nvl_readl(tdev, NVL_LINK_CHANGE);
+		reg_val &= ~NVL_LINK_CHANGE_NEWSTATE_F(~0);
+		reg_val |= NVL_LINK_CHANGE_NEWSTATE_F(
+					NVL_LINK_CHANGE_NEWSTATE_RCVY_AC);
+		reg_val &= ~NVL_LINK_CHANGE_OLDSTATE_MASK_F(~0);
+		reg_val |= NVL_LINK_CHANGE_OLDSTATE_MASK_F(
+					NVL_LINK_CHANGE_OLDSTATE_MASK_DONTCARE);
+		reg_val &= ~NVL_LINK_CHANGE_ACTION_F(~0);
+		reg_val |= NVL_LINK_CHANGE_ACTION_F(
+				NVL_LINK_CHANGE_ACTION_LTSSM_CHANGE);
+		nvlw_nvl_writel(tdev, NVL_LINK_CHANGE, reg_val);
+
+		break;
+
 	case NVLINK_LINK_ENABLE_PM:
 		if (!(tdev->tlink.sl_params.enabled)) {
 			nvlink_err("Single-Lane (SL / 1/8th) mode is disabled"
@@ -762,6 +819,9 @@ int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off)
 		 * There is no need to (and indeed, we must not) hold
 		 * the master endpoint lock here.
 		 */
+		nvlink_err("Link retraining from the slave endpoint is"
+			" currently not supported");
+		return -EPERM;
 	}
 
 	if (from_off)
@@ -772,3 +832,107 @@ int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off)
 	return ret;
 }
 
+int t19x_nvlink_write_discovery_token(struct tnvlink_dev *tdev, u64 token)
+{
+	int ret = 0;
+	u32 reg_val = 0;
+	u32 token_low_32 = (u32)(token & (u64)(0xffffffff));
+	u32 token_high_32 = (u32)((token >> (u64)(32)) & (u64)(0xffffffff));
+
+	/* Check if R4TX interface is ready to accept a new request */
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL0_R4TX_COMMAND);
+	if (!(reg_val & BIT(NVL_SL0_R4TX_COMMAND_READY))) {
+		nvlink_err("Unable to write discovery token because R4TX"
+				" interface is not ready for a new request");
+		ret = -EBUSY;
+		goto fail;
+	}
+
+	/* Write the token in little endian format */
+	nvlw_nvl_writel(tdev, NVL_SL0_R4TX_WDATA0, token_low_32);
+	nvlw_nvl_writel(tdev, NVL_SL0_R4TX_WDATA1, token_high_32);
+
+	/* Issue the command to write the token */
+	reg_val &= ~NVL_SL0_R4TX_COMMAND_REQUEST_F(~0);
+	reg_val |= NVL_SL0_R4TX_COMMAND_REQUEST_F(
+					NVL_SL0_R4TX_COMMAND_REQUEST_WRITE);
+	reg_val |= BIT(NVL_SL0_R4TX_COMMAND_COMPLETE);
+	reg_val &= ~NVL_SL0_R4TX_COMMAND_WADDR_F(~0);
+	reg_val |= NVL_SL0_R4TX_COMMAND_WADDR_F(NVL_SL0_R4TX_COMMAND_WADDR_SC);
+	nvlw_nvl_writel(tdev, NVL_SL0_R4TX_COMMAND, reg_val);
+
+	/* Wait for the token write command to complete */
+	ret = wait_for_reg_cond_nvlink(tdev,
+					NVL_SL0_R4TX_COMMAND,
+					NVL_SL0_R4TX_COMMAND_COMPLETE,
+					true,
+					"NVL_SL0_R4TX_COMMAND_COMPLETE",
+					nvlw_nvl_readl,
+					&reg_val,
+					R4TX_TIMEOUT_US);
+	if (ret < 0)
+		goto fail;
+
+	nvlink_dbg("Successfully wrote discovery token. Token = 0x%llx.",
+		token);
+	goto exit;
+
+fail:
+	nvlink_err("Failed to write discovery token!");
+exit:
+	return ret;
+}
+
+int t19x_nvlink_read_discovery_token(struct tnvlink_dev *tdev, u64 *token)
+{
+	int ret = 0;
+	u32 reg_val = 0;
+	u32 token_low_32 = 0;
+	u32 token_high_32 = 0;
+
+	/* Check if R4TX interface is ready to accept a new request */
+	reg_val = nvlw_nvl_readl(tdev, NVL_SL1_R4LOCAL_COMMAND);
+	if (!(reg_val & BIT(NVL_SL1_R4LOCAL_COMMAND_READY))) {
+		nvlink_err("Unable to read discovery token because R4TX"
+				" interface is not ready for a new request");
+		ret = -EBUSY;
+		goto fail;
+	}
+
+	/* Issue the command to read the token */
+	reg_val &= ~NVL_SL1_R4LOCAL_COMMAND_REQUEST_F(~0);
+	reg_val |= NVL_SL1_R4LOCAL_COMMAND_REQUEST_F(
+					NVL_SL1_R4LOCAL_COMMAND_REQUEST_READ);
+	reg_val |= BIT(NVL_SL1_R4LOCAL_COMMAND_COMPLETE);
+	reg_val &= ~NVL_SL1_R4LOCAL_COMMAND_RADDR_F(~0);
+	reg_val |= NVL_SL1_R4LOCAL_COMMAND_RADDR_F(
+					NVL_SL1_R4LOCAL_COMMAND_RADDR_SC);
+	nvlw_nvl_writel(tdev, NVL_SL1_R4LOCAL_COMMAND, reg_val);
+
+	/* Wait for the token read command to complete */
+	ret = wait_for_reg_cond_nvlink(tdev,
+					NVL_SL1_R4LOCAL_COMMAND,
+					NVL_SL1_R4LOCAL_COMMAND_COMPLETE,
+					true,
+					"NVL_SL1_R4LOCAL_COMMAND_COMPLETE",
+					nvlw_nvl_readl,
+					&reg_val,
+					R4TX_TIMEOUT_US);
+	if (ret < 0)
+		goto fail;
+
+	/* Read the token in little endian format */
+	token_low_32 = nvlw_nvl_readl(tdev, NVL_SL1_R4LOCAL_RDATA0);
+	token_high_32 = nvlw_nvl_readl(tdev, NVL_SL1_R4LOCAL_RDATA1);
+	*token = ((u64)(token_high_32) << (u64)(32)) |
+		((u64)(token_low_32) & (u64)(0xffffffff));
+
+	nvlink_dbg("Successfully read discovery token. Token = 0x%llx.",
+		*token);
+	goto exit;
+
+fail:
+	nvlink_err("Failed to read discovery token!");
+exit:
+	return ret;
+}

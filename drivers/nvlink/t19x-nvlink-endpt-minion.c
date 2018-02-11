@@ -153,10 +153,11 @@ int minion_send_cmd(struct tnvlink_dev *tdev,
 	err = wait_for_reg_cond_nvlink(tdev,
 					MINION_NVLINK_DL_CMD,
 					MINION_NVLINK_DL_CMD_READY,
-					1,
+					true,
 					"MINION_NVLINK_DL_CMD_READY",
 					nvlw_minion_readl,
-					&reg_val);
+					&reg_val,
+					DEFAULT_LOOP_TIMEOUT_US);
 	if (err < 0) {
 		nvlink_err("MINION command (cmd = %d) failed to complete", cmd);
 		return err;
@@ -670,10 +671,11 @@ int minion_boot(struct tnvlink_dev *tdev)
 	ret = wait_for_reg_cond_nvlink(tdev,
 					MINION_NVLINK_DL_CMD,
 					MINION_NVLINK_DL_CMD_READY,
-					1,
+					true,
 					"MINION_NVLINK_DL_CMD_READY",
 					nvlw_minion_readl,
-					&reg_val);
+					&reg_val,
+					DEFAULT_LOOP_TIMEOUT_US);
 	if (ret < 0) {
 		nvlink_err("MINION booted but its not accepting commands");
 		goto err_dump;
@@ -876,10 +878,11 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 	ret = wait_for_reg_cond_nvlink(tdev,
 					NVL_BR0_CFG_STATUS_CAL,
 					NVL_BR0_CFG_STATUS_CAL_RXCAL_DONE,
-					1,
+					true,
 					"NVL_BR0_CFG_STATUS_CAL_RXCAL_DONE",
 					nvlw_nvl_readl,
-					&reg_val);
+					&reg_val,
+					DEFAULT_LOOP_TIMEOUT_US);
 	if (ret < 0) {
 		nvlink_err("RX calibration failed!");
 

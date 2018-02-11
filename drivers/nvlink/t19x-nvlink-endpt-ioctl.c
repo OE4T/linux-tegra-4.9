@@ -46,63 +46,197 @@ static int get_lp_counters_ioctl(struct tnvlink_dev *tdev,
 					void *ioctl_struct);
 static int clear_lp_counters_ioctl(struct tnvlink_dev *tdev,
 					void *ioctl_struct);
+static int enable_shim_driver_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int enable_device_interrupts_ioctl(struct tnvlink_dev *tdev,
+						void *ioctl_struct);
+static int service_device_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int disable_device_interrupts_ioctl(struct tnvlink_dev *tdev,
+						void *ioctl_struct);
+static int inject_err_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int set_link_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_link_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int set_tx_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_tx_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int set_rx_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int get_rx_mode_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct);
+static int write_discovery_token_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int read_discovery_token_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int get_local_pci_info_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int set_topology_info_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
 
 struct tnvlink_ioctl {
 	const char *const name;
 	const size_t struct_size;
 	int (*handler)(struct tnvlink_dev *, void *);
+	bool is_rm_shim_ioctl;
 };
 
 static const struct tnvlink_ioctl ioctls[] = {
 	[TNVLINK_IOCTL_GET_NVLINK_CAPS] = {
-		.name		= "get_nvlink_caps",
-		.struct_size	= sizeof(struct tegra_nvlink_caps),
-		.handler	= get_nvlink_caps_ioctl,
+		.name			= "get_nvlink_caps",
+		.struct_size		= sizeof(struct tegra_nvlink_caps),
+		.handler		= get_nvlink_caps_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_GET_NVLINK_STATUS] = {
-		.name		= "get_nvlink_status",
-		.struct_size	= sizeof(struct tegra_nvlink_status),
-		.handler	= get_nvlink_status_ioctl,
+		.name			= "get_nvlink_status",
+		.struct_size		= sizeof(struct tegra_nvlink_status),
+		.handler		= get_nvlink_status_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_CLEAR_COUNTERS] = {
-		.name		= "clear_counters",
-		.struct_size	= sizeof(struct tegra_nvlink_clear_counters),
-		.handler	= clear_counters_ioctl,
+		.name			= "clear_counters",
+		.struct_size = sizeof(struct tegra_nvlink_clear_counters),
+		.handler		= clear_counters_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_GET_COUNTERS] = {
-		.name		= "get_counters",
-		.struct_size	= sizeof(struct tegra_nvlink_get_counters),
-		.handler	= get_counters_ioctl,
+		.name			= "get_counters",
+		.struct_size = sizeof(struct tegra_nvlink_get_counters),
+		.handler		= get_counters_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_GET_ERR_INFO] = {
-		.name		= "get_err_info",
-		.struct_size	= sizeof(struct tegra_nvlink_get_err_info),
-		.handler	= get_err_info_ioctl,
+		.name			= "get_err_info",
+		.struct_size = sizeof(struct tegra_nvlink_get_err_info),
+		.handler		= get_err_info_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_GET_ERROR_RECOVERIES] = {
-		.name		= "get_error_recoveries",
+		.name			= "get_error_recoveries",
 		.struct_size = sizeof(struct tegra_nvlink_get_error_recoveries),
-		.handler	= get_error_recoveries_ioctl,
+		.handler		= get_error_recoveries_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_SETUP_EOM] = {
-		.name		= "setup_eom",
-		.struct_size	= sizeof(struct tegra_nvlink_setup_eom),
-		.handler	= setup_eom_ioctl,
+		.name			= "setup_eom",
+		.struct_size		= sizeof(struct tegra_nvlink_setup_eom),
+		.handler		= setup_eom_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_TRAIN_INTRANODE_CONN] = {
-		.name		= "train_intranode_conn",
+		.name			= "train_intranode_conn",
 		.struct_size = sizeof(struct tegra_nvlink_train_intranode_conn),
-		.handler	= train_intranode_conn_ioctl,
+		.handler		= train_intranode_conn_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_GET_LP_COUNTERS] = {
-		.name		= "get_lp_counters",
-		.struct_size	= sizeof(struct tegra_nvlink_get_lp_counters),
-		.handler	= get_lp_counters_ioctl,
+		.name			= "get_lp_counters",
+		.struct_size = sizeof(struct tegra_nvlink_get_lp_counters),
+		.handler		= get_lp_counters_ioctl,
+		.is_rm_shim_ioctl	= false,
 	},
 	[TNVLINK_IOCTL_CLEAR_LP_COUNTERS] = {
-		.name		= "clear_lp_counters",
-		.struct_size	= sizeof(struct tegra_nvlink_clear_lp_counters),
-		.handler	= clear_lp_counters_ioctl,
+		.name			= "clear_lp_counters",
+		.struct_size = sizeof(struct tegra_nvlink_clear_lp_counters),
+		.handler		= clear_lp_counters_ioctl,
+		.is_rm_shim_ioctl	= false,
+	},
+	[TNVLINK_IOCTL_ENABLE_SHIM_DRIVER] = {
+		.name			= "enable_shim_driver",
+		.struct_size		= 0,
+		.handler		= enable_shim_driver_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_ENABLE_DEVICE_INTERRUPTS] = {
+		.name			= "enable_device_interrupts",
+		.struct_size =
+			sizeof(struct tegra_nvlink_enable_device_interrupts),
+		.handler		= enable_device_interrupts_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_SERVICE_DEVICE] = {
+		.name			= "service_device",
+		.struct_size = sizeof(struct tegra_nvlink_service_device),
+		.handler		= service_device_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_DISABLE_DEVICE_INTERRUPTS] = {
+		.name			= "disable_device_interrupts",
+		.struct_size =
+			sizeof(struct tegra_nvlink_disable_device_interrupts),
+		.handler		= disable_device_interrupts_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_INJECT_ERR] = {
+		.name			= "inject_err",
+		.struct_size = sizeof(struct tegra_nvlink_inject_err),
+		.handler		= inject_err_ioctl,
+		.is_rm_shim_ioctl	= false,
+	},
+	[TNVLINK_IOCTL_SET_LINK_MODE] = {
+		.name			= "set_link_mode",
+		.struct_size = sizeof(struct tegra_nvlink_set_link_mode),
+		.handler		= set_link_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_GET_LINK_MODE] = {
+		.name			= "get_link_mode",
+		.struct_size = sizeof(struct tegra_nvlink_get_link_mode),
+		.handler		= get_link_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_SET_TX_MODE] = {
+		.name			= "set_tx_mode",
+		.struct_size = sizeof(struct tegra_nvlink_set_tx_mode),
+		.handler		= set_tx_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_GET_TX_MODE] = {
+		.name			= "get_tx_mode",
+		.struct_size = sizeof(struct tegra_nvlink_get_tx_mode),
+		.handler		= get_tx_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_SET_RX_MODE] = {
+		.name			= "set_rx_mode",
+		.struct_size = sizeof(struct tegra_nvlink_set_rx_mode),
+		.handler		= set_rx_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_GET_RX_MODE] = {
+		.name			= "get_rx_mode",
+		.struct_size = sizeof(struct tegra_nvlink_get_rx_mode),
+		.handler		= get_rx_mode_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_WRITE_DISCOVERY_TOKEN] = {
+		.name			= "write_discovery_token",
+		.struct_size
+			= sizeof(struct tegra_nvlink_write_discovery_token),
+		.handler		= write_discovery_token_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_READ_DISCOVERY_TOKEN] = {
+		.name			= "read_discovery_token",
+		.struct_size = sizeof(struct tegra_nvlink_read_discovery_token),
+		.handler		= read_discovery_token_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_GET_LOCAL_PCI_INFO] = {
+		.name			= "get_local_pci_info",
+		.struct_size = sizeof(struct tegra_nvlink_get_local_pci_info),
+		.handler		= get_local_pci_info_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_SET_TOPOLOGY_INFO] = {
+		.name			= "set_topology_info",
+		.struct_size = sizeof(struct tegra_nvlink_set_topology_info),
+		.handler		= set_topology_info_ioctl,
+		.is_rm_shim_ioctl	= true,
 	},
 };
 
@@ -123,13 +257,8 @@ static int get_nvlink_caps_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 	struct tegra_nvlink_caps *caps =
 				(struct tegra_nvlink_caps *)ioctl_struct;
 
-	if (is_nvlink_loopback_topology(tdev)) {
-		caps->nvlink_caps |= (TEGRA_CTRL_NVLINK_CAPS_SUPPORTED |
-					TEGRA_CTRL_NVLINK_CAPS_VALID);
-	} else {
-		/* TODO: */
-	}
-
+	caps->nvlink_caps |= TEGRA_CTRL_NVLINK_CAPS_SUPPORTED |
+				TEGRA_CTRL_NVLINK_CAPS_VALID;
 	/* Sysmem atomics are supported for NVLINK versions > 1.0 */
 	if (NVLINK_IP_VERSION > TEGRA_NVLINK_VERSION_10)
 		caps->nvlink_caps |= TEGRA_CTRL_NVLINK_CAPS_SYSMEM_ATOMICS;
@@ -202,47 +331,55 @@ static int get_nvlink_status_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 	struct nvlink_link *nlink = &ndev->link;
 	struct tegra_nvlink_status *status =
 				(struct tegra_nvlink_status *)ioctl_struct;
+	struct nvlink_device_pci_info *local_pci_info =	&ndev->pci_info;
+	struct nvlink_device_pci_info *remote_pci_info =
+					&nlink->remote_dev_info.pci_info;
 	u32 reg_val = 0;
 	u32 state = 0;
 
-	/*
-	 * Link should be connected and in HS mode, otherwise
-	 * t19x_nvlink_endpt_open() will fail and we wouldn't be here.
-	 */
-	status->link_info.connected = true;
+	if (tdev->rm_shim_enabled) {
+		nlink->is_connected =
+			is_link_connected((struct tnvlink_link *)nlink->priv);
+	}
+	status->link_info.connected = nlink->is_connected;
 
 	status->link_info.remote_device_link_number =
 					nlink->remote_dev_info.link_id;
 	status->link_info.local_device_link_number = nlink->link_id;
 
-	if (is_nvlink_loopback_topology(tdev)) {
-		status->link_info.caps |= TEGRA_CTRL_NVLINK_CAPS_VALID;
+	status->link_info.local_device_info.device_type =
+				TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_TEGRA;
+	status->link_info.local_device_info.domain = local_pci_info->domain;
+	status->link_info.local_device_info.bus = local_pci_info->bus;
+	status->link_info.local_device_info.device = local_pci_info->device;
+	status->link_info.local_device_info.function = local_pci_info->function;
+	status->link_info.local_device_info.pci_device_id =
+						local_pci_info->pci_device_id;
+
+	status->link_info.remote_device_info.domain = remote_pci_info->domain;
+	status->link_info.remote_device_info.bus = remote_pci_info->bus;
+	status->link_info.remote_device_info.device = remote_pci_info->device;
+	status->link_info.remote_device_info.function =
+						remote_pci_info->function;
+	status->link_info.remote_device_info.pci_device_id =
+						remote_pci_info->pci_device_id;
+
+	if (nlink->remote_dev_info.device_id == NVLINK_ENDPT_T19X) {
 		status->link_info.loop_property =
 			TEGRA_CTRL_NVLINK_STATUS_LOOP_PROPERTY_LOOPBACK;
-
-		status->link_info.local_device_info.device_type =
-			TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_TEGRA;
-		status->link_info.local_device_info.domain = 0;
-		status->link_info.local_device_info.bus = 0;
-		status->link_info.local_device_info.device = 0;
-		status->link_info.local_device_info.function = 0;
-		status->link_info.local_device_info.pci_device_id = 0;
-
 		status->link_info.remote_device_info.device_type =
-			status->link_info.local_device_info.device_type;
-		status->link_info.remote_device_info.domain =
-			status->link_info.local_device_info.domain;
-		status->link_info.remote_device_info.bus =
-			status->link_info.local_device_info.bus;
-		status->link_info.remote_device_info.device =
-			status->link_info.local_device_info.device;
-		status->link_info.remote_device_info.function =
-			status->link_info.local_device_info.function;
-		status->link_info.remote_device_info.pci_device_id =
-			status->link_info.local_device_info.pci_device_id;
+				TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_TEGRA;
+	} else if (nlink->remote_dev_info.device_id == NVLINK_ENDPT_GV100) {
+		status->link_info.loop_property =
+				TEGRA_CTRL_NVLINK_STATUS_LOOP_PROPERTY_NONE;
+		status->link_info.remote_device_info.device_type =
+				TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_GPU;
 	} else {
-		/* TODO: Handle other topologies */
+		nvlink_err("Invalid remote device ID");
+		return -ENODEV;
 	}
+
+	status->link_info.caps |= TEGRA_CTRL_NVLINK_CAPS_VALID;
 
 	status->enabled_link_mask =
 			TNVLINK_LINK_ID_TO_MASK(nlink->link_id);
@@ -717,6 +854,20 @@ static int train_intranode_conn_ioctl(struct tnvlink_dev *tdev,
 		(struct tegra_nvlink_train_intranode_conn *)ioctl_struct;
 	int ret;
 
+	if (tdev->rm_shim_enabled) {
+		nvlink_err("The TRAIN_INTRANODE_CONN IOCTL is currently"
+			" disabled because the RM shim driver is enabled. When"
+			" the shim driver is enabled,"
+			" link state transitions/link training are handled by"
+			" the RM NVLINK core driver. Therefore, the"
+			" TRAIN_INTRANODE_CONN IOCTL is not needed when the RM"
+			" shim driver is enabled. If you want to enable this"
+			" IOCTL, disable the shim driver mode in the Tegra"
+			" NVLINK endpoint driver.");
+		ret = -ENOSYS;
+		goto exit;
+	}
+
 	if (train_intranode_conn->src_end_point.node_id !=
 			train_intranode_conn->dst_end_point.node_id) {
 		nvlink_err("Source and destination node IDs don't match!");
@@ -869,6 +1020,317 @@ static int clear_lp_counters_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 	return 0;
 }
 
+static int enable_shim_driver_ioctl(struct tnvlink_dev *tdev,
+				void *ioctl_struct)
+{
+	struct nvlink_device *ndev = tdev->ndev;
+
+	tdev->rm_shim_enabled = true;
+	ndev->device_id = NVLINK_ENDPT_T19X;
+	ndev->is_master = false;
+	/*
+	 * Right now we only support a T19x+GV100 topology for the RM shim
+	 * mode
+	 */
+	ndev->link.remote_dev_info.device_id = NVLINK_ENDPT_GV100;
+
+	/*
+	 * In RM shim driver mode we use the RM core driver instead of the Tegra
+	 * core driver. Therefore, we're unregistering from the Tegra core
+	 * driver.
+	 */
+	nvlink_unregister_link(&ndev->link);
+	nvlink_unregister_device(ndev);
+
+	return 0;
+}
+
+static int enable_device_interrupts_ioctl(struct tnvlink_dev *tdev,
+						void *ioctl_struct)
+{
+	struct tegra_nvlink_enable_device_interrupts *device_interrupts =
+		(struct tegra_nvlink_enable_device_interrupts *)ioctl_struct;
+
+	if (device_interrupts->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	nvlink_enable_dl_interrupts(tdev);
+
+	return 0;
+}
+
+static int service_device_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	int ret = 0;
+	struct tegra_nvlink_service_device *service_device =
+			(struct tegra_nvlink_service_device *)ioctl_struct;
+	bool retrain_from_safe = false;
+
+	if (service_device->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	ret = nvlink_service_dl_interrupts(tdev, &retrain_from_safe);
+	if ((ret == 0) && retrain_from_safe) {
+		service_device->retrain_from_safe_mask =
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id);
+	}
+
+	return ret;
+}
+
+static int disable_device_interrupts_ioctl(struct tnvlink_dev *tdev,
+						void *ioctl_struct)
+{
+	struct tegra_nvlink_disable_device_interrupts *device_interrupts =
+		(struct tegra_nvlink_disable_device_interrupts *)ioctl_struct;
+
+	if (device_interrupts->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	nvlink_disable_dl_interrupts(tdev);
+
+	return 0;
+}
+
+static int inject_err_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	int ret = 0;
+	struct tegra_nvlink_inject_err *inject_err =
+				(struct tegra_nvlink_inject_err *)ioctl_struct;
+
+	if (inject_err->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	if (inject_err->is_fatal_error) {
+		/*
+		 * Choice of error is somewhat arbitrary. If needed, we can add
+		 * a field in struct tegra_nvlink_inject_err to allow userspace
+		 * to control which specific error they want to inject.
+		 */
+		nvlink_dbg("Injecting RAM data parity error on link");
+		nvlw_nvltlc_writel(tdev,
+				NVLTLC_RX_ERR_INJECT_0,
+				BIT(NVLTLC_RX_ERR_INJECT_0_RXRAMDATAPARITYERR));
+	} else {
+		nvlink_dbg("Injecting RCVY_AC error on link");
+		ret = t19x_nvlink_set_link_mode(tdev->ndev,
+						NVLINK_LINK_RCVY_AC);
+	}
+
+	return ret;
+}
+
+static int set_link_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_set_link_mode *set_link_mode =
+			(struct tegra_nvlink_set_link_mode *)ioctl_struct;
+
+	if (set_link_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	return t19x_nvlink_set_link_mode(tdev->ndev, set_link_mode->link_mode);
+}
+
+static int get_link_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_get_link_mode *get_link_mode =
+			(struct tegra_nvlink_get_link_mode *)ioctl_struct;
+
+	if (get_link_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	get_link_mode->link_mode = t19x_nvlink_get_link_mode(tdev->ndev);
+
+	return 0;
+}
+
+static int set_tx_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_set_tx_mode *set_tx_mode =
+			(struct tegra_nvlink_set_tx_mode *)ioctl_struct;
+
+	if (set_tx_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	return t19x_nvlink_set_sublink_mode(tdev->ndev,
+						false,
+						set_tx_mode->tx_mode);
+}
+
+static int get_tx_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_get_tx_mode *get_tx_mode =
+			(struct tegra_nvlink_get_tx_mode *)ioctl_struct;
+
+	if (get_tx_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	get_tx_mode->tx_mode = t19x_nvlink_get_sublink_mode(tdev->ndev, false);
+
+	return 0;
+}
+
+static int set_rx_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_set_rx_mode *set_rx_mode =
+			(struct tegra_nvlink_set_rx_mode *)ioctl_struct;
+
+	if (set_rx_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	return t19x_nvlink_set_sublink_mode(tdev->ndev,
+						true,
+						set_rx_mode->rx_mode);
+}
+
+static int get_rx_mode_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	struct tegra_nvlink_get_rx_mode *get_rx_mode =
+			(struct tegra_nvlink_get_rx_mode *)ioctl_struct;
+
+	if (get_rx_mode->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	get_rx_mode->rx_mode = t19x_nvlink_get_sublink_mode(tdev->ndev, true);
+
+	return 0;
+}
+
+static int write_discovery_token_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct)
+{
+	struct tegra_nvlink_write_discovery_token *write_discovery_token =
+		(struct tegra_nvlink_write_discovery_token *)ioctl_struct;
+
+	if (write_discovery_token->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	return t19x_nvlink_write_discovery_token(tdev,
+						write_discovery_token->token);
+}
+
+static int read_discovery_token_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct)
+{
+	struct tegra_nvlink_read_discovery_token *read_discovery_token =
+		(struct tegra_nvlink_read_discovery_token *)ioctl_struct;
+
+	if (read_discovery_token->link_mask !=
+			TNVLINK_LINK_ID_TO_MASK(tdev->ndev->link.link_id)) {
+		nvlink_err("Invalid link mask specified");
+		return -EINVAL;
+	}
+
+	return t19x_nvlink_read_discovery_token(tdev,
+						&read_discovery_token->token);
+}
+
+static int get_local_pci_info_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct)
+{
+	struct tegra_nvlink_get_local_pci_info *get_local_pci_info =
+		(struct tegra_nvlink_get_local_pci_info *)ioctl_struct;
+	struct tegra_nvlink_device_info *user_local_endpt =
+					&get_local_pci_info->local_endpt;
+	struct nvlink_device_pci_info *kernel_local_endpt =
+							&tdev->ndev->pci_info;
+
+	user_local_endpt->domain = kernel_local_endpt->domain;
+	user_local_endpt->bus = kernel_local_endpt->bus;
+	user_local_endpt->device = kernel_local_endpt->device;
+	user_local_endpt->function = kernel_local_endpt->function;
+	user_local_endpt->pci_device_id = kernel_local_endpt->pci_device_id;
+
+	user_local_endpt->device_type =
+				TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_TEGRA;
+
+	return 0;
+}
+
+static int set_topology_info_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	int ret = 0;
+	struct tegra_nvlink_set_topology_info *set_topology_info =
+			(struct tegra_nvlink_set_topology_info *)ioctl_struct;
+	struct tegra_nvlink_device_info *user_remote_dev_info =
+					&set_topology_info->remote_endpt;
+	struct nvlink_device *ndev = tdev->ndev;
+	struct nvlink_link *nlink = &ndev->link;
+	struct nvlink_device_pci_info *kernel_local_pci_info = &ndev->pci_info;
+	struct nvlink_device_pci_info *kernel_remote_pci_info =
+					&nlink->remote_dev_info.pci_info;
+
+	if (user_remote_dev_info->device_type !=
+		TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_TYPE_GPU) {
+		nvlink_err("Invalid remote endpoint type (type = 0x%llx)",
+			user_remote_dev_info->device_type);
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	nlink->link_id = set_topology_info->local_link_id;
+	nlink->remote_dev_info.link_id = set_topology_info->remote_link_id;
+
+	kernel_remote_pci_info->domain = user_remote_dev_info->domain;
+	kernel_remote_pci_info->bus = user_remote_dev_info->bus;
+	kernel_remote_pci_info->device = user_remote_dev_info->device;
+	kernel_remote_pci_info->function = user_remote_dev_info->function;
+	kernel_remote_pci_info->pci_device_id =
+					user_remote_dev_info->pci_device_id;
+	if (memcmp(kernel_remote_pci_info,
+			kernel_local_pci_info,
+			sizeof(*kernel_remote_pci_info)) == 0) {
+		nvlink_err("PCI information of remote and local devices is"
+			" identical. This is an invalid configuration.");
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	goto exit;
+fail:
+	/* In the case of an error, zero out all stored information. */
+	nlink->link_id = 0;
+	nlink->remote_dev_info.link_id = 0;
+	memset(kernel_remote_pci_info,
+		0,
+		sizeof(*kernel_remote_pci_info));
+exit:
+	return ret;
+}
+
 static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -890,6 +1352,18 @@ static long t19x_nvlink_endpt_ioctl(struct file *file, unsigned int cmd,
 		(ioctl_num >= TNVLINK_IOCTL_NUM_IOCTLS)) {
 		nvlink_err("Unsupported IOCTL call");
 		return -EINVAL;
+	}
+
+	if (!tdev->rm_shim_enabled &&
+		ioctls[ioctl_num].is_rm_shim_ioctl &&
+		ioctl_num != TNVLINK_IOCTL_ENABLE_SHIM_DRIVER) {
+		nvlink_err("The %s IOCTL can only be called when the RM shim"
+			" driver is being used. Currently the RM shim driver is"
+			" disabled. Therefore, the %s IOCTL has been"
+			" disabled as well.",
+			ioctls[ioctl_num].name,
+			ioctls[ioctl_num].name);
+		return -ENOSYS;
 	}
 
 	if (arg_size != ioctls[ioctl_num].struct_size) {
@@ -957,13 +1431,23 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 		return -EBADFD;
 	}
 
-	ret = nvlink_enumerate(ndev);
-	if (ret < 0)
-		nvlink_err("Failed to enable the link!");
-	else
-		nvlink_dbg("Link enabled successfully!");
-
+	if (ndev->is_master) {
+		ret = nvlink_enumerate(ndev);
+		if (ret < 0)
+			nvlink_err("Failed to enable the link!");
+		else
+			nvlink_dbg("Link enabled successfully!");
+	} else {
+		/* This case is needed for the RM shim driver mode */
+		nvlink_dbg("Because Tegra endpoint is not the NVLINK master,"
+			" Tegra NVLINK's device node open will only perform"
+			" Tegra NVLINK controller initialization. Link state"
+			" transitions will be initiated later on by the NVLINK"
+			" master endpoint.");
+		ret = nvlink_initialize_endpoint(ndev);
+	}
 	filp->private_data = tdev;
+
 	return ret;
 }
 

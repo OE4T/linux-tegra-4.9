@@ -180,11 +180,16 @@ struct tnvlink_link {
 	u32 error_recoveries;
 	/* Parameters which describe the selected Single-Lane policy */
 	struct single_lane_params sl_params;
+	/* Pointer to parent struct tnvlink_dev */
+	struct tnvlink_dev *tdev;
+	/* Pointer to parent struct nvlink_link */
 	struct nvlink_link *nlink;
 };
 
 /* Tegra endpoint driver's private device struct */
 struct tnvlink_dev {
+	/* Are we using the RM shim driver? */
+	bool rm_shim_enabled;
 	/* base address of minion */
 	void __iomem *nvlw_minion_base;
 	/* base address of IOCTRL */
@@ -268,10 +273,11 @@ int wait_for_reg_cond_nvlink(
 			struct tnvlink_dev *tdev,
 			u32 reg,
 			u32 bit,
-			int bit_set,
+			bool check_for_bit_set,
 			char *bit_name,
 			u32 (*reg_readl)(struct tnvlink_dev *, u32),
-			u32 *reg_val);
+			u32 *reg_val,
+			u32 timeout_us);
 
 void minion_dump_pc_trace(struct tnvlink_dev *tdev);
 void minion_dump_registers(struct tnvlink_dev *tdev);
@@ -281,9 +287,14 @@ int minion_send_cmd(struct tnvlink_dev *tdev,
 				u32 cmd,
 				u32 scratch0_val);
 void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev);
+
 void nvlink_config_common_intr(struct tnvlink_dev *tdev);
+void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev);
 void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev);
 void minion_service_falcon_intr(struct tnvlink_dev *tdev);
+void nvlink_disable_dl_interrupts(struct tnvlink_dev *tdev);
+int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev,
+				bool *retrain_from_safe);
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id);
 
 void init_single_lane_params(struct tnvlink_dev *tdev);
@@ -298,7 +309,10 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev,
 				bool is_rx_sublink);
 int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 				u32 mode);
+bool is_link_connected(struct tnvlink_link *tlink);
 int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off);
+int t19x_nvlink_write_discovery_token(struct tnvlink_dev *tdev, u64 token);
+int t19x_nvlink_read_discovery_token(struct tnvlink_dev *tdev, u64 *token);
 
 #ifdef CONFIG_DEBUG_FS
 void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev);

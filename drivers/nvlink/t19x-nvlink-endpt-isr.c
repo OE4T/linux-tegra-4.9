@@ -99,7 +99,7 @@ static void nvlink_enable_minion_link_intr(struct tnvlink_dev *tdev)
 	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, reg_val);
 }
 
-static void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev)
+void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 
@@ -433,7 +433,7 @@ static bool nvlink_minion_service_intr(struct tnvlink_dev *tdev)
 }
 
 /* Disable DL/PL interrupts */
-static void nvlink_disable_dl_interrupts(struct tnvlink_dev *tdev)
+void nvlink_disable_dl_interrupts(struct tnvlink_dev *tdev)
 {
 	nvlw_nvl_writel(tdev, NVL_INTR_NONSTALL_EN, 0);
 	nvlw_nvl_writel(tdev, NVL_INTR_STALL_EN, 0);
@@ -484,7 +484,8 @@ static void nvlink_handle_link_errors(struct tnvlink_dev *tdev,
 	}
 }
 
-static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
+int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev,
+				 bool *retrain_from_safe)
 {
 	u32 nonfatal_mask = 0;
 	u32 fatal_mask = 0;
@@ -492,7 +493,8 @@ static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
 	u32 intr_status = 0;
 	int ret = 0;
 	struct nvlink_link_error_masks err_masks = {0};
-	bool retrain_from_safe = false;
+
+	*retrain_from_safe = false;
 
 	/*
 	 * Mask DLPL intr register while reading it. This ensures that we
@@ -520,7 +522,7 @@ static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
 		nvlink_err("Retraining from SAFE");
 		nonfatal_mask |= BIT(NVL_INTR_TX_RECOVERY_LONG);
 		inforom_mask |= BIT(DL_TX_RECOVERY_LONG);
-		retrain_from_safe = true;
+		*retrain_from_safe = true;
 	}
 
 	if (intr_status & BIT(NVL_INTR_TX_FAULT_RAM)) {
@@ -600,7 +602,7 @@ static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
 	}
 
 	if (fatal_mask)
-		retrain_from_safe = false;
+		*retrain_from_safe = false;
 
 	/*
 	 * NOTE: _TX_RECOVERY_LONG is non-fatal if handled by SW, but still
@@ -611,11 +613,28 @@ static int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev)
 		nvlink_handle_link_errors(tdev, &err_masks, inforom_mask);
 	}
 
-	if (retrain_from_safe) {
-		if (nvlink_retrain_link(tdev, false)) {
-			nvlink_err("Fatal: Unable to retrain Link from"
-				" SAFE mode");
-			ret = -1;
+	if (*retrain_from_safe) {
+		if (tdev->rm_shim_enabled) {
+			/*
+			 * FIXME: Fix the following hack. The proper solution
+			 * would be to increment the error recoveries count
+			 * after RM notifies us that the link has been
+			 * retrained.
+			 */
+			nvlink_dbg("We've encountered an error which requires"
+				" link retraining but we 're in RM shim driver"
+				" mode. And in RM shim driver mode we don't"
+				" know when RM will retrain the link. Currently"
+				" we just assume that RM will retrain the link"
+				" successfully. Therefore, we blindly increment"
+				" the successful error recoveries count.");
+			tdev->tlink.error_recoveries++;
+		} else {
+			if (nvlink_retrain_link(tdev, false)) {
+				nvlink_err("Fatal: Unable to retrain Link from"
+					" SAFE mode");
+				ret = -1;
+			}
 		}
 	}
 
@@ -1330,6 +1349,7 @@ static u32 nvlink_service_link(struct tnvlink_dev *tdev)
 	u32 tlc_tx_err_status0;
 	u32 tlc_rx_err_status0;
 	u32 tlc_rx_err_status1;
+	bool retrain_from_safe = false;
 
 	/*
 	 * Cache the error log register for clients.  Need to cache it here
@@ -1343,7 +1363,7 @@ static u32 nvlink_service_link(struct tnvlink_dev *tdev)
 	tdev->tlink.tlc_rx_err_status0 |= tlc_rx_err_status0;
 	tdev->tlink.tlc_rx_err_status1 |= tlc_rx_err_status1;
 
-	nvlink_service_dl_interrupts(tdev);
+	nvlink_service_dl_interrupts(tdev, &retrain_from_safe);
 
 	nvlink_service_tlc_interrupts(tdev);
 

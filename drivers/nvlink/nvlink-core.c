@@ -314,6 +314,7 @@ int nvlink_register_link(struct nvlink_link *link)
 		goto fail;
 	}
 	link->mode = NVLINK_LINK_OFF;
+	link->is_connected = false;
 	nvlink_core.nlinks[link->link_id] = link;
 
 	goto success;
@@ -928,6 +929,8 @@ int nvlink_transition_intranode_conn_off_to_safe(struct nvlink_device *ndev)
 		return ret;
 	}
 
+	link0->is_connected = true;
+	link1->is_connected = true;
 	nvlink_dbg("Link in Safe mode!");
 	return ret;
 }
@@ -1096,7 +1099,7 @@ EXPORT_SYMBOL(nvlink_train_intranode_conn_safe_to_hs);
  * have the clocks, resets, uphy, minion, interrupts and memory interface
  * initialized and the endpoint should be ready for link state transition
  */
-static int nvlink_initialize_endpoint(struct nvlink_device *ndev)
+int nvlink_initialize_endpoint(struct nvlink_device *ndev)
 {
 	int ret = 0;
 	enum init_state init_state = NVLINK_DEV_OFF;
@@ -1169,6 +1172,7 @@ fail:
 success:
 	return ret;
 }
+EXPORT_SYMBOL(nvlink_initialize_endpoint);
 
 /*
  * Setup the link and endpoint devices for data transfer over high speed

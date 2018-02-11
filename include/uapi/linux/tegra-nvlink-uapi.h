@@ -312,7 +312,9 @@ enum tegra_ctrl_link_mode {
 	TEGRA_CTRL_NVLINK_LINK_HS,
 	TEGRA_CTRL_NVLINK_LINK_SAFE,
 	TEGRA_CTRL_NVLINK_LINK_FAULT,
-	TEGRA_CTRL_NVLINK_LINK_RECOVERY,
+	TEGRA_CTRL_NVLINK_LINK_RCVY_AC,
+	TEGRA_CTRL_NVLINK_LINK_RCVY_SW,
+	TEGRA_CTRL_NVLINK_LINK_RCVY_RX,
 	TEGRA_CTRL_NVLINK_LINK_DETECT,
 	TEGRA_CTRL_NVLINK_LINK_RESET,
 	TEGRA_CTRL_NVLINK_LINK_ENABLE_PM,
@@ -407,6 +409,88 @@ struct tegra_nvlink_clear_lp_counters {
 	__u32 link_id;
 };
 
+/* TEGRA_CTRL_CMD_NVLINK_ENABLE_DEVICE_INTERRUPTS */
+struct tegra_nvlink_enable_device_interrupts {
+	__u32 link_mask;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_SERVICE_DEVICE */
+struct tegra_nvlink_service_device {
+	__u32 link_mask;
+	__u32 retrain_from_safe_mask;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_DISABLE_DEVICE_INTERRUPTS */
+struct tegra_nvlink_disable_device_interrupts {
+	__u32 link_mask;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_INJECT_ERR */
+struct tegra_nvlink_inject_err {
+	__u32 link_mask;
+	bool is_fatal_error;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_SET_LINK_MODE */
+struct tegra_nvlink_set_link_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_link_mode link_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_GET_LINK_MODE */
+struct tegra_nvlink_get_link_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_link_mode link_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_SET_TX_MODE */
+struct tegra_nvlink_set_tx_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_tx_mode tx_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_GET_TX_MODE */
+struct tegra_nvlink_get_tx_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_tx_mode tx_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_SET_RX_MODE */
+struct tegra_nvlink_set_rx_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_rx_mode rx_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_GET_RX_MODE */
+struct tegra_nvlink_get_rx_mode {
+	__u32 link_mask;
+	enum tegra_ctrl_rx_mode rx_mode;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_WRITE_DISCOVERY_TOKEN */
+struct tegra_nvlink_write_discovery_token {
+	__u32 link_mask;
+	__u64 token;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_READ_DISCOVERY_TOKEN */
+struct tegra_nvlink_read_discovery_token {
+	__u32 link_mask;
+	__u64 token;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_GET_LOCAL_PCI_INFO */
+struct tegra_nvlink_get_local_pci_info {
+	struct tegra_nvlink_device_info local_endpt;
+};
+
+/* TEGRA_CTRL_CMD_NVLINK_SET_TOPOLOGY_INFO */
+struct tegra_nvlink_set_topology_info {
+	struct tegra_nvlink_device_info remote_endpt;
+	__u32 local_link_id;
+	__u32 remote_link_id;
+};
+
 /* Enum to represent IOCTLs inside the Tegra NVLINK driver */
 enum tnvlink_ioctl_num {
 	TNVLINK_IOCTL_GET_NVLINK_CAPS,
@@ -419,6 +503,21 @@ enum tnvlink_ioctl_num {
 	TNVLINK_IOCTL_TRAIN_INTRANODE_CONN,
 	TNVLINK_IOCTL_GET_LP_COUNTERS,
 	TNVLINK_IOCTL_CLEAR_LP_COUNTERS,
+	TNVLINK_IOCTL_ENABLE_SHIM_DRIVER,
+	TNVLINK_IOCTL_ENABLE_DEVICE_INTERRUPTS,
+	TNVLINK_IOCTL_SERVICE_DEVICE,
+	TNVLINK_IOCTL_DISABLE_DEVICE_INTERRUPTS,
+	TNVLINK_IOCTL_INJECT_ERR,
+	TNVLINK_IOCTL_SET_LINK_MODE,
+	TNVLINK_IOCTL_GET_LINK_MODE,
+	TNVLINK_IOCTL_SET_TX_MODE,
+	TNVLINK_IOCTL_GET_TX_MODE,
+	TNVLINK_IOCTL_SET_RX_MODE,
+	TNVLINK_IOCTL_GET_RX_MODE,
+	TNVLINK_IOCTL_WRITE_DISCOVERY_TOKEN,
+	TNVLINK_IOCTL_READ_DISCOVERY_TOKEN,
+	TNVLINK_IOCTL_GET_LOCAL_PCI_INFO,
+	TNVLINK_IOCTL_SET_TOPOLOGY_INFO,
 	TNVLINK_IOCTL_NUM_IOCTLS
 };
 
@@ -464,5 +563,64 @@ enum tnvlink_ioctl_num {
 			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
 				TNVLINK_IOCTL_CLEAR_LP_COUNTERS,	\
 				struct tegra_nvlink_clear_lp_counters)
+#define TEGRA_CTRL_CMD_NVLINK_ENABLE_SHIM_DRIVER			\
+			_IO(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_ENABLE_SHIM_DRIVER)
+#define TEGRA_CTRL_CMD_NVLINK_ENABLE_DEVICE_INTERRUPTS			\
+		_IOW(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_ENABLE_DEVICE_INTERRUPTS,		\
+			struct tegra_nvlink_enable_device_interrupts)
+#define TEGRA_CTRL_CMD_NVLINK_SERVICE_DEVICE				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SERVICE_DEVICE,		\
+				struct tegra_nvlink_service_device)
+#define TEGRA_CTRL_CMD_NVLINK_DISABLE_DEVICE_INTERRUPTS			\
+		_IOW(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_DISABLE_DEVICE_INTERRUPTS,	\
+			struct tegra_nvlink_disable_device_interrupts)
+#define TEGRA_CTRL_CMD_NVLINK_INJECT_ERR				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_INJECT_ERR,		\
+				struct tegra_nvlink_inject_err)
+#define TEGRA_CTRL_CMD_NVLINK_SET_LINK_MODE				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SET_LINK_MODE,		\
+				struct tegra_nvlink_set_link_mode)
+#define TEGRA_CTRL_CMD_NVLINK_GET_LINK_MODE				\
+			_IOWR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_LINK_MODE,		\
+				struct tegra_nvlink_get_link_mode)
+#define TEGRA_CTRL_CMD_NVLINK_SET_TX_MODE				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SET_TX_MODE,		\
+				struct tegra_nvlink_set_tx_mode)
+#define TEGRA_CTRL_CMD_NVLINK_GET_TX_MODE				\
+			_IOWR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_TX_MODE,		\
+				struct tegra_nvlink_get_tx_mode)
+#define TEGRA_CTRL_CMD_NVLINK_SET_RX_MODE				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SET_RX_MODE,		\
+				struct tegra_nvlink_set_rx_mode)
+#define TEGRA_CTRL_CMD_NVLINK_GET_RX_MODE				\
+			_IOWR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_RX_MODE,		\
+				struct tegra_nvlink_get_rx_mode)
+#define TEGRA_CTRL_CMD_NVLINK_WRITE_DISCOVERY_TOKEN			\
+		_IOW(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_WRITE_DISCOVERY_TOKEN,		\
+			struct tegra_nvlink_write_discovery_token)
+#define TEGRA_CTRL_CMD_NVLINK_READ_DISCOVERY_TOKEN			\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_READ_DISCOVERY_TOKEN,		\
+			struct tegra_nvlink_read_discovery_token)
+#define TEGRA_CTRL_CMD_NVLINK_GET_LOCAL_PCI_INFO			\
+			_IOR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_LOCAL_PCI_INFO,	\
+				struct tegra_nvlink_get_local_pci_info)
+#define TEGRA_CTRL_CMD_NVLINK_SET_TOPOLOGY_INFO				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SET_TOPOLOGY_INFO,	\
+				struct tegra_nvlink_set_topology_info)
 
 #endif /* TEGRA_NVLINK_UAPI_H */

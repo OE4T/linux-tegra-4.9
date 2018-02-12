@@ -2239,10 +2239,12 @@ u32 gv100_nvlink_link_get_mode(struct gk20a *g, u32 link_id)
 		return nvgpu_nvlink_link_hs;
 	if (state == nvl_link_state_state_fault_v())
 		return nvgpu_nvlink_link_fault;
-	if ((state == nvl_link_state_state_rcvy_ac_v()) ||
-			(state == nvl_link_state_state_rcvy_sw_v()) ||
-			(state == nvl_link_state_state_rcvy_rx_v()))
-		return nvgpu_nvlink_link_recovery;
+	if (state == nvl_link_state_state_rcvy_ac_v())
+		return nvgpu_nvlink_link_rcvy_ac;
+	if (state == nvl_link_state_state_rcvy_sw_v())
+		return nvgpu_nvlink_link_rcvy_sw;
+	if (state == nvl_link_state_state_rcvy_rx_v())
+		return nvgpu_nvlink_link_rcvy_rx;
 
 	return nvgpu_nvlink_link_off;
 }

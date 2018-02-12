@@ -138,8 +138,12 @@ static u32 nvgpu_nvlink_get_link_mode(struct nvlink_device *ndev)
 		return NVLINK_LINK_SAFE;
 	case nvgpu_nvlink_link_fault:
 		return NVLINK_LINK_FAULT;
-	case nvgpu_nvlink_link_recovery:
-		return NVLINK_LINK_RECOVERY;
+	case nvgpu_nvlink_link_rcvy_ac:
+		return NVLINK_LINK_RCVY_AC;
+	case nvgpu_nvlink_link_rcvy_sw:
+		return NVLINK_LINK_RCVY_SW;
+	case nvgpu_nvlink_link_rcvy_rx:
+		return NVLINK_LINK_RCVY_RX;
 	case nvgpu_nvlink_link_detect:
 		return NVLINK_LINK_DETECT;
 	case nvgpu_nvlink_link_reset:
@@ -198,8 +202,14 @@ static int nvgpu_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 	case NVLINK_LINK_FAULT:
 		mode_sw = nvgpu_nvlink_link_fault;
 		break;
-	case NVLINK_LINK_RECOVERY:
-		mode_sw = nvgpu_nvlink_link_recovery;
+	case NVLINK_LINK_RCVY_AC:
+		mode_sw = nvgpu_nvlink_link_rcvy_ac;
+		break;
+	case NVLINK_LINK_RCVY_SW:
+		mode_sw = nvgpu_nvlink_link_rcvy_sw;
+		break;
+	case NVLINK_LINK_RCVY_RX:
+		mode_sw = nvgpu_nvlink_link_rcvy_rx;
 		break;
 	case NVLINK_LINK_DETECT:
 		mode_sw = nvgpu_nvlink_link_detect;

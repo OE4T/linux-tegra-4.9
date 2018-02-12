@@ -637,8 +637,7 @@
 #define TEGRA194_CLK_DLA0_CORE_MUX		301
 /** @brief CLK_RST_CONTROLLER_CLK_SOURCE_DLA1_CORE switch divider output */
 #define TEGRA194_CLK_DLA1_CORE_MUX		302
-/** @brief Controls CLK_RST_CONTROLLER_NVLINK_CLK_CTRL_0.NVLINK_TXCLK_CTRL */
-#define TEGRA194_CLK_NVLINK_TXCLK_CTRL		303
+
 /** @brief UTMI PLL HW power sequencer */
 #define TEGRA194_CLK_UTMIPLL_HPS		304
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C5 */
@@ -685,5 +684,7 @@
 #define TEGRA194_CLK_NVLINK_PLL_TXCLK		325
 /** @brief PLLE hardware power sequencer (overrides 'manual' programming of PLL) */
 #define TEGRA194_CLK_PLLE_HPS			326
+/** @brief CLK_ENB_PLLREFE_OUT gate output */
+#define TEGRA194_CLK_PLLREFE_VCOOUT_GATED	327
 
 #endif

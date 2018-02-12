@@ -527,8 +527,12 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 				&apm_msg->msgq_msg);
 		spin_unlock_irqrestore(&app->apm_msg_queue_lock, flag);
 		if (ret < 0) {
-			pr_err("%s: Failed to queue message ret %d\n",
-				__func__, ret);
+			pr_err("%s: Failed to queue message ret %d \
+				rd %d and wr %d pointer %p mbox_id %d\n",
+				__func__, ret,
+				app->apm->msgq_recv.msgq.read_index,
+				app->apm->msgq_recv.msgq.write_index,
+				&app->apm->msgq_recv.msgq, app->apm->mbox_id);
 			return ret;
 		}
 	}
@@ -542,7 +546,6 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 		pr_err("%s: Failed to send mailbox message id %d ret %d\n",
 			__func__, app->apm->mbox_id, ret);
 	}
-
 	if (!(flags & TEGRA210_ADSP_MSG_FLAG_NEED_ACK))
 		return ret;
 
@@ -550,8 +553,11 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 		app->msg_complete,
 		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
 	if (WARN_ON(ret == 0))
-		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
-
+		pr_err("%s: ACK timed out %d rd %d wr %d mbox_id %d \
+			msg_q 0x%p\n", __func__, app->reg,
+			app->apm->msgq_recv.msgq.read_index,
+			app->apm->msgq_recv.msgq.write_index,
+			app->apm->mbox_id, &app->apm->msgq_recv.msgq);
 	return ret;
 }
 
@@ -805,13 +811,14 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 	if (!app->desc->handle) {
 		return -ENODEV;
 	}
-
 	app->info = nvadsp_app_init(app->desc->handle, NULL);
 	if (IS_ERR_OR_NULL(app->info)) {
 		dev_err(adsp->dev, "Failed to init app %s(%s).",
 			app->desc->name, app->desc->fw_name);
 		return -ENODEV;
 	}
+
+	dev_info(adsp->dev, "apm init app %s done\n", app->desc->name);
 
 	spin_lock_init(&app->lock);
 	spin_lock_init(&app->apm_msg_queue_lock);
@@ -845,12 +852,13 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		}
 
 		init_completion(app->msg_complete);
-
 		ret = nvadsp_app_start(app->info);
 		if (ret < 0) {
 			dev_err(adsp->dev, "Failed to start adsp app");
 			goto err_mbox_close;
 		}
+		dev_info(adsp->dev, "apm start app %d msg_q 0x%p\n"
+			,app->apm->mbox_id, &app->apm->msgq_recv.msgq);
 		/* Copy APM IN app data to APM OUT app */
 		apm_out->info = app->info;
 		apm_out->plugin = app->plugin;

@@ -3,7 +3,7 @@
  *
  * ADSP OS App management
  *
- * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -616,6 +616,7 @@ nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
 	nvadsp_app_info_t *app;
 	msgq_t *msgq_send;
 	int *state;
+	unsigned long flags;
 
 	if (IS_ERR_OR_NULL(priv.pdev)) {
 		pr_err("ADSP Driver is not initialized\n");
@@ -648,7 +649,10 @@ nvadsp_app_info_t __must_check *nvadsp_app_init(nvadsp_app_handle_t handle,
 	data->app_init.message = ADSP_APP_INIT;
 
 	message->msgq_msg.size = MSGQ_MSG_PAYLOAD_WSIZE(*message);
+
+	spin_lock_irqsave(&drv_data->mbox_lock, flags);
 	msgq_queue_message(msgq_send, &message->msgq_msg);
+	spin_unlock_irqrestore(&drv_data->mbox_lock, flags);
 
 	if (app->return_status) {
 		state = (int *)&app->state;
@@ -674,6 +678,7 @@ static int start_app_on_adsp(nvadsp_app_info_t *app,
 	struct nvadsp_drv_data *drv_data;
 	msgq_t *msgq_send;
 	int *state;
+	unsigned long flags;
 
 	drv_data = platform_get_drvdata(priv.pdev);
 	shared_mem = drv_data->shared_adsp_os_data;
@@ -681,7 +686,10 @@ static int start_app_on_adsp(nvadsp_app_info_t *app,
 	msgq_send = &msg_pool->app_loader_send_message.msgq;
 
 	message->msgq_msg.size = MSGQ_MSG_PAYLOAD_WSIZE(*message);
+
+	spin_lock_irqsave(&drv_data->mbox_lock, flags);
 	msgq_queue_message(msgq_send, &message->msgq_msg);
+	spin_unlock_irqrestore(&drv_data->mbox_lock, flags);
 
 	state = (int *)&app->state;
 	*state = NVADSP_APP_STATE_STARTED;

@@ -633,23 +633,22 @@ static struct cftype files[] = {
 	{ }	/* terminate */
 };
 
-static int
-schedtune_boostgroup_init(struct schedtune *st)
+static void
+schedtune_boostgroup_init(struct schedtune *st, int idx)
 {
 	struct boost_groups *bg;
 	int cpu;
 
-	/* Keep track of allocated boost groups */
-	allocated_group[st->idx] = st;
-
-	/* Initialize the per CPU boost groups */
+	/* Initialize per CPUs boost group support */
 	for_each_possible_cpu(cpu) {
 		bg = &per_cpu(cpu_boost_groups, cpu);
-		bg->group[st->idx].boost = 0;
-		bg->group[st->idx].tasks = 0;
+		bg->group[idx].boost = 0;
+		bg->group[idx].tasks = 0;
 	}
 
-	return 0;
+	/* Keep track of allocated boost groups */
+	allocated_group[idx] = st;
+	st->idx = idx;
 }
 
 static struct cgroup_subsys_state *
@@ -682,14 +681,10 @@ schedtune_css_alloc(struct cgroup_subsys_state *parent_css)
 		goto out;
 
 	/* Initialize per CPUs boost group support */
-	st->idx = idx;
-	if (schedtune_boostgroup_init(st))
-		goto release;
+	schedtune_boostgroup_init(st, idx);
 
 	return &st->css;
 
-release:
-	kfree(st);
 out:
 	return ERR_PTR(-ENOMEM);
 }
@@ -697,8 +692,14 @@ out:
 static void
 schedtune_boostgroup_release(struct schedtune *st)
 {
-	/* Reset this boost group */
-	schedtune_boostgroup_update(st->idx, 0);
+	struct boost_groups *bg;
+	int cpu;
+
+	/* Reset per CPUs boost group support */
+	for_each_possible_cpu(cpu) {
+		bg = &per_cpu(cpu_boost_groups, cpu);
+		bg->group[st->idx].boost = 0;
+	}
 
 	/* Keep track of allocated boost groups */
 	allocated_group[st->idx] = NULL;
@@ -709,6 +710,7 @@ schedtune_css_free(struct cgroup_subsys_state *css)
 {
 	struct schedtune *st = css_st(css);
 
+	/* Release per CPUs boost group support */
 	schedtune_boostgroup_release(st);
 	kfree(st);
 }

@@ -144,6 +144,9 @@ errout:
 static void stop(void)
 {
 	if (atomic_cmpxchg(&ctx.started, 1, 0)) {
+		quadd_hrt_stop();
+		quadd_power_clk_stop();
+
 		preempt_disable();
 
 		ctx.comm->reset();
@@ -158,9 +161,6 @@ static void stop(void)
 		tegra_profiler_unlock();
 
 		preempt_enable();
-
-		quadd_hrt_stop();
-		quadd_power_clk_stop();
 	}
 }
 
@@ -278,6 +278,11 @@ set_parameters(struct quadd_parameters *p)
 		extra & QUADD_PARAM_EXTRA_SAMPLING ? 1 : 0;
 	ctx.mode_is_trace_all = p->trace_all_tasks;
 
+	pr_info("flag: sampling: %s\n",
+		ctx.mode_is_sampling ? "yes" : "no");
+	pr_info("flag: trace all: %s\n",
+		ctx.mode_is_trace_all ? "yes" : "no");
+
 	if (ctx.mode_is_trace_all && !capable(CAP_SYS_ADMIN)) {
 		pr_err("error: trace all tasks mode is allowed only for root\n");
 		return -EACCES;
@@ -374,8 +379,6 @@ set_parameters(struct quadd_parameters *p)
 		err = quadd_unwind_start(task);
 		if (err)
 			return err;
-	} else {
-		pr_info("Sampling is disabled\n");
 	}
 
 	pr_info("New parameters have been applied\n");

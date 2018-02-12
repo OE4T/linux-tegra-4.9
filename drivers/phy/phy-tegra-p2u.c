@@ -288,7 +288,7 @@ static irqreturn_t tegra_p2u_irq_handler(int irq, void *arg)
 		break;
 
 	default:
-		dev_err(phy->dev, "Rx_Margin_intr : INVALID\n");
+		dev_err(phy->dev, "INVALID Rx_Margin_intr : 0x%x\n", val);
 		break;
 	}
 

@@ -681,6 +681,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 					dev_err(card->dev,
 					"Failed to set cpu dai bclk ratio for %s\n",
 					rtd->dai_link->name);
+					return err;
 				}
 
 				/* set TDM slot mask */
@@ -693,6 +694,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 						dev_err(card->dev,
 						"%s cpu DAI slot mask not set\n",
 						rtd->cpu_dai->name);
+						return err;
 					}
 				}
 			}
@@ -767,7 +769,9 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
 
 	/* TODO: should we pass here clk_rate ? */
-	tegra_machine_set_params(card, machine, rate, channels, formats);
+	err = tegra_machine_set_params(card, machine, rate, channels, formats);
+	if (err < 0)
+		return err;
 
 	rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
 	if (rtd) {

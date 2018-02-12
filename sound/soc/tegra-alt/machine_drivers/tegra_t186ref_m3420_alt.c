@@ -145,14 +145,18 @@ static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
 	stream = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	stream->rate_min = params_rate(params);
 
-	bclk_ratio = tegra_machine_get_bclk_ratio_t18x(rtd);
-	if (bclk_ratio >= 0) {
-		err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
-		if (err < 0) {
-			dev_err(card->dev, "Failed to set bclk ratio for %s\n",
-				rtd->dai_link->name);
-			return err;
-		}
+	err = tegra_machine_get_bclk_ratio_t18x(rtd, &bclk_ratio);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to get bclk ratio for %s\n",
+			rtd->dai_link->name);
+		return err;
+	}
+
+	err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to set bclk ratio for %s\n",
+			rtd->dai_link->name);
+		return err;
 	}
 
 	/*

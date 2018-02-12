@@ -196,6 +196,7 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *dai_params;
+	unsigned int bclk_ratio;
 	int mclk, clk_out_rate;
 	int err;
 
@@ -227,8 +228,13 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai,
-		tegra_machine_get_bclk_ratio_t18x(rtd));
+	err = tegra_machine_get_bclk_ratio_t18x(rtd, &bclk_ratio);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to get cpu dai bclk ratio\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
 	if (err < 0) {
 		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
 		return err;
@@ -253,6 +259,7 @@ static int tegra_t186ref_init(struct snd_soc_pcm_runtime *rtd)
 	struct device_node *parentnp = np->parent;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int tx_mask = (1<<8) - 1, rx_mask = (1<<8) - 1;
+	unsigned int bclk_ratio;
 	AD1937_EXTRA_INFO ad1937_info;
 	int err;
 
@@ -302,8 +309,13 @@ static int tegra_t186ref_init(struct snd_soc_pcm_runtime *rtd)
 		configure_max_codec = 0;
 	}
 
-	err = snd_soc_dai_set_bclk_ratio(i2s_dai,
-			tegra_machine_get_bclk_ratio_t18x(rtd));
+	err = tegra_machine_get_bclk_ratio_t18x(rtd, &bclk_ratio);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to get cpu dai bclk ratio\n");
+		return err;
+	}
+
+	err = snd_soc_dai_set_bclk_ratio(i2s_dai, bclk_ratio);
 	if (err < 0) {
 		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
 		return err;

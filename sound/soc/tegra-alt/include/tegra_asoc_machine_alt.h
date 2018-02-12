@@ -393,8 +393,8 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 
 unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name);
 
-unsigned int tegra_machine_get_bclk_ratio(
-	struct snd_soc_pcm_runtime *rtd);
+int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
+				 unsigned int *ratio);
 unsigned int tegra_machine_get_rx_mask(
 	struct snd_soc_pcm_runtime *rtd);
 unsigned int tegra_machine_get_tx_mask(
@@ -429,8 +429,8 @@ int tegra_machine_append_codec_conf_t18x(struct snd_soc_codec_conf *conf,
 
 unsigned int tegra_machine_get_codec_dai_link_idx_t18x(const char *codec_name);
 
-unsigned int tegra_machine_get_bclk_ratio_t18x(
-	struct snd_soc_pcm_runtime *rtd);
+int tegra_machine_get_bclk_ratio_t18x(struct snd_soc_pcm_runtime *rtd,
+				      unsigned int *ratio);
 unsigned int tegra_machine_get_rx_mask_t18x(
 	struct snd_soc_pcm_runtime *rtd);
 unsigned int tegra_machine_get_tx_mask_t18x(

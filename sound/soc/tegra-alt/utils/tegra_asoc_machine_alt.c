@@ -3254,28 +3254,23 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_codec_dai_link_idx);
 
-unsigned int tegra_machine_get_bclk_ratio(
-	struct snd_soc_pcm_runtime *rtd)
+int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
+				 unsigned int *ratio)
 {
 	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
 	char *codec_name = (char *)codec_dai_link->name;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx(codec_name);
+	unsigned int idx = tegra_machine_get_codec_dai_link_idx(codec_name);
 
-	if (idx == -EINVAL)
-		goto err;
-
-	if (!bclk_ratio)
-		goto err;
+	if (idx == -EINVAL || !ratio || !bclk_ratio)
+		return -EINVAL;
 
 	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0);
 
-	return bclk_ratio[idx];
+	*ratio = bclk_ratio[idx];
 
-err:
-	return -EINVAL;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio);
 
@@ -3513,8 +3508,8 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_codec_dai_link_idx_t18x);
 
-unsigned int tegra_machine_get_bclk_ratio_t18x(
-	struct snd_soc_pcm_runtime *rtd)
+int tegra_machine_get_bclk_ratio_t18x(struct snd_soc_pcm_runtime *rtd,
+				      unsigned int *ratio)
 {
 	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
 	char *codec_name = (char *)codec_dai_link->name;
@@ -3523,18 +3518,14 @@ unsigned int tegra_machine_get_bclk_ratio_t18x(
 	unsigned int *bclk_ratio_t18x =
 		tegra_machine_get_bclk_ratio_array();
 
-	if (idx == -EINVAL)
-		goto err;
-
-	if (!bclk_ratio_t18x)
-		goto err;
+	if (idx == -EINVAL || !ratio || !bclk_ratio_t18x)
+		return -EINVAL;
 
 	idx = idx - tegra_machine_get_num_links_t18x();
 
-	return bclk_ratio_t18x[idx];
+	*ratio = bclk_ratio_t18x[idx];
 
-err:
-	return -EINVAL;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio_t18x);
 

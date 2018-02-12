@@ -92,7 +92,7 @@ struct tegra_machine_soc_data {
 		write_idle_bias_off_state;
 
 	/* call back APIs */
-	unsigned int (*get_bclk_ratio)(struct snd_soc_pcm_runtime *rtd);
+	int (*get_bclk_ratio)(struct snd_soc_pcm_runtime *, unsigned int *);
 	struct snd_soc_dai_link *(*get_dai_link)(void);
 	struct snd_soc_codec_conf *(*get_codec_conf)(void);
 	int (*append_dai_link)(struct snd_soc_dai_link *link,
@@ -668,15 +668,18 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 				dai_params->formats = formats;
 
 				fmt = rtd->dai_link->dai_fmt;
-				bclk_ratio =
-					machine->soc_data->get_bclk_ratio(rtd);
 
-				if (bclk_ratio >= 0) {
-					err = snd_soc_dai_set_bclk_ratio(
-							rtd->cpu_dai,
-							bclk_ratio);
+				err = machine->soc_data->get_bclk_ratio(rtd,
+								&bclk_ratio);
+				if (err < 0) {
+					dev_err(card->dev,
+					"Failed to get bclk ratio for %s\n",
+					rtd->dai_link->name);
+					return err;
 				}
 
+				err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai,
+								 bclk_ratio);
 				if (err < 0) {
 					dev_err(card->dev,
 					"Failed to set cpu dai bclk ratio for %s\n",

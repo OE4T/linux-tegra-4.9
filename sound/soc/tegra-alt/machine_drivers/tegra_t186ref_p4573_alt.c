@@ -121,7 +121,7 @@ static int tegra186_hw_params(struct snd_pcm_substream *substream,
 	int channels = params_channels(params);
 	int formats = params_format(params);
 	int rate = params_rate(params);
-	unsigned int clk_out_rate;
+	unsigned int clk_out_rate, bclk_ratio;
 	int ret, i;
 
 	ret = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, rate, 0, 0);
@@ -178,8 +178,14 @@ static int tegra186_hw_params(struct snd_pcm_substream *substream,
 			return ret;
 		}
 
-		ret = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai,
-				tegra_machine_get_bclk_ratio_t18x(rtd));
+		ret = tegra_machine_get_bclk_ratio_t18x(rtd, &bclk_ratio);
+		if (ret) {
+			dev_err(card->dev, "Failed to get cpu dai bclk ratio for %s\n",
+					rtd->dai_link->name);
+			return ret;
+		}
+
+		ret = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
 		if (ret) {
 			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
 					rtd->dai_link->name);

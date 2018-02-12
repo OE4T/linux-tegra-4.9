@@ -298,7 +298,7 @@ static int tegra_t210ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 		(struct device_node *)rtd->dai_link->cpu_of_node;
 	struct device_node *parentnp = np->parent;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
-	unsigned int mclk, clk_out_rate, srate;
+	unsigned int mclk, clk_out_rate, srate, bclk_ratio;
 	unsigned int tx_mask = (1 << 8) - 1, rx_mask = (1 << 8) - 1;
 	int err = 0;
 
@@ -327,9 +327,14 @@ static int tegra_t210ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 		}
 	}
 
+	err = tegra_machine_get_bclk_ratio(rtd, &bclk_ratio);
+	if (err < 0) {
+		dev_err(card->dev, "Failed to get cpu dai bclk ratio\n");
+		return err;
+	}
+
 	/* set blck ratio */
-	err = snd_soc_dai_set_bclk_ratio(cpu_dai,
-			tegra_machine_get_bclk_ratio(rtd));
+	err = snd_soc_dai_set_bclk_ratio(cpu_dai, bclk_ratio);
 	if (err < 0) {
 		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
 		return err;

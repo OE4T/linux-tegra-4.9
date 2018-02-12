@@ -76,6 +76,7 @@ struct tegra_p2u {
 	struct work_struct	rx_margin_work;
 	u32			next_state;
 	spinlock_t		next_state_lock; /* lock for next_state */
+	bool			enable_lm;
 };
 
 struct margin_ctrl {
@@ -96,11 +97,13 @@ static int tegra_p2u_power_on(struct phy *x)
 	u32 val;
 	struct tegra_p2u *phy = phy_get_drvdata(x);
 
-	val = P2U_RX_MARGIN_SW_INT_EN_READINESS |
-	      P2U_RX_MARGIN_SW_INT_EN_MARGIN_START |
-	      P2U_RX_MARGIN_SW_INT_EN_MARGIN_CHANGE |
-	      P2U_RX_MARGIN_SW_INT_EN_MARGIN_STOP;
-	writel(val, phy->base + P2U_RX_MARGIN_SW_INT_EN);
+	if (phy->enable_lm) {
+		val = P2U_RX_MARGIN_SW_INT_EN_READINESS |
+		      P2U_RX_MARGIN_SW_INT_EN_MARGIN_START |
+		      P2U_RX_MARGIN_SW_INT_EN_MARGIN_CHANGE |
+		      P2U_RX_MARGIN_SW_INT_EN_MARGIN_STOP;
+		writel(val, phy->base + P2U_RX_MARGIN_SW_INT_EN);
+	}
 
 	val = readl(phy->base + P2U_PERIODIC_EQ_CTRL_GEN3);
 	val |= P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN;
@@ -334,6 +337,9 @@ static int tegra_p2u_probe(struct platform_device *pdev)
 		return ret;
 	}
 	phy->id = val;
+
+	phy->enable_lm = of_property_read_bool(dev->of_node,
+					       "nvidia,enable-lm");
 
 	spin_lock_init(&phy->next_state_lock);
 	INIT_WORK(&phy->rx_margin_work, rx_margin_work_fn);

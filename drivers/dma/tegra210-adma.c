@@ -733,7 +733,7 @@ static unsigned int tegra_adma_get_residue(struct tegra_adma_chan *tdc)
 	/* get transferred data count */
 	tc_transferred = ch_regs->tc - tc_remain;
 
-	tot_xfer = (tdc->tx_buf_count * ch_regs->tc) + tc_transferred;
+	tot_xfer = (uint64_t)(tdc->tx_buf_count * ch_regs->tc) + tc_transferred;
 	tot_xfer %= desc->buf_len;
 
 	return desc->buf_len - tot_xfer;

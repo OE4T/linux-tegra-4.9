@@ -37,9 +37,6 @@ obj-y += powergate/
 
 obj-$(CONFIG_TEGRA_THERMAL_THROTTLE)        += tegra_throttle.o
 
-obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
-obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
-
 obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o
 
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += central_actmon/
@@ -57,8 +54,6 @@ asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
 
 
 obj-y += bond_out.o
-
-obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL)      += cluster-control.o
 
 obj-$(CONFIG_TEGRA_IVC)			+= tegra-ivc.o
 

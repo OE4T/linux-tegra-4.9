@@ -993,7 +993,7 @@ static int dma_read(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 		}
 		dev_info(dev, "DMA read. Size: %u bytes, Time diff: %lld ns\n",
 			 tx->size, ktime_to_ns(pcie->rd_end_time) -
-			 ktime_to_ns(pcie->rd_end_time));
+			 ktime_to_ns(pcie->rd_start_time));
 	} else {
 		/* wait for completion or timeout */
 		ret = wait_for_completion_timeout(&pcie->rd_cpl[tx->channel],

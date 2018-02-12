@@ -84,6 +84,9 @@
 					*
 					* == Signal properties ==
 					*
+					* phy_mode = "";
+					* PHY mode used by the MIPI lanes for this device
+					*
 					* tegra_sinterface = "";
 					* CSI Serial interface connected to tegra
 					* Incase of virtual HW devices, use virtual
@@ -149,10 +152,11 @@
 					mode0 { /*IMX318_MODE_5488X4112_30FPS*/
 						mclk_khz = "24000";
 						num_lanes = "3";
+						phy_mode = "CPHY";
 						tegra_sinterface = "serial_a";
 						discontinuous_clk = "no";
 						dpcm_enable = "false";
-						cil_settletime = "0"; /* TODO check this, send 8 to reg for default 15 cycles*/
+						cil_settletime = "20";
 
 						active_w = "5488";
 						active_h = "4112";

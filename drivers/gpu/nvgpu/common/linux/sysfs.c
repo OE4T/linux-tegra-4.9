@@ -28,6 +28,7 @@
 #include "platform_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gv11b/gr_gv11b.h"
 
 #define PTIMER_FP_FACTOR			1000000
 
@@ -990,6 +991,36 @@ static ssize_t gfxp_wfi_timeout_count_store(struct device *dev,
 		if (err)
 			return err;
 	}
+	return count;
+}
+
+static ssize_t gfxp_wfi_timeout_unit_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct gr_gk20a *gr = &g->gr;
+	int err = -1;
+
+	if (count > 0 && buf[0] == 's')
+		/* sysclk */
+		gr->gfxp_wfi_timeout_unit = GFXP_WFI_TIMEOUT_UNIT_SYSCLK;
+	else
+		/* usec */
+		gr->gfxp_wfi_timeout_unit = GFXP_WFI_TIMEOUT_UNIT_USEC;
+
+	if (g->ops.gr.init_preemption_state && g->power_on) {
+		err = gk20a_busy(g);
+		if (err)
+			return err;
+
+		err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.init_preemption_state(g));
+
+		gk20a_idle(g);
+
+		if (err)
+			return err;
+	}
 
 	return count;
 }
@@ -1004,9 +1035,23 @@ static ssize_t gfxp_wfi_timeout_count_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", val);
 }
 
+static ssize_t gfxp_wfi_timeout_unit_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct gr_gk20a *gr = &g->gr;
+
+	if (gr->gfxp_wfi_timeout_unit == GFXP_WFI_TIMEOUT_UNIT_USEC)
+		return snprintf(buf, PAGE_SIZE, "usec\n");
+	else
+		return snprintf(buf, PAGE_SIZE, "sysclk\n");
+}
+
 static DEVICE_ATTR(gfxp_wfi_timeout_count, (S_IRWXU|S_IRGRP|S_IROTH),
 		gfxp_wfi_timeout_count_read, gfxp_wfi_timeout_count_store);
 
+static DEVICE_ATTR(gfxp_wfi_timeout_unit, (S_IRWXU|S_IRGRP|S_IROTH),
+		gfxp_wfi_timeout_unit_read, gfxp_wfi_timeout_unit_store);
 
 void nvgpu_remove_sysfs(struct device *dev)
 {
@@ -1045,6 +1090,7 @@ void nvgpu_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_czf_bypass);
 	device_remove_file(dev, &dev_attr_pd_max_batches);
 	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_count);
+	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
@@ -1094,6 +1140,7 @@ int nvgpu_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_czf_bypass);
 	error |= device_create_file(dev, &dev_attr_pd_max_batches);
 	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_count);
+	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;

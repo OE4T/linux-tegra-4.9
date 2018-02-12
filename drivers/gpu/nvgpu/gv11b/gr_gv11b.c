@@ -56,7 +56,7 @@
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
-#define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 1000
+#define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 100
 
 /* ecc scrubbing will done in 1 pri read cycle,but for safety used 10 retries */
 #define ECC_SCRUBBING_TIMEOUT_MAX 1000
@@ -1661,6 +1661,11 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 				gr_gpcs_ppcs_cbm_beta_cb_ctrl_r(),
 				gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(
 					cbes_reserve),
+				true);
+
+		gr_gk20a_ctx_patch_write(g, gr_ctx,
+				gr_fe_gfxp_wfi_timeout_r(),
+				g->gr.gfxp_wfi_timeout_count,
 				true);
 
 		gr_gk20a_ctx_patch_write_end(g, gr_ctx, true);
@@ -4099,17 +4104,19 @@ int gr_gv11b_init_preemption_state(struct gk20a *g)
 {
 	u32 debug_2;
 	struct gr_gk20a *gr = &g->gr;
+	u32 unit;
 
 	nvgpu_log_fn(g, " ");
 
-	gk20a_writel(g, gr_fe_gfxp_wfi_timeout_r(),
-			gr_fe_gfxp_wfi_timeout_count_f(
-			gr->gfxp_wfi_timeout_count));
+	if (gr->gfxp_wfi_timeout_unit == GFXP_WFI_TIMEOUT_UNIT_USEC)
+		unit = gr_debug_2_gfxp_wfi_timeout_unit_usec_f();
+	else
+		unit = gr_debug_2_gfxp_wfi_timeout_unit_sysclk_f();
 
 	debug_2 = gk20a_readl(g, gr_debug_2_r());
 	debug_2 = set_field(debug_2,
-			gr_debug_2_gfxp_wfi_timeout_unit_m(),
-			gr_debug_2_gfxp_wfi_timeout_unit_usec_f());
+		gr_debug_2_gfxp_wfi_timeout_unit_m(),
+		unit);
 	gk20a_writel(g, gr_debug_2_r(), debug_2);
 
 	return 0;
@@ -4117,14 +4124,18 @@ int gr_gv11b_init_preemption_state(struct gk20a *g)
 void gr_gv11b_init_gfxp_wfi_timeout_count(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
-
+	gr->gfxp_wfi_timeout_unit = GFXP_WFI_TIMEOUT_UNIT_USEC;
 	gr->gfxp_wfi_timeout_count = GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT;
 }
 
 unsigned long gr_gv11b_get_max_gfxp_wfi_timeout_count(struct gk20a *g)
 {
-	/* 100 msec in usec count */
-	return (100 * 1000UL);
+	if (g->gr.gfxp_wfi_timeout_unit == GFXP_WFI_TIMEOUT_UNIT_USEC)
+		/* 100 msec in usec count */
+		return (100UL * 1000UL);
+	else
+		/* 100 msec for 1GHz clock */
+		return (100UL * 1000UL * 1000UL);
 }
 
 static int gr_gv11b_ecc_scrub_is_done(struct gk20a *g,

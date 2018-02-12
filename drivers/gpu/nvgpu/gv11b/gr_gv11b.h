@@ -34,6 +34,9 @@
 #define ZBC_STENCIL_CLEAR_FMT_INVAILD     0
 #define ZBC_STENCIL_CLEAR_FMT_U8          1
 
+#define GFXP_WFI_TIMEOUT_UNIT_SYSCLK      0
+#define GFXP_WFI_TIMEOUT_UNIT_USEC        1
+
 struct gk20a;
 struct gr_gk20a;
 struct zbc_entry;

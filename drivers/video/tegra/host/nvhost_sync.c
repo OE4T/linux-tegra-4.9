@@ -348,7 +348,11 @@ struct sync_fence *nvhost_sync_fdget(int fd)
 		return fence;
 
 	for (i = 0; i < fence->num_fences; i++) {
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+		struct dma_fence *pt = fence->cbs[i].sync_pt;
+#else
 		struct fence *pt = fence->cbs[i].sync_pt;
+#endif
 		struct sync_pt *spt = sync_pt_from_fence(pt);
 		struct sync_timeline *t;
 

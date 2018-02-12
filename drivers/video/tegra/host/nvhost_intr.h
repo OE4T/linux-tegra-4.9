@@ -26,6 +26,10 @@
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+#include <linux/wait.h>
+#endif
 
 #include "nvhost_ktime.h"
 

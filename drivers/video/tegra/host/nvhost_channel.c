@@ -31,6 +31,10 @@
 #include <linux/delay.h>
 #include <linux/nvhost.h>
 #include <linux/slab.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+#include <linux/refcount.h>
+#endif
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
@@ -441,8 +445,13 @@ EXPORT_SYMBOL(nvhost_channel_submit);
 void nvhost_getchannel(struct nvhost_channel *ch)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+	trace_nvhost_getchannel(pdata->pdev->name,
+				refcount_read(&ch->refcount.refcount), ch->chid);
+#else
 	trace_nvhost_getchannel(pdata->pdev->name,
 				atomic_read(&ch->refcount.refcount), ch->chid);
+#endif
 	kref_get(&ch->refcount);
 }
 
@@ -451,6 +460,17 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+	int i;
+
+	trace_nvhost_putchannel(pdata->pdev->name,
+				refcount_read(&ch->refcount.refcount), ch->chid);
+
+	mutex_lock(&host->chlist_mutex);
+	for (i = 0; i < cnt; i++)
+		kref_put(&ch->refcount, nvhost_channel_unmap_locked);
+	mutex_unlock(&host->chlist_mutex);
+#else
 	trace_nvhost_putchannel(pdata->pdev->name,
 				atomic_read(&ch->refcount.refcount), ch->chid);
 
@@ -468,6 +488,7 @@ void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 	mutex_lock(&host->chlist_mutex);
 	kref_sub(&ch->refcount, cnt, nvhost_channel_unmap_locked);
 	mutex_unlock(&host->chlist_mutex);
+#endif
 }
 EXPORT_SYMBOL(nvhost_putchannel);
 

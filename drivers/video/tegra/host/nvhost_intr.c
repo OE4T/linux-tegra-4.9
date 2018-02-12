@@ -464,7 +464,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 void *nvhost_intr_alloc_waiter(void)
 {
 	return kzalloc(sizeof(struct nvhost_waitlist),
-			GFP_KERNEL|__GFP_REPEAT);
+			GFP_KERNEL);
 }
 
 static int __nvhost_intr_register_notifier(struct platform_device *pdev,
@@ -481,13 +481,13 @@ static int __nvhost_intr_register_notifier(struct platform_device *pdev,
 	if (!callback)
 		return -EINVAL;
 
-	waiter = kzalloc(sizeof(*waiter), GFP_KERNEL | __GFP_REPEAT);
+	waiter = kzalloc(sizeof(*waiter), GFP_KERNEL);
 	if (!waiter) {
 		nvhost_err(&pdev->dev, "failed to allocate waiter");
 		err = -ENOMEM;
 		goto err_alloc_waiter;
 	}
-	notifier = kzalloc(sizeof(*notifier), GFP_KERNEL | __GFP_REPEAT);
+	notifier = kzalloc(sizeof(*notifier), GFP_KERNEL);
 	if (!notifier) {
 		nvhost_err(&pdev->dev, "failed to allocate notifier");
 		err = -ENOMEM;

@@ -184,6 +184,22 @@ static inline u32 gr_exception_sked_m(void)
 {
 	return 0x1U << 8U;
 }
+static inline u32 gr_exception_pd_m(void)
+{
+	return 0x1U << 2U;
+}
+static inline u32 gr_exception_scc_m(void)
+{
+	return 0x1U << 3U;
+}
+static inline u32 gr_exception_ssync_m(void)
+{
+	return 0x1U << 5U;
+}
+static inline u32 gr_exception_mme_m(void)
+{
+	return 0x1U << 7U;
+}
 static inline u32 gr_exception1_r(void)
 {
 	return 0x00400118U;
@@ -231,6 +247,46 @@ static inline u32 gr_exception_en_ds_m(void)
 static inline u32 gr_exception_en_ds_enabled_f(void)
 {
 	return 0x10U;
+}
+static inline u32 gr_exception_en_pd_m(void)
+{
+	return 0x1U << 2U;
+}
+static inline u32 gr_exception_en_pd_enabled_f(void)
+{
+	return 0x4U;
+}
+static inline u32 gr_exception_en_scc_m(void)
+{
+	return 0x1U << 3U;
+}
+static inline u32 gr_exception_en_scc_enabled_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_exception_en_ssync_m(void)
+{
+	return 0x1U << 5U;
+}
+static inline u32 gr_exception_en_ssync_enabled_f(void)
+{
+	return 0x20U;
+}
+static inline u32 gr_exception_en_mme_m(void)
+{
+	return 0x1U << 7U;
+}
+static inline u32 gr_exception_en_mme_enabled_f(void)
+{
+	return 0x80U;
+}
+static inline u32 gr_exception_en_sked_m(void)
+{
+	return 0x1U << 8U;
+}
+static inline u32 gr_exception_en_sked_enabled_f(void)
+{
+	return 0x100U;
 }
 static inline u32 gr_exception1_en_r(void)
 {
@@ -872,6 +928,10 @@ static inline u32 gr_fe_hww_esr_en_enable_f(void)
 {
 	return 0x80000000U;
 }
+static inline u32 gr_fe_hww_esr_info_r(void)
+{
+	return 0x004041b0U;
+}
 static inline u32 gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(void)
 {
 	return 0x00419eacU;
@@ -999,6 +1059,10 @@ static inline u32 gr_mme_hww_esr_reset_active_f(void)
 static inline u32 gr_mme_hww_esr_en_enable_f(void)
 {
 	return 0x80000000U;
+}
+static inline u32 gr_mme_hww_esr_info_r(void)
+{
+	return 0x00404494U;
 }
 static inline u32 gr_memfmt_hww_esr_r(void)
 {
@@ -2369,6 +2433,18 @@ static inline u32 gr_scc_hww_esr_reset_active_f(void)
 	return 0x40000000U;
 }
 static inline u32 gr_scc_hww_esr_en_enable_f(void)
+{
+	return 0x80000000U;
+}
+static inline u32 gr_ssync_hww_esr_r(void)
+{
+	return 0x00405a14U;
+}
+static inline u32 gr_ssync_hww_esr_reset_active_f(void)
+{
+	return 0x40000000U;
+}
+static inline u32 gr_ssync_hww_esr_en_enable_f(void)
 {
 	return 0x80000000U;
 }

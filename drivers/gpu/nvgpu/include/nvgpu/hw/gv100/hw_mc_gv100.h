@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -108,6 +108,10 @@ static inline u32 mc_intr_pbus_pending_f(void)
 {
 	return 0x10000000U;
 }
+static inline u32 mc_intr_nvlink_pending_f(void)
+{
+	return 0x400000U;
+}
 static inline u32 mc_intr_en_r(u32 i)
 {
 	return 0x00000140U + i*4U;
@@ -203,6 +207,22 @@ static inline u32 mc_enable_nvdec_disabled_v(void)
 static inline u32 mc_enable_nvdec_enabled_f(void)
 {
 	return 0x8000U;
+}
+static inline u32 mc_enable_nvlink_disabled_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 mc_enable_nvlink_disabled_f(void)
+{
+	return 0x0U;
+}
+static inline u32 mc_enable_nvlink_enabled_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 mc_enable_nvlink_enabled_f(void)
+{
+	return 0x2000000U;
 }
 static inline u32 mc_intr_ltc_r(void)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -127,6 +127,26 @@ static inline u32 ram_in_page_dir_base_fault_replay_gcc_w(void)
 static inline u32 ram_in_page_dir_base_fault_replay_gcc_true_f(void)
 {
 	return 0x20U;
+}
+static inline u32 ram_in_use_ver2_pt_format_f(u32 v)
+{
+	return (v & 0x1U) << 10U;
+}
+static inline u32 ram_in_use_ver2_pt_format_m(void)
+{
+	return 0x1U << 10U;
+}
+static inline u32 ram_in_use_ver2_pt_format_w(void)
+{
+	return 128U;
+}
+static inline u32 ram_in_use_ver2_pt_format_true_f(void)
+{
+	return 0x400U;
+}
+static inline u32 ram_in_use_ver2_pt_format_false_f(void)
+{
+	return 0x0U;
 }
 static inline u32 ram_in_big_page_size_f(u32 v)
 {

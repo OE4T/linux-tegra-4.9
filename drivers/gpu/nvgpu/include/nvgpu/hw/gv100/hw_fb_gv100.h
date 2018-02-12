@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -60,6 +60,82 @@ static inline u32 fb_fbhub_num_active_ltcs_r(void)
 {
 	return 0x00100800U;
 }
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_f(u32 v)
+{
+	return (v & 0xffU) << 16U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_m(void)
+{
+	return 0xffU << 16U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_v(u32 r)
+{
+	return (r >> 16U) & 0xffU;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_f(u32 v, u32 i)
+{
+	return (v & 0x1U) << (16U + i*1U);
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_m(u32 i)
+{
+	return 0x1U << (16U + i*1U);
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_v(u32 r, u32 i)
+{
+	return (r >> (16U + i*1U)) & 0x1U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer___size_1_v(void)
+{
+	return 0x00000008U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer___size_1_f(u32 i)
+{
+	return 0x0U << (32U + i*1U);
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_enabled_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_enabled_f(u32 i)
+{
+	return 0x1U << (32U + i*1U);
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_disabled_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_use_nvlink_peer_disabled_f(u32 i)
+{
+	return 0x0U << (32U + i*1U);
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_f(u32 v)
+{
+	return (v & 0x1U) << 25U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_m(void)
+{
+	return 0x1U << 25U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_v(u32 r)
+{
+	return (r >> 25U) & 0x1U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_use_read_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_use_read_f(void)
+{
+	return 0x0U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_fbhub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_f(void)
+{
+	return 0x2000000U;
+}
 static inline u32 fb_mmu_ctrl_r(void)
 {
 	return 0x00100c80U;
@@ -99,6 +175,178 @@ static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_true_f(void)
 static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_false_f(void)
 {
 	return 0x0U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_f(u32 v)
+{
+	return (v & 0x3U) << 24U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_m(void)
+{
+	return 0x3U << 24U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_v(u32 r)
+{
+	return (r >> 24U) & 0x3U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_l2_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_l2_f(void)
+{
+	return 0x0U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_atomic_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_atomic_f(void)
+{
+	return 0x1000000U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_rmw_v(void)
+{
+	return 0x00000002U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_rmw_f(void)
+{
+	return 0x2000000U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_power_v(void)
+{
+	return 0x00000003U;
+}
+static inline u32 fb_mmu_ctrl_atomic_capability_mode_power_f(void)
+{
+	return 0x3000000U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_r(void)
+{
+	return 0x001fac80U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_f(u32 v)
+{
+	return (v & 0x3U) << 24U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_m(void)
+{
+	return 0x3U << 24U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_v(u32 r)
+{
+	return (r >> 24U) & 0x3U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_l2_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_l2_f(void)
+{
+	return 0x0U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_atomic_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_atomic_f(void)
+{
+	return 0x1000000U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_rmw_v(void)
+{
+	return 0x00000002U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_rmw_f(void)
+{
+	return 0x2000000U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_power_v(void)
+{
+	return 0x00000003U;
+}
+static inline u32 fb_hsmmu_pri_mmu_ctrl_atomic_capability_mode_power_f(void)
+{
+	return 0x3000000U;
+}
+static inline u32 fb_hshub_num_active_ltcs_r(void)
+{
+	return 0x001fbc20U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_f(u32 v)
+{
+	return (v & 0xffU) << 16U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_m(void)
+{
+	return 0xffU << 16U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_v(u32 r)
+{
+	return (r >> 16U) & 0xffU;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_f(u32 v, u32 i)
+{
+	return (v & 0x1U) << (16U + i*1U);
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_m(u32 i)
+{
+	return 0x1U << (16U + i*1U);
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_v(u32 r, u32 i)
+{
+	return (r >> (16U + i*1U)) & 0x1U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer___size_1_v(void)
+{
+	return 0x00000008U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer___size_1_f(u32 i)
+{
+	return 0x0U << (32U + i*1U);
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_enabled_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_enabled_f(u32 i)
+{
+	return 0x1U << (32U + i*1U);
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_disabled_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_hshub_num_active_ltcs_use_nvlink_peer_disabled_f(u32 i)
+{
+	return 0x0U << (32U + i*1U);
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_f(u32 v)
+{
+	return (v & 0x1U) << 25U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_m(void)
+{
+	return 0x1U << 25U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_v(u32 r)
+{
+	return (r >> 25U) & 0x1U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_use_read_v(void)
+{
+	return 0x00000000U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_use_read_f(void)
+{
+	return 0x0U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_hshub_num_active_ltcs_hub_sys_atomic_mode_use_rmw_f(void)
+{
+	return 0x2000000U;
 }
 static inline u32 fb_priv_mmu_phy_secure_r(void)
 {
@@ -507,6 +755,30 @@ static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
 static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
 {
 	return 0x00000001U;
+}
+static inline u32 fb_niso_cfg1_r(void)
+{
+	return 0x00100c14U;
+}
+static inline u32 fb_niso_cfg1_sysmem_nvlink_f(u32 v)
+{
+	return (v & 0x1U) << 17U;
+}
+static inline u32 fb_niso_cfg1_sysmem_nvlink_m(void)
+{
+	return 0x1U << 17U;
+}
+static inline u32 fb_niso_cfg1_sysmem_nvlink_v(u32 r)
+{
+	return (r >> 17U) & 0x1U;
+}
+static inline u32 fb_niso_cfg1_sysmem_nvlink_enabled_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 fb_niso_cfg1_sysmem_nvlink_enabled_f(void)
+{
+	return 0x20000U;
 }
 static inline u32 fb_niso_flush_sysmem_addr_r(void)
 {
@@ -1504,8 +1776,196 @@ static inline u32 fb_mmu_priv_level_mask_r(void)
 {
 	return 0x00100cdcU;
 }
+static inline u32 fb_mmu_priv_level_mask_write_violation_f(u32 v)
+{
+	return (v & 0x1U) << 7U;
+}
 static inline u32 fb_mmu_priv_level_mask_write_violation_m(void)
 {
 	return 0x1U << 7U;
+}
+static inline u32 fb_mmu_priv_level_mask_write_violation_v(u32 r)
+{
+	return (r >> 7U) & 0x1U;
+}
+static inline u32 fb_hshub_config0_r(void)
+{
+	return 0x001fbc00U;
+}
+static inline u32 fb_hshub_config0_sysmem_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffffU) << 0U;
+}
+static inline u32 fb_hshub_config0_sysmem_nvlink_mask_m(void)
+{
+	return 0xffffU << 0U;
+}
+static inline u32 fb_hshub_config0_sysmem_nvlink_mask_v(u32 r)
+{
+	return (r >> 0U) & 0xffffU;
+}
+static inline u32 fb_hshub_config0_peer_pcie_mask_f(u32 v)
+{
+	return (v & 0xffffU) << 16U;
+}
+static inline u32 fb_hshub_config0_peer_pcie_mask_v(u32 r)
+{
+	return (r >> 16U) & 0xffffU;
+}
+static inline u32 fb_hshub_config1_r(void)
+{
+	return 0x001fbc04U;
+}
+static inline u32 fb_hshub_config1_peer_0_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 0U;
+}
+static inline u32 fb_hshub_config1_peer_0_nvlink_mask_v(u32 r)
+{
+	return (r >> 0U) & 0xffU;
+}
+static inline u32 fb_hshub_config1_peer_1_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 8U;
+}
+static inline u32 fb_hshub_config1_peer_1_nvlink_mask_v(u32 r)
+{
+	return (r >> 8U) & 0xffU;
+}
+static inline u32 fb_hshub_config1_peer_2_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 16U;
+}
+static inline u32 fb_hshub_config1_peer_2_nvlink_mask_v(u32 r)
+{
+	return (r >> 16U) & 0xffU;
+}
+static inline u32 fb_hshub_config1_peer_3_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 24U;
+}
+static inline u32 fb_hshub_config1_peer_3_nvlink_mask_v(u32 r)
+{
+	return (r >> 24U) & 0xffU;
+}
+static inline u32 fb_hshub_config2_r(void)
+{
+	return 0x001fbc08U;
+}
+static inline u32 fb_hshub_config2_peer_4_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 0U;
+}
+static inline u32 fb_hshub_config2_peer_4_nvlink_mask_v(u32 r)
+{
+	return (r >> 0U) & 0xffU;
+}
+static inline u32 fb_hshub_config2_peer_5_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 8U;
+}
+static inline u32 fb_hshub_config2_peer_5_nvlink_mask_v(u32 r)
+{
+	return (r >> 8U) & 0xffU;
+}
+static inline u32 fb_hshub_config2_peer_6_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 16U;
+}
+static inline u32 fb_hshub_config2_peer_6_nvlink_mask_v(u32 r)
+{
+	return (r >> 16U) & 0xffU;
+}
+static inline u32 fb_hshub_config2_peer_7_nvlink_mask_f(u32 v)
+{
+	return (v & 0xffU) << 24U;
+}
+static inline u32 fb_hshub_config2_peer_7_nvlink_mask_v(u32 r)
+{
+	return (r >> 24U) & 0xffU;
+}
+static inline u32 fb_hshub_config6_r(void)
+{
+	return 0x001fbc18U;
+}
+static inline u32 fb_hshub_config7_r(void)
+{
+	return 0x001fbc1cU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_0_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 0U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_0_physical_portmap_v(u32 r)
+{
+	return (r >> 0U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_1_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 4U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_1_physical_portmap_v(u32 r)
+{
+	return (r >> 4U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_2_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 8U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_2_physical_portmap_v(u32 r)
+{
+	return (r >> 8U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_3_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 12U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_3_physical_portmap_v(u32 r)
+{
+	return (r >> 12U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_4_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 16U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_4_physical_portmap_v(u32 r)
+{
+	return (r >> 16U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_5_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 20U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_5_physical_portmap_v(u32 r)
+{
+	return (r >> 20U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_6_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 24U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_6_physical_portmap_v(u32 r)
+{
+	return (r >> 24U) & 0xfU;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_7_physical_portmap_f(u32 v)
+{
+	return (v & 0xfU) << 28U;
+}
+static inline u32 fb_hshub_config7_nvlink_logical_7_physical_portmap_v(u32 r)
+{
+	return (r >> 28U) & 0xfU;
+}
+static inline u32 fb_hshub_nvl_cfg_priv_level_mask_r(void)
+{
+	return 0x001fbc50U;
+}
+static inline u32 fb_hshub_nvl_cfg_priv_level_mask_write_protection_f(u32 v)
+{
+	return (v & 0x7U) << 4U;
+}
+static inline u32 fb_hshub_nvl_cfg_priv_level_mask_write_protection_v(u32 r)
+{
+	return (r >> 4U) & 0x7U;
 }
 #endif

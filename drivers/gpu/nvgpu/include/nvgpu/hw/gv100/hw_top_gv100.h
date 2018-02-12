@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -168,6 +168,14 @@ static inline u32 top_device_info_type_enum_lce_f(void)
 {
 	return 0x4cU;
 }
+static inline u32 top_device_info_type_enum_ioctrl_v(void)
+{
+	return 0x00000012U;
+}
+static inline u32 top_device_info_type_enum_ioctrl_f(void)
+{
+	return 0x48U;
+}
 static inline u32 top_device_info_engine_v(u32 r)
 {
 	return (r >> 5U) & 0x1U;
@@ -200,6 +208,10 @@ static inline u32 top_device_info_entry_data_v(void)
 {
 	return 0x00000001U;
 }
+static inline u32 top_device_info_entry_engine_type_v(void)
+{
+	return 0x00000003U;
+}
 static inline u32 top_device_info_data_type_v(u32 r)
 {
 	return (r >> 30U) & 0x1U;
@@ -231,5 +243,93 @@ static inline u32 top_device_info_data_fault_id_v(u32 r)
 static inline u32 top_device_info_data_fault_id_valid_v(void)
 {
 	return 0x00000001U;
+}
+static inline u32 top_nvhsclk_ctrl_r(void)
+{
+	return 0x00022424U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_nvl_f(u32 v)
+{
+	return (v & 0x7U) << 0U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_nvl_m(void)
+{
+	return 0x7U << 0U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_nvl_v(u32 r)
+{
+	return (r >> 0U) & 0x7U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_pcie_f(u32 v)
+{
+	return (v & 0x1U) << 3U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_pcie_m(void)
+{
+	return 0x1U << 3U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_pcie_v(u32 r)
+{
+	return (r >> 3U) & 0x1U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_core_f(u32 v)
+{
+	return (v & 0x1U) << 4U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_core_m(void)
+{
+	return 0x1U << 4U;
+}
+static inline u32 top_nvhsclk_ctrl_e_clk_core_v(u32 r)
+{
+	return (r >> 4U) & 0x1U;
+}
+static inline u32 top_nvhsclk_ctrl_rfu_f(u32 v)
+{
+	return (v & 0xfU) << 5U;
+}
+static inline u32 top_nvhsclk_ctrl_rfu_m(void)
+{
+	return 0xfU << 5U;
+}
+static inline u32 top_nvhsclk_ctrl_rfu_v(u32 r)
+{
+	return (r >> 5U) & 0xfU;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_nvl_f(u32 v)
+{
+	return (v & 0x7U) << 10U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_nvl_m(void)
+{
+	return 0x7U << 10U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_nvl_v(u32 r)
+{
+	return (r >> 10U) & 0x7U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_pcie_f(u32 v)
+{
+	return (v & 0x1U) << 9U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_pcie_m(void)
+{
+	return 0x1U << 9U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_pcie_v(u32 r)
+{
+	return (r >> 9U) & 0x1U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_core_f(u32 v)
+{
+	return (v & 0x1U) << 13U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_core_m(void)
+{
+	return 0x1U << 13U;
+}
+static inline u32 top_nvhsclk_ctrl_swap_clk_core_v(u32 r)
+{
+	return (r >> 13U) & 0x1U;
 }
 #endif

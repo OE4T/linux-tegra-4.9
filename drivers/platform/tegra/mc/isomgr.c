@@ -307,11 +307,11 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 	if (unlikely(atomic_read(&cp->kref.refcount)))
 		goto fail_unlock;
 
-	if (isomgr.ops->isomgr_plat_register)
+	if (isomgr.ops->isomgr_plat_register) {
 		ret = isomgr.ops->isomgr_plat_register(dedi_bw, client);
-
-	if (!ret)
-		goto fail_unlock;
+		if (!ret)
+			goto fail_unlock;
+	}
 
 	purge_isomgr_client(cp);
 	cp->magic = ISOMGR_MAGIC;
@@ -423,12 +423,12 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 	if (unlikely(!cp->renegotiate && bw > cp->dedi_bw))
 		goto out;
 
-	if (isomgr.ops->isomgr_plat_reserve)
+	if (isomgr.ops->isomgr_plat_reserve) {
 		ret = isomgr.ops->isomgr_plat_reserve(cp, bw,
 				(enum tegra_iso_client)client);
-
-	if (!ret)
-		goto out;
+		if (!ret)
+			goto out;
+	}
 
 	/* Look up MC's min freq that could satisfy requested BW and LT */
 	mf = mc_min_freq(ubw, ult);
@@ -495,11 +495,11 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 
 	trace_tegra_isomgr_realize(handle, cname[client], "enter");
 
-	if (isomgr.ops->isomgr_plat_realize)
+	if (isomgr.ops->isomgr_plat_realize) {
 		ret = isomgr.ops->isomgr_plat_realize(cp);
-
-	if (!ret)
-		goto out;
+		if (!ret)
+			goto out;
+	}
 
 	dvfs_latency = (u32)cp->lto;
 	cp->realize = false;

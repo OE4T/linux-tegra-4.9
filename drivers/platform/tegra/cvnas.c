@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
@@ -86,6 +87,8 @@ struct cvnas_device {
 
 	struct reset_control *rst;
 	struct reset_control *rst_fcm;
+
+	bool virt;
 };
 
 static struct platform_device *cvnas_plat_dev;
@@ -275,6 +278,9 @@ static int nvcvnas_power_on(struct cvnas_device *cvnas_dev)
 		return 0;
 	}
 
+	if (cvnas_dev->virt)
+		return 0;
+
 	err = clk_prepare_enable(cvnas_dev->clk);
 	if (err < 0)
 		goto err_enable_clk;
@@ -328,6 +334,9 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 		pr_err("is not supported on this platform\n");
 		return 0;
 	}
+
+	if (cvnas_dev->virt)
+		return 0;
 
 	reset_control_assert(cvnas_dev->rst_fcm);
 
@@ -393,12 +402,19 @@ size_t nvcvnas_get_cvsram_size(void)
 }
 EXPORT_SYMBOL(nvcvnas_get_cvsram_size);
 
+static const struct of_device_id nvcvnas_of_ids[] = {
+	{ .compatible = "nvidia,tegra-cvnas", .data = (void *)false, },
+	{ .compatible = "nvidia,tegra-cvnas-hv", .data = (void *)true, },
+	{ }
+};
+
 static int nvcvnas_probe(struct platform_device *pdev)
 {
 	struct cvnas_device *cvnas_dev;
 	int ret;
 	u32 cvsram_slice_data[2];
 	u32 cvsram_reg_data[4];
+	const struct of_device_id *match;
 
 	cvnas_plat_dev = pdev;
 
@@ -406,6 +422,10 @@ static int nvcvnas_probe(struct platform_device *pdev)
 			sizeof(*cvnas_dev), GFP_KERNEL);
 	if (!cvnas_dev)
 		return -ENOMEM;
+
+	match = of_match_device(nvcvnas_of_ids, &pdev->dev);
+	if (match)
+		cvnas_dev->virt = (bool)match->data;
 
 	cvnas_dev->cvreg_iobase = of_iomap(pdev->dev.of_node, 0);
 	if (!cvnas_dev->cvreg_iobase) {
@@ -604,11 +624,6 @@ static const struct dev_pm_ops nvcvnas_pm_ops = {
 #else
 #define NVCVNAs_PM_OPS NULL
 #endif
-
-static const struct of_device_id nvcvnas_of_ids[] = {
-	{ .compatible = "nvidia,tegra-cvnas" },
-	{ }
-};
 
 static struct platform_driver nvcvnas_driver = {
 	.driver = {

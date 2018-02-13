@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,6 +43,7 @@
  */
 struct nv_pmu_boardobj {
 	u8 type;
+	u8 grp_idx;
 };
 
 /*
@@ -51,6 +52,7 @@ struct nv_pmu_boardobj {
  */
 struct nv_pmu_boardobj_query {
 	u8 type;
+	u8 grp_idx;
 };
 
 /*
@@ -61,7 +63,7 @@ struct nv_pmu_boardobjgrp_super {
 	u8 type;
 	u8 class_id;
 	u8 obj_slots;
-	u8 rsvd;
+	u8 flags;
 };
 
 struct nv_pmu_boardobjgrp {

@@ -107,12 +107,13 @@ struct pmu_init_msg_pmu_v1 {
 	u16 sw_managed_area_size;
 };
 
+#define PMU_QUEUE_COUNT_FOR_V5 4
 #define PMU_QUEUE_COUNT_FOR_V4 5
 #define PMU_QUEUE_COUNT_FOR_V3 3
 #define PMU_QUEUE_HPQ_IDX_FOR_V3 0
 #define PMU_QUEUE_LPQ_IDX_FOR_V3 1
 #define PMU_QUEUE_MSG_IDX_FOR_V3 2
-#define PMU_QUEUE_MSG_IDX_FOR_V4 4
+#define PMU_QUEUE_MSG_IDX_FOR_V5 3
 struct pmu_init_msg_pmu_v3 {
 	u8 msg_type;
 	u8  queue_index[PMU_QUEUE_COUNT_FOR_V3];
@@ -144,8 +145,8 @@ struct pmu_init_msg_pmu_v4 {
 struct pmu_init_msg_pmu_v5 {
 	u8 msg_type;
 	u8 flcn_status;
-	u8  queue_index[PMU_QUEUE_COUNT_FOR_V4];
-	u16 queue_size[PMU_QUEUE_COUNT_FOR_V4];
+	u8  queue_index[PMU_QUEUE_COUNT_FOR_V5];
+	u16 queue_size[PMU_QUEUE_COUNT_FOR_V5];
 	u16 queue_offset;
 
 	u16 sw_managed_area_offset;

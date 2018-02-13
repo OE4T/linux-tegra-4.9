@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -301,6 +301,7 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	pboardobjgrppmu->type = pboardobjgrp->type;
 	pboardobjgrppmu->class_id = pboardobjgrp->classid;
 	pboardobjgrppmu->obj_slots = BOARDOBJGRP_PMU_SLOTS_GET(pboardobjgrp);
+	pboardobjgrppmu->flags = 0;
 
 	gk20a_dbg_info(" Done");
 	return 0;

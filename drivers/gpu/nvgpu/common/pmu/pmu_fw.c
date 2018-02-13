@@ -37,8 +37,8 @@
 
 /* PMU F/W version */
 #define APP_VERSION_GV11B	23416738
-#define APP_VERSION_GV10X	23440730
-#define APP_VERSION_GP10X	21308030
+#define APP_VERSION_GV10X	23616379
+#define APP_VERSION_GP10X	22099494
 #define APP_VERSION_GP10B	20429989
 #define APP_VERSION_GM20B	20490253
 
@@ -897,7 +897,7 @@ static void get_pmu_init_msg_pmu_queue_params_v5(struct pmu_queue *queue,
 	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
 		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
 	else if (tmp_id == PMU_MESSAGE_QUEUE)
-		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V4;
+		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V5;
 	else
 		return;
 

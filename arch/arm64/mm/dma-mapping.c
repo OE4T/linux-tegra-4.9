@@ -59,6 +59,16 @@
 #define ENABLE_IOMMU_DMA_OPS_NOTIFIER 0
 #define ENABLE_IOMMU_SETUP_DMA_OPS 0
 
+#ifndef CONFIG_DMA_API_DEBUG
+char *__weak debug_dma_platformdata(struct device *dev)
+{
+	/* empty string by default */
+	static char buf[1];
+
+	return buf;
+}
+#endif
+
 static int dma_get_ioprot(unsigned long attrs,
 		enum dma_data_direction dir, bool coherent);
 

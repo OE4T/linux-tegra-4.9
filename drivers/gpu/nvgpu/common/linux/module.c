@@ -246,6 +246,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		INIT_WORK(&l->nonstall_fn_work, nvgpu_intr_nonstall_cb);
 	}
 
+	err = gk20a_detect_chip(g);
+	if (err)
+		return err;
+
 	err = gk20a_finalize_poweron(g);
 	set_user_nice(current, nice_value);
 	if (err)

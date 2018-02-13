@@ -68,7 +68,7 @@ void __gk20a_warn_on_no_regs(void)
 	WARN_ONCE(1, "Attempted access to GPU regs after unmapping!");
 }
 
-static int gk20a_detect_chip(struct gk20a *g)
+int gk20a_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_params *p = &g->params;
 
@@ -130,10 +130,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		return 0;
 
 	g->power_on = true;
-
-	err = gk20a_detect_chip(g);
-	if (err)
-		goto done;
 
 	/*
 	 * Before probing the GPU make sure the GPU's state is cleared. This is

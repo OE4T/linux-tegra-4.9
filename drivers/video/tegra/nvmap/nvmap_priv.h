@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -394,9 +394,6 @@ struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,
 					      unsigned long type,
 					      phys_addr_t *start);
-
-unsigned long nvmap_carveout_usage(struct nvmap_client *c,
-				   struct nvmap_heap_block *b);
 
 struct nvmap_carveout_node;
 

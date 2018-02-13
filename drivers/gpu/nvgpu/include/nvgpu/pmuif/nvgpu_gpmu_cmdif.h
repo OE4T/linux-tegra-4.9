@@ -38,6 +38,7 @@
 #include "gpmuiftherm.h"
 #include "gpmuifthermsensor.h"
 #include "gpmuifseq.h"
+#include "gpmu_super_surf_if.h"
 
 /*
  * Command requesting execution of the RPC (Remote Procedure Call)

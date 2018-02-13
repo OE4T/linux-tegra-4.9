@@ -241,11 +241,19 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
+	if (g->ops.pmu.alloc_super_surface) {
+		err = g->ops.pmu.alloc_super_surface(g,
+				&pmu->super_surface_buf,
+				sizeof(struct nv_pmu_super_surface));
+		if (err)
+			goto err_free_seq_buf;
+	}
+
 	err = nvgpu_dma_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
 			&pmu->trace_buf);
 	if (err) {
 		nvgpu_err(g, "failed to allocate pmu trace buffer\n");
-		goto err_free_seq_buf;
+		goto err_free_super_surface;
 	}
 
 	pmu->sw_ready = true;
@@ -253,6 +261,9 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 skip_init:
 	nvgpu_log_fn(g, "done");
 	return 0;
+ err_free_super_surface:
+ 	 if (g->ops.pmu.alloc_super_surface)
+ 		 nvgpu_dma_unmap_free(vm, &pmu->super_surface_buf);
  err_free_seq_buf:
 	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
  err_free_seq:
@@ -558,6 +569,23 @@ int nvgpu_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 	}
 
 	return 0;
+}
+
+int nvgpu_pmu_super_surface_alloc(struct gk20a *g,
+	struct nvgpu_mem *mem_surface, u32 size)
+{
+	struct vm_gk20a *vm = g->mm.pmu.vm;
+	int err = 0;
+
+	nvgpu_log_fn(g, " ");
+
+	err = nvgpu_dma_alloc_map(vm, size, mem_surface);
+	if (err) {
+		nvgpu_err(g, "failed to allocate pmu suffer surface\n");
+		err = -ENOMEM;
+	}
+
+	return err;
 }
 
 void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)

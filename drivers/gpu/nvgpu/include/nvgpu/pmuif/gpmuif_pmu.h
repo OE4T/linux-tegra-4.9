@@ -66,8 +66,8 @@ struct pmu_cmdline_args_v6 {
 	u8 raise_priv_sec;
 	struct flcn_mem_desc_v0 gc6_ctx;
 	struct flcn_mem_desc_v0 gc6_bsod_ctx;
-	struct flcn_mem_desc_v0 init_data_dma_info;
-	u32 dummy;
+	struct flcn_mem_desc_v0 super_surface;
+	u32 flags;
 };
 
 /* GPU ID */

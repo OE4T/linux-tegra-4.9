@@ -641,6 +641,8 @@ struct gpu_ops {
 			u32 size);
 		void (*set_pmu_cmdline_args_trace_dma_base)(
 				struct nvgpu_pmu *pmu);
+		void (*config_pmu_cmdline_args_super_surface)(
+				struct nvgpu_pmu *pmu);
 		void (*set_pmu_cmdline_args_trace_dma_idx)(
 			struct nvgpu_pmu *pmu, u32 idx);
 		void * (*get_pmu_cmdline_args_ptr)(struct nvgpu_pmu *pmu);
@@ -914,6 +916,8 @@ struct gpu_ops {
 		void (*update_lspmu_cmdline_args)(struct gk20a *g);
 		void (*setup_apertures)(struct gk20a *g);
 		u32 (*get_irqdest)(struct gk20a *g);
+		int (*alloc_super_surface)(struct gk20a *g,
+			struct nvgpu_mem *super_surface, u32 size);
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);

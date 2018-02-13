@@ -142,6 +142,16 @@ static void set_pmu_cmdline_args_falctracedmabase_v5(struct nvgpu_pmu *pmu)
 	nvgpu_pmu_surface_describe(g, &pmu->trace_buf, &pmu->args_v5.trace_buf);
 }
 
+static void config_pmu_cmdline_args_super_surface_v6(struct nvgpu_pmu *pmu)
+{
+	struct gk20a *g = gk20a_from_pmu(pmu);
+
+	if (g->ops.pmu.alloc_super_surface) {
+		nvgpu_pmu_surface_describe(g, &pmu->super_surface_buf,
+			&pmu->args_v6.super_surface);
+	}
+}
+
 static void set_pmu_cmdline_args_falctracedmaidx_v5(
 			struct nvgpu_pmu *pmu, u32 idx)
 {
@@ -1250,6 +1260,8 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 			set_pmu_cmdline_args_falctracedmabase_v5;
 		g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx =
 			set_pmu_cmdline_args_falctracedmaidx_v5;
+		g->ops.pmu_ver.config_pmu_cmdline_args_super_surface =
+			config_pmu_cmdline_args_super_surface_v6;
 		g->ops.pmu_ver.get_pmu_cmdline_args_ptr =
 			get_pmu_cmdline_args_ptr_v5;
 		g->ops.pmu_ver.get_pmu_allocation_struct_size =
@@ -1586,6 +1598,8 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 	nvgpu_dma_unmap_free(vm, &g->acr.hsbl_ucode);
 
 	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
+
+	nvgpu_dma_unmap_free(vm, &pmu->super_surface_buf);
 
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);

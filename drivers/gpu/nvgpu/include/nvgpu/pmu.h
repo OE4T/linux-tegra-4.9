@@ -306,6 +306,8 @@ struct nvgpu_pmu {
 	/* TBD: remove this if ZBC seq is fixed */
 	struct nvgpu_mem seq_buf;
 	struct nvgpu_mem trace_buf;
+	struct nvgpu_mem super_surface_buf;
+
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;
@@ -449,6 +451,8 @@ int nvgpu_init_pmu_support(struct gk20a *g);
 int nvgpu_pmu_destroy(struct gk20a *g);
 int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 	struct pmu_msg *msg);
+int nvgpu_pmu_super_surface_alloc(struct gk20a *g,
+	struct nvgpu_mem *mem_surface, u32 size);
 
 void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 	bool post_change_event);

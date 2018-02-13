@@ -25,6 +25,18 @@
 #include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlboardobj.h"
 
+/* board object group command id's. */
+#define NV_PMU_BOARDOBJGRP_CMD_SET 			0x00
+#define NV_PMU_BOARDOBJGRP_CMD_GET_STATUS	0x01
+
+#define NV_PMU_RPC_ID_CLK_BOARD_OBJ_GRP_CMD		0x00
+#define NV_PMU_RPC_ID_FAN_BOARD_OBJ_GRP_CMD		0x00
+#define NV_PMU_RPC_ID_PERF_BOARD_OBJ_GRP_CMD 	0x00
+#define NV_PMU_RPC_ID_PERF_CF_BOARD_OBJ_GRP_CMD	0x00
+#define NV_PMU_RPC_ID_PMGR_BOARD_OBJ_GRP_CMD   	0x00
+#define NV_PMU_RPC_ID_THERM_BOARD_OBJ_GRP_CMD  	0x00
+#define NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD   	0x00
+
 /*
  * Base structure describing a BOARDOBJ for communication between Kernel and
  * PMU.
@@ -200,5 +212,21 @@ struct nv_pmu_boardobj_msg {
 	NV_PMU_BOARDOBJ_GRP_GET_STATUS_MAKE(_eng, _class,                      \
 	CTRL_BOARDOBJGRP_E255_MAX_OBJECTS)
 
+/* RPC */
+
+/*
+ * structure that holds data used to
+ * execute BOARD_OBJ_GRP_CMD RPC.
+ */
+struct nv_pmu_rpc_struct_board_obj_grp_cmd
+{
+    /* [IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+    /* [IN] BOARDOBJGRP class IDs. */
+    u8  class_id;
+    /* [IN] Requested command ID (@ref NV_PMU_BOARDOBJGRP_CMD_***)*/
+    u8  command_id;
+    u32  scratch[1];
+};
 
 #endif /*  _GPMUIFBOARDOBJ_H_ */

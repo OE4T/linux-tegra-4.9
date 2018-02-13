@@ -1291,6 +1291,14 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 				get_pmu_init_msg_pmu_sw_mg_off_v5;
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
 				get_pmu_init_msg_pmu_sw_mg_size_v5;
+			g->ops.pmu_ver.boardobj.boardobjgrp_pmucmd_construct_impl =
+				boardobjgrp_pmucmd_construct_impl_v1;
+			g->ops.pmu_ver.boardobj.boardobjgrp_pmuset_impl =
+				boardobjgrp_pmuset_impl_v1;
+			g->ops.pmu_ver.boardobj.boardobjgrp_pmugetstatus_impl =
+				boardobjgrp_pmugetstatus_impl_v1;
+			g->ops.pmu_ver.boardobj.is_boardobjgrp_pmucmd_id_valid =
+				is_boardobjgrp_pmucmd_id_valid_v1;
 		} else {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
 				get_pmu_init_msg_pmu_queue_params_v4;
@@ -1442,6 +1450,14 @@ static int nvgpu_init_pmu_fw_ver_ops(struct nvgpu_pmu *pmu)
 			get_pmu_sequence_in_alloc_ptr_v3;
 		g->ops.pmu_ver.get_pmu_seq_out_a_ptr =
 			get_pmu_sequence_out_alloc_ptr_v3;
+		g->ops.pmu_ver.boardobj.boardobjgrp_pmucmd_construct_impl =
+			boardobjgrp_pmucmd_construct_impl;
+		g->ops.pmu_ver.boardobj.boardobjgrp_pmuset_impl =
+			boardobjgrp_pmuset_impl;
+		g->ops.pmu_ver.boardobj.boardobjgrp_pmugetstatus_impl =
+			boardobjgrp_pmugetstatus_impl;
+		g->ops.pmu_ver.boardobj.is_boardobjgrp_pmucmd_id_valid =
+			is_boardobjgrp_pmucmd_id_valid_v0;
 		break;
 	case APP_VERSION_GM20B:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =

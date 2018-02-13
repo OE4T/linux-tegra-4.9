@@ -731,6 +731,21 @@ struct gpu_ops {
 				u8 value);
 		void (*pg_cmd_eng_buf_load_set_dma_idx)(struct pmu_pg_cmd *pg,
 				u8 value);
+		struct {
+			u32 (*boardobjgrp_pmucmd_construct_impl)(struct gk20a *g,
+				struct boardobjgrp *pboardobjgrp,
+				struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
+				u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset,
+				u8 rpc_func_id);
+			u32 (*boardobjgrp_pmuset_impl)(struct gk20a *g,
+				struct boardobjgrp *pboardobjgrp);
+			u32 (*boardobjgrp_pmugetstatus_impl)(struct gk20a *g,
+				struct boardobjgrp *pboardobjgrp,
+				struct boardobjgrpmask *mask);
+			int (*is_boardobjgrp_pmucmd_id_valid)(struct gk20a *g,
+				struct boardobjgrp *pboardobjgrp,
+				struct boardobjgrp_pmu_cmd *cmd);
+		} boardobj;
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);

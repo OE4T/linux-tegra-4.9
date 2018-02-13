@@ -123,7 +123,9 @@ struct boardobjgrp_pmu_cmd {
 	u8   msgid;
 	u8   hdrsize;
 	u8   entrysize;
-	u16  fbsize;
+	u16 dmem_buffer_size;
+	u32 super_surface_offset;
+	u32 fbsize;
 	struct nv_pmu_boardobjgrp_super *buf;
 	struct pmu_surface surf;
 };
@@ -136,6 +138,7 @@ struct boardobjgrp_pmu {
 	u8   unitid;
 	u8   classid;
 	bool bset;
+	u8 rpc_func_id;
 	struct boardobjgrp_pmu_cmd set;
 	struct boardobjgrp_pmu_cmd getstatus;
 };
@@ -148,7 +151,7 @@ struct boardobjgrp_pmu {
 typedef u32 boardobjgrp_pmucmd_construct(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp,
 		struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
-		u8 hdrsize, u8 entrysize, u16 fbsize);
+		u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id);
 
 /*
 * Destroys BOARDOBJGRP PMU SW state.  CMD.
@@ -296,6 +299,7 @@ struct boardobjgrp {
 * are not supported.
 */
 #define BOARDOBJGRP_GRP_CMD_ID_INVALID                                255
+#define BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID                           255
 
 /*!
 * Helper macro to construct a BOARDOBJGRP's PMU SW state.
@@ -313,29 +317,33 @@ do {                                                                          \
 	NV_PMU_##_ENG##_BOARDOBJGRP_CLASS_ID_##_CLASS;                        \
 } while (0)
 
-#define BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(pgpu, pboardobjgrp, eng, ENG,   \
-	class, CLASS)                                                         \
-	boardobjgrp_pmucmd_construct_impl(                                    \
-	pgpu,                                              /* pgpu */         \
+#define BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp, eng, ENG, \
+	class, CLASS)                                                 \
+	g->ops.pmu_ver.boardobj.boardobjgrp_pmucmd_construct_impl(    \
+	g,                                              /* pgpu */    \
 	pboardobjgrp,                                      /* pboardobjgrp */ \
 	&((pboardobjgrp)->pmu.set),                        /* pcmd */         \
 	NV_PMU_##ENG##_CMD_ID_BOARDOBJ_GRP_SET,               /* id */        \
 	NV_PMU_##ENG##_MSG_ID_BOARDOBJ_GRP_SET,               /* msgid */     \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobjgrp_set_header_aligned), \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobj_set_union_aligned), \
-	(u32)sizeof(struct nv_pmu_##eng##_##class##_boardobj_grp_set))
+	(u32)sizeof(struct nv_pmu_##eng##_##class##_boardobj_grp_set),	\
+	(u32)offsetof(struct nv_pmu_super_surface, eng.class##_grp_set), \
+	NV_PMU_RPC_ID_##ENG##_BOARD_OBJ_GRP_CMD)
 
-#define BOARDOBJGRP_PMU_CMD_GRP_GET_STATUS_CONSTRUCT(pgpu, pboardobjgrp,      \
-	eng, ENG, class, CLASS)                                           \
-	boardobjgrp_pmucmd_construct_impl(                                    \
-	pgpu,                                              /* pGpu */         \
+#define BOARDOBJGRP_PMU_CMD_GRP_GET_STATUS_CONSTRUCT(g, pboardobjgrp, \
+	eng, ENG, class, CLASS)                                       \
+	g->ops.pmu_ver.boardobj.boardobjgrp_pmucmd_construct_impl(    \
+	g,                                              /* pGpu */    \
 	pboardobjgrp,                                      /* pBoardObjGrp */ \
 	&((pboardobjgrp)->pmu.getstatus),                  /* pCmd */         \
 	NV_PMU_##ENG##_CMD_ID_BOARDOBJ_GRP_GET_STATUS,        /* id */        \
 	NV_PMU_##ENG##_MSG_ID_BOARDOBJ_GRP_GET_STATUS,        /* msgid */     \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobjgrp_get_status_header_aligned), \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobj_get_status_union_aligned), \
-	(u32)sizeof(struct nv_pmu_##eng##_##class##_boardobj_grp_get_status))
+	(u32)sizeof(struct nv_pmu_##eng##_##class##_boardobj_grp_get_status),	\
+	(u32)offsetof(struct nv_pmu_super_surface, eng.class##_grp_get_status), \
+	NV_PMU_RPC_ID_##ENG##_BOARD_OBJ_GRP_CMD)
 
 /* ------------------------ Function Prototypes ----------------------------- */
 /* Constructor and destructor */
@@ -348,6 +356,8 @@ boardobjgrp_pmucmd_construct     boardobjgrp_pmucmd_construct_impl;
 boardobjgrp_pmucmd_destroy         boardobjgrp_pmucmd_destroy_impl;
 boardobjgrp_pmucmd_pmuinithandle   boardobjgrp_pmucmd_pmuinithandle_impl;
 
+boardobjgrp_pmucmd_construct     boardobjgrp_pmucmd_construct_impl_v1;
+
 /* BOARDOBJGRP interfaces */
 boardobjgrp_pmuinithandle    boardobjgrp_pmuinithandle_impl;
 boardobjgrp_pmuhdrdatainit   boardobjgrp_pmuhdrdatainit_super;
@@ -356,6 +366,8 @@ boardobjgrp_pmudatainit      boardobjgrp_pmudatainit_super;
 boardobjgrp_pmudatainit      boardobjgrp_pmudatainit_legacy;
 boardobjgrp_pmuset           boardobjgrp_pmuset_impl;
 boardobjgrp_pmugetstatus     boardobjgrp_pmugetstatus_impl;
+boardobjgrp_pmuset           boardobjgrp_pmuset_impl_v1;
+boardobjgrp_pmugetstatus     boardobjgrp_pmugetstatus_impl_v1;
 
 void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 
@@ -413,4 +425,10 @@ boardobjgrp_from_node(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct boardobjgrp, node));
 };
 
+int is_boardobjgrp_pmucmd_id_valid_v0(struct gk20a *g,
+	struct boardobjgrp *pboardobjgrp,
+	struct boardobjgrp_pmu_cmd *cmd);
+int is_boardobjgrp_pmucmd_id_valid_v1(struct gk20a *g,
+	struct boardobjgrp *pboardobjgrp,
+	struct boardobjgrp_pmu_cmd *cmd);
 #endif

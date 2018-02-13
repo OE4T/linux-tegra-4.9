@@ -2455,9 +2455,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 		tegra_dp_link_cal(dp);
 		tegra_dp_tu_config(dp, cfg);
-
-		tegra_dp_tpg(dp, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
-			     cfg->lane_count);
 	}
 
 	tegra_sor_port_enable(sor, true);

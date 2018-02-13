@@ -116,5 +116,6 @@ int gp10b_init_gpu_characteristics(struct gk20a *g)
 	gk20a_init_gpu_characteristics(g);
 	gp10b_detect_ecc_enabled_units(g);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_RESCHEDULE_RUNLIST, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USER_SYNCPOINT, true);
 	return 0;
 }

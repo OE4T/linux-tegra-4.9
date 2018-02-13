@@ -154,6 +154,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_SYNCPOINT_ADDRESS	(1ULL << 26)
 /* VPR is supported */
 #define NVGPU_GPU_FLAGS_SUPPORT_VPR			(1ULL << 27)
+/* Allocating per-channel syncpoint in user space is supported */
+#define NVGPU_GPU_FLAGS_SUPPORT_USER_SYNCPOINT		(1ULL << 28)
 /* SM LRF ECC is enabled */
 #define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
 /* SM SHM ECC is enabled */
@@ -1648,6 +1650,12 @@ struct nvgpu_boosted_ctx_args {
 	__u32 padding;
 };
 
+struct nvgpu_get_user_syncpoint_args {
+	__u64 gpu_va;		/* out */
+	__u32 syncpoint_id;	/* out */
+	__u32 syncpoint_max;	/* out */
+};
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -1698,9 +1706,11 @@ struct nvgpu_boosted_ctx_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 124, struct nvgpu_boosted_ctx_args)
 #define NVGPU_IOCTL_CHANNEL_GET_TIMESLICE \
 	_IOW(NVGPU_IOCTL_MAGIC, 125, struct nvgpu_timeslice_args)
+#define NVGPU_IOCTL_CHANNEL_GET_USER_SYNCPOINT \
+	_IOR(NVGPU_IOCTL_MAGIC, 126, struct nvgpu_get_user_syncpoint_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_GET_TIMESLICE)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_GET_USER_SYNCPOINT)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*

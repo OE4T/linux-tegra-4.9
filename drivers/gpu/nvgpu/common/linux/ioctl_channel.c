@@ -32,6 +32,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/nvhost.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -948,6 +949,60 @@ static int nvgpu_ioctl_channel_set_preemption_mode(struct channel_gk20a *ch,
 	return err;
 }
 
+static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
+	struct nvgpu_get_user_syncpoint_args *args)
+{
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	struct gk20a *g = ch->g;
+	int err;
+
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_USER_SYNCPOINT)) {
+		nvgpu_err(g, "user syncpoints not supported");
+		return -EINVAL;
+	}
+
+	if (!gk20a_platform_has_syncpoints(g)) {
+		nvgpu_err(g, "syncpoints not supported");
+		return -EINVAL;
+	}
+
+	if (g->aggressive_sync_destroy_thresh) {
+		nvgpu_err(g, "sufficient syncpoints not available");
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&ch->sync_lock);
+	if (ch->sync) {
+		nvgpu_mutex_release(&ch->sync_lock);
+	} else {
+		ch->sync = gk20a_channel_sync_create(ch);
+		if (!ch->sync) {
+			nvgpu_mutex_release(&ch->sync_lock);
+			return -ENOMEM;
+		}
+		nvgpu_mutex_release(&ch->sync_lock);
+
+		if (g->ops.fifo.resetup_ramfc) {
+			err = g->ops.fifo.resetup_ramfc(ch);
+			if (err)
+				return err;
+		}
+	}
+
+	args->syncpoint_id = ch->sync->syncpt_id(ch->sync);
+	args->syncpoint_max = nvgpu_nvhost_syncpt_read_maxval(g->nvhost_dev,
+						args->syncpoint_id);
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS))
+		args->gpu_va = ch->sync->syncpt_address(ch->sync);
+	else
+		args->gpu_va = 0;
+
+	return 0;
+#else
+	return -EINVAL;
+#endif
+}
+
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1238,6 +1293,18 @@ long gk20a_channel_ioctl(struct file *filp,
 		} else {
 			err = -EINVAL;
 		}
+		break;
+	case NVGPU_IOCTL_CHANNEL_GET_USER_SYNCPOINT:
+		err = gk20a_busy(ch->g);
+		if (err) {
+			dev_err(dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+		err = nvgpu_ioctl_channel_get_user_syncpoint(ch,
+		      (struct nvgpu_get_user_syncpoint_args *)buf);
+		gk20a_idle(ch->g);
 		break;
 	default:
 		dev_dbg(dev, "unrecognized ioctl cmd: 0x%x", cmd);

@@ -102,6 +102,9 @@ struct gk20a_channel_sync {
 	/* Returns the sync point id or negative number if no syncpt*/
 	int (*syncpt_id)(struct gk20a_channel_sync *s);
 
+	/* Returns the sync point address of sync point or 0 if not supported */
+	u64 (*syncpt_address)(struct gk20a_channel_sync *s);
+
 	/* Free the resources allocated by gk20a_channel_sync_create. */
 	void (*destroy)(struct gk20a_channel_sync *s);
 };

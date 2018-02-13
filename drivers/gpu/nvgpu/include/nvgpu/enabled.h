@@ -157,11 +157,13 @@ struct gk20a;
 
 /* GPU_VA address of a syncpoint is supported */
 #define NVGPU_SUPPORT_SYNCPOINT_ADDRESS		65
+/* Allocating per-channel syncpoint in user space is supported */
+#define NVGPU_SUPPORT_USER_SYNCPOINT		66
 
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			66
+#define NVGPU_MAX_ENABLED_BITS			67
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

@@ -152,6 +152,12 @@ int nvgpu_nvhost_syncpt_read_ext_check(
 	return nvhost_syncpt_read_ext_check(nvhost_dev->host1x_pdev, id, val);
 }
 
+u32 nvgpu_nvhost_syncpt_read_maxval(
+	struct nvgpu_nvhost_dev *nvhost_dev, u32 id)
+{
+	return nvhost_syncpt_read_maxval(nvhost_dev->host1x_pdev, id);
+}
+
 int nvgpu_nvhost_create_symlink(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);

@@ -294,6 +294,13 @@ static int gk20a_channel_syncpt_id(struct gk20a_channel_sync *s)
 	return sp->id;
 }
 
+static u64 gk20a_channel_syncpt_address(struct gk20a_channel_sync *s)
+{
+	struct gk20a_channel_syncpt *sp =
+		container_of(s, struct gk20a_channel_syncpt, ops);
+	return sp->syncpt_buf.gpu_va;
+}
+
 static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
@@ -345,6 +352,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
 	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
 	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
+	sp->ops.syncpt_address		= gk20a_channel_syncpt_address;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
 	return &sp->ops;
@@ -865,6 +873,11 @@ static int gk20a_channel_semaphore_syncpt_id(struct gk20a_channel_sync *s)
 	return -EINVAL;
 }
 
+static u64 gk20a_channel_semaphore_syncpt_address(struct gk20a_channel_sync *s)
+{
+	return 0;
+}
+
 static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_semaphore *sema =
@@ -916,6 +929,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
 	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
+	sema->ops.syncpt_address = gk20a_channel_semaphore_syncpt_address;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
 
 	return &sema->ops;

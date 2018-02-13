@@ -21,6 +21,7 @@
 #include <asm/cpu.h>
 #include <asm/cputype.h>
 #include <asm/cpufeature.h>
+#include <asm/exception.h>
 
 #ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 static bool btb_inv_enable = 1;
@@ -214,7 +215,7 @@ void __init enable_errata_workarounds(void)
 #define ARM_STD_SVC_VERSION		0x8400ff03
 uint32_t invoke_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2, uintptr_t arg3);
 
-void invalidate_btb(void)
+asmlinkage void __exception invalidate_btb(void)
 {
 	if (btb_inv_enable) {
 		int retval = -EINVAL;

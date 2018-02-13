@@ -142,6 +142,15 @@ ENTRY(cpu_do_switch_mm)
 	isb
 	msr	ttbr0_el1, x0			// now update TTBR0
 	isb
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+alternative_if ARM64_IC_IALLU_ON_CTX_CHANGE
+	sub	sp, sp, #S_FRAME_SIZE
+	str	lr, [sp, #S_LR]
+	bl invalidate_btb
+	ldr	lr, [sp, #S_LR]
+	add	sp, sp, #S_FRAME_SIZE		// restore sp
+alternative_else_nop_endif
+#endif
 	b	post_ttbr_update_workaround	// Back to C code...
 ENDPROC(cpu_do_switch_mm)
 

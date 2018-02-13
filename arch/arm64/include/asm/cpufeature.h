@@ -214,6 +214,10 @@ static inline bool system_uses_ttbr0_pan(void)
 		!cpus_have_cap(ARM64_HAS_PAN);
 }
 
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+void invalidate_btb(void);
+#endif
+
 #endif /* __ASSEMBLY__ */
 
 #endif

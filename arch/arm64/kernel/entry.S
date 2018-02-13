@@ -676,12 +676,12 @@ el0_ia:
 	 */
 	mrs	x26, far_el1
 	// enable interrupts before calling the main handler
-	enable_dbg_and_irq
+	enable_dbg
 	ct_user_exit
 	mov	x0, x26
 	mov	x1, x25
 	mov	x2, sp
-	bl	do_mem_abort
+	bl	do_el0_ia_bp_hardening
 	b	ret_to_user
 el0_fpsimd_acc:
 	/*
@@ -714,7 +714,7 @@ el0_sp_pc:
 	mov	x0, x26
 	mov	x1, x25
 	mov	x2, sp
-	bl	do_sp_pc_abort
+	bl	do_el0_sp_pc_abort_bp_hardening
 	b	ret_to_user
 el0_undef:
 	/*
@@ -741,6 +741,8 @@ el0_dbg:
 	 * Debug exception handling
 	 */
 	tbnz	x24, #0, el0_inv		// EL0 only
+	mrs	x0, elr_el1
+	bl	do_el0_bp_hardening
 	mrs	x0, far_el1
 	mov	x1, x25
 	mov	x2, sp
@@ -768,6 +770,8 @@ el0_irq_naked:
 #endif
 
 	ct_user_exit
+	mrs	x0, elr_el1
+	bl	do_el0_bp_hardening
 	irq_handler
 
 #ifdef CONFIG_TRACE_IRQFLAGS

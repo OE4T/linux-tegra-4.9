@@ -251,7 +251,7 @@ struct nvhost_device_data t19_vi5_info = {
 	.clocks = {
 		{"vi", UINT_MAX},
 		{"vi-const", UINT_MAX},
-		{"nvcsi", 204000000},
+		{"nvcsi", 400000000},
 		{"nvcsilp", 204000000},
 	},
 	.ctrl_ops		= &tegra194_vi5_ctrl_ops,
@@ -266,7 +266,7 @@ struct nvhost_device_data t19_vi5_info = {
 struct nvhost_device_data t19_nvcsi_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"nvcsi", 204000000},
+		{"nvcsi", 400000000},
 		{"nvcsilp", 204000000},
 	},
 	.devfs_name		= "nvcsi",

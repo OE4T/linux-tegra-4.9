@@ -54,6 +54,9 @@
 
 	bpmp {
 	        status = "okay";
+		bpmpthermal {
+			status = "okay";
+		};
 	};
 
 	gv11b {

@@ -655,7 +655,7 @@ static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
 			hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
 		} else {
 			if ((hdmi->edid_src == EDID_SRC_PANEL)
-					&& !hdmi->dc->vedid) {
+					&& !hdmi->dc->vedid && hdmi->enabled) {
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
 				tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 			}

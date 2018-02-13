@@ -674,8 +674,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 					int channels,
 					u64 formats)
 {
-	unsigned int tx_mask = (1 << channels) - 1;
-	unsigned int rx_mask = (1 << channels) - 1;
+	unsigned int mask = (1 << channels) - 1;
 	int idx = 0, err = 0;
 	u64 format_k;
 
@@ -709,11 +708,8 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 				&& (idx < num_of_dai_links)) {
 				unsigned int fmt;
 
-				err = 0;
 				/* TODO: why below overrite is needed */
 				dai_params->formats = formats;
-
-				fmt = rtd->dai_link->dai_fmt;
 
 				err = tegra_machine_set_bclk_ratio(machine,
 								   rtd);
@@ -724,12 +720,15 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 					return err;
 				}
 
+				fmt = rtd->dai_link->dai_fmt;
+				fmt &= SND_SOC_DAIFMT_FORMAT_MASK;
+
 				/* set TDM slot mask */
-				if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) ==
-							SND_SOC_DAIFMT_DSP_A) {
+				if (fmt == SND_SOC_DAIFMT_DSP_A ||
+				    fmt == SND_SOC_DAIFMT_DSP_B) {
 					err = snd_soc_dai_set_tdm_slot(
-							rtd->cpu_dai,
-							tx_mask, rx_mask, 0, 0);
+							rtd->cpu_dai, mask,
+							mask, 0, 0);
 					if (err < 0) {
 						dev_err(card->dev,
 						"%s cpu DAI slot mask not set\n",

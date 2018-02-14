@@ -95,6 +95,7 @@
 			<&bpmp_clks TEGRA194_CLK_SDMMC_LEGACY_TM>;
 		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "sdmmc_legacy_tm";
 		uhs-mask = <0x08>;
+		nvidia,en-periodic-calib;
 		status = "disabled";
 	 };
 
@@ -132,6 +133,7 @@
 			<&bpmp_clks TEGRA194_CLK_SDMMC_LEGACY_TM>;
 		clock-names = "sdmmc", "pll_p", "pll_c4_muxed", "sdmmc_legacy_tm";
 		uhs-mask = <0x08>;
+		nvidia,en-periodic-calib;
 		status = "disabled";
 	 };
 };

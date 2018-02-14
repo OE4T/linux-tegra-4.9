@@ -31,7 +31,6 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_qos.h>
 #include <linux/time.h>
-#include <linux/fence.h>
 
 #ifdef CONFIG_TEGRA_HOST1X
 #include <linux/host1x.h>

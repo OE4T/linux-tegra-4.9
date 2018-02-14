@@ -625,7 +625,7 @@ static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 		return err;
 
 	nvgpu_semaphore_get(sema);
-	BUG_ON(!nvgpu_atomic_read(&sema->value));
+	BUG_ON(!sema->incremented);
 	add_sema_cmd(c->g, c, sema, wait_cmd, 8, true, false);
 
 	/*

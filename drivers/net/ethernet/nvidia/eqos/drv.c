@@ -4131,7 +4131,7 @@ u16 eqos_select_queue(struct net_device *dev,
 
 	pr_debug("-->eqos_select_queue\n");
 
-	for (i = 0; i <= EQOS_TX_QUEUE_CNT; i++) {
+	for (i = 0; i < EQOS_TX_QUEUE_CNT; i++) {
 		if (pdt_cfg->q_prio[i] == skb->priority) {
 			txqueue_select = i;
 			break;

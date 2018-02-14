@@ -1,7 +1,7 @@
 /*
 * Tegra flcn common driver
 *
-* Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -430,17 +430,13 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 
 	for (offset = 0; offset < v->os.data_size; offset += 256)
 		flcn_dma_pa_to_internal_256b(pdev,
-					   v->os.data_offset + offset,
-					   offset, false);
+					     v->os.data_offset + offset,
+					     offset, false);
 
-	if (v->os.bin_magic == 0x10fe) {
-		for (offset = 0; offset < v->os.code_size; offset += 256)
-			flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset + offset,
-					   offset, true);
-	} else {
-		flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset,
-					   0, true);
-	}
+	for (offset = 0; offset < v->os.code_size; offset += 256)
+		flcn_dma_pa_to_internal_256b(pdev,
+					     v->os.code_offset + offset,
+					     offset, true);
 
 	/* setup falcon interrupts and enable interface */
 	if (!pdata->self_config_flcn_isr) {

@@ -1149,6 +1149,12 @@ static int gk20a_probe(struct platform_device *dev)
 	if (err)
 		goto return_err;
 
+	np = nvgpu_get_node(gk20a);
+	if (of_dma_is_coherent(np)) {
+		__nvgpu_set_enabled(gk20a, NVGPU_USE_COHERENT_SYSMEM, true);
+		__nvgpu_set_enabled(gk20a, NVGPU_SUPPORT_IO_COHERENCE, true);
+	}
+
 	if (nvgpu_platform_is_simulation(gk20a))
 		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);
 
@@ -1207,12 +1213,6 @@ static int gk20a_probe(struct platform_device *dev)
 	}
 
 	gk20a->mm.has_physical_mode = !nvgpu_is_hypervisor_mode(gk20a);
-
-	np = nvgpu_get_node(gk20a);
-	if (of_dma_is_coherent(np)) {
-		__nvgpu_set_enabled(gk20a, NVGPU_USE_COHERENT_SYSMEM, true);
-		__nvgpu_set_enabled(gk20a, NVGPU_SUPPORT_IO_COHERENCE, true);
-	}
 
 	return 0;
 

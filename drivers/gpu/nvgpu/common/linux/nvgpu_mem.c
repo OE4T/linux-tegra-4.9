@@ -45,6 +45,14 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 		return 0;
 
 	/*
+	 * WAR for bug 2040115: we already will always have a coherent vmap()
+	 * for all sysmem buffers. The prot settings are left alone since
+	 * eventually this should be deleted.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+		return 0;
+
+	/*
 	 * A CPU mapping is implicitly made for all SYSMEM DMA allocations that
 	 * don't have NVGPU_DMA_NO_KERNEL_MAPPING. Thus we don't need to make
 	 * another CPU mapping.
@@ -71,6 +79,13 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+		return;
+
+	/*
+	 * WAR for bug 2040115: skip this since the map will be taken care of
+	 * during the free in the DMA API.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
 		return;
 
 	/*
@@ -393,8 +408,12 @@ int nvgpu_mem_create_from_mem(struct gk20a *g,
 
 	/*
 	 * Re-use the CPU mapping only if the mapping was made by the DMA API.
+	 *
+	 * Bug 2040115: the DMA API wrapper makes the mapping that we should
+	 * re-use.
 	 */
-	if (!(src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
+	if (!(src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING) ||
+	    nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
 		dest->cpu_va = src->cpu_va + (PAGE_SIZE * start_page);
 
 	dest->priv.pages = src->priv.pages + start_page;

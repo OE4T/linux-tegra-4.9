@@ -231,6 +231,7 @@ struct gk20a_platform gv11b_tegra_platform = {
 	/* power management configuration */
 	.enable_elpg		= true,
 	.can_elpg_init		= true,
+	.enable_aelpg           = true,
 
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,

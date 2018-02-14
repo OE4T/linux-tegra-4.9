@@ -2037,9 +2037,9 @@ static uint get_dma_state(uint qinx, bool is_rx)
 		val = GET_VALUE(dma_dsr1, lpos, hpos);
 	} else {
 		lpos = (is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS)
-		    + ((qinx - 3) * 8);
+		    + ((qinx - 7) * 8);
 		hpos = (is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS)
-		    + ((qinx - 3) * 8);
+		    + ((qinx - 7) * 8);
 		DMA_DSR2_RD(dma_dsr2);
 		val = GET_VALUE(dma_dsr2, lpos, hpos);
 	}

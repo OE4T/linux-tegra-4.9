@@ -104,11 +104,6 @@ static void dump_backtrace_entry(unsigned long where)
 	 * Note that 'where' can have a physical address, but it's not handled.
 	 */
 	print_ip_sym(where);
-#ifdef CONFIG_DEBUG_VERBOSE_OOPS
-	if (in_exception_text(where))
-		dump_mem("", "Exception stack", stack,
-			 stack + sizeof(struct pt_regs));
-#endif
 }
 
 static void __dump_instr(const char *lvl, struct pt_regs *regs)

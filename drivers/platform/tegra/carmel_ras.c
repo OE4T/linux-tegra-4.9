@@ -338,7 +338,7 @@ static struct error_record ccplex_ers[] = {
 		ERR_CTL_CMUCTU_TAG_PAR_ERR | ERR_CTL_CMUCTU_CTU_SNP_ERR |
 		ERR_CTL_CMUCTU_TRCDMA_REQ_ERR,
 	.errors = cmu_ctu_errors},
-	{.name = "SCF:L3_0", .errx = 784,
+	{.name = "SCF:L3_0", .errx = 768,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
 		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
@@ -346,7 +346,7 @@ static struct error_record ccplex_ers[] = {
 		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
 		ERR_CTL_SCFL3_TO_ERR,
 	 .errors = scf_l3_errors},
-	{.name = "SCF:L3_1", .errx = 785,
+	{.name = "SCF:L3_1", .errx = 769,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
 		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
@@ -354,7 +354,7 @@ static struct error_record ccplex_ers[] = {
 		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
 		ERR_CTL_SCFL3_TO_ERR,
 	 .errors = scf_l3_errors},
-	{.name = "SCF:L3_2", .errx = 786,
+	{.name = "SCF:L3_2", .errx = 770,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
 		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
@@ -362,7 +362,7 @@ static struct error_record ccplex_ers[] = {
 		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
 		ERR_CTL_SCFL3_TO_ERR,
 	 .errors = scf_l3_errors},
-	{.name = "SCF:L3_3", .errx = 787,
+	{.name = "SCF:L3_3", .errx = 771,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
 		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,4 +29,18 @@ u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv,
 u32 volt_get_voltage(struct gk20a *g, u32 volt_domain, u32 *voltage_uv);
 int volt_set_noiseaware_vmin(struct gk20a *g, u32 logic_voltage_uv,
 		u32 sram_voltage_uv);
+
+u32 nvgpu_volt_set_voltage_gp10x(struct gk20a *g, u32 logic_voltage_uv,
+	u32 sram_voltage_uv);
+u32 nvgpu_volt_rail_get_voltage_gp10x(struct gk20a *g,
+	u8 volt_domain, u32 *pvoltage_uv);
+u32 nvgpu_volt_send_load_cmd_to_pmu_gp10x(struct gk20a *g);
+
+u32 nvgpu_volt_set_voltage_gv10x(struct gk20a *g, u32 logic_voltage_uv,
+	u32 sram_voltage_uv);
+u32 nvgpu_volt_rail_get_voltage_gv10x(struct gk20a *g,
+	u8 volt_domain, u32 *pvoltage_uv);
+u32 nvgpu_volt_send_load_cmd_to_pmu_gv10x(struct gk20a *g);
+
+
 #endif

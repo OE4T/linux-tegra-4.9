@@ -1,7 +1,7 @@
 /*
  * general p state infrastructure
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -89,6 +89,7 @@ enum nv_pmu_pmgr_pwm_source {
 #define CTRL_VOLT_DEVICE_OPERATION_TYPE_DEFAULT	0x01
 #define CTRL_VOLT_DEVICE_OPERATION_TYPE_LPWR_STEADY_STATE	0x02
 #define CTRL_VOLT_DEVICE_OPERATION_TYPE_LPWR_SLEEP_STATE	0x03
+#define CTRL_VOLT_VOLT_DEVICE_OPERATION_TYPE_IPC_VMIN	0x04
 
 /*!
  * Macros for Voltage Domains.
@@ -123,6 +124,18 @@ struct ctrl_volt_volt_rail_list_item {
 struct ctrl_volt_volt_rail_list {
 	u8    num_rails;
 	struct ctrl_volt_volt_rail_list_item
+		rails[CTRL_VOLT_VOLT_RAIL_MAX_RAILS];
+};
+
+struct ctrl_volt_volt_rail_list_item_v1 {
+	u8 rail_idx;
+	u32 voltage_uv;
+	u32 voltage_min_noise_unaware_uv;
+};
+
+struct ctrl_volt_volt_rail_list_v1 {
+	u8    num_rails;
+	struct ctrl_volt_volt_rail_list_item_v1
 		rails[CTRL_VOLT_VOLT_RAIL_MAX_RAILS];
 };
 

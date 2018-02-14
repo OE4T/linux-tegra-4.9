@@ -725,6 +725,7 @@ struct vbios_voltage_rail_table_1x_header {
 #define NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_09		0X00000009
 #define NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0A		0X0000000A
 #define NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0B		0X0000000B
+#define NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0C		0X0000000C
 
 struct vbios_voltage_rail_table_1x_entry {
 	u32 boot_voltage_uv;
@@ -735,6 +736,7 @@ struct vbios_voltage_rail_table_1x_entry {
 	u8 boot_volt_vfe_equ_idx;
 	u8 vmin_limit_vfe_equ_idx;
 	u8 volt_margin_limit_vfe_equ_idx;
+	u8 volt_scale_exp_pwr_equ_idx;
 } __packed;
 
 /* Voltage Device Table */

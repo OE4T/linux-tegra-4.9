@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -49,6 +49,8 @@ struct nv_pmu_volt_volt_rail_boardobj_set {
 	u8 volt_margin_limit_vfe_equ_idx;
 	u8 pwr_equ_idx;
 	u8 volt_dev_idx_default;
+	u8 volt_dev_idx_ipc_vmin;
+	u8 volt_scale_exp_pwr_equ_idx;
 	struct ctrl_boardobjgrp_mask_e32 volt_dev_mask;
 	s32 volt_delta_uv[CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES];
 };
@@ -101,7 +103,6 @@ NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(volt, volt_device);
 
 /* ------------ VOLT_POLICY's GRP_SET defines and structures ------------ */
 struct nv_pmu_volt_volt_policy_boardobjgrp_set_header {
-
 	struct nv_pmu_boardobjgrp_e32 super;
 };
 
@@ -330,6 +331,62 @@ struct nv_pmu_volt_volt_rail_list {
 	u8 num_rails;
 	struct ctrl_perf_volt_rail_list_item
 	rails[NV_PMU_VF_INJECT_MAX_VOLT_RAILS];
+};
+
+struct nv_pmu_volt_volt_rail_list_V1 {
+	u8 num_rails;
+	struct ctrl_volt_volt_rail_list_item_v1
+	rails[NV_PMU_VF_INJECT_MAX_VOLT_RAILS];
+};
+
+/* VOLT RPC */
+#define NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD	0x00
+#define NV_PMU_RPC_ID_VOLT_VOLT_SET_VOLTAGE		0x01
+#define NV_PMU_RPC_ID_VOLT_LOAD					0x02
+#define NV_PMU_RPC_ID_VOLT_VOLT_RAIL_GET_VOLTAGE	0x03
+#define NV_PMU_RPC_ID_VOLT_VOLT_POLICY_SANITY_CHECK	0x04
+#define NV_PMU_RPC_ID_VOLT_TEST_EXECUTE		0x05
+#define NV_PMU_RPC_ID_VOLT__COUNT			0x06
+
+/*
+ * Defines the structure that holds data
+ * used to execute LOAD RPC.
+ */
+struct nv_pmu_rpc_struct_volt_load {
+	/*[IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+	u32  scratch[1];
+};
+
+/*
+ * Defines the structure that holds data
+ * used to execute VOLT_SET_VOLTAGE RPC.
+ */
+struct nv_pmu_rpc_struct_volt_volt_set_voltage {
+	/*[IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+	/*[IN] ID of the client that wants to set the voltage */
+	u8 client_id;
+	/*
+	 * [IN] The list containing target voltage and
+	 *  noise-unaware Vmin value for the VOLT_RAILs.
+	 */
+	struct ctrl_volt_volt_rail_list_v1 rail_list;
+	u32  scratch[1];
+};
+
+/*
+ * Defines the structure that holds data
+ * used to execute VOLT_RAIL_GET_VOLTAGE RPC.
+ */
+struct nv_pmu_rpc_struct_volt_volt_rail_get_voltage {
+	/*[IN/OUT] Must be first field in RPC structure */
+	struct nv_pmu_rpc_header hdr;
+	/* [OUT] Current voltage in uv */
+	u32 voltage_uv;
+	/* [IN] Voltage Rail Table Index */
+	u8 rail_idx;
+	u32  scratch[1];
 };
 
 #endif  /* _GPMUIFVOLT_H_*/

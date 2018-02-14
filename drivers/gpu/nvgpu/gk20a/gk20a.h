@@ -747,6 +747,13 @@ struct gpu_ops {
 				struct boardobjgrp *pboardobjgrp,
 				struct boardobjgrp_pmu_cmd *cmd);
 		} boardobj;
+		struct {
+			u32 (*volt_set_voltage)(struct gk20a *g,
+				u32 logic_voltage_uv, u32 sram_voltage_uv);
+			u32 (*volt_get_voltage)(struct gk20a *g,
+				u8 volt_domain, u32 *pvoltage_uv);
+			u32 (*volt_send_load_cmd_to_pmu)(struct gk20a *g);
+		} volt;
 	} pmu_ver;
 	struct {
 		int (*get_netlist_name)(struct gk20a *g, int index, char *name);

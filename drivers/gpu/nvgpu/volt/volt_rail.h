@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -51,7 +51,9 @@ struct voltage_rail {
 	u8 alt_rel_limit_vfe_equ_idx;
 	u8 ov_limit_vfe_equ_idx;
 	u8 pwr_equ_idx;
+	u8 volt_scale_exp_pwr_equ_idx;
 	u8 volt_dev_idx_default;
+	u8 volt_dev_idx_ipc_vmin;
 	u8 boot_volt_vfe_equ_idx;
 	u8 vmin_limit_vfe_equ_idx;
 	u8 volt_margin_limit_vfe_equ_idx;

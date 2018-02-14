@@ -1035,6 +1035,25 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 			break;
 		}
 		break;
+	case PMU_UNIT_VOLT:
+		switch (rpc.function) {
+		case NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD");
+			break;
+		case NV_PMU_RPC_ID_VOLT_VOLT_SET_VOLTAGE:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_VOLT_VOLT_SET_VOLTAGE");
+			break;
+		case NV_PMU_RPC_ID_VOLT_VOLT_RAIL_GET_VOLTAGE:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_VOLT_VOLT_RAIL_GET_VOLTAGE");
+			break;
+		case NV_PMU_RPC_ID_VOLT_LOAD:
+			nvgpu_pmu_dbg(g,
+				"reply NV_PMU_RPC_ID_VOLT_LOAD");
+		}
+		break;
 		/* TBD case will be added */
 	default:
 		nvgpu_err(g, " Invalid RPC response, stats 0x%x",

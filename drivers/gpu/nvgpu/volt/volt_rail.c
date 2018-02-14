@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +34,10 @@ u8 volt_rail_volt_domain_convert_to_idx(struct gk20a *g, u8 volt_domain)
 {
 	switch (g->perf_pmu.volt.volt_rail_metadata.volt_domain_hal) {
 	case CTRL_VOLT_DOMAIN_HAL_GP10X_SINGLE_RAIL:
-		if (volt_domain == CTRL_BOARDOBJ_IDX_INVALID)
+		switch (volt_domain) {
+		case CTRL_VOLT_DOMAIN_LOGIC:
 			return 0;
+		}
 		break;
 	case CTRL_VOLT_DOMAIN_HAL_GP10X_SPLIT_RAIL:
 		switch (volt_domain) {
@@ -59,6 +61,22 @@ u32 volt_rail_volt_dev_register(struct gk20a *g, struct voltage_rail
 		if (pvolt_rail->volt_dev_idx_default ==
 				CTRL_BOARDOBJ_IDX_INVALID) {
 			pvolt_rail->volt_dev_idx_default = volt_dev_idx;
+		} else {
+			status = -EINVAL;
+			goto exit;
+		}
+	} else if (operation_type ==
+		CTRL_VOLT_VOLT_DEVICE_OPERATION_TYPE_IPC_VMIN) {
+		if (pvolt_rail->volt_dev_idx_ipc_vmin ==
+			CTRL_BOARDOBJ_IDX_INVALID) {
+			pvolt_rail->volt_dev_idx_ipc_vmin = volt_dev_idx;
+			/*
+			* Exit on purpose as we do not want to register
+			* IPC_VMIN device against the rail to avoid
+			* setting current voltage instead of
+			* IPC Vmin voltage.
+			*/
+			goto exit;
 		} else {
 			status = -EINVAL;
 			goto exit;
@@ -136,6 +154,9 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 			prail->volt_margin_limit_vfe_equ_idx;
 	rail_pmu_data->pwr_equ_idx = prail->pwr_equ_idx;
 	rail_pmu_data->volt_dev_idx_default = prail->volt_dev_idx_default;
+	rail_pmu_data->volt_scale_exp_pwr_equ_idx =
+			prail->volt_scale_exp_pwr_equ_idx;
+	rail_pmu_data->volt_dev_idx_ipc_vmin = prail->volt_dev_idx_ipc_vmin;
 
 	for (i = 0; i < CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES; i++) {
 		rail_pmu_data->volt_delta_uv[i] = prail->volt_delta_uv[i] +
@@ -187,6 +208,8 @@ static struct voltage_rail *construct_volt_rail(struct gk20a *g, void *pargs)
 			ptemp_rail->vmin_limit_vfe_equ_idx;
 	board_obj_volt_rail_ptr->volt_margin_limit_vfe_equ_idx =
 			ptemp_rail->volt_margin_limit_vfe_equ_idx;
+	board_obj_volt_rail_ptr->volt_scale_exp_pwr_equ_idx =
+			ptemp_rail->volt_scale_exp_pwr_equ_idx;
 
 	gk20a_dbg_info("Done");
 
@@ -283,6 +306,14 @@ static u32 volt_get_volt_rail_table(struct gk20a *g,
 			(u8)entry.alt_rel_limit_vfe_equidx;
 		rail_type_data.volt_rail.ov_limit_vfe_equ_idx =
 			(u8)entry.ov_limit_vfe_equ_idx;
+
+		if (header.table_entry_size >=
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0C)
+			rail_type_data.volt_rail.volt_scale_exp_pwr_equ_idx =
+				(u8)entry.volt_scale_exp_pwr_equ_idx;
+		else
+			rail_type_data.volt_rail.volt_scale_exp_pwr_equ_idx =
+				CTRL_BOARDOBJ_IDX_INVALID;
 
 		if (header.table_entry_size >=
 			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0B)

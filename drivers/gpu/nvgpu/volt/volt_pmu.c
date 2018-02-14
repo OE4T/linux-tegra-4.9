@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -115,7 +115,7 @@ volt_pmu_rpc_execute:
 	return status;
 }
 
-u32 volt_pmu_send_load_cmd_to_pmu(struct gk20a *g)
+u32 nvgpu_volt_send_load_cmd_to_pmu_gp10x(struct gk20a *g)
 {
 	struct nv_pmu_volt_rpc rpc_call = { 0 };
 	u32 status = 0;
@@ -131,7 +131,23 @@ u32 volt_pmu_send_load_cmd_to_pmu(struct gk20a *g)
 	return status;
 }
 
-static u32 volt_rail_get_voltage(struct gk20a *g,
+u32 nvgpu_volt_send_load_cmd_to_pmu_gv10x(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	struct nv_pmu_rpc_struct_volt_load rpc;
+	u32 status = 0;
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_volt_load));
+	PMU_RPC_EXECUTE(status, pmu, VOLT, LOAD, &rpc, 0);
+	if (status) {
+		nvgpu_err(g, "Failed to execute RPC status=0x%x",
+			status);
+	}
+
+	return status;
+}
+
+u32 nvgpu_volt_rail_get_voltage_gp10x(struct gk20a *g,
 	u8 volt_domain, u32 *pvoltage_uv)
 {
 	struct nv_pmu_volt_rpc rpc_call = { 0 };
@@ -165,6 +181,37 @@ static u32 volt_rail_get_voltage(struct gk20a *g,
 	return status;
 }
 
+u32 nvgpu_volt_rail_get_voltage_gv10x(struct gk20a *g,
+	u8 volt_domain, u32 *pvoltage_uv)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	struct nv_pmu_rpc_struct_volt_volt_rail_get_voltage rpc;
+	u32 status  = 0;
+	u8 rail_idx;
+
+	rail_idx = volt_rail_volt_domain_convert_to_idx(g, volt_domain);
+	if ((rail_idx == CTRL_VOLT_RAIL_INDEX_INVALID) ||
+		(!VOLT_RAIL_INDEX_IS_VALID(&g->perf_pmu.volt, rail_idx))) {
+		nvgpu_err(g,
+			"failed: volt_domain = %d, voltage rail table = %d.",
+			volt_domain, rail_idx);
+		return -EINVAL;
+	}
+
+	memset(&rpc, 0,
+		sizeof(struct nv_pmu_rpc_struct_volt_volt_rail_get_voltage));
+	rpc.rail_idx = rail_idx;
+
+	PMU_RPC_EXECUTE_CPB(status, pmu, VOLT, VOLT_SET_VOLTAGE, &rpc, 0);
+	if (status) {
+		nvgpu_err(g, "Failed to execute RPC status=0x%x",
+			status);
+	}
+
+	*pvoltage_uv = rpc.voltage_uv;
+
+	return status;
+}
 
 static u32 volt_policy_set_voltage(struct gk20a *g, u8 client_id,
 		struct ctrl_perf_volt_rail_list *prail_list)
@@ -217,9 +264,54 @@ exit:
 	return status;
 }
 
-u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv, u32 sram_voltage_uv)
+static u32 volt_set_voltage_gv10x_rpc(struct gk20a *g, u8 client_id,
+		struct ctrl_volt_volt_rail_list_v1 *prail_list)
 {
-	u32 status = 0;
+	struct nvgpu_pmu *pmu = &g->pmu;
+	struct nv_pmu_rpc_struct_volt_volt_set_voltage rpc;
+	int status = 0;
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_volt_volt_set_voltage));
+	rpc.client_id = 0x1;
+	rpc.rail_list = *prail_list;
+
+	PMU_RPC_EXECUTE(status, pmu, VOLT, VOLT_SET_VOLTAGE, &rpc, 0);
+	if (status) {
+		nvgpu_err(g, "Failed to execute RPC status=0x%x",
+			status);
+	}
+
+	return status;
+}
+
+u32 nvgpu_volt_set_voltage_gv10x(struct gk20a *g, u32 logic_voltage_uv,
+		u32 sram_voltage_uv)
+{
+	int status = 0;
+	struct ctrl_volt_volt_rail_list_v1 rail_list = { 0 };
+
+	rail_list.num_rails = RAIL_COUNT;
+	rail_list.rails[0].rail_idx =
+		volt_rail_volt_domain_convert_to_idx(g,
+			CTRL_VOLT_DOMAIN_LOGIC);
+	rail_list.rails[0].voltage_uv = logic_voltage_uv;
+	rail_list.rails[0].voltage_min_noise_unaware_uv = logic_voltage_uv;
+	rail_list.rails[1].rail_idx =
+		volt_rail_volt_domain_convert_to_idx(g,
+			CTRL_VOLT_DOMAIN_SRAM);
+	rail_list.rails[1].voltage_uv = sram_voltage_uv;
+	rail_list.rails[1].voltage_min_noise_unaware_uv = sram_voltage_uv;
+
+	status = volt_set_voltage_gv10x_rpc(g,
+		CTRL_VOLT_POLICY_CLIENT_PERF_CORE_VF_SEQ, &rail_list);
+
+	return status;
+}
+
+u32 nvgpu_volt_set_voltage_gp10x(struct gk20a *g, u32 logic_voltage_uv,
+		u32 sram_voltage_uv)
+{
+	int status = 0;
 	struct ctrl_perf_volt_rail_list rail_list = { 0 };
 
 	rail_list.num_rails = RAIL_COUNT;
@@ -234,12 +326,18 @@ u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv, u32 sram_voltage_uv)
 		CTRL_VOLT_POLICY_CLIENT_PERF_CORE_VF_SEQ, &rail_list);
 
 	return status;
+}
 
+u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv, u32 sram_voltage_uv)
+{
+	return g->ops.pmu_ver.volt.volt_set_voltage(g,
+		logic_voltage_uv, sram_voltage_uv);
 }
 
 u32 volt_get_voltage(struct gk20a *g, u32 volt_domain, u32 *voltage_uv)
 {
-	return volt_rail_get_voltage(g, volt_domain, voltage_uv);
+	return g->ops.pmu_ver.volt.volt_get_voltage(g,
+		volt_domain, voltage_uv);
 }
 
 static int volt_policy_set_noiseaware_vmin(struct gk20a *g,

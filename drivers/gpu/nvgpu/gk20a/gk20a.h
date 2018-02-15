@@ -447,6 +447,8 @@ struct gpu_ops {
 			struct gr_gk20a_isr_data *isr_data, u32 error_notifier);
 		int (*handle_notify_pending)(struct gk20a *g,
 					struct gr_gk20a_isr_data *isr_data);
+		int (*handle_semaphore_pending)(struct gk20a *g,
+					struct gr_gk20a_isr_data *isr_data);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -5267,8 +5267,8 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 	return -EINVAL;
 }
 
-static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
-					     struct gr_gk20a_isr_data *isr_data)
+int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
+				     struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -5896,7 +5896,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (gr_intr & gr_intr_semaphore_pending_f()) {
-		gk20a_gr_handle_semaphore_pending(g, &isr_data);
+		g->ops.gr.handle_semaphore_pending(g, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_semaphore_reset_f());
 		gr_intr &= ~gr_intr_semaphore_pending_f();

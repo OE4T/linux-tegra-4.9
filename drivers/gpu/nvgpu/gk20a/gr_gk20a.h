@@ -808,4 +808,6 @@ int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c);
 u32 gk20a_init_sw_bundle(struct gk20a *g);
 int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type);
+int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
+				struct gr_gk20a_isr_data *isr_data);
 #endif /*__GR_GK20A_H__*/

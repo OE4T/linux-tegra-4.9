@@ -2940,11 +2940,12 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 
 	reset_control_deassert(pcie->core_rst);
 
+	tegra_pcie_dw_host_init(&pcie->pp);
+
 	/* restore MSI interrutp vector*/
 	dw_pcie_cfg_write(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
 			  4, pcie->msi_ctrl_int);
 
-	tegra_pcie_dw_host_init(&pcie->pp);
 	tegra_pcie_dw_scan_bus(&pcie->pp);
 
 	/* Enable ASPM counters */

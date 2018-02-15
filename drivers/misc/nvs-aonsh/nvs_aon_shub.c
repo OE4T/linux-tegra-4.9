@@ -259,6 +259,10 @@ static int tegra_aon_shub_batch(void *client, int snsr_id, int flags,
 	shub->shub_req->req_type = AON_SHUB_REQUEST_BATCH;
 	shub->shub_req->data.batch.snsr_id = snsr_id;
 	shub->shub_req->data.batch.flags = flags;
+	if (period < shub->snsrs[snsr_id]->cfg.delay_us_min)
+		period = shub->snsrs[snsr_id]->cfg.delay_us_min;
+	else if (period > shub->snsrs[snsr_id]->cfg.delay_us_max)
+		period = shub->snsrs[snsr_id]->cfg.delay_us_max;
 	shub->shub_req->data.batch.period = period;
 	shub->shub_req->data.batch.timeout = timeout;
 	ret = tegra_aon_shub_ivc_msg_send(shub,

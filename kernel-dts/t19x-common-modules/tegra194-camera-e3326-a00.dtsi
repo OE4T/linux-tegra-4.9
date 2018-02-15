@@ -160,6 +160,7 @@
 				mclk_khz = "24000";
 				num_lanes = "2";
 				tegra_sinterface = "serial_c";
+				phy_mode = "DPHY";
 				discontinuous_clk = "no";
 				dpcm_enable = "false";
 				cil_settletime = "0";
@@ -187,6 +188,7 @@
 				mclk_khz = "24000";
 				num_lanes = "2";
 				tegra_sinterface = "serial_c";
+				phy_mode = "DPHY";
 				discontinuous_clk = "no";
 				dpcm_enable = "false";
 				cil_settletime = "0";
@@ -214,6 +216,7 @@
 				mclk_khz = "24000";
 				num_lanes = "2";
 				tegra_sinterface = "serial_c";
+				phy_mode = "DPHY";
 				discontinuous_clk = "no";
 				dpcm_enable = "false";
 				cil_settletime = "0";

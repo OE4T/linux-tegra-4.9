@@ -97,6 +97,7 @@
 				mclk_khz = "72000";
 				num_lanes = "2";
 				tegra_sinterface = "serial_a";
+				phy_mode = "SLVS";
 				discontinuous_clk = "no";
 				dpcm_enable = "false";
 				cil_settletime = "0";

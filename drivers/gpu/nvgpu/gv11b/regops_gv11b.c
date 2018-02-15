@@ -22,10 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/slab.h>
-#include <linux/err.h>
-#include <linux/bsearch.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"

@@ -393,6 +393,7 @@ static const struct gpu_ops gv11b_ops = {
 		.dump_ctxsw_stats = gr_gp10b_dump_ctxsw_stats,
 		.fecs_host_int_enable = gr_gv11b_fecs_host_int_enable,
 		.handle_ssync_hww = gr_gv11b_handle_ssync_hww,
+		.set_error_notifier = gk20a_gr_set_error_notifier,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

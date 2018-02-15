@@ -426,6 +426,7 @@ static const struct gpu_ops gv100_ops = {
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
 		.fecs_host_int_enable = gr_gv11b_fecs_host_int_enable,
 		.handle_ssync_hww = gr_gv11b_handle_ssync_hww,
+		.set_error_notifier = gk20a_gr_set_error_notifier,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

@@ -443,6 +443,8 @@ struct gpu_ops {
 					 struct nvgpu_gr_ctx *gr_ctx);
 		void (*fecs_host_int_enable)(struct gk20a *g);
 		int (*handle_ssync_hww)(struct gk20a *g);
+		void (*set_error_notifier)(struct gk20a *g,
+			struct gr_gk20a_isr_data *isr_data, u32 error_notifier);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

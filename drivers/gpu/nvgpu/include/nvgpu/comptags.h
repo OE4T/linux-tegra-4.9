@@ -24,6 +24,7 @@
 #define __NVGPU_COMPTAGS__
 
 #include <nvgpu/lock.h>
+#include <nvgpu/types.h>
 
 struct gk20a;
 struct nvgpu_os_buffer;

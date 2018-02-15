@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -166,7 +166,34 @@ struct sensor_cfg {
 	struct nvs_float offsets[NVS_CHANNEL_N_MAX];
 };
 
+#define NVS_FN_DEV_VERSION		(1)
 struct nvs_fn_dev {
+/**
+ * version of this structure.
+ * Note that this is backward compatible with the non-versioned
+ * structure since the first member was "release" and never
+ * implemented thereby making that structure version 0 (from the
+ * NULL pointer).
+ * Populate with: NVS_FN_DEV_VERSION
+ */
+	unsigned int ver;
+/**
+ * sizeof this structure.
+ * A little extra protection for ABI compatibility.
+ * Populate with: sizeof(struct nvs_fn_dev)
+ */
+	unsigned int sizeof_struct;
+/**
+ * sts - status flags
+ * used by both device and NVS layers
+ * See NVS_STS_ defines
+ */
+	unsigned int *sts;
+/**
+ * errs - error counter
+ * used by both device and NVS layers
+ */
+	unsigned int *errs;
 /**
  * release - device is gone - driver cleanup
  * @client: clients private data
@@ -206,7 +233,28 @@ struct nvs_fn_dev {
  * batching is not supported.
  */
 	int (*batch)(void *client, int snsr_id, int flags,
-		     unsigned int period, unsigned int timeout);
+		     unsigned int period_us, unsigned int timeout_us);
+/**
+ * batch_read - see Android definition of batch
+ * http://source.android.com/devices/sensors/batching.html
+ * @client: clients private data
+ * @snsr_id: sensor ID
+ * @*period: pointer to sensor period in microseconds
+ * @*timeout: pointer to batch timeout in microseconds
+ *
+ * Returns 0 on success or a negative error code.
+ *
+ * This call is specifically to read the actual rate period
+ * and batch timeout set by the HW driver and not the requested
+ * period and batch timeout passed with the above batch
+ * function which may not necessarily be the same.
+ *
+ * The call may be made with either the period_us or timeout_us
+ * pointer set to NULL, in which case the HW driver just ignores
+ * that pointer without error.
+ */
+	int (*batch_read)(void *client, int snsr_id,
+			  unsigned int *period_us, unsigned int *timeout_us);
 /**
  * flush - see Android definition of flush
  * http://source.android.com/devices/sensors/batching.html
@@ -401,17 +449,6 @@ struct nvs_fn_dev {
  * Used to extend the functionality of the nvs attribute.
  */
 	int (*nvs_read)(void *client, int snsr_id, char *buf);
-/**
- * sts - status flags
- * used by both device and NVS layers
- * See NVS_STS_ defines
- */
-	unsigned int *sts;
-/**
- * errs - error counter
- * used by both device and NVS layers
- */
-	unsigned int *errs;
 };
 
 struct nvs_fn_if {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -83,7 +83,7 @@
 #include <linux/nvs.h>
 #include <linux/version.h>
 
-#define NVS_IIO_DRIVER_VERSION		(222)
+#define NVS_IIO_DRIVER_VERSION		(223)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -1174,10 +1174,16 @@ static int nvs_read_raw(struct iio_dev *indio_dev,
 				return ret;
 		}
 
-		if (ret)
-			*val = st->batch_period_us;
-		else
+		if (ret) {
+			if (st->fn_dev->batch_read)
+				ret = st->fn_dev->batch_read(st->client,
+							     st->cfg->snsr_id,
+							     val, NULL);
+			else
+				*val = st->batch_period_us;
+		} else {
 			*val = st->cfg->delay_us_min;
+		}
 		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_BATCH_TIMEOUT:
@@ -1190,10 +1196,16 @@ static int nvs_read_raw(struct iio_dev *indio_dev,
 				return ret;
 		}
 
-		if (ret)
-			*val = st->batch_timeout_us;
-		else
+		if (ret) {
+			if (st->fn_dev->batch_read)
+				ret = st->fn_dev->batch_read(st->client,
+							     st->cfg->snsr_id,
+							     NULL, val);
+			else
+				*val = st->batch_timeout_us;
+		} else {
 			*val = st->cfg->delay_us_max;
+		}
 		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_BATCH_FLAGS:

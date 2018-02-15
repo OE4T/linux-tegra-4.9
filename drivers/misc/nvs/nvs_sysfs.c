@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,7 +45,7 @@
 #include <linux/string.h>
 #include "nvs_sysfs.h"
 
-#define NVS_SYSFS_DRIVER_VERSION	(2)
+#define NVS_SYSFS_DRIVER_VERSION	(3)
 
 
 static const char * const nvs_snsr_names[] = {
@@ -1194,6 +1194,7 @@ static ssize_t nvs_attr_us_period_show(struct device *dev,
 				       char *buf)
 {
 	struct nvs_state *st = dev_to_nvs_state(dev);
+	unsigned int period_us;
 	int ret;
 
 	if (st->fn_dev->enable == nvs_fn_dev_enable) {
@@ -1205,10 +1206,21 @@ static ssize_t nvs_attr_us_period_show(struct device *dev,
 			return ret;
 	}
 
-	if (ret)
-		return snprintf(buf, PAGE_SIZE, "%u\n", st->us_period);
+	if (ret) {
+		if (st->fn_dev->batch_read) {
+			ret = st->fn_dev->batch_read(st->client,
+						     st->cfg->snsr_id,
+						     &period_us, NULL);
+			if (ret < 0)
+				return ret;
+		} else {
+			period_us = st->us_period;
+		}
+	} else {
+		period_us = st->cfg->delay_us_min;
+	}
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", st->cfg->delay_us_min);
+	return snprintf(buf, PAGE_SIZE, "%u\n", period_us);
 }
 
 static ssize_t nvs_attr_us_period_store(struct device *dev,
@@ -1260,6 +1272,7 @@ static ssize_t nvs_attr_us_timeout_show(struct device *dev,
 					char *buf)
 {
 	struct nvs_state *st = dev_to_nvs_state(dev);
+	unsigned int timeout_us;
 	int ret;
 
 	if (st->fn_dev->enable == nvs_fn_dev_enable) {
@@ -1271,10 +1284,21 @@ static ssize_t nvs_attr_us_timeout_show(struct device *dev,
 			return ret;
 	}
 
-	if (ret)
-		return snprintf(buf, PAGE_SIZE, "%u\n", st->us_timeout);
+	if (ret) {
+		if (st->fn_dev->batch_read) {
+			ret = st->fn_dev->batch_read(st->client,
+						     st->cfg->snsr_id,
+						     NULL, &timeout_us);
+			if (ret < 0)
+				return ret;
+		} else {
+			timeout_us = st->us_timeout;
+		}
+	} else {
+		timeout_us = st->cfg->delay_us_max;
+	}
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", st->cfg->delay_us_max);
+	return snprintf(buf, PAGE_SIZE, "%u\n", timeout_us);
 }
 
 static ssize_t nvs_attr_us_timeout_store(struct device *dev,

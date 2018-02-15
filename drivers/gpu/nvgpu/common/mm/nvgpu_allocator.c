@@ -156,7 +156,8 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 	a->priv = priv;
 	a->debug = dbg;
 
-	strlcpy(a->name, name, sizeof(a->name));
+	strncpy(a->name, name, sizeof(a->name));
+	a->name[sizeof(a->name) - 1] = 0;
 
 	return 0;
 }

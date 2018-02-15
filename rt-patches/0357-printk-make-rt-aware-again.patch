@@ -1,0 +1,67 @@
+From 33ac2c6b2ff2d36645b8cd65c96d0b8d510ce53f Mon Sep 17 00:00:00 2001
+From: Timo Alho <talho@nvidia.com>
+Date: Wed, 14 Feb 2018 23:05:10 +0200
+Subject: [PATCH 1/2] printk: make rt aware (again)
+
+Similar to patch "printk: Make rt aware", make changes to downstream
+added code as well:
+
+Drop the lock before calling the console driver and do not disable
+interrupts while printing to a serial console.
+
+Signed-off-by: Timo Alho <talho@nvidia.com>
+---
+ kernel/printk/printk.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index c400234..4b347c9 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -1655,6 +1655,7 @@ static void call_force_console_drivers(const char *force_text,
+ 	if (!console_drivers)
+ 		return;
+ 
++	migrate_disable();
+ 	for_each_console(con) {
+ 		if (exclusive_console && con != exclusive_console)
+ 			continue;
+@@ -1669,6 +1670,7 @@ static void call_force_console_drivers(const char *force_text,
+ 		if (con->flags & CON_FORCE_LEVEL)
+ 			con->write(con, force_text, force_len);
+ 	}
++	migrate_enable();
+ }
+ 
+ /*
+@@ -2440,10 +2442,10 @@ static void console_cont_flush(char *text, size_t size)
+ 	len = cont_print_text(text, size);
+ #ifdef CONFIG_PREEMPT_RT_FULL
+ 	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+-	call_console_drivers(cont.level, NULL, 0, text, len);
+ #else
+ 	raw_spin_unlock(&logbuf_lock);
+ 	stop_critical_timings();
++#endif
+ 	call_console_drivers(cont.level, NULL, 0, text, len);
+ 
+ 	/* Add prefix in case console is with CON_FORCE_LEVEL */
+@@ -2461,6 +2463,7 @@ static void console_cont_flush(char *text, size_t size)
+ 		call_force_console_drivers(text, len);
+ 	}
+ 
++#ifndef CONFIG_PREEMPT_RT_FULL
+ 	start_critical_timings();
+ 	local_irq_restore(flags);
+ #endif
+@@ -2595,6 +2598,7 @@ void console_unlock(void)
+ #ifdef CONFIG_PREEMPT_RT_FULL
+ 		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+ 		call_console_drivers(level, ext_text, ext_len, text, len);
++		call_force_console_drivers(force_text, force_len);
+ #else
+ 		raw_spin_unlock(&logbuf_lock);
+ 
+-- 
+2.1.4
+

@@ -90,6 +90,7 @@ struct gk20a_event_id_data {
 	struct gk20a *g;
 
 	int id; /* ch or tsg */
+	int pid;
 	u32 event_id;
 
 	bool event_posted;

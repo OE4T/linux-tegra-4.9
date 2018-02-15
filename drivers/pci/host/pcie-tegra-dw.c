@@ -2495,7 +2495,8 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
 	}
 
-	ret = of_property_read_u32(np, "nvidia,controller-id", &pcie->cid);
+	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
+					 &pcie->cid);
 	if (ret) {
 		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
 		return ret;

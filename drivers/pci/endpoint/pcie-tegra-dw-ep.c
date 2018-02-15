@@ -1095,7 +1095,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
 	}
 
-	ret = of_property_read_u32(np, "nvidia,controller-id", &pcie->cid);
+	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
+					 &pcie->cid);
 	if (ret) {
 		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
 		return ret;

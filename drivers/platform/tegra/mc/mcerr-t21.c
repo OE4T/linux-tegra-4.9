@@ -22,6 +22,10 @@
 
 #include <linux/of.h>
 #include <linux/moduleparam.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+#include <linux/sched/clock.h>
+#endif
 #include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mcerr.h>
 #include <dt-bindings/memory/tegra-swgroup.h>

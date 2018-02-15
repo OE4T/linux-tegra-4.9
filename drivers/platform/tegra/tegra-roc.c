@@ -19,6 +19,10 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
+#include <linux/sched/signal.h>
+#endif
 #include <linux/mutex.h>
 #include <linux/delay.h>
 #include <linux/export.h>

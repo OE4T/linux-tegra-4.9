@@ -62,6 +62,12 @@
 #define ECC_SCRUBBING_TIMEOUT_MAX 1000
 #define ECC_SCRUBBING_TIMEOUT_DEFAULT 10
 
+/*
+ * Each gpc can have maximum 32 tpcs, so each tpc index need
+ * 5 bits. Each map register(32bits) can hold 6 tpcs info.
+ */
+#define GR_TPCS_INFO_FOR_MAPREGISTER 6
+
 bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
@@ -2305,10 +2311,12 @@ int gr_gv11b_handle_fecs_error(struct gk20a *g,
 int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 map;
-	u32 i, j, mapregs;
+	u32 i, j;
+	u32 mapreg_num, base, offset, mapregs;
 	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
 				GPU_LIT_NUM_TPC_PER_GPC);
+	u32 num_tpcs = num_gpcs * num_tpc_per_gpc;
 
 	gk20a_dbg_fn("");
 
@@ -2318,21 +2326,54 @@ int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_writel(g, gr_crstr_map_table_cfg_r(),
 		gr_crstr_map_table_cfg_row_offset_f(gr->map_row_offset) |
 		gr_crstr_map_table_cfg_num_entries_f(gr->tpc_count));
+	/*
+	 * 6 tpc can be stored in one map register.
+	 * But number of tpcs are not always multiple of six,
+	 * so adding additional check for valid number of
+	 * tpcs before programming map register.
+	 */
+	mapregs = DIV_ROUND_UP(num_tpcs, GR_TPCS_INFO_FOR_MAPREGISTER);
 
-	/* 6 tpc can be stored in one map register */
-	mapregs = (num_gpcs * num_tpc_per_gpc + 5) / 6;
+	for (mapreg_num = 0, base = 0; mapreg_num < mapregs; mapreg_num++,
+				base = base + GR_TPCS_INFO_FOR_MAPREGISTER) {
+		map = 0;
+		for (offset = 0;
+			(offset < GR_TPCS_INFO_FOR_MAPREGISTER && num_tpcs > 0);
+			offset++, num_tpcs--) {
+			switch (offset) {
+			case 0:
+				map =  map | gr_crstr_gpc_map_tile0_f(
+						gr->map_tiles[base + offset]);
+				break;
+			case 1:
+				map =  map | gr_crstr_gpc_map_tile1_f(
+						gr->map_tiles[base + offset]);
+				break;
+			case 2:
+				map =  map | gr_crstr_gpc_map_tile2_f(
+						gr->map_tiles[base + offset]);
+				break;
+			case 3:
+				map =  map | gr_crstr_gpc_map_tile3_f(
+						gr->map_tiles[base + offset]);
+				break;
+			case 4:
+				map =  map | gr_crstr_gpc_map_tile4_f(
+						gr->map_tiles[base + offset]);
+				break;
+			case 5:
+				map =  map | gr_crstr_gpc_map_tile5_f(
+						gr->map_tiles[base + offset]);
+				break;
+			default:
+				nvgpu_err(g, "incorrect rop mapping %x", offset);
+				break;
+			}
+		}
 
-	for (i = 0, j = 0; i < mapregs; i++, j = j + 6) {
-		map =  gr_crstr_gpc_map_tile0_f(gr->map_tiles[j]) |
-			gr_crstr_gpc_map_tile1_f(gr->map_tiles[j + 1]) |
-			gr_crstr_gpc_map_tile2_f(gr->map_tiles[j + 2]) |
-			gr_crstr_gpc_map_tile3_f(gr->map_tiles[j + 3]) |
-			gr_crstr_gpc_map_tile4_f(gr->map_tiles[j + 4]) |
-			gr_crstr_gpc_map_tile5_f(gr->map_tiles[j + 5]);
-
-		gk20a_writel(g, gr_crstr_gpc_map_r(i), map);
-		gk20a_writel(g, gr_ppcs_wwdx_map_gpc_map_r(i), map);
-		gk20a_writel(g, gr_rstr2d_gpc_map_r(i), map);
+		gk20a_writel(g, gr_crstr_gpc_map_r(mapreg_num), map);
+		gk20a_writel(g, gr_ppcs_wwdx_map_gpc_map_r(mapreg_num), map);
+		gk20a_writel(g, gr_rstr2d_gpc_map_r(mapreg_num), map);
 	}
 
 	gk20a_writel(g, gr_ppcs_wwdx_map_table_cfg_r(),

@@ -22,12 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/types.h>
-#include <linux/printk.h>
-
-#include <linux/types.h>
-#include <linux/tegra_gpu_t19x.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"

@@ -5302,7 +5302,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 }
 #endif
 
-static int gk20a_gr_handle_notify_pending(struct gk20a *g,
+int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -5891,7 +5891,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		isr_data.sub_chan, isr_data.class_num);
 
 	if (gr_intr & gr_intr_notify_pending_f()) {
-		gk20a_gr_handle_notify_pending(g, &isr_data);
+		g->ops.gr.handle_notify_pending(g, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_notify_reset_f());
 		gr_intr &= ~gr_intr_notify_pending_f();

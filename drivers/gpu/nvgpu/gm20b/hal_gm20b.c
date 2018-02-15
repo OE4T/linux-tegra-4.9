@@ -312,6 +312,7 @@ static const struct gpu_ops gm20b_ops = {
 		.init_ctxsw_hdr_data = gk20a_gr_init_ctxsw_hdr_data,
 		.fecs_host_int_enable = gr_gk20a_fecs_host_int_enable,
 		.set_error_notifier = gk20a_gr_set_error_notifier,
+		.handle_notify_pending = gk20a_gr_handle_notify_pending,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

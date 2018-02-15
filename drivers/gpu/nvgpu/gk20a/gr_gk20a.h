@@ -800,4 +800,6 @@ void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
 u32 gr_gk20a_get_patch_slots(struct gk20a *g);
 void gk20a_gr_set_error_notifier(struct gk20a *g,
 			struct gr_gk20a_isr_data *isr_data, u32 error_notifier);
+int gk20a_gr_handle_notify_pending(struct gk20a *g,
+				struct gr_gk20a_isr_data *isr_data);
 #endif /*__GR_GK20A_H__*/

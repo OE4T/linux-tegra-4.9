@@ -798,7 +798,7 @@ MMC_DEV_ATTR(enhanced_area_offset, "%llu\n",
 MMC_DEV_ATTR(enhanced_area_size, "%u\n", card->ext_csd.enhanced_area_size);
 MMC_DEV_ATTR(raw_rpmb_size_mult, "%#x\n", card->ext_csd.raw_rpmb_size_mult);
 MMC_DEV_ATTR(rel_sectors, "%#x\n", card->ext_csd.rel_sectors);
-MMC_DEV_ATTR(ocr, "%08x\n", card->ocr);
+MMC_DEV_ATTR(ocr, "0x%08x\n", card->ocr);
 MMC_DEV_ATTR(cmdq_status, "%s\n", mmc_card_cmdq(card) ? "enabled" : "disabled");
 MMC_DEV_ATTR(bkops_status, "%u\n", card->ext_csd.raw_bkops_status);
 MMC_DEV_ATTR(hpi_support, "%u\n", card->ext_csd.hpi);

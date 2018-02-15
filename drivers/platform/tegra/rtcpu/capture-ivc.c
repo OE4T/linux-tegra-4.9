@@ -1,7 +1,7 @@
 /*
  * Capture IVC driver
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -297,6 +297,8 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	if (WARN_ON(!__scivc_control))
 		return -ENODEV;
 
+	speculation_barrier();
+
 	civc = __scivc_control;
 
 	mutex_lock(&civc->cb_ctx_lock);
@@ -339,6 +341,8 @@ int tegra_capture_ivc_unregister_capture_cb(uint32_t chan_id)
 	if (!__scivc_capture)
 		return -ENODEV;
 
+	speculation_barrier();
+
 	civc = __scivc_capture;
 
 	mutex_lock(&civc->cb_ctx_lock);
@@ -376,6 +380,8 @@ static void tegra_capture_ivc_worker(struct work_struct *work)
 		/* Check if message is valid */
 		if (WARN(id >= TOTAL_CHANNELS, "Invalid rtcpu response id %u", id))
 			goto skip;
+
+		speculation_barrier();
 
 		/* Check if callback function available */
 		if (unlikely(!civc->cb_ctx[id].cb_func)) {

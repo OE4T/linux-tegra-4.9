@@ -431,6 +431,7 @@ static const struct gpu_ops gm20b_ops = {
 		.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1,
 		.tsg_bind_channel = gk20a_tsg_bind_channel,
 		.tsg_unbind_channel = gk20a_fifo_tsg_unbind_channel,
+		.post_event_id = gk20a_tsg_event_id_post_event,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

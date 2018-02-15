@@ -98,10 +98,6 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_IMPL_GV11B	0x0000000B
 #define NVGPU_GPU_IMPL_GV100	0x00000000
 
-#ifdef CONFIG_TEGRA_19x_GPU
-#include <linux/nvgpu-t19x.h>
-#endif
-
 #define NVGPU_GPU_BUS_TYPE_NONE         0
 #define NVGPU_GPU_BUS_TYPE_AXI         32
 

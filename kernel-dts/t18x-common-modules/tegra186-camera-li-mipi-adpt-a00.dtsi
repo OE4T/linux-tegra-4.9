@@ -184,6 +184,7 @@
 					mclk_khz = "37125";
 					num_lanes = "4";
 					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";
@@ -216,6 +217,7 @@
 					mclk_khz = "37125";
 					num_lanes = "4";
 					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";
@@ -249,6 +251,7 @@
 					mclk_khz = "37125";
 					num_lanes = "4";
 					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";
@@ -282,6 +285,7 @@
 					mclk_khz = "37125";
 					num_lanes = "4";
 					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";
@@ -314,6 +318,7 @@
 					mclk_khz = "37125";
 					num_lanes = "4";
 					tegra_sinterface = "serial_a";
+					phy_mode = "DPHY";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";

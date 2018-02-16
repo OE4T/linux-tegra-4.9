@@ -22,6 +22,7 @@
 
 #include <nvgpu/bug.h>
 #include <nvgpu/log.h>
+#include <nvgpu/log2.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>

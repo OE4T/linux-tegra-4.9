@@ -27,6 +27,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/vm.h>
+#include <nvgpu/log2.h>
 
 #include "gk20a/gk20a.h"
 

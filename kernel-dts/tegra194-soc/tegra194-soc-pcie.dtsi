@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -481,6 +481,7 @@
 		nvidia,device-id = /bits/ 16 <0x1AD4>;
 		nvidia,controller-id = <&bpmp 0x5>;
 		nvidia,num-lanes = <8>;
+		nvidia,tsa-config = <0x0200b004>;
 
 		nvidia,margin-port-cap = <0x194>;
 		nvidia,margin-lane-cntrl = <0x198>;
@@ -790,6 +791,7 @@
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <&bpmp 0x5>;
+		nvidia,tsa-config = <0x0200b004>;
 
 		bus-range = <0x0 0xff>;
 		ranges = <0x81000000 0x0 0x3a100000 0x0 0x3a100000 0x0 0x00100000      /* downstream I/O (1MB) */

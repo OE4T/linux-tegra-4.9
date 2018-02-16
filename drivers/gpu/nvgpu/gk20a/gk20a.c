@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/reboot.h>
-
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/allocator.h>
@@ -61,7 +59,7 @@ void __nvgpu_check_gpu_state(struct gk20a *g)
 	if (boot_0 == 0xffffffff) {
 		nvgpu_err(g, "GPU has disappeared from bus!!");
 		nvgpu_err(g, "Rebooting system!!");
-		kernel_restart(NULL);
+		nvgpu_kernel_restart(NULL);
 	}
 }
 

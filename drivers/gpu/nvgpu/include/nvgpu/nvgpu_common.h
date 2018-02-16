@@ -31,4 +31,6 @@ int nvgpu_probe(struct gk20a *g,
 		const char *interface_name,
 		struct class *class);
 
+void nvgpu_kernel_restart(void *cmd);
+
 #endif

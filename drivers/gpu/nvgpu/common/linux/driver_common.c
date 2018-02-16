@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/reboot.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
 #include <uapi/linux/nvgpu.h>
@@ -36,6 +37,11 @@
 #include "gk20a/regops_gk20a.h"
 
 #define EMC3D_DEFAULT_RATIO 750
+
+void nvgpu_kernel_restart(void *cmd)
+{
+	kernel_restart(cmd);
+}
 
 static void nvgpu_init_vars(struct gk20a *g)
 {

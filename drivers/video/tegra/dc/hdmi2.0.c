@@ -367,10 +367,12 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		return false;
 
 	/*
-	 * Work around for modes that fail the constraint:
+	 * Workaround for modes that fail the constraint:
 	 * V_FRONT_PORCH >= V_REF_TO_SYNC + 1
+	 *
+	 * This constraint does not apply to nvdisplay.
 	 */
-	if (mode->lower_margin == 1) {
+	if (!tegra_dc_is_nvdisplay() && mode->lower_margin == 1) {
 		mode->lower_margin++;
 		mode->upper_margin--;
 		mode->vmode |= FB_VMODE_ADJUSTED;

@@ -1998,7 +1998,8 @@ static int tegra_dsi_wait_frame_end(struct tegra_dc *dc,
 		frame_period);
 
 	/* wait for v_ref_to_sync no. of lines after frame end interrupt */
-	udelay(mode.v_ref_to_sync * line_period);
+	if (!tegra_dc_is_nvdisplay())
+		udelay(mode.v_ref_to_sync * line_period);
 
 	return timeout;
 }

@@ -368,32 +368,22 @@ static bool check_yuv_timings(struct tegra_dc_mode *mode, bool verbose)
 	return true;
 }
 
-static bool check_mode_timings(const struct tegra_dc *dc,
+static bool check_t21x_mode_timings(const struct tegra_dc *dc,
 			       struct tegra_dc_mode *mode, bool verbose)
 {
-#if defined(CONFIG_TEGRA_HDMI2_0)
 	if ((mode->vmode & FB_VMODE_Y420) ||
-	    (mode->vmode & FB_VMODE_Y420_ONLY)) {
+		(mode->vmode & FB_VMODE_Y420_ONLY))
 		mode->v_ref_to_sync = 1;
-	} else {
+	else
 		calc_ref_to_sync(mode);
-	}
+
 	mode->h_ref_to_sync = 1;
-#else
-	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-			/* HDMI controller requires h_ref=1, v_ref=1 */
-		mode->h_ref_to_sync = 1;
-		mode->v_ref_to_sync = 1;
-	} else {
-		calc_ref_to_sync(mode);
-	}
-#endif
 
 	if (dc->out->type == TEGRA_DC_OUT_DSI && dc->out->vrr) {
 		mode->h_ref_to_sync =
-			dc->out->modes[dc->out->n_modes-1].h_ref_to_sync;
+			dc->out->modes[dc->out->n_modes - 1].h_ref_to_sync;
 		mode->v_ref_to_sync =
-			dc->out->modes[dc->out->n_modes-1].v_ref_to_sync;
+			dc->out->modes[dc->out->n_modes - 1].v_ref_to_sync;
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_DP) {
@@ -408,8 +398,61 @@ static bool check_mode_timings(const struct tegra_dc *dc,
 		return false;
 	}
 
+	return true;
+}
+
+static bool check_nvdisp_mode_timings(const struct tegra_dc *dc,
+				struct tegra_dc_mode *mode, bool verbose)
+{
+	int h_total, v_total;
+
+	/*
+	 * Constraint 1: V_SYNC_WIDTH  >= 1
+	 *               H_SYNC_WIDTH  >= 1
+	 *               V_FRONT_PORCH >= 1
+	 *               H_FRONT_PORCH >= 1
+	 */
+	CHK(mode->v_sync_width < 1 || mode->h_sync_width < 1 ||
+		mode->v_front_porch < 1 || mode->h_front_porch < 1,
+		"{V,H}_SYNC_WIDTH >= 1, {V,H}_FRONT_PORCH >= 1\n");
+
+	/*
+	 * Constraint 2: H_DISP_ACTIVE >= 8
+	 *               V_DISP_ACTIVE >= 4
+	 */
+	CHK(mode->h_active < 8 || mode->v_active < 4,
+		"H_DISP_ACTIVE >= 8, V_DISP_ACTIVE >= 4\n");
+
+	/*
+	 * Constraint 3: H_TOTAL < 32768
+	 *               V_TOTAL < 32768
+	 */
+	h_total = mode->h_sync_width + mode->h_back_porch + mode->h_active +
+		mode->h_front_porch;
+	v_total = mode->v_sync_width + mode->v_back_porch + mode->v_active +
+		mode->v_front_porch;
+	CHK(h_total >= 32768 || v_total >= 32768,
+		"H_TOTAL < 32768, V_TOTAL < 32768\n");
+
+	/* Constraint 4: H_BLANK >= 25 */
+	CHK(h_total - mode->h_active < 25,
+		"H_BLANK >= 25\n");
+
+	return true;
+}
+
+static bool check_mode_timings(const struct tegra_dc *dc,
+				struct tegra_dc_mode *mode, bool verbose)
+{
+	bool check;
+
 	if (!check_yuv_timings(mode, verbose))
 		return false;
+
+	if (tegra_dc_is_nvdisplay())
+		check = check_nvdisp_mode_timings(dc, mode, verbose);
+	else
+		check = check_t21x_mode_timings(dc, mode, verbose);
 
 	if (verbose)
 		dev_dbg(&dc->ndev->dev,
@@ -417,7 +460,7 @@ static bool check_mode_timings(const struct tegra_dc *dc,
 			mode->h_active, mode->v_active, mode->pclk,
 			mode->h_ref_to_sync, mode->v_ref_to_sync);
 
-	return true;
+	return check;
 }
 
 bool check_fb_videomode_timings(const struct tegra_dc *dc,

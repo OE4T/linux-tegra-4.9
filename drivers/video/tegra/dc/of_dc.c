@@ -1128,22 +1128,26 @@ static int parse_modes(struct tegra_dc_out *default_out,
 	const struct tegra_dc_out_pin *pins = default_out->out_pins;
 	int i;
 
+	/* {V,H}_REF_TO_SYNC do NOT exist on nvdisplay. */
+	if (!tegra_dc_is_nvdisplay()) {
+		if (!of_property_read_u32(np, "nvidia,h-ref-to-sync", &temp)) {
+			modes->h_ref_to_sync = temp;
+		} else {
+			OF_DC_LOG("of h_ref_to_sync %d\n", temp);
+			goto parse_modes_fail;
+		}
+		if (!of_property_read_u32(np, "nvidia,v-ref-to-sync", &temp)) {
+			modes->v_ref_to_sync = temp;
+		} else {
+			OF_DC_LOG("of v_ref_to_sync %d\n", temp);
+			goto parse_modes_fail;
+		}
+	}
+
 	if (!of_property_read_u32(np, "clock-frequency", &temp)) {
 		modes->pclk = temp;
 		OF_DC_LOG("of pclk %d\n", temp);
 	} else {
-		goto parse_modes_fail;
-	}
-	if (!of_property_read_u32(np, "nvidia,h-ref-to-sync", &temp)) {
-		modes->h_ref_to_sync = temp;
-	} else {
-		OF_DC_LOG("of h_ref_to_sync %d\n", temp);
-		goto parse_modes_fail;
-	}
-	if (!of_property_read_u32(np, "nvidia,v-ref-to-sync", &temp)) {
-		modes->v_ref_to_sync = temp;
-	} else {
-		OF_DC_LOG("of v_ref_to_sync %d\n", temp);
 		goto parse_modes_fail;
 	}
 	if (!of_property_read_u32(np, "hsync-len", &temp)) {

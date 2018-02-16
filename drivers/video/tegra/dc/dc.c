@@ -3874,9 +3874,13 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		mode->rated_pclk = 0;
 
 		tegra_dc_get(dc);
-		val = tegra_dc_readl(dc, DC_DISP_REF_TO_SYNC);
-		mode->h_ref_to_sync = val & 0xffff;
-		mode->v_ref_to_sync = (val >> 16) & 0xffff;
+
+		/* {V,H}_REF_TO_SYNC do NOT exist on nvdisplay. */
+		if (!tegra_dc_is_nvdisplay()) {
+			val = tegra_dc_readl(dc, DC_DISP_REF_TO_SYNC);
+			mode->h_ref_to_sync = val & 0xffff;
+			mode->v_ref_to_sync = (val >> 16) & 0xffff;
+		}
 
 		val = tegra_dc_readl(dc, DC_DISP_SYNC_WIDTH);
 		mode->h_sync_width = val & 0xffff;
@@ -4433,7 +4437,7 @@ static void tegra_dc_prism_update_backlight(struct tegra_dc *dc)
 void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 {
 	WARN_ON(!mutex_is_locked(&dc->lock));
-	WARN_ON(vfp < dc->mode.v_ref_to_sync + 1);
+	WARN_ON(!tegra_dc_is_nvdisplay() && vfp < dc->mode.v_ref_to_sync + 1);
 	/* It's very unlikely that active vfp will need to
 	 * be changed outside of vrr context */
 	WARN_ON(!dc->out->vrr || !dc->out->vrr->capability);

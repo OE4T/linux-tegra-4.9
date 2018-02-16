@@ -149,23 +149,12 @@ static struct tegra_dc_mode min_mode = {
 	.h_sync_width = 1,
 	.v_sync_width = 1,
 	.h_back_porch = 20,
-	/* V back porch for T21x is 0 and for Nvdisplay is 2 .
-	 * Its populated  in tegra_dc_populate_min_mode.
-	 */
-	.v_back_porch = 2,
+	.v_back_porch = 0,
 	.h_active = 16,
 	.v_active = 16,
 	.h_front_porch = 1,
 	.v_front_porch = 2,
 };
-
-static void tegra_dc_populate_min_mode(void)
-{
-	if (tegra_dc_is_nvdisplay())
-		min_mode.v_back_porch = 2;
-	else
-		min_mode.v_back_porch = 0;
-}
 
 unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
@@ -882,8 +871,6 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	if (tegra_dc_is_nvdisplay())
 		tegra_sor_fpga_settings(dc, sor);
 	init_rwsem(&sor->reset_lock);
-
-	tegra_dc_populate_min_mode();
 
 	return sor;
 
@@ -1747,7 +1734,7 @@ tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
-	if (tegra_platform_is_vdk())
+	if (tegra_dc_is_nvdisplay())
 		return;
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -1796,7 +1783,7 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
-	if (tegra_platform_is_vdk())
+	if (tegra_dc_is_nvdisplay())
 		return;
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -1987,14 +1974,6 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	reg_val |= NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK;
 
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
-
-	if (tegra_dc_is_nvdisplay()) {
-		if (sor->dc->out->type == TEGRA_DC_OUT_DP)
-			tegra_sor_write_field(sor,
-				NV_SOR_DP_SPARE(sor->portnum),
-				NV_SOR_DP_SPARE_MSA_SRC_MASK,
-				NV_SOR_DP_SPARE_MSA_SRC_SOR);
-	}
 
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI) {
 		if (tegra_dc_is_nvdisplay())

@@ -71,12 +71,11 @@ void __gk20a_warn_on_no_regs(void)
 static int gk20a_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_params *p = &g->params;
-	u32 val;
 
 	if (p->gpu_arch)
 		return 0;
 
-	val = gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
+	gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
 
 	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
 			g->params.gpu_arch,
@@ -375,8 +374,8 @@ int gk20a_wait_for_idle(struct gk20a *g)
 		nvgpu_msleep(20);
 
 	if (wait_length < 0) {
-		pr_warn("%s: Timed out waiting for idle (%d)!\n",
-			__func__, nvgpu_atomic_read(&g->usage_count));
+		nvgpu_warn(g, "Timed out waiting for idle (%d)!\n",
+			   nvgpu_atomic_read(&g->usage_count));
 		return -ETIMEDOUT;
 	}
 

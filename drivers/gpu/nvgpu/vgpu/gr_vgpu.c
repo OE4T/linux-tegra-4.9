@@ -302,6 +302,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	p->as_handle = vm->handle;
 	p->gr_ctx_va = gr_ctx->mem.gpu_va;
 	p->class_num = class;
+	p->tsg_id = gr_ctx->tsgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 
@@ -501,6 +502,7 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	if (!nvgpu_mem_is_valid(&gr_ctx->mem)) {
 		tsg->vm = c->vm;
 		nvgpu_vm_get(tsg->vm);
+		gr_ctx->tsgid = tsg->tsgid;
 		err = g->ops.gr.alloc_gr_ctx(g, gr_ctx,
 					c->vm,
 					class_num,

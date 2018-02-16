@@ -369,6 +369,7 @@ struct tegra_vgpu_gr_ctx_params {
 	u64 as_handle;
 	u64 gr_ctx_va;
 	u32 class_num;
+	u32 tsg_id;
 };
 
 struct tegra_vgpu_channel_bind_gr_ctx_params {

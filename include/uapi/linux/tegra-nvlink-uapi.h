@@ -1,7 +1,7 @@
 /*
- * tegra-nvlink-mods.h:
+ * tegra-nvlink-uapi.h:
  * This header contains the structures and variables needed for
- * the NVLINK MODs APIs exported by the Tegra NVLINK endpoint driver.
+ * the NVLINK userspace APIs exported by the Tegra NVLINK endpoint driver.
  *
  * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -18,14 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef TEGRA_NVLINK_MODS_H
-#define TEGRA_NVLINK_MODS_H
+#ifndef TEGRA_NVLINK_UAPI_H
+#define TEGRA_NVLINK_UAPI_H
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS */
 
-#define NVLINK_VERSION_10				0x00000001
-#define NVLINK_VERSION_20				0x00000002
-#define NVLINK_VERSION_22				0x00000004
+#define TEGRA_NVLINK_VERSION_10				0x00000001
+#define TEGRA_NVLINK_VERSION_20				0x00000002
+#define TEGRA_NVLINK_VERSION_22				0x00000004
 
 #define TEGRA_CTRL_NVLINK_CAPS_NVLINK_VERSION_INVALID	(0x00000000)
 #define TEGRA_CTRL_NVLINK_CAPS_NVLINK_VERSION_1_0	(0x00000001)
@@ -51,7 +51,7 @@
 #define TEGRA_CTRL_NVLINK_CAPS_POWER_STATE_L3		BIT(11)
 #define TEGRA_CTRL_NVLINK_CAPS_VALID			BIT(12)
 
-struct nvlink_caps {
+struct tegra_nvlink_caps {
 	__u16 nvlink_caps;
 
 	__u8 lowest_nvlink_version;
@@ -139,7 +139,7 @@ struct nvlink_caps {
 
 #define TEGRA_CTRL_NVLINK_DEVICE_INFO_DEVICE_UUID_INVALID	(0xFFFFFFFF)
 
-struct nvlink_device_info {
+struct tegra_nvlink_device_info {
 	/* ID Flags */
 	__u32 device_id_flags;
 
@@ -157,7 +157,7 @@ struct nvlink_device_info {
 	__u8 device_uuid[16];
 };
 
-struct nvlink_link_status_info {
+struct tegra_nvlink_link_status_info {
 	/* Top level capablilites */
 	__u16 caps;
 
@@ -192,13 +192,13 @@ struct nvlink_link_status_info {
 	__u8 remote_device_link_number;
 	__u8 local_device_link_number;
 
-	struct nvlink_device_info remote_device_info;
-	struct nvlink_device_info local_device_info;
+	struct tegra_nvlink_device_info remote_device_info;
+	struct tegra_nvlink_device_info local_device_info;
 };
 
-struct nvlink_status {
+struct tegra_nvlink_status {
 	__u32 enabled_link_mask;
-	struct nvlink_link_status_info link_info;
+	struct tegra_nvlink_link_status_info link_info;
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS */
@@ -234,23 +234,23 @@ struct nvlink_status {
  * one such set bit in 'n'. Even if multiple bits are set,
  * result is in range of 0-31.
  */
-#define BIT_IDX_32(n)						\
+#define TEGRA_BIT_IDX_32(n)						\
 			((((n) & 0xFFFF0000) ? 0x10 : 0) |	\
 			(((n) & 0xFF00FF00) ? 0x08 : 0) |	\
 			(((n) & 0xF0F0F0F0) ? 0x04 : 0) |	\
 			(((n) & 0xCCCCCCCC) ? 0x02 : 0) |	\
 			(((n) & 0xAAAAAAAA) ? 0x01 : 0))
 
-struct nvlink_clear_counters {
+struct tegra_nvlink_clear_counters {
 	__u32 link_mask;
 	__u32 counter_mask;
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS */
-#define nvlink_counter(x)	\
-		BIT_IDX_32(TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(x))
+#define tegra_nvlink_counter(x)	\
+	TEGRA_BIT_IDX_32(TEGRA_CTRL_NVLINK_COUNTER_DL_RX_ERR_CRC_LANE_L(x))
 
-struct nvlink_get_counters {
+struct tegra_nvlink_get_counters {
 	__u8 link_id;
 	__u32 counter_mask;
 	bool bTx0_tl_counter_overflow;
@@ -261,7 +261,7 @@ struct nvlink_get_counters {
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO */
-struct nvlink_err_info {
+struct tegra_nvlink_err_info {
 	__u32 tl_err_log;
 	__u32 tl_intr_en;
 	__u32 tlc_tx_err_status0;
@@ -277,19 +277,19 @@ struct nvlink_err_info {
 	bool bExcess_error_dl;
 };
 
-struct nvlink_get_err_info {
+struct tegra_nvlink_get_err_info {
 	__u32 link_mask;
-	struct nvlink_err_info link_err_info;
+	struct tegra_nvlink_err_info link_err_info;
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES */
-struct nvlink_get_error_recoveries {
+struct tegra_nvlink_get_error_recoveries {
 	__u32 link_mask;
 	__u32 num_recoveries;
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_SETUP_EOM */
-struct nvlink_setup_eom {
+struct tegra_nvlink_setup_eom {
 	__u8 link_id;
 	__u32 params;
 };
@@ -333,27 +333,27 @@ enum tegra_ctrl_rx_mode {
 	TEGRA_CTRL_NVLINK_RX_RXCAL,
 };
 
-struct nvlink_pci_dev_info {
+struct tegra_nvlink_pci_dev_info {
 	__u16 domain;
 	__u8 bus;
 	__u8 device;
 	__u8 function;
 };
 
-struct nvlink_endpoint {
+struct tegra_nvlink_endpoint {
 	__u16 node_id;
 	__u32 link_index;
-	struct nvlink_pci_dev_info pci_info;
+	struct tegra_nvlink_pci_dev_info pci_info;
 };
 
 /* link and sublink state of an nvlink endpoint */
-struct nvlink_link_state {
+struct tegra_nvlink_link_state {
 	__u64 link_mode;
 	__u64 tx_sublink_mode;
 	__u64 rx_sublink_mode;
 };
 
-enum nvlink_conn_train_type {
+enum tegra_nvlink_conn_train_type {
 	nvlink_train_conn_off_to_swcfg = 0,
 	nvlink_train_conn_swcfg_to_active,
 	nvlink_train_conn_to_off,
@@ -361,16 +361,16 @@ enum nvlink_conn_train_type {
 	nvlink_train_conn_swcfg_to_off,
 };
 
-struct nvlink_train_intranode_conn {
+struct tegra_nvlink_train_intranode_conn {
 	/* input fields */
-	enum nvlink_conn_train_type train_to;
-	struct nvlink_endpoint src_end_point;
-	struct nvlink_endpoint dst_end_point;
+	enum tegra_nvlink_conn_train_type train_to;
+	struct tegra_nvlink_endpoint src_end_point;
+	struct tegra_nvlink_endpoint dst_end_point;
 
 	/* output fields */
 	int status;
-	struct nvlink_link_state src_end_state;
-	struct nvlink_link_state dst_end_state;
+	struct tegra_nvlink_link_state src_end_state;
+	struct tegra_nvlink_link_state dst_end_state;
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS */
@@ -381,7 +381,7 @@ struct nvlink_train_intranode_conn {
 #define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_NUM_TX_LP_EXIT	4
 #define TEGRA_CTRL_NVLINK_GET_LP_COUNTERS_MAX_COUNTERS		5
 
-struct nvlink_get_lp_counters {
+struct tegra_nvlink_get_lp_counters {
 	/* input field */
 	__u32 link_id;
 	/* input, output field */
@@ -391,31 +391,33 @@ struct nvlink_get_lp_counters {
 };
 
 /* TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS */
-struct nvlink_clear_lp_counters {
+struct tegra_nvlink_clear_lp_counters {
 	__u32 link_id;
 };
 
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
 #define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  1, struct nvlink_caps)
+	_IOR(TEGRA_NVLINK_IOC_MAGIC,  1, struct tegra_nvlink_caps)
 #define TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  2, struct nvlink_status)
+	_IOR(TEGRA_NVLINK_IOC_MAGIC,  2, struct tegra_nvlink_status)
 #define TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC,  3, struct nvlink_clear_counters)
+	_IOW(TEGRA_NVLINK_IOC_MAGIC,  3, struct tegra_nvlink_clear_counters)
 #define TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct nvlink_get_counters)
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct tegra_nvlink_get_counters)
 #define TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 5, struct nvlink_get_err_info)
+	_IOR(TEGRA_NVLINK_IOC_MAGIC, 5, struct tegra_nvlink_get_err_info)
 #define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES	\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6, struct nvlink_get_error_recoveries)
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6,		\
+		struct tegra_nvlink_get_error_recoveries)
 #define TEGRA_CTRL_CMD_NVLINK_SETUP_EOM			\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 7, struct nvlink_setup_eom)
+	_IOW(TEGRA_NVLINK_IOC_MAGIC, 7, struct tegra_nvlink_setup_eom)
 #define TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN		\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 8, struct nvlink_train_intranode_conn)
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 8,		\
+		struct tegra_nvlink_train_intranode_conn)
 #define TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS		\
-		_IOWR(TEGRA_NVLINK_IOC_MAGIC, 9, struct nvlink_get_lp_counters)
+	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 9, struct tegra_nvlink_get_lp_counters)
 #define TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS	\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 10, struct nvlink_clear_lp_counters)
+	_IOW(TEGRA_NVLINK_IOC_MAGIC, 10, struct tegra_nvlink_clear_lp_counters)
 
-#endif /* TEGRA_NVLINK_MODS_H */
+#endif /* TEGRA_NVLINK_UAPI_H */

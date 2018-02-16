@@ -105,6 +105,7 @@ struct tegra_machine_soc_data {
 static int tegra_machine_driver_remove(struct platform_device *);
 static int tegra_machine_driver_probe(struct platform_device *);
 static void dai_link_setup(struct platform_device *);
+static void ignore_suspend(struct snd_soc_card *);
 static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *);
 static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *);
 
@@ -1215,6 +1216,24 @@ static const struct of_device_id tegra_machine_of_match[] = {
 	{},
 };
 
+static void __maybe_unused ignore_suspend(struct snd_soc_card *card)
+{
+	struct snd_soc_pcm_runtime *rtd;
+#if KERNEL_VERSION(4, 5, 0) > LINUX_VERSION_CODE
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+	int idx;
+	int num_of_dai_links = machine->soc_data->num_xbar_dai_links +
+		machine->num_codec_links;
+
+	for (idx = 0; idx < num_of_dai_links; idx++) {
+		rtd = &card->rtd[idx];
+#else
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+#endif
+		rtd->dai_link->ignore_suspend = true;
+	}
+}
+
 static int tegra_machine_driver_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -1343,6 +1362,10 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 			ret);
 		goto err_switch_unregister;
 	}
+
+#ifdef CONFIG_ANDROID
+	ignore_suspend(card);
+#endif
 
 	rtd = tegra_machine_get_codec_link(card);
 	if (!rtd)

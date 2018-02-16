@@ -3,6 +3,7 @@ ccflags-y += -I$(srctree)/include
 ccflags-y += -I$(srctree)
 ccflags-y += -I$(srctree.nvidia)
 ccflags-y += -I$(srctree.nvidia)/drivers/platform/tegra/rtcpu
+ccflags-y += -I$(srctree.nvidia)/drivers/platform/tegra
 
 obj-y += debug.o
 obj-y += tegra-sysfs-mbox.o

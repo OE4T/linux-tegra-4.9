@@ -109,5 +109,6 @@ void nvgpu_udelay(unsigned int usecs);
  * Timekeeping.
  */
 s64 nvgpu_current_time_ms(void);
+u64 nvgpu_hr_timestamp(void);
 
 #endif

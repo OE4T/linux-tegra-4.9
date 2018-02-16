@@ -241,3 +241,18 @@ s64 nvgpu_current_time_ms(void)
 {
 	return ktime_to_ms(ktime_get());
 }
+
+/**
+ * nvgpu_hr_timestamp - Opaque 'high resolution' time stamp.
+ *
+ * Return a "high resolution" time stamp. It does not really matter exactly what
+ * it is, so long as it generally returns unique values and monotonically
+ * increases - wrap around _is_ possible though in a system running for long
+ * enough.
+ *
+ * Note: what high resolution means is system dependent.
+ */
+u64 nvgpu_hr_timestamp(void)
+{
+	return get_cycles();
+}

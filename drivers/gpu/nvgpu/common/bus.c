@@ -42,7 +42,7 @@ int nvgpu_get_timestamps_zipper(struct gk20a *g,
 		if (err)
 			return err;
 
-		samples[i].cpu_timestamp = (u64)get_cycles();
+		samples[i].cpu_timestamp = nvgpu_hr_timestamp();
 	}
 
 end:

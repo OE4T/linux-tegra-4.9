@@ -7,7 +7,6 @@ GCOV_PROFILE := y
 
 subdir-ccflags-y += -Werror
 subdir-ccflags-y += -I$(srctree)/drivers/platform/tegra/include \
-		    -I$(srctree.nvidia)/drivers/platform/tegra/ \
 		    -I$(srctree)/drivers/video/tegra/dc/panel/ \
 		    -I$(srctree)/arch/arm/mach-tegra
 

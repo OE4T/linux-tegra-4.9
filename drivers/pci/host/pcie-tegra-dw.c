@@ -88,11 +88,13 @@
 #define APPL_INTR_EN_L1_8_AER_INT_EN		BIT(15)
 #define APPL_INTR_EN_L1_8_INTX_EN		BIT(11)
 #define APPL_INTR_EN_L1_8_EDMA_INT_EN		BIT(6)
-#define APPL_INTR_EN_L1_8_AUTO_BW_INT_EN		BIT(3)
+#define APPL_INTR_EN_L1_8_AUTO_BW_INT_EN	BIT(3)
+#define APPL_INTR_EN_L1_8_BW_MGT_INT_EN		BIT(2)
 
 #define APPL_INTR_STATUS_L1_8_0			0x4C
 #define APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK	0xFC0
 #define APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS	BIT(3)
+#define APPL_INTR_STATUS_L1_8_0_BW_MGT_INT_STS	BIT(2)
 
 #define APPL_INTR_STATUS_L1_9			0x54
 #define APPL_INTR_STATUS_L1_10			0x58
@@ -619,6 +621,15 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 			writel(APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS,
 			       pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 			check_apply_link_bad_war(pp);
+		}
+		if (val & APPL_INTR_STATUS_L1_8_0_BW_MGT_INT_STS) {
+			writel(APPL_INTR_STATUS_L1_8_0_BW_MGT_INT_STS,
+			       pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
+
+			dw_pcie_cfg_read(pcie->pp.dbi_base +
+					 CFG_LINK_STATUS_CONTROL, 4, &val);
+			dev_dbg(pp->dev, "Link Speed : Gen-%u\n", (val >> 16) &
+					   PCI_EXP_LNKSTA_CLS);
 		}
 	}
 	val = readl(pcie->appl_base + APPL_INTR_STATUS_L0);
@@ -1283,6 +1294,22 @@ static int apply_speed_change(struct seq_file *s, void *data)
 		}
 	}
 
+	/* Wait for previous link training to complete */
+	start_jiffies = jiffies;
+	for (;;) {
+		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
+				 4, &val);
+		if (!(val & CFG_LINK_STATUS_LT))
+			break;
+		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
+			break;
+		usleep_range(1000, 1100);
+	}
+	if (val & CFG_LINK_STATUS_LT) {
+		seq_puts(s, "Previous link training didn't complete\n");
+		return 0;
+	}
+
 	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,
 			 &val);
 	val &= ~PCI_EXP_LNKSTA_CLS;
@@ -1307,18 +1334,15 @@ static int apply_speed_change(struct seq_file *s, void *data)
 			break;
 		usleep_range(1000, 1100);
 	}
-	if (val & CFG_LINK_STATUS_LT) {
-		seq_puts(s, "Link Re-training failed after speed change\n");
+
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
+			 4, &val);
+	if (((val >> 16) & PCI_EXP_LNKSTA_CLS) == pcie->target_speed) {
+		seq_puts(s, "Link speed is successful...!\n");
 	} else {
-		dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
-				 4, &val);
-		if (((val >> 16) & PCI_EXP_LNKSTA_CLS) == pcie->target_speed) {
-			seq_puts(s, "Link speed is successful...!\n");
-		} else {
-			seq_puts(s, "Link speed change failed...");
-			seq_printf(s, "Settled for Gen-%u\n", (val >> 16) &
-				   PCI_EXP_LNKSTA_CLS);
-		}
+		seq_puts(s, "Link speed change failed...");
+		seq_printf(s, "Settled for Gen-%u\n", (val >> 16) &
+			   PCI_EXP_LNKSTA_CLS);
 	}
 
 	return 0;
@@ -1856,6 +1880,7 @@ static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
 	val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
 	val |= APPL_INTR_EN_L1_8_INTX_EN;
 	val |= APPL_INTR_EN_L1_8_AUTO_BW_INT_EN;
+	val |= APPL_INTR_EN_L1_8_BW_MGT_INT_EN;
 	if (IS_ENABLED(CONFIG_PCIEAER))
 		val |= APPL_INTR_EN_L1_8_AER_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);

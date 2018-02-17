@@ -19,6 +19,7 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/kernel.h>
+#include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
@@ -32,6 +33,7 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/pci.h>
+#include <linux/kfifo.h>
 
 #define CTRL_0	(0)
 #define CTRL_1	(1)
@@ -195,6 +197,8 @@
 
 #define LTR_MSG_TIMEOUT (100*1000)
 
+#define EVENT_QUEUE_LEN	(256)
+
 #define NUM_TIMING_STEPS 0x14
 #define NUM_VOLTAGE_STEPS 0x14
 
@@ -263,7 +267,9 @@ struct tegra_pcie_dw_ep {
 	int			irq;
 	int			phy_count;
 	struct phy		**phy;
-	struct work_struct pcie_ep_work;
+	struct task_struct *pcie_ep_task;
+	wait_queue_head_t wq;
+	DECLARE_KFIFO(event_fifo, u32, EVENT_QUEUE_LEN);
 	u32 bar0_size;
 	u32 cid;
 	u16 device_id;
@@ -316,24 +322,34 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 		/* clear any stale PEX_RST interrupt */
 		writel(APPL_INTR_STATUS_L0_PEX_RST_INT,
 		       pcie->appl_base + APPL_INTR_STATUS_L0);
-		pcie->event = EP_PEX_RST_DE_ASSERT;
-		schedule_work(&pcie->pcie_ep_work);
+		if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DE_ASSERT)) {
+			dev_err(pcie->dev, "EVENT: fifo is full\n");
+			return IRQ_HANDLED;
+		}
+		wake_up(&pcie->wq);
 	} else if (val & APPL_INTR_STATUS_L0_LINK_STATE_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1);
 		writel(val, pcie->appl_base + APPL_INTR_STATUS_L1);
 		dev_dbg(pcie->dev, "APPL_INTR_STATUS_L1 = 0x%08X\n", val);
 		if (val & APPL_INTR_STATUS_L1_HOT_RESET_DONE) {
 			/* clear any stale PEX_RST interrupt */
-			pcie->event = EP_PEX_HOT_RST_DONE;
-			schedule_work(&pcie->pcie_ep_work);
+			if (!kfifo_put(&pcie->event_fifo,
+				       EP_PEX_HOT_RST_DONE)) {
+				dev_err(pcie->dev, "EVENT: fifo is full\n");
+				return IRQ_HANDLED;
+			}
+			wake_up(&pcie->wq);
 		}
 	} else if (val & APPL_INTR_STATUS_L0_PCI_CMD_EN_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_15);
 		writel(val, pcie->appl_base + APPL_INTR_STATUS_L1_15);
 		dev_dbg(pcie->dev, "APPL_INTR_STATUS_L1_15 = 0x%08X\n", val);
 		if (val & APPL_INTR_STATUS_L1_15_CFG_BME_CHGED) {
-			pcie->event = EP_PEX_BME_CHANGE;
-			schedule_work(&pcie->pcie_ep_work);
+			if (!kfifo_put(&pcie->event_fifo, EP_PEX_BME_CHANGE)) {
+				dev_err(pcie->dev, "EVENT: fifo is full\n");
+				return IRQ_HANDLED;
+			}
+			wake_up(&pcie->wq);
 		}
 	} else {
 		dev_info(pcie->dev, "Random interrupt (STATUS = 0x%08X)\n",
@@ -487,220 +503,261 @@ static void program_gen3_gen4_eq_presets(struct tegra_pcie_dw_ep *pcie)
 	writel(val, pcie->dbi_base + GEN3_RELATED_OFF);
 }
 
-void pcie_ep_work_fn(struct work_struct *work)
+static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 {
-	struct tegra_pcie_dw_ep *pcie =
-	    container_of(work, struct tegra_pcie_dw_ep, pcie_ep_work);
 	u32 val = 0;
 	int ret = 0;
 
-	if (pcie->event == EP_PEX_RST_DE_ASSERT) {
-		ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
-		if (ret)
-			dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n",
-				ret);
+	ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
+	if (ret)
+		dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n", ret);
 
-		ret = clk_prepare_enable(pcie->core_clk);
-		if (ret) {
-			dev_err(pcie->dev, "Failed to enable core clock\n");
-			return;
-		}
-
-		reset_control_assert(pcie->core_apb_rst);
-		reset_control_deassert(pcie->core_apb_rst);
-
-		ret = tegra_pcie_power_on_phy(pcie);
-		if (ret) {
-			dev_err(pcie->dev, "failed to power_on phy\n");
-			return;
-		}
-
-		/* clear any stale interrupt statuses */
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
-
-		/* configure this core for EP mode operation */
-		val = readl(pcie->appl_base + APPL_DM_TYPE);
-		val &= ~APPL_DM_TYPE_MASK;
-		val |= APPL_DM_TYPE_EP;
-		writel(val, pcie->appl_base + APPL_DM_TYPE);
-
-		val = readl(pcie->appl_base + APPL_CTRL);
-		val |= APPL_SYS_PRE_DET_STATE;
-		val |= APPL_CTRL_HW_HOT_RST_EN;
-		writel(val, pcie->appl_base + APPL_CTRL);
-
-		if (tegra_platform_is_fpga()) {
-			val = readl(pcie->appl_base + APPL_PINMUX);
-			val &= ~APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN;
-			writel(val, pcie->appl_base + APPL_PINMUX);
-		}
-
-		/* update CFG base address */
-		writel(pcie->dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
-		       pcie->appl_base + APPL_CFG_BASE_ADDR);
-
-		/* update iATU_DMA base address */
-		writel(pcie->atu_dma_res->start &
-		       APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
-		       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
-
-		/* enable PEX_RST interrupt generation */
-		val = readl(pcie->appl_base + APPL_INTR_EN_L0_0);
-		val |= APPL_INTR_EN_L0_0_SYS_INTR_EN;
-		if (tegra_platform_is_fpga())
-			val |= APPL_INTR_EN_L0_0_PEX_RST_INT_EN;
-		val |= APPL_INTR_EN_L0_0_LINK_STATE_INT_EN;
-		val |= APPL_INTR_EN_L0_0_PCI_CMD_EN_INT_EN;
-		writel(val, pcie->appl_base + APPL_INTR_EN_L0_0);
-
-		val = readl(pcie->appl_base + APPL_INTR_EN_L1_0);
-		val |= APPL_INTR_EN_L1_0_HOT_RESET_DONE_INT_EN;
-		writel(val, pcie->appl_base + APPL_INTR_EN_L1_0);
-
-		reset_control_assert(pcie->core_rst);
-		reset_control_deassert(pcie->core_rst);
-
-		/* FPGA specific PHY initialization */
-		if (tegra_platform_is_fpga()) {
-			val = readl(pcie->appl_base + APPL_GTH_PHY);
-			val &= ~APPL_GTH_PHY_RST;
-			writel(val, pcie->appl_base + APPL_GTH_PHY);
-			usleep_range(900, 1100);
-
-			val = readl(pcie->appl_base + APPL_GTH_PHY);
-			val &= 0xFFFF0000;
-			val |= 0x780; /* required for multiple L1.2 entries */
-			val |= APPL_GTH_PHY_RST;
-			writel(val, pcie->appl_base + APPL_GTH_PHY);
-			usleep_range(900, 1100);
-		}
-
-		/* Enable only 1MB of BAR */
-		writel(pcie->bar0_size - 1, pcie->dbi_base + 0x1010);
-		writel(0x00000000, pcie->dbi_base + 0x1014);
-
-		val = readl(pcie->dbi_base + AUX_CLK_FREQ);
-		val &= ~(0x3FF);
-		if (tegra_platform_is_fpga())
-			val |= 0x6;
-		else
-			val |= 19;	/* CHECK: for Silicon */
-		writel(val, pcie->dbi_base + AUX_CLK_FREQ);
-
-		inbound_atu(pcie, PCIE_ATU_REGION_INDEX0, PCIE_ATU_TYPE_MEM,
-			    0x0, pcie->dma_handle, pcie->bar0_size,
-			    PCIE_ATU_CR2_MATCH_MODE_BAR, 0);
-
-		if (pcie->update_fc_fixup) {
-			val = readl(pcie->dbi_base +
-				    CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
-			val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
-			writel(val, pcie->dbi_base +
-			       CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
-		}
-
-		program_gen3_gen4_eq_presets(pcie);
-
-		val = readl(pcie->dbi_base + MISC_CONTROL_1);
-		val |= MISC_CONTROL_1_DBI_RO_WR_EN;
-		writel(val, pcie->dbi_base + MISC_CONTROL_1);
-
-		if (pcie->disabled_aspm_states & 0x1)
-			disable_aspm_l0s(pcie); /* Disable L0s */
-		if (pcie->disabled_aspm_states & 0x2) {
-			disable_aspm_l10(pcie); /* Disable L1 */
-			disable_aspm_l11(pcie); /* Disable L1.1 */
-			disable_aspm_l12(pcie); /* Disable L1.2 */
-		}
-		if (pcie->disabled_aspm_states & 0x4)
-			disable_aspm_l11(pcie); /* Disable L1.1 */
-		if (pcie->disabled_aspm_states & 0x8)
-			disable_aspm_l12(pcie); /* Disable L1.2 */
-
-		writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
-
-		writew(PCI_CLASS_MEMORY_OTHER,
-		       pcie->dbi_base + PCI_CLASS_DEVICE);
-
-		val = readl(pcie->dbi_base + MISC_CONTROL_1);
-		val &= ~MISC_CONTROL_1_DBI_RO_WR_EN;
-		writel(val, pcie->dbi_base + MISC_CONTROL_1);
-
-		/* enable LTSSM */
-		val = readl(pcie->appl_base + APPL_CTRL);
-		val |= APPL_CTRL_LTSSM_EN;
-		writel(val, pcie->appl_base + APPL_CTRL);
-		pcie->event = EP_EVENT_INVALID;
+	ret = clk_prepare_enable(pcie->core_clk);
+	if (ret) {
+		dev_err(pcie->dev, "Failed to enable core clock\n");
+		return;
 	}
-	if (pcie->event == EP_PEX_HOT_RST_DONE) {
-		/* SW FixUp required during hot reset */
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_MSI_CTRL_2);
-		writel(0xFFFFFFFF, pcie->appl_base + APPL_PM_STATUS);
 
-		val = readl(pcie->appl_base + APPL_CTRL);
-		val |= APPL_CTRL_LTSSM_EN;
-		writel(val, pcie->appl_base + APPL_CTRL);
-		pcie->event = EP_EVENT_INVALID;
+	reset_control_assert(pcie->core_apb_rst);
+	reset_control_deassert(pcie->core_apb_rst);
+
+	ret = tegra_pcie_power_on_phy(pcie);
+	if (ret) {
+		dev_err(pcie->dev, "failed to power_on phy\n");
+		return;
 	}
-	if (pcie->event == EP_PEX_BME_CHANGE) {
-		/* Check if BME is set to '1' */
-		val = readl(pcie->dbi_base + EP_CS_STATUS_COMMAND);
-		if (val & EP_CS_STATUS_COMMAND_BME) {
-			ktime_t timeout;
 
-			/* 100us for both snoop and no-snoop */
-			/* TODO : Value should be updated for Silicon*/
-			val = 100 | (2 << PCI_LTR_SCALE_SHIFT) | LTR_MSG_REQ;
-			val |= (val << LTR_MST_NO_SNOOP_SHIFT);
-			writel(val, pcie->appl_base + APPL_LTR_MSG_1);
-			/* Send LTR upstream */
+	/* clear any stale interrupt statuses */
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
+
+	/* configure this core for EP mode operation */
+	val = readl(pcie->appl_base + APPL_DM_TYPE);
+	val &= ~APPL_DM_TYPE_MASK;
+	val |= APPL_DM_TYPE_EP;
+	writel(val, pcie->appl_base + APPL_DM_TYPE);
+
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val |= APPL_SYS_PRE_DET_STATE;
+	val |= APPL_CTRL_HW_HOT_RST_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+
+	if (tegra_platform_is_fpga()) {
+		val = readl(pcie->appl_base + APPL_PINMUX);
+		val &= ~APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN;
+		writel(val, pcie->appl_base + APPL_PINMUX);
+	}
+
+	/* update CFG base address */
+	writel(pcie->dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_BASE_ADDR);
+
+	/* update iATU_DMA base address */
+	writel(pcie->atu_dma_res->start &
+	       APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
+
+	/* enable PEX_RST interrupt generation */
+	val = readl(pcie->appl_base + APPL_INTR_EN_L0_0);
+	val |= APPL_INTR_EN_L0_0_SYS_INTR_EN;
+	if (tegra_platform_is_fpga())
+		val |= APPL_INTR_EN_L0_0_PEX_RST_INT_EN;
+	val |= APPL_INTR_EN_L0_0_LINK_STATE_INT_EN;
+	val |= APPL_INTR_EN_L0_0_PCI_CMD_EN_INT_EN;
+	writel(val, pcie->appl_base + APPL_INTR_EN_L0_0);
+
+	val = readl(pcie->appl_base + APPL_INTR_EN_L1_0);
+	val |= APPL_INTR_EN_L1_0_HOT_RESET_DONE_INT_EN;
+	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0);
+
+	reset_control_assert(pcie->core_rst);
+	reset_control_deassert(pcie->core_rst);
+
+	/* FPGA specific PHY initialization */
+	if (tegra_platform_is_fpga()) {
+		val = readl(pcie->appl_base + APPL_GTH_PHY);
+		val &= ~APPL_GTH_PHY_RST;
+		writel(val, pcie->appl_base + APPL_GTH_PHY);
+		usleep_range(900, 1100);
+
+		val = readl(pcie->appl_base + APPL_GTH_PHY);
+		val &= 0xFFFF0000;
+		val |= 0x780; /* required for multiple L1.2 entries */
+		val |= APPL_GTH_PHY_RST;
+		writel(val, pcie->appl_base + APPL_GTH_PHY);
+		usleep_range(900, 1100);
+	}
+
+	/* Enable only 1MB of BAR */
+	writel(pcie->bar0_size - 1, pcie->dbi_base + 0x1010);
+	writel(0x00000000, pcie->dbi_base + 0x1014);
+
+	val = readl(pcie->dbi_base + AUX_CLK_FREQ);
+	val &= ~(0x3FF);
+	if (tegra_platform_is_fpga())
+		val |= 0x6;
+	else
+		val |= 19;	/* CHECK: for Silicon */
+	writel(val, pcie->dbi_base + AUX_CLK_FREQ);
+
+	inbound_atu(pcie, PCIE_ATU_REGION_INDEX0, PCIE_ATU_TYPE_MEM,
+		    0x0, pcie->dma_handle, pcie->bar0_size,
+		    PCIE_ATU_CR2_MATCH_MODE_BAR, 0);
+
+	if (pcie->update_fc_fixup) {
+		val = readl(pcie->dbi_base +
+			    CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+		val |= 0x1 << CFG_TIMER_CTRL_ACK_NAK_SHIFT;
+		writel(val, pcie->dbi_base +
+		       CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF);
+	}
+
+	program_gen3_gen4_eq_presets(pcie);
+
+	val = readl(pcie->dbi_base + MISC_CONTROL_1);
+	val |= MISC_CONTROL_1_DBI_RO_WR_EN;
+	writel(val, pcie->dbi_base + MISC_CONTROL_1);
+
+	if (pcie->disabled_aspm_states & 0x1)
+		disable_aspm_l0s(pcie); /* Disable L0s */
+	if (pcie->disabled_aspm_states & 0x2) {
+		disable_aspm_l10(pcie); /* Disable L1 */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
+	if (pcie->disabled_aspm_states & 0x4)
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+	if (pcie->disabled_aspm_states & 0x8)
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+
+	writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
+
+	writew(PCI_CLASS_MEMORY_OTHER,
+	       pcie->dbi_base + PCI_CLASS_DEVICE);
+
+	val = readl(pcie->dbi_base + MISC_CONTROL_1);
+	val &= ~MISC_CONTROL_1_DBI_RO_WR_EN;
+	writel(val, pcie->dbi_base + MISC_CONTROL_1);
+
+	/* enable LTSSM */
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val |= APPL_CTRL_LTSSM_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+}
+
+static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
+{
+	u32 val = 0;
+
+	/* SW FixUp required during hot reset */
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L0);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_1);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_2);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_3);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_6);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_7);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_8);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_9);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_10);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_11);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_13);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_14);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_MSI_CTRL_2);
+	writel(0xFFFFFFFF, pcie->appl_base + APPL_PM_STATUS);
+
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val |= APPL_CTRL_LTSSM_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+}
+
+static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
+{
+	u32 val = 0;
+
+	/* Check if BME is set to '1' */
+	val = readl(pcie->dbi_base + EP_CS_STATUS_COMMAND);
+	if (val & EP_CS_STATUS_COMMAND_BME) {
+		ktime_t timeout;
+
+		/* 100us for both snoop and no-snoop */
+		/* TODO : Value should be updated for Silicon*/
+		val = 100 | (2 << PCI_LTR_SCALE_SHIFT) | LTR_MSG_REQ;
+		val |= (val << LTR_MST_NO_SNOOP_SHIFT);
+		writel(val, pcie->appl_base + APPL_LTR_MSG_1);
+		/* Send LTR upstream */
+		val = readl(pcie->appl_base + APPL_LTR_MSG_2);
+		val |= APPL_LTR_MSG_2_LTR_MSG_REQ_STATE;
+		writel(val, pcie->appl_base + APPL_LTR_MSG_2);
+
+		timeout = ktime_add_us(ktime_get(), LTR_MSG_TIMEOUT);
+		for (;;) {
 			val = readl(pcie->appl_base + APPL_LTR_MSG_2);
-			val |= APPL_LTR_MSG_2_LTR_MSG_REQ_STATE;
-			writel(val, pcie->appl_base + APPL_LTR_MSG_2);
-
-			timeout = ktime_add_us(ktime_get(), LTR_MSG_TIMEOUT);
-			for (;;) {
-				val = readl(pcie->appl_base + APPL_LTR_MSG_2);
-				if (!(val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE))
-					break;
-				if (ktime_after(ktime_get(), timeout))
-					break;
-				usleep_range(1000, 1100);
-			}
-			if (val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE)
-				dev_err(pcie->dev, "LTR_MSG sending failed\n");
+			if (!(val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE))
+				break;
+			if (ktime_after(ktime_get(), timeout))
+				break;
+			usleep_range(1000, 1100);
 		}
-		pcie->event = EP_EVENT_INVALID;
+		if (val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE)
+			dev_err(pcie->dev, "LTR_MSG sending failed\n");
 	}
+}
+
+static int pcie_ep_work_thread(void *p)
+{
+	struct tegra_pcie_dw_ep *pcie = (struct tegra_pcie_dw_ep *)p;
+	u32 event = 0;
+
+	while (1) {
+		wait_event_interruptible(pcie->wq,
+					 !kfifo_is_empty(&pcie->event_fifo));
+
+		if (kthread_should_stop())
+			break;
+
+		if (!kfifo_get(&pcie->event_fifo, &event)) {
+			dev_warn(pcie->dev, "empty kfifo\n");
+			return 0;
+		}
+
+		switch (event) {
+		case EP_PEX_RST_DE_ASSERT:
+			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_RST_DE_ASSERT\n");
+			pex_ep_event_pex_rst_deassert(pcie);
+			break;
+
+		case EP_PEX_HOT_RST_DONE:
+			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_HOT_RST_DONE\n");
+			pex_ep_event_hot_rst_done(pcie);
+			break;
+
+		case EP_PEX_BME_CHANGE:
+			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_BME_CHANGE\n");
+			pex_ep_event_bme_change(pcie);
+			break;
+
+		default:
+			dev_warn(pcie->dev, "Invalid PCIe EP event\n");
+			break;
+		}
+	}
+	return 0;
 }
 
 static void tegra_pcie_disable_phy(struct tegra_pcie_dw_ep *pcie)
@@ -763,8 +820,11 @@ static irqreturn_t pex_rst_isr(int irq, void *arg)
 {
 	struct tegra_pcie_dw_ep *pcie = arg;
 
-	pcie->event = EP_PEX_RST_DE_ASSERT;
-	schedule_work(&pcie->pcie_ep_work);
+	if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DE_ASSERT)) {
+		dev_err(pcie->dev, "EVENT: fifo is full\n");
+		return IRQ_HANDLED;
+	}
+	wake_up(&pcie->wq);
 	return IRQ_HANDLED;
 }
 
@@ -1261,12 +1321,6 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		pcie->bar0_size = SZ_1M;
 	}
 
-	ret = of_property_read_u32(np, "nvidia,controller-id", &pcie->cid);
-	if (ret) {
-		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
-		goto fail_dbi_res;
-	}
-
 	pcie->cpu_virt = dma_alloc_coherent(pcie->dev, pcie->bar0_size,
 					    &pcie->dma_handle, GFP_KERNEL);
 	if (!pcie->cpu_virt) {
@@ -1283,55 +1337,65 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	of_property_read_u32(np, "nvidia,disable-aspm-states",
 			     &pcie->disabled_aspm_states);
 
-	INIT_WORK(&pcie->pcie_ep_work, pcie_ep_work_fn);
+	INIT_KFIFO(pcie->event_fifo);
+
+	init_waitqueue_head(&pcie->wq);
+
+	pcie->pcie_ep_task = kthread_run(pcie_ep_work_thread, (void *)pcie,
+					 "pcie_ep_work");
+	if (IS_ERR(pcie->pcie_ep_task)) {
+		dev_err(pcie->dev, "failed to create pcie_ep_work thread\n");
+		ret = PTR_ERR(pcie->pcie_ep_task);
+		goto fail_dbi_res;
+	}
 
 	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
 	if (IS_ERR(pcie->core_rst)) {
 		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
 		ret = PTR_ERR(pcie->core_rst);
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 
 	pcie->irq = platform_get_irq_byname(pdev, "intr");
 	if (!pcie->irq) {
 		dev_err(pcie->dev, "failed to get intr interrupt\n");
 		ret = -ENODEV;
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 
 	ret = devm_request_irq(&pdev->dev, pcie->irq, tegra_pcie_irq_handler,
 			       IRQF_SHARED, "tegra-pcie-intr", pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to request \"intr\" irq\n");
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 
 	pex_rst_gpio = of_get_named_gpio(np, "nvidia,pex-rst-gpio", 0);
 	if (!gpio_is_valid(pex_rst_gpio)) {
 		dev_err(pcie->dev, "pex-rst-gpio is missing\n");
 		ret = pex_rst_gpio;
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 	ret = devm_gpio_request(pcie->dev, pex_rst_gpio, "pex_rst_gpio");
 	if (ret < 0) {
 		dev_err(pcie->dev, "pex_rst_gpio request failed\n");
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 	ret = gpio_direction_input(pex_rst_gpio);
 	if (ret < 0) {
 		dev_err(pcie->dev, "pex_rst_gpio direction input failed\n");
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 	irq = gpio_to_irq(pex_rst_gpio);
 	if (irq < 0) {
 		dev_err(pcie->dev, "Unable to get irq for pex_rst_gpio\n");
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 	ret = devm_request_irq(pcie->dev, (unsigned int)irq, pex_rst_isr,
 			       IRQF_TRIGGER_RISING, "pex_rst", (void *)pcie);
 	if (ret < 0) {
 		dev_err(pcie->dev, "Unable to request irq for pex_rst\n");
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 
 	name = kasprintf(GFP_KERNEL, "pcie-ep-%u", pcie->cid);
@@ -1348,6 +1412,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 
 	return ret;
 
+fail_thread:
+	kthread_stop(pcie->pcie_ep_task);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
 fail_core_clk:

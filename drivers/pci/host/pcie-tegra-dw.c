@@ -2102,6 +2102,11 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	tmp |= (pp->lanes << CFG_LINK_CAP_MAX_WIDTH_SHIFT);
 	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
 
+	/* Enable ASPM counters */
+	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
+	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
+
 	program_gen3_gen4_eq_presets(pp);
 
 	/* Program what ASPM states sould get advertised */
@@ -2129,7 +2134,6 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	}
 
 	/* CDM check enable */
-	pcie->cdm_check = of_property_read_bool(np, "nvidia,cdm_check");
 	if (pcie->cdm_check) {
 		dw_pcie_cfg_read(pp->dbi_base +
 				 PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, &tmp);
@@ -2287,79 +2291,6 @@ static struct pcie_host_ops tegra_pcie_dw_host_ops = {
 	.scan_bus = tegra_pcie_dw_scan_bus,
 };
 
-static int tegra_add_pcie_port(struct pcie_port *pp,
-			       struct platform_device *pdev)
-{
-	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
-	int ret;
-
-	pp->irq = platform_get_irq_byname(pdev, "intr");
-	if (!pp->irq) {
-		dev_err(pp->dev, "failed to get intr interrupt\n");
-		return -ENODEV;
-	}
-
-	ret = devm_request_irq(&pdev->dev, pp->irq, tegra_pcie_irq_handler,
-			       IRQF_SHARED, "tegra-pcie-intr", pp);
-	if (ret) {
-		dev_err(pp->dev, "failed to request \"intr\" irq\n");
-		return ret;
-	}
-
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		pp->msi_irq = platform_get_irq_byname(pdev, "msi");
-		if (!pp->msi_irq) {
-			dev_err(pp->dev, "failed to get msi interrupt\n");
-			ret = -ENODEV;
-			goto fail_get_msi;
-		}
-
-		ret = devm_request_irq(&pdev->dev, pp->msi_irq,
-				       tegra_pcie_msi_irq_handler,
-				       IRQF_SHARED | IRQF_NO_THREAD,
-				       "tegra-pcie-msi", pp);
-		if (ret) {
-			dev_err(pp->dev, "failed to request \"msi\" irq\n");
-			goto fail_get_msi;
-		}
-	}
-
-	/* program to use MPS of 256 whereever possible */
-	pcie_bus_config = PCIE_BUS_SAFE;
-
-	pp->root_bus_nr = -1;
-	pp->ops = &tegra_pcie_dw_host_ops;
-
-	/* Disable MSI interrupts for PME messages */
-	pcie_pme_disable_msi();
-
-	ret = dw_pcie_host_init(pp);
-
-	if (ret == -ENOMEDIUM && pcie->power_down_en) {
-		if (pcie->cid != CTRL_5) {
-			if (uphy_bpmp_pcie_controller_state_set(pcie->cid,
-								false))
-				dev_err(pcie->dev,
-					"Disabling controller-%d failed\n",
-					pcie->cid);
-		}
-		goto fail_host_init;
-	} else if (ret && ret != -ENOMEDIUM) {
-		dev_err(pp->dev, "failed to initialize host\n");
-		goto fail_host_init;
-	}
-	ret = 0;
-
-	return ret;
-
-fail_host_init:
-	if (IS_ENABLED(CONFIG_PCI_MSI))
-		devm_free_irq(&pdev->dev, pp->msi_irq, pp);
-fail_get_msi:
-	devm_free_irq(&pdev->dev, pp->irq, pp);
-	return ret;
-}
-
 static void tegra_pcie_disable_phy(struct tegra_pcie_dw *pcie)
 {
 	int phy_count = pcie->phy_count;
@@ -2401,11 +2332,114 @@ err_phy_init:
 	return ret;
 }
 
+static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
+{
+	struct device_node *np = pcie->dev->of_node;
+	int ret = 0;
+
+	/* Parse controller specific register offsets */
+	ret = of_property_read_u32(np, "nvidia,cfg-link-cap-l1sub",
+				   &pcie->cfg_link_cap_l1sub);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cfg-link-cap-l1sub: %d\n",
+			ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,cap-pl16g-status",
+			     &pcie->cap_pl16g_status);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cap-pl16g-status: %d\n", ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,cap-pl16g-cap-off",
+			     &pcie->cap_pl16g_cap_off);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read cap-pl16g-cap-off: %d\n", ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,event-cntr-ctrl",
+			     &pcie->event_cntr_ctrl);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-ctrl: %d\n", ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,event-cntr-data",
+			     &pcie->event_cntr_data);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,margin-port-cap",
+			     &pcie->margin_port_cap);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read margin-port-cap: %d\n", ret);
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,margin-lane-cntrl",
+			     &pcie->margin_lane_cntrl);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read margin-lane-cntrl: %d\n", ret);
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "nvidia,dl-feature-cap",
+			     &pcie->dl_feature_cap);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read dl_feature_cap: %d\n", ret);
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
+		pcie->num_lanes = 0;
+	}
+	ret = of_property_read_u32(np, "nvidia,max-speed", &pcie->max_speed);
+	if ((ret < 0) || (pcie->max_speed < 1 || pcie->max_speed > 4)) {
+		dev_err(pcie->dev, "invalid max-speed (err=%d), set to Gen-1\n",
+			ret);
+		pcie->max_speed = 1;
+	}
+	pcie->pex_wake = of_get_named_gpio(np, "nvidia,pex-wake", 0);
+	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
+		"nvidia,enable-power-down");
+	ret = of_property_read_u32(np, "nvidia,dma-size", &pcie->dma_size);
+	if (ret) {
+		dev_dbg(pcie->dev, "Setting default dma size to 1MB\n");
+		pcie->dma_size = SZ_1M;
+	}
+
+	if (device_property_read_bool(pcie->dev, "nvidia,dma-poll"))
+		pcie->dma_poll = true;
+	else
+		pcie->dma_poll = false;
+
+	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
+					 &pcie->cid);
+	if (ret) {
+		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
+		return ret;
+	}
+	ret = of_property_read_u32(np, "nvidia,tsa-config",
+				   &pcie->tsa_config_addr);
+	pcie->disable_clock_request = of_property_read_bool(pcie->dev->of_node,
+		"nvidia,disable-clock-request");
+	pcie->cdm_check = of_property_read_bool(np, "nvidia,cdm_check");
+
+	pcie->phy_count = of_property_count_strings(np, "phy-names");
+	if (pcie->phy_count < 0) {
+		dev_err(pcie->dev, "unable to find phy entries\n");
+		return pcie->phy_count;
+	}
+
+	return 0;
+}
+
 static int tegra_pcie_dw_probe(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie;
 	struct pcie_port *pp;
-	struct device_node *np = pdev->dev.of_node;
 	struct phy **phy;
 	struct resource *appl_res;
 	struct resource	*dbi_res;
@@ -2413,7 +2447,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	struct pinctrl *pin = NULL;
 	struct pinctrl_state *pin_state = NULL;
 	char *name;
-	int phy_count;
 	int ret, i = 0;
 	u32 val = 0;
 
@@ -2422,67 +2455,15 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pp = &pcie->pp;
-
 	pp->dev = &pdev->dev;
 	pcie->dev = &pdev->dev;
 
-	ret = of_property_read_u32(np, "nvidia,cfg-link-cap-l1sub",
-				   &pcie->cfg_link_cap_l1sub);
+	ret = tegra_pcie_dw_parse_dt(pcie);
 	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read cfg-link-cap-l1sub: %d\n",
-			ret);
-		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
+		dev_err(pcie->dev, "DT parsing failed: %d\n", ret);
+		return ret;
 	}
-	of_property_read_u32(np, "nvidia,cap-pl16g-status",
-			     &pcie->cap_pl16g_status);
-	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read cap-pl16g-status: %d\n", ret);
-		pcie->cap_pl16g_status = CAP_PL16G_STATUS_REG;
-	}
-	of_property_read_u32(np, "nvidia,cap-pl16g-cap-off",
-			     &pcie->cap_pl16g_cap_off);
-	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read cap-pl16g-cap-off: %d\n", ret);
-		pcie->cap_pl16g_cap_off = PL16G_CAP_OFF;
-	}
-	of_property_read_u32(np, "nvidia,event-cntr-ctrl",
-			     &pcie->event_cntr_ctrl);
-	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read event-cntr-ctrl: %d\n", ret);
-		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
-	}
-	of_property_read_u32(np, "nvidia,event-cntr-data",
-			     &pcie->event_cntr_data);
-	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
-		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
-	}
-	of_property_read_u32(np, "nvidia,margin-port-cap",
-			     &pcie->margin_port_cap);
-	if (ret < 0)
-		dev_err(pcie->dev, "fail to read margin-port-cap: %d\n", ret);
-	of_property_read_u32(np, "nvidia,margin-lane-cntrl",
-			     &pcie->margin_lane_cntrl);
-	if (ret < 0)
-		dev_err(pcie->dev, "fail to read margin-lane-cntrl: %d\n", ret);
 
-	of_property_read_u32(np, "nvidia,dl-feature-cap",
-			     &pcie->dl_feature_cap);
-	if (ret < 0)
-		dev_err(pcie->dev, "fail to read dl_feature_cap: %d\n", ret);
-
-	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
-	if (ret < 0) {
-		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
-		pcie->num_lanes = 0;
-	}
-	ret = of_property_read_u32(np, "nvidia,max-speed", &pcie->max_speed);
-	if ((ret < 0) | (val < 0 && val > 4)) {
-		dev_err(pcie->dev, "invalid max-speed (err=%d), set to Gen-1\n",
-			ret);
-		pcie->max_speed = 1;
-	}
-	pcie->pex_wake = of_get_named_gpio(np, "nvidia,pex-wake", 0);
 	if (gpio_is_valid(pcie->pex_wake)) {
 		ret = devm_gpio_request(pcie->dev, pcie->pex_wake, "pcie_wake");
 		if (ret < 0) {
@@ -2500,57 +2481,9 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		device_init_wakeup(pcie->dev, true);
 	}
 
-	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
-		"nvidia,enable-power-down");
 	pp->skip_enum = pcie->power_down_en;
 
-	ret = of_property_read_u32(np, "nvidia,dma-size", &pcie->dma_size);
-	if (ret) {
-		dev_dbg(pcie->dev, "Setting default dma size to 1MB\n");
-		pcie->dma_size = SZ_1M;
-	}
-	if (device_property_read_bool(pcie->dev, "nvidia,dma-poll"))
-		pcie->dma_poll = true;
-	else
-		pcie->dma_poll = false;
-
-	if (tegra_platform_is_fpga()) {
-		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
-		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
-		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
-	}
-
-	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
-					 &pcie->cid);
-	if (ret) {
-		dev_err(pcie->dev, "Controller-ID is missing in DT: %d\n", ret);
-		return ret;
-	}
-
-	if (pcie->cid != CTRL_5) {
-		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
-		if (ret) {
-			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
-				pcie->cid, ret);
-			return ret;
-		}
-	}
-
-	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");
-	if (IS_ERR(pcie->pex_ctl_reg)) {
-		dev_err(&pdev->dev, "fail to get regulator: %ld\n",
-			PTR_ERR(pcie->pex_ctl_reg));
-		return PTR_ERR(pcie->pex_ctl_reg);
-	}
-	ret = regulator_enable(pcie->pex_ctl_reg);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
-		return ret;
-	}
-
-	ret = of_property_read_u32(np, "nvidia,tsa-config",
-				   &pcie->tsa_config_addr);
-	if (!ret) {
+	if (pcie->tsa_config_addr) {
 		void __iomem *tsa_addr;
 
 		tsa_addr = ioremap(pcie->tsa_config_addr, 4);
@@ -2586,88 +2519,150 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		}
 	}
 
+	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");
+	if (IS_ERR(pcie->pex_ctl_reg)) {
+		dev_err(&pdev->dev, "fail to get regulator: %ld\n",
+			PTR_ERR(pcie->pex_ctl_reg));
+		return PTR_ERR(pcie->pex_ctl_reg);
+	}
+
 	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(pcie->core_clk)) {
 		dev_err(&pdev->dev, "Failed to get core clock\n");
-		ret = PTR_ERR(pcie->core_clk);
-		goto fail_core_clk;
+		return PTR_ERR(pcie->core_clk);
 	}
+
+	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
+	if (!appl_res) {
+		dev_err(&pdev->dev, "missing appl space\n");
+		return PTR_ERR(appl_res);
+	}
+	pcie->appl_base = devm_ioremap_resource(&pdev->dev, appl_res);
+	if (IS_ERR(pcie->appl_base)) {
+		dev_err(&pdev->dev, "mapping appl space failed\n");
+		return PTR_ERR(pcie->appl_base);
+	}
+
+	pcie->core_apb_rst = devm_reset_control_get(pcie->dev, "core_apb_rst");
+	if (IS_ERR(pcie->core_apb_rst)) {
+		dev_err(pcie->dev, "PCIE : core_apb_rst reset is missing\n");
+		return PTR_ERR(pcie->core_apb_rst);
+	}
+
+	phy = devm_kcalloc(pcie->dev, pcie->phy_count, sizeof(*phy),
+			   GFP_KERNEL);
+	if (!phy) {
+		return PTR_ERR(phy);
+	}
+
+	for (i = 0; i < pcie->phy_count; i++) {
+		name = kasprintf(GFP_KERNEL, "pcie-p2u-%u", i);
+		if (!name) {
+			dev_err(pcie->dev, "failed to create p2u string\n");
+			return -ENOMEM;
+		}
+		phy[i] = devm_phy_get(pcie->dev, name);
+		kfree(name);
+		if (IS_ERR(phy[i])) {
+			ret = PTR_ERR(phy[i]);
+			dev_err(pcie->dev, "phy_get error: %d\n", ret);
+			return ret;
+		}
+	}
+
+	pcie->phy = phy;
+
+	dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
+	if (!dbi_res) {
+		dev_err(&pdev->dev, "missing config space\n");
+		return PTR_ERR(dbi_res);
+	}
+	pcie->dbi_res = dbi_res;
+	pp->dbi_base = devm_ioremap_resource(&pdev->dev, dbi_res);
+	if (IS_ERR(pp->dbi_base)) {
+		dev_err(&pdev->dev, "mapping dbi space failed\n");
+		return PTR_ERR(pp->dbi_base);
+	}
+	pp->va_cfg0_base = pp->dbi_base;
+	pp->va_cfg1_base = pp->dbi_base + resource_size(dbi_res) / 2;
+
+	atu_dma_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						   "atu_dma");
+	if (!atu_dma_res) {
+		dev_err(&pdev->dev, "missing atu_dma space\n");
+		return PTR_ERR(atu_dma_res);
+	}
+	pcie->atu_dma_res = atu_dma_res;
+	pcie->atu_dma_base = devm_ioremap_resource(&pdev->dev, atu_dma_res);
+	if (IS_ERR(pcie->atu_dma_base)) {
+		dev_err(&pdev->dev, "mapping atu_dma space failed\n");
+		return PTR_ERR(pcie->atu_dma_base);
+	}
+
+	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
+	if (IS_ERR(pcie->core_rst)) {
+		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
+		return PTR_ERR(pcie->core_rst);
+	}
+
+	pp->irq = platform_get_irq_byname(pdev, "intr");
+	if (!pp->irq) {
+		dev_err(pp->dev, "failed to get intr interrupt\n");
+		return -ENODEV;
+	}
+
+	ret = devm_request_irq(&pdev->dev, pp->irq, tegra_pcie_irq_handler,
+			       IRQF_SHARED, "tegra-pcie-intr", pp);
+	if (ret) {
+		dev_err(pp->dev, "failed to request \"intr\" irq\n");
+		return ret;
+	}
+
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		pp->msi_irq = platform_get_irq_byname(pdev, "msi");
+		if (!pp->msi_irq) {
+			dev_err(pp->dev, "failed to get msi interrupt\n");
+			return -ENODEV;
+		}
+
+		ret = devm_request_irq(&pdev->dev, pp->msi_irq,
+				       tegra_pcie_msi_irq_handler,
+				       IRQF_SHARED | IRQF_NO_THREAD,
+				       "tegra-pcie-msi", pp);
+		if (ret) {
+			dev_err(pp->dev, "failed to request \"msi\" irq\n");
+			return ret;
+		}
+	}
+
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+		if (ret) {
+			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
+	}
+
+	ret = regulator_enable(pcie->pex_ctl_reg);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
+		goto fail_reg_en;
+	}
+
 	ret = clk_prepare_enable(pcie->core_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to enable core clock\n");
 		goto fail_core_clk;
 	}
 
-	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
-	if (!appl_res) {
-		dev_err(&pdev->dev, "missing appl space\n");
-		ret = PTR_ERR(appl_res);
-		goto fail_appl_res;
-	}
-	pcie->appl_base = devm_ioremap_resource(&pdev->dev, appl_res);
-	if (IS_ERR(pcie->appl_base)) {
-		dev_err(&pdev->dev, "mapping appl space failed\n");
-		ret = PTR_ERR(pcie->appl_base);
-		goto fail_appl_res;
-	}
-
-	pcie->core_apb_rst = devm_reset_control_get(pcie->dev, "core_apb_rst");
-	if (IS_ERR(pcie->core_apb_rst)) {
-		dev_err(pcie->dev, "PCIE : core_apb_rst reset is missing\n");
-		ret = PTR_ERR(pcie->core_apb_rst);
-		goto fail_appl_res;
-	}
-
 	reset_control_deassert(pcie->core_apb_rst);
-
-	phy_count = of_property_count_strings(np, "phy-names");
-	if (phy_count < 0) {
-		dev_err(pcie->dev, "unable to find phy entries\n");
-		ret = phy_count;
-		goto fail_phy;
-	}
-
-	phy = devm_kcalloc(pcie->dev, phy_count, sizeof(*phy), GFP_KERNEL);
-	if (!phy) {
-		ret = PTR_ERR(phy);
-		goto fail_phy;
-	}
-
-	for (i = 0; i < phy_count; i++) {
-		name = kasprintf(GFP_KERNEL, "pcie-p2u-%u", i);
-		phy[i] = devm_phy_get(pcie->dev, name);
-		kfree(name);
-		if (IS_ERR(phy[i])) {
-			ret = PTR_ERR(phy[i]);
-			dev_err(pcie->dev, "phy_get error: %d\n", ret);
-			goto fail_phy;
-		}
-	}
-
-	pcie->phy_count = phy_count;
-	pcie->phy = phy;
 
 	ret = tegra_pcie_enable_phy(pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to enable phy\n");
 		goto fail_phy;
 	}
-
-	dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
-	if (!dbi_res) {
-		dev_err(&pdev->dev, "missing config space\n");
-		ret = PTR_ERR(dbi_res);
-		goto fail_dbi_res;
-	}
-	pcie->dbi_res = dbi_res;
-	pp->dbi_base = devm_ioremap_resource(&pdev->dev, dbi_res);
-	if (IS_ERR(pp->dbi_base)) {
-		dev_err(&pdev->dev, "mapping dbi space failed\n");
-		ret = PTR_ERR(pp->dbi_base);
-		goto fail_dbi_res;
-	}
-	pp->va_cfg0_base = pp->dbi_base;
-	pp->va_cfg1_base = pp->dbi_base + resource_size(dbi_res) / 2;
 
 	/* update CFG base address */
 	writel(dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
@@ -2679,8 +2674,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	val = readl(pcie->appl_base + APPL_CTRL);
 	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
 
-	pcie->disable_clock_request = of_property_read_bool(pcie->dev->of_node,
-		"nvidia,disable-clock-request");
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
@@ -2692,43 +2685,30 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		disable_aspm_l12(pcie); /* Disable L1.2 */
 	}
 
-	atu_dma_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
-						   "atu_dma");
-	if (!atu_dma_res) {
-		dev_err(&pdev->dev, "missing atu_dma space\n");
-		ret = PTR_ERR(atu_dma_res);
-		goto fail_dbi_res;
-	}
-	pcie->atu_dma_res = atu_dma_res;
-	pcie->atu_dma_base = devm_ioremap_resource(&pdev->dev, atu_dma_res);
-	if (IS_ERR(pcie->atu_dma_base)) {
-		dev_err(&pdev->dev, "mapping atu_dma space failed\n");
-		ret = PTR_ERR(pcie->atu_dma_base);
-		goto fail_dbi_res;
-	}
-
 	/* update iATU_DMA base address */
 	writel(atu_dma_res->start & APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
-	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
-	if (IS_ERR(pcie->core_rst)) {
-		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
-		ret = PTR_ERR(pcie->core_rst);
-		goto fail_dbi_res;
-	}
-
 	reset_control_deassert(pcie->core_rst);
 
-	ret = tegra_add_pcie_port(pp, pdev);
+	/* program to use MPS of 256 whereever possible */
+	pcie_bus_config = PCIE_BUS_SAFE;
+
+	pp->root_bus_nr = -1;
+	pp->ops = &tegra_pcie_dw_host_ops;
+
+	/* Disable MSI interrupts for PME messages */
+	pcie_pme_disable_msi();
+
+	platform_set_drvdata(pdev, pcie);
+
+	ret = dw_pcie_host_init(pp);
 	if (ret < 0) {
 		if (ret != -ENOMEDIUM)
 			dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n",
 				ret);
-		goto fail_add_port;
+		goto fail_host_init;
 	}
-
-	platform_set_drvdata(pdev, pcie);
 
 	/* Enable DMA processing engines */
 	for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
@@ -2741,15 +2721,10 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		init_completion(&pcie->rd_cpl[i]);
 	}
 
-	/* Enable ASPM counters */
-	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
-	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
-
 	name = kasprintf(GFP_KERNEL, "pcie-%u", pcie->cid);
 	if (!name) {
 		ret = -ENOMEM;
-		goto fail_add_port;
+		goto fail_debugfs;
 	}
 	pcie->debugfs = debugfs_create_dir(name, NULL);
 	if (!pcie->debugfs)
@@ -2760,16 +2735,24 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 	return 0;
 
-fail_add_port:
+fail_debugfs:
+	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+		mutex_destroy(&pcie->wr_lock[i]);
+
+	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+		mutex_destroy(&pcie->rd_lock[i]);
+fail_host_init:
 	reset_control_assert(pcie->core_rst);
-fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
 fail_phy:
 	reset_control_assert(pcie->core_apb_rst);
-fail_appl_res:
 	clk_disable_unprepare(pcie->core_clk);
 fail_core_clk:
 	regulator_disable(pcie->pex_ctl_reg);
+fail_reg_en:
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+
 	return ret;
 }
 
@@ -2862,6 +2845,9 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 	reset_control_assert(pcie->core_apb_rst);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
+
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
 
 	return 0;
 }
@@ -2979,11 +2965,6 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 			  4, pcie->msi_ctrl_int);
 
 	tegra_pcie_dw_scan_bus(&pcie->pp);
-
-	/* Enable ASPM counters */
-	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
-	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
 
 	return 0;
 fail_phy:

@@ -909,8 +909,10 @@ struct isp_program_descriptor {
 	struct capture_isp_program_status isp_program_status;
 
 	uint32_t activate_flags;
-#define CAPTURE_ACTIVATE_FLAG_ON_SEQUENCE_ID	U32_C(1)
-#define CAPTURE_ACTIVATE_FLAG_ON_SETTINGS_ID	U32_C(2)
+
+#define CAPTURE_ACTIVATE_FLAG_ON_SEQUENCE_ID	U32_C(0x1) /* 1 << 0 */
+#define CAPTURE_ACTIVATE_FLAG_ON_SETTINGS_ID	U32_C(0x2) /* 1 << 1 */
+#define CAPTURE_ACTIVATE_FLAG_COUPLED		U32_C(0x4) /* 1 << 2 */
 
 	/** Pad to aligned size */
 	uint32_t __pad[7];

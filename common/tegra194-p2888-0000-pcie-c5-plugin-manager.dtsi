@@ -17,13 +17,13 @@
 		fragment-pcie-c5-rp {
 			odm-data = "disable-pcie-c5-endpoint";
 			override@0 {
-				target = <&{/pcie_c5_rp}>;
+				target = <&{/pcie@141a0000}>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
 			override@1 {
-				target = <&{/pcie_c5_ep}>;
+				target = <&{/pcie_ep@141a0000}>;
 				_overlay_ {
 					status = "disabled";
 				};
@@ -39,13 +39,13 @@
 		fragment-pcie-c5-ep {
 			odm-data = "enable-pcie-c5-endpoint";
 			override@0 {
-				target = <&{/pcie_c5_rp}>;
+				target = <&{/pcie@141a0000}>;
 				_overlay_ {
 					status = "disabled";
 				};
 			};
 			override@1 {
-				target = <&{/pcie_c5_ep}>;
+				target = <&{/pcie_ep@141a0000}>;
 				_overlay_ {
 					status = "okay";
 				};

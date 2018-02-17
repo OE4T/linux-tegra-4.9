@@ -1334,11 +1334,17 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		goto fail_dbi_res;
 	}
 
-	pcie->debugfs = debugfs_create_dir(pdev->dev.of_node->name, NULL);
+	name = kasprintf(GFP_KERNEL, "pcie-ep-%u", pcie->cid);
+	if (!name) {
+		ret = -ENOMEM;
+		goto fail_dbi_res;
+	}
+	pcie->debugfs = debugfs_create_dir(name, NULL);
 	if (!pcie->debugfs)
 		dev_err(pcie->dev, "debugfs creation failed\n");
 	else
 		init_debugfs(pcie);
+	kfree(name);
 
 	return ret;
 

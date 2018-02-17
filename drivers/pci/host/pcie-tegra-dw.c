@@ -2746,11 +2746,17 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
 	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->event_cntr_ctrl, 4, val);
 
-	pcie->debugfs = debugfs_create_dir(pdev->dev.of_node->name, NULL);
+	name = kasprintf(GFP_KERNEL, "pcie-%u", pcie->cid);
+	if (!name) {
+		ret = -ENOMEM;
+		goto fail_add_port;
+	}
+	pcie->debugfs = debugfs_create_dir(name, NULL);
 	if (!pcie->debugfs)
 		dev_err(pcie->dev, "debugfs creation failed\n");
 	else
 		init_debugfs(pcie);
+	kfree(name);
 
 	return 0;
 

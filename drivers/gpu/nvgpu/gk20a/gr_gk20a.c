@@ -6053,7 +6053,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			/* signal clients waiting on an event */
 			if (g->ops.gr.sm_debugger_attached(g) &&
 					 post_event && fault_ch) {
-				gk20a_dbg_gpu_post_events(fault_ch);
+				g->ops.debugger.post_events(fault_ch);
 			}
 		}
 

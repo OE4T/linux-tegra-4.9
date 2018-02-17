@@ -2032,7 +2032,7 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 		}
 
 		/* Post events to UMD */
-		gk20a_dbg_gpu_post_events(ch);
+		g->ops.debugger.post_events(ch);
 
 		tsg = &g->fifo.tsg[ch->tsgid];
 

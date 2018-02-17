@@ -515,6 +515,9 @@ struct gpu_ops {
 		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
 	} clock_gating;
 	struct {
+		void (*post_events)(struct channel_gk20a *ch);
+	} debugger;
+	struct {
 		int (*init_fifo_setup_hw)(struct gk20a *g);
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*unbind_channel)(struct channel_gk20a *ch_gk20a);

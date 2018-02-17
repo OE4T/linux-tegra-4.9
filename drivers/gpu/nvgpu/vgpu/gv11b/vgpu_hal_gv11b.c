@@ -39,6 +39,7 @@
 #include <gk20a/flcn_gk20a.h>
 #include <gk20a/bus_gk20a.h>
 #include <gk20a/mc_gk20a.h>
+#include "gk20a/dbg_gpu_gk20a.h"
 
 #include <gm20b/gr_gm20b.h>
 #include <gm20b/fb_gm20b.h>
@@ -525,6 +526,9 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 	.debug = {
 		.show_dump = NULL,
 	},
+	.debugger = {
+		.post_events = gk20a_dbg_gpu_post_events,
+	},
 	.dbg_session_ops = {
 		.exec_reg_ops = vgpu_exec_regops,
 		.dbg_set_powergate = vgpu_dbg_set_powergate,
@@ -585,6 +589,7 @@ int vgpu_gv11b_init_hal(struct gk20a *g)
 	gops->regops = vgpu_gv11b_ops.regops;
 	gops->mc = vgpu_gv11b_ops.mc;
 	gops->debug = vgpu_gv11b_ops.debug;
+	gops->debugger = vgpu_gv11b_ops.debugger;
 	gops->dbg_session_ops = vgpu_gv11b_ops.dbg_session_ops;
 	gops->bus = vgpu_gv11b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)

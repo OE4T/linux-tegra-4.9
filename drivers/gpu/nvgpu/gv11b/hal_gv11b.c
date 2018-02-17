@@ -667,6 +667,9 @@ static const struct gpu_ops gv11b_ops = {
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,
 	},
+	.debugger = {
+		.post_events = gk20a_dbg_gpu_post_events,
+	},
 	.dbg_session_ops = {
 		.exec_reg_ops = exec_regops_gk20a,
 		.dbg_set_powergate = dbg_set_powergate,
@@ -729,6 +732,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->regops = gv11b_ops.regops;
 	gops->mc = gv11b_ops.mc;
 	gops->debug = gv11b_ops.debug;
+	gops->debugger = gv11b_ops.debugger;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
 	gops->bus = gv11b_ops.bus;
 #if defined(CONFIG_GK20A_CYCLE_STATS)

@@ -951,7 +951,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 				NVGPU_ERR_NOTIFIER_GR_ERROR_SW_NOTIFY);
 		break;
 	case TEGRA_VGPU_GR_INTR_SM_EXCEPTION:
-		gk20a_dbg_gpu_post_events(ch);
+		g->ops.debugger.post_events(ch);
 		break;
 	default:
 		WARN_ON(1);

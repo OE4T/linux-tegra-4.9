@@ -118,6 +118,7 @@
 #define EP_CS_STATUS_COMMAND_BME		BIT(2)
 
 #define EP_CFG_LINK_CAP				0x7C
+#define EP_CFG_LINK_CAP_MAX_SPEED_MASK		0xF
 
 #define CFG_LINK_STATUS_CONTROL	0x80
 
@@ -284,6 +285,7 @@ struct tegra_pcie_dw_ep {
 	struct dentry *debugfs;
 
 	u32 num_lanes;
+	u32 max_speed;
 	u32 cfg_link_cap_l1sub;
 	u32 margin_port_cap;
 	u32 margin_lane_cntrl;
@@ -644,6 +646,13 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 		disable_aspm_l12(pcie); /* Disable L1.2 */
 
 	writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
+
+	if (pcie->max_speed >= 1 && pcie->max_speed <= 4) {
+		val = readl(pcie->dbi_base + EP_CFG_LINK_CAP);
+		val &= ~EP_CFG_LINK_CAP_MAX_SPEED_MASK;
+		val |= pcie->max_speed;
+		writel(val, pcie->dbi_base + EP_CFG_LINK_CAP);
+	}
 
 	writew(PCI_CLASS_MEMORY_OTHER,
 	       pcie->dbi_base + PCI_CLASS_DEVICE);
@@ -1154,6 +1163,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 			ret);
 		pcie->cfg_link_cap_l1sub = CFG_LINK_CAP_L1SUB;
 	}
+
+	of_property_read_u32(np, "nvidia,max-speed", &pcie->max_speed);
 
 	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
 					 &pcie->cid);

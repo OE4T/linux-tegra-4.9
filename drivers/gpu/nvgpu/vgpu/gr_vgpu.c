@@ -1026,7 +1026,7 @@ int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 }
 
 int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
-	struct channel_gk20a *ch, bool enable)
+	struct channel_gk20a *ch, u64 gpu_va, bool enable)
 {
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *ch_ctx;
@@ -1040,6 +1040,11 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	tsg = tsg_gk20a_from_ch(ch);
 	if (!tsg)
 		return -EINVAL;
+
+	if (gpu_va) {
+		nvgpu_err(g, "gpu_va suppose to be allocated by this function.");
+		return -EINVAL;
+	}
 
 	ch_ctx = &tsg->gr_ctx;
 	pm_ctx = &ch_ctx->pm_ctx;

@@ -298,6 +298,7 @@ struct gpu_ops {
 				bool enable);
 		int (*update_hwpm_ctxsw_mode)(struct gk20a *g,
 				struct channel_gk20a *c,
+				u64 gpu_va,
 				bool enable);
 		int (*dump_gr_regs)(struct gk20a *g,
 				struct gk20a_debug_output *o);

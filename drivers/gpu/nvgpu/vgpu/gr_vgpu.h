@@ -58,7 +58,7 @@ int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable);
 int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
-	struct channel_gk20a *ch, bool enable);
+	struct channel_gk20a *ch, u64 gpu_va, bool enable);
 int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id);
 int vgpu_gr_suspend_contexts(struct gk20a *g,

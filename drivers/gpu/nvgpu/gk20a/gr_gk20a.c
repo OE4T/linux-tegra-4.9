@@ -1722,6 +1722,7 @@ out:
 
 int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  struct channel_gk20a *c,
+				  u64 gpu_va,
 				  bool enable_hwpm_ctxsw)
 {
 	struct tsg_gk20a *tsg;
@@ -1787,8 +1788,9 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				return ret;
 			}
 
-			pm_ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
+			pm_ctx->mem.gpu_va = nvgpu_gmmu_map_fixed(c->vm,
 							&pm_ctx->mem,
+							gpu_va,
 							pm_ctx->mem.size,
 							NVGPU_VM_MAP_CACHEABLE,
 							gk20a_mem_flag_none, true,

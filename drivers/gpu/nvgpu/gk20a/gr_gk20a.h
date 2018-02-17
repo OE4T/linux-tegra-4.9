@@ -643,6 +643,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 				    bool enable_smpc_ctxsw);
 int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  struct channel_gk20a *c,
+				  u64 gpu_va,
 				  bool enable_hwpm_ctxsw);
 
 struct nvgpu_gr_ctx;

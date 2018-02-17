@@ -350,7 +350,7 @@
 		};
 	};
 
-	pcie_c0_ep {
+	pcie_ep@14180000 {
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
 		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
@@ -388,7 +388,7 @@
 		dma-coherent;
 	};
 
-	pcie_c1_ep {
+	pcie_ep@14100000 {
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
 		reg = <0x00 0x14100000 0x0 0x00020000   /* appl registers (128K)      */
@@ -416,7 +416,7 @@
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
 	};
-	pcie_c4_ep {
+	pcie_ep@14160000 {
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX4A>;
 		reg = <0x00 0x14160000 0x0 0x00020000   /* appl registers (128K)      */
@@ -454,7 +454,7 @@
 		dma-coherent;
 	};
 
-	pcie_c5_ep {
+	pcie_ep@141a0000 {
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
 		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
@@ -497,7 +497,7 @@
 		dma-coherent;
 	};
 
-	pcie_c0_rp {
+	pcie@14180000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
 		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
@@ -549,7 +549,7 @@
 		nvidia,dl-feature-cap = <0x30c>;
 	};
 
-	pcie_c1_rp {
+	pcie@14100000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
 		reg = <0x00 0x14100000 0x0 0x00020000   /* appl registers (128K)      */
@@ -601,7 +601,7 @@
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
-	pcie_c2_rp {
+	pcie@14120000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
 		reg = <0x00 0x14120000 0x0 0x00020000   /* appl registers (128K)      */
@@ -653,7 +653,7 @@
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
-	pcie_c3_rp {
+	pcie@14140000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX1A>;
 		reg = <0x00 0x14140000 0x0 0x00020000   /* appl registers (128K)      */
@@ -705,7 +705,7 @@
 		nvidia,dl-feature-cap = <0x2dc>;
 	};
 
-	pcie_c4_rp {
+	pcie@14160000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX4A>;
 		reg = <0x00 0x14160000 0x0 0x00020000   /* appl registers (128K)      */
@@ -757,7 +757,7 @@
 		nvidia,dl-feature-cap = <0x2f8>;
 	};
 
-	pcie_c5_rp {
+	pcie@141a0000 {
 		compatible = "nvidia,tegra194-pcie", "snps,dw-pcie";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
 		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */

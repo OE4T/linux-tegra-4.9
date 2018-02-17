@@ -29,6 +29,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
+#include <linux/tegra_prod.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
@@ -461,6 +462,8 @@ struct tegra_pcie_dw {
 
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
+	struct tegra_prod *prod_list;
+	void __iomem *base_addr_list[2];
 };
 
 struct dma_tx {
@@ -660,6 +663,41 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 	}
 
 	return IRQ_RETVAL(handled);
+}
+
+static void pcie_prod_get_base_list(struct tegra_pcie_dw *pcie)
+{
+	struct device_node *np = pcie->dev->of_node;
+	const char *reg_name;
+	int i = 0;
+
+	while (!of_property_read_string_index(np, "reg-names", i, &reg_name)) {
+		if (!strcasecmp("appl", reg_name))
+			pcie->base_addr_list[i] = pcie->appl_base;
+		if (!strcasecmp("config", reg_name))
+			pcie->base_addr_list[i] = pcie->pp.dbi_base;
+		i++;
+	}
+}
+
+static void pcie_apply_prod(struct tegra_pcie_dw *pcie, char *reg_name)
+{
+	if (pcie->prod_list) {
+		if (tegra_prod_set_by_reg_name(pcie->base_addr_list,
+					       "prod", pcie->prod_list,
+						reg_name)) {
+			dev_info(pcie->dev,
+				 "prod settings are not found in DT\n");
+		}
+
+		if (tegra_prod_set_by_reg_name(pcie->base_addr_list,
+					       "prod_c_pcierc",
+						pcie->prod_list,
+						reg_name)) {
+			dev_info(pcie->dev,
+				 "prod_c_pcierc is not found in DT\n");
+		}
+	}
 }
 
 static int bpmp_send_uphy_message_atomic(struct mrq_uphy_request *req, int size,
@@ -2190,6 +2228,8 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 				reset_control_assert(pcie->core_rst);
 				reset_control_deassert(pcie->core_rst);
 
+				pcie_apply_prod(pcie, "config");
+
 				dw_pcie_cfg_read(pp->dbi_base +
 						 pcie->dl_feature_cap,
 						 4, &val);
@@ -2519,6 +2559,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		}
 	}
 
+	pcie->prod_list = devm_tegra_prod_get(pcie->dev);
+	if (IS_ERR(pcie->prod_list)) {
+		dev_info(pcie->dev, "No prod values found\n");
+		pcie->prod_list = NULL;
+	}
+
 	pcie->pex_ctl_reg = devm_regulator_get(&pdev->dev, "vddio-pex-ctl");
 	if (IS_ERR(pcie->pex_ctl_reg)) {
 		dev_err(&pdev->dev, "fail to get regulator: %ld\n",
@@ -2604,6 +2650,8 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "PCIE : core_rst reset is missing\n");
 		return PTR_ERR(pcie->core_rst);
 	}
+
+	pcie_prod_get_base_list(pcie);
 
 	pp->irq = platform_get_irq_byname(pdev, "intr");
 	if (!pp->irq) {
@@ -2808,6 +2856,8 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 
 	reset_control_deassert(pcie->core_apb_rst);
 
+	pcie_apply_prod(pcie, "appl");
+
 	ret = tegra_pcie_enable_phy(pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to enable phy\n");
@@ -2840,6 +2890,8 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
 	reset_control_deassert(pcie->core_rst);
+
+	pcie_apply_prod(pcie, "config");
 
 	/* program to use MPS of 256 whereever possible */
 	pcie_bus_config = PCIE_BUS_SAFE;
@@ -2954,6 +3006,9 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 		goto fail_core_clk;
 	}
 	reset_control_deassert(pcie->core_apb_rst);
+
+	pcie_apply_prod(pcie, "appl");
+
 	ret = tegra_pcie_enable_phy(pcie);
 	if (ret) {
 		dev_err(dev, "failed to enable phy\n");
@@ -2984,6 +3039,8 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
 	reset_control_deassert(pcie->core_rst);
+
+	pcie_apply_prod(pcie, "config");
 
 	tegra_pcie_dw_host_init(&pcie->pp);
 

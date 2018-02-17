@@ -26,6 +26,7 @@
 #include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
 #include <soc/tegra/chip-id.h>
@@ -456,6 +457,7 @@ struct tegra_pcie_dw {
 	u32 msi_ctrl_int;
 	int pex_wake;
 	u32 tsa_config_addr;
+	bool link_state;
 
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
@@ -2481,8 +2483,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		device_init_wakeup(pcie->dev, true);
 	}
 
-	pp->skip_enum = pcie->power_down_en;
-
 	if (pcie->tsa_config_addr) {
 		void __iomem *tsa_addr;
 
@@ -2635,78 +2635,19 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (pcie->cid != CTRL_5) {
-		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
-		if (ret) {
-			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
-				pcie->cid, ret);
-			return ret;
-		}
-	}
-
-	ret = regulator_enable(pcie->pex_ctl_reg);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
-		goto fail_reg_en;
-	}
-
-	ret = clk_prepare_enable(pcie->core_clk);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to enable core clock\n");
-		goto fail_core_clk;
-	}
-
-	reset_control_deassert(pcie->core_apb_rst);
-
-	ret = tegra_pcie_enable_phy(pcie);
-	if (ret) {
-		dev_err(pcie->dev, "failed to enable phy\n");
-		goto fail_phy;
-	}
-
-	/* update CFG base address */
-	writel(dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
-	       pcie->appl_base + APPL_CFG_BASE_ADDR);
-
-	/* configure this core for RP mode operation */
-	writel(APPL_DM_TYPE_RP, pcie->appl_base + APPL_DM_TYPE);
-
-	val = readl(pcie->appl_base + APPL_CTRL);
-	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
-
-	if (pcie->disable_clock_request) {
-		val = readl(pcie->appl_base + APPL_PINMUX);
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
-		writel(val, pcie->appl_base + APPL_PINMUX);
-
-		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
-		disable_aspm_l11(pcie); /* Disable L1.1 */
-		disable_aspm_l12(pcie); /* Disable L1.2 */
-	}
-
-	/* update iATU_DMA base address */
-	writel(atu_dma_res->start & APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
-	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
-
-	reset_control_deassert(pcie->core_rst);
-
-	/* program to use MPS of 256 whereever possible */
-	pcie_bus_config = PCIE_BUS_SAFE;
-
-	pp->root_bus_nr = -1;
-	pp->ops = &tegra_pcie_dw_host_ops;
-
-	/* Disable MSI interrupts for PME messages */
-	pcie_pme_disable_msi();
-
 	platform_set_drvdata(pdev, pcie);
-
-	ret = dw_pcie_host_init(pp);
+	pm_runtime_enable(pcie->dev);
+	ret = pm_runtime_get_sync(pcie->dev);
 	if (ret < 0) {
-		if (ret != -ENOMEDIUM)
-			dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n",
-				ret);
+		dev_err(pcie->dev, "failed to enable pcie dev");
+		pm_runtime_disable(pcie->dev);
+		return ret;
+	}
+
+	pcie->link_state = tegra_pcie_dw_link_up(&pcie->pp);
+
+	if (!pcie->link_state && pcie->power_down_en) {
+		ret = 0;
 		goto fail_host_init;
 	}
 
@@ -2742,16 +2683,8 @@ fail_debugfs:
 	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
 		mutex_destroy(&pcie->rd_lock[i]);
 fail_host_init:
-	reset_control_assert(pcie->core_rst);
-	tegra_pcie_disable_phy(pcie);
-fail_phy:
-	reset_control_assert(pcie->core_apb_rst);
-	clk_disable_unprepare(pcie->core_clk);
-fail_core_clk:
-	regulator_disable(pcie->pex_ctl_reg);
-fail_reg_en:
-	if (pcie->cid != CTRL_5)
-		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+	pm_runtime_put_sync(pcie->dev);
+	pm_runtime_disable(pcie->dev);
 
 	return ret;
 }
@@ -2829,6 +2762,9 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
 	int i;
 
+	if (!pcie->link_state && pcie->power_down_en)
+		return 0;
+
 	debugfs_remove_recursive(pcie->debugfs);
 
 	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
@@ -2836,6 +2772,16 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 
 	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
 		mutex_destroy(&pcie->rd_lock[i]);
+
+	pm_runtime_put_sync(pcie->dev);
+	pm_runtime_disable(pcie->dev);
+
+	return 0;
+}
+
+static int tegra_pcie_dw_runtime_suspend(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 
 	dw_pcie_host_deinit(&pcie->pp);
 	tegra_pcie_dw_pme_turnoff(pcie);
@@ -2852,10 +2798,108 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra_pcie_dw_runtime_resume(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+	struct pcie_port *pp = &pcie->pp;
+	int ret = 0;
+	u32 val;
+
+	if (pcie->cid != CTRL_5) {
+		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, true);
+		if (ret) {
+			dev_err(pcie->dev, "Enabling controller-%d failed:%d\n",
+				pcie->cid, ret);
+			return ret;
+		}
+	}
+
+	ret = regulator_enable(pcie->pex_ctl_reg);
+	if (ret < 0) {
+		dev_err(pcie->dev, "regulator enable failed: %d\n", ret);
+		goto fail_reg_en;
+	}
+
+	ret = clk_prepare_enable(pcie->core_clk);
+	if (ret) {
+		dev_err(pcie->dev, "Failed to enable core clock\n");
+		goto fail_core_clk;
+	}
+
+	reset_control_deassert(pcie->core_apb_rst);
+
+	ret = tegra_pcie_enable_phy(pcie);
+	if (ret) {
+		dev_err(pcie->dev, "failed to enable phy\n");
+		goto fail_phy;
+	}
+
+	/* update CFG base address */
+	writel(pcie->dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_BASE_ADDR);
+
+	/* configure this core for RP mode operation */
+	writel(APPL_DM_TYPE_RP, pcie->appl_base + APPL_DM_TYPE);
+
+	val = readl(pcie->appl_base + APPL_CTRL);
+	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
+
+	if (pcie->disable_clock_request) {
+		val = readl(pcie->appl_base + APPL_PINMUX);
+		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
+		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
+		writel(val, pcie->appl_base + APPL_PINMUX);
+
+		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
+
+	/* update iATU_DMA base address */
+	writel(pcie->atu_dma_res->start & APPL_CFG_IATU_DMA_BASE_ADDR_MASK,
+	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
+
+	reset_control_deassert(pcie->core_rst);
+
+	/* program to use MPS of 256 whereever possible */
+	pcie_bus_config = PCIE_BUS_SAFE;
+
+	pp->root_bus_nr = -1;
+	pp->ops = &tegra_pcie_dw_host_ops;
+
+	/* Disable MSI interrupts for PME messages */
+	pcie_pme_disable_msi();
+
+	ret = dw_pcie_host_init(pp);
+	if (ret < 0) {
+		dev_err(pcie->dev, "PCIE : Add PCIe port failed: %d\n", ret);
+		goto fail_host_init;
+	}
+
+	return 0;
+
+fail_host_init:
+	reset_control_assert(pcie->core_rst);
+	tegra_pcie_disable_phy(pcie);
+fail_phy:
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+fail_core_clk:
+	regulator_disable(pcie->pex_ctl_reg);
+fail_reg_en:
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+
+	return ret;
+}
+
 static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 {
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	int ret = 0;
+
+	if (!pcie->link_state)
+		return 0;
 
 	/* save MSI interrutp vector*/
 	dw_pcie_cfg_read(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
@@ -2888,6 +2932,9 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	int ret;
 	u32 val;
+
+	if (!pcie->link_state)
+		return 0;
 
 	if (gpio_is_valid(pcie->pex_wake) && device_may_wakeup(dev)) {
 		ret = disable_irq_wake(gpio_to_irq(pcie->pex_wake));
@@ -2984,6 +3031,8 @@ MODULE_DEVICE_TABLE(of, tegra_pcie_dw_of_match);
 static const struct dev_pm_ops tegra_pcie_dw_pm_ops = {
 	.suspend_noirq = tegra_pcie_dw_suspend_noirq,
 	.resume_noirq = tegra_pcie_dw_resume_noirq,
+	.runtime_suspend = tegra_pcie_dw_runtime_suspend,
+	.runtime_resume = tegra_pcie_dw_runtime_resume,
 };
 
 static struct platform_driver tegra_pcie_dw_driver = {

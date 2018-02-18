@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.h
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -63,6 +63,7 @@ struct quadd_hrt_ctx {
 
 	struct timecounter *tc;
 	int use_arch_timer;
+	int arch_timer_user_access;
 
 	struct quadd_unw_methods um;
 	int get_stack_offset;

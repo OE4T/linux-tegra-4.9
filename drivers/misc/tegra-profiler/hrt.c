@@ -770,7 +770,9 @@ int quadd_hrt_start(void)
 			um->fp, um->ut, um->ut_ce, um->dwarf);
 	}
 
-	if (hrt.tc && (extra & QUADD_PARAM_EXTRA_USE_ARCH_TIMER))
+	if (hrt.tc && (extra & QUADD_PARAM_EXTRA_USE_ARCH_TIMER) &&
+	    (hrt.arch_timer_user_access ||
+	     (extra & QUADD_PARAM_EXTRA_FORCE_ARCH_TIMER)))
 		hrt.use_arch_timer = 1;
 	else
 		hrt.use_arch_timer = 0;
@@ -849,16 +851,15 @@ static void init_arch_timer(void)
 
 	u32 cntkctl = arch_timer_get_cntkctl();
 
-	if (cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
-		info = arch_timer_get_kvm_info();
-		hrt.tc = &info->timecounter;
+	info = arch_timer_get_kvm_info();
+	hrt.tc = &info->timecounter;
 #else
-		hrt.tc = arch_timer_get_timecounter();
+	hrt.tc = arch_timer_get_timecounter();
 #endif
-	} else {
-		hrt.tc = NULL;
-	}
+
+	hrt.arch_timer_user_access =
+		(cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN) ? 1 : 0;
 }
 
 struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/quadd_proc.c
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,16 +61,16 @@ static int show_capabilities(struct seq_file *f, void *offset)
 	unsigned int extra = cap->reserved[QUADD_COMM_CAP_IDX_EXTRA];
 	struct quadd_arch_info *arch = NULL;
 
-	seq_printf(f, "pmu:                                   %s\n",
+	seq_printf(f, "pmu:                     %s\n",
 		   YES_NO(cap->pmu));
-	seq_printf(f, "tegra 3 LP cluster:                    %s\n",
+	seq_printf(f, "tegra 3 LP cluster:      %s\n",
 		   YES_NO(cap->tegra_lp_cluster));
-	seq_printf(f, "power rate samples:                    %s\n",
+	seq_printf(f, "power rate samples:      %s\n",
 		   YES_NO(cap->power_rate));
-	seq_printf(f, "arch timer is available:               %s\n",
+	seq_printf(f, "arch timer is available: %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_ARCH_TIMER));
-
-	seq_puts(f, "\n");
+	seq_printf(f, "arch timer user access:  %s\n",
+		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_ARCH_TIMER_USR));
 
 	if (ctx->pmu) {
 		for_each_possible_cpu(cpuid) {
@@ -98,7 +98,7 @@ static int show_capabilities(struct seq_file *f, void *offset)
 					   YES_NO(cpu_cap->l2_multiple_events));
 			}
 
-			seq_puts(f, "  Supported events:\n");
+			seq_puts(f, "Supported events:\n");
 			seq_printf(f, "  cpu_cycles:                     %s\n",
 				   YES_NO(event->cpu_cycles));
 			seq_printf(f, "  instructions:                   %s\n",

@@ -291,7 +291,7 @@ set_parameters(struct quadd_parameters *p)
 	p->package_name[sizeof(p->package_name) - 1] = '\0';
 	ctx.param = *p;
 
-	if (!ctx.mode_is_trace_all) {
+	if (!ctx.mode_is_trace_all || ctx.mode_is_sampling) {
 		if (!validate_freq(p->freq)) {
 			pr_err("error: incorrect frequency: %u\n", p->freq);
 			return -EINVAL;
@@ -569,8 +569,11 @@ get_capabilities(struct quadd_comm_cap *cap)
 	extra |= QUADD_COMM_CAP_EXTRA_RB_MMAP_OP;
 	extra |= QUADD_COMM_CAP_EXTRA_CPU_MASK;
 
-	if (ctx.hrt->tc)
+	if (ctx.hrt->tc) {
 		extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER;
+		if (ctx.hrt->arch_timer_user_access)
+			extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER_USR;
+	}
 
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 	cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] = get_possible_cpu();

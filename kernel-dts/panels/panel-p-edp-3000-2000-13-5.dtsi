@@ -54,6 +54,8 @@
 						vfront-porch = <8>;
 						vback-porch = <48>;
 						vsync-len = <8>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
 					};
 				};
 			};

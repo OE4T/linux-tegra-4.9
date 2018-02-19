@@ -38,6 +38,12 @@ Required properties:
   - nvidia,cfg-link-cap-l1sub: L1SUB_CAP_L1SUB reg offset
       0x1b0 - C4
       0x1c4 - C0 and C5
+  - nvidia,event-cntr-ctrl: EVENT_COUNTER_CONTROL reg offset
+      0x1c4 - C4
+      0x1d8 - C0 and C5
+  - nvidia,event-cntr-data: EVENT_COUNTER_DATA reg offset
+      0x1c8 - C4
+      0x1dc - C0 and C5
   - nvidia,margin-lane-cntrl: MARGIN_LANE_CNTRL_STATUS reg offset
       0x184 - C1, C2 and C3
       0x194 - C4

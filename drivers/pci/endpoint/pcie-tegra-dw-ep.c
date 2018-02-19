@@ -143,6 +143,22 @@
 #define MARGIN_LANE_CNTRL_STATUS_PAYLOAD_STATUS_MASK		GENMASK(31, 24)
 #define MARGIN_LANE_CNTRL_STATUS_PAYLOAD_STATUS_SHIFT		24
 
+#define EVENT_COUNTER_CONTROL_REG	0x1d8
+#define EVENT_COUNTER_ALL_CLEAR		0x3
+#define EVENT_COUNTER_ENABLE_ALL	0x7
+#define EVENT_COUNTER_ENABLE_SHIFT	2
+#define EVENT_COUNTER_EVENT_SEL_MASK	0xFF
+#define EVENT_COUNTER_EVENT_SEL_SHIFT	16
+#define EVENT_COUNTER_EVENT_Tx_L0S	0x2
+#define EVENT_COUNTER_EVENT_Rx_L0S	0x3
+#define EVENT_COUNTER_EVENT_L1		0x5
+#define EVENT_COUNTER_EVENT_L1_1	0x7
+#define EVENT_COUNTER_EVENT_L1_2	0x8
+#define EVENT_COUNTER_GROUP_SEL_SHIFT	24
+#define EVENT_COUNTER_GROUP_5		0x5
+
+#define EVENT_COUNTER_DATA_REG		0x1dC
+
 #define CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF		0x718
 #define CFG_TIMER_CTRL_ACK_NAK_SHIFT		(19)
 
@@ -287,6 +303,8 @@ struct tegra_pcie_dw_ep {
 	u32 num_lanes;
 	u32 max_speed;
 	u32 cfg_link_cap_l1sub;
+	u32 event_cntr_ctrl;
+	u32 event_cntr_data;
 	u32 margin_port_cap;
 	u32 margin_lane_cntrl;
 };
@@ -644,6 +662,11 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 		disable_aspm_l11(pcie); /* Disable L1.1 */
 	if (pcie->disabled_aspm_states & 0x8)
 		disable_aspm_l12(pcie); /* Disable L1.2 */
+
+	/* Enable ASPM counters */
+	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
+	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
+	writel(val, pcie->dbi_base + pcie->event_cntr_ctrl);
 
 	writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
 
@@ -1091,6 +1114,52 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 	return 0;
 }
 
+static inline u32 event_counter_prog(struct tegra_pcie_dw_ep *pcie, u32 event)
+{
+	u32 val = 0;
+
+	val = readl(pcie->dbi_base + pcie->event_cntr_ctrl);
+	val &= ~(EVENT_COUNTER_EVENT_SEL_MASK << EVENT_COUNTER_EVENT_SEL_SHIFT);
+	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
+	val |= event << EVENT_COUNTER_EVENT_SEL_SHIFT;
+	val |= EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
+	writel(val, pcie->dbi_base + pcie->event_cntr_ctrl);
+	val = readl(pcie->dbi_base + pcie->event_cntr_data);
+	return val;
+}
+
+static int aspm_state_cnt(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_dw_ep *pcie = (struct tegra_pcie_dw_ep *)(s->private);
+	u32 val = 0;
+
+	seq_printf(s, "Tx L0s entry count : %u\n",
+		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_Tx_L0S));
+
+	seq_printf(s, "Rx L0s entry count : %u\n",
+		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_Rx_L0S));
+
+	seq_printf(s, "Link L1 entry count : %u\n",
+		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_L1));
+
+	seq_printf(s, "Link L1.1 entry count : %u\n",
+		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_L1_1));
+
+	seq_printf(s, "Link L1.2 entry count : %u\n",
+		   event_counter_prog(pcie, EVENT_COUNTER_EVENT_L1_2));
+
+	/* Clear all counters */
+	writel(EVENT_COUNTER_ALL_CLEAR,
+	       pcie->dbi_base + pcie->event_cntr_ctrl);
+
+	/* Re-enable counting */
+	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
+	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
+	writel(val, pcie->dbi_base + pcie->event_cntr_ctrl);
+
+	return 0;
+}
+
 #define DEFINE_ENTRY(__name)	\
 static int __name ## _open(struct inode *inode, struct file *file)	\
 {									\
@@ -1105,6 +1174,7 @@ static const struct file_operations __name ## _fops = {	\
 
 DEFINE_ENTRY(verify_timing_margin);
 DEFINE_ENTRY(verify_voltage_margin);
+DEFINE_ENTRY(aspm_state_cnt);
 
 static int init_debugfs(struct tegra_pcie_dw_ep *pcie)
 {
@@ -1119,6 +1189,11 @@ static int init_debugfs(struct tegra_pcie_dw_ep *pcie)
 				(void *)pcie, &verify_voltage_margin_fops);
 	if (!d)
 		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
+
+	d = debugfs_create_file("aspm_state_cnt", 0444, pcie->debugfs,
+				(void *)pcie, &aspm_state_cnt_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for aspm_state_cnt failed\n");
 
 	return 0;
 }
@@ -1148,14 +1223,31 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
 		return ret;
 	}
+
 	of_property_read_u32(np, "nvidia,margin-port-cap",
 			     &pcie->margin_port_cap);
 	if (ret < 0)
 		dev_err(pcie->dev, "fail to read margin-port-cap: %d\n", ret);
+
 	of_property_read_u32(np, "nvidia,margin-lane-cntrl",
 			     &pcie->margin_lane_cntrl);
 	if (ret < 0)
 		dev_err(pcie->dev, "fail to read margin-lane-cntrl: %d\n", ret);
+
+	of_property_read_u32(np, "nvidia,event-cntr-ctrl",
+			     &pcie->event_cntr_ctrl);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-ctrl: %d\n", ret);
+		pcie->event_cntr_ctrl = EVENT_COUNTER_CONTROL_REG;
+	}
+
+	of_property_read_u32(np, "nvidia,event-cntr-data",
+			     &pcie->event_cntr_data);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read event-cntr-data: %d\n", ret);
+		pcie->event_cntr_data = EVENT_COUNTER_DATA_REG;
+	}
+
 	ret = of_property_read_u32(np, "nvidia,cfg-link-cap-l1sub",
 				   &pcie->cfg_link_cap_l1sub);
 	if (ret < 0) {

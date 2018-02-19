@@ -48,6 +48,7 @@ clk_destroy:
 	return ret;
 }
 
+#if IS_MODULE(CONFIG_TEGRA_ACONNECT)
 static int tegra_aconnect_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
@@ -56,6 +57,7 @@ static int tegra_aconnect_remove(struct platform_device *pdev)
 
 	return 0;
 }
+#endif
 
 static int tegra_aconnect_runtime_resume(struct device *dev)
 {
@@ -80,7 +82,9 @@ MODULE_DEVICE_TABLE(of, tegra_aconnect_of_match);
 
 static struct platform_driver tegra_aconnect_driver = {
 	.probe = tegra_aconnect_probe,
+#if IS_MODULE(CONFIG_TEGRA_ACONNECT)
 	.remove = tegra_aconnect_remove,
+#endif
 	.driver = {
 		.name = "tegra-aconnect",
 		.of_match_table = tegra_aconnect_of_match,

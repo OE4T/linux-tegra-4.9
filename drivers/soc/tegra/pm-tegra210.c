@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -106,19 +106,6 @@ static int tegra_of_idle_state_idx_from_name(char *state_name)
 	of_node_put(cpu_node);
 
 	return id_found ? (i + 1) : 0;
-}
-
-/* Change CPU tolerance level according to hotplug state */
-static int tegra_bpmp_tolerate_idle(int cpu, int ccxtl, int scxtl)
-{
-	s32 data[3];
-
-	data[0] = cpu_to_le32(cpu);
-	data[1] = cpu_to_le32(ccxtl);
-	data[2] = cpu_to_le32(scxtl);
-
-	return tegra_bpmp_send_receive(MRQ_TOLERATE_IDLE,
-				       data, sizeof(data), NULL, 0);
 }
 
 static int proc_idle_state_enter(int cpu, int idle_state)
@@ -524,29 +511,6 @@ out:
 }
 late_initcall(tegra210_cpuidle_init);
 
-static int tegra210_cpu_notify(struct notifier_block *nb, unsigned long action,
-			       void *hcpu)
-{
-	int cpu = (long)hcpu;
-
-	switch (action) {
-	case CPU_POST_DEAD:
-	case CPU_DEAD_FROZEN:
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC7, TEGRA_PM_SC7);
-		break;
-	case CPU_UP_PREPARE:
-	case CPU_UP_PREPARE_FROZEN:
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC1, TEGRA_PM_SC1);
-		break;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block tegra210_cpu_nb = {
-	.notifier_call = tegra210_cpu_notify
-};
-
 static int __init tegra210_pm_init(void)
 {
 	if (tegra_get_chip_id() != TEGRA210)
@@ -572,7 +536,6 @@ static int __init tegra210_pm_init(void)
 				tegra_of_idle_state_idx_from_name("cc7");
 
 	tegra210_cpu_pm_register_notifier(&tegra210_cpu_pm_nb);
-	register_cpu_notifier(&tegra210_cpu_nb);
 	register_syscore_ops(&bpmp_sc7_suspend_ops);
 out:
 	return 0;

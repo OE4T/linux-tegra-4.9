@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -77,6 +77,97 @@ static u32 construct_volt_policy_split_rail(struct gk20a *g,
 	return status;
 }
 
+static u32 construct_volt_policy_single_rail(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pArgs)
+{
+	struct voltage_policy_single_rail *ptmp_policy  =
+			(struct voltage_policy_single_rail *)pArgs;
+	struct voltage_policy_single_rail *pvolt_policy = NULL;
+	u32 status = 0;
+
+	status = construct_volt_policy(g, ppboardobj, size, pArgs);
+	if (status)
+		return status;
+
+	pvolt_policy = (struct voltage_policy_single_rail *)*ppboardobj;
+
+	pvolt_policy->rail_idx = ptmp_policy->rail_idx;
+
+	return status;
+}
+
+static u32 volt_policy_pmu_data_init_single_rail(struct gk20a *g,
+	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct voltage_policy_single_rail *ppolicy;
+	struct nv_pmu_volt_volt_policy_sr_boardobj_set *pset;
+
+	status = volt_policy_pmu_data_init_super(g, pboardobj, ppmudata);
+	if (status)
+		goto done;
+
+	ppolicy = (struct voltage_policy_single_rail *)pboardobj;
+	pset = (struct nv_pmu_volt_volt_policy_sr_boardobj_set *)
+				ppmudata;
+	pset->rail_idx = ppolicy->rail_idx;
+
+done:
+	return status;
+}
+
+static u32 volt_policy_pmu_data_init_sr_multi_step(struct gk20a *g,
+	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct voltage_policy_single_rail_multi_step *ppolicy;
+	struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set *pset;
+
+	status = volt_policy_pmu_data_init_single_rail(g, pboardobj, ppmudata);
+	if (status)
+		goto done;
+
+	ppolicy = (struct voltage_policy_single_rail_multi_step *)pboardobj;
+	pset = (struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set *)
+				ppmudata;
+
+	pset->ramp_up_step_size_uv   = ppolicy->ramp_up_step_size_uv;
+	pset->ramp_down_step_size_uv = ppolicy->ramp_down_step_size_uv;
+	pset->inter_switch_delay_us = ppolicy->inter_switch_delay_us;
+
+done:
+	return status;
+}
+
+static u32 volt_construct_volt_policy_single_rail_multi_step(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	struct boardobj *pboardobj   = NULL;
+	struct voltage_policy_single_rail_multi_step *p_volt_policy = NULL;
+	struct voltage_policy_single_rail_multi_step *tmp_policy =
+		(struct voltage_policy_single_rail_multi_step *)pargs;
+	u32 status = 0;
+
+	status = construct_volt_policy_single_rail(g, ppboardobj, size, pargs);
+	if (status)
+		return status;
+
+	pboardobj = (*ppboardobj);
+	p_volt_policy = (struct voltage_policy_single_rail_multi_step *)
+						*ppboardobj;
+
+	pboardobj->pmudatainit = volt_policy_pmu_data_init_sr_multi_step;
+
+	p_volt_policy->ramp_up_step_size_uv =
+		tmp_policy->ramp_up_step_size_uv;
+	p_volt_policy->ramp_down_step_size_uv =
+		tmp_policy->ramp_down_step_size_uv;
+	p_volt_policy->inter_switch_delay_us =
+		tmp_policy->inter_switch_delay_us;
+
+	return status;
+}
+
 static u32 volt_policy_pmu_data_init_split_rail(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
@@ -128,8 +219,8 @@ static struct voltage_policy *volt_volt_policy_construct(struct gk20a *g, void *
 	struct boardobj *pboard_obj = NULL;
 	u32 status = 0;
 
-	if (BOARDOBJ_GET_TYPE(pargs) ==
-		CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP) {
+	switch (BOARDOBJ_GET_TYPE(pargs)) {
+	case CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP:
 		status = volt_construct_volt_policy_split_rail_single_step(g,
 			&pboard_obj,
 			sizeof(struct voltage_policy_split_rail_single_step),
@@ -137,8 +228,20 @@ static struct voltage_policy *volt_volt_policy_construct(struct gk20a *g, void *
 		if (status) {
 			nvgpu_err(g,
 				"Could not allocate memory for voltage_policy");
-				pboard_obj = NULL;
+			pboard_obj = NULL;
 		}
+		break;
+	case CTRL_VOLT_POLICY_TYPE_SINGLE_RAIL_MULTI_STEP:
+		status = volt_construct_volt_policy_single_rail_multi_step(g,
+			&pboard_obj,
+			sizeof(struct voltage_policy_single_rail_multi_step),
+			pargs);
+		if (status) {
+			nvgpu_err(g,
+				"Could not allocate memory for voltage_policy");
+			pboard_obj = NULL;
+		}
+		break;
 	}
 
 	return (struct voltage_policy *)pboard_obj;
@@ -155,6 +258,8 @@ static u8 volt_policy_type_convert(u8 vbios_type)
 
 	case NV_VBIOS_VOLTAGE_POLICY_1X_ENTRY_TYPE_SR_SINGLE_STEP:
 		return CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP;
+	case NV_VBIOS_VOLTAGE_POLICY_1X_ENTRY_TYPE_SINGLE_RAIL_MULTI_STEP:
+		return CTRL_VOLT_POLICY_TYPE_SINGLE_RAIL_MULTI_STEP;
 	}
 
 	return CTRL_VOLT_POLICY_TYPE_INVALID;
@@ -175,6 +280,7 @@ static u32 volt_get_volt_policy_table(struct gk20a *g,
 		struct boardobj		board_obj;
 		struct voltage_policy	volt_policy;
 		struct voltage_policy_split_rail	split_rail;
+		struct voltage_policy_single_rail_multi_step single_rail_ms;
 	} policy_type_data;
 
 	voltage_policy_table_ptr =
@@ -204,7 +310,8 @@ static u32 volt_get_volt_policy_table(struct gk20a *g,
 
 		policy_type = volt_policy_type_convert((u8)entry.type);
 
-		if (policy_type == CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP) {
+		switch (policy_type) {
+		case  CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP:
 			policy_type_data.split_rail.rail_idx_master =
 				(u8)BIOS_GET_FIELD(entry.param0,
 				  NV_VBIOS_VPT_ENTRY_PARAM0_SR_VD_MASTER);
@@ -220,6 +327,18 @@ static u32 volt_get_volt_policy_table(struct gk20a *g,
 			policy_type_data.split_rail.delta_max_vfe_equ_idx =
 				(u8)BIOS_GET_FIELD(entry.param0,
 				  NV_VBIOS_VPT_ENTRY_PARAM0_SR_DELTA_SM_MAX);
+			break;
+		case CTRL_VOLT_POLICY_TYPE_SINGLE_RAIL_MULTI_STEP:
+			policy_type_data.single_rail_ms.inter_switch_delay_us =
+			(u16)BIOS_GET_FIELD(entry.param1,
+			NV_VBIOS_VPT_ENTRY_PARAM1_SR_SETTLE_TIME_INTERMEDIATE);
+			policy_type_data.single_rail_ms.ramp_up_step_size_uv =
+			(u32)BIOS_GET_FIELD(entry.param2,
+			NV_VBIOS_VPT_ENTRY_PARAM2_SR_RAMP_UP_STEP_SIZE_UV);
+			policy_type_data.single_rail_ms.ramp_down_step_size_uv =
+			(u32)BIOS_GET_FIELD(entry.param3,
+			NV_VBIOS_VPT_ENTRY_PARAM3_SR_RAMP_DOWN_STEP_SIZE_UV);
+			break;
 		}
 
 		policy_type_data.board_obj.type = policy_type;
@@ -286,6 +405,30 @@ static u32 _volt_policy_devgrp_pmustatus_instget(struct gk20a *g,
 	return 0;
 }
 
+static u32 _volt_policy_grp_pmudatainit_super(struct gk20a *g,
+	struct boardobjgrp *pboardobjgrp,
+	struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
+{
+	struct nv_pmu_volt_volt_policy_boardobjgrp_set_header *pset =
+		(struct nv_pmu_volt_volt_policy_boardobjgrp_set_header *)
+		pboardobjgrppmu;
+	struct obj_volt *volt  = (struct obj_volt *)pboardobjgrp;
+	u32 status = 0;
+
+	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
+	if (status) {
+		nvgpu_err(g,
+			"error updating pmu boardobjgrp for volt policy 0x%x",
+			 status);
+		goto done;
+	}
+	pset->perf_core_vf_seq_policy_idx =
+		volt->volt_policy_metadata.perf_core_vf_seq_policy_idx;
+
+done:
+	return status;
+}
+
 u32 volt_policy_pmu_setup(struct gk20a *g)
 {
 	u32 status;
@@ -326,6 +469,7 @@ u32 volt_policy_sw_setup(struct gk20a *g)
 
 	pboardobjgrp->pmudatainstget  = _volt_policy_devgrp_pmudata_instget;
 	pboardobjgrp->pmustatusinstget  = _volt_policy_devgrp_pmustatus_instget;
+	pboardobjgrp->pmudatainit = _volt_policy_grp_pmudatainit_super;
 
 	/* Obtain Voltage Rail Table from VBIOS */
 	status = volt_get_volt_policy_table(g, &g->perf_pmu.volt.

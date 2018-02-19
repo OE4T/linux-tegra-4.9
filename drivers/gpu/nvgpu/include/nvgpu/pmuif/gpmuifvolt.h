@@ -104,6 +104,7 @@ NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(volt, volt_device);
 /* ------------ VOLT_POLICY's GRP_SET defines and structures ------------ */
 struct nv_pmu_volt_volt_policy_boardobjgrp_set_header {
 	struct nv_pmu_boardobjgrp_e32 super;
+	u8 perf_core_vf_seq_policy_idx;
 };
 
 struct nv_pmu_volt_volt_policy_boardobj_set {
@@ -112,6 +113,13 @@ struct nv_pmu_volt_volt_policy_boardobj_set {
 struct nv_pmu_volt_volt_policy_sr_boardobj_set {
 	struct nv_pmu_volt_volt_policy_boardobj_set super;
 	u8 rail_idx;
+};
+
+struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set {
+	struct nv_pmu_volt_volt_policy_sr_boardobj_set super;
+	u16 inter_switch_delay_us;
+	u32 ramp_up_step_size_uv;
+	u32 ramp_down_step_size_uv;
 };
 
 struct nv_pmu_volt_volt_policy_splt_r_boardobj_set {
@@ -138,6 +146,8 @@ union nv_pmu_volt_volt_policy_boardobj_set_union {
 	struct nv_pmu_boardobj board_obj;
 	struct nv_pmu_volt_volt_policy_boardobj_set super;
 	struct nv_pmu_volt_volt_policy_sr_boardobj_set single_rail;
+	struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set
+		single_rail_ms;
 	struct nv_pmu_volt_volt_policy_splt_r_boardobj_set split_rail;
 	struct nv_pmu_volt_volt_policy_srms_boardobj_set
 			split_rail_m_s;

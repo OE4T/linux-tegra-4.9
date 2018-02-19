@@ -2686,6 +2686,11 @@ struct tegra_se_eddsa_params {
 	unsigned short key_size;
 };
 
+struct tegra_crypto_completion {
+	struct completion restart;
+	int req_err;
+};
+
 static bool tegra_se_eddsa_params_is_valid(struct tegra_se_eddsa_params *params)
 {
 	const u32 *private_key = params->key;
@@ -2777,6 +2782,28 @@ static int tegra_se_eddsa_set_priv_key(struct crypto_akcipher *tfm,
 	return 0;
 }
 
+static void tegra_crypt_complete(struct crypto_async_request *req, int err)
+{
+	struct tegra_crypto_completion *done = req->data;
+
+	if (err != -EINPROGRESS) {
+		done->req_err = err;
+		complete(&done->restart);
+	}
+}
+
+static int sha_async_hash_op(struct ahash_request *req,
+				struct tegra_crypto_completion *tr,
+				int ret)
+{
+	if (ret == -EBUSY) {
+		wait_for_completion(&tr->restart);
+		reinit_completion(&tr->restart);
+		ret = tr->req_err;
+	}
+	return ret;
+}
+
 static int tegra_se_hash_data(struct tegra_se_elp_dev *se_dev, u32 *msg,
 			      u32 *hash, unsigned int nbytes, char *algo)
 {
@@ -2784,6 +2811,7 @@ static int tegra_se_hash_data(struct tegra_se_elp_dev *se_dev, u32 *msg,
 	struct crypto_ahash *tfm;
 	struct scatterlist sg;
 	struct ahash_request *req;
+	struct tegra_crypto_completion sha_complete;
 
 	tfm = crypto_alloc_ahash(algo, 0, 0);
 	if (IS_ERR(tfm)) {
@@ -2799,10 +2827,15 @@ static int tegra_se_hash_data(struct tegra_se_elp_dev *se_dev, u32 *msg,
 		goto free_tfm;
 	}
 
+	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				   tegra_crypt_complete, &sha_complete);
+
+	init_completion(&sha_complete.restart);
+
 	sg_init_one(&sg, msg, nbytes);
 	ahash_request_set_crypt(req, &sg, (u8 *)hash, nbytes);
 
-	ret = crypto_ahash_digest(req);
+	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_digest(req));
 	if (ret)
 		dev_err(se_dev->dev, "%s hash operation failed\n", algo);
 

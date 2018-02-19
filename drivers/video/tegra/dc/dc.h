@@ -719,7 +719,7 @@ struct tegra_vrr {
 	u32	db_hist_cap;
 	s32	vfp;
 	s32	insert_frame;
-	s32	g_vrr_session_id;
+	s32	vrr_session_id;
 	s32	nvdisp_direct_drive;
 
 	/* Must be kept in order */
@@ -1087,6 +1087,11 @@ void tegra_sd_enbl_dsbl_prism(struct device *dev, bool status);
 
 void nvsd_check_prism_thresh(struct device *dev, int brightness);
 void nvsd_enbl_dsbl_prism(struct device *dev, bool status);
+
+#if defined(CONFIG_TEGRA_HDMIVRR) && (defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY))
+void tegra_hdmivrr_te_vrr_sec(struct tegra_vrr *vrr);
+void tegra_hdmivrr_te_vrr_auth(struct tegra_vrr *vrr);
+#endif
 
 /* PM0 and PM1 signal control */
 #define TEGRA_PWM_PM0 0

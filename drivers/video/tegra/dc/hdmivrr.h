@@ -1,7 +1,7 @@
 /*
  * hdmivrr.h: hdmi vrr headers declarations.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -86,22 +86,35 @@
 #define DPAUX_AUTH_DIGEST1		0x3e0
 #define DPAUX_AUTH_DIGEST2		0x3f0
 
+#define CMD_VRR_SEC			101
+#define CMD_VRR_AUTH			102
+
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+extern int te_open_trusted_session(u32 *ta_uuid, u32 size, u32 *session_id);
+extern int te_launch_trusted_oper(u64 *buf, u32 buflen, u32 session_id,
+		u32 *ta_uuid, u32 comd_id, u32 size);
+extern void te_close_trusted_session(u32 session_id, u32 *ta_uuid, u32 size);
+#endif
+
 #ifdef CONFIG_TEGRA_HDMIVRR
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi);
+int tegra_hdmivrr_disable(struct tegra_hdmi *hdmi);
 void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	struct list_head *head);
 int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi);
-void te_authenticate_vrr(u8 *buf_ptr, u32 buflen);
+int tegra_hdmivrr_te_set_buf(void *addr);
 void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate);
 #else
-static inline int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
-{ return 0; }
+static inline int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi) { return 0; }
+static inline int tegra_hdmivrr_disable(struct tegra_hdmi *hdmi) { return 0; }
 static inline void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
-	struct list_head *head) { return; }
-static inline int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
-{ return 0; }
+						 struct list_head *head)
+{ return; }
+static inline int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi) { return 0; }
+static inline int tegra_hdmivrr_te_set_buf(void *addr)
+{ return -EPROTONOSUPPORT; }
 static inline void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi,
-	bool activate)
+					   bool activate)
 { return; }
 #endif
 

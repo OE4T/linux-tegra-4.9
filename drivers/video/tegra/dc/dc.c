@@ -4512,9 +4512,9 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 		vrr->fe_intr_req = 0;
 	}
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+#if defined(CONFIG_TEGRA_HDMIVRR) && (defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY))
 	if (te_is_secos_dev_enabled())
-		te_vrr_sec();
+		tegra_hdmivrr_te_vrr_sec(vrr);
 #endif
 
 	/* Increment frame end interrupt refcount requested

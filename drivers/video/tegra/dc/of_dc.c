@@ -1,7 +1,7 @@
 /*
  * of_dc.c: tegra dc of interface.
  *
- * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -67,6 +67,7 @@
 #include "panel/board-panel.h"
 #include "panel/tegra-board-id.h"
 #include "dc_common.h"
+#include "hdmivrr.h"
 
 /* #define OF_DC_DEBUG */
 
@@ -3296,7 +3297,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			if (te_is_secos_dev_enabled()) {
 				int retval;
 
-				retval = te_vrr_set_buf(virt_to_phys(vrr));
+				retval = tegra_hdmivrr_te_set_buf(vrr);
 				if (retval) {
 					dev_err(&ndev->dev, "failed to set buffer\n");
 					goto fail_parse;
@@ -3328,10 +3329,11 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			OF_DC_LOG("nvidia,hdmi-vrr-caps: %d\n", temp);
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 			if (te_is_secos_dev_enabled()) {
-				check_val = te_vrr_set_buf(virt_to_phys(
-					def_out->vrr));
+				check_val = tegra_hdmivrr_te_set_buf(
+						def_out->vrr);
 				if (check_val) {
-					dev_err(&ndev->dev, "failed to set buffer\n");
+					dev_err(&ndev->dev,
+						"failed to set buffer\n");
 					goto fail_parse;
 				}
 			}

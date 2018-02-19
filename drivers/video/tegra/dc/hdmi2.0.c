@@ -628,6 +628,7 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	hdmi->eld_valid = false;
 	hdmi->mon_spec_valid = false;
 
+	tegra_hdmivrr_disable(hdmi);
 	tegra_dc_disable(hdmi->dc);
 
 	tegra_hdmi_hotplug_notify(hdmi, false);

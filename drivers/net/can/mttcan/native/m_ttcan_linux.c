@@ -967,9 +967,7 @@ static void mttcan_timer_cb(unsigned long data)
 	raw_spin_lock_irqsave(&priv->tc_lock, flags);
 	ret = get_ptp_hwtime(&tref);
 	if (ret != 0) {
-		dev_err(priv->device, "mttcan timer: HW PTP not running\n");
-		raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
-		return;
+		tref = ktime_to_ns(ktime_get());
 	}
 	timecounter_init(&priv->tc, &priv->cc, tref);
 	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
@@ -1358,10 +1356,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			ret = get_ptp_hwtime(&tref);
 			if (ret != 0) {
 				dev_err(priv->device, "HW PTP not running\n");
-				priv->hwts_rx_en = false;
-				raw_spin_unlock_irqrestore(&priv->tc_lock,
-							   flags);
-				return -ERANGE;
+				tref = ktime_to_ns(ktime_get());
 			}
 			timecounter_init(&priv->tc, &priv->cc, tref);
 			priv->hwts_rx_en = true;

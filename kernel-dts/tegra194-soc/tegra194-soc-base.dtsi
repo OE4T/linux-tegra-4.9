@@ -641,6 +641,8 @@
 		      <0x0 0x4004f000 0x0 0x00001000>;
 		status = "disabled";
 		#power-domain-cells = <1>;
+		#strap-cells = <1>;
+		#nvidia,controller-id-cells = <1>;
 	};
 
 	se: se_elp@3ad0000 {

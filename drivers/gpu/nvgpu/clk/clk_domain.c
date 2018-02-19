@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,8 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 static u32 clk_domain_pmudatainit_super(struct gk20a *g, struct boardobj
 	*board_obj_ptr,	struct nv_pmu_boardobj *ppmudata);
 
-static const struct vbios_clocks_table_1x_hal_clock_entry
-		vbiosclktbl1xhalentry[] = {
+static struct vbios_clocks_table_1x_hal_clock_entry
+		vbiosclktbl1xhalentry_gp[] = {
 	{ clkwhich_gpc2clk,    true,  },
 	{ clkwhich_xbar2clk,   true,  },
 	{ clkwhich_mclk,       false, },
@@ -51,11 +51,39 @@ static const struct vbios_clocks_table_1x_hal_clock_entry
 	{ clkwhich_dispclk,    false, },
 	{ clkwhich_pciegenclk, false, }
 };
+/*
+ * Updated from RM devinit_clock.c
+ * GV100 is 0x03 and
+ * GP10x is 0x02 in clocks_hal.
+ */
+static struct vbios_clocks_table_1x_hal_clock_entry
+		vbiosclktbl1xhalentry_gv[] = {
+	{ clkwhich_gpcclk,     true,  },
+	{ clkwhich_xbarclk,    true,  },
+	{ clkwhich_mclk,       false, },
+	{ clkwhich_sysclk,     true,  },
+	{ clkwhich_hubclk,     false, },
+	{ clkwhich_nvdclk,     true,  },
+	{ clkwhich_pwrclk,     false, },
+	{ clkwhich_dispclk,    false, },
+	{ clkwhich_pciegenclk, false, },
+	{ clkwhich_hostclk,    true,  }
+};
 
 static u32 clktranslatehalmumsettoapinumset(u32 clkhaldomains)
 {
 	u32   clkapidomains = 0;
 
+	if (clkhaldomains & BIT(clkwhich_gpcclk))
+		clkapidomains |= CTRL_CLK_DOMAIN_GPCCLK;
+	if (clkhaldomains & BIT(clkwhich_xbarclk))
+		clkapidomains |= CTRL_CLK_DOMAIN_XBARCLK;
+	if (clkhaldomains & BIT(clkwhich_sysclk))
+		clkapidomains |= CTRL_CLK_DOMAIN_SYSCLK;
+	if (clkhaldomains & BIT(clkwhich_hubclk))
+		clkapidomains |= CTRL_CLK_DOMAIN_HUBCLK;
+	if (clkhaldomains & BIT(clkwhich_hostclk))
+		clkapidomains |= CTRL_CLK_DOMAIN_HOSTCLK;
 	if (clkhaldomains & BIT(clkwhich_gpc2clk))
 		clkapidomains |= CTRL_CLK_DOMAIN_GPC2CLK;
 	if (clkhaldomains & BIT(clkwhich_xbar2clk))
@@ -98,6 +126,7 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 
 	pset->vbios_domains = pdomains->vbios_domains;
 	pset->cntr_sampling_periodms = pdomains->cntr_sampling_periodms;
+	pset->version = CLK_DOMAIN_BOARDOBJGRP_VERSION;
 	pset->b_override_o_v_o_c = false;
 	pset->b_debug_mode = false;
 	pset->b_enforce_vf_monotonicity = pdomains->b_enforce_vf_monotonicity;
@@ -255,6 +284,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 	u8 *clocks_table_ptr = NULL;
 	struct vbios_clocks_table_1x_header clocks_table_header = { 0 };
 	struct vbios_clocks_table_1x_entry clocks_table_entry = { 0 };
+	struct vbios_clocks_table_1x_hal_clock_entry *vbiosclktbl1xhalentry;
 	u8 *clocks_tbl_entry_ptr = NULL;
 	u32 index = 0;
 	struct clk_domain *pclkdomain_dev;
@@ -287,6 +317,18 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 
 	if (clocks_table_header.entry_size <
 	    VBIOS_CLOCKS_TABLE_1X_ENTRY_SIZE_09) {
+		status = -EINVAL;
+		goto done;
+	}
+
+	switch (clocks_table_header.clocks_hal) {
+	case CLK_TABLE_HAL_ENTRY_GP:
+		vbiosclktbl1xhalentry = vbiosclktbl1xhalentry_gp;
+		break;
+	case CLK_TABLE_HAL_ENTRY_GV:
+		vbiosclktbl1xhalentry = vbiosclktbl1xhalentry_gv;
+		break;
+	default:
 		status = -EINVAL;
 		goto done;
 	}
@@ -330,7 +372,6 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 			clk_domain_data.v3x_prog.noise_unaware_ordering_index =
 				(u8)(BIOS_GET_FIELD(clocks_table_entry.param2,
 				     NV_VBIOS_CLOCKS_TABLE_1X_ENTRY_PARAM2_PROG_NOISE_UNAWARE_ORDERING_IDX));
-
 			if (clk_domain_data.v3x.b_noise_aware_capable) {
 				clk_domain_data.v3x_prog.noise_aware_ordering_index =
 					(u8)(BIOS_GET_FIELD(clocks_table_entry.param2,
@@ -343,7 +384,9 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 					CTRL_CLK_CLK_DOMAIN_3X_PROG_ORDERING_INDEX_INVALID;
 				clk_domain_data.v3x_prog.b_force_noise_unaware_ordering = false;
 			}
-			clk_domain_data.v3x_prog.factory_offset_khz = 0;
+
+			clk_domain_data.v3x_prog.factory_delta.data.delta_khz = 0;
+			clk_domain_data.v3x_prog.factory_delta.type = 0;
 
 			clk_domain_data.v3x_prog.freq_delta_min_mhz =
 				(u16)(BIOS_GET_FIELD(clocks_table_entry.param1,
@@ -379,7 +422,8 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 					CTRL_CLK_CLK_DOMAIN_3X_PROG_ORDERING_INDEX_INVALID;
 				clk_domain_data.v3x_prog.b_force_noise_unaware_ordering = false;
 			}
-			clk_domain_data.v3x_prog.factory_offset_khz = 0;
+			clk_domain_data.v3x_prog.factory_delta.data.delta_khz = 0;
+			clk_domain_data.v3x_prog.factory_delta.type = 0;
 			clk_domain_data.v3x_prog.freq_delta_min_mhz = 0;
 			clk_domain_data.v3x_prog.freq_delta_max_mhz = 0;
 			clk_domain_data.v3x_slave.master_idx =
@@ -771,7 +815,7 @@ static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 		pclk_domain_3x_prog->noise_aware_ordering_index;
 	pset->b_force_noise_unaware_ordering =
 		pclk_domain_3x_prog->b_force_noise_unaware_ordering;
-	pset->factory_offset_khz = pclk_domain_3x_prog->factory_offset_khz;
+	pset->factory_delta = pclk_domain_3x_prog->factory_delta;
 	pset->freq_delta_min_mhz = pclk_domain_3x_prog->freq_delta_min_mhz;
 	pset->freq_delta_max_mhz = pclk_domain_3x_prog->freq_delta_max_mhz;
 	memcpy(&pset->deltas, &pdomains->deltas,
@@ -817,7 +861,7 @@ static u32 clk_domain_construct_3x_prog(struct gk20a *g,
 		ptmpdomain->noise_aware_ordering_index;
 	pdomain->b_force_noise_unaware_ordering =
 		ptmpdomain->b_force_noise_unaware_ordering;
-	pdomain->factory_offset_khz = ptmpdomain->factory_offset_khz;
+	pdomain->factory_delta = ptmpdomain->factory_delta;
 	pdomain->freq_delta_min_mhz = ptmpdomain->freq_delta_min_mhz;
 	pdomain->freq_delta_max_mhz = ptmpdomain->freq_delta_max_mhz;
 

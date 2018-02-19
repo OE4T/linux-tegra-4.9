@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,16 +31,34 @@
 #include "gpmuifvolt.h"
 #include <nvgpu/flcnif_cmn.h>
 
+
+/*
+ *  Try to get gpc2clk, mclk, sys2clk, xbar2clk work for Pascal
+ *
+ *  mclk is same for both
+ *  gpc2clk is 17 for Pascal and 13 for Volta, making it 17
+ *    as volta uses gpcclk
+ *  sys2clk is 20 in Pascal and 15 in Volta.
+ *    Changing for Pascal would break nvdclk of Volta
+ *  xbar2clk is 19 in Pascal and 14 in Volta
+ *    Changing for Pascal would break pwrclk of Volta
+ */
 enum nv_pmu_clk_clkwhich {
-	clkwhich_mclk		= 5,
-	clkwhich_dispclk	= 7,
-	clkwhich_gpc2clk	= 17,
-	clkwhich_xbar2clk	= 19,
-	clkwhich_sys2clk	= 20,
-	clkwhich_hub2clk	= 21,
-	clkwhich_pwrclk		= 24,
-	clkwhich_nvdclk		= 25,
-	clkwhich_pciegenclk	= 31,
+	clkwhich_gpcclk         = 1,
+	clkwhich_xbarclk        = 2,
+	clkwhich_sysclk         = 3,
+	clkwhich_hubclk         = 4,
+	clkwhich_mclk           = 5,
+	clkwhich_hostclk        = 6,
+	clkwhich_dispclk        = 7,
+	clkwhich_xclk           = 12,
+	clkwhich_gpc2clk        = 17,
+	clkwhich_xbar2clk       = 14,
+	clkwhich_sys2clk        = 15,
+	clkwhich_hub2clk        = 16,
+	clkwhich_pwrclk         = 19,
+	clkwhich_nvdclk         = 20,
+	clkwhich_pciegenclk     = 26,
 };
 
 /*
@@ -62,8 +80,10 @@ enum nv_pmu_clk_clkwhich {
 struct nv_pmu_clk_clk_domain_boardobjgrp_set_header {
 	struct nv_pmu_boardobjgrp_e32 super;
 	u32 vbios_domains;
+	struct ctrl_boardobjgrp_mask_e32 prog_domains_mask;
 	struct ctrl_boardobjgrp_mask_e32 master_domains_mask;
 	u16 cntr_sampling_periodms;
+	u8 version;
 	bool b_override_o_v_o_c;
 	bool b_debug_mode;
 	bool b_enforce_vf_monotonicity;
@@ -93,22 +113,24 @@ struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set {
 	struct nv_pmu_clk_clk_domain_3x_boardobj_set super;
 	u8 clk_prog_idx_first;
 	u8 clk_prog_idx_last;
-	u8 noise_unaware_ordering_index;
-	u8 noise_aware_ordering_index;
 	bool b_force_noise_unaware_ordering;
-	int factory_offset_khz;
+	struct ctrl_clk_freq_delta factory_delta;
 	short freq_delta_min_mhz;
 	short freq_delta_max_mhz;
 	struct ctrl_clk_clk_delta deltas;
+	u8 noise_unaware_ordering_index;
+	u8 noise_aware_ordering_index;
 };
 
 struct nv_pmu_clk_clk_domain_3x_master_boardobj_set {
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	u32 slave_idxs_mask;
 };
 
 struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set {
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	u8 master_idx;
 };
 
@@ -143,21 +165,24 @@ struct nv_pmu_clk_clk_prog_1x_boardobj_set {
 
 struct nv_pmu_clk_clk_prog_1x_master_boardobj_set {
 	struct nv_pmu_clk_clk_prog_1x_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	bool b_o_c_o_v_enabled;
 	struct ctrl_clk_clk_prog_1x_master_vf_entry vf_entries[
 		CTRL_CLK_CLK_PROG_1X_MASTER_VF_ENTRY_MAX_ENTRIES];
-	union ctrl_clk_clk_prog_1x_master_source_data source_data;
 	struct ctrl_clk_clk_delta deltas;
+	union ctrl_clk_clk_prog_1x_master_source_data source_data;
 };
 
 struct nv_pmu_clk_clk_prog_1x_master_ratio_boardobj_set {
 	struct nv_pmu_clk_clk_prog_1x_master_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry slave_entries[
 		CTRL_CLK_PROG_1X_MASTER_MAX_SLAVE_ENTRIES];
 };
 
 struct nv_pmu_clk_clk_prog_1x_master_table_boardobj_set {
 	struct nv_pmu_clk_clk_prog_1x_master_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	struct ctrl_clk_clk_prog_1x_master_table_slave_entry
 	slave_entries[CTRL_CLK_PROG_1X_MASTER_MAX_SLAVE_ENTRIES];
 };

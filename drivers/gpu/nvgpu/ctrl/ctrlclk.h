@@ -1,7 +1,7 @@
 /*
  * general p state infrastructure
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,19 +32,20 @@
 
 /* valid clock domain values */
 #define CTRL_CLK_DOMAIN_MCLK                                (0x00000010)
+#define CTRL_CLK_DOMAIN_HOSTCLK                             (0x00000020)
 #define CTRL_CLK_DOMAIN_DISPCLK                             (0x00000040)
 #define CTRL_CLK_DOMAIN_GPC2CLK                             (0x00010000)
 #define CTRL_CLK_DOMAIN_XBAR2CLK                            (0x00040000)
-#define CTRL_CLK_DOMAIN_SYS2CLK                             (0x00080000)
-#define CTRL_CLK_DOMAIN_HUB2CLK                             (0x00100000)
-#define CTRL_CLK_DOMAIN_PWRCLK                              (0x00800000)
-#define CTRL_CLK_DOMAIN_NVDCLK                              (0x01000000)
-#define CTRL_CLK_DOMAIN_PCIEGENCLK                          (0x02000000)
+#define CTRL_CLK_DOMAIN_SYS2CLK                             (0x00800000)
+#define CTRL_CLK_DOMAIN_HUB2CLK                             (0x01000000)
+#define CTRL_CLK_DOMAIN_PWRCLK                              (0x00080000)
+#define CTRL_CLK_DOMAIN_NVDCLK                              (0x00100000)
+#define CTRL_CLK_DOMAIN_PCIEGENCLK                          (0x00200000)
 
-#define CTRL_CLK_DOMAIN_GPCCLK                              (0x10000000)
-#define CTRL_CLK_DOMAIN_XBARCLK                             (0x20000000)
-#define CTRL_CLK_DOMAIN_SYSCLK                              (0x40000000)
-#define CTRL_CLK_DOMAIN_HUBCLK                              (0x80000000)
+#define CTRL_CLK_DOMAIN_GPCCLK                              (0x00000001)
+#define CTRL_CLK_DOMAIN_XBARCLK                             (0x00000002)
+#define CTRL_CLK_DOMAIN_SYSCLK                              (0x00000004)
+#define CTRL_CLK_DOMAIN_HUBCLK                              (0x00000008)
 
 #define CTRL_CLK_CLK_DOMAIN_TYPE_3X                                  0x01
 #define CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED                            0x02
@@ -55,10 +56,10 @@
 #define CTRL_CLK_CLK_DOMAIN_3X_PROG_ORDERING_INDEX_INVALID 0xFF
 #define CTRL_CLK_CLK_DOMAIN_INDEX_INVALID                           0xFF
 
-#define CTRL_CLK_CLK_PROG_TYPE_1X                              0x00
-#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER                       0x01
-#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_RATIO                 0x02
-#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_TABLE                 0x03
+#define CTRL_CLK_CLK_PROG_TYPE_1X                              0x01
+#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER                       0x02
+#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_RATIO                 0x03
+#define CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_TABLE                 0x04
 #define CTRL_CLK_CLK_PROG_TYPE_UNKNOWN                         255
 
 /*!
@@ -120,10 +121,18 @@ struct ctrl_clk_clk_prog_1x_source_pll {
 	u8 freq_step_size_mhz;
 };
 
-struct ctrl_clk_clk_delta {
-	int freq_delta_khz;
-	int volt_deltauv[CTRL_CLK_CLK_DELTA_MAX_VOLT_RAILS];
+union ctrl_clk_freq_delta_data {
+	s32 delta_khz;
+	s16 delta_percent;
+};
+struct ctrl_clk_freq_delta {
+	u8 type;
+	union ctrl_clk_freq_delta_data data;
+};
 
+struct ctrl_clk_clk_delta {
+	struct ctrl_clk_freq_delta freq_delta;
+	int volt_deltauv[CTRL_CLK_CLK_DELTA_MAX_VOLT_RAILS];
 };
 
 union ctrl_clk_clk_prog_1x_source_data {

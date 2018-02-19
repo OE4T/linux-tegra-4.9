@@ -2711,12 +2711,9 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	struct pci_bus *child;
 	struct pcie_port *pp = &pcie->pp;
 	u32 data;
-	u16 val;
+	int err;
 
 	if (!tegra_pcie_dw_link_up(&pcie->pp))
-		return;
-
-	if (!tegra_pcie_try_link_l2(pcie))
 		return;
 
 	list_for_each_entry(child, &pp->bus->children, node) {
@@ -2725,27 +2722,10 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
 			if (!pdev)
 				break;
-			pci_read_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
-					     &val);
-			if ((val & PCI_PM_CTRL_STATE_MASK) == PCI_D0) {
-				dev_dbg(pcie->dev,
-					"Downstream device is in D0\n");
-				break;
-			}
-			val &= ~PCI_PM_CTRL_STATE_MASK;
-			val |= PCI_D0;
-			pci_write_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
-					      val);
-			msleep(100);
-			pci_read_config_word(pdev, pdev->pm_cap + PCI_PM_CTRL,
-					     &val);
-			if ((val & PCI_PM_CTRL_STATE_MASK) == PCI_D0) {
-				dev_dbg(pcie->dev,
-					"D0 transition successful\n");
-				break;
-			} else {
+
+			err = pci_set_power_state(pdev, PCI_D0);
+			if (err)
 				dev_err(pcie->dev, "D0 transition failed\n");
-			}
 		}
 	}
 

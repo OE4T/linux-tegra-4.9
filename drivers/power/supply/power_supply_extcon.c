@@ -1,7 +1,7 @@
 /*
  * power_supply_extcon: Power supply detection through extcon.
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  * Laxman Dewangan <ldewangan@nvidia.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -419,7 +419,7 @@ static int psy_extcon_probe(struct platform_device *pdev)
 				!strcmp(psy_cable->name, "ACA RID-A"))
 			ext_name = pdata->y_cable_extcon_name;
 		if (!ext_name) {
-			dev_info(psy_extcon->dev, "No extname for cable %s\n",
+			dev_warn(psy_extcon->dev, "No extname for cable %s\n",
 						psy_cable->name);
 			continue;
 		}

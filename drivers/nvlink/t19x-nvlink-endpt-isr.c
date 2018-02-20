@@ -239,6 +239,17 @@ void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev)
 	nvlink_enable_nvlipt_interrupts(tdev);
 }
 
+/* Disable NVLIPT Link interrupts */
+static void nvlink_disable_nvlipt_interrupts(struct tnvlink_dev *tdev)
+{
+	u32 reg_val;
+
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_INTR_CONTROL_LINK0);
+	reg_val &= ~BIT(NVLIPT_INTR_CONTROL_LINK0_STALLENABLE);
+	reg_val &= ~BIT(NVLIPT_INTR_CONTROL_LINK0_NOSTALLENABLE);
+	nvlw_nvlipt_writel(tdev, NVLIPT_INTR_CONTROL_LINK0, reg_val);
+}
+
 /* Service MINION Falcon interrupts */
 void minion_service_falcon_intr(struct tnvlink_dev *tdev)
 {
@@ -1371,6 +1382,15 @@ static u32 nvlink_service_link(struct tnvlink_dev *tdev)
 	nvlink_service_nvlipt_interrupts(tdev);
 
 	return 0;
+}
+
+/* Disable link interrupts */
+void nvlink_disable_link_interrupts(struct tnvlink_dev *tdev)
+{
+	minion_disable_link_intr(tdev);
+	nvlink_disable_tl_interrupts(tdev);
+	nvlink_disable_dl_interrupts(tdev);
+	nvlink_disable_nvlipt_interrupts(tdev);
 }
 
 irqreturn_t t19x_nvlink_endpt_isr(int irq, void *dev_id)

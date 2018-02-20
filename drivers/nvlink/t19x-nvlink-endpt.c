@@ -506,6 +506,254 @@ success:
 	return ret;
 }
 
+/* Disable the NVLINK aperture in SCF blocks */
+static void disable_nvlink_aperture(void)
+{
+	u32 reg_val;
+
+	/* Read  SCF TOM value */
+	asm volatile("mrs %0, s3_0_c15_c0_3" : "=r"(reg_val));
+
+	/* Clear the enable bit */
+	reg_val &= ~BIT(SCF_NVLINK_CFG_EN);
+
+	/* Write SCF TOM value */
+	asm volatile("msr s3_0_c15_c0_3, %0" : : "r" (reg_val));
+}
+
+/* Check there are no pending requests on NVLink */
+static bool is_nvlink_idle(struct tnvlink_dev *tdev)
+{
+	u32 reg;
+
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_ACT_TRANSINFO);
+	if (reg & MSSNVLINK_MASTER_ACT_TRANSINFO_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_ACT_TRANSINFO_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_ACT_TRANSINFO_RMW);
+	if (reg & MSSNVLINK_MASTER_ACT_TRANSINFO_RMW_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_ACT_TRANSINFO_RMW_CNT_CURRENT is"
+			" not zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_ACT_INGR_DATA);
+	if (reg & MSSNVLINK_MASTER_ACT_INGR_DATA_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_ACT_INGR_DATA_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_ACT_EGR_DATA);
+	if (reg & MSSNVLINK_MASTER_ACT_EGR_DATA_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_ACT_EGR_DATA_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_RESERVED_EGR_DATA);
+	if (reg & MSSNVLINK_MASTER_RESERVED_EGR_DATA_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_RESERVED_EGR_DATA_CNT_CURRENT is"
+			" not zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_ACT_TRANSDONE);
+	if (reg & MSSNVLINK_MASTER_ACT_TRANSDONE_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_ACT_TRANSDONE_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_INGR_CMD_QUEUE);
+	if (reg & MSSNVLINK_MASTER_INGR_CMD_QUEUE_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_INGR_CMD_QUEUE_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_MASTER_EGR_CMD_QUEUE);
+	if (reg & MSSNVLINK_MASTER_EGR_CMD_QUEUE_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_MASTER_EGR_CMD_QUEUE_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_ACT_TRANSINFO);
+	if (reg & MSSNVLINK_SLAVE_ACT_TRANSINFO_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_ACT_TRANSINFO_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_ACT_INGR_DATA);
+	if (reg & MSSNVLINK_SLAVE_ACT_INGR_DATA_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_ACT_INGR_DATA_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_ACT_EGR_DATA);
+	if (reg & MSSNVLINK_SLAVE_ACT_EGR_DATA_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_ACT_EGR_DATA_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_ACT_TAG_TABLE);
+	if (reg & MSSNVLINK_SLAVE_ACT_TAG_TABLE_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_ACT_TAG_TABLE_CNT_CURRENT is not"
+			" zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_TRANSDONE_MCF_REQ);
+	if (reg & MSSNVLINK_SLAVE_TRANSDONE_MCF_REQ_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_TRANSDONE_MCF_REQ_CNT_CURRENT is"
+			" not zero and nvlink is not idle");
+		return false;
+	}
+	reg = mssnvlink_0_readl(tdev, MSSNVLINK_SLAVE_TRANSDONE_MCF_DAT);
+	if (reg & MSSNVLINK_SLAVE_TRANSDONE_MCF_DAT_CNT_CURRENT_MASK) {
+		nvlink_dbg("MSSNVLINK_SLAVE_TRANSDONE_MCF_DAT_CNT_CURRENT is"
+			" not zero and nvlink is not idle");
+		return false;
+	}
+
+	return true;
+}
+
+static void enable_nvlink_slcg(struct tnvlink_dev *tdev)
+{
+	u32 val;
+
+	val = mssnvlink_0_readl(tdev, MSSNVLINK_CLK_SLCG);
+	val &= ~(BIT(MSSNVLINK_CLK_SLCG_MCF_MASTER_CLK_ENBL));
+	val &= ~(BIT(MSSNVLINK_CLK_SLCG_MCF_SLAVE_CLK_ENBL));
+	val |= BIT(MSSNVLINK_CLK_SLCG_CORE_CLK_UPDATE_ENBL);
+	mssnvlink_0_writel(tdev, MSSNVLINK_CLK_SLCG, val);
+}
+
+int t19x_nvlink_dev_interface_disable(struct nvlink_device *ndev)
+{
+	struct tnvlink_dev *tdev = NULL;
+
+	if (!ndev) {
+		nvlink_err("Invalid nvlink_device struct pointer");
+		return -EINVAL;
+	}
+	tdev = (struct tnvlink_dev *)ndev->priv;
+
+	/* Ensure there is no pending request in MSSNVLINK */
+	/* FIXME : If is_nvlink_idle() returns true, there's no guarantee
+	 * that NVLINK will remain idle.
+	 */
+	if (!is_nvlink_idle(tdev)) {
+		nvlink_err("Can't shutdown nvlink, link still active.");
+		return -EPERM;
+	}
+
+	disable_nvlink_aperture();
+	enable_nvlink_slcg(tdev);
+
+	nvlink_dbg("nvlink dev interface disable successful");
+
+	return 0;
+}
+
+int t19x_nvlink_dev_car_disable(struct nvlink_device *ndev)
+{
+	struct tnvlink_dev *tdev = NULL;
+	int ret = 0;
+
+	if (!ndev) {
+		nvlink_err("Invalid nvlink_device struct pointer");
+		return -EINVAL;
+	}
+	tdev = (struct tnvlink_dev *)ndev->priv;
+
+	/* Switch the TX clock from brick PLL to OSC */
+	ret = clk_set_parent(tdev->clk_nvlink_tx, tdev->clk_m);
+	if (ret < 0) {
+		nvlink_err("clk_nvlink_tx's clk_set_parent() call failed");
+		goto fail;
+	}
+
+	ret = reset_control_assert(tdev->rst_mssnvl);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for mssnvl");
+		goto fail;
+	}
+
+	if (tdev->refclk == NVLINK_REFCLK_150)
+		clk_disable_unprepare(tdev->clk_pllnvhs);
+
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_pll0);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_pll0");
+		goto fail;
+	}
+
+	ret = reset_control_assert(tdev->rst_nvhs_uphy);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed nvhs_uphy");
+		goto fail;
+	}
+
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l7);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l7");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l6);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l6");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l5);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l5");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l4);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l4");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l3);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l3");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l2);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l2");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l1);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l1");
+		goto fail;
+	}
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_l0);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_l0");
+		goto fail;
+	}
+
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+	ret = tegra_powergate_partition(tdev->pgid_nvl);
+	if (ret < 0) {
+		nvlink_err("Powergate nvlink partition failed");
+		goto fail;
+	}
+#endif
+
+	clk_disable_unprepare(tdev->clk_nvlink_sys);
+
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_pm);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed nvhs_uphy_pm");
+		goto fail;
+	}
+
+	clk_disable_unprepare(tdev->clk_nvhs_pll0_mgmt);
+
+fail:
+	return ret;
+}
+
 static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 {
 	/* clocks */
@@ -635,6 +883,37 @@ static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 
 	return 0;
 }
+
+#if IS_ENABLED(CONFIG_PM_SLEEP)
+/* This function invokes core driver's nvlink shutdown api */
+int t19x_nvlink_suspend(struct device *dev)
+{
+	struct tnvlink_dev *tdev = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (!tdev) {
+		nvlink_err("Invalid tnvlink_dev struct pointer");
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	ret = nvlink_shutdown(tdev->ndev);
+	if (ret < 0)
+		goto fail;
+
+	nvlink_dbg("t19x nvlink suspend successful");
+	goto exit;
+
+fail:
+	nvlink_err("t19x nvlink suspend failed!");
+exit:
+	return ret;
+}
+
+static const struct dev_pm_ops tegra_nvlink_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(t19x_nvlink_suspend, NULL)
+};
+#endif
 
 static void tegra_nvlink_clk_rst_deinit(struct tnvlink_dev *tdev)
 {
@@ -931,7 +1210,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	ndev->dev_ops.dev_early_init = t19x_nvlink_dev_early_init;
 	ndev->dev_ops.dev_interface_init = t19x_nvlink_dev_interface_init;
 	ndev->dev_ops.dev_reg_init = t19x_nvlink_dev_reg_init;
-
+	ndev->dev_ops.dev_interface_disable = t19x_nvlink_dev_interface_disable;
 	/* Point priv of ndev to the tegra nvlink endpoint device struct */
 	ndev->priv = (void *) tdev;
 
@@ -1052,6 +1331,9 @@ static struct platform_driver t19x_nvlink_endpt_pdrv = {
 	.remove		= t19x_nvlink_endpt_remove,
 	.driver		= {
 		.name	= NVLINK_DRV_NAME,
+#if IS_ENABLED(CONFIG_PM_SLEEP)
+		.pm     = &tegra_nvlink_pm_ops,
+#endif
 		.of_match_table = of_match_ptr(t19x_nvlink_controller_of_match),
 	},
 };

@@ -1093,6 +1093,120 @@ int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev)
 }
 EXPORT_SYMBOL(nvlink_train_intranode_conn_safe_to_hs);
 
+int nvlink_transition_intranode_conn_safe_to_off(struct nvlink_device *ndev)
+{
+	int ret = 0;
+	struct nvlink_intranode_conn conn;
+	struct nvlink_device *ndev0 = NULL;
+	struct nvlink_device *ndev1 = NULL;
+
+	if (!ndev) {
+		nvlink_err("Invalid device struct pointer");
+		return -EINVAL;
+	}
+
+	ret = nvlink_get_intranode_conn(ndev, &conn);
+	if (ret < 0) {
+		nvlink_err("Error retrieving intranode connection information");
+		return ret;
+	}
+	ndev0 = conn.ndev0;
+	ndev1 = conn.ndev1;
+
+	ndev0->link.link_ops.set_link_mode(ndev0,
+					NVLINK_LINK_DISABLE_ERR_DETECT);
+	ndev1->link.link_ops.set_link_mode(ndev1,
+					NVLINK_LINK_DISABLE_ERR_DETECT);
+
+	/*  Disable Lanes on both sides of the link */
+	ret = ndev0->link.link_ops.set_link_mode(ndev0,
+					NVLINK_LINK_LANE_DISABLE);
+	if (ret < 0) {
+		nvlink_err("ndev0 set NVLINK_LINK_LANE_DISABLE failed");
+		goto fail;
+	}
+	ret = ndev1->link.link_ops.set_link_mode(ndev1,
+					NVLINK_LINK_LANE_DISABLE);
+	if (ret < 0) {
+		nvlink_err("ndev1 set NVLINK_LINK_LANE_DISABLE failed");
+		goto fail;
+	}
+
+	/* Shutdown Lanes on both sides of the link */
+	ret = ndev0->link.link_ops.set_link_mode(ndev0,
+					NVLINK_LINK_LANE_SHUTDOWN);
+	if (ret < 0) {
+		nvlink_err("ndev0 set NVLINK_LINK_LANE_SHUTDOWN failed");
+		goto fail;
+	}
+	ret = ndev1->link.link_ops.set_link_mode(ndev1,
+					NVLINK_LINK_LANE_SHUTDOWN);
+	if (ret < 0) {
+		nvlink_err("ndev1 set NVLINK_LINK_LANE_SHUTDOWN failed");
+		goto fail;
+	}
+
+	/* First force TX sublinks to OFF for each direction.
+	 * Then  force RX sublinks to OFF for each direction.
+	 */
+	ret = ndev0->link.link_ops.set_sublink_mode(ndev0, false,
+						NVLINK_TX_OFF);
+	if (ret < 0) {
+		nvlink_err("ndev0 set TX sublink_mode to OFF failed");
+		goto fail;
+	}
+	ret = ndev1->link.link_ops.set_sublink_mode(ndev1, false,
+						NVLINK_TX_OFF);
+	if (ret < 0) {
+		nvlink_err("ndev1 set TX sublink_mode to OFF failed");
+		goto fail;
+	}
+
+	ret = ndev0->link.link_ops.set_sublink_mode(ndev0, true,
+						NVLINK_RX_OFF);
+	if (ret < 0) {
+		nvlink_err("ndev0 set RX sublink_mode to OFF failed");
+		goto fail;
+	}
+	ret = ndev1->link.link_ops.set_sublink_mode(ndev1, true,
+						NVLINK_RX_OFF);
+	if (ret < 0) {
+		nvlink_err("ndev1 set RX sublink_mode to OFF failed");
+		goto fail;
+	}
+
+	ret = ndev0->link.link_ops.set_link_mode(ndev0, NVLINK_LINK_OFF);
+	if (ret < 0) {
+		nvlink_err("ndev0 set link mode to OFF failed");
+		goto fail;
+	}
+
+	/* set_link_mode(NVLINK_LINK_OFF) disables CAR. Make sure we are not
+	 * calling this twice for the same endpoint incase of loopback
+	 * topologies.
+	 */
+	if (ndev0 != ndev1) {
+		ret = ndev1->link.link_ops.set_link_mode(ndev1,
+							NVLINK_LINK_OFF);
+		if (ret < 0) {
+			nvlink_err("ndev1 set link mode to OFF failed");
+			goto fail;
+		}
+	}
+
+	ret = nvlink_set_init_state(ndev0, NVLINK_DEV_OFF);
+	if (ret < 0)
+		goto fail;
+
+	ret = nvlink_set_init_state(ndev1, NVLINK_DEV_OFF);
+	if (ret < 0)
+		goto fail;
+
+fail:
+	return ret;
+}
+EXPORT_SYMBOL(nvlink_transition_intranode_conn_safe_to_off);
+
 /*
  * Initialize the device using different callbacks registered through
  * dev_ops and link_ops. At the end of this function, the device should
@@ -1241,6 +1355,103 @@ success:
 	return ret;
 }
 EXPORT_SYMBOL(nvlink_enumerate);
+
+/*
+ * Disable the device interface, transition the link to SAFE mode
+ * and then to OFF. Only master device can able to initiate nvlink shutdown.
+ */
+int nvlink_shutdown(struct nvlink_device *ndev)
+{
+	int ret = 0;
+	struct nvlink_device *master_dev = NULL;
+	struct nvlink_device *slave_dev = NULL;
+	struct topology *topology = NULL;
+	enum init_state master_state = NVLINK_DEV_OFF;
+	enum init_state slave_state = NVLINK_DEV_OFF;
+
+	if (!ndev) {
+		nvlink_err("Invalid pointer to device struct");
+		return -EINVAL;
+	}
+
+	mutex_lock(&nvlink_core.mutex);
+	topology = &(nvlink_core.topology);
+
+	if (ndev->device_id != topology->master_dev_id) {
+		nvlink_err("Device is not master and cannot start shutdown");
+		ret = -EINVAL;
+		goto release_mutex;
+	}
+
+	master_dev = nvlink_core.ndevs[topology->master_dev_id];
+	slave_dev = nvlink_core.ndevs[topology->slave_dev_id];
+
+	if (!master_dev || !slave_dev) {
+		nvlink_err("Slave or Master not registered with core driver");
+		ret = -ENODATA;
+		goto release_mutex;
+	}
+
+	mutex_unlock(&nvlink_core.mutex);
+
+	ret = nvlink_get_init_state(master_dev, &master_state);
+	if (ret < 0) {
+		nvlink_err("Error retrieving init state for master");
+		goto fail;
+	}
+	ret = nvlink_get_init_state(slave_dev, &slave_state);
+	if (ret < 0) {
+		nvlink_err("Error retrieving init state for slave");
+		goto fail;
+	}
+
+	if (master_state == NVLINK_DEV_OFF || slave_state == NVLINK_DEV_OFF) {
+		nvlink_dbg("master/slave device is off, link already shutdown");
+		return ret;
+	}
+
+	if (master_state != NVLINK_DEV_REG_INIT_DONE ||
+		slave_state != NVLINK_DEV_REG_INIT_DONE) {
+		nvlink_err("nvlink not initialized and is struck in"
+			" intermediate state");
+		ret = -EPERM;
+		goto fail;
+	}
+
+	ret = master_dev->dev_ops.dev_interface_disable(master_dev);
+	if (ret < 0) {
+		nvlink_err("master_dev dev_interface_disable failed");
+		goto fail;
+	}
+
+	ret = slave_dev->dev_ops.dev_interface_disable(slave_dev);
+	if (ret < 0) {
+		nvlink_err("slave_dev dev_interface_disable failed");
+		goto fail;
+	}
+
+	ret = nvlink_transition_intranode_conn_hs_to_safe(master_dev);
+	if (ret < 0) {
+		nvlink_err("Transiting intranode conn to safe failed");
+		goto fail;
+	}
+
+	ret = nvlink_transition_intranode_conn_safe_to_off(master_dev);
+	if (ret < 0) {
+		nvlink_err("Turning off nvlink lane failed");
+		goto fail;
+	}
+
+	nvlink_dbg("Nvlink shutdown successful!");
+	goto success;
+release_mutex:
+	mutex_unlock(&nvlink_core.mutex);
+fail:
+	nvlink_err("nvlink shutdown failed");
+success:
+	return ret;
+}
+EXPORT_SYMBOL(nvlink_shutdown);
 
 #ifdef CONFIG_DEBUG_FS
 void nvlink_core_debugfs_init(void)

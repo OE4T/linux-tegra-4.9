@@ -166,6 +166,45 @@ static const struct file_operations  nvlink_speedcontrol_fops = {
 	.owner	= THIS_MODULE,
 };
 
+static int nvlink_shutdown_file_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+
+	return 0;
+}
+
+static ssize_t nvlink_shutdown_file_write(struct file *file,
+					const char __user *ubuf,
+					size_t count, loff_t *offp)
+{
+	struct tnvlink_dev *tdev = file->private_data;
+	char tmp[3];
+	int ret = 0;
+
+	ret = copy_from_user(tmp, ubuf, count);
+
+	if (!strncmp(tmp, "1", 1)) {
+		nvlink_dbg("nvlink shutdown request from debugfs node");
+		ret = t19x_nvlink_suspend(tdev->dev);
+		if (ret < 0)
+			nvlink_err("t19x_nvlink_suspend failed");
+	} else {
+		nvlink_err("Unsupported value. Write 1 to shutdown nvlink");
+		ret = -EINVAL;
+	}
+
+	if (ret)
+		return ret;
+	else
+		return count;
+}
+
+static const struct file_operations nvlink_shutdown_fops = {
+	.open	= nvlink_shutdown_file_open,
+	.write	= nvlink_shutdown_file_write,
+	.owner	= THIS_MODULE,
+};
+
 static int nvlink_single_lane_debugfs_init(struct tnvlink_dev *tdev)
 {
 	struct dentry *tegra_sl_debugfs;
@@ -279,6 +318,16 @@ void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev)
 	if (IS_ERR_OR_NULL(tdev->tegra_debugfs_file)) {
 		tdev->tegra_debugfs_file = NULL;
 		nvlink_dbg("debugfs_create_file() for nvlink_rate_config failed");
+		goto fail;
+	}
+
+	/* nvlink_shutdown: to shutdown the nvlink */
+	tdev->tegra_debugfs_file = debugfs_create_file("shutdown",
+				S_IWUSR, tdev->tegra_debugfs,
+				tdev, &nvlink_shutdown_fops);
+	if (IS_ERR_OR_NULL(tdev->tegra_debugfs_file)) {
+		tdev->tegra_debugfs_file = NULL;
+		nvlink_err("debugfs_create_file() for nvlink_shutdown failed");
 		goto fail;
 	}
 

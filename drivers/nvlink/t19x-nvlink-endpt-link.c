@@ -450,11 +450,59 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_TX_OFF:
-			/* TODO */
-			nvlink_err("Putting the TX sublink in NVLINK_TX_OFF"
-				" mode is currently not supported by the"
-				" driver");
-			status = -EOPNOTSUPP;
+			if (tx_sublink_state ==
+				NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_OFF) {
+				nvlink_dbg("TX already in OFF state");
+				break;
+			} else if (tx_sublink_state ==
+				NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_HS) {
+				nvlink_err("TX cannot be taken from HS to"
+					" OFF state directly");
+				return -EPERM;
+			}
+
+			nvlink_dbg("Changing TX sublink state to OFF");
+			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
+			reg_val &= ~NVL_SUBLINK_CHANGE_COUNTDOWN_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_COUNTDOWN_F(
+					NVL_SUBLINK_CHANGE_COUNTDOWN_IMMEDIATE);
+			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
+					NVL_SUBLINK_CHANGE_NEWSTATE_OFF);
+			reg_val &= ~NVL_SUBLINK_CHANGE_SUBLINK_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_SUBLINK_F(
+					NVL_SUBLINK_CHANGE_SUBLINK_TX);
+			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
+					NVL_SUBLINK_CHANGE_ACTION_SLSM_CHANGE);
+			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
+
+			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
+			do {
+				reg_val = nvlw_nvl_readl(tdev,
+							NVL_SUBLINK_CHANGE);
+				if ((reg_val &
+				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
+				NVL_SUBLINK_CHANGE_STATUS_DONE)
+					break;
+				else if ((reg_val &
+				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
+				NVL_SUBLINK_CHANGE_STATUS_FAULT) {
+					nvlink_err("Fault while changing TX"
+						" sublink to OFF state");
+					return -EPROTO;
+				}
+				usleep_range(DEFAULT_LOOP_SLEEP_US,
+					DEFAULT_LOOP_SLEEP_US * 2);
+				timeout_us = timeout_us - DEFAULT_LOOP_SLEEP_US;
+			} while (timeout_us > 0);
+
+			if (timeout_us <= 0) {
+				nvlink_err("Timeout while waiting for TX"
+					" sublink to go to OFF state");
+				return -ETIMEDOUT;
+			}
+
 			break;
 
 		default:
@@ -467,12 +515,64 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 	} else {
 		switch (mode) {
 		case NVLINK_RX_OFF:
-			/* TODO */
-			nvlink_err("Putting the RX sublink in NVLINK_RX_OFF"
-				" mode is currently not supported by the"
-				" driver");
-			status = -EOPNOTSUPP;
+			if (rx_sublink_state ==
+				NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_OFF) {
+				nvlink_dbg("RX already in OFF state");
+				break;
+			} else if (rx_sublink_state ==
+				NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_HS) {
+				nvlink_err("RX cannot be taken from HS to"
+					" OFF state directly");
+				return -EPERM;
+			}
+
+			nvlink_dbg("Changing RX sublink state to OFF");
+			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
+			reg_val &= ~NVL_SUBLINK_CHANGE_COUNTDOWN_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_COUNTDOWN_F(
+					NVL_SUBLINK_CHANGE_COUNTDOWN_IMMEDIATE);
+			reg_val &= ~NVL_SUBLINK_CHANGE_OLDSTATE_MASK_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_OLDSTATE_MASK_F(
+				NVL_SUBLINK_CHANGE_OLDSTATE_MASK_DONTCARE);
+			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
+					NVL_SUBLINK_CHANGE_NEWSTATE_OFF);
+			reg_val &= ~NVL_SUBLINK_CHANGE_SUBLINK_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_SUBLINK_F(
+					NVL_SUBLINK_CHANGE_SUBLINK_RX);
+			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
+			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
+					NVL_SUBLINK_CHANGE_ACTION_SLSM_FORCE);
+			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
+
+			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
+			do {
+				reg_val = nvlw_nvl_readl(tdev,
+							NVL_SUBLINK_CHANGE);
+				if ((reg_val &
+				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
+				NVL_SUBLINK_CHANGE_STATUS_DONE)
+					break;
+				else if ((reg_val &
+				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
+				NVL_SUBLINK_CHANGE_STATUS_FAULT) {
+					nvlink_err("Fault while changing RX"
+						" sublink to OFF state");
+					return -EPROTO;
+				}
+				usleep_range(DEFAULT_LOOP_SLEEP_US,
+					DEFAULT_LOOP_SLEEP_US * 2);
+				timeout_us = timeout_us - DEFAULT_LOOP_SLEEP_US;
+			} while (timeout_us > 0);
+
+			if (timeout_us <= 0) {
+				nvlink_err("Timeout while waiting for RX"
+					" sublink to go to OFF state");
+				return -ETIMEDOUT;
+			}
+
 			break;
+
 		case NVLINK_RX_RXCAL:
 			status = t19x_nvlink_rxcal_enable(tdev);
 			if (status) {
@@ -547,6 +647,24 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 	link_state = t19x_nvlink_get_link_state(ndev);
 
 	switch (mode) {
+	case NVLINK_LINK_OFF:
+		if (link_state == NVL_LINK_STATE_STATE_INIT) {
+			nvlink_dbg("Link is already in OFF mode");
+			break;
+		} else if (link_state == NVL_LINK_STATE_STATE_ACTIVE) {
+			nvlink_err("Link cannot be taken from ACTIVE state"
+				" to OFF mode");
+			return -EPERM;
+		}
+
+		status = t19x_nvlink_dev_car_disable(ndev);
+		if (status < 0) {
+			nvlink_err("set link mode to OFF failed");
+			break;
+		}
+
+		break;
+
 	case NVLINK_LINK_SAFE:
 		if (link_state == NVL_LINK_STATE_STATE_SWCFG) {
 			nvlink_dbg("Link is already in Safe mode");
@@ -745,7 +863,34 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 
 		break;
 
+	case NVLINK_LINK_DISABLE_ERR_DETECT:
+		/* Disable link interrupts */
+		nvlink_disable_link_interrupts(tdev);
+
+		break;
+
+	case NVLINK_LINK_LANE_DISABLE:
+		status = minion_send_cmd(tdev,
+				MINION_NVLINK_DL_CMD_COMMAND_LANEDISABLE, 0);
+		if (status < 0) {
+			nvlink_err("Error setting link mode to LANE DISABLE");
+			break;
+		}
+
+		break;
+
+	case NVLINK_LINK_LANE_SHUTDOWN:
+		status = minion_send_cmd(tdev,
+				MINION_NVLINK_DL_CMD_COMMAND_LANESHUTDOWN, 0);
+		if (status < 0) {
+			nvlink_err("Error setting link mode to LANE SHUTDOWN");
+			break;
+		}
+
+		break;
+
 	/* TODO: other "case"s need to be implemented here */
+
 	default:
 		nvlink_err("Invalid link mode specified (link mode = %u)",
 			mode);

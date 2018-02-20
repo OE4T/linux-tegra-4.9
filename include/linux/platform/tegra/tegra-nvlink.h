@@ -182,6 +182,7 @@ struct device_operations {
 	int (*dev_early_init)(struct nvlink_device *ndev);
 	int (*dev_interface_init)(struct nvlink_device *ndev);
 	int (*dev_reg_init)(struct nvlink_device *ndev);
+	int (*dev_interface_disable)(struct nvlink_device *ndev);
 	int (*dev_shutdown)(struct nvlink_device *ndev);
 };
 
@@ -283,4 +284,5 @@ int nvlink_transition_intranode_conn_off_to_safe(struct nvlink_device *ndev);
 int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev);
 int nvlink_initialize_endpoint(struct nvlink_device *ndev);
 int nvlink_transition_intranode_conn_hs_to_safe(struct nvlink_device *ndev);
+int nvlink_shutdown(struct nvlink_device *ndev);
 #endif /* TEGRA_NVLINK_H */

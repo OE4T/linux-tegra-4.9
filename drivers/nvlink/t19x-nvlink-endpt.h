@@ -269,6 +269,9 @@ void nvlw_sync2x_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 u32 nvlw_nvltlc_readl(struct tnvlink_dev *tdev, u32 reg);
 void nvlw_nvltlc_writel(struct tnvlink_dev *tdev, u32 reg, u32 val);
 
+int t19x_nvlink_dev_car_disable(struct nvlink_device *ndev);
+int t19x_nvlink_suspend(struct device *dev);
+
 int wait_for_reg_cond_nvlink(
 			struct tnvlink_dev *tdev,
 			u32 reg,
@@ -291,6 +294,7 @@ void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev);
 void nvlink_config_common_intr(struct tnvlink_dev *tdev);
 void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev);
 void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev);
+void nvlink_disable_link_interrupts(struct tnvlink_dev *tdev);
 void minion_service_falcon_intr(struct tnvlink_dev *tdev);
 void nvlink_disable_dl_interrupts(struct tnvlink_dev *tdev);
 int nvlink_service_dl_interrupts(struct tnvlink_dev *tdev,

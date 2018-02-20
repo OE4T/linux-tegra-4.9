@@ -602,10 +602,6 @@
 		status = "disabled";
         };
 
-	tegra_usb_cd: usb_cd {
-		compatible = "nvidia,tegra210-usb-cd";
-		status = "disabled";
-	};
 
 	xotg {
 		compatible = "nvidia,tegra210-xotg";
@@ -756,6 +752,13 @@
 		};
 	};
 #endif
+	tegra_usb_cd: usb_cd {
+		compatible = "nvidia,tegra210-usb-cd";
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
+		status = "disabled";
+	};
 
 	tegra_padctl_uphy: pinctrl@7009f000 {
 		compatible = "nvidia,tegra21x-padctl-uphy";

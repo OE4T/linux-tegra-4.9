@@ -829,7 +829,7 @@ static int m88e1111_config_init(struct phy_device *phydev)
 
 static int m88e1121_config_init(struct phy_device *phydev)
 {
-	int err, oldpage;
+	int err, oldpage, temp;
 
 	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
 
@@ -842,6 +842,17 @@ static int m88e1121_config_init(struct phy_device *phydev)
 			MII_88E1121_PHY_LED_DEF);
 	if (err < 0)
 		return err;
+
+	if (phy_interrupt_is_valid(phydev)) {
+		/* Setup LED[2] as interrupt pin (active low) */
+		temp = phy_read(phydev, MII_88E1318S_PHY_LED_TCR);
+		temp &= ~MII_88E1318S_PHY_LED_TCR_FORCE_INT;
+		temp |= MII_88E1318S_PHY_LED_TCR_INTn_ENABLE;
+		temp |= MII_88E1318S_PHY_LED_TCR_INT_ACTIVE_LOW;
+		err = phy_write(phydev, MII_88E1318S_PHY_LED_TCR, temp);
+		if (err < 0)
+			return err;
+	}
 
 	phy_write(phydev, MII_MARVELL_PHY_PAGE, oldpage);
 
@@ -1613,8 +1624,9 @@ static void marvell_get_stats(struct phy_device *phydev,
 
 static int marvell_probe(struct phy_device *phydev)
 {
-	struct marvell_priv *priv;
+	struct phy_driver *phydrv = to_phy_driver(phydev->mdio.dev.driver);
 	struct device_node *of_node = phydev->mdio.dev.of_node;
+	struct marvell_priv *priv;
 
 	priv = devm_kzalloc(&phydev->mdio.dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -1623,6 +1635,10 @@ static int marvell_probe(struct phy_device *phydev)
 	if (of_node)
 		priv->copper = of_property_read_bool(of_node,
 						"marvell,copper-mode");
+
+	/* Enable the interrupts for Marvell PHY in copper mode */
+	if (priv->copper)
+		phydrv->flags |= PHY_HAS_INTERRUPT;
 
 	phydev->priv = priv;
 
@@ -1823,6 +1839,9 @@ static struct phy_driver marvell_drivers[] = {
 		.config_aneg = &m88e1512_config_aneg,
 		.config_init = &m88e1512_config_init,
 		.read_status = &m88e1512_read_status,
+		.ack_interrupt = &marvell_ack_interrupt,
+		.config_intr = &marvell_config_intr,
+		.did_interrupt = &m88e1121_did_interrupt,
 		.resume = &marvell_resume,
 		.suspend = &marvell_suspend,
 		.get_sset_count = marvell_get_sset_count,

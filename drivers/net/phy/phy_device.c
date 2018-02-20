@@ -1674,13 +1674,6 @@ static int phy_probe(struct device *dev)
 
 	phydev->drv = phydrv;
 
-	/* Disable the interrupt if the PHY doesn't support it
-	 * but the interrupt is still a valid one
-	 */
-	if (!(phydrv->flags & PHY_HAS_INTERRUPT) &&
-	    phy_interrupt_is_valid(phydev))
-		phydev->irq = PHY_POLL;
-
 	if (phydrv->flags & PHY_IS_INTERNAL)
 		phydev->is_internal = true;
 
@@ -1704,6 +1697,13 @@ static int phy_probe(struct device *dev)
 
 	if (phydev->drv->probe)
 		err = phydev->drv->probe(phydev);
+
+	/* Disable the interrupt if the PHY doesn't support it
+	 * but the interrupt is still a valid one
+	 */
+	if (!(phydrv->flags & PHY_HAS_INTERRUPT) &&
+	    phy_interrupt_is_valid(phydev))
+		phydev->irq = PHY_POLL;
 
 	mutex_unlock(&phydev->lock);
 

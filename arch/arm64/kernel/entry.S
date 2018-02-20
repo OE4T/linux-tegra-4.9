@@ -364,18 +364,18 @@ ENTRY(vectors)
 	kernel_ventry	1, sync				// Synchronous EL1h
 	kernel_ventry	1, irq				// IRQ EL1h
 	kernel_ventry	1, fiq_invalid			// FIQ EL1h
-	kernel_ventry	1, error_invalid		// Error EL1h
+	kernel_ventry	1, serr				// Error EL1h
 
 	kernel_ventry	0, sync				// Synchronous 64-bit EL0
 	kernel_ventry	0, irq				// IRQ 64-bit EL0
 	kernel_ventry	0, fiq_invalid			// FIQ 64-bit EL0
-	kernel_ventry	0, error_invalid		// Error 64-bit EL0
+	kernel_ventry	0, serr				// Error 64-bit EL0
 
 #ifdef CONFIG_COMPAT
 	kernel_ventry	0, sync_compat, 32		// Synchronous 32-bit EL0
 	kernel_ventry	0, irq_compat, 32		// IRQ 32-bit EL0
 	kernel_ventry	0, fiq_invalid_compat, 32	// FIQ 32-bit EL0
-	kernel_ventry	0, error_invalid_compat, 32	// Error 32-bit EL0
+	kernel_ventry	0, serr_compat, 32		// Error 32-bit EL0
 #else
 	kernel_ventry	0, sync_invalid, 32		// Synchronous 32-bit EL0
 	kernel_ventry	0, irq_invalid, 32		// IRQ 32-bit EL0
@@ -578,6 +578,20 @@ el0_serr:
 	bl	handle_serr
 	b	ret_to_user
 ENDPROC(el0_serr)
+
+#ifdef CONFIG_COMPAT
+el0_serr_compat:
+        kernel_entry 0, 32
+        // enable interrupts before calling the main handler
+        enable_dbg_and_irq
+        ct_user_exit
+        mrs     x0, daif
+        mrs     x1, spsr_el1
+        mov     x2, sp
+        bl      handle_serr
+        b       ret_to_user
+ENDPROC(el0_serr_compat)
+#endif
 
 /*
  * EL0 mode handlers.

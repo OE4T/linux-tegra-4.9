@@ -532,6 +532,7 @@ struct gpu_ops {
 		void (*post_events)(struct channel_gk20a *ch);
 	} debugger;
 	struct {
+		int (*setup_sw)(struct gk20a *g);
 		int (*init_fifo_setup_hw)(struct gk20a *g);
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*unbind_channel)(struct channel_gk20a *ch_gk20a);

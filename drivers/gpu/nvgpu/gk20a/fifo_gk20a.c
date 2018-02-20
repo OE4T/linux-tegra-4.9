@@ -862,24 +862,27 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_init_fifo_setup_sw(struct gk20a *g)
+int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned int chid, i;
 	int err = 0;
-	u64 userd_base;
 
 	gk20a_dbg_fn("");
 
-	if (f->sw_ready) {
-		gk20a_dbg_fn("skip init");
-		return 0;
-	}
-
 	f->g = g;
 
-	nvgpu_mutex_init(&f->intr.isr.mutex);
-	nvgpu_mutex_init(&f->gr_reset_mutex);
+	err = nvgpu_mutex_init(&f->intr.isr.mutex);
+	if (err) {
+		nvgpu_err(g, "failed to init isr.mutex");
+		return err;
+	}
+
+	err = nvgpu_mutex_init(&f->gr_reset_mutex);
+	if (err) {
+		nvgpu_err(g, "failed to init gr_reset_mutex");
+		return err;
+	}
 
 	g->ops.fifo.init_pbdma_intr_descs(f); /* just filling in data/tables */
 
@@ -914,7 +917,73 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	init_runlist(g, f);
 
 	nvgpu_init_list_node(&f->free_chs);
-	nvgpu_mutex_init(&f->free_chs_mutex);
+
+	err = nvgpu_mutex_init(&f->free_chs_mutex);
+	if (err) {
+		nvgpu_err(g, "failed to init free_chs_mutex");
+		goto clean_up;
+	}
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		gk20a_init_channel_support(g, chid);
+		gk20a_init_tsg_support(g, chid);
+	}
+
+	err = nvgpu_mutex_init(&f->tsg_inuse_mutex);
+	if (err) {
+		nvgpu_err(g, "failed to init tsg_inuse_mutex");
+		goto clean_up;
+	}
+
+	f->remove_support = gk20a_remove_fifo_support;
+
+	f->deferred_reset_pending = false;
+
+	err = nvgpu_mutex_init(&f->deferred_reset_mutex);
+	if (err) {
+		nvgpu_err(g, "failed to init deferred_reset_mutex");
+		goto clean_up;
+	}
+
+	gk20a_dbg_fn("done");
+	return 0;
+
+clean_up:
+	nvgpu_err(g, "fail");
+
+	nvgpu_vfree(g, f->channel);
+	f->channel = NULL;
+	nvgpu_vfree(g, f->tsg);
+	f->tsg = NULL;
+	nvgpu_kfree(g, f->pbdma_map);
+	f->pbdma_map = NULL;
+	nvgpu_kfree(g, f->engine_info);
+	f->engine_info = NULL;
+	nvgpu_kfree(g, f->active_engines_list);
+	f->active_engines_list = NULL;
+
+	return err;
+}
+
+int gk20a_init_fifo_setup_sw(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	unsigned int chid;
+	u64 userd_base;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	if (f->sw_ready) {
+		gk20a_dbg_fn("skip init");
+		return 0;
+	}
+
+	err = gk20a_init_fifo_setup_sw_common(g);
+	if (err) {
+		nvgpu_err(g, "fail: err: %d", err);
+		return err;
+	}
 
 	if (g->ops.mm.is_bar1_supported(g))
 		err = nvgpu_dma_alloc_map_sys(g->mm.bar1.vm,
@@ -936,18 +1005,11 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 			chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;
-		gk20a_init_channel_support(g, chid);
-		gk20a_init_tsg_support(g, chid);
 	}
-	nvgpu_mutex_init(&f->tsg_inuse_mutex);
 
 	err = nvgpu_channel_worker_init(g);
 	if (err)
 		goto clean_up;
-	f->remove_support = gk20a_remove_fifo_support;
-
-	f->deferred_reset_pending = false;
-	nvgpu_mutex_init(&f->deferred_reset_mutex);
 
 	f->sw_ready = true;
 
@@ -956,21 +1018,12 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 clean_up:
 	gk20a_dbg_fn("fail");
-	if (g->ops.mm.is_bar1_supported(g))
-		nvgpu_dma_unmap_free(g->mm.bar1.vm, &f->userd);
-	else
-		nvgpu_dma_free(g, &f->userd);
-
-	nvgpu_vfree(g, f->channel);
-	f->channel = NULL;
-	nvgpu_vfree(g, f->tsg);
-	f->tsg = NULL;
-	nvgpu_kfree(g, f->pbdma_map);
-	f->pbdma_map = NULL;
-	nvgpu_kfree(g, f->engine_info);
-	f->engine_info = NULL;
-	nvgpu_kfree(g, f->active_engines_list);
-	f->active_engines_list = NULL;
+	if (nvgpu_mem_is_valid(&f->userd)) {
+		if (g->ops.mm.is_bar1_supported(g))
+			nvgpu_dma_unmap_free(g->mm.bar1.vm, &f->userd);
+		else
+			nvgpu_dma_free(g, &f->userd);
+	}
 
 	return err;
 }
@@ -1049,7 +1102,7 @@ int gk20a_init_fifo_support(struct gk20a *g)
 {
 	u32 err;
 
-	err = gk20a_init_fifo_setup_sw(g);
+	err = g->ops.fifo.setup_sw(g);
 	if (err)
 		return err;
 

@@ -351,6 +351,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.channel_suspend = gk20a_channel_suspend,
 		.channel_resume = gk20a_channel_resume,
 		.set_error_notifier = nvgpu_set_error_notifier,
+		.setup_sw = gk20a_init_fifo_setup_sw,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

@@ -84,7 +84,6 @@
 			alignment = <0x0 0x10000>;
 			alloc-ranges = <0x0 0x0 0x1 0x0>;
 			no-map;
-			status = "disabled";
 		};
 
 	};

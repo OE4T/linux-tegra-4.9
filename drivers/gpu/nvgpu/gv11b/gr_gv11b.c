@@ -4263,7 +4263,13 @@ void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 		gr_gpcs_pri_mmu_ctrl_mmu_aperture_m() |
 		gr_gpcs_pri_mmu_ctrl_mmu_vol_m() |
 		gr_gpcs_pri_mmu_ctrl_mmu_disable_m();
+
+	temp = set_field(temp, gr_gpcs_pri_mmu_ctrl_atomic_capability_mode_m(),
+                           gr_gpcs_pri_mmu_ctrl_atomic_capability_mode_rmw_f());
 	gk20a_writel(g, gr_gpcs_pri_mmu_ctrl_r(), temp);
+	nvgpu_log_info(g, "mmu_ctrl_r = 0x%08x, atomic_capability_mode_rmw",
+			temp);
+
 	gk20a_writel(g, gr_gpcs_pri_mmu_pm_unit_mask_r(), 0);
 	gk20a_writel(g, gr_gpcs_pri_mmu_pm_req_mask_r(), 0);
 

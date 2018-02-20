@@ -357,8 +357,13 @@ static struct tegra_usb_cd_soc_data tegra186_soc_config = {
 	.init_hw_ops = tegra18x_usb_cd_init_ops,
 };
 
+static struct tegra_usb_cd_soc_data tegra210_soc_config = {
+	.init_hw_ops = tegra21x_usb_cd_init_ops,
+};
+
 static const struct of_device_id tegra_usb_cd_of_match[] = {
 	{.compatible = "nvidia,tegra186-usb-cd", .data = &tegra186_soc_config,},
+	{.compatible = "nvidia,tegra210-usb-cd", .data = &tegra210_soc_config,},
 	{},
 };
 MODULE_DEVICE_TABLE(of, tegra_usb_cd_of_match);
@@ -390,7 +395,6 @@ static int tegra_usb_cd_probe(struct platform_device *pdev)
 
 	match = of_match_device(of_match_ptr(tegra_usb_cd_of_match),
 			&pdev->dev);
-
 	if (!match)
 		return -ENODEV;
 

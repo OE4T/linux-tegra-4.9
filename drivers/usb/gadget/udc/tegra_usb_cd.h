@@ -80,5 +80,6 @@ enum tegra_usb_cd_apple_chargers {
 };
 
 int tegra18x_usb_cd_init_ops(struct tegra_usb_cd *ucd);
+int tegra21x_usb_cd_init_ops(struct tegra_usb_cd *ucd);
 
 #endif /* __TEGRA_USB_CD_H */

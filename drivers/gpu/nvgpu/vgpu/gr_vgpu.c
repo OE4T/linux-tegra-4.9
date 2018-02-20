@@ -523,13 +523,6 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			goto out;
 		}
 
-		/* commit gr ctx buffer */
-		err = g->ops.gr.commit_inst(c, gr_ctx->mem.gpu_va);
-		if (err) {
-			nvgpu_err(g, "fail to commit gr ctx buffer");
-			goto out;
-		}
-
 		/* allocate patch buffer */
 		err = vgpu_gr_alloc_channel_patch_ctx(g, c);
 		if (err) {
@@ -547,6 +540,13 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		err = vgpu_gr_commit_global_ctx_buffers(g, c, true);
 		if (err) {
 			nvgpu_err(g, "fail to commit global ctx buffers");
+			goto out;
+		}
+
+		/* commit gr ctx buffer */
+		err = g->ops.gr.commit_inst(c, gr_ctx->mem.gpu_va);
+		if (err) {
+			nvgpu_err(g, "fail to commit gr ctx buffer");
 			goto out;
 		}
 

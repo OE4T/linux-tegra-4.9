@@ -3,7 +3,7 @@
  *
  * declarations for t19x cache
  *
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,7 @@ struct tegra_l3_ioctl_data {
 };
 
 #define TEGRA_L3_CACHE_GET_IOCTL_DATA    \
-		_IOWR(TEGRA_L3_CACHE_IOC_MAGIC, 1, struct tegra_l3_ioctl_data)
+		_IOR(TEGRA_L3_CACHE_IOC_MAGIC, 1, struct tegra_l3_ioctl_data)
 
 #define TEGRA_L3_CACHE_IOCTL_IOC_MAXNR _IOC_NR(TEGRA_L3_CACHE_GET_IOCTL_DATA)
 #define TEGRA_L3_CACHE_IOCTL_MAX_ARG_SIZE  \

@@ -38,6 +38,7 @@ static ssize_t tegrafw_read_trusty(struct device *dev,
 		return snprintf(data, size, "%s",
 			trusty_version_str_get(&pdev->dev));
 	}
+	snprintf(data, size, "NULL");
 	return 0;
 }
 #endif

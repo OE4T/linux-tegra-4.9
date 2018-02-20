@@ -544,18 +544,13 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 
 
 	/* xavier onwards, passing card name from DT */
-	if (!of_property_read_string(pdev->dev.of_node, "hda,card-name",
-		&card_name)) {
-		strcpy(card->driver, card_name);
-		strcpy(card->shortname, card_name);
-	} else {
-		/* for platforms < xavier */
-		strcpy(card->driver, "tegra-hda");
-		strcpy(card->shortname, "tegra-hda");
-	}
+	if (of_property_read_string(pdev->dev.of_node, "hda,card-name",
+	    &card_name))
+		card_name = "tegra-hda";
 
-	snprintf(card->longname, sizeof(card->longname),
-		 "%s at 0x%lx irq %i",
+	snprintf(card->driver, sizeof(card->driver), "%s", card_name);
+	snprintf(card->shortname, sizeof(card->shortname), "%s", card_name);
+	snprintf(card->longname, sizeof(card->longname), "%s at 0x%lx irq %i",
 		 card->shortname, bus->addr, bus->irq);
 
 	return 0;

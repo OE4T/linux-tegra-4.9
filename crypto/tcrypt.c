@@ -71,6 +71,8 @@ static unsigned int sec;
 static unsigned long dsize;
 static unsigned int bsize;
 static unsigned int bcnt;
+static unsigned int enc_target;
+static unsigned int dec_target;
 static char *alg = NULL;
 static u32 type;
 static u32 mask;
@@ -1165,14 +1167,22 @@ out:
 }
 
 static int customized_test_acipher_speed(const char *algo, unsigned int bsize,
-		unsigned int bcnt)
+		unsigned int bcnt, unsigned int enc_target, unsigned int dec_target)
 {
 	int i, no_runs, target_enc_speed, target_dec_speed;
 	int max_enc_speed = 0, max_dec_speed = 0, speed;
 
 	no_runs = CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS;
-	target_enc_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED;
-	target_dec_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED;
+
+	if (enc_target)
+		target_enc_speed = enc_target;
+	else
+		target_enc_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED;
+
+	if (dec_target)
+		target_dec_speed = dec_target;
+	else
+		target_dec_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED;
 
 	for (i = 0; i < no_runs; i++) {
 		speed = acipher_speed(algo, ENCRYPT, bsize, bcnt);
@@ -2639,12 +2649,12 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 555:
-		if (customized_test_acipher_speed("cbc(aes)", bsize, bcnt))
+		if (customized_test_acipher_speed("cbc(aes)", bsize, bcnt, enc_target, dec_target))
 			return -EIO;
 		break;
 
 	case 556:
-		if (customized_test_acipher_speed("xts(aes)", bsize, bcnt))
+		if (customized_test_acipher_speed("xts(aes)", bsize, bcnt, enc_target, dec_target))
 			return -EIO;
 		break;
 
@@ -2728,6 +2738,8 @@ module_param(sec, uint, 0);
 module_param(dsize, ulong, 0);
 module_param(bsize, uint, 0);
 module_param(bcnt, uint, 0);
+module_param(enc_target, uint, 0);
+module_param(dec_target, uint, 0);
 /* When this parameter (sec) is not supplied,
  * it calculates in CPU cycles instead
  */

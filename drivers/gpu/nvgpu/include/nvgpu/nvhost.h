@@ -89,11 +89,20 @@ int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 		struct nvgpu_nvhost_dev *nvhost_dev,
 		u64 *base, size_t *size);
 u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
+int nvgpu_nvhost_syncpt_init(struct gk20a *g);
 #else
 static inline int nvgpu_nvhost_syncpt_unit_interface_get_aperture(
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u64 *base, size_t *size) { return -EINVAL; }
-static inline u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id) {
+		u64 *base, size_t *size)
+{
+	return -EINVAL;
+}
+static inline u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id)
+{
+	return 0;
+}
+static inline int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+{
 	return 0;
 }
 #endif

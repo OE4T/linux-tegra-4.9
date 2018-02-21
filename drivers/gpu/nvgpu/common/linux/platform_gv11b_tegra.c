@@ -49,37 +49,13 @@ static void gr_gv11b_remove_sysfs(struct device *dev);
 static int gv11b_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-	struct gk20a *g = platform->g;
-	int err = 0;
+	int err;
 
-	if (g->has_syncpoints) {
-		err = nvgpu_get_nvhost_dev(g);
-		if (err) {
-			dev_err(dev, "host1x device not available");
+	err = nvgpu_nvhost_syncpt_init(platform->g);
+	if (err) {
+		if (err != -ENOSYS)
 			return err;
-		}
 	}
-
-	if (g->has_syncpoints) {
-		err = nvgpu_nvhost_syncpt_unit_interface_get_aperture(
-				g->nvhost_dev,
-				&g->syncpt_unit_base,
-				&g->syncpt_unit_size);
-		if (err) {
-			dev_err(dev, "Failed to get syncpt interface");
-			return -ENOSYS;
-		}
-		g->syncpt_size =
-			nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
-		nvgpu_info(g, "syncpt_unit_base %llx "
-				"syncpt_unit_size %zx size %x\n",
-				g->syncpt_unit_base, g->syncpt_unit_size,
-				g->syncpt_size);
-	}
-#else
-	g->has_syncpoints = false;
-#endif
 
 	err = gk20a_tegra_init_secure_alloc(platform);
 	if (err)

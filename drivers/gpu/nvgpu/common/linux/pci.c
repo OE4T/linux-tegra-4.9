@@ -20,6 +20,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 
+#include <nvgpu/nvhost.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
@@ -316,6 +317,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x88000126,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
+	.has_syncpoints = true,
 	},
 	{ /* SKU250 */
 	/* ptimer src frequency in hz */
@@ -350,6 +352,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vbios_min_version = 0x1,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
+	.has_syncpoints = true,
 	},
 	{ /* SKU 0x1e3f */
 	/* ptimer src frequency in hz */
@@ -699,6 +702,17 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		if (err != -ENODEV) {
 			nvgpu_err(g, "fatal error probing nvlink, bailing out");
 			goto err_free_irq;
+		}
+		/* Enable Semaphore SHIM on nvlink only for now. */
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, false);
+		g->has_syncpoints = false;
+	} else {
+		err = nvgpu_nvhost_syncpt_init(g);
+		if (err) {
+			if (err != -ENOSYS) {
+				nvgpu_err(g, "syncpt init failed");
+				goto err_free_irq;
+			}
 		}
 	}
 

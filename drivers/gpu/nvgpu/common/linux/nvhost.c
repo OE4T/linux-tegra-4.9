@@ -258,4 +258,37 @@ u32 nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id)
 {
 	return nvhost_syncpt_unit_interface_get_byte_offset(syncpt_id);
 }
+
+int nvgpu_nvhost_syncpt_init(struct gk20a *g)
+{
+	int err = 0;
+
+	if (!g->has_syncpoints)
+		return -ENOSYS;
+
+	err = nvgpu_get_nvhost_dev(g);
+	if (err) {
+		nvgpu_err(g, "host1x device not available");
+		g->has_syncpoints = false;
+		return -ENOSYS;
+	}
+
+	err = nvgpu_nvhost_syncpt_unit_interface_get_aperture(
+			g->nvhost_dev,
+			&g->syncpt_unit_base,
+			&g->syncpt_unit_size);
+	if (err) {
+		nvgpu_err(g, "Failed to get syncpt interface");
+		g->has_syncpoints = false;
+		return -ENOSYS;
+	}
+
+	g->syncpt_size =
+			nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(1);
+	nvgpu_info(g, "syncpt_unit_base %llx syncpt_unit_size %zx size %x\n",
+			g->syncpt_unit_base, g->syncpt_unit_size,
+			g->syncpt_size);
+
+	return 0;
+}
 #endif

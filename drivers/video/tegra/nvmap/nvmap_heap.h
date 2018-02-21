@@ -52,5 +52,6 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap);
 
 int nvmap_query_heap_peer(struct nvmap_heap *heap);
+size_t nvmap_query_heap_size(struct nvmap_heap *heap);
 
 #endif

@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,6 +37,7 @@
 
 #include "nvmap_ioctl.h"
 #include "nvmap_priv.h"
+#include "nvmap_heap.h"
 
 
 extern struct device tegra_vpr_dev;
@@ -879,4 +880,27 @@ int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg)
 	}
 
 	return 0;
+}
+
+int nvmap_ioctl_get_heap_size(struct file *filp, void __user *arg)
+{
+	struct nvmap_heap_size op;
+	struct nvmap_heap *heap;
+	int i;
+	memset(&op, 0, sizeof(op));
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+		if (op.heap & nvmap_dev->heaps[i].heap_bit) {
+			heap = nvmap_dev->heaps[i].carveout;
+			op.size = nvmap_query_heap_size(heap);
+			if (copy_to_user(arg, &op, sizeof(op)))
+				return -EFAULT;
+			return 0;
+		}
+	}
+	return -ENODEV;
+
 }

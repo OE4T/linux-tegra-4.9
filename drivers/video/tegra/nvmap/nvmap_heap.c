@@ -100,6 +100,14 @@ int nvmap_query_heap_peer(struct nvmap_heap *heap)
 	return heap->peer;
 }
 
+size_t nvmap_query_heap_size(struct nvmap_heap *heap)
+{
+	if (!heap)
+		return -EINVAL;
+
+	return heap->len;
+}
+
 void nvmap_heap_debugfs_init(struct dentry *heap_root, struct nvmap_heap *heap)
 {
 	if (sizeof(heap->base) == sizeof(u64))

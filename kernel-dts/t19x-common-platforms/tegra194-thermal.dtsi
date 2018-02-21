@@ -18,7 +18,8 @@
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
 #include "tegra194-balanced-throttle.dtsi"
-
+#include "tegra194-pwm-fan.dtsi"
+#include "tegra194-thermal-fan-est.dtsi"
 /* THERMAL gpio definitions */
 #define TEMP_ALERT TEGRA194_MAIN_GPIO(H, 2)
 

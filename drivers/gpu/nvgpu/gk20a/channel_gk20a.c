@@ -41,6 +41,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/log2.h>
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -288,7 +289,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	struct dbg_session_gk20a *dbg_s;
 	struct dbg_session_data *session_data, *tmp_s;
 	struct dbg_session_channel_data *ch_data, *tmp;
-	bool was_tsg = false;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -313,13 +313,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 				nvgpu_err(g,
 					"failed to unbind channel %d from TSG",
 					ch->chid);
-			/*
-			 * Channel is not a part of TSG this point onwards
-			 * So stash its status and use it whenever necessary
-			 * e.g. while releasing gr_ctx in
-			 * g->ops.gr.free_channel_ctx()
-			 */
-			was_tsg = true;
 		} else {
 			gk20a_disable_channel(ch);
 		}

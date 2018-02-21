@@ -3,7 +3,7 @@
  * Touch Screen I2C Driver for EETI Controller
  *
  * Copyright (C) 2000-2017  eGalax_eMPIA Technology Inc. All rights reserved.
- * Copyright (c) 2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,6 +81,7 @@ struct _egalax_i2c {
 	unsigned int ioctl_cmd;
 	int interrupt_gpio;
 	int reset_gpio;
+	bool enable_high;
 	wait_queue_head_t sysfs_query_queue;
 	bool sysfs_query_wait;
 	unsigned char sysfs_hook_cmd[3];
@@ -832,7 +833,10 @@ static int egalax_power_off(void)
 {
 	int error;
 
-	gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 0);
+	if(p_egalax_i2c_dev->enable_high)
+		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 1);
+	else
+		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 0);
 	error = regulator_enable(p_egalax_i2c_dev->regulator_hv);
 	if (error < 0)
 		EGALAX_DBG(DBG_MODULE, " regulator enable failed: %d\n",
@@ -874,7 +878,10 @@ static int egalax_power_on(void)
 		EGALAX_DBG(DBG_MODULE, " regulator enable failed: %d\n",
 			error);
 	usleep_range(1000, 5000);
-	gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 1);
+	if(p_egalax_i2c_dev->enable_high)
+		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 0);
+	else
+		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 1);
 
 	return 0;
 }
@@ -950,6 +957,8 @@ static int request_dt(struct i2c_client *client)
 							"irq-gpio", 0);
 		p_egalax_i2c_dev->reset_gpio = of_get_named_gpio(devnode,
 							"reset-gpio", 0);
+		if (of_property_read_bool(devnode, "enable-active-high"))
+			p_egalax_i2c_dev->enable_high = true;
 		/* regulator */
 		p_egalax_i2c_dev->regulator_hv = devm_regulator_get(
 						&client->dev, "vdd-ts-hv");

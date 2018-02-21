@@ -184,7 +184,7 @@ int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code_lo, addr_data_lo, addr_load_lo;
-	u64 addr_code_hi, addr_data_hi, addr_load_hi;
+	u64 addr_code_hi, addr_data_hi;
 	u32 i, blocks, addr_args;
 
 	gk20a_dbg_fn("");
@@ -237,8 +237,6 @@ int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 			desc->app_start_offset +
 			desc->app_resident_data_offset) >> 8);
 	addr_load_lo = u64_lo32((pmu->ucode.gpu_va +
-			desc->bootloader_start_offset) >> 8);
-	addr_load_hi = u64_hi32((pmu->ucode.gpu_va +
 			desc->bootloader_start_offset) >> 8);
 
 	gk20a_writel(g, pwr_falcon_dmemd_r(0), 0x0);

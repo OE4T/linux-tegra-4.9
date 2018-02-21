@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <trace/events/gk20a.h>
-
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/gmmu.h>
@@ -6171,14 +6169,10 @@ static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			      u32 *broadcast_flags)
 {
 	u32 gpc_addr;
-	u32 ppc_address;
-	u32 ppc_broadcast_addr;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
 	/* setup defaults */
-	ppc_address = 0;
-	ppc_broadcast_addr = 0;
 	*addr_type = CTXSW_ADDR_TYPE_SYS;
 	*broadcast_flags = PRI_BROADCAST_FLAGS_NONE;
 	*gpc_num = 0;

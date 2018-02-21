@@ -756,7 +756,7 @@ static void gr_gm20b_load_gpccs_with_bootloader(struct gk20a *g)
 
 int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 {
-	u32 err, flags;
+	u32 err;
 	u32 reg_offset = gr_gpcs_gpccs_falcon_hwcfg_r() -
 	  gr_fecs_falcon_hwcfg_r();
 	u8 falcon_id_mask = 0;
@@ -770,7 +770,6 @@ int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
 	}
 
-	flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 	g->pmu_lsf_loaded_falcon_id = 0;
 	if (nvgpu_is_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE)) {
 		/* this must be recovery so bootstrap fecs and gpccs */

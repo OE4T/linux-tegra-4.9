@@ -1215,9 +1215,7 @@ void gk20a_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 
 void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 {
-	struct fifo_gk20a *f = NULL;
 	u32 engine_enum = ENGINE_INVAL_GK20A;
-	u32 inst_id = 0;
 	struct fifo_engine_info_gk20a *engine_info;
 
 	gk20a_dbg_fn("");
@@ -1225,14 +1223,10 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	if (!g)
 		return;
 
-	f = &g->fifo;
-
 	engine_info = gk20a_fifo_get_engine_info(g, engine_id);
 
-	if (engine_info) {
+	if (engine_info)
 		engine_enum = engine_info->engine_enum;
-		inst_id = engine_info->inst_id;
-	}
 
 	if (engine_enum == ENGINE_INVAL_GK20A)
 		nvgpu_err(g, "unsupported engine_id %d", engine_id);
@@ -1300,19 +1294,15 @@ bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 		u32 engine_subid, bool fake_fault)
 {
 	u32 engine_enum = ENGINE_INVAL_GK20A;
-	struct fifo_gk20a *fifo = NULL;
 	struct fifo_engine_info_gk20a *engine_info;
 
 	if (!g)
 		return false;
 
-	fifo = &g->fifo;
-
 	engine_info = gk20a_fifo_get_engine_info(g, engine_id);
 
-	if (engine_info) {
+	if (engine_info)
 		engine_enum = engine_info->engine_enum;
-	}
 
 	if (engine_enum == ENGINE_INVAL_GK20A)
 		return false;
@@ -2974,7 +2964,6 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 {
-	struct fifo_runlist_info_gk20a *runlist;
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -ETIMEDOUT;
@@ -2982,7 +2971,6 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
-	runlist = &g->fifo.runlist_info[runlist_id];
 	do {
 		if ((gk20a_readl(g, fifo_eng_runlist_r(runlist_id)) &
 				fifo_eng_runlist_pending_true_f()) == 0) {
@@ -3173,7 +3161,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 *runlist_entry_base = NULL;
 	u64 runlist_iova;
-	u32 old_buf, new_buf;
+	u32 new_buf;
 	struct channel_gk20a *ch = NULL;
 	struct tsg_gk20a *tsg = NULL;
 	u32 count = 0;
@@ -3205,7 +3193,6 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		}
 	}
 
-	old_buf = runlist->cur_buffer;
 	new_buf = !runlist->cur_buffer;
 
 	runlist_iova = nvgpu_mem_get_addr(g, &runlist->mem[new_buf]);

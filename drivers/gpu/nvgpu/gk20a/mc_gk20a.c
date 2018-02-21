@@ -22,8 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <trace/events/gk20a.h>
-
 #include "gk20a.h"
 #include "mc_gk20a.h"
 

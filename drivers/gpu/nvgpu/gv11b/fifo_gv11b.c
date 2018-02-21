@@ -33,6 +33,7 @@
 #include <nvgpu/nvhost.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/log2.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/io_usermode.h>
 
@@ -932,7 +933,6 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
 {
-	bool verbose = false;
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *refch = NULL;
 	u32 runlists_mask, runlist_id;
@@ -1049,22 +1049,18 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 #endif
 
 	if (tsg) {
-		if (!g->fifo.deferred_reset_pending) {
-			if (rc_type == RC_TYPE_MMU_FAULT) {
-				gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
-				verbose = gk20a_fifo_error_tsg(g, tsg);
-			}
-		}
+		if (!g->fifo.deferred_reset_pending &&
+		    rc_type == RC_TYPE_MMU_FAULT)
+			gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
+
 		gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
 		if (refch)
 			gk20a_channel_put(refch);
 	} else if (refch) {
-		if (!g->fifo.deferred_reset_pending) {
-			if (rc_type == RC_TYPE_MMU_FAULT) {
+		if (!g->fifo.deferred_reset_pending &&
+		    rc_type == RC_TYPE_MMU_FAULT)
 				gk20a_fifo_set_ctx_mmu_error_ch(g, refch);
-				verbose = gk20a_fifo_error_ch(g, refch);
-			}
-		}
+
 		gk20a_channel_abort(refch, false);
 		gk20a_channel_put(refch);
 	} else {

@@ -1181,57 +1181,50 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 
 int request_txrx_irqs(struct eqos_prv_data *pdata)
 {
-	int ret = Y_SUCCESS;
-	uint i, j = 0;
-	struct chan_data *pchinfo;
 	struct platform_device *pdev = pdata->pdev;
-
-	pr_debug("-->%s()\n", __func__);
+	int ret = 0, i, j = 0;
 
 	pdata->irq_number = pdata->dev->irq;
 
-	ret = request_irq(pdata->common_irq,
-			  eqos_common_isr, IRQF_SHARED, "ether_qos.common_irq", pdata);
-	if (ret != Y_SUCCESS) {
-		pr_err("Unable to register  %d\n", pdata->common_irq);
-		ret = -EBUSY;
+	ret = request_irq(pdata->common_irq, eqos_common_isr,
+			  IRQF_SHARED, "ether_qos.common_irq", pdata);
+	if (unlikely(ret < 0)) {
+		netdev_err(pdata->dev, "failed to register common interrupt - %d\n",
+			   pdata->common_irq);
 		goto err_common_irq;
 	}
 
 	for (i = 0; i < pdata->num_chans; i++) {
-
 		snprintf(irq_names[j], 32, "%s.rx%d", dev_name(&pdev->dev), i);
-		ret = request_irq(pdata->rx_irqs[i],
-				  eqos_ch_isr, 0, irq_names[j++], pdata);
-		if (ret != 0) {
-			pr_err("Unable to register  %d\n", pdata->rx_irqs[i]);
-			ret = -EBUSY;
+		ret = request_irq(pdata->rx_irqs[i], eqos_ch_isr,
+				  IRQF_TRIGGER_NONE, irq_names[j++], pdata);
+		if (unlikely(ret < 0)) {
+			netdev_err(pdata->dev, "failed to register Rx channel interrupt - %d\n",
+				   pdata->rx_irqs[i]);
 			goto err_chan_irq;
 		}
-		snprintf(irq_names[j], 32, "%s.tx%d", dev_name(&pdev->dev), i);
-		ret = request_irq(pdata->tx_irqs[i],
-				  eqos_ch_isr, 0, irq_names[j++], pdata);
-		if (ret != 0) {
-			pr_err("Unable to register  %d\n", pdata->tx_irqs[i]);
-			ret = -EBUSY;
-			goto err_chan_irq;
-		}
-		pchinfo = &pdata->chinfo[i];
 
 		pdata->rx_irq_alloc_mask |= (1 << i);
 
+		snprintf(irq_names[j], 32, "%s.tx%d", dev_name(&pdev->dev), i);
+		ret = request_irq(pdata->tx_irqs[i], eqos_ch_isr,
+				  IRQF_TRIGGER_NONE, irq_names[j++], pdata);
+		if (unlikely(ret < 0)) {
+			netdev_err(pdata->dev, "failed to register Tx channel interrupt - %d\n",
+				   pdata->rx_irqs[i]);
+			goto err_chan_irq;
+		}
+
 		pdata->tx_irq_alloc_mask |= (1 << i);
 	}
-	pr_debug("<--%s()\n", __func__);
 
 	return ret;
 
- err_chan_irq:
+err_chan_irq:
 	free_txrx_irqs(pdata);
 	free_irq(pdata->common_irq, pdata);
 
- err_common_irq:
-	pr_debug("<--%s(): error\n", __func__);
+err_common_irq:
 	return ret;
 }
 

@@ -56,6 +56,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
 		nvgpu_log(g, gpu_dbg_info, "nvlink soc credits init done by bpmp");
 	} else {
+#ifndef __NVGPU_POSIX__
 		/* MSS_NVLINK_1_BASE */
 		void __iomem *soc1 = ioremap(0x01f20010, 4096);
 		/* MSS_NVLINK_2_BASE */
@@ -87,6 +88,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 		writel_relaxed(val, soc4);
 		val = readl_relaxed(soc4 + 4);
 		writel_relaxed(val, soc4 + 4);
+#endif
 	}
 }
 
@@ -996,7 +998,7 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 	}
 }
 
-static void gv11b_fb_replay_or_cancel_faults(struct gk20a *g,
+static int gv11b_fb_replay_or_cancel_faults(struct gk20a *g,
 			 u32 invalidate_replay_val)
 {
 	int err = 0;
@@ -1017,6 +1019,8 @@ static void gv11b_fb_replay_or_cancel_faults(struct gk20a *g,
 		err = gv11b_fb_mmu_invalidate_replay(g,
 			fb_mmu_invalidate_replay_start_ack_all_f());
 	}
+
+	return err;
 }
 
 static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,

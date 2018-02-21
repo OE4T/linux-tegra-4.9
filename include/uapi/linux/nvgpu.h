@@ -1478,6 +1478,8 @@ struct nvgpu_fence {
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
 /* expire current timeslice and reschedule runlist from front */
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST	(1 << 6)
+/* user space has added syncpoint increments in the pushbuffer */
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_USER_FENCE_UPDATE	(1 << 7)
 
 struct nvgpu_submit_gpfifo_args {
 	__u64 gpfifo;

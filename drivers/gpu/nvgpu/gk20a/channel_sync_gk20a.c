@@ -301,6 +301,13 @@ static u64 gk20a_channel_syncpt_address(struct gk20a_channel_sync *s)
 	return sp->syncpt_buf.gpu_va;
 }
 
+static u32 gk20a_channel_add_user_incrs(struct gk20a_channel_sync *s, u32 val)
+{
+	struct gk20a_channel_syncpt *sp =
+		container_of(s, struct gk20a_channel_syncpt, ops);
+	return nvgpu_nvhost_syncpt_incr_max_ext(sp->nvhost_dev, sp->id, val);
+}
+
 static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
@@ -353,6 +360,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
 	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
 	sp->ops.syncpt_address		= gk20a_channel_syncpt_address;
+	sp->ops.add_user_incrs		= gk20a_channel_add_user_incrs;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
 
 	return &sp->ops;
@@ -878,6 +886,12 @@ static u64 gk20a_channel_semaphore_syncpt_address(struct gk20a_channel_sync *s)
 	return 0;
 }
 
+static u32 gk20a_channel_semaphore_add_user_incrs(struct gk20a_channel_sync *s,
+						  u32 val)
+{
+	return 0;
+}
+
 static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_semaphore *sema =
@@ -930,6 +944,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
 	sema->ops.syncpt_address = gk20a_channel_semaphore_syncpt_address;
+	sema->ops.add_user_incrs = gk20a_channel_semaphore_add_user_incrs;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
 
 	return &sema->ops;

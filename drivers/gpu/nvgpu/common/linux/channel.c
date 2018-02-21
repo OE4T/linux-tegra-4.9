@@ -720,7 +720,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		return -EINVAL;
 
 	if ((flags & (NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
-		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
+		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET |
+		      NVGPU_SUBMIT_GPFIFO_FLAGS_USER_FENCE_UPDATE)) &&
 	    !fence)
 		return -EINVAL;
 
@@ -756,6 +757,16 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			c->wdt_enabled ||
 			(g->can_railgate && !c->deterministic) ||
 			!skip_buffer_refcounting;
+
+	/*
+	 * If User is adding increments to the pushbuffer and doing all job
+	 * tracking, then no need for kernel tracking here
+	 * User should ensure that all pre-requisites for fast submit are met
+	 * Fail the submit if that's not the case
+	 */
+	if (need_job_tracking &&
+	    (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_USER_FENCE_UPDATE))
+		return -EINVAL;
 
 	if (need_job_tracking) {
 		bool need_sync_framework = false;
@@ -866,6 +877,15 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (c->has_timedout) {
 		err = -ETIMEDOUT;
 		goto clean_up;
+	}
+
+	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_USER_FENCE_UPDATE) {
+		/*
+		 * User space adds increments in the pushbuffer, so just
+		 * handle the threshold book keeping in kernel by adding
+		 * number of syncpoint increments to threshold
+		 */
+		c->sync->add_user_incrs(c->sync, fence->value);
 	}
 
 	if (need_job_tracking) {

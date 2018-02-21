@@ -319,10 +319,21 @@ static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
 static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 		struct nvgpu_channel_wdt_args *args)
 {
-	if (args->wdt_status == NVGPU_IOCTL_CHANNEL_DISABLE_WDT)
-		ch->wdt_enabled = false;
-	else if (args->wdt_status == NVGPU_IOCTL_CHANNEL_ENABLE_WDT)
-		ch->wdt_enabled = true;
+	u32 status = args->wdt_status & (NVGPU_IOCTL_CHANNEL_DISABLE_WDT |
+			NVGPU_IOCTL_CHANNEL_ENABLE_WDT);
+
+	if (status == NVGPU_IOCTL_CHANNEL_DISABLE_WDT)
+		ch->timeout.enabled = false;
+	else if (status == NVGPU_IOCTL_CHANNEL_ENABLE_WDT)
+		ch->timeout.enabled = true;
+	else
+		return -EINVAL;
+
+	if (args->wdt_status & NVGPU_IOCTL_CHANNEL_WDT_FLAG_SET_TIMEOUT)
+		ch->timeout.limit_ms = args->timeout_ms;
+
+	ch->timeout.debug_dump = (args->wdt_status &
+			NVGPU_IOCTL_CHANNEL_WDT_FLAG_DISABLE_DUMP) == 0;
 
 	return 0;
 }

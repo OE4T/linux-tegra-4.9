@@ -753,7 +753,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 */
 	need_job_tracking = (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) ||
 			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) ||
-			c->wdt_enabled ||
+			c->timeout.enabled ||
 			(g->can_railgate && !c->deterministic) ||
 			!skip_buffer_refcounting;
 
@@ -791,7 +791,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		 */
 		need_deferred_cleanup = !c->deterministic ||
 					need_sync_framework ||
-					c->wdt_enabled ||
+					c->timeout.enabled ||
 					(g->can_railgate &&
 					 !c->deterministic) ||
 					!skip_buffer_refcounting;

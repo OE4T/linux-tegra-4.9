@@ -1808,7 +1808,7 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 	else {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 
-		if (gk20a_fifo_error_tsg(g, tsg))
+		if (gk20a_fifo_error_tsg(g, tsg) && verbose)
 			gk20a_debug_dump(g);
 
 		gk20a_fifo_abort_tsg(g, tsgid, false);

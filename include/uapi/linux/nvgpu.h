@@ -1577,13 +1577,15 @@ struct nvgpu_cycle_stats_snapshot_args {
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH  1
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH  2
 
-/* disable watchdog per-channel */
+/* configure watchdog per-channel */
 struct nvgpu_channel_wdt_args {
 	__u32 wdt_status;
-	__u32 padding;
+	__u32 timeout_ms;
 };
-#define NVGPU_IOCTL_CHANNEL_DISABLE_WDT		1
-#define NVGPU_IOCTL_CHANNEL_ENABLE_WDT		2
+#define NVGPU_IOCTL_CHANNEL_DISABLE_WDT		  (1 << 0)
+#define NVGPU_IOCTL_CHANNEL_ENABLE_WDT		  (1 << 1)
+#define NVGPU_IOCTL_CHANNEL_WDT_FLAG_SET_TIMEOUT  (1 << 2)
+#define NVGPU_IOCTL_CHANNEL_WDT_FLAG_DISABLE_DUMP (1 << 3)
 
 /*
  * Interleaving channels in a runlist is an approach to improve

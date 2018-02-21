@@ -61,8 +61,6 @@ static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
 static struct channel_gk20a_job *channel_gk20a_joblist_peek(
 		struct channel_gk20a *c);
 
-static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
-
 /* allocate GPU channel */
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 {
@@ -696,14 +694,19 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
 
-	/* reset timeout counter and update timestamp */
+	/* clear ctxsw timeout counter and update timestamp */
 	ch->timeout_accumulated_ms = 0;
 	ch->timeout_gpfifo_get = 0;
 	/* set gr host default timeout */
 	ch->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch->timeout_debug_dump = true;
 	ch->has_timedout = false;
-	ch->wdt_enabled = true;
+
+	/* init kernel watchdog timeout */
+	ch->timeout.enabled = true;
+	ch->timeout.limit_ms = g->ch_wdt_timeout_ms;
+	ch->timeout.debug_dump = true;
+
 	ch->obj_class = 0;
 	ch->subctx_id = 0;
 	ch->runqueue_sel = 0;
@@ -1166,10 +1169,10 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
-	if (!c->g->timeouts_enabled || !c->wdt_enabled)
+	if (!c->g->timeouts_enabled || !c->timeout.enabled)
 		acquire_timeout = 0;
 	else
-		acquire_timeout = gk20a_get_channel_watchdog_timeout(c);
+		acquire_timeout = c->timeout.limit_ms;
 
 	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
 					c->gpfifo.entry_num,
@@ -1265,11 +1268,6 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 		ch->timeout_accumulated_ms > ch->timeout_ms_max;
 }
 
-static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch)
-{
-	return ch->g->ch_wdt_timeout_ms;
-}
-
 u32 nvgpu_get_gp_free_count(struct channel_gk20a *c)
 {
 	update_gp_get(c->g, c);
@@ -1282,7 +1280,7 @@ static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
 	ch->timeout.pb_get = ch->g->ops.fifo.userd_pb_get(ch->g, ch);
 	ch->timeout.running = true;
 	nvgpu_timeout_init(ch->g, &ch->timeout.timer,
-			gk20a_get_channel_watchdog_timeout(ch),
+			ch->timeout.limit_ms,
 			NVGPU_TIMER_CPU_TIMER);
 }
 
@@ -1303,10 +1301,10 @@ static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
  */
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
-	if (!ch->g->timeouts_enabled || !gk20a_get_channel_watchdog_timeout(ch))
+	if (!ch->g->timeouts_enabled)
 		return;
 
-	if (!ch->wdt_enabled)
+	if (!ch->timeout.enabled)
 		return;
 
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
@@ -1425,11 +1423,13 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	nvgpu_err(g, "Job on channel %d timed out",
 		  ch->chid);
 
-	gk20a_debug_dump(g);
-	gk20a_gr_debug_dump(g);
+	/* force reset calls gk20a_debug_dump but not this */
+	if (ch->timeout.debug_dump)
+		gk20a_gr_debug_dump(g);
 
 	g->ops.fifo.force_reset_ch(ch,
-		NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT, true);
+		NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT,
+		ch->timeout.debug_dump);
 }
 
 /**

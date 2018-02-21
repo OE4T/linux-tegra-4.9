@@ -96,11 +96,17 @@ struct channel_gk20a_joblist {
 };
 
 struct channel_gk20a_timeout {
+	/* lock protects the running timer state */
 	struct nvgpu_raw_spinlock lock;
 	struct nvgpu_timeout timer;
 	bool running;
 	u32 gp_get;
 	u64 pb_get;
+
+	/* lock not needed */
+	u32 limit_ms;
+	bool enabled;
+	bool debug_dump;
 };
 
 /*
@@ -167,7 +173,6 @@ struct channel_gk20a {
 	struct nvgpu_semaphore_int *hw_sema;
 
 	int chid;
-	bool wdt_enabled;
 	nvgpu_atomic_t bound;
 	bool vpr;
 	bool deterministic;
@@ -203,7 +208,9 @@ struct channel_gk20a {
 	u32 timeout_accumulated_ms;
 	u32 timeout_gpfifo_get;
 
+	/* kernel watchdog to kill stuck jobs */
 	struct channel_gk20a_timeout timeout;
+
 	/* for job cleanup handling in the background worker */
 	struct nvgpu_list_node worker_item;
 

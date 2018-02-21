@@ -443,7 +443,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 		err = -ENOMEM;
 		goto end;
 	}
-	ce_ctx->ch->wdt_enabled = false;
+	ce_ctx->ch->timeout.enabled = false;
 
 	/* bind the channel to the vm */
 	err = __gk20a_vm_bind_channel(g->mm.ce.vm, ce_ctx->ch);

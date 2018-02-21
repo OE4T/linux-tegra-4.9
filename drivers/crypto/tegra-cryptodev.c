@@ -366,19 +366,6 @@ out:
 	return ret;
 }
 
-static int sha_async_hash_op(struct ahash_request *req,
-				struct tegra_crypto_completion *tr,
-				int ret)
-{
-	if (ret == -EINPROGRESS || ret == -EBUSY) {
-		ret = wait_for_completion_interruptible(&tr->restart);
-		if (!ret)
-			ret = tr->req_err;
-		reinit_completion(&tr->restart);
-	}
-	return ret;
-}
-
 static int wait_async_op(struct tegra_crypto_completion *tr, int ret)
 {
 	if (ret == -EINPROGRESS || ret == -EBUSY) {
@@ -1243,6 +1230,9 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 		goto out_noreq;
 	}
 
+	ahash_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				   tegra_crypt_complete, &sha_complete);
+
 	ret = alloc_bufs(xbuf);
 	if (ret < 0) {
 		pr_err("alloc_bufs failed");
@@ -1281,21 +1271,21 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 
 	ahash_request_set_crypt(req, sg, result, sha_req->plaintext_sz);
 
-	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_init(req));
+	ret = wait_async_op(&sha_complete, crypto_ahash_init(req));
 	if (ret) {
 		pr_err("alg: hash: init failed for %s: ret=%d\n",
 			sha_req->algo, ret);
 		goto out;
 	}
 
-	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_update(req));
+	ret = wait_async_op(&sha_complete, crypto_ahash_update(req));
 	if (ret) {
 		pr_err("alg: hash: update failed for %s: ret=%d\n",
 			sha_req->algo, ret);
 		goto out;
 	}
 
-	ret = sha_async_hash_op(req, &sha_complete, crypto_ahash_final(req));
+	ret = wait_async_op(&sha_complete, crypto_ahash_final(req));
 	if (ret) {
 		pr_err("alg: hash: final failed for %s: ret=%d\n",
 			sha_req->algo, ret);

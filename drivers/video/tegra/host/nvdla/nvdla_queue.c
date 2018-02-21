@@ -1045,9 +1045,6 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 				queue->syncpt_id, task->fence,
 				task, task->fence_counter);
 
-	/* get syncpoint reference */
-	nvhost_syncpt_get_ref(task->sp, queue->syncpt_id);
-
 	/* enable INT_ON_COMPLETE and INT_ON_ERROR falcon interrupts */
 	method_id = (DLA_CMD_SUBMIT_TASK & DLA_METHOD_ID_CMD_MASK) |
 			(1 << DLA_INT_ON_COMPLETE_SHIFT) |

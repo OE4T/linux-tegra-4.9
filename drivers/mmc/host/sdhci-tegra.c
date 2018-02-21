@@ -98,6 +98,7 @@
 #define SDHCI_TEGRA_SDMEM_COMP_PADCTRL		0x1E0
 #define SDHCI_TEGRA_PAD_E_INPUT_OR_E_PWRD_MASK	0x80000000
 #define SDHCI_TEGRA_SDMEMCOMP_PADCTRL_VREF_SEL	0x0000000F
+#define SDHCI_TEGRA_SDMEMCOMP_PADCTRL_DRVDN_OVR	0x0007F000
 
 #define SDHCI_TEGRA_AUTO_CAL_CONFIG		0x1e4
 #define SDHCI_AUTO_CAL_START			BIT(31)
@@ -1322,9 +1323,32 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int ret;
 
-	if (signal_voltage == MMC_SIGNAL_VOLTAGE_180)
+	if (signal_voltage == MMC_SIGNAL_VOLTAGE_180) {
 		tegra_sdhci_set_padctrl(host, 1800000);
+		/*
+		 * prod_c_1_8v and prod_c_3_3v are applicable to only
+		 * t194 platforms
+		 */
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+			"prod_c_1_8v", tegra_host->prods, 0,
+			SDHCI_TEGRA_SDMEM_COMP_PADCTRL,
+			SDHCI_TEGRA_SDMEMCOMP_PADCTRL_DRVDN_OVR);
+		if (ret < 0)
+			dev_dbg(mmc_dev(host->mmc),
+				"%s: error %d in comp drvdn settings at 1.8v\n",
+				__func__, ret);
+	} else {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+			"prod_c_3_3v", tegra_host->prods, 0,
+			SDHCI_TEGRA_SDMEM_COMP_PADCTRL,
+			SDHCI_TEGRA_SDMEMCOMP_PADCTRL_DRVDN_OVR);
+		if (ret < 0)
+			dev_dbg(mmc_dev(host->mmc),
+				"%s: error %d in comp drvdn settings at 3.3v\n",
+				__func__, ret);
+	}
 
 	if (tegra_host->pad_calib_required)
 		tegra_sdhci_pad_autocalib(host);

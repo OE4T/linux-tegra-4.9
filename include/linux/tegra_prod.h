@@ -82,6 +82,23 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 				     u32 offset, u32 mask);
 
 /**
+ * tegra_prod_set_by_reg_name - Set the prod setting from list partially
+ *				when reg-names matches under given prod name.
+ * @base:	base address of the register.
+ * @prod_name:  the name of tegra prod need to set.
+ * @tegra_prod: the list of tegra prods.
+ * @reg_name: Register names.
+ *
+ * Find the tegra prod in the list according to the name. Then set
+ * that tegra prod which has matching of register name.
+ *
+ * Returns 0 on success.
+ */
+int tegra_prod_set_by_reg_name(void __iomem **base, const char *prod_name,
+			       struct tegra_prod *tegra_prod,
+			       const char *reg_name);
+
+/**
  * tegra_prod_by_name_supported - Tell whether tegra prod will be supported by
  *				  given name or not.
  * @tegra_prod: the list of tegra prods.

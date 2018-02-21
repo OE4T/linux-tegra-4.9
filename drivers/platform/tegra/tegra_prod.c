@@ -24,6 +24,7 @@
 #include <linux/tegra_prod.h>
 
 #define PROD_TUPLE_NUM (sizeof(struct prod_tuple)/sizeof(u32))
+#define MAX_POSSIBLE_REGS_NAMES	50
 
 /* tegra_prod: Tegra Prod list for the given submodule
  * @n_prod_cells: Number of prod setting cells.
@@ -32,6 +33,8 @@ struct tegra_prod {
 	struct tegra_prod_config *prod_config;
 	int num; /* number of tegra_prod*/
 	int n_prod_cells;
+	const char *reg_names[MAX_POSSIBLE_REGS_NAMES];
+	int num_reg_names;
 };
 
 struct prod_tuple {
@@ -492,6 +495,72 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 }
 EXPORT_SYMBOL(tegra_prod_set_by_name_partially);
 
+/**
+ * tegra_prod_set_by_reg_name - Set the prod setting from list partially
+ *				when reg-names matches under given prod name.
+ * @base:		base address of the register.
+ * @prod_name:		the name of tegra prod need to set.
+ * @tegra_prod:	the list of tegra prods.
+ * @reg_name: Register names.
+ *
+ * Find the tegra prod in the list according to the name. Then set
+ * that tegra prod which has matching of register name.
+ *
+ * Returns 0 on success.
+ */
+int tegra_prod_set_by_reg_name(void __iomem **base, const char *prod_name,
+			       struct tegra_prod *tegra_prod,
+			       const char *reg_name)
+{
+	struct tegra_prod_config *t_prod;
+	int ret;
+	int reg_index;
+	int i;
+	bool found = false;
+
+	if (!tegra_prod)
+		return -EINVAL;
+
+	if (!tegra_prod->num_reg_names)
+		return -EINVAL;
+
+	for (i = 0; i < tegra_prod->num_reg_names; i++) {
+		if (!strcasecmp(tegra_prod->reg_names[i], reg_name)) {
+			found = true;
+			break;
+		}
+	}
+	if (!found)
+		return -ENODEV;
+	reg_index = i;
+
+	found = false;
+	for (i = 0; i < tegra_prod->num; i++) {
+		t_prod = &tegra_prod->prod_config[i];
+		if (!strcasecmp(t_prod->name, prod_name)) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		return -ENODEV;
+
+	for (i = 0; i < t_prod->count; i++) {
+		struct prod_tuple *ptuple = &t_prod->prod_tuple[i];;
+
+		if (ptuple->index != reg_index)
+			continue;
+
+		ret = tegra_prod_set_tuple(base, ptuple, ptuple->mask);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_prod_set_by_reg_name);
+
 bool tegra_prod_by_name_supported(struct tegra_prod *tegra_prod,
 				  const char *name)
 {
@@ -531,6 +600,7 @@ static struct tegra_prod *tegra_prod_init(struct device *dev,
 	struct tegra_prod *tegra_prod;
 	struct device_node *np_prod;
 	int prod_num = 0;
+	int i;
 	int ret;
 
 	np_prod = of_get_child_by_name(np, "prod-settings");
@@ -553,6 +623,23 @@ static struct tegra_prod *tegra_prod_init(struct device *dev,
 	tegra_prod = devm_kzalloc(dev, sizeof(*tegra_prod), GFP_KERNEL);
 	if (!tegra_prod)
 		return  ERR_PTR(-ENOMEM);
+
+	tegra_prod->num_reg_names = of_property_count_strings(np, "reg-names");
+	if (tegra_prod->num_reg_names > MAX_POSSIBLE_REGS_NAMES) {
+		dev_err(dev, "Node %s: have too many register names\n",
+			np_prod->name);
+		return ERR_PTR(-EINVAL);
+	}
+
+	for (i = 0; i < tegra_prod->num_reg_names; ++i) {
+		ret = of_property_read_string_index(np, "reg-names", i,
+					&tegra_prod->reg_names[i]);
+		if (ret < 0) {
+			dev_err(dev, "Node %s: Failed to read reg-names at index %d: %d\n",
+				np_prod->name, i, ret);
+			return ERR_PTR(ret);
+		}
+	}
 
 	tegra_prod->prod_config = devm_kcalloc(dev, prod_num,
 					       sizeof(*tegra_prod->prod_config),

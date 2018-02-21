@@ -770,19 +770,34 @@ static int __init plugin_manager(struct device_node *np)
 	}
 
 	if ((odm_count > 0) && odm_np) {
+		bool is_anded_odm_overrides;
+
+		is_anded_odm_overrides = of_property_read_bool(np,
+						"odm-anded-override");
+
 		of_property_for_each_string(np, "odm-data", prop, bname) {
 			found = of_property_read_bool(odm_np, bname);
 			if (found) {
 				pr_info("node %s match with odm-data %s\n",
 					np->full_name, bname);
+
+				if (is_anded_odm_overrides)
+					continue;
+
 				if (override_on_all_match)
 					break;
 				goto search_done;
+			} else {
+				if (is_anded_odm_overrides)
+					return 0;
 			}
 		}
 
 		if (override_on_all_match && !found)
 			return 0;
+
+		if (!override_on_all_match)
+			goto search_done;
 	}
 
 	if ((nct_count > 0) && nct_np) {

@@ -52,6 +52,7 @@ static struct nvdisp_common_imp_data g_imp;
  */
 struct clk *hubclk;
 static struct clk *compclk;
+static bool nvdisp_common_init_done;
 
 static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
 
@@ -1262,11 +1263,13 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	tegra_nvdisp_crc_region_init();
 
 	dc->valid_windows = 0;
+	nvdisp_common_init_done = true;
+
 	goto INIT_EXIT;
 
 #ifdef CONFIG_TEGRA_ISOMGR
 BW_REG_ERR:
-	tegra_nvdisp_bandwidth_unregister();
+	_tegra_nvdisp_bandwidth_unregister();
 #endif
 INIT_PD_ERR:
 	_tegra_nvdisp_destroy_pd_table(dc);
@@ -1518,12 +1521,17 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	int err = 0;
 	char syncpt_name[32];
 
+	mutex_lock(&tegra_nvdisp_lock);
 	/* Only need init once no matter how many dc objects */
-	if (!dc->ndev->id) {
+	if (!nvdisp_common_init_done) {
 		err = _tegra_nvdisp_init_once(dc);
-		if (err)
+		if (err) {
+			mutex_unlock(&tegra_nvdisp_lock);
 			return err;
+		}
 	}
+	mutex_unlock(&tegra_nvdisp_lock);
+
 
 	/*Lut alloc is needed per dc */
 	if (!dc->fb_nvdisp_lut.rgb) {

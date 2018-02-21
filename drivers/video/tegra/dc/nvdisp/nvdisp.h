@@ -56,7 +56,7 @@ int tegra_nvdisp_set_win_csc(struct tegra_dc_win *win,
 void tegra_nvdisp_set_common_channel_pending(struct tegra_dc *dc);
 struct tegra_nvdisp_imp_settings *tegra_nvdisp_get_current_imp_settings(void);
 void tegra_nvdisp_program_imp_settings(struct tegra_dc *dc);
-
+void _tegra_nvdisp_bandwidth_unregister(void);
 int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 new_iso_bw,
 	u32 new_total_bw, u32 new_emc, u32 new_hubclk, bool before_win_update);
 int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,

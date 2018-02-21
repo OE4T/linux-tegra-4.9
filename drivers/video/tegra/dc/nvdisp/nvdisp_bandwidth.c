@@ -652,18 +652,17 @@ int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
 	if (!tegra_platform_is_silicon())
 		return ret;
 
-	mutex_lock(&tegra_nvdisp_lock);
 	memset(&ihub_bw_info, 0, sizeof(ihub_bw_info));
 
 	ihub_bw_info.bwmgr_handle = tegra_bwmgr_register(bwmgr_client);
 	if (IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
 		ret = -ENOENT;
-		goto unlock_and_ret;
+		return ret;
 	}
 
 	ret = tegra_nvdisp_bandwidth_register_max_config(iso_client);
 	if (ret)
-		goto unlock_and_ret;
+		return ret;
 
 	/*
 	 * Assume that all the bandwidth is currently available to us so that we
@@ -671,26 +670,30 @@ int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
 	 */
 	ihub_bw_info.available_bw = UINT_MAX;
 
-unlock_and_ret:
-	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 }
 
 /*
  * tegra_nvdisp_bandwidth_unregister - unregister the IHUB BW client
  */
+void _tegra_nvdisp_bandwidth_unregister(void)
+{
+	if (!tegra_platform_is_silicon())
+		return;
+
+	if (!IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
+		tegra_isomgr_unregister(ihub_bw_info.isomgr_handle);
+	if (!IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
+		tegra_bwmgr_unregister(ihub_bw_info.bwmgr_handle);
+}
+
 void tegra_nvdisp_bandwidth_unregister(void)
 {
 	if (!tegra_platform_is_silicon())
 		return;
 
 	mutex_lock(&tegra_nvdisp_lock);
-
-	if (!IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
-		tegra_isomgr_unregister(ihub_bw_info.isomgr_handle);
-	if (!IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
-		tegra_bwmgr_unregister(ihub_bw_info.bwmgr_handle);
-
+	_tegra_nvdisp_bandwidth_unregister();
 	mutex_unlock(&tegra_nvdisp_lock);
 }
 #else

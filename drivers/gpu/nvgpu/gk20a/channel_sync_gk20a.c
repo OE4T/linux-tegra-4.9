@@ -893,9 +893,11 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 static struct gk20a_channel_sync *
 gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 {
-	int asid = -1;
 	struct gk20a_channel_semaphore *sema;
 	char pool_name[20];
+#ifdef CONFIG_SYNC
+	int asid = -1;
+#endif
 
 	if (WARN_ON(!c->vm))
 		return NULL;
@@ -905,13 +907,13 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 		return NULL;
 	sema->c = c;
 
-	if (c->vm->as_share)
-		asid = c->vm->as_share->id;
-
 	sprintf(pool_name, "semaphore_pool-%d", c->chid);
 	sema->pool = c->vm->sema_pool;
 
 #ifdef CONFIG_SYNC
+	if (c->vm->as_share)
+		asid = c->vm->as_share->id;
+
 	sema->timeline = gk20a_sync_timeline_create(
 			"gk20a_ch%d_as%d", c->chid, asid);
 	if (!sema->timeline) {

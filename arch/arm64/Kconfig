@@ -115,19 +115,6 @@ config ARM64
 config 64BIT
 	def_bool y
 
-config ARCH_TEGRA_18x_SOC
-	bool "Tegra 18x family SOC Kconfig placeholder"
-	select ARCH_TEGRA_18x_SOC_PRIVATE
-	select ARM_GIC_PM
-	help
-	  Kconfig placeholder for NVIDIA Tegra18x family of SoCs
-
-config ARCH_TEGRA_19x_SOC
-	select ARCH_TEGRA_19x_SOC_PRIVATE
-	bool "Tegra 19x family SOC"
-	help
-	  Enable support for NVIDIA Tegra19x family of SoCs
-
 config ARCH_PHYS_ADDR_T_64BIT
 	def_bool y
 

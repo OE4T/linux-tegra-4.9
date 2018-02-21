@@ -138,4 +138,8 @@ struct tegra210_dmic {
 	int format_out;
 };
 
+/* exported functions to enable DMIC from other driver */
+int tegra210_dmic_enable(int id);
+int tegra210_dmic_disable(int id);
+
 #endif

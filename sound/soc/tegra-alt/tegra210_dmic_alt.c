@@ -40,6 +40,8 @@
 
 #define DRV_NAME "tegra210-dmic"
 
+static struct platform_device *pdev_bkp[5];
+
 static const struct reg_default tegra210_dmic_reg_defaults[] = {
 	{ TEGRA210_DMIC_TX_INT_MASK, 0x00000001},
 	{ TEGRA210_DMIC_TX_CIF_CTRL, 0x00007700},
@@ -151,6 +153,66 @@ static const int tegra210_dmic_fmt_values[] = {
 	TEGRA210_AUDIOCIF_BITS_16,
 	TEGRA210_AUDIOCIF_BITS_32,
 };
+
+int tegra210_dmic_enable(int id)
+{
+	struct tegra210_dmic *dmic;
+	struct platform_device *pdev = pdev_bkp[id];
+	int ret = 0;
+	int dmic_clk;
+
+	if (!pdev) {
+		pr_err("No dmic registered for id %d\n", id);
+		return -EINVAL;
+	}
+
+	dmic = dev_get_drvdata(&pdev->dev);
+	if (!dmic)
+		return -EINVAL;
+
+	dmic_clk = (1 << (6 + dmic->osr_val)) * 48000;
+	ret = clk_set_rate(dmic->clk_dmic, dmic_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "Can't set dmic clock rate: %d\n", ret);
+		return ret;
+	}
+
+	pm_runtime_get_sync(&pdev->dev);
+
+	ret = clk_prepare_enable(dmic->clk_dmic);
+	if (ret) {
+		dev_err(&pdev->dev, "clk_enable failed: %d\n", ret);
+		return ret;
+	}
+
+	regmap_write(dmic->regmap, TEGRA210_DMIC_ENABLE, 1);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(tegra210_dmic_enable);
+
+int tegra210_dmic_disable(int id)
+{
+	struct tegra210_dmic *dmic;
+	struct platform_device *pdev = pdev_bkp[id];
+	int ret = 0;
+
+	if (!pdev) {
+		pr_err("No dmic registered for id %d\n", id);
+		return -EINVAL;
+	}
+
+	dmic = dev_get_drvdata(&pdev->dev);
+	if (!dmic)
+		return -EINVAL;
+
+	clk_disable_unprepare(dmic->clk_dmic);
+
+	regmap_write(dmic->regmap, TEGRA210_DMIC_ENABLE, 0);
+
+	pm_runtime_put(&pdev->dev);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(tegra210_dmic_disable);
 
 static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -694,6 +756,8 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 err_dap:
 	dev_set_drvdata(&pdev->dev, dmic);
+
+	pdev_bkp[pdev->dev.id] = pdev;
 
 	return 0;
 

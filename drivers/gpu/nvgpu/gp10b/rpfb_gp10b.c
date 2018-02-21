@@ -133,28 +133,27 @@ void gp10b_replayable_pagefault_buffer_clear_overflow(struct gk20a *g)
 
 }
 
+/*
+ * Debug function.
+ */
 void gp10b_replayable_pagefault_buffer_info(struct gk20a *g)
 {
-
-	gk20a_dbg_fn("");
-	pr_info("rpfb low: 0x%x\n",
-		(gk20a_readl(g, fifo_replay_fault_buffer_lo_r()) >> 12));
-	pr_info("rpfb hi: 0x%x\n",
-		gk20a_readl(g, fifo_replay_fault_buffer_hi_r()));
-	pr_info("rpfb enabled: 0x%x\n",
-		(gk20a_readl(g, fifo_replay_fault_buffer_lo_r()) & 0x1));
-	pr_info("rpfb size: %d\n",
-		gk20a_readl(g, fifo_replay_fault_buffer_size_r()));
-	pr_info("rpfb get index: %d\n",
-		gp10b_replayable_pagefault_buffer_get_index(g));
-	pr_info("rpfb put index: %d\n",
-		gp10b_replayable_pagefault_buffer_put_index(g));
-	pr_info("rpfb empty: %d\n",
-		gp10b_replayable_pagefault_buffer_is_empty(g));
-	pr_info("rpfb full  %d\n",
-		gp10b_replayable_pagefault_buffer_is_full(g));
-	pr_info("rpfb overflow  %d\n",
-		gp10b_replayable_pagefault_buffer_is_overflow(g));
-
-	gk20a_dbg_fn("done");
+	nvgpu_info(g, "rpfb low: 0x%x\n",
+		   gk20a_readl(g, fifo_replay_fault_buffer_lo_r()) >> 12);
+	nvgpu_info(g, "rpfb hi: 0x%x\n",
+		   gk20a_readl(g, fifo_replay_fault_buffer_hi_r()));
+	nvgpu_info(g, "rpfb enabled: 0x%x\n",
+		   gk20a_readl(g, fifo_replay_fault_buffer_lo_r()) & 0x1);
+	nvgpu_info(g, "rpfb size: %d\n",
+		   gk20a_readl(g, fifo_replay_fault_buffer_size_r()));
+	nvgpu_info(g, "rpfb get index: %d\n",
+		   gp10b_replayable_pagefault_buffer_get_index(g));
+	nvgpu_info(g, "rpfb put index: %d\n",
+		   gp10b_replayable_pagefault_buffer_put_index(g));
+	nvgpu_info(g, "rpfb empty: %d\n",
+		   gp10b_replayable_pagefault_buffer_is_empty(g));
+	nvgpu_info(g, "rpfb full  %d\n",
+		   gp10b_replayable_pagefault_buffer_is_full(g));
+	nvgpu_info(g, "rpfb overflow  %d\n",
+		   gp10b_replayable_pagefault_buffer_is_overflow(g));
 }

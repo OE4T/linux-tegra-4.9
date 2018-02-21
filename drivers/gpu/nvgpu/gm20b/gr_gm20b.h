@@ -116,7 +116,8 @@ void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem);
 void gr_gm20b_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state);
 void gr_gm20b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries);
-int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc);
+int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc,
+		u32 tpc, struct channel_gk20a *fault_ch);
 int gm20b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
 		struct nvgpu_gr_sm_error_state *sm_error_state);

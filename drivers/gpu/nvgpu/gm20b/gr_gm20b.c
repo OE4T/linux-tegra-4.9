@@ -1271,7 +1271,8 @@ void gr_gm20b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gm20b);
 }
 
-int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc,
+				struct channel_gk20a *fault_ch)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;

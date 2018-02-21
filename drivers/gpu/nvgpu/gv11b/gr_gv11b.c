@@ -3101,7 +3101,8 @@ int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	return err;
 }
 
-int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc,
+				struct channel_gk20a *fault_ch)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;

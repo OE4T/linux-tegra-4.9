@@ -5605,7 +5605,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		  "sm hww global 0x%08x warp 0x%08x", global_esr, warp_esr);
 
 	gr_gk20a_elpg_protected_call(g,
-		g->ops.gr.record_sm_error_state(g, gpc, tpc));
+		g->ops.gr.record_sm_error_state(g, gpc, tpc, fault_ch));
 
 	if (g->ops.gr.pre_process_sm_exception) {
 		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc, sm,

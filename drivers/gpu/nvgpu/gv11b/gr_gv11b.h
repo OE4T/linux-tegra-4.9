@@ -166,7 +166,8 @@ int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct nvgpu_gr_sm_error_state *sm_error_state);
 int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable);
-int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc);
+int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc,
+		struct channel_gk20a *fault_ch);
 void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g);
 bool gv11b_gr_sm_debugger_attached(struct gk20a *g);
 void gv11b_gr_suspend_single_sm(struct gk20a *g,

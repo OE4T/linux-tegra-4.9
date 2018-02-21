@@ -1,7 +1,8 @@
-config ARCH_TEGRA_18x_SOC_PRIVATE
-	bool "Tegra 18x family SOC"
+config ARCH_TEGRA_18x_SOC
+	bool "Tegra 18x family SOC (Downstream options)"
 	select CPU_V8
 	select ARM_GIC
+	select ARM_GIC_PM
 	select COMMON_CLK
 	select SOC_BUS
 	select ARCH_REQUIRE_GPIOLIB
@@ -15,12 +16,12 @@ config ARCH_TEGRA_18x_SOC_PRIVATE
 	select ARM64_CPU_SUSPEND
 	default n
 	help
-	  Support for NVIDIA Tegra 18x family of SoCs
+	  NVIDIA Tegra Downstream options for 18x family of SoCs
 
-config ARCH_TEGRA_19x_SOC_PRIVATE
-	bool "Tegra 19x family SOC"
+config ARCH_TEGRA_19x_SOC
+	bool "Tegra 19x family SOC (Downstream options)"
 	select PINCTRL
 	select PINCTRL_TEGRA194
 	default n
 	help
-	  Support for NVIDIA Tegra 19x family of SoCs
+	  NVIDIA Tegra Downstream options for 19x family of SoCs

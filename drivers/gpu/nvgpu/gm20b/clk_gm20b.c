@@ -28,6 +28,8 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/fuse.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/log.h>
+#include <nvgpu/types.h>
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_timer_gm20b.h>
@@ -84,24 +86,26 @@ static struct pll_parms gpc_pll_params;
 
 static void clk_setup_slide(struct gk20a *g, u32 clk_u);
 
-#define DUMP_REG(addr_func) \
-do {									\
-	addr = trim_sys_##addr_func##_r();				\
-	data = gk20a_readl(g, addr);					\
-	pr_info(#addr_func "[0x%x] = 0x%x\n", addr, data);		\
-} while (0)
-
 static void dump_gpc_pll(struct gk20a *g, struct pll *gpll, u32 last_cfg)
 {
-	u32 addr, data;
+#define __DUMP_REG(__addr_str__)					\
+	do {								\
+		u32 __addr__ = trim_sys_ ## __addr_str__ ## _r();	\
+		u32 __data__ = gk20a_readl(g, __addr__);		\
+									\
+		nvgpu_info(g, "  " #__addr_str__ " [0x%x] = 0x%x",	\
+			   __addr__, __data__); 			\
+	} while (0)
 
-	pr_info("**** GPCPLL DUMP ****");
-	pr_info("gpcpll s/w M=%u N=%u P=%u\n", gpll->M, gpll->N, gpll->PL);
-	pr_info("gpcpll_cfg_last = 0x%x\n", last_cfg);
-	DUMP_REG(gpcpll_cfg);
-	DUMP_REG(gpcpll_coeff);
-	DUMP_REG(sel_vco);
-	pr_info("\n");
+	nvgpu_info(g, "GPCPLL DUMP:");
+	nvgpu_info(g, "  gpcpll s/w M=%u N=%u P=%u\n", gpll->M, gpll->N, gpll->PL);
+	nvgpu_info(g, "  gpcpll_cfg_last = 0x%x\n", last_cfg);
+
+	__DUMP_REG(gpcpll_cfg);
+	__DUMP_REG(gpcpll_coeff);
+	__DUMP_REG(sel_vco);
+
+#undef __DUMP_REG
 }
 
 #define PLDIV_GLITCHLESS 1

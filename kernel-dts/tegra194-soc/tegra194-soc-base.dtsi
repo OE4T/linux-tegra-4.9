@@ -488,6 +488,10 @@
 		iommus = <&smmu TEGRA_SID_SMMU_TEST>;
 	};
 
+	dma_test: dma_test {
+		compatible = "nvidia,dma_test";
+	};
+
 	mc {
 		compatible = "nvidia,tegra-t19x-mc";
 

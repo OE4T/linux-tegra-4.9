@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,7 +58,7 @@
 
 #define TEGRA_FUSE_ENABLE_PRGM_OFFSET		0
 #define TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET	1
-#define TEGRA_FUSE_BURN_MAX_FUSES		15
+#define TEGRA_FUSE_BURN_MAX_FUSES		30
 
 #define TEGRA_FUSE_ODM_PRODUCTION_MODE		0xa0
 #define H2_START_MACRO_BIT_INDEX		2167
@@ -162,7 +162,7 @@ static bool tegra_fuse_is_fuse_burn_allowed(struct fuse_burn_data *data)
 	ret = tegra_fuse_readl(TEGRA_FUSE_ODM_PRODUCTION_MODE, &reg);
 	if (!ret) {
 		if (reg) {
-			if (!strcmp(data->name, "odm_reserved"))
+			if (!strncmp(data->name, "reserved_odm", 12))
 				return true;
 			if (!strcmp(data->name, "odm_lock"))
 				return true;
@@ -554,7 +554,14 @@ static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 	.mirroring_support = false,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2e, 17, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm0, 0x2e, 17, 32, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm1, 0x30, 17, 32, 0xcc, true, false),
+		FUSE_BURN_DATA(reserved_odm2, 0x32, 17, 32, 0xd0, true, false),
+		FUSE_BURN_DATA(reserved_odm3, 0x34, 17, 32, 0xd4, true, false),
+		FUSE_BURN_DATA(reserved_odm4, 0x36, 17, 32, 0xd8, true, false),
+		FUSE_BURN_DATA(reserved_odm5, 0x38, 17, 32, 0xdc, true, false),
+		FUSE_BURN_DATA(reserved_odm6, 0x3a, 17, 32, 0xe0, true, false),
+		FUSE_BURN_DATA(reserved_odm7, 0x3c, 17, 32, 0xe4, true, false),
 		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
 		FUSE_BURN_DATA(device_key, 0x2a, 20, 32, 0xb4, true, false),
 		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
@@ -575,7 +582,14 @@ static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm0, 0x2, 2, 32, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm1, 0x4, 2, 32, 0xcc, true, false),
+		FUSE_BURN_DATA(reserved_odm2, 0x6, 2, 32, 0xd0, true, false),
+		FUSE_BURN_DATA(reserved_odm3, 0x8, 2, 32, 0xd4, true, false),
+		FUSE_BURN_DATA(reserved_odm4, 0xa, 2, 32, 0xd8, true, false),
+		FUSE_BURN_DATA(reserved_odm5, 0xc, 2, 32, 0xdc, true, false),
+		FUSE_BURN_DATA(reserved_odm6, 0xe, 2, 32, 0xe0, true, false),
+		FUSE_BURN_DATA(reserved_odm7, 0x10, 2, 32, 0xe4, true, false),
 		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
 		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
 		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true, false),
@@ -598,7 +612,14 @@ static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x62, 27, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm0, 0x62, 27, 32, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm1, 0x64, 27, 32, 0xcc, true, false),
+		FUSE_BURN_DATA(reserved_odm2, 0x66, 27, 32, 0xd0, true, false),
+		FUSE_BURN_DATA(reserved_odm3, 0x68, 27, 32, 0xd4, true, false),
+		FUSE_BURN_DATA(reserved_odm4, 0x6a, 27, 32, 0xd8, true, false),
+		FUSE_BURN_DATA(reserved_odm5, 0x6c, 27, 32, 0xdc, true, false),
+		FUSE_BURN_DATA(reserved_odm6, 0x6e, 27, 32, 0xe0, true, false),
+		FUSE_BURN_DATA(reserved_odm7, 0x70, 27, 32, 0xe4, true, false),
 		FUSE_BURN_DATA(odm_lock, 0, 6, 16, 0x8, true, false),
 		FUSE_BURN_DATA(device_key, 0x5e, 30, 32, 0xb4, true, false),
 		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 24, 1, 0xb8, true, false),
@@ -619,7 +640,18 @@ static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
 	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
-		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm0, 0x2, 2, 32, 0xc8, true, false),
+		FUSE_BURN_DATA(reserved_odm1, 0x4, 2, 32, 0xcc, true, false),
+		FUSE_BURN_DATA(reserved_odm2, 0x6, 2, 32, 0xd0, true, false),
+		FUSE_BURN_DATA(reserved_odm3, 0x8, 2, 32, 0xd4, true, false),
+		FUSE_BURN_DATA(reserved_odm4, 0xa, 2, 32, 0xd8, true, false),
+		FUSE_BURN_DATA(reserved_odm5, 0xc, 2, 32, 0xdc, true, false),
+		FUSE_BURN_DATA(reserved_odm6, 0xe, 2, 32, 0xe0, true, false),
+		FUSE_BURN_DATA(reserved_odm7, 0x10, 2, 32, 0xe4, true, false),
+		FUSE_BURN_DATA(reserved_odm8, 0x16, 26, 32, 0x420, true, false),
+		FUSE_BURN_DATA(reserved_odm9, 0x18, 26, 32, 0x424, true, false),
+		FUSE_BURN_DATA(reserved_odm10, 0x1a, 26, 32, 0x428, true, false),
+		FUSE_BURN_DATA(reserved_odm11, 0x1c, 26, 32, 0x42c, true, false),
 		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true, false),
 		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true, false),
 		FUSE_BURN_DATA(odm_production_mode, 0, 11, 1, 0xa0, true, false),

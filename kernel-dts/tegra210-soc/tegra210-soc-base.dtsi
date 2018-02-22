@@ -264,6 +264,10 @@
 		iommus = <&smmu TEGRA_SWGROUP_SMMU_TEST>;
 	};
 
+	dma_test: dma_test {
+		compatible = "nvidia,dma_test";
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra210-bpmp";
 		carveout-start = <0x80005000>;

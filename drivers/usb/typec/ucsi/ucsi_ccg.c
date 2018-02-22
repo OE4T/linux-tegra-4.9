@@ -75,6 +75,7 @@
 
 /* CCGx user defined register (0x40~0x4F) */
 #define REG_VENDOR_DEFINED_0	0x0040
+#define  CMD_UPDATE_OUTPUT_CURRENT	0x1
 
 /* UCSI memory region */
 #define REG_UCSI_VERSION	0xF000
@@ -1173,6 +1174,36 @@ static int ccg_fw_update(struct ucsi_ccg *ccg)
 	return err;
 }
 
+/**
+ * @brief Get Iout value in mA from CCG controller
+ * @return 0 if success, not zero for other cases
+ */
+static int
+get_runtime_output_current(struct ucsi_ccg *ccg, int *rt_current_ma)
+{
+	u16 raw_data = 0;
+	int err;
+
+	err = ccg_cmd_vendor_defined_reg(ccg, 0, CMD_UPDATE_OUTPUT_CURRENT);
+	if (err) {
+		dev_err(ccg->dev, "send CMD_UPDATE_OUTPUT_CURRENT failed\n");
+		return err;
+	}
+
+	err = ccg_reg_read(ccg, REG_FLASH_RW_MEM, (u8 *)&raw_data,
+			sizeof(raw_data));
+	if (err) {
+		dev_err(ccg->dev, "read current value failed\n");
+		return err;
+	}
+
+	/* Raw data is in 10 mA */
+	*rt_current_ma = (int)(raw_data * 10);
+
+	dev_info(ccg->dev, "Output Current (mA): %d\n", *rt_current_ma);
+	return err;
+}
+
 static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
@@ -1240,6 +1271,7 @@ static ssize_t test_store(struct device *dev,
 	struct i2c_client *i2c_cl = to_i2c_client(dev);
 	struct ucsi_ccg *ccg = i2c_get_clientdata(i2c_cl);
 	unsigned int mode;
+	int data = 0;
 
 	if (kstrtouint(buf, 10, &mode))
 		return -EINVAL;
@@ -1256,6 +1288,8 @@ static ssize_t test_store(struct device *dev,
 		ccg_cmd_select_sink_pdo(ccg, 1, 0xF); // change P2 PDO to 15V
 	else if (mode == 5)
 		ccg_cmd_select_sink_pdo(ccg, 1, 0x1F); // change P2 PDO to 20V
+	else if (mode == 6)
+		get_runtime_output_current(ccg, &data);
 
 	return n;
 }
@@ -1273,7 +1307,8 @@ static ssize_t test_show(struct device *dev,
 		"2: P1 PD status\n"
 		"3: P2 PD status\n"
 		"4: selectPDO_15V\n"
-		"5: selectPDO_20V\n");
+		"5: selectPDO_20V\n"
+		"6: get current Iout\n");
 
 }
 

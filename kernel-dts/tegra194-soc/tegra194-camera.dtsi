@@ -93,6 +93,8 @@
 			nvidia,ivc-timeout = <50>;
 			nvidia,test-timeout = <5000>;
 			nvidia,mem-map = <&tegra_rce &vi &isp>;
+			/* Max EMC bandwidth during tests */
+			nvidia,test-bw = <0xffFFffFF>;
 		};
 		ivccontrol@3 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";

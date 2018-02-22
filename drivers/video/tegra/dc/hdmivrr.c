@@ -869,6 +869,7 @@ void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate)
 		dc->mode.v_back_porch = fbmode->upper_margin;
 
 	_tegra_dc_set_mode(dc, &dc->mode);
+	dc->mode_dirty = true;
 	tegra_dc_update_mode(dc);
 	msleep(frametime_ms * 2);
 }

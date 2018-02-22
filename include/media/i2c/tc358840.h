@@ -2,6 +2,7 @@
  * tc358840.h - Toshiba UH2C/D HDMI-CSI bridge driver
  *
  * Copyright (c) 2015, Armin Weiss <weii@zhaw.ch>
+ * Copyright (c) 2016 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,9 +43,11 @@ enum tc358840_ddc5v_delays {
 struct tc358840_platform_data {
 	/* GPIOs */
 	int reset_gpio;		/* Pin K8 */
-
+#ifdef CONFIG_V4L2_FWNODE
+	struct v4l2_fwnode_endpoint endpoint;
+#else
 	struct v4l2_of_endpoint endpoint;
-
+#endif
 	/* System clock connected to REFCLK (pin K9) */
 	u32 refclk_hz;		/* 40 - 50 MHz */
 

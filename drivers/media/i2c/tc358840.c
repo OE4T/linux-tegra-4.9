@@ -2,7 +2,7 @@
  * tc358840.c - Toshiba UH2C/D HDMI-CSI bridge driver
  *
  * Copyright (c) 2015, Armin Weiss <weii@zhaw.ch>
- * Copyright (c) 2016 - 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is based on the tc358840 - Toshiba HDMI to CSI-2 bridge driver
  * from Cisco Systems, Inc.
@@ -41,7 +41,11 @@
 #include <media/v4l2-event.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
+#ifdef CONFIG_V4L2_FWNODE
+#include <media/v4l2-fwnode.h>
+#else
 #include <media/v4l2-of.h>
+#endif
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 

@@ -251,7 +251,6 @@
 					    TEGRA_SID(NVJPG)
 					    TEGRA_SID(NVDLA0)
 					    TEGRA_SID(NVDLA1)
-					    TEGRA_SID(NVDISPLAY)
 					    TEGRA_SID(NVENC1)
 					    TEGRA_SID(NVDEC1)
 					    TEGRA_SID(SE)
@@ -296,6 +295,10 @@
 			isp_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID(ISP)>;
+			};
+			nvdisplay_domain {
+				address-space = <&nvdisplay_as>;
+				sid-list = <TEGRA_SID(NVDISPLAY)>;
 			};
 			pcie0_domain {
 				address-space = <&pcie0_as>;
@@ -424,6 +427,13 @@
 				gap-page = <1>;
 			};
 			host1x_client_as: host1x_client {
+				iova-start = <0x0 0x1000>;
+				iova-size = <0x0 0xFFFFEFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			nvdisplay_as: nvdisplay {
 				iova-start = <0x0 0x1000>;
 				iova-size = <0x0 0xFFFFEFFF>;
 				alignment = <0xFFFFF>;

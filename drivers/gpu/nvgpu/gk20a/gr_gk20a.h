@@ -79,6 +79,7 @@ enum /* global_ctx_buffer */ {
 	ATTRIBUTE_VPR		= 5,
 	GOLDEN_CTX		= 6,
 	PRIV_ACCESS_MAP		= 7,
+	FECS_TRACE_BUFFER	= 8,
 	NR_GLOBAL_CTX_BUF	= 9
 };
 
@@ -89,6 +90,7 @@ enum  /*global_ctx_buffer_va */ {
 	ATTRIBUTE_VA		= 2,
 	GOLDEN_CTX_VA		= 3,
 	PRIV_ACCESS_MAP_VA	= 4,
+	FECS_TRACE_BUFFER_VA	= 5,
 	NR_GLOBAL_CTX_BUF_VA	= 6
 };
 
@@ -289,6 +291,8 @@ struct gr_gk20a {
 		u32 buffer_header_size;
 
 		u32 priv_access_map_size;
+
+		u32 fecs_trace_buffer_size;
 
 		struct gr_ucode_gk20a ucode;
 

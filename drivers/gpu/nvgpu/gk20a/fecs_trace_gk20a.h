@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,5 +39,6 @@ int gk20a_gr_max_entries(struct gk20a *g,
 int gk20a_fecs_trace_enable(struct gk20a *g);
 int gk20a_fecs_trace_disable(struct gk20a *g);
 bool gk20a_fecs_trace_is_enabled(struct gk20a *g);
+size_t gk20a_fecs_trace_buffer_size(struct gk20a *g);
 
 #endif /* __FECS_TRACE_GK20A_H */

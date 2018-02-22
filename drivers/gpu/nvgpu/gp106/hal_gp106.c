@@ -834,6 +834,7 @@ int gp106_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
+	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, false);
 
 	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
 	if (gops->fuse.check_priv_security(g))

@@ -28,6 +28,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/enabled.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/hashtable.h>
 #include <nvgpu/circ_buf.h>
@@ -51,7 +52,7 @@
  * If HW circular buffer is getting too many "buffer full" conditions,
  * increasing this constant should help (it drives Linux' internal buffer size).
  */
-#define GK20A_FECS_TRACE_NUM_RECORDS		(1 << 6)
+#define GK20A_FECS_TRACE_NUM_RECORDS		(1 << 10)
 #define GK20A_FECS_TRACE_HASH_BITS		8 /* 2^8 */
 #define GK20A_FECS_TRACE_FRAME_PERIOD_US	(1000000ULL/60ULL)
 #define GK20A_FECS_TRACE_PTIMER_SHIFT		5
@@ -74,7 +75,6 @@ struct gk20a_fecs_trace_hash_ent {
 
 struct gk20a_fecs_trace {
 
-	struct nvgpu_mem trace_buf;
 	DECLARE_HASHTABLE(pid_hash_table, GK20A_FECS_TRACE_HASH_BITS);
 	struct nvgpu_mutex hash_lock;
 	struct nvgpu_mutex poll_lock;
@@ -106,10 +106,12 @@ static inline int gk20a_fecs_trace_num_ts(void)
 }
 
 static struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
-	struct gk20a_fecs_trace *trace, int idx)
+	struct gk20a *g, int idx)
 {
+	struct nvgpu_mem *mem = &g->gr.global_ctx_buffer[FECS_TRACE_BUFFER].mem;
+
 	return (struct gk20a_fecs_trace_record *)
-		((u8 *) trace->trace_buf.cpu_va
+		((u8 *) mem->cpu_va
 		+ (idx * ctxsw_prog_record_timestamp_record_size_in_bytes_v()));
 }
 
@@ -258,12 +260,13 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	pid_t cur_pid;
 	pid_t new_pid;
+	int count = 0;
 
 	/* for now, only one VM */
 	const int vmid = 0;
 
-	struct gk20a_fecs_trace_record *r = gk20a_fecs_trace_get_record(
-		trace, index);
+	struct gk20a_fecs_trace_record *r =
+		gk20a_fecs_trace_get_record(g, index);
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"consuming record trace=%p read=%d record=%p", trace, index, r);
@@ -334,10 +337,11 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 			continue;
 
 		gk20a_ctxsw_trace_write(g, &entry);
+		count++;
 	}
 
 	gk20a_ctxsw_trace_wake_up(g, vmid);
-	return 0;
+	return count;
 }
 
 int gk20a_fecs_trace_poll(struct gk20a *g)
@@ -376,15 +380,16 @@ int gk20a_fecs_trace_poll(struct gk20a *g)
 	g->ops.mm.fb_flush(g);
 
 	while (read != write) {
-		/* Ignore error code, as we want to consume all records */
-		(void)gk20a_fecs_trace_ring_read(g, read);
+		cnt = gk20a_fecs_trace_ring_read(g, read);
+		if (cnt <= 0)
+			break;
 
 		/* Get to next record. */
 		read = (read + 1) & (GK20A_FECS_TRACE_NUM_RECORDS - 1);
 	}
 
 	/* ensure FECS records has been updated before incrementing read index */
-	nvgpu_smp_wmb();
+	nvgpu_wmb();
 	gk20a_fecs_trace_set_read_index(g, read);
 
 done:
@@ -411,20 +416,10 @@ static int gk20a_fecs_trace_periodic_polling(void *arg)
 	return 0;
 }
 
-static int gk20a_fecs_trace_alloc_ring(struct gk20a *g)
+size_t gk20a_fecs_trace_buffer_size(struct gk20a *g)
 {
-	struct gk20a_fecs_trace *trace = g->fecs_trace;
-
-	return nvgpu_dma_alloc_sys(g, GK20A_FECS_TRACE_NUM_RECORDS
-			* ctxsw_prog_record_timestamp_record_size_in_bytes_v(),
-			&trace->trace_buf);
-}
-
-static void gk20a_fecs_trace_free_ring(struct gk20a *g)
-{
-	struct gk20a_fecs_trace *trace = g->fecs_trace;
-
-	nvgpu_dma_free(g, &trace->trace_buf);
+	return GK20A_FECS_TRACE_NUM_RECORDS
+			* ctxsw_prog_record_timestamp_record_size_in_bytes_v();
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -460,8 +455,8 @@ static int gk20a_fecs_trace_debugfs_ring_seq_show(
 {
 	loff_t *pos = (loff_t *) v;
 	struct gk20a *g = *(struct gk20a **)s->private;
-	struct gk20a_fecs_trace *trace = g->fecs_trace;
-	struct gk20a_fecs_trace_record *r = gk20a_fecs_trace_get_record(trace, *pos);
+	struct gk20a_fecs_trace_record *r =
+		gk20a_fecs_trace_get_record(g, *pos);
 	int i;
 	const u32 invalid_tag =
 	    ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_v();
@@ -588,12 +583,6 @@ int gk20a_fecs_trace_init(struct gk20a *g)
 		goto clean_poll_lock;
 
 	BUG_ON(!is_power_of_2(GK20A_FECS_TRACE_NUM_RECORDS));
-	err = gk20a_fecs_trace_alloc_ring(g);
-	if (err) {
-		nvgpu_warn(g, "failed to allocate FECS ring");
-		goto clean_hash_lock;
-	}
-
 	hash_init(trace->pid_hash_table);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
@@ -604,8 +593,6 @@ int gk20a_fecs_trace_init(struct gk20a *g)
 
 	return 0;
 
-clean_hash_lock:
-	nvgpu_mutex_destroy(&trace->hash_lock);
 clean_poll_lock:
 	nvgpu_mutex_destroy(&trace->poll_lock);
 clean:
@@ -624,14 +611,14 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 
 	u32 lo;
 	u32 hi;
-	u64 pa;
+	u64 addr;
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *ch_ctx;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	struct nvgpu_mem *mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
 	pid_t pid;
-	u32 aperture;
+	u32 aperture_mask;
 
 	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw,
 			"chid=%d context_ptr=%x inst_block=%llx",
@@ -648,22 +635,46 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	if (!trace)
 		return -ENOMEM;
 
-	pa = nvgpu_inst_block_addr(g, &trace->trace_buf);
-	if (!pa)
-		return -ENOMEM;
-	aperture = nvgpu_aperture_mask(g, &trace->trace_buf,
+	mem = &g->gr.global_ctx_buffer[FECS_TRACE_BUFFER].mem;
+
+	if (nvgpu_is_enabled(g, NVGPU_FECS_TRACE_VA)) {
+		addr = ch_ctx->global_ctx_buffer_va[FECS_TRACE_BUFFER_VA];
+		nvgpu_log(g, gpu_dbg_ctxsw, "gpu_va=%llx", addr);
+		aperture_mask = 0;
+	} else {
+		addr = nvgpu_inst_block_addr(g, mem);
+		nvgpu_log(g, gpu_dbg_ctxsw, "pa=%llx", addr);
+		aperture_mask = nvgpu_aperture_mask(g, mem,
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(),
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_coherent_f(),
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f());
+	}
+	if (!addr)
+		return -ENOMEM;
+
+	lo = u64_lo32(addr);
+	hi = u64_hi32(addr);
+
+	mem = &ch_ctx->mem;
 
 	if (nvgpu_mem_begin(g, mem))
 		return -ENOMEM;
 
-	lo = u64_lo32(pa);
-	hi = u64_hi32(pa);
-
 	nvgpu_log(g, gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
 		lo, GK20A_FECS_TRACE_NUM_RECORDS);
+
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
+		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
+			GK20A_FECS_TRACE_NUM_RECORDS));
+
+	nvgpu_mem_end(g, mem);
+
+	if (nvgpu_is_enabled(g, NVGPU_FECS_TRACE_VA))
+		mem = &ch->ctx_header.mem;
+
+	if (nvgpu_mem_begin(g, mem))
+		return -ENOMEM;
 
 	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),
@@ -671,11 +682,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi) |
-		aperture);
-	nvgpu_mem_wr(g, mem,
-		ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
-		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
-			GK20A_FECS_TRACE_NUM_RECORDS));
+		aperture_mask);
 
 	nvgpu_mem_end(g, mem);
 
@@ -728,7 +735,6 @@ int gk20a_fecs_trace_deinit(struct gk20a *g)
 		return 0;
 
 	nvgpu_thread_stop(&trace->poll_task);
-	gk20a_fecs_trace_free_ring(g);
 	gk20a_fecs_trace_free_hash_table(g);
 
 	nvgpu_mutex_destroy(&g->fecs_trace->hash_lock);

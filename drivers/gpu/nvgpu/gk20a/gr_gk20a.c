@@ -41,6 +41,7 @@
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
+#include "gk20a/fecs_trace_gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
@@ -2499,6 +2500,10 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 			return ret;
 		}
 		g->gr.ctx_vars.priv_access_map_size = 512 * 1024;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+		g->gr.ctx_vars.fecs_trace_buffer_size =
+			gk20a_fecs_trace_buffer_size(g);
+#endif
 	}
 
 	nvgpu_log_fn(g, "done");
@@ -2629,6 +2634,20 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	if (err)
 		goto clean_up;
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	nvgpu_log_info(g, "fecs_trace_buffer_size : %d",
+		   gr->ctx_vars.fecs_trace_buffer_size);
+
+	err = nvgpu_dma_alloc_sys(g,
+			gr->ctx_vars.fecs_trace_buffer_size,
+			&gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem);
+	if (err)
+		goto clean_up;
+
+	gr->global_ctx_buffer[FECS_TRACE_BUFFER].destroy =
+			 gk20a_gr_destroy_ctx_buffer;
+#endif
 
 	nvgpu_log_fn(g, "done");
 	return 0;
@@ -2769,6 +2788,21 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_index[PRIV_ACCESS_MAP_VA] = PRIV_ACCESS_MAP;
 
 	tsg->gr_ctx.global_ctx_buffer_mapped = true;
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	/* FECS trace buffer */
+	if (nvgpu_is_enabled(g, NVGPU_FECS_TRACE_VA)) {
+		mem = &gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem;
+		gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size, 0,
+				gk20a_mem_flag_none, true, mem->aperture);
+		if (!gpu_va)
+			goto clean_up;
+		g_bfr_va[FECS_TRACE_BUFFER_VA] = gpu_va;
+		g_bfr_size[FECS_TRACE_BUFFER_VA] = mem->size;
+		g_bfr_index[FECS_TRACE_BUFFER_VA] = FECS_TRACE_BUFFER;
+	}
+#endif
+
 	return 0;
 
 clean_up:
@@ -3050,6 +3084,14 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 				"fail to commit gr ctx buffer");
 			goto out;
 		}
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+		if (g->ops.fecs_trace.bind_channel && !c->vpr) {
+			err = g->ops.fecs_trace.bind_channel(g, c);
+			if (err)
+				nvgpu_warn(g,
+					"fail to bind channel for ctxsw trace");
+		}
+#endif
 	}
 
 	nvgpu_log_fn(g, "done");

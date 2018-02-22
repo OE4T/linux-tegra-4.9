@@ -6088,13 +6088,16 @@ int gk20a_gr_isr(struct gk20a *g)
 	if (need_reset) {
 		if (tsgid != NVGPU_INVALID_TSG_ID)
 			gk20a_fifo_recover(g, gr_engine_id,
-					   tsgid, true, true, true);
+					   tsgid, true, true, true,
+						RC_TYPE_GR_FAULT);
 		else if (ch)
 			gk20a_fifo_recover(g, gr_engine_id,
-					   ch->chid, false, true, true);
+					   ch->chid, false, true, true,
+						RC_TYPE_GR_FAULT);
 		else
 			gk20a_fifo_recover(g, gr_engine_id,
-					   0, false, false, true);
+					   0, false, false, true,
+						RC_TYPE_GR_FAULT);
 	}
 
 	if (gr_intr && !ch) {

@@ -1817,7 +1817,7 @@ static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
 	return engines;
 }
 
-void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose)
+void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose, int rc_type)
 {
 	u32 engines;
 
@@ -1829,7 +1829,8 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose)
 	engines = gk20a_fifo_engines_on_id(g, chid, false);
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, chid, false, true, verbose);
+		gk20a_fifo_recover(g, engines, chid, false, true, verbose,
+					rc_type);
 	else {
 		struct channel_gk20a *ch = &g->fifo.channel[chid];
 
@@ -1847,7 +1848,8 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose)
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 }
 
-void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
+void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose,
+				int rc_type)
 {
 	u32 engines;
 
@@ -1859,7 +1861,8 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 	engines = gk20a_fifo_engines_on_id(g, tsgid, true);
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, tsgid, true, true, verbose);
+		gk20a_fifo_recover(g, engines, tsgid, true, true, verbose,
+					rc_type);
 	else {
 		struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 
@@ -1956,7 +1959,7 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 
 void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 			u32 hw_id, bool id_is_tsg,
-			bool id_is_known, bool verbose)
+			bool id_is_known, bool verbose, int rc_type)
 {
 	unsigned int id_type;
 
@@ -1972,7 +1975,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 		id_type = ID_TYPE_UNKNOWN;
 
 	g->ops.fifo.teardown_ch_tsg(g, __engine_ids, hw_id, id_type,
-					 RC_TYPE_NORMAL, NULL);
+					 rc_type, NULL);
 }
 
 /* force reset channel and tsg (if it's part of one) */
@@ -1998,10 +2001,12 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 		}
 
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
-		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose);
+		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose,
+				RC_TYPE_FORCE_RESET);
 	} else {
 		g->ops.fifo.set_error_notifier(ch, err_code);
-		gk20a_fifo_recover_ch(g, ch->chid, verbose);
+		gk20a_fifo_recover_ch(g, ch->chid, verbose,
+				RC_TYPE_FORCE_RESET);
 	}
 
 	return 0;
@@ -2288,7 +2293,8 @@ bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 			 */
 			gk20a_channel_timeout_restart_all_channels(g);
 			gk20a_fifo_recover(g, BIT(engine_id), id,
-					is_tsg, true, verbose);
+					is_tsg, true, verbose,
+					RC_TYPE_CTXSW_TIMEOUT);
 		} else {
 			gk20a_dbg_info(
 				"fifo is waiting for ctx switch for %d ms, "
@@ -2542,7 +2548,7 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 
 		if (gk20a_channel_get(ch)) {
 			g->ops.fifo.set_error_notifier(ch, error_notifier);
-			gk20a_fifo_recover_ch(g, id, true);
+			gk20a_fifo_recover_ch(g, id, true, RC_TYPE_PBDMA_FAULT);
 			gk20a_channel_put(ch);
 		}
 	} else if (fifo_pbdma_status_id_type_v(status)
@@ -2560,7 +2566,7 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 			}
 		}
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
-		gk20a_fifo_recover_tsg(g, id, true);
+		gk20a_fifo_recover_tsg(g, id, true, RC_TYPE_PBDMA_FAULT);
 	}
 }
 
@@ -2578,8 +2584,10 @@ u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g, struct fifo_gk20a *f,
 		nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
 			"pbdma id %d intr_0 0x%08x pending",
 			pbdma_id, pbdma_intr_0);
-		rc_type = g->ops.fifo.handle_pbdma_intr_0(g, pbdma_id,
-				 pbdma_intr_0, &handled, &error_notifier);
+
+		if (g->ops.fifo.handle_pbdma_intr_0(g, pbdma_id, pbdma_intr_0,
+			&handled, &error_notifier) != RC_TYPE_NO_RC)
+			rc_type = RC_TYPE_PBDMA_FAULT;
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 
@@ -2587,8 +2595,10 @@ u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g, struct fifo_gk20a *f,
 		nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
 			"pbdma id %d intr_1 0x%08x pending",
 			pbdma_id, pbdma_intr_1);
-		rc_type = g->ops.fifo.handle_pbdma_intr_1(g, pbdma_id,
-				 pbdma_intr_1, &handled, &error_notifier);
+
+		if (g->ops.fifo.handle_pbdma_intr_1(g, pbdma_id, pbdma_intr_1,
+			&handled, &error_notifier) != RC_TYPE_NO_RC)
+			rc_type = RC_TYPE_PBDMA_FAULT;
 		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
@@ -2721,7 +2731,8 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 			gk20a_channel_put(ch);
 		}
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
-		gk20a_fifo_recover_tsg(g, id, true);
+		gk20a_fifo_recover_tsg(g, id, true,
+						RC_TYPE_PREEMPT_TIMEOUT);
 	} else {
 		struct channel_gk20a *ch = &g->fifo.channel[id];
 
@@ -2731,7 +2742,8 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 		if (gk20a_channel_get(ch)) {
 			g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
-			gk20a_fifo_recover_ch(g, id, true);
+			gk20a_fifo_recover_ch(g, id, true,
+						RC_TYPE_PREEMPT_TIMEOUT);
 			gk20a_channel_put(ch);
 		}
 	}
@@ -3024,7 +3036,8 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 	}
 
 	if (engines)
-		gk20a_fifo_recover(g, engines, ~(u32)0, false, false, true);
+		gk20a_fifo_recover(g, engines, ~(u32)0, false, false, true,
+				RC_TYPE_RUNLIST_UPDATE_TIMEOUT);
 }
 
 int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)

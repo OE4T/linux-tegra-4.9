@@ -57,10 +57,15 @@ enum {
 
 #define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
 
-#define RC_TYPE_NORMAL			0
+#define RC_TYPE_NO_RC			0
 #define RC_TYPE_MMU_FAULT		1
 #define RC_TYPE_PBDMA_FAULT		2
-#define RC_TYPE_NO_RC			0xff
+#define RC_TYPE_GR_FAULT		3
+#define RC_TYPE_PREEMPT_TIMEOUT		4
+#define RC_TYPE_CTXSW_TIMEOUT		5
+#define RC_TYPE_RUNLIST_UPDATE_TIMEOUT	6
+#define RC_TYPE_FORCE_RESET		7
+#define RC_TYPE_SCHED_ERR		8
 
 #define NVGPU_FIFO_DEFAULT_TIMESLICE_TIMEOUT	128UL
 #define NVGPU_FIFO_DEFAULT_TIMESLICE_SCALE	3UL
@@ -256,9 +261,11 @@ void gk20a_fifo_recover(struct gk20a *g,
 			u32 engine_ids, /* if zero, will be queried from HW */
 			u32 hw_id, /* if ~0, will be queried from HW */
 			bool hw_id_is_tsg, /* ignored if hw_id == ~0 */
-			bool id_is_known, bool verbose);
-void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose);
-void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose);
+			bool id_is_known, bool verbose, int rc_type);
+void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose,
+				int rc_type);
+void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose,
+				int rc_type);
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 				u32 err_code, bool verbose);
 void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id);

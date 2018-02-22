@@ -83,6 +83,9 @@ static const struct of_device_id tegra_disb_pd[] = {
 #define NUM_CAPTURE_SD 1
 #define NUM_PLAYBACK_SD 1
 
+/* GSC_ID register */
+#define HDA_GSC_REG		0x1e0
+
 struct hda_tegra {
 	struct azx chip;
 	struct device *dev;
@@ -686,7 +689,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	struct azx *chip = &hda->chip;
 	struct platform_device *pdev = to_platform_device(hda->dev);
 	struct device_node *np = pdev->dev.of_node;
-	int num_codec_slots = 0;
+	int num_codec_slots = 0, gsc_id;
 	struct hdac_bus *bus = azx_bus(chip);
 	int err;
 
@@ -707,6 +710,10 @@ static void hda_tegra_probe_work(struct work_struct *work)
 		azx_fpci_writel(chip, FIFO_WATERMARK, 0x07070707);
 		azx_fpci_writel(chip, BUFSZ_NUM_OF_FRAMES, 0x000a0a0a);
 	}
+
+	/* program HDA GSC_ID to get access to APR */
+	if (of_property_read_u32(np, "nvidia,apr-gsc-id", &gsc_id) >= 0)
+		hda_tegra_writel(gsc_id, hda->regs + HDA_GSC_REG);
 
 	/* create codec instances */
 	err = azx_probe_codecs(chip, num_codec_slots);

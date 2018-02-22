@@ -17,6 +17,13 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_HDMIVRR_H
 #define __DRIVERS_VIDEO_TEGRA_DC_HDMIVRR_H
 
+#define VCP_NV_DISP_CONTROLLER_ID      0xc8
+#define NV_MODULE_REV(controller_id)   ((controller_id) >> 8)
+#define NV_MODULE_ID(controller_id)    ((controller_id) >> 12)
+#define NV_MODULE_ID_R2                (0 << 0)
+#define NV_MODULE_ID_R3                (1 << 0)
+#define NV_MODULE_ID_R4                (2 << 0)
+
 #define VCP_MAGIC0			0xe0
 #define VCP_MAGIC1			0xe1
 #define VCP_AUX_STAT			0xe2

@@ -145,6 +145,11 @@ static bool hdmivrr_verify_checksum(char *buf, int len)
 	return buf[len-1] == cksum;
 }
 
+static bool hdmivrr_is_module_id_r2(u16 display_controller_id)
+{
+	return (NV_MODULE_ID(display_controller_id) == NV_MODULE_ID_R2);
+}
+
 static int hdmivrr_set_vcp(struct tegra_hdmi *hdmi, u8 reg, u16 val)
 {
 	int status;
@@ -756,10 +761,6 @@ static bool tegra_hdmivrr_fb_mode_is_compatible(struct tegra_hdmi *hdmi,
 {
 	struct fb_videomode m_tmp;
 
-	if ((m->vmode & FB_VMODE_IS_DETAILED) ||
-		!(m->vmode & FB_VMODE_IS_CEA))
-		return false;
-
 	/* Currently HDMI VRR is supported only in 1920x1080p 60Hz mode.
 	 * 1920x1080p 60Hz CEA mode index is 16. Strip out vmode flags
 	 * that we don't expect to find in this CEA mode before comparison,
@@ -788,6 +789,8 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	struct fb_videomode *m;
 	struct fb_videomode m_vrr;
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	u16 disp_controller_id = 0;
+	bool module_id_r2;
 
 	if (!head)
 		return;
@@ -798,6 +801,12 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 		return;
 
 	if (!vrr->capability)
+		return;
+
+	if (!hdmivrr_get_vcp(hdmi, VCP_NV_DISP_CONTROLLER_ID,
+			     &disp_controller_id))
+		module_id_r2 = hdmivrr_is_module_id_r2(disp_controller_id);
+	else
 		return;
 
 	/* Check whether VRR modes were already added */
@@ -818,7 +827,17 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 		if (m->vmode & FB_VMODE_VRR)
 			break;
 
-		if (tegra_hdmivrr_fb_mode_is_compatible(hdmi, m)) {
+		if ((m->vmode & FB_VMODE_IS_DETAILED) ||
+		   !(m->vmode & FB_VMODE_IS_CEA))
+			continue;
+
+		/* Currently HDMI VRR is supported on
+		 * Rev 2 monitors - in only 1920x1080p 60Hz mode.
+		 * Rev 3/4 monitors - in all modes.
+		 * Note: Rev 1 monitors do not have HDMI inputs.
+		 */
+		if (!module_id_r2 || (module_id_r2 &&
+		    tegra_hdmivrr_fb_mode_is_compatible(hdmi, m))) {
 			m_vrr = *m;
 			m_vrr.vmode |= FB_VMODE_VRR;
 			fb_add_videomode(&m_vrr, head);

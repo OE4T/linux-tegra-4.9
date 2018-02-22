@@ -86,51 +86,6 @@ int nvmap_dmabuf_stash_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_NVMAP_DMABUF_STASH_STATS
-struct nvmap_stash_stats {
-	unsigned long long hits;
-	unsigned long long all_hits;
-	unsigned long long misses;
-	unsigned long long evictions;
-
-	unsigned long long stashed_iova;
-	unsigned long long stashed_maps;
-};
-
-static DEFINE_SPINLOCK(nvmap_stat_lock);
-static struct nvmap_stash_stats nvmap_stash_stats;
-
-#define stash_stat_inc(var)			\
-	do {					\
-		spin_lock(&nvmap_stat_lock);	\
-		nvmap_stash_stats.var += 1;	\
-		spin_unlock(&nvmap_stat_lock);	\
-	} while (0)
-#define stash_stat_dec(var)			\
-	do {					\
-		spin_lock(&nvmap_stat_lock);	\
-		nvmap_stash_stats.var -= 1;	\
-		spin_unlock(&nvmap_stat_lock);	\
-	} while (0)
-#define stash_stat_add_iova(handle)					\
-	do {								\
-		spin_lock(&nvmap_stat_lock);				\
-		nvmap_stash_stats.stashed_iova += (handle)->size;	\
-		spin_unlock(&nvmap_stat_lock);				\
-	} while (0)
-#define stash_stat_sub_iova(handle)					\
-	do {								\
-		spin_lock(&nvmap_stat_lock);				\
-		nvmap_stash_stats.stashed_iova -= (handle)->size;	\
-		spin_unlock(&nvmap_stat_lock);				\
-	} while (0)
-#else
-#define stash_stat_inc(var)
-#define stash_stat_dec(var)
-#define stash_stat_add_iova(handle)
-#define stash_stat_sub_iova(handle)
-#endif
-
 static int nvmap_dmabuf_attach(struct dma_buf *dmabuf, struct device *dev,
 			       struct dma_buf_attachment *attach)
 {
@@ -153,22 +108,6 @@ static void nvmap_dmabuf_detach(struct dma_buf *dmabuf,
 }
 
 /*
- * Add this sgt to the stash - should be called when the SGT's ref count hits
- * 0.
- */
-#ifdef CONFIG_NVMAP_DMABUF_STASH
-static void __nvmap_dmabuf_add_stash(struct nvmap_handle_sgt *nvmap_sgt)
-{
-	pr_debug("Adding mapping to stash.\n");
-	mutex_lock(&nvmap_stashed_maps_lock);
-	list_add(&nvmap_sgt->stash_entry, &nvmap_stashed_maps);
-	mutex_unlock(&nvmap_stashed_maps_lock);
-	stash_stat_inc(stashed_maps);
-	stash_stat_add_iova(nvmap_sgt->owner->handle);
-}
-#endif
-
-/*
  * Make sure this mapping is no longer stashed - this corresponds to a "hit". If
  * the mapping is not stashed this is just a no-op.
  */
@@ -183,9 +122,6 @@ static void __nvmap_dmabuf_del_stash(struct nvmap_handle_sgt *nvmap_sgt)
 	pr_debug("Removing map from stash.\n");
 	list_del_init(&nvmap_sgt->stash_entry);
 	mutex_unlock(&nvmap_stashed_maps_lock);
-	stash_stat_inc(hits);
-	stash_stat_dec(stashed_maps);
-	stash_stat_sub_iova(nvmap_sgt->owner->handle);
 }
 
 static inline bool access_vpr_phys(struct device *dev) {
@@ -241,9 +177,6 @@ static void __nvmap_dmabuf_evict_stash_locked(
 {
 	if (!list_empty(&nvmap_sgt->stash_entry))
 		list_del_init(&nvmap_sgt->stash_entry);
-
-	stash_stat_dec(stashed_maps);
-	stash_stat_sub_iova(nvmap_sgt->owner->handle);
 }
 
 /*
@@ -301,15 +234,7 @@ static void __nvmap_dmabuf_stash_sgt_locked(struct dma_buf_attachment *attach,
 			if (!atomic_sub_and_test(1, &nvmap_sgt->refs))
 				goto done;
 
-			/*
-			 * If we get here, the ref count is zero. Stash the
-			 * mapping.
-			 */
-#ifdef CONFIG_NVMAP_DMABUF_STASH
-			__nvmap_dmabuf_add_stash(nvmap_sgt);
-#else
 			__nvmap_dmabuf_free_sgt_locked(nvmap_sgt);
-#endif
 			goto done;
 		}
 	}
@@ -343,12 +268,9 @@ static struct sg_table *__nvmap_dmabuf_get_sgt_locked(
 		sgt = nvmap_sgt->sgt;
 		atomic_inc(&nvmap_sgt->refs);
 		__nvmap_dmabuf_del_stash(nvmap_sgt);
-		stash_stat_inc(all_hits);
 		break;
 	}
 
-	if (!sgt)
-		stash_stat_inc(misses);
 	return sgt;
 }
 
@@ -404,9 +326,6 @@ struct sg_table *_nvmap_dmabuf_map_dma_buf(
 	}
 
 cache_hit:
-#ifdef CONFIG_NVMAP_DMABUF_STASH
-	BUG_ON(attach->priv && attach->priv != sgt);
-#endif
 	attach->priv = sgt;
 	mutex_unlock(&info->maps_lock);
 	return sgt;
@@ -795,131 +714,4 @@ int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client,
 error:
 	dma_buf_put(dmabuf);
 	return ret;
-}
-
-/*
- * List detailed info for all buffers allocated.
- */
-#ifdef CONFIG_NVMAP_DMABUF_STASH
-static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
-{
-	struct nvmap_handle_sgt *nvmap_sgt;
-	struct nvmap_handle *handle;
-	struct nvmap_client *client;
-	const char *name;
-	phys_addr_t addr;
-
-	mutex_lock(&nvmap_stashed_maps_lock);
-	list_for_each_entry(nvmap_sgt, &nvmap_stashed_maps, stash_entry) {
-		handle = nvmap_sgt->owner->handle;
-		client = nvmap_client_get(handle->owner);
-		name = "unknown";
-
-		if (client) {
-			if (strcmp(client->name, "user") == 0)
-				name = client->task->comm;
-			else
-				name = client->name;
-		}
-
-		seq_printf(s, "%s: ", name);
-		seq_printf(s, " flags = 0x%08x, refs = %d\n",
-			   handle->flags, atomic_read(&handle->ref));
-
-		seq_printf(s, "  device = %s, mapping = %lx\n",
-			   dev_name(nvmap_sgt->dev),
-			   (unsigned long)nvmap_sgt->mapping);
-		addr = sg_dma_address(nvmap_sgt->sgt->sgl);
-		seq_printf(s, "  IO addr = %pa + 0x%zx\n",
-			&addr, handle->size);
-
-		/* Cleanup. */
-		nvmap_client_put(client);
-	}
-	mutex_unlock(&nvmap_stashed_maps_lock);
-
-	return 0;
-}
-
-static int __nvmap_dmabuf_stashes_open(struct inode *inode,
-				       struct file *file)
-{
-	return single_open(file, __nvmap_dmabuf_stashes_show, NULL);
-}
-
-static const struct file_operations nvmap_dmabuf_stashes_fops = {
-	.open    = __nvmap_dmabuf_stashes_open,
-	.read    = seq_read,
-	.llseek  = seq_lseek,
-	.release = single_release,
-};
-#endif
-
-#define NVMAP_DMABUF_WO_TRIGGER_NODE(trigger, name)			\
-	DEFINE_SIMPLE_ATTRIBUTE(__nvmap_dmabuf_##name##_fops, NULL,	\
-				trigger, "%llu");
-#define NVMAP_DMABUF_WO_DEBUGFS(name, root)				\
-	do {								\
-		if (!debugfs_create_file(__stringify(name), S_IWUSR, root, \
-					 NULL, &__nvmap_dmabuf_##name##_fops))\
-			return;						\
-	} while (0)
-
-#ifdef CONFIG_NVMAP_DMABUF_STASH_STATS
-
-/*
- * Clear the stash stats counting.
- */
-static int __nvmap_dmabuf_clear_stash_stats(void *data, u64 val)
-{
-	spin_lock(&nvmap_stat_lock);
-	nvmap_stash_stats.hits = 0;
-	nvmap_stash_stats.all_hits = 0;
-	nvmap_stash_stats.misses = 0;
-	nvmap_stash_stats.evictions = 0;
-	spin_unlock(&nvmap_stat_lock);
-	return 0;
-}
-NVMAP_DMABUF_WO_TRIGGER_NODE(__nvmap_dmabuf_clear_stash_stats, clear_stats);
-#endif
-
-void nvmap_dmabuf_debugfs_init(struct dentry *nvmap_root)
-{
-	struct dentry *dmabuf_root;
-
-	if (!nvmap_root)
-		return;
-
-	dmabuf_root = debugfs_create_dir("dmabuf", nvmap_root);
-	if (!dmabuf_root)
-		return;
-
-#if defined(CONFIG_NVMAP_DMABUF_STASH_STATS)
-#define CACHE_STAT(root, stat)						\
-	do {								\
-		if (!debugfs_create_u64(__stringify(stat), S_IRUGO,	\
-					root, &nvmap_stash_stats.stat)) \
-			return;						\
-	} while (0)
-
-	CACHE_STAT(dmabuf_root, hits);
-	CACHE_STAT(dmabuf_root, all_hits);
-	CACHE_STAT(dmabuf_root, misses);
-	CACHE_STAT(dmabuf_root, evictions);
-	CACHE_STAT(dmabuf_root, stashed_iova);
-	CACHE_STAT(dmabuf_root, stashed_maps);
-	NVMAP_DMABUF_WO_DEBUGFS(clear_stats, dmabuf_root);
-#endif
-
-#define DMABUF_INFO_FILE(root, file)					\
-	do {								\
-		if (!debugfs_create_file(__stringify(file), S_IRUGO,	\
-					 root, NULL,			\
-					 &nvmap_dmabuf_##file##_fops))	\
-			return;						\
-	} while (0)
-
-#ifdef CONFIG_NVMAP_DMABUF_STASH
-	DMABUF_INFO_FILE(dmabuf_root, stashes);
-#endif
 }

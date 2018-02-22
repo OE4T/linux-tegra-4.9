@@ -1821,7 +1821,6 @@ int __init nvmap_probe(struct platform_device *pdev)
 	nvmap_stats_init(nvmap_debug_root);
 	platform_set_drvdata(pdev, dev);
 
-	nvmap_dmabuf_debugfs_init(nvmap_debug_root);
 	e = nvmap_dmabuf_stash_init();
 	if (e)
 		goto fail_heaps;

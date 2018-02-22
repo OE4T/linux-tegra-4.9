@@ -65,22 +65,6 @@ config NVMAP_CACHE_MAINT_BY_SET_WAYS
 	 where inner cache includes only L1. For the systems, where inner cache
 	 includes L1 and L2, keep this option disabled.
 
-config NVMAP_DMABUF_STASH
-	bool "Enable stashing of IOVA maps with dmabuf"
-	default y
-	help
-	  Set to Y if you would like nvmap to stash maps when using dma
-	  bufs. This will speed up remapping of the same handle at the cost
-	  of using more IOVA space.
-
-config NVMAP_DMABUF_STASH_STATS
-	bool "Enable stat tracking on the stash"
-	depends on NVMAP_DMABUF_STASH
-	help
-	  Say Y to enable tracking of basic cache statistics on the dmabuf
-	  stash. This adds some overhead but should be very useful for
-	  debugging memory leaks.
-
 config NVMAP_FORCE_ZEROED_USER_PAGES
 	bool "Only alloc zeroed pages for user space"
 	default y

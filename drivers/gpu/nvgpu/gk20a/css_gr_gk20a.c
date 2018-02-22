@@ -75,7 +75,7 @@ static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
 }
 
 /* informs hw how many snapshots have been processed (frees up fifo space) */
-void css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
+void gk20a_css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
 {
 	if (done > 0) {
 		gk20a_writel(g, perf_pmasys_mem_bump_r(),
@@ -102,7 +102,7 @@ static void css_hw_reset_streaming(struct gk20a *g)
 			perf_pmasys_control_membuf_clear_status_doit_f());
 
 	/* pointing all pending snapshots as handled */
-	css_hw_set_handled_snapshots(g, css_hw_get_pending_snapshots(g));
+	gk20a_css_hw_set_handled_snapshots(g, css_hw_get_pending_snapshots(g));
 }
 
 /*

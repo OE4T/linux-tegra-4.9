@@ -129,7 +129,7 @@ struct gk20a_cs_snapshot {
 	struct gk20a_cs_snapshot_fifo_entry	*hw_get;
 };
 
-void css_hw_set_handled_snapshots(struct gk20a *g, u32 done);
+void gk20a_css_hw_set_handled_snapshots(struct gk20a *g, u32 done);
 int css_hw_enable_snapshot(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client);
 void css_hw_disable_snapshot(struct gr_gk20a *gr);

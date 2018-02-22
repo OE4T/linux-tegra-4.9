@@ -623,7 +623,7 @@ static const struct gpu_ops gp10b_ops = {
 		.enable_snapshot = css_hw_enable_snapshot,
 		.disable_snapshot = css_hw_disable_snapshot,
 		.check_data_available = css_hw_check_data_available,
-		.set_handled_snapshots = css_hw_set_handled_snapshots,
+		.set_handled_snapshots = gk20a_css_hw_set_handled_snapshots,
 		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
 		.release_perfmon_ids = css_gr_release_perfmon_ids,
 	},

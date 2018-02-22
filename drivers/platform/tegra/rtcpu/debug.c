@@ -33,6 +33,7 @@
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra-mc-sid.h>
 
 struct camrtc_debug {
@@ -46,6 +47,7 @@ struct camrtc_debug {
 		char *test_case;
 		size_t test_case_size;
 		u32 test_timeout;
+		unsigned long test_bw;
 	} parameters;
 	struct camrtc_test_mem {
 		u32 index;
@@ -654,6 +656,7 @@ static int camrtc_run_mem_test(struct seq_file *file,
 	struct device *isp_dev = crd->mem_devices[2];
 	struct sg_table isp_sgt[ARRAY_SIZE(crd->mem)];
 	struct camrtc_test_mem *mem0 = &crd->mem[0];
+	struct tegra_bwmgr_client *bwmgr = NULL;
 
 	memset(vi_sgt, 0, sizeof(vi_sgt));
 	memset(isp_sgt, 0, sizeof(isp_sgt));
@@ -711,6 +714,21 @@ static int camrtc_run_mem_test(struct seq_file *file,
 						DMA_TO_DEVICE);
 	}
 
+	if (crd->parameters.test_bw != 0)
+		bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_CAMERA_NON_ISO);
+
+	if (!IS_ERR_OR_NULL(bwmgr)) {
+		ret = tegra_bwmgr_set_emc(bwmgr, crd->parameters.test_bw,
+				TEGRA_BWMGR_SET_EMC_SHARED_BW);
+		if (ret < 0)
+			dev_info(dev, "emc request rate %lu failed, %d\n",
+				crd->parameters.test_bw, ret);
+		else
+			dev_dbg(dev, "requested emc rate %lu\n",
+				crd->parameters.test_bw);
+	}
+
+
 	BUILD_BUG_ON_MISMATCH(
 		struct camrtc_dbg_request, run_mem_test_data.data,
 		struct camrtc_dbg_response, run_mem_test_data.data);
@@ -736,6 +754,10 @@ static int camrtc_run_mem_test(struct seq_file *file,
 	}
 
 unmap:
+	if (!IS_ERR_OR_NULL(bwmgr)) {
+		tegra_bwmgr_unregister(bwmgr);
+	}
+
 	for (i = 0; i < ARRAY_SIZE(vi_sgt); i++) {
 		if (vi_sgt[i].sgl) {
 			dma_unmap_sg(vi_dev, vi_sgt[i].sgl,
@@ -1219,6 +1241,7 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 {
 	struct device *dev = &ch->dev;
 	struct camrtc_debug *crd;
+	uint32_t bw;
 
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_request));
 	BUG_ON(ch->ivc.frame_size < sizeof(struct camrtc_dbg_response));
@@ -1249,6 +1272,19 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	crd->mem_devices[0] = camrtc_get_linked_device(dev, NV(mem-map), 0);
 	crd->mem_devices[1] = camrtc_get_linked_device(dev, NV(mem-map), 1);
 	crd->mem_devices[2] = camrtc_get_linked_device(dev, NV(mem-map), 2);
+
+	if (of_property_read_u32(dev->of_node, NV(test-bw), &bw) == 0) {
+		unsigned long test_bw;
+
+		if (bw == 0xFFFFFFFFU)
+			test_bw = tegra_bwmgr_get_max_emc_rate();
+		else
+			test_bw = tegra_bwmgr_round_rate(bw);
+
+		crd->parameters.test_bw = test_bw;
+
+		dev_dbg(dev, "using emc rate %lu for tests\n", test_bw);
+	}
 
 	if (crd->mem_devices[0] == NULL) {
 		dev_dbg(dev, "missing %s\n", NV(mem-map));

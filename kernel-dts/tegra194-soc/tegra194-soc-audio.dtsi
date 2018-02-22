@@ -622,6 +622,9 @@
 		/* Set watermark registers to default value */
 		nvidia,set-watermark-reg;
 
+		/* program GSC_ID */
+		nvidia,apr-gsc-id = <10>;
+
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			 <&bpmp_clks TEGRA194_CLK_MAUD>,
 			 <&bpmp_clks TEGRA194_CLK_HDA>,

@@ -254,6 +254,9 @@ int nvgpu_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next,
 int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 chid,
 			      bool add, bool wait_for_finish);
 
+int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
+					    u32 chid, bool add,
+					    bool wait_for_finish);
 int gk20a_fifo_suspend(struct gk20a *g);
 
 bool gk20a_fifo_mmu_fault_pending(struct gk20a *g);

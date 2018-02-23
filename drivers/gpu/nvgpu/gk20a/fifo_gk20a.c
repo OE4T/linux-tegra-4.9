@@ -55,9 +55,7 @@
 #define FECS_METHOD_WFI_RESTORE 0x80000
 #define FECS_MAILBOX_0_ACK_RESTORE 0x4
 
-static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
-					    u32 chid, bool add,
-					    bool wait_for_finish);
+
 static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg);
 
 static const char *const pbdma_intr_fault_type_desc[] = {
@@ -3275,7 +3273,7 @@ void gk20a_fifo_runlist_hw_submit(struct gk20a *g, u32 runlist_id,
 		fifo_eng_runlist_length_f(count));
 }
 
-static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
+int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 chid, bool add,
 					    bool wait_for_finish)
 {

@@ -2502,11 +2502,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 			tegra_dc_sor_attach(dp->sor);
 		}
 	} else {
-		/*
-		 * Fake panel. Just enable host.
-		 * No not engage with panel.
-		 */
-		tegra_sor_tpg(dp->sor, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
+		/* Just enable host. */
+		tegra_dp_tpg(dp, TEGRA_DC_DP_TRAINING_PATTERN_DISABLE,
 			      dp->link_cfg.lane_count);
 		tegra_dc_sor_attach(dp->sor);
 	}

@@ -1930,6 +1930,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		host->mmc->caps2 |= MMC_CAP2_PERIODIC_CACHE_FLUSH;
 
 	host->mmc->caps2 |= MMC_CAP2_EN_CLK_TO_ACCESS_REG;
+	host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
 
 	if (tegra_host->force_non_rem_rescan)
 		host->mmc->caps2 |= MMC_CAP2_FORCE_RESCAN;

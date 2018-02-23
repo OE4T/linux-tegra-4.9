@@ -2065,7 +2065,7 @@ static void wait_for_dma_to_go_idle(uint qinx, bool is_rx)
 			wait_for_idle = false;
 		else {
 			wait_for_idle = true;
-			usleep_range(50, 60);
+			udelay(10);
 		}
 	} while (wait_for_idle && time_is_after_jiffies(timeout));
 

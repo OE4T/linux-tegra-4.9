@@ -285,6 +285,10 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u16 *dirty_rect, bool wait_for_vblank, bool lock_flip);
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
+int tegra_nvdisp_disable_wins(struct tegra_dc *dc,
+			struct tegra_dc_win_detach_state *win_state_arr);
+int tegra_nvdisp_restore_wins(struct tegra_dc *dc,
+			struct tegra_dc_win_detach_state *win_state_arr);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 int tegra_nvdisp_head_disable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);

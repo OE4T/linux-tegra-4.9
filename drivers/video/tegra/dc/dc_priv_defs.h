@@ -427,6 +427,22 @@ struct tegra_dc_out_info {
 };
 #endif
 
+/*
+ * struct tegra_dc_win_detach_state - Caches the relevant window register state
+ * when disabling and restoring windows during SOR detach
+ *
+ * This struct is only used on nvdisplay.
+ *
+ * @win_set_control_reg - Cached win_set_control_r() value before disable
+ * @win_scaler_usage_reg - Cached win_scaler_usage_r() value before disable
+ * @win_options_reg - Cached win_options_r() value before disable
+ */
+struct tegra_dc_win_detach_state {
+	u32 win_set_control_reg;
+	u32 win_scaler_usage_reg;
+	u32 win_options_reg;
+};
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;

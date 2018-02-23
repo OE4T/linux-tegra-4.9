@@ -181,6 +181,8 @@ struct tegra_dc_sor_data {
 	bool   power_is_up;
 
 	int dc_reg_ctx[DC_N_WINDOWS + 5];
+	struct tegra_dc_win_detach_state *win_state_arr;
+
 	enum {
 		SOR_ATTACHED = 1,
 		SOR_DETACHING,

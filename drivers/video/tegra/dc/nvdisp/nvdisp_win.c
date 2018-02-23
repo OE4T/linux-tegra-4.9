@@ -1093,3 +1093,106 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 
 	return 0;
 }
+
+int tegra_nvdisp_disable_wins(struct tegra_dc *dc,
+			struct tegra_dc_win_detach_state *win_state_arr)
+{
+	u32 update_mask = 0;
+	u32 act_req_mask = 0;
+	int i, ret;
+
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+		struct tegra_dc_win_detach_state *win_state;
+
+		if (!win || !win->dc)
+			continue;
+
+		/*
+		 * Cache the relevant register state for this window.
+		 *
+		 * If the window is already detached, there's nothing to cache.
+		 * We want to avoid reading any additional window registers
+		 * since the window owner must at least be set in assembly.
+		 */
+		win_state = &win_state_arr[i];
+		win_state->win_set_control_reg =
+				nvdisp_win_read(win, win_set_control_r());
+		if (win_state->win_set_control_reg ==
+			win_set_control_owner_none_f())
+			continue;
+
+		win_state->win_scaler_usage_reg =
+				nvdisp_win_read(win, win_scaler_usage_r());
+		win_state->win_options_reg =
+				nvdisp_win_read(win, win_options_r());
+
+		/* Detach and disable this window. */
+		nvdisp_win_write(win, win_set_control_owner_none_f(),
+				win_set_control_r());
+		nvdisp_win_write(win, win_scaler_usage_hbypass_f(1) |
+				win_scaler_usage_vbypass_f(1) |
+				win_scaler_usage_use422_disable_f(),
+				win_scaler_usage_r());
+		nvdisp_win_write(win, win_options_win_enable_disable_f(),
+				win_options_r());
+
+		update_mask |=
+			nvdisp_cmd_state_ctrl_win_a_update_enable_f() << i;
+		act_req_mask |=
+			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << i;
+	}
+
+	ret = tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask);
+	if (ret)
+		dev_err(&dc->ndev->dev,
+			"%s: DC timeout when disabling windows\n", __func__);
+
+	return ret;
+}
+
+int tegra_nvdisp_restore_wins(struct tegra_dc *dc,
+			struct tegra_dc_win_detach_state *win_state_arr)
+{
+	u32 update_mask = 0;
+	u32 act_req_mask = 0;
+	int i, ret;
+
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+		struct tegra_dc_win_detach_state *win_state;
+
+		if (!win || !win->dc)
+			continue;
+
+		/*
+		 * If this window was already detached before disable, there's
+		 * nothing to restore.
+		 */
+		win_state = &win_state_arr[i];
+		if (win_state->win_set_control_reg ==
+			win_set_control_owner_none_f())
+			continue;
+
+		nvdisp_win_write(win, win_state->win_set_control_reg,
+				win_set_control_r());
+		nvdisp_win_write(win, win_state->win_scaler_usage_reg,
+				win_scaler_usage_r());
+		nvdisp_win_write(win, win_state->win_options_reg,
+				win_options_r());
+
+		update_mask |=
+			nvdisp_cmd_state_ctrl_win_a_update_enable_f() << i;
+		act_req_mask |=
+			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << i;
+	}
+
+	ret = tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask);
+	if (ret)
+		dev_err(&dc->ndev->dev,
+			"%s: DC timeout when restoring windows\n", __func__);
+
+	return ret;
+}

@@ -855,6 +855,17 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	else
 		sor->audio_support = true;
 
+	if (tegra_dc_is_nvdisplay()) {
+		sor->win_state_arr = devm_kzalloc(&dc->ndev->dev,
+					tegra_dc_get_numof_dispwindows() *
+					sizeof(*sor->win_state_arr),
+					GFP_KERNEL);
+		if (!sor->win_state_arr) {
+			err = -ENOMEM;
+			goto err_rst;
+		}
+	}
+
 	sor->dc = dc;
 	sor->np = sor_np;
 	sor->sor_clk = sor_clk;
@@ -936,6 +947,9 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_debug_destroy(sor);
 
 	iounmap(sor->base);
+
+	if (tegra_dc_is_nvdisplay())
+		devm_kfree(dev, sor->win_state_arr);
 	devm_kfree(dev, sor);
 }
 
@@ -1730,12 +1744,9 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 
 /* Disable windows and set minimum raster timings */
 static void
-tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
+tegra_dc_sor_disable_win_short_raster_t21x(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
-
-	if (tegra_dc_is_nvdisplay())
-		return;
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
@@ -1779,12 +1790,9 @@ tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 
 /* Restore previous windows status and raster timings */
 static void
-tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
+tegra_dc_sor_restore_win_and_raster_t21x(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
-
-	if (tegra_dc_is_nvdisplay())
-		return;
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
@@ -1805,6 +1813,24 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_DISP_ACTIVE);
 
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+}
+
+static inline void tegra_sor_save_dc_state(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_dc_is_nvdisplay())
+		tegra_nvdisp_disable_wins(sor->dc, sor->win_state_arr);
+	else
+		tegra_dc_sor_disable_win_short_raster_t21x(sor->dc,
+			sor->dc_reg_ctx);
+}
+
+static inline void tegra_sor_restore_dc_state(struct tegra_dc_sor_data *sor)
+{
+	if (tegra_dc_is_nvdisplay())
+		tegra_nvdisp_restore_wins(sor->dc, sor->win_state_arr);
+	else
+		tegra_dc_sor_restore_win_and_raster_t21x(sor->dc,
+			sor->dc_reg_ctx);
 }
 
 void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
@@ -1879,14 +1905,14 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
 
-	if (sor->sor_state != SOR_ATTACHED)
+	if (sor->sor_state != SOR_ATTACHED && sor->sor_state != SOR_SLEEP)
 		return;
 
 	tegra_dc_get(dc);
 
 	tegra_dc_sor_sleep(sor);
 
-	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
+	tegra_sor_save_dc_state(sor);
 
 	sor->sor_state = SOR_DETACHING;
 	tegra_dc_put(dc);
@@ -1931,7 +1957,7 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 
 	tegra_sor_stop_dc(sor);
 
-	tegra_dc_sor_restore_win_and_raster(dc, sor->dc_reg_ctx);
+	tegra_sor_restore_dc_state(sor);
 
 	tegra_dc_writel(dc, dc_int_mask, DC_CMD_INT_MASK);
 	sor->sor_state = SOR_DETACHED;

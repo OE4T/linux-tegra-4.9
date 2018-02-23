@@ -316,7 +316,10 @@ static void show_map(struct task_struct *tsk, u64 addr)
 	pr_alert("Library at 0x%llx: 0x%lx %s\n", addr, vma->vm_start, p);
 }
 
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 void invalidate_btb(void);
+#endif
+
 /*
  * Something tried to access memory that isn't in our memory map. User mode
  * accesses just cause a SIGSEGV
@@ -717,6 +720,7 @@ asmlinkage void __exception do_el0_ia_bp_hardening(unsigned long addr,
 						   unsigned int esr,
 						   struct pt_regs *regs)
 {
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 	/*
 	 * We've taken an instruction abort from userspace and not yet
 	 * re-enabled IRQs. If the address is a kernel address, apply
@@ -726,6 +730,7 @@ asmlinkage void __exception do_el0_ia_bp_hardening(unsigned long addr,
 		invalidate_btb();
 		asm("dsb nsh");
 	}
+#endif
 
 	local_irq_enable();
 	do_mem_abort(addr, esr, regs);
@@ -733,10 +738,12 @@ asmlinkage void __exception do_el0_ia_bp_hardening(unsigned long addr,
 
 asmlinkage void __exception do_el0_bp_hardening(unsigned long addr)
 {
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 	if (addr > TASK_SIZE) {
 		invalidate_btb();
 		asm("dsb nsh");
 	}
+#endif
 }
 
 /*
@@ -766,6 +773,7 @@ asmlinkage void __exception do_el0_sp_pc_abort_bp_hardening(unsigned long addr,
 						   unsigned int esr,
 						   struct pt_regs *regs)
 {
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
 	/*
 	 * We've taken an instruction abort from userspace and not yet
 	 * re-enabled IRQs. If the address is a kernel address, apply
@@ -775,6 +783,7 @@ asmlinkage void __exception do_el0_sp_pc_abort_bp_hardening(unsigned long addr,
 		invalidate_btb();
 		asm("dsb nsh");
 	}
+#endif
 
 	local_irq_enable();
 	do_sp_pc_abort(addr, esr, regs);

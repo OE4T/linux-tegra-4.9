@@ -445,7 +445,7 @@ static void carmel_ras_enable(void *info)
 		ras_read_error_control();
 	}
 
-	pr_info("%s:RAS enabled on cpu%d\n", __func__, cpu);
+	pr_info("%s: RAS enabled on cpu%d\n", __func__, cpu);
 }
 
 static int carmel_ras_enable_callback(unsigned int cpu)
@@ -782,7 +782,7 @@ static int ras_trip(u64 errx, u64 pfgctl)
 		__func__, ras_read_errselr());
 
 	err_ctl = ras_read_error_control();
-	pr_crit("%s:Error Record ERRCTL = 0x%lx\n", __func__, err_ctl);
+	pr_crit("%s: Error Record ERRCTL = 0x%lx\n", __func__, err_ctl);
 	if (!(err_ctl & RAS_CTL_ED)) {
 		pr_crit("%s: Error Detection is not enabled", __func__);
 		return 0;
@@ -798,7 +798,7 @@ static int ras_trip(u64 errx, u64 pfgctl)
 	/* Set coundown value */
 	ras_write_pfg_cdn(ERRi_PFGCDN_CDN_1);
 	/* Write to ERR<X>PFGCTL */
-	pr_info("%s:Writing 0x%llx to ERRXPFGCTL\n", __func__, pfgctl);
+	pr_info("%s: Writing 0x%llx to ERRXPFGCTL\n", __func__, pfgctl);
 	ras_write_pfg_control(pfgctl);
 	return 0;
 }

@@ -16,11 +16,16 @@
 #include <linux/interrupt.h>
 #include <linux/of_device.h>
 #include <linux/arm64_ras.h>
+#include <linux/of_irq.h>
+#include <linux/cpuhotplug.h>
 
-static int fhi_irq;
+static int fhi_irq[CONFIG_NR_CPUS];
 static u8 is_ras_probe_done;
 static LIST_HEAD(fhi_callback_list);
 static DEFINE_RAW_SPINLOCK(fhi_lock);
+
+/* saved hotplug state */
+static enum cpuhp_state hp_state;
 
 static const struct of_device_id arm64_ras_match[] = {
 	{
@@ -343,8 +348,7 @@ static irqreturn_t ras_fhi_isr(int irq, void *dev_id)
 	struct ras_fhi_callback *callback;
 
 	/* Iterate through the banks looking for one with an error */
-	pr_crit("CPU%d RAS: Fault Handling Interrupt %d detected\n",
-		smp_processor_id(), irq);
+	pr_crit("CPU%d: RAS: FHI %d detected\n", smp_processor_id(), irq);
 
 	raw_spin_lock_irqsave(&fhi_lock, flags);
 	list_for_each_entry(callback, &fhi_callback_list, node) {
@@ -355,19 +359,49 @@ static irqreturn_t ras_fhi_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int ras_fhi_enable(unsigned int cpu)
+{
+	if (irq_force_affinity(fhi_irq[cpu], cpumask_of(cpu))) {
+		pr_info("%s: Failed to set IRQ %d affinity to CPU%d\n",
+			__func__, fhi_irq[cpu], cpu);
+		return -EINVAL;
+	}
+	enable_irq(fhi_irq[cpu]);
+	pr_info("%s: FHI %d enabled on CPU%d\n", __func__, fhi_irq[cpu], cpu);
+	return 0;
+}
+
+static int ras_fhi_disable(unsigned int cpu)
+{
+	int boot_cpu = 0;
+
+	disable_irq_nosync(fhi_irq[cpu]);
+	if (irq_force_affinity(fhi_irq[cpu], cpumask_of(boot_cpu)))
+		pr_info("%s: Failed to set IRQ %d affinity to boot cpu %d\n",
+					__func__, fhi_irq[cpu], boot_cpu);
+	pr_info("%s: FHI %d disabled\n", __func__, fhi_irq[cpu]);
+	return 0;
+}
+
 /* Register Fault Handling Interrupt or FHI
  * for Correctable Errors
  */
 static int ras_register_fhi_isr(struct platform_device *pdev)
 {
-	int err = 0;
+	int err = 0, cpu, irq_count;
 
-	fhi_irq = platform_get_irq(pdev, 0);
-	if (fhi_irq <= 0) {
-		dev_err(&pdev->dev, "No IRQ\n");
-		err = -ENOENT;
-		goto isr_err;
+	irq_count = platform_irq_count(pdev);
+
+	for_each_possible_cpu(cpu) {
+		BUG_ON(cpu >= irq_count);
+		fhi_irq[cpu] = platform_get_irq(pdev, cpu);
+		if (fhi_irq[cpu] <= 0) {
+			dev_err(&pdev->dev, "No IRQ\n");
+			err = -ENOENT;
+			goto isr_err;
+		}
 	}
+
 isr_err:
 	return err;
 }
@@ -378,26 +412,34 @@ isr_err:
 int register_fhi_callback(struct ras_fhi_callback *callback, void *cookie)
 {
 	unsigned long flags;
-	int err = 0;
+	int err = 0, cpu = 0;
 
 	raw_spin_lock_irqsave(&fhi_lock, flags);
 	list_add(&callback->node, &fhi_callback_list);
 	raw_spin_unlock_irqrestore(&fhi_lock, flags);
 
-	if (!cookie)
-		goto isr_err;
-
-	err = request_irq(fhi_irq, ras_fhi_isr,
-		IRQF_SHARED, "ras-fhi", cookie);
-	if (err) {
-		pr_err("%s: request_irq(%d) failed (%d)\n", __func__,
-		fhi_irq, err);
-		goto isr_err;
+	for_each_possible_cpu(cpu) {
+		err = request_irq(fhi_irq[cpu], ras_fhi_isr,
+				IRQ_PER_CPU, "ras-fhi", cookie);
+		if (err) {
+			pr_err("%s: request_irq(%d) failed (%d)\n", __func__,
+					fhi_irq[cpu], err);
+			goto isr_err;
+		}
+		disable_irq(fhi_irq[cpu]);
 	}
+	/* Ensure that any CPU brought online sets up FHI */
+	hp_state = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN,
+			"arm64_ras:online",
+			ras_fhi_enable,
+			ras_fhi_disable);
+
+	if (hp_state < 0)
+		pr_info("%s: unable to register FHI\n", __func__);
+
 isr_err:
 	return err;
 }
-
 EXPORT_SYMBOL(register_fhi_callback);
 
 static int ras_probe(struct platform_device *pdev)
@@ -412,8 +454,10 @@ static int ras_probe(struct platform_device *pdev)
 			probe = 1;
 	}
 
-	if (!probe)
-		return 0;
+	if (!probe) {
+		dev_info(dev, "None of the CPUs support RAS");
+		return -EINVAL;
+	}
 
 	/* register FHI for Correctable Errors */
 	match = of_match_device(of_match_ptr(arm64_ras_match),
@@ -425,8 +469,8 @@ static int ras_probe(struct platform_device *pdev)
 	}
 	err = ras_register_fhi_isr(pdev);
 	if (err < 0) {
-		dev_info(dev, "Failed to register Fault Handling Interrupt"
-			" ISR");
+		dev_info(dev, "Failed to register Fault Handling Interrupts"
+				" ISR");
 		return err;
 	}
 
@@ -435,13 +479,13 @@ static int ras_probe(struct platform_device *pdev)
 	 */
 	smp_mb();
 	is_ras_probe_done = 1;
-	dev_info(dev, "RAS driver enabled");
+	dev_info(dev, "probed");
 	return 0;
 }
 
 static int ras_remove(struct platform_device *pdev)
 {
-	free_irq(fhi_irq, NULL);
+	cpuhp_remove_state(hp_state);
 	return 0;
 }
 

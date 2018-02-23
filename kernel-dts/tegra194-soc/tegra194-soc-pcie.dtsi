@@ -381,6 +381,8 @@
 		nvidia,margin-port-cap = <0x194>;
 		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
+		nvidia,event-cntr-ctrl = <0x1d8>;
+		nvidia,event-cntr-data = <0x1dc>;
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
@@ -445,6 +447,8 @@
 		nvidia,margin-port-cap = <0x190>;
 		nvidia,margin-lane-cntrl = <0x194>;
 		nvidia,cfg-link-cap-l1sub = <0x1b0>;
+		nvidia,event-cntr-ctrl = <0x1c4>;
+		nvidia,event-cntr-data = <0x1c8>;
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
@@ -486,6 +490,8 @@
 		nvidia,margin-port-cap = <0x194>;
 		nvidia,margin-lane-cntrl = <0x198>;
 		nvidia,cfg-link-cap-l1sub = <0x1c4>;
+		nvidia,event-cntr-ctrl = <0x1d8>;
+		nvidia,event-cntr-data = <0x1dc>;
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;

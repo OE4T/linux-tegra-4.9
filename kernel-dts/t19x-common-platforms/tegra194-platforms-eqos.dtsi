@@ -2,7 +2,7 @@
  * tegra194-platforms-eqos.dtsi: Ethernet QOS DTSI file.  Common for all
  * t194 platforms boards.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,5 +53,25 @@
 				marvell,copper-mode;
 			};
 		};
-        };
+	};
+
+	thermal-zones {
+		Tdiode_tegra {
+			trips {
+				MAKE_EQOS_TRIP(m40, -40000, 5000);
+				MAKE_EQOS_TRIP(m5, -5000, 5000);
+				MAKE_EQOS_TRIP(p30, 30000, 5000);
+				MAKE_EQOS_TRIP(p65, 65000, 5000);
+				MAKE_EQOS_TRIP(p100, 100000, 5000);
+			};
+
+			cooling-maps {
+				MAP_EQOS(m40, 1);
+				MAP_EQOS(m5, 2);
+				MAP_EQOS(p30, 3);
+				MAP_EQOS(p65, 4);
+				MAP_EQOS(p100, 5);
+			};
+		};
+	};
 };

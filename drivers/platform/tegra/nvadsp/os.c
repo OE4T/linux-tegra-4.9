@@ -63,6 +63,7 @@
 
 #define EOT	0x04 /* End of Transmission */
 #define SOH	0x01 /* Start of Header */
+#define BELL	0x07 /* Bell character */
 
 #define ADSP_TAG	"\n[ADSP OS]"
 
@@ -85,9 +86,11 @@
 #define DISABLE_MBOX2_FULL_INT	0x0
 #define ENABLE_MBOX2_FULL_INT	0xFFFFFFFF
 
-#define LOGGER_TIMEOUT		20 /* in ms */
+#define LOGGER_TIMEOUT		1 /* in ms */
 #define ADSP_WFI_TIMEOUT	800 /* in ms */
 #define LOGGER_COMPLETE_TIMEOUT	500 /* in ms */
+
+#define SEARCH_SOH_RETRY	2
 
 #define DUMP_BUFF 128
 
@@ -120,6 +123,7 @@ struct nvadsp_os_data {
 	size_t			adsp_os_size;
 	dma_addr_t		app_alloc_addr;
 	size_t			app_size;
+	int			num_start; /* registers number of time start called */
 };
 
 static struct nvadsp_os_data priv;
@@ -150,11 +154,16 @@ static void (*nvadsp_tegra_adma_dump_ch_reg)(void);
 static int adsp_logger_open(struct inode *inode, struct file *file)
 {
 	struct nvadsp_debug_log *logger = inode->i_private;
-	struct nvadsp_os_data *os_data;
 	int ret = -EBUSY;
 	char *start;
+	int i;
 
-	os_data = container_of(logger, struct nvadsp_os_data, logger);
+	mutex_lock(&priv.os_run_lock);
+	if (!priv.num_start) {
+		mutex_unlock(&priv.os_run_lock);
+		goto err_ret;
+	}
+	mutex_unlock(&priv.os_run_lock);
 
 	/*
 	 * checks if os_opened decrements to zero and if returns true. If true
@@ -165,13 +174,8 @@ static int adsp_logger_open(struct inode *inode, struct file *file)
 		goto err_ret;
 	}
 
-	ret = wait_event_interruptible(logger->wait_queue,
-				os_data->adsp_os_fw_loaded);
-	if (ret == -ERESTARTSYS)  /* check if interrupted */
-		goto err;
-
 	/* loop till writer is initilized with SOH */
-	do {
+	for (i = 0; i < SEARCH_SOH_RETRY; i++) {
 
 		ret = wait_event_interruptible_timeout(logger->wait_queue,
 			memchr(logger->debug_ram_rdr, SOH,
@@ -182,7 +186,14 @@ static int adsp_logger_open(struct inode *inode, struct file *file)
 
 		start = memchr(logger->debug_ram_rdr, SOH,
 			logger->debug_ram_sz);
-	} while (!start);
+		if (start)
+			break;
+	}
+
+	if (i == SEARCH_SOH_RETRY) {
+		ret = -EINVAL;
+		goto err;
+        }
 
 	/* maxdiff can be 0, therefore valid */
 	logger->ram_iter = start - logger->debug_ram_rdr;
@@ -222,7 +233,6 @@ static ssize_t adsp_logger_read(struct file *file, char __user *buf,
 	ssize_t ret_num_char = 1;
 	char last_char;
 
-loop:
 	last_char = logger->debug_ram_rdr[logger->ram_iter];
 
 	if ((last_char != EOT) && (last_char != 0)) {
@@ -230,7 +240,7 @@ loop:
 		if ((last_char == '\n') || (last_char == '\r')) {
 
 			if (copy_to_user(buf, ADSP_TAG, sizeof(ADSP_TAG) - 1)) {
-				dev_err(dev, "%s failed\n", __func__);
+				dev_err(dev, "%s failed in copying tag\n", __func__);
 				ret_num_char = -EFAULT;
 				goto exit;
 			}
@@ -239,7 +249,7 @@ loop:
 		} else
 #endif
 		if (copy_to_user(buf, &last_char, 1)) {
-			dev_err(dev, "%s failed\n", __func__);
+			dev_err(dev, "%s failed in copying character\n", __func__);
 			ret_num_char = -EFAULT;
 			goto exit;
 		}
@@ -256,8 +266,14 @@ loop:
 	if (ret_num_char == -ERESTARTSYS) {
 		goto exit;
 	}
-	goto loop;
 
+	last_char = BELL;
+	if (copy_to_user(buf, &last_char, 1)) {
+		dev_err(dev, "%s failed in copying bell character\n", __func__);
+		ret_num_char = -EFAULT;
+		goto exit;
+	}
+	ret_num_char = 1;
 exit:
 	return ret_num_char;
 }
@@ -1610,6 +1626,7 @@ int nvadsp_os_start(void)
 
 	}
 	priv.os_running = drv_data->adsp_os_running = true;
+	priv.num_start++;
 #if defined(CONFIG_TEGRA_ADSP_FILEIO)
 	if (!drv_data->adspff_init) {
 		ret = adspff_init();

@@ -90,10 +90,11 @@ static size_t  scrncapt_get_dcbuf_len(struct tegra_dc_dmabuf *dcbuf)
  * o outputs:
  *  - return: number of bytes copied
  */
-static size_t  scrncapt_copy_dcbuf(void *pDst,
+static size_t scrncapt_copy_dcbuf(void  __user *pDst,
 			struct tegra_dc_dmabuf *pSrcBuf, size_t len)
 {
 	size_t  copied;
+	unsigned long ret;
 
 	if (!len || !pDst || !pSrcBuf || !pSrcBuf->buf || !pSrcBuf->sgt
 		|| !pSrcBuf->sgt->nents || !pSrcBuf->sgt->sgl)
@@ -125,8 +126,13 @@ static size_t  scrncapt_copy_dcbuf(void *pDst,
 			l = (len < (ofs + l)) ? len - ofs : l;
 
 			vaddr_src = ioremap_cache(sg_phys(sg), l);
-			memcpy((char *)pDst + ofs, vaddr_src, l);
+			ret = copy_to_user((void __user *)((char *)pDst + ofs),
+						vaddr_src, l);
 			iounmap(vaddr_src);
+			if (ret) {
+				local_irq_restore(flags);
+				return -EFAULT;
+			}
 
 			ofs += l;
 			if (sg->offset) {
@@ -384,15 +390,15 @@ static int  scrncapt_get_info_cursor(struct tegra_dc *dc, void __user *ptr)
 }
 
 
-static int  scrncapt_get_info_cursor_data(struct tegra_dc *dc,
+static int scrncapt_get_info_cursor_data(struct tegra_dc *dc,
 		void __user *ptr)
 {
-	int     err = 0;
-	struct tegra_dc_ext  *ext = dc->ext;
-	struct tegra_dc_ext_scrncapt_get_info_cursor_data  info;
-	struct tegra_dc_dmabuf  *dcbuf;
-	void                    *pbuf;
-	size_t                  len, l = 0;
+	int err = 0;
+	struct tegra_dc_ext *ext = dc->ext;
+	struct tegra_dc_ext_scrncapt_get_info_cursor_data info;
+	struct tegra_dc_dmabuf *dcbuf;
+	void __user *pbuf;
+	size_t len, l = 0;
 
 	if (copy_from_user(&info, ptr, sizeof(info))) {
 		err = -EFAULT;
@@ -408,7 +414,7 @@ static int  scrncapt_get_info_cursor_data(struct tegra_dc *dc,
 					err = -EFAULT;
 		}
 		if (!err && dcbuf) {
-			pbuf = (void *)info.ptr;
+			pbuf = (void __user *)info.ptr;
 			l = scrncapt_copy_dcbuf(pbuf, dcbuf, len);
 			if (l != len)
 				err = -EIO;
@@ -487,17 +493,17 @@ int  tegra_dc_scrncapt_get_info(struct tegra_dc_ext_user *user,
 }
 
 
-int  tegra_dc_scrncapt_dup_fbuf(struct tegra_dc_ext_user *user,
+int tegra_dc_scrncapt_dup_fbuf(struct tegra_dc_ext_user *user,
 		struct tegra_dc_ext_scrncapt_dup_fbuf *args)
 {
-	int  err = 0;
-	int  p;
-	struct tegra_dc_ext  *ext = user->ext;
-	struct tegra_dc      *dc  = ext->dc;
-	struct tegra_dc_win      *win;
-	struct tegra_dc_ext_win  *extwin;
-	u8   *dest;
-	int  ofs;
+	int err = 0;
+	int p;
+	struct tegra_dc_ext *ext = user->ext;
+	struct tegra_dc *dc  = ext->dc;
+	struct tegra_dc_win *win;
+	struct tegra_dc_ext_win *extwin;
+	u8 *dest;
+	int ofs;
 
 	/* no support of 1st implementation */
 	if (TEGRA_DC_EXT_SCRNCAPT_VER_V(args->ver) != 2)
@@ -539,7 +545,8 @@ int  tegra_dc_scrncapt_dup_fbuf(struct tegra_dc_ext_user *user,
 				err = -ENOSPC;
 				break;
 			}
-			l = scrncapt_copy_dcbuf(dest + ofs, buf, len);
+			l = scrncapt_copy_dcbuf((void __user *)(dest + ofs),
+						buf, len);
 			if (l != len) {
 				err = -EIO;
 				break;

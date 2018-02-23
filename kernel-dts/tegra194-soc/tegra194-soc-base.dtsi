@@ -112,7 +112,7 @@
 	tegra-cvnas {
 		compatible = "nvidia,tegra-cvnas";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_CV>;
-		reg = <0x0 0x14000000 0x0 0x10000>, /* CV0_REG0_BASE */
+		reg = <0x0 0x14000000 0x0 0x20000>, /* CV0_REG0_BASE */
 		      <0x0 0x14020000 0x0 0x10000>, /* CV0_SRAM_BASE */
 		      <0x0 0x0b240000 0x0 0x10000>; /* HSM_BASE */
 		clocks = <&bpmp_clks TEGRA194_CLK_CVNAS>;

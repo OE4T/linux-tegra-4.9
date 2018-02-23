@@ -99,6 +99,7 @@ static struct tegra210_adsp_app_desc {
 
 static struct tegra210_adsp_app_desc *adsp_app_desc;
 static unsigned int adsp_app_count; /* total number of apps initialized */
+static int apm_stack_size[APM_IN_END - APM_IN_START + 1];
 
 struct tegra210_adsp_app_read_data {
 	int32_t data[NVFX_MAX_RAW_DATA_WSIZE];
@@ -812,6 +813,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		struct tegra210_adsp_app *apm_out = &adsp->apps[apm_out_reg];
 
 		app->apm = APM_SHARED_STATE(app->info->mem.shared);
+		app->info->stack_size = apm_stack_size[app->reg - APM_IN_START];
 
 		ret = nvadsp_mbox_open(&app->apm_mbox,
 			&app->apm->mbox_id,
@@ -5047,7 +5049,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	uint32_t adma_ch_page = 0;
 	uint32_t adma_ch_start = TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
 	uint32_t adma_ch_cnt = TEGRA210_ADSP_ADMA_CHANNEL_COUNT;
-	char plugin_info[20];
+	char plugin_info[20], apm_info[20];
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	char switch_info[20];
 	uint32_t adsp_switch_count;
@@ -5323,6 +5325,13 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		}
 	}
 #endif
+	for (i = 0; i < (APM_IN_END - APM_IN_START + 1); i++) {
+		apm_stack_size[i] = 0;
+		memset((void *)apm_info, '\0', 20);
+		sprintf(apm_info, "apm%d-stack-size", i+1);
+		of_property_read_u32(pdev->dev.of_node, apm_info,
+				&apm_stack_size[i]);
+	}
 	pr_info("tegra210_adsp_audio_platform_probe probe successfull.");
 	return 0;
 

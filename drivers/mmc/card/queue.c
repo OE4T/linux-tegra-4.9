@@ -176,13 +176,9 @@ static inline bool mmc_cmdq_should_pull_reqs(struct mmc_host *host,
 	spin_lock_bh(&ctx->cmdq_ctx_lock);
 	if ((blocking_dcmd && ctx->active_dcmd) || ctx->rpmb_in_wait ||
 			ctx->active_ncqcmd) {
-		if ((ctx->curr_state != CMDQ_STATE_HALT) ||
-			(ctx->curr_state != CMDQ_STATE_ERR)) {
-			pr_debug("%s: skip pulling reqs: dcmd: %d rpmb: %d ncq: %d state: %d\n",
-				 mmc_hostname(host), ctx->active_dcmd,
-				 ctx->rpmb_in_wait, ctx->active_ncqcmd,
-				 ctx->curr_state);
-		}
+		pr_debug("%s: skip pull reqs: dcmd: %d rpmb: %d ncq: %d state: %d\n",
+			 mmc_hostname(host), ctx->active_dcmd, ctx->rpmb_in_wait,
+			ctx->active_ncqcmd, ctx->curr_state);
 		spin_unlock_bh(&ctx->cmdq_ctx_lock);
 		return false;
 	} else {

@@ -365,17 +365,6 @@ static bool minion_service_link_intr(struct tnvlink_dev *tdev)
 		nvlink_dbg("Received NON-FATAL INTR_CODE = SWREQ");
 		break;
 
-	/* MINION had to turn off PM for some reason */
-	case MINION_NVLINK_LINK_INTR_CODE_PMDISABLED:
-		nvlink_dbg("Received PMDISABLE INTR_CODE = PMDISABLED");
-		/*
-		 * Bug 1893385: Handle PM reenable
-		 */
-		nvlink_err("NOTE: PM will remain disabled until Bug 1893385"
-						" is resolved");
-		break;
-
-
 	/* The following are considered FATAL by arch */
 	case MINION_NVLINK_LINK_INTR_CODE_NA:
 		nvlink_dbg("Received FATAL INTR_CODE = NA");

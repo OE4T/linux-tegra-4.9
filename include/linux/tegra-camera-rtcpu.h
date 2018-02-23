@@ -25,6 +25,8 @@ int tegra_camrtc_restore(struct device *dev);
 bool tegra_camrtc_is_rtcpu_alive(struct device *dev);
 void tegra_camrtc_flush_trace(struct device *dev);
 
+bool tegra_camrtc_is_rtcpu_powered(void);
+
 #define TEGRA_CAMRTC_VERSION_LEN 128
 
 int tegra_camrtc_command(struct device *dev, u32 command, long timeout);

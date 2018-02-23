@@ -1124,6 +1124,8 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static struct device *s_dev;
+
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *rtcpu;
@@ -1225,6 +1227,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	/* Print firmware version */
 	tegra_camrtc_log_fw_version(dev);
 
+	s_dev = dev;
+
 	dev_dbg(dev, "successfully probed RTCPU on %s\n", name);
 
 	return 0;
@@ -1281,6 +1285,19 @@ bool tegra_camrtc_is_rtcpu_alive(struct device *dev)
 	return rtcpu->online;
 }
 EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_alive);
+
+bool tegra_camrtc_is_rtcpu_powered(void)
+{
+	struct tegra_cam_rtcpu *rtcpu;
+
+	if (s_dev) {
+		rtcpu = dev_get_drvdata(s_dev);
+		return rtcpu->powered;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_powered);
 
 void tegra_camrtc_flush_trace(struct device *dev)
 {

@@ -18,6 +18,7 @@
 
 #include "nvcsi-t194.h"
 #include <linux/nvhost_nvcsi_ioctl.h>
+#include <linux/tegra-camera-rtcpu.h>
 
 #include <asm/ioctls.h>
 #include <linux/device.h>
@@ -33,6 +34,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/tegra_prod.h>
+#include <linux/kthread.h>
 
 #include <media/mc_common.h>
 #include "camera/nvcsi/csi5_fops.h"
@@ -41,6 +44,7 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t194/t194.h"
+#include "media/csi.h"
 
 static long long input_stats;
 
@@ -49,6 +53,9 @@ struct t194_nvcsi {
 	struct platform_device *pdev;
 	struct tegra_csi_device csi;
 	struct dentry *dir;
+	void __iomem *io;
+	struct tegra_prod *prod_list;
+	atomic_t on;
 };
 
 static const struct of_device_id tegra194_nvcsi_of_match[] = {
@@ -151,17 +158,96 @@ const struct file_operations tegra194_nvcsi_ctrl_ops = {
 	.release = t194_nvcsi_release,
 };
 
+static void nvcsi_apply_prod(struct platform_device *pdev)
+{
+	int err = -ENODEV;
+
+	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
+	struct tegra_csi_channel *chan;
+	u32 phy_mode;
+	bool is_cphy;
+
+	if (!list_empty(&nvcsi->csi.csi_chans)) {
+
+		chan = list_first_entry(&nvcsi->csi.csi_chans,
+				struct tegra_csi_channel, list);
+		phy_mode = read_phy_mode_from_dt(chan);
+		is_cphy = (phy_mode == CSI_PHY_MODE_CPHY);
+
+		err = tegra_prod_set_by_name(&nvcsi->io, "prod",
+							nvcsi->prod_list);
+
+		if (err) {
+			dev_err(&pdev->dev,
+				"%s: prod set fail (err=%d)\n", __func__, err);
+		}
+		if (is_cphy)
+			err = tegra_prod_set_by_name(&nvcsi->io,
+							"prod_c_cphy_mode",
+							nvcsi->prod_list);
+		else
+			err = tegra_prod_set_by_name(&nvcsi->io,
+							"prod_c_dphy_mode",
+							nvcsi->prod_list);
+		if (err) {
+			dev_err(&pdev->dev,
+				"%s: prod set fail (err=%d)\n", __func__, err);
+		}
+	}
+
+}
+
+static int nvcsi_prod_apply_thread(void *data)
+{
+	struct platform_device *pdev = data;
+	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
+
+	/*
+	 * rtcpu finishes poweron after ~120ms after nvcsi_finalize_poweron
+	 * so sleep for around that much before checking rtcpu
+	 * power state again
+	 */
+	while (!tegra_camrtc_is_rtcpu_powered())
+		usleep_range(1000*125, 1000*126);
+
+	nvcsi_apply_prod(pdev);
+	tegra_csi_mipi_calibrate(&nvcsi->csi, true);
+	return 0;
+
+}
+
+
 int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev)
 {
 	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
 
-	return tegra_csi_mipi_calibrate(&nvcsi->csi, true);
+	if (atomic_read(&nvcsi->on) == 1)
+		return 0;
+	atomic_set(&nvcsi->on, 1);
+
+	/* rtcpu resets nvcsi registers, so we set prod settings
+	 * after rtcpu has finished resetting the registers
+	 * which happens during rtcpu's poweron call
+	 * TODO: fix this dependency
+	 */
+	if (!tegra_camrtc_is_rtcpu_powered())
+		kthread_run(nvcsi_prod_apply_thread, pdev, "nvcsi-t194-prod");
+	else {
+		nvcsi_apply_prod(pdev);
+		tegra_csi_mipi_calibrate(&nvcsi->csi, true);
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_finalize_poweron);
 
 int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 {
 	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
+
+	if (atomic_read(&nvcsi->on) == 0)
+		return 0;
+	atomic_set(&nvcsi->on, 0);
 
 	return tegra_csi_mipi_calibrate(&nvcsi->csi, false);
 }
@@ -172,6 +258,8 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	int err = 0;
 	struct nvhost_device_data *pdata;
 	struct t194_nvcsi *nvcsi;
+	struct resource *mem;
+	void __iomem *regs;
 
 	pdata = (void *)of_device_get_match_data(&pdev->dev);
 	if (unlikely(pdata == NULL)) {
@@ -192,6 +280,24 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 
 	pdata->private_data = nvcsi;
 
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!mem) {
+		dev_err(&pdev->dev, "No memory resource\n");
+		return -EINVAL;
+	}
+	regs = devm_ioremap_nocache(&pdev->dev, mem->start, resource_size(mem));
+	if (!regs) {
+		dev_err(&pdev->dev, "ioremap failed\n");
+		return -ENOMEM;
+	}
+	nvcsi->io = regs;
+	nvcsi->prod_list = devm_tegra_prod_get(&pdev->dev);
+
+	if (IS_ERR(nvcsi->prod_list)) {
+		pr_err("%s: Can not find nvcsi prod node\n", __func__);
+		return -ENODEV;
+	}
+
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
 		return err;
@@ -208,6 +314,7 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 
 	nvcsi->pdev = pdev;
 	nvcsi->csi.fops = &csi5_fops;
+	atomic_set(&nvcsi->on, 0);
 	err = tegra_csi_media_controller_init(&nvcsi->csi, pdev);
 
 	nvcsi_deskew_platform_setup(&nvcsi->csi, true);

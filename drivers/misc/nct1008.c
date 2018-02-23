@@ -811,8 +811,8 @@ static int nct1008_thermal_set_limits(int sensor,
 		value = temperature_to_value(extended_range, hi_limit);
 		dev_dbg(&client->dev, "%s: set hi_limit %ld\n",
 				__func__, hi_limit);
-		reg = (sensor == LOC) ? LOC_TEMP_LO_LIMIT_WR :
-					EXT_TEMP_LO_LIMIT_HI_BYTE_WR;
+		reg = (sensor == LOC) ? LOC_TEMP_HI_LIMIT_WR :
+					EXT_TEMP_HI_LIMIT_HI_BYTE_WR;
 		err = nct1008_write_reg(data, reg, value);
 		if (err)
 			return err;

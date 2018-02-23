@@ -1,7 +1,7 @@
 /*
  * tegra194-soc-eqos.dtsi: Ethernet QOS DTSI file.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,21 @@
 
 #include <dt-bindings/clock/tegra194-clock.h>
 #include <dt-bindings/reset/tegra194-reset.h>
+
+#define MAKE_EQOS_TRIP(name, temp, hyst) \
+	eqos_##name: eqos-##name@temp { \
+		temperature = <(temp)>; \
+		hysteresis = <hyst>; \
+		type = "active"; \
+	}
+
+#define MAP_EQOS(name, state) \
+	map_eqos_##name { \
+		trip = <&eqos_##name>; \
+		cooling-device = <&eqos_cool_dev state state>; \
+		cdev-type = "tegra-eqos"; \
+	}
+
 
 / {
 	ether_qos@2490000 {
@@ -52,6 +67,11 @@
 		nvidia,use_multi_queues;
 		nvidia,slot_intvl_val = <0x07C>;
 		status = "disabled";
-        };
+		eqos_cool_dev: eqos-cool-dev {
+			cooling-min-state = <0>;
+			cooling-max-state = <5>;
+			#cooling-cells = <2>;
+		};
+	};
 
 };

@@ -48,6 +48,8 @@
 #define CLK_SOURCE_SOR1 0x410
 #define CLK_SOURCE_APE 0x6c0
 #define CLK_SOURCE_VI 0x148
+#define CLK_SOURCE_SDMMC2 0x154
+#define CLK_SOURCE_SDMMC4 0x164
 
 #define CLK_OUT_ENB_Y 0x298
 #define CLK_ENB_PLLP_OUT_CPU BIT(31)
@@ -2361,11 +2363,9 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_rtc] = { .dt_id = TEGRA210_CLK_RTC, .present = true },
 	[tegra_clk_timer] = { .dt_id = TEGRA210_CLK_TIMER, .present = true },
 	[tegra_clk_uarta_8] = { .dt_id = TEGRA210_CLK_UARTA, .present = true },
-	[tegra_clk_sdmmc2_9] = { .dt_id = TEGRA210_CLK_SDMMC2, .present = true },
 	[tegra_clk_i2s1] = { .dt_id = TEGRA210_CLK_I2S1, .present = true },
 	[tegra_clk_i2c1] = { .dt_id = TEGRA210_CLK_I2C1, .present = true },
 	[tegra_clk_sdmmc1_9] = { .dt_id = TEGRA210_CLK_SDMMC1, .present = true },
-	[tegra_clk_sdmmc4_9] = { .dt_id = TEGRA210_CLK_SDMMC4, .present = true },
 	[tegra_clk_pwm] = { .dt_id = TEGRA210_CLK_PWM, .present = true },
 	[tegra_clk_i2s2] = { .dt_id = TEGRA210_CLK_I2S2, .present = true },
 	[tegra_clk_usbd] = { .dt_id = TEGRA210_CLK_USBD, .present = true },
@@ -3170,6 +3170,16 @@ static __init void tegra210_periph_clk_init(
 	clk = clk_register_divider(NULL, "qspi_out", "qspi", 0,
 				   clk_base + 0x6c4, 8, 1, 0, NULL);
 	clks[TEGRA210_CLK_QSPI_OUT] = clk;
+
+	clk = tegra_clk_register_sdmmc_mux_div("sdmmc2", clk_base,
+					    CLK_SOURCE_SDMMC2, 9,
+					    TEGRA_DIVIDER_ROUND_UP, 0, NULL);
+	clks[TEGRA210_CLK_SDMMC2] = clk;
+
+	clk = tegra_clk_register_sdmmc_mux_div("sdmmc4", clk_base,
+					    CLK_SOURCE_SDMMC4, 15,
+					    TEGRA_DIVIDER_ROUND_UP, 0, NULL);
+	clks[TEGRA210_CLK_SDMMC4] = clk;
 
 	if (t210b01) {
 		tegra_ape.rpolicy.low_rate_parent_idx = mux_ape_pll_p_idx;

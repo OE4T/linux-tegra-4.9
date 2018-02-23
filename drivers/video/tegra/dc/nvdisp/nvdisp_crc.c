@@ -444,15 +444,16 @@ static int tegra_nvdisp_crc_rg_get(struct tegra_dc *dc,
 
 	if (status & nvdisp_rg_crca_error_true_f()) {
 		u32 frame_cnt = tegra_dc_get_frame_cnt(dc);
-		dev_err(&dc->ndev->dev, "Error reading RG CRC. "
-			"Frame #%u status = %#x\n", frame_cnt, status);
 
-		if (e->rg.valid) {
-			dev_err(&dc->ndev->dev, "RG CRC still valid. "
-				"Frame #%u\n", frame_cnt);
-		} else {
+		dev_err(&dc->ndev->dev,
+			"late   RG_CRC read, "
+			"frame_cnt=%u status=%#x valid=%s %u\n",
+			frame_cnt, status,
+			(e->rg.valid) ? "1:keep":"0:clr",
+			e->rg.crc);
+
+		if (!e->rg.valid)
 			e->rg.crc = 0;
-		}
 
 		status |= nvdisp_rg_crca_error_true_f();
 		tegra_dc_writel(dc, status, nvdisp_rg_crca_r());
@@ -475,15 +476,16 @@ static int tegra_nvdisp_crc_comp_get(struct tegra_dc *dc,
 
 	if (status & nvdisp_comp_crca_error_true_f()) {
 		u32 frame_cnt = tegra_dc_get_frame_cnt(dc);
-		dev_err(&dc->ndev->dev, "Error reading COMP CRC. "
-			"Frame #%u status = %#x\n", frame_cnt, status);
 
-		if (e->comp.valid) {
-			dev_err(&dc->ndev->dev, "COMP CRC still valid. "
-				"Frame #%u\n", frame_cnt);
-		} else {
+		dev_err(&dc->ndev->dev,
+			"late COMP_CRC read, "
+			"frame_cnt=%u status=%#x valid=%s %u\n",
+			frame_cnt, status,
+			(e->comp.valid) ? "1:keep":"0:clr",
+			e->comp.crc);
+
+		if (!e->comp.valid)
 			e->comp.crc = 0;
-		}
 
 		status |= nvdisp_comp_crca_error_true_f();
 		tegra_dc_writel(dc, status, nvdisp_comp_crca_r());

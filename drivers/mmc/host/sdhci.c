@@ -2204,6 +2204,13 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		return err;
 	}
 
+	/*
+	 * Set data timeout counter to 0 as the timeout value would be more
+	 * than sufficient to allow tuning block transfer and reset the data
+	 * FSM before issuing CMD reset in case of Buffer read ready interrupt
+	 * timeout
+	 */
+	sdhci_writeb(host, 0, SDHCI_TIMEOUT_CONTROL);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	ctrl |= SDHCI_CTRL_EXEC_TUNING;
 	if (host->quirks2 & SDHCI_QUIRK2_TUNING_WORK_AROUND)

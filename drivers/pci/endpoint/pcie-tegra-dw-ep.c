@@ -96,8 +96,6 @@
 #define LTR_MSG_REQ				BIT(15)
 #define LTR_MST_NO_SNOOP_SHIFT			16
 
-#define APPL_PM_STATUS				0xFC
-
 #define APPL_DM_TYPE				0x100
 #define APPL_DM_TYPE_MASK			0xF
 #define APPL_DM_TYPE_EP				0x0
@@ -711,7 +709,6 @@ static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
 	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_15);
 	writel(0xFFFFFFFF, pcie->appl_base + APPL_INTR_STATUS_L1_17);
 	writel(0xFFFFFFFF, pcie->appl_base + APPL_MSI_CTRL_2);
-	writel(0xFFFFFFFF, pcie->appl_base + APPL_PM_STATUS);
 
 	val = readl(pcie->appl_base + APPL_CTRL);
 	val |= APPL_CTRL_LTSSM_EN;

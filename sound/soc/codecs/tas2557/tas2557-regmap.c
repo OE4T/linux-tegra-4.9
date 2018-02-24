@@ -58,6 +58,12 @@
 #define LOW_TEMPERATURE_GAIN 6
 #define LOW_TEMPERATURE_COUNTER 12
 
+static const char *const tas2557_supply_names[] = {
+	"vdd-amp-5v0",
+	"vdd-amp-1v8",
+};
+
+
 /*
 * tas2557_i2c_write_device : write single byte to device
 * platform dependent, need platform specific support
@@ -1098,6 +1104,7 @@ static int tas2557_i2c_probe(struct i2c_client *pClient,
 	struct tas2557_priv *pTAS2557;
 	int nResult = 0;
 	unsigned int nValue = 0;
+	int i;
 
 	dev_info(&pClient->dev, "%s enter\n", __func__);
 
@@ -1105,6 +1112,22 @@ static int tas2557_i2c_probe(struct i2c_client *pClient,
 	if (!pTAS2557) {
 		nResult = -ENOMEM;
 		goto err;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(pTAS2557->supplies); i++)
+		pTAS2557->supplies[i].supply = tas2557_supply_names[i];
+
+	nResult = devm_regulator_bulk_get(&pClient->dev, ARRAY_SIZE(pTAS2557->supplies),
+				      pTAS2557->supplies);
+	if (nResult) {
+		dev_err(&pClient->dev, "Failed to get supplies: %d\n", nResult);
+		return nResult;
+	}
+	nResult = regulator_bulk_enable(ARRAY_SIZE(pTAS2557->supplies),
+				    pTAS2557->supplies);
+	if (nResult) {
+		dev_err(&pClient->dev, "Failed to enable supplies: %d\n", nResult);
+		return nResult;
 	}
 
 	pTAS2557->client = pClient;
@@ -1297,6 +1320,8 @@ static int tas2557_i2c_remove(struct i2c_client *pClient)
 	tas2557_deregister_misc(pTAS2557);
 	mutex_destroy(&pTAS2557->file_lock);
 #endif
+
+	regulator_bulk_disable(ARRAY_SIZE(pTAS2557->supplies), pTAS2557->supplies);
 
 	mutex_destroy(&pTAS2557->dev_lock);
 	return 0;

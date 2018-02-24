@@ -25,6 +25,9 @@
 #include <linux/regmap.h>
 #include <linux/workqueue.h>
 #include <linux/timer.h>
+#include <linux/regulator/consumer.h>
+
+#define TAS2557_MAX_SUPPLIES	2
 
 /* Page Control Register */
 #define TAS2557_PAGECTL_REG			0
@@ -549,6 +552,8 @@ struct tas2557_priv {
 	int mnCurrentReg;
 	struct mutex file_lock;
 #endif
+
+	struct regulator_bulk_data	supplies[TAS2557_MAX_SUPPLIES];
 
 };
 

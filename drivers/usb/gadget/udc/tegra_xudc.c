@@ -3446,7 +3446,7 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 	val = xudc_readl(xudc, SSPX_CORE_CNT0);
 	val &= ~(SSPX_CORE_CNT0_PING_TBURST_MASK <<
 		 SSPX_CORE_CNT0_PING_TBURST_SHIFT);
-	val |= 0x6 << SSPX_CORE_CNT0_PING_TBURST_SHIFT;
+	val |= 0xa << SSPX_CORE_CNT0_PING_TBURST_SHIFT;
 	xudc_writel(xudc, val, SSPX_CORE_CNT0);
 
 	/* Default tPortConfiguration timeout is too small. */

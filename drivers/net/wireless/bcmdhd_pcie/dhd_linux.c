@@ -7482,18 +7482,18 @@ bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 
 	/* set default firmware and nvram path for built-in type driver */
 	if (!dhd_download_fw_on_driverload) {
-#ifdef CONFIG_BCMDHD_FW_PATH
-		if (is_file_valid(CONFIG_BCMDHD_FW_PATH))
-			fw = CONFIG_BCMDHD_FW_PATH;
-#endif /* CONFIG_BCMDHD_FW_PATH */
-#ifdef CONFIG_BCMDHD_NVRAM_PATH
-		if (is_file_valid(CONFIG_BCMDHD_NVRAM_PATH))
-			nv = CONFIG_BCMDHD_NVRAM_PATH;
-#endif /* CONFIG_BCMDHD_NVRAM_PATH */
-#ifdef CONFIG_BCMDHD_ES4_NVRAM_PATH
+#ifdef CONFIG_BCMDHD_PCIE_FW_PATH
+		if (is_file_valid(CONFIG_BCMDHD_PCIE_FW_PATH))
+			fw = CONFIG_BCMDHD_PCIE_FW_PATH;
+#endif /* CONFIG_BCMDHD_PCIE_FW_PATH */
+#ifdef CONFIG_BCMDHD_PCIE_NVRAM_PATH
+		if (is_file_valid(CONFIG_BCMDHD_PCIE_NVRAM_PATH))
+			nv = CONFIG_BCMDHD_PCIE_NVRAM_PATH;
+#endif /* CONFIG_BCMDHD_PCIE_NVRAM_PATH */
+#ifdef CONFIG_BCMDHD_PCIE_ES4_NVRAM_PATH
 		if (is_es4_module()) {
-			if (is_file_valid(CONFIG_BCMDHD_ES4_NVRAM_PATH)) {
-				nv = CONFIG_BCMDHD_ES4_NVRAM_PATH;
+			if (is_file_valid(CONFIG_BCMDHD_PCIE_ES4_NVRAM_PATH)) {
+				nv = CONFIG_BCMDHD_PCIE_ES4_NVRAM_PATH;
 				DHD_INFO(("ES4 module detected, Nvram \
 					 path updated to %s\n", nv));
 			}

@@ -155,6 +155,7 @@
 #define PCIE_ATU_TYPE_IO		(0x2 << 0)
 #define PCIE_ATU_TYPE_CFG0		(0x4 << 0)
 #define PCIE_ATU_TYPE_CFG1		(0x5 << 0)
+#define PCIE_ATU_TYPE_TD_SHIFT		8
 #define PCIE_ATU_INCREASE_REGION_SIZE	BIT(13)
 #define PCIE_ATU_CR2			0x4
 #define PCIE_ATU_ENABLE			(0x1 << 31)
@@ -421,6 +422,7 @@ struct tegra_pcie_dw {
 	void *cpu_virt_addr;
 	bool disable_clock_request;
 	bool power_down_en;
+	bool td_bit;
 	u8 init_link_width;
 
 	/* DMA operation */
@@ -762,6 +764,8 @@ static inline void prog_atu(struct pcie_port *pp, int i, u32 val, u32 reg)
 static void outbound_atu(struct pcie_port *pp, int i, int type, u64 cpu_addr,
 			 u64 pci_addr, u64 size)
 {
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
+
 	prog_atu(pp, i, lower_32_bits(cpu_addr), PCIE_ATU_LOWER_BASE);
 	prog_atu(pp, i, upper_32_bits(cpu_addr), PCIE_ATU_UPPER_BASE);
 	prog_atu(pp, i, lower_32_bits(cpu_addr + size - 1), PCIE_ATU_LIMIT);
@@ -769,7 +773,8 @@ static void outbound_atu(struct pcie_port *pp, int i, int type, u64 cpu_addr,
 		 PCIE_ATU_UPPER_LIMIT);
 	prog_atu(pp, i, lower_32_bits(pci_addr), PCIE_ATU_LOWER_TARGET);
 	prog_atu(pp, i, upper_32_bits(pci_addr), PCIE_ATU_UPPER_TARGET);
-	prog_atu(pp, i, type | PCIE_ATU_INCREASE_REGION_SIZE, PCIE_ATU_CR1);
+	prog_atu(pp, i, type | PCIE_ATU_INCREASE_REGION_SIZE |
+		 pcie->td_bit << PCIE_ATU_TYPE_TD_SHIFT, PCIE_ATU_CR1);
 	prog_atu(pp, i, PCIE_ATU_ENABLE, PCIE_ATU_CR2);
 }
 
@@ -2505,6 +2510,8 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		dev_err(pcie->dev, "DT parsing failed: %d\n", ret);
 		return ret;
 	}
+
+	pcie->td_bit = pcie_is_ecrc_enabled();
 
 	if (gpio_is_valid(pcie->pex_wake)) {
 		ret = devm_gpio_request(pcie->dev, pcie->pex_wake, "pcie_wake");

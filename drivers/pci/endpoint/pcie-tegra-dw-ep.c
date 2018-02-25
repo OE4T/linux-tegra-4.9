@@ -565,9 +565,14 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	u32 val = 0;
 	int ret = 0;
 
-	ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
-	if (ret)
-		dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n", ret);
+	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1)) {
+		ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
+		if (ret) {
+			dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n",
+				ret);
+			return;
+		}
+	}
 
 	ret = clk_prepare_enable(pcie->core_clk);
 	if (ret) {

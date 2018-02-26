@@ -1276,6 +1276,10 @@ static inline u32 gr_fecs_new_ctx_target_sys_mem_ncoh_f(void)
 {
 	return 0x30000000U;
 }
+static inline u32 gr_fecs_new_ctx_target_sys_mem_coh_f(void)
+{
+	return 0x20000000U;
+}
 static inline u32 gr_fecs_new_ctx_valid_s(void)
 {
 	return 1U;
@@ -1335,6 +1339,10 @@ static inline u32 gr_fecs_arb_ctx_ptr_target_vid_mem_f(void)
 static inline u32 gr_fecs_arb_ctx_ptr_target_sys_mem_ncoh_f(void)
 {
 	return 0x30000000U;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_sys_mem_coh_f(void)
+{
+	return 0x20000000U;
 }
 static inline u32 gr_fecs_arb_ctx_cmd_r(void)
 {

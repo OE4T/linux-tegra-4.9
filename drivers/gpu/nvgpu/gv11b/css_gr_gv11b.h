@@ -30,6 +30,5 @@ int gv11b_css_hw_enable_snapshot(struct channel_gk20a *ch,
 void gv11b_css_hw_disable_snapshot(struct gr_gk20a *gr);
 int gv11b_css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
 			bool *hw_overflow);
-void gv11b_css_hw_set_handled_snapshots(struct gk20a *g, u32 done);
 
 #endif /* CSS_GR_GV11B_H */

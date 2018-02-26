@@ -57,6 +57,15 @@ static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
 			sizeof(struct gk20a_cs_snapshot_fifo_entry);
 }
 
+/* informs hw how many snapshots have been processed (frees up fifo space) */
+static inline void gv11b_css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
+{
+	if (done > 0) {
+		gk20a_writel(g, perf_pmasys_mem_bump_r(),
+		     done * sizeof(struct gk20a_cs_snapshot_fifo_entry));
+	}
+}
+
 /* disable streaming to memory */
 static void gv11b_css_hw_reset_streaming(struct gk20a *g)
 {
@@ -75,17 +84,6 @@ static void gv11b_css_hw_reset_streaming(struct gk20a *g)
 
 	/* pointing all pending snapshots as handled */
 	gv11b_css_hw_set_handled_snapshots(g, css_hw_get_pending_snapshots(g));
-}
-
-/* informs hw how many snapshots have been processed (frees up fifo space) */
-void gv11b_css_hw_set_handled_snapshots(struct gk20a *g, u32 done)
-{
-	if (done == 0u) {
-		return;
-	}
-
-	gk20a_writel(g, perf_pmasys_mem_bump_r(),
-		done * sizeof(struct gk20a_cs_snapshot_fifo_entry));
 }
 
 int gv11b_css_hw_enable_snapshot(struct channel_gk20a *ch,

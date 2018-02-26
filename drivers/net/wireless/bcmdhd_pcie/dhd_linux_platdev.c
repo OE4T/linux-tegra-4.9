@@ -361,7 +361,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 	wifi_regulator = regulator_get(&pdev->dev, "wlreg_on");
 	if (IS_ERR_OR_NULL(wifi_regulator)) {
 #ifdef CONFIG_REGULATOR
-		DHD_ERROR(("%s failed to get regulator %lu\n",
+		DHD_ERROR(("%s failed to get regulator %ld\n",
 			__FUNCTION__, PTR_ERR(wifi_regulator)));
 #else
 		DHD_ERROR(("%s regulator is null\n", __FUNCTION__));

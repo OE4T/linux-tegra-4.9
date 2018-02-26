@@ -556,6 +556,44 @@ fail_file:
 	return err;
 }
 
+static void nvhost_event_poll_update(void *priv, int nr_completed)
+{
+	struct nvhost_event_poll_fd_rec *private_data =
+		(struct nvhost_event_poll_fd_rec *)priv;
+
+	mutex_lock(&private_data->lock);
+	private_data->event_posted = true;
+	mutex_unlock(&private_data->lock);
+
+	wake_up_interruptible(&private_data->wq);
+}
+
+static int nvhost_ioctl_ctrl_poll_fd_trigger_event(
+	struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_poll_fd_trigger_event_args *args)
+{
+	struct nvhost_event_poll_fd_rec *private_data;
+	struct file *f = fget(args->fd);
+	int err;
+
+	if (!f)
+		return -EINVAL;
+
+	if (f->f_op != &nvhost_event_poll_fd_ops)
+		return -EINVAL;
+
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
+		return -EINVAL;
+
+	private_data = (struct nvhost_event_poll_fd_rec *)f->private_data;
+
+	err = nvhost_intr_register_fast_notifier(ctx->dev->dev, args->id,
+		args->thresh, nvhost_event_poll_update, private_data);
+
+	fput(f);
+	return err;
+}
+
 static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -642,6 +680,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_POLL_FD_CREATE:
 		err = nvhost_ioctl_ctrl_poll_fd_create(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_POLL_FD_TRIGGER_EVENT:
+		err = nvhost_ioctl_ctrl_poll_fd_trigger_event(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

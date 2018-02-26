@@ -444,6 +444,13 @@ struct nvhost_ctrl_poll_fd_create_args {
 	__u32 padding;
 };
 
+struct nvhost_ctrl_poll_fd_trigger_event_args {
+	__s32 fd;
+	__u32 id;
+	__u32 thresh;
+	__u32 padding;
+};
+
 #define NVHOST_IOCTL_CTRL_SYNCPT_READ		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_ctrl_syncpt_read_args)
 #define NVHOST_IOCTL_CTRL_SYNCPT_INCR		\
@@ -482,9 +489,11 @@ struct nvhost_ctrl_poll_fd_create_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 15, struct nvhost_ctrl_check_module_support_args)
 #define NVHOST_IOCTL_CTRL_POLL_FD_CREATE	\
 	_IOR(NVHOST_IOCTL_MAGIC, 16, struct nvhost_ctrl_poll_fd_create_args)
+#define NVHOST_IOCTL_CTRL_POLL_FD_TRIGGER_EVENT        \
+	_IOW(NVHOST_IOCTL_MAGIC, 17, struct nvhost_ctrl_poll_fd_trigger_event_args)
 
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_POLL_FD_CREATE)
+	_IOC_NR(NVHOST_IOCTL_CTRL_POLL_FD_TRIGGER_EVENT)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_syncpt_waitmex_args)
 

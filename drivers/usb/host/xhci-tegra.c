@@ -1571,6 +1571,9 @@ static irqreturn_t tegra_xusb_padctl_irq(int irq, void *data)
 	int i;
 	bool oc = false;
 
+	if (tegra->suspended)
+		return IRQ_HANDLED;
+
 	if (tegra->soc->handle_oc) {
 		for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
 			if (tegra_xusb_padctl_overcurrent_detected(

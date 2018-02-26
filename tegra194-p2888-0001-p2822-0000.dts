@@ -253,4 +253,16 @@
 	mttcan@c320000 {
 		status = "okay";
 	};
+
+	serial@3110000 {
+		status = "okay";
+	};
+
+	pwm@32c0000 {
+		status = "okay";
+	};
+
+	pwm@32f0000 {
+		status = "okay";
+	};
 };

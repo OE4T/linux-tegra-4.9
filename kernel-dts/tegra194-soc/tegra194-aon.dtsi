@@ -67,6 +67,12 @@
 				nvidia,frame-count = <16>;
 				nvidia,frame-size = <128>;
 			};
+                        ivc_aon_shub@d880 {
+                                reg = <0xd880>, <0x1d880>;
+                                reg-names = "rx", "tx";
+                                nvidia,frame-count = <4>;
+                                nvidia,frame-size = <256>;
+                        };
 		};
 	};
 
@@ -75,4 +81,10 @@
 		mboxes = <&aon 1>;
 		status = "okay";
 	};
+
+        aon_shub {
+                status = "disabled";
+                compatible = "nvidia,tegra186_aon_shub";
+                mboxes = <&aon 5>;
+        };
 };

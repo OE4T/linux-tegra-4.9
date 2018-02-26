@@ -710,8 +710,8 @@ static int isp_capture_read_syncpt(struct tegra_isp_channel *chan,
 	return 0;
 }
 
-static int isp_capture_fill_in_prefence_info(struct tegra_isp_channel *chan,
-		int prefence_offset, uint32_t gos_relative,
+static int isp_capture_populate_fence_info(struct tegra_isp_channel *chan,
+		int fence_offset, uint32_t gos_relative,
 		uint32_t sp_relative)
 {
 	struct isp_capture *capture = chan->capture_data;
@@ -725,7 +725,7 @@ static int isp_capture_fill_in_prefence_info(struct tegra_isp_channel *chan,
 	uint64_t gos_info = 0;
 
 	reloc_page_addr = dma_buf_kmap(capture->capture_desc_ctx.requests.buf,
-				prefence_offset >> PAGE_SHIFT);
+				fence_offset >> PAGE_SHIFT);
 
 	if (unlikely(reloc_page_addr == NULL)) {
 		dev_err(chan->isp_dev, "%s: couldn't map request\n", __func__);
@@ -734,14 +734,14 @@ static int isp_capture_fill_in_prefence_info(struct tegra_isp_channel *chan,
 
 	sp_raw = __raw_readq(
 			(void __iomem *)(reloc_page_addr +
-			(prefence_offset & ~PAGE_MASK)));
+			(fence_offset & ~PAGE_MASK)));
 	sp_id = sp_raw & 0xFFFFFFFF;
 
 	err = chan->ops->get_syncpt_gos_backing(chan->ndev, sp_id, &syncpt_addr,
 			&gos_index, &gos_offset);
 	if (err) {
 		dev_err(chan->isp_dev,
-			"%s: get prefence GoS failed\n", __func__);
+			"%s: get GoS backing failed\n", __func__);
 		goto ret;
 	}
 
@@ -749,14 +749,62 @@ static int isp_capture_fill_in_prefence_info(struct tegra_isp_channel *chan,
 			& 0xFFFFFFFF);
 
 	__raw_writeq(gos_info, (void __iomem *)(reloc_page_addr +
-			((prefence_offset + gos_relative) & ~PAGE_MASK)));
+			((fence_offset + gos_relative) & ~PAGE_MASK)));
 
 	__raw_writeq((uint64_t)syncpt_addr, (void __iomem *)(reloc_page_addr +
-			((prefence_offset + sp_relative) & ~PAGE_MASK)));
+			((fence_offset + sp_relative) & ~PAGE_MASK)));
 
 ret:
 	dma_buf_kunmap(capture->capture_desc_ctx.requests.buf,
-			prefence_offset >> PAGE_SHIFT, reloc_page_addr);
+			fence_offset >> PAGE_SHIFT, reloc_page_addr);
+	return err;
+}
+
+static int isp_capture_setup_inputfences(struct tegra_isp_channel *chan,
+		struct isp_capture_req *req, int request_offset)
+{
+	uint32_t __user *inpfences_reloc_user;
+	uint32_t *inpfences_relocs = NULL;
+	uint32_t inputfences_offset = 0;
+	int i = 0;
+	int err = 0;
+
+	/* It is valid not to have inputfences for given frame capture */
+	if (!req->inputfences_relocs.num_relocs)
+		return 0;
+
+	inpfences_reloc_user = (uint32_t __user *)
+			(uintptr_t)req->inputfences_relocs.reloc_relatives;
+
+	inpfences_relocs = kcalloc(req->inputfences_relocs.num_relocs,
+				sizeof(uint32_t), GFP_KERNEL);
+	if (unlikely(inpfences_relocs == NULL)) {
+		dev_err(chan->isp_dev,
+			"failed to allocate inputfences reloc array\n");
+		return -ENOMEM;
+	}
+
+	err = copy_from_user(inpfences_relocs, inpfences_reloc_user,
+		req->inputfences_relocs.num_relocs * sizeof(uint32_t)) ?
+			-EFAULT : 0;
+	if (err < 0) {
+		dev_err(chan->isp_dev, "failed to copy inputfences relocs\n");
+		goto fail;
+	}
+
+	for (i = 0; i < req->inputfences_relocs.num_relocs; i++) {
+		inputfences_offset = request_offset +
+					inpfences_relocs[i];
+		err = isp_capture_populate_fence_info(chan, inputfences_offset,
+				req->gos_relative, req->sp_relative);
+		if (err < 0) {
+			dev_err(chan->isp_dev, "Populate inputfences info failed\n");
+			goto fail;
+		}
+	}
+
+fail:
+	kfree(inpfences_relocs);
 	return err;
 }
 
@@ -765,43 +813,40 @@ static int isp_capture_setup_prefences(struct tegra_isp_channel *chan,
 {
 	uint32_t __user *prefence_reloc_user;
 	uint32_t *prefence_relocs = NULL;
-	uint32_t prefence_offset;
+	uint32_t prefence_offset = 0;
 	int i = 0;
 	int err = 0;
 
 	/* It is valid not to have prefences for given frame capture */
-	if (!req->prog_prefence_relocs.num_relocs) {
-		dev_dbg(chan->isp_dev,
-			"no prefences available, skip setup\n");
+	if (!req->prefences_relocs.num_relocs)
 		return 0;
-	}
 
 	prefence_reloc_user = (uint32_t __user *)
-			(uintptr_t)req->prog_prefence_relocs.reloc_relatives;
+			(uintptr_t)req->prefences_relocs.reloc_relatives;
 
-	prefence_relocs = kcalloc(req->prog_prefence_relocs.num_relocs,
+	prefence_relocs = kcalloc(req->prefences_relocs.num_relocs,
 		sizeof(uint32_t), GFP_KERNEL);
 	if (unlikely(prefence_relocs == NULL)) {
 		dev_err(chan->isp_dev,
-			"failed to allocate prefence reloc array\n");
+			"failed to allocate prefences reloc array\n");
 		return -ENOMEM;
 	}
 
 	err = copy_from_user(prefence_relocs, prefence_reloc_user,
-		req->prog_prefence_relocs.num_relocs * sizeof(uint32_t)) ?
+		req->prefences_relocs.num_relocs * sizeof(uint32_t)) ?
 			-EFAULT : 0;
 	if (err < 0) {
-		dev_err(chan->isp_dev, "failed to copy prefence relocs\n");
+		dev_err(chan->isp_dev, "failed to copy prefences relocs\n");
 		goto fail;
 	}
 
-	for (i = 0; i < req->prog_prefence_relocs.num_relocs; i++) {
+	for (i = 0; i < req->prefences_relocs.num_relocs; i++) {
 		prefence_offset = request_offset +
 					prefence_relocs[i];
-		err = isp_capture_fill_in_prefence_info(chan, prefence_offset,
+		err = isp_capture_populate_fence_info(chan, prefence_offset,
 				req->gos_relative, req->sp_relative);
 		if (err < 0) {
-			dev_err(chan->isp_dev, "Fill prefence info failed\n");
+			dev_err(chan->isp_dev, "Populate prefences info failed\n");
 			goto fail;
 		}
 	}
@@ -1041,6 +1086,12 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 
 	request_offset = req->buffer_index *
 			capture->capture_desc_ctx.request_size;
+
+	err = isp_capture_setup_inputfences(chan, req, request_offset);
+	if (err < 0) {
+		dev_err(chan->isp_dev, "failed to setup inputfences\n");
+		goto fail;
+	}
 
 	err = isp_capture_setup_prefences(chan, req, request_offset);
 	if (err < 0) {

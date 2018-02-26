@@ -1,7 +1,7 @@
 /*
  * Tegra ISP capture operations
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -61,9 +61,10 @@ struct isp_capture_req {
 	uint32_t __pad;
 	/* relocation relatives */
 	struct capture_isp_reloc isp_relocs;
-	struct capture_isp_reloc prog_prefence_relocs;
+	struct capture_isp_reloc inputfences_relocs;
 	uint32_t gos_relative;
 	uint32_t sp_relative;
+	struct capture_isp_reloc prefences_relocs;
 } __ISP_CAPTURE_ALIGN;
 
 struct isp_program_req {

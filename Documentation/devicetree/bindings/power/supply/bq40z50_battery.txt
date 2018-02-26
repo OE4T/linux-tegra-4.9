@@ -20,9 +20,9 @@ Optional properties :
    adjust battery soc value 100 to kernel max soc value
 Example:
 
-	bq40z50@16 {
+	bq40z50@0b {
 		compatible = "ti,bq40z50-battery";
-		reg = <0x16>;
+		reg = <0x0b>;
 		ti,design-capacity = <7800>;
 		ti,design-voltage = <4300000>;
 		ti,kernel-threshold-soc = <2>;

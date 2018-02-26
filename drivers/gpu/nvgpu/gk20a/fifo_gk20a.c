@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1647,28 +1647,32 @@ static bool gk20a_fifo_handle_mmu_fault(
 		 * Disable the channel/TSG from hw and increment syncpoints.
 		 */
 		if (tsg) {
-			if (!g->fifo.deferred_reset_pending) {
+			if (g->fifo.deferred_reset_pending) {
+				gk20a_disable_tsg(tsg);
+			} else {
 				if (!fake_fault)
 					gk20a_fifo_set_ctx_mmu_error_tsg(g,
 									 tsg);
 				verbose = gk20a_fifo_error_tsg(g, tsg);
+				gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
 			}
-			gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
 
 			/* put back the ref taken early above */
 			if (refch)
 				gk20a_channel_put(ch);
 		} else if (ch) {
 			if (refch) {
-				if (!g->fifo.deferred_reset_pending) {
+				if (g->fifo.deferred_reset_pending) {
+					g->ops.fifo.disable_channel(ch);
+				} else {
 					if (!fake_fault)
 						gk20a_fifo_set_ctx_mmu_error_ch(
 							g, refch);
 
 					verbose = gk20a_fifo_error_ch(g,
 							 refch);
+					gk20a_channel_abort(ch, false);
 				}
-				gk20a_channel_abort(ch, false);
 				gk20a_channel_put(ch);
 			} else {
 				nvgpu_err(g,

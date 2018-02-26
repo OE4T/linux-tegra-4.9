@@ -1049,19 +1049,25 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 #endif
 
 	if (tsg) {
-		if (!g->fifo.deferred_reset_pending &&
-		    rc_type == RC_TYPE_MMU_FAULT)
-			gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
+		if (g->fifo.deferred_reset_pending) {
+			gk20a_disable_tsg(tsg);
+		} else {
+			if (rc_type == RC_TYPE_MMU_FAULT)
+				gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
 
-		gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
+			gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
+		}
 		if (refch)
 			gk20a_channel_put(refch);
 	} else if (refch) {
-		if (!g->fifo.deferred_reset_pending &&
-		    rc_type == RC_TYPE_MMU_FAULT)
+		if (g->fifo.deferred_reset_pending) {
+			g->ops.fifo.disable_channel(refch);
+		} else {
+			if (rc_type == RC_TYPE_MMU_FAULT)
 				gk20a_fifo_set_ctx_mmu_error_ch(g, refch);
 
-		gk20a_channel_abort(refch, false);
+			gk20a_channel_abort(refch, false);
+		}
 		gk20a_channel_put(refch);
 	} else {
 		nvgpu_err(g, "id unknown, abort runlist");

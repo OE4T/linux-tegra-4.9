@@ -852,7 +852,7 @@
 		};
 	};
 
-	pcie_ep@14160000 {
+	pcie_c4_ep {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -884,7 +884,7 @@
 		};
 	};
 
-	pcie_ep@14180000 {
+	pcie_c0_ep {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -914,7 +914,7 @@
 		};
 	};
 
-	pcie_ep@141a0000 {
+	pcie_c5_ep {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -944,7 +944,7 @@
 		};
 	};
 
-	pcie@14100000 {
+	pcie_c1_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -966,7 +966,7 @@
 		};
 	};
 
-	pcie@14120000 {
+	pcie_c2_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -988,7 +988,7 @@
 		};
 	};
 
-	pcie@14140000 {
+	pcie_c3_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -1010,7 +1010,7 @@
 		};
 	};
 
-	pcie@14160000 {
+	pcie_c4_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -1031,7 +1031,7 @@
 		};
 	};
 
-	pcie@14180000 {
+	pcie_c0_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {
@@ -1052,7 +1052,7 @@
 		};
 	};
 
-	pcie@141a0000 {
+	pcie_c5_rp {
 		prod-settings {
 			#prod-cells = <4>;
 			prod {

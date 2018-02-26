@@ -140,7 +140,7 @@
 #define   USB2_OTG_PD_DR                   BIT(2)
 #define   TERM_RANGE_ADJ(x)                (((x) & 0xf) << 3)
 #define   RPD_CTRL(x)                      (((x) & 0x1f) << 26)
-#define   RPD_CTRL_VALUE(x)                (((x) << 26) & 0x1f)
+#define   RPD_CTRL_VALUE(x)                (((x) >> 26) & 0x1f)
 
 #define XUSB_PADCTL_USB2_BATTERY_CHRG_TDCD_DBNC_TIMER_0 (0x280)
 #define   TDCD_DBNC(x)                          (((x) & 0x7ff) << 0)

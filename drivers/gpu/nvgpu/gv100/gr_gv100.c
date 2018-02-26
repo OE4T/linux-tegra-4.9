@@ -277,26 +277,6 @@ exit_build_table:
 	return err;
 }
 
-void gr_gv100_load_tpc_mask(struct gk20a *g)
-{
-	u64 pes_tpc_mask = 0x0ULL;
-	u32 gpc, pes;
-	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
-				GPU_LIT_NUM_TPC_PER_GPC);
-
-	/* gv100 has 6 GPC and 7 TPC/GPC */
-	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
-		for (pes = 0; pes < g->gr.pe_count_per_gpc; pes++) {
-			pes_tpc_mask |= (u64) g->gr.pes_tpc_mask[pes][gpc] <<
-				(num_tpc_per_gpc * gpc);
-		}
-	}
-
-	nvgpu_log_info(g, "pes_tpc_mask: %016llx\n", pes_tpc_mask);
-	gk20a_writel(g, gr_fe_tpc_fs_r(0), u64_lo32(pes_tpc_mask));
-	gk20a_writel(g, gr_fe_tpc_fs_r(1), u64_hi32(pes_tpc_mask));
-}
-
 u32 gr_gv100_get_patch_slots(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;

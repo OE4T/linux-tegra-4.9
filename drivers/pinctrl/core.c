@@ -1125,7 +1125,7 @@ unapply_new_state:
 
 	/* There's no infinite recursive loop here because p->state is NULL */
 	if (old_state)
-		pinctrl_select_state(p, old_state);
+		ret = pinctrl_select_state(p, old_state);
 
 	return ret;
 }

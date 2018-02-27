@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef __LINUX_SND_#define RT5659_H
-#define __LINUX_SND_#define RT5659_H
+#ifndef __LINUX_SND_RT5659_H
+#define __LINUX_SND_RT5659_H
 
 /* dmic1 pin configuration */
 #define RT5659_DMIC1_NULL		0

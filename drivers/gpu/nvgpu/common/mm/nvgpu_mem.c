@@ -74,6 +74,15 @@ u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 				     sysmem_mask, sysmem_coh_mask, vidmem_mask);
 }
 
+bool nvgpu_aperture_is_sysmem(enum nvgpu_aperture ap)
+{
+	return ap == __APERTURE_SYSMEM_COH || ap == APERTURE_SYSMEM;
+}
+
+bool nvgpu_mem_is_sysmem(struct nvgpu_mem *mem)
+{
+	return nvgpu_aperture_is_sysmem(mem->aperture);
+}
 
 struct nvgpu_sgl *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt,
 				     struct nvgpu_sgl *sgl)

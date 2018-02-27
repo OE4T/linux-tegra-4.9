@@ -515,12 +515,20 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 	/*
 	 * At this point we have a scatter-gather list pointing to some number
 	 * of discontiguous chunks of memory. We must iterate over that list and
-	 * generate a GMMU map call for each chunk. There are two possibilities:
-	 * either an IOMMU is enabled or not. When an IOMMU is enabled the
-	 * mapping is simple since the "physical" address is actually a virtual
-	 * IO address and will be contiguous.
+	 * generate a GMMU map call for each chunk. There are several
+	 * possibilities:
+	 *
+	 *  1. IOMMU enabled, IOMMU addressing (typical iGPU)
+	 *  2. IOMMU enabled, IOMMU bypass     (NVLINK bypasses SMMU)
+	 *  3. IOMMU disabled                  (less common but still supported)
+	 *  4. VIDMEM
+	 *
+	 * For (1) we can assume that there's really only one actual SG chunk
+	 * since the IOMMU gives us a single contiguous address range. However,
+	 * for (2), (3) and (4) we have to actually go through each SG entry and
+	 * map each chunk individually.
 	 */
-	if (attrs->aperture == APERTURE_SYSMEM &&
+	if (nvgpu_aperture_is_sysmem(attrs->aperture) &&
 	    nvgpu_iommuable(g) &&
 	    nvgpu_sgt_iommuable(g, sgt)) {
 		u64 io_addr = nvgpu_sgt_get_gpu_addr(g, sgt, sgt->sgl, attrs);
@@ -538,8 +546,8 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 	}
 
 	/*
-	 * Finally: last possible case: do the no-IOMMU mapping. In this case we
-	 * really are mapping physical pages directly.
+	 * Handle cases (2), (3), and (4): do the no-IOMMU mapping. In this case
+	 * we really are mapping physical pages directly.
 	 */
 	nvgpu_sgt_for_each_sgl(sgl, sgt) {
 		u64 phys_addr;

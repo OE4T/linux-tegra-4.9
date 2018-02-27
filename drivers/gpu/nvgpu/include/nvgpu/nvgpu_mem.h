@@ -217,6 +217,9 @@ static inline const char *nvgpu_aperture_str(struct gk20a *g,
 	return "UNKNOWN";
 }
 
+bool nvgpu_aperture_is_sysmem(enum nvgpu_aperture ap);
+bool nvgpu_mem_is_sysmem(struct nvgpu_mem *mem);
+
 /*
  * Returns true if the passed nvgpu_mem has been allocated (i.e it's valid for
  * subsequent use).

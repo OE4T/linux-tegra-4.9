@@ -1282,9 +1282,9 @@ static ssize_t lr388k7_ts_log_show(struct device *dev,
 }
 #endif /* DEBUG_LR388K7 */
 
-static DEVICE_ATTR(force_cap, 0660, lr388k7_ts_force_cap_show,
+static DEVICE_ATTR(force_cap, 0640, lr388k7_ts_force_cap_show,
 			lr388k7_ts_force_cap_store);
-static DEVICE_ATTR(dump, 0660, lr388k7_ts_dump_show,
+static DEVICE_ATTR(dump, 0640, lr388k7_ts_dump_show,
 			lr388k7_ts_dump_store);
 static DEVICE_ATTR(report_mode, 0640, lr388k7_ts_report_mode_show,
 			lr388k7_ts_report_mode_store);
@@ -1301,11 +1301,11 @@ static DEVICE_ATTR(test, 0640,
 		   lr388k7_ts_test_show,
 		   lr388k7_ts_test_store);
 #if defined(DEBUG_LR388K7)
-static DEVICE_ATTR(check_state, 0660,
+static DEVICE_ATTR(check_state, 0640,
 		   lr388k7_ts_check_state_show,
 		   lr388k7_ts_check_state_store);
 
-static DEVICE_ATTR(log, 0660,
+static DEVICE_ATTR(log, 0640,
 		   lr388k7_ts_log_show,
 		   lr388k7_ts_log_store);
 #endif
@@ -2607,18 +2607,16 @@ static int lr388k7_probe(struct spi_device *spi)
 		goto err_clear_drvdata;
 	}
 
-	error = sysfs_create_link(&dev->kobj,
-				  &lr388k7_ts_miscdev.this_device->kobj,
-				  "touch");
+	error = sysfs_create_group(&lr388k7_ts_miscdev.this_device->kobj,
+				   &lr388k7_ts_attr_group);
 	if (error) {
 		dev_err(dev, "failed to create sysfs group\n");
 		goto err_clear_drvdata;
 	}
 
-
-
-	error = sysfs_create_group(&lr388k7_ts_miscdev.this_device->kobj,
-				   &lr388k7_ts_attr_group);
+	error = sysfs_create_link(&dev->kobj,
+				  &lr388k7_ts_miscdev.this_device->kobj,
+				  "touch");
 	if (error) {
 		dev_err(dev, "failed to create sysfs group\n");
 		goto err_clear_drvdata;

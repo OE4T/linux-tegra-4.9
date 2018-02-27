@@ -1119,20 +1119,6 @@ static void mc_reg_info_array_init(
 	INIT_REG_INFO(inf_arr, MC_HUBORD_HUB2MCF_REQ_DDA_MAX);
 	INIT_REG_INFO(inf_arr, MC_HUBINT_HUB2MCF_REQ_DDA_MAX);
 	INIT_REG_INFO(inf_arr, MC_CIFLL_NVLRHP_LATENCY_ALLOWANCE);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_APER);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_APEW);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_APEDMAR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_APEDMAW);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_EQOSR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_EQOSW);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_HDAR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_HDAW);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_NVDISPLAYR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_NVDISPLAYR1);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_PTCR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_VIFALR);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_VIFALW);
-	INIT_REG_INFO(inf_arr, MC_TXN_OVERRIDE_CONFIG_VIW);
 	INIT_REG_INFO(inf_arr, MC_CONFIG_TSA_SINGLE_ARB_ENABLE);
 	INIT_REG_INFO(inf_arr, MC_EMEM_ARB_OVERRIDE);
 	INIT_REG_INFO(inf_arr, MC_PCFIFO_CLIENT_CONFIG0);
@@ -1400,45 +1386,6 @@ static void write_mcf_dda_perf_regs_kern_init(
 	}
 }
 
-static void write_iso_non_coh_perf_regs(
-		struct reg_info *mc_inf_arr
-		)
-{
-	/* Force All ISO clients to be Non-COH */
-	unsigned int data = 0;
-	data = NV_FLD_SET_DRF_DEF(MC,
-			TXN_OVERRIDE_CONFIG_VIW,
-			VIW_COH_PATH_OVERRIDE_NORMAL,
-			FORCE_NON_COHERENT,
-			data);
-	data = NV_FLD_SET_DRF_DEF(MC,
-			TXN_OVERRIDE_CONFIG_VIW,
-			VIW_COH_PATH_OVERRIDE_SO_DEV,
-			FORCE_NON_COHERENT,
-			data);
-
-#define WRITE_ISO_NON_COH(reg_name) \
-	reg_info_reg_wr(mc_inf_arr, \
-			TEGRA_MC_TXN_OVERRIDE_CONFIG_##reg_name##_ID, \
-			data);
-
-	WRITE_ISO_NON_COH(APER);
-	WRITE_ISO_NON_COH(APEW);
-	WRITE_ISO_NON_COH(APEDMAR);
-	WRITE_ISO_NON_COH(APEDMAW);
-	WRITE_ISO_NON_COH(EQOSR);
-	WRITE_ISO_NON_COH(EQOSW);
-	WRITE_ISO_NON_COH(HDAR);
-	WRITE_ISO_NON_COH(HDAW);
-	WRITE_ISO_NON_COH(NVDISPLAYR);
-	WRITE_ISO_NON_COH(NVDISPLAYR1);
-	WRITE_ISO_NON_COH(PTCR);
-	WRITE_ISO_NON_COH(VIFALR);
-	WRITE_ISO_NON_COH(VIFALW);
-	WRITE_ISO_NON_COH(VIW);
-#undef WRITE_ISO_NON_COH
-}
-
 static void disable_pcfifo_interlock(
 		struct reg_info *mc_inf_arr
 		)
@@ -1591,8 +1538,6 @@ static void write_perf_regs_kern_init(
 	data = 0x4;
 	reg_info_reg_wr(mc_inf_arr,
 			TEGRA_MC_CIFLL_NVLRHP_LATENCY_ALLOWANCE_ID, data);
-
-	write_iso_non_coh_perf_regs(mc_inf_arr);
 
 	if (mc_settings_ptr->tsa_arb_fix) {
 		data = 0;

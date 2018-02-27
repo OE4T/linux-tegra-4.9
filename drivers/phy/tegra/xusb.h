@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (c) 2015, Google Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -355,6 +355,7 @@ struct tegra_xusb_usb3_port {
 	bool internal;
 	enum tegra_xusb_usb_port_cap port_cap;
 	int oc_pin;
+	bool gen1_only;
 
 	u32 tap1;
 	u32 amp;

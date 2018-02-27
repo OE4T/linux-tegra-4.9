@@ -1045,7 +1045,7 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 		reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
 	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
 
-	if (port->port_cap == USB_OTG_CAP) {
+	if (port->port_cap == USB_OTG_CAP || port->gen1_only) {
 		reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
 		reg &= ~(PORTX_SPEED_SUPPORT_MASK << PORTX_SPEED_SUPPORT_SHIFT(index));
 		reg |= (PORT_SPEED_SUPPORT_GEN1 << PORTX_SPEED_SUPPORT_SHIFT(index));

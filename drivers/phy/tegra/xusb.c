@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -794,8 +794,13 @@ static int tegra_xusb_usb3_port_parse_dt(struct tegra_xusb_usb3_port *usb3)
 		dev_err(&port->dev, "failed to read port: %d\n", err);
 		return err;
 	}
-
 	usb3->port = value;
+
+	of_property_read_u32(np, "nvidia,usb3-gen1-only", &value);
+	if (!err && value == 1)
+		usb3->gen1_only = true;
+	else
+		usb3->gen1_only = false;
 
 	usb3->internal = of_property_read_bool(np, "nvidia,internal");
 

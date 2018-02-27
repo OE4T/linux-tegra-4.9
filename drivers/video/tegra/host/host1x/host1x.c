@@ -179,8 +179,9 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 {
 	u32 timeout;
 	int err;
-	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt_nospec(&ctx->dev->syncpt, &args->id))
 		return -EINVAL;
+
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		/* FIXME: MAX_SCHEDULE_TIMEOUT is ulong which can be bigger
                    than u32 so we should fix nvhost_syncpt_wait_timeout to
@@ -204,8 +205,9 @@ static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 	u32 timeout;
 	int err;
 	struct nvhost_timespec nvts;
-	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt_nospec(&ctx->dev->syncpt, &args->id))
 		return -EINVAL;
+
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		timeout = (u32)MAX_SCHEDULE_TIMEOUT;
 	else

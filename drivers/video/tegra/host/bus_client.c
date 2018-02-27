@@ -1077,6 +1077,9 @@ static int nvhost_ioctl_channel_set_syncpoint_name(
 	char name[32];
 	int j;
 
+	if (!nvhost_syncpt_is_valid_hw_pt_nospec(&host->syncpt, &buf->syncpt_id))
+		return -EINVAL;
+
 	if (args_name) {
 		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
 			return -EFAULT;

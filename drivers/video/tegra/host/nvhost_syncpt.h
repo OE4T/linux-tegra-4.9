@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -116,6 +116,7 @@ int nvhost_syncpt_nb_hw_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_nb_pts(struct nvhost_syncpt *sp);
 int nvhost_syncpt_pts_base(struct nvhost_syncpt *sp);
 bool nvhost_syncpt_is_valid_hw_pt(struct nvhost_syncpt *sp, u32 id);
+bool nvhost_syncpt_is_valid_hw_pt_nospec(struct nvhost_syncpt *sp, u32 *id);
 bool nvhost_syncpt_is_valid_pt(struct nvhost_syncpt *sp, u32 id);
 int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf);
 int nvhost_syncpt_nb_mlocks(struct nvhost_syncpt *sp);

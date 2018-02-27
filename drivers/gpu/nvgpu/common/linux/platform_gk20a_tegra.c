@@ -122,6 +122,9 @@ static int gk20a_tegra_secure_alloc(struct gk20a *g,
 	int err = 0;
 	size_t aligned_size = PAGE_ALIGN(size);
 
+	if (nvgpu_mem_is_valid(&desc->mem))
+		return 0;
+
 	/* We ran out of preallocated memory */
 	if (secure_buffer->used + aligned_size > secure_buffer->size) {
 		nvgpu_err(platform->g, "failed to alloc %zu bytes of VPR, %zu/%zu used",

@@ -2482,6 +2482,11 @@ static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 {
 	int err = 0;
 
+	nvgpu_log_fn(g, " ");
+
+	if (nvgpu_mem_is_valid(&desc->mem))
+		return 0;
+
 	err = nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 				    size, &desc->mem);
 	if (err)

@@ -718,6 +718,7 @@ void dw_pcie_host_deinit(struct pcie_port *pp)
 			case IORESOURCE_IO:
 				pci_unmap_iospace(win->res);
 			}
+			kfree(win->res);
 		}
 	}
 	pci_free_resource_list(&res);

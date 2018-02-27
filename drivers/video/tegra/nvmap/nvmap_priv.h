@@ -464,10 +464,6 @@ void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);
 
-struct nvmap_client *nvmap_client_get(struct nvmap_client *client);
-
-void nvmap_client_put(struct nvmap_client *c);
-
 struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
 
 /* MM definitions. */

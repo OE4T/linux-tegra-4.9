@@ -431,26 +431,6 @@ static void destroy_client(struct nvmap_client *client)
 	kfree(client);
 }
 
-struct nvmap_client *nvmap_client_get(struct nvmap_client *client)
-{
-	if (!virt_addr_valid(client))
-		return NULL;
-
-	if (!atomic_add_unless(&client->count, 1, 0))
-		return NULL;
-
-	return client;
-}
-
-void nvmap_client_put(struct nvmap_client *client)
-{
-	if (!client)
-		return;
-
-	if (!atomic_dec_return(&client->count))
-		destroy_client(client);
-}
-
 static int nvmap_open(struct inode *inode, struct file *filp)
 {
 	struct miscdevice *miscdev = filp->private_data;
@@ -479,8 +459,14 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 {
 	struct nvmap_client *priv = filp->private_data;
 
+	if(!priv)
+		return 0;
+
 	trace_nvmap_release(priv, priv->name);
-	nvmap_client_put(priv);
+
+	if (!atomic_dec_return(&priv->count))
+		destroy_client(priv);
+
 	return 0;
 }
 

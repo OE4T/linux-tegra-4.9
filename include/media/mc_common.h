@@ -366,6 +366,8 @@ struct tegra_csi_fops {
 		enum tegra_csi_port_num port_num);
 	void (*csi_override_format)(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
+	int (*csi_error_recover)(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num);
 	int (*mipical)(struct tegra_csi_channel *chan);
 	int (*hw_init)(struct tegra_csi_device *csi);
 };

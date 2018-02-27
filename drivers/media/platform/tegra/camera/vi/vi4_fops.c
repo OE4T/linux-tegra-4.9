@@ -30,6 +30,7 @@
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
 
+static void tegra_channel_error_recovery(struct tegra_channel *chan);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 static int tegra_channel_stop_increments(struct tegra_channel *chan);
 static void tegra_channel_notify_status_callback(
@@ -189,10 +190,11 @@ static bool vi_notify_wait(struct tegra_channel *chan,
 		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
 				chan->syncpt[i][SOF_SYNCPT_IDX], thresh[i],
 				250, NULL, NULL);
-		if (unlikely(err))
+		if (unlikely(err)) {
 			dev_err(chan->vi->dev,
 				"PXL_SOF syncpt timeout! err = %d\n", err);
-		else {
+			return false;
+		} else {
 			struct vi_capture_status status;
 
 			err = vi_notify_get_capture_status(chan->vnc[i],
@@ -205,6 +207,7 @@ static bool vi_notify_wait(struct tegra_channel *chan,
 				*ts = ns_to_timespec((s64)status.sof_ts);
 		}
 	}
+
 	return true;
 }
 
@@ -506,6 +509,10 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	int err = false;
 	int i;
 
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
+	chan->capture_state = CAPTURE_IDLE;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
 	for (i = 0; i < chan->valid_ports; i++)
 		tegra_channel_surface_setup(chan, buf, i);
 
@@ -522,12 +529,20 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	}
 
 	/* wait for vi notifier events */
-	vi_notify_wait(chan, &ts);
+	if (!vi_notify_wait(chan, &ts)) {
+		tegra_channel_error_recovery(chan);
+
+		state = VB2_BUF_STATE_ERROR;
+
+		spin_lock_irqsave(&chan->capture_state_lock, flags);
+		chan->capture_state = CAPTURE_TIMEOUT;
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+	}
 
 	vi4_check_status(chan);
 
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	if (chan->capture_state != CAPTURE_ERROR)
+	if (chan->capture_state == CAPTURE_IDLE)
 		chan->capture_state = CAPTURE_GOOD;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
@@ -615,6 +630,58 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
 	trace_tegra_channel_capture_done("eof", ts);
+}
+
+
+static struct v4l2_subdev *find_linked_csi_subdev(struct tegra_csi_device *csi,
+	struct tegra_channel *chan)
+{
+	struct tegra_csi_channel *csi_it;
+	int i = 0;
+
+	list_for_each_entry(csi_it, &csi->csi_chans, list) {
+		for (i = 0; i < chan->num_subdevs; i++)
+			if (chan->subdev[i] == &csi_it->subdev)
+				return chan->subdev[i];
+	}
+
+	return NULL;
+}
+
+static void tegra_channel_error_recovery(struct tegra_channel *chan)
+{
+	int i = 0;
+
+	struct v4l2_subdev *csi_subdev;
+	struct tegra_csi_device *csi = tegra_get_mc_csi();
+
+	dev_warn(chan->vi->dev,
+		"%s: attempting to reset the capture channel\n", __func__);
+
+	/* Find connected NvCsi stream subdev */
+	csi_subdev = find_linked_csi_subdev(csi, chan);
+	if (!csi_subdev) {
+		dev_err(chan->vi->dev,
+			"%s: failed, unable to find linked csi subdev\n",
+			__func__);
+		return;
+	}
+
+	/* Disable VI notify */
+	for (i = 0; i < chan->valid_ports; i++)
+		tegra_channel_notify_disable(chan, i);
+
+	/* NvCsi reset/recovery */
+	v4l2_subdev_call(csi_subdev, core, sync,
+		V4L2_SYNC_EVENT_SUBDEV_ERROR_RECOVER);
+
+	/* Clear VI error state */
+	vi4_write(chan, CFG_INTERRUPT_STATUS, 0x1);
+	vi4_write(chan, NOTIFY_ERROR, 0x1);
+
+	/* Re-initialize VI and capture context */
+	for (i = 0; i < chan->valid_ports; i++)
+		tegra_channel_capture_setup(chan, i);
 }
 
 static int tegra_channel_kthread_capture_start(void *data)

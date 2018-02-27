@@ -61,25 +61,33 @@ static u32 csi4_phy_read(struct tegra_csi_channel *chan,
 		CSI4_BASE_ADDRESS + (CSI4_PHY_OFFSET * index) + addr);
 }
 
-static void csi4_stream_init(struct tegra_csi_channel *chan, int port_num)
+static void csi4_stream_init(struct tegra_csi_channel *chan, int csi_port)
 {
 	struct tegra_csi_device *csi = chan->csi;
+	int phy_num = csi_port >> 1;
+	bool cil_a = (csi_port & 0x1) ? false : true;
 
 	dev_dbg(csi->dev, "%s\n", __func__);
 
-	csi4_stream_write(chan, port_num, CILA_INTR_STATUS, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILA_ERR_INTR_STATUS, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILA_INTR_MASK, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILA_ERR_INTR_MASK, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILB_INTR_STATUS, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILB_ERR_INTR_STATUS, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILB_INTR_MASK, 0xffffffff);
-	csi4_stream_write(chan, port_num, CILB_ERR_INTR_MASK, 0xffffffff);
-	csi4_stream_write(chan, port_num, INTR_STATUS, 0x3ffff);
-	csi4_stream_write(chan, port_num, ERR_INTR_STATUS, 0x7ffff);
-	csi4_stream_write(chan, port_num, ERROR_STATUS2VI_MASK, 0x0);
-	csi4_stream_write(chan, port_num, INTR_MASK, 0x0);
-	csi4_stream_write(chan, port_num, ERR_INTR_MASK, 0x0);
+	if (cil_a) {
+		csi4_phy_write(chan, phy_num, CILA_INTR_STATUS, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILA_ERR_INTR_STATUS, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILA_INTR_MASK, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILA_ERR_INTR_MASK, 0xffffffff);
+	}
+
+	if (!cil_a || (chan->numlanes > 2)) {
+		csi4_phy_write(chan, phy_num, CILB_INTR_STATUS, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILB_ERR_INTR_STATUS, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILB_INTR_MASK, 0xffffffff);
+		csi4_phy_write(chan, phy_num, CILB_ERR_INTR_MASK, 0xffffffff);
+	}
+
+	csi4_stream_write(chan, csi_port, INTR_STATUS, 0x3ffff);
+	csi4_stream_write(chan, csi_port, ERR_INTR_STATUS, 0x7ffff);
+	csi4_stream_write(chan, csi_port, ERROR_STATUS2VI_MASK, 0x0);
+	csi4_stream_write(chan, csi_port, INTR_MASK, 0x0);
+	csi4_stream_write(chan, csi_port, ERR_INTR_MASK, 0x0);
 }
 
 static void csi4_stream_config(struct tegra_csi_channel *chan, int port_num)
@@ -105,7 +113,7 @@ static void csi4_phy_config(
 	int csi_lanes, bool enable)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	int phy_num = (csi_port & 0x6) >> 1;
+	int phy_num = csi_port >> 1;
 	bool cil_a = (csi_port & 0x1) ? false : true;
 	int cil_config;
 	/* Clocks for the CSI interface */
@@ -573,6 +581,20 @@ static void csi4_override_format(struct tegra_csi_channel *chan,
 	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
 }
 
+static int csi4_error_recover(struct tegra_csi_channel *chan,
+	enum tegra_csi_port_num port_num)
+{
+	int csi_port = chan->ports[port_num].num;
+
+	dev_dbg(chan->csi->dev, "%s: resetting nvcsi stream %d\n",
+		__func__, csi_port);
+
+	csi4_stop_streaming(chan, port_num);
+	csi4_start_streaming(chan, port_num);
+
+	return 0;
+}
+
 static int csi4_mipi_cal(struct tegra_csi_channel *chan)
 {
 	unsigned int lanes, num_ports, port, addr;
@@ -653,6 +675,7 @@ struct tegra_csi_fops csi4_fops = {
 	.csi_start_streaming = csi4_start_streaming,
 	.csi_stop_streaming = csi4_stop_streaming,
 	.csi_override_format = csi4_override_format,
+	.csi_error_recover = csi4_error_recover,
 	.mipical = csi4_mipi_cal,
 	.hw_init = csi4_hw_init,
 };

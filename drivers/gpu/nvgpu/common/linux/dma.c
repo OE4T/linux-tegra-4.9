@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -221,6 +221,11 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	NVGPU_DEFINE_DMA_ATTRS(dma_attrs);
 	void *alloc_ret;
 
+	if (nvgpu_mem_is_valid(mem)) {
+		nvgpu_warn(g, "memory leak !!");
+		WARN_ON(1);
+	}
+
 	/*
 	 * Before the debug print so we see this in the total. But during
 	 * cleanup in the fail path this has to be subtracted.
@@ -296,6 +301,11 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
 	int before_pending;
+
+	if (nvgpu_mem_is_valid(mem)) {
+		nvgpu_warn(g, "memory leak !!");
+		WARN_ON(1);
+	}
 
 	dma_dbg_alloc(g, size, flags, "vidmem");
 

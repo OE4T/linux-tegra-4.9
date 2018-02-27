@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2173,6 +2173,8 @@ struct mrq_uphy_response {
 #define BPMP_ETIMEDOUT  23
 /** @brief Out of range */
 #define BPMP_ERANGE	34
+/** @brief Function not implemented */
+#define  BPMP_ENOSYS	38
 /** @brief Invalid slot */
 #define BPMP_EBADSLT	57
 

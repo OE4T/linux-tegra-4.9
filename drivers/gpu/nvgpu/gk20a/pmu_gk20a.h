@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -69,7 +69,7 @@ void gk20a_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 
 void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable);
 int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
-				 u32 *var, u32 val);
+				 void *var, u8 val);
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,

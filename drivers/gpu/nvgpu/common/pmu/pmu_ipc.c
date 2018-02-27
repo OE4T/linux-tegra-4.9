@@ -953,7 +953,7 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu)
 }
 
 int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
-				 u32 *var, u32 val)
+				 void *var, u8 val)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct nvgpu_timeout timeout;
@@ -962,7 +962,7 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		if (*var == val)
+		if (*(u8 *)var == val)
 			return 0;
 
 		if (gk20a_pmu_is_interrupted(pmu))
@@ -980,11 +980,12 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 {
 	struct nv_pmu_rpc_header rpc;
 	struct nvgpu_pmu *pmu = &g->pmu;
-        struct nv_pmu_rpc_struct_perfmon_query *rpc_param;
+	struct rpc_handler_payload *rpc_payload =
+		(struct rpc_handler_payload *)param;
+	struct nv_pmu_rpc_struct_perfmon_query *rpc_param;
 
 	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_header));
-	if (param)
-		memcpy(&rpc, param, sizeof(struct nv_pmu_rpc_header));
+	memcpy(&rpc, rpc_payload->rpc_buff,	sizeof(struct nv_pmu_rpc_header));
 
 	if (rpc.flcn_status) {
 		nvgpu_err(g, " failed RPC response, status=0x%x, func=0x%x",
@@ -1026,7 +1027,8 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 		case NV_PMU_RPC_ID_PERFMON_T18X_QUERY:
 			nvgpu_pmu_dbg(g,
 				"reply NV_PMU_RPC_ID_PERFMON_QUERY");
-			rpc_param = (struct nv_pmu_rpc_struct_perfmon_query *)param;
+			rpc_param = (struct nv_pmu_rpc_struct_perfmon_query *)
+				rpc_payload->rpc_buff;
 			pmu->load = rpc_param->sample_buffer[0];
 			pmu->perfmon_query = 1;
 			/* set perfmon_query to 1 after load is copied */
@@ -1042,32 +1044,62 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 
 exit:
 	/* free allocated memory */
-	if (param)
-		nvgpu_kfree(g, param);
+	if (rpc_payload->is_mem_free_set)
+		nvgpu_kfree(g, rpc_payload);
 }
 
 int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	u16 size_rpc, u16 size_scratch, pmu_callback caller_cb,
-	void *caller_cb_param)
+	void *caller_cb_param, bool is_copy_back)
 {
 	struct gk20a *g = pmu->g;
 	struct pmu_cmd cmd;
 	struct pmu_payload payload;
-	pmu_callback callback = caller_cb;
+	struct rpc_handler_payload *rpc_payload = NULL;
+	pmu_callback callback = NULL;
 	void *rpc_buff = NULL;
-	void *cb_param = caller_cb_param;
 	u32 seq = 0;
 	int status = 0;
 
 	if (!pmu->pmu_ready) {
 		nvgpu_warn(g, "PMU is not ready to process RPC");
-		return -EINVAL;
+		status = EINVAL;
+		goto exit;
 	}
 
-	rpc_buff = nvgpu_kzalloc(g, size_rpc);
-	if (!rpc_buff)
-		return -ENOMEM;
+	if (caller_cb == NULL) {
+		rpc_payload = nvgpu_kzalloc(g,
+			sizeof(struct rpc_handler_payload) + size_rpc);
+		if (!rpc_payload) {
+			status = ENOMEM;
+			goto exit;
+		}
 
+		rpc_payload->rpc_buff = (u8 *)rpc_payload +
+			sizeof(struct rpc_handler_payload);
+		rpc_payload->is_mem_free_set =
+			is_copy_back ? false : true;
+
+		/* assign default RPC handler*/
+		callback = pmu_rpc_handler;
+	} else {
+		if (caller_cb_param == NULL) {
+			nvgpu_err(g, "Invalid cb param addr");
+			status = EINVAL;
+			goto exit;
+		}
+		rpc_payload = nvgpu_kzalloc(g,
+			sizeof(struct rpc_handler_payload));
+		if (!rpc_payload) {
+			status = ENOMEM;
+			goto exit;
+		}
+		rpc_payload->rpc_buff = caller_cb_param;
+		rpc_payload->is_mem_free_set = true;
+		callback = caller_cb;
+	}
+
+	rpc_buff = rpc_payload->rpc_buff;
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	memset(&payload, 0, sizeof(struct pmu_payload));
 
@@ -1081,24 +1113,38 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	payload.rpc.size_rpc = size_rpc;
 	payload.rpc.size_scratch = size_scratch;
 
-	/* assign default RPC handler & buffer */
-	if (!callback && !cb_param) {
-		callback = pmu_rpc_handler;
-		cb_param = rpc_buff;
-	}
-
 	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, &payload,
-			PMU_COMMAND_QUEUE_LPQ, pmu_rpc_handler,
-			cb_param, &seq, ~0);
+			PMU_COMMAND_QUEUE_LPQ, callback,
+			rpc_payload, &seq, ~0);
 	if (status) {
 		nvgpu_err(g, "Failed to execute RPC status=0x%x, func=0x%x",
 				status, rpc->function);
+		goto exit;
 	}
 
-	/* if caller passed buff then free allocated RPC buffer */
-	if (caller_cb_param)
-		nvgpu_kfree(g, rpc_buff);
+	/*
+	 * Option act like blocking call, which waits till RPC request
+	 * executes on PMU & copy back processed data to rpc_buff
+	 * to read data back in nvgpu
+	 */
+	if (is_copy_back) {
+		/* clear buff */
+		memset(rpc_buff, 0, size_rpc);
+		/* wait till RPC execute in PMU & ACK */
+		pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
+			&((struct nv_pmu_rpc_header *)rpc_buff)->function,
+			rpc->function);
+		/* copy back data to caller */
+		memcpy(rpc, rpc_buff, size_rpc);
+		/* free allocated memory */
+		nvgpu_kfree(g, rpc_payload);
+	}
+
+exit:
+	if (status) {
+		if (rpc_payload)
+			nvgpu_kfree(g, rpc_payload);
+	}
 
 	return status;
-
 }

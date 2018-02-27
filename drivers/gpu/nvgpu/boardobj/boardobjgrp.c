@@ -977,7 +977,7 @@ static u32 boardobjgrp_pmucmdsend_rpc(struct gk20a *g,
 	status = nvgpu_pmu_rpc_execute(pmu, &(rpc.hdr),
 		(sizeof(rpc) - sizeof(rpc.scratch)),
 		pcmd->dmem_buffer_size,
-		NULL, NULL);
+		NULL, NULL, copy_out);
 
 	if (status) {
 		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);

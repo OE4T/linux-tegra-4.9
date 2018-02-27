@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -154,11 +154,44 @@ enum {
 		\
 		_stat = nvgpu_pmu_rpc_execute(_pmu, &((_prpc)->hdr),    \
 			(sizeof(*(_prpc)) - sizeof((_prpc)->scratch)),\
-			(_size), NULL, NULL);	\
+			(_size), NULL, NULL, false);	\
+	} while (0)
+
+/* RPC blocking call to copy back data from PMU to  _prpc */
+#define PMU_RPC_EXECUTE_CPB(_stat, _pmu, _unit, _func, _prpc, _size)\
+	do {                                                 \
+		memset(&((_prpc)->hdr), 0, sizeof((_prpc)->hdr));\
+		\
+		(_prpc)->hdr.unit_id   = PMU_UNIT_##_unit;       \
+		(_prpc)->hdr.function = NV_PMU_RPC_ID_##_unit##_##_func;\
+		(_prpc)->hdr.flags    = 0x0;    \
+		\
+		_stat = nvgpu_pmu_rpc_execute(_pmu, &((_prpc)->hdr),    \
+			(sizeof(*(_prpc)) - sizeof((_prpc)->scratch)),\
+			(_size), NULL, NULL, true);	\
+	} while (0)
+
+/* RPC non-blocking with call_back handler option */
+#define PMU_RPC_EXECUTE_CB(_stat, _pmu, _unit, _func, _prpc, _size, _cb, _cbp)\
+	do {                                                 \
+		memset(&((_prpc)->hdr), 0, sizeof((_prpc)->hdr));\
+		\
+		(_prpc)->hdr.unit_id   = PMU_UNIT_##_unit;       \
+		(_prpc)->hdr.function = NV_PMU_RPC_ID_##_unit##_##_func;\
+		(_prpc)->hdr.flags    = 0x0;    \
+		\
+		_stat = nvgpu_pmu_rpc_execute(_pmu, &((_prpc)->hdr),    \
+			(sizeof(*(_prpc)) - sizeof((_prpc)->scratch)),\
+			(_size), _cb, _cbp, false);	\
 	} while (0)
 
 typedef void (*pmu_callback)(struct gk20a *, struct pmu_msg *, void *, u32,
 	u32);
+
+struct rpc_handler_payload {
+	void *rpc_buff;
+	bool is_mem_free_set;
+};
 
 struct pmu_rpc_desc {
 	void   *prpc;
@@ -500,6 +533,7 @@ bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
 
 /* PMU RPC */
 int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
-	u16 size_rpc, u16 size_scratch, pmu_callback callback, void *cb_param);
+	u16 size_rpc, u16 size_scratch, pmu_callback callback, void *cb_param,
+	bool is_copy_back);
 
 #endif /* __NVGPU_PMU_H__ */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -813,6 +813,10 @@ static int __init denver_knobs_init(void)
 
 	/* Cancel the notifier as mts_version should be set now. */
 	unregister_cpu_notifier(&mts_version_cpu_nb);
+
+	/* mts_version will be non-zero, only if its an NVIDIA CPU */
+	if (mts_version)
+		pr_info("%s:MTS_VERSION:%d\n", __func__, mts_version);
 
 	if (mts_version && !proc_create("mts_version", 0, NULL, &mts_version_fops)) {
 		pr_err("Failed to create /proc/mts_version!\n");

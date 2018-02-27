@@ -35,6 +35,8 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/vmalloc.h>
 #include <linux/version.h>
+#include <linux/poll.h>
+#include <linux/anon_inodes.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -471,6 +473,89 @@ static int nvhost_ioctl_ctrl_check_module_support(
 	return 0;
 }
 
+struct nvhost_event_poll_fd_rec {
+	int fd;
+	bool event_posted;
+	struct mutex lock;
+	wait_queue_head_t wq;
+};
+
+static unsigned int nvhost_event_poll(struct file *filp, poll_table *wait)
+{
+	struct nvhost_event_poll_fd_rec *private_data = filp->private_data;
+	unsigned int mask = 0;
+
+	poll_wait(filp, &private_data->wq, wait);
+
+	mutex_lock(&private_data->lock);
+	if (private_data->event_posted) {
+		mask = (POLLPRI | POLLIN);
+		private_data->event_posted = false;
+	}
+	mutex_unlock(&private_data->lock);
+
+	return mask;
+}
+
+static int nvhost_event_poll_fd_release(struct inode *inode, struct file *filp)
+{
+	struct nvhost_event_poll_fd_rec *private_data = filp->private_data;
+	kfree(private_data);
+	return 0;
+}
+
+const struct file_operations nvhost_event_poll_fd_ops = {
+	.owner = THIS_MODULE,
+	.poll = nvhost_event_poll,
+	.release = nvhost_event_poll_fd_release,
+};
+
+static int nvhost_ioctl_ctrl_poll_fd_create (
+	struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_poll_fd_create_args *args)
+{
+	struct nvhost_event_poll_fd_rec *private_data;
+	struct file *file;
+	char name[64];
+	int err;
+	int fd;
+
+	err = get_unused_fd_flags(O_RDWR);
+	if (err < 0)
+		return err;
+	fd = err;
+
+	snprintf(name, sizeof(name), "nvhost-event-poll-fd");
+
+	file = anon_inode_getfile(name, &nvhost_event_poll_fd_ops,
+				  NULL, O_RDWR);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto fail_file;
+	}
+
+	private_data = kzalloc(sizeof(*private_data), GFP_KERNEL);
+	if (!private_data)
+		goto fail_alloc;
+
+	private_data->fd = fd;
+	init_waitqueue_head(&private_data->wq);
+	mutex_init(&private_data->lock);
+	private_data->event_posted = false;
+
+	fd_install(fd, file);
+	file->private_data = private_data;
+
+	args->fd = fd;
+	return 0;
+
+fail_alloc:
+	fput(file);
+fail_file:
+	put_unused_fd(fd);
+	return err;
+}
+
 static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -554,6 +639,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_CHECK_MODULE_SUPPORT:
 		err = nvhost_ioctl_ctrl_check_module_support(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_POLL_FD_CREATE:
+		err = nvhost_ioctl_ctrl_poll_fd_create(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

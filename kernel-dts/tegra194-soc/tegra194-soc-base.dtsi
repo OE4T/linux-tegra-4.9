@@ -2032,8 +2032,20 @@
 
 	nvpmodel {
 		compatible = "nvidia,nvpmodel";
-		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
-		clock-names = "emc";
+		clocks = <&bpmp_clks TEGRA194_CLK_EMC>,
+				<&bpmp_clks TEGRA194_CLK_DLA0_CORE>,
+				<&bpmp_clks TEGRA194_CLK_DLA1_CORE>,
+				<&bpmp_clks TEGRA194_CLK_DLA0_FALCON>,
+				<&bpmp_clks TEGRA194_CLK_DLA1_FALCON>,
+				<&bpmp_clks TEGRA194_CLK_PVA0_VPS0>,
+				<&bpmp_clks TEGRA194_CLK_PVA0_VPS1>,
+				<&bpmp_clks TEGRA194_CLK_PVA1_VPS0>,
+				<&bpmp_clks TEGRA194_CLK_PVA1_VPS1>,
+				<&bpmp_clks TEGRA194_CLK_PVA0_AXI>,
+				<&bpmp_clks TEGRA194_CLK_PVA1_AXI>;
+		clock-names = "emc", "dla0_core", "dla1_core", "dla0_falcon", "dla1_falcon",
+				"pva0_vps0", "pva0_vps1","pva1_vps0", "pva1_vps1",
+				"pva0_axi", "pva1_axi";
 		status = "okay";
 	};
 };

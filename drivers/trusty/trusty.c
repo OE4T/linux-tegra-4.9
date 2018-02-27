@@ -69,6 +69,11 @@ struct trusty_state {
 #define SMC_REGISTERS_TRASHED	"ip"
 #endif
 
+#ifdef CONFIG_PREEMPT_RT_FULL
+void migrate_enable(void);
+void migrate_disable(void);
+#endif
+
 int hyp_ipa_translate(uint64_t *ipa)
 {
 	int gid, ret = 0;
@@ -496,7 +501,12 @@ void trusty_enqueue_nop(struct device *dev, struct trusty_nop *nop)
 	struct trusty_work *tw;
 	struct trusty_state *s = platform_get_drvdata(to_platform_device(dev));
 
+#ifdef CONFIG_PREEMPT_RT_FULL
+	migrate_disable();
+#else
 	preempt_disable();
+#endif
+
 	tw = this_cpu_ptr(s->nop_works);
 	if (nop) {
 		WARN_ON(s->api_version < TRUSTY_API_VERSION_SMP_NOP);
@@ -507,7 +517,12 @@ void trusty_enqueue_nop(struct device *dev, struct trusty_nop *nop)
 		spin_unlock_irqrestore(&s->nop_lock, flags);
 	}
 	schedule_workitem(s->nop_wq, &tw->work);
+
+#ifdef CONFIG_PREEMPT_RT_FULL
+	migrate_enable();
+#else
 	preempt_enable();
+#endif
 }
 EXPORT_SYMBOL(trusty_enqueue_nop);
 

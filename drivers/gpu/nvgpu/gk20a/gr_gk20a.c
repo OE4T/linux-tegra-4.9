@@ -752,7 +752,7 @@ static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 		gr_fecs_current_ctx_valid_f(1);
 }
 
-static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
+int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
 	u32 inst_base_ptr = u64_lo32(nvgpu_inst_block_addr(g, &c->inst_block)
@@ -881,7 +881,7 @@ u32 gk20a_gr_tpc_offset(struct gk20a *g, u32 tpc)
 	return tpc_offset;
 }
 
-static int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
+int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 			struct channel_gk20a *c, bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1282,7 +1282,7 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 	return 0;
 }
 
-static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
+int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 {
 	struct gk20a *g = c->g;
 	int ret;
@@ -1306,7 +1306,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	return ret;
 }
 
-static u32 gk20a_init_sw_bundle(struct gk20a *g)
+u32 gk20a_init_sw_bundle(struct gk20a *g)
 {
 	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
 	u32 last_bundle_data = 0;

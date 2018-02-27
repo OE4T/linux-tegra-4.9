@@ -802,4 +802,10 @@ void gk20a_gr_set_error_notifier(struct gk20a *g,
 			struct gr_gk20a_isr_data *isr_data, u32 error_notifier);
 int gk20a_gr_handle_notify_pending(struct gk20a *g,
 				struct gr_gk20a_isr_data *isr_data);
+int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
+			struct channel_gk20a *c, bool patch);
+int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
+					struct channel_gk20a *c);
+u32 gk20a_init_sw_bundle(struct gk20a *g);
+int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type);
 #endif /*__GR_GK20A_H__*/

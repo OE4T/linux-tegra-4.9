@@ -2073,7 +2073,7 @@ u32 get_ecc_override_val(struct gk20a *g)
 	return 0;
 }
 
-static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
+bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 				bool *cilp_preempt_pending)
 {
 	struct gk20a *g = ch->g;

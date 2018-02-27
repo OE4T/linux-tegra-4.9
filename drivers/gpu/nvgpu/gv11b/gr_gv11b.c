@@ -131,7 +131,7 @@ bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
-static u32 gv11b_gr_sm_offset(struct gk20a *g, u32 sm)
+u32 gv11b_gr_sm_offset(struct gk20a *g, u32 sm)
 {
 
 	u32 sm_pri_stride = nvgpu_get_litter_value(g, GPU_LIT_SM_PRI_STRIDE);

@@ -74,6 +74,7 @@ u32 t19x_nvlink_get_link_mode(struct nvlink_device *ndev)
 		link_mode = NVLINK_LINK_RCVY_RX;
 		break;
 	default:
+		nvlink_err("Invalid link state (link state = %u)", link_state);
 		link_mode = NVLINK_LINK_OFF;
 		break;
 	}
@@ -111,6 +112,9 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink)
 			break;
 
 		default:
+			nvlink_err("Invalid TX sublink state"
+				" (sublink state = %u)",
+				state);
 			sublink_mode = NVLINK_TX_OFF;
 			break;
 		}
@@ -137,6 +141,9 @@ u32 t19x_nvlink_get_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink)
 			break;
 
 		default:
+			nvlink_err("Invalid RX sublink state"
+				" (sublink state = %u)",
+				state);
 			sublink_mode = NVLINK_RX_OFF;
 			break;
 		}
@@ -230,8 +237,7 @@ static int t19x_nvlink_prbs_gen_en(struct tnvlink_dev *tdev)
 /* Put RX in calibration */
 static int t19x_nvlink_rxcal_enable(struct tnvlink_dev *tdev)
 {
-	/* TODO: Put RX in calibration */
-
+	/* TODO: Move the RX calibration code from init_nvhs_phy() to here */
 	return 0;
 }
 
@@ -267,17 +273,26 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 	if (!is_rx_sublink) {
 		switch (mode) {
 		case NVLINK_TX_COMMON:
-			/* TODO  */
+			/* TODO */
+			nvlink_err("Putting the TX sublink in NVLINK_TX_COMMON"
+				" mode is currently not supported by the"
+				" driver");
+			status = -EOPNOTSUPP;
 			break;
 
 		case NVLINK_TX_COMMON_DISABLE:
-			/* This is a NOP for the GPU side.
-			 * Need to check if anything needs to be done for Tegra.
-			 */
+			nvlink_err("Putting the TX sublink in"
+				" NVLINK_TX_COMMON_DISABLE mode is currently"
+				" not supported by the driver");
+			status = -EOPNOTSUPP;
 			break;
 
 		case NVLINK_TX_DATA_READY:
-			/*TODO */
+			/* TODO */
+			nvlink_err("Putting the TX sublink in"
+				" NVLINK_TX_DATA_READY mode is currently not"
+				" supported by the driver");
+			status = -EOPNOTSUPP;
 			break;
 
 		case NVLINK_TX_PRBS_EN:
@@ -436,16 +451,27 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 		case NVLINK_TX_OFF:
 			/* TODO */
+			nvlink_err("Putting the TX sublink in NVLINK_TX_OFF"
+				" mode is currently not supported by the"
+				" driver");
+			status = -EOPNOTSUPP;
 			break;
 
 		default:
-			/* TODO */
+			nvlink_err("Invalid TX sublink mode"
+				" (sublink mode = %u)",
+				mode);
+			status = -EINVAL;
 			break;
 		}
 	} else {
 		switch (mode) {
 		case NVLINK_RX_OFF:
 			/* TODO */
+			nvlink_err("Putting the RX sublink in NVLINK_RX_OFF"
+				" mode is currently not supported by the"
+				" driver");
+			status = -EOPNOTSUPP;
 			break;
 		case NVLINK_RX_RXCAL:
 			status = t19x_nvlink_rxcal_enable(tdev);
@@ -500,7 +526,10 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		default:
-			/* TODO */
+			nvlink_err("Invalid RX sublink mode"
+				" (sublink mode = %u)",
+				mode);
+			status = -EINVAL;
 			break;
 		}
 	}
@@ -718,7 +747,8 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 
 	/* TODO: other "case"s need to be implemented here */
 	default:
-		nvlink_err("Invalid link mode specified");
+		nvlink_err("Invalid link mode specified (link mode = %u)",
+			mode);
 		status = -EINVAL;
 		break;
 	}
@@ -778,7 +808,9 @@ void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev)
 static int nvlink_retrain_link_from_off(struct tnvlink_dev *tdev)
 {
 	/* We don't need this for now */
-	return -1;
+	nvlink_err("Retraining the link from OFF mode is currently not"
+		" supported by the driver");
+	return -EOPNOTSUPP;
 }
 
 static int nvlink_retrain_link_from_safe(struct tnvlink_dev *tdev)

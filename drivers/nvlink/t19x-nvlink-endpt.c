@@ -408,12 +408,15 @@ int t19x_nvlink_dev_early_init(struct nvlink_device *ndev)
 		return -EINVAL;
 	}
 	tdev = (struct tnvlink_dev *)ndev->priv;
-	/* TODO: Add return value check for all subfunctions */
-	tegra_nvlink_car_enable(tdev);
+
+	ret = tegra_nvlink_car_enable(tdev);
+	if (ret < 0)
+		goto fail;
 	ret = minion_boot(tdev);
 	if (ret < 0)
 		goto fail;
 	nvlink_config_common_intr(tdev);
+
 	nvlink_dbg("Device early init done for dev%u", ndev->device_id);
 	goto success;
 fail:
@@ -436,7 +439,7 @@ int t19x_nvlink_link_early_init(struct nvlink_device *ndev)
 		return -EINVAL;
 	}
 	tdev = (struct tnvlink_dev *)ndev->priv;
-	/* TODO: Add return value check for all subfunctions */
+
 	nvlink_enable_AN0_packets(tdev);
 	ret = init_nvhs_phy(tdev);
 	if (ret < 0)
@@ -464,7 +467,7 @@ int t19x_nvlink_dev_interface_init(struct nvlink_device *ndev)
 		return -EINVAL;
 	}
 	tdev = (struct tnvlink_dev *)ndev->priv;
-	/* TODO: Add return value check for all subfunctions */
+
 	mssnvlink_init(tdev);
 	program_scf_tom();
 	nvlink_dbg("Link interface init done for dev%u", ndev->device_id);
@@ -485,6 +488,7 @@ int t19x_nvlink_dev_reg_init(struct nvlink_device *ndev)
 		return -EINVAL;
 	}
 	tdev = (struct tnvlink_dev *)ndev->priv;
+
 	if (tdev->prod_list) {
 		ret = tegra_prod_set_by_name(&tdev->mssnvlink_0_base,
 				"prod", tdev->prod_list);

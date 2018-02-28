@@ -44,12 +44,17 @@
 			nvidia,down_wmark_window = /bits/ 8 <2>;
 			nvidia,avg_window_log2 = /bits/ 8 <6>;
 			/*
-			 * count_weight(W) = (no_dram_clock/actmon_pulse) /
-			 * 			no_of_channels
-			 * 		   = 2048 / 4
-			 * 		   = 512 = 0x200
+			 * count_weight(W) = no of dram clks needed to access N atoms
+			 * N = atoms per dvfs pulse = (2^7+1) = 256 atoms
+			 * 1 atom = 64 bytes
+			 * t186 has 128 max dram width (4 channels x 32 bits per channel)
+			 * 1 dram clock cycle provides 128*2 bits = 32 bytes
+			 * (i.e) 2 dram clocks provides 1 atom
+			 * so 2*256=512 dram clocks needed for 256 atoms
+			 * W = 512
 			 */
 			nvidia,count_weight = <0x200>;
+			nvidia,max_dram_channels = /bits/ 8 <4>;
 			nvidia,type = <1>;
 			status = "disabled";
 		};

@@ -315,7 +315,7 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 }
 
 static struct gk20a_channel_sync *
-gk20a_channel_syncpt_create(struct channel_gk20a *c)
+gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 {
 	struct gk20a_channel_syncpt *sp;
 	char syncpt_name[32];
@@ -327,11 +327,19 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->c = c;
 	sp->nvhost_dev = c->g->nvhost_dev;
 
-	snprintf(syncpt_name, sizeof(syncpt_name),
-		"%s_%d", c->g->name, c->chid);
+	if (user_managed) {
+		snprintf(syncpt_name, sizeof(syncpt_name),
+			"%s_%d_user", c->g->name, c->chid);
 
-	sp->id = nvgpu_nvhost_get_syncpt_host_managed(sp->nvhost_dev,
+		sp->id = nvgpu_nvhost_get_syncpt_client_managed(sp->nvhost_dev,
+						syncpt_name);
+	} else {
+		snprintf(syncpt_name, sizeof(syncpt_name),
+			"%s_%d", c->g->name, c->chid);
+
+		sp->id = nvgpu_nvhost_get_syncpt_host_managed(sp->nvhost_dev,
 						c->chid, syncpt_name);
+	}
 	if (!sp->id) {
 		nvgpu_kfree(c->g, sp);
 		nvgpu_err(c->g, "failed to get free syncpt");
@@ -892,7 +900,7 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 }
 
 static struct gk20a_channel_sync *
-gk20a_channel_semaphore_create(struct channel_gk20a *c)
+gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 {
 	int asid = -1;
 	struct gk20a_channel_semaphore *sema;
@@ -940,13 +948,14 @@ void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync)
 	sync->destroy(sync);
 }
 
-struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
+struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
+	bool user_managed)
 {
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	if (gk20a_platform_has_syncpoints(c->g))
-		return gk20a_channel_syncpt_create(c);
+		return gk20a_channel_syncpt_create(c, user_managed);
 #endif
-	return gk20a_channel_semaphore_create(c);
+	return gk20a_channel_semaphore_create(c, user_managed);
 }
 
 bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g)

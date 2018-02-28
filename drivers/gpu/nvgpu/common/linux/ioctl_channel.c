@@ -972,11 +972,11 @@ static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
 	}
 
 	nvgpu_mutex_acquire(&ch->sync_lock);
-	if (ch->sync) {
+	if (ch->user_sync) {
 		nvgpu_mutex_release(&ch->sync_lock);
 	} else {
-		ch->sync = gk20a_channel_sync_create(ch);
-		if (!ch->sync) {
+		ch->user_sync = gk20a_channel_sync_create(ch, true);
+		if (!ch->user_sync) {
 			nvgpu_mutex_release(&ch->sync_lock);
 			return -ENOMEM;
 		}
@@ -989,11 +989,11 @@ static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
 		}
 	}
 
-	args->syncpoint_id = ch->sync->syncpt_id(ch->sync);
+	args->syncpoint_id = ch->user_sync->syncpt_id(ch->user_sync);
 	args->syncpoint_max = nvgpu_nvhost_syncpt_read_maxval(g->nvhost_dev,
 						args->syncpoint_id);
 	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS))
-		args->gpu_va = ch->sync->syncpt_address(ch->sync);
+		args->gpu_va = ch->user_sync->syncpt_address(ch->user_sync);
 	else
 		args->gpu_va = 0;
 

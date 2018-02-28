@@ -444,7 +444,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	if (g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
 		if (!c->sync) {
-			c->sync = gk20a_channel_sync_create(c);
+			c->sync = gk20a_channel_sync_create(c, false);
 			if (!c->sync) {
 				err = -ENOMEM;
 				nvgpu_mutex_release(&c->sync_lock);

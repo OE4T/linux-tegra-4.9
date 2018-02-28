@@ -65,6 +65,8 @@ void nvgpu_nvhost_syncpt_put_ref_ext(struct nvgpu_nvhost_dev *nvhost_dev,
 u32 nvgpu_nvhost_get_syncpt_host_managed(struct nvgpu_nvhost_dev *nvhost_dev,
 	u32 param,
 	const char *syncpt_name);
+u32 nvgpu_nvhost_get_syncpt_client_managed(struct nvgpu_nvhost_dev *nvhost_dev,
+	const char *syncpt_name);
 
 int nvgpu_nvhost_create_symlink(struct gk20a *g);
 void nvgpu_nvhost_remove_symlink(struct gk20a *g);

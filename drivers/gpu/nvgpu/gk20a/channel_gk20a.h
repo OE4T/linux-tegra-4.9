@@ -226,6 +226,7 @@ struct channel_gk20a {
 
 	struct nvgpu_mutex sync_lock;
 	struct gk20a_channel_sync *sync;
+	struct gk20a_channel_sync *user_sync;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;

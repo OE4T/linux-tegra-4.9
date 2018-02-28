@@ -138,6 +138,14 @@ u32 nvgpu_nvhost_get_syncpt_host_managed(
 			param, syncpt_name);
 }
 
+u32 nvgpu_nvhost_get_syncpt_client_managed(
+	struct nvgpu_nvhost_dev *nvhost_dev,
+	const char *syncpt_name)
+{
+	return nvhost_get_syncpt_client_managed(nvhost_dev->host1x_pdev,
+			syncpt_name);
+}
+
 int nvgpu_nvhost_syncpt_wait_timeout_ext(
 	struct nvgpu_nvhost_dev *nvhost_dev, u32 id,
 	u32 thresh, u32 timeout, u32 *value, struct timespec *ts)

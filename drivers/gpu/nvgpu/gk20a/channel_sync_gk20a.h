@@ -110,7 +110,8 @@ struct gk20a_channel_sync {
 };
 
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync);
-struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c);
+struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
+	bool user_managed);
 bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g);
 
 #ifdef CONFIG_SYNC

@@ -438,6 +438,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		gk20a_channel_sync_destroy(ch->sync);
 		ch->sync = NULL;
 	}
+	if (ch->user_sync) {
+		gk20a_channel_sync_destroy(ch->user_sync);
+		ch->user_sync = NULL;
+	}
 	nvgpu_mutex_release(&ch->sync_lock);
 
 	/*
@@ -1147,7 +1151,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	if (!g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
-		c->sync = gk20a_channel_sync_create(c);
+		c->sync = gk20a_channel_sync_create(c, false);
 		if (!c->sync) {
 			err = -ENOMEM;
 			nvgpu_mutex_release(&c->sync_lock);

@@ -3124,10 +3124,15 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
 
-	gr->fbp_rop_l2_en_mask =
-		nvgpu_kzalloc(g, gr->max_fbps_count * sizeof(u32));
-	if (!gr->fbp_rop_l2_en_mask)
-		goto clean_up;
+	if (gr->fbp_rop_l2_en_mask == NULL) {
+		gr->fbp_rop_l2_en_mask =
+			nvgpu_kzalloc(g, gr->max_fbps_count * sizeof(u32));
+		if (!gr->fbp_rop_l2_en_mask)
+			goto clean_up;
+	} else {
+		memset(gr->fbp_rop_l2_en_mask, 0, gr->max_fbps_count *
+				sizeof(u32));
+	}
 
 	tmp = gk20a_readl(g, top_tpc_per_gpc_r());
 	gr->max_tpc_per_gpc_count = top_tpc_per_gpc_value_v(tmp);
@@ -3152,13 +3157,40 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		goto clean_up;
 	}
 
-	gr->gpc_tpc_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
-	gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
-	gr->gpc_zcb_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
-	gr->gpc_ppc_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
+	if (gr->gpc_tpc_count == NULL)
+		gr->gpc_tpc_count = nvgpu_kzalloc(g, gr->gpc_count *
+					sizeof(u32));
+	else
+		memset(gr->gpc_tpc_count, 0, gr->gpc_count *
+					sizeof(u32));
 
-	gr->gpc_skip_mask =
-		nvgpu_kzalloc(g, gr_pd_dist_skip_table__size_1_v() *
+	if (gr->gpc_tpc_mask == NULL)
+		gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->gpc_count *
+					sizeof(u32));
+	else
+		memset(gr->gpc_tpc_mask, 0,  gr->gpc_count *
+					sizeof(u32));
+
+	if (gr->gpc_zcb_count == NULL)
+		gr->gpc_zcb_count = nvgpu_kzalloc(g, gr->gpc_count *
+					sizeof(u32));
+	else
+		memset(gr->gpc_zcb_count, 0, gr->gpc_count *
+					sizeof(u32));
+
+	if (gr->gpc_ppc_count == NULL)
+		gr->gpc_ppc_count = nvgpu_kzalloc(g, gr->gpc_count *
+					sizeof(u32));
+	else
+		memset(gr->gpc_ppc_count, 0, gr->gpc_count *
+					sizeof(u32));
+
+	if (gr->gpc_skip_mask == NULL)
+		gr->gpc_skip_mask =
+			nvgpu_kzalloc(g, gr_pd_dist_skip_table__size_1_v() *
+			      4 * sizeof(u32));
+	else
+		memset(gr->gpc_skip_mask, 0, gr_pd_dist_skip_table__size_1_v() *
 			      4 * sizeof(u32));
 
 	if (!gr->gpc_tpc_count || !gr->gpc_tpc_mask || !gr->gpc_zcb_count ||
@@ -3246,8 +3278,15 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		gr->gpc_skip_mask[gpc_index] = gpc_new_skip_mask;
 	}
 
-	gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count * gr->tpc_count *
-				sm_per_tpc * sizeof(struct sm_info));
+	/* allocate for max tpc per gpc */
+	if (gr->sm_to_cluster == NULL)
+		gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count *
+					gr->max_tpc_per_gpc_count *
+					sm_per_tpc * sizeof(struct sm_info));
+	else
+		memset(gr->sm_to_cluster, 0, gr->gpc_count *
+					gr->max_tpc_per_gpc_count *
+					sm_per_tpc * sizeof(struct sm_info));
 	gr->no_of_sm = 0;
 
 	gk20a_dbg_info("fbps: %d", gr->num_fbps);
@@ -3316,13 +3355,17 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int err;
 
-	err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_wr_mem);
-	if (err)
-		goto err;
+	if (!nvgpu_mem_is_valid(&gr->mmu_wr_mem)) {
+		err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_wr_mem);
+		if (err)
+			goto err;
+	}
 
-	err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_rd_mem);
-	if (err)
-		goto err_free_wr_mem;
+	if (!nvgpu_mem_is_valid(&gr->mmu_rd_mem)) {
+		err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_rd_mem);
+		if (err)
+			goto err_free_wr_mem;
+	}
 	return 0;
 
  err_free_wr_mem:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,7 @@
 
 #include <nvgpu/ltc.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/nvgpu_mem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -53,6 +54,9 @@ int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
 {
 	struct gr_gk20a *gr = &g->gr;
 	unsigned long flags = 0;
+
+	if (nvgpu_mem_is_valid(&gr->compbit_store.mem))
+		return 0;
 
 	if (!nvgpu_iommuable(g))
 		flags = NVGPU_DMA_FORCE_CONTIGUOUS;

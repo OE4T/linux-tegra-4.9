@@ -446,7 +446,7 @@ int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param_v1.sub_cmd_id =
 				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
 		cmd.cmd.pg.gr_init_param_v1.featuremask =
-				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
+				NVGPU_PMU_GR_FEATURE_MASK_ALL;
 
 		gv11b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM_INIT\n");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
@@ -476,7 +476,15 @@ int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.sf_mask_update.ctrl_id =
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
 		cmd.cmd.pg.sf_mask_update.enabled_mask =
-				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
+				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING |
+				NVGPU_PMU_GR_FEATURE_MASK_PRIV_RING |
+				NVGPU_PMU_GR_FEATURE_MASK_UNBIND |
+				NVGPU_PMU_GR_FEATURE_MASK_SAVE_GLOBAL_STATE |
+				NVGPU_PMU_GR_FEATURE_MASK_RESET_ENTRY |
+				NVGPU_PMU_GR_FEATURE_MASK_HW_SEQUENCE |
+				NVGPU_PMU_GR_FEATURE_MASK_ELPG_SRAM |
+				NVGPU_PMU_GR_FEATURE_MASK_ELPG_LOGIC |
+				NVGPU_PMU_GR_FEATURE_MASK_ELPG_L2RPPG;
 
 		gv11b_dbg_pmu("cmd post PMU_PG_CMD_SUB_FEATURE_MASK_UPDATE\n");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,

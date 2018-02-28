@@ -27,7 +27,7 @@ static int lpwr_debug_show(struct seq_file *s, void *data)
 	if (g->ops.pmu.pmu_pg_engines_feature_list &&
 		g->ops.pmu.pmu_pg_engines_feature_list(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
-		PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+		NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 		seq_printf(s, "PSTATE: %u\n"
 			"RPPG Enabled: %u\n"
 			"RPPG ref count: %u\n"

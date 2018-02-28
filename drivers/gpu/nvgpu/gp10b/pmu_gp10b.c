@@ -239,7 +239,7 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param.sub_cmd_id =
 				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
 		cmd.cmd.pg.gr_init_param.featuremask =
-				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
+				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING;
 
 		gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM ");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,

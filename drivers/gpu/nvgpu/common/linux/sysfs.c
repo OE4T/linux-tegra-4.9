@@ -477,7 +477,7 @@ static ssize_t elpg_enable_store(struct device *dev,
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
-				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 				nvgpu_pmu_pg_global_enable(g, false);
 				g->elpg_enabled = false;
 			} else {

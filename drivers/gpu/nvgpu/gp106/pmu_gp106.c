@@ -81,7 +81,7 @@ int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset)
 u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 {
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
-		return PMU_PG_FEATURE_GR_RPPG_ENABLED;
+		return NVGPU_PMU_GR_FEATURE_MASK_RPPG;
 
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
 		return NVGPU_PMU_MS_FEATURE_MASK_ALL;
@@ -133,7 +133,7 @@ int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param.sub_cmd_id =
 				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
 		cmd.cmd.pg.gr_init_param.featuremask =
-				PMU_PG_FEATURE_GR_RPPG_ENABLED;
+				NVGPU_PMU_GR_FEATURE_MASK_RPPG;
 
 		gp106_dbg_pmu("cmd post GR PMU_PG_CMD_ID_PG_PARAM");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,

@@ -89,7 +89,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
-				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 				pmu->initialized = true;
 				nvgpu_pmu_state_change(g, PMU_STATE_STARTED,
 					true);
@@ -116,7 +116,7 @@ int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 		if (g->ops.pmu.pmu_pg_engines_feature_list &&
 			g->ops.pmu.pmu_pg_engines_feature_list(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
-			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+			NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 			if (g->ops.pmu.pmu_lpwr_enable_pg)
 				status = g->ops.pmu.pmu_lpwr_enable_pg(g,
 						true);
@@ -126,7 +126,7 @@ int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 		if (g->ops.pmu.pmu_pg_engines_feature_list &&
 			g->ops.pmu.pmu_pg_engines_feature_list(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
-			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+			NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 			if (g->ops.pmu.pmu_lpwr_disable_pg)
 				status = g->ops.pmu.pmu_lpwr_disable_pg(g,
 						true);

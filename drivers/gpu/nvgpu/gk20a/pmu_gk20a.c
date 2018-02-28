@@ -545,7 +545,7 @@ u32 gk20a_pmu_pg_engines_list(struct gk20a *g)
 u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 {
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
-		return PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
+		return NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING;
 
 	return 0;
 }

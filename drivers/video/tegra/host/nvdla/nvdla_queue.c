@@ -23,6 +23,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>
+#include <trace/events/nvhost.h>
 
 #include "../drivers/staging/android/sync.h"
 
@@ -215,12 +216,57 @@ static void nvdla_task_syncpt_reset(struct nvhost_syncpt *syncpt,
 	nvhost_syncpt_update_min(syncpt, id);
 }
 
+static inline int nvdla_get_max_preaction_size(void)
+{
+	return (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *
+		sizeof(struct dla_action_opcode)) +
+		(MAX_NUM_NVDLA_PREFENCES *
+			sizeof(struct dla_action_semaphore)) +
+		(MAX_NUM_NVDLA_IN_TASK_STATUS *
+			sizeof(struct dla_action_task_status)) +
+		sizeof(struct dla_action_opcode));
+}
+
+static inline int nvdla_get_max_postaction_size(void)
+{
+	return (((MAX_NUM_NVDLA_POSTFENCES +
+				MAX_NUM_NVDLA_OUT_TASK_STATUS +
+				NUM_PROFILING_POSTACTION) *
+		sizeof(struct dla_action_opcode)) +
+		(MAX_NUM_NVDLA_POSTFENCES *
+			sizeof(struct dla_action_semaphore)) +
+		((MAX_NUM_NVDLA_OUT_TASK_STATUS +
+			NUM_PROFILING_POSTACTION) *
+			sizeof(struct dla_action_task_status)) +
+		sizeof(struct dla_action_opcode));
+}
+
+static inline size_t nvdla_profile_status_offset(struct nvdla_task *task)
+{
+	size_t offset = 0;
+
+	offset += sizeof(struct dla_task_descriptor);
+	offset += (2 * MAX_NUM_ACTION_LIST * sizeof(struct dla_action_list));
+	offset += nvdla_get_max_preaction_size();
+	offset += nvdla_get_max_postaction_size();
+
+	offset = roundup(offset, 8);
+	offset += MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct dla_mem_addr);
+
+	offset = roundup(offset, 8);
+
+	return offset;
+}
+
 static void nvdla_queue_update(void *priv, int nr_completed)
 {
 	int task_complete;
 	struct nvdla_task *task, *safe;
 	struct nvhost_queue *queue = priv;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_notification *tsp_notifier;
+	u64 timestamp_start, timestamp_end;
+	u64 *timestamp_ptr;
 
 	mutex_lock(&queue->list_lock);
 
@@ -236,6 +282,21 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 		if (task_complete) {
 			nvdla_dbg_fn(pdev, "task with syncpt[%d] val[%d] done",
 				queue->syncpt_id, task->fence);
+
+			tsp_notifier = (struct nvhost_notification *)
+					((uint8_t *)task->task_desc +
+					nvdla_profile_status_offset(task));
+			timestamp_ptr = (u64 *) &tsp_notifier->time_stamp;
+			/* Report timestamps in TSC ticks, so divide by 32 */
+			timestamp_end = *timestamp_ptr >> 5;
+			timestamp_start = (*timestamp_ptr -
+					(tsp_notifier->info32 * 1000)) >> 5;
+			nvhost_eventlib_log_task(pdev,
+				queue->syncpt_id,
+				task->fence,
+				timestamp_start,
+				timestamp_end);
+
 			nvdla_task_free_locked(task);
 		}
 	}
@@ -243,28 +304,6 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 	nvhost_module_idle_mult(pdev, nr_completed);
 
 	mutex_unlock(&queue->list_lock);
-}
-
-static inline int nvdla_get_max_preaction_size(void)
-{
-	return (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *
-		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_PREFENCES *
-			sizeof(struct dla_action_semaphore)) +
-		(MAX_NUM_NVDLA_IN_TASK_STATUS *
-			sizeof(struct dla_action_task_status)) +
-		sizeof(struct dla_action_opcode));
-}
-
-static inline int nvdla_get_max_postaction_size(void)
-{
-	return (((MAX_NUM_NVDLA_POSTFENCES + MAX_NUM_NVDLA_OUT_TASK_STATUS) *
-		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_POSTFENCES *
-			sizeof(struct dla_action_semaphore)) +
-		(MAX_NUM_NVDLA_OUT_TASK_STATUS *
-			sizeof(struct dla_action_task_status)) +
-		sizeof(struct dla_action_opcode));
 }
 
 static size_t nvdla_get_task_desc_size(void)
@@ -282,6 +321,9 @@ static size_t nvdla_get_task_desc_size(void)
 
 	size = roundup(size, 8);
 	size += MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct dla_mem_addr);
+
+	size = roundup(size, 8);
+	size += sizeof(struct nvhost_notification);
 
 	/* falcon requires IOVA addr to be 256 aligned */
 	size = roundup(size, SZ_256);
@@ -438,6 +480,10 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 		sizeof(struct dla_action_list) + nvdla_get_max_preaction_size();
 
 	start = next = (u8 *)task_desc + postactionlist_of;
+
+	/* Action to write the status notifier after task finishes (for TSP). */
+	next = add_status_action(next, POSTACTION_TASK_STATUS,
+		task->task_desc_pa + nvdla_profile_status_offset(task), 0);
 
 	/* fill output task status */
 	for (j = 0; j < task->num_out_task_status; j++) {
@@ -1006,6 +1052,7 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	uint32_t method_id;
 	uint32_t counter;
 	int i, err = 0;
+	u64 timestamp;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -1051,6 +1098,9 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 			(1 << DLA_INT_ON_ERROR_SHIFT);
 	method_data = ALIGNED_DMA(task->task_desc_pa);
 
+	/* Report timestamp in TSC ticks. */
+	timestamp = arch_counter_get_cntvct();
+
 	/* prepare command for channel submit */
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL) {
 
@@ -1089,6 +1139,11 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 			counter = counter - 1;
 		}
 	}
+
+	nvhost_eventlib_log_submit(queue->pool->pdev,
+			   queue->syncpt_id,
+			   task->fence,
+			   timestamp);
 
 	/* prepare command for MMIO submit */
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {

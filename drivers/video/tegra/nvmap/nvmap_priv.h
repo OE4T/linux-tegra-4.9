@@ -94,8 +94,6 @@ extern u32 nvmap_max_handle_count;
 extern bool nvmap_convert_iovmm_to_carveout;
 extern bool nvmap_convert_carveout_to_iovmm;
 
-/* If set force zeroed memory to userspace. */
-extern bool zero_memory;
 extern struct vm_operations_struct nvmap_vma_ops;
 
 #ifdef CONFIG_ARM64

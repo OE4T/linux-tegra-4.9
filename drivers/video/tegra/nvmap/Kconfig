@@ -65,15 +65,6 @@ config NVMAP_CACHE_MAINT_BY_SET_WAYS
 	 where inner cache includes only L1. For the systems, where inner cache
 	 includes L1 and L2, keep this option disabled.
 
-config NVMAP_FORCE_ZEROED_USER_PAGES
-	bool "Only alloc zeroed pages for user space"
-	default y
-	help
-	  Say Y here to force zeroing of pages allocated for user space. This
-	  avoids leaking kernel secure data to user space. This can add
-	  significant overhead to allocation operations depending on the
-	  allocation size requested.
-
 config NVMAP_FD_START
 	hex "FD number to start allocation from"
 	default 0x400

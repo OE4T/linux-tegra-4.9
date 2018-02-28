@@ -23,36 +23,8 @@
 
 #include "nvmap_priv.h"
 
-#ifdef CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES
-bool zero_memory = true;
-#define ZERO_MEMORY_PERMS 0444
-#else
-bool zero_memory;
-#define ZERO_MEMORY_PERMS 0644
-#endif
-
 bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;
-
-static int zero_memory_set(const char *arg, const struct kernel_param *kp)
-{
-#ifdef CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES
-	return -EPERM;
-#else
-	param_set_bool(arg, kp);
-#ifdef CONFIG_NVMAP_PAGE_POOLS
-	nvmap_page_pool_clear();
-#endif
-	return 0;
-#endif
-}
-
-static struct kernel_param_ops zero_memory_ops = {
-	.get = param_get_bool,
-	.set = zero_memory_set,
-};
-
-module_param_cb(zero_memory, &zero_memory_ops, &zero_memory, ZERO_MEMORY_PERMS);
 
 u32 nvmap_max_handle_count;
 
@@ -110,8 +82,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	struct page **pages;
 	gfp_t gfp = GFP_NVMAP;
 
-	if (zero_memory)
-		gfp |= __GFP_ZERO;
+	gfp |= __GFP_ZERO;
 
 	pages = nvmap_altalloc(nr_page * sizeof(*pages));
 	if (!pages)

@@ -1303,13 +1303,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	if (ret)
 		goto err;
 
-	/* update device name with card name */
-	if (dev_set_name(&pdev->dev, "%s", card->name) < 0) {
-		dev_err(&pdev->dev, "error in setting machine driver device name\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
 	match = of_match_device(tegra_machine_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");

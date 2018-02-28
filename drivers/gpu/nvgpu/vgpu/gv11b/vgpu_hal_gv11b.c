@@ -153,7 +153,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.alloc_gr_ctx = vgpu_gr_gp10b_alloc_gr_ctx,
 		.free_gr_ctx = vgpu_gr_free_gr_ctx,
 		.update_ctxsw_preemption_mode =
-			gr_gp10b_update_ctxsw_preemption_mode,
+			gr_gv11b_update_ctxsw_preemption_mode,
 		.dump_gr_regs = NULL,
 		.update_pc_sampling = gr_gm20b_update_pc_sampling,
 		.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask,

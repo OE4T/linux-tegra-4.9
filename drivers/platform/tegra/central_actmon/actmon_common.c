@@ -27,10 +27,13 @@
 #include <linux/sysfs.h>
 
 #include <linux/platform/tegra/actmon_common.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 /* Global definitions */
 static struct actmon_drv_data *actmon;
 static struct device *mon_dev;
+static u8 max_dram_channels;
+static u8 ch_num;
 
 #define offs(dev_reg_offs) (actmon->base + dev_reg_offs)
 
@@ -820,6 +823,15 @@ static int actmon_dev_parse_dt(struct actmon_dev *dev,
 		dev_info(mon_dev, "<nvidia,count_weight> property is not provided for the device %s setting up default value:%u\n",
 			dev->dn->name, dev->count_weight);
 	}
+
+	ret = of_property_read_u8(dev->dn, "nvidia,max_dram_channels",
+			&max_dram_channels);
+	if (ret) {
+		dev_info(mon_dev, "<nvidia,max_dram_channels> property is not provided for the device %s\n",dev->dn->name);
+	}
+	ch_num = tegra_bwmgr_get_dram_num_channels();
+	if (ch_num && max_dram_channels)
+		dev->count_weight *= (u32)(max_dram_channels / ch_num);
 
 	ret = of_property_read_u32(dev->dn, "nvidia,type",
 			&dev->type);

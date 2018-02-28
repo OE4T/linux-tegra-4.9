@@ -28,52 +28,6 @@
 
 #include "gk20a/gk20a.h"
 
-/*
- * Make sure to use the right coherency aperture if you use this function! This
- * will not add any checks. If you want to simply use the default coherency then
- * use nvgpu_aperture_mask().
- */
-u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
-			  u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask)
-{
-	/*
-	 * Some iGPUs treat sysmem (i.e SoC DRAM) as vidmem. In these cases the
-	 * "sysmem" aperture should really be translated to VIDMEM.
-	 */
-	if (!nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE))
-		aperture = APERTURE_VIDMEM;
-
-	switch (aperture) {
-	case __APERTURE_SYSMEM_COH:
-		return sysmem_coh_mask;
-	case APERTURE_SYSMEM:
-		return sysmem_mask;
-	case APERTURE_VIDMEM:
-		return vidmem_mask;
-	case APERTURE_INVALID:
-		WARN_ON("Bad aperture");
-	}
-	return 0;
-}
-
-u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
-			u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask)
-{
-	enum nvgpu_aperture ap = mem->aperture;
-
-	/*
-	 * Handle the coherent aperture: ideally most of the driver is not
-	 * aware of the difference between coherent and non-coherent sysmem so
-	 * we add this translation step here.
-	 */
-	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) &&
-	    ap == APERTURE_SYSMEM)
-		ap = __APERTURE_SYSMEM_COH;
-
-	return __nvgpu_aperture_mask(g, ap,
-				     sysmem_mask, sysmem_coh_mask, vidmem_mask);
-}
-
 void *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt, void *sgl)
 {
 	return sgt->ops->sgl_next(sgl);

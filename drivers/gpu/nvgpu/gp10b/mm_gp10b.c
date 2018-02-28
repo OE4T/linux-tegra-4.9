@@ -124,9 +124,8 @@ int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
 
 	gk20a_writel(g, bus_bar2_block_r(),
 		     nvgpu_aperture_mask(g, inst_block,
-					 bus_bar2_block_target_sys_mem_ncoh_f(),
-					 bus_bar2_block_target_sys_mem_coh_f(),
-					 bus_bar2_block_target_vid_mem_f()) |
+				bus_bar2_block_target_sys_mem_ncoh_f(),
+				bus_bar2_block_target_vid_mem_f()) |
 		     bus_bar2_block_mode_virtual_f() |
 		     bus_bar2_block_ptr_f(inst_pa));
 
@@ -149,9 +148,8 @@ static void update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	phys_addr >>= gmmu_new_pde_address_shift_v();
 
 	pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
-					gmmu_new_pde_aperture_sys_mem_ncoh_f(),
-					gmmu_new_pde_aperture_sys_mem_coh_f(),
-					gmmu_new_pde_aperture_video_memory_f());
+			gmmu_new_pde_aperture_sys_mem_ncoh_f(),
+			gmmu_new_pde_aperture_video_memory_f());
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(phys_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
 	pde_v[1] |= phys_addr >> 24;
@@ -196,7 +194,6 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 			gmmu_new_dual_pde_address_small_sys_f(small_addr);
 		pde_v[2] |= nvgpu_aperture_mask(g, pd->mem,
 			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
-			gmmu_new_dual_pde_aperture_small_sys_mem_coh_f(),
 			gmmu_new_dual_pde_aperture_small_video_memory_f());
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
 		pde_v[3] |= small_addr >> 24;
@@ -207,7 +204,6 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
 		pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
 			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
-			gmmu_new_dual_pde_aperture_big_sys_mem_coh_f(),
 			gmmu_new_dual_pde_aperture_big_video_memory_f());
 		pde_v[1] |= big_addr >> 28;
 	}
@@ -244,10 +240,11 @@ static void __update_pte(struct vm_gk20a *vm,
 		gmmu_new_pte_address_sys_f(phys_shifted) :
 		gmmu_new_pte_address_vid_f(phys_shifted);
 	u32 pte_tgt = __nvgpu_aperture_mask(g,
-					attrs->aperture,
-					gmmu_new_pte_aperture_sys_mem_ncoh_f(),
-					gmmu_new_pte_aperture_sys_mem_coh_f(),
-					gmmu_new_pte_aperture_video_memory_f());
+			attrs->aperture,
+			attrs->coherent ?
+				gmmu_new_pte_aperture_sys_mem_coh_f() :
+				gmmu_new_pte_aperture_sys_mem_ncoh_f(),
+			gmmu_new_pte_aperture_video_memory_f());
 
 	pte_w[0] = pte_valid | pte_addr | pte_tgt;
 
@@ -309,7 +306,7 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 		page_size >> 10,
 		nvgpu_gmmu_perm_str(attrs->rw_flag),
 		attrs->kind_v,
-		nvgpu_aperture_str(g, attrs->aperture),
+		nvgpu_aperture_str(attrs->aperture),
 		attrs->cacheable ? 'C' : '-',
 		attrs->sparse    ? 'S' : '-',
 		attrs->priv      ? 'P' : '-',
@@ -431,9 +428,8 @@ void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
 		nvgpu_aperture_mask(g, vm->pdb.mem,
-				ram_in_page_dir_base_target_sys_mem_ncoh_f(),
-				ram_in_page_dir_base_target_sys_mem_coh_f(),
-				ram_in_page_dir_base_target_vid_mem_f()) |
+		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
+		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_big_page_size_64kb_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo) |

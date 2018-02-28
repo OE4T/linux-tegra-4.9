@@ -122,9 +122,8 @@ static inline u32 big_valid_pde0_bits(struct gk20a *g,
 {
 	u32 pde0_bits =
 		nvgpu_aperture_mask(g, pd->mem,
-				    gmmu_pde_aperture_big_sys_mem_ncoh_f(),
-				    gmmu_pde_aperture_big_sys_mem_coh_f(),
-				    gmmu_pde_aperture_big_video_memory_f()) |
+		  gmmu_pde_aperture_big_sys_mem_ncoh_f(),
+		  gmmu_pde_aperture_big_video_memory_f()) |
 		gmmu_pde_address_big_sys_f(
 			   (u32)(addr >> gmmu_pde_address_shift_v()));
 
@@ -136,9 +135,8 @@ static inline u32 small_valid_pde1_bits(struct gk20a *g,
 {
 	u32 pde1_bits =
 		nvgpu_aperture_mask(g, pd->mem,
-				    gmmu_pde_aperture_small_sys_mem_ncoh_f(),
-				    gmmu_pde_aperture_small_sys_mem_coh_f(),
-				    gmmu_pde_aperture_small_video_memory_f()) |
+		  gmmu_pde_aperture_small_sys_mem_ncoh_f(),
+		  gmmu_pde_aperture_small_video_memory_f()) |
 		gmmu_pde_vol_small_true_f() | /* tbd: why? */
 		gmmu_pde_address_small_sys_f(
 			   (u32)(addr >> gmmu_pde_address_shift_v()));
@@ -217,7 +215,6 @@ static void __update_pte(struct vm_gk20a *vm,
 
 	pte_w[1] = __nvgpu_aperture_mask(g, attrs->aperture,
 					 gmmu_pte_aperture_sys_mem_ncoh_f(),
-					 gmmu_pte_aperture_sys_mem_coh_f(),
 					 gmmu_pte_aperture_video_memory_f()) |
 		gmmu_pte_kind_f(attrs->kind_v) |
 		gmmu_pte_comptagline_f((u32)(attrs->ctag >> ctag_shift));
@@ -271,7 +268,7 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 		page_size >> 10,
 		nvgpu_gmmu_perm_str(attrs->rw_flag),
 		attrs->kind_v,
-		nvgpu_aperture_str(g, attrs->aperture),
+		nvgpu_aperture_str(attrs->aperture),
 		attrs->cacheable ? 'C' : '-',
 		attrs->sparse    ? 'S' : '-',
 		attrs->priv      ? 'P' : '-',
@@ -366,12 +363,11 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
-		       nvgpu_aperture_mask(g, vm->pdb.mem,
-				ram_in_page_dir_base_target_sys_mem_ncoh_f(),
-				ram_in_page_dir_base_target_sys_mem_coh_f(),
-				ram_in_page_dir_base_target_vid_mem_f()) |
-		       ram_in_page_dir_base_vol_true_f() |
-		       ram_in_page_dir_base_lo_f(pdb_addr_lo));
+		nvgpu_aperture_mask(g, vm->pdb.mem,
+		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
+		  ram_in_page_dir_base_target_vid_mem_f()) |
+		ram_in_page_dir_base_vol_true_f() |
+		ram_in_page_dir_base_lo_f(pdb_addr_lo));
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));

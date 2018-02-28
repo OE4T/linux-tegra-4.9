@@ -34,22 +34,37 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
+		u32 sysmem_mask, u32 vidmem_mask)
+{
+	switch (aperture) {
+	case APERTURE_SYSMEM:
+		/* some igpus consider system memory vidmem */
+		return nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE)
+			? sysmem_mask : vidmem_mask;
+	case APERTURE_VIDMEM:
+		/* for dgpus only */
+		return vidmem_mask;
+	case APERTURE_INVALID:
+		WARN_ON("Bad aperture");
+	}
+	return 0;
+}
+
+u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
+		u32 sysmem_mask, u32 vidmem_mask)
+{
+	return __nvgpu_aperture_mask(g, mem->aperture,
+			sysmem_mask, vidmem_mask);
+}
+
 int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;
-	pgprot_t prot = nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) ?
-		PAGE_KERNEL :
+	pgprot_t prot = nvgpu_is_enabled(g, NVGPU_DMA_COHERENT) ? PAGE_KERNEL :
 		pgprot_writecombine(PAGE_KERNEL);
 
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
-		return 0;
-
-	/*
-	 * WAR for bug 2040115: we already will always have a coherent vmap()
-	 * for all sysmem buffers. The prot settings are left alone since
-	 * eventually this should be deleted.
-	 */
-	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
 		return 0;
 
 	/*
@@ -79,13 +94,6 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
-		return;
-
-	/*
-	 * WAR for bug 2040115: skip this since the map will be taken care of
-	 * during the free in the DMA API.
-	 */
-	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
 		return;
 
 	/*
@@ -307,8 +315,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
  */
 u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl)
 {
-	if (nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ||
-	    !nvgpu_iommuable(g))
+	if (!nvgpu_iommuable(g))
 		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
 
 	if (sg_dma_address(sgl) == 0)
@@ -408,12 +415,8 @@ int nvgpu_mem_create_from_mem(struct gk20a *g,
 
 	/*
 	 * Re-use the CPU mapping only if the mapping was made by the DMA API.
-	 *
-	 * Bug 2040115: the DMA API wrapper makes the mapping that we should
-	 * re-use.
 	 */
-	if (!(src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING) ||
-	    nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+	if (!(src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
 		dest->cpu_va = src->cpu_va + (PAGE_SIZE * start_page);
 
 	dest->priv.pages = src->priv.pages + start_page;

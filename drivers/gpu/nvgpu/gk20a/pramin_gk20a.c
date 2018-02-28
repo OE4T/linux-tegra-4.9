@@ -41,7 +41,6 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 	u32 lo = (u32)(addr & 0xfffff);
 	u32 win = nvgpu_aperture_mask(g, mem,
 			bus_bar0_window_target_sys_mem_noncoherent_f(),
-			bus_bar0_window_target_sys_mem_coherent_f(),
 			bus_bar0_window_target_vid_mem_f()) |
 		bus_bar0_window_base_f(hi);
 

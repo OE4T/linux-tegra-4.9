@@ -27,10 +27,9 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/mm.h>
-#include <nvgpu/enabled.h>
-#include <nvgpu/acr/nvgpu_acr.h>
 
 #include "gk20a/gk20a.h"
 #include "acr_gv11b.h"
@@ -221,9 +220,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 		pwr_pmu_new_instblk_ptr_f(
 		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 		pwr_pmu_new_instblk_valid_f(1) |
-		     (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) ?
-		      pwr_pmu_new_instblk_target_sys_coh_f() :
-		      pwr_pmu_new_instblk_target_sys_ncoh_f())) ;
+		pwr_pmu_new_instblk_target_sys_ncoh_f());
 
 	/*copy bootloader interface structure to dmem*/
 	nvgpu_flcn_copy_to_dmem(pmu->flcn, 0, (u8 *)pbl_desc,

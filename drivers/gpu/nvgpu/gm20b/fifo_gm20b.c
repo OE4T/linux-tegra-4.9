@@ -32,7 +32,6 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/mm.h>
-#include <nvgpu/enabled.h>
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
@@ -52,12 +51,11 @@ void channel_gm20b_bind(struct channel_gk20a *c)
 
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->chid),
-		     ccsr_channel_inst_ptr_f(inst_ptr) |
-		     nvgpu_aperture_mask(g, &c->inst_block,
-				ccsr_channel_inst_target_sys_mem_ncoh_f(),
-				ccsr_channel_inst_target_sys_mem_coh_f(),
-				ccsr_channel_inst_target_vid_mem_f()) |
-		     ccsr_channel_inst_bind_true_f());
+		ccsr_channel_inst_ptr_f(inst_ptr) |
+		nvgpu_aperture_mask(g, &c->inst_block,
+		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
+		 ccsr_channel_inst_target_vid_mem_f()) |
+		ccsr_channel_inst_bind_true_f());
 
 	gk20a_writel(g, ccsr_channel_r(c->chid),
 		(gk20a_readl(g, ccsr_channel_r(c->chid)) &

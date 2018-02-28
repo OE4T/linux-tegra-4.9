@@ -1,7 +1,7 @@
 /*
  * hdmi2.0.h: hdmi2.0 driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -22,7 +22,6 @@
 #define HDMI_HPD_DEBOUNCE_DELAY_MS	(100)
 #define HDMI_SCDC_MONITOR_TIMEOUT_MS	(5000)
 #define HDMI_EDID_MAX_LENGTH (4 * EDID_BYTES_PER_BLOCK)
-#define HDMI_HPD_DROP_TIMEOUT_MS	(1500)
 #define HDMI_HDR_INFOFRAME_STOP_TIMEOUT_MS	(2000)
 
 /* SCDC block */

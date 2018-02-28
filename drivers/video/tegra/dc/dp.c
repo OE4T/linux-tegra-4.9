@@ -2793,14 +2793,21 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 	/* Get ready to receive any hpd event */
 	tegra_dc_dp_hotplug_init(dc);
 
+	dp->suspended = false;
+
 	if (tegra_platform_is_sim() &&
-		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL)) {
-		dp->suspended = false;
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
 		return;
-	}
+
+	if (is_hotplug_supported(dp))
+		reinit_completion(&dc->hpd_complete);
+
+	dp->hpd_data.dc_resumed = true;
 	tegra_dp_pending_hpd(dp);
 
-	dp->suspended = false;
+	if (is_hotplug_supported(dp))
+		wait_for_completion(&dc->hpd_complete);
+
 }
 
 static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)

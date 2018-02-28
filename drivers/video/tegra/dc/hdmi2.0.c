@@ -806,6 +806,8 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 
 fail:
 	mutex_unlock(&hdmi->hpd_lock);
+	if (hdmi->dc->suspended)
+		complete(&hdmi->dc->hpd_complete);
 	return;
 
 reschedule_worker:
@@ -3203,12 +3205,16 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 
 	cancel_delayed_work(&hdmi->hpd_worker);
 
+	reinit_completion(&dc->hpd_complete);
+
 	/* If resume happens with a non-VRR monitor, the HPD
 	   worker will correct the mode based on the new EDID */
 	_tegra_hdmivrr_activate(hdmi, true);
 
 	schedule_delayed_work(&hdmi->hpd_worker,
-				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS + HDMI_HPD_DROP_TIMEOUT_MS));
+				msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS));
+
+	wait_for_completion(&dc->hpd_complete);
 }
 
 static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)

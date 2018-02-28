@@ -6487,6 +6487,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	mutex_init(&dc->msrmnt_info.lock);
 	init_completion(&dc->frame_end_complete);
 	init_completion(&dc->crc_complete);
+	init_completion(&dc->hpd_complete);
 	init_waitqueue_head(&dc->wq);
 	init_waitqueue_head(&dc->timestamp_wq);
 	INIT_WORK(&dc->vblank_work, tegra_dc_vblank);
@@ -6961,10 +6962,10 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	mutex_lock(&dc->lock);
 	ret = tegra_dc_io_start(dc);
 
-	if (dc->enabled) {
+	if (dc->enabled)
 		_tegra_dc_disable(dc);
-		dc->suspended = true;
-	}
+
+	dc->suspended = true;
 
 	if (dc->out_ops && dc->out_ops->suspend)
 		dc->out_ops->suspend(dc);
@@ -7005,7 +7006,6 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	dev_info(&ndev->dev, "resume\n");
 
 	mutex_lock(&dc->lock);
-	dc->suspended = false;
 
 	/* To pan the fb on resume */
 	tegra_fb_pan_display_reset(dc->fb);
@@ -7018,20 +7018,9 @@ static int tegra_dc_resume(struct platform_device *ndev)
 
 	if (dc->enabled) {
 		dc->enabled = false;
-		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 	}
-
-	/*
-	 * tegra_dc_enable returns without unpowergating dc as
-	 * it is userspace's responsibility to enable DC after
-	 * dc_resume completes.
-	 * When no userspace entity is active, driver needs to
-	 * unpowergate dc during resume so that hpd worker can
-	 * read EDID subsequently.
-	 */
-	if (!tegra_dc_ext_is_userspace_active() && !tegra_dc_is_powered(dc))
-		tegra_dc_unpowergate_locked(dc);
+	dc->suspended = false;
 
 	mutex_unlock(&dc->lock);
 	tegra_dc_cursor_resume(dc);

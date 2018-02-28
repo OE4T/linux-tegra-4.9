@@ -55,11 +55,13 @@ static void hpd_disable(struct tegra_hpd_data *data)
 {
 	if (data->dc->connected) {
 		pr_info("hpd: DC from connected to disconnected\n");
-		data->dc->connected = false;
-		tegra_dc_disable(data->dc);
+		if (!data->dc->suspended) {
+			data->dc->connected = false;
+			tegra_dc_disable(data->dc);
+		}
 	}
 
-	if (data->dc->fb)
+	if ((!data->dc->suspended) && (data->dc->fb))
 		tegra_fb_update_monspecs(data->dc->fb, NULL, NULL);
 
 	if (data->ops->disable)
@@ -184,8 +186,12 @@ static void hpd_plug_state(struct tegra_hpd_data *data)
 		 */
 		data->edid_reads = 0;
 
-		set_hpd_state(data, STATE_CHECK_EDID,
-				CHECK_EDID_DELAY_MS);
+		if (data->dc->suspended)
+			set_hpd_state(data, STATE_RECHECK_EDID,
+					CHECK_EDID_DELAY_MS);
+		else
+			set_hpd_state(data, STATE_CHECK_EDID,
+					CHECK_EDID_DELAY_MS);
 	} else {
 		/*
 		 * Nothing plugged in, so we are finished. Go to the
@@ -294,6 +300,17 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 			tgt_state = STATE_DONE_ENABLED;
 			timeout = -1;
 		} else {
+			if (data->dc->suspended) {
+				/*
+				 * During dc suspend/resume sequnce put
+				 * "dc->suspended = false", when new mointor
+				 * connected so state machine does not go in
+				 * loop between STATE_RECHECK_EDID and
+				 * STATE_HPD_RESET.
+				 */
+				data->dc->enabled = false;
+				data->dc->suspended = false;
+			}
 			pr_info("hpd: EDID change, reset hpd state machine\n");
 		}
 	}
@@ -436,10 +453,20 @@ static void sched_hpd_work(struct tegra_hpd_data *data, int resched_time)
 	 * and guarantees that any given work is
 	 * never executed parallelly by multiple CPUs
 	 */
-	if ((resched_time >= 0) && !data->shutdown)
+	if ((resched_time >= 0) && !data->shutdown) {
 		queue_delayed_work(system_wq,
 				&data->dwork,
 				msecs_to_jiffies(resched_time));
+
+	} else if (data->dc_resumed && resched_time < 0) {
+		/*
+		 * We reach here when hpd state machine completes i.e
+		 * hpd state is ENABLE or DISABLE and during DC suspend
+		 * resume sequence.
+		 */
+		complete(&data->dc->hpd_complete);
+		data->dc_resumed = false;
+	}
 }
 
 static void set_hpd_state(struct tegra_hpd_data *data,
@@ -549,6 +576,7 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 	tegra_dc_set_edid(dc, data->edid);
 	data->eld_retrieved = false;
 	data->edid_reads = 0;
+	data->dc_resumed = false;
 
 	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
 

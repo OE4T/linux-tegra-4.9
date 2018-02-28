@@ -556,6 +556,7 @@ struct tegra_dc {
 
 	struct completion		frame_end_complete;
 	struct completion		crc_complete;
+	struct completion		hpd_complete;
 	bool				crc_pending;
 
 	struct work_struct		vblank_work;

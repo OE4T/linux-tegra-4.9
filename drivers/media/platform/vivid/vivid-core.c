@@ -48,10 +48,10 @@
 #include "vivid-osd.h"
 #include "vivid-ctrls.h"
 
-#define VIVID_MODULE_NAME "vivid"
+#define VIVID_MODULE_NAME "tegra-vivid"
 
 /* The maximum number of vivid devices */
-#define VIVID_MAX_DEVS CONFIG_VIDEO_VIVID_MAX_DEVS
+#define VIVID_MAX_DEVS CONFIG_VIDEO_TEGRA_VIVID_MAX_DEVS
 
 MODULE_DESCRIPTION("Virtual Video Test Driver");
 MODULE_AUTHOR("Hans Verkuil");
@@ -208,7 +208,7 @@ static int vidioc_querycap(struct file *file, void  *priv,
 	struct vivid_dev *dev = video_drvdata(file);
 	struct video_device *vdev = video_devdata(file);
 
-	strcpy(cap->driver, "vivid");
+	strcpy(cap->driver, "tegra-vivid");
 	snprintf(cap->card, sizeof(cap->card),
 			"%s", dev->v4l2_dev.name);
 	snprintf(cap->bus_info, sizeof(cap->bus_info),
@@ -1442,7 +1442,7 @@ static void vivid_pdev_release(struct device *dev)
 }
 
 static struct platform_device vivid_pdev = {
-	.name		= "vivid",
+	.name		= "tegra-vivid",
 	.dev.release	= vivid_pdev_release,
 };
 
@@ -1450,7 +1450,7 @@ static struct platform_driver vivid_pdrv = {
 	.probe		= vivid_probe,
 	.remove		= vivid_remove,
 	.driver		= {
-		.name	= "vivid",
+		.name	= "tegra-vivid",
 	},
 };
 

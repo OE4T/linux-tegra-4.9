@@ -1250,6 +1250,7 @@
 			clock-names = "dpaux";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX>;
 			reset-names = "dpaux";
+			power-domains = <&disa_pd>;
 		}; //dpaux0
 
 		dpaux1: dpaux@155D0000 {
@@ -1263,6 +1264,7 @@
 			clock-names = "dpaux1";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX1>;
 			reset-names = "dpaux1";
+			power-domains = <&disa_pd>;
 		}; //dpaux1
 
 		dpaux2: dpaux@155E0000 {
@@ -1276,6 +1278,7 @@
 			clock-names = "dpaux2";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX2>;
 			reset-names = "dpaux2";
+			power-domains = <&disa_pd>;
 		}; //dpaux2
 
 		dpaux3: dpaux@155F0000 {
@@ -1289,6 +1292,7 @@
 			clock-names = "dpaux3";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX3>;
 			reset-names = "dpaux3";
+			power-domains = <&disa_pd>;
 		}; //dpaux3
 
 		tegra_cec: tegra_cec {

@@ -351,10 +351,13 @@ static struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 	init.parent_names = parent_names;
 	init.num_parents = num_parents;
 
-	if ((flags & mux_div_flags) == mux_div_flags)
+	if ((flags & mux_div_flags) == mux_div_flags) {
+		init.flags |= CLK_SET_RATE_NOCACHE;
 		init.ops = &tegra_clk_bpmp_mux_rate_ops;
-	else if (flags & BPMP_CLK_HAS_SET_RATE)
+	} else if (flags & BPMP_CLK_HAS_SET_RATE) {
+		init.flags |= CLK_SET_RATE_NOCACHE;
 		init.ops = &tegra_clk_bpmp_rate_ops;
+	}
 	else if (flags & BPMP_CLK_HAS_MUX)
 		init.ops = &tegra_clk_bpmp_mux_ops;
 	else

@@ -22,7 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/types.h>
+#include <nvgpu/types.h>
 
 #include "gk20a/gk20a.h"
 

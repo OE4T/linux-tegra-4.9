@@ -202,7 +202,7 @@ static const struct __nvlink_reginit __nvlink_reginit_per_link_gpu[] = {
 
 #define NVL_DEVICE(str) nvlinkip_discovery_common_device_##str##_v()
 
-const char * __gv100_device_type_to_str(u32 type)
+static const char *__gv100_device_type_to_str(u32 type)
 {
 	if (type == NVL_DEVICE(ioctrl))
 		return "IOCTRL";
@@ -1259,7 +1259,7 @@ static void gv100_nvlink_nvlipt_intr_enable(struct gk20a *g, u32 link_id,
 /*
  * Per-link NVLIPT ISR handler
  */
-bool gv100_nvlink_nvlipt_isr(struct gk20a *g, u32 link_id)
+static bool gv100_nvlink_nvlipt_isr(struct gk20a *g, u32 link_id)
 {
 	/*
 	 * Interrupt handling happens in leaf handlers. Assume all interrupts

@@ -20,8 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/scatterlist.h>
-
 #include <nvgpu/bug.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/dma.h>

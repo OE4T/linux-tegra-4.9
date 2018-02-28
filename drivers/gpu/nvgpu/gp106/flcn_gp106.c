@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gp106/sec2_gp106.h"
+#include "gp106/flcn_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_falcon_gp106.h>
 

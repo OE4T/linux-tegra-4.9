@@ -1,7 +1,7 @@
 /*
  * GP106 FUSE
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,6 +25,7 @@
 #include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
+#include "gp106/fuse_gp106.h"
 
 int gp106_fuse_check_priv_security(struct gk20a *g)
 {

@@ -1,7 +1,7 @@
 /*
  * imx274.c - imx274 sensor driver
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -111,8 +111,8 @@ static const imx274_reg mode_3840X2160[] = {
 
 	/* crop */
 	{0x30DD, 0x01}, /*VWIDCUTEN*/
-	{0x30DE, 0x08}, /*VWIDCUT*/
-	{0x30E0, 0x00}, /*VWINCUTPOS*/
+	{0x30DE, 0x04}, /*VWIDCUT*/
+	{0x30E0, 0x03}, /*VWINCUTPOS*/
 	{0x3037, 0x01}, /*HTRIMMING_EN*/
 	{0x3038, 0x0C}, /*HTRIMMING_START*/
 	{0x3039, 0x00},
@@ -126,7 +126,6 @@ static const imx274_reg mode_3840X2160[] = {
 	{0x3007, 0xA2},
 	{0x3019, 0x00},
 	{0x3A41, 0x08},
-	{0x3A42, 0x01},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
 	{0x3344, 0x16},
@@ -207,8 +206,8 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 
 	/* crop */
 	{0x30DD, 0x01}, /*VWIDCUTEN*/
-	{0x30DE, 0x08}, /*VWIDCUT*/
-	{0x30E0, 0x00}, /*VWINCUTPOS*/
+	{0x30DE, 0x04}, /*VWIDCUT*/
+	{0x30E0, 0x03}, /*VWINCUTPOS*/
 	{0x3037, 0x01}, /*HTRIMMING_EN*/
 	{0x3038, 0x0C}, /*HTRIMMING_START*/
 	{0x3039, 0x00},
@@ -222,7 +221,6 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 	{0x3007, 0x02},
 	{0x3019, 0x00},
 	{0x3A41, 0x08},
-	{0x3A42, 0x01},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
 	{0x3344, 0x16},
@@ -249,9 +247,9 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 	{IMX274_TABLE_END, 0x0000}
 };
 
-/* Mode1(DOL): 3864x2182 10 bits 30fps DOL-HDR
- * H: LI+3840=3844
- * V: (OB+2166+VBP)*2=4448
+/* Mode1(DOL): 3840x2160 10 bits 30fps DOL-HDR
+ * Active H: LI (4) + Left margin (12) + 3840 = 3856
+ * Active V: [OB (8) + 2160 + VBP (50)] * 2 exposures = 4436
  */
 static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -303,7 +301,7 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x3004, 0x06},
 	{0x3005, 0x01},
 	{0x3006, 0x00},
-	{0x3007, 0x02},
+	{0x3007, 0xA2}, /* [7:5] is set to 0x5 to enable VWINPOS cropping. */
 	{0x300E, 0x00},
 	{0x3019, 0x31},
 	{0x301A, 0x00},
@@ -324,20 +322,21 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x30F8, 0xEC},
 	{0x30F9, 0x08},
 	{0x30FA, 0x00},
-	{0x30EE, 0x01},
 	{0x3037, 0x01},
-	{0x3038, 0x0C},
+	{0x3038, 0x00}, /* Note that the 12 "margin" pixels are NOT cropped here. */
+					/* They will be cropped by CSI along with LI pixels. */
+					/* This is a WAR for CSI cropping alignment requirements. */
 	{0x3039, 0x00},
 	{0x303A, 0x0C},
 	{0x303B, 0x0F},
 	{0x30DD, 0x01},
-	{0x30DE, 0x04},
+	{0x30DE, 0x04}, /* VWIDCUT: Crop 4 margin rows from the top and bottom. */
 	{0x30DF, 0x00},
-	{0x30E0, 0x02},
+	{0x30E0, 0x03}, /* VWINPOS: Crop after 6 ignored area rows (VWINPOS * 2) */
 	{0x30E1, 0x00},
-	{0x3130, 0x7E},
+	{0x3130, 0x78}, /* WRITE_VSIZE: 2168 = post-crop size (2160) + OB (8) */
 	{0x3131, 0x08},
-	{0x3132, 0xA8},
+	{0x3132, 0xA2}, /* Y_OUT_SIZE: 2210 = post-crop size (2160) + SHR (50) */
 	{0x3133, 0x08},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -358,15 +357,14 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x366C, 0x19},
 	{0x366D, 0x17},
 	{0x3A41, 0x08},
-	{0x3A42, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
 	{IMX274_TABLE_END, 0x0000}
 };
 
 /* Mode 3(DOL) : 1920x1080 10 bits 60fps DOL-HDR
- * H: LI+1920=1924
- * V: (OB+1080+VBP)*2=2252
+ * Active H: LI (4) + Left margin (6) + 1920 + Right margin (6) = 1936
+ * Active V: [OB (8) + 1080 + VBP (38)] * 2 exposures = 2252
  */
 static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -434,25 +432,25 @@ static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{0x306B, 0x05},
 	{0x30E2, 0x02},
 	{0x30E9, 0x01},
-	{0x30F6, 0x10},
+	{0x30F6, 0x1C}, /* HMAX */
 	{0x30F7, 0x04},
 	{0x30F8, 0x83},
 	{0x30F9, 0x04},
 	{0x30FA, 0x00},
 	{0x30EE, 0x01},
 	{0x30DD, 0x01},
-	{0x30DE, 0x07},
+	{0x30DE, 0x04}, /* VWIDCUT */
 	{0x30DF, 0x00},
-	{0x30E0, 0x04},
+	{0x30E0, 0x03}, /* VWINPOS */
 	{0x30E1, 0x00},
 	{0x3037, 0x01},
-	{0x3038, 0x0C},
+	{0x3038, 0x00}, /* HTRIM (6 left and 6 right margin pixels output) */
 	{0x3039, 0x00},
-	{0x303A, 0x0C},
+	{0x303A, 0x18},
 	{0x303B, 0x0F},
-	{0x3130, 0x40},
+	{0x3130, 0x40}, /* WRITE_VSIZE: 1080 + 8 */
 	{0x3131, 0x04},
-	{0x3132, 0x5E},
+	{0x3132, 0x5E}, /* Y_OUT_SIZE: 1080 + 38 */
 	{0x3133, 0x04},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -473,7 +471,6 @@ static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{0x366C, 0x19},
 	{0x366D, 0x17},
 	{0x3A41, 0x08},
-	{0x3A42, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
 	{IMX274_TABLE_END, 0x0000}
@@ -550,7 +547,6 @@ static imx274_reg mode_1920X1080[] = {
 	{0x3007, 0xB1},
 	{0x3019, 0x00},
 	{0x3A41, 0x08},
-	{0x3A42, 0x01},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
 	{0x3344, 0x1A},
@@ -634,7 +630,6 @@ static const imx274_reg mode_1288x546[] = {
 	{0x3007, 0x02},
 	{0x3019, 0x00},
 	{0x3A41, 0x04},
-	{0x3A42, 0x01},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
 	{0x3344, 0x1A},
@@ -696,8 +691,8 @@ static const int imx274_240_fr[] = {
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
 	{{3840, 2160}, imx274_60_fr, 1, 0, IMX274_MODE_3840X2160},
 	{{1920, 1080}, imx274_60_fr, 1, 0, IMX274_MODE_1920X1080},
-	{{3844, 4448}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
-	{{1924, 2252}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
+	{{3856, 4436}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
+	{{1936, 2252}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
 	{{1288, 546}, imx274_240_fr, 1, 0, IMX274_MODE_1288X546},
 };
 #endif  /* __IMX274_I2C_TABLES__ */

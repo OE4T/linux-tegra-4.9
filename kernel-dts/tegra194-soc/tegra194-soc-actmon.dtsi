@@ -55,6 +55,7 @@
 			 * W = 256
 			 */
 			nvidia,count_weight = <0x100>;
+			nvidia,max_dram_channels = /bits/ 8 <16>;
 			nvidia,type = <1>;
 			status = "disabled";
 		};

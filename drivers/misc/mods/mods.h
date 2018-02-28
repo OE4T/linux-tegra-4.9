@@ -1,7 +1,7 @@
 /*
  * mods.h - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 79
+#define MODS_DRIVER_VERSION_MINOR 82
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -803,6 +803,13 @@ struct MODS_SCREEN_INFO {
 	__u16 lfb_linelength;
 };
 
+/* MODS_ESC_GET_SCREEN_INFO_2 */
+struct MODS_SCREEN_INFO_2 {
+	/* OUT */
+	struct MODS_SCREEN_INFO info;
+	__u32 ext_lfb_base;
+};
+
 enum MODS_DMA_TRANSACTION_TYPE {
 	MODS_DMA_MEMCPY,
 	MODS_DMA_XOR,
@@ -972,6 +979,17 @@ struct MODS_GET_NVLINK_LINE_RATE {
 
 	/* OUT */
 	__u32             speed;
+};
+
+
+/* MODS_ESC_ACQUIRE_ACCESS_TOKEN
+ * MODS_ESC_RELEASE_ACCESS_TOKEN
+ * MODS_ESC_VERIFY_ACCESS_TOKEN
+ */
+#define MODS_ACCESS_TOKEN_NONE ~0U
+struct MODS_ACCESS_TOKEN {
+	/* IN/OUT */
+	__u32             token;
 };
 
 #pragma pack(pop)
@@ -1211,5 +1229,13 @@ struct MODS_GET_NVLINK_LINE_RATE {
 		    _IO(MODS_IOC_MAGIC, 104)
 #define MODS_ESC_RESUME_CONSOLE		\
 		    _IO(MODS_IOC_MAGIC, 105)
+#define MODS_ESC_GET_SCREEN_INFO_2			\
+		    _IOR(MODS_IOC_MAGIC, 106, struct MODS_SCREEN_INFO_2)
+#define MODS_ESC_ACQUIRE_ACCESS_TOKEN		\
+		    _IOR(MODS_IOC_MAGIC, 107, struct MODS_ACCESS_TOKEN)
+#define MODS_ESC_RELEASE_ACCESS_TOKEN		\
+		    _IOW(MODS_IOC_MAGIC, 108, struct MODS_ACCESS_TOKEN)
+#define MODS_ESC_VERIFY_ACCESS_TOKEN		\
+		    _IOW(MODS_IOC_MAGIC, 109, struct MODS_ACCESS_TOKEN)
 
 #endif /* _MODS_H_  */

@@ -1,7 +1,7 @@
 /*
  * mods_irq.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -564,10 +564,13 @@ unsigned char mods_alloc_channel(void)
 	struct mods_priv *pmp = get_all_data();
 	int i = 0;
 	unsigned char channel = MODS_CHANNEL_MAX + 1;
-	unsigned char max_channels = mods_get_multi_instance()
-					 ? MODS_CHANNEL_MAX : 1;
+	unsigned char max_channels = 1;
 
 	LOG_ENT();
+
+	if (mods_get_multi_instance() ||
+	    (mods_get_access_token() != MODS_ACCESS_TOKEN_NONE))
+		max_channels = MODS_CHANNEL_MAX;
 
 	for (i = 0; i < max_channels; i++) {
 		if (!test_and_set_bit(i, &pmp->channel_flags)) {

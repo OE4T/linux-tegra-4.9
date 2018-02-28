@@ -1,7 +1,7 @@
 /*
  * mods_internal.h - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -78,6 +78,7 @@ struct mods_file_private_data {
 	struct mem_type      mem_type;
 	struct mutex         mtx;
 	int                  mods_fb_suspended[FB_MAX];
+	u32                  access_token;
 };
 
 typedef struct mods_file_private_data *MODS_PRIV;
@@ -160,6 +161,8 @@ int mods_get_debug_level(void);
 int mods_check_debug_level(int mask);
 int mods_get_multi_instance(void);
 void mods_set_multi_instance(int mi);
+u32 mods_get_access_token(void);
+int mods_check_access_token(struct file *fp);
 
 #if defined(CONFIG_PPC64)
 void mods_set_ppc_tce_bypass(int bypass);
@@ -262,7 +265,7 @@ struct mods_priv {
 
 	/* bits map for each allocated id. Each mods has an id. */
 	/* the design is to take  into	account multi mods. */
-	unsigned long	  channel_flags;
+	unsigned long     channel_flags;
 
 	/* fifo loop queue */
 	struct irq_q_info rec_info[MODS_CHANNEL_MAX];

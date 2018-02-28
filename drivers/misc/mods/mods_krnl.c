@@ -1,7 +1,7 @@
 /*
  * mods_krnl.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -25,6 +25,7 @@
 #include <linux/miscdevice.h>
 #include <linux/screen_info.h>
 #include <linux/uaccess.h>
+#include <linux/random.h>
 #ifdef MODS_HAS_CONSOLE_LOCK
 #   include <linux/console.h>
 #   include <linux/kd.h>
@@ -112,11 +113,13 @@ struct pci_driver mods_pci_driver = {
  * module wide parameters and access functions *
  * used to avoid globalization of variables    *
  ***********************************************/
+
 static int debug = -0x80000000;
 static int multi_instance = MODS_MULTI_INSTANCE_DEFAULT_VALUE;
+static u32 access_token = MODS_ACCESS_TOKEN_NONE;
 
 #if defined(CONFIG_PPC64)
-static int ppc_tce_bypass = MODS_PPC_TCE_BYPASS_DEFAULT;
+static int ppc_tce_bypass = MODS_PPC_TCE_BYPASS_ON;
 
 void mods_set_ppc_tce_bypass(int bypass)
 {
@@ -152,6 +155,36 @@ void mods_set_multi_instance(int mi)
 int mods_get_multi_instance(void)
 {
 	return multi_instance > 0;
+}
+
+u32 mods_get_access_token(void)
+{
+	return access_token;
+}
+
+static int mods_set_access_token(u32 tok)
+{
+	/* When setting a null token, the existing token must match the
+	 * provided token, when setting a non-null token the existing token
+	 * must be null, use atomic compare/exchange to set it
+	 */
+	u32 req_old_token =
+	    (tok == MODS_ACCESS_TOKEN_NONE) ?
+		access_token : MODS_ACCESS_TOKEN_NONE;
+
+	if (cmpxchg(&access_token, req_old_token, tok) != req_old_token)
+		return -EFAULT;
+	return OK;
+}
+
+int mods_check_access_token(struct file *fp)
+{
+	MODS_PRIV private_data = fp->private_data;
+
+	if (private_data->access_token != mods_get_access_token())
+		return -EFAULT;
+
+	return OK;
 }
 
 /******************************
@@ -645,6 +678,8 @@ static int mods_krnl_open(struct inode *ip, struct file *fp)
 
 	init_waitqueue_head(&private_data->interrupt_event);
 
+	private_data->access_token = MODS_ACCESS_TOKEN_NONE;
+
 	fp->private_data = private_data;
 
 	mods_info_printk("driver opened\n");
@@ -710,6 +745,10 @@ static unsigned int mods_krnl_poll(struct file *fp, poll_table *wait)
 	unsigned int mask = 0;
 	MODS_PRIV private_data = fp->private_data;
 	unsigned char id = MODS_GET_FILE_PRIVATE_ID(fp);
+	int access_tok_ret = mods_check_access_token(fp);
+
+	if (access_tok_ret < 0)
+		return access_tok_ret;
 
 	if (!(fp->f_flags & O_NONBLOCK)) {
 		mods_debug_printk(DEBUG_ISR_DETAILED, "poll wait\n");
@@ -726,8 +765,15 @@ static int mods_krnl_map_inner(struct file *fp, struct vm_area_struct *vma);
 static int mods_krnl_mmap(struct file *fp, struct vm_area_struct *vma)
 {
 	struct mods_vm_private_data *vma_private_data;
+	int access_tok_ret;
 
 	LOG_ENT();
+
+	access_tok_ret = mods_check_access_token(fp);
+	if (access_tok_ret < 0) {
+		LOG_EXT();
+		return access_tok_ret;
+	}
 
 	vma->vm_ops = &mods_krnl_vm_ops;
 
@@ -903,6 +949,21 @@ static int mods_krnl_map_inner(struct file *fp, struct vm_area_struct *vma)
 	return OK;
 }
 
+#if !defined(CONFIG_ARM) && !defined(CONFIG_ARM64) && !defined(CONFIG_PPC64)
+static int mods_get_screen_info(struct MODS_SCREEN_INFO *p)
+{
+	p->orig_video_mode = screen_info.orig_video_mode;
+	p->orig_video_is_vga = screen_info.orig_video_isVGA;
+	p->lfb_width = screen_info.lfb_width;
+	p->lfb_height = screen_info.lfb_height;
+	p->lfb_depth = screen_info.lfb_depth;
+	p->lfb_base = screen_info.lfb_base;
+	p->lfb_size = screen_info.lfb_size;
+	p->lfb_linelength = screen_info.lfb_linelength;
+	return OK;
+}
+#endif
+
 /*************************
  * ESCAPE CALL FUNCTIONS *
  *************************/
@@ -930,15 +991,31 @@ int esc_mods_get_screen_info(struct file *pfile, struct MODS_SCREEN_INFO *p)
 #if defined(CONFIG_ARM) || defined(CONFIG_ARM64) || defined(CONFIG_PPC64)
 	return -EINVAL;
 #else
-	p->orig_video_mode = screen_info.orig_video_mode;
-	p->orig_video_is_vga = screen_info.orig_video_isVGA;
-	p->lfb_width = screen_info.lfb_width;
-	p->lfb_height = screen_info.lfb_height;
-	p->lfb_depth = screen_info.lfb_depth;
-	p->lfb_base = screen_info.lfb_base;
-	p->lfb_size = screen_info.lfb_size;
-	p->lfb_linelength = screen_info.lfb_linelength;
-	return OK;
+	int rc = mods_get_screen_info(p);
+
+#if defined(VIDEO_CAPABILITY_64BIT_BASE)
+	if (screen_info.ext_lfb_base)
+		return -EOVERFLOW;
+#endif
+
+	return rc;
+#endif
+}
+
+int esc_mods_get_screen_info_2(struct file *pfile, struct MODS_SCREEN_INFO_2 *p)
+{
+#if defined(CONFIG_ARM) || defined(CONFIG_ARM64) || defined(CONFIG_PPC64)
+	return -EINVAL;
+#else
+	int rc = mods_get_screen_info(&p->info);
+
+#if defined(VIDEO_CAPABILITY_64BIT_BASE)
+	p->ext_lfb_base = screen_info.ext_lfb_base;
+#else
+	p->ext_lfb_base = 0;
+#endif
+
+	return rc;
 #endif
 }
 
@@ -1048,6 +1125,83 @@ static int mods_resume_console(struct file *pfile)
 	return ret;
 }
 
+int esc_mods_acquire_access_token(struct file *pfile,
+				  struct MODS_ACCESS_TOKEN *pToken)
+{
+	int ret = -EINVAL;
+
+	LOG_ENT();
+
+	if (mods_get_multi_instance()) {
+		LOG_EXT();
+		mods_error_printk(
+		"access token ops not supported with multi_instance=1!\n");
+		return ret;
+	}
+
+	get_random_bytes(&pToken->token, sizeof(pToken->token));
+	ret = mods_set_access_token(pToken->token);
+	if (ret < 0) {
+		mods_error_printk("unable to set access token!\n");
+	} else {
+		MODS_PRIV private_data = pfile->private_data;
+
+		private_data->access_token = pToken->token;
+	}
+
+	LOG_EXT();
+
+	return ret;
+}
+
+int esc_mods_release_access_token(struct file *pfile,
+				  struct MODS_ACCESS_TOKEN *pToken)
+{
+	int ret = -EINVAL;
+
+	LOG_ENT();
+
+	if (mods_get_multi_instance()) {
+		LOG_EXT();
+		mods_error_printk(
+		"access token ops not supported with multi_instance=1!\n");
+		return ret;
+	}
+
+	ret = mods_set_access_token(MODS_ACCESS_TOKEN_NONE);
+	if (ret < 0) {
+		mods_error_printk("unable to clear access token!\n");
+	} else {
+		MODS_PRIV private_data = pfile->private_data;
+
+		private_data->access_token = MODS_ACCESS_TOKEN_NONE;
+	}
+
+	LOG_EXT();
+
+	return ret;
+}
+
+int esc_mods_verify_access_token(struct file *pfile,
+				 struct MODS_ACCESS_TOKEN *pToken)
+{
+	int ret = -EINVAL;
+
+	LOG_ENT();
+
+	if (pToken->token == mods_get_access_token()) {
+		MODS_PRIV private_data = pfile->private_data;
+
+		private_data->access_token = pToken->token;
+		ret = OK;
+	} else
+		mods_error_printk("invalid access token\n");
+
+	LOG_EXT();
+
+	return ret;
+}
+
 /**************
  * IO control *
  **************/
@@ -1063,6 +1217,15 @@ static long mods_krnl_ioctl(struct file  *fp,
 	char buf[64];
 
 	LOG_ENT();
+
+	if ((cmd != MODS_ESC_VERIFY_ACCESS_TOKEN) &&
+	    (cmd != MODS_ESC_GET_API_VERSION)) {
+		ret = mods_check_access_token(fp);
+		if (ret < 0) {
+			LOG_EXT();
+			return ret;
+		}
+	}
 
 	arg_size = _IOC_SIZE(cmd);
 
@@ -1652,6 +1815,10 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_GET_SCREEN_INFO,
 			   esc_mods_get_screen_info, MODS_SCREEN_INFO);
 		break;
+	case MODS_ESC_GET_SCREEN_INFO_2:
+		MODS_IOCTL(MODS_ESC_GET_SCREEN_INFO_2,
+			   esc_mods_get_screen_info_2, MODS_SCREEN_INFO_2);
+		break;
 	case MODS_ESC_LOCK_CONSOLE:
 		MODS_IOCTL_VOID(MODS_ESC_LOCK_CONSOLE,
 			   esc_mods_lock_console);
@@ -1706,6 +1873,24 @@ static long mods_krnl_ioctl(struct file  *fp,
 			   MODS_TEGRA_PROD_ITERATOR);
 		break;
 #endif
+
+	case MODS_ESC_ACQUIRE_ACCESS_TOKEN:
+		MODS_IOCTL(MODS_ESC_ACQUIRE_ACCESS_TOKEN,
+			   esc_mods_acquire_access_token,
+			   MODS_ACCESS_TOKEN);
+		break;
+
+	case MODS_ESC_RELEASE_ACCESS_TOKEN:
+		MODS_IOCTL_NORETVAL(MODS_ESC_RELEASE_ACCESS_TOKEN,
+				    esc_mods_release_access_token,
+				    MODS_ACCESS_TOKEN);
+		break;
+
+	case MODS_ESC_VERIFY_ACCESS_TOKEN:
+		MODS_IOCTL_NORETVAL(MODS_ESC_VERIFY_ACCESS_TOKEN,
+				    esc_mods_verify_access_token,
+				    MODS_ACCESS_TOKEN);
+		break;
 
 	default:
 		mods_error_printk("unrecognized ioctl (0x%x)\n", cmd);

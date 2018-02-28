@@ -848,7 +848,13 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *attach,
 {
 	might_sleep();
 
-	if (WARN_ON(!attach || !attach->dmabuf || !sg_table))
+	if (WARN(!attach, "attach is NULL"))
+		return;
+
+	if (WARN(!attach->dmabuf, "attach->dmabuf is NULL"))
+		return;
+
+	if (WARN(!sg_table, "sg_table is NULL"))
 		return;
 
 	mutex_lock(&attach->dmabuf->lock);

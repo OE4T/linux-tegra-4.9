@@ -14,11 +14,11 @@
 #include <linux/bitops.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/tegra-mce.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
+#include <linux/tegra-mce.h>
 #include <linux/platform_device.h>
 #include <soc/tegra/chip-id.h>
 #include <uapi/linux/tegra_l3_cache.h>
@@ -27,7 +27,6 @@
 #define MASK GENMASK(15, 12)
 #define T19x_CACHE_STR	"l3_cache"
 
-#define CCPLEX_CACHE_CONTROL		49
 #define CCPLEX_CC_GPU_ONLY_BITS_SHIFT	8
 
 #define MAX_L3_WAYS			16
@@ -128,15 +127,16 @@ int t19x_clean_dcache_all(void)
 
 static int t19x_extract_l3_cache_ways(struct device *dev)
 {
-	u64 nvg_index = CCPLEX_CACHE_CONTROL;
 	u64 nvg_data;
 	u32 *gpu_cpu_ways = &cache_data->ioctl_data.igpu_cpu_ways;
 	u32 *gpu_only_ways = &cache_data->ioctl_data.igpu_only_ways;
 	u32 dt_gpu_cpu_ways = *gpu_cpu_ways;
 	u32 dt_gpu_only_ways = *gpu_only_ways;
 
-	asm volatile("msr s3_0_c15_c1_2, %0" : : "r" (nvg_index));
-	asm volatile ("mrs %0, s3_0_c15_c1_3" : "=r" (nvg_data));
+	if (tegra_mce_read_l3_cache_ways(&nvg_data)) {
+		dev_err(dev, "Reading L3 cache ways is not supported in this platform\n");
+		return -ENOTSUPP;
+	}
 
 	*gpu_cpu_ways = nvg_data & L3_WAYS_MASK;
 	*gpu_only_ways = (nvg_data >> CCPLEX_CC_GPU_ONLY_BITS_SHIFT) & L3_WAYS_MASK;
@@ -156,7 +156,6 @@ static int t19x_extract_l3_cache_ways(struct device *dev)
 static int t19x_set_l3_cache_ways(u32 gpu_cpu_ways, u32 gpu_only_ways)
 {
 	struct device *dev = &cache_data->pdev->dev;
-	u64 nvg_index = CCPLEX_CACHE_CONTROL;
 	u64 nvg_data;
 	u64 ret;
 
@@ -176,10 +175,10 @@ static int t19x_set_l3_cache_ways(u32 gpu_cpu_ways, u32 gpu_only_ways)
 
 	nvg_data = gpu_cpu_ways | gpu_only_ways;
 
-	asm volatile("msr s3_0_c15_c1_2, %0" : : "r" (nvg_index));
-	asm volatile("msr s3_0_c15_c1_3, %0" : : "r" (nvg_data));
-	asm volatile ("mrs %0, s3_0_c15_c1_3" : "=r" (ret));
-
+	if (tegra_mce_write_l3_cache_ways(nvg_data, &ret)) {
+		dev_err(dev, "Writing L3 cache ways is not supported in this platform\n");
+		return -ENOTSUPP;
+	}
 	if (ret != nvg_data) {
 		dev_err(dev, "CCPLEX_CACHE_CONTROL contents are not updated!!\n");
 		return -ENODEV;

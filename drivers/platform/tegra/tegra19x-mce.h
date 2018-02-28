@@ -40,6 +40,11 @@ int tegra19x_mce_dbg_cstats_show(struct seq_file *s, void *data);
 int t19x_flush_cache_all(void);
 int t19x_flush_dcache_all(void);
 int t19x_clean_dcache_all(void);
+
+/* Return L3 cache ways */
+int tegra19x_mce_read_l3_cache_ways(u64 *value);
+/* Write L3 cache ways and return L3 cache ways actually written */
+int tegra19x_mce_write_l3_cache_ways(u64 data, u64 *value);
 #else /* CONFIG_ARCH_TEGRA_19x_SOC */
 static int tegra19x_mce_enter_cstate(u32 state, u32 wake_time)
 {
@@ -109,6 +114,14 @@ static int t19x_flush_dcache_all(void)
 	return -ENOTSUPP;
 }
 static int t19x_clean_dcache_all(void)
+{
+	return -ENOTSUPP;
+}
+static int tegra19x_mce_write_l3_cache_ways(u64 data, u64 *value)
+{
+	return -ENOTSUPP;
+}
+static int tegra19x_mce_read_l3_cache_ways(u64 *value)
 {
 	return -ENOTSUPP;
 }

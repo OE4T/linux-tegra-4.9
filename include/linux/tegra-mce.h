@@ -121,4 +121,8 @@ int tegra_mce_read_dda_ctrl(u32 index, u64 *value);
 int tegra_flush_cache_all(void);
 int tegra_flush_dcache_all(void *__maybe_unused unused);
 int tegra_clean_dcache_all(void *__maybe_unused unused);
+/* L3 cache ways read/write functions */
+int tegra_mce_read_l3_cache_ways(u64 *value);
+int tegra_mce_write_l3_cache_ways(u64 data, u64 *value);
+
 #endif /* _LINUX_TEGRA_MCE_H */

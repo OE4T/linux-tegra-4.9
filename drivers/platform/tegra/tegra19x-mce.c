@@ -229,6 +229,34 @@ int tegra19x_mce_read_dda_ctrl(u32 index, u64* value)
 	return 0;
 }
 
+int tegra19x_mce_read_l3_cache_ways(u64 *value)
+{
+	/* disable preemption */
+	preempt_disable();
+
+	nvg_send_req(TEGRA_NVG_CHANNEL_CCPLEX_CACHE_CONTROL);
+	*value = nvg_get_response();
+
+	/* enable preemption */
+	preempt_enable();
+
+	return 0;
+}
+
+int tegra19x_mce_write_l3_cache_ways(u64 data, u64 *value)
+{
+	/* disable preemption */
+	preempt_disable();
+
+	nvg_send_req_data(TEGRA_NVG_CHANNEL_CCPLEX_CACHE_CONTROL, data);
+	*value = nvg_get_response();
+
+	/* enable preemption */
+	preempt_enable();
+
+	return 0;
+}
+
 #ifdef CONFIG_DEBUG_FS
 /* Dummy functions below */
 int tegra19x_mce_features_get(void *data, u64 *val) { return -ENOTSUPP; }

@@ -53,6 +53,8 @@ int (*_tegra_mce_write_uncore_perfmon)(u32, u32);
 int (*_tegra_mce_enable_latic)(void);
 int (*_tegra_mce_write_dda_ctrl)(u32 index, u64 value);
 int (*_tegra_mce_read_dda_ctrl)(u32 index, u64 *value);
+int (*_tegra_mce_read_l3_cache_ways)(u64 *value);
+int (*_tegra_mce_write_l3_cache_ways)(u64 data, u64 *value);
 
 /**
  * Specify power state and wake time for entering upon STANDBYWFI
@@ -345,6 +347,37 @@ int tegra_mce_read_dda_ctrl(u32 index, u64 *value)
 }
 EXPORT_SYMBOL_GPL(tegra_mce_read_dda_ctrl);
 
+/**
+ * Read NVG L3 cache control register
+ *
+ * @value:   Fill L3 cache ways
+ *
+ * Returns 0 on success
+ */
+int tegra_mce_read_l3_cache_ways(u64 *value)
+{
+	if (!_tegra_mce_read_l3_cache_ways)
+		return -ENOTSUPP;
+	return _tegra_mce_read_l3_cache_ways(value);
+}
+EXPORT_SYMBOL_GPL(tegra_mce_read_l3_cache_ways);
+
+/**
+ * Write L3 cache ways and read back the l3 cache ways written
+ *
+ * @data:   L3 cache ways to be writtein
+ * @value:  L3 cache ways returrned back
+ *
+ * Returns 0 on success
+ */
+int tegra_mce_write_l3_cache_ways(u64 data, u64 *value)
+{
+	if (!_tegra_mce_write_l3_cache_ways)
+		return -ENOTSUPP;
+	return _tegra_mce_write_l3_cache_ways(data, value);
+}
+EXPORT_SYMBOL_GPL(tegra_mce_write_l3_cache_ways);
+
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *mce_debugfs;
 
@@ -626,6 +659,9 @@ static __init int tegra_mce_early_init(void)
 		_tegra_mce_read_versions = tegra19x_mce_read_versions;
 		_tegra_mce_write_dda_ctrl = tegra19x_mce_write_dda_ctrl;
 		_tegra_mce_read_dda_ctrl = tegra19x_mce_read_dda_ctrl;
+		_tegra_mce_read_l3_cache_ways = tegra19x_mce_read_l3_cache_ways;
+		_tegra_mce_write_l3_cache_ways =
+			tegra19x_mce_write_l3_cache_ways;
 		break;
 	default:
 		/* Do not support any other platform */

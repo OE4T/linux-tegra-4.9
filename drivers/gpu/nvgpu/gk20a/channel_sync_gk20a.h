@@ -105,9 +105,6 @@ struct gk20a_channel_sync {
 	/* Returns the sync point address of sync point or 0 if not supported */
 	u64 (*syncpt_address)(struct gk20a_channel_sync *s);
 
-	/* Handle user added increments in the push buffer */
-	u32 (*add_user_incrs)(struct gk20a_channel_sync *s, u32 val);
-
 	/* Free the resources allocated by gk20a_channel_sync_create. */
 	void (*destroy)(struct gk20a_channel_sync *s);
 };

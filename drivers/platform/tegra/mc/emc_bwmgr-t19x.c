@@ -548,10 +548,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_ecc_1X_2rank_eff;
+					bwmgr_t194_16ch_ecc_4X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_ecc_1X_1rank_eff;
+					bwmgr_t194_16ch_ecc_4X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 			bwmgr_t194_lpddr4_16ch_ecc_iso_max_nvdis_bw_reqd;
@@ -570,10 +570,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 					DRAM_TYPE_LPDDR4_8CH_ECC;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_ecc_1X_2rank_eff;
+					bwmgr_t194_8ch_ecc_4X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_ecc_1X_1rank_eff;
+					bwmgr_t194_8ch_ecc_4X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_8ch_ecc_iso_max_nvdis_bw_reqd;
@@ -593,10 +593,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_16CH;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_1X_2rank_eff;
+					bwmgr_t194_16ch_4X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_16ch_1X_1rank_eff;
+					bwmgr_t194_16ch_4X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_16ch_iso_max_nvdis_bw_reqd;
@@ -613,10 +613,10 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_8CH;
 				if (dram_rank)
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_1X_2rank_eff;
+					bwmgr_t194_8ch_4X_2rank_eff;
 				else
 					bwmgr_dram_noniso_eff_table =
-					bwmgr_t194_8ch_1X_1rank_eff;
+					bwmgr_t194_8ch_4X_1rank_eff;
 
 				bwmgr_max_nvdis_bw_reqd =
 				bwmgr_t194_lpddr4_8ch_iso_max_nvdis_bw_reqd;

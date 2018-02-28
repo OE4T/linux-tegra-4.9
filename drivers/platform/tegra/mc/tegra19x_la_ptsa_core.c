@@ -1572,32 +1572,23 @@ static void wr_ord_perf_regs(
 
 	/* Mapping ordered clients to different TBUs */
 
-#define WRITE_TBU_CLNT_STEER(client_name, tbu_num) \
+	#define WRITE_TBU_CLNT_STEER(client_name, tbu_num) \
 	do { \
-		data = 0; \
+		data = reg_info_reg_rd( \
+			mc_inf_arr, \
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_## \
+			client_name##_ID); \
 		data = NV_FLD_SET_DRF_NUM( \
-				MC, \
-				TBU_CLIENT_STEERING_CONFIG_##client_name, \
-				client_name##_NORMAL_TBUID_OVERRIDE, \
-				1, \
-				data); \
-		data = NV_FLD_SET_DRF_NUM( \
-				MC, \
-				TBU_CLIENT_STEERING_CONFIG_##client_name, \
-				client_name##_NORMAL_TBUID, \
-				tbu_num, \
-				data); \
-		data = NV_FLD_SET_DRF_NUM( \
-				MC, \
-				TBU_CLIENT_STEERING_CONFIG_##client_name, \
-				client_name##_SO_DEV_TBUID, \
-				tbu_num, \
-				data); \
+			MC, \
+			TBU_CLIENT_STEERING_CONFIG_##client_name, \
+			client_name##_SO_DEV_TBUID, \
+			tbu_num, \
+			data); \
 		reg_info_reg_wr( \
-				mc_inf_arr, \
-				TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_## \
+			mc_inf_arr, \
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_## \
 				client_name##_ID, \
-				data); \
+			data); \
 	} while (0)
 
 	WRITE_TBU_CLNT_STEER(PCIE5W, 0x1);
@@ -1790,24 +1781,14 @@ static void set_pcie1_ord_id(
 	}
 
 	if (mc_settings_ptr->en_ordering) {
-		data = 0;
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE1W,
-				PCIE1W_NORMAL_TBUID_OVERRIDE,
-				1,
-				data);
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE1W,
-				PCIE1W_NORMAL_TBUID,
-				0,
-				data);
+		data = reg_info_reg_rd(
+			mcpcie_inf_arr,
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE1W_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, TBU_CLIENT_STEERING_CONFIG_PCIE1W,
-				PCIE1W_SO_DEV_TBUID,
-				id, data);
+			PCIE1W_SO_DEV_TBUID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE1W_ID, data);
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE1W_ID, data);
 	}
 }
 
@@ -1846,25 +1827,15 @@ static void set_pcie2_ord_id(
 	}
 
 	if (mc_settings_ptr->en_ordering) {
-		data = 0;
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE2AW,
-				PCIE2AW_NORMAL_TBUID_OVERRIDE,
-				1,
-				data);
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE2AW,
-				PCIE2AW_NORMAL_TBUID,
-				0,
-				data);
+		data = reg_info_reg_rd(
+			mcpcie_inf_arr,
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE2AW_ID);
 		data = NV_FLD_SET_DRF_NUM(MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE2AW,
-				PCIE2AW_SO_DEV_TBUID,
-				id, data);
+			TBU_CLIENT_STEERING_CONFIG_PCIE2AW,
+			PCIE2AW_SO_DEV_TBUID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE2AW_ID, data);
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE2AW_ID, data);
 	}
 }
 
@@ -1903,24 +1874,14 @@ static void set_pcie3_ord_id(
 	}
 
 	if (mc_settings_ptr->en_ordering) {
-		data = 0;
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE3W,
-				PCIE3W_NORMAL_TBUID_OVERRIDE,
-				1,
-				data);
-		data = NV_FLD_SET_DRF_NUM(
-				MC,
-				TBU_CLIENT_STEERING_CONFIG_PCIE3W,
-				PCIE3W_NORMAL_TBUID,
-				0,
-				data);
+		data = reg_info_reg_rd(
+			mcpcie_inf_arr,
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE3W_ID);
 		data = NV_FLD_SET_DRF_NUM(MC, TBU_CLIENT_STEERING_CONFIG_PCIE3W,
-				PCIE3W_SO_DEV_TBUID,
-				id, data);
+			PCIE3W_SO_DEV_TBUID,
+			id, data);
 		reg_info_reg_wr(mcpcie_inf_arr,
-				TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE3W_ID, data);
+			TEGRA_MC_TBU_CLIENT_STEERING_CONFIG_PCIE3W_ID, data);
 	}
 }
 
@@ -1948,17 +1909,17 @@ static void update_ord_ids(
 
 	switch (pcie_xbar_cfg) { /* PCIE_COMMON_APPL_COMMON_CONTROL_0 */
 	case 0:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 3);
 		break;
 	case 1:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 2:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 3);
 		break;
@@ -1968,28 +1929,28 @@ static void update_ord_ids(
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 4:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 5:
 		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
-		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 6:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 3);
 		break;
 	case 7:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 8:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
-		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
+		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 9:
@@ -1998,7 +1959,7 @@ static void update_ord_ids(
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 10:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
@@ -2008,7 +1969,7 @@ static void update_ord_ids(
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		break;
 	case 12:
-		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 1);
+		set_pcie1_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 2);
 		set_pcie2_ord_id(mcpcie_inf_arr, mc_settings_ptr, 1, 0);
 		set_pcie3_ord_id(mcpcie_inf_arr, mc_settings_ptr, 0, 3);
 		break;

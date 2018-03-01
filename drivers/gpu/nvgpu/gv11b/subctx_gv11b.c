@@ -32,6 +32,7 @@
 
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 static void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block);
@@ -170,12 +171,12 @@ void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct fifo_gk20a *f = &g->fifo;
 	u32 lo, hi;
 	u32 subctx_id = 0;
 	u32 format_word;
 	u32 pdb_addr_lo, pdb_addr_hi;
 	u64 pdb_addr;
+	u32 max_subctx_count = gr_pri_fe_chip_def_info_max_veid_count_init_v();
 	u32 aperture = nvgpu_aperture_mask(g, vm->pdb.mem,
 			ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(),
 			ram_in_sc_page_dir_base_target_vid_mem_v());
@@ -194,7 +195,7 @@ void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);
 	nvgpu_log(g, gpu_dbg_info, " pdb info lo %x hi %x",
 					format_word, pdb_addr_hi);
-	for (subctx_id = 0; subctx_id < f->max_subctx_count; subctx_id++) {
+	for (subctx_id = 0; subctx_id < max_subctx_count; subctx_id++) {
 		lo = ram_in_sc_page_dir_base_vol_0_w() + (4 * subctx_id);
 		hi = ram_in_sc_page_dir_base_hi_0_w() + (4 * subctx_id);
 		nvgpu_mem_wr32(g, inst_block, lo, format_word);

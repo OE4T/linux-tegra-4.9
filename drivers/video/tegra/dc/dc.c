@@ -6505,34 +6505,21 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tegra_dc_init_nvdisp_lut_defaults(&dc->fb_nvdisp_lut);
 
 	dc->n_windows = tegra_dc_get_numof_dispwindows();
-	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
-		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
-		struct tegra_dc_win *win = NULL;
 
-		if (tegra_dc_is_nvdisplay()) {
-			win = &tegra_dc_windows[i];
-			win->color_expand_enable = true;
-			win->clamp_before_blend = true;
-		} else {
-			win = &dc->windows[i];
+	if (tegra_dc_is_t21x()) {
+		for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
+			struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
+			struct tegra_dc_win *win = &dc->windows[i];
+
 			win->dc = dc;
-		}
-		if (!test_bit(i, &dc->valid_windows))
-			win->flags |= TEGRA_WIN_FLAG_INVALID;
-		else {
-			win->idx = i;
-			tmp_win->idx = i;
-			tmp_win->dc = dc;
 
-			if (tegra_dc_is_t21x()) {
+			if (test_bit(i, &dc->valid_windows)) {
+				win->idx = i;
+				tmp_win->idx = i;
+				tmp_win->dc = dc;
+
 				tegra_dc_init_win_csc_defaults(&win->win_csc);
 				tegra_dc_init_lut_defaults(&win->lut);
-			}
-			if (tegra_dc_is_nvdisplay()) {
-				win->force_user_csc = false;
-				win->force_user_degamma = false;
-				tegra_dc_init_nvdisp_lut_defaults(
-							&win->nvdisp_lut);
 			}
 		}
 	}

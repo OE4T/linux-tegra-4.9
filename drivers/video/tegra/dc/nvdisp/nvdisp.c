@@ -1222,15 +1222,13 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		goto INIT_CLK_ERR;
 	}
 
-	/* Initialize the session id counter to 0 */
-	dc->imp_session_id_cntr = 0;
-
 	/* Init sycpt ids */
 	dc->valid_windows = 0x3f; /* Assign all windows to this head */
 	for (i = 0; i < tegra_dc_get_numof_dispwindows();
 			++i, ++syncpt_name[5]) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
+		win->idx = i;
 		win->syncpt.id = nvhost_get_syncpt_client_managed(dc->ndev,
 								syncpt_name);
 
@@ -1238,6 +1236,13 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		ret = nvdisp_alloc_input_lut(dc, win, true);
 		if (ret)
 			goto INIT_LUT_ERR;
+
+		tegra_dc_init_nvdisp_lut_defaults(&win->nvdisp_lut);
+
+		win->color_expand_enable = true;
+		win->clamp_before_blend = true;
+		win->force_user_csc = false;
+		win->force_user_degamma = false;
 	}
 
 	ret = _tegra_nvdisp_init_pd_table(dc);

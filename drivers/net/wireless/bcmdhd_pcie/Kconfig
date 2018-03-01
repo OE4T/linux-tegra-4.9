@@ -30,6 +30,13 @@ config BCMDHD_PCIE_NVRAM_PATH
 	---help---
 	  Path to the calibration file.
 
+config BCMDHD_CLM_PATH
+	depends on BCMDHD
+	string "Firmware path"
+	default "/lib/firmware/brcm/bcmdhd.clm_blob"
+	---help---
+	  Path to the firmware file.
+
 config BCMDHD_PCIE_ES4_NVRAM_PATH
 	depends on BCMDHD
 	string "NVRAM ES4 path"

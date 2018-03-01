@@ -184,9 +184,6 @@ enum dhd_op_flags {
 #define DHD_SCAN_DEF_TIMEOUT 10000 /* ms: Max time out for scan in progress */
 #endif
 
-#ifndef CONFIG_BCMDHD_CLM_PATH
-#define CONFIG_BCMDHD_CLM_PATH "/system/etc/wifi/bcmdhd_clm.blob"
-#endif /* CONFIG_BCMDHD_CLM_PATH */
 #define WL_CCODE_NULL_COUNTRY  "#n"
 
 #define FW_VER_STR_LEN	128

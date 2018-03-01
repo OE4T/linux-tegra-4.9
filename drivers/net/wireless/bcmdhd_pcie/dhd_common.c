@@ -3868,6 +3868,7 @@ dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
 		DHD_TRACE(("clm path from module param:%s\n", clm_path));
 	} else {
 		clm_blob_path = CONFIG_BCMDHD_CLM_PATH;
+		DHD_TRACE(("clm defualt path from module param:%s\n", clm_blob_path));
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,6 +59,7 @@
 			ccg,irqflags = <IRQF_TRIGGER_LOW>;
 			interrupt-parent = <&tegra_aon_gpio>;
 			interrupts = <TEGRA194_AON_GPIO(BB, 2) 0>;
+			wakeup-source;
 			status = "okay";
 		};
 	};

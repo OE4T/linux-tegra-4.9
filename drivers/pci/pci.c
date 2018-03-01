@@ -58,6 +58,7 @@ struct pci_pme_device {
 };
 
 #define PME_TIMEOUT 1000 /* How long between PME checks */
+#define CRS_TIMEOUT (60 * 1000) /* Configuration Request Retry timeout */
 
 static void pci_dev_d3_sleep(struct pci_dev *dev)
 {
@@ -4997,7 +4998,8 @@ bool pci_device_is_present(struct pci_dev *pdev)
 {
 	u32 v;
 
-	return pci_bus_read_dev_vendor_id(pdev->bus, pdev->devfn, &v, 0);
+	return pci_bus_read_dev_vendor_id(pdev->bus, pdev->devfn, &v,
+					  CRS_TIMEOUT);
 }
 EXPORT_SYMBOL_GPL(pci_device_is_present);
 

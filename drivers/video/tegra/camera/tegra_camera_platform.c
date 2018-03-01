@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/camera/tegra_camera_platform.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,10 +23,13 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/platform/tegra/bwmgr_mc.h>
+#include <linux/list.h>
 
 #include <media/vi.h>
 #include <media/tegra_camera_dev_mfi.h>
 #include <media/tegra_camera_platform.h>
+
+#include "nvhost_acm.h"
 
 #define CAMDEV_NAME "tegra_camera_ctrl"
 
@@ -59,6 +62,9 @@ struct tegra_camera_info {
 	u64 bypass_mode_isobw;
 	/* set max bw by default */
 	bool en_max_bw;
+
+	struct list_head device_list;
+	struct mutex device_list_mutex;
 };
 
 static const struct of_device_id tegra_camera_of_ids[] = {
@@ -574,6 +580,9 @@ static int tegra_camera_probe(struct platform_device *pdev)
 #endif
 	}
 
+	mutex_init(&info->device_list_mutex);
+	INIT_LIST_HEAD(&info->device_list);
+
 	tegra_vi_register_mfi_cb(tegra_camera_dev_mfi_cb, NULL);
 
 	platform_set_drvdata(pdev, info);
@@ -584,6 +593,71 @@ static int tegra_camera_probe(struct platform_device *pdev)
 #endif
 	return 0;
 }
+
+int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info)
+{
+	int err = 0;
+	struct tegra_camera_dev_info *cdev;
+	struct tegra_camera_info *info;
+
+	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -EINVAL;
+
+	cdev = kzalloc(sizeof(struct tegra_camera_dev_info), GFP_KERNEL);
+	if (!cdev)
+		return -ENOMEM;
+
+	memcpy(cdev, cdev_info, sizeof(struct tegra_camera_dev_info));
+
+	INIT_LIST_HEAD(&cdev->device_node);
+
+	mutex_lock(&info->device_list_mutex);
+	list_add(&cdev->device_node, &info->device_list);
+	if (cdev->hw_type != HWTYPE_NONE) {
+		err = nvhost_module_add_client(cdev->pdev, &cdev->hw_type);
+		if (err) {
+			mutex_unlock(&info->device_list_mutex);
+			dev_err(info->dev, "%s could not add %d to nvhost\n",
+					__func__, cdev->hw_type);
+			return err;
+		}
+	}
+	mutex_unlock(&info->device_list_mutex);
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_camera_device_register);
+
+int tegra_camera_device_unregister(void *priv)
+{
+	struct tegra_camera_dev_info *cdev;
+	int found = 0;
+	struct tegra_camera_info *info;
+
+	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -EINVAL;
+
+	mutex_lock(&info->device_list_mutex);
+	list_for_each_entry(cdev, &info->device_list, device_node) {
+		if (priv == cdev->priv) {
+			list_del(&cdev->device_node);
+			found = 1;
+			break;
+		}
+	}
+
+	if (found) {
+		if (cdev->hw_type != HWTYPE_NONE)
+			nvhost_module_remove_client(cdev->pdev, &cdev->hw_type);
+		kfree(cdev);
+	}
+	mutex_unlock(&info->device_list_mutex);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_camera_device_unregister);
 
 static int tegra_camera_remove(struct platform_device *pdev)
 {

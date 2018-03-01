@@ -1097,6 +1097,8 @@ struct gpu_ops {
 		int (*shutdown)(struct gk20a *g);
 		int (*early_init)(struct gk20a *g);
 	} nvlink;
+
+	void (*semaphore_wakeup)(struct gk20a *g, bool post_events);
 };
 
 struct nvgpu_bios_ucode {

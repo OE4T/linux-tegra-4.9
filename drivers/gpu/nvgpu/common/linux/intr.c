@@ -15,6 +15,7 @@
 #include <linux/irqreturn.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/mc_gk20a.h"
 
 #include <nvgpu/atomic.h>
 #include <nvgpu/unit.h>
@@ -138,17 +139,11 @@ void nvgpu_intr_nonstall_cb(struct work_struct *work)
 	struct nvgpu_os_linux *l =
 		container_of(work, struct nvgpu_os_linux, nonstall_fn_work);
 	struct gk20a *g = &l->g;
-	u32 ops;
-	bool semaphore_wakeup, post_events;
 
 	do {
+		u32 ops;
+
 		ops = atomic_xchg(&l->nonstall_ops, 0);
-
-		semaphore_wakeup = ops & gk20a_nonstall_ops_wakeup_semaphore;
-		post_events = ops & gk20a_nonstall_ops_post_events;
-
-		if (semaphore_wakeup)
-			gk20a_channel_semaphore_wakeup(g, post_events);
-
+		mc_gk20a_handle_intr_nonstall(g, ops);
 	} while (atomic_read(&l->nonstall_ops) != 0);
 }

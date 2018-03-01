@@ -240,3 +240,14 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 
 	return is_pending;
 }
+
+void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops)
+{
+	bool semaphore_wakeup, post_events;
+
+	semaphore_wakeup = ops & gk20a_nonstall_ops_wakeup_semaphore;
+	post_events = ops & gk20a_nonstall_ops_post_events;
+
+	if (semaphore_wakeup)
+		g->ops.semaphore_wakeup(g, post_events);
+}

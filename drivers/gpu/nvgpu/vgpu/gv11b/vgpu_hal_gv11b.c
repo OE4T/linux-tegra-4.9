@@ -602,6 +602,7 @@ int vgpu_gv11b_init_hal(struct gk20a *g)
 	gops->chip_init_gpu_characteristics =
 		vgpu_gv11b_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = vgpu_gv11b_ops.get_litter_value;
+	gops->semaphore_wakeup = gk20a_channel_semaphore_wakeup;
 
 	g->name = "gv11b";
 

@@ -794,6 +794,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->chip_init_gpu_characteristics =
 		gv100_ops.chip_init_gpu_characteristics;
 	gops->get_litter_value = gv100_ops.get_litter_value;
+	gops->semaphore_wakeup = gk20a_channel_semaphore_wakeup;
 
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, true);
 	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);

@@ -137,7 +137,7 @@ struct isomgr_ops {
 	bool (*isomgr_plat_realize)(struct isomgr_client *cp);
 };
 
-struct isomgr_ops *other_isomgr_init(void);
+struct isomgr_ops *pre_t19x_isomgr_init(void);
 struct isomgr_ops *t19x_isomgr_init(void);
 
 #if defined(CONFIG_TEGRA_ISOMGR)

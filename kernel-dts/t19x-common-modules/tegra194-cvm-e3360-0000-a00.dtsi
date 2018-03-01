@@ -49,6 +49,34 @@
 					nvidia,bypass-smmu;
 				};
 			};
+			override@1 {
+				target = <&dp_aux_ch0_i2c>;
+				_overlay_ {
+					/delete-property/ dmas;
+					/delete-property/ dma-names;
+				};
+			};
+			override@2 {
+				target = <&dp_aux_ch1_i2c>;
+				_overlay_ {
+					/delete-property/ dmas;
+					/delete-property/ dma-names;
+				};
+			};
+			override@3 {
+				target = <&dp_aux_ch2_i2c>;
+				_overlay_ {
+					/delete-property/ dmas;
+					/delete-property/ dma-names;
+				};
+			};
+			override@4 {
+				target = <&dp_aux_ch3_i2c>;
+				_overlay_ {
+					/delete-property/ dmas;
+					/delete-property/ dma-names;
+				};
+			};
 		};
 		fragment-e3360-a00-xusb {
 			ids = "3360-1099-000", "3360-1098-000";

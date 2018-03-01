@@ -125,6 +125,16 @@ config MTD_QSPI_FLASH
 	  Quad Output/Dual IO/Quad IO/DDR Fast/DDR Dual IO/DDR Quad IO read,
 	  Page Program/Quad Page program write, sector and bulk erase modes.
 
+config MTD_TEGRA_VIRT
+	tristate "Support Tegra Virtual MTD devices"
+	depends on MTD_OF_PARTS
+	help
+	  Adds support for Virtual MTD devices based on Tegra virtualization
+	  framework.
+
+	  This will cause virtual MTD device driver to be built to work with
+	  physical MTD devices in the backend.
+
 config MTD_BCM47XXSFLASH
 	tristate "Support for serial flash on BCMA bus"
 	depends on BCMA_SFLASH && (MIPS || ARM)

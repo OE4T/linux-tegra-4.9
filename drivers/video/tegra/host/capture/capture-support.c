@@ -104,7 +104,7 @@ int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
 	addr = nvhost_syncpt_address(pdev, id);
 	err = nvhost_syncpt_get_gos(pdev, id, &index, &offset);
 	if (err < 0) {
-		dev_warn(&pdev->dev, "%s: failed to get GoS backing: %d\n",
+		dev_dbg(&pdev->dev, "%s: failed to get GoS backing: %d\n",
 			__func__, err);
 	}
 
@@ -112,7 +112,7 @@ int t194_capture_get_syncpt_gos_backing(struct platform_device *pdev,
 	*gos_index = index;
 	*gos_offset = offset;
 
-	dev_info(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
+	dev_dbg(&pdev->dev, "%s: id=%u addr=0x%llx gos_idx=%u gos_offset=%u\n",
 		__func__, id, addr, index, offset);
 
 	return 0;

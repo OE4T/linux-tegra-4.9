@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/isomgr-other.c
+ * arch/arm/mach-tegra/isomgr-pre_t19x.c
  *
  * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
  *
@@ -322,7 +322,7 @@ static struct isoclient_info *get_iso_client_info(int *length)
 	return cinfo;
 }
 
-static void other_iso_plat_init(void)
+static void pre_t19x_iso_plat_init(void)
 {
 	unsigned int max_emc_clk;
 	unsigned int max_emc_bw;
@@ -350,7 +350,7 @@ static void other_iso_plat_init(void)
 	}
 }
 
-static void other_iso_plat_unregister(struct isomgr_client *cp)
+static void pre_t19x_iso_plat_unregister(struct isomgr_client *cp)
 {
 	if (cp->real_bw > cp->margin_bw)
 		isomgr.avail_bw += cp->real_bw;
@@ -358,7 +358,7 @@ static void other_iso_plat_unregister(struct isomgr_client *cp)
 		isomgr.avail_bw += cp->margin_bw;
 }
 
-static bool other_iso_plat_reserve(struct isomgr_client *cp, u32 bw,
+static bool pre_t19x_iso_plat_reserve(struct isomgr_client *cp, u32 bw,
 					enum tegra_iso_client client)
 {
 	u64 bw_check;
@@ -392,7 +392,7 @@ bw_limit_check:
 
 }
 
-static bool other_iso_plat_realize(struct isomgr_client *cp)
+static bool pre_t19x_iso_plat_realize(struct isomgr_client *cp)
 {
 	s32 delta_bw = 0;
 
@@ -427,7 +427,7 @@ static bool other_iso_plat_realize(struct isomgr_client *cp)
 	return true;
 }
 
-static bool other_iso_plat_register(u32 dedi_bw, enum tegra_iso_client client)
+static bool pre_t19x_iso_plat_register(u32 dedi_bw, enum tegra_iso_client client)
 {
 	if (unlikely(dedi_bw > isomgr.max_iso_bw - isomgr.dedi_bw)) {
 		pr_err("iso bandwidth %uKB is not available, client %s\n",
@@ -437,16 +437,16 @@ static bool other_iso_plat_register(u32 dedi_bw, enum tegra_iso_client client)
 	return true;
 }
 
-static struct isomgr_ops isomgr_ops_other = {
-	.isomgr_plat_init = other_iso_plat_init,
-	.isomgr_plat_register = other_iso_plat_register,
-	.isomgr_plat_unregister = other_iso_plat_unregister,
-	.isomgr_plat_reserve = other_iso_plat_reserve,
-	.isomgr_plat_realize = other_iso_plat_realize,
+static struct isomgr_ops isomgr_ops_pre_t19x = {
+	.isomgr_plat_init = pre_t19x_iso_plat_init,
+	.isomgr_plat_register = pre_t19x_iso_plat_register,
+	.isomgr_plat_unregister = pre_t19x_iso_plat_unregister,
+	.isomgr_plat_reserve = pre_t19x_iso_plat_reserve,
+	.isomgr_plat_realize = pre_t19x_iso_plat_realize,
 };
 
-struct isomgr_ops *other_isomgr_init(void)
+struct isomgr_ops *pre_t19x_isomgr_init(void)
 {
 	isoclient_info = get_iso_client_info(&isoclients);
-	return &isomgr_ops_other;
+	return &isomgr_ops_pre_t19x;
 }

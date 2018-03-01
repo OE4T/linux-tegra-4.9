@@ -851,7 +851,7 @@ int __init isomgr_init(void)
 	if (tegra_get_chip_id() == TEGRA194)
 		isomgr.ops = t19x_isomgr_init();
 	else
-		isomgr.ops = other_isomgr_init();
+		isomgr.ops = pre_t19x_isomgr_init();
 
 	for (i = 0; ; i++) {
 		if (isoclient_info[i].name)

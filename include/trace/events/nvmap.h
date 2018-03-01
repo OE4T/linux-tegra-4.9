@@ -792,22 +792,6 @@ TRACE_EVENT(nvmap_pp_fill_zero_lots,
 		__entry->nr - __entry->ret)
 );
 
-TRACE_EVENT(nvmap_pp_fill_lots,
-	TP_PROTO(int add_to_pp),
-
-	TP_ARGS(add_to_pp),
-
-	TP_STRUCT__entry(
-		__field(int, add_to_pp)
-	),
-
-	TP_fast_assign(
-		__entry->add_to_pp = add_to_pp;
-	),
-
-	TP_printk("add to page pool:%d", __entry->add_to_pp)
-);
-
 #endif /* _TRACE_NVMAP_H */
 
 /* This part must be outside protection */

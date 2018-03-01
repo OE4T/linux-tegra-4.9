@@ -22,7 +22,7 @@ int tegra19x_mce_enter_cstate(u32 state, u32 wake_time);
 int tegra19x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 				    u8 force, u32 wake_mask, bool valid);
 int tegra19x_mce_update_crossover_time(u32 type, u32 time);
-int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats);
+int tegra19x_mce_read_cstate_stats(u32 state, u64 *stats);
 int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable);
 int tegra19x_mce_read_versions(u32 *major, u32 *minor);
 int tegra19x_mce_write_dda_ctrl(u32 index, u64 value);
@@ -54,7 +54,7 @@ static int tegra19x_mce_update_crossover_time(u32 type, u32 time)
 {
 	return -ENOTSUPP;
 }
-static int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
+static int tegra19x_mce_read_cstate_stats(u32 state, u64 *stats)
 {
 	return -ENOTSUPP;
 }

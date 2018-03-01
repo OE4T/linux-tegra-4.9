@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,7 @@ int tegra18x_mce_enter_cstate(u32 state, u32 wake_time);
 int tegra18x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 				    u8 force, u32 wake_mask, bool valid);
 int tegra18x_mce_update_crossover_time(u32 type, u32 time);
-int tegra18x_mce_read_cstate_stats(u32 state, u32 *stats);
+int tegra18x_mce_read_cstate_stats(u32 state, u64 *stats);
 int tegra18x_mce_write_cstate_stats(u32 state, u32 stats);
 int tegra18x_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
 int tegra18x_mce_online_core(int cpu);
@@ -62,7 +62,7 @@ static int tegra18x_mce_update_crossover_time(u32 type, u32 time)
 {
 	return -ENOTSUPP;
 }
-static int tegra18x_mce_read_cstate_stats(u32 state, u32 *stats)
+static int tegra18x_mce_read_cstate_stats(u32 state, u64 *stats)
 {
 	return -ENOTSUPP;
 }

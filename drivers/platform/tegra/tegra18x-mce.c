@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -119,13 +119,13 @@ int tegra18x_mce_update_crossover_time(u32 type, u32 time)
 	return send_smc(MCE_SMC_UPDATE_XOVER_TIME, &regs);
 }
 
-int tegra18x_mce_read_cstate_stats(u32 state, u32 *stats)
+int tegra18x_mce_read_cstate_stats(u32 state, u64 *stats)
 {
 	struct tegra_mce_regs regs;
 
 	regs.args[0] = state;
 	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
-	*stats = (u32)regs.args[2];
+	*stats = regs.args[2];
 
 	return 0;
 }
@@ -332,7 +332,7 @@ static const char * const cstats_table[] = {
 int tegra18x_mce_dbg_cstats_show(struct seq_file *s, void *data)
 {
 	int st;
-	u32 val;
+	u64 val;
 
 	seq_printf(s, "%-30s%-10s\n", "name", "count");
 	seq_puts(s, "----------------------------------------\n");
@@ -342,7 +342,7 @@ int tegra18x_mce_dbg_cstats_show(struct seq_file *s, void *data)
 		if (tegra18x_mce_read_cstate_stats(st, &val))
 			pr_err("mce: failed to read cstat: %d\n", st);
 		else
-			seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);
+			seq_printf(s, "%-30s%-10lld\n", cstats_table[st], val);
 	}
 
 	return 0;

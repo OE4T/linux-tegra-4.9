@@ -38,7 +38,7 @@ static int tegra_mce_id = TEGRA_MCE_ID_MAX;
 int (*_tegra_mce_enter_cstate)(u32, u32);
 int (*_tegra_mce_update_cstate_info)(u32, u32, u32, u8, u32, bool);
 int (*_tegra_mce_update_crossover_time)(u32, u32);
-int (*_tegra_mce_read_cstate_stats)(u32, u32 *);
+int (*_tegra_mce_read_cstate_stats)(u32, u64 *);
 int (*_tegra_mce_write_cstate_stats)(u32, u32);
 int (*_tegra_mce_is_sc7_allowed)(u32, u32, u32 *);
 int (*_tegra_mce_online_core)(int);
@@ -116,7 +116,7 @@ EXPORT_SYMBOL_GPL(tegra_mce_update_crossover_time);
  *
  * Returns 0 if success.
  */
-int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
+int tegra_mce_read_cstate_stats(u32 state, u64 *stats)
 {
 	if (!_tegra_mce_read_cstate_stats)
 		return -ENOTSUPP;

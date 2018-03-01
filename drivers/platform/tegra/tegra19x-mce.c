@@ -115,7 +115,7 @@ int tegra19x_mce_update_crossover_time(u32 type, u32 time)
 	return 0;
 }
 
-int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
+int tegra19x_mce_read_cstate_stats(u32 state, u64 *stats)
 {
 	if (!stats)
 		return -EINVAL;
@@ -126,7 +126,7 @@ int tegra19x_mce_read_cstate_stats(u32 state, u32 *stats)
 	nvg_send_req_data(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_REQUEST,
 				(uint64_t)state);
 	nvg_send_req(TEGRA_NVG_CHANNEL_CSTATE_STAT_QUERY_VALUE);
-	*stats = (u32)nvg_get_response();
+	*stats = nvg_get_response();
 
 	/* enable preemption */
 	preempt_enable();
@@ -263,7 +263,8 @@ static struct cstats_info cstats_table[] = {
 int tegra19x_mce_dbg_cstats_show(struct seq_file *s, void *data)
 {
 	int st, unit;
-	u32 val, mce_index;
+	u64 val;
+	u32 mce_index;
 
 	seq_printf(s, "%-25s%-15s%-10s\n", "name", "unit-id", "count/time");
 	seq_puts(s, "---------------------------------------------------\n");
@@ -275,7 +276,7 @@ int tegra19x_mce_dbg_cstats_show(struct seq_file *s, void *data)
 				pr_err("mce: failed to read cstat: %s, %x\n",
 					cstats_table[st].name, mce_index);
 			else
-				seq_printf(s, "%-25s%-15d%-10d\n",
+				seq_printf(s, "%-25s%-15d%-20lld\n",
 					cstats_table[st].name, unit, val);
 		}
 	}

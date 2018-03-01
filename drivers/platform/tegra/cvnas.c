@@ -34,6 +34,7 @@
 #include <linux/of_address.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
+#include <linux/nvmap_t19x.h>
 #include <soc/tegra/chip-id.h>
 
 static int cvnas_debug;
@@ -89,6 +90,9 @@ struct cvnas_device {
 	struct reset_control *rst_fcm;
 
 	bool virt;
+
+	int (*pmops_busy)(void);
+	int (*pmops_idle)(void);
 };
 
 static struct platform_device *cvnas_plat_dev;
@@ -360,8 +364,6 @@ static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 	return 0;
 }
 
-int nvmap_register_cvsram_carveout(struct device *dma_dev,
-		phys_addr_t base, size_t size);
 /* Call at the time we allocate something from CVNAS */
 int nvcvnas_busy(void)
 {
@@ -497,8 +499,12 @@ static int nvcvnas_probe(struct platform_device *pdev)
 		goto err_cvnas_debugfs_init;
 	}
 
+	cvnas_dev->pmops_busy = nvcvnas_busy;
+	cvnas_dev->pmops_idle = nvcvnas_idle;
+
 	ret = nvmap_register_cvsram_carveout(&cvnas_dev->dma_dev,
-			cvnas_dev->cvsram_base, cvnas_dev->cvsram_size);
+			cvnas_dev->cvsram_base, cvnas_dev->cvsram_size,
+			cvnas_dev->pmops_busy, cvnas_dev->pmops_idle);
 	if (ret) {
 		dev_err(&pdev->dev,
 			"nvmap cvsram register failed. ret=%d\n", ret);
@@ -506,9 +512,6 @@ static int nvcvnas_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(&pdev->dev, cvnas_dev);
-
-	/* Fix me: call busy until correct place holder is not found */
-	nvcvnas_busy();
 
 	/* TODO: Add interrupt handler */
 
@@ -534,17 +537,11 @@ err_of_iomap:
 static int nvcvnas_remove(struct platform_device *pdev)
 {
 	struct cvnas_device *cvnas_dev;
-	int ret;
 
 	cvnas_dev = dev_get_drvdata(&pdev->dev);
 	if (!cvnas_dev)
 		return -ENODEV;
-	/* Fix me: call idle until find correct place holder */
-	nvcvnas_idle();
 
-	ret = nvcvnas_power_off(cvnas_dev);
-	if (ret)
-		return ret;
 	debugfs_remove(cvnas_dev->debugfs_root);
 	of_reserved_mem_device_release(&pdev->dev);
 	iounmap(cvnas_dev->cvsram_iobase);
@@ -557,6 +554,9 @@ static void nvcvnas_shutdown(struct platform_device *pdev)
 {
 	struct cvnas_device *cvnas_dev;
 	int ret;
+
+	if (pm_runtime_suspended(&pdev->dev))
+		return;
 
 	cvnas_dev = dev_get_drvdata(&pdev->dev);
 	if (!cvnas_dev) {

@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,7 +25,8 @@
 #define NVMAP_HEAP_CARVEOUT_GOS     (1ul<<24)
 
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
-		phys_addr_t base, size_t size);
+		phys_addr_t base, size_t size,
+		int (*pmops_busy)(void), int (*pmops_idle)(void));
 
 struct cv_dev_info {
 	struct device_node *np;

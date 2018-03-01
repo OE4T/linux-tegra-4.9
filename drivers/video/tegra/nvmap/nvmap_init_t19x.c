@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_init_t19x.c
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,7 +34,8 @@ const struct of_device_id nvmap_of_ids[] = {
 };
 
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
-		phys_addr_t base, size_t size)
+		phys_addr_t base, size_t size, int (*busy)(void),
+		int (*idle)(void))
 {
 	static struct nvmap_platform_carveout cvsram = {
 		.name = "cvsram",
@@ -42,6 +43,9 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		.disable_dynamic_dma_map = true,
 		.no_cpu_access = true,
 	};
+
+	cvsram.pm_ops.busy = busy;
+	cvsram.pm_ops.idle = idle;
 
 	if (!base || !size || (base != PAGE_ALIGN(base)) ||
 	    (size != PAGE_ALIGN(size)))

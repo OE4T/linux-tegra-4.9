@@ -74,6 +74,7 @@ struct nvmap_heap {
 	bool can_alloc; /* Used only if is_ivm == true */
 	int peer; /* Used only if is_ivm == true */
 	int vm_id; /* Used only if is_ivm == true */
+	struct nvmap_pm_ops pm_ops;
 };
 
 struct device *dma_dev_from_handle(unsigned long type)
@@ -306,6 +307,19 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 		}
 	}
 
+	/*
+	 * If this HEAP has pm_ops defined and powering on the
+	 * RAM attached with the HEAP returns error, don't
+	 * allocate from the heap and return NULL.
+	 */
+	if (h->pm_ops.busy) {
+		if (h->pm_ops.busy() < 0) {
+			pr_err("Unable to power on the heap device\n");
+			mutex_unlock(&h->lock);
+			return NULL;
+		}
+	}
+
 	align = max_t(size_t, align, L1_CACHE_BYTES);
 	b = do_heap_alloc(h, len, align, prot, 0, start);
 	if (b) {
@@ -354,6 +368,14 @@ void nvmap_heap_free(struct nvmap_heap_block *b)
 	lb = container_of(b, struct list_block, block);
 	nvmap_flush_heap_block(NULL, b, lb->size, lb->mem_prot);
 	do_heap_free(b);
+	/*
+	 * If this HEAP has pm_ops defined and powering off the
+	 * RAM attached with the HEAP returns error, raise warning.
+	 */
+	if (h->pm_ops.idle) {
+		if (h->pm_ops.idle() < 0)
+			WARN_ON(1);
+	}
 
 	mutex_unlock(&h->lock);
 }
@@ -417,6 +439,12 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->len = len;
 	h->peer = co->peer;
 	h->vm_id = co->vmid;
+	if (co->pm_ops.busy)
+		h->pm_ops.busy = co->pm_ops.busy;
+
+	if (co->pm_ops.idle)
+		h->pm_ops.idle = co->pm_ops.idle;
+
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	if (!co->no_cpu_access &&

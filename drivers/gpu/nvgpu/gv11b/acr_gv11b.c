@@ -29,8 +29,8 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/mm.h>
-#include <nvgpu/enabled.h>
 #include <nvgpu/acr/nvgpu_acr.h>
+#include <nvgpu/enabled.h>
 
 #include "gk20a/gk20a.h"
 #include "acr_gv11b.h"
@@ -248,16 +248,25 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 
 void gv11b_setup_apertures(struct gk20a *g)
 {
+	struct mm_gk20a *mm = &g->mm;
+	struct nvgpu_mem *inst_block = &mm->pmu.inst_block;
+
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
 			pwr_fbif_transcfg_mem_type_physical_f() |
-			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+			nvgpu_aperture_mask(g, inst_block,
+			pwr_fbif_transcfg_target_noncoherent_sysmem_f(),
+			pwr_fbif_transcfg_target_coherent_sysmem_f(),
+			pwr_fbif_transcfg_target_local_fb_f()));
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
 			pwr_fbif_transcfg_mem_type_virtual_f());
 	/* setup apertures - physical */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
 			pwr_fbif_transcfg_mem_type_physical_f() |
-			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+			nvgpu_aperture_mask(g, inst_block,
+			pwr_fbif_transcfg_target_noncoherent_sysmem_f(),
+			pwr_fbif_transcfg_target_coherent_sysmem_f(),
+			pwr_fbif_transcfg_target_local_fb_f()));
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
 			pwr_fbif_transcfg_mem_type_physical_f() |
 			pwr_fbif_transcfg_target_coherent_sysmem_f());

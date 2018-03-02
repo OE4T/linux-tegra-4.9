@@ -56,6 +56,9 @@ static const struct apbmisc_data *apbmisc_data;
 
 u32 tegra_read_chipid(void)
 {
+	static u32 chipid;
+	static bool chipid_set = false;
+
 	if (!apbmisc_base)
 		tegra_init_apbmisc();
 
@@ -64,7 +67,15 @@ u32 tegra_read_chipid(void)
 		return 0;
 	}
 
-	return readl_relaxed(apbmisc_base + 4);
+	/* In Virtualized system, MISC region is trap/emulated.
+	 * Return the saved value instead in all cases and save
+	 * a MMIO read */
+	if (chipid_set == false) {
+		chipid = readl_relaxed(apbmisc_base + 4);
+		chipid_set = true;
+	}
+
+	return chipid;
 }
 
 u8 tegra_get_chip_id(void)

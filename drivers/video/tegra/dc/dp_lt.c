@@ -791,6 +791,25 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
+	/*
+	 * See comment above the TEGRA_DC_DP_TRAINING_PATTERN_BS_CSTM entry in
+	 * sor.c for why this WAR is required.
+	 */
+	if (lt_data->dp->link_cfg.tps == TEGRA_DC_DP_TRAINING_PATTERN_4) {
+		struct tegra_dc_sor_data *sor = lt_data->dp->sor;
+
+		tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_0, 0x1BC6F1BC);
+		tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_1, 0xC6F1BC6F);
+		tegra_sor_writel(sor, NV_SOR_DP_LQ_CSTM_2, 0x6F1B);
+
+		tegra_sor_write_field(sor, NV_SOR_DP_CONFIG(sor->portnum),
+			NV_SOR_DP_CONFIG_RD_RESET_VAL_NEGATIVE,
+			NV_SOR_DP_CONFIG_RD_RESET_VAL_POSITIVE);
+
+		tegra_sor_tpg(sor, TEGRA_DC_DP_TRAINING_PATTERN_BS_CSTM,
+			lt_data->n_lanes);
+	}
+
 	set_lt_tpg(lt_data, lt_data->dp->link_cfg.tps);
 	wait_aux_training(lt_data, false);
 

@@ -134,6 +134,23 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING4,
 	},
+	/*
+	 * On T194, the HW pattern generator sends the RD_RESET (running
+	 * disparity reset) signal one clock cycle too early. This specifically
+	 * affects TPS4 since TPS4 requires scrambling, so whatever symbol is
+	 * sent during this early cycle will be random. As a result, the RD of
+	 * the first symbol of TPS4 will be random as well.
+	 *
+	 * In order to WAR this issue, we will send a custom BS (blanking start)
+	 * pattern when switching from TPS1 to TPS4 during equalization in order
+	 * to control what the RD of the "early symbol" will be.
+	 */
+	[TEGRA_DC_DP_TRAINING_PATTERN_BS_CSTM] = {
+		.chan_coding = true,
+		.scrambling = true,
+		.dpcd_val = 0, /* unused */
+		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_CSTM,
+	},
 };
 
 static struct of_device_id tegra_sor_pd[] = {

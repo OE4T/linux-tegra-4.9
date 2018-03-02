@@ -327,16 +327,6 @@ int gp10b_clk_get_freqs(struct device *dev,
 	unsigned long max_rate;
 	unsigned long new_rate = 0, prev_rate = 0;
 	int i = 0, freq_counter = 0;
-	struct gk20a *g = get_gk20a(dev);
-
-	/*
-	 * Limit minimum frequency to 216.75MHz for gv11b, until issue
-	 * with lower frequencies are root caused - Bug 2056266
-	 * This hack needs to be removed once actual issue got fixed
-	 */
-
-	if ((g->params.gpu_arch + g->params.gpu_impl) == NVGPU_GPUID_GV11B)
-		new_rate = 216750000;
 
 	max_rate = clk_round_rate(platform->clk[0], (UINT_MAX - 1));
 

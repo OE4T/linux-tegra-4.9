@@ -474,6 +474,7 @@ F:	drivers/usb/gadget/function/*
 F:	drivers/usb/serial/*
 F:	drivers/usb/gadget/tegra_udc.c
 F:	drivers/usb/gadget/udc/tegra_xudc.c
+F:	drivers/usb/gadget/udc/tegra_usb_cd*.c
 F:	drivers/usb/host/xhci-tegra*
 F:	drivers/usb/phy/tegra*otg.c
 F:	drivers/usb/phy/tegra*usb_phy.c

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,7 +79,6 @@ enum tegra_usb_cd_apple_chargers {
 	APPLE_2000MA,
 };
 
-int tegra18x_usb_cd_init_ops(struct tegra_usb_cd *ucd);
-int tegra21x_usb_cd_init_ops(struct tegra_usb_cd *ucd);
+int tegra_usb_cd_init_ops(struct tegra_usb_cd *ucd);
 
 #endif /* __TEGRA_USB_CD_H */

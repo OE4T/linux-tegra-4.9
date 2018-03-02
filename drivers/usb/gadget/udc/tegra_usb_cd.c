@@ -1,7 +1,7 @@
 /*
  * tegra_usb_cd.c -- Tegra USB charger detection driver.
  *
- * Copyright (c) 2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -354,15 +354,20 @@ void tegra_ucd_set_sdp_cdp_current(struct tegra_usb_cd *ucd, int current_ma)
 EXPORT_SYMBOL_GPL(tegra_ucd_set_sdp_cdp_current);
 
 static struct tegra_usb_cd_soc_data tegra186_soc_config = {
-	.init_hw_ops = tegra18x_usb_cd_init_ops,
+	.init_hw_ops = tegra_usb_cd_init_ops,
+};
+
+static struct tegra_usb_cd_soc_data tegra194_soc_config = {
+	.init_hw_ops = tegra_usb_cd_init_ops,
 };
 
 static struct tegra_usb_cd_soc_data tegra210_soc_config = {
-	.init_hw_ops = tegra21x_usb_cd_init_ops,
+	.init_hw_ops = tegra_usb_cd_init_ops,
 };
 
 static const struct of_device_id tegra_usb_cd_of_match[] = {
 	{.compatible = "nvidia,tegra186-usb-cd", .data = &tegra186_soc_config,},
+	{.compatible = "nvidia,tegra194-usb-cd", .data = &tegra194_soc_config,},
 	{.compatible = "nvidia,tegra210-usb-cd", .data = &tegra210_soc_config,},
 	{},
 };

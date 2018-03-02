@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@
 	((ma >= VREG_CUR_LEVEL_##low) && (ma <= (VREG_CUR_LEVEL_##high - 1)))
 #define VREG_LVL(ma, level)     IS_CUR_IN_RANGE(ma, level, level + 1)
 
-static bool tegra18x_usb_dcp_charger_detect(struct tegra_usb_cd *ucd)
+static bool tegra_usb_dcp_charger_detect(struct tegra_usb_cd *ucd)
 {
 	bool status;
 
@@ -47,7 +47,7 @@ static bool tegra18x_usb_dcp_charger_detect(struct tegra_usb_cd *ucd)
 	return status;
 }
 
-static bool tegra18x_usb_cdp_charger_detect(struct tegra_usb_cd *ucd)
+static bool tegra_usb_cdp_charger_detect(struct tegra_usb_cd *ucd)
 {
 	bool status;
 
@@ -62,7 +62,7 @@ static bool tegra18x_usb_cdp_charger_detect(struct tegra_usb_cd *ucd)
 	return status;
 }
 
-static int tegra18x_usb_apple_charger_detect(struct tegra_usb_cd *ucd)
+static int tegra_usb_apple_charger_detect(struct tegra_usb_cd *ucd)
 {
 	u32 val;
 
@@ -77,7 +77,7 @@ static int tegra18x_usb_apple_charger_detect(struct tegra_usb_cd *ucd)
 	return -1;
 }
 
-static int tegra18x_pad_power_on(struct tegra_usb_cd *ucd)
+static int tegra_pad_power_on(struct tegra_usb_cd *ucd)
 {
 	tegra_xusb_padctl_utmi_pad_charger_detect_on(ucd->padctl, ucd->phy);
 	tegra_xusb_padctl_set_dcd_debounce_time(ucd->padctl, ucd->phy, 0xa);
@@ -86,7 +86,7 @@ static int tegra18x_pad_power_on(struct tegra_usb_cd *ucd)
 	return 0;
 }
 
-static int tegra18x_pad_power_off(struct tegra_usb_cd *ucd)
+static int tegra_pad_power_off(struct tegra_usb_cd *ucd)
 {
 	tegra_xusb_padctl_utmi_pad_disable_detect_filters(ucd->padctl,
 								ucd->phy);
@@ -95,7 +95,7 @@ static int tegra18x_pad_power_off(struct tegra_usb_cd *ucd)
 	return 0;
 }
 
-static void tegra18x_usb_vbus_pad_protection(struct tegra_usb_cd *ucd,
+static void tegra_usb_vbus_pad_protection(struct tegra_usb_cd *ucd,
 			bool enable)
 {
 	int current_limit;
@@ -127,20 +127,20 @@ static int no_op(struct tegra_usb_cd *ucd)
 	return 0;
 }
 
-static struct tegra_usb_cd_ops tegra18_ucd_ops = {
+static struct tegra_usb_cd_ops tegra_ucd_ops = {
 	.open = no_op,
 	.close = no_op,
-	.power_on = tegra18x_pad_power_on,
-	.power_off = tegra18x_pad_power_off,
-	.dcp_cd = tegra18x_usb_dcp_charger_detect,
-	.cdp_cd = tegra18x_usb_cdp_charger_detect,
-	.apple_cd = tegra18x_usb_apple_charger_detect,
-	.vbus_pad_protection = tegra18x_usb_vbus_pad_protection,
+	.power_on = tegra_pad_power_on,
+	.power_off = tegra_pad_power_off,
+	.dcp_cd = tegra_usb_dcp_charger_detect,
+	.cdp_cd = tegra_usb_cdp_charger_detect,
+	.apple_cd = tegra_usb_apple_charger_detect,
+	.vbus_pad_protection = tegra_usb_vbus_pad_protection,
 };
 
-int tegra18x_usb_cd_init_ops(struct tegra_usb_cd *ucd)
+int tegra_usb_cd_init_ops(struct tegra_usb_cd *ucd)
 {
-	ucd->hw_ops = &tegra18_ucd_ops;
+	ucd->hw_ops = &tegra_ucd_ops;
 
 	return 0;
 }

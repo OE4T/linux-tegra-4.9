@@ -1939,7 +1939,7 @@
 		status = "disabled";
 	};
 
-	cpufreq@d080000 {
+	cpufreq {
 		compatible = "nvidia,tegra194-cpufreq";
 		status = "disabled";
 		cpu_emc_map = <1500000 800000>,

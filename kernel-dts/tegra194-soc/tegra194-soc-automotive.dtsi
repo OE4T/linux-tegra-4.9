@@ -270,7 +270,7 @@
 		status = "okay";
 	};
 
-	cpufreq@d080000 {
+	cpufreq {
 		status = "okay";
 	};
 

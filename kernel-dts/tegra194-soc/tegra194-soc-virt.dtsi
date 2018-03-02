@@ -218,7 +218,7 @@
 	  cpufreq driver(in case if present in server code). In bpmp-server(which
 	  owns cpufreq)DT, cpufreq DT node will be enabled explicitly.
 	*/
-	cpufreq@d080000 {
+	cpufreq {
 		status = "disabled";
 	};
 };

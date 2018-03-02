@@ -27,10 +27,10 @@
 #define U32_C(x) x##UL
 #endif
 #ifndef U16_C
-#define U16_C(x) x##U
+#define U16_C(x) (uint16_t)(x##U)
 #endif
 #ifndef U8_C
-#define U8_C(x) x##U
+#define U8_C(x) (uint8_t)(x##U)
 #endif
 #endif
 

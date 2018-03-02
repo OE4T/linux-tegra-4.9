@@ -1050,8 +1050,8 @@ struct isp_capture_descriptor {
 	/**
 	 * 3 MW ports, max 2 surfaces (multiplanar) per port.
 	 */
-#define ISP_MAX_OUTPUTS 3
-#define ISP_MAX_OUTPUT_SURFACES 2
+#define ISP_MAX_OUTPUTS 3U
+#define ISP_MAX_OUTPUT_SURFACES 2U
 
 	/** output surfaces */
 	struct {

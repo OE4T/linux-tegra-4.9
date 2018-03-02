@@ -769,6 +769,157 @@ TRACE_EVENT(display_embedded_latency,
 		__entry->ctrl_num, __entry->line_num, __entry->timestamp)
 );
 
+DECLARE_EVENT_CLASS(display_crc_regs,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 crca, u32 crcb),
+	TP_ARGS(ctrl_num, frame_cnt, type, crca, crcb),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, frame_cnt)
+		__field(char *, type)
+		__field(u32, crca)
+		__field(u32, crcb)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->frame_cnt = frame_cnt;
+		__entry->type = type;
+		__entry->crca = crca;
+		__entry->crcb = crcb;
+	),
+	TP_printk("DC%d frame_cnt=%u read %s status=%#x CRCB=%u",
+		__entry->ctrl_num,
+		__entry->frame_cnt,
+		__entry->type,
+		__entry->crca,
+		__entry->crcb
+	)
+);
+
+DEFINE_EVENT(display_crc_regs, display_crc_read,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 crca, u32 crcb),
+	TP_ARGS(ctrl_num, frame_cnt, type, crca, crcb)
+);
+
+DECLARE_EVENT_CLASS(display_crc_rgnl,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 id, u32 status, u32 crc),
+	TP_ARGS(ctrl_num, frame_cnt, type, id, status, crc),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, frame_cnt)
+		__field(char *, type)
+		__field(u32, id)
+		__field(u32, status)
+		__field(u32, crc)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->frame_cnt = frame_cnt;
+		__entry->type   = type;
+		__entry->id     = id;
+		__entry->status = status;
+		__entry->crc    = crc;
+	),
+	TP_printk("DC%d frame_cnt=%u read %s%u status=%#x CRC=%u",
+		__entry->ctrl_num,
+		__entry->frame_cnt,
+		__entry->type,
+		__entry->id,
+		__entry->status,
+		__entry->crc
+	)
+);
+
+DEFINE_EVENT(display_crc_rgnl, display_crc_rgnl,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 id, u32 status, u32 crcb),
+	TP_ARGS(ctrl_num, frame_cnt, type, id, status, crcb)
+);
+
+DECLARE_EVENT_CLASS(display_crc_late,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, bool valid, u32 crc),
+	TP_ARGS(ctrl_num, frame_cnt, type, valid, crc),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, frame_cnt)
+		__field(char *, type)
+		__field(bool, valid)
+		__field(u32, crc)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->frame_cnt = frame_cnt;
+		__entry->type = type;
+		__entry->valid = valid;
+		__entry->crc = crc;
+	),
+	TP_printk("DC%d frame_cnt=%u %s CRC   valid=%s %u",
+		__entry->ctrl_num,
+		__entry->frame_cnt,
+		__entry->type,
+		__entry->valid ? "1:keep":"0:clr",
+		__entry->crc
+	)
+);
+
+DEFINE_EVENT(display_crc_late, display_crc_late,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, bool valid, u32 crc),
+	TP_ARGS(ctrl_num, frame_cnt, type, valid, crc)
+);
+
+DECLARE_EVENT_CLASS(display_crc_rgnl_stat,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 id, u32 status),
+	TP_ARGS(ctrl_num, frame_cnt, type, id, status),
+	TP_STRUCT__entry(
+		__field(int, ctrl_num)
+		__field(u32, frame_cnt)
+		__field(char *, type)
+		__field(u32, id)
+		__field(u32, status)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->frame_cnt = frame_cnt;
+		__entry->type   = type;
+		__entry->id     = id;
+		__entry->status = status;
+	),
+	TP_printk("DC%d frame_cnt=%u %s%u status=%#x",
+		__entry->ctrl_num,
+		__entry->frame_cnt,
+		__entry->type,
+		__entry->id,
+		__entry->status
+	)
+);
+
+DEFINE_EVENT(display_crc_rgnl_stat, display_crc_rgnl_stat,
+	TP_PROTO(int ctrl_num, u32 frame_cnt, char *type, u32 id, u32 status),
+	TP_ARGS(ctrl_num, frame_cnt, type, id, status)
+);
+
+TRACE_EVENT(display_crc_boundary_crossed,
+	TP_PROTO(int ctrl_num, u32 start_frame_cnt, u32 end_frame_cnt, char *desc),
+
+	TP_ARGS(ctrl_num, start_frame_cnt, end_frame_cnt, desc),
+	TP_STRUCT__entry(
+		__field(u32, ctrl_num)
+		__field(u32, start_frame_cnt)
+		__field(u32, end_frame_cnt)
+		__field(char *, desc)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->start_frame_cnt = start_frame_cnt;
+		__entry->end_frame_cnt = end_frame_cnt;
+		__entry->desc = desc;
+	),
+	TP_printk("DC%d start_frame=%u end_frame=%u %s",
+		__entry->ctrl_num,
+		__entry->start_frame_cnt,
+		__entry->end_frame_cnt,
+		__entry->desc
+	)
+);
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

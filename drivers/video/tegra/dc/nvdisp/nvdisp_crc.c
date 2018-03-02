@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_crc.c
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,6 +15,7 @@
  */
 
 #include <linux/errno.h>
+#include <linux/delay.h>
 
 #include "video/tegra_dc_ext.h"
 #include "dc_priv.h"
@@ -391,6 +392,7 @@ static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
 {
 	int id, ret = 0;
 	u32 ctl, status;
+	u32 frame_cnt;
 	u32 crc_readback_location_mask =
 	nvdisp_rg_region_crc_control_readback_location_readback_golden_f();
 
@@ -404,12 +406,17 @@ static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
 		return -EPERM;
 	}
 
+	frame_cnt = tegra_dc_get_frame_cnt(dc);
+
 	for (id = 0; id < TEGRA_DC_MAX_CRC_REGIONS; id++) {
 		if (!is_region_enabled(ctl, id))
 			continue;
 
-		if (!is_region_crc_ready(status, id))
+		if (!is_region_crc_ready(status, id)) {
+			trace_display_crc_rgnl_stat(dc->ctrl_num, frame_cnt,
+				"RGN", id, status);
 			continue;
+		}
 
 		/* Clearing out the error bit is a functional no-op, since the
 		 * error bit simply signifies that the HW calculated CRC value
@@ -423,6 +430,9 @@ static int tegra_nvdisp_crc_rg_regional_get(struct tegra_dc *dc,
 		e->regional[id].crc = tegra_dc_readl(dc, regs[id].golden_crc);
 		e->regional[id].valid = true;
 		status |= masks[id].pending;
+
+		trace_display_crc_rgnl(dc->ctrl_num, frame_cnt, "RGN",
+			id, status, e->regional[id].crc);
 	}
 
 	tegra_dc_writel(dc, status, nvdisp_rg_region_crc_r());
@@ -434,27 +444,23 @@ static int tegra_nvdisp_crc_rg_get(struct tegra_dc *dc,
 				   struct tegra_dc_crc_buf_ele *e)
 {
 	u32 status;
+	u32 frame_cnt;
 
 	status = tegra_dc_readl(dc, nvdisp_rg_crca_r());
+	frame_cnt = tegra_dc_get_frame_cnt(dc);
 
 	if (status & nvdisp_rg_crca_valid_true_f()) {
 		e->rg.crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());
 		e->rg.valid = true;
+		trace_display_crc_read(dc->ctrl_num, frame_cnt, "RG  ",
+			status, e->rg.crc);
 	}
 
 	if (status & nvdisp_rg_crca_error_true_f()) {
-		u32 frame_cnt = tegra_dc_get_frame_cnt(dc);
-
-		dev_err(&dc->ndev->dev,
-			"late   RG_CRC read, "
-			"frame_cnt=%u status=%#x valid=%s %u\n",
-			frame_cnt, status,
-			(e->rg.valid) ? "1:keep":"0:clr",
-			e->rg.crc);
-
+		trace_display_crc_late(dc->ctrl_num, frame_cnt, "RG  ",
+			e->rg.valid, e->rg.crc);
 		if (!e->rg.valid)
 			e->rg.crc = 0;
-
 		status |= nvdisp_rg_crca_error_true_f();
 		tegra_dc_writel(dc, status, nvdisp_rg_crca_r());
 	}
@@ -466,27 +472,23 @@ static int tegra_nvdisp_crc_comp_get(struct tegra_dc *dc,
 				     struct tegra_dc_crc_buf_ele *e)
 {
 	u32 status;
+	u32 frame_cnt;
 
 	status = tegra_dc_readl(dc, nvdisp_comp_crca_r());
+	frame_cnt = tegra_dc_get_frame_cnt(dc);
 
 	if (status & nvdisp_comp_crca_valid_true_f()) {
 		e->comp.crc = tegra_dc_readl(dc, nvdisp_comp_crcb_r());
 		e->comp.valid = true;
+		trace_display_crc_read(dc->ctrl_num, frame_cnt, "COMP",
+			status, e->comp.crc);
 	}
 
 	if (status & nvdisp_comp_crca_error_true_f()) {
-		u32 frame_cnt = tegra_dc_get_frame_cnt(dc);
-
-		dev_err(&dc->ndev->dev,
-			"late COMP_CRC read, "
-			"frame_cnt=%u status=%#x valid=%s %u\n",
-			frame_cnt, status,
-			(e->comp.valid) ? "1:keep":"0:clr",
-			e->comp.crc);
-
+		trace_display_crc_late(dc->ctrl_num, frame_cnt, "COMP",
+			e->comp.valid, e->comp.crc);
 		if (!e->comp.valid)
 			e->comp.crc = 0;
-
 		status |= nvdisp_comp_crca_error_true_f();
 		tegra_dc_writel(dc, status, nvdisp_comp_crca_r());
 	}
@@ -513,8 +515,16 @@ static int tegra_nvdisp_crc_or_get(struct tegra_dc *dc,
 int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 			     struct tegra_dc_crc_buf_ele *e)
 {
+#define NEXT_FRAME_POLL_DELAY_US 1
+#define FRAME_BOUNDARY_CROSSING_RETRIES 5
 	int ret = 0, iter;
+	int max_retries = FRAME_BOUNDARY_CROSSING_RETRIES;
 	bool valids = false; /* Logical OR of valid fields of individual CRCs */
+	u32 frame_cnt_start;
+	u32 frame_cnt_end;
+
+retry:
+	frame_cnt_start = tegra_dc_get_frame_cnt(dc);
 
 	if (atomic_read(&dc->crc_ref_cnt.rg))
 		tegra_nvdisp_crc_rg_get(dc, e);
@@ -528,12 +538,54 @@ int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
 	if (atomic_read(&dc->crc_ref_cnt.regional))
 		ret = tegra_nvdisp_crc_rg_regional_get(dc, e);
 
+	frame_cnt_end = tegra_dc_get_frame_cnt(dc);
+
+	if (frame_cnt_end != frame_cnt_start) {
+		unsigned long timeout_jf;
+		u32 frame_cnt_retry;
+
+		trace_display_crc_boundary_crossed(dc->ctrl_num,
+			frame_cnt_start, frame_cnt_end,
+			"wait for next frame");
+
+		timeout_jf = jiffies + msecs_to_jiffies(MSEC_PER_SEC << 1);
+
+		do {
+			usleep_range(NEXT_FRAME_POLL_DELAY_US,
+				NEXT_FRAME_POLL_DELAY_US << 1);
+			frame_cnt_retry = tegra_dc_get_frame_cnt(dc);
+		} while ((frame_cnt_end == frame_cnt_retry) &&
+			time_after(timeout_jf, jiffies));
+
+		if (frame_cnt_end == frame_cnt_retry) {
+			dev_err(&dc->ndev->dev,
+				"frame=%u NEXT FRAME POLL TIMEOUT\n",
+				frame_cnt_end);
+			trace_display_crc_boundary_crossed(dc->ctrl_num,
+				frame_cnt_end, frame_cnt_retry,
+				"NEXT FRAME POLL TIMEOUT");
+			return -EBUSY;
+		}
+		if (--max_retries <= 0) {
+			trace_display_crc_boundary_crossed(dc->ctrl_num,
+				frame_cnt_end, frame_cnt_retry,
+				"retries exhausted");
+			return -EBUSY;
+		}
+		trace_display_crc_boundary_crossed(dc->ctrl_num,
+			frame_cnt_end, frame_cnt_retry,
+			"rereading CRCs");
+		goto retry;
+	}
+
 	valids = e->rg.valid || e->comp.valid || e->sor.valid;
 
 	for (iter = 0; iter < TEGRA_DC_EXT_MAX_REGIONS && !valids; iter++)
 		valids = e->regional[iter].valid;
 
 	return valids ? ret : -EINVAL;
+#undef FRAME_BOUNDARY_CROSSING_RETRIES
+#undef NEXT_FRAME_POLL_DELAY_US
 }
 
 void tegra_nvdisp_crc_reset(struct tegra_dc *dc)

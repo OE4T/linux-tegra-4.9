@@ -14,6 +14,7 @@
  */
 
 #include "common/tegra194-p2888-0000-a00.dtsi"
+#include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "common/tegra194-e3366-1199-a00.dtsi"
 #include "common/tegra194-power-tree-p2888-0001-e3366-1199.dtsi"
 / {

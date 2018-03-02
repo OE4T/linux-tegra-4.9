@@ -15,7 +15,6 @@
 
 #include <t19x-common-modules/tegra194-cvm-p2888-0000-a00.dtsi>
 #include "tegra194-eeprom-manager-p2888-0000.dtsi"
-#include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-powermon-p2888.dtsi"
 
 / {

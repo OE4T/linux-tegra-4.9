@@ -31,13 +31,13 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/enabled.h>
+#include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "css_gr_gv11b.h"
-
-#include <nvgpu/log.h>
-#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
@@ -144,6 +144,7 @@ int gv11b_css_hw_enable_snapshot(struct channel_gk20a *ch,
 			perf_pmasys_mem_block_valid_true_f() |
 			nvgpu_aperture_mask(g, &g->mm.hwpm.inst_block,
 				perf_pmasys_mem_block_target_sys_ncoh_f(),
+				perf_pmasys_mem_block_target_sys_coh_f(),
 				perf_pmasys_mem_block_target_lfb_f()));
 
 

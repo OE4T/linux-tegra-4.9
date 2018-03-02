@@ -653,6 +653,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 		return -ENOMEM;
 	aperture = nvgpu_aperture_mask(g, &trace->trace_buf,
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(),
+			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_coherent_f(),
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f());
 
 	if (nvgpu_mem_begin(g, mem))

@@ -75,8 +75,8 @@ struct gk20a;
 #define NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL	24
 /* Support batch mapping */
 #define NVGPU_SUPPORT_MAP_BUFFER_BATCH		25
-/* Support DMA coherence */
-#define NVGPU_DMA_COHERENT			26
+/* Use coherent aperture for sysmem. */
+#define NVGPU_USE_COHERENT_SYSMEM		26
 /* Use physical scatter tables instead of IOMMU */
 #define NVGPU_MM_USE_PHYSICAL_SG		27
 

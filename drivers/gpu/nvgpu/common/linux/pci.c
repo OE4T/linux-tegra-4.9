@@ -17,13 +17,13 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_platform.h>
+#include <linux/of_address.h>
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/nvlink.h>
-#include <linux/of_platform.h>
-#include <linux/of_address.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
@@ -566,6 +566,12 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	platform->g = g;
 	l->dev = &pdev->dev;
 
+	np = nvgpu_get_node(g);
+	if (of_dma_is_coherent(np)) {
+		__nvgpu_set_enabled(g, NVGPU_USE_COHERENT_SYSMEM, true);
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
+	}
+
 	err = pci_enable_device(pdev);
 	if (err)
 		return err;
@@ -643,13 +649,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 
 	g->mm.has_physical_mode = false;
-
-	np = nvgpu_get_node(g);
-
-	if (of_dma_is_coherent(np)) {
-		__nvgpu_set_enabled(g, NVGPU_DMA_COHERENT, true);
-		__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
-	}
 
 	return 0;
 }

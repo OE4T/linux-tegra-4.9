@@ -23,6 +23,7 @@
 
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/common.h>
+#include <soc/tegra/chip-id.h>
 
 #include "fuse.h"
 
@@ -62,6 +63,20 @@ u32 tegra_read_chipid(void)
 	if (!apbmisc_base) {
 		WARN(1, "Tegra Chip ID not yet available\n");
 		return 0;
+	}
+
+	/* In Virtualized system, return the saved value as
+	 * MISC region is trap/emulated.
+	 */
+	if (is_tegra_hypervisor_mode()) {
+		static u32 chipid;
+		static bool chipid_set;
+
+		if (unlikely(chipid_set == false)) {
+			chipid = readl_relaxed(apbmisc_base + 4);
+			chipid_set = true;
+		}
+		return chipid;
 	}
 
 	return readl_relaxed(apbmisc_base + 4);

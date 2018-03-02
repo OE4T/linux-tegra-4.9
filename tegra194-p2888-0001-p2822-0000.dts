@@ -22,6 +22,7 @@
 #include "common/tegra194-thermal-p2888.dtsi"
 #include "common/tegra194-plugin-manager-p2888-0000.dtsi"
 #include "common/tegra194-plugin-manager-p2822-0000.dtsi"
+#include "common/tegra194-super-module-e2614-p2888-0000.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

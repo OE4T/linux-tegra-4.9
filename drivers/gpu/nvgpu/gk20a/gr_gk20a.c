@@ -2149,12 +2149,40 @@ clean_up:
 	return err;
 }
 
+static void gr_gk20a_wait_for_fecs_arb_idle(struct gk20a *g)
+{
+	int retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
+	u32 val;
+
+	val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
+	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
+		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
+		retries--;
+		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
+	}
+
+	if (!retries)
+		nvgpu_err(g, "arbiter cmd timeout, fecs arb ctx cmd: 0x%08x",
+				gk20a_readl(g, gr_fecs_arb_ctx_cmd_r()));
+
+	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
+	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
+			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
+		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
+		retries--;
+	}
+	if (!retries) {
+		nvgpu_err(g,
+			  "arbiter idle timeout, fecs ctxsw status: 0x%08x",
+			  gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
+	}
+}
+
 void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
 	int retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	u64 inst_ptr;
-	u32 val;
 
 	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
 			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
@@ -2186,15 +2214,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), 0x7);
 
 	/* Wait for arbiter command to complete */
-	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
-	val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
-	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
-		retries--;
-		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
-	}
-	if (!retries)
-		nvgpu_err(g, "arbiter complete timeout");
+	gr_gk20a_wait_for_fecs_arb_idle(g);
 
 	gk20a_writel(g, gr_fecs_current_ctx_r(),
 			gr_fecs_current_ctx_ptr_f(inst_ptr >> 12) |
@@ -2203,15 +2223,8 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	/* Send command to arbiter to flush */
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), gr_fecs_arb_ctx_cmd_cmd_s());
 
-	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
-	val = (gk20a_readl(g, gr_fecs_arb_ctx_cmd_r()));
-	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
-		retries--;
-		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
-	}
-	if (!retries)
-		nvgpu_err(g, "arbiter complete timeout");
+	gr_gk20a_wait_for_fecs_arb_idle(g);
+
 }
 
 void gr_gk20a_load_ctxsw_ucode_header(struct gk20a *g, u64 addr_base,

@@ -29,7 +29,6 @@
 #include <linux/platform_device.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
-#include <linux/tegra_prod.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
@@ -298,8 +297,6 @@ struct tegra_pcie_dw_ep {
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
 	struct dentry *debugfs;
-	struct tegra_prod *prod_list;
-	void __iomem *base_addr_list[2];
 
 	u32 num_lanes;
 	u32 max_speed;
@@ -330,42 +327,6 @@ static void inbound_atu(struct tegra_pcie_dw_ep *pcie, int i, int type,
 	prog_atu(pcie, i, type, PCIE_ATU_CR1);
 	prog_atu(pcie, i, PCIE_ATU_ENABLE | (bar << PCIE_ATU_CR2_BAR_SHIFT) |
 		 (match_mode <<  PCIE_ATU_CR2_MATCH_MODE_SHIFT), PCIE_ATU_CR2);
-}
-
-static void pcie_prod_get_base_list(struct tegra_pcie_dw_ep *pcie)
-{
-	struct device_node *np = pcie->dev->of_node;
-	const char *reg_name;
-	int i = 0;
-
-	while (!of_property_read_string_index(np, "reg-names", i, &reg_name)) {
-		if (!strcasecmp("appl", reg_name))
-			pcie->base_addr_list[i] = pcie->appl_base;
-		if (!strcasecmp("config", reg_name))
-			pcie->base_addr_list[i] = pcie->dbi_base;
-		i++;
-	}
-}
-
-static void pcie_apply_prod(struct tegra_pcie_dw_ep *pcie, char *reg_name)
-{
-	if (pcie->prod_list) {
-		if (tegra_prod_set_by_reg_name(pcie->base_addr_list,
-					       "prod",
-					       pcie->prod_list,
-					       reg_name)) {
-			dev_info(pcie->dev,
-				 "prod settings are not found in DT\n");
-		}
-
-		if (tegra_prod_set_by_reg_name(pcie->base_addr_list,
-					       "prod_c_pcieep",
-						pcie->prod_list,
-						reg_name)) {
-			dev_info(pcie->dev,
-				 "prod_c_pcierc is not found in DT\n");
-		}
-	}
 }
 
 static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
@@ -583,8 +544,6 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	reset_control_assert(pcie->core_apb_rst);
 	reset_control_deassert(pcie->core_apb_rst);
 
-	pcie_apply_prod(pcie, "appl");
-
 	ret = tegra_pcie_power_on_phy(pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to power_on phy\n");
@@ -649,8 +608,6 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 
 	reset_control_assert(pcie->core_rst);
 	reset_control_deassert(pcie->core_rst);
-
-	pcie_apply_prod(pcie, "config");
 
 	/* FPGA specific PHY initialization */
 	if (tegra_platform_is_fpga()) {
@@ -1368,12 +1325,6 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		}
 	}
 
-	pcie->prod_list = devm_tegra_prod_get(pcie->dev);
-	if (IS_ERR(pcie->prod_list)) {
-		dev_info(pcie->dev, "No prod values found\n");
-		pcie->prod_list = NULL;
-	}
-
 	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(pcie->core_clk)) {
 		dev_err(&pdev->dev, "Failed to get core clock\n");
@@ -1447,8 +1398,6 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		ret = PTR_ERR(pcie->dbi_base);
 		goto fail_dbi_res;
 	}
-
-	pcie_prod_get_base_list(pcie);
 
 	pcie->atu_dma_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   "atu_dma");

@@ -166,10 +166,8 @@ static int default_set_la(enum tegra_la_id id, unsigned int bw_mbps)
 
 static void program_scaled_la(struct la_client_info *ci, int la)
 {
-	if (tegra_get_chip_id() == TEGRA186)
-		return;
-
-	program_scaled_la_t21x(ci, la);
+	if (tegra_get_chip_id() == TEGRA210)
+		program_scaled_la_t21x(ci, la);
 }
 
 void program_la(struct la_client_info *ci, int la)

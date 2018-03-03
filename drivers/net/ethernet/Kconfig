@@ -1,0 +1,9 @@
+#
+# Ethernet LAN device configuration
+#
+
+if ETHERNET
+
+source "drivers/net/ethernet/realtek/Kconfig"
+
+endif # ETHERNET

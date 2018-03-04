@@ -2060,7 +2060,7 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct device_node *np = pp->dev->of_node;
 	u32 val, tmp;
-	int err, count = 100;
+	int err, count = 200;
 
 	dw_pcie_setup_rc(pp);
 

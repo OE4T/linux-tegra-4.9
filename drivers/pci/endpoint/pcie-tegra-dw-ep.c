@@ -106,6 +106,12 @@
 #define APPL_CFG_IATU_DMA_BASE_ADDR		0x108
 #define APPL_CFG_IATU_DMA_BASE_ADDR_MASK	0xFFFC0000
 
+#define APPL_CFG_MISC				0x110
+#define APPL_CFG_MISC_SLV_EP_MODE		BIT(14)
+#define APPL_CFG_MISC_ARCACHE_MASK		0x3C00
+#define APPL_CFG_MISC_ARCACHE_SHIFT		10
+#define APPL_CFG_MISC_ARCACHE_VAL		3
+
 #define APPL_CFG_SLCG_OVERRIDE			0x114
 #define APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER	BIT(0)
 
@@ -579,6 +585,11 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val |= APPL_SYS_PRE_DET_STATE;
 	val |= APPL_CTRL_HW_HOT_RST_EN;
 	writel(val, pcie->appl_base + APPL_CTRL);
+
+	val = readl(pcie->appl_base + APPL_CFG_MISC);
+	val |= APPL_CFG_MISC_SLV_EP_MODE;
+	val |= (APPL_CFG_MISC_ARCACHE_VAL << APPL_CFG_MISC_ARCACHE_SHIFT);
+	writel(val, pcie->appl_base + APPL_CFG_MISC);
 
 	if (tegra_platform_is_fpga()) {
 		val = readl(pcie->appl_base + APPL_PINMUX);

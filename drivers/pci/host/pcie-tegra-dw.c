@@ -135,6 +135,11 @@
 #define APPL_CFG_IATU_DMA_BASE_ADDR		0x108
 #define APPL_CFG_IATU_DMA_BASE_ADDR_MASK	0xFFFC0000
 
+#define APPL_CFG_MISC				0x110
+#define APPL_CFG_MISC_ARCACHE_MASK		0x3C00
+#define APPL_CFG_MISC_ARCACHE_SHIFT		10
+#define APPL_CFG_MISC_ARCACHE_VAL		3
+
 #define APPL_CFG_SLCG_OVERRIDE			0x114
 #define APPL_CFG_SLCG_OVERRIDE_SLCG_EN_MASTER	BIT(0)
 
@@ -2874,6 +2879,10 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 	val = readl(pcie->appl_base + APPL_CTRL);
 	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
 
+	val = readl(pcie->appl_base + APPL_CFG_MISC);
+	val |= (APPL_CFG_MISC_ARCACHE_VAL << APPL_CFG_MISC_ARCACHE_SHIFT);
+	writel(val, pcie->appl_base + APPL_CFG_MISC);
+
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
@@ -3019,6 +3028,10 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 
 	val = readl(pcie->appl_base + APPL_CTRL);
 	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
+
+	val = readl(pcie->appl_base + APPL_CFG_MISC);
+	val |= (APPL_CFG_MISC_ARCACHE_VAL << APPL_CFG_MISC_ARCACHE_SHIFT);
+	writel(val, pcie->appl_base + APPL_CFG_MISC);
 
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);

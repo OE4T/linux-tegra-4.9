@@ -2170,6 +2170,10 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 				  PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, tmp);
 	}
 
+	val = readl(pp->dbi_base + PORT_LOGIC_MISC_CONTROL);
+	val &= ~PORT_LOGIC_MISC_CONTROL_DBI_RO_WR_EN;
+	writel(val, pp->dbi_base + PORT_LOGIC_MISC_CONTROL);
+
 	/* FPGA specific PHY initialization */
 	if (tegra_platform_is_fpga()) {
 		val = readl(pcie->appl_base + APPL_GTH_PHY);

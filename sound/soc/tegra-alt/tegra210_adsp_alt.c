@@ -40,6 +40,10 @@
 #include <linux/irqchip/tegra-agic.h>
 #include <linux/of_device.h>
 
+#include <net/sock.h>
+#include <linux/netlink.h>
+#include <linux/skbuff.h>
+
 #include <sound/pcm.h>
 #include <sound/core.h>
 #include <sound/pcm_params.h>
@@ -64,11 +68,18 @@
 /* Flag to enable/disable loading of ADSP firmware */
 #define ENABLE_ADSP 1
 
+#define NETLINK_ADSP_EVENT 31
+#define NETLINK_ADSP_EVENT_GROUP 1
+
+struct adsp_event_nlmsg {
+	uint32_t err;
+	uint32_t data[NVFX_MAX_CALL_PARAMS_WSIZE];
+};
+
 #define ADSP_RESPONSE_TIMEOUT	1000 /* in ms */
 /* ADSP controls plugin index */
 #define PLUGIN_SET_PARAMS_IDX	1
 #define PLUGIN_SEND_BYTES_IDX	11
-
 static const unsigned int tegra210_adsp_rates[] = {
 	8000, 11025, 12000, 16000, 22050,
 	24000, 32000, 44100, 48000
@@ -191,6 +202,7 @@ struct tegra210_adsp {
 	bool is_fe_set[ADSP_FE_COUNT];
 	spinlock_t switch_lock;
 #endif
+	struct sock *nl_sk;
 };
 
 static const struct snd_pcm_hardware adsp_pcm_hardware = {
@@ -1091,6 +1103,52 @@ static int tegra210_adsp_remove_connection(struct tegra210_adsp *adsp,
 	return 0;
 }
 
+/* ADSP socket message handlers */
+static void tegra210_adsp_nl_recv_msg(struct sk_buff *skb)
+{
+	struct nlmsghdr *nlh;
+
+	nlh = (struct nlmsghdr *)skb->data;
+	pr_info("Established client: %d\n", nlh->nlmsg_pid);
+
+	return;
+}
+
+static void tegra210_adsp_nl_send_msg(struct tegra210_adsp *adsp,
+	apm_fx_error_event_params_t *apm_err_msg)
+{
+
+	struct sk_buff *skb;
+	struct nlmsghdr *nlh;
+	int res;
+	struct adsp_event_nlmsg *msg;
+
+	if (adsp->nl_sk == NULL) {
+		pr_err("socket not created\n");
+		return;
+	}
+
+	skb = nlmsg_new(sizeof(struct adsp_event_nlmsg), 0);
+	if (!skb) {
+		pr_err("Failed to allocate new skb\n");
+		return;
+	}
+
+	nlh = nlmsg_put(skb, 0, 0, NLMSG_DONE, sizeof(struct adsp_event_nlmsg), 0);
+	NETLINK_CB(skb).dst_group = NETLINK_ADSP_EVENT_GROUP;    /* to mcast group 1<<0 */
+
+	msg = (struct adsp_event_nlmsg *)nlmsg_data(nlh);
+	msg->err = apm_err_msg->err;
+	memcpy(msg->data, apm_err_msg->data,
+		(sizeof(uint32_t) * NVFX_MAX_CALL_PARAMS_WSIZE));
+
+	res = nlmsg_multicast(adsp->nl_sk, skb, 0, NETLINK_ADSP_EVENT_GROUP, 0);
+	if (res < 0)
+		pr_err("Error while sending back to user: %d\n", res);
+
+	return;
+}
+
 /* ADSP mailbox message handler */
 static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 {
@@ -1149,6 +1207,10 @@ static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
 		break;
+	case nvfx_apm_method_fx_error_event:
+		tegra210_adsp_nl_send_msg(app->adsp,
+			&apm_msg->msg.fx_error_event_params);
+		break;
 	default:
 		pr_err("Unsupported cmd %d.", apm_msg->msg.call_params.method);
 	}
@@ -1188,7 +1250,6 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 			return 0;
 		runtime = prtd->substream->runtime;
 		snd_pcm_period_elapsed(prtd->substream);
-
 		if ((IS_MMAP_ACCESS(runtime->access))) {
 			if (prtd->prev_appl_ptr !=
 				runtime->control->appl_ptr) {
@@ -1199,6 +1260,10 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 		break;
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
+		break;
+	case nvfx_apm_method_fx_error_event:
+		tegra210_adsp_nl_send_msg(app->adsp,
+			&apm_msg->msg.fx_error_event_params);
 		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
@@ -1230,6 +1295,10 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 		break;
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
+		break;
+	case nvfx_apm_method_fx_error_event:
+		tegra210_adsp_nl_send_msg(app->adsp,
+			&apm_msg->msg.fx_error_event_params);
 		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
@@ -5144,6 +5213,9 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	char switch_info[20];
 	uint32_t adsp_switch_count;
 #endif
+	struct netlink_kernel_cfg cfg = {
+        	.input = tegra210_adsp_nl_recv_msg,
+    	};
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
 
@@ -5430,6 +5502,14 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		of_property_read_u32(pdev->dev.of_node, apm_info,
 				&apm_stack_size[i]);
 	}
+
+	adsp->nl_sk = netlink_kernel_create(&init_net, NETLINK_ADSP_EVENT, &cfg);
+	if (!adsp->nl_sk) {
+		pr_err("Error creating socket.\n");
+		return -1;
+	}
+	pr_info("Succssfully created NETLINK_ADSP_EVENT socket\n");
+
 	pr_info("tegra210_adsp_audio_platform_probe probe successfull.");
 	return 0;
 

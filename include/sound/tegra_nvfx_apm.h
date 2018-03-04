@@ -2,7 +2,7 @@
  * tegra_nvfx_apm.h - Shared APM interface between Tegra ADSP ALSA driver and
  *                    ADSP side user space code.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -83,6 +83,8 @@ enum {
 	nvfx_apm_method_set_input_mode,
 	nvfx_apm_method_write_data,
 	nvfx_apm_method_read_data,
+	/* ADSP to CPU : To report plugin error */
+	nvfx_apm_method_fx_error_event,
 };
 
 /* For method nvfx_apm_method_set_io_buffer */
@@ -161,6 +163,13 @@ typedef struct {
 	uint32_t req_size;
 } apm_fx_read_request_params_t;
 
+typedef struct {
+	nvfx_call_params_t call_params;
+	variant_t plugin; /* pointer to plugin_t */
+	uint32_t err;
+	uint32_t data[NVFX_MAX_CALL_PARAMS_WSIZE];
+} apm_fx_error_event_params_t;
+
 /* unified app message structure */
 #pragma pack(4)
 typedef union {
@@ -180,7 +189,8 @@ typedef union {
 			apm_fx_connect_params_t            fx_connect_params;
 			apm_fx_remove_params_t             fx_remove_params;
 			apm_fx_set_param_params_t          fx_set_param_params;
-			apm_fx_read_request_params_t	   fx_read_request_params;
+			apm_fx_read_request_params_t       fx_read_request_params;
+			apm_fx_error_event_params_t        fx_error_event_params;
 		};
 	} msg;
 } apm_msg_t;

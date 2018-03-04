@@ -2,7 +2,7 @@
  * tegra_nvfx.h - Shared NVFX interface between Tegra ADSP ALSA driver and
  *                ADSP side user space code.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -195,6 +195,30 @@ typedef struct {
 	nvfx_call_params_t call;
 	int32_t state;
 } nvfx_set_state_params_t;
+
+/**
+ * nvfx_method_error_event - Required FX States
+ *
+ * @nvfx_event_no_error
+ * @nvfx_event_error
+ *
+ */
+enum {
+	nvfx_event_no_error = 0,
+	nvfx_event_error,
+};
+
+/**
+ * nvfx_error_event_params_t - Sets the FX state
+ *
+ * @call                nvfx_call_t parameters
+ * @state               State to set the FX
+ *
+ */
+typedef struct {
+	nvfx_call_params_t call;
+	int32_t err;
+} nvfx_error_event_params_t;
 
 /**
  * nvfx_flush_params_t - Flushes input and cached data buffers to

@@ -168,11 +168,18 @@
 #define L0S_ENTRANCE_LAT_MASK		0x07000000
 #define L1_ENTRANCE_LAT_SHIFT		27
 #define L1_ENTRANCE_LAT_MASK		0x38000000
+#define N_FTS_SHIFT			8
+#define N_FTS_MASK			0xFF
+#define N_FTS_VAL			52
 
 #define CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF		0x718
 #define CFG_TIMER_CTRL_ACK_NAK_SHIFT		(19)
 
 #define CFG_LINK_CAP_L1SUB			0x1C4
+
+#define PORT_LOGIC_GEN2_CTRL		0x80C
+#define FTS_MASK			0xFF
+#define FTS_VAL				52
 
 #define GEN3_RELATED_OFF	0x890
 #define GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL	BIT(0)
@@ -710,6 +717,17 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	writel(val, pcie->dbi_base + GEN3_RELATED_OFF);
 
 	writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
+
+	/* Configure N_FTS & FTS */
+	val = readl(pcie->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
+	val &= ~(N_FTS_MASK << N_FTS_SHIFT);
+	val |= N_FTS_VAL << N_FTS_SHIFT;
+	writel(val, pcie->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
+
+	val = readl(pcie->dbi_base + PORT_LOGIC_GEN2_CTRL);
+	val &= ~FTS_MASK;
+	val |= FTS_VAL;
+	writel(val, pcie->dbi_base + PORT_LOGIC_GEN2_CTRL);
 
 	if (pcie->max_speed >= 1 && pcie->max_speed <= 4) {
 		val = readl(pcie->dbi_base + EP_CFG_LINK_CAP);

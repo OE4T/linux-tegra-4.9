@@ -2151,6 +2151,13 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 
 	program_gen3_gen4_eq_presets(pp);
 
+	/* Program T_cmrt and T_pwr_on values */
+	dw_pcie_cfg_read(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub, 4, &val);
+	val &= ~(PCI_L1SS_CAP_CM_RTM_MASK | PCI_L1SS_CAP_PWRN_VAL_MASK);
+	val |= (0x3C << PCI_L1SS_CAP_CM_RTM_SHIFT);	/* 60us */
+	val |= (0x14 << PCI_L1SS_CAP_PWRN_VAL_SHIFT);	/* 40us */
+	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub, 4, val);
+
 	/* Program what ASPM states sould get advertised */
 	err = of_property_read_u32(np, "nvidia,disable-aspm-states", &val);
 	if (!err) {

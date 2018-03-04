@@ -163,6 +163,12 @@
 
 #define EVENT_COUNTER_DATA_REG		0x1dC
 
+#define PORT_LOGIC_ACK_F_ASPM_CTRL	0x70C
+#define L0S_ENTRANCE_LAT_SHIFT		24
+#define L0S_ENTRANCE_LAT_MASK		0x07000000
+#define L1_ENTRANCE_LAT_SHIFT		27
+#define L1_ENTRANCE_LAT_MASK		0x38000000
+
 #define CFG_TIMER_CTRL_MAX_FUNC_NUM_OFF		0x718
 #define CFG_TIMER_CTRL_ACK_NAK_SHIFT		(19)
 
@@ -667,6 +673,20 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val = readl(pcie->dbi_base + MISC_CONTROL_1);
 	val |= MISC_CONTROL_1_DBI_RO_WR_EN;
 	writel(val, pcie->dbi_base + MISC_CONTROL_1);
+
+	/* Program T_cmrt and T_pwr_on values */
+	val = readl(pcie->dbi_base + pcie->cfg_link_cap_l1sub);
+	val &= ~(PCI_L1SS_CAP_CM_RTM_MASK | PCI_L1SS_CAP_PWRN_VAL_MASK);
+	val |= (0x3C << PCI_L1SS_CAP_CM_RTM_SHIFT);	/* 60us */
+	val |= (0x14 << PCI_L1SS_CAP_PWRN_VAL_SHIFT);	/* 40us */
+	writel(val, pcie->dbi_base + pcie->cfg_link_cap_l1sub);
+
+	/* Program L0s and L1 entrance latencies */
+	val = readl(pcie->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
+	val &= ~(L0S_ENTRANCE_LAT_MASK | L1_ENTRANCE_LAT_MASK);
+	val |= (0x3 << L0S_ENTRANCE_LAT_SHIFT);	/* 4us */
+	val |= (0x5 << L1_ENTRANCE_LAT_SHIFT);	/* 32us */
+	writel(val, pcie->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
 
 	if (pcie->disabled_aspm_states & 0x1)
 		disable_aspm_l0s(pcie); /* Disable L0s */

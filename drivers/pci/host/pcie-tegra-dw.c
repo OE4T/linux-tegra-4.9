@@ -3002,6 +3002,8 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	/* configure this core for RP mode operation */
 	writel(APPL_DM_TYPE_RP, pcie->appl_base + APPL_DM_TYPE);
 
+	writel(0x0, pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
+
 	val = readl(pcie->appl_base + APPL_CTRL);
 	writel(val | APPL_CTRL_SYS_PRE_DET_STATE, pcie->appl_base + APPL_CTRL);
 

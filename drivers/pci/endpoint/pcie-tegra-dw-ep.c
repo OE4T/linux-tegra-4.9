@@ -573,6 +573,8 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val |= APPL_DM_TYPE_EP;
 	writel(val, pcie->appl_base + APPL_DM_TYPE);
 
+	writel(0x0, pcie->appl_base + APPL_CFG_SLCG_OVERRIDE);
+
 	val = readl(pcie->appl_base + APPL_CTRL);
 	val |= APPL_SYS_PRE_DET_STATE;
 	val |= APPL_CTRL_HW_HOT_RST_EN;

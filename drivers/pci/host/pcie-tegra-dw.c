@@ -256,6 +256,7 @@
 #define GEN3_EQ_CONTROL_OFF_FB_MODE_MASK	GENMASK(3, 0)
 
 #define GEN3_RELATED_OFF	0x890
+#define GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL	BIT(0)
 #define GEN3_RELATED_OFF_GEN3_EQ_DISABLE	BIT(16)
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT	24
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK	GENMASK(25, 24)
@@ -2165,6 +2166,10 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 		if (val & 0x8)
 			disable_aspm_l12(pcie); /* Disable L1.2 */
 	}
+
+	val = readl(pp->dbi_base + GEN3_RELATED_OFF);
+	val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
+	writel(val, pp->dbi_base + GEN3_RELATED_OFF);
 
 	if (of_property_read_bool(np, "nvidia,update_fc_fixup")) {
 		dw_pcie_cfg_read(pp->dbi_base +

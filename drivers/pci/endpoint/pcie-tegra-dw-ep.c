@@ -169,6 +169,7 @@
 #define CFG_LINK_CAP_L1SUB			0x1C4
 
 #define GEN3_RELATED_OFF	0x890
+#define GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL	BIT(0)
 #define GEN3_RELATED_OFF_GEN3_EQ_DISABLE	BIT(16)
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_SHIFT	24
 #define GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK	GENMASK(25, 24)
@@ -683,6 +684,10 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val = EVENT_COUNTER_ENABLE_ALL << EVENT_COUNTER_ENABLE_SHIFT;
 	val |= EVENT_COUNTER_GROUP_5 << EVENT_COUNTER_GROUP_SEL_SHIFT;
 	writel(val, pcie->dbi_base + pcie->event_cntr_ctrl);
+
+	val = readl(pcie->dbi_base + GEN3_RELATED_OFF);
+	val &= ~GEN3_RELATED_OFF_GEN3_ZRXDC_NONCOMPL;
+	writel(val, pcie->dbi_base + GEN3_RELATED_OFF);
 
 	writew(pcie->device_id, pcie->dbi_base + PCI_DEVICE_ID);
 

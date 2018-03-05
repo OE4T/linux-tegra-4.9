@@ -43,6 +43,8 @@
 #define CTRL_5	(5)
 
 #define APPL_PINMUX				(0X0)
+#define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN	BIT(4)
+#define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE	BIT(5)
 #define APPL_PINMUX_PEX_RST_IN_OVERRIDE_EN	BIT(11)
 
 #define APPL_CTRL				(0X4)
@@ -604,6 +606,11 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val |= APPL_CFG_MISC_SLV_EP_MODE;
 	val |= (APPL_CFG_MISC_ARCACHE_VAL << APPL_CFG_MISC_ARCACHE_SHIFT);
 	writel(val, pcie->appl_base + APPL_CFG_MISC);
+
+	val = readl(pcie->appl_base + APPL_PINMUX);
+	val |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
+	val |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
+	writel(val, pcie->appl_base + APPL_PINMUX);
 
 	if (tegra_platform_is_fpga()) {
 		val = readl(pcie->appl_base + APPL_PINMUX);

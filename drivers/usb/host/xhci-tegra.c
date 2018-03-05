@@ -3053,6 +3053,14 @@ put_padctl:
 	return err;
 }
 
+static void tegra_xusb_shutdown(struct platform_device *pdev)
+{
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct usb_hcd	*hcd = tegra->hcd;
+
+	xhci_shutdown(hcd);
+}
+
 static int tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
@@ -4185,6 +4193,7 @@ MODULE_DEVICE_TABLE(of, tegra_xusb_of_match);
 static struct platform_driver tegra_xusb_driver = {
 	.probe = tegra_xusb_probe,
 	.remove = tegra_xusb_remove,
+	.shutdown = tegra_xusb_shutdown,
 	.driver = {
 		.name = "tegra-xusb",
 		.pm = &tegra_xusb_pm_ops,
@@ -4196,7 +4205,7 @@ static void tegra_xhci_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
 	struct tegra_xusb *tegra = dev_get_drvdata(dev);
 
-	xhci->quirks |= XHCI_PLAT;
+	xhci->quirks |= XHCI_PLAT | XHCI_SPURIOUS_WAKEUP;
 	if (tegra && tegra->soc->lpm_support)
 		xhci->quirks |= XHCI_LPM_SUPPORT;
 }

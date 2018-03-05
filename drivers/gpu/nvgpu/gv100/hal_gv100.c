@@ -534,7 +534,6 @@ static const struct gpu_ops gv100_ops = {
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 		.free_channel_ctx_header = gv11b_free_subctx_header,
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
-		.apply_ctxsw_timeout_intr = gv100_apply_ctxsw_timeout_intr,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv100_get_netlist_name,

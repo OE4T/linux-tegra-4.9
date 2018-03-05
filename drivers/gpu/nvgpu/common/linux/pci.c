@@ -342,10 +342,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
 	.clk_round_rate = nvgpu_pci_clk_round_rate,
 
-	/*
-	 * WAR: PCIE X1 is very slow, set to very high value till nvlink is up
-	 */
-	.ch_wdt_timeout_ms = 30000,
+	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
 	.vbios_min_version = 0x1,

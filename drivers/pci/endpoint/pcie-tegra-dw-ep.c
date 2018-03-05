@@ -787,6 +787,11 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 {
 	u32 val = 0;
 
+	/* If EP doesn't advertise L1SS, just return */
+	val = readl(pcie->dbi_base + pcie->cfg_link_cap_l1sub);
+	if (!(val & (PCI_L1SS_CAP_ASPM_L11S | PCI_L1SS_CAP_ASPM_L12S)))
+		return;
+
 	/* Check if BME is set to '1' */
 	val = readl(pcie->dbi_base + EP_CS_STATUS_COMMAND);
 	if (val & EP_CS_STATUS_COMMAND_BME) {

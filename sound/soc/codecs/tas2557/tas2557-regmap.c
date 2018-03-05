@@ -935,7 +935,10 @@ static enum hrtimer_restart temperature_timer_func(struct hrtimer *timer)
 
 	if (pTAS2557->mbPowerUp) {
 		schedule_work(&pTAS2557->mtimerwork);
-		schedule_delayed_work(&pTAS2557->irq_work, msecs_to_jiffies(1));
+		if (gpio_is_valid(pTAS2557->mnLeftChlGpioINT)
+			|| gpio_is_valid(pTAS2557->mnRightChlGpioINT))
+			schedule_delayed_work(&pTAS2557->irq_work,
+						msecs_to_jiffies(1));
 	}
 	return HRTIMER_NORESTART;
 }
@@ -1036,9 +1039,12 @@ static int tas2557_runtime_suspend(struct tas2557_priv *pTAS2557)
 		dev_dbg(pTAS2557->dev, "cancel timer work\n");
 		cancel_work_sync(&pTAS2557->mtimerwork);
 	}
-	if (delayed_work_pending(&pTAS2557->irq_work)) {
-		dev_dbg(pTAS2557->dev, "cancel IRQ work\n");
-		cancel_delayed_work_sync(&pTAS2557->irq_work);
+	if (gpio_is_valid(pTAS2557->mnLeftChlGpioINT)
+		|| gpio_is_valid(pTAS2557->mnRightChlGpioINT)) {
+		if (delayed_work_pending(&pTAS2557->irq_work)) {
+			dev_dbg(pTAS2557->dev, "cancel IRQ work\n");
+			cancel_delayed_work_sync(&pTAS2557->irq_work);
+		}
 	}
 
 	return 0;

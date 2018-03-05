@@ -1,7 +1,7 @@
 /*
  * tegra210-soc-base.dtsi: SOC specific DTSI file with all node disabled.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1365,6 +1365,7 @@
 		status = "disabled";
 		clocks = <&tegra_car TEGRA210_CLK_PCLK>;
 		clock-names = "pclk";
+		nvidia,secure-pmc;
 
 		pex_io_dpd_disable_state: pex_en {
 			pex-io-dpd-signals-dis {

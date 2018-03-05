@@ -2127,8 +2127,7 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 	if (!ret)
 		i2c_dev->hs_master_code = prop;
 
-	i2c_dev->disable_dma_mode = of_property_read_bool(np,
-			"nvidia,disable-dma-mode");
+	i2c_dev->disable_dma_mode = !of_property_read_bool(np, "dmas");
 	i2c_dev->is_clkon_always = of_property_read_bool(np,
 			"nvidia,clock-always-on");
 	i2c_dev->disable_multi_pkt_mode = of_property_read_bool(np,

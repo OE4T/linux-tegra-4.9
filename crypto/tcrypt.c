@@ -1406,9 +1406,6 @@ static int test_akcipher_cycles(struct akcipher_request *r, int op)
 		case VERIFY:
 			ret = do_one_akcipher_op(r, crypto_akcipher_verify(r));
 			break;
-		default:
-			ret = -EINVAL;
-			break;
 		}
 		if (ret)
 			goto out;

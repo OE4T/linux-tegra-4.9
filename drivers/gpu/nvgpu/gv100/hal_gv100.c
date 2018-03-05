@@ -503,7 +503,7 @@ static const struct gpu_ops gv100_ops = {
 		.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs,
 		.reset_enable_hw = gk20a_init_fifo_reset_enable_hw,
 		.teardown_ch_tsg = gv11b_fifo_teardown_ch_tsg,
-		.handle_sched_error = gv11b_fifo_handle_sched_error,
+		.handle_sched_error = gk20a_fifo_handle_sched_error,
 		.handle_pbdma_intr_0 = gv11b_fifo_handle_pbdma_intr_0,
 		.handle_pbdma_intr_1 = gv11b_fifo_handle_pbdma_intr_1,
 		.init_eng_method_buffers = gv11b_fifo_init_eng_method_buffers,
@@ -534,7 +534,6 @@ static const struct gpu_ops gv100_ops = {
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 		.free_channel_ctx_header = gv11b_free_subctx_header,
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
-		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
 		.apply_ctxsw_timeout_intr = gv100_apply_ctxsw_timeout_intr,
 	},
 	.gr_ctx = {

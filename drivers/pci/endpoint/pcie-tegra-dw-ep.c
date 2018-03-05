@@ -785,9 +785,8 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 	if (val & EP_CS_STATUS_COMMAND_BME) {
 		ktime_t timeout;
 
-		/* 100us for both snoop and no-snoop */
-		/* TODO : Value should be updated for Silicon*/
-		val = 100 | (2 << PCI_LTR_SCALE_SHIFT) | LTR_MSG_REQ;
+		/* 110us for both snoop and no-snoop */
+		val = 110 | (2 << PCI_LTR_SCALE_SHIFT) | LTR_MSG_REQ;
 		val |= (val << LTR_MST_NO_SNOOP_SHIFT);
 		writel(val, pcie->appl_base + APPL_LTR_MSG_1);
 		/* Send LTR upstream */

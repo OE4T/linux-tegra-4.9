@@ -271,6 +271,7 @@ enum ep_event {
 	EP_PEX_RST_DE_ASSERT,
 	EP_PEX_HOT_RST_DONE,
 	EP_PEX_BME_CHANGE,
+	EP_EVENT_EXIT,
 	EP_EVENT_INVALID,
 };
 
@@ -834,7 +835,7 @@ static int pcie_ep_work_thread(void *p)
 
 		if (!kfifo_get(&pcie->event_fifo, &event)) {
 			dev_warn(pcie->dev, "empty kfifo\n");
-			return 0;
+			continue;
 		}
 
 		switch (event) {
@@ -1347,12 +1348,13 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (IS_ERR(pcie->pex_ctl_reg)) {
 		dev_err(&pdev->dev, "fail to get regulator: %ld\n",
 			PTR_ERR(pcie->pex_ctl_reg));
-		return PTR_ERR(pcie->pex_ctl_reg);
+		ret = PTR_ERR(pcie->pex_ctl_reg);
+		goto fail_regulator;
 	}
 	ret = regulator_enable(pcie->pex_ctl_reg);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "regulator enable failed: %d\n", ret);
-		return ret;
+		goto fail_regulator;
 	}
 
 	ret = of_property_read_u32(np, "nvidia,tsa-config", &addr);
@@ -1371,7 +1373,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (IS_ERR(pin)) {
 		ret = PTR_ERR(pin);
 		dev_err(pcie->dev, "pinctrl_get failed: %d\n", ret);
-		return ret;
+		goto fail_pinctrl;
 	}
 	pin_state = pinctrl_lookup_state(pin, "pex_rst");
 	if (!IS_ERR(pin_state)) {
@@ -1379,7 +1381,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			dev_err(pcie->dev, "setting pex_rst state fail: %d\n",
 				ret);
-			return ret;
+			goto fail_pinctrl;
 		}
 	}
 	pin_state = pinctrl_lookup_state(pin, "clkreq");
@@ -1388,7 +1390,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			dev_err(pcie->dev, "setting clkreq state fail: %d\n",
 				ret);
-			return ret;
+			goto fail_pinctrl;
 		}
 	}
 
@@ -1396,7 +1398,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (IS_ERR(pcie->core_clk)) {
 		dev_err(&pdev->dev, "Failed to get core clock\n");
 		ret = PTR_ERR(pcie->core_clk);
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	pcie->appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
@@ -1404,33 +1406,33 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (!pcie->appl_res) {
 		dev_err(&pdev->dev, "missing appl space\n");
 		ret = PTR_ERR(pcie->appl_res);
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 	pcie->appl_base = devm_ioremap_resource(&pdev->dev, pcie->appl_res);
 	if (IS_ERR(pcie->appl_base)) {
 		dev_err(&pdev->dev, "mapping appl space failed\n");
 		ret = PTR_ERR(pcie->appl_base);
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	pcie->core_apb_rst = devm_reset_control_get(pcie->dev, "core_apb_rst");
 	if (IS_ERR(pcie->core_apb_rst)) {
 		dev_err(pcie->dev, "PCIE : core_apb_rst reset is missing\n");
 		ret = PTR_ERR(pcie->core_apb_rst);
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	phy_count = of_property_count_strings(np, "phy-names");
 	if (phy_count < 0) {
 		dev_err(pcie->dev, "unable to find phy entries\n");
 		ret = phy_count;
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	phy = devm_kcalloc(pcie->dev, phy_count, sizeof(*phy), GFP_KERNEL);
 	if (!phy) {
 		ret = PTR_ERR(phy);
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	for (i = 0; i < phy_count; i++) {
@@ -1439,7 +1441,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		kfree(name);
 		if (IS_ERR(phy[i])) {
 			ret = PTR_ERR(phy[i]);
-			goto fail_core_clk;
+			goto fail_pinctrl;
 		}
 	}
 
@@ -1449,7 +1451,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	ret = tegra_pcie_init_phy(pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to init phy\n");
-		goto fail_core_clk;
+		goto fail_pinctrl;
 	}
 
 	pcie->dbi_res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
@@ -1518,7 +1520,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	if (IS_ERR(pcie->pcie_ep_task)) {
 		dev_err(pcie->dev, "failed to create pcie_ep_work thread\n");
 		ret = PTR_ERR(pcie->pcie_ep_task);
-		goto fail_dbi_res;
+		goto fail_alloc;
 	}
 
 	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
@@ -1573,7 +1575,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	name = kasprintf(GFP_KERNEL, "pcie-ep-%u", pcie->cid);
 	if (!name) {
 		ret = -ENOMEM;
-		goto fail_dbi_res;
+		goto fail_thread;
 	}
 	pcie->debugfs = debugfs_create_dir(name, NULL);
 	if (!pcie->debugfs)
@@ -1582,14 +1584,46 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		init_debugfs(pcie);
 	kfree(name);
 
+	platform_set_drvdata(pdev, pcie);
+
 	return ret;
 
 fail_thread:
 	kthread_stop(pcie->pcie_ep_task);
+fail_alloc:
+	dma_free_coherent(pcie->dev, pcie->bar0_size, pcie->cpu_virt,
+			  pcie->dma_handle);
 fail_dbi_res:
 	tegra_pcie_disable_phy(pcie);
-fail_core_clk:
+fail_pinctrl:
 	regulator_disable(pcie->pex_ctl_reg);
+fail_regulator:
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+	return ret;
+}
+
+static int tegra_pcie_dw_ep_remove(struct platform_device *pdev)
+{
+	struct tegra_pcie_dw_ep *pcie = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	debugfs_remove_recursive(pcie->debugfs);
+
+	if (!kfifo_put(&pcie->event_fifo, EP_EVENT_EXIT))
+		dev_err(pcie->dev, "EVENT: fifo is full\n");
+	kthread_stop(pcie->pcie_ep_task);
+
+	dma_free_coherent(pcie->dev, pcie->bar0_size, pcie->cpu_virt,
+			  pcie->dma_handle);
+
+	tegra_pcie_disable_phy(pcie);
+
+	regulator_disable(pcie->pex_ctl_reg);
+
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+
 	return ret;
 }
 
@@ -1600,15 +1634,15 @@ static const struct of_device_id tegra_pcie_dw_ep_of_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_pcie_dw_ep_of_match);
 
 static struct platform_driver tegra_pcie_dw_ep_driver = {
-	.remove		= __exit_p(tegra_pcie_dw_ep_remove),
+	.probe		= tegra_pcie_dw_ep_probe,
+	.remove		= tegra_pcie_dw_ep_remove,
 	.driver = {
 		.name	= "tegra-pcie-dw-ep",
 		.of_match_table = tegra_pcie_dw_ep_of_match,
 	},
 };
 
-module_platform_driver_probe(tegra_pcie_dw_ep_driver, tegra_pcie_dw_ep_probe);
-
+module_platform_driver(tegra_pcie_dw_ep_driver);
 MODULE_AUTHOR("Vidya Sagar <vidyas@nvidia.com>");
 MODULE_DESCRIPTION("Nvidia PCIe End-Point controller driver");
 MODULE_LICENSE("GPL v2");

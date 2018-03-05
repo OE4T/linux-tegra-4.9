@@ -814,6 +814,23 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		}
 	}
 
+	rtd = snd_soc_get_pcm_runtime(card, "rt565x-codec-sysclk-bclk1");
+	if (rtd) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+
+		dai_params->rate_min = clk_rate;
+		dai_params->formats = (machine->fmt_via_kcontrol == 2) ?
+			(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
+
+		err = rt565x_manage_codec_sysclk(dai_params, rtd->codec_dai,
+						 RT5659_PLL1_S_BCLK1);
+		if (err < 0) {
+			dev_err(card->dev, "codec_dai clock not set\n");
+			return err;
+		}
+	}
+
 	/* TODO: remove below spdif links if clk_rate is passed
 	 *	in tegra_machine_set_params
 	 */

@@ -256,6 +256,9 @@ struct gk20a_platform {
 
 	/* stream id to use */
 	u32 ltc_streamid;
+
+	/* scaling rate */
+	unsigned long cached_rate;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

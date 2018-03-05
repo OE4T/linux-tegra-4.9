@@ -57,11 +57,13 @@ gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS / GP10B_FREQ_SELECT_STEP];
 
 #define EMC_BW_RATIO  (TEGRA_GP10B_BW_PER_FREQ / TEGRA_DDR4_BW_PER_FREQ)
 
+#define GPCCLK_INIT_RATE 1000000000
+
 static struct {
 	char *name;
 	unsigned long default_rate;
 } tegra_gp10b_clocks[] = {
-	{"gpu", 1000000000},
+	{"gpu", GPCCLK_INIT_RATE},
 	{"gpu_sys", 204000000} };
 
 static void gr_gp10b_remove_sysfs(struct device *dev);
@@ -90,6 +92,8 @@ int gp10b_tegra_get_clocks(struct device *dev)
 		} else {
 			clk_set_rate(c, rate);
 			platform->clk[i] = c;
+			if (i == 0)
+				platform->cached_rate = rate;
 		}
 	}
 	platform->num_clks = i;

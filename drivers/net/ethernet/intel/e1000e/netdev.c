@@ -4284,9 +4284,9 @@ void e1000e_down(struct e1000_adapter *adapter, bool reset)
 	del_timer_sync(&adapter->watchdog_timer);
 	del_timer_sync(&adapter->phy_info_timer);
 
-	spin_lock(&adapter->stats64_lock);
+	spin_lock_bh(&adapter->stats64_lock);
 	e1000e_update_stats(adapter);
-	spin_unlock(&adapter->stats64_lock);
+	spin_unlock_bh(&adapter->stats64_lock);
 
 	e1000e_flush_descriptors(adapter);
 
@@ -5300,7 +5300,7 @@ static void e1000_watchdog_task(struct work_struct *work)
 	}
 
 link_up:
-	spin_lock(&adapter->stats64_lock);
+	spin_lock_bh(&adapter->stats64_lock);
 	e1000e_update_stats(adapter);
 
 	mac->tx_packet_delta = adapter->stats.tpt - adapter->tpt_old;
@@ -5312,7 +5312,7 @@ link_up:
 	adapter->gorc_old = adapter->stats.gorc;
 	adapter->gotc = adapter->stats.gotc - adapter->gotc_old;
 	adapter->gotc_old = adapter->stats.gotc;
-	spin_unlock(&adapter->stats64_lock);
+	spin_unlock_bh(&adapter->stats64_lock);
 
 	/* If the link is lost the controller stops DMA, but
 	 * if there is queued Tx work it cannot be done.  So
@@ -5943,7 +5943,7 @@ struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 
 	memset(stats, 0, sizeof(struct rtnl_link_stats64));
-	spin_lock(&adapter->stats64_lock);
+	spin_lock_bh(&adapter->stats64_lock);
 	e1000e_update_stats(adapter);
 	/* Fill out the OS statistics structure */
 	stats->rx_bytes = adapter->stats.gorc;
@@ -5974,7 +5974,7 @@ struct rtnl_link_stats64 *e1000e_get_stats64(struct net_device *netdev,
 
 	/* Tx Dropped needs to be maintained elsewhere */
 
-	spin_unlock(&adapter->stats64_lock);
+	spin_unlock_bh(&adapter->stats64_lock);
 	return stats;
 }
 

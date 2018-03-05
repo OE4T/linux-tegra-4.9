@@ -742,14 +742,13 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 
 static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	u64 ptr = nvgpu_inst_block_addr(g, inst_block) >>
-		ram_in_base_shift_v();
+	u32 ptr = u64_lo32(nvgpu_inst_block_addr(g, inst_block)
+			>> ram_in_base_shift_v());
 	u32 aperture = nvgpu_aperture_mask(g, inst_block,
-				gr_fecs_current_ctx_target_sys_mem_ncoh_f(),
-				gr_fecs_current_ctx_target_sys_mem_coh_f(),
-				gr_fecs_current_ctx_target_vid_mem_f());
+			gr_fecs_current_ctx_target_sys_mem_ncoh_f(),
+			gr_fecs_current_ctx_target_vid_mem_f());
 
-	return gr_fecs_current_ctx_ptr_f(u64_lo32(ptr)) | aperture |
+	return gr_fecs_current_ctx_ptr_f(ptr) | aperture |
 		gr_fecs_current_ctx_valid_f(1);
 }
 
@@ -2172,18 +2171,16 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 
 	inst_ptr = nvgpu_inst_block_addr(g, &ucode_info->inst_blk_desc);
 	gk20a_writel(g, gr_fecs_new_ctx_r(),
-		     gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
-		     nvgpu_aperture_mask(g, &ucode_info->inst_blk_desc,
+			gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
+			nvgpu_aperture_mask(g, &ucode_info->inst_blk_desc,
 				gr_fecs_new_ctx_target_sys_mem_ncoh_f(),
-				gr_fecs_new_ctx_target_sys_mem_coh_f(),
 				gr_fecs_new_ctx_target_vid_mem_f()) |
-		     gr_fecs_new_ctx_valid_m());
+			gr_fecs_new_ctx_valid_m());
 
 	gk20a_writel(g, gr_fecs_arb_ctx_ptr_r(),
-		     gr_fecs_arb_ctx_ptr_ptr_f(inst_ptr >> 12) |
-		     nvgpu_aperture_mask(g, &ucode_info->inst_blk_desc,
+			gr_fecs_arb_ctx_ptr_ptr_f(inst_ptr >> 12) |
+			nvgpu_aperture_mask(g, &ucode_info->inst_blk_desc,
 				gr_fecs_arb_ctx_ptr_target_sys_mem_ncoh_f(),
-				gr_fecs_arb_ctx_ptr_target_sys_mem_coh_f(),
 				gr_fecs_arb_ctx_ptr_target_vid_mem_f()));
 
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), 0x7);
@@ -4387,9 +4384,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
 		     nvgpu_aperture_mask(g, &gr->mmu_wr_mem,
-				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
-				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
-				fb_mmu_debug_wr_aperture_vid_mem_f()) |
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
+		       fb_mmu_debug_wr_aperture_vid_mem_f()) |
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
@@ -4398,9 +4394,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
 		     nvgpu_aperture_mask(g, &gr->mmu_rd_mem,
-				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
-				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
-				fb_mmu_debug_rd_aperture_vid_mem_f()) |
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
+		       fb_mmu_debug_rd_aperture_vid_mem_f()) |
 		     fb_mmu_debug_rd_vol_false_f() |
 		     fb_mmu_debug_rd_addr_f(addr));
 

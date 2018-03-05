@@ -28,7 +28,6 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/semaphore.h>
-#include <nvgpu/enabled.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
@@ -667,13 +666,11 @@ static void fifo_engine_exception_status(struct gk20a *g,
 static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct fifo_runlist_info_gk20a *runlist;
-	struct fifo_engine_info_gk20a *engine_info;
 	unsigned int runlist_id;
 	u32 i;
 	size_t runlist_size;
 	u32 active_engine_id, pbdma_id, engine_id;
-	int flags = nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ?
-		NVGPU_DMA_FORCE_CONTIGUOUS : 0;
+	struct fifo_engine_info_gk20a *engine_info;
 
 	nvgpu_log_fn(g, " ");
 
@@ -708,9 +705,8 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			int err = nvgpu_dma_alloc_flags_sys(g, flags,
-							    runlist_size,
-							    &runlist->mem[i]);
+			int err = nvgpu_dma_alloc_sys(g, runlist_size,
+					&runlist->mem[i]);
 			if (err) {
 				nvgpu_err(g, "memory allocation failed");
 				goto clean_up_runlist;
@@ -3244,9 +3240,8 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		gk20a_writel(g, fifo_runlist_base_r(),
 			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
 			nvgpu_aperture_mask(g, &runlist->mem[new_buf],
-				fifo_runlist_base_target_sys_mem_ncoh_f(),
-				fifo_runlist_base_target_sys_mem_coh_f(),
-				fifo_runlist_base_target_vid_mem_f()));
+			  fifo_runlist_base_target_sys_mem_ncoh_f(),
+			  fifo_runlist_base_target_vid_mem_f()));
 	}
 
 	gk20a_writel(g, fifo_runlist_r(),
@@ -3768,9 +3763,8 @@ static int gk20a_fifo_commit_userd(struct channel_gk20a *c)
 	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
 		       nvgpu_aperture_mask(g, &g->fifo.userd,
-					   pbdma_userd_target_sys_mem_ncoh_f(),
-					   pbdma_userd_target_sys_mem_coh_f(),
-					   pbdma_userd_target_vid_mem_f()) |
+			pbdma_userd_target_sys_mem_ncoh_f(),
+			pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
 	nvgpu_mem_wr32(g, &c->inst_block,

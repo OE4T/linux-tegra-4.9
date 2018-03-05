@@ -21,7 +21,6 @@
  */
 
 #include <nvgpu/page_allocator.h>
-#include <nvgpu/enabled.h>
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/bus.h>
@@ -156,9 +155,8 @@ int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 
 	gk20a_writel(g, bus_bar1_block_r(),
 		     nvgpu_aperture_mask(g, bar1_inst,
-					 bus_bar1_block_target_sys_mem_ncoh_f(),
-					 bus_bar1_block_target_sys_mem_coh_f(),
-					 bus_bar1_block_target_vid_mem_f()) |
+		       bus_bar1_block_target_sys_mem_ncoh_f(),
+		       bus_bar1_block_target_vid_mem_f()) |
 		     bus_bar1_block_mode_virtual_f() |
 		     bus_bar1_block_ptr_f(ptr_v));
 

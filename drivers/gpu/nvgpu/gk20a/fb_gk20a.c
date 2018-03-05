@@ -98,9 +98,8 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
 		nvgpu_aperture_mask(g, pdb,
-				fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
-				fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
-				fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
+		  fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
+		  fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
 
 	gk20a_writel(g, fb_mmu_invalidate_r(),
 		fb_mmu_invalidate_all_va_true_f() |

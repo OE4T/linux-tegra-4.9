@@ -20,7 +20,6 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-#include <linux/of_address.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
@@ -1108,7 +1107,6 @@ static int gk20a_probe(struct platform_device *dev)
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
-	struct device_node *np;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1148,12 +1146,6 @@ static int gk20a_probe(struct platform_device *dev)
 	err = nvgpu_init_enabled_flags(gk20a);
 	if (err)
 		goto return_err;
-
-	np = nvgpu_get_node(gk20a);
-	if (of_dma_is_coherent(np)) {
-		__nvgpu_set_enabled(gk20a, NVGPU_USE_COHERENT_SYSMEM, true);
-		__nvgpu_set_enabled(gk20a, NVGPU_SUPPORT_IO_COHERENCE, true);
-	}
 
 	if (nvgpu_platform_is_simulation(gk20a))
 		__nvgpu_set_enabled(gk20a, NVGPU_IS_FMODEL, true);

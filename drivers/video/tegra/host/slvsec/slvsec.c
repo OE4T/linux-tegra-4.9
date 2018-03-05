@@ -107,6 +107,7 @@ struct slvsec {
 static int slvsec_init_debugfs(struct slvsec *slvsec);
 static void slvsec_remove_debugfs(struct slvsec *slvsec);
 
+#ifdef SLVSEC_ENABLE_IRQ
 static irqreturn_t slvsec_isr(int irq, void *arg)
 {
 	struct platform_device *pdev = arg;
@@ -224,6 +225,7 @@ static int slvsec_get_irq(struct platform_device *pdev,
 
 	return ret;
 }
+#endif
 
 int slvsec_finalize_poweron(struct platform_device *pdev)
 {
@@ -291,10 +293,12 @@ static int slvsec_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, info);
 	info->private_data = slvsec;
 
+#ifdef SLVSEC_ENABLE_IRQ
 	if (tegra_platform_is_silicon()) {
 		slvsec_get_irq(pdev, "slvs-ec", &slvsec->irq, slvsec_isr);
 		slvsec_get_irq(pdev, "syncgen", &slvsec->vi_irq, slvsec_vi_isr);
 	}
+#endif
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
@@ -310,9 +314,11 @@ static int slvsec_probe(struct platform_device *pdev)
 
 	slvsec_init_debugfs(slvsec);
 
+#ifdef SLVSEC_ENABLE_IRQ
 	dev_info(dev, "clearing pending interrupts\n");
 	if (tegra_platform_is_silicon())
 		slvsec_isr(slvsec->irq, pdev);
+#endif
 
 	slvsec->mc_slvs	= tegra_slvs_media_controller_init(pdev);
 	if (IS_ERR(slvsec->mc_slvs)) {

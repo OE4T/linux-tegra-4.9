@@ -173,6 +173,8 @@ int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 	if (!gk20a_get(g))
 		return -ENODEV;
 
+	vidmem_dbg(g, "Allocating vidmem buf: %zu bytes", bytes);
+
 	priv = nvgpu_kzalloc(g, sizeof(*priv));
 	if (!priv) {
 		err = -ENOMEM;
@@ -180,8 +182,8 @@ int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 	}
 
 	buf = nvgpu_vidmem_user_alloc(g, bytes);
-	if (!buf) {
-		err = -ENOMEM;
+	if (IS_ERR(buf)) {
+		err = PTR_ERR(buf);
 		goto fail;
 	}
 

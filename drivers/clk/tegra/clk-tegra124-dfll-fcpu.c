@@ -514,6 +514,7 @@ static const unsigned long tegra210b01_cpu_max_freq_table[] = {
 	[0] = 1963500000UL,
 	[1] = 1963500000UL,
 	[2] = 2091000000UL,
+	[3] = 2014500000UL,
 };
 
 #define CPUB01_CVB_TABLE_SLT_B1 \
@@ -630,6 +631,12 @@ static const unsigned long tegra210b01_cpu_max_freq_table[] = {
 	.cvb_version = "FCPU Table - p4v3"
 
 struct cvb_table tegra210b01_cpu_cvb_tables[] = {
+	{
+		.speedo_id = 3,
+		.process_id = -1,
+		.max_millivolts = 1120,
+		CPUB01_CVB_TABLE,
+	},
 	{
 		.speedo_id = 2,
 		.process_id = 1,

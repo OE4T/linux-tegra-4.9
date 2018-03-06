@@ -183,6 +183,9 @@ static void __init rev_t210b01sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 	case 0x01: /* Engineering SKU */
 	case 0x83:
 		break;
+	case 0x87:
+		sku_info->cpu_speedo_id = 3;
+		break;
 	default:
 		pr_err("Tegra210b01: invalid combination of SKU/revision/mode:\n");
 		pr_err("Tegra210b01: SKU %#04x, rev %d\n", sku, rev);

@@ -2944,6 +2944,19 @@ static ssize_t proc_largest_task_read(struct file *file,
 		/* find load data of the ctask */
 		task_decayed_load(ctask, &avg);
 
+		/* If the load_avg is greater than 1024 this
+		 * this implies that the scheduler has inflated
+		 * this pid's load_avg time inorder to give
+		 * it higher priority.
+		 * This inflation sometimes occurs when the nice
+		 * value of the pid is lowered below zero. Thus
+		 * ignore this pid so that we may find the
+		 * largest task of the process that is not specially
+		 * handled by the scheduler.
+		 */
+		if (avg.load_avg > 1024)
+			continue;
+
 		/* if load_avg is greater than current largest,
 		 * set this task as the largest task */
 		if (avg.load_avg > largest_task.load_avg) {

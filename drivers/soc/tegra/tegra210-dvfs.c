@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,7 @@ struct tegra_dvfs_data {
 	struct dvfs *qspi_sdr_vf_table;
 	struct dvfs *qspi_ddr_vf_table;
 	struct dvfs *sor1_dp_vf_table;
+	int sor1_dp_vf_table_size;
 	int (*get_core_min_mv)(void);
 	int (*get_core_max_mv)(void);
 
@@ -1294,6 +1295,7 @@ static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
 {
 	struct dvfs *sor1_dp_dvfs = &dvfs_data->sor1_dp_vf_table[0];
 	struct clk *c;
+	int i, n = dvfs_data->sor1_dp_vf_table_size;
 
 	c = clk_get_sys(sor1_dp_dvfs->clk_name, sor1_dp_dvfs->clk_name);
 	if (IS_ERR(c)) {
@@ -1302,9 +1304,14 @@ static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
 		return;
 	}
 
-	if (match_dvfs_one(sor1_dp_dvfs->clk_name, sor1_dp_dvfs->speedo_id,
-		sor1_dp_dvfs->process_id, soc_speedo_id, core_process_id))
-		tegra_dvfs_add_alt_freqs(c, sor1_dp_dvfs);
+	for (i = 0; i < n; i++, sor1_dp_dvfs++) {
+		if (match_dvfs_one(sor1_dp_dvfs->clk_name,
+			sor1_dp_dvfs->speedo_id, sor1_dp_dvfs->process_id,
+			soc_speedo_id, core_process_id)) {
+			tegra_dvfs_add_alt_freqs(c, sor1_dp_dvfs);
+			break;
+		}
+	}
 
 	return;
 
@@ -2099,6 +2106,7 @@ static struct tegra_dvfs_data tegra210_dvfs_data = {
 	.qspi_sdr_vf_table = qspi_sdr_dvfs_table,
 	.qspi_ddr_vf_table = qspi_ddr_dvfs_table,
 	.sor1_dp_vf_table = sor1_dp_dvfs_table,
+	.sor1_dp_vf_table_size = ARRAY_SIZE(sor1_dp_dvfs_table),
 	.get_core_min_mv = get_core_sku_min_mv,
 	.get_core_max_mv = get_core_sku_max_mv,
 
@@ -2126,6 +2134,7 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.qspi_sdr_vf_table = qspi_sdrb01_dvfs_table,
 	.qspi_ddr_vf_table = qspi_ddrb01_dvfs_table,
 	.sor1_dp_vf_table = sor1_dpb01_dvfs_table,
+	.sor1_dp_vf_table_size = ARRAY_SIZE(sor1_dpb01_dvfs_table),
 	.get_core_min_mv = get_coreb01_sku_min_mv,
 	.get_core_max_mv = get_coreb01_sku_max_mv,
 
@@ -2155,6 +2164,7 @@ static struct tegra_dvfs_data tegra210b01slt_dvfs_data = {
 	.qspi_sdr_vf_table = qspi_sdrb01slt_dvfs_table,
 	.qspi_ddr_vf_table = qspi_ddrb01slt_dvfs_table,
 	.sor1_dp_vf_table = sor1_dpb01slt_dvfs_table,
+	.sor1_dp_vf_table_size = ARRAY_SIZE(sor1_dpb01slt_dvfs_table),
 	.get_core_min_mv = get_coreb01slt_sku_min_mv,
 	.get_core_max_mv = get_coreb01slt_sku_max_mv,
 

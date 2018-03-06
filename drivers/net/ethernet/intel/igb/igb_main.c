@@ -5382,6 +5382,10 @@ static void igb_reset_task(struct work_struct *work)
 	struct igb_adapter *adapter;
 	adapter = container_of(work, struct igb_adapter, reset_task);
 
+	if ((adapter->pm_status == PM_SUSPENDED) ||
+	    (adapter->pm_status == PM_SUSPENDING))
+		return;
+
 	igb_dump(adapter);
 	netdev_err(adapter->netdev, "Reset adapter\n");
 	igb_reinit_locked(adapter);
@@ -7628,10 +7632,15 @@ static int igb_suspend(struct device *dev)
 	int retval;
 	bool wake;
 	struct pci_dev *pdev = to_pci_dev(dev);
+	struct net_device *netdev = pci_get_drvdata(pdev);
+	struct igb_adapter *adapter = netdev_priv(netdev);
 
+	adapter->pm_status = PM_SUSPENDING;
 	retval = __igb_shutdown(pdev, &wake, 0);
-	if (retval)
+	if (retval) {
+		adapter->pm_status = PM_ACTIVE;
 		return retval;
+	}
 
 	if (wake) {
 		pci_prepare_to_sleep(pdev);
@@ -7639,6 +7648,8 @@ static int igb_suspend(struct device *dev)
 		pci_wake_from_d3(pdev, false);
 		pci_set_power_state(pdev, PCI_D3hot);
 	}
+
+	adapter->pm_status = PM_SUSPENDED;
 
 	return 0;
 }
@@ -7687,8 +7698,11 @@ static int igb_resume(struct device *dev)
 	if (!err && netif_running(netdev))
 		err = __igb_open(netdev, true);
 
-	if (!err)
+	if (!err) {
 		netif_device_attach(netdev);
+		adapter->pm_status = PM_ACTIVE;
+	}
+
 	rtnl_unlock();
 
 	return err;

@@ -45,6 +45,7 @@
 #define ACTION_LIST_FENCE_SIZE 13
 #define ACTION_LIST_STATUS_OPERATION_SIZE 11
 #define ACTION_LIST_TERMINATION_SIZE 1
+#define ACTION_LIST_STATS_SIZE 9
 
 /*
  * The worst-case input action buffer size:
@@ -66,6 +67,7 @@
  * - Output status write triggers a half-word memory operation (size 11 bytes)
  * - Output action list includes a single status write for
  *   timestamping purpose (size 11 bytes)
+ * - Output action list includes a operation for stats purpose (size 9 bytes)
  * - Output action list includes syncpoint and semaphore increments
  * - The action list is terminated by a null action (1 byte)
  */
@@ -73,6 +75,7 @@
 	ALIGN(PVA_MAX_POSTFENCES * ACTION_LIST_FENCE_SIZE + \
 	      PVA_MAX_OUTPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
 	      ACTION_LIST_STATUS_OPERATION_SIZE + \
+	      ACTION_LIST_STATS_SIZE + \
 	      ACTION_LIST_FENCE_SIZE  * 2 + \
 	      ACTION_LIST_TERMINATION_SIZE, 256))
 
@@ -90,6 +93,7 @@ struct pva_hw_task {
 	struct pva_task_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
 	struct nvhost_notification status_start;
 	struct nvhost_notification status_end;
+	struct pva_task_statistics statistics;
 	u8 opaque_data[PVA_MAX_PRIMARY_PAYLOAD_SIZE];
 };
 
@@ -441,6 +445,23 @@ static inline int pva_task_write_atomic_op(u8 *base, u8 action)
 	return 1;
 }
 
+static inline int pva_task_write_stats_op(u8 *base, u8 action, u64 addr, u16 val)
+{
+	int i = 0;
+
+	base[i++] = action;
+	base[i++] = (u8)((addr >> 0) & 0xff);
+	base[i++] = (u8)((addr >> 8) & 0xff);
+	base[i++] = (u8)((addr >> 16) & 0xff);
+	base[i++] = (u8)((addr >> 24) & 0xff);
+	base[i++] = (u8)((addr >> 32) & 0xff);
+	base[i++] = (u8)((addr >> 40) & 0xff);
+	base[i++] = (u8)((addr >> 48) & 0xff);
+	base[i++] = (u8)((addr >> 56) & 0xff);
+
+	return i;
+}
+
 static inline int pva_task_write_ptr_16b_op(u8 *base, u8 action, u64 addr, u16 val)
 {
 	int i = 0;
@@ -671,6 +692,14 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	}
 	ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 		TASK_ACT_PTR_WRITE_VAL, syncpt_addr, 1);
+
+	output_status_addr = task->dma_addr +
+			     offsetof(struct pva_hw_task, statistics);
+	ptr += pva_task_write_stats_op(
+				&hw_postactions[ptr],
+				TASK_ACT_PVA_STATISTICS,
+				output_status_addr, 1);
+
 	ptr += pva_task_write_atomic_op(&hw_postactions[ptr],
 		TASK_ACT_TERMINATE);
 
@@ -962,6 +991,7 @@ static void pva_task_update(struct pva_submit_task *task)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	u64 *timestamp_start = (u64 *)&hw_task->status_start.time_stamp;
 	u64 *timestamp_end = (u64 *)&hw_task->status_end.time_stamp;
+	struct pva_task_statistics *stats = &hw_task->statistics;
 
 	trace_nvhost_task_timestamp(dev_name(&pdev->dev),
 				    pdata->class,
@@ -978,6 +1008,19 @@ static void pva_task_update(struct pva_submit_task *task)
 			task, (u64)task->dma_addr,
 			*timestamp_start,
 			*timestamp_end);
+
+	nvhost_dbg_info("QueuedTime %llu, HeadTime 0x%llu, "
+			"InputActionComplete %llu, VpuAssignedTime %llu, "
+			"VpuStartTime %llu, VpuCompleteTime %llu, "
+			"TaskCompeteTime %llu, AssignedVpu %d",
+			stats->queued_time,
+			stats->head_time,
+			stats->input_actions_complete,
+			stats->vpu_assigned_time,
+			stats->vpu_start_time,
+			stats->vpu_complete_time,
+			stats->complete_time,
+			stats->vpu_assigned);
 
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);

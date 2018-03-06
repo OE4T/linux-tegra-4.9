@@ -106,24 +106,37 @@ static void dma_debugfs_init(struct device *dev, struct heap_info *heap)
 	if (sizeof(phys_addr_t) == sizeof(u64)) {
 		debugfs_create_x64("curr_base", S_IRUGO,
 			heap->dma_debug_root, (u64 *)&heap->curr_base);
+		debugfs_create_x64("curr_size", S_IRUGO,
+			heap->dma_debug_root, (u64 *)&heap->curr_len);
+
 		debugfs_create_x64("cma_base", S_IRUGO,
 			heap->dma_debug_root, (u64 *)&heap->cma_base);
+		debugfs_create_x64("cma_size", S_IRUGO,
+			heap->dma_debug_root, (u64 *)&heap->cma_len);
+		debugfs_create_x64("cma_chunk_size", S_IRUGO,
+			heap->dma_debug_root, (u64 *)&heap->cma_chunk_size);
+
+		debugfs_create_x64("floor_size", S_IRUGO,
+			heap->dma_debug_root, (u64 *)&heap->floor_size);
+
 	} else {
 		debugfs_create_x32("curr_base", S_IRUGO,
 			heap->dma_debug_root, (u32 *)&heap->curr_base);
+		debugfs_create_x32("curr_size", S_IRUGO,
+			heap->dma_debug_root, (u32 *)&heap->curr_len);
+
 		debugfs_create_x32("cma_base", S_IRUGO,
 			heap->dma_debug_root, (u32 *)&heap->cma_base);
+		debugfs_create_x32("cma_size", S_IRUGO,
+			heap->dma_debug_root, (u32 *)&heap->cma_len);
+		debugfs_create_x32("cma_chunk_size", S_IRUGO,
+			heap->dma_debug_root, (u32 *)&heap->cma_chunk_size);
+
+		debugfs_create_x32("floor_size", S_IRUGO,
+			heap->dma_debug_root, (u32 *)&heap->floor_size);
 	}
-	debugfs_create_size_t("curr_size", S_IRUGO,
-		heap->dma_debug_root, &heap->curr_len);
-	debugfs_create_size_t("cma_size", S_IRUGO,
-		heap->dma_debug_root, &heap->cma_len);
-	debugfs_create_size_t("cma_chunk_size", S_IRUGO,
-		heap->dma_debug_root, &heap->cma_chunk_size);
 	debugfs_create_x32("num_cma_chunks", S_IRUGO,
 		heap->dma_debug_root, (u32 *)&heap->num_chunks);
-	debugfs_create_size_t("floor_size", S_IRUGO,
-		heap->dma_debug_root, &heap->floor_size);
 }
 
 int dma_set_resizable_heap_floor_size(struct device *dev, size_t floor_size)

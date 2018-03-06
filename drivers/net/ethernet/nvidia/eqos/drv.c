@@ -70,15 +70,11 @@ unsigned char mac_addr1[6] = { 0x00, 0x66, 0x77, 0x88, 0x99, 0xaa };
  * set default mode as GENERIC
  * */
 /* Value of "2" enables mtl tx q */
-static int q_op_mode[EQOS_MAX_TX_QUEUE_CNT] = {
-	2,
-	2,
-	2,
-	2,
-	2,
-	2,
-	2,
-	2
+static int q_op_mode[MAX_CHANS] = {
+	EQOS_Q_DCB,
+	EQOS_Q_AVB,
+	EQOS_Q_AVB,
+	EQOS_Q_AVB
 };
 
 /* Store the IRQ names to be used by /proc/interrupts */

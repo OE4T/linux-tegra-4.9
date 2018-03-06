@@ -585,7 +585,7 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	fw_ver_read_bin = host1x_readl(pdev, NV_DLA_OS_VERSION);
 	firmware_version = dla_version();
 
-	if (firmware_version != fw_ver_read_bin) {
+	if ((firmware_version & 0xffff00) != (fw_ver_read_bin & 0xffff00)) {
 		nvdla_dbg_err(pdev,
 		"Fw version of kernel [%u.%u.%u] doesn't match with actual version[%u.%u.%u]",
 		(firmware_version >> 16) & 0xff, (firmware_version >> 8) & 0xff, firmware_version & 0xff,

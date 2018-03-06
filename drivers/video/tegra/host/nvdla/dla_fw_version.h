@@ -21,7 +21,7 @@
 
 #define FIRMWARE_VERSION_MAJOR		0x00
 #define FIRMWARE_VERSION_MINOR		0x0b
-#define FIRMWARE_VERSION_SUBMINOR	0x03
+#define FIRMWARE_VERSION_SUBMINOR	0x04
 
 static inline uint32_t dla_version(void)
 {

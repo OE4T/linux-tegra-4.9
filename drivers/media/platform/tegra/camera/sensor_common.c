@@ -168,6 +168,8 @@ static int sensor_common_parse_signal_props(
 			signal->phy_mode = CSI_PHY_MODE_CPHY;
 		else if (strcmp(temp_str, "DPHY") == 0)
 			signal->phy_mode = CSI_PHY_MODE_DPHY;
+		else if (strcmp(temp_str, "SLVS") == 0)
+			signal->phy_mode = SLVS_EC;
 		else {
 			dev_err(dev, "%s: Invalid Phy mode\n", __func__);
 			return -EINVAL;

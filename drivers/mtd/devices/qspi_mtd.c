@@ -1623,7 +1623,6 @@ static struct spi_driver qspi_mtd_driver = {
 	.driver = {
 		.name	= "qspi_mtd",
 		.owner	= THIS_MODULE,
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.id_table	= qspi_ids,
 	.probe	= qspi_probe,

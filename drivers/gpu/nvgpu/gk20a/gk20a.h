@@ -631,6 +631,7 @@ struct gpu_ops {
 		u32 (*get_syncpt_incr_cmd_size)(bool wfi_cmd);
 		int (*get_sync_ro_map)(struct vm_gk20a *vm,
 				u64 *base_gpuva, u32 *sync_size);
+		u32 (*get_syncpt_incr_per_release)(void);
 #endif
 	} fifo;
 	struct pmu_v {

@@ -515,6 +515,8 @@ static const struct gpu_ops gv100_ops = {
 		.get_syncpt_wait_cmd_size = gv11b_fifo_get_syncpt_wait_cmd_size,
 		.add_syncpt_incr_cmd = gv11b_fifo_add_syncpt_incr_cmd,
 		.get_syncpt_incr_cmd_size = gv11b_fifo_get_syncpt_incr_cmd_size,
+		.get_syncpt_incr_per_release =
+                                gv11b_fifo_get_syncpt_incr_per_release,
 		.get_sync_ro_map = gv11b_fifo_get_sync_ro_map,
 #endif
 		.resetup_ramfc = NULL,

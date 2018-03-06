@@ -390,6 +390,8 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.free_syncpt_buf = gv11b_fifo_free_syncpt_buf,
 		.add_syncpt_wait_cmd = gv11b_fifo_add_syncpt_wait_cmd,
 		.get_syncpt_wait_cmd_size = gv11b_fifo_get_syncpt_wait_cmd_size,
+		.get_syncpt_incr_per_release =
+                                gv11b_fifo_get_syncpt_incr_per_release,
 		.add_syncpt_incr_cmd = gv11b_fifo_add_syncpt_incr_cmd,
 		.get_syncpt_incr_cmd_size = gv11b_fifo_get_syncpt_incr_cmd_size,
 		.get_sync_ro_map = vgpu_gv11b_fifo_get_sync_ro_map,

@@ -498,6 +498,8 @@ static const struct gpu_ops gp106_ops = {
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,
 		.add_syncpt_wait_cmd = gk20a_fifo_add_syncpt_wait_cmd,
 		.get_syncpt_wait_cmd_size = gk20a_fifo_get_syncpt_wait_cmd_size,
+		.get_syncpt_incr_per_release =
+				gk20a_fifo_get_syncpt_incr_per_release,
 		.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd,
 		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
 		.get_sync_ro_map = NULL,

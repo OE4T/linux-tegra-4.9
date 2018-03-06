@@ -1,7 +1,7 @@
 /*
  * GK20A Channel Synchronization Abstraction
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -194,7 +194,8 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	c->g->ops.fifo.add_syncpt_incr_cmd(c->g, wfi_cmd,
 			incr_cmd, sp->id, sp->syncpt_buf.gpu_va);
 
-	thresh = nvgpu_nvhost_syncpt_incr_max_ext(sp->nvhost_dev, sp->id, 2);
+	thresh = nvgpu_nvhost_syncpt_incr_max_ext(sp->nvhost_dev, sp->id,
+			c->g->ops.fifo.get_syncpt_incr_per_release());
 
 	if (register_irq) {
 		struct channel_gk20a *referenced = gk20a_channel_get(c);

@@ -406,6 +406,7 @@ void gk20a_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 			struct priv_cmd_entry *cmd, u32 off,
 			u32 id, u32 thresh, u64 gpu_va);
 u32 gk20a_fifo_get_syncpt_wait_cmd_size(void);
+u32 gk20a_fifo_get_syncpt_incr_per_release(void);
 void gk20a_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 			bool wfi_cmd, struct priv_cmd_entry *cmd,
 			u32 id, u64 gpu_va);

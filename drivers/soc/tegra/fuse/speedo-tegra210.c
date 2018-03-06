@@ -103,6 +103,7 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 		/* fall through for a01 */
 	case 0x07:
 	case 0x17:
+	case 0x1F:
 		if (vcm31_sku && sku == 0x17) {
 			sku_info->cpu_speedo_id = 4;
 			sku_info->soc_speedo_id = 1;

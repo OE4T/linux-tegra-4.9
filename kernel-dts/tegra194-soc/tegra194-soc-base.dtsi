@@ -1813,6 +1813,16 @@
 	};
 #endif
 
+	tegra_usb_cd: usb_cd {
+		compatible = "nvidia,tegra194-usb-cd";
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+		nvidia,xusb-padctl = <&xusb_padctl>;
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "otg-phy";
+#endif
+		status = "disabled";
+	};
+
 	tegra_xudc: xudc@3550000 {
 		compatible = "nvidia,tegra194-xudc";
 		reg = <0x0 0x03550000 0x0 0x8000>,
@@ -1832,6 +1842,7 @@
 		dma-coherent;
 
 		status = "disabled";
+		charger-detector = <&tegra_usb_cd>;
 	};
 
 	tegra_xhci: xhci@3610000 {

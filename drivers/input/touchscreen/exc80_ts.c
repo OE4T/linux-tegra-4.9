@@ -1163,8 +1163,6 @@ static int egalax_i2c_remove(struct i2c_client *client)
 		input_dev = NULL;
 	}
 
-	sysfs_remove_group(&client->dev.kobj, &egalax_attr_group);
-
 	i2c_set_clientdata(client, NULL);
 	kfree(egalax_i2c);
 	p_egalax_i2c_dev = NULL;
@@ -1212,6 +1210,8 @@ static void egalax_i2c_ts_exit(void)
 		kfree(p_char_dev);
 		p_char_dev = NULL;
 	}
+
+	sysfs_remove_group(&egalax_misc_dev.this_device->kobj, &egalax_attr_group);
 
 	misc_deregister(&egalax_misc_dev);
 

@@ -225,7 +225,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 				     vm_area->addr,
 				     vm_area->size,
 				     vm_area->pgsz_idx,
-				     true,
+				     false,
 				     gk20a_mem_flag_none,
 				     true,
 				     NULL);

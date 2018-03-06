@@ -140,6 +140,7 @@ struct nvgpu_mem {
 	size_t					 aligned_size;
 	u64					 gpu_va;
 	bool					 skip_wmb;
+	bool					 free_gpu_va;
 
 	/*
 	 * Set when a nvgpu_mem struct is not a "real" nvgpu_mem struct. Instead

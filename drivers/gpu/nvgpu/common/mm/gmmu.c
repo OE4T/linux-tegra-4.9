@@ -86,6 +86,18 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
 		flags |= NVGPU_VM_MAP_IO_COHERENT;
 
+	/*
+	 * Later on, when we free this nvgpu_mem's GPU mapping, we are going to
+	 * potentially have to free the GPU VA space. If the address passed in
+	 * is non-zero then this API is not expected to manage the VA space and
+	 * therefor we should not try and free it. But otherwise, if we do
+	 * manage the VA alloc, we obviously must free it.
+	 */
+	if (addr != 0)
+		mem->free_gpu_va = false;
+	else
+		mem->free_gpu_va = true;
+
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vaddr = g->ops.mm.gmmu_map(vm, addr,
 				   sgt,    /* sg list */
@@ -152,7 +164,7 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm, struct nvgpu_mem *mem, u64 gpu_va)
 			     gpu_va,
 			     mem->size,
 			     gmmu_page_size_kernel,
-			     true, /*va_allocated */
+			     mem->free_gpu_va,
 			     gk20a_mem_flag_none,
 			     false,
 			     NULL);

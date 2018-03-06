@@ -139,6 +139,7 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"null",
 };
 
+#ifdef CONFIG_TRACEPOINTS
 static const char *bwmgr_req_to_name(enum tegra_bwmgr_request_type req)
 {
 	/* Keep in sync with enum tegra_bwmgr_request_type. */
@@ -157,6 +158,7 @@ static const char *bwmgr_req_to_name(enum tegra_bwmgr_request_type req)
 		return "INVALID_REQUEST";
 	}
 }
+#endif
 #endif /* defined(CONFIG_DEBUG_FS) || defined(CONFIG_TRACEPOINTS) */
 
 static inline void bwmgr_lock(void)

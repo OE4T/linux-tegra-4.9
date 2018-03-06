@@ -1803,16 +1803,14 @@ void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 	/* semaphore_d */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
 
-	/* operation: release, wfi */
+	/* operation: 4 byte payload, release, wfi */
 	nvgpu_mem_wr32(g, cmd->mem, off++,
-		0x2 | ((wfi_cmd ? 0x0 : 0x1) << 20));
-	/* ignored */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+		(0x1 << 24) | 0x2 | ((wfi_cmd ? 0x0 : 0x1) << 20));
 }
 
 u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
 {
-	return 9;
+	return 8;
 }
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 

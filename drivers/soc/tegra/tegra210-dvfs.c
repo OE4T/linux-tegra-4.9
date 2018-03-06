@@ -1620,8 +1620,11 @@ static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
 	cells_num = of_property_read_bool(node, "nvidia,constraint-ucm2") ? 2 :
 		of_property_read_bool(node, "nvidia,constraint") ? 1 : 0;
 
-	of_property_for_each_phandle_with_args(iter, node, "nvidia,trips",
-					       NULL, cells_num) {
+	if (of_phandle_iterator_init(&iter, node, "nvidia,trips",
+				     NULL, cells_num))
+		return -ENOENT;
+
+	while (!of_phandle_iterator_next(&iter)) {
 		struct device_node *trip_dn = iter.node;
 
 		if (i >= MAX_THERMAL_LIMITS) {

@@ -422,7 +422,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 				ret = tegra_dc_update_windows(&win, 1, NULL,
 						true, false);
 				if (ret) {
-					dev_err(pdev,
+					dev_info(pdev,
 						"update windows ret = %d\n",
 						ret);
 				}

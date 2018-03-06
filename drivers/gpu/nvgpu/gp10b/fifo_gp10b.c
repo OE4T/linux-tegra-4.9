@@ -25,6 +25,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/enabled.h>
 
 #include "fifo_gp10b.h"
 
@@ -78,8 +79,9 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
 		       nvgpu_aperture_mask(g, &g->fifo.userd,
-			pbdma_userd_target_sys_mem_ncoh_f(),
-			pbdma_userd_target_vid_mem_f()) |
+					   pbdma_userd_target_sys_mem_ncoh_f(),
+					   pbdma_userd_target_sys_mem_coh_f(),
+					   pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
 	nvgpu_mem_wr32(g, &c->inst_block,

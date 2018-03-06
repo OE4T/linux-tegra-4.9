@@ -227,6 +227,16 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	}
 
 	/*
+	 * WAR for IO coherent chips: the DMA API does not seem to generate
+	 * mappings that work correctly. Unclear why - Bug ID: 2040115.
+	 *
+	 * Basically we just tell the DMA API not to map with NO_KERNEL_MAPPING
+	 * and then make a vmap() ourselves.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+		flags |= NVGPU_DMA_NO_KERNEL_MAPPING;
+
+	/*
 	 * Before the debug print so we see this in the total. But during
 	 * cleanup in the fail path this has to be subtracted.
 	 */
@@ -260,7 +270,17 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 					iova, size, flags);
 	}
 	if (err)
-		goto fail_free;
+		goto fail_free_dma;
+
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM)) {
+		mem->cpu_va = vmap(mem->priv.pages,
+				   size >> PAGE_SHIFT,
+				   0, PAGE_KERNEL);
+		if (!mem->cpu_va) {
+			err = -ENOMEM;
+			goto fail_free_sgt;
+		}
+	}
 
 	mem->aligned_size = size;
 	mem->aperture = APERTURE_SYSMEM;
@@ -270,12 +290,14 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 	return 0;
 
-fail_free:
-	g->dma_memory_used -= mem->aligned_size;
+fail_free_sgt:
+	nvgpu_free_sgtable(g, &mem->priv.sgt);
+fail_free_dma:
 	dma_free_attrs(d, size, alloc_ret, iova, NVGPU_DMA_ATTR(dma_attrs));
 	mem->cpu_va = NULL;
 	mem->priv.sgt = NULL;
 	mem->size = 0;
+	g->dma_memory_used -= mem->aligned_size;
 	return err;
 }
 
@@ -476,6 +498,12 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 	if (!(mem->mem_flags & NVGPU_MEM_FLAG_SHADOW_COPY) &&
 	    !(mem->mem_flags & __NVGPU_MEM_FLAG_NO_DMA) &&
 	    (mem->cpu_va || mem->priv.pages)) {
+		/*
+		 * Free side of WAR for bug 2040115.
+		 */
+		if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+			vunmap(mem->cpu_va);
+
 		if (mem->priv.flags) {
 			NVGPU_DEFINE_DMA_ATTRS(dma_attrs);
 

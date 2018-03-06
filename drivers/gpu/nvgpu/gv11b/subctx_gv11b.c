@@ -178,8 +178,9 @@ void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 	u64 pdb_addr;
 	u32 max_subctx_count = gr_pri_fe_chip_def_info_max_veid_count_init_v();
 	u32 aperture = nvgpu_aperture_mask(g, vm->pdb.mem,
-			ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(),
-			ram_in_sc_page_dir_base_target_vid_mem_v());
+				ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(),
+				ram_in_sc_page_dir_base_target_sys_mem_coh_v(),
+				ram_in_sc_page_dir_base_target_vid_mem_v());
 
 	pdb_addr = nvgpu_mem_get_addr(g, vm->pdb.mem);
 	pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());

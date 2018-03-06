@@ -99,6 +99,7 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 			nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 			pwr_pmu_new_instblk_valid_f(1) |
 			nvgpu_aperture_mask(g, &mm->pmu.inst_block,
+				pwr_pmu_new_instblk_target_sys_ncoh_f(),
 				pwr_pmu_new_instblk_target_sys_coh_f(),
 				pwr_pmu_new_instblk_target_fb_f()));
 
@@ -165,6 +166,7 @@ void init_pmu_setup_hw1(struct gk20a *g)
 					nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 				pwr_pmu_new_instblk_valid_f(1) |
 				nvgpu_aperture_mask(g, &mm->pmu.inst_block,
+					pwr_pmu_new_instblk_target_sys_ncoh_f(),
 					pwr_pmu_new_instblk_target_sys_coh_f(),
 					pwr_pmu_new_instblk_target_fb_f()));
 

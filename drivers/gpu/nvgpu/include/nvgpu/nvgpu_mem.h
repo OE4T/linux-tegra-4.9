@@ -25,6 +25,7 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/list.h>
+#include <nvgpu/enabled.h>
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/nvgpu_mem.h>
@@ -51,6 +52,10 @@ struct nvgpu_page_alloc;
 enum nvgpu_aperture {
 	APERTURE_INVALID = 0, /* unallocated or N/A */
 	APERTURE_SYSMEM,
+
+	 /* Don't use directly. Use APERTURE_SYSMEM, this is used internally. */
+	__APERTURE_SYSMEM_COH,
+
 	APERTURE_VIDMEM
 };
 
@@ -195,12 +200,18 @@ nvgpu_mem_from_clear_list_entry(struct nvgpu_list_node *node)
 					    clear_list_entry));
 };
 
-static inline const char *nvgpu_aperture_str(enum nvgpu_aperture aperture)
+static inline const char *nvgpu_aperture_str(struct gk20a *g,
+					     enum nvgpu_aperture aperture)
 {
 	switch (aperture) {
-		case APERTURE_INVALID: return "INVAL";
-		case APERTURE_SYSMEM:  return "SYSMEM";
-		case APERTURE_VIDMEM:  return "VIDMEM";
+	case APERTURE_INVALID:
+		return "INVAL";
+	case APERTURE_SYSMEM:
+		return "SYSMEM";
+	case __APERTURE_SYSMEM_COH:
+		return "SYSCOH";
+	case APERTURE_VIDMEM:
+		return "VIDMEM";
 	};
 	return "UNKNOWN";
 }
@@ -332,9 +343,9 @@ u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem);
 u64 nvgpu_mem_get_phys_addr(struct gk20a *g, struct nvgpu_mem *mem);
 
 u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
-		u32 sysmem_mask, u32 vidmem_mask);
+		u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask);
 u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 sysmem_mask, u32 vidmem_mask);
+		u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask);
 
 u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys);
 

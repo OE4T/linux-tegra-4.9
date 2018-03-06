@@ -796,7 +796,7 @@ static int tegra_xusb_usb3_port_parse_dt(struct tegra_xusb_usb3_port *usb3)
 	}
 	usb3->port = value;
 
-	of_property_read_u32(np, "nvidia,usb3-gen1-only", &value);
+	err = of_property_read_u32(np, "nvidia,usb3-gen1-only", &value);
 	if (!err && value == 1)
 		usb3->gen1_only = true;
 	else

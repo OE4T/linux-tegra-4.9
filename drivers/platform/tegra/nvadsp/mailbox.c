@@ -56,19 +56,21 @@ static void mboxq_destroy(struct nvadsp_mbox_queue *queue)
 static status_t mboxq_enqueue(struct nvadsp_mbox_queue *queue,
 				   uint32_t data)
 {
+	unsigned long flags;
 	int ret = 0;
 
 	if (is_mboxq_full(queue)) {
 		ret = -EINVAL;
 		goto out;
 	}
-
+	spin_lock_irqsave(&queue->lock, flags);
 	if (is_mboxq_empty(queue))
 		complete_all(&queue->comp);
 
 	queue->array[queue->tail] = data;
 	queue->tail = (queue->tail + 1) & NVADSP_MBOX_QUEUE_SIZE_MASK;
 	queue->count++;
+	spin_unlock_irqrestore(&queue->lock, flags);
  out:
 	return ret;
 }

@@ -3,7 +3,7 @@
  *
  * Allocation tag routines for nvmap
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -103,8 +103,10 @@ int nvmap_remove_tag(struct nvmap_device *dev, u32 tag)
 
 	mutex_lock(&dev->tags_lock);
 	old = nvmap_search_tag_entry(&dev->tags, tag);
-	if (old)
+	if (old){
 		rb_erase(&old->node, &dev->tags);
+		kfree(old);
+	}
 	mutex_unlock(&dev->tags_lock);
 
 	return 0;

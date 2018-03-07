@@ -2630,6 +2630,22 @@ int eqos_napi_mq(struct napi_struct *napi, int budget)
 	return received;
 }
 
+static inline void eqos_enable_slot_function_ctrl(struct eqos_prv_data *pdata)
+{
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	int qinx;
+
+	for (qinx = 0; qinx < pdata->num_chans; qinx++) {
+		struct eqos_tx_queue *tx_queue = GET_TX_QUEUE_PTR(qinx);
+
+		if (tx_queue->slot_num_check) {
+			pr_info("slot number function enabled for Queue=%d\n",
+				qinx);
+			hw_if->config_slot_num_check(qinx, 1);
+		}
+	}
+}
+
 /*!
 * \brief API to return the device/interface status.
 *
@@ -3969,6 +3985,9 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		DBGPR_PTP("-->eqos registering get_ptp function\n");
 		/* Register broadcasting MAC timestamp to clients */
 		tegra_register_hwtime_source(eqos_get_ptptime, pdata);
+
+		/* Enable slot function control */
+		eqos_enable_slot_function_ctrl(pdata);
 	}
 
 	DBGPR_PTP("config.flags = %#x, tx_type = %#x, rx_filter = %#x\n",

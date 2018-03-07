@@ -242,6 +242,9 @@
 /* Max number of chans supported */
 #define MAX_CHANS	4
 
+/* Maximum number of slots available */
+#define EQOS_MAX_SLOTS	16
+
 /*
 #ifdef EQOS_ENABLE_VLAN_TAG
 #define MAX_PACKET_SIZE VLAN_ETH_FRAME_LEN
@@ -975,6 +978,7 @@ struct eqos_tx_queue {
 	/* Tx descriptors */
 	struct tx_ring ptx_ring;
 	int q_op_mode;
+	bool slot_num_check;
 };
 
 /* wrapper buffer structure to hold received pkt details */
@@ -1313,6 +1317,7 @@ struct eqos_cfg {
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
 	uint		q_prio[MAX_CHANS];
 	uint		chan_napi_quota[MAX_CHANS];
+	uint		slot_num_check[MAX_CHANS];
 	pause_frames_e	pause_frames;
 	uint		iso_bw;
 	uint		eth_iso_enable;

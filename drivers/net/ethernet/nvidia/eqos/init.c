@@ -590,6 +590,28 @@ err_out:
 	return ret;
 }
 
+static void eqos_get_slot_num_check_queues(struct eqos_prv_data *pdata,
+					   u32 *slot_num)
+{
+	struct device_node *node = pdata->pdev->dev.of_node;
+	int qinx, ret = 0;
+
+	if (pdata->num_chans == 1)
+		return;
+
+	ret = of_property_read_u32_array(node, "nvidia,slot_num_check",
+					 slot_num, pdata->num_chans);
+	if (ret)
+		return;
+
+	for (qinx = 0; qinx < pdata->num_chans; qinx++) {
+		struct eqos_tx_queue *tx_queue = GET_TX_QUEUE_PTR(qinx);
+
+		if (slot_num[qinx] == 1)
+			tx_queue->slot_num_check = true;
+	}
+}
+
 #ifdef CONFIG_THERMAL
 #define TEGRA_EQOS_THERM_MAX_STATE     5
 static int tegra_eqos_max_state(struct thermal_cooling_device *tcd,
@@ -903,6 +925,7 @@ int eqos_probe(struct platform_device *pdev)
 	mutex_init(&pdata->hw_change_lock);
 	pdata->hw_stopped = true;
 
+	pdata->num_chans = num_chans;
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
 		phyirq = power_irq;
@@ -1041,6 +1064,7 @@ int eqos_probe(struct platform_device *pdev)
 			   SLOT_INTVL_DEFAULT, SLOT_INTVL_MAX);
 	pdata->dt_cfg.phy_apd_mode = of_property_read_bool(node,
 							   "nvidia,brcm_phy_apd_mode");
+	eqos_get_slot_num_check_queues(pdata, pdt_cfg->slot_num_check);
 
 #ifndef DISABLE_TRISTATE
 	if (pdata->mac_ver == EQOS_MAC_CORE_4_10) {
@@ -1051,7 +1075,6 @@ int eqos_probe(struct platform_device *pdev)
 					state failed with %d\n", ret);
 	}
 #endif
-	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;
 

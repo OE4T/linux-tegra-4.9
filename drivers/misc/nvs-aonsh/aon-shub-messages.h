@@ -219,6 +219,8 @@ struct aon_shub_init_snsrs_request {
  *
  * Fields:
  * gpio:		GPIO number.
+ * reset_gpio:		RESET GPIO number.
+ * gpio_ctlr_id:	GPIO controller id.
  * chip_id:		sensor chip id.
  * i2c_id:		I2C controller id.
  * i2c_addr:		I2C address of the device.
@@ -227,6 +229,8 @@ struct aon_shub_init_snsrs_request {
  */
 struct aon_shub_init_setup_request {
 	u32 gpio;
+	s32 reset_gpio;
+	u8 gpio_ctlr_id;
 	u8 chip_id;
 	u8 i2c_id;
 	u8 i2c_addr;
@@ -388,10 +392,10 @@ struct aon_shub_init_response {
  */
 struct aon_shub_payload_response {
 	u32 count;
-	/* Max 2 physical sensors for now on a single device.
+	/* Max 4 physical sensors for now on a single device.
 	 * This can be changed if required.
 	 */
-	struct sensor_payload_t data[2];
+	struct sensor_payload_t data[4];
 };
 
 /* This structure indicates the contents of the response from the remote CPU

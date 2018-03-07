@@ -82,6 +82,13 @@ enum I2C_IDS {
 	I2CID_MAX = 2,
 };
 
+enum GPIO_CTLR_IDS {
+	GPIO_CHIP_ID_MIN,
+	AON_GPIO_CHIP_ID = GPIO_CHIP_ID_MIN,
+	MAIN_GPIO_CHIP_ID,
+	GPIO_CHIP_ID_MAX = MAIN_GPIO_CHIP_ID,
+};
+
 struct aon_shub_sensor {
 	char name[32];
 	char part[32];
@@ -568,6 +575,11 @@ static inline bool is_i2cid_valid(u8 i2c_id)
 	return (i2c_id >= I2CID_MIN && i2c_id <= I2CID_MAX);
 }
 
+static inline bool is_gpio_ctlr_id_valid(u8 ctlr_id)
+{
+	return (ctlr_id >= GPIO_CHIP_ID_MIN && ctlr_id <= GPIO_CHIP_ID_MAX);
+}
+
 static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 				struct device_node *np)
 {
@@ -575,7 +587,8 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 	struct device_node *cn;
 	struct device *dev;
 	struct aon_shub_init_setup_request *setup_req;
-	u32 gpio, chip_id;
+	u32 gpio, chip_id, gpio_ctlr_id;
+	s32 rst_gpio;
 	u32 i2c_info[3];
 	u32 aux_chip_info[2];
 	bool aux_slave = false;
@@ -596,6 +609,25 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 				(int)chip_id, cn->name);
 			return -EINVAL;
 		}
+
+		ret = of_property_read_u32(cn, "gpio_ctlr_id", &gpio_ctlr_id);
+		if (ret) {
+			dev_err(dev, "missing <%s> property\n", "gpio_ctlr_id");
+			return ret;
+		}
+
+		if (!is_gpio_ctlr_id_valid(gpio_ctlr_id)) {
+			dev_err(dev, "Invalid gpio_ctlr_id: %d\n",
+				(int)gpio_ctlr_id);
+			return -EINVAL;
+		}
+
+		/*
+		 * If reset GPIO is not present, its not an error.
+		 */
+		ret = of_property_read_u32(cn, "reset_gpio", &rst_gpio);
+		if (ret)
+			rst_gpio = -1;
 
 		ret = of_property_read_u32(cn, "gpio", &gpio);
 		if (ret) {
@@ -652,6 +684,8 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 		shub->shub_req->data.init.req = AON_SHUB_INIT_REQUEST_SETUP;
 		setup_req = &shub->shub_req->data.init.data.setup;
 		setup_req->gpio = gpio;
+		setup_req->reset_gpio = rst_gpio;
+		setup_req->gpio_ctlr_id = gpio_ctlr_id;
 		setup_req->chip_id = chip_id;
 		setup_req->i2c_id = i2c_info[0];
 		setup_req->i2c_addr = i2c_info[2];
@@ -857,16 +891,16 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 				__func__);
 			goto err_exit;
 		}
-		if (shub->shub_resp->data.init.init_type ==
+		if (shub->shub_resp->data.init.init_type !=
 						AON_SHUB_INIT_REQUEST_I2C) {
-			if (shub->shub_resp->data.init.status) {
-				dev_err(shub->dev, "I2C init failed\n");
-				ret = -1;
-				goto err_exit;
-			}
-		} else {
+			ret = -EIO;
 			dev_err(shub->dev,
 				"Invalid response to I2C init request\n");
+			goto err_exit;
+		}
+		if (shub->shub_resp->data.init.status) {
+			dev_err(shub->dev, "I2C init failed\n");
+			ret = -1;
 			goto err_exit;
 		}
 		i2c_inited = true;
@@ -888,15 +922,15 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 			__func__);
 		goto err_exit;
 	}
-	if (shub->shub_resp->data.init.init_type ==
+	if (shub->shub_resp->data.init.init_type !=
 					AON_SHUB_INIT_REQUEST_SNSR) {
-		if (shub->shub_resp->data.init.status) {
-			dev_err(shub->dev, "Sensors init failed\n");
-			ret = -1;
-			goto err_exit;
-		}
-	} else {
+		ret = -EIO;
 		dev_err(shub->dev, "Invalid response to sensor init request\n");
+		goto err_exit;
+	}
+	if (shub->shub_resp->data.init.status) {
+		dev_err(shub->dev, "Sensors init failed\n");
+		ret = -1;
 		goto err_exit;
 	}
 	chip_id_msk = shub->chip_id_mask;

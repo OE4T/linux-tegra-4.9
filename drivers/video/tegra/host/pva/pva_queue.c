@@ -51,22 +51,17 @@
  * The worst-case input action buffer size:
  * - Prefences trigger a word memory operation (size 13 bytes)
  * - Input status reads trigger a half-word memory operation (size 11 bytes)
- * - Input action list includes a single status write for
- *   timestamping purpose (size 11 bytes)
  * - The action list is terminated by a null action (1 byte)
  */
 #define INPUT_ACTION_BUFFER_SIZE ( \
 	ALIGN(PVA_MAX_PREFENCES * ACTION_LIST_FENCE_SIZE + \
 	      PVA_MAX_INPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
-	      ACTION_LIST_STATUS_OPERATION_SIZE + \
 	      ACTION_LIST_TERMINATION_SIZE, 256))
 
 /*
  * The worst-case output action buffer size:
  * - Postfences trigger a word memory operation (size 13 bytes)
  * - Output status write triggers a half-word memory operation (size 11 bytes)
- * - Output action list includes a single status write for
- *   timestamping purpose (size 11 bytes)
  * - Output action list includes a operation for stats purpose (size 9 bytes)
  * - Output action list includes syncpoint and semaphore increments
  * - The action list is terminated by a null action (1 byte)
@@ -74,7 +69,6 @@
 #define OUTPUT_ACTION_BUFFER_SIZE ( \
 	ALIGN(PVA_MAX_POSTFENCES * ACTION_LIST_FENCE_SIZE + \
 	      PVA_MAX_OUTPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
-	      ACTION_LIST_STATUS_OPERATION_SIZE + \
 	      ACTION_LIST_STATS_SIZE + \
 	      ACTION_LIST_FENCE_SIZE  * 2 + \
 	      ACTION_LIST_TERMINATION_SIZE, 256))
@@ -91,8 +85,6 @@ struct pva_hw_task {
 	struct pva_task_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter_desc output_surface_desc;
 	struct pva_task_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
-	struct nvhost_notification status_start;
-	struct nvhost_notification status_end;
 	struct pva_task_statistics statistics;
 	u8 opaque_data[PVA_MAX_PRIMARY_PAYLOAD_SIZE];
 };
@@ -507,7 +499,6 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 {
 	u8 *hw_preactions = hw_task->preactions;
 	int i = 0, j = 0, ptr = 0;
-	dma_addr_t output_status_addr;
 
 	/* Add waits to preactions list */
 	for (i = 0; i < task->num_prefences; i++) {
@@ -606,13 +597,6 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 					input_status_addr, 0);
 	}
 
-	output_status_addr = task->dma_addr +
-			     offsetof(struct pva_hw_task, status_start);
-	ptr += pva_task_write_ptr_16b_op(
-				&hw_preactions[ptr],
-				TASK_ACT_WRITE_STATUS,
-				output_status_addr, 1);
-
 	ptr += pva_task_write_atomic_op(&hw_preactions[ptr],
 		TASK_ACT_TERMINATE);
 
@@ -638,13 +622,6 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 			to_platform_device(task->pva->pdev->dev.parent);
 	dma_addr_t output_status_addr;
 	u32 thresh;
-
-	output_status_addr = task->dma_addr +
-			     offsetof(struct pva_hw_task, status_end);
-	ptr += pva_task_write_ptr_16b_op(
-				&hw_postactions[ptr],
-				TASK_ACT_WRITE_STATUS,
-				output_status_addr, 1);
 
 	/* Write Output action status */
 	for (i = 0; i < task->num_output_task_status; i++) {
@@ -989,25 +966,23 @@ static void pva_task_update(struct pva_submit_task *task)
 	struct pva *pva = task->pva;
 	struct platform_device *pdev = pva->pdev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	u64 *timestamp_start = (u64 *)&hw_task->status_start.time_stamp;
-	u64 *timestamp_end = (u64 *)&hw_task->status_end.time_stamp;
 	struct pva_task_statistics *stats = &hw_task->statistics;
 
 	trace_nvhost_task_timestamp(dev_name(&pdev->dev),
 				    pdata->class,
 				    queue->syncpt_id,
 				    task->syncpt_thresh,
-				    *timestamp_start,
-				    *timestamp_end);
+				    stats->vpu_assigned_time,
+				    stats->complete_time);
 	nvhost_eventlib_log_task(pdev,
 				 queue->syncpt_id,
 				 task->syncpt_thresh,
-				 *timestamp_start >> 5,
-				 *timestamp_end >> 5);
+				 stats->vpu_assigned_time,
+				 stats->complete_time);
 	nvhost_dbg_info("Completed task %p (0x%llx), start_time=%llu, end_time=%llu",
 			task, (u64)task->dma_addr,
-			*timestamp_start,
-			*timestamp_end);
+			stats->vpu_assigned_time,
+			stats->complete_time);
 
 	nvhost_dbg_info("QueuedTime %llu, HeadTime 0x%llu, "
 			"InputActionComplete %llu, VpuAssignedTime %llu, "
@@ -1248,6 +1223,10 @@ static int pva_task_submit(struct pva_submit_task *task)
 	if (err)
 		goto err_module_busy;
 
+	/*
+	 * TSC timestamp is same as CNTVCT. Task statistics are being
+	 * reported in TSC ticks.
+	 */
 	timestamp = arch_counter_get_cntvct();
 
 	/* Choose the submit policy based on the mode */

@@ -3007,6 +3007,8 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	INT start_index = ptx_ring->cur_tx;
 	INT original_start_index = ptx_ring->cur_tx;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
+	struct eqos_tx_queue *tx_queue = GET_TX_QUEUE_PTR(qinx);
+	static unsigned int slot_number[MAX_CHANS];
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
@@ -3119,6 +3121,16 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 						     varptp_enable);
 	if (varptp_enable) {
 		TX_NORMAL_DESC_TDES2_TTSE_WR(ptx_desc->tdes2, 0x1);
+	}
+
+	if (!vartso_enable && tx_queue->q_op_mode == EQOS_Q_AVB &&
+	    tx_queue->slot_num_check) {
+		if ((slot_number[qinx] % EQOS_MAX_SLOTS) == 0)
+			slot_number[qinx] = 0;
+
+		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(ptx_desc->tdes3,
+							  slot_number[qinx]);
+		slot_number[qinx]++;
 	}
 
 	INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);

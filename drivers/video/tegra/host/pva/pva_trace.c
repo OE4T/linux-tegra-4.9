@@ -1,7 +1,7 @@
 /*
  * PVA trace log for T194
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@
 #include "pva.h"
 #include "pva_trace.h"
 
-static void read_linear(struct pva_trace_log *trace, u32 toff)
+static void read_linear(const char *name, struct pva_trace_log *trace, u32 toff)
 {
 	struct pva_trace_header *th = NULL;
 	struct pva_trace_block_hdr *bh = NULL;
@@ -38,11 +38,13 @@ static void read_linear(struct pva_trace_log *trace, u32 toff)
 		dt = bh->start_time;
 		for (i = 0 ; i < bh->n_entries ; i++) {
 			dt = dt + tp->delta_time;
-			nvhost_dbg_info("delta_time: %llu\tmajor: %u\tminor: %u\tflags: %u\tsequence: %u\targ1: %u\targ2: %u\n",
-				dt, tp->major, tp->minor, tp->flags,
+			nvhost_dbg_info("delta_time: %llu\t %s\t major: %u\t"
+				"minor: %u\t flags: %u\tsequence: %u\targ1:"
+				" %u\targ2: %u\n",
+				dt, name, tp->major, tp->minor, tp->flags,
 				tp->sequence, tp->arg1, tp->arg2);
 
-			trace_nvhost_pva_write(dt, tp->major,
+			trace_nvhost_pva_write(dt, name, tp->major,
 				tp->minor, tp->flags, tp->sequence,
 				tp->arg1, tp->arg2);
 			tp = tp + 1;
@@ -66,6 +68,7 @@ void pva_trace_copy_to_ftrace(struct pva *pva)
 	struct pva_trace_log *trace;
 	struct pva_trace_header *th;
 	u32 toff;
+	const char *dev_name = pva->pdev->name;
 
 	trace = &pva->pva_trace;
 	th = (struct pva_trace_header *)trace->addr;
@@ -91,14 +94,14 @@ void pva_trace_copy_to_ftrace(struct pva *pva)
 
 	if (th->head_offset < toff) {
 		/* No circular read */
-		read_linear(trace, toff);
+		read_linear(dev_name, trace, toff);
 	} else {
 		/*
 		 * Circular read
 		 * Read from head to trace_log buffer size
 		 */
-		read_linear(trace, trace->size);
+		read_linear(dev_name, trace, trace->size);
 		/* Read from head to tail  */
-		read_linear(trace, toff);
+		read_linear(dev_name, trace, toff);
 	}
 }

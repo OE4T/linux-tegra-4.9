@@ -1,7 +1,7 @@
 /*
  * Nvhost event logging to ftrace.
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ TRACE_EVENT(nvhost_pva_write,
 
 	TP_PROTO(
 		u64 delta_time,
+		const char *name,
 		u8 major,
 		u8 minor,
 		u8 flags,
@@ -41,6 +42,7 @@ TRACE_EVENT(nvhost_pva_write,
 
 	TP_ARGS(
 		delta_time,
+		name,
 		major,
 		minor,
 		flags,
@@ -51,6 +53,7 @@ TRACE_EVENT(nvhost_pva_write,
 
 	TP_STRUCT__entry(
 		__field(u64, delta_time)
+		__field(const char *, name)
 		__field(u8, major)
 		__field(u8, minor)
 		__field(u8, flags)
@@ -61,6 +64,7 @@ TRACE_EVENT(nvhost_pva_write,
 
 	TP_fast_assign(
 		__entry->delta_time = delta_time;
+		__entry->name = name;
 		__entry->major = major;
 		__entry->minor = minor;
 		__entry->flags = flags;
@@ -69,10 +73,11 @@ TRACE_EVENT(nvhost_pva_write,
 		__entry->arg2 = arg2;
 		),
 
-	TP_printk("time: %llu\tmajor: 0x%x\tminor: 0x%x\tflags: 0x%x\t"
+	TP_printk("time: %llu\t %s\t major: 0x%x\tminor: 0x%x\tflags: 0x%x\t"
 		"sequence: 0x%x\targ1: %u\targ2: %u",
-		__entry->delta_time, __entry->major, __entry->minor,
-		__entry->flags, __entry->sequence, __entry->arg1, __entry->arg2)
+		__entry->delta_time, __entry->name, __entry->major,
+		__entry->minor, __entry->flags, __entry->sequence,
+		__entry->arg1, __entry->arg2)
 );
 
 #endif /*  _TRACE_NVHOST_PVA_H */

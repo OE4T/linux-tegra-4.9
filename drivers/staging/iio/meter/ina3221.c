@@ -51,6 +51,8 @@
 #define INA3221_WARN_CHAN2		0x0A
 #define INA3221_CRIT_CHAN3		0x0B
 #define INA3221_WARN_CHAN3		0x0C
+#define INA3221_SHUNT_VOLT_SUM		0x0D
+#define INA3221_SHUNT_VOLT_SUM_LIMIT	0x0E
 #define INA3221_MASK_ENABLE		0x0F
 
 #define INA3221_SHUNT_VOL(i)		(INA3221_SHUNT_VOL_CHAN1 + (i) * 2)
@@ -66,6 +68,7 @@
 #define INA3221_VSHUNT_CT		(4 << 3) /* Vshunt 1.1 mS conv time */
 #define INA3221_CONT_MODE		7 /* continuous bus n shunt V measure */
 #define INA3221_TRIG_MODE		3 /* triggered bus n shunt V measure */
+#define INA3221_ENABLE_CHAN_SUM		(7 << 12) /* sum all three channels */
 
 #define INA3221_CONT_CONFIG_DATA	(INA3221_ENABLE_CHAN | INA3221_AVG | \
 					INA3221_VBUS_CT | INA3221_VSHUNT_CT | \
@@ -95,6 +98,8 @@ enum {
 	RUNNING_MODE,
 	VBUS_VOLTAGE_CURRENT,
 	POLL_DELAY,
+	INPUT_CURRENT_SUM,
+	CRIT_CURRENT_SUM_LIMIT,
 };
 
 enum mode {
@@ -140,6 +145,9 @@ struct ina3221_platform_data {
 	u16 cont_conf_data;
 	u16 trig_conf_data;
 	bool enable_forced_continuous;
+	bool enable_channel_sum;
+	u32 crit_current_limit_sum;
+	u32 channel_sum_shunt_resistor;
 	struct ina3221_chan_pdata cpdata[INA3221_NUMBER_OF_RAILS];
 };
 
@@ -183,6 +191,24 @@ static inline int busv_register_to_mv(u16 reg)
 	int ret = (s16)reg;
 
 	return (ret >> 3) * 8;
+}
+
+/* convert shunt voltage sum register value to current (in mA) */
+static int shuntv_sum_register_to_ma(u16 reg, int resistance)
+{
+	int uv, ma;
+
+	uv = (s16)reg;
+	uv = ((uv >> 1) * 40); /* LSB (4th bit) is 40uV */
+	/*
+	 * calculate uv/resistance with rounding knowing that C99 truncates
+	 * towards zero
+	 */
+	if (uv > 0)
+		ma = ((uv * 2 / resistance) + 1) / 2;
+	else
+		ma = ((uv * 2 / resistance) - 1) / 2;
+	return ma;
 }
 
 /* convert shunt voltage register value to current (in mA) */
@@ -742,6 +768,101 @@ exit:
 	return ret;
 }
 
+static int ina3221_get_input_current_sum(struct ina3221_chip *chip,
+					 int *curr_limit)
+{
+	int ret;
+
+	mutex_lock(&chip->mutex);
+
+	if (chip->shutdown_complete) {
+		mutex_unlock(&chip->mutex);
+		return -EIO;
+	}
+
+	ret = __locked_start_conversion(chip);
+	if (ret < 0) {
+		goto exit;
+	}
+
+	/* getting voltage readings in micro volts*/
+	ret = i2c_smbus_read_word_data(chip->client, INA3221_SHUNT_VOLT_SUM);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"Reading input current sum failed: %d\n", ret);
+		goto exit;
+	}
+
+	*curr_limit = shuntv_sum_register_to_ma(be16_to_cpu(ret),
+				chip->pdata->channel_sum_shunt_resistor);
+
+	ret = __locked_end_conversion(chip);
+exit:
+	mutex_unlock(&chip->mutex);
+	return ret;
+}
+
+static int ina3221_get_input_current_sum_limit(struct ina3221_chip *chip,
+					       int *curr_limit)
+{
+	int ret;
+
+	mutex_lock(&chip->mutex);
+
+	if (chip->shutdown_complete) {
+		mutex_unlock(&chip->mutex);
+		return -EIO;
+	}
+
+	ret = i2c_smbus_read_word_data(chip->client,
+				       INA3221_SHUNT_VOLT_SUM_LIMIT);
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"reading input current sum limit failed: %d\n", ret);
+		goto exit;
+	}
+
+	*curr_limit = shuntv_sum_register_to_ma(be16_to_cpu(ret),
+				chip->pdata->channel_sum_shunt_resistor);
+	ret = 0;
+exit:
+	mutex_unlock(&chip->mutex);
+
+	return ret;
+}
+
+static int ina3221_set_input_current_sum_limit(struct ina3221_chip *chip,
+					       int curr_limit)
+{
+	int ret;
+	int shunt_volt_limit;
+
+	shunt_volt_limit = curr_limit * chip->pdata->channel_sum_shunt_resistor;
+	shunt_volt_limit = (u16)(shunt_volt_limit / 20);
+
+	mutex_lock(&chip->mutex);
+
+	if (chip->shutdown_complete) {
+		mutex_unlock(&chip->mutex);
+		return -EIO;
+	}
+
+	ret = i2c_smbus_write_word_data(chip->client,
+					INA3221_SHUNT_VOLT_SUM_LIMIT,
+					be16_to_cpu(shunt_volt_limit));
+	if (ret < 0) {
+		dev_err(chip->dev,
+			"Setting channel sum crit_current limit failed: %d\n",
+			ret);
+		goto exit;
+	}
+
+exit:
+	mutex_unlock(&chip->mutex);
+
+	return ret;
+}
+
 static int __locked_ina3221_switch_mode(struct ina3221_chip *chip,
 		   int cpus, int cpufreq)
 {
@@ -949,6 +1070,18 @@ static ssize_t ina3221_show_channel(struct device *dev,
 			return snprintf(buf, PAGE_SIZE, "%d mw\n", power_mw);
 		return ret;
 
+	case INPUT_CURRENT_SUM:
+		ret = ina3221_get_input_current_sum(chip, &current_ma);
+		if (!ret)
+			return snprintf(buf, PAGE_SIZE, "%d ma\n", current_ma);
+		return ret;
+
+	case CRIT_CURRENT_SUM_LIMIT:
+		ret = ina3221_get_input_current_sum_limit(chip, &current_ma);
+		if (!ret)
+			return snprintf(buf, PAGE_SIZE, "%d ma\n", current_ma);
+		return ret;
+
 	case CRIT_CURRENT_LIMIT:
 		ret = ina3221_get_channel_critical_current(chip, channel,
 							   &current_ma);
@@ -1020,6 +1153,15 @@ static ssize_t ina3221_set_channel(struct device *dev,
 		current_ma = (int) val;
 		ret = ina3221_set_channel_critical_current(chip, channel,
 							   current_ma);
+		return ret < 0 ? ret : len;
+
+	case CRIT_CURRENT_SUM_LIMIT:
+		if (kstrtol(buf, 10, &val) < 0)
+			return -EINVAL;
+		current_ma = (int)val;
+
+		ret = ina3221_set_input_current_sum_limit(chip, current_ma);
+
 		return ret < 0 ? ret : len;
 
 	case WARN_CURRENT_LIMIT:
@@ -1125,6 +1267,13 @@ static IIO_DEVICE_ATTR(polling_delay_2, S_IRUGO | S_IWUSR,
 		ina3221_show_channel, ina3221_set_channel,
 		PACK_MODE_CHAN(POLL_DELAY, 2));
 
+static IIO_DEVICE_ATTR(in_current_sum_input, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(INPUT_CURRENT_SUM, 0));
+static IIO_DEVICE_ATTR(crit_current_limit_sum, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(CRIT_CURRENT_SUM_LIMIT, 0));
+
 static struct attribute *ina3221_attributes[] = {
 	&iio_dev_attr_rail_name_0.dev_attr.attr,
 	&iio_dev_attr_rail_name_1.dev_attr.attr,
@@ -1145,6 +1294,8 @@ static struct attribute *ina3221_attributes[] = {
 	&iio_dev_attr_polling_delay_0.dev_attr.attr,
 	&iio_dev_attr_polling_delay_1.dev_attr.attr,
 	&iio_dev_attr_polling_delay_2.dev_attr.attr,
+	&iio_dev_attr_in_current_sum_input.dev_attr.attr,
+	&iio_dev_attr_crit_current_limit_sum.dev_attr.attr,
 	NULL,
 };
 
@@ -1215,6 +1366,16 @@ static struct ina3221_platform_data *ina3221_get_platform_data_dt(
 	pdata->enable_forced_continuous = of_property_read_bool(np,
 				"ti,enable-forced-continuous");
 
+	pdata->enable_channel_sum =
+			of_property_read_bool(np, "ti,enable-channel-sum");
+	ret = of_property_read_u32(np,
+				   "ti,channel-sum-critical-current-limit-ma",
+				   &pval);
+	if (!ret)
+		pdata->crit_current_limit_sum = pval;
+	else
+		pdata->crit_current_limit_sum = U32_MINUS_1;
+
 	for_each_child_of_node(np, child) {
 		ret = of_property_read_u32(child, "reg", &reg);
 		if (ret || reg >= 3) {
@@ -1273,7 +1434,7 @@ static int ina3221_probe(struct i2c_client *client,
 	struct ina3221_chip *chip;
 	struct iio_dev *indio_dev;
 	struct ina3221_platform_data *pdata;
-	int ret, size;
+	int ret, size, val;
 
 	pdata = ina3221_get_platform_data_dt(client);
 	if (IS_ERR(pdata)) {
@@ -1347,6 +1508,40 @@ static int ina3221_probe(struct i2c_client *client,
 	if (ret < 0) {
 		dev_info(&client->dev, "Not able to set warn and crit limits!\n");
 		/*Not an error condition, could let the probe continue*/
+	}
+
+	/* disable channel summation if all three channels shunt resistor values
+	 * are not same.
+	 */
+	if (pdata->cpdata[0].shunt_resistor ==
+	    pdata->cpdata[1].shunt_resistor &&
+	    pdata->cpdata[0].shunt_resistor ==
+	    pdata->cpdata[2].shunt_resistor)
+		pdata->channel_sum_shunt_resistor =
+			pdata->cpdata[0].shunt_resistor;
+	else
+		pdata->enable_channel_sum = 0;
+
+	if (pdata->enable_channel_sum) {
+		ret = i2c_smbus_read_word_data(chip->client,
+					       INA3221_MASK_ENABLE);
+		if (ret < 0) {
+			dev_err(&client->dev, "Failed to read mask/enable register\n");
+			return ret;
+		}
+		val = ret | INA3221_ENABLE_CHAN_SUM;
+		ret = i2c_smbus_write_word_data(chip->client,
+						INA3221_MASK_ENABLE,
+						cpu_to_be16(val));
+		if (ret < 0) {
+			dev_err(&client->dev, "Failed to write mask/enable register\n");
+			return ret;
+		}
+
+		if (pdata->crit_current_limit_sum != U32_MINUS_1) {
+			val = pdata->crit_current_limit_sum;
+			ina3221_set_input_current_sum_limit(chip, val);
+		}
 	}
 
 	if (chip->mode == FORCED_CONTINUOUS) {

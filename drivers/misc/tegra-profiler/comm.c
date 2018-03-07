@@ -729,15 +729,13 @@ error_out:
 }
 
 static void
-delete_mmap(struct quadd_mmap_area *mmap)
+remove_mmap_entry(struct quadd_mmap_area *mmap)
 {
 	struct quadd_mmap_area *entry, *next;
 
 	list_for_each_entry_safe(entry, next, &comm_ctx.mmap_areas, list) {
 		if (entry == mmap) {
 			list_del(&entry->list);
-			vfree(entry->data);
-			kfree(entry);
 			break;
 		}
 	}
@@ -773,9 +771,15 @@ static void mmap_close(struct vm_area_struct *vma)
 	else
 		pr_warn("warning: mmap area is uninitialized\n");
 
+	remove_mmap_entry(mmap);
+
 out:
 	raw_spin_unlock(&comm_ctx.mmaps_lock);
-	delete_mmap(mmap);
+
+	if (mmap) {
+		vfree(mmap->data);
+		kfree(mmap);
+	}
 }
 
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)

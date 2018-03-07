@@ -1002,8 +1002,8 @@ static void pva_task_update(struct pva_submit_task *task)
 	nvhost_eventlib_log_task(pdev,
 				 queue->syncpt_id,
 				 task->syncpt_thresh,
-				 *timestamp_start,
-				 *timestamp_end);
+				 *timestamp_start >> 5,
+				 *timestamp_end >> 5);
 	nvhost_dbg_info("Completed task %p (0x%llx), start_time=%llu, end_time=%llu",
 			task, (u64)task->dma_addr,
 			*timestamp_start,
@@ -1248,11 +1248,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 	if (err)
 		goto err_module_busy;
 
-	/*
-	 * TSC timestamp is same as CNTVCT but it's shifted by 5. Shift
-	 * CNTVCT as well to keep all the timestamps consistent.
-	 */
-	timestamp = arch_counter_get_cntvct() << 5;
+	timestamp = arch_counter_get_cntvct();
 
 	/* Choose the submit policy based on the mode */
 	switch (task->pva->submit_mode) {

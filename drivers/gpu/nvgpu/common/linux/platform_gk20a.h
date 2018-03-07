@@ -121,6 +121,9 @@ struct gk20a_platform {
 	 */
 	u32 default_pri_timeout;
 
+	/* guest/vm id, needed for IPA to PA transation */
+	int vmid;
+
 	/* Initialize the platform interface of the gk20a driver.
 	 *
 	 * The platform implementation of this function must
@@ -203,6 +206,12 @@ struct gk20a_platform {
 	 * of the CPU.
 	 */
 	void (*dump_platform_dependencies)(struct device *dev);
+
+	/* Defined when SMMU stage-2 is enabled, and we need to use physical
+	 * addresses (not IPA). This is the case for GV100 nvlink in HV+L
+	 * configuration, when dGPU is in pass-through mode.
+	 */
+	u64 (*phys_addr)(struct gk20a *g, u64 ipa);
 
 	/* Callbacks to assert/deassert GPU reset */
 	int (*reset_assert)(struct device *dev);

@@ -24,6 +24,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/nvlink.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
@@ -44,7 +45,7 @@
 
 static int nvgpu_pci_tegra_probe(struct device *dev)
 {
-	return 0;
+	return nvgpu_init_soc_vars(get_gk20a(dev));
 }
 
 static int nvgpu_pci_tegra_remove(struct device *dev)

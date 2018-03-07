@@ -33,10 +33,18 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
+#include "platform_gk20a.h"
 
-static inline u64 __nvgpu_sgl_phys(struct gk20a *g, struct nvgpu_sgl *sgl)
+static u64 __nvgpu_sgl_phys(struct gk20a *g, struct nvgpu_sgl *sgl)
 {
-	return sg_phys((struct scatterlist *)sgl);
+	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	u64 ipa = sg_phys((struct scatterlist *)sgl);
+
+	if (platform->phys_addr)
+		return platform->phys_addr(g, ipa);
+
+	return ipa;
 }
 
 int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)

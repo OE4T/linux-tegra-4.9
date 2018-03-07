@@ -13,8 +13,13 @@
 
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/tegra_bpmp.h>
+#ifdef CONFIG_TEGRA_HV_MANAGER
+#include <soc/tegra/virt/syscalls.h>
+#endif
 
 #include <nvgpu/soc.h>
+#include "os_linux.h"
+#include "platform_gk20a.h"
 
 bool nvgpu_platform_is_silicon(struct gk20a *g)
 {
@@ -39,4 +44,58 @@ bool nvgpu_is_hypervisor_mode(struct gk20a *g)
 bool nvgpu_is_bpmp_running(struct gk20a *g)
 {
 	return tegra_bpmp_running();
+}
+
+#ifdef CONFIG_TEGRA_HV_MANAGER
+/* When nvlink is enabled on dGPU, we need to use physical memory addresses.
+ * There is no SMMU translation. However, the device initially enumerates as a
+ * PCIe device. As such, when allocation memory for this PCIe device, the DMA
+ * framework ends up allocating memory using SMMU (if enabled in device tree).
+ * As a result, when we switch to nvlink, we need to use underlying physical
+ * addresses, even if memory mappings exist in SMMU.
+ * In addition, when stage-2 SMMU translation is enabled (for instance when HV
+ * is enabled), the addresses we get from dma_alloc are IPAs. We need to
+ * convert them to PA.
+ */
+static u64 nvgpu_tegra_hv_ipa_pa(struct gk20a *g, u64 ipa)
+{
+	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct hyp_ipa_pa_info info;
+	int err;
+	u64 pa = 0ULL;
+
+	err = hyp_read_ipa_pa_info(&info, platform->vmid, ipa);
+	if (err < 0) {
+		nvgpu_err(g, "ipa=%llx translation failed vmid=%u err=%d",
+				ipa, platform->vmid, err);
+	} else {
+		pa = info.base + info.offset;
+		nvgpu_log(g, gpu_dbg_map_v,
+				"ipa=%llx vmid=%d -> pa=%llx "
+				"base=%llx offset=%llx size=%llx\n",
+				ipa, platform->vmid, pa, info.base,
+				info.offset, info.size);
+	}
+	return pa;
+}
+#endif
+
+int nvgpu_init_soc_vars(struct gk20a *g)
+{
+#ifdef CONFIG_TEGRA_HV_MANAGER
+	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	int err;
+
+	if (nvgpu_is_hypervisor_mode(g)) {
+		err = hyp_read_gid(&platform->vmid);
+		if (err) {
+			nvgpu_err(g, "failed to read vmid");
+			return err;
+		}
+		platform->phys_addr = nvgpu_tegra_hv_ipa_pa;
+	}
+#endif
+	return 0;
 }

@@ -32,10 +32,10 @@
 	bluedroid_pm {
 		compatible = "nvidia,tegra-bluedroid_pm";
 		bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 6) 0>;
-		bluedroid_pm,host-wake-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(T, 3) 0>;
+		bluedroid_pm,host-wake-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(Y, 0) 0>;
 		bluedroid_pm,ext-wake-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 7) 0>;
 		interrupt-parent = <&tegra_main_gpio>;
-		interrupts = <TEGRA194_MAIN_GPIO(T, 3) 0x01>;
+		interrupts = <TEGRA194_MAIN_GPIO(Y, 0) 0x01>;
 	};
 
 	bcmdhd_pcie_wlan {

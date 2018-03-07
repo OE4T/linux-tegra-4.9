@@ -253,10 +253,6 @@
 					    TEGRA_SID(NVDLA1)
 					    TEGRA_SID(NVENC1)
 					    TEGRA_SID(NVDEC1)
-					    TEGRA_SID(SE)
-					    TEGRA_SID(SE1)
-					    TEGRA_SID(SE2)
-					    TEGRA_SID(SE3)
 					    TEGRA_SID(TSEC)
 					    TEGRA_SID(TSECB)>;
 			};
@@ -351,6 +347,13 @@
 			sdmmc4a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC4A>;
+			};
+			se_domain {
+				address-space = <&se_client_as>;
+				sid-list = <TEGRA_SID(SE)
+					    TEGRA_SID(SE1)
+					    TEGRA_SID(SE2)
+					    TEGRA_SID(SE3)>;
 			};
 			smmu_test_domain {
 				address-space = <&common_as>;
@@ -486,6 +489,13 @@
 			pva_as: pva0 {
 				iova-start = <0x0 0x80000000>;
 				iova-size = <0x0 0x7FFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			se_client_as: se {
+				iova-start = <0x0 0x1000>;
+				iova-size = <0x0 0xFFFFEFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

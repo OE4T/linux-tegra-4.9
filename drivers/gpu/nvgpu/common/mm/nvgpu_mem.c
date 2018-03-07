@@ -81,9 +81,10 @@ struct nvgpu_sgl *nvgpu_sgt_get_next(struct nvgpu_sgt *sgt,
 	return sgt->ops->sgl_next(sgl);
 }
 
-u64 nvgpu_sgt_get_phys(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl)
+u64 nvgpu_sgt_get_phys(struct gk20a *g, struct nvgpu_sgt *sgt,
+		       struct nvgpu_sgl *sgl)
 {
-	return sgt->ops->sgl_phys(sgl);
+	return sgt->ops->sgl_phys(g, sgl);
 }
 
 u64 nvgpu_sgt_get_dma(struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl)
@@ -156,7 +157,7 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 	 * of the SGT.
 	 */
 	nvgpu_sgt_for_each_sgl(sgl, sgt) {
-		chunk_align = 1ULL << __ffs(nvgpu_sgt_get_phys(sgt, sgl) |
+		chunk_align = 1ULL << __ffs(nvgpu_sgt_get_phys(g, sgt, sgl) |
 					    nvgpu_sgt_get_length(sgt, sgl));
 
 		if (align)

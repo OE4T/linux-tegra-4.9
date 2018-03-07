@@ -543,7 +543,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 		}
 
 		phys_addr = g->ops.mm.gpu_phys_addr(g, attrs,
-			    nvgpu_sgt_get_phys(sgt, sgl)) + space_to_skip;
+			    nvgpu_sgt_get_phys(g, sgt, sgl)) + space_to_skip;
 		chunk_length = min(length,
 			nvgpu_sgt_get_length(sgt, sgl) - space_to_skip);
 
@@ -629,7 +629,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   sgt ? "MAP" : "UNMAP",
 		   virt_addr,
 		   length,
-		   sgt ? nvgpu_sgt_get_phys(sgt, sgt->sgl) : 0,
+		   sgt ? nvgpu_sgt_get_phys(g, sgt, sgt->sgl) : 0,
 		   space_to_skip,
 		   page_size >> 10,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),

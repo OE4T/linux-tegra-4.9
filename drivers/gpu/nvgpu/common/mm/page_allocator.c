@@ -160,7 +160,7 @@ static struct nvgpu_sgl *nvgpu_page_alloc_sgl_next(struct nvgpu_sgl *sgl)
 	return (struct nvgpu_sgl *)sgl_impl->next;
 }
 
-static u64 nvgpu_page_alloc_sgl_phys(struct nvgpu_sgl *sgl)
+static u64 nvgpu_page_alloc_sgl_phys(struct gk20a *g, struct nvgpu_sgl *sgl)
 {
 	struct nvgpu_mem_sgl *sgl_impl = (struct nvgpu_mem_sgl *)sgl;
 
@@ -231,11 +231,12 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 			       bool free_buddy_alloc)
 {
 	struct nvgpu_sgl *sgl = alloc->sgt.sgl;
+	struct gk20a *g = a->owner->g;
 
 	if (free_buddy_alloc) {
 		while (sgl) {
 			nvgpu_free(&a->source_allocator,
-				   nvgpu_sgt_get_phys(&alloc->sgt, sgl));
+				   nvgpu_sgt_get_phys(g, &alloc->sgt, sgl));
 			sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 		}
 	}
@@ -615,6 +616,7 @@ fail:
 static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 	struct nvgpu_page_allocator *a, u64 len)
 {
+	struct gk20a *g = a->owner->g;
 	struct nvgpu_page_alloc *alloc = NULL;
 	struct nvgpu_sgl *sgl;
 	u64 pages;
@@ -635,7 +637,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 	while (sgl) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx",
 			   i++,
-			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_phys(g, &alloc->sgt, sgl),
 			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
 		sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 	}
@@ -779,6 +781,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 	struct nvgpu_page_allocator *a = page_allocator(__a);
 	struct nvgpu_page_alloc *alloc = NULL;
 	struct nvgpu_sgl *sgl;
+	struct gk20a *g = a->owner->g;
 	u64 aligned_len, pages;
 	int i = 0;
 
@@ -802,7 +805,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 	while (sgl) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx",
 			   i++,
-			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_phys(g, &alloc->sgt, sgl),
 			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
 		sgl = nvgpu_sgt_get_next(&alloc->sgt, sgl);
 	}

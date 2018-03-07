@@ -34,6 +34,11 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+static inline u64 __nvgpu_sgl_phys(struct gk20a *g, struct nvgpu_sgl *sgl)
+{
+	return sg_phys((struct scatterlist *)sgl);
+}
+
 int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;
@@ -309,10 +314,12 @@ u64 nvgpu_mem_get_addr_sgl(struct gk20a *g, struct scatterlist *sgl)
 {
 	if (nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ||
 	    !nvgpu_iommuable(g))
-		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
+		return g->ops.mm.gpu_phys_addr(g, NULL,
+			__nvgpu_sgl_phys(g, (struct nvgpu_sgl *)sgl));
 
 	if (sg_dma_address(sgl) == 0)
-		return g->ops.mm.gpu_phys_addr(g, NULL, sg_phys(sgl));
+		return g->ops.mm.gpu_phys_addr(g, NULL,
+			__nvgpu_sgl_phys(g, (struct nvgpu_sgl *)sgl));
 
 	if (sg_dma_address(sgl) == DMA_ERROR_CODE)
 		return 0;
@@ -376,7 +383,7 @@ u64 nvgpu_mem_get_phys_addr(struct gk20a *g, struct nvgpu_mem *mem)
 	if (mem->aperture == APERTURE_VIDMEM)
 		return nvgpu_mem_get_addr(g, mem);
 
-	return sg_phys(mem->priv.sgt->sgl);
+	return __nvgpu_sgl_phys(g, (struct nvgpu_sgl *)mem->priv.sgt->sgl);
 }
 
 /*
@@ -501,9 +508,9 @@ static struct nvgpu_sgl *nvgpu_mem_linux_sgl_next(struct nvgpu_sgl *sgl)
 	return (struct nvgpu_sgl *)sg_next((struct scatterlist *)sgl);
 }
 
-static u64 nvgpu_mem_linux_sgl_phys(struct nvgpu_sgl *sgl)
+static u64 nvgpu_mem_linux_sgl_phys(struct gk20a *g, struct nvgpu_sgl *sgl)
 {
-	return (u64)sg_phys((struct scatterlist *)sgl);
+	return (u64)__nvgpu_sgl_phys(g, sgl);
 }
 
 static u64 nvgpu_mem_linux_sgl_dma(struct nvgpu_sgl *sgl)
@@ -522,7 +529,7 @@ static u64 nvgpu_mem_linux_sgl_gpu_addr(struct gk20a *g,
 {
 	if (sg_dma_address((struct scatterlist *)sgl) == 0)
 		return g->ops.mm.gpu_phys_addr(g, attrs,
-			sg_phys((struct scatterlist *)sgl));
+				__nvgpu_sgl_phys(g, sgl));
 
 	if (sg_dma_address((struct scatterlist *)sgl) == DMA_ERROR_CODE)
 		return 0;

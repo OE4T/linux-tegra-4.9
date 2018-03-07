@@ -430,7 +430,7 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 		err = gk20a_ce_execute_ops(g,
 			g->mm.vidmem.ce_ctx_id,
 			0,
-			nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			nvgpu_sgt_get_phys(g, &alloc->sgt, sgl),
 			nvgpu_sgt_get_length(&alloc->sgt, sgl),
 			0x00000000,
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
@@ -445,7 +445,7 @@ int nvgpu_vidmem_clear(struct gk20a *g, struct nvgpu_mem *mem)
 		}
 
 		vidmem_dbg(g, "  > [0x%llx  +0x%llx]",
-			   nvgpu_sgt_get_phys(&alloc->sgt, sgl),
+			   nvgpu_sgt_get_phys(g, &alloc->sgt, sgl),
 			   nvgpu_sgt_get_length(&alloc->sgt, sgl));
 
 		gk20a_last_fence = gk20a_fence_out;

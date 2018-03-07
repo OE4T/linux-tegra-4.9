@@ -122,7 +122,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 			continue;
 		}
 
-		phys_addr = nvgpu_sgt_get_phys(sgt, sgl) + space_to_skip;
+		phys_addr = nvgpu_sgt_get_phys(g, sgt, sgl) + space_to_skip;
 		chunk_length = min(size,
 			   nvgpu_sgt_get_length(sgt, sgl) - space_to_skip);
 

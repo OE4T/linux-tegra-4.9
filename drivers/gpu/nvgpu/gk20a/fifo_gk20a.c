@@ -867,6 +867,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned int chid, i;
 	int err = 0;
+	u64 userd_base;
 
 	gk20a_dbg_fn("");
 
@@ -929,9 +930,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	}
 	gk20a_dbg(gpu_dbg_map, "userd gpu va = 0x%llx", f->userd.gpu_va);
 
+	userd_base = nvgpu_mem_get_addr(g, &f->userd);
 	for (chid = 0; chid < f->num_channels; chid++) {
-		f->channel[chid].userd_iova =
-			nvgpu_mem_get_addr(g, &f->userd) +
+		f->channel[chid].userd_iova = userd_base +
 			chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;

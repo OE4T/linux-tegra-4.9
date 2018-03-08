@@ -606,7 +606,7 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 	if (val & APPL_INTR_STATUS_L0_INT_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_8_0 = 0x%08X\n", val);
-		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK &
+		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK &&
 		    !pcie->dma_disable) {
 			val = dma_common_rd(pcie->atu_dma_base,
 					    DMA_WRITE_INT_STATUS_OFF);

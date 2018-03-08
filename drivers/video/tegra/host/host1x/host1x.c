@@ -37,6 +37,7 @@
 #include <linux/version.h>
 #include <linux/poll.h>
 #include <linux/anon_inodes.h>
+#include <linux/kref.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -480,6 +481,7 @@ struct nvhost_event_poll_fd_rec {
 	bool event_posted;
 	struct mutex lock;
 	wait_queue_head_t wq;
+	struct kref ref;
 };
 
 static unsigned int nvhost_event_poll(struct file *filp, poll_table *wait)
@@ -499,10 +501,18 @@ static unsigned int nvhost_event_poll(struct file *filp, poll_table *wait)
 	return mask;
 }
 
+static void nvhost_event_poll_free_priv_data(struct kref *ref)
+{
+	struct nvhost_event_poll_fd_rec *private_data =
+		container_of(ref, struct nvhost_event_poll_fd_rec, ref);
+
+	kfree(private_data);
+}
+
 static int nvhost_event_poll_fd_release(struct inode *inode, struct file *filp)
 {
 	struct nvhost_event_poll_fd_rec *private_data = filp->private_data;
-	kfree(private_data);
+	kref_put(&private_data->ref, nvhost_event_poll_free_priv_data);
 	return 0;
 }
 
@@ -544,6 +554,7 @@ static int nvhost_ioctl_ctrl_poll_fd_create (
 	init_waitqueue_head(&private_data->wq);
 	mutex_init(&private_data->lock);
 	private_data->event_posted = false;
+	kref_init(&private_data->ref);
 
 	fd_install(fd, file);
 	file->private_data = private_data;
@@ -568,6 +579,8 @@ static void nvhost_event_poll_update(void *priv, int nr_completed)
 	mutex_unlock(&private_data->lock);
 
 	wake_up_interruptible(&private_data->wq);
+
+	kref_put(&private_data->ref, nvhost_event_poll_free_priv_data);
 }
 
 static int nvhost_ioctl_ctrl_poll_fd_trigger_event(
@@ -588,9 +601,12 @@ static int nvhost_ioctl_ctrl_poll_fd_trigger_event(
 		return -EINVAL;
 
 	private_data = (struct nvhost_event_poll_fd_rec *)f->private_data;
+	kref_get(&private_data->ref);
 
 	err = nvhost_intr_register_fast_notifier(ctx->dev->dev, args->id,
 		args->thresh, nvhost_event_poll_update, private_data);
+	if (err)
+		kref_put(&private_data->ref, nvhost_event_poll_free_priv_data);
 
 	fput(f);
 	return err;

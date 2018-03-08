@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -185,6 +185,14 @@
 			* num_of_ignored_pixels = "";
 			* Used for cropping, The length of line info(pixels)
 			*
+			* num_of_left_margin_pixels = "";
+			* Used for cropping, the size of the left edge margin before
+			* the active pixel area (after ignored pixels)
+			*
+			* num_of_right_margin_pixels = "";
+			* Used for cropping, the size of the right edge margin after
+			* the active pixel area
+			*
 			*/
 				mode0 { // IMX274_MODE_3840X2160
 					mclk_khz = "24000";
@@ -262,8 +270,8 @@
 					mode_type = "bayer_wdr_dol";
 					pixel_phase = "rggb";
 
-					active_w = "3844";
-					active_h = "4448";
+					active_w = "3856";
+					active_h = "4436";
 					readout_orientation = "0";
 					line_length = "4208";
 					inherent_gain = "1";
@@ -286,6 +294,8 @@
 					num_of_ignored_lines = "8";
 					num_of_lines_offset_0 = "50";
 					num_of_ignored_pixels = "4";
+					num_of_left_margin_pixels = "12";
+					num_of_right_margin_pixels = "0";
 				};
 				mode3 { // IMX274_MODE_1920X1080_DOL_60FPS
 					mclk_khz = "24000";
@@ -300,7 +310,7 @@
 					mode_type = "bayer_wdr_dol";
 					pixel_phase = "rggb";
 
-					active_w = "1924";
+					active_w = "1936";
 					active_h = "2252";
 					readout_orientation = "0";
 					line_length = "4160";
@@ -325,6 +335,8 @@
 					num_of_ignored_lines = "8";
 					num_of_lines_offset_0 = "38";
 					num_of_ignored_pixels = "4";
+					num_of_left_margin_pixels = "6";
+					num_of_right_margin_pixels = "6";
 				};
 				ports {
 					#address-cells = <1>;

@@ -59,6 +59,7 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 {
 	int ret = 0;
 	struct gk20a *gk20a = sea->gk20a;
+	u32 i;
 
 	__lock_sema_sea(sea);
 
@@ -70,6 +71,14 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 
 	sea->size = SEMAPHORE_POOL_COUNT;
 	sea->map_size = SEMAPHORE_POOL_COUNT * PAGE_SIZE;
+
+	/*
+	 * Start the semaphores at values that will soon overflow the 32-bit
+	 * integer range. This way any buggy comparisons would start to fail
+	 * sooner rather than later.
+	 */
+	for (i = 0; i < PAGE_SIZE * SEMAPHORE_POOL_COUNT; i += 4)
+		nvgpu_mem_wr(gk20a, &sea->sea_mem, i, 0xfffffff0);
 
 out:
 	__unlock_sema_sea(sea);
@@ -345,6 +354,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	int ret = 0;
 	struct nvgpu_semaphore_int *hw_sema;
 	struct nvgpu_semaphore_pool *p = ch->vm->sema_pool;
+	int current_value;
 
 	BUG_ON(!p);
 
@@ -369,8 +379,8 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	hw_sema->p = p;
 	hw_sema->idx = hw_sema_idx;
 	hw_sema->offset = SEMAPHORE_SIZE * hw_sema_idx;
-	nvgpu_atomic_set(&hw_sema->next_value, 0);
-	nvgpu_mem_wr(ch->g, &p->rw_mem, hw_sema->offset, 0);
+	current_value = nvgpu_mem_rd(ch->g, &p->rw_mem, hw_sema->offset);
+	nvgpu_atomic_set(&hw_sema->next_value, current_value);
 
 	nvgpu_mutex_release(&p->pool_lock);
 

@@ -95,6 +95,7 @@
 			};
 		};
 		csi_base: nvcsi@15a00000 {
+			num-tpg-channels = <36>;
 			csi_chan0: channel@0 {
 				status = "disabled";
 				ports {

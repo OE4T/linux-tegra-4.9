@@ -73,6 +73,9 @@
 #define PD_PORT0_REG_IDX        0x1000
 #define PD_PORT1_REG_IDX        0x2000
 
+/* CCGx user defined register (0x40~0x4F) */
+#define REG_VENDOR_DEFINED_0	0x0040
+
 /* UCSI memory region */
 #define REG_UCSI_VERSION	0xF000
 #define REG_UCSI_CCI		0xF004
@@ -980,6 +983,33 @@ static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port)
 	return 0;
 }
 
+static int
+ccg_cmd_vendor_defined_reg
+(struct ucsi_ccg *ccg, int reg_offset, int data)
+{
+	struct ccg_cmd cmd;
+	int ret;
+
+	/* 0x40~0x4F can be used as vendor defined reg */
+	if ((reg_offset < 0) || (reg_offset > 0xF))
+		return CMD_INVALID;
+
+	cmd.reg = REG_VENDOR_DEFINED_0 + reg_offset;
+	cmd.data = data;
+	cmd.len = 1;
+
+	mutex_lock(&ccg->lock);
+	ret = ccg_send_command(ccg, &cmd);
+	mutex_unlock(&ccg->lock);
+
+	if (ret != CMD_SUCCESS) {
+		dev_err(ccg->dev, "%s: failed ret=%d\n", __func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int do_flash(struct ucsi_ccg *ccg, const struct firmware *fw)
 {
 	struct device *dev = ccg->dev;
@@ -1247,13 +1277,40 @@ static ssize_t test_show(struct device *dev,
 
 }
 
+static ssize_t set_debugger_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct i2c_client *i2c_cl = to_i2c_client(dev);
+	struct ucsi_ccg *ccg = i2c_get_clientdata(i2c_cl);
+	unsigned int mode;
+
+	if (kstrtouint(buf, 10, &mode))
+		return -EINVAL;
+
+	/* write debugger mode to vendor defined reg 0x41 */
+	ccg_cmd_vendor_defined_reg(ccg, 1, mode);
+
+	return n;
+}
+
+static ssize_t set_debugger_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf,
+		"0: Apply TypeC default mode\n"
+		"1: Apply E2440 debugger mode\n"
+		"2: Apply E2540 debugger mode\n");
+}
+
 static DEVICE_ATTR(do_flash, 0644, do_flash_show, do_flash_store);
 static DEVICE_ATTR(test, 0644, test_show, test_store);
+static DEVICE_ATTR(set_debugger, 0644, set_debugger_show, set_debugger_store);
 
 static struct attribute *
 ucsi_ccg_sysfs_attrs[] = {
 	&dev_attr_do_flash.attr,
 	&dev_attr_test.attr,
+	&dev_attr_set_debugger.attr,
 	NULL,
 };
 

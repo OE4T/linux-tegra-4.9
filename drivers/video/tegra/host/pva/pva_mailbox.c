@@ -26,6 +26,7 @@
 #include "nvhost_acm.h"
 #include "dev.h"
 #include "pva.h"
+#include "pva_mailbox.h"
 
 static u32 pva_get_mb_reg(u32 i)
 {
@@ -215,3 +216,4 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 err_invalid_parameter:
 	return err;
 }
+EXPORT_SYMBOL(pva_mailbox_send_cmd_sync);

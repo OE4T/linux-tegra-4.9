@@ -1465,7 +1465,9 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 
 		/* Stop and disconnect the PHY */
 		if (pdata->phydev) {
-			phy_stop_interrupts(pdata->phydev);
+			if (phy_interrupt_is_valid(pdata->phydev))
+				phy_stop_interrupts(pdata->phydev);
+
 			phy_stop(pdata->phydev);
 
 			if (gpio_is_valid(pdata->phy_reset_gpio))
@@ -1519,7 +1521,8 @@ static INT eqos_resume(struct platform_device *pdev)
 	eqos_clock_init(pdata);
 
 	if (netif_running(dev)) {
-		if (pdata->phydev->drv->low_power_mode) {
+		if (pdata->phydev && pdata->phydev->drv &&
+		    pdata->phydev->drv->low_power_mode) {
 			/* reset the PHY Broadcom PHY needs minimum of 2us delay */
 			pr_info("%s(): exit from iddq-lp mode\n", __func__);
 			if (gpio_is_valid(pdata->phy_reset_gpio)) {
@@ -1528,7 +1531,8 @@ static INT eqos_resume(struct platform_device *pdev)
 				gpio_set_value(pdata->phy_reset_gpio, 1);
 			}
 			pdata->phydev->drv->low_power_mode(pdata->phydev, false);
-		} else if (!gpio_get_value(pdata->phy_reset_gpio)) {
+		} else if (gpio_is_valid(pdata->phy_reset_gpio) &&
+			   !gpio_get_value(pdata->phy_reset_gpio)) {
 			/* deassert phy reset */
 			gpio_set_value(pdata->phy_reset_gpio, 1);
 		}
@@ -1537,8 +1541,10 @@ static INT eqos_resume(struct platform_device *pdev)
 
 		/* Init the PHY */
 		pdata->phydev->drv->config_init(pdata->phydev);
+
 		/* Enable PHY interrupts */
-		phy_start_interrupts(pdata->phydev);
+		if (phy_interrupt_is_valid(pdata->phydev))
+			phy_start_interrupts(pdata->phydev);
 	}
 	pdata->suspended = 0;
 	pdata->hw_stopped = false;

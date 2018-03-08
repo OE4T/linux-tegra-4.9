@@ -270,6 +270,9 @@ static int nvgpu_as_ioctl_get_sync_ro_map(
 	if (!g->ops.fifo.get_sync_ro_map)
 		return -EINVAL;
 
+	if (!gk20a_platform_has_syncpoints(g))
+		return -EINVAL;
+
 	err = g->ops.fifo.get_sync_ro_map(vm, &base_gpuva, &sync_size);
 	if (err)
 		return err;

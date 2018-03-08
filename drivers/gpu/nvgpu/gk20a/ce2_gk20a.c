@@ -43,7 +43,7 @@
  * Copy engine defines line size in pixels
  */
 #define MAX_CE_SHIFT	31	/* 4Gpixels -1 */
-#define MAX_CE_MASK	((u32) (~(~0 << MAX_CE_SHIFT)))
+#define MAX_CE_MASK	((u32) (~(~0U << MAX_CE_SHIFT)))
 #define MAX_CE_ALIGN(a)	(a & MAX_CE_MASK)
 
 

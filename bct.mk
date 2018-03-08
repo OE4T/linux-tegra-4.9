@@ -13,6 +13,7 @@ PRODUCT_COPY_FILES += \
     $(BCT_FILES_PATH)/padvoltage/tegra19x-mb1-padvoltage-p2888-0000-p2822-0000.cfg:tegra19x-mb1-padvoltage-p2888-0000-p2822-0000.cfg \
     $(BCT_FILES_PATH)/padvoltage/tegra19x-mb1-padvoltage-p2888-0000-a00-p2822-0000-a00.cfg:tegra19x-mb1-padvoltage-p2888-0000-a00-p2822-0000-a00.cfg \
     $(BCT_FILES_PATH)/prod/tegra19x-mb1-prod-p2888-0000-p2822-0000.cfg:tegra19x-mb1-prod-p2888-0000-p2822-0000.cfg \
+    $(BCT_FILES_PATH)/deviceprod/tegra19x-mb1-deviceprod-p2888-0001-p2822-0000.cfg:tegra19x-mb1-deviceprod-p2888-0001-p2822-0000.cfg \
     $(BCT_FILES_PATH)/uphy-lane/tegra194-mb1-uphy-lane-p2888-0000-p2822-0000.cfg:tegra194-mb1-uphy-lane-p2888-0000-p2822-0000.cfg \
     $(BCT_FILES_PATH)/sdram/tegra194-mb1-bct-memcfg-derated-p2888.cfg:tegra194-mb1-bct-memcfg-derated-p2888.cfg \
     $(BCT_FILES_PATH)/sdram/tegra194-mb1-bct-memcfg-p2888.cfg:tegra194-mb1-bct-memcfg-p2888.cfg

@@ -284,7 +284,9 @@ struct ufs_tegra_host {
 	struct clk *ufs_uphy_pll3;
 	struct regulator *vddio_ufs;
 	struct regulator *vddio_ufs_ap;
-	struct padctrl *ufs_padctrl;
+	struct pinctrl *ufs_pinctrl;
+	struct pinctrl_state *dpd_enable;
+	struct pinctrl_state *dpd_disable;
 	u32 vs_burst;
 	/* Hibernate entry support is broken
 	   WAR is suggested to fix hibernate entry functionality

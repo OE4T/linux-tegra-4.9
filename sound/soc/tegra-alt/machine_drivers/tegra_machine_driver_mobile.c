@@ -37,10 +37,6 @@
 #include "tegra_asoc_machine_alt.h"
 #include "tegra210_xbar_alt.h"
 
-#ifdef CONFIG_SWITCH
-#include <linux/switch.h>
-#endif
-
 #define DRV_NAME "tegra-asoc:"
 
 #define GPIO_SPKR_EN    BIT(0)
@@ -339,30 +335,21 @@ static const struct snd_soc_dapm_widget tegra_mystique_dapm_widgets[] = {
 static const struct snd_soc_dapm_route tegra_machine_audio_map[] = {
 };
 
-#ifdef CONFIG_SWITCH
 static const char * const tegra_machine_jack_state_text[] = {
 	"None",
 	"HS",
 	"HP",
 	"MIC",
 };
-static struct switch_dev tegra_machine_headset_switch = {
-		.name = "h2w",
-};
+
+enum headset_state headset_jack_state;
+
 static struct notifier_block tegra_machine_jack_detect_nb = {
 	.notifier_call = tegra_machine_jack_notifier,
 };
 static const struct soc_enum tegra_machine_jack_state =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_jack_state_text),
 		tegra_machine_jack_state_text);
-#else
-static struct snd_soc_jack_pin tegra_machine_hp_jack_pins[] = {
-	{
-		.pin = "Headphone Jack",
-		.mask = SND_JACK_HEADPHONE,
-	},
-};
-#endif
 
 static const struct snd_kcontrol_new tegra_machine_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Spk"),
@@ -376,11 +363,9 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 	SOC_SINGLE_EXT("bclk ratio override", SND_SOC_NOPM, 0, INT_MAX, 0,
 		tegra_machine_codec_get_bclk_ratio,
 		tegra_machine_codec_put_bclk_ratio),
-#ifdef CONFIG_SWITCH
 	SOC_ENUM_EXT("Jack-state", tegra_machine_jack_state,
 		tegra_machine_codec_get_jack_state,
 		tegra_machine_codec_put_jack_state),
-#endif
 };
 
 static const struct snd_kcontrol_new tegra_mystique_controls[] = {
@@ -558,29 +543,29 @@ static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#ifdef CONFIG_SWITCH
 static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = tegra_machine_headset_switch.state;
+	ucontrol->value.integer.value[0] = headset_jack_state;
 	return 0;
 }
 
 static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+
 	if (ucontrol->value.integer.value[0] == SWITCH_STATE_NONE)
-		switch_set_state(&tegra_machine_headset_switch,
-			SWITCH_STATE_NONE);
+		snd_soc_jack_report(&tegra_machine_hp_jack, 0,
+			SND_JACK_HEADSET);
 	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HS)
-		switch_set_state(&tegra_machine_headset_switch,
-			SWITCH_STATE_HS);
+		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_HEADSET,
+			SND_JACK_HEADSET);
 	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HP)
-		switch_set_state(&tegra_machine_headset_switch,
-			SWITCH_STATE_HP);
+		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_HEADPHONE,
+			SND_JACK_HEADSET);
 	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_MIC)
-		switch_set_state(&tegra_machine_headset_switch,
-			SWITCH_STATE_MIC);
+		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_MICROPHONE,
+			SND_JACK_HEADSET);
 	return 0;
 }
 
@@ -591,9 +576,9 @@ static int tegra_machine_jack_notifier(struct notifier_block *self,
 	struct snd_soc_card *card = jack->card;
 
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	enum headset_state state = SWITCH_STATE_NONE;
 	static bool button_pressed;
 	struct snd_soc_pcm_runtime *rtd;
+	headset_jack_state = SWITCH_STATE_NONE;
 
 	if (!machine->is_hs_supported)
 		return NOTIFY_OK;
@@ -617,24 +602,22 @@ static int tegra_machine_jack_notifier(struct notifier_block *self,
 
 	switch (jack->status) {
 	case SND_JACK_HEADPHONE:
-		state = SWITCH_STATE_HP;
+		headset_jack_state = SWITCH_STATE_HP;
 		break;
 	case SND_JACK_HEADSET:
-		state = SWITCH_STATE_HS;
+		headset_jack_state = SWITCH_STATE_HS;
 		break;
 	case SND_JACK_MICROPHONE:
 		/* special case for intel HDA header */
-		state = SWITCH_STATE_MIC;
+		headset_jack_state = SWITCH_STATE_MIC;
 		break;
 	default:
-		state = SWITCH_STATE_NONE;
+		headset_jack_state = SWITCH_STATE_NONE;
 	}
 
-	dev_dbg(card->dev, "switch state to %x\n", state);
-	switch_set_state(&tegra_machine_headset_switch, state);
+	dev_dbg(card->dev, "switch state to %x\n", headset_jack_state);
 	return NOTIFY_OK;
 }
-#endif
 
 static struct snd_soc_pcm_runtime *tegra_machine_get_codec_link(
 						struct snd_soc_card *card)
@@ -1071,25 +1054,15 @@ static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	err = snd_soc_card_jack_new(card, "Headphone Jack", SND_JACK_HEADPHONE,
+	err = snd_soc_card_jack_new(card, "Headset Jack", SND_JACK_HEADSET,
 					&tegra_machine_hp_jack, NULL, 0);
 	if (err) {
 		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
 		return err;
 	}
 
-#ifndef CONFIG_SWITCH
-	err = snd_soc_jack_add_pins(&tegra_machine_hp_jack,
-					ARRAY_SIZE(tegra_machine_hp_jack_pins),
-					tegra_machine_hp_jack_pins);
-	if (err) {
-		dev_err(card->dev, "snd_soc_jack_add_pins failed %d\n", err);
-		return err;
-	}
-#else
 	snd_soc_jack_notifier_register(&tegra_machine_hp_jack,
 		&tegra_machine_jack_detect_nb);
-#endif
 
 	/* single button supporting play/pause */
 	snd_jack_set_key(tegra_machine_hp_jack.jack,
@@ -1370,13 +1343,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	dai_link_setup(pdev);
 
-#ifdef CONFIG_SWITCH
-	/* Add h2w swith class support */
-	ret = tegra_alt_asoc_switch_register(&tegra_machine_headset_switch);
-	if (ret < 0)
-		goto err_alloc_dai_link;
-#endif
-
 	pdata = devm_kzalloc(&pdev->dev,
 				sizeof(struct tegra_asoc_platform_data),
 				GFP_KERNEL);
@@ -1384,7 +1350,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Can't allocate tegra_asoc_platform_data struct\n");
 		ret = -ENOMEM;
-		goto err_switch_unregister;
+		goto err_alloc_dai_link;
 	}
 
 	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =
@@ -1398,13 +1364,13 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 					&pdev->dev,
 					card);
 	if (ret)
-		goto err_switch_unregister;
+		goto err_alloc_dai_link;
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		goto err_switch_unregister;
+		goto err_alloc_dai_link;
 	}
 
 #ifdef CONFIG_ANDROID
@@ -1429,10 +1395,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	return 0;
 
-err_switch_unregister:
-#ifdef CONFIG_SWITCH
-	tegra_alt_asoc_switch_unregister(&tegra_machine_headset_switch);
-#endif
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
@@ -1446,9 +1408,6 @@ static int tegra_machine_driver_remove(struct platform_device *pdev)
 
 	snd_soc_unregister_card(card);
 
-#ifdef CONFIG_SWITCH
-	tegra_alt_asoc_switch_unregister(&tegra_machine_headset_switch);
-#endif
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
 

@@ -2,7 +2,7 @@
  * tegra_asoc_utils_alt.c - MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2010-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -36,10 +36,6 @@
 #include <linux/pinctrl/pinconf-tegra.h>
 
 #include "tegra_asoc_utils_alt.h"
-
-#ifdef CONFIG_SWITCH
-static bool is_switch_registered;
-#endif
 
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,
@@ -327,34 +323,6 @@ int tegra_alt_asoc_utils_set_extern_parent(
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_set_extern_parent);
-
-#ifdef CONFIG_SWITCH
-int tegra_alt_asoc_switch_register(struct switch_dev *sdev)
-{
-	int ret;
-
-	if (is_switch_registered)
-		return -EBUSY;
-
-	ret = switch_dev_register(sdev);
-
-	if (ret >= 0)
-		is_switch_registered = true;
-
-	return ret;
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_switch_register);
-
-void tegra_alt_asoc_switch_unregister(struct switch_dev *sdev)
-{
-	if (!is_switch_registered)
-		return;
-
-	switch_dev_unregister(sdev);
-	is_switch_registered = false;
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_switch_unregister);
-#endif
 
 MODULE_AUTHOR("Stephen Warren <swarren@nvidia.com>");
 MODULE_DESCRIPTION("Tegra ASoC utility code");

@@ -23,10 +23,6 @@
 #ifndef __TEGRA_ASOC_UTILS_ALT_H_
 #define __TEGRA_ASOC_UTILS_ALT_H_
 
-#ifdef CONFIG_SWITCH
-#include <linux/switch.h>
-#endif
-
 struct clk;
 struct device;
 
@@ -100,10 +96,5 @@ int tegra_alt_asoc_utils_clk_disable(struct tegra_asoc_audio_clock_info *data);
 int tegra_alt_asoc_utils_register_ctls(struct tegra_asoc_audio_clock_info *data);
 
 int tegra_alt_asoc_utils_tristate_dap(int id, bool tristate);
-
-#ifdef CONFIG_SWITCH
-int tegra_alt_asoc_switch_register(struct switch_dev *sdev);
-void tegra_alt_asoc_switch_unregister(struct switch_dev *sdev);
-#endif
 
 #endif

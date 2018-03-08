@@ -2140,6 +2140,9 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 
 void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
+	if (sor->dc->initialized)
+		return;
+
 	if (!sor->clk_type)
 		tegra_sor_config_safe_clk(sor);
 	tegra_sor_clk_enable(sor);

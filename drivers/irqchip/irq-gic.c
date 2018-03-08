@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2002 ARM Limited, All Rights Reserved.
  *
- *  Copyright (C) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *  Copyright (C) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1571,7 +1571,8 @@ static bool gic_check_eoimode(struct device_node *node, void __iomem **base)
 {
 	struct resource cpuif_res;
 
-	of_address_to_resource(node, 1, &cpuif_res);
+	if (of_address_to_resource(node, 1, &cpuif_res))
+		return false;
 
 	if (!is_hyp_mode_available())
 		return false;

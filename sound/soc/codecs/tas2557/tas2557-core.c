@@ -216,7 +216,8 @@ int tas2557_SA_DevChnSetup(struct tas2557_priv *pTAS2557, unsigned int mode)
 	unsigned char buf_DevA_Left_DevB_Right[16] = {0x40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x40, 0, 0, 0};
 	unsigned char buf_DevA_Right_DevB_Left[16] = {0, 0, 0, 0, 0x40, 0, 0, 0, 0x40, 0, 0, 0, 0, 0, 0, 0};
 	unsigned char buf_DevA_MonoMix_DevB_MonoMix[16] = {0x20, 0, 0, 0, 0x20, 0, 0, 0, 0x20, 0, 0, 0, 0x20, 0, 0, 0};
-	unsigned char *pDevABuf, *pDevBBuf;
+	unsigned char *pDevABuf = NULL;
+	unsigned char *pDevBBuf = NULL;
 
 	dev_dbg(pTAS2557->dev, "%s, mode %d\n", __func__, mode);
 	if ((pTAS2557->mpFirmware->mnPrograms == 0)
@@ -802,6 +803,7 @@ static int tas2557_load_coefficient(struct tas2557_priv *pTAS2557,
 		chl = pPrevConfiguration->mnDevices;
 	}
 
+	pProgram = &(pTAS2557->mpFirmware->mpPrograms[pTAS2557->mnCurrentProgram]);
 	pNewConfiguration = &(pTAS2557->mpFirmware->mpConfigurations[nNewConfig]);
 	pTAS2557->mnCurrentConfiguration = nNewConfig;
 	if (pPrevConfiguration) {
@@ -812,7 +814,6 @@ static int tas2557_load_coefficient(struct tas2557_priv *pTAS2557,
 		}
 	}
 
-	pProgram = &(pTAS2557->mpFirmware->mpPrograms[pTAS2557->mnCurrentProgram]);
 	if (bPowerOn) {
 		dev_dbg(pTAS2557->dev, "%s, power down to load new snapshot\n", __func__);
 		if (hrtimer_active(&pTAS2557->mtimer))

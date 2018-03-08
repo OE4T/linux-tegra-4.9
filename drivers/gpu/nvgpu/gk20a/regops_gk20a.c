@@ -461,7 +461,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 			}
 
 			/* read first 32bits */
-			if (unlikely(skip_read_lo == false)) {
+			if (skip_read_lo == false) {
 				data32_lo = gk20a_readl(g, ops[i].offset);
 				data32_lo &= ~ops[i].and_n_mask_lo;
 				data32_lo |= ops[i].value_lo;

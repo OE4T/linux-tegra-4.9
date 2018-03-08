@@ -272,13 +272,15 @@ EXPORT_SYMBOL(tegra_virt_t210mixer_get_adder_config);
 int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct snd_soc_dapm_context *dapm =
+		snd_soc_dapm_kcontrol_dapm(kcontrol);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	unsigned int reg = mc->reg;
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct nvaudio_ivc_ctxt *hivc_client =
 		nvaudio_ivc_alloc_ctxt(card->dev);
-	int err;
+	int err, connect;
 	struct nvaudio_ivc_msg msg;
 
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
@@ -297,6 +299,9 @@ int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
 		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
 		return err;
 	}
+
+	connect = !!ucontrol->value.integer.value[0];
+	snd_soc_dapm_mixer_update_power(dapm, kcontrol, connect, NULL);
 
 	return 0;
 }

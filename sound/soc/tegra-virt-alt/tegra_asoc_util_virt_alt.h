@@ -201,6 +201,21 @@
 		.num_regs = (sizeof(uint16_t) * \
 		(TEGRA_AUDIO_METADATA_HDR_LENGTH + 1)), \
 		 })}
+
+#define ADDER_CTRL_DECL(name, id)	\
+	static const struct snd_kcontrol_new name[] = {	\
+MIXER_ADDER_CTRL_DECL("RX1", id, 0x01),	\
+MIXER_ADDER_CTRL_DECL("RX2", id, 0x02),	\
+MIXER_ADDER_CTRL_DECL("RX3", id, 0x03),	\
+MIXER_ADDER_CTRL_DECL("RX4", id, 0x04),	\
+MIXER_ADDER_CTRL_DECL("RX5", id, 0x05),	\
+MIXER_ADDER_CTRL_DECL("RX6", id, 0x06),	\
+MIXER_ADDER_CTRL_DECL("RX7", id, 0x07),	\
+MIXER_ADDER_CTRL_DECL("RX8", id, 0x08),	\
+MIXER_ADDER_CTRL_DECL("RX9", id, 0x09),	\
+MIXER_ADDER_CTRL_DECL("RX10", id, 0x0a),	\
+}
+
 enum {
 	numerator1_enum = 0,
 	numerator2_enum,

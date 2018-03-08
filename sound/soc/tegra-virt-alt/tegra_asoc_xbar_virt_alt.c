@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_xbar_virt_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 #include <linux/module.h>
 
 #include "tegra_virt_alt_ivc.h"
+#include "tegra_asoc_util_virt_alt.h"
 #include "tegra_asoc_xbar_virt_alt.h"
 
 static const struct soc_enum *tegra_virt_enum_source;
@@ -444,6 +445,13 @@ MUX_ENUM_CTRL_DECL_186(asrc16_tx, 0x71);
 MUX_ENUM_CTRL_DECL_186(asrc17_tx, 0x72);
 
 
+ADDER_CTRL_DECL(Adder1, 0x0);
+ADDER_CTRL_DECL(Adder2, 0x1);
+ADDER_CTRL_DECL(Adder3, 0x2);
+ADDER_CTRL_DECL(Adder4, 0x3);
+ADDER_CTRL_DECL(Adder5, 0x4);
+
+
 static struct snd_soc_dapm_widget tegra186_virt_xbar_widgets[] = {
 	WIDGETS("ADMAIF1", admaif1_tx),
 	WIDGETS("ADMAIF2", admaif2_tx),
@@ -464,16 +472,32 @@ static struct snd_soc_dapm_widget tegra186_virt_xbar_widgets[] = {
 	WIDGETS("SFC2", sfc2_tx),
 	WIDGETS("SFC3", sfc3_tx),
 	WIDGETS("SFC4", sfc4_tx),
-	WIDGETS("MIXER1-1", mixer11_tx),
-	WIDGETS("MIXER1-2", mixer12_tx),
-	WIDGETS("MIXER1-3", mixer13_tx),
-	WIDGETS("MIXER1-4", mixer14_tx),
-	WIDGETS("MIXER1-5", mixer15_tx),
-	WIDGETS("MIXER1-6", mixer16_tx),
-	WIDGETS("MIXER1-7", mixer17_tx),
-	WIDGETS("MIXER1-8", mixer18_tx),
-	WIDGETS("MIXER1-9", mixer19_tx),
-	WIDGETS("MIXER1-10", mixer110_tx),
+	MIXER_IN_WIDGETS("MIXER1-1", mixer11_tx),
+	MIXER_IN_WIDGETS("MIXER1-2", mixer12_tx),
+	MIXER_IN_WIDGETS("MIXER1-3", mixer13_tx),
+	MIXER_IN_WIDGETS("MIXER1-4", mixer14_tx),
+	MIXER_IN_WIDGETS("MIXER1-5", mixer15_tx),
+	MIXER_IN_WIDGETS("MIXER1-6", mixer16_tx),
+	MIXER_IN_WIDGETS("MIXER1-7", mixer17_tx),
+	MIXER_IN_WIDGETS("MIXER1-8", mixer18_tx),
+	MIXER_IN_WIDGETS("MIXER1-9", mixer19_tx),
+	MIXER_IN_WIDGETS("MIXER1-10", mixer110_tx),
+
+	MIXER_OUT_WIDGETS("MIXER1-1"),
+	MIXER_OUT_WIDGETS("MIXER1-2"),
+	MIXER_OUT_WIDGETS("MIXER1-3"),
+	MIXER_OUT_WIDGETS("MIXER1-4"),
+	MIXER_OUT_WIDGETS("MIXER1-5"),
+	SND_SOC_DAPM_MIXER("Adder1", SND_SOC_NOPM, 1, 0,
+		Adder1, ARRAY_SIZE(Adder1)),
+	SND_SOC_DAPM_MIXER("Adder2", SND_SOC_NOPM, 1, 0,
+		Adder2, ARRAY_SIZE(Adder2)),
+	SND_SOC_DAPM_MIXER("Adder3", SND_SOC_NOPM, 1, 0,
+		Adder3, ARRAY_SIZE(Adder3)),
+	SND_SOC_DAPM_MIXER("Adder4", SND_SOC_NOPM, 1, 0,
+		Adder4, ARRAY_SIZE(Adder4)),
+	SND_SOC_DAPM_MIXER("Adder5", SND_SOC_NOPM, 1, 0,
+		Adder5, ARRAY_SIZE(Adder5)),
 	WIDGETS("SPDIF1-1", spdif11_tx),
 	WIDGETS("SPDIF1-2", spdif12_tx),
 	WIDGETS("AFC1", afc1_tx),
@@ -667,10 +691,28 @@ static struct snd_soc_dapm_widget tegra186_virt_xbar_widgets[] = {
 	{ name " RX", NULL,		name " Mux"},			\
 	MUX_ROUTES(name)
 
+#define MIXER_IN_ROUTES(name)						\
+	MUX_ROUTES(name)
+
 #define MIC_SPK_ROUTES(name)						\
 	{ name " RX",       NULL,		name " MIC"},		\
 	{ name " HEADPHONE", NULL,		name " Mux"},		\
 	MUX_ROUTES(name)
+
+#define MIXER_ROUTES(name, id)	\
+	{name,	"RX1",	"MIXER1-1 Mux",},	\
+	{name,	"RX2",	"MIXER1-2 Mux",},	\
+	{name,	"RX3",	"MIXER1-3 Mux",},	\
+	{name,	"RX4",	"MIXER1-4 Mux",},	\
+	{name,	"RX5",	"MIXER1-5 Mux",},	\
+	{name,	"RX6",	"MIXER1-6 Mux",},	\
+	{name,	"RX7",	"MIXER1-7 Mux",},	\
+	{name,	"RX8",	"MIXER1-8 Mux",},	\
+	{name,	"RX9",	"MIXER1-9 Mux",},	\
+	{name,	"RX10",	"MIXER1-10 Mux"},	\
+	{"MIXER1-"#id " RX",	NULL,	name}
+
+
 
 static struct snd_soc_dapm_route tegra186_virt_xbar_routes[] = {
 	IN_OUT_ROUTES("ADMAIF1")
@@ -692,16 +734,23 @@ static struct snd_soc_dapm_route tegra186_virt_xbar_routes[] = {
 	TEGRA210_ROUTES("SFC2")
 	TEGRA210_ROUTES("SFC3")
 	TEGRA210_ROUTES("SFC4")
-	TEGRA210_ROUTES("MIXER1-1")
-	TEGRA210_ROUTES("MIXER1-2")
-	TEGRA210_ROUTES("MIXER1-3")
-	TEGRA210_ROUTES("MIXER1-4")
-	TEGRA210_ROUTES("MIXER1-5")
-	TEGRA210_ROUTES("MIXER1-6")
-	TEGRA210_ROUTES("MIXER1-7")
-	TEGRA210_ROUTES("MIXER1-8")
-	TEGRA210_ROUTES("MIXER1-9")
-	TEGRA210_ROUTES("MIXER1-10")
+	MIXER_IN_ROUTES("MIXER1-1")
+	MIXER_IN_ROUTES("MIXER1-2")
+	MIXER_IN_ROUTES("MIXER1-3")
+	MIXER_IN_ROUTES("MIXER1-4")
+	MIXER_IN_ROUTES("MIXER1-5")
+	MIXER_IN_ROUTES("MIXER1-6")
+	MIXER_IN_ROUTES("MIXER1-7")
+	MIXER_IN_ROUTES("MIXER1-8")
+	MIXER_IN_ROUTES("MIXER1-9")
+	MIXER_IN_ROUTES("MIXER1-10")
+
+	MIXER_ROUTES("Adder1", 1),
+	MIXER_ROUTES("Adder2", 2),
+	MIXER_ROUTES("Adder3", 3),
+	MIXER_ROUTES("Adder4", 4),
+	MIXER_ROUTES("Adder5", 5),
+
 	TEGRA210_ROUTES("SPDIF1-1")
 	TEGRA210_ROUTES("SPDIF1-2")
 	TEGRA210_ROUTES("AFC1")

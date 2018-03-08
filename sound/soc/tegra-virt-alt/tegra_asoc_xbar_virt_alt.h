@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_xbar_virt_alt.h - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -60,6 +60,12 @@
 	SND_SOC_DAPM_MUX(sname " Mux", SND_SOC_NOPM, 0, 0, &ename##_control)
 
 #define TX_WIDGETS(sname) \
+	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0)
+
+#define MIXER_IN_WIDGETS(sname, ename) \
+	SND_SOC_DAPM_MUX(sname " Mux", SND_SOC_NOPM, 0, 0, &ename##_control)
+
+#define MIXER_OUT_WIDGETS(sname) \
 	SND_SOC_DAPM_AIF_IN(sname " RX", NULL, 0, SND_SOC_NOPM, 0, 0)
 
 #define SND_SOC_DAPM_OUT(wname) \

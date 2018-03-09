@@ -1250,6 +1250,28 @@ int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data)
 	return max_lane_count;
 }
 
+static inline u32 tegra_dp_get_bpp(struct tegra_dc_dp_data *dp)
+{
+	int yuv_flag = dp->dc->mode.vmode & FB_VMODE_YUV_MASK;
+
+	if (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y24)) {
+		return 16;
+	} else if (yuv_flag & (FB_VMODE_Y422 | FB_VMODE_Y420)) {
+		/* YUV 422 non 8bpc and YUV 420 modes are not supported in hw */
+		dev_err(&dp->dc->ndev->dev, "%s: Unsupported mode with vmode: 0x%x for DP\n",
+				__func__, dp->dc->mode.vmode);
+		return 0;
+	} else if (yuv_flag & FB_VMODE_Y24) {
+		return 24;
+	} else if (yuv_flag & FB_VMODE_Y30) {
+		return 30;
+	} else if (yuv_flag & FB_VMODE_Y36) {
+		return 36;
+	} else {
+		return dp->dc->out->depth ? dp->dc->out->depth : 24;
+	}
+}
+
 static int tegra_dc_init_default_panel_link_cfg(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
@@ -1391,7 +1413,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	if (ret)
 		return ret;
 
-	cfg->bits_per_pixel = dp->dc->out->depth ? : 24;
+	cfg->bits_per_pixel = tegra_dp_get_bpp(dp);
 
 	cfg->lane_count = cfg->max_lane_count;
 
@@ -2887,7 +2909,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		unsigned long total_max_link_bw;
 		unsigned long mode_bw;
 
-		bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
+		bits_per_pixel = tegra_dp_get_bpp(dp);
 
 		key = tegra_dp_link_speed_get(dp, link_rate);
 		if (WARN_ON(key == dp->sor->num_link_speeds)) {
@@ -2936,6 +2958,20 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		mode->upper_margin--;
 		mode->vmode |= FB_VMODE_ADJUSTED;
 	}
+
+	if (tegra_dc_is_t21x()) {
+		/* No support for YUV modes on T21x hardware. */
+		if (mode->vmode & (YUV_MASK))
+			return false;
+	}
+
+	if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
+			(mode->vmode & FB_VMODE_Y420))
+		return false;
+
+	if ((mode->vmode & FB_VMODE_Y422) &&
+			!(mode->vmode & FB_VMODE_Y24))
+		return false;
 
 	if (!tegra_dp_check_dc_constraint(mode))
 		return false;

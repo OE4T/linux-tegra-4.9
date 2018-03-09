@@ -1380,45 +1380,133 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 	sor->power_is_up = false;
 }
 
-static u32 tegra_sor_get_pixel_depth(struct tegra_dc *dc)
+static u32 tegra_sor_hdmi_get_pixel_depth(struct tegra_dc *dc)
 {
 	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	int yuv_bypass_mode = dc->mode.vmode & FB_VMODE_BYPASS;
-	u32 pixel_depth = 0;
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI && !yuv_bypass_mode) {
+	if (!yuv_flag)
+		return NV_SOR_STATE1_ASY_PIXELDEPTH_DEFAULTVAL;
+
+	if (!yuv_bypass_mode) {
 		if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
 			if (tegra_dc_is_t19x())
-				pixel_depth =
-				tegra_sor_yuv420_8bpc_pixel_depth_t19x();
+				return tegra_sor_yuv420_8bpc_pixel_depth_t19x();
 		} else if (yuv_flag & FB_VMODE_Y422) {
 			if (yuv_flag & FB_VMODE_Y24)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_16_422;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_16_422;
 			else if (yuv_flag & FB_VMODE_Y30)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_20_422;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_20_422;
 			else if (yuv_flag & FB_VMODE_Y36)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_422;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_422;
 		} else {
 			if (yuv_flag & FB_VMODE_Y24)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444;
 			else if (yuv_flag & FB_VMODE_Y30)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_30_444;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_30_444;
 			else if (yuv_flag & FB_VMODE_Y36)
-				pixel_depth =
-					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_36_444;
+				return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_36_444;
 		}
 	} else {
-		pixel_depth = (dc->out->depth > 18 || !dc->out->depth) ?
-			NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
-			NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
+		return NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444;
 	}
 
-	return pixel_depth;
+	return NV_SOR_STATE1_ASY_PIXELDEPTH_DEFAULTVAL;
+}
+
+static u32 tegra_sor_dp_get_pixel_depth(struct tegra_dc *dc)
+{
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	int yuv_bypass_mode = dc->mode.vmode & FB_VMODE_BYPASS;
+
+	if (yuv_flag) {
+		if (!yuv_bypass_mode) {
+			if (yuv_flag & FB_VMODE_Y422) {
+				if (yuv_flag & FB_VMODE_Y24)
+					return
+					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_16_422;
+			} else if (IS_RGB(yuv_flag) ||
+				(yuv_flag & FB_VMODE_Y444)) {
+				if (yuv_flag & FB_VMODE_Y24)
+					return
+					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444;
+				else if (yuv_flag & FB_VMODE_Y30)
+					return
+					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_30_444;
+				else if (yuv_flag & FB_VMODE_Y36)
+					return
+					NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_36_444;
+			} else {
+				dev_err(&dc->ndev->dev, "%s: Unsupported mode with vmode: 0x%x for DP\n",
+						__func__, dc->mode.vmode);
+			}
+		} else {
+			dev_err(&dc->ndev->dev, "%s: Unsupported bypass mode with vmode: 0x%x for DP\n",
+					__func__, dc->mode.vmode);
+		}
+	} else {
+		return (dc->out->depth > 18 || !dc->out->depth) ?
+				NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_24_444 :
+				NV_SOR_STATE1_ASY_PIXELDEPTH_BPP_18_444;
+	}
+
+	return NV_SOR_STATE1_ASY_PIXELDEPTH_DEFAULTVAL;
+}
+
+static u32 tegra_sor_get_pixel_depth(struct tegra_dc *dc)
+{
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		return tegra_sor_hdmi_get_pixel_depth(dc);
+	else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))
+		return tegra_sor_dp_get_pixel_depth(dc);
+
+	dev_err(&dc->ndev->dev, "%s: unsupported out_type=%d\n",
+			__func__, dc->out->type);
+	return 0;
+}
+
+static u32 tegra_sor_get_range_compress(struct tegra_dc *dc)
+{
+	if ((dc->mode.vmode & FB_VMODE_BYPASS) ||
+			!(dc->mode.vmode & FB_VMODE_LIMITED_RANGE))
+		return NV_HEAD_STATE0_RANGECOMPRESS_DISABLE;
+
+	return NV_HEAD_STATE0_RANGECOMPRESS_ENABLE;
+}
+
+static u32 tegra_sor_get_dynamic_range(struct tegra_dc *dc)
+{
+	if ((dc->mode.vmode & FB_VMODE_BYPASS) ||
+		!(dc->mode.vmode & FB_VMODE_LIMITED_RANGE))
+		return NV_HEAD_STATE0_DYNRANGE_VESA;
+
+	return NV_HEAD_STATE0_DYNRANGE_CEA;
+}
+
+static u32 tegra_sor_get_color_space(struct tegra_dc *dc)
+{
+	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
+	u32 color_space = NV_HEAD_STATE0_COLORSPACE_RGB;
+
+	if (!IS_RGB(yuv_flag)) {
+		u32 ec = dc->mode.vmode & FB_VMODE_EC_MASK;
+
+		switch (ec) {
+		case FB_VMODE_EC_ADOBE_YCC601:
+		case FB_VMODE_EC_SYCC601:
+		case FB_VMODE_EC_XVYCC601:
+			color_space = NV_HEAD_STATE0_COLORSPACE_YUV_601;
+			break;
+		case FB_VMODE_EC_XVYCC709:
+			color_space = NV_HEAD_STATE0_COLORSPACE_YUV_709;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return color_space;
 }
 
 static inline u32 tegra_sor_get_adjusted_hblank(struct tegra_dc *dc,
@@ -1471,6 +1559,13 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	reg_val |= tegra_sor_get_pixel_depth(dc);
 	tegra_sor_writel(sor, NV_SOR_STATE1, reg_val);
 
+	/* Interlaced is not supported in hw */
+	reg_val = NV_HEAD_STATE0_INTERLACED_PROGRESSIVE;
+	reg_val |= tegra_sor_get_range_compress(sor->dc);
+	reg_val |= tegra_sor_get_dynamic_range(sor->dc);
+	reg_val |= tegra_sor_get_color_space(sor->dc);
+	tegra_sor_writel(sor, nv_sor_head_state0(head_num), reg_val);
+
 	BUG_ON(!dc_mode);
 	vtotal = dc_mode->v_sync_width + dc_mode->v_back_porch +
 		dc_mode->v_active + dc_mode->v_front_porch;
@@ -1499,7 +1594,6 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 		vblank_start << NV_HEAD_STATE4_VBLANK_START_SHIFT |
 		hblank_start << NV_HEAD_STATE4_HBLANK_START_SHIFT);
 
-	/* TODO: adding interlace mode support */
 	tegra_sor_writel(sor, nv_sor_head_state5(head_num), 0x1);
 
 	tegra_sor_write_field(sor, NV_SOR_CSTM,

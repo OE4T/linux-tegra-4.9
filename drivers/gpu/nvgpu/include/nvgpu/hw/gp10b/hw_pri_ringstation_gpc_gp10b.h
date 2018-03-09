@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -71,6 +71,14 @@ static inline u32 pri_ringstation_gpc_gpc0_priv_error_wrdat_r(void)
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_info_r(void)
 {
 	return 0x00128128U;
+}
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_info_subid_v(u32 r)
+{
+	return (r >> 24U) & 0x3fU;
+}
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_info_priv_level_v(u32 r)
+{
+	return (r >> 20U) & 0x3U;
 }
 static inline u32 pri_ringstation_gpc_gpc0_priv_error_code_r(void)
 {

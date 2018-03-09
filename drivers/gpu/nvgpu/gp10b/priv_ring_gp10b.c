@@ -1,7 +1,7 @@
 /*
  * GP10B priv ring
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,6 +33,69 @@
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_sys_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_gpc_gp10b.h>
 
+static const char * const invalid_str = "invalid";
+
+static const char *const error_type_badf1xyy[] = {
+	"client timeout",
+	"decode error",
+	"client in reset",
+	"client floorswept",
+	"client stuck ack",
+	"client expected ack",
+	"fence error",
+	"subid error",
+	"byte access unsupported",
+};
+
+static const char *const error_type_badf2xyy[] = {
+	"orphan gpc/fbp"
+};
+
+static const char *const error_type_badf3xyy[] = {
+	"priv ring dead"
+};
+
+static const char *const error_type_badf5xyy[] = {
+	"client error",
+	"priv level violation",
+	"indirect priv level violation",
+	"local local ring error",
+	"falcon mem access priv level violation",
+	"pri route error"
+};
+
+static void gp10b_priv_ring_decode_error_code(struct gk20a *g,
+			u32 error_code)
+{
+	u32 error_type, error_type_index;
+
+	error_type = (error_code & 0x0000f000) >> 24;
+	error_type_index = (error_code & 0x00000f00) >> 16;
+	error_code = error_code & 0xBADFf000;
+
+	if (error_code == 0xBADF1000) {
+		if (error_type_index <
+				ARRAY_SIZE(error_type_badf1xyy))
+			nvgpu_err(g, "%s",
+				error_type_badf1xyy[error_type_index]);
+	} else if (error_code == 0xBADF2000) {
+		if (error_type_index <
+				ARRAY_SIZE(error_type_badf2xyy))
+			nvgpu_err(g, "%s",
+				error_type_badf2xyy[error_type_index]);
+	} else if (error_code == 0xBADF3000) {
+		if (error_type_index <
+				ARRAY_SIZE(error_type_badf3xyy))
+			nvgpu_err(g, "%s",
+				error_type_badf3xyy[error_type_index]);
+	} else if (error_code == 0xBADF5000) {
+		if (error_type_index <
+				ARRAY_SIZE(error_type_badf5xyy))
+			nvgpu_err(g, "%s",
+				error_type_badf5xyy[error_type_index]);
+	}
+}
+
 void gp10b_priv_ring_isr(struct gk20a *g)
 {
 	u32 status0, status1;
@@ -40,6 +103,8 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 	s32 retry = 100;
 	u32 gpc;
 	u32 gpc_stride, offset;
+	u32 error_info;
+	u32 error_code;
 
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		nvgpu_info(g, "unhandled priv ring intr");
@@ -63,11 +128,20 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 		nvgpu_err(g, "ring overflowed");
 
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
-		nvgpu_err(g, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
+		error_info =
+			gk20a_readl(g, pri_ringstation_sys_priv_error_info_r());
+		error_code =
+			gk20a_readl(g, pri_ringstation_sys_priv_error_code_r());
+		nvgpu_err(g, "SYS write error. ADR 0x%08x WRDAT 0x%08x "
+				"INFO 0x%08x (subid 0x%08x priv level %d), "
+				"CODE 0x%08x",
 			gk20a_readl(g, pri_ringstation_sys_priv_error_adr_r()),
 			gk20a_readl(g, pri_ringstation_sys_priv_error_wrdat_r()),
-			gk20a_readl(g, pri_ringstation_sys_priv_error_info_r()),
-			gk20a_readl(g, pri_ringstation_sys_priv_error_code_r()));
+			error_info,
+			pri_ringstation_sys_priv_error_info_subid_v(error_info),
+			pri_ringstation_sys_priv_error_info_priv_level_v(error_info),
+			error_code);
+		gp10b_priv_ring_decode_error_code(g, error_code);
 	}
 
 	if (status1) {
@@ -75,16 +149,25 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 			offset = gpc * gpc_stride;
 			if (status1 & BIT(gpc)) {
-				nvgpu_err(g, "GPC%u write error. ADR %08x "
-					"WRDAT %08x INFO %08x, CODE %08x", gpc,
+				error_info = gk20a_readl(g,
+					pri_ringstation_gpc_gpc0_priv_error_info_r() + offset);
+				error_code = gk20a_readl(g,
+					pri_ringstation_gpc_gpc0_priv_error_code_r() + offset);
+				nvgpu_err(g, "GPC%u write error. ADR 0x%08x "
+					"WRDAT 0x%08x "
+					"INFO 0x%08x (subid 0x%08x priv level %d), "
+					"CODE 0x%08x", gpc,
 					gk20a_readl(g,
 					pri_ringstation_gpc_gpc0_priv_error_adr_r() + offset),
 					gk20a_readl(g,
 					pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + offset),
-					gk20a_readl(g,
-					pri_ringstation_gpc_gpc0_priv_error_info_r() + offset),
-					gk20a_readl(g,
-					pri_ringstation_gpc_gpc0_priv_error_code_r() + offset));
+					error_info,
+					pri_ringstation_gpc_gpc0_priv_error_info_subid_v(error_info),
+					pri_ringstation_gpc_gpc0_priv_error_info_priv_level_v(error_info),
+					error_code);
+
+				gp10b_priv_ring_decode_error_code(g, error_code);
+
 				status1 = status1 & (~(BIT(gpc)));
 				if (!status1)
 					break;

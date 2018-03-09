@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -106,13 +106,17 @@ static void tegra_combined_uart_start_tx(struct uart_port *port)
 	unsigned long count;
 	struct circ_buf *xmit = &port->state->xmit;
 
-	tail = (unsigned long)&xmit->buf[xmit->tail];
-	count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
-	if (!count)
-		return;
+	while (true) {
+		tail = (unsigned long)&xmit->buf[xmit->tail];
+		count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
 
-	tegra_combined_uart_console_write(NULL, (char *)tail, count);
-	xmit->tail = (xmit->tail + count) & (UART_XMIT_SIZE - 1);
+		if (!count)
+			break;
+
+		tegra_combined_uart_console_write(NULL, (char *)tail, count);
+		xmit->tail = (xmit->tail + count) & (UART_XMIT_SIZE - 1);
+	}
+	uart_write_wakeup(port);
 }
 
 /*

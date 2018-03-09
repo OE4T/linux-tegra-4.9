@@ -80,6 +80,66 @@ TRACE_EVENT(nvhost_pva_write,
 		__entry->arg1, __entry->arg2)
 );
 
+TRACE_EVENT(nvhost_pva_task_stats,
+
+	TP_PROTO(
+		const char *name,
+		u64 queued_time,
+		u64 head_time,
+		u64 input_actions_complete,
+		u64 vpu_assigned_time,
+		u64 vpu_start_time,
+		u64 vpu_complete_time,
+		u64 complete_time,
+		u8 vpu_assigned
+		),
+
+	TP_ARGS(
+		name,
+		queued_time,
+		head_time,
+		input_actions_complete,
+		vpu_assigned_time,
+		vpu_start_time,
+		vpu_complete_time,
+		complete_time,
+		vpu_assigned
+		),
+
+	TP_STRUCT__entry(
+		__field(const char *, name)
+		__field(u64, queued_time)
+		__field(u64, head_time)
+		__field(u64, input_actions_complete)
+		__field(u64, vpu_assigned_time)
+		__field(u64, vpu_start_time)
+		__field(u64, vpu_complete_time)
+		__field(u64, complete_time)
+		__field(u8, vpu_assigned)
+		),
+
+	TP_fast_assign(
+		__entry->name = name;
+		__entry->queued_time = queued_time;
+		__entry->head_time = head_time;
+		__entry->input_actions_complete = input_actions_complete;
+		__entry->vpu_assigned_time = vpu_assigned_time;
+		__entry->vpu_start_time = vpu_start_time;
+		__entry->vpu_complete_time = vpu_complete_time;
+		__entry->complete_time = complete_time;
+		__entry->vpu_assigned = vpu_assigned;
+		),
+
+	TP_printk("%s\tqueued_time: %llu\thead_time: %llu\t"
+		"input_actions_complete: %llu\tvpu_assigned_time: %llu\t"
+		"vpu_start_time: %llu\tvpu_complete_time: %llu\t"
+		"complete_time: %llu\tvpu_assigned: %d",
+		__entry->name, __entry->queued_time, __entry->head_time,
+		__entry->input_actions_complete, __entry->vpu_assigned_time,
+		__entry->vpu_start_time, __entry->vpu_complete_time,
+		__entry->complete_time, __entry->vpu_assigned)
+);
+
 #endif /*  _TRACE_NVHOST_PVA_H */
 
 /* This part must be outside protection */

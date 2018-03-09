@@ -42,6 +42,8 @@
 #include "hw_cfg_pva.h"
 #include "t194/hardware_t194.h"
 
+#include <trace/events/nvhost_pva.h>
+
 #define ACTION_LIST_FENCE_SIZE 13
 #define ACTION_LIST_STATUS_OPERATION_SIZE 11
 #define ACTION_LIST_TERMINATION_SIZE 1
@@ -983,6 +985,16 @@ static void pva_task_update(struct pva_submit_task *task)
 			task, (u64)task->dma_addr,
 			stats->vpu_assigned_time,
 			stats->complete_time);
+
+	trace_nvhost_pva_task_stats(pdev->name,
+			stats->queued_time,
+			stats->head_time,
+			stats->input_actions_complete,
+			stats->vpu_assigned_time,
+			stats->vpu_start_time,
+			stats->vpu_complete_time,
+			stats->complete_time,
+			stats->vpu_assigned);
 
 	nvhost_dbg_info("QueuedTime %llu, HeadTime 0x%llu, "
 			"InputActionComplete %llu, VpuAssignedTime %llu, "

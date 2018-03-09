@@ -20,8 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/pci_ids.h>
-
+#include <nvgpu/pci.h>
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>

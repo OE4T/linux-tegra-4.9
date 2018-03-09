@@ -4510,7 +4510,7 @@ static void xhci_reinit_work(struct work_struct *work)
 	}
 
 	spin_lock_irqsave(&xhci->lock, flags);
-	xhci->xhc_state |= XHCI_STATE_RECOVERY | XHCI_STATE_DYING;
+	xhci->xhc_state |= XHCI_STATE_DYING;
 	spin_unlock_irqrestore(&xhci->lock, flags);
 
 	tegra_xusb_remove(pdev);

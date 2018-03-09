@@ -689,8 +689,7 @@ void xhci_stop(struct usb_hcd *hcd)
 
 	mutex_lock(&xhci->mutex);
 
-	if (!(xhci->xhc_state & XHCI_STATE_HALTED) &&
-		!(xhci->xhc_state & XHCI_STATE_RECOVERY)) {
+	if (!(xhci->xhc_state & XHCI_STATE_HALTED)) {
 		spin_lock_irq(&xhci->lock);
 
 		xhci->xhc_state |= XHCI_STATE_HALTED;

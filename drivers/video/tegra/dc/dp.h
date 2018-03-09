@@ -183,6 +183,28 @@ enum {
 	VSC_16BPC = 4,
 };
 
+enum {
+	VSC_RGB_SRGB = 0,
+	VSC_RGB_ADOBERGB = 3,
+};
+
+enum {
+	VSC_YUV_ITU_R_BT601 = 0,
+	VSC_YUV_ITU_R_BT709 = 1,
+	VSC_YUV_XVYCC601 = 2,
+	VSC_YUV_XVYCC709 = 3,
+	VSC_YUV_SYCC601 = 4,
+	VSC_YUV_ADOBEYCC601 = 5,
+};
+
+enum {
+	VSC_CONTENT_TYPE_DEFAULT = 0,
+	VSC_CONTENT_TYPE_GRAPHICS = 1,
+	VSC_CONTENT_TYPE_PHOTO = 2,
+	VSC_CONTENT_TYPE_VIDEO = 3,
+	VSC_CONTENT_TYPE_GAME = 4,
+};
+
 int tegra_dp_dpcd_write_field(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 mask, u8 data);
 void tegra_dc_dp_pre_disable_link(struct tegra_dc_dp_data *dp);

@@ -2372,15 +2372,123 @@ static int tegra_dp_vsc_col_ext_disable(struct tegra_dc_dp_data *dp)
 	return !ret ? 0 : -ETIMEDOUT;
 }
 
-__maybe_unused
-static void tegra_dp_vsc_col_ext(struct tegra_dc_dp_data *dp,
-			u8 vsc_pix_encoding, u8 colorimetry,
-			u8 dynamic_range, u8 bpc,
-			u8 content_type)
+static inline u8 tegra_dp_vsc_get_bpc(struct tegra_dc_dp_data *dp)
 {
+	int yuv_flag = dp->dc->mode.vmode & FB_VMODE_YUV_MASK;
+	u8 bpc = VSC_8BPC;
+
+	if (yuv_flag & FB_VMODE_Y24) {
+		bpc = VSC_8BPC;
+	} else if (yuv_flag & FB_VMODE_Y30) {
+		bpc = VSC_10BPC;
+	} else if (yuv_flag & FB_VMODE_Y36) {
+		bpc = VSC_12BPC;
+	} else if (yuv_flag & FB_VMODE_Y48) {
+		bpc = VSC_16BPC;
+	} else {
+		switch (dp->dc->out->depth) {
+		case 18:
+			bpc = VSC_6BPC;
+			break;
+		case 30:
+			bpc = VSC_10BPC;
+			break;
+		case 36:
+			bpc = VSC_12BPC;
+			break;
+		case 48:
+			bpc = VSC_16BPC;
+			break;
+		case 24:
+		default:
+			bpc = VSC_8BPC;
+			break;
+		}
+	};
+
+	return bpc;
+}
+
+static inline u8 tegra_dp_vsc_get_pixel_encoding(struct tegra_dc_dp_data *dp)
+{
+	int yuv_flag = dp->dc->mode.vmode & FB_VMODE_YUV_MASK;
+
+	if (yuv_flag & FB_VMODE_Y422)
+		return VSC_YUV422;
+	else if (yuv_flag & FB_VMODE_Y444)
+		return VSC_YUV444;
+	else if (IS_RGB(yuv_flag))
+		return VSC_RGB;
+
+	return VSC_RGB;
+}
+
+static inline u8 tegra_dp_vsc_get_dynamic_range(struct tegra_dc_dp_data *dp)
+{
+	if ((dp->dc->mode.vmode & FB_VMODE_BYPASS) ||
+			!(dp->dc->mode.vmode & FB_VMODE_LIMITED_RANGE))
+		return VSC_VESA_RANGE;
+
+	return VSC_CEA_RANGE;
+}
+
+static inline u8 tegra_dp_vsc_get_colorimetry(struct tegra_dc_dp_data *dp)
+{
+	u32 vmode_flag = dp->dc->mode.vmode;
+	u8 colorimetry = VSC_RGB_SRGB;
+
+	if (vmode_flag & FB_VMODE_EC_ENABLE) {
+		u32 ec = vmode_flag & FB_VMODE_EC_MASK;
+
+		switch (ec) {
+		case FB_VMODE_EC_ADOBE_RGB:
+			colorimetry = VSC_RGB_ADOBERGB;
+			break;
+		case FB_VMODE_EC_ADOBE_YCC601:
+			colorimetry = VSC_YUV_ADOBEYCC601;
+			break;
+		case FB_VMODE_EC_SYCC601:
+			colorimetry = VSC_YUV_SYCC601;
+			break;
+		case FB_VMODE_EC_XVYCC601:
+			colorimetry = VSC_YUV_XVYCC709;
+			break;
+		case FB_VMODE_EC_XVYCC709:
+			colorimetry = VSC_YUV_XVYCC709;
+			break;
+		default:
+			colorimetry = VSC_RGB_SRGB;
+			break;
+		}
+	}
+
+	return colorimetry;
+}
+
+static void tegra_dp_vsc_col_ext(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
+	u8 vsc_pix_encoding = 0, colorimetry = 0, dynamic_range = 0,
+			bpc = 0, content_type = 0;
+	u32 vmode_flag = dp->dc->mode.vmode;
+	u32 ec = vmode_flag & FB_VMODE_EC_MASK;
+
+	if (!tegra_dc_is_nvdisplay() || !cfg->support_vsc_ext_colorimetry)
+		return;
+
+	if (!(vmode_flag & FB_VMODE_Y420) &&
+		!(ec & (FB_VMODE_EC_BT2020_CYCC | FB_VMODE_EC_BT2020_YCC_RGB)))
+		return;
+
 	tegra_dp_vsc_col_ext_disable(dp);
+	vsc_pix_encoding = tegra_dp_vsc_get_pixel_encoding(dp);
+	colorimetry = tegra_dp_vsc_get_colorimetry(dp);
+	dynamic_range = tegra_dp_vsc_get_dynamic_range(dp);
+	bpc = tegra_dp_vsc_get_bpc(dp);
+	content_type = VSC_CONTENT_TYPE_DEFAULT;
 
 	tegra_dp_vsc_col_ext_header(dp);
+
 	tegra_dp_vsc_col_ext_payload(dp, vsc_pix_encoding,
 				colorimetry, dynamic_range,
 				bpc, content_type);
@@ -2509,6 +2617,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	if (tegra_dc_is_ext_dp_panel(dc) && sor->audio_support)
 		tegra_hda_enable(dp->hda_handle);
 #endif
+
+	tegra_dp_vsc_col_ext(dp);
 
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
 		!no_lt_at_unblank) {

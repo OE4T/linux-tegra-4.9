@@ -14,6 +14,20 @@
  */
 
 / {
+	pmc@c360000 {
+		ufs_dpd_enable: dpd-enable {
+			ufs {
+				pins = "ufs";
+				low-power-enable;
+			};
+		};
+		ufs_dpd_disable: dpd-disable {
+			ufs {
+				pins = "ufs";
+				low-power-disable;
+			};
+		};
+	};
 
 	tegra_ufs: ufshci@2450000 {
 		compatible = "tegra,ufs_variant";
@@ -60,8 +74,9 @@
 		vcc-max-microamp = <0>;
 		vccq-max-microamp = <0>;
 		vccq2-max-microamp = <0>;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_UFS>;
-		pad-names = "ufs";
+		pinctrl-names = "ufs_dpd_enable", "ufs_dpd_disable";
+		pinctrl-0 = <&ufs_dpd_enable>;
+		pinctrl-1 = <&ufs_dpd_disable>;
 		status = "disabled";
 
 		ufs_variant {

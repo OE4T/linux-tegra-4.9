@@ -253,7 +253,7 @@ int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
 
 	/* use vm_identifier if provided */
 	vm_identifier = vm_identifier ?
-		vm_identifier : (void *)(uintptr_t)current->pid;
+		vm_identifier : (void *)(uintptr_t)current->tgid;
 
 	if (!pdata) {
 		pr_err("%s: NULL device data\n", __func__);

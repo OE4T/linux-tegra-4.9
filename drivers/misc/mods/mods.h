@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 82
+#define MODS_DRIVER_VERSION_MINOR 83
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -148,6 +148,14 @@ struct MODS_DMA_MAP_MEMORY {
 	/* IN */
 	__u64                 memory_handle;
 	struct mods_pci_dev_2 pci_device;
+};
+
+/* MODS_ESC_GET_IOMMU_STATE */
+struct MODS_GET_IOMMU_STATE {
+	/* IN */
+	struct mods_pci_dev_2 pci_device;
+	/* OUT */
+	__u32                 state;
 };
 
 /* MODS_ESC_FIND_PCI_DEVICE_2 */
@@ -1237,5 +1245,7 @@ struct MODS_ACCESS_TOKEN {
 		    _IOW(MODS_IOC_MAGIC, 108, struct MODS_ACCESS_TOKEN)
 #define MODS_ESC_VERIFY_ACCESS_TOKEN		\
 		    _IOW(MODS_IOC_MAGIC, 109, struct MODS_ACCESS_TOKEN)
+#define MODS_ESC_GET_IOMMU_STATE			\
+		    _IOWR(MODS_IOC_MAGIC, 110, struct MODS_GET_IOMMU_STATE)
 
 #endif /* _MODS_H_  */

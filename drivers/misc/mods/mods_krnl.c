@@ -177,7 +177,7 @@ static int mods_set_access_token(u32 tok)
 	return OK;
 }
 
-int mods_check_access_token(struct file *fp)
+static int mods_check_access_token(struct file *fp)
 {
 	MODS_PRIV private_data = fp->private_data;
 
@@ -968,25 +968,29 @@ static int mods_get_screen_info(struct MODS_SCREEN_INFO *p)
  * ESCAPE CALL FUNCTIONS *
  *************************/
 
-int esc_mods_get_api_version(struct file *pfile, struct MODS_GET_VERSION *p)
+static int esc_mods_get_api_version(struct file *pfile,
+				    struct MODS_GET_VERSION *p)
 {
 	p->version = MODS_DRIVER_VERSION;
 	return OK;
 }
 
-int esc_mods_get_kernel_version(struct file *pfile, struct MODS_GET_VERSION *p)
+static int esc_mods_get_kernel_version(struct file *pfile,
+				       struct MODS_GET_VERSION *p)
 {
 	p->version = MODS_KERNEL_VERSION;
 	return OK;
 }
 
-int esc_mods_set_driver_para(struct file *pfile, struct MODS_SET_PARA *p)
+static int esc_mods_set_driver_para(struct file *pfile,
+				    struct MODS_SET_PARA *p)
 {
 	int rc = OK;
 	return rc;
 }
 
-int esc_mods_get_screen_info(struct file *pfile, struct MODS_SCREEN_INFO *p)
+static int esc_mods_get_screen_info(struct file *pfile,
+				    struct MODS_SCREEN_INFO *p)
 {
 #if defined(CONFIG_ARM) || defined(CONFIG_ARM64) || defined(CONFIG_PPC64)
 	return -EINVAL;
@@ -1002,7 +1006,8 @@ int esc_mods_get_screen_info(struct file *pfile, struct MODS_SCREEN_INFO *p)
 #endif
 }
 
-int esc_mods_get_screen_info_2(struct file *pfile, struct MODS_SCREEN_INFO_2 *p)
+static int esc_mods_get_screen_info_2(struct file *pfile,
+				      struct MODS_SCREEN_INFO_2 *p)
 {
 #if defined(CONFIG_ARM) || defined(CONFIG_ARM64) || defined(CONFIG_PPC64)
 	return -EINVAL;
@@ -1019,7 +1024,7 @@ int esc_mods_get_screen_info_2(struct file *pfile, struct MODS_SCREEN_INFO_2 *p)
 #endif
 }
 
-int esc_mods_lock_console(struct file *pfile)
+static int esc_mods_lock_console(struct file *pfile)
 {
 #if defined(MODS_HAS_CONSOLE_LOCK)
 	console_lock();
@@ -1029,7 +1034,7 @@ int esc_mods_lock_console(struct file *pfile)
 #endif
 }
 
-int esc_mods_unlock_console(struct file *pfile)
+static int esc_mods_unlock_console(struct file *pfile)
 {
 #if defined(MODS_HAS_CONSOLE_LOCK)
 	console_unlock();
@@ -1039,7 +1044,7 @@ int esc_mods_unlock_console(struct file *pfile)
 #endif
 }
 
-int esc_mods_suspend_console(struct file *pfile)
+static int esc_mods_suspend_console(struct file *pfile)
 {
 	int ret = -EINVAL;
 
@@ -1080,7 +1085,7 @@ int esc_mods_suspend_console(struct file *pfile)
 	return ret;
 }
 
-int esc_mods_resume_console(struct file *pfile)
+static int esc_mods_resume_console(struct file *pfile)
 {
 	return mods_resume_console(pfile);
 }
@@ -1125,8 +1130,8 @@ static int mods_resume_console(struct file *pfile)
 	return ret;
 }
 
-int esc_mods_acquire_access_token(struct file *pfile,
-				  struct MODS_ACCESS_TOKEN *pToken)
+static int esc_mods_acquire_access_token(struct file *pfile,
+					 struct MODS_ACCESS_TOKEN *ptoken)
 {
 	int ret = -EINVAL;
 
@@ -1139,14 +1144,14 @@ int esc_mods_acquire_access_token(struct file *pfile,
 		return ret;
 	}
 
-	get_random_bytes(&pToken->token, sizeof(pToken->token));
-	ret = mods_set_access_token(pToken->token);
+	get_random_bytes(&ptoken->token, sizeof(ptoken->token));
+	ret = mods_set_access_token(ptoken->token);
 	if (ret < 0) {
 		mods_error_printk("unable to set access token!\n");
 	} else {
 		MODS_PRIV private_data = pfile->private_data;
 
-		private_data->access_token = pToken->token;
+		private_data->access_token = ptoken->token;
 	}
 
 	LOG_EXT();
@@ -1154,8 +1159,8 @@ int esc_mods_acquire_access_token(struct file *pfile,
 	return ret;
 }
 
-int esc_mods_release_access_token(struct file *pfile,
-				  struct MODS_ACCESS_TOKEN *pToken)
+static int esc_mods_release_access_token(struct file *pfile,
+					 struct MODS_ACCESS_TOKEN *ptoken)
 {
 	int ret = -EINVAL;
 
@@ -1182,17 +1187,17 @@ int esc_mods_release_access_token(struct file *pfile,
 	return ret;
 }
 
-int esc_mods_verify_access_token(struct file *pfile,
-				 struct MODS_ACCESS_TOKEN *pToken)
+static int esc_mods_verify_access_token(struct file *pfile,
+					struct MODS_ACCESS_TOKEN *ptoken)
 {
 	int ret = -EINVAL;
 
 	LOG_ENT();
 
-	if (pToken->token == mods_get_access_token()) {
+	if (ptoken->token == mods_get_access_token()) {
 		MODS_PRIV private_data = pfile->private_data;
 
-		private_data->access_token = pToken->token;
+		private_data->access_token = ptoken->token;
 		ret = OK;
 	} else
 		mods_error_printk("invalid access token\n");
@@ -1411,6 +1416,11 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_PCI_UNMAP_RESOURCE,
 			   esc_mods_pci_unmap_resource,
 			   MODS_PCI_UNMAP_RESOURCE);
+		break;
+	case MODS_ESC_GET_IOMMU_STATE:
+		MODS_IOCTL(MODS_ESC_GET_IOMMU_STATE,
+			   esc_mods_get_iommu_state,
+			   MODS_GET_IOMMU_STATE);
 		break;
 #endif
 

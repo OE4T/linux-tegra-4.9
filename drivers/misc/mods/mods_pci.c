@@ -1,7 +1,7 @@
 /*
  * mods_pci.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -21,6 +21,9 @@
 
 #include <linux/io.h>
 #include <linux/fs.h>
+#if defined(MODS_HAS_DMA_OPS)
+#include <linux/dma-mapping.h>
+#endif
 
 /************************
  * PCI HELPER FUNCTIONS *
@@ -837,3 +840,33 @@ int esc_mods_pci_unmap_resource(struct file *fp,
 	return OK;
 #endif
 }
+
+int esc_mods_get_iommu_state(struct file                 *pfile,
+			     struct MODS_GET_IOMMU_STATE *state)
+{
+#if !defined(CONFIG_SWIOTLB)
+	/* SW IOTLB turned off in the kernel, HW IOMMU active */
+	state->state = 1;
+#elif defined(MODS_HAS_DMA_OPS)
+
+	unsigned int    devfn = PCI_DEVFN(state->pci_device.device,
+					  state->pci_device.function);
+	struct pci_dev *dev   = MODS_PCI_GET_SLOT(state->pci_device.domain,
+						  state->pci_device.bus,
+						  devfn);
+
+	const struct dma_map_ops *ops = get_dma_ops(&dev->dev);
+
+#if defined(MODS_HAS_NONCOH_DMA_OPS)
+	state->state = ops->map_sg != &noncoherent_swiotlb_dma_ops &&
+			ops->map_sg != &coherent_swiotlb_dma_ops;
+#else
+	state->state = ops->map_sg != swiotlb_map_sg_attrs;
+#endif
+#else
+	/* Old kernels, only x86 support, assume no IOMMU */
+	state->state = 0;
+#endif
+	return OK;
+}
+

@@ -162,7 +162,6 @@ int mods_check_debug_level(int mask);
 int mods_get_multi_instance(void);
 void mods_set_multi_instance(int mi);
 u32 mods_get_access_token(void);
-int mods_check_access_token(struct file *fp);
 
 #if defined(CONFIG_PPC64)
 void mods_set_ppc_tce_bypass(int bypass);
@@ -483,6 +482,8 @@ int esc_mods_pci_map_resource(struct file *fp,
 			      struct MODS_PCI_MAP_RESOURCE *p);
 int esc_mods_pci_unmap_resource(struct file *fp,
 				struct MODS_PCI_UNMAP_RESOURCE *p);
+int esc_mods_get_iommu_state(struct file                 *pfile,
+			     struct MODS_GET_IOMMU_STATE *state);
 #endif
 /* irq */
 #if defined(MODS_TEGRA) && defined(CONFIG_OF_IRQ) && defined(CONFIG_OF)

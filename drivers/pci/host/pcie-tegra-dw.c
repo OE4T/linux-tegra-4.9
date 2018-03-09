@@ -2810,6 +2810,10 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
+	if (!pcie->dma_disable)
+		dma_free_coherent(pcie->dev, pcie->dma_size,
+				  pcie->cpu_virt_addr, pcie->dma_addr);
+
 	debugfs_remove_recursive(pcie->debugfs);
 
 	if (!pcie->dma_disable) {

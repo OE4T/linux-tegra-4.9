@@ -20,11 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/delay.h>
 #include <linux/pci_ids.h>
 
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS

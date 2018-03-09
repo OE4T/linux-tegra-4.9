@@ -24,6 +24,8 @@
 
 struct gk20a;
 
+#include <nvgpu/types.h>
+
 int nvgpu_tegra_get_gpu_speedo_id(struct gk20a *g);
 
 void nvgpu_tegra_fuse_write_bypass(struct gk20a *g, u32 val);

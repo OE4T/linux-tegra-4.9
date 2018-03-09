@@ -26,6 +26,7 @@
 #include "gk20a/gk20a.h"
 
 #include <nvgpu/log2.h>
+#include <nvgpu/types.h>
 
 int gp106_init_xve_ops(struct gpu_ops *gops);
 

@@ -23,6 +23,8 @@
 #ifndef _NVGPU_FIRMWARE_H_
 #define _NVGPU_FIRMWARE_H_
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 
 #define NVGPU_REQUEST_FIRMWARE_NO_WARN		(1UL << 0)

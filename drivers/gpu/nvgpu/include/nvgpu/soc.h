@@ -22,6 +22,8 @@
 #ifndef __NVGPU_SOC_H__
 #define __NVGPU_SOC_H__
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 
 bool nvgpu_platform_is_silicon(struct gk20a *g);

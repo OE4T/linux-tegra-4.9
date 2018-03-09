@@ -59,7 +59,7 @@
 		spi-max-frequency = <65000000>;
 		nvidia,clk-parents = "pll_p", "osc";
 		clocks = <&bpmp_clks TEGRA194_CLK_SPI2>,
-			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+			<&bpmp_clks TEGRA194_CLK_PLLAON>,
 			<&bpmp_clks TEGRA194_CLK_OSC>;
 		clock-names = "spi", "pll_p", "osc";
 		resets = <&bpmp_resets TEGRA194_RESET_SPI2>;

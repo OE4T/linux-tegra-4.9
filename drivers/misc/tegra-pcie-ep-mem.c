@@ -445,7 +445,7 @@ static int write(struct seq_file *s, void *data)
 	if (!bar_mem) {
 		dev_err(&ep->pdev->dev, "Cannot map BAR0, aborting\n");
 		ret = -ENOMEM;
-		goto err_out;
+		goto err_remap;
 	}
 	get_random_bytes(bar_mem, ep->size);
 
@@ -461,8 +461,9 @@ static int write(struct seq_file *s, void *data)
 		dev_info(&ep->pdev->dev, "DMA-Write test PASSED\n");
 	else
 		dev_info(&ep->pdev->dev, "DMA-Write test FAILED\n");
-
 err_out:
+	iounmap(bar_mem);
+err_remap:
 	return ret;
 }
 
@@ -479,7 +480,7 @@ static int write_ll(struct seq_file *s, void *data)
 	if (!bar_mem) {
 		dev_err(&ep->pdev->dev, "Cannot map BAR0, aborting\n");
 		ret = -ENOMEM;
-		goto err_out;
+		goto err_remap;
 	}
 
 	/* create linked list to be sent to ep's local memory */
@@ -560,6 +561,8 @@ static int write_ll(struct seq_file *s, void *data)
 	dev_info(&ep->pdev->dev, "DMA-Write-LL PASSED\n");
 
 err_out:
+	iounmap(bar_mem);
+err_remap:
 	return ret;
 }
 
@@ -581,7 +584,7 @@ static int read(struct seq_file *s, void *data)
 	if (!bar_mem) {
 		dev_err(&ep->pdev->dev, "Cannot map BAR0, aborting\n");
 		ret = -ENOMEM;
-		goto err_out;
+		goto err_remap;
 	}
 	get_random_bytes(phys_to_virt(ep->src), ep->size);
 
@@ -599,6 +602,8 @@ static int read(struct seq_file *s, void *data)
 		dev_info(&ep->pdev->dev, "DMA-Read test FAILED\n");
 
 err_out:
+	iounmap(bar_mem);
+err_remap:
 	return ret;
 }
 
@@ -615,7 +620,7 @@ static int read_ll(struct seq_file *s, void *data)
 	if (!bar_mem) {
 		dev_err(&ep->pdev->dev, "Cannot map BAR0, aborting\n");
 		ret = -ENOMEM;
-		goto err_out;
+		goto err_remap;
 	}
 
 	/* create linked list to be sent to ep's local memory */
@@ -696,6 +701,8 @@ static int read_ll(struct seq_file *s, void *data)
 	dev_info(&ep->pdev->dev, "DMA-Read-LL PASSED\n");
 
 err_out:
+	iounmap(bar_mem);
+err_remap:
 	return ret;
 }
 

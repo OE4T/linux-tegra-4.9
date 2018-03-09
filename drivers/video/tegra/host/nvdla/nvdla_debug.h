@@ -1,7 +1,7 @@
 /*
  * NVDLA debug utils header
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016 - 2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@ enum nvdla_dbg_categories {
 	debug_perf	= BIT(5),  /* for tracking perf impact */
 };
 
+#ifdef CONFIG_TEGRA_NVDLA_TRACE_PRINTK
 #define nvdla_dbg(check_mask, pdev, format, arg...)			\
 do {									\
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);	\
@@ -51,6 +52,19 @@ do {									\
 					__func__, ##arg);		\
 	}								\
 } while (0)
+#else /* CONFIG_TEGRA_NVDLA_TRACE_PRINTK */
+#define nvdla_dbg(check_mask, pdev, format, arg...)			\
+do {									\
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);	\
+	struct nvdla_device *nvdla_dev = (struct nvdla_device *)	\
+					pdata->private_data;		\
+	if (unlikely((check_mask) & nvdla_dev->dbg_mask)) {		\
+		pr_info("%s:%s: " format "\n",			\
+					dev_name(&pdev->dev),		\
+					__func__, ##arg);		\
+	}								\
+} while (0)
+#endif
 
 #define nvdla_dbg_err(pdev, fmt, arg...) \
 	nvdla_dbg(debug_err, pdev, fmt, ##arg)

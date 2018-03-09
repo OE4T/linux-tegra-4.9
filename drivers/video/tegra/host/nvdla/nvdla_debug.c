@@ -717,8 +717,10 @@ void nvdla_debug_init(struct platform_device *pdev)
 
 	debugfs_create_u32("debug_mask", S_IRUGO | S_IWUSR, de,
 			&nvdla_dev->dbg_mask);
+#ifdef CONFIG_TEGRA_NVDLA_TRACE_PRINTK
 	debugfs_create_u32("en_trace", S_IRUGO | S_IWUSR, de,
 			&nvdla_dev->en_trace);
+#endif
 	debugfs_create_u32("submit_mode", S_IRUGO | S_IWUSR, de,
 			&nvdla_dev->submit_mode);
 

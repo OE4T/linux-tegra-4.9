@@ -1,7 +1,7 @@
 /*
  * qspi-tegra.h: SPI interface for Nvidia Tegra210 QSPI controller.
  *
- * Copyright (C) 2011-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@ struct tegra_qspi_device_controller_data {
 	bool x4_is_ddr;
 	bool ifddr_div2_sdr;
 	bool is_combined_seq_mode_en;
+	u8 bus_clk_div;
 };
 
 enum qspi_bus_width {

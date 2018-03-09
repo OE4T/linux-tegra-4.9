@@ -197,6 +197,7 @@ struct tegra_qspi_data {
 	bool					enable_dma_support;
 	bool					clock_always_on;
 	bool					is_ddr_mode;
+	u8					bus_clk_div;
 	u32					qspi_max_frequency;
 	u32					cur_speed;
 	u8					qspi_num_dummy_cycle;
@@ -245,9 +246,9 @@ struct tegra_qspi_data {
 	dma_addr_t				tx_dma_phys;
 	struct dma_async_tx_descriptor		*tx_dma_desc;
 	struct tegra_prod			*prod_list;
+	int					qspi_enable_cmbseq_mode;
 #ifdef QSPI_BRINGUP_BUILD
 	int					qspi_force_unpacked_mode;
-	int					qspi_enable_cmbseq_mode;
 	int					qspi_enable_prod_override;
 	int					qspi_force_pio_mode;
 	int					qspi_force_dma_mode;
@@ -459,32 +460,28 @@ static ssize_t bus_speed_set(struct device *dev,
 			tqspi->qspi_force_bus_speed = false;
 			return count;
 		}
-		if (tqspi->cur_speed != speed) {
-			tqspi->qspi_max_frequency = speed;
-			tqspi->cur_speed = tqspi->qspi_max_frequency;
-			set_best_clk_source(tqspi, speed);
-			ret = clk_set_rate(tqspi->clk, speed);
-			if (ret < 0) {
-				dev_err(tqspi->dev,
-						"Failed to set QSPI clock freq: %d\n",
-						ret);
-				return -EINVAL;
-			}
-			actual_speed = clk_get_rate(tqspi->clk);
-			if (actual_speed <= 0)
-				return -EINVAL;
-			if (tqspi->is_ddr_mode)
-				ret = clk_set_rate(tqspi->sdr_ddr_clk,
-						actual_speed >> 1);
-			else
-				ret = clk_set_rate(tqspi->sdr_ddr_clk,
-						actual_speed);
-			if (ret < 0) {
-				dev_err(tqspi->dev,
-						"Failed to set QSPI OUT clock freq: %d\n",
-						ret);
-				return -EINVAL;
-			}
+		if (speed > tqspi->qspi_max_frequency/tqspi->bus_clk_div)
+			return -EINVAL;
+		if (tqspi->cur_speed == speed)
+			return count;
+		tqspi->cur_speed = speed;
+		set_best_clk_source(tqspi, speed);
+		ret = clk_set_rate(tqspi->clk, speed*tqspi->bus_clk_div);
+		if (ret < 0) {
+			dev_err(tqspi->dev,
+				"Failed to set QSPI clock freq: %d\n",
+				ret);
+			return -EINVAL;
+		}
+		actual_speed = clk_get_rate(tqspi->clk)/tqspi->bus_clk_div;
+		if (actual_speed <= 0)
+			return -EINVAL;
+		ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed);
+		if (ret < 0) {
+			dev_err(tqspi->dev,
+				"Failed to set QSPI OUT clock freq: %d\n",
+				ret);
+			return -EINVAL;
 		}
 		tqspi->qspi_force_bus_speed = true;
 		return count;
@@ -715,7 +712,7 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 		tqspi->words_per_32bit = 1;
 	}
 #else
-	if (bits_per_word == 8 || bits_per_word == 16 && (t->len > 3)) {
+	if ((bits_per_word == 8 || bits_per_word == 16) && (t->len > 3)) {
 		tqspi->is_packed = true;
 		tqspi->words_per_32bit = 32 / bits_per_word;
 	} else {
@@ -1274,6 +1271,9 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 					 bool is_single_xfer)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
+#ifndef QSPI_BRINGUP_BUILD
+	struct tegra_qspi_device_controller_data *cdata = spi->controller_data;
+#endif
 	u32 speed = 0;
 	u32 actual_speed = 0;
 	u8 bits_per_word;
@@ -1283,6 +1283,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	int req_mode;
 	u8 bus_width = X1, num_dummy_cycles = 0;
 	bool is_ddr = false;
+	u8 bus_clk_div = tqspi->bus_clk_div;
 
 	bits_per_word = t->bits_per_word;
 	tqspi->cur_qspi = spi;
@@ -1303,6 +1304,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 			num_dummy_cycles =  cdata->x1_dymmy_cycle;
 			speed = cdata->x1_bus_speed;
 		}
+		bus_clk_div = cdata->bus_clk_div;
 	} else {
 		dev_err(tqspi->dev, "Controller Data is not available\n");
 		return -EINVAL;
@@ -1323,17 +1325,27 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	ret = tegra_qspi_validate_request(spi, tqspi, t, is_ddr);
 	if (ret)
 		return ret;
-	if (!speed)
-		speed = tqspi->qspi_max_frequency;
-	if (speed != tqspi->cur_speed) {
-		ret = clk_set_rate(tqspi->clk, speed);
+	if (!speed || speed > tqspi->qspi_max_frequency/bus_clk_div)
+		speed = tqspi->qspi_max_frequency/bus_clk_div;
+	if (speed != tqspi->cur_speed ||
+	    bus_clk_div != tqspi->bus_clk_div) {
+		ret = clk_set_rate(tqspi->clk, speed*bus_clk_div);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "Failed to set QSPI clock freq: %d\n",
-				ret);
+			dev_err(tqspi->dev,
+				"Failed to set QSPI clock freq: %d\n", ret);
+			return -EINVAL;
+		}
+		actual_speed = clk_get_rate(tqspi->clk)/bus_clk_div;
+		ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed);
+		if (ret < 0) {
+			dev_err(tqspi->dev,
+				"Failed to set QSPI clock freq: %d\n", ret);
 			return -EINVAL;
 		}
 		tqspi->cur_speed = speed;
+		tqspi->bus_clk_div = bus_clk_div;
 	}
+#if 0
 	if (is_ddr != tqspi->is_ddr_mode) {
 		actual_speed = clk_get_rate(tqspi->clk);
 		if (is_ddr)
@@ -1348,6 +1360,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		}
 		tqspi->is_ddr_mode = is_ddr;
 	}
+#endif
 	if (is_first_of_msg) {
 		tegra_qspi_clear_status(tqspi);
 
@@ -1999,7 +2012,6 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	struct tegra_qspi_device_controller_data *cdata = NULL;
 	struct device_node *np = spi->dev.of_node, *data_np = NULL;
 	u32 pval;
-	int ret;
 
 	if (!np) {
 		dev_dbg(&spi->dev, "Device must have DT node handle\n");
@@ -2016,36 +2028,45 @@ static struct tegra_qspi_device_controller_data *tegra_qspi_get_cdata_dt(
 	if (!cdata)
 		return NULL;
 
-	ret = of_property_read_u32(data_np, "nvidia,x1-len-limit", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x1-len-limit", &pval))
 		cdata->x1_len_limit = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,x1-bus-speed", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x1-bus-speed", &pval))
 		cdata->x1_bus_speed = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,x1-dymmy-cycle", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x1-dymmy-cycle", &pval))
 		cdata->x1_dymmy_cycle = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,x4-bus-speed", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x4-bus-speed", &pval))
 		cdata->x4_bus_speed = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,x4-dymmy-cycle", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x4-dymmy-cycle", &pval))
 		cdata->x4_dymmy_cycle = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,x4-is-ddr", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,x4-is-ddr", &pval))
 		cdata->x4_is_ddr = pval;
 
-	ret = of_property_read_u32(data_np, "nvidia,ifddr-div2-sdr", &pval);
-	if (!ret)
+	if (!of_property_read_u32(data_np, "nvidia,ifddr-div2-sdr", &pval))
 		cdata->ifddr_div2_sdr = pval;
+
+	if (!of_property_read_u8(data_np, "nvidia,ctrl-bus-clk-ratio",
+				 (u8 *) &pval))
+		cdata->bus_clk_div = (u8)pval;
 
 	cdata->is_combined_seq_mode_en = of_property_read_bool(data_np,
 						"nvidia,combined-seq-mode-en");
+
+	/* Bus speed mentioned in device tree should be what is applied
+	 * on interface. Earlier version used to apply half of the bus
+	 * speed defined in device tree. To maintain backward compatibility
+	 * with old device tree, applied bus speed is half of that defined in
+	 * device tree if 'nvidia,ifddr-div2-sdr' is defined
+	 */
+	if (cdata->ifddr_div2_sdr && cdata->x1_bus_speed)
+		cdata->x1_bus_speed /= 2;
+
+	if (cdata->ifddr_div2_sdr && cdata->x4_bus_speed)
+		cdata->x4_bus_speed /= 2;
 
 	return cdata;
 }
@@ -2211,6 +2232,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 				ret);
 			goto exit_pm_disable;
 		}
+		tqspi->bus_clk_div = 2;
 	}
 
 	tqspi->def_command1_reg  = QSPI_M_S | QSPI_CS_SW_HW |  QSPI_CS_SW_VAL;

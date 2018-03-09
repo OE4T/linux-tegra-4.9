@@ -74,8 +74,24 @@ child node of the spi slave node.
 - nvidia,x4-bus-speed:		Integer, X4 bus speed.
 - nvidia,x4-dymmy-cycle:	Integer, X4 dummy cycle.
 - nvidia,x4-is-ddr:		Integer, X4 is DDR?
-- nvidia,ifddr-div2-sdr:	Integer, If DDR then device by 2.
+- nvidia,ctrl-bus-clk-ratio	Integer, clock ratio bewteen ctrl & bus clk
 - nvidia,combined-seq-mode-en:  Boolean, Select combined sequence mode.
+
+deprecated:
+- nvidia,ifddr-div2-sdr:	Integer, If DDR then device by 2.
+
+
+Bus Speed:
+---------
+To maintain compatibility with old device tree, bus speed on interface is
+half of what is provided in device tree if property 'nvidia,ifddr-div2-sdr'
+is defined. Else speed maintained on interface is same as bus speed
+defined in device tree.
+
+QSPI contorller frequency is 2x of speed maintained at interface in DDR mode.
+For SDR mode, this can be set with 'cltrl-bus-clk-ratio'. Default is 2x (same
+as DDR mode) to avoid settings clock for each transaction and improve
+performance.
 
 Aliases:
 -------

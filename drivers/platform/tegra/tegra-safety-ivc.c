@@ -332,10 +332,9 @@ static int tegra_safety_ivc_parse_hsp(struct device *dev)
 }
 
 static const struct of_device_id tegra_safety_ivc_of_match[] = {
-	{
-		.compatible = NV(tegra186-safety-ivc)
-	},
-	{ },
+	{ .compatible = NV(tegra186-safety-ivc)},
+	{ .compatible = NV(tegra194-safety-ivc)},
+	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_safety_ivc_of_match);
 

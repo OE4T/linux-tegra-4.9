@@ -20,7 +20,7 @@ config DENVER_MCA
 config TEGRA_AON
 	bool "Tegra AON driver"
 	depends on ARCH_TEGRA_18x_SOC
-	select TEGRA_IVC
+	select NV_TEGRA_IVC
 	select TEGRA_HSP
 
 config TEGRA_ARI_MCA
@@ -65,7 +65,7 @@ config TEGRA_BWMGR
 config TEGRA_CAMERA_RTCPU
 	bool "Enable Tegra Camera RTCPU Driver"
 	depends on ARCH_TEGRA_18x_SOC
-	select TEGRA_IVC
+	select NV_TEGRA_IVC
 	select TEGRA_HSP
 
 config TEGRA_ISOMGR
@@ -140,7 +140,7 @@ config TEGRA_PTP_NOTIFIER
 config TEGRA_SAFETY_SCE
 	tristate "Enable CCPLEX-SCE communication Driver for Safety"
 	depends on ARCH_TEGRA_18x_SOC
-	select TEGRA_IVC
+	select NV_TEGRA_IVC
 	select TEGRA_HSP
 	help
 	  This enables communication between CCPLEX and SCE over IVC channel.

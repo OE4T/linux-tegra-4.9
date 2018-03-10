@@ -177,6 +177,7 @@ static int bpmp_setup_allocator(struct device *dev)
 	int ret;
 	struct tegra_hv_ivm_cookie *ivm;
 	void *virt_base;
+	int flags;
 
 	ret = of_property_read_u32_index(dev->of_node, "mempool", 0,
 			&mempool_id);
@@ -197,13 +198,19 @@ static int bpmp_setup_allocator(struct device *dev)
 
 	virt_base = ioremap_cache(ivm->ipa, ivm->size);
 
+	flags = DMA_MEMORY_EXCLUSIVE;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+	flags |= DMA_MEMORY_NOMAP;
+#endif
 	ret = dma_declare_coherent_memory(dev, ivm->ipa, 0, ivm->size,
-			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+			flags);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	if (!(ret & DMA_MEMORY_NOMAP)) {
 		dev_err(dev, "dma_declare_coherent_memory failed (%x)\n", ret);
 		return ret;
 	}
+#endif
 
 	hv_virt_base = virt_base;
 

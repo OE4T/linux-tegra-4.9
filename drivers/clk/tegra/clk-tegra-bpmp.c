@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -83,10 +83,11 @@ static const struct of_device_id tegra_clock_ids[] __initconst = {
 	{}
 };
 
+#ifdef CONFIG_TEGRA_CLK_DEBUG
 static struct tegra_pto_table emc_pto = {
 	.clk_id = 0, .divider = 1, .pto_id = 36,
 };
-
+#endif
 int __init tegra_bpmp_of_clk_init(void)
 {
 	struct device_node *dn;
@@ -105,8 +106,10 @@ int __init tegra_bpmp_of_clk_init(void)
 		return -ENODEV;
 	}
 	clk_register_clkdev(emc_clk, "emc", 0);
+#ifdef CONFIG_TEGRA_CLK_DEBUG
 	tegra_clk_debugfs_add(emc_clk);
 	tegra_register_pto(emc_clk, &emc_pto);
+#endif
 
 out:
 	return 0;

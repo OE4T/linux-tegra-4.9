@@ -593,7 +593,9 @@ static int clk_init_set(void *data, u64 val)
 		if (IS_ERR_OR_NULL(c))
 			continue;
 
+#ifdef CONFIG_TEGRA_CLK_DEBUG
 		tegra_clk_debugfs_add(c);
+#endif
 	}
 	return 0;
 }

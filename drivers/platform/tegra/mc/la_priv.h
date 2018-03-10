@@ -629,6 +629,10 @@ void tegra_la_get_t11x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t12x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t18x_specific(struct la_chip_specific *cs);
 void tegra_la_get_t21x_specific(struct la_chip_specific *cs);
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
 void tegra_la_get_t19x_specific(struct la_chip_specific *cs);
+#else
+static inline void tegra_la_get_t19x_specific(struct la_chip_specific *cs) {}
+#endif
 
 #endif /* _MACH_TEGRA_LA_PRIV_H_ */

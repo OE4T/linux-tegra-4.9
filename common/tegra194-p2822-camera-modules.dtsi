@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 #include "tegra194-p2822-0000-camera-e3331-a00.dtsi"
 #include "tegra194-p2822-0000-camera-imx274-dual.dtsi"
 
-#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 5)
+#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 4)
 #define CAM0_PWDN	TEGRA194_MAIN_GPIO(H, 6)
 #define CAM1_RST_L	TEGRA194_MAIN_GPIO(T, 5)
 #define CAM1_PWDN	TEGRA194_MAIN_GPIO(T, 6)

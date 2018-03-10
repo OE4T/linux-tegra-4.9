@@ -53,7 +53,7 @@ asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
 
 obj-y += bond_out.o
 
-obj-$(CONFIG_TEGRA_IVC)			+= tegra-ivc.o
+obj-$(CONFIG_NV_TEGRA_IVC)			+= tegra-ivc.o
 
 obj-y					+= mselect.o
 

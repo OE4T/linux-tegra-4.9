@@ -71,8 +71,8 @@ config TEGRA_CENTRAL_ACTMON
 	  as it monitors central activity for example MC activity. HW fabric of
 	  central and unit actmon is different. If unsure, say Y here.
 
-config TEGRA_IVC
-	bool "Tegra IVC protocol support"
+config NV_TEGRA_IVC
+	bool "Tegra IVC protocol support (Downstream version)"
 	default n
 	help
 	  Enable the Tegra IVC library, which implements a lockless, shared-

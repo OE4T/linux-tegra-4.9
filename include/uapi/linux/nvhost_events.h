@@ -1,7 +1,7 @@
 /*
  * Eventlib interface for PVA
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@ enum {
 	NVHOST_SCHEMA_VERSION = 1
 };
 
-#define NVHOST_EVENT_PROVIDER_NAME "nvhost"
+#define NVHOST_EVENT_PROVIDER_NAME "nv_mm_nvhost"
 
 /* Marks that the task is submitted to hardware */
 struct nvhost_task_submit {

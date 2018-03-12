@@ -2,9 +2,9 @@
     "Type"   : "EventProvider",
     "Version": "1",
 
-    "EventProviderName": "nvhost",
-    "StructPrefix"     : "nvhost_",
-    "MacroPrefix"      : "NVHOST_",
+    "EventProviderName": "nv_mm_nvhost",
+    "StructPrefix"     : "nv_mm_nvhost_",
+    "MacroPrefix"      : "NV_MM_NVHOST_",
 
     "EventTypes": [
 

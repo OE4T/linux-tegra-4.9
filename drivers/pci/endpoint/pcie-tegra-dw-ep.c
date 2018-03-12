@@ -27,6 +27,7 @@
 #include <linux/pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
 #include <soc/tegra/chip-id.h>
@@ -321,6 +322,8 @@ struct tegra_pcie_dw_ep {
 	struct margin_cmd mcmd;
 	struct dentry *debugfs;
 
+	struct tegra_bwmgr_client *emc_bw;
+
 	u32 num_lanes;
 	u32 max_speed;
 	u32 cfg_link_cap_l1sub;
@@ -328,6 +331,15 @@ struct tegra_pcie_dw_ep {
 	u32 event_cntr_data;
 	u32 margin_port_cap;
 	u32 margin_lane_cntrl;
+};
+
+static unsigned int pcie_emc_client_id[] = {
+	TEGRA_BWMGR_CLIENT_PCIE,
+	TEGRA_BWMGR_CLIENT_PCIE_1,
+	TEGRA_BWMGR_CLIENT_PCIE_2,
+	TEGRA_BWMGR_CLIENT_PCIE_3,
+	TEGRA_BWMGR_CLIENT_PCIE_4,
+	TEGRA_BWMGR_CLIENT_PCIE_5
 };
 
 static int tegra_pcie_power_on_phy(struct tegra_pcie_dw_ep *pcie);
@@ -787,6 +799,7 @@ static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
 static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 {
 	u32 val = 0;
+	unsigned long freq;
 
 	/* If EP doesn't advertise L1SS, just return */
 	val = readl(pcie->dbi_base + pcie->cfg_link_cap_l1sub);
@@ -819,6 +832,27 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 		if (val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE)
 			dev_err(pcie->dev, "LTR_MSG sending failed\n");
 	}
+
+	/* Make EMC FLOOR freq request based on link width */
+	val = readl(pcie->dbi_base + CFG_LINK_STATUS_CONTROL);
+	switch ((val >> 16) & PCI_EXP_LNKSTA_NLW) {
+	case PCI_EXP_LNKSTA_NLW_X1:
+		freq = 1333000000;
+		break;
+	case PCI_EXP_LNKSTA_NLW_X2:
+	case PCI_EXP_LNKSTA_NLW_X4:
+		freq = 1600000000;
+		break;
+	case PCI_EXP_LNKSTA_NLW_X8:
+		freq = 2133000000;
+		break;
+	default:
+		/* set to max to avoid any perf penalty */
+		freq = 2133000000;
+		break;
+	}
+	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
+		dev_err(pcie->dev, "can't set emc clock[%lu]\n", freq);
 }
 
 static int pcie_ep_work_thread(void *p)
@@ -1515,12 +1549,19 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&pcie->wq);
 
+	pcie->emc_bw = tegra_bwmgr_register(pcie_emc_client_id[pcie->cid]);
+	if (IS_ERR_OR_NULL(pcie->emc_bw)) {
+		dev_err(pcie->dev, "bwmgr registration failed\n");
+		ret = -ENOENT;
+		goto fail_alloc;
+	}
+
 	pcie->pcie_ep_task = kthread_run(pcie_ep_work_thread, (void *)pcie,
 					 "pcie_ep_work");
 	if (IS_ERR(pcie->pcie_ep_task)) {
 		dev_err(pcie->dev, "failed to create pcie_ep_work thread\n");
 		ret = PTR_ERR(pcie->pcie_ep_task);
-		goto fail_alloc;
+		goto fail_bwmgr;
 	}
 
 	pcie->core_rst = devm_reset_control_get(pcie->dev, "core_rst");
@@ -1590,6 +1631,8 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 
 fail_thread:
 	kthread_stop(pcie->pcie_ep_task);
+fail_bwmgr:
+	tegra_bwmgr_unregister(pcie->emc_bw);
 fail_alloc:
 	dma_free_coherent(pcie->dev, pcie->bar0_size, pcie->cpu_virt,
 			  pcie->dma_handle);
@@ -1613,6 +1656,8 @@ static int tegra_pcie_dw_ep_remove(struct platform_device *pdev)
 	if (!kfifo_put(&pcie->event_fifo, EP_EVENT_EXIT))
 		dev_err(pcie->dev, "EVENT: fifo is full\n");
 	kthread_stop(pcie->pcie_ep_task);
+
+	tegra_bwmgr_unregister(pcie->emc_bw);
 
 	dma_free_coherent(pcie->dev, pcie->bar0_size, pcie->cpu_virt,
 			  pcie->dma_handle);

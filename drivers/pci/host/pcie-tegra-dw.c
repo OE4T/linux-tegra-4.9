@@ -26,6 +26,7 @@
 #include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/pm_runtime.h>
 #include <linux/phy/phy.h>
 #include <linux/resource.h>
@@ -441,6 +442,8 @@ struct tegra_pcie_dw {
 	bool td_bit;
 	u8 init_link_width;
 
+	struct tegra_bwmgr_client *emc_bw;
+
 	/* DMA operation */
 	u64 src;
 	u64 dst;
@@ -506,6 +509,15 @@ struct dma_ll {
 	u32 sar_high;
 	u32 dar_low;
 	u32 dar_high;
+};
+
+static unsigned int pcie_emc_client_id[] = {
+	TEGRA_BWMGR_CLIENT_PCIE,
+	TEGRA_BWMGR_CLIENT_PCIE_1,
+	TEGRA_BWMGR_CLIENT_PCIE_2,
+	TEGRA_BWMGR_CLIENT_PCIE_3,
+	TEGRA_BWMGR_CLIENT_PCIE_4,
+	TEGRA_BWMGR_CLIENT_PCIE_5
 };
 
 static inline void dma_common_wr16(void __iomem *p, u32 val, u32 offset)
@@ -2292,10 +2304,33 @@ static void enable_ltr(struct pci_dev *pdev)
 static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 {
 	struct pci_host_bridge *host = pci_find_host_bridge(pp->bus);
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct resource_entry *win;
 	struct pci_dev *pdev = NULL, *ppdev = NULL;
 	u32 data = 0, pos = 0;
 	struct pci_bus *child;
+	unsigned long freq;
+
+	/* Make EMC FLOOR freq request based on link width */
+	data = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
+	switch ((data >> 16) & PCI_EXP_LNKSTA_NLW) {
+	case PCI_EXP_LNKSTA_NLW_X1:
+		freq = 1333000000;
+		break;
+	case PCI_EXP_LNKSTA_NLW_X2:
+	case PCI_EXP_LNKSTA_NLW_X4:
+		freq = 1600000000;
+		break;
+	case PCI_EXP_LNKSTA_NLW_X8:
+		freq = 2133000000;
+		break;
+	default:
+		/* set to max to avoid any perf penalty */
+		freq = 2133000000;
+		break;
+	}
+	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
+		dev_err(pp->dev, "can't set emc clock[%lu]\n", freq);
 
 	resource_list_for_each_entry(win, &host->windows) {
 		if (win->res->flags & IORESOURCE_IO) {
@@ -2697,6 +2732,13 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		}
 	}
 
+	pcie->emc_bw = tegra_bwmgr_register(pcie_emc_client_id[pcie->cid]);
+	if (IS_ERR_OR_NULL(pcie->emc_bw)) {
+		dev_err(pcie->dev, "bwmgr registration failed\n");
+		ret = -ENOENT;
+		return ret;
+	}
+
 	platform_set_drvdata(pdev, pcie);
 	pm_runtime_enable(pcie->dev);
 	ret = pm_runtime_get_sync(pcie->dev);
@@ -2750,6 +2792,7 @@ fail_debugfs:
 fail_host_init:
 	pm_runtime_put_sync(pcie->dev);
 	pm_runtime_disable(pcie->dev);
+	tegra_bwmgr_unregister(pcie->emc_bw);
 
 	return ret;
 }
@@ -2826,6 +2869,7 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 
 	pm_runtime_put_sync(pcie->dev);
 	pm_runtime_disable(pcie->dev);
+	tegra_bwmgr_unregister(pcie->emc_bw);
 
 	return 0;
 }

@@ -5418,6 +5418,7 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 {
 	int ret;
 	ktime_t start = ktime_get();
+	u32 ref_clk;
 
 	ret = ufshcd_link_startup(hba);
 	if (ret)
@@ -5456,6 +5457,15 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 	ufshcd_force_reset_auto_bkops(hba);
 	hba->wlun_dev_clr_ua = true;
 	ufshcd_get_ref_clk_value(hba, &hba->init_prefetch_data.ref_clk_freq);
+	dev_info(hba->dev, "default ref_clk_freq = %u\n",
+		 hba->init_prefetch_data.ref_clk_freq);
+	if (hba->init_prefetch_data.ref_clk_freq != 0) {
+		ref_clk = 0;
+		ufshcd_set_refclk_value(hba, &ref_clk);
+		ufshcd_get_ref_clk_value(hba, &hba->init_prefetch_data.ref_clk_freq);
+		dev_info(hba->dev, "Configured ref_clk_freq = %u\n",
+			 hba->init_prefetch_data.ref_clk_freq);
+	}
 
 	if (ufshcd_get_max_pwr_mode(hba)) {
 		dev_err(hba->dev,

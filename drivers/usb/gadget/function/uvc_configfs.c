@@ -1880,7 +1880,7 @@ static int __uvcg_cnt_strm(void *priv1, void *priv2, void *priv3, int n,
 	break;
 	case UVCG_FRAME: {
 		struct uvcg_frame *frm = priv1;
-		int sz = sizeof(frm->dw_frame_interval);
+		size_t sz = sizeof(frm->dw_frame_interval);
 
 		*size += sizeof(frm->frame);
 		*size += frm->frame.b_frame_interval_type * sz;

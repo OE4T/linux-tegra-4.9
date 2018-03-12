@@ -246,6 +246,7 @@ int gv100_init_gpu_characteristics(struct gk20a *g)
 		return err;
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_TEMPERATURE, true);
 
 	return 0;
 }
@@ -586,6 +587,14 @@ static const struct gpu_ops gv100_ops = {
 		.enter = gk20a_pramin_enter,
 		.exit = gk20a_pramin_exit,
 		.data032_r = pram_data032_r,
+	},
+	.therm = {
+#ifdef CONFIG_DEBUG_FS
+		.therm_debugfs_init = gp106_therm_debugfs_init,
+#endif /* CONFIG_DEBUG_FS */
+		.elcg_init_idle_filters = gp106_elcg_init_idle_filters,
+		.get_internal_sensor_curr_temp =
+			gp106_get_internal_sensor_curr_temp,
 	},
 	.pmu = {
 		.init_wpr_region = gv100_pmu_init_acr,

@@ -1376,6 +1376,9 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
 
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_GET_TEMPERATURE))
+		return -EINVAL;
+
 	if (!g->ops.therm.get_internal_sensor_curr_temp)
 		return -EINVAL;
 

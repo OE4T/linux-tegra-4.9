@@ -26,8 +26,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gp106/bios_gp106.h"
-#include "common/linux/os_linux.h"
-#include "common/linux/platform_gk20a.h"
 
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
@@ -148,8 +146,7 @@ exit:
 static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_i2c_device_desc_table i2c_desc_table;
-	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
-	u32 idx = platform->ina3221_dcb_index;
+	u32 idx = g->ina3221_dcb_index;
 	u32 status = 0;
 
 	/* INA3221 I2C device info */
@@ -159,9 +156,9 @@ static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 	i2c_desc_table.devices[idx].super.type = 0x4E;
 
 	i2c_desc_table.devices[idx].dcb_index = idx;
-	i2c_desc_table.devices[idx].i2c_address = platform->ina3221_i2c_address;
+	i2c_desc_table.devices[idx].i2c_address = g->ina3221_i2c_address;
 	i2c_desc_table.devices[idx].i2c_flags = 0xC2F;
-	i2c_desc_table.devices[idx].i2c_port = platform->ina3221_i2c_port;
+	i2c_desc_table.devices[idx].i2c_port = g->ina3221_i2c_port;
 
 	/* Pass the table down the PMU as an object */
 	status = pmgr_pmu_set_object(
@@ -220,7 +217,7 @@ static u32 pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 			status);
 
 exit:
-	kfree(pwr_desc_table);
+	nvgpu_kfree(g, pwr_desc_table);
 	return status;
 }
 
@@ -289,7 +286,7 @@ static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 			status);
 
 exit:
-	kfree(pwr_monitor_pack);
+	nvgpu_kfree(g, pwr_monitor_pack);
 	return status;
 }
 

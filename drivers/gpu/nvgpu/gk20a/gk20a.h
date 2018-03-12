@@ -1416,6 +1416,15 @@ struct gk20a {
 	u16 pci_class;
 	u8 pci_revision;
 
+	/*
+	 * PCI power management: i2c device index, port and address for
+	 * INA3221.
+	 */
+	u32 ina3221_dcb_index;
+	u32 ina3221_i2c_address;
+	u32 ina3221_i2c_port;
+	bool hardcode_sw_threshold;
+
 	/* PCIe power states. */
 	bool xve_l0s;
 	bool xve_l1;

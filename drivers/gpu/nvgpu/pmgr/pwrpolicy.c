@@ -28,8 +28,6 @@
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gp106/bios_gp106.h"
-#include "common/linux/os_linux.h"
-#include "common/linux/platform_gk20a.h"
 
 #define _pwr_policy_limitarboutputget_helper(p_limit_arb) (p_limit_arb)->output
 #define _pwr_policy_limitdeltaapply(limit, delta) ((u32)max(((s32)limit) + (delta), 0))
@@ -517,7 +515,6 @@ static inline void devinit_unpack_pwr_policy_entry(
 static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
 	u32 status = 0;
 	u8 *ptr = NULL;
 	struct boardobj *boardobj;
@@ -690,7 +687,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 		++obj_index;
 	}
 
-	if (platform->hardcode_sw_threshold) {
+	if (g->hardcode_sw_threshold) {
 		status = _pwr_policy_construct_WAR_SW_Threshold_policy(g,
 					ppwrpolicyobjs,
 					&pwr_policy_data,

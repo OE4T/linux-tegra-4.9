@@ -581,6 +581,11 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	g->pci_class = (pdev->class >> 8) & 0xFFFFU; // we only want base/sub
 	g->pci_revision = pdev->revision;
 
+	g->ina3221_dcb_index = platform->ina3221_dcb_index;
+	g->ina3221_i2c_address = platform->ina3221_i2c_address;
+	g->ina3221_i2c_port = platform->ina3221_i2c_port;
+	g->hardcode_sw_threshold = platform->hardcode_sw_threshold;
+
 #if defined(CONFIG_PCI_MSI)
 	err = pci_enable_msi(pdev);
 	if (err) {

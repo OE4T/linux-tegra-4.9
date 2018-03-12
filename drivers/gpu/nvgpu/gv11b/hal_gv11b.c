@@ -364,7 +364,9 @@ static const struct gpu_ops gv11b_ops = {
 		.update_boosted_ctx = gr_gp10b_update_boosted_ctx,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.set_bes_crop_debug4 = gr_gp10b_set_bes_crop_debug4,
+#ifdef CONFIG_SYSFS
 		.create_gr_sysfs = gr_gv11b_create_sysfs,
+#endif
 		.set_ctxsw_preemption_mode = gr_gv11b_set_ctxsw_preemption_mode,
 		.is_etpc_addr = gv11b_gr_pri_is_etpc_addr,
 		.egpc_etpc_priv_addr_table = gv11b_gr_egpc_etpc_priv_addr_table,

@@ -335,7 +335,9 @@ static const struct gpu_ops gp10b_ops = {
 		.init_preemption_state = gr_gp10b_init_preemption_state,
 		.update_boosted_ctx = gr_gp10b_update_boosted_ctx,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
+#ifdef CONFIG_SYSFS
 		.create_gr_sysfs = gr_gp10b_create_sysfs,
+#endif
 		.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
 		.init_gfxp_wfi_timeout_count =

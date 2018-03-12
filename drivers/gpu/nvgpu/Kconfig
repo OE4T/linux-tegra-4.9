@@ -114,7 +114,7 @@ config GK20A_PCI
 
 config GK20A_TRACE_PRINTK
 	bool "Support trace_printk debugging"
-	depends on GK20A && FTRACE_PRINTK
+	depends on GK20A && TRACING
 	default n
 	help
 	  Enable nvgpu debug facility to redirect debug spew to ftrace. This

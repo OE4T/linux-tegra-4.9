@@ -613,6 +613,7 @@ struct sdhci_ops {
 	void	(*dump_vendor_regs)(struct sdhci_host *host);
 	void	(*pre_regulator_config)(struct sdhci_host *sdhci, int vdd,
 			bool flag);
+	void	(*voltage_switch_req)(struct sdhci_host *sdhci, bool req);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

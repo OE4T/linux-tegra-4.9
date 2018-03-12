@@ -183,6 +183,7 @@ struct mmc_host_ops {
 	void	(*enable_host_int)(struct mmc_host *host, bool enable);
 	void	(*pre_regulator_config)(struct mmc_host *host, int vdd,
 					bool flag);
+	void	(*voltage_switch_req)(struct mmc_host *host, bool req);
 };
 
 struct mmc_card;

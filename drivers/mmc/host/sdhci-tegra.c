@@ -74,6 +74,7 @@
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL_1		0x124
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL_2		0x128
+#define SDHCI_MISC_CTRL_2_CLK_OVR_ON		0x40000000
 
 #define SDMMC_VNDR_IO_TRIM_CTRL_0		0x1AC
 #define SDMMC_VNDR_IO_TRIM_CTRL_0_SEL_VREG_MASK	0x4
@@ -118,6 +119,8 @@
 #define NVQUIRK_USE_PLATFORM_TUNING	BIT(9)
 #define NVQUIRK_READ_REG_AFTER_WRITE	BIT(10)
 #define NVQUIRK_SHADOW_XFER_MODE_WRITE	BIT(11)
+/* Quirk to identify SLCG registers */
+#define NVQUIRK_SDMMC_CLK_OVERRIDE	BIT(12)
 
 #define MAX_CLK_PARENTS	5
 #define MAX_DIVISOR_VALUE	128
@@ -595,7 +598,7 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
-	u32 misc_ctrl, clk_ctrl;
+	u32 misc_ctrl, clk_ctrl, misc_ctrl_2;
 	int err;
 	bool clear_ddr_signalling = true;
 
@@ -642,9 +645,13 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 		if (soc_data->nvquirks & SDHCI_MISC_CTRL_ENABLE_SDR50)
 			clk_ctrl |= SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE;
 	}
-
-	tegra_host->slcg_status = !(clk_ctrl &
-				    SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE);
+	if (soc_data->nvquirks & NVQUIRK_SDMMC_CLK_OVERRIDE) {
+		misc_ctrl_2 = sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_2);
+		tegra_host->slcg_status = !(misc_ctrl_2 &
+						SDHCI_MISC_CTRL_2_CLK_OVR_ON);
+	} else
+		tegra_host->slcg_status = !(clk_ctrl &
+					SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE);
 
 	sdhci_writel(host, misc_ctrl, SDHCI_TEGRA_VENDOR_MISC_CTRL);
 	sdhci_writel(host, clk_ctrl, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
@@ -1431,6 +1438,49 @@ static void tegra_sdhci_pre_regulator_config(struct sdhci_host *sdhci,
 	tegra_sdhci_configure_e_input(sdhci, flag);
 }
 
+/* Configure voltage switch specific requirements */
+static void tegra_sdhci_voltage_switch_req(struct sdhci_host *host, bool req)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+	u32 clk_ctrl;
+
+	if (!req) {
+		/* Disable SLCG */
+		clk_ctrl = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+		clk_ctrl = clk_ctrl | SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE;
+		sdhci_writel(host, clk_ctrl, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+
+		if (soc_data->nvquirks & NVQUIRK_SDMMC_CLK_OVERRIDE) {
+			clk_ctrl = sdhci_readl(host,
+						SDHCI_TEGRA_VENDOR_MISC_CTRL_2);
+			clk_ctrl = clk_ctrl | SDHCI_MISC_CTRL_2_CLK_OVR_ON;
+			sdhci_writel(host, clk_ctrl,
+						SDHCI_TEGRA_VENDOR_MISC_CTRL_2);
+		}
+	} else  {
+		/* Restore SLCG */
+		if (tegra_host->slcg_status) {
+			clk_ctrl = sdhci_readl(host,
+						SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			clk_ctrl = clk_ctrl &
+					~SDHCI_CLOCK_CTRL_LEGACY_CLKEN_OVERRIDE;
+			sdhci_writel(host, clk_ctrl,
+						SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			if (soc_data->nvquirks &
+					NVQUIRK_SDMMC_CLK_OVERRIDE) {
+				clk_ctrl = sdhci_readl(host,
+						SDHCI_TEGRA_VENDOR_MISC_CTRL_2);
+				clk_ctrl = clk_ctrl &
+						~SDHCI_MISC_CTRL_2_CLK_OVR_ON;
+				sdhci_writel(host, clk_ctrl,
+						SDHCI_TEGRA_VENDOR_MISC_CTRL_2);
+			}
+		}
+	}
+
+}
 static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_b     = tegra_sdhci_readb,
@@ -1462,6 +1512,7 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.card_event = tegra_sdhci_card_event,
 	.dump_vendor_regs = tegra_sdhci_dump_vendor_regs,
 	.pre_regulator_config	= tegra_sdhci_pre_regulator_config,
+	.voltage_switch_req	= tegra_sdhci_voltage_switch_req,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {
@@ -1599,6 +1650,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
 		    NVQUIRK_ENABLE_SDR50 |
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
+		    NVQUIRK_SDMMC_CLK_OVERRIDE |
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 	.cqequirks = CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD,
 };
@@ -1622,6 +1674,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra194 = {
 		    NVQUIRK_ENABLE_SDR50 |
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
+		    NVQUIRK_SDMMC_CLK_OVERRIDE |
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 };
 static const struct of_device_id sdhci_tegra_dt_match[] = {

@@ -736,6 +736,8 @@ int mmc_sd_get_cid(struct mmc_host *host, u32 ocr, u32 *cid, u32 *rocr)
 	u32 max_current;
 	int retries = 10;
 	u32 pocr = ocr;
+	if (host->ops->voltage_switch_req)
+		host->ops->voltage_switch_req(host, false);
 
 try_again:
 	if (!retries) {
@@ -802,6 +804,9 @@ try_again:
 		err = mmc_send_cid(host, cid);
 	else
 		err = mmc_all_send_cid(host, cid);
+
+	if (host->ops->voltage_switch_req)
+		host->ops->voltage_switch_req(host, true);
 
 	return err;
 }

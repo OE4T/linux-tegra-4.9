@@ -83,13 +83,19 @@ struct rtc_time rt;
 #define SM501
 //
 
-voice_buf voice_buf_data;
+extern int tegra210_dmic_enable(int dmic_inst);
+extern int tegra210_dmic_disable(int dmic_inst);
+
+void enable_pdm_clock(void);
+void disable_pdm_clock(void);
+static atomic_t dmic_clk_cnt = ATOMIC_INIT(0);
+
 int im501_dsp_mode_old = -1;
 int im501_vbuf_trans_status;
 int ap_sleep_flag;
 static struct spi_device *im501_spi;
 int current_firmware_type = WAKEUP_FIRMWARE;
-u8 *firmware_type_ptr;		//0: wakeup firmware; 1: ultrasound firmware
+u8 firmware_type = WAKEUP_FIRMWARE;	//0: wakeup firmware; 1: ultrasound firmware
 
 //#define VERIFY_PCM_KFIFO
 #ifdef VERIFY_PCM_KFIFO
@@ -99,10 +105,9 @@ u32 g_pcm_size;
 u32 g_offset;
 #endif				//VERIFY_PCM_KFIFO
 
-#define CDEV_COUNT 1
-#define IM501_CDEV_NAME "fm_smp"
-#define REC_FILE_PATH 			"/sdcard/im501_oneshot.pcm"
-#define SPI_REC_FILE_PATH 		"/sdcard/im501_spi_rec.pcm"
+#define IM501_CDEV_NAME		"fm_smp"
+#define REC_FILE_PATH		"/sdcard/im501_oneshot.pcm"
+#define SPI_REC_FILE_PATH	"/sdcard/im501_spi_rec.pcm"
 
 struct im501_data_t {
 	struct mutex lock;
@@ -110,11 +115,12 @@ struct im501_data_t {
 	dev_t record_chrdev;
 	struct cdev record_cdev;
 	struct device *record_dev;
-//      struct kfifo    *pcm_kfifo;
-//      spinlock_t              pcm_fifo_lock;
+	struct kfifo *pcm_kfifo;
+	spinlock_t pcm_fifo_lock;
 	struct class *cdev_class;
 	atomic_t audio_owner;
-	int pdm_clki_gpio;
+	int irq_gpio;
+	int reset_gpio;
 };
 struct im501_data_t *im501_data;
 
@@ -132,403 +138,8 @@ static char im501_spi_record_started;
 struct file *fpdata;
 mm_segment_t oldfs;
 unsigned int output_counter;
-//
 
 int check_dsp_status(void);
-
-#define EOF -1
-mm_segment_t oldfs;
-char filepath_name[255] = { 0 };
-
-int im501_dsp_mode = 1;
-struct file *openFile(const char *path, int flag, int mode)
-{
-	struct file *fp;
-
-	fp = filp_open(path, flag, 0);
-
-	if (IS_ERR(fp))
-		return NULL;
-	else
-		return fp;
-}
-
-int readFile(struct file *fp, char *buf, int readlen)
-{
-	if (fp->f_op && fp->f_op->read)
-		return fp->f_op->read(fp, buf, readlen, &fp->f_pos);
-	else
-		return -EFAILOPEN;
-}
-
-int closeFile(struct file *fp)
-{
-	filp_close(fp, NULL);
-	return ESUCCESS;
-}
-
-void initKernelEnv(void)
-{
-	oldfs = get_fs();
-	set_fs(KERNEL_DS);
-}
-
-int fgetc(struct file *fp)
-{
-	int cnt;
-	u8 c;
-
-	cnt = readFile(fp, &c, 1);
-	if (cnt <= 0) {
-		return EOF;
-	} else {
-		return c;
-	}
-}
-
-char *fgets(char *dst, int max, struct file *fp, int *word_count)
-{
-	int c = 0;
-	char *p;
-
-	/* get max bytes or upto a newline */
-	*word_count = 0;
-	for (p = dst, max--; max > 0; max--) {
-		c = fgetc(fp);
-		if (c == EOF)
-			break;
-		*p++ = c;
-		(*word_count)++;
-		if (c == '\n')
-			break;
-	}
-	// add end char '\0' in the string
-	*p = 0;
-
-	if (p == dst)
-		return NULL;
-
-	return dst;
-}
-
-char *combine_path_name(char *s, char *append)
-{
-	char *save = s;
-
-	strcpy(save, IM501_FIRMWARE_PATH);
-	for (; *s; ++s);
-
-	while ((*s++ = *append++));
-
-	return save;
-}
-
-int is_white_space(int x)
-{
-	if (x == ' ' || x == '\t' || x == '\n' || x == '\f' || x == '\b'
-	    || x == '\r')
-		return 1;
-	else
-		return 0;
-}
-
-void del_white_space(char *src)
-{
-	char *cp1, *cp2, *cp3;
-
-	// skip leading spaces
-	cp1 = src;
-	while (*cp1) {
-		if (!is_white_space(*cp1))
-			break;
-		cp1++;
-	}
-
-	// skip tailing spaces
-	cp2 = cp1;
-	while (*cp2) {		// point to string end
-		cp2++;
-	}
-	while (cp2 > cp1) {
-		cp2--;
-		if (!is_white_space(*cp2))
-			break;
-	}
-
-	// copy string
-	cp3 = src;
-	while (cp1 <= cp2)
-		*cp3++ = *cp1++;
-
-	*cp3 = '\0';
-}
-
-// parse 4 fields: "mode, path_vec, dsp_vec, mode_description"; delimiter is comma
-int parser_mode(char *src_argv, cfg_mode_cmd *data)
-{
-	char *pch;
-	char *delim = ",";	// comma
-	int argc = 0;
-
-	while ((pch = strsep(&src_argv, delim)) != NULL) {
-		if (*pch == 0)
-			continue;
-		if (argc == 0) {
-			del_white_space(pch);
-			data->mode = simple_strtoul(pch, NULL, 16);
-		} else if (argc == 1) {
-			del_white_space(pch);
-			strncpy(data->path_setting_file_name, pch,
-				MAX_PATH_LEN);
-		} else if (argc == 2) {
-			del_white_space(pch);
-			strncpy(data->dsp_setting_file_name, pch, MAX_PATH_LEN);
-		} else if (argc == 3) {
-			del_white_space(pch);
-			strncpy(data->comment, pch, MAX_COMMENT_LEN);
-		}
-		argc++;
-	}
-
-	return argc;
-}
-
-// parse 2 fields: "address data"; delimiter is space and tab
-int parser_reg_mem(char *src_argv, dev_cmd *data)
-{
-	char *pch;
-	char delim[] = " \t";	// space and tab
-	int argc = 0;
-
-	while ((pch = strsep(&src_argv, delim)) != NULL) {
-		if (*pch == 0)
-			continue;
-		if (argc == 0) {
-			data->reg_addr = simple_strtoul(pch, NULL, 16);
-		} else if (argc == 1) {
-			data->val = simple_strtoul(pch, NULL, 16);
-		} else {
-			break;
-		}
-		argc++;
-	}
-
-	return argc;
-}
-
-// load codec init VEC, access HW register thru short address
-int load_init_vec(char *file_src)
-{
-	struct file *fp;
-	int word_count = 0;
-	char s[255];		//assume each line of the opened file is below 255 characters
-	dev_cmd payload;
-
-	pr_err("%s: file %s\n", __func__, file_src);
-
-	initKernelEnv();
-	fp = openFile(file_src, O_RDONLY, 0);
-
-	if (fp == NULL) {
-		pr_err("%s, File %s could not be opened\n", __func__, file_src);
-		set_fs(oldfs);
-		return -EFAILOPEN;
-	} else {
-		pr_err("%s, File %s opened!...\n", __func__, file_src);
-		while (fgets(s, 255, fp, &word_count) != NULL) {
-			if (s[0] == '-' || s[0] == '#' || s[0] == '/'
-			    || s[0] == 0xD || s[0] == 0x0) {
-				continue;
-			} else {
-				//parse addr, value,
-				if (parser_reg_mem(s, &payload) >= 2) {
-					//pr_err("payload.reg_addr=0x%08x, payload.val=0x%08x\n", (u32)payload.reg_addr, (u32)payload.val);
-
-//how to know it ia memory or register?
-//int im501_spi_write_reg(u8 reg, u8 val);
-//int im501_spi_write_dram(u32 addr, u8 *pdata);
-					//write to device
-//need change                                   fm1388_write((u32)payload.reg_addr, (u32)payload.val);
-				}
-			}
-		}
-
-		/* Close stream; skip error-checking for brevity of example */
-		closeFile(fp);
-		set_fs(oldfs);
-	}
-
-	return ESUCCESS;
-}
-
-// load VEC file, access HW register thru long address
-int load_vec(char *file_src)
-{
-	struct file *fp;
-	int word_count = 0;
-	char s[255];		//assume each line of the opened file is below 255 characters
-	dev_cmd payload;
-
-	pr_err("%s: file %s\n", __func__, file_src);
-
-	initKernelEnv();
-	fp = openFile(file_src, O_RDONLY, 0);
-
-	if (fp == NULL) {
-		pr_err("%s, File %s could not be opened\n", __func__, file_src);
-		set_fs(oldfs);
-		return -EFAILOPEN;
-	} else {
-		pr_err("%s, File %s opened!...\n", __func__, file_src);
-		while (fgets(s, 255, fp, &word_count) != NULL) {
-			if (s[0] == '-' || s[0] == '#' || s[0] == '/'
-			    || s[0] == 0xD || s[0] == 0x0) {
-				continue;
-			} else {
-				//parse addr, value,
-				if (parser_reg_mem(s, &payload) >= 2) {
-
-//how to know it ia memory or register?
-//int im501_spi_write_reg(u8 reg, u8 val);
-//int im501_spi_write_dram(u32 addr, u8 *pdata);
-					//write to device
-//need change                                   fm1388_dsp_mode_i2c_write_addr((u32)payload.reg_addr, payload.val);
-				}
-			}
-		}
-
-		/* Close stream; skip error-checking for brevity of example */
-		closeFile(fp);
-		set_fs(oldfs);
-	}
-
-	return ESUCCESS;
-}
-
-// load mode configuration file
-int load_mode_cfg(char *file_src, u32 choosed_mode)
-{
-	struct file *fp;
-	int word_count = 0;
-	cfg_mode_cmd cfg_mode;
-	char s[CONFIG_LINE_LEN];	//assume each line of the opened file is below 255 characters
-
-	pr_err("%s: file %s\n", __func__, file_src);
-
-	initKernelEnv();
-	fp = openFile(file_src, O_RDONLY, 0);
-
-	if (fp == NULL) {
-		pr_err("%s, File %s could not be opened\n", __func__, file_src);
-		set_fs(oldfs);
-		return -EFAILOPEN;
-	} else {
-		pr_err("%s, File %s opened!...\n", __func__, file_src);
-		while (fgets(s, CONFIG_LINE_LEN, fp, &word_count) != NULL) {
-			if (s[0] == '#' || s[0] == '/' || s[0] == 0xD
-			    || s[0] == 0x0) {
-				continue;
-			} else {
-				//parse mode, path vec, dsp vec, comment
-				if (parser_mode(s, &cfg_mode) >= 3) {
-					if (choosed_mode == cfg_mode.mode) {
-						pr_err
-						    ("mode=%d, path=%s, dsp_setting=%s, comment=%s\n",
-						     cfg_mode.mode,
-						     cfg_mode.
-						     path_setting_file_name,
-						     cfg_mode.
-						     dsp_setting_file_name,
-						     cfg_mode.comment);
-						break;
-					}
-				}
-			}
-		}
-
-		/* Close stream; skip error-checking for brevity of example */
-		closeFile(fp);
-		set_fs(oldfs);
-
-		if (choosed_mode == cfg_mode.mode) {
-			pr_err("%s, Set to Mode %d: %s\n", __func__,
-			       choosed_mode, cfg_mode.comment);
-			load_vec(combine_path_name(filepath_name, cfg_mode.path_setting_file_name));	// load path VEC
-			load_vec(combine_path_name(filepath_name, cfg_mode.dsp_setting_file_name));	// load DSP parameter VEC
-		} else {
-			pr_err("%s, Cannot find Mode %d in cfg file\n",
-			       __func__, choosed_mode);
-			return -EFAILOPEN;
-		}
-	}
-
-	return ESUCCESS;
-}
-
-void postwork_set_mode(void)
-{
-	//Fuli 20160902 wait for a while to let DSP working normally
-	msleep(200);
-	//
-
-	load_vec(combine_path_name(filepath_name, "FM1388_run.vec"));
-	msleep(2000);
-
-	check_dsp_status();
-
-	//Fuli 20160902 wait a while
-	msleep(2000);
-	//
-}
-
-#if 0
-void dsp_mode_change(u32 mode)
-{
-	u32 val, times = 10;
-
-	pr_err("%s: will change dsp_mode to: %x\n", __func__, mode);
-	if (load_vec(combine_path_name(filepath_name, "FM1388_sleep.vec")) ==
-	    ESUCCESS) {
-		// wait for DSP default setting ready
-		while (1) {
-//need change                   addr = DSP_PARAMETER_READY;
-//need change                   fm1388_dsp_mode_i2c_read_addr(fm1388_i2c, addr, &val);
-
-			//pr_err("%s, *** reg_addr=0x%08x, val=0x%04x\n", __func__, DSP_PARAMETER_READY, val);
-			if ((val & 0x100) == 0x100) {	// ready: bit 8 = 1
-				break;
-			} else {
-				times--;
-				if (times == 0) {
-					pr_err
-					    ("%s, timeout: wait for DSP default setting ready\n",
-					     __func__);
-					break;
-				}
-			}
-			msleep(10);
-		}
-
-		if (load_mode_cfg
-		    (combine_path_name(filepath_name, "FM1388_mode.cfg"),
-		     mode) == ESUCCESS) {
-			load_vec(combine_path_name
-				 (filepath_name, "FM1388_wakeup.vec"));
-
-			//Fuli 20160903
-//need change                   postwork_set_mode();
-			//
-
-			im501_dsp_mode = mode;
-		} else {
-			pr_err
-			    ("%s file(%s) open error! failed to change dsp mode.\n",
-			     __func__, combine_path_name(filepath_name,
-							 "FM1388_mode.cfg"));
-		}
-	}
-}
-#endif
 
 int im501_spi_read_reg(u8 reg, u8 *val)
 {
@@ -871,30 +482,77 @@ int check_dsp_status(void)
  * The following is just a sample to control the PDM_CLKI on/off through UIF.
  * The parameter @pdm_clki_rate is reserved for future use.
  */
-int codec2im501_pdm_clki_set(bool set_flag, u32 pdm_clki_rate)
+int codec2im501_pdm_clki_set(bool set_flag, u32 rate)
 {
 	if (set_flag == NORMAL_MODE) {
-		pr_err("%s: set the pdm_clki with gpio_number = %d\n", __func__,
-		       im501_data->pdm_clki_gpio);
-		gpio_set_value(im501_data->pdm_clki_gpio, 1);
+		pr_err("%s: enable pdm_clki rate %d\n", __func__, rate);
+		enable_pdm_clock();
 		mdelay(10);
 	} else {
-		pr_err("%s: unset the pdm_clki with gpio_number = %d\n",
-		       __func__, im501_data->pdm_clki_gpio);
-		gpio_set_value(im501_data->pdm_clki_gpio, 0);
+		pr_err("%s: disable pdm_clki rate %d\n", __func__, rate);
+		disable_pdm_clock();
 		mdelay(10);
 	}
 	return 0;
 }
 
-unsigned char fetch_voice_data(unsigned int start_addr,
-			       unsigned int data_length)
+int im501_reset(void)
+{
+	if (im501_data->reset_gpio == -1)
+		return 0;
+
+	pr_err("%s: reset im501 with gpio_number = %d\n", __func__, im501_data->reset_gpio);
+
+	pr_err("%s: set reset pin to low.\n", __func__);
+	gpio_set_value(im501_data->reset_gpio, 0);
+	mdelay(200);
+	pr_err("%s: set reset pin to high.\n", __func__);
+	gpio_set_value(im501_data->reset_gpio, 1);
+	mdelay(200);
+
+	return 0;
+}
+
+void writeDataFile(char *buf, int count)
+{
+	if (fpdata != NULL) {
+		oldfs = get_fs();
+		set_fs(get_ds());
+		fpdata->f_op->write(fpdata, (u8 *)(buf), count, &fpdata->f_pos);
+		set_fs(oldfs);
+	}
+}
+
+void openFileForWrite(unsigned char *filePath)
+{
+	/* disable file i/o */
+#if 0
+	if (fpdata != NULL) {
+		filp_close(fpdata, NULL);
+		fpdata = NULL;
+	}
+	fpdata = filp_open(filePath, O_CREAT | O_RDWR, 0666);
+	if (!fpdata) {
+		pr_err("file open failed %s\n", filePath);
+	}
+#endif
+}
+
+void closeDataFile(void)
+{
+	if (fpdata != NULL) {
+		filp_close(fpdata, NULL);
+		fpdata = NULL;
+	}
+}
+
+unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length)
 {
 	unsigned char err = ESUCCESS;
 	unsigned char *pbuf;
 	unsigned int i, a, b;
 	unsigned int read_size = 2048;
-	//int fifo_len;
+	int fifo_len;
 
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
@@ -921,14 +579,15 @@ unsigned char fetch_voice_data(unsigned int start_addr,
 
 		start_addr += read_size;
 
+#if 0
 		if (fpdata != NULL) {
 			fpdata->f_op->write(fpdata, (u8 *) (pbuf), read_size,
 					    &fpdata->f_pos);
 		} else {
 			pr_err("%s: open data file failed.\n", __func__);
 		}
+#endif
 
-/* Fuli 20171027 not need fifo, write file directly
 		//fuli 20170515 to reduce output pr_err("%s: put the voice data to pcm FIFO.\n", __func__);
 		//if(i % 10 == 0) pr_err("%s: put the voice data to pcm FIFO.\n", __func__);
 		//
@@ -944,7 +603,6 @@ unsigned char fetch_voice_data(unsigned int start_addr,
 		else {
 			pr_err("%s: PCM FIFO is full.\n", __func__);
 		}
-*/
 	}
 
 	if (b > 0) {
@@ -957,16 +615,18 @@ unsigned char fetch_voice_data(unsigned int start_addr,
 				kfree(pbuf);
 			return err;
 		}
-
+#if 0
 		if (fpdata != NULL) {
 			fpdata->f_op->write(fpdata, (u8 *) (pbuf), b,
 					    &fpdata->f_pos);
 		} else {
 			pr_err("%s: open data file failed.\n", __func__);
 		}
-/* Fuli 20171027 not need fifo, write file directly
+#endif
+
 		fifo_len = kfifo_len(im501_data->pcm_kfifo);
 		//pr_err("%s: fifo_len = %d\n", __func__, fifo_len);
+		// TODO: Remove infinite wait, use timeout
 		while (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) < read_size)
 			msleep(10);
 
@@ -980,7 +640,6 @@ unsigned char fetch_voice_data(unsigned int start_addr,
 		else {
 			pr_err("%s: PCM FIFO is full.\n", __func__);
 		}
-*/
 	}
 
 	if (pbuf)
@@ -999,32 +658,11 @@ unsigned char fetch_voice_data(unsigned int start_addr,
 
 EXPORT_SYMBOL_GPL(fetch_voice_data);
 
-void openFileForWrite(unsigned char *filePath)
-{
-	oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	if (fpdata != NULL) {
-		filp_close(fpdata, NULL);
-		fpdata = NULL;
-	}
-	fpdata = filp_open(filePath, O_CREAT | O_RDWR, 0666);
-}
-
-void closeDataFile(void)
-{
-	if (fpdata != NULL) {
-		filp_close(fpdata, NULL);
-		fpdata = NULL;
-	}
-	set_fs(oldfs);
-}
-
 unsigned char parse_to_host_command(to_host_cmd cmd)
 {
 	unsigned char err = ESUCCESS;
 	unsigned int address = HW_VOICE_BUF_START;
 	u8 *pdata;
-	u32 pdm_clki_rate = 2 * 1000 * 1000;
 	u32 spi_speed = SPI_HIGH_SPEED;
 	int ret;
 	//fuli 20170629 for new protocol
@@ -1051,6 +689,9 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 			address = HW_VOICE_BUF_START + HW_VOICE_BUF_BANK_SIZE;	//BANK1 address
 		}
 #endif
+
+		pr_err("TODO: remove delay hack for SPI record interrupts to come\n");
+		mdelay(50);
 
 		if (im501_host_irqstatus == 1)
 			pr_err("%s: data ready at address=%x, data_size=%x\n",
@@ -1083,7 +724,7 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 			//to change the iM501 from PSM to Normal mode, and to keep the same setting
 			//as the mode before changing to PSM, the Host just needs to turn on the PDMCLKI,
 			//and no additional command is needed.
-			codec2im501_pdm_clki_set(NORMAL_MODE, pdm_clki_rate);
+			codec2im501_pdm_clki_set(NORMAL_MODE, 0);
 			im501_dsp_mode_old = NORMAL_MODE;
 			mdelay(5);
 #endif
@@ -1129,8 +770,6 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 	return err;
 }
 
-EXPORT_SYMBOL_GPL(parse_to_host_command);
-
 unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 {
 	unsigned char err;
@@ -1159,7 +798,7 @@ unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 
 	memset(pTempData, 0, 8);
 
-	for (i = 0; i < 50; i++) {	//wait for (50*100us = 5ms) to check if DSP finished
+	for (i = 0; i < 200; i++) {	//wait for (50*100us = 5ms) to check if DSP finished
 		err = im501_spi_read_dram(TO_DSP_CMD_ADDR, pTempData);
 		if (err != ESUCCESS) {
 			pr_err
@@ -1188,12 +827,9 @@ unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 	return err;
 }
 
-EXPORT_SYMBOL_GPL(im501_send_to_dsp_command);
-
-unsigned char write_cmd_to_im501(unsigned char cmd_index, unsigned int para)
+unsigned char im501_send_message_to_dsp(unsigned char cmd_index, unsigned int para)
 {
-
-	unsigned char err;
+	unsigned char err = ESUCCESS;
 	to_501_cmd cmd;
 
 	cmd.attri = para & 0xFFFFFF;
@@ -1206,75 +842,12 @@ unsigned char write_cmd_to_im501(unsigned char cmd_index, unsigned int para)
 	       __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
 	err = im501_send_to_dsp_command(cmd);
 
-	return err;
-
-}
-
-EXPORT_SYMBOL_GPL(write_cmd_to_im501);
-
-//Fuli 20171022 to support general message interface
-unsigned char im501_send_message_to_dsp(unsigned char cmd_index,
-					unsigned int para)
-{
-	unsigned char err = ESUCCESS;
-	int i = 0;
-
-	for (i = 0; i < 50; i++) {
-		err = write_cmd_to_im501(cmd_index, para);
-		if (err == ESUCCESS)
-			break;
-		else {
-			pr_err
-			    ("%s: fail to send message(%02x) to dsp. err=%d\n",
-			     __func__, cmd_index >> 2, err);
-		}
+	if (err != ESUCCESS) {
+		pr_err("%s: fail to send message(%02x) to dsp. err=%d\n",
+		     __func__, cmd_index >> 2, err);
 	}
-
 	return err;
 }
-
-//
-#ifdef CUBIETRUCK
-static int im501_gpio_init(int *gpio_number, int dt_gpio_idx)
-{
-	*gpio_number = GPIOB(2);
-	//pr_err("%s: gpio_number = %d @ %d\n", __func__, *gpio_number, dt_gpio_idx);
-
-	if (!gpio_is_valid(*gpio_number))
-		return -1;
-
-	if (gpio_request(*gpio_number, "pdm_clk")) {
-		pr_err("%s: %s request port error!\n", __func__, "pdm_clk");
-		return -1;
-	} else {
-		gpio_direction_output(*gpio_number, 0);
-		mdelay(10);
-		gpio_free(*gpio_number);
-	}
-	return ESUCCESS;
-}
-#else
-static int im501_gpio_init(struct device_node *np, int *gpio_number,
-			   int dt_gpio_idx)
-{
-	*gpio_number = of_get_gpio(np, dt_gpio_idx);
-	//pr_err("%s: gpio_number = %d @ %d\n", __func__, *gpio_number, dt_gpio_idx);
-
-	if (!gpio_is_valid(*gpio_number))
-		return -1;
-
-	if (gpio_request(*gpio_number, "pdm_clk")) {
-		pr_err("%s: %s request port error!\n", __func__, "pdm_clk");
-		return -1;
-	} else {
-		gpio_direction_output(*gpio_number, 0);
-		mdelay(10);
-
-		gpio_free(*gpio_number);
-	}
-	return ESUCCESS;
-}
-#endif
 
 unsigned char request_start_voice_buf_trans(void)
 {
@@ -1282,18 +855,13 @@ unsigned char request_start_voice_buf_trans(void)
 	err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_START_BUF_TRANS, 0);
 
 	//Fuli 20161216 clear fifo when start to detect ketwords.
-	/* Fuli 20171027 not need fifo, write file directly
-	   pr_err("%s: clear pcm fifo, it may contains data which is not be fetched.\n", __func__);
-	   spin_lock(&im501_data->pcm_fifo_lock);
-	   kfifo_reset(im501_data->pcm_kfifo);
-	   spin_unlock(&im501_data->pcm_fifo_lock);
-	 */
-	//
+	pr_err("%s: clear pcm fifo, it may contains data which is not be fetched.\n", __func__);
+	spin_lock(&im501_data->pcm_fifo_lock);
+	kfifo_reset(im501_data->pcm_kfifo);
+	spin_unlock(&im501_data->pcm_fifo_lock);
 
 	return err;
 }
-
-EXPORT_SYMBOL_GPL(request_start_voice_buf_trans);
 
 unsigned char request_stop_voice_buf_trans(void)
 {
@@ -1304,8 +872,6 @@ unsigned char request_stop_voice_buf_trans(void)
 
 	return err;
 }
-
-EXPORT_SYMBOL_GPL(request_stop_voice_buf_trans);
 
 unsigned char request_enter_psm(void)
 {
@@ -1335,7 +901,7 @@ unsigned char request_enter_psm(void)
 			     __func__, err);
 		}
 #ifdef CODEC2IM501_PDM_CLKI
-		mdelay(5);
+		mdelay(100);
 		codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
 		mdelay(5);
 #endif
@@ -1348,8 +914,6 @@ unsigned char request_enter_psm(void)
 	return err;
 }
 
-EXPORT_SYMBOL_GPL(request_enter_psm);
-
 unsigned char request_enter_normal(void)
 {
 	unsigned char err = ESUCCESS;
@@ -1359,7 +923,7 @@ unsigned char request_enter_normal(void)
 #ifdef CODEC2IM501_PDM_CLKI
 		mdelay(5);
 		codec2im501_pdm_clki_set(NORMAL_MODE, 0);
-		mdelay(5);
+		mdelay(100);
 #endif
 
 		//fuli 20170629
@@ -1379,8 +943,6 @@ unsigned char request_enter_normal(void)
 
 	return err;
 }
-
-EXPORT_SYMBOL_GPL(request_enter_normal);
 
 int im501_spi_burst_read_check(u32 start_addr, u8 *buf, u32 data_length)
 {
@@ -1451,8 +1013,6 @@ static void im501_8byte_swap(u8 *rxbuf, u32 len)
 		rxbuf[i + 7] = local_buf[0];
 	}
 }
-
-EXPORT_SYMBOL_GPL(im501_8byte_swap);
 
 static size_t im501_read_file(char *file_path, const u8 **buf)
 {
@@ -1541,9 +1101,9 @@ static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 
 EXPORT_SYMBOL_GPL(im501_dsp_load_single_fw_file);
 
-static void im501_dsp_load_fw(u8 firmware_type)
+static int im501_dsp_load_fw(u8 firmware_type)
 {				//0: wakeup firmware; 1: ultrasound firmware
-
+	int err = 0;
 	const struct firmware *fw = NULL;
 	u8 *local_buf;
 	int fw_type = IM501_DSP_FW;
@@ -1560,24 +1120,25 @@ static void im501_dsp_load_fw(u8 firmware_type)
 #endif
 
 	if (firmware_type == WAKEUP_FIRMWARE)
-		request_firmware(&fw, "iram0.bin", &im501_spi->dev);
+		err = request_firmware(&fw, "im501_iram0.bin", &im501_spi->dev);
 	else
-		request_firmware(&fw, "../firmware1/iram0.bin",
+		err = request_firmware(&fw, "../firmware1/im501_iram0.bin",
 				 &im501_spi->dev);
 
 	if (!fw) {
 		dev_err(&im501_spi->dev,
-			"%s: iram0.bin firmware request failed.\n", __func__);
+			"%s: im501_iram0.bin firmware request failed.\n", __func__);
+		return err;
 	}
 	if (fw) {
-		pr_err("%s: firmware iram0.bin size = %zu \n", __func__,
+		pr_err("%s: firmware im501_iram0.bin size = %zu \n", __func__,
 		       fw->size);
 		im501_spi_burst_write(0x10000000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
 		local_buf = (u8 *) kzalloc(fw->size, GFP_KERNEL);
 		if (!local_buf)
-			return;	// -ENOMEM;
+			return -ENOMEM;
 #ifdef FW_BURST_RD_CHECK
 		im501_spi_burst_read_dram(0x10000000, local_buf, fw->size);
 		if (fw_type == IM501_DSP_FW)
@@ -1624,24 +1185,25 @@ static void im501_dsp_load_fw(u8 firmware_type)
 	}
 
 	if (firmware_type == WAKEUP_FIRMWARE)
-		request_firmware(&fw, "dram0.bin", &im501_spi->dev);
+		err = request_firmware(&fw, "im501_dram0.bin", &im501_spi->dev);
 	else
-		request_firmware(&fw, "../firmware1/dram0.bin",
+		err = request_firmware(&fw, "../firmware1/im501_dram0.bin",
 				 &im501_spi->dev);
 
 	if (!fw) {
 		dev_err(&im501_spi->dev,
-			"%s: dram0.bin firmware request failed.\n", __func__);
+			"%s: im501_dram0.bin firmware request failed.\n", __func__);
+		return err;
 	}
 	if (fw) {
-		pr_err("%s: firmware dram0.bin size = %zu\n", __func__,
+		pr_err("%s: firmware im501_dram0.bin size = %zu\n", __func__,
 		       fw->size);
 		im501_spi_burst_write(0x0ffc0000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
 		local_buf = (u8 *) kzalloc(fw->size, GFP_KERNEL);
 		if (!local_buf)
-			return;	// -ENOMEM;
+			return -ENOMEM;
 
 #ifdef FW_BURST_RD_CHECK
 		im501_spi_burst_read_dram(0x0ffc0000, local_buf, fw->size);
@@ -1665,23 +1227,24 @@ static void im501_dsp_load_fw(u8 firmware_type)
 	}
 
 	if (firmware_type == WAKEUP_FIRMWARE)
-		request_firmware(&fw, "dram1.bin", &im501_spi->dev);
+		err = request_firmware(&fw, "im501_dram1.bin", &im501_spi->dev);
 	else
-		request_firmware(&fw, "../firmware1/dram1.bin",
+		err = request_firmware(&fw, "../firmware1/im501_dram1.bin",
 				 &im501_spi->dev);
 
 	if (!fw) {
 		dev_err(&im501_spi->dev,
-			"%s: dram1.bin firmware request failed.\n", __func__);
+			"%s: im501_dram1.bin firmware request failed.\n", __func__);
+		return err;
 	}
 	if (fw) {
-		pr_err("%s: firmware dram1.bin size=%zu\n", __func__, fw->size);
+		pr_err("%s: firmware im501_dram1.bin size=%zu\n", __func__, fw->size);
 		im501_spi_burst_write(0x0ffe0000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
 		local_buf = (u8 *) kzalloc(fw->size, GFP_KERNEL);
 		if (!local_buf)
-			return;	// -ENOMEM;
+			return -ENOMEM;
 
 #ifdef FW_BURST_RD_CHECK
 		im501_spi_burst_read_dram(0x0ffe0000, local_buf, fw->size);
@@ -1711,6 +1274,7 @@ static void im501_dsp_load_fw(u8 firmware_type)
 	       rt.tm_sec);
 #endif
 	pr_err("%s: firmware is loaded\n", __func__);
+	return err;
 }
 
 void im501_write_check_spi_reg(u8 reg, u8 val)
@@ -1727,24 +1291,59 @@ void im501_write_check_spi_reg(u8 reg, u8 val)
 	return;
 }
 
+void enable_pdm_clock(void)
+{
+	int retry_count = 100;
+	while (retry_count > 0) {
+		if (tegra210_dmic_enable(0))
+			pr_err("DMIC not yet registered\n");
+		else {
+			atomic_inc_return(&dmic_clk_cnt);
+			break;
+		}
+		msleep(10);
+		retry_count--;
+	};
+}
+
+void disable_pdm_clock(void)
+{
+	if (atomic_read(&dmic_clk_cnt) > 0) {
+		tegra210_dmic_disable(0);
+		atomic_sub(1, &dmic_clk_cnt);
+	}
+}
+
 static void im501_fw_loaded(const struct firmware *fw, void *context)
 {
-	u32 pdm_clki_rate = 2 * 1000 * 1000;
 	u8 *temp_data;
+	u32 addr, regval;
 
 	pr_err("%s: entering...\n", __func__);
 	release_firmware(fw);
 
 #ifdef CODEC2IM501_PDM_CLKI
-	//Commented out temporarily
-	codec2im501_pdm_clki_set(NORMAL_MODE, pdm_clki_rate);
+	codec2im501_pdm_clki_set(NORMAL_MODE, 0);
 	mdelay(5);		//Apply PDM_CLKI, and then wait for 1024 clock cycles
 #endif
 	mdelay(500);		//make sure PDMCLKI is ready for external PDMCLKI
+
+	//reset DSP
+	im501_reset();
+
+	//Enable DSP Clock, put DSP on hold and remove DSP reset
 	im501_write_check_spi_reg(0x00, 0x07);
 	im501_write_check_spi_reg(0x00, 0x05);
 
 	mdelay(1);
+
+	//Enable PDM_DATAO1
+	addr = 0xFFFFF10;
+	im501_spi_read_dram(addr, (u8 *)&regval);
+	regval = regval & 0xFBFFFFFF;
+	im501_spi_write_dram(addr, (u8 *)&regval);
+	im501_spi_read_dram(addr, (u8 *)&regval);
+	pr_err("%s: update register 0x%x value 0x%x\n", __func__, addr, regval);
 
 	current_firmware_type = WAKEUP_FIRMWARE;
 	if (context != NULL) {
@@ -1753,12 +1352,14 @@ static void im501_fw_loaded(const struct firmware *fw, void *context)
 	}
 	pr_err("%s: firmware_type = %d\n", __func__, current_firmware_type);
 
-	im501_dsp_load_fw(current_firmware_type);
-	if (context != NULL) {
-		kfree(context);
+	if (im501_dsp_load_fw(current_firmware_type) != 0) {
+		pr_err("im501 firmware load failed @@@@@@@@@@@@@@@@@\n");
+		codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
+		return;
 	}
 	mdelay(1);
 
+	//Remove DSP “on hold” to “run"
 	im501_write_check_spi_reg(0x00, 0x04);
 
 	//check DSP working or not
@@ -1768,34 +1369,7 @@ static void im501_fw_loaded(const struct firmware *fw, void *context)
 
 	//Here after download the firmware, force DSP enter PSM mode for testing.
 	//Should be changed according to the real requirement.
-	//request_enter_psm();
-
-#ifdef VERIFY_PCM_KFIFO
-	const struct firmware *pcm_fw = NULL;
-	int i;
-
-	//pr_err("%s: entering...\n", __func__);
-	request_firmware(&pcm_fw, PCM_FILE, &im501_spi->dev);
-	if (!pcm_fw) {
-		dev_err(&im501_spi->dev, "%s: %s request failed.\n", __func__,
-			PCM_FILE);
-	}
-	if (pcm_fw) {
-		g_pcm_buf = pcm_fw->data;
-		g_pcm_size = pcm_fw->size;
-		pr_err("%s: %s: g_pcm_size = %d\n", __func__, PCM_FILE,
-		       pcm_fw->size);
-	}
-#endif				//VERIFY_PCM_KFIFO
-
-/*need change for configuration
-    if(load_fm1388_mode_cfg(combine_path_name(filepath_name, "FM1388_mode.cfg"), mode) == -EFAILOPEN){
-		pr_err("%s file(%s) open error! failed to set dsp default mode.\n", __func__, combine_path_name(filepath_name, "FM1388_mode.cfg"));
-	}
-	else {
-		im501_dsp_mode = mode;
-	}
-*/
+	request_enter_psm();
 
 	return;
 }
@@ -1820,69 +1394,6 @@ unsigned char im501_switch_to_normal_mode(void)
 {
 	return im501_send_message_to_dsp(TO_DSP_CMD_REQ_SWITCH_SPI_REC, 0);
 }
-
-//
-
-/*SPI Recording using polling instead of interrupt
-static int im501_spi_recording_polling(void* data)
-{
-    unsigned char err;
-    to_host_cmd   cmd;
-    u8 *pdata;
-
-	//pr_err("%s: entering...\n", __func__);
-    while (!kthread_should_stop()) {
-		if (im501_dsp_mode_old == POWER_SAVING_MODE) {
-			pr_err("%s: iM501 is in PSM, does not support spi recording at this time\n", __func__);
-			break;
-		}
-
-		pdata = (u8 *)&cmd;
-		err = im501_spi_read_dram( TO_HOST_CMD_ADDR, pdata);
-		if( err != ESUCCESS ){
-			pr_err("%s: error occurs when get data from DRAM, error=%d\n", __func__, err);
-			break;
-		}
-
-		cmd.status = pdata[3] >> 7;
-		cmd.cmd_byte = pdata[3] & 0x7F;
-		cmd.attri = pdata[0] | (pdata[1] * 256) | (pdata[2] * 256 * 256);
-		//pr_err("%s: cmd[%#x, %#x, %#x]\n", __func__, cmd.status, cmd.cmd_byte, cmd.attri);
-
-		if((cmd.status != 1) || (cmd.cmd_byte != TO_HOST_CMD_DATA_BUF_RDY)){
-			//pr_err("%s: voice buffer is not ready yet.\n", __func__);
-			msleep(2);
-		}
-		else {
-			pr_err("%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3]);
-
-			im501_spi_lock(&im501_data->spi_op_lock);
-			err = parse_to_host_command( cmd );
-			im501_spi_unlock(&im501_data->spi_op_lock);
-
-			if( err != ESUCCESS ){
-				pr_err("%s: error occurs when calling parse_to_host_command(), error=%d\n", __func__, err);
-			}
-		}
-		msleep(2);
-	}
-
-	return ESUCCESS;
-}
-
-static void	im501_create_thread_for_spi_recording(void) {
-	int (*thread_fn)(void* data);
-	char name[] = "im501_spi_recording";
-
-	pr_err("%s: entering...\n", __func__);
-
-    thread_fn = im501_spi_recording_polling;
-	thread_id = (struct task_struct *)kthread_run(thread_fn,
-					NULL, name);
-
-	return;
-}
-*/
 
 static void im501_irq_handling_work(struct work_struct *work)
 {
@@ -1946,7 +1457,7 @@ static void im501_irq_handling_work(struct work_struct *work)
 
 static irqreturn_t im501_irq_handler(int irq, void *para)
 {
-	//pr_err("%s: entering...\n", __func__);
+	pr_err("%s: entering...\n", __func__);
 	queue_work(im501_irq_wq, &im501_irq_work);
 
 	return IRQ_HANDLED;
@@ -1992,46 +1503,40 @@ static ssize_t im501_record_read(struct file *file,
 				 char __user *buf,
 				 size_t count_want, loff_t *f_pos)
 {
-	/* Fuli 20171027 not need fifo, write file directly
-	   struct im501_data_t *im501_data_tmp = (struct im501_data_t *)file->private_data;
+	struct im501_data_t *im501_data_tmp = (struct im501_data_t *)file->private_data;
+	size_t not_copied;
+	ssize_t to_copy = count_want;
+	int avail;
+	unsigned int copied, total_copied = 0;
+	unsigned long timeout = jiffies + msecs_to_jiffies(2000);
 
-	   size_t not_copied;
-	   ssize_t to_copy = count_want;
-	   int avail;
-	   unsigned int copied, total_copied = 0;
-	   unsigned long timeout = jiffies + msecs_to_jiffies(2000);
+	//pr_err("%s: entering... count_want = %d, *f_pos = %ld\n", __func__, count_want, *f_pos);
+	avail = kfifo_len(im501_data_tmp->pcm_kfifo);
+	//pr_err("%s: avail = %d\n", __func__, avail);
 
-	   //pr_err("%s: entering... count_want = %d, *f_pos = %ld\n", __func__, count_want, *f_pos);
-	   avail = kfifo_len(im501_data_tmp->pcm_kfifo);
-	   //pr_err("%s: avail = %d\n", __func__, avail);
+	while ((total_copied < count_want) && time_before(jiffies, timeout) && avail) {
+		int ret;
+		to_copy = avail;
+		if (count_want - total_copied < avail)
+			to_copy = count_want - total_copied;
 
-	   while ((total_copied < count_want) && time_before(jiffies, timeout) && avail) {
-	   int ret;
+		ret = kfifo_to_user(im501_data_tmp->pcm_kfifo, buf + total_copied,
+			to_copy, &copied);
+		if (ret)
+			return -EIO;
+		pr_err("%s: %d bytes are copied:\n", __func__, copied);
 
-	   to_copy = avail;
-	   if (count_want - total_copied < avail)
-	   to_copy = count_want - total_copied;
+		total_copied += copied;
+		avail = kfifo_len(im501_data_tmp->pcm_kfifo);
+	}
 
-	   ret = kfifo_to_user(im501_data_tmp->pcm_kfifo, buf + total_copied,
-	   to_copy, &copied);
-	   if (ret)
-	   return -EIO;
-	   pr_err("%s: %d bytes are copied:\n", __func__, copied);
+	if (avail && (total_copied < count_want))
+		dev_err(&im501_spi->dev, "im501: timeout during reading\n");
 
-	   total_copied += copied;
+	not_copied = count_want - total_copied;
+	*f_pos = *f_pos + (count_want - not_copied);
 
-	   avail = kfifo_len(im501_data_tmp->pcm_kfifo);
-	   }
-
-	   if (avail && (total_copied < count_want))
-	   dev_err(&im501_spi->dev, "im501: timeout during reading\n");
-
-	   not_copied = count_want - total_copied;
-	   *f_pos = *f_pos + (count_want - not_copied);
-
-	   return count_want - not_copied;
-	 */
-	return 0;
+	return count_want - not_copied;
 }
 
 static const struct file_operations record_fops = {
@@ -2053,8 +1558,7 @@ static int im501_create_cdev(struct spi_device *spi)
 	pr_err("%s: im501_data->audio_owner.counter = %d\n", __func__,
 	       im501_data->audio_owner.counter);
 
-	ret =
-	    alloc_chrdev_region(&im501_data->record_chrdev, 0, 1,
+	ret = alloc_chrdev_region(&im501_data->record_chrdev, 0, 1,
 				IM501_CDEV_NAME);
 	if (ret) {
 		dev_err(dev, "%s: failed to allocate character device\n",
@@ -2097,23 +1601,21 @@ static int im501_create_cdev(struct spi_device *spi)
 	}
 	pr_err("%s: device_create ok...\n", __func__);
 
-	/* Fuli 20171027 not need fifo, write file directly
-	   spin_lock_init(&im501_data->pcm_fifo_lock);
-	   im501_data->pcm_kfifo = (struct kfifo *)kmalloc(sizeof(struct kfifo), GFP_KERNEL);
-	   if (im501_data->pcm_kfifo == NULL) {
-	   dev_err(&im501_spi->dev, "no fifo for pcm_kfifo\n");
-	   return -ENOMEM;
-	   }
-	   pr_err("%s: pcm_kfifo alloc ok...\n", __func__);
+	spin_lock_init(&im501_data->pcm_fifo_lock);
+	im501_data->pcm_kfifo = (struct kfifo *)kmalloc(sizeof(struct kfifo), GFP_KERNEL);
+	if (im501_data->pcm_kfifo == NULL) {
+		dev_err(&im501_spi->dev, "no fifo for pcm_kfifo\n");
+		return -ENOMEM;
+	}
+	pr_err("%s: pcm_kfifo alloc ok...\n", __func__);
 
-	   ret = kfifo_alloc(im501_data->pcm_kfifo, MAX_KFIFO_BUFFER_SIZE,
-	   GFP_KERNEL);
-	   if (ret) {
-	   dev_err(&im501_spi->dev, "no kfifo memory\n");
-	   return -1;
-	   }
-	   pr_err("%s: pcm_kfifo buffer alloc ok...\n", __func__);
-	 */
+	ret = kfifo_alloc(im501_data->pcm_kfifo, MAX_KFIFO_BUFFER_SIZE, GFP_KERNEL);
+	if (ret) {
+		dev_err(&im501_spi->dev, "no kfifo memory\n");
+		return -1;
+	}
+	pr_err("%s: pcm_kfifo buffer alloc ok...\n", __func__);
+
 	return ret;
 }
 
@@ -2137,6 +1639,8 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 	}
 	temp = copy_from_user(local_buffer, buffer, length);
 
+	request_enter_normal();
+
 	//pr_err("local_buffer = %d:, length = %d\n", local_buffer[0], length);
 	switch (local_buffer[0]) {
 	case FM_SMVD_REG_READ:
@@ -2148,8 +1652,13 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 
 	case FM_SMVD_DSP_ADDR_READ:
 		get_addr_ret_data = (dev_cmd_long *) local_buffer;
-		im501_spi_read_dram(get_addr_ret_data->addr,
-				    (u8 *) &get_addr_ret_data->val);
+		if (get_addr_ret_data->addr % 4 == 0) {
+			im501_spi_read_dram(get_addr_ret_data->addr, (u8 *)&get_addr_ret_data->val);
+			get_addr_ret_data->val &= 0xFFFF;
+		} else if (get_addr_ret_data->addr % 2 == 0) {
+			im501_spi_read_dram(get_addr_ret_data->addr - 2, (u8 *)&get_addr_ret_data->val);
+			get_addr_ret_data->val = ((get_addr_ret_data->val & 0xFFFF0000) >> 16);
+		}
 		ret = sizeof(dev_cmd_long);
 		break;
 
@@ -2181,6 +1690,8 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 		break;
 	}
 
+	request_enter_psm();
+
 	if (copy_to_user(buffer, local_buffer, ret))
 		return -EFAULT;
 
@@ -2201,7 +1712,7 @@ static ssize_t im501_spi_device_write(struct file *file,
 	 */
 	dev_cmd_message *local_msg_cmd;
 
-	unsigned int cmd_name, cmd_addr, cmd_val;
+	unsigned int cmd_name, cmd_addr, cmd_val, temp_cmd_val;
 	int dsp_mode;
 	int new_firmware_type;
 	int temp = 0;
@@ -2231,7 +1742,15 @@ static ssize_t im501_spi_device_write(struct file *file,
 	case FM_SMVD_DSP_ADDR_WRITE:	//Command #3
 		cmd_addr = local_dev_cmd->addr;
 		cmd_val = local_dev_cmd->val;
-		im501_spi_write_dram(cmd_addr, (u8 *) &cmd_val);
+		if (cmd_addr % 4 == 0) {
+			im501_spi_read_dram(cmd_addr, (u8 *)&temp_cmd_val);
+			temp_cmd_val = ((temp_cmd_val & 0xFFFF0000) | (cmd_val & 0xFFFF));
+			im501_spi_write_dram(cmd_addr, (u8 *)&temp_cmd_val);
+		} else if (cmd_addr % 2 == 0) {
+			im501_spi_read_dram(cmd_addr - 2, (u8 *)&temp_cmd_val);
+			temp_cmd_val = ((temp_cmd_val & 0xFFFF) | ((cmd_val << 16) & 0xFFFF0000));
+			im501_spi_write_dram(cmd_addr - 2, (u8 *)&temp_cmd_val);
+		}
 		break;
 
 	case FM_SMVD_MODE_SET:	//Command #4
@@ -2270,19 +1789,13 @@ static ssize_t im501_spi_device_write(struct file *file,
 				    ("%s: requested firmware type is the same as current firmware type, not need to change it.\n",
 				     __func__);
 			} else {
-				if (firmware_type_ptr == NULL) {
-					firmware_type_ptr =
-					    (u8 *) kzalloc(sizeof(u8 *),
-							   GFP_KERNEL);
-				}
-				*firmware_type_ptr = new_firmware_type;
+				firmware_type = new_firmware_type;
 				request_firmware_nowait(THIS_MODULE,
 							FW_ACTION_HOTPLUG,
 							"im501_fw",
 							&im501_spi->dev,
 							GFP_KERNEL,
-							(void *)
-							firmware_type_ptr,
+							(void *)&firmware_type,
 							im501_fw_loaded);
 			}
 		} else {
@@ -2303,6 +1816,7 @@ static ssize_t im501_spi_device_write(struct file *file,
 		//it will be set when im501 wakeup from PSM, set it here for SPI recording
 		im501_vbuf_trans_status = 1;
 
+		request_enter_normal();
 		im501_switch_to_spi_recording_mode();
 		request_start_voice_buf_trans();
 
@@ -2316,7 +1830,8 @@ static ssize_t im501_spi_device_write(struct file *file,
 		im501_switch_to_normal_mode();
 		//
 
-		msleep(2000);
+		msleep(1000);
+		request_enter_psm();
 		closeDataFile();
 		output_counter = 0;
 		break;
@@ -2384,11 +1899,11 @@ static int im501_spi_probe(struct spi_device *spi)
 	u32 trigenabled = 0;
 	script_item_value_type_e type;
 	script_item_u val;
+	int irq_gpio;		/* irq gpio define */
 #else
 	struct device *dev = &spi->dev;
 	struct device_node *np = dev->of_node;
 #endif
-	int irq_gpio;		/* irq gpio define */
 	u32 spi_speed;
 
 	im501_spi = spi;
@@ -2407,20 +1922,7 @@ static int im501_spi_probe(struct spi_device *spi)
 	mutex_init(&im501_data->spi_op_lock);
 	pr_err("%s: im501_data mutex lock init successfully\n", __func__);
 
-	//Prepare GPIO for PDM_CLKI on/off control
-#ifdef CUBIETRUCK
-	im501_gpio_init(&im501_data->pdm_clki_gpio, 1);
-#else
-	im501_gpio_init(np, &im501_data->pdm_clki_gpio, 1);
-#endif
-
-	//request pdm_clki_gpio for global usage.
-	if (gpio_request(im501_data->pdm_clki_gpio, "pdm_clk")) {
-		pr_err("%s: %s request port error!\n", __func__, "pdm_clk");
-		return -1;
-	}
 #ifdef CODEC2IM501_PDM_CLKI
-	//Commented out temporarily
 	codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
 	mdelay(5);
 #endif
@@ -2450,13 +1952,10 @@ static int im501_spi_probe(struct spi_device *spi)
 	}
 	pr_err("%s: setup spi, spi_speed=%d \n", __func__, spi_speed);
 
-	if (firmware_type_ptr == NULL) {
-		firmware_type_ptr = (u8 *) kzalloc(sizeof(u8 *), GFP_KERNEL);
-	}
-	*firmware_type_ptr = WAKEUP_FIRMWARE;
+	firmware_type = WAKEUP_FIRMWARE;
 	request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 				"im501_fw", &spi->dev, GFP_KERNEL,
-				(void *)firmware_type_ptr, im501_fw_loaded);
+				(void *)&firmware_type, im501_fw_loaded);
 
 	im501_create_cdev(spi);
 
@@ -2503,15 +2002,18 @@ static int im501_spi_probe(struct spi_device *spi)
 		pr_err("%s: trigger enabled is %d\n", __func__, trigenabled);
 	}
 #else
-	irq_gpio = of_get_gpio(np, 0);
-	pr_err("%s: irq_gpio = %d\n", __func__, irq_gpio);
-
-	if (!gpio_is_valid(irq_gpio))
+	im501_data->irq_gpio = of_get_gpio(np, 0);
+	if (gpio_request(im501_data->irq_gpio, "im501_irq")) {
+		pr_err("irq_gpio %d request failed!\n", im501_data->irq_gpio);
 		return 0;
-	if (irq_gpio)
-		im501_irq = gpio_to_irq(irq_gpio);
-	pr_err("%s: im501_irq = %d\n", __func__, im501_irq);
+	}
 
+	if (gpio_direction_input(im501_data->irq_gpio)) {
+		pr_err("irq_gpio gpio_direction_input failed!\n");
+		return 0;
+	}
+
+	im501_irq = gpio_to_irq(im501_data->irq_gpio);
 	irq_set_irq_type(im501_irq, IRQ_TYPE_EDGE_RISING);
 	ret = request_irq(im501_irq, im501_irq_handler, IRQF_TRIGGER_RISING,
 			 "im501_spi", im501_idx);
@@ -2520,7 +2022,18 @@ static int im501_spi_probe(struct spi_device *spi)
 		return ret;
 	}
 #endif
-//
+
+	im501_data->reset_gpio = of_get_named_gpio(np, "reset-gpios", 0);
+	if (gpio_request(im501_data->reset_gpio, "im501_reset")) {
+		pr_err("reset_gpio %d request failed!\n", im501_data->reset_gpio);
+		return 0;
+	}
+
+	if (gpio_direction_output(im501_data->reset_gpio, 1)) {
+		pr_err("reset_gpio gpio_direction_output failed!\n");
+		return 0;
+	}
+
 	return 0;
 }
 
@@ -2536,7 +2049,8 @@ static int im501_spi_remove(struct spi_device *spi)
 
 	flush_workqueue(im501_irq_wq);
 	destroy_workqueue(im501_irq_wq);
-	gpio_free(im501_data->pdm_clki_gpio);
+	gpio_free(im501_data->irq_gpio);
+	gpio_free(im501_data->reset_gpio);
 
 	return 0;
 }

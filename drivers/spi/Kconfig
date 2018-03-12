@@ -669,6 +669,7 @@ config QSPI_TEGRA
 
 config SPI_IM501
 	tristate "FM IM501 SPI interface"
+	depends on SND_SOC_TEGRA210_DMIC_ALT
 	help
 	  SPI driver for FM IM501 voice processor.
 

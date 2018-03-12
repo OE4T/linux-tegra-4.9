@@ -144,12 +144,12 @@
 			};
 			controller-data {
 				nvidia,x1-len-limit = <16>;
-				nvidia,x1-bus-speed = <204000000>; /* In MHz */
+				nvidia,x1-bus-speed = <102000000>; /* In MHz */
 				nvidia,x1-dymmy-cycle = <8>;
-				nvidia,x4-bus-speed = <204000000>;
+				nvidia,x4-bus-speed = <102000000>;
 				nvidia,x4-dymmy-cycle = <8>;
-				nvidia,ifddr-div2-sdr = <1>;
 				nvidia,x4-is-ddr=<1>;
+				nvidia,ctrl-bus-clk-ratio = <2>;
 			};
 		};
 	};
@@ -168,12 +168,12 @@
 			};
 			controller-data {
 				nvidia,x1-len-limit = <16>;
-				nvidia,x1-bus-speed = <204000000>; /* In MHz */
+				nvidia,x1-bus-speed = <102000000>; /* In MHz */
 				nvidia,x1-dymmy-cycle = <8>;
-				nvidia,x4-bus-speed = <204000000>;
+				nvidia,x4-bus-speed = <102000000>;
 				nvidia,x4-dymmy-cycle = <8>;
-				nvidia,ifddr-div2-sdr = <1>;
 				nvidia,x4-is-ddr=<1>;
+				nvidia,ctrl-bus-clk-ratio = <2>;
 			};
 		};
 	};

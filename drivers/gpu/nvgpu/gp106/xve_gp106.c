@@ -23,7 +23,6 @@
 #include "gk20a/gk20a.h"
 #include "gp106/bios_gp106.h"
 #include "gp106/xve_gp106.h"
-#include "common/linux/os_linux.h"
 
 #include <nvgpu/bug.h>
 #include <nvgpu/xve.h>
@@ -108,10 +107,8 @@ int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed)
 	if (link_speed == xve_link_control_status_link_speed_link_speed_8p0_v())
 		real_link_speed = GPU_XVE_SPEED_8P0;
 
-	if (!real_link_speed) {
-		pr_warn("%s: Unknown PCIe bus speed!\n", __func__);
+	if (!real_link_speed)
 		return -ENODEV;
-	}
 
 	*xve_link_speed = real_link_speed;
 	return 0;

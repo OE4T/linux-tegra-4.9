@@ -24,16 +24,15 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include "common/linux/os_linux.h"
 #endif
 
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
-#include "common/linux/os_linux.h"
+#include "gp106/mclk_gp106.h"
 
 #include "clk_gp106.h"
-
-#include "gp106/mclk_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_trim_gp106.h>
 

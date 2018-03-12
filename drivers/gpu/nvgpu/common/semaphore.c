@@ -376,10 +376,10 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 
 	ch->hw_sema = hw_sema;
 	hw_sema->ch = ch;
-	hw_sema->p = p;
-	hw_sema->idx = hw_sema_idx;
-	hw_sema->offset = SEMAPHORE_SIZE * hw_sema_idx;
-	current_value = nvgpu_mem_rd(ch->g, &p->rw_mem, hw_sema->offset);
+	hw_sema->location.pool = p;
+	hw_sema->location.offset = SEMAPHORE_SIZE * hw_sema_idx;
+	current_value = nvgpu_mem_rd(ch->g, &p->rw_mem,
+			hw_sema->location.offset);
 	nvgpu_atomic_set(&hw_sema->next_value, current_value);
 
 	nvgpu_mutex_release(&p->pool_lock);
@@ -399,15 +399,16 @@ fail:
 void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 {
 	struct nvgpu_semaphore_pool *p = ch->vm->sema_pool;
+	struct nvgpu_semaphore_int *hw_sema = ch->hw_sema;
+	int idx = hw_sema->location.offset / SEMAPHORE_SIZE;
 
 	BUG_ON(!p);
 
 	nvgpu_mutex_acquire(&p->pool_lock);
 
-	clear_bit(ch->hw_sema->idx, p->semas_alloced);
+	clear_bit(idx, p->semas_alloced);
 
-	/* Make sure that when the ch is re-opened it will get a new HW sema. */
-	nvgpu_kfree(ch->g, ch->hw_sema);
+	nvgpu_kfree(ch->g, hw_sema);
 	ch->hw_sema = NULL;
 
 	nvgpu_mutex_release(&p->pool_lock);
@@ -435,14 +436,15 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 		return NULL;
 
 	nvgpu_ref_init(&s->ref);
-	s->hw_sema = ch->hw_sema;
+	s->g = ch->g;
+	s->location = ch->hw_sema->location;
 	nvgpu_atomic_set(&s->value, 0);
 
 	/*
 	 * Take a ref on the pool so that we can keep this pool alive for
 	 * as long as this semaphore is alive.
 	 */
-	nvgpu_semaphore_pool_get(s->hw_sema->p);
+	nvgpu_semaphore_pool_get(s->location.pool);
 
 	gpu_sema_dbg(ch->g, "Allocated semaphore (c=%d)", ch->chid);
 
@@ -454,9 +456,9 @@ static void nvgpu_semaphore_free(struct nvgpu_ref *ref)
 	struct nvgpu_semaphore *s =
 		container_of(ref, struct nvgpu_semaphore, ref);
 
-	nvgpu_semaphore_pool_put(s->hw_sema->p);
+	nvgpu_semaphore_pool_put(s->location.pool);
 
-	nvgpu_kfree(s->hw_sema->ch->g, s);
+	nvgpu_kfree(s->g, s);
 }
 
 void nvgpu_semaphore_put(struct nvgpu_semaphore *s)

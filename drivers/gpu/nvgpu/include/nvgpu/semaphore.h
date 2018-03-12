@@ -50,15 +50,18 @@
 
 struct nvgpu_semaphore_sea;
 
+struct nvgpu_semaphore_loc {
+	struct nvgpu_semaphore_pool *pool; /* Pool that owns this sema. */
+	u32 offset;			   /* Byte offset into the pool. */
+};
+
 /*
  * Underlying semaphore data structure. This semaphore can be shared amongst
  * other semaphore instances.
  */
 struct nvgpu_semaphore_int {
-	int idx;			/* Semaphore index. */
-	u32 offset;			/* Offset into the pool. */
+	struct nvgpu_semaphore_loc location;
 	nvgpu_atomic_t next_value;	/* Next available value. */
-	struct nvgpu_semaphore_pool *p;	/* Pool that owns this sema. */
 	struct channel_gk20a *ch;	/* Channel that owns this sema. */
 };
 
@@ -68,7 +71,8 @@ struct nvgpu_semaphore_int {
  * semaphore to be shared among an essentially infinite number of submits.
  */
 struct nvgpu_semaphore {
-	struct nvgpu_semaphore_int *hw_sema;
+	struct gk20a *g;
+	struct nvgpu_semaphore_loc location;
 
 	nvgpu_atomic_t value;
 	int incremented;
@@ -195,8 +199,8 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch);
  */
 static inline u64 nvgpu_semaphore_gpu_rw_va(struct nvgpu_semaphore *s)
 {
-	return __nvgpu_semaphore_pool_gpu_va(s->hw_sema->p, false) +
-		s->hw_sema->offset;
+	return __nvgpu_semaphore_pool_gpu_va(s->location.pool, false) +
+		s->location.offset;
 }
 
 /*
@@ -205,20 +209,20 @@ static inline u64 nvgpu_semaphore_gpu_rw_va(struct nvgpu_semaphore *s)
  */
 static inline u64 nvgpu_semaphore_gpu_ro_va(struct nvgpu_semaphore *s)
 {
-	return __nvgpu_semaphore_pool_gpu_va(s->hw_sema->p, true) +
-		s->hw_sema->offset;
+	return __nvgpu_semaphore_pool_gpu_va(s->location.pool, true) +
+		s->location.offset;
 }
 
 static inline u64 nvgpu_hw_sema_addr(struct nvgpu_semaphore_int *hw_sema)
 {
-	return __nvgpu_semaphore_pool_gpu_va(hw_sema->p, true) +
-		hw_sema->offset;
+	return __nvgpu_semaphore_pool_gpu_va(hw_sema->location.pool, true) +
+		hw_sema->location.offset;
 }
 
 static inline u32 __nvgpu_semaphore_read(struct nvgpu_semaphore_int *hw_sema)
 {
-	return nvgpu_mem_rd(hw_sema->ch->g,
-			    &hw_sema->p->rw_mem, hw_sema->offset);
+	return nvgpu_mem_rd(hw_sema->ch->g, &hw_sema->location.pool->rw_mem,
+			hw_sema->location.offset);
 }
 
 /*
@@ -226,7 +230,8 @@ static inline u32 __nvgpu_semaphore_read(struct nvgpu_semaphore_int *hw_sema)
  */
 static inline u32 nvgpu_semaphore_read(struct nvgpu_semaphore *s)
 {
-	return __nvgpu_semaphore_read(s->hw_sema);
+	return nvgpu_mem_rd(s->g, &s->location.pool->rw_mem,
+			s->location.offset);
 }
 
 /*
@@ -270,19 +275,14 @@ static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
 	return !nvgpu_semaphore_is_released(s);
 }
 
-static inline u32 nvgpu_semaphore_next_value(struct nvgpu_semaphore *s)
-{
-	return (u32)nvgpu_atomic_read(&s->hw_sema->next_value);
-}
-
 /*
  * If @force is set then this will not wait for the underlying semaphore to
  * catch up to the passed semaphore threshold.
  */
 static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
-					     bool force)
+					     bool force,
+					     struct nvgpu_semaphore_int *hw_sema)
 {
-	struct nvgpu_semaphore_int *hw_sema = s->hw_sema;
 	u32 current_val;
 	u32 threshold = nvgpu_semaphore_get_value(s);
 	int attempts = 0;
@@ -312,16 +312,17 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	if (__nvgpu_semaphore_value_released(threshold, current_val))
 		return;
 
-	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->p->rw_mem, hw_sema->offset,
-			threshold);
+	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->location.pool->rw_mem,
+			hw_sema->location.offset, threshold);
 
-	gpu_sema_verbose_dbg(hw_sema->p->sema_sea->gk20a,
+	gpu_sema_verbose_dbg(hw_sema->location.pool->sema_sea->gk20a,
 			     "(c=%d) WRITE %u", hw_sema->ch->chid, threshold);
 }
 
-static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s)
+static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s,
+					   struct nvgpu_semaphore_int *hw_sema)
 {
-	__nvgpu_semaphore_release(s, false);
+	__nvgpu_semaphore_release(s, false, hw_sema);
 }
 
 /*
@@ -333,16 +334,17 @@ static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s)
  *
  * Also used to prep a semaphore for an INCR by the GPU.
  */
-static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s)
+static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s,
+		struct nvgpu_semaphore_int *hw_sema)
 {
 	BUG_ON(s->incremented);
 
-	nvgpu_atomic_set(&s->value, nvgpu_atomic_add_return(1, &s->hw_sema->next_value));
+	nvgpu_atomic_set(&s->value, nvgpu_atomic_add_return(1, &hw_sema->next_value));
 	s->incremented = 1;
 
-	gpu_sema_verbose_dbg(s->hw_sema->p->sema_sea->gk20a,
+	gpu_sema_verbose_dbg(s->g,
 			     "INCR sema for c=%d (%u)",
-			     s->hw_sema->ch->chid,
-			     nvgpu_semaphore_next_value(s));
+			     hw_sema->ch->chid,
+			     nvgpu_atomic_read(&hw_sema->next_value));
 }
 #endif

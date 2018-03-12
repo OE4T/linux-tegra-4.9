@@ -494,7 +494,7 @@ static void gk20a_channel_semaphore_launcher(
 		  "wait completed (%d) for fence %p '%s', triggering gpu work",
 		  err, fence, fence->name);
 	sync_fence_put(fence);
-	nvgpu_semaphore_release(w->sema);
+	nvgpu_semaphore_release(w->sema, w->ch->hw_sema);
 	nvgpu_semaphore_put(w->sema);
 	nvgpu_kfree(g, w);
 }
@@ -522,7 +522,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	 * incr the underlying sema next_value.
 	 */
 	if (!acquire)
-		nvgpu_semaphore_incr(s);
+		nvgpu_semaphore_incr(s, c->hw_sema);
 
 	/* semaphore_a */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
@@ -561,17 +561,18 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	}
 
 	if (acquire)
-		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u owner=%-3d"
+		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u pool=%-3d"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
-				     s->hw_sema->ch->chid, va, cmd->gva,
+				     s->location.pool->page_idx, va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
 	else
-		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) va=0x%llx "
-				     "cmd_mem=0x%llx b=0x%llx off=%u",
+		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) pool=%-3d"
+				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
-				     nvgpu_semaphore_read(s), va, cmd->gva,
-				     cmd->mem->gpu_va, ob);
+				     nvgpu_semaphore_read(s),
+				     s->location.pool->page_idx,
+				     va, cmd->gva, cmd->mem->gpu_va, ob);
 }
 
 static int gk20a_channel_semaphore_wait_syncpt(
@@ -714,7 +715,7 @@ static int gk20a_channel_semaphore_wait_fd(
 
 	/* worker takes one reference */
 	nvgpu_semaphore_get(w->sema);
-	nvgpu_semaphore_incr(w->sema);
+	nvgpu_semaphore_incr(w->sema, c->hw_sema);
 
 	/* GPU unblocked when the semaphore value increments. */
 	add_sema_cmd(c->g, c, w->sema, wait_cmd, 8, true, false);
@@ -740,7 +741,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	 */
 	if (ret == 1) {
 		sync_fence_put(sync_fence);
-		nvgpu_semaphore_release(w->sema);
+		nvgpu_semaphore_release(w->sema, c->hw_sema);
 		nvgpu_semaphore_put(w->sema);
 	}
 

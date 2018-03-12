@@ -338,8 +338,8 @@ static void gk20a_sync_pt_value_str_for_sema(struct gk20a_sync_pt *pt,
 {
 	struct nvgpu_semaphore *s = pt->sema;
 
-	snprintf(str, size, "S: c=%d [v=%u,r_v=%u]",
-		 s->hw_sema->ch->chid,
+	snprintf(str, size, "S: pool=%d [v=%u,r_v=%u]",
+		 s->location.pool->page_idx,
 		 nvgpu_semaphore_get_value(s),
 		 nvgpu_semaphore_read(s));
 }

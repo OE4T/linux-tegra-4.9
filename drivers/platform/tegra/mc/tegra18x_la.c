@@ -485,6 +485,11 @@ static int t18x_set_init_la(enum tegra_la_id id,
 	   t18x_handle_disp_la(). */
 	if (ci->client_type == TEGRA_LA_CONSTANT_READ_CLIENT) {
 		la_to_set = ci->init_la;
+	} else {
+		pr_debug(
+		"%s is not constant read client, don't program init LA value\n",
+		ci->name);
+		return 0;
 	}
 
 	program_la(ci, la_to_set);

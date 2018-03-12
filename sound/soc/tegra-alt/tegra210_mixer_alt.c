@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -155,7 +155,7 @@ static int tegra210_mixer_put_format(struct snd_kcontrol *kcontrol,
 	int value = ucontrol->value.integer.value[0];
 
 	if (strstr(kcontrol->id.name, "Channels")) {
-		if (value > 0 && value <= 8)
+		if (value >= 0 && value <= 8)
 			mixer->channels_via_control[mc->reg - 1] = value;
 		else
 			return -EINVAL;

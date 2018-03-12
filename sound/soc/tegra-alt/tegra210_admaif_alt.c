@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -570,7 +570,7 @@ static int tegra_admaif_put_format(struct snd_kcontrol *kcontrol,
 	char buf[50];
 
 	if (strstr(kcontrol->id.name, "Channels")) {
-		if (value > 0 && value <= 16)
+		if (value >= 0 && value <= 16)
 			admaif->override_channels[mc->reg] = value;
 		else
 			return -EINVAL;

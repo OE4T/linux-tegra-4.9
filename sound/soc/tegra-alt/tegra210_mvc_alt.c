@@ -1,7 +1,7 @@
 /*
  * tegra210_mvc_alt.c - Tegra210 MVC driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -304,6 +304,8 @@ static int tegra210_mvc_put_audio_bits(struct snd_kcontrol *kcontrol,
 	val = ucontrol->value.integer.value[0];
 	if ((val >= 8) && (val <= 32) && (val%4 == 0))
 		mvc->audio_bits = val/4 - 1;
+	else if (val == 0)
+		mvc->audio_bits = 0;
 	else
 		return -EINVAL;
 

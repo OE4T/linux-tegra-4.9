@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.c - Tegra210 AMX driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -574,12 +574,12 @@ static int tegra210_amx_put_channels(struct snd_kcontrol *kcontrol,
 
 	snprintf(buf, 50, "Input%d Channels", reg);
 	if (strstr(kcontrol->id.name, buf)) {
-		if (value > 0 && value <= 16)
+		if (value >= 0 && value <= 16)
 			amx->input_channels[reg - 1] = value;
 		else
 			return -EINVAL;
 	} else if (strstr(kcontrol->id.name, "Output Channels")) {
-		if (value > 0 && value <= 16)
+		if (value >= 0 && value <= 16)
 			amx->output_channels = value;
 		else
 			return -EINVAL;

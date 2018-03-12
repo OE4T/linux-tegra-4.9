@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.c - Tegra210 SFC driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -499,7 +499,7 @@ static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
 	else if (strstr(kcontrol->id.name, "output"))
 		sfc->format_out = value;
 	else if (strstr(kcontrol->id.name, "Channels")) {
-		if (value > 0 && value <= 2)
+		if (value >= 0 && value <= 2)
 			sfc->channels_via_control = value;
 		else
 			return -EINVAL;

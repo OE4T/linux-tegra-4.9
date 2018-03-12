@@ -23,8 +23,8 @@
 #ifndef EVENTLIB_TBUF_H
 #define EVENTLIB_TBUF_H
 
-#include <eventlib.h>
-#include <tracebuf.h>
+#include "eventlib.h"
+#include "tracebuf.h"
 
 struct eventlib_tbuf_w2r {
 	uint32_t compat;

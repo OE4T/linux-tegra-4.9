@@ -23,7 +23,7 @@
 #ifndef EVENTLIB_FLT_H
 #define EVENTLIB_FLT_H
 
-#include <eventlib.h>
+#include "eventlib.h"
 
 /* Readers' connects/updates/disconnects and writer's checks for updates, are
  * all fully asynchronous.

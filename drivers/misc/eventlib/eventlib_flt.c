@@ -22,8 +22,8 @@
 
 #include <linux/string.h>
 
-#include <eventlib.h>
-#include <tracebuf.h>
+#include "eventlib.h"
+#include "tracebuf.h"
 #include "eventlib_init.h"
 #include "eventlib_flt.h"
 

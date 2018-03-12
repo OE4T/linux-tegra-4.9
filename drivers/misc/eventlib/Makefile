@@ -14,7 +14,6 @@
 #
 
 ccflags-y += -Werror
-ccflags-y += -I$(srctree)/../nvidia/drivers/misc/eventlib
 
 obj-$(CONFIG_EVENTLIB) := eventlib-kernel.o
 

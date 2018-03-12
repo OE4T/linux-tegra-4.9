@@ -198,7 +198,6 @@ static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct boardobj *pboardobj   = NULL;
-	struct voltage_policy_split_rail_single_step *p_volt_policy = NULL;
 	u32 status = 0;
 
 	status = construct_volt_policy_split_rail(g, ppboardobj, size, pargs);
@@ -206,9 +205,6 @@ static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 		return status;
 
 	pboardobj = (*ppboardobj);
-	p_volt_policy = (struct voltage_policy_split_rail_single_step *)
-						*ppboardobj;
-
 	pboardobj->pmudatainit = volt_policy_pmu_data_init_split_rail;
 
 	return status;
@@ -455,7 +451,7 @@ u32 volt_policy_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	status = boardobjgrpconstruct_e32(g, 
+	status = boardobjgrpconstruct_e32(g,
 			&g->perf_pmu.volt.volt_policy_metadata.volt_policies);
 	if (status) {
 		nvgpu_err(g,

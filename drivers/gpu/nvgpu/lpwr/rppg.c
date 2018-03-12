@@ -29,18 +29,15 @@
 static void pmu_handle_rppg_init_msg(struct gk20a *g, struct pmu_msg *msg,
 	void *param, u32 handle, u32 status)
 {
-
-	u8 ctrlId = NV_PMU_RPPG_CTRL_ID_MAX;
 	u32 *success = param;
 
 	if (status == 0) {
 		switch (msg->msg.pg.rppg_msg.cmn.msg_id) {
 		case NV_PMU_RPPG_MSG_ID_INIT_CTRL_ACK:
-			ctrlId = msg->msg.pg.rppg_msg.init_ctrl_ack.ctrl_id;
 			*success = 1;
 			nvgpu_pmu_dbg(g, "RPPG is acknowledged from PMU %x",
 				msg->msg.pg.msg_type);
-		break;
+			break;
 		}
 	}
 
@@ -160,5 +157,3 @@ u32 init_rppg(struct gk20a *g)
 
 	return status;
 }
-
-

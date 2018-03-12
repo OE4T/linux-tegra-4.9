@@ -58,7 +58,6 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 int clk_pmu_freq_controller_load(struct gk20a *g, bool bload, u8 bit_idx)
 {
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -122,7 +121,6 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload, u8 bit_idx)
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);
@@ -163,7 +161,6 @@ done:
 u32 clk_pmu_vin_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -185,7 +182,6 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);
@@ -226,7 +222,6 @@ done:
 static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 {
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -286,7 +281,6 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);

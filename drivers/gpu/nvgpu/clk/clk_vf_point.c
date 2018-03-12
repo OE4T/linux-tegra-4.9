@@ -93,7 +93,6 @@ u32 clk_vf_point_sw_setup(struct gk20a *g)
 {
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
-	struct clk_vf_points *pclkvfpointobjs;
 
 	gk20a_dbg_info("");
 
@@ -106,7 +105,6 @@ u32 clk_vf_point_sw_setup(struct gk20a *g)
 	}
 
 	pboardobjgrp = &g->clk_pmu.clk_vf_pointobjs.super.super;
-	pclkvfpointobjs = &(g->clk_pmu.clk_vf_pointobjs);
 
 	BOARDOBJGRP_PMU_CONSTRUCT(pboardobjgrp, CLK, CLK_VF_POINT);
 

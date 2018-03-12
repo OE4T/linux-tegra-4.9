@@ -68,7 +68,6 @@ static int pmu_handle_perf_event(struct gk20a *g, void *pmu_msg)
 u32 perf_pmu_vfe_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -89,7 +88,6 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 		       (u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.perf.cmd_type = NV_PMU_PERF_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_perf_rpc);

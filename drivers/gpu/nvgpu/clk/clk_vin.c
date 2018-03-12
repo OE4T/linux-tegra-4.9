@@ -387,15 +387,11 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 	/* Read table entries*/
 	vin_tbl_entry_ptr = vin_table_ptr + vin_desc_table_header.header_sizee;
 	for (index = 0; index < vin_desc_table_header.entry_count; index++) {
-		u32 vin_id;
-
 		memcpy(&vin_desc_table_entry, vin_tbl_entry_ptr,
 		       sizeof(struct vin_descriptor_entry_10));
 
 		if (vin_desc_table_entry.vin_device_type == CTRL_CLK_VIN_TYPE_DISABLED)
 			continue;
-
-		vin_id = vin_desc_table_entry.vin_device_id;
 
 		vin_dev_data.super.type =
 			(u8)vin_desc_table_entry.vin_device_type;

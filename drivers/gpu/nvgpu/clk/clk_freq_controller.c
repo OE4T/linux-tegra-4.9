@@ -180,7 +180,6 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 	struct vbios_fct_1x_entry entry  = { 0 };
 	u8 entry_idx;
 	u8 *entry_offset;
-	u32 freq_controller_id;
 	struct clk_freq_controller *pclk_freq_cntr = NULL;
 	struct clk_freq_controller *ptmp_freq_cntr = NULL;
 	struct clk_freq_controller_pi *ptmp_freq_cntr_pi = NULL;
@@ -232,8 +231,6 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 		ptmp_freq_cntr->controller_id =
 			(u8)BIOS_GET_FIELD(entry.param0,
 				NV_VBIOS_FCT_1X_ENTRY_PARAM0_ID);
-
-		freq_controller_id = ptmp_freq_cntr->controller_id;
 
 		pclk_domain = CLK_CLK_DOMAIN_GET((&g->clk_pmu),
 				(u32)entry.clk_domain_idx);

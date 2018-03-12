@@ -162,10 +162,6 @@ static void set_xve_l1_mask(struct gk20a *g, int status)
  */
 void xve_disable_aspm_gp106(struct gk20a *g)
 {
-	u32 xve_priv;
-
-	xve_priv = g->ops.xve.xve_readl(g, xve_priv_xv_r());
-
 	set_xve_l0s_mask(g, true);
 	set_xve_l1_mask(g, true);
 }

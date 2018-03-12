@@ -3713,7 +3713,6 @@ static void configure_dma(struct eqos_prv_data *pdata)
 	/* To get Best Performance */
 	DMA_SBUS_BLEN16_WR(1);
 	DMA_SBUS_BLEN8_WR(1);
-	DMA_SBUS_BLEN4_WR(1);
 	DMA_SBUS_RD_OSR_LMT_WR(2);
 	DMA_SBUS_EAME_WR(1);
 

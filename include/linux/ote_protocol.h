@@ -23,8 +23,6 @@ int tegra_set_vpr_params(void *vpr_base, size_t vpr_size);
 
 void trusty_restore_keyslots(void);
 void tlk_restore_keyslots(void);
-int  te_vrr_set_buf(phys_addr_t addr);
-void te_vrr_sec(void);
 
 int te_is_secos_dev_enabled(void);
 

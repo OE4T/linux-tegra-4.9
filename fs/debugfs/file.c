@@ -101,7 +101,7 @@ static int open_proxy_open(struct inode *inode, struct file *filp)
 {
 	const struct dentry *dentry = F_DENTRY(filp);
 	const struct file_operations *real_fops = NULL;
-	int srcu_idx, r = 0;
+	int r = 0;
 
 	real_fops = debugfs_real_fops(filp);
 	real_fops = fops_get(real_fops);

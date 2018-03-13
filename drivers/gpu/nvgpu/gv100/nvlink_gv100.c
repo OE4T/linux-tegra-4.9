@@ -690,8 +690,11 @@ static u32 gv100_nvlink_minion_init_uphy(struct gk20a *g, unsigned long mask,
 	unsigned long link_enable;
 
 	switch(g->nvlink.speed) {
-	case nvgpu_nvlink_speed_default:
+	case nvgpu_nvlink_speed_25G:
 		init_pll_cmd = minion_nvlink_dl_cmd_command_initpll_0_v();
+		break;
+	case nvgpu_nvlink_speed_20G:
+		init_pll_cmd = minion_nvlink_dl_cmd_command_initpll_1_v();
 		break;
 	default:
 		nvgpu_err(g, "Unsupported UPHY speed");
@@ -2644,8 +2647,7 @@ int gv100_nvlink_early_init(struct gk20a *g)
 		goto nvlink_init_exit;
 	}
 
-	/* For now set default speed */
-	g->nvlink.speed = nvgpu_nvlink_speed_default;
+	g->nvlink.speed = nvgpu_nvlink_speed_20G;
 
 	err = __gv100_nvlink_state_load_hal(g);
 	if (err) {

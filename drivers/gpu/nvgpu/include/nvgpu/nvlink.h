@@ -128,7 +128,8 @@ struct nvgpu_nvlink_link {
 #define NVLINK_MAX_LINKS_SW 6
 
 enum nvgpu_nvlink_speed {
-	nvgpu_nvlink_speed_default,
+	nvgpu_nvlink_speed_25G,
+	nvgpu_nvlink_speed_20G,
 	nvgpu_nvlink_speed__last,
 };
 

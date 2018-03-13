@@ -1547,17 +1547,6 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 	if (err)
 		goto __nodev;
 
-	err = sysfs_create_link(&(hdev->dev.kobj), &(shdr_card->card_dev.kobj),
-			"sound");
-
-	if (err < 0)
-		dev_warn(&hdev->dev, "Can't create sound sysfs link\n");
-
-	err = sysfs_create_link(&(hdev->dev.kobj), &(shdr_input_dev->dev.kobj),
-			"input");
-
-	if (err < 0)
-		dev_warn(&hdev->dev, "Can't create input sysfs link\n");
 	return 0;
 
 __nodev:

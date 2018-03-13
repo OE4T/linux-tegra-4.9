@@ -3,7 +3,7 @@
  *
  * GK20A Sync Framework Integration
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -33,9 +33,6 @@ struct sync_pt;
 struct nvgpu_semaphore;
 struct fence;
 
-int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence);
-struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f);
-
 #ifdef CONFIG_SYNC
 struct sync_timeline *gk20a_sync_timeline_create(const char *fmt, ...);
 void gk20a_sync_timeline_destroy(struct sync_timeline *);
@@ -46,6 +43,7 @@ struct sync_fence *gk20a_sync_fence_create(
 		struct nvgpu_semaphore *,
 		const char *fmt, ...);
 struct sync_fence *gk20a_sync_fence_fdget(int fd);
+struct nvgpu_semaphore *gk20a_sync_pt_sema(struct sync_pt *spt);
 #else
 static inline void gk20a_sync_timeline_destroy(struct sync_timeline *obj) {}
 static inline void gk20a_sync_timeline_signal(struct sync_timeline *obj) {}

@@ -502,10 +502,10 @@ static void gk20a_channel_semaphore_launcher(
 
 static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 			 struct nvgpu_semaphore *s, struct priv_cmd_entry *cmd,
-			 int cmd_size, bool acquire, bool wfi)
+			 u32 offset, bool acquire, bool wfi)
 {
 	int ch = c->chid;
-	u32 ob, off = cmd->off;
+	u32 ob, off = cmd->off + offset;
 	u64 va;
 
 	ob = off;
@@ -588,108 +588,79 @@ static int gk20a_channel_semaphore_wait_syncpt(
 }
 
 #ifdef CONFIG_SYNC
-/*
- * Attempt a fast path for waiting on a sync_fence. Basically if the passed
- * sync_fence is backed by a nvgpu_semaphore then there's no reason to go
- * through the rigmarole of setting up a separate semaphore which waits on an
- * interrupt from the GPU and then triggers a worker thread to execute a SW
- * based semaphore release. Instead just have the GPU wait on the same semaphore
- * that is going to be incremented by the GPU.
- *
- * This function returns 2 possible values: -ENODEV or 0 on success. In the case
- * of -ENODEV the fastpath cannot be taken due to the fence not being backed by
- * a GPU semaphore.
- */
-static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
-					 struct sync_fence *fence,
-					 struct priv_cmd_entry *wait_cmd,
-					 struct nvgpu_semaphore **fp_sema)
+static int semaphore_wait_fd_native(struct channel_gk20a *c, int fd,
+		struct priv_cmd_entry *wait_cmd)
 {
-	struct nvgpu_semaphore *sema;
-	int err;
-
-	if (!gk20a_is_sema_backed_sync_fence(fence))
-		return -ENODEV;
-
-	sema = gk20a_sync_fence_get_sema(fence);
-
-	/*
-	 * If there's no underlying sema then that means the underlying sema has
-	 * already signaled.
-	 */
-	if (!sema) {
-		*fp_sema = NULL;
-		return 0;
-	}
-
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, wait_cmd);
-	if (err)
-		return err;
-
-	nvgpu_semaphore_get(sema);
-	BUG_ON(!sema->incremented);
-	add_sema_cmd(c->g, c, sema, wait_cmd, 8, true, false);
-
-	/*
-	 * Make sure that gk20a_channel_semaphore_wait_fd() can create another
-	 * fence with the underlying semaphore.
-	 */
-	*fp_sema = sema;
-
-	return 0;
-}
-#endif
-
-static int gk20a_channel_semaphore_wait_fd(
-		struct gk20a_channel_sync *s, int fd,
-		struct priv_cmd_entry *entry,
-		struct gk20a_fence *fence)
-{
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
-	struct channel_gk20a *c = sema->c;
-#ifdef CONFIG_SYNC
-	struct nvgpu_semaphore *fp_sema;
 	struct sync_fence *sync_fence;
-	struct priv_cmd_entry *wait_cmd = entry;
-	struct wait_fence_work *w = NULL;
-	int err, ret, status;
+	int err;
+	const int wait_cmd_size = 8;
+	int num_wait_cmds;
+	int i;
 
 	sync_fence = gk20a_sync_fence_fdget(fd);
 	if (!sync_fence)
 		return -EINVAL;
 
-	ret = __semaphore_wait_fd_fast_path(c, sync_fence, wait_cmd, &fp_sema);
-	if (ret == 0) {
-		if (fp_sema) {
-			err = gk20a_fence_from_semaphore(c->g, fence,
-					sema->timeline,
-					fp_sema,
-					&c->semaphore_wq,
-					false);
-			if (err) {
-				nvgpu_semaphore_put(fp_sema);
-				goto clean_up_priv_cmd;
-			}
-		} else
-			/*
-			 * Init an empty fence. It will instantly return
-			 * from gk20a_fence_wait().
-			 */
-			gk20a_init_fence(fence, NULL, NULL);
-
-		sync_fence_put(sync_fence);
-		goto skip_slow_path;
+	num_wait_cmds = sync_fence->num_fences;
+	if (num_wait_cmds == 0) {
+		err = 0;
+		goto put_fence;
 	}
+
+	err = gk20a_channel_alloc_priv_cmdbuf(c,
+			wait_cmd_size * num_wait_cmds,
+			wait_cmd);
+	if (err) {
+		nvgpu_err(c->g, "not enough priv cmd buffer space");
+		goto put_fence;
+	}
+
+	for (i = 0; i < sync_fence->num_fences; i++) {
+		struct fence *f = sync_fence->cbs[i].sync_pt;
+		struct sync_pt *pt = sync_pt_from_fence(f);
+		struct nvgpu_semaphore *sema;
+
+		sema = gk20a_sync_pt_sema(pt);
+		if (!sema) {
+			/* expired */
+			nvgpu_memset(c->g, wait_cmd->mem,
+			(wait_cmd->off + i * wait_cmd_size) * sizeof(u32),
+				0, wait_cmd_size * sizeof(u32));
+		} else {
+			WARN_ON(!sema->incremented);
+			add_sema_cmd(c->g, c, sema, wait_cmd,
+					i * wait_cmd_size, true, false);
+			nvgpu_semaphore_put(sema);
+		}
+	}
+
+put_fence:
+	sync_fence_put(sync_fence);
+	return err;
+}
+
+static int semaphore_wait_fd_proxy(struct channel_gk20a *c, int fd,
+		struct priv_cmd_entry *wait_cmd,
+		struct gk20a_fence *fence_out,
+		struct sync_timeline *timeline)
+{
+	const int wait_cmd_size = 8;
+	struct sync_fence *sync_fence;
+	struct wait_fence_work *w = NULL;
+	int err, status;
+
+	sync_fence = sync_fence_fdget(fd);
+	if (!sync_fence)
+		return -EINVAL;
 
 	/* If the fence has signaled there is no reason to wait on it. */
 	status = atomic_read(&sync_fence->status);
 	if (status == 0) {
 		sync_fence_put(sync_fence);
-		goto skip_slow_path;
+		return 0;
 	}
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, wait_cmd_size, wait_cmd);
 	if (err) {
 		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
@@ -718,34 +689,34 @@ static int gk20a_channel_semaphore_wait_fd(
 	nvgpu_semaphore_incr(w->sema, c->hw_sema);
 
 	/* GPU unblocked when the semaphore value increments. */
-	add_sema_cmd(c->g, c, w->sema, wait_cmd, 8, true, false);
+	add_sema_cmd(c->g, c, w->sema, wait_cmd, 0, true, false);
 
 	/*
 	 *  We need to create the fence before adding the waiter to ensure
 	 *  that we properly clean up in the event the sync_fence has
 	 *  already signaled
 	 */
-	err = gk20a_fence_from_semaphore(c->g, fence, sema->timeline, w->sema,
-			&c->semaphore_wq, false);
+	err = gk20a_fence_from_semaphore(c->g, fence_out, timeline,
+			w->sema, &c->semaphore_wq, false);
 	if (err)
 		goto clean_up_sema;
 
-	ret = sync_fence_wait_async(sync_fence, &w->waiter);
+	err = sync_fence_wait_async(sync_fence, &w->waiter);
 	gk20a_add_pending_sema_wait(c->g, w);
 
-	/*
-	 * If the sync_fence has already signaled then the above async_wait
-	 * will never trigger. This causes the semaphore release op to never
-	 * happen which, in turn, hangs the GPU. That's bad. So let's just
-	 * do the nvgpu_semaphore_release() right now.
+        /*
+	 * If the sync_fence has already signaled then the above wait_async
+	 * will not get scheduled; the fence completed just after doing the
+	 * status check above before allocs and waiter init, and won the race.
+	 * This causes the waiter to be skipped, so let's release the semaphore
+	 * here and put the refs taken for the worker.
 	 */
-	if (ret == 1) {
+	if (err == 1) {
 		sync_fence_put(sync_fence);
 		nvgpu_semaphore_release(w->sema, c->hw_sema);
 		nvgpu_semaphore_put(w->sema);
 	}
 
-skip_slow_path:
 	return 0;
 
 clean_up_sema:
@@ -758,9 +729,27 @@ clean_up_sema:
 clean_up_worker:
 	nvgpu_kfree(c->g, w);
 clean_up_priv_cmd:
-	gk20a_free_priv_cmdbuf(c, entry);
+	gk20a_free_priv_cmdbuf(c, wait_cmd);
 clean_up_sync_fence:
 	sync_fence_put(sync_fence);
+	return err;
+}
+#endif
+
+static int gk20a_channel_semaphore_wait_fd(
+		struct gk20a_channel_sync *s, int fd,
+		struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence)
+{
+	struct gk20a_channel_semaphore *sema =
+		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct channel_gk20a *c = sema->c;
+#ifdef CONFIG_SYNC
+	int err;
+
+	err = semaphore_wait_fd_native(c, fd, entry);
+	if (err)
+		err = semaphore_wait_fd_proxy(c, fd, entry, fence, sema->timeline);
 	return err;
 #else
 	nvgpu_err(c->g,
@@ -798,7 +787,7 @@ static int __gk20a_channel_semaphore_incr(
 	}
 
 	/* Release the completion semaphore. */
-	add_sema_cmd(c->g, c, semaphore, incr_cmd, 14, false, wfi_cmd);
+	add_sema_cmd(c->g, c, semaphore, incr_cmd, 0, false, wfi_cmd);
 
 	err = gk20a_fence_from_semaphore(c->g, fence,
 			sp->timeline, semaphore,

@@ -1,7 +1,7 @@
 /*
  * GK20A Sync Framework Integration
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -68,55 +68,6 @@ struct gk20a_sync_pt_inst {
 	struct sync_pt			pt;
 	struct gk20a_sync_pt		*shared;
 };
-
-/**
- * Check if the passed sync_fence is backed by a single GPU semaphore. In such
- * cases we can short circuit a lot of SW involved in signaling pre-fences and
- * post fences.
- *
- * For now reject multi-sync_pt fences. This could be changed in future. It
- * would require that the sema fast path push a sema acquire for each semaphore
- * in the fence.
- */
-int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence)
-{
-	struct sync_timeline *t;
-
-	struct fence *pt = fence->cbs[0].sync_pt;
-	struct sync_pt *spt = sync_pt_from_fence(pt);
-
-	if (fence->num_fences != 1)
-		return 0;
-
-	if (spt == NULL)
-		return 0;
-
-	t = sync_pt_parent(spt);
-
-	if (t->ops == &gk20a_sync_timeline_ops)
-		return 1;
-	return 0;
-}
-
-struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f)
-{
-	struct sync_pt *spt;
-	struct gk20a_sync_pt_inst *pti;
-
-	struct fence *pt;
-
-	if (!f)
-		return NULL;
-
-	if (!gk20a_is_sema_backed_sync_fence(f))
-		return NULL;
-
-	pt = f->cbs[0].sync_pt;
-	spt = sync_pt_from_fence(pt);
-	pti = container_of(spt, struct gk20a_sync_pt_inst, pt);
-
-	return pti->shared->sema;
-}
 
 /**
  * Compares sync pt values a and b, both of which will trigger either before
@@ -371,7 +322,44 @@ static const struct sync_timeline_ops gk20a_sync_timeline_ops = {
 
 struct sync_fence *gk20a_sync_fence_fdget(int fd)
 {
-	return sync_fence_fdget(fd);
+	struct sync_fence *fence = sync_fence_fdget(fd);
+	int i;
+
+	if (!fence)
+		return NULL;
+
+	for (i = 0; i < fence->num_fences; i++) {
+		struct fence *pt = fence->cbs[i].sync_pt;
+		struct sync_pt *spt = sync_pt_from_fence(pt);
+		struct sync_timeline *t;
+
+		if (spt == NULL) {
+			sync_fence_put(fence);
+			return NULL;
+		}
+
+		t = sync_pt_parent(spt);
+		if (t->ops != &gk20a_sync_timeline_ops) {
+			sync_fence_put(fence);
+			return NULL;
+		}
+	}
+
+	return fence;
+}
+
+struct nvgpu_semaphore *gk20a_sync_pt_sema(struct sync_pt *spt)
+{
+	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(spt);
+	struct nvgpu_semaphore *sema;
+
+	nvgpu_spinlock_acquire(&pt->lock);
+	sema = pt->sema;
+	if (sema)
+		nvgpu_semaphore_get(sema);
+	nvgpu_spinlock_release(&pt->lock);
+
+	return sema;
 }
 
 void gk20a_sync_timeline_signal(struct sync_timeline *timeline)

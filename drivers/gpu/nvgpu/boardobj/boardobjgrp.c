@@ -240,6 +240,9 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 			pboardobjgrp, pcmd))
 		goto boardobjgrp_pmucmd_pmuinithandle_exit;
 
+	if (!pcmd->fbsize)
+		goto boardobjgrp_pmucmd_pmuinithandle_exit;
+
 	nvgpu_pmu_sysmem_surface_alloc(g, sysmem_desc, pcmd->fbsize);
 	/* we only have got sysmem later this will get copied to vidmem
 	surface*/

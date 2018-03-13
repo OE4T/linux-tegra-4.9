@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@ struct isc_pwm_info {
 	struct pwm_device *pwm;
 	atomic_t in_use;
 	struct mutex mutex;
+	bool force_on;
 };
 
 #endif  /* __ISC_PWM_PRIV_H__ */

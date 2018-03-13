@@ -1,7 +1,7 @@
 /*
  * isc_pwm.c - ISC PWM driver.
  *
- * Copyright (c) 2016-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,6 +42,9 @@ static int isc_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 	if (!chip || !pwm)
 		return -EINVAL;
 
+	if (info->force_on)
+		return err;
+
 	mutex_lock(&info->mutex);
 
 	if (atomic_inc_return(&info->in_use) == 1)
@@ -74,6 +77,9 @@ static int isc_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	struct isc_pwm_info *info = to_isc_pwm_info(chip);
 	int err = 0;
 
+	if (info->force_on)
+		return err;
+
 	mutex_lock(&info->mutex);
 
 	err = pwm_config(info->pwm, duty_ns, period_ns);
@@ -87,6 +93,7 @@ static struct pwm_device *of_isc_pwm_xlate(struct pwm_chip *pc,
 			const struct of_phandle_args *args)
 {
 	struct pwm_device *pwm;
+	struct isc_pwm_info *info = to_isc_pwm_info(pc);
 	int err = 0;
 
 	pwm = pwm_request_from_chip(pc, args->args[0], NULL);
@@ -95,10 +102,24 @@ static struct pwm_device *of_isc_pwm_xlate(struct pwm_chip *pc,
 		return NULL;
 	}
 
-	err = pwm_config(pwm, args->args[1]/4, args->args[1]);
-	if (err) {
-		dev_err(pc->dev, "can't config PWM: %d\n", err);
-		return NULL;
+	if (info->force_on) {
+		err = pwm_config(info->pwm, args->args[1]/4, args->args[1]);
+		if (err) {
+			dev_err(pc->dev, "can't config PWM: %d\n", err);
+			return NULL;
+		}
+
+		err = pwm_enable(info->pwm);
+		if (err) {
+			dev_err(pc->dev, "can't enable PWM: %d\n", err);
+			return NULL;
+		}
+	} else {
+		err = pwm_config(pwm, args->args[1]/4, args->args[1]);
+		if (err) {
+			dev_err(pc->dev, "can't config PWM: %d\n", err);
+			return NULL;
+		}
 	}
 
 	return pwm;
@@ -115,6 +136,7 @@ static int isc_pwm_probe(struct platform_device *pdev)
 {
 	struct isc_pwm_info *info = NULL;
 	int err = 0, npwm;
+	bool force_on = false;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -132,12 +154,15 @@ static int isc_pwm_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	force_on = of_property_read_bool(pdev->dev.of_node, "force_on");
+
 	info->chip.dev = &pdev->dev;
 	info->chip.ops = &isc_pwm_ops;
 	info->chip.base = -1;
 	info->chip.npwm = npwm;
 	info->chip.of_xlate = of_isc_pwm_xlate;
 	info->chip.of_pwm_n_cells = 2;
+	info->force_on = force_on;
 
 	err = pwmchip_add(&info->chip);
 	if (err < 0) {

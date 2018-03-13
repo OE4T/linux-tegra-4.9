@@ -52,29 +52,25 @@
 			override@1 {
 				target = <&dp_aux_ch0_i2c>;
 				_overlay_ {
-					/delete-property/ dmas;
-					/delete-property/ dma-names;
+					delete-target-property = "dmas";
 				};
 			};
 			override@2 {
 				target = <&dp_aux_ch1_i2c>;
 				_overlay_ {
-					/delete-property/ dmas;
-					/delete-property/ dma-names;
+					delete-target-property = "dmas";
 				};
 			};
 			override@3 {
 				target = <&dp_aux_ch2_i2c>;
 				_overlay_ {
-					/delete-property/ dmas;
-					/delete-property/ dma-names;
+					delete-target-property = "dmas";
 				};
 			};
 			override@4 {
 				target = <&dp_aux_ch3_i2c>;
 				_overlay_ {
-					/delete-property/ dmas;
-					/delete-property/ dma-names;
+					delete-target-property = "dmas";
 				};
 			};
 		};

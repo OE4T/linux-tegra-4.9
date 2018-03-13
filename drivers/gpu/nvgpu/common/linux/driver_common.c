@@ -221,6 +221,11 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_pm_vars(g);
 	nvgpu_init_vbios_vars(g);
 	nvgpu_init_ltc_vars(g);
+	err = nvgpu_init_soc_vars(g);
+	if (err) {
+		nvgpu_err(g, "init soc vars failed");
+		return err;
+	}
 
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);

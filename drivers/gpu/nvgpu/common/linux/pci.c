@@ -45,7 +45,7 @@
 
 static int nvgpu_pci_tegra_probe(struct device *dev)
 {
-	return nvgpu_init_soc_vars(get_gk20a(dev));
+	return 0;
 }
 
 static int nvgpu_pci_tegra_remove(struct device *dev)

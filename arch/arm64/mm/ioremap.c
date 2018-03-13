@@ -117,8 +117,8 @@ int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr)
 {
 	BUG_ON(offset + SZ_64K > IO_SPACE_LIMIT);
 
-	return ioremap_page_range(PCI_IOBASE + offset,
-				  PCI_IOBASE + offset + SZ_64K,
+	return ioremap_page_range((unsigned long)(PCI_IOBASE + offset),
+				  (unsigned long)(PCI_IOBASE + offset + SZ_64K),
 				  phys_addr,
 				  __pgprot(PROT_DEVICE_nGnRE));
 }
@@ -126,7 +126,7 @@ EXPORT_SYMBOL_GPL(pci_ioremap_io);
 
 void pci_iounmap_io(unsigned int offset)
 {
-	unmap_kernel_range(PCI_IOBASE + offset, SZ_64K);
+	unmap_kernel_range((unsigned long)(PCI_IOBASE + offset), SZ_64K);
 }
 EXPORT_SYMBOL_GPL(pci_iounmap_io);
 

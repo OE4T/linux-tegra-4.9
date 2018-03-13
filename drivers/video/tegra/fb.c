@@ -826,6 +826,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	console_lock();
 	b_locked_fb_info = lock_fb_info(fb_info->info);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
+	fb_info->info->monspecs.modedb = NULL;
 	fb_destroy_modelist(&fb_info->info->modelist);
 	event.info = fb_info->info;
 	/* Notify layers above fb.c that the hardware is unavailable */

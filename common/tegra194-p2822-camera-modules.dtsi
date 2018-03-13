@@ -17,6 +17,7 @@
 #include "tegra194-p2822-0000-camera-e3333-a00.dtsi"
 #include "tegra194-p2822-0000-camera-e3331-a00.dtsi"
 #include "tegra194-p2822-0000-camera-imx274-dual.dtsi"
+#include "tegra194-p2822-0000-camera-imx274-a00.dtsi"
 
 #define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 4)
 #define CAM0_PWDN	TEGRA194_MAIN_GPIO(H, 6)

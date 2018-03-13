@@ -1,7 +1,7 @@
 /*
  * tegra186_arad_alt.c - Tegra186 ARAD driver
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -241,6 +241,20 @@ static int tegra186_arad_mux_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra186_arad_get_info(struct snd_kcontrol *kcontrol,
+				  struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_mixer_control *arad_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = arad_private->max;
+
+	return 0;
+}
+
 static int tegra186_arad_get_ratio_int(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -453,6 +467,26 @@ static ARAD_MUX_ENUM_CTRL_DECL(denominator6,
 		0, 0xffff, 0, tegra186_arad_get_prescalar, \
 		tegra186_arad_put_prescalar)
 
+#define ARAD_LINE_RATIO_INT(id) { \
+	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
+	.name = "Lane"#id" Ratio Int", \
+	.access = SNDRV_CTL_ELEM_ACCESS_READ | SNDRV_CTL_ELEM_ACCESS_VOLATILE, \
+	.info = tegra186_arad_get_info, \
+	.get = tegra186_arad_get_ratio_int, \
+	.private_value = SOC_SINGLE_VALUE( \
+		TEGRA186_ARAD_LANE##id##_RATIO_INTEGER_PART, 0, \
+		TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0, 0) }
+
+#define ARAD_LINE_RATIO_FRAC(id) { \
+	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,\
+	.name = "Lane"#id" Ratio Frac",\
+	.access = SNDRV_CTL_ELEM_ACCESS_READ | SNDRV_CTL_ELEM_ACCESS_VOLATILE,\
+	.info = tegra186_arad_get_info, \
+	.get = tegra186_arad_get_ratio_frac,\
+	.private_value = SOC_SINGLE_VALUE(\
+		TEGRA186_ARAD_LANE##id##_RATIO_FRACTIONAL_PART, 0, \
+		TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0, 0) }
+
 static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 	SOC_SINGLE_EXT("Lane1 enable", TEGRA186_ARAD_LANE_ENABLE, 0, 1, 0,
 		tegra186_arad_get_enable_lane, tegra186_arad_put_enable_lane),
@@ -494,54 +528,18 @@ static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 	SOC_ENUM_EXT("Denominator6 Mux", denominator6_enum,
 		tegra186_arad_mux_get, tegra186_arad_mux_put),
 
-	SOC_SINGLE_EXT("Lane1 Ratio Int",
-		TEGRA186_ARAD_LANE1_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane1 Ratio Frac",
-		TEGRA186_ARAD_LANE1_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
-	SOC_SINGLE_EXT("Lane2 Ratio Int",
-		TEGRA186_ARAD_LANE2_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane2 Ratio Frac",
-		TEGRA186_ARAD_LANE2_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
-	SOC_SINGLE_EXT("Lane3 Ratio Int",
-		TEGRA186_ARAD_LANE3_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane3 Ratio Frac",
-		TEGRA186_ARAD_LANE3_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
-	SOC_SINGLE_EXT("Lane4 Ratio Int",
-		TEGRA186_ARAD_LANE4_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane4 Ratio Frac",
-		TEGRA186_ARAD_LANE4_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
-	SOC_SINGLE_EXT("Lane5 Ratio Int",
-		TEGRA186_ARAD_LANE5_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane5 Ratio Frac",
-		TEGRA186_ARAD_LANE5_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
-	SOC_SINGLE_EXT("Lane6 Ratio Int",
-		TEGRA186_ARAD_LANE6_RATIO_INTEGER_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_INTEGER_PART_MASK, 0,
-		tegra186_arad_get_ratio_int, NULL),
-	SOC_SINGLE_EXT("Lane6 Ratio Frac",
-		TEGRA186_ARAD_LANE6_RATIO_FRACTIONAL_PART,
-		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
-		tegra186_arad_get_ratio_frac, NULL),
+	ARAD_LINE_RATIO_INT(1),
+	ARAD_LINE_RATIO_FRAC(1),
+	ARAD_LINE_RATIO_INT(2),
+	ARAD_LINE_RATIO_FRAC(2),
+	ARAD_LINE_RATIO_INT(3),
+	ARAD_LINE_RATIO_FRAC(3),
+	ARAD_LINE_RATIO_INT(4),
+	ARAD_LINE_RATIO_FRAC(4),
+	ARAD_LINE_RATIO_INT(5),
+	ARAD_LINE_RATIO_FRAC(5),
+	ARAD_LINE_RATIO_INT(6),
+	ARAD_LINE_RATIO_FRAC(6),
 
 	ARAD_NUMERATOR_PRESCALAR(1),
 	ARAD_NUMERATOR_PRESCALAR(2),

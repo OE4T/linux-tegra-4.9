@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -60,10 +60,8 @@ static inline const char *nvgpu_log_name(struct gk20a *g)
 #ifdef CONFIG_GK20A_TRACE_PRINTK
 static void __nvgpu_trace_printk_log(u32 trace, const char *gpu_name,
 				     const char *func_name, int line,
-				     enum nvgpu_log_type type, const char *log)
+				     const char *log_type, const char *log)
 {
-	const char *log_type = log_types[type];
-
 	trace_printk(LOG_FMT, gpu_name, func_name, line, log_type, log);
 }
 #endif
@@ -73,14 +71,13 @@ static void __nvgpu_really_print_log(u32 trace, const char *gpu_name,
 				     enum nvgpu_log_type type, const char *log)
 {
 	const char *name = gpu_name ? gpu_name : "";
+	const char *log_type = log_types[type];
 
 #ifdef CONFIG_GK20A_TRACE_PRINTK
 	if (trace)
 		return __nvgpu_trace_printk_log(trace, name, func_name,
-						line, type, log);
-#else
-	const char *log_type = log_types[type];
-
+						line, log_type, log);
+#endif
 	switch (type) {
 	case NVGPU_DEBUG:
 		/*
@@ -100,7 +97,6 @@ static void __nvgpu_really_print_log(u32 trace, const char *gpu_name,
 		pr_err(LOG_FMT, name, func_name, line, log_type, log);
 		break;
 	}
-#endif
 }
 
 __attribute__((format (printf, 5, 6)))

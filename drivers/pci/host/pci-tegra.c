@@ -5,7 +5,7 @@
  * Author: Mike Rapoport <mike@compulab.co.il>
  *
  * Based on NVIDIA PCIe driver
- * Copyright (c) 2008-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA Corporation. All rights reserved.
  *
  * Bits taken from arch/arm/mach-dove/pcie.c
  *
@@ -586,7 +586,7 @@ static struct tegra_pcie_bus *tegra_pcie_bus_alloc(struct tegra_pcie *pcie,
 	struct tegra_pcie_bus *bus;
 
 	PR_FUNC_LINE;
-	bus = kzalloc(sizeof(*bus), GFP_KERNEL);
+	bus = devm_kzalloc(pcie->dev, sizeof(*bus), GFP_KERNEL);
 	if (!bus)
 		return ERR_PTR(-ENOMEM);
 
@@ -4892,7 +4892,6 @@ release_drvdata:
 static int tegra_pcie_remove(struct platform_device *pdev)
 {
 	struct tegra_pcie *pcie = platform_get_drvdata(pdev);
-	struct tegra_pcie_bus *bus;
 
 	PR_FUNC_LINE;
 
@@ -4907,8 +4906,6 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	pci_unmap_iospace(&pcie->pio);
 	pci_bus_remove_resources(pcie->host->bus);
 	pci_remove_root_bus(pcie->host->bus);
-	list_for_each_entry(bus, &pcie->buses, list)
-		kfree(bus);
 	iounmap(pcie->cfg_va_base);
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		tegra_pcie_disable_msi(pcie);

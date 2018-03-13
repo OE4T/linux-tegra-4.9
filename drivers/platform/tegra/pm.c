@@ -26,7 +26,6 @@
 #include <linux/notifier.h>
 #include <linux/serial_reg.h>
 #include <linux/tegra-pm.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/of_address.h>
 #include <linux/ioport.h>
 

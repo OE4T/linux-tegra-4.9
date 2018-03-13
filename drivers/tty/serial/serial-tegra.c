@@ -529,7 +529,10 @@ static void tegra_uart_fill_tx_fifo(struct tegra_uart_port *tup, int max_bytes)
 	int i;
 
 	for (i = 0; i < max_bytes; i++) {
-		BUG_ON(uart_circ_empty(xmit));
+		if (uart_circ_empty(xmit)) {
+			dev_err(tup->uport.dev, "Tx Buffer is empty\n");
+			return;
+		}
 		if (tup->cdata->tx_fifo_full_status) {
 			unsigned long lsr = tegra_uart_read(tup, UART_LSR);
 			if ((lsr & TEGRA_UART_LSR_TXFIFO_FULL))

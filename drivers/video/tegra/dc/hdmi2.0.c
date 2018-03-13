@@ -603,6 +603,10 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	}
 
 	tegra_dc_sor_detach(sor);
+
+	if (dc->out->vrr_hotplug_state == TEGRA_HPD_STATE_FORCE_DEASSERT)
+		tegra_dc_disable_disp_ctrl_mode(dc);
+
 	tegra_sor_clk_switch_setup(sor, false);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_power_lanes(sor, 4, false);
@@ -2784,7 +2788,10 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 		tegra_hdmi_spd_infoframe(hdmi);
 	}
 
-	tegra_dc_sor_attach(sor);
+	if (dc->out->vrr_hotplug_state == TEGRA_HPD_STATE_NORMAL)
+		tegra_dc_sor_attach(sor);
+	else
+		tegra_dc_enable_disp_ctrl_mode(dc);
 
 	/* enable hdcp */
 	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
@@ -3414,10 +3421,110 @@ static int tegra_hdmi_hotplug_dbg_open(struct inode *inode, struct file *file)
 	return single_open(file, tegra_hdmi_hotplug_dbg_show, inode->i_private);
 }
 
+/* show current hpd/vhotplug state */
+static int tegra_hdmi_vhotplug_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc;
+
+	if (WARN_ON(!hdmi))
+		return -EINVAL;
+
+	dc = hdmi->dc;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	/* make sure we see updated hotplug_state value */
+	rmb();
+	seq_printf(m, "hdmi vhotplug state: %d\n", dc->out->vrr_hotplug_state);
+
+	return 0;
+}
+
+/*
+ * sw control for hpd/vhotplug.
+ * 0 is normal state, hw drives hpd/vhotplug.
+ * -1 is force deassert, sw drives hpd/vhotplug.
+ * 1 is force assert, sw drives hpd/vhotplug.
+ * before releasing to hw, sw must ensure hpd/vhotplug state is normal i.e. 0
+ */
+static ssize_t tegra_hdmi_vhotplug_dbg_write(struct file *file,
+					const char __user *addr,
+					size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc;
+	long new_hpd_state;
+	int ret;
+	static bool free_vrr;
+
+	if (WARN_ON(!hdmi))
+		return -EINVAL;
+
+	dc = hdmi->dc;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_hpd_state);
+	if (ret < 0)
+		return ret;
+
+	if (new_hpd_state == TEGRA_HPD_STATE_FORCE_ASSERT) {
+
+		if (!dc->out->vrr) {
+			dc->out->vrr = devm_kzalloc(&dc->ndev->dev,
+						    sizeof(struct tegra_vrr),
+						    GFP_KERNEL);
+			if (!dc->out->vrr) {
+				dev_err(&dc->ndev->dev, "not enough memory\n");
+				return -ENOMEM;
+			}
+
+			free_vrr = true;
+		}
+
+		dc->out->vrr->capability = 1;
+
+	} else if (new_hpd_state == TEGRA_HPD_STATE_FORCE_DEASSERT) {
+
+		if (free_vrr && dc->out->vrr) {
+			devm_kfree(&dc->ndev->dev, dc->out->vrr);
+			dc->out->vrr = NULL;
+		}
+
+		if (dc->out->vrr)
+			dc->out->vrr->capability = 0;
+	}
+
+	dc->out->vrr_hotplug_state = new_hpd_state;
+
+	tegra_hdmi_set_hotplug_state(hdmi, new_hpd_state);
+
+	return len;
+}
+
+static int tegra_hdmi_vhotplug_dbg_open(struct inode *inode,
+					  struct file *file)
+{
+	return single_open(file, tegra_hdmi_vhotplug_dbg_show,
+			   inode->i_private);
+}
+
 static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 	.open = tegra_hdmi_hotplug_dbg_open,
 	.read = seq_read,
 	.write = tegra_hdmi_hotplug_dbg_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static const struct file_operations tegra_hdmi_vhotplug_dbg_ops = {
+	.open = tegra_hdmi_vhotplug_dbg_open,
+	.read = seq_read,
+	.write = tegra_hdmi_vhotplug_dbg_write,
 	.llseek = seq_lseek,
 	.release = single_release,
 };
@@ -3549,6 +3656,10 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 				hdmi, &tegra_hdmi_ddc_power_toggle_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
+	ret = debugfs_create_file("vhotplug", 0444, hdmi->debugdir,
+				hdmi, &tegra_hdmi_vhotplug_dbg_ops);
+	if (IS_ERR_OR_NULL(ret))
+		goto fail;
 	return;
 fail:
 	dev_err(&hdmi->dc->ndev->dev, "could not create hdmi%d debugfs\n",
@@ -3600,7 +3711,7 @@ static void tegra_dc_hdmi_vrr_enable(struct tegra_dc *dc, bool enable)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr)
+	if (!vrr || !vrr->capability)
 		return;
 
 	if (!(dc->mode.vmode & FB_VMODE_VRR)) {

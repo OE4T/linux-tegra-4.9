@@ -3268,6 +3268,32 @@ int tegra_dc_enable_update_and_act(struct tegra_dc *dc, u32 update_mask,
 
 	return tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL, act_req_mask,
 						0, 1, TEGRA_DC_POLL_TIMEOUT_MS);
+
+}
+
+void tegra_dc_disable_disp_ctrl_mode(struct tegra_dc *dc)
+{
+	tegra_dc_get(dc);
+
+	tegra_dc_writel(dc, DISP_CTRL_MODE_STOP, DC_CMD_DISPLAY_COMMAND);
+	tegra_dc_enable_general_act(dc);
+
+	tegra_dc_put(dc);
+}
+
+void tegra_dc_enable_disp_ctrl_mode(struct tegra_dc *dc)
+{
+	tegra_dc_get(dc);
+	/* Enable DC */
+	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
+		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
+			DC_CMD_DISPLAY_COMMAND);
+	else
+		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
+			DC_CMD_DISPLAY_COMMAND);
+
+	tegra_dc_enable_general_act(dc);
+	tegra_dc_put(dc);
 }
 
 /* Set dc at the next available index in the tegra_dcs array. */

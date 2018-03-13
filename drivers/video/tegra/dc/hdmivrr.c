@@ -836,7 +836,7 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	struct fb_videomode m_vrr;
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	u16 disp_controller_id = 0;
-	bool module_id_r2;
+	bool module_id_r2 = false;
 
 	if (!head)
 		return;
@@ -852,8 +852,6 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	if (!hdmivrr_get_vcp(hdmi, VCP_NV_DISP_CONTROLLER_ID,
 			     &disp_controller_id))
 		module_id_r2 = hdmivrr_is_module_id_r2(disp_controller_id);
-	else
-		return;
 
 	/* Check whether VRR modes were already added */
 	list_for_each(pos, head) {
@@ -922,7 +920,7 @@ void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate)
 
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 {
-	int status;
+	int status = 0;
 	struct tegra_dc *dc;
 	struct tegra_vrr *vrr;
 
@@ -931,6 +929,9 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 
 	dc = hdmi->dc;
 	vrr = dc->out->vrr;
+
+	if (!(dc->out->vrr_hotplug_state == TEGRA_HPD_STATE_NORMAL))
+		goto exit;
 
 	status = tegra_hdmivrr_is_vrr_capable(hdmi);
 	if (status)
@@ -994,5 +995,6 @@ int tegra_hdmivrr_disable(struct tegra_hdmi *hdmi)
 		vrr->ta_ctx = NULL;
 	}
 #endif
+	vrr->capability = 0;
 	return 0;
 }

@@ -124,6 +124,10 @@ u32 timeout_ms);
 /* defined in dc.c, used in sor.c, nvdisp.c, nvdisp_lut.c */
 void tegra_dc_enable_general_act(struct tegra_dc *dc);
 
+/* defined in dc.c, used by hdmi2.0.c */
+void tegra_dc_enable_disp_ctrl_mode(struct tegra_dc *dc);
+void tegra_dc_disable_disp_ctrl_mode(struct tegra_dc *dc);
+
 /* defined in dc.c, used in nvdisp.c */
 int tegra_dc_enable_update_and_act(struct tegra_dc *dc, u32 update_mask,
 							u32 act_req_mask);

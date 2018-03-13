@@ -805,12 +805,6 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	} else
 		vrr->nvdisp_direct_drive = 0;
 
-	/*
-	 * VRR capability is set when we have vrr_settings section in DT
-	 * vrr_settings, vrr_min_fps, and vrr_max_fps should always be
-	 * set at the same time in DT.
-	 */
-	vrr->capability = 1;
 	return 0;
 }
 

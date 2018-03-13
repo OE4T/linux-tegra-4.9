@@ -103,12 +103,26 @@
 #define ISL9238_CURR_SENSE_RES_OTP	10
 #define ISL9238_ADPTR_SENSE_RES_OTP	20
 
+#define ISL9238_TEMP_H_CHG_DISABLE	60
+#define ISL9238_TEMP_L_CHG_DISABLE	0
+
+static const struct regmap_range isl9238_readable_ranges[] = {
+	regmap_reg_range(ISL9238_CHG_CURR_LIMIT, ISL9238_CONTROL4_OPTIONS),
+	regmap_reg_range(ISL9238_MANUFACTURER_ID, ISL9238_DEVICE_ID),
+};
+
+static const struct regmap_access_table isl9238_readable_table = {
+	.yes_ranges = isl9238_readable_ranges,
+	.n_yes_ranges = ARRAY_SIZE(isl9238_readable_ranges),
+};
+
 static const struct regmap_config isl9238_rmap_config = {
 	.reg_bits		= 8,
 	.val_bits		= 16,
 	.max_register		= ISL9238_DEVICE_ID,
 	.cache_type		= REGCACHE_NONE,
 	.val_format_endian	= REGMAP_ENDIAN_NATIVE,
+	.rd_table		= &isl9238_readable_table,
 };
 
 struct isl9238_vbus_pdata {
@@ -121,8 +135,17 @@ struct isl9238_chg_pdata {
 	struct regulator_consumer_supply *consumer_supplies;
 	struct regulator_init_data	*chg_ridata;
 
+	const char *tz_name;
+	int temp_poll_time;
+	int temp_range_len;
+	u32 *temp_range;
+	int *temp_chg_curr_lim;
+	u32 *max_battery_voltage;
+	u32 *voltage_curr_lim;
+
 	u32 charge_current_lim;
 	u32 max_sys_voltage;
+	u32 max_init_voltage;
 	u32 min_sys_voltage;
 	u32 input_voltage_limit;
 	u32 adapter_current_lim1;
@@ -136,6 +159,7 @@ struct isl9238_chg_pdata {
 	u32 adapter_sense_resistor;
 	u32 otg_voltage;
 	u32 otg_current;
+	u32 terminate_chg_current;
 	bool disable_input_regulation;
 	bool enable_bat_learn_mode;
 	bool disable_turbo_mode;
@@ -175,6 +199,8 @@ struct isl9238_charger {
 	bool	disable_sc7_during_charging;
 	bool	wake_lock_released;
 	bool	cable_connected;
+	bool	thermal_chg_disable;
+	bool	terminate_charging;
 	u32	chg_status;
 	u32	in_current_limit;
 	u32	last_adapter_current;
@@ -185,6 +211,11 @@ struct isl9238_charger {
 	u32	curnt_sense_res;
 	u32	adptr_sense_res;
 	u32	charging_current_lim;
+	u32	adapter_curr_lim1;
+	u32	max_init_voltage;
+	u32	max_sys_voltage;
+	u32	terminate_chg_current;
+	int	last_temp;
 };
 
 struct isl9238_charger *isl9238_bc;
@@ -355,6 +386,30 @@ static ssize_t isl9238_sysfs_set_adptr_curnt_limit(struct device *dev,
 	return count;
 }
 
+static ssize_t isl9238_sysfs_show_max_sys_voltage(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	unsigned int data;
+	int ret;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	ret = regmap_read(isl9238_bc->rmap, ISL9238_MAX_SYS_VOLTAGE, &data);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "system voltage read fail:%d\n", ret);
+		return ret;
+	}
+
+	data = data & ISL9238_MAX_SYS_VOLTAGE_MASK;
+
+	return snprintf(buf, MAX_STR_PRINT, "%d mV\n", data);
+}
+
 static ssize_t isl9238_sysfs_show_adptr_curnt_range(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -381,11 +436,15 @@ static DEVICE_ATTR(input_charging_current, 0644,
 static DEVICE_ATTR(input_charging_current_range, 0444,
 		isl9238_sysfs_show_adptr_curnt_range, NULL);
 
+static DEVICE_ATTR(max_system_voltage, 0444,
+		isl9238_sysfs_show_max_sys_voltage, NULL);
+
 static struct attribute *isl9238_attributes[] = {
 	&dev_attr_output_charging_current.attr,
 	&dev_attr_output_charging_current_range.attr,
 	&dev_attr_input_charging_current.attr,
 	&dev_attr_input_charging_current_range.attr,
+	&dev_attr_max_system_voltage.attr,
 	NULL,
 };
 
@@ -405,7 +464,7 @@ static void isl9238_sysfs_init(struct device *dev)
 	}
 
 	err = sysfs_create_group(bc_kobj, &isl9238_attr_group);
-	if (!err)
+	if (err)
 		dev_err(dev, "failed to create isl9238 sysfs entries\n");
 }
 #else
@@ -601,6 +660,13 @@ static int isl9238_set_charging_voltage(struct regulator_dev *rdev,
 
 	dev_info(isl9238->dev, "setting adapter voltage %d\n", max_uv / 1000);
 
+	reg_val = isl9238->max_init_voltage & ISL9238_MAX_SYS_VOLTAGE_MASK;
+	ret = isl9238_write(isl9238, ISL9238_MAX_SYS_VOLTAGE, reg_val);
+	if (ret < 0) {
+		dev_err(isl9238->dev, "max sys voltage write fail:%d\n", ret);
+		return ret;
+	}
+
 	if (max_uv == 0)
 		return 0;
 
@@ -625,7 +691,7 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 					int min_ua, int max_ua)
 {
 	struct isl9238_charger *isl9238 = rdev_get_drvdata(rdev);
-	unsigned int chg_current_limit;
+	unsigned int chg_current_limit, adapter_curr_limit = 0;
 	int in_current_limit;
 	int old_current_limit;
 	int ret = 0;
@@ -633,8 +699,6 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 
 	if (isl9238->is_otg_connected)
 		return -EINVAL;
-
-	dev_info(isl9238->dev, "setting adapter current %d\n", max_ua / 1000);
 
 	if (max_ua == 0) {
 		/* disable charging by setting charging current to 0mA */
@@ -644,13 +708,34 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 				"charge current update failed %d\n", ret);
 			return ret;
 		}
+
 		isl9238->wake_lock_released = false;
 		isl9238->chg_status = BATTERY_DISCHARGING;
+		isl9238->cable_connected = 0;
+		dev_info(isl9238->dev, "stop thermal monitor\n");
+		isl9238->last_temp = 0;
+		battery_charger_thermal_stop_monitoring(isl9238->bc_dev);
 		dev_info(isl9238->dev, "charging disabled\n");
 		battery_charging_status_update(isl9238->bc_dev,
 					       isl9238->chg_status);
-		return 0;
+
+		/* set default adapter current limit */
+		adapter_curr_limit = isl9238->adapter_curr_lim1;
+		dev_info(isl9238->dev, "set default adapter current:%d\n",
+			 adapter_curr_limit);
+
+		if (isl9238->adptr_sense_res)
+			adapter_curr_limit = adapter_curr_limit *
+			isl9238->adptr_sense_res / ISL9238_ADPTR_SENSE_RES_OTP;
+
+		val = adapter_curr_limit & ISL9238_ADPTR_CURR_LIMIT1_MASK;
+		ret = isl9238_write(isl9238, ISL9238_ADPTR_CURR_LIMIT1, val);
+		if (ret < 0)
+			dev_err(isl9238->dev, "set adptr curr fail:%d\n", ret);
+		return ret;
 	}
+
+	dev_info(isl9238->dev, "setting adapter current:%d\n", max_ua / 1000);
 
 	/* enable charging by setting default charging current */
 	if (isl9238->charging_current_lim) {
@@ -709,6 +794,9 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 	}
 	isl9238->in_current_limit = in_current_limit;
 	battery_charging_status_update(isl9238->bc_dev, isl9238->chg_status);
+	dev_info(isl9238->dev, "start thermal monitor\n");
+	isl9238->last_temp = 0;
+	battery_charger_thermal_start_monitoring(isl9238->bc_dev);
 
 	return 0;
 }
@@ -874,6 +962,112 @@ out:
 	return IRQ_HANDLED;
 }
 
+static int isl9238_charger_thermal_configure(
+		struct battery_charger_dev *bc_dev,
+		int temp, bool enable_charger, bool enable_charg_half_current,
+		int battery_voltage)
+{
+	struct isl9238_charger *isl9238 = battery_charger_get_drvdata(bc_dev);
+	struct isl9238_chg_pdata *chg_pdata;
+	unsigned int val;
+	int temp_chg_curr_lim = 0, volt_chg_curr_lim = 0;
+	int bat_voltage, bat_current, max_system_voltage = 0;
+	int ret, i;
+
+	if (isl9238->shutdown_complete)
+		return 0;
+
+	chg_pdata = isl9238->chg_pdata;
+	if (!isl9238->cable_connected || !chg_pdata->temp_range_len)
+		return 0;
+
+	dev_info(isl9238->dev, "battery temp %d\n", temp);
+
+	if ((isl9238->last_temp == temp) && !isl9238->terminate_charging)
+		return 0;
+
+	isl9238->last_temp = temp;
+	isl9238->terminate_charging = false;
+
+	bat_current = battery_gauge_get_charging_current(isl9238->bc_dev);
+	if (bat_current <= isl9238->terminate_chg_current)
+		isl9238->terminate_charging = true;
+
+	if ((temp >= ISL9238_TEMP_H_CHG_DISABLE ||
+	     temp <= ISL9238_TEMP_L_CHG_DISABLE) ||
+	     isl9238->terminate_charging) {
+		if (isl9238->thermal_chg_disable)
+			return 0;
+		/* set chg current to 0 to disable charging */
+		ret = isl9238_write(isl9238, ISL9238_CHG_CURR_LIMIT, 0x0);
+		if (ret < 0) {
+			dev_err(isl9238->dev,
+				"charge current write fail:%d\n", ret);
+			return ret;
+		}
+
+		if (isl9238->terminate_charging)
+			dev_info(isl9238->dev,
+				 "bat current:%d below terminate current:%d\n",
+				 bat_current, isl9238->terminate_chg_current);
+		dev_info(isl9238->dev, "thermal: charging disabled\n");
+		isl9238->thermal_chg_disable = true;
+		return 0;
+	}
+
+	for (i = 0; i < chg_pdata->temp_range_len; ++i) {
+		if (temp <= chg_pdata->temp_range[i]) {
+			temp_chg_curr_lim = chg_pdata->temp_chg_curr_lim[i];
+			volt_chg_curr_lim = chg_pdata->voltage_curr_lim[i];
+			max_system_voltage = chg_pdata->max_battery_voltage[i];
+			if (isl9238->thermal_chg_disable) {
+				dev_info(isl9238->dev,
+					 "thermal: charging enabled\n");
+				isl9238->thermal_chg_disable = false;
+			}
+			break;
+		}
+	}
+
+	if (temp_chg_curr_lim != volt_chg_curr_lim) {
+		bat_voltage =
+			battery_gauge_get_battery_voltage(isl9238->bc_dev);
+		dev_info(isl9238->dev, "battery voltage:%d mV\n", bat_voltage);
+		dev_info(isl9238->dev, "battery current:%d mA\n", bat_current);
+		if (bat_current <= volt_chg_curr_lim ||
+		    bat_voltage >= max_system_voltage) {
+			temp_chg_curr_lim = volt_chg_curr_lim;
+			max_system_voltage = isl9238->max_sys_voltage;
+		} else {
+			max_system_voltage = isl9238->max_init_voltage;
+		}
+	}
+
+	dev_info(isl9238->dev, "thermal:set max system voltage:%d mV\n",
+		 max_system_voltage);
+
+	val = max_system_voltage & ISL9238_MAX_SYS_VOLTAGE_MASK;
+	ret = isl9238_write(isl9238, ISL9238_MAX_SYS_VOLTAGE, val);
+	if (ret < 0) {
+		dev_err(isl9238->dev, "reg write fail:%d\n", ret);
+		return ret;
+	}
+
+	dev_info(isl9238->dev, "thermal:set charging current:%d mA\n",
+		 temp_chg_curr_lim);
+
+	if (isl9238->curnt_sense_res)
+		temp_chg_curr_lim = temp_chg_curr_lim *
+			isl9238->curnt_sense_res / ISL9238_CURR_SENSE_RES_OTP;
+
+	val = temp_chg_curr_lim & ISL9238_CHG_CURR_LIMIT_MASK;
+	ret = isl9238_write(isl9238, ISL9238_CHG_CURR_LIMIT, val);
+	if (ret < 0)
+		dev_err(isl9238->dev, "charge current write fail:%d\n", ret);
+
+	return ret;
+}
+
 static int isl9238_report_charging_state(struct battery_charger_dev *bc_dev)
 {
 	struct isl9238_charger *isl9238 = battery_charger_get_drvdata(bc_dev);
@@ -883,6 +1077,7 @@ static int isl9238_report_charging_state(struct battery_charger_dev *bc_dev)
 
 static struct battery_charging_ops isl9238_charger_bci_ops = {
 	.get_charging_status = isl9238_report_charging_state,
+	.thermal_configure = isl9238_charger_thermal_configure,
 };
 
 static struct battery_charger_info isl9238_charger_bci = {
@@ -946,9 +1141,8 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 		}
 	}
 
-	if (isl9238->chg_pdata->max_sys_voltage) {
-		val = isl9238->chg_pdata->max_sys_voltage &
-					ISL9238_MAX_SYS_VOLTAGE_MASK;
+	if (isl9238->max_init_voltage) {
+		val = isl9238->max_init_voltage & ISL9238_MAX_SYS_VOLTAGE_MASK;
 		ret = isl9238_write(isl9238, ISL9238_MAX_SYS_VOLTAGE, val);
 		if (ret < 0) {
 			dev_err(isl9238->dev,
@@ -1166,6 +1360,7 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 	struct isl9238_chg_pdata *pdata;
 	u32 pval;
 	int ret;
+	int count, temp_range_len = 0, curr_volt_table_len = 0;
 
 	pdata = devm_kzalloc(&client->dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
@@ -1189,6 +1384,10 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 	ret = of_property_read_u32(np, "isl,max-system-voltage-mv", &pval);
 	if (!ret)
 		pdata->max_sys_voltage = pval;
+
+	ret = of_property_read_u32(np, "isl,max-init-voltage-mv", &pval);
+	if (!ret)
+		pdata->max_init_voltage = pval;
 
 	ret = of_property_read_u32(np, "isl,min-system-voltage-mv", &pval);
 	if (!ret)
@@ -1234,6 +1433,10 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 	if (!ret)
 		pdata->adapter_sense_resistor = pval;
 
+	ret = of_property_read_u32(np, "isl,terminate-chg-current", &pval);
+	if (!ret)
+		pdata->terminate_chg_current = pval / 1000;
+
 	pdata->disable_input_regulation = of_property_read_bool(np,
 				"isl,disable-regulation");
 
@@ -1261,6 +1464,77 @@ static struct isl9238_chg_pdata *isl9238_parse_dt_data(
 	pdata->enable_psys_monitor = of_property_read_bool(np,
 				"isl,enable-psys-monitor");
 
+	pdata->tz_name = of_get_property(np, "isl,thermal-zone", NULL);
+
+	ret = of_property_read_u32(np, "isl,temp-polling-time-sec", &pval);
+	if (!ret)
+		pdata->temp_poll_time = pval;
+
+	temp_range_len = of_property_count_u32_elems(np, "isl,temp-range");
+	pdata->temp_range_len = temp_range_len;
+
+	if (temp_range_len <= 0)
+		goto vbus_node;
+
+	curr_volt_table_len =
+		of_property_count_u32_elems(np, "isl,current-voltage-table");
+	curr_volt_table_len = curr_volt_table_len / 3;
+
+	if (temp_range_len != curr_volt_table_len) {
+		dev_info(&client->dev, "current-thermal profile invalid\n");
+		goto vbus_node;
+	}
+
+	pdata->temp_range = devm_kzalloc(&client->dev,
+					 sizeof(u32) * temp_range_len,
+					 GFP_KERNEL);
+	if (!pdata->temp_range)
+		return ERR_PTR(-ENOMEM);
+
+	ret = of_property_read_u32_array(np, "isl,temp-range",
+					 pdata->temp_range, temp_range_len);
+	if (ret < 0)
+		return ERR_PTR(ret);
+
+	pdata->temp_chg_curr_lim = devm_kzalloc(&client->dev,
+					   sizeof(u32) * curr_volt_table_len,
+					   GFP_KERNEL);
+	if (!pdata->temp_chg_curr_lim)
+		return ERR_PTR(-ENOMEM);
+
+	pdata->voltage_curr_lim = devm_kzalloc(&client->dev,
+				   sizeof(u32) * curr_volt_table_len,
+				   GFP_KERNEL);
+	if (!pdata->voltage_curr_lim)
+		return ERR_PTR(-ENOMEM);
+
+	pdata->max_battery_voltage = devm_kzalloc(&client->dev,
+				 sizeof(u32) * curr_volt_table_len,
+				 GFP_KERNEL);
+	if (!pdata->max_battery_voltage)
+		return ERR_PTR(-ENOMEM);
+
+	for (count = 0;  count < curr_volt_table_len; ++count) {
+		ret = of_property_read_u32_index(np,
+						 "isl,current-voltage-table",
+						 count, &pval);
+		if (!ret)
+			pdata->temp_chg_curr_lim[count] = pval;
+
+		ret = of_property_read_u32_index(np,
+						 "isl,current-voltage-table",
+						 count + 5, &pval);
+		if (!ret)
+			pdata->voltage_curr_lim[count] = pval;
+
+		ret = of_property_read_u32_index(np,
+						 "isl,current-voltage-table",
+						 count + 10, &pval);
+		if (!ret)
+			pdata->max_battery_voltage[count] = pval;
+	}
+
+vbus_node:
 	vbus_reg_node = of_find_node_by_name(np, "vbus");
 	if (vbus_reg_node) {
 		pdata->vbus_pdata = devm_kzalloc(&client->dev,
@@ -1323,6 +1597,14 @@ static int isl9238_probe(struct i2c_client *client,
 	isl9238->curnt_sense_res = isl9238->chg_pdata->curr_sense_resistor;
 	isl9238->adptr_sense_res = isl9238->chg_pdata->adapter_sense_resistor;
 	isl9238->charging_current_lim = isl9238->chg_pdata->charge_current_lim;
+	isl9238->adapter_curr_lim1 = isl9238->chg_pdata->adapter_current_lim1;
+	isl9238->max_init_voltage = isl9238->chg_pdata->max_init_voltage;
+	isl9238->max_sys_voltage = isl9238->chg_pdata->max_sys_voltage;
+	isl9238->terminate_chg_current =
+			isl9238->chg_pdata->terminate_chg_current;
+	isl9238_charger_bci.polling_time_sec =
+			isl9238->chg_pdata->temp_poll_time;
+	isl9238_charger_bci.tz_name = isl9238->chg_pdata->tz_name;
 	isl9238->chg_status = BATTERY_DISCHARGING;
 
 	isl9238_bc = isl9238;
@@ -1392,6 +1674,24 @@ scrub_mutex:
 	return ret;
 }
 
+static void isl9238_shutdown(struct i2c_client *client)
+{
+	struct isl9238_charger *isl9238 = i2c_get_clientdata(client);
+
+	mutex_lock(&isl9238->mutex);
+	isl9238->shutdown_complete = 1;
+	mutex_unlock(&isl9238->mutex);
+
+	if (isl9238->is_otg_connected)
+		isl9238_otg_disable(isl9238->vbus_rdev);
+
+	if (!isl9238->cable_connected)
+		return;
+
+	dev_info(isl9238->dev, "shutdown:stop thermal monitor\n");
+	battery_charger_thermal_stop_monitoring(isl9238->bc_dev);
+}
+
 static const struct of_device_id isl9238_of_match[] = {
 	{ .compatible = "isil,isl9238", },
 	{},
@@ -1410,6 +1710,7 @@ static struct i2c_driver isl9238_i2c_driver = {
 		.of_match_table = isl9238_of_match,
 	},
 	.probe = isl9238_probe,
+	.shutdown = isl9238_shutdown,
 	.id_table = isl9238_id,
 };
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007-2008 Advanced Micro Devices, Inc.
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  * Author: Joerg Roedel <jroedel@suse.de>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1299,7 +1299,7 @@ static size_t iommu_pgsize(struct iommu_domain *domain,
 	pgsize_idx = __fls(size);
 
 	/* need to consider alignment requirements ? */
-	if (likely(addr_merge)) {
+	if (!domain->ops->ignore_align && addr_merge) {
 		/* Max page size allowed by address */
 		unsigned int align_pgsize_idx = __ffs(addr_merge);
 		pgsize_idx = min(pgsize_idx, align_pgsize_idx);

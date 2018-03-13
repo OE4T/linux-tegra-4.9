@@ -15,7 +15,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  * Copyright (C) 2013 ARM Limited
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -1325,8 +1325,13 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 
 	spin_lock_init(&smmu_domain->lock);
 
-	smmu_domain->domain.pgsize_bitmap = SECTION_SIZE |
-					    ARM_SMMU_PTE_CONT_SIZE | PAGE_SIZE;
+	/*
+	 * Our arm-smmu driver can handle any size page by breaking
+	 * it up into 4Kb and 4Mb chunks. We would like the iommu
+	 * framework to pass us largest pages possible for performance
+	 * reasons, so set all pgsize_bitmap bits.
+	 */
+	smmu_domain->domain.pgsize_bitmap = (0UL - 1UL) & PAGE_MASK;
 
 	if (iommu_get_dma_cookie(&smmu_domain->domain))
 		goto out_free_domain;
@@ -2404,9 +2409,8 @@ static const struct iommu_ops arm_smmu_ops = {
 	.iova_to_phys	= arm_smmu_iova_to_phys,
 	.add_device	= arm_smmu_add_device,
 	.remove_device	= arm_smmu_remove_device,
-	.pgsize_bitmap	= (SECTION_SIZE |
-			   ARM_SMMU_PTE_CONT_SIZE |
-			   PAGE_SIZE),
+	.pgsize_bitmap	= (0UL - 1UL) & PAGE_MASK,
+	.ignore_align	= 1,
 };
 
 static void arm_smmu_device_reset(struct arm_smmu_device *smmu)

@@ -42,6 +42,7 @@
 					nvidia,out-height = <190>;
 					nvidia,out-xres = <3000>;
 					nvidia,out-yres = <2000>;
+					nvidia,out-rotation = <180>;
 				};
 				display-timings {
 					3000x2000-60HZ {

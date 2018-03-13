@@ -18,6 +18,7 @@
 #include "tegra194-p2822-0000-camera-e3331-a00.dtsi"
 #include "tegra194-p2822-0000-camera-imx274-dual.dtsi"
 #include "tegra194-p2822-0000-camera-imx274-a00.dtsi"
+#include "tegra194-p2822-0000-camera-imx185-a00.dtsi"
 
 #define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 4)
 #define CAM0_PWDN	TEGRA194_MAIN_GPIO(H, 6)
@@ -268,6 +269,9 @@
 					status = "disabled";
 				};
 				imx274_cam0: imx274_a@1a {
+					status = "disabled";
+				};
+				imx185_cam0: imx185_a@1a {
 					status = "disabled";
 				};
 				e3331_cam0: imx318_a@10 {

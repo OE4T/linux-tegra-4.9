@@ -1167,9 +1167,6 @@ static int snd_atvr_timer_start(struct snd_pcm_substream *substream)
 	atvr_snd->timeout_jiffies =
 		msecs_to_jiffies(SND_ATVR_RUNNING_TIMEOUT_MSEC);
 	atvr_snd->timer_callback_count = 0;
-	setup_timer(&atvr_snd->decoding_timer,
-		snd_atvr_timer_callback,
-		(unsigned long)substream);
 
 	snd_atvr_schedule_timer(substream);
 	return 0;
@@ -1346,6 +1343,9 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 #ifdef DEBUG_TIMER
 	snd_atvr_log("%s, built %s %s\n", __func__, __DATE__, __TIME__);
 #endif
+	/* Initialize the timer for the opened substream */
+	setup_timer(&atvr_snd->decoding_timer, snd_atvr_timer_callback,
+		    (unsigned long)substream);
 
 	return ret;
 }

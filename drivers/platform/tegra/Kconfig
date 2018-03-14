@@ -168,4 +168,8 @@ config TEGRA_CBB_NOC
 config POWERGATE_TEGRA_BPMP
         def_bool NV_TEGRA_BPMP
 
+config TEGRA_HSP
+	bool "Enable Tegra Hardware Synchronization Primitives driver"
+	default y
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

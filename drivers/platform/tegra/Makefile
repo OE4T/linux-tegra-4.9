@@ -63,3 +63,7 @@ obj-$(CONFIG_TEGRA_19X_RAS) += carmel_ras.o
 obj-$(CONFIG_TEGRA_CBB_NOC) += tegra_cbb.o
 
 endif
+
+obj-$(CONFIG_TEGRA_HSP) += tegra-hsp.o
+obj-$(CONFIG_TEGRA_HSP) += tegra186-hsp.o
+

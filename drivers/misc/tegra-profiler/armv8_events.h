@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv8_events.h
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,8 @@
 
 #define QUADD_AA64_CPU_IDCODE_CORTEX_A57	0x01
 #define QUADD_AA64_CPU_IDCODE_CORTEX_A53	0x03
+
+#define QUADD_AA64_ID_AA64DFR0_PMUVER_MASK	0x0f
 
 enum {
 	QUADD_AA64_CPU_TYPE_UNKNOWN = 1,

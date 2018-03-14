@@ -853,18 +853,19 @@ static struct quadd_event_source_interface pmu_armv8_int = {
 static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 {
 	int idx, err = 0;
-	u32 pmcr, ext_ver, idcode = 0, pmu_ver;
+	u32 pmcr, idcode = 0, reg_midr;
 	u64 aa64_dfr;
 	u8 implementer;
 	struct cpuinfo_arm64 *local_cpu_data = &per_cpu(cpu_data, cpuid);
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
-	u32 reg_midr = local_cpu_data->reg_midr;
+	struct quadd_arch_info *arch = &local_pmu_ctx->arch;
 
-	strncpy(local_pmu_ctx->arch.name, "Unknown",
-			sizeof(local_pmu_ctx->arch.name));
+	reg_midr = local_cpu_data->reg_midr;
 
-	local_pmu_ctx->arch.type = QUADD_AA64_CPU_TYPE_UNKNOWN;
-	local_pmu_ctx->arch.ver = 0;
+	strncpy(arch->name, "Unknown", sizeof(arch->name));
+
+	arch->type = QUADD_AA64_CPU_TYPE_UNKNOWN;
+	arch->pmuver_is_set = 0;
 	local_pmu_ctx->current_map = NULL;
 
 	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
@@ -872,22 +873,19 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 	if (!reg_midr)
 		return 0;
 
-	implementer = (reg_midr >> 24) & 0xFF;
+	implementer = MIDR_IMPLEMENTOR(reg_midr);
 
-	aa64_dfr = read_cpuid(ID_AA64DFR0_EL1);
-	pmu_ver = (aa64_dfr >> 8) & 0x0f;
+	aa64_dfr = local_cpu_data->reg_id_aa64dfr0;
+	arch->pmuver = (aa64_dfr >> ID_AA64DFR0_PMUVER_SHIFT) &
+			QUADD_AA64_ID_AA64DFR0_PMUVER_MASK;
+	arch->pmuver_is_set = 1;
 
-	if (pmu_ver != QUADD_AA64_PMUVER_PMUV3 &&
-	    pmu_ver != QUADD_AA64_PMUVER_PMUV3_EVCNT16)
-		err = 1;
+	if (implementer == 'A' || implementer == 'N') {
 
-	if (err == 0 && (implementer == 'A' || implementer == 'N')) {
+		strncpy(arch->name, "AA64 PmuV3", sizeof(arch->name));
 
-		strncpy(local_pmu_ctx->arch.name, "AA64 PmuV3",
-				sizeof(local_pmu_ctx->arch.name));
-
-		idx = sizeof(local_pmu_ctx->arch.name) - 1;
-		local_pmu_ctx->arch.name[idx] = '\0';
+		idx = sizeof(arch->name) - 1;
+		arch->name[idx] = '\0';
 
 		local_pmu_ctx->counters_mask =
 			QUADD_ARMV8_COUNTERS_MASK_PMUV3;
@@ -901,70 +899,52 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 		idcode = (pmcr >> QUADD_ARMV8_PMCR_IDCODE_SHIFT) &
 			QUADD_ARMV8_PMCR_IDCODE_MASK;
 
-		pr_info("imp: %#x, idcode: %#x\n", implementer, idcode);
+		pr_debug("imp: %#x, idcode: %#x\n", implementer, idcode);
 	}
 
-	if (err == 0) {
-		switch (implementer) {
-		case 'A':
-			strncat(local_pmu_ctx->arch.name, " ARM",
-				sizeof(local_pmu_ctx->arch.name) -
-				strlen(local_pmu_ctx->arch.name));
-			idx = sizeof(local_pmu_ctx->arch.name) - 1;
-			local_pmu_ctx->arch.name[idx] = '\0';
+	switch (implementer) {
+	case 'A':
+		strncat(arch->name, " ARM",
+			sizeof(arch->name) - strlen(arch->name));
+		idx = sizeof(arch->name) - 1;
+		arch->name[idx] = '\0';
 
-			if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A53) {
-				local_pmu_ctx->arch.type =
-					QUADD_AA64_CPU_TYPE_CORTEX_A53;
+		if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A53) {
+			arch->type = QUADD_AA64_CPU_TYPE_CORTEX_A53;
 
-				strncat(local_pmu_ctx->arch.name, " CORTEX-A53",
-					sizeof(local_pmu_ctx->arch.name) -
-					strlen(local_pmu_ctx->arch.name));
+			strncat(arch->name, " CORTEX-A53",
+				sizeof(arch->name) - strlen(arch->name));
 
-			} else if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A57) {
-				local_pmu_ctx->arch.type =
-					QUADD_AA64_CPU_TYPE_CORTEX_A57;
-				local_pmu_ctx->current_map =
-					quadd_armv8_pmuv3_a57_events_map;
-
-				strncat(local_pmu_ctx->arch.name, " CORTEX-A57",
-					sizeof(local_pmu_ctx->arch.name) -
-					strlen(local_pmu_ctx->arch.name));
-			} else {
-				local_pmu_ctx->arch.type =
-					QUADD_AA64_CPU_TYPE_ARM;
-			}
-			break;
-		case 'N':
-			ext_ver = armv8_id_afr0_el1_read();
-
-			ext_ver = (ext_ver >> QUADD_ARMV8_PMU_NVEXT_SHIFT) &
-				QUADD_ARMV8_PMU_NVEXT_MASK;
-
-			strncat(local_pmu_ctx->arch.name, " NVIDIA (Denver)",
-				sizeof(local_pmu_ctx->arch.name) -
-				strlen(local_pmu_ctx->arch.name));
-			local_pmu_ctx->arch.type = QUADD_AA64_CPU_TYPE_DENVER;
-			local_pmu_ctx->arch.ver = ext_ver;
+		} else if (idcode == QUADD_AA64_CPU_IDCODE_CORTEX_A57) {
+			arch->type = QUADD_AA64_CPU_TYPE_CORTEX_A57;
 			local_pmu_ctx->current_map =
-				quadd_armv8_pmuv3_denver_events_map;
-			break;
-		default:
-			strncat(local_pmu_ctx->arch.name,
-				" Unknown implementor code",
-				sizeof(local_pmu_ctx->arch.name) -
-				strlen(local_pmu_ctx->arch.name));
-			local_pmu_ctx->arch.type =
-				QUADD_AA64_CPU_TYPE_UNKNOWN_IMP;
-			err = 1;
-			break;
+				quadd_armv8_pmuv3_a57_events_map;
+
+			strncat(arch->name, " CORTEX-A57",
+				sizeof(arch->name) - strlen(arch->name));
+		} else {
+			arch->type = QUADD_AA64_CPU_TYPE_ARM;
 		}
+		break;
+	case 'N':
+		strncat(arch->name, " NVIDIA (Denver)",
+			sizeof(arch->name) - strlen(arch->name));
+		arch->type = QUADD_AA64_CPU_TYPE_DENVER;
+		local_pmu_ctx->current_map =
+			quadd_armv8_pmuv3_denver_events_map;
+		break;
+	default:
+		strncat(arch->name,
+			" Unknown implementor code",
+			sizeof(arch->name) - strlen(arch->name));
+		arch->type = QUADD_AA64_CPU_TYPE_UNKNOWN_IMP;
+		err = 1;
+		break;
 	}
 
-	local_pmu_ctx->arch.name[sizeof(local_pmu_ctx->arch.name) - 1] = '\0';
-	pr_info("[%d] arch: %s, type: %d, ver: %d, pmu ver: %#x\n",
-		cpuid, local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
-		local_pmu_ctx->arch.ver, pmu_ver);
+	arch->name[sizeof(arch->name) - 1] = '\0';
+	pr_info("[%d] arch: %s, pmuver: %#x\n",
+		cpuid, arch->name, arch->pmuver);
 
 	return err;
 }

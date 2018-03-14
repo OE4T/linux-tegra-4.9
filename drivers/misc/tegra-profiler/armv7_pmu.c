@@ -827,12 +827,13 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 
 	struct cpuinfo_arm *local_cpu_data = &per_cpu(cpu_data, cpu);
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpu);
+	struct quadd_arch_info *arch = &local_pmu_ctx->arch;
 
-	local_pmu_ctx->arch.type = QUADD_ARM_CPU_TYPE_UNKNOWN;
-	local_pmu_ctx->arch.ver = 0;
+	arch->type = QUADD_ARM_CPU_TYPE_UNKNOWN;
+	arch->pmuver_is_set = 0;
 	local_pmu_ctx->current_map = NULL;
-	strncpy(local_pmu_ctx->arch.name, "Unknown",
-		sizeof(local_pmu_ctx->arch.name));
+
+	strncpy(arch->name, "Unknown", sizeof(arch->name));
 
 	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
 
@@ -847,9 +848,8 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 	if (cpu_implementer == ARM_CPU_IMP_ARM) {
 		switch (part_number) {
 		case ARM_CPU_PART_CORTEX_A9:
-			local_pmu_ctx->arch.type = QUADD_ARM_CPU_TYPE_CORTEX_A9;
-			strncpy(local_pmu_ctx->arch.name, "Cortex A9",
-				sizeof(local_pmu_ctx->arch.name));
+			arch->type = QUADD_ARM_CPU_TYPE_CORTEX_A9;
+			strncpy(arch->name, "Cortex A9", sizeof(arch->name));
 
 			local_pmu_ctx->counters_mask =
 				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A9;
@@ -859,11 +859,8 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 			break;
 
 		case ARM_CPU_PART_CORTEX_A15:
-			local_pmu_ctx->arch.type =
-				QUADD_ARM_CPU_TYPE_CORTEX_A15;
-
-			strncpy(local_pmu_ctx->arch.name, "Cortex A15",
-				sizeof(local_pmu_ctx->arch.name));
+			arch->type = QUADD_ARM_CPU_TYPE_CORTEX_A15;
+			strncpy(arch->name, "Cortex A15", sizeof(arch->name));
 
 			local_pmu_ctx->counters_mask =
 				QUADD_ARMV7_COUNTERS_MASK_CORTEX_A15;
@@ -873,7 +870,7 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 			break;
 
 		default:
-			local_pmu_ctx->arch.type = QUADD_ARM_CPU_TYPE_UNKNOWN;
+			arch->type = QUADD_ARM_CPU_TYPE_UNKNOWN;
 			local_pmu_ctx->current_map = NULL;
 			err = 1;
 			break;
@@ -882,10 +879,8 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 		err = 1;
 	}
 
-	local_pmu_ctx->arch.name[sizeof(local_pmu_ctx->arch.name) - 1] = '\0';
-	pr_info("[%d] arch: %s, type: %d, ver: %d\n",
-		cpu, local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
-		local_pmu_ctx->arch.ver);
+	arch->name[sizeof(arch->name) - 1] = '\0';
+	pr_info("[%d] arch: %s\n", cpu, arch->name);
 
 	return err;
 }

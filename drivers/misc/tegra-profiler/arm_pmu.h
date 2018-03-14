@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/arm_pmu.h
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,7 +33,9 @@ struct quadd_pmu_event_info {
 
 struct quadd_arch_info {
 	int type;
-	int ver;
+
+	int pmuver;
+	unsigned pmuver_is_set:1;
 
 	char name[QUADD_ARCH_NAME_MAX];
 };

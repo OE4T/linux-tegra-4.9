@@ -36,10 +36,7 @@ atlantic-objs := aq_main.o \
 	aq_ring.o \
 	aq_hw_utils.o \
 	aq_ethtool.o \
-	aq_main.o \
-	aq_drvinfo.o \
 	hw_atl/hw_atl_a0.o \
 	hw_atl/hw_atl_b0.o \
 	hw_atl/hw_atl_utils.o \
-	hw_atl/hw_atl_llh.o \
-	hw_atl/hw_atl_utils_fw2x.o
+	hw_atl/hw_atl_llh.o

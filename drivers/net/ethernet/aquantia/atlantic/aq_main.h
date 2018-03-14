@@ -14,6 +14,4 @@
 
 #include "aq_common.h"
 
-struct net_device *aq_ndev_alloc(void);
-
 #endif /* AQ_MAIN_H */

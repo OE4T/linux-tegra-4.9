@@ -1323,7 +1323,6 @@ static struct platform_driver gk20a_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "gk20a",
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 #ifdef CONFIG_OF
 		.of_match_table = tegra_gk20a_of_match,
 #endif

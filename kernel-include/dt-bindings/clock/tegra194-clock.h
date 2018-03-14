@@ -686,5 +686,7 @@
 #define TEGRA194_CLK_PLLE_HPS			326
 /** @brief CLK_ENB_PLLREFE_OUT gate output */
 #define TEGRA194_CLK_PLLREFE_VCOOUT_GATED	327
+/** @brief TEGRA194_CLK_SOR_SAFE clk source (PLLP_OUT0 divided by 17) */
+#define TEGRA194_CLK_PLLP_DIV17			328
 
 #endif

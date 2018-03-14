@@ -25,6 +25,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_pci.h>
 #include <linux/pci.h>
+#include <linux/pci-aspm.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/pm_runtime.h>
@@ -440,6 +441,7 @@ struct tegra_pcie_dw {
 	bool disable_clock_request;
 	bool power_down_en;
 	bool td_bit;
+	bool disable_l1_cpm;
 	u8 init_link_width;
 
 	struct tegra_bwmgr_client *emc_bw;
@@ -2358,6 +2360,9 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
 			if (!pdev)
 				break;
+			if (pcie->disable_l1_cpm)
+				pci_disable_link_state_locked(pdev,
+							      PCIE_LINK_STATE_CLKPM);
 			pos = pci_find_ext_capability(pdev,
 						      PCI_EXT_CAP_ID_L1SS);
 			if (!pos)
@@ -2511,6 +2516,11 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 		pcie->dma_disable = true;
 	else
 		pcie->dma_disable = false;
+
+	if (device_property_read_bool(pcie->dev, "nvidia,disable-l1-cpm"))
+		pcie->disable_l1_cpm = true;
+	else
+		pcie->disable_l1_cpm = false;
 
 	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
 					 &pcie->cid);

@@ -140,6 +140,8 @@ Optional properties:
     set to 1 MB if this property is missing
 - "nvidia,dma-disable" : Add this property to disable DMA specific interrupts
     and creating DMA specific debugfs entries
+- "nvidia,disable-l1-cpm" : Add this property to disable ASPM L1-CPM for the
+    immediate end point
 
 Power supplies for Tegra194:
 //TODO

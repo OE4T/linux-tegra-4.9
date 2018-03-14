@@ -746,7 +746,8 @@ static void failsafe(struct tas2557_priv *pTAS2557)
 	if (hrtimer_active(&pTAS2557->mtimer))
 		hrtimer_cancel(&pTAS2557->mtimer);
 	pTAS2557->enableIRQ(pTAS2557, channel_both, false);
-	tas2557_dev_load_data(pTAS2557, channel_both, p_tas2557_shutdown_data);
+	if (tas2557_dev_load_data(pTAS2557, channel_both, p_tas2557_shutdown_data) < 0)
+		return;
 	pTAS2557->mbPowerUp = false;
 	pTAS2557->hw_reset(pTAS2557);
 	pTAS2557->write(pTAS2557, channel_both, TAS2557_SW_RESET_REG, 0x01);
@@ -1673,8 +1674,11 @@ static int doSingleRegCheckSum(struct tas2557_priv *pTAS2557, enum channel chl,
 				goto end;
 		}
 
-		if (chl == channel_broadcast)
+		if (chl == channel_broadcast) {
 			nResult = tas2557_enter_broadcast_mode(pTAS2557);
+			if (nResult < 0)
+				goto end;
+		}
 
 		if ((chl == channel_both) || (chl == channel_broadcast)) {
 			if ((nData1 != nData2) || (nData1 != nValue)) {
@@ -1770,8 +1774,11 @@ static int doMultiRegCheckSum(struct tas2557_priv *pTAS2557, enum channel chl,
 					goto end;
 			}
 
-			if (chl == channel_broadcast)
+			if (chl == channel_broadcast) {
 				nResult = tas2557_enter_broadcast_mode(pTAS2557);
+				if (nResult < 0)
+					goto end;
+			}
 
 			if ((chl == channel_both) || (chl == channel_broadcast)) {
 				if (memcmp(nBuf1, nBuf2, TCRCData.mnLen) != 0) {

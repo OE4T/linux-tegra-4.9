@@ -291,7 +291,7 @@ static int isl9238_otg_set_voltage(struct regulator_dev *rdev,
 	otg_voltage_limit = max_uv / 1000;
 
 	reg_val = isl9238_val_to_reg(otg_voltage_limit, 0, 12, 12, 0);
-	ret = isl9238_write(isl9238, ISL9238_OTG_VOLTAGE, reg_val << 8);
+	ret = isl9238_write(isl9238, ISL9238_OTG_VOLTAGE, reg_val << 3);
 	if (ret < 0) {
 		dev_err(isl9238->dev, "otg voltage update failed %d\n", ret);
 		return ret;
@@ -301,11 +301,35 @@ static int isl9238_otg_set_voltage(struct regulator_dev *rdev,
 	return ret;
 }
 
+static int isl9238_otg_set_curr_limit(struct regulator_dev *rdev,
+				      int min_ua, int max_ua)
+{
+	struct isl9238_charger *isl9238 = rdev_get_drvdata(rdev);
+	int ret = 0;
+	int val;
+
+	if (isl9238->is_otg_connected)
+		return -EINVAL;
+
+	if (max_ua == 0)
+		return -EINVAL;
+
+	dev_info(isl9238->dev, "Setting otg current %d\n", max_ua / 1000);
+
+	val = (max_ua / 1000) & ISL9238_OTG_CURRENT_MASK;
+	ret = isl9238_write(isl9238, ISL9238_OTG_CURRENT, val);
+	if (ret < 0)
+		dev_err(isl9238->dev, "otg current write fail:%d\n", ret);
+
+	return ret;
+}
+
 static struct regulator_ops isl9238_otg_ops = {
 	.enable		= isl9238_otg_enable,
 	.disable	= isl9238_otg_disable,
 	.is_enabled	= isl9238_otg_is_enabled,
 	.set_voltage	= isl9238_otg_set_voltage,
+	.set_current_limit	= isl9238_otg_set_curr_limit,
 };
 
 static struct regulator_desc isl9238_otg_reg_desc = {
@@ -562,8 +586,6 @@ static void isl9238_charger_get_op_modes(struct isl9238_charger *isl9238)
 		dev_info(isl9238->dev, "otg buck boost mode is active\n");
 		break;
 	default:
-		dev_info(isl9238->dev,
-			 "operating mode is not valid\n");
 		break;
 	}
 

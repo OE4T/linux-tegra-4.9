@@ -1377,6 +1377,10 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	ignore_suspend(card);
 #endif
 
+	tegra_machine_add_i2s_codec_controls(card,
+					machine->soc_data->num_xbar_dai_links +
+					machine->num_codec_links);
+
 	rtd = tegra_machine_get_codec_link(card);
 	if (!rtd)
 		dev_warn(&pdev->dev,

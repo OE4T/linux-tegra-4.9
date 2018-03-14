@@ -34,6 +34,66 @@ enum rx_state_t {
 	RX_DONE,
 };
 
+enum ivc_audio_regdump_t {
+	NVAUDIO_REGDUMP_RX_TX,
+	NVAUDIO_REGDUMP_RX,
+	NVAUDIO_REGDUMP_TX,
+	NVAUDIO_REGDUMP_GLOBAL
+};
+
+enum ape_ahub_blocks_t {
+	ADMAIF1 = 1,
+	ADMAIF2,
+	ADMAIF3,
+	ADMAIF4,
+	ADMAIF5,
+	ADMAIF6,
+	ADMAIF7,
+	ADMAIF8,
+	ADMAIF9,
+	ADMAIF10,
+	ADMAIF11,
+	ADMAIF12,
+	ADMAIF13,
+	ADMAIF14,
+	ADMAIF15,
+	ADMAIF16,
+	ADMAIF17,
+	ADMAIF18,
+	ADMAIF19,
+	ADMAIF20,
+	AMX1,
+	AMX2,
+	AMX3,
+	AMX4,
+	ADX1,
+	ADX2,
+	ADX3,
+	ADX4,
+	MIXER1,
+	I2S1,
+	I2S2,
+	I2S3,
+	I2S4,
+	I2S5,
+	I2S6,
+	ASRC1,
+	SFC1,
+	SFC2,
+	SFC3,
+	SFC4,
+	AFC1,
+	AFC2,
+	AFC3,
+	AFC4,
+	AFC5,
+	AFC6,
+	MVC1,
+	MVC2,
+	ARAD1,
+	MAX_AHUB_RESOURCES
+};
+
 enum nvaudio_ivc_cmd_t {
 	NVAUDIO_DMAIF_SET_RXCIF,
 	NVAUDIO_DMAIF_SET_TXCIF,
@@ -89,6 +149,7 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_AMIXER_GET_RX_GAIN,
 	NVAUDIO_AMIXER_SET_RX_DURATION,
 	NVAUDIO_AMIXER_GET_RX_DURATION,
+	NVAUDIO_AHUB_BLOCK_REGDUMP,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -165,6 +226,12 @@ struct nvaudio_ivc_dmaif_info {
 	int32_t	value;
 };
 
+struct nvaudio_ivc_ahub_block {
+	uint32_t	block_id;
+	uint32_t	dump_cmd;
+	uint32_t	stream_id;
+};
+
 struct nvaudio_ivc_msg {
 	int32_t			channel_id;
 	enum nvaudio_ivc_cmd_t	cmd;
@@ -178,6 +245,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t210_amx_info	amx_info;
 		struct nvaudio_ivc_t210_i2s_info	i2s_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;
+		struct nvaudio_ivc_ahub_block		ahub_block_info;
 	} params;
 	bool			ack_required;
 	int32_t			err;

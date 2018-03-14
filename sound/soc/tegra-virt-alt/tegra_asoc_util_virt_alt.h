@@ -23,6 +23,8 @@
 #include "tegra_asoc_metadata_util_alt.h"
 
 #define MIXER_CONFIG_SHIFT_VALUE 16
+#define STREAM_ID_SHIFT_VALUE    16
+#define REGDUMP_CMD_SHIFT_VALUE  24
 #define MIXER_MAX_RX_GAIN        0x7FFFFFFF
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK		0xFFFFFFFF
@@ -190,6 +192,14 @@
 	0, 48000, 0,	\
 	tegra_virt_i2s_get_rate,	\
 	tegra_virt_i2s_set_rate)
+
+#define REGDUMP_PACK(id1, id2, id3) \
+	(id1 | (id2 << STREAM_ID_SHIFT_VALUE) | (id3 << REGDUMP_CMD_SHIFT_VALUE))
+#define REGDUMP_CTRL_DECL(ename, id, stream_id, cmd) \
+	SOC_SINGLE_EXT(ename, REGDUMP_PACK(id, stream_id, cmd),  \
+	0, 1, 0,	\
+	tegra_virt_t210ahub_get_regdump, \
+	tegra_virt_t210ahub_set_regdump)
 
 #define METADATA_CTRL_DECL(ename) \
 	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
@@ -395,6 +405,13 @@ int tegra_virt_set_metadata(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_get_metadata(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210ahub_get_regdump(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210ahub_set_regdump(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 #endif

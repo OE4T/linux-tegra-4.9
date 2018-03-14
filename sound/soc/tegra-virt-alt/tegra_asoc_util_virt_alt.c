@@ -1812,6 +1812,45 @@ lb:
 }
 EXPORT_SYMBOL(tegra_metadata_setup);
 
+int tegra_virt_t210ahub_get_regdump(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210ahub_get_regdump);
+
+int tegra_virt_t210ahub_set_regdump(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AHUB_BLOCK_REGDUMP;
+	msg.params.ahub_block_info.block_id = ((int) reg) & 0xFFFF;
+	msg.params.ahub_block_info.stream_id = (((int) reg) >>
+				STREAM_ID_SHIFT_VALUE) & 0xFF;
+	msg.params.ahub_block_info.dump_cmd = (((int) reg) >>
+				REGDUMP_CMD_SHIFT_VALUE) & 0xFF;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210ahub_set_regdump);
+
 MODULE_AUTHOR("Dipesh Gandhi <dipeshg@nvidia.com>");
 MODULE_DESCRIPTION("Tegra Virt ASoC utility code");
 MODULE_LICENSE("GPL");

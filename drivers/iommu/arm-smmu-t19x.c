@@ -311,6 +311,7 @@
 #define ARM_SMMU_CB_TLBSTATUS		0x7f4
 
 #define SCTLR_S1_ASIDPNE		(1 << 12)
+#define SCTLR_HUPCF			(1 << 8)
 #define SCTLR_CFCFG			(1 << 7)
 #define SCTLR_CFIE			(1 << 6)
 #define SCTLR_CFRE			(1 << 5)
@@ -1456,7 +1457,7 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain)
 	}
 
 	/* SCTLR */
-	reg = SCTLR_CFIE | SCTLR_CFRE | SCTLR_M | SCTLR_EAE_SBOP;
+	reg = SCTLR_CFIE | SCTLR_CFRE | SCTLR_M | SCTLR_EAE_SBOP | SCTLR_HUPCF;
 	if (stage1)
 		reg |= SCTLR_S1_ASIDPNE;
 #ifdef __BIG_ENDIAN

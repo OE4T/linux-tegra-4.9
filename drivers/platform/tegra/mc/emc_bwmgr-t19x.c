@@ -34,6 +34,13 @@ static u32 bwmgr_t194_8ch_ecc_4X_1rank_eff[] = { /* % */
 	  55,    60
 };
 
+/* efficiency percentage 4ch ecc 4X 1-rank*/
+static u32 bwmgr_t194_4ch_ecc_4X_1rank_eff[] = { /* % */
+	  20,    20,    20,    20,    20,
+	  20,    30,    30,    30,    55,
+	  55,    60
+};
+
 /* efficiency percentage 16ch ecc 4X 1-rank*/
 static u32 bwmgr_t194_16ch_ecc_4X_1rank_eff[] = { /* % */
 	  20,    20,    20,    20,    20,
@@ -43,6 +50,13 @@ static u32 bwmgr_t194_16ch_ecc_4X_1rank_eff[] = { /* % */
 
 /* efficiency percentage 8ch 4X 1-rank*/
 static u32 bwmgr_t194_8ch_4X_1rank_eff[] = { /* % */
+	  30,    30,    30,    30,    30,
+	  30,    40,    40,    40,    70,
+	  70,    70
+};
+
+/* efficiency percentage 4ch 4X 1-rank*/
+static u32 bwmgr_t194_4ch_4X_1rank_eff[] = { /* % */
 	  30,    30,    30,    30,    30,
 	  30,    40,    40,    40,    70,
 	  70,    70
@@ -62,6 +76,13 @@ static u32 bwmgr_t194_8ch_ecc_4X_2rank_eff[] = { /* % */
 	  55,    60
 };
 
+/* efficiency percentage 4ch ecc 4X 2-rank*/
+static u32 bwmgr_t194_4ch_ecc_4X_2rank_eff[] = { /* % */
+	  20,    20,    20,    20,    20,
+	  20,    30,    30,    30,    55,
+	  55,    60
+};
+
 /* efficiency percentage 16ch ecc 4X 2-rank*/
 static u32 bwmgr_t194_16ch_ecc_4X_2rank_eff[] = { /* % */
 	  20,    20,    20,    20,    20,
@@ -71,6 +92,13 @@ static u32 bwmgr_t194_16ch_ecc_4X_2rank_eff[] = { /* % */
 
 /* efficiency percentage 8ch 4X 2-rank*/
 static u32 bwmgr_t194_8ch_4X_2rank_eff[] = { /* % */
+	  25,    25,    25,    25,    25,
+	  25,    40,    40,    40,    65,
+	  65,    65
+};
+
+/* efficiency percentage 4ch 4X 2-rank*/
+static u32 bwmgr_t194_4ch_4X_2rank_eff[] = { /* % */
 	  25,    25,    25,    25,    25,
 	  25,    40,    40,    40,    65,
 	  65,    65
@@ -90,6 +118,13 @@ static u32 bwmgr_t194_8ch_ecc_1X_1rank_eff[] = { /* % */
 	  65,    70
 };
 
+/* efficiency percentage 4ch ecc 1X 1-rank*/
+static u32 bwmgr_t194_4ch_ecc_1X_1rank_eff[] = { /* % */
+	  45,    45,    45,    45,    45,
+	  45,    50,    50,    50,    65,
+	  65,    70
+};
+
 /* efficiency percentage 16ch ecc 1X 1-rank*/
 static u32 bwmgr_t194_16ch_ecc_1X_1rank_eff[] = { /* % */
 	  40,    40,    40,    40,    40,
@@ -99,6 +134,13 @@ static u32 bwmgr_t194_16ch_ecc_1X_1rank_eff[] = { /* % */
 
 /* efficiency percentage 8ch 1X 1-rank*/
 static u32 bwmgr_t194_8ch_1X_1rank_eff[] = { /* % */
+	  60,    60,    60,    60,    60,
+	  60,    60,    60,    60,    80,
+	  80,    80
+};
+
+/* efficiency percentage 4ch 1X 1-rank*/
+static u32 bwmgr_t194_4ch_1X_1rank_eff[] = { /* % */
 	  60,    60,    60,    60,    60,
 	  60,    60,    60,    60,    80,
 	  80,    80
@@ -118,6 +160,13 @@ static u32 bwmgr_t194_8ch_ecc_1X_2rank_eff[] = { /* % */
 	  55,    55
 };
 
+/* efficiency percentage 4ch ecc 1X 2-rank*/
+static u32 bwmgr_t194_4ch_ecc_1X_2rank_eff[] = { /* % */
+	  40,    40,    40,    40,    40,
+	  40,    45,    45,    45,    60,
+	  55,    55
+};
+
 /* efficiency percentage 16ch ecc 1X 2-rank*/
 static u32 bwmgr_t194_16ch_ecc_1X_2rank_eff[] = { /* % */
 	  40,    40,    40,    40,    40,
@@ -127,6 +176,13 @@ static u32 bwmgr_t194_16ch_ecc_1X_2rank_eff[] = { /* % */
 
 /* efficiency percentage 8ch 1X 2-rank*/
 static u32 bwmgr_t194_8ch_1X_2rank_eff[] = { /* % */
+	  55,    55,    55,    55,    55,
+	  55,    55,    55,    55,    70,
+	  70,    70
+};
+
+/* efficiency percentage 4ch 1X 2-rank*/
+static u32 bwmgr_t194_4ch_1X_2rank_eff[] = { /* % */
 	  55,    55,    55,    55,    55,
 	  55,    55,    55,    55,    70,
 	  70,    70
@@ -150,6 +206,12 @@ static u32 bwmgr_t194_lpddr4_8ch_iso_max_nvdis_bw_reqd[] = { /* MHz */
 	 656,   684
 };
 
+static u32 bwmgr_t194_lpddr4_4ch_iso_max_nvdis_bw_reqd[] = { /* MHz */
+	   0,     0,    22,    66,   107,
+	 148,   177,   205,   237,   437,
+	 656,   684
+};
+
 static u32 bwmgr_t194_lpddr4_16ch_iso_max_nvdis_bw_reqd[] = { /* MHz */
 	   0,     0,    11,    33,    53,
 	  74,    88,   102,   167,   347,
@@ -157,6 +219,12 @@ static u32 bwmgr_t194_lpddr4_16ch_iso_max_nvdis_bw_reqd[] = { /* MHz */
 };
 
 static u32 bwmgr_t194_lpddr4_8ch_ecc_iso_max_nvdis_bw_reqd[] = { /* MHz */
+	   0,     0,    26,    80,   131,
+	 169,   196,   222,   251,   397,
+	 494,   591
+};
+
+static u32 bwmgr_t194_lpddr4_4ch_ecc_iso_max_nvdis_bw_reqd[] = { /* MHz */
 	   0,     0,    26,    80,   131,
 	 169,   196,   222,   251,   397,
 	 494,   591
@@ -179,6 +247,12 @@ static u32 bwmgr_t194_lpddr4_8ch_iso_max_vi_bw_reqd[] = { /* MHz */
 	 279,   279
 };
 
+static u32 bwmgr_t194_lpddr4_4ch_iso_max_vi_bw_reqd[] = { /* MHz */
+	   0,     0,    14,    42,    68,
+	  95,   113,   131,   151,   279,
+	 279,   279
+};
+
 static u32 bwmgr_t194_lpddr4_16ch_iso_max_vi_bw_reqd[] = { /* MHz */
 	   0,     0,     8,    24,    40,
 	  55,    66,    76,    88,   139,
@@ -186,6 +260,12 @@ static u32 bwmgr_t194_lpddr4_16ch_iso_max_vi_bw_reqd[] = { /* MHz */
 };
 
 static u32 bwmgr_t194_lpddr4_8ch_ecc_iso_max_vi_bw_reqd[] = { /* MHz */
+	   0,     0,    11,    34,    56,
+	  78,    93,   108,   124,   279,
+	 279,   279
+};
+
+static u32 bwmgr_t194_lpddr4_4ch_ecc_iso_max_vi_bw_reqd[] = { /* MHz */
 	   0,     0,    11,    34,    56,
 	  78,    93,   108,   124,   279,
 	 279,   279
@@ -208,6 +288,12 @@ static int bwmgr_t194_lpddr4_8ch_iso_slope[] = {
 	  -1,    -1
 };
 
+static int bwmgr_t194_lpddr4_4ch_iso_slope[] = {
+	  -1,    -1,    -1,    -1,    -1,
+	  -1,    -1,    -1,    -1,    -1,
+	  -1,    -1
+};
+
 static int bwmgr_t194_lpddr4_16ch_iso_slope[] = {
 	  -1,    -1,    -1,    -1,    -1,
 	  -1,    -1,    -1,    -1,    -1,
@@ -215,6 +301,12 @@ static int bwmgr_t194_lpddr4_16ch_iso_slope[] = {
 };
 
 static int bwmgr_t194_lpddr4_8ch_ecc_iso_slope[] = {
+	  -1,    -1,    -1,    -1,    -1,
+	  -1,    -1,    -1,    -1,    -1,
+	  -1,    -2
+};
+
+static int bwmgr_t194_lpddr4_4ch_ecc_iso_slope[] = {
 	  -1,    -1,    -1,    -1,    -1,
 	  -1,    -1,    -1,    -1,    -1,
 	  -1,    -2
@@ -237,6 +329,12 @@ static u32 bwmgr_t194_lpddr4_8ch_iso_vi_bw_reqd_offset[] = { /* MHz */
 	   0,     0
 };
 
+static u32 bwmgr_t194_lpddr4_4ch_iso_vi_bw_reqd_offset[] = { /* MHz */
+	   0,     0,     0,     0,     0,
+	   0,     0,     0,     0,     0,
+	   0,     0
+};
+
 static u32 bwmgr_t194_lpddr4_16ch_iso_vi_bw_reqd_offset[] = { /* MHz */
 	   0,     0,     0,     0,     0,
 	   0,     0,     0,     0,     0,
@@ -244,6 +342,12 @@ static u32 bwmgr_t194_lpddr4_16ch_iso_vi_bw_reqd_offset[] = { /* MHz */
 };
 
 static u32 bwmgr_t194_lpddr4_8ch_ecc_iso_vi_bw_reqd_offset[] = { /* MHz */
+	   0,     0,     0,     0,     0,
+	   0,     0,     0,     0,     0,
+	   0,     0
+};
+
+static u32 bwmgr_t194_lpddr4_4ch_ecc_iso_vi_bw_reqd_offset[] = { /* MHz */
 	   0,     0,     0,     0,     0,
 	   0,     0,     0,     0,     0,
 	   0,     0
@@ -336,13 +440,10 @@ static unsigned long freq_to_bw(unsigned long freq)
 		return freq * 64;
 
 	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH)
 		return freq * 32;
 
+	/*4CH and 4CH_ECC*/
 	return freq * 16;
 }
 
@@ -353,13 +454,10 @@ static unsigned long bw_to_freq(unsigned long bw)
 		return (bw + 64 - 1) / 64;
 
 	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH)
 		return (bw + 32 - 1) / 32;
 
+	/*4CH and 4CH_ECC*/
 	return (bw + 16 - 1) / 16;
 }
 
@@ -453,6 +551,13 @@ static void t19x_update_efficiency(unsigned long dram_refresh_rate)
 			else
 				bwmgr_dram_noniso_eff_table =
 					bwmgr_t194_8ch_ecc_4X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_4X_1rank_eff;
 		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH) {
 			if (dram_rank)
 				bwmgr_dram_noniso_eff_table =
@@ -467,6 +572,13 @@ static void t19x_update_efficiency(unsigned long dram_refresh_rate)
 			else
 				bwmgr_dram_noniso_eff_table =
 					bwmgr_t194_8ch_4X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_4X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_4X_1rank_eff;
 		}
 	} else if (dram_refresh_rate == DRAM_REFRESH_1X) {
 		if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH_ECC) {
@@ -483,6 +595,13 @@ static void t19x_update_efficiency(unsigned long dram_refresh_rate)
 			else
 				bwmgr_dram_noniso_eff_table =
 					bwmgr_t194_8ch_ecc_1X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_1X_1rank_eff;
 		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH) {
 			if (dram_rank)
 				bwmgr_dram_noniso_eff_table =
@@ -497,6 +616,13 @@ static void t19x_update_efficiency(unsigned long dram_refresh_rate)
 			else
 				bwmgr_dram_noniso_eff_table =
 					bwmgr_t194_8ch_1X_1rank_eff;
+		} else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH) {
+			if (dram_rank)
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_1X_2rank_eff;
+			else
+				bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_1X_1rank_eff;
 		}
 	}
 }
@@ -590,6 +716,28 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_vi_bw_reqd_offset =
 				bwmgr_t194_lpddr4_8ch_ecc_iso_vi_bw_reqd_offset;
 
+			} else if (ch_num == 4) {
+				bwmgr_dram_type =
+					DRAM_TYPE_LPDDR4_4CH_ECC;
+				if (dram_rank)
+					bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_4X_2rank_eff;
+				else
+					bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_ecc_4X_1rank_eff;
+
+				bwmgr_max_nvdis_bw_reqd =
+				bwmgr_t194_lpddr4_4ch_ecc_iso_max_nvdis_bw_reqd;
+
+				bwmgr_max_vi_bw_reqd =
+				bwmgr_t194_lpddr4_4ch_ecc_iso_max_vi_bw_reqd;
+
+				bwmgr_slope =
+				bwmgr_t194_lpddr4_4ch_ecc_iso_slope;
+
+				bwmgr_vi_bw_reqd_offset =
+				bwmgr_t194_lpddr4_4ch_ecc_iso_vi_bw_reqd_offset;
+
 			}
 		} else {
 			if (ch_num == 16) {
@@ -632,10 +780,30 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 				bwmgr_vi_bw_reqd_offset =
 				bwmgr_t194_lpddr4_8ch_iso_vi_bw_reqd_offset;
 
+			} else if (ch_num == 4) {
+				bwmgr_dram_type = DRAM_TYPE_LPDDR4_4CH;
+				if (dram_rank)
+					bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_4X_2rank_eff;
+				else
+					bwmgr_dram_noniso_eff_table =
+					bwmgr_t194_4ch_4X_1rank_eff;
+
+				bwmgr_max_nvdis_bw_reqd =
+				bwmgr_t194_lpddr4_4ch_iso_max_nvdis_bw_reqd;
+
+				bwmgr_max_vi_bw_reqd =
+				bwmgr_t194_lpddr4_4ch_iso_max_vi_bw_reqd;
+
+				bwmgr_slope = bwmgr_t194_lpddr4_4ch_iso_slope;
+
+				bwmgr_vi_bw_reqd_offset =
+				bwmgr_t194_lpddr4_4ch_iso_vi_bw_reqd_offset;
+
 			}
 		}
 
-		if (ch_num < 8) {
+		if (ch_num < 4) {
 			pr_err("bwmgr: Unknown memory channel configuration\n");
 			pr_err("bwmgr: ddr config not supported\n");
 			WARN_ON(true);

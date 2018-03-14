@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Job
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -144,8 +144,9 @@ static void job_free(struct kref *ref)
 	if (job->engine_timestamps.ptr) {
 		if (job->engine_timestamps.ptr[0] != 0) {
 			nvhost_eventlib_log_task(job->ch->dev, job->sp->id,
-				job->sp->fence, job->engine_timestamps.ptr[0],
-				job->engine_timestamps.ptr[1]);
+				job->sp->fence,
+				job->engine_timestamps.ptr[0] >> 5,
+				job->engine_timestamps.ptr[1] >> 5);
 		}
 		dma_free_coherent(&job->ch->vm->pdev->dev, sizeof(u64) * 2,
 			job->engine_timestamps.ptr,

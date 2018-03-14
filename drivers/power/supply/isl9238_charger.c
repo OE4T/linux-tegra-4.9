@@ -99,6 +99,7 @@ static const struct regmap_config isl9238_rmap_config = {
 	.val_bits		= 16,
 	.max_register		= ISL9238_DEVICE_ID,
 	.cache_type		= REGCACHE_NONE,
+	.val_format_endian	= REGMAP_ENDIAN_NATIVE,
 };
 
 struct isl9238_vbus_pdata {
@@ -173,30 +174,27 @@ struct isl9238_charger {
 };
 
 static inline int isl9238_write(struct isl9238_charger *isl9238,
-				u8 reg, unsigned int value)
+				u8 reg, unsigned int reg_val)
 {
-	return i2c_smbus_write_word_data(isl9238->client, reg, value);
+	return regmap_write(isl9238->rmap, reg, reg_val);
 }
 
 static inline int isl9238_read(struct isl9238_charger *isl9238, u8 reg)
 {
-	return i2c_smbus_read_word_data(isl9238->client, reg);
-}
-
-static int isl9238_update_bits(struct isl9238_charger *isl9238, u8 reg,
-			       unsigned int mask, unsigned int value)
-{
-	unsigned int reg_value;
+	unsigned int reg_val;
 	int ret;
 
-	ret = i2c_smbus_read_word_data(isl9238->client, reg);
+	ret = regmap_read(isl9238->rmap, reg, &reg_val);
 	if (ret < 0)
 		return ret;
 
-	reg_value = ret & ~mask;
-	reg_value |= value & mask;
+	return reg_val;
+}
 
-	return i2c_smbus_write_word_data(isl9238->client, reg, reg_value);
+static int isl9238_update_bits(struct isl9238_charger *isl9238, u8 reg,
+			       unsigned int mask, unsigned int reg_val)
+{
+	return regmap_update_bits(isl9238->rmap, reg, mask, reg_val);
 }
 
 static int isl9238_val_to_reg(int val, int offset, int div, int nbits,

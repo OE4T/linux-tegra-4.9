@@ -210,6 +210,7 @@ struct tegra_vgpu_ch_ctx_params {
 	u64 attr_va;
 	u64 page_pool_va;
 	u64 priv_access_map_va;
+	u64 fecs_trace_va;
 	u32 class_num;
 };
 

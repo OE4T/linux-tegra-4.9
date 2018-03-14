@@ -35,6 +35,7 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "gk20a/fecs_trace_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
@@ -122,6 +123,9 @@ int vgpu_gr_init_ctx_state(struct gk20a *g)
 
 	gr->ctx_vars.buffer_size = g->gr.ctx_vars.golden_image_size;
 	g->gr.ctx_vars.priv_access_map_size = 512 * 1024;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	g->gr.ctx_vars.fecs_trace_buffer_size = gk20a_fecs_trace_buffer_size(g);
+#endif
 	return 0;
 }
 
@@ -153,7 +157,12 @@ static int vgpu_gr_alloc_global_ctx_buffers(struct gk20a *g)
 		gr->ctx_vars.priv_access_map_size);
 	gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size =
 		gr->ctx_vars.priv_access_map_size;
-
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	nvgpu_log_info(g, "fecs_trace_buffer_size : %d",
+		gr->ctx_vars.fecs_trace_buffer_size);
+	gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem.size =
+		gr->ctx_vars.fecs_trace_buffer_size;
+#endif
 	return 0;
 }
 
@@ -219,6 +228,19 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_size[PRIV_ACCESS_MAP_VA] =
 		gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size;
 
+	/* FECS trace Buffer */
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	gpu_va = __nvgpu_vm_alloc_va(ch_vm,
+		gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem.size,
+		gmmu_page_size_kernel);
+
+	if (!gpu_va)
+		goto clean_up;
+
+	g_bfr_va[FECS_TRACE_BUFFER_VA] = gpu_va;
+	g_bfr_size[FECS_TRACE_BUFFER_VA] =
+		gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem.size;
+#endif
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_MAP_GR_GLOBAL_CTX;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
@@ -226,6 +248,9 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 	p->attr_va = g_bfr_va[ATTRIBUTE_VA];
 	p->page_pool_va = g_bfr_va[PAGEPOOL_VA];
 	p->priv_access_map_va = g_bfr_va[PRIV_ACCESS_MAP_VA];
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	p->fecs_trace_va = g_bfr_va[FECS_TRACE_BUFFER_VA];
+#endif
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret)
 		goto clean_up;
@@ -576,6 +601,15 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			nvgpu_err(g, "fail to commit gr ctx buffer");
 			goto out;
 		}
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+		/* for fecs bind channel */
+		err = gr_gk20a_elpg_protected_call(g,
+				vgpu_gr_load_golden_ctx_image(g, c));
+		if (err) {
+			nvgpu_err(g, "fail to load golden ctx image");
+			goto out;
+		}
+#endif
 	}
 
 	/* PM ctxt switch is off by default */

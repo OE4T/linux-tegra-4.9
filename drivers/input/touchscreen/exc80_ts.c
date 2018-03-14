@@ -90,6 +90,8 @@ struct _egalax_i2c {
 	struct regulator        *regulator_5v0;
 	struct regulator        *regulator_3v3;
 	struct regulator        *regulator_1v8;
+	bool                    flip_x;
+	bool                    flip_y;
 };
 
 struct egalax_char_dev {
@@ -585,13 +587,13 @@ static void ProcessReport(unsigned char *buf,
 		y = tmp;
 	#endif
 
-	#ifdef _CONVERT_X
+	if (p_egalax_i2c_dev->flip_x) {
 		x = MAX_RESOLUTION-x;
-	#endif
+	}
 
-	#ifdef _CONVERT_Y
+	if (p_egalax_i2c_dev->flip_y) {
 		y = MAX_RESOLUTION-y;
-	#endif
+	}
 
 		pContactBuf[RecvPtsCnt].ID = contactID;
 		pContactBuf[RecvPtsCnt].Status = status;
@@ -948,7 +950,7 @@ static int egalax_i2c_ops_resume(struct device *dev)
 
 static int request_dt(struct i2c_client *client)
 {
-	int result = 0;
+	int result = 0, val;
 	struct device_node *devnode;
 
 	devnode = client->dev.of_node;
@@ -959,6 +961,17 @@ static int request_dt(struct i2c_client *client)
 							"reset-gpio", 0);
 		if (of_property_read_bool(devnode, "enable-active-high"))
 			p_egalax_i2c_dev->enable_high = true;
+
+		/* Touch orientation */
+		result = of_property_read_u32(devnode, "flip-x", &val);
+		if (result < 0)
+			val = 0;
+		p_egalax_i2c_dev->flip_x = val != 0 ? true : false;
+		result = of_property_read_u32(devnode, "flip-y", &val);
+		if (result < 0)
+			val = 0;
+		p_egalax_i2c_dev->flip_y = val != 0 ? true : false;
+
 		/* regulator */
 		p_egalax_i2c_dev->regulator_hv = devm_regulator_get(
 						&client->dev, "vdd-ts-hv");

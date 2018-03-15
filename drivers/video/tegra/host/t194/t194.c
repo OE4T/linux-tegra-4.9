@@ -176,6 +176,7 @@ static struct host1x_device_info host1x04_info = {
 		"sem-syncpt-shim"
 	},
 	.nb_resources	= 4,
+	.secure_cmdfifo = true,
 };
 
 struct nvhost_device_data t19_host1x_info = {

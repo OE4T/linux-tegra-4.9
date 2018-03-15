@@ -87,6 +87,9 @@ struct host1x_device_info {
 	char		*resources[NVHOST_MODULE_MAX_IORESOURCE_MEM];
 	/* host1x: number of resources */
 	int		nb_resources;
+
+	/* cmdfifo only accessible from hypervisor? */
+	bool		secure_cmdfifo;
 };
 
 struct nvhost_vm_firmware_area {

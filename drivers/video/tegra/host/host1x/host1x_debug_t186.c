@@ -154,6 +154,11 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 	u32 val, temp, rd_ptr, wr_ptr, start, end, max = 64;
 	struct platform_device *pdev = to_platform_device(ch->dev->dev.parent);
 
+	if (m->info.secure_cmdfifo) {
+		nvhost_debug_output(o, "%d: cmdfifo inaccessible\n", chid);
+		return;
+	}
+
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
 
 	temp = host1x_hypervisor_readl(pdev,

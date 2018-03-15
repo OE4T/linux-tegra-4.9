@@ -58,7 +58,6 @@ struct notification {
 struct channel_gk20a_job {
 	struct nvgpu_mapped_buf **mapped_buffers;
 	int num_mapped_buffers;
-	struct gk20a_fence *pre_fence;
 	struct gk20a_fence *post_fence;
 	struct priv_cmd_entry *wait_cmd;
 	struct priv_cmd_entry *incr_cmd;

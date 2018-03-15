@@ -1924,9 +1924,8 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		channel_gk20a_joblist_delete(c, job);
 		channel_gk20a_joblist_unlock(c);
 
-		/* Close the fences (this will unref the semaphores and release
-		 * them to the pool). */
-		gk20a_fence_put(job->pre_fence);
+		/* Close the fence (this will unref the semaphore and release
+		 * it to the pool). */
 		gk20a_fence_put(job->post_fence);
 
 		/* Free the private command buffers (wait_cmd first and

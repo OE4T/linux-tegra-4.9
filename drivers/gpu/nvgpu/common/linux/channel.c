@@ -420,7 +420,6 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      struct channel_gk20a_job *job,
 				      struct priv_cmd_entry **wait_cmd,
 				      struct priv_cmd_entry **incr_cmd,
-				      struct gk20a_fence **pre_fence,
 				      struct gk20a_fence **post_fence,
 				      bool force_need_sync_fence,
 				      bool register_irq,
@@ -470,19 +469,13 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * this condition.
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
-		job->pre_fence = gk20a_alloc_fence(c);
-		if (!job->pre_fence) {
-			err = -ENOMEM;
-			goto fail;
-		}
-
 		if (!pre_alloc_enabled)
 			job->wait_cmd = nvgpu_kzalloc(g,
 				sizeof(struct priv_cmd_entry));
 
 		if (!job->wait_cmd) {
 			err = -ENOMEM;
-			goto clean_up_pre_fence;
+			goto fail;
 		}
 
 		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
@@ -495,12 +488,11 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 						   job->wait_cmd);
 		}
 
-		if (!err) {
-			if (job->wait_cmd->valid)
-				*wait_cmd = job->wait_cmd;
-			*pre_fence = job->pre_fence;
-		} else
+		if (err)
 			goto clean_up_wait_cmd;
+
+		if (job->wait_cmd->valid)
+			*wait_cmd = job->wait_cmd;
 	}
 
 	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
@@ -552,12 +544,8 @@ clean_up_wait_cmd:
 	free_priv_cmdbuf(c, job->wait_cmd);
 	if (!pre_alloc_enabled)
 		job->wait_cmd = NULL;
-clean_up_pre_fence:
-	gk20a_fence_put(job->pre_fence);
-	job->pre_fence = NULL;
 fail:
 	*wait_cmd = NULL;
-	*pre_fence = NULL;
 	return err;
 }
 
@@ -684,7 +672,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
-	struct gk20a_fence *pre_fence = NULL;
 	struct gk20a_fence *post_fence = NULL;
 	struct channel_gk20a_job *job = NULL;
 	/* we might need two extra gpfifo entries - one for pre fence
@@ -875,7 +862,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 		err = gk20a_submit_prepare_syncs(c, fence, job,
 						 &wait_cmd, &incr_cmd,
-						 &pre_fence, &post_fence,
+						 &post_fence,
 						 force_need_sync_fence,
 						 need_deferred_cleanup,
 						 flags);
@@ -940,7 +927,6 @@ clean_up_job:
 	channel_gk20a_free_job(c, job);
 clean_up:
 	gk20a_dbg_fn("fail");
-	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
 	if (c->deterministic)
 		nvgpu_rwsem_up_read(&g->deterministic_busy);

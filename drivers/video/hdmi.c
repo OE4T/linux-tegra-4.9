@@ -36,6 +36,9 @@ static u8 hdmi_infoframe_checksum(u8 *ptr, size_t size)
 	u8 csum = 0;
 	size_t i;
 
+	if (size <= 0)
+		return csum;
+
 	/* compute checksum */
 	for (i = 0; i < size; i++)
 		csum += ptr[i];

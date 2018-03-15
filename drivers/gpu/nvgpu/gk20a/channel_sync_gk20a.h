@@ -37,24 +37,16 @@ struct gk20a_channel_sync {
 	nvgpu_atomic_t refcount;
 
 	/* Generate a gpu wait cmdbuf from syncpoint.
-	 * Returns
-	 *  - a gpu cmdbuf that performs the wait when executed,
-	 *  - possibly a helper fence that the caller must hold until the
-	 *    cmdbuf is executed.
+	 * Returns a gpu cmdbuf that performs the wait when executed
 	 */
 	int (*wait_syncpt)(struct gk20a_channel_sync *s, u32 id, u32 thresh,
-			   struct priv_cmd_entry *entry,
-			   struct gk20a_fence *fence);
+			   struct priv_cmd_entry *entry);
 
 	/* Generate a gpu wait cmdbuf from sync fd.
-	 * Returns
-	 *  - a gpu cmdbuf that performs the wait when executed,
-	 *  - possibly a helper fence that the caller must hold until the
-	 *    cmdbuf is executed.
+	 * Returns a gpu cmdbuf that performs the wait when executed
 	 */
 	int (*wait_fd)(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry *entry,
-		       struct gk20a_fence *fence);
+		       struct priv_cmd_entry *entry);
 
 	/* Increment syncpoint/semaphore.
 	 * Returns

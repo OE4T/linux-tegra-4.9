@@ -488,11 +488,11 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
 			wait_fence_fd = fence->id;
 			err = c->sync->wait_fd(c->sync, wait_fence_fd,
-					       job->wait_cmd, job->pre_fence);
+					       job->wait_cmd);
 		} else {
 			err = c->sync->wait_syncpt(c->sync, fence->id,
-						   fence->value, job->wait_cmd,
-						   job->pre_fence);
+						   fence->value,
+						   job->wait_cmd);
 		}
 
 		if (!err) {

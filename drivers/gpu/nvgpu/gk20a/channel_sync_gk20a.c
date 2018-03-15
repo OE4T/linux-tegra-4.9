@@ -51,8 +51,7 @@ struct gk20a_channel_syncpt {
 };
 
 static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
-		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
-		struct gk20a_fence *fence)
+		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
@@ -84,8 +83,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 }
 
 static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry *wait_cmd,
-		       struct gk20a_fence *fence)
+		       struct priv_cmd_entry *wait_cmd)
 {
 #ifdef CONFIG_SYNC
 	int i;
@@ -456,8 +454,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 
 static int gk20a_channel_semaphore_wait_syncpt(
 		struct gk20a_channel_sync *s, u32 id,
-		u32 thresh, struct priv_cmd_entry *entry,
-		struct gk20a_fence *fence)
+		u32 thresh, struct priv_cmd_entry *entry)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -521,8 +518,7 @@ put_fence:
 
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
-		struct priv_cmd_entry *entry,
-		struct gk20a_fence *fence)
+		struct priv_cmd_entry *entry)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);

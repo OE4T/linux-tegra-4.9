@@ -771,7 +771,7 @@ static int isp_capture_setup_prefences(struct tegra_isp_channel *chan,
 
 	/* It is valid not to have prefences for given frame capture */
 	if (!req->prog_prefence_relocs.num_relocs) {
-		dev_info(chan->isp_dev,
+		dev_dbg(chan->isp_dev,
 			"no prefences available, skip setup\n");
 		return 0;
 	}

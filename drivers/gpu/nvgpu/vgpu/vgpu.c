@@ -165,6 +165,10 @@ int vgpu_intr_thread(void *dev_id)
 		case TEGRA_VGPU_EVENT_SM_ESR:
 			vgpu_gr_handle_sm_esr_event(g, &msg->info.sm_esr);
 			break;
+		case TEGRA_VGPU_EVENT_SEMAPHORE_WAKEUP:
+			g->ops.semaphore_wakeup(g,
+					!!msg->info.sem_wakeup.post_events);
+			break;
 		default:
 			nvgpu_err(g, "unknown event %u", msg->event);
 			break;

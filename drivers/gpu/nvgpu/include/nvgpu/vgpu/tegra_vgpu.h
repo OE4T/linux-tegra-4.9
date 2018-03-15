@@ -706,6 +706,10 @@ struct tegra_vgpu_sm_esr_info {
 	u32 hww_warp_esr_report_mask;
 };
 
+struct tegra_vgpu_semaphore_wakeup {
+	u32 post_events;
+};
+
 enum {
 
 	TEGRA_VGPU_INTR_GR = 0,
@@ -722,6 +726,7 @@ enum {
 	TEGRA_VGPU_EVENT_FECS_TRACE = 2,
 	TEGRA_VGPU_EVENT_CHANNEL = 3,
 	TEGRA_VGPU_EVENT_SM_ESR = 4,
+	TEGRA_VGPU_EVENT_SEMAPHORE_WAKEUP = 5,
 };
 
 struct tegra_vgpu_intr_msg {
@@ -736,6 +741,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_fecs_trace_event_info fecs_trace;
 		struct tegra_vgpu_channel_event_info channel_event;
 		struct tegra_vgpu_sm_esr_info sm_esr;
+		struct tegra_vgpu_semaphore_wakeup sem_wakeup;
 		char padding[32];
 	} info;
 };

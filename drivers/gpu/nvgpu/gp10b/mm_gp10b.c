@@ -352,6 +352,7 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 	 * Check if the aperture AND address are set
 	 */
 	if (pde_v[2] & (gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f() |
+			gmmu_new_dual_pde_aperture_small_sys_mem_coh_f() |
 			gmmu_new_dual_pde_aperture_small_video_memory_f())) {
 		u64 addr = (((u64) pde_v[3] << 32) | (u64) (pde_v[2] &
 			gmmu_new_dual_pde_address_small_sys_f(~0))) <<
@@ -362,6 +363,7 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 	}
 
 	if (pde_v[0] & (gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() |
+			gmmu_new_dual_pde_aperture_big_sys_mem_coh_f() |
 			gmmu_new_dual_pde_aperture_big_video_memory_f())) {
 		u64 addr = (((u64) pde_v[1] << 32) | (u64) (pde_v[0] &
 			gmmu_new_dual_pde_address_big_sys_f(~0))) <<

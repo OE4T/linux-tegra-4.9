@@ -143,7 +143,6 @@ static irqreturn_t tegra_wdt_irq(int irq, void *data)
 
 static void tegra_wdt_ref(struct watchdog_device *wdd)
 {
-	struct platform_device *pdev = to_platform_device(wdd->parent);
 	struct tegra_wdt *wdt = watchdog_get_drvdata(wdd);
 
 	if (wdt->irq <= 0)
@@ -152,9 +151,10 @@ static void tegra_wdt_ref(struct watchdog_device *wdd)
 	/*
 	 * Remove the interrupt handler if userspace is taking over WDT.
 	 */
-	if (wdt->enable_on_init) {
-		printk("%s remove irq\n", __func__);
-		devm_free_irq(&pdev->dev, wdt->irq, wdt);
+	if (wdt->enable_on_init &&
+		test_bit(WDT_INIT_DAEMON_ACTIVE, &wdt->status)) {
+		printk("%s disable irq\n", __func__);
+		disable_irq(wdt->irq);
 		clear_bit(WDT_INIT_DAEMON_ACTIVE, &wdt->status);
 	}
 }
@@ -437,6 +437,9 @@ static int tegra_wdt_remove(struct platform_device *pdev)
 	struct tegra_wdt *wdt = platform_get_drvdata(pdev);
 
 	tegra_wdt_stop(&wdt->wdd);
+
+	if (wdt->irq > 0)
+		devm_free_irq(&pdev->dev, wdt->irq, wdt);
 
 	watchdog_unregister_device(&wdt->wdd);
 

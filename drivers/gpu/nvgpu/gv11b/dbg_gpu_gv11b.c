@@ -25,6 +25,27 @@
 #include <nvgpu/log.h>
 #include "gk20a/gk20a.h"
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
+
+static void gv11b_perfbuf_reset_streaming(struct gk20a *g)
+{
+	u32 engine_status;
+	u32 num_unread_bytes;
+
+	g->ops.mc.reset(g, mc_enable_perfmon_enabled_f());
+
+	engine_status = gk20a_readl(g, perf_pmasys_enginestatus_r());
+	WARN_ON(0u ==
+		(engine_status & perf_pmasys_enginestatus_rbufempty_empty_f()));
+
+	gk20a_writel(g, perf_pmasys_control_r(),
+		perf_pmasys_control_membuf_clear_status_doit_f());
+
+	num_unread_bytes = gk20a_readl(g, perf_pmasys_mem_bytes_r());
+	if (num_unread_bytes != 0u) {
+		gk20a_writel(g, perf_pmasys_mem_bump_r(), num_unread_bytes);
+	}
+}
 
 int gv11b_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 {
@@ -46,6 +67,8 @@ int gv11b_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 		return err;
 
 	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
+
+	gv11b_perfbuf_reset_streaming(g);
 
 	virt_addr_lo = u64_lo32(offset);
 	virt_addr_hi = u64_hi32(offset);
@@ -81,6 +104,8 @@ int gv11b_perfbuf_disable_locked(struct gk20a *g)
 		nvgpu_err(g, "failed to poweron");
 		return err;
 	}
+
+	gv11b_perfbuf_reset_streaming(g);
 
 	gk20a_writel(g, perf_pmasys_outbase_r(), 0);
 	gk20a_writel(g, perf_pmasys_outbaseupper_r(),

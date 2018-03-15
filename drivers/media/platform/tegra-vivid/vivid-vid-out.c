@@ -31,6 +31,68 @@
 #include "vivid-kthread-out.h"
 #include "vivid-vid-out.h"
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int vid_out_queue_setup(struct vb2_queue *vq,
+		       unsigned *nbuffers, unsigned *nplanes,
+		       unsigned sizes[], struct device *alloc_devs[])
+{
+	struct vivid_dev *dev = vb2_get_drv_priv(vq);
+	const struct vivid_fmt *vfmt = dev->fmt_out;
+	unsigned planes = dev->fmt_out_metadata_height ? vfmt->buffers : (vfmt->buffers - 1);
+	unsigned h = dev->fmt_out_rect.height;
+	unsigned size = dev->bytesperline_out[0] * (h + dev->fmt_out_metadata_height);
+	unsigned p;
+
+	for (p = vfmt->buffers; p < vfmt->planes; p++)
+		size += dev->bytesperline_out[p] * h / vfmt->vdownsampling[p];
+
+	if (dev->field_out == V4L2_FIELD_ALTERNATE) {
+		/*
+		 * You cannot use write() with FIELD_ALTERNATE since the field
+		 * information (TOP/BOTTOM) cannot be passed to the kernel.
+		 */
+		if (vb2_fileio_is_active(vq))
+			return -EINVAL;
+	}
+
+	if (dev->queue_setup_error) {
+		/*
+		 * Error injection: test what happens if queue_setup() returns
+		 * an error.
+		 */
+		dev->queue_setup_error = false;
+		return -EINVAL;
+	}
+
+	if (*nplanes) {
+		/*
+		 * Check if the number of requested planes match
+		 * the number of planes in the current format. You can't mix that.
+		 */
+		if (*nplanes != planes)
+			return -EINVAL;
+		if (sizes[0] < size)
+			return -EINVAL;
+		for (p = 1; p < planes; p++) {
+			if (sizes[p] < dev->bytesperline_out[p] * h)
+				return -EINVAL;
+		}
+	} else {
+		for (p = 0; p < planes; p++)
+			sizes[p] = p ? dev->bytesperline_out[p] * h : size;
+	}
+
+	if (vq->num_buffers + *nbuffers < 2)
+		*nbuffers = 2 - vq->num_buffers;
+
+	*nplanes = planes;
+
+	dprintk(dev, 1, "%s: count=%d\n", __func__, *nbuffers);
+	for (p = 0; p < planes; p++)
+		dprintk(dev, 1, "%s: size[%u]=%u\n", __func__, p, sizes[p]);
+	return 0;
+}
+#else
 static int vid_out_queue_setup(struct vb2_queue *vq, const void *parg,
 		       unsigned *nbuffers, unsigned *nplanes,
 		       unsigned sizes[], void *alloc_ctxs[])
@@ -107,6 +169,7 @@ static int vid_out_queue_setup(struct vb2_queue *vq, const void *parg,
 		dprintk(dev, 1, "%s: size[%u]=%u\n", __func__, p, sizes[p]);
 	return 0;
 }
+#endif
 
 static int vid_out_buf_prepare(struct vb2_buffer *vb)
 {
@@ -1170,7 +1233,7 @@ int vivid_vid_out_s_dv_timings(struct file *file, void *_fh,
 				0, NULL, NULL) &&
 	    !valid_cvt_gtf_timings(timings))
 		return -EINVAL;
-	if (v4l2_match_dv_timings(timings, &dev->dv_timings_out, 0))
+	if (tegra_v4l2_match_dv_timings(timings, &dev->dv_timings_out, 0, 0))
 		return 0;
 	if (vb2_is_busy(&dev->vb_vid_out_q))
 		return -EBUSY;

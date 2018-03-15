@@ -103,9 +103,70 @@ static const struct v4l2_discrete_probe webcam_probe = {
 	VIVID_WEBCAM_SIZES
 };
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int vid_cap_queue_setup(struct vb2_queue *vq,
+		       unsigned *nbuffers, unsigned *nplanes,
+		       unsigned sizes[], struct device *alloc_devs[])
+{
+	struct vivid_dev *dev = vb2_get_drv_priv(vq);
+	unsigned buffers = tpg_g_buffers(&dev->tpg);
+	unsigned p;
+
+	if (dev->field_cap == V4L2_FIELD_ALTERNATE) {
+		/*
+		 * You cannot use read() with FIELD_ALTERNATE since the field
+		 * information (TOP/BOTTOM) cannot be passed back to the user.
+		 */
+		if (vb2_fileio_is_active(vq))
+			return -EINVAL;
+	}
+
+	if (dev->queue_setup_error) {
+		/*
+		 * Error injection: test what happens if queue_setup() returns
+		 * an error.
+		 */
+		dev->queue_setup_error = false;
+		return -EINVAL;
+	}
+	if (*nplanes) {
+		/*
+		 * Check if the number of requested planes match
+		 * the number of buffers in the current format. You can't mix that.
+		 */
+		if (*nplanes != buffers)
+			return -EINVAL;
+
+		for (p = 0; p < buffers; p++) {
+			if (sizes[p] < tpg_g_line_width(&dev->tpg, p) *
+					tpg_g_buf_height(&dev->tpg, p) +
+							dev->fmt_cap->data_offset[p])
+				return -EINVAL;
+		}
+	} else {
+		for (p = 0; p < buffers; p++) {
+			sizes[p] = tpg_g_line_width(&dev->tpg, p) *
+					tpg_g_buf_height(&dev->tpg, p) +
+					dev->fmt_cap->data_offset[p];
+		}
+	}
+
+	if (vq->num_buffers + *nbuffers < 2)
+		*nbuffers = 2 - vq->num_buffers;
+
+	*nplanes = buffers;
+
+	dprintk(dev, 1, "%s: count=%d\n", __func__, *nbuffers);
+	for (p = 0; p < buffers; p++)
+		dprintk(dev, 1, "%s: size[%u]=%u\n", __func__, p, sizes[p]);
+
+	return 0;
+}
+#else
 static int vid_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 		       unsigned *nbuffers, unsigned *nplanes,
 		       unsigned sizes[], void *alloc_ctxs[])
+
 {
 	const struct v4l2_format *fmt = parg;
 	struct vivid_dev *dev = vb2_get_drv_priv(vq);
@@ -178,6 +239,7 @@ static int vid_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 
 	return 0;
 }
+#endif
 
 static int vid_cap_buf_prepare(struct vb2_buffer *vb)
 {
@@ -1758,7 +1820,7 @@ int vivid_vid_cap_s_dv_timings(struct file *file, void *_fh,
 	    !valid_cvt_gtf_timings(timings))
 		return -EINVAL;
 
-	if (v4l2_match_dv_timings(timings, &dev->dv_timings_cap, 0))
+	if (tegra_v4l2_match_dv_timings(timings, &dev->dv_timings_cap, 0, 0))
 		return 0;
 	if (vb2_is_busy(&dev->vb_vid_cap_q))
 		return -EBUSY;

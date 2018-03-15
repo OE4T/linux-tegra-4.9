@@ -117,8 +117,8 @@ static void vivid_thread_sdr_cap_tick(struct vivid_dev *dev)
 	if (sdr_cap_buf) {
 		sdr_cap_buf->vb.sequence = dev->sdr_cap_seq_count;
 		vivid_sdr_cap_process(dev, sdr_cap_buf);
-		v4l2_get_timestamp(&sdr_cap_buf->vb.timestamp);
-		sdr_cap_buf->vb.timestamp.tv_sec += dev->time_wrap_offset;
+		vivid_get_timestamp(&sdr_cap_buf->vb);
+		vivid_wrap_time_offset(&sdr_cap_buf->vb, dev->time_wrap_offset);
 		vb2_buffer_done(&sdr_cap_buf->vb.vb2_buf, dev->dqbuf_error ?
 				VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 		dev->dqbuf_error = false;
@@ -213,6 +213,17 @@ static int vivid_thread_sdr_cap(void *data)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int sdr_cap_queue_setup(struct vb2_queue *vq,
+		       unsigned *nbuffers, unsigned *nplanes,
+		       unsigned sizes[], struct device *alloc_devs[])
+{
+	/* 2 = max 16-bit sample returned */
+	sizes[0] = SDR_CAP_SAMPLES_PER_BUF * 2;
+	*nplanes = 1;
+	return 0;
+}
+#else
 static int sdr_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 		       unsigned *nbuffers, unsigned *nplanes,
 		       unsigned sizes[], void *alloc_ctxs[])
@@ -222,6 +233,7 @@ static int sdr_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 	*nplanes = 1;
 	return 0;
 }
+#endif
 
 static int sdr_cap_buf_prepare(struct vb2_buffer *vb)
 {

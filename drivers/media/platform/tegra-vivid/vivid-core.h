@@ -21,11 +21,13 @@
 #define _VIVID_CORE_H_
 
 #include <linux/fb.h>
+#include <linux/version.h>
 #include <media/videobuf2-v4l2.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-ctrls.h>
 #include <media/sensor_common.h>
+#include <media/camera_version_utils.h>
 #include "vivid-tpg.h"
 #include "vivid-rds-gen.h"
 #include "vivid-vbi-gen.h"
@@ -554,6 +556,24 @@ static inline bool vivid_is_svid_out(const struct vivid_dev *dev)
 static inline bool vivid_is_hdmi_out(const struct vivid_dev *dev)
 {
 	return dev->output_type[dev->output] == HDMI;
+}
+
+static inline void vivid_get_timestamp(struct vb2_v4l2_buffer *vb)
+{
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+	vb->vb2_buf.timestamp = ktime_get_ns();
+#else
+	v4l2_get_timestamp(&vb->timestamp);
+#endif
+}
+
+static inline void vivid_wrap_time_offset(struct vb2_v4l2_buffer *vb, u64 offset)
+{
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+	vb->vb2_buf.timestamp += offset;
+#else
+	vb->timestamp.tv_sec += offset;
+#endif
 }
 
 #endif

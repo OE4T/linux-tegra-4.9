@@ -429,6 +429,7 @@ static const struct gpu_ops gv100_ops = {
 		.set_error_notifier = gk20a_gr_set_error_notifier,
 		.handle_notify_pending = gk20a_gr_handle_notify_pending,
 		.handle_semaphore_pending = gk20a_gr_handle_semaphore_pending,
+		.add_ctxsw_reg_pm_fbpa = gr_gv100_add_ctxsw_reg_pm_fbpa,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

@@ -34,6 +34,8 @@
 
 #include <nvgpu/hw/gv100/hw_gr_gv100.h>
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
+#include <nvgpu/hw/gv100/hw_fuse_gv100.h>
+
 
 /*
  *  Estimate performance if the given logical TPC in the given logical GPC were
@@ -328,4 +330,46 @@ u32 gr_gv100_get_patch_slots(struct gk20a *g)
 	size += 2 * PATCH_CTX_SLOTS_PER_PAGE;
 
 	return size;
+}
+
+int gr_gv100_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
+				struct ctxsw_buf_offset_map_entry *map,
+				struct aiv_list_gk20a *regs,
+				u32 *count, u32 *offset,
+				u32 max_cnt, u32 base,
+				u32 num_fbpas, u32 stride, u32 mask)
+{
+	u32 fbpa_id;
+	u32 idx;
+	u32 cnt = *count;
+	u32 off = *offset;
+	u32 active_fbpa_mask;
+
+	if ((cnt + (regs->count * num_fbpas)) > max_cnt)
+		return -EINVAL;
+
+	/*
+	 * Read active fbpa mask from fuse
+	 * Note that 0:enable and 1:disable in value read from fuse so we've to
+	 * flip the bits.
+	 * Also set unused bits to zero
+	 */
+	active_fbpa_mask = nvgpu_readl(g, fuse_status_opt_fbio_r());
+	active_fbpa_mask = ~active_fbpa_mask;
+	active_fbpa_mask = active_fbpa_mask & ((1 << num_fbpas) - 1);
+
+	for (idx = 0; idx < regs->count; idx++) {
+		for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
+			if (active_fbpa_mask & BIT(fbpa_id)) {
+				map[cnt].addr = base +
+						(regs->l[idx].addr & mask) +
+						(fbpa_id * stride);
+				map[cnt++].offset = off;
+				off += 4;
+			}
+		}
+	}
+	*count = cnt;
+	*offset = off;
+	return 0;
 }

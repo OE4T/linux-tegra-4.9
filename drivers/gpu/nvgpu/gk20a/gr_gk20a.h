@@ -811,4 +811,10 @@ u32 gk20a_init_sw_bundle(struct gk20a *g);
 int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type);
 int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 				struct gr_gk20a_isr_data *isr_data);
+int gr_gk20a_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
+				struct ctxsw_buf_offset_map_entry *map,
+				struct aiv_list_gk20a *regs,
+				u32 *count, u32 *offset,
+				u32 max_cnt, u32 base,
+				u32 num_fbpas, u32 stride, u32 mask);
 #endif /*__GR_GK20A_H__*/

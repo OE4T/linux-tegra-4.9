@@ -450,6 +450,12 @@ struct gpu_ops {
 					struct gr_gk20a_isr_data *isr_data);
 		int (*handle_semaphore_pending)(struct gk20a *g,
 					struct gr_gk20a_isr_data *isr_data);
+		int (*add_ctxsw_reg_pm_fbpa)(struct gk20a *g,
+				struct ctxsw_buf_offset_map_entry *map,
+				struct aiv_list_gk20a *regs,
+				u32 *count, u32 *offset,
+				u32 max_cnt, u32 base,
+				u32 num_fbpas, u32 stride, u32 mask);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

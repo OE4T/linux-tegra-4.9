@@ -32,7 +32,25 @@ struct therm_devices {
 };
 
 struct therm_device {
-	struct therm_devices super;
+	struct boardobj super;
+};
+
+struct therm_device_gpu_sci {
+	struct therm_device super;
+};
+
+struct therm_device_gpu_gpc_tsosc {
+	struct therm_device super;
+	u8 gpc_tsosc_idx;
+};
+
+struct therm_device_hbm2_site {
+	struct therm_device super;
+	u8 site_idx;
+};
+
+struct therm_device_hbm2_combined {
+	struct therm_device super;
 };
 
 u32 therm_device_sw_setup(struct gk20a *g);

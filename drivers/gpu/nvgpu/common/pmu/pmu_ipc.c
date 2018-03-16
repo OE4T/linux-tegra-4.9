@@ -841,8 +841,16 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 		nvgpu_pmu_dbg(g, "reply PMU_UNIT_PERF");
 		break;
 	case PMU_UNIT_THERM:
-		nvgpu_pmu_dbg(g, "reply PMU_UNIT_THERM");
-		break;
+			switch (rpc.function) {
+			case NV_PMU_RPC_ID_THERM_BOARD_OBJ_GRP_CMD:
+				nvgpu_pmu_dbg(g,
+					"reply NV_PMU_RPC_ID_THERM_BOARD_OBJ_GRP_CMD");
+				break;
+			default:
+				nvgpu_pmu_dbg(g, "reply PMU_UNIT_THERM");
+				break;
+			}
+			break;
 		/* TBD case will be added */
 	default:
 		nvgpu_err(g, " Invalid RPC response, stats 0x%x",

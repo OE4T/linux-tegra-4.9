@@ -41,15 +41,37 @@ struct nv_pmu_therm_therm_device_boardobj_set {
 	struct nv_pmu_boardobj super;
 };
 
+struct nv_pmu_therm_therm_device_gpu_gpc_tsosc_boardobj_set {
+	struct nv_pmu_therm_therm_device_boardobj_set super;
+	u8 gpc_tsosc_idx;
+};
+
+struct nv_pmu_therm_therm_device_gpu_sci_boardobj_set {
+	struct nv_pmu_therm_therm_device_boardobj_set super;
+};
+
 struct nv_pmu_therm_therm_device_i2c_boardobj_set {
 	struct nv_pmu_therm_therm_device_boardobj_set super;
 	u8 i2c_dev_idx;
 };
 
+struct nv_pmu_therm_therm_device_hbm2_site_boardobj_set {
+	struct nv_pmu_therm_therm_device_boardobj_set super;
+	u8 site_idx;
+};
+
+struct nv_pmu_therm_therm_device_hbm2_combined_boardobj_set {
+	struct nv_pmu_therm_therm_device_boardobj_set super;
+};
+
 union nv_pmu_therm_therm_device_boardobj_set_union {
 	struct nv_pmu_boardobj board_obj;
 	struct nv_pmu_therm_therm_device_boardobj_set therm_device;
+	struct nv_pmu_therm_therm_device_gpu_gpc_tsosc_boardobj_set gpu_gpc_tsosc;
+	struct nv_pmu_therm_therm_device_gpu_sci_boardobj_set gpu_sci;
 	struct nv_pmu_therm_therm_device_i2c_boardobj_set i2c;
+	struct nv_pmu_therm_therm_device_hbm2_site_boardobj_set hbm2_site;
+	struct nv_pmu_therm_therm_device_hbm2_combined_boardobj_set hbm2_combined;
 };
 
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(therm, therm_device);

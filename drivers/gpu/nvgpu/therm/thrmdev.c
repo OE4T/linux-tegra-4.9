@@ -30,22 +30,6 @@
 #include "gp106/bios_gp106.h"
 #include "ctrl/ctrltherm.h"
 
-static struct boardobj *construct_therm_device(struct gk20a *g,
-			void *pargs, u16 pargs_size, u8 type)
-{
-	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
-
-	status = boardobj_construct_super(g, &board_obj_ptr,
-		pargs_size, pargs);
-	if (status)
-		return NULL;
-
-	nvgpu_log_info(g, " Done");
-
-	return board_obj_ptr;
-}
-
 static u32 _therm_device_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
@@ -70,6 +54,168 @@ static u32 _therm_device_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
+static u32 construct_therm_device(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	return boardobj_construct_super(g, ppboardobj, size, pargs);
+}
+
+static u32 construct_therm_device_gpu(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	return construct_therm_device(g, ppboardobj, size, pargs);
+}
+
+static u32 construct_therm_device_gpu_sci(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	return construct_therm_device(g, ppboardobj, size, pargs);
+}
+
+
+static u32 therm_device_pmu_data_init_gpu_gpc_tsosc(struct gk20a *g,
+	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct therm_device_gpu_gpc_tsosc *pdev = NULL;
+	struct nv_pmu_therm_therm_device_gpu_gpc_tsosc_boardobj_set *pset;
+
+	status = boardobj_pmudatainit_super(g, pboard_obj, ppmudata);
+	if (status != 0) {
+		goto exit;
+	}
+
+	pdev = (struct therm_device_gpu_gpc_tsosc *)(void *)pboard_obj;
+	pset = (struct nv_pmu_therm_therm_device_gpu_gpc_tsosc_boardobj_set *)
+		(void*) ppmudata;
+
+	pset->gpc_tsosc_idx = pdev->gpc_tsosc_idx;
+
+exit:
+	return status;
+}
+
+static u32 construct_therm_device_gpu_tsosc(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	struct therm_device_gpu_gpc_tsosc *pdev = NULL;
+	struct therm_device_gpu_gpc_tsosc *ptmp_dev =
+		(struct therm_device_gpu_gpc_tsosc *)pargs;
+	u32 status = 0;
+
+	status = construct_therm_device(g, ppboardobj, size, pargs);
+	if (status != 0) {
+		return status;
+	}
+
+	pdev = (struct therm_device_gpu_gpc_tsosc *)(void *)*ppboardobj;
+
+	pdev->super.super.pmudatainit =
+		therm_device_pmu_data_init_gpu_gpc_tsosc;
+
+	pdev->gpc_tsosc_idx = ptmp_dev->gpc_tsosc_idx;
+
+	return status;
+}
+
+static u32 therm_device_pmu_data_init_hbm2_site(struct gk20a *g,
+	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct therm_device_hbm2_site *pdev = NULL;
+	struct nv_pmu_therm_therm_device_hbm2_site_boardobj_set *pset;
+
+	status = boardobj_pmudatainit_super(g, pboard_obj, ppmudata);
+	if (status != 0) {
+		goto exit;
+	}
+
+	pdev = (struct therm_device_hbm2_site *)(void *)pboard_obj;
+	pset = (struct nv_pmu_therm_therm_device_hbm2_site_boardobj_set *)
+		(void *)ppmudata;
+
+	pset->site_idx = pdev->site_idx;
+
+exit:
+	return status;
+}
+
+static u32 construct_therm_device_hbm2_site(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	struct therm_device_hbm2_site *pdev = NULL;
+	struct therm_device_hbm2_site *ptmp_dev =
+		(struct therm_device_hbm2_site *)pargs;
+	u32 status = 0;
+
+	status = construct_therm_device(g, ppboardobj, size, pargs);
+	if (status != 0) {
+		return status;
+	}
+
+	pdev = (struct therm_device_hbm2_site *)(void *)*ppboardobj;
+
+	pdev->super.super.pmudatainit =
+		therm_device_pmu_data_init_hbm2_site;
+
+	pdev->site_idx = ptmp_dev->site_idx;
+
+	return status;
+}
+
+static u32 construct_therm_device_hbm2_combined(struct gk20a *g,
+	struct boardobj **ppboardobj, u16 size, void *pargs)
+{
+	return construct_therm_device(g, ppboardobj, size, pargs);
+}
+
+
+static struct boardobj *therm_device_construct(struct gk20a *g,
+	void *pargs)
+{
+	struct boardobj *board_obj_ptr = NULL;
+	u32 status = 0;
+
+	switch (BOARDOBJ_GET_TYPE(pargs)) {
+	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU:
+		status = construct_therm_device_gpu(g, &board_obj_ptr,
+			sizeof(struct therm_device), pargs);
+		break;
+	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU_GPC_SCI:
+		status = construct_therm_device_gpu_sci(g, &board_obj_ptr,
+			sizeof(struct therm_device_gpu_sci), pargs);
+		break;
+	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU_GPC_TSOSC:
+		status = construct_therm_device_gpu_tsosc(g, &board_obj_ptr,
+			sizeof(struct therm_device_gpu_gpc_tsosc), pargs);
+		break;
+	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_HBM2_SITE:
+		status = construct_therm_device_hbm2_site(g, &board_obj_ptr,
+			sizeof(struct therm_device_hbm2_site), pargs);
+		break;
+	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_HBM2_COMBINED:
+		status = construct_therm_device_hbm2_combined(g, &board_obj_ptr,
+			sizeof(struct therm_device_hbm2_combined), pargs);
+		break;
+	default:
+		nvgpu_err(g,
+			"unsupported therm_device class - 0x%x",
+			BOARDOBJ_GET_TYPE(pargs));
+		break;
+	}
+
+	if(status) {
+		board_obj_ptr = NULL;
+		nvgpu_err(g,
+			"could not allocate memory for therm_device");
+		if (board_obj_ptr != NULL)
+			nvgpu_kfree(g, board_obj_ptr);
+	}
+
+
+	return board_obj_ptr;
+}
+
 static u32 devinit_get_therm_device_table(struct gk20a *g,
 				struct therm_devices *pthermdeviceobjs)
 {
@@ -81,10 +227,14 @@ static u32 devinit_get_therm_device_table(struct gk20a *g,
 	struct therm_device_1x_entry *therm_device_table_entry = NULL;
 	u32 index;
 	u32 obj_index = 0;
-	u16 therm_device_size = 0;
+	u8 class_id = 0;
 	union {
 		struct boardobj boardobj;
 		struct therm_device therm_device;
+		struct therm_device_gpu_sci gpu_sci;
+		struct therm_device_gpu_gpc_tsosc gpu_gpc_tsosc;
+		struct therm_device_hbm2_site hbm2_site;
+		struct therm_device_hbm2_combined hbm2_combined;
 	} therm_device_data;
 
 	nvgpu_log_info(g, " ");
@@ -120,17 +270,34 @@ static u32 devinit_get_therm_device_table(struct gk20a *g,
 			(curr_therm_device_table_ptr +
 				(therm_device_table_header.table_entry_size * index));
 
-		if (therm_device_table_entry->class_id !=
-				NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU) {
+		class_id = therm_device_table_entry->class_id;
+
+		switch (class_id) {
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_INVALID:
 			continue;
+			break;
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU:
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU_GPC_SCI:
+			break;
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU_GPC_TSOSC:
+			therm_device_data.gpu_gpc_tsosc.gpc_tsosc_idx =
+				therm_device_table_entry->param0;
+			break;
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_HBM2_SITE:
+			therm_device_data.hbm2_site.site_idx =
+				therm_device_table_entry->param0;
+			break;
+		case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_HBM2_COMBINED:
+			break;
+		default:
+			nvgpu_err(g,
+				"Unknown thermal device class i - %x, class - %x",
+				index, class_id);
+			goto done;
 		}
 
-		therm_device_size = sizeof(struct therm_device);
-		therm_device_data.boardobj.type = CTRL_THERMAL_THERM_DEVICE_CLASS_GPU;
-
-		boardobj = construct_therm_device(g, &therm_device_data,
-					therm_device_size, therm_device_data.boardobj.type);
-
+		therm_device_data.boardobj.type = class_id;
+		boardobj = therm_device_construct(g, &therm_device_data);
 		if (!boardobj) {
 			nvgpu_err(g,
 				"unable to create thermal device for %d type %d",

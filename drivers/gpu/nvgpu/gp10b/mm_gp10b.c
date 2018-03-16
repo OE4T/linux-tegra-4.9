@@ -143,12 +143,13 @@ static void update_gmmu_pde3_locked(struct vm_gk20a *vm,
 				    struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
+	struct nvgpu_gmmu_pd *next_pd = &pd->entries[pd_idx];
 	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pde_v[2] = {0, 0};
 
 	phys_addr >>= gmmu_new_pde_address_shift_v();
 
-	pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
+	pde_v[0] |= nvgpu_aperture_mask(g, next_pd->mem,
 					gmmu_new_pde_aperture_sys_mem_ncoh_f(),
 					gmmu_new_pde_aperture_sys_mem_coh_f(),
 					gmmu_new_pde_aperture_video_memory_f());
@@ -177,6 +178,7 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 				    struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
+	struct nvgpu_gmmu_pd *next_pd = &pd->entries[pd_idx];
 	bool small_valid, big_valid;
 	u32 small_addr = 0, big_addr = 0;
 	u32 pd_offset = pd_offset_from_index(l, pd_idx);
@@ -194,7 +196,7 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (small_valid) {
 		pde_v[2] |=
 			gmmu_new_dual_pde_address_small_sys_f(small_addr);
-		pde_v[2] |= nvgpu_aperture_mask(g, pd->mem,
+		pde_v[2] |= nvgpu_aperture_mask(g, next_pd->mem,
 			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_small_sys_mem_coh_f(),
 			gmmu_new_dual_pde_aperture_small_video_memory_f());
@@ -205,7 +207,7 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (big_valid) {
 		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(big_addr);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
-		pde_v[0] |= nvgpu_aperture_mask(g, pd->mem,
+		pde_v[0] |= nvgpu_aperture_mask(g, next_pd->mem,
 			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_big_sys_mem_coh_f(),
 			gmmu_new_dual_pde_aperture_big_video_memory_f());

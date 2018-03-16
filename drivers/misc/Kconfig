@@ -84,10 +84,12 @@ config TEGRA_PCIE_EP_MEM
 	 Say Y if Tegra is working in PCIe-End Point mode and a client
 	 driver is required
 
+if ARCH_TEGRA
 source "drivers/misc/nvs-dfsh/Kconfig"
 source "drivers/misc/nvs/Kconfig"
 source "drivers/misc/nvs-aonsh/Kconfig"
 source "drivers/misc/tegra-profiler/Kconfig"
 source "drivers/misc/eventlib/Kconfig"
+endif
 
 endmenu

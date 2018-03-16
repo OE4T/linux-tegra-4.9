@@ -80,9 +80,6 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 	l->regs_saved = l->regs;
 	l->bar1_saved = l->bar1;
 
-	nvgpu_init_list_node(&g->pending_sema_waits);
-	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
-
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
 	g->has_syncpoints = platform->has_syncpoints;

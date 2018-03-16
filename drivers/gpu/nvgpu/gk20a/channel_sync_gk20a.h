@@ -114,12 +114,4 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
 	bool user_managed);
 bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g);
 
-#ifdef CONFIG_SYNC
-void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g);
-#else
-static inline void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g)
-{
-}
-#endif
-
 #endif

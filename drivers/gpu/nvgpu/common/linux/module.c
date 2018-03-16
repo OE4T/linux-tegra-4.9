@@ -1052,7 +1052,6 @@ void gk20a_driver_start_unload(struct gk20a *g)
 	gk20a_wait_for_idle(g);
 
 	nvgpu_wait_for_deferred_interrupts(g);
-	gk20a_channel_cancel_pending_sema_waits(g);
 
 	if (l->nonstall_work_queue) {
 		cancel_work_sync(&l->nonstall_fn_work);

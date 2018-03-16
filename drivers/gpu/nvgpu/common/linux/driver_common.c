@@ -77,9 +77,6 @@ static void nvgpu_init_vars(struct gk20a *g)
 	dma_set_mask(dev, DMA_BIT_MASK(34));
 	dma_set_coherent_mask(dev, DMA_BIT_MASK(34));
 
-	nvgpu_init_list_node(&g->pending_sema_waits);
-	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
-
 	nvgpu_init_list_node(&g->profiler_objects);
 
 	nvgpu_init_list_node(&g->boardobj_head);

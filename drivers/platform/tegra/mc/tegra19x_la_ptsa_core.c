@@ -570,6 +570,15 @@ static void mc_settings_init(
 	unsigned int *error)
 {
 	switch (dram_type) {
+	case TEGRA_LP4_4CH:
+		mc_settings_ptr->num_channels = 4;
+		mc_settings_ptr->bytes_per_dram_clk = 16;
+		mc_settings_ptr->hub_dda_div = FIX_PT(1, 0, error);
+		mc_settings_ptr->ring0_dda_div = FIX_PT(4, 0, error);
+		mc_settings_ptr->dram_to_emc_freq_ratio = 2;
+		mc_settings_ptr->highest_dram_freq = FIX_PT(2132, 0, error);
+		mc_settings_ptr->lowest_dram_freq = FIX_PT(25, 0, error);
+		break;
 	case TEGRA_LP4_8CH:
 	case TEGRA_LP4X_8CH:
 		mc_settings_ptr->num_channels = 8;
@@ -1075,6 +1084,16 @@ static int get_bytes_per_dram_clk(
 	int bytes_per_dram_clk = 0;
 
 	switch (dram_type) {
+	case TEGRA_DDR3_1CH:
+	case TEGRA_LP3_1CH:
+	case TEGRA_LP4_2CH:
+		bytes_per_dram_clk = 16;
+		break;
+	case TEGRA_DDR3_2CH:
+	case TEGRA_LP3_2CH:
+	case TEGRA_LP4_4CH:
+		bytes_per_dram_clk = 16;
+		break;
 	case TEGRA_LP4_8CH:
 	case TEGRA_LP4X_8CH:
 		bytes_per_dram_clk = 32;

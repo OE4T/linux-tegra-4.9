@@ -860,6 +860,9 @@ static enum tegra_dram_t t19x_emc_get_dram_type(void)
 	}
 
 	switch (ch) {
+	case(0xf):
+		dram_type = TEGRA_LP4_4CH;
+		break;
 	case(0xff):
 		dram_type = mem_type ? TEGRA_LP4_8CH : TEGRA_LP4X_8CH;
 		break;

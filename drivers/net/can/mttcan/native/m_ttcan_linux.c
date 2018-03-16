@@ -446,7 +446,7 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 	struct can_frame *cf;
 	struct sk_buff *skb;
 
-	if (lec_type == LEC_NO_CHANGE || lec_type == LEC_NO_ERROR)
+	if (lec_type == LEC_NO_ERROR)
 		return 0;
 	/* propagate the error condition to the CAN stack */
 	skb = alloc_can_err_skb(dev, &cf);

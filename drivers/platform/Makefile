@@ -1,1 +1,1 @@
-obj-y += tegra/
+obj-$(CONFIG_ARCH_TEGRA) += tegra/

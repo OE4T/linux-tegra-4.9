@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,42 +18,32 @@
 #define __IMX204_H__
 
 #include <linux/ioctl.h>  /* For IOCTL macros */
-#include <media/nvc.h>
-#include <media/nvc_image.h>
 
-#define IMX204_IOCTL_WRITE	IOW('o', 1, struct imx204_write)
+#define	IMX204_CHIP_ID				0x81
+#define	IMX204_CLK_PER_INT_OFFSET	104
+#define	IMX204_SHR_MIN				8
+#define	IMX204_SPL					0x00
+#define	IMX204_INPUT_CLK			72000000
 
-#define IMX204_EEPROM_ADDRESS		0x50
-#define IMX204_EEPROM_SIZE		1024
-#define IMX204_EEPROM_STR_SIZE		(IMX204_EEPROM_SIZE * 2)
-#define IMX204_EEPROM_BLOCK_SIZE	(1 << 8)
-#define IMX204_EEPROM_NUM_BLOCKS \
-	 (IMX204_EEPROM_SIZE / IMX204_EEPROM_BLOCK_SIZE)
+#define	IMX204_XHS_PER_XVS			3000
+#define	IMX204_CLK_PER_XHS_60FPS	400
+#define	IMX204_CLK_PER_XHS_30FPS	800
 
-#define IMX204_OTP_CTRL_ADDR		0x0A00
-#define IMX204_OTP_STATUS_ADDR		0x0A01
-#define IMX204_OTP_PAGE_NUM_ADDR	0x0A02
-#define IMX204_OTP_PAGE_START_ADDR	0x0A04
-#define IMX204_OTP_PAGE_END_ADDR	0x0A43
-#define IMX204_OTP_NUM_PAGES		(16)
-#define IMX204_OTP_PAGE_SIZE \
-	 (IMX204_OTP_PAGE_END_ADDR - IMX204_OTP_PAGE_START_ADDR + 1)
-#define IMX204_OTP_SIZE \
-	 (IMX204_OTP_PAGE_SIZE * IMX204_OTP_NUM_PAGES)
-#define IMX204_OTP_STR_SIZE (IMX204_OTP_SIZE * 2)
-#define IMX204_OTP_STATUS_IN_PROGRESS		0
-#define IMX204_OTP_STATUS_READ_COMPLETE	1
-#define IMX204_OTP_STATUS_READ_FAIL		5
+#define	IMX204_SVR_ADDR_LSB			0x000D
+#define	IMX204_SVR_ADDR_MSB			0x000E
 
-#define IMX204_FUSE_ID_OTP_ROW_ADDR	0x0A36
-#define IMX204_FUSE_ID_OTP_PAGE	19 /*0x13*/
-#define IMX204_FUSE_ID_SIZE		11
-#define IMX204_FUSE_ID_STR_SIZE	(IMX204_FUSE_ID_SIZE * 2)
+/* IMX204 didn't support FrameLength
+ * This is only for storing the data for SVR calculation
+ */
+#define	IMX204_FRAME_LENGTH_ADDR_LSB	0xFEFE
+#define	IMX204_FRAME_LENGTH_ADDR_MSB	0xFEFF
 
-struct imx204_write {
-	__u8 tx_buf[256];
-	__u32 len;
-};
+#define	IMX204_PGC_ADDR_LSB			0x0009
+#define	IMX204_PGC_ADDR_MSB			0x000A
+#define	IMX204_PGC_MSB_MASK			0x0007
+
+#define	IMX204_SHR_ADDR_LSB			0x000B
+#define	IMX204_SHR_ADDR_MSB			0x000C
 
 #ifdef __KERNEL__
 struct imx204_power_rail {
@@ -62,24 +52,14 @@ struct imx204_power_rail {
 	struct regulator *iovdd;
 	struct clk *mclk;
 	unsigned int reset_gpio;
-	unsigned int enable_hvs_gpio;
-	unsigned int enable_spi_gpio;
-	unsigned int pwr_state_gpio;
-	unsigned int enable_pmic_gpio;
 };
 
 struct imx204_platform_data {
 	const char *mclk_name; /* NULL for default default_mclk */
 	unsigned int reset_gpio;
-	unsigned int enable_spi_gpio;
-	unsigned int enable_hvs_gpio;
-	bool ext_reg;
 	int (*power_on)(struct imx204_power_rail *pw);
 	int (*power_off)(struct imx204_power_rail *pw);
 };
-
-int imx204_set_reset_ops(void *drvdata,
-			 int (*power)(void *drvdata, int enable));
 
 #endif /* __KERNEL__ */
 

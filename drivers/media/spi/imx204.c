@@ -1,7 +1,7 @@
 /*
  * imx204.c - imx204 sensor driver
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,7 @@
 
 #define IMX204_GAIN_SHIFT		8
 #define IMX204_MIN_GAIN		(1 << IMX204_GAIN_SHIFT)
-#define IMX204_MAX_GAIN		(27 << IMX204_GAIN_SHIFT)
+#define IMX204_MAX_GAIN		(23 << IMX204_GAIN_SHIFT)
 #define IMX204_MIN_FRAME_LENGTH	(0x0E51)
 #define IMX204_MAX_FRAME_LENGTH	(0xffff)
 #define IMX204_MIN_EXPOSURE_COARSE	(0x0001)
@@ -50,14 +50,8 @@
 #define IMX204_DEFAULT_MODE	IMX204_MODE_5352x3950
 #define IMX204_DEFAULT_WIDTH	5352
 #define IMX204_DEFAULT_HEIGHT	3950
-#define IMX204_DEFAULT_WIDTH_FPGA	1784
-#define IMX204_DEFAULT_HEIGHT_FPGA	1318
-#define IMX204_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SGRBG10_1X10
+#define IMX204_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX204_DEFAULT_CLK_FREQ	72000000
-
-#define IMX204_CHIP_ID 0x81
-#define VGP1_OFFSET	0x5068
-#define VGP5_OFFSET	0x5078
 
 struct imx204 {
 	struct camera_common_power_rail	power;
@@ -67,9 +61,8 @@ struct imx204 {
 	struct device			*dev;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
-	void __iomem *vi_base;
-
 	s32				group_hold_prev;
+	u32				prevSvr;
 	bool				group_hold_en;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
@@ -80,6 +73,7 @@ struct imx204 {
 static const struct regmap_config sensor_regmap_config = {
 	.reg_bits = 24,
 	.val_bits = 8,
+	.cache_type = REGCACHE_NONE,
 };
 
 static int imx204_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
@@ -127,17 +121,6 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx204_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT,
-		.name = "Coarse Time Short",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX204_MIN_EXPOSURE_COARSE,
-		.max = IMX204_MAX_EXPOSURE_COARSE,
-		.def = IMX204_DEFAULT_EXPOSURE_COARSE,
-		.step = 1,
-	},
-	{
-		.ops = &imx204_ctrl_ops,
 		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
 		.name = "Group Hold",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
@@ -160,34 +143,41 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 };
 
+static inline void imx204_get_svr_regs(imx204_reg *regs,
+				u32 svr)
+{
+	regs->addr = (IMX204_CHIP_ID << 16) | IMX204_SVR_ADDR_LSB;
+	regs->val = svr & 0xFF;
+	(regs + 1)->addr = (IMX204_CHIP_ID << 16) | IMX204_SVR_ADDR_MSB;
+	(regs + 1)->val = (svr >> 8) && 0xFF;
+}
+
 static inline void imx204_get_frame_length_regs(imx204_reg *regs,
 				u32 frame_length)
 {
-	// TODO
+	regs->addr = (IMX204_CHIP_ID << 16) | IMX204_FRAME_LENGTH_ADDR_LSB;
+	regs->val = frame_length  & 0xFF;
+	(regs + 1)->addr = (IMX204_CHIP_ID << 16) |
+		IMX204_FRAME_LENGTH_ADDR_MSB;
+	(regs + 1)->val = (frame_length >> 8) & 0xFF;
 }
 
 static inline void imx204_get_coarse_time_regs(imx204_reg *regs,
 				u32 coarse_time)
 {
-	// TODO
-}
-
-static inline void imx204_get_coarse_time_short_regs(imx204_reg *regs,
-				u32 coarse_time)
-{
-	// TODO
+	regs->addr = (IMX204_CHIP_ID << 16) | IMX204_SHR_ADDR_LSB;
+	regs->val = coarse_time & 0xFF;
+	(regs + 1)->addr = (IMX204_CHIP_ID << 16) | IMX204_SHR_ADDR_MSB;
+	(regs + 1)->val = (coarse_time >> 8) & 0xFF;
 }
 
 static inline void imx204_get_gain_reg(imx204_reg *regs,
 				u16 gain)
 {
-	// TODO
-}
-
-static inline void imx204_get_gain_short_reg(imx204_reg *regs,
-				u16 gain)
-{
-	// TODO
+	regs->addr = (IMX204_CHIP_ID << 16) | IMX204_PGC_ADDR_LSB;
+	regs->val = gain & 0xFF;
+	(regs + 1)->addr = (IMX204_CHIP_ID << 16) | IMX204_PGC_ADDR_MSB;
+	(regs + 1)->val = (gain >> 8) & IMX204_PGC_MSB_MASK;
 }
 
 static int test_mode;
@@ -206,24 +196,12 @@ static int imx204_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 {
 	int err;
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
-#ifdef USE_REGMAP
-	u32 addr32 = ((0x81<<16)|(addr));
+	u32 addr32 = ((IMX204_CHIP_ID<<16)|(addr));
 
 	err = regmap_write(priv->regmap, addr32, val);
 	if (err)
 		dev_err(priv->dev, "%s:spi write failed, %x = %x\n",
 			__func__, addr, val);
-#else
-	u8 data[4];
-
-	data[0] = 0x81;
-	data[1] = (addr >> 8) & 0xff;
-	data[2] = addr & 0xff;
-	data[3] = val;
-	err = spi_write(priv->spi, &data[0], 4);
-	if (err < 0)
-		dev_err(priv->dev, "spi_write failed %d\n", err);
-#endif
 
 	return err;
 }
@@ -233,46 +211,24 @@ static int imx204_write_reg32(struct camera_common_data *s_data,
 {
 	int err = 0;
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
-#ifdef USE_REGMAP
+
 	err = regmap_write(priv->regmap, addr, val);
 	if (err)
 		dev_err(priv->dev, "%s:spi write failed, %x = %x\n",
 			__func__, addr, val);
 
-#else
-	unsigned char buffer[4];
-
-	buffer[0] = (addr>>16)&0xFF;
-	buffer[1] = (addr>>8)&0xFF;
-	buffer[2] = (addr)&0xFF;
-	buffer[3] = (val)&0xFF;
-	spi_write(priv->spi, buffer, 4);
-#endif
 	return err;
 }
 
 static int imx204_write_table(struct imx204 *priv,
 			      const imx204_reg table[])
 {
-#ifdef USE_REGMAP
-	return regmap_util_write_table_8(priv->regmap,
-					 table,
-					 NULL, 0,
-					 IMX204_TABLE_WAIT_MS,
-					 IMX204_TABLE_END);
-#else
 	int cnt = 0;
 	int status = 0;
 
 	while (table[cnt].addr != IMX204_TABLE_END) {
 		if (table[cnt].addr == IMX204_TABLE_WAIT_MS) {
 			msleep_range(table[cnt].val);
-		} else if (table[cnt].addr == IMX204_TABLE_ENABLE_GTX) {
-			if (!tegra_platform_is_silicon()) {
-				/* toggle VGP5 to enable GTX on uFPGA */
-				writel(0x10001, priv->vi_base + VGP5_OFFSET);
-				writel(0x0, priv->vi_base + VGP5_OFFSET);
-			}
 		} else {
 			status = imx204_write_reg32(priv->s_data,
 					table[cnt].addr, table[cnt].val);
@@ -287,7 +243,6 @@ static int imx204_write_table(struct imx204 *priv,
 		cnt++;
 	}
 	return status;
-#endif
 }
 
 static void imx204_gpio_set(struct imx204 *priv,
@@ -305,13 +260,8 @@ static int imx204_power_on(struct camera_common_data *s_data)
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-	if (!tegra_platform_is_silicon()) {
-		/* VGP1 is used as reset GPIO on uFPGA */
-		writel(0x10001, priv->vi_base + VGP1_OFFSET);
-	} else {
-		if (gpio_is_valid(pw->reset_gpio))
-			imx204_gpio_set(priv, pw->reset_gpio, 1);
-	}
+	if (gpio_is_valid(pw->reset_gpio))
+		imx204_gpio_set(priv, pw->reset_gpio, 1);
 
 	pw->state = SWITCH_ON;
 	return 0;
@@ -322,13 +272,8 @@ static int imx204_power_off(struct camera_common_data *s_data)
 	struct imx204 *priv = (struct imx204 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-	if (!tegra_platform_is_silicon()) {
-		/* VGP1 is used as reset GPIO on uFPGA */
-		writel(0, priv->vi_base + VGP1_OFFSET);
-	} else {
-		if (gpio_is_valid(pw->reset_gpio))
-			imx204_gpio_set(priv, pw->reset_gpio, 0);
-	}
+	if (gpio_is_valid(pw->reset_gpio))
+		imx204_gpio_set(priv, pw->reset_gpio, 0);
 
 	pw->state = SWITCH_OFF;
 	return 0;
@@ -378,7 +323,6 @@ static int imx204_get_framesync(struct camera_common_data *s_data,
 static int imx204_set_gain(struct imx204 *priv, s32 val);
 static int imx204_set_frame_length(struct imx204 *priv, s32 val);
 static int imx204_set_coarse_time(struct imx204 *priv, s32 val);
-static int imx204_set_coarse_time_short(struct imx204 *priv, s32 val);
 
 static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -388,17 +332,14 @@ static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 	int err;
 	int sensor_mode = s_data->mode;
 
-	dev_info(priv->dev, "%s++ enable = %d\n", __func__, enable);
+	dev_dbg(priv->dev, "%s++ enable = %d\n", __func__, enable);
 
 	if (!enable) {
 		return imx204_write_table(priv,
 			mode_table[IMX204_MODE_STOP_STREAM]);
 	}
 
-	if (!tegra_platform_is_silicon())
-		err = imx204_write_table(priv, mode_table_fpga[sensor_mode]);
-	else
-		err = imx204_write_table(priv, mode_table[sensor_mode]);
+	err = imx204_write_table(priv, mode_table[sensor_mode]);
 	if (err)
 		goto exit;
 
@@ -430,14 +371,6 @@ static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_dbg(priv->dev,
 				"%s: warning coarse time override failed\n",
 				__func__);
-
-		control.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT;
-		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-		err |= imx204_set_coarse_time_short(priv, control.value);
-		if (err)
-			dev_dbg(sd->dev,
-				"%s: warning coarse time short override failed\n",
-				__func__);
 	}
 
 	if (tegra_platform_is_silicon()) {
@@ -447,7 +380,7 @@ static int imx204_s_stream(struct v4l2_subdev *sd, int enable)
 			goto exit;
 	}
 
-	dev_info(priv->dev, "%s--\n", __func__);
+	dev_dbg(priv->dev, "%s--\n", __func__);
 	return 0;
 exit:
 	dev_info(priv->dev, "%s: error setting stream\n", __func__);
@@ -523,32 +456,151 @@ static struct camera_common_sensor_ops imx204_common_ops = {
 
 static int imx204_set_group_hold(struct imx204 *priv, s32 val)
 {
-	// TODO
+	dev_dbg(priv->dev, "%s: Not supported\n", __func__);
 	return 0;
 }
 
 static int imx204_set_gain(struct imx204 *priv, s32 val)
 {
-	// TODO
+	imx204_reg	reg_list[2];
+	int err;
+	int i = 0;
+	u16 gain;
+
+	dev_dbg(priv->dev, "%s: val=%d\n", __func__, val);
+
+	if (val < IMX204_MIN_GAIN)
+		val = IMX204_MIN_GAIN;
+	else if (val > IMX204_MAX_GAIN)
+		val = IMX204_MAX_GAIN;
+
+	gain = 2048 - (2048 * IMX204_MIN_GAIN / val);
+
+	if (gain > 1957)
+		gain = 1957;
+	imx204_get_gain_reg(reg_list, gain);
+
+	for (i = 0; i < ARRAY_SIZE(reg_list); i++) {
+		err = imx204_write_reg32(priv->s_data,
+			reg_list[i].addr, reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
 	return 0;
+
+fail:
+	dev_err(priv->dev, "%s: set Gain failed\n", __func__);
+	return err;
 }
 
 static int imx204_set_frame_length(struct imx204 *priv, s32 val)
 {
-	// TODO
+	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	imx204_reg reg_list[2];
+	int err;
+	u32 frame_length;
+	u32 frame_rate;
+	int i = 0;
+	u32	svr = 0;
+
+	dev_dbg(priv->dev, "%s: val=%d\n", __func__, val);
+
+	if (val < 0)
+		val = IMX204_MIN_FRAME_LENGTH;
+
+	frame_length = (u32)val;
+	frame_rate = (u32)(mode->signal_properties.pixel_clock.val /
+			(u32)(frame_length *
+			mode->image_properties.line_length));
+
+	dev_dbg(priv->dev, "%s: frame_rate = %d, pixel_clock = %lld\n",
+			 __func__, frame_rate,
+			 mode->signal_properties.pixel_clock.val);
+
+	if (frame_rate >= 60)
+		svr = 0;
+	else {
+		while ((frame_rate) <= ((60 / (svr + 1))))
+			svr++;
+	}
+
+	imx204_get_svr_regs(reg_list, svr);
+
+	for (i = 0; i < ARRAY_SIZE(reg_list); i++) {
+		err = imx204_write_reg32(priv->s_data, reg_list[i].addr,
+							reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	priv->prevSvr = svr;
+	dev_dbg(priv->dev, "%s: fps = %d, svr=%d\n", __func__, frame_rate, svr);
+
 	return 0;
+
+fail:
+	dev_info(priv->dev, "%s: frame_length control error\n", __func__);
+
+	return err;
 }
 
 static int imx204_set_coarse_time(struct imx204 *priv, s32 val)
 {
-	// TODO
-	return 0;
-}
+	const struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 
-static int imx204_set_coarse_time_short(struct imx204 *priv, s32 val)
-{
-	// TODO
+	imx204_reg reg_list[2];
+	u32 shr, svr, spl, shr_min, shr_max;
+	u64 et, req;
+	u32 i;
+	u32 curXHS;
+	int err = 0;
+
+	dev_dbg(priv->dev, "%s: val=%d\n", __func__, val);
+
+	curXHS = IMX204_CLK_PER_XHS_60FPS;
+
+	req = (u64)val;
+	et = (req * mode->image_properties.line_length *
+		FIXED_POINT_SCALING_FACTOR)	/
+		mode->signal_properties.pixel_clock.val;
+
+	svr = priv->prevSvr;
+	spl = IMX204_SPL;
+	shr = (IMX204_XHS_PER_XVS * (svr-spl+1)) -
+		  (((IMX204_INPUT_CLK * et) - IMX204_CLK_PER_INT_OFFSET) /
+			curXHS / FIXED_POINT_SCALING_FACTOR);
+
+	dev_dbg(priv->dev, "%s: before shr=%u\n", __func__, shr);
+
+	shr_min = IMX204_SHR_MIN;
+	shr_max = (svr + 1) * IMX204_XHS_PER_XVS - 4;
+	if (shr < shr_min)
+		shr = shr_min;
+	if (shr > shr_max)
+		shr = shr_max;
+
+	dev_dbg(priv->dev, "%s: shr=%u, svr=%u, et=%llu\n",
+		__func__, shr, svr, et);
+
+	imx204_get_coarse_time_regs(reg_list, shr);
+
+	for (i = 0; i < ARRAY_SIZE(reg_list); i++) {
+		err = imx204_write_reg32(priv->s_data, reg_list[i].addr,
+							reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
 	return 0;
+
+fail:
+	dev_info(priv->dev, "%s: coarse_time control error\n", __func__);
+	return err;
 }
 
 static int imx204_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
@@ -587,9 +639,6 @@ static int imx204_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case TEGRA_CAMERA_CID_COARSE_TIME:
 		err = imx204_set_coarse_time(priv, ctrl->val);
-		break;
-	case TEGRA_CAMERA_CID_COARSE_TIME_SHORT:
-		err = imx204_set_coarse_time_short(priv, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = imx204_set_group_hold(priv, ctrl->val);
@@ -788,14 +837,6 @@ static int imx204_probe(struct spi_device *spi)
 	common_data->fmt_height		= common_data->def_height;
 	common_data->def_clk_freq	= IMX204_DEFAULT_CLK_FREQ;
 
-	/* uFPGA specific settings */
-	if (!tegra_platform_is_silicon()) {
-		common_data->frmfmt		= &imx204_frmfmt_fpga[0];
-		common_data->numfmts	= ARRAY_SIZE(imx204_frmfmt_fpga);
-		common_data->def_width	= IMX204_DEFAULT_WIDTH_FPGA;
-		common_data->def_height	= IMX204_DEFAULT_HEIGHT_FPGA;
-	}
-
 	priv->dev				= &spi->dev;
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
@@ -834,13 +875,6 @@ static int imx204_probe(struct spi_device *spi)
 	err = v4l2_async_register_subdev(priv->subdev);
 	if (err)
 		return err;
-
-	if (!tegra_platform_is_silicon()) {
-		/* VGP1 is used as reset GPIO on uFPGA */
-		priv->vi_base = ioremap(0x15f00000, 0x10000);
-		if (!priv->vi_base)
-			dev_err(priv->dev, "can't get vi base address\n");
-	}
 
 	pr_info("[IMX204]: probing v4l2 sensor done\n");
 	return ret;

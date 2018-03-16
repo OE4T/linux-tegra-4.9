@@ -285,36 +285,6 @@ static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 
 }
 
-static int _t19x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
-{
-	if (atomic_read(&mipi->refcount) < 0) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_inc_return(&mipi->refcount) == 1) {
-		tegra_mipi_clk_enable(mipi);
-		mipical_write(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0), 0x1);
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
-				PDVREG, 0 << PDVREG_SHIFT);
-	}
-	return 0;
-}
-
-static int _t19x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
-{
-	if (atomic_read(&mipi->refcount) < 1) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_dec_return(&mipi->refcount) == 0) {
-		mipical_write(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0), 0x2);
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
-				PDVREG, 1 << PDVREG_SHIFT);
-		tegra_mipi_clk_disable(mipi);
-	}
-	return 0;
-}
-
 static int _tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 {
 	if (atomic_read(&mipi->refcount) < 0) {
@@ -861,8 +831,8 @@ static const struct tegra_mipi_soc tegra19x_mipi_soc = {
 	.dsi_base = T186_DSI_BASE + 8,
 	.ppsb_war = 0,
 	.debug_table_id = DEBUGFS_TABLE_T19x,
-	.pad_enable = &_t19x_tegra_mipi_bias_pad_enable,
-	.pad_disable = &_t19x_tegra_mipi_bias_pad_disable,
+	.pad_enable = &_tegra_mipi_bias_pad_enable,
+	.pad_disable = &_tegra_mipi_bias_pad_disable,
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
 // temporary WAR to get 4.4 builds working

@@ -1,7 +1,7 @@
 /*
  * NVHOST queue management for T194
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,6 +75,8 @@ static int nvhost_queue_task_pool_alloc(struct platform_device *pdev,
 		task_pool->kmem_addr = kcalloc(num_tasks,
 					queue->task_kmem_size, GFP_KERNEL);
 		if (!task_pool->kmem_addr) {
+			nvhost_err(&pdev->dev,
+				   "failed to allocate task_pool->kmem_addr");
 			err = -ENOMEM;
 			goto err_alloc_task_kmem;
 		}
@@ -87,6 +89,7 @@ static int nvhost_queue_task_pool_alloc(struct platform_device *pdev,
 				__DMA_ATTR(task_dma_attrs));
 
 	if (task_pool->va == NULL) {
+		nvhost_err(&pdev->dev, "failed to allocate task_pool->va");
 		err = -ENOMEM;
 		goto err_alloc_task_pool;
 	}
@@ -167,12 +170,14 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 
 	pool = kzalloc(sizeof(struct nvhost_queue_pool), GFP_KERNEL);
 	if (pool == NULL) {
+		nvhost_err(&pdev->dev, "failed to allocate queue pool");
 		err = -ENOMEM;
 		goto fail_alloc_pool;
 	}
 
 	queues = kcalloc(num_queues, sizeof(struct nvhost_queue), GFP_KERNEL);
 	if (queues == NULL) {
+		nvhost_err(&pdev->dev, "failed to allocate queues");
 		err = -ENOMEM;
 		goto fail_alloc_queues;
 	}
@@ -180,6 +185,7 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 	task_pool = kcalloc(num_queues,
 			sizeof(struct nvhost_queue_task_pool), GFP_KERNEL);
 	if (task_pool == NULL) {
+		nvhost_err(&pdev->dev, "failed to allocate task_pool");
 		err = -ENOMEM;
 		goto fail_alloc_task_pool;
 	}
@@ -435,14 +441,17 @@ int nvhost_queue_submit_to_host1x(struct nvhost_queue *queue,
 
 	/* Allocate memory for the task and task command buffer */
 	task = kzalloc(sizeof(*task), GFP_KERNEL);
-	if (task == NULL)
+	if (task == NULL) {
+		nvhost_err(&client_pdev->dev, "failed to allocate task");
 		goto err_alloc_task;
+	}
 
 	task->cpu_addr = dma_alloc_coherent(&host1x_pdev->dev,
 						CMDBUF_SIZE,
 						&task->dma_addr,
 						GFP_KERNEL);
 	if (task->cpu_addr == NULL) {
+		nvhost_err(&client_pdev->dev, "failed to allocate task");
 		err = -ENOMEM;
 		goto err_alloc_cmdbuf;
 	}
@@ -495,8 +504,12 @@ int nvhost_queue_submit_to_host1x(struct nvhost_queue *queue,
 					    queue->syncpt_id,
 					    job->sp->fence,
 					    queue_task_update, task);
-	if (err < 0)
+	if (err < 0) {
+		nvhost_err(&client_pdev->dev,
+			   "failed to register notifier err=%d",
+			   err);
 		goto err_register_notifier;
+	}
 
 	/* nvhost keeps a reference on the job and we don't
 	 * need to access it anymore

@@ -1,7 +1,7 @@
 /*
  * Host1x Application Specific Virtual Memory
  *
- * Copyright (c) 2015-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -193,8 +193,11 @@ int iommu_context_dev_map_static(void *vaddr, dma_addr_t paddr, size_t size)
 	struct iommu_ctx *ctx;
 
 	mapping = kzalloc(sizeof(*mapping), GFP_KERNEL);
-	if (!mapping)
+	if (!mapping) {
+		dev_err(NULL, "%s: could not allocate mapping struct\n",
+			   __func__);
 		return -ENOMEM;
+	}
 
 	INIT_LIST_HEAD(&mapping->list);
 	mapping->vaddr = vaddr;
@@ -225,8 +228,11 @@ static int iommu_context_dev_probe(struct platform_device *pdev)
 	}
 
 	ctx = devm_kzalloc(&pdev->dev, sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
+	if (!ctx) {
+		dev_err(&pdev->dev,
+			   "%s: could not allocate iommu ctx\n", __func__);
 		return -ENOMEM;
+	}
 
 	INIT_LIST_HEAD(&ctx->list);
 	ctx->pdev = pdev;

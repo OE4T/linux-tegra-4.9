@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,6 +62,7 @@ int nvhost_push_buffer_alloc(struct push_buffer *pb)
 			&pb->dma_addr,
 			GFP_KERNEL);
 	if (!pb->mapped) {
+		nvhost_err(NULL, "failed to allocate pushbuffer");
 		pb->mapped = NULL;
 		return -ENOMEM;
 	}
@@ -192,8 +193,11 @@ unsigned int nvhost_cdma_wait_locked(struct nvhost_cdma *cdma,
 		lock = &cdma->sync_queue_lock;
 	else if (event == CDMA_EVENT_PUSH_BUFFER_SPACE)
 		lock = &cdma->push_buffer_lock;
-	else
+	else {
+		nvhost_err(&cdma->pdev->dev,
+			   "invalid event %d", event);
 		return -EINVAL;
+	}
 
 	mutex_lock(lock);
 

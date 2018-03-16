@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Driver Entrypoint
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,8 +58,11 @@ int nvhost_device_list_add(struct platform_device *pdev)
 	struct nvhost_device_list *list;
 
 	list = kzalloc(sizeof(struct nvhost_device_list), GFP_KERNEL);
-	if (!list)
+	if (!list) {
+		nvhost_err(&pdev->dev,
+			   "could not allocate device list");
 		return -ENOMEM;
+	}
 
 	list->pdev = pdev;
 	list_add_tail(&list->list, &ndev_head.list);

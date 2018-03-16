@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Legacy Power Domain Provider
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -137,8 +137,10 @@ static int _nvhost_init_domain(struct device_node *np)
 	}
 
 	pd = kzalloc(sizeof(*pd), GFP_KERNEL);
-	if (!pd)
+	if (!pd) {
+		nvhost_err(NULL, "failed to allocate pd structure");
 		return -ENOMEM;
+	}
 
 	if (of_property_read_u32(np, "partition-id", &pd->powergate_id))
 		pd->powergate_id = -1;

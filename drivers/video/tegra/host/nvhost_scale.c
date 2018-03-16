@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -364,22 +364,30 @@ void nvhost_scale_init(struct platform_device *pdev)
 	if (pdata->actmon_enabled) {
 
 		if (device_create_file(&pdev->dev,
-		    &dev_attr_load))
+		    &dev_attr_load)) {
+			nvhost_err(&pdev->dev, "failed to create device file");
 			goto err_create_sysfs_entry;
+		}
 
 		profile->actmon = kzalloc(profile->num_actmons *
 					sizeof(struct host1x_actmon *),
 					  GFP_KERNEL);
-		if (!profile->actmon)
+		if (!profile->actmon) {
+			nvhost_err(&pdev->dev,
+				   "failed to allocate actmon array");
 			goto err_allocate_actmons;
+		}
 
 		for (i = 0; i < profile->num_actmons; i++) {
 			profile->actmon[i] = kzalloc(
 					sizeof(struct host1x_actmon),
 					GFP_KERNEL);
 
-			if (!profile->actmon[i])
+			if (!profile->actmon[i]) {
+				nvhost_err(&pdev->dev,
+					   "failed to allocate actmon struct");
 				goto err_allocate_actmon;
+			}
 
 			actmon = profile->actmon[i];
 			actmon->host = nvhost_get_host(pdev);
@@ -661,14 +669,21 @@ static ssize_t actmon_sample_period_norm_write(struct file *file,
 	memset(buffer, 0, sizeof(buffer));
 	buf_size = min(count, (sizeof(buffer)-1));
 
-	if (copy_from_user(buffer, user_buf, buf_size))
+	if (copy_from_user(buffer, user_buf, buf_size)) {
+		nvhost_err(NULL, "failed to copy from user user_buf=%px",
+			   user_buf);
 		return -EFAULT;
+	}
 
-	if (strlen(buffer) > buf_size)
+	if (strlen(buffer) > buf_size) {
+		nvhost_err(NULL, "buffer too large (>%d)", buf_size);
 		return -EFAULT;
+	}
 
-	if (kstrtoul(buffer, 10, &period))
+	if (kstrtoul(buffer, 10, &period)) {
+		nvhost_err(NULL, "failed to convert %s to ul", buffer);
 		return -EINVAL;
+	}
 
 	actmon_op().set_sample_period_norm(actmon, period);
 
@@ -729,14 +744,21 @@ static ssize_t actmon_k_write(struct file *file,
 	memset(buffer, 0, sizeof(buffer));
 	buf_size = min(count, (sizeof(buffer)-1));
 
-	if (copy_from_user(buffer, user_buf, buf_size))
+	if (copy_from_user(buffer, user_buf, buf_size)) {
+		nvhost_err(NULL,
+			   "failed to copy from user user_buf=%px", user_buf);
 		return -EFAULT;
+	}
 
-	if (strlen(buffer) > buf_size)
+	if (strlen(buffer) > buf_size) {
+		nvhost_err(NULL, "buffer too large (>%d)", buf_size);
 		return -EFAULT;
+	}
 
-	if (kstrtoul(buffer, 10, &k))
+	if (kstrtoul(buffer, 10, &k)) {
+		nvhost_err(NULL, "failed to convert %s to ul", buffer);
 		return -EINVAL;
+	}
 
 	actmon_op().set_k(actmon, k);
 

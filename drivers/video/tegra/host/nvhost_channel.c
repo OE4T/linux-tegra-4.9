@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,8 +42,10 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 
 	host->chlist = kzalloc(nvhost_channel_nb_channels(host) *
 			       sizeof(struct nvhost_channel *), GFP_KERNEL);
-	if (host->chlist == NULL)
+	if (host->chlist == NULL) {
+		nvhost_err(&host->dev->dev, "failed to allocate channel list");
 		return -ENOMEM;
+	}
 
 	mutex_init(&host->chlist_mutex);
 	mutex_init(&host->ch_alloc_mutex);

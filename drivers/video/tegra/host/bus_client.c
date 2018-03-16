@@ -75,8 +75,11 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	struct resource *r;
 
 	/* check if offset is u32 aligned */
-	if (offset & 3)
+	if (offset & 3) {
+		nvhost_err(&ndev->dev, "misaligned register offset 0x%x",
+			   offset);
 		return -EINVAL;
+	}
 
 	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
 	if (!r) {
@@ -85,8 +88,12 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	}
 
 	if (offset + 4 * count > resource_size(r)
-			|| (offset + 4 * count < offset))
+	    || (offset + 4 * count < offset)) {
+		nvhost_err(&ndev->dev,
+			   "invalid register range offset 0x%x count %u",
+			   offset, count);
 		err = -EPERM;
+	}
 
 	return err;
 }
@@ -96,8 +103,12 @@ int validate_max_size(struct platform_device *ndev, u32 size)
 	struct resource *r;
 
 	/* check if size is non-zero and u32 aligned */
-	if (!size || size & 3)
+	if (!size || size & 3) {
+		nvhost_err(&ndev->dev,
+			   "invalid dev size 0x%x",
+			   size);
 		return -EINVAL;
+	}
 
 	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
 	if (!r) {
@@ -105,8 +116,10 @@ int validate_max_size(struct platform_device *ndev, u32 size)
 		return -ENODEV;
 	}
 
-	if (size > resource_size(r))
+	if (size > resource_size(r)) {
+		nvhost_err(&ndev->dev, "invalid dev size 0x%x", size);
 		return -EPERM;
+	}
 
 	return 0;
 }
@@ -330,8 +343,10 @@ static int __nvhost_channelopen(struct inode *inode,
 		pdata = container_of(inode->i_cdev,
 				struct nvhost_device_data, cdev);
 		pdev = pdata->pdev;
-	} else
+	} else {
+		nvhost_err(NULL, "could not open the channel");
 		return -EINVAL;
+	}
 
 	/* ..and host1x specific data */
 	host1x_pdata = dev_get_drvdata(pdev->dev.parent);
@@ -341,14 +356,20 @@ static int __nvhost_channelopen(struct inode *inode,
 
 	/* If the device is in exclusive mode, make channel reservation here */
 	if (pdata->exclusive) {
-		if (pdata->num_mapped_chs == pdata->num_channels)
+		if (pdata->num_mapped_chs == pdata->num_channels) {
+			nvhost_err(&pdev->dev,
+				   "no more available channels for an exclusive device");
 			goto fail_mark_used;
+		}
 		pdata->num_mapped_chs++;
 	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
+	if (!priv) {
+		nvhost_err(&pdev->dev,
+			   "failed to allocate priv structure");
 		goto fail_allocate_priv;
+	}
 	filp->private_data = priv;
 
 	/* Register this client to acm */
@@ -534,6 +555,9 @@ static int submit_add_gathers(struct nvhost_submit_args *args,
 		err = copy_from_user(local_class_ids, class_ids,
 			sizeof(u32) * args->num_cmdbufs);
 		if (err) {
+			nvhost_err(&pdata->pdev->dev,
+				   "failed to copy user inputs: class_ids=%px num_cmdbufs=%u",
+				   class_ids, args->num_cmdbufs);
 			err = -EINVAL;
 			goto free_local_class_ids;
 		}
@@ -546,6 +570,9 @@ static int submit_add_gathers(struct nvhost_submit_args *args,
 
 		err = copy_from_user(&cmdbuf, cmdbufs + i, sizeof(cmdbuf));
 		if (err) {
+			nvhost_err(&pdata->pdev->dev,
+				   "failed to copy user inputs: cmdbufs+%d=%px",
+				   i, cmdbufs + i);
 			err = -EINVAL;
 			goto free_local_class_ids;
 		}
@@ -561,6 +588,9 @@ static int submit_add_gathers(struct nvhost_submit_args *args,
 		if (class_id &&
 		    class_id != pdata->class &&
 		    class_id != NV_HOST1X_CLASS_ID) {
+			nvhost_err(&pdata->pdev->dev,
+				   "invalid class id 0x%x",
+				   class_id);
 			err = -EINVAL;
 			goto free_local_class_ids;
 		}
@@ -591,6 +621,7 @@ static int submit_copy_relocs(struct nvhost_submit_args *args,
 	struct nvhost_reloc_type __user *reloc_types =
 		(struct nvhost_reloc_type __user *)
 				(uintptr_t)args->reloc_types;
+	struct device *d = &job->ch->dev->dev;
 
 	int err;
 
@@ -598,19 +629,31 @@ static int submit_copy_relocs(struct nvhost_submit_args *args,
 
 	err = copy_from_user(job->relocarray,
 			relocs, sizeof(*relocs) * args->num_relocs);
-	if (err)
+	if (err) {
+		nvhost_err(d,
+			   "failed to copy user input: relocs=%px num_relocs=%u",
+			   relocs, args->num_relocs);
 		return -EINVAL;
+	}
 
 	err = copy_from_user(job->relocshiftarray,
 			reloc_shifts, sizeof(*reloc_shifts) * args->num_relocs);
-	if (err)
+	if (err) {
+		nvhost_err(d,
+			   "failed to copy user input: reloc_shifts=%px num_relocs=%u",
+			   reloc_shifts, args->num_relocs);
 		return -EINVAL;
+	}
 
 	if (reloc_types) {
 		err = copy_from_user(job->reloctypearray,
 			reloc_types, sizeof(*reloc_types) * args->num_relocs);
-		if (err)
+		if (err) {
+			nvhost_err(d,
+				   "failed to copy user input: reloc_types=%px num_relocs=%u",
+				   reloc_types, args->num_relocs);
 			return -EINVAL;
+		}
 	}
 
 	return 0;
@@ -634,8 +677,13 @@ static int submit_get_syncpoints(struct nvhost_submit_args *args,
 	int err;
 	u32 i;
 
-	if (args->num_syncpt_incrs > NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS)
+	if (args->num_syncpt_incrs > NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS) {
+		nvhost_err(&pdata->pdev->dev,
+			   "num_syncpt_incrs=%u is larger than max=%u",
+			   args->num_syncpt_incrs,
+			   NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS);
 		return -EINVAL;
+	}
 
 	/*
 	 * Go through each syncpoint from userspace. Here we:
@@ -651,12 +699,19 @@ static int submit_get_syncpoints(struct nvhost_submit_args *args,
 
 		/* Copy */
 		err = copy_from_user(&sp, syncpt_incrs + i, sizeof(sp));
-		if (err)
+		if (err) {
+			nvhost_err(&pdata->pdev->dev,
+				   "failed to copy user input: syncpt_incrs+%d=%px",
+				   i, syncpt_incrs + i);
 			return -EINVAL;
+		}
 
 		/* Validate the trivial case */
-		if (sp.syncpt_id == 0)
+		if (sp.syncpt_id == 0) {
+			nvhost_err(&pdata->pdev->dev,
+				   "syncpt_id 0 forbidden");
 			return -EINVAL;
+		}
 
 		/* ..and then ensure that the syncpoints have been reserved
 		 * for this client */
@@ -667,8 +722,12 @@ static int submit_get_syncpoints(struct nvhost_submit_args *args,
 			}
 		}
 
-		if (!found)
+		if (!found) {
+			nvhost_err(&pdata->pdev->dev,
+				   "tried to use unreserved syncpoint %u",
+				   sp.syncpt_id);
 			return -EINVAL;
+		}
 
 		/* Store and get a reference */
 		job->sp[i].id = sp.syncpt_id;
@@ -705,8 +764,11 @@ static int submit_deliver_fences(struct nvhost_submit_args *args,
 		pts = kcalloc(args->num_syncpt_incrs,
 			      sizeof(struct nvhost_ctrl_sync_fence_info),
 			      GFP_KERNEL);
-		if (!pts)
+		if (!pts) {
+			nvhost_err(&job->ch->dev->dev,
+				   "failed to allocate pts");
 			return -ENOMEM;
+		}
 
 		for (i = 0; i < args->num_syncpt_incrs; i++) {
 			pts[i].id = job->sp[i].id;
@@ -739,8 +801,12 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int err;
 
 	if ((args->num_syncpt_incrs < 1) || (args->num_syncpt_incrs >
-		     nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt)))
+		nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt))) {
+		nvhost_err(&pdata->pdev->dev,
+			   "invalid num_syncpt_incrs=%u",
+			   args->num_syncpt_incrs);
 		return -EINVAL;
+	}
 
 	job = nvhost_job_alloc(ctx->ch,
 			args->num_cmdbufs,
@@ -775,6 +841,9 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	err = copy_from_user(job->waitchk,
 			waitchks, sizeof(*waitchks) * args->num_waitchks);
 	if (err) {
+		nvhost_err(&pdata->pdev->dev,
+			   "failed to copy user input: waitchks=%px num_waitchks=%u",
+			   waitchks, args->num_waitchks);
 		err = -EINVAL;
 		goto put_job;
 	}
@@ -820,7 +889,7 @@ unpin_job:
 put_job:
 	nvhost_job_put(job);
 
-	nvhost_err(&pdata->pdev->dev, "failed with err %d\n", err);
+	nvhost_err(&pdata->pdev->dev, "failed with err %d", err);
 
 	return err;
 }
@@ -894,8 +963,12 @@ static int nvhost_ioctl_channel_module_regrdwr(
 
 	/* Check that there is something to read and that block size is
 	 * u32 aligned */
-	if (num_offsets == 0 || args->block_size & 3)
+	if (num_offsets == 0 || args->block_size & 3) {
+		nvhost_err(&ctx->pdev->dev,
+			   "invalid regrdwr parameters: num_offsets=%u block_size=0x%x",
+			   num_offsets, args->block_size);
 		return -EINVAL;
+	}
 
 	ndev = ctx->pdev;
 
@@ -908,16 +981,24 @@ static int nvhost_ioctl_channel_module_regrdwr(
 		u32 offs;
 		int remaining = args->block_size >> 2;
 
-		if (get_user(offs, offsets))
+		if (get_user(offs, offsets)) {
+			nvhost_err(&ndev->dev,
+				   "failed to copy user's input: offsets=%px",
+				   offsets);
 			return -EFAULT;
+		}
 
 		offsets++;
 		while (remaining) {
 			int batch = min(remaining, 64);
 			if (args->write) {
 				if (copy_from_user(vals, values,
-						batch * sizeof(u32)))
+						batch * sizeof(u32))) {
+					nvhost_err(&ndev->dev,
+						"failed to copy user's input: values=%px batch=%u",
+						values, batch);
 					return -EFAULT;
+				}
 
 				err = nvhost_write_module_regs(ndev,
 					offs, batch, vals);
@@ -930,8 +1011,11 @@ static int nvhost_ioctl_channel_module_regrdwr(
 					return err;
 
 				if (copy_to_user(values, vals,
-						batch * sizeof(u32)))
+						 batch * sizeof(u32))) {
+					nvhost_err(&ndev->dev,
+					    "failed to copy vals to user");
 					return -EFAULT;
+				}
 			}
 
 			remaining -= batch;
@@ -1031,8 +1115,12 @@ static int nvhost_ioctl_channel_get_client_syncpt(
 
 	/* prepare syncpoint name (in case it is needed) */
 	if (args_name) {
-		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
+		if (strncpy_from_user(name, args_name, sizeof(name)) < 0) {
+			nvhost_err(&ctx->pdev->dev,
+				   "failed to copy from user: args_name=%px",
+				   args_name);
 			return -EFAULT;
+		}
 		name[sizeof(name) - 1] = '\0';
 	} else {
 		name[0] = '\0';
@@ -1103,11 +1191,15 @@ static int nvhost_ioctl_channel_set_syncpoint_name(
 					buf->syncpt_id,
 					(const char *)syncpt_name);
 			} else {
+				nvhost_err(&pdata->pdev->dev,
+					   "failed to allocate syncpt_name");
 				return -ENOMEM;
 			}
 		}
 	}
 
+	nvhost_err(&pdata->pdev->dev, "invalid syncpoint id %u",
+		   buf->syncpt_id);
 	return -EINVAL;
 }
 
@@ -1122,12 +1214,18 @@ static long nvhost_channelctl(struct file *filp,
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_IOCTL_CHANNEL_LAST) ||
-		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE))
+		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CHANNEL_MAX_ARG_SIZE)) {
+		nvhost_err(NULL, "invalid cmd 0x%x", cmd);
 		return -ENOIOCTLCMD;
+	}
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
-		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
+		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd))) {
+			nvhost_err(NULL,
+				   "failed to copy from user: arg=%px",
+				   (void __user *)arg);
 			return -EFAULT;
+		}
 	}
 
 	/* serialize calls from this fd */
@@ -1147,13 +1245,16 @@ static long nvhost_channelctl(struct file *filp,
 		char *name;
 
 		err = get_unused_fd_flags(O_RDWR);
-		if (err < 0)
+		if (err < 0) {
+			nvhost_err(dev, "failed to get unused fd");
 			break;
+		}
 		fd = err;
 
 		name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
 				dev_name(dev), fd);
 		if (!name) {
+			nvhost_err(dev, "failed to allocate name");
 			err = -ENOMEM;
 			put_unused_fd(fd);
 			break;
@@ -1162,6 +1263,7 @@ static long nvhost_channelctl(struct file *filp,
 		file = anon_inode_getfile(name, filp->f_op, NULL, O_RDWR);
 		kfree(name);
 		if (IS_ERR(file)) {
+			nvhost_err(dev, "failed to get file");
 			err = PTR_ERR(file);
 			put_unused_fd(fd);
 			break;
@@ -1192,6 +1294,7 @@ static long nvhost_channelctl(struct file *filp,
 			(struct nvhost_get_param_arg *)buf;
 
 		if (arg->param >= NVHOST_MODULE_MAX_SYNCPTS) {
+			nvhost_err(dev, "invalid syncpoint id %u", arg->param);
 			err = -EINVAL;
 			break;
 		}
@@ -1225,6 +1328,7 @@ static long nvhost_channelctl(struct file *filp,
 	}
 	case NVHOST_IOCTL_CHANNEL_GET_WAITBASE:
 	{
+		nvhost_err(dev, "GET_WAITBASE (%d) not supported", cmd);
 		err = -EINVAL;
 		break;
 	}
@@ -1245,6 +1349,7 @@ static long nvhost_channelctl(struct file *filp,
 			(struct nvhost_get_param_arg *)buf;
 
 		if (arg->param >= NVHOST_MODULE_MAX_MODMUTEXES) {
+			nvhost_err(dev, "invalid modmutex 0x%x", arg->param);
 			err = -EINVAL;
 			break;
 		}
@@ -1252,6 +1357,7 @@ static long nvhost_channelctl(struct file *filp,
 		speculation_barrier();
 
 		if (!pdata->modulemutexes[arg->param]) {
+			nvhost_err(dev, "invalid modmutex 0x%x", arg->param);
 			err = -EINVAL;
 			break;
 		}
@@ -1305,6 +1411,7 @@ static long nvhost_channelctl(struct file *filp,
 		((struct nvhost_get_param_args *)buf)->value = false;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
+		nvhost_err(dev, "SET_PRIORITY not supported");
 		err = -EINVAL;
 		break;
 	case NVHOST32_IOCTL_CHANNEL_MODULE_REGRDWR:
@@ -1469,8 +1576,11 @@ static long nvhost_channelctl(struct file *filp,
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ)) {
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
-		if (err)
+		if (err) {
+			nvhost_err(dev, "failed to copy output to user: arg=%px",
+				   (void __user *)arg);
 			err = -EFAULT;
+		}
 	}
 
 	return err;

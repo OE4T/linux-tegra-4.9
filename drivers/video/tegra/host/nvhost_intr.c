@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -483,11 +483,13 @@ static int __nvhost_intr_register_notifier(struct platform_device *pdev,
 
 	waiter = kzalloc(sizeof(*waiter), GFP_KERNEL | __GFP_REPEAT);
 	if (!waiter) {
+		nvhost_err(&pdev->dev, "failed to allocate waiter");
 		err = -ENOMEM;
 		goto err_alloc_waiter;
 	}
 	notifier = kzalloc(sizeof(*notifier), GFP_KERNEL | __GFP_REPEAT);
 	if (!notifier) {
+		nvhost_err(&pdev->dev, "failed to allocate notifier");
 		err = -ENOMEM;
 		goto err_alloc_notifier;
 	}
@@ -572,8 +574,11 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 	intr->general_irq = irq_gen;
 
 	intr->low_prio_wq = create_singlethread_workqueue("host_low_prio_wq");
-	if (!intr->low_prio_wq)
+	if (!intr->low_prio_wq) {
+		nvhost_err(&host->dev->dev,
+			   "failed to create low prio waitqueue");
 		return -EINVAL;
+	}
 
 	for (id = 0, syncpt = intr->syncpt;
 	     id < nb_pts;

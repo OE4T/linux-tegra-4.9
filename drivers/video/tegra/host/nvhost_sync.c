@@ -269,8 +269,10 @@ static int nvhost_sync_fill_driver_data(struct sync_pt *sync_pt,
 	struct nvhost_sync_pt *pt = to_nvhost_sync_pt(sync_pt);
 	struct nvhost_ctrl_sync_fence_info info;
 
-	if (size < sizeof(info))
+	if (size < sizeof(info)) {
+		nvhost_err(NULL, "size %d too small", size);
 		return -ENOMEM;
+	}
 
 	info.id = pt->obj->id;
 	info.thresh = pt->thresh;
@@ -433,8 +435,10 @@ void nvhost_sync_pt_signal(struct nvhost_sync_pt *pt, u64 timestamp)
 int nvhost_sync_fence_set_name(int fence_fd, const char *name)
 {
 	struct sync_fence *fence = nvhost_sync_fdget(fence_fd);
-	if (!fence)
+	if (!fence) {
+		nvhost_err(NULL, "failed to get fence");
 		return -EINVAL;
+	}
 	strlcpy(fence->name, name, sizeof(fence->name));
 	sync_fence_put(fence);
 	return 0;
@@ -478,6 +482,8 @@ struct sync_fence *nvhost_sync_create_fence(struct platform_device *pdev,
 
 	for (i = 0; i < num_pts; i++) {
 		if (!nvhost_syncpt_is_valid_hw_pt(sp, pts[i].id)) {
+			nvhost_err(&pdev->dev, "invalid syncpoint id %u",
+				   pts[i].id);
 			WARN_ON(1);
 			return ERR_PTR(-EINVAL);
 		}

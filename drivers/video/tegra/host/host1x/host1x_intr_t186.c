@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -371,8 +371,12 @@ static int intr_init(struct nvhost_intr *intr)
 	err = request_threaded_irq(intr->syncpt_irq, NULL,
 				syncpt_thresh_cascade_isr,
 				IRQF_ONESHOT, "host_syncpt", dev);
-	if (err)
+	if (err) {
+		nvhost_err(&dev->dev->dev,
+			   "failed to request host_syncpt irq %u with err=%d",
+			   intr->syncpt_irq, err);
 		return err;
+	}
 
 	/* master disable for general (not syncpt) host interrupts */
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), 0);

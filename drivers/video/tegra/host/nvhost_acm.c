@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -337,8 +337,10 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 #endif
 		if (pdata->clk[index])
 			*rate = clk_get_rate(pdata->clk[index]);
-		else
+		else {
+			nvhost_err(&dev->dev, "invalid clk index %d", index);
 			err = -EINVAL;
+		}
 
 	nvhost_module_idle(dev);
 	return err;
@@ -352,8 +354,10 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	struct nvhost_module_client *m;
 	int ret = -EINVAL;
 
-	if (!nvhost_is_bwmgr_clk(pdata, index) && !pdata->clk[index])
+	if (!nvhost_is_bwmgr_clk(pdata, index) && !pdata->clk[index]) {
+		nvhost_err(&dev->dev, "invalid clk index %d", index);
 		return -EINVAL;
+	}
 
 	/* don't update rate if scaling is disabled for this clock */
 	if (pdata->clocks[index].disable_scaling)
@@ -450,8 +454,11 @@ int nvhost_module_add_client(struct platform_device *dev, void *priv)
 		      pdata->num_clks, priv);
 
 	client = kzalloc(sizeof(*client), GFP_KERNEL);
-	if (!client)
+	if (!client) {
+		nvhost_err(&dev->dev,
+			   "failed to allocate client structure");
 		return -ENOMEM;
+	}
 
 	INIT_LIST_HEAD(&client->node);
 	client->priv = priv;
@@ -585,6 +592,8 @@ int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
 			return 0;
 		}
 	}
+	nvhost_err(&dev->dev,
+		   "could not find clk %s", name);
 	return -EINVAL;
 }
 
@@ -876,8 +885,10 @@ int nvhost_module_enable_clk(struct device *dev)
 		nvhost_module_enable_clk(dev->parent);
 
 	pdata = dev_get_drvdata(dev);
-	if (!pdata)
+	if (!pdata) {
+		nvhost_err(dev, "pdata not found");
 		return -EINVAL;
+	}
 
 	for (index = 0; index < pdata->num_clks; index++) {
 		int err;
@@ -1016,8 +1027,10 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	struct nvhost_master *host;
 
 	pdata = dev_get_drvdata(dev);
-	if (!pdata)
+	if (!pdata) {
+		nvhost_err(dev, "pdata not found");
 		return -EINVAL;
+	}
 
 	if (!pdata->power_on) {
 		WARN_ON(1);
@@ -1065,8 +1078,10 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	int retry_count, ret = 0, i;
 
 	pdata = dev_get_drvdata(dev);
-	if (!pdata)
+	if (!pdata) {
+		nvhost_err(dev, "pdata not found");
 		return -EINVAL;
+	}
 
 	host = nvhost_get_host(pdata->pdev);
 	/* WAR to bug 1588951: Retry booting 3 times */
@@ -1108,6 +1123,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	/* Failed to start the device */
 	if (ret) {
+		nvhost_err(dev, "failed to start the device");
 		goto out;
 	}
 

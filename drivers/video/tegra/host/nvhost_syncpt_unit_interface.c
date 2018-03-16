@@ -83,8 +83,10 @@ int nvhost_syncpt_get_cv_dev_address_table(struct platform_device *engine_pdev,
 
 	/* fetch and store the address table */
 	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
-	if (!cv_dev_info)
+	if (!cv_dev_info) {
+		nvhost_err(&engine_pdev->dev, "failed to fetch_cv_dev_info");
 		return -EFAULT;
+	}
 
 	for (i = 0; i < cv_dev_info->count; ++i) {
 		sgt = cv_dev_info->sgt + i;
@@ -159,8 +161,10 @@ int nvhost_syncpt_get_gos(struct platform_device *engine_pdev,
 	struct syncpt_gos_backing *syncpt_gos_backing;
 
 	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
-	if (!syncpt_gos_backing)
+	if (!syncpt_gos_backing) {
+		nvhost_err(&engine_pdev->dev, "failed to find gos backing");
 		return -EINVAL;
+	}
 
 	*gos_id = syncpt_gos_backing->gos_id;
 	*gos_offset = syncpt_gos_backing->gos_offset;
@@ -250,6 +254,8 @@ static void nvhost_syncpt_insert_syncpt_backing(struct rb_root *root,
  * This function creates a GoS backing for a give syncpoint id.
  * GoS backing is then inserted into a global list for
  * future reference/lookup.
+ * A backing will only be created for engines supporting GoS
+ * and skipped otherwise.
  */
 int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 				     u32 syncpt_id)
@@ -266,11 +272,14 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	/* check if engine supports GoS */
 	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
 	if (!cv_dev_info)
-		return -EFAULT;
+		return 0;
 
 	/* if context isolation is enabled, GoS is not supported */
-	if (pdata->isolate_contexts)
+	if (pdata->isolate_contexts) {
+		nvhost_err(&engine_pdev->dev,
+			   "gos unsupported for engines with context isolation");
 		return -EINVAL;
+	}
 
 	/* check if backing already exists */
 	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
@@ -279,14 +288,17 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 
 	/* Allocate and initialize backing */
 	syncpt_gos_backing = kzalloc(sizeof(*syncpt_gos_backing), GFP_KERNEL);
-	if (!syncpt_gos_backing)
+	if (!syncpt_gos_backing) {
+		nvhost_err(&engine_pdev->dev, "failed to allocate gos backing");
 		return -ENOMEM;
+	}
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	dma_alloc_attrs(&cv_dev_info->offset_dev, sizeof(u32), &offset,
 			GFP_KERNEL, __DMA_ATTR(attrs));
 	err = dma_mapping_error(&cv_dev_info->offset_dev, offset);
 	if (err) {
+		nvhost_err(&engine_pdev->dev, "failed to alloc attributes");
 		kfree(syncpt_gos_backing);
 		return -ENOMEM;
 	}
@@ -361,8 +373,10 @@ int nvhost_syncpt_unit_interface_get_aperture(
 {
 	struct resource *res;
 
-	if (host_pdev == NULL || base == NULL || size == NULL)
+	if (host_pdev == NULL || base == NULL || size == NULL) {
+		nvhost_err(NULL, "need nonNULL parameters to return output");
 		return -ENOSYS;
+	}
 
 	res = platform_get_resource_byname(host_pdev, IORESOURCE_MEM,
 					   "sem-syncpt-shim");
@@ -451,8 +465,11 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 	syncpt_unit_interface = devm_kzalloc(&engine_pdev->dev,
 					     sizeof(*syncpt_unit_interface),
 					     GFP_KERNEL);
-	if (syncpt_unit_interface == NULL)
+	if (syncpt_unit_interface == NULL) {
+		nvhost_err(&engine_pdev->dev,
+			   "failed to allocate syncpt_unit_interface");
 		return -ENOMEM;
+	}
 
 	/* If IOMMU is enabled, map it into the device memory */
 	if (engine_pdev->dev.archdata.iommu) {

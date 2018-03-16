@@ -105,14 +105,18 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		job_size(num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
 
-	if(!size)
+	if(!size) {
+		nvhost_err(&pdata->pdev->dev, "empty job requested");
 		return NULL;
+	}
 	if(size <= PAGE_SIZE)
 		job = kzalloc(size, GFP_KERNEL);
 	else
 		job = vzalloc(size);
-	if (!job)
+	if (!job) {
+		nvhost_err(&pdata->pdev->dev, "failed to allocate job");
 		return NULL;
+	}
 
 	kref_init(&job->ref);
 	job->ch = ch;
@@ -124,8 +128,11 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		job->engine_timestamps.ptr =
 			dma_zalloc_coherent(&ch->vm->pdev->dev, sizeof(u64) * 2,
 			&job->engine_timestamps.dma, GFP_KERNEL);
-		if (!job->engine_timestamps.ptr)
+		if (!job->engine_timestamps.ptr) {
+			nvhost_err(&pdata->pdev->dev,
+				   "failed to allocate engine timestamps");
 			return NULL;
+		}
 	}
 
 	return job;
@@ -355,18 +362,23 @@ static int pin_array_ids(struct platform_device *dev,
 		buf = dma_buf_get(ids[i].id);
 		if (IS_ERR(buf)) {
 			err = -EINVAL;
+			nvhost_err(&dev->dev, "could not get buf err=%d", err);
 			goto clean_up;
 		}
 
 		attach = dma_buf_attach(buf, &dev->dev);
 		if (IS_ERR(attach)) {
 			err = PTR_ERR(attach);
+			nvhost_err(&dev->dev, "could not attach buf err=%d",
+				   err);
 			goto clean_up_attach;
 		}
 
 		sgt = dma_buf_map_attachment(attach, ids[i].direction);
 		if (IS_ERR(sgt)) {
 			err = PTR_ERR(sgt);
+			nvhost_err(&dev->dev, "could not map attachment err=%d",
+				err);
 			goto clean_up_map;
 		}
 
@@ -485,8 +497,10 @@ static int do_relocs(struct nvhost_job *job,
 		}
 
 		if (reloc->cmdbuf_offset & 3 ||
-		    reloc->cmdbuf_offset >= buf->size)
-		{
+		    reloc->cmdbuf_offset >= buf->size) {
+			nvhost_err(&pdata->pdev->dev,
+				   "invalid cmdbuf_offset=0x%x",
+				   reloc->cmdbuf_offset);
 			return -EINVAL;
 		}
 

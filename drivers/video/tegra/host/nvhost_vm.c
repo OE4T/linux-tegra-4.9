@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,8 +55,10 @@ void *nvhost_vm_allocate_firmware_area(struct platform_device *pdev,
 					 firmware_area->bitmap_size_bits,
 					 order);
 	mutex_unlock(&firmware_area->mutex);
-	if (region < 0)
+	if (region < 0) {
+		nvhost_err(&pdev->dev, "no free region in firmware area");
 		goto err_allocate_vm_firmware_area;
+	}
 
 	/* return the alloacted area */
 	*dma_addr = firmware_area->dma_addr + (region * SZ_4K);
@@ -84,8 +86,10 @@ int nvhost_vm_init(struct platform_device *pdev)
 		DIV_ROUND_UP(firmware_area->bitmap_size_bits, 8);
 	firmware_area->bitmap = devm_kzalloc(&pdev->dev,
 		firmware_area->bitmap_size_bytes, GFP_KERNEL);
-	if (!firmware_area->bitmap)
+	if (!firmware_area->bitmap) {
+		nvhost_err(&pdev->dev, "failed to allocate fw area bitmap");
 		return -ENOMEM;
+	}
 
 	/* allocate area */
 	firmware_area->vaddr =
@@ -97,8 +101,10 @@ int nvhost_vm_init(struct platform_device *pdev)
 				&firmware_area->dma_addr, GFP_KERNEL,
 				DMA_ATTR_READ_ONLY);
 #endif
-	if (!firmware_area->vaddr)
+	if (!firmware_area->vaddr) {
+		nvhost_err(&pdev->dev, "failed to alloc attrs");
 		return -ENOMEM;
+	}
 
 	/* ..otherwise pin the firmware to all address spaces */
 	nvhost_vm_map_static(pdev, firmware_area->vaddr,
@@ -207,6 +213,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 	/* get room to keep vm */
 	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
 	if (!vm) {
+		nvhost_err(&pdev->dev, "failed to allocate vm");
 		mutex_unlock(&host->vm_mutex);
 		goto err_alloc_vm;
 	}
@@ -225,8 +232,10 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	if (vm_op().init && vm->enable_hw) {
 		err = vm_op().init(vm, identifier);
-		if (err)
+		if (err) {
+			nvhost_debug_dump(host);
 			goto err_init;
+		}
 	}
 
 	mutex_unlock(&host->vm_alloc_mutex);

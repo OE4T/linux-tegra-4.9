@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -115,8 +115,11 @@ static void cdma_make_adjacent_space(struct nvhost_cdma *cdma, u32 slots)
 static int cdma_timeout_init(struct nvhost_cdma *cdma,
 				 u32 syncpt_id)
 {
-	if (syncpt_id == NVSYNCPT_INVALID)
+	if (syncpt_id == NVSYNCPT_INVALID) {
+		nvhost_err(&cdma->pdev->dev,
+			   "invalid syncpoint id %u", syncpt_id);
 		return -EINVAL;
+	}
 
 	INIT_DELAYED_WORK(&cdma->timeout.wq, cdma_timeout_handler);
 	cdma->timeout.initialized = true;

@@ -233,8 +233,10 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	sp = nvhost_get_syncpt_owner_struct(id, sp);
 	host = syncpt_to_dev(sp);
 
-	if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id))
+	if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id)) {
+		nvhost_err(&host->dev->dev, "invalid syncpoint id %u", id);
 		return -EINVAL;
+	}
 
 
 	/*
@@ -852,8 +854,11 @@ static int nvhost_reserve_syncpt(struct nvhost_syncpt *sp, u32 id,
 static int nvhost_syncpt_assign_name(struct nvhost_syncpt *sp, u32 id,
 					const char *syncpt_name)
 {
-	if (id < NVHOST_FREE_SYNCPT_BASE(sp) || !sp->assigned[id])
+	if (id < NVHOST_FREE_SYNCPT_BASE(sp) || !sp->assigned[id]) {
+		nvhost_err(&syncpt_to_dev(sp)->dev->dev,
+			   "invalid syncpoint id %u", id);
 		return -EINVAL;
+	}
 
 	sp->syncpt_names[id] = syncpt_name;
 
@@ -887,14 +892,14 @@ static u32 nvhost_get_syncpt(struct platform_device *pdev,
 
 	if (!id) {
 		mutex_unlock(&sp->syncpt_mutex);
-		nvhost_err(d, "failed to find free syncpt\n");
+		nvhost_err(d, "failed to find free syncpt");
 		return 0;
 	}
 
 	/* if we get one, then reserve it */
 	err = nvhost_reserve_syncpt(sp, id, client_managed);
 	if (err) {
-		nvhost_err(d, "syncpt reservation failed\n");
+		nvhost_err(d, "syncpt reservation failed");
 		mutex_unlock(&sp->syncpt_mutex);
 		return 0;
 	}
@@ -902,14 +907,14 @@ static u32 nvhost_get_syncpt(struct platform_device *pdev,
 	/* assign a name for debugging purpose */
 	err = nvhost_syncpt_assign_name(sp, id, syncpt_name);
 	if (err) {
-		nvhost_err(d, "syncpt name assignment failed\n");
+		nvhost_err(d, "syncpt name assignment failed");
 		mutex_unlock(&sp->syncpt_mutex);
 		return 0;
 	}
 
 	ret = nvhost_syncpt_get_ref(sp, id);
 	if (ret != 1) {
-		nvhost_err(d, "syncpt found with invalid refcount %d\n", ret);
+		nvhost_err(d, "syncpt found with invalid refcount %d", ret);
 		nvhost_syncpt_put_ref(sp, id);
 		mutex_unlock(&sp->syncpt_mutex);
 		return 0;
@@ -944,7 +949,7 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 
 	id = nvhost_get_syncpt(pdev, false, syncpt_name);
 	if (!id) {
-		nvhost_err(&pdev->dev, "failed to get syncpt\n");
+		nvhost_err(&pdev->dev, "failed to get syncpt");
 		kfree(syncpt_name);
 		return 0;
 	}
@@ -968,7 +973,7 @@ u32 nvhost_get_syncpt_client_managed(struct platform_device *pdev,
 
 	id = nvhost_get_syncpt(pdev, true, syncpt_name);
 	if (!id) {
-		nvhost_err(&pdev->dev, "failed to get syncpt\n");
+		nvhost_err(&pdev->dev, "failed to get syncpt");
 		kfree(syncpt_name);
 		return 0;
 	}
@@ -1129,6 +1134,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	sp->timeline = kzalloc(sizeof(struct nvhost_sync_timeline *) *
 			nb_pts, GFP_KERNEL);
 	if (!sp->timeline) {
+		nvhost_err(&dev->dev, "failed to allocate syncpt timeline");
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -1147,6 +1153,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 	if (!(sp->assigned && sp->client_managed && sp->min_val && sp->max_val
 		     && sp->lock_counts && sp->in_use && sp->ref)) {
+		nvhost_err(&dev->dev, "syncpt in a wrong state");
 		/* frees happen in the deinit */
 		err = -ENOMEM;
 		goto fail;
@@ -1154,6 +1161,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 
 	sp->kobj = kobject_create_and_add("syncpt", &dev->dev.kobj);
 	if (!sp->kobj) {
+		nvhost_err(&dev->dev, "failed to create syncpt kobj");
 		err = -EIO;
 		goto fail;
 	}
@@ -1166,11 +1174,13 @@ int nvhost_syncpt_init(struct platform_device *dev,
 			* nb_pts * NUM_SYSFS_ENTRY,
 			GFP_KERNEL);
 	if (!sp->syncpt_attrs) {
+		nvhost_err(&dev->dev, "failed to allocate syncpt attributes");
 		err = -ENOMEM;
 		goto fail;
 	}
 
 	if (!sp->syncpt_names || !sp->last_used_by) {
+		nvhost_err(&dev->dev, "syncpt in a wrong state");
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -1226,6 +1236,7 @@ int nvhost_syncpt_init(struct platform_device *dev,
 	sp->timeline_invalid = nvhost_sync_timeline_create(sp,
 							   NVSYNCPT_INVALID);
 	if (!sp->timeline_invalid) {
+		nvhost_err(&dev->dev, "syncpt timeline invalid");
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -1365,8 +1376,10 @@ int nvhost_nb_syncpts_store(struct nvhost_syncpt *sp, const char *buf)
 		master->info.nb_pts = nb_syncpts;
 		master->info.pts_limit = master->info.pts_base +
 						master->info.nb_pts;
-	} else
+	} else {
+		nvhost_err(d, "invalid syncpoint %s", buf);
 		ret = -EIO;
+	}
 
 	return ret;
 }

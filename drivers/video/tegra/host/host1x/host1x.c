@@ -138,6 +138,7 @@ static int nvhost_ctrlopen(struct inode *inode, struct file *filp)
 			GFP_KERNEL);
 
 	if (!(priv && mod_locks)) {
+		nvhost_err(&host->dev->dev, "failed to allocate mod_locks");
 		kfree(priv);
 		kfree(mod_locks);
 		return -ENOMEM;
@@ -180,8 +181,12 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 {
 	u32 timeout;
 	int err;
-	if (!nvhost_syncpt_is_valid_hw_pt_nospec(&ctx->dev->syncpt, &args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt_nospec(&ctx->dev->syncpt,
+						 &args->id)) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "invalid syncpt %u", args->id);
 		return -EINVAL;
+	}
 
 	if (args->timeout == NVHOST_NO_TIMEOUT)
 		/* FIXME: MAX_SCHEDULE_TIMEOUT is ulong which can be bigger
@@ -240,19 +245,27 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 		(const void __user *)(uintptr_t)args->pts;
 
 	if (args_name) {
-		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
+		if (strncpy_from_user(name, args_name, sizeof(name)) < 0) {
+			nvhost_err(&ctx->dev->dev->dev,
+				   "failed to copy from user: args_name=%px",
+				   args_name);
 			return -EFAULT;
+		}
 		name[sizeof(name) - 1] = '\0';
 	} else {
 		name[0] = '\0';
 	}
 
 	pts = kmalloc_array(args->num_pts, sizeof(*pts), GFP_KERNEL);
-	if (!pts)
+	if (!pts) {
+		nvhost_err(&ctx->dev->dev->dev, "failed to allocate pts");
 		return -ENOMEM;
+	}
 
 	/* Multiplication overflow would have errored in kmalloc_array */
 	if (copy_from_user(pts, args_pts, sizeof(*pts) * args->num_pts)) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "failed to copy from user args_pts=%px", args_pts);
 		err = -EFAULT;
 		goto out;
 	}
@@ -260,6 +273,8 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 	for (i = 0; i < args->num_pts; i++) {
 		if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt,
 					pts[i].id)) {
+			nvhost_err(&ctx->dev->dev->dev,
+				   "invalid syncpoint id %u", pts[i].id);
 			err = -EINVAL;
 			goto out;
 		}
@@ -271,6 +286,7 @@ out:
 	kfree(pts);
 	return err;
 #else
+	nvhost_err(&ctx->dev->dev->dev, "operation not supported");
 	return -EINVAL;
 #endif
 }
@@ -286,8 +302,12 @@ static int nvhost_ioctl_ctrl_sync_fence_set_name(
 		(const char __user *)(uintptr_t)args->name;
 
 	if (args_name) {
-		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
+		if (strncpy_from_user(name, args_name, sizeof(name)) < 0) {
+			nvhost_err(&ctx->dev->dev->dev,
+				   "failed to copy from user: args_name=%px",
+				   args_name);
 			return -EFAULT;
+		}
 		name[sizeof(name) - 1] = '\0';
 	} else {
 		name[0] = '\0';
@@ -296,6 +316,7 @@ static int nvhost_ioctl_ctrl_sync_fence_set_name(
 	err = nvhost_sync_fence_set_name(args->fence_fd, name);
 	return err;
 #else
+	nvhost_err(&ctx->dev->dev->dev, "operation not supported");
 	return -EINVAL;
 #endif
 }
@@ -305,8 +326,11 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 {
 	int err = 0;
 	if (args->id >= nvhost_syncpt_nb_mlocks(&ctx->dev->syncpt) ||
-	    args->lock > 1)
+	    args->lock > 1) {
+		nvhost_err(&ctx->dev->dev->dev, "invalid modmutex %u",
+			   args->id);
 		return -EINVAL;
+	}
 
 	speculation_barrier();
 
@@ -344,12 +368,19 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 			args->num_offsets, args->write);
 
 	/* Check that there is something to read */
-	if (num_offsets == 0)
+	if (num_offsets == 0) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "invalid regrdwr parameters: num_offsets=0");
 		return -EINVAL;
+	}
 
 	ndev = nvhost_device_list_match_by_id(args->id);
-	if (!ndev)
+	if (!ndev) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "could not find the device with id 0x%x",
+			   args->id);
 		return -ENODEV;
+	}
 
 	err = validate_max_size(ndev, args->block_size);
 	if (err)
@@ -364,8 +395,10 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	vals = kmalloc(args->block_size, GFP_KERNEL);
 	if (!vals) {
 		vals = vmalloc(args->block_size);
-		if (!vals)
+		if (!vals) {
+			nvhost_err(&ndev->dev, "could not allocate vals");
 			return -ENOMEM;
+		}
 	}
 
 	if (args->write) {
@@ -375,10 +408,15 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 			if (copy_from_user((char *)vals,
 					(char __user *)values,
 					args->block_size)) {
+				nvhost_err(&ndev->dev,
+					   "failed to copy from user values=%px",
+					   (char __user *)values);
 				kvfree(vals);
 				return -EFAULT;
 			}
 			if (get_user(offs, offsets)) {
+				nvhost_err(&ndev->dev,
+					   "failed to copy offsets from userspace");
 				kvfree(vals);
 				return -EFAULT;
 			}
@@ -395,6 +433,7 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 		while (num_offsets--) {
 			u32 offs;
 			if (get_user(offs, offsets)) {
+				nvhost_err(&ndev->dev, "failed to get user");
 				kvfree(vals);
 				return -EFAULT;
 			}
@@ -407,6 +446,8 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 			if (copy_to_user((void __user *)values,
 					(void const *)vals,
 					args->block_size)) {
+				nvhost_err(&ndev->dev,
+					   "failed to copy to user");
 				kvfree(vals);
 				return -EFAULT;
 			}
@@ -429,8 +470,11 @@ static int nvhost_ioctl_ctrl_get_version(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_read_max(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_read_args *args)
 {
-	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id)) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "invalid syncpoint id %u", args->id);
 		return -EINVAL;
+	}
 
 	/* prevent speculative access to sp->max_val[id] */
 	speculation_barrier();
@@ -454,8 +498,11 @@ static int nvhost_ioctl_ctrl_get_characteristics(struct nvhost_ctrl_userctx *ctx
 		err = copy_to_user((void __user *)(uintptr_t)
 			args->nvhost_characteristics_buf_addr,
 			nvhost_char, write_size);
-		if (err)
+		if (err) {
+			nvhost_err(&ctx->dev->dev->dev,
+				   "failed to copy to user");
 			err = -EFAULT;
+		}
 	}
 
 	if (err == 0)
@@ -533,8 +580,11 @@ static int nvhost_ioctl_ctrl_poll_fd_create (
 	int fd;
 
 	err = get_unused_fd_flags(O_RDWR);
-	if (err < 0)
+	if (err < 0) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "failed to get unused fd");
 		return err;
+	}
 	fd = err;
 
 	snprintf(name, sizeof(name), "nvhost-event-poll-fd");
@@ -542,13 +592,17 @@ static int nvhost_ioctl_ctrl_poll_fd_create (
 	file = anon_inode_getfile(name, &nvhost_event_poll_fd_ops,
 				  NULL, O_RDWR);
 	if (IS_ERR(file)) {
+		nvhost_err(&ctx->dev->dev->dev, "failed to get file");
 		err = PTR_ERR(file);
 		goto fail_file;
 	}
 
 	private_data = kzalloc(sizeof(*private_data), GFP_KERNEL);
-	if (!private_data)
+	if (!private_data) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "failed to allocate private_data");
 		goto fail_alloc;
+	}
 
 	private_data->fd = fd;
 	init_waitqueue_head(&private_data->wq);
@@ -591,14 +645,21 @@ static int nvhost_ioctl_ctrl_poll_fd_trigger_event(
 	struct file *f = fget(args->fd);
 	int err;
 
-	if (!f)
+	if (!f) {
+		nvhost_err(&ctx->dev->dev->dev, "failed to fget");
 		return -EINVAL;
+	}
 
-	if (f->f_op != &nvhost_event_poll_fd_ops)
+	if (f->f_op != &nvhost_event_poll_fd_ops) {
+		nvhost_err(&ctx->dev->dev->dev, "incorrect fops backend");
 		return -EINVAL;
+	}
 
-	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
+	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id)) {
+		nvhost_err(&ctx->dev->dev->dev,
+			   "invalid syncpt id %u", args->id);
 		return -EINVAL;
+	}
 
 	private_data = (struct nvhost_event_poll_fd_rec *)f->private_data;
 	kref_get(&private_data->ref);
@@ -622,12 +683,17 @@ static long nvhost_ctrlctl(struct file *filp,
 	if ((_IOC_TYPE(cmd) != NVHOST_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
 		(_IOC_NR(cmd) > NVHOST_IOCTL_CTRL_LAST) ||
-		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CTRL_MAX_ARG_SIZE))
+		(_IOC_SIZE(cmd) > NVHOST_IOCTL_CTRL_MAX_ARG_SIZE)) {
+		nvhost_err(NULL, "invalid cmd 0x%x", cmd);
 		return -ENOIOCTLCMD;
+	}
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
-		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
+		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd))) {
+			nvhost_err(NULL, "failed to copy from user arg=%px",
+				   (void __user *)arg);
 			return -EFAULT;
+		}
 	}
 
 	switch (cmd) {
@@ -703,14 +769,18 @@ static long nvhost_ctrlctl(struct file *filp,
 		err = nvhost_ioctl_ctrl_poll_fd_trigger_event(priv, (void *)buf);
 		break;
 	default:
+		nvhost_err(&priv->dev->dev->dev, "invalid cmd 0x%x", cmd);
 		err = -ENOIOCTLCMD;
 		break;
 	}
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ)) {
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
-		if (err)
+		if (err) {
+			nvhost_err(&priv->dev->dev->dev,
+				   "failed to copy to user");
 			err = -EFAULT;
+		}
 	}
 
 	return err;
@@ -855,8 +925,10 @@ static int nvhost_user_init(struct nvhost_master *host)
 	cdev_init(&host->cdev, &nvhost_ctrlops);
 	host->cdev.owner = THIS_MODULE;
 	err = cdev_add(&host->cdev, devno, 1);
-	if (err < 0)
+	if (err < 0) {
+		nvhost_err(&host->dev->dev, "failed to add cdev");
 		goto fail;
+	}
 	host->ctrl = device_create(host->nvhost_class, &host->dev->dev, devno,
 					NULL, IFACE_NAME "-ctrl");
 	if (IS_ERR(host->ctrl)) {
@@ -868,6 +940,7 @@ static int nvhost_user_init(struct nvhost_master *host)
 	host->caps_nodes = devm_kzalloc(&host->dev->dev,
 			sizeof(struct nvhost_capability_node) * 7, GFP_KERNEL);
 	if (!host->caps_nodes) {
+		nvhost_err(&host->dev->dev, "failed to allocate caps_nodes");
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -875,6 +948,8 @@ static int nvhost_user_init(struct nvhost_master *host)
 	host->caps_kobj = kobject_create_and_add("capabilities",
 			&host->dev->dev.kobj);
 	if (!host->caps_kobj) {
+		nvhost_err(&host->dev->dev,
+			   "failed to create capabilities dir");
 		err = -EIO;
 		goto fail;
 	}
@@ -970,6 +1045,7 @@ static int nvhost_alloc_resources(struct nvhost_master *host)
 				    GFP_KERNEL);
 
 	if (!host->intr.syncpt) {
+		nvhost_err(&host->dev->dev, "failed to allocate intr.syncpt");
 		/* frees happen in the support removal phase */
 		return -ENOMEM;
 	}
@@ -1054,8 +1130,10 @@ static int of_nvhost_parse_platform_data(struct platform_device *dev,
 	if (!of_property_read_u32(np, "nvidia,nb-pts", &value))
 		host->info.nb_pts = value;
 
-	if (host->info.nb_pts > host->info.nb_hw_pts)
+	if (host->info.nb_pts > host->info.nb_hw_pts) {
+		nvhost_err(&dev->dev, "invalid nb_pts property");
 		return -EINVAL;
+	}
 
 	host->info.pts_limit = host->info.pts_base + host->info.nb_pts;
 
@@ -1132,6 +1210,9 @@ static int nvhost_device_get_host1x_resources_byname(struct nvhost_master *host)
 
 		regs = devm_ioremap_resource(&dev->dev, r);
 		if (IS_ERR(regs)) {
+			nvhost_err(&host->dev->dev,
+				   "failed to ioremap resources %s",
+				   host->info.resources[i]);
 			ret = PTR_ERR(regs);
 			goto fail;
 		}
@@ -1195,8 +1276,10 @@ static int nvhost_probe(struct platform_device *dev)
 	}
 
 	host = devm_kzalloc(&dev->dev, sizeof(*host), GFP_KERNEL);
-	if (!host)
+	if (!host) {
+		nvhost_err(NULL, "failed to alloc host structure");
 		return -ENOMEM;
+	}
 
 	host->dev = dev;
 	INIT_LIST_HEAD(&host->static_mappings_list);

@@ -570,6 +570,7 @@
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <&bpmp 0x1>;
+		nvidia,host1x = <&host1x>;
 		nvidia,disable-l1-cpm;
 
 		bus-range = <0x0 0xff>;

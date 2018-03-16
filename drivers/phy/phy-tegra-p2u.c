@@ -24,6 +24,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 
 #define P2U_PERIODIC_EQ_CTRL_GEN3	0xc0
+#define P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN		BIT(0)
 #define P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
 #define P2U_PERIODIC_EQ_CTRL_GEN4	0xc4
 #define P2U_PERIODIC_EQ_CTRL_GEN4_INIT_PRESET_EQ_TRAIN_EN	BIT(1)
@@ -115,6 +116,7 @@ static int tegra_p2u_power_on(struct phy *x)
 	writel(val, phy->base + P2U_CONTROL_GEN1);
 
 	val = readl(phy->base + P2U_PERIODIC_EQ_CTRL_GEN3);
+	val &= ~P2U_PERIODIC_EQ_CTRL_GEN3_PERIODIC_EQ_EN;
 	val |= P2U_PERIODIC_EQ_CTRL_GEN3_INIT_PRESET_EQ_TRAIN_EN;
 	writel(val, phy->base + P2U_PERIODIC_EQ_CTRL_GEN3);
 

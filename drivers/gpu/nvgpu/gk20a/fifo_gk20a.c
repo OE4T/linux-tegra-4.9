@@ -1432,7 +1432,8 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			ch->has_timedout = true;
-			gk20a_channel_abort_clean_up(ch);
+			if (ch->g->ops.fifo.ch_abort_clean_up)
+				ch->g->ops.fifo.ch_abort_clean_up(ch);
 			gk20a_channel_put(ch);
 		}
 	}
@@ -2016,7 +2017,8 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	if (!tsg_timedout)
 		g->ops.fifo.enable_tsg(tsg);
 
-	gk20a_channel_abort_clean_up(ch);
+	if (ch->g->ops.fifo.ch_abort_clean_up)
+		ch->g->ops.fifo.ch_abort_clean_up(ch);
 
 	return 0;
 

@@ -628,6 +628,7 @@ struct gpu_ops {
 						struct tsg_gk20a *tsg);
 		u32 (*get_preempt_timeout)(struct gk20a *g);
 		void (*post_event_id)(struct tsg_gk20a *tsg, int event_id);
+		void (*ch_abort_clean_up)(struct channel_gk20a *ch);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);

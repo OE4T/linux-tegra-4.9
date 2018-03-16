@@ -220,7 +220,8 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 	if (channel_preempt && gk20a_is_channel_marked_as_tsg(ch))
 		ch->g->ops.fifo.preempt_channel(ch->g, ch->chid);
 
-	gk20a_channel_abort_clean_up(ch);
+	if (ch->g->ops.fifo.ch_abort_clean_up)
+		ch->g->ops.fifo.ch_abort_clean_up(ch);
 }
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch)

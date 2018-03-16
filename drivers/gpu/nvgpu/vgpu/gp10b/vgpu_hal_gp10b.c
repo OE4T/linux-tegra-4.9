@@ -345,6 +345,8 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.tsg_unbind_channel = vgpu_tsg_unbind_channel,
 		.post_event_id = gk20a_tsg_event_id_post_event,
 		.ch_abort_clean_up = gk20a_channel_abort_clean_up,
+		.check_tsg_ctxsw_timeout = gk20a_fifo_check_tsg_ctxsw_timeout,
+		.check_ch_ctxsw_timeout = gk20a_fifo_check_ch_ctxsw_timeout,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

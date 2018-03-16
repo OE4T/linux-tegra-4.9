@@ -2216,10 +2216,10 @@ bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 		bool verbose = false;
 
 		if (is_tsg) {
-			ret = gk20a_fifo_check_tsg_ctxsw_timeout(
+			ret = g->ops.fifo.check_tsg_ctxsw_timeout(
 					&f->tsg[id], &verbose, &ms);
 		} else {
-			ret = gk20a_fifo_check_ch_ctxsw_timeout(
+			ret = g->ops.fifo.check_ch_ctxsw_timeout(
 					&f->channel[id], &verbose, &ms);
 		}
 

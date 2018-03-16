@@ -70,7 +70,6 @@ static int gv11b_vgpu_probe(struct device *dev)
 
 struct gk20a_platform gv11b_vgpu_tegra_platform = {
 	.has_syncpoints = true,
-	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
 	.can_railgate_init	= false,

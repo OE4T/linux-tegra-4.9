@@ -286,9 +286,13 @@
 
 #define CAP_SPCIE_CAP_OFF	0x154
 #define CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK	GENMASK(3, 0)
+#define CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_MASK	GENMASK(11, 8)
+#define CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_SHIFT	8
 
 #define PL16G_CAP_OFF		0x188
 #define PL16G_CAP_OFF_DSP_16G_TX_PRESET_MASK	GENMASK(3, 0)
+#define PL16G_CAP_OFF_USP_16G_TX_PRESET_MASK	GENMASK(7, 4)
+#define PL16G_CAP_OFF_USP_16G_TX_PRESET_SHIFT	4
 
 #define AUX_CLK_FREQ			0xB40
 
@@ -2030,15 +2034,21 @@ static void program_gen3_gen4_eq_presets(struct pcie_port *pp)
 					 + (i * 2), 2, &val);
 			val &= ~CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK;
 			val |= init_preset;
+			val &= ~CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_MASK;
+			val |= (init_preset <<
+				   CAP_SPCIE_CAP_OFF_USP_TX_PRESET0_SHIFT);
 			dw_pcie_cfg_write(pp->dbi_base + CAP_SPCIE_CAP_OFF
-					 + (i* 2), 2, val);
+					 + (i * 2), 2, val);
 
 			dw_pcie_cfg_read(pp->dbi_base + pcie->cap_pl16g_cap_off
 					 + i, 1, &val);
 			val &= ~PL16G_CAP_OFF_DSP_16G_TX_PRESET_MASK;
 			val |= init_preset;
+			val &= ~PL16G_CAP_OFF_USP_16G_TX_PRESET_MASK;
+			val |= (init_preset <<
+				PL16G_CAP_OFF_USP_16G_TX_PRESET_SHIFT);
 			dw_pcie_cfg_write(pp->dbi_base + pcie->cap_pl16g_cap_off
-					 + i , 1, val);
+					 + i, 1, val);
 		}
 	}
 

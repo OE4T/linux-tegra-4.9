@@ -507,27 +507,7 @@ static void disable_aspm_l12(struct tegra_pcie_dw_ep *pcie)
 
 static void program_gen3_gen4_eq_presets(struct tegra_pcie_dw_ep *pcie)
 {
-	int i, init_preset = 5;
 	u32 val = 0;
-	u16 val_16 = 0;
-	u8 val_8 = 0;
-
-	/* program init preset */
-	if (init_preset < 11) {
-		for (i = 0; i < pcie->num_lanes; i++) {
-			val_16 = readw(pcie->dbi_base + CAP_SPCIE_CAP_OFF +
-				       (i * 2));
-			val_16 &= ~CAP_SPCIE_CAP_OFF_DSP_TX_PRESET0_MASK;
-			val_16 |= init_preset;
-			writew(val_16, pcie->dbi_base + CAP_SPCIE_CAP_OFF +
-			       (i * 2));
-
-			val_8 = readb(pcie->dbi_base + PL16G_CAP_OFF + i);
-			val_8 &= ~PL16G_CAP_OFF_DSP_16G_TX_PRESET_MASK;
-			val_8 |= init_preset;
-			writeb(val_8, pcie->dbi_base + PL16G_CAP_OFF + i);
-		}
-	}
 
 	val = readl(pcie->dbi_base + GEN3_RELATED_OFF);
 	val &= ~GEN3_RELATED_OFF_RATE_SHADOW_SEL_MASK;

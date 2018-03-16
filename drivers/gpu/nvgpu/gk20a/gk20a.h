@@ -456,6 +456,10 @@ struct gpu_ops {
 				u32 *count, u32 *offset,
 				u32 max_cnt, u32 base,
 				u32 num_fbpas, u32 stride, u32 mask);
+		int (*add_ctxsw_reg_perf_pma)(struct ctxsw_buf_offset_map_entry *map,
+					struct aiv_list_gk20a *regs,
+					u32 *count, u32 *offset,
+					u32 max_cnt, u32 base, u32 mask);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -373,3 +373,13 @@ int gr_gv100_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
 	*offset = off;
 	return 0;
 }
+
+int gr_gv100_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
+	struct aiv_list_gk20a *regs,
+	u32 *count, u32 *offset,
+	u32 max_cnt, u32 base, u32 mask)
+{
+	*offset = ALIGN(*offset, 256);
+	return gr_gk20a_add_ctxsw_reg_perf_pma(map, regs,
+			count, offset, max_cnt, base, mask);
+}

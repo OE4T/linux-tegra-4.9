@@ -7568,6 +7568,15 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
 	return 0;
 }
 
+int gr_gk20a_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
+	struct aiv_list_gk20a *regs,
+	u32 *count, u32 *offset,
+	u32 max_cnt, u32 base, u32 mask)
+{
+	return add_ctxsw_buffer_map_entries(map, regs,
+			count, offset, max_cnt, base, mask);
+}
+
 /*
  *            PM CTXSW BUFFER LAYOUT :
  *|---------------------------------------------|0x00 <----PM CTXSW BUFFER BASE
@@ -7671,7 +7680,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 		goto cleanup;
 
 	/* Add entries from _LIST_nv_perf_pma_ctx_reg*/
-	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.perf_pma,
+	if (g->ops.gr.add_ctxsw_reg_perf_pma(map, &g->gr.ctx_vars.ctxsw_regs.perf_pma,
 				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
 		goto cleanup;
 

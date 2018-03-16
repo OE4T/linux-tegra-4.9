@@ -701,16 +701,30 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	return 0;
 }
 
+static void throttle_enable(struct gk20a *g, u32 val)
+{
+	gk20a_writel(g, therm_use_a_r(), val);
+}
+
+static u32 throttle_disable(struct gk20a *g)
+{
+	u32 val = gk20a_readl(g, therm_use_a_r());
+	gk20a_writel(g, therm_use_a_r(), 0);
+	return val;
+}
+
 /* GPCPLL bypass methods */
 static int clk_change_pldiv_under_bypass(struct gk20a *g, struct pll *gpll)
 {
-	u32 data, coeff;
+	u32 data, coeff, throt;
 
 	/* put PLL in bypass before programming it */
+	throt = throttle_disable(g);
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_bypass_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+	throttle_enable(g, throt);
 
 	/* change PLDIV */
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
@@ -720,24 +734,28 @@ static int clk_change_pldiv_under_bypass(struct gk20a *g, struct pll *gpll)
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
 	/* put PLL back on vco */
+	throt = throttle_disable(g);
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	nvgpu_udelay(1);
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_vco_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+	throttle_enable(g, throt);
 
 	return 0;
 }
 
 static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 {
-	u32 data, cfg, coeff, timeout;
+	u32 data, cfg, coeff, timeout, throt;
 
 	/* put PLL in bypass before programming it */
+	throt = throttle_disable(g);
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_bypass_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+	throttle_enable(g, throt);
 
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	nvgpu_udelay(1);
@@ -835,10 +853,12 @@ pll_locked:
 	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	/* put PLL back on vco */
+	throt = throttle_disable(g);
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_vco_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
+	throttle_enable(g, throt);
 
 	return 0;
 }
@@ -1095,7 +1115,7 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 
 static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 {
-	u32 cfg, coeff;
+	u32 cfg, coeff, throt;
 	struct clk_gk20a *clk = &g->clk;
 	struct pll gpll = clk->gpc_pll;
 
@@ -1112,10 +1132,12 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 	}
 
 	/* put PLL in bypass before disabling it */
+	throt = throttle_disable(g);
 	cfg = gk20a_readl(g, trim_sys_sel_vco_r());
 	cfg = set_field(cfg, trim_sys_sel_vco_gpc2clk_out_m(),
 			trim_sys_sel_vco_gpc2clk_out_bypass_f());
 	gk20a_writel(g, trim_sys_sel_vco_r(), cfg);
+	throttle_enable(g, throt);
 
 	/* clear SYNC_MODE before disabling PLL */
 	cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());

@@ -443,7 +443,7 @@ fail:
 	return err;
 }
 
-int nvdla_send_postfences(struct nvdla_task *task,
+int nvdla_update_postfences(struct nvdla_task *task,
 			struct nvdla_ioctl_submit_task *user_task)
 {
 	int err = 0, i;
@@ -454,7 +454,7 @@ int nvdla_send_postfences(struct nvdla_task *task,
 		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
 	char fence_name[32];
 
-	nvdla_dbg_fn(dla_pdev, "sending post fences");
+	nvdla_dbg_fn(dla_pdev, "copy post fences for user");
 
 	for (i = 0; i < task->num_postfences; i++) {
 		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD) {
@@ -485,14 +485,14 @@ int nvdla_send_postfences(struct nvdla_task *task,
 	}
 
 	nvdla_dbg_fn(dla_pdev, "copy postfences to user");
-	/* send post fences */
+	/* copy post fences */
 	if (copy_to_user(postfences, task->postfences,
 		(task->num_postfences * sizeof(struct nvdla_fence)))) {
 		err = -EFAULT;
-		nvdla_dbg_err(dla_pdev, "failed to send postfences");
+		nvdla_dbg_err(dla_pdev, "failed to copy postfences");
 		goto fail;
 	}
-	nvdla_dbg_info(dla_pdev, "postfences sent");
+	nvdla_dbg_info(dla_pdev, "postfences copied for user");
 
 fail:
 	return err;
@@ -821,6 +821,22 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		}
 		nvdla_dbg_info(pdev, "task[%d] desc filled", i + 1);
 
+		/* get expected postfences prior to submit */
+		err = nvdla_get_postfences(queue, task);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to get fences%d", i + 1);
+			goto fail_to_get_fences;
+		}
+		nvdla_dbg_info(pdev, "task[%d] got fences", i + 1);
+
+		/* update fences to user */
+		err = nvdla_update_postfences(task, local_tasks + i);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail update postfence%d", i + 1);
+			goto fail_to_update_postfences;
+		}
+		nvdla_dbg_info(pdev, "postfences of task[%d] update", i + 1);
+
 		/* send job to engine through queue framework */
 		err = nvhost_queue_submit(queue, task);
 		if (err) {
@@ -828,22 +844,15 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			goto fail_to_submit_task;
 		}
 		nvdla_dbg_info(pdev, "task[%d] submitted", i + 1);
-
-		/* send fences to user */
-		err = nvdla_send_postfences(task, local_tasks + i);
-		if (err) {
-			nvdla_dbg_err(pdev, "fail to send postfence%d", i + 1);
-			goto fail_to_send_postfences;
-		}
-		nvdla_dbg_info(pdev, "postfences of task[%d] sent", i + 1);
 		kref_put(&task->ref, task_free);
 	}
 	nvdla_dbg_fn(pdev, "Task submitted, done!");
 
 	return 0;
 
-fail_to_send_postfences:
 fail_to_submit_task:
+fail_to_update_postfences:
+fail_to_get_fences:
 fail_to_fill_task_desc:
 fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */

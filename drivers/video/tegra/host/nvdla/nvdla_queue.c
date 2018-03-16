@@ -1039,6 +1039,44 @@ int nvdla_emulator_submit(struct nvhost_queue *queue, struct nvdla_emu_task *tas
 	return 0;
 }
 
+int nvdla_get_postfences(struct nvhost_queue *queue, void *in_task)
+{
+	struct nvdla_task *task = (struct nvdla_task *)in_task;
+	struct platform_device *pdev = queue->pool->pdev;
+	uint32_t counter, task_fence;
+	int i;
+
+	nvdla_dbg_fn(pdev, "");
+
+	/* get task ref */
+	nvdla_task_get(task);
+
+	if (task->fence_counter == 0)
+		task->fence_counter = 1;
+
+	task_fence = nvhost_syncpt_read_maxval(pdev, queue->syncpt_id) +
+			task->fence_counter;
+
+	/* Update postfences for all */
+	counter = task->fence_counter - 1;
+	for (i = 0; i < task->num_postfences; i++) {
+		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SYNCPT) ||
+		    (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD)) {
+			task->postfences[i].syncpoint_index =
+					queue->syncpt_id;
+			task->postfences[i].syncpoint_value =
+					task_fence - counter;
+
+			nvdla_dbg_info(pdev, "[%d] postfence set[%u]:[%u]",
+				i, task->postfences[i].syncpoint_index,
+				task->postfences[i].syncpoint_value);
+
+			counter = counter - 1;
+		}
+	}
+	return 0;
+}
+
 /* Queue management API */
 static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 {
@@ -1050,23 +1088,12 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	struct nvdla_cmd_data cmd_data;
 	uint32_t method_data;
 	uint32_t method_id;
-	uint32_t counter;
-	int i, err = 0;
+	int err = 0;
 	u64 timestamp;
 
 	nvdla_dbg_fn(pdev, "");
 
-	/* get pm refcount */
-	if (nvhost_module_busy(pdev))
-		return -EINVAL;
-
 	mutex_lock(&queue->list_lock);
-
-	/* get task ref and add to list */
-	nvdla_task_get(task);
-
-	if (task->fence_counter == 0)
-		task->fence_counter = 1;
 
 	/* get fence from nvhost for MMIO mode*/
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_MMIO) {
@@ -1101,6 +1128,10 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	/* Report timestamp in TSC ticks. */
 	timestamp = arch_counter_get_cntvct();
 
+	/* get pm refcount */
+	if (nvhost_module_busy(pdev))
+		goto fail_to_poweron;
+
 	/* prepare command for channel submit */
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL) {
 
@@ -1122,24 +1153,6 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	if (err)
 		goto fail_to_register;
 
-	/* Update postfences for all */
-	counter = task->fence_counter - 1;
-	for (i = 0; i < task->num_postfences; i++) {
-		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SYNCPT) ||
-		    (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD)) {
-			task->postfences[i].syncpoint_index =
-					queue->syncpt_id;
-			task->postfences[i].syncpoint_value =
-					task->fence - counter;
-
-			nvdla_dbg_info(pdev, "[%d] postfence set[%u]:[%u]",
-				i, task->postfences[i].syncpoint_index,
-				task->postfences[i].syncpoint_value);
-
-			counter = counter - 1;
-		}
-	}
-
 	nvhost_eventlib_log_submit(queue->pool->pdev,
 			   queue->syncpt_id,
 			   task->fence,
@@ -1154,15 +1167,18 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 		/* submit task to engine */
 		err = nvdla_send_cmd(pdev, &cmd_data);
 		if (err) {
+			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
 			nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
 					task->fence);
-			nvdla_dbg_err(pdev, "task[%p] submit failed", task);
 		}
 	}
-
+	mutex_unlock(&queue->list_lock);
+	return err;
 
 fail_to_register:
 fail_to_channel_submit:
+	nvhost_module_idle(pdev);
+fail_to_poweron:
 	mutex_unlock(&queue->list_lock);
 
 	return err;

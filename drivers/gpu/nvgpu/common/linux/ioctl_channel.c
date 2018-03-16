@@ -977,6 +977,11 @@ static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
 		return -EINVAL;
 	}
 
+	if (g->aggressive_sync_destroy_thresh) {
+		nvgpu_err(g, "sufficient syncpoints not available");
+		return -EINVAL;
+	}
+
 	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->user_sync) {
 		nvgpu_mutex_release(&ch->sync_lock);

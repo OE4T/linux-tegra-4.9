@@ -93,6 +93,7 @@
 #define   USB2_TRK_START_TIMER(x)		(((x) & 0x7f) << 12)
 #define   USB2_TRK_DONE_RESET_TIMER(x)		(((x) & 0x7f) << 19)
 #define   USB2_PD_TRK				(1 << 26)
+#define   USB2_TRK_COMPLETED			(1 << 31)
 
 #define USB2_VBUS_ID				(0x360)
 #define   VBUS_OVERRIDE				(1 << 14)
@@ -296,6 +297,10 @@ static void tegra194_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 			dev_warn(padctl->dev, "failed to enable USB2 trk clock\n");
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+	reg |= USB2_TRK_COMPLETED;
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	reg &= ~USB2_TRK_START_TIMER(~0);
 	reg |= USB2_TRK_START_TIMER(0x1e);
 	reg &= ~USB2_TRK_DONE_RESET_TIMER(~0);
@@ -314,13 +319,20 @@ static void tegra194_utmi_bias_pad_power_on(struct tegra_xusb_padctl *padctl)
 	reg &= ~USB2_PD_TRK;
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 
+	udelay(1);
+
+	padctl_readl_poll(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1,
+		USB2_TRK_COMPLETED, USB2_TRK_COMPLETED, 100);
+
+	if (!padctl->is_xhci_iov)
+		clk_disable_unprepare(priv->usb2_trk_clk);
+
 	mutex_unlock(&padctl->lock);
 }
 
 static void tegra194_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 {
 	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
-	u32 reg;
 
 	mutex_lock(&padctl->lock);
 
@@ -333,13 +345,6 @@ static void tegra194_utmi_bias_pad_power_off(struct tegra_xusb_padctl *padctl)
 		mutex_unlock(&padctl->lock);
 		return;
 	}
-
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
-	reg |= USB2_PD_TRK;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
-
-	if (!padctl->is_xhci_iov)
-		clk_disable_unprepare(priv->usb2_trk_clk);
 
 	mutex_unlock(&padctl->lock);
 }

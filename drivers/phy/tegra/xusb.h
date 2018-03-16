@@ -16,6 +16,7 @@
 #define __PHY_TEGRA_XUSB_H
 
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/usb/ch9.h>
@@ -516,6 +517,24 @@ static inline u32 padctl_readl(struct tegra_xusb_padctl *padctl,
 	u32 value = readl(padctl->regs + offset);
 	dev_dbg(padctl->dev, "%08lx > %08x\n", offset, value);
 	return value;
+}
+
+static inline u32 padctl_readl_poll(struct tegra_xusb_padctl *padctl,
+	unsigned long offset, u32 val, u32 mask, int us)
+{
+	u32 regval;
+	int err;
+
+	err = readl_poll_timeout_atomic(padctl->regs + offset, regval,
+					 (regval & mask) == val, 1, us);
+	dev_dbg(padctl->dev, "%08lx poll > %08x, %d\n", offset,
+		regval, err);
+	if (err) {
+		dev_err(padctl->dev, "%08lx poll timeout > %08x\n", offset,
+			regval);
+	}
+
+	return err;
 }
 
 struct tegra_xusb_lane *tegra_xusb_find_lane(struct tegra_xusb_padctl *padctl,

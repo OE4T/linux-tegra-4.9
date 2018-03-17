@@ -1018,7 +1018,7 @@ int vidioc_s_fmt_vid_out_overlay(struct file *file, void *priv,
 		new_bitmap = memdup_user(win->bitmap, bitmap_size);
 
 		if (IS_ERR(new_bitmap))
-			return PTR_ERR(new_bitmap);
+			return (int)PTR_ERR(new_bitmap);
 	}
 
 	dev->overlay_out_top = win->w.top;
@@ -1097,7 +1097,6 @@ int vivid_vid_out_s_fbuf(struct file *file, void *fh,
 	default:
 		return -EINVAL;
 	}
-	dev->fbuf_out_flags &= ~(chroma_flags | alpha_flags);
 	dev->fbuf_out_flags = a->flags & (chroma_flags | alpha_flags);
 	return 0;
 }

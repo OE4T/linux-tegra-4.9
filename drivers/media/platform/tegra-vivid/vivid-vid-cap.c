@@ -882,10 +882,14 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 			if (webcam_sizes[i].width == mp->width &&
 					webcam_sizes[i].height == mp->height)
 				break;
-		dev->webcam_size_idx = i;
-		if (dev->webcam_ival_idx >= 2 * (VIVID_WEBCAM_SIZES - i))
-			dev->webcam_ival_idx = 2 * (VIVID_WEBCAM_SIZES - i) - 1;
-		vivid_update_format_cap(dev, false);
+		if (i < ARRAY_SIZE(webcam_sizes)) {
+			u32 max_idx = 2 * (VIVID_WEBCAM_SIZES - i);
+
+			dev->webcam_size_idx = i;
+			if (dev->webcam_ival_idx >= max_idx)
+				dev->webcam_ival_idx = max_idx - 1;
+			vivid_update_format_cap(dev, false);
+		}
 	} else {
 		struct v4l2_rect r = { 0, 0, mp->width, mp->height };
 

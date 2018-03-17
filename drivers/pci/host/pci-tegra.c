@@ -3177,9 +3177,21 @@ static int tegra_pcie_get_xbar_config(struct tegra_pcie *pcie, u32 lanes,
 {
 	struct device_node *np = pcie->dev->of_node;
 
-	if (of_device_is_compatible(np, "nvidia,tegra124-pcie") ||
-		of_device_is_compatible(np, "nvidia,tegra210-pcie") ||
-		of_device_is_compatible(np, "nvidia,tegra210b01-pcie")) {
+	if (of_device_is_compatible(np, "nvidia,tegra210b01-pcie")) {
+		switch (lanes) {
+		case 0x0104:
+			dev_info(pcie->dev, "4x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1;
+			return 0;
+		default:
+			dev_info(pcie->dev, "wrong configuration updated in DT, "
+				"switching to default 4x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1;
+			update_rp_lanes(pcie, 0x0104);
+			return 0;
+		}
+	} else if (of_device_is_compatible(np, "nvidia,tegra124-pcie") ||
+		of_device_is_compatible(np, "nvidia,tegra210-pcie")) {
 		switch (lanes) {
 		case 0x0104:
 			dev_info(pcie->dev, "4x1, 1x1 configuration\n");

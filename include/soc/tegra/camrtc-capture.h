@@ -1027,9 +1027,19 @@ struct stats_surface {
  *
  * @param frame_timeout: frame wait time
  *
- * @param prefence_count: Number of input pre-fences for given capture request.
+ * @param num_inputfences: (renamed prefence_count (DEPRECATED)):
+ *                  Number of inputfences for given capture request.
+ *                  These fences are exclusively associated with ISP input ports and
+ *                  they support subframe sychronization.
  *
- * @param progress_prefence:  progress syncpoint for each input pre-fences.
+ * @param inputfences: (renamed progress_prefence (DEPRECATED)):
+ *                  progress syncpoint for each one of inputfences.
+ *
+ * @param num_prefences: Number of traditional prefences for given capture request.
+ *                  They are generic, so can be used for any pre-condition but do not
+ *                  support subframe synchronization.
+ *
+ * @param prefences: syncpoint for each one of prefences.
  *
  * @param status: capture status written by RTCPU.
  *
@@ -1141,17 +1151,31 @@ struct isp_capture_descriptor {
 
 	uint32_t frame_timeout;	 /**< Timeout in microseconds */
 
-	uint32_t prefence_count;
-	// TODO
-	// Do we need syncpt increment at slice boundaries? TBD.
-	// If we do, then change this array to 2D array.
-	struct syncpoint_info progress_prefence[ISP_MAX_INPUT_SURFACES];
+	union {
+		/* field renamed */
+		uint32_t prefence_count CAMRTC_DEPRECATED;
+		uint32_t num_inputfences;
+	};
+
+	union {
+		/* array renamed */
+		struct syncpoint_info progress_prefence[ISP_MAX_INPUT_SURFACES] CAMRTC_DEPRECATED;
+		struct syncpoint_info inputfences[ISP_MAX_INPUT_SURFACES];
+	};
+
+	/* TBD: Decide exact max count */
+#define ISP_MAX_PREFENCES ISP_MAX_OUTPUTS + ISP_MAX_INPUT_SURFACES
+
+	uint32_t num_prefences;
+	uint32_t __pad_prefences;
+
+	struct syncpoint_info prefences[ISP_MAX_PREFENCES];
 
 	/** Result record – written by RTCPU */
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[12];
+	uint32_t __pad[6];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**

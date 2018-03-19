@@ -210,6 +210,10 @@
 		status = "disabled";
 	};
 
+	cv-noc@14040000 {
+		status = "disabled";
+	};
+
 	/* Disable cpufreq, so that server partitions accidently don't invoke
 	  cpufreq driver(in case if present in server code). In bpmp-server(which
 	  owns cpufreq)DT, cpufreq DT node will be enabled explicitly.

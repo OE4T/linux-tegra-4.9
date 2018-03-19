@@ -2181,6 +2181,13 @@
 		status = "disabled";
 	};
 
+	cv-noc@14040000 {
+		compatible = "nvidia,tegra194-CV-NOC";
+		reg = <0x0 0x14040000 0x0 0x1000>;
+		interrupts = <0 238 4>, <0 239 4>;
+		status = "disabled";
+	};
+
 	axi2apb@2390000 {
 		compatible = "nvidia,tegra194-AXI2APB-bridge";
 		reg = <0x0 0x02390000 0x0 0x1000>,

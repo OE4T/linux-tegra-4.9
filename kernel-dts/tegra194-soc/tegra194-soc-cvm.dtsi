@@ -275,6 +275,10 @@
 		status = "okay";
 	};
 
+	cv-noc@14040000 {
+		status = "okay";
+	};
+
 	axi2apb@2390000 {
 		status = "okay";
 	};

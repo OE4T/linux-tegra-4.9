@@ -165,6 +165,16 @@ static void scenoc_parse_routeid
 	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 8, 0);
 }
 
+static void cvnoc_parse_routeid
+		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
+{
+	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 18, 16);
+	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 15, 12);
+	noc_trans_info->targ_subrange = get_cbb_routeid_targsubrange
+							(routeid, 11, 7);
+	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 6, 0);
+}
+
 
 static void cbb_errlogger_faulten(void __iomem *addr)
 {
@@ -619,6 +629,25 @@ static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
 	.is_ax2apb_bridge_connected = 1
 };
 
+static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
+	.name   = "CV-NOC",
+	.errvld = cbb_errlogger_errvld,
+	.faulten = cbb_errlogger_faulten,
+	.stallen = cbb_errlogger_stallen,
+	.errclr = cbb_errlogger_errclr,
+	.tegra_cbb_master_id = t194_master_id,
+	.noc_aperture = t194_cvnoc_aperture_lookup,
+	.max_noc_aperture = ARRAY_SIZE(t194_cvnoc_aperture_lookup),
+	.tegra_noc_routeid_initflow = t194_cvnoc_routeid_initflow,
+	.tegra_noc_routeid_targflow = t194_cvnoc_routeid_targflow,
+	.tegra_noc_parse_routeid = cvnoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 1,
+	.is_clk_rst = true,
+	.is_cluster_probed = is_nvcvnas_probed,
+	.tegra_noc_clk_enable = nvcvnas_busy,
+	.tegra_noc_clk_disable = nvcvnas_idle
+};
+
 static const struct of_device_id axi2apb_match[] = {
 	{ .compatible = "nvidia,tegra194-AXI2APB-bridge", },
 	{},
@@ -635,6 +664,8 @@ static struct of_device_id tegra_cbb_match[] = {
 		.data = &tegra194_rce_noc_data},
 	{.compatible    = "nvidia,tegra194-SCE-NOC",
 		.data = &tegra194_sce_noc_data},
+	{.compatible    = "nvidia,tegra194-CV-NOC",
+		.data = &tegra194_cv_noc_data},
 	{},
 };
 
@@ -798,6 +829,16 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	if (bdata->is_clk_rst) {
+		if (bdata->is_cluster_probed())
+			bdata->tegra_noc_clk_enable();
+		else {
+			dev_info(&pdev->dev, "defer probe as %s not probed yet",
+								bdata->name);
+			return -EPROBE_DEFER;
+		}
+	}
+
 	res_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res_base) {
 		dev_err(&pdev->dev, "Could not find base address");
@@ -881,6 +922,9 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 
 	/* set “FaultEn=1” to enable error reporting signal “Fault” */
 	errlog->faulten(errlog->vaddr);
+
+	if ((bdata->is_clk_rst) && (bdata->is_cluster_probed()))
+		bdata->tegra_noc_clk_disable();
 
 	return 0;
 }

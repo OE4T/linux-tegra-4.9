@@ -155,5 +155,9 @@ struct tegra_cbb_noc_data {
 	char		**tegra_noc_routeid_targflow;
 	char		**tegra_cbb_master_id;
 	bool		is_ax2apb_bridge_connected;
+	bool		is_clk_rst;
+	int		(*is_cluster_probed)(void);
+	int		(*tegra_noc_clk_enable)(void);
+	int		(*tegra_noc_clk_disable)(void);
 };
 

@@ -406,6 +406,14 @@ size_t nvcvnas_get_cvsram_size(void)
 }
 EXPORT_SYMBOL(nvcvnas_get_cvsram_size);
 
+int is_nvcvnas_probed(void)
+{
+	if (cvnas_plat_dev && dev_get_drvdata(&cvnas_plat_dev->dev))
+		return 1;
+	else
+		return 0;
+}
+
 static const struct of_device_id nvcvnas_of_ids[] = {
 	{ .compatible = "nvidia,tegra-cvnas", .data = (void *)false, },
 	{ .compatible = "nvidia,tegra-cvnas-hv", .data = (void *)true, },

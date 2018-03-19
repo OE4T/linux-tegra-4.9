@@ -523,7 +523,7 @@ struct tegra_xudc {
 	struct regulator_bulk_data *supplies;
 
 	struct clk **clks;
-	unsigned int num_clks;
+	int num_clks;
 	bool clk_enabled;
 
 	bool device_mode;
@@ -3570,7 +3570,7 @@ static int tegra_xudc_clk_init(struct tegra_xudc *xudc)
 	xudc->num_clks = of_count_phandle_with_args(dev->of_node, "clocks",
 						    "#clock-cells");
 	if (xudc->num_clks <= 0)
-		return 0;
+		return -EINVAL;
 
 	xudc->clks = devm_kcalloc(dev, xudc->num_clks, sizeof(*xudc->clks),
 				  GFP_KERNEL);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1171,6 +1171,24 @@ static int bmp_batch(void *client, int snsr_id, int flags,
 	return ret;
 }
 
+static int bmp_batch_read(void *client, int snsr_id,
+			  unsigned int *period_us, unsigned int *timeout_us)
+{
+	struct bmp_state *st = (struct bmp_state *)client;
+	int ret = 0;
+
+	if (period_us)
+		*period_us = st->period_us;
+	if (timeout_us)
+		*timeout_us = 0;
+#if BMP_NVI_MPU_SUPPORT
+	if (st->mpu_en)
+		ret = nvi_mpu_batch_read(st->port_id[RD],
+					 period_us, timeout_us);
+#endif /* BMP_NVI_MPU_SUPPORT */
+	return ret;
+}
+
 static int bmp_flush(void *client, int snsr_id)
 {
 	int ret = -EINVAL;
@@ -1303,6 +1321,7 @@ static int bmp_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev bmp_fn_dev = {
 	.enable				= bmp_enable,
 	.batch				= bmp_batch,
+	.batch_read			= bmp_batch_read,
 	.flush				= bmp_flush,
 	.resolution			= bmp_resolution,
 	.reset				= bmp_reset,

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -904,6 +904,24 @@ static int akm_batch(void *client, int snsr_id, int flags,
 	return ret;
 }
 
+static int akm_batch_read(void *client, int snsr_id,
+			  unsigned int *period_us, unsigned int *timeout_us)
+{
+	struct akm_state *st = (struct akm_state *)client;
+	int ret = 0;
+
+	if (period_us)
+		*period_us = st->period_us;
+	if (timeout_us)
+		*timeout_us = 0;
+#if AKM_NVI_MPU_SUPPORT
+	if (st->port_id[RD] >= 0)
+		ret = nvi_mpu_batch_read(st->port_id[RD],
+					 period_us, timeout_us);
+#endif /* AKM_NVI_MPU_SUPPORT */
+	return ret;
+}
+
 static int akm_flush(void *client, int snsr_id)
 {
 	struct akm_state *st = (struct akm_state *)client;
@@ -1080,6 +1098,7 @@ static int akm_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev akm_fn_dev = {
 	.enable				= akm_enable,
 	.batch				= akm_batch,
+	.batch_read			= akm_batch_read,
 	.flush				= akm_flush,
 	.resolution			= akm_resolution,
 	.reset				= akm_reset,

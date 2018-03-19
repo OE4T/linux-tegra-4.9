@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -430,20 +430,27 @@ static int nvi_dd_odr(struct nvi_state *st, struct nvi_dmp_dev *dd)
 		return 0;
 
 	if (dd->dev == DEV_AUX)
-		period_us = st->aux.port[dd->aux_port].period_us;
+		period_us = st->aux.port[dd->aux_port].period_us_req;
 	else
-		period_us = st->snsr[dd->dev].period_us;
+		period_us = st->snsr[dd->dev].period_us_req;
 	if (period_us) {
 		odr_cfg = period_us / MPU_DMP_PERIOD_US;
-		if (odr_cfg)
+		period_us = MPU_DMP_PERIOD_US;
+		if (odr_cfg) {
+			period_us *= odr_cfg;
 			odr_cfg--;
+		}
 	} else {
+		period_us = MPU_DMP_PERIOD_US;
 		odr_cfg = 0;
 	}
-	if (dd->dev == DEV_AUX)
+	if (dd->dev == DEV_AUX) {
 		st->aux.port[dd->aux_port].odr = odr_cfg;
-	else
+		st->aux.port[dd->aux_port].period_us_rd = period_us;
+	} else {
 		st->snsr[dd->dev].odr = odr_cfg;
+		st->snsr[dd->dev].period_us_rd = period_us;
+	}
 	ret = nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
 	ret |= nvi_mem_wr_be(st, dd->odr_cfg, 2, odr_cfg);
 	ret |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -356,8 +356,9 @@ struct aux_port {
 	struct nvi_mpu_port nmp;
 	struct nvi_aux_port_dmp_dev *dd;
 	unsigned int ext_data_offset;
-	unsigned int period_us;
 	unsigned int timeout_us;
+	unsigned int period_us_req;
+	unsigned int period_us_rd;
 	unsigned int odr;
 	s64 ts_last;
 	bool ts_reset;
@@ -436,10 +437,11 @@ struct nvi_snsr {
 	int buf_shft;
 	unsigned int buf_n;
 	unsigned int enable;
-	unsigned int period_us;
 	unsigned int timeout_us;
-	unsigned int sts;
+	unsigned int period_us_req;
+	unsigned int period_us_rd;
 	unsigned int odr;
+	unsigned int sts;
 	unsigned int ts_n;
 	s64 ts_push_delay;
 	s64 push_delay_ns;

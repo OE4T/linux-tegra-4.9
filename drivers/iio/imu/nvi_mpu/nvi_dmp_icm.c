@@ -1,4 +1,4 @@
-/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -892,7 +892,7 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 	/* set source's period_us_req[] to fastest enabled sensor */
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
 		dd = &nvi_dmp_devs[i];
-		if ((!st->snsr[dd->dev].period_us) || !(irq_msk &
+		if ((!st->snsr[dd->dev].period_us_req) || !(irq_msk &
 							(1 << dd->dev)))
 			/* sensor not enabled or non-valid period */
 			continue;
@@ -905,9 +905,10 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 				/* sensor doesn't use this source */
 				continue;
 
-			if (st->snsr[dd->dev].period_us < period_us_req[src])
+			if (st->snsr[dd->dev].period_us_req <
+							    period_us_req[src])
 				period_us_req[src] =
-						   st->snsr[dd->dev].period_us;
+					       st->snsr[dd->dev].period_us_req;
 			/* override above speeds with any faster defaults */
 			if (dd->period_us_dflt) {
 				if (dd->period_us_dflt < period_us_req[src])
@@ -996,9 +997,9 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 				/* AUX sensor not enabled */
 				continue;
 
-			period_us = st->aux.port[dd->aux_port].period_us;
+			period_us = st->aux.port[dd->aux_port].period_us_req;
 		} else {
-			period_us = st->snsr[dd->dev].period_us;
+			period_us = st->snsr[dd->dev].period_us_req;
 		}
 
 		if (st->bm_timeout_us) {
@@ -1018,20 +1019,27 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 #if ICM_DMP_FW_VER == 2
 			/* everything is off of SRC_GYR for v.2 */
 			odr_cfg = period_us / st->src[SRC_GYR].period_us_src;
+			period_us = st->src[SRC_GYR].period_us_src;
 #else /* ICM_DMP_FW_VER < 2 */
 			odr_cfg = period_us /
 					    st->src[dd->odr_src].period_us_src;
+			period_us = st->src[dd->odr_src].period_us_src;
 #endif /* ICM_DMP_FW_VER */
-			if (odr_cfg)
+			if (odr_cfg) {
+				period_us *= odr_cfg;
 				odr_cfg--;
+			}
 		} else {
 			/* data is not sent so timing is synced to src */
 			odr_cfg = 0;
 		}
-		if (dd->dev == DEV_AUX)
+		if (dd->dev == DEV_AUX) {
 			st->aux.port[dd->aux_port].odr = odr_cfg;
-		else
+			st->aux.port[dd->aux_port].period_us_rd = period_us;
+		} else {
 			st->snsr[dd->dev].odr = odr_cfg;
+			st->snsr[dd->dev].period_us_rd = period_us;
+		}
 		ret |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
 		ret |= nvi_mem_wr_be(st, dd->odr_cfg, 2, odr_cfg);
 		ret |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);

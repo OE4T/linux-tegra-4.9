@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -34,7 +34,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(343)
+#define NVI_DRIVER_VERSION		(345)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1136,10 +1136,10 @@ static int nvi_pm(struct nvi_state *st, const char *fn, int pm_req)
 			pm = NVI_PM_ON;
 		} else if ((st->en_msk & ((1 << EN_LP) |
 					  MSK_DEV_ALL)) == MSK_PM_LP) {
-			if (st->snsr[DEV_ACC].period_us >=
+			if (st->snsr[DEV_ACC].period_us_req >=
 					     st->snsr[DEV_ACC].cfg.thresh_hi) {
 				for (lp = 0; lp < st->hal->lp_tbl_n; lp++) {
-					if (st->snsr[DEV_ACC].period_us >=
+					if (st->snsr[DEV_ACC].period_us_req >=
 							   st->hal->lp_tbl[lp])
 						break;
 				}
@@ -1430,9 +1430,9 @@ static int nvi_period_src(struct nvi_state *st, int src)
 	for (i = 0; dev_msk; i++) {
 		if (dev_msk & (1 << i)) {
 			dev_msk &= ~(1 << i);
-			if (st->snsr[i].enable && st->snsr[i].period_us) {
-				if (st->snsr[i].period_us < period_us)
-					period_us = st->snsr[i].period_us;
+			if (st->snsr[i].enable && st->snsr[i].period_us_req) {
+				if (st->snsr[i].period_us_req < period_us)
+					period_us = st->snsr[i].period_us_req;
 				enabled = true;
 			}
 		}
@@ -1459,15 +1459,16 @@ int nvi_period_aux(struct nvi_state *st)
 	unsigned int timeout_us = -1;
 	unsigned int msk_en;
 	unsigned int i;
-	int ret;
+	int ret = 0;
 
 	msk_en = st->snsr[DEV_AUX].enable | st->aux.dmp_en_msk;
 	for (i = 0; msk_en; i++) {
 		if (msk_en & (1 << i)) {
 			msk_en &= ~(1 << i);
-			if (st->aux.port[i].period_us) {
-				if (st->aux.port[i].period_us < period_us)
-					period_us = st->aux.port[i].period_us;
+			if (st->aux.port[i].period_us_req) {
+				if (st->aux.port[i].period_us_req < period_us)
+					period_us =
+						 st->aux.port[i].period_us_req;
 				if (st->aux.port[i].timeout_us < timeout_us)
 					timeout_us =
 						    st->aux.port[i].timeout_us;
@@ -1477,10 +1478,13 @@ int nvi_period_aux(struct nvi_state *st)
 	}
 
 	if (enabled) {
-		st->snsr[DEV_AUX].period_us = period_us;
 		st->snsr[DEV_AUX].timeout_us = timeout_us;
+		if (st->snsr[DEV_AUX].period_us_req != period_us) {
+			st->snsr[DEV_AUX].period_us_req = period_us;
+			ret |= 1; /* flag something changed */
+		}
 	}
-	ret = nvi_period_src(st, st->hal->dev[DEV_AUX]->src);
+	ret |= nvi_period_src(st, st->hal->dev[DEV_AUX]->src);
 	ret |= nvi_timeout(st);
 	return ret;
 }
@@ -1505,6 +1509,8 @@ static int nvi_en(struct nvi_state *st)
 {
 	bool dmp_en = false;
 	unsigned int i;
+	unsigned int us;
+	int src;
 	int ret;
 	int ret_t = 0;
 
@@ -1594,8 +1600,26 @@ static int nvi_en(struct nvi_state *st)
 				st->aux.port[i].odr = 0;
 		}
 
+		ret = 0;
 		for (i = 0; i < st->hal->src_n; i++)
-			ret_t |= st->hal->src[i].fn_period(st);
+			ret |= st->hal->src[i].fn_period(st);
+
+		if (ret) {
+			ret_t |= ret;
+		} else {
+			for (i = 0; i < DEV_N; i++) {
+				src = st->hal->dev[i]->src;
+				if (src < 0 || src >= SRC_N)
+					continue;
+
+				us = st->src[src].period_us_src;
+				st->snsr[i].period_us_rd = us;
+			}
+
+			us = st->src[st->hal->dev[DEV_AUX]->src].period_us_src;
+			for (i = 0; i < AUX_PORT_IO; i++)
+				st->aux.port[i].period_us_rd = us;
+		}
 
 		if (st->snsr[DEV_ACC].enable) {
 			ret = st->hal->fn->en_acc(st);
@@ -1662,7 +1686,7 @@ static void nvi_aux_dbg(struct nvi_state *st, char *tag, int val)
 		/* NS = nmp structure */
 		pr_info("NS: P%d AD=%x RG=%x CL=%x DO=%x MS=%u US=%u SB=%x\n",
 			i, n->addr, n->reg, n->ctrl, n->data_out, n->delay_ms,
-			st->aux.port[i].period_us, n->shutdown_bypass);
+			st->aux.port[i].period_us_rd, n->shutdown_bypass);
 		p = &st->aux.port[i];
 		/* PS = port structure */
 		pr_info("PS: P%d EDO=%u ODR=%u DMP_CTRL=%x EN=%x HWDOUT=%x\n",
@@ -1947,7 +1971,7 @@ static int nvi_aux_port_alloc(struct nvi_state *st,
 	memcpy(&st->aux.port[port].nmp, nmp, sizeof(struct nvi_mpu_port));
 	st->aux.port[port].dd = dd;
 	st->aux.port[port].nmp.ctrl &= ~BIT_SLV_EN;
-	st->aux.port[port].period_us = st->aux.port[port].nmp.period_us;
+	st->aux.port[port].period_us_req = st->aux.port[port].nmp.period_us;
 	return port;
 }
 
@@ -2049,7 +2073,7 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 
 	/* enable it at fastest speed */
 	st->aux.port[AUX_PORT_IO].nmp.delay_ms = 0;
-	st->aux.port[AUX_PORT_IO].period_us =
+	st->aux.port[AUX_PORT_IO].period_us_req =
 			     st->src[st->hal->dev[DEV_AUX]->src].period_us_min;
 	ret = nvi_user_ctrl_en(st, __func__, false, false, false, false);
 	ret |= nvi_aux_port_enable(st, 1 << AUX_PORT_IO, true);
@@ -2328,7 +2352,7 @@ int nvi_mpu_batch(int port, unsigned int period_us, unsigned int timeout_us)
 			/* sensor not supported by DMP */
 			ret = -EINVAL;
 		} else {
-			st->aux.port[port].period_us = period_us;
+			st->aux.port[port].period_us_req = period_us;
 			st->aux.port[port].timeout_us = timeout_us;
 			ret = nvi_period_aux(st);
 			if (st->en_msk & (1 << DEV_DMP) &&
@@ -2349,6 +2373,36 @@ int nvi_mpu_batch(int port, unsigned int period_us, unsigned int timeout_us)
 	return ret;
 }
 EXPORT_SYMBOL(nvi_mpu_batch);
+
+int nvi_mpu_batch_read(int port,
+		       unsigned int *period_us, unsigned int *timeout_us)
+{
+	struct nvi_state *st = nvi_state_local;
+	int ret;
+
+	if (st != NULL) {
+		if (st->sts & NVI_DBG_SPEW_AUX)
+			pr_info("%s port %d: p=%p t=%p\n",
+				__func__, port, period_us, timeout_us);
+	} else {
+		pr_debug("%s port %d: p=%p t=%p ERR -EAGAIN\n",
+			__func__, port, period_us, timeout_us);
+		return -EAGAIN;
+	}
+
+	nvi_mutex_lock(st);
+	ret = nvi_aux_mpu_call_pre(st, port);
+	if (!ret) {
+		if (timeout_us)
+			*timeout_us = 0;
+		if (period_us)
+			*period_us = st->aux.port[port].period_us_rd;
+		ret = nvi_aux_mpu_call_post(st, "nvi_mpu_batch_read=", ret);
+	}
+	nvi_mutex_unlock(st);
+	return ret;
+}
+EXPORT_SYMBOL(nvi_mpu_batch_read);
 
 int nvi_mpu_flush(int port)
 {
@@ -3245,7 +3299,7 @@ static int nvi_enable(void *client, int snsr_id, int enable)
 }
 
 static int nvi_batch(void *client, int snsr_id, int flags,
-		     unsigned int period, unsigned int timeout)
+		     unsigned int period_us, unsigned int timeout_us)
 {
 	struct nvi_state *st = (struct nvi_state *)client;
 	int ret = 0;
@@ -3255,26 +3309,26 @@ static int nvi_batch(void *client, int snsr_id, int flags,
 	 */
 	if (SENSOR_FLAG_ONE_SHOT_MODE == (st->snsr[snsr_id].cfg.flags &
 					  REPORTING_MODE_MASK)) {
-		st->snsr[snsr_id].cfg.delay_us_min = period;
-		st->snsr[snsr_id].cfg.delay_us_max = timeout;
+		st->snsr[snsr_id].cfg.delay_us_min = period_us;
+		st->snsr[snsr_id].cfg.delay_us_max = timeout_us;
 		st->snsr[snsr_id].cfg.report_n = flags;
 		if (st->en_msk & (1 << DEV_DMP))
 			ret = st->hal->dmp->fn_dev_init(st, snsr_id);
 		return ret;
 	}
 
-	if (timeout && !st->snsr[snsr_id].cfg.fifo_max_evnt_cnt)
+	if (timeout_us && !st->snsr[snsr_id].cfg.fifo_max_evnt_cnt)
 		return -EINVAL;
 
 	if (snsr_id == DEV_TMP)
 		return 0;
 
-	if (period == st->snsr[snsr_id].period_us &&
-				       timeout == st->snsr[snsr_id].timeout_us)
+	if (period_us == st->snsr[snsr_id].period_us_req &&
+				    timeout_us == st->snsr[snsr_id].timeout_us)
 		return 0;
 
-	st->snsr[snsr_id].period_us = period;
-	st->snsr[snsr_id].timeout_us = timeout;
+	st->snsr[snsr_id].period_us_req = period_us;
+	st->snsr[snsr_id].timeout_us = timeout_us;
 	if (!st->snsr[snsr_id].enable)
 		return 0;
 
@@ -3293,6 +3347,18 @@ static int nvi_batch(void *client, int snsr_id, int flags,
 	}
 
 	return ret;
+}
+
+static int nvi_batch_read(void *client, int snsr_id,
+			  unsigned int *period_us, unsigned int *timeout_us)
+{
+	struct nvi_state *st = (struct nvi_state *)client;
+
+	if (timeout_us)
+		*timeout_us = 0;
+	if (period_us)
+		*period_us = st->snsr[snsr_id].period_us_rd;
+	return 0;
 }
 
 static int nvi_flush(void *client, int snsr_id)
@@ -3595,11 +3661,15 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 				      st->snsr[i].usr_cfg);
 			t += snprintf(buf + t, PAGE_SIZE - t, "enable=%x\n",
 				      st->snsr[i].enable);
-			t += snprintf(buf + t, PAGE_SIZE - t, "period_us=%u\n",
-				      st->snsr[i].period_us);
 			t += snprintf(buf + t, PAGE_SIZE - t,
 				      "timeout_us=%u\n",
 				      st->snsr[i].timeout_us);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_req=%u\n",
+				      st->snsr[i].period_us_req);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_rd=%u\n",
+				      st->snsr[i].period_us_rd);
 			t += snprintf(buf + t, PAGE_SIZE - t, "odr=%u\n",
 				      st->snsr[i].odr);
 			t += snprintf(buf + t, PAGE_SIZE - t, "ts_last=%lld\n",
@@ -3748,6 +3818,7 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev nvi_nvs_fn = {
 	.enable				= nvi_enable,
 	.batch				= nvi_batch,
+	.batch_read			= nvi_batch_read,
 	.flush				= nvi_flush,
 	.max_range			= nvi_max_range,
 	.offset				= nvi_offset,

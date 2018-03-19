@@ -1,6 +1,6 @@
 /*
 * Copyright (C) 2012 Invensense, Inc.
-* Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
 *
 * This software is licensed under the terms of the GNU General Public
 * License version 2, as published by the Free Software Foundation, and
@@ -378,6 +378,22 @@ int nvi_mpu_data_out(int port, u8 data_out);
  *            - -EINVAL: timeout_us not supported if > 0.
  */
 int nvi_mpu_batch(int port, unsigned int period_us, unsigned int timeout_us);
+
+/**
+ * batch read.
+ * @param port
+ * @param period_us pointer
+ * @param timeout_us pointer
+ * @return int error
+ *            Possible errors are:
+ *            - -EAGAIN: MPU is not initialized yet.
+ *            - -EPERM: MPU is shutdown.  MPU API won't be
+ *                 available until a system restart.
+ *            - -EBUSY: MPU is busy with another request.
+ *            - -EINVAL: timeout_us not supported if > 0.
+ */
+int nvi_mpu_batch_read(int port,
+		       unsigned int *period_us, unsigned int *timeout_us);
 
 /**
  * batch flush.

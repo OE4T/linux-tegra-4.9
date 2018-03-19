@@ -255,23 +255,23 @@
 		status = "okay";
 	};
 
-	cbbnocaxi@2300000 {
+	cbb-noc@2300000 {
 		status = "okay";
 	};
 
-	cbbnocaxi@C600000 {
+	aon-noc@C600000 {
 		status = "okay";
 	};
 
-	cbbnocaxi@D600000 {
+	bpmp-noc@D600000 {
 		status = "okay";
 	};
 
-	cbbnocaxi@BE00000 {
+	rce-noc@BE00000 {
 		status = "okay";
 	};
 
-	cbbnocaxi@B600000 {
+	sce-noc@B600000 {
 		status = "okay";
 	};
 

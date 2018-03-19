@@ -90,7 +90,7 @@
 		reg = <0x0 0x80000000 0x0 0xc0000000>;
 	};
 
-	cbbnocaxi@2300000 {
+	cbb-noc@2300000 {
 		status = "okay";
 	};
 

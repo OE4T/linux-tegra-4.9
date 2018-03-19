@@ -91,9 +91,11 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	ret = gk20a_channel_suspend(g);
-	if (ret)
-		return ret;
+	if (g->ops.fifo.channel_suspend) {
+		ret = g->ops.fifo.channel_suspend(g);
+		if (ret)
+			return ret;
+	}
 
 	/* disable elpg before gr or fifo suspend */
 	if (g->ops.pmu.is_pmu_supported(g))
@@ -330,7 +332,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 #endif
 
-	gk20a_channel_resume(g);
+	if (g->ops.fifo.channel_resume)
+		g->ops.fifo.channel_resume(g);
 
 	nvgpu_init_mm_ce_context(g);
 

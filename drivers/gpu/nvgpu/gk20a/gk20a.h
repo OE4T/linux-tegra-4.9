@@ -633,6 +633,8 @@ struct gpu_ops {
 						bool *verbose, u32 *ms);
 		bool (*check_ch_ctxsw_timeout)(struct channel_gk20a *ch,
 						bool *verbose, u32 *ms);
+		int (*channel_suspend)(struct gk20a *g);
+		int (*channel_resume)(struct gk20a *g);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);

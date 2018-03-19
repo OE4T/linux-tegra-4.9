@@ -1930,7 +1930,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 			"Client registration for eMC Successful\n");
 
 
-	tegra_host->rst = devm_reset_control_get(&pdev->dev, "sdmmc");
+	tegra_host->rst = devm_reset_control_get(&pdev->dev, "sdhci");
 	if (IS_ERR(tegra_host->rst))
 		dev_err(mmc_dev(host->mmc), "reset err\n");
 	else

@@ -691,6 +691,10 @@ int do_huge_pmd_anonymous_page(struct fault_env *fe)
 		return ret;
 	}
 	gfp = alloc_hugepage_direct_gfpmask(vma);
+	/* Disable movable allocations to avoid fallback to CMA.
+	 * Unmovable allocations can fallback to movable anyway.
+	 */
+	gfp &= ~__GFP_MOVABLE;
 	page = alloc_hugepage_vma(gfp, vma, haddr, HPAGE_PMD_ORDER);
 	if (unlikely(!page)) {
 		count_vm_event(THP_FAULT_FALLBACK);

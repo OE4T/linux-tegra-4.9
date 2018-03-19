@@ -424,21 +424,21 @@
 			};
 			host1x_as: host1x {
 				iova-start = <0x0 0x1000>;
-				iova-size = <0x1F 0xFFFFF000>;
+				iova-size = <0x0 0xFFFFEFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
 			host1x_client_as: host1x_client {
 				iova-start = <0x0 0x1000>;
-				iova-size = <0x0 0xFFFFEFFF>;
+				iova-size = <0x1F 0xFFFFF000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
 			nvdisplay_as: nvdisplay {
 				iova-start = <0x0 0x1000>;
-				iova-size = <0x1F 0xFFFFF000>;
+				iova-size = <0x0 0xFFFFEFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

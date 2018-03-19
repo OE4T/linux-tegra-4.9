@@ -24,8 +24,11 @@
 #include <linux/string.h>
 #include <linux/i2c.h>
 #include <linux/extcon.h>
+#include <linux/regulator/consumer.h>
 
 #include "ucsi.h"
+
+/* #define CCG_DUMP_EVT_RESP_DATA */
 
 /* CCGx dev info registers */
 #define REG_DEVICE_MODE		0x0000
@@ -63,6 +66,7 @@
 #define  PDO_3                  (1<<3)
 #define  PDO_4                  (1<<4)
 #define REG_PD_STATUS(x)        (0x1008 + (x * 0x1000))
+#define REG_CURRENT_PDO(x)      (0x1010 + (x * 0x1000))
 #define REG_TYPEC_STATUS(x)     (0x100C + (x * 0x1000))
 #define REG_EVENT_MASK(x)	(0x1024 + (x * 0x1000))
 #define  OC_DET			(1<<1)
@@ -70,6 +74,7 @@
 #define  CONN_DET		((1<<3) | (1<<4))
 #define  PD_EVT_DET		((1<<5) | (1<<6))
 #define REG_PD_RESPONSE(x)      (0x1400 + (x * 0x1000))
+#define REG_PD_RESP_DATA(x)     (0x1400 + (x * 0x1000) + 4)
 #define PD_PORT0_REG_IDX        0x1000
 #define PD_PORT1_REG_IDX        0x2000
 
@@ -94,6 +99,11 @@
 #define FW1_METADATA_ROW        0x1FF
 #define FW2_METADATA_ROW        0x1FE
 
+#define CCG_RESP_DATA_MAX_NUM	256
+
+#define PD_CURRENT_TO_UA(x)		(x*10*1000)	/* PD is in 10mA*/
+#define PD_VOLT_TO_UA(x)		(x*50*1000)	/* PD is in 50mV*/
+
 enum enum_fw_mode {
 	BOOT,   /* bootloader */
 	FW1,    /* FW partition-1 */
@@ -106,6 +116,7 @@ enum enum_fw_mode {
 #define EVENT_INDEX		RESET_COMPLETE
 #define PORT_CONNECT_DET	0x84
 #define PORT_DISCONNECT_DET	0x85
+#define PORT_PD_CONTRACT_COMPL	0x86
 #define ROLE_SWAP_COMPELETE	0x87
 
 /* CCGx response codes */
@@ -122,6 +133,13 @@ enum ccg_resp_code {
 	PD_CMD_FAIL             = 0x0D,
 	UNDEF_ERROR             = 0x0F,
 	INVALID_RESP		= 0x10,
+};
+
+enum ccg_pdo_type {
+	PDO_FIXED_SUPPLY = 0,
+	PDO_BATTERY,
+	PDO_VARIABLE_SUPPLY,
+	PDO_AUGMENTED
 };
 
 static const char * const ccg_resp_strs[] = {
@@ -189,6 +207,78 @@ static const char * const ccg_evt_strs[] = {
 	/* 0xAA */ "Rp Change Detected",
 };
 
+union ccg_pd_do_data {
+	uint32_t val;
+
+	struct BIST_DO {
+		uint32_t rsvd1                      : 16;
+		uint32_t rsvd2                      : 12;
+		uint32_t mode                       : 4;
+	} bist_do;
+
+	struct FIXED_SRC {
+		uint32_t max_current                : 10;
+		uint32_t voltage                    : 10;
+		uint32_t pk_current                 : 2;
+		uint32_t reserved                   : 2;
+		uint32_t unchunk_sup                : 1;
+		uint32_t dr_swap                    : 1;
+		uint32_t usb_comm_cap               : 1;
+		uint32_t ext_powered                : 1;
+		uint32_t usb_suspend_sup            : 1;
+		uint32_t dual_role_power            : 1;
+		uint32_t supply_type                : 2;
+	} fixed_src;
+
+	struct VAR_SRC {
+		uint32_t max_current                : 10;
+		uint32_t min_voltage                : 10;
+		uint32_t max_voltage                : 10;
+		uint32_t supply_type                : 2;
+	} var_src;
+
+	struct BAT_SRC {
+		uint32_t max_power                  : 10;
+		uint32_t min_voltage                : 10;
+		uint32_t max_voltage                : 10;
+		uint32_t supply_type                : 2;
+	} bat_src;
+
+	struct SRC_GEN {
+		uint32_t max_cur_power              : 10;
+		uint32_t min_voltage                : 10;
+		uint32_t max_voltage                : 10;
+		uint32_t supply_type                : 2;
+	} src_gen;
+
+	struct FIXED_SNK {
+		uint32_t op_current                 : 10;
+		uint32_t voltage                    : 10;
+		uint32_t rsrvd                      : 3;
+		uint32_t fr_swap                    : 2;
+		uint32_t dr_swap                    : 1;
+		uint32_t usb_comm_cap               : 1;
+		uint32_t ext_powered                : 1;
+		uint32_t high_cap                   : 1;
+		uint32_t dual_role_power            : 1;
+		uint32_t supply_type                : 2;
+	} fixed_snk;
+
+	struct VAR_SNK {
+		uint32_t op_current                 : 10;
+		uint32_t min_voltage                : 10;
+		uint32_t max_voltage                : 10;
+		uint32_t supply_type                : 2;
+	} var_snk;
+
+	struct BAT_SNK {
+		uint32_t op_power                   : 10;
+		uint32_t min_voltage                : 10;
+		uint32_t max_voltage                : 10;
+		uint32_t supply_type                : 2;
+	} bat_snk;
+};
+
 struct ccg_cmd {
 	u16 reg;
 	u32 data;
@@ -198,6 +288,7 @@ struct ccg_cmd {
 struct ccg_resp {
 	u8 code;
 	u8 length;
+	u8 data[CCG_RESP_DATA_MAX_NUM];
 };
 
 struct ccg_dev_info {
@@ -272,6 +363,7 @@ struct ucsi_ccg {
 	struct ucsi_ppm ppm;
 
 	struct ucsi_ccg_extcon *typec_extcon[2];
+	struct ucsi_ccg_extcon *typec_pd_extcon;
 	int port_num;
 
 	/* CCG HPI communication flags */
@@ -288,7 +380,19 @@ struct ucsi_ccg {
 	struct completion reset_comp;
 	struct ccg_dev_info info;
 	struct ccg_typec_pd_info port[2];
+	union ccg_pd_do_data do_data[2];
+	struct regulator *charger_reg;
+	struct regulator *otg_reg;
 };
+
+struct ccg_pd_contract {
+	u8 is_successful:1;
+	u8 sink_cap_mismatch:1;
+	u8 failure_reason:3;
+	u8 reserved:3;
+	u8 reserved2[3];
+	u32 rdo;
+} __packed;
 
 static int ccg_reg_write
 (struct ucsi_ccg *ccg, u16 reg, const void *data, unsigned int nbytes)
@@ -529,6 +633,198 @@ static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
 	mutex_unlock(&extcon->lock);
 }
 
+static void update_typec_pd_extcon_state(struct ucsi_ccg *ccg, bool enable)
+{
+	struct ucsi_ccg_extcon *extcon;
+
+	extcon = ccg->typec_pd_extcon;
+
+	if (!extcon)
+		return;
+
+	mutex_lock(&extcon->lock);
+
+	if (!enable) {
+		extcon_set_state_sync(extcon->edev, EXTCON_USB_PD, 0);
+		extcon_set_state_sync(extcon->edev, EXTCON_NONE, 1);
+	}
+	else {
+		extcon_set_state_sync(extcon->edev, EXTCON_USB_PD, 1);
+		extcon_set_state_sync(extcon->edev, EXTCON_NONE, 0);
+	}
+
+	mutex_unlock(&extcon->lock);
+}
+
+static int ccg_cmd_get_current_pdo(struct ucsi_ccg *ccg, int port)
+{
+	int ret;
+
+	if (port > ccg->info.two_pd_ports)
+		return -EINVAL;
+
+	if (ccg->port[port].pd_contract == 0) {
+		dev_info(ccg->dev,
+			"[typec-port%d] PD contract not established\n", port);
+		return -EINVAL;
+	}
+
+	ret = ccg_reg_read(ccg, REG_CURRENT_PDO(port),
+			(u8 *)(&ccg->do_data[port]),
+			sizeof(ccg->do_data[port]));
+
+	if (ret)
+		return -EIO;
+
+	dev_info(ccg->dev, "ccg_cmd_get_current_pdo: %08x:\n",
+			(unsigned int)(ccg->do_data[port].val));
+	dev_info(ccg->dev,
+		"[typec-port%d] DO type %d, max_current %d, voltage %d\n",
+			port, ccg->do_data[port].fixed_src.supply_type,
+			ccg->do_data[port].fixed_src.max_current,
+			ccg->do_data[port].fixed_src.voltage);
+
+	return 0;
+}
+
+static void pd_charger_disable(struct ucsi_ccg *ccg, int index)
+{
+	mutex_lock(&ccg->lock);
+
+	if (ccg->charger_reg != NULL) {
+		dev_info(ccg->dev,
+			"[typec-port%d] Disable the charger\n", index);
+		regulator_set_current_limit(ccg->charger_reg, 0, 0);
+		regulator_set_voltage(ccg->charger_reg, 0, 0);
+	} else {
+		dev_info(ccg->dev, "No charger available to be disabled\n");
+	}
+
+	update_typec_pd_extcon_state(ccg, false);
+	mutex_unlock(&ccg->lock);
+}
+
+static int pd_charger_enable(struct ucsi_ccg *ccg, int index)
+{
+	int ret = 0;
+	int reg_max_cur_uA = 0, reg_max_vol_uV = 0;
+
+	mutex_lock(&ccg->lock);
+
+	if (ccg->charger_reg != NULL) {
+		switch (ccg->do_data[index].fixed_src.supply_type) {
+		case PDO_FIXED_SUPPLY:
+			reg_max_cur_uA =
+				PD_CURRENT_TO_UA(
+				    ccg->do_data[index].fixed_src.max_current);
+			reg_max_vol_uV =
+				PD_VOLT_TO_UA(
+				    ccg->do_data[index].fixed_src.voltage);
+			break;
+		case PDO_VARIABLE_SUPPLY:
+		case PDO_BATTERY:
+		default:
+			break;
+		}
+		if ((reg_max_cur_uA > 0) && (reg_max_vol_uV > 0)) {
+			dev_info(ccg->dev,
+			    "[typec-port%d] Enable charger (cur=%d, volt=%d)\n",
+					index, reg_max_cur_uA, reg_max_vol_uV);
+		} else {
+			dev_err(ccg->dev, "current/ voltage value invalied\n");
+			ret = EINVAL;
+			goto __out;
+		}
+
+		ret = regulator_set_current_limit(ccg->charger_reg,
+							0, reg_max_cur_uA);
+		if (ret < 0) {
+			dev_err(ccg->dev,
+				"regulator_set_current_limit failed %d\n", ret);
+			goto __out;
+		}
+		ret = regulator_set_voltage(ccg->charger_reg,
+							0, reg_max_vol_uV);
+		if (ret < 0) {
+			dev_err(ccg->dev,
+				"regulator_set_voltage failed %d\n", ret);
+			goto __out;
+		}
+	} else {
+		dev_info(ccg->dev, "No charger available to be enabled\n");
+	}
+
+__out:
+	if (ret >= 0)
+		update_typec_pd_extcon_state(ccg, true);
+
+	mutex_unlock(&ccg->lock);
+	return ret;
+}
+
+static void ccg_pd_read_resp_data(struct ucsi_ccg *ccg, int index)
+{
+	struct ccg_resp *resp = &ccg->pd_resp[index];
+	int ret;
+
+	if (!resp->length)
+		return;
+
+	ret = ccg_reg_read(ccg, REG_PD_RESP_DATA(index), resp->data,
+				resp->length);
+	if (!ret) {
+#ifdef CCG_DUMP_EVT_RESP_DATA
+		dev_err(ccg->dev, "port %d: %02x %d:\n",
+					index, resp->code, resp->length);
+		print_hex_dump(KERN_ERR, "resp: ", DUMP_PREFIX_ADDRESS, 16, 1,
+				resp->data, resp->length, 1);
+#endif
+	} else {
+		dev_err(ccg->dev, "read REG_PD_RESPONSE_MSG(%d, %d) failed\n",
+			index, resp->length);
+	}
+}
+
+static void pd_event_handle_disconnect_det(struct ucsi_ccg *ccg, int index)
+{
+	if (ccg->port[index].pd_contract == 1) {
+		if (!ccg->port[index].cur_power_role) {
+			/* Battery Charging handling */
+			dev_info(ccg->dev, "Battery Charging handling\n");
+			pd_charger_disable(ccg, index);
+		} else {
+			/* OTG handling */
+			dev_info(ccg->dev, "OTG handling\n");
+		}
+	}
+}
+
+static void pd_event_handle_contract_comp(struct ucsi_ccg *ccg, int index)
+{
+	int ret = 0;
+
+	if (ccg_cmd_get_current_pdo(ccg, index) < 0)
+		goto __err_disable_reg;
+
+	if (!ccg->port[index].cur_power_role) {
+		/* Battery Charging handling */
+		dev_info(ccg->dev, "Battery Charging handling\n");
+		ret = pd_charger_enable(ccg, index);
+		if (ret < 0)
+			goto __err_disable_reg;
+	} else {
+		/* OTG handling */
+		dev_info(ccg->dev, "OTG handling\n");
+	}
+
+	return;
+
+__err_disable_reg:
+	dev_err(ccg->dev,
+		"PD port%d error in pd_event_handle_contract_comp\n", index);
+	pd_charger_disable(ccg, index);
+}
+
 static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 {
 	struct device *dev = ccg->dev;
@@ -541,6 +837,8 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 	dev_dbg(dev, "port%d event code: 0x%02x, data len: %d\n",
 			index, resp->code, resp->length);
 
+	ccg_pd_read_resp_data(ccg, index);
+
 	if (resp->code & ASYNC_EVENT) {
 		/* Ignore Async events before ccg init */
 		if (test_bit(INIT_PENDING, &ccg->flags))
@@ -552,9 +850,16 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 
 			switch (resp->code) {
 			case PORT_DISCONNECT_DET:
+				pd_event_handle_disconnect_det(ccg, index);
+				update_typec_extcon_state(ccg, index);
+				break;
 			case PORT_CONNECT_DET:
 			case ROLE_SWAP_COMPELETE:
 				update_typec_extcon_state(ccg, index);
+				break;
+			case PORT_PD_CONTRACT_COMPL:
+				update_typec_extcon_state(ccg, index);
+				pd_event_handle_contract_comp(ccg, index);
 				break;
 			default:
 				break;
@@ -1217,8 +1522,11 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 	}
 
 	/* Perform initial detection */
-	for (i = 0; i < ccg->port_num; i++)
+	for (i = 0; i < ccg->port_num; i++) {
 		update_typec_extcon_state(ccg, i);
+		if (ccg->port[i].pd_contract == 1)
+			pd_event_handle_contract_comp(ccg, i);
+	}
 
 	/* Update event mask for ports */
 	ccg_cmd_update_event_mask(ccg, 0);
@@ -1309,7 +1617,6 @@ static ssize_t test_show(struct device *dev,
 		"4: selectPDO_15V\n"
 		"5: selectPDO_20V\n"
 		"6: get current Iout\n");
-
 }
 
 static ssize_t set_debugger_store(struct device *dev,
@@ -1358,6 +1665,10 @@ static int ucsi_ccg_extcon_cables[] = {
 	EXTCON_USB, EXTCON_USB_HOST, EXTCON_NONE
 };
 
+static int ucsi_ccg_pd_extcon_cables[] = {
+	EXTCON_USB_PD, EXTCON_NONE
+};
+
 static struct device_node *
 ucsi_ccg_find_typec_extcon_node(struct device *dev, unsigned int index)
 {
@@ -1371,6 +1682,27 @@ ucsi_ccg_find_typec_extcon_node(struct device *dev, unsigned int index)
 		char *name;
 
 		name = kasprintf(GFP_KERNEL, "port-%u", index);
+		np = of_find_node_by_name(np, name);
+		kfree(name);
+	} else
+		dev_err(dev, "failed to find typec-extcon node\n");
+
+	return np;
+}
+
+static struct device_node *
+ucsi_ccg_find_typec_pd_extcon_node(struct device *dev)
+{
+	/*
+	 * of_find_node_by_name() drops a reference, so make sure to grab one.
+	 */
+	struct device_node *np = of_node_get(dev->of_node);
+
+	np = of_find_node_by_name(np, "typec-pd");
+	if (np) {
+		char *name;
+
+		name = kasprintf(GFP_KERNEL, "pd");
 		np = of_find_node_by_name(np, name);
 		kfree(name);
 	} else
@@ -1419,6 +1751,46 @@ unregister:
 	return NULL;
 }
 
+static struct ucsi_ccg_extcon *
+ucsi_ccg_pd_extcon_probe
+(struct device *parent, struct device_node *np)
+{
+	struct ucsi_ccg_extcon *extcon;
+	int err;
+
+	extcon = devm_kzalloc(parent, sizeof(*extcon), GFP_KERNEL);
+	if (!extcon)
+		return extcon;
+
+	extcon->port_id = 0;
+	extcon->dev.parent = parent;
+	extcon->dev.of_node = np;
+
+	dev_set_name(&extcon->dev, "typec-pd");
+
+	err = device_register(&extcon->dev);
+	if (err)
+		return NULL;
+
+	extcon->edev = devm_extcon_dev_allocate(&extcon->dev,
+						ucsi_ccg_pd_extcon_cables);
+	if (IS_ERR(extcon->edev))
+		goto unregister;
+
+	mutex_init(&extcon->lock);
+
+	err = devm_extcon_dev_register(&extcon->dev, extcon->edev);
+	if (err < 0)
+		goto unregister;
+
+	return extcon;
+
+unregister:
+	device_unregister(&extcon->dev);
+
+	return NULL;
+}
+
 static int ucsi_ccg_setup_extcon(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
@@ -1445,11 +1817,35 @@ static int ucsi_ccg_setup_extcon(struct ucsi_ccg *ccg)
 	return 0;
 }
 
+static int ucsi_ccg_setup_pd_extcon(struct ucsi_ccg *ccg)
+{
+	struct device *dev = ccg->dev;
+	struct ucsi_ccg_extcon *extcon;
+	struct device_node *np;
+
+	np = ucsi_ccg_find_typec_pd_extcon_node(dev);
+	if (!np || !of_device_is_available(np)) {
+		of_node_put(np);
+		return -EINVAL;
+	}
+
+	extcon = ucsi_ccg_pd_extcon_probe(dev, np);
+	if (extcon) {
+		dev_info(dev, "typec-pd extcon dev created\n");
+		ccg->typec_pd_extcon = extcon;
+	} else {
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int ucsi_ccg_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct ucsi_ccg *ccg;
 	struct device *dev = &client->dev;
+	struct regulator *charger_reg, *otg_reg;
 	int err = 0;
 
 	ccg = devm_kzalloc(dev, sizeof(struct ucsi_ccg), GFP_KERNEL);
@@ -1465,6 +1861,16 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	init_completion(&ccg->hpi_cmd_done);
 	init_completion(&ccg->reset_comp);
 
+	/* Get the vbus regulator for charging */
+	charger_reg = regulator_get(ccg->dev, "pd_bat_chg");
+	if (!IS_ERR(charger_reg))
+		ccg->charger_reg = charger_reg;
+
+	/* Get the vbus regulator for charging */
+	otg_reg = regulator_get(ccg->dev, "pd_otg_chg");
+	if (!IS_ERR(otg_reg))
+		ccg->otg_reg = otg_reg;
+
 	err = get_fw_info(ccg);
 	if (err) {
 		dev_err(dev, "get_fw_info fail,, err=%d\n", err);
@@ -1479,6 +1885,12 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	err = ucsi_ccg_setup_extcon(ccg);
 	if (err) {
 		dev_err(dev, "Setup extcon fail, err=%d\n", err);
+		return err;
+	}
+
+	err = ucsi_ccg_setup_pd_extcon(ccg);
+	if (err) {
+		dev_err(dev, "Setup PD extcon fail, err=%d\n", err);
 		return err;
 	}
 

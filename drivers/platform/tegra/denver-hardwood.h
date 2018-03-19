@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,7 +17,6 @@
 #ifndef _MACH_DENVER_HARDWOOD_H_
 #define _MACH_DENVER_HARDWOOD_H_
 
-#define N_CPU				2
 #define N_BUFFER			16
 #define N_BUFFER_LEGACY		4
 #define BUFFER_SIZE			(1 << 20)

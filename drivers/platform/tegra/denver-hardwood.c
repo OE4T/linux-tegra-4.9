@@ -1,7 +1,7 @@
 /*
  *  arch/arm64/mach-tegra/denver-hardwood.c
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,9 +75,9 @@ struct hardwood_device {
 	struct hardwood_buf bufs[N_BUFFER];
 };
 
-static struct hardwood_device hardwood_devs[N_CPU];
+static struct hardwood_device *hardwood_devs;
 
-static int minor_map[N_CPU] = { -1 };
+static int minor_map[CONFIG_NR_CPUS];
 
 static int TRACER_IRQS[] = { 48, 54 };
 
@@ -95,6 +95,8 @@ static u64 tracer_names_size;
 static u32 buffer_size = BUFFER_SIZE;
 static u32 buffer_order = BUFFER_ORDER;
 static u32 num_buffers = N_BUFFER;
+
+static u32 num_cpu;
 
 static bool hardwood_supported;
 static bool hardwood_init_done;
@@ -120,7 +122,7 @@ static irqreturn_t hardwood_handler(int irq, void *dev_id)
 	struct hardwood_device *dev = (struct hardwood_device *) dev_id;
 
 	pr_debug("IRQ%d received\n", irq);
-	if (one_irq_per_cpu && num_online_cpus() == N_CPU) {
+	if (one_irq_per_cpu && num_online_cpus() == num_cpu) {
 		/* All CPUs online and IRQ is per-cpu; wake target CPU */
 		dev->signaled = 1;
 		wake_up_interruptible(&dev->wait_q);
@@ -143,7 +145,7 @@ static irqreturn_t hardwood_handler(int irq, void *dev_id)
 
 static int hardwood_set_affinity(void) {
 	int i;
-	for(i = 0; i < N_CPU; i++) {
+	for (i = 0; i < num_cpu; i++) {
 		if(hardwood_devs[i].irq) {
 			if(irq_force_affinity(hardwood_devs[i].irq,
 				cpumask_of(hardwood_devs[i].logical_cpu)))
@@ -164,7 +166,7 @@ static int hardwood_open(struct inode *inode, struct file *file)
 		return -ENOENT;
 	}
 
-	for (cpu = 0; cpu < N_CPU; ++cpu)
+	for (cpu = 0; cpu < num_cpu; ++cpu)
 		if (minor_map[cpu] == minor) {
 			found = 1;
 			break;
@@ -245,7 +247,7 @@ static long hardwood_ioctl(struct file *file, unsigned int cmd,
 
 	if (op.buffer_id >= num_buffers)
 		return -EINVAL;
-	if (op.core_id >= N_CPU)
+	if (op.core_id >= num_cpu)
 		return -EINVAL;
 	speculation_barrier();
 
@@ -410,7 +412,7 @@ static int agent_thread_fn(void *data)
 		set_current_state(TASK_RUNNING);
 		agent_signaled = false;
 
-		for (cpu = 0; cpu < N_CPU; ++cpu) {
+		for (cpu = 0; cpu < num_cpu; ++cpu) {
 			pr_debug("agent: checking CPU %d\n", cpu);
 			dev = &hardwood_devs[cpu];
 
@@ -592,7 +594,7 @@ static void free_buffers(void)
 	int i, j;
 	struct hardwood_buf *buf;
 
-	for (i = 0; i < N_CPU; i++)
+	for (i = 0; i < num_cpu; i++)
 		for (j = 0; j < num_buffers; j++) {
 			buf = &hardwood_devs[i].bufs[j];
 			if (buf->va)
@@ -611,7 +613,7 @@ static void config_num_buffers(void)
 	}
 
 	spin_lock(&hw_lock);
-	for (cpu = 0; cpu < N_CPU; cpu++)
+	for (cpu = 0; cpu < num_cpu; cpu++)
 		hw_run_cmd(HW_CMD(cpu, num_buffers, cmd));
 	spin_unlock(&hw_lock);
 }
@@ -634,7 +636,7 @@ static inline int hardwood_late_init(void)
 
 		config_num_buffers();
 
-		for (i = 0; i < N_CPU; i++)
+		for (i = 0; i < num_cpu; i++)
 			for (j = 0; j < num_buffers; j++) {
 				ret = init_one_buffer(i, j);
 				if (ret) {
@@ -745,7 +747,8 @@ static void init_one_cpu(int logical_cpu)
 	struct hardwood_device *hdev;
 	int cpu;
 
-	cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(logical_cpu), 0);
+	// Core numbering is attached by MTS. This mapping is arbitrary.
+	cpu = logical_cpu;
 
 	hdev = &hardwood_devs[cpu];
 	memset(hdev, 0, sizeof(*hdev));
@@ -830,13 +833,29 @@ static int hardwood_probe(struct platform_device *pdev)
 			osdump_virtual_irq = platform_get_irq(pdev, 0);
 		}
 
+		/* Init num_cpu so that we can alloc core-specific memory*/
 		for_each_online_cpu(cpu) {
 			/* Only init on Denver CPUs */
 			cpuinfo = &per_cpu(cpu_data, cpu);
 			if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) ==
 			    ARM_CPU_IMP_NVIDIA)
-				init_one_cpu(cpu);
+				num_cpu++;
 		}
+
+		hardwood_devs = kmalloc_array(num_cpu,
+					      sizeof(struct hardwood_device),
+					      GFP_KERNEL);
+		if (!hardwood_devs) {
+			pr_debug("Denver: kmalloc fail for %d hardwood_devs\n",
+					num_cpu);
+			return -ENOMEM;
+		}
+
+		memset(minor_map, -1, num_cpu*sizeof(int));
+
+		/* init_one_cpu expects hardwood_devs to exist. */
+		for (cpu = 0; cpu < num_cpu; cpu++)
+			init_one_cpu(cpu);
 
 		/* Create buffer size attribute at hardwood-0 */
 		dev = hardwood_devs[0].dev.this_device;

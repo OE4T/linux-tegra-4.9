@@ -4496,17 +4496,38 @@ static void xhci_reinit_work(struct work_struct *work)
 				struct xhci_hcd, tegra_xhci_reinit_work);
 	struct platform_device *pdev = xhci->pdev;
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct device *dev = tegra->dev;
 	unsigned long target;
 	bool has_active_slots = true;
-	int j;
+	int j, ret;
+
+	/* If the controller is in ELPG during reinit, then bring it out of
+	 * elpg first before doing reinit. Otherwise we will see inconsistent
+	 * behaviour. For example phy->power_count variable will be decremented
+	 * twice. Once dring elpg and once during usb_remove. when phy_power_on
+	 * is called during probe, the phy wont actually power on.
+	 */
+	mutex_lock(&tegra->lock);
+	if (pm_runtime_suspended(dev)) {
+		ret = tegra_xhci_exit_elpg(tegra, true);
+		if (ret < 0) {
+			mutex_unlock(&tegra->lock);
+			dev_err(tegra->dev, "Elpg exit failed during reinit\n");
+			return;
+		}
+	}
+	mutex_unlock(&tegra->lock);
+
 
 	for (j = 0; j < tegra->soc->num_typed_phys[USB2_PHY]; j++) {
 		/* turn off VBUS to disconnect all devices */
 		tegra_xusb_padctl_vbus_power_off(tegra->padctl, j);
 	}
 
-	target = jiffies + msecs_to_jiffies(1000);
-	/* wait until all slots have been disabled */
+	target = jiffies + msecs_to_jiffies(5000);
+	/* wait until all slots have been disabled. Also waiting for 5
+	 * seconds to make sure pending STOP_EP commands are completed
+	 */
 	while (has_active_slots && time_is_after_jiffies(target)) {
 		has_active_slots = false;
 		for (j = 1; j < MAX_HC_SLOTS; j++) {

@@ -2586,18 +2586,25 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	if (gpio_is_valid(pcie->pex_wake)) {
 		ret = devm_gpio_request(pcie->dev, pcie->pex_wake, "pcie_wake");
 		if (ret < 0) {
-			dev_err(pcie->dev, "pcie_wake gpio_request failed %d\n",
-				ret);
-			return ret;
+			if (ret == -EBUSY) {
+				dev_err(pcie->dev, "pex_wake already in use\n");
+				pcie->pex_wake = -EINVAL;
+			} else {
+				dev_err(pcie->dev, "pcie_wake gpio_request failed %d\n",
+					ret);
+				return ret;
+			}
 		}
-		ret = gpio_direction_input(pcie->pex_wake);
-		if (ret < 0) {
-			dev_err(pcie->dev,
-				"%s: pcie_wake gpio_direction_input failed %d\n",
-				__func__, ret);
-			return ret;
+		if (gpio_is_valid(pcie->pex_wake)) {
+			ret = gpio_direction_input(pcie->pex_wake);
+			if (ret < 0) {
+				dev_err(pcie->dev,
+					"%s: pcie_wake gpio_direction_input failed %d\n",
+					__func__, ret);
+				return ret;
+			}
+			device_init_wakeup(pcie->dev, true);
 		}
-		device_init_wakeup(pcie->dev, true);
 	}
 
 	if (pcie->tsa_config_addr) {

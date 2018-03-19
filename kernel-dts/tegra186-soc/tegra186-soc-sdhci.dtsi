@@ -56,7 +56,7 @@
 		nvidia,parent_clk_list ="pll_p", "pll_p", "pll_p", "pll_p", "pll_p", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0", "pll_c4_out0";
 		pll_source = "pll_p", "pll_c4_out0";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC4>;
-		reset-names = "sdmmc";
+		reset-names = "sdhci";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_PLLC4_OUT0>,
@@ -91,7 +91,7 @@
 		compad-vref-1v8 = <0x2>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC3>;
-		reset-names = "sdmmc";
+		reset-names = "sdhci";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
@@ -130,7 +130,7 @@
 		nvidia,is-emmc;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC2>;
-		reset-names = "sdmmc";
+		reset-names = "sdhci";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;
@@ -163,7 +163,7 @@
 		compad-vref-1v8 = <0x2>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC1>;
-		reset-names = "sdmmc";
+		reset-names = "sdhci";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_SDMMC_LEGACY_TM>;

@@ -509,7 +509,8 @@ struct la_ptsa_core {
 	/* Updates DDA RATE values for kernel init */
 	void (*update_new_dda_rate_frac_kern_init)(
 		struct dda_info *dda_info_array,
-		struct mc_settings_info *mc_settings_ptr);
+		struct mc_settings_info *mc_settings_ptr,
+		unsigned int *error);
 
 	/* Maps ISO LA to DDA */
 	enum tegra_dda_id (*convert_la2dda_id_for_dyn_ptsa)(

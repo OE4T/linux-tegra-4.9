@@ -63,6 +63,18 @@
 			error);   \
 	} while (0)
 
+static struct fixed_point bw2fraction(
+	struct mc_settings_info *mc_settings_ptr,
+	struct fixed_point bw_mbps,
+	unsigned int *error);
+
+static unsigned int fraction2dda(
+	struct fixed_point fraction,
+	struct fixed_point div,
+	unsigned int mask,
+	int round_up_or_to_nearest,
+	unsigned int *error);
+
 static unsigned int calc_eff_rowsorter_sz(
 	struct fixed_point emc_clk_mhz,
 	struct mc_settings_info *mc_settings_ptr,
@@ -932,7 +944,8 @@ static void update_new_dda_minmax_kern_init(
 
 static void update_new_dda_rate_frac_kern_init(
 	struct dda_info *dda_info_array,
-	struct mc_settings_info *mc_settings_ptr
+	struct mc_settings_info *mc_settings_ptr,
+	unsigned int *error
 )
 {
 	int clientid;
@@ -966,6 +979,24 @@ static void update_new_dda_rate_frac_kern_init(
 					dda_info_array[clientid].frac_valid = 0;
 				}
 			}
+		} else if (clientid == TEGRA_DDA_EQOSPC_ID) {
+			struct fixed_point iso_adj_bw;
+
+			iso_adj_bw = fixed_point_mult(
+				FIX_PT(250, 0, error),
+				mc_settings_ptr->two_stge_ecc_iso_dda_bw_margin,
+				error);
+			dda_info_array[clientid].frac =
+				bw2fraction(mc_settings_ptr, iso_adj_bw, error);
+			dda_info_array[clientid].frac_valid = 1;
+			dda_info_array[clientid].rate =
+			fraction2dda(
+				dda_info_array[clientid].frac,
+				dda_info_array[clientid].dda_div,
+				dda_info_array[clientid].mask,
+				(dda_info_array[clientid].iso_type !=
+					TEGRA_NISO),
+				error);
 		}
 	}
 

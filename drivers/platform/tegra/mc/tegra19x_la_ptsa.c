@@ -361,7 +361,16 @@ static void t19x_init_ptsa(void)
 		return;
 	}
 
-	lp.update_new_dda_rate_frac_kern_init(dda_info_array, &mc_settings);
+	lp.update_new_dda_rate_frac_kern_init(
+		dda_info_array,
+		&mc_settings,
+		&error);
+	if (error) {
+		pr_err("%s: ", __func__);
+		pr_err("error. Skipping kernel init programming\n");
+		WARN_ON(1);
+		return;
+	}
 	dda_info_array[TEGRA_DDA_MLL_MPCORER_ID].min = -6;
 	dda_info_array[TEGRA_DDA_MLL_MPCORER_ID].max = 6;
 

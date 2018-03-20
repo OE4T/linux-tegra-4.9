@@ -280,6 +280,13 @@ static void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
 	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 }
 
+static void gk20a_channel_syncpt_set_safe_state(struct gk20a_channel_sync *s)
+{
+	struct gk20a_channel_syncpt *sp =
+		container_of(s, struct gk20a_channel_syncpt, ops);
+	nvgpu_nvhost_syncpt_set_safe_state(sp->nvhost_dev, sp->id);
+}
+
 static void gk20a_channel_syncpt_signal_timeline(
 		struct gk20a_channel_sync *s)
 {
@@ -357,6 +364,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 	sp->ops.incr_wfi		= gk20a_channel_syncpt_incr_wfi;
 	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
+	sp->ops.set_safe_state		= gk20a_channel_syncpt_set_safe_state;
 	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
 	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
 	sp->ops.syncpt_address		= gk20a_channel_syncpt_address;
@@ -634,6 +642,11 @@ static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
 	/* Nothing to do. */
 }
 
+static void gk20a_channel_semaphore_set_safe_state(struct gk20a_channel_sync *s)
+{
+	/* Nothing to do. */
+}
+
 static void gk20a_channel_semaphore_signal_timeline(
 		struct gk20a_channel_sync *s)
 {
@@ -703,6 +716,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	sema->ops.incr_wfi	= gk20a_channel_semaphore_incr_wfi;
 	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
+	sema->ops.set_safe_state = gk20a_channel_semaphore_set_safe_state;
 	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
 	sema->ops.syncpt_address = gk20a_channel_semaphore_syncpt_address;
@@ -711,8 +725,11 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	return &sema->ops;
 }
 
-void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync)
+void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
+	bool set_safe_state)
 {
+	if (set_safe_state)
+		sync->set_safe_state(sync);
 	sync->destroy(sync);
 }
 

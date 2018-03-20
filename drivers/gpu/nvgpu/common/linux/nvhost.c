@@ -166,6 +166,25 @@ u32 nvgpu_nvhost_syncpt_read_maxval(
 	return nvhost_syncpt_read_maxval(nvhost_dev->host1x_pdev, id);
 }
 
+void nvgpu_nvhost_syncpt_set_safe_state(
+	struct nvgpu_nvhost_dev *nvhost_dev, u32 id)
+{
+	u32 val;
+
+	/*
+	 * Add large number of increments to current value
+	 * so that all waiters on this syncpoint are released
+	 *
+	 * We don't expect any case where more than 0x10000 increments
+	 * are pending
+	 */
+	val = nvhost_syncpt_read_minval(nvhost_dev->host1x_pdev, id);
+	val += 0x10000;
+
+	nvhost_syncpt_set_minval(nvhost_dev->host1x_pdev, id, val);
+	nvhost_syncpt_set_maxval(nvhost_dev->host1x_pdev, id, val);
+}
+
 int nvgpu_nvhost_create_symlink(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);

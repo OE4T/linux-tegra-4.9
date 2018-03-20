@@ -52,6 +52,8 @@ int nvgpu_nvhost_syncpt_read_ext_check(struct nvgpu_nvhost_dev *nvhost_dev,
 	u32 id, u32 *val);
 u32 nvgpu_nvhost_syncpt_read_maxval(struct nvgpu_nvhost_dev *nvhost_dev,
 	u32 id);
+void nvgpu_nvhost_syncpt_set_safe_state(
+	struct nvgpu_nvhost_dev *nvhost_dev, u32 id);
 
 int nvgpu_nvhost_intr_register_notifier(struct nvgpu_nvhost_dev *nvhost_dev,
 	u32 id, u32 thresh, void (*callback)(void *, int), void *private_data);

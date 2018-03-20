@@ -196,6 +196,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->sync)
 		ch->sync->set_min_eq_max(ch->sync);
+	if (ch->user_sync)
+		ch->user_sync->set_safe_state(ch->user_sync);
 	nvgpu_mutex_release(&ch->sync_lock);
 
 	/* release all job semaphores (applies only to jobs that use
@@ -435,11 +437,18 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	/* sync must be destroyed before releasing channel vm */
 	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->sync) {
-		gk20a_channel_sync_destroy(ch->sync);
+		gk20a_channel_sync_destroy(ch->sync, false);
 		ch->sync = NULL;
 	}
 	if (ch->user_sync) {
-		gk20a_channel_sync_destroy(ch->user_sync);
+		/*
+		 * Set user managed syncpoint to safe state
+		 * But it's already done if channel has timedout
+		 */
+		if (ch->has_timedout)
+			gk20a_channel_sync_destroy(ch->user_sync, false);
+		else
+			gk20a_channel_sync_destroy(ch->user_sync, true);
 		ch->user_sync = NULL;
 	}
 	nvgpu_mutex_release(&ch->sync_lock);
@@ -1211,7 +1220,7 @@ clean_up_prealloc:
 		channel_gk20a_free_prealloc_resources(c);
 clean_up_sync:
 	if (c->sync) {
-		gk20a_channel_sync_destroy(c->sync);
+		gk20a_channel_sync_destroy(c->sync, false);
 		c->sync = NULL;
 	}
 clean_up_unmap:
@@ -1905,7 +1914,8 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 				if (nvgpu_atomic_dec_and_test(
 					&c->sync->refcount) &&
 						g->aggressive_sync_destroy) {
-					gk20a_channel_sync_destroy(c->sync);
+					gk20a_channel_sync_destroy(c->sync,
+						false);
 					c->sync = NULL;
 				}
 				nvgpu_mutex_release(&c->sync_lock);

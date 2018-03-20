@@ -86,6 +86,13 @@ struct gk20a_channel_sync {
 	/* Reset the channel syncpoint/semaphore. */
 	void (*set_min_eq_max)(struct gk20a_channel_sync *s);
 
+	/*
+	 * Set the channel syncpoint/semaphore to safe state
+	 * This should be used to reset User managed syncpoint since we don't
+	 * track threshold values for those syncpoints
+	 */
+	void (*set_safe_state)(struct gk20a_channel_sync *s);
+
 	/* Signals the sync timeline (if owned by the gk20a_channel_sync layer).
 	 * This should be called when we notice that a gk20a_fence is
 	 * expired. */
@@ -101,7 +108,8 @@ struct gk20a_channel_sync {
 	void (*destroy)(struct gk20a_channel_sync *s);
 };
 
-void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync);
+void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
+	bool set_safe_state);
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
 	bool user_managed);
 bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g);

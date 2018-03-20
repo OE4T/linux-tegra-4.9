@@ -922,6 +922,9 @@ int eqos_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
+	for (i = 0; i < num_chans; i++)
+		spin_lock_init(&pdata->chan_irq_lock[i]);
+
 	mutex_init(&pdata->hw_change_lock);
 	pdata->hw_stopped = true;
 

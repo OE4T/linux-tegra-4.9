@@ -267,9 +267,6 @@ static int gk20a_railgating_debugfs_init(struct gk20a *g)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct dentry *d;
 
-	if (!g->can_railgate)
-		return 0;
-
 	d = debugfs_create_file(
 		"railgate_residency", S_IRUGO|S_IWUSR, l->debugfs, g,
 						&railgate_residency_fops);

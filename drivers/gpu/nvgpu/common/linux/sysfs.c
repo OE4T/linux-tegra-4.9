@@ -305,24 +305,23 @@ static ssize_t railgate_enable_store(struct device *dev,
 	unsigned long railgate_enable = 0;
 	/* dev is guaranteed to be valid here. Ok to de-reference */
 	struct gk20a *g = get_gk20a(dev);
-	int err = 0;
+	int err;
 
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
 		return -EINVAL;
 
 	if (railgate_enable && !g->can_railgate) {
-		/* release extra ref count */
-		gk20a_idle(g);
 		g->can_railgate = true;
-		g->user_railgate_disabled = false;
+		pm_runtime_set_autosuspend_delay(dev, g->railgate_delay);
 	} else if (railgate_enable == 0 && g->can_railgate) {
-		/* take extra ref count */
-		err = gk20a_busy(g);
-		if (err)
-			return err;
 		g->can_railgate = false;
-		g->user_railgate_disabled = true;
+		pm_runtime_set_autosuspend_delay(dev, -1);
 	}
+	/* wake-up system to make rail-gating setting effective */
+	err = gk20a_busy(g);
+	if (err)
+		return err;
+	gk20a_idle(g);
 
 	nvgpu_info(g, "railgate is %s.", g->can_railgate ?
 		"enabled" : "disabled");

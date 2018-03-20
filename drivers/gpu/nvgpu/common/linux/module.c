@@ -458,10 +458,10 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 	 * If User disables rail gating, we take one more
 	 * extra refcount
 	 */
-	if (g->user_railgate_disabled)
-		target_ref_cnt = 2;
-	else
+	if (g->can_railgate)
 		target_ref_cnt = 1;
+	else
+		target_ref_cnt = 2;
 	nvgpu_mutex_acquire(&platform->railgate_lock);
 
 	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
@@ -964,7 +964,7 @@ static int gk20a_pm_suspend(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
-	int idle_usage_count = g->user_railgate_disabled ? 1 : 0;
+	int idle_usage_count = 0;
 
 	if (!g->power_on) {
 		if (!pm_runtime_enabled(dev))
@@ -1020,23 +1020,19 @@ static int gk20a_pm_init(struct device *dev)
 
 	nvgpu_log_fn(g, " ");
 
-	/* Initialise pm runtime */
-	if (g->railgate_delay) {
+	/*
+	 * Initialise pm runtime. For railgate disable
+	 * case, set autosuspend delay to negative which
+	 * will suspend runtime pm
+	 */
+	if (g->railgate_delay && g->can_railgate)
 		pm_runtime_set_autosuspend_delay(dev,
 				 g->railgate_delay);
-		pm_runtime_use_autosuspend(dev);
-	}
+	else
+		pm_runtime_set_autosuspend_delay(dev, -1);
 
-	if (g->can_railgate) {
-		pm_runtime_enable(dev);
-		if (!pm_runtime_enabled(dev))
-			gk20a_pm_unrailgate(dev);
-		else
-			gk20a_pm_railgate(dev);
-	} else {
-		__pm_runtime_disable(dev, false);
-		gk20a_pm_unrailgate(dev);
-	}
+	pm_runtime_use_autosuspend(dev);
+	pm_runtime_enable(dev);
 
 	return err;
 }

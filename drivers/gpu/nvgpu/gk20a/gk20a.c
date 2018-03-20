@@ -370,9 +370,6 @@ int gk20a_wait_for_idle(struct gk20a *g)
 	if (!g)
 		return -ENODEV;
 
-	if (g->user_railgate_disabled)
-		target_usage_count = 1;
-
 	while ((nvgpu_atomic_read(&g->usage_count) != target_usage_count)
 			&& (wait_length-- >= 0))
 		nvgpu_msleep(20);

@@ -25,6 +25,8 @@
 	nvidia,fastboot-usb-vid = <0x0955>;
 	nvidia,fastboot-usb-pid = <0x70fb>;
 
+	compatible = "nvidia,galen", "nvidia,tegra194";
+
 	bpmp_i2c {
 		tegra_tmp451: temp-sensor@4c {
 			vdd-supply = <&e3366_vdd_1v8_slt>;

@@ -28,6 +28,8 @@
 	nvidia,fastboot-usb-vid = <0x0955>;
 	nvidia,fastboot-usb-pid = <0x70fb>;
 
+	compatible = "nvidia,galen", "nvidia,tegra194";
+
 	chosen {
 		bootargs ="console=ttyTCU0,115200";
 		board-has-eeprom;

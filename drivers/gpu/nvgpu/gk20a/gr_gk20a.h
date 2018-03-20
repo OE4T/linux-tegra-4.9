@@ -799,8 +799,6 @@ void gk20a_gr_get_ovr_perf_regs(struct gk20a *g, u32 *num_ovr_perf_regs,
 void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
 					struct nvgpu_mem *mem);
 u32 gr_gk20a_get_patch_slots(struct gk20a *g);
-void gk20a_gr_set_error_notifier(struct gk20a *g,
-			struct gr_gk20a_isr_data *isr_data, u32 error_notifier);
 int gk20a_gr_handle_notify_pending(struct gk20a *g,
 				struct gr_gk20a_isr_data *isr_data);
 int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,

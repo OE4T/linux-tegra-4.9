@@ -315,7 +315,6 @@ static const struct gpu_ops gm20b_ops = {
 		.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce,
 		.init_ctxsw_hdr_data = gk20a_gr_init_ctxsw_hdr_data,
 		.fecs_host_int_enable = gr_gk20a_fecs_host_int_enable,
-		.set_error_notifier = gk20a_gr_set_error_notifier,
 		.handle_notify_pending = gk20a_gr_handle_notify_pending,
 		.handle_semaphore_pending = gk20a_gr_handle_semaphore_pending,
 		.add_ctxsw_reg_pm_fbpa = gr_gk20a_add_ctxsw_reg_pm_fbpa,

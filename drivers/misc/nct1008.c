@@ -132,13 +132,7 @@
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
 
-struct nct1008_adjust_offset_table {
-	int temp;
-	int offset;
-};
-
 struct nct1008_sensor_data {
-	struct nct1008_adjust_offset_table offset_table[16];
 	struct thermal_zone_device *thz;
 	long current_hi_limit;
 	long current_lo_limit;
@@ -157,7 +151,6 @@ struct nct1008_data {
 	char chip_name[I2C_NAME_SIZE];
 	struct regulator *nct_reg;
 	int oneshot_conv_period_ns;
-	int conv_period_ms;
 	int nct_disabled;
 	int stop_workqueue;
 	struct nct1008_sensor_data sensors[SENSORS_COUNT];
@@ -166,9 +159,6 @@ struct nct1008_data {
 static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
 static unsigned long nct1008_shutdown_warning_cur_state;
 static long shutdown_warn_saved_temp;
-
-static int conv_period_ms_table[] =
-	{16000, 8000, 4000, 2000, 1000, 500, 250, 125, 63, 32, 16};
 
 static inline s16 value_to_temperature(bool extended, u8 value)
 {
@@ -228,11 +218,9 @@ static int nct1008_get_temp_common(int sensor,
 					int *temp)
 {
 	struct nct1008_platform_data *pdata = &data->plat_data;
-	struct nct1008_sensor_data *sensorp;
 	s16 temp_hi;
 	s16 temp_lo = 0;
 	long temp_milli = 0;
-	int i, off = 0;
 	u8 value;
 	int ret;
 
@@ -257,17 +245,6 @@ static int nct1008_get_temp_common(int sensor,
 
 		temp_hi = value_to_temperature(pdata->extended_range, value);
 		temp_milli = CELSIUS_TO_MILLICELSIUS(temp_hi) + temp_lo * 250;
-
-		sensorp = &data->sensors[sensor];
-		for (i = 0; i < ARRAY_SIZE(sensorp->offset_table); i++) {
-			if (temp_milli <
-				(sensorp->offset_table[i].temp * 1000)) {
-				off = sensorp->offset_table[i].offset * 1000;
-				break;
-			}
-		}
-
-		temp_milli += off;
 
 	} else if (sensor == LOC) {
 		ret = nct1008_read_reg(data, LOC_TEMP_RD);
@@ -1148,8 +1125,6 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	ret = nct1008_write_reg(data, CONV_RATE_WR, pdata->conv_rate);
 	if (ret)
 		goto error;
-
-	data->conv_period_ms = conv_period_ms_table[pdata->conv_rate];
 
 	/* Setup local hi and lo limits. */
 	ret = nct1008_write_reg(data, LOC_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);

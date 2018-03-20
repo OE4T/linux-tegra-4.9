@@ -594,11 +594,15 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	return 0;
 }
 
-int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info)
+int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,
+					void *priv)
 {
 	int err = 0;
 	struct tegra_camera_dev_info *cdev;
 	struct tegra_camera_info *info;
+
+	if (!cdev_info || !priv)
+		return -EINVAL;
 
 	info = dev_get_drvdata(tegra_camera_misc.parent);
 	if (!info)
@@ -608,9 +612,10 @@ int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info)
 	if (!cdev)
 		return -ENOMEM;
 
-	memcpy(cdev, cdev_info, sizeof(struct tegra_camera_dev_info));
+	*cdev = *cdev_info;
 
 	INIT_LIST_HEAD(&cdev->device_node);
+	cdev->priv = priv;
 
 	mutex_lock(&info->device_list_mutex);
 	list_add(&cdev->device_node, &info->device_list);
@@ -631,7 +636,7 @@ EXPORT_SYMBOL(tegra_camera_device_register);
 
 int tegra_camera_device_unregister(void *priv)
 {
-	struct tegra_camera_dev_info *cdev;
+	struct tegra_camera_dev_info *cdev, *tmp;
 	int found = 0;
 	struct tegra_camera_info *info;
 
@@ -640,7 +645,7 @@ int tegra_camera_device_unregister(void *priv)
 		return -EINVAL;
 
 	mutex_lock(&info->device_list_mutex);
-	list_for_each_entry(cdev, &info->device_list, device_node) {
+	list_for_each_entry_safe(cdev, tmp, &info->device_list, device_node) {
 		if (priv == cdev->priv) {
 			list_del(&cdev->device_node);
 			found = 1;

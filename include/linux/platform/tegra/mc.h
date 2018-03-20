@@ -148,6 +148,9 @@ static inline void __mc_raw_writel(int idx, u32 val, u32 reg)
  */
 static inline u32 mssnvlink_readl(unsigned int idx, u32 reg)
 {
+	if (mssnvlink_hubs == UINT_MAX)
+		return 0;
+
 	if (idx >= mssnvlink_hubs) {
 		WARN(1, "mssnvlink read: invalid hub ID - %u\n", idx);
 		return 0;
@@ -172,6 +175,9 @@ static inline u32 mssnvlink_readl(unsigned int idx, u32 reg)
 
 static inline void mssnvlink_writel(unsigned int idx, u32 val, u32 reg)
 {
+	if (mssnvlink_hubs == UINT_MAX)
+		return;
+
 	if (idx >= mssnvlink_hubs) {
 		WARN(1, "mssnvlink write: invalid hub ID - %u\n", idx);
 		return;

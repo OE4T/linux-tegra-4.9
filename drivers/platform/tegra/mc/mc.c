@@ -326,7 +326,8 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 
 	dn = of_get_next_child(pdev->dev.of_node, NULL);
 	if (!dn) {
-		dev_dbg(&pdev->dev, "No mssnvlink node\n");
+		mssnvlink_hubs = UINT_MAX;
+		dev_info(&pdev->dev, "No mssnvlink node\n");
 		return;
 	}
 

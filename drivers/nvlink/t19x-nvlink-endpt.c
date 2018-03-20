@@ -799,8 +799,8 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	}
 	tdev->prod_list = nvlink_prod;
 	tdev->refclk = NVLINK_REFCLK_156;
-	ndev->speed = NVLINK_SPEED_25;
-	ndev->link_bitrate = LINK_BITRATE_156MHZ_25GBPS;
+	ndev->speed = NVLINK_SPEED_20;
+	ndev->link_bitrate = LINK_BITRATE_156MHZ_20GBPS;
 	tdev->ndev = ndev;
 
 	tdev->tlink.sl_params = entry_100us_sl_params;

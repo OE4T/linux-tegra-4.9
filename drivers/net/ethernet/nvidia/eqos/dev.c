@@ -1494,82 +1494,6 @@ static INT config_mmc_counters(void)
 	return Y_SUCCESS;
 }
 
-/*!
-* \brief This sequence is used to disable given DMA channel rx interrupts
-* \param[in] qinx
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT disable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
-{
-	u32 reg;
-
-	VIRT_INTR_CH_CRTL_RD(qinx, reg);
-	reg &= ~VIRT_INTR_CH_CRTL_RX_WR_MASK;
-	VIRT_INTR_CH_CRTL_WR(qinx, reg);
-
-	return Y_SUCCESS;
-}
-
-/*!
-* \brief This sequence is used to enable given DMA channel rx interrupts
-* \param[in] qinx
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT enable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
-{
-	u32 reg;
-
-	VIRT_INTR_CH_CRTL_RD(qinx, reg);
-	reg |= VIRT_INTR_CH_CRTL_RX_WR_MASK;
-	VIRT_INTR_CH_CRTL_WR(qinx, reg);
-
-	return Y_SUCCESS;
-}
-
-/*!
-* \brief This sequence is used to disable given DMA channel tx/rx interrupts
-* \param[in] qinx
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT disable_chan_interrupts(UINT qinx, struct eqos_prv_data *pdata)
-{
-	u32 reg;
-
-	VIRT_INTR_CH_CRTL_RD(qinx, reg);
-	reg &= ~pdata->chinfo[qinx].int_mask;
-	VIRT_INTR_CH_CRTL_WR(qinx, reg);
-
-	return Y_SUCCESS;
-}
-
-/*!
-* \brief This sequence is used to enable given DMA channel tx/rx interrupts
-* \param[in] qinx
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static INT enable_chan_interrupts(UINT qinx, struct eqos_prv_data *pdata)
-{
-	u32 reg;
-
-	VIRT_INTR_CH_CRTL_RD(qinx, reg);
-	reg |= pdata->chinfo[qinx].int_mask;
-	VIRT_INTR_CH_CRTL_WR(qinx, reg);
-
-	return Y_SUCCESS;
-}
-
 static VOID configure_sa_via_reg(u32 cmd)
 {
 	MAC_MCR_SARC_WR(cmd);
@@ -3983,9 +3907,8 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 
 	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < pdata->num_chans; j++) {
-
 		VIRT_INTR_CH_STAT_WR(j, i);
-		VIRT_INTR_CH_CRTL_WR(j, pdata->chinfo[j].int_mask);
+		VIRT_INTR_CH_CRTL_WR(j, i);
 	}
 	configure_mac(pdata);
 
@@ -4124,11 +4047,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->config_tx_pbl_val = config_tx_pbl_val;
 	hw_if->get_tx_pbl_val = get_tx_pbl_val;
 	hw_if->config_pblx8 = config_pblx8;
-
-	hw_if->disable_rx_interrupt = disable_rx_interrupt;
-	hw_if->enable_rx_interrupt = enable_rx_interrupt;
-	hw_if->disable_chan_interrupts = disable_chan_interrupts;
-	hw_if->enable_chan_interrupts = enable_chan_interrupts;
 
 	/* for handling MMC */
 	hw_if->disable_mmc_interrupts = disable_mmc_interrupts;

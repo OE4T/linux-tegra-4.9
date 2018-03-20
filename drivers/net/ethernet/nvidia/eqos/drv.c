@@ -225,30 +225,52 @@ static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 	pr_debug("<--eqos_napi_disable\n");
 }
 
-void eqos_disable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
+void eqos_disable_chan_rx_interrupt(struct eqos_prv_data *pdata, int chan)
 {
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	UINT qinx;
+	unsigned long flags;
+	u32 reg;
 
-	pr_debug("-->eqos_disable_all_ch_rx_interrpt\n");
-
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
-		hw_if->disable_rx_interrupt(qinx, pdata);
-
-	pr_debug("<--eqos_disable_all_ch_rx_interrpt\n");
+	spin_lock_irqsave(&pdata->chan_irq_lock[chan], flags);
+	VIRT_INTR_CH_CRTL_RD(chan, reg);
+	reg &= ~VIRT_INTR_CH_CRTL_RX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(chan, reg);
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[chan], flags);
 }
 
-void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
+void eqos_enable_chan_rx_interrupt(struct eqos_prv_data *pdata, int chan)
 {
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	UINT qinx;
+	unsigned long flags;
+	u32 reg;
 
-	pr_debug("-->eqos_enable_all_ch_rx_interrpt\n");
+	spin_lock_irqsave(&pdata->chan_irq_lock[chan], flags);
+	VIRT_INTR_CH_CRTL_RD(chan, reg);
+	reg |= VIRT_INTR_CH_CRTL_RX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(chan, reg);
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[chan], flags);
+}
 
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
-		hw_if->enable_rx_interrupt(qinx, pdata);
+void eqos_disable_chan_tx_interrupt(struct eqos_prv_data *pdata, int chan)
+{
+	unsigned long flags;
+	u32 reg;
 
-	pr_debug("<--eqos_enable_all_ch_rx_interrpt\n");
+	spin_lock_irqsave(&pdata->chan_irq_lock[chan], flags);
+	VIRT_INTR_CH_CRTL_RD(chan, reg);
+	reg &= ~VIRT_INTR_CH_CRTL_TX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(chan, reg);
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[chan], flags);
+}
+
+void eqos_enable_chan_tx_interrupt(struct eqos_prv_data *pdata, int chan)
+{
+	unsigned long flags;
+	u32 reg;
+
+	spin_lock_irqsave(&pdata->chan_irq_lock[chan], flags);
+	VIRT_INTR_CH_CRTL_RD(chan, reg);
+	reg |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(chan, reg);
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[chan], flags);
 }
 
 void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
@@ -313,71 +335,6 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 		schedule_work(&pdata->fbe_work);
 	}
 
-	pr_debug("<--%s()\n", __func__);
-}
-
-void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
-			     int qinx, int *pnapi_sched)
-{
-	ULONG dma_sr;
-	ULONG dma_ier;
-	u32 ch_crtl_reg;
-	u32 ch_stat_reg;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	struct eqos_rx_queue *rx_queue = NULL;
-
-	pr_debug("-->%s(), chan=%d\n", __func__, qinx);
-
-	rx_queue = GET_RX_QUEUE_PTR(qinx);
-
-	DMA_SR_RD(qinx, dma_sr);
-
-	DMA_IER_RD(qinx, dma_ier);
-	VIRT_INTR_CH_STAT_RD(qinx, ch_stat_reg);
-	VIRT_INTR_CH_CRTL_RD(qinx, ch_crtl_reg);
-
-	pr_debug("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
-
-	pr_debug("VIRT_INTR_CH_STAT[%d] = %#x, VIRT_INTR_CH_CRTL= %#x\n",
-	      qinx, ch_stat_reg, ch_crtl_reg);
-
-	/*on ufpga, update of DMA_IER is really slow, such that interrupt
-	 * would happen, but read of IER returns old value.  This would
-	 * cause driver to return when there really was an interrupt asserted.
-	 * so for now, comment this out.
-	 */
-	/* process only those interrupts which we
-	 * have enabled.
-	 */
-	if (!(tegra_platform_is_unit_fpga()))
-		ch_stat_reg &= ch_crtl_reg;
-
-	if (ch_stat_reg == 0)
-		return;
-
-	if (ch_stat_reg & VIRT_INTR_CH_CRTL_RX_WR_MASK) {
-		DMA_SR_WR(qinx, ((0x1) << 6) | ((0x1) << 15));
-		VIRT_INTR_CH_STAT_WR(qinx, VIRT_INTR_CH_CRTL_RX_WR_MASK);
-		pdata->xstats.rx_normal_irq_n[qinx]++;
-	}
-
-	if (tegra_platform_is_unit_fpga())
-		ch_stat_reg &= ch_crtl_reg;
-
-	if (ch_stat_reg & VIRT_INTR_CH_CRTL_TX_WR_MASK) {
-		DMA_SR_WR(qinx, ((0x1) << 0) | ((0x1) << 15));
-		VIRT_INTR_CH_STAT_WR(qinx, VIRT_INTR_CH_CRTL_TX_WR_MASK);
-		pdata->xstats.tx_normal_irq_n[qinx]++;
-	}
-
-	if (likely(napi_schedule_prep(&rx_queue->napi))) {
-		hw_if->disable_chan_interrupts(qinx, pdata);
-		__napi_schedule(&rx_queue->napi);
-	} else {
-		/* Do nothing here. */
-		pr_debug("Ethernet Interrupt while in poll!\n");
-	}
 	pr_debug("<--%s()\n", __func__);
 }
 
@@ -525,44 +482,74 @@ irqreturn_t eqos_common_isr(int irq, void *device_id)
 
 }
 
-/* Only used when multi irq is enabled.
- * Will only handle tx/rx for one channel.
- */
-irqreturn_t eqos_ch_isr(int irq, void *device_id)
+irqreturn_t eqos_rx_chan_isr(int irq, void *data)
 {
-	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
-	uint i;
-	int qinx = -1;
-	int napi_sched = 0;
+	struct eqos_rx_queue *rx_queue = (struct eqos_rx_queue *)data;
+	struct eqos_prv_data *pdata = rx_queue->pdata;
+	unsigned int qinx = rx_queue->chan_num;
+	u32 dma_ier, dma_sr, ch_crtl, ch_stat;
+	unsigned long flags;
 
-	i = smp_processor_id();
+	spin_lock_irqsave(&pdata->chan_irq_lock[qinx], flags);
+	DMA_SR_RD(qinx, dma_sr);
+	DMA_IER_RD(qinx, dma_ier);
+	VIRT_INTR_CH_STAT_RD(qinx, ch_stat);
+	VIRT_INTR_CH_CRTL_RD(qinx, ch_crtl);
 
-	if ((irq == pdata->rx_irqs[0]) || (irq == pdata->tx_irqs[0]))
-		qinx = 0;
-	else if ((irq == pdata->rx_irqs[1]) || (irq == pdata->tx_irqs[1]))
-		qinx = 1;
-	else if ((irq == pdata->rx_irqs[2]) || (irq == pdata->tx_irqs[2]))
-		qinx = 2;
-	else if ((irq == pdata->rx_irqs[3]) || (irq == pdata->tx_irqs[3]))
-		qinx = 3;
+	netdev_dbg(pdata->dev, "DMA_SR[%d] = %#x, DMA_IER= %#x\n",
+		   qinx, dma_sr, dma_ier);
+	netdev_dbg(pdata->dev,
+		   "VIRT_INTR_CH_STAT[%d] = %#x, VIRT_INTR_CH_CRTL= %#x\n",
+		   qinx, ch_stat, ch_crtl);
 
-	pr_debug("-->%s(): cpu=%d, chan=%d\n", __func__, i, qinx);
+	if (ch_stat & VIRT_INTR_CH_CRTL_RX_WR_MASK) {
+		DMA_SR_WR(qinx, ((0x1) << 6) | ((0x1) << 15));
+		VIRT_INTR_CH_STAT_WR(qinx, VIRT_INTR_CH_CRTL_RX_WR_MASK);
+		pdata->xstats.rx_normal_irq_n[qinx]++;
+	}
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[qinx], flags);
 
-	if (qinx != -1) {
-		handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
-	} else {
-		pr_debug("%s(): irq %d not handled\n", __func__, irq);
-		return IRQ_NONE;
+	if (likely(napi_schedule_prep(&rx_queue->napi))) {
+		eqos_disable_chan_rx_interrupt(pdata, qinx);
+		__napi_schedule(&rx_queue->napi);
 	}
 
-	spin_lock(&pdata->chinfo[qinx].irq_lock);
-	handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
-	spin_unlock(&pdata->chinfo[qinx].irq_lock);
+	return IRQ_HANDLED;
+}
 
-	pr_debug("<--%s()\n", __func__);
+irqreturn_t eqos_tx_chan_isr(int irq, void *data)
+{
+	struct eqos_tx_queue *tx_queue = (struct eqos_tx_queue *)data;
+	struct eqos_prv_data *pdata = tx_queue->pdata;
+	unsigned int qinx = tx_queue->chan_num;
+	u32 dma_ier, dma_sr, ch_crtl, ch_stat;
+	unsigned long flags;
+
+	spin_lock_irqsave(&pdata->chan_irq_lock[qinx], flags);
+	DMA_SR_RD(qinx, dma_sr);
+	DMA_IER_RD(qinx, dma_ier);
+	VIRT_INTR_CH_STAT_RD(qinx, ch_stat);
+	VIRT_INTR_CH_CRTL_RD(qinx, ch_crtl);
+
+	netdev_dbg(pdata->dev, "DMA_SR[%d] = %#x, DMA_IER= %#x\n",
+		   qinx, dma_sr, dma_ier);
+	netdev_dbg(pdata->dev,
+		   "VIRT_INTR_CH_STAT[%d] = %#x, VIRT_INTR_CH_CRTL= %#x\n",
+		   qinx, ch_stat, ch_crtl);
+
+	if (ch_stat & VIRT_INTR_CH_CRTL_TX_WR_MASK) {
+		DMA_SR_WR(qinx, ((0x1) << 0) | ((0x1) << 15));
+		VIRT_INTR_CH_STAT_WR(qinx, VIRT_INTR_CH_CRTL_TX_WR_MASK);
+		pdata->xstats.tx_normal_irq_n[qinx]++;
+	}
+	spin_unlock_irqrestore(&pdata->chan_irq_lock[qinx], flags);
+
+	if (likely(napi_schedule_prep(&tx_queue->napi))) {
+		eqos_disable_chan_tx_interrupt(pdata, qinx);
+		__napi_schedule(&tx_queue->napi);
+	}
 
 	return IRQ_HANDLED;
-
 }
 
 /*!
@@ -1169,10 +1156,10 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 
 	for (i = 0; i < pdata->num_chans; i++) {
 		if (pdata->rx_irq_alloc_mask & (1 << i)) {
-			free_irq(pdata->rx_irqs[i], pdata);
+			free_irq(pdata->rx_irqs[i], &pdata->rx_queue[i]);
 		}
 		if (pdata->tx_irq_alloc_mask & (1 << i)) {
-			free_irq(pdata->tx_irqs[i], pdata);
+			free_irq(pdata->tx_irqs[i], &pdata->tx_queue[i]);
 		}
 	}
 
@@ -1196,8 +1183,9 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 
 	for (i = 0; i < pdata->num_chans; i++) {
 		snprintf(irq_names[j], 32, "%s.rx%d", dev_name(&pdev->dev), i);
-		ret = request_irq(pdata->rx_irqs[i], eqos_ch_isr,
-				  IRQF_TRIGGER_NONE, irq_names[j++], pdata);
+		ret = request_irq(pdata->rx_irqs[i], eqos_rx_chan_isr,
+				  IRQF_TRIGGER_NONE, irq_names[j++],
+				  &pdata->rx_queue[i]);
 		if (unlikely(ret < 0)) {
 			netdev_err(pdata->dev, "failed to register Rx channel interrupt - %d\n",
 				   pdata->rx_irqs[i]);
@@ -1207,8 +1195,9 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 		pdata->rx_irq_alloc_mask |= (1 << i);
 
 		snprintf(irq_names[j], 32, "%s.tx%d", dev_name(&pdev->dev), i);
-		ret = request_irq(pdata->tx_irqs[i], eqos_ch_isr,
-				  IRQF_TRIGGER_NONE, irq_names[j++], pdata);
+		ret = request_irq(pdata->tx_irqs[i], eqos_tx_chan_isr,
+				  IRQF_TRIGGER_NONE, irq_names[j++],
+				  &pdata->tx_queue[i]);
 		if (unlikely(ret < 0)) {
 			netdev_err(pdata->dev, "failed to register Tx channel interrupt - %d\n",
 				   pdata->rx_irqs[i]);
@@ -5780,13 +5769,14 @@ struct net_device_ops *eqos_get_netdev_ops(void)
 
 static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 {
-	struct hw_if_struct *hw_if = &pdata->hw_if;
 	int i;
 
 	pr_debug("-->%s()\n", __func__);
 
-	for (i = 0; i < pdata->num_chans; i++)
-		hw_if->disable_chan_interrupts(i, pdata);
+	for (i = 0; i < pdata->num_chans; i++) {
+		eqos_disable_chan_rx_interrupt(pdata, i);
+		eqos_disable_chan_tx_interrupt(pdata, i);
+	}
 
 	/* disable mac interrupts */
 	MAC_IMR_WR(0);

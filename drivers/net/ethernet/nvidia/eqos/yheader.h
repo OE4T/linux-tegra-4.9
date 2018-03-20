@@ -709,7 +709,6 @@ struct eqos_prv_data;
 struct tx_ring;
 
 struct hw_if_struct {
-
 	INT (*tx_complete)(struct s_tx_desc *);
 	INT (*tx_window_error)(struct s_tx_desc *);
 	INT (*tx_aborted_error)(struct s_tx_desc *);
@@ -822,12 +821,6 @@ struct hw_if_struct {
 	 VOID(*configure_mac_addr0_reg) (UCHAR *);
 	 VOID(*configure_mac_addr1_reg) (UCHAR *);
 	 VOID(*configure_sa_via_reg) (u32);
-
-	/* for handling multi-queue */
-	INT(*disable_rx_interrupt)(UINT, struct eqos_prv_data *);
-	INT(*enable_rx_interrupt)(UINT, struct eqos_prv_data *);
-	INT (*disable_chan_interrupts)(UINT, struct eqos_prv_data *);
-	INT (*enable_chan_interrupts)(UINT, struct eqos_prv_data *);
 
 	/* for handling MMC */
 	INT(*disable_mmc_interrupts)(VOID);
@@ -1373,6 +1366,8 @@ struct eqos_prv_data {
 
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];
+	/* DMA channel IRQ lock for Tx/Rx */
+	spinlock_t chan_irq_lock[MAX_CHANS];
 	uint	num_chans;
 
 	uint rx_irq_alloc_mask;

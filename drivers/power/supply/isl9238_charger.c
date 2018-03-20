@@ -28,6 +28,8 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/machine.h>
 
+#define MAX_STR_PRINT	50
+
 /* Register definitions */
 #define ISL9238_CHG_CURR_LIMIT		0x14
 #define ISL9238_MAX_SYS_VOLTAGE		0x15
@@ -70,6 +72,8 @@
 #define ISL9238_BATTERY_OVP_MASK	0x80
 #define ISL9238_TRICKLE_CHG_CURR_MASK	0xC000
 #define ISL9238_OTG_CURRENT_MASK	0x1F80
+#define ISL9238_RELOAD_ACLIM_MASK	BIT(14)
+#define ISL9238_REREAD_PROG_MASK	BIT(15)
 
 #define ISL9238_TRICKLE_CHG_MODE		BIT(4)
 #define ISL9238_ACTIVE_CNTRL_LOOP_MASK		0x6000
@@ -90,6 +94,11 @@
 #define ISL9238_TRIGGER_PROCHOT_ACOK		BIT(5)
 #define ISL9238_TRIGGER_OTG_CURR		BIT(7)
 #define ISL9238_PSYS_POWER_MONITOR		BIT(3)
+#define ISL9238_ADPTR_CHG_CURR_MIN		0x8
+#define ISL9238_ADPTR_CHG_CURR_MAX		0x2F80
+#define ISL9238_BAT_CHG_CURRENT_SMBUSK		BIT(7)
+#define ISL9238_DISABLE_RELOAD_ACLIM		BIT(14)
+#define ISL9238_DISABLE_REREAD_PROG		BIT(15)
 
 #define ISL9238_CURR_SENSE_RES_OTP	10
 #define ISL9238_ADPTR_SENSE_RES_OTP	20
@@ -159,6 +168,8 @@ struct isl9238_charger {
 	struct regulator_desc		chg_reg_desc;
 	struct device_node		*chg_np;
 
+	struct battery_charger_dev	*bc_dev;
+
 	bool	is_otg_connected;
 	bool	shutdown_complete;
 	bool	disable_sc7_during_charging;
@@ -166,12 +177,17 @@ struct isl9238_charger {
 	bool	cable_connected;
 	u32	chg_status;
 	u32	in_current_limit;
-	u32	last_charging_current;
+	u32	last_adapter_current;
 	u32	in_voltage_limit;
-	u32	last_charging_voltage;
+	u32	last_adapter_voltage;
 	u32	last_otg_voltage;
 	u32	otg_voltage_limit;
+	u32	curnt_sense_res;
+	u32	adptr_sense_res;
+	u32	charging_current_lim;
 };
+
+struct isl9238_charger *isl9238_bc;
 
 static inline int isl9238_write(struct isl9238_charger *isl9238,
 				u8 reg, unsigned int reg_val)
@@ -214,6 +230,190 @@ static int isl9238_val_to_reg(int val, int offset, int div, int nbits,
 		return (val - offset) / div;
 }
 
+#if defined(CONFIG_SYSFS)
+static ssize_t isl9238_sysfs_show_chg_curnt_limit(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	int ret;
+	unsigned int data;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	ret = regmap_read(isl9238_bc->rmap, ISL9238_CHG_CURR_LIMIT, &data);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "charge curnt read fail:%d", ret);
+		return ret;
+	}
+
+	if (isl9238_bc->curnt_sense_res)
+		data = data * ISL9238_CURR_SENSE_RES_OTP /
+			isl9238_bc->curnt_sense_res;
+
+	return snprintf(buf, MAX_STR_PRINT, "%u mA\n", data);
+}
+
+static ssize_t isl9238_sysfs_set_chg_curnt_limit(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int curr_val, rval, ret;
+
+	if (kstrtouint(buf, 0, &curr_val)) {
+		dev_err(isl9238_bc->dev, "current limit read fail\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	if (isl9238_bc->curnt_sense_res)
+		curr_val = curr_val * isl9238_bc->curnt_sense_res /
+			ISL9238_CURR_SENSE_RES_OTP;
+
+	rval = curr_val & ISL9238_CHG_CURR_LIMIT_MASK;
+	ret = isl9238_write(isl9238_bc, ISL9238_CHG_CURR_LIMIT, rval);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "charge curnt write fail:%d\n", ret);
+		return ret;
+	}
+
+	return count;
+}
+
+static ssize_t isl9238_sysfs_show_chg_curnt_range(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	int ret = 0;
+
+	ret = snprintf(buf + strlen(buf), MAX_STR_PRINT, "%d mA to %d mA\n",
+		       ISL9238_ADPTR_CHG_CURR_MIN, ISL9238_ADPTR_CHG_CURR_MAX);
+
+	return ret;
+}
+
+static ssize_t isl9238_sysfs_show_adptr_curnt_limit(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	unsigned int data;
+	int ret;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	ret = regmap_read(isl9238_bc->rmap, ISL9238_ADPTR_CURR_LIMIT1, &data);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "adptr curnt1 read fail:%d\n", ret);
+		return ret;
+	}
+
+	if (isl9238_bc->adptr_sense_res)
+		data = data * ISL9238_ADPTR_SENSE_RES_OTP /
+			isl9238_bc->adptr_sense_res;
+
+	return snprintf(buf, MAX_STR_PRINT, "%d mA\n", data);
+}
+
+static ssize_t isl9238_sysfs_set_adptr_curnt_limit(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int curnt_val, rval, ret;
+
+	if (kstrtouint(buf, 0, &curnt_val)) {
+		dev_err(isl9238_bc->dev, "current limit read fail\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	if (isl9238_bc->adptr_sense_res)
+		curnt_val = curnt_val * isl9238_bc->adptr_sense_res /
+			ISL9238_ADPTR_SENSE_RES_OTP;
+
+	rval = curnt_val & ISL9238_ADPTR_CURR_LIMIT1_MASK;
+	ret = isl9238_write(isl9238_bc, ISL9238_ADPTR_CURR_LIMIT1, rval);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret  < 0) {
+		dev_err(isl9238_bc->dev, "adptr curnt1 write fail:%d\n", ret);
+		return ret;
+	}
+	return count;
+}
+
+static ssize_t isl9238_sysfs_show_adptr_curnt_range(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	int ret = 0;
+
+	ret = snprintf(buf + strlen(buf), MAX_STR_PRINT, "%d mA to %d mA\n",
+		       ISL9238_ADPTR_CHG_CURR_MIN,
+		       ISL9238_ADPTR_CHG_CURR_MAX);
+
+	return ret;
+}
+
+static DEVICE_ATTR(output_charging_current, 0644,
+		isl9238_sysfs_show_chg_curnt_limit,
+		isl9238_sysfs_set_chg_curnt_limit);
+
+static DEVICE_ATTR(output_charging_current_range, 0444,
+		isl9238_sysfs_show_chg_curnt_range, NULL);
+
+static DEVICE_ATTR(input_charging_current, 0644,
+		isl9238_sysfs_show_adptr_curnt_limit,
+		isl9238_sysfs_set_adptr_curnt_limit);
+
+static DEVICE_ATTR(input_charging_current_range, 0444,
+		isl9238_sysfs_show_adptr_curnt_range, NULL);
+
+static struct attribute *isl9238_attributes[] = {
+	&dev_attr_output_charging_current.attr,
+	&dev_attr_output_charging_current_range.attr,
+	&dev_attr_input_charging_current.attr,
+	&dev_attr_input_charging_current_range.attr,
+	NULL,
+};
+
+static const struct attribute_group isl9238_attr_group = {
+	.attrs = isl9238_attributes,
+};
+
+static void isl9238_sysfs_init(struct device *dev)
+{
+	int err;
+	static struct kobject *bc_kobj;
+
+	bc_kobj = kobject_create_and_add("battery_charger", kernel_kobj);
+	if (!bc_kobj) {
+		dev_err(dev, "/sys/kernel/battery_charger sysfs create failed\n");
+		return;
+	}
+
+	err = sysfs_create_group(bc_kobj, &isl9238_attr_group);
+	if (!err)
+		dev_err(dev, "failed to create isl9238 sysfs entries\n");
+}
+#else
+static void tisl9238_sysfs_init(struct device *dev)
+{
+}
+#endif
+
 static int isl9238_otg_enable(struct regulator_dev *rdev)
 {
 	struct isl9238_charger *isl9238 = rdev_get_drvdata(rdev);
@@ -252,6 +452,7 @@ static int isl9238_otg_disable(struct regulator_dev *rdev)
 	}
 	mutex_unlock(&isl9238->otg_mutex);
 
+	dev_info(isl9238->dev, "OTG disabled\n");
 	return ret;
 }
 
@@ -277,13 +478,15 @@ static int isl9238_otg_set_voltage(struct regulator_dev *rdev,
 	int reg_val;
 	int ret = -EINVAL;
 
-	if (!isl9238->is_otg_connected)
+	if (!isl9238->is_otg_connected) {
+		dev_info(isl9238->dev, "otg not enabled\n");
 		return ret;
+	}
 
 	if (max_uv == 0)
-		return ret;
+		return 0;
 
-	dev_info(isl9238->dev, "Setting otg voltage %d\n", max_uv / 1000);
+	dev_info(isl9238->dev, "setting otg voltage %d\n", max_uv / 1000);
 
 	isl9238->last_otg_voltage = max_uv;
 	otg_voltage_limit = max_uv / 1000;
@@ -304,17 +507,25 @@ static int isl9238_otg_set_curr_limit(struct regulator_dev *rdev,
 {
 	struct isl9238_charger *isl9238 = rdev_get_drvdata(rdev);
 	int ret = 0;
-	int val;
+	int otg_current_lim, val;
 
-	if (isl9238->is_otg_connected)
+	if (!isl9238->is_otg_connected) {
+		dev_info(isl9238->dev, "otg not enabled\n");
 		return -EINVAL;
+	}
 
 	if (max_ua == 0)
-		return -EINVAL;
+		return 0;
 
-	dev_info(isl9238->dev, "Setting otg current %d\n", max_ua / 1000);
+	dev_info(isl9238->dev, "setting otg current %d\n", max_ua / 1000);
 
-	val = (max_ua / 1000) & ISL9238_OTG_CURRENT_MASK;
+	otg_current_lim = max_ua / 1000;
+
+	if (isl9238->curnt_sense_res)
+		otg_current_lim = otg_current_lim * isl9238->curnt_sense_res /
+				ISL9238_CURR_SENSE_RES_OTP;
+
+	val = otg_current_lim & ISL9238_OTG_CURRENT_MASK;
 	ret = isl9238_write(isl9238, ISL9238_OTG_CURRENT, val);
 	if (ret < 0)
 		dev_err(isl9238->dev, "otg current write fail:%d\n", ret);
@@ -357,7 +568,8 @@ static int isl9238_init_vbus_regulator(struct isl9238_charger *isl9238,
 	isl9238->vbus_ridata->constraints.valid_ops_mask =
 					REGULATOR_CHANGE_MODE |
 					REGULATOR_CHANGE_STATUS |
-					REGULATOR_CHANGE_VOLTAGE;
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_CURRENT;
 
 	/* Register vbus regulator */
 	rconfig.dev = isl9238->dev;
@@ -387,13 +599,12 @@ static int isl9238_set_charging_voltage(struct regulator_dev *rdev,
 	if (isl9238->is_otg_connected)
 		return -EINVAL;
 
+	dev_info(isl9238->dev, "setting adapter voltage %d\n", max_uv / 1000);
+
 	if (max_uv == 0)
-		return -EINVAL;
+		return 0;
 
-	dev_info(isl9238->dev, "Setting charging voltage %d\n", max_uv / 1000);
-
-	isl9238->wake_lock_released = false;
-	isl9238->last_charging_voltage = max_uv;
+	isl9238->last_adapter_voltage = max_uv;
 	in_voltage_limit = max_uv / 1000;
 
 	if (isl9238->wake_lock_released)
@@ -414,6 +625,7 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 					int min_ua, int max_ua)
 {
 	struct isl9238_charger *isl9238 = rdev_get_drvdata(rdev);
+	unsigned int chg_current_limit;
 	int in_current_limit;
 	int old_current_limit;
 	int ret = 0;
@@ -422,25 +634,44 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 	if (isl9238->is_otg_connected)
 		return -EINVAL;
 
-	if (max_ua == 0)
-		return -EINVAL;
+	dev_info(isl9238->dev, "setting adapter current %d\n", max_ua / 1000);
 
-	isl9238->wake_lock_released = false;
-
-	dev_info(isl9238->dev, "Setting charging current %d\n", max_ua / 1000);
-
-	ret = isl9238_read(isl9238, ISL9238_INFO2_CHG_STATUS);
-	if (ret < 0) {
-		dev_err(isl9238->dev, "info2 reg read failed:%d\n", ret);
-		return ret;
+	if (max_ua == 0) {
+		/* disable charging by setting charging current to 0mA */
+		ret = isl9238_write(isl9238, ISL9238_CHG_CURR_LIMIT, 0);
+		if (ret < 0) {
+			dev_err(isl9238->dev,
+				"charge current update failed %d\n", ret);
+			return ret;
+		}
+		isl9238->wake_lock_released = false;
+		isl9238->chg_status = BATTERY_DISCHARGING;
+		dev_info(isl9238->dev, "charging disabled\n");
+		battery_charging_status_update(isl9238->bc_dev,
+					       isl9238->chg_status);
+		return 0;
 	}
-	if (!(ret & ISL9238_ADAPTER_STATE)) {
-		dev_info(isl9238->dev, "adapter not present:%d\n", ret);
-		return -ENODEV;
+
+	/* enable charging by setting default charging current */
+	if (isl9238->charging_current_lim) {
+		chg_current_limit = isl9238->charging_current_lim;
+		if (isl9238->curnt_sense_res)
+			chg_current_limit = chg_current_limit *
+				isl9238->curnt_sense_res /
+				ISL9238_CURR_SENSE_RES_OTP;
+
+		val = chg_current_limit & ISL9238_CHG_CURR_LIMIT_MASK;
+		ret = isl9238_write(isl9238, ISL9238_CHG_CURR_LIMIT, val);
+		if (ret < 0) {
+			dev_err(isl9238->dev,
+				"charging current write fail:%d\n", ret);
+			return ret;
+		}
+		dev_info(isl9238->dev, "charging enabled\n");
 	}
 
 	old_current_limit = isl9238->in_current_limit;
-	isl9238->last_charging_current = max_ua;
+	isl9238->last_adapter_current = max_ua;
 
 	in_current_limit = max_ua / 1000;
 	isl9238->cable_connected = 1;
@@ -449,10 +680,27 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 	if (isl9238->wake_lock_released)
 		in_current_limit = 500;
 
-	if (isl9238->chg_pdata->adapter_sense_resistor)
+	/*
+	 * disable auto charge to set adapter current through smbus
+	 * disable reload adapter current limit on usb plugin
+	 * disable reread prog pin resistor
+	 */
+	ret = isl9238_update_bits(isl9238, ISL9238_CONTROL3_OPTIONS,
+				  ISL9238_AUTO_CHARGE_MODE_MASK |
+				  ISL9238_RELOAD_ACLIM_MASK |
+				  ISL9238_REREAD_PROG_MASK,
+				  ISL9238_BAT_CHG_CURRENT_SMBUSK |
+				  ISL9238_DISABLE_RELOAD_ACLIM |
+				  ISL9238_DISABLE_REREAD_PROG);
+	if (ret < 0) {
+		dev_err(isl9238->dev, "control3 reg write fail:%d\n", ret);
+		return ret;
+	}
+
+	if (isl9238->adptr_sense_res)
 		in_current_limit = in_current_limit *
-			isl9238->chg_pdata->adapter_sense_resistor /
-			ISL9238_ADPTR_SENSE_RES_OTP;
+			isl9238->adptr_sense_res / ISL9238_ADPTR_SENSE_RES_OTP;
+
 	val = in_current_limit & ISL9238_ADPTR_CURR_LIMIT1_MASK;
 	ret = isl9238_write(isl9238, ISL9238_ADPTR_CURR_LIMIT1, val);
 	if (ret < 0) {
@@ -460,6 +708,7 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 		return ret;
 	}
 	isl9238->in_current_limit = in_current_limit;
+	battery_charging_status_update(isl9238->bc_dev, isl9238->chg_status);
 
 	return 0;
 }
@@ -491,7 +740,8 @@ static int isl9238_init_charger_regulator(struct isl9238_charger *isl9238,
 	isl9238->chg_ridata->constraints.valid_ops_mask =
 					REGULATOR_CHANGE_MODE |
 					REGULATOR_CHANGE_STATUS |
-					REGULATOR_CHANGE_CURRENT;
+					REGULATOR_CHANGE_CURRENT |
+					REGULATOR_CHANGE_VOLTAGE;
 	rconfig.dev = isl9238->dev;
 	rconfig.of_node =  isl9238->chg_np;
 	rconfig.init_data = isl9238->chg_ridata;
@@ -624,6 +874,22 @@ out:
 	return IRQ_HANDLED;
 }
 
+static int isl9238_report_charging_state(struct battery_charger_dev *bc_dev)
+{
+	struct isl9238_charger *isl9238 = battery_charger_get_drvdata(bc_dev);
+
+	return isl9238->chg_status;
+}
+
+static struct battery_charging_ops isl9238_charger_bci_ops = {
+	.get_charging_status = isl9238_report_charging_state,
+};
+
+static struct battery_charger_info isl9238_charger_bci = {
+	.cell_id = 0,
+	.bc_ops = &isl9238_charger_bci_ops,
+};
+
 static int isl9238_charger_init(struct isl9238_charger *isl9238)
 {
 	unsigned int val;
@@ -633,6 +899,7 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 	unsigned int trickle_chg_curr;
 	unsigned int adptr_curr_lim1;
 	unsigned int adptr_curr_lim2;
+	unsigned int otg_current_lim;
 	int ret;
 
 	chg_curr_lim = isl9238->chg_pdata->charge_current_lim;
@@ -641,6 +908,7 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 	adptr_curr_lim1 = isl9238->chg_pdata->adapter_current_lim1;
 	adptr_curr_lim2 = isl9238->chg_pdata->adapter_current_lim2;
 	trickle_chg_curr = isl9238->chg_pdata->trickle_chg_current;
+	otg_current_lim = isl9238->chg_pdata->otg_current;
 
 	if (isl9238->chg_pdata->enable_auto_charging) {
 		ret = isl9238_update_bits(isl9238, ISL9238_CONTROL3_OPTIONS,
@@ -650,7 +918,21 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 				"auto charge mode enable failed %d\n", ret);
 			return ret;
 		}
+	} else {
+	ret = isl9238_update_bits(isl9238, ISL9238_CONTROL3_OPTIONS,
+				  ISL9238_AUTO_CHARGE_MODE_MASK |
+				  ISL9238_RELOAD_ACLIM_MASK |
+				  ISL9238_REREAD_PROG_MASK,
+				  ISL9238_BAT_CHG_CURRENT_SMBUSK |
+				  ISL9238_DISABLE_RELOAD_ACLIM |
+				  ISL9238_DISABLE_REREAD_PROG);
+		if (ret < 0) {
+			dev_err(isl9238->dev,
+				"control3 reg write fail:%d\n", ret);
+			return ret;
+		}
 	}
+
 	if (chg_curr_lim) {
 		if (curr_sense_res)
 			chg_curr_lim = chg_curr_lim *
@@ -767,8 +1049,11 @@ static int isl9238_charger_init(struct isl9238_charger *isl9238)
 	}
 
 	if (isl9238->chg_pdata->otg_current) {
-		val = isl9238->chg_pdata->otg_current &
-					ISL9238_OTG_CURRENT_MASK;
+		if (curr_sense_res)
+			otg_current_lim = otg_current_lim * curr_sense_res /
+				ISL9238_CURR_SENSE_RES_OTP;
+
+		val = otg_current_lim & ISL9238_OTG_CURRENT_MASK;
 		ret = isl9238_write(isl9238, ISL9238_OTG_CURRENT, val);
 		if (ret < 0) {
 			dev_err(isl9238->dev,
@@ -1035,7 +1320,12 @@ static int isl9238_probe(struct i2c_client *client,
 	isl9238->chg_pdata = pdata;
 	isl9238->vbus_np = vbus_np;
 	isl9238->chg_np = chg_np;
+	isl9238->curnt_sense_res = isl9238->chg_pdata->curr_sense_resistor;
+	isl9238->adptr_sense_res = isl9238->chg_pdata->adapter_sense_resistor;
+	isl9238->charging_current_lim = isl9238->chg_pdata->charge_current_lim;
 	isl9238->chg_status = BATTERY_DISCHARGING;
+
+	isl9238_bc = isl9238;
 
 	mutex_init(&isl9238->mutex);
 	mutex_init(&isl9238->otg_mutex);
@@ -1045,6 +1335,8 @@ static int isl9238_probe(struct i2c_client *client,
 		dev_err(&client->dev, "version read failed %d\n", ret);
 		goto scrub_mutex;
 	}
+
+	isl9238_sysfs_init(&client->dev);
 
 	ret = isl9238_charger_init(isl9238);
 	if (ret < 0) {
@@ -1074,6 +1366,14 @@ static int isl9238_probe(struct i2c_client *client,
 	}
 	device_set_wakeup_capable(isl9238->dev, true);
 	device_wakeup_enable(isl9238->dev);
+
+	isl9238->bc_dev = battery_charger_register(isl9238->dev,
+			&isl9238_charger_bci, isl9238);
+	if (IS_ERR(isl9238->bc_dev)) {
+		ret = PTR_ERR(isl9238->bc_dev);
+		dev_err(isl9238->dev, "batt-chg register fail:%d\n", ret);
+		goto scrub_mutex;
+	}
 
 	ret = isl9238_init_vbus_regulator(isl9238, pdata);
 	if (ret < 0) {

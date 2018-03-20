@@ -714,6 +714,11 @@ struct tegra_vgpu_channel_cleanup {
 	u32 chid;
 };
 
+struct tegra_vgpu_channel_set_error_notifier {
+	u32 chid;
+	u32 error;
+};
+
 enum {
 
 	TEGRA_VGPU_INTR_GR = 0,
@@ -732,6 +737,7 @@ enum {
 	TEGRA_VGPU_EVENT_SM_ESR = 4,
 	TEGRA_VGPU_EVENT_SEMAPHORE_WAKEUP = 5,
 	TEGRA_VGPU_EVENT_CHANNEL_CLEANUP = 6,
+	TEGRA_VGPU_EVENT_SET_ERROR_NOTIFIER = 7,
 };
 
 struct tegra_vgpu_intr_msg {
@@ -748,6 +754,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_sm_esr_info sm_esr;
 		struct tegra_vgpu_semaphore_wakeup sem_wakeup;
 		struct tegra_vgpu_channel_cleanup ch_cleanup;
+		struct tegra_vgpu_channel_set_error_notifier set_error_notifier;
 		char padding[32];
 	} info;
 };

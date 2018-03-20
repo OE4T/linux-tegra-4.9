@@ -122,6 +122,20 @@ static void vgpu_channel_abort_cleanup(struct gk20a *g, u32 chid)
 	g->ops.fifo.ch_abort_clean_up(ch);
 }
 
+static void vgpu_set_error_notifier(struct gk20a *g,
+		struct tegra_vgpu_channel_set_error_notifier *p)
+{
+	struct channel_gk20a *ch;
+
+	if (p->chid >= g->fifo.num_channels) {
+		nvgpu_err(g, "invalid chid %d", p->chid);
+		return;
+	}
+
+	ch = &g->fifo.channel[p->chid];
+	g->ops.fifo.set_error_notifier(ch, p->error);
+}
+
 int vgpu_intr_thread(void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -180,6 +194,10 @@ int vgpu_intr_thread(void *dev_id)
 		case TEGRA_VGPU_EVENT_CHANNEL_CLEANUP:
 			vgpu_channel_abort_cleanup(g,
 					msg->info.ch_cleanup.chid);
+			break;
+		case TEGRA_VGPU_EVENT_SET_ERROR_NOTIFIER:
+			vgpu_set_error_notifier(g,
+						&msg->info.set_error_notifier);
 			break;
 		default:
 			nvgpu_err(g, "unknown event %u", msg->event);

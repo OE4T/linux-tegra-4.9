@@ -775,10 +775,15 @@ arch_initcall(arm64_dma_init);
 
 #define UL_ATR(a) (a)
 
-/* Thankfully, all cache ops are by VA so we can ignore phys here */
-static void flush_page(struct device *dev, const void *virt, phys_addr_t phys)
+static void flush_sg(struct device *dev, struct sg_table *sgt)
 {
-	__dma_flush_area(virt, PAGE_SIZE);
+	struct scatterlist *s;
+	int i = 0;
+	int nents = sgt->orig_nents;
+
+	for_each_sg(sgt->sgl, s, nents, i) {
+		__dma_flush_area(sg_virt(s), s->length);
+	}
 }
 
 static void *__iommu_alloc_attrs(struct device *dev, size_t size,
@@ -814,7 +819,7 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 		pgprot_t prot = __get_dma_pgprot(attrs, PAGE_KERNEL, coherent);
 
 		pages = iommu_dma_alloc(dev, iosize, gfp, UL_ATR(attrs),
-					ioprot, handle, flush_page);
+					ioprot, handle, flush_sg);
 		if (!pages)
 			return NULL;
 

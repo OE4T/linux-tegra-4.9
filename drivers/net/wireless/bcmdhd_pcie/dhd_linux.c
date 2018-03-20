@@ -883,13 +883,13 @@ dhd_cpumasks_init(dhd_info_t *dhd)
 	cpumask_clear(dhd->cpumask_secondary);
 
 	cpus = DHD_LB_PRIMARY_CPUS;
-	for (id = 0; id < NR_CPUS; id++) {
+	for (id = 0; id < num_possible_cpus(); id++) {
 		if (isset(&cpus, id))
 			cpumask_set_cpu(id, dhd->cpumask_primary);
 	}
 
 	cpus = DHD_LB_SECONDARY_CPUS;
-	for (id = 0; id < NR_CPUS; id++) {
+	for (id = 0; id < num_possible_cpus(); id++) {
 		if (isset(&cpus, id))
 			cpumask_set_cpu(id, dhd->cpumask_secondary);
 	}

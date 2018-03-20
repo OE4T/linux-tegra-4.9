@@ -114,6 +114,14 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 	gk20a_tsg_event_id_post_event(tsg, info->event_id);
 }
 
+static void vgpu_channel_abort_cleanup(struct gk20a *g, u32 chid)
+{
+	struct channel_gk20a *ch = &g->fifo.channel[chid];
+
+	ch->has_timedout = true;
+	g->ops.fifo.ch_abort_clean_up(ch);
+}
+
 int vgpu_intr_thread(void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -168,6 +176,10 @@ int vgpu_intr_thread(void *dev_id)
 		case TEGRA_VGPU_EVENT_SEMAPHORE_WAKEUP:
 			g->ops.semaphore_wakeup(g,
 					!!msg->info.sem_wakeup.post_events);
+			break;
+		case TEGRA_VGPU_EVENT_CHANNEL_CLEANUP:
+			vgpu_channel_abort_cleanup(g,
+					msg->info.ch_cleanup.chid);
 			break;
 		default:
 			nvgpu_err(g, "unknown event %u", msg->event);

@@ -5154,14 +5154,14 @@ void gk20a_gr_set_error_notifier(struct gk20a *g,
 			nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
 					channel_gk20a, ch_entry) {
 				if (gk20a_channel_get(ch_tsg)) {
-					nvgpu_set_error_notifier(ch_tsg,
+					g->ops.fifo.set_error_notifier(ch_tsg,
 							 error_notifier);
 					gk20a_channel_put(ch_tsg);
 				}
 			}
 			nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 		} else {
-			nvgpu_set_error_notifier(ch, error_notifier);
+			g->ops.fifo.set_error_notifier(ch, error_notifier);
 		}
 	}
 }

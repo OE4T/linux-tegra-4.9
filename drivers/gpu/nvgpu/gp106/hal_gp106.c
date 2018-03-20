@@ -89,6 +89,7 @@
 #include <nvgpu/bus.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>
 #include <nvgpu/hw/gp106/hw_fifo_gp106.h>
@@ -504,6 +505,7 @@ static const struct gpu_ops gp106_ops = {
 		.check_ch_ctxsw_timeout = gk20a_fifo_check_ch_ctxsw_timeout,
 		.channel_suspend = gk20a_channel_suspend,
 		.channel_resume = gk20a_channel_resume,
+		.set_error_notifier = nvgpu_set_error_notifier,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

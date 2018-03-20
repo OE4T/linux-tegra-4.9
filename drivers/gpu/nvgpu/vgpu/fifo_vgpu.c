@@ -643,7 +643,8 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
-				nvgpu_set_error_notifier(ch_tsg, err_code);
+				g->ops.fifo.set_error_notifier(ch_tsg,
+								err_code);
 				ch_tsg->has_timedout = true;
 				gk20a_channel_put(ch_tsg);
 			}
@@ -651,7 +652,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
-		nvgpu_set_error_notifier(ch, err_code);
+		g->ops.fifo.set_error_notifier(ch, err_code);
 		ch->has_timedout = true;
 	}
 
@@ -726,10 +727,11 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_INTR_PBDMA:
-		nvgpu_set_error_notifier(ch, NVGPU_ERR_NOTIFIER_PBDMA_ERROR);
+		g->ops.fifo.set_error_notifier(ch,
+						NVGPU_ERR_NOTIFIER_PBDMA_ERROR);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_CTXSW_TIMEOUT:
-		nvgpu_set_error_notifier(ch,
+		g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 		break;
 	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:

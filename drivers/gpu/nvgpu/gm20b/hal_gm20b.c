@@ -60,6 +60,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/bus.h>
+#include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
@@ -443,6 +444,7 @@ static const struct gpu_ops gm20b_ops = {
 		.check_ch_ctxsw_timeout = gk20a_fifo_check_ch_ctxsw_timeout,
 		.channel_suspend = gk20a_channel_suspend,
 		.channel_resume = gk20a_channel_resume,
+		.set_error_notifier = nvgpu_set_error_notifier,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gk20a_fifo_free_syncpt_buf,

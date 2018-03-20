@@ -85,6 +85,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -533,6 +534,7 @@ static const struct gpu_ops gv11b_ops = {
 		.check_ch_ctxsw_timeout = gk20a_fifo_check_ch_ctxsw_timeout,
 		.channel_suspend = gk20a_channel_suspend,
 		.channel_resume = gk20a_channel_resume,
+		.set_error_notifier = nvgpu_set_error_notifier,
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf,
 		.free_syncpt_buf = gv11b_fifo_free_syncpt_buf,

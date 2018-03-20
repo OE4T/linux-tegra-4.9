@@ -1393,7 +1393,7 @@ void gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 {
 	nvgpu_err(g,
 		"channel %d generated a mmu fault", refch->chid);
-	nvgpu_set_error_notifier(refch,
+	g->ops.fifo.set_error_notifier(refch,
 				NVGPU_ERR_NOTIFIER_FIFO_ERROR_MMU_ERR_FLT);
 }
 
@@ -1938,7 +1938,8 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
-				nvgpu_set_error_notifier(ch_tsg, err_code);
+				g->ops.fifo.set_error_notifier(ch_tsg,
+								err_code);
 				gk20a_channel_put(ch_tsg);
 			}
 		}
@@ -1946,7 +1947,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose);
 	} else {
-		nvgpu_set_error_notifier(ch, err_code);
+		g->ops.fifo.set_error_notifier(ch, err_code);
 		gk20a_fifo_recover_ch(g, ch->chid, verbose);
 	}
 
@@ -2108,7 +2109,7 @@ bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
 		*verbose = ch->timeout_debug_dump;
 		*ms = ch->timeout_accumulated_ms;
 		if (recover)
-			nvgpu_set_error_notifier(ch,
+			ch->g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 
 		gk20a_channel_put(ch);
@@ -2172,7 +2173,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {
-				nvgpu_set_error_notifier(ch,
+				ch->g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 				*verbose |= ch->timeout_debug_dump;
 				gk20a_channel_put(ch);
@@ -2487,7 +2488,7 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 		struct channel_gk20a *ch = &f->channel[id];
 
 		if (gk20a_channel_get(ch)) {
-			nvgpu_set_error_notifier(ch, error_notifier);
+			g->ops.fifo.set_error_notifier(ch, error_notifier);
 			gk20a_fifo_recover_ch(g, id, true);
 			gk20a_channel_put(ch);
 		}
@@ -2500,7 +2501,7 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {
-				nvgpu_set_error_notifier(ch,
+				g->ops.fifo.set_error_notifier(ch,
 					error_notifier);
 				gk20a_channel_put(ch);
 			}
@@ -2662,7 +2663,7 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 				channel_gk20a, ch_entry) {
 			if (!gk20a_channel_get(ch))
 				continue;
-			nvgpu_set_error_notifier(ch,
+			g->ops.fifo.set_error_notifier(ch,
 				NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 			gk20a_channel_put(ch);
 		}
@@ -2675,7 +2676,7 @@ void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 			"preempt channel %d timeout", id);
 
 		if (gk20a_channel_get(ch)) {
-			nvgpu_set_error_notifier(ch,
+			g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 			gk20a_fifo_recover_ch(g, id, true);
 			gk20a_channel_put(ch);

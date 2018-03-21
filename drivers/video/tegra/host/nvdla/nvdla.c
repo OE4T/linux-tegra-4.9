@@ -59,7 +59,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
 
 	if (message == DLA_MSG_DEBUG_PRINT)
-		nvdla_dbg_info(pdev, "falcon: %s",
+		nvdla_dbg_fw(pdev, "falcon: %s",
 				(char *)nvdla_dev->debug_dump_va);
 
 	if ((message == DLA_MSG_CMD_COMPLETE ||

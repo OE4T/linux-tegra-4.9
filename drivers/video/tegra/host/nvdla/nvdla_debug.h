@@ -33,6 +33,7 @@ enum nvdla_dbg_categories {
 	debug_fn	= BIT(3),  /* fn name tracing */
 	debug_reg	= BIT(4),  /* reg accesses, including operation desc */
 	debug_perf	= BIT(5),  /* for tracking perf impact */
+	debug_fw	= BIT(6),  /* enable firmware log */
 };
 
 #ifdef CONFIG_TEGRA_NVDLA_TRACE_PRINTK
@@ -80,6 +81,9 @@ do {									\
 
 #define nvdla_dbg_reg(pdev, fmt, arg...) \
 	nvdla_dbg(debug_reg, pdev, fmt, ##arg)
+
+#define nvdla_dbg_fw(pdev, fmt, arg...) \
+	nvdla_dbg(debug_fw, pdev, fmt, ##arg)
 
 /**
  * nvdla_debug_init() initiallze dla debug utils

@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-base.dtsi: SoC Base DTSI file.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2179,7 +2179,6 @@
 		power-domains = <&adsp_pd>;
 #endif
 		wakeup-disable;
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_APE>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
@@ -2269,7 +2268,6 @@
 					"adsp", "aclk";
 			resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 			reset-names = "adspall";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_APE>;
 		};
 	};

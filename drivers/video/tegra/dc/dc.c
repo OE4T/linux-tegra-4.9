@@ -6020,10 +6020,22 @@ void tegra_dc_disable(struct tegra_dc *dc)
 	tegra_dc_syncpt_flush(dc->ndev, dc->vblank_syncpt);
 }
 
+static inline void tegra_dc_disable_all_wins(struct tegra_dc *dc)
+{
+	int blank_windows = tegra_dc_ext_disable(dc->ext);
+
+	/*
+	 * The tegra_dc_ext_disable() call above will disable the windows on
+	 * this head that are owned by the given dc_ext owner. Any active
+	 * windows on this head that have no dc_ext owner will be left
+	 * untouched. The following tegra_dc_blank_wins() call will ensure that
+	 * any remaining windows are actually disabled.
+	 */
+	tegra_dc_blank_wins(dc, ~blank_windows);
+}
+
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 {
-	int blank_windows;
-
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;
 
@@ -6042,11 +6054,7 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 		return;
 	}
 
-	blank_windows = tegra_dc_ext_disable(dc->ext);
-
-	/* tegra_dc_ext_disable blanks windows which are owned by user.
-	 * Blank remaining windows here which are valid for this head */
-	tegra_dc_blank_wins(dc, ~blank_windows);
+	tegra_dc_disable_all_wins(dc);
 
 	if (dc->cursor.enabled)
 		tegra_dc_cursor_suspend(dc);
@@ -6994,7 +7002,7 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 		return ret;
 	}
 
-	tegra_dc_ext_disable(dc->ext);
+	tegra_dc_disable_all_wins(dc);
 
 	tegra_dc_cursor_suspend(dc);
 

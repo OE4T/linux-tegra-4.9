@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 		dma-coherent;
 		reg = <0x0 0x0c1a0000 0x0 0x40000>; /* AON shared semaphore */
 		#mbox-cells = <1>;
-		#stream-id-cells = <1>;
 		nvidia,hsp-shared-mailbox = <&aon_hsp 2>;
 		nvidia,hsp-shared-mailbox-names = "ivc-pair";
 		nvidia,ivc-carveout-base-ss = <0>;

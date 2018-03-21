@@ -127,7 +127,6 @@
 					"adsp", "aclk";
 			resets = <&bpmp_resets TEGRA194_RESET_ADSP_ALL>;
 			reset-names = "adspall";
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_APE>;
 			status = "disabled";
 		};
@@ -564,7 +563,6 @@
 			wakeup-disable;
 			nvidia,adma_ch_start = <16>;
 			nvidia,adma_ch_cnt = <16>;
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_APE>;
 			interrupt-parent = <&tegra_agic>;
 			interrupts = <GIC_SPI INT_ADMA_EOT16 IRQ_TYPE_LEVEL_HIGH

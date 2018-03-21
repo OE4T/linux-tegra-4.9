@@ -156,28 +156,24 @@
 
 	vse@15810000 {
 		compatible = "nvidia,tegra186-hv-vse";
-		#stream-id-cells = <1>;
 		se-engine-id = <0>;
 		status = "disabled";
 	};
 
 	vse@15820000 {
 		compatible = "nvidia,tegra186-hv-vse";
-		#stream-id-cells = <1>;
 		se-engine-id = <1>;
 		status = "disabled";
 	};
 
 	vse@15830000 {
 		compatible = "nvidia,tegra186-hv-vse";
-		#stream-id-cells = <1>;
 		se-engine-id = <2>;
 		status = "disabled";
 	};
 
 	vse@15840000 {
 		compatible = "nvidia,tegra186-hv-vse";
-		#stream-id-cells = <1>;
 		se-engine-id = <3>;
 		status = "disabled";
 	};

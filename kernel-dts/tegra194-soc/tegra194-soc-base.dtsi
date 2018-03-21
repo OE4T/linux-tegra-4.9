@@ -1431,7 +1431,6 @@
 				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS1>;
 			clock-names = "axi", "vps0", "vps1";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_PVA0>;
 			dma-coherent;
 		};
@@ -1448,7 +1447,6 @@
 				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS1>;
 			clock-names = "axi", "vps0", "vps1";
 
-			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_PVA1>;
 			dma-coherent;
 		};
@@ -1837,7 +1835,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
 		dma-coherent;
 
@@ -1875,7 +1872,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
 		dma-coherent;
 
@@ -1891,7 +1887,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF0>;
 		dma-coherent;
 
@@ -1907,7 +1902,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF1>;
 		dma-coherent;
 
@@ -1923,7 +1917,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF2>;
 		dma-coherent;
 
@@ -1939,7 +1932,6 @@
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 
-		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_VF3>;
 		dma-coherent;
 

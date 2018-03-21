@@ -518,8 +518,9 @@
 	};
 
 	mc {
+		#address-cells = <2>;
+		#size-cells = <2>;
 		compatible = "nvidia,tegra-t19x-mc";
-
 		reg-ranges = <1>;
 		reg	   = <0x0 0x2c10000 0x0 0x10000   /* MCB */
 			      0x0 0x2c20000 0x0 0x10000   /* MC0 */

@@ -1,7 +1,7 @@
 /*
  * tegra210_peq_alt.c - Tegra210 PEQ driver
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -281,35 +281,51 @@ static const struct regmap_config tegra210_peq_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-int tegra210_peq_hw_params(struct snd_soc_codec *codec)
+void tegra210_peq_restore(struct tegra210_ope *ope)
 {
-	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
-	u32 val = 0;
-	int i = 0;
-
-	regmap_read(ope->peq_regmap, TEGRA210_PEQ_CONFIG, &val);
-	if (!(val & TEGRA210_PEQ_CONFIG_MODE_ACTIVE))
-		return 0;
+	unsigned int i;
 
 	for (i = 0; i < TEGRA210_PEQ_MAX_CHANNELS; i++) {
 		tegra210_xbar_write_ahubram(ope->peq_regmap,
 			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_CTRL,
 			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_DATA,
 			(i * TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH),
-			(u32 *)&biquad_init_gains,
+			(u32 *)&ope->peq_biquad_gains,
 			TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH);
 
 		tegra210_xbar_write_ahubram(ope->peq_regmap,
 			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_CTRL,
 			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_DATA,
 			(i * TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH),
-			(u32 *)&biquad_init_shifts,
+			(u32 *)&ope->peq_biquad_shifts,
 			TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH);
 
 	}
-	return 0;
 }
-EXPORT_SYMBOL_GPL(tegra210_peq_hw_params);
+EXPORT_SYMBOL_GPL(tegra210_peq_restore);
+
+void tegra210_peq_save(struct tegra210_ope *ope)
+{
+	unsigned int i;
+
+	for (i = 0; i < TEGRA210_PEQ_MAX_CHANNELS; i++) {
+		tegra210_xbar_read_ahubram(ope->peq_regmap,
+			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_CTRL,
+			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_DATA,
+			(i * TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH),
+			(u32 *)&ope->peq_biquad_gains,
+			TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH);
+
+		tegra210_xbar_read_ahubram(ope->peq_regmap,
+			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_CTRL,
+			TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_DATA,
+			(i * TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH),
+			(u32 *)&ope->peq_biquad_shifts,
+			TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH);
+
+	}
+}
+EXPORT_SYMBOL_GPL(tegra210_peq_save);
 
 int tegra210_peq_codec_init(struct snd_soc_codec *codec)
 {

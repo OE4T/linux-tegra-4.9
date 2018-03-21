@@ -1,7 +1,7 @@
 /*
  * tegra210_ope_alt.h - Definitions for Tegra210 OPE driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,8 @@
 
 #ifndef __TEGRA210_OPE_ALT_H__
 #define __TEGRA210_OPE_ALT_H__
+
+#include "tegra210_peq_alt.h"
 
 /* Register offsets from TEGRA210_OPE*_BASE */
 /*
@@ -87,12 +89,15 @@ struct tegra210_ope {
 	struct regmap *peq_regmap;
 	struct regmap *mbdrc_regmap;
 	const struct tegra210_ope_soc_data *soc_data;
+	u32 peq_biquad_gains[TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH];
+	u32 peq_biquad_shifts[TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH];
 	bool is_shutdown;
 };
 
 extern int tegra210_peq_init(struct platform_device *pdev, int id);
 extern int tegra210_peq_codec_init(struct snd_soc_codec *codec);
-extern int tegra210_peq_hw_params(struct snd_soc_codec *codec);
+extern void tegra210_peq_restore(struct tegra210_ope *ope);
+extern void tegra210_peq_save(struct tegra210_ope *ope);
 extern int tegra210_mbdrc_init(struct platform_device *pdev, int id);
 extern int tegra210_mbdrc_codec_init(struct snd_soc_codec *codec);
 extern int tegra210_mbdrc_hw_params(struct snd_soc_codec *codec);

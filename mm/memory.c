@@ -3354,8 +3354,10 @@ static int do_shared_fault(struct fault_env *fe, pgoff_t pgoff)
 		return ret;
 	}
 
-	if (set_page_dirty(fault_page))
-		dirtied = 1;
+	/* There's no need to set anon page dirty. */
+	if (!PageAnon(fault_page))
+		if (set_page_dirty(fault_page))
+			dirtied = 1;
 	/*
 	 * Take a local copy of the address_space - page.mapping may be zeroed
 	 * by truncate after unlock_page().   The address_space itself remains

@@ -1,7 +1,7 @@
 /*
  * tegra210-soc-actmon.dtsi: Tegra210 soc dtsi file for central actmon instances
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@
 		clock-names = "actmon";
 		resets = <&tegra_car TEGRA210_CLK_ACTMON>;
 		reset-names = "actmon";
-		#stream-id-cells = <1>;
 		nvidia,sample_period = /bits/ 8 <20>;
 
 		mc_all {	/* MC_ALL actmon device */

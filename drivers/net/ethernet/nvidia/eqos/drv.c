@@ -1812,8 +1812,7 @@ tx_netdev_return:
 	return retval;
 }
 
-static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc,
-				      unsigned int qinx)
+static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc)
 {
 	u32 ptp_status = 0;
 	u32 pkt_type = 0;
@@ -1895,6 +1894,20 @@ static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc,
 	DBGPR_PTP("<--eqos_print_rx_tstamp_info\n");
 }
 
+static inline int eqos_get_rx_tstamp_status(struct s_rx_desc *context_desc)
+{
+	if (likely(!(context_desc->rdes3 & EQOS_RDESC3_OWN) &&
+		   (context_desc->rdes3 & EQOS_RDESC3_CTXT))) {
+		if (unlikely((context_desc->rdes0 == 0xffffffff) &&
+			     (context_desc->rdes1 == 0xffffffff)))
+			return -EINVAL;
+
+		return 0;
+	}
+
+	return -EBUSY;
+}
+
 /*!
 * \brief API to get rx time stamp value.
 *
@@ -1913,70 +1926,52 @@ static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc,
 * \retval 2 if time stamp is corrupted
 */
 
-static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
-					  struct sk_buff *skb,
-					  struct rx_ring
-					  *prx_ring, unsigned int qinx)
+static int eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
+				struct sk_buff *skb,
+				struct s_rx_desc *prx_desc,
+				struct s_rx_desc *context_desc)
 {
-	struct s_rx_desc *prx_desc =
-	    GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
-	struct s_rx_context_desc *rx_context_desc = NULL;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct skb_shared_hwtstamps *shhwtstamp = NULL;
+	struct skb_shared_hwtstamps *shhwtstamp;
+	int retry, ret = 0;
 	u64 ns;
-	int retry, ret;
 
-	DBGPR_PTP("-->eqos_get_rx_hwtstamp\n");
+	if (!pdata->hw_feat.tsstssel || !pdata->hwts_rx_en)
+		return -ENOTSUPP;
 
-	eqos_print_rx_tstamp_info(prx_desc, qinx);
+	if (unlikely(!(prx_desc->rdes3 & EQOS_RDESC3_RS1V) ||
+		     !(prx_desc->rdes1 & EQOS_RDESC1_TSA)) ||
+		      (prx_desc->rdes1 & EQOS_RDESC1_TD))
+		return -ENOTSUPP;
 
-	prx_ring->dirty_rx++;
-	INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
-	rx_context_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
+	eqos_print_rx_tstamp_info(prx_desc);
 
-	DBGPR_PTP("\nRX_CONTEX_DESC[%d %4p %d RECEIVED FROM DEVICE]"
-		  " = %#x:%#x:%#x:%#x",
-		  qinx, rx_context_desc, prx_ring->cur_rx,
-		  rx_context_desc->rdes0, rx_context_desc->rdes1,
-		  rx_context_desc->rdes2, rx_context_desc->rdes3);
-
-	/* check rx tsatmp */
 	for (retry = 0; retry < 10; retry++) {
-		ret = hw_if->get_rx_tstamp_status(rx_context_desc);
-		if (ret == 1) {
-			/* time stamp is valid */
+		ret = eqos_get_rx_tstamp_status(context_desc);
+		if (ret == 0) {
+			/* Timestamp can be read. */
 			break;
-		} else if (ret == 0) {
-			pr_err("Device has not yet updated the context "
-			       "desc to hold Rx time stamp(retry = %d)\n",
-			       retry);
-		} else {
-			pr_err
-			    ("Error: Rx time stamp is corrupted(retry = %d)\n",
-			     retry);
-			return 2;
+		} else if (ret != -EBUSY) {
+			netdev_err(pdata->dev,
+				   "Failed to get RX timestamp: %d\n", ret);
+			return ret;
 		}
+
+		netdev_dbg(pdata->dev,
+			   "RX timestamp not yet available; retrying...\n");
+	}
+	if (ret != 0) {
+		netdev_err(pdata->dev, "Timed out waiting for RX timestamp\n");
+		return ret;
 	}
 
-	if (retry == 10) {
-		pr_err("Device has not yet updated the context "
-		       "desc to hold Rx time stamp(retry = %d)\n", retry);
-		prx_ring->dirty_rx--;
-		DECR_RX_DESC_INDEX(prx_ring->cur_rx);
-		return 0;
-	}
-
-	pdata->xstats.rx_timestamp_captured_n++;
-	/* get valid tstamp */
-	ns = hw_if->get_rx_tstamp(rx_context_desc);
-
+	ns = context_desc->rdes0 + 1000000000ULL * context_desc->rdes1;
 	shhwtstamp = skb_hwtstamps(skb);
 	memset(shhwtstamp, 0, sizeof(struct skb_shared_hwtstamps));
 	shhwtstamp->hwtstamp = ns_to_ktime(ns);
 
-	DBGPR_PTP("<--eqos_get_rx_hwtstamp\n");
+	pdata->xstats.rx_timestamp_captured_n++;
 
-	return 1;
+	return 0;
 }
 
 /*!
@@ -2238,6 +2233,10 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 	skb->dev = dev;
 	skb->protocol = eth_type_trans(skb, dev);
 
+	dev->last_rx = jiffies;
+	dev->stats.rx_packets++;
+	dev->stats.rx_bytes += skb->len;
+
 	if (dev->features & NETIF_F_GRO)
 		napi_gro_receive(&rx_queue->napi, skb);
 	else
@@ -2245,22 +2244,19 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 }
 
 /* Receive Checksum Offload configuration */
-static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
-				       struct sk_buff *skb,
-				       struct s_rx_desc *prx_desc)
+static inline void eqos_get_rx_csum(struct eqos_prv_data *pdata,
+				    struct sk_buff *skb,
+				    struct s_rx_desc *prx_desc)
 {
-	UINT rdes1;
-
 	skb->ip_summed = CHECKSUM_NONE;
 
-	if ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM) {
-		/* Receive Status rdes1 Valid ? */
-		if ((prx_desc->rdes3 & EQOS_RDESC3_RS1V)) {
-			/* check(rdes1.IPCE bit) whether device has done csum correctly or not */
-			RX_NORMAL_DESC_RDES1_RD(prx_desc->rdes1, rdes1);
-			if ((rdes1 & 0xC8) == 0x0)
-				skb->ip_summed = CHECKSUM_UNNECESSARY;	/* csum done by device */
-		}
+	if (unlikely(!(pdata->dev_state & NETIF_F_RXCSUM)))
+		return;
+
+	if ((prx_desc->rdes3 & EQOS_RDESC3_RS1V) &&
+	    !(prx_desc->rdes1 & (EQOS_RDESC1_IPCE | EQOS_RDESC1_IPCB |
+				 EQOS_RDESC1_IPHE))) {
+		skb->ip_summed = CHECKSUM_UNNECESSARY;
 	}
 }
 
@@ -2268,28 +2264,29 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 				    struct sk_buff *skb,
 				    struct s_rx_desc *prx_desc)
 {
-	USHORT vlan_tag = 0;
+	if (unlikely(!(pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX)))
+		return;
 
-	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) ==
-	    NETIF_F_HW_VLAN_CTAG_RX) {
-		/* Receive Status rdes0 Valid ? */
-		if ((prx_desc->rdes3 & EQOS_RDESC3_RS0V)) {
-			/* device received frame with VLAN Tag or
-			 * double VLAN Tag ? */
-			if (((prx_desc->rdes3 & EQOS_RDESC3_LT) ==
-			     0x40000) ||
-			     ((prx_desc->rdes3 & EQOS_RDESC3_LT) ==
-				0x50000)) {
-				vlan_tag = prx_desc->rdes0 & 0xffff;
-				/* insert VLAN tag into skb */
-				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
-						       vlan_tag);
-				pdata->xstats.rx_vlan_pkt_n++;
-			}
+	/* Receive Status rdes0 Valid ? */
+	if (prx_desc->rdes3 & EQOS_RDESC3_RS0V) {
+		u32 lt = prx_desc->rdes3 & EQOS_RDESC3_LT;
+
+		if (lt == EQOS_RDESC3_LT_VT || lt == EQOS_RDESC3_LT_DVT) {
+			u16 vlan_tag = prx_desc->rdes0 & EQOS_RDESC0_OVT;
+
+			__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
+					       vlan_tag);
+			pdata->xstats.rx_vlan_pkt_n++;
 		}
 	}
 }
 
+static inline int eqos_rx_dirty(struct rx_ring *prx_ring)
+{
+	BUILD_BUG_ON_NOT_POWER_OF_2(RX_DESC_CNT);
+
+	return (prx_ring->cur_rx - prx_ring->dirty_rx) & (RX_DESC_CNT - 1);
+}
 /*!
 * \brief API to pass the Rx packets to stack if default mode
 * is enabled.
@@ -2315,209 +2312,107 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 	unsigned int qinx = rx_queue->chan_num;
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
-	struct net_device *dev = pdata->dev;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct sk_buff *skb = NULL;
+	struct net_device *dev = pdata->dev;
 	int received = 0;
-	struct rx_swcx_desc *prx_swcx_desc = NULL;
-	struct s_rx_desc *prx_desc = NULL;
-	UINT pkt_len;
-	UINT err_bits = EQOS_RDESC3_ES_BITS;
-	u32 sw_cur_rx_desc_addr = 0;
-	u32 hw_cur_rx_desc_addr = 0;
-
 	int ret;
 
 	pr_debug("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
 
-	hw_cur_rx_desc_addr = prx_ring->hw_last_rx_desc_addr;
-	while (received < quota) {
-		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
-		prx_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
+	while (received < quota && received < RX_DESC_CNT) {
+		struct rx_swcx_desc *prx_swcx_desc;
+		struct s_rx_desc *prx_desc, *context_desc;
+		struct sk_buff *skb;
+		u32 status, pkt_len;
+		int entry = prx_ring->cur_rx;
 
-		sw_cur_rx_desc_addr =
-			GET_RX_DESC_DMA_ADDR(qinx, prx_ring->cur_rx);
+		prx_swcx_desc = GET_RX_BUF_PTR(qinx, entry);
+		prx_desc = GET_RX_DESC_PTR(qinx, entry);
 
-		/* check for data availability */
-		if (!(prx_desc->rdes3 & EQOS_RDESC3_OWN) &&
-		    prx_swcx_desc->skb) {
-			if (hw_cur_rx_desc_addr == sw_cur_rx_desc_addr) {
-				DMA_CHRDR_RD(qinx,
-					     prx_ring->hw_last_rx_desc_addr);
-				if (prx_ring->hw_last_rx_desc_addr ==
-				    hw_cur_rx_desc_addr)
-					break;
-				hw_cur_rx_desc_addr =
-					prx_ring->hw_last_rx_desc_addr;
-			}
+		status = prx_desc->rdes3;
+		if (status & EQOS_RDESC3_OWN)
+			break;
+
+		INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
+
+		if (WARN_ON_ONCE(!prx_swcx_desc->skb))
+			/* RX ring is in an inconsistent state */
+			break;
+
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, prx_desc, prx_ring->cur_rx);
+		dump_rx_desc(qinx, prx_desc, entry);
 #endif
-			/* assign it to new skb */
+		if (likely(!(status & EQOS_RDESC3_ES_BITS) &&
+			   (status & EQOS_RDESC3_LD))) {
+			/* Unmap the SKB */
 			skb = prx_swcx_desc->skb;
 			prx_swcx_desc->skb = NULL;
 
 			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
-					 pdata->rx_buffer_len,
-					 DMA_FROM_DEVICE);
+					 pdata->rx_buffer_len, DMA_FROM_DEVICE);
+
 			prx_swcx_desc->dma = 0;
 
-			/* get the packet length */
-			pkt_len = (prx_desc->rdes3 & EQOS_RDESC3_PL);
+			pkt_len = (status & EQOS_RDESC3_PL);
+			skb_put(skb, pkt_len);
 
 #ifdef EQOS_ENABLE_RX_PKT_DUMP
-			print_pkt(skb, pkt_len, 0, (prx_ring->cur_rx));
+			print_pkt(skb, pkt_len, 0, entry);
 #endif
+			eqos_get_rx_csum(pdata, skb, prx_desc);
 
-#ifdef ENABLE_CHANNEL_DATA_CHECK
-			check_channel_data(skb, qinx, 1);
+			eqos_get_rx_vlan(pdata, skb, prx_desc);
+
+			#ifdef YDEBUG_FILTER
+			eqos_check_rx_filter_status(prx_desc);
 #endif
-
-			/* check for bad/oversized packet,
-			 * error is valid only for last descriptor
-			 * (OWN + LD bit set).
-			 */
-			if (tegra_platform_is_unit_fpga())
-				err_bits = EQOS_RDESC3_CRC | EQOS_RDESC3_OF;
-
-			if (!(prx_desc->rdes3 & err_bits) &&
-			    (prx_desc->rdes3 & EQOS_RDESC3_LD)) {
-				/* pkt_len = pkt_len - 4; *//* CRC stripping */
-
-				/* code added for copybreak, this should improve
-				 * performance for small pkts with large amount
-				 * of reassembly being done in the stack
+			context_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
+			ret = eqos_get_rx_hwtstamp(pdata, skb, prx_desc,
+						   context_desc);
+			if (ret == 0) {
+				/* Context descriptor was consumed. Its skb
+				 * and DMA mapping will be recycled.
 				 */
-				if (pkt_len < EQOS_COPYBREAK_DEFAULT) {
-					struct sk_buff *new_skb =
-					    netdev_alloc_skb_ip_align(dev,
-								      pkt_len);
-					if (new_skb) {
-						skb_copy_to_linear_data_offset
-						    (new_skb, -NET_IP_ALIGN,
-						     (skb->data - NET_IP_ALIGN),
-						     (pkt_len + NET_IP_ALIGN));
-						/* recycle actual desc skb */
-						prx_swcx_desc->skb = skb;
-						skb = new_skb;
-					} else {
-						/* just continue the old skb */
-					}
-				}
-				skb_put(skb, pkt_len);
-
-				eqos_config_rx_csum(pdata, skb, prx_desc);
-
-#ifdef EQOS_ENABLE_VLAN_TAG
-				eqos_get_rx_vlan(pdata, skb, prx_desc);
-#endif
-
-#ifdef YDEBUG_FILTER
-				eqos_check_rx_filter_status(prx_desc);
-#endif
-
-				if (pdata->hw_feat.tsstssel &&
-				    pdata->hwts_rx_en &&
-				    !hw_if->rx_tstamp_available(prx_desc)) {
-					/* get rx tstamp if available */
-					ret = eqos_get_rx_hwtstamp(pdata, skb,
-								   prx_ring,
-								   qinx);
-					if (ret == 0) {
-						/* device has not yet updated
-						 * the CONTEXT desc to hold the
-						 * time stamp, hence delay the
-						 * packet reception
-						 */
-						prx_swcx_desc->skb = skb;
-						prx_swcx_desc->dma =
-						    dma_map_single(&pdata->
-							pdev->dev,
-							skb->data,
-							pdata->rx_buffer_len,
-							DMA_FROM_DEVICE);
-
-						if (dma_mapping_error
-						    (&pdata->pdev->dev,
-						     prx_swcx_desc->dma))
-							pr_err
-							    ("failed to do the RX dma map\n");
-						goto rx_tstmp_failed;
-					}
-				}
-
-				dev->last_rx = jiffies;
-				/* update the statistics */
-				dev->stats.rx_packets++;
-				dev->stats.rx_bytes += skb->len;
-				eqos_receive_skb(pdata, dev, skb, qinx);
-				received++;
-			} else {
-				dump_rx_desc(qinx, prx_desc,
-					     prx_ring->cur_rx);
-				if (!(prx_desc->rdes3 & EQOS_RDESC3_LD))
-					pr_debug("Received oversized pkt,"
-					      "spanned across multiple desc\n");
-
-				/* recycle skb */
-				prx_swcx_desc->skb = skb;
-				dev->stats.rx_errors++;
-				eqos_update_rx_errors(dev,
-						      prx_desc->rdes3);
+				INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
 			}
 
-			prx_ring->dirty_rx++;
-			if (prx_ring->dirty_rx >=
-			    prx_ring->skb_realloc_threshold)
-				desc_if->realloc_skb(pdata, qinx);
-
-			INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
+			eqos_receive_skb(pdata, dev, skb, qinx);
 		} else {
-			/* no more data to read */
-			break;
+			eqos_update_rx_errors(dev, status);
 		}
+
+		received++;
+		if (eqos_rx_dirty(prx_ring) >=
+		    prx_ring->skb_realloc_threshold)
+			desc_if->realloc_skb(pdata, qinx);
 	}
 
- rx_tstmp_failed:
+	desc_if->realloc_skb(pdata, qinx);
 
-	if (prx_ring->dirty_rx)
-		desc_if->realloc_skb(pdata, qinx);
-
-	pr_debug("<--%s(): received = %d, qinx=%d\n", __func__, received, qinx);
+	pdata->xstats.rx_pkt_n += received;
+	pdata->xstats.q_rx_pkt_n[qinx] += received;
 
 	return received;
 }
 
-/*!
-* \brief API to update the rx status.
-*
-* \details This function is called in poll function to update the
-* status of received packets.
-*
-* \param[in] dev - pointer to net_device structure.
-* \param[in] rx_status - value of received packet status.
-*
-* \return void.
-*/
-
 void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 {
-	pr_debug("-->eqos_update_rx_errors\n");
+	if (rx_status & EQOS_RDESC3_LD) {
+		/* CRC Error */
+		if (rx_status & EQOS_RDESC3_CRC)
+			dev->stats.rx_crc_errors++;
+		/* Receive Error */
+		if (rx_status & EQOS_RDESC3_RE)
+			dev->stats.rx_frame_errors++;
+		/* RX FIFO Overrun */
+		if (rx_status & EQOS_RDESC3_OF)
+			dev->stats.rx_fifo_errors++;
+	} else {
+		/* Packet truncated */
+		dev->stats.rx_over_errors++;
+	}
 
-	/* received pkt with crc error */
-	if ((rx_status & 0x1000000))
-		dev->stats.rx_crc_errors++;
-
-	/* received frame alignment */
-	if ((rx_status & 0x100000))
-		dev->stats.rx_frame_errors++;
-
-	/* receiver fifo overrun */
-	if ((rx_status & 0x200000))
-		dev->stats.rx_fifo_errors++;
-
-	pr_debug("<--eqos_update_rx_errors\n");
+	dev->stats.rx_errors++;
 }
 
 int eqos_napi_poll_rx(struct napi_struct *napi, int budget)

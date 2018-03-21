@@ -1036,93 +1036,6 @@ static INT config_hw_time_stamping(UINT config_val)
 }
 
 /*!
-* \brief This sequence is used get the 64-bit of the timestamp
-* captured by the device for the corresponding received packet
-* in nanosecond.
-* \param[in] rxdesc
-* \return (unsigned long long) on success
-* \retval ns
-*/
-
-static ULONG_LONG get_rx_tstamp(t_rx_context_desc *rxdesc)
-{
-	ULONG_LONG ns;
-	ULONG rdes1;
-
-	RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, ns);
-	RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
-	ns = ns + (rdes1 * 1000000000ull);
-
-	return ns;
-}
-
-/*!
-* \brief This sequence is used to check whether the captured timestamp
-* for the corresponding received packet is valid or not.
-* Returns 0 if no context descriptor
-* Returns 1 if timestamp is valid
-* Returns 2 if time stamp is corrupted
-* \param[in] rxdesc
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
-{
-	UINT own;
-	UINT ctxt;
-	UINT rdes0;
-	UINT rdes1;
-
-	/* check for own bit and CTXT bit */
-	RX_CONTEXT_DESC_RDES3_OWN_RD(rxdesc->rdes3, own);
-	RX_CONTEXT_DESC_RDES3_CTXT_RD(rxdesc->rdes3, ctxt);
-	if ((own == 0) && (ctxt == 0x1)) {
-		RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, rdes0);
-		RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
-		if ((rdes0 == 0xffffffff) && (rdes1 == 0xffffffff)) {
-			/* time stamp is corrupted */
-			return 2;
-		} else {
-			/* time stamp is valid */
-			return 1;
-		}
-	} else {
-		/* no CONTEX desc to hold time stamp value */
-		return 0;
-	}
-}
-
-/*!
-* \brief This sequence is used to check whether the timestamp value
-* is available in a context descriptor or not. Returns 1 if timestamp
-* is available else returns 0
-* \param[in] rxdesc
-* \return Success or Failure
-* \retval  0 Success
-* \retval -1 Failure
-*/
-
-static int rx_tstamp_available(t_rx_desc *rxdesc)
-{
-	unsigned int rs1v;
-	unsigned int tsa;
-	unsigned int td;
-
-	RX_NORMAL_DESC_RDES3_RS1V_RD(rxdesc->rdes3, rs1v);
-	if (rs1v == 1) {
-		RX_NORMAL_DESC_RDES1_TSA_RD(rxdesc->rdes1, tsa);
-		RX_NORMAL_DESC_RDES1_TD_RD(rxdesc->rdes1, td);
-
-		if (tsa && !td)
-			return 0;
-	}
-
-	return 1;
-}
-
-/*!
 * \brief This sequence is used get the least 64-bit of the timestamp
 * captured by the device for the corresponding transmit packet in nanosecond
 * \return (unsigned long long) on success
@@ -4079,9 +3992,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->get_tx_tstamp = get_tx_tstamp;
 	hw_if->get_tx_tstamp_status_via_reg = get_tx_tstamp_status_via_reg;
 	hw_if->get_tx_tstamp_via_reg = get_tx_tstamp_via_reg;
-	hw_if->rx_tstamp_available = rx_tstamp_available;
-	hw_if->get_rx_tstamp_status = get_rx_tstamp_status;
-	hw_if->get_rx_tstamp = get_rx_tstamp;
 	hw_if->drop_tx_status_enabled = drop_tx_status_enabled;
 
 	/* for l3 and l4 layer filtering */

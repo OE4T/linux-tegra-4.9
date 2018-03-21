@@ -398,6 +398,7 @@
 #define FSYNR0_WNR			(1 << 4)
 
 #define NUM_SID				64
+#define ALL_PGSIZES_BITMAP		((~0UL) & PAGE_MASK)
 
 static int force_stage;
 module_param_named(t19x_force_stage, force_stage, int, S_IRUGO | S_IWUSR);
@@ -1600,8 +1601,13 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 
 	spin_lock_init(&smmu_domain->lock);
 
-	smmu_domain->domain.pgsize_bitmap = SECTION_SIZE |
-					    ARM_SMMU_PTE_CONT_SIZE | PAGE_SIZE;
+	/*
+	 * Our arm-smmu driver can handle any size page by breaking
+	 * it up into 4Kb and 4Mb chunks. We would like the iommu
+	 * framework to pass us largest pages possible for performance
+	 * reasons, so set all pgsize_bitmap bits.
+	 */
+	smmu_domain->domain.pgsize_bitmap = ALL_PGSIZES_BITMAP;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	if (iommu_get_dma_cookie(&smmu_domain->domain))
@@ -2724,9 +2730,10 @@ static const struct iommu_ops arm_smmu_ops = {
 	.iova_to_phys	= arm_smmu_iova_to_phys,
 	.add_device	= arm_smmu_add_device,
 	.remove_device	= arm_smmu_remove_device,
-	.pgsize_bitmap	= (SECTION_SIZE |
-			   ARM_SMMU_PTE_CONT_SIZE |
-			   PAGE_SIZE),
+	.pgsize_bitmap	= ALL_PGSIZES_BITMAP,
+#if LINUX_VERSION_CODE  > KERNEL_VERSION(4, 9, 0)
+	.ignore_align	= 1,
+#endif
 };
 
 static void arm_smmu_device_reset(struct arm_smmu_device *smmu)

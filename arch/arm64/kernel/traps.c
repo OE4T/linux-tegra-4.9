@@ -43,7 +43,6 @@
 #include <asm/exception.h>
 #include <asm/system_misc.h>
 #include <asm/sysreg.h>
-#include <soc/tegra/chip-id.h>
 
 static const char *handler[]= {
 	"Synchronous Abort",
@@ -730,15 +729,9 @@ asmlinkage void handle_serr(unsigned long daif, unsigned long spsr,
 	asm volatile("mrs %0, mpidr_el1" : "=r"(mpidr));
 	asm volatile ("mrs %0, esr_el1" : "=r"(esr));
 
-	if (tegra_get_chip_id() == TEGRA194) /* Bug 2048274 */
-		pr_crit_once("CPU%d: SError detected, daif=%lx, "
-			"spsr=0x%lx, mpidr=%lx, esr=%lx\n",
-			smp_processor_id(), daif, spsr, mpidr, esr);
-	else
-		pr_crit("CPU%d: SError detected, daif=%lx, "
-			"spsr=0x%lx, mpidr=%lx, esr=%lx\n",
-			smp_processor_id(), daif, spsr, mpidr, esr);
-
+	pr_crit("CPU%d: SError detected, daif=%lx, "
+	        "spsr=0x%lx, mpidr=%lx, esr=%lx\n",
+	        smp_processor_id(), daif, spsr, mpidr, esr);
 #ifdef CONFIG_SERROR_HANDLER
 	raw_spin_lock_irqsave(&serr_lock, flags);
 	list_for_each_entry(hook, &serr_hook, node)

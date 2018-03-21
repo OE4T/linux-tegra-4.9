@@ -461,7 +461,7 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 
 	/* allocate isp program unpin list based on queue depth */
 	capture->program_desc_ctx.unpins_list = kcalloc(
-				capture->capture_desc_ctx.queue_depth,
+				capture->program_desc_ctx.queue_depth,
 				sizeof(struct capture_common_unpins *),
 				GFP_KERNEL);
 	if (unlikely(capture->program_desc_ctx.unpins_list == NULL)) {

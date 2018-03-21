@@ -1705,11 +1705,6 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 {
 	int err = 0;
 
-	if (!tegra_se_count_sgs(req->src, req->nbytes)) {
-		dev_err(se_dev->dev, "invalid SG count");
-		return -EINVAL;
-	}
-
 	mutex_lock(&se_dev->lock);
 	err = ablkcipher_enqueue_request(&se_dev->queue, req);
 

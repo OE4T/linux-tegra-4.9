@@ -378,7 +378,8 @@
 #define EQOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */
 #define EQOS_MIN_SUPPORTED_MTU (ETH_ZLEN + ETH_FCS_LEN + VLAN_HLEN)
 
-#define EQOS_RDESC3_OWN	0x80000000
+#define EQOS_RDESC3_OWN		0x80000000
+#define EQOS_RDESC3_CTXT	0x40000000
 #define EQOS_RDESC3_FD		0x20000000
 #define EQOS_RDESC3_LD		0x10000000
 #define EQOS_RDESC3_RS2V	0x08000000
@@ -391,6 +392,8 @@
 #define EQOS_RDESC3_RE		0x00100000
 #define EQOS_RDESC3_DRIB	0x00080000
 #define EQOS_RDESC3_LT		0x00070000
+#define EQOS_RDESC3_LT_VT	0x00040000 /* VLAN tagged packet */
+#define EQOS_RDESC3_LT_DVT	0x00050000 /* Double VLAN tagged packet */
 #define EQOS_RDESC3_ES		0x00008000
 #define EQOS_RDESC3_PL		0x00007FFF
 
@@ -401,8 +404,15 @@
 
 #define EQOS_RDESC2_HL	0x000003FF
 
+#define EQOS_RDESC1_TD		0x00008000 /* Timestamp Dropped */
+#define EQOS_RDESC1_TSA		0x00004000 /* Timestamp available */
+#define EQOS_RDESC1_IPCE	0x00000080 /* IP payload error */
+#define EQOS_RDESC1_IPCB	0x00000040 /* IP checksum bypassed */
+#define EQOS_RDESC1_IPHE	0x00000008 /* IP header error */
 #define EQOS_RDESC1_PT		0x00000007 /* Payload type */
 #define EQOS_RDESC1_PT_TCP	0x00000002 /* Payload type = TCP */
+
+#define EQOS_RDESC0_OVT	0x0000ffff /* Outer VLAN tag */
 
 /* Maximum size of pkt that is copied to a new buffer on receive */
 #define EQOS_COPYBREAK_DEFAULT 256
@@ -851,9 +861,6 @@ struct hw_if_struct {
 	ULONG_LONG (*get_tx_tstamp)(struct s_tx_desc *txdesc);
 	UINT (*get_tx_tstamp_status_via_reg)(void);
 	ULONG_LONG(*get_tx_tstamp_via_reg)(void);
-	INT(*rx_tstamp_available)(struct s_rx_desc *rxdesc);
-	UINT(*get_rx_tstamp_status)(struct s_rx_context_desc *rxdesc);
-	ULONG_LONG(*get_rx_tstamp)(struct s_rx_context_desc *rxdesc);
 	INT(*drop_tx_status_enabled)(void);
 
 	/* for l2, l3 and l4 layer filtering */

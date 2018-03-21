@@ -1566,7 +1566,8 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *);
 void eqos_init_function_ptrs_desc(struct desc_if_struct *);
 struct net_device_ops *eqos_get_netdev_ops(void);
 struct ethtool_ops *eqos_get_ethtool_ops(void);
-int eqos_napi_mq(struct napi_struct *, int);
+int eqos_napi_poll_rx(struct napi_struct *napi, int budget);
+int eqos_napi_poll_tx(struct napi_struct *napi, int budget);
 
 void eqos_get_pdata(struct eqos_prv_data *pdata);
 

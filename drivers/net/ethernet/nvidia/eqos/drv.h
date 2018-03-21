@@ -53,10 +53,6 @@ static void eqos_set_rx_mode(struct net_device *);
 
 static int eqos_start_xmit(struct sk_buff *, struct net_device *);
 
-static void process_tx_completions(struct net_device *,
-				   struct eqos_prv_data *,
-				   uint qinx);
-
 static struct net_device_stats *eqos_get_stats(struct net_device *);
 
 static int eqos_set_features(struct net_device *dev,
@@ -86,10 +82,6 @@ static int eqos_ioctl(struct net_device *, struct ifreq *, int);
 irqreturn_t eqos_isr(int, void *);
 
 static INT eqos_change_mtu(struct net_device *dev, INT new_mtu);
-
-static int process_rx_completions(struct eqos_prv_data *pdata,
-				  int quota, UINT qinx);
-
 static void eqos_receive_skb(struct eqos_prv_data *pdata,
 				    struct net_device *dev,
 				    struct sk_buff *skb,

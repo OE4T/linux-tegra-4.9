@@ -58,7 +58,6 @@ extern ULONG eqos_base_addr;
 #include <linux/nospec.h>
 
 static INT eqos_status;
-static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
 
 /* raw spinlock to get HW PTP time and kernel time atomically */
 static DEFINE_RAW_SPINLOCK(eqos_ts_lock);
@@ -197,14 +196,13 @@ static void eqos_start_all_ch_rx_dma(struct eqos_prv_data *pdata)
 
 static void eqos_napi_enable_mq(struct eqos_prv_data *pdata)
 {
-	struct eqos_rx_queue *rx_queue = NULL;
 	int qinx;
 
 	pr_debug("-->eqos_napi_enable_mq\n");
 
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		rx_queue = GET_RX_QUEUE_PTR(qinx);
-		napi_enable(&rx_queue->napi);
+	for (qinx = 0; qinx < pdata->num_chans; qinx++) {
+		napi_enable(&pdata->rx_queue[qinx].napi);
+		napi_enable(&pdata->tx_queue[qinx].napi);
 	}
 
 	pr_debug("<--eqos_napi_enable_mq\n");
@@ -212,14 +210,13 @@ static void eqos_napi_enable_mq(struct eqos_prv_data *pdata)
 
 static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 {
-	struct eqos_rx_queue *rx_queue = NULL;
 	int qinx;
 
 	pr_debug("-->eqos_napi_disable\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		rx_queue = GET_RX_QUEUE_PTR(qinx);
-		napi_disable(&rx_queue->napi);
+		napi_disable(&pdata->rx_queue[qinx].napi);
+		napi_disable(&pdata->tx_queue[qinx].napi);
 	}
 
 	pr_debug("<--eqos_napi_disable\n");
@@ -1012,7 +1009,6 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 {
 	pr_debug("-->eqos_configure_rx_fun_ptr\n");
 
-	pdata->process_rx_completions = process_rx_completions;
 	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
 	pr_debug("<--eqos_configure_rx_fun_ptr\n");
@@ -1705,9 +1701,6 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	pr_debug("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
-	if (ptx_ring->tx_pkt_queued > (TX_DESC_CNT >> 2))
-		process_tx_completions(pdata->dev, pdata, qinx);
-
 	spin_lock(&pdata->chinfo[qinx].chan_tx_lock);
 
 	if (skb->len <= 0) {
@@ -2065,9 +2058,11 @@ static unsigned int eqos_get_tx_hwtstamp(struct eqos_prv_data *pdata,
 * \return void
 */
 
-static void process_tx_completions(struct net_device *dev,
-				   struct eqos_prv_data *pdata, UINT qinx)
+static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 {
+	struct eqos_prv_data *pdata = tx_queue->pdata;
+	unsigned int qinx = tx_queue->chan_num;
+	struct net_device *dev = pdata->dev;
 	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_desc *ptx_desc = NULL;
@@ -2075,6 +2070,7 @@ static void process_tx_completions(struct net_device *dev,
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct desc_if_struct *desc_if = &(pdata->desc_if);
 	int err_incremented;
+	int processed = 0;
 	unsigned int tstamp_taken = 0;
 
 	pr_debug("-->%s(): ptx_ring->tx_pkt_queued = %d"
@@ -2206,6 +2202,8 @@ static void process_tx_completions(struct net_device *dev,
 
 	pr_debug("<--%s(): ptx_ring->tx_pkt_queued = %d\n",
 	      __func__, ptx_ring->tx_pkt_queued);
+
+	return processed;
 }
 
 #ifdef YDEBUG_FILTER
@@ -2320,9 +2318,10 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 * \retval number of packets received.
 */
 
-static int process_rx_completions(struct eqos_prv_data *pdata,
-				  int quota, UINT qinx)
+static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 {
+	struct eqos_prv_data *pdata = rx_queue->pdata;
+	unsigned int qinx = rx_queue->chan_num;
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	struct net_device *dev = pdata->dev;
@@ -2530,87 +2529,38 @@ void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 	pr_debug("<--eqos_update_rx_errors\n");
 }
 
-static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
-{
-	struct eqos_rx_queue *rx_queue;
-	int received = 0;
-	int budget = pdata->dt_cfg.chan_napi_quota[qinx];
-
-	pr_debug("-->%s(): chan=%d\n", __func__, qinx);
-
-	rx_queue = GET_RX_QUEUE_PTR(qinx);
-
-	/* check for tx descriptor status */
-	process_tx_completions(pdata->dev, pdata, qinx);
-
-	received = pdata->process_rx_completions(pdata, budget, qinx);
-
-	pdata->xstats.rx_pkt_n += received;
-	pdata->xstats.q_rx_pkt_n[qinx] += received;
-
-	pr_debug("<--%s():\n", __func__);
-
-	return received;
-}
-
-static void do_txrx_post_processing(struct eqos_prv_data *pdata,
-				    struct napi_struct *napi,
-				    int received, int budget)
-{
-	struct eqos_rx_queue *rx_queue;
-	int qinx = 0;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	pr_debug("-->%s():\n", __func__);
-
-	/* If we processed all pkts, we are done;
-	 * tell the kernel & re-enable interrupt
-	 */
-	if (received < budget) {
-		rx_queue = container_of(napi, struct eqos_rx_queue, napi);
-		qinx = rx_queue->chan_num;
-		hw_if = &pdata->hw_if;
-		if (pdata->dev->features & NETIF_F_GRO) {
-			/* to turn off polling */
-			napi_complete(napi);
-
-			/* Enable RX interrupt */
-			hw_if->enable_chan_interrupts(qinx, pdata);
-		} else {
-
-			spin_lock(&pdata->lock);
-			__napi_complete(napi);
-
-			/* Enable RX interrupt */
-			hw_if->enable_chan_interrupts(qinx, pdata);
-
-			spin_unlock(&pdata->lock);
-		}
-	}
-	pr_debug("<--%s():\n", __func__);
-}
-
-
-int eqos_napi_mq(struct napi_struct *napi, int budget)
+int eqos_napi_poll_rx(struct napi_struct *napi, int budget)
 {
 	struct eqos_rx_queue *rx_queue =
 	    container_of(napi, struct eqos_rx_queue, napi);
 	struct eqos_prv_data *pdata = rx_queue->pdata;
-
 	int qinx = rx_queue->chan_num;
 	int received = 0;
 
-	pr_debug("-->%s(): budget = %d\n", __func__, budget);
-
-	pdata->xstats.napi_poll_n++;
-	received = handle_txrx_completions(pdata, qinx);
-
-	do_txrx_post_processing(pdata, napi, received,
-				pdata->dt_cfg.chan_napi_quota[qinx]);
-
-	pr_debug("<--%s()\n", __func__);
+	received = process_rx_completions(rx_queue, budget);
+	if (received < budget) {
+		napi_complete(napi);
+		eqos_enable_chan_rx_interrupt(pdata, qinx);
+	}
 
 	return received;
+}
+
+int eqos_napi_poll_tx(struct napi_struct *napi, int budget)
+{
+	struct eqos_tx_queue *tx_queue =
+	    container_of(napi, struct eqos_tx_queue, napi);
+	struct eqos_prv_data *pdata = tx_queue->pdata;
+	int qinx = tx_queue->chan_num;
+	int processed;
+
+	processed = process_tx_completions(tx_queue, budget);
+	if (processed < budget) {
+		napi_complete(napi);
+		eqos_enable_chan_tx_interrupt(pdata, qinx);
+	}
+
+	return processed;
 }
 
 static inline void eqos_enable_slot_function_ctrl(struct eqos_prv_data *pdata)

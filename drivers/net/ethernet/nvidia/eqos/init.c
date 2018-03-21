@@ -1169,12 +1169,12 @@ int eqos_probe(struct platform_device *pdev)
 		pdata->rx_queue[i].pdata = pdata;
 		pdata->rx_queue[i].chan_num = i;
 		netif_napi_add(ndev, &pdata->rx_queue[i].napi,
-			       eqos_napi_mq, pdt_cfg->chan_napi_quota[i]);
+			       eqos_napi_poll_rx, pdt_cfg->chan_napi_quota[i]);
 
 		pdata->tx_queue[i].pdata = pdata;
 		pdata->tx_queue[i].chan_num = i;
 		netif_napi_add(ndev, &pdata->tx_queue[i].napi,
-			       eqos_napi_mq, pdt_cfg->chan_napi_quota[i]);
+			       eqos_napi_poll_tx, pdt_cfg->chan_napi_quota[i]);
 	}
 
 	ndev->ethtool_ops = (eqos_get_ethtool_ops());
@@ -1300,8 +1300,8 @@ int eqos_probe(struct platform_device *pdev)
 
 	/* remove rx napi */
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
-		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
-		netif_napi_del(&rx_queue->napi);
+		netif_napi_del(&pdata->rx_queue[i].napi);
+		netif_napi_del(&pdata->tx_queue[i].napi);
 	}
 	if (1 == pdata->hw_feat.sma_sel)
 		eqos_mdio_unregister(ndev);
@@ -1390,8 +1390,8 @@ int eqos_remove(struct platform_device *pdev)
 
 	/* remove rx napi */
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
-		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
-		netif_napi_del(&rx_queue->napi);
+		netif_napi_del(&pdata->rx_queue[i].napi);
+		netif_napi_del(&pdata->tx_queue[i].napi);
 	}
 
 	if (1 == pdata->hw_feat.sma_sel)

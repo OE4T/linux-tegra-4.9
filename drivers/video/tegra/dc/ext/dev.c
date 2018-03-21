@@ -349,7 +349,7 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 		}
 	}
 
-	return !!windows;
+	return windows;
 }
 
 static int tegra_dc_ext_check_windowattr(struct tegra_dc_ext *ext,

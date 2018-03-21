@@ -6046,10 +6046,11 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 		return;
 	}
 
-	blank_windows = !tegra_dc_ext_disable(dc->ext);
+	blank_windows = tegra_dc_ext_disable(dc->ext);
 
-	if (blank_windows)
-		tegra_dc_blank_wins(dc, BLANK_ALL);
+	/* tegra_dc_ext_disable blanks windows which are owned by user.
+	 * Blank remaining windows here which are valid for this head */
+	tegra_dc_blank_wins(dc, ~blank_windows);
 
 	if (dc->cursor.enabled)
 		tegra_dc_cursor_suspend(dc);

@@ -530,13 +530,11 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 	/* Unmap and return skb for tx desc/bufs owned by hw.
 	 * Caller ensures that hw is no longer accessing these descriptors
 	 */
-	while (ptx_ring->tx_pkt_queued > 0) {
+	while (ptx_ring->dirty_tx != ptx_ring->cur_tx) {
 		tx_swcx_free(pdata,
 			     GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx));
 
 		INCR_TX_DESC_INDEX(ptx_ring->dirty_tx, 1);
-		ptx_ring->free_desc_cnt++;
-		ptx_ring->tx_pkt_queued--;
 	}
 	pr_debug("<--%s()\n", __func__);
 }

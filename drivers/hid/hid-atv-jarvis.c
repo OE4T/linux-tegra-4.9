@@ -758,7 +758,7 @@ static int snd_atvr_decode_msbc_packet(
 			msbc_bytes_in_packet[atvr_snd->packet_in_frame]) {
 
 			pr_err(
-			  "%s: received %zd audio bytes but expected %d bytes\n",
+			 "%s: received %zd audio bytes but expected %d bytes\n",
 			  __func__, num_bytes,
 			  msbc_bytes_in_packet[atvr_snd->packet_in_frame]);
 
@@ -1464,7 +1464,7 @@ static int snd_card_atvr_pcm(struct snd_atvr *atvr_snd,
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, ops);
 	pcm->private_data = atvr_snd;
 	pcm->info_flags = 0;
-	strcpy(pcm->name, "SHDR PCM");
+	strlcpy(pcm->name, "SHDR PCM", sizeof(pcm->name));
 
 	return 0;
 }
@@ -1538,8 +1538,9 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 	else
 		atvr_snd->pcm_hw = atvr_pcm_hardware;
 
-	strcpy(shdr_card->driver, "SHIELD Remote Audio");
-	strcpy(shdr_card->shortname, "SHDRAudio");
+	strlcpy(shdr_card->driver, "SHIELD Rmt Aud", sizeof(shdr_card->driver));
+	strlcpy(shdr_card->shortname, "SHDRAudio",
+						sizeof(shdr_card->shortname));
 	sprintf(shdr_card->longname, "SHIELD Remote %i audio", dev + 1);
 
 	err = snd_card_register(shdr_card);

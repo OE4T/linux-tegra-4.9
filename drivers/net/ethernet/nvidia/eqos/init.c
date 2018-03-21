@@ -1162,12 +1162,16 @@ int eqos_probe(struct platform_device *pdev)
 		enable_irq_wake(ndev->irq);
 	}
 
-	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
-		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
-
-		netif_napi_add(ndev, &rx_queue->napi,
+	for (i = 0; i < pdata->num_chans; i++) {
+		pdata->rx_queue[i].pdata = pdata;
+		pdata->rx_queue[i].chan_num = i;
+		netif_napi_add(ndev, &pdata->rx_queue[i].napi,
 			       eqos_napi_mq, pdt_cfg->chan_napi_quota[i]);
-		rx_queue->chan_num = i;
+
+		pdata->tx_queue[i].pdata = pdata;
+		pdata->tx_queue[i].chan_num = i;
+		netif_napi_add(ndev, &pdata->tx_queue[i].napi,
+			       eqos_napi_mq, pdt_cfg->chan_napi_quota[i]);
 	}
 
 	ndev->ethtool_ops = (eqos_get_ethtool_ops());

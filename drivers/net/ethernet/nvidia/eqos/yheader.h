@@ -977,6 +977,9 @@ struct tx_ring {
 struct eqos_tx_queue {
 	/* Tx descriptors */
 	struct tx_ring ptx_ring;
+	struct napi_struct napi;
+	struct eqos_prv_data *pdata;
+	unsigned int chan_num;
 	int q_op_mode;
 	bool slot_num_check;
 };

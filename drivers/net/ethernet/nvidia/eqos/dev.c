@@ -2916,23 +2916,25 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
+		GET_TX_WRAPPER_DESC(qinx);
 	struct tx_swcx_desc *ptx_swcx_desc =
-	    GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+		GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	struct s_tx_desc *ptx_desc =
-	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+		GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	struct s_tx_desc *plast_desc;
 	struct s_tx_context_desc *TX_CONTEXT_DESC =
-	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+		GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+	struct s_tx_pkt_features *tx_pkt_features =
+		GET_TX_PKT_FEATURES_PTR(qinx);
+	struct eqos_tx_queue *tx_queue = GET_TX_QUEUE_PTR(qinx);
+	INT original_start_index = ptx_ring->cur_tx;
+	static unsigned int slot_number[MAX_CHANS];
+	INT start_index = ptx_ring->cur_tx;
+	int cur_index = ptx_ring->cur_tx;
 	UINT varcsum_enable;
 	UINT varvlan_pkt;
 	UINT varvt;
 	INT i;
-	INT start_index = ptx_ring->cur_tx;
-	INT original_start_index = ptx_ring->cur_tx;
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
-	struct eqos_tx_queue *tx_queue = GET_TX_QUEUE_PTR(qinx);
-	static unsigned int slot_number[MAX_CHANS];
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
@@ -2976,11 +2978,11 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 			ptx_ring->default_mss = tx_pkt_features->mss;
 		}
 
-		original_start_index = ptx_ring->cur_tx;
-		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
-		start_index = ptx_ring->cur_tx;
-		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+		original_start_index = cur_index;
+		INCR_TX_DESC_INDEX(cur_index, 1);
+		start_index = cur_index;
+		ptx_desc = GET_TX_DESC_PTR(qinx, cur_index);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, cur_index);
 		desc_cnt--;
 	}
 
@@ -3057,10 +3059,10 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		slot_number[qinx]++;
 	}
 
-	INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+	INCR_TX_DESC_INDEX(cur_index, 1);
 	plast_desc = ptx_desc;
-	ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
-	ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+	ptx_desc = GET_TX_DESC_PTR(qinx, cur_index);
+	ptx_swcx_desc = GET_TX_BUF_PTR(qinx, cur_index);
 	desc_cnt--;
 
 	for (i = 0; i < desc_cnt; i++) {
@@ -3079,10 +3081,10 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		/* Mark it as NORMAL descriptor */
 		TX_NORMAL_DESC_TDES3_CTXT_WR(ptx_desc->tdes3, 0);
 
-		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		INCR_TX_DESC_INDEX(cur_index, 1);
 		plast_desc = ptx_desc;
-		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+		ptx_desc = GET_TX_DESC_PTR(qinx, cur_index);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, cur_index);
 	}
 	/* Mark it as LAST descriptor */
 	TX_NORMAL_DESC_TDES3_LD_WR(plast_desc->tdes3, 0x1);
@@ -3099,14 +3101,15 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
-	dump_tx_desc(pdata, original_start_index, (ptx_ring->cur_tx - 1),
+	dump_tx_desc(pdata, original_start_index, (cur_index - 1),
 		     1, qinx);
 #endif
 
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
 	wmb();
-	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, ptx_ring->cur_tx));
+	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, cur_index));
+	ptx_ring->cur_tx = cur_index;
 
 	if (pdata->eee_enabled) {
 		/* restart EEE timer */

@@ -1668,6 +1668,12 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	pr_debug("<--eqos_set_rx_mode\n");
 }
 
+static inline int eqos_tx_avail(struct tx_ring *ptx_ring)
+{
+	BUILD_BUG_ON_NOT_POWER_OF_2(TX_DESC_CNT);
+
+	return (ptx_ring->dirty_tx - ptx_ring->cur_tx - 1) & (TX_DESC_CNT - 1);
+}
 
 /*!
 * \brief API to transmit the packets
@@ -1687,28 +1693,23 @@ static void eqos_set_rx_mode(struct net_device *dev)
 static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	UINT qinx = skb_get_queue_mapping(skb);
+	unsigned int qinx = skb_get_queue_mapping(skb);
 	struct netdev_queue *txq = netdev_get_tx_queue(dev, qinx);
-
 	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
-
-	int cnt = 0;
-	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
+	struct hw_if_struct *hw_if = &pdata->hw_if;
 	INT retval = NETDEV_TX_OK;
+	int cnt = 0;
 	int tso;
 
 	pr_debug("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
-	spin_lock(&pdata->chinfo[qinx].chan_tx_lock);
-
 	if (skb->len <= 0) {
+		netdev_err(dev, "empty skb received from stack\n");
 		dev_kfree_skb_any(skb);
-		pr_err("%s : Empty skb received from stack\n", dev->name);
 		goto tx_netdev_return;
 	}
-
 
 	memset(tx_pkt_features, 0, sizeof(struct s_tx_pkt_features));
 
@@ -1770,10 +1771,9 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	cnt = desc_if->tx_swcx_alloc(dev, skb);
 	if (cnt <= 0) {
 		if (cnt == 0) {
-			ptx_ring->queue_stopped = 1;
 			netif_stop_subqueue(dev, qinx);
-			pr_debug("%s(): TX ring full for queue %d\n",
-			      __func__, qinx);
+			netdev_err(dev, "%s(): TX ring full for queue %d\n",
+				   __func__, qinx);
 			retval = NETDEV_TX_BUSY;
 			goto tx_netdev_return;
 		}
@@ -1784,15 +1784,8 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	txq->trans_start = jiffies;
 
-	ptx_ring->free_desc_cnt -= cnt;
-	ptx_ring->tx_pkt_queued += cnt;
-
 #ifdef EQOS_ENABLE_TX_PKT_DUMP
 	print_pkt(skb, skb->len, 1, (ptx_ring->cur_tx - 1));
-#endif
-
-#ifdef ENABLE_CHANNEL_DATA_CHECK
-	check_channel_data(skb, qinx, 0);
 #endif
 
 	if ((pdata->eee_enabled) && (pdata->tx_path_in_lpi_mode) &&
@@ -1807,11 +1800,15 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* configure required descriptor fields for transmission */
 	hw_if->pre_xmit(pdata, qinx);
 
- tx_netdev_return:
-	spin_unlock(&pdata->chinfo[qinx].chan_tx_lock);
+	/* Stop the queue if there might not be enough descriptors for another
+	 * packet (1 context desc + 1 header desc + fragment descs).
+	 */
+	if (eqos_tx_avail(ptx_ring) < MAX_SKB_FRAGS + 2) {
+		netif_stop_subqueue(dev, qinx);
+		netdev_dbg(dev, "%s(): Stopping TX ring %d\n", __func__, qinx);
+	}
 
-	pr_debug("<--eqos_start_xmit\n");
-
+tx_netdev_return:
 	return retval;
 }
 
@@ -2063,35 +2060,32 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 	struct eqos_prv_data *pdata = tx_queue->pdata;
 	unsigned int qinx = tx_queue->chan_num;
 	struct net_device *dev = pdata->dev;
-	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
-	struct s_tx_desc *ptx_desc = NULL;
+	struct netdev_queue *txq = netdev_get_tx_queue(dev, qinx);
+	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
+	struct desc_if_struct *desc_if = &pdata->desc_if;
+	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct tx_swcx_desc *ptx_swcx_desc = NULL;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct desc_if_struct *desc_if = &(pdata->desc_if);
+	struct s_tx_desc *ptx_desc = NULL;
+	int entry = ptx_ring->dirty_tx;
+	unsigned int tstamp_taken = 0;
 	int err_incremented;
 	int processed = 0;
-	unsigned int tstamp_taken = 0;
 
-	pr_debug("-->%s(): ptx_ring->tx_pkt_queued = %d"
-	      " dirty_tx = %d, qinx = %u\n",
-	      __func__,
-	      ptx_ring->tx_pkt_queued, ptx_ring->dirty_tx, qinx);
-
-	spin_lock(&pdata->chinfo[qinx].chan_tx_lock);
+	pr_debug("-->%s(): dirty_tx = %d, qinx = %u\n", __func__, entry, qinx);
 
 	pdata->xstats.tx_clean_n[qinx]++;
-	while (ptx_ring->tx_pkt_queued > 0) {
-		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->dirty_tx);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx);
+	while (entry != ptx_ring->cur_tx && processed < budget) {
+		ptx_desc = GET_TX_DESC_PTR(qinx, entry);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, entry);
 		tstamp_taken = 0;
 
+		/* ensure we actually got Tx desc */
+		rmb();
 		if (!hw_if->tx_complete(ptx_desc))
 			break;
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
-		dump_tx_desc(pdata, ptx_ring->dirty_tx, ptx_ring->dirty_tx,
-			     0, qinx);
+		dump_tx_desc(pdata, entry, entry, 0, qinx);
 #endif
 
 		/* update the tx error if any by looking at last segment
@@ -2113,7 +2107,7 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 				if (tstamp_taken) {
 					DBGPR_PTP
 					    ("passed tx timestamp to stack[qinx = %d, dirty_tx = %d]\n",
-					     qinx, ptx_ring->dirty_tx);
+					     qinx, entry);
 				}
 			}
 
@@ -2179,16 +2173,17 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 		desc_if->tx_swcx_free(pdata, ptx_swcx_desc);
 
 		/* reset the descriptor so that driver/host can reuse it */
-		hw_if->tx_desc_reset(ptx_ring->dirty_tx, pdata, qinx);
+		hw_if->tx_desc_reset(entry, pdata, qinx);
 
-		INCR_TX_DESC_INDEX(ptx_ring->dirty_tx, 1);
-		ptx_ring->free_desc_cnt++;
-		ptx_ring->tx_pkt_queued--;
+		INCR_TX_DESC_INDEX(entry, 1);
 	}
 
-	if ((ptx_ring->queue_stopped == 1) && (ptx_ring->free_desc_cnt > 0)) {
-		ptx_ring->queue_stopped = 0;
-		netif_wake_subqueue(dev, qinx);
+	__netif_tx_lock(txq, smp_processor_id());
+	/* Update the dirty pointer and wake up the TX queue, if necessary. */
+	ptx_ring->dirty_tx = entry;
+	if (netif_tx_queue_stopped(txq) &&
+	    eqos_tx_avail(ptx_ring) >= MAX_SKB_FRAGS + 2) {
+		netif_tx_wake_queue(txq);
 	}
 
 	if ((pdata->eee_enabled) && (!pdata->tx_path_in_lpi_mode) &&
@@ -2197,11 +2192,7 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 		mod_timer(&pdata->eee_ctrl_timer,
 			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
-
-	spin_unlock(&pdata->chinfo[qinx].chan_tx_lock);
-
-	pr_debug("<--%s(): ptx_ring->tx_pkt_queued = %d\n",
-	      __func__, ptx_ring->tx_pkt_queued);
+	__netif_tx_unlock(txq);
 
 	return processed;
 }
@@ -5747,7 +5738,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
-	int i;
 
 	pr_debug("-->%s()\n", __func__);
 
@@ -5761,15 +5751,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	hw_if->stop_mac_rx();
 	eqos_disable_all_irqs(pdata);
 	eqos_all_ch_napi_disable(pdata);
-
-	/* Ensure no tx thread is running.  We have
-	 * already prevented any new callers of or tx thread above.
-	 * Below will allow any remaining tx threads to complete.
-	 */
-	for (i = 0; i < pdata->num_chans; i++) {
-		spin_lock(&pdata->chinfo[i].chan_tx_lock);
-		spin_unlock(&pdata->chinfo[i].chan_tx_lock);
-	}
 
 	/* stop DMA TX */
 	eqos_stop_all_ch_tx_dma(pdata);

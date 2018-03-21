@@ -706,16 +706,20 @@ static inline pid_t nvmap_client_pid(struct nvmap_client *client)
 static inline int nvmap_get_user_pages(ulong vaddr,
 		                int nr_page, struct page **pages)
 {
+	int ret;
+	down_read(&current->mm->mmap_sem);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-        return get_user_pages(current, current->mm,
+        ret = get_user_pages(current, current->mm,
 			      vaddr & PAGE_MASK, nr_page,
 			      1/*write*/, 1, /* force */
 			      pages, NULL);
 #else
-	return get_user_pages(vaddr & PAGE_MASK, nr_page,
+	ret = get_user_pages(vaddr & PAGE_MASK, nr_page,
 			      FOLL_WRITE | FOLL_FORCE,
 			      pages, NULL);
 #endif
+	up_read(&current->mm->mmap_sem);
+	return ret;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)

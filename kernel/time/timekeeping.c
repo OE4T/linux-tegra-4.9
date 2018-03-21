@@ -305,6 +305,15 @@ static void tk_setup_internals(struct timekeeper *tk, struct clocksource *clock)
 	tk->tkr_mono.mult = clock->mult;
 	tk->tkr_raw.mult = clock->mult;
 	tk->ntp_err_mult = 0;
+	/* Reset xtime_sec and xtime_nsec to have time from
+	 * POR when changing clocksource */
+	if (IS_ENABLED(CONFIG_SCHED_POR_TIME) &&
+	    clock != clocksource_default_clock()) {
+		tk->xtime_sec = 0;
+		tk->tkr_raw.xtime_nsec = ((tk->tkr_raw.cycle_last) * clock->mult);
+		tk->tkr_mono.xtime_nsec = ((tk->tkr_mono.cycle_last) * clock->mult);
+		tk_normalize_xtime(tk);
+	}
 }
 
 /* Timekeeper helper functions. */

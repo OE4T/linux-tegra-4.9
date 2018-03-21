@@ -184,7 +184,7 @@ extern void clocksource_touch_watchdog(void);
 extern void clocksource_change_rating(struct clocksource *cs, int rating);
 extern void clocksource_suspend(void);
 extern void clocksource_resume(void);
-extern struct clocksource * __init clocksource_default_clock(void);
+extern struct clocksource * clocksource_default_clock(void);
 extern void clocksource_mark_unstable(struct clocksource *cs);
 
 extern u64

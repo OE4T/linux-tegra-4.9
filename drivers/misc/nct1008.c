@@ -1041,186 +1041,195 @@ static int nct1008_offsets_program(struct nct1008_data *data)
 	return r;
 }
 
-static int nct1008_configure_sensor(struct nct1008_data *data)
+static int nct1008_ext_sensor_init(struct nct1008_data *data)
 {
-	struct i2c_client *client = data->client;
+	int ret, val;
 	struct nct1008_platform_data *pdata = &data->plat_data;
-	static struct thermal_cooling_device *cdev;
-	u8 value;
-	s16 temp;
-	u8 temp2;
-	int ret;
-	bool ext_err = false;
-
-	if (!pdata || !pdata->supported_hwrev)
-		return -ENODEV;
 
 	ret = nct1008_read_reg(data, STATUS_RD);
 	if (ret & BIT(2)) {
-		pr_info("%s: ERR: remote sensor circuit is open (0x%02x)\n",
-			data->chip_name, ret);
-		ext_err = true; /* flag the error */
+		/* skip configuration of EXT sensor */
+		dev_err(&data->client->dev, "EXT sensor circuit is open\n");
+		return -ENODEV;
 	}
 
-	/* Initially place in Standby */
-	ret = nct1008_write_reg(data, CONFIG_WR, STANDBY_BIT);
-	if (ret)
-		goto error;
-
-	/* Local temperature h/w shutdown limit */
-	value = temperature_to_value(pdata->extended_range,
-					data->sensors[LOC].shutdown_limit);
-	ret = nct1008_write_reg(data, LOC_THERM_LIMIT, value);
-	if (ret)
-		goto error;
-
-	/* set extended range mode if needed */
-	if (pdata->extended_range)
-		data->config |= EXTENDED_RANGE_BIT;
-	data->config &= ~(THERM2_BIT | ALERT_BIT);
-
-	ret = nct1008_write_reg(data, CONFIG_WR, data->config | STANDBY_BIT);
-	if (ret)
-		goto error;
-
-	/* Temperature conversion rate */
-	ret = nct1008_write_reg(data, CONV_RATE_WR, pdata->conv_rate);
-	if (ret)
-		goto error;
-
-	/* Setup local hi and lo limits. */
-	ret = nct1008_write_reg(data, LOC_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
-	if (ret)
-		goto error;
-
-	ret = nct1008_write_reg(data, LOC_TEMP_LO_LIMIT_WR, 0);
-	if (ret)
-		goto error;
-
-	if (ext_err)
-		return ext_err; /* skip configuration of EXT sensor */
-
 	/* External temperature h/w shutdown limit. */
-	value = temperature_to_value(pdata->extended_range,
+	val = temperature_to_value(pdata->extended_range,
 					data->sensors[EXT].shutdown_limit);
-	ret = nct1008_write_reg(data, EXT_THERM_LIMIT_WR, value);
+	ret = nct1008_write_reg(data, EXT_THERM_LIMIT_WR, val);
 	if (ret)
-		goto error;
+		goto err;
 
 	/* Setup external hi and lo limits */
 	ret = nct1008_write_reg(data, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
 	if (ret)
-		goto error;
-	ret = nct1008_write_reg(data, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
-			NCT1008_MAX_TEMP);
-	if (ret)
-		goto error;
+		goto err;
 
-	 /* Initiate one-shot conversion  */
+	ret = nct1008_write_reg(data, EXT_TEMP_HI_LIMIT_HI_BYTE_WR,
+				NCT1008_MAX_TEMP);
+err:
+	if (ret < 0)
+		dev_err(&data->client->dev, "EXT sensor init failed 0x%x", ret);
+
+	return ret;
+
+}
+
+static int nct1008_loc_sensor_init(struct nct1008_data *data)
+{
+	int ret = 0, val;
+	struct nct1008_platform_data *pdata = &data->plat_data;
+
+	/* Local temperature h/w shutdown limit */
+	val = temperature_to_value(pdata->extended_range,
+					data->sensors[LOC].shutdown_limit);
+	ret = nct1008_write_reg(data, LOC_THERM_LIMIT, val);
+	if (ret)
+		goto err;
+
+	/* Setup local hi and lo limits. */
+	ret = nct1008_write_reg(data, LOC_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
+	if (ret)
+		goto err;
+
+	ret = nct1008_write_reg(data, LOC_TEMP_LO_LIMIT_WR, 0);
+
+err:
+	if (ret < 0)
+		dev_err(&data->client->dev, "LOC sensor init failed 0x%x", ret);
+
+	return ret;
+}
+
+static int nct1008_sensors_init(struct nct1008_data *data)
+{
+	int ret = -ENODEV;
+	int ext_err = 0;
+	int temp;
+	struct nct1008_platform_data *pdata = &data->plat_data;
+
+	if (!pdata || !pdata->supported_hwrev)
+		goto err;
+
+	/* Configure sensor to trigger alerts clear THERM2_BIT and ALERT_BIT*/
+	data->config = 0;
+	if (pdata->extended_range)
+		data->config |= EXTENDED_RANGE_BIT;
+
+	/* Initially place in Standby */
+	ret = nct1008_write_reg(data, CONFIG_WR, data->config | STANDBY_BIT);
+	if (ret)
+		goto err;
+
+	ret = nct1008_loc_sensor_init(data);
+	if (ret < 0)
+		goto err;
+
+	ext_err = nct1008_ext_sensor_init(data);
+
+	/* Temperature conversion rate */
+	ret = nct1008_write_reg(data, CONV_RATE_WR, pdata->conv_rate);
+	if (ret)
+		goto err;
+
+	/* Initiate one-shot conversion  */
 	ret = nct1008_write_reg(data, ONE_SHOT, 0x1);
 	if (ret)
-		goto error;
+		goto err;
 
-    /* Give hardware necessary time to finish conversion */
-	usleep_range(data->oneshot_conv_period_ns,
-		data->oneshot_conv_period_ns + 1000);
+	/* Give hardware necessary time to finish conversion */
+	usleep_range(data->oneshot_conv_period_ns, data->oneshot_conv_period_ns
+			+ 1000);
 
 	/* read initial local temperature */
-	ret = nct1008_read_reg(data, LOC_TEMP_RD);
+	ret = nct1008_get_temp_common(LOC, data, &temp);
 	if (ret < 0)
-		goto error;
-	else
-		value = ret;
+		goto err;
 
-	temp = value_to_temperature(pdata->extended_range, value);
-	dev_dbg(&client->dev, "\n initial local temp = %d ", temp);
+	dev_info(&data->client->dev, "initial LOC temp: %d ", temp);
+	/* read initial ext temperature */
+	if (ext_err == 0) {
+		ret = nct1008_get_temp_common(EXT, data, &temp);
+		if (ret < 0)
+			goto err;
 
-    /* read initial ext temperature */
-	ret = nct1008_read_reg(data, EXT_TEMP_LO_RD);
+		dev_info(&data->client->dev, "initial EXT temp: %d ", temp);
+	}
+
+err:
 	if (ret < 0)
-		goto error;
-	else
-		value = ret;
+		dev_err(&data->client->dev, "sensor init failed 0x%x", ret);
 
-	temp2 = (value >> 6);
-	ret = nct1008_read_reg(data, EXT_TEMP_HI_RD);
+	return ret;
+}
+
+static int nct1008_limits_store(struct nct1008_data *data)
+{
+	int val;
+	struct nct1008_platform_data *pdata = &data->plat_data;
+
+	/* Reset current hi/lo limit values with register values */
+	val = nct1008_read_reg(data, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
+	if (val < 0)
+		goto err;
+
+	data->sensors[EXT].current_lo_limit =
+		value_to_temperature(pdata->extended_range, val);
+	val = nct1008_read_reg(data, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
+	if (val < 0)
+		goto err;
+
+	data->sensors[EXT].current_hi_limit =
+		value_to_temperature(pdata->extended_range, val);
+	val = nct1008_read_reg(data, LOC_TEMP_LO_LIMIT_RD);
+	if (val < 0)
+		goto err;
+
+	data->sensors[LOC].current_lo_limit =
+		value_to_temperature(pdata->extended_range, val);
+
+	val = nct1008_read_reg(data, LOC_TEMP_HI_LIMIT_RD);
+	if (val < 0)
+		goto err;
+
+	data->sensors[LOC].current_hi_limit =
+		value_to_temperature(pdata->extended_range, val);
+
+err:
+	if (val < 0)
+		dev_err(&data->client->dev, "limit reg read failed 0x%x", val);
+
+	return val;
+}
+
+static int nct1008_configure_sensor(struct nct1008_data *data)
+{
+	int ret;
+
+	ret = nct1008_sensors_init(data);
 	if (ret < 0)
-		goto error;
-	else
-		value = ret;
+		goto err;
 
-	temp = value_to_temperature(pdata->extended_range, value);
-
-	if (temp2 > 0)
-		dev_dbg(&client->dev, "\n initial ext temp = %d.%d deg",
-				temp, temp2 * 25);
-	else
-		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
+	ret = nct1008_limits_store(data);
+	if (ret < 0)
+		goto err;
 
 	if (data->chip != MAX6649)
 		nct1008_offsets_program(data);
 
-	/* Reset current hi/lo limit values with register values */
-	ret = nct1008_read_reg(data, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
-	if (ret < 0)
-		goto error;
-	else
-		value = ret;
-	data->sensors[EXT].current_lo_limit =
-		value_to_temperature(pdata->extended_range, value);
-
-	ret = nct1008_read_reg(data, EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
-	if (ret < 0)
-		goto error;
-	else
-		value = ret;
-
-	data->sensors[EXT].current_hi_limit =
-		value_to_temperature(pdata->extended_range, value);
-
-	ret = nct1008_read_reg(data, LOC_TEMP_LO_LIMIT_RD);
-	if (ret < 0)
-		goto error;
-	else
-		value = ret;
-
-	data->sensors[LOC].current_lo_limit =
-		value_to_temperature(pdata->extended_range, value);
-
-	ret = nct1008_read_reg(data, LOC_TEMP_HI_LIMIT_RD);
-	if (ret < 0)
-		goto error;
-	else
-		value = ret;
-
-	data->sensors[LOC].current_hi_limit =
-		value_to_temperature(pdata->extended_range, value);
-
-	cdev = thermal_cooling_device_register("shutdown_warning", data,
-					&nct1008_shutdown_warning_ops);
-	if (IS_ERR_OR_NULL(cdev))
-		dev_err(&client->dev,
-			"shutdown_warning cdev registration failed %d\n", ret);
-
-	return 0;
-error:
-	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, ret);
+err:
 	return ret;
 }
 
 static int nct1008_configure_irq(struct nct1008_data *data)
 {
-	data->workqueue = create_singlethread_workqueue(data->chip_name);
-
-	INIT_WORK(&data->work, nct1008_work_func);
-
 	if (data->client->irq < 0)
-		return 0;
-	else
-		return request_irq(data->client->irq, nct1008_irq,
-			IRQF_TRIGGER_LOW,
-			data->chip_name,
-			data);
+		return -EINVAL;
+
+	data->workqueue = create_singlethread_workqueue(data->chip_name);
+	INIT_WORK(&data->work, nct1008_work_func);
+	return request_irq(data->client->irq, nct1008_irq, IRQF_TRIGGER_LOW,
+				data->chip_name, data);
 }
 
 static int nct1008_dt_parse(struct i2c_client *client,
@@ -1318,9 +1327,32 @@ static struct thermal_zone_of_device_ops ext_sops = {
 	.set_trips = nct1008_ext_set_trips,
 };
 
+static void nct1008_thermal_init(struct nct1008_data *data)
+{
+	struct thermal_zone_device *tzd;
+	struct thermal_cooling_device *cdev;
+	struct device *dev = &data->client->dev;
+
+	/* Config for the Local sensor. */
+	tzd = thermal_zone_of_sensor_register(dev, LOC, data, &loc_sops);
+	if (!IS_ERR_OR_NULL(tzd))
+		data->sensors[LOC].thz = tzd;
+
+	/* register External sensor if connection is good  */
+	tzd = thermal_zone_of_sensor_register(dev, EXT, data, &ext_sops);
+	if (!IS_ERR_OR_NULL(tzd))
+		data->sensors[EXT].thz = tzd;
+
+	cdev = thermal_cooling_device_register("shutdown_warning", data,
+				&nct1008_shutdown_warning_ops);
+	if (IS_ERR_OR_NULL(cdev))
+		dev_err(dev, "cdev registration failed %ld\n", PTR_ERR(cdev));
+}
+
 /*
  * Manufacturer(OnSemi) recommended sequence for
  * Extended Range mode is as follows
+ * nct1008_configure_sensor:
  * 1. Place in Standby
  * 2. Scale the THERM and ALERT limits
  *	appropriately(for Extended Range mode).
@@ -1328,6 +1360,7 @@ static struct thermal_zone_of_device_ops ext_sops = {
  *	ALERT mask/THERM2 mode may be done here
  *	as these are not critical
  * 4. Set Conversion Rate as required
+ * nct1008_enable:
  * 5. Take device out of Standby
  */
 
@@ -1337,18 +1370,16 @@ static struct thermal_zone_of_device_ops ext_sops = {
 static int nct1008_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
-	struct nct1008_data *data;
-	struct thermal_zone_device *zone_device;
 	int err;
-	bool ext_err;
-
+	struct nct1008_data *data;
 	if (!client->dev.of_node) {
 		dev_err(&client->dev, "missing device tree node\n");
 		return -EINVAL;
 	}
 
-	dev_info(&client->dev, "find device tree node, parsing dt\n");
-	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
+	dev_dbg(&client->dev, "find device tree node, parsing dt\n");
+	data = devm_kzalloc(&client->dev, sizeof(struct nct1008_data),
+				GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -1361,15 +1392,11 @@ static int nct1008_probe(struct i2c_client *client,
 	strlcpy(data->chip_name, id->name, I2C_NAME_SIZE);
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->mutex);
-
 	data->nct_reg = regulator_get(&client->dev, "vdd");
 	if (IS_ERR(data->nct_reg)) {
-		err = PTR_ERR(data->nct_reg);
-		if (err != -EPROBE_DEFER)
-			dev_err(&client->dev, "Error [%d] in getting "
-				"the regulator handle for vdd.\n", err);
-		data->nct_reg = NULL;
-		goto cleanup;
+		dev_err(&client->dev, "vdd regulator get failed: 0x%x\n", err);
+		mutex_destroy(&data->mutex);
+		return -ENODEV;
 	}
 
 	/* oneshot conversion time */
@@ -1379,32 +1406,19 @@ static int nct1008_probe(struct i2c_client *client,
 		data->oneshot_conv_period_ns = NCT_CONV_TIME_ONESHOT_US;
 
 	nct1008_power_control(data, true);
-
-	/* extended range recommended steps 1 through 4 taken care
-	 * in nct1008_configure_sensor function */
-	err = nct1008_configure_sensor(data);	/* sensor is in standby */
-	ext_err = err;
-	if (err < 0) {
-		dev_err(&client->dev, "\n error file: %s : %s(), line=%d ",
-			__FILE__, __func__, __LINE__);
+	/* sensor is in standby */
+	err = nct1008_configure_sensor(data);
+	if (err < 0)
 		goto error;
-	}
 
 	err = nct1008_configure_irq(data);
-	if (err < 0) {
-		dev_err(&client->dev, "\n error file: %s : %s(), line=%d ",
-			__FILE__, __func__, __LINE__);
-		goto error;
-	}
-	dev_info(&client->dev, "%s: initialized\n", __func__);
+	if (err < 0)
+		dev_info(&client->dev, "irq config failed: 0x%x ", err);
 
-	/* extended range recommended step 5 is in nct1008_enable function */
-	err = nct1008_enable(client);		/* sensor is running */
-	if (err < 0) {
-		dev_err(&client->dev, "Error: %s, line=%d, error=%d\n",
-			__func__, __LINE__, err);
+	/* sensor is running */
+	err = nct1008_enable(client);
+	if (err < 0)
 		goto error;
-	}
 
 	/* register sysfs hooks */
 	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
@@ -1413,32 +1427,13 @@ static int nct1008_probe(struct i2c_client *client,
 		goto error;
 	}
 
-	if (client->dev.of_node) {
-		/* Config for the Local sensor. */
-		zone_device = thermal_zone_of_sensor_register(&client->dev, LOC,
-				data, &loc_sops);
-
-		if (!IS_ERR_OR_NULL(zone_device))
-			data->sensors[LOC].thz = zone_device;
-
-		/* register External sensor if connection is good  */
-		zone_device = thermal_zone_of_sensor_register(&client->dev, EXT,
-				data, &ext_sops);
-
-		if (!IS_ERR_OR_NULL(zone_device))
-			data->sensors[EXT].thz = zone_device;
-	}
-
+	dev_info(&client->dev, "%s: initialized\n", __func__);
+	nct1008_thermal_init(data);
 	return 0;
-
 error:
 	dev_err(&client->dev, "\n exit %s, err=%d ", __func__, err);
-	nct1008_power_control(data, false);
-cleanup:
 	mutex_destroy(&data->mutex);
-	if (data->nct_reg)
-		regulator_put(data->nct_reg);
-	kfree(data);
+	nct1008_power_control(data, false);
 	return err;
 }
 
@@ -1523,12 +1518,13 @@ static int nct1008_resume(struct device *dev)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	nct1008_power_control(data, true);
-	nct1008_configure_sensor(data);
-	err = nct1008_enable(client);
-	if (err < 0) {
-		dev_err(&client->dev, "Error: %s, error=%d\n", __func__, err);
+	err = nct1008_configure_sensor(data);
+	if (err < 0)
 		return err;
-	}
+
+	err = nct1008_enable(client);
+	if (err < 0)
+		return err;
 
 	mutex_lock(&data->mutex);
 	data->stop_workqueue = 0;

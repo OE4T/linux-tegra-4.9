@@ -627,7 +627,23 @@ static struct platform_driver tegra_hsp_driver = {
 		.pm	= &tegra_hsp_pm_ops,
 	},
 };
-module_platform_driver(tegra_hsp_driver);
+
+static int __init tegra18_hsp_init(void)
+{
+	int ret;
+
+	ret = platform_driver_register(&tegra_hsp_driver);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+subsys_initcall(tegra18_hsp_init);
+
+static void __exit tegra18_hsp_exit(void)
+{
+}
+module_exit(tegra18_hsp_exit);
 MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra 186 HSP driver");
 MODULE_LICENSE("GPL");

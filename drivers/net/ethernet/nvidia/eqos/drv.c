@@ -937,82 +937,6 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	pr_debug("<--eqos_print_all_hw_features\n");
 }
 #endif
-/*!
- * \brief allcation of Rx skb's for default rx mode.
- *
- * \details This function is invoked by other api's for
- * allocating the Rx skb's with default Rx mode.
- *
- * \param[in] pdata – pointer to private data structure.
- * \param[in] buffer – pointer to wrapper receive buffer data structure.
- * \param[in] gfp – the type of memory allocation.
- *
- * \return int
- *
- * \retval 0 on success and -ve number on failure.
- */
-
-static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
-			     struct rx_swcx_desc *prx_swcx_desc, gfp_t gfp)
-{
-	struct sk_buff *skb = prx_swcx_desc->skb;
-
-	pr_debug("-->eqos_alloc_rx_buf\n");
-
-	if (skb) {
-		pskb_trim(skb, 0);
-		if (prx_swcx_desc->dma)
-			goto skip_mapping;
-		goto map_skb;
-	}
-
-	skb =
-	    __netdev_alloc_skb_ip_align(pdata->dev, pdata->rx_buffer_len, gfp);
-	if (skb == NULL) {
-		prx_swcx_desc->skb = NULL;
-		pr_err("Failed to allocate skb\n");
-		return -ENOMEM;
-	}
-	prx_swcx_desc->skb = skb;
-	prx_swcx_desc->len = pdata->rx_buffer_len;
-
- map_skb:
-	prx_swcx_desc->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-				     pdata->rx_buffer_len,
-				     DMA_FROM_DEVICE);
-	if (dma_mapping_error(&pdata->pdev->dev, prx_swcx_desc->dma)) {
-		pr_err("failed to do the RX dma map\n");
-		return -ENOMEM;
-	}
-
-skip_mapping:
-	prx_swcx_desc->mapped_as_page = Y_FALSE;
-
-	pr_debug("<--eqos_alloc_rx_buf\n");
-
-	return 0;
-}
-
-/*!
- * \brief api to configure Rx function pointer after reset.
- *
- * \details This function will initialize the receive function pointers
- * which are used for allocating skb's and receiving the packets based
- * Rx mode - default.
- *
- * \param[in] pdata – pointer to private data structure.
- *
- * \return void
- */
-
-static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
-{
-	pr_debug("-->eqos_configure_rx_fun_ptr\n");
-
-	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
-
-	pr_debug("<--eqos_configure_rx_fun_ptr\n");
-}
 
 /*!
  * \brief api to initialize default values.
@@ -5683,7 +5607,6 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	eqos_default_common_confs(pdata);
 	eqos_default_tx_confs(pdata);
 	eqos_default_rx_confs(pdata);
-	eqos_configure_rx_fun_ptr(pdata);
 
 	desc_if->wrapper_tx_desc_init(pdata);
 	desc_if->wrapper_rx_desc_init(pdata);

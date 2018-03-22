@@ -376,6 +376,46 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	pr_debug("<--eqos_wrapper_tx_descriptor_init_single_q\n");
 }
 
+static int desc_alloc_skb(struct eqos_prv_data *pdata,
+			  struct rx_swcx_desc *prx_swcx_desc, gfp_t gfp)
+{
+	struct sk_buff *skb = prx_swcx_desc->skb;
+	dma_addr_t dma = prx_swcx_desc->dma;
+
+	if (skb) {
+		/* Recycled skbs should have zero length and their buffer
+		 * still DMA mapped.
+		 */
+		if (WARN_ON(skb->len != 0))
+			skb_trim(skb, 0);
+		if (WARN_ON(!dma))
+			goto dma_map;
+
+		return 0;
+	}
+
+	skb = __netdev_alloc_skb_ip_align(pdata->dev, pdata->rx_buffer_len,
+					  gfp);
+	if (unlikely(!skb)) {
+		netdev_err(pdata->dev, "RX skb allocation failed\n");
+		return -ENOMEM;
+	}
+
+dma_map:
+	dma = dma_map_single(&pdata->pdev->dev, skb->data, pdata->rx_buffer_len,
+			     DMA_FROM_DEVICE);
+	if (unlikely(dma_mapping_error(&pdata->pdev->dev, dma))) {
+		netdev_err(pdata->dev, "RX skb dma map failed\n");
+		dev_kfree_skb_any(skb);
+		return -ENOMEM;
+	}
+
+	prx_swcx_desc->skb = skb;
+	prx_swcx_desc->dma = dma;
+
+	return 0;
+}
+
 /*!
 * \brief API to initialize the receive descriptors.
 *
@@ -394,13 +434,13 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 			struct eqos_prv_data *pdata,
 			UINT qinx)
 {
-	int i;
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	struct rx_swcx_desc *prx_swcx_desc = GET_RX_BUF_PTR(qinx, 0);
 	struct s_rx_desc *desc = GET_RX_DESC_PTR(qinx, 0);
 	dma_addr_t desc_dma = GET_RX_DESC_DMA_ADDR(qinx, 0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
+	int i, ret;
 
 	pr_debug("-->eqos_wrapper_rx_descriptor_init_single_q: "\
 		"qinx = %u\n", qinx);
@@ -413,11 +453,10 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 		    (desc_dma + sizeof(struct s_rx_desc) * i);
 		GET_RX_BUF_PTR(qinx, i) = &prx_swcx_desc[i];
 
-		/* allocate skb & assign to each desc */
-		if (pdata->alloc_rx_buf(pdata, GET_RX_BUF_PTR(qinx, i), GFP_KERNEL))
+		ret = desc_alloc_skb(pdata, GET_RX_BUF_PTR(qinx, i),
+				     GFP_KERNEL);
+		if (ret < 0)
 			break;
-
-		wmb();
 	}
 
 	prx_ring->cur_rx = 0;
@@ -448,17 +487,12 @@ static void eqos_wrapper_tx_descriptor_init(struct eqos_prv_data
 
 static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data *pdata)
 {
-	struct eqos_rx_queue *rx_queue = NULL;
 	unsigned int qinx;
 
 	pr_debug("-->eqos_wrapper_rx_descriptor_init\n");
 
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		rx_queue = GET_RX_QUEUE_PTR(qinx);
-		rx_queue->pdata = pdata;
-
+	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
 		eqos_wrapper_rx_descriptor_init_single_q(pdata, qinx);
-	}
 
 	pr_debug("<--eqos_wrapper_rx_descriptor_init\n");
 }
@@ -1054,37 +1088,33 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 				UINT qinx)
 {
-	int i;
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	struct rx_swcx_desc *prx_swcx_desc = NULL;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
-	int tail_idx;
+	int tail_idx, ret;
 
-	pr_debug("-->%s: prx_ring->skb_realloc_idx = %d qinx=%u\n",
-	      __func__, prx_ring->skb_realloc_idx, qinx);
+	while (prx_ring->dirty_rx != prx_ring->cur_rx) {
+		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->dirty_rx);
 
-	for (i = 0; i < prx_ring->dirty_rx; i++) {
-		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->skb_realloc_idx);
-		/* allocate skb & assign to each desc */
-		if (pdata->alloc_rx_buf(pdata, prx_swcx_desc, GFP_ATOMIC)) {
-			pr_err("Failed to re allocate skb\n");
+		ret = desc_alloc_skb(pdata, prx_swcx_desc, GFP_ATOMIC);
+		if (ret < 0) {
 			pdata->xstats.q_re_alloc_rx_buf_failed[qinx]++;
 			break;
 		}
 
-		wmb();
-		hw_if->rx_desc_reset(prx_ring->skb_realloc_idx, pdata,
+		hw_if->rx_desc_reset(prx_ring->dirty_rx, pdata,
 				     prx_swcx_desc->inte, qinx);
-		INCR_RX_DESC_INDEX(prx_ring->skb_realloc_idx, 1);
+		INCR_RX_DESC_INDEX(prx_ring->dirty_rx, 1);
 	}
-	tail_idx = prx_ring->skb_realloc_idx;
+
+	tail_idx = prx_ring->dirty_rx;
 	DECR_RX_DESC_INDEX(tail_idx);
+
+	/* make sure Rx ring tail index update */
+	wmb();
 	hw_if->update_rx_tail_ptr(qinx,
 		GET_RX_DESC_DMA_ADDR(qinx, tail_idx));
-	prx_ring->dirty_rx = 0;
-
-	pr_debug("<--eqos_re_alloc_skb\n");
 
 	return;
 }

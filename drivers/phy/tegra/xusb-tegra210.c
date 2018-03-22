@@ -2319,8 +2319,17 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 		unsigned int ssp = tegra210_usb3_lane_map(lane);
 		struct tegra_xusb_usb3_port *port =
 				tegra_xusb_find_usb3_port(padctl, ssp);
-		struct tegra_xusb_usb2_port *companion_usb2_port =
-				tegra_xusb_find_usb2_port(padctl, port->port);
+		struct tegra_xusb_usb2_port *companion_usb2_port;
+
+		if (!port) {
+			dev_err(padctl->dev, "no port found for USB3 lane %u\n",
+						ssp);
+			mutex_unlock(&padctl->lock);
+			return -ENODEV;
+		}
+
+		companion_usb2_port =
+			tegra_xusb_find_usb2_port(padctl, port->port);
 
 		if (!companion_usb2_port) {
 			dev_err(padctl->dev,
@@ -2380,20 +2389,20 @@ static int tegra210_pcie_phy_power_on(struct phy *phy)
 		struct tegra_xusb_usb3_port *port =
 				tegra_xusb_find_usb3_port(padctl,
 					tegra210_usb3_lane_map(lane));
-		int port_index = port->base.index;
+		int port_index;
 		int err;
+
+		if (!port) {
+			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
+						lane->index);
+			mutex_unlock(&padctl->lock);
+			return -ENODEV;
+		}
+
+		port_index = port->base.index;
 
 		if (priv->prod_list) {
 			char prod_name[] = "prod_c_ssX";
-
-			port = tegra_xusb_find_usb3_port(padctl,
-					tegra210_usb3_lane_map(lane));
-			if (!port) {
-				dev_err(&phy->dev, "no port found for USB3 lane %u\n",
-							lane->index);
-				mutex_unlock(&padctl->lock);
-				return -ENODEV;
-			}
 
 			sprintf(prod_name, "prod_c_ss%d", port_index);
 			err = tegra_prod_set_by_name(&padctl->regs, prod_name,
@@ -2850,20 +2859,20 @@ static int tegra210_sata_phy_power_on(struct phy *phy)
 		struct tegra_xusb_usb3_port *port =
 				tegra_xusb_find_usb3_port(padctl,
 					tegra210_usb3_lane_map(lane));
-		int port_index = port->base.index;
+		int port_index;
 		int err;
+
+		if (!port) {
+			dev_err(&phy->dev, "no port found for USB3 lane %u\n",
+						lane->index);
+			mutex_unlock(&padctl->lock);
+			return -ENODEV;
+		}
+
+		port_index = port->base.index;
 
 		if (priv->prod_list) {
 			char prod_name[] = "prod_c_ssX";
-
-			port = tegra_xusb_find_usb3_port(padctl,
-					tegra210_usb3_lane_map(lane));
-			if (!port) {
-				dev_err(&phy->dev, "no port found for USB3 lane %u\n",
-							lane->index);
-				mutex_unlock(&padctl->lock);
-				return -ENODEV;
-			}
 
 			sprintf(prod_name, "prod_c_ss%d", port_index);
 			err = tegra_prod_set_by_name(&padctl->regs, prod_name,

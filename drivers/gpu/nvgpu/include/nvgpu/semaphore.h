@@ -276,28 +276,36 @@ static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
 }
 
 /*
- * Fast-forward the hw sema to the threshold represented by sema_thresh.
+ * Fast-forward the hw sema to its tracked max value.
+ *
+ * Return true if the sema wasn't at the max value and needed updating, false
+ * otherwise.
  */
-static inline void nvgpu_semaphore_reset(struct nvgpu_semaphore *sema_thresh,
-					     struct nvgpu_semaphore_int *hw_sema)
+static inline bool nvgpu_semaphore_reset(struct nvgpu_semaphore_int *hw_sema)
 {
-	u32 current_val;
-	u32 threshold = nvgpu_semaphore_get_value(sema_thresh);
-
-	current_val = nvgpu_semaphore_read(sema_thresh);
+	u32 threshold = (u32)nvgpu_atomic_read(&hw_sema->next_value);
+	u32 current_val = __nvgpu_semaphore_read(hw_sema);
 
 	/*
 	 * If the semaphore has already reached the value we would write then
-	 * this is really just a NO-OP.
+	 * this is really just a NO-OP. However, the sema value shouldn't be
+	 * more than what we expect to be the max.
 	 */
-	if (__nvgpu_semaphore_value_released(threshold, current_val))
-		return;
+
+	if (WARN_ON(__nvgpu_semaphore_value_released(threshold + 1,
+						     current_val)))
+		return false;
+
+	if (current_val == threshold)
+		return false;
 
 	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->location.pool->rw_mem,
 			hw_sema->location.offset, threshold);
 
 	gpu_sema_verbose_dbg(hw_sema->ch->g, "(c=%d) RESET %u -> %u",
 			hw_sema->ch->chid, current_val, threshold);
+
+	return true;
 }
 
 /*

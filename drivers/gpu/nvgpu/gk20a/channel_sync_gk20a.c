@@ -646,7 +646,18 @@ static int gk20a_channel_semaphore_incr_user(
 
 static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
 {
-	/* Nothing to do. */
+	struct gk20a_channel_semaphore *sp =
+		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct channel_gk20a *c = sp->c;
+	bool updated;
+
+	if (!c->hw_sema)
+		return;
+
+	updated = nvgpu_semaphore_reset(c->hw_sema);
+
+	if (updated)
+		nvgpu_cond_broadcast_interruptible(&c->semaphore_wq);
 }
 
 static void gk20a_channel_semaphore_set_safe_state(struct gk20a_channel_sync *s)

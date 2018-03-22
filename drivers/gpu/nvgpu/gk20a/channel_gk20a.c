@@ -185,10 +185,6 @@ int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 
 void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 {
-	struct channel_gk20a_job *job, *n;
-	bool released_job_semaphore = false;
-	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(ch);
-
 	/* synchronize with actual job cleanup */
 	nvgpu_mutex_acquire(&ch->joblist.cleanup_lock);
 
@@ -200,47 +196,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		ch->user_sync->set_safe_state(ch->user_sync);
 	nvgpu_mutex_release(&ch->sync_lock);
 
-	/* release all job semaphores (applies only to jobs that use
-	   semaphore synchronization) */
-	channel_gk20a_joblist_lock(ch);
-	if (pre_alloc_enabled) {
-		int tmp_get = ch->joblist.pre_alloc.get;
-		int put = ch->joblist.pre_alloc.put;
-
-		/*
-		 * ensure put is read before any subsequent reads.
-		 * see corresponding nvgpu_smp_wmb in gk20a_channel_add_job()
-		 */
-		nvgpu_smp_rmb();
-
-		while (tmp_get != put) {
-			job = &ch->joblist.pre_alloc.jobs[tmp_get];
-			if (job->post_fence->semaphore) {
-				nvgpu_semaphore_reset(
-					job->post_fence->semaphore,
-					ch->hw_sema);
-				released_job_semaphore = true;
-			}
-			tmp_get = (tmp_get + 1) % ch->joblist.pre_alloc.length;
-		}
-	} else {
-		nvgpu_list_for_each_entry_safe(job, n,
-				&ch->joblist.dynamic.jobs,
-				channel_gk20a_job, list) {
-			if (job->post_fence->semaphore) {
-				nvgpu_semaphore_reset(
-					job->post_fence->semaphore,
-					ch->hw_sema);
-				released_job_semaphore = true;
-			}
-		}
-	}
-	channel_gk20a_joblist_unlock(ch);
-
 	nvgpu_mutex_release(&ch->joblist.cleanup_lock);
-
-	if (released_job_semaphore)
-		nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 
 	/*
 	 * When closing the channel, this scheduled update holds one ref which

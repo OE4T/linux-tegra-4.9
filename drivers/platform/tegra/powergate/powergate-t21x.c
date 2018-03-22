@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,6 +32,7 @@
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
 #include <linux/platform/tegra/mc.h>
+#include <soc/tegra/pmc.h>
 
 #define MAX_CLK_EN_NUM			15
 #define MAX_HOTRESET_CLIENT_NUM		4
@@ -626,7 +627,6 @@ static struct tegra210_powergate_info t210_pg_info[TEGRA210_POWER_DOMAIN_MAX] = 
 static DEFINE_SPINLOCK(tegra210_pg_lock);
 
 static void __iomem *tegra_mc;
-static void __iomem *tegra_pmc;
 static void __iomem *tegra_car;
 static void __iomem *tegra_ape;
 static void __iomem *tegra_dispa;
@@ -642,17 +642,6 @@ static bool tegra210b01;
 static u32  __maybe_unused mc_read(unsigned long reg)
 {
         return readl(tegra_mc + reg);
-}
-
-/* PMC register read/write */
-static u32 pmc_read(unsigned long reg)
-{
-        return readl(tegra_pmc + reg);
-}
-
-static void pmc_write(u32 val, unsigned long reg)
-{
-        writel_relaxed(val, tegra_pmc + reg);
 }
 
 #define HOTRESET_READ_COUNTS		5
@@ -686,7 +675,7 @@ static bool tegra210_pg_is_powered(int id)
 {
 	u32 status = 0;
 
-	status = pmc_read(PWRGATE_STATUS) & t210_pg_info[id].mask;
+	status = tegra_pmc_readl(PWRGATE_STATUS) & t210_pg_info[id].mask;
 
 	return !!status;
 }
@@ -712,7 +701,7 @@ static int tegra_powergate_set(int id, bool new_state)
 
 	spin_lock_irqsave(lock, flags);
 
-	status = !!(pmc_read(PWRGATE_STATUS) & t210_pg_info[id].mask);
+	status = !!(tegra_pmc_readl(PWRGATE_STATUS) & t210_pg_info[id].mask);
 
 	if (status == new_state) {
 		spin_unlock_irqrestore(lock, flags);
@@ -726,8 +715,8 @@ static int tegra_powergate_set(int id, bool new_state)
 	case TEGRA210_POWER_DOMAIN_CPU3:
 		/* CPU ungated in s/w only during boot/resume with outer
 		   waiting loop and no contention from other CPUs */
-		pmc_write(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
-		pmc_read(PWRGATE_TOGGLE);
+		tegra_pmc_writel_relaxed(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
+		tegra_pmc_readl(PWRGATE_TOGGLE);
 		spin_unlock_irqrestore(lock, flags);
 		return 0;
 
@@ -738,7 +727,7 @@ static int tegra_powergate_set(int id, bool new_state)
 	/* Wait if PMC is already processing some other power gating request */
 	do {
 		udelay(1);
-		reg = pmc_read(PWRGATE_TOGGLE);
+		reg = tegra_pmc_readl(PWRGATE_TOGGLE);
 		contention_timeout--;
 	} while ((contention_timeout > 0) && (reg & PWRGATE_TOGGLE_START));
 
@@ -748,12 +737,12 @@ static int tegra_powergate_set(int id, bool new_state)
 	contention_timeout = 100;
 
 	/* Submit power gate request */
-	pmc_write(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
+	tegra_pmc_writel_relaxed(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
 
 	/* Wait while PMC accepts the request */
 	do {
 		udelay(1);
-		reg = pmc_read(PWRGATE_TOGGLE);
+		reg = tegra_pmc_readl(PWRGATE_TOGGLE);
 		contention_timeout--;
 	} while ((contention_timeout > 0) && (reg & PWRGATE_TOGGLE_START));
 
@@ -766,7 +755,7 @@ static int tegra_powergate_set(int id, bool new_state)
 	do {
 		do {
 			udelay(1);
-			status = !!(pmc_read(PWRGATE_STATUS) &
+			status = !!(tegra_pmc_readl(PWRGATE_STATUS) &
 				    t210_pg_info[id].mask);
 
 			toggle_timeout--;
@@ -1051,13 +1040,13 @@ static int tegra210_powergate_remove_clamping(int id)
 	else
 		mask = t210_pg_info[id].mask;
 
-	pmc_write(mask, REMOVE_CLAMPING);
+	tegra_pmc_writel_relaxed(mask, REMOVE_CLAMPING);
 	/* Wait until clamp is removed */
 	do {
 		udelay(1);
 		contention_timeout--;
 	} while ((contention_timeout > 0)
-			&& (pmc_read(PWRGATE_CLAMP_STATUS) & BIT(id)));
+			&& (tegra_pmc_readl(PWRGATE_CLAMP_STATUS) & BIT(id)));
 
 	WARN(contention_timeout <= 0, "Couldn't remove clamping");
 
@@ -1467,7 +1456,6 @@ static struct tegra_powergate_driver_ops tegra210_pg_ops = {
 	.powergate_remove_clamping = tegra210_powergate_remove_clamping,
 };
 
-#define TEGRA_PMC_BASE  0x7000E400
 #define TEGRA_MC_BASE   0x70019000
 #define TEGRA_CAR_BASE	0x60006000
 #define TEGRA_APE_BASE	0x702c0000
@@ -1478,9 +1466,6 @@ struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void)
 {
 	u32 hid, chipid, major;
 
-	tegra_pmc = ioremap(TEGRA_PMC_BASE, 4096);
-	if (!tegra_pmc)
-		return NULL;
 	tegra_mc = ioremap(TEGRA_MC_BASE, 4096);
 	if (!tegra_mc)
 		return NULL;

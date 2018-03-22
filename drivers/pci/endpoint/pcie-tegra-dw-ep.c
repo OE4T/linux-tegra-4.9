@@ -526,9 +526,8 @@ static void program_gen3_gen4_eq_presets(struct tegra_pcie_dw_ep *pcie)
 
 	val = readl(pcie->dbi_base + GEN3_EQ_CONTROL_OFF);
 	val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
-	val |= (0x270 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+	val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
 	val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
-	val |= 0x1;
 	writel(val, pcie->dbi_base + GEN3_EQ_CONTROL_OFF);
 
 	val = readl(pcie->dbi_base + GEN3_RELATED_OFF);

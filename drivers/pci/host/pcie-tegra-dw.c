@@ -2056,9 +2056,8 @@ static void program_gen3_gen4_eq_presets(struct pcie_port *pp)
 
 	dw_pcie_cfg_read(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, &val);
 	val &= ~GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_MASK;
-	val |= (0x270 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
+	val |= (0x360 << GEN3_EQ_CONTROL_OFF_PSET_REQ_VEC_SHIFT);
 	val &= ~GEN3_EQ_CONTROL_OFF_FB_MODE_MASK;
-	val |= 0x1;
 	dw_pcie_cfg_write(pp->dbi_base + GEN3_EQ_CONTROL_OFF, 4, val);
 
 	dw_pcie_cfg_read(pp->dbi_base + GEN3_RELATED_OFF, 4, &val);

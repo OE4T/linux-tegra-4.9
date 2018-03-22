@@ -277,4 +277,25 @@
 	ufshci@2450000 {
 		nvidia,enable-wlu-scsi-device-add;
 	};
+	se_elp@3ad0000 {
+		status = "okay";
+	};
+
+	host1x {
+		se@15810000 {
+			status="okay";
+		};
+
+		se@15820000 {
+			status="okay";
+		};
+
+		se@15830000 {
+			status="okay";
+		};
+
+		se@15840000 {
+			status="okay";
+		};
+	};
 };

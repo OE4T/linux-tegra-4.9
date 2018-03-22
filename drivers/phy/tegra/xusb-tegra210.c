@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (C) 2015 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -30,6 +30,9 @@
 #include <soc/tegra/pmc.h>
 
 #include "xusb.h"
+
+#define TEGRA210_UTMI_PHYS	(4)
+#define TEGRA210_OC_PIN_NUM	(2)
 
 /* Data contact detection timeout */
 #define TDCD_TIMEOUT_MS           400
@@ -65,6 +68,29 @@
 #define XUSB_PADCTL_SS_PORT_MAP     (0x014)
 #define   SS_PORT_MAP(_ss, _usb2)   (((_usb2) & 0x7) << ((_ss) * 5))
 #define   SS_PORT_MAP_PORT_DISABLED (0x7)
+
+#define XUSB_PADCTL_USB2_OC_MAP			(0x10)
+#define	  PORTX_OC_PIN_SHIFT(x)			((x) * 4)
+#define	  PORT_OC_PIN_MASK			(0xf)
+#define	    OC_PIN_DETECTION_DISABLED		(0xf)
+#define	    OC_PIN_DETECTED(x)			(x)
+#define	    OC_PIN_DETECTED_VBUS_PAD(x)		((x) + 4)
+
+#define XUSB_PADCTL_VBUS_OC_MAP			(0x18)
+#define	  VBUS_OC_MAP_SHIFT(x)			((x) * 5 + 1)
+#define	  VBUS_OC_MAP_MASK			(0xf)
+#define	    VBUS_OC_DETECTION_DISABLED		(0xf)
+#define	    VBUS_OC_DETECTED(x)			(x)
+#define	    VBUS_OC_DETECTED_VBUS_PAD(x)	((x) + 4)
+#define	  VBUS_ENABLE(x)			(1 << (x) * 5)
+
+#define	XUSB_PADCTL_OC_DET			(0x1c)
+#define	  SET_OC_DETECTED(x)			(1 << (x))
+#define	  OC_DETECTED(x)			(1 << (8 + (x)))
+#define	  OC_DETECTED_VBUS_PAD(x)		(1 << (12 + (x)))
+#define	  OC_DETECTED_VBUS_PAD_MASK		(0xf << 12)
+#define	  OC_DETECTED_INT_EN			(1 << (20 + (x)))
+#define	  OC_DETECTED_INT_EN_VBUS_PAD(x)	(1 << (24 + (x)))
 
 #define XUSB_PADCTL_ELPG_PROGRAM_0                0x20
 #define   USB2_PORT_WAKE_INTERRUPT_ENABLE(x)      BIT((x))
@@ -1223,6 +1249,183 @@ void tegra210_utmi_pad_power_down(struct phy *phy)
 	mutex_unlock(&padctl->lock);
 }
 
+#define oc_debug(u) \
+		dev_dbg(u->dev, "%s(%d):OC_DET %#x, VBUS_OC_MAP %#x, "\
+			"USB2_OC_MAP %#x\n", __func__, __LINE__,\
+			padctl_readl(u, XUSB_PADCTL_OC_DET), \
+			padctl_readl(u, XUSB_PADCTL_VBUS_OC_MAP), \
+			padctl_readl(u, XUSB_PADCTL_USB2_OC_MAP))
+
+/* should only be called with a UTMI phy and with padctl->lock held */
+static void tegra210_enable_vbus_oc(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_padctl *padctl;
+	unsigned int index;
+	struct tegra_xusb_usb2_port *port;
+	int pin;
+	u32 reg;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev,
+			"no port found for USB2 lane %u\n", index);
+		return;
+	}
+
+	if (!padctl->oc_pinctrl) {
+		dev_dbg(padctl->dev,
+			"%s no OC pinctrl device\n", __func__);
+		return;
+	}
+
+	pin = port->oc_pin;
+	if (pin < 0) {
+		dev_dbg(padctl->dev,
+			"%s no OC support for port %d\n", __func__, index);
+		return;
+	}
+
+	dev_dbg(padctl->dev,
+		"enable VBUS/OC on UTMI port %d, pin %d\n", index, pin);
+
+	/* initialize OC: step 7 in PG p.1272 */
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OC_MAP);
+	reg &= ~(PORT_OC_PIN_MASK << PORTX_OC_PIN_SHIFT(index));
+	reg |= OC_PIN_DETECTION_DISABLED << PORTX_OC_PIN_SHIFT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OC_MAP);
+
+	/* need to disable VBUS_ENABLEx_OC_MAP before enabling VBUS */
+	reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+	reg &= ~(VBUS_OC_MAP_MASK << VBUS_OC_MAP_SHIFT(pin));
+	reg |= VBUS_OC_DETECTION_DISABLED << VBUS_OC_MAP_SHIFT(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
+
+	/* WAR: disable UTMIPLL power down, not needed for current clk
+	 * framework
+	 */
+
+	/* clear false OC_DETECTED VBUS_PADx */
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+	reg &= ~OC_DETECTED_VBUS_PAD_MASK;
+	reg |= OC_DETECTED_VBUS_PAD(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_OC_DET);
+
+	udelay(100);
+
+	/* WAR: enable UTMIPLL power down, not needed for current clk
+	 * framework
+	 */
+
+	/* Enable VBUS */
+	reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+	reg |= VBUS_ENABLE(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
+
+	/* vbus has been supplied to device. A finite time (>10ms) for OC
+	 * detection pin to be pulled-up
+	 */
+	msleep(20);
+
+	/* check and clear if there is any stray OC */
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+	if (reg & OC_DETECTED_VBUS_PAD(pin)) {
+		/* clear stray OC */
+		dev_dbg(padctl->dev,
+			 "clear stray OC on port %d pin %d, OC_DET=%#x\n",
+			 index, pin, reg);
+
+		reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+		reg &= ~VBUS_ENABLE(pin);
+
+		reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+		reg &= ~OC_DETECTED_VBUS_PAD_MASK;
+		reg |= OC_DETECTED_VBUS_PAD(pin);
+		padctl_writel(padctl, reg, XUSB_PADCTL_OC_DET);
+
+		/* Enable VBUS back after clearing stray OC */
+		reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+		reg |= VBUS_ENABLE(pin);
+		padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
+	}
+
+	/* change the OC_MAP source and enable OC interrupt */
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OC_MAP);
+	reg &= ~(PORT_OC_PIN_MASK << PORTX_OC_PIN_SHIFT(index));
+	reg |= (OC_PIN_DETECTED_VBUS_PAD(pin) & PORT_OC_PIN_MASK) <<
+		PORTX_OC_PIN_SHIFT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OC_MAP);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+	reg &= ~OC_DETECTED_VBUS_PAD_MASK;
+	reg |= OC_DETECTED_INT_EN_VBUS_PAD(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_OC_DET);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+	reg &= ~(VBUS_OC_MAP_MASK << VBUS_OC_MAP_SHIFT(pin));
+	reg |= (VBUS_OC_DETECTED_VBUS_PAD(pin) & VBUS_OC_MAP_MASK) <<
+		VBUS_OC_MAP_SHIFT(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
+
+	oc_debug(padctl);
+}
+
+/* should only be called with a UTMI phy and with padctl->lock held */
+static void tegra210_disable_vbus_oc(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_padctl *padctl;
+	struct tegra_xusb_usb2_port *port;
+	unsigned int index;
+	int pin;
+	u32 reg;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+	index = lane->index;
+
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev,
+			"no port found for USB2 lane %u\n", index);
+		return;
+	}
+
+	if (!padctl->oc_pinctrl) {
+		dev_dbg(padctl->dev,
+			"%s no OC pinctrl device\n", __func__);
+		return;
+	}
+
+	pin = port->oc_pin;
+	if (pin < 0) {
+		dev_dbg(padctl->dev,
+			"%s no OC support for port %d\n", __func__, index);
+		return;
+	}
+
+	dev_dbg(padctl->dev,
+		"disable VBUS/OC on UTMI port %d, pin %d\n", index, pin);
+
+	/* disable VBUS PAD interrupt for this port */
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+	reg &= ~OC_DETECTED_INT_EN_VBUS_PAD(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_OC_DET);
+
+	/* clear VBUS OC MAP, disable VBUS. Skip doing so if it's OTG port and
+	 * OTG vbus always on is set.
+	 */
+	reg = padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
+	reg &= ~(VBUS_OC_MAP_MASK << VBUS_OC_MAP_SHIFT(pin));
+	reg |= VBUS_OC_DETECTION_DISABLED << VBUS_OC_MAP_SHIFT(pin);
+	reg &= ~VBUS_ENABLE(pin);
+	padctl_writel(padctl, reg, XUSB_PADCTL_VBUS_OC_MAP);
+}
+
 static int tegra210_usb2_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
@@ -1257,9 +1460,12 @@ static int tegra210_usb2_phy_init(struct phy *phy)
 	 * defined (-1)
 	 */
 	if (port->supply && port->port_cap == USB_HOST_CAP &&
+		!regulator_is_enabled(port->supply) &&
 		(!padctl->oc_pinctrl || port->oc_pin < 0)) {
 		err = regulator_enable(port->supply);
 		if (err) {
+			dev_err(padctl->dev, "enable port %d vbus failed %d\n",
+				index, err);
 			mutex_unlock(&padctl->lock);
 			return err;
 		}
@@ -1405,6 +1611,10 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 		value |= VREG_LEV(0x1);
 	padctl_writel(padctl, value,
 			XUSB_PADCTL_USB2_BATTERY_CHRG_OTGPADX_CTL_1(index));
+
+	/* enable VBUS OC support only on non-OTG port */
+	if (port->port_cap != USB_OTG_CAP)
+		tegra210_enable_vbus_oc(phy);
 
 	mutex_unlock(&padctl->lock);
 
@@ -3176,6 +3386,18 @@ tegra210_xusb_padctl_probe(struct device *dev,
 
 static void tegra210_xusb_padctl_remove(struct tegra_xusb_padctl *padctl)
 {
+	int i;
+	int err;
+
+	/* switch all VBUS_ENx pins back to default state */
+	if (padctl->oc_pinctrl)
+		for (i = 0; i < padctl->soc->num_oc_pins; i++) {
+			err = pinctrl_select_state(padctl->oc_pinctrl,
+						padctl->oc_disable[i]);
+			if (err)
+				dev_dbg(padctl->dev,
+				"Set VBUS_ENx pins to default err=%d\n", err);
+		}
 }
 
 /* must be called under padctl->lock */
@@ -3450,32 +3672,6 @@ int tegra210_xusb_padctl_remote_wake_detected(struct phy *phy)
 	return -EINVAL;
 }
 
-/* should only be called with a UTMI phy and with padctl->lock held */
-static void tegra210_enable_vbus_oc(struct phy *phy)
-{
-	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
-	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-
-	dev_dbg(padctl->dev, "enable VBUS OC on %s\n",
-			dev_name(&tegra_xusb_find_usb2_port(
-					padctl, lane->index)->base.dev));
-
-	/* TODO implement */
-}
-
-/* should only be called with a UTMI phy and with padctl->lock held */
-static void tegra210_disable_vbus_oc(struct phy *phy)
-{
-	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
-	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-
-	dev_dbg(padctl->dev, "disable VBUS OC on %s\n",
-			dev_name(&tegra_xusb_find_usb2_port(
-					padctl, lane->index)->base.dev));
-
-	/* TODO implement */
-}
-
 static int tegra210_xusb_padctl_vbus_power_on(struct tegra_xusb_padctl *padctl,
 					unsigned int index)
 {
@@ -3571,6 +3767,74 @@ static int tegra210_xusb_padctl_vbus_power_off(struct tegra_xusb_padctl *padctl,
 	}
 	mutex_unlock(&padctl->lock);
 	return rc;
+}
+
+int tegra210_phy_xusb_overcurrent_detected(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_padctl *padctl;
+	struct tegra_xusb_usb2_port *port;
+	unsigned int index;
+	bool detected = false;
+	u32 reg;
+	int pin;
+
+	if (!phy)
+		return 0;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+	if (!is_utmi_phy(phy))
+		return -EINVAL;
+
+	index = lane->index;
+	port = tegra_xusb_find_usb2_port(padctl, index);
+	if (!port)
+		return -EINVAL;
+
+	pin = port->oc_pin;
+	if (pin < 0)
+		return -EINVAL;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+
+	detected = !!(reg & OC_DETECTED_VBUS_PAD(pin));
+	if (detected) {
+		reg &= ~OC_DETECTED_VBUS_PAD_MASK;
+		reg &= ~OC_DETECTED_INT_EN_VBUS_PAD(pin);
+		padctl_writel(padctl, reg, XUSB_PADCTL_OC_DET);
+	}
+
+	return detected;
+}
+
+void tegra210_phy_xusb_handle_overcurrent(struct tegra_xusb_padctl *padctl)
+{
+	struct tegra_xusb_usb2_port *port;
+	unsigned int i;
+	u32 reg;
+	int pin;
+
+	oc_debug(padctl);
+	mutex_lock(&padctl->lock);
+	reg = padctl_readl(padctl, XUSB_PADCTL_OC_DET);
+
+	for (i = 0; i < TEGRA210_UTMI_PHYS; i++) {
+		port = tegra_xusb_find_usb2_port(padctl, i);
+		if (!port)
+			continue;
+
+		pin = port->oc_pin;
+		if (pin < 0)
+			continue;
+
+		if (reg & OC_DETECTED_VBUS_PAD(pin)) {
+			dev_info(padctl->dev, "%s: clear port %d pin %d OC\n",
+				 __func__, i, pin);
+			tegra210_enable_vbus_oc(padctl->usb2->lanes[i]);
+		}
+	}
+	mutex_unlock(&padctl->lock);
 }
 
 static void tegra210_xusb_padctl_otg_vbus_handle
@@ -3964,6 +4228,8 @@ static const struct tegra_xusb_padctl_ops tegra210_xusb_padctl_ops = {
 	.has_otg_cap = tegra210_xusb_padctl_has_otg_cap,
 	.vbus_override = tegra210_xusb_padctl_vbus_override,
 	.id_override = tegra210_xusb_padctl_id_override,
+	.overcurrent_detected = tegra210_phy_xusb_overcurrent_detected,
+	.handle_overcurrent = tegra210_phy_xusb_handle_overcurrent,
 	.utmi_pad_power_on = tegra210_utmi_pad_power_on,
 	.utmi_pad_power_down = tegra210_utmi_pad_power_down,
 	.utmi_port_reset_quirk = tegra210_utmi_port_reset_quirk,
@@ -4003,6 +4269,7 @@ static const char * const tegra210b01_supply_names[] = {
 
 const struct tegra_xusb_padctl_soc tegra210_xusb_padctl_soc = {
 	.num_pads = ARRAY_SIZE(tegra210_pads),
+	.num_oc_pins = TEGRA210_OC_PIN_NUM,
 	.pads = tegra210_pads,
 	.ports = {
 		.usb2 = {
@@ -4026,6 +4293,7 @@ EXPORT_SYMBOL_GPL(tegra210_xusb_padctl_soc);
 
 const struct tegra_xusb_padctl_soc tegra210b01_xusb_padctl_soc = {
 	.num_pads = ARRAY_SIZE(tegra210b01_pads),
+	.num_oc_pins = TEGRA210_OC_PIN_NUM,
 	.pads = tegra210b01_pads,
 	.ports = {
 		.usb2 = {

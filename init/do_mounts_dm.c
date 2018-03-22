@@ -172,7 +172,10 @@ static char * __init dm_parse_device(struct dm_device *dev, char *str)
 	strlcpy(dev->uuid, opt.start, len);
 
 	/* Determine if the table/device will be read only or read-write */
-	get_dm_option(&opt, DM_ANY_SEP);
+	if (!get_dm_option(&opt, DM_ANY_SEP)) {
+		DMERR("failed to check if table/device will be RO or RW");
+		goto parse_fail;
+	}
 	if (!strncmp("ro", opt.start, opt.len)) {
 		dev->ro = 1;
 	} else if (!strncmp("rw", opt.start, opt.len)) {

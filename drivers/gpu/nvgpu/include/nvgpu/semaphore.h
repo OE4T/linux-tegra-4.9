@@ -173,8 +173,8 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_get_sea(struct gk20a *g);
 /*
  * Semaphore pool functions.
  */
-struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
-	struct nvgpu_semaphore_sea *sea);
+int nvgpu_semaphore_pool_alloc(struct nvgpu_semaphore_sea *sea,
+			       struct nvgpu_semaphore_pool **pool);
 int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *pool,
 			     struct vm_gk20a *vm);
 void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *pool,

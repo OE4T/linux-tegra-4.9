@@ -230,9 +230,9 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	if (!sema_sea)
 		return -ENOMEM;
 
-	vm->sema_pool = nvgpu_semaphore_pool_alloc(sema_sea);
-	if (!vm->sema_pool)
-		return -ENOMEM;
+	err = nvgpu_semaphore_pool_alloc(sema_sea, &vm->sema_pool);
+	if (err)
+		return err;
 
 	/*
 	 * Allocate a chunk of GPU VA space for mapping the semaphores. We will

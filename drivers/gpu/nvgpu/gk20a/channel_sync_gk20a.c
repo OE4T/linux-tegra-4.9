@@ -58,10 +58,8 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	struct channel_gk20a *c = sp->c;
 	int err = 0;
 
-	if (!nvgpu_nvhost_syncpt_is_valid_pt_ext(sp->nvhost_dev, id)) {
-		nvgpu_warn(c->g, "invalid wait id in gpfifo submit, elided");
-		return 0;
-	}
+	if (!nvgpu_nvhost_syncpt_is_valid_pt_ext(sp->nvhost_dev, id))
+		return -EINVAL;
 
 	if (nvgpu_nvhost_syncpt_is_expired_ext(sp->nvhost_dev, id, thresh))
 		return 0;

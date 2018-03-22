@@ -462,11 +462,8 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	}
 
 	/*
-	 * Optionally insert syncpt wait in the beginning of gpfifo submission
-	 * when user requested and the wait hasn't expired. Validate that the id
-	 * makes sense, elide if not. The only reason this isn't being
-	 * unceremoniously killed is to keep running some tests which trigger
-	 * this condition.
+	 * Optionally insert syncpt/semaphore wait in the beginning of gpfifo
+	 * submission when user requested and the wait hasn't expired.
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
 		int max_wait_cmds = c->deterministic ? 1 : 0;

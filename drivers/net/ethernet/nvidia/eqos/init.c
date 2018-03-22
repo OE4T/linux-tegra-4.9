@@ -1019,9 +1019,6 @@ int eqos_probe(struct platform_device *pdev)
 		pdata->tx_irqs[j] = tx_irqs[j];
 	}
 
-	pdata->tx_queue_cnt = num_chans;
-	pdata->rx_queue_cnt = num_chans;
-
 	/* Get synopsys chip ID */
 	pdata->mac_ver = eqos_get_mac_version();
 

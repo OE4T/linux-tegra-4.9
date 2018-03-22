@@ -419,8 +419,8 @@
 #define EQOS_SYSCLOCK	62500000 /* System clock is 62.5MHz */
 #define EQOS_SYSTIMEPERIOD	16 /* System time period is 16ns */
 
-#define EQOS_TX_QUEUE_CNT (pdata->tx_queue_cnt)
-#define EQOS_RX_QUEUE_CNT (pdata->rx_queue_cnt)
+#define EQOS_TX_QUEUE_CNT (pdata->num_chans)
+#define EQOS_RX_QUEUE_CNT (pdata->num_chans)
 #define EQOS_QUEUE_CNT min(EQOS_TX_QUEUE_CNT, EQOS_RX_QUEUE_CNT)
 
 /* Helper macros for TX descriptor handling */
@@ -1390,12 +1390,10 @@ struct eqos_prv_data {
 
 	/* TX Queue */
 	struct eqos_tx_queue *tx_queue;
-	UCHAR tx_queue_cnt;
 	UINT tx_qinx;
 
 	/* RX Queue */
 	struct eqos_rx_queue *rx_queue;
-	UCHAR rx_queue_cnt;
 	UINT rx_qinx;
 
 	struct mii_bus *mii;

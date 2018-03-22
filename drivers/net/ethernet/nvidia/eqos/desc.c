@@ -137,12 +137,12 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 {
 	int ret = 0;
 
-	pr_debug("-->eqos_alloc_queue_struct: tx_queue_cnt = %d,"\
-		"rx_queue_cnt = %d\n", pdata->tx_queue_cnt, pdata->rx_queue_cnt);
+	pr_debug("-->eqos_alloc_queue_struct: number of channels = %d\n",
+		 pdata->num_chans);
 
 	pdata->tx_queue =
-		kzalloc(sizeof(struct eqos_tx_queue) * pdata->tx_queue_cnt,
-		GFP_KERNEL);
+		kzalloc(sizeof(struct eqos_tx_queue) * pdata->num_chans,
+			GFP_KERNEL);
 	if (pdata->tx_queue == NULL) {
 		pr_err("ERROR: Unable to allocate Tx queue structure\n");
 		ret = -ENOMEM;
@@ -150,8 +150,8 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 	}
 
 	pdata->rx_queue =
-		kzalloc(sizeof(struct eqos_rx_queue) * pdata->rx_queue_cnt,
-		GFP_KERNEL);
+		kzalloc(sizeof(struct eqos_rx_queue) * pdata->num_chans,
+			GFP_KERNEL);
 	if (pdata->rx_queue == NULL) {
 		pr_err("ERROR: Unable to allocate Rx queue structure\n");
 		ret = -ENOMEM;

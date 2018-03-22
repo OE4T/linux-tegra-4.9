@@ -55,7 +55,7 @@ void eqos_enable_eee_mode(struct eqos_prv_data *pdata)
 
 	DBGPR_EEE("-->eqos_enable_eee_mode\n");
 
-	for (qinx = 0; qinx < pdata->tx_queue_cnt; qinx++) {
+	for (qinx = 0; qinx < pdata->num_chans; qinx++) {
 		ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 
 		if ((ptx_ring->dirty_tx == ptx_ring->cur_tx) &&

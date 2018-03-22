@@ -469,6 +469,8 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * this condition.
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
+		int max_wait_cmds = c->deterministic ? 1 : 0;
+
 		if (!pre_alloc_enabled)
 			job->wait_cmd = nvgpu_kzalloc(g,
 				sizeof(struct priv_cmd_entry));
@@ -481,7 +483,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
 			wait_fence_fd = fence->id;
 			err = c->sync->wait_fd(c->sync, wait_fence_fd,
-					       job->wait_cmd);
+					       job->wait_cmd, max_wait_cmds);
 		} else {
 			err = c->sync->wait_syncpt(c->sync, fence->id,
 						   fence->value,
@@ -758,8 +760,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		need_sync_framework = force_need_sync_fence ||
 			gk20a_channel_sync_needs_sync_framework(g) ||
 			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE &&
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT ||
-			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET));
+			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET);
 
 		/*
 		 * Deferred clean-up is necessary for any of the following

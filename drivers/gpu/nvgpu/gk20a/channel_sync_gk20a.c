@@ -83,7 +83,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 }
 
 static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry *wait_cmd)
+		       struct priv_cmd_entry *wait_cmd, int max_wait_cmds)
 {
 #ifdef CONFIG_SYNC
 	int i;
@@ -100,6 +100,11 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	sync_fence = nvgpu_nvhost_sync_fdget(fd);
 	if (!sync_fence)
 		return -EINVAL;
+
+	if (max_wait_cmds && sync_fence->num_fences > max_wait_cmds) {
+		sync_fence_put(sync_fence);
+		return -EINVAL;
+	}
 
 	/* validate syncpt ids */
 	for (i = 0; i < sync_fence->num_fences; i++) {
@@ -473,7 +478,7 @@ static int gk20a_channel_semaphore_wait_syncpt(
 
 #ifdef CONFIG_SYNC
 static int semaphore_wait_fd_native(struct channel_gk20a *c, int fd,
-		struct priv_cmd_entry *wait_cmd)
+		struct priv_cmd_entry *wait_cmd, int max_wait_cmds)
 {
 	struct sync_fence *sync_fence;
 	int err;
@@ -488,6 +493,11 @@ static int semaphore_wait_fd_native(struct channel_gk20a *c, int fd,
 	num_wait_cmds = sync_fence->num_fences;
 	if (num_wait_cmds == 0) {
 		err = 0;
+		goto put_fence;
+	}
+
+	if (max_wait_cmds && sync_fence->num_fences > max_wait_cmds) {
+		err = -EINVAL;
 		goto put_fence;
 	}
 
@@ -526,14 +536,13 @@ put_fence:
 
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
-		struct priv_cmd_entry *entry)
+		struct priv_cmd_entry *entry, int max_wait_cmds)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
 	struct channel_gk20a *c = sema->c;
 #ifdef CONFIG_SYNC
-
-	return semaphore_wait_fd_native(c, fd, entry);
+	return semaphore_wait_fd_native(c, fd, entry, max_wait_cmds);
 #else
 	nvgpu_err(c->g,
 		  "trying to use sync fds with CONFIG_SYNC disabled");

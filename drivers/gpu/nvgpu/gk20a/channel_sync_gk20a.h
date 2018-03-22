@@ -46,7 +46,7 @@ struct gk20a_channel_sync {
 	 * Returns a gpu cmdbuf that performs the wait when executed
 	 */
 	int (*wait_fd)(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry *entry);
+		       struct priv_cmd_entry *entry, int max_wait_cmds);
 
 	/* Increment syncpoint/semaphore.
 	 * Returns

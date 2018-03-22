@@ -41,6 +41,7 @@ struct battery_gauge_ops {
 	int (*set_current_broadcast) (struct battery_gauge_dev *bg_device);
 	int (*get_battery_temp)(void);
 	int (*get_battery_soc)(struct battery_gauge_dev *bg_device);
+	int (*get_battery_voltage)(struct battery_gauge_dev *bg_device);
 };
 
 struct battery_charging_ops {
@@ -114,6 +115,7 @@ int battery_gauge_fc_state(struct battery_gauge_dev *bg_dev,
 int battery_gauge_report_battery_soc(struct battery_gauge_dev *bg_dev,
 		int battery_soc);
 int battery_gauge_get_battery_soc(struct battery_charger_dev *bc_dev);
+int battery_gauge_get_battery_voltage(struct battery_charger_dev *bc_dev);
 int battery_gauge_get_input_current_limit(struct battery_gauge_dev *bg_dev);
 int battery_gauge_get_input_power(struct battery_gauge_dev *bg_dev,
 		int *power_mw);

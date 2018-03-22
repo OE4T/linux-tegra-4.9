@@ -23,6 +23,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
+#include <linux/power/battery-charger-gauge-comm.h>
 #include <linux/regmap.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
@@ -65,7 +66,7 @@
 #define BQ40Z50_BATTERY_LOW		15
 #define BQ40Z50_BATTERY_FULL		100
 
-#define BQ40Z50_DELAY			msecs_to_jiffies(30000)
+#define BQ40Z50_DELAY			msecs_to_jiffies(60000)
 
 #define MAX_STRING_PRINT		50
 
@@ -89,6 +90,7 @@ struct bq40z50_chip {
 	struct power_supply		*psy_bat;
 	struct power_supply_desc	psy_desc;
 	struct bq40z50_pdata		*pdata;
+	struct battery_gauge_dev	*bg_dev;
 
 	/* battery voltage */
 	int vcell;
@@ -431,6 +433,96 @@ static irqreturn_t bq40z50_irq(int id, void *dev)
 	return IRQ_HANDLED;
 }
 
+static int bq40z50_report_battery_voltage(struct battery_gauge_dev *bg_dev)
+{
+	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
+	int val;
+
+	val = bq40z50_read_word(chip, BQ40Z50_VOLTAGE);
+	if (val < 0)
+		dev_err(chip->dev, "%s: err %d\n", __func__, val);
+
+	return val;
+}
+
+static int bq40z50_report_battery_soc(struct battery_gauge_dev *bg_dev)
+{
+	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
+	int val;
+
+	val = bq40z50_read_word(chip, BQ40Z50_STATE_OF_CHARGE);
+	if (val < 0) {
+		dev_err(chip->dev, "%s: err %d\n", __func__, val);
+		return val;
+	}
+
+	val =  battery_gauge_get_adjusted_soc(chip->bg_dev,
+					      chip->pdata->threshold_soc,
+					      chip->pdata->maximum_soc,
+					      val * 100);
+
+	return val;
+}
+
+static int bq40z50_update_battery_state(struct battery_gauge_dev *bg_dev,
+					enum battery_charger_status status)
+{
+	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
+	int val;
+
+	mutex_lock(&chip->mutex);
+	if (chip->shutdown_complete) {
+		mutex_unlock(&chip->mutex);
+		return 0;
+	}
+
+	val = bq40z50_read_word(chip, BQ40Z50_STATE_OF_CHARGE);
+	if (val < 0)
+		dev_err(chip->dev, "%s: err %d\n", __func__, val);
+	else
+		chip->soc = battery_gauge_get_adjusted_soc(chip->bg_dev,
+				chip->pdata->threshold_soc,
+				chip->pdata->maximum_soc, val * 100);
+
+	if (chip->low_battery_shutdown && chip->soc == 0)
+		chip->soc = 1;
+
+	if (status == BATTERY_CHARGING) {
+		chip->charge_complete = 0;
+		chip->status = POWER_SUPPLY_STATUS_CHARGING;
+	} else if (status == BATTERY_CHARGING_DONE) {
+		if (chip->soc == BQ40Z50_BATTERY_FULL) {
+			chip->charge_complete = 1;
+			chip->status = POWER_SUPPLY_STATUS_FULL;
+			chip->capacity_level =
+					POWER_SUPPLY_CAPACITY_LEVEL_FULL;
+		}
+		goto done;
+	} else {
+		chip->status = POWER_SUPPLY_STATUS_DISCHARGING;
+		chip->charge_complete = 0;
+	}
+	chip->lasttime_status = chip->status;
+
+done:
+	mutex_unlock(&chip->mutex);
+	power_supply_changed(chip->psy_bat);
+	dev_info(chip->dev, "Battery state:%d SoC: %d%% UI state:%d\n",
+		 status, chip->soc, chip->status);
+	return 0;
+}
+
+static struct battery_gauge_ops bq40z50_bg_ops = {
+	.update_battery_status = bq40z50_update_battery_state,
+	.get_battery_soc = bq40z50_report_battery_soc,
+	.get_battery_voltage = bq40z50_report_battery_voltage,
+};
+
+static struct battery_gauge_info bq40z50_bgi = {
+	.cell_id = 0,
+	.bg_ops = &bq40z50_bg_ops,
+};
+
 static int bq40z50_fg_init(struct bq40z50_chip *chip)
 {
 	int ret = 0;
@@ -553,6 +645,13 @@ static int bq40z50_probe(struct i2c_client *client,
 		goto psy_exit;
 	}
 
+	chip->bg_dev = battery_gauge_register(chip->dev, &bq40z50_bgi, chip);
+	if (IS_ERR(chip->bg_dev)) {
+		ret = PTR_ERR(chip->bg_dev);
+		dev_err(chip->dev, "battery gauge register fail:%d\n", ret);
+		goto psy_exit;
+	}
+
 	chip->psy_bat = devm_power_supply_register(&client->dev,
 						   &bq240z50_psy_desc,
 						   &bq40z50_psy_cfg);
@@ -576,7 +675,7 @@ static int bq40z50_probe(struct i2c_client *client,
 						dev_name(&client->dev), chip);
 		if (ret < 0) {
 			dev_err(chip->dev, "irq request fail:%d\n", ret);
-			return ret;
+			goto psy_exit;
 		}
 	}
 	device_set_wakeup_capable(&client->dev, 1);
@@ -591,7 +690,7 @@ static int bq40z50_probe(struct i2c_client *client,
 	ret = sysfs_create_group(&client->dev.kobj, &bq40z50_attr_group);
 	if (ret < 0) {
 		dev_err(chip->dev, "sysfs create failed:%d\n", ret);
-		return ret;
+		goto psy_exit;
 	}
 
 	return 0;

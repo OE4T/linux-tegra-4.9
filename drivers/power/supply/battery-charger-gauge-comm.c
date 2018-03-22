@@ -2,7 +2,7 @@
  * battery-charger-gauge-comm.c --- Communication between battery charger and
  *	battery gauge driver.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -290,6 +290,28 @@ static const struct attribute_group battery_sysfs_attr_group = {
 	.attrs = battery_sysfs_attributes,
 };
 
+int battery_gauge_get_battery_voltage(struct battery_charger_dev *bc_dev)
+{
+	struct battery_gauge_dev *bg_dev;
+	int ret = 0;
+
+	if (!bc_dev)
+		return -EINVAL;
+
+	mutex_lock(&charger_gauge_list_mutex);
+
+	list_for_each_entry(bg_dev, &gauge_list, list) {
+		if (bg_dev->cell_id != bc_dev->cell_id)
+			continue;
+		if (bg_dev->ops && bg_dev->ops->get_battery_voltage)
+			ret = bg_dev->ops->get_battery_voltage(bg_dev);
+	}
+
+	mutex_unlock(&charger_gauge_list_mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(battery_gauge_get_battery_voltage);
+
 int battery_gauge_get_battery_soc(struct battery_charger_dev *bc_dev)
 {
 	struct battery_gauge_dev *bg_dev;
@@ -464,10 +486,8 @@ struct battery_charger_dev *battery_charger_register(struct device *dev,
 		return ERR_PTR(-EINVAL);
 
 	bc_dev = kzalloc(sizeof(*bc_dev), GFP_KERNEL);
-	if (!bc_dev) {
-		dev_err(dev, "Memory alloc for bc_dev failed\n");
+	if (!bc_dev)
 		return ERR_PTR(-ENOMEM);
-	}
 
 	mutex_lock(&charger_gauge_list_mutex);
 
@@ -661,10 +681,8 @@ struct battery_gauge_dev *battery_gauge_register(struct device *dev,
 		return ERR_PTR(-EINVAL);
 
 	bg_dev = kzalloc(sizeof(*bg_dev), GFP_KERNEL);
-	if (!bg_dev) {
-		dev_err(dev, "Memory alloc for bg_dev failed\n");
+	if (!bg_dev)
 		return ERR_PTR(-ENOMEM);
-	}
 
 	ret = sysfs_create_group(&dev->kobj, &battery_sysfs_attr_group);
 	if (ret < 0)
@@ -684,7 +702,6 @@ struct battery_gauge_dev *battery_gauge_register(struct device *dev,
 	if (bgi->input_power_channel_name)
 		bg_dev->input_power_channel_name =
 					bgi->input_power_channel_name;
-
 
 #ifdef CONFIG_THERMAL
 	if (bgi->tz_name) {

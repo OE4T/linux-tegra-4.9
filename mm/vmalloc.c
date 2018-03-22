@@ -31,6 +31,7 @@
 #include <linux/compiler.h>
 #include <linux/llist.h>
 #include <linux/bitops.h>
+#include <linux/sizes.h>
 
 #include <asm/uaccess.h>
 #include <asm/tlbflush.h>

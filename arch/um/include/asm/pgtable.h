@@ -27,12 +27,14 @@
 #include <asm/pgtable-2level.h>
 #endif
 
+typedef unsigned long	pteval_t;
+
 extern pgd_t swapper_pg_dir[PTRS_PER_PGD];
 
 /* zero page used for uninitialized stuff */
 extern unsigned long *empty_zero_page;
 
-#define pgtable_cache_init() do ; while (0)
+#define pgtable_cache_init() do { } while (0)
 
 /* Just any arbitrary offset to the start of the vmalloc VM area: the
  * current 8MB value just means that there will be a 8MB "hole" after the
@@ -336,7 +338,7 @@ static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
 struct mm_struct;
 extern pte_t *virt_to_pte(struct mm_struct *mm, unsigned long addr);
 
-#define update_mmu_cache(vma,address,ptep) do ; while (0)
+#define update_mmu_cache(vma,address,ptep) do { } while (0)
 
 /* Encode and de-code a swap entry */
 #define __swp_type(x)			(((x).val >> 5) & 0x1f)

@@ -26,7 +26,6 @@
 #include <linux/types.h>
 #include <linux/workqueue.h>
 #include <linux/thermal.h>
-#include <linux/platform_data/thermal_sensors.h>
 
 enum nct1008_chip {
 	NCT1008,
@@ -35,14 +34,7 @@ enum nct1008_chip {
 	MAX6649
 };
 
-enum nct1008_sensors {
-	LOC,
-	EXT,
-	SENSORS_COUNT
-};
-
 struct nct1008_platform_data {
-	bool supported_hwrev;
 	int conv_rate;
 	int offset;
 	int alpha;

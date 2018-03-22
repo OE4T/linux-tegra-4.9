@@ -26,15 +26,15 @@
 #include <linux/i2c.h>
 #include <linux/slab.h>
 #include <linux/err.h>
-#include <linux/gpio.h>
 #include <linux/device.h>
 #include <linux/nct1008.h>
-#include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/thermal.h>
 #include <linux/regulator/consumer.h>
+#include <linux/gpio/consumer.h>
 #include <linux/version.h>
 #include <soc/tegra/fuse.h>
+#include <dt-bindings/misc/nvidia,nct1008.h>
 
 /* Register Addresses used in this module. */
 #define LOC_TEMP_RD                  0x00
@@ -132,6 +132,10 @@
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
 
+#define LOC TEGRA_NCT_SENSOR_LOC
+#define EXT TEGRA_NCT_SENSOR_EXT
+#define CNT TEGRA_NCT_SENSOR_MAX
+
 struct nct1008_sensor_data {
 	struct thermal_zone_device *thz;
 	long current_hi_limit;
@@ -153,7 +157,7 @@ struct nct1008_data {
 	int oneshot_conv_period_ns;
 	int nct_disabled;
 	int stop_workqueue;
-	struct nct1008_sensor_data sensors[SENSORS_COUNT];
+	struct nct1008_sensor_data sensors[CNT];
 };
 
 static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
@@ -1054,11 +1058,16 @@ static int nct1008_ext_sensor_init(struct nct1008_data *data)
 	}
 
 	/* External temperature h/w shutdown limit. */
-	val = temperature_to_value(pdata->extended_range,
+	if (data->sensors[EXT].shutdown_limit != INT_MIN) {
+		val = temperature_to_value(pdata->extended_range,
 					data->sensors[EXT].shutdown_limit);
-	ret = nct1008_write_reg(data, EXT_THERM_LIMIT_WR, val);
-	if (ret)
-		goto err;
+		ret = nct1008_write_reg(data, EXT_THERM_LIMIT_WR, val);
+		if (ret)
+			goto err;
+
+		dev_info(&data->client->dev, "EXT shutdown limit %d",
+				data->sensors[EXT].shutdown_limit);
+	}
 
 	/* Setup external hi and lo limits */
 	ret = nct1008_write_reg(data, EXT_TEMP_LO_LIMIT_HI_BYTE_WR, 0);
@@ -1081,11 +1090,16 @@ static int nct1008_loc_sensor_init(struct nct1008_data *data)
 	struct nct1008_platform_data *pdata = &data->plat_data;
 
 	/* Local temperature h/w shutdown limit */
-	val = temperature_to_value(pdata->extended_range,
+	if (data->sensors[LOC].shutdown_limit != INT_MIN) {
+		val = temperature_to_value(pdata->extended_range,
 					data->sensors[LOC].shutdown_limit);
-	ret = nct1008_write_reg(data, LOC_THERM_LIMIT, val);
-	if (ret)
-		goto err;
+		ret = nct1008_write_reg(data, LOC_THERM_LIMIT, val);
+		if (ret)
+			goto err;
+
+		dev_info(&data->client->dev, "LOC shutdown limit %d",
+				data->sensors[LOC].shutdown_limit);
+	}
 
 	/* Setup local hi and lo limits. */
 	ret = nct1008_write_reg(data, LOC_TEMP_HI_LIMIT_WR, NCT1008_MAX_TEMP);
@@ -1108,7 +1122,7 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 	int temp;
 	struct nct1008_platform_data *pdata = &data->plat_data;
 
-	if (!pdata || !pdata->supported_hwrev)
+	if (!pdata)
 		goto err;
 
 	/* Configure sensor to trigger alerts clear THERM2_BIT and ALERT_BIT*/
@@ -1128,9 +1142,11 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 	ext_err = nct1008_ext_sensor_init(data);
 
 	/* Temperature conversion rate */
-	ret = nct1008_write_reg(data, CONV_RATE_WR, pdata->conv_rate);
-	if (ret)
-		goto err;
+	if (pdata->conv_rate >= 0) {
+		ret = nct1008_write_reg(data, CONV_RATE_WR, pdata->conv_rate);
+		if (ret)
+			goto err;
+	}
 
 	/* Initiate one-shot conversion  */
 	ret = nct1008_write_reg(data, ONE_SHOT, 0x1);
@@ -1236,43 +1252,51 @@ static int nct1008_dt_parse(struct i2c_client *client,
 			struct nct1008_data *data)
 {
 	struct device_node *np = client->dev.of_node;
-	struct device_node *child_sensor;
+	struct device_node *child;
 	struct nct1008_platform_data *pdata = &data->plat_data;
-	int nct72_gpio;
+	struct gpio_desc *nct1008_gpio = NULL;
 	unsigned int proc, index = 0;
 
+	pdata->conv_rate = INT_MIN;
+	data->sensors[LOC].shutdown_limit = INT_MIN;
+	data->sensors[EXT].shutdown_limit = INT_MIN;
 	if (!np) {
-		dev_err(&client->dev,
-			"Cannot found the DT node\n");
-		goto err_parse_dt;
+		dev_err(&client->dev, "Cannot find the DT node\n");
+		return -ENODEV;
 	}
 
 	dev_info(&client->dev, "starting parse dt\n");
-	if (client->irq == 0)
+	if (client->irq == 0) {
 		client->irq = -1;
+		dev_info(&client->dev, "Missing interrupt prop\n");
+	}
+
+	if (of_property_read_u32(np, "conv-rate", &pdata->conv_rate))
+		dev_info(&client->dev, "Missing conv-rate prop\n");
+
+	nct1008_gpio = gpiod_get(&client->dev, "temp-alert",  GPIOD_IN);
+	if (IS_ERR(nct1008_gpio))
+		dev_info(&client->dev, "Missing temp-alert-gpio prop\n");
+
+	dev_dbg(&client->dev, "gpio:%d irq:%d\n", desc_to_gpio(nct1008_gpio),
+			gpiod_to_irq(nct1008_gpio));
+
+	/* optional properties */
+	/* Keep property with typo for backward compatibility */
+	if (!of_property_read_u32(np, "extended-rage", &proc) ||
+		!of_property_read_u32(np, "extended-range", &proc))
+		pdata->extended_range = (proc) ? true : false;
 
 	pdata->alpha = 10000;
 	pdata->beta = 0;
+	pdata->offset = 0;
+	pdata->fuse_offset = false;
 	if (!of_property_read_u32(np, "alpha", &proc))
 		pdata->alpha = proc;
 
 	if (!of_property_read_u32(np, "beta", &proc))
 		pdata->beta = proc;
 
-	if (of_property_read_u32(np, "conv-rate", &proc))
-		goto err_parse_dt;
-
-	pdata->conv_rate = proc;
-	if (of_property_read_u32(np, "supported-hwrev", &proc))
-		goto err_parse_dt;
-
-	pdata->supported_hwrev = (bool) proc;
-	if (of_property_read_u32(np, "extended-rage", &proc))
-		goto err_parse_dt;
-
-	pdata->extended_range = (bool) proc;
-	pdata->offset = 0;
-	pdata->fuse_offset = false;
 	if (!of_property_read_u32(np, "offset", &proc))
 		/* offset resolution is 0.25C resolution, TMP451 uses 0.0625C*/
 		pdata->offset = proc * 4;
@@ -1285,34 +1309,31 @@ static int nct1008_dt_parse(struct i2c_client *client,
 	else
 		dev_info(&client->dev, "programming offset of 0C\n");
 
-	if (of_property_read_bool(np, "temp-alert-gpio")) {
-		nct72_gpio = of_get_named_gpio(np,  "temp-alert-gpio", 0);
-		if (gpio_request(nct72_gpio, "temp_alert") < 0)
-			dev_err(&client->dev,
-				"%s gpio request error\n", __FILE__);
+	/*
+	 * This a legacy property that is incorrect because it assumes
+	 * the first subnode will be the LOC sensor. This has been
+	 * deprecated in favor of the new *-shutdown-limit properties
+	 * but is being kept to maintain backward compatibility.
+	 */
+	for_each_child_of_node(np, child) {
+		if (!of_property_read_u32(child, "shutdown-limit", &proc))
+			data->sensors[index].shutdown_limit = proc;
 
-		if (gpio_direction_input(nct72_gpio) < 0) {
-			dev_err(&client->dev,
-				"%s gpio direction_input fail\n", __FILE__);
-			gpio_free(nct72_gpio);
-		}
-	}
-
-	for_each_child_of_node(np, child_sensor) {
-		if (of_property_read_u32(child_sensor, "shutdown-limit", &proc))
-			goto err_parse_dt;
-
-		data->sensors[index].shutdown_limit = proc;
 		index++;
 	}
+
+	if (index)
+		dev_info(&client->dev, "!!!Found deprecated property!!!\n");
+
+	if (!of_property_read_u32(np, "loc-shutdown-limit", &proc))
+		data->sensors[LOC].shutdown_limit = proc;
+
+	if (!of_property_read_u32(np, "ext-shutdown-limit", &proc))
+		data->sensors[EXT].shutdown_limit = proc;
 
 	dev_info(&client->dev, "success parsing dt\n");
 	client->dev.platform_data = pdata;
 	return 0;
-
-err_parse_dt:
-	dev_err(&client->dev, "Parsing device tree data error.\n");
-	return -EINVAL;
 }
 
 static struct thermal_zone_of_device_ops loc_sops = {

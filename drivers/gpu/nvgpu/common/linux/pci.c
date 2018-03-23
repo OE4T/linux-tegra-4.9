@@ -549,7 +549,8 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 			sizeof(struct gk20a_platform));
 	if (!platform) {
 		dev_err(&pdev->dev, "couldn't allocate platform data");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto err_free_l;
 	}
 
 	/* copy detected device data to allocated platform space*/
@@ -559,10 +560,8 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	pci_set_drvdata(pdev, platform);
 
 	err = nvgpu_init_enabled_flags(g);
-	if (err) {
-		kfree(g);
-		return err;
-	}
+	if (err)
+		goto err_free_platform;
 
 	platform->g = g;
 	l->dev = &pdev->dev;
@@ -575,7 +574,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	err = pci_enable_device(pdev);
 	if (err)
-		return err;
+		goto err_free_platform;
 	pci_set_master(pdev);
 
 	g->pci_vendor_id = pdev->vendor;
@@ -597,8 +596,10 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	g->irq_stall = pdev->irq;
 	g->irq_nonstall = pdev->irq;
-	if (g->irq_stall < 0)
-		return -ENXIO;
+	if (g->irq_stall < 0) {
+		err = -ENXIO;
+		goto err_disable_msi;
+	}
 
 	err = devm_request_threaded_irq(&pdev->dev,
 			g->irq_stall,
@@ -611,17 +612,18 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	if (err) {
 		nvgpu_err(g,
 			"failed to request irq @ %d", g->irq_stall);
-		return err;
+		goto err_disable_msi;
 	}
 	disable_irq(g->irq_stall);
 
 	err = nvgpu_pci_init_support(pdev);
 	if (err)
-		return err;
+		goto err_free_irq;
 
 	if (strchr(dev_name(&pdev->dev), '%')) {
 		nvgpu_err(g, "illegal character in device name");
-		return -EINVAL;
+		err = -EINVAL;
+		goto err_free_irq;
 	}
 
 	snprintf(nodefmt, sizeof(nodefmt),
@@ -629,12 +631,12 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	err = nvgpu_probe(g, "gpu_pci", nodefmt, &nvgpu_pci_class);
 	if (err)
-		return err;
+		goto err_free_irq;
 
 	err = nvgpu_pci_pm_init(&pdev->dev);
 	if (err) {
 		nvgpu_err(g, "pm init failed");
-		return err;
+		goto err_free_irq;
 	}
 
 	err = nvgpu_nvlink_probe(g);
@@ -645,13 +647,26 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	if (err) {
 		if (err != -ENODEV) {
 			nvgpu_err(g, "fatal error probing nvlink, bailing out");
-			return err;
+			goto err_free_irq;
 		}
 	}
 
 	g->mm.has_physical_mode = false;
 
 	return 0;
+
+err_free_irq:
+	nvgpu_free_irq(g);
+err_disable_msi:
+#if defined(CONFIG_PCI_MSI)
+	if (g->msi_enabled)
+		pci_disable_msi(pdev);
+#endif
+err_free_platform:
+	nvgpu_kfree(g, platform);
+err_free_l:
+	kfree(l);
+	return err;
 }
 
 static void nvgpu_pci_remove(struct pci_dev *pdev)

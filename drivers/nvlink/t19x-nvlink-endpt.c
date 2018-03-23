@@ -198,11 +198,18 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 	}
 	/* Clear reset for UPHY PM */
 	reset_control_deassert(tdev->rst_nvhs_uphy_pm);
+
 	/* Enable clock for nvlink_sys */
 	ret = clk_prepare_enable(tdev->clk_nvlink_sys);
 	if (ret < 0) {
 		nvlink_err("nvlink sys clock enable failed : %d", ret);
-		goto nvlink_sys_fail;
+		goto nvlink_sys_enable_fail;
+	}
+	ret = clk_set_parent(tdev->clk_nvlink_sys,
+				tdev->clk_pllrefe_vcoout_gated);
+	if (ret < 0) {
+		nvlink_err("nvlink sys clock set parent failed : %d", ret);
+		goto nvlink_sys_set_parent_fail;
 	}
 
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
@@ -267,8 +274,9 @@ pllnvhs_fail:
 	tegra_powergate_partition(tdev->pgid_nvl);
 #endif
 unpowergate_partition_fail:
+nvlink_sys_set_parent_fail:
 	clk_disable_unprepare(tdev->clk_nvlink_sys);
-nvlink_sys_fail:
+nvlink_sys_enable_fail:
 	clk_disable_unprepare(tdev->clk_nvhs_pll0_mgmt);
 fail:
 	return ret;
@@ -499,6 +507,13 @@ static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 		return PTR_ERR(tdev->clk_nvhs_pll0_mgmt);
 	}
 
+	tdev->clk_pllrefe_vcoout_gated = devm_clk_get(tdev->dev,
+			"pllrefe_vcoout_gated");
+	if (IS_ERR(tdev->clk_pllrefe_vcoout_gated)) {
+		nvlink_err("missing pllrefe clock");
+		return PTR_ERR(tdev->clk_pllrefe_vcoout_gated);
+	}
+
 	tdev->clk_nvlink_sys = devm_clk_get(tdev->dev,
 			"nvlink_sys");
 	if (IS_ERR(tdev->clk_nvlink_sys)) {
@@ -612,6 +627,9 @@ static void tegra_nvlink_clk_rst_deinit(struct tnvlink_dev *tdev)
 	/* clocks */
 	if (tdev->clk_nvhs_pll0_mgmt)
 		devm_clk_put(tdev->dev, tdev->clk_nvhs_pll0_mgmt);
+
+	if (tdev->clk_pllrefe_vcoout_gated)
+		devm_clk_put(tdev->dev, tdev->clk_pllrefe_vcoout_gated);
 
 	if (tdev->clk_nvlink_sys)
 		devm_clk_put(tdev->dev, tdev->clk_nvlink_sys);

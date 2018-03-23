@@ -208,6 +208,7 @@ struct tnvlink_dev {
 #endif /* CONFIG_DEBUG_FS  */
 	/* clocks */
 	struct clk *clk_nvhs_pll0_mgmt;
+	struct clk *clk_pllrefe_vcoout_gated;
 	struct clk *clk_nvlink_sys;
 	struct clk *clk_pllnvhs;
 	struct clk *clk_m;

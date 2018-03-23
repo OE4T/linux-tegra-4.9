@@ -421,8 +421,6 @@ static const struct gpu_ops gv100_ops = {
 		.add_zbc_s = gr_gv11b_add_zbc_stencil,
 		.handle_gcc_exception = gr_gv11b_handle_gcc_exception,
 		.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle,
-		.handle_tpc_sm_ecc_exception =
-			gr_gv11b_handle_tpc_sm_ecc_exception,
 		.decode_egpc_addr = gv11b_gr_decode_egpc_addr,
 		.fecs_host_int_enable = gr_gv11b_fecs_host_int_enable,
 		.handle_ssync_hww = gr_gv11b_handle_ssync_hww,

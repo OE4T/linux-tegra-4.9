@@ -3,7 +3,7 @@
  *
  * GK20A Channel Synchronization Abstraction
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -92,11 +92,6 @@ struct gk20a_channel_sync {
 	 * track threshold values for those syncpoints
 	 */
 	void (*set_safe_state)(struct gk20a_channel_sync *s);
-
-	/* Signals the sync timeline (if owned by the gk20a_channel_sync layer).
-	 * This should be called when we notice that a gk20a_fence is
-	 * expired. */
-	void (*signal_timeline)(struct gk20a_channel_sync *s);
 
 	/* Returns the sync point id or negative number if no syncpt*/
 	int (*syncpt_id)(struct gk20a_channel_sync *s);

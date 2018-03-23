@@ -1894,7 +1894,9 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		WARN_ON(!c->sync);
 
 		if (c->sync) {
-			c->sync->signal_timeline(c->sync);
+			if (c->has_os_fence_framework_support &&
+				g->os_channel.os_fence_framework_inst_exists(c))
+					g->os_channel.signal_os_fence_framework(c);
 
 			if (g->aggressive_sync_destroy_thresh) {
 				nvgpu_mutex_acquire(&c->sync_lock);

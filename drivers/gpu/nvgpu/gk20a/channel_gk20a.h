@@ -280,6 +280,8 @@ struct channel_gk20a {
 	struct gk20a_channel_sync *sync;
 	struct gk20a_channel_sync *user_sync;
 
+	bool has_os_fence_framework_support;
+
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif

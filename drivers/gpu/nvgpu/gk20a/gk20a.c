@@ -335,10 +335,6 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (g->ops.fifo.channel_resume)
 		g->ops.fifo.channel_resume(g);
 
-	nvgpu_init_mm_ce_context(g);
-
-	nvgpu_vidmem_thread_unpause(&g->mm);
-
 done:
 	if (err)
 		g->power_on = false;

@@ -344,9 +344,18 @@ static int gk20a_ctrl_prepare_compressible_read(
 	struct gk20a_fence *fence_out = NULL;
 	int submit_flags = nvgpu_submit_gpfifo_user_flags_to_common_flags(
 		args->submit_flags);
+	int fd = -1;
 
 	fence.id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
+
+	/* Try and allocate an fd here*/
+	if ((submit_flags & NVGPU_SUBMIT_FLAGS_FENCE_GET)
+		&& (submit_flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE)) {
+			fd = get_unused_fd_flags(O_RDWR);
+			if (fd < 0)
+				return fd;
+	}
 
 	ret = gk20a_prepare_compressible_read(l, args->handle,
 			args->request_compbits, args->offset,
@@ -356,20 +365,24 @@ static int gk20a_ctrl_prepare_compressible_read(
 			submit_flags, &fence, &args->valid_compbits,
 			&args->zbc_color, &fence_out);
 
-	if (ret)
+	if (ret) {
+		if (fd != -1)
+			put_unused_fd(fd);
 		return ret;
+	}
 
 	/* Convert fence_out to something we can pass back to user space. */
 	if (submit_flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) {
 		if (submit_flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE) {
 			if (fence_out) {
-				int fd = gk20a_fence_install_fd(fence_out);
-				if (fd < 0)
-					ret = fd;
+				ret = gk20a_fence_install_fd(fence_out, fd);
+				if (ret)
+					put_unused_fd(fd);
 				else
 					args->fence.fd = fd;
 			} else {
 				args->fence.fd = -1;
+				put_unused_fd(fd);
 			}
 		} else {
 			if (fence_out) {

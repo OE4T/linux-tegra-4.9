@@ -40,6 +40,8 @@
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 
+#include "gk20a/sync_gk20a.h"
+
 u32 nvgpu_submit_gpfifo_user_flags_to_common_flags(u32 user_flags)
 {
 	u32 flags = 0;
@@ -292,6 +294,10 @@ static int nvgpu_channel_alloc_linux(struct gk20a *g, struct channel_gk20a *ch)
 	ch->os_priv = priv;
 	priv->ch = ch;
 
+#ifdef CONFIG_SYNC
+	ch->has_os_fence_framework_support = true;
+#endif
+
 	err = nvgpu_mutex_init(&priv->error_notifier.mutex);
 	if (err) {
 		nvgpu_kfree(g, priv);
@@ -309,6 +315,64 @@ static void nvgpu_channel_free_linux(struct gk20a *g, struct channel_gk20a *ch)
 
 	nvgpu_mutex_destroy(&priv->error_notifier.mutex);
 	nvgpu_kfree(g, priv);
+
+	ch->os_priv = NULL;
+
+#ifdef CONFIG_SYNC
+	ch->has_os_fence_framework_support = false;
+#endif
+}
+
+static int nvgpu_channel_init_os_fence_framework(struct channel_gk20a *ch,
+	const char *fmt, ...)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+	struct nvgpu_os_fence_framework *fence_framework;
+	char name[30];
+	va_list args;
+
+	fence_framework = &priv->fence_framework;
+
+	va_start(args, fmt);
+	vsnprintf(name, sizeof(name), fmt, args);
+	va_end(args);
+
+	fence_framework->timeline = gk20a_sync_timeline_create(name);
+
+	if (!fence_framework->timeline)
+		return -EINVAL;
+
+	return 0;
+}
+static void nvgpu_channel_signal_os_fence_framework(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+	struct nvgpu_os_fence_framework *fence_framework;
+
+	fence_framework = &priv->fence_framework;
+
+	gk20a_sync_timeline_signal(fence_framework->timeline);
+}
+
+static void nvgpu_channel_destroy_os_fence_framework(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+	struct nvgpu_os_fence_framework *fence_framework;
+
+	fence_framework = &priv->fence_framework;
+
+	gk20a_sync_timeline_destroy(fence_framework->timeline);
+	fence_framework->timeline = NULL;
+}
+
+static bool nvgpu_channel_fence_framework_exists(struct channel_gk20a *ch)
+{
+	struct nvgpu_channel_linux *priv = ch->os_priv;
+	struct nvgpu_os_fence_framework *fence_framework;
+
+	fence_framework = &priv->fence_framework;
+
+	return (fence_framework->timeline != NULL);
 }
 
 int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l)
@@ -332,6 +396,16 @@ int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l)
 		nvgpu_channel_work_completion_signal;
 	g->os_channel.work_completion_cancel_sync =
 		nvgpu_channel_work_completion_cancel_sync;
+
+	g->os_channel.os_fence_framework_inst_exists =
+		nvgpu_channel_fence_framework_exists;
+	g->os_channel.init_os_fence_framework =
+		nvgpu_channel_init_os_fence_framework;
+	g->os_channel.signal_os_fence_framework =
+		nvgpu_channel_signal_os_fence_framework;
+	g->os_channel.destroy_os_fence_framework =
+		nvgpu_channel_destroy_os_fence_framework;
+
 	return 0;
 
 err_clean:
@@ -354,6 +428,11 @@ void nvgpu_remove_channel_support_linux(struct nvgpu_os_linux *l)
 
 		nvgpu_channel_free_linux(g, ch);
 	}
+
+	g->os_channel.os_fence_framework_inst_exists = NULL;
+	g->os_channel.init_os_fence_framework = NULL;
+	g->os_channel.signal_os_fence_framework = NULL;
+	g->os_channel.destroy_os_fence_framework = NULL;
 }
 
 u32 nvgpu_get_gpfifo_entry_size(void)

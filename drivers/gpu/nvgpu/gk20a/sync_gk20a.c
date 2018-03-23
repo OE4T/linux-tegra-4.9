@@ -32,6 +32,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/kref.h>
+#include "../common/linux/channel.h"
 
 #include "../drivers/staging/android/sync.h"
 
@@ -373,15 +374,9 @@ void gk20a_sync_timeline_destroy(struct sync_timeline *timeline)
 }
 
 struct sync_timeline *gk20a_sync_timeline_create(
-		const char *fmt, ...)
+		const char *name)
 {
 	struct gk20a_sync_timeline *obj;
-	char name[30];
-	va_list args;
-
-	va_start(args, fmt);
-	vsnprintf(name, sizeof(name), fmt, args);
-	va_end(args);
 
 	obj = (struct gk20a_sync_timeline *)
 		sync_timeline_create(&gk20a_sync_timeline_ops,
@@ -395,8 +390,7 @@ struct sync_timeline *gk20a_sync_timeline_create(
 }
 
 struct sync_fence *gk20a_sync_fence_create(
-		struct gk20a *g,
-		struct sync_timeline *obj,
+		struct channel_gk20a *c,
 		struct nvgpu_semaphore *sema,
 		const char *fmt, ...)
 {
@@ -404,7 +398,15 @@ struct sync_fence *gk20a_sync_fence_create(
 	va_list args;
 	struct sync_pt *pt;
 	struct sync_fence *fence;
-	struct gk20a_sync_timeline *timeline = to_gk20a_timeline(obj);
+	struct gk20a *g = c->g;
+
+	struct nvgpu_channel_linux *os_channel_priv = c->os_priv;
+	struct nvgpu_os_fence_framework *fence_framework = NULL;
+	struct gk20a_sync_timeline *timeline = NULL;
+
+	fence_framework = &os_channel_priv->fence_framework;
+
+	timeline = to_gk20a_timeline(fence_framework->timeline);
 
 	pt = gk20a_sync_pt_create_inst(g, timeline, sema);
 	if (pt == NULL)

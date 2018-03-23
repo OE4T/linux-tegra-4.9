@@ -34,12 +34,11 @@ struct nvgpu_semaphore;
 struct fence;
 
 #ifdef CONFIG_SYNC
-struct sync_timeline *gk20a_sync_timeline_create(const char *fmt, ...);
+struct sync_timeline *gk20a_sync_timeline_create(const char *name);
 void gk20a_sync_timeline_destroy(struct sync_timeline *);
 void gk20a_sync_timeline_signal(struct sync_timeline *);
 struct sync_fence *gk20a_sync_fence_create(
-		struct gk20a *g,
-		struct sync_timeline *,
+		struct channel_gk20a *c,
 		struct nvgpu_semaphore *,
 		const char *fmt, ...);
 struct sync_fence *gk20a_sync_fence_fdget(int fd);
@@ -50,6 +49,10 @@ static inline void gk20a_sync_timeline_signal(struct sync_timeline *obj) {}
 static inline struct sync_fence *gk20a_sync_fence_fdget(int fd)
 {
 	return NULL;
+}
+static inline struct sync_timeline *gk20a_sync_timeline_create(
+	const char *name) {
+		return NULL;
 }
 #endif
 

@@ -3,7 +3,7 @@
  *
  * GK20A Fences
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -44,8 +44,9 @@ struct gk20a_fence {
 	/* Valid for all fence types: */
 	bool valid;
 	struct nvgpu_ref ref;
-	struct sync_fence *sync_fence;
 	const struct gk20a_fence_ops *ops;
+
+	struct sync_fence *os_fence;
 
 	/* Valid for fences created from semaphores: */
 	struct nvgpu_semaphore *semaphore;
@@ -62,18 +63,16 @@ struct gk20a_fence {
 
 /* Fences can be created from semaphores or syncpoint (id, value) pairs */
 int gk20a_fence_from_semaphore(
-		struct gk20a *g,
 		struct gk20a_fence *fence_out,
-		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
 		struct nvgpu_cond *semaphore_wq,
-		bool need_sync_fence);
+		struct sync_fence *os_fence);
 
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
 		u32 id, u32 value,
-		bool need_sync_fence);
+		struct sync_fence *os_fence);
 
 int gk20a_alloc_fence_pool(
 		struct channel_gk20a *c,
@@ -87,7 +86,7 @@ struct gk20a_fence *gk20a_alloc_fence(
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,
-		struct sync_fence *sync_fence);
+		struct sync_fence *os_fence);
 
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);
@@ -95,6 +94,7 @@ struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f);
 int gk20a_fence_wait(struct gk20a *g, struct gk20a_fence *f,
 							unsigned long timeout);
 bool gk20a_fence_is_expired(struct gk20a_fence *f);
-int gk20a_fence_install_fd(struct gk20a_fence *f);
+bool gk20a_fence_is_valid(struct gk20a_fence *f);
+int gk20a_fence_install_fd(struct gk20a_fence *f, int fd);
 
 #endif

@@ -1408,6 +1408,11 @@ struct gk20a {
 		void (*close)(struct channel_gk20a *ch);
 		void (*work_completion_signal)(struct channel_gk20a *ch);
 		void (*work_completion_cancel_sync)(struct channel_gk20a *ch);
+		bool (*os_fence_framework_inst_exists)(struct channel_gk20a *ch);
+		int (*init_os_fence_framework)(
+			struct channel_gk20a *ch, const char *fmt, ...);
+		void (*signal_os_fence_framework)(struct channel_gk20a *ch);
+		void (*destroy_os_fence_framework)(struct channel_gk20a *ch);
 	} os_channel;
 
 	struct gk20a_scale_profile *scale_profile;

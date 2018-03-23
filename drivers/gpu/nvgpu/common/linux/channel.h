@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,9 @@ struct gk20a_fence;
 struct fifo_profile_gk20a;
 struct nvgpu_os_linux;
 
+struct sync_fence;
+struct sync_timeline;
+
 struct nvgpu_channel_completion_cb {
 	/*
 	 * Signal channel owner via a callback, if set, in job cleanup with
@@ -52,8 +55,18 @@ struct nvgpu_error_notifier {
 	struct nvgpu_mutex mutex;
 };
 
+/*
+ * This struct contains fence_related data.
+ * e.g. sync_timeline for sync_fences.
+ */
+struct nvgpu_os_fence_framework {
+	struct sync_timeline *timeline;
+};
+
 struct nvgpu_channel_linux {
 	struct channel_gk20a *ch;
+
+	struct nvgpu_os_fence_framework fence_framework;
 
 	struct nvgpu_channel_completion_cb completion_cb;
 	struct nvgpu_error_notifier error_notifier;

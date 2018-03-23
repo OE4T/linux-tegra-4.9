@@ -774,6 +774,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct gk20a_fence *fence_out;
 	struct fifo_profile_gk20a *profile = NULL;
 	u32 submit_flags = 0;
+	int fd = -1;
 
 	int ret = 0;
 	gk20a_dbg_fn("");
@@ -794,19 +795,31 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	nvgpu_get_fence_args(&args->fence, &fence);
 	submit_flags =
 		nvgpu_submit_gpfifo_user_flags_to_common_flags(args->flags);
+
+	/* Try and allocate an fd here*/
+	if ((args->flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+		&& (args->flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE)) {
+			fd = get_unused_fd_flags(O_RDWR);
+			if (fd < 0)
+				return fd;
+	}
+
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  submit_flags, &fence,
 					  &fence_out, false, profile);
 
-	if (ret)
+	if (ret) {
+		if (fd != -1)
+			put_unused_fd(fd);
 		goto clean_up;
+	}
 
 	/* Convert fence_out to something we can pass back to user space. */
 	if (args->flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
 		if (args->flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
-			int fd = gk20a_fence_install_fd(fence_out);
-			if (fd < 0)
-				ret = fd;
+			ret = gk20a_fence_install_fd(fence_out, fd);
+			if (ret)
+				put_unused_fd(fd);
 			else
 				args->fence.id = fd;
 		} else {

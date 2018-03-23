@@ -40,6 +40,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/vidmem.h>
 
 #include "platform_gk20a.h"
 #include "sysfs.h"
@@ -252,13 +253,22 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		return err;
 
 	err = gk20a_finalize_poweron(g);
-	set_user_nice(current, nice_value);
-	if (err)
+	if (err) {
+		set_user_nice(current, nice_value);
 		goto done;
+	}
 
 	err = nvgpu_finalize_poweron_linux(l);
-	if (err)
+	if (err) {
+		set_user_nice(current, nice_value);
 		goto done;
+	}
+
+	nvgpu_init_mm_ce_context(g);
+
+	nvgpu_vidmem_thread_unpause(&g->mm);
+
+	set_user_nice(current, nice_value);
 
 	/* Initialise scaling: it will initialize scaling drive only once */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ) &&

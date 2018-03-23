@@ -183,6 +183,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
+	struct sync_fence *sync_fence = NULL;
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c,
 			c->g->ops.fifo.get_syncpt_incr_cmd_size(wfi_cmd),
@@ -224,10 +225,28 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		}
 	}
 
-	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev, sp->id, thresh,
-					 need_sync_fence);
-	if (err)
+#ifdef CONFIG_SYNC
+	if (need_sync_fence) {
+		sync_fence = nvgpu_nvhost_sync_create_fence(sp->nvhost_dev,
+			sp->id, thresh, "fence");
+
+		if (IS_ERR(sync_fence)) {
+			err = PTR_ERR(sync_fence);
+			goto clean_up_priv_cmd;
+		}
+	}
+#endif
+
+	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev,
+	 sp->id, thresh, sync_fence);
+
+	if (err) {
+#ifdef CONFIG_SYNC
+		if (sync_fence)
+			sync_fence_put(sync_fence);
+#endif
 		goto clean_up_priv_cmd;
+	}
 
 	return 0;
 
@@ -288,12 +307,6 @@ static void gk20a_channel_syncpt_set_safe_state(struct gk20a_channel_sync *s)
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	nvgpu_nvhost_syncpt_set_safe_state(sp->nvhost_dev, sp->id);
-}
-
-static void gk20a_channel_syncpt_signal_timeline(
-		struct gk20a_channel_sync *s)
-{
-	/* Nothing to do. */
 }
 
 static int gk20a_channel_syncpt_id(struct gk20a_channel_sync *s)
@@ -368,7 +381,6 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
 	sp->ops.set_safe_state		= gk20a_channel_syncpt_set_safe_state;
-	sp->ops.signal_timeline		= gk20a_channel_syncpt_signal_timeline;
 	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
 	sp->ops.syncpt_address		= gk20a_channel_syncpt_address;
 	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
@@ -383,9 +395,6 @@ struct gk20a_channel_semaphore {
 
 	/* A semaphore pool owned by this channel. */
 	struct nvgpu_semaphore_pool *pool;
-
-	/* A sync timeline that advances when gpu completes work. */
-	struct sync_timeline *timeline;
 };
 
 static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
@@ -560,6 +569,7 @@ static int __gk20a_channel_semaphore_incr(
 	struct channel_gk20a *c = sp->c;
 	struct nvgpu_semaphore *semaphore;
 	int err = 0;
+	struct sync_fence *sync_fence = NULL;
 
 	semaphore = nvgpu_semaphore_alloc(c);
 	if (!semaphore) {
@@ -579,12 +589,31 @@ static int __gk20a_channel_semaphore_incr(
 	/* Release the completion semaphore. */
 	add_sema_cmd(c->g, c, semaphore, incr_cmd, 0, false, wfi_cmd);
 
-	err = gk20a_fence_from_semaphore(c->g, fence,
-			sp->timeline, semaphore,
-			&c->semaphore_wq,
-			need_sync_fence);
-	if (err)
+#ifdef CONFIG_SYNC
+	if (need_sync_fence) {
+		sync_fence = gk20a_sync_fence_create(c,
+			semaphore, "f-gk20a-0x%04x",
+			nvgpu_semaphore_gpu_ro_va(semaphore));
+
+		if (!sync_fence) {
+			err = -ENOMEM;
+			goto clean_up_sema;
+		}
+	}
+#endif
+
+	err = gk20a_fence_from_semaphore(fence,
+		semaphore,
+		&c->semaphore_wq,
+		sync_fence);
+
+	if (err) {
+#ifdef CONFIG_SYNC
+		if (sync_fence)
+			sync_fence_put(sync_fence);
+#endif
 		goto clean_up_sema;
+	}
 
 	return 0;
 
@@ -665,14 +694,6 @@ static void gk20a_channel_semaphore_set_safe_state(struct gk20a_channel_sync *s)
 	/* Nothing to do. */
 }
 
-static void gk20a_channel_semaphore_signal_timeline(
-		struct gk20a_channel_sync *s)
-{
-	struct gk20a_channel_semaphore *sp =
-		container_of(s, struct gk20a_channel_semaphore, ops);
-	gk20a_sync_timeline_signal(sp->timeline);
-}
-
 static int gk20a_channel_semaphore_syncpt_id(struct gk20a_channel_sync *s)
 {
 	return -EINVAL;
@@ -687,8 +708,13 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
-	if (sema->timeline)
-		gk20a_sync_timeline_destroy(sema->timeline);
+
+	struct channel_gk20a *c = sema->c;
+	struct gk20a *g = c->g;
+
+	if (c->has_os_fence_framework_support &&
+		g->os_channel.os_fence_framework_inst_exists(c))
+			g->os_channel.destroy_os_fence_framework(c);
 
 	/* The sema pool is cleaned up by the VM destroy. */
 	sema->pool = NULL;
@@ -700,10 +726,10 @@ static struct gk20a_channel_sync *
 gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 {
 	struct gk20a_channel_semaphore *sema;
+	struct gk20a *g = c->g;
 	char pool_name[20];
-#ifdef CONFIG_SYNC
 	int asid = -1;
-#endif
+	int err;
 
 	if (WARN_ON(!c->vm))
 		return NULL;
@@ -716,17 +742,20 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	sprintf(pool_name, "semaphore_pool-%d", c->chid);
 	sema->pool = c->vm->sema_pool;
 
-#ifdef CONFIG_SYNC
 	if (c->vm->as_share)
 		asid = c->vm->as_share->id;
 
-	sema->timeline = gk20a_sync_timeline_create(
+	if (c->has_os_fence_framework_support) {
+		/*Init the sync_timeline for this channel */
+		err = g->os_channel.init_os_fence_framework(c,
 			"gk20a_ch%d_as%d", c->chid, asid);
-	if (!sema->timeline) {
-		gk20a_channel_semaphore_destroy(&sema->ops);
-		return NULL;
+
+		if (err) {
+			nvgpu_kfree(g, sema);
+			return NULL;
+		}
 	}
-#endif
+
 	nvgpu_atomic_set(&sema->ops.refcount, 0);
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
 	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
@@ -735,7 +764,6 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
 	sema->ops.set_safe_state = gk20a_channel_semaphore_set_safe_state;
-	sema->ops.signal_timeline = gk20a_channel_semaphore_signal_timeline;
 	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
 	sema->ops.syncpt_address = gk20a_channel_semaphore_syncpt_address;
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;

@@ -3,6 +3,7 @@
  *
  *  Copyright (C) 2003 Russell King, All Rights Reserved.
  *  Copyright (C) 2007 Pierre Ossman
+ *  Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -28,9 +29,10 @@
 
 #define to_mmc_driver(d)	container_of(d, struct mmc_driver, drv)
 
-#ifdef CONFIG_MMC_TEST
-static struct mmc_driver *mmc_test_drv;
-#endif
+struct mmc_card *mmc_cards[MAX_CARDS_NUM];
+EXPORT_SYMBOL(mmc_cards);
+
+static int card_idx;
 
 static ssize_t type_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -116,13 +118,12 @@ static int mmc_bus_probe(struct device *dev)
 	struct mmc_driver *drv = to_mmc_driver(dev->driver);
 	struct mmc_card *card = mmc_dev_to_card(dev);
 
-#ifdef CONFIG_MMC_TEST
-	/*
-	 * Explicitly invoking mmc_test probe to co-exist with mmcblk driver.
-	 */
-	if (mmc_test_drv  != NULL)
-		mmc_test_drv->probe(card);
-#endif
+	if (card_idx == MAX_CARDS_NUM) {
+		pr_err("Exceeded the total number of cards allowed");
+		return -EINVAL;
+	} else {
+		mmc_cards[card_idx++] = card;
+	}
 
 	return drv->probe(card);
 }
@@ -240,10 +241,6 @@ void mmc_unregister_bus(void)
 int mmc_register_driver(struct mmc_driver *drv)
 {
 	drv->drv.bus = &mmc_bus_type;
-#ifdef CONFIG_MMC_TEST
-	if (!strcmp(drv->drv.name, "mmc_test"))
-		mmc_test_drv = drv;
-#endif
 	return driver_register(&drv->drv);
 }
 

@@ -2,7 +2,7 @@
  *  linux/drivers/mmc/card/mmc_test.c
  *
  *  Copyright 2007-2008 Pierre Ossman
- *  Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *  Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3198,34 +3198,31 @@ static void mmc_test_remove(struct mmc_card *card)
 	mmc_test_free_dbgfs_file(card);
 }
 
-static void mmc_test_shutdown(struct mmc_card *card)
+static int mmc_test_init(void)
 {
-}
+	int card_idx;
 
-static struct mmc_driver mmc_driver = {
-	.drv		= {
-		.name	= "mmc_test",
-	},
-	.probe		= mmc_test_probe,
-	.remove		= mmc_test_remove,
-	.shutdown	= mmc_test_shutdown,
-};
-
-static int __init mmc_test_init(void)
-{
-	return mmc_register_driver(&mmc_driver);
+	for (card_idx = 0; card_idx < MAX_CARDS_NUM; card_idx++) {
+		if (mmc_cards[card_idx] != NULL)
+			mmc_test_probe(mmc_cards[card_idx]);
+	}
+	return 0;
 }
 
 static void __exit mmc_test_exit(void)
 {
+	int card_idx;
+
+	for (card_idx = 0; card_idx < MAX_CARDS_NUM; card_idx++) {
+		if (mmc_cards[card_idx] != NULL)
+			mmc_test_remove(mmc_cards[card_idx]);
+	}
 	/* Clear stalled data if card is still plugged */
 	mmc_test_free_result(NULL);
 	mmc_test_free_dbgfs_file(NULL);
-
-	mmc_unregister_driver(&mmc_driver);
 }
 
-module_init(mmc_test_init);
+late_initcall(mmc_test_init);
 module_exit(mmc_test_exit);
 
 MODULE_LICENSE("GPL");

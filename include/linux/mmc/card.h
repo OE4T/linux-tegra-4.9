@@ -1,7 +1,7 @@
 /*
  *  linux/include/linux/mmc/card.h
  *
- *  Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *  Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,7 @@
 #include <linux/mod_devicetable.h>
 
 #define MMC_CARD_CMDQ_BLK_SIZE 512
+#define MAX_CARDS_NUM 4
 struct mmc_cid {
 	unsigned int		manfid;
 	char			prod_name[8];
@@ -584,6 +585,8 @@ struct mmc_driver {
 	void (*remove)(struct mmc_card *);
 	void (*shutdown)(struct mmc_card *);
 };
+
+extern struct mmc_card *mmc_cards[MAX_CARDS_NUM];
 
 extern int mmc_register_driver(struct mmc_driver *);
 extern void mmc_unregister_driver(struct mmc_driver *);

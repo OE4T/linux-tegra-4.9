@@ -159,7 +159,7 @@ static void tegra_channel_surface_setup(
 
 	if (chan->embedded_data_height > 0) {
 		desc->ch_cfg.embdata_enable = 1;
-		desc->ch_cfg.frame.embed_x = chan->embedded_data_width;
+		desc->ch_cfg.frame.embed_x = chan->embedded_data_width * BPP_MEM;
 		desc->ch_cfg.frame.embed_y = chan->embedded_data_height;
 		desc->ch_cfg.atomp.surface[VI_ATOMP_SURFACE_EMBEDDED].offset
 			= chan->vi->emb_buf;

@@ -345,7 +345,9 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 	if (!pd->mem)
 		return pgsz;
 
-	nvgpu_mem_begin(g, pd->mem);
+	if (nvgpu_mem_begin(g, pd->mem))
+		return pgsz;
+
 	for (i = 0; i < GP10B_PDE0_ENTRY_SIZE >> 2; i++)
 		pde_v[i] = nvgpu_mem_rd32(g, pd->mem, pde_offset + i);
 	nvgpu_mem_end(g, pd->mem);

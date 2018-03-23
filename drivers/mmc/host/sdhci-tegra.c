@@ -431,9 +431,8 @@ static void tegra_sdhci_card_event(struct sdhci_host *host)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 
-	if (host->mmc->rem_card_present)
-		tegra_host->tuning_status = TUNING_STATUS_RETUNE;
-	else
+	tegra_host->tuning_status = TUNING_STATUS_RETUNE;
+	if (!host->mmc->rem_card_present)
 		tegra_host->set_1v8_calib_offsets = false;
 }
 
@@ -2097,6 +2096,9 @@ static int tegra_sdhci_resume(struct sdhci_host *host)
 	} else {
 		host->mmc->rem_card_present = true;
 	}
+
+	if (host->mmc->rem_card_present == false)
+		tegra_host->tuning_status = TUNING_STATUS_RETUNE;
 
 	/* Set min identificaion clock of 400 KHz */
 	tegra_sdhci_set_clock(host, 400000);

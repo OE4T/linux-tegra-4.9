@@ -193,9 +193,12 @@ struct sdhci_tegra {
 	bool pad_calib_required;
 	struct clk *tmclk;
 	struct sdhci_tegra_clk_src_data *clk_src_data;
+	struct sdhci_host *host;
+	struct delayed_work detect_delay;
 	unsigned long curr_clk_rate;
 	unsigned long max_clk_limit;
 	unsigned long max_ddr_clk_limit;
+	u32 boot_detect_delay;
 	struct tegra_prod *prods;
 	u8 tuned_tap_delay;
 	bool rate_change_needs_clk;
@@ -1766,6 +1769,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 		}
 	}
 	of_property_read_u32(np, "uhs-mask", (u32 *)&tegra_host->uhs_mask);
+	of_property_read_u32(np, "nvidia,boot-detect-delay",
+			&tegra_host->boot_detect_delay);
 
 	tegra_host->force_non_rem_rescan = of_property_read_bool(np,
 		"force-non-removable-rescan");
@@ -1828,6 +1833,30 @@ static int sdhci_tegra_parse_parent_list_from_dt(struct platform_device *pdev,
 }
 
 
+static void sdhci_delayed_detect(struct work_struct *work)
+{
+	struct sdhci_tegra *tegra_host;
+	struct sdhci_host *host;
+
+	tegra_host = container_of(work, struct sdhci_tegra, detect_delay.work);
+	host = tegra_host->host;
+
+	if (sdhci_add_host(host))
+		goto err_add_host;
+
+	if (!tegra_host->disable_rtpm) {
+		pm_runtime_mark_last_busy(mmc_dev(host->mmc));
+		pm_runtime_put_autosuspend(mmc_dev(host->mmc));
+	}
+
+	/* Initialize debugfs */
+	sdhci_tegra_debugfs_init(host);
+
+err_add_host:
+	if (!tegra_host->disable_rtpm)
+		pm_runtime_disable(mmc_dev(host->mmc));
+}
+
 static int sdhci_tegra_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -1852,6 +1881,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	tegra_host = sdhci_pltfm_priv(pltfm_host);
 	tegra_host->ddr_signaling = false;
 	tegra_host->pad_calib_required = false;
+	tegra_host->host = host;
+
+	INIT_DELAYED_WORK(&tegra_host->detect_delay, sdhci_delayed_detect);
 
 	/* FIXME: This is for until dma-mask binding is supported in DT.
 	 *        Set coherent_dma_mask for each Tegra SKUs.
@@ -1914,7 +1946,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (IS_ERR(tegra_host->tmclk)) {
 		dev_err(mmc_dev(host->mmc), "timeout clk error\n");
 		rc = PTR_ERR(tegra_host->tmclk);
-		goto err_tmclk_get;
+		goto err_clk_get;
 	};
 	clk_set_rate(tegra_host->tmclk, SDMMC_TIMEOUT_CLK_FREQ_HZ);
 
@@ -2022,26 +2054,10 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	}
 #endif
 
-	rc = sdhci_add_host(host);
-	if (rc)
-		goto err_add_host;
-
-	if (!tegra_host->disable_rtpm) {
-		pm_runtime_mark_last_busy(mmc_dev(host->mmc));
-		pm_runtime_put_autosuspend(mmc_dev(host->mmc));
-	}
-
-	/* Initialize debugfs */
-	sdhci_tegra_debugfs_init(host);
-
+	schedule_delayed_work(&tegra_host->detect_delay,
+			      msecs_to_jiffies(tegra_host->boot_detect_delay));
 	return 0;
 
-err_add_host:
-err_tmclk_get:
-	if (!tegra_host->disable_rtpm)
-		pm_runtime_disable(mmc_dev(host->mmc));
-	clk_disable_unprepare(tegra_host->tmclk);
-	clk_disable_unprepare(pltfm_host->clk);
 err_clk_get:
 err_power_req:
 err_parse_dt:

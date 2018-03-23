@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,7 +60,8 @@ struct tipc_chan_ctx {
 
 enum tipc_chan_state {
 	TIPC_DISCONNECTED = 0,
-	TIPC_CONNECTED
+	TIPC_CONNECTED,
+	TIPC_NOT_FOUND
 };
 
 static int wait_for_response(struct  tipc_chan_ctx *chan_ctx, int timeout)
@@ -120,7 +121,7 @@ static void _handle_event(void *data, int event)
 	case TIPC_CHANNEL_SHUTDOWN:
 		pr_err("%s: channel(state:%d) shutting down\n",
 				__func__, chan_ctx->state);
-		chan_ctx->state = TIPC_CHANNEL_DISCONNECTED;
+		chan_ctx->state = TIPC_DISCONNECTED;
 		/* wake up the pending client */
 		complete(&chan_ctx->reply_comp);
 		break;
@@ -128,13 +129,13 @@ static void _handle_event(void *data, int event)
 	case TIPC_CHANNEL_DISCONNECTED:
 		pr_err("%s: channel(state:%d) disconnected\n",
 				__func__, chan_ctx->state);
-		chan_ctx->state = TIPC_CHANNEL_DISCONNECTED;
+		chan_ctx->state = TIPC_DISCONNECTED;
 		/* wake up the pending client */
 		complete(&chan_ctx->reply_comp);
 		break;
 
 	case TIPC_CHANNEL_NOT_FOUND:
-		chan_ctx->state = TIPC_CHANNEL_NOT_FOUND;
+		chan_ctx->state = TIPC_NOT_FOUND;
 		/* wake up the pending client */
 		complete(&chan_ctx->reply_comp);
 		break;
@@ -295,7 +296,7 @@ static int handle_ote_msg(struct tipc_chan_ctx *chan_ctx, void *buf,
 		trusty_ote_debug("%s: queue payload\n", __func__);
 		ret = queue_msg(chan_ctx, chan_ctx->data[1], chan_ctx->len[1]);
 		if (ret) {
-			pr_err("%s:error(%d) in queue header\n", __func__, ret);
+			pr_err("%s:error(%d) in queue payload\n", __func__, ret);
 			goto err_exit;
 		}
 	}
@@ -303,7 +304,7 @@ static int handle_ote_msg(struct tipc_chan_ctx *chan_ctx, void *buf,
 	trusty_ote_debug("%s: waiting for response\n", __func__);
 	ret = wait_for_response(chan_ctx, REPLY_TIMEOUT);
 	if (ret < 0) {
-		pr_err("%s:ERROR(%d) in receving header\n", __func__, ret);
+		pr_err("%s:ERROR(%d) in receiving header\n", __func__, ret);
 		goto err_exit;
 	}
 
@@ -371,12 +372,12 @@ int te_open_trusted_session(char *name, void **ctx)
 
 	ret = wait_for_response(chan_ctx, REPLY_TIMEOUT);
 	if (ret < 0) {
-		pr_err("%s:ERROR(%d) in receving response from service\n",
+		pr_err("%s:ERROR(%d) in receiving response from service\n",
 								__func__, ret);
 		goto err_conn;
 	}
 
-	if (chan_ctx->state == TIPC_CHANNEL_NOT_FOUND) {
+	if (chan_ctx->state == TIPC_NOT_FOUND) {
 		ret = -EOPNOTSUPP;
 		goto err_conn;
 	}
@@ -429,7 +430,7 @@ void te_close_trusted_session(void *ctx)
 	/* wake up the pending client */
 	complete(&chan_ctx->reply_comp);
 
-	if (chan_ctx->state == TIPC_CHANNEL_CONNECTED)
+	if (chan_ctx->state == TIPC_CONNECTED)
 		tipc_chan_shutdown(chan_ctx->chan);
 	tipc_chan_destroy(chan_ctx->chan);
 

@@ -76,6 +76,7 @@ struct rtc_time rt;
 #define FW_BURST_RD_CHECK
 //#define FW_MEM_RD_CHECK
 
+//#define ENABLE_KERNEL_DUMP
 #define MAX_KFIFO_BUFFER_SIZE		(131072*2)	/* >4 seconds */
 #define CODEC2IM501_PDM_CLKI
 
@@ -106,8 +107,8 @@ u32 g_offset;
 #endif				//VERIFY_PCM_KFIFO
 
 #define IM501_CDEV_NAME		"fm_smp"
-#define REC_FILE_PATH		"/sdcard/im501_oneshot.pcm"
-#define SPI_REC_FILE_PATH	"/sdcard/im501_spi_rec.pcm"
+#define REC_FILE_PATH		"/data/im501_oneshot_kernel.pcm"
+#define SPI_REC_FILE_PATH	"/data/im501_spi_rec_kernel.pcm"
 
 struct im501_data_t {
 	struct mutex lock;
@@ -124,9 +125,9 @@ struct im501_data_t {
 };
 struct im501_data_t *im501_data;
 
-int *im501_idx;
 int im501_irq;
 static struct work_struct im501_irq_work;
+static struct work_struct im501_fw_load_work;
 static struct workqueue_struct *im501_irq_wq;
 static int im501_host_irqstatus; // To notify the HAL about the incoming irq.
 //Fuli 20161216 resolve the issue about can only invoke interrupt once
@@ -135,8 +136,9 @@ static void im501_irq_handling_work(struct work_struct *work);
 
 //Fuli 20170922 to support SPI recording
 static char im501_spi_record_started;
-struct file *fpdata;
+struct file *fpdata = (struct file *)-1;
 mm_segment_t oldfs;
+static loff_t offset;
 unsigned int output_counter;
 
 int check_dsp_status(void);
@@ -313,10 +315,7 @@ int im501_spi_burst_read_dram(u32 addr, u8 *rxbuf, size_t len)
 		status = spi_sync(im501_spi, &message);
 
 		if (status) {
-			pr_err
-			    ("%s: something wrong in spi_sync. going to return failure\n",
-			     __func__);
-
+			dev_err(&im501_spi->dev, "%s: error in spi_sync\n",	__func__);
 			return false;
 		}
 
@@ -378,7 +377,7 @@ int im501_spi_burst_write(u32 addr, const u8 *txbuf, size_t len, int fw_type)
 	int i, local_len, end, status;
 
 	spi_cmd =
-	    (addr == 0x10000000) ? IM501_SPI_CMD_IM_WR : IM501_SPI_CMD_DM_WR;
+		(addr == 0x10000000) ? IM501_SPI_CMD_IM_WR : IM501_SPI_CMD_DM_WR;
 
 	local_len = (len % 8) ? (((len / 8) + 1) * 8) : len;
 	local_buf = kzalloc(local_len, GFP_KERNEL);
@@ -389,8 +388,10 @@ int im501_spi_burst_write(u32 addr, const u8 *txbuf, size_t len, int fw_type)
 	memcpy(local_buf, txbuf, len);
 
 	write_buf = kzalloc(IM501_SPI_BUF_LEN + 6, GFP_KERNEL);
-	if (write_buf == NULL)
+	if (write_buf == NULL) {
+		kfree(local_buf);
 		return -ENOMEM;
+	}
 
 	write_buf[0] = spi_cmd;	//Assign the command byte first, since it is fixed.
 	while (offset < local_len) {
@@ -446,31 +447,31 @@ int check_dsp_status(void)
 	int err = ESUCCESS;
 
 	err =
-	    im501_spi_read_dram(TO_DSP_FRAMECOUNTER_ADDR, (u8 *) &framecount1);
+		im501_spi_read_dram(TO_DSP_FRAMECOUNTER_ADDR, (u8 *) &framecount1);
 	if (err != ESUCCESS) {
-		pr_err("%s: call im501_spi_read_dram() return error(%d)\n",
-		       __func__, err);
+		dev_err(&im501_spi->dev, "%s: call im501_spi_read_dram() return error(%d)\n",
+			   __func__, err);
 		return err;
 	}
 
 	mdelay(500);
 
 	err =
-	    im501_spi_read_dram(TO_DSP_FRAMECOUNTER_ADDR, (u8 *) &framecount2);
+		im501_spi_read_dram(TO_DSP_FRAMECOUNTER_ADDR, (u8 *) &framecount2);
 	if (err != ESUCCESS) {
-		pr_err("%s: call im501_spi_read_dram() return error(%d)\n",
-		       __func__, err);
+		dev_err(&im501_spi->dev, "%s: call im501_spi_read_dram() return error(%d)\n",
+			   __func__, err);
 		return err;
 	}
 
 	framecount1 = framecount1 >> 16;
 	framecount2 = framecount2 >> 16;
-	pr_err("%s: framecount1=%x, framecount2=%x\n", __func__, framecount1,
-	       framecount2);
+	dev_dbg(&im501_spi->dev, "%s: framecount1=%x, framecount2=%x\n", __func__, framecount1,
+		   framecount2);
 	if (framecount1 != framecount2) {
-		pr_err("%s: im501 is working normally.\n", __func__);
+		dev_info(&im501_spi->dev, "%s: im501 is working normally.\n", __func__);
 	} else {
-		pr_err("%s: im501 is NOT working.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: im501 is NOT working.\n", __func__);
 		return EDSPNOTWORK;
 	}
 
@@ -485,11 +486,11 @@ int check_dsp_status(void)
 int codec2im501_pdm_clki_set(bool set_flag, u32 rate)
 {
 	if (set_flag == NORMAL_MODE) {
-		pr_err("%s: enable pdm_clki rate %d\n", __func__, rate);
+		dev_dbg(&im501_spi->dev, "%s: enable pdm_clki rate %d\n", __func__, rate);
 		enable_pdm_clock();
 		mdelay(10);
 	} else {
-		pr_err("%s: disable pdm_clki rate %d\n", __func__, rate);
+		dev_dbg(&im501_spi->dev, "%s: disable pdm_clki rate %d\n", __func__, rate);
 		disable_pdm_clock();
 		mdelay(10);
 	}
@@ -501,12 +502,12 @@ int im501_reset(void)
 	if (im501_data->reset_gpio == -1)
 		return 0;
 
-	pr_err("%s: reset im501 with gpio_number = %d\n", __func__, im501_data->reset_gpio);
+	dev_info(&im501_spi->dev, "%s: reset im501 with gpio_number = %d\n", __func__, im501_data->reset_gpio);
 
-	pr_err("%s: set reset pin to low.\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: set reset pin to low.\n", __func__);
 	gpio_set_value(im501_data->reset_gpio, 0);
 	mdelay(200);
-	pr_err("%s: set reset pin to high.\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: set reset pin to high.\n", __func__);
 	gpio_set_value(im501_data->reset_gpio, 1);
 	mdelay(200);
 
@@ -515,34 +516,43 @@ int im501_reset(void)
 
 void writeDataFile(char *buf, int count)
 {
-	if (fpdata != NULL) {
+	loff_t ret;
+	if (!IS_ERR(fpdata)) {
 		oldfs = get_fs();
 		set_fs(get_ds());
-		fpdata->f_op->write(fpdata, (u8 *)(buf), count, &fpdata->f_pos);
+		dev_dbg(&im501_spi->dev, "writing %d\n", (int)count);
+		ret = vfs_write(fpdata, buf, count, &offset);
 		set_fs(oldfs);
 	}
 }
 
 void openFileForWrite(unsigned char *filePath)
 {
-	/* disable file i/o */
-#if 0
-	if (fpdata != NULL) {
+#ifdef ENABLE_KERNEL_DUMP
+	offset = 0;
+	oldfs = get_fs();
+	set_fs(get_ds());
+	if (!IS_ERR(fpdata)) {
 		filp_close(fpdata, NULL);
 		fpdata = NULL;
 	}
 	fpdata = filp_open(filePath, O_CREAT | O_RDWR, 0666);
-	if (!fpdata) {
-		pr_err("file open failed %s\n", filePath);
-	}
+	if (IS_ERR(fpdata))
+		dev_err(&im501_spi->dev, "file open failed %s\n", filePath);
+	else
+		dev_info(&im501_spi->dev, "file open success %s\n", filePath);
+	set_fs(oldfs);
 #endif
 }
 
 void closeDataFile(void)
 {
-	if (fpdata != NULL) {
+	if (!IS_ERR(fpdata)) {
+		oldfs = get_fs();
+		set_fs(get_ds());
 		filp_close(fpdata, NULL);
-		fpdata = NULL;
+		fpdata = (struct file *)-1;
+		set_fs(oldfs);
 	}
 }
 
@@ -560,10 +570,10 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 	a = data_length / read_size;
 	b = data_length % read_size;
 
-	//pr_err("%s: data_length=%d, a=%d, b=%d\n", __func__, data_length, a, b);
+	//dev_err(&im501_spi->dev, "%s: data_length=%d, a=%d, b=%d\n", __func__, data_length, a, b);
 	pbuf = (unsigned char *)kzalloc(read_size, GFP_KERNEL);
 	if (!pbuf) {
-		pr_err("%s: pbuf allocation failure.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: pbuf allocation failure.\n", __func__);
 		return -1;
 	}
 
@@ -572,24 +582,19 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 		if (err != NO_ERR) {
 			if (pbuf)
 				kfree(pbuf);
-			pr_err("%s: im501_spi_burst_read_dram() failure.\n",
-			       __func__);
+			dev_err(&im501_spi->dev, "%s: im501_spi_burst_read_dram() failure.\n",
+				   __func__);
 			return err;
 		}
 
 		start_addr += read_size;
 
-#if 0
-		if (fpdata != NULL) {
-			fpdata->f_op->write(fpdata, (u8 *) (pbuf), read_size,
-					    &fpdata->f_pos);
-		} else {
-			pr_err("%s: open data file failed.\n", __func__);
-		}
+#ifdef ENABLE_KERNEL_DUMP
+		if (!IS_ERR(fpdata))
+			writeDataFile(pbuf, read_size);
 #endif
-
-		//fuli 20170515 to reduce output pr_err("%s: put the voice data to pcm FIFO.\n", __func__);
-		//if(i % 10 == 0) pr_err("%s: put the voice data to pcm FIFO.\n", __func__);
+		//fuli 20170515 to reduce output dev_err(&im501_spi->dev, "%s: put the voice data to pcm FIFO.\n", __func__);
+		//if(i % 10 == 0) dev_err(&im501_spi->dev, "%s: put the voice data to pcm FIFO.\n", __func__);
 		//
 		while (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) < read_size)
 			msleep(10);
@@ -601,44 +606,40 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 			spin_unlock(&im501_data->pcm_fifo_lock);
 		}
 		else {
-			pr_err("%s: PCM FIFO is full.\n", __func__);
+			dev_err(&im501_spi->dev, "%s: PCM FIFO is full.\n", __func__);
 		}
 	}
 
 	if (b > 0) {
 		err = im501_spi_burst_read_dram(start_addr, pbuf, b);
 		if (err != ESUCCESS) {
-			pr_err
-			    ("%s: im501_spi_burst_read_dram failure with %d.\n",
-			     __func__, err);
+			dev_err(&im501_spi->dev,
+				"%s: im501_spi_burst_read_dram failure with %d.\n",
+				__func__, err);
 			if (pbuf)
 				kfree(pbuf);
 			return err;
 		}
-#if 0
-		if (fpdata != NULL) {
-			fpdata->f_op->write(fpdata, (u8 *) (pbuf), b,
-					    &fpdata->f_pos);
-		} else {
-			pr_err("%s: open data file failed.\n", __func__);
-		}
+#ifdef ENABLE_KERNEL_DUMP
+		if (!IS_ERR(fpdata))
+			writeDataFile(pbuf, b);
 #endif
 
 		fifo_len = kfifo_len(im501_data->pcm_kfifo);
-		//pr_err("%s: fifo_len = %d\n", __func__, fifo_len);
+
 		// TODO: Remove infinite wait, use timeout
 		while (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) < read_size)
 			msleep(10);
 
 		if (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) >= read_size) {
 		//if (!kfifo_is_full(im501_data->pcm_kfifo)) {
-			//pr_err("%s_b: put %d bytes voice data to PCM FIFO.\n", __func__, b);
+			//dev_err(&im501_spi->dev, "%s_b: put %d bytes voice data to PCM FIFO.\n", __func__, b);
 			spin_lock(&im501_data->pcm_fifo_lock);
 			kfifo_in(im501_data->pcm_kfifo, pbuf, b);
 			spin_unlock(&im501_data->pcm_fifo_lock);
 		}
 		else {
-			pr_err("%s: PCM FIFO is full.\n", __func__);
+			dev_err(&im501_spi->dev, "%s: PCM FIFO is full.\n", __func__);
 		}
 	}
 
@@ -646,11 +647,11 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 		kfree(pbuf);
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc2.time));
-	pr_err("%s: get one bank used %ld us\n", __func__,
-	       (unsigned
+	dev_err(&im501_spi->dev, "%s: get one bank used %ld us\n", __func__,
+		   (unsigned
 		long)((unsigned long)(txc2.time.tv_sec -
-				      txc.time.tv_sec) * 1000000L +
-		      (unsigned long)(txc2.time.tv_usec - txc.time.tv_usec)));
+					  txc.time.tv_sec) * 1000000L +
+			  (unsigned long)(txc2.time.tv_usec - txc.time.tv_usec)));
 #endif
 	return err;
 
@@ -669,9 +670,9 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 	int bank, sync_word_pos, data_size = HW_VOICE_BUF_BANK_SIZE;
 	//
 
-	//pr_err("%s: cmd_byte = %#x\n", __func__, cmd.cmd_byte);
+	//dev_err(&im501_spi->dev, "%s: cmd_byte = %#x\n", __func__, cmd.cmd_byte);
 	if ((im501_vbuf_trans_status == 1) && (cmd.status == 1) && (cmd.cmd_byte == TO_HOST_CMD_DATA_BUF_RDY)) {	//Reuest host to read To-Host Buffer-Fast
-		//pr_err("%s: data ready\n", __func__);
+		//dev_err(&im501_spi->dev, "%s: data ready\n", __func__);
 #ifdef SM501			//fuli 20170629 the protocol is different from old version
 		data_size = ((cmd.attri >> 13) & 0x7FF) << 1;	//16 bits sample, one sample occupies 2 bytes.
 		bank = (cmd.attri >> 11) & 0x03;
@@ -690,32 +691,29 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 		}
 #endif
 
-		pr_err("TODO: remove delay hack for SPI record interrupts to come\n");
-		mdelay(50);
-
 		if (im501_host_irqstatus == 1)
-			pr_err("%s: data ready at address=%x, data_size=%x\n",
-			       __func__, address, data_size);
+			dev_info(&im501_spi->dev, "%s: data ready at address=%x, data_size=%x\n",
+				   __func__, address, data_size);
 		err = fetch_voice_data(address, data_size);
 		if (err != ESUCCESS) {
-			pr_err("%s: fetch_voice_data() return error.\n",
-			       __func__);
+			dev_err(&im501_spi->dev, "%s: fetch_voice_data() return error.\n",
+				   __func__);
 			return err;
 		}
 		//cmd.status = 0;
 		//Should be modified in accordance with customers scenario definitions.
 		pdata = (u8 *) &cmd;
 		pdata[3] &= 0x7F;	//changes the bit-31 to 0 to indicate that the hot has finished with the task.
-		//pr_err("%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3]);
+		//dev_err(&im501_spi->dev, "%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3]);
 		err = im501_spi_write_dram(TO_HOST_CMD_ADDR, pdata);
 		if (err != ESUCCESS) {
-			pr_err("%s: im501_spi_write_dram() return error.\n",
-			       __func__);
+			dev_err(&im501_spi->dev, "%s: im501_spi_write_dram() return error.\n",
+				   __func__);
 			return err;
 		}
 	} else {		//treat all other interrupt as keyword detect
 		//if(cmd.cmd_byte == TO_HOST_CMD_KEYWORD_DET) {//Info host Keywords detected
-		//pr_err("%s: im501_vbuf_trans_status = %d\n", __func__, im501_vbuf_trans_status);
+		//dev_err(&im501_spi->dev, "%s: im501_vbuf_trans_status = %d\n", __func__, im501_vbuf_trans_status);
 		if ((im501_vbuf_trans_status == 0) && (im501_dsp_mode_old == POWER_SAVING_MODE)) {	//only available when not transfer voice and in PSM
 			im501_vbuf_trans_status = 1;
 			im501_host_irqstatus = 1;
@@ -728,8 +726,8 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 			im501_dsp_mode_old = NORMAL_MODE;
 			mdelay(5);
 #endif
-			pr_err("%s: keyword detected.\n", __func__);
-			//pr_err("%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n", __func__, ap_sleep_flag, im501_dsp_mode_old);
+			dev_info(&im501_spi->dev, "%s: keyword detected.\n", __func__);
+			//dev_err(&im501_spi->dev, "%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n", __func__, ap_sleep_flag, im501_dsp_mode_old);
 			if (ap_sleep_flag) {
 				im501_spi->mode = SPI_MODE_0;	/* clk active low */
 				im501_spi->bits_per_word = 8;
@@ -749,21 +747,22 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 			//Should be modified in accordance with customers scenario definitions.
 			pdata = (u8 *) &cmd;
 			pdata[3] &= 0x7F;	//changes the bit-31 to 0 to indicate that the hot has finished with the task.
-			//pr_err("%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3]);
+			//dev_err(&im501_spi->dev, "%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3]);
 			err = im501_spi_write_dram(TO_HOST_CMD_ADDR, pdata);
 			if (err != ESUCCESS) {
-				pr_err
-				    ("%s: 1111 im501_spi_write_dram() return error.\n",
-				     __func__);
+				dev_err(&im501_spi->dev,
+					"%s: 1111 im501_spi_write_dram() return error.\n",
+					__func__);
 				return err;
 			}
-			//pr_err("%s: start to get oneshot and save to file!!!!!!!!!!!!!!!!!!!!!!\n", __func__);
+			//dev_err(&im501_spi->dev, "%s: start to get oneshot and save to file!!!!!!!!!!!!!!!!!!!!!!\n", __func__);
 			openFileForWrite(REC_FILE_PATH);
 			request_start_voice_buf_trans();
 		} else {
-			pr_err
-			    ("%s: Do not process other interrupt during process keyword detection and oneshot, or DSP is in normal mode.\n",
-			     __func__);
+			dev_info(&im501_spi->dev,
+				"%s: Do not process other interrupt during process "
+				"keyword detection and oneshot, or DSP is in normal mode.\n",
+				__func__);
 		}
 	}
 
@@ -777,22 +776,20 @@ unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 	u8 pTempData[8];
 	u8 *pdata;
 
-	//pr_err("%s: attri=%#x, cmd_byte_ext=%#x, status=%#x, cmd_byte=%#x\n", __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
 	pdata = (u8 *) &cmd;
-	//pr_err("%s: pdata[%#x, %#x, %#x, %#x, %#x]\n", __func__, pdata[0], pdata[1], pdata[2], pdata[3], pdata[4]);
-	//pr_err("%s: attr=%#x, ext=%#x, status=%#x, cmd=%#x\n", __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
+	//dev_err(&im501_spi->dev, "%s: attr=%#x, ext=%#x, status=%#x, cmd=%#x\n", __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
 
 	err = im501_spi_write_dram(TO_DSP_CMD_ADDR, pdata);
 	if (err != ESUCCESS) {
-		pr_err("%s: call im501_spi_write_dram() return error(%d)\n",
-		       __func__, err);
+		dev_err(&im501_spi->dev, "%s: call im501_spi_write_dram() return error(%d)\n",
+			   __func__, err);
 		return err;
 	}
 
 	err = im501_spi_write_reg(0x01, cmd.cmd_byte);	//generate interrupt to DSP
 	if (err != ESUCCESS) {
-		pr_err("%s: call im501_spi_write_reg() return error(%d)\n",
-		       __func__, err);
+		dev_err(&im501_spi->dev, "%s: call im501_spi_write_reg() return error(%d)\n",
+			   __func__, err);
 		return err;
 	}
 
@@ -801,19 +798,19 @@ unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 	for (i = 0; i < 200; i++) {	//wait for (50*100us = 5ms) to check if DSP finished
 		err = im501_spi_read_dram(TO_DSP_CMD_ADDR, pTempData);
 		if (err != ESUCCESS) {
-			pr_err
-			    ("%s: call im501_spi_read_dram() return error(%d)\n",
-			     __func__, err);
+			dev_err(&im501_spi->dev,
+				"%s: call im501_spi_read_dram() return error(%d)\n",
+				__func__, err);
 			return err;
 		}
-		//pr_err("%s: pTempData[%#x, %#x, %#x, %#x]\n", __func__, pTempData[0], pTempData[1], pTempData[2], pTempData[3]);
+		//dev_err(&im501_spi->dev, "%s: pTempData[%#x, %#x, %#x, %#x]\n", __func__, pTempData[0], pTempData[1], pTempData[2], pTempData[3]);
 		cmd.status = pTempData[3] >> 7;
 		cmd.cmd_byte_ext = pTempData[3] & 0x7F;
 		cmd.attri =
-		    pTempData[0] | (pTempData[1] * 256) | (pTempData[2] * 256 *
+			pTempData[0] | (pTempData[1] * 256) | (pTempData[2] * 256 *
 							   256);
-		pr_err("%s: cmd[%#x, %#x, %#x]\n", __func__, cmd.status,
-		       cmd.cmd_byte_ext, cmd.attri);
+		dev_info(&im501_spi->dev, "%s: cmd[%#x, %#x, %#x]\n", __func__, cmd.status,
+			   cmd.cmd_byte_ext, cmd.attri);
 
 		if (cmd.status != 0) {
 			err = TO_501_CMD_ERR;
@@ -838,13 +835,13 @@ unsigned char im501_send_message_to_dsp(unsigned char cmd_index, unsigned int pa
 
 	cmd.cmd_byte = cmd_index;	//((cmd_index & 0x3F) << 2) | 0x01; //D[1] : "1", interrupt DSP. This bit generates NMI (non-mask-able interrupt), D[0]: "1" generate mask-able interrupt
 
-	pr_err("%s: attri=%#x, cmd_byte_ext=%#x, status=%#x, cmd_byte=%#x\n",
-	       __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
+	dev_info(&im501_spi->dev, "%s: attri=%#x, cmd_byte_ext=%#x, status=%#x, cmd_byte=%#x\n",
+		   __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
 	err = im501_send_to_dsp_command(cmd);
 
 	if (err != ESUCCESS) {
-		pr_err("%s: fail to send message(%02x) to dsp. err=%d\n",
-		     __func__, cmd_index >> 2, err);
+		dev_err(&im501_spi->dev, "%s: fail to send message(%02x) to dsp. err=%d\n",
+			 __func__, cmd_index >> 2, err);
 	}
 	return err;
 }
@@ -855,7 +852,7 @@ unsigned char request_start_voice_buf_trans(void)
 	err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_START_BUF_TRANS, 0);
 
 	//Fuli 20161216 clear fifo when start to detect ketwords.
-	pr_err("%s: clear pcm fifo, it may contains data which is not be fetched.\n", __func__);
+	dev_info(&im501_spi->dev, "%s: clear pcm fifo, it may contains data which is not be fetched.\n", __func__);
 	spin_lock(&im501_data->pcm_fifo_lock);
 	kfifo_reset(im501_data->pcm_kfifo);
 	spin_unlock(&im501_data->pcm_fifo_lock);
@@ -878,27 +875,26 @@ unsigned char request_enter_psm(void)
 	unsigned char err = ESUCCESS;
 
 	if (im501_vbuf_trans_status == 1) {
-		pr_err("%s: im501_vbuf_trans_status = %d, stop it.\n", __func__,
-		       im501_vbuf_trans_status);
-		request_stop_voice_buf_trans();	//Call this function to guarantee there is no voice transferring.
+		dev_err(&im501_spi->dev, "%s: im501_vbuf_trans_status = %d, stop it.\n", __func__,
+			   im501_vbuf_trans_status);
+		//Call this function to guarantee there is no voice transferring.
+		request_stop_voice_buf_trans();
 	}
 
 	im501_vbuf_trans_status = 0;
 
 	if (im501_dsp_mode_old != POWER_SAVING_MODE) {	//The current dsp mode is not PSM.
-		pr_err
-		    ("%s-1: ap_sleep_flag = %d, im501_dsp_mode_old = %d. iM501 is going to sleep.\n",
-		     __func__, ap_sleep_flag, im501_dsp_mode_old);
-		pr_err("%s: the command is %#x\n", __func__,
-		       TO_DSP_CMD_REQ_ENTER_PSM);
-		//fuli 20170629         err = write_cmd_to_im501( TO_DSP_CMD_REQ_ENTER_PSM, 0xc0000000);
-		err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_ENTER_PSM, 0);
-		//
+		dev_info(&im501_spi->dev,
+			"ap_sleep_flag = %d, im501_dsp_mode_old = %d. iM501 is going to sleep.\n",
+			 ap_sleep_flag, im501_dsp_mode_old);
+		dev_info(&im501_spi->dev,
+			"%s: the command is %#x\n", __func__, TO_DSP_CMD_REQ_ENTER_PSM);
 
+		err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_ENTER_PSM, 0);
 		if (ESUCCESS != err) {
-			pr_err
-			    ("%s: error occurs when switch to power saving mode, error = %d\n",
-			     __func__, err);
+			dev_err(&im501_spi->dev,
+				"%s: error occurs when switch to power saving mode, error = %d\n",
+				__func__, err);
 		}
 #ifdef CODEC2IM501_PDM_CLKI
 		mdelay(100);
@@ -907,8 +903,8 @@ unsigned char request_enter_psm(void)
 #endif
 		ap_sleep_flag = 1;
 		im501_dsp_mode_old = POWER_SAVING_MODE;
-		pr_err("%s-2: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
-		       __func__, ap_sleep_flag, im501_dsp_mode_old);
+		dev_info(&im501_spi->dev, "%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
+			   __func__, ap_sleep_flag, im501_dsp_mode_old);
 	}
 
 	return err;
@@ -919,7 +915,7 @@ unsigned char request_enter_normal(void)
 	unsigned char err = ESUCCESS;
 
 	if (im501_dsp_mode_old != NORMAL_MODE) {	//The current dsp mode is not NORMAL
-		pr_err("%s: entering...\n", __func__);
+		dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 #ifdef CODEC2IM501_PDM_CLKI
 		mdelay(5);
 		codec2im501_pdm_clki_set(NORMAL_MODE, 0);
@@ -929,16 +925,16 @@ unsigned char request_enter_normal(void)
 		//fuli 20170629
 		err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_ENTER_NORMAL, 0);
 		if (ESUCCESS != err) {
-			pr_err
-			    ("%s: error occurs when switch to normal mode, error = %d\n",
-			     __func__, err);
+			dev_err(&im501_spi->dev,
+				"%s: error occurs when switch to normal mode, error = %d\n",
+				__func__, err);
 		}
-		//
 
 		ap_sleep_flag = 0;
 		im501_dsp_mode_old = NORMAL_MODE;
-		pr_err("%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
-		       __func__, ap_sleep_flag, im501_dsp_mode_old);
+		dev_info(&im501_spi->dev,
+			"%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
+			__func__, ap_sleep_flag, im501_dsp_mode_old);
 	}
 
 	return err;
@@ -950,21 +946,21 @@ int im501_spi_burst_read_check(u32 start_addr, u8 *buf, u32 data_length)
 	unsigned char *pbuf;
 	unsigned int i, a, b;
 
-	pr_err("%s: entering...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 	a = data_length / IM501_SPI_BUF_LEN;
 	b = data_length % IM501_SPI_BUF_LEN;
 
 	pbuf = (unsigned char *)kzalloc(IM501_SPI_BUF_LEN, GFP_KERNEL);
 	if (!pbuf) {
-		pr_err("%s: pbuf allocation failure.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: pbuf allocation failure.\n", __func__);
 		return -1;
 	}
 
 	for (i = 0; i < a; i++) {
-		pr_err("%s: start_addr = %#x\n", __func__, start_addr);
+		dev_dbg(&im501_spi->dev, "%s: start_addr = %#x\n", __func__, start_addr);
 		err =
-		    im501_spi_burst_read_dram(start_addr, pbuf,
-					      IM501_SPI_BUF_LEN);
+			im501_spi_burst_read_dram(start_addr, pbuf,
+						  IM501_SPI_BUF_LEN);
 		if (err != ESUCCESS) {
 			return err;
 		}
@@ -1018,12 +1014,13 @@ static size_t im501_read_file(char *file_path, const u8 **buf)
 {
 	loff_t pos = 0;
 	unsigned int file_size = 0;
+	int read_len;
 	struct file *fp;
 
-	pr_err("%s: file_path = %s\n", __func__, file_path);
+	dev_info(&im501_spi->dev, "file_path = %s\n", file_path);
 	fp = filp_open(file_path, O_RDONLY, 0);
 	if (!IS_ERR(fp)) {
-		pr_err("%s: The file is present.\n", __func__);
+		dev_info(&im501_spi->dev, "The file is present.\n");
 
 		file_size = vfs_llseek(fp, pos, SEEK_END);
 
@@ -1033,10 +1030,15 @@ static size_t im501_read_file(char *file_path, const u8 **buf)
 			return 0;
 		}
 
-		kernel_read(fp, pos, (char *)*buf, file_size);
+		read_len = kernel_read(fp, pos, (char *)*buf, file_size);
+		if (read_len <= 0) {
+			dev_err(&im501_spi->dev, "kernel_read error\n");
+			read_len = 0;
+		}
+
 		filp_close(fp, 0);
 
-		return file_size;
+		return read_len;
 	}
 
 	return 0;
@@ -1048,13 +1050,12 @@ static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 	int i;
 	size_t size = 0;
 
-	//pr_err("%s: entering...\n", __func__);
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
 	rtc_time_to_tm(txc.time.tv_sec, &rt);
-	pr_err("%s: start time: %d-%d-%d %d:%d:%d \n", __func__,
-	       rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
-	       rt.tm_sec);
+	dev_info(&im501_spi->dev, "%s: start time: %d-%d-%d %d:%d:%d \n", __func__,
+		   rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
+		   rt.tm_sec);
 #endif
 
 	size = im501_read_file(fw_name, (const u8 **)&data);
@@ -1064,8 +1065,8 @@ static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 		return -1;
 	}
 	if (size) {
-		pr_err("%s: firmware %s size = %zu, addr = %#x\n", __func__,
-		       fw_name, size, addr);
+		dev_info(&im501_spi->dev, "%s: firmware %s size = %zu, addr = %#x\n", __func__,
+			   fw_name, size, addr);
 		im501_spi_burst_write(addr, data, size, fw_type);
 
 #ifdef FW_RD_CHECK
@@ -1079,9 +1080,9 @@ static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 
 		for (i = 0; i < size; i++) {
 			if (local_buf[i] != data[i]) {
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i], data[i],
-				       addr + i);
+				dev_err(&im501_spi->dev, "%s: fw read %#x vs write %#x @ %#x\n",
+					   __func__, local_buf[i], data[i],
+					   addr + i);
 			}
 		}
 #endif
@@ -1092,9 +1093,9 @@ static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
 	rtc_time_to_tm(txc.time.tv_sec, &rt);
-	pr_err("%s: end   time: %d-%d-%d %d:%d:%d \n", __func__,
-	       rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
-	       rt.tm_sec);
+	dev_info(&im501_spi->dev, "%s: end   time: %d-%d-%d %d:%d:%d \n", __func__,
+		   rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
+		   rt.tm_sec);
 #endif
 	return 0;
 }
@@ -1109,14 +1110,13 @@ static int im501_dsp_load_fw(u8 firmware_type)
 	int fw_type = IM501_DSP_FW;
 	int i;
 
-	pr_err("%s: firmware_type=%d\n", __func__, firmware_type);
-	//pr_err("%s: entering...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: firmware_type=%d\n", __func__, firmware_type);
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
 	rtc_time_to_tm(txc.time.tv_sec, &rt);
-	pr_err("%s: start time: %d-%d-%d %d:%d:%d \n", __func__,
-	       rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
-	       rt.tm_sec);
+	dev_info(&im501_spi->dev, "%s: start time: %d-%d-%d %d:%d:%d \n", __func__,
+		   rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
+		   rt.tm_sec);
 #endif
 
 	if (firmware_type == WAKEUP_FIRMWARE)
@@ -1130,9 +1130,10 @@ static int im501_dsp_load_fw(u8 firmware_type)
 			"%s: im501_iram0.bin firmware request failed.\n", __func__);
 		return err;
 	}
+
 	if (fw) {
-		pr_err("%s: firmware im501_iram0.bin size = %zu \n", __func__,
-		       fw->size);
+		dev_info(&im501_spi->dev, "%s: firmware im501_iram0.bin size = %zu \n", __func__,
+			   fw->size);
 		im501_spi_burst_write(0x10000000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
@@ -1146,36 +1147,11 @@ static int im501_dsp_load_fw(u8 firmware_type)
 
 		for (i = 0; i < fw->size; i++) {
 			if (local_buf[i] != fw->data[i]) {
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i], fw->data[i],
-				       0x10000000 + i);
+				dev_err(&im501_spi->dev, "%s: fw read %#x vs write %#x @ %#x\n",
+					   __func__, local_buf[i], fw->data[i],
+					   0x10000000 + i);
 				break;
 			}
-		}
-#endif
-#ifdef FW_MEM_RD_CHECK
-		for (i = 0; i < fw->size / 4; i++) {
-			im501_spi_read_dram(0x10000000 + i * 4,
-					    local_buf + i * 4);
-			if (local_buf[i * 4] != fw->data[i * 4])
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i * 4],
-				       fw->data[i * 4], 0x10000000 + i * 4);
-			if (local_buf[i * 4 + 1] != fw->data[i * 4 + 1])
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i * 4 + 1],
-				       fw->data[i * 4 + 1],
-				       0x10000000 + i * 4 + 1);
-			if (local_buf[i * 4 + 2] != fw->data[i * 4 + 2])
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i * 4 + 2],
-				       fw->data[i * 4 + 2],
-				       0x10000000 + i * 4 + 2);
-			if (local_buf[i * 4 + 3] != fw->data[i * 4 + 3])
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i * 4 + 3],
-				       fw->data[i * 4 + 3],
-				       0x10000000 + i * 4 + 3);
 		}
 #endif
 		kfree(local_buf);
@@ -1195,9 +1171,10 @@ static int im501_dsp_load_fw(u8 firmware_type)
 			"%s: im501_dram0.bin firmware request failed.\n", __func__);
 		return err;
 	}
+
 	if (fw) {
-		pr_err("%s: firmware im501_dram0.bin size = %zu\n", __func__,
-		       fw->size);
+		dev_info(&im501_spi->dev, "%s: firmware im501_dram0.bin size = %zu\n", __func__,
+			   fw->size);
 		im501_spi_burst_write(0x0ffc0000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
@@ -1212,9 +1189,9 @@ static int im501_dsp_load_fw(u8 firmware_type)
 
 		for (i = 0; i < fw->size; i++) {
 			if (local_buf[i] != fw->data[i]) {
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i], fw->data[i],
-				       0x0ffc0000 + i);
+				dev_err(&im501_spi->dev, "%s: fw read %#x vs write %#x @ %#x\n",
+					   __func__, local_buf[i], fw->data[i],
+					   0x0ffc0000 + i);
 				break;
 			}
 		}
@@ -1237,8 +1214,9 @@ static int im501_dsp_load_fw(u8 firmware_type)
 			"%s: im501_dram1.bin firmware request failed.\n", __func__);
 		return err;
 	}
+
 	if (fw) {
-		pr_err("%s: firmware im501_dram1.bin size=%zu\n", __func__, fw->size);
+		dev_info(&im501_spi->dev, "%s: firmware im501_dram1.bin size = %zu\n", __func__, fw->size);
 		im501_spi_burst_write(0x0ffe0000, fw->data, fw->size, fw_type);
 
 #ifdef FW_RD_CHECK
@@ -1253,9 +1231,9 @@ static int im501_dsp_load_fw(u8 firmware_type)
 
 		for (i = 0; i < fw->size; i++) {
 			if (local_buf[i] != fw->data[i]) {
-				pr_err("%s: fw read %#x vs write %#x @ %#x\n",
-				       __func__, local_buf[i], fw->data[i],
-				       0x0ffe0000 + i);
+				dev_err(&im501_spi->dev, "%s: fw read %#x vs write %#x @ %#x\n",
+					   __func__, local_buf[i], fw->data[i],
+					   0x0ffe0000 + i);
 				break;
 			}
 		}
@@ -1269,11 +1247,11 @@ static int im501_dsp_load_fw(u8 firmware_type)
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
 	rtc_time_to_tm(txc.time.tv_sec, &rt);
-	pr_err("%s: end   time: %d-%d-%d %d:%d:%d \n", __func__,
-	       rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
-	       rt.tm_sec);
+	dev_info(&im501_spi->dev, "%s: end   time: %d-%d-%d %d:%d:%d \n", __func__,
+		   rt.tm_year + 1900, rt.tm_mon, rt.tm_mday, rt.tm_hour, rt.tm_min,
+		   rt.tm_sec);
 #endif
-	pr_err("%s: firmware is loaded\n", __func__);
+	dev_info(&im501_spi->dev, "%s: firmware is loaded\n", __func__);
 	return err;
 }
 
@@ -1284,9 +1262,9 @@ void im501_write_check_spi_reg(u8 reg, u8 val)
 	im501_spi_write_reg(reg, val);
 	im501_spi_read_reg(0x00, (u8 *) &ret_val);
 	if (ret_val != val)
-		pr_err
-		    ("%s: read back value(%x) of reg%02x is different from the written value(%x). \n",
-		     __func__, ret_val, reg, val);
+		dev_err(&im501_spi->dev,
+			"%s: read back value(%x) of reg%02x is different from the written value(%x). \n",
+			__func__, ret_val, reg, val);
 
 	return;
 }
@@ -1296,7 +1274,7 @@ void enable_pdm_clock(void)
 	int retry_count = 100;
 	while (retry_count > 0) {
 		if (tegra210_dmic_enable(0))
-			pr_err("DMIC not yet registered\n");
+			dev_info(&im501_spi->dev, "DMIC not yet registered\n");
 		else {
 			atomic_inc_return(&dmic_clk_cnt);
 			break;
@@ -1314,19 +1292,17 @@ void disable_pdm_clock(void)
 	}
 }
 
-static void im501_fw_loaded(const struct firmware *fw, void *context)
+static void im501_fw_load(struct work_struct *work)
 {
-	u8 *temp_data;
 	u32 addr, regval;
 
-	pr_err("%s: entering...\n", __func__);
-	release_firmware(fw);
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 
 #ifdef CODEC2IM501_PDM_CLKI
 	codec2im501_pdm_clki_set(NORMAL_MODE, 0);
 	mdelay(5);		//Apply PDM_CLKI, and then wait for 1024 clock cycles
 #endif
-	mdelay(500);		//make sure PDMCLKI is ready for external PDMCLKI
+	mdelay(100);		//make sure PDMCLKI is ready for external PDMCLKI
 
 	//reset DSP
 	im501_reset();
@@ -1342,18 +1318,9 @@ static void im501_fw_loaded(const struct firmware *fw, void *context)
 	im501_spi_read_dram(addr, (u8 *)&regval);
 	regval = regval & 0xFBFFFFFF;
 	im501_spi_write_dram(addr, (u8 *)&regval);
-	im501_spi_read_dram(addr, (u8 *)&regval);
-	pr_err("%s: update register 0x%x value 0x%x\n", __func__, addr, regval);
 
-	current_firmware_type = WAKEUP_FIRMWARE;
-	if (context != NULL) {
-		temp_data = context;
-		current_firmware_type = (u8) (*temp_data);
-	}
-	pr_err("%s: firmware_type = %d\n", __func__, current_firmware_type);
-
-	if (im501_dsp_load_fw(current_firmware_type) != 0) {
-		pr_err("im501 firmware load failed @@@@@@@@@@@@@@@@@\n");
+	if (im501_dsp_load_fw(firmware_type) != 0) {
+		dev_err(&im501_spi->dev, "im501 firmware load failed\n");
 		codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
 		return;
 	}
@@ -1403,10 +1370,10 @@ static void im501_irq_handling_work(struct work_struct *work)
 	u32 spi_speed = SPI_LOW_SPEED;
 	int ret;
 
-	//pr_err("%s: entering...\n", __func__);
+	//dev_err(&im501_spi->dev, "%s: entering...\n", __func__);
 	if (im501_dsp_mode_old == POWER_SAVING_MODE) {
-		pr_err("%s: iM501 is in PSM, set the spi speed to %d\n",
-		       __func__, spi_speed);
+		dev_info(&im501_spi->dev, "%s: iM501 is in PSM, set the spi speed to %d\n",
+			   __func__, spi_speed);
 		im501_spi->mode = SPI_MODE_0;	/* clk active low */
 		im501_spi->bits_per_word = 8;
 		im501_spi->max_speed_hz = spi_speed;
@@ -1422,24 +1389,24 @@ static void im501_irq_handling_work(struct work_struct *work)
 	pdata = (u8 *) &cmd;
 	err = im501_spi_read_dram(TO_HOST_CMD_ADDR, pdata);
 	if (err != ESUCCESS) {
-		pr_err("%s: error occurs when get data from DRAM, error=%d\n",
-		       __func__, err);
+		dev_err(&im501_spi->dev, "%s: im501_spi_read_dram error, error=%d\n",
+			   __func__, err);
 		return;
 	}
 
 	if ((im501_host_irqstatus == 1) || ((output_counter % 100) == 0)) {
-		pr_err("%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0],
-		       pdata[1], pdata[2], pdata[3]);
+		dev_info(&im501_spi->dev, "%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0],
+			   pdata[1], pdata[2], pdata[3]);
 	}
 	output_counter++;
 
 	cmd.status = pdata[3] >> 7;
 	cmd.cmd_byte = pdata[3] & 0x7F;
 	cmd.attri = pdata[0] | (pdata[1] * 256) | (pdata[2] * 256 * 256);
-	//pr_err("%s: cmd[%#x, %#x, %#x]\n", __func__, cmd.status, cmd.cmd_byte, cmd.attri);
+	//dev_err(&im501_spi->dev, "%s: cmd[%#x, %#x, %#x]\n", __func__, cmd.status, cmd.cmd_byte, cmd.attri);
 
 	if (cmd.status != 1) {
-		pr_err("%s: got wrong command from DSP.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: got wrong command from DSP.\n", __func__);
 	}
 
 	im501_spi_lock(&im501_data->spi_op_lock);
@@ -1447,9 +1414,9 @@ static void im501_irq_handling_work(struct work_struct *work)
 	im501_spi_unlock(&im501_data->spi_op_lock);
 
 	if (err != ESUCCESS) {
-		pr_err
-		    ("%s: error occurs when calling parse_to_host_command(), error=%d\n",
-		     __func__, err);
+		dev_err(&im501_spi->dev,
+			"%s: error calling parse_to_host_command(), error=%d\n",
+			__func__, err);
 	}
 
 	return;
@@ -1457,7 +1424,7 @@ static void im501_irq_handling_work(struct work_struct *work)
 
 static irqreturn_t im501_irq_handler(int irq, void *para)
 {
-	pr_err("%s: entering...\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: entering...\n", __func__);
 	queue_work(im501_irq_wq, &im501_irq_work);
 
 	return IRQ_HANDLED;
@@ -1467,11 +1434,11 @@ static irqreturn_t im501_irq_handler(int irq, void *para)
  * character device can be opened. */
 static int im501_record_open(struct inode *inode, struct file *file)
 {
-	pr_err("%s: entering...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 	if (!atomic_add_unless(&im501_data->audio_owner, 1, 1))
 		return -EBUSY;
-	pr_err("%s: im501_data->audio_owner.counter = %d\n", __func__,
-	       im501_data->audio_owner.counter);
+	dev_dbg(&im501_spi->dev, "%s: im501_data->audio_owner.counter = %d\n", __func__,
+		   im501_data->audio_owner.counter);
 
 	file->private_data = im501_data;
 
@@ -1480,10 +1447,10 @@ static int im501_record_open(struct inode *inode, struct file *file)
 
 static int im501_record_release(struct inode *inode, struct file *file)
 {
-	pr_err("%s: decrease audio_owner.\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: decrease audio_owner.\n", __func__);
 	atomic_dec(&im501_data->audio_owner);
-	pr_err("%s: im501_data->audio_owner.counter = %d\n", __func__,
-	       im501_data->audio_owner.counter);
+	dev_dbg(&im501_spi->dev, "%s: im501_data->audio_owner.counter = %d\n", __func__,
+		   im501_data->audio_owner.counter);
 
 	return 0;
 }
@@ -1494,7 +1461,7 @@ static ssize_t im501_record_write(struct file *file,
 				  const char __user *buf,
 				  size_t count_want, loff_t *f_pos)
 {
-	pr_err("%s: entering...\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: entering...\n", __func__);
 	return count_want;
 }
 
@@ -1510,9 +1477,9 @@ static ssize_t im501_record_read(struct file *file,
 	unsigned int copied, total_copied = 0;
 	unsigned long timeout = jiffies + msecs_to_jiffies(2000);
 
-	//pr_err("%s: entering... count_want = %d, *f_pos = %ld\n", __func__, count_want, *f_pos);
+	//dev_err(&im501_spi->dev, "%s: entering... count_want = %d, *f_pos = %ld\n", __func__, count_want, *f_pos);
 	avail = kfifo_len(im501_data_tmp->pcm_kfifo);
-	//pr_err("%s: avail = %d\n", __func__, avail);
+	//dev_err(&im501_spi->dev, "%s: avail = %d\n", __func__, avail);
 
 	while ((total_copied < count_want) && time_before(jiffies, timeout) && avail) {
 		int ret;
@@ -1524,7 +1491,7 @@ static ssize_t im501_record_read(struct file *file,
 			to_copy, &copied);
 		if (ret)
 			return -EIO;
-		pr_err("%s: %d bytes are copied:\n", __func__, copied);
+		dev_dbg(&im501_spi->dev, "%s: %d bytes are copied:\n", __func__, copied);
 
 		total_copied += copied;
 		avail = kfifo_len(im501_data_tmp->pcm_kfifo);
@@ -1553,10 +1520,7 @@ static int im501_create_cdev(struct spi_device *spi)
 	struct device *dev = &spi->dev;
 	int cdev_major, dev_no;
 
-	pr_err("%s: entering...\n", __func__);
 	atomic_set(&im501_data->audio_owner, 0);
-	pr_err("%s: im501_data->audio_owner.counter = %d\n", __func__,
-	       im501_data->audio_owner.counter);
 
 	ret = alloc_chrdev_region(&im501_data->record_chrdev, 0, 1,
 				IM501_CDEV_NAME);
@@ -1565,22 +1529,18 @@ static int im501_create_cdev(struct spi_device *spi)
 			__func__);
 		return ret;
 	}
-	pr_err("%s: alloc_chrdev_region ok...\n", __func__);
 
 	cdev_major = MAJOR(im501_data->record_chrdev);
-	pr_err("%s: char dev major = %d", __func__, cdev_major);
 
 	im501_data->cdev_class = class_create(THIS_MODULE, IM501_CDEV_NAME);
 	if (IS_ERR(im501_data->cdev_class)) {
 		dev_err(dev, "%s: failed to create class\n", __func__);
 		return err;
 	}
-	pr_err("%s: cdev_class create ok...\n", __func__);
 
 	dev_no = MKDEV(cdev_major, 1);
 
 	cdev_init(&im501_data->record_cdev, &record_fops);
-	pr_err("%s: cdev_init ok...\n", __func__);
 
 	im501_data->record_cdev.owner = THIS_MODULE;
 
@@ -1589,17 +1549,17 @@ static int im501_create_cdev(struct spi_device *spi)
 		dev_err(dev, "%s: failed to add character device\n", __func__);
 		return ret;
 	}
-	pr_err("%s: cdev_add ok...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: cdev_add ok...\n", __func__);
 
 	im501_data->record_dev = device_create(im501_data->cdev_class, NULL,
-					       dev_no, NULL, "%s%d",
-					       IM501_CDEV_NAME, 1);
+						   dev_no, NULL, "%s%d",
+						   IM501_CDEV_NAME, 1);
 	if (IS_ERR(im501_data->record_dev)) {
 		dev_err(&im501_spi->dev, "%s: could not create device\n",
 			__func__);
 		return err;
 	}
-	pr_err("%s: device_create ok...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: device_create ok...\n", __func__);
 
 	spin_lock_init(&im501_data->pcm_fifo_lock);
 	im501_data->pcm_kfifo = (struct kfifo *)kmalloc(sizeof(struct kfifo), GFP_KERNEL);
@@ -1607,20 +1567,18 @@ static int im501_create_cdev(struct spi_device *spi)
 		dev_err(&im501_spi->dev, "no fifo for pcm_kfifo\n");
 		return -ENOMEM;
 	}
-	pr_err("%s: pcm_kfifo alloc ok...\n", __func__);
 
 	ret = kfifo_alloc(im501_data->pcm_kfifo, MAX_KFIFO_BUFFER_SIZE, GFP_KERNEL);
 	if (ret) {
 		dev_err(&im501_spi->dev, "no kfifo memory\n");
 		return -1;
 	}
-	pr_err("%s: pcm_kfifo buffer alloc ok...\n", __func__);
 
 	return ret;
 }
 
 static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
-				     size_t length, loff_t *offset)
+					 size_t length, loff_t *offset)
 {
 	char str[5];
 	size_t ret = 0;
@@ -1634,14 +1592,12 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 
 	local_buffer = (char *)kzalloc(length * sizeof(char), GFP_KERNEL);
 	if (!local_buffer) {
-		pr_err("%s: local_buffer allocation failure.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: local_buffer allocation failure.\n", __func__);
 		goto out;
 	}
 	temp = copy_from_user(local_buffer, buffer, length);
 
-	request_enter_normal();
-
-	//pr_err("local_buffer = %d:, length = %d\n", local_buffer[0], length);
+	//dev_err(&im501_spi->dev, "local_buffer = %d:, length = %d\n", local_buffer[0], length);
 	switch (local_buffer[0]) {
 	case FM_SMVD_REG_READ:
 		get_reg_ret_data = (dev_cmd_reg_rw *) local_buffer;
@@ -1652,13 +1608,8 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 
 	case FM_SMVD_DSP_ADDR_READ:
 		get_addr_ret_data = (dev_cmd_long *) local_buffer;
-		if (get_addr_ret_data->addr % 4 == 0) {
-			im501_spi_read_dram(get_addr_ret_data->addr, (u8 *)&get_addr_ret_data->val);
-			get_addr_ret_data->val &= 0xFFFF;
-		} else if (get_addr_ret_data->addr % 2 == 0) {
-			im501_spi_read_dram(get_addr_ret_data->addr - 2, (u8 *)&get_addr_ret_data->val);
-			get_addr_ret_data->val = ((get_addr_ret_data->val & 0xFFFF0000) >> 16);
-		}
+		im501_spi_read_dram(get_addr_ret_data->addr,
+					(u8 *) &get_addr_ret_data->val);
 		ret = sizeof(dev_cmd_long);
 		break;
 
@@ -1673,7 +1624,7 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 		get_irq_status->val = im501_host_irqstatus;
 		if (im501_host_irqstatus == 1) {
 			im501_host_irqstatus = 0;
-			pr_err("%s: iM501 irq is coming..\n", __func__);
+			dev_info(&im501_spi->dev, "%s: iM501 irq is coming..\n", __func__);
 		}
 		ret = sizeof(dev_cmd_short);
 		break;
@@ -1681,7 +1632,7 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 	case FM_SMVD_GET_FW_TYPE:
 		get_firmware_type_ret_data = (dev_cmd_fw_type *) local_buffer;
 		get_firmware_type_ret_data->firmware_type =
-		    (char)current_firmware_type;
+			(char)current_firmware_type;
 		ret = sizeof(dev_cmd_fw_type);
 		break;
 
@@ -1690,10 +1641,8 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 		break;
 	}
 
-	request_enter_psm();
-
 	if (copy_to_user(buffer, local_buffer, ret))
-		return -EFAULT;
+		ret = -EFAULT;
 
  out:
 	if (local_buffer)
@@ -1702,8 +1651,8 @@ static ssize_t im501_spi_device_read(struct file *file, char __user *buffer,
 }
 
 static ssize_t im501_spi_device_write(struct file *file,
-				      const char __user *buffer, size_t length,
-				      loff_t *offset)
+					  const char __user *buffer, size_t length,
+					  loff_t *offset)
 {
 	dev_cmd_long *local_dev_cmd;
 	dev_cmd_fwdl *local_dev_cmd_fwdl;
@@ -1712,23 +1661,27 @@ static ssize_t im501_spi_device_write(struct file *file,
 	 */
 	dev_cmd_message *local_msg_cmd;
 
-	unsigned int cmd_name, cmd_addr, cmd_val, temp_cmd_val;
+	unsigned int cmd_name, cmd_addr, cmd_val;
 	int dsp_mode;
 	int new_firmware_type;
-	int temp = 0;
 	unsigned char err = ESUCCESS;
 
-	pr_err("%s: entering...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 	local_dev_cmd =
-	    (dev_cmd_long *) kzalloc(sizeof(dev_cmd_long), GFP_KERNEL);
+		(dev_cmd_long *) kzalloc(sizeof(dev_cmd_long), GFP_KERNEL);
 	if (!local_dev_cmd) {
-		pr_err("%s: local_dev_cmd allocation failure.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: local_dev_cmd allocation failure.\n", __func__);
 		goto out;
 	}
-	temp = copy_from_user(local_dev_cmd, buffer, length);
 
-	pr_err("local_dev_cmd->cmd_name = %d, length = %zu\n",
-	       local_dev_cmd->cmd_name, length);
+	err = copy_from_user(local_dev_cmd, buffer, min(sizeof(dev_cmd_long), length));
+	if (err) {
+		dev_err(&im501_spi->dev, "%s: copy_from_user error\n", __func__);
+		goto out;
+	}
+
+	dev_info(&im501_spi->dev, "local_dev_cmd->cmd_name = %d, length = %zu\n",
+		   local_dev_cmd->cmd_name, length);
 	cmd_name = local_dev_cmd->cmd_name;
 
 	switch (cmd_name) {
@@ -1742,20 +1695,12 @@ static ssize_t im501_spi_device_write(struct file *file,
 	case FM_SMVD_DSP_ADDR_WRITE:	//Command #3
 		cmd_addr = local_dev_cmd->addr;
 		cmd_val = local_dev_cmd->val;
-		if (cmd_addr % 4 == 0) {
-			im501_spi_read_dram(cmd_addr, (u8 *)&temp_cmd_val);
-			temp_cmd_val = ((temp_cmd_val & 0xFFFF0000) | (cmd_val & 0xFFFF));
-			im501_spi_write_dram(cmd_addr, (u8 *)&temp_cmd_val);
-		} else if (cmd_addr % 2 == 0) {
-			im501_spi_read_dram(cmd_addr - 2, (u8 *)&temp_cmd_val);
-			temp_cmd_val = ((temp_cmd_val & 0xFFFF) | ((cmd_val << 16) & 0xFFFF0000));
-			im501_spi_write_dram(cmd_addr - 2, (u8 *)&temp_cmd_val);
-		}
+		im501_spi_write_dram(cmd_addr, (u8 *) &cmd_val);
 		break;
 
 	case FM_SMVD_MODE_SET:	//Command #4
-		pr_err("%s: FM_SMVD_MODE_SET dsp_mode = %d\n", __func__,
-		       local_dev_cmd->addr);
+		dev_info(&im501_spi->dev, "%s: FM_SMVD_MODE_SET dsp_mode = %d\n", __func__,
+			   local_dev_cmd->addr);
 		dsp_mode = local_dev_cmd->addr;
 		// Temporarily set to PSM mode.
 		if (dsp_mode == 0)
@@ -1774,34 +1719,28 @@ static ssize_t im501_spi_device_write(struct file *file,
 	case FM_SMVD_DL_EFT_FW:
 		local_dev_cmd_fwdl = (dev_cmd_fwdl *) local_dev_cmd;
 		im501_dsp_load_single_fw_file(local_dev_cmd_fwdl->buf,
-					      local_dev_cmd_fwdl->dsp_addr,
-					      IM501_EFT_FW);
+						  local_dev_cmd_fwdl->dsp_addr,
+						  IM501_EFT_FW);
 		break;
 
 	case FM_SMVD_SWITCH_FW:
-		pr_err("%s: FM_SMVD_SWITCH_FW firmware_type = %d\n", __func__,
-		       local_dev_cmd->addr);
+		dev_info(&im501_spi->dev, "%s: FM_SMVD_SWITCH_FW firmware_type = %d\n", __func__,
+			   local_dev_cmd->addr);
 		new_firmware_type = local_dev_cmd->addr;
 
 		if ((new_firmware_type == 0) || (new_firmware_type == 1)) {
 			if (new_firmware_type == current_firmware_type) {
-				pr_err
-				    ("%s: requested firmware type is the same as current firmware type, not need to change it.\n",
-				     __func__);
+				dev_err(&im501_spi->dev,
+					"%s: requested firmware type is the same as current firmware type, not need to change it.\n",
+					__func__);
 			} else {
 				firmware_type = new_firmware_type;
-				request_firmware_nowait(THIS_MODULE,
-							FW_ACTION_HOTPLUG,
-							"im501_fw",
-							&im501_spi->dev,
-							GFP_KERNEL,
-							(void *)&firmware_type,
-							im501_fw_loaded);
+				schedule_work(&im501_fw_load_work);
 			}
 		} else {
-			pr_err
-			    ("%s: requested firmware type is not supported.\n",
-			     __func__);
+			dev_err(&im501_spi->dev,
+				"%s: requested firmware type is not supported.\n",
+				__func__);
 		}
 		break;
 
@@ -1815,7 +1754,6 @@ static ssize_t im501_spi_device_write(struct file *file,
 
 		//it will be set when im501 wakeup from PSM, set it here for SPI recording
 		im501_vbuf_trans_status = 1;
-
 		request_enter_normal();
 		im501_switch_to_spi_recording_mode();
 		request_start_voice_buf_trans();
@@ -1828,29 +1766,24 @@ static ssize_t im501_spi_device_write(struct file *file,
 
 		//not sure it is needed or not
 		im501_switch_to_normal_mode();
-		//
 
 		msleep(1000);
 		request_enter_psm();
 		closeDataFile();
 		output_counter = 0;
 		break;
-		//
 
 		//Fuli 20171022 to support general message interface
 	case FM_SMVD_SEND_MESSAGE:
 		local_msg_cmd = (dev_cmd_message *) local_dev_cmd;
-		pr_err
-		    ("%s: will send message 0x%02X to DSP with data 0x%08X.\n",
-		     __func__, local_msg_cmd->message_index,
-		     local_msg_cmd->message_data);
-		err =
-		    im501_send_message_to_dsp(((local_msg_cmd->
-						message_index & 0x3F) << 2) |
-					      0x01,
-					      local_msg_cmd->message_data);
+		dev_info(&im501_spi->dev,
+			"%s: will send message 0x%02X to DSP with data 0x%08X.\n",
+			__func__, local_msg_cmd->message_index,
+			 local_msg_cmd->message_data);
+		err = im501_send_message_to_dsp(
+				((local_msg_cmd->message_index & 0x3F) << 2) | 0x01,
+				local_msg_cmd->message_data);
 		break;
-		//
 
 	default:
 		break;
@@ -1907,20 +1840,16 @@ static int im501_spi_probe(struct spi_device *spi)
 	u32 spi_speed;
 
 	im501_spi = spi;
-	pr_err
-	    ("%s: max_speed = %d, chip_select = %d, mode = %d, modalias = %s\n",
-	     __func__, spi->max_speed_hz, spi->chip_select, spi->mode,
-	     spi->modalias);
 
 	im501_data =
-	    (struct im501_data_t *)kzalloc(sizeof(struct im501_data_t),
+		(struct im501_data_t *)kzalloc(sizeof(struct im501_data_t),
 					   GFP_KERNEL);
-	if (im501_data == NULL)
+	if (im501_data == NULL) {
+		dev_err(&im501_spi->dev, "%s: im501_data allocate fail\n", __func__);
 		return -ENOMEM;
-	pr_err("%s: im501_data allocated successfully\n", __func__);
+	}
 
 	mutex_init(&im501_data->spi_op_lock);
-	pr_err("%s: im501_data mutex lock init successfully\n", __func__);
 
 #ifdef CODEC2IM501_PDM_CLKI
 	codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
@@ -1930,7 +1859,7 @@ static int im501_spi_probe(struct spi_device *spi)
 #ifdef CUBIETRUCK
 	type = script_get_item("spi_board0", "max_speed_hz", &val);
 	if (SCIRPT_ITEM_VALUE_TYPE_INT != type) {
-		pr_err("%s: request max_speed_hz error!\n", __func__);
+		dev_err(&im501_spi->dev, "%s: request max_speed_hz error!\n", __func__);
 		spi_speed = SPI_HIGH_SPEED;
 	} else {
 		spi_speed = val.val;
@@ -1950,101 +1879,100 @@ static int im501_spi_probe(struct spi_device *spi)
 		dev_err(&spi->dev, "spi_setup() failed\n");
 		return -EIO;
 	}
-	pr_err("%s: setup spi, spi_speed=%d \n", __func__, spi_speed);
+	dev_info(&im501_spi->dev, "%s: setup spi, spi_speed=%d \n", __func__, spi_speed);
 
 	firmware_type = WAKEUP_FIRMWARE;
-	request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+	/*request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
 				"im501_fw", &spi->dev, GFP_KERNEL,
 				(void *)&firmware_type, im501_fw_loaded);
-
+*/
 	im501_create_cdev(spi);
 
-	pr_err("%s: misc_register.\n", __func__);
 	ret = misc_register(&im501_spi_dev);
 	if (ret)
 		dev_err(&spi->dev, "Couldn't register control device\n");
 
 	im501_vbuf_trans_status = 0;
 
-	im501_idx = (int *)kzalloc(sizeof(int *), GFP_KERNEL);
-	*im501_idx = 1;
-
 	INIT_WORK(&im501_irq_work, im501_irq_handling_work);
+	INIT_WORK(&im501_fw_load_work, im501_fw_load);
 	im501_irq_wq = create_singlethread_workqueue("im501_irq_wq");
 
 #ifdef CUBIETRUCK
 	irq_gpio = GPIOH(16);
 	im501_irq =
-	    sw_gpio_irq_request(irq_gpio, TRIG_EDGE_POSITIVE,
+		sw_gpio_irq_request(irq_gpio, TRIG_EDGE_POSITIVE,
 				(peint_handle) im501_irq_handler,
-				(int *)im501_idx);
-	pr_err("%s: im501_irq = %d\n", __func__, im501_irq);
+				NULL);
+	dev_err(&im501_spi->dev, "%s: im501_irq = %d\n", __func__, im501_irq);
 	if (im501_irq == 0) {
-		pr_err("%s: IM501 sw_gpio_irq_request failed\n", __func__);
+		dev_err(&im501_spi->dev, "%s: IM501 sw_gpio_irq_request failed\n", __func__);
 		return 0;
 	}
 
 	ret = sw_gpio_eint_get_trigtype(irq_gpio, &trigtype);
 	if (ret != 0) {
-		pr_err("%s: sw_gpio_eint_get_trigtype() failed.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: sw_gpio_eint_get_trigtype() failed.\n", __func__);
 	} else {
 		if (trigtype == TRIG_EDGE_POSITIVE) {
-			pr_err("%s: trigger type is TRIG_EDGE_POSITIVE.\n",
-			       __func__);
+			dev_err(&im501_spi->dev, "%s: trigger type is TRIG_EDGE_POSITIVE.\n",
+				   __func__);
 		} else {
-			pr_err("%s: trigger type is %d\n", __func__, trigtype);
+			dev_err(&im501_spi->dev, "%s: trigger type is %d\n", __func__, trigtype);
 		}
 	}
 	ret = sw_gpio_eint_get_enable(irq_gpio, &trigenabled);
 	if (ret != 0) {
-		pr_err("%s: sw_gpio_eint_get_enable() failed.\n", __func__);
+		dev_err(&im501_spi->dev, "%s: sw_gpio_eint_get_enable() failed.\n", __func__);
 	} else {
-		pr_err("%s: trigger enabled is %d\n", __func__, trigenabled);
+		dev_err(&im501_spi->dev, "%s: trigger enabled is %d\n", __func__, trigenabled);
 	}
 #else
 	im501_data->irq_gpio = of_get_gpio(np, 0);
 	if (gpio_request(im501_data->irq_gpio, "im501_irq")) {
-		pr_err("irq_gpio %d request failed!\n", im501_data->irq_gpio);
+		dev_err(&im501_spi->dev, "irq_gpio %d request failed!\n", im501_data->irq_gpio);
 		return 0;
 	}
 
 	if (gpio_direction_input(im501_data->irq_gpio)) {
-		pr_err("irq_gpio gpio_direction_input failed!\n");
+		dev_err(&im501_spi->dev, "irq_gpio gpio_direction_input failed!\n");
 		return 0;
 	}
 
 	im501_irq = gpio_to_irq(im501_data->irq_gpio);
 	irq_set_irq_type(im501_irq, IRQ_TYPE_EDGE_RISING);
 	ret = request_irq(im501_irq, im501_irq_handler, IRQF_TRIGGER_RISING,
-			 "im501_spi", im501_idx);
+			 "im501_spi", NULL);
 	if (ret) {
-		pr_err("%s: irq %d request fail!\n", __func__, im501_irq);
+		dev_err(&im501_spi->dev, "%s: irq %d request fail!\n", __func__, im501_irq);
 		return ret;
 	}
 #endif
 
 	im501_data->reset_gpio = of_get_named_gpio(np, "reset-gpios", 0);
 	if (gpio_request(im501_data->reset_gpio, "im501_reset")) {
-		pr_err("reset_gpio %d request failed!\n", im501_data->reset_gpio);
+		dev_err(&im501_spi->dev, "reset_gpio %d request failed!\n", im501_data->reset_gpio);
 		return 0;
 	}
 
 	if (gpio_direction_output(im501_data->reset_gpio, 1)) {
-		pr_err("reset_gpio gpio_direction_output failed!\n");
+		dev_err(&im501_spi->dev, "reset_gpio gpio_direction_output failed!\n");
 		return 0;
 	}
+
+	schedule_work(&im501_fw_load_work);
+
+	dev_info(&im501_spi->dev, "%s: success\n", __func__);
 
 	return 0;
 }
 
 static int im501_spi_remove(struct spi_device *spi)
 {
-	pr_err("%s: entering...\n", __func__);
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 
 #ifdef CUBIETRUCK
 	sw_gpio_irq_free(im501_irq);
-#else
-	free_irq(im501_irq, im501_idx);
 #endif
 
 	flush_workqueue(im501_irq_wq);
@@ -2078,10 +2006,10 @@ static int __init im501_spi_init(void)
 
 	status = spi_register_driver(&im501_spi_driver);
 	if (status < 0) {
-		pr_err("%s: im501_spi_driver failure. status = %d\n", __func__,
-		       status);
+		dev_err(&im501_spi->dev, "%s: im501_spi_driver failure. status = %d\n", __func__,
+			   status);
 	}
-	pr_err("%s: im501_spi_driver success. status = %d\n", __func__, status);
+	dev_info(&im501_spi->dev, "%s: im501_spi_driver success. status = %d\n", __func__, status);
 	return status;
 }
 
@@ -2095,5 +2023,5 @@ static void __exit im501_spi_exit(void)
 module_exit(im501_spi_exit);
 
 MODULE_DESCRIPTION("IM501 SPI driver");
-MODULE_AUTHOR("sample code <henryhzhang@fortemedia.com>;<fuli@fortemedia.com>");
+MODULE_AUTHOR("<henryhzhang@fortemedia.com>, <fuli@fortemedia.com>");
 MODULE_LICENSE("GPL v2");

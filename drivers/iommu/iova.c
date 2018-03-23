@@ -415,7 +415,7 @@ EXPORT_SYMBOL_GPL(free_iova);
 */
 unsigned long
 alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
-		unsigned long limit_pfn)
+		unsigned long limit_pfn, bool size_align)
 {
 	bool flushed_rcache = false;
 	unsigned long iova_pfn;
@@ -426,7 +426,7 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
 		return iova_pfn;
 
 retry:
-	new_iova = alloc_iova(iovad, size, limit_pfn, true);
+	new_iova = alloc_iova(iovad, size, limit_pfn, size_align);
 	if (!new_iova) {
 		unsigned int cpu;
 

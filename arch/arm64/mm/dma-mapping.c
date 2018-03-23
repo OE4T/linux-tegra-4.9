@@ -83,24 +83,36 @@ inline struct iova_domain *cookie_iovad(struct iommu_domain *domain)
 	return &((struct iommu_dma_cookie *)domain->iova_cookie)->iovad;
 }
 
-struct iova *__alloc_iova(struct iommu_domain *domain, size_t size,
+dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain, size_t size,
 		dma_addr_t dma_limit, bool size_aligned);
 
+void iommu_dma_free_iova(struct iova_domain *iovad,
+		dma_addr_t iova, size_t size);
+
+static dma_addr_t arm__alloc_iova(struct device *dev, size_t size)
+{
+	struct dma_iommu_mapping *mapping = dev->archdata.mapping;
+	struct iommu_domain *domain = mapping->domain;
+	struct iova_domain *iovad = cookie_iovad(domain);
+	dma_addr_t addr;
+
+	addr = iommu_dma_alloc_iova(domain, PAGE_ALIGN(size), dma_get_mask(dev),
+					true);
+	if (!addr)
+		return DMA_ERROR_CODE;
+	return addr;
+}
+
 static void arm__free_iova(struct device *dev,
-			       dma_addr_t addr)
+			       dma_addr_t addr, size_t size)
 {
 	struct dma_iommu_mapping *mapping = dev->archdata.mapping;
 	struct iommu_domain *domain = mapping->domain;
 	struct iova_domain *iovad = cookie_iovad(domain);
 
-	unsigned long shift = iova_shift(iovad);
-	unsigned long pfn = addr >> shift;
-
-	struct iova *iova_s = find_iova(iovad, pfn);
-
-	__free_iova(iovad, iova_s);
-
+	iommu_dma_free_iova(iovad, addr, size);
 }
+
 
 dma_addr_t arm__alloc_iova_at(struct device *dev, dma_addr_t dma_handle,
 				size_t size)
@@ -109,7 +121,6 @@ dma_addr_t arm__alloc_iova_at(struct device *dev, dma_addr_t dma_handle,
 	struct iommu_domain *domain;
 	struct iova_domain *iovad;
 	size_t len = PAGE_ALIGN(size);
-	struct iova *iova_s;
 	dma_addr_t limit_addr;
 
 	domain = iommu_get_domain_for_dev(dev);
@@ -129,21 +140,21 @@ dma_addr_t arm__alloc_iova_at(struct device *dev, dma_addr_t dma_handle,
 	limit_addr = dma_handle + iova_align(iovad, size) -
 				iovad->granule;
 
-	iova_s = __alloc_iova(domain, len, limit_addr, false);
+	dma_addr = iommu_dma_alloc_iova(domain, len, limit_addr, false);
 
-	if (!iova_s)
+	if (!dma_addr)
 		return DMA_ERROR_CODE;
 
-	dma_addr = iova_dma_addr(iovad, iova_s);
 	if (dma_addr != dma_handle) {
 		pr_err("iova alloc don't match, dh=%pad, da=%pad\n",
 			&dma_handle, &dma_addr);
-		__free_iova(iovad, iova_s);
+		iommu_dma_free_iova(iovad, dma_addr, len);
 		return DMA_ERROR_CODE;
 	}
 
-	return iova_dma_addr(iovad, iova_s);
+	return dma_addr;
 }
+
 struct dma_map_ops arm_dma_ops;
 
 enum dma_operation {
@@ -2572,7 +2583,7 @@ static dma_addr_t arm_iommu_map_at(struct device *dev, dma_addr_t dma_addr,
 	} else if (ret == DMA_ERROR_CODE) {
 		return ret;
 	} else if (iova != dma_addr) {
-		arm__free_iova(dev, ret);
+		arm__free_iova(dev, ret, size);
 		return DMA_ERROR_CODE;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -98,6 +98,11 @@ enum system_function_id {
 	GUEST_SUSPEND_COMPLETE,
 	GUEST_RESUME_INIT,
 	GUEST_RESUME_COMPLETE,
+	GUEST_PAUSE,
+	SYSTEM_SUSPEND_INIT,
+	SYSTEM_SUSPEND_COMPLETE,
+	SYSTEM_RESUME_INIT,
+	SYSTEM_RESUME_COMPLETE,
 	MAX_FUNC_ID,
 };
 
@@ -132,5 +137,7 @@ typedef enum  {
 		CREATE_CMD(GUEST_SUSPEND_COMPLETE,vmid)
 #define GUEST_RESUME_INIT_CMD(vmid)       CREATE_CMD(GUEST_RESUME_INIT,vmid)
 #define GUEST_RESUME_COMPLETE_CMD(vmid)   CREATE_CMD(GUEST_RESUME_COMPLETE,vmid)
-
+#define GUEST_PAUSE_CMD(vmid)		CREATE_CMD(GUEST_PAUSE, vmid)
+#define SYS_SUSPEND_INIT_CMD		CREATE_CMD(SYSTEM_SUSPEND_INIT, 0)
+#define SYS_SUSPEND_COMPLETE_CMD	CREATE_CMD(SYSTEM_SUSPEND_COMPLETE, 0)
 #endif /* _TEGRA_HV_SYSMGR_H */

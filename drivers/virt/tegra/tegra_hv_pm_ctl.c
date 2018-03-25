@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,6 +52,21 @@ int (*tegra_hv_pm_ctl_prepare_shutdown)(void);
 
 /* Guest ID for state */
 static u32 guest_id;
+
+int tegra_hv_pm_ctl_trigger_sys_suspend(void)
+{
+	int ret;
+
+	ret = hyp_guest_reset(SYS_SUSPEND_INIT_CMD, NULL);
+	if (ret < 0) {
+		pr_err("%s: Failed to trigger system suspend, %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 
 int tegra_hv_pm_ctl_trigger_sys_shutdown(void)
 {
@@ -307,6 +322,35 @@ static ssize_t ivc_peer_vmid_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", data->ivck->peer_vmid);
 }
 
+static ssize_t trigger_sys_suspend_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct tegra_hv_pm_ctl *data = dev_get_drvdata(dev);
+	unsigned int val;
+	int ret;
+
+	ret = kstrtouint(buf, 0, &val);
+	if (ret) {
+		dev_err(data->dev, "%s: Failed to convert string to uint\n",
+			__func__);
+		return ret;
+	}
+
+	if (val != 1) {
+		dev_err(data->dev, "%s: Unsupported value, %u\n",
+			__func__, val);
+		return -EINVAL;
+	}
+
+	ret = tegra_hv_pm_ctl_trigger_sys_suspend();
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
+
 static ssize_t trigger_sys_shutdown_store(struct device *dev,
 					  struct device_attribute *attr,
 					  const char *buf, size_t count)
@@ -452,6 +496,7 @@ static DEVICE_ATTR_RO(ivc_id);
 static DEVICE_ATTR_RO(ivc_frame_size);
 static DEVICE_ATTR_RO(ivc_nframes);
 static DEVICE_ATTR_RO(ivc_peer_vmid);
+static DEVICE_ATTR_WO(trigger_sys_suspend);
 static DEVICE_ATTR_WO(trigger_sys_shutdown);
 static DEVICE_ATTR_WO(trigger_sys_reboot);
 static DEVICE_ATTR_WO(trigger_guest_suspend);
@@ -463,6 +508,7 @@ static struct attribute *tegra_hv_pm_ctl_attributes[] = {
 	&dev_attr_ivc_frame_size.attr,
 	&dev_attr_ivc_nframes.attr,
 	&dev_attr_ivc_peer_vmid.attr,
+	&dev_attr_trigger_sys_suspend.attr,
 	&dev_attr_trigger_sys_shutdown.attr,
 	&dev_attr_trigger_sys_reboot.attr,
 	&dev_attr_trigger_guest_suspend.attr,

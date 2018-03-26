@@ -515,18 +515,42 @@ static ssize_t sys_store_bypassmode(struct device *dev,
 		return -EIO;
 }
 
+static ssize_t sys_show_calibration(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+			0x03, 0x02, 0x3F, 0x4E};
+	bool bRet = true;
+	unsigned int status = 0;
+
+	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
+	if (bRet) {
+		status = p_egalax_i2c_dev->sysfs_cmd_result[4];
+		status += p_egalax_i2c_dev->sysfs_cmd_result[5]<<8;
+		if (status & 0x00000100)
+			return sprintf(buf, "0xff\n");
+		else
+			return sprintf(buf, "0x00\n");
+	} else {
+		return sprintf(buf, "0xff\n");
+	}
+}
+
 static DEVICE_ATTR(version, 0640, sys_show_version, NULL);
 static DEVICE_ATTR(touch_event, 0640, sys_show_touchevent, NULL);
 static DEVICE_ATTR(report_mode, 0640, sys_show_reportmode,
 		   sys_store_reportmode);
 static DEVICE_ATTR(bypass_mode, 0640, sys_show_bypassmode,
 		   sys_store_bypassmode);
+static DEVICE_ATTR(calibration, 0440, sys_show_calibration, NULL);
 
 static struct attribute *egalax_attributes[] = {
 	&dev_attr_version.attr,
 	&dev_attr_touch_event.attr,
 	&dev_attr_report_mode.attr,
 	&dev_attr_bypass_mode.attr,
+	&dev_attr_calibration.attr,
 	NULL,
 };
 
@@ -835,7 +859,7 @@ static int egalax_power_off(void)
 {
 	int error;
 
-	if(p_egalax_i2c_dev->enable_high)
+	if (p_egalax_i2c_dev->enable_high)
 		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 1);
 	else
 		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 0);
@@ -880,7 +904,7 @@ static int egalax_power_on(void)
 		EGALAX_DBG(DBG_MODULE, " regulator enable failed: %d\n",
 			error);
 	usleep_range(1000, 5000);
-	if(p_egalax_i2c_dev->enable_high)
+	if (p_egalax_i2c_dev->enable_high)
 		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 0);
 	else
 		gpio_direction_output(p_egalax_i2c_dev->reset_gpio, 1);

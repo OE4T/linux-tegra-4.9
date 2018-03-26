@@ -58,7 +58,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 cmd;
 	s32 retry = 100;
 	u32 gpc;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 gpc_priv_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_PRIV_STRIDE);
 
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
@@ -80,10 +80,10 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		if (status1 & BIT(gpc)) {
 			gk20a_dbg(gpu_dbg_intr, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
-				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_adr_r() + gpc * gpc_stride),
-				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + gpc * gpc_stride),
-				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_info_r() + gpc * gpc_stride),
-				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_code_r() + gpc * gpc_stride));
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_adr_r() + gpc * gpc_priv_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + gpc * gpc_priv_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_info_r() + gpc * gpc_priv_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_code_r() + gpc * gpc_priv_stride));
 		}
 	}
 	/* clear interrupt */

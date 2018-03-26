@@ -198,6 +198,9 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_DMA_COPY_CLASS:
 		ret = PASCAL_DMA_COPY_A;
 		break;
+	case GPU_LIT_GPC_PRIV_STRIDE:
+		ret = proj_gpc_priv_stride_v();
+		break;
 	default:
 		BUG();
 		break;

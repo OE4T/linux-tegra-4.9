@@ -2,7 +2,7 @@
  * xHCI host controller driver
  *
  * Copyright (C) 2008 Intel Corp.
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Sarah Sharp
  * Some code borrowed from the Linux EHCI driver.
@@ -2342,6 +2342,16 @@ static int handle_tx_event(struct xhci_hcd *xhci,
 	/* Endpoint ID is 1 based, our index is zero based */
 	ep_index = TRB_TO_EP_ID(le32_to_cpu(event->flags)) - 1;
 	ep = &xdev->eps[ep_index];
+
+	/* Stopped on endpoint with invalid CStream. Stream ring will be
+	 * cleaned up in command completion for stop endpoint command.
+	 */
+	trb_comp_code = GET_COMP_CODE(le32_to_cpu(event->transfer_len));
+	if ((ep->ep_state & EP_HAS_STREAMS) && (event->buffer == 0) &&
+		(trb_comp_code == COMP_STOP_INVAL)) {
+		inc_deq(xhci, xhci->event_ring);
+		return 0;
+	}
 	ep_ring = xhci_dma_to_transfer_ring(ep, le64_to_cpu(event->buffer));
 	ep_ctx = xhci_get_ep_ctx(xhci, xdev->out_ctx, ep_index);
 	if (!ep_ring ||
@@ -2369,7 +2379,6 @@ static int handle_tx_event(struct xhci_hcd *xhci,
 	}
 
 	event_dma = le64_to_cpu(event->buffer);
-	trb_comp_code = GET_COMP_CODE(le32_to_cpu(event->transfer_len));
 	/* Look for common error cases */
 	switch (trb_comp_code) {
 	/* Skip codes that require special handling depending on

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -67,6 +67,10 @@ static inline u32 proj_gpc_shared_base_v(void)
 static inline u32 proj_gpc_stride_v(void)
 {
 	return 0x00008000U;
+}
+static inline u32 proj_gpc_priv_stride_v(void)
+{
+	return 0x00000800U;
 }
 static inline u32 proj_ltc_stride_v(void)
 {

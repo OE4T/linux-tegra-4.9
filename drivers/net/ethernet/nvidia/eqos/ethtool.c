@@ -547,22 +547,11 @@ static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	pr_debug("-->eqos_get_wol\n");
-
 	wol->supported = 0;
-	spin_lock_irq(&pdata->lock);
-	if (device_can_wakeup(&pdata->pdev->dev)) {
-		if (pdata->hw_feat.mgk_sel)
-			wol->supported |= WAKE_MAGIC;
-		if (pdata->hw_feat.rwk_sel)
-			wol->supported |= WAKE_UCAST;
-		wol->wolopts = pdata->wolopts;
-	}
-	spin_unlock_irq(&pdata->lock);
+	wol->wolopts = 0;
 
-	pr_debug("<--eqos_get_wol\n");
-
-	return;
+	if (pdata->phydev)
+		phy_ethtool_get_wol(pdata->phydev, wol);
 }
 
 /*!
@@ -580,43 +569,11 @@ static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 static int eqos_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	u32 support = WAKE_MAGIC | WAKE_UCAST;
-	int ret = 0;
 
-	pr_debug("-->eqos_set_wol\n");
+	if (!pdata->phydev)
+		return -ENOTSUPP;
 
-	/* By default almost all GMAC devices support the WoL via
-	 * magic frame but we can disable it if the HW capability
-	 * register shows no support for pmt_magic_frame
-	 */
-	if (!pdata->hw_feat.mgk_sel)
-		wol->wolopts &= ~WAKE_MAGIC;
-	if (!pdata->hw_feat.rwk_sel)
-		wol->wolopts &= ~WAKE_UCAST;
-
-	if (!device_can_wakeup(&pdata->pdev->dev))
-		return -EINVAL;
-
-	if (wol->wolopts & ~support)
-		return -EINVAL;
-
-	if (wol->wolopts) {
-		DBGPR_ETHTOOL("Wakeup enable\n");
-		device_set_wakeup_enable(&pdata->pdev->dev, 1);
-		enable_irq_wake(pdata->irq_number);
-	} else {
-		DBGPR_ETHTOOL("Wakeup disable\n");
-		device_set_wakeup_enable(&pdata->pdev->dev, 0);
-		disable_irq_wake(pdata->irq_number);
-	}
-
-	spin_lock_irq(&pdata->lock);
-	pdata->wolopts = wol->wolopts;
-	spin_unlock_irq(&pdata->lock);
-
-	pr_debug("<--eqos_set_wol\n");
-
-	return ret;
+	return phy_ethtool_set_wol(pdata->phydev, wol);
 }
 
 u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)

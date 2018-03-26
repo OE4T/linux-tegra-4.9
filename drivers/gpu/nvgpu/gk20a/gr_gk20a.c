@@ -2467,7 +2467,8 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 		};
 
 	gk20a_dbg_fn("");
-	if (!g->gr.ctx_vars.golden_image_size) {
+	/* query ctxsw image sizes, if golden context is not created */
+	if (!g->gr.ctx_vars.golden_image_initialized) {
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_image_size_v();
 		op.mailbox.ret = &g->gr.ctx_vars.golden_image_size;

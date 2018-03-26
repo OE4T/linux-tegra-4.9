@@ -57,7 +57,7 @@
 #define MII_M1011_IEVENT_CLEAR		0x0000
 
 #define MII_M1011_IMASK			0x12
-#define MII_M1011_IMASK_INIT		0x6400
+#define MII_M1011_IMASK_INIT		0x6480
 #define MII_M1011_IMASK_CLEAR		0x0000
 
 #define MII_M1011_PHY_SCR		0x10
@@ -1842,6 +1842,8 @@ static struct phy_driver marvell_drivers[] = {
 		.ack_interrupt = &marvell_ack_interrupt,
 		.config_intr = &marvell_config_intr,
 		.did_interrupt = &m88e1121_did_interrupt,
+		.get_wol = &m88e1318_get_wol,
+		.set_wol = &m88e1318_set_wol,
 		.resume = &marvell_resume,
 		.suspend = &marvell_suspend,
 		.get_sset_count = marvell_get_sset_count,

@@ -26,7 +26,7 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
 	nvidia,fastboot-usb-vid = <0x0955>;
-	nvidia,fastboot-usb-pid = <0x70fb>;
+	nvidia,fastboot-usb-pid = <0xee1e>;
 
 	compatible = "nvidia,galen", "nvidia,tegra194";
 

@@ -72,7 +72,7 @@
 
 		gos_reserved: grid-of-semaphores {
 			compatible = "nvidia,gosmem";
-			size = <0 0x600000>;
+			size = <0 0x6000>;
 			alignment = <0 0x1000>;
 			no-map;
 			status = "disabled";

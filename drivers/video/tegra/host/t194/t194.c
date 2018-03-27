@@ -658,7 +658,6 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.can_powergate		= true,
 	.transcfg_addr		= 0x0444,
 	.transcfg_val		= 0x20,
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
@@ -691,7 +690,6 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.can_powergate		= true,
 	.transcfg_addr		= 0x0444,
 	.transcfg_val		= 0x20,
-	.isolate_contexts	= true,
 };
 #endif
 

@@ -33,7 +33,7 @@
 	nvidia,boardids = "3489:0000:A0";
 	nvidia,proc-boardid = "3489:0000:A0";
 	nvidia,fastboot-usb-vid = <0x0955>;
-	nvidia,fastboot-usb-pid = <0x70fb>;
+	nvidia,fastboot-usb-pid = <0xee16>;
 
 	chosen {
 		board-has-eeprom;

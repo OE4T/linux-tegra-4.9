@@ -461,14 +461,33 @@ fail_to_pin_mem:
 	return err;
 }
 
+static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
+			u32 *gos_id, u32 *gos_offset)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int err = 0;
+
+	if (!nvdla_dev->is_gos_enabled) {
+		nvdla_dbg_err(pdev, "GoS is not enabled\n");
+		return -EINVAL;
+	}
+
+	err = nvhost_syncpt_get_gos(pdev, syncpt_id, gos_id, gos_offset);
+	if (err) {
+		nvdla_dbg_err(pdev,
+		  "Get GoS failed for syncpt[%d], err[%d]\n", syncpt_id, err);
+	}
+
+	return err;
+}
+
 static int nvdla_fill_postactions(struct nvdla_task *task)
 {
 	struct dla_task_descriptor *task_desc = task->task_desc;
 	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct dla_action_list *postactionl;
 	uint16_t postactionlist_of;
 	u8 *next, *start;
@@ -529,8 +548,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 			u32 gos_id, gos_offset;
 
 			/* update GoS backing if available  */
-			if (nvdla_dev->is_gos_enabled &&
-			    !nvhost_syncpt_get_gos(pdev, queue->syncpt_id,
+			if (!nvdla_get_gos(pdev, queue->syncpt_id,
 					&gos_id, &gos_offset)) {
 				u32 max;
 
@@ -646,8 +664,6 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvhost_master *host = nvhost_get_host(pdev);
 	struct nvhost_syncpt *sp = &host->syncpt;
 	struct dla_action_list *preactionl;
@@ -694,8 +710,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 				}
 
 				/* check if GoS backing available */
-				if (nvdla_dev->is_gos_enabled &&
-				    !nvhost_syncpt_get_gos(pdev, id, &gos_id,
+				if (!nvdla_get_gos(pdev, id, &gos_id,
 						&gos_offset)) {
 					nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
 						i, id, gos_id,
@@ -726,8 +741,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 					task->prefences[i].syncpoint_index,
 					task->prefences[i].syncpoint_value);
 
-			if (nvdla_dev->is_gos_enabled &&
-			    !nvhost_syncpt_get_gos(pdev,
+			if (!nvdla_get_gos(pdev,
 				task->prefences[i].syncpoint_index, &gos_id,
 						&gos_offset)) {
 				nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] gos_id[%u] gos_offset[%u] val[%u]",

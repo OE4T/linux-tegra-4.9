@@ -82,7 +82,6 @@
 #include "gv11b/pmu_gv11b.h"
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/regops_gv11b.h"
-#include "gv11b/gv11b_gating_reglist.h"
 #include "gv11b/subctx_gv11b.h"
 
 #include "gv100.h"
@@ -98,6 +97,7 @@
 #include "gv100/pmu_gv100.h"
 #include "gv100/nvlink_gv100.h"
 #include "gv100/regops_gv100.h"
+#include "gv100/gv100_gating_reglist.h"
 
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>
@@ -455,6 +455,56 @@ static const struct gpu_ops gv100_ops = {
 		.mem_unlock = gv100_fb_memory_unlock,
 		.init_nvlink = gv100_fb_init_nvlink,
 		.enable_nvlink = gv100_fb_enable_nvlink,
+	},
+	.clock_gating = {
+		.slcg_bus_load_gating_prod =
+			gv100_slcg_bus_load_gating_prod,
+		.slcg_ce2_load_gating_prod =
+			gv100_slcg_ce2_load_gating_prod,
+		.slcg_chiplet_load_gating_prod =
+			gv100_slcg_chiplet_load_gating_prod,
+		.slcg_ctxsw_firmware_load_gating_prod =
+			gv100_slcg_ctxsw_firmware_load_gating_prod,
+		.slcg_fb_load_gating_prod =
+			gv100_slcg_fb_load_gating_prod,
+		.slcg_fifo_load_gating_prod =
+			gv100_slcg_fifo_load_gating_prod,
+		.slcg_gr_load_gating_prod =
+			gr_gv100_slcg_gr_load_gating_prod,
+		.slcg_ltc_load_gating_prod =
+			ltc_gv100_slcg_ltc_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gv100_slcg_perf_load_gating_prod,
+		.slcg_priring_load_gating_prod =
+			gv100_slcg_priring_load_gating_prod,
+		.slcg_pmu_load_gating_prod =
+			gv100_slcg_pmu_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gv100_slcg_therm_load_gating_prod,
+		.slcg_xbar_load_gating_prod =
+			gv100_slcg_xbar_load_gating_prod,
+		.blcg_bus_load_gating_prod =
+			gv100_blcg_bus_load_gating_prod,
+		.blcg_ce_load_gating_prod =
+			gv100_blcg_ce_load_gating_prod,
+		.blcg_ctxsw_firmware_load_gating_prod =
+			gv100_blcg_ctxsw_firmware_load_gating_prod,
+		.blcg_fb_load_gating_prod =
+			gv100_blcg_fb_load_gating_prod,
+		.blcg_fifo_load_gating_prod =
+			gv100_blcg_fifo_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gv100_blcg_gr_load_gating_prod,
+		.blcg_ltc_load_gating_prod =
+			gv100_blcg_ltc_load_gating_prod,
+		.blcg_pwr_csb_load_gating_prod =
+			gv100_blcg_pwr_csb_load_gating_prod,
+		.blcg_pmu_load_gating_prod =
+			gv100_blcg_pmu_load_gating_prod,
+		.blcg_xbar_load_gating_prod =
+			gv100_blcg_xbar_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gv100_pg_gr_load_gating_prod,
 	},
 	.fifo = {
 		.get_preempt_timeout = gv100_fifo_get_preempt_timeout,

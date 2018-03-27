@@ -410,7 +410,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	 * incr the underlying sema next_value.
 	 */
 	if (!acquire)
-		nvgpu_semaphore_incr(s, c->hw_sema);
+		nvgpu_semaphore_prepare(s, c->hw_sema);
 
 	/* semaphore_a */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);

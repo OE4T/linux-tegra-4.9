@@ -276,37 +276,18 @@ static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
 }
 
 /*
- * If @force is set then this will not wait for the underlying semaphore to
- * catch up to the passed semaphore threshold.
+ * Fast-forward the hw sema to the threshold represented by sema_thresh.
  */
-static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
-					     bool force,
+static inline void nvgpu_semaphore_reset(struct nvgpu_semaphore *sema_thresh,
 					     struct nvgpu_semaphore_int *hw_sema)
 {
 	u32 current_val;
-	u32 threshold = nvgpu_semaphore_get_value(s);
-	int attempts = 0;
+	u32 threshold = nvgpu_semaphore_get_value(sema_thresh);
+
+	current_val = nvgpu_semaphore_read(sema_thresh);
 
 	/*
-	 * Wait until the sema value is 1 less than the write value. That
-	 * way this function is essentially an increment.
-	 *
-	 * TODO: tune the wait a little better.
-	 */
-	while (!__nvgpu_semaphore_value_released(threshold - 1,
-			current_val = nvgpu_semaphore_read(s))) {
-		if (force)
-			break;
-		nvgpu_msleep(100);
-		attempts += 1;
-		if (attempts > 100) {
-			WARN(1, "Stall on sema release!");
-			return;
-		}
-	}
-
-	/*
-	 * If the semaphore has already passed the value we would write then
+	 * If the semaphore has already reached the value we would write then
 	 * this is really just a NO-OP.
 	 */
 	if (__nvgpu_semaphore_value_released(threshold, current_val))
@@ -315,36 +296,28 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->location.pool->rw_mem,
 			hw_sema->location.offset, threshold);
 
-	gpu_sema_verbose_dbg(hw_sema->location.pool->sema_sea->gk20a,
-			     "(c=%d) WRITE %u", hw_sema->ch->chid, threshold);
-}
-
-static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s,
-					   struct nvgpu_semaphore_int *hw_sema)
-{
-	__nvgpu_semaphore_release(s, false, hw_sema);
+	gpu_sema_verbose_dbg(hw_sema->ch->g, "(c=%d) RESET %u -> %u",
+			hw_sema->ch->chid, current_val, threshold);
 }
 
 /*
- * Configure a software based increment on this semaphore. This is useful for
- * when we want the GPU to wait on a SW event before processing a channel.
- * Another way to describe this is when the GPU needs to wait on a SW pre-fence.
- * The pre-fence signals SW which in turn calls nvgpu_semaphore_release() which
- * then allows the GPU to continue.
- *
- * Also used to prep a semaphore for an INCR by the GPU.
+ * Update nvgpu-tracked shadow of the value in "hw_sema" and mark the threshold
+ * value to "s" which represents the increment that the caller must write in a
+ * pushbuf. The same nvgpu_semaphore will also represent an output fence; when
+ * nvgpu_semaphore_is_released(s) == true, the gpu is done with this increment.
  */
-static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s,
+static inline void nvgpu_semaphore_prepare(struct nvgpu_semaphore *s,
 		struct nvgpu_semaphore_int *hw_sema)
 {
-	BUG_ON(s->incremented);
+	int next = nvgpu_atomic_add_return(1, &hw_sema->next_value);
 
-	nvgpu_atomic_set(&s->value, nvgpu_atomic_add_return(1, &hw_sema->next_value));
+	/* "s" should be an uninitialized sema. */
+	WARN_ON(s->incremented);
+
+	nvgpu_atomic_set(&s->value, next);
 	s->incremented = 1;
 
-	gpu_sema_verbose_dbg(s->g,
-			     "INCR sema for c=%d (%u)",
-			     hw_sema->ch->chid,
-			     nvgpu_atomic_read(&hw_sema->next_value));
+	gpu_sema_verbose_dbg(s->g, "INCR sema for c=%d (%u)",
+			     hw_sema->ch->chid, next);
 }
 #endif

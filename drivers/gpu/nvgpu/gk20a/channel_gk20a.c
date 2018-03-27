@@ -216,8 +216,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		while (tmp_get != put) {
 			job = &ch->joblist.pre_alloc.jobs[tmp_get];
 			if (job->post_fence->semaphore) {
-				__nvgpu_semaphore_release(
-					job->post_fence->semaphore, true,
+				nvgpu_semaphore_reset(
+					job->post_fence->semaphore,
 					ch->hw_sema);
 				released_job_semaphore = true;
 			}
@@ -228,8 +228,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 				&ch->joblist.dynamic.jobs,
 				channel_gk20a_job, list) {
 			if (job->post_fence->semaphore) {
-				__nvgpu_semaphore_release(
-					job->post_fence->semaphore, true,
+				nvgpu_semaphore_reset(
+					job->post_fence->semaphore,
 					ch->hw_sema);
 				released_job_semaphore = true;
 			}

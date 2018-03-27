@@ -649,8 +649,6 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	if ((mem->flags & DMA_MEMORY_NOMAP) &&
 	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
 		align = 0;
-	} else if (attrs & DMA_ATTR_ALLOC_EXACT_SIZE) {
-		align = 0;
 	} else  {
 		if (order > DMA_BUF_ALIGNMENT)
 			align = (1 << DMA_BUF_ALIGNMENT) - 1;

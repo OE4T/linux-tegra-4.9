@@ -2970,8 +2970,10 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	u8 link_rate = 0, lane_count = 0;
 	unsigned int key; /* Index into the link speed table */
 	int capability = 1;
-
 	struct tegra_vrr *vrr;
+
+	if (!tegra_dc_hpd((struct tegra_dc *)dc))
+		return false;
 
 	if (!mode->pixclock)
 		return false;

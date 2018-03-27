@@ -31,6 +31,7 @@ bool nvgpu_platform_is_simulation(struct gk20a *g);
 bool nvgpu_platform_is_fpga(struct gk20a *g);
 bool nvgpu_is_hypervisor_mode(struct gk20a *g);
 bool nvgpu_is_bpmp_running(struct gk20a *g);
+bool nvgpu_is_soc_t194_a01(struct gk20a *g);
 int nvgpu_init_soc_vars(struct gk20a *g);
 
 #endif

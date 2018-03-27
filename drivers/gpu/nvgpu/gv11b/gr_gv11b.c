@@ -31,6 +31,7 @@
 #include <nvgpu/fuse.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -2860,7 +2861,6 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 	u32 data;
 	int err;
 	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
-	u32 rev = g->params.gpu_rev;
 
 	nvgpu_log_fn(g, " ");
 
@@ -2869,9 +2869,9 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
 
-	if (ver == NVGPU_GPUID_GV11B && rev == 0xa1) {
-
-		/* Disable CBM alpha and beta invalidations for l2 for gv11b A01 */
+	if (ver == NVGPU_GPUID_GV11B && nvgpu_is_soc_t194_a01(g))
+	{
+		/* Disable CBM alpha and beta invalidations for l2 for t194 A01 */
 		data = gk20a_readl(g, gr_gpcs_ppcs_cbm_debug_r());
 		data = set_field(data,
 			gr_gpcs_ppcs_cbm_debug_invalidate_alpha_m(),
@@ -2881,14 +2881,14 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			gr_gpcs_ppcs_cbm_debug_invalidate_beta_disable_f());
 		gk20a_writel(g, gr_gpcs_ppcs_cbm_debug_r(), data);
 
-		/* Disable SCC pagepool invalidates  for gv11b A01 */
+		/* Disable SCC pagepool invalidates  for t194 A01 */
 		data = gk20a_readl(g, gr_scc_debug_r());
 		data = set_field(data,
 			gr_scc_debug_pagepool_invalidates_m(),
 			gr_scc_debug_pagepool_invalidates_disable_f());
 		gk20a_writel(g, gr_scc_debug_r(), data);
 
-		/* Disable SWDX spill buffer invalidates for gv11b A01 */
+		/* Disable SWDX spill buffer invalidates */
 		data = gk20a_readl(g, gr_gpcs_swdx_spill_unit_r());
 		data = set_field(data,
 			gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_m(),

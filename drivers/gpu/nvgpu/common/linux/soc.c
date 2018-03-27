@@ -12,6 +12,7 @@
  */
 
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_bpmp.h>
 #ifdef CONFIG_TEGRA_HV_MANAGER
 #include <soc/tegra/virt/syscalls.h>
@@ -44,6 +45,13 @@ bool nvgpu_is_hypervisor_mode(struct gk20a *g)
 bool nvgpu_is_bpmp_running(struct gk20a *g)
 {
 	return tegra_bpmp_running();
+}
+
+bool nvgpu_is_soc_t194_a01(struct gk20a *g)
+{
+	return ((tegra_get_chip_id() == TEGRA194 &&
+			tegra_chip_get_revision() == TEGRA194_REVISION_A01) ?
+		true : false);
 }
 
 #ifdef CONFIG_TEGRA_HV_MANAGER

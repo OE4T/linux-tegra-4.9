@@ -211,6 +211,7 @@ struct nvdla_device {
 	u32 trace_enable;
 	u32 events_mask;
 	bool is_gos_enabled;
+	bool is_gos_fetched;
 	dma_addr_t debug_dump_pa;
 	u32 *debug_dump_va;
 	dma_addr_t trace_dump_pa;

@@ -468,9 +468,21 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	int err = 0;
 
+	if (!nvdla_dev->is_gos_fetched) {
+		nvdla_dbg_info(pdev, "fetch GoS regions and send to ucode\n");
+		err = nvhost_module_busy(pdev);
+		if (err) {
+			nvdla_dbg_info(pdev, "failed to poweron[%d]\n",
+					nvdla_dev->is_gos_fetched);
+			goto fail_to_poweron;
+		}
+		nvhost_module_idle(pdev);
+	}
+
 	if (!nvdla_dev->is_gos_enabled) {
 		nvdla_dbg_err(pdev, "GoS is not enabled\n");
-		return -EINVAL;
+		err = -EINVAL;
+		goto gos_disabled;
 	}
 
 	err = nvhost_syncpt_get_gos(pdev, syncpt_id, gos_id, gos_offset);
@@ -479,6 +491,8 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 		  "Get GoS failed for syncpt[%d], err[%d]\n", syncpt_id, err);
 	}
 
+gos_disabled:
+fail_to_poweron:
 	return err;
 }
 

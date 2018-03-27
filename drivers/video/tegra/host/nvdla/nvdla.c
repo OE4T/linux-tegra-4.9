@@ -501,6 +501,8 @@ static int nvdla_send_gos_region(struct platform_device *pdev)
 	struct nvdla_cmd_data cmd_data;
 	struct dla_region_gos *gos_region = NULL;
 	struct nvdla_cmd_mem_info gos_cmd_mem_info;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -515,14 +517,17 @@ static int nvdla_send_gos_region(struct platform_device *pdev)
 				&dla_grid);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to get grid[%d]", err);
+		nvdla_dev->is_gos_fetched = false;
 		goto fail_to_get_grid;
 	}
 
 	if (num_grids > MAX_NUM_GRIDS) {
 		nvdla_dbg_err(pdev, "num_grid[%d] > than [%d]", num_grids,
 				MAX_NUM_GRIDS);
+		nvdla_dev->is_gos_fetched = false;
 		goto fail_to_get_grid;
 	}
+	nvdla_dev->is_gos_fetched = true;
 
 	/* assign memory for GoS set command */
 	err = nvdla_get_cmd_memory(pdev, &gos_cmd_mem_info);

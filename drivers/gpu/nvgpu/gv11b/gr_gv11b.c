@@ -2835,6 +2835,8 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 {
 	u32 data;
 	int err;
+	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
+	u32 rev = g->params.gpu_rev;
 
 	gk20a_dbg_fn("");
 
@@ -2843,37 +2845,43 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 			gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_arm_63_48_match_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_texio_control_r(), data);
 
-	/* Disable CBM alpha and beta invalidations for l2 */
-	data = gk20a_readl(g, gr_gpcs_ppcs_cbm_debug_r());
-	data = set_field(data, gr_gpcs_ppcs_cbm_debug_invalidate_alpha_m(),
+	if (ver == NVGPU_GPUID_GV11B && rev == 0xa1) {
+
+		/* Disable CBM alpha and beta invalidations for l2 for gv11b A01 */
+		data = gk20a_readl(g, gr_gpcs_ppcs_cbm_debug_r());
+		data = set_field(data,
+			gr_gpcs_ppcs_cbm_debug_invalidate_alpha_m(),
 			gr_gpcs_ppcs_cbm_debug_invalidate_alpha_disable_f());
-	data = set_field(data, gr_gpcs_ppcs_cbm_debug_invalidate_beta_m(),
+		data = set_field(data,
+			gr_gpcs_ppcs_cbm_debug_invalidate_beta_m(),
 			gr_gpcs_ppcs_cbm_debug_invalidate_beta_disable_f());
-	gk20a_writel(g, gr_gpcs_ppcs_cbm_debug_r(), data);
+		gk20a_writel(g, gr_gpcs_ppcs_cbm_debug_r(), data);
+
+		/* Disable SCC pagepool invalidates  for gv11b A01 */
+		data = gk20a_readl(g, gr_scc_debug_r());
+		data = set_field(data,
+			gr_scc_debug_pagepool_invalidates_m(),
+			gr_scc_debug_pagepool_invalidates_disable_f());
+		gk20a_writel(g, gr_scc_debug_r(), data);
+
+		/* Disable SWDX spill buffer invalidates for gv11b A01 */
+		data = gk20a_readl(g, gr_gpcs_swdx_spill_unit_r());
+		data = set_field(data,
+			gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_m(),
+			gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_disabled_f());
+		gk20a_writel(g, gr_gpcs_swdx_spill_unit_r(), data);
+	}
 
 	data = gk20a_readl(g, gr_gpcs_tpcs_sm_disp_ctrl_r());
 	data = set_field(data, gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_m(),
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
-	/* Disable SCC pagepool invalidates */
-	data = gk20a_readl(g, gr_scc_debug_r());
-	data = set_field(data, gr_scc_debug_pagepool_invalidates_m(),
-			 gr_scc_debug_pagepool_invalidates_disable_f());
-	gk20a_writel(g, gr_scc_debug_r(), data);
-
 	if (g->gr.fecs_feature_override_ecc_val != 0) {
 		gk20a_writel(g,
 			gr_fecs_feature_override_ecc_r(),
 			g->gr.fecs_feature_override_ecc_val);
 	}
-
-	/* Disable SWDX spill buffer invalidates */
-	data = gk20a_readl(g, gr_gpcs_swdx_spill_unit_r());
-	data = set_field(
-		data, gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_m(),
-		gr_gpcs_swdx_spill_unit_spill_buffer_cache_mgmt_mode_disabled_f());
-	gk20a_writel(g, gr_gpcs_swdx_spill_unit_r(), data);
 
 	err = gr_gk20a_init_fs_state(g);
 	if (err)

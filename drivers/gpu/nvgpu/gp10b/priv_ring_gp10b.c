@@ -67,9 +67,8 @@ static const char *const error_type_badf5xyy[] = {
 void gp10b_priv_ring_decode_error_code(struct gk20a *g,
 			u32 error_code)
 {
-	u32 error_type, error_type_index;
+	u32 error_type_index;
 
-	error_type = (error_code & 0x0000f000) >> 24;
 	error_type_index = (error_code & 0x00000f00) >> 16;
 	error_code = error_code & 0xBADFf000;
 

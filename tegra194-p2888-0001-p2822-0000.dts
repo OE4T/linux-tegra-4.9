@@ -92,6 +92,12 @@
 					#extcon-cells = <1>;
 				};
 			};
+			typec-pd {
+				typec_pd: pd {
+					status = "okay";
+					#extcon-cells = <1>;
+				};
+			};
 		};
 	};
 

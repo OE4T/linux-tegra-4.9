@@ -939,7 +939,8 @@ void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 			gr_gpcs_tpcs_tpccs_tpc_exception_en_mpc_enabled_f());
 
 	tpc_mask =
-		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
+		gr_gpcs_gpccs_gpc_exception_en_tpc_f(
+			(1 << gr->max_tpc_per_gpc_count) - 1);
 
 	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(),
 		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1) |
@@ -1743,7 +1744,7 @@ static int gr_gv11b_dump_gr_sm_regs(struct gk20a *g,
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		gpc_offset = gk20a_gr_gpc_offset(g, gpc);
 
-		for (tpc = 0; tpc < g->gr.tpc_count; tpc++) {
+		for (tpc = 0; tpc < g->gr.gpc_tpc_count[gpc]; tpc++) {
 			tpc_offset = gk20a_gr_tpc_offset(g, tpc);
 
 			for (sm = 0; sm < sm_per_tpc; sm++) {
@@ -4155,7 +4156,7 @@ static int gr_gv11b_ecc_scrub_is_done(struct gk20a *g,
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		gpc_offset = gk20a_gr_gpc_offset(g, gpc);
 
-		for (tpc = 0; tpc < g->gr.tpc_count; tpc++) {
+		for (tpc = 0; tpc < g->gr.gpc_tpc_count[gpc]; tpc++) {
 			tpc_offset = gk20a_gr_tpc_offset(g, tpc);
 
 			do {

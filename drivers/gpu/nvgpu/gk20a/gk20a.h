@@ -1113,6 +1113,7 @@ struct gpu_ops {
 	} falcon;
 	struct {
 		void (*isr)(struct gk20a *g);
+		void (*decode_error_code)(struct gk20a *g, u32 error_code);
 	} priv_ring;
 	struct {
 		int (*check_priv_security)(struct gk20a *g);

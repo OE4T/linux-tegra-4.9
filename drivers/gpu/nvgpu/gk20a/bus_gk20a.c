@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -65,7 +65,7 @@ void gk20a_bus_init_hw(struct gk20a *g)
 
 void gk20a_bus_isr(struct gk20a *g)
 {
-	u32 val, save0, save1, err_code;
+	u32 val, save0, save1, fecs_errcode = 0;
 
 	val = gk20a_readl(g, bus_intr_0_r());
 
@@ -78,29 +78,37 @@ void gk20a_bus_isr(struct gk20a *g)
 
 		save0 = gk20a_readl(g, timer_pri_timeout_save_0_r());
 		if (timer_pri_timeout_save_0_fecs_tgt_v(save0)) {
-
-			err_code = gk20a_readl(g,
+			/*
+			 * write & addr fields in timeout_save0
+			 * might not be reliable
+			 */
+			fecs_errcode = gk20a_readl(g,
 					timer_pri_timeout_fecs_errcode_r());
-			/* write and addr fields are not reliable */
-			nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x "
-					"FECS_ERRCODE 0x%08x", val, err_code);
-
-			if ((err_code & 0xffffff00) == 0xbadf1300)
-				nvgpu_err(g, "NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: "
-					"0x%08x",
-					gk20a_readl(g, gr_gpc0_fs_gpc_r()));
-		} else {
-			save1 = gk20a_readl(g, timer_pri_timeout_save_1_r());
-			nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x ADR 0x%08x "
-				"R/W %s  DATA 0x%08x",
-				val,
-				timer_pri_timeout_save_0_addr_v(save0) << 2,
-				timer_pri_timeout_save_0_write_v(save0) ?
-				"WRITE" : "READ", save1);
 		}
+
+		save1 = gk20a_readl(g, timer_pri_timeout_save_1_r());
+		nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x ADR 0x%08x "
+			"%s  DATA 0x%08x ",
+			val,
+			timer_pri_timeout_save_0_addr_v(save0) << 2,
+			timer_pri_timeout_save_0_write_v(save0) ?
+			"WRITE" : "READ", save1);
 
 		gk20a_writel(g, timer_pri_timeout_save_0_r(), 0);
 		gk20a_writel(g, timer_pri_timeout_save_1_r(), 0);
+
+		if (fecs_errcode) {
+			nvgpu_err(g, "FECS_ERRCODE 0x%08x", fecs_errcode);
+			if (g->ops.priv_ring.decode_error_code)
+				g->ops.priv_ring.decode_error_code(g,
+							fecs_errcode);
+
+			if ((fecs_errcode & 0xffffff00) == 0xbadf1300)
+				nvgpu_err(g, "NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: "
+					"0x%08x",
+					gk20a_readl(g, gr_gpc0_fs_gpc_r()));
+		}
+
 	} else {
 		nvgpu_err(g, "Unhandled NV_PBUS_INTR_0: 0x%08x", val);
 	}

@@ -711,6 +711,7 @@ static const struct gpu_ops gv11b_ops = {
 	},
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
+		.decode_error_code = gp10b_priv_ring_decode_error_code,
 	},
 	.fuse = {
 		.check_priv_security = gp10b_fuse_check_priv_security,

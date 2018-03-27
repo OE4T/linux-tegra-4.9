@@ -734,6 +734,7 @@ static const struct gpu_ops gv100_ops = {
 	},
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
+		.decode_error_code = gp10b_priv_ring_decode_error_code,
 	},
 	.nvlink = {
 		.discover_ioctrl = gv100_nvlink_discover_ioctrl,

@@ -64,7 +64,7 @@ static const char *const error_type_badf5xyy[] = {
 	"pri route error"
 };
 
-static void gp10b_priv_ring_decode_error_code(struct gk20a *g,
+void gp10b_priv_ring_decode_error_code(struct gk20a *g,
 			u32 error_code)
 {
 	u32 error_type, error_type_index;
@@ -141,7 +141,8 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 			pri_ringstation_sys_priv_error_info_subid_v(error_info),
 			pri_ringstation_sys_priv_error_info_priv_level_v(error_info),
 			error_code);
-		gp10b_priv_ring_decode_error_code(g, error_code);
+		if (g->ops.priv_ring.decode_error_code)
+			g->ops.priv_ring.decode_error_code(g, error_code);
 	}
 
 	if (status1) {
@@ -166,7 +167,9 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 					pri_ringstation_gpc_gpc0_priv_error_info_priv_level_v(error_info),
 					error_code);
 
-				gp10b_priv_ring_decode_error_code(g, error_code);
+				if (g->ops.priv_ring.decode_error_code)
+					g->ops.priv_ring.decode_error_code(g,
+								error_code);
 
 				status1 = status1 & (~(BIT(gpc)));
 				if (!status1)

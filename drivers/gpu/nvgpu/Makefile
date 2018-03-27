@@ -62,6 +62,7 @@ nvgpu-y += \
 	common/linux/sim_pci.o \
 	common/linux/os_sched.o \
 	common/linux/nvlink.o \
+	common/linux/dt.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \

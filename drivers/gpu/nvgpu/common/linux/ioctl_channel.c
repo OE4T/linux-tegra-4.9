@@ -589,16 +589,30 @@ static u32 nvgpu_gpfifo_user_flags_to_common_flags(u32 user_flags)
 	return flags;
 }
 
-static int nvgpu_channel_ioctl_alloc_gpfifo(struct channel_gk20a *c,
-		unsigned int num_entries,
-		unsigned int num_inflight_jobs,
-		u32 user_flags)
+static void nvgpu_get_gpfifo_ex_args(
+		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args,
+		struct nvgpu_gpfifo_args *gpfifo_args)
 {
-	return gk20a_channel_alloc_gpfifo(c, num_entries,
-			num_inflight_jobs,
-			nvgpu_gpfifo_user_flags_to_common_flags(user_flags));
+	gpfifo_args->num_entries = alloc_gpfifo_ex_args->num_entries;
+	gpfifo_args->num_inflight_jobs = alloc_gpfifo_ex_args->num_inflight_jobs;
+	gpfifo_args->flags = nvgpu_gpfifo_user_flags_to_common_flags(
+							alloc_gpfifo_ex_args->flags);
 }
 
+static void nvgpu_get_gpfifo_args(
+		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args,
+		struct nvgpu_gpfifo_args *gpfifo_args)
+{
+	/*
+	 * Kernel can insert one extra gpfifo entry before user
+	 * submitted gpfifos and another one after, for internal usage.
+	 * Triple the requested size.
+	 */
+	gpfifo_args->num_entries = alloc_gpfifo_args->num_entries * 3;
+	gpfifo_args->num_inflight_jobs = 0;
+	gpfifo_args->flags = nvgpu_gpfifo_user_flags_to_common_flags(
+							alloc_gpfifo_args->flags);
+}
 
 static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					ulong id, u32 offset,
@@ -1075,6 +1089,9 @@ long gk20a_channel_ioctl(struct file *filp,
 	{
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =
 			(struct nvgpu_alloc_gpfifo_ex_args *)buf;
+		struct nvgpu_gpfifo_args gpfifo_args;
+
+		nvgpu_get_gpfifo_ex_args(alloc_gpfifo_ex_args, &gpfifo_args);
 
 		err = gk20a_busy(ch->g);
 		if (err) {
@@ -1089,10 +1106,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			gk20a_idle(ch->g);
 			break;
 		}
-		err = nvgpu_channel_ioctl_alloc_gpfifo(ch,
-				alloc_gpfifo_ex_args->num_entries,
-				alloc_gpfifo_ex_args->num_inflight_jobs,
-				alloc_gpfifo_ex_args->flags);
+		err = gk20a_channel_alloc_gpfifo(ch, &gpfifo_args);
 		gk20a_idle(ch->g);
 		break;
 	}
@@ -1100,6 +1114,9 @@ long gk20a_channel_ioctl(struct file *filp,
 	{
 		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args =
 			(struct nvgpu_alloc_gpfifo_args *)buf;
+		struct nvgpu_gpfifo_args gpfifo_args;
+
+		nvgpu_get_gpfifo_args(alloc_gpfifo_args, &gpfifo_args);
 
 		err = gk20a_busy(ch->g);
 		if (err) {
@@ -1109,15 +1126,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 
-		/*
-		 * Kernel can insert one extra gpfifo entry before user
-		 * submitted gpfifos and another one after, for internal usage.
-		 * Triple the requested size.
-		 */
-		err = nvgpu_channel_ioctl_alloc_gpfifo(ch,
-				alloc_gpfifo_args->num_entries * 3,
-				0,
-				alloc_gpfifo_args->flags);
+		err = gk20a_channel_alloc_gpfifo(ch, &gpfifo_args);
 		gk20a_idle(ch->g);
 		break;
 	}

@@ -46,6 +46,12 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
 
+struct nvgpu_gpfifo_args {
+	u32 num_entries;
+	u32 num_inflight_jobs;
+	u32 flags;
+};
+
 struct notification {
 	struct {
 		u32 nanoseconds[2];
@@ -324,9 +330,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		bool is_privileged_channel);
 
 int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
-		unsigned int num_entries,
-		unsigned int num_inflight_jobs,
-		u32 flags);
+		struct nvgpu_gpfifo_args *gpfifo_args);
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 

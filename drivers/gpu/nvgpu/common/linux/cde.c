@@ -1277,6 +1277,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	struct channel_gk20a *ch;
 	struct tsg_gk20a *tsg;
 	struct gr_gk20a *gr = &g->gr;
+	struct nvgpu_gpfifo_args gpfifo_args;
 	int err = 0;
 	u64 vaddr;
 
@@ -1316,8 +1317,11 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 		goto err_alloc_gpfifo;
 	}
 
+	gpfifo_args.num_entries = 1024;
+	gpfifo_args.num_inflight_jobs = 0;
+	gpfifo_args.flags = 0;
 	/* allocate gpfifo (1024 should be more than enough) */
-	err = gk20a_channel_alloc_gpfifo(ch, 1024, 0, 0);
+	err = gk20a_channel_alloc_gpfifo(ch, &gpfifo_args);
 	if (err) {
 		nvgpu_warn(g, "cde: unable to allocate gpfifo");
 		goto err_alloc_gpfifo;

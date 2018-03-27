@@ -1034,9 +1034,7 @@ static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c)
 }
 
 int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
-		unsigned int num_entries,
-		unsigned int num_inflight_jobs,
-		u32 flags)
+		struct nvgpu_gpfifo_args *gpfifo_args)
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm;
@@ -1044,13 +1042,13 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	int err = 0;
 	unsigned long acquire_timeout;
 
-	gpfifo_size = num_entries;
+	gpfifo_size = gpfifo_args->num_entries;
 	gpfifo_entry_size = nvgpu_get_gpfifo_entry_size();
 
-	if (flags & NVGPU_GPFIFO_FLAGS_SUPPORT_VPR)
+	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_SUPPORT_VPR)
 		c->vpr = true;
 
-	if (flags & NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC) {
+	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC) {
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		/*
 		 * Railgating isn't deterministic; instead of disallowing
@@ -1137,15 +1135,15 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
 					c->gpfifo.entry_num,
-					acquire_timeout, flags);
+					acquire_timeout, gpfifo_args->flags);
 	if (err)
 		goto clean_up_sync;
 
 	/* TBD: setup engine contexts */
 
-	if (num_inflight_jobs) {
+	if (gpfifo_args->num_inflight_jobs) {
 		err = channel_gk20a_prealloc_resources(c,
-				num_inflight_jobs);
+				gpfifo_args->num_inflight_jobs);
 		if (err)
 			goto clean_up_sync;
 	}
@@ -1166,7 +1164,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 clean_up_priv_cmd:
 	channel_gk20a_free_priv_cmdbuf(c);
 clean_up_prealloc:
-	if (num_inflight_jobs)
+	if (gpfifo_args->num_inflight_jobs)
 		channel_gk20a_free_prealloc_resources(c);
 clean_up_sync:
 	if (c->sync) {

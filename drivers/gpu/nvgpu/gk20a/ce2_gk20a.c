@@ -406,6 +406,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 {
 	struct gk20a_gpu_ctx *ce_ctx;
 	struct gk20a_ce_app *ce_app = &g->ce_app;
+	struct nvgpu_gpfifo_args gpfifo_args;
 	u32 ctx_id = ~0;
 	int err = 0;
 
@@ -458,8 +459,11 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 		goto end;
 	}
 
+	gpfifo_args.num_entries = 1024;
+	gpfifo_args.num_inflight_jobs = 0;
+	gpfifo_args.flags = 0;
 	/* allocate gpfifo (1024 should be more than enough) */
-	err = gk20a_channel_alloc_gpfifo(ce_ctx->ch, 1024, 0, 0);
+	err = gk20a_channel_alloc_gpfifo(ce_ctx->ch, &gpfifo_args);
 	if (err) {
 		nvgpu_err(g, "ce: unable to allocate gpfifo");
 		goto end;

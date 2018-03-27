@@ -889,7 +889,6 @@ free_out:
 	dev_err(&dp->dc->ndev->dev, "could not create %s debugfs\n",
 		debug_dirname);
 	tegra_dc_dp_debugfs_remove(dp);
-	return;
 }
 
 static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
@@ -1880,9 +1879,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	 * If the new output type is fakeDP and an SOR instance
 	 * from a previous output type exists, re-use it.
 	 */
-	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
-		 ((struct tegra_dc_dp_data *)dc->out_data)->sor &&
-		 !tegra_dc_is_nvdisplay()) {
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP &&
+		!tegra_dc_is_nvdisplay() && dc->out_data &&
+		((struct tegra_dc_dp_data *)dc->out_data)->sor) {
 		dp->sor = ((struct tegra_dc_dp_data *)dc->out_data)->sor;
 	} else {
 		dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
@@ -2574,11 +2573,11 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
 
 		/*
-		* enhanced framing enable field shares DPCD offset
-		* with lane count set field. Make sure lane count is set
-		* before enhanced framing enable. CTS waits on first
-		* write to this offset to check for lane count set.
-		*/
+		 * enhanced framing enable field shares DPCD offset
+		 * with lane count set field. Make sure lane count is set
+		 * before enhanced framing enable. CTS waits on first
+		 * write to this offset to check for lane count set.
+		 */
 		tegra_dp_set_lane_count(dp, cfg->lane_count);
 
 		tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
@@ -2656,8 +2655,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		switch_set_state(&dp->audio_switch, 1);
 	}
 #endif
-
-	return;
 }
 
 void tegra_dc_dp_enable_link(struct tegra_dc_dp_data *dp)
@@ -2939,7 +2936,6 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 
 	if (is_hotplug_supported(dp))
 		wait_for_completion(&dc->hpd_complete);
-
 }
 
 static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
@@ -2980,8 +2976,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	if (dc->out->vrr) {
 		vrr = dc->out->vrr;
 
-/* FIXME Bug: 1740464
- * */
+		/* FIXME Bug: 1740464 */
 		if (tegra_dc_is_vrr_authentication_enabled())
 			capability = vrr->capability;
 

@@ -14,6 +14,16 @@
 
 / {
 	plugin-manager {
+		fragment-pcie-c1-rp {
+			ids = ">=2822-0000-200";
+			override@0 {
+				target = <&{/pcie@14100000}>;
+				_overlay_ {
+					nvidia,max-speed = <2>;
+				};
+			};
+		};
+
 		fragment-pcie-c5-rp {
 			odm-data = "disable-pcie-c5-endpoint";
 			override@0 {

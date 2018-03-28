@@ -914,6 +914,7 @@ static struct dentry *debugfs_node_emc_min;
 static struct dentry *debugfs_node_emc_max;
 static struct dentry *debugfs_node_core_emc_rate;
 static struct dentry *debugfs_node_clients_info;
+static struct dentry *debugfs_node_dram_channels;
 
 static int bwmgr_debugfs_emc_rate_set(void *data, u64 val)
 {
@@ -937,6 +938,15 @@ static int bwmgr_debugfs_core_emc_rate_get(void *data, u64 *val)
 
 DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_core_emc_rate,
 	bwmgr_debugfs_core_emc_rate_get, NULL, "%llu\n");
+
+static int bwmgr_debugfs_dram_channels_get(void *data, u64 *val)
+{
+	*val = bwmgr_dram_num_channels;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_dram_channels,
+	bwmgr_debugfs_dram_channels_get, NULL, "%llu\n");
 
 static int bwmgr_debugfs_floor_set(void *data, u64 val)
 {
@@ -1125,6 +1135,9 @@ static void bwmgr_debugfs_init(void)
 		debugfs_node_clients_info = debugfs_create_file
 			("bwmgr_clients_info", S_IRUGO, debugfs_dir, NULL,
 			 &fops_bwmgr_clients_info);
+		debugfs_node_dram_channels = debugfs_create_file(
+			"num_dram_channels", S_IRUSR, debugfs_dir, NULL,
+			 &fops_debugfs_dram_channels);
 	} else
 		pr_err("bwmgr: error creating bwmgr debugfs dir.\n");
 

@@ -1,6 +1,6 @@
 /* Keytable for NVIDIA Remote Controller
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,7 +44,7 @@ static struct rc_map_list nvidia_map = {
 	.map = {
 			.scan = foster_table,
 			.size = ARRAY_SIZE(foster_table),
-			.rc_type = RC_BIT_NEC,
+			.rc_type = RC_TYPE_NEC,
 			.name = RC_MAP_NVIDIA_NEC,
 	}
 };

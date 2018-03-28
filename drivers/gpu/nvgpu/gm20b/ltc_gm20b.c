@@ -43,7 +43,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
 	/* one tag line covers 128KB */
-	u32 max_comptag_lines = max_size << 3;
+	u32 max_comptag_lines = max_size << 3U;
 
 	u32 hw_max_comptag_lines =
 		ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_init_v();
@@ -53,7 +53,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	u32 comptags_per_cacheline =
 		ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(cbc_param);
 	u32 cacheline_size =
-		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
+		512U << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
 	u32 slices_per_ltc =
 		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
 
@@ -63,7 +63,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
-	if (max_comptag_lines == 0)
+	if (max_comptag_lines == 0U)
 		return 0;
 
 	if (max_comptag_lines > hw_max_comptag_lines)
@@ -113,12 +113,12 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	struct gr_gk20a *gr = &g->gr;
 	struct nvgpu_timeout timeout;
 	int err = 0;
-	u32 ltc, slice, ctrl1, val, hw_op = 0;
+	u32 ltc, slice, ctrl1, val, hw_op = 0U;
 	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
 				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
-	const u32 max_lines = 16384;
+	const u32 max_lines = 16384U;
 
 	gk20a_dbg_fn("");
 
@@ -237,7 +237,7 @@ void gm20b_ltc_isr(struct gk20a *g)
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
-		if ((mc_intr & 1 << ltc) == 0)
+		if ((mc_intr & 1U << ltc) == 0)
 			continue;
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
@@ -256,7 +256,7 @@ void gm20b_ltc_isr(struct gk20a *g)
 u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 {
 	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
-	if (val == 2) {
+	if (val == 2U) {
 		return base * 2;
 	} else if (val != 1) {
 		nvgpu_err(g, "Invalid number of active ltcs: %08x", val);
@@ -359,24 +359,24 @@ int gm20b_determine_L2_size_bytes(struct gk20a *g)
 
 	active_sets_value = ltc_ltc0_lts0_tstg_cfg1_active_sets_v(tmp);
 	if (active_sets_value == ltc_ltc0_lts0_tstg_cfg1_active_sets_all_v()) {
-		sets = 64;
+		sets = 64U;
 	} else if (active_sets_value ==
 		 ltc_ltc0_lts0_tstg_cfg1_active_sets_half_v()) {
-		sets = 32;
+		sets = 32U;
 	} else if (active_sets_value ==
 		 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v()) {
-		sets = 16;
+		sets = 16U;
 	} else {
 		nvgpu_err(g, "Unknown constant %u for active sets",
 		       (unsigned)active_sets_value);
-		sets = 0;
+		sets = 0U;
 	}
 
 	active_ltcs = g->gr.num_fbps;
 
 	/* chip-specific values */
-	lts_per_ltc = 2;
-	bytes_per_line = 128;
+	lts_per_ltc = 2U;
+	bytes_per_line = 128U;
 	cache_size = active_ltcs * lts_per_ltc * ways * sets * bytes_per_line;
 
 	return cache_size;
@@ -424,7 +424,7 @@ void gm20b_ltc_set_zbc_depth_entry(struct gk20a *g,
 void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 max_size = gr->max_comptag_mem;
-	u32 max_comptag_lines = max_size << 3;
+	u32 max_comptag_lines = max_size << 3U;
 
 	u32 compbit_base_post_divide;
 	u64 compbit_base_post_multiply64;

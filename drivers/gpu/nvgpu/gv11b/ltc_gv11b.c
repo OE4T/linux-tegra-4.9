@@ -96,9 +96,9 @@ void gv11b_ltc_isr(struct gk20a *g)
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
-		if ((mc_intr & 1 << ltc) == 0)
+		if ((mc_intr & 1U << ltc) == 0)
 			continue;
-		ltc_corrected = ltc_uncorrected = 0;
+		ltc_corrected = ltc_uncorrected = 0U;
 
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			u32 offset = ltc_stride * ltc + lts_stride * slice;
@@ -133,10 +133,10 @@ void gv11b_ltc_isr(struct gk20a *g)
 					ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_total_counter_overflow_m();
 
 				/* clear the interrupt */
-				if ((corrected_delta > 0) || corrected_overflow) {
+				if ((corrected_delta > 0U) || corrected_overflow) {
 					gk20a_writel(g, ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset, 0);
 				}
-				if ((uncorrected_delta > 0) || uncorrected_overflow) {
+				if ((uncorrected_delta > 0U) || uncorrected_overflow) {
 					gk20a_writel(g,
 						ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset, 0);
 				}
@@ -146,9 +146,9 @@ void gv11b_ltc_isr(struct gk20a *g)
 
 				/* update counters per slice */
 				if (corrected_overflow)
-					corrected_delta += (0x1UL << ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_s());
+					corrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_s());
 				if (uncorrected_overflow)
-					uncorrected_delta += (0x1UL << ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s());
+					uncorrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s());
 
 				ltc_corrected += corrected_delta;
 				ltc_uncorrected += uncorrected_delta;

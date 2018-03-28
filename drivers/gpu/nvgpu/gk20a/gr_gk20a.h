@@ -174,7 +174,7 @@ struct gr_zcull_info {
 
 #define GK20A_ZBC_COLOR_VALUE_SIZE	4  /* RGBA */
 
-#define GK20A_STARTOF_ZBC_TABLE		1   /* index zero reserved to indicate "not ZBCd" */
+#define GK20A_STARTOF_ZBC_TABLE		1U   /* index zero reserved to indicate "not ZBCd" */
 #define GK20A_SIZEOF_ZBC_TABLE		16  /* match ltcs_ltss_dstg_zbc_index_address width (4) */
 #define GK20A_ZBC_TABLE_SIZE		(16 - 1)
 

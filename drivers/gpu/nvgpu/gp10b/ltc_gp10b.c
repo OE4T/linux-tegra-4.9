@@ -61,7 +61,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	/* max memory size (MB) to cover */
 	u32 max_size = gr->max_comptag_mem;
 	/* one tag line covers 64KB */
-	u32 max_comptag_lines = max_size << 4;
+	u32 max_comptag_lines = max_size << 4U;
 
 	u32 hw_max_comptag_lines =
 		ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_init_v();
@@ -71,7 +71,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	u32 comptags_per_cacheline =
 		ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(cbc_param);
 	u32 cacheline_size =
-		512 << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
+		512U << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
 	u32 slices_per_ltc =
 		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
 	u32 cbc_param2 =
@@ -85,7 +85,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gk20a_dbg_fn("");
 
-	if (max_comptag_lines == 0)
+	if (max_comptag_lines == 0U)
 		return 0;
 
 	/* Already initialized */
@@ -138,18 +138,18 @@ int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	struct gr_gk20a *gr = &g->gr;
 	struct nvgpu_timeout timeout;
 	int err = 0;
-	u32 ltc, slice, ctrl1, val, hw_op = 0;
+	u32 ltc, slice, ctrl1, val, hw_op = 0U;
 	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
 				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
-	const u32 max_lines = 16384;
+	const u32 max_lines = 16384U;
 
 	nvgpu_log_fn(g, " ");
 
 	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
 
-	if (gr->compbit_store.mem.size == 0)
+	if (gr->compbit_store.mem.size == 0U)
 		return 0;
 
 	while (1) {
@@ -235,7 +235,7 @@ void gp10b_ltc_isr(struct gk20a *g)
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
-		if ((mc_intr & 1 << ltc) == 0)
+		if ((mc_intr & 1U << ltc) == 0)
 			continue;
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			u32 offset = ltc_stride * ltc + lts_stride * slice;

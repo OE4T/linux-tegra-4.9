@@ -660,6 +660,7 @@ static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
 		FUSE_BURN_DATA(boot_security_info, 0x66, 21, 16, 0x168, true, false),
 		FUSE_BURN_DATA(debug_authentication, 0, 20, 5, 0x1e4, true, false),
 		FUSE_BURN_DATA(odm_info, 0x67, 5, 16, 0x19c, false, false),
+		FUSE_BURN_DATA(pdi, 0x40, 17, 64, 0x300, false, false),
 		{},
 	},
 };

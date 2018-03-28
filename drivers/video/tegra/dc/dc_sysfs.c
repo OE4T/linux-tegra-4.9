@@ -541,8 +541,6 @@ void tegra_dc_remove_sysfs(struct device *dev)
 
 	if (dc->out->type != TEGRA_DC_OUT_HDMI)
 		device_remove_file(dev, &dev_attr_panel_rotation);
-
-	tegra_bw_remove_sysfs(dev);
 }
 
 void tegra_dc_create_sysfs(struct device *dev)
@@ -596,8 +594,6 @@ void tegra_dc_create_sysfs(struct device *dev)
 		error |= device_create_file(dev, &dev_attr_smart_panel);
 	if (dc->out->type != TEGRA_DC_OUT_HDMI)
 		error |= device_create_file(dev, &dev_attr_panel_rotation);
-
-	error |= tegra_bw_create_sysfs(dev);
 
 	if (error)
 		dev_err(&ndev->dev, "Failed to create sysfs attributes!\n");

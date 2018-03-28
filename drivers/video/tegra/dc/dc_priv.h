@@ -261,8 +261,6 @@ bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc);
 int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data);
 void tegra_dc_reset_imp_state(void);
-int tegra_bw_create_sysfs(struct device *dev);
-void tegra_bw_remove_sysfs(struct device *dev);
 struct dentry *tegra_nvdisp_create_imp_lock_debugfs(struct tegra_dc *dc);
 
 /** Frame-Flip Lock API

@@ -169,6 +169,8 @@ static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
 static void tegra_dc_collect_latency_data(struct tegra_dc *dc);
 
 static DEFINE_MUTEX(tegra_dc_lock);
+/* Lock to serialize dc registration during probe */
+static DEFINE_MUTEX(tegra_dc_registration_lock);
 
 static struct device_dma_parameters tegra_dc_dma_parameters = {
 	.max_segment_size = UINT_MAX,
@@ -6335,12 +6337,16 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (tegra_dc_is_nvdisplay() && !tegra_dc_common_probe_status())
 		return -EPROBE_DEFER;
 
+	/* Serialize dc device registration */
+	mutex_lock(&tegra_dc_registration_lock);
+
 	/* Specify parameters for the maximum physical segment size. */
 	ndev->dev.dma_parms = &tegra_dc_dma_parameters;
 
 	dc = kzalloc(sizeof(struct tegra_dc), GFP_KERNEL);
 	if (!dc) {
 		dev_err(&ndev->dev, "can't allocate memory for tegra_dc\n");
+		mutex_unlock(&tegra_dc_registration_lock);
 		return -ENOMEM;
 	}
 
@@ -6356,8 +6362,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	dt_pdata = of_dc_parse_platform_data(ndev, dt_pdata);
 	if (IS_ERR_OR_NULL(dt_pdata)) {
-		if (dt_pdata)
-			ret = PTR_ERR(dt_pdata);
+		ret = dt_pdata ? PTR_ERR(dt_pdata) : -EINVAL;
 		goto err_free;
 	}
 
@@ -6396,9 +6401,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 			partition_id_disa = tegra_pd_get_powergate_id(
 								tegra_disa_pd);
-			if (partition_id_disa < 0)
-				return -EINVAL;
-
+			if (partition_id_disa < 0) {
+				ret = -EINVAL;
+				goto err_iounmap_reg;
+			}
 			dc->powergate_id = partition_id_disa;
 #ifdef CONFIG_TEGRA_ISOMGR
 			isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
@@ -6422,9 +6428,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 			partition_id_disb = tegra_pd_get_powergate_id(
 								tegra_disb_pd);
-			if (partition_id_disb < 0)
-				return -EINVAL;
-
+			if (partition_id_disb < 0) {
+				ret = -EINVAL;
+				goto err_iounmap_reg;
+			}
 			dc->powergate_id = partition_id_disb;
 #endif
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -6622,14 +6629,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (IS_ERR_OR_NULL(emc_la_handle)) {
 			dev_err(&ndev->dev, "can't get handle %s\n", clk_name);
 			ret = -ENOENT;
-			return ret;
+			goto err_disable_dc;
 		}
 		dc->emc_la_handle = emc_la_handle;
 		ret = tegra_bwmgr_set_emc(dc->emc_la_handle, 0,
 				TEGRA_BWMGR_SET_EMC_FLOOR);
 		if (ret) {
 			dev_err(&ndev->dev, "can't set emc clock: %d\n", ret);
-			return ret;
+			ret = -EINVAL;
+			goto err_disable_dc;
 		}
 	}
 
@@ -6729,6 +6737,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;
 			dev_err(&ndev->dev, "failed to register fb\n");
+			ret = -EINVAL;
 			goto err_remove_debugfs;
 		}
 	}
@@ -6744,7 +6753,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 					dev_err(&dc->ndev->dev,
 						"Unable to get dc_rst%u reset control\n",
 						dc->ctrl_num);
-					return PTR_ERR(dc->rst);
+					ret = dc->rst ? PTR_ERR(dc->rst) : -ENOENT;
+					goto err_remove_debugfs;
 				}
 
 				if (dc->rst) {
@@ -6824,6 +6834,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->vedid = false;
 	dc->vedid_data = NULL;
 
+	mutex_unlock(&tegra_dc_registration_lock);
 	return 0;
 
 err_remove_debugfs:
@@ -6860,6 +6871,8 @@ err_release_resource_reg:
 err_free:
 	tegra_dc_clear(dc);
 	kfree(dc);
+	dc = NULL;
+	mutex_unlock(&tegra_dc_registration_lock);
 
 	return ret;
 }

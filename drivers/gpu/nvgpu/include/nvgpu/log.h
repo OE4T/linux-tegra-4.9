@@ -44,7 +44,7 @@ void __nvgpu_log_msg(struct gk20a *g, const char *func_name, int line,
 		     enum nvgpu_log_type type, const char *fmt, ...);
 
 __attribute__((format (printf, 5, 6)))
-void __nvgpu_log_dbg(struct gk20a *g, u32 log_mask,
+void __nvgpu_log_dbg(struct gk20a *g, u64 log_mask,
 		     const char *func_name, int line,
 		     const char *fmt, ...);
 
@@ -92,7 +92,7 @@ void __nvgpu_log_dbg(struct gk20a *g, u32 log_mask,
  * said prints would not happen. For example for-loops of log statements in
  * critical paths.
  */
-int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
+int nvgpu_log_mask_enabled(struct gk20a *g, u64 log_mask);
 
 /**
  * nvgpu_log - Print a debug message
@@ -164,7 +164,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * This exist for backwards compatibility with the old debug/logging API. If you
  * want ftrace support use the new API!
  */
-extern u32 nvgpu_dbg_mask;
+extern u64 nvgpu_dbg_mask;
 
 #define gk20a_dbg(log_mask, fmt, arg...)				\
 	do {								\

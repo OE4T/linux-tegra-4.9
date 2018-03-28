@@ -38,7 +38,7 @@
  */
 #define LOG_FMT			"nvgpu: %s %33s:%-4d [%s]  %s\n"
 
-u32 nvgpu_dbg_mask = NVGPU_DEFAULT_DBG_MASK;
+u64 nvgpu_dbg_mask = NVGPU_DEFAULT_DBG_MASK;
 
 static const char *log_types[] = {
 	"ERR",
@@ -47,7 +47,7 @@ static const char *log_types[] = {
 	"INFO",
 };
 
-int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask)
+int nvgpu_log_mask_enabled(struct gk20a *g, u64 log_mask)
 {
 	return !!(g->log_mask & log_mask);
 }
@@ -115,7 +115,7 @@ void __nvgpu_log_msg(struct gk20a *g, const char *func_name, int line,
 }
 
 __attribute__((format (printf, 5, 6)))
-void __nvgpu_log_dbg(struct gk20a *g, u32 log_mask,
+void __nvgpu_log_dbg(struct gk20a *g, u64 log_mask,
 		     const char *func_name, int line,
 		     const char *fmt, ...)
 {

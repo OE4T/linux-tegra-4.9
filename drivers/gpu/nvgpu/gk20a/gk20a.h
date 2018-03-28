@@ -1233,7 +1233,7 @@ struct gk20a {
 	bool suspended;
 	bool sw_ready;
 
-	u32 log_mask;
+	u64 log_mask;
 	u32 log_trace;
 
 	struct nvgpu_gpu_params params;

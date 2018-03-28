@@ -701,11 +701,11 @@ void dw_pcie_host_deinit(struct pcie_port *pp)
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		if (!pp->ops->msi_host_deinit) {
-			irq_domain_remove(pp->irq_domain);
 			for (i = 0; i < MAX_MSI_IRQS; i++) {
 				irq = irq_find_mapping(pp->irq_domain, i);
 				irq_dispose_mapping(irq);
 			}
+			irq_domain_remove(pp->irq_domain);
 		} else {
 			pp->ops->msi_host_deinit(pp, &dw_pcie_msi_chip);
 		}

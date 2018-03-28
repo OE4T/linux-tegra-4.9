@@ -81,23 +81,34 @@
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m","prod_c_hdmi_54m_111m","prod_c_hdmi_111m_223m","prod_c_hdmi_223m_300m","prod_c_hdmi_300m_600m";
 				prod_c_dp {
 					prod = <
-						0 0x000005a4 0x0f000000 0x05000000              //SOR_NV_PDISP_SOR_PLL0_0
-						0 0x000005a8 0x03000100 0x00000100              //SOR_NV_PDISP_SOR_PLL1_0
-						0 0x000005ac 0x02000000 0x02000000              //SOR_NV_PDISP_SOR_PLL2_0
-						0 0x000005e4 0x00003b80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
-						0 0x00000180 0x00000001 0x00000001>;            //SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE	0x01
+						0 0x00000180 0x00000001 0x00000001		//SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE		0x1
+						0 0x000005a4 0x0f0f0f00 0x05050300		//SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP			0x5
+												//				19:16=FILTER			0x5
+												//				11:08=VCOCAP			0x3
+						0 0x000005a8 0x00000100 0x00000100		//SOR_NV_PDISP_SOR_PLL1_0	08:08=TMDS_TERM			0x1
+						0 0x000005ac 0xf000ff00 0x00000000		//SOR_NV_PDISP_SOR_PLL2_0	31:28=PLL_MDIV			0x0
+												//				15:08=PLL_NDIV			0x0
+						0 0x000005b0 0x00000ff0 0x00000440		//SOR_NV_PDISP_SOR_PLL3_0	11:08=AVDD10_LEVEL		0x4
+												//				07:04=AVDD14_LEVEL		0x4
+						0 0x000005b4 0x00400000 0x00000000		//SOR_NV_PDISP_SOR_PLL4_0	22:22=ENB_LCKDET		0x0
+						0 0x000005e4 0x00003b80 0x00001a00>;		//SOR_NV_PDISP_SOR_PLL5_0	13:11=PLL_SEL_TIMER		0x3
+												//				09:07=PLL_LOCKDET2_SETUPN	0x4
+				};
+				prod_c_rbr {
+					prod = <
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr2 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hbr3 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hdmi_0m_54m {
 					prod = <
@@ -128,10 +139,6 @@
 						0 0x00000138 0xffffffff 0x333d3d3d              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
 						0 0x000005e4 0x00003b80 0x00001a00>;            //SOR_NV_PDISP_SOR_PLL5_0
-				};
-				prod_c_rbr {
-					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
 				};
 			};
 		};
@@ -142,23 +149,34 @@
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m","prod_c_hdmi_54m_111m","prod_c_hdmi_111m_223m","prod_c_hdmi_223m_300m","prod_c_hdmi_300m_600m";
 				prod_c_dp {
 					prod = <
-						0 0x000005a4 0x0f000000 0x05000000              //SOR_NV_PDISP_SOR_PLL0_0
-						0 0x000005a8 0x03000100 0x00000100              //SOR_NV_PDISP_SOR_PLL1_0
-						0 0x000005ac 0x02000000 0x02000000              //SOR_NV_PDISP_SOR_PLL2_0
-						0 0x000005e4 0x00003b80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
-						0 0x00000180 0x00000001 0x00000001>;            //SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE	0x01
+						0 0x00000180 0x00000001 0x00000001		//SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE		0x1
+						0 0x000005a4 0x0f0f0f00 0x05050300		//SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP			0x5
+												//				19:16=FILTER			0x5
+												//				11:08=VCOCAP			0x3
+						0 0x000005a8 0x00000100 0x00000100		//SOR_NV_PDISP_SOR_PLL1_0	08:08=TMDS_TERM			0x1
+						0 0x000005ac 0xf000ff00 0x00000000		//SOR_NV_PDISP_SOR_PLL2_0	31:28=PLL_MDIV			0x0
+												//				15:08=PLL_NDIV			0x0
+						0 0x000005b0 0x00000ff0 0x00000440		//SOR_NV_PDISP_SOR_PLL3_0	11:08=AVDD10_LEVEL		0x4
+												//				07:04=AVDD14_LEVEL		0x4
+						0 0x000005b4 0x00400000 0x00000000		//SOR_NV_PDISP_SOR_PLL4_0	22:22=ENB_LCKDET		0x0
+						0 0x000005e4 0x00003b80 0x00001a00>;		//SOR_NV_PDISP_SOR_PLL5_0	13:11=PLL_SEL_TIMER		0x3
+												//				09:07=PLL_LOCKDET2_SETUPN	0x4
+				};
+				prod_c_rbr {
+					prod = <
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr2 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hbr3 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hdmi_0m_54m {
 					prod = <
@@ -189,10 +207,6 @@
 						0 0x00000138 0xffffffff 0x333d3d3d              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
 						0 0x000005e4 0x00003b80 0x00001a00>;            //SOR_NV_PDISP_SOR_PLL5_0
-				};
-				prod_c_rbr {
-					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
 				};
 			};
 		};
@@ -203,23 +217,34 @@
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m","prod_c_hdmi_54m_111m","prod_c_hdmi_111m_223m","prod_c_hdmi_223m_300m","prod_c_hdmi_300m_600m";
 				prod_c_dp {
 					prod = <
-						0 0x000005a4 0x0f000000 0x05000000              //SOR_NV_PDISP_SOR_PLL0_0
-						0 0x000005a8 0x03000100 0x00000100              //SOR_NV_PDISP_SOR_PLL1_0
-						0 0x000005ac 0x02000000 0x02000000              //SOR_NV_PDISP_SOR_PLL2_0
-						0 0x000005e4 0x00003b80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
-						0 0x00000180 0x00000001 0x00000001>;            //SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE	0x01
+						0 0x00000180 0x00000001 0x00000001		//SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE		0x1
+						0 0x000005a4 0x0f0f0f00 0x05050300		//SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP			0x5
+												//				19:16=FILTER			0x5
+												//				11:08=VCOCAP			0x3
+						0 0x000005a8 0x00000100 0x00000100		//SOR_NV_PDISP_SOR_PLL1_0	08:08=TMDS_TERM			0x1
+						0 0x000005ac 0xf000ff00 0x00000000		//SOR_NV_PDISP_SOR_PLL2_0	31:28=PLL_MDIV			0x0
+												//				15:08=PLL_NDIV			0x0
+						0 0x000005b0 0x00000ff0 0x00000440		//SOR_NV_PDISP_SOR_PLL3_0	11:08=AVDD10_LEVEL		0x4
+												//				07:04=AVDD14_LEVEL		0x4
+						0 0x000005b4 0x00400000 0x00000000		//SOR_NV_PDISP_SOR_PLL4_0	22:22=ENB_LCKDET		0x0
+						0 0x000005e4 0x00003b80 0x00001a00>;		//SOR_NV_PDISP_SOR_PLL5_0	13:11=PLL_SEL_TIMER		0x3
+												//				09:07=PLL_LOCKDET2_SETUPN	0x4
+				};
+				prod_c_rbr {
+					prod = <
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr2 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hbr3 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hdmi_0m_54m {
 					prod = <
@@ -250,10 +275,6 @@
 						0 0x00000138 0xffffffff 0x333d3d3d              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
 						0 0x000005e4 0x00003b80 0x00001a00>;            //SOR_NV_PDISP_SOR_PLL5_0
-				};
-				prod_c_rbr {
-					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
 				};
 			};
 		};
@@ -264,23 +285,34 @@
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m","prod_c_hdmi_54m_111m","prod_c_hdmi_111m_223m","prod_c_hdmi_223m_300m","prod_c_hdmi_300m_600m";
 				prod_c_dp {
 					prod = <
-						0 0x000005a4 0x0f000000 0x05000000              //SOR_NV_PDISP_SOR_PLL0_0
-						0 0x000005a8 0x03000100 0x00000100              //SOR_NV_PDISP_SOR_PLL1_0
-						0 0x000005ac 0x02000000 0x02000000              //SOR_NV_PDISP_SOR_PLL2_0
-						0 0x000005e4 0x00003b80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
-						0 0x00000180 0x00000001 0x00000001>;            //SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE	0x01
+						0 0x00000180 0x00000001 0x00000001		//SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE		0x1
+						0 0x000005a4 0x0f0f0f00 0x05050300		//SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP			0x5
+												//				19:16=FILTER			0x5
+												//				11:08=VCOCAP			0x3
+						0 0x000005a8 0x00000100 0x00000100		//SOR_NV_PDISP_SOR_PLL1_0	08:08=TMDS_TERM			0x1
+						0 0x000005ac 0xf000ff00 0x00000000		//SOR_NV_PDISP_SOR_PLL2_0	31:28=PLL_MDIV			0x0
+												//				15:08=PLL_NDIV			0x0
+						0 0x000005b0 0x00000ff0 0x00000440		//SOR_NV_PDISP_SOR_PLL3_0	11:08=AVDD10_LEVEL		0x4
+												//				07:04=AVDD14_LEVEL		0x4
+						0 0x000005b4 0x00400000 0x00000000		//SOR_NV_PDISP_SOR_PLL4_0	22:22=ENB_LCKDET		0x0
+						0 0x000005e4 0x00003b80 0x00001a00>;		//SOR_NV_PDISP_SOR_PLL5_0	13:11=PLL_SEL_TIMER		0x3
+												//				09:07=PLL_LOCKDET2_SETUPN	0x4
+				};
+				prod_c_rbr {
+					prod = <
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00200000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x2
 				};
 				prod_c_hbr2 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hbr3 {
 					prod = <
-						0 0x000005a8 0x00f00000 0x00400000>;            //SOR_NV_PDISP_SOR_PLL1_0
+						0 0x000005a8 0x00f00000 0x00300000>;		//SOR_NV_PDISP_SOR_PLL1_0	23:20=LOADADJ			0x3
 				};
 				prod_c_hdmi_0m_54m {
 					prod = <
@@ -311,10 +343,6 @@
 						0 0x00000138 0xffffffff 0x333d3d3d              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
 						0 0x000005e4 0x00003b80 0x00001a00>;            //SOR_NV_PDISP_SOR_PLL5_0
-				};
-				prod_c_rbr {
-					prod = <
-						0 0x000005a8 0x00f00000 0x00300000>;            //SOR_NV_PDISP_SOR_PLL1_0
 				};
 			};
 		};
@@ -329,9 +357,9 @@
 				};
 				prod_c_dpaux_dp {
 					prod = <
-						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+						0 0x00000124 0x000037fe 0x000024b2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
 											//				10:08=AUX_DRVZ		0x04
-											//				07:02=AUX_DRVI		0x30
+											//				07:02=AUX_DRVI		0x2c
 											//				01:01=AUX_INPUT_RCV	0x01
 						>;
 				};
@@ -348,9 +376,9 @@
 				};
 				prod_c_dpaux_dp {
 					prod = <
-						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+						0 0x00000124 0x000037fe 0x000024b2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
 											//				10:08=AUX_DRVZ		0x04
-											//				07:02=AUX_DRVI		0x30
+											//				07:02=AUX_DRVI		0x2c
 											//				01:01=AUX_INPUT_RCV	0x01
 						>;
 				};
@@ -367,9 +395,9 @@
 				};
 				prod_c_dpaux_dp {
 					prod = <
-						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+						0 0x00000124 0x000037fe 0x000024b2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
 											//				10:08=AUX_DRVZ		0x04
-											//				07:02=AUX_DRVI		0x30
+											//				07:02=AUX_DRVI		0x2c
 											//				01:01=AUX_INPUT_RCV	0x01
 						>;
 				};
@@ -386,9 +414,9 @@
 				};
 				prod_c_dpaux_dp {
 					prod = <
-						0 0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
+						0 0x00000124 0x000037fe 0x000024b2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
 											//				10:08=AUX_DRVZ		0x04
-											//				07:02=AUX_DRVI		0x30
+											//				07:02=AUX_DRVI		0x2c
 											//				01:01=AUX_INPUT_RCV	0x01
 						>;
 				};

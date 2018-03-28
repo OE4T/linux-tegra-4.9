@@ -3916,10 +3916,18 @@ void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 int gk20a_fifo_setup_userd(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
-	struct nvgpu_mem *mem = &g->fifo.userd;
-	u32 offset = c->chid * g->fifo.userd_entry_size / sizeof(u32);
+	struct nvgpu_mem *mem;
+	u32 offset;
 
 	gk20a_dbg_fn("");
+
+	if (nvgpu_mem_is_valid(&c->usermode_userd)) {
+		mem = &c->usermode_userd;
+		offset = 0;
+	} else {
+		mem = &g->fifo.userd;
+		offset = c->chid * g->fifo.userd_entry_size / sizeof(u32);
+	}
 
 	nvgpu_mem_wr32(g, mem, offset + ram_userd_put_w(), 0);
 	nvgpu_mem_wr32(g, mem, offset + ram_userd_get_w(), 0);

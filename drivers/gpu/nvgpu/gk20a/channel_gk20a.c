@@ -376,6 +376,13 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	if(g->ops.fifo.free_channel_ctx_header)
 		g->ops.fifo.free_channel_ctx_header(ch);
 
+	if (ch->usermode_submit_enabled) {
+		gk20a_channel_free_usermode_buffers(ch);
+		ch->userd_iova = nvgpu_mem_get_addr(g, &f->userd) +
+				ch->chid * f->userd_entry_size;
+		ch->usermode_submit_enabled = false;
+	}
+
 	gk20a_gr_flush_channel_tlb(gr);
 
 	nvgpu_dma_unmap_free(ch_vm, &ch->gpfifo.mem);
@@ -1086,12 +1093,30 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		goto clean_up_idle;
 	}
 
+	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT) {
+		if (g->ops.fifo.alloc_usermode_buffers) {
+			err = g->ops.fifo.alloc_usermode_buffers(c,
+					gpfifo_args);
+			if (err) {
+				nvgpu_err(g, "Usermode buffer alloc failed");
+				goto clean_up;
+			}
+			c->userd_iova = nvgpu_mem_get_addr(g,
+				&c->usermode_userd);
+			c->usermode_submit_enabled = true;
+		} else {
+			nvgpu_err(g, "Usermode submit not supported");
+			err = -EINVAL;
+			goto clean_up;
+		}
+	}
+
 	err = nvgpu_dma_alloc_map_sys(ch_vm,
 			gpfifo_size * gpfifo_entry_size,
 			&c->gpfifo.mem);
 	if (err) {
 		nvgpu_err(g, "%s: memory allocation failed", __func__);
-		goto clean_up;
+		goto clean_up_usermode;
 	}
 
 	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
@@ -1174,6 +1199,13 @@ clean_up_sync:
 clean_up_unmap:
 	nvgpu_big_free(g, c->gpfifo.pipe);
 	nvgpu_dma_unmap_free(ch_vm, &c->gpfifo.mem);
+clean_up_usermode:
+	if (c->usermode_submit_enabled) {
+		gk20a_channel_free_usermode_buffers(c);
+		c->userd_iova = nvgpu_mem_get_addr(g, &g->fifo.userd) +
+				c->chid * g->fifo.userd_entry_size;
+		c->usermode_submit_enabled = false;
+	}
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
 clean_up_idle:
@@ -1185,6 +1217,12 @@ clean_up_idle:
 	}
 	nvgpu_err(g, "fail");
 	return err;
+}
+
+void gk20a_channel_free_usermode_buffers(struct channel_gk20a *c)
+{
+	if (nvgpu_mem_is_valid(&c->usermode_userd))
+		nvgpu_dma_free(c->g, &c->usermode_userd);
 }
 
 /* Update with this periodically to determine how the gpfifo is draining. */

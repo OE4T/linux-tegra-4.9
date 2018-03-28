@@ -45,10 +45,14 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
+#define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1 << 3)
 
 struct nvgpu_gpfifo_args {
 	u32 num_entries;
 	u32 num_inflight_jobs;
+	u32 userd_dmabuf_fd;
+	u32 gpfifo_dmabuf_fd;
+	u32 work_submit_token;
 	u32 flags;
 };
 
@@ -184,6 +188,7 @@ struct channel_gk20a {
 	/* deterministic, but explicitly idle and submits disallowed */
 	bool deterministic_railgate_allowed;
 	bool cde;
+	bool usermode_submit_enabled;
 	pid_t pid;
 	pid_t tgid;
 	struct nvgpu_mutex ioctl_lock;
@@ -198,6 +203,7 @@ struct channel_gk20a {
 
 	struct gpfifo_desc gpfifo;
 
+	struct nvgpu_mem usermode_userd; /* Used for Usermode Submission */
 	struct nvgpu_mem inst_block;
 
 	u64 userd_iova;
@@ -361,6 +367,7 @@ void free_priv_cmdbuf(struct channel_gk20a *c,
 void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 					bool clean_all);
 
+void gk20a_channel_free_usermode_buffers(struct channel_gk20a *c);
 u32 nvgpu_get_gpfifo_entry_size(void);
 
 #endif /* CHANNEL_GK20A_H */

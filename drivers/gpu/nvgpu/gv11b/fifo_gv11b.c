@@ -493,6 +493,12 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 		if (ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_switch_v()) {
 			/* Eng save hasn't started yet. Continue polling */
+			if (stall_intr) {
+				/* if stall intr stop polling */
+				*reset_eng_bitmask |= BIT(act_eng_id);
+				ret = 0;
+				break;
+			}
 
 		} else if (ctx_stat ==
 			 fifo_engine_status_ctx_status_valid_v() ||

@@ -137,7 +137,17 @@ static void dda_init(unsigned int *error)
 	mc_writel(dda_info_array[TEGRA_DDA_##NAME##_ID].rate & \
 		MC_##NAME##_PTSA_RATE_0_PTSA_RATE_## \
 			NAME##_DEFAULT_MASK, \
-		MC_##NAME##_PTSA_RATE_0);
+		MC_##NAME##_PTSA_RATE_0)
+
+#define T19X_WRITE_PTSA_MIN(NAME) \
+	mc_writel(dda_info_array[TEGRA_DDA_##NAME##_ID].min & \
+		MC_##NAME##_PTSA_MIN_0_PTSA_MIN_##NAME##_DEFAULT_MASK, \
+		MC_##NAME##_PTSA_MIN_0)
+
+#define T19X_WRITE_PTSA_MAX(NAME) \
+	mc_writel(dda_info_array[TEGRA_DDA_##NAME##_ID].max & \
+		MC_##NAME##_PTSA_MAX_0_PTSA_MAX_##NAME##_DEFAULT_MASK, \
+		MC_##NAME##_PTSA_MAX_0)
 
 static void program_kern_init_ptsa(void)
 {
@@ -147,7 +157,7 @@ static void program_kern_init_ptsa(void)
 	T19X_WRITE_PTSA_MIN_MAX_RATE(BPMPPC);
 	T19X_WRITE_PTSA_MIN_MAX(CIFLL_ISO);
 	T19X_WRITE_PTSA_MIN_MAX_RATE(CIFLL_SISO);
-	T19X_WRITE_PTSA_MIN_MAX_RATE(CIFLL_NISO);
+	T19X_WRITE_PTSA_MAX(CIFLL_NISO);
 	T19X_WRITE_PTSA_MIN_MAX_RATE(CIFLL_RING0X);
 	T19X_WRITE_PTSA_MIN_MAX_RATE(DIS);
 	T19X_WRITE_PTSA_MIN_MAX_RATE(DLA0FALPC);
@@ -233,6 +243,8 @@ static void program_kern_init_ptsa(void)
 static void program_non_kern_init_ptsa(void)
 {
 	T19X_WRITE_PTSA_RATE(CIFLL_ISO);
+	T19X_WRITE_PTSA_MIN(CIFLL_NISO);
+	T19X_WRITE_PTSA_RATE(CIFLL_NISO);
 	T19X_WRITE_PTSA_MIN_MAX_RATE(MLL_MPCORER);
 }
 
@@ -728,6 +740,8 @@ static void scf_dda_init(
 						PERC(10), NEG(16), 16, error);
 		set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_L3D,
 						PERC(10), NEG(4), 4, error);
+		set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_NISO,
+						eps, NEG(3), 0, error);
 	}
 
 	set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_SNOC_MCF,
@@ -750,8 +764,6 @@ static void scf_dda_init(
 
 	set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_SISO,
 					0, 1, 1, error);
-	set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_NISO,
-					eps, NEG(3), 0, error);
 	set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_NISO_REMOTE,
 					eps, NEG(3), 0, error);
 	set_nvg_scf_dda(TEGRA_NVG_CHANNEL_DDA_L3CTRL_ISO,

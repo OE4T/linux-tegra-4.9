@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 #define THERMAL_ZONE_AUX	4
 #define THERMAL_ZONE_PLLX	5
 #define THERMAL_ZONE_AO		6
-#define THERMAL_ZONE_RESERVED2	7
+#define THERMAL_ZONE_TJ_MAX	7
 #define THERMAL_ZONE_COUNT	8
 
 #endif

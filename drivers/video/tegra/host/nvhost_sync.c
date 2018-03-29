@@ -24,6 +24,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/version.h>
+#include <linux/nospec.h>
 
 #include <linux/nvhost_ioctl.h>
 
@@ -487,10 +488,11 @@ struct sync_fence *nvhost_sync_create_fence(struct platform_device *pdev,
 			WARN_ON(1);
 			return ERR_PTR(-EINVAL);
 		}
+		pts[i].id = array_index_nospec(pts[i].id,
+						nvhost_syncpt_nb_hw_pts(sp));
+
 	}
 
-	/* prevent speculative access to sp->timeline[idx] */
-	speculation_barrier();
 	for (i = 0; i < num_pts; i++) {
 		struct nvhost_sync_timeline *obj;
 		struct sync_pt *pt;

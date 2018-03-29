@@ -40,6 +40,7 @@
 
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/nospec.h>
 
 #ifdef CONFIG_EVENTLIB
 #include <linux/keventlib.h>
@@ -1300,7 +1301,9 @@ static long nvhost_channelctl(struct file *filp,
 		}
 
 		/* prevent speculative access to ctx->syncpts[index] */
-		speculation_barrier();
+		arg->param = array_index_nospec(arg->param,
+						NVHOST_MODULE_MAX_SYNCPTS);
+
 		if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE)
 			arg->value = nvhost_ioctl_channel_get_syncpt_instance(
 						priv, pdata, arg->param);
@@ -1354,7 +1357,8 @@ static long nvhost_channelctl(struct file *filp,
 			break;
 		}
 
-		speculation_barrier();
+		arg->param = array_index_nospec(arg->param,
+						NVHOST_MODULE_MAX_MODMUTEXES);
 
 		if (!pdata->modulemutexes[arg->param]) {
 			nvhost_err(dev, "invalid modmutex 0x%x", arg->param);

@@ -157,8 +157,8 @@ static int nvhost_ioctl_ctrl_syncpt_read(struct nvhost_ctrl_userctx *ctx,
 	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 
-	/* prevent speculative access to sp->min_val[id] */
-	speculation_barrier();
+	args->id = array_index_nospec(args->id,
+				nvhost_syncpt_nb_hw_pts(&ctx->dev->syncpt));
 
 	args->value = nvhost_syncpt_read(&ctx->dev->syncpt, args->id);
 	trace_nvhost_ioctl_ctrl_syncpt_read(args->id, args->value);
@@ -478,8 +478,8 @@ static int nvhost_ioctl_ctrl_syncpt_read_max(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 	}
 
-	/* prevent speculative access to sp->max_val[id] */
-	speculation_barrier();
+	args->id = array_index_nospec(args->id,
+				nvhost_syncpt_nb_hw_pts(&ctx->dev->syncpt));
 
 	args->value = nvhost_syncpt_read_max(&ctx->dev->syncpt, args->id);
 	return 0;

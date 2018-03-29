@@ -3120,6 +3120,10 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 					&dbg_nvdisp_topology_fops);
 			if (!retval)
 				goto remove_out;
+
+			retval = tegra_nvdisp_create_imp_lock_debugfs(dc);
+			if (!retval)
+				goto remove_out;
 		}
 	}
 

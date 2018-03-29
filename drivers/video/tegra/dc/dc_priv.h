@@ -263,6 +263,7 @@ int tegra_dc_queue_imp_propose(struct tegra_dc *dc,
 void tegra_dc_reset_imp_state(void);
 int tegra_bw_create_sysfs(struct device *dev);
 void tegra_bw_remove_sysfs(struct device *dev);
+struct dentry *tegra_nvdisp_create_imp_lock_debugfs(struct tegra_dc *dc);
 
 /** Frame-Flip Lock API
  * Defined in dc.c. Used in dc_common.c

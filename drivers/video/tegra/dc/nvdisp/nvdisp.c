@@ -2829,6 +2829,23 @@ static int cpy_dvfs_pairs_to_user(void __user *ext_dvfs_ptr,
 		ext_pairs[i].latency = dvfs_table->pairs[i].latency;
 	}
 
+	/*
+	 * If lock mode is enabled, the EMC frequency may have been locked by an
+	 * external client. As such, filter the EMC DVFS table based on the
+	 * current max EMC rate.
+	 */
+	if (unlikely(g_imp.lock_mode_enabled)) {
+		unsigned long max_emc_khz = tegra_bwmgr_round_rate(ULONG_MAX) /
+					emc_to_dram_factor / 1000;
+
+		for (i = num_pairs_to_cpy - 1; i >= 0; i--) {
+			if (ext_pairs[i].freq > max_emc_khz)
+				num_pairs_to_cpy--;
+			else if (ext_pairs[i].freq <= max_emc_khz)
+				break;
+		}
+	}
+
 	if (copy_to_user(ext_dvfs_ptr, ext_pairs,
 			num_pairs_to_cpy * sizeof(*ext_pairs))) {
 		pr_err("%s: Can't copy DVFS pairs to user\n", __func__);
@@ -2941,6 +2958,15 @@ int tegra_nvdisp_get_imp_caps(struct tegra_dc_ext_imp_caps *imp_caps)
 	int ret = 0;
 
 	imp_caps->mc_caps = g_imp.mc_caps;
+
+	/*
+	 * If lock mode is enabled, the max hubclk frequency may have been
+	 * locked by an external client. Re-query the max hubclk rate
+	 * accordingly.
+	 */
+	if (unlikely(g_imp.lock_mode_enabled))
+		imp_caps->mc_caps.peak_hubclk_hz =
+					clk_round_rate(hubclk, ULONG_MAX);
 
 	ret = cpy_dvfs_pairs_to_user(imp_caps->dvfs_pairs,
 				imp_caps->num_dvfs_requested,
@@ -4580,3 +4606,11 @@ void tegra_nvdisp_set_msrmnt_mode(struct tegra_dc *dc, bool enable)
 
 	mutex_unlock(&dc->msrmnt_info.lock);
 }
+
+#ifdef CONFIG_DEBUG_FS
+inline struct dentry *tegra_nvdisp_create_imp_lock_debugfs(struct tegra_dc *dc)
+{
+	return debugfs_create_bool("imp_lock_mode", 0644, dc->debug_common_dir,
+				&g_imp.lock_mode_enabled);
+}
+#endif

@@ -43,6 +43,15 @@ struct nvdisp_common_imp_data {
 
 	struct tegra_dc_ext_imp_mc_caps mc_caps;
 	bool reg_caps_initialized;
+
+	/*
+	 * If this flag is set, the driver will assume that the frequencies of
+	 * the following clocks have been locked by an external client:
+	 * - EMC
+	 * - hubclk
+	 * - dispclk
+	 */
+	bool lock_mode_enabled;
 };
 
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);

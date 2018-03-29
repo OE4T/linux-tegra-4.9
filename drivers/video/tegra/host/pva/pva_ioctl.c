@@ -20,6 +20,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/nospec.h>
 
 #include <asm/ioctls.h>
 #include <asm/barrier.h>
@@ -175,7 +176,10 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		goto err_check_num_tasks;
 	}
 
-	speculation_barrier();
+	ioctl_tasks_header->num_tasks =
+		array_index_nospec(ioctl_tasks_header->num_tasks,
+					PVA_MAX_TASKS + 1);
+
 	if (ioctl_tasks_header->version > 0) {
 		err = -ENOSYS;
 		goto err_check_version;
@@ -301,7 +305,8 @@ static int pva_queue_set_attr(struct pva_private *priv, void *arg)
 		goto end;
 	}
 
-	speculation_barrier();
+	id = array_index_nospec(id, QUEUE_ATTR_MAX);
+
 	/* Initialize attribute for setting */
 	attr.id = id;
 	attr.value = val;

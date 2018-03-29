@@ -30,6 +30,7 @@
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 #include <linux/uaccess.h>
+#include <linux/nospec.h>
 #include <soc/tegra/chip-id.h>
 #include <crypto/rng.h>
 #include <crypto/hash.h>
@@ -234,7 +235,9 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 	if (crypt_req->op != TEGRA_CRYPTO_CBC) {
 		if (crypt_req->op >= TEGRA_CRYPTO_MAX)
 			return -EINVAL;
-		speculation_barrier();
+
+		crypt_req->op = array_index_nospec(crypt_req->op,
+							TEGRA_CRYPTO_MAX);
 
 		tfm = crypto_alloc_skcipher(aes_algo[crypt_req->op],
 			CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
@@ -1703,12 +1706,15 @@ rng_out:
 				rsa_req_ah.algo);
 			return -EINVAL;
 		}
+		rsa_req_ah.algo = array_index_nospec(rsa_req_ah.algo,
+								NUM_RSA_ALGO);
 		if (rsa_req_ah.msg_len > MAX_RSA_MSG_LEN) {
 			pr_err("Illegal message from user of length = %d\n",
 				rsa_req_ah.msg_len);
 			return -EINVAL;
 		}
-		speculation_barrier();
+		rsa_req_ah.msg_len = array_index_nospec(rsa_req_ah.msg_len,
+							MAX_RSA_MSG_LEN + 1);
 		ret = tegra_crypt_rsa_ahash(filp, ctx, &rsa_req_ah);
 		break;
 
@@ -1723,13 +1729,16 @@ rng_out:
 				rsa_req.msg_len);
 			return -EINVAL;
 		}
+		rsa_req.msg_len = array_index_nospec(rsa_req.msg_len,
+							MAX_RSA_MSG_LEN + 1);
 		if (rsa_req.algo >= NUM_RSA_ALGO) {
 			pr_err("Invalid value of algo index %d\n",
 				rsa_req.algo);
 			return -EINVAL;
 		}
+		rsa_req.algo = array_index_nospec(rsa_req.algo,
+							NUM_RSA_ALGO);
 
-		speculation_barrier();
 		ret = tegra_crypt_rsa(filp, ctx, &rsa_req);
 		break;
 

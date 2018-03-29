@@ -25,6 +25,7 @@
 #include <linux/of_device.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/nospec.h>
 
 #include <asm/barrier.h>
 
@@ -205,7 +206,9 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 		return -EINVAL;
 	if (WARN_ON(!__scivc_control))
 		return -ENODEV;
-	speculation_barrier();
+
+	chan_id  = array_index_nospec(chan_id,  NUM_CAPTURE_CHANNELS);
+	trans_id = array_index_nospec(trans_id, TOTAL_CHANNELS);
 
 	civc = __scivc_control;
 
@@ -255,7 +258,7 @@ int tegra_capture_ivc_register_capture_cb(
 	if (WARN(chan_id >= NUM_CAPTURE_CHANNELS,
 			"invalid channel id %u", chan_id))
 		return -EINVAL;
-	speculation_barrier();
+	chan_id = array_index_nospec(chan_id, NUM_CAPTURE_CHANNELS);
 
 	if (!__scivc_capture)
 		return -ENODEV;
@@ -297,7 +300,7 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	if (WARN_ON(!__scivc_control))
 		return -ENODEV;
 
-	speculation_barrier();
+	id = array_index_nospec(id, TOTAL_CHANNELS);
 
 	civc = __scivc_control;
 
@@ -341,7 +344,7 @@ int tegra_capture_ivc_unregister_capture_cb(uint32_t chan_id)
 	if (!__scivc_capture)
 		return -ENODEV;
 
-	speculation_barrier();
+	chan_id = array_index_nospec(chan_id, NUM_CAPTURE_CHANNELS);
 
 	civc = __scivc_capture;
 
@@ -381,7 +384,7 @@ static void tegra_capture_ivc_worker(struct work_struct *work)
 		if (WARN(id >= TOTAL_CHANNELS, "Invalid rtcpu response id %u", id))
 			goto skip;
 
-		speculation_barrier();
+		id = array_index_nospec(id, TOTAL_CHANNELS);
 
 		/* Check if callback function available */
 		if (unlikely(!civc->cb_ctx[id].cb_func)) {

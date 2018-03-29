@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
 #include <linux/property.h>
+#include <linux/nospec.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
@@ -410,6 +411,8 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 
 	if (fse->index >= ARRAY_SIZE(tegra_csi_tpg_sizes))
 		return -EINVAL;
+	fse->index = array_index_nospec(fse->index,
+					ARRAY_SIZE(tegra_csi_tpg_sizes));
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		const struct tegra_video_format *format =
@@ -420,8 +423,6 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 	}
 	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
 		return -EINVAL;
-
-	speculation_barrier();
 
 	fse->min_width = fse->max_width =
 			tegra_csi_tpg_sizes[fse->index].width;

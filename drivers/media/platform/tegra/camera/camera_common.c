@@ -25,7 +25,9 @@
 #include <trace/events/camera_common.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/tegra-i2c-rtcpu.h>
+
 #include <asm/barrier.h>
+#include <linux/nospec.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -659,12 +661,11 @@ int camera_common_enum_framesizes(struct v4l2_subdev *sd,
 
 	if (fse->index >= s_data->numfmts)
 		return -EINVAL;
+	fse->index = array_index_nospec(fse->index, s_data->numfmts);
 
 	ret = camera_common_evaluate_color_format(sd, fse->code);
 	if (ret)
 		return ret;
-
-	speculation_barrier();
 
 	fse->min_width = fse->max_width =
 		s_data->frmfmt[fse->index].size.width;
@@ -701,8 +702,8 @@ int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
 	/* Check index is in the rage of framerates array index */
 	if (fie->index >= s_data->frmfmt[i].num_framerates)
 		return -EINVAL;
-
-	speculation_barrier();
+	fie->index = array_index_nospec(fie->index,
+					s_data->frmfmt[i].num_framerates);
 
 	fie->interval.numerator = 1;
 	fie->interval.denominator =

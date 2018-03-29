@@ -34,6 +34,7 @@
 #include <linux/delay.h>
 #include <linux/hdmi.h>
 #include <linux/v4l2-dv-timings.h>
+#include <linux/nospec.h>
 
 #include <media/v4l2-dv-timings.h>
 #include <media/v4l2-ctrls.h>
@@ -1937,8 +1938,7 @@ static int tc358840_enum_framesizes(struct v4l2_subdev *sd,
 
 	if (fse->index >= num_frmfmt)
 		return -EINVAL;
-
-	speculation_barrier();
+	fse->index = array_index_nospec(fse->index, num_frmfmt);
 
 	fse->min_width = fse->max_width = frmfmt[fse->index].size.width;
 	fse->min_height = fse->max_height = frmfmt[fse->index].size.height;
@@ -1971,7 +1971,7 @@ static int tc358840_enum_frameintervals(struct v4l2_subdev *sd,
 	if (fie->index >= frmfmt[i].num_framerates)
 		return -EINVAL;
 
-	speculation_barrier();
+	fie->index = array_index_nospec(fie->index, frmfmt[i].num_framerates);
 
 	fie->interval.numerator = 1;
 	fie->interval.denominator = frmfmt[i].framerates[fie->index];

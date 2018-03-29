@@ -128,6 +128,11 @@ static int recheck_edid(struct tegra_hpd_data *data, int *match)
 	if (ret > 0) {
 		struct tegra_dc_edid *dc_edid = tegra_edid_get_data(data->edid);
 
+		if (!dc_edid) {
+			*match = 0;
+			return 0;
+		}
+
 		pr_info("hpd: old edid len = %ld\n", (long int)dc_edid->len);
 		*match = !!((ret == dc_edid->len) &&
 			  !memcmp(tmp, dc_edid->buf, dc_edid->len));

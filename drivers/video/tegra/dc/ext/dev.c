@@ -28,6 +28,7 @@
 #include <linux/fb.h>
 #include <linux/version.h>
 #include <linux/string.h>
+#include <linux/nospec.h>
 #include <video/tegra_dc_ext.h>
 #include <trace/events/display.h>
 
@@ -196,7 +197,7 @@ static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
 	if ((n >= tegra_dc_get_numof_dispwindows()) ||
 		!(ext->dc->valid_windows & BIT(n)))
 		return -EINVAL;
-	speculation_barrier();
+	n = array_index_nospec(n, tegra_dc_get_numof_dispwindows());
 
 	win = &ext->win[n];
 
@@ -224,7 +225,7 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	if ((n >= tegra_dc_get_numof_dispwindows()) ||
 		!(ext->dc->valid_windows & BIT(n)))
 		return -EINVAL;
-	speculation_barrier();
+	n = array_index_nospec(n, tegra_dc_get_numof_dispwindows());
 
 	win = &ext->win[n];
 
@@ -2095,7 +2096,8 @@ static int tegra_dc_ext_set_win_csc(struct tegra_dc_ext_user *user,
 
 	if (index >= tegra_dc_get_numof_dispwindows())
 		return -EINVAL;
-	speculation_barrier();
+	index = array_index_nospec(index, tegra_dc_get_numof_dispwindows());
+
 	win = tegra_dc_get_window(dc, index);
 	if (!win)
 		return -EINVAL;
@@ -2137,7 +2139,8 @@ static int tegra_dc_ext_set_nvdisp_win_csc(struct tegra_dc_ext_user *user,
 
 	if (index >= tegra_dc_get_numof_dispwindows())
 		return -EINVAL;
-	speculation_barrier();
+	index = array_index_nospec(index, tegra_dc_get_numof_dispwindows());
+
 	win = tegra_dc_get_window(dc, index);
 	if (!win)
 		return -EINVAL;
@@ -2251,7 +2254,8 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 
 	if (index >= tegra_dc_get_numof_dispwindows())
 		return -EINVAL;
-	speculation_barrier();
+	index = array_index_nospec(index, tegra_dc_get_numof_dispwindows());
+
 	win = tegra_dc_get_window(dc, index);
 	if (!win)
 		return -EINVAL;
@@ -2500,8 +2504,9 @@ static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
 	for (i = 0; i < win_num; i++) {
 		if (wins[i].index >= tegra_dc_get_numof_dispwindows())
 			return -EINVAL;
+		wins[i].index = array_index_nospec(wins[i].index,
+					tegra_dc_get_numof_dispwindows());
 	}
-	speculation_barrier();
 
 	for (i = 0; i < win_num; i++) {
 		int idx = wins[i].index;

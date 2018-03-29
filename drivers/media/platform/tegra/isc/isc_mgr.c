@@ -36,6 +36,7 @@
 #include <linux/i2c.h>
 #include <linux/pwm.h>
 #include <linux/debugfs.h>
+#include <linux/nospec.h>
 #include <linux/seq_file.h>
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
@@ -424,7 +425,8 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 		goto pwr_info_end;
 	}
 
-	speculation_barrier();
+	pinfo.pwr_gpio = array_index_nospec(pinfo.pwr_gpio, pd->num_pwr_gpios);
+
 	pinfo.pwr_status  = gpio_get_value(pd->pwr_gpios[pinfo.pwr_gpio]);
 	err = 0;
 
@@ -451,11 +453,11 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	if (arg >= MAX_ISC_GPIOS)
 		arg = MAX_ISC_GPIOS - 1;
 
-	speculation_barrier();
+	arg = array_index_nospec(arg, MAX_ISC_GPIOS);
 	pwr_gpio = pd->pwr_mapping[arg];
 
 	if (pwr_gpio < pd->num_pwr_gpios) {
-		speculation_barrier();
+		pwr_gpio = array_index_nospec(pwr_gpio, pd->num_pwr_gpios);
 		gpio_set_value(pd->pwr_gpios[pwr_gpio],
 			PW_ON(pd->pwr_flags[pwr_gpio]));
 		isc_mgr->pwr_state |= BIT(pwr_gpio);
@@ -487,11 +489,12 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	if (arg >= MAX_ISC_GPIOS)
 		arg = MAX_ISC_GPIOS - 1;
 
-	speculation_barrier();
+	arg = array_index_nospec(arg, MAX_ISC_GPIOS);
+
 	pwr_gpio = pd->pwr_mapping[arg];
 
 	if (pwr_gpio < pd->num_pwr_gpios) {
-		speculation_barrier();
+		pwr_gpio = array_index_nospec(pwr_gpio, pd->num_pwr_gpios);
 		gpio_set_value(pd->pwr_gpios[pwr_gpio],
 				PW_OFF(pd->pwr_flags[pwr_gpio]));
 		isc_mgr->pwr_state &= ~BIT(pwr_gpio);

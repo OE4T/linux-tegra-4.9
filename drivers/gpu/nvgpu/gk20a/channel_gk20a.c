@@ -645,6 +645,9 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* Channel privilege level */
 	ch->is_privileged_channel = is_privileged_channel;
 
+	ch->pid = nvgpu_current_tid(g);
+	ch->tgid = nvgpu_current_pid(g);  /* process granularity for FECS traces */
+
 	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->g = NULL;
 		free_channel(f, ch);
@@ -655,9 +658,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	/* now the channel is in a limbo out of the free list but not marked as
 	 * alive and used (i.e. get-able) yet */
-
-	ch->pid = nvgpu_current_tid(g);
-	ch->tgid = nvgpu_current_pid(g);  /* process granularity for FECS traces */
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;

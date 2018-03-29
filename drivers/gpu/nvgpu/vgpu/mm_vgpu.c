@@ -31,9 +31,6 @@
 #include <nvgpu/vgpu/vm.h>
 #include <nvgpu/vgpu/vgpu.h>
 
-#include <nvgpu/linux/vm.h>
-#include <nvgpu/linux/nvgpu_mem.h>
-
 #include "mm_vgpu.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

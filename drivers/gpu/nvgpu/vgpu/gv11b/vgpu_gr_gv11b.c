@@ -23,6 +23,7 @@
 #include "gk20a/gk20a.h"
 #include "vgpu/gr_vgpu.h"
 #include "vgpu_subctx_gv11b.h"
+#include "vgpu_gr_gv11b.h"
 
 int vgpu_gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {

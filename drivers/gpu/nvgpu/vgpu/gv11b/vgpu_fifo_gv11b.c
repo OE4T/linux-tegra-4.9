@@ -26,6 +26,7 @@
 #include <nvgpu/vgpu/tegra_vgpu.h>
 
 #include "gv11b/fifo_gv11b.h"
+#include "vgpu_fifo_gv11b.h"
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 

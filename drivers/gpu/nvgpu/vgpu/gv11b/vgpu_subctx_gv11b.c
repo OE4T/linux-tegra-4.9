@@ -21,6 +21,7 @@
  */
 
 #include "gk20a/gk20a.h"
+#include "vgpu_subctx_gv11b.h"
 
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>

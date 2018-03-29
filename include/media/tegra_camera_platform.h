@@ -48,6 +48,8 @@ enum tegra_camera_sensor_type {
 	SENSORTYPE_CPHY,
 	SENSORTYPE_SLVSEC,
 	SENSORTYPE_VIRTUAL,
+	/* HDMI-IN or other inputs */
+	SENSORTYPE_OTHER,
 	SENSORTYPE_MAX,
 };
 

@@ -48,6 +48,7 @@
 #include "nvcsi/deskew.h"
 
 #define TPG_CSI_GROUP_ID	10
+#define HDMI_IN_RATE 550000000
 
 static s64 queue_init_ts;
 
@@ -1316,6 +1317,92 @@ static int tegra_channel_connect_sensor(
 	return 0;
 }
 
+static int map_to_sensor_type(u32 phy_mode)
+{
+	switch (phy_mode) {
+	case CSI_PHY_MODE_DPHY:
+		return SENSORTYPE_DPHY;
+	case CSI_PHY_MODE_CPHY:
+		return SENSORTYPE_CPHY;
+	case SLVS_EC:
+		return SENSORTYPE_SLVSEC;
+	default:
+		return SENSORTYPE_OTHER;
+	}
+}
+
+static u64 tegra_channel_get_max_pixelclock(struct tegra_channel *chan)
+{
+	int i = 0;
+	u64 val = 0, pixelclock = 0;
+
+	struct v4l2_subdev *sd = chan->subdev_on_csi;
+	struct camera_common_data *s_data =
+		to_camera_common_data(sd->dev);
+	struct sensor_mode_properties *sensor_mode;
+
+	for (i = 0; i < s_data->sensor_props.num_modes; i++) {
+		sensor_mode = &s_data->sensor_props.sensor_modes[i];
+		val = sensor_mode->signal_properties.pixel_clock.val;
+		/* Select the mode with largest pixel rate */
+		if (pixelclock < val)
+			pixelclock = val;
+	}
+
+	return pixelclock;
+}
+
+static u32 tegra_channel_get_sensor_type(struct tegra_channel *chan)
+{
+	u32 phy_mode = 0, sensor_type = 0;
+	struct v4l2_subdev *sd = chan->subdev_on_csi;
+	struct camera_common_data *s_data =
+		to_camera_common_data(sd->dev);
+	struct sensor_mode_properties *sensor_mode;
+
+	/* Select phy mode based on the first mode */
+	sensor_mode = &s_data->sensor_props.sensor_modes[0];
+	phy_mode = sensor_mode->signal_properties.phy_mode;
+	sensor_type = map_to_sensor_type(phy_mode);
+
+	return sensor_type;
+}
+
+static u64 tegra_channel_get_max_source_rate(void)
+{
+	/* WAR: bug 2095503 */
+	/* TODO very large hard-coded rate based on 4k@60 fps */
+	/* implement proper functionality here. */
+	u64 pixelrate = HDMI_IN_RATE;
+	return pixelrate;
+}
+
+static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
+			struct tegra_channel *chan)
+{
+	u64 pixelclock = 0;
+
+	if (chan->pg_mode)
+		cdev->sensor_type = SENSORTYPE_VIRTUAL;
+	else if (v4l2_subdev_has_op(chan->subdev_on_csi,
+				video, g_dv_timings)) {
+		cdev->sensor_type = SENSORTYPE_OTHER;
+		pixelclock = tegra_channel_get_max_source_rate();
+	} else {
+		cdev->sensor_type = tegra_channel_get_sensor_type(chan);
+		pixelclock = tegra_channel_get_max_pixelclock(chan);
+		/* Multiply by CPHY symbols to pixels factor. */
+		if (cdev->sensor_type == SENSORTYPE_CPHY)
+			pixelclock *= 16/7;
+	}
+
+	cdev->pixel_rate = pixelclock;
+	cdev->pixel_bit_depth = chan->fmtinfo->width;
+	cdev->bpp = chan->fmtinfo->bpp.numerator;
+	/* BW in kBps */
+	cdev->bw = cdev->pixel_rate * cdev->bpp / 1024;
+}
+
 int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
 	int ret = 0;
@@ -1324,6 +1411,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	struct v4l2_subdev *sd;
 	int index = 0;
 	int num_sd = 0;
+	struct tegra_camera_dev_info camdev_info;
 	int grp_id = chan->pg_mode ? (TPG_CSI_GROUP_ID + chan->port[0] + 1)
 		: chan->port[0] + 1;
 
@@ -1387,13 +1475,17 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 		goto fail;
 	}
 
+	memset(&camdev_info, 0, sizeof(camdev_info));
+
 	/*
 	 * If subdev on csi is csi or channel is in pg mode
 	 * then don't look for sensor props
 	 */
 	if (strstr(chan->subdev_on_csi->name, "nvcsi") != NULL ||
-			chan->pg_mode)
+			chan->pg_mode) {
+		tegra_channel_populate_dev_info(&camdev_info, chan);
 		return 0;
+	}
 
 	ret = tegra_channel_sensorprops_setup(chan);
 	if (ret < 0) {
@@ -1409,6 +1501,8 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 			"%s: failed to connect sensor to channel\n", __func__);
 		goto fail;
 	}
+
+	tegra_channel_populate_dev_info(&camdev_info, chan);
 
 	return 0;
 fail:

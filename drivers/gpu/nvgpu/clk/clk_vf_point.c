@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -200,7 +200,8 @@ static u32 _clk_vf_point_pmudatainit_volt(struct gk20a *g,
 		ppmudata;
 
 	pset->source_voltage_uv = pclk_vf_point_volt->source_voltage_uv;
-	pset->freq_delta_khz = pclk_vf_point_volt->freq_delta_khz;
+	pset->freq_delta.data = pclk_vf_point_volt->freq_delta.data;
+	pset->freq_delta.type = pclk_vf_point_volt->freq_delta.type;
 
 	return status;
 }
@@ -257,6 +258,7 @@ static u32 clk_vf_point_construct_volt(struct gk20a *g,
 			_clk_vf_point_pmudatainit_volt;
 
 	pclkvfpoint->source_voltage_uv = ptmpvfpoint->source_voltage_uv;
+	pclkvfpoint->freq_delta = ptmpvfpoint->freq_delta;
 
 	return status;
 }

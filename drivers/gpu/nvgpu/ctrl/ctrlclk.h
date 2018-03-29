@@ -75,8 +75,8 @@
 
 #define CTRL_CLK_CLK_VF_POINT_IDX_INVALID                      255
 
-#define CTRL_CLK_CLK_VF_POINT_TYPE_FREQ                         0x00
-#define CTRL_CLK_CLK_VF_POINT_TYPE_VOLT                         0x01
+#define CTRL_CLK_CLK_VF_POINT_TYPE_FREQ                         0x01
+#define CTRL_CLK_CLK_VF_POINT_TYPE_VOLT                         0x02
 #define CTRL_CLK_CLK_VF_POINT_TYPE_UNKNOWN                      255
 
 struct ctrl_clk_clk_prog_1x_master_source_fll {

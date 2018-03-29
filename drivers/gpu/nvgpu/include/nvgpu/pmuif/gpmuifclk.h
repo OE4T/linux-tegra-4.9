@@ -282,7 +282,7 @@ struct nv_pmu_clk_clk_vf_point_freq_boardobj_set {
 struct nv_pmu_clk_clk_vf_point_volt_boardobj_set {
 	struct nv_pmu_clk_clk_vf_point_boardobj_set super;
 	u32 source_voltage_uv;
-	int freq_delta_khz;
+	struct ctrl_clk_freq_delta freq_delta;
 };
 
 union nv_pmu_clk_clk_vf_point_boardobj_set_union {
@@ -296,11 +296,13 @@ NV_PMU_BOARDOBJ_GRP_SET_MAKE_E255(clk, clk_vf_point);
 
 struct nv_pmu_clk_clk_vf_point_boardobjgrp_get_status_header {
 	struct nv_pmu_boardobjgrp_e255 super;
+	u32 vf_points_cahce_counter;
 };
 
 struct nv_pmu_clk_clk_vf_point_boardobj_get_status {
 	struct nv_pmu_boardobj super;
 	struct ctrl_clk_vf_pair pair;
+	u8 dummy[38];
 };
 
 struct nv_pmu_clk_clk_vf_point_volt_boardobj_get_status {

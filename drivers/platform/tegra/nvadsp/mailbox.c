@@ -14,6 +14,7 @@
  */
 
 #include "dev.h"
+#include <linux/nospec.h>
 #include <asm/barrier.h>
 
 #define NVADSP_MAILBOX_START	512
@@ -187,7 +188,9 @@ status_t nvadsp_mbox_open(struct nvadsp_mbox *mbox, uint16_t *mid,
 			ret = -ERANGE;
 			goto out;
 		}
-		speculation_barrier();
+
+		*mid = array_index_nospec(*mid, NVADSP_MAILBOX_MAX);
+
 		if (nvadsp_drv_data->mboxes[*mid]) {
 			pr_debug("%s: mailbox %d already opened.\n",
 				 __func__, *mid);

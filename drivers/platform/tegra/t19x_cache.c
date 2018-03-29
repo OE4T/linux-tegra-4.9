@@ -29,7 +29,6 @@
 
 #define CCPLEX_CC_GPU_ONLY_BITS_SHIFT	8
 
-#define MAX_L3_WAYS			16
 #define L3_WAYS_MASK			GENMASK(4, 0)
 
 #ifdef CONFIG_DEBUG_FS
@@ -159,9 +158,12 @@ static int t19x_set_l3_cache_ways(u32 gpu_cpu_ways, u32 gpu_only_ways)
 	u64 nvg_data;
 	u64 ret;
 
-	if ((gpu_only_ways > MAX_L3_WAYS) || (gpu_cpu_ways > MAX_L3_WAYS)) {
-		dev_err(dev, "gpu_cpu_ways:%u or gpu_only_ways:%u exceeds 16!!\n",
-			gpu_cpu_ways, gpu_only_ways);
+	if ((gpu_only_ways > cache_data->ioctl_data.total_ways) ||
+		(gpu_cpu_ways > cache_data->ioctl_data.total_ways)) {
+		dev_err(dev, "gpu_cpu_ways:%u or gpu_only_ways:%u"
+			"exceeds total_ways:%u!!\n",
+			gpu_cpu_ways, gpu_only_ways,
+			cache_data->ioctl_data.total_ways);
 		return -EINVAL;
 	}
 

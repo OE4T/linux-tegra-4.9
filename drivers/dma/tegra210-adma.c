@@ -22,7 +22,6 @@
 #include <linux/of_device.h>
 #include <linux/of_dma.h>
 #include <linux/of_irq.h>
-#include <linux/pm_clock.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 
@@ -243,6 +242,7 @@ struct tegra_adma_chan {
 struct tegra_adma {
 	struct dma_device		dma_dev;
 	struct device			*dev;
+	struct clk                      *ahub_clk;
 	void __iomem			*base_addr;
 	void __iomem			*adast_addr;
 	void __iomem			*shrd_sem_addr;
@@ -1086,7 +1086,10 @@ static int tegra_adma_runtime_suspend(struct device *dev)
 			ch_reg->config = tdma_ch_read(tdc, ADMA_CH_CONFIG);
 		}
 	}
-	return pm_clk_suspend(dev);
+
+	clk_disable_unprepare(tdma->ahub_clk);
+
+	return 0;
 }
 
 static int tegra_adma_runtime_resume(struct device *dev)
@@ -1095,9 +1098,11 @@ static int tegra_adma_runtime_resume(struct device *dev)
 	struct tegra_adma *tdma = dev_get_drvdata(dev);
 	int ret, i;
 
-	ret = pm_clk_resume(dev);
-	if (ret)
+	ret = clk_prepare_enable(tdma->ahub_clk);
+	if (ret) {
+		dev_err(dev, "ahub clk_enable failed: %d\n", ret);
 		return ret;
+	}
 
 	if (tdma->is_virt == false) {
 		if (tdma->chip_data->tegra_adast_init != NULL) {
@@ -1333,13 +1338,11 @@ static int tegra_adma_probe(struct platform_device *pdev)
 			return PTR_ERR(tdma->shrd_sem_addr);
 	}
 
-	ret = pm_clk_create(&pdev->dev);
-	if (ret)
-		return ret;
-
-	ret = of_pm_clk_add_clk(&pdev->dev, "d_audio");
-	if (ret)
-		goto clk_destroy;
+	tdma->ahub_clk = devm_clk_get(&pdev->dev, "d_audio");
+	if (IS_ERR(tdma->ahub_clk)) {
+		dev_err(&pdev->dev, "Error: Missing ahub controller clock\n");
+		return PTR_ERR(tdma->ahub_clk);
+	}
 
 	spin_lock_init(&tdma->global_lock);
 
@@ -1420,8 +1423,6 @@ rpm_put:
 	pm_runtime_put_sync(&pdev->dev);
 rpm_disable:
 	pm_runtime_disable(&pdev->dev);
-clk_destroy:
-	pm_clk_destroy(&pdev->dev);
 
 	return ret;
 }
@@ -1438,7 +1439,6 @@ static int tegra_adma_remove(struct platform_device *pdev)
 
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-	pm_clk_destroy(&pdev->dev);
 
 	return 0;
 }

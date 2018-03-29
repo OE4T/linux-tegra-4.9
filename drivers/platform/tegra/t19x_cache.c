@@ -11,6 +11,8 @@
  * more details.
  */
 
+#define pr_fmt(fmt)	"%s(): " fmt, __func__
+
 #include <linux/bitops.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -20,6 +22,7 @@
 #include <linux/debugfs.h>
 #include <linux/tegra-mce.h>
 #include <linux/platform_device.h>
+#include <linux/sysfs.h>
 #include <soc/tegra/chip-id.h>
 #include <uapi/linux/tegra_l3_cache.h>
 #include <soc/tegra/chip-id.h>
@@ -187,6 +190,106 @@ static int t19x_set_l3_cache_ways(u32 gpu_cpu_ways, u32 gpu_only_ways)
 	}
 
 	return 0;
+}
+
+static ssize_t gpu_only_ways_show(struct device *device,
+				struct device_attribute *attr, char *buf)
+{
+	struct cache_drv_data *pdata;
+
+	t19x_extract_l3_cache_ways(device);
+
+	pdata = dev_get_drvdata(device);
+
+	return sprintf(buf, "%u\n", pdata->ioctl_data.igpu_only_ways);
+}
+
+static ssize_t gpu_only_ways_store(struct device *device,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
+{
+	struct cache_drv_data *pdata;
+	u32 new_gpu_only_ways;
+	u32 gpu_cpu_ways;
+
+	if (is_tegra_hypervisor_mode())
+		return -EPERM;
+
+	if (kstrtou32(buf, 0, &new_gpu_only_ways) < 0)
+		return -EINVAL;
+
+	t19x_extract_l3_cache_ways(device);
+	pdata = dev_get_drvdata(device);
+	gpu_cpu_ways = pdata->ioctl_data.igpu_cpu_ways;
+	t19x_set_l3_cache_ways(gpu_cpu_ways, new_gpu_only_ways);
+
+	return count;
+}
+
+static ssize_t gpu_cpu_ways_show(struct device *device,
+				struct device_attribute *attr, char *buf)
+{
+	struct cache_drv_data *pdata;
+
+	t19x_extract_l3_cache_ways(device);
+
+	pdata = dev_get_drvdata(device);
+
+	return sprintf(buf, "%u\n", pdata->ioctl_data.igpu_cpu_ways);
+}
+
+static ssize_t gpu_cpu_ways_store(struct device *device,
+				struct device_attribute *attr, const char *buf,
+				size_t count)
+{
+	struct cache_drv_data *pdata;
+	u32 new_gpu_cpu_ways;
+	u32 gpu_only_ways;
+
+	if (is_tegra_hypervisor_mode())
+		return -EPERM;
+
+	if (kstrtou32(buf, 0, &new_gpu_cpu_ways) < 0)
+		return -EINVAL;
+
+	t19x_extract_l3_cache_ways(device);
+	pdata = dev_get_drvdata(device);
+	gpu_only_ways = pdata->ioctl_data.igpu_only_ways;
+	t19x_set_l3_cache_ways(new_gpu_cpu_ways, gpu_only_ways);
+
+	return count;
+}
+
+static DEVICE_ATTR(l3_gpu_only_ways, 0644,
+	gpu_only_ways_show, gpu_only_ways_store);
+static DEVICE_ATTR(l3_gpu_cpu_ways, 0644,
+	gpu_cpu_ways_show, gpu_cpu_ways_store);
+
+static int t19x_cache_sysfs_create(struct device *dev)
+{
+	int err;
+
+	err = device_create_file(dev, &dev_attr_l3_gpu_only_ways);
+	if (err) {
+		dev_warn(dev, "Couldn't create gpu_only_ways attribute err%d\n",
+			err);
+		return err;
+	}
+
+	err = device_create_file(dev, &dev_attr_l3_gpu_cpu_ways);
+	if (err) {
+		dev_warn(dev, "Couldn't create gpu_cpu_ways attribute err%d\n",
+			err);
+		device_remove_file(dev, &dev_attr_l3_gpu_only_ways);
+		return err;
+	}
+
+	return 0;
+}
+static void t19x_cache_sysfs_remove(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_l3_gpu_only_ways);
+	device_remove_file(dev, &dev_attr_l3_gpu_cpu_ways);
 }
 
 static int t19x_parse_dt(void)
@@ -478,6 +581,12 @@ static int __init t19x_cache_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = t19x_cache_sysfs_create(dev);
+	if (ret) {
+		dev_err(dev, "Failed to create sysfs attributes!\n");
+		goto err_out;
+	}
+
 #ifdef CONFIG_DEBUG_FS
 	ret = t19x_cache_debug_init();
 	if (ret) {
@@ -486,7 +595,7 @@ static int __init t19x_cache_probe(struct platform_device *pdev)
 	}
 #endif
 
-	dev_dbg(dev, "passed\n");
+	dev_notice(dev, "probed\n");
 
 	return 0;
 
@@ -501,6 +610,8 @@ err_out:
 static int __exit t19x_cache_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+
+	t19x_cache_sysfs_remove(dev);
 
 	misc_deregister(&cache_data->dev_user);
 	devm_kfree(dev, cache_data);

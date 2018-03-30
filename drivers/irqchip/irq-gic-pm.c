@@ -19,7 +19,6 @@
 #include <linux/of_irq.h>
 #include <linux/irqchip/arm-gic.h>
 #include <linux/platform_device.h>
-#include <linux/pm_clock.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/irqchip/tegra-agic.h>
@@ -27,6 +26,12 @@
 struct gic_clk_data {
 	unsigned int num_clocks;
 	const char *const *clocks;
+};
+
+struct gic_chip_pm {
+	struct gic_chip_data *gic;
+	const struct gic_clk_data *data;
+	struct clk **clk;
 };
 
 static struct gic_chip_data *tegra_agic;
@@ -78,12 +83,21 @@ EXPORT_SYMBOL_GPL(tegra_agic_route_interrupt);
 
 static int gic_runtime_resume(struct device *dev)
 {
-	struct gic_chip_data *gic = dev_get_drvdata(dev);
-	int ret;
+	struct gic_chip_pm *gic_chip_pm = dev_get_drvdata(dev);
+	struct gic_chip_data *gic = gic_chip_pm->gic;
+	const struct gic_clk_data *data = gic_chip_pm->data;
+	int ret, i;
 
-	ret = pm_clk_resume(dev);
-	if (ret)
-		return ret;
+	for (i = 0; i < data->num_clocks; i++) {
+		ret = clk_prepare_enable(gic_chip_pm->clk[i]);
+		if (ret) {
+			while (--i >= 0)
+				clk_disable_unprepare(gic_chip_pm->clk[i]);
+
+			dev_err(dev, " clk_enable failed: %d\n", ret);
+			return ret;
+		}
+	}
 
 	/*
 	 * On the very first resume, the pointer to the driver data
@@ -102,12 +116,18 @@ static int gic_runtime_resume(struct device *dev)
 
 static int gic_runtime_suspend(struct device *dev)
 {
-	struct gic_chip_data *gic = dev_get_drvdata(dev);
+	struct gic_chip_pm *gic_chip_pm = dev_get_drvdata(dev);
+	struct gic_chip_data *gic = gic_chip_pm->gic;
+	const struct gic_clk_data *data = gic_chip_pm->data;
+	int i;
 
 	gic_dist_save(gic);
 	gic_cpu_save(gic);
 
-	return pm_clk_suspend(dev);
+	for (i = 0; i < data->num_clocks; i++)
+		clk_disable_unprepare(gic_chip_pm->clk[i]);
+
+	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
@@ -128,25 +148,26 @@ static int gic_pm_suspend(struct device *dev)
 }
 #endif
 
-static int gic_get_clocks(struct device *dev, const struct gic_clk_data *data)
+
+static int gic_get_clocks(struct device *dev, struct gic_chip_pm *gic_chip_pm)
 {
+	const struct gic_clk_data *data = gic_chip_pm->data;
 	unsigned int i;
-	int ret;
 
 	if (!dev || !data)
 		return -EINVAL;
 
-	ret = pm_clk_create(dev);
-	if (ret)
-		return ret;
+	gic_chip_pm->clk = devm_kzalloc(dev, data->num_clocks *
+				sizeof(struct clk *), GFP_KERNEL);
+	if (!gic_chip_pm->clk)
+		return -ENOMEM;
 
 	for (i = 0; i < data->num_clocks; i++) {
-		ret = of_pm_clk_add_clk(dev, data->clocks[i]);
-		if (ret) {
-			dev_err(dev, "failed to add clock %s\n",
+		gic_chip_pm->clk[i] = devm_clk_get(dev, data->clocks[i]);
+		if (IS_ERR(gic_chip_pm->clk[i])) {
+			dev_err(dev, "failed to get clock %s\n",
 				data->clocks[i]);
-			pm_clk_destroy(dev);
-			return ret;
+			return PTR_ERR(gic_chip_pm->clk[i]);
 		}
 	}
 
@@ -157,7 +178,7 @@ static int gic_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	const struct gic_data *data;
-	struct gic_chip_data *gic;
+	struct gic_chip_pm *gic_chip_pm;
 	int ret, irq;
 
 	data = of_device_get_match_data(&pdev->dev);
@@ -166,13 +187,21 @@ static int gic_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	gic_chip_pm = devm_kzalloc(dev, sizeof(*gic_chip_pm), GFP_KERNEL);
+	if (!gic_chip_pm)
+		return -ENOMEM;
+
+	gic_chip_pm->data = data->clk_data;
+
+	platform_set_drvdata(pdev, gic_chip_pm);
+
 	irq = irq_of_parse_and_map(dev->of_node, 0);
 	if (!irq) {
 		dev_err(dev, "no parent interrupt found!\n");
 		return -EINVAL;
 	}
 
-	ret = gic_get_clocks(dev, data->clk_data);
+	ret = gic_get_clocks(dev, gic_chip_pm);
 	if (ret)
 		goto irq_dispose;
 
@@ -182,17 +211,15 @@ static int gic_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto rpm_disable;
 
-	ret = gic_of_init_child(dev, &gic, irq);
+	ret = gic_of_init_child(dev, &gic_chip_pm->gic, irq);
 	if (ret)
 		goto rpm_put;
-
-	platform_set_drvdata(pdev, gic);
 
 	pm_runtime_put(dev);
 
 	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-agic") ||
 	of_device_is_compatible(dev->of_node, "nvidia,tegra186-agic"))
-		tegra_agic = gic;
+		tegra_agic = gic_chip_pm->gic;
 
 	dev_info(dev, "GIC IRQ controller registered\n");
 
@@ -202,7 +229,6 @@ rpm_put:
 	pm_runtime_put_sync(dev);
 rpm_disable:
 	pm_runtime_disable(dev);
-	pm_clk_destroy(dev);
 irq_dispose:
 	irq_dispose_mapping(irq);
 

@@ -1265,11 +1265,11 @@
 			};
 			prod_c_ds {
 				prod = <
-					0 0x00000100 0x1fff0000 0x05090000>;              //SDMMC_VENDOR_CLOCK_CNTRL_0
+					0 0x00000100 0x1fff0000 0x14080000>;              //SDMMC_VENDOR_CLOCK_CNTRL_0
 			};
 			prod_c_hs {
 				prod = <
-					0 0x00000100 0x1fff0000 0x05090000>;              //SDMMC_VENDOR_CLOCK_CNTRL_0
+					0 0x00000100 0x1fff0000 0x14080000>;              //SDMMC_VENDOR_CLOCK_CNTRL_0
 			};
 			prod_c_cqe {
 				prod = <

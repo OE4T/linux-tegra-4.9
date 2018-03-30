@@ -240,7 +240,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	 * Before the debug print so we see this in the total. But during
 	 * cleanup in the fail path this has to be subtracted.
 	 */
-	g->dma_memory_used += mem->aligned_size;
+	g->dma_memory_used += PAGE_ALIGN(size);
 
 	dma_dbg_alloc(g, size, flags, "sysmem");
 

@@ -151,9 +151,16 @@ static void _handle_event(void *data, int event)
 	return;
 }
 
+static void _handle_release(void *data)
+{
+	trusty_ote_debug("%s\n", __func__);
+	kfree(data);
+}
+
 struct tipc_chan_ops chan_ops = {
 	.handle_msg = _handle_msg,
 	.handle_event = _handle_event,
+	.handle_release = _handle_release,
 };
 
 /*
@@ -407,6 +414,9 @@ err:
 	tipc_chan_shutdown(chan_ctx->chan);
 err_conn:
 	tipc_chan_destroy(chan_ctx->chan);
+	/* chan_ctx is freed in a callback, no need to explicitly free it here */
+	return ret;
+
 err_chan:
 	kfree(chan_ctx);
 	return ret;
@@ -433,8 +443,6 @@ void te_close_trusted_session(void *ctx)
 	if (chan_ctx->state == TIPC_CONNECTED)
 		tipc_chan_shutdown(chan_ctx->chan);
 	tipc_chan_destroy(chan_ctx->chan);
-
-	kfree(chan_ctx);
 }
 EXPORT_SYMBOL(te_close_trusted_session);
 

@@ -264,6 +264,27 @@ static struct iommu_linear_map_mapping t186_linear_map[] = {
 	{},
 };
 
+static struct iommu_linear_map_mapping t194_linear_map[] = {
+	{
+		.name = "15200000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
+	{
+		.name = "15210000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
+	{
+		.name = "15220000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
+	{
+		.name = "15230000.nvdisplay",
+		.map = tegra_fb_linear_map,
+	},
+	{},
+};
+
+
 int iommu_get_linear_map(struct device *dev, struct iommu_linear_map **map)
 {
 	const char *s;
@@ -275,6 +296,9 @@ int iommu_get_linear_map(struct device *dev, struct iommu_linear_map **map)
 	switch (tegra_get_chipid()) {
 	case TEGRA_CHIPID_TEGRA18:
 		table = t186_linear_map;
+		break;
+	case TEGRA_CHIPID_TEGRA19:
+		table = t194_linear_map;
 		break;
 	default:
 		return 0;

@@ -2049,6 +2049,9 @@ static void arm_smmu_do_linear_map(struct device *dev)
 		int err;
 		DEFINE_DMA_ATTRS(attrs);
 
+		if (map->is_mapped)
+			return;
+
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 
@@ -2058,14 +2061,16 @@ static void arm_smmu_do_linear_map(struct device *dev)
 
 			err = dma_map_linear_attrs(dev, map->start,
 						size, 0, __DMA_ATTR(attrs));
-			if (err == DMA_ERROR_CODE)
+			if (err == DMA_ERROR_CODE) {
 				dev_err(dev,
 					"IOVA linear map %pad(%zx) failed\n",
 					&map->start, size);
-			else
+			} else {
 				dev_info(dev,
 					"IOVA linear map %pad(%zx)\n",
 					&map->start, size);
+				map->is_mapped = true;
+			}
 			map++;
 		}
 	}

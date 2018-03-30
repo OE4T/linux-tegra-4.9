@@ -37,6 +37,7 @@
 #include <linux/version.h>
 #include <linux/pm_qos.h>
 #include <linux/workqueue.h>
+#include <linux/tegra-cpufreq.h>
 
 /* cpufreq transisition latency */
 #define TEGRA_CPUFREQ_TRANSITION_LATENCY (300 * 1000) /* unit in nanoseconds */
@@ -57,6 +58,7 @@ struct cpu_emc_map {
 };
 static struct cpu_emc_map *cpu_emc_map_ptr;
 static uint16_t cpu_emc_map_num;
+static uint8_t tegra_hypervisor_mode;
 
 enum cluster {
 	CLUSTER0,
@@ -331,8 +333,16 @@ static int tegra194_set_speed(struct cpufreq_policy *policy, unsigned int index)
 
 	cl = get_cpu_cluster(policy->cpu);
 
-	for_each_cpu(cpu, policy->cpus)
-		tegra_update_cpu_speed(tgt_freq, cpu);
+	/*
+	 * In hypervisor case cpufreq server will take care of
+	 * updating frequency for each cpu in a cluster. So no
+	 * need to run through the loop.
+	 */
+	if (tegra_hypervisor_mode)
+		t194_update_cpu_speed_hv(tgt_freq, policy->cpu);
+	else
+		for_each_cpu(cpu, policy->cpus)
+			tegra_update_cpu_speed(tgt_freq, cpu);
 
 	if (tfreq_data.pcluster[cl].bwmgr)
 		set_cpufreq_to_emcfreq(cl, tgt_freq);
@@ -440,8 +450,12 @@ static int freq_set(void *data, u64 val)
 	uint64_t cpu = (uint64_t)data;
 	uint32_t freq = val;
 
-	if (val)
-		tegra_update_cpu_speed(freq, cpu);
+	if (val) {
+		if (tegra_hypervisor_mode)
+			t194_update_cpu_speed_hv(freq, cpu);
+		else
+			tegra_update_cpu_speed(freq, cpu);
+	}
 
 	return 0;
 }
@@ -717,7 +731,10 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 #endif
 	if (!ret && (freq != ftbl[idx].frequency)) {
 		freq = ftbl[idx].frequency;
-		tegra_update_cpu_speed(freq, policy->cpu);
+		if (tegra_hypervisor_mode)
+			t194_update_cpu_speed_hv(freq, policy->cpu);
+		else
+			tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
 	policy->cur = tegra194_get_speed(policy->cpu);
@@ -1071,6 +1088,7 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 
 	mutex_init(&tfreq_data.mlock);
 	tfreq_data.freq_compute_delay = US_DELAY;
+	tegra_hypervisor_mode = is_tegra_hypervisor_mode();
 
 	for_each_possible_cpu(cpu) {
 		cl = get_cpu_cluster(cpu);
@@ -1079,6 +1097,15 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 	}
 
 	set_cpu_mask();
+
+	if (tegra_hypervisor_mode) {
+		ret = parse_hv_dt_data(dn);
+		if (ret)
+			goto err_free_res;
+	}
+
+	if (tegra_hypervisor_mode)
+		tegra_cpufreq_driver.get = t194_get_cpu_speed_hv;
 
 	ret = register_with_emc_bwmgr();
 	if (ret) {

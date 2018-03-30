@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,12 +20,15 @@
 enum tegra_cpufreq_msg_ids {
 	TEGRA_CPU_FREQ_THROTTLE,
 	TEGRA_CPU_FREQ_SET_RATE,
+	TEGRA_CPU_FREQ_GET_RATE,
 	MAX_IVC_MSG_ID,
 };
 
-int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf);
 int parse_hv_dt_data(struct device_node *dn);
+int parse_t194_cpufreq_hv_dt(struct device_node *dn);
 bool hv_is_set_speed_supported(void);
 void tegra_update_cpu_speed_hv(uint32_t rate, uint8_t cpu);
+uint32_t t194_get_cpu_speed_hv(uint32_t cpu);
+void t194_update_cpu_speed_hv(uint32_t rate, uint32_t cpu);
 
 #endif

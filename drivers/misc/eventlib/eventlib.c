@@ -1,7 +1,7 @@
 /*
  * eventlib.c
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,7 +29,7 @@
 
 #include "eventlib.h"
 
-#define KEVENTLIB_VERSION		"0.1"
+#define KEVENTLIB_VERSION		"0.2"
 
 #define EVENTLIB_SYSFS_DIR_NAME		"eventlib"
 #define EVENTLIB_SYSFS_TEST_FILE_NAME	"test"
@@ -177,6 +177,7 @@ create_sysfs_entry(struct eventlib_provider_info *info,
 	attr->attr.name = EVENTLIB_SYSFS_EVENTS_FILE_NAME;
 	attr->attr.mode = 0444;
 	attr->mmap = sysfs_mmap;
+	attr->read = NULL;
 	attr->size = info->data_size;
 
 	ret = sysfs_create_bin_file(info->kobj, attr);

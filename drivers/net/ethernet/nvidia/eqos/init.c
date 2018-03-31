@@ -801,7 +801,6 @@ static inline u32 eqos_get_mac_version(void)
 
 int eqos_probe(struct platform_device *pdev)
 {
-
 	struct eqos_prv_data *pdata = NULL;
 	struct net_device *ndev = NULL;
 	int i, j, ret = 0;
@@ -816,9 +815,7 @@ int eqos_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u8 mac_addr[6];
-
 	struct eqos_cfg *pdt_cfg;
-	struct chan_data *pchinfo;
 	bool	use_multi_q;
 	uint	num_chans;
 
@@ -878,7 +875,6 @@ int eqos_probe(struct platform_device *pdev)
 			j, rx_irqs[j], j, tx_irqs[j]);
 
 	pr_debug("============================================================\n");
-	pr_debug("Sizeof rx context desc %lu\n", sizeof(struct s_rx_context_desc));
 	pr_debug("Sizeof tx context desc %lu\n", sizeof(struct s_tx_context_desc));
 	pr_debug("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_desc));
 	pr_debug("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_desc));
@@ -1078,15 +1074,6 @@ int eqos_probe(struct platform_device *pdev)
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;
 
-	for (i = 0; i < num_chans; i++) {
-		pchinfo = &pdata->chinfo[i];
-		pchinfo->chan_num = i;
-		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_WR_MASK;
-
-		/* enable tx interrupts for all chan */
-		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
-	}
-
 	/* csr_clock_speed is axi_cbb_clk rate */
 	pdata->csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
 	if (pdata->csr_clock_speed <= 0) {
@@ -1222,12 +1209,6 @@ int eqos_probe(struct platform_device *pdev)
 	spin_lock_init(&pdata->lock);
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
-
-	for (i = 0; i < num_chans; i++) {
-		spin_lock_init(&pdata->chinfo[i].chan_lock);
-		spin_lock_init(&pdata->chinfo[i].irq_lock);
-		spin_lock_init(&pdata->chinfo[i].chan_tx_lock);
-	}
 
 	ret = register_netdev(ndev);
 	if (ret) {

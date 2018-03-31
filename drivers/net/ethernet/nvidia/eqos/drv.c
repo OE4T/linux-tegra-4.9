@@ -131,30 +131,6 @@ static int is_ptp_addr(char *addr)
 		return 0;
 }
 
-/*Check if Channel 0 is PTP and has data 0xee
-  Check if Channel 1 is AV and has data 0xbb or 0xcc
-  Check if Channel 2 is AV and has data 0xdd*/
-#ifdef ENABLE_CHANNEL_DATA_CHECK
-static void check_channel_data(struct sk_buff *skb, unsigned int qinx,
-	int is_rx)
-{
-	if (((qinx == 0) &&
-		((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF788) &&
-		((*(((char *)skb->data) + 80) & 0xFF) != 0xee)) ||
-	   ((qinx == 1) &&
-		((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF022) &&
-		(((*(((char *)skb->data) + 80) & 0xFF) != 0xbb) &&
-		((*(((char *)skb->data) + 80) & 0xFF) != 0xcc))) ||
-	   ((qinx == 2) &&
-		((*(((short *)skb->data) + 6) & 0xFFFF) == 0xF022) &&
-		((*(((char *)skb->data) + 80) & 0xFF) != 0xdd))) {
-			while (1)
-		pr_err("Incorrect %s data 0x%x in Q %d\n",
-		((is_rx) ? "RX" : "TX"), *(((char *)skb->data) + 80), qinx);
-	}
-}
-#endif
-
 static void eqos_stop_all_ch_rx_dma(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);

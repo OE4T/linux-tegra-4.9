@@ -366,9 +366,6 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 
 	ptx_ring->cur_tx = 0;
 	ptx_ring->dirty_tx = 0;
-	ptx_ring->queue_stopped = 0;
-	ptx_ring->tx_pkt_queued = 0;
-	ptx_ring->free_desc_cnt = TX_DESC_CNT;
 
 	hw_if->tx_desc_init(pdata, qinx);
 	ptx_ring->cur_tx = 0;
@@ -461,9 +458,7 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 
 	prx_ring->cur_rx = 0;
 	prx_ring->dirty_rx = 0;
-	prx_ring->skb_realloc_idx = 0;
 	prx_ring->skb_realloc_threshold = MIN_RX_DESC_CNT;
-	prx_ring->pkt_received = 0;
 
 	hw_if->rx_desc_init(pdata, qinx);
 	prx_ring->cur_rx = 0;

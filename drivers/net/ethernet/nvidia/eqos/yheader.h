@@ -616,15 +616,6 @@ typedef unsigned short *USHORTP;
 typedef void VOID;
 typedef void *VOIDP;
 
-struct s_rx_context_desc {
-	UINT rdes0;
-	UINT rdes1;
-	UINT rdes2;
-	UINT rdes3;
-};
-
-typedef struct s_rx_context_desc t_rx_context_desc;
-
 struct s_tx_context_desc {
 	UINT tdes0;
 	UINT tdes1;
@@ -949,12 +940,6 @@ struct tx_ring {
 				be used for current xfer */
 	int dirty_tx;	/* always gives index of desc which has to
 				be checked for xfer complete */
-	unsigned int free_desc_cnt;	/* always gives total number of available
-					free desc count for driver */
-	unsigned int tx_pkt_queued;	/* always gives total number of packets
-					queued for transmission */
-	unsigned int queue_stopped;
-
 	UINT tx_threshold_val;	/* contain bit value for TX threshold */
 	UINT tsf_on;		/* set to 1 if TSF is enabled else set to 0 */
 	UINT osf_on;		/* set to 1 if OSF is enabled else set to 0 */
@@ -988,11 +973,6 @@ struct eqos_tx_queue {
 struct rx_swcx_desc {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
-	unsigned short len;	/* length of received packet */
-	struct page *page;	/* page address */
-	unsigned char mapped_as_page;
-	bool good_pkt;		/* set to 1 if it is good packet else
-				set to 0 */
 	unsigned int inte;	/* set to non-zero if INTE is set for
 				corresponding desc */
 };
@@ -1010,9 +990,6 @@ struct rx_ring {
 	int cur_rx;	/* always gives index of desc which needs to
 				be checked for packet availabilty */
 	int dirty_rx;
-	unsigned int pkt_received;	/* always gives total number of packets
-					received from device in one RX interrupt */
-	unsigned int skb_realloc_idx;
 	unsigned int skb_realloc_threshold;
 
 	/* for rx coalesce schem */
@@ -1029,8 +1006,6 @@ struct rx_ring {
 	/* for rx vlan stripping */
 	u32 rx_inner_vlan_strip;
 	u32 rx_outer_vlan_strip;
-
-	u32 hw_last_rx_desc_addr;
 };
 
 struct eqos_rx_queue {
@@ -1328,15 +1303,6 @@ struct eqos_cfg {
 	u32		slot_intvl_val; /* Slot Interval Value*/
 };
 
-struct chan_data {
-	uint	chan_num;
-	uint	cpu;
-	u32	int_mask;
-	spinlock_t chan_tx_lock;
-	spinlock_t chan_lock;
-	spinlock_t irq_lock;
-};
-
 struct eqos_prv_data {
 	struct net_device *dev;
 	struct platform_device *pdev;
@@ -1372,7 +1338,6 @@ struct eqos_prv_data {
 	struct regulator *phy_pllvdd;
 
 	struct eqos_cfg dt_cfg;
-	struct chan_data chinfo[MAX_CHANS];
 	/* DMA channel IRQ lock for Tx/Rx */
 	spinlock_t chan_irq_lock[MAX_CHANS];
 	uint	num_chans;
@@ -1390,11 +1355,9 @@ struct eqos_prv_data {
 
 	/* TX Queue */
 	struct eqos_tx_queue *tx_queue;
-	UINT tx_qinx;
 
 	/* RX Queue */
 	struct eqos_rx_queue *rx_queue;
-	UINT rx_qinx;
 
 	struct mii_bus *mii;
 	struct phy_device *phydev;
@@ -1449,10 +1412,6 @@ struct eqos_prv_data {
 	UINT axi_worl;
 	UINT axi_rorl;
 
-	int (*process_rx_completions)(struct eqos_prv_data *pdata,
-				      int quota, UINT qinx);
-	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
-			     struct rx_swcx_desc *buffer, gfp_t gfp);
 	unsigned int rx_buffer_len;
 	unsigned int rx_max_frame_size;
 

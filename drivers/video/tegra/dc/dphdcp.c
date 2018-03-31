@@ -1022,13 +1022,13 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		dphdcp_err("receiver is not hdcp capable\n");
 		goto failure;
 	}
-repeater_auth:
 	dphdcp->ta_ctx = NULL;
 	e = te_open_trusted_session(HDCP_PORT_NAME, &dphdcp->ta_ctx);
 	if (e) {
 		dphdcp_err("open session failed\n");
 		goto failure;
 	}
+repeater_auth:
 	if (tegra_dc_is_nvdisplay()) {
 		/* if session successfully opened, launch operations */
 		/* repeater flag in Bskv must be configured before

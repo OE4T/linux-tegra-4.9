@@ -1044,22 +1044,12 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 
 	/* unmap the first buffer */
 	if (prx_swcx_desc->dma) {
-		if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
-			dma_unmap_page(&pdata->pdev->dev, prx_swcx_desc->dma,
-				       PAGE_SIZE, DMA_FROM_DEVICE);
-		} else {
-			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
-					 pdata->rx_buffer_len,
-					 DMA_FROM_DEVICE);
-		}
+		dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
+				 pdata->rx_buffer_len,
+				 DMA_FROM_DEVICE);
 		prx_swcx_desc->dma = 0;
 	}
 
-	/* page1 will be present only if JUMBO is enabled */
-	if (prx_swcx_desc->page) {
-		put_page(prx_swcx_desc->page);
-		prx_swcx_desc->page = NULL;
-	}
 	if (prx_swcx_desc->skb) {
 		dev_kfree_skb_any(prx_swcx_desc->skb);
 		prx_swcx_desc->skb = NULL;

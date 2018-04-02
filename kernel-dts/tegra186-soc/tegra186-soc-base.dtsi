@@ -536,7 +536,7 @@
 		resets = <&tegra_car TEGRA186_RESET_TACH>;
 		reset-names = "tach";
 		pulse-per-rev = <2>;
-		capture-window-length = <2>;
+		capture-window-length = <8>;
 		status = "disabled";
 	};
 

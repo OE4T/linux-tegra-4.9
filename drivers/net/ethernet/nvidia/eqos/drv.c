@@ -55,6 +55,7 @@ extern ULONG eqos_base_addr;
 #include "yregacc.h"
 #include "nvregacc.h"
 #include <soc/tegra/chip-id.h>
+#include <linux/nospec.h>
 
 static INT eqos_status;
 static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
@@ -3419,7 +3420,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		return -EFAULT;
 
 	qinx = req.qinx;
-	if (qinx > EQOS_QUEUE_CNT) {
+	if (qinx >= EQOS_QUEUE_CNT) {
 		pr_err("Queue number %d is invalid\n"
 		       "Hardware has only %d Tx/Rx Queues\n",
 		       qinx, EQOS_QUEUE_CNT);
@@ -3427,6 +3428,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		return ret;
 	}
 
+	qinx = array_index_nospec(qinx, EQOS_QUEUE_CNT);
 	ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 	prx_ring = GET_RX_WRAPPER_DESC(qinx);
 

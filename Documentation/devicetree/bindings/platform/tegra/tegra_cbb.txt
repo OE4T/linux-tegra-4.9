@@ -24,42 +24,42 @@ additional information about exact error cause and AXI2APB bridge giving error.
 
 
 Required properties for NOC's:
-- compatible: Should be per NOC "nvidia,tegra194-CBBNOCAXI-bridge"
+- compatible: Should be per NOC "nvidia,tegra194-CBB-NOC"
 - reg: Physical base address and length of registers
 - interrupts: irq numbers of secure and nonsecure interrupts for the NOC error
 
 Example:
 ========
 	cbbnocaxi@2300000 {
-		compatible = "nvidia,tegra194-CBBNOCAXI-bridge";
+		compatible = "nvidia,tegra194-CBB-NOC";
 		reg = <0x0 0x02300000 0x0 0x1000>;
 		interrupts = <0 230 4>, <0 231 4>;
 		status = "okay";
 	};
 
 	cbbnocaxi@C600000 {
-		compatible = "nvidia,tegra194-CBBNOCAON-bridge";
+		compatible = "nvidia,tegra194-AON-NOC";
 		reg = <0x0 0xC600000 0x0 0x1000>;
 		interrupts = <0 260 4>, <0 172 4>;
 		status = "okay";
 	};
 
 	cbbnocaxi@D600000 {
-		compatible = "nvidia,tegra194-CBBNOCBPMP-bridge";
+		compatible = "nvidia,tegra194-BPMP-NOC";
 		reg = <0x0 0xD600000 0x0 0x1000>;
 		interrupts = <0 262 4>, <0 174 4>;
 		status = "okay";
 	};
 
 	cbbnocaxi@BE00000 {
-		compatible = "nvidia,tegra194-CBBNOCRCE-bridge";
+		compatible = "nvidia,tegra194-RCE-NOC";
 		reg = <0x0 0xBE00000 0x0 0x1000>;
 		interrupts = <0 259 4>, <0 175 4>;
 		status = "okay";
 	};
 
 	cbbnocaxi@B600000 {
-		compatible = "nvidia,tegra194-CBBNOCSCE-bridge";
+		compatible = "nvidia,tegra194-SCE-NOC";
 		reg = <0x0 0xB600000 0x0 0x1000>;
 		interrupts = <0 261 4>, <0 173 4>;
 		status = "okay";

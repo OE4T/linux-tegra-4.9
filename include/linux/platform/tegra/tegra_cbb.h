@@ -135,6 +135,7 @@ struct tegra_cbb_errlog_record {
 	char		**tegra_noc_routeid_initflow;
 	char		**tegra_noc_routeid_targflow;
 	char		**tegra_cbb_master_id;
+	bool		is_ax2apb_bridge_connected;
 	u64		*axi2abp_bases;
 	int		apb_bridge_cnt;
 };
@@ -153,5 +154,6 @@ struct tegra_cbb_noc_data {
 	char		**tegra_noc_routeid_initflow;
 	char		**tegra_noc_routeid_targflow;
 	char		**tegra_cbb_master_id;
+	bool		is_ax2apb_bridge_connected;
 };
 

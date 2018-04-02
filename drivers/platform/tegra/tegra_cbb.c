@@ -413,7 +413,8 @@ static void print_errlog0(struct seq_file *file,
 	print_cbb_err(file, "\t  Error Description\t: %s\n",
 			noc_errors[hdr.errcode].type);
 
-	if (!strcmp(noc_errors[hdr.errcode].errcode, "SLV")) {
+	if (!strcmp(noc_errors[hdr.errcode].errcode, "SLV")
+			&& (errlog->is_ax2apb_bridge_connected)) {
 		int i = 0, j = 0;
 		int max_axi2apb_err = ARRAY_SIZE(tegra_axi2apb_errors);
 		u32 bus_status = 0;
@@ -529,8 +530,8 @@ static int cbb_serr_callback(struct pt_regs *regs, int reason,
 				unsigned int esr, void *priv)
 {
 	unsigned int errvld_status = 0;
-	int retval = 1;
 	struct tegra_cbb_errlog_record *errlog = priv;
+	int retval = 1;
 
 	errvld_status = errlog->errvld(errlog->vaddr);
 
@@ -554,7 +555,8 @@ static struct tegra_cbb_noc_data tegra194_cbb_central_noc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_cbbcentralnoc_aperture_lookup),
 	.tegra_noc_routeid_initflow = t194_cbbcentralnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_cbbcentralnoc_routeid_targflow,
-	.tegra_noc_parse_routeid = cbbcentralnoc_parse_routeid
+	.tegra_noc_parse_routeid = cbbcentralnoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 1
 };
 
 static struct tegra_cbb_noc_data tegra194_aon_noc_data = {
@@ -568,7 +570,8 @@ static struct tegra_cbb_noc_data tegra194_aon_noc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_aonnoc_aperture_lookup),
 	.tegra_noc_routeid_initflow = t194_aonnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_aonnoc_routeid_targflow,
-	.tegra_noc_parse_routeid = aonnoc_parse_routeid
+	.tegra_noc_parse_routeid = aonnoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 0
 };
 
 static struct tegra_cbb_noc_data tegra194_bpmp_noc_data = {
@@ -582,7 +585,8 @@ static struct tegra_cbb_noc_data tegra194_bpmp_noc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_bpmpnoc_aperture_lookup),
 	.tegra_noc_routeid_initflow = t194_bpmpnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_bpmpnoc_routeid_targflow,
-	.tegra_noc_parse_routeid = bpmpnoc_parse_routeid
+	.tegra_noc_parse_routeid = bpmpnoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 1
 };
 
 static struct tegra_cbb_noc_data tegra194_rce_noc_data = {
@@ -596,7 +600,8 @@ static struct tegra_cbb_noc_data tegra194_rce_noc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_scenoc_aperture_lookup),
 	.tegra_noc_routeid_initflow = t194_scenoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
-	.tegra_noc_parse_routeid = scenoc_parse_routeid
+	.tegra_noc_parse_routeid = scenoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 1
 };
 
 static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
@@ -610,7 +615,8 @@ static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
 	.max_noc_aperture = ARRAY_SIZE(t194_scenoc_aperture_lookup),
 	.tegra_noc_routeid_initflow = t194_scenoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
-	.tegra_noc_parse_routeid = scenoc_parse_routeid
+	.tegra_noc_parse_routeid = scenoc_parse_routeid,
+	.is_ax2apb_bridge_connected = 1
 };
 
 static const struct of_device_id axi2apb_match[] = {
@@ -619,15 +625,15 @@ static const struct of_device_id axi2apb_match[] = {
 };
 
 static struct of_device_id tegra_cbb_match[] = {
-	{.compatible    = "nvidia,tegra194-CBBNOCAXI-bridge",
+	{.compatible    = "nvidia,tegra194-CBB-NOC",
 		.data = &tegra194_cbb_central_noc_data},
-	{.compatible    = "nvidia,tegra194-CBBNOCAON-bridge",
+	{.compatible    = "nvidia,tegra194-AON-NOC",
 		.data = &tegra194_aon_noc_data},
-	{.compatible    = "nvidia,tegra194-CBBNOCBPMP-bridge",
+	{.compatible    = "nvidia,tegra194-BPMP-NOC",
 		.data = &tegra194_bpmp_noc_data},
-	{.compatible    = "nvidia,tegra194-CBBNOCRCE-bridge",
+	{.compatible    = "nvidia,tegra194-RCE-NOC",
 		.data = &tegra194_rce_noc_data},
-	{.compatible    = "nvidia,tegra194-CBBNOCSCE-bridge",
+	{.compatible    = "nvidia,tegra194-SCE-NOC",
 		.data = &tegra194_sce_noc_data},
 	{},
 };
@@ -811,30 +817,31 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	if (IS_ERR(errlog->vaddr))
 		return -EPERM;
 
-	np = of_find_matching_node(NULL, axi2apb_match);
-	if (!np) {
-		dev_info(&pdev->dev, "No match found for axi2apb\n");
-		return -ENOENT;
-	}
-	errlog->apb_bridge_cnt =
-		(of_property_count_elems_of_size(np, "reg", sizeof(u32)))/4;
-
-	errlog->axi2abp_bases = devm_kzalloc(&pdev->dev,
-			sizeof(u64)*errlog->apb_bridge_cnt, GFP_KERNEL);
-	if (errlog->axi2abp_bases == NULL)
-		return -ENOMEM;
-
-	for (i = 0; i < errlog->apb_bridge_cnt; i++) {
-		void __iomem *base = of_iomap(np, i);
-
-		if (!base) {
-			dev_err(&pdev->dev,
-					"failed to map axi2apb range\n");
+	if (bdata->is_ax2apb_bridge_connected) {
+		np = of_find_matching_node(NULL, axi2apb_match);
+		if (!np) {
+			dev_info(&pdev->dev, "No match found for axi2apb\n");
 			return -ENOENT;
 		}
-		errlog->axi2abp_bases[i] = (u64)base;
-	}
+		errlog->apb_bridge_cnt =
+			(of_property_count_elems_of_size(np, "reg", sizeof(u32)))/4;
 
+		errlog->axi2abp_bases = devm_kzalloc(&pdev->dev,
+				sizeof(u64)*errlog->apb_bridge_cnt, GFP_KERNEL);
+		if (errlog->axi2abp_bases == NULL)
+			return -ENOMEM;
+
+		for (i = 0; i < errlog->apb_bridge_cnt; i++) {
+			void __iomem *base = of_iomap(np, i);
+
+			if (!base) {
+				dev_err(&pdev->dev,
+						"failed to map axi2apb range\n");
+				return -ENOENT;
+			}
+			errlog->axi2abp_bases[i] = (u64)base;
+		}
+	}
 	errlog->name      = bdata->name;
 	errlog->errvld    = bdata->errvld;
 	errlog->errclr    = bdata->errclr;
@@ -846,6 +853,7 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	errlog->tegra_noc_routeid_targflow = bdata->tegra_noc_routeid_targflow;
 	errlog->tegra_noc_parse_routeid = bdata->tegra_noc_parse_routeid;
 	errlog->tegra_cbb_master_id = bdata->tegra_cbb_master_id;
+	errlog->is_ax2apb_bridge_connected = bdata->is_ax2apb_bridge_connected;
 
 	callback = devm_kzalloc(&pdev->dev, sizeof(*callback), GFP_KERNEL);
 	callback->fn = cbb_serr_callback;
@@ -873,8 +881,6 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 
 	/* set “FaultEn=1” to enable error reporting signal “Fault” */
 	errlog->faulten(errlog->vaddr);
-
-	dev_info(&pdev->dev, "cbb NOC probed OK\n");
 
 	return 0;
 }

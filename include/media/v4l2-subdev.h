@@ -139,6 +139,7 @@ struct v4l2_subdev_io_pin_config {
 
 #define V4L2_SYNC_EVENT_FOCUS_POS		(1 << 0)
 #define V4L2_SYNC_EVENT_IRIS_POS		(1 << 1)
+#define V4L2_SYNC_EVENT_SUBDEV_ERROR_RECOVER	(1 << 2)
 
 /**
  * struct v4l2_subdev_core_ops - Define core ops callbacks for subdevs

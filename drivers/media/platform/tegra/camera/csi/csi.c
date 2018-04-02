@@ -873,21 +873,29 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 		node = of_find_node_by_name(node, "nvcsi");
 		strncpy(csi->devname, "nvcsi", 6);
 	}
-	if (!node)
-		return -EINVAL;
-	err = of_property_read_u32(node, "num-channels", &num_channels);
-	if (err) {
-		dev_dbg(csi->dev, " Failed to find num of channels, set to 0\n");
+
+	if (node) {
+		err = of_property_read_u32(node, "num-channels", &num_channels);
+		if (err) {
+			dev_dbg(csi->dev, " Failed to find num of channels, set to 0\n");
+			num_channels = 0;
+		}
+
+		err = of_property_read_u32(node, "num-tpg-channels",
+			&num_tpg_channels);
+		/* Backward compatibility for T210 and T186.
+		 * They both can generate 6 tpg streams, so use 6
+		 * as default if DT entry is missing.
+		 * For future chips, add this DT entry to
+		 * create correct number of tpg video nodes
+		 */
+		if (err)
+			num_tpg_channels = DEFAULT_NUM_TPG_CHANNELS;
+	} else {
 		num_channels = 0;
-	}
-	err = of_property_read_u32(node, "num-tpg-channels", &num_tpg_channels);
-	/* Backward compatibility for T210 and T186. They both can generate
-	 * 6 tpg streams, so use 6 as default if DT entry is missing.
-	 * For future chips, add this DT entry to
-	 * create correct number of tpg video nodes
-	 */
-	if (err)
 		num_tpg_channels = DEFAULT_NUM_TPG_CHANNELS;
+	}
+
 	csi->num_tpg_channels = num_tpg_channels;
 	csi->num_channels = num_channels;
 	for (i = 0; i < num_channels; i++) {

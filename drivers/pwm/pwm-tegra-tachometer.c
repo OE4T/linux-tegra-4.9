@@ -252,7 +252,7 @@ static int pwm_tegra_tach_probe(struct platform_device *pdev)
 	if (ptt->pulse_per_rev > ptt->capture_win_len)
 		ptt->capture_win_len = ptt->pulse_per_rev;
 
-	ret = pwm_set_capture_window_length(pwm, ptt->capture_win_len);
+	ret = pwm_tegra_tacho_set_capture_wlen(&ptt->chip, pwm, ptt->capture_win_len);
 	if (ret < 0) {
 		dev_err(ptt->dev, "Failed to set window length: %d\n", ret);
 		goto pwm_remove;

@@ -1028,8 +1028,7 @@ struct hmm_devmem *hmm_devmem_add(const struct hmm_devmem_ops *ops,
 		goto error_devm_add_action;
 
 	size = ALIGN(size, PA_SECTION_SIZE);
-	addr = min((unsigned long)iomem_resource.end,
-		   (1UL << MAX_PHYSMEM_BITS) - 1);
+	addr = min((unsigned long)iomem_resource.end, VMEMMAP_END_PHYS - 1);
 	addr = addr - size + 1UL;
 
 	/*

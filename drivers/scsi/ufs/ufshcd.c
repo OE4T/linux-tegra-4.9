@@ -5565,9 +5565,9 @@ out:
 	return ret;
 }
 
-static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
+static int execute_single_query_ioctl_req(struct ufs_hba *hba,
+	struct ufs_ioc_query_req *ioctl_req)
 {
-	struct ufs_ioc_query_req *ioctl_req;
 	int err = 0;
 	bool flag = 0;
 	u32 attr = 0;
@@ -5575,37 +5575,18 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	int data_len = 0;
 	u8 flag_u8;
 
-	ioctl_req = devm_kzalloc(hba->dev, sizeof(struct ufs_ioc_query_req),
-		GFP_KERNEL);
-	if (ioctl_req == NULL) {
-		err = -ENOMEM;
-		goto out;
-	}
-
-	/* Copy the user buffer to kernel buffer */
-	err = copy_from_user(ioctl_req, buf, sizeof(struct ufs_ioc_query_req));
-	if (err) {
-		err = -ENOMEM;
-		goto out_release_mem;
-	}
-
-	if ((ioctl_req->buf_size != 0) && (ioctl_req->buffer == NULL)) {
-		err = -EINVAL;
-		goto out_release_mem;
-	}
-
 	switch (ioctl_req->opcode) {
 	case UPIU_QUERY_OPCODE_READ_DESC:
 		if (ioctl_req->idn >= QUERY_DESC_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		data_len = min_t(int, QUERY_DESC_MAX_SIZE, ioctl_req->buf_size);
 		desc = devm_kzalloc(hba->dev, data_len, GFP_KERNEL);
 		if (desc == NULL) {
 			err = -ENOMEM;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = __ufshcd_query_descriptor(hba, ioctl_req->opcode,
@@ -5622,14 +5603,14 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	case UPIU_QUERY_OPCODE_WRITE_DESC:
 		if (ioctl_req->idn >= QUERY_DESC_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		data_len = min_t(int, QUERY_DESC_MAX_SIZE, ioctl_req->buf_size);
 		desc = devm_kzalloc(hba->dev, data_len, GFP_KERNEL);
 		if (desc == NULL) {
 			err = -ENOMEM;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = copy_from_user(desc, ioctl_req->buffer, data_len);
@@ -5646,12 +5627,12 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	case UPIU_QUERY_OPCODE_READ_ATTR:
 		if (ioctl_req->idn >= QUERY_ATTR_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		if (ioctl_req->buf_size != sizeof(u32)) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = ufshcd_query_attr(hba, ioctl_req->opcode, ioctl_req->idn,
@@ -5664,12 +5645,12 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	case UPIU_QUERY_OPCODE_WRITE_ATTR:
 		if (ioctl_req->idn > QUERY_ATTR_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		if (ioctl_req->buf_size != sizeof(u32)) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = copy_from_user((void *)&attr, ioctl_req->buffer,
@@ -5683,12 +5664,12 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	case UPIU_QUERY_OPCODE_READ_FLAG:
 		if (ioctl_req->idn > QUERY_FLAG_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		if (ioctl_req->buf_size != sizeof(u8)) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = ufshcd_query_flag(hba, ioctl_req->opcode, ioctl_req->idn,
@@ -5706,19 +5687,110 @@ static int ufshcd_query_ioctl(struct ufs_hba *hba, void __user *buf)
 	case UPIU_QUERY_OPCODE_TOGGLE_FLAG:
 		if (ioctl_req->idn > QUERY_FLAG_IDN_MAX) {
 			err = -EINVAL;
-			goto out_release_mem;
+			goto out;
 		}
 
 		err = ufshcd_query_flag(hba, ioctl_req->opcode,	ioctl_req->idn,
 			NULL);
 		break;
-
+	default:
+		err = -EINVAL;
 	}
 
-	if (!err)
-		err = copy_to_user(buf, ioctl_req, sizeof(*ioctl_req));
+out:
+	return err;
+}
 
-out_release_mem:
+
+static int ufshcd_combo_query_ioctl(struct ufs_hba *hba, void __user *buf)
+{
+	struct ufs_ioc_combo_query_req *ioctl_req;
+	int err = 0, ret = 0;
+	u32 delay = 0;
+	u8 i = 0;
+	struct ufs_ioc_query_req *query = NULL;
+
+	ioctl_req = devm_kzalloc(hba->dev,
+			sizeof(struct ufs_ioc_combo_query_req), GFP_KERNEL);
+	if (ioctl_req == NULL) {
+		err = -ENOMEM;
+		goto out;
+	}
+
+	/* Copy the combo query user buffer to kernel buffer */
+	err = copy_from_user(ioctl_req, buf,
+		sizeof(struct ufs_ioc_combo_query_req));
+	if (err) {
+		err = -ENOMEM;
+		goto out_release_combo_query_mem;
+	}
+
+	if ((ioctl_req->num_cmds == 0) || (ioctl_req->query == NULL) ||
+		(ioctl_req->num_cmds > MAX_QUERY_CMD_PER_COMBO)) {
+		err = -EINVAL;
+		goto out_release_combo_query_mem;
+	}
+
+	query = devm_kzalloc(hba->dev, sizeof(struct ufs_ioc_query_req) *
+			ioctl_req->num_cmds, GFP_KERNEL);
+	if (query == NULL) {
+		err = -ENOMEM;
+		goto out_release_combo_query_mem;
+	}
+	/* Copy the query user buffer to kernel buffer */
+	err = copy_from_user(query, ioctl_req->query,
+		sizeof(struct ufs_ioc_query_req) * ioctl_req->num_cmds);
+	if (err) {
+		err = -ENOMEM;
+		goto out_release_query_mem;
+	}
+
+	for (i = 0; i < ioctl_req->num_cmds; i++) {
+		if ((query[i].buf_size != 0) && (query[i].buffer == NULL)) {
+			err = -EINVAL;
+			goto out_release_query_mem;
+		}
+	}
+
+	if (ioctl_req->need_cq_empty) {
+		scsi_block_requests(hba->host);
+
+		wait_event(hba->dev_cmd.tag_wq, hba->lrb_in_use == 0);
+
+		if (hba->lrb_in_use) {
+			err = -EBUSY;
+			goto out_unblock_scsi_req;
+		}
+	}
+
+	for (i = 0; i < ioctl_req->num_cmds; i++) {
+		ret = execute_single_query_ioctl_req(hba, &query[i]);
+		query[i].error_status = ret;
+		if (err == 0)
+			err = ret;
+		if (err && ioctl_req->return_on_error)
+			break;
+		/* add delay if specified */
+		delay = query[i].delay;
+		if (delay) {
+			if (delay > 10000)
+				msleep(delay / 1000);
+			else
+				usleep_range(delay, delay + 10);
+		}
+	}
+
+	ret = copy_to_user(ioctl_req->query, query,
+			sizeof(struct ufs_ioc_query_req) * ioctl_req->num_cmds);
+	if (!err)
+		err = ret;
+
+out_unblock_scsi_req:
+	if (ioctl_req->need_cq_empty)
+		scsi_unblock_requests(hba->host);
+out_release_query_mem:
+	devm_kfree(hba->dev, query);
+out_release_combo_query_mem:
 	devm_kfree(hba->dev, ioctl_req);
 out:
 	return err;
@@ -5753,9 +5825,9 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buf)
 	int err = 0;
 
 	switch (cmd) {
-	case UFS_IOCTL_QUERY:
+	case UFS_IOCTL_COMBO_QUERY:
 		pm_runtime_get_sync(hba->dev);
-		err = ufshcd_query_ioctl(hba, buf);
+		err = ufshcd_combo_query_ioctl(hba, buf);
 		pm_runtime_put_sync(hba->dev);
 		break;
 

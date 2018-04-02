@@ -3011,8 +3011,8 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	if (dc->out->dp_out != NULL) {
 		u32 bits_per_pixel;
 		u32 max_link_bw_rate;
-		unsigned long total_max_link_bw;
-		unsigned long mode_bw;
+		u64 total_max_link_bw;
+		u64 mode_bw;
 
 		bits_per_pixel = tegra_dp_get_bpp(dp);
 
@@ -3025,13 +3025,14 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		max_link_bw_rate = dp->sor->link_speeds[key].max_link_bw;
 
 		/* max link bandwidth = lane_freq * lanes * 8 / 10 */
-		total_max_link_bw = (unsigned long)max_link_bw_rate
+		total_max_link_bw = (u64)max_link_bw_rate
 				* 1000 * 1000 * 8 / 10 * lane_count;
-		mode_bw = (unsigned long)mode->xres * (unsigned long)mode->yres
-				* mode->refresh * bits_per_pixel;
+		mode_bw = (u64)PICOS2KHZ(mode->pixclock) * 1000
+				* bits_per_pixel;
 
 		if (total_max_link_bw < mode_bw) {
-			dev_info(&dc->ndev->dev, "mode bw=%lu > link bw=%lu\n",
+			dev_info(&dc->ndev->dev,
+				"mode bw=%llu > link bw=%llu\n",
 				mode_bw, total_max_link_bw);
 			return false;
 		}

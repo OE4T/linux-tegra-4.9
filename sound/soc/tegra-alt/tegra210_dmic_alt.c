@@ -171,6 +171,16 @@ int tegra210_dmic_enable(int id)
 		return -EINVAL;
 
 	dmic_clk = (1 << (6 + dmic->osr_val)) * 48000;
+
+	if (dmic->set_parent_rate) {
+		ret = clk_set_rate(dmic->clk_pll_a_out0, dmic_clk);
+		if (ret) {
+			dev_err(&pdev->dev,
+			"Can't set dmic parent clock rate: %d\n", ret);
+			return ret;
+		}
+	}
+
 	ret = clk_set_rate(dmic->clk_dmic, dmic_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Can't set dmic clock rate: %d\n", ret);
@@ -256,6 +266,15 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 		program_dmic_gpio();
 		program_dmic_clk(dmic_clk);
 	} else {
+		if (dmic->set_parent_rate) {
+			ret = clk_set_rate(dmic->clk_pll_a_out0, dmic_clk);
+			if (ret) {
+				dev_err(dev,
+				"Can't set dmic parent clock rate: %d\n", ret);
+				return ret;
+			}
+		}
+
 		ret = clk_set_rate(dmic->clk_dmic, dmic_clk);
 		if (ret) {
 			dev_err(dev, "Can't set dmic clock rate: %d\n", ret);
@@ -711,6 +730,8 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	/* Below patch is as per latest POR value */
 	regmap_write(dmic->regmap,
 			TEGRA210_DMIC_DCR_BIQUAD_0_COEF_4, 0x00000000);
+
+	dmic->set_parent_rate = of_property_read_bool(np, "set-parent-rate");
 
 	if (of_property_read_u32(np, "nvidia,ahub-dmic-id",
 				&pdev->dev.id) < 0) {

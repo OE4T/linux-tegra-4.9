@@ -137,6 +137,7 @@ struct tegra210_dmic {
 	int lrsel;
 	bool is_shutdown;
 	int format_out;
+	bool set_parent_rate;
 };
 
 /* exported functions to enable DMIC from other driver */

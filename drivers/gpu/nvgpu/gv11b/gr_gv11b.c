@@ -3979,6 +3979,7 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t)
 {
 	u32 gpc_num, tpc_num;
+	u32 priv_addr, gpc_addr;
 
 	nvgpu_log_info(g, "addr=0x%x", addr);
 
@@ -4017,10 +4018,16 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 					g, gpc_num, tpc_num, addr,
 					priv_addr_table, t);
 			} else {
-				priv_addr_table[*t] =
-					pri_egpc_addr(g,
-					pri_gpccs_addr_mask(addr),
-					     gpc_num);
+				priv_addr = pri_egpc_addr(g,
+						pri_gpccs_addr_mask(addr),
+						gpc_num);
+
+				gpc_addr = pri_gpccs_addr_mask(priv_addr);
+				tpc_num = g->ops.gr.get_tpc_num(g, gpc_addr);
+				if (tpc_num >= g->gr.gpc_tpc_count[gpc_num])
+					continue;
+
+				priv_addr_table[*t] = priv_addr;
 				nvgpu_log_info(g, "priv_addr_table[%d]:%#08x",
 					*t, priv_addr_table[*t]);
 				(*t)++;

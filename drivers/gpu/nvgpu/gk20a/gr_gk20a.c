@@ -6353,6 +6353,7 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 {
 	int addr_type; /*enum ctxsw_addr_type */
 	u32 gpc_num, tpc_num, ppc_num, be_num;
+	u32 priv_addr, gpc_addr;
 	u32 broadcast_flags;
 	u32 t;
 	int err;
@@ -6404,10 +6405,18 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 							       priv_addr_table, &t);
 				if (err)
 					return err;
-			} else
-				priv_addr_table[t++] =
-					pri_gpc_addr(g, pri_gpccs_addr_mask(addr),
-						     gpc_num);
+			} else {
+				priv_addr = pri_gpc_addr(g,
+						pri_gpccs_addr_mask(addr),
+						gpc_num);
+
+				gpc_addr = pri_gpccs_addr_mask(priv_addr);
+				tpc_num = g->ops.gr.get_tpc_num(g, gpc_addr);
+				if (tpc_num >= g->gr.gpc_tpc_count[gpc_num])
+					continue;
+
+				priv_addr_table[t++] = priv_addr;
+			}
 		}
 	} else if (((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
 			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&

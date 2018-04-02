@@ -1191,19 +1191,15 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	if (sor->dc->initialized)
 		return;
 
-	if (sor->io_padctrl) {
-		int ret = padctrl_power_enable(sor->io_padctrl);
-
-		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
-				 ret);
-	}
-
-	usleep_range(20, 70);
-
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE,
 				NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE);
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+				NV_SOR_PLL2_AUX0_MASK,
+				NV_SOR_PLL2_AUX0_SEQ_PLL_PULLDOWN_OVERRIDE);
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+				NV_SOR_PLL2_CLKGEN_MODE_MASK,
+				NV_SOR_PLL2_CLKGEN_MODE_DP_TMDS);
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX2_MASK,
 				NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN);
@@ -1211,15 +1207,28 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 				NV_SOR_PLL2_AUX1_SEQ_MASK,
 				NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE);
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-				NV_SOR_PLL2_AUX0_MASK,
-				NV_SOR_PLL2_AUX0_SEQ_PLL_PULLDOWN_OVERRIDE);
-	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_PWR_MASK,
-						NV_SOR_PLL0_PWR_ON);
-	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_VCOPD_MASK,
-						NV_SOR_PLL0_VCOPD_RESCIND);
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-				NV_SOR_PLL2_CLKGEN_MODE_MASK,
-				NV_SOR_PLL2_CLKGEN_MODE_DP_TMDS);
+				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
+				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_ENABLE);
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
+				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_ENABLE);
+	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_PWR_MASK,
+						NV_SOR_PLL0_PWR_OFF);
+	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_VCOPD_MASK,
+						NV_SOR_PLL0_VCOPD_ASSERT);
+	tegra_sor_pad_cal_power(sor, false);
+	usleep_range(20, 70);
+
+	if (sor->io_padctrl) {
+		int ret = padctrl_power_enable(sor->io_padctrl);
+
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
+				 ret);
+	}
 	usleep_range(20, 70);
 
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
@@ -1227,6 +1236,10 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
 	usleep_range(50, 100);
 
+	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_PWR_MASK,
+						NV_SOR_PLL0_PWR_ON);
+	tegra_sor_write_field(sor, nv_sor_pll0_reg, NV_SOR_PLL0_VCOPD_MASK,
+						NV_SOR_PLL0_VCOPD_RESCIND);
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
 				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
@@ -1238,6 +1251,7 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, nv_sor_pll1_reg,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE);
+	usleep_range(10, 20);
 }
 
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
@@ -1262,6 +1276,7 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
+	tegra_sor_pad_cal_power(sor, false);
 
 	if (sor->io_padctrl) {
 		int ret = padctrl_power_disable(sor->io_padctrl);
@@ -1270,6 +1285,7 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
 				ret);
 	}
+	usleep_range(20, 70);
 }
 
 /* The SOR power sequencer does not work for t124 so SW has to
@@ -1808,12 +1824,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 			DC_CMD_STATE_ACCESS);
 
 	tegra_dc_sor_config_panel(sor, false);
-	tegra_dc_sor_update(sor);
-
-	/* WAR for bug 1428181 */
-	tegra_dc_sor_enable_sor(sor, true);
-	tegra_dc_sor_enable_sor(sor, false);
-
 	tegra_dc_sor_update(sor);
 
 	/* Sleep request */

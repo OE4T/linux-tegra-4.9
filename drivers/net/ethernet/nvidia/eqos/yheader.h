@@ -380,12 +380,14 @@
 
 #define EQOS_RDESC3_OWN		0x80000000
 #define EQOS_RDESC3_CTXT	0x40000000
+#define EQOS_RDESC3_IOC		0x40000000
 #define EQOS_RDESC3_FD		0x20000000
 #define EQOS_RDESC3_LD		0x10000000
 #define EQOS_RDESC3_RS2V	0x08000000
 #define EQOS_RDESC3_RS1V	0x04000000
 #define EQOS_RDESC3_RS0V	0x02000000
 #define EQOS_RDESC3_CRC		0x01000000
+#define EQOS_RDESC3_BUF1V	0x01000000
 #define EQOS_RDESC3_GP		0x00800000
 #define EQOS_RDESC3_WD		0x00400000
 #define EQOS_RDESC3_OF		0x00200000
@@ -973,7 +975,7 @@ struct eqos_tx_queue {
 struct rx_swcx_desc {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
-	unsigned int inte;	/* set to non-zero if INTE is set for
+	bool inte;	/* set to non-zero if INTE is set for
 				corresponding desc */
 };
 

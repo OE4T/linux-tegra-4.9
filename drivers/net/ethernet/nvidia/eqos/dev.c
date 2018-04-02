@@ -2690,24 +2690,15 @@ static void rx_descriptor_reset(UINT idx,
 
 	pr_debug("-->rx_descriptor_reset\n");
 
-	memset(prx_desc, 0, sizeof(struct s_rx_desc));
-	/* update buffer 1 address pointer */
-	RX_NORMAL_DESC_RDES0_WR(prx_desc->rdes0, L32(prx_swcx_desc->dma));
-	RX_NORMAL_DESC_RDES1_WR(prx_desc->rdes1, H32(prx_swcx_desc->dma));
+	/* Set buffer 1 address.  Since we can have > 32 bit physical addresses
+	 * and do not use split headers, we do not use buffer 2.
+	 */
+	prx_desc->rdes0 = L32(prx_swcx_desc->dma);
+	prx_desc->rdes1 = H32(prx_swcx_desc->dma);
 
-	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
-		/* update buffer 2 address pointer */
-		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
-		/* set control bits - OWN, INTE, BUF1V and BUF2V */
-		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
-					(0x83000000 | inte));
-	} else {
-		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
-		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
-					(0x81000000 | inte));
-	}
+	/* Set buffer 1 valid, own, and interrupt bits. */
+	prx_desc->rdes3 = EQOS_RDESC3_OWN | EQOS_RDESC3_BUF1V |
+		(inte ? EQOS_RDESC3_IOC : 0);
 
 	pr_debug("<--rx_descriptor_reset\n");
 }
@@ -2745,20 +2736,16 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 		/* set buffer 2 address pointer to zero */
 		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3, 0xc1000000);
+		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3, EQOS_RDESC3_OWN |
+					EQOS_RDESC3_IOC | EQOS_RDESC3_BUF1V);
 
-		prx_swcx_desc->inte = (1 << 30);
+		prx_swcx_desc->inte = true;
 
 		/* reconfigure INTE bit if RX watchdog timer is enabled */
 		if (prx_ring->use_riwt) {
 			if ((i % prx_ring->rx_coal_frames) != 0) {
-				UINT rdes3 = 0;
-				RX_NORMAL_DESC_RDES3_RD(prx_desc->rdes3,
-							rdes3);
-				/* reset INTE */
-				RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
-							(rdes3 & ~(1 << 30)));
-				prx_swcx_desc->inte = 0;
+				prx_desc->rdes3 &= ~EQOS_RDESC3_IOC;
+				prx_swcx_desc->inte = false;
 			}
 		}
 
@@ -2773,9 +2760,6 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	DMA_RDTP_RPDR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, last_index));
 	/* update the starting address of desc chain/ring */
 	DMA_RDLAR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, start_index));
-
-	prx_ring->hw_last_rx_desc_addr =
-		GET_RX_DESC_DMA_ADDR(qinx, start_index);
 
 	pr_debug("<--rx_descriptor_init\n");
 }

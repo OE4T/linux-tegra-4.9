@@ -76,6 +76,9 @@
 #define FIXADDR_TOP		(PCI_IO_START - SZ_2M)
 #define TASK_SIZE_64		(UL(1) << VA_BITS)
 
+/* The physical address of the end of vmemmap */
+#define VMEMMAP_END_PHYS	((VMEMMAP_SIZE >> STRUCT_PAGE_MAX_SHIFT) << PAGE_SHIFT)
+
 #ifdef CONFIG_COMPAT
 #define TASK_SIZE_32		UL(0x100000000)
 #define TASK_SIZE		(test_thread_flag(TIF_32BIT) ? \

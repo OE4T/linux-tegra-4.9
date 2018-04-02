@@ -4392,6 +4392,10 @@ static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f(void)
 {
 	return 0x0U;
 }
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_addr_f(void)
+{
+	return 0xfU;
+}
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f(void)
 {
 	return 0x20U;

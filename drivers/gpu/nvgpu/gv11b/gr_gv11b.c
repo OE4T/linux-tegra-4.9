@@ -30,6 +30,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/fuse.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/error_notifier.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -2090,6 +2091,41 @@ static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 	return 0;
 }
 
+static int gr_gv11b_handle_warp_esr_error_misaligned_addr(struct gk20a *g,
+	u32 gpc, u32 tpc, u32 sm,
+	u32 warp_esr,
+	struct channel_gk20a *fault_ch)
+{
+	struct tsg_gk20a *tsg;
+	u32 offset;
+	struct channel_gk20a *ch_tsg;
+
+	if (fault_ch) {
+		tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
+			if (gk20a_channel_get(ch_tsg)) {
+				g->ops.fifo.set_error_notifier(ch_tsg,
+						 NVGPU_ERR_NOTIFIER_GR_EXCEPTION);
+				gk20a_channel_put(ch_tsg);
+			}
+		}
+		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+	}
+
+	/* clear interrupt */
+	offset = gk20a_gr_gpc_offset(g, gpc) +
+			gk20a_gr_tpc_offset(g, tpc) +
+			gv11b_gr_sm_offset(g, sm);
+	nvgpu_writel(g,
+		gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset, 0);
+
+	/* return error so that recovery is triggered by gk20a_gr_isr() */
+	return -EFAULT;
+}
+
 /* @brief pre-process work on the SM exceptions to determine if we clear them or not.
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
@@ -2116,6 +2152,10 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 	 */
 	if (warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f())
 		return gr_gv11b_handle_warp_esr_error_mmu_nack(g, gpc, tpc, sm,
+				warp_esr, fault_ch);
+
+	if (warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_addr_f())
+		return gr_gv11b_handle_warp_esr_error_misaligned_addr(g, gpc, tpc, sm,
 				warp_esr, fault_ch);
 
 	if (fault_ch) {

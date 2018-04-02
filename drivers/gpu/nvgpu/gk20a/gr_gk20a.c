@@ -5740,7 +5740,7 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 				"GPC%d TPC%d: SM%d exception pending",
 				 gpc, tpc, sm);
 
-			ret = g->ops.gr.handle_sm_exception(g,
+			ret |= g->ops.gr.handle_sm_exception(g,
 				 gpc, tpc, sm, post_event, fault_ch,
 				hww_global_esr);
 			/* clear the hwws, also causes tpc and gpc
@@ -5759,11 +5759,11 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_gpc0_tpc0_tpccs_tpc_exception_tex_pending_v()) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: TEX exception pending", gpc, tpc);
-		ret = g->ops.gr.handle_tex_exception(g, gpc, tpc, post_event);
+		ret |= g->ops.gr.handle_tex_exception(g, gpc, tpc, post_event);
 	}
 
 	if (g->ops.gr.handle_tpc_mpc_exception)
-		ret = g->ops.gr.handle_tpc_mpc_exception(g,
+		ret |= g->ops.gr.handle_tpc_mpc_exception(g,
 					gpc, tpc, post_event);
 
 	return ret;
@@ -5801,7 +5801,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				  "GPC%d: TPC%d exception pending", gpc, tpc);
 
-			ret = gk20a_gr_handle_tpc_exception(g, gpc, tpc,
+			ret |= gk20a_gr_handle_tpc_exception(g, gpc, tpc,
 					post_event, fault_ch, hww_global_esr);
 
 		}
@@ -5812,7 +5812,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 			int gcc_ret = 0;
 			gcc_ret = g->ops.gr.handle_gcc_exception(g, gpc, tpc,
 				post_event, fault_ch, hww_global_esr);
-			ret = ret ? ret : gcc_ret;
+			ret |= ret ? ret : gcc_ret;
 		}
 
 		/* Handle GPCCS exceptions */
@@ -5820,7 +5820,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 			int ret_ecc = 0;
 			ret_ecc = g->ops.gr.handle_gpc_gpccs_exception(g, gpc,
 								gpc_exception);
-			ret = ret ? ret : ret_ecc;
+			ret |= ret ? ret : ret_ecc;
 		}
 
 		/* Handle GPCMMU exceptions */
@@ -5829,7 +5829,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 
 			ret_mmu = g->ops.gr.handle_gpc_gpcmmu_exception(g, gpc,
 								gpc_exception);
-			ret = ret ? ret : ret_mmu;
+			ret |= ret ? ret : ret_mmu;
 		}
 
 	}

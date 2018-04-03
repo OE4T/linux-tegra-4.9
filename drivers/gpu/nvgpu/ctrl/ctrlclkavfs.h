@@ -41,6 +41,14 @@
 #define	CTRL_CLK_VIN_ID_UNDEFINED	0x000000FF
 
 #define	CTRL_CLK_VIN_TYPE_DISABLED 0x00000000
+#define CTRL_CLK_VIN_TYPE_V10      0x00000001
+#define CTRL_CLK_VIN_TYPE_V20      0x00000002
+
+/*!
+ * Various types of VIN calibration that the GPU can support
+ */
+#define CTRL_CLK_VIN_CAL_TYPE_V10           (0x00000000)
+#define CTRL_CLK_VIN_CAL_TYPE_V20           (0x00000001)
 
 /*!
  * Mask of all GPC VIN IDs supported by RM

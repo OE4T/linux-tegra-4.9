@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -44,11 +44,19 @@ struct vin_device {
 	u8 id;
 	u8 volt_domain;
 	u8 volt_domain_vbios;
-	u32 slope;
-	u32 intercept;
 	u32 flls_shared_mask;
 
 	vin_device_state_load  *state_load;
+};
+
+struct vin_device_v10 {
+	struct vin_device super;
+	struct ctrl_clk_vin_device_info_data_v10 data;
+};
+
+struct vin_device_v20 {
+	struct vin_device super;
+	struct ctrl_clk_vin_device_info_data_v20 data;
 };
 
 /* get vin device object from descriptor table index*/
@@ -61,5 +69,11 @@ boardobj_pmudatainit vindeviceinit_pmudata_super;
 
 u32 clk_vin_sw_setup(struct gk20a *g);
 u32 clk_vin_pmu_setup(struct gk20a *g);
+u32 clk_avfs_get_vin_cal_fuse_v10(struct gk20a *g,
+					struct avfsvinobjs *pvinobjs,
+					struct vin_device_v20 *pvindev);
+u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
+					struct avfsvinobjs *pvinobjs,
+					struct vin_device_v20 *pvindev);
 
 #endif

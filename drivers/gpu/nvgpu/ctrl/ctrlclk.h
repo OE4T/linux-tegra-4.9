@@ -135,6 +135,30 @@ struct ctrl_clk_clk_delta {
 	int volt_deltauv[CTRL_CLK_CLK_DELTA_MAX_VOLT_RAILS];
 };
 
+struct ctrl_clk_vin_v10 {
+	u32 slope;
+	u32 intercept;
+};
+
+struct ctrl_clk_vin_v20 {
+	s8 offset;
+	s8 gain;
+};
+
+union ctrl_clk_vin_data_v20 {
+	struct ctrl_clk_vin_v10 cal_v10;
+	struct ctrl_clk_vin_v20 cal_v20;
+};
+
+struct ctrl_clk_vin_device_info_data_v10 {
+	struct ctrl_clk_vin_v10 vin_cal;
+};
+
+struct ctrl_clk_vin_device_info_data_v20 {
+	u8 cal_type;
+	union ctrl_clk_vin_data_v20 vin_cal;
+};
+
 union ctrl_clk_clk_prog_1x_source_data {
 	struct ctrl_clk_clk_prog_1x_source_pll pll;
 };

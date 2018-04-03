@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,8 +40,23 @@
 static u32 devinit_get_vin_device_table(struct gk20a *g,
 		struct avfsvinobjs *pvinobjs);
 
+static u32 vin_device_construct_v10(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs);
+static u32 vin_device_construct_v20(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs);
+static u32 vin_device_construct_super(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs);
 static struct vin_device *construct_vin_device(struct gk20a *g, void *pargs);
 
+static u32 vin_device_init_pmudata_v10(struct gk20a *g,
+				  struct boardobj *board_obj_ptr,
+				  struct nv_pmu_boardobj *ppmudata);
+static u32 vin_device_init_pmudata_v20(struct gk20a *g,
+				  struct boardobj *board_obj_ptr,
+				  struct nv_pmu_boardobj *ppmudata);
 static u32 vin_device_init_pmudata_super(struct gk20a *g,
 				  struct boardobj *board_obj_ptr,
 				  struct nv_pmu_boardobj *ppmudata);
@@ -184,6 +199,120 @@ static u32 read_vin_cal_slope_intercept_fuse(struct gk20a *g,
 	return 0;
 }
 
+static u32 read_vin_cal_gain_offset_fuse(struct gk20a *g,
+					     u32 vin_id, s8 *gain,
+					     s8 *offset)
+{
+	u32 data = 0;
+
+	switch (vin_id) {
+	case CTRL_CLK_VIN_ID_GPC0:
+		data = gk20a_readl(g, fuse_vin_cal_gpc0_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_GPC1:
+		data = gk20a_readl(g, fuse_vin_cal_gpc1_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_GPC2:
+		data = gk20a_readl(g, fuse_vin_cal_gpc2_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_GPC3:
+		data = gk20a_readl(g, fuse_vin_cal_gpc3_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_GPC4:
+		data = gk20a_readl(g, fuse_vin_cal_gpc4_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_GPC5:
+		data = gk20a_readl(g, fuse_vin_cal_gpc5_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_SYS:
+	case CTRL_CLK_VIN_ID_XBAR:
+	case CTRL_CLK_VIN_ID_LTC:
+		data = gk20a_readl(g, fuse_vin_cal_shared_delta_r());
+		break;
+
+	case CTRL_CLK_VIN_ID_SRAM:
+		data = gk20a_readl(g, fuse_vin_cal_sram_delta_r());
+		break;
+
+	default:
+		return -EINVAL;
+	}
+	if (data == 0xFFFFFFFF)
+		return -EINVAL;
+	*gain = (s8) (data >> 16) & 0x1f;
+	*offset = (s8) data & 0x7f;
+
+	return 0;
+}
+
+u32 clk_avfs_get_vin_cal_fuse_v10(struct gk20a *g,
+					struct avfsvinobjs *pvinobjs,
+					struct vin_device_v20 *pvindev)
+{
+	u32 status = 0;
+	u32 slope, intercept;
+	u8 i;
+
+	if (pvinobjs->calibration_rev_vbios == read_vin_cal_fuse_rev(g)) {
+		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
+				     struct vin_device_v20 *, pvindev, i) {
+			slope = 0;
+			intercept = 0;
+			pvindev = (struct vin_device_v20 *)CLK_GET_VIN_DEVICE(pvinobjs, i);
+			status = read_vin_cal_slope_intercept_fuse(g,
+					pvindev->super.id, &slope, &intercept);
+			if (status) {
+				nvgpu_err(g,
+				"err reading vin cal for id %x", pvindev->super.id);
+				return status;
+			}
+			if (slope != 0 && intercept != 0) {
+				pvindev->data.vin_cal.cal_v10.slope = slope;
+				pvindev->data.vin_cal.cal_v10.intercept = intercept;
+			}
+		}
+	}
+	return status;
+
+}
+
+u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
+					struct avfsvinobjs *pvinobjs,
+					struct vin_device_v20 *pvindev)
+{
+	u32 status = 0;
+	s8 gain, offset;
+	u8 i;
+
+	if (pvinobjs->calibration_rev_vbios == read_vin_cal_fuse_rev(g)) {
+		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
+				     struct vin_device_v20 *, pvindev, i) {
+			gain = 0;
+			offset = 0;
+			pvindev = (struct vin_device_v20 *)CLK_GET_VIN_DEVICE(pvinobjs, i);
+			status = read_vin_cal_gain_offset_fuse(g,
+					pvindev->super.id, &gain, &offset);
+			if (status) {
+				nvgpu_err(g,
+				"err reading vin cal for id %x", pvindev->super.id);
+				return status;
+			}
+			if (gain != 0 && offset != 0) {
+				pvindev->data.vin_cal.cal_v20.gain = gain;
+				pvindev->data.vin_cal.cal_v20.offset = offset;
+			}
+		}
+	}
+	return status;
+
+}
+
 static u32 _clk_vin_devgrp_pmudatainit_super(struct gk20a *g,
 					     struct boardobjgrp *pboardobjgrp,
 					     struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
@@ -249,11 +378,8 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 {
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
-	u32 slope;
-	u32 intercept;
-	struct vin_device *pvindev;
+	struct vin_device_v20 *pvindev = NULL;
 	struct avfsvinobjs *pvinobjs;
-	u8 i;
 
 	gk20a_dbg_info("");
 
@@ -288,25 +414,8 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 		goto done;
 
 	/*update vin calibration to fuse */
-	if (pvinobjs->calibration_rev_vbios == read_vin_cal_fuse_rev(g)) {
-		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
-				     struct vin_device *, pvindev, i) {
-			slope = 0;
-			intercept = 0;
-			pvindev = CLK_GET_VIN_DEVICE(pvinobjs, i);
-			status = read_vin_cal_slope_intercept_fuse(g,
-					pvindev->id, &slope, &intercept);
-			if (status) {
-				nvgpu_err(g,
-				"err reading vin cal for id %x", pvindev->id);
-				goto done;
-			}
-			if (slope != 0 && intercept != 0) {
-				pvindev->slope = slope;
-				pvindev->intercept = intercept;
-			}
-		}
-	}
+	g->ops.pmu_ver.clk.clk_avfs_get_vin_cal_data(g, pvinobjs, pvindev);
+
 	status = BOARDOBJGRP_PMU_CMD_GRP_GET_STATUS_CONSTRUCT(g,
 				&g->clk_pmu.avfs_vinobjs.super.super,
 				clk, CLK, clk_vin_device, CLK_VIN_DEVICE);
@@ -349,9 +458,17 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 	struct vin_descriptor_entry_10 vin_desc_table_entry = { 0 };
 	u8 *vin_tbl_entry_ptr = NULL;
 	u32 index = 0;
-	u32 slope, intercept;
-	struct vin_device vin_dev_data;
+	u32 slope=0, intercept=0;
+	s8 offset=0, gain=0;
 	struct vin_device *pvin_dev;
+	u32 cal_type;
+
+	union {
+		struct boardobj boardobj;
+		struct vin_device vin_device;
+		struct vin_device_v10 vin_device_v10;
+		struct vin_device_v20 vin_device_v20;
+	} vin_device_data;
 
 	gk20a_dbg_info("");
 
@@ -371,19 +488,36 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 	pvinobjs->vin_is_disable_allowed =
 			BIOS_GET_FIELD(vin_desc_table_header.flags0,
 				NV_VIN_DESC_FLAGS0_DISABLE_CONTROL);
+	cal_type = BIOS_GET_FIELD(vin_desc_table_header.flags0,
+				NV_VIN_DESC_FLAGS0_VIN_CAL_TYPE);
+	if(!cal_type)
+		cal_type = CTRL_CLK_VIN_CAL_TYPE_V10;
 
-	/* VIN calibration slope: XX.YYY mV/code => XXYYY uV/code*/
-	slope = ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
-			NV_VIN_DESC_VIN_CAL_SLOPE_INTEGER) * 1000)) +
-		((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
-			NV_VIN_DESC_VIN_CAL_SLOPE_FRACTION)));
+	switch (cal_type) {
+	case CTRL_CLK_VIN_CAL_TYPE_V10:
+		/* VIN calibration slope: XX.YYY mV/code => XXYYY uV/code*/
+		slope = ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+				NV_VIN_DESC_VIN_CAL_SLOPE_INTEGER) * 1000)) +
+			((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+				NV_VIN_DESC_VIN_CAL_SLOPE_FRACTION)));
 
-	/* VIN calibration intercept: ZZZ.W mV => ZZZW00 uV */
-	intercept = ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
-			NV_VIN_DESC_VIN_CAL_INTERCEPT_INTEGER) * 1000)) +
-		    ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
-			NV_VIN_DESC_VIN_CAL_INTERCEPT_FRACTION) * 100));
+		/* VIN calibration intercept: ZZZ.W mV => ZZZW00 uV */
+		intercept = ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+				NV_VIN_DESC_VIN_CAL_INTERCEPT_INTEGER) * 1000)) +
+			    ((BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+				NV_VIN_DESC_VIN_CAL_INTERCEPT_FRACTION) * 100));
 
+		break;
+	case CTRL_CLK_VIN_CAL_TYPE_V20:
+		offset = BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+                                NV_VIN_DESC_VIN_CAL_OFFSET);
+		gain = BIOS_GET_FIELD(vin_desc_table_header.vin_cal,
+                                NV_VIN_DESC_VIN_CAL_GAIN);
+		break;
+	default:
+		status = -1;
+		goto done;
+	}
 	/* Read table entries*/
 	vin_tbl_entry_ptr = vin_table_ptr + vin_desc_table_header.header_sizee;
 	for (index = 0; index < vin_desc_table_header.entry_count; index++) {
@@ -393,17 +527,28 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 		if (vin_desc_table_entry.vin_device_type == CTRL_CLK_VIN_TYPE_DISABLED)
 			continue;
 
-		vin_dev_data.super.type =
+		vin_device_data.boardobj.type =
 			(u8)vin_desc_table_entry.vin_device_type;
-		vin_dev_data.id = (u8)vin_desc_table_entry.vin_device_id;
-		vin_dev_data.volt_domain_vbios =
+		vin_device_data.vin_device.id = (u8)vin_desc_table_entry.vin_device_id;
+		vin_device_data.vin_device.volt_domain_vbios =
 			(u8)vin_desc_table_entry.volt_domain_vbios;
-		vin_dev_data.slope = slope;
-		vin_dev_data.intercept = intercept;
+		vin_device_data.vin_device.flls_shared_mask = 0;
 
-		vin_dev_data.flls_shared_mask = 0;
+		switch (vin_device_data.boardobj.type) {
+		case CTRL_CLK_VIN_TYPE_V10:
+			vin_device_data.vin_device_v10.data.vin_cal.slope = slope;
+			vin_device_data.vin_device_v10.data.vin_cal.intercept = intercept;
+			break;
+		case CTRL_CLK_VIN_TYPE_V20:
+			vin_device_data.vin_device_v20.data.vin_cal.cal_v20.offset = offset;
+			vin_device_data.vin_device_v20.data.vin_cal.cal_v20.gain = gain;
+			break;
+		default:
+			status = -1;
+			goto done;
+		};
 
-		pvin_dev = construct_vin_device(g, (void *)&vin_dev_data);
+		pvin_dev = construct_vin_device(g, (void *)&vin_device_data);
 
 		status = boardobjgrp_objinsert(&pvinobjs->super.super,
 				(struct boardobj *)pvin_dev, index);
@@ -416,34 +561,166 @@ done:
 	return status;
 }
 
+static u32 vin_device_construct_v10(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs)
+{
+	struct boardobj *ptmpobj = (struct boardobj *)pargs;
+	struct vin_device_v10 *pvin_device_v10;
+	struct vin_device_v10 *ptmpvin_device_v10 = (struct vin_device_v10 *)pargs;
+	u32 status = 0;
+
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_VIN_TYPE_V10)
+		return -EINVAL;
+
+	ptmpobj->type_mask |= BIT(CTRL_CLK_VIN_TYPE_V10);
+	status = vin_device_construct_super(g, ppboardobj, size, pargs);
+	if (status)
+		return -EINVAL;
+
+	pvin_device_v10 = (struct vin_device_v10 *)*ppboardobj;
+
+	pvin_device_v10->super.super.pmudatainit =
+			vin_device_init_pmudata_v10;
+
+	pvin_device_v10->data.vin_cal.slope = ptmpvin_device_v10->data.vin_cal.slope;
+	pvin_device_v10->data.vin_cal.intercept = ptmpvin_device_v10->data.vin_cal.intercept;
+
+	return status;
+}
+
+static u32 vin_device_construct_v20(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs)
+{
+	struct boardobj *ptmpobj = (struct boardobj *)pargs;
+	struct vin_device_v20 *pvin_device_v20;
+	struct vin_device_v20 *ptmpvin_device_v20 = (struct vin_device_v20 *)pargs;
+	u32 status = 0;
+
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_VIN_TYPE_V20)
+		return -EINVAL;
+
+	ptmpobj->type_mask |= BIT(CTRL_CLK_VIN_TYPE_V20);
+	status = vin_device_construct_super(g, ppboardobj, size, pargs);
+	if (status)
+		return -EINVAL;
+
+	pvin_device_v20 = (struct vin_device_v20 *)*ppboardobj;
+
+	pvin_device_v20->super.super.pmudatainit =
+			vin_device_init_pmudata_v20;
+
+	pvin_device_v20->data.vin_cal.cal_v20.offset = ptmpvin_device_v20->data.vin_cal.cal_v20.offset;
+	pvin_device_v20->data.vin_cal.cal_v20.gain = ptmpvin_device_v20->data.vin_cal.cal_v20.gain;
+
+	return status;
+}
+static u32 vin_device_construct_super(struct gk20a *g,
+					struct boardobj **ppboardobj,
+					u16 size, void *pargs)
+{
+	struct vin_device *pvin_device;
+	struct vin_device *ptmpvin_device = (struct vin_device *)pargs;
+	u32 status = 0;
+	status = boardobj_construct_super(g, ppboardobj, size, pargs);
+
+	if (status)
+		return -EINVAL;
+
+	pvin_device = (struct vin_device *)*ppboardobj;
+
+	pvin_device->super.pmudatainit =
+			vin_device_init_pmudata_super;
+
+	pvin_device->id = ptmpvin_device->id;
+	pvin_device->volt_domain_vbios = ptmpvin_device->volt_domain_vbios;
+	pvin_device->flls_shared_mask = ptmpvin_device->flls_shared_mask;
+	pvin_device->volt_domain = CTRL_VOLT_DOMAIN_LOGIC;
+
+	return status;
+}
 static struct vin_device *construct_vin_device(struct gk20a *g, void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	struct vin_device *pvin_dev;
-	struct vin_device *board_obj_vin_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
-	status = boardobj_construct_super(g, &board_obj_ptr,
-		sizeof(struct vin_device), pargs);
+	gk20a_dbg_info(" %d", BOARDOBJ_GET_TYPE(pargs));
+	switch (BOARDOBJ_GET_TYPE(pargs)) {
+	case CTRL_CLK_VIN_TYPE_V10:
+		status = vin_device_construct_v10(g, &board_obj_ptr,
+			sizeof(struct vin_device_v10), pargs);
+		break;
+
+	case CTRL_CLK_VIN_TYPE_V20:
+		status = vin_device_construct_v20(g, &board_obj_ptr,
+			sizeof(struct vin_device_v20), pargs);
+		break;
+
+	default:
+		return NULL;
+	};
+
 	if (status)
 		return NULL;
-
-	/*got vin board obj allocated now fill it into boardobj grp*/
-	pvin_dev = (struct vin_device *)pargs;
-	board_obj_vin_ptr = (struct vin_device *)board_obj_ptr;
-	/* override super class interface */
-	board_obj_ptr->pmudatainit = vin_device_init_pmudata_super;
-	board_obj_vin_ptr->id = pvin_dev->id;
-	board_obj_vin_ptr->volt_domain_vbios = pvin_dev->volt_domain_vbios;
-	board_obj_vin_ptr->slope = pvin_dev->slope;
-	board_obj_vin_ptr->intercept = pvin_dev->intercept;
-	board_obj_vin_ptr->flls_shared_mask = pvin_dev->flls_shared_mask;
-	board_obj_vin_ptr->volt_domain = CTRL_VOLT_DOMAIN_LOGIC;
 
 	gk20a_dbg_info(" Done");
 
 	return (struct vin_device *)board_obj_ptr;
+}
+
+
+
+static u32 vin_device_init_pmudata_v10(struct gk20a *g,
+					 struct boardobj *board_obj_ptr,
+					 struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct vin_device_v20 *pvin_dev_v20;
+	struct nv_pmu_clk_clk_vin_device_v10_boardobj_set *perf_pmu_data;
+
+	gk20a_dbg_info("");
+
+	status = vin_device_init_pmudata_super(g, board_obj_ptr, ppmudata);
+	if (status != 0)
+		return status;
+
+	pvin_dev_v20 = (struct vin_device_v20 *)board_obj_ptr;
+	perf_pmu_data = (struct nv_pmu_clk_clk_vin_device_v10_boardobj_set *)
+		ppmudata;
+
+	perf_pmu_data->data.vin_cal.intercept = pvin_dev_v20->data.vin_cal.cal_v10.intercept;
+	perf_pmu_data->data.vin_cal.slope = pvin_dev_v20->data.vin_cal.cal_v10.slope;
+
+	gk20a_dbg_info(" Done");
+
+	return status;
+}
+
+static u32 vin_device_init_pmudata_v20(struct gk20a *g,
+					 struct boardobj *board_obj_ptr,
+					 struct nv_pmu_boardobj *ppmudata)
+{
+	u32 status = 0;
+	struct vin_device_v20 *pvin_dev_v20;
+	struct nv_pmu_clk_clk_vin_device_v20_boardobj_set *perf_pmu_data;
+
+	gk20a_dbg_info("");
+
+	status = vin_device_init_pmudata_super(g, board_obj_ptr, ppmudata);
+	if (status != 0)
+		return status;
+
+	pvin_dev_v20 = (struct vin_device_v20 *)board_obj_ptr;
+	perf_pmu_data = (struct nv_pmu_clk_clk_vin_device_v20_boardobj_set *)
+		ppmudata;
+
+	perf_pmu_data->data.vin_cal.cal_v20.offset = pvin_dev_v20->data.vin_cal.cal_v20.offset;
+	perf_pmu_data->data.vin_cal.cal_v20.gain = pvin_dev_v20->data.vin_cal.cal_v20.gain;
+
+	gk20a_dbg_info(" Done");
+
+	return status;
 }
 
 static u32 vin_device_init_pmudata_super(struct gk20a *g,
@@ -465,9 +742,7 @@ static u32 vin_device_init_pmudata_super(struct gk20a *g,
 		ppmudata;
 
 	perf_pmu_data->id = pvin_dev->id;
-	perf_pmu_data->intercept = pvin_dev->intercept;
 	perf_pmu_data->volt_domain = pvin_dev->volt_domain;
-	perf_pmu_data->slope = pvin_dev->slope;
 	perf_pmu_data->flls_shared_mask = pvin_dev->flls_shared_mask;
 
 	gk20a_dbg_info(" Done");

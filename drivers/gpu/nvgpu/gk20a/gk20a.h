@@ -801,6 +801,9 @@ struct gpu_ops {
 		} volt;
 		struct {
 			u32 (*get_vbios_clk_domain)(u32 vbios_domain);
+			u32 (*clk_avfs_get_vin_cal_data)(struct gk20a *g,
+				struct avfsvinobjs *pvinobjs,
+				struct vin_device_v20 *pvindev);
 		}clk;
 	} pmu_ver;
 	struct {

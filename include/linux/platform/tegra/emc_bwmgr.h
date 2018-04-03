@@ -17,6 +17,7 @@
 #include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/of_address.h>
+#include <linux/platform/tegra/iso_client.h>
 
 /* keep in sync with tegra_bwmgr_client_names */
 enum tegra_bwmgr_client_id {
@@ -124,6 +125,7 @@ struct bwmgr_ops {
 	unsigned long (*get_best_iso_freq)(long iso_bw,
 		long iso_bw_nvdis, long iso_bw_vi);
 	void (*update_efficiency)(unsigned long dram_refresh_rate);
+	u32 (*get_max_iso_bw)(enum tegra_iso_client client);
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t21x(void);

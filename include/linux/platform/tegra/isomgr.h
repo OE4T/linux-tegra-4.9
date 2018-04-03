@@ -21,6 +21,7 @@
 #define _INCLUDE_MACH_ISOMGR_H
 
 #include <linux/platform/tegra/emc_bwmgr.h>
+#include <linux/platform/tegra/iso_client.h>
 
 #define ISOMGR_MAGIC  0x150A1C
 
@@ -30,22 +31,6 @@
 /* callback to client to renegotiate ISO BW allocation */
 typedef void (*tegra_isomgr_renegotiate)(void *priv,
 					 u32 avail_bw); /* KB/sec */
-
-
-enum tegra_iso_client {
-	TEGRA_ISO_CLIENT_DISP_0,
-	TEGRA_ISO_CLIENT_DISP_1,
-	TEGRA_ISO_CLIENT_DISP_2,
-	TEGRA_ISO_CLIENT_VI_0,
-	TEGRA_ISO_CLIENT_VI_1,
-	TEGRA_ISO_CLIENT_ISP_A,
-	TEGRA_ISO_CLIENT_ISP_B,
-	TEGRA_ISO_CLIENT_BBC_0,
-	TEGRA_ISO_CLIENT_TEGRA_CAMERA,
-	TEGRA_ISO_CLIENT_APE_ADMA,
-	TEGRA_ISO_CLIENT_EQOS,
-	TEGRA_ISO_CLIENT_COUNT
-};
 
 struct isoclient_info {
 	enum tegra_iso_client client;
@@ -135,6 +120,7 @@ struct isomgr_ops {
 	bool (*isomgr_plat_reserve)(struct isomgr_client *cp,
 			u32 bw, enum tegra_iso_client client);
 	bool (*isomgr_plat_realize)(struct isomgr_client *cp);
+	u32 (*isomgr_max_iso_bw)(enum tegra_iso_client client);
 };
 
 struct isomgr_ops *pre_t19x_isomgr_init(void);
@@ -167,7 +153,7 @@ int tegra_isomgr_get_imp_time(enum tegra_iso_client, u32 bw);
 u32 tegra_isomgr_get_available_iso_bw(void);
 
 /* returns total iso bw in KB/sec */
-u32 tegra_isomgr_get_total_iso_bw(void);
+u32 tegra_isomgr_get_total_iso_bw(enum tegra_iso_client client);
 
 /* Initialize isomgr.
  * This api would be called by .init_machine during boot.
@@ -216,7 +202,7 @@ static inline u32 tegra_isomgr_get_available_iso_bw(void)
 	return UINT_MAX;
 }
 
-static inline u32 tegra_isomgr_get_total_iso_bw(void)
+static inline u32 tegra_isomgr_get_total_iso_bw(enum tegra_iso_client client)
 {
 	return UINT_MAX;
 }

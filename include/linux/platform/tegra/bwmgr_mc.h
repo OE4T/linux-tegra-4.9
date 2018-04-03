@@ -15,6 +15,7 @@
 #define __BWMGR_MC_H
 
 #include <linux/types.h>
+#include <linux/platform/tegra/iso_client.h>
 
 unsigned long bwmgr_apply_efficiency(
 		unsigned long bw, unsigned long iso_bw,
@@ -28,6 +29,7 @@ unsigned long bwmgr_freq_to_bw(unsigned long freq);
 unsigned long bwmgr_bw_to_freq(unsigned long bw);
 unsigned long bwmgr_get_lowest_iso_emc_freq(long iso_bw,
 		long iso_bw_nvdis, long iso_bw_vi);
+u32 tegra_bwmgr_get_max_iso_bw(enum tegra_iso_client);
 
 u32 bwmgr_dvfs_latency(u32 ufreq);
 int bwmgr_iso_bw_percentage_max(void);

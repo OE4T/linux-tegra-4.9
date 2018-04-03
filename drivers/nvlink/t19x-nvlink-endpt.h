@@ -215,6 +215,7 @@ struct tnvlink_dev {
 	struct clk *clk_nvlink_pll_txclk;
 	struct clk *clk_nvlink_tx;
 	/* resets */
+	struct reset_control *rst_mssnvl;
 	struct reset_control *rst_nvhs_uphy_pm;
 	struct reset_control *rst_nvhs_uphy;
 	struct reset_control *rst_nvhs_uphy_pll0;

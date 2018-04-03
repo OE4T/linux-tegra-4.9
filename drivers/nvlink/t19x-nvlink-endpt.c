@@ -267,6 +267,10 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 			goto pllnvhs_fail;
 		}
 	}
+
+	/* De-assert MSSNVLINK0 reset */
+	reset_control_deassert(tdev->rst_mssnvl);
+
 	return ret;
 
 pllnvhs_fail:
@@ -548,6 +552,11 @@ static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 	}
 
 	/* Resets */
+	tdev->rst_mssnvl = devm_reset_control_get(tdev->dev, "mssnvl");
+	if (IS_ERR(tdev->rst_mssnvl)) {
+		nvlink_err("missing rst_mssnvl reset");
+		return PTR_ERR(tdev->rst_mssnvl);
+	}
 	tdev->rst_nvhs_uphy_pm = devm_reset_control_get(tdev->dev,
 			"nvhs_uphy_pm");
 	if (IS_ERR(tdev->rst_nvhs_uphy_pm)) {

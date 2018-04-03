@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -477,95 +477,26 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
  *
  * \retval zero on success and -ve number on failure.
  */
-#define SPEED_UNKNOWN -1
-#define DUPLEX_UNKNOWN 0xff
 static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned int pause, duplex;
-	unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
-	pr_debug("-->eqos_getsettings\n");
-
-	if (pdata->hw_feat.pcs_sel) {
-		if (!pdata->pcs_link) {
-			ethtool_cmd_speed_set(cmd, SPEED_UNKNOWN);
-			cmd->duplex = DUPLEX_UNKNOWN;
-			return 0;
-		}
-		ethtool_cmd_speed_set(cmd, pdata->pcs_speed);
-		cmd->duplex = pdata->pcs_duplex;
-
-		pause = hw_if->get_an_adv_pause_param();
-		duplex = hw_if->get_an_adv_duplex_param();
-		lp_pause = hw_if->get_lp_an_adv_pause_param();
-		lp_duplex = hw_if->get_lp_an_adv_duplex_param();
-
-		if (pause == 1)
-			cmd->advertising |= ADVERTISED_Pause;
-		if (pause == 2)
-			cmd->advertising |= ADVERTISED_Asym_Pause;
-		/* MAC always supports Auto-negotiation */
-		cmd->autoneg = ADVERTISED_Autoneg;
-		cmd->supported |= SUPPORTED_Autoneg;
-		cmd->advertising |= ADVERTISED_Autoneg;
-
-		if (duplex) {
-			cmd->supported |= (SUPPORTED_1000baseT_Full |
-					   SUPPORTED_100baseT_Full |
-					   SUPPORTED_10baseT_Full);
-			cmd->advertising |= (ADVERTISED_1000baseT_Full |
-					     ADVERTISED_100baseT_Full |
-					     ADVERTISED_10baseT_Full);
-		} else {
-			cmd->supported |= (SUPPORTED_1000baseT_Half |
-					   SUPPORTED_100baseT_Half |
-					   SUPPORTED_10baseT_Half);
-			cmd->advertising |= (ADVERTISED_1000baseT_Half |
-					     ADVERTISED_100baseT_Half |
-					     ADVERTISED_10baseT_Half);
-		}
-
-		/* link partner features */
-		cmd->lp_advertising |= ADVERTISED_Autoneg;
-		if (lp_pause == 1)
-			cmd->lp_advertising |= ADVERTISED_Pause;
-		if (lp_pause == 2)
-			cmd->lp_advertising |= ADVERTISED_Asym_Pause;
-
-		if (lp_duplex)
-			cmd->lp_advertising |= (ADVERTISED_1000baseT_Full |
-						ADVERTISED_100baseT_Full |
-						ADVERTISED_10baseT_Full);
-		else
-			cmd->lp_advertising |= (ADVERTISED_1000baseT_Half |
-						ADVERTISED_100baseT_Half |
-						ADVERTISED_10baseT_Half);
-
-		cmd->port = PORT_OTHER;
-	} else {
-		if (pdata->phydev == NULL) {
-			DBGPR_ETHTOOL("%s: PHY is not registered\n", dev->name);
-			return -ENODEV;
-		}
-
-		if (!netif_running(dev)) {
-			DBGPR_ETHTOOL("%s: interface is disabled: we cannot "
-				      "track link speed / duplex settings\n",
-				      dev->name);
-			return -EBUSY;
-		}
-
-		cmd->transceiver = XCVR_EXTERNAL;
-
-		spin_lock_irq(&pdata->lock);
-		ret = phy_ethtool_gset(pdata->phydev, cmd);
-		spin_unlock_irq(&pdata->lock);
+	if (!pdata->phydev) {
+		netdev_err(dev, "PHY is not registered\n");
+		return -ENODEV;
 	}
 
-	pr_debug("<--eqos_getsettings\n");
+	if (!netif_running(dev)) {
+		netdev_err(dev, "Interface is disabled: can't get speed/duplex settings\n");
+		return -EBUSY;
+	}
+
+	cmd->transceiver = XCVR_EXTERNAL;
+
+	spin_lock_irq(&pdata->lock);
+	ret = phy_ethtool_gset(pdata->phydev, cmd);
+	spin_unlock_irq(&pdata->lock);
 
 	return ret;
 }
@@ -583,48 +514,21 @@ static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
  *
  * \retval zero on success and -ve number on failure.
  */
-
 static int eqos_setsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned int speed;
+	u8 duplex = cmd->duplex;
 	int ret = 0;
 
-	DBGPR_ETHTOOL("-->eqos_setsettings\n");
-
-	if (pdata->hw_feat.pcs_sel) {
-		speed = ethtool_cmd_speed(cmd);
-
-		/* verify the settings we care about */
-		if ((cmd->autoneg != AUTONEG_ENABLE) &&
-		    (cmd->autoneg != AUTONEG_DISABLE))
-			return -EINVAL;
-/*
-		if ((cmd->autoneg == AUTONEG_ENABLE) &&
-			(cmd->advertising == 0))
-			return -EINVAL;
-		if ((cmd->autoneg == AUTONEG_DISABLE) &&
-			(speed != SPEED_1000 &&
-			 speed != SPEED_100 &&
-			 speed != SPEED_10) ||
-			(cmd->duplex != DUPLEX_FULL &&
-			 cmd->duplex != DUPLEX_HALF))
-			 return -EINVAL;
-*/
-		spin_lock_irq(&pdata->lock);
-		if (cmd->autoneg == AUTONEG_ENABLE)
-			hw_if->control_an(1, 1);
-		else
-			hw_if->control_an(0, 0);
-		spin_unlock_irq(&pdata->lock);
-	} else {
-		spin_lock_irq(&pdata->lock);
-		ret = phy_ethtool_sset(pdata->phydev, cmd);
-		spin_unlock_irq(&pdata->lock);
+	if (pdata->num_chans == MAX_CHANS &&
+	    duplex == DUPLEX_HALF) {
+		netdev_err(dev, "Half duplex mode not allowed in multi-channel\n");
+		return -ENOTSUPP;
 	}
 
-	DBGPR_ETHTOOL("<--eqos_setsettings\n");
+	spin_lock_irq(&pdata->lock);
+	ret = phy_ethtool_sset(pdata->phydev, cmd);
+	spin_unlock_irq(&pdata->lock);
 
 	return ret;
 }

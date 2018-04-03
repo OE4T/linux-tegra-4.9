@@ -31,7 +31,10 @@
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
 #endif
-
+#if defined(CONFIG_TRUSTY)
+#include <linux/trusty/trusty.h>
+#include <linux/trusty/trusty_ipc.h>
+#endif
 #include "dc.h"
 #include "dc_priv.h"
 #include "edid.h"
@@ -41,6 +44,7 @@
 #include "hdmi_reg.h"
 #include "hdmivrr.h"
 
+#define VRR_AUTH_NAME	"com.nvidia.tos.0179ed96-1adb-45a8-8dc69d08790252bb"
 #define VRR_AUTH_UUID	{0x0179ED96, 0x45A81ADB, 0x089DC68D, 0xBB520279}
 #define HDMIVRR_POLL_MS 50
 #define HDMIVRR_POLL_TIMEOUT_MS 1000
@@ -380,52 +384,96 @@ static int hdmivrr_dpcd_write_u32(struct tegra_hdmi *hdmi, u32 reg, u32 val)
 	return status;
 }
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
-void hdmivrr_te_service_commands(u32 ta_cmd, u32 session_id)
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
+void hdmivrr_te_service_commands(u32 ta_cmd, struct tegra_vrr *vrr)
 {
+
 	int status;
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	u32 vrr_auth_uuid[4] = VRR_AUTH_UUID;
 	u32 uuid_size = sizeof(vrr_auth_uuid);
 
-	status = te_launch_trusted_oper((u64 *)vrr_buf, PAGE_SIZE, session_id,
-					vrr_auth_uuid, ta_cmd, uuid_size);
-	if (status)
-		pr_err("VRR: Failed to launch operation, err = %d\n", status);
+	if (te_is_secos_dev_enabled()) {
+		status = te_launch_trusted_oper_tlk((u64 *)vrr_buf, PAGE_SIZE,
+						    vrr->vrr_session_id,
+						    vrr_auth_uuid,
+						    ta_cmd, uuid_size);
+		if (status)
+			pr_err("VRR: Failed to launch operation, err = %d\n",
+			       status);
+	}
+#endif
+#ifdef CONFIG_TRUSTY
+	if (is_trusty_dev_enabled()) {
+		status = te_launch_trusted_oper((u64 *)vrr_buf, 1024,
+				ta_cmd, vrr->ta_ctx);
 
+		if (status)
+			pr_err("VRR: Failed to launch operation, err = %d\n",
+			       status);
+	}
+#endif
 }
 
 /* Open the  tz session for vrr service */
-int hdmivrr_te_init(u32 *session_id)
+int hdmivrr_te_init(struct tegra_vrr *vrr)
 {
-	int status;
+	int status = -ENODEV;
+
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	u32 vrr_auth_uuid[4] = VRR_AUTH_UUID;
 	u32 uuid_size = sizeof(vrr_auth_uuid);
 
-	status = te_open_trusted_session(vrr_auth_uuid, uuid_size, session_id);
+	if (te_is_secos_dev_enabled()) {
+		status = te_open_trusted_session_tlk(vrr_auth_uuid, uuid_size,
+				&(vrr->vrr_session_id));
 
-	if (status)
-		pr_err("VRR: Failed to open session, err = %d\n", status);
+		if (status)
+			pr_err("VRR: Failed to open session, err = %d\n",
+			       status);
+	}
 
+#endif
+#ifdef CONFIG_TRUSTY
+	vrr->ta_ctx = NULL;
+
+	if (is_trusty_dev_enabled()) {
+		status = te_open_trusted_session(VRR_AUTH_NAME, &vrr->ta_ctx);
+
+		if (status)
+			pr_err("VRR: Failed to open session, err = %d\n",
+			       status);
+	}
+#endif
 	return status;
 }
 
 /* Close the tz session which was created for vrr */
-void hdmivrr_te_deinit(s32 session_id)
+void hdmivrr_te_deinit(struct tegra_vrr *vrr)
 {
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	u32 vrr_auth_uuid[4] = VRR_AUTH_UUID;
 	u32 uuid_size = sizeof(vrr_auth_uuid);
 
-	te_close_trusted_session(session_id, vrr_auth_uuid, uuid_size);
+	if (te_is_secos_dev_enabled()) {
+		te_close_trusted_session_tlk(vrr->vrr_session_id, vrr_auth_uuid,
+					     uuid_size);
+	}
+#endif
+#ifdef CONFIG_TRUSTY
+	if (is_trusty_dev_enabled())
+		te_close_trusted_session(vrr->ta_ctx);
+#endif
 }
 
 void tegra_hdmivrr_te_vrr_auth(struct tegra_vrr *vrr)
 {
-	hdmivrr_te_service_commands(CMD_VRR_AUTH, vrr->vrr_session_id);
+	hdmivrr_te_service_commands(CMD_VRR_AUTH, vrr);
 }
 
 void tegra_hdmivrr_te_vrr_sec(struct tegra_vrr *vrr)
 {
-	hdmivrr_te_service_commands(CMD_VRR_SEC, vrr->vrr_session_id);
+	hdmivrr_te_service_commands(CMD_VRR_SEC, vrr);
 }
 #endif
 
@@ -547,10 +595,8 @@ static int tegra_hdmivrr_auth_sts_ready(struct tegra_hdmi *hdmi)
 
 static void tegra_hdmivrr_mac(struct tegra_hdmi *hdmi, struct tegra_vrr *vrr)
 {
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
-	if (te_is_secos_dev_enabled())
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 		tegra_hdmivrr_te_vrr_auth(vrr);
-
 #endif
 }
 
@@ -890,18 +936,25 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 	if (status)
 		goto fail;
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 	/* Let the session id live through out to save time and
 	 * kill it when TV is unplugged.
 	 */
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL)
 	if (!(vrr->vrr_session_id)) {
-		status = hdmivrr_te_init(&(vrr->vrr_session_id));
+		status = hdmivrr_te_init(vrr);
 
 		if (status)
 			goto fail;
 	}
 #endif
+#if defined(CONFIG_TRUSTY)
+	if ((!vrr->ta_ctx)) {
+		status = hdmivrr_te_init(vrr);
 
+		if (status)
+			goto fail;
+	}
+#endif
 	status = tegra_hdmivrr_page_init(hdmi);
 	if (status)
 		goto fail;
@@ -929,10 +982,16 @@ int tegra_hdmivrr_disable(struct tegra_hdmi *hdmi)
 	dc = hdmi->dc;
 	vrr = dc->out->vrr;
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL)
 	if (vrr->vrr_session_id) {
-		hdmivrr_te_deinit(vrr->vrr_session_id);
+		hdmivrr_te_deinit(vrr);
 		vrr->vrr_session_id = 0;
+	}
+#endif
+#if defined(CONFIG_TRUSTY)
+	if (vrr->ta_ctx) {
+		hdmivrr_te_deinit(vrr);
+		vrr->ta_ctx = NULL;
 	}
 #endif
 	return 0;

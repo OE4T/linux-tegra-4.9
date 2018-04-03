@@ -2925,7 +2925,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 {
 	u32 temp;
 	int err = 0;
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 	int check_val;
 #endif
 	const __be32 *p;
@@ -3293,8 +3293,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 						&dma_addr, GFP_KERNEL);
 		vrr = def_out->vrr;
 		if (vrr) {
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
-			if (te_is_secos_dev_enabled()) {
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 				int retval;
 
 				retval = tegra_hdmivrr_te_set_buf(vrr);
@@ -3302,7 +3301,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 					dev_err(&ndev->dev, "failed to set buffer\n");
 					goto fail_parse;
 				}
-			}
 #endif
 		} else {
 			dev_err(&ndev->dev, "not enough memory\n");
@@ -3327,8 +3325,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 				goto fail_parse;
 			}
 			OF_DC_LOG("nvidia,hdmi-vrr-caps: %d\n", temp);
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
-			if (te_is_secos_dev_enabled()) {
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 				check_val = tegra_hdmivrr_te_set_buf(
 						def_out->vrr);
 				if (check_val) {
@@ -3336,7 +3333,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 						"failed to set buffer\n");
 					goto fail_parse;
 				}
-			}
 #endif
 		}
 	} else

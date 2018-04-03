@@ -1692,7 +1692,7 @@
 		resets = <&bpmp_resets TEGRA194_RESET_TACH>;
 		reset-names = "tach";
 		pulse-per-rev = <2>;
-		sampling-window = <2>;
+		capture-window-length = <2>;
 		disable-clk-gate;
 		status = "disabled";
 	};

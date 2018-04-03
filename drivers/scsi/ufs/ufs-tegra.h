@@ -295,6 +295,8 @@ struct ufs_tegra_host {
 
 	/* UFS tegra deviations from standard UFSHCI spec. */
 	unsigned int nvquirks;
+	int cd_gpio;
+	struct gpio_desc *cd_gpio_desc;
 #ifdef CONFIG_DEBUG_FS
 	u32 refclk_value;
 	long program_refclk;

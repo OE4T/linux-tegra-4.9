@@ -22,10 +22,13 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/reset.h>
 #include <soc/tegra/pmc.h>
+#include <linux/gpio/consumer.h>
+#include <linux/gpio.h>
 
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -120,6 +123,11 @@ void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 }
 #endif
 
+static bool ufs_tegra_get_cd(struct gpio_desc *cd_gpio_desc)
+{
+	/* If card present then gpio value low, else high */
+	return (gpiod_get_value_cansleep(cd_gpio_desc) == 0);
+}
 
 /**
  * ufs_tegra_cfg_vendor_registers
@@ -1266,6 +1274,8 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 
 	if(of_property_read_bool(np, "nvidia,enable-wlu-scsi-device-add"))
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_ENABLE_WLUNS;
+
+	ufs_tegra->cd_gpio = of_get_named_gpio(np, "nvidia,cd-gpios", 0);
 }
 
 /**
@@ -1317,6 +1327,17 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	if (IS_ERR_OR_NULL(ufs_tegra->dpd_disable))
 		dev_err(dev, "Missing dpd_disable state, err: %ld\n",
 			PTR_ERR(ufs_tegra->dpd_disable));
+
+	if (gpio_is_valid(ufs_tegra->cd_gpio)) {
+		ufs_tegra->cd_gpio_desc = gpio_to_desc(ufs_tegra->cd_gpio);
+		hba->card_present = ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc);
+	} else {
+		/*
+		 * If card detect gpio is not specified then assume
+		 * UFS device is non-removable and it is always present
+		 */
+		hba->card_present = 1;
+	}
 
 	ufs_tegra->ufs_aux_base = devm_ioremap(dev,
 			NV_ADDRESS_MAP_UFSHC_AUX_BASE, UFS_AUX_ADDR_RANGE);

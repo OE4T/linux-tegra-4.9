@@ -38,9 +38,6 @@ early_param("vpr", tegra_vpr_arg);
 
 static int tegra_vpr_resize_arg(char *options)
 {
-	if (IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE))
-		WARN(1, "CONFIG_TRANSPARENT_HUGEPAGE enabled, vpr_resize may not work properly!!!");
-
 	tegra_vpr_resize = true;
 	return 0;
 }

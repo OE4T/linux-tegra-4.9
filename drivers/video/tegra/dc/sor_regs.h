@@ -291,6 +291,7 @@
 #define NV_SOR_PLL2						(0x19)
 #define NV_SOR_PLL3						(0x1a)
 #define NV_SOR_PLL4						(-1)
+#define NV_SOR_PLL5						(-1)
 
 #define NV_SOR_PLL0_ICHPMP_SHFIT				(24)
 #define NV_SOR_PLL0_ICHPMP_DEFAULT_MASK				(0xf << 24)

@@ -2744,6 +2744,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
 	tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
 
+	tegra_sor_hdmi_cal(sor);
+
 	tegra_hdmi_config_tmds(hdmi);
 
 	tegra_sor_hdmi_pad_power_up(sor);

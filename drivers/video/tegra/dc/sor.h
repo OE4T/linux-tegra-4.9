@@ -252,6 +252,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor);
+void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor);
 unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 					u32 reg, u32 mask, u32 exp_val,
 					u32 poll_interval_us,
@@ -268,6 +269,7 @@ u32 __attribute__((weak)) nv_sor_pll1_t19x(void);
 u32 __attribute__((weak)) nv_sor_pll2_t19x(void);
 u32 __attribute__((weak)) nv_sor_pll3_t19x(void);
 u32 __attribute__((weak)) nv_sor_pll4_t19x(void);
+u32 __attribute__((weak)) nv_sor_pll5_t19x(void);
 u32 __attribute__((weak)) nv_sor_dp_padctl_t19x(u32 i);
 u32 __attribute__((weak)) nv_sor_dp_misc1_override_t19x(void);
 u32 __attribute__((weak)) nv_sor_dp_misc1_bit6_t19x(void);
@@ -391,6 +393,14 @@ static inline u32 nv_sor_pll4(void)
 		return NV_SOR_PLL4_T18X;
 	else
 		return NV_SOR_PLL4;
+}
+
+static inline u32 nv_sor_pll5(void)
+{
+	if (tegra_dc_is_t19x())
+		return nv_sor_pll5_t19x();
+
+	return NV_SOR_PLL5;
 }
 
 static inline u32 nv_sor_dp_padctl(u32 i)

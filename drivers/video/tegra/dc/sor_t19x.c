@@ -77,6 +77,11 @@ inline u32 nv_sor_pll4_t19x(void)
 	return NV_SOR_PLL4_T19X;
 }
 
+inline u32 nv_sor_pll5_t19x(void)
+{
+	return NV_SOR_PLL5_T19X;
+}
+
 inline u32 nv_sor_dp_padctl_t19x(u32 i)
 {
 	return NV_SOR_DP_PADCTL_T19X(i);

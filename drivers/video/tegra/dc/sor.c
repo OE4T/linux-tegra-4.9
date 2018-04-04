@@ -438,6 +438,8 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(nv_sor_pll3());
 	if (tegra_dc_is_nvdisplay())
 		DUMP_REG(nv_sor_pll4());
+	if (tegra_dc_is_t19x())
+		DUMP_REG(nv_sor_pll5());
 	DUMP_REG(NV_SOR_CSTM);
 	DUMP_REG(NV_SOR_LVDS);
 	DUMP_REG(NV_SOR_CRCA);
@@ -1691,6 +1693,52 @@ static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
 	}
 
 	return err;
+}
+
+void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
+{
+	u32 nv_sor_pll2_reg = nv_sor_pll2();
+	int ret = 0;
+
+	/* rterm calibration is currently enabled only for T19x*/
+	if (!tegra_dc_is_t19x())
+		return;
+
+	if (sor->io_padctrl) {
+		ret = padctrl_power_enable(sor->io_padctrl);
+
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
+				 ret);
+	}
+	usleep_range(5, 20);
+
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	usleep_range(20, 100);
+
+	tegra_sor_pad_cal_power(sor, true);
+	usleep_range(10, 20);
+
+	tegra_dc_sor_termination_cal(sor);
+
+	tegra_sor_pad_cal_power(sor, false);
+	usleep_range(10, 20);
+
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	usleep_range(20, 100);
+
+	if (sor->io_padctrl) {
+		ret = padctrl_power_disable(sor->io_padctrl);
+
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
+				ret);
+	}
+	usleep_range(5, 20);
 }
 
 static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)

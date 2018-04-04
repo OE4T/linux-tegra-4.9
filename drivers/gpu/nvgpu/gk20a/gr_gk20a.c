@@ -3782,7 +3782,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	struct zbc_color_table *c_tbl;
 	struct zbc_depth_table *d_tbl;
 	u32 i;
-	int ret = -ENOMEM;
+	int ret = -ENOSPC;
 	bool added = false;
 	u32 entries;
 

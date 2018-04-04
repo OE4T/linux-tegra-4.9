@@ -3,7 +3,7 @@
  *
  * Tegra T194 HOST1X Register Definitions
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,7 +29,7 @@
 
 /* sync registers */
 #define NV_HOST1X_SYNCPT_NB_PTS 704
-#define NV_HOST1X_NB_MLOCKS 24
+#define NV_HOST1X_NB_MLOCKS 32
 
 #define NV_HOST1X_MLOCK_ID_NVCSI	7
 #define NV_HOST1X_MLOCK_ID_ISP		8

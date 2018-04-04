@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -33,9 +33,6 @@
 unsigned int nvhost_debug_trace_cmdbuf;
 unsigned int nvhost_debug_trace_actmon;
 
-pid_t nvhost_debug_force_timeout_pid;
-u32 nvhost_debug_force_timeout_val;
-u32 nvhost_debug_force_timeout_channel;
 u32 nvhost_debug_force_timeout_dump;
 
 void nvhost_debug_output(struct output *o, const char* fmt, ...)
@@ -263,12 +260,6 @@ void nvhost_debug_init(struct nvhost_master *master)
 	if (nvhost_get_chip_ops()->debug.debug_init)
 		nvhost_get_chip_ops()->debug.debug_init(de);
 
-	debugfs_create_u32("force_timeout_pid", S_IRUGO|S_IWUSR, de,
-			&nvhost_debug_force_timeout_pid);
-	debugfs_create_u32("force_timeout_val", S_IRUGO|S_IWUSR, de,
-			&nvhost_debug_force_timeout_val);
-	debugfs_create_u32("force_timeout_channel", S_IRUGO|S_IWUSR, de,
-			&nvhost_debug_force_timeout_channel);
 	debugfs_create_u32("force_timeout_dump", S_IRUGO|S_IWUSR, de,
 			&nvhost_debug_force_timeout_dump);
 	nvhost_debug_force_timeout_dump = 0;

@@ -78,6 +78,9 @@
 			physical_w = "4.713";
 			physical_h = "3.494";
 
+			/* enable delay gain due to no hardware group hold support */
+			delayed_gain = "true";
+
 			/* Define any required hw resources needed by driver */
 			/* ie, clocks, io pins, power sources */
 			/* mclk = "cam_mclk1"; Not in use. */
@@ -109,19 +112,19 @@
 
 				active_w = "5352";
 				active_h = "3950";
-				pixel_t = "bayer_grbg";
+				pixel_t = "bayer_rggb";
 				readout_orientation = "0";
 				line_length = "6667";
 				inherent_gain = "1";
 				mclk_multiplier = "11";
-				pix_clk_hz = "600000000";
+				pix_clk_hz = "1320000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "22.3";
 				min_hdr_ratio = "1";
 				max_hdr_ratio = "1";
-				min_framerate = "30";
-				max_framerate = "30";
+				min_framerate = "1.5";
+				max_framerate = "60";
 				min_exp_time = "13";
 				max_exp_time = "33333";
 			};

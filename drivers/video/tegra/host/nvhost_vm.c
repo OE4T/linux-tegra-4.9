@@ -179,6 +179,19 @@ void nvhost_vm_get(struct nvhost_vm *vm)
 	kref_get(&vm->kref);
 }
 
+static inline bool nvhost_vm_can_be_reused(
+	struct platform_device *pdev,
+	struct nvhost_vm *vm,
+	void *identifier)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	return vm->identifier == identifier &&
+		vm->enable_hw == pdata->isolate_contexts &&
+		device_is_iommuable(&pdev->dev) ==
+		    device_is_iommuable(&vm->pdev->dev);
+}
+
 struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 				     void *identifier)
 {
@@ -194,8 +207,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	if (identifier) {
 		list_for_each_entry(vm, &host->vm_list, vm_list) {
-			if (vm->identifier == identifier &&
-			    vm->enable_hw == pdata->isolate_contexts) {
+			if (nvhost_vm_can_be_reused(pdev, vm, identifier)) {
 				/* skip entries that are going to be removed */
 				if (!kref_get_unless_zero(&vm->kref))
 					continue;

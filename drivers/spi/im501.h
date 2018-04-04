@@ -44,8 +44,8 @@
 #define  HW_VOICE_BUF_BANK1              (0x0FFFB6E0)
 #define  BANK0				 (0x00)
 #define  BANK1				 (0x01)
-#define  BANK0_SYNC			 (0x10)
-#define  BANK1_SYNC			 (0x11)
+#define  BANK0_SYNC			 (0x02)
+#define  BANK1_SYNC			 (0x03)
 //
 #define  HW_VOICE_BUF_BANK_SIZE          (1024*2)	//2kB
 #define  HW_BUF_RX_L                     (0x0FFFE000)	//1kB

@@ -380,7 +380,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 				nvhost_syncpt_debug(sp);
 			} else {
 				old_val = new_val;
-				dev_warn(&syncpt_to_dev(sp)->dev->dev,
+				dev_info(&syncpt_to_dev(sp)->dev->dev,
 					"%s: syncpoint id %d (%s) progressing slowly %d, timeout=%d\n",
 					 current->comm, id,
 					 syncpt_op().name(sp, id),

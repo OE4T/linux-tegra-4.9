@@ -3179,9 +3179,15 @@ put_padctl:
 static void tegra_xusb_shutdown(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
-	struct usb_hcd	*hcd = tegra->hcd;
 
-	xhci_shutdown(hcd);
+	if (!tegra)
+		return;
+
+	if (!tegra->fw_loaded && !tegra->soc->is_xhci_vf)
+		return;
+
+	if (tegra->hcd)
+		xhci_shutdown(tegra->hcd);
 }
 
 static int tegra_xusb_remove(struct platform_device *pdev)

@@ -243,7 +243,7 @@ struct nvhost_device_data t19_vi_thi_info = {
 };
 
 struct nvhost_device_data t19_vi5_info = {
-	.devfs_name		= "vi5",
+	.devfs_name		= "vi",
 	.keepalive		= true,
 	.autosuspend_delay	= 500,
 	.poweron_reset		= true,
@@ -292,7 +292,7 @@ struct nvhost_device_data t19_isp_thi_info = {
 };
 
 struct nvhost_device_data t19_isp5_info = {
-	.devfs_name		= "isp5",
+	.devfs_name		= "isp",
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.poweron_reset		= true,

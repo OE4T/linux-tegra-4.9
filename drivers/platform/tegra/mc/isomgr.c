@@ -779,10 +779,17 @@ u32 tegra_isomgr_get_available_iso_bw(void)
 }
 EXPORT_SYMBOL(tegra_isomgr_get_available_iso_bw);
 
-static u32 __tegra_isomgr_get_total_iso_bw(void)
+static u32 __tegra_isomgr_get_total_iso_bw(enum tegra_iso_client client)
 {
-	trace_tegra_isomgr_get_total_iso_bw(isomgr.max_iso_bw);
-	return isomgr.max_iso_bw;
+	u32 bw;
+
+	if (isomgr.ops->isomgr_max_iso_bw) /*t19x and later*/
+		bw = isomgr.ops->isomgr_max_iso_bw(client);
+	else /*t18x and before*/
+		bw = isomgr.max_iso_bw;
+
+	trace_tegra_isomgr_get_total_iso_bw(bw);
+	return bw;
 }
 
 /**
@@ -790,11 +797,11 @@ static u32 __tegra_isomgr_get_total_iso_bw(void)
  *
  * @returns	total bw in KB/sec.
  */
-u32 tegra_isomgr_get_total_iso_bw(void)
+u32 tegra_isomgr_get_total_iso_bw(enum tegra_iso_client client)
 {
 	if (test_mode)
 		return UINT_MAX;
-	return __tegra_isomgr_get_total_iso_bw();
+	return __tegra_isomgr_get_total_iso_bw(client);
 }
 EXPORT_SYMBOL(tegra_isomgr_get_total_iso_bw);
 
@@ -1111,8 +1118,8 @@ u32 test_tegra_isomgr_get_available_iso_bw(void)
 }
 EXPORT_SYMBOL(test_tegra_isomgr_get_available_iso_bw);
 
-u32 test_tegra_isomgr_get_total_iso_bw(void)
+u32 test_tegra_isomgr_get_total_iso_bw(enum tegra_iso_client client)
 {
-	return __tegra_isomgr_get_total_iso_bw();
+	return __tegra_isomgr_get_total_iso_bw(client);
 }
 EXPORT_SYMBOL(test_tegra_isomgr_get_total_iso_bw);

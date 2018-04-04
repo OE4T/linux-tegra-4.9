@@ -637,6 +637,21 @@ unsigned long bwmgr_get_lowest_iso_emc_freq(long iso_bw,
 }
 EXPORT_SYMBOL_GPL(bwmgr_get_lowest_iso_emc_freq);
 
+/* tegra_bwmgr_get_max_iso_bw
+ * This function returns the max iso bw.
+ * This is applicable from t19x onwards, where max_iso is different
+ * based on clients requesting.
+ * This should not be called on pre t19x and returns 0 in those cases
+ */
+u32 tegra_bwmgr_get_max_iso_bw(enum tegra_iso_client client)
+{
+	if (bwmgr.ops->get_max_iso_bw)
+		return bwmgr.ops->get_max_iso_bw(client);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_bwmgr_get_max_iso_bw);
+
 int bwmgr_iso_bw_percentage_max(void)
 {
 	return bwmgr_iso_bw_percentage;

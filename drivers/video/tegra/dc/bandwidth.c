@@ -1016,7 +1016,14 @@ void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw)
 	if (dc->available_bw == avail_bw)
 		return;
 
-	data.total_bw = tegra_isomgr_get_total_iso_bw();
+	/* tegra_isomgr_get_total_iso_bw() uses the iso_client_id passed only
+	 * for t19x. For pre-t19x the function argument passed is ignored.
+	 * bandwidth.c is only used on T21x. On T186/T194, we always use
+	 * TEGRA_ISO_CLIENT_DISP_0 since there's only one display isoclient,
+	 * but this isn't the case for T21x. For T21x, there are per-DC
+	 * isoclients, and each one has its own corresponding id.
+	 */
+	data.total_bw = tegra_isomgr_get_total_iso_bw(TEGRA_ISO_CLIENT_DISP_0);
 	data.avail_bw = avail_bw;
 	data.resvd_bw = dc->reserved_bw;
 

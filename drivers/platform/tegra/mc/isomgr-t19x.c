@@ -186,18 +186,6 @@ static bool is_isomgr_request_possible(bool reserve, u32 register_bw,
 
 static void t19x_iso_plat_init(void)
 {
-	//TODO: This requires work. For now return max_disp at 1.6 GHz
-	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH)
-		isomgr.max_iso_bw = bwmgr_freq_to_bw(437500);
-
-	else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH)
-		isomgr.max_iso_bw = bwmgr_freq_to_bw(397451);
-
-	else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_8CH_ECC)
-		isomgr.max_iso_bw = bwmgr_freq_to_bw(347875);
-
-	else if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_16CH_ECC)
-		isomgr.max_iso_bw = bwmgr_freq_to_bw(250033);
 }
 
 static void t19x_iso_plat_unregister(struct isomgr_client *cp)
@@ -233,12 +221,18 @@ static bool t19x_iso_plat_register(u32 dedi_bw, enum tegra_iso_client client)
 		return false;
 }
 
+static u32 t19x_iso_max_bw(enum tegra_iso_client client)
+{
+	return tegra_bwmgr_get_max_iso_bw(client);
+}
+
 static struct isomgr_ops isomgr_ops_t19x = {
 	.isomgr_plat_init = t19x_iso_plat_init,
 	.isomgr_plat_register = t19x_iso_plat_register,
 	.isomgr_plat_unregister = t19x_iso_plat_unregister,
 	.isomgr_plat_reserve = t19x_iso_plat_reserve,
 	.isomgr_plat_realize = t19x_iso_plat_realize,
+	.isomgr_max_iso_bw = t19x_iso_max_bw,
 };
 
 struct isomgr_ops *t19x_isomgr_init(void)

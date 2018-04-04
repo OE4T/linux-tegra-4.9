@@ -627,6 +627,38 @@ static void t19x_update_efficiency(unsigned long dram_refresh_rate)
 	}
 }
 
+static int get_dram_freq_table_idx(unsigned long emc_rate)
+{
+	int i = ARRAY_SIZE(bwmgr_t194_dram_freq_table) - 1;
+
+	/* emc_rate is in Hz, dram_freq table's unit is MHz */
+	emc_rate /= 1000000;
+
+	while (i > 0 && bwmgr_t194_dram_freq_table[i] > emc_rate)
+		i--;
+
+	return i;
+}
+
+static u32 t19x_get_max_iso_bw(enum tegra_iso_client client)
+{
+	u8 idx = 0;
+	unsigned long emc_max_rate = tegra_bwmgr_get_max_emc_rate();
+
+	idx = get_dram_freq_table_idx(emc_max_rate);
+
+	if ((client == TEGRA_ISO_CLIENT_DISP_0) ||
+		(client == TEGRA_ISO_CLIENT_DISP_1) ||
+		(client == TEGRA_ISO_CLIENT_DISP_2))
+		return bwmgr_freq_to_bw(bwmgr_max_nvdis_bw_reqd[idx] * 1000);
+	else if (client == TEGRA_ISO_CLIENT_TEGRA_CAMERA)
+		return bwmgr_freq_to_bw(bwmgr_max_vi_bw_reqd[idx] * 1000);
+	else
+		return bwmgr_freq_to_bw((((bwmgr_slope[idx] *
+		bwmgr_max_nvdis_bw_reqd[idx]) +
+		bwmgr_vi_bw_reqd_offset[idx]) - 1) * 1000);
+}
+
 static struct bwmgr_ops bwmgr_ops_t19x = {
 	.get_best_iso_freq = get_best_iso_freq,
 	.freq_to_bw = freq_to_bw,
@@ -634,6 +666,7 @@ static struct bwmgr_ops bwmgr_ops_t19x = {
 	.dvfs_latency = dvfs_latency,
 	.bwmgr_apply_efficiency = t19x_bwmgr_apply_efficiency,
 	.update_efficiency = t19x_update_efficiency,
+	.get_max_iso_bw = t19x_get_max_iso_bw,
 };
 
 struct bwmgr_ops *bwmgr_eff_init_t19x(void)

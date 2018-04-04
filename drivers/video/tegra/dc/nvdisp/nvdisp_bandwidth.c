@@ -397,7 +397,7 @@ static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
 		return;
 	}
 
-	data.total_bw = tegra_isomgr_get_total_iso_bw();
+	data.total_bw = tegra_isomgr_get_total_iso_bw(TEGRA_ISO_CLIENT_DISP_0);
 	data.avail_bw = avail_bw;
 	data.resvd_bw = bw_info->reserved_bw;
 
@@ -476,7 +476,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	/* conversion factor */
 	emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
 
-	total_iso_bw = tegra_isomgr_get_total_iso_bw();
+	total_iso_bw = tegra_isomgr_get_total_iso_bw(iso_client);
 
 	imp_table = tegra_dc_common_get_imp_table();
 	if (!imp_table || imp_table->num_settings <= 0)

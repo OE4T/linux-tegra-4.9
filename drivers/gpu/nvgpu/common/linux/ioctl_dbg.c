@@ -1020,8 +1020,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch_gk20a;
 
-	gk20a_dbg_fn("%s pm ctxsw mode = %d",
-		     g->name, args->mode);
+	nvgpu_log_fn(g, "%s pm ctxsw mode = %d", g->name, args->mode);
 
 	/* Must have a valid reservation to enable/disable hwpm cxtsw.
 	 * Just print an error message for now, but eventually this should
@@ -1049,13 +1048,16 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 		err = -EINVAL;
 		goto clean_up;
 	}
-
+	if (!dbg_s->is_pg_disabled) {
+		nvgpu_err(g, "powergate is not disabled");
+		err = -ENOSYS;
+		goto clean_up;
+	}
 	err = g->ops.gr.update_hwpm_ctxsw_mode(g, ch_gk20a, 0,
-				args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
+		args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
 	if (err)
 		nvgpu_err(g,
-			  "error (%d) during pm ctxsw mode update", err);
-
+			"error (%d) during pm ctxsw mode update", err);
 	/* gk20a would require a WAR to set the core PM_ENABLE bit, not
 	 * added here with gk20a being deprecated
 	 */

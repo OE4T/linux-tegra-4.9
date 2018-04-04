@@ -31,7 +31,10 @@
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "imx268_mode_tbls.h"
 
+#define IMX268_MAX_COARSE_DIFF	10
+
 /* imx268 - sensor i2c register addresses */
+#define IMX268_GROUP_HOLD_ADDR			0x0104
 #define IMX268_COARSE_INTEG_TIME_ADDR_MSB	0x0202
 #define IMX268_COARSE_INTEG_TIME_ADDR_LSB	0x0203
 #define IMX268_GAIN_ADDR_MSB			0x0204
@@ -49,14 +52,13 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
 	TEGRA_CAMERA_CID_FRAME_RATE,
-	/* TEGRA_CAMERA_CID_GROUP_HOLD, */
-	/* TEGRA_CAMERA_CID_EEPROM_DATA, */
-	/* TEGRA_CAMERA_CID_FUSE_ID, */
+	TEGRA_CAMERA_CID_GROUP_HOLD,
 };
 
 struct imx268 {
 	struct i2c_client *i2c_client;
 	struct v4l2_subdev *subdev;
+	s32 group_hold_prev;
 	u32 frame_length;
 	struct camera_common_data *s_data;
 	struct tegracam_device *tc_dev;
@@ -129,46 +131,23 @@ static inline int imx268_write_table(struct imx268 *priv,
 
 static int imx268_set_group_hold(struct camera_common_data *s_data, bool val)
 {
+	struct imx268 *priv = (struct imx268 *)s_data->priv;
 	struct device *dev = s_data->dev;
-	dev_err(dev, "%s: unsupported, should not be called", __func__);
-	return 0;
-}
-
-static int imx268_set_exposure(struct camera_common_data *s_data, s64 val)
-{
-	struct device *dev = s_data->dev;
-	const struct sensor_mode_properties *mode =
-		&(s_data->sensor_props.sensor_modes[s_data->mode_prop_idx]);
-	imx268_reg reg_list[2];
 	int err = 0;
-	u32 coarse_time;
-	int i;
 
-	coarse_time = mode->signal_properties.pixel_clock.val *
-		val / mode->image_properties.line_length /
-		mode->control_properties.exposure_factor;
-
-	/* @todo: min and max coarse_time bounds */
-
-	dev_dbg(dev, "%s: coarse_time: %d\n", __func__, coarse_time);
-
-	imx268_get_coarse_time_regs(reg_list, coarse_time);
-
-	for (i = 0; i < 2; i++) {
-		err = imx268_write_reg(s_data, reg_list[i].addr,
-			reg_list[i].val);
-		if (err) {
-			dev_dbg(dev,
-				"%s: coarse_time control error\n", __func__);
-			return err;
-		}
+	priv->group_hold_prev = val;
+	err = imx268_write_reg(s_data, IMX268_GROUP_HOLD_ADDR, val);
+	if (err) {
+		dev_dbg(dev, "%s: group hold control error\n", __func__);
+		return err;
 	}
 
-	return err;
+	return 0;
 }
 
 static int imx268_set_gain(struct camera_common_data *s_data, s64 val)
 {
+	struct imx268 *priv = (struct imx268 *)s_data->priv;
 	struct device *dev = s_data->dev;
 	const struct sensor_mode_properties *mode =
 		&(s_data->sensor_props.sensor_modes[s_data->mode_prop_idx]);
@@ -177,17 +156,22 @@ static int imx268_set_gain(struct camera_common_data *s_data, s64 val)
 	s16 gain;
 	int i;
 
+	if (!priv->group_hold_prev)
+		imx268_set_group_hold(s_data, 1);
+
 	if (val < mode->control_properties.min_gain_val)
 		val = mode->control_properties.min_gain_val;
 	else if (val > mode->control_properties.max_gain_val)
 		val = mode->control_properties.max_gain_val;
 
-	/* translate value */
+	/* translate value (from normalized gain) */
 	gain = (s16)((512 * mode->control_properties.gain_factor) / val);
 	gain = 512 - gain;
 
 	if (gain < 0)
 		gain = 0;
+	else if (gain > 480)
+		gain = 480;
 
 	dev_dbg(dev, "%s: gain: %d, times: %lld\n", __func__, gain, val);
 
@@ -216,11 +200,14 @@ static int imx268_set_frame_rate(struct camera_common_data *s_data, s64 val)
 	u32 frame_length;
 	int i;
 
+	if (!priv->group_hold_prev)
+		imx268_set_group_hold(s_data, 1);
+
 	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
-		((u64)mode->control_properties.framerate_factor) /
+		(u64)mode->control_properties.framerate_factor /
 		mode->image_properties.line_length / val);
 
-	dev_dbg(dev, "%s: frame_length: %d\n", __func__, frame_length);
+	dev_dbg(dev, "%s: frame_length: %u\n", __func__, frame_length);
 
 	imx268_get_frame_length_regs(reg_list, frame_length);
 
@@ -239,23 +226,57 @@ static int imx268_set_frame_rate(struct camera_common_data *s_data, s64 val)
 	return 0;
 }
 
-static int imx268_fill_string_ctrl(struct camera_common_data *s_data,
-				struct v4l2_ctrl *ctrl)
+static int imx268_set_exposure(struct camera_common_data *s_data, s64 val)
 {
+	struct imx268 *priv = (struct imx268 *)s_data->priv;
 	struct device *dev = s_data->dev;
-	dev_err(dev, "%s: unsupported, should not be called", __func__);
-	return 0;
+	const struct sensor_mode_properties *mode =
+		&(s_data->sensor_props.sensor_modes[s_data->mode_prop_idx]);
+	imx268_reg reg_list[2];
+	int err = 0;
+	u32 coarse_time;
+	s32 max_coarse_time = priv->frame_length - IMX268_MAX_COARSE_DIFF;
+	int i;
+
+	if (!priv->group_hold_prev)
+		imx268_set_group_hold(s_data, 1);
+
+	coarse_time = mode->signal_properties.pixel_clock.val *
+		val / mode->image_properties.line_length /
+		mode->control_properties.exposure_factor;
+
+	if (coarse_time < 1)
+		coarse_time = 1;
+	else if (coarse_time > max_coarse_time) {
+		coarse_time = max_coarse_time;
+		dev_dbg(dev, "%s: exposure limited by frame_length: %d\n",
+			__func__, max_coarse_time);
+	}
+
+	dev_dbg(dev, "%s: coarse_time: %u\n", __func__, coarse_time);
+
+	imx268_get_coarse_time_regs(reg_list, coarse_time);
+
+	for (i = 0; i < 2; i++) {
+		err = imx268_write_reg(s_data, reg_list[i].addr,
+			reg_list[i].val);
+		if (err) {
+			dev_dbg(dev,
+				"%s: coarse_time control error\n", __func__);
+			return err;
+		}
+	}
+
+	return err;
 }
 
 static struct tegracam_ctrl_ops imx268_ctrl_ops = {
 	.numctrls = ARRAY_SIZE(ctrl_cid_list),
 	.ctrl_cid_list = ctrl_cid_list,
-	.string_ctrl_size = { 0, 0 }, /* unsupported */
 	.set_gain = imx268_set_gain,
 	.set_exposure = imx268_set_exposure,
 	.set_frame_rate = imx268_set_frame_rate,
-	.set_group_hold = imx268_set_group_hold, /* unsupported */
-	.fill_string_ctrl = imx268_fill_string_ctrl, /* unsupported */
+	.set_group_hold = imx268_set_group_hold,
 };
 
 static inline int imx268_power_on(struct camera_common_data *s_data)
@@ -328,7 +349,6 @@ static int imx268_power_off(struct camera_common_data *s_data)
 	dev_dbg(dev, "%s: power off\n", __func__);
 
 	if (pdata && pdata->power_off) {
-		dev_dbg(dev, "%s: b1\n", __func__);
 		err = pdata->power_off(pw);
 		if (err) {
 			dev_err(dev, "%s: power off failed\n", __func__);

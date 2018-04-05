@@ -135,3 +135,14 @@ config NVGPU_SUPPORT_CDE
 	default y
 	help
 	  Enable support for extraction of comptags for CDE.
+
+config NVGPU_USE_TEGRA_ALLOC_FD
+	bool "Use tegra_alloc_fd() for allocating dma_buf fds for vidmem"
+	depends on GK20A && GK20A_VIDMEM
+	default y
+	help
+	  Use tegra_alloc_fd() for allocating dma_buf fds. This allocates
+	  the fds above 1024 which exempts them from counting against process
+	  fd limit.
+
+	  It is only available in Tegra kernel.

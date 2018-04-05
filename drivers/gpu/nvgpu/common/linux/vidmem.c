@@ -17,7 +17,9 @@
 #include <linux/dma-buf.h>
 #include <uapi/linux/nvgpu.h>
 
+#ifdef CONFIG_NVGPU_USE_TEGRA_ALLOC_FD
 #include <linux/platform/tegra/tegra_fd.h>
+#endif
 
 #include <nvgpu/dma.h>
 #include <nvgpu/enabled.h>
@@ -195,7 +197,11 @@ int nvgpu_vidmem_export_linux(struct gk20a *g, size_t bytes)
 
 	buf->priv = priv;
 
+#ifdef CONFIG_NVGPU_USE_TEGRA_ALLOC_FD
 	fd = tegra_alloc_fd(current->files, 1024, O_RDWR);
+#else
+	fd = get_unused_fd_flags(O_RDWR);
+#endif
 	if (fd < 0) {
 		/* ->release frees what we have done */
 		dma_buf_put(priv->dmabuf);

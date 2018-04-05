@@ -2152,9 +2152,17 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 			tegra210_adsp_pcm_ack(substream);
 		}
 		break;
-	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
+		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
+			nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
+		if (ret < 0) {
+			dev_err(prtd->dev, "Failed to set state");
+			return ret;
+		}
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
 		ret = tegra210_adsp_send_state_msg(prtd->fe_apm,
 			nvfx_state_inactive,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
@@ -2969,8 +2977,9 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 
 	dev_dbg(adsp->dev, "%s\n", __func__);
 
-	if (!adsp->init_done)
-		return 0;
+	mutex_lock(&adsp->mutex);
+	if (!adsp->init_done || !adsp->adsp_started)
+		goto exit;
 
 	/* Check for msgq empty before suspend */
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++) {
@@ -2998,6 +3007,8 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 		clk_disable_unprepare(adsp->ape_clk);
 	}
 
+exit:
+	mutex_unlock(&adsp->mutex);
 	return ret;
 }
 
@@ -3008,19 +3019,21 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 
 	dev_dbg(adsp->dev, "%s\n", __func__);
 
-	if (!adsp->init_done)
-		return 0;
+	mutex_lock(&adsp->mutex);
+	if (!adsp->init_done || adsp->adsp_started)
+		goto exit;
+
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		ret = clk_prepare_enable(adsp->ahub_clk);
 		if (ret < 0) {
 			dev_err(dev, "ahub clk_enable failed: %d\n", ret);
-			return ret;
+			goto exit;
 		}
 
 		ret = clk_prepare_enable(adsp->ape_clk);
 		if (ret < 0) {
 			dev_err(dev, "ape clk_enable failed: %d\n", ret);
-			return ret;
+			goto exit;
 		}
 
 		if (!adsp->soc_data->is_soc_t210) {
@@ -3028,18 +3041,21 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 			if (ret < 0) {
 				dev_err(dev, "apb2ape clk_enable failed: %d\n"
 					, ret);
-				return ret;
+				goto exit;
 			}
 		}
 	}
+
 	ret = nvadsp_os_start();
 	if (ret) {
 		dev_err(adsp->dev, "Failed to start ADSP OS ret 0x%x", ret);
 		adsp->adsp_started = 0;
-		return ret;
+		goto exit;
 	}
-	adsp->adsp_started = 1;
 
+	adsp->adsp_started = 1;
+exit:
+	mutex_unlock(&adsp->mutex);
 	return ret;
 }
 #endif
@@ -5696,9 +5712,24 @@ static void tegra210_adsp_audio_platform_shutdown(
 	adsp->is_shutdown = true;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_adsp_pm_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);
+}
+
+static int tegra_adsp_pm_resume(struct device *dev)
+{
+	return pm_runtime_force_resume(dev);
+}
+#endif
+
 static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_adsp_runtime_suspend,
 			   tegra210_adsp_runtime_resume, NULL)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra_adsp_pm_suspend,
+			tegra_adsp_pm_resume)
+
 };
 
 static struct platform_driver tegra210_adsp_audio_driver = {

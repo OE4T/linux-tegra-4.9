@@ -4,6 +4,7 @@
  * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
  * 
  * Copyright (C) 1999-2017, Broadcom Corporation
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -9264,7 +9265,7 @@ wl_cfg80211_sched_scan_start(struct wiphy *wiphy,
 
 
 	if (!request->n_ssids || !request->n_match_sets) {
-		WL_ERR(("Invalid sched scan req!! n_ssids:%d \n", request->n_ssids));
+		WL_DBG(("Invalid sched scan req!! n_ssids:%d\n", request->n_ssids));
 		return -EINVAL;
 	}
 

@@ -7302,6 +7302,10 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 		hba->clk_scaling.window_start_t = 0;
 	}
 
+	/* If UFS device/card not present then skip ufs scan */
+	if (!hba->card_present)
+		return 0;
+
 	/* Hold auto suspend until async scan completes */
 	pm_runtime_get_sync(dev);
 

@@ -1,7 +1,9 @@
 append_menu "Device Drivers"
 
+if ARCH_TEGRA
 source "drivers/misc/tegra186-ahc/Kconfig"
 source "drivers/nvpmodel/Kconfig"
 source "drivers/nvlink/Kconfig"
+endif
 
 endmenu

@@ -172,12 +172,3 @@ int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 
 	return 0;
 }
-
-void gk20a_init_bus(struct gpu_ops *gops)
-{
-	gops->bus.init_hw = gk20a_bus_init_hw;
-	gops->bus.isr = gk20a_bus_isr;
-	gops->bus.read_ptimer = gk20a_read_ptimer;
-	gops->bus.get_timestamps_zipper = nvgpu_get_timestamps_zipper;
-	gops->bus.bar1_bind = gk20a_bus_bar1_bind;
-}

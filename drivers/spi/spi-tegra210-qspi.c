@@ -1311,7 +1311,9 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	}
 #else
 	num_dummy_cycles = get_dummy_cyl(t->delay_usecs);
-	if (!tqspi->qspi_force_bus_speed)
+	if (tqspi->qspi_force_bus_speed)
+		speed = tqspi->cur_speed;
+	else
 		speed = t->speed_hz;
 #endif
 	/*

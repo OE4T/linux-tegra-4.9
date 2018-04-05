@@ -20,7 +20,7 @@
 #include "common/tegra194-power-tree-p2888-0001-p2822-1000.dtsi"
 #include "t19x-common-platforms/tegra194-comms.dtsi"
 #include "common/tegra194-thermal-p2888.dtsi"
-#include "common/tegra194-p2888-p2822-pcie-plugin-manager.dtsi"
+#include "common/tegra194-plugin-manager-p2888-0000.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

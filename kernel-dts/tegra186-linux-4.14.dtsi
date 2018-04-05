@@ -33,41 +33,4 @@
 		/delete-property/ mmc-ddr-1_8v;
 		/delete-property/ mmc-hs400-1_8v;
 	};
-
-	/* Disable smmu for sdhci, bpmp, uart */
-	sdhci@3460000 {
-		/delete-property/ iommus;
-	};
-
-	bpmp {
-		/delete-property/ iommus;
-	};
-
-	serial@3100000 {
-		/delete-property/ iommus;
-	};
-
-	serial@3110000 {
-		/delete-property/ iommus;
-	};
-
-	serial@c280000 {
-		/delete-property/ iommus;
-	};
-
-	serial@3130000 {
-		/delete-property/ iommus;
-	};
-
-	serial@3140000 {
-		/delete-property/ iommus;
-	};
-
-	serial@3150000 {
-		/delete-property/ iommus;
-	};
-
-	serial@c290000 {
-		/delete-property/ iommus;
-	};
 };

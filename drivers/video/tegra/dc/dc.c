@@ -6664,6 +6664,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	pm_runtime_use_autosuspend(&ndev->dev);
 	pm_runtime_set_autosuspend_delay(&ndev->dev, 100);
 	pm_runtime_enable(&ndev->dev);
+	/* Enable async suspend/resume to reduce LP0 latency */
+	device_enable_async_suspend(&ndev->dev);
 
 	/* if bootloader leaves this head enabled, then skip CMU programming. */
 	dc->is_cmu_set_bl = (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) != 0;

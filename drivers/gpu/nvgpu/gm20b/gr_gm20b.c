@@ -1073,16 +1073,22 @@ int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 
 u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
 {
-	u32 fbp_en_mask, opt_fbio;
+	u32 fbp_en_mask;
 	u32 tmp, max_fbps_count;
 
 	tmp = gk20a_readl(g, top_num_fbps_r());
 	max_fbps_count = top_num_fbps_value_v(tmp);
 
-	opt_fbio = gk20a_readl(g, fuse_status_opt_fbio_r());
-	fbp_en_mask =
-		((1 << max_fbps_count) - 1) ^
-		fuse_status_opt_fbio_data_v(opt_fbio);
+	/*
+	 * Read active fbp mask from fuse
+	 * Note that 0:enable and 1:disable in value read from fuse so we've to
+	 * flip the bits.
+	 * Also set unused bits to zero
+	 */
+	fbp_en_mask = gk20a_readl(g, fuse_status_opt_fbp_r());
+	fbp_en_mask = ~fbp_en_mask;
+	fbp_en_mask = fbp_en_mask & ((1 << max_fbps_count) - 1);
+
 	return fbp_en_mask;
 }
 

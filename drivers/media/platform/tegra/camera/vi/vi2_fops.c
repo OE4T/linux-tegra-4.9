@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 2 device common APIs
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -637,7 +637,7 @@ static int vi2_update_clknbw(struct tegra_channel *chan, u8 on)
 
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
-	ret = vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
+	ret = tegra_camera_update_isobw(chan->vi->aggregated_kbyteps, 0);
 	mutex_unlock(&chan->vi->bw_update_lock);
 	if (ret)
 		dev_info(chan->vi->dev,

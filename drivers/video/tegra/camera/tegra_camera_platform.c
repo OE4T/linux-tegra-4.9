@@ -63,6 +63,13 @@ struct tegra_camera_info {
 	/* set max bw by default */
 	bool en_max_bw;
 
+	u64 total_pixel_rate;
+	u64 active_pixel_rate;
+	u64 active_iso_bw;
+	u32 max_pixel_depth;
+	u32 ppc_divider;
+	u32 num_active_streams;
+	bool pg_mode;
 	struct list_head device_list;
 	struct mutex device_list_mutex;
 };
@@ -226,7 +233,7 @@ static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 
 	/* deallocate bypass mode isomgr bw */
 	info->bypass_mode_isobw = 0;
-	return vi_v4l2_update_isobw(0, 1);
+	return tegra_camera_update_isobw(0, 1);
 #endif
 
 	return 0;
@@ -352,12 +359,12 @@ static int dbgfs_tegra_camera_init(void)
 #endif
 
 /*
- * vi_kbyteps: Iso bw request from V4L2 vi driver.
+ * bw_kbytes: Iso bw request from V4L2 vi driver.
  * is_ioctl: Whether this function is called by userspace or kernel.
  * This function aggregates V4L2 vi driver's request with userspace (SCF)
  * iso bw request and submit total to isomgr.
  */
-int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
+int tegra_camera_update_isobw(u32 bw_kbytes, u32 is_ioctl)
 {
 	struct tegra_camera_info *info;
 	unsigned long total_khz;
@@ -374,7 +381,7 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 		return -ENODEV;
 	mutex_lock(&info->update_bw_lock);
 	if (!is_ioctl)
-		info->vi_mode_isobw = vi_kbyteps;
+		info->vi_mode_isobw = bw_kbytes;
 	bw = info->bypass_mode_isobw + info->vi_mode_isobw;
 
 	/* Bug 200323801 consider iso bw of both vi mode and vi-bypass mode */
@@ -418,7 +425,7 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 	mutex_unlock(&info->update_bw_lock);
 	return ret;
 }
-EXPORT_SYMBOL(vi_v4l2_update_isobw);
+EXPORT_SYMBOL(tegra_camera_update_isobw);
 
 static long tegra_camera_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
@@ -457,7 +464,7 @@ static long tegra_camera_ioctl(struct file *file,
 
 		if (kcopy.is_iso) {
 			info->bypass_mode_isobw = kcopy.bw;
-			ret = vi_v4l2_update_isobw(0, 1);
+			ret = tegra_camera_update_isobw(0, 1);
 		} else {
 			dev_dbg(info->dev, "%s:Set bw %llu at %lu KHz\n",
 				__func__, kcopy.bw, mc_khz);
@@ -580,6 +587,13 @@ static int tegra_camera_probe(struct platform_device *pdev)
 #endif
 	}
 
+	info->total_pixel_rate = 0;
+	info->active_pixel_rate = 0;
+	info->active_iso_bw = 0;
+	info->max_pixel_depth = 0;
+	info->ppc_divider = 1;
+	info->num_active_streams = 0;
+	info->pg_mode = false;
 	mutex_init(&info->device_list_mutex);
 	INIT_LIST_HEAD(&info->device_list);
 
@@ -591,6 +605,49 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(info->dev, "Fail to create debugfs");
 #endif
+	return 0;
+}
+
+static void update_platform_data(struct tegra_camera_dev_info *cdev,
+	struct tegra_camera_info *info, bool dev_registered)
+{
+	/* TPG: handled differently based on
+	 * throughput calculations.
+	 */
+	if (cdev->sensor_type == SENSORTYPE_VIRTUAL)
+		info->pg_mode = dev_registered;
+
+	if (dev_registered) {
+		/* if bytes per pixel is greater than 2, then num_ppc
+		 * is 4 for VI. Set divider for this case.
+		 */
+		if (cdev->bpp > 2)
+			info->ppc_divider = 2;
+		info->total_pixel_rate += cdev->pixel_rate;
+		if (info->max_pixel_depth < cdev->pixel_bit_depth)
+			info->max_pixel_depth = cdev->pixel_bit_depth;
+	} else {
+		info->total_pixel_rate -= cdev->pixel_rate;
+	}
+}
+
+static int add_nvhost_client(struct tegra_camera_dev_info *cdev)
+{
+	int ret = 0;
+
+	if (cdev->hw_type == HWTYPE_NONE)
+		return 0;
+
+	ret = nvhost_module_add_client(cdev->pdev, &cdev->hw_type);
+	return ret;
+}
+
+static int remove_nvhost_client(struct tegra_camera_dev_info *cdev)
+{
+	if (cdev->hw_type == HWTYPE_NONE)
+		return 0;
+
+	nvhost_module_remove_client(cdev->pdev, &cdev->hw_type);
 	return 0;
 }
 
@@ -620,7 +677,7 @@ int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,
 	mutex_lock(&info->device_list_mutex);
 	list_add(&cdev->device_node, &info->device_list);
 	if (cdev->hw_type != HWTYPE_NONE) {
-		err = nvhost_module_add_client(cdev->pdev, &cdev->hw_type);
+		err = add_nvhost_client(cdev);
 		if (err) {
 			mutex_unlock(&info->device_list_mutex);
 			dev_err(info->dev, "%s could not add %d to nvhost\n",
@@ -628,6 +685,7 @@ int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,
 			return err;
 		}
 	}
+	update_platform_data(cdev, info, true);
 	mutex_unlock(&info->device_list_mutex);
 
 	return err;
@@ -654,8 +712,8 @@ int tegra_camera_device_unregister(void *priv)
 	}
 
 	if (found) {
-		if (cdev->hw_type != HWTYPE_NONE)
-			nvhost_module_remove_client(cdev->pdev, &cdev->hw_type);
+		remove_nvhost_client(cdev);
+		update_platform_data(cdev, info, false);
 		kfree(cdev);
 	}
 	mutex_unlock(&info->device_list_mutex);
@@ -663,6 +721,124 @@ int tegra_camera_device_unregister(void *priv)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_camera_device_unregister);
+
+static int calculate_and_set_device_clock(struct tegra_camera_info *info,
+		struct tegra_camera_dev_info *cdev)
+{
+	int ret = 0;
+	u64 active_pr = info->active_pixel_rate;
+	u64 total_pr = info->total_pixel_rate;
+	u32 overhead = cdev->overhead + 100;
+	u32 max_depth = info->max_pixel_depth;
+	u32 bus_width = cdev->bus_width;
+	u32 ppc = (cdev->ppc > 0) ? cdev->ppc : 1;
+	u32 ppc_divider = (ppc > 1) ? info->ppc_divider : 1;
+	u64 nr = 0;
+	u64 dr = 0;
+	u64 final_pr = (cdev->use_max) ? total_pr : active_pr;
+
+	if (cdev->hw_type == HWTYPE_NONE)
+		return 0;
+
+	switch (cdev->hw_type) {
+	case HWTYPE_CSI:
+		nr = max_depth * final_pr * overhead;
+		dr = bus_width * 100;
+		if (dr == 0)
+			return -EINVAL;
+		break;
+	case HWTYPE_VI:
+		nr = final_pr * overhead;
+		dr = 100 * (ppc / ppc_divider);
+		break;
+	case HWTYPE_ISPA:
+	case HWTYPE_ISPB:
+		nr = final_pr * overhead;
+		dr = 100 * ppc;
+		break;
+	case HWTYPE_SLVSEC:
+		/* TODO add proper calculations here */
+		nr = UINT_MAX - 1;
+		dr = 1;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* Use special rates based on throughput
+	 * for TPG.
+	 */
+	if (info->pg_mode) {
+		nr = cdev->pg_clk_rate;
+		dr = 1;
+	}
+
+	/* avoid rounding errors by adding dr to nr */
+	cdev->clk_rate = (nr + dr) / dr;
+
+	/* no stream active, set to 0 */
+	if (info->num_active_streams == 0)
+		cdev->clk_rate = 0;
+
+	ret = nvhost_module_set_rate(cdev->pdev, &cdev->hw_type,
+			cdev->clk_rate, 0, NVHOST_CLOCK);
+	if (ret)
+		return ret;
+
+	/* save the actual rate set by nvhost */
+	ret = nvhost_module_get_rate(cdev->pdev, &cdev->actual_clk_rate, 0);
+	return ret;
+}
+
+int tegra_camera_update_clknbw(void *priv, bool stream_on)
+{
+	struct tegra_camera_dev_info *cdev;
+	struct tegra_camera_info *info;
+	int ret = 0;
+
+	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -EINVAL;
+
+	mutex_lock(&info->device_list_mutex);
+	/* Need to traverse the list twice, first to make sure that
+	 * stream on is set for the active stream and then to
+	 * update clocks and BW.
+	 * Needed as devices could have been added in any order in the list.
+	 */
+	list_for_each_entry(cdev, &info->device_list, device_node) {
+		if (priv == cdev->priv) {
+			/* set stream on */
+			cdev->stream_on = stream_on;
+			if (stream_on) {
+				info->active_pixel_rate += cdev->pixel_rate;
+				info->active_iso_bw += cdev->bw;
+				info->num_active_streams++;
+			} else {
+				info->active_pixel_rate -= cdev->pixel_rate;
+				info->active_iso_bw -= cdev->bw;
+				info->num_active_streams--;
+			}
+			break;
+		}
+	}
+
+	/* update clocks */
+	list_for_each_entry(cdev, &info->device_list, device_node) {
+		ret = calculate_and_set_device_clock(info, cdev);
+		if (ret) {
+			mutex_unlock(&info->device_list_mutex);
+			return -EINVAL;
+		}
+	}
+	mutex_unlock(&info->device_list_mutex);
+
+	/* set BW */
+	tegra_camera_update_isobw(0, 0);
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_camera_update_clknbw);
 
 static int tegra_camera_remove(struct platform_device *pdev)
 {

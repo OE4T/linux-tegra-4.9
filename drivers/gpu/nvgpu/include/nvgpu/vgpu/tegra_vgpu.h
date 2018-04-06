@@ -455,6 +455,7 @@ struct tegra_vgpu_engines_info {
 
 #define TEGRA_VGPU_MAX_GPC_COUNT 16
 #define TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC 16
+#define TEGRA_VGPU_L2_EN_MASK 32
 
 struct tegra_vgpu_constants_params {
 	u32 arch;
@@ -494,6 +495,7 @@ struct tegra_vgpu_constants_params {
 	u32 num_pce;
 	u32 sm_per_tpc;
 	u32 max_subctx_count;
+	u32 l2_en_mask[TEGRA_VGPU_L2_EN_MASK];
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {

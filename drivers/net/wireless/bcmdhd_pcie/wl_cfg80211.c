@@ -2615,7 +2615,7 @@ wl_run_escan(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	}
 	if (!cfg->p2p_supported || !p2p_scan(cfg)) {
 		/* LEGACY SCAN TRIGGER */
-		WL_ERR((" LEGACY E-SCAN START\n"));
+		WL_SCAN((" LEGACY E-SCAN START\n"));
 
 #if defined(USE_INITIAL_SHORT_DWELL_TIME)
 		if (!request) {
@@ -2673,7 +2673,7 @@ wl_run_escan(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 
 		err = wldev_iovar_setbuf(ndev, "escan", params, params_size,
 			cfg->escan_ioctl_buf, WLC_IOCTL_MEDLEN, NULL);
-		WL_ERR(("LEGACY_SCAN sync ID: %d, bssidx: %d\n", params->sync_id, bssidx));
+		WL_SCAN(("LEGACY_SCAN sync ID: %d, bssidx: %d\n", params->sync_id, bssidx));
 		if (unlikely(err)) {
 			if (err == BCME_EPERM)
 				/* Scan Not permitted at this point of time */

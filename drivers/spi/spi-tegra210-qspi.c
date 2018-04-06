@@ -1219,9 +1219,8 @@ static int tegra_qspi_validate_request(struct spi_device *spi,
 	return 0;
 }
 
-static void tegra_qspi_set_gr_registers(struct spi_device *spi)
+static void tegra_qspi_set_gr_registers(struct tegra_qspi_data *tqspi)
 {
-	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	char prod_name[MAX_PROD_NAME];
 	int clk_mhz;
 	int err;
@@ -1230,7 +1229,7 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 	if (tqspi->qspi_enable_prod_override)
 		return;
 #endif
-	if (tqspi->prod_list)
+	if (!tqspi->prod_list)
 		goto regs_por;
 
 	/* If available, initialise the config registers
@@ -1414,8 +1413,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		tqspi->cur_direction |= DATA_DIR_TX;
 
 	tqspi->command1_reg = command1;
-
-	tegra_qspi_set_gr_registers(spi);
 
 	if (tqspi->dcycle_non_cmbseq_mode) {
 		tqspi->qspi_num_dummy_cycle =
@@ -2240,6 +2237,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->def_command1_reg  = QSPI_M_S | QSPI_CS_SW_HW |  QSPI_CS_SW_VAL;
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
 	tqspi->def_command2_reg = tegra_qspi_readl(tqspi, QSPI_COMMAND2);
+	tegra_qspi_set_gr_registers(tqspi);
 	pm_runtime_put(&pdev->dev);
 
 	master->dev.of_node = pdev->dev.of_node;
@@ -2356,7 +2354,7 @@ static int tegra_qspi_resume(struct device *dev)
 		return ret;
 	}
 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
-	tegra_qspi_writel(tqspi, tqspi->def_command2_reg, QSPI_COMMAND2);
+	tegra_qspi_set_gr_registers(tqspi);
 	pm_runtime_put(dev);
 
 	return spi_master_resume(master);

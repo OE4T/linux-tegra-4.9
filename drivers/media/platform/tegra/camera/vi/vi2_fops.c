@@ -21,11 +21,6 @@
 #include "vi2_fops.h"
 #include "vi2_formats.h"
 #include <trace/events/camera_common.h>
-#define DEFAULT_FRAMERATE	30
-#define DEFAULT_CSI_FREQ	204000000
-#define BPP_MEM		2
-#define NUM_PPC		2
-#define VI_CSI_CLK_SCALE	110
 
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 
@@ -557,101 +552,6 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static int vi2_update_clknbw(
-	struct tegra_channel *chan, u8 on) __maybe_unused;
-static int vi2_update_clknbw(struct tegra_channel *chan, u8 on)
-{
-	int ret = 0;
-	unsigned long request_pixelrate;
-	struct v4l2_subdev_frame_interval fie;
-	unsigned long csi_freq = 0;
-
-	fie.interval.denominator = DEFAULT_FRAMERATE;
-	fie.interval.numerator = 1;
-
-	if (v4l2_subdev_has_op(chan->subdev_on_csi,
-				video, g_frame_interval))
-		v4l2_subdev_call(chan->subdev_on_csi, video,
-				g_frame_interval, &fie);
-	else {
-		if (v4l2_subdev_has_op(chan->subdev_on_csi,
-				video, g_dv_timings)) {
-			u32 total_width;
-			u32 total_height;
-			struct v4l2_dv_timings dvtimings;
-			struct v4l2_bt_timings *timings = &dvtimings.bt;
-
-			v4l2_subdev_call(chan->subdev_on_csi,
-				video, g_dv_timings, &dvtimings);
-			total_width = timings->width + timings->hfrontporch +
-				timings->hsync + timings->hbackporch;
-			total_height = timings->height + timings->vfrontporch +
-				timings->vsync + timings->vbackporch;
-			fie.interval.denominator = timings->pixelclock /
-				(total_width * total_height);
-		}
-	}
-
-	if (on) {
-		/**
-		 * TODO: use real sensor pixelrate
-		 * See PowerService code
-		 */
-		request_pixelrate = (long long)(chan->format.width
-				* chan->format.height
-				* fie.interval.denominator / 100)
-				* VI_CSI_CLK_SCALE;
-		/* for PG, get csi frequency from nvhost */
-		if (chan->pg_mode) {
-			ret = nvhost_module_get_rate(
-					chan->vi->csi->pdev, &csi_freq, 0);
-			csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
-		} else
-			/* Use default csi4 frequency for t186 for now
-			 * We can't get the frequency from nvhost because
-			 * vi4 does not has access to csi4
-			 */
-			csi_freq = DEFAULT_CSI_FREQ;
-
-		/* VI clk should be slightly faster than CSI clk*/
-		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
-				max(request_pixelrate,
-				csi_freq * VI_CSI_CLK_SCALE * NUM_PPC / 100),
-				0, NVHOST_PIXELRATE);
-		if (ret) {
-			dev_err(chan->vi->dev, "Fail to update vi clk\n");
-			return ret;
-		}
-	} else {
-		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
-				NVHOST_PIXELRATE);
-		if (ret) {
-			dev_err(chan->vi->dev, "Fail to update vi clk\n");
-			return ret;
-		}
-	}
-
-	chan->requested_kbyteps = (on > 0 ? 1 : -1) *
-		((long long)(chan->format.width * chan->format.height
-		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000;
-
-	mutex_lock(&chan->vi->bw_update_lock);
-	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
-	ret = tegra_camera_update_isobw(chan->vi->aggregated_kbyteps, 0);
-	mutex_unlock(&chan->vi->bw_update_lock);
-	if (ret)
-		dev_info(chan->vi->dev,
-		"WAR:Calculation not precise.Ignore BW request failure\n");
-#if 0
-	ret = vi4_v4l2_set_la(chan->vi->ndev, 0, 0);
-	if (ret)
-		dev_info(chan->vi->dev,
-		"WAR:Calculation not precise.Ignore LA failure\n");
-#endif
-	return 0;
-}
-EXPORT_SYMBOL(vi2_update_clknbw);
-
 static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
@@ -701,9 +601,6 @@ static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
-
-	/* Update clock and bandwidth based on the format */
-	vi2_update_clknbw(chan, 1);
 
 	/* Start kthread to capture data to buffer */
 	chan->kthread_capture_start = kthread_run(
@@ -771,9 +668,6 @@ static int vi2_channel_stop_streaming(struct vb2_queue *vq)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 #endif
-
-	if (!chan->bypass)
-		vi2_update_clknbw(chan, 0);
 
 	vi_channel_syncpt_free(chan);
 	return 0;

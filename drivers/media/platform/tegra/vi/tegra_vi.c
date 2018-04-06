@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -279,26 +279,6 @@ static long vi_ioctl(struct file *file,
 		return ret;
 	}
 	case _IOC_NR(NVHOST_VI_IOCTL_GET_VI_CLK): {
-		int ret;
-		u64 vi_clk_rate = 0;
-
-		ret = nvhost_module_get_rate(tegra_vi->ndev,
-			(unsigned long *)&vi_clk_rate, 0);
-		if (ret) {
-			dev_err(&tegra_vi->ndev->dev,
-			"%s: failed to get vi clk\n",
-			__func__);
-			return ret;
-		}
-
-		if (copy_to_user((void __user *)arg,
-			&vi_clk_rate, sizeof(vi_clk_rate))) {
-			dev_err(&tegra_vi->ndev->dev,
-			"%s:Failed to copy vi clk rate to user\n",
-			__func__);
-			return -EFAULT;
-		}
-
 		return 0;
 	}
 	case _IOC_NR(NVHOST_VI_IOCTL_SET_VI_LA_BW): {
@@ -384,17 +364,7 @@ static long vi_ioctl(struct file *file,
 		return ret;
 	}
 	case _IOC_NR(NVHOST_VI_IOCTL_SET_VI_CLK): {
-		long vi_clk_rate = 0;
-
-		if (copy_from_user(&vi_clk_rate,
-			(const void __user *)arg, sizeof(long))) {
-			dev_err(&tegra_vi->ndev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-		}
-
-		return nvhost_module_set_rate(tegra_vi->ndev,
-				tegra_vi, vi_clk_rate, 0, NVHOST_CLOCK);
+		return 0;
 	}
 	default:
 		dev_err(&tegra_vi->ndev->dev,
@@ -408,7 +378,6 @@ static int vi_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata;
 	struct vi *vi;
-	int err = 0;
 
 	pdata = container_of(inode->i_cdev,
 		struct nvhost_device_data, ctrl_cdev);
@@ -421,15 +390,7 @@ static int vi_open(struct inode *inode, struct file *file)
 
 	file->private_data = vi;
 
-	/* add vi client to acm */
-	if (nvhost_module_add_client(vi->ndev, vi)) {
-		dev_err(&vi->ndev->dev,
-			"%s: failed add vi client\n",
-			__func__);
-		return -ENOMEM;
-	}
-
-	return err;
+	return 0;
 }
 
 static int vi_release(struct inode *inode, struct file *file)
@@ -449,9 +410,6 @@ static int vi_release(struct inode *inode, struct file *file)
 		}
 	}
 #endif
-
-	/* remove vi client from acm */
-	nvhost_module_remove_client(tegra_vi->ndev, tegra_vi);
 
 	return ret;
 }

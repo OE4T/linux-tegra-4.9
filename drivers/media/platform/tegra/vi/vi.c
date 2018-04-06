@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@
 #include <media/tegra_v4l2_camera.h>
 #include <media/tegra_camera_dev_mfi.h>
 #include <media/vi.h>
+#include <media/tegra_camera_platform.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -351,6 +352,7 @@ static int vi_probe(struct platform_device *dev)
 	struct nvhost_device_data *pdata = NULL;
 	struct tegra_t210_vi_data *data = NULL;
 	u8 num_channels;
+	struct tegra_camera_dev_info vi_info;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -481,6 +483,13 @@ static int vi_probe(struct platform_device *dev)
 	err = tegra_vi_media_controller_init(&tegra_vi->mc_vi, dev);
 	if (err)
 		goto vi_mc_init_error;
+
+	memset(&vi_info, 0, sizeof(vi_info));
+	vi_info.pdev = dev;
+	vi_info.hw_type = HWTYPE_VI;
+	err = tegra_camera_device_register(&vi_info, tegra_vi);
+	if (err)
+		goto vi_probe_fail;
 
 	return 0;
 

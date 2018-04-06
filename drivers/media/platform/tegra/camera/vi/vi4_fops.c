@@ -25,14 +25,10 @@
 #include "vi4_fops.h"
 #include <media/sensor_common.h>
 #include <trace/events/camera_common.h>
-#define DEFAULT_FRAMERATE	30
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
-#define NUM_PPC		8
-#define VI_CSI_CLK_SCALE	110
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
-#define PG_BITRATE	32
 
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 static int tegra_channel_stop_increments(struct tegra_channel *chan);
@@ -666,127 +662,6 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static int vi4_update_clknbw(struct tegra_channel *chan, u8 on)
-{
-	int ret = 0;
-	unsigned long request_pixelrate;
-	struct v4l2_subdev_frame_interval fie;
-	unsigned long csi_freq = 0;
-	unsigned int ppc_multiplier = 1;
-	u64 pixelclock = 0;
-
-	/* if bytes per pixel is greater than 2, then num_ppc is 4 */
-	/* since num_ppc in nvhost framework is always 8, use multiplier */
-	if (chan->fmtinfo->bpp.numerator > 2)
-		ppc_multiplier = 2;
-
-	fie.interval.denominator = DEFAULT_FRAMERATE;
-	fie.interval.numerator = 1;
-
-	if (v4l2_subdev_has_op(chan->subdev_on_csi,
-				video, g_frame_interval))
-		v4l2_subdev_call(chan->subdev_on_csi, video,
-				g_frame_interval, &fie);
-	else if (v4l2_subdev_has_op(chan->subdev_on_csi,
-				video, g_dv_timings)) {
-		u32 total_width;
-		u32 total_height;
-		struct v4l2_dv_timings dvtimings;
-		struct v4l2_bt_timings *timings = &dvtimings.bt;
-
-		v4l2_subdev_call(chan->subdev_on_csi,
-			video, g_dv_timings, &dvtimings);
-		total_width = timings->width + timings->hfrontporch +
-			timings->hsync + timings->hbackporch;
-		total_height = timings->height + timings->vfrontporch +
-			timings->vsync + timings->vbackporch;
-		fie.interval.denominator = timings->pixelclock /
-			(total_width * total_height);
-		pixelclock = timings->pixelclock;
-	} else {
-		struct v4l2_subdev *sd = chan->subdev_on_csi;
-		struct camera_common_data *s_data =
-			to_camera_common_data(sd->dev);
-		struct sensor_mode_properties *sensor_mode;
-		int idx = s_data->mode_prop_idx;
-
-		idx = s_data->mode_prop_idx;
-		if (idx < s_data->sensor_props.num_modes) {
-			sensor_mode = &s_data->sensor_props.sensor_modes[idx];
-			pixelclock =
-				sensor_mode->signal_properties.pixel_clock.val;
-		}
-	}
-
-	if (on) {
-		/* for PG, using default frequence */
-		if (chan->pg_mode) {
-			ret = nvhost_module_get_rate(chan->vi->csi->pdev,
-				&csi_freq, 0);
-			if (ret)
-				return ret;
-			request_pixelrate = csi_freq * PG_BITRATE /
-				chan->fmtinfo->width;
-			request_pixelrate *= ppc_multiplier;
-		} else if (pixelclock) {
-			/* use real sensor pixelrate */
-			request_pixelrate = (long long)(pixelclock / 100)
-				* VI_CSI_CLK_SCALE
-				* ppc_multiplier;
-		} else {
-			request_pixelrate = (long long)(chan->format.width
-				* chan->format.height
-				* fie.interval.denominator / 100)
-				* VI_CSI_CLK_SCALE * ppc_multiplier;
-		}
-
-		/* C-PHY sensors - 2.28 clock multiplier*/
-		if (chan->numlanes == 3) {
-			request_pixelrate *= 16/7;
-			csi_freq *= 16/7;
-		}
-
-		/* VI clk should be slightly faster than CSI clk*/
-		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
-				request_pixelrate, 0, NVHOST_PIXELRATE);
-		if (ret) {
-			dev_err(chan->vi->dev, "Fail to update vi clk\n");
-			return ret;
-		}
-	} else {
-		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
-				NVHOST_PIXELRATE);
-		if (ret) {
-			dev_err(chan->vi->dev, "Fail to update vi clk\n");
-			return ret;
-		}
-	}
-	if (chan->pg_mode)
-		chan->requested_kbyteps = on ?
-			(((long long)csi_freq * PG_BITRATE * BPP_MEM /
-			 chan->fmtinfo->width) / 1000) :
-			(-chan->requested_kbyteps);
-	else
-		chan->requested_kbyteps = on ?
-		((((long long) chan->format.width * chan->format.height
-		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000) :
-		(-chan->requested_kbyteps);
-
-	mutex_lock(&chan->vi->bw_update_lock);
-	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
-	ret = tegra_camera_update_isobw(chan->vi->aggregated_kbyteps, 0);
-	mutex_unlock(&chan->vi->bw_update_lock);
-	if (ret)
-		dev_info(chan->vi->dev,
-		"WAR:Calculation not precise.Ignore BW request failure\n");
-	ret = vi4_v4l2_set_la(chan->vi->ndev, 0, 0);
-	if (ret)
-		dev_info(chan->vi->dev,
-		"WAR:Calculation not precise.Ignore LA failure\n");
-	return 0;
-}
-EXPORT_SYMBOL(vi4_update_clknbw);
-
 static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
@@ -892,11 +767,6 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
 
-	/* Update clock and bandwidth based on the format */
-	ret = vi4_update_clknbw(chan, 1);
-	if (ret)
-		goto error_capture_setup;
-
 	INIT_WORK(&chan->error_work, tegra_channel_error_worker);
 	INIT_WORK(&chan->status_work, tegra_channel_status_worker);
 
@@ -958,9 +828,6 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 #endif
-
-	if (!chan->bypass)
-		vi4_update_clknbw(chan, 0);
 
 	return 0;
 }

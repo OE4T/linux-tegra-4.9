@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics ISP
  *
- * Copyright (c) 2012-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,6 +45,7 @@
 #include <linux/nvhost_isp_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
 #include "isp.h"
+#include <media/tegra_camera_platform.h>
 
 #define T12_ISP_CG_CTRL		0x74
 #define T12_CG_2ND_LEVEL_EN	1
@@ -53,6 +54,10 @@
 
 #define ISPA_DEV_ID		0
 #define ISPB_DEV_ID		1
+#define ISP_PPC_T186		2
+#define ISP_OVERHEAD_T210	10
+/* 15% sw + 2% hw */
+#define ISP_OVERHEAD_T186	17
 
 static struct of_device_id tegra_isp_of_match[] = {
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
@@ -273,6 +278,9 @@ static int isp_probe(struct platform_device *dev)
 
 	struct isp *tegra_isp;
 	struct nvhost_device_data *pdata = NULL;
+	struct tegra_camera_dev_info isp_info;
+
+	memset(&isp_info, 0, sizeof(isp_info));
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -283,6 +291,9 @@ static int isp_probe(struct platform_device *dev)
 			if (match)
 				pdata = (struct nvhost_device_data *)
 					match->data;
+			/* 2% hw + 15% sw overhead */
+			isp_info.overhead = ISP_OVERHEAD_T186;
+			isp_info.ppc = ISP_PPC_T186;
 		} else {
 			/*
 			* For older kernels, we use "isp.0" for ispa
@@ -311,6 +322,9 @@ static int isp_probe(struct platform_device *dev)
 					pdata = &t21_ispb_info;
 				if (dev_id == ISPA_DEV_ID)
 					pdata = &t21_isp_info;
+				/* 10% overhead */
+				isp_info.overhead = ISP_OVERHEAD_T210;
+				isp_info.use_max = true;
 			}
 		}
 	} else
@@ -383,6 +397,14 @@ static int isp_probe(struct platform_device *dev)
 	if (err)
 		goto free_isr;
 
+	isp_info.hw_type = HWTYPE_ISPA;
+	if (dev_id == ISPB_DEV_ID)
+		isp_info.hw_type = HWTYPE_ISPB;
+	isp_info.pdev = dev;
+	err = tegra_camera_device_register(&isp_info, tegra_isp);
+	if (err)
+		goto free_isr;
+
 	return 0;
 free_isr:
 	kfree(tegra_isp->my_isr_work);
@@ -396,6 +418,8 @@ static int __exit isp_remove(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct isp *tegra_isp = (struct isp *)pdata->private_data;
+
+	tegra_camera_device_unregister(tegra_isp);
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 	if (tegra_isp->isomgr_handle)
@@ -471,26 +495,6 @@ static long isp_ioctl(struct file *file,
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
-		int ret;
-		u64 isp_clk_rate = 0;
-
-		ret = nvhost_module_get_rate(tegra_isp->ndev,
-			(unsigned long *)&isp_clk_rate, 0);
-		if (ret) {
-			dev_err(&tegra_isp->ndev->dev,
-			"%s: failed to get isp clk\n",
-			__func__);
-			return ret;
-		}
-
-		if (copy_to_user((void __user *)arg,
-			&isp_clk_rate, sizeof(isp_clk_rate))) {
-			dev_err(&tegra_isp->ndev->dev,
-			"%s:Failed to copy isp clk rate to user\n",
-			__func__);
-			return -EFAULT;
-		}
-
 		return 0;
 	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
@@ -597,17 +601,7 @@ static long isp_ioctl(struct file *file,
 		return ret;
 	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
-		long isp_clk_rate = 0;
-
-		if (copy_from_user(&isp_clk_rate,
-			(const void __user *)arg, sizeof(long))) {
-			dev_err(&tegra_isp->ndev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-		}
-
-		return nvhost_module_set_rate(tegra_isp->ndev,
-				tegra_isp, isp_clk_rate, 0, NVHOST_CLOCK);
+		return 0;
 	}
 	default:
 		dev_err(&tegra_isp->ndev->dev,
@@ -634,14 +628,6 @@ static int isp_open(struct inode *inode, struct file *file)
 
 	file->private_data = tegra_isp;
 
-	/* add isp client to acm */
-	if (nvhost_module_add_client(tegra_isp->ndev, tegra_isp)) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: failed add isp client\n",
-			__func__);
-		return -ENOMEM;
-	}
-
 	return 0;
 }
 
@@ -664,9 +650,6 @@ static int isp_release(struct inode *inode, struct file *file)
 		}
 	}
 #endif
-
-	/* remove isp client from acm */
-	nvhost_module_remove_client(tegra_isp->ndev, tegra_isp);
 
 	return ret;
 }

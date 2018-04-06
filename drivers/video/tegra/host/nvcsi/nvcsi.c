@@ -33,6 +33,7 @@
 
 #include <media/mc_common.h>
 #include <media/csi.h>
+#include <media/tegra_camera_platform.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -42,6 +43,10 @@
 #include "camera/csi/csi4_fops.h"
 
 #include "deskew.h"
+
+#define PG_CLK_RATE	102000000
+/* width of interface between VI and CSI */
+#define CSI_BUS_WIDTH	64
 
 static long long input_stats;
 
@@ -127,6 +132,9 @@ static int nvcsi_probe(struct platform_device *dev)
 	struct nvhost_device_data *pdata = NULL;
 	struct nvcsi *nvcsi = NULL;
 	struct tegra_csi_data *data = NULL;
+	struct tegra_camera_dev_info csi_info;
+
+	memset(&csi_info, 0, sizeof(csi_info));
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -188,6 +196,15 @@ static int nvcsi_probe(struct platform_device *dev)
 
 	nvcsi_deskew_debugfs_init(nvcsi);
 
+	csi_info.pdev = dev;
+	csi_info.hw_type = HWTYPE_CSI;
+	csi_info.use_max = true;
+	csi_info.bus_width = CSI_BUS_WIDTH;
+	csi_info.pg_clk_rate = PG_CLK_RATE;
+	err = tegra_camera_device_register(&csi_info, nvcsi);
+	if (err)
+		goto err_module_init;
+
 	return 0;
 
 err_mediacontroller_init:
@@ -206,6 +223,7 @@ static int __exit nvcsi_remove(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct nvcsi *nvcsi = (struct nvcsi *)pdata->private_data;
 
+	tegra_camera_device_unregister(nvcsi);
 	mc_csi = NULL;
 	nvcsi_deskew_debugfs_remove(nvcsi);
 	tegra_csi_media_controller_remove(&nvcsi->csi);
@@ -303,20 +321,11 @@ static long nvcsi_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
 	struct nvcsi_private *priv = file->private_data;
-	struct platform_device *pdev = priv->pdev;
 	int ret;
 
 	switch (cmd) {
 	case NVHOST_NVCSI_IOCTL_SET_NVCSI_CLK: {
-		long rate;
-
-		if (!(file->f_mode & FMODE_WRITE))
-			return -EINVAL;
-		if (get_user(rate, (long __user *)arg))
-			return -EFAULT;
-
-		return nvhost_module_set_rate(pdev, priv, rate, 0,
-						NVHOST_CLOCK);
+		return 0;
 		}
 	// sensor must be turned on before calling this ioctl, and streaming
 	// should be started shortly after.
@@ -351,10 +360,6 @@ static int nvcsi_open(struct inode *inode, struct file *file)
 
 	priv->pdev = pdev;
 
-	if (nvhost_module_add_client(pdev, priv)) {
-		kfree(priv);
-		return -ENOMEM;
-	}
 	file->private_data = priv;
 	return nonseekable_open(inode, file);
 }
@@ -362,9 +367,7 @@ static int nvcsi_open(struct inode *inode, struct file *file)
 static int nvcsi_release(struct inode *inode, struct file *file)
 {
 	struct nvcsi_private *priv = file->private_data;
-	struct platform_device *pdev = priv->pdev;
 
-	nvhost_module_remove_client(pdev, priv);
 	kfree(priv);
 	return 0;
 }

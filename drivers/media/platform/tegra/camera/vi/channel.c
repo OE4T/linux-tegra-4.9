@@ -602,6 +602,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 	trace_tegra_channel_set_stream("enable", on);
 
 	if (on) {
+		tegra_camera_update_clknbw(chan, true);
 		/* Enable CSI before sensor. Reason is as follows:
 		 * CSI is able to catch the very first clk transition.
 		 */
@@ -648,6 +649,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 			if (!ret && err < 0 && err != -ENOIOCTLCMD)
 				ret = err;
 		}
+		tegra_camera_update_clknbw(chan, false);
 	}
 
 	atomic_set(&chan->is_streaming, on);
@@ -1484,7 +1486,8 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	if (strstr(chan->subdev_on_csi->name, "nvcsi") != NULL ||
 			chan->pg_mode) {
 		tegra_channel_populate_dev_info(&camdev_info, chan);
-		return 0;
+		ret = tegra_camera_device_register(&camdev_info, chan);
+		return ret;
 	}
 
 	ret = tegra_channel_sensorprops_setup(chan);
@@ -1503,8 +1506,9 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	}
 
 	tegra_channel_populate_dev_info(&camdev_info, chan);
+	ret = tegra_camera_device_register(&camdev_info, chan);
 
-	return 0;
+	return ret;
 fail:
 	tegra_channel_free_sensor_properties(chan->subdev_on_csi);
 	return ret;
@@ -2020,6 +2024,8 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 		&chan->vi->vb2_dma_alloc_refcnt);
 #endif
 	mutex_unlock(&chan->video_lock);
+
+	tegra_camera_device_unregister(chan);
 
 	media_entity_cleanup(&chan->video.entity);
 

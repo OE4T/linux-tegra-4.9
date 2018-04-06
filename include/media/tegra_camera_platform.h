@@ -95,7 +95,7 @@ struct tegra_camera_dev_info {
 	struct list_head device_node;
 };
 
-int tegra_camera_update_isobw(u32 bw_kbytes, u32 is_iotcl);
+int tegra_camera_update_isobw(void);
 int tegra_camera_emc_clk_enable(void);
 int tegra_camera_emc_clk_disable(void);
 int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,

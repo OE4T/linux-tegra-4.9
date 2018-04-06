@@ -1,7 +1,7 @@
 /*
  * VI driver for T186
  *
- * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,6 +36,7 @@
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
 #include <media/mc_common.h>
+#include <media/tegra_camera_platform.h>
 #include "camera/vi/vi4_fops.h"
 
 #define VI_CFG_INTERRUPT_STATUS_0		0x0044
@@ -53,6 +54,9 @@
 #define VI_FMLITE_BUF_OVFL_ERR_MASK		0x00000010
 #define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
 #define VI_ISPBUFA_ERR_MASK			0x00000001
+
+/* HW capability, pixels per clock */
+#define NUM_PPC					8
 
 /* Interrupt handler */
 /* NOTE: VI4 has three interrupt lines. This handler is for the master/error
@@ -223,15 +227,7 @@ static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 
 	switch (cmd) {
 	case NVHOST_VI_IOCTL_SET_VI_CLK: {
-		long rate;
-
-		if (!(file->f_mode & FMODE_WRITE))
-			return -EINVAL;
-		if (get_user(rate, (long __user *)arg))
-			return -EFAULT;
-
-		return nvhost_module_set_rate(pdev, file, rate, 0,
-						NVHOST_CLOCK);
+		return 0;
 	}
 	case NVHOST_VI_IOCTL_SET_VI_LA_BW: {
 		int ret = 0;
@@ -260,14 +256,9 @@ static int nvhost_vi4_open(struct inode *inode, struct file *file)
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
-	int err;
 
 	if ((file->f_flags & O_ACCMODE) != O_WRONLY)
 		return -EACCES;
-
-	err = nvhost_module_add_client(pdev, file);
-	if (err)
-		return err;
 
 	file->private_data = pdev;
 	return nonseekable_open(inode, file);
@@ -275,9 +266,6 @@ static int nvhost_vi4_open(struct inode *inode, struct file *file)
 
 static int nvhost_vi4_release(struct inode *inode, struct file *file)
 {
-	struct platform_device *pdev = file->private_data;
-
-	nvhost_module_remove_client(pdev, file);
 	return 0;
 }
 
@@ -379,6 +367,9 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi;
 	struct tegra_vi_data *data = NULL;
 	int err;
+	struct tegra_camera_dev_info vi_info;
+
+	memset(&vi_info, 0, sizeof(vi_info));
 
 	match = of_match_device(tegra_vi4_of_match, &pdev->dev);
 	if (!match) {
@@ -467,13 +458,19 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	if (err)
 		return err;
 
-	return 0;
+	vi_info.pdev = pdev;
+	vi_info.hw_type = HWTYPE_VI;
+	vi_info.ppc = NUM_PPC;
+	err = tegra_camera_device_register(&vi_info, vi);
+
+	return err;
 }
 
 static int tegra_vi4_remove(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
+	tegra_camera_device_unregister(vi);
 	vi_channel_drv_unregister(&pdev->dev);
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
 	if (vi->hvnd != NULL)

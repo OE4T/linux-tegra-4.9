@@ -171,11 +171,13 @@ struct tegra_dma;
  * @nr_channels: Number of channels available in the controller.
  * @channel_reg_size: Channel register size.
  * @max_dma_count: Maximum DMA transfer count supported by DMA controller.
+ * @hw_support_pause: DMA HW engine support pause of the channel.
  */
 struct tegra_dma_chip_data {
 	int nr_channels;
 	int channel_reg_size;
 	int max_dma_count;
+	bool hw_support_pause;
 };
 
 /* DMA channel registers */
@@ -456,6 +458,29 @@ static int tegra_dma_slave_config(struct dma_chan *dc,
 	return 0;
 }
 
+static int tegra_dma_pause(struct tegra_dma_channel *tdc)
+{
+	int timeout = TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT;
+
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSRE, TEGRA_GPCDMA_CHAN_CSRE_PAUSE);
+
+	/* Wait until busy bit is de-asserted */
+	do {
+		if (!(tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS) &
+			TEGRA_GPCDMA_STATUS_BUSY))
+			break;
+		udelay(TEGRA_GPCDMA_BURST_COMPLETE_TIME);
+		timeout -= TEGRA_GPCDMA_BURST_COMPLETE_TIME;
+	} while (timeout);
+
+	if (!timeout) {
+		dev_err(tdc2dev(tdc), "DMA pause timed out\n");
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
 static void tegra_dma_resume(struct tegra_dma_channel *tdc)
 {
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSRE, 0);
@@ -498,6 +523,7 @@ static void tegra_dma_start(struct tegra_dma_channel *tdc,
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_FIXED_PATTERN, ch_regs->fixed_pattern);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ, ch_regs->mmio_seq);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, ch_regs->mc_seq);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSRE, 0);
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, ch_regs->csr);
 
 	/* Start DMA */
@@ -852,6 +878,7 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 	unsigned long status, burst_time;
 	unsigned long wcount = 0;
 	bool was_busy;
+	int err;
 
 	raw_spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req))
@@ -860,33 +887,40 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 	if (!tdc->busy)
 		goto skip_dma_stop;
 
-	/* Before Reading DMA status to figure out number
-	 * of bytes transferred by DMA channel:
-	 * Change the client associated with the DMA channel
-	 * to stop DMA engine from starting any more bursts for
-	 * the given client and wait for in flight bursts to complete
-	 */
-	tegra_dma_reset_client(tdc);
+	if (tdc->tdma->chip_data->hw_support_pause) {
+		err = tegra_dma_pause(tdc);
+		if (err)
+			return err;
+	} else {
+		/* Before Reading DMA status to figure out number
+		 * of bytes transferred by DMA channel:
+		 * Change the client associated with the DMA channel
+		 * to stop DMA engine from starting any more bursts for
+		 * the given client and wait for in flight bursts to complete
+		 */
+		tegra_dma_reset_client(tdc);
 
-	/* Wait for in flight data transfer to finish */
-	udelay(TEGRA_GPCDMA_BURST_COMPLETE_TIME);
+		/* Wait for in flight data transfer to finish */
+		udelay(TEGRA_GPCDMA_BURST_COMPLETE_TIME);
 
-	/* If TX/RX path is still active wait till it becomes
-	 * inactive */
-	burst_time = 0;
-	while (burst_time < TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
-		status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
-		if (status & (TEGRA_GPCDMA_STATUS_CHANNEL_TX |
-			TEGRA_GPCDMA_STATUS_CHANNEL_RX)) {
-			udelay(5);
-			burst_time += 5;
-		} else
-			break;
-	}
+		/* If TX/RX path is still active wait till it becomes
+		 * inactive
+		 */
+		burst_time = 0;
+		while (burst_time < TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
+			status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
+			if (status & (TEGRA_GPCDMA_STATUS_CHANNEL_TX |
+				TEGRA_GPCDMA_STATUS_CHANNEL_RX)) {
+				udelay(5);
+				burst_time += 5;
+			} else
+				break;
+		}
 
-	if (burst_time >= TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
-		pr_err("Timeout waiting for DMA burst completion!\n");
-		tegra_dma_dump_chan_regs(tdc);
+		if (burst_time >= TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
+			pr_err("Timeout waiting for DMA burst completion!\n");
+			tegra_dma_dump_chan_regs(tdc);
+		}
 	}
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
@@ -1649,11 +1683,18 @@ static struct dma_chan *tegra_dma_of_xlate(struct of_phandle_args *dma_spec,
 	return chan;
 }
 
-#if defined(CONFIG_OF)
 static const struct tegra_dma_chip_data tegra186_dma_chip_data = {
 	.nr_channels = 32,
 	.channel_reg_size = 0x10000,
 	.max_dma_count = 1024UL * 1024UL * 1024UL,
+	.hw_support_pause = false,
+};
+
+static const struct tegra_dma_chip_data tegra19x_dma_chip_data = {
+	.nr_channels = 32,
+	.channel_reg_size = 0x10000,
+	.max_dma_count = 1024UL * 1024UL * 1024UL,
+	.hw_support_pause = true,
 };
 
 static const struct of_device_id tegra_dma_of_match[] = {
@@ -1661,18 +1702,12 @@ static const struct of_device_id tegra_dma_of_match[] = {
 		.compatible = "nvidia,tegra186-gpcdma",
 		.data = &tegra186_dma_chip_data,
 	}, {
-	},
-};
-MODULE_DEVICE_TABLE(of, tegra_dma_of_match);
-#endif
-
-static struct platform_device_id tegra_dma_devtype[] = {
-	{
-		.name = "tegra186-gpcdma",
-		.driver_data = (unsigned long)&tegra186_dma_chip_data,
+		.compatible = "nvidia,tegra19x-gpcdma",
+		.data = &tegra19x_dma_chip_data,
 	}, {
 	},
 };
+MODULE_DEVICE_TABLE(of, tegra_dma_of_match);
 
 static int tegra_dma_program_sid(struct tegra_dma_channel *tdc, int chan, int stream_id)
 {
@@ -1984,11 +2019,10 @@ static struct platform_driver tegra_dmac_driver = {
 		.name	= "tegra-gpcdma",
 		.owner = THIS_MODULE,
 		.pm	= &tegra_dma_dev_pm_ops,
-		.of_match_table = of_match_ptr(tegra_dma_of_match),
+		.of_match_table = tegra_dma_of_match,
 	},
 	.probe		= tegra_dma_probe,
 	.remove		= tegra_dma_remove,
-	.id_table	= tegra_dma_devtype,
 };
 
 static int __init tegra_dmac_drvinit(void)

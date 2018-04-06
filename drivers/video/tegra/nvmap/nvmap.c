@@ -3,7 +3,7 @@
  *
  * Memory manager for Tegra GPU
  *
- * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,18 +64,24 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	nvmap_kmaps_inc(h);
 	if (pagenum >= h->size >> PAGE_SHIFT)
 		goto out;
-	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-	area = alloc_vm_area(PAGE_SIZE, NULL);
-	if (!area)
-		goto out;
-	kaddr = (ulong)area->addr;
 
-	if (h->heap_pgalloc)
-		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
-	else
-		paddr = h->carveout->base + pagenum * PAGE_SIZE;
+	if (h->vaddr) {
+		kaddr = (unsigned long)h->vaddr + pagenum * PAGE_SIZE;
+	} else {
+		prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+		area = alloc_vm_area(PAGE_SIZE, NULL);
+		if (!area)
+			goto out;
+		kaddr = (ulong)area->addr;
 
-	ioremap_page_range(kaddr, kaddr + PAGE_SIZE, paddr, prot);
+		if (h->heap_pgalloc)
+			paddr = page_to_phys(nvmap_to_page(
+						h->pgalloc.pages[pagenum]));
+		else
+			paddr = h->carveout->base + pagenum * PAGE_SIZE;
+
+		ioremap_page_range(kaddr, kaddr + PAGE_SIZE, paddr, prot);
+	}
 	return (void *)kaddr;
 out:
 	nvmap_kmaps_dec(h);
@@ -99,6 +105,9 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
 		return;
 
+	if (h->vaddr && (h->vaddr == (addr - pagenum * PAGE_SIZE)))
+		goto out;
+
 	if (h->heap_pgalloc)
 		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
 	else
@@ -119,6 +128,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 		free_vm_area(area);
 	else
 		WARN(1, "Invalid address passed");
+out:
 	nvmap_kmaps_dec(h);
 	nvmap_handle_put(h);
 }

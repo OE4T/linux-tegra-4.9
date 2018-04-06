@@ -19,6 +19,7 @@
 #include <linux/io.h>
 #include <linux/debugfs.h>
 #include <linux/of.h>
+#include <soc/tegra/chip-id.h>
 
 #include <trace/events/nvmap.h>
 
@@ -475,8 +476,8 @@ out:
  *
  * NOTE: this omits outer cache operations which is fine for ARM64
  */
-int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
-			      u64 *sizes, int op, int nr)
+static int __nvmap_do_cache_maint_list(struct nvmap_handle **handles,
+				u64 *offsets, u64 *sizes, int op, int nr)
 {
 	int i;
 	u64 total = 0;
@@ -554,6 +555,27 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
 	}
 
 	return 0;
+}
+
+inline int nvmap_do_cache_maint_list(struct nvmap_handle **handles,
+				u64 *offsets, u64 *sizes, int op, int nr)
+{
+	int ret = 0;
+
+	switch (tegra_get_chip_id()) {
+	case TEGRA194:
+		/*
+		 * As io-coherency is enabled by default from T194 onwards,
+		 * Don't do cache maint from CPU side. The HW, SCF will do.
+		 */
+		break;
+	default:
+		ret = __nvmap_do_cache_maint_list(handles,
+					offsets, sizes, op, nr);
+		break;
+	}
+
+	return ret;
 }
 
 static int cache_inner_threshold_show(struct seq_file *m, void *v)

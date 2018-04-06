@@ -1517,7 +1517,7 @@
 	}; // host1x
 
 	gpcdma: dma@2600000 {
-		compatible = "nvidia,tegra186-gpcdma";
+		compatible = "nvidia,tegra19x-gpcdma", "nvidia,tegra186-gpcdma";
 		reg = <0x0 0x2600000 0x0 0x210000>;
 		resets = <&bpmp_resets TEGRA194_RESET_GPCDMA>;
 		reset-names = "gpcdma";

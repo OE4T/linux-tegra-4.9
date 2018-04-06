@@ -63,9 +63,7 @@
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #define BLK_SIZE (256)
-#define NV_PMM_FBP_STRIDE	0x1000
 #define NV_PERF_PMM_FBP_ROUTER_STRIDE 0x0200
-#define NV_PERF_PMMGPC_CHIPLET_OFFSET	0x1000
 #define NV_PERF_PMMGPCROUTER_STRIDE	0x0200
 #define NV_PCFG_BASE		0x00088000
 #define NV_XBAR_MXBAR_PRI_GPC_GNIC_STRIDE	0x0020
@@ -7563,7 +7561,7 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
 					count, offset, max_cnt, base, ~0))
 			return -EINVAL;
 
-		base = (NV_PERF_PMMGPC_CHIPLET_OFFSET * gpc_num);
+		base = (g->ops.gr.get_pmm_per_chiplet_offset() * gpc_num);
 		if (add_ctxsw_buffer_map_entries(map,
 					&g->gr.ctx_vars.ctxsw_regs.perf_gpc,
 					count, offset, max_cnt, base, ~0))
@@ -7703,7 +7701,9 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 					&g->gr.ctx_vars.ctxsw_regs.fbp,
 					&count, &offset,
 					hwpm_ctxsw_reg_count_max, 0,
-					g->gr.num_fbps, NV_PMM_FBP_STRIDE, ~0))
+					g->gr.num_fbps,
+					g->ops.gr.get_pmm_per_chiplet_offset(),
+					~0))
 		goto cleanup;
 
 	/* Add entries from _LIST_nv_perf_fbprouter_ctx_regs */

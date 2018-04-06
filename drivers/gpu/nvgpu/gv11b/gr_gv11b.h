@@ -234,6 +234,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 int gr_gv11b_handle_ssync_hww(struct gk20a *g);
 u32 gv11b_gr_sm_offset(struct gk20a *g, u32 sm);
 
+u32 gr_gv11b_get_pmm_per_chiplet_offset(void);
 int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
 	int *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,

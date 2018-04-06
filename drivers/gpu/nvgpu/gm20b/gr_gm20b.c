@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -41,6 +41,7 @@
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ctxsw_prog_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_perf_gm20b.h>
 
 void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
@@ -1540,4 +1541,9 @@ void gm20a_gr_disable_rd_coalesce(struct gk20a *g)
 			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_f(0));
 
 	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), dbg2_reg);
+}
+
+u32 gr_gm20b_get_pmm_per_chiplet_offset(void)
+{
+	return (perf_pmmsys_extent_v() - perf_pmmsys_base_v() + 1);
 }

@@ -353,6 +353,8 @@ static const struct gpu_ops gp10b_ops = {
 		.add_ctxsw_reg_perf_pma = gr_gk20a_add_ctxsw_reg_perf_pma,
 		.decode_priv_addr = gr_gk20a_decode_priv_addr,
 		.create_priv_addr_table = gr_gk20a_create_priv_addr_table,
+		.get_pmm_per_chiplet_offset =
+			gr_gm20b_get_pmm_per_chiplet_offset,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

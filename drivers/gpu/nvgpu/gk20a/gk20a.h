@@ -470,6 +470,7 @@ struct gpu_ops {
 					   u32 addr,
 					   u32 *priv_addr_table,
 					   u32 *num_registers);
+		u32 (*get_pmm_per_chiplet_offset)(void);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -238,4 +238,8 @@ int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
 	int *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 	u32 *broadcast_flags);
+int gr_gv11b_create_priv_addr_table(struct gk20a *g,
+	u32 addr,
+	u32 *priv_addr_table,
+	u32 *num_registers);
 #endif

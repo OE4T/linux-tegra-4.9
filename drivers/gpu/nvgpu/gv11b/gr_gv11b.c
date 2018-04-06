@@ -57,6 +57,7 @@
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 100
 
@@ -4509,5 +4510,212 @@ int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
 	}
 
 	*addr_type = CTXSW_ADDR_TYPE_SYS;
+	return 0;
+}
+
+static u32 gr_gv11b_pri_pmmgpc_addr(u32 gpc_num, u32 domain_idx, u32 offset)
+{
+	return perf_pmmgpc_base_v() +
+		(gpc_num * (perf_pmmsys_extent_v() - perf_pmmsys_base_v() + 1)) +
+		(domain_idx * perf_pmmgpc_perdomain_offset_v()) +
+		offset;
+}
+
+static void gr_gv11b_split_pmm_fbp_broadcast_address(struct gk20a *g,
+	u32 offset, u32 *priv_addr_table, u32 *t,
+	u32 domain_start, u32 num_domains)
+{
+	u32 domain_idx = 0;
+	u32 fbp_num = 0;
+	u32 base = 0;
+
+	for (fbp_num = 0; fbp_num < g->gr.num_fbps; fbp_num++) {
+		base = perf_pmmfbp_base_v() +
+			(fbp_num *
+			(perf_pmmsys_extent_v() - perf_pmmsys_base_v() + 1));
+
+		for (domain_idx = domain_start;
+		     domain_idx < (domain_start + num_domains);
+		     domain_idx++) {
+			priv_addr_table[(*t)++] = base +
+				(domain_idx * perf_pmmgpc_perdomain_offset_v())
+				+ offset;
+		}
+	}
+}
+
+
+int gr_gv11b_create_priv_addr_table(struct gk20a *g,
+					   u32 addr,
+					   u32 *priv_addr_table,
+					   u32 *num_registers)
+{
+	int addr_type; /*enum ctxsw_addr_type */
+	u32 gpc_num, tpc_num, ppc_num, be_num;
+	u32 priv_addr, gpc_addr;
+	u32 broadcast_flags;
+	u32 t;
+	int err;
+	int fbpa_num;
+
+	t = 0;
+	*num_registers = 0;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+
+	err = g->ops.gr.decode_priv_addr(g, addr, &addr_type,
+					&gpc_num, &tpc_num, &ppc_num, &be_num,
+					&broadcast_flags);
+	gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type = %d", addr_type);
+	if (err)
+		return err;
+
+	if ((addr_type == CTXSW_ADDR_TYPE_SYS) ||
+	    (addr_type == CTXSW_ADDR_TYPE_BE)) {
+		/*
+		 * The BE broadcast registers are included in the compressed PRI
+		 * table. Convert a BE unicast address to a broadcast address
+		 * so that we can look up the offset
+		 */
+		if ((addr_type == CTXSW_ADDR_TYPE_BE) &&
+		    !(broadcast_flags & PRI_BROADCAST_FLAGS_BE))
+			priv_addr_table[t++] = pri_be_shared_addr(g, addr);
+		else
+			priv_addr_table[t++] = addr;
+
+		*num_registers = t;
+		return 0;
+	}
+
+	/*
+	 * The GPC/TPC unicast registers are included in the compressed PRI
+	 * tables. Convert a GPC/TPC broadcast address to unicast addresses so
+	 * that we can look up the offsets
+	 */
+	if (broadcast_flags & PRI_BROADCAST_FLAGS_GPC) {
+		for (gpc_num = 0; gpc_num < g->gr.gpc_count; gpc_num++) {
+
+			if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
+				for (tpc_num = 0;
+				     tpc_num < g->gr.gpc_tpc_count[gpc_num];
+				     tpc_num++)
+					priv_addr_table[t++] =
+						pri_tpc_addr(g,
+						    pri_tpccs_addr_mask(addr),
+						    gpc_num, tpc_num);
+
+			else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC) {
+				err = gr_gk20a_split_ppc_broadcast_addr(g,
+					addr, gpc_num, priv_addr_table, &t);
+				if (err)
+					return err;
+			} else {
+				priv_addr = pri_gpc_addr(g,
+						pri_gpccs_addr_mask(addr),
+						gpc_num);
+
+				gpc_addr = pri_gpccs_addr_mask(priv_addr);
+				tpc_num = g->ops.gr.get_tpc_num(g, gpc_addr);
+				if (tpc_num >= g->gr.gpc_tpc_count[gpc_num])
+					continue;
+
+				priv_addr_table[t++] = priv_addr;
+			}
+		}
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_PMMGPC) {
+		u32 pmm_domain_start = 0;
+		u32 domain_idx = 0;
+		u32 num_domains = 0;
+		u32 offset = 0;
+
+		if (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCA) {
+			pmm_domain_start = NV_PERF_PMMGPCTPCA_DOMAIN_START;
+			num_domains = NV_PERF_PMMGPC_NUM_DOMAINS;
+			offset = PRI_PMMGS_OFFSET_MASK(addr);
+		} else if (broadcast_flags &
+				PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCB) {
+			pmm_domain_start = NV_PERF_PMMGPCTPCA_DOMAIN_START +
+					   NV_PERF_PMMGPC_NUM_DOMAINS;
+			num_domains = NV_PERF_PMMGPC_NUM_DOMAINS;
+			offset = PRI_PMMGS_OFFSET_MASK(addr);
+		} else if (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_GPCS) {
+			pmm_domain_start = (addr -
+			     (NV_PERF_PMMGPC_GPCS + PRI_PMMS_ADDR_MASK(addr)))/
+			     perf_pmmgpc_perdomain_offset_v();
+			num_domains = 1;
+			offset = PRI_PMMS_ADDR_MASK(addr);
+		} else {
+			return -EINVAL;
+		}
+
+		for (gpc_num = 0; gpc_num < g->gr.gpc_count; gpc_num++) {
+			for (domain_idx = pmm_domain_start;
+			     domain_idx < (pmm_domain_start + num_domains);
+			     domain_idx++) {
+				priv_addr_table[t++] =
+					gr_gv11b_pri_pmmgpc_addr(gpc_num,
+					domain_idx, offset);
+			}
+		}
+	} else if (((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
+			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
+				g->ops.gr.egpc_etpc_priv_addr_table) {
+		gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
+		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num,
+				broadcast_flags, priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
+		g->ops.gr.split_lts_broadcast_addr(g, addr,
+							priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTCS) {
+		g->ops.gr.split_ltc_broadcast_addr(g, addr,
+							priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_FBPA) {
+		for (fbpa_num = 0;
+		     fbpa_num < nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
+		     fbpa_num++)
+			priv_addr_table[t++] = pri_fbpa_addr(g,
+					pri_fbpa_addr_mask(g, addr), fbpa_num);
+	} else if ((addr_type == CTXSW_ADDR_TYPE_LTCS) &&
+		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPGS_LTC)) {
+		gr_gv11b_split_pmm_fbp_broadcast_address(g,
+			PRI_PMMGS_OFFSET_MASK(addr),
+			priv_addr_table, &t,
+			NV_PERF_PMMFBP_LTC_DOMAIN_START,
+			NV_PERF_PMMFBP_LTC_NUM_DOMAINS);
+	} else if ((addr_type == CTXSW_ADDR_TYPE_ROP) &&
+		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPGS_ROP)) {
+		gr_gv11b_split_pmm_fbp_broadcast_address(g,
+			PRI_PMMGS_OFFSET_MASK(addr),
+			priv_addr_table, &t,
+			NV_PERF_PMMFBP_ROP_DOMAIN_START,
+			NV_PERF_PMMFBP_ROP_NUM_DOMAINS);
+	} else if ((addr_type == CTXSW_ADDR_TYPE_FBP) &&
+		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPS)) {
+		u32 domain_start;
+
+		domain_start = (addr -
+			(NV_PERF_PMMFBP_FBPS + PRI_PMMS_ADDR_MASK(addr)))/
+			perf_pmmgpc_perdomain_offset_v();
+		gr_gv11b_split_pmm_fbp_broadcast_address(g,
+			PRI_PMMS_ADDR_MASK(addr),
+			priv_addr_table, &t,
+			domain_start, 1);
+	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_GPC)) {
+		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
+			for (tpc_num = 0;
+			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
+			     tpc_num++)
+				priv_addr_table[t++] =
+					pri_tpc_addr(g,
+						pri_tpccs_addr_mask(addr),
+						gpc_num, tpc_num);
+		else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC)
+			err = gr_gk20a_split_ppc_broadcast_addr(g,
+					addr, gpc_num, priv_addr_table, &t);
+		else
+			priv_addr_table[t++] = addr;
+	}
+
+	*num_registers = t;
 	return 0;
 }

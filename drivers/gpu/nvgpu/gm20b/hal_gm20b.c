@@ -321,6 +321,7 @@ static const struct gpu_ops gm20b_ops = {
 		.add_ctxsw_reg_pm_fbpa = gr_gk20a_add_ctxsw_reg_pm_fbpa,
 		.add_ctxsw_reg_perf_pma = gr_gk20a_add_ctxsw_reg_perf_pma,
 		.decode_priv_addr = gr_gk20a_decode_priv_addr,
+		.create_priv_addr_table = gr_gk20a_create_priv_addr_table,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

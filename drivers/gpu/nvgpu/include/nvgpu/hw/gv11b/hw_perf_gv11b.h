@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -56,6 +56,30 @@
 #ifndef _hw_perf_gv11b_h_
 #define _hw_perf_gv11b_h_
 
+static inline u32 perf_pmmgpc_perdomain_offset_v(void)
+{
+	return 0x00000200U;
+}
+static inline u32 perf_pmmgpc_base_v(void)
+{
+	return 0x00180000U;
+}
+static inline u32 perf_pmmgpc_extent_v(void)
+{
+	return 0x00183fffU;
+}
+static inline u32 perf_pmmsys_base_v(void)
+{
+	return 0x00240000U;
+}
+static inline u32 perf_pmmsys_extent_v(void)
+{
+	return 0x00243fffU;
+}
+static inline u32 perf_pmmfbp_base_v(void)
+{
+	return 0x00200000U;
+}
 static inline u32 perf_pmasys_control_r(void)
 {
 	return 0x0024a000U;

@@ -37,6 +37,13 @@
 #define NV_PERF_PMMGPC_GPCS                  0x00278000
 #define NV_PERF_PMMFBP_FBPS                  0x0027C000
 
+#define NV_PERF_PMMGPCTPCA_DOMAIN_START      2
+#define NV_PERF_PMMFBP_LTC_DOMAIN_START      2
+#define NV_PERF_PMMFBP_ROP_DOMAIN_START      6
+#define NV_PERF_PMMGPC_NUM_DOMAINS           7
+#define NV_PERF_PMMFBP_LTC_NUM_DOMAINS       4
+#define NV_PERF_PMMFBP_ROP_NUM_DOMAINS       2
+
 #define PRI_PMMGS_ADDR_WIDTH                 9
 #define PRI_PMMS_ADDR_WIDTH                  14
 

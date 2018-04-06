@@ -404,6 +404,7 @@ static const struct gpu_ops gv11b_ops = {
 		.add_ctxsw_reg_pm_fbpa = gr_gk20a_add_ctxsw_reg_pm_fbpa,
 		.add_ctxsw_reg_perf_pma = gr_gk20a_add_ctxsw_reg_perf_pma,
 		.decode_priv_addr = gr_gv11b_decode_priv_addr,
+		.create_priv_addr_table = gr_gv11b_create_priv_addr_table,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

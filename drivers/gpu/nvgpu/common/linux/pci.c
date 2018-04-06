@@ -34,6 +34,8 @@
 #include "sysfs.h"
 #include "os_linux.h"
 #include "platform_gk20a.h"
+#include "sim.h"
+#include "sim_pci.h"
 
 #include "pci.h"
 #include "pci_usermode.h"
@@ -492,6 +494,10 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		err = PTR_ERR(l->bar1);
 		goto fail;
 	}
+
+	err = nvgpu_pci_init_sim_support(g);
+	if (err)
+		goto fail;
 
 	nvgpu_pci_init_usermode_support(l);
 

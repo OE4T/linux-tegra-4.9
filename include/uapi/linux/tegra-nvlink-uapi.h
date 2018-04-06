@@ -395,29 +395,61 @@ struct tegra_nvlink_clear_lp_counters {
 	__u32 link_id;
 };
 
+/* Enum to represent IOCTLs inside the Tegra NVLINK driver */
+enum tnvlink_ioctl_num {
+	TNVLINK_IOCTL_GET_NVLINK_CAPS,
+	TNVLINK_IOCTL_GET_NVLINK_STATUS,
+	TNVLINK_IOCTL_CLEAR_COUNTERS,
+	TNVLINK_IOCTL_GET_COUNTERS,
+	TNVLINK_IOCTL_GET_ERR_INFO,
+	TNVLINK_IOCTL_GET_ERROR_RECOVERIES,
+	TNVLINK_IOCTL_SETUP_EOM,
+	TNVLINK_IOCTL_TRAIN_INTRANODE_CONN,
+	TNVLINK_IOCTL_GET_LP_COUNTERS,
+	TNVLINK_IOCTL_CLEAR_LP_COUNTERS,
+};
+
 /* TODO: choose a unique MAGIC number for ioctl implementation */
 #define TEGRA_NVLINK_IOC_MAGIC	  'T'
-#define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS		\
-	_IOR(TEGRA_NVLINK_IOC_MAGIC,  1, struct tegra_nvlink_caps)
-#define TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS		\
-	_IOR(TEGRA_NVLINK_IOC_MAGIC,  2, struct tegra_nvlink_status)
-#define TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS		\
-	_IOW(TEGRA_NVLINK_IOC_MAGIC,  3, struct tegra_nvlink_clear_counters)
-#define TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS		\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 4, struct tegra_nvlink_get_counters)
-#define TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO		\
-	_IOR(TEGRA_NVLINK_IOC_MAGIC, 5, struct tegra_nvlink_get_err_info)
-#define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES	\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 6,		\
-		struct tegra_nvlink_get_error_recoveries)
-#define TEGRA_CTRL_CMD_NVLINK_SETUP_EOM			\
-	_IOW(TEGRA_NVLINK_IOC_MAGIC, 7, struct tegra_nvlink_setup_eom)
-#define TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN		\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 8,		\
-		struct tegra_nvlink_train_intranode_conn)
-#define TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS		\
-	_IOWR(TEGRA_NVLINK_IOC_MAGIC, 9, struct tegra_nvlink_get_lp_counters)
-#define TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS	\
-	_IOW(TEGRA_NVLINK_IOC_MAGIC, 10, struct tegra_nvlink_clear_lp_counters)
+#define	TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS				\
+			_IOR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_NVLINK_CAPS,		\
+				struct tegra_nvlink_caps)
+#define TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_STATUS				\
+			_IOR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_NVLINK_STATUS,	\
+				struct tegra_nvlink_status)
+#define TEGRA_CTRL_CMD_NVLINK_CLEAR_COUNTERS				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_CLEAR_COUNTERS,		\
+				struct tegra_nvlink_clear_counters)
+#define TEGRA_CTRL_CMD_NVLINK_GET_COUNTERS				\
+			_IOWR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_COUNTERS,		\
+				struct tegra_nvlink_get_counters)
+#define TEGRA_CTRL_CMD_NVLINK_GET_ERR_INFO				\
+			_IOR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_ERR_INFO,		\
+				struct tegra_nvlink_get_err_info)
+#define TEGRA_CTRL_CMD_NVLINK_GET_ERROR_RECOVERIES			\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_GET_ERROR_RECOVERIES,		\
+			struct tegra_nvlink_get_error_recoveries)
+#define TEGRA_CTRL_CMD_NVLINK_SETUP_EOM					\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_SETUP_EOM,		\
+				struct tegra_nvlink_setup_eom)
+#define TEGRA_CTRL_NVLINK_TRAIN_INTRANODE_CONN				\
+		_IOWR(TEGRA_NVLINK_IOC_MAGIC,				\
+			TNVLINK_IOCTL_TRAIN_INTRANODE_CONN,		\
+			struct tegra_nvlink_train_intranode_conn)
+#define TEGRA_CTRL_CMD_NVLINK_GET_LP_COUNTERS				\
+			_IOWR(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_GET_LP_COUNTERS,		\
+				struct tegra_nvlink_get_lp_counters)
+#define TEGRA_CTRL_CMD_NVLINK_CLEAR_LP_COUNTERS				\
+			_IOW(TEGRA_NVLINK_IOC_MAGIC,			\
+				TNVLINK_IOCTL_CLEAR_LP_COUNTERS,	\
+				struct tegra_nvlink_clear_lp_counters)
 
 #endif /* TEGRA_NVLINK_UAPI_H */

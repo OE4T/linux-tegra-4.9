@@ -18,6 +18,7 @@
 #include <linux/clk.h>
 #include <linux/cpufreq.h>
 #include <linux/err.h>
+#include <linux/debugfs.h>
 #include <linux/of.h>
 #include <linux/list.h>
 #include <linux/module.h>
@@ -56,6 +57,7 @@ struct tegra_throt_clk {
 
 struct tegra_throt_cdev_clk {
 	struct tegra_throt_clk *throt_clk;
+	struct tegra_throt_cdev *throt_cdev;
 	struct list_head clk_list;
 	int offset_hz;
 	int slope_adj;
@@ -66,6 +68,7 @@ static struct pm_qos_request tegra_throt_gpu_req;
 static int tegra_throt_cpu_req;
 static LIST_HEAD(tegra_throt_cdev_list);
 static DEFINE_MUTEX(tegra_throt_lock);
+static struct dentry *tegra_throt_root;
 
 static struct tegra_throt_clk throt_clks[TEGRA_THROTTLE_MAX] = {
 	{
@@ -229,6 +232,152 @@ static int tegra_throt_calc_max_state(struct tegra_throt_cdev *tcd)
 	return max_state;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int cdev_freq_table_show(struct seq_file *s, void *data)
+{
+	int i, j;
+	unsigned long throt_rate;
+	struct tegra_throt_cdev *tcd = s->private;
+	struct tegra_throt_cdev_clk *tcc;
+
+	for (i = 0; i <= tcd->max_state; i++) {
+		for (j = 0; j < tcd->num_clks; j++) {
+			tcc = &tcd->clks[j];
+			throt_rate = tegra_throt_calc_rate(i,
+					tcc->throt_clk->max_rate,
+					tcc->throt_clk->min_rate,
+					tcc->throt_clk->step_hz, tcc->offset_hz,
+					tcc->slope_adj);
+			seq_printf(s, " %7lu", throt_rate);
+		}
+		seq_puts(s, "\n");
+	}
+
+	return 0;
+}
+
+static int table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cdev_freq_table_show, inode->i_private);
+}
+
+static const struct file_operations ftable_fops = {
+	.open		= table_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int prop_get(void *data, u64 *val)
+{
+	*val = *((int *)data);
+	return 0;
+}
+
+static int cutoff_set(void *data, u64 val)
+{
+	int *prop = (int *)data;
+	struct tegra_throt_cdev *tcd = container_of(prop,
+					struct tegra_throt_cdev, cutoff);
+	*prop = (int)val;
+	tcd->max_state = tegra_throt_calc_max_state(tcd);
+
+	return 0;
+}
+
+static int offset_set(void *data, u64 val)
+{
+	int *prop = (int *)data;
+	struct tegra_throt_cdev_clk *tcc = container_of(prop,
+						struct tegra_throt_cdev_clk,
+						offset_hz);
+	*prop = val;
+	tcc->throt_cdev->max_state = tegra_throt_calc_max_state(
+							tcc->throt_cdev);
+	return 0;
+}
+
+
+static int slope_set(void *data, u64 val)
+{
+	int *prop = (int *)data;
+	struct tegra_throt_cdev_clk *tcc = container_of(prop,
+						struct tegra_throt_cdev_clk,
+						slope_adj);
+	*prop = val;
+	tcc->throt_cdev->max_state = tegra_throt_calc_max_state(
+							tcc->throt_cdev);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(cfops, prop_get, cutoff_set, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(ofops, prop_get, offset_set, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(sfops, prop_get, slope_set, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(tfops, prop_get, NULL, "%lld\n");
+
+static void tegra_throt_dbgfs_remove(struct dentry *root)
+{
+	debugfs_remove_recursive(root);
+}
+
+static int tegra_throt_dbgfs_create(struct dentry **root)
+{
+	*root = debugfs_create_dir("tegra_throttle", NULL);
+	return (!root) ? -ENODEV : 0;
+}
+
+static void tegra_throt_dbgfs_init(struct platform_device *pdev,
+		struct tegra_throt_cdev *tcd, struct dentry *throt_root)
+{
+	int i;
+	struct dentry *r, *cr, *f;
+
+	if (!tcd)
+		goto err;
+
+	r = debugfs_create_dir(tcd->cdev_type, throt_root);
+	f = r ? debugfs_create_file("cutoff", 0644, r, &tcd->cutoff, &cfops) :
+		r;
+	f = f ? debugfs_create_file("table", 0644, r, tcd, &ftable_fops) : f;
+	if (!f)
+		goto err;
+
+	for (i = 0; i < tcd->num_clks; i++) {
+		struct tegra_throt_cdev_clk *tcc = &tcd->clks[i];
+
+		cr = debugfs_create_dir(tcc->throt_clk->name, r);
+		if (!cr)
+			goto err;
+
+		f = debugfs_create_file("offset", 0644, cr, &tcc->offset_hz,
+					&ofops);
+		f = f ? debugfs_create_file("slope-adj", 0644, cr,
+					&tcc->slope_adj, &sfops) : f;
+		f = f ? debugfs_create_file("throt-rate", 0644, cr,
+					&tcc->cdev_throt_rate, &tfops) : f;
+		if (!f)
+			goto err;
+	}
+
+	return;
+err:
+	dev_err(&pdev->dev, "failed to initialize debugfs\n");
+}
+
+#else /* CONFIG_DEBUG_FS */
+static void tegra_throt_dbgfs_init(struct platform_device *pdev,
+		struct tegra_throt_cdev *tcd, struct dentry *root)
+{}
+
+static void tegra_throt_dbgfs_remove(struct dentry *root)
+{}
+
+static int tegra_throt_dbgfs_create(struct dentry *root)
+{
+	return 0;
+}
+#endif
+
 static int tegra_throt_cdev_clk_init(struct platform_device *pdev,
 			struct tegra_throt_clk *pclks, struct device_node *np,
 			struct tegra_throt_cdev *tcd)
@@ -274,6 +423,7 @@ static int tegra_throt_cdev_clk_init(struct platform_device *pdev,
 				tcc->throt_clk->name, tcc->offset_hz,
 				tcc->slope_adj);
 		tcc->cdev_throt_rate = UINT_MAX;
+		tcc->throt_cdev = tcd;
 		list_add(&tcc->clk_list, &tclk->cdev_clk_list);
 	}
 
@@ -290,6 +440,9 @@ static int tegra_throt_cdev_init(struct platform_device *pdev,
 	struct tegra_throt_cdev *tcd = NULL;
 
 	if (!np)
+		return -ENODEV;
+
+	if (tegra_throt_dbgfs_create(&tegra_throt_root))
 		return -ENODEV;
 
 	for_each_child_of_node(np, ch) {
@@ -328,6 +481,7 @@ static int tegra_throt_cdev_init(struct platform_device *pdev,
 		list_add(&tcd->cdev_list, &tegra_throt_cdev_list);
 		dev_info(&pdev->dev, "cdev:%s max_state:%d cutoff:%d\n",
 				tcd->cdev_type, tcd->max_state, tcd->cutoff);
+		tegra_throt_dbgfs_init(pdev, tcd, tegra_throt_root);
 	}
 
 	if (!cnt)
@@ -401,6 +555,7 @@ static int tegra_throt_remove(struct platform_device *pdev)
 	cpufreq_unregister_notifier(&tegra_throt_cpufreq_nb,
 					CPUFREQ_POLICY_NOTIFIER);
 	pm_qos_remove_request(&tegra_throt_gpu_req);
+	tegra_throt_dbgfs_remove(tegra_throt_root);
 	list_for_each_entry(pos, &tegra_throt_cdev_list, cdev_list)
 		thermal_cooling_device_unregister(pos->cdev);
 

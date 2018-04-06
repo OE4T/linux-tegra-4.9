@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -533,13 +533,8 @@
 #define CURSOR_START_ADDR_MASK	(((1 << 22) - 1) << 10)
 #define CURSOR_START_ADDR(_addr)	((_addr) >> 10)
 
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 #define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
-#define	CURSOR_START_ADDR_HI(_addr) ((_addr >> 32) & 0x3)
-#else
-#define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
-#define	CURSOR_START_ADDR_HI(_addr) (0)
-#endif
+
 #define   CURSOR_SIZE_32		(0x0 << 24)
 #define   CURSOR_SIZE_64		(0x1 << 24)
 #define   CURSOR_SIZE_128		(0x2 << 24)

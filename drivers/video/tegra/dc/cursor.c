@@ -1,7 +1,7 @@
 /*
  * cursor.c: Function required to implement cursor interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author:
  *  Robert Morell <rmorell@nvidia.com>
@@ -122,11 +122,34 @@ static inline u32 cursor_alpha_value(struct tegra_dc *dc, u32 *val)
 	return retval;
 }
 
+static inline u32 cursor_start_address_hi(dma_addr_t phys_addr)
+{
+
+/*For nvdisplay arch cursor physical addr size is 40 bits, so mask 8 bits*/
+#define NVDISP_CURSOR_START_ADDR_HI_MASK 0xff
+/*For t21x  cursor physical addr size is 34 bits, so mask 2 bits*/
+#define CURSOR_START_ADDR_HI_MASK 0x3
+
+	u32 hi_addr = 0;
+
+	if (tegra_dc_is_nvdisplay())
+		hi_addr = ((phys_addr >> 32) &
+				NVDISP_CURSOR_START_ADDR_HI_MASK);
+	else
+		hi_addr = ((phys_addr >> 32) &
+				CURSOR_START_ADDR_HI_MASK);
+
+#undef NVDISP_CURSOR_START_ADDR_HI_MASK
+#undef CURSOR_START_ADDR_HI_MASK
+
+	return hi_addr;
+}
 
 static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 	enum tegra_dc_cursor_size size, dma_addr_t phys_addr)
 {
 	u32 val = 0;
+	u32 cursor_addr_hi = 0;
 	int clip_win;
 
 	BUG_ON(phys_addr & ~CURSOR_START_ADDR_MASK);
@@ -139,8 +162,10 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 
 	clip_win = dc->cursor.clip_win;
 	val |= CURSOR_CLIP_SHIFT_BITS(clip_win);
+	cursor_addr_hi = cursor_start_address_hi(phys_addr);
+
 	/* TODO: check calculation with HW */
-	tegra_dc_writel(dc, (u32)(CURSOR_START_ADDR_HI(phys_addr)),
+	tegra_dc_writel(dc, cursor_addr_hi,
 			DC_DISP_CURSOR_START_ADDR_HI);
 	tegra_dc_writel(dc, (u32)(val | CURSOR_START_ADDR_LOW(phys_addr)),
 			DC_DISP_CURSOR_START_ADDR);

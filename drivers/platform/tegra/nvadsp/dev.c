@@ -56,17 +56,6 @@ static int __init adsp_debug_init(struct nvadsp_drv_data *drv_data)
 }
 #endif /* CONFIG_DEBUG_FS */
 
-#ifdef CONFIG_PM_SLEEP
-static int nvadsp_suspend(struct device *dev)
-{
-	return 0;
-}
-
-static int nvadsp_resume(struct device *dev)
-{
-	return 0;
-}
-#endif	/* CONFIG_PM_SLEEP */
 
 #ifdef CONFIG_PM
 static int nvadsp_runtime_resume(struct device *dev)
@@ -106,8 +95,26 @@ static int nvadsp_runtime_idle(struct device *dev)
 }
 #endif /* CONFIG_PM */
 
+#ifdef CONFIG_PM_SLEEP
+static int nvadsp_suspend(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return nvadsp_runtime_suspend(dev);
+}
+
+static int nvadsp_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return nvadsp_runtime_resume(dev);
+}
+#endif /* CONFIG_PM_SLEEP */
+
 static const struct dev_pm_ops nvadsp_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(nvadsp_suspend, nvadsp_resume)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(nvadsp_suspend, nvadsp_resume)
 	SET_RUNTIME_PM_OPS(nvadsp_runtime_suspend, nvadsp_runtime_resume,
 			   nvadsp_runtime_idle)
 };

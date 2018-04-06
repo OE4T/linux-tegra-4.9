@@ -1697,6 +1697,7 @@ static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
 
 void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
 {
+	u32 nv_sor_pll1_reg = nv_sor_pll1();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
 	int ret = 0;
 
@@ -1716,6 +1717,9 @@ void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	tegra_sor_write_field(sor, nv_sor_pll1_reg,
+		NV_SOR_PLL1_TMDS_TERM_ENABLE,
+		NV_SOR_PLL1_TMDS_TERM_ENABLE);
 	usleep_range(20, 100);
 
 	tegra_sor_pad_cal_power(sor, true);
@@ -1728,7 +1732,10 @@ void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
 
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
-		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
+	tegra_sor_write_field(sor, nv_sor_pll1_reg,
+		NV_SOR_PLL1_TMDS_TERM_DISABLE,
+		NV_SOR_PLL1_TMDS_TERM_DISABLE);
 	usleep_range(20, 100);
 
 	if (sor->io_padctrl) {

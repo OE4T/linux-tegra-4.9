@@ -261,6 +261,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 			gr_gv11b_get_max_gfxp_wfi_timeout_count,
 		.add_ctxsw_reg_pm_fbpa = gr_gk20a_add_ctxsw_reg_pm_fbpa,
 		.add_ctxsw_reg_perf_pma = gr_gk20a_add_ctxsw_reg_perf_pma,
+		.decode_priv_addr = gr_gv11b_decode_priv_addr,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

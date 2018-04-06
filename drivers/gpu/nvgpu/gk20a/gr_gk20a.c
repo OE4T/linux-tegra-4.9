@@ -6247,7 +6247,7 @@ static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
 					          u32 *priv_offset);
 
 /* This function will decode a priv address and return the partition type and numbers. */
-static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
+int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			      int  *addr_type, /* enum ctxsw_addr_type */
 			      u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 			      u32 *broadcast_flags)
@@ -6365,7 +6365,7 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
-	err = gr_gk20a_decode_priv_addr(g, addr, &addr_type,
+	err = g->ops.gr.decode_priv_addr(g, addr, &addr_type,
 					&gpc_num, &tpc_num, &ppc_num, &be_num,
 					&broadcast_flags);
 	gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type = %d", addr_type);
@@ -7211,7 +7211,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
-	err = gr_gk20a_decode_priv_addr(g, addr, &addr_type,
+	err = g->ops.gr.decode_priv_addr(g, addr, &addr_type,
 					&gpc_num, &tpc_num, &ppc_num, &be_num,
 					&broadcast_flags);
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,

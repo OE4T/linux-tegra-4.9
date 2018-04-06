@@ -46,6 +46,7 @@
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
 #include "gv11b/gv11b.h"
+#include "gv11b/gr_pri_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -4399,4 +4400,114 @@ int gr_gv11b_handle_ssync_hww(struct gk20a *g)
 	gk20a_writel(g, gr_ssync_hww_esr_r(),
 			 gr_ssync_hww_esr_reset_active_f());
 	return -EFAULT;
+}
+
+/*
+ * This function will decode a priv address and return the partition
+ * type and numbers
+ */
+int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
+	int  *addr_type, /* enum ctxsw_addr_type */
+	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
+	u32 *broadcast_flags)
+{
+	u32 gpc_addr;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+
+	/* setup defaults */
+	*addr_type = CTXSW_ADDR_TYPE_SYS;
+	*broadcast_flags = PRI_BROADCAST_FLAGS_NONE;
+	*gpc_num = 0;
+	*tpc_num = 0;
+	*ppc_num = 0;
+	*be_num  = 0;
+
+	if (pri_is_gpc_addr(g, addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_GPC;
+		gpc_addr = pri_gpccs_addr_mask(addr);
+		if (pri_is_gpc_addr_shared(g, addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_GPC;
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_GPC;
+		} else
+			*gpc_num = pri_get_gpc_num(g, addr);
+
+		if (pri_is_ppc_addr(g, gpc_addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_PPC;
+			if (pri_is_ppc_addr_shared(g, gpc_addr)) {
+				*broadcast_flags |= PRI_BROADCAST_FLAGS_PPC;
+				return 0;
+			}
+		}
+		if (g->ops.gr.is_tpc_addr(g, gpc_addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_TPC;
+			if (pri_is_tpc_addr_shared(g, gpc_addr)) {
+				*broadcast_flags |= PRI_BROADCAST_FLAGS_TPC;
+				return 0;
+			}
+			*tpc_num = g->ops.gr.get_tpc_num(g, gpc_addr);
+		}
+		return 0;
+	} else if (pri_is_be_addr(g, addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_BE;
+		if (pri_is_be_addr_shared(g, addr)) {
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_BE;
+			return 0;
+		}
+		*be_num = pri_get_be_num(g, addr);
+		return 0;
+	} else if (pri_is_ltc_addr(addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_LTCS;
+		if (g->ops.gr.is_ltcs_ltss_addr(g, addr))
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTCS;
+		else if (g->ops.gr.is_ltcn_ltss_addr(g, addr))
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTSS;
+		return 0;
+	} else if (pri_is_fbpa_addr(g, addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_FBPA;
+		if (pri_is_fbpa_addr_shared(g, addr)) {
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_FBPA;
+			return 0;
+		}
+		return 0;
+	} else if (g->ops.gr.is_egpc_addr && g->ops.gr.is_egpc_addr(g, addr)) {
+		return g->ops.gr.decode_egpc_addr(g,
+				addr, addr_type, gpc_num,
+				tpc_num, broadcast_flags);
+	} else if (PRI_PMMGS_BASE_ADDR_MASK(addr) ==
+			NV_PERF_PMMGPC_GPCGS_GPCTPCA) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCA |
+				     PRI_BROADCAST_FLAGS_PMMGPC);
+		*addr_type = CTXSW_ADDR_TYPE_GPC;
+		return 0;
+	} else if (PRI_PMMGS_BASE_ADDR_MASK(addr) ==
+			NV_PERF_PMMGPC_GPCGS_GPCTPCB) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCB |
+				     PRI_BROADCAST_FLAGS_PMMGPC);
+		*addr_type = CTXSW_ADDR_TYPE_GPC;
+		return 0;
+	} else if (PRI_PMMGS_BASE_ADDR_MASK(addr) == NV_PERF_PMMFBP_FBPGS_LTC) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_FBPGS_LTC |
+				     PRI_BROADCAST_FLAGS_PMMFBP);
+		*addr_type = CTXSW_ADDR_TYPE_LTCS;
+		return 0;
+	} else if (PRI_PMMGS_BASE_ADDR_MASK(addr) == NV_PERF_PMMFBP_FBPGS_ROP) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_FBPGS_ROP |
+				     PRI_BROADCAST_FLAGS_PMMFBP);
+		*addr_type = CTXSW_ADDR_TYPE_ROP;
+		return 0;
+	} else if (PRI_PMMS_BASE_ADDR_MASK(addr) == NV_PERF_PMMGPC_GPCS) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_GPCS |
+				     PRI_BROADCAST_FLAGS_PMMGPC);
+		*addr_type = CTXSW_ADDR_TYPE_GPC;
+		return 0;
+	} else if (PRI_PMMS_BASE_ADDR_MASK(addr) == NV_PERF_PMMFBP_FBPS) {
+		*broadcast_flags |= (PRI_BROADCAST_FLAGS_PMM_FBPS |
+				     PRI_BROADCAST_FLAGS_PMMFBP);
+		*addr_type = CTXSW_ADDR_TYPE_FBP;
+		return 0;
+	}
+
+	*addr_type = CTXSW_ADDR_TYPE_SYS;
+	return 0;
 }

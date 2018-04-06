@@ -821,4 +821,8 @@ int gr_gk20a_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
 	struct aiv_list_gk20a *regs,
 	u32 *count, u32 *offset,
 	u32 max_cnt, u32 base, u32 mask);
+int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
+	int *addr_type,
+	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
+	u32 *broadcast_flags);
 #endif /*__GR_GK20A_H__*/

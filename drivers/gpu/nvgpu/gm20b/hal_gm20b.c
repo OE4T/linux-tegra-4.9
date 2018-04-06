@@ -320,6 +320,7 @@ static const struct gpu_ops gm20b_ops = {
 		.handle_semaphore_pending = gk20a_gr_handle_semaphore_pending,
 		.add_ctxsw_reg_pm_fbpa = gr_gk20a_add_ctxsw_reg_pm_fbpa,
 		.add_ctxsw_reg_perf_pma = gr_gk20a_add_ctxsw_reg_perf_pma,
+		.decode_priv_addr = gr_gk20a_decode_priv_addr,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

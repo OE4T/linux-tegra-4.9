@@ -430,6 +430,7 @@ static const struct gpu_ops gv100_ops = {
 		.handle_semaphore_pending = gk20a_gr_handle_semaphore_pending,
 		.add_ctxsw_reg_pm_fbpa = gr_gv100_add_ctxsw_reg_pm_fbpa,
 		.add_ctxsw_reg_perf_pma = gr_gv100_add_ctxsw_reg_perf_pma,
+		.decode_priv_addr = gr_gv11b_decode_priv_addr,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

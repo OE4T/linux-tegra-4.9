@@ -32,7 +32,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/mm/nvgpu_mem.c \
 	common/mm/comptags.c \
 	common/mm/mm.c \
-	common/bus.c \
+	common/bus/bus.c \
 	common/enabled.c \
 	common/pramin.c \
 	common/semaphore.c \
@@ -108,7 +108,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	lpwr/lpwr.c \
 	lpwr/rppg.c \
 	gk20a/gk20a.c \
-	gk20a/bus_gk20a.c \
+	common/bus/bus_gk20a.c \
 	gk20a/pramin_gk20a.c \
 	gk20a/ce2_gk20a.c \
 	gk20a/fifo_gk20a.c \
@@ -130,7 +130,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gk20a/tsg_gk20a.c \
 	gk20a/mc_gk20a.c \
 	gm20b/hal_gm20b.c \
-	gm20b/bus_gm20b.c \
+	common/bus/bus_gm20b.c \
 	gm20b/ltc_gm20b.c \
 	gm20b/gr_gm20b.c \
 	gm20b/clk_gm20b.c \

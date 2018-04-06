@@ -21,7 +21,14 @@ ccflags-y += -D__NVGPU_PREVENT_UNTRUSTED_SPECULATION
 
 obj-$(CONFIG_GK20A) := nvgpu.o
 
-nvgpu-y := \
+# OS independent parts of nvgpu. The work to collect files here
+# is in progress.
+
+nvgpu-y += common/bus/bus.o \
+	common/bus/bus_gk20a.o \
+	common/bus/bus_gm20b.o
+
+nvgpu-y += \
 	common/linux/kmem.o \
 	common/linux/timers.o \
 	common/linux/ioctl.o \
@@ -65,7 +72,6 @@ nvgpu-y := \
 	common/mm/nvgpu_mem.o \
 	common/mm/comptags.o \
 	common/mm/mm.o \
-	common/bus.o \
 	common/enabled.o \
 	common/nvlink.o \
 	common/pramin.o \
@@ -87,7 +93,6 @@ nvgpu-y := \
 	common/clock_gating/gv100_gating_reglist.o \
 	common/clock_gating/gv11b_gating_reglist.o \
 	gk20a/gk20a.o \
-	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
@@ -110,7 +115,6 @@ nvgpu-y := \
 	gk20a/fecs_trace_gk20a.o \
 	gk20a/mc_gk20a.o \
 	gm20b/hal_gm20b.o \
-	gm20b/bus_gm20b.o \
 	gm20b/ltc_gm20b.o \
 	gm20b/gr_gm20b.o \
 	gm20b/clk_gm20b.o \

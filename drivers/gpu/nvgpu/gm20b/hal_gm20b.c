@@ -23,6 +23,8 @@
  */
 
 #include "common/clock_gating/gm20b_gating_reglist.h"
+#include "common/bus/bus_gm20b.h"
+#include "common/bus/bus_gk20a.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -33,7 +35,6 @@
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
-#include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/priv_ring_gk20a.h"
 #include "gk20a/regops_gk20a.h"
@@ -52,7 +53,6 @@
 #include "clk_gm20b.h"
 #include "regops_gm20b.h"
 #include "therm_gm20b.h"
-#include "bus_gm20b.h"
 #include "hal_gm20b.h"
 #include "acr_gm20b.h"
 #include "fuse_gm20b.h"

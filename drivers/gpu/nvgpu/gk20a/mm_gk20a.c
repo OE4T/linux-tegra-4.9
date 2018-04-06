@@ -44,7 +44,7 @@
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
-#include "bus_gk20a.h"
+#include "common/bus/bus_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>

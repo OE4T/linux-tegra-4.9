@@ -44,7 +44,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "mc_gk20a.h"
 #include "hal.h"
-#include "bus_gk20a.h"
+#include "common/bus/bus_gk20a.h"
 #include "pstate/pstate.h"
 
 void __nvgpu_check_gpu_state(struct gk20a *g)

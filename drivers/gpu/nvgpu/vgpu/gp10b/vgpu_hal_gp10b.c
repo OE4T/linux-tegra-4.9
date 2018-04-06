@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "common/bus/bus_gk20a.h"
+
 #include "vgpu/fifo_vgpu.h"
 #include "vgpu/gr_vgpu.h"
 #include "vgpu/ltc_vgpu.h"
@@ -34,7 +36,6 @@
 #include "vgpu_mm_gp10b.h"
 #include "vgpu_fuse_gp10b.h"
 
-#include "gk20a/bus_gk20a.h"
 #include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/mc_gk20a.h"

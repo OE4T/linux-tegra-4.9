@@ -22,13 +22,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "common/bus/bus_gk20a.h"
+
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
-#include "gk20a/bus_gk20a.h"
 #include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"

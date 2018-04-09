@@ -118,7 +118,7 @@
 						0 0x000005e4 0x00003f80 0x00002a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x333a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_54m_111m {
 					prod = <
@@ -138,7 +138,7 @@
 						0 0x000005e4 0x00003f80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x373a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_223m_300m {
 					prod = <
@@ -206,7 +206,7 @@
 						0 0x000005e4 0x00003f80 0x00002a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x333a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_54m_111m {
 					prod = <
@@ -226,7 +226,7 @@
 						0 0x000005e4 0x00003f80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x373a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_223m_300m {
 					prod = <
@@ -294,7 +294,7 @@
 						0 0x000005e4 0x00003f80 0x00002a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x333a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_54m_111m {
 					prod = <
@@ -314,7 +314,7 @@
 						0 0x000005e4 0x00003f80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x373a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_223m_300m {
 					prod = <
@@ -382,7 +382,7 @@
 						0 0x000005e4 0x00003f80 0x00002a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x333a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_54m_111m {
 					prod = <
@@ -402,7 +402,7 @@
 						0 0x000005e4 0x00003f80 0x00001a00              //SOR_NV_PDISP_SOR_PLL5_0
 						0 0x00000138 0xffffffff 0x373a3a3a              //SOR_NV_PDISP_SOR_LANE_DRIVE_CURRENT0_0
 						0 0x00000148 0xffffffff 0x00000000              //SOR_NV_PDISP_SOR_LANE_PREEMPHASIS0_0
-						0 0x000005b8 0x0040ff00 0x00401000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
+						0 0x000005b8 0x0040ff00 0x00400000>;            //SOR_NV_PDISP_SOR_DP_PADCTL0
 				};
 				prod_c_hdmi_223m_300m {
 					prod = <

@@ -1339,7 +1339,7 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 			SDHCI_TEGRA_SDMEMCOMP_PADCTRL_DRVUP_OVR);
 		if (ret < 0)
 			dev_dbg(mmc_dev(host->mmc),
-				"%s: error %d in comp drvdn settings at 1.8v\n",
+				"%s: error %d in comp drvup settings at 1.8v\n",
 				__func__, ret);
 	} else {
 		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
@@ -1348,7 +1348,7 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 			SDHCI_TEGRA_SDMEMCOMP_PADCTRL_DRVUP_OVR);
 		if (ret < 0)
 			dev_dbg(mmc_dev(host->mmc),
-				"%s: error %d in comp drvdn settings at 3.3v\n",
+				"%s: error %d in comp drvup settings at 3.3v\n",
 				__func__, ret);
 	}
 

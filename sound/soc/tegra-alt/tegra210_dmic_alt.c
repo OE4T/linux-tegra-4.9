@@ -265,6 +265,11 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 
 	regmap_update_bits(dmic->regmap,
 				TEGRA210_DMIC_CTRL,
+				TEGRA210_DMIC_CTRL_LRSEL_POLARITY_MASK,
+				dmic->lrsel << TEGRA210_DMIC_CTRL_LRSEL_POLARITY_SHIFT);
+
+	regmap_update_bits(dmic->regmap,
+				TEGRA210_DMIC_CTRL,
 				TEGRA210_DMIC_CTRL_OSR_MASK,
 				osr << TEGRA210_DMIC_CTRL_OSR_SHIFT);
 
@@ -370,6 +375,8 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 					dmic->sample_rate_via_control;
 	else if (strstr(kcontrol->id.name, "OSR Value"))
 		ucontrol->value.integer.value[0] = dmic->osr_val;
+	else if (strstr(kcontrol->id.name, "LR Select"))
+		ucontrol->value.integer.value[0] = dmic->lrsel;
 
 	return 0;
 }
@@ -393,6 +400,8 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 		dmic->sample_rate_via_control = value;
 	else if (strstr(kcontrol->id.name, "OSR Value"))
 		dmic->osr_val = value;
+	else if (strstr(kcontrol->id.name, "LR Select"))
+		dmic->lrsel = value;
 
 	return 0;
 }
@@ -490,6 +499,15 @@ static const struct soc_enum tegra210_dmic_osr_enum =
 		ARRAY_SIZE(tegra210_dmic_osr_text),
 		tegra210_dmic_osr_text);
 
+static const char * const tegra210_dmic_lrsel_text[] = {
+	"Left", "Right",
+};
+
+static const struct soc_enum tegra210_dmic_lrsel_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_dmic_lrsel_text),
+		tegra210_dmic_lrsel_text);
+
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25599, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
@@ -502,6 +520,8 @@ static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Sample Rate", 0, 0, 48000, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_ENUM_EXT("OSR Value", tegra210_dmic_osr_enum,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_ENUM_EXT("LR Select", tegra210_dmic_lrsel_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	};
 

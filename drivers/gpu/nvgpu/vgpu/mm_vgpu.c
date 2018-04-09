@@ -97,14 +97,6 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 
 	gk20a_dbg_fn("");
 
-	if (va_allocated) {
-		err = __nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
-		if (err) {
-			nvgpu_err(g, "failed to free va");
-			return;
-		}
-	}
-
 	msg.cmd = TEGRA_VGPU_CMD_AS_UNMAP;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
@@ -113,6 +105,11 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	if (err || msg.ret)
 		nvgpu_err(g, "failed to update gmmu ptes on unmap");
 
+	if (va_allocated) {
+		err = __nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
+		if (err)
+			nvgpu_err(g, "failed to free va");
+	}
 	/* TLB invalidate handled on server side */
 }
 

@@ -6421,7 +6421,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
 				g->ops.gr.egpc_etpc_priv_addr_table) {
 		gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
-		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num,
+		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num, tpc_num,
 				broadcast_flags, priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
 		g->ops.gr.split_lts_broadcast_addr(g, addr,

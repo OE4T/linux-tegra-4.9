@@ -4018,9 +4018,9 @@ static void gv11b_gr_update_priv_addr_table_smpc(struct gk20a *g, u32 gpc_num,
 }
 
 void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
-		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t)
+	u32 gpc_num, u32 tpc_num, u32 broadcast_flags,
+	u32 *priv_addr_table, u32 *t)
 {
-	u32 gpc_num, tpc_num;
 	u32 priv_addr, gpc_addr;
 
 	nvgpu_log_info(g, "addr=0x%x", addr);
@@ -4055,7 +4055,6 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 					}
 				}
 			} else if (broadcast_flags & PRI_BROADCAST_FLAGS_SMPC) {
-				tpc_num = 0;
 				gv11b_gr_update_priv_addr_table_smpc(
 					g, gpc_num, tpc_num, addr,
 					priv_addr_table, t);
@@ -4078,9 +4077,8 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_EGPC)) {
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_ETPC) {
 			nvgpu_log_info(g, "broadcast flags etpc but not egpc");
-			gpc_num = 0;
 			for (tpc_num = 0;
-			     tpc_num < g->gr.gpc_tpc_count[gpc];
+			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
 			     tpc_num++) {
 				if (broadcast_flags &
 						PRI_BROADCAST_FLAGS_SMPC)
@@ -4091,7 +4089,7 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 					priv_addr_table[*t] =
 					pri_etpc_addr(g,
 					pri_tpccs_addr_mask(addr),
-					     gpc, tpc_num);
+					     gpc_num, tpc_num);
 					nvgpu_log_info(g,
 					"priv_addr_table[%d]:%#08x",
 					*t, priv_addr_table[*t]);
@@ -4099,8 +4097,6 @@ void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 				}
 			}
 		} else if (broadcast_flags & PRI_BROADCAST_FLAGS_SMPC) {
-			tpc_num = 0;
-			gpc_num = 0;
 			gv11b_gr_update_priv_addr_table_smpc(
 				g, gpc_num, tpc_num, addr,
 				priv_addr_table, t);
@@ -4666,7 +4662,7 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
 				g->ops.gr.egpc_etpc_priv_addr_table) {
 		gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
-		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num,
+		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num, tpc_num,
 				broadcast_flags, priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
 		g->ops.gr.split_lts_broadcast_addr(g, addr,

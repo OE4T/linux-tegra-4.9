@@ -214,7 +214,7 @@ void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
 int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags);
 void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
-		 u32 gpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t);
+	 u32 gpc, u32 tpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t);
 u32 gv11b_gr_get_egpc_base(struct gk20a *g);
 void gr_gv11b_init_gpc_mmu(struct gk20a *g);
 int gr_gv11b_init_preemption_state(struct gk20a *g);

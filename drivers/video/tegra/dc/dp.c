@@ -2973,6 +2973,61 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 
 	struct tegra_vrr *vrr;
 
+	if (!mode->pixclock)
+		return false;
+
+	if (tegra_dc_is_nvdisplay()) {
+		if (mode->xres > 8192)
+			return false;
+	} else {
+		if (mode->xres > 4096)
+			return false;
+	}
+
+	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
+		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))
+		return false;
+
+	/*
+	 * Workaround for modes that fail the constraint:
+	 * V_FRONT_PORCH >= V_REF_TO_SYNC + 1
+	 *
+	 * This constraint does not apply to nvdisplay.
+	 */
+	if (!tegra_dc_is_nvdisplay() && mode->lower_margin == 1) {
+		mode->lower_margin++;
+		mode->upper_margin--;
+		mode->vmode |= FB_VMODE_ADJUSTED;
+	}
+
+	if (tegra_dc_is_t21x()) {
+		/* No support for YUV modes on T21x hardware. */
+		if (mode->vmode & (YUV_MASK))
+			return false;
+	}
+
+	if (mode->vmode & FB_VMODE_INTERLACED)
+		return false;
+
+	if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
+			(mode->vmode & FB_VMODE_Y420))
+		return false;
+
+	if ((mode->vmode & FB_VMODE_Y422) &&
+			!(mode->vmode & FB_VMODE_Y24))
+		return false;
+
+	if (!tegra_dp_check_dc_constraint(mode))
+		return false;
+
+	/*
+	 * CTS mandates that if edid is corrupted
+	 * use fail-safe mode i.e. VGA 640x480@60
+	 */
+	if (dc->edid->errors)
+		return (mode->xres == 640 && mode->yres == 480)
+			 ? true : false;
+
 	if (dc->out->vrr) {
 		vrr = dc->out->vrr;
 
@@ -3037,58 +3092,6 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 			return false;
 		}
 	}
-
-	if (!mode->pixclock)
-		return false;
-
-	if (tegra_dc_is_nvdisplay()) {
-		if (mode->xres > 8192)
-			return false;
-	} else {
-		if (mode->xres > 4096)
-			return false;
-	}
-
-	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
-		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))
-		return false;
-
-	/*
-	 * Workaround for modes that fail the constraint:
-	 * V_FRONT_PORCH >= V_REF_TO_SYNC + 1
-	 *
-	 * This constraint does not apply to nvdisplay.
-	 */
-	if (!tegra_dc_is_nvdisplay() && mode->lower_margin == 1) {
-		mode->lower_margin++;
-		mode->upper_margin--;
-		mode->vmode |= FB_VMODE_ADJUSTED;
-	}
-
-	if (tegra_dc_is_t21x()) {
-		/* No support for YUV modes on T21x hardware. */
-		if (mode->vmode & (YUV_MASK))
-			return false;
-	}
-
-	if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
-			(mode->vmode & FB_VMODE_Y420))
-		return false;
-
-	if ((mode->vmode & FB_VMODE_Y422) &&
-			!(mode->vmode & FB_VMODE_Y24))
-		return false;
-
-	if (!tegra_dp_check_dc_constraint(mode))
-		return false;
-
-	/*
-	 * CTS mandates that if edid is corrupted
-	 * use fail-safe mode i.e. VGA 640x480@60
-	 */
-	if (dc->edid->errors)
-		return (mode->xres == 640 && mode->yres == 480)
-			 ? true : false;
 
 	return true;
 }

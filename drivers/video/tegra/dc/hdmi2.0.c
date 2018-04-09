@@ -303,7 +303,6 @@ static u32 tegra_hdmi_mode_min_tmds_rate(const struct fb_videomode *mode)
 	return tmds_csc_8bpc_khz;
 }
 
-__maybe_unused
 static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
 {
@@ -329,6 +328,9 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 			return false;
 	}
 #endif
+
+	if (mode->vmode & FB_VMODE_INTERLACED)
+		return false;
 
 	/* some non-compliant edids list 420vdb modes in vdb */
 	if ((mode->vmode & FB_VMODE_Y420) &&

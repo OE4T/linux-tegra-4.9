@@ -1165,18 +1165,30 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 		return -ENODEV;
 	}
 
-	if (tegra_platform_is_sim()) {
+	if (tegra_platform_is_sim() && timeout_ms > 0) {
 		dev_dbg(chan->isp_dev, "%s timeout : %d extended by 10x on VDK",
 			__func__, timeout_ms);
 		timeout_ms *= 10;
 	}
 
-	err = wait_for_completion_killable_timeout(
-			&capture->capture_resp,
-			msecs_to_jiffies(timeout_ms));
-	if (err <= 0) {
-		dev_err(chan->isp_dev, "no reply from camera processor\n");
-		return -ETIMEDOUT;
+	/* negative timeout means wait forever */
+	if (timeout_ms < 0) {
+		err = wait_for_completion_killable(&capture->capture_resp);
+	} else {
+		err = wait_for_completion_killable_timeout(
+				&capture->capture_resp,
+				msecs_to_jiffies(timeout_ms));
+		if (err == 0) {
+			dev_err(chan->isp_dev,
+				"no reply from camera processor\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	if (err < 0) {
+		dev_err(chan->isp_dev,
+			"wait for capture status failed\n");
+		return err;
 	}
 
 	return 0;

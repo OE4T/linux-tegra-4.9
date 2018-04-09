@@ -836,16 +836,25 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 	dev_dbg(chan->dev, "%s: waiting for status, timeout:%d ms\n",
 		__func__, timeout_ms);
 
-	ret = wait_for_completion_killable_timeout(
-			&capture->capture_resp,
-			msecs_to_jiffies(timeout_ms));
-	/* Possible return values:
-	 * -ERESTARTSYS if interrupted, 0 if timed out, positive (at least 1,
-	 * or number of jiffies left till timeout) if completed */
-	if (ret <= 0) {
+	/* negative timeout means wait forever */
+	if (timeout_ms < 0) {
+		ret = wait_for_completion_killable(&capture->capture_resp);
+	} else {
+		ret = wait_for_completion_killable_timeout(
+				&capture->capture_resp,
+				msecs_to_jiffies(timeout_ms));
+		if (ret == 0) {
+			dev_err(chan->dev,
+				"no reply from camera processor\n");
+			return -ETIMEDOUT;
+		}
+	}
+
+	if (ret < 0) {
 		dev_err(chan->dev,
-			"no reply from camera processor\n");
-		return -ETIMEDOUT;
-	} else
-		return 0;
+			"wait for capture status failed\n");
+		return ret;
+	}
+
+	return 0;
 }

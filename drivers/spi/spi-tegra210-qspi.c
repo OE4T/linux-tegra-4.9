@@ -1237,8 +1237,8 @@ static void tegra_qspi_set_gr_registers(struct tegra_qspi_data *tqspi)
 	 */
 	err = tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
 	if (err < 0)
-		dev_dbg(tqspi->dev, "Prod config not found for QSPI: %d\n",
-			err);
+		dev_info_once(tqspi->dev,
+			      "Prod config not found for QSPI: %d\n", err);
 
 	clk_mhz = tqspi->cur_speed / 1000000;
 
@@ -1249,11 +1249,11 @@ static void tegra_qspi_set_gr_registers(struct tegra_qspi_data *tqspi)
 
 	err = tegra_prod_set_by_name(&tqspi->base, prod_name, tqspi->prod_list);
 	if (!err)
-		return;
+		dev_info_once(tqspi->dev,
+			      "Failed to apply prod name[%s] for qspi\n",
+			      prod_name);
 
-	dev_info_once(tqspi->dev, "Failed to apply prod name[%s] for qspi\n",
-		      prod_name);
-
+	return;
 regs_por:
 	/* If NOT defined in prod list or error in applying prod settings,
 	 * then initialise golden registers with POR values.

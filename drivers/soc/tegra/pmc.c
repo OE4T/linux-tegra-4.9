@@ -1988,7 +1988,11 @@ static void tegra_pmc_resume(void)
 	case TEGRA114:
 		break;
 	default:
-		tegra_pmc_reg_writel(0x0, TEGRA_PMC_IO_DPD_ENABLE);
+		/* Don't access the secure DPD_ENABLE register
+		 * if the secure-pmc flag is enabled.
+		 */
+		if (!get_secure_pmc_setting())
+			tegra_pmc_reg_writel(0x0, TEGRA_PMC_IO_DPD_ENABLE);
 		break;
 	}
 

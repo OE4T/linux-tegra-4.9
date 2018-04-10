@@ -3045,7 +3045,8 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 	    pwr_mode->pwr_tx == hba->pwr_info.pwr_tx &&
 	    pwr_mode->hs_rate == hba->pwr_info.hs_rate) {
 		dev_dbg(hba->dev, "%s: power already configured\n", __func__);
-		return 0;
+		ret = 0;
+		goto out;
 	}
 
 	/*
@@ -3081,17 +3082,16 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 
 	ret = ufshcd_uic_change_pwr_mode(hba, pwr_mode->pwr_rx << 4
 			| pwr_mode->pwr_tx);
-
-	if (ret) {
+	if (ret)
 		dev_err(hba->dev,
 			"%s: power mode change failed %d\n", __func__, ret);
-	} else {
-		ufshcd_vops_pwr_change_notify(hba, POST_CHANGE, NULL,
-								pwr_mode);
-
+	else
 		memcpy(&hba->pwr_info, pwr_mode,
 			sizeof(struct ufs_pa_layer_attr));
-	}
+out:
+	if (!ret)
+		ufshcd_vops_pwr_change_notify(hba, POST_CHANGE, NULL,
+					      pwr_mode);
 
 	return ret;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *      VenkataJagadish.p	<vjagadish@nvidia.com>
@@ -24,6 +24,7 @@
 #include <soc/tegra/pmc.h>
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
+#include <linux/jiffies.h>
 
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -123,10 +124,43 @@ void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 }
 #endif
 
+static int ufs_schedule_delayed_work(struct delayed_work *work,
+				     unsigned long delay)
+{
+	/*
+	 * We use the system_freezable_wq, because of two reasons.
+	 * First, it allows several works (not the same work item) to be
+	 * executed simultaneously. Second, the queue becomes frozen when
+	 * userspace becomes frozen during system PM.
+	 */
+	return queue_delayed_work(system_freezable_wq, work, delay);
+}
+
 static bool ufs_tegra_get_cd(struct gpio_desc *cd_gpio_desc)
 {
 	/* If card present then gpio value low, else high */
 	return (gpiod_get_value_cansleep(cd_gpio_desc) == 0);
+}
+
+static irqreturn_t ufs_cd_gpio_isr(int irq, void *dev_id)
+{
+	struct ufs_tegra_host *ufs_tegra = dev_id;
+
+	ufs_tegra->hba->card_present =
+			ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc);
+
+	ufs_schedule_delayed_work(&ufs_tegra->detect, msecs_to_jiffies(200));
+
+	return IRQ_HANDLED;
+
+}
+
+void ufs_rescan(struct work_struct *work)
+{
+	struct ufs_tegra_host *ufs_tegra =
+		container_of(work, struct ufs_tegra_host, detect.work);
+
+	ufshcd_rescan(ufs_tegra->hba);
 }
 
 /**
@@ -475,6 +509,32 @@ static void ufs_tegra_disable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->hba->clk_gating.state = CLKS_OFF;
 }
 
+static int ufs_tegra_set_ufs_mphy_clocks(struct ufs_hba *hba, bool enable)
+{
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+	int ret = 0;
+
+	if (enable) {
+		ret = ufs_tegra_enable_ufs_clks(ufs_tegra);
+		if (ret) {
+			dev_err(hba->dev, "failed to set ufs clks, ret: %d\n",
+				ret);
+			goto out;
+		}
+
+		ret = ufs_tegra_enable_mphylane_clks(ufs_tegra);
+		if (ret) {
+			dev_err(hba->dev, "failed to set mphy clks, ret: %d\n",
+				ret);
+			goto out;
+		}
+	} else {
+		ufs_tegra_disable_mphylane_clks(ufs_tegra);
+		ufs_tegra_disable_ufs_clks(ufs_tegra);
+	}
+out:
+	return ret;
+}
 
 static int ufs_tegra_ufs_reset_init(struct ufs_tegra_host *ufs_tegra)
 {
@@ -889,6 +949,18 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		reset_control_assert(ufs_tegra->ufshc_lp_rst);
 	}
 
+	/* Enable wake irq at end of suspend */
+	if (device_may_wakeup(dev)) {
+		ret = enable_irq_wake(ufs_tegra->cd_irq);
+		if (ret) {
+			dev_err(dev, "Failed to enable wake irq %u, ret: %d\n",
+				ufs_tegra->cd_irq, ret);
+			ufs_tegra->wake_enable_failed = true;
+		} else {
+			ufs_tegra->wake_enable_failed = false;
+		}
+	}
+
 	/*
 	 * Disable ufs, mphy tx/rx lane clocks if they are on
 	 * and assert the reset
@@ -911,6 +983,13 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 
 	if (pm_op != UFS_SYSTEM_PM)
 		return 0;
+
+	if (device_may_wakeup(dev) && !ufs_tegra->wake_enable_failed) {
+		ret = disable_irq_wake(ufs_tegra->cd_irq);
+		if (ret)
+			dev_err(dev, "Failed to disable wakeirq %u,err %d\n",
+				ufs_tegra->cd_irq, ret);
+	}
 
 	ufs_tegra->ufshc_state = UFSHC_RESUME;
 
@@ -1276,6 +1355,8 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 		ufs_tegra->hba->quirks |= UFSHCD_QUIRK_ENABLE_WLUNS;
 
 	ufs_tegra->cd_gpio = of_get_named_gpio(np, "nvidia,cd-gpios", 0);
+	ufs_tegra->cd_wakeup_capable =
+		of_property_read_bool(np, "nvidia,cd-wakeup-capable");
 }
 
 /**
@@ -1328,9 +1409,33 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		dev_err(dev, "Missing dpd_disable state, err: %ld\n",
 			PTR_ERR(ufs_tegra->dpd_disable));
 
-	if (gpio_is_valid(ufs_tegra->cd_gpio)) {
+	if (gpio_is_valid(ufs_tegra->cd_gpio) &&
+			ufs_tegra->cd_wakeup_capable) {
 		ufs_tegra->cd_gpio_desc = gpio_to_desc(ufs_tegra->cd_gpio);
 		hba->card_present = ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc);
+
+		ufs_tegra->cd_irq = gpio_to_irq(ufs_tegra->cd_gpio);
+		if (ufs_tegra->cd_irq <= 0) {
+			dev_err(dev, "failed to get gpio irq %d, hence wakeup"
+				" with UFS can't be supported\n",
+				ufs_tegra->cd_irq);
+			ufs_tegra->cd_irq = 0;
+		} else {
+			device_init_wakeup(dev, 1);
+			dev_info(dev, "wakeup init done, cdirq %d\n",
+				 ufs_tegra->cd_irq);
+			err = devm_request_irq(dev, ufs_tegra->cd_irq,
+				ufs_cd_gpio_isr, IRQF_TRIGGER_RISING |
+				IRQF_TRIGGER_FALLING,
+				"ufs_cd_gpio", ufs_tegra);
+			if (err)
+				dev_err(dev, "request irq failed ret: %d,"
+					"wakeup with UFS can't be supported\n",
+					err);
+			else
+				ufs_tegra->cd_irq = err;
+		}
+		INIT_DELAYED_WORK(&ufs_tegra->detect, ufs_rescan);
 	} else {
 		/*
 		 * If card detect gpio is not specified then assume
@@ -1458,6 +1563,7 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
 	.hibern8_entry_notify   = ufs_tegra_hibern8_entry_notify,
+	.set_ufs_mphy_clocks	= ufs_tegra_set_ufs_mphy_clocks,
 };
 
 static int ufs_tegra_probe(struct platform_device *pdev)

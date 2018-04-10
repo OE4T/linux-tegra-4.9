@@ -295,7 +295,11 @@ struct ufs_tegra_host {
 
 	/* UFS tegra deviations from standard UFSHCI spec. */
 	unsigned int nvquirks;
+	bool cd_wakeup_capable;
 	int cd_gpio;
+	unsigned int cd_irq;
+	bool wake_enable_failed;
+	struct delayed_work detect;
 	struct gpio_desc *cd_gpio_desc;
 #ifdef CONFIG_DEBUG_FS
 	u32 refclk_value;
@@ -310,6 +314,8 @@ struct ufs_tegra_host {
 };
 
 extern struct ufs_hba_variant_ops ufs_hba_tegra_vops;
+extern int ufshcd_rescan(struct ufs_hba *hb);
+void ufs_rescan(struct work_struct *work);
 
 static inline u32 mphy_readl(void __iomem *mphy_base, u32 offset)
 {

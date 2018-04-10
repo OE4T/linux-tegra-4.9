@@ -21,6 +21,18 @@
 #ifndef TEGRA_NVLINK_UAPI_H
 #define TEGRA_NVLINK_UAPI_H
 
+#include <linux/ioctl.h>
+#include <linux/types.h>
+
+#if defined(__KERNEL__)
+#include <linux/bitops.h>
+#else
+#define __user
+#ifndef BIT
+#define BIT(b) (1UL << (b))
+#endif
+#endif
+
 /* TEGRA_CTRL_CMD_NVLINK_GET_NVLINK_CAPS */
 
 #define TEGRA_NVLINK_VERSION_10				0x00000001

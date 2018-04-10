@@ -30,6 +30,8 @@
 
 #include "gm20b/fuse_gm20b.h"
 
+#include "fuse_gp10b.h"
+
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
 int gp10b_fuse_check_priv_security(struct gk20a *g)

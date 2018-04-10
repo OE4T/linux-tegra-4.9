@@ -28,6 +28,8 @@
 
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 
+#include "therm_gv11b.h"
+
 int gv11b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;

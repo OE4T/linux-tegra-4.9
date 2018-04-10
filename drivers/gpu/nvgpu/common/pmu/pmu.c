@@ -338,6 +338,7 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 
 	init = pv->get_pmu_msg_pmu_init_msg_ptr(&(msg->msg.init));
 	if (!pmu->gid_info.valid) {
+		u32 *gid_hdr_data = (u32 *)(gid_data.signature);
 
 		nvgpu_flcn_copy_from_dmem(pmu->flcn,
 			pv->get_pmu_init_msg_pmu_sw_mg_off(init),
@@ -345,7 +346,7 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 			sizeof(struct pmu_sha1_gid_data), 0);
 
 		pmu->gid_info.valid =
-			(*(u32 *)gid_data.signature == PMU_SHA1_GID_SIGNATURE);
+			(*gid_hdr_data == PMU_SHA1_GID_SIGNATURE);
 
 		if (pmu->gid_info.valid) {
 

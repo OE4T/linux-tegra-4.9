@@ -92,7 +92,6 @@ int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 bool gr_gm20b_is_tpc_addr(struct gk20a *g, u32 addr);
 u32 gr_gm20b_get_tpc_num(struct gk20a *g, u32 addr);
 int gr_gm20b_load_ctxsw_ucode(struct gk20a *g);
-int gr_gm20b_load_ctxsw_ucode(struct gk20a *g);
 void gr_gm20b_detect_sm_arch(struct gk20a *g);
 u32 gr_gm20b_pagepool_default_size(struct gk20a *g);
 int gr_gm20b_alloc_gr_ctx(struct gk20a *g,

@@ -133,9 +133,3 @@ int gp10b_elcg_init_idle_filters(struct gk20a *g)
 	gk20a_dbg_fn("done");
 	return 0;
 }
-
-void gp10b_init_therm_ops(struct gpu_ops *gops)
-{
-	gops->therm.init_therm_setup_hw = gp10b_init_therm_setup_hw;
-	gops->therm.elcg_init_idle_filters = gp10b_elcg_init_idle_filters;
-}

@@ -33,6 +33,8 @@
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_sys_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_gpc_gp10b.h>
 
+#include "priv_ring_gp10b.h"
+
 static const char * const invalid_str = "invalid";
 
 static const char *const error_type_badf1xyy[] = {

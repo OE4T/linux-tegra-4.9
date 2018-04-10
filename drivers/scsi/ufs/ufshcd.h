@@ -302,6 +302,7 @@ struct ufs_hba_variant_ops {
 	int     (*resume)(struct ufs_hba *, enum ufs_pm_op);
 	void	(*dbg_register_dump)(struct ufs_hba *hba);
 	int	(*phy_initialization)(struct ufs_hba *);
+	int	(*set_ufs_mphy_clocks)(struct ufs_hba *, bool);
 };
 
 /* clock gating state  */

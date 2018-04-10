@@ -47,6 +47,18 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
 #define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1 << 3)
 
+/*
+ * The binary format of 'struct nvgpu_channel_fence' introduced here
+ * should match that of 'struct nvgpu_fence' defined in uapi header, since
+ * this struct is intended to be a mirror copy of the uapi struct. This is
+ * not a hard requirement though because of nvgpu_get_fence_args conversion
+ * function.
+ */
+struct nvgpu_channel_fence {
+	u32 id;
+	u32 value;
+};
+
 struct nvgpu_gpfifo_args {
 	u32 num_entries;
 	u32 num_inflight_jobs;

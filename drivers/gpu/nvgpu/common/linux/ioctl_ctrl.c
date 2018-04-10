@@ -339,7 +339,7 @@ static int gk20a_ctrl_prepare_compressible_read(
 
 #ifdef CONFIG_NVGPU_SUPPORT_CDE
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct nvgpu_fence fence;
+	struct nvgpu_channel_fence fence;
 	struct gk20a_fence *fence_out = NULL;
 	int flags = args->submit_flags;
 

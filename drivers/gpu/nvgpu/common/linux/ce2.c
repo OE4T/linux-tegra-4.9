@@ -56,7 +56,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 	u32 cmd_buf_read_offset;
 	u32 dma_copy_class;
 	struct nvgpu_gpfifo gpfifo;
-	struct nvgpu_fence fence = {0,0};
+	struct nvgpu_channel_fence fence = {0, 0};
 	struct gk20a_fence *ce_cmd_buf_fence_out = NULL;
 
 	if (!ce_app->initialised ||ce_app->app_state != NVGPU_CE_ACTIVE)

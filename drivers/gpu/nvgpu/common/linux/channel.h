@@ -24,7 +24,7 @@
 struct channel_gk20a;
 struct nvgpu_gpfifo;
 struct nvgpu_submit_gpfifo_args;
-struct nvgpu_fence;
+struct nvgpu_channel_fence;
 struct gk20a_fence;
 struct fifo_profile_gk20a;
 struct nvgpu_os_linux;
@@ -75,7 +75,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
-				struct nvgpu_fence *fence,
+				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
 				bool force_need_sync_fence,
 				struct fifo_profile_gk20a *profile);

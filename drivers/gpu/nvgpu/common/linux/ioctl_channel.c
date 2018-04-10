@@ -614,6 +614,14 @@ static void nvgpu_get_gpfifo_args(
 							alloc_gpfifo_args->flags);
 }
 
+static void nvgpu_get_fence_args(
+		struct nvgpu_fence *fence_args_in,
+		struct nvgpu_channel_fence *fence_args_out)
+{
+	fence_args_out->id = fence_args_in->id;
+	fence_args_out->value = fence_args_in->value;
+}
+
 static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					ulong id, u32 offset,
 					u32 payload, u32 timeout)
@@ -760,6 +768,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct channel_gk20a *ch,
 	struct nvgpu_submit_gpfifo_args *args)
 {
+	struct nvgpu_channel_fence fence;
 	struct gk20a_fence *fence_out;
 	struct fifo_profile_gk20a *profile = NULL;
 
@@ -779,8 +788,9 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 		!capable(CAP_SYS_NICE))
 		return -EPERM;
 
+	nvgpu_get_fence_args(&args->fence, &fence);
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
-					  args->flags, &args->fence,
+					  args->flags, &fence,
 					  &fence_out, false, profile);
 
 	if (ret)

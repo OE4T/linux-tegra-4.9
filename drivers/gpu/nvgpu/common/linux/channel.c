@@ -416,7 +416,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
  * Handle the submit synchronization - pre-fences and post-fences.
  */
 static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
-				      struct nvgpu_fence *fence,
+				      struct nvgpu_channel_fence *fence,
 				      struct channel_gk20a_job *job,
 				      struct priv_cmd_entry **wait_cmd,
 				      struct priv_cmd_entry **incr_cmd,
@@ -663,7 +663,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
-				struct nvgpu_fence *fence,
+				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
 				bool force_need_sync_fence,
 				struct fifo_profile_gk20a *profile)

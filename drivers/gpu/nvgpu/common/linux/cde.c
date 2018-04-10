@@ -748,7 +748,7 @@ deinit_image:
 }
 
 static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
-				    u32 op, struct nvgpu_fence *fence,
+				    u32 op, struct nvgpu_channel_fence *fence,
 				    u32 flags, struct gk20a_fence **fence_out)
 {
 	struct nvgpu_os_linux *l = cde_ctx->l;
@@ -975,7 +975,7 @@ int gk20a_cde_convert(struct nvgpu_os_linux *l,
 		      struct dma_buf *compbits_scatter_buf,
 		      u64 compbits_byte_offset,
 		      u64 scatterbuffer_byte_offset,
-		      struct nvgpu_fence *fence,
+		      struct nvgpu_channel_fence *fence,
 		      u32 __flags, struct gk20a_cde_param *params,
 		      int num_params, struct gk20a_fence **fence_out)
 __acquires(&l->cde_app->mutex)
@@ -1482,7 +1482,7 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvgpu_fence *fence_in,
+		u32 submit_flags, struct nvgpu_channel_fence *fence_in,
 		struct gk20a_buffer_state *state)
 {
 	struct gk20a *g = &l->g;
@@ -1624,7 +1624,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 		u64 offset, u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvgpu_fence *fence_in,
+		u32 submit_flags, struct nvgpu_channel_fence *fence_in,
 		struct gk20a_buffer_state *state)
 {
 	struct gk20a *g = &l->g;
@@ -1656,7 +1656,7 @@ int gk20a_prepare_compressible_read(
 		u64 compbits_hoffset, u64 compbits_voffset,
 		u64 scatterbuffer_offset,
 		u32 width, u32 height, u32 block_height_log2,
-		u32 submit_flags, struct nvgpu_fence *fence,
+		u32 submit_flags, struct nvgpu_channel_fence *fence,
 		u32 *valid_compbits, u32 *zbc_color,
 		struct gk20a_fence **fence_out)
 {

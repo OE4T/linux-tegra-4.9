@@ -1,7 +1,7 @@
 /*
  * tegra186_dspk_alt.h - Definitions for Tegra186 DSPK driver
  *
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -186,6 +186,7 @@ struct tegra186_dspk {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_active_state;
 	struct pinctrl_state *pin_idle_state;
+	const char *prod_name;
 	unsigned int rx_fifo_th; /* threshold in terms of frames */
 	unsigned int osr_val; /* osr value */
 	bool is_shutdown;

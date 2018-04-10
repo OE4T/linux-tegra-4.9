@@ -260,6 +260,13 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (i2s->prod_name) {
+			ret = tegra_pinctrl_config_prod(dev, i2s->prod_name);
+			if (ret < 0)
+				dev_warn(dev, "Failed to set %s setting\n",
+						i2s->prod_name);
+		}
+
 		if (!IS_ERR(i2s->pin_default_state)) {
 			ret = pinctrl_select_state(i2s->pinctrl,
 						i2s->pin_default_state);
@@ -281,8 +288,8 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 		}
 	}
 
-	regcache_cache_only(i2s->regmap, false);
 
+	regcache_cache_only(i2s->regmap, false);
 	if (!i2s->is_shutdown)
 		regcache_sync(i2s->regmap);
 
@@ -1074,7 +1081,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	struct property *prop;
 	void __iomem *regs;
 	int ret = 0, count = 0, num_supplies;
-	const char *supply, *prod_name;
+	const char *supply;
 	int partition_id = 0;
 
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
@@ -1098,6 +1105,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->enable_cya = false;
 	i2s->loopback = 0;
 	i2s->is_shutdown = false;
+	i2s->prod_name = NULL;
 
 	if (i2s->soc_data->is_soc_t210) {
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
@@ -1201,8 +1209,9 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			"enable-cya");
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (of_property_read_string(np, "prod-name", &prod_name) == 0)
-			tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+		if (of_property_read_string(np, "prod-name",
+						&i2s->prod_name) == 0)
+			tegra_pinctrl_config_prod(&pdev->dev, i2s->prod_name);
 
 		num_supplies =
 			of_property_count_strings(np, "regulator-supplies");

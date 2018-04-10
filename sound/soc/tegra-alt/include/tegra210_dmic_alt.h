@@ -129,6 +129,7 @@ struct tegra210_dmic {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_active_state;
 	struct pinctrl_state *pin_idle_state;
+	const char *prod_name;
 	int boost_gain; /* with 100x factor */
 	int ch_select;
 	int tx_mono_to_stereo;

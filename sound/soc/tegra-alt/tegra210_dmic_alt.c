@@ -100,6 +100,13 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
 	int ret;
 
+	if (dmic->prod_name) {
+		ret = tegra_pinctrl_config_prod(dev, dmic->prod_name);
+		if (ret < 0)
+			dev_warn(dev, "Failed to set %s setting\n",
+					dmic->prod_name);
+	}
+
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (!IS_ERR(dmic->pin_active_state) && dmic->is_pinctrl) {
 			ret = pinctrl_select_state(dmic->pinctrl,
@@ -115,6 +122,7 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 			return ret;
 		}
 	}
+
 
 	regcache_cache_only(dmic->regmap, false);
 
@@ -654,7 +662,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	int ret = 0;
 	const struct of_device_id *match;
 	struct tegra210_dmic_soc_data *soc_data;
-	const char *prod_name;
 
 	match = of_match_device(tegra210_dmic_of_match, &pdev->dev);
 	if (!match) {
@@ -673,6 +680,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	dmic->soc_data = soc_data;
 	dmic->is_shutdown = false;
+	dmic->prod_name = NULL;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
@@ -756,11 +764,11 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		goto err_suspend;
 	}
 
-	if (of_property_read_string(np, "prod-name", &prod_name) == 0) {
-		ret = tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+	if (of_property_read_string(np, "prod-name", &dmic->prod_name) == 0) {
+		ret = tegra_pinctrl_config_prod(&pdev->dev, dmic->prod_name);
 		if (ret < 0)
 			dev_warn(&pdev->dev, "Failed to set %s setting\n",
-					prod_name);
+					dmic->prod_name);
 	}
 
 	if (of_property_read_u32(np, "nvidia,is-pinctrl",

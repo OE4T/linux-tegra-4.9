@@ -118,6 +118,13 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 	struct tegra186_dspk *dspk = dev_get_drvdata(dev);
 	int ret;
 
+	if (dspk->prod_name) {
+		ret = tegra_pinctrl_config_prod(dev, dspk->prod_name);
+		if (ret < 0)
+			dev_warn(dev, "Failed to set %s setting\n",
+					dspk->prod_name);
+	}
+
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (!IS_ERR(dspk->pin_active_state) && dspk->is_pinctrl) {
 			ret = pinctrl_select_state(dspk->pinctrl,
@@ -461,7 +468,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	int ret = 0;
 	const struct of_device_id *match;
 	struct tegra186_dspk_soc_data *soc_data;
-	const char *prod_name;
 
 	match = of_match_device(tegra186_dspk_of_match, &pdev->dev);
 	if (!match) {
@@ -481,6 +487,7 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 
 	dspk->soc_data = soc_data;
 	dspk->is_shutdown = false;
+	dspk->prod_name = NULL;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dspk->clk_dspk = devm_clk_get(&pdev->dev, NULL);
@@ -558,11 +565,11 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		goto err_suspend;
 	}
 
-	if (of_property_read_string(np, "prod-name", &prod_name) == 0) {
-		ret = tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+	if (of_property_read_string(np, "prod-name", &dspk->prod_name) == 0) {
+		ret = tegra_pinctrl_config_prod(&pdev->dev, dspk->prod_name);
 		if (ret < 0)
 			dev_warn(&pdev->dev, "Failed to set %s setting\n",
-					prod_name);
+					dspk->prod_name);
 	}
 
 	if (of_property_read_u32(np, "nvidia,is-pinctrl",

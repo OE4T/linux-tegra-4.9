@@ -175,6 +175,32 @@ static void hmm_invalidate_page(struct mmu_notifier *mn,
 	hmm_invalidate_range(mm->hmm, HMM_UPDATE_INVALIDATE, start, end);
 }
 
+static void hmm_release(struct mmu_notifier *mn, struct mm_struct *mm)
+{
+        struct hmm_mirror *mirror;
+        struct hmm *hmm = mm->hmm;
+
+        down_write(&hmm->mirrors_sem);
+        mirror = list_first_entry_or_null(&hmm->mirrors, struct hmm_mirror,
+                                          list);
+        while (mirror) {
+                list_del_init(&mirror->list);
+                if (mirror->ops->release) {
+                        /*
+                         * Drop mirrors_sem so callback can wait on any pending
+                         * work that might itself trigger mmu_notifier callback
+                         * and thus would deadlock with us.
+                         */
+                        up_write(&hmm->mirrors_sem);
+                        mirror->ops->release(mirror);
+                        down_write(&hmm->mirrors_sem);
+                }
+                mirror = list_first_entry_or_null(&hmm->mirrors,
+                                                  struct hmm_mirror, list);
+        }
+        up_write(&hmm->mirrors_sem);
+}
+
 static void hmm_invalidate_range_start(struct mmu_notifier *mn,
 				       struct mm_struct *mm,
 				       unsigned long start,
@@ -200,6 +226,7 @@ static void hmm_invalidate_range_end(struct mmu_notifier *mn,
 }
 
 static const struct mmu_notifier_ops hmm_mmu_notifier_ops = {
+	.release                = hmm_release,
 	.invalidate_page	= hmm_invalidate_page,
 	.invalidate_range_start	= hmm_invalidate_range_start,
 	.invalidate_range_end	= hmm_invalidate_range_end,
@@ -246,7 +273,7 @@ void hmm_mirror_unregister(struct hmm_mirror *mirror)
 	struct hmm *hmm = mirror->hmm;
 
 	down_write(&hmm->mirrors_sem);
-	list_del(&mirror->list);
+	list_del_init(&mirror->list);
 	up_write(&hmm->mirrors_sem);
 }
 EXPORT_SYMBOL(hmm_mirror_unregister);

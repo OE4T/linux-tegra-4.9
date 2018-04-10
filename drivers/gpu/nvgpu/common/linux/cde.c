@@ -1171,7 +1171,7 @@ __releases(&l->cde_app->mutex)
 
 	/* take always the postfence as it is needed for protecting the
 	 * cde context */
-	flags = __flags | NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
+	flags = __flags | NVGPU_SUBMIT_FLAGS_FENCE_GET;
 
 	/* gk20a_cde_execute_buffer() will grab a power reference of it's own */
 	gk20a_idle(g);

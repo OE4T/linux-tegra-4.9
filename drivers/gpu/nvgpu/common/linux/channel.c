@@ -39,6 +39,34 @@
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 
+u32 nvgpu_submit_gpfifo_user_flags_to_common_flags(u32 user_flags)
+{
+	u32 flags = 0;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT)
+		flags |= NVGPU_SUBMIT_FLAGS_FENCE_WAIT;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+		flags |= NVGPU_SUBMIT_FLAGS_FENCE_GET;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_HW_FORMAT)
+		flags |= NVGPU_SUBMIT_FLAGS_HW_FORMAT;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE)
+		flags |= NVGPU_SUBMIT_FLAGS_SYNC_FENCE;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI)
+		flags |= NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING)
+		flags |= NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING;
+
+	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST)
+		flags |= NVGPU_SUBMIT_FLAGS_RESCHEDULE_RUNLIST;
+
+	return flags;
+}
+
 /*
  * API to convert error_notifiers in common code and of the form
  * NVGPU_ERR_NOTIFIER_* into Linux specific error_notifiers exposed to user
@@ -430,7 +458,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	bool new_sync_created = false;
 	int wait_fence_fd = -1;
 	int err = 0;
-	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
+	bool need_wfi = !(flags & NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI);
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 
 	/*
@@ -465,7 +493,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * Optionally insert syncpt/semaphore wait in the beginning of gpfifo
 	 * submission when user requested and the wait hasn't expired.
 	 */
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
+	if (flags & NVGPU_SUBMIT_FLAGS_FENCE_WAIT) {
 		int max_wait_cmds = c->deterministic ? 1 : 0;
 
 		if (!pre_alloc_enabled)
@@ -477,7 +505,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 			goto fail;
 		}
 
-		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+		if (flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE) {
 			wait_fence_fd = fence->id;
 			err = c->sync->wait_fd(c->sync, wait_fence_fd,
 					       job->wait_cmd, max_wait_cmds);
@@ -494,8 +522,8 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 			*wait_cmd = job->wait_cmd;
 	}
 
-	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
-	    (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
+	if ((flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) &&
+	    (flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE))
 		need_sync_fence = true;
 
 	/*
@@ -516,7 +544,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		goto clean_up_post_fence;
 	}
 
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+	if (flags & NVGPU_SUBMIT_FLAGS_FENCE_GET)
 		err = c->sync->incr_user(c->sync, wait_fence_fd, job->incr_cmd,
 				 job->post_fence, need_wfi, need_sync_fence,
 				 register_irq);
@@ -678,7 +706,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * and one for post fence. */
 	const int extra_entries = 2;
 	bool skip_buffer_refcounting = (flags &
-			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
+			NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING);
 	int err = 0;
 	bool need_job_tracking;
 	bool need_deferred_cleanup = false;
@@ -706,8 +734,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (!gpfifo && !args)
 		return -EINVAL;
 
-	if ((flags & (NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT |
-		      NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)) &&
+	if ((flags & (NVGPU_SUBMIT_FLAGS_FENCE_WAIT |
+		      NVGPU_SUBMIT_FLAGS_FENCE_GET)) &&
 	    !fence)
 		return -EINVAL;
 
@@ -738,8 +766,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * required and a fast submit can be done (ie. only need to write
 	 * out userspace GPFIFO entries and update GP_PUT).
 	 */
-	need_job_tracking = (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) ||
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) ||
+	need_job_tracking = (flags & NVGPU_SUBMIT_FLAGS_FENCE_WAIT) ||
+			(flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) ||
 			c->timeout.enabled ||
 			(g->can_railgate && !c->deterministic) ||
 			!skip_buffer_refcounting;
@@ -757,8 +785,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 		need_sync_framework = force_need_sync_fence ||
 			gk20a_channel_sync_needs_sync_framework(g) ||
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE &&
-			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET);
+			(flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE &&
+			 flags & NVGPU_SUBMIT_FLAGS_FENCE_GET);
 
 		/*
 		 * Deferred clean-up is necessary for any of the following
@@ -899,7 +927,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.userd_gp_put(g, c);
 
-	if ((NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST & flags) &&
+	if ((NVGPU_SUBMIT_FLAGS_RESCHEDULE_RUNLIST & flags) &&
 		g->ops.fifo.reschedule_runlist)
 		g->ops.fifo.reschedule_runlist(g, c->runlist_id);
 

@@ -43,6 +43,7 @@
 #include "platform_gk20a.h"
 #include "os_linux.h"
 #include "dmabuf.h"
+#include "channel.h"
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7ULL) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
@@ -341,7 +342,8 @@ static int gk20a_ctrl_prepare_compressible_read(
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct nvgpu_channel_fence fence;
 	struct gk20a_fence *fence_out = NULL;
-	int flags = args->submit_flags;
+	int submit_flags = nvgpu_submit_gpfifo_user_flags_to_common_flags(
+		args->submit_flags);
 
 	fence.id = args->fence.syncpt_id;
 	fence.value = args->fence.syncpt_value;
@@ -351,15 +353,15 @@ static int gk20a_ctrl_prepare_compressible_read(
 			args->compbits_hoffset, args->compbits_voffset,
 			args->scatterbuffer_offset,
 			args->width, args->height, args->block_height_log2,
-			flags, &fence, &args->valid_compbits,
+			submit_flags, &fence, &args->valid_compbits,
 			&args->zbc_color, &fence_out);
 
 	if (ret)
 		return ret;
 
 	/* Convert fence_out to something we can pass back to user space. */
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) {
-		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+	if (submit_flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) {
+		if (submit_flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE) {
 			if (fence_out) {
 				int fd = gk20a_fence_install_fd(fence_out);
 				if (fd < 0)

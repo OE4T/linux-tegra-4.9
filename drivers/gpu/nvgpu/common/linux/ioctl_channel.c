@@ -771,6 +771,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct nvgpu_channel_fence fence;
 	struct gk20a_fence *fence_out;
 	struct fifo_profile_gk20a *profile = NULL;
+	u32 submit_flags = 0;
 
 	int ret = 0;
 	gk20a_dbg_fn("");
@@ -789,8 +790,10 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 		return -EPERM;
 
 	nvgpu_get_fence_args(&args->fence, &fence);
+	submit_flags =
+		nvgpu_submit_gpfifo_user_flags_to_common_flags(args->flags);
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
-					  args->flags, &fence,
+					  submit_flags, &fence,
 					  &fence_out, false, profile);
 
 	if (ret)

@@ -61,6 +61,7 @@ struct nvgpu_channel_linux {
 	struct dma_buf *cyclestate_buffer_handler;
 };
 
+u32 nvgpu_submit_gpfifo_user_flags_to_common_flags(u32 user_flags);
 int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l);
 void nvgpu_remove_channel_support_linux(struct nvgpu_os_linux *l);
 

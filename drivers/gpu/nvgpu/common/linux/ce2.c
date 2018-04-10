@@ -128,7 +128,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 			pbdma_gp_entry1_length_f(methodSize));
 
 		/* take always the postfence as it is needed for protecting the ce context */
-		submit_flags |= NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
+		submit_flags |= NVGPU_SUBMIT_FLAGS_FENCE_GET;
 
 		nvgpu_smp_wmb();
 

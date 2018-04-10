@@ -211,6 +211,9 @@ set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 	if (pmu_info->nr_supp_events == 0)
 		return -ENODEV;
 
+	if (params->nr_events > QUADD_MAX_COUNTERS)
+		return -EINVAL;
+
 	for (i = 0; i < params->nr_events; i++) {
 		struct quadd_event *event = &params->events[i];
 

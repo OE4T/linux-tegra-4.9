@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <uapi/linux/nvgpu.h>
-
 #include <nvgpu/types.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

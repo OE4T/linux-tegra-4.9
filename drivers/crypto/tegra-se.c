@@ -3276,7 +3276,7 @@ static struct tegra_se_chipdata tegra21_se_chipdata = {
 	.rsa_key_rw_op = false,
 	.aes_keydata_reg_sz = 32,
 	.ahb_ack = false,
-	.handle_sc7 = true,
+	.handle_sc7 = false,
 };
 
 static struct tegra_se_chipdata tegra210b01_se_chipdata = {

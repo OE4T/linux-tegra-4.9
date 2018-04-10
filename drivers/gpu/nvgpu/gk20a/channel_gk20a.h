@@ -59,6 +59,19 @@ struct nvgpu_channel_fence {
 	u32 value;
 };
 
+/*
+ * The binary format of 'struct nvgpu_gpfifo_entry' introduced here
+ * should match that of 'struct nvgpu_gpfifo' defined in uapi header, since
+ * this struct is intended to be a mirror copy of the uapi struct. This is
+ * a rigid requirement because there's no conversion function and there are
+ * memcpy's present between the user gpfifo (of type nvgpu_gpfifo) and the
+ * kern gpfifo (of type nvgpu_gpfifo_entry).
+ */
+struct nvgpu_gpfifo_entry {
+	u32 entry0;
+	u32 entry1;
+};
+
 struct nvgpu_gpfifo_args {
 	u32 num_entries;
 	u32 num_inflight_jobs;

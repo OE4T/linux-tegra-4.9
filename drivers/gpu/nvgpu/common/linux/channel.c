@@ -328,12 +328,12 @@ void nvgpu_remove_channel_support_linux(struct nvgpu_os_linux *l)
 
 u32 nvgpu_get_gpfifo_entry_size(void)
 {
-	return sizeof(struct nvgpu_gpfifo);
+	return sizeof(struct nvgpu_gpfifo_entry);
 }
 
 #ifdef CONFIG_DEBUG_FS
 static void trace_write_pushbuffer(struct channel_gk20a *c,
-				   struct nvgpu_gpfifo *g)
+				   struct nvgpu_gpfifo_entry *g)
 {
 	void *mem = NULL;
 	unsigned int words;
@@ -371,15 +371,15 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 #endif
 
 static void trace_write_pushbuffer_range(struct channel_gk20a *c,
-					 struct nvgpu_gpfifo *g,
-					 struct nvgpu_gpfifo __user *user_gpfifo,
+					 struct nvgpu_gpfifo_entry *g,
+					 struct nvgpu_gpfifo_entry __user *user_gpfifo,
 					 int offset,
 					 int count)
 {
 #ifdef CONFIG_DEBUG_FS
 	u32 size;
 	int i;
-	struct nvgpu_gpfifo *gp;
+	struct nvgpu_gpfifo_entry *gp;
 	bool gpfifo_allocated = false;
 
 	if (!gk20a_debug_trace_cmdbuf)
@@ -389,7 +389,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 		return;
 
 	if (!g) {
-		size = count * sizeof(struct nvgpu_gpfifo);
+		size = count * sizeof(struct nvgpu_gpfifo_entry);
 		if (size) {
 			g = nvgpu_big_malloc(c->g, size);
 			if (!g)
@@ -553,7 +553,7 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 {
 	struct gk20a *g = c->g;
 	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
-	struct nvgpu_gpfifo x = {
+	struct nvgpu_gpfifo_entry x = {
 		.entry0 = u64_lo32(cmd->gva),
 		.entry1 = u64_hi32(cmd->gva) |
 			pbdma_gp_entry1_length_f(cmd->size)
@@ -574,17 +574,18 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
  * splitting into two memcpys to handle wrap-around.
  */
 static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_gpfifo *kern_gpfifo,
-		struct nvgpu_gpfifo __user *user_gpfifo,
+		struct nvgpu_gpfifo_entry *kern_gpfifo,
+		struct nvgpu_gpfifo_entry __user *user_gpfifo,
 		u32 num_entries)
 {
 	/* byte offsets */
-	u32 gpfifo_size = c->gpfifo.entry_num * sizeof(struct nvgpu_gpfifo);
-	u32 len = num_entries * sizeof(struct nvgpu_gpfifo);
-	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo);
+	u32 gpfifo_size =
+		c->gpfifo.entry_num * sizeof(struct nvgpu_gpfifo_entry);
+	u32 len = num_entries * sizeof(struct nvgpu_gpfifo_entry);
+	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo_entry);
 	u32 end = start + len; /* exclusive */
 	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
-	struct nvgpu_gpfifo *cpu_src;
+	struct nvgpu_gpfifo_entry *cpu_src;
 	int err;
 
 	if (user_gpfifo && !c->gpfifo.pipe) {
@@ -659,7 +660,7 @@ out:
 }
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvgpu_gpfifo *gpfifo,
+				struct nvgpu_gpfifo_entry *gpfifo,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
@@ -681,8 +682,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	int err = 0;
 	bool need_job_tracking;
 	bool need_deferred_cleanup = false;
-	struct nvgpu_gpfifo __user *user_gpfifo = args ?
-		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
+	struct nvgpu_gpfifo_entry __user *user_gpfifo = args ?
+		(struct nvgpu_gpfifo_entry __user *)(uintptr_t)args->gpfifo : NULL;
 
 	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return -ENODEV;

@@ -47,7 +47,7 @@ struct gk20a_fence;
 struct nvgpu_channel_fence;
 struct channel_gk20a;
 struct vm_gk20a;
-struct nvgpu_gpfifo;
+struct nvgpu_gpfifo_entry;
 
 /*
  * this element defines a buffer that is allocated and mapped into gpu address
@@ -258,10 +258,10 @@ struct gk20a_cde_ctx {
 
 	u64 backing_store_vaddr;
 
-	struct nvgpu_gpfifo *init_convert_cmd;
+	struct nvgpu_gpfifo_entry *init_convert_cmd;
 	int init_cmd_num_entries;
 
-	struct nvgpu_gpfifo *convert_cmd;
+	struct nvgpu_gpfifo_entry *convert_cmd;
 	int convert_cmd_num_entries;
 
 	struct kobj_attribute attr;

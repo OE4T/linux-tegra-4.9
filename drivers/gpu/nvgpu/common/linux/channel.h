@@ -71,7 +71,7 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		bool is_privileged_channel);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvgpu_gpfifo *gpfifo,
+				struct nvgpu_gpfifo_entry *gpfifo,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,

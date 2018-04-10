@@ -558,7 +558,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 {
 	struct nvgpu_os_linux *l = cde_ctx->l;
 	struct gk20a *g = &l->g;
-	struct nvgpu_gpfifo **gpfifo, *gpfifo_elem;
+	struct nvgpu_gpfifo_entry **gpfifo, *gpfifo_elem;
 	u32 *num_entries;
 	unsigned int i;
 
@@ -577,7 +577,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 	/* allocate gpfifo entries to be pushed */
 	*gpfifo = nvgpu_kzalloc(g,
-				sizeof(struct nvgpu_gpfifo) * num_elems);
+				sizeof(struct nvgpu_gpfifo_entry) * num_elems);
 	if (!*gpfifo) {
 		nvgpu_warn(g, "cde: could not allocate memory for gpfifo entries");
 		return -ENOMEM;
@@ -624,11 +624,11 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	struct nvgpu_os_linux *l = cde_ctx->l;
 	struct gk20a *g = &l->g;
 	unsigned long init_bytes = cde_ctx->init_cmd_num_entries *
-		sizeof(struct nvgpu_gpfifo);
+		sizeof(struct nvgpu_gpfifo_entry);
 	unsigned long conv_bytes = cde_ctx->convert_cmd_num_entries *
-		sizeof(struct nvgpu_gpfifo);
+		sizeof(struct nvgpu_gpfifo_entry);
 	unsigned long total_bytes = init_bytes + conv_bytes;
-	struct nvgpu_gpfifo *combined_cmd;
+	struct nvgpu_gpfifo_entry *combined_cmd;
 
 	/* allocate buffer that has space for both */
 	combined_cmd = nvgpu_kzalloc(g, total_bytes);
@@ -753,7 +753,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 {
 	struct nvgpu_os_linux *l = cde_ctx->l;
 	struct gk20a *g = &l->g;
-	struct nvgpu_gpfifo *gpfifo = NULL;
+	struct nvgpu_gpfifo_entry *gpfifo = NULL;
 	int num_entries = 0;
 
 	/* check command type */

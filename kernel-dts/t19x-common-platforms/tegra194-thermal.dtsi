@@ -38,7 +38,7 @@
 			reg = <0x4c>;
 			sensor-name = "tmp451-ext";
 			supported-hwrev = <1>;
-			offset = <(-34)>;
+			offset = <(-38)>;
 			conv-rate = <0x06>;
 			extended-rage = <1>;
 
@@ -86,13 +86,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <84500>;
+					temperature = <90500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <79000>;
+					temperature = <85000>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -111,7 +111,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <79000>;
+					temperature = <85000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -129,13 +129,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <91000>;
+					temperature = <97000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <85500>;
+					temperature = <91500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;

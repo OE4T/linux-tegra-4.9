@@ -93,27 +93,29 @@
 				use_sensor_mode_id = "true";
 
 				/**
+				* ==== Modes ====
 				* A modeX node is required to support v4l2 driver
 				* implementation with NVIDIA camera software stack
 				*
-				* mclk_khz = "";
-				* Standard MIPI driving clock, typically 24MHz
+				* == Signal properties ==
 				*
-				* num_lanes = "";
-				* Number of lane channels sensor is programmed to output
+				* phy_mode = "";
+				* PHY mode used by the MIPI lanes for this device
 				*
 				* tegra_sinterface = "";
-				* The base tegra serial interface lanes are connected to
+				* CSI Serial interface connected to tegra
+				* Incase of virtual HW devices, use virtual
+				* For SW emulated devices, use host
 				*
-				* discontinuous_clk = "";
-				* The sensor is programmed to use a discontinuous clock on MIPI lanes
+				* pix_clk_hz = "";
+				* Sensor pixel clock used for calculations like exposure and framerate
 				*
-				* dpcm_enable = "true";
-				* The sensor is programmed to use a DPCM modes
+				* readout_orientation = "0";
+				* Based on camera module orientation.
+				* Only change readout_orientation if you specifically
+				* Program a different readout order for this mode
 				*
-				* cil_settletime = "";
-				* MIPI lane settle time value.
-				* A "0" value attempts to autocalibrate based on mclk_multiplier
+				* == Image format Properties ==
 				*
 				* active_w = "";
 				* Pixel active region width
@@ -121,65 +123,47 @@
 				* active_h = "";
 				* Pixel active region height
 				*
-				* dynamic_pixel_bit_depth = "";
-				* sensor dynamic bit depth for sensor mode
-				*
-				* csi_pixel_bit_depth = "";
-				* sensor output bit depth for sensor mode
-				*
-				* mode_type="";
-				* Sensor mode type, For eg: yuv, Rgb, bayer, bayer_wdr_pwl
-				*
-				* pixel_phase="";
-				* Pixel phase for sensor mode, For eg: rggb, vyuy, rgb888
-				*
-				* readout_orientation = "0";
-				* Based on camera module orientation.
-				* Only change readout_orientation if you specifically
-				* Program a different readout order for this mode
+				* pixel_t = "";
+				* The sensor readout pixel pattern
 				*
 				* line_length = "";
 				* Pixel line length (width) for sensor mode.
-				* This is used to calibrate features in our camera stack.
 				*
-				* mclk_multiplier = "";
-				* Multiplier to MCLK to help time hardware capture sequence
-				* TODO: Assign to PLL_Multiplier as well until fixed in core
+				* == Source Control Settings ==
 				*
-				* pix_clk_hz = "";
-				* Sensor pixel clock used for calculations like exposure and framerate
+				* Gain factor used to convert fixed point integer to float
+				* Gain range [min_gain/gain_factor, max_gain/gain_factor]
+				* Gain step [step_gain/gain_factor is the smallest step that can be configured]
+				* Framerate factor used to convert fixed point integer to float
+				* Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
+				* Framerate step [step_framerate/framerate_factor is the smallest step that can be configured]
+				* Exposure factor used to convert fixed point integer to float
+				* For convenience use 1 sec = 1000000us as conversion factor
+				* Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
+				* Exposure step [step_exp_time/exposure_factor is the smallest step that can be configured]
 				*
-				*
-				*
-				*
-				* inherent_gain = "";
-				* Gain obtained inherently from mode (ie. pixel binning)
-				*
-				* min_gain_val = ""; (floor to 6 decimal places)
-				* max_gain_val = ""; (floor to 6 decimal places)
-				* gain_step_pitch = ""; (floor to 6 decimal places, unit is db)
+				* gain_factor = ""; (integer factor used for floating to fixed point conversion)
+				* min_gain_val = ""; (ceil to integer)
+				* max_gain_val = ""; (ceil to integer)
+				* step_gain_val = ""; (ceil to integer)
 				* Gain limits for mode
-				* if use_decibel_gain = "true", please set the gain as decibel
 				*
+				* exposure_factor = ""; (integer factor used for floating to fixed point conversion)
 				* min_exp_time = ""; (ceil to integer)
 				* max_exp_time = ""; (ceil to integer)
-				* exp_time_1h = ""; (ceil to integer)
-				* Exposure Time limits for mode (us)
+				* step_exp_time = ""; (ceil to integer)
+				* Exposure Time limits for mode (sec)
 				*
-				*
-				* min_hdr_ratio = "";
-				* max_hdr_ratio = "";
-				* HDR Ratio limits for mode
-				*
-				* min_framerate = "";
-				* max_framerate = "";
+				* framerate_factor = ""; (integer factor used for floating to fixed point conversion)
+				* min_framerate = ""; (ceil to integer)
+				* max_framerate = ""; (ceil to integer)
+				* step_framerate = ""; (ceil to integer)
 				* Framerate limits for mode (fps)
 				*
 				* embedded_metadata_height = "";
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-
 				mode0 {/*mode IMX185_MODE_1920X1080_CROP_30FPS*/
 					mclk_khz = "37125";
 					num_lanes = "4";
@@ -201,15 +185,20 @@
 					mclk_multiplier = "2";
 					pix_clk_hz = "74250000";
 
-					min_gain_val = "0"; /* dB */
-					max_gain_val = "48"; /* dB */
-					gain_step_pitch = "0.3";
+					gain_factor = "10";
+					min_gain_val = "0"; /* 0dB */
+					max_gain_val = "480"; /* 48dB */
+					step_gain_val = "3"; /* 0.3 */
 					min_hdr_ratio = "1";
 					max_hdr_ratio = "1";
-					min_framerate = "1.5";
-					max_framerate = "30";
-					min_exp_time = "30";
-					max_exp_time = "660000";
+					framerate_factor = "1000000";
+					min_framerate = "1500000"; /* 1.5 */
+					max_framerate = "30000000"; /* 30 */
+					step_framerate = "1";
+					exposure_factor = "1000000";
+					min_exp_time = "30"; /* us */
+					max_exp_time = "660000"; /* us */
+					step_exp_time = "1";
 					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 				};
@@ -234,15 +223,20 @@
 					mclk_multiplier = "2.4";
 					pix_clk_hz = "89100000";
 
-					min_gain_val = "0";
-					max_gain_val = "48";
-					gain_step_pitch = "0.3";
+					gain_factor = "10";
+					min_gain_val = "0"; /* 0dB */
+					max_gain_val = "480"; /* 48dB */
+					step_gain_val = "3"; /* 0.3 */
 					min_hdr_ratio = "1";
 					max_hdr_ratio = "1";
-					min_framerate = "1.5";
-					max_framerate = "30";
-					min_exp_time = "30";
-					max_exp_time = "660000";
+					framerate_factor = "1000000";
+					min_framerate = "1500000"; /* 1.5 */
+					max_framerate = "30000000"; /* 30 */
+					step_framerate = "1";
+					exposure_factor = "1000000";
+					min_exp_time = "30"; /* us */
+					max_exp_time = "660000"; /* us */
+					step_exp_time = "1";
 					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 				};
@@ -268,15 +262,19 @@
 					mclk_multiplier = "4";
 					pix_clk_hz = "148500000";
 
-					min_gain_val = "0";
-					max_gain_val = "48";
-					gain_step_pitch = "0.3";
+					gain_factor = "10";
+					min_gain_val = "0"; /* 0dB */
+					max_gain_val = "480"; /* 48dB */
+					step_gain_val = "3"; /* 0.3 */
 					min_hdr_ratio = "1";
 					max_hdr_ratio = "1";
-					min_framerate = "1.5";
-					max_framerate = "60";
-					min_exp_time = "30";
-					max_exp_time = "660000";
+					framerate_factor = "1000000";
+					min_framerate = "1500000"; /* 1.5 */
+					max_framerate = "60000000"; /* 60 */
+					step_framerate = "1";
+					exposure_factor = "1000000";
+					min_exp_time = "30"; /* us */
+					max_exp_time = "660000"; /* us */
 					exp_time_1h = "15";
 					embedded_metadata_height = "1";
 				};
@@ -302,15 +300,19 @@
 					mclk_multiplier = "4.8";
 					pix_clk_hz = "178200000";
 
-					min_gain_val = "0";
-					max_gain_val = "48";
-					gain_step_pitch = "0.3";
+					gain_factor = "10";
+					min_gain_val = "0"; /* 0dB */
+					max_gain_val = "480"; /* 48dB */
+					step_gain_val = "3"; /* 0.3 */
 					min_hdr_ratio = "1";
 					max_hdr_ratio = "1";
-					min_framerate = "1.5";
-					max_framerate = "60";
-					min_exp_time = "30";
-					max_exp_time = "660000";
+					framerate_factor = "1000000";
+					min_framerate = "1500000"; /* 1.5 */
+					max_framerate = "60000000"; /* 60 */
+					step_framerate = "1";
+					exposure_factor = "1000000";
+					min_exp_time = "30"; /* us */
+					max_exp_time = "660000"; /* us */
 					exp_time_1h = "15";
 					embedded_metadata_height = "1";
 				};
@@ -335,15 +337,19 @@
 					mclk_multiplier = "2";
 					pix_clk_hz = "74250000";
 
-					min_gain_val = "0";
-					max_gain_val = "12";
-					gain_step_pitch = "0.3";
+					gain_factor = "10";
+					min_gain_val = "0"; /* 0dB */
+					max_gain_val = "120"; /* 12dB */
+					step_gain_val = "3"; /* 0.3 */
 					min_hdr_ratio = "16";
 					max_hdr_ratio = "16";
-					min_framerate = "1.5";
-					max_framerate = "30";
-					min_exp_time = "30";
-					max_exp_time = "660000";
+					framerate_factor = "1000000";
+					min_framerate = "1500000"; /* 1.5 */
+					max_framerate = "30000000"; /* 30 */
+					step_framerate = "1";
+					exposure_factor = "1000000";
+					min_exp_time = "30"; /* us */
+					max_exp_time = "660000"; /* us */
 					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 

@@ -808,12 +808,6 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 
 	size = PAGE_ALIGN(size);
 
-	/*
-	 * Some drivers rely on this, and we probably don't want the
-	 * possibility of stale kernel data being read by devices anyway.
-	 */
-	gfp |= __GFP_ZERO;
-
 	if (gfpflags_allow_blocking(gfp)) {
 		struct page **pages;
 		pgprot_t prot = __get_dma_pgprot(attrs, PAGE_KERNEL, coherent);

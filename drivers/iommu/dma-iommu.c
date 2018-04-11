@@ -414,8 +414,10 @@ struct page **iommu_dma_alloc(struct device *dev, size_t size, gfp_t gfp,
 	struct iova_domain *iovad = cookie_iovad(domain);
 	struct page **pages;
 	struct sg_table sgt;
+	struct scatterlist *s;
 	dma_addr_t iova;
 	unsigned int count, min_size, alloc_sizes = domain->pgsize_bitmap;
+	int i;
 
 	min_size = alloc_sizes & -alloc_sizes;
 	if (min_size < PAGE_SIZE) {
@@ -460,6 +462,10 @@ struct page **iommu_dma_alloc(struct device *dev, size_t size, gfp_t gfp,
 
 	if (sg_alloc_table_from_pages(&sgt, pages, count, 0, size, GFP_KERNEL))
 		goto out_free_iova;
+
+	for_each_sg(sgt.sgl, s, sgt.orig_nents, i) {
+		memset(sg_virt(s), 0, s->length);
+	}
 
 	if (!(prot & IOMMU_CACHE)) {
 		flush_sg(dev, &sgt);

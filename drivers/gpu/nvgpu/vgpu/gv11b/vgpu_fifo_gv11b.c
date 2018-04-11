@@ -21,6 +21,7 @@
  */
 
 #include <gk20a/gk20a.h>
+#include <nvgpu/dma.h>
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
@@ -114,6 +115,14 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	}
 
 	return 0;
+}
+
+void vgpu_gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
+					struct nvgpu_mem *syncpt_buf)
+{
+	nvgpu_gmmu_unmap(c->vm, syncpt_buf, syncpt_buf->gpu_va);
+	__nvgpu_vm_free_va(c->vm, syncpt_buf->gpu_va, gmmu_page_size_kernel);
+	nvgpu_dma_free(c->g, syncpt_buf);
 }
 
 int vgpu_gv11b_fifo_get_sync_ro_map(struct vm_gk20a *vm,

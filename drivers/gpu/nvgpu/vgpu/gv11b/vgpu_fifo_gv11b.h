@@ -28,6 +28,8 @@ struct gk20a;
 int vgpu_gv11b_init_fifo_setup_hw(struct gk20a *g);
 int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 			u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
+void vgpu_gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
+					struct nvgpu_mem *syncpt_buf);
 int vgpu_gv11b_fifo_get_sync_ro_map(struct vm_gk20a *vm,
 	u64 *base_gpuva, u32 *sync_size);
 #endif

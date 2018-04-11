@@ -124,6 +124,10 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
 	},
+	[7] = {
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+	},
 };
 
 static struct nvmap_platform_data nvmap_data = {

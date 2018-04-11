@@ -1,7 +1,7 @@
 /*
  * tegracam_core - tegra camera framework initialization
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -153,10 +153,10 @@ int tegracam_v4l2subdev_register(struct tegracam_device *tc_dev,
 		dev_err(dev, "Failed to init ctrls %s\n", tc_dev->name);
 		return err;
 	}
+	tc_dev->numctrls = ctrl_hdl->ctrl_ops->numctrls;
 	s_data->numctrls = tc_dev->numctrls;
 	sd->ctrl_handler = s_data->ctrl_handler = &ctrl_hdl->ctrl_handler;
 	s_data->ctrls = ctrl_hdl->ctrls;
-
 	sd->internal_ops = tc_dev->v4l2sd_internal_ops;
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
 			V4L2_SUBDEV_FL_HAS_EVENTS;

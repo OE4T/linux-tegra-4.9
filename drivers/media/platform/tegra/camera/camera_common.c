@@ -1,7 +1,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -96,7 +96,8 @@ static const char *camera_common_csi_io_pads[] = {
 	"csif",
 };
 
-static bool camera_common_verify_code(struct tegra_channel *chan, unsigned int code)
+static bool camera_common_verify_code(
+	struct tegra_channel *chan, unsigned int code)
 {
 	int i;
 
@@ -125,7 +126,6 @@ int camera_common_g_ctrl(struct camera_common_data *s_data,
 
 	return -EFAULT;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_g_ctrl);
 
 int camera_common_regulator_get(struct device *dev,
@@ -147,7 +147,6 @@ int camera_common_regulator_get(struct device *dev,
 	*vreg = reg;
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_regulator_get);
 
 int camera_common_parse_clocks(struct device *dev,
@@ -209,7 +208,6 @@ int camera_common_parse_clocks(struct device *dev,
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_parse_clocks);
 
 int camera_common_parse_ports(struct device *dev,
@@ -251,8 +249,25 @@ int camera_common_parse_ports(struct device *dev,
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_parse_ports);
+
+int camera_common_parse_general_properties(struct device *dev,
+			      struct camera_common_data *s_data)
+{
+	struct device_node *np = dev->of_node;
+	int err = 0;
+	const char *str;
+
+	s_data->use_sensor_mode_id = false;
+	err = of_property_read_string(np, "use_sensor_mode_id",	&str);
+	if (!err) {
+		if (!strcmp(str, "true"))
+			s_data->use_sensor_mode_id = true;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(camera_common_parse_general_properties);
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused)
 {
@@ -349,7 +364,6 @@ void camera_common_remove_debugfs(
 	debugfs_remove_recursive(s_data->debugdir);
 	s_data->debugdir = NULL;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_remove_debugfs);
 
 void camera_common_create_debugfs(
@@ -378,7 +392,6 @@ remove_debugfs:
 	dev_err(dev, "couldn't create debugfs\n");
 	camera_common_remove_debugfs(s_data);
 }
-
 EXPORT_SYMBOL_GPL(camera_common_create_debugfs);
 
 /* Find a data format by a pixel code in an array */
@@ -583,7 +596,6 @@ verify_code:
 
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_try_fmt);
 
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
@@ -604,7 +616,6 @@ int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	return ret;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_s_fmt);
 
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
@@ -625,7 +636,6 @@ int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_g_fmt);
 
 static int camera_common_evaluate_color_format(struct v4l2_subdev *sd,
@@ -818,7 +828,6 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_s_power);
 
 int camera_common_g_mbus_config(struct v4l2_subdev *sd,
@@ -831,7 +840,6 @@ int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_g_mbus_config);
 
 int camera_common_get_framesync(struct v4l2_subdev *sd,
@@ -863,7 +871,6 @@ int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on)
 
 	return err;
 }
-
 EXPORT_SYMBOL_GPL(camera_common_focuser_s_power);
 
 int camera_common_initialize(struct camera_common_data *s_data,
@@ -881,6 +888,11 @@ int camera_common_initialize(struct camera_common_data *s_data,
 		return err;
 	}
 
+	err = camera_common_parse_general_properties(s_data->dev, s_data);
+	if (err) {
+		dev_err(s_data->dev, "Failed to find general properties.\n");
+		return err;
+	}
 
 	err = sensor_common_init_sensor_properties(s_data->dev,
 						s_data->dev->of_node,

@@ -1,7 +1,7 @@
 /*
  * tegracam_ctrls - control framework for tegra camera drivers
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -99,6 +99,28 @@ static struct v4l2_ctrl_config ctrl_cfg_list[] = {
 		.max = CTRL_MAX_STR_SIZE,
 		.step = 2,
 	},
+	{
+		.ops = &tegracam_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_MODE_ID,
+		.name = "Sensor Mode",
+		.type = V4L2_CTRL_TYPE_INTEGER64,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = CTRL_U32_MIN,
+		.max = CTRL_U32_MAX,
+		.def = CTRL_U32_MIN,
+		.step = 1,
+	},
+	{
+		.ops = &tegracam_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_HDR_EN,
+		.name = "HDR enable",
+		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
+		.min = 0,
+		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
+		.menu_skip_mask = 0,
+		.def = 0,
+		.qmenu_int = switch_ctrl_qmenu,
+	},
 };
 
 static int tegracam_get_ctrl_index(u32 cid)
@@ -187,6 +209,10 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = ops->set_group_hold(s_data, ctrl->val);
+		break;
+	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
+		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
+	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
 		pr_err("%s: unknown ctrl id.\n", __func__);

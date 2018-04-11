@@ -216,7 +216,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	int err, nice_value;
+	int err;
 
 	gk20a_dbg_fn("");
 
@@ -238,9 +238,6 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		return err;
 
-	nice_value = task_nice(current);
-	set_user_nice(current, -20);
-
 	/* Enable interrupt workqueue */
 	if (!l->nonstall_work_queue) {
 		l->nonstall_work_queue = alloc_workqueue("%s",
@@ -253,22 +250,16 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		return err;
 
 	err = gk20a_finalize_poweron(g);
-	if (err) {
-		set_user_nice(current, nice_value);
+	if (err)
 		goto done;
-	}
 
 	err = nvgpu_finalize_poweron_linux(l);
-	if (err) {
-		set_user_nice(current, nice_value);
+	if (err)
 		goto done;
-	}
 
 	nvgpu_init_mm_ce_context(g);
 
 	nvgpu_vidmem_thread_unpause(&g->mm);
-
-	set_user_nice(current, nice_value);
 
 	/* Initialise scaling: it will initialize scaling drive only once */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ) &&

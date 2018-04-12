@@ -609,19 +609,25 @@ static int __do_huge_pmd_anonymous_page(struct fault_env *fe, struct page *page,
  */
 static inline gfp_t alloc_hugepage_direct_gfpmask(struct vm_area_struct *vma)
 {
+	gfp_t gfp = GFP_TRANSHUGE_LIGHT;
 	bool vma_madvised = !!(vma->vm_flags & VM_HUGEPAGE);
 
 	if (test_bit(TRANSPARENT_HUGEPAGE_DEFRAG_REQ_MADV_FLAG,
 				&transparent_hugepage_flags) && vma_madvised)
-		return GFP_TRANSHUGE;
+		gfp = GFP_TRANSHUGE;
 	else if (test_bit(TRANSPARENT_HUGEPAGE_DEFRAG_KSWAPD_FLAG,
 						&transparent_hugepage_flags))
-		return GFP_TRANSHUGE_LIGHT | __GFP_KSWAPD_RECLAIM;
+		gfp = GFP_TRANSHUGE_LIGHT | __GFP_KSWAPD_RECLAIM;
 	else if (test_bit(TRANSPARENT_HUGEPAGE_DEFRAG_DIRECT_FLAG,
 						&transparent_hugepage_flags))
-		return GFP_TRANSHUGE | (vma_madvised ? 0 : __GFP_NORETRY);
+		gfp = GFP_TRANSHUGE | (vma_madvised ? 0 : __GFP_NORETRY);
 
-	return GFP_TRANSHUGE_LIGHT;
+	/* Disable movable allocations to avoid fallback to CMA.
+	 * Unmovable allocations can fallback to movable anyway.
+	 */
+	gfp &= ~__GFP_MOVABLE;
+
+	return gfp;
 }
 
 /* Caller must hold page table lock. */
@@ -691,10 +697,6 @@ int do_huge_pmd_anonymous_page(struct fault_env *fe)
 		return ret;
 	}
 	gfp = alloc_hugepage_direct_gfpmask(vma);
-	/* Disable movable allocations to avoid fallback to CMA.
-	 * Unmovable allocations can fallback to movable anyway.
-	 */
-	gfp &= ~__GFP_MOVABLE;
 	page = alloc_hugepage_vma(gfp, vma, haddr, HPAGE_PMD_ORDER);
 	if (unlikely(!page)) {
 		count_vm_event(THP_FAULT_FALLBACK);

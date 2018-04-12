@@ -24,6 +24,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/os_sched.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/tsg_gk20a.h"
@@ -370,7 +371,7 @@ int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp)
 		goto free_ref;
 	}
 
-	tsg = gk20a_tsg_open(g);
+	tsg = gk20a_tsg_open(g, nvgpu_current_pid(g));
 	if (!tsg) {
 		nvgpu_kfree(g, priv);
 		err = -ENOMEM;

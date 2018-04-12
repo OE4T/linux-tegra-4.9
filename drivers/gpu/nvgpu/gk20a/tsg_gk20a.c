@@ -267,7 +267,7 @@ static struct tsg_gk20a *gk20a_tsg_acquire_unused_tsg(struct fifo_gk20a *f)
 	return tsg;
 }
 
-struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
+struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 {
 	struct tsg_gk20a *tsg;
 	int err;
@@ -286,7 +286,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	tsg->timeslice_timeout = 0;
 	tsg->timeslice_scale = 0;
 	tsg->runlist_id = ~0;
-	tsg->tgid = nvgpu_current_pid(g);
+	tsg->tgid = pid;
 
 	if (g->ops.fifo.init_eng_method_buffers)
 		g->ops.fifo.init_eng_method_buffers(g, tsg);

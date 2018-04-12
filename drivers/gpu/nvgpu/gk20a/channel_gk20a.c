@@ -615,7 +615,8 @@ void __gk20a_channel_kill(struct channel_gk20a *ch)
 
 struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		s32 runlist_id,
-		bool is_privileged_channel)
+		bool is_privileged_channel,
+		pid_t pid, pid_t tid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
@@ -645,8 +646,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* Channel privilege level */
 	ch->is_privileged_channel = is_privileged_channel;
 
-	ch->pid = nvgpu_current_tid(g);
-	ch->tgid = nvgpu_current_pid(g);  /* process granularity for FECS traces */
+	ch->pid = tid;
+	ch->tgid = pid;  /* process granularity for FECS traces */
 
 	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->g = NULL;

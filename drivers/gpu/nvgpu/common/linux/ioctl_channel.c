@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,6 +33,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/os_sched.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -495,7 +496,8 @@ static int __gk20a_channel_open(struct gk20a *g,
 		goto fail_busy;
 	}
 	/* All the user space channel should be non privilege */
-	ch = gk20a_open_new_channel(g, runlist_id, false);
+	ch = gk20a_open_new_channel(g, runlist_id, false,
+				nvgpu_current_pid(g), nvgpu_current_tid(g));
 	gk20a_idle(g);
 	if (!ch) {
 		nvgpu_err(g,

@@ -31,6 +31,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/os_sched.h>
 
 #include <nvgpu/linux/vm.h>
 
@@ -1287,7 +1288,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 		return -ENOSYS;
 	}
 
-	tsg = gk20a_tsg_open(g);
+	tsg = gk20a_tsg_open(g, nvgpu_current_pid(g));
 	if (!tsg) {
 		nvgpu_err(g, "cde: could not create TSG");
 		err = -ENOMEM;

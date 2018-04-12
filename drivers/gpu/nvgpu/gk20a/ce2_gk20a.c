@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Copy Engine  (gr host)
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,6 +24,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/os_sched.h>
 
 #include "gk20a.h"
 
@@ -430,7 +431,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	ce_ctx->vm = g->mm.ce.vm;
 
 	/* allocate a tsg if needed */
-	ce_ctx->tsg = gk20a_tsg_open(g);
+	ce_ctx->tsg = gk20a_tsg_open(g, nvgpu_current_pid(g));
 	if (!ce_ctx->tsg) {
 		nvgpu_err(g, "ce: gk20a tsg not available");
 		err = -ENOMEM;
@@ -438,7 +439,8 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	}
 
 	/* always kernel client needs privileged channel */
-	ce_ctx->ch = gk20a_open_new_channel(g, runlist_id, true);
+	ce_ctx->ch = gk20a_open_new_channel(g, runlist_id, true,
+				nvgpu_current_pid(g), nvgpu_current_tid(g));
 	if (!ce_ctx->ch) {
 		nvgpu_err(g, "ce: gk20a channel not available");
 		err = -ENOMEM;

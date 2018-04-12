@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/os_sched.h>
 
 /*
  * This is required for nvgpu_vm_find_buf() which is used in the tracing
@@ -251,7 +252,8 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 	struct channel_gk20a *ch;
 	struct nvgpu_channel_linux *priv;
 
-	ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel);
+	ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel,
+				nvgpu_current_pid(g), nvgpu_current_tid(g));
 
 	if (ch) {
 		priv = ch->os_priv;

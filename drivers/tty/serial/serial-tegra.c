@@ -814,7 +814,7 @@ static int tegra_uart_rx_buffer_push(struct tegra_uart_port *tup,
 
 	/* If we are here, DMA is stopped */
 	ret = tegra_uart_copy_rx_to_tty(tup, port, count);
-	if (ret || !tup->disable_pio_mode)
+	if (ret || tup->disable_pio_mode)
 		goto skip_pio;
 
 	ret = tegra_uart_handle_rx_pio(tup, port);

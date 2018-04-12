@@ -32,7 +32,8 @@
 
 #include "volt.h"
 
-#define RAIL_COUNT 2
+#define RAIL_COUNT_GP 2
+#define RAIL_COUNT_GV 1
 
 struct volt_rpc_pmucmdhandler_params {
 	struct nv_pmu_volt_rpc *prpc_call;
@@ -202,7 +203,7 @@ u32 nvgpu_volt_rail_get_voltage_gv10x(struct gk20a *g,
 		sizeof(struct nv_pmu_rpc_struct_volt_volt_rail_get_voltage));
 	rpc.rail_idx = rail_idx;
 
-	PMU_RPC_EXECUTE_CPB(status, pmu, VOLT, VOLT_SET_VOLTAGE, &rpc, 0);
+	PMU_RPC_EXECUTE_CPB(status, pmu, VOLT, VOLT_RAIL_GET_VOLTAGE, &rpc, 0);
 	if (status) {
 		nvgpu_err(g, "Failed to execute RPC status=0x%x",
 			status);
@@ -275,7 +276,7 @@ static u32 volt_set_voltage_gv10x_rpc(struct gk20a *g, u8 client_id,
 	rpc.client_id = 0x1;
 	rpc.rail_list = *prail_list;
 
-	PMU_RPC_EXECUTE(status, pmu, VOLT, VOLT_SET_VOLTAGE, &rpc, 0);
+	PMU_RPC_EXECUTE_CPB(status, pmu, VOLT, VOLT_SET_VOLTAGE, &rpc, 0);
 	if (status) {
 		nvgpu_err(g, "Failed to execute RPC status=0x%x",
 			status);
@@ -290,17 +291,12 @@ u32 nvgpu_volt_set_voltage_gv10x(struct gk20a *g, u32 logic_voltage_uv,
 	int status = 0;
 	struct ctrl_volt_volt_rail_list_v1 rail_list = { 0 };
 
-	rail_list.num_rails = RAIL_COUNT;
+	rail_list.num_rails = RAIL_COUNT_GV;
 	rail_list.rails[0].rail_idx =
 		volt_rail_volt_domain_convert_to_idx(g,
 			CTRL_VOLT_DOMAIN_LOGIC);
 	rail_list.rails[0].voltage_uv = logic_voltage_uv;
 	rail_list.rails[0].voltage_min_noise_unaware_uv = logic_voltage_uv;
-	rail_list.rails[1].rail_idx =
-		volt_rail_volt_domain_convert_to_idx(g,
-			CTRL_VOLT_DOMAIN_SRAM);
-	rail_list.rails[1].voltage_uv = sram_voltage_uv;
-	rail_list.rails[1].voltage_min_noise_unaware_uv = sram_voltage_uv;
 
 	status = volt_set_voltage_gv10x_rpc(g,
 		CTRL_VOLT_POLICY_CLIENT_PERF_CORE_VF_SEQ, &rail_list);
@@ -314,7 +310,7 @@ u32 nvgpu_volt_set_voltage_gp10x(struct gk20a *g, u32 logic_voltage_uv,
 	int status = 0;
 	struct ctrl_perf_volt_rail_list rail_list = { 0 };
 
-	rail_list.num_rails = RAIL_COUNT;
+	rail_list.num_rails = RAIL_COUNT_GP;
 	rail_list.rails[0].volt_domain = CTRL_VOLT_DOMAIN_LOGIC;
 	rail_list.rails[0].voltage_uv = logic_voltage_uv;
 	rail_list.rails[0].voltage_min_noise_unaware_uv = logic_voltage_uv;
@@ -370,7 +366,7 @@ int volt_set_noiseaware_vmin(struct gk20a *g, u32 logic_voltage_uv,
 	int status = 0;
 	struct ctrl_volt_volt_rail_list rail_list = { 0 };
 
-	rail_list.num_rails = RAIL_COUNT;
+	rail_list.num_rails = RAIL_COUNT_GP;
 	rail_list.rails[0].rail_idx = 0;
 	rail_list.rails[0].voltage_uv = logic_voltage_uv;
 	rail_list.rails[1].rail_idx = 1;

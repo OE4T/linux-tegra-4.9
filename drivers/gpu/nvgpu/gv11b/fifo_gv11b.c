@@ -392,6 +392,7 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 	u32 pbdma_stat;
 	u32 chan_stat;
 	int ret = -EBUSY;
+	unsigned int loop_count = 0;
 
 	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
@@ -400,6 +401,14 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 	nvgpu_log(g, gpu_dbg_info, "wait preempt pbdma %d", pbdma_id);
 	/* Verify that ch/tsg is no longer on the pbdma */
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt pbdma retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
 		/*
 		 * If the PBDMA has a stalling interrupt and receives a NACK,
 		 * the PBDMA won't save out until the STALLING interrupt is
@@ -452,8 +461,11 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "preempt timeout pbdma"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret)
+		nvgpu_err(g, "preempt timeout pbdma: %u pbdma_stat: %u "
+				"tsgid: %u", pbdma_id, pbdma_stat, id);
 	return ret;
 }
 
@@ -466,7 +478,8 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 	u32 eng_stat;
 	u32 ctx_stat;
 	int ret = -EBUSY;
-	bool stall_intr = false;
+	unsigned int loop_count = 0;
+	u32 eng_intr_pending;
 
 	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
@@ -476,20 +489,56 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			act_eng_id);
 	/* Check if ch/tsg has saved off the engine or if ctxsw is hung */
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt eng retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
 		eng_stat = gk20a_readl(g, fifo_engine_status_r(act_eng_id));
 		ctx_stat  = fifo_engine_status_ctx_status_v(eng_stat);
 
-		if (g->ops.mc.is_stall_and_eng_intr_pending(g, act_eng_id)) {
-			stall_intr = true;
+		if (g->ops.mc.is_stall_and_eng_intr_pending(g, act_eng_id,
+					&eng_intr_pending)) {
+		/* From h/w team
+		 * Engine save can be blocked by eng  stalling interrupts.
+		 * FIFO interrupts shouldn’t block an engine save from
+		 * finishing, but could block FIFO from reporting preempt done.
+		 * No immediate reason to reset the engine if FIFO interrupt is
+		 * pending.
+		 * The hub, priv_ring, and ltc interrupts could block context
+		 * switch (or memory), but doesn’t necessarily have to.
+		 * For Hub interrupts they just report access counters and page
+		 * faults. Neither of these necessarily block context switch
+		 * or preemption, but they could.
+		 * For example a page fault for graphics would prevent graphics
+		 * from saving out. An access counter interrupt is a
+		 * notification and has no effect.
+		 * SW should handle page faults though for preempt to complete.
+		 * PRI interrupt (due to a failed PRI transaction) will result
+		 * in ctxsw failure reported to HOST.
+		 * LTC interrupts are generally ECC related and if so,
+		 * certainly don’t block preemption/ctxsw but they could.
+		 * Bus interrupts shouldn’t have anything to do with preemption
+		 * state as they are part of the Host EXT pipe, though they may
+		 * exhibit a symptom that indicates that GPU is in a bad state.
+		 * To be completely fair, when an engine is preempting SW
+		 * really should just handle other interrupts as they come in.
+		 * It’s generally bad to just poll and wait on a preempt
+		 * to complete since there are many things in the GPU which may
+		 * cause a system to hang/stop responding.
+		 */
 			nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
 					"stall intr set, "
-					"preemption will not finish");
+					"preemption might not finish");
 		}
 		if (ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_switch_v()) {
 			/* Eng save hasn't started yet. Continue polling */
-			if (stall_intr) {
-				/* if stall intr stop polling */
+			if (eng_intr_pending) {
+				/* if eng intr, stop polling */
 				*reset_eng_bitmask |= BIT(act_eng_id);
 				ret = 0;
 				break;
@@ -501,8 +550,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			 fifo_engine_status_ctx_status_ctxsw_save_v()) {
 
 			if (id == fifo_engine_status_id_v(eng_stat)) {
-				if (stall_intr ||
-					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				if (eng_intr_pending) {
 					/* preemption will not finish */
 					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
@@ -518,9 +566,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			 fifo_engine_status_ctx_status_ctxsw_load_v()) {
 
 			if (id == fifo_engine_status_next_id_v(eng_stat)) {
-
-				if (stall_intr ||
-					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				if (eng_intr_pending) {
 					/* preemption will not finish */
 					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
@@ -540,8 +586,21 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "preempt timeout eng"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret) {
+		/*
+		* The reasons a preempt can fail are:
+		* 1.Some other stalling interrupt is asserted preventing
+		*   channel or context save.
+		* 2.The memory system hangs.
+		* 3.The engine hangs during CTXSW.
+		*/
+		nvgpu_err(g, "preempt timeout eng: %u ctx_stat: %u tsgid: %u",
+			act_eng_id, ctx_stat, id);
+		*reset_eng_bitmask |= BIT(act_eng_id);
+	}
+
 	return ret;
 }
 
@@ -718,7 +777,6 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	u32 pbdma_id;
 	u32 act_eng_id;
 	u32 runlist_id;
-	int func_ret;
 	int ret = 0;
 	u32 tsgid;
 
@@ -735,30 +793,15 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	runlist_served_pbdmas = f->runlist_info[runlist_id].pbdma_bitmask;
 	runlist_served_engines = f->runlist_info[runlist_id].eng_bitmask;
 
-	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma) {
-
-		func_ret = gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
+	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma)
+		ret |= gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
 							 timeout_rc_type);
-		if (func_ret != 0) {
-			nvgpu_log_info(g, "preempt timeout pbdma %d", pbdma_id);
-			ret |= func_ret;
-		}
-	}
-
 	f->runlist_info[runlist_id].reset_eng_bitmask = 0;
 
-	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines) {
-
-		func_ret = gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
+	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines)
+		ret |= gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
 				&f->runlist_info[runlist_id].reset_eng_bitmask,
 				 timeout_rc_type);
-
-		if (func_ret != 0) {
-			nvgpu_log_info(g, "preempt timeout engine %d", act_eng_id);
-			ret |= func_ret;
-		}
-	}
-
 	return ret;
 }
 

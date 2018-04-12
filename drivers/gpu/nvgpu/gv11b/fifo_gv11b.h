@@ -50,6 +50,8 @@
 
 #define CHANNEL_INFO_VEID0		0
 
+#define MAX_PRE_SI_RETRIES		200000	/* 1G/500KHz * 100 */
+
 struct gpu_ops;
 
 void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,

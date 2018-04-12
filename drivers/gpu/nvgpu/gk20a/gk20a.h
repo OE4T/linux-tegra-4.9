@@ -1109,7 +1109,7 @@ struct gpu_ops {
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
 		bool (*is_intr_nvlink_pending)(struct gk20a *g, u32 mc_intr);
 		bool (*is_stall_and_eng_intr_pending)(struct gk20a *g,
-								u32 act_eng_id);
+					u32 act_eng_id, u32 *eng_intr_pending);
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);

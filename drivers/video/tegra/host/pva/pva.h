@@ -207,6 +207,7 @@ struct pva {
 	u32 r5_dbg_wait;
 	bool timeout_enabled;
 	u32 slcg_disable;
+	u32 vmem_war_disable;
 
 	struct work_struct pva_abort_handler_work;
 	bool booted;

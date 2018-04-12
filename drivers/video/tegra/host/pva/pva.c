@@ -32,7 +32,7 @@
 #include <linux/firmware.h>
 #include <linux/iommu.h>
 #include <linux/reset.h>
-
+#include <linux/platform/tegra/common.h>
 #include <soc/tegra/chip-id.h>
 
 #include "nvhost_syncpt_unit_interface.h"
@@ -173,6 +173,9 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	if (pva->slcg_disable)
 		sema_value |= PVA_CG_DISABLE;
+
+	if (pva->vmem_war_disable)
+		sema_value |= PVA_VMEM_RD_WAR_DISABLE;
 
 	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT);
 	host1x_writel(pdev, hsp_ss0_set_r(), sema_value);
@@ -690,6 +693,14 @@ static int pva_probe(struct platform_device *pdev)
 	mutex_init(&pva->ccq_mutex);
 	pva->submit_mode = PVA_SUBMIT_MODE_MMIO_CCQ;
 	pva->slcg_disable = 0;
+	pva->vmem_war_disable = 0;
+
+#ifdef __linux__
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	if (tegra_chip_get_revision() != TEGRA194_REVISION_A01)
+		pva->vmem_war_disable = 1;
+#endif
+#endif
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

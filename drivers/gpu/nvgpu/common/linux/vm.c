@@ -285,6 +285,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		nvgpu_err(g,
 			  "buf size %llx < (offset(%llx) + map_size(%llx))\n",
 			  (u64)dmabuf->size, buffer_offset, mapping_size);
+		dma_buf_put(dmabuf);
 		return -EINVAL;
 	}
 

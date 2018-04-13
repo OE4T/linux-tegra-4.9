@@ -1,0 +1,19 @@
+From e076d8db4168b62553e4c84fb07b37e707b819a7 Mon Sep 17 00:00:00 2001
+From: Julia Cartwright <julia@ni.com>
+Date: Mon, 26 Feb 2018 10:43:05 -0600
+Subject: [PATCH 349/356] Linux 4.9.84-rt62 REBASE
+
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..40d81d8 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt62
+-- 
+2.1.4
+

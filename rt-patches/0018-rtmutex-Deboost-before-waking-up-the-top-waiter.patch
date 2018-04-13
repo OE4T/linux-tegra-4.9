@@ -1,4 +1,4 @@
-From fe7b2d2f1714de7ad3c46f1263f4f7580e2d4e3c Mon Sep 17 00:00:00 2001
+From 6a6101095e58864b6be9bdc12b1f377e27db44fd Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
 Subject: [PATCH 018/356] rtmutex: Deboost before waking up the top waiter
@@ -60,10 +60,10 @@ index 28dd926..26273b5 100644
  	return ret;
  }
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 30f08b7..440469b 100644
+index 7f8ee5d..a77f7ca 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -371,24 +371,6 @@ static void __rt_mutex_adjust_prio(struct task_struct *task)
+@@ -370,24 +370,6 @@ static void __rt_mutex_adjust_prio(struct task_struct *task)
  }
  
  /*
@@ -88,7 +88,7 @@ index 30f08b7..440469b 100644
   * Deadlock detection is conditional:
   *
   * If CONFIG_DEBUG_RT_MUTEXES=n, deadlock detection is only conducted
-@@ -1049,6 +1031,7 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
+@@ -1072,6 +1054,7 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
  	 * lock->wait_lock.
  	 */
  	rt_mutex_dequeue_pi(current, waiter);
@@ -96,7 +96,7 @@ index 30f08b7..440469b 100644
  
  	/*
  	 * As we are waking up the top waiter, and the waiter stays
-@@ -1391,6 +1374,16 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1416,6 +1399,16 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
  	 */
  	mark_wakeup_next_waiter(wake_q, lock);
  
@@ -113,7 +113,7 @@ index 30f08b7..440469b 100644
  	raw_spin_unlock_irqrestore(&lock->wait_lock, flags);
  
  	/* check PI boosting */
-@@ -1440,6 +1433,18 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
+@@ -1465,6 +1458,18 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
  	return slowfn(lock);
  }
  
@@ -132,7 +132,7 @@ index 30f08b7..440469b 100644
  static inline void
  rt_mutex_fastunlock(struct rt_mutex *lock,
  		    bool (*slowfn)(struct rt_mutex *lock,
-@@ -1453,11 +1458,7 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
+@@ -1478,11 +1483,7 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  
  	deboost = slowfn(lock, &wake_q);
  
@@ -145,7 +145,7 @@ index 30f08b7..440469b 100644
  }
  
  /**
-@@ -1570,6 +1571,13 @@ bool __sched __rt_mutex_futex_unlock(struct rt_mutex *lock,
+@@ -1595,6 +1596,13 @@ bool __sched __rt_mutex_futex_unlock(struct rt_mutex *lock,
  	}
  
  	mark_wakeup_next_waiter(wake_q, lock);
@@ -159,7 +159,7 @@ index 30f08b7..440469b 100644
  	return true; /* deboost and wakeups */
  }
  
-@@ -1582,10 +1590,7 @@ void __sched rt_mutex_futex_unlock(struct rt_mutex *lock)
+@@ -1607,10 +1615,7 @@ void __sched rt_mutex_futex_unlock(struct rt_mutex *lock)
  	deboost = __rt_mutex_futex_unlock(lock, &wake_q);
  	raw_spin_unlock_irq(&lock->wait_lock);
  
@@ -172,10 +172,10 @@ index 30f08b7..440469b 100644
  
  /**
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 25ccf71..6f07357 100644
+index f4c34c4..dad9229 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -122,7 +122,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
+@@ -123,7 +123,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
  				 struct wake_q_head *wqh);
  

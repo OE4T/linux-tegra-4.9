@@ -1,4 +1,4 @@
-From 39621d1f9741694ce11412b3658969a3b86fec66 Mon Sep 17 00:00:00 2001
+From 56229b84bac40dcb78b5f46e72e2c56db27a608c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
 Subject: [PATCH 015/356] futex: Rework futex_lock_pi() to use
@@ -208,10 +208,10 @@ index da387cc..141ace2 100644
  	 * haven't already.
  	 */
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index fb86e5f..de0d978 100644
+index e1896ac..ef5cdcd 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1491,19 +1491,6 @@ int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
+@@ -1516,19 +1516,6 @@ int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
  EXPORT_SYMBOL_GPL(rt_mutex_lock_interruptible);
  
  /*
@@ -231,7 +231,7 @@ index fb86e5f..de0d978 100644
   * Futex variant, must not use fastpath.
   */
  int __sched rt_mutex_futex_trylock(struct rt_mutex *lock)
-@@ -1772,12 +1759,6 @@ int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
+@@ -1797,12 +1784,6 @@ int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
  	/* sleep on the mutex */
  	ret = __rt_mutex_slowlock(lock, TASK_INTERRUPTIBLE, to, waiter);
  
@@ -244,7 +244,7 @@ index fb86e5f..de0d978 100644
  	raw_spin_unlock_irq(&lock->wait_lock);
  
  	return ret;
-@@ -1817,6 +1798,13 @@ bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+@@ -1842,6 +1823,13 @@ bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
  		fixup_rt_mutex_waiters(lock);
  		cleanup = true;
  	}
@@ -259,10 +259,10 @@ index fb86e5f..de0d978 100644
  
  	return cleanup;
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index fedd5ab..4fe3f32 100644
+index 8e81b17..b620aaf 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -113,7 +113,6 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
+@@ -114,7 +114,6 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
  extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
  				 struct rt_mutex_waiter *waiter);
  

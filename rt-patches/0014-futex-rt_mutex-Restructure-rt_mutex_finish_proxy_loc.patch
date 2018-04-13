@@ -1,4 +1,4 @@
-From 293ec0a539fb6026893c1cc2562c093d6447e48e Mon Sep 17 00:00:00 2001
+From ba362d12bd926e44eb52c073371be8a6a826c279 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
 Subject: [PATCH 014/356] futex,rt_mutex: Restructure
@@ -61,10 +61,10 @@ index ea7feb8..da387cc 100644
  		 * Fixup the pi_state owner and possibly acquire the lock if we
  		 * haven't already.
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 92499cb..fb86e5f 100644
+index d7dbce1..e1896ac 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1743,21 +1743,23 @@ struct task_struct *rt_mutex_next_owner(struct rt_mutex *lock)
+@@ -1768,21 +1768,23 @@ struct task_struct *rt_mutex_next_owner(struct rt_mutex *lock)
  }
  
  /**
@@ -92,7 +92,7 @@ index 92499cb..fb86e5f 100644
  			       struct hrtimer_sleeper *to,
  			       struct rt_mutex_waiter *waiter)
  {
-@@ -1770,9 +1772,6 @@ int rt_mutex_finish_proxy_lock(struct rt_mutex *lock,
+@@ -1795,9 +1797,6 @@ int rt_mutex_finish_proxy_lock(struct rt_mutex *lock,
  	/* sleep on the mutex */
  	ret = __rt_mutex_slowlock(lock, TASK_INTERRUPTIBLE, to, waiter);
  
@@ -102,7 +102,7 @@ index 92499cb..fb86e5f 100644
  	/*
  	 * try_to_take_rt_mutex() sets the waiter bit unconditionally. We might
  	 * have to fix that up.
-@@ -1783,3 +1782,42 @@ int rt_mutex_finish_proxy_lock(struct rt_mutex *lock,
+@@ -1808,3 +1807,42 @@ int rt_mutex_finish_proxy_lock(struct rt_mutex *lock,
  
  	return ret;
  }
@@ -146,10 +146,10 @@ index 92499cb..fb86e5f 100644
 +	return cleanup;
 +}
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index d16de236..fedd5ab 100644
+index 74b4cf2f..8e81b17 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -107,9 +107,11 @@ extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter);
+@@ -108,9 +108,11 @@ extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter);
  extern int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);

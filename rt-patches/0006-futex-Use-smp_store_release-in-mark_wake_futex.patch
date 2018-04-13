@@ -1,4 +1,4 @@
-From 9cc55ebdc3e7968f86cbec9146b4497de3815a5b Mon Sep 17 00:00:00 2001
+From 07f6424fdeceae77b2f3c7d31c5276c4d6fad121 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:49 +0100
 Subject: [PATCH 006/356] futex: Use smp_store_release() in mark_wake_futex()

@@ -1,4 +1,4 @@
-From 25fa7ba86a3bc1f353a5a98a6919fd01b1305c4b Mon Sep 17 00:00:00 2001
+From b1872d56816f16395ec1ae188a8718ba7fce44d8 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:50 +0100
 Subject: [PATCH 007/356] futex: Remove rt_mutex_deadlock_account_*()
@@ -58,10 +58,10 @@ index d0519c3..b585af9 100644
  extern void debug_rt_mutex_free_waiter(struct rt_mutex_waiter *waiter);
  extern void debug_rt_mutex_init(struct rt_mutex *lock, const char *name);
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 2c49d76..1c57ff1 100644
+index 196cc46..385715b 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -936,8 +936,6 @@ static int try_to_take_rt_mutex(struct rt_mutex *lock, struct task_struct *task,
+@@ -956,8 +956,6 @@ static int try_to_take_rt_mutex(struct rt_mutex *lock, struct task_struct *task,
  	 */
  	rt_mutex_set_owner(lock, task);
  
@@ -70,7 +70,7 @@ index 2c49d76..1c57ff1 100644
  	return 1;
  }
  
-@@ -1340,8 +1338,6 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1365,8 +1363,6 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
  
  	debug_rt_mutex_unlock(lock);
  
@@ -79,7 +79,7 @@ index 2c49d76..1c57ff1 100644
  	/*
  	 * We must be careful here if the fast path is enabled. If we
  	 * have no waiters queued we cannot set owner to NULL here
-@@ -1407,11 +1403,10 @@ rt_mutex_fastlock(struct rt_mutex *lock, int state,
+@@ -1432,11 +1428,10 @@ rt_mutex_fastlock(struct rt_mutex *lock, int state,
  				struct hrtimer_sleeper *timeout,
  				enum rtmutex_chainwalk chwalk))
  {
@@ -94,7 +94,7 @@ index 2c49d76..1c57ff1 100644
  }
  
  static inline int
-@@ -1423,21 +1418,19 @@ rt_mutex_timed_fastlock(struct rt_mutex *lock, int state,
+@@ -1448,21 +1443,19 @@ rt_mutex_timed_fastlock(struct rt_mutex *lock, int state,
  				      enum rtmutex_chainwalk chwalk))
  {
  	if (chwalk == RT_MUTEX_MIN_CHAINWALK &&
@@ -121,7 +121,7 @@ index 2c49d76..1c57ff1 100644
  	return slowfn(lock);
  }
  
-@@ -1447,19 +1440,18 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
+@@ -1472,19 +1465,18 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh))
  {
  	WAKE_Q(wake_q);
@@ -149,7 +149,7 @@ index 2c49d76..1c57ff1 100644
  }
  
  /**
-@@ -1570,10 +1562,9 @@ EXPORT_SYMBOL_GPL(rt_mutex_unlock);
+@@ -1595,10 +1587,9 @@ EXPORT_SYMBOL_GPL(rt_mutex_unlock);
  bool __sched rt_mutex_futex_unlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh)
  {
@@ -162,7 +162,7 @@ index 2c49d76..1c57ff1 100644
  	return rt_mutex_slowunlock(lock, wqh);
  }
  
-@@ -1631,7 +1622,6 @@ void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
+@@ -1656,7 +1647,6 @@ void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  	__rt_mutex_init(lock, NULL);
  	debug_rt_mutex_proxy_lock(lock, proxy_owner);
  	rt_mutex_set_owner(lock, proxy_owner);
@@ -170,7 +170,7 @@ index 2c49d76..1c57ff1 100644
  }
  
  /**
-@@ -1647,7 +1637,6 @@ void rt_mutex_proxy_unlock(struct rt_mutex *lock,
+@@ -1672,7 +1662,6 @@ void rt_mutex_proxy_unlock(struct rt_mutex *lock,
  {
  	debug_rt_mutex_proxy_unlock(lock);
  	rt_mutex_set_owner(lock, NULL);

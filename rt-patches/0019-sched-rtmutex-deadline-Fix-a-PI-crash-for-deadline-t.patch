@@ -1,4 +1,4 @@
-From 20b6e6976c846d3c2740590521aac9ac09bd7f2d Mon Sep 17 00:00:00 2001
+From 942dd25557223cf2f722e35f6cc1b6b4987a1629 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
 Subject: [PATCH 019/356] sched/rtmutex/deadline: Fix a PI crash for deadline
@@ -73,10 +73,10 @@ index 325f649..d359b1a 100644
  #else
  # define INIT_RT_MUTEXES(tsk)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index e63dfe7..20bf3c2d 100644
+index 1f6073f..fcd4012 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1891,6 +1891,8 @@ struct task_struct {
+@@ -1892,6 +1892,8 @@ struct task_struct {
  	/* PI waiters blocked on a rt_mutex held by this task */
  	struct rb_root pi_waiters;
  	struct rb_node *pi_waiters_leftmost;
@@ -110,10 +110,10 @@ index 998b27d..c9f28b1 100644
  #endif
  }
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 440469b..3c4e5bf 100644
+index a77f7ca..1996128 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -321,6 +321,19 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+@@ -320,6 +320,19 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
  }
  
  /*
@@ -133,7 +133,7 @@ index 440469b..3c4e5bf 100644
   * Calculate task priority from the waiter tree priority
   *
   * Return task->normal_prio when the waiter tree is empty or when
-@@ -335,12 +348,12 @@ int rt_mutex_getprio(struct task_struct *task)
+@@ -334,12 +347,12 @@ int rt_mutex_getprio(struct task_struct *task)
  		   task->normal_prio);
  }
  
@@ -150,7 +150,7 @@ index 440469b..3c4e5bf 100644
  }
  
  /*
-@@ -349,12 +362,12 @@ struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
+@@ -348,12 +361,12 @@ struct task_struct *rt_mutex_get_top_task(struct task_struct *task)
   */
  int rt_mutex_get_effective_prio(struct task_struct *task, int newprio)
  {
@@ -168,10 +168,10 @@ index 440469b..3c4e5bf 100644
  
  /*
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 4cb2e7d..5b2c09f 100644
+index 21c4ea6..345a93e 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3840,6 +3840,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3842,6 +3842,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  		goto out_unlock;
  	}
  

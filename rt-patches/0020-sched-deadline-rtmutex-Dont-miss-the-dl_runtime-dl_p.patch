@@ -1,4 +1,4 @@
-From 270b3a4946f6ac8a039e9b7d9b3d8f29bce9bfc0 Mon Sep 17 00:00:00 2001
+From f11ab4eacd96d073e86e7bb14e2942c7eb8faf84 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
 Subject: [PATCH 020/356] sched/deadline/rtmutex: Dont miss the
@@ -42,10 +42,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 3c4e5bf..f0dc1f6 100644
+index 1996128..03a345d 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -603,7 +603,7 @@ static int rt_mutex_adjust_prio_chain(struct task_struct *task,
+@@ -602,7 +602,7 @@ static int rt_mutex_adjust_prio_chain(struct task_struct *task,
  	 * enabled we continue, but stop the requeueing in the chain
  	 * walk.
  	 */

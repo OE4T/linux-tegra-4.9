@@ -1,4 +1,4 @@
-From e8f06f50c3eb8e51868c907d0e33768e45669bd7 Mon Sep 17 00:00:00 2001
+From c223479316a7b36260f90dbc36ec25e2e464af8c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jul 2016 18:22:23 +0200
 Subject: [PATCH 001/356] timer: make the base lock raw
@@ -13,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index 2d5cc7d..21ba5c2 100644
+index 7c47791..e5d96b4 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
 @@ -193,7 +193,7 @@ EXPORT_SYMBOL(jiffies_64);
@@ -152,7 +152,7 @@ index 2d5cc7d..21ba5c2 100644
  }
  
  /*
-@@ -1881,16 +1881,16 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1881,8 +1881,8 @@ int timers_dead_cpu(unsigned int cpu)
  		 * The caller is globally serialized and nobody else
  		 * takes two locks at once, deadlock is not possible.
  		 */
@@ -161,8 +161,9 @@ index 2d5cc7d..21ba5c2 100644
 +		raw_spin_lock_irq(&new_base->lock);
 +		raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
- 		BUG_ON(old_base->running_timer);
- 
+ 		/*
+ 		 * The current CPUs base clock might be stale. Update it
+@@ -1895,8 +1895,8 @@ int timers_dead_cpu(unsigned int cpu)
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
  
@@ -173,7 +174,7 @@ index 2d5cc7d..21ba5c2 100644
  		put_cpu_ptr(&timer_bases);
  	}
  	return 0;
-@@ -1906,7 +1906,7 @@ static void __init init_timer_cpu(int cpu)
+@@ -1912,7 +1912,7 @@ static void __init init_timer_cpu(int cpu)
  	for (i = 0; i < NR_BASES; i++) {
  		base = per_cpu_ptr(&timer_bases[i], cpu);
  		base->cpu = cpu;

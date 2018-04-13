@@ -1,4 +1,4 @@
-From 494f40a28d618a303225d22fa47e9d073b0fd33a Mon Sep 17 00:00:00 2001
+From 596c84918228e5a957e97e9509019fb1f0708246 Mon Sep 17 00:00:00 2001
 From: Dan Murphy <dmurphy@ti.com>
 Date: Fri, 24 Feb 2017 08:41:49 -0600
 Subject: [PATCH 003/356] lockdep: Fix compilation error for !CONFIG_MODULES
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 10 insertions(+)
 
 diff --git a/include/linux/module.h b/include/linux/module.h
-index 3d3d218..5944baa 100644
+index 57059d4..85611a5 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
 @@ -664,6 +664,11 @@ static inline bool is_module_percpu_address(unsigned long addr)
@@ -43,7 +43,7 @@ index 3d3d218..5944baa 100644
  {
  	return false;
 diff --git a/kernel/module.c b/kernel/module.c
-index 289616d..3483a37 100644
+index 1ac6c9eb..6a6ed7f 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -734,6 +734,11 @@ bool is_module_percpu_address(unsigned long addr)

@@ -1,4 +1,4 @@
-From 6372ca162cc3fa8f167da89beff34e27cdbdccf0 Mon Sep 17 00:00:00 2001
+From 86ebf5ae43e6f114762eb38bdb570577ce71ad67 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:56 +0100
 Subject: [PATCH 013/356] futex,rt_mutex: Introduce rt_mutex_init_waiter()
@@ -43,10 +43,10 @@ index a50c17a..ea7feb8 100644
  	ret = get_futex_key(uaddr2, flags & FLAGS_SHARED, &key2, VERIFY_WRITE);
  	if (unlikely(ret != 0))
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 8412d87..92499cb 100644
+index c0639b5..d7dbce1 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1151,6 +1151,14 @@ void rt_mutex_adjust_pi(struct task_struct *task)
+@@ -1176,6 +1176,14 @@ void rt_mutex_adjust_pi(struct task_struct *task)
  				   next_lock, NULL, task);
  }
  
@@ -61,7 +61,7 @@ index 8412d87..92499cb 100644
  /**
   * __rt_mutex_slowlock() - Perform the wait-wake-try-to-take loop
   * @lock:		 the rt_mutex to take
-@@ -1233,9 +1241,7 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1258,9 +1266,7 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
  	unsigned long flags;
  	int ret = 0;
  
@@ -73,10 +73,10 @@ index 8412d87..92499cb 100644
  	/*
  	 * Technically we could use raw_spin_[un]lock_irq() here, but this can
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 2441c2d..d16de236 100644
+index d4d98c9..74b4cf2f 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -103,6 +103,7 @@ extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
+@@ -104,6 +104,7 @@ extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  				       struct task_struct *proxy_owner);
  extern void rt_mutex_proxy_unlock(struct rt_mutex *lock,
  				  struct task_struct *proxy_owner);

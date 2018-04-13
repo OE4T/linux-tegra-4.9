@@ -1,4 +1,4 @@
-From 7c66dab62bfda6cba879b9e4f4b36bbbcd183063 Mon Sep 17 00:00:00 2001
+From de59eb0d6fa3ceca28e790315b0f4a29e6c5237d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
 Subject: [PATCH 002/356] lockdep: Handle statically initialized PER_CPU locks
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  5 files changed, 67 insertions(+), 36 deletions(-)
 
 diff --git a/include/linux/module.h b/include/linux/module.h
-index 0c3207d..3d3d218 100644
+index d2224a0..57059d4 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
 @@ -496,6 +496,7 @@ static inline int module_is_live(struct module *mod)
@@ -158,7 +158,7 @@ index 6599c7f..43f06ed 100644
  	}
  	/*
 diff --git a/kernel/module.c b/kernel/module.c
-index 0e54d5b..289616d 100644
+index 0651f2d..1ac6c9eb 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -660,16 +660,7 @@ static void percpu_modcopy(struct module *mod,

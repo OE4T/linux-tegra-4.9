@@ -6323,6 +6323,17 @@ int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 	return -EINVAL;
 }
 
+void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
+				      u32 num_fbpas,
+				      u32 *priv_addr_table, u32 *t)
+{
+	u32 fbpa_id;
+
+	for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++)
+		priv_addr_table[(*t)++] = pri_fbpa_addr(g,
+				pri_fbpa_addr_mask(g, addr), fbpa_id);
+}
+
 int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
 				      u32 gpc_num,
 				      u32 *priv_addr_table, u32 *t)
@@ -6356,7 +6367,6 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 	u32 broadcast_flags;
 	u32 t;
 	int err;
-	int fbpa_num;
 
 	t = 0;
 	*num_registers = 0;
@@ -6430,11 +6440,9 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		g->ops.gr.split_ltc_broadcast_addr(g, addr,
 							priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_FBPA) {
-		for (fbpa_num = 0;
-		     fbpa_num < nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
-		     fbpa_num++)
-			priv_addr_table[t++] = pri_fbpa_addr(g,
-					pri_fbpa_addr_mask(g, addr), fbpa_num);
+		g->ops.gr.split_fbpa_broadcast_addr(g, addr,
+				nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS),
+				priv_addr_table, &t);
 	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_GPC)) {
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
 			for (tpc_num = 0;

@@ -4557,7 +4557,6 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 	u32 broadcast_flags;
 	u32 t;
 	int err;
-	int fbpa_num;
 
 	t = 0;
 	*num_registers = 0;
@@ -4671,11 +4670,9 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 		g->ops.gr.split_ltc_broadcast_addr(g, addr,
 							priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_FBPA) {
-		for (fbpa_num = 0;
-		     fbpa_num < nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
-		     fbpa_num++)
-			priv_addr_table[t++] = pri_fbpa_addr(g,
-					pri_fbpa_addr_mask(g, addr), fbpa_num);
+		g->ops.gr.split_fbpa_broadcast_addr(g, addr,
+				nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS),
+				priv_addr_table, &t);
 	} else if ((addr_type == CTXSW_ADDR_TYPE_LTCS) &&
 		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPGS_LTC)) {
 		gr_gv11b_split_pmm_fbp_broadcast_address(g,

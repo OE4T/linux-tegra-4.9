@@ -434,6 +434,7 @@ static const struct gpu_ops gv100_ops = {
 		.create_priv_addr_table = gr_gv11b_create_priv_addr_table,
 		.get_pmm_per_chiplet_offset =
 			gr_gv11b_get_pmm_per_chiplet_offset,
+		.split_fbpa_broadcast_addr = gr_gv100_split_fbpa_broadcast_addr,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

@@ -28,6 +28,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/gr_pri_gk20a.h"
 
 #include "gv100/gr_gv100.h"
 #include "gv11b/subctx_gv11b.h"
@@ -332,6 +333,23 @@ u32 gr_gv100_get_patch_slots(struct gk20a *g)
 	return size;
 }
 
+static u32 gr_gv100_get_active_fpba_mask(struct gk20a *g, u32 num_fbpas)
+{
+	u32 active_fbpa_mask;
+
+	/*
+	 * Read active fbpa mask from fuse
+	 * Note that 0:enable and 1:disable in value read from fuse so we've to
+	 * flip the bits.
+	 * Also set unused bits to zero
+	 */
+	active_fbpa_mask = nvgpu_readl(g, fuse_status_opt_fbio_r());
+	active_fbpa_mask = ~active_fbpa_mask;
+	active_fbpa_mask = active_fbpa_mask & ((1 << num_fbpas) - 1);
+
+	return active_fbpa_mask;
+}
+
 int gr_gv100_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
 				struct ctxsw_buf_offset_map_entry *map,
 				struct aiv_list_gk20a *regs,
@@ -348,15 +366,7 @@ int gr_gv100_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
 	if ((cnt + (regs->count * num_fbpas)) > max_cnt)
 		return -EINVAL;
 
-	/*
-	 * Read active fbpa mask from fuse
-	 * Note that 0:enable and 1:disable in value read from fuse so we've to
-	 * flip the bits.
-	 * Also set unused bits to zero
-	 */
-	active_fbpa_mask = nvgpu_readl(g, fuse_status_opt_fbio_r());
-	active_fbpa_mask = ~active_fbpa_mask;
-	active_fbpa_mask = active_fbpa_mask & ((1 << num_fbpas) - 1);
+	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g, num_fbpas);
 
 	for (idx = 0; idx < regs->count; idx++) {
 		for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
@@ -382,4 +392,21 @@ int gr_gv100_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
 	*offset = ALIGN(*offset, 256);
 	return gr_gk20a_add_ctxsw_reg_perf_pma(map, regs,
 			count, offset, max_cnt, base, mask);
+}
+
+void gr_gv100_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
+				      u32 num_fbpas,
+				      u32 *priv_addr_table, u32 *t)
+{
+	u32 active_fbpa_mask;
+	u32 fbpa_id;
+
+	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g, num_fbpas);
+
+	for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
+		if (active_fbpa_mask & BIT(fbpa_id)) {
+			priv_addr_table[(*t)++] = pri_fbpa_addr(g,
+					pri_fbpa_addr_mask(g, addr), fbpa_id);
+		}
+	}
 }

@@ -324,6 +324,7 @@ static const struct gpu_ops gm20b_ops = {
 		.create_priv_addr_table = gr_gk20a_create_priv_addr_table,
 		.get_pmm_per_chiplet_offset =
 			gr_gm20b_get_pmm_per_chiplet_offset,
+		.split_fbpa_broadcast_addr = gr_gk20a_split_fbpa_broadcast_addr,
 	},
 	.fb = {
 		.reset = fb_gk20a_reset,

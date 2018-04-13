@@ -832,4 +832,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 	u32 addr,
 	u32 *priv_addr_table,
 	u32 *num_registers);
+void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
+	u32 num_fbpas,
+	u32 *priv_addr_table, u32 *t);
 #endif /*__GR_GK20A_H__*/

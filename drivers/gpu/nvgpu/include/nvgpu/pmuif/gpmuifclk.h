@@ -128,12 +128,30 @@ struct nv_pmu_clk_clk_domain_3x_master_boardobj_set {
 	u32 slave_idxs_mask;
 };
 
+struct nv_pmu_clk_clk_domain_35_prog_boardobj_set {
+	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
+	u8 dummy;
+};
+
+struct nv_pmu_clk_clk_domain_35_master_boardobj_set {
+	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
+	u32 master_slave_domains_grp_mask;
+};
+
+
 struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set {
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
 	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	u8 master_idx;
 };
 
+struct nv_pmu_clk_clk_domain_35_slave_boardobj_set {
+	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set super;
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
+	u8 master_idx;
+};
 union nv_pmu_clk_clk_domain_boardobj_set_union {
 	struct nv_pmu_boardobj board_obj;
 	struct nv_pmu_clk_clk_domain_boardobj_set super;
@@ -142,6 +160,9 @@ union nv_pmu_clk_clk_domain_boardobj_set_union {
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set v3x_prog;
 	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set v3x_master;
 	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set v3x_slave;
+	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set v35_prog;
+	struct nv_pmu_clk_clk_domain_35_master_boardobj_set v35_master;
+	struct nv_pmu_clk_clk_domain_35_slave_boardobj_set v35_slave;
 };
 
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(clk, clk_domain);
@@ -504,6 +525,7 @@ struct nv_pmu_clk_clk_fll_device_boardobjgrp_get_status_header {
 struct nv_pmu_clk_clk_fll_device_boardobj_get_status {
 	struct nv_pmu_boardobj_query super;
 	u8 current_regime_id;
+	bool b_dvco_min_reached;
 	u16 min_freq_mhz;
 	struct nv_pmu_clk_lut_vf_entry lut_vf_curve[NV_UNSIGNED_ROUNDED_DIV(CTRL_CLK_LUT_NUM_ENTRIES, 2)];
 };

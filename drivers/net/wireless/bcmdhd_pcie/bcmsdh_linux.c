@@ -165,10 +165,10 @@ void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint 
 	bcmsdh_osinfo->dev = dev;
 	osl_set_bus_handle(osh, bcmsdh);
 
-#if !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#if !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 	if (dev && device_init_wakeup(dev, true) == 0)
 		bcmsdh_osinfo->dev_wake_enabled = TRUE;
-#endif /* !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
+#endif /* !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
 
 #if defined(OOB_INTR_ONLY)
 	OOB_PARAM_IF(!(adapter->oob_disable)) {
@@ -208,11 +208,11 @@ int bcmsdh_remove(bcmsdh_info_t *bcmsdh)
 {
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 
-#if !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#if !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 	if (bcmsdh_osinfo->dev)
 		device_init_wakeup(bcmsdh_osinfo->dev, false);
 	bcmsdh_osinfo->dev_wake_enabled = FALSE;
-#endif /* !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
+#endif /* !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
 
 	drvinfo.remove(bcmsdh_osinfo->context);
 	MFREE(bcmsdh->osh, bcmsdh->os_cxt, sizeof(bcmsdh_os_info_t));
@@ -283,18 +283,18 @@ bcmsdh_unregister(void)
 
 void bcmsdh_dev_pm_stay_awake(bcmsdh_info_t *bcmsdh)
 {
-#if !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#if !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 	pm_stay_awake(bcmsdh_osinfo->dev);
-#endif /* !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
+#endif /* !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
 }
 
 void bcmsdh_dev_relax(bcmsdh_info_t *bcmsdh)
 {
-#if !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
+#if !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36))
 	bcmsdh_os_info_t *bcmsdh_osinfo = bcmsdh->os_cxt;
 	pm_relax(bcmsdh_osinfo->dev);
-#endif /* !defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
+#endif /* !defined(CONFIG_PM_WAKELOCKS) && (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 36)) */
 }
 
 bool bcmsdh_dev_pm_enabled(bcmsdh_info_t *bcmsdh)

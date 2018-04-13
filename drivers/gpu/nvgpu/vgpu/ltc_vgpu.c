@@ -56,6 +56,8 @@ int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (err)
 		return err;
 
+	gr->max_comptag_lines = max_comptag_lines;
+
 	return 0;
 }
 

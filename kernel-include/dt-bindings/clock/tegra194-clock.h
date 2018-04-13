@@ -688,5 +688,9 @@
 #define TEGRA194_CLK_PLLREFE_VCOOUT_GATED	327
 /** @brief TEGRA194_CLK_SOR_SAFE clk source (PLLP_OUT0 divided by 17) */
 #define TEGRA194_CLK_PLLP_DIV17			328
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_SOC_THERM switch divider output */
+#define TEGRA194_CLK_SOC_THERM			329
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_TSENSOR switch divider output */
+#define TEGRA194_CLK_TSENSOR			330
 
 #endif

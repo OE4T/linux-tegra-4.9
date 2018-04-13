@@ -867,6 +867,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	if (err)
 		goto unpin_job;
 
+	nvhost_eventlib_log_submit(ctx->pdev, job->sp[0].id,
+			pdata->push_work_done ? (job->sp[0].fence - 1) :
+			job->sp[0].fence, arch_counter_get_cntvct());
+
 	err = submit_deliver_fences(args, job, ctx);
 	if (err)
 		goto put_job;

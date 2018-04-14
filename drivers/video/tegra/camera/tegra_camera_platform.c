@@ -422,7 +422,7 @@ int tegra_camera_update_isobw(void)
 	}
 
 #ifdef CONFIG_DEBUG_FS
-	vi_mode_d = info->vi_mode_isobw;
+	vi_mode_d = bw;
 	bypass_mode_d = info->bypass_mode_isobw;
 #endif
 	mutex_unlock(&info->update_bw_lock);

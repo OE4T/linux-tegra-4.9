@@ -96,11 +96,15 @@ static long t194_nvcsi_ioctl(struct file *file, unsigned int cmd,
 		unsigned int active_lanes;
 
 		dev_dbg(mc_csi->dev, "ioctl: deskew_setup\n");
-		filepriv->deskew_ctx.deskew_lanes = get_user(active_lanes,
-				(long __user *)arg);
-		ret = nvcsi_deskew_setup(&filepriv->deskew_ctx);
-		return ret;
+		ret = copy_from_user(&active_lanes, (const void __user *)arg,
+							sizeof(unsigned int));
+		if (ret) {
+			return -EINVAL;
+		} else {
+			filepriv->deskew_ctx.deskew_lanes = active_lanes;
+			return nvcsi_deskew_setup(&filepriv->deskew_ctx);
 		}
+	}
 	case NVHOST_NVCSI_IOCTL_DESKEW_APPLY: {
 		dev_dbg(mc_csi->dev, "ioctl: deskew_apply\n");
 		ret = nvcsi_deskew_apply_check(&filepriv->deskew_ctx);

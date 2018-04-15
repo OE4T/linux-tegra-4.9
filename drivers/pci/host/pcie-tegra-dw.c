@@ -122,6 +122,7 @@
 
 #define APPL_APPL_DEBUG				0xD0
 #define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
+#define APPL_APPL_DEBUG_PM_LINKST_IN_L0		0x11
 #define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK	GENMASK(8, 3)
 #define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT	3
 
@@ -1593,29 +1594,6 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 	read_margin_status(pcie, s, i, NO_STEP);
 
 	for (i = 1; i <= NUM_TIMING_STEPS; i++) {
-		/* Step Margin to timing offset to left of default
-		 * payload = offset | (0x10 << 6)
-		 */
-		setup_margin_cmd(pcie, MARGIN_SET_X_OFFSET, RP_RCV_NO,
-				 i | LEFT_STEP_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_WIN_TIME);
-		read_margin_status(pcie, s, i, LEFT_STEP);
-
-		setup_margin_cmd(pcie, MARGIN_SET_NORMAL, RP_RCV_NO,
-				 NORMAL_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_READ_DELAY);
-		read_margin_status(pcie, s, i, NO_STEP);
-
-		setup_margin_cmd(pcie, MARGIN_CLR_ERR, RP_RCV_NO,
-				 CLR_ERR_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_READ_DELAY);
-		read_margin_status(pcie, s, i, NO_STEP);
-	}
-
-	for (i = 1; i <= NUM_TIMING_STEPS; i++) {
 		/* Step Margin to timing offset to right of default
 		 * payload = offset | (0x00 << 6)
 		 */
@@ -1637,6 +1615,22 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 		msleep(MARGIN_READ_DELAY);
 		read_margin_status(pcie, s, i, NO_STEP);
 	}
+
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4, &val);
+
+	if (((val >> 16) & PCI_EXP_LNKSTA_CLS) != 0x4)
+		seq_puts(s, "Link is not in Gen4, restart the device & execute lane margin\n");
+
+	if (pcie->init_link_width > ((val >> 16) & PCI_EXP_LNKSTA_NLW) >>
+	    PCI_EXP_LNKSTA_NLW_SHIFT)
+		seq_puts(s, "Link width reduced, restart the device & execute lane margin\n");
+
+	val = readl(pcie->appl_base + APPL_APPL_DEBUG);
+	val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
+	val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+
+	if (val != APPL_APPL_DEBUG_PM_LINKST_IN_L0)
+		seq_puts(s, "Link is not in L0, restart the device & execute lane margin\n");
 
 	return 0;
 }
@@ -1677,29 +1671,6 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 	read_margin_status(pcie, s, i, NO_STEP);
 
 	for (i = 1; i <= NUM_VOLTAGE_STEPS; i++) {
-		/* Step Margin to voltage offset to down of default
-		 * payload = offset | (0x1 << 7)
-		 */
-		setup_margin_cmd(pcie, MARGIN_SET_Y_OFFSET, RP_RCV_NO,
-				 i | DOWN_STEP_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_WIN_TIME);
-		read_margin_status(pcie, s, i, DOWN_STEP);
-
-		setup_margin_cmd(pcie, MARGIN_SET_NORMAL, RP_RCV_NO,
-				 NORMAL_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_READ_DELAY);
-		read_margin_status(pcie, s, i, NO_STEP);
-
-		setup_margin_cmd(pcie, MARGIN_CLR_ERR, RP_RCV_NO,
-				 CLR_ERR_PAYLOAD);
-		issue_margin_cmd(pcie);
-		msleep(MARGIN_READ_DELAY);
-		read_margin_status(pcie, s, i, NO_STEP);
-	}
-
-	for (i = 1; i <= NUM_VOLTAGE_STEPS; i++) {
 		/* Step Margin to voltage offset to up of default
 		 * payload = offset | (0x00 << 7)
 		 */
@@ -1721,6 +1692,22 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 		msleep(MARGIN_READ_DELAY);
 		read_margin_status(pcie, s, i, NO_STEP);
 	}
+
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4, &val);
+
+	if (((val >> 16) & PCI_EXP_LNKSTA_CLS) != 0x4)
+		seq_puts(s, "Link is not in Gen4, restart the device & execute lane margin\n");
+
+	if (pcie->init_link_width > ((val >> 16) & PCI_EXP_LNKSTA_NLW) >>
+	    PCI_EXP_LNKSTA_NLW_SHIFT)
+		seq_puts(s, "Link width reduced, restart the device & execute lane margin\n");
+
+	val = readl(pcie->appl_base + APPL_APPL_DEBUG);
+	val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
+	val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+
+	if (val != APPL_APPL_DEBUG_PM_LINKST_IN_L0)
+		seq_puts(s, "Link is not in L0, restart the device & execute lane margin\n");
 
 	return 0;
 }

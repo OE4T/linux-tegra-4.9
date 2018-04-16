@@ -12,6 +12,8 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
  *
+ * Copyright (C) 2018 NVIDIA Corporation. All rights reserved.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -155,6 +157,7 @@
  *
  */
 #define EXTCON_PROP_DISP_HPD		150
+#define EXTCON_PROP_DISP_DP_LANE	151
 
 /* Properties of EXTCON_TYPE_DISP. */
 #define EXTCON_PROP_DISP_MIN		150

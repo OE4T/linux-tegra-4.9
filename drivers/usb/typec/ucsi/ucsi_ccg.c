@@ -73,6 +73,8 @@
 #define	 OV_DET			(1<<2)
 #define  CONN_DET		((1<<3) | (1<<4))
 #define  PD_EVT_DET		((1<<5) | (1<<6))
+#define  VDM_EVT_DET		(1<<7)
+#define  DP_EVT_DET		(1<<10)
 #define REG_PD_RESPONSE(x)      (0x1400 + (x * 0x1000))
 #define REG_PD_RESP_DATA(x)     (0x1400 + (x * 0x1000) + 4)
 #define PD_PORT0_REG_IDX        0x1000
@@ -118,6 +120,8 @@ enum enum_fw_mode {
 #define PORT_DISCONNECT_DET	0x85
 #define PORT_PD_CONTRACT_COMPL	0x86
 #define ROLE_SWAP_COMPELETE	0x87
+#define VDM_RECEIVED		0x90
+#define ALT_MODE_EVT		0xB0
 
 /* CCGx response codes */
 enum ccg_resp_code {
@@ -205,6 +209,13 @@ static const char * const ccg_evt_strs[] = {
 	/* 0xA8 */ "0xA8",
 	/* 0xA9 */ "0xA9",
 	/* 0xAA */ "Rp Change Detected",
+	/* 0xAB */ "Billboard Connect",
+	/* 0xAC */ "Send Vendor Data",
+	/* 0xAD */ "Reserved",
+	/* 0xAE */ "Reserved",
+	/* 0xAF */ "Reserved",
+	/* 0xB0 */ "Alternate Mode event",
+	/* 0xB1 */ "Alternate Mode Hardware event",
 };
 
 union ccg_pd_do_data {
@@ -354,6 +365,15 @@ struct ucsi_ccg_extcon {
 	int cstate;
 };
 
+#define VDO_MAX_NUM		7
+struct ccg_dp {
+	u32 modes[VDO_MAX_NUM - 1];
+	int mode_num;
+	int entered;
+	u8 pin_assign;
+	bool prefer_multi_func;
+};
+
 struct ucsi_ccg {
 	struct device *dev;
 	struct i2c_client *i2c_cl;
@@ -383,6 +403,7 @@ struct ucsi_ccg {
 	union ccg_pd_do_data do_data[2];
 	struct regulator *charger_reg;
 	struct regulator *otg_reg;
+	struct ccg_dp dp[2];
 };
 
 struct ccg_pd_contract {
@@ -392,6 +413,90 @@ struct ccg_pd_contract {
 	u8 reserved:3;
 	u8 reserved2[3];
 	u32 rdo;
+} __packed;
+
+struct ccg_alt_mode_evt {
+	u8 ccg_data_role:1;
+	u8 evt_type_code:7;
+#define ALTMODE_EVT_ENTERED		2
+#define ALTMODE_EVT_MODE_DISC_CMPL	4
+#define ALTMODE_EVT_REPORTS_SVID	6
+#define ALTMODE_EVT_MODE_EVT		12
+	u8 mode_id;
+	u16 mode_svid;
+	u8 event_data[3];
+	u8 addl_evt_code;
+#define ALTMODE_EVT_DP_PIN_ASSIGN	1
+#define ALTMODE_EVT_DP_STATUS_UPDATE	2
+} __packed;
+
+struct pd_msg_header {
+	u16 msg_type:5;
+	u16 port_data_role:1;
+	u16 spec_ver:2;
+	u16 port_power_rule_or_cable_plug:1;
+	u16 msg_id:3;
+	u16 num_of_dos:3;
+	u16 extended:1;
+} __packed;
+
+struct pd_vdm_header {
+	u16 cmd:5;
+	u16 reserved:1;
+	u16 cmd_type:2;
+	u16 obj_pos:3;
+	u16 reserved2:2;
+	u16 svdm_ver:2;
+	u16 vdm_type:1;
+	u16 svid;
+} __packed;
+
+#define PIN_ASSIGN_DESELECT		0x00
+#define PIN_ASSIGN_A			0x01
+#define PIN_ASSIGN_B			0x02
+#define PIN_ASSIGN_C			0x04
+#define PIN_ASSIGN_D			0x08
+#define PIN_ASSIGN_E			0x10
+#define PIN_ASSIGN_F			0x20
+
+struct dp_status_vdo {
+	u32 connected:2;
+	u32 power_low:1;
+	u32 enabled:1;
+	u32 multi_function_preferred:1;
+	u32 usb_config_request:1;
+	u32 exit_dp_mode_request:1;
+	u32 hpd_state:1;
+	u32 irq_hpd:1;
+} __packed;
+
+#define VDM_CMD_TYPE_INITIATOR		0
+#define VDM_CMD_TYPE_ACK		1
+#define VDM_CMD_TYPE_NAK		2
+#define VDM_CMD_TYPE_BUSY		3
+
+#define VDM_CMD_DISCOVER_IDENTITY	1
+#define VDM_CMD_DISCOVER_SVID		2
+#define VDM_CMD_DISCOVER_MODES		3
+#define VDM_CMD_ENTER_MODE		4
+#define VDM_CMD_EXIT_MODE		5
+#define VDM_CMD_ATTENTION		6
+#define VDM_CMD_MIN_VAL			1
+#define VDM_CMD_MAX_VAL			6
+
+#define VDM_DP_CMD_STATUS_UPDATE	16
+#define VDM_DP_CMD_CONFIGURE		17
+#define VDM_DP_CMD_MIN_VAL		16
+#define VDM_DP_CMD_MAX_VAL		17
+
+#define SVID_DP			0xff01
+
+struct pd_vdm {
+	struct pd_msg_header msg_hdr;
+	u8 sop_type;
+	u8 reserved;
+	struct pd_vdm_header vdm_hdr;
+	u32 vdos[VDO_MAX_NUM - 1];
 } __packed;
 
 static int ccg_reg_write
@@ -581,7 +686,9 @@ static inline bool invalid_resp(int code)
 
 static inline bool invalid_evt(int code)
 {
-	return (code >= 0xAB) || (code < 0x80);
+	unsigned long num_of_events = ARRAY_SIZE(ccg_evt_strs);
+
+	return (code >= (EVENT_INDEX + num_of_events)) || (code < EVENT_INDEX);
 }
 
 static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
@@ -825,6 +932,232 @@ __err_disable_reg:
 	pd_charger_disable(ccg, index);
 }
 
+static void
+update_typec_extcon_dp_mode
+(struct ucsi_ccg *ccg, int index, int lane_num)
+{
+	struct ucsi_ccg_extcon *extcon;
+
+	extcon = ccg->typec_extcon[index];
+
+	if (!extcon)
+		return;
+
+	if (lane_num > 0) {
+		union extcon_property_value prop;
+
+		prop.intval = lane_num;
+		dev_info(ccg->dev, "%s: set prop dp_lane_num=%d\n",
+			__func__, lane_num);
+		extcon_set_property(extcon->edev, EXTCON_DISP_DP,
+				EXTCON_PROP_DISP_DP_LANE, prop);
+	}
+
+	extcon_set_state_sync(extcon->edev, EXTCON_DISP_DP, !!lane_num);
+}
+
+static const char *ccg_pd_vdm_cmd_get_name(int svid, int cmd)
+{
+	const char *name = "unknown";
+	static const char * const vdm_cmd_names[] = {
+		"Discover Identity",
+		"Discover SVIDs",
+		"Discover Modes",
+		"Enter Mode",
+		"Exit Mode",
+		"Attention",
+	};
+	static const char * const vdm_dp_cmd_names[] = {
+		"DP Status Update",
+		"DP Configure",
+	};
+
+	if (cmd >= VDM_CMD_MIN_VAL && cmd <= VDM_CMD_MAX_VAL)
+		name = vdm_cmd_names[cmd - VDM_CMD_MIN_VAL];
+
+	if (svid == SVID_DP) {
+		if (cmd >= VDM_DP_CMD_MIN_VAL && cmd <= VDM_DP_CMD_MAX_VAL)
+			name = vdm_dp_cmd_names[cmd - VDM_DP_CMD_MIN_VAL];
+	}
+
+	return name;
+}
+
+static const char *ccg_pd_vdm_type_get_name(int type)
+{
+	static const char * const vdm_cmd_type_names[] = {
+		"Initiator", "ACK", "NAK", "BUSY",
+	};
+
+	return vdm_cmd_type_names[type & 0x3];
+}
+
+static void show_dp_status(struct ucsi_ccg *ccg, struct dp_status_vdo *status)
+{
+	dev_info(ccg->dev,
+		"connected: %d, power_low: %d, enabled: %d, multi-func: %d\n"
+		"\t\t   usb_req: %d, exit_dp: %d, hpd_state: %d, irq_hpd: %d\n",
+		status->connected,
+		status->power_low,
+		status->enabled,
+		status->multi_function_preferred,
+		status->usb_config_request,
+		status->exit_dp_mode_request,
+		status->hpd_state,
+		status->irq_hpd);
+}
+
+static void ccg_pd_dp_vdm_received(struct ucsi_ccg *ccg, int index)
+{
+	struct pd_vdm *vdm;
+	struct pd_vdm_header *vdm_hdr;
+	struct ccg_dp *ccg_dp = &ccg->dp[index];
+	struct ccg_resp *resp = &ccg->pd_resp[index];
+	int i, num;
+
+	vdm = (struct pd_vdm *) resp->data;
+	vdm_hdr = &vdm->vdm_hdr;
+	num = vdm->msg_hdr.num_of_dos - 1;
+
+
+	if (vdm_hdr->cmd_type != VDM_CMD_TYPE_ACK)
+		return;
+
+	if (vdm_hdr->cmd == VDM_CMD_DISCOVER_MODES) {
+		ccg_dp->mode_num = num;
+		for (i = 0; i < num; i++)
+			ccg_dp->modes[i] = vdm->vdos[i];
+
+	} else if (vdm_hdr->cmd == VDM_CMD_ENTER_MODE) {
+		ccg_dp->entered = vdm_hdr->obj_pos;
+	} else if (vdm_hdr->cmd == VDM_CMD_EXIT_MODE) {
+		ccg_dp->entered = 0;
+		ccg_dp->prefer_multi_func = false;
+		update_typec_extcon_dp_mode(ccg, index, 0);
+	} else if (vdm_hdr->cmd == VDM_DP_CMD_STATUS_UPDATE) {
+		struct dp_status_vdo *status;
+
+		status = (struct dp_status_vdo *) vdm->vdos;
+		ccg_dp->prefer_multi_func = status->multi_function_preferred;
+		show_dp_status(ccg, status);
+	} else if (vdm_hdr->cmd == VDM_DP_CMD_CONFIGURE) {
+		int dp_lane_num;
+		int pin_assign = ccg_dp->pin_assign;
+
+		if (pin_assign == PIN_ASSIGN_DESELECT)
+			dp_lane_num = 0;
+		else if ((pin_assign & PIN_ASSIGN_C) ||
+				(pin_assign & PIN_ASSIGN_E)) {
+			if (ccg_dp->prefer_multi_func)
+				dp_lane_num = 2;
+			else
+				dp_lane_num = 4;
+		} else
+			dp_lane_num = 2;
+
+		update_typec_extcon_dp_mode(ccg, index, dp_lane_num);
+	}
+}
+
+static void ccg_pd_vdm_received(struct ucsi_ccg *ccg, int index)
+{
+	struct ccg_resp *resp = &ccg->pd_resp[index];
+	struct pd_vdm *vdm;
+	struct pd_vdm_header *vdm_hdr;
+	struct pd_msg_header *msg_hdr;
+	int i, num;
+
+	mutex_lock(&ccg->lock);
+
+	vdm = (struct pd_vdm *) resp->data;
+	msg_hdr = &vdm->msg_hdr;
+	vdm_hdr = &vdm->vdm_hdr;
+
+	dev_dbg(ccg->dev, "msg_hdr: type: %d, id: %d, num_of_dos: %d\n",
+		msg_hdr->msg_type, msg_hdr->msg_id, msg_hdr->num_of_dos);
+	dev_info(ccg->dev,
+		"vdm_hdr: svid: %04x, cmd: %s (%d) cmd_type: %s, obj_pos: %d\n",
+		vdm_hdr->svid,
+		ccg_pd_vdm_cmd_get_name(vdm_hdr->svid, vdm_hdr->cmd),
+		vdm_hdr->cmd, ccg_pd_vdm_type_get_name(vdm_hdr->cmd_type),
+		vdm_hdr->obj_pos);
+
+	num = msg_hdr->num_of_dos - 1;
+	if (vdm_hdr->cmd == VDM_CMD_DISCOVER_SVID)
+		num = (num + 1) >> 1;
+
+	if (vdm_hdr->svid == SVID_DP)
+		ccg_pd_dp_vdm_received(ccg, index);
+
+	for (i = 0; i < num; i++) {
+		if (vdm_hdr->cmd == VDM_CMD_DISCOVER_SVID) {
+			dev_dbg(ccg->dev, "svid %d: %04x %04x\n", i,
+				vdm->vdos[i] & 0xffff, vdm->vdos[i] >> 16);
+		} else
+			dev_dbg(ccg->dev, "vdo %d: %08x\n", i, vdm->vdos[i]);
+	}
+
+	mutex_unlock(&ccg->lock);
+}
+
+static void ccg_pd_alt_mode_evt(struct ucsi_ccg *ccg, int index)
+{
+	struct ccg_alt_mode_evt *evt;
+	struct ccg_dp *ccg_dp = &ccg->dp[index];
+	struct ccg_resp *resp = &ccg->pd_resp[index];
+
+	mutex_lock(&ccg->lock);
+
+	evt = (struct ccg_alt_mode_evt *) resp->data;
+
+	dev_dbg(ccg->dev, "ALTMODE_EVT: %s, type = %d, mode_id = %d,\n"
+		"\tmode_svid = %04x, %02x %02x %02x %02x\n",
+		evt->ccg_data_role ? "DFP" : "UFP",
+		evt->evt_type_code, evt->mode_id, evt->mode_svid,
+		evt->event_data[0], evt->event_data[1], evt->event_data[2],
+		evt->addl_evt_code);
+
+	switch (evt->evt_type_code) {
+	case ALTMODE_EVT_ENTERED:
+		dev_info(ccg->dev,
+			"== ALTMODE entered: id = %d, svid = %04x\n",
+			evt->mode_id, evt->mode_svid);
+		break;
+	case ALTMODE_EVT_MODE_DISC_CMPL:
+		dev_info(ccg->dev, "== ALTMODE discover complete\n");
+		break;
+	case ALTMODE_EVT_MODE_EVT:
+		if (evt->addl_evt_code == ALTMODE_EVT_DP_PIN_ASSIGN) {
+			u8 pin_assign = evt->event_data[0];
+			int i;
+
+			if (pin_assign) {
+				char str[] = "      ";
+
+				for (i = 0; i <= 5; i++) {
+					if (pin_assign & (1 << i))
+						str[i] = 'A' + i;
+				}
+				dev_info(ccg->dev,
+					"pin assign: %s\n", str);
+			}
+			ccg_dp->pin_assign = pin_assign;
+
+		} else if (evt->addl_evt_code == ALTMODE_EVT_DP_STATUS_UPDATE) {
+			struct dp_status_vdo *status;
+			u32 vdo;
+
+			vdo = evt->event_data[0] + (evt->event_data[1] << 8) +
+				(evt->event_data[2] << 16);
+			status = (struct dp_status_vdo *) &vdo;
+			show_dp_status(ccg, status);
+		}
+		break;
+	}
+
+	mutex_unlock(&ccg->lock);
+}
+
 static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 {
 	struct device *dev = ccg->dev;
@@ -852,6 +1185,7 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 			case PORT_DISCONNECT_DET:
 				pd_event_handle_disconnect_det(ccg, index);
 				update_typec_extcon_state(ccg, index);
+				update_typec_extcon_dp_mode(ccg, index, 0);
 				break;
 			case PORT_CONNECT_DET:
 			case ROLE_SWAP_COMPELETE:
@@ -860,6 +1194,12 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 			case PORT_PD_CONTRACT_COMPL:
 				update_typec_extcon_state(ccg, index);
 				pd_event_handle_contract_comp(ccg, index);
+				break;
+			case VDM_RECEIVED:
+				ccg_pd_vdm_received(ccg, index);
+				break;
+			case ALT_MODE_EVT:
+				ccg_pd_alt_mode_evt(ccg, index);
 				break;
 			default:
 				break;
@@ -1270,7 +1610,8 @@ static int ccg_cmd_validate_fw(struct ucsi_ccg *ccg, unsigned int fwid)
 static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port)
 {
 	struct ccg_cmd cmd;
-	u16 mask = OC_DET | OV_DET | CONN_DET | PD_EVT_DET;
+	u16 mask = OC_DET | OV_DET | CONN_DET | PD_EVT_DET |
+			VDM_EVT_DET | DP_EVT_DET;
 	int ret;
 
 	cmd.reg = REG_EVENT_MASK(port);
@@ -1662,7 +2003,7 @@ ucsi_ccg_attr_group = {
 };
 
 static int ucsi_ccg_extcon_cables[] = {
-	EXTCON_USB, EXTCON_USB_HOST, EXTCON_NONE
+	EXTCON_USB, EXTCON_USB_HOST, EXTCON_DISP_DP, EXTCON_NONE
 };
 
 static int ucsi_ccg_pd_extcon_cables[] = {
@@ -1742,6 +2083,9 @@ ucsi_ccg_extcon_probe
 	err = devm_extcon_dev_register(&extcon->dev, extcon->edev);
 	if (err < 0)
 		goto unregister;
+
+	extcon_set_property_capability(extcon->edev, EXTCON_DISP_DP,
+						EXTCON_PROP_DISP_DP_LANE);
 
 	return extcon;
 

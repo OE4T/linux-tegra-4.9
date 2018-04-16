@@ -785,30 +785,4 @@ static struct platform_driver pva_driver = {
 	},
 };
 
-static struct of_device_id tegra_pva_domain_match[] = {
-	{
-		.compatible = "nvidia,tegra194-cv-pd",
-		.data = (struct nvhost_device_data *)&t19_pva0_info
-	},
-	{ }
-};
-
-/* Register PVA power domains and driver */
-static int __init pva_init(void)
-{
-	int ret;
-
-	ret = nvhost_domain_init(tegra_pva_domain_match);
-	if (ret)
-		return ret;
-
-	return platform_driver_register(&pva_driver);
-}
-
-static void __exit pva_exit(void)
-{
-	platform_driver_unregister(&pva_driver);
-}
-
-module_init(pva_init);
-module_exit(pva_exit);
+module_platform_driver(pva_driver);

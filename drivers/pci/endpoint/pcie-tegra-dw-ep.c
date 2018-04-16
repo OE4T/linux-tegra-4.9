@@ -323,6 +323,7 @@ struct tegra_pcie_dw_ep {
 	struct dentry *debugfs;
 
 	struct tegra_bwmgr_client *emc_bw;
+	u32 dvfs_tbl[4][4]; /* for x1/x2/x3/x4 and Gen-1/2/3/4 */
 
 	u32 num_lanes;
 	u32 max_speed;
@@ -791,7 +792,7 @@ static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
 
 static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 {
-	u32 val = 0, speed = 0;
+	u32 val = 0, width = 0, speed = 0;
 	unsigned long freq;
 
 	/* If EP doesn't advertise L1SS, just return */
@@ -826,24 +827,15 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 			dev_err(pcie->dev, "LTR_MSG sending failed\n");
 	}
 
-	/* Make EMC FLOOR freq request based on link width */
+	/* Make EMC FLOOR freq request based on link width and speed */
 	val = readl(pcie->dbi_base + CFG_LINK_STATUS_CONTROL);
-	switch ((val >> 16) & PCI_EXP_LNKSTA_NLW) {
-	case PCI_EXP_LNKSTA_NLW_X1:
-		freq = 1333000000;
-		break;
-	case PCI_EXP_LNKSTA_NLW_X2:
-	case PCI_EXP_LNKSTA_NLW_X4:
-		freq = 1600000000;
-		break;
-	case PCI_EXP_LNKSTA_NLW_X8:
-		freq = 2133000000;
-		break;
-	default:
-		/* set to max to avoid any perf penalty */
-		freq = 2133000000;
-		break;
-	}
+	width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
+	width = find_first_bit((const unsigned long *)&width,
+			       sizeof(width));
+	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
+	freq = pcie->dvfs_tbl[width][speed - 1];
+	dev_dbg(pcie->dev, "EMC Freq requested = %lu\n", freq);
+
 	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
 		dev_err(pcie->dev, "can't set emc clock[%lu]\n", freq);
 
@@ -1321,6 +1313,13 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(np, "nvidia,num-lanes", &pcie->num_lanes);
 	if (ret < 0) {
 		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
+		return ret;
+	}
+
+	ret = of_property_read_u32_array(np, "nvidia,dvfs-tbl",
+					 &pcie->dvfs_tbl[0][0], 16);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read EMC DVFS table: %d\n", ret);
 		return ret;
 	}
 

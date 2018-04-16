@@ -494,6 +494,7 @@ struct tegra_pcie_dw {
 
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
+	u32 dvfs_tbl[4][4]; /* for x1/x2/x3/x4 and Gen-1/2/3/4 */
 };
 
 struct dma_tx {
@@ -2322,28 +2323,19 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct resource_entry *win;
 	struct pci_dev *pdev = NULL, *ppdev = NULL;
-	u32 data = 0, pos = 0, speed = 0;
+	u32 width = 0, speed = 0, data = 0, pos = 0;
 	struct pci_bus *child;
 	unsigned long freq;
 
-	/* Make EMC FLOOR freq request based on link width */
+	/* Make EMC FLOOR freq request based on link width and speed */
 	data = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
-	switch ((data >> 16) & PCI_EXP_LNKSTA_NLW) {
-	case PCI_EXP_LNKSTA_NLW_X1:
-		freq = 1333000000;
-		break;
-	case PCI_EXP_LNKSTA_NLW_X2:
-	case PCI_EXP_LNKSTA_NLW_X4:
-		freq = 1600000000;
-		break;
-	case PCI_EXP_LNKSTA_NLW_X8:
-		freq = 2133000000;
-		break;
-	default:
-		/* set to max to avoid any perf penalty */
-		freq = 2133000000;
-		break;
-	}
+	width = ((data >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
+	width = find_first_bit((const unsigned long *)&width,
+			       sizeof(width));
+	speed = ((data >> 16) & PCI_EXP_LNKSTA_CLS);
+	freq = pcie->dvfs_tbl[width][speed - 1];
+	dev_dbg(pp->dev, "EMC Freq requested = %lu\n", freq);
+
 	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
 		dev_err(pp->dev, "can't set emc clock[%lu]\n", freq);
 
@@ -2500,6 +2492,13 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 			     &pcie->dl_feature_cap);
 	if (ret < 0) {
 		dev_err(pcie->dev, "fail to read dl_feature_cap: %d\n", ret);
+		return ret;
+	}
+
+	ret = of_property_read_u32_array(np, "nvidia,dvfs-tbl",
+					 &pcie->dvfs_tbl[0][0], 16);
+	if (ret < 0) {
+		dev_err(pcie->dev, "fail to read EMC DVFS table: %d\n", ret);
 		return ret;
 	}
 

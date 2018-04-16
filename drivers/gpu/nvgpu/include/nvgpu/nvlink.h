@@ -25,6 +25,12 @@
 
 #include <nvgpu/types.h>
 
+#ifdef __KERNEL__
+#include <nvgpu/linux/nvlink.h>
+#else
+#include <nvgpu_rmos/include/nvlink.h>
+#endif
+
 struct gk20a;
 
 struct nvgpu_nvlink_ioctrl_list {
@@ -207,11 +213,12 @@ struct nvgpu_nvlink_dev {
 	void *priv;
 };
 
-
 int nvgpu_nvlink_enumerate(struct gk20a *g);
 int nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off);
+int nvgpu_nvlink_read_dt_props(struct gk20a *g);
+
 int nvgpu_nvlink_probe(struct gk20a *g);
 
 void nvgpu_mss_nvlink_init_credits(struct gk20a *g);
 
-#endif
+#endif /* __NVGPU_NVLINK_H__ */

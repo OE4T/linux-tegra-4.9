@@ -816,6 +816,7 @@ static const struct gpu_ops gv100_ops = {
 		.isr = gp10b_priv_ring_isr,
 		.decode_error_code = gp10b_priv_ring_decode_error_code,
 	},
+#if defined(CONFIG_TEGRA_NVLINK)
 	.nvlink = {
 		.discover_ioctrl = gv100_nvlink_discover_ioctrl,
 		.discover_link = gv100_nvlink_discover_link,
@@ -835,6 +836,7 @@ static const struct gpu_ops gv100_ops = {
 		.shutdown = gv100_nvlink_shutdown,
 		.early_init = gv100_nvlink_early_init,
 	},
+#endif
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
 };

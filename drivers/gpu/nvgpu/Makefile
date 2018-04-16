@@ -65,6 +65,7 @@ nvgpu-y := \
 	common/mm/mm.o \
 	common/bus.o \
 	common/enabled.o \
+	common/nvlink.o \
 	common/pramin.o \
 	common/semaphore.o \
 	common/as.o \

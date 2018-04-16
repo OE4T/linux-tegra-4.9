@@ -20,6 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifdef CONFIG_TEGRA_NVLINK
+
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/bios.h>
 #include <nvgpu/firmware.h>
@@ -2677,3 +2679,4 @@ nvlink_init_exit:
 	return err;
 }
 
+#endif /* CONFIG_TEGRA_NVLINK */

@@ -735,6 +735,8 @@ void xhci_stop(struct usb_hcd *hcd)
 	mutex_unlock(&xhci->mutex);
 }
 
+extern struct device_type pci_dev_type;
+
 /*
  * Shutdown HC (not bus-specific)
  *
@@ -765,8 +767,12 @@ void xhci_shutdown(struct usb_hcd *hcd)
 			readl(&xhci->op_regs->status));
 
 	/* Yet another workaround for spurious wakeups at shutdown with HSW */
-	if (xhci->quirks & XHCI_SPURIOUS_WAKEUP)
-		pci_set_power_state(to_pci_dev(hcd->self.controller), PCI_D3hot);
+	if (xhci->quirks & XHCI_SPURIOUS_WAKEUP) {
+		struct device *dev = hcd->self.controller;
+
+		if (dev->type == &pci_dev_type)
+			pci_set_power_state(to_pci_dev(dev), PCI_D3hot);
+	}
 }
 
 #ifdef CONFIG_PM

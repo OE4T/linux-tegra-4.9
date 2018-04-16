@@ -17,7 +17,6 @@
 #define  _M_TTCAN_LINUX_H
 
 #include <linux/list.h>
-#include <linux/spinlock.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
@@ -103,8 +102,9 @@ struct mttcan_priv {
 	struct mbox_client cl;
 	struct completion xfer_completion;
 	struct mbox_chan *mbox;
-	raw_spinlock_t tc_lock;
-	spinlock_t tslock;
+	raw_spinlock_t tc_lock; /* lock to protect timecounter infra */
+	spinlock_t tslock; /* lock to protect ioctl */
+	spinlock_t tx_lock; /* lock to protect transmit path */
 	void __iomem *regs;
 	void __iomem *mres;
 	void *std_shadow;

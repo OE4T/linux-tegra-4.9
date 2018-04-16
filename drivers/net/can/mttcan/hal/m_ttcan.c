@@ -618,7 +618,7 @@ unsigned int ttcan_read_txevt_fifo(struct ttcan_controller *ttcan)
 	txefs = ttcan_read32(ttcan, ADR_MTTCAN_TXEFS);
 
 	if (!(txefs & MTT_TXEFS_EFFL_MASK)) {
-		pr_info("%s: Tx Event FIFO empty\n", __func__);
+		pr_debug("%s: Tx Event FIFO empty\n", __func__);
 		return 0;
 	}
 	q_read = ttcan->tx_config.evt_q_num;

@@ -112,6 +112,7 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 
 	raw_spin_lock_init(&priv->tc_lock);
 	spin_lock_init(&priv->tslock);
+	spin_lock_init(&priv->tx_lock);
 
 	return err;
 }
@@ -554,13 +555,14 @@ static void mttcan_tx_event(struct net_device *dev)
 
 static void mttcan_tx_complete(struct net_device *dev)
 {
-	u32 msg_no;
-
 	struct mttcan_priv *priv = netdev_priv(dev);
 	struct ttcan_controller *ttcan = priv->ttcan;
 	struct net_device_stats *stats = &dev->stats;
+	u32 msg_no;
+	u32 completed_tx;
 
-	u32 completed_tx = ttcan_read_tx_complete_reg(ttcan);
+	spin_lock(&priv->tx_lock);
+	completed_tx = ttcan_read_tx_complete_reg(ttcan);
 
 	/* apply mask to consider only active CAN Tx transactions */
 	completed_tx &= ttcan->tx_object;
@@ -577,16 +579,17 @@ static void mttcan_tx_complete(struct net_device *dev)
 
 	if (netif_queue_stopped(dev))
 		netif_wake_queue(dev);
+	spin_unlock(&priv->tx_lock);
 }
 
 static void mttcan_tx_cancelled(struct net_device *dev)
 {
-	u32 buff_bit, cancelled_reg, cancelled_msg, msg_no;
 	struct mttcan_priv *priv = netdev_priv(dev);
 	struct ttcan_controller *ttcan = priv->ttcan;
 	struct net_device_stats *stats = &dev->stats;
+	u32 buff_bit, cancelled_reg, cancelled_msg, msg_no;
 
-
+	spin_lock(&priv->tx_lock);
 	cancelled_reg = ttcan_read_tx_cancelled_reg(ttcan);
 
 	/* cancelled_msg are newly cancelled message for current interrupt */
@@ -611,6 +614,7 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 			break;
 		}
 	}
+	spin_unlock(&priv->tx_lock);
 }
 
 static int mttcan_poll_ir(struct napi_struct *napi, int quota)
@@ -722,7 +726,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 		if (ir & MTTCAN_RX_FIFO_INTR) {
 			if (ir & MTT_IR_RF1L_MASK) {
 				netdev_warn(dev, "%s: some msgs lost on in Q1\n",
-					__func__);
+					   __func__);
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 				mttcan_handle_lost_frame(dev, 1);
@@ -730,7 +734,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			}
 			if (ir & MTT_IR_RF0L_MASK) {
 				netdev_warn(dev, "%s: some msgs lost on in Q0\n",
-					__func__);
+					   __func__);
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 				mttcan_handle_lost_frame(dev, 0);
@@ -1276,11 +1280,7 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	if (can_is_canfd_skb(skb))
 		frame->flags |= CAN_FD_FLAG;
 
-	if (ttcan_tx_buffers_full(priv->ttcan)) {
-		netif_stop_queue(dev);
-		smp_mb();
-		return NETDEV_TX_BUSY;
-	}
+	spin_lock_bh(&priv->tx_lock);
 
 	/* Write Tx message to controller */
 	msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
@@ -1290,11 +1290,9 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 				(struct ttcanfd_frame *)frame);
 
 	if (msg_no < 0) {
-		if (printk_ratelimit())
-			netdev_warn(dev, "No Tx space left\n");
-		kfree_skb(skb);
-		dev->stats.tx_dropped++;
-		return NETDEV_TX_OK;
+		netif_stop_queue(dev);
+		spin_unlock_bh(&priv->tx_lock);
+		return NETDEV_TX_BUSY;
 	}
 	can_put_echo_skb(skb, dev, msg_no);
 
@@ -1307,6 +1305,8 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 		printk_ratelimit())
 		netdev_err(dev, "Writing to occupied echo_skb buffer\n");
 	clear_bit(msg_no, &priv->ttcan->tx_obj_cancelled);
+
+	spin_unlock_bh(&priv->tx_lock);
 
 	return NETDEV_TX_OK;
 }

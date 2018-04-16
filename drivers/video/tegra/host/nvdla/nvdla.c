@@ -660,14 +660,6 @@ static struct of_device_id tegra_nvdla_of_match[] = {
 	{ },
 };
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static struct of_device_id tegra_nvdla_domain_match[] = {
-	{.compatible = "nvidia,tegra194-dla-pd",
-	.data = (struct nvhost_device_data *)&t19_nvdla0_info},
-	{},
-};
-#endif
-
 static int nvdla_probe(struct platform_device *pdev)
 {
 	int err = 0;
@@ -810,24 +802,6 @@ static struct platform_driver nvdla_driver = {
 	},
 };
 
-static int __init nvdla_init(void)
-{
-	int ret;
+module_platform_driver(nvdla_driver);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	ret = nvhost_domain_init(tegra_nvdla_domain_match);
-	if (ret)
-		return ret;
-#endif
-
-	return platform_driver_register(&nvdla_driver);
-}
-
-static void __exit nvdla_exit(void)
-{
-	platform_driver_unregister(&nvdla_driver);
-}
-
-module_init(nvdla_init);
-module_exit(nvdla_exit);
 MODULE_AUTHOR("Shridhar Rasal <srasal@nvidia.com>");

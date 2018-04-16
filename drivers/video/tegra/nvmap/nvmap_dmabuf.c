@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,7 @@
 #include <linux/stringify.h>
 #include <linux/of.h>
 #include <linux/platform/tegra/tegra_fd.h>
+#include <linux/version.h>
 
 #include <trace/events/nvmap.h>
 
@@ -124,8 +125,9 @@ static void __nvmap_dmabuf_del_stash(struct nvmap_handle_sgt *nvmap_sgt)
 	mutex_unlock(&nvmap_stashed_maps_lock);
 }
 
-static inline bool access_vpr_phys(struct device *dev) {
-	if (!to_dma_iommu_mapping(dev))
+static inline bool access_vpr_phys(struct device *dev)
+{
+	if (!device_is_iommuable(dev))
 		return true;
 
 	/*
@@ -529,9 +531,15 @@ static struct dma_buf_ops nvmap_dma_buf_ops = {
 	.release	= nvmap_dmabuf_release,
 	.begin_cpu_access = nvmap_dmabuf_begin_cpu_access,
 	.end_cpu_access = nvmap_dmabuf_end_cpu_access,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.map_atomic	= nvmap_dmabuf_kmap_atomic,
+	.map		= nvmap_dmabuf_kmap,
+	.unmap		= nvmap_dmabuf_kunmap,
+#else
 	.kmap_atomic	= nvmap_dmabuf_kmap_atomic,
 	.kmap		= nvmap_dmabuf_kmap,
 	.kunmap		= nvmap_dmabuf_kunmap,
+#endif
 	.mmap		= nvmap_dmabuf_mmap,
 	.vmap		= nvmap_dmabuf_vmap,
 	.vunmap		= nvmap_dmabuf_vunmap,

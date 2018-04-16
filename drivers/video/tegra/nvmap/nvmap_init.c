@@ -21,6 +21,11 @@
 #include <linux/tegra-ivc.h>
 #include <linux/dma-contiguous.h>
 #include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/clock.h>
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <linux/cma.h>
 #endif
@@ -382,7 +387,12 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 		pr_info("cma area initialed in legacy way already\n");
 		goto finish;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0,
+					rmem->name, &cma);
+#else
 	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0, &cma);
+#endif
 	if (ret) {
 		pr_info("cma_init_reserved_mem fails for %s\n", rmem->name);
 		goto finish;

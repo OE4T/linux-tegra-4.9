@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_fault.c
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,7 +21,11 @@
 #include "nvmap_priv.h"
 
 static void nvmap_vma_close(struct vm_area_struct *vma);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int nvmap_vma_fault(struct vm_fault *vmf);
+#else
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf);
+#endif
 static bool nvmap_fixup_prot(struct vm_area_struct *vma,
 		unsigned long addr, pgoff_t pgoff);
 
@@ -170,13 +174,23 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	}
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int nvmap_vma_fault(struct vm_fault *vmf)
+#else
 static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+#endif
 {
 	struct page *page;
 	struct nvmap_vma_priv *priv;
 	unsigned long offs;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	struct vm_area_struct *vma = vmf->vma;
+	unsigned long vmf_address = vmf->address;
+#else
+	void __user *vmf_address = vmf->virtual_address;
+#endif
 
-	offs = (unsigned long)(vmf->virtual_address - vma->vm_start);
+	offs = (unsigned long)(vmf_address - vma->vm_start);
 	priv = vma->vm_private_data;
 	if (!priv || !priv->handle || !priv->handle->alloc)
 		return VM_FAULT_SIGBUS;
@@ -195,7 +209,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		pfn = ((priv->handle->carveout->base + offs) >> PAGE_SHIFT);
 		if (!pfn_valid(pfn)) {
 			vm_insert_pfn(vma,
-				(unsigned long)vmf->virtual_address, pfn);
+				(unsigned long)vmf_address, pfn);
 			return VM_FAULT_NOPAGE;
 		}
 		/* CMA memory would get here */

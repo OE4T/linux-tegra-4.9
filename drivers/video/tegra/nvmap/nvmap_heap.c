@@ -29,6 +29,11 @@
 #include <linux/stat.h>
 #include <linux/sizes.h>
 #include <linux/io.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/clock.h>
+#endif
 
 #include <linux/nvmap.h>
 #include <linux/dma-mapping.h>

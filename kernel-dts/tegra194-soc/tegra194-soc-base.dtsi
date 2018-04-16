@@ -1818,7 +1818,7 @@
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
 		phy-names = "otg-phy";
 #endif
-		status = "disabled";
+		status = "okay";
 	};
 
 	tegra_xudc: xudc@3550000 {

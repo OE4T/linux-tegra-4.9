@@ -666,14 +666,18 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 		goto error;
 	}
 
-	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++)
+	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++) {
+		complete(&capture->capture_program_resp);
 		isp_capture_program_request_unpin(chan, i);
+	}
 
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests);
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests_isp);
 
-	for (i = 0; i < capture->capture_desc_ctx.queue_depth; i++)
+	for (i = 0; i < capture->capture_desc_ctx.queue_depth; i++) {
+		complete(&capture->capture_resp);
 		isp_capture_request_unpin(chan, i);
+	}
 
 	isp_capture_release_syncpts(chan);
 

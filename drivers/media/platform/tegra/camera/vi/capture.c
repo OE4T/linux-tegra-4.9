@@ -541,6 +541,7 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
 	int err = 0;
 	int ret = 0;
+	int i = 0;
 
 	if (capture == NULL) {
 		dev_err(chan->dev,
@@ -583,6 +584,9 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 			"failed to unregister control callback\n");
 		err = ret;
 	}
+
+	for (i = 0; i < capture->queue_depth; i++)
+		complete(&capture->capture_resp);
 
 	vi_capture_release_syncpts(chan);
 

@@ -3,7 +3,7 @@
  *
  * NVIDIA Tegra specific power events.
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,25 @@ TRACE_EVENT(tegra_rtc_set_alarm,
 	),
 
 	TP_printk("now %lu, target %lu\n", __entry->now, __entry->target)
+);
+
+TRACE_EVENT(tegra_rtc_irq_handler,
+
+	TP_PROTO(const char *s, unsigned long target),
+
+	TP_ARGS(s, target),
+
+	TP_STRUCT__entry(
+		__string(s, s)
+		__field(unsigned long, target)
+	),
+
+	TP_fast_assign(
+		__assign_str(s, s);
+		__entry->target = target;
+	),
+
+	TP_printk("%s: irq time %lu\n", __get_str(s), __entry->target)
 );
 
 #endif /* _TRACE_TEGRA_RTC_H */

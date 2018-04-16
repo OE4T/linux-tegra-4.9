@@ -274,7 +274,6 @@ static int tegra_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	writel(status, info->rtc_base + TEGRA_RTC_REG_INTR_MASK);
 
 	spin_unlock_irqrestore(&info->tegra_rtc_lock, sl_irq_flags);
-
 	return 0;
 }
 
@@ -316,6 +315,7 @@ static int tegra_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	unsigned long period;
 
 	rtc_tm_to_time(&alarm->time, &period);
+
 	return __tegra_rtc_set_alarm(dev, period, alarm->enabled);
 }
 
@@ -342,7 +342,7 @@ static irqreturn_t tegra_rtc_irq_handler(int irq, void *data)
 	tegra_rtc_alarm_irq_enable(dev, 0);
 	msec = readl(info->rtc_base + TEGRA_RTC_REG_MILLI_SECONDS);
 	sec = readl(info->rtc_base + TEGRA_RTC_REG_SHADOW_SECONDS);
-	trace_printk("%s: irq time %lu\n", __func__, sec * MSEC_PER_SEC + msec);
+	trace_tegra_rtc_irq_handler(__func__, sec * MSEC_PER_SEC + msec);
 
 	status = readl(info->rtc_base + TEGRA_RTC_REG_INTR_STATUS);
 	mask = readl(info->rtc_base + TEGRA_RTC_REG_INTR_MASK);

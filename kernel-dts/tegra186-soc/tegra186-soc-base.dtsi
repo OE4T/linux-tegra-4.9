@@ -310,7 +310,7 @@
 				sid-list = <TEGRA_SID_AON>;
 			};
 			afi_domain {
-				address-space = <&common_as>;
+				address-space = <&pcie_as>;
 				sid-list = <TEGRA_SID_AFI>;
 			};
 			sata2_domain {
@@ -349,6 +349,13 @@
 			common_as: common {
 				iova-start = <0x0 0x80000000>;
 				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pcie_as: pcie_as {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0xFFFFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

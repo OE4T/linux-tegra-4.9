@@ -67,7 +67,7 @@ enum cluster {
 struct cc3_params {
 	u32 ndiv;
 	u32 freq;
-	u8 enable;
+	bool enable;
 };
 
 struct per_cluster_data {
@@ -349,7 +349,7 @@ static void __tegra_mce_cc3_ctrl(void *data)
 {
 	struct cc3_params *param = (struct cc3_params *)data;
 
-	tegra_mce_cc3_ctrl(param->ndiv, 0, param->enable);
+	tegra_mce_cc3_ctrl(param->ndiv, 0, (u8)param->enable);
 }
 
 static void enable_cc3(struct device_node *dn)
@@ -620,6 +620,12 @@ static int __init cc3_debug_init(void)
 		dir = debugfs_create_dir(buff, dir);
 		if (!dir)
 			goto err_out;
+
+		if (!tfreq_data.pcluster[cl].cc3.enable) {
+			debugfs_create_bool("supported", RO_MODE, dir,
+				&tfreq_data.pcluster[cl].cc3.enable);
+			continue;
+		}
 
 		if (!debugfs_create_file("enable", RW_MODE, dir, (void *)cl,
 			&pcl_cc3_ops))
@@ -1031,14 +1037,6 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 
 	set_cpu_mask();
 
-#ifdef CONFIG_DEBUG_FS
-	ret = tegra_cpufreq_debug_init();
-	if (ret) {
-		pr_err("tegra19x-cpufreq: failed to create debugfs nodes\n");
-		goto err_out;
-	}
-#endif
-
 	ret = register_with_emc_bwmgr();
 	if (ret) {
 		pr_err("tegra19x-cpufreq: fail to register emc bw manager\n");
@@ -1060,6 +1058,14 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 		goto err_free_res;
 
 	enable_cc3(dn);
+
+#ifdef CONFIG_DEBUG_FS
+	ret = tegra_cpufreq_debug_init();
+	if (ret) {
+		pr_err("tegra19x-cpufreq: failed to create debugfs nodes\n");
+		goto err_out;
+	}
+#endif
 
 	ret = init_freqtbls(dn);
 	if (ret)

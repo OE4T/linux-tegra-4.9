@@ -73,19 +73,22 @@ static const struct gating_desc gv11b_slcg_gr[] = {
 	{.addr = 0x00405864, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x00405910, .prod = 0xfffffff0, .disable = 0xfffffffe},
 	{.addr = 0x00408044, .prod = 0x00000000, .disable = 0x000007fe},
-	{.addr = 0x00407004, .prod = 0x00000000, .disable = 0x000001fe},
-	{.addr = 0x00405bf4, .prod = 0x00000000, .disable = 0x00000002},
+	/* fix priv error */
+	/*{.addr = 0x00407004, .prod = 0x00000000, .disable = 0x000001fe},*/
+	/*{.addr = 0x00405bf4, .prod = 0x00000000, .disable = 0x00000002},*/
 	{.addr = 0x0041a134, .prod = 0x00020008, .disable = 0x0003fffe},
 	{.addr = 0x0041a894, .prod = 0x00000000, .disable = 0x0000fffe},
 	{.addr = 0x00418504, .prod = 0x00000000, .disable = 0x0007fffe},
-	{.addr = 0x0041860c, .prod = 0x00000000, .disable = 0x000001fe},
+	/* fix priv error */
+	/*{.addr = 0x0041860c, .prod = 0x00000000, .disable = 0x000001fe},*/
 	{.addr = 0x0041868c, .prod = 0x00000000, .disable = 0x0000001e},
 	{.addr = 0x0041871c, .prod = 0x00000000, .disable = 0x000003fe},
 	{.addr = 0x00418388, .prod = 0x00000000, .disable = 0x00000001},
 	{.addr = 0x0041882c, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00418bc0, .prod = 0x00000000, .disable = 0x000001fe},
 	{.addr = 0x00418974, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00418c74, .prod = 0xffffff80, .disable = 0xfffffffe},
+	/* fix priv error */
+	/*{.addr = 0x00418c74, .prod = 0xffffff80, .disable = 0xfffffffe},*/
 	{.addr = 0x00418cf4, .prod = 0xfffffff8, .disable = 0xfffffffe},
 	{.addr = 0x00418d74, .prod = 0xffffffe0, .disable = 0xfffffffe},
 	{.addr = 0x00418f10, .prod = 0xffffffe0, .disable = 0xfffffffe},
@@ -108,7 +111,8 @@ static const struct gating_desc gv11b_slcg_gr[] = {
 	{.addr = 0x00419a84, .prod = 0x0000000c, .disable = 0x0000000e},
 	{.addr = 0x0041be2c, .prod = 0x04115fc0, .disable = 0xfffffffe},
 	{.addr = 0x0041bfec, .prod = 0xfffffff0, .disable = 0xfffffffe},
-	{.addr = 0x0041bed4, .prod = 0xfffffff8, .disable = 0xfffffffe},
+	/* fix priv error */
+	/*{.addr = 0x0041bed4, .prod = 0xfffffff8, .disable = 0xfffffffe},*/
 	{.addr = 0x00408814, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00408a84, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x004089ac, .prod = 0x00000000, .disable = 0x0001fffe},

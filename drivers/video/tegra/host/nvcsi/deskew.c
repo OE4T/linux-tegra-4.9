@@ -467,8 +467,11 @@ int nvcsi_deskew_setup(struct nvcsi_deskew_context *ctx)
 		return -EINVAL;
 	}
 
-	new_lanes = ctx->deskew_lanes &
-				~(enabled_deskew_lanes | done_deskew_lanes);
+	mutex_lock(&deskew_lock);
+	done_deskew_lanes &= ~(ctx->deskew_lanes);
+	mutex_unlock(&deskew_lock);
+
+	new_lanes = ctx->deskew_lanes & ~enabled_deskew_lanes;
 	if (new_lanes) {
 		set_enabled_with_lock(new_lanes);
 		nvcsi_deskew_setup_start(new_lanes);

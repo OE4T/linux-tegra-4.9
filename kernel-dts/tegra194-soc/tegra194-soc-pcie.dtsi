@@ -343,6 +343,11 @@
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
 
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  666000000
+							204000000 408000000 666000000  1066000000
+							408000000 666000000 1066000000 2133000000 >;
+
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
 	};
@@ -409,6 +414,11 @@
 		nvidia,event-cntr-ctrl = <0x1c4>;
 		nvidia,event-cntr-data = <0x1c8>;
 
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  800000000
+							204000000 408000000 800000000  1600000000
+							0         0         0          0 >;
+
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
 	};
@@ -452,6 +462,11 @@
 		nvidia,event-cntr-ctrl = <0x1d8>;
 		nvidia,event-cntr-data = <0x1dc>;
 
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  666000000
+							204000000 408000000 666000000  1066000000
+							408000000 666000000 1066000000 2133000000 >;
+
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
 	};
@@ -488,6 +503,11 @@
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;
+
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  666000000
+							204000000 408000000 666000000  1066000000
+							408000000 666000000 1066000000 2133000000 >;
 
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
@@ -542,6 +562,11 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 45 0x04>;
 
+		nvidia,dvfs-tbl = < 204000000 408000000 800000000  1333000000
+							0         0         0          0
+							0         0         0          0
+							0         0         0          0 >;
+
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <&bpmp 0x1>;
@@ -594,6 +619,11 @@
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 47 0x04>;
+
+		nvidia,dvfs-tbl = < 204000000 408000000 800000000  1333000000
+							0         0         0          0
+							0         0         0          0
+							0         0         0          0 >;
 
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
@@ -648,6 +678,11 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 49 0x04>;
 
+		nvidia,dvfs-tbl = < 204000000 408000000 800000000  1333000000
+							0         0         0          0
+							0         0         0          0
+							0         0         0          0 >;
+
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <&bpmp 0x3>;
@@ -700,6 +735,11 @@
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 51 0x04>;
+
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  800000000
+							204000000 408000000 800000000  1600000000
+							0         0         0          0 >;
 
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
@@ -757,6 +797,11 @@
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 53 0x04>;
+
+		nvidia,dvfs-tbl = < 204000000 204000000 204000000  408000000
+							204000000 204000000 408000000  666000000
+							204000000 408000000 666000000  1066000000
+							408000000 666000000 1066000000 2133000000 >;
 
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;

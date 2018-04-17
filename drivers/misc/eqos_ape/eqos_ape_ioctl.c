@@ -1,7 +1,7 @@
 /*
  * eqos_ape_ioctl.c -- EQOS APE Clock Synchronization driver IO control
  *
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,6 +32,7 @@
 #define DEFAULT_N_FRACT		(0)
 #define DEFAULT_N_MODULO	(0)
 
+static struct rate_to_time_period g_rate;
 static int eqos_ape_ioctl_major;
 static struct cdev eqos_ape_ioctl_cdev;
 static struct device *dev_eqos_ape;
@@ -82,7 +83,9 @@ unsigned int cmd, unsigned long arg)
 		if (!(arg && copy_from_user(&rate_info,
 					_rate_info,
 					sizeof(rate_info)))) {
-
+			g_rate.n_modulo = rate_info.n_modulo;
+			g_rate.n_fract = rate_info.n_fract;
+			g_rate.n_int = rate_info.n_int;
 			amisc_writel(
 				(AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK
 							(rate_info.n_modulo) |
@@ -208,13 +211,11 @@ static int eqos_ape_ioctl_open(struct inode *inp, struct file *filep)
 {
 	int ret = 0;
 
-#ifdef CONFIG_PM_RUNTIME
 	ret = pm_runtime_get_sync(&eqos_ape_drv_data->pdev->dev);
 	if (ret < 0)
 		return ret;
-#endif
+
 	dev_dbg(&eqos_ape_drv_data->pdev->dev, "eqos ape opened\n");
-	amisc_clk_init();
 	amisc_idle_enable();
 	return ret;
 }
@@ -224,15 +225,12 @@ static int eqos_ape_ioctl_release(struct inode *inp, struct file *filep)
 	int ret = 0;
 
 	amisc_idle_disable();
-#ifdef CONFIG_PM
 	ret = pm_runtime_put_sync(&eqos_ape_drv_data->pdev->dev);
 	if (ret < 0) {
 		dev_err(&eqos_ape_drv_data->pdev->dev, "pm_runtime_put_sync failed\n");
 		return ret;
 	}
-#endif
 	dev_dbg(&eqos_ape_drv_data->pdev->dev, "eqos ape closed\n");
-	amisc_clk_deinit();
 	return ret;
 }
 
@@ -245,6 +243,8 @@ static const struct file_operations eqos_ape_ioctl_fops = {
 
 static void eqos_ape_ioctl_cleanup(void)
 {
+
+	amisc_clk_deinit();
 	cdev_del(&eqos_ape_ioctl_cdev);
 	device_destroy(eqos_ape_ioctl_class, MKDEV(eqos_ape_ioctl_major, 0));
 
@@ -351,11 +351,8 @@ static int eqos_ape_probe(struct platform_device *pdev)
 	eqos_ape_drv_data = drv_data;
 	eqos_ape_init();
 
-#ifdef CONFIG_PM_RUNTIME
-	tegra_ape_pd_add_device(&eqos_ape_drv_data->pdev->dev);
 	pm_runtime_enable(&eqos_ape_drv_data->pdev->dev);
-#endif
-
+	amisc_clk_init();
 out:
 	return ret;
 }
@@ -364,11 +361,63 @@ static int eqos_ape_remove(struct platform_device *pdev)
 {
 	eqos_ape_exit();
 
-#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&eqos_ape_drv_data->pdev->dev);
-#endif
 	return 0;
 }
+
+#ifdef CONFIG_PM_SLEEP
+static int eqos_ape_suspend(struct device *dev)
+{
+	struct eqos_drvdata *data = eqos_ape_drv_data;
+
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(0) |
+		AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(0)),
+		AMISC_APE_TSC_CTRL_0_0);
+	amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(DEFAULT_N_INT),
+		AMISC_APE_TSC_CTRL_1_0);
+	amisc_writel(AMISC_APE_TSC_CTRL_3_0_DISABLE,
+		AMISC_APE_TSC_CTRL_3_0);
+	amisc_idle_enable();
+	amisc_plla_set_rate(data->pll_a_clk_rate);
+	data->first_sync = 1;
+
+	pm_runtime_put_sync(dev);
+	return 0;
+}
+
+static int eqos_ape_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	pm_runtime_get_sync(dev);
+
+	amisc_idle_disable();
+	amisc_writel(AMISC_APE_TSC_CTRL_3_0_ENABLE,
+			AMISC_APE_TSC_CTRL_3_0);
+
+	amisc_writel(
+		(AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK
+		(g_rate.n_modulo) |
+		AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK
+		(g_rate.n_fract)),
+		AMISC_APE_TSC_CTRL_0_0);
+	amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK
+		(g_rate.n_int),
+		AMISC_APE_TSC_CTRL_1_0);
+	amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
+		AMISC_APE_TSC_CTRL_3_0_COPY),
+		AMISC_APE_TSC_CTRL_3_0);
+
+	return 0;
+}
+#endif
+static const struct dev_pm_ops eqos_ape_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(eqos_ape_suspend, eqos_ape_resume)
+};
 
 static const struct of_device_id eqos_ape_of_match[] = {
 	{ .compatible = "nvidia,tegra18x-eqos-ape", .data = NULL, },
@@ -379,6 +428,7 @@ static struct platform_driver eqos_ape_driver = {
 	.driver = {
 		.name = "eqos_ape",
 		.owner = THIS_MODULE,
+		.pm = &eqos_ape_pm_ops,
 		.of_match_table = of_match_ptr(eqos_ape_of_match),
 	},
 	.probe = eqos_ape_probe,

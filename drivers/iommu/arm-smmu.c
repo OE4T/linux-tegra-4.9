@@ -301,6 +301,8 @@
 #define ARM_SMMU_CB_S1_TLBIVAL		0x620
 #define ARM_SMMU_CB_S2_TLBIIPAS2	0x630
 #define ARM_SMMU_CB_S2_TLBIIPAS2L	0x638
+#define ARM_SMMU_CB_TLBSYNC		0x7f0
+#define ARM_SMMU_CB_TLBSTATUS		0x7f4
 
 #define SCTLR_S1_ASIDPNE		(1 << 12)
 #define SCTLR_HUPCF			(1 << 8)
@@ -771,17 +773,13 @@ static void __arm_smmu_free_bitmap(unsigned long *map, int idx)
 }
 
 /* Wait for any pending TLB invalidations to complete */
-static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
+static void arm_smmu_tlb_sync_wait_for_complete(struct arm_smmu_device *smmu,
+		void __iomem *base)
 {
 	int count = 0;
-	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
 
-	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
-		writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
-
-	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC);
-	while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
-	       & sTLBGSTATUS_GSACTIVE) {
+	while (readl_relaxed(base + ARM_SMMU_GR0_sTLBGSTATUS)
+			& sTLBGSTATUS_GSACTIVE) {
 		cpu_relax();
 		if (++count == TLB_LOOP_TIMEOUT) {
 			dev_err_ratelimited(smmu->dev,
@@ -792,6 +790,48 @@ static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 	}
 }
 
+static void arm_smmu_cb_tlb_sync_wait_for_complete(struct arm_smmu_device *smmu,
+		void __iomem *base)
+{
+	int count = 0;
+
+	while (readl_relaxed(base + ARM_SMMU_CB_TLBSTATUS)
+			& sTLBGSTATUS_GSACTIVE) {
+		cpu_relax();
+		if (++count == TLB_LOOP_TIMEOUT) {
+			dev_err_ratelimited(smmu->dev,
+			"TLB sync timed out -- SMMU may be deadlocked\n");
+			return;
+		}
+		udelay(1);
+	}
+}
+
+static void arm_smmu_cb_tlb_sync(struct arm_smmu_domain *smmu_domain)
+{
+	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
+	struct arm_smmu_device *smmu = smmu_domain->smmu;
+	void __iomem *base;
+
+	base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
+
+	writel_relaxed(0, base + ARM_SMMU_CB_TLBSYNC);
+
+	arm_smmu_cb_tlb_sync_wait_for_complete(smmu, base);
+}
+
+static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
+{
+	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
+
+	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
+		writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
+
+	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC);
+
+	arm_smmu_tlb_sync_wait_for_complete(smmu, gr0_base);
+}
+
 static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 {
 	u64 time_before = 0;
@@ -799,6 +839,7 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	void __iomem *base = ARM_SMMU_GR0(smmu);
 	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
+	bool do_cb_inval_sync = false;
 
 #ifdef CONFIG_TRACEPOINTS
 	if (static_key_false(&__tracepoint_arm_smmu_tlb_inv_context.key)
@@ -810,13 +851,19 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 		base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
 		writel_relaxed(ARM_SMMU_CB_ASID(cfg),
 			       base + ARM_SMMU_CB_S1_TLBIASID);
+		if (!tegra_platform_is_sim())
+			do_cb_inval_sync = true;
 	} else {
 		base = ARM_SMMU_GR0(smmu);
 		writel_relaxed(ARM_SMMU_CB_VMID(cfg),
 			       base + ARM_SMMU_GR0_TLBIVMID);
 	}
 
-	arm_smmu_tlb_sync(smmu);
+	if (do_cb_inval_sync) {
+		arm_smmu_cb_tlb_sync(smmu_domain);
+	} else {
+		arm_smmu_tlb_sync(smmu);
+	}
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_context(time_before, cfg->cbndx);
@@ -854,6 +901,7 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 	unsigned long iova_orig = iova;
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
+	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 #ifdef CONFIG_TRACEPOINTS
 	if (static_key_false(&__tracepoint_arm_smmu_tlb_inv_range.key)
@@ -865,7 +913,13 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		__arm_smmu_tlb_inv_range(smmu_domain, iova);
 		iova += PAGE_SIZE;
 	}
-	arm_smmu_tlb_sync(smmu);
+
+	if (!tegra_platform_is_sim() &&
+	    (stage1 || smmu->version == ARM_SMMU_V2)) {
+		arm_smmu_cb_tlb_sync(smmu_domain);
+	} else {
+		arm_smmu_tlb_sync(smmu);
+	}
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_range(time_before, cfg->cbndx,

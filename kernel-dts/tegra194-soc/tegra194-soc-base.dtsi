@@ -1555,9 +1555,10 @@
 			0 106 0x04
 			0 107 0x04>;
 		#dma-cells = <1>;
-
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		dma-coherent;
+		nvidia,start-dma-channel-index = <1>;
+		dma-channels = <31>;
 
 		status = "disabled";
 	};

@@ -2,7 +2,7 @@
  * linux/drivers/video/fbmon.c
  *
  * Copyright (C) 2002 James Simmons <jsimmons@users.sf.net>
- * Copyright (C) 2014-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * Credits:
  *
@@ -1124,8 +1124,8 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 	struct fb_videomode *m;
 	struct hdmi_vendor_block hvd = {0};
 	int num = 0, i, j, hdmi_num = 0;
-	u8 svd[64], y420_svd[31], y420_support_bitmap[31];
-	u8 edt[(128 - 4) / DETAILED_TIMING_DESCRIPTION_SIZE];
+	u8 svd[64] = {0}, y420_svd[31] = {0}, y420_support_bitmap[31] = {0};
+	u8 edt[(128 - 4) / DETAILED_TIMING_DESCRIPTION_SIZE] = {0};
 	u8 pos = 4, svd_n = 0, y420_svd_n = 0, y420_support_bitmap_n = 0;
 	bool y420_support_full = false;
 

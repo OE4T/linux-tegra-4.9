@@ -34,7 +34,7 @@ struct quadd_pmu_event_info {
 struct quadd_arch_info {
 	int type;
 
-	int pmuver;
+	unsigned int pmuver;
 	unsigned pmuver_is_set:1;
 
 	char name[QUADD_ARCH_NAME_MAX];

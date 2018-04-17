@@ -46,6 +46,7 @@ struct quadd_ring_buffer {
 };
 
 struct quadd_comm_ctx {
+	struct quadd_ctx *ctx;
 	struct quadd_comm_control_interface *control;
 
 	atomic_t active;
@@ -387,7 +388,7 @@ ready_to_profile(void)
 	if (!comm_ctx.params_ok)
 		return 0;
 
-	if (quadd_mode_is_sampling()) {
+	if (quadd_mode_is_sampling(comm_ctx.ctx)) {
 		for_each_possible_cpu(cpuid) {
 			is_cpu_present =
 				comm_ctx.control->is_cpu_present(cpuid);
@@ -457,7 +458,7 @@ device_ioctl(struct file *file,
 		}
 
 		if (!comm_ctx.params_ok ||
-		    !quadd_mode_is_sampling()) {
+		    !quadd_mode_is_sampling(comm_ctx.ctx)) {
 			pr_err("error: incorrect setup ioctl\n");
 			err = -EPERM;
 			goto error_out;
@@ -932,9 +933,12 @@ static int comm_init(void)
 }
 
 struct quadd_comm_data_interface *
-quadd_comm_events_init(struct quadd_comm_control_interface *control)
+quadd_comm_events_init(struct quadd_ctx *ctx,
+		       struct quadd_comm_control_interface *control)
 {
 	int err;
+
+	comm_ctx.ctx = ctx;
 
 	err = comm_init();
 	if (err < 0)

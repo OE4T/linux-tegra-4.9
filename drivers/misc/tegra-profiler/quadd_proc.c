@@ -89,7 +89,7 @@ static int show_capabilities(struct seq_file *f, void *offset)
 			seq_printf(f, "pmu arch:                  %s\n",
 					   arch->name);
 			if (arch->pmuver_is_set)
-				seq_printf(f, "pmu arch version:          %d\n",
+				seq_printf(f, "pmu arch version:          %u\n",
 					   arch->pmuver);
 
 			seq_printf(f, "l2 cache:                  %s\n",

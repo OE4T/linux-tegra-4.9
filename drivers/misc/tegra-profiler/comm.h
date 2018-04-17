@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.h
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 
 #include <linux/types.h>
 
+struct quadd_ctx;
 struct quadd_record_data;
 struct quadd_comm_cap;
 struct quadd_module_state;
@@ -85,7 +86,8 @@ struct quadd_comm_data_interface {
 };
 
 struct quadd_comm_data_interface *
-quadd_comm_events_init(struct quadd_comm_control_interface *control);
+quadd_comm_events_init(struct quadd_ctx *ctx,
+		       struct quadd_comm_control_interface *control);
 void quadd_comm_events_exit(void);
 
 #endif	/* __QUADD_COMM_H__ */

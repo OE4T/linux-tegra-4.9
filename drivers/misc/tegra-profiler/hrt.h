@@ -50,6 +50,7 @@ struct quadd_hrt_ctx {
 	struct quadd_ctx *quadd_ctx;
 
 	atomic_t active;
+	atomic_t mmap_active;
 	atomic_t nr_active_all_core;
 
 	atomic64_t counter_samples;
@@ -62,11 +63,11 @@ struct quadd_hrt_ctx {
 	unsigned long rss_size_prev;
 
 	struct timecounter *tc;
-	int use_arch_timer;
-	int arch_timer_user_access;
+	unsigned int use_arch_timer:1;
+	unsigned int arch_timer_user_access:1;
 
 	struct quadd_unw_methods um;
-	int get_stack_offset;
+	unsigned int get_stack_offset:1;
 };
 
 struct task_struct;
@@ -76,8 +77,8 @@ struct quadd_event_context {
 	struct task_struct *task;
 	struct pt_regs *regs;
 
-	int user_mode;
-	int is_sched;
+	unsigned int user_mode:1;
+	unsigned int is_sched:1;
 };
 
 #define QUADD_HRT_MIN_FREQ	100

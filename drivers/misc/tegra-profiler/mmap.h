@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/mmap.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,9 +17,11 @@
 #ifndef __QUADD_MMAP_H
 #define __QUADD_MMAP_H
 
-#include <linux/types.h>
+struct vm_area_struct;
+struct task_struct;
+struct quadd_ctx;
 
-void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid);
-int quadd_get_current_mmap(pid_t pid);
+void quadd_process_mmap(struct vm_area_struct *vma, struct task_struct *task);
+void quadd_get_mmaps(struct quadd_ctx *ctx);
 
 #endif  /* __QUADD_MMAP_H */

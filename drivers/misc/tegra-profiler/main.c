@@ -60,16 +60,6 @@ static struct quadd_comm_cap_for_cpu *get_capabilities_for_cpu_int(int cpuid)
 	return &per_cpu(per_cpu_caps, cpuid);
 }
 
-int quadd_mode_is_trace_all(void)
-{
-	return ctx.mode_is_trace_all;
-}
-
-int quadd_mode_is_sampling(void)
-{
-	return ctx.mode_is_sampling;
-}
-
 int tegra_profiler_try_lock(void)
 {
 	return atomic_cmpxchg(&ctx.tegra_profiler_lock, 0, 1);
@@ -92,14 +82,12 @@ static int start(void)
 	}
 
 	if (!atomic_cmpxchg(&ctx.started, 0, 1)) {
-		preempt_disable();
-
-		if (quadd_mode_is_sampling()) {
+		if (quadd_mode_is_sampling(&ctx)) {
 			if (ctx.pmu) {
 				err = ctx.pmu->enable();
 				if (err) {
 					pr_err("error: pmu enable\n");
-					goto errout_preempt;
+					goto errout;
 				}
 			}
 
@@ -107,7 +95,7 @@ static int start(void)
 				err = ctx.pl310->enable();
 				if (err) {
 					pr_err("error: pl310 enable\n");
-					goto errout_preempt;
+					goto errout;
 				}
 			}
 		}
@@ -117,10 +105,8 @@ static int start(void)
 		err = quadd_hrt_start();
 		if (err) {
 			pr_err("error: hrt start\n");
-			goto errout_preempt;
+			goto errout;
 		}
-
-		preempt_enable();
 
 		err = quadd_power_clk_start();
 		if (err < 0) {
@@ -130,9 +116,6 @@ static int start(void)
 	}
 
 	return 0;
-
-errout_preempt:
-	preempt_enable();
 
 errout:
 	atomic_set(&ctx.started, 0);
@@ -268,10 +251,10 @@ static int verify_app(struct quadd_parameters *p, uid_t task_uid)
 static int
 set_parameters(struct quadd_parameters *p)
 {
-	int i, err, nr_pl310 = 0;
+	int i, err = 0, nr_pl310 = 0;
 	uid_t task_uid, current_uid;
 	struct quadd_event *pl310_events;
-	struct task_struct *task;
+	struct task_struct *task = NULL;
 	u64 *low_addr_p;
 	u32 extra;
 
@@ -279,49 +262,61 @@ set_parameters(struct quadd_parameters *p)
 
 	ctx.mode_is_sampling =
 		extra & QUADD_PARAM_EXTRA_SAMPLING ? 1 : 0;
+	ctx.mode_is_tracing =
+		extra & QUADD_PARAM_EXTRA_TRACING ? 1 : 0;
+	ctx.mode_is_sample_all =
+		extra & QUADD_PARAM_EXTRA_SAMPLE_ALL_TASKS ? 1 : 0;
 	ctx.mode_is_trace_all = p->trace_all_tasks;
+	ctx.mode_is_sample_tree =
+		extra & QUADD_PARAM_EXTRA_SAMPLE_TREE ? 1 : 0;
+	ctx.mode_is_trace_tree =
+		extra & QUADD_PARAM_EXTRA_TRACE_TREE ? 1 : 0;
 
-	pr_info("flag: sampling: %s\n",
-		ctx.mode_is_sampling ? "yes" : "no");
-	pr_info("flag: trace all: %s\n",
-		ctx.mode_is_trace_all ? "yes" : "no");
+	pr_info("flags: s/t/sa/ta/st/tt: %u/%u/%u/%u/%u/%u\n",
+		ctx.mode_is_sampling,
+		ctx.mode_is_tracing,
+		ctx.mode_is_sample_all,
+		ctx.mode_is_trace_all,
+		ctx.mode_is_sample_tree,
+		ctx.mode_is_trace_tree);
 
-	if (ctx.mode_is_trace_all && !capable(CAP_SYS_ADMIN)) {
-		pr_err("error: trace all tasks mode is allowed only for root\n");
+	if ((ctx.mode_is_trace_all || ctx.mode_is_sample_all) &&
+	    !capable(CAP_SYS_ADMIN)) {
+		pr_err("error: \"all tasks\" modes are allowed only for root\n");
 		return -EACCES;
 	}
 
 	p->package_name[sizeof(p->package_name) - 1] = '\0';
 	ctx.param = *p;
 
-	if (!ctx.mode_is_trace_all || ctx.mode_is_sampling) {
-		if (!validate_freq(p->freq)) {
+	current_uid = from_kuid(&init_user_ns, current_fsuid());
+	pr_info("owner uid: %u\n", current_uid);
+
+	if ((ctx.mode_is_tracing && !ctx.mode_is_trace_all) ||
+	    (ctx.mode_is_sampling && !ctx.mode_is_sample_all)) {
+		if (ctx.mode_is_sampling && !validate_freq(p->freq)) {
 			pr_err("error: incorrect frequency: %u\n", p->freq);
 			return -EINVAL;
 		}
 
-		/* Currently only one process */
+		/* Currently only first process */
 		if (p->nr_pids != 1)
 			return -EINVAL;
 
-		rcu_read_lock();
-		task = pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
-		rcu_read_unlock();
+		task = get_pid_task(find_vpid(p->pids[0]), PIDTYPE_PID);
 		if (!task) {
 			pr_err("error: process not found: %u\n", p->pids[0]);
 			return -ESRCH;
 		}
 
-		current_uid = from_kuid(&init_user_ns, current_fsuid());
 		task_uid = from_kuid(&init_user_ns, task_uid(task));
-
-		pr_info("owner/task uids: %u/%u\n", current_uid, task_uid);
+		pr_info("task uid: %u\n", task_uid);
 
 		if (!capable(CAP_SYS_ADMIN)) {
 			if (current_uid != task_uid) {
 				err = verify_app(p, task_uid);
 				if (err < 0)
-					return err;
+					goto out_put_task;
 			}
 			ctx.collect_kernel_ips = 0;
 		} else {
@@ -335,8 +330,10 @@ set_parameters(struct quadd_parameters *p)
 			type = event->type;
 			id = event->id;
 
-			if (type != QUADD_EVENT_TYPE_HARDWARE)
-				return -EINVAL;
+			if (type != QUADD_EVENT_TYPE_HARDWARE) {
+				err = -EINVAL;
+				goto out_put_task;
+			}
 
 			if (ctx.pl310 &&
 			    ctx.pl310_info.nr_supp_events > 0 &&
@@ -348,12 +345,14 @@ set_parameters(struct quadd_parameters *p)
 
 				if (nr_pl310++ > 1) {
 					pr_err("error: multiply pl310 events\n");
-					return -EINVAL;
+					err = -EINVAL;
+					goto out_put_task;
 				}
 			} else {
 				pr_err("Bad event: %s\n",
 				       quadd_get_hw_event_str(id));
-				return -EINVAL;
+				err = -EINVAL;
+				goto out_put_task;
 			}
 		}
 
@@ -365,7 +364,7 @@ set_parameters(struct quadd_parameters *p)
 							    pl310_events, 1);
 				if (err) {
 					pr_info("pl310 set_parameters: error\n");
-					return err;
+					goto out_put_task;
 				}
 				ctx.pl310_info.active = 1;
 			} else {
@@ -381,12 +380,16 @@ set_parameters(struct quadd_parameters *p)
 
 		err = quadd_unwind_start(task);
 		if (err)
-			return err;
+			goto out_put_task;
 	}
 
 	pr_info("New parameters have been applied\n");
 
-	return 0;
+out_put_task:
+	if (task)
+		put_task_struct(task);
+
+	return err;
 }
 
 static void
@@ -734,7 +737,7 @@ static int __init quadd_module_init(void)
 		return err;
 	}
 
-	ctx.comm = quadd_comm_events_init(&control);
+	ctx.comm = quadd_comm_events_init(&ctx, &control);
 	if (IS_ERR(ctx.comm)) {
 		pr_err("error: COMM init failed\n");
 		return PTR_ERR(ctx.comm);

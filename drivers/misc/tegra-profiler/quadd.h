@@ -56,8 +56,8 @@ struct source_info {
 
 	unsigned int raw_event_mask;
 
-	int is_present;
-	int active;
+	unsigned int is_present:1;
+	unsigned int active:1;
 };
 
 struct quadd_ctx {
@@ -77,18 +77,49 @@ struct quadd_ctx {
 	atomic_t started;
 	atomic_t tegra_profiler_lock;
 
-	int collect_kernel_ips;
+	unsigned int collect_kernel_ips:1;
 
-	int mode_is_trace_all;
-	int mode_is_sampling;
+	unsigned int mode_is_sampling:1;
+	unsigned int mode_is_tracing:1;
+	unsigned int mode_is_sample_all:1;
+	unsigned int mode_is_trace_all:1;
+	unsigned int mode_is_sample_tree:1;
+	unsigned int mode_is_trace_tree:1;
 };
+
+static inline int quadd_mode_is_sampling(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_sampling;
+}
+
+static inline int quadd_mode_is_tracing(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_tracing;
+}
+
+static inline int quadd_mode_is_sample_all(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_sample_all;
+}
+
+static inline int quadd_mode_is_trace_all(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_trace_all;
+}
+
+static inline int quadd_mode_is_sample_tree(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_sample_tree;
+}
+
+static inline int quadd_mode_is_trace_tree(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_trace_tree;
+}
 
 void quadd_get_state(struct quadd_module_state *state);
 
 int tegra_profiler_try_lock(void);
 void tegra_profiler_unlock(void);
-
-int quadd_mode_is_trace_all(void);
-int quadd_mode_is_sampling(void);
 
 #endif	/* __QUADD_H */

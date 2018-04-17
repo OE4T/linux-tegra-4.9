@@ -3,6 +3,8 @@
  *
  * Copyright 2014 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  * This program is free software; you may redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 2 of the License.
@@ -284,6 +286,7 @@ static int vid_cap_buf_prepare(struct vb2_buffer *vb)
 
 			err = dma_buf_begin_cpu_access(dbuf, 0,
 					vb->planes[p].length, dma_dir);
+			dma_buf_put(dbuf);
 			if (err) {
 				dprintk(dev, 1, "%s dma buf cpu access for plane %d failed\n",
 					__func__, p);
@@ -319,6 +322,7 @@ static void vid_cap_buf_finish(struct vb2_buffer *vb)
 
 				dma_buf_end_cpu_access(dbuf, 0,
 					vb->planes[p].length, dma_dir);
+				dma_buf_put(dbuf);
 			}
 		}
 	}

@@ -69,6 +69,7 @@ struct tegra_camera_info {
 	u32 max_pixel_depth;
 	u32 ppc_divider;
 	u32 num_active_streams;
+	u32 sensor_type;
 	bool pg_mode;
 	struct list_head device_list;
 	struct mutex device_list_mutex;
@@ -596,6 +597,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	info->max_pixel_depth = 0;
 	info->ppc_divider = 1;
 	info->num_active_streams = 0;
+	info->sensor_type = 0;
 	info->pg_mode = false;
 	mutex_init(&info->device_list_mutex);
 	INIT_LIST_HEAD(&info->device_list);
@@ -619,6 +621,9 @@ static void update_platform_data(struct tegra_camera_dev_info *cdev,
 	 */
 	if (cdev->sensor_type == SENSORTYPE_VIRTUAL)
 		info->pg_mode = dev_registered;
+
+	if (cdev->sensor_type != SENSORTYPE_NONE)
+		info->sensor_type = cdev->sensor_type;
 
 	if (dev_registered) {
 		/* if bytes per pixel is greater than 2, then num_ppc
@@ -751,17 +756,23 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 	u32 overhead = cdev->overhead + 100;
 	u32 max_depth = info->max_pixel_depth;
 	u32 bus_width = cdev->bus_width;
+	u32 lane_num = cdev->lane_num;
+	u64 lane_speed = cdev->lane_speed;
 	u32 ppc = (cdev->ppc) ? cdev->ppc : 1;
 	u32 ppc_divider = (ppc > 1) ? info->ppc_divider : 1;
 	u64 nr = 0;
 	u64 dr = 0;
+	u64 clk_rate = 0;
 	u64 final_pr = (cdev->use_max) ? total_pr : active_pr;
+	bool set_clk = true;
 
 	if (cdev->hw_type == HWTYPE_NONE)
 		return 0;
 
 	switch (cdev->hw_type) {
 	case HWTYPE_CSI:
+		if (info->sensor_type == SENSORTYPE_SLVSEC)
+			set_clk = false;
 		nr = max_depth * final_pr * overhead;
 		dr = bus_width * 100;
 		if (dr == 0)
@@ -777,36 +788,48 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 		dr = 100 * ppc;
 		break;
 	case HWTYPE_SLVSEC:
-		/* TODO add proper calculations here */
-		nr = UINT_MAX - 1;
-		dr = 1;
+		if (info->sensor_type != SENSORTYPE_SLVSEC)
+			set_clk = false;
+		nr = lane_speed * lane_num * overhead;
+		dr = bus_width * 100;
+		if (dr == 0)
+			return -EINVAL;
 		break;
 	default:
 		return -EINVAL;
 	}
 
 	/* avoid rounding errors by adding dr to nr */
-	cdev->clk_rate = (nr + dr) / dr;
+	clk_rate = (nr + dr) / dr;
 
 	/* Use special rates based on throughput
 	 * for TPG.
 	 */
 	if (info->pg_mode) {
-		cdev->clk_rate =  (cdev->pg_clk_rate) ?
+		clk_rate =  (cdev->pg_clk_rate) ?
 			cdev->pg_clk_rate : DEFAULT_PG_CLK_RATE;
 	}
 
 	/* no stream active, set to 0 */
 	if (info->num_active_streams == 0)
-		cdev->clk_rate = 0;
+		clk_rate = 0;
 
-	ret = nvhost_module_set_rate(cdev->pdev, &cdev->hw_type,
-			cdev->clk_rate, 0, NVHOST_CLOCK);
-	if (ret)
-		return ret;
+	if (clk_rate != cdev->clk_rate)
+		cdev->clk_rate = clk_rate;
+	else
+		set_clk = false;
 
-	/* save the actual rate set by nvhost */
-	ret = nvhost_module_get_rate(cdev->pdev, &cdev->actual_clk_rate, 0);
+	if (set_clk) {
+		ret = nvhost_module_set_rate(cdev->pdev, &cdev->hw_type,
+				cdev->clk_rate, 0, NVHOST_CLOCK);
+		if (ret)
+			return ret;
+
+		/* save the actual rate set by nvhost */
+		ret = nvhost_module_get_rate(cdev->pdev,
+				&cdev->actual_clk_rate, 0);
+	}
+
 	return ret;
 }
 

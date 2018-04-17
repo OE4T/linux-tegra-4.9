@@ -1,7 +1,7 @@
 /*
  * VI5 driver for T194
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,9 +46,15 @@
 
 #include <media/vi.h>
 #include <media/mc_common.h>
+#include <media/tegra_camera_platform.h>
 #include "camera/vi/vi5_fops.h"
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
+
+/* HW capability, pixels per clock */
+#define NUM_PPC		8
+/* 15% bus protocol overhead */
+#define VI_OVERHEAD	15
 
 struct host_vi5 {
 	struct platform_device *pdev;
@@ -139,6 +145,7 @@ static int vi5_probe(struct platform_device *pdev)
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
 	struct host_vi5 *vi5;
+	struct tegra_camera_dev_info vi_info;
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -189,6 +196,15 @@ static int vi5_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
+	memset(&vi_info, 0, sizeof(vi_info));
+	vi_info.pdev = pdev;
+	vi_info.hw_type = HWTYPE_VI;
+	vi_info.ppc = NUM_PPC;
+	vi_info.overhead = VI_OVERHEAD;
+	err = tegra_camera_device_register(&vi_info, vi5);
+	if (err)
+		goto device_release;
+
 	err = vi_channel_drv_register(pdev, &vi5_channel_drv_ops);
 	if (err)
 		goto device_release;
@@ -227,42 +243,11 @@ struct t194_vi5_file_private {
 static long nvhost_vi5_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
-	struct t194_vi5_file_private *filepriv = file->private_data;
-	struct platform_device *pdev = filepriv->pdev;
-
 	switch (cmd) {
 	case NVHOST_VI_IOCTL_SET_VI_CLK: {
-		long rate;
-
-		if (!(file->f_mode & FMODE_WRITE))
-			return -EINVAL;
-		if (get_user(rate, (long __user *)arg))
-			return -EFAULT;
-
-		return nvhost_module_set_rate(pdev, filepriv, rate, 0,
-						NVHOST_CLOCK);
+		return 0;
 	}
 	case _IOC_NR(NVHOST_VI_IOCTL_GET_VI_CLK): {
-		int ret;
-		u64 vi_clk_rate = 0;
-
-		ret = nvhost_module_get_rate(pdev,
-			(unsigned long *)&vi_clk_rate, 0);
-		if (ret) {
-			dev_err(&pdev->dev,
-			"%s: failed to get vi clk\n",
-			__func__);
-			return ret;
-		}
-
-		if (copy_to_user((void __user *)arg,
-			&vi_clk_rate, sizeof(vi_clk_rate))) {
-			dev_err(&pdev->dev,
-			"%s:Failed to copy vi clk rate to user\n",
-			__func__);
-			return -EFAULT;
-		}
-
 		return 0;
 	}
 	case NVHOST_VI_IOCTL_SET_VI_LA_BW: {
@@ -286,11 +271,6 @@ static int nvhost_vi5_open(struct inode *inode, struct file *file)
 
 	filepriv->pdev = pdev;
 
-	if (nvhost_module_add_client(pdev, filepriv)) {
-		kfree(filepriv);
-		return -ENOMEM;
-	}
-
 	file->private_data = filepriv;
 
 	return nonseekable_open(inode, file);
@@ -299,9 +279,7 @@ static int nvhost_vi5_open(struct inode *inode, struct file *file)
 static int nvhost_vi5_release(struct inode *inode, struct file *file)
 {
 	struct t194_vi5_file_private *filepriv = file->private_data;
-	struct platform_device *pdev = filepriv->pdev;
 
-	nvhost_module_remove_client(pdev, filepriv);
 	kfree(filepriv);
 
 	return 0;
@@ -323,6 +301,7 @@ static int vi5_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_vi5 *vi5 = pdata->private_data;
 
+	tegra_camera_device_unregister(vi5);
 	vi_channel_drv_unregister(&pdev->dev);
 	tegra_vi_media_controller_cleanup(&vi5->vi_common.mc_vi);
 

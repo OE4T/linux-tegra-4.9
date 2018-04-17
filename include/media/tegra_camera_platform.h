@@ -80,6 +80,8 @@ struct tegra_camera_dev_info {
 	u32 hw_type;
 	u32 bus_width;
 	u32 overhead;
+	u64 lane_speed;
+	u32 lane_num;
 	u32 ppc;
 	u64 clk_rate;
 	u64 pg_clk_rate;

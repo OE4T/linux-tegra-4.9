@@ -38,6 +38,7 @@
 #include <linux/kthread.h>
 
 #include <media/mc_common.h>
+#include <media/tegra_camera_platform.h>
 #include "camera/nvcsi/csi5_fops.h"
 
 #include "dev.h"
@@ -45,6 +46,11 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 #include "media/csi.h"
+
+/* PG rate based on max ISP throughput */
+#define PG_CLK_RATE	102000000
+/* width of interface between VI and CSI */
+#define CSI_BUS_WIDTH	64
 
 static long long input_stats;
 
@@ -78,19 +84,11 @@ static long t194_nvcsi_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
 	struct t194_nvcsi_file_private *filepriv = file->private_data;
-	struct platform_device *pdev = filepriv->pdev;
-	long rate;
 	int ret;
 
 	switch (cmd) {
 	case NVHOST_NVCSI_IOCTL_SET_NVCSI_CLK: {
-		if (!(file->f_mode & FMODE_WRITE))
-			return -EINVAL;
-		if (get_user(rate, (long __user *)arg))
-			return -EFAULT;
-
-		return nvhost_module_set_rate(pdev, filepriv,
-					rate, 0, NVHOST_CLOCK);
+		return 0;
 		}
 	// sensor must be turned on before calling this ioctl, and streaming
 	// should be started shortly after.
@@ -126,11 +124,6 @@ static int t194_nvcsi_open(struct inode *inode, struct file *file)
 
 	filepriv->pdev = pdev;
 
-	if (nvhost_module_add_client(pdev, filepriv)) {
-		kfree(filepriv);
-		return -ENOMEM;
-	}
-
 	file->private_data = filepriv;
 
 	return nonseekable_open(inode, file);
@@ -139,9 +132,7 @@ static int t194_nvcsi_open(struct inode *inode, struct file *file)
 static int t194_nvcsi_release(struct inode *inode, struct file *file)
 {
 	struct t194_nvcsi_file_private *filepriv = file->private_data;
-	struct platform_device *pdev = filepriv->pdev;
 
-	nvhost_module_remove_client(pdev, filepriv);
 	kfree(filepriv);
 
 	return 0;
@@ -260,6 +251,7 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	struct t194_nvcsi *nvcsi;
 	struct resource *mem;
 	void __iomem *regs;
+	struct tegra_camera_dev_info csi_info;
 
 	pdata = (void *)of_device_get_match_data(&pdev->dev);
 	if (unlikely(pdata == NULL)) {
@@ -312,6 +304,16 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		goto err_client_device_init;
 	}
 
+	memset(&csi_info, 0, sizeof(csi_info));
+	csi_info.pdev = pdev;
+	csi_info.hw_type = HWTYPE_CSI;
+	csi_info.use_max = true;
+	csi_info.bus_width = CSI_BUS_WIDTH;
+	csi_info.pg_clk_rate = PG_CLK_RATE;
+	err = tegra_camera_device_register(&csi_info, nvcsi);
+	if (err)
+		goto err_mediacontroller_init;
+
 	nvcsi->pdev = pdev;
 	nvcsi->csi.fops = &csi5_fops;
 	atomic_set(&nvcsi->on, 0);
@@ -338,6 +340,7 @@ static int __exit t194_nvcsi_remove(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct t194_nvcsi *nvcsi = pdata->private_data;
 
+	tegra_camera_device_unregister(nvcsi);
 	mc_csi = NULL;
 	nvcsi_deskew_debugfs_remove(nvcsi);
 	tegra_csi_media_controller_remove(&nvcsi->csi);

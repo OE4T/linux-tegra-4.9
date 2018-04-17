@@ -1,7 +1,7 @@
 /*
  * ISP5 driver for T194
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <media/isp_channel.h>
+#include <media/tegra_camera_platform.h>
 #include <soc/tegra/camrtc-capture.h>
 #include <soc/tegra/chip-id.h>
 
@@ -44,6 +45,10 @@
 #include "nvhost_syncpt_unit_interface.h"
 #include "t194/t194.h"
 #include <linux/nvhost_isp_ioctl.h>
+
+#define ISP_PPC		2
+/* 20% overhead */
+#define ISP_OVERHEAD	20
 
 struct host_isp5 {
 	struct platform_device *pdev;
@@ -104,6 +109,7 @@ static int isp5_probe(struct platform_device *pdev)
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
 	struct host_isp5 *isp5;
+	struct tegra_camera_dev_info isp_info;
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -158,6 +164,15 @@ static int isp5_probe(struct platform_device *pdev)
 		goto put_thi;
 	}
 
+	memset(&isp_info, 0, sizeof(isp_info));
+	isp_info.overhead = ISP_OVERHEAD;
+	isp_info.ppc = ISP_PPC;
+	isp_info.hw_type = HWTYPE_ISPA;
+	isp_info.pdev = pdev;
+	err = tegra_camera_device_register(&isp_info, isp5);
+	if (err)
+		goto device_release;
+
 #if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	err = isp_channel_drv_register(pdev, &isp5_channel_drv_ops);
 	if (err)
@@ -188,40 +203,10 @@ static long isp_ioctl(struct file *file,
 
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
-		int ret;
-		u64 isp_clk_rate = 0;
-
-		ret = nvhost_module_get_rate(pdev,
-			(unsigned long *)&isp_clk_rate, 0);
-		if (ret) {
-			dev_err(&pdev->dev,
-			"%s: failed to get isp clk\n",
-			__func__);
-			return ret;
-		}
-
-		if (copy_to_user((void __user *)arg,
-			&isp_clk_rate, sizeof(isp_clk_rate))) {
-			dev_err(&pdev->dev,
-			"%s:Failed to copy isp clk rate to user\n",
-			__func__);
-			return -EFAULT;
-		}
-
 		return 0;
 	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
-		long isp_clk_rate = 0;
-
-		if (copy_from_user(&isp_clk_rate,
-			(const void __user *)arg, sizeof(long))) {
-			dev_err(&pdev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-		}
-
-		return nvhost_module_set_rate(pdev,
-				filepriv, isp_clk_rate, 0, NVHOST_CLOCK);
+		return 0;
 	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
 		/* No BW control needed. Return without error. */
@@ -248,11 +233,6 @@ static int isp_open(struct inode *inode, struct file *file)
 
 	filepriv->pdev = pdev;
 
-	if (nvhost_module_add_client(pdev, filepriv)) {
-		kfree(filepriv);
-		return -ENOMEM;
-	}
-
 	file->private_data = filepriv;
 
 	return nonseekable_open(inode, file);
@@ -261,9 +241,7 @@ static int isp_open(struct inode *inode, struct file *file)
 static int isp_release(struct inode *inode, struct file *file)
 {
 	struct t194_isp5_file_private *filepriv = file->private_data;
-	struct platform_device *pdev = filepriv->pdev;
 
-	nvhost_module_remove_client(pdev, filepriv);
 	kfree(filepriv);
 
 	return 0;
@@ -283,6 +261,8 @@ static int isp5_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct host_isp5 *isp5 = (struct host_isp5 *)pdata->private_data;
+
+	tegra_camera_device_unregister(isp5);
 
 #if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	isp_channel_drv_unregister(&pdev->dev);

@@ -1,7 +1,7 @@
 /*
  * SLVS-EC driver for T194
  *
- * Copyright (c) 2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <soc/tegra/chip-id.h>
+#include <media/tegra_camera_platform.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -79,6 +80,14 @@
 #define SLVSEC_CIL_STRM1_INTR_MASK		U32_C(0x3181c)
 
 #define SLVSEC_CIL_STRM_INTR_STATUS_CAL_DONE	BIT(3)
+
+/* HW capabilities */
+#define BUS_WIDTH	64
+#define LANE_NUM	8
+#define LANE_SPEED	2304000000
+/* uses 8b10b encoding */
+#define ENCODE_NR	8
+#define ENCODE_DR	10
 
 struct slvsec {
 	struct platform_device *pdev;
@@ -269,6 +278,7 @@ static int slvsec_probe(struct platform_device *pdev)
 	struct nvhost_device_data *info;
 	struct device_node *vi_np;
 	struct slvsec *slvsec;
+	struct tegra_camera_dev_info slvsec_info;
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -312,6 +322,17 @@ static int slvsec_probe(struct platform_device *pdev)
 	if (err)
 		goto deinit;
 
+	memset(&slvsec_info, 0, sizeof(slvsec_info));
+	slvsec_info.pdev = pdev;
+	slvsec_info.hw_type = HWTYPE_SLVSEC;
+	slvsec_info.use_max = true;
+	slvsec_info.lane_speed = LANE_SPEED * ENCODE_NR / ENCODE_DR;
+	slvsec_info.lane_num = LANE_NUM;
+	slvsec_info.bus_width = BUS_WIDTH;
+	err = tegra_camera_device_register(&slvsec_info, slvsec);
+	if (err)
+		goto deinit;
+
 	slvsec_init_debugfs(slvsec);
 
 #ifdef SLVSEC_ENABLE_IRQ
@@ -342,6 +363,7 @@ static int __exit slvsec_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct slvsec *slvsec = (struct slvsec *)pdata->private_data;
 
+	tegra_camera_device_unregister(slvsec);
 	slvsec_remove_debugfs(slvsec);
 
 	return 0;

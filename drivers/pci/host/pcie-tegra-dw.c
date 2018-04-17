@@ -2850,8 +2850,15 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 		}
 	}
 
-	if (tegra_pcie_try_link_l2(pcie))
+	if (tegra_pcie_try_link_l2(pcie)) {
 		dev_info(pcie->dev, "Link didn't transit to L2 state\n");
+		/* TX lane clock freq will reset to Gen1 only if link is in L2
+		 * or detect state. So disable LTSMM to enter detect state.
+		 */
+		data = readl(pcie->appl_base + APPL_CTRL);
+		data &= ~APPL_CTRL_LTSSM_EN;
+		writel(data, pcie->appl_base + APPL_CTRL);
+	}
 
 	data = readl(pcie->appl_base + APPL_PINMUX);
 	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);

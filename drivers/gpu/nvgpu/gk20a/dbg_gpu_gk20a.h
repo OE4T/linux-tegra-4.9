@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -132,4 +132,5 @@ void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
 int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size);
 int gk20a_perfbuf_disable_locked(struct gk20a *g);
 
+void nvgpu_dbg_session_post_event(struct dbg_session_gk20a *dbg_s);
 #endif /* DBG_GPU_GK20A_H */

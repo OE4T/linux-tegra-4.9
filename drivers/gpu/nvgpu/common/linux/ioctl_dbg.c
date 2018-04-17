@@ -468,6 +468,11 @@ free_ref:
 	return err;
 }
 
+void nvgpu_dbg_session_post_event(struct dbg_session_gk20a *dbg_s)
+{
+	nvgpu_cond_broadcast_interruptible(&dbg_s->dbg_events.wait_queue);
+}
+
 static int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 			struct dbg_session_channel_data *ch_data)
 {

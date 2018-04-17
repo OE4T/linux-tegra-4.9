@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -27,6 +27,7 @@
 #include <nvgpu/vm.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -106,7 +107,7 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 
 			dbg_s->dbg_events.num_pending_events++;
 
-			nvgpu_cond_broadcast_interruptible(&dbg_s->dbg_events.wait_queue);
+			nvgpu_dbg_session_post_event(dbg_s);
 		}
 	}
 

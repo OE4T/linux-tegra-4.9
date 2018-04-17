@@ -1073,6 +1073,7 @@ static struct dma_map_ops iommu_dma_ops = {
 	.map_at = arm_iommu_map_at,
 };
 
+#if ENABLE_IOMMU_DMA_OPS_NOTIFIER
 /*
  * TODO: Right now __iommu_setup_dma_ops() gets called too early to do
  * everything it needs to - the device is only partially created and the
@@ -1211,6 +1212,8 @@ int register_iommu_dma_ops_notifier(struct bus_type *bus)
 	return ret;
 }
 
+#endif /* ENABLE_IOMMU_DMA_OPS_NOTIFIER */
+
 static int __init __iommu_dma_init(void)
 {
 	int ret = 0;
@@ -1229,6 +1232,7 @@ arch_initcall(__iommu_dma_init);
 void __iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 				  const struct iommu_ops *ops)
 {
+#if ENABLE_IOMMU_DMA_OPS_NOTIFIER
 	struct iommu_group *group;
 
 	if (!ops)
@@ -1246,6 +1250,7 @@ void __iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 	} else {
 		queue_iommu_attach(dev, ops, dma_base, size);
 	}
+#endif
 }
 
 #else
@@ -2102,6 +2107,7 @@ int arm_dma_mapping_error(struct device *dev, dma_addr_t dev_addr)
 static LIST_HEAD(iommu_mapping_list);
 static DEFINE_SPINLOCK(iommu_mapping_list_lock);
 
+#if defined(CONFIG_DMA_API_DEBUG)
 #if defined(CONFIG_DEBUG_FS)
 static dma_addr_t bit_to_addr(size_t pos, dma_addr_t base)
 {
@@ -2171,12 +2177,15 @@ static const struct file_operations dump_iommu_mappings_fops = {
 };
 
 #endif /* CONFIG_DEBUG_FS */
+#endif /* CONFIG_DMA_API_DEBUG */
 
 void dma_debugfs_platform_info(struct dentry *dent)
 {
 #ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_DMA_API_DEBUG
 	debugfs_create_file("dump_mappings", S_IRUGO, dent, NULL,
 			    &dump_iommu_mappings_fops);
+#endif
 #endif
 }
 

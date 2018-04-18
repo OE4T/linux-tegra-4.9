@@ -330,15 +330,15 @@ static struct snd_soc_dai_driver tegra186_dspk_dais[] = {
 };
 
 static const struct snd_soc_dapm_widget tegra186_dspk_widgets[] = {
-	SND_SOC_DAPM_AIF_IN("DSPK RX", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
-	SND_SOC_DAPM_AIF_OUT("DSPK TX", NULL, 0, SND_SOC_NOPM, 0, 0),
+	SND_SOC_DAPM_AIF_IN("DSPK TX1", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
+	SND_SOC_DAPM_AIF_IN("DSPK TX2", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
 };
 
 static const struct snd_soc_dapm_route tegra186_dspk_routes[] = {
-	{ "DSPK RX",	   NULL, "DSPK Receive Right" },
-	{ "DSPK TX",	   NULL, "DSPK RX" },
-	{ "DSPK Right Transmit", NULL, "DSPK TX" },
-	{ "DSPK Left Transmit", NULL, "DSPK TX" },
+	{ "DSPK TX1",	   NULL, "DSPK Receive Left" },
+	{ "DSPK Left Transmit", NULL, "DSPK TX1" },
+	{ "DSPK TX2",	   NULL, "DSPK Receive Right" },
+	{ "DSPK Right Transmit", NULL, "DSPK TX2" },
 };
 
 static const char * const tegra186_dspk_osr_text[] = {

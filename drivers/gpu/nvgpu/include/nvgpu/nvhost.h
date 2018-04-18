@@ -25,6 +25,8 @@
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 
+#include <nvgpu/types.h>
+
 struct nvgpu_nvhost_dev;
 struct gk20a;
 struct sync_pt;

@@ -30,39 +30,118 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/ptimer/ptimer.o \
 	common/ptimer/ptimer_gk20a.o
 
+# Linux specific parts of nvgpu.
 nvgpu-y += \
-	common/linux/kmem.o \
-	common/linux/timers.o \
-	common/linux/ioctl.o \
-	common/linux/ioctl_ctrl.o \
-	common/linux/ioctl_as.o \
-	common/linux/ioctl_channel.o \
-	common/linux/ioctl_tsg.o \
-	common/linux/ioctl_dbg.o \
-	common/linux/ioctl_clk_arb.o \
-	common/linux/log.o \
-	common/linux/cond.o \
-	common/linux/nvgpu_mem.o \
-	common/linux/dma.o \
-	common/linux/driver_common.o \
-	common/linux/firmware.o \
-	common/linux/thread.o \
-	common/linux/vm.o \
-	common/linux/intr.o \
-	common/linux/sysfs.o \
-	common/linux/io.o \
-	common/linux/io_usermode.o \
-	common/linux/rwsem.o \
-	common/linux/comptags.o \
-	common/linux/dmabuf.o \
-	common/linux/sched.o \
-	common/linux/channel.o \
-	common/linux/ce2.o \
-	common/linux/sim.o \
-	common/linux/sim_pci.o \
-	common/linux/os_sched.o \
-	common/linux/nvlink.o \
-	common/linux/dt.o \
+	os/linux/kmem.o \
+	os/linux/timers.o \
+	os/linux/ioctl.o \
+	os/linux/ioctl_ctrl.o \
+	os/linux/ioctl_as.o \
+	os/linux/ioctl_channel.o \
+	os/linux/ioctl_tsg.o \
+	os/linux/ioctl_dbg.o \
+	os/linux/ioctl_clk_arb.o \
+	os/linux/log.o \
+	os/linux/cond.o \
+	os/linux/nvgpu_mem.o \
+	os/linux/dma.o \
+	os/linux/driver_common.o \
+	os/linux/firmware.o \
+	os/linux/thread.o \
+	os/linux/vm.o \
+	os/linux/intr.o \
+	os/linux/sysfs.o \
+	os/linux/io.o \
+	os/linux/io_usermode.o \
+	os/linux/rwsem.o \
+	os/linux/comptags.o \
+	os/linux/dmabuf.o \
+	os/linux/sched.o \
+	os/linux/channel.o \
+	os/linux/ce2.o \
+	os/linux/sim.o \
+	os/linux/sim_pci.o \
+	os/linux/os_sched.o \
+	os/linux/nvlink.o \
+	os/linux/dt.o
+
+nvgpu-$(CONFIG_GK20A_VIDMEM) += \
+	os/linux/vidmem.o
+
+nvgpu-$(CONFIG_DEBUG_FS) += \
+	os/linux/debug.o \
+	os/linux/debug_gr.o \
+	os/linux/debug_fifo.o \
+	os/linux/debug_ce.o \
+	os/linux/debug_pmu.o \
+	os/linux/debug_sched.o \
+	os/linux/debug_allocator.o \
+	os/linux/debug_hal.o \
+	os/linux/debug_clk.o \
+	os/linux/debug_xve.o
+
+ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)
+nvgpu-$(CONFIG_DEBUG_FS) += \
+	os/linux/debug_kmem.o
+endif
+
+nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
+	os/linux/ctxsw_trace.o
+
+nvgpu-$(CONFIG_TEGRA_GK20A) += \
+	os/linux/module.o \
+	os/linux/module_usermode.o \
+	os/linux/soc.o \
+	os/linux/fuse.o \
+	os/linux/platform_ecc_sysfs.o \
+	os/linux/platform_gk20a_tegra.o \
+	os/linux/platform_gp10b_tegra.o \
+	os/linux/platform_gv11b_tegra.o
+
+nvgpu-$(CONFIG_SYNC) += \
+	os/linux/sync_sema_android.o \
+	os/linux/os_fence_android.o \
+	os/linux/os_fence_android_sema.o
+
+ifeq ($(CONFIG_TEGRA_GK20A_NVHOST), y)
+nvgpu-$(CONFIG_SYNC) += \
+	os/linux/os_fence_android_syncpt.o
+endif
+
+nvgpu-$(CONFIG_GK20A_PCI) += \
+	os/linux/pci.o \
+	os/linux/pci_usermode.o
+
+nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += \
+	os/linux/nvhost.o
+
+nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
+	os/linux/vgpu/platform_vgpu_tegra.o \
+	os/linux/vgpu/fecs_trace_vgpu.o \
+	os/linux/vgpu/clk_vgpu.o \
+	os/linux/vgpu/sysfs_vgpu.o \
+	os/linux/vgpu/vgpu_ivc.o \
+	os/linux/vgpu/vgpu_ivm.o \
+	os/linux/vgpu/vgpu_linux.o \
+	os/linux/vgpu/gv11b/platform_gv11b_vgpu_tegra.o
+
+nvgpu-$(CONFIG_COMMON_CLK) += \
+	os/linux/clk.o
+
+nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
+	os/linux/scale.o
+
+nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
+	os/linux/cde.o \
+	os/linux/cde_gm20b.o \
+	os/linux/cde_gp10b.o
+
+ifeq ($(CONFIG_DEBUG_FS),y)
+nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
+	os/linux/debug_cde.o
+endif
+
+nvgpu-y += \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -138,51 +217,7 @@ nvgpu-y += \
 	boardobj/boardobjgrp_e32.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
-	common/mm/vidmem.o \
-	common/linux/vidmem.o
-
-nvgpu-$(CONFIG_DEBUG_FS) += \
-	common/linux/debug.o \
-	common/linux/debug_gr.o \
-	common/linux/debug_fifo.o \
-	common/linux/debug_ce.o \
-	common/linux/debug_pmu.o \
-	common/linux/debug_sched.o \
-	common/linux/debug_allocator.o \
-	common/linux/debug_hal.o \
-	common/linux/debug_clk.o \
-	common/linux/debug_xve.o
-
-ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)
-nvgpu-$(CONFIG_DEBUG_FS) += \
-	common/linux/debug_kmem.o
-endif
-
-nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
-	common/linux/ctxsw_trace.o
-
-nvgpu-$(CONFIG_TEGRA_GK20A) += \
-	common/linux/module.o \
-	common/linux/module_usermode.o \
-	common/linux/soc.o \
-	common/linux/fuse.o \
-	common/linux/platform_ecc_sysfs.o \
-	common/linux/platform_gk20a_tegra.o \
-	common/linux/platform_gp10b_tegra.o \
-	common/linux/platform_gv11b_tegra.o
-
-nvgpu-$(CONFIG_SYNC) += common/linux/sync_sema_android.o \
-		common/linux/os_fence_android.o \
-		common/linux/os_fence_android_sema.o
-
-ifeq ($(CONFIG_TEGRA_GK20A_NVHOST), y)
-nvgpu-$(CONFIG_SYNC) += common/linux/os_fence_android_syncpt.o
-endif
-
-nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o \
-	common/linux/pci_usermode.o \
-
-nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += common/linux/nvhost.o
+	common/mm/vidmem.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/ltc_vgpu.o \
@@ -205,20 +240,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gv11b/vgpu_fifo_gv11b.o \
 	vgpu/gv11b/vgpu_subctx_gv11b.o \
 	vgpu/gv11b/vgpu_tsg_gv11b.o \
-	common/linux/vgpu/platform_vgpu_tegra.o \
-	common/linux/vgpu/fecs_trace_vgpu.o \
-	common/linux/vgpu/clk_vgpu.o \
-	common/linux/vgpu/sysfs_vgpu.o \
-	common/linux/vgpu/vgpu_ivc.o \
-	common/linux/vgpu/vgpu_ivm.o \
-	common/linux/vgpu/vgpu_linux.o \
-	common/linux/vgpu/gv11b/platform_gv11b_vgpu_tegra.o
-
-nvgpu-$(CONFIG_COMMON_CLK) += \
-	common/linux/clk.o
-
-nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
-	common/linux/scale.o
 
 nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
@@ -316,13 +337,3 @@ nvgpu-y += \
 	therm/thrmpmu.o \
 	lpwr/rppg.o \
 	lpwr/lpwr.o
-
-nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
-	common/linux/cde.o \
-	common/linux/cde_gm20b.o \
-	common/linux/cde_gp10b.o
-
-ifeq ($(CONFIG_DEBUG_FS),y)
-nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
-	common/linux/debug_cde.o
-endif

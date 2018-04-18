@@ -28,7 +28,7 @@
 #include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 #endif
 #include "gp106/mclk_gp106.h"
 

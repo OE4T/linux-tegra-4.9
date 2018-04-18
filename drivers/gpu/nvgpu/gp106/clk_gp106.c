@@ -24,7 +24,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 #endif
 
 #include <nvgpu/kmem.h>

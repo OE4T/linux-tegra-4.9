@@ -21,7 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "clk_vgpu.h"
 #include "ctrl/ctrlclk.h"
-#include "common/linux/platform_gk20a.h"
+#include "os/linux/platform_gk20a.h"
 
 static unsigned long
 vgpu_freq_table[TEGRA_VGPU_GPU_FREQ_TABLE_SIZE];

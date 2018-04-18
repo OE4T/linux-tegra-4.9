@@ -18,7 +18,7 @@
 
 #include <linux/tegra-ivc.h>
 
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 
 struct tegra_hv_ivm_cookie *vgpu_ivm_mempool_reserve(unsigned int id)
 {

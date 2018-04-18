@@ -43,7 +43,7 @@
 #include "volt/volt.h"
 
 #ifdef CONFIG_DEBUG_FS
-#include "common/linux/os_linux.h"
+#include "os_linux.h"
 #endif
 
 static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,

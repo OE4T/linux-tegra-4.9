@@ -27,7 +27,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 #endif
 
 #include <nvgpu/hw/gp106/hw_therm_gp106.h>

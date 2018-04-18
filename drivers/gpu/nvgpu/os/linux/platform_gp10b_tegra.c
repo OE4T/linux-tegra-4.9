@@ -43,7 +43,7 @@
 #include "platform_gk20a.h"
 #include "platform_ecc_sysfs.h"
 #include "platform_gk20a_tegra.h"
-#include "gp10b/platform_gp10b.h"
+#include "platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
 #include "scale.h"
 

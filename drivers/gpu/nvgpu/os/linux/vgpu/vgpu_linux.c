@@ -40,12 +40,12 @@
 #include "gk20a/regops_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
-#include "common/linux/module.h"
-#include "common/linux/os_linux.h"
-#include "common/linux/ioctl.h"
-#include "common/linux/scale.h"
-#include "common/linux/driver_common.h"
-#include "common/linux/platform_gk20a.h"
+#include "os/linux/module.h"
+#include "os/linux/os_linux.h"
+#include "os/linux/ioctl.h"
+#include "os/linux/scale.h"
+#include "os/linux/driver_common.h"
+#include "os/linux/platform_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 

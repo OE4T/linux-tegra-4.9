@@ -26,7 +26,7 @@
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 #endif
 
 int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val)

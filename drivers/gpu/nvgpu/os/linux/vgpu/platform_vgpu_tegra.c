@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gk20a/gk20a.h"
-#include "common/linux/platform_gk20a.h"
-#include "clk_vgpu.h"
-
 #include <nvgpu/nvhost.h>
+
+#include "gk20a/gk20a.h"
+#include "os/linux/platform_gk20a.h"
+#include "clk_vgpu.h"
 
 static int gk20a_tegra_probe(struct device *dev)
 {

@@ -41,7 +41,7 @@
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 
 #include <nvgpu/log.h>
 

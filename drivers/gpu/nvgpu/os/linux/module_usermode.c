@@ -18,7 +18,7 @@
 
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 
-#include "common/linux/os_linux.h"
+#include "os_linux.h"
 
 /*
  * Locks out the driver from accessing GPU registers. This prevents access to

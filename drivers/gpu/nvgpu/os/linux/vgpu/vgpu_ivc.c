@@ -17,7 +17,7 @@
 #include <nvgpu/types.h>
 #include <linux/tegra_gr_comm.h>
 
-#include "common/linux/os_linux.h"
+#include "os/linux/os_linux.h"
 
 int vgpu_ivc_init(struct gk20a *g, u32 elems,
 		const size_t *queue_sizes, u32 queue_start, u32 num_queues)

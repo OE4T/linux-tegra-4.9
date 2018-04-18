@@ -348,7 +348,7 @@ static struct init_data usb3_lane_data[] = {
 	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
 
-static unsigned int
+static int
 tegra210_usb3_lane_map(struct tegra_xusb_lane *lane);
 
 struct tegra210_xusb_fuse_calibration {
@@ -2102,7 +2102,7 @@ static int tegra210_hsic_phy_disable_wake(struct phy *phy)
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_0);
 	reg &= ~ALL_WAKE_EVENTS;
-	reg &= ~~USB2_HSIC_PORT_WAKE_INTERRUPT_ENABLE(index);
+	reg &= ~USB2_HSIC_PORT_WAKE_INTERRUPT_ENABLE(index);
 	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_0);
 
 	usleep_range(10, 20);
@@ -2316,7 +2316,7 @@ static int tegra210_pcie_phy_init(struct phy *phy)
 		tegra210_pcie_lane_defaults(lane);
 
 	if (tegra_xusb_lane_check(lane, "xusb")) {
-		unsigned int ssp = tegra210_usb3_lane_map(lane);
+		int ssp = tegra210_usb3_lane_map(lane);
 		struct tegra_xusb_usb3_port *port =
 				tegra_xusb_find_usb3_port(padctl, ssp);
 		struct tegra_xusb_usb2_port *companion_usb2_port;
@@ -2514,9 +2514,14 @@ static int tegra210_usb3_phy_enable_sleepwalk(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-	unsigned int index = tegra210_usb3_lane_map(lane);
+	int index = tegra210_usb3_lane_map(lane);
 	struct device *dev = padctl->dev;
 	u32 reg;
+
+	if (index < 0) {
+		dev_err(dev, "invalid usb3 port number %d\n", index);
+		return -EINVAL;
+	}
 
 	dev_dbg(dev, "phy enable sleepwalk on usb3-%d\n", index);
 
@@ -2543,9 +2548,14 @@ static int tegra210_usb3_phy_disable_sleepwalk(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-	unsigned int index = tegra210_usb3_lane_map(lane);
+	int index = tegra210_usb3_lane_map(lane);
 	struct device *dev = padctl->dev;
 	u32 reg;
+
+	if (index < 0) {
+		dev_err(dev, "invalid usb3 port number %d\n", index);
+		return -EINVAL;
+	}
 
 	dev_dbg(dev, "phy disable sleepwalk on usb3-%d\n", index);
 
@@ -2570,9 +2580,14 @@ static int tegra210_usb3_phy_enable_wake(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-	unsigned int index = tegra210_usb3_lane_map(lane);
+	int index = tegra210_usb3_lane_map(lane);
 	struct device *dev = padctl->dev;
 	u32 reg;
+
+	if (index < 0) {
+		dev_err(dev, "invalid usb3 port number %d\n", index);
+		return -EINVAL;
+	}
 
 	dev_dbg(dev, "phy enable wake on usb3-%d\n", index);
 
@@ -2599,9 +2614,14 @@ static int tegra210_usb3_phy_disable_wake(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
-	unsigned int index = tegra210_usb3_lane_map(lane);
+	int index = tegra210_usb3_lane_map(lane);
 	struct device *dev = padctl->dev;
 	u32 reg;
+
+	if (index < 0) {
+		dev_err(dev, "invalid usb3 port number %d\n", index);
+		return -EINVAL;
+	}
 
 	dev_dbg(dev, "phy disable wake on usb3-%d\n", index);
 
@@ -3172,7 +3192,7 @@ static const struct tegra_xusb_port_ops tegra210_usb3_port_ops = {
 	.map = tegra210_usb3_port_map,
 };
 
-unsigned int
+static int
 tegra210_usb3_lane_find_port_index(struct tegra_xusb_lane *lane,
 				const struct tegra_xusb_lane_map *map,
 				const char *function)
@@ -3191,7 +3211,7 @@ tegra210_usb3_lane_find_port_index(struct tegra_xusb_lane *lane,
 	return -1;
 }
 
-static unsigned int
+static int
 tegra210_usb3_lane_map(struct tegra_xusb_lane *lane)
 {
 	int err = t210b01_compatible(lane->pad->padctl);
@@ -3208,7 +3228,8 @@ tegra210_usb3_lane_map(struct tegra_xusb_lane *lane)
 
 static inline bool is_usb3_phy(struct phy *phy)
 {
-	return phy->ops == &tegra210_pcie_phy_ops;
+	return (phy->ops == &tegra210_pcie_phy_ops ||
+			phy->ops == &tegra210_sata_phy_ops);
 }
 
 static bool is_usb3_phy_has_otg_cap(struct tegra_xusb_padctl *padctl,
@@ -3620,6 +3641,12 @@ static int tegra210_usb3_phy_remote_wake_detected(
 			struct tegra_xusb_padctl *padctl, int port)
 {
 	u32 reg;
+
+	if (port < 0) {
+		dev_err(padctl->dev, "invalid usb3 port number %d\n",
+					port);
+		return false;
+	}
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_0);
 	if ((reg & SS_PORT_WAKE_INTERRUPT_ENABLE(port)) &&

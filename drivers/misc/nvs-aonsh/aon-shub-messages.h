@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -57,13 +57,21 @@ enum aon_shub_init_request_type {
 	AON_SHUB_INIT_REQUEST_SETUP = 3,
 };
 
-/* This enum represents the types of requests to AON sensor hub system
+/* This enum represents the types of sys requests to AON sensor hub system
  * control.
  */
 enum aon_shub_sys_request_type {
 	AON_SHUB_SYS_REQUEST_DBG = 1,
 	AON_SHUB_SYS_REQUEST_PM = 2,
 	AON_SHUB_SYS_REQUEST_SNSR_CNT = 3,
+};
+
+/* This enum represents the types of PM requests to AON sensor hub system
+ * control.
+ */
+enum aon_shub_pm_request_type {
+	AON_SHUB_PM_REQUEST_SUSPEND = 1,
+	AON_SHUB_PM_REQUEST_RESUME = 2,
 };
 
 /* TODO: avoid zeros to prevent
@@ -190,6 +198,7 @@ struct aon_shub_dbg_request {
  */
 struct aon_shub_pm_request {
 	u32 flags;
+	u32 chip_id_msk;
 };
 
 /* This struct is used to represent data required for an i2c controller init

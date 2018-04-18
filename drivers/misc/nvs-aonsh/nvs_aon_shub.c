@@ -1,7 +1,7 @@
 /*
  * Sensor Hub driver for NVIDIA's Tegra186 AON Sensor Processing Engine.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,7 @@ struct tegra_aon_shub {
 	u32			 nchips;
 	u32			 i2c_clk_rates[I2CID_MAX];
 	u32			 chip_id_mask;
+	u32			 active_snsr_msk;
 	u32			 adjust_ts_counter;
 	u64			 ts_res_ns;
 	s64			 ts_adjustment;
@@ -990,8 +991,10 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 		ret = shub->nvs->probe(&shub->snsrs[i]->nvs_st, (void *)shub,
 					shub->dev,  &aon_shub_nvs_fn,
 					&shub->snsrs[i]->cfg);
-		if (!ret)
+		if (!ret) {
+			shub->active_snsr_msk |= BIT(i);
 			snsrs++;
+		}
 	}
 	if (!snsrs) {
 		dev_err(shub->dev, "nvs_probe() failed..!\n");
@@ -1120,20 +1123,63 @@ static int tegra_aon_shub_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra_aon_shub_suspend(struct device *dev)
 {
-	/* TODO: */
-	return 0;
+	struct tegra_aon_shub *shub = dev_get_drvdata(dev);
+	struct aon_shub_pm_request *pm_req;
+	int ret = 0;
+	u32 en_snsrs, snsr;
+
+	en_snsrs = shub->active_snsr_msk;
+	while (en_snsrs) {
+		snsr = __builtin_ctz(en_snsrs);
+		ret = tegra_aon_shub_enable(shub,
+					    shub->snsrs[snsr]->cfg.snsr_id,
+					    0);
+		if (ret)
+			return ret;
+		en_snsrs &= ~BIT(snsr);
+	}
+
+	mutex_lock(&shub->shub_mutex);
+	shub->shub_req->req_type = AON_SHUB_REQUEST_SYS;
+	shub->shub_req->data.sys.req = AON_SHUB_SYS_REQUEST_PM;
+	pm_req = &shub->shub_req->data.sys.data.pm;
+	pm_req->flags = AON_SHUB_PM_REQUEST_SUSPEND;
+	pm_req->chip_id_msk = shub->chip_id_mask;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
+	if (ret)
+		dev_err(shub->dev, "AON SHUB Suspend ERR: %d\n", ret);
+	mutex_unlock(&shub->shub_mutex);
+
+	return ret;
 }
 
 static int tegra_aon_shub_resume(struct device *dev)
 {
-	/* TODO: */
+	struct tegra_aon_shub *shub = dev_get_drvdata(dev);
+	struct aon_shub_pm_request *pm_req;
+	int ret;
+
+	mutex_lock(&shub->shub_mutex);
+	shub->shub_req->req_type = AON_SHUB_REQUEST_SYS;
+	shub->shub_req->data.sys.req = AON_SHUB_SYS_REQUEST_PM;
+	pm_req = &shub->shub_req->data.sys.data.pm;
+	pm_req->flags = AON_SHUB_PM_REQUEST_RESUME;
+	pm_req->chip_id_msk = shub->chip_id_mask;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
+	if (ret)
+		dev_err(shub->dev, "AON SHUB Resume ERR: %d\n", ret);
+	mutex_unlock(&shub->shub_mutex);
+
 	return 0;
 }
 
 static const struct dev_pm_ops tegra_aon_shub_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_aon_shub_suspend, tegra_aon_shub_resume)
 };
-
 #endif
 
 static const struct of_device_id tegra_aon_shub_of_match[] = {

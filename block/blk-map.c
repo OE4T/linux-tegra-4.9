@@ -39,6 +39,8 @@ static int __blk_rq_unmap_user(struct bio *bio)
 			bio_unmap_user(bio);
 		else
 			ret = bio_uncopy_user(bio);
+
+		bio_put(bio);
 	}
 
 	return ret;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2001 Jens Axboe <axboe@kernel.dk>
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -512,7 +513,11 @@ struct bio *bio_alloc_bioset(gfp_t gfp_mask, int nr_iovecs, struct bio_set *bs)
 	return bio;
 
 err_free:
-	mempool_free(p, bs->bio_pool);
+	if (!bs)
+		kfree(bio);
+	else
+		mempool_free(p, bs->bio_pool);
+
 	return NULL;
 }
 EXPORT_SYMBOL(bio_alloc_bioset);

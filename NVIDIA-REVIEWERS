@@ -134,6 +134,7 @@ M:	Emma Yan <eyan@nvidia.com>
 L:	tegra-display-core@exchange.nvidia.com
 B:	Mobile_DDK_Display
 S:	Supported
+F:	drivers/extcon/extcon-disp-state.c
 F:	drivers/misc/tegra-cec/*
 F:	drivers/platform/tegra/panel-simulator.c
 F:	drivers/video/backlight/backlight.c

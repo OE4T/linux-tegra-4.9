@@ -134,9 +134,10 @@ static int tegra_usb_cd_set_current_limit(struct tegra_usb_cd *ucd, int max_ua)
 	if (max_ua > 0 && ucd->hw_ops->vbus_pad_protection)
 		ucd->hw_ops->vbus_pad_protection(ucd, true);
 
-	dev_info(ucd->dev, "set current %dma\n", max_ua/1000);
-	if (ucd->vbus_reg != NULL)
+	if (ucd->vbus_reg != NULL) {
+		dev_info(ucd->dev, "set current %dma\n", max_ua/1000);
 		ret = regulator_set_current_limit(ucd->vbus_reg, 0, max_ua);
+	}
 
 	if (max_ua == 0 && ucd->hw_ops->vbus_pad_protection)
 		ucd->hw_ops->vbus_pad_protection(ucd, false);

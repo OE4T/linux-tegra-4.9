@@ -32,6 +32,7 @@ struct priv_cmd_entry;
 struct channel_gk20a;
 struct gk20a_fence;
 struct gk20a;
+struct nvgpu_semaphore;
 
 struct gk20a_channel_sync {
 	nvgpu_atomic_t refcount;
@@ -102,6 +103,10 @@ struct gk20a_channel_sync {
 	/* Free the resources allocated by gk20a_channel_sync_create. */
 	void (*destroy)(struct gk20a_channel_sync *s);
 };
+
+void gk20a_channel_gen_sema_wait_cmd(struct channel_gk20a *c,
+	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
+	u32 wait_cmd_size, int pos);
 
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
 	bool set_safe_state);

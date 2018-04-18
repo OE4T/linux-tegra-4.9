@@ -29,6 +29,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/list.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/os_fence.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
@@ -472,6 +473,23 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 				     va, cmd->gva, cmd->mem->gpu_va, ob);
 }
 
+void gk20a_channel_gen_sema_wait_cmd(struct channel_gk20a *c,
+	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
+	u32 wait_cmd_size, int pos)
+{
+	if (!sema) {
+		/* expired */
+		nvgpu_memset(c->g, wait_cmd->mem,
+			(wait_cmd->off + pos * wait_cmd_size) * sizeof(u32),
+			0, wait_cmd_size * sizeof(u32));
+	} else {
+		WARN_ON(!sema->incremented);
+		add_sema_cmd(c->g, c, sema, wait_cmd,
+			pos * wait_cmd_size, true, false);
+		nvgpu_semaphore_put(sema);
+	}
+}
+
 static int gk20a_channel_semaphore_wait_syncpt(
 		struct gk20a_channel_sync *s, u32 id,
 		u32 thresh, struct priv_cmd_entry *entry)
@@ -483,64 +501,6 @@ static int gk20a_channel_semaphore_wait_syncpt(
 	return -ENODEV;
 }
 
-#ifdef CONFIG_SYNC
-static int semaphore_wait_fd_native(struct channel_gk20a *c, int fd,
-		struct priv_cmd_entry *wait_cmd, int max_wait_cmds)
-{
-	struct sync_fence *sync_fence;
-	int err;
-	const int wait_cmd_size = 8;
-	int num_wait_cmds;
-	int i;
-
-	sync_fence = gk20a_sync_fence_fdget(fd);
-	if (!sync_fence)
-		return -EINVAL;
-
-	num_wait_cmds = sync_fence->num_fences;
-	if (num_wait_cmds == 0) {
-		err = 0;
-		goto put_fence;
-	}
-
-	if (max_wait_cmds && sync_fence->num_fences > max_wait_cmds) {
-		err = -EINVAL;
-		goto put_fence;
-	}
-
-	err = gk20a_channel_alloc_priv_cmdbuf(c,
-			wait_cmd_size * num_wait_cmds,
-			wait_cmd);
-	if (err) {
-		nvgpu_err(c->g, "not enough priv cmd buffer space");
-		goto put_fence;
-	}
-
-	for (i = 0; i < sync_fence->num_fences; i++) {
-		struct fence *f = sync_fence->cbs[i].sync_pt;
-		struct sync_pt *pt = sync_pt_from_fence(f);
-		struct nvgpu_semaphore *sema;
-
-		sema = gk20a_sync_pt_sema(pt);
-		if (!sema) {
-			/* expired */
-			nvgpu_memset(c->g, wait_cmd->mem,
-			(wait_cmd->off + i * wait_cmd_size) * sizeof(u32),
-				0, wait_cmd_size * sizeof(u32));
-		} else {
-			WARN_ON(!sema->incremented);
-			add_sema_cmd(c->g, c, sema, wait_cmd,
-					i * wait_cmd_size, true, false);
-			nvgpu_semaphore_put(sema);
-		}
-	}
-
-put_fence:
-	sync_fence_put(sync_fence);
-	return err;
-}
-#endif
-
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
 		struct priv_cmd_entry *entry, int max_wait_cmds)
@@ -548,13 +508,20 @@ static int gk20a_channel_semaphore_wait_fd(
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
 	struct channel_gk20a *c = sema->c;
-#ifdef CONFIG_SYNC
-	return semaphore_wait_fd_native(c, fd, entry, max_wait_cmds);
-#else
-	nvgpu_err(c->g,
-		  "trying to use sync fds with CONFIG_SYNC disabled");
-	return -ENODEV;
-#endif
+
+	struct nvgpu_os_fence os_fence = {0};
+	int err;
+
+	err = nvgpu_os_fence_fdget(&os_fence, c, fd);
+	if (err)
+		return err;
+
+	err = os_fence.ops->program_waits(&os_fence,
+		entry, c, max_wait_cmds);
+
+	os_fence.ops->drop_ref(&os_fence);
+
+	return err;
 }
 
 static int __gk20a_channel_semaphore_incr(
@@ -570,6 +537,7 @@ static int __gk20a_channel_semaphore_incr(
 	struct nvgpu_semaphore *semaphore;
 	int err = 0;
 	struct sync_fence *sync_fence = NULL;
+	struct nvgpu_os_fence os_fence = {0};
 
 	semaphore = nvgpu_semaphore_alloc(c);
 	if (!semaphore) {
@@ -589,18 +557,15 @@ static int __gk20a_channel_semaphore_incr(
 	/* Release the completion semaphore. */
 	add_sema_cmd(c->g, c, semaphore, incr_cmd, 0, false, wfi_cmd);
 
-#ifdef CONFIG_SYNC
 	if (need_sync_fence) {
-		sync_fence = gk20a_sync_fence_create(c,
-			semaphore, "f-gk20a-0x%04x",
-			nvgpu_semaphore_gpu_ro_va(semaphore));
+		err = nvgpu_os_fence_sema_create(&os_fence, c,
+			semaphore);
 
-		if (!sync_fence) {
-			err = -ENOMEM;
+		if (err)
 			goto clean_up_sema;
-		}
+
+		sync_fence = (struct sync_fence *)os_fence.priv;
 	}
-#endif
 
 	err = gk20a_fence_from_semaphore(fence,
 		semaphore,
@@ -608,10 +573,8 @@ static int __gk20a_channel_semaphore_incr(
 		sync_fence);
 
 	if (err) {
-#ifdef CONFIG_SYNC
-		if (sync_fence)
-			sync_fence_put(sync_fence);
-#endif
+		if (nvgpu_os_fence_is_initialized(&os_fence))
+			os_fence.ops->drop_ref(&os_fence);
 		goto clean_up_sema;
 	}
 

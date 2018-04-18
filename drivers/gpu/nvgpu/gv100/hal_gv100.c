@@ -111,6 +111,7 @@
 #include <nvgpu/hw/gv100/hw_top_gv100.h>
 #include <nvgpu/hw/gv100/hw_pram_gv100.h>
 #include <nvgpu/hw/gv100/hw_pwr_gv100.h>
+#include <nvgpu/hw/gv100/hw_gr_gv100.h>
 
 static int gv100_get_litter_value(struct gk20a *g, int value)
 {
@@ -434,6 +435,7 @@ static const struct gpu_ops gv100_ops = {
 		.get_pmm_per_chiplet_offset =
 			gr_gv11b_get_pmm_per_chiplet_offset,
 		.split_fbpa_broadcast_addr = gr_gv100_split_fbpa_broadcast_addr,
+		.fecs_ctxsw_mailbox_size = gr_fecs_ctxsw_mailbox__size_1_v,
 	},
 	.fb = {
 		.reset = gv100_fb_reset,

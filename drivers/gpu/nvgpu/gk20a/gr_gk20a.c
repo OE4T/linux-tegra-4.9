@@ -155,8 +155,10 @@ void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 		gk20a_readl(g, gr_fecs_debug1_r()));
 	nvgpu_err(g, "gr_fecs_debuginfo_r : 0x%x",
 		gk20a_readl(g, gr_fecs_debuginfo_r()));
+	nvgpu_err(g, "gr_fecs_ctxsw_status_1_r : 0x%x",
+		gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
 
-	for (i = 0; i < gr_fecs_ctxsw_mailbox__size_1_v(); i++)
+	for (i = 0; i < g->ops.gr.fecs_ctxsw_mailbox_size(); i++)
 		nvgpu_err(g, "gr_fecs_ctxsw_mailbox_r(%d) : 0x%x",
 			i, gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(i)));
 

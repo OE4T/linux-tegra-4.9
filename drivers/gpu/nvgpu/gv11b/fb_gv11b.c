@@ -22,13 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/types.h>
-
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/bug.h>
 #include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
@@ -57,37 +56,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 		nvgpu_log(g, gpu_dbg_info, "nvlink soc credits init done by bpmp");
 	} else {
 #ifndef __NVGPU_POSIX__
-		/* MSS_NVLINK_1_BASE */
-		void __iomem *soc1 = ioremap(0x01f20010, 4096);
-		/* MSS_NVLINK_2_BASE */
-		void __iomem *soc2 = ioremap(0x01f40010, 4096);
-		/* MSS_NVLINK_3_BASE */
-		void __iomem *soc3 = ioremap(0x01f60010, 4096);
-		/* MSS_NVLINK_4_BASE */
-		void __iomem *soc4 = ioremap(0x01f80010, 4096);
-		u32 val;
-
-		nvgpu_log(g, gpu_dbg_info, "init nvlink soc credits");
-
-		val = readl_relaxed(soc1);
-		writel_relaxed(val, soc1);
-		val = readl_relaxed(soc1 + 4);
-		writel_relaxed(val, soc1 + 4);
-
-		val = readl_relaxed(soc2);
-		writel_relaxed(val, soc2);
-		val = readl_relaxed(soc2 + 4);
-		writel_relaxed(val, soc2 + 4);
-
-		val = readl_relaxed(soc3);
-		writel_relaxed(val, soc3);
-		val = readl_relaxed(soc3 + 4);
-		writel_relaxed(val, soc3 + 4);
-
-		val = readl_relaxed(soc4);
-		writel_relaxed(val, soc4);
-		val = readl_relaxed(soc4 + 4);
-		writel_relaxed(val, soc4 + 4);
+		nvgpu_mss_nvlink_init_credits(g);
 #endif
 	}
 }

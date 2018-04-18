@@ -77,10 +77,13 @@ static enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
  *      - Attempt to find a reserved memory area and use the page size
  *        based on that.
  *      - If no reserved page size is available, default to small pages.
- *   o  If the base is zero:
+ *   o  If the base is zero and we have an SMMU:
  *      - If the size is larger than or equal to the big page size, use big
  *        pages.
  *      - Otherwise use small pages.
+ *   o If there's no SMMU:
+ *      - Regardless of buffer size use small pages since we have no
+ *      - guarantee of contiguity.
  */
 enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 {
@@ -95,7 +98,8 @@ enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 	if (base)
 		return __get_pte_size_fixed_map(vm, base, size);
 
-	if (size >= vm->gmmu_page_sizes[gmmu_page_size_big])
+	if (size >= vm->gmmu_page_sizes[gmmu_page_size_big] &&
+	    nvgpu_iommuable(g))
 		return gmmu_page_size_big;
 	return gmmu_page_size_small;
 }

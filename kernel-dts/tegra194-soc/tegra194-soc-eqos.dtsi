@@ -51,12 +51,13 @@
 				<0 188 0x4>,	/* tx2 */
 				<0 193 0x4>,	/* rx3 */
 				<0 189 0x4>;	/* tx3 */
-		clocks = <&bpmp_clks TEGRA194_CLK_EQOS_AXI>,
-			<&bpmp_clks TEGRA194_CLK_EQOS_RX>,
-			<&bpmp_clks TEGRA194_CLK_EQOS_PTP_REF>,
-			<&bpmp_clks TEGRA194_CLK_EQOS_TX>,
-			<&bpmp_clks TEGRA194_CLK_AXI_CBB>;
-		clock-names = "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "axi_cbb";
+		clocks = <&bpmp_clks TEGRA194_CLK_PLLREFE_VCOOUT>,
+			 <&bpmp_clks TEGRA194_CLK_EQOS_AXI>,
+			 <&bpmp_clks TEGRA194_CLK_EQOS_RX>,
+			 <&bpmp_clks TEGRA194_CLK_EQOS_PTP_REF>,
+			 <&bpmp_clks TEGRA194_CLK_EQOS_TX>,
+			 <&bpmp_clks TEGRA194_CLK_AXI_CBB>;
+		clock-names = "pllrefe_vcoout", "eqos_axi", "eqos_rx", "eqos_ptp_ref", "eqos_tx", "axi_cbb";
 		resets = <&bpmp_resets TEGRA194_RESET_EQOS>;
 		reset-names = "eqos_rst";
 		/* bootloader should update MAC address */

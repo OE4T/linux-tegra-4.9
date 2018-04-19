@@ -120,11 +120,12 @@
 #define APPL_LINK_STATUS			0xcc
 #define APPL_LINK_STATUS_RDLH_LINK_UP		BIT(0)
 
-#define APPL_APPL_DEBUG				0xD0
-#define APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT	BIT(21)
-#define APPL_APPL_DEBUG_PM_LINKST_IN_L0		0x11
-#define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK	GENMASK(8, 3)
-#define APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT	3
+#define APPL_DEBUG				0xD0
+#define APPL_DEBUG_PM_LINKST_IN_L2_LAT		BIT(21)
+#define APPL_DEBUG_PM_LINKST_IN_L0		0x11
+#define APPL_DEBUG_LTSSM_STATE_MASK		GENMASK(8, 3)
+#define APPL_DEBUG_LTSSM_STATE_SHIFT		3
+#define LTSSM_STATE_PRE_DETECT			5
 
 #define APPL_RADM_STATUS			0xE4
 #define APPL_PM_XMT_TURNOFF_STATE		BIT(0)
@@ -376,6 +377,8 @@
 #define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 (2)
 
 #define PME_ACK_TIMEOUT 10000
+
+#define LTSSM_TIMEOUT 10000
 
 #define NUM_TIMING_STEPS 0x14
 #define NUM_VOLTAGE_STEPS 0x14
@@ -1416,8 +1419,8 @@ static int apply_pme_turnoff(struct seq_file *s, void *data)
 
 	mdelay(1000);
 
-	val = readl(pcie->appl_base + APPL_APPL_DEBUG);
-	if (val & APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT)
+	val = readl(pcie->appl_base + APPL_DEBUG);
+	if (val & APPL_DEBUG_PM_LINKST_IN_L2_LAT)
 		seq_puts(s, "PME_TurnOff sent and Link is in L2 state\n");
 	else
 		seq_puts(s, "PME_TurnOff failed\n");
@@ -1637,11 +1640,11 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 	    PCI_EXP_LNKSTA_NLW_SHIFT)
 		seq_puts(s, "Link width reduced, restart the device & execute lane margin\n");
 
-	val = readl(pcie->appl_base + APPL_APPL_DEBUG);
-	val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
-	val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+	val = readl(pcie->appl_base + APPL_DEBUG);
+	val &= APPL_DEBUG_LTSSM_STATE_MASK;
+	val >>= APPL_DEBUG_LTSSM_STATE_SHIFT;
 
-	if (val != APPL_APPL_DEBUG_PM_LINKST_IN_L0)
+	if (val != APPL_DEBUG_PM_LINKST_IN_L0)
 		seq_puts(s, "Link is not in L0, restart the device & execute lane margin\n");
 
 	return 0;
@@ -1714,11 +1717,11 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 	    PCI_EXP_LNKSTA_NLW_SHIFT)
 		seq_puts(s, "Link width reduced, restart the device & execute lane margin\n");
 
-	val = readl(pcie->appl_base + APPL_APPL_DEBUG);
-	val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
-	val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+	val = readl(pcie->appl_base + APPL_DEBUG);
+	val &= APPL_DEBUG_LTSSM_STATE_MASK;
+	val >>= APPL_DEBUG_LTSSM_STATE_SHIFT;
 
-	if (val != APPL_APPL_DEBUG_PM_LINKST_IN_L0)
+	if (val != APPL_DEBUG_PM_LINKST_IN_L0)
 		seq_puts(s, "Link is not in L0, restart the device & execute lane margin\n");
 
 	return 0;
@@ -2253,9 +2256,9 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
 	while (!(val & CFG_LINK_STATUS_DLL_ACTIVE)) {
 		if (!count) {
-			val = readl(pcie->appl_base + APPL_APPL_DEBUG);
-			val &= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_MASK;
-			val >>= APPL_APPL_DEBUG_SMLH_LTSSM_STATE_SHIFT;
+			val = readl(pcie->appl_base + APPL_DEBUG);
+			val &= APPL_DEBUG_LTSSM_STATE_MASK;
+			val >>= APPL_DEBUG_LTSSM_STATE_SHIFT;
 			tmp = readl(pcie->appl_base + APPL_LINK_STATUS);
 			tmp &= APPL_LINK_STATUS_RDLH_LINK_UP;
 			if ((val == 0x11) && !tmp) {
@@ -2838,8 +2841,8 @@ static int tegra_pcie_try_link_l2(struct tegra_pcie_dw *pcie)
 	val |= APPL_PM_XMT_TURNOFF_STATE;
 	writel(val, pcie->appl_base + APPL_RADM_STATUS);
 
-	return readl_poll_timeout(pcie->appl_base + APPL_APPL_DEBUG, val,
-				 val & APPL_APPL_DEBUG_PM_LINKST_IN_L2_LAT,
+	return readl_poll_timeout_atomic(pcie->appl_base + APPL_DEBUG, val,
+				 val & APPL_DEBUG_PM_LINKST_IN_L2_LAT,
 				 1, PME_ACK_TIMEOUT);
 }
 
@@ -2875,6 +2878,15 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 		data = readl(pcie->appl_base + APPL_CTRL);
 		data &= ~APPL_CTRL_LTSSM_EN;
 		writel(data, pcie->appl_base + APPL_CTRL);
+		err = readl_poll_timeout_atomic(pcie->appl_base + APPL_DEBUG,
+						data,
+						((data &
+						APPL_DEBUG_LTSSM_STATE_MASK) >>
+						APPL_DEBUG_LTSSM_STATE_SHIFT) ==
+						LTSSM_STATE_PRE_DETECT,
+						1, LTSSM_TIMEOUT);
+		if (err)
+			dev_info(pcie->dev, "Link didn't go to detect state\n");
 	}
 
 	data = readl(pcie->appl_base + APPL_PINMUX);

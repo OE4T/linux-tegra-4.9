@@ -671,11 +671,6 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev)
 			"pmd=%llx, pte=%llx\n", iova, fsynr, cfg->cbndx,
 			sid, sid, tegra_mc_get_sid_name(sid), pgd,
 			pud, pmd, pte);
-		trace_printk("Unhandled context fault: iova=0x%08lx, "
-			"fsynr=0x%x, cb=%d, sid=%d(0x%x - %s), pgd=%llx "
-			"pud=%llx, pmd=%llx, pte=%llx\n", iova, fsynr,
-			cfg->cbndx, sid, sid, tegra_mc_get_sid_name(sid),
-			pgd, pud, pmd, pte);
 		ret = IRQ_NONE;
 		resume = RESUME_TERMINATE;
 	}
@@ -739,10 +734,6 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 		"Unexpected {global,context} fault, this could be serious\n");
 	dev_err_ratelimited(smmu->dev,
 		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
-		gfsr, gfsynr0, gfsynr1, gfsynr2);
-
-	trace_printk("Unexpected {global,context} fault, this could be serious\n");
-	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
 	writel(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);

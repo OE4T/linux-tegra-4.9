@@ -273,6 +273,7 @@ nvgpu-y += \
 	clk/clk_domain.o \
 	clk/clk_prog.o \
 	clk/clk_vf_point.o \
+	common/linux/ioctl_clk_arb.o \
 	common/linux/clk_arb.o \
 	clk/clk_freq_controller.o \
 	perf/vfe_var.o \

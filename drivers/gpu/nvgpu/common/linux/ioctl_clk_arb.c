@@ -1,0 +1,641 @@
+/*
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <linux/cdev.h>
+#include <linux/file.h>
+#include <linux/anon_inodes.h>
+#include <linux/rculist.h>
+#include <linux/llist.h>
+#include <linux/uaccess.h>
+#include <linux/poll.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+#include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/bitops.h>
+#include <nvgpu/lock.h>
+#include <nvgpu/kmem.h>
+#include <nvgpu/atomic.h>
+#include <nvgpu/bug.h>
+#include <nvgpu/kref.h>
+#include <nvgpu/log.h>
+#include <nvgpu/barrier.h>
+#include <nvgpu/cond.h>
+#include <nvgpu/clk_arb.h>
+
+#include "gk20a/gk20a.h"
+#include "clk/clk.h"
+#include "clk_arb_linux.h"
+#include "pstate/pstate.h"
+#include "lpwr/lpwr.h"
+#include "volt/volt.h"
+
+#ifdef CONFIG_DEBUG_FS
+#include "common/linux/os_linux.h"
+#endif
+
+static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
+		struct file *filp)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct nvgpu_clk_session *session = dev->session;
+
+
+	gk20a_dbg_fn("");
+
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	return 0;
+}
+
+static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+
+	gk20a_dbg_fn("");
+
+	poll_wait(filp, &dev->readout_wq.wq, wait);
+	return nvgpu_atomic_xchg(&dev->poll_mask, 0);
+}
+
+static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
+		struct file *filp)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct nvgpu_clk_session *session = dev->session;
+	struct nvgpu_clk_arb *arb;
+
+	arb = session->g->clk_arb;
+
+	gk20a_dbg_fn("");
+
+	if (arb) {
+		nvgpu_spinlock_acquire(&arb->users_lock);
+		list_del_rcu(&dev->link);
+		nvgpu_spinlock_release(&arb->users_lock);
+		nvgpu_clk_notification_queue_free(arb->g, &dev->queue);
+	}
+
+	synchronize_rcu();
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+
+	return 0;
+}
+
+static inline u32 __pending_event(struct nvgpu_clk_dev *dev,
+		struct nvgpu_gpu_event_info *info) {
+
+	u32 tail, head;
+	u32 events = 0;
+	struct nvgpu_clk_notification *p_notif;
+
+	tail = nvgpu_atomic_read(&dev->queue.tail);
+	head = nvgpu_atomic_read(&dev->queue.head);
+
+	head = (tail - head) < dev->queue.size ? head : tail - dev->queue.size;
+
+	if (_WRAPGTEQ(tail, head) && info) {
+		head++;
+		p_notif = &dev->queue.notifications[head % dev->queue.size];
+		events |= p_notif->notification;
+		info->event_id = ffs(events) - 1;
+		info->timestamp = p_notif->timestamp;
+		nvgpu_atomic_set(&dev->queue.head, head);
+	}
+
+	return events;
+}
+
+static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
+					size_t size, loff_t *off)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct nvgpu_gpu_event_info info;
+	ssize_t err;
+
+	gk20a_dbg_fn("filp=%p, buf=%p, size=%zu", filp, buf, size);
+
+	if ((size - *off) < sizeof(info))
+		return 0;
+
+	memset(&info, 0, sizeof(info));
+	/* Get the oldest event from the queue */
+	while (!__pending_event(dev, &info)) {
+		if (filp->f_flags & O_NONBLOCK)
+			return -EAGAIN;
+		err = NVGPU_COND_WAIT_INTERRUPTIBLE(&dev->readout_wq,
+				__pending_event(dev, &info), 0);
+		if (err)
+			return err;
+		if (info.timestamp)
+			break;
+	}
+
+	if (copy_to_user(buf + *off, &info, sizeof(info)))
+		return -EFAULT;
+
+	return sizeof(info);
+}
+
+static int nvgpu_clk_arb_set_event_filter(struct nvgpu_clk_dev *dev,
+		struct nvgpu_gpu_set_event_filter_args *args)
+{
+	u32 mask;
+
+	gk20a_dbg(gpu_dbg_fn, "");
+
+	if (args->flags)
+		return -EINVAL;
+
+	if (args->size != 1)
+		return -EINVAL;
+
+	if (copy_from_user(&mask, (void __user *) args->buffer,
+			args->size * sizeof(u32)))
+		return -EFAULT;
+
+	/* update alarm mask */
+	nvgpu_atomic_set(&dev->enabled_mask, mask);
+
+	return 0;
+}
+
+static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
+		unsigned long arg)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct gk20a *g = dev->session->g;
+	u8 buf[NVGPU_EVENT_IOCTL_MAX_ARG_SIZE];
+	int err = 0;
+
+	gk20a_dbg(gpu_dbg_fn, "nr=%d", _IOC_NR(cmd));
+
+	if ((_IOC_TYPE(cmd) != NVGPU_EVENT_IOCTL_MAGIC) || (_IOC_NR(cmd) == 0)
+		|| (_IOC_NR(cmd) > NVGPU_EVENT_IOCTL_LAST))
+		return -EINVAL;
+
+	BUG_ON(_IOC_SIZE(cmd) > NVGPU_EVENT_IOCTL_MAX_ARG_SIZE);
+
+	memset(buf, 0, sizeof(buf));
+	if (_IOC_DIR(cmd) & _IOC_WRITE) {
+		if (copy_from_user(buf, (void __user *) arg, _IOC_SIZE(cmd)))
+			return -EFAULT;
+	}
+
+	switch (cmd) {
+	case NVGPU_EVENT_IOCTL_SET_FILTER:
+		err = nvgpu_clk_arb_set_event_filter(dev,
+				(struct nvgpu_gpu_set_event_filter_args *)buf);
+		break;
+	default:
+		nvgpu_warn(g, "unrecognized event ioctl cmd: 0x%x", cmd);
+		err = -ENOTTY;
+	}
+
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+		err = copy_to_user((void __user *) arg, buf, _IOC_SIZE(cmd));
+
+	return err;
+}
+
+static const struct file_operations completion_dev_ops = {
+	.owner = THIS_MODULE,
+	.release = nvgpu_clk_arb_release_completion_dev,
+	.poll = nvgpu_clk_arb_poll_dev,
+};
+
+static const struct file_operations event_dev_ops = {
+	.owner = THIS_MODULE,
+	.release = nvgpu_clk_arb_release_event_dev,
+	.poll = nvgpu_clk_arb_poll_dev,
+	.read = nvgpu_clk_arb_read_event_dev,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvgpu_clk_arb_ioctl_event_dev,
+#endif
+	.unlocked_ioctl = nvgpu_clk_arb_ioctl_event_dev,
+};
+
+static int nvgpu_clk_arb_install_fd(struct gk20a *g,
+		struct nvgpu_clk_session *session,
+		const struct file_operations *fops,
+		struct nvgpu_clk_dev **_dev)
+{
+	struct file *file;
+	int fd;
+	int err;
+	int status;
+	char name[64];
+	struct nvgpu_clk_dev *dev;
+
+	gk20a_dbg_fn("");
+
+	dev = nvgpu_kzalloc(g, sizeof(*dev));
+	if (!dev)
+		return -ENOMEM;
+
+	status = nvgpu_clk_notification_queue_alloc(g, &dev->queue,
+		DEFAULT_EVENT_NUMBER);
+	if (status < 0)  {
+		err = status;
+		goto fail;
+	}
+
+	fd = get_unused_fd_flags(O_RDWR);
+	if (fd < 0) {
+		err = fd;
+		goto fail;
+	}
+
+	snprintf(name, sizeof(name), "%s-clk-fd%d", g->name, fd);
+	file = anon_inode_getfile(name, fops, dev, O_RDWR);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto fail_fd;
+	}
+
+	fd_install(fd, file);
+
+	nvgpu_cond_init(&dev->readout_wq);
+
+	nvgpu_atomic_set(&dev->poll_mask, 0);
+
+	dev->session = session;
+	nvgpu_ref_init(&dev->refcount);
+
+	nvgpu_ref_get(&session->refcount);
+
+	*_dev = dev;
+
+	return fd;
+
+fail_fd:
+	put_unused_fd(fd);
+fail:
+	nvgpu_kfree(g, dev);
+
+	return err;
+}
+
+int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
+	struct nvgpu_clk_session *session, int *event_fd, u32 alarm_mask)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	struct nvgpu_clk_dev *dev;
+	int fd;
+
+	gk20a_dbg_fn("");
+
+	fd = nvgpu_clk_arb_install_fd(g, session, &event_dev_ops, &dev);
+	if (fd < 0)
+		return fd;
+
+	/* TODO: alarm mask needs to be set to default value to prevent
+	 * failures of legacy tests. This will be removed when sanity is
+	 * updated
+	 */
+	if (alarm_mask)
+		nvgpu_atomic_set(&dev->enabled_mask, alarm_mask);
+	else
+		nvgpu_atomic_set(&dev->enabled_mask, EVENT(VF_UPDATE));
+
+	dev->arb_queue_head = nvgpu_atomic_read(&arb->notification_queue.head);
+
+	nvgpu_spinlock_acquire(&arb->users_lock);
+	list_add_tail_rcu(&dev->link, &arb->users);
+	nvgpu_spinlock_release(&arb->users_lock);
+
+	*event_fd = fd;
+
+	return 0;
+}
+
+int nvgpu_clk_arb_install_request_fd(struct gk20a *g,
+	struct nvgpu_clk_session *session, int *request_fd)
+{
+	struct nvgpu_clk_dev *dev;
+	int fd;
+
+	gk20a_dbg_fn("");
+
+	fd = nvgpu_clk_arb_install_fd(g, session, &completion_dev_ops, &dev);
+	if (fd < 0)
+		return fd;
+
+	*request_fd = fd;
+
+	return 0;
+}
+
+int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
+	struct nvgpu_clk_session *session, int request_fd)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	struct nvgpu_clk_dev *dev;
+	struct fd fd;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	fd  = fdget(request_fd);
+	if (!fd.file)
+		return -EINVAL;
+
+	if (fd.file->f_op != &completion_dev_ops) {
+		err = -EINVAL;
+		goto fdput_fd;
+	}
+
+	dev = (struct nvgpu_clk_dev *) fd.file->private_data;
+
+	if (!dev || dev->session != session) {
+		err = -EINVAL;
+		goto fdput_fd;
+	}
+	nvgpu_ref_get(&dev->refcount);
+	llist_add(&dev->node, &session->targets);
+	if (arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
+
+fdput_fd:
+	fdput(fd);
+	return err;
+}
+
+int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
+		int request_fd, u32 api_domain, u16 target_mhz)
+{
+	struct nvgpu_clk_dev *dev;
+	struct fd fd;
+	int err = 0;
+
+	gk20a_dbg_fn("domain=0x%08x target_mhz=%u", api_domain, target_mhz);
+
+	fd = fdget(request_fd);
+	if (!fd.file)
+		return -EINVAL;
+
+	if (fd.file->f_op != &completion_dev_ops) {
+		err = -EINVAL;
+		goto fdput_fd;
+	}
+
+	dev = fd.file->private_data;
+	if (!dev || dev->session != session) {
+		err = -EINVAL;
+		goto fdput_fd;
+	}
+
+	switch (api_domain) {
+	case NVGPU_GPU_CLK_DOMAIN_MCLK:
+		dev->mclk_target_mhz = target_mhz;
+		break;
+
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		dev->gpc2clk_target_mhz = target_mhz * 2ULL;
+		break;
+
+	default:
+		err = -EINVAL;
+	}
+
+fdput_fd:
+	fdput(fd);
+	return err;
+}
+
+int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
+		u32 api_domain, u16 *freq_mhz)
+{
+	int err = 0;
+	struct nvgpu_clk_arb_target *target;
+
+	do {
+		target = NV_ACCESS_ONCE(session->target);
+		/* no reordering of this pointer */
+		nvgpu_smp_rmb();
+
+		switch (api_domain) {
+		case NVGPU_GPU_CLK_DOMAIN_MCLK:
+			*freq_mhz = target->mclk;
+			break;
+
+		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+			*freq_mhz = target->gpc2clk / 2ULL;
+			break;
+
+		default:
+			*freq_mhz = 0;
+			err = -EINVAL;
+		}
+	} while (target != NV_ACCESS_ONCE(session->target));
+	return err;
+}
+
+int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
+		u32 api_domain, u16 *freq_mhz)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	int err = 0;
+	struct nvgpu_clk_arb_target *actual;
+
+	do {
+		actual = NV_ACCESS_ONCE(arb->actual);
+		/* no reordering of this pointer */
+		nvgpu_smp_rmb();
+
+		switch (api_domain) {
+		case NVGPU_GPU_CLK_DOMAIN_MCLK:
+			*freq_mhz = actual->mclk;
+			break;
+
+		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+			*freq_mhz = actual->gpc2clk / 2ULL;
+			break;
+
+		default:
+			*freq_mhz = 0;
+			err = -EINVAL;
+		}
+	} while (actual != NV_ACCESS_ONCE(arb->actual));
+	return err;
+}
+
+int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
+		u32 api_domain, u16 *freq_mhz)
+{
+	switch (api_domain) {
+	case NVGPU_GPU_CLK_DOMAIN_MCLK:
+		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_MCLK) /
+			1000000ULL;
+		return 0;
+
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		*freq_mhz = g->ops.clk.measure_freq(g,
+			CTRL_CLK_DOMAIN_GPC2CLK) / 2000000ULL;
+		return 0;
+
+	default:
+		return -EINVAL;
+	}
+}
+
+int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
+		u16 *min_mhz, u16 *max_mhz)
+{
+	int ret;
+
+	switch (api_domain) {
+	case NVGPU_GPU_CLK_DOMAIN_MCLK:
+		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
+				CTRL_CLK_DOMAIN_MCLK, min_mhz, max_mhz);
+		return ret;
+
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
+				CTRL_CLK_DOMAIN_GPC2CLK, min_mhz, max_mhz);
+		if (!ret) {
+			*min_mhz /= 2;
+			*max_mhz /= 2;
+		}
+		return ret;
+
+	default:
+		return -EINVAL;
+	}
+}
+
+u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g)
+{
+	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
+	u32 api_domains = 0;
+
+	if (clk_domains & CTRL_CLK_DOMAIN_GPC2CLK)
+		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_GPCCLK);
+
+	if (clk_domains & CTRL_CLK_DOMAIN_MCLK)
+		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_MCLK);
+
+	return api_domains;
+}
+
+bool nvgpu_clk_arb_is_valid_domain(struct gk20a *g, u32 api_domain)
+{
+	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
+
+	switch (api_domain) {
+	case NVGPU_GPU_CLK_DOMAIN_MCLK:
+		return ((clk_domains & CTRL_CLK_DOMAIN_MCLK) != 0);
+
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		return ((clk_domains & CTRL_CLK_DOMAIN_GPC2CLK) != 0);
+
+	default:
+		return false;
+	}
+}
+
+int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
+	u32 api_domain, u32 *max_points, u16 *fpoints)
+{
+	int err;
+	u32 i;
+
+	switch (api_domain) {
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		err = clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_GPC2CLK,
+				max_points, fpoints);
+		if (err || !fpoints)
+			return err;
+		for (i = 0; i < *max_points; i++)
+			fpoints[i] /= 2;
+		return 0;
+	case NVGPU_GPU_CLK_DOMAIN_MCLK:
+		return clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_MCLK,
+				max_points, fpoints);
+	default:
+		return -EINVAL;
+	}
+}
+
+#ifdef CONFIG_DEBUG_FS
+static int nvgpu_clk_arb_stats_show(struct seq_file *s, void *unused)
+{
+	struct gk20a *g = s->private;
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	struct nvgpu_clk_arb_debug *debug;
+
+	u64 num;
+	s64 tmp, avg, std, max, min;
+
+	debug = NV_ACCESS_ONCE(arb->debug);
+	/* Make copy of structure and ensure no reordering */
+	nvgpu_smp_rmb();
+	if (!debug)
+		return -EINVAL;
+
+	std = debug->switch_std;
+	avg = debug->switch_avg;
+	max = debug->switch_max;
+	min = debug->switch_min;
+	num = debug->switch_num;
+
+	tmp = std;
+	do_div(tmp, num);
+	seq_printf(s, "Number of transitions: %lld\n",
+		num);
+	seq_printf(s, "max / min : %lld / %lld usec\n",
+		max, min);
+	seq_printf(s, "avg / std : %lld / %ld usec\n",
+		avg, int_sqrt(tmp));
+
+	return 0;
+}
+
+static int nvgpu_clk_arb_stats_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, nvgpu_clk_arb_stats_show, inode->i_private);
+}
+
+static const struct file_operations nvgpu_clk_arb_stats_fops = {
+	.open		= nvgpu_clk_arb_stats_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+
+int nvgpu_clk_arb_debugfs_init(struct gk20a *g)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct dentry *gpu_root = l->debugfs;
+	struct dentry *d;
+
+	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+
+	d = debugfs_create_file(
+			"arb_stats",
+			S_IRUGO,
+			gpu_root,
+			g,
+			&nvgpu_clk_arb_stats_fops);
+	if (!d)
+		return -ENOMEM;
+
+	return 0;
+}
+#endif

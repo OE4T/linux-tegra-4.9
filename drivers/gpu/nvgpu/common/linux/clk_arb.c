@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -39,224 +39,12 @@
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
+#include "clk_arb_linux.h"
 #include "pstate/pstate.h"
 #include "lpwr/lpwr.h"
 #include "volt/volt.h"
 
-#ifdef CONFIG_DEBUG_FS
-#include "common/linux/os_linux.h"
-#endif
-
-#define MAX_F_POINTS 256
-#define DEFAULT_EVENT_NUMBER 32
-
-struct nvgpu_clk_dev;
-struct nvgpu_clk_arb_target;
-struct nvgpu_clk_notification_queue;
-
-#ifdef CONFIG_DEBUG_FS
-static int nvgpu_clk_arb_debugfs_init(struct gk20a *g);
-#endif
-
-static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
-		struct file *filp);
-static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
-		struct file *filp);
-static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait);
-static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
-					size_t size, loff_t *off);
-
-static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
-			unsigned long arg);
-
-static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work);
-static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work);
-static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb);
-static void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount);
-static void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount);
-static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
-	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
-	u32 voltuv_sram);
-static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
-	u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
-	u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram);
-static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
-				struct nvgpu_clk_arb_target *target,
-				u32 alarm_mask);
-static void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm);
-static void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm);
-
-static void nvgpu_clk_arb_queue_notification(struct gk20a *g,
-				struct nvgpu_clk_notification_queue *queue,
-				u32 alarm_mask);
-static int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
-				struct nvgpu_clk_notification_queue *queue,
-				size_t events_number);
-
-static void nvgpu_clk_notification_queue_free(struct gk20a *g,
-				struct nvgpu_clk_notification_queue *queue);
-
-#define VF_POINT_INVALID_PSTATE ~0U
-#define VF_POINT_SET_PSTATE_SUPPORTED(a, b) ((a)->pstates |= (1UL << (b)))
-#define VF_POINT_GET_PSTATE(a)	(((a)->pstates) ?\
-	__fls((a)->pstates) :\
-	VF_POINT_INVALID_PSTATE)
-#define VF_POINT_COMMON_PSTATE(a, b)	(((a)->pstates & (b)->pstates) ?\
-	__fls((a)->pstates & (b)->pstates) :\
-	VF_POINT_INVALID_PSTATE)
-
-/* Local Alarms */
-#define EVENT(alarm)	(0x1UL << NVGPU_GPU_EVENT_##alarm)
-
-#define LOCAL_ALARM_MASK (EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE) | \
-				EVENT(VF_UPDATE))
-
-#define _WRAPGTEQ(a, b) ((a-b) > 0)
-
-struct nvgpu_clk_notification {
-	u32 notification;
-	u64 timestamp;
-};
-
-struct nvgpu_clk_notification_queue {
-	u32 size;
-	nvgpu_atomic_t head;
-	nvgpu_atomic_t tail;
-	struct nvgpu_clk_notification *notifications;
-};
-
-struct nvgpu_clk_vf_point {
-	u16 pstates;
-	union {
-		struct {
-			u16 gpc_mhz;
-			u16 sys_mhz;
-			u16 xbar_mhz;
-		};
-		u16 mem_mhz;
-	};
-	u32 uvolt;
-	u32 uvolt_sram;
-};
-
-struct nvgpu_clk_vf_table {
-	u32 mclk_num_points;
-	struct nvgpu_clk_vf_point *mclk_points;
-	u32 gpc2clk_num_points;
-	struct nvgpu_clk_vf_point *gpc2clk_points;
-};
-#ifdef CONFIG_DEBUG_FS
-struct nvgpu_clk_arb_debug {
-	s64 switch_max;
-	s64 switch_min;
-	u64 switch_num;
-	s64 switch_avg;
-	s64 switch_std;
-};
-#endif
-
-struct nvgpu_clk_arb_target {
-	u16 mclk;
-	u16 gpc2clk;
-	u32 pstate;
-};
-
-struct nvgpu_clk_arb {
-	struct nvgpu_spinlock sessions_lock;
-	struct nvgpu_spinlock users_lock;
-
-	struct nvgpu_mutex pstate_lock;
-	struct list_head users;
-	struct list_head sessions;
-	struct llist_head requests;
-
-	struct gk20a *g;
-	int status;
-
-	struct nvgpu_clk_arb_target actual_pool[2];
-	struct nvgpu_clk_arb_target *actual;
-
-	u16 gpc2clk_default_mhz;
-	u16 mclk_default_mhz;
-	u32 voltuv_actual;
-
-	u16 gpc2clk_min, gpc2clk_max;
-	u16 mclk_min, mclk_max;
-
-	struct work_struct update_fn_work;
-	struct workqueue_struct *update_work_queue;
-	struct work_struct vf_table_fn_work;
-	struct workqueue_struct *vf_table_work_queue;
-
-	struct nvgpu_cond request_wq;
-
-	struct nvgpu_clk_vf_table *current_vf_table;
-	struct nvgpu_clk_vf_table vf_table_pool[2];
-	u32 vf_table_index;
-
-	u16 *mclk_f_points;
-	nvgpu_atomic_t req_nr;
-
-	u32 mclk_f_numpoints;
-	u16 *gpc2clk_f_points;
-	u32 gpc2clk_f_numpoints;
-
-	nvgpu_atomic64_t alarm_mask;
-	struct nvgpu_clk_notification_queue notification_queue;
-
-#ifdef CONFIG_DEBUG_FS
-	struct nvgpu_clk_arb_debug debug_pool[2];
-	struct nvgpu_clk_arb_debug *debug;
-	bool debugfs_set;
-#endif
-};
-
-struct nvgpu_clk_dev {
-	struct nvgpu_clk_session *session;
-	union {
-		struct list_head link;
-		struct llist_node node;
-	};
-	struct nvgpu_cond readout_wq;
-	nvgpu_atomic_t poll_mask;
-	u16 gpc2clk_target_mhz;
-	u16 mclk_target_mhz;
-	u32 alarms_reported;
-	nvgpu_atomic_t enabled_mask;
-	struct nvgpu_clk_notification_queue queue;
-	u32 arb_queue_head;
-	struct nvgpu_ref refcount;
-};
-
-struct nvgpu_clk_session {
-	bool zombie;
-	struct gk20a *g;
-	struct nvgpu_ref refcount;
-	struct list_head link;
-	struct llist_head targets;
-
-	struct nvgpu_clk_arb_target target_pool[2];
-	struct nvgpu_clk_arb_target *target;
-};
-
-static const struct file_operations completion_dev_ops = {
-	.owner = THIS_MODULE,
-	.release = nvgpu_clk_arb_release_completion_dev,
-	.poll = nvgpu_clk_arb_poll_dev,
-};
-
-static const struct file_operations event_dev_ops = {
-	.owner = THIS_MODULE,
-	.release = nvgpu_clk_arb_release_event_dev,
-	.poll = nvgpu_clk_arb_poll_dev,
-	.read = nvgpu_clk_arb_read_event_dev,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = nvgpu_clk_arb_ioctl_event_dev,
-#endif
-	.unlocked_ioctl = nvgpu_clk_arb_ioctl_event_dev,
-};
-
-static int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
+int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue,
 				size_t events_number) {
 	queue->notifications = nvgpu_kcalloc(g, events_number,
@@ -271,7 +59,7 @@ static int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 	return 0;
 }
 
-static void nvgpu_clk_notification_queue_free(struct gk20a *g,
+void nvgpu_clk_notification_queue_free(struct gk20a *g,
 		struct nvgpu_clk_notification_queue *queue) {
 	nvgpu_kfree(g, queue->notifications);
 	queue->size = 0;
@@ -279,185 +67,20 @@ static void nvgpu_clk_notification_queue_free(struct gk20a *g,
 	nvgpu_atomic_set(&queue->tail, 0);
 }
 
-int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
-{
-	struct nvgpu_clk_arb *arb;
-	u16 default_mhz;
-	int err;
-	int index;
-	struct nvgpu_clk_vf_table *table;
+static void nvgpu_clk_arb_queue_notification(struct gk20a *g,
+				struct nvgpu_clk_notification_queue *queue,
+				u32 alarm_mask) {
 
-	gk20a_dbg_fn("");
+	u32 queue_index;
+	u64 timestamp;
 
-	if (!g->ops.clk_arb.get_arbiter_clk_domains)
-		return 0;
+	queue_index = (nvgpu_atomic_inc_return(&queue->tail)) % queue->size;
+	/* get current timestamp */
+	timestamp = (u64) sched_clock();
 
-	arb = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_arb));
-	if (!arb)
-		return -ENOMEM;
+	queue->notifications[queue_index].timestamp = timestamp;
+	queue->notifications[queue_index].notification = alarm_mask;
 
-	err = nvgpu_mutex_init(&arb->pstate_lock);
-	if (err)
-		goto mutex_fail;
-	nvgpu_spinlock_init(&arb->sessions_lock);
-	nvgpu_spinlock_init(&arb->users_lock);
-
-	arb->mclk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
-	if (!arb->mclk_f_points) {
-		err = -ENOMEM;
-		goto init_fail;
-	}
-
-	arb->gpc2clk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
-	if (!arb->gpc2clk_f_points) {
-		err = -ENOMEM;
-		goto init_fail;
-	}
-
-	for (index = 0; index < 2; index++) {
-		table = &arb->vf_table_pool[index];
-		table->gpc2clk_num_points = MAX_F_POINTS;
-		table->mclk_num_points = MAX_F_POINTS;
-
-		table->gpc2clk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
-			sizeof(struct nvgpu_clk_vf_point));
-		if (!table->gpc2clk_points) {
-			err = -ENOMEM;
-			goto init_fail;
-		}
-
-
-		table->mclk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
-			sizeof(struct nvgpu_clk_vf_point));
-		if (!table->mclk_points) {
-			err = -ENOMEM;
-			goto init_fail;
-		}
-	}
-
-	g->clk_arb = arb;
-	arb->g = g;
-
-	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
-			CTRL_CLK_DOMAIN_MCLK, &default_mhz);
-	if (err < 0) {
-		err = -EINVAL;
-		goto init_fail;
-	}
-
-	arb->mclk_default_mhz = default_mhz;
-
-	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
-			CTRL_CLK_DOMAIN_GPC2CLK, &default_mhz);
-	if (err < 0) {
-		err = -EINVAL;
-		goto init_fail;
-	}
-
-	arb->gpc2clk_default_mhz = default_mhz;
-
-	arb->actual = &arb->actual_pool[0];
-
-	nvgpu_atomic_set(&arb->req_nr, 0);
-
-	nvgpu_atomic64_set(&arb->alarm_mask, 0);
-	err = nvgpu_clk_notification_queue_alloc(g, &arb->notification_queue,
-		DEFAULT_EVENT_NUMBER);
-	if (err < 0)
-		goto init_fail;
-
-	INIT_LIST_HEAD_RCU(&arb->users);
-	INIT_LIST_HEAD_RCU(&arb->sessions);
-	init_llist_head(&arb->requests);
-
-	nvgpu_cond_init(&arb->request_wq);
-	arb->vf_table_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
-		"vf_table_update");
-	arb->update_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
-		"arbiter_update");
-
-
-	INIT_WORK(&arb->vf_table_fn_work, nvgpu_clk_arb_run_vf_table_cb);
-
-	INIT_WORK(&arb->update_fn_work, nvgpu_clk_arb_run_arbiter_cb);
-
-#ifdef CONFIG_DEBUG_FS
-	arb->debug = &arb->debug_pool[0];
-
-	if (!arb->debugfs_set) {
-		if (nvgpu_clk_arb_debugfs_init(g))
-			arb->debugfs_set = true;
-	}
-#endif
-	err = clk_vf_point_cache(g);
-	if (err < 0)
-		goto init_fail;
-
-	err = nvgpu_clk_arb_update_vf_table(arb);
-	if (err < 0)
-		goto init_fail;
-	do {
-		/* Check that first run is completed */
-		nvgpu_smp_mb();
-		NVGPU_COND_WAIT_INTERRUPTIBLE(&arb->request_wq,
-			nvgpu_atomic_read(&arb->req_nr), 0);
-	} while (!nvgpu_atomic_read(&arb->req_nr));
-
-
-	return arb->status;
-
-init_fail:
-	nvgpu_kfree(g, arb->gpc2clk_f_points);
-	nvgpu_kfree(g, arb->mclk_f_points);
-
-	for (index = 0; index < 2; index++) {
-		nvgpu_kfree(g, arb->vf_table_pool[index].gpc2clk_points);
-		nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
-	}
-
-	nvgpu_mutex_destroy(&arb->pstate_lock);
-
-mutex_fail:
-	nvgpu_kfree(g, arb);
-
-	return err;
-}
-
-void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
-{
-	nvgpu_clk_arb_schedule_alarm(g,
-		(0x1UL << NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD));
-}
-
-void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-
-	nvgpu_clk_arb_set_global_alarm(g, alarm);
-	if (arb->update_work_queue)
-		queue_work(arb->update_work_queue, &arb->update_fn_work);
-}
-
-static void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-
-	u64 current_mask;
-	u32 refcnt;
-	u32 alarm_mask;
-	u64 new_mask;
-
-	do {
-		current_mask = nvgpu_atomic64_read(&arb->alarm_mask);
-		/* atomic operations are strong so they do not need masks */
-
-		refcnt = ((u32) (current_mask >> 32)) + 1;
-		alarm_mask =  (u32) (current_mask & ~alarm);
-		new_mask = ((u64) refcnt << 32) | alarm_mask;
-
-	} while (unlikely(current_mask !=
-			(u64)nvgpu_atomic64_cmpxchg(&arb->alarm_mask,
-					current_mask, new_mask)));
 }
 
 static void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm)
@@ -482,231 +105,8 @@ static void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm)
 						current_mask, new_mask)));
 
 	nvgpu_clk_arb_queue_notification(g, &arb->notification_queue, alarm);
-
 }
 
-void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	int index;
-
-	if (arb) {
-		cancel_work_sync(&arb->vf_table_fn_work);
-		destroy_workqueue(arb->vf_table_work_queue);
-		arb->vf_table_work_queue = NULL;
-
-		cancel_work_sync(&arb->update_fn_work);
-		destroy_workqueue(arb->update_work_queue);
-		arb->update_work_queue = NULL;
-
-		nvgpu_kfree(g, arb->gpc2clk_f_points);
-		nvgpu_kfree(g, arb->mclk_f_points);
-
-		for (index = 0; index < 2; index++) {
-			nvgpu_kfree(g,
-				arb->vf_table_pool[index].gpc2clk_points);
-			nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
-		}
-		nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
-		nvgpu_kfree(g, g->clk_arb);
-		g->clk_arb = NULL;
-	}
-}
-
-static int nvgpu_clk_arb_install_fd(struct gk20a *g,
-		struct nvgpu_clk_session *session,
-		const struct file_operations *fops,
-		struct nvgpu_clk_dev **_dev)
-{
-	struct file *file;
-	int fd;
-	int err;
-	int status;
-	char name[64];
-	struct nvgpu_clk_dev *dev;
-
-	gk20a_dbg_fn("");
-
-	dev = nvgpu_kzalloc(g, sizeof(*dev));
-	if (!dev)
-		return -ENOMEM;
-
-	status = nvgpu_clk_notification_queue_alloc(g, &dev->queue,
-		DEFAULT_EVENT_NUMBER);
-	if (status < 0)  {
-		err = status;
-		goto fail;
-	}
-
-	fd = get_unused_fd_flags(O_RDWR);
-	if (fd < 0) {
-		err = fd;
-		goto fail;
-	}
-
-	snprintf(name, sizeof(name), "%s-clk-fd%d", g->name, fd);
-	file = anon_inode_getfile(name, fops, dev, O_RDWR);
-	if (IS_ERR(file)) {
-		err = PTR_ERR(file);
-		goto fail_fd;
-	}
-
-	fd_install(fd, file);
-
-	nvgpu_cond_init(&dev->readout_wq);
-
-	nvgpu_atomic_set(&dev->poll_mask, 0);
-
-	dev->session = session;
-	nvgpu_ref_init(&dev->refcount);
-
-	nvgpu_ref_get(&session->refcount);
-
-	*_dev = dev;
-
-	return fd;
-
-fail_fd:
-	put_unused_fd(fd);
-fail:
-	nvgpu_kfree(g, dev);
-
-	return err;
-}
-
-int nvgpu_clk_arb_init_session(struct gk20a *g,
-		struct nvgpu_clk_session **_session)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	struct nvgpu_clk_session *session = *(_session);
-
-	gk20a_dbg_fn("");
-
-	if (!g->ops.clk_arb.get_arbiter_clk_domains)
-		return 0;
-
-	session = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_session));
-	if (!session)
-		return -ENOMEM;
-	session->g = g;
-
-	nvgpu_ref_init(&session->refcount);
-
-	session->zombie = false;
-	session->target_pool[0].pstate = CTRL_PERF_PSTATE_P8;
-	/* make sure that the initialization of the pool is visible
-	 * before the update
-	 */
-	nvgpu_smp_wmb();
-	session->target = &session->target_pool[0];
-
-	init_llist_head(&session->targets);
-
-	nvgpu_spinlock_acquire(&arb->sessions_lock);
-	list_add_tail_rcu(&session->link, &arb->sessions);
-	nvgpu_spinlock_release(&arb->sessions_lock);
-
-	*_session = session;
-
-	return 0;
-}
-
-static void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount)
-{
-	struct nvgpu_clk_dev *dev = container_of(refcount,
-			struct nvgpu_clk_dev, refcount);
-	struct nvgpu_clk_session *session = dev->session;
-
-	nvgpu_kfree(session->g, dev);
-}
-
-static void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)
-{
-	struct nvgpu_clk_session *session = container_of(refcount,
-			struct nvgpu_clk_session, refcount);
-	struct nvgpu_clk_arb *arb = session->g->clk_arb;
-	struct gk20a *g = session->g;
-	struct nvgpu_clk_dev *dev, *tmp;
-	struct llist_node *head;
-
-	gk20a_dbg_fn("");
-
-	if (arb) {
-		nvgpu_spinlock_acquire(&arb->sessions_lock);
-		list_del_rcu(&session->link);
-		nvgpu_spinlock_release(&arb->sessions_lock);
-	}
-
-	head = llist_del_all(&session->targets);
-	llist_for_each_entry_safe(dev, tmp, head, node) {
-		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
-	}
-	synchronize_rcu();
-	nvgpu_kfree(g, session);
-}
-
-void nvgpu_clk_arb_release_session(struct gk20a *g,
-	struct nvgpu_clk_session *session)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-
-	gk20a_dbg_fn("");
-
-	session->zombie = true;
-	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
-	if (arb && arb->update_work_queue)
-		queue_work(arb->update_work_queue, &arb->update_fn_work);
-}
-
-int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
-	struct nvgpu_clk_session *session, int *event_fd, u32 alarm_mask)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	struct nvgpu_clk_dev *dev;
-	int fd;
-
-	gk20a_dbg_fn("");
-
-	fd = nvgpu_clk_arb_install_fd(g, session, &event_dev_ops, &dev);
-	if (fd < 0)
-		return fd;
-
-	/* TODO: alarm mask needs to be set to default value to prevent
-	 * failures of legacy tests. This will be removed when sanity is
-	 * updated
-	 */
-	if (alarm_mask)
-		nvgpu_atomic_set(&dev->enabled_mask, alarm_mask);
-	else
-		nvgpu_atomic_set(&dev->enabled_mask, EVENT(VF_UPDATE));
-
-	dev->arb_queue_head = nvgpu_atomic_read(&arb->notification_queue.head);
-
-	nvgpu_spinlock_acquire(&arb->users_lock);
-	list_add_tail_rcu(&dev->link, &arb->users);
-	nvgpu_spinlock_release(&arb->users_lock);
-
-	*event_fd = fd;
-
-	return 0;
-}
-
-int nvgpu_clk_arb_install_request_fd(struct gk20a *g,
-	struct nvgpu_clk_session *session, int *request_fd)
-{
-	struct nvgpu_clk_dev *dev;
-	int fd;
-
-	gk20a_dbg_fn("");
-
-	fd = nvgpu_clk_arb_install_fd(g, session, &completion_dev_ops, &dev);
-	if (fd < 0)
-		return fd;
-
-	*request_fd = fd;
-
-	return 0;
-}
 
 static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 {
@@ -1014,13 +414,6 @@ exit_vf_table:
 	return status;
 }
 
-void nvgpu_clk_arb_schedule_vf_table_update(struct gk20a *g)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-
-	if (arb->vf_table_work_queue)
-		queue_work(arb->vf_table_work_queue, &arb->vf_table_fn_work);
-}
 
 static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
 {
@@ -1042,6 +435,305 @@ static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
 		return;
 	}
 	nvgpu_clk_arb_update_vf_table(arb);
+}
+
+static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
+		u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
+		u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram)
+{
+	u16 gpc2clk_target, mclk_target;
+	u32 gpc2clk_voltuv, gpc2clk_voltuv_sram;
+	u32 mclk_voltuv, mclk_voltuv_sram;
+	u32 pstate = VF_POINT_INVALID_PSTATE;
+	struct nvgpu_clk_vf_table *table;
+	u32 index, index_mclk;
+	struct nvgpu_clk_vf_point *mclk_vf = NULL;
+
+	do {
+		gpc2clk_target = *gpc2clk;
+		mclk_target = *mclk;
+		gpc2clk_voltuv = 0;
+		gpc2clk_voltuv_sram = 0;
+		mclk_voltuv = 0;
+		mclk_voltuv_sram = 0;
+
+		table = NV_ACCESS_ONCE(arb->current_vf_table);
+		/* pointer to table can be updated by callback */
+		nvgpu_smp_rmb();
+
+		if (!table)
+			continue;
+		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points)) {
+			nvgpu_err(arb->g, "found empty table");
+			goto find_exit;
+		}
+		/* First we check MCLK to find out which PSTATE we are
+		 * are requesting, and from there try to find the minimum
+		 * GPC2CLK on the same PSTATE that satisfies the request.
+		 * If no GPC2CLK can be found, then we need to up the PSTATE
+		 */
+
+recalculate_vf_point:
+		for (index = 0; index < table->mclk_num_points; index++) {
+			if (table->mclk_points[index].mem_mhz >= mclk_target) {
+				mclk_vf = &table->mclk_points[index];
+				break;
+			}
+		}
+		if (index == table->mclk_num_points) {
+			mclk_vf = &table->mclk_points[index-1];
+			index = table->mclk_num_points - 1;
+		}
+		index_mclk = index;
+
+		/* round up the freq requests */
+		for (index = 0; index < table->gpc2clk_num_points; index++) {
+			pstate = VF_POINT_COMMON_PSTATE(
+					&table->gpc2clk_points[index], mclk_vf);
+
+			if ((table->gpc2clk_points[index].gpc_mhz >=
+							gpc2clk_target) &&
+					(pstate != VF_POINT_INVALID_PSTATE)) {
+				gpc2clk_target =
+					table->gpc2clk_points[index].gpc_mhz;
+				*sys2clk =
+					table->gpc2clk_points[index].sys_mhz;
+				*xbar2clk =
+					table->gpc2clk_points[index].xbar_mhz;
+
+				gpc2clk_voltuv =
+					table->gpc2clk_points[index].uvolt;
+				gpc2clk_voltuv_sram =
+					table->gpc2clk_points[index].uvolt_sram;
+				break;
+			}
+		}
+
+		if (index == table->gpc2clk_num_points) {
+			pstate = VF_POINT_COMMON_PSTATE(
+				&table->gpc2clk_points[index-1], mclk_vf);
+			if (pstate != VF_POINT_INVALID_PSTATE) {
+				gpc2clk_target =
+					table->gpc2clk_points[index-1].gpc_mhz;
+				*sys2clk =
+					table->gpc2clk_points[index-1].sys_mhz;
+				*xbar2clk  =
+					table->gpc2clk_points[index-1].xbar_mhz;
+
+				gpc2clk_voltuv =
+					table->gpc2clk_points[index-1].uvolt;
+				gpc2clk_voltuv_sram =
+					table->gpc2clk_points[index-1].
+						uvolt_sram;
+			} else if (index_mclk >= table->mclk_num_points - 1) {
+				/* There is no available combination of MCLK
+				 * and GPC2CLK, we need to fail this
+				 */
+				gpc2clk_target = 0;
+				mclk_target = 0;
+				pstate = VF_POINT_INVALID_PSTATE;
+				goto find_exit;
+			} else {
+				/* recalculate with higher PSTATE */
+				gpc2clk_target = *gpc2clk;
+				mclk_target = table->mclk_points[index_mclk+1].
+									mem_mhz;
+				goto recalculate_vf_point;
+			}
+		}
+
+		mclk_target = mclk_vf->mem_mhz;
+		mclk_voltuv = mclk_vf->uvolt;
+		mclk_voltuv_sram = mclk_vf->uvolt_sram;
+
+	} while (!table ||
+		(NV_ACCESS_ONCE(arb->current_vf_table) != table));
+
+find_exit:
+	*voltuv = gpc2clk_voltuv > mclk_voltuv ? gpc2clk_voltuv : mclk_voltuv;
+	*voltuv_sram = gpc2clk_voltuv_sram > mclk_voltuv_sram ?
+		gpc2clk_voltuv_sram : mclk_voltuv_sram;
+	/* noise unaware vmin */
+	*nuvmin = mclk_voltuv;
+	*nuvmin_sram = mclk_voltuv_sram;
+	*gpc2clk = gpc2clk_target < *gpc2clk ? gpc2clk_target : *gpc2clk;
+	*mclk = mclk_target;
+	return pstate;
+}
+
+static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
+	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
+	u32 voltuv_sram)
+{
+	struct set_fll_clk fllclk;
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	int status;
+
+	fllclk.gpc2clkmhz = gpc2clk_target;
+	fllclk.sys2clkmhz = sys2clk_target;
+	fllclk.xbar2clkmhz = xbar2clk_target;
+
+	fllclk.voltuv = voltuv;
+
+	/* if voltage ascends we do:
+	 * (1) FLL change
+	 * (2) Voltage change
+	 * (3) MCLK change
+	 * If it goes down
+	 * (1) MCLK change
+	 * (2) Voltage change
+	 * (3) FLL change
+	 */
+
+	/* descending */
+	if (voltuv < arb->voltuv_actual) {
+		status = g->ops.clk.mclk_change(g, mclk_target);
+		if (status < 0)
+			return status;
+
+		status = volt_set_voltage(g, voltuv, voltuv_sram);
+		if (status < 0)
+			return status;
+
+		status = clk_set_fll_clks(g, &fllclk);
+		if (status < 0)
+			return status;
+	} else {
+		status = clk_set_fll_clks(g, &fllclk);
+		if (status < 0)
+			return status;
+
+		status = volt_set_voltage(g, voltuv, voltuv_sram);
+		if (status < 0)
+			return status;
+
+		status = g->ops.clk.mclk_change(g, mclk_target);
+		if (status < 0)
+			return status;
+	}
+
+	return 0;
+}
+
+static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
+				struct nvgpu_clk_arb_target *target,
+				u32 alarm) {
+
+	struct nvgpu_clk_session *session = dev->session;
+	struct nvgpu_clk_arb *arb = session->g->clk_arb;
+	struct nvgpu_clk_notification *notification;
+
+	u32 queue_alarm_mask = 0;
+	u32 enabled_mask = 0;
+	u32 new_alarms_reported = 0;
+	u32 poll_mask = 0;
+	u32 tail, head;
+	u32 queue_index;
+	size_t size;
+	int index;
+
+	enabled_mask = nvgpu_atomic_read(&dev->enabled_mask);
+	size = arb->notification_queue.size;
+
+	/* queue global arbiter notifications in buffer */
+	do {
+		tail = nvgpu_atomic_read(&arb->notification_queue.tail);
+		/* copy items to the queue */
+		queue_index = nvgpu_atomic_read(&dev->queue.tail);
+		head = dev->arb_queue_head;
+		head = (tail - head) < arb->notification_queue.size ?
+			head : tail - arb->notification_queue.size;
+
+		for (index = head; _WRAPGTEQ(tail, index); index++) {
+			u32 alarm_detected;
+
+			notification = &arb->notification_queue.
+						notifications[(index+1) % size];
+			alarm_detected =
+				NV_ACCESS_ONCE(notification->notification);
+
+			if (!(enabled_mask & alarm_detected))
+				continue;
+
+			queue_index++;
+			dev->queue.notifications[
+				queue_index % dev->queue.size].timestamp =
+					NV_ACCESS_ONCE(notification->timestamp);
+
+			dev->queue.notifications[
+				queue_index % dev->queue.size].notification =
+					alarm_detected;
+
+			queue_alarm_mask |= alarm_detected;
+		}
+	} while (unlikely(nvgpu_atomic_read(&arb->notification_queue.tail) !=
+			(int)tail));
+
+	nvgpu_atomic_set(&dev->queue.tail, queue_index);
+	/* update the last notification we processed from global queue */
+
+	dev->arb_queue_head = tail;
+
+	/* Check if current session targets are met */
+	if (enabled_mask & EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE)) {
+		if ((target->gpc2clk < session->target->gpc2clk)
+			|| (target->mclk < session->target->mclk)) {
+
+			poll_mask |= (POLLIN | POLLPRI);
+			nvgpu_clk_arb_queue_notification(arb->g, &dev->queue,
+				EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE));
+		}
+	}
+
+	/* Check if there is a new VF update */
+	if (queue_alarm_mask & EVENT(VF_UPDATE))
+		poll_mask |= (POLLIN | POLLRDNORM);
+
+	/* Notify sticky alarms that were not reported on previous run*/
+	new_alarms_reported = (queue_alarm_mask |
+			(alarm & ~dev->alarms_reported & queue_alarm_mask));
+
+	if (new_alarms_reported & ~LOCAL_ALARM_MASK) {
+		/* check that we are not re-reporting */
+		if (new_alarms_reported & EVENT(ALARM_GPU_LOST))
+			poll_mask |= POLLHUP;
+
+		poll_mask |= (POLLIN | POLLPRI);
+		/* On next run do not report global alarms that were already
+		 * reported, but report SHUTDOWN always
+		 */
+		dev->alarms_reported = new_alarms_reported & ~LOCAL_ALARM_MASK &
+							~EVENT(ALARM_GPU_LOST);
+	}
+
+	if (poll_mask) {
+		nvgpu_atomic_set(&dev->poll_mask, poll_mask);
+		nvgpu_cond_broadcast_interruptible(&dev->readout_wq);
+	}
+
+	return new_alarms_reported;
+}
+
+static void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+
+	u64 current_mask;
+	u32 refcnt;
+	u32 alarm_mask;
+	u64 new_mask;
+
+	do {
+		current_mask = nvgpu_atomic64_read(&arb->alarm_mask);
+		/* atomic operations are strong so they do not need masks */
+
+		refcnt = ((u32) (current_mask >> 32)) + 1;
+		alarm_mask =  (u32) (current_mask & ~alarm);
+		new_mask = ((u64) refcnt << 32) | alarm_mask;
+
+	} while (unlikely(current_mask !=
+			(u64)nvgpu_atomic64_cmpxchg(&arb->alarm_mask,
+					current_mask, new_mask)));
 }
 
 static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
@@ -1345,639 +1037,283 @@ exit_arb:
 		~EVENT(ALARM_GPU_LOST));
 }
 
-static void nvgpu_clk_arb_queue_notification(struct gk20a *g,
-				struct nvgpu_clk_notification_queue *queue,
-				u32 alarm_mask) {
-
-	u32 queue_index;
-	u64 timestamp;
-
-	queue_index = (nvgpu_atomic_inc_return(&queue->tail)) % queue->size;
-	/* get current timestamp */
-	timestamp = (u64) sched_clock();
-
-	queue->notifications[queue_index].timestamp = timestamp;
-	queue->notifications[queue_index].notification = alarm_mask;
-
-}
-
-static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
-				struct nvgpu_clk_arb_target *target,
-				u32 alarm) {
-
-	struct nvgpu_clk_session *session = dev->session;
-	struct nvgpu_clk_arb *arb = session->g->clk_arb;
-	struct nvgpu_clk_notification *notification;
-
-	u32 queue_alarm_mask = 0;
-	u32 enabled_mask = 0;
-	u32 new_alarms_reported = 0;
-	u32 poll_mask = 0;
-	u32 tail, head;
-	u32 queue_index;
-	size_t size;
+int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
+{
+	struct nvgpu_clk_arb *arb;
+	u16 default_mhz;
+	int err;
 	int index;
-
-	enabled_mask = nvgpu_atomic_read(&dev->enabled_mask);
-	size = arb->notification_queue.size;
-
-	/* queue global arbiter notifications in buffer */
-	do {
-		tail = nvgpu_atomic_read(&arb->notification_queue.tail);
-		/* copy items to the queue */
-		queue_index = nvgpu_atomic_read(&dev->queue.tail);
-		head = dev->arb_queue_head;
-		head = (tail - head) < arb->notification_queue.size ?
-			head : tail - arb->notification_queue.size;
-
-		for (index = head; _WRAPGTEQ(tail, index); index++) {
-			u32 alarm_detected;
-
-			notification = &arb->notification_queue.
-						notifications[(index+1) % size];
-			alarm_detected =
-				NV_ACCESS_ONCE(notification->notification);
-
-			if (!(enabled_mask & alarm_detected))
-				continue;
-
-			queue_index++;
-			dev->queue.notifications[
-				queue_index % dev->queue.size].timestamp =
-					NV_ACCESS_ONCE(notification->timestamp);
-
-			dev->queue.notifications[
-				queue_index % dev->queue.size].notification =
-					alarm_detected;
-
-			queue_alarm_mask |= alarm_detected;
-		}
-	} while (unlikely(nvgpu_atomic_read(&arb->notification_queue.tail) !=
-			(int)tail));
-
-	nvgpu_atomic_set(&dev->queue.tail, queue_index);
-	/* update the last notification we processed from global queue */
-
-	dev->arb_queue_head = tail;
-
-	/* Check if current session targets are met */
-	if (enabled_mask & EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE)) {
-		if ((target->gpc2clk < session->target->gpc2clk)
-			|| (target->mclk < session->target->mclk)) {
-
-			poll_mask |= (POLLIN | POLLPRI);
-			nvgpu_clk_arb_queue_notification(arb->g, &dev->queue,
-				EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE));
-		}
-	}
-
-	/* Check if there is a new VF update */
-	if (queue_alarm_mask & EVENT(VF_UPDATE))
-		poll_mask |= (POLLIN | POLLRDNORM);
-
-	/* Notify sticky alarms that were not reported on previous run*/
-	new_alarms_reported = (queue_alarm_mask |
-			(alarm & ~dev->alarms_reported & queue_alarm_mask));
-
-	if (new_alarms_reported & ~LOCAL_ALARM_MASK) {
-		/* check that we are not re-reporting */
-		if (new_alarms_reported & EVENT(ALARM_GPU_LOST))
-			poll_mask |= POLLHUP;
-
-		poll_mask |= (POLLIN | POLLPRI);
-		/* On next run do not report global alarms that were already
-		 * reported, but report SHUTDOWN always
-		 */
-		dev->alarms_reported = new_alarms_reported & ~LOCAL_ALARM_MASK &
-							~EVENT(ALARM_GPU_LOST);
-	}
-
-	if (poll_mask) {
-		nvgpu_atomic_set(&dev->poll_mask, poll_mask);
-		nvgpu_cond_broadcast_interruptible(&dev->readout_wq);
-	}
-
-	return new_alarms_reported;
-}
-
-static int nvgpu_clk_arb_set_event_filter(struct nvgpu_clk_dev *dev,
-		struct nvgpu_gpu_set_event_filter_args *args)
-{
-	u32 mask;
-
-	gk20a_dbg(gpu_dbg_fn, "");
-
-	if (args->flags)
-		return -EINVAL;
-
-	if (args->size != 1)
-		return -EINVAL;
-
-	if (copy_from_user(&mask, (void __user *) args->buffer,
-			args->size * sizeof(u32)))
-		return -EFAULT;
-
-	/* update alarm mask */
-	nvgpu_atomic_set(&dev->enabled_mask, mask);
-
-	return 0;
-}
-
-static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
-		unsigned long arg)
-{
-	struct nvgpu_clk_dev *dev = filp->private_data;
-	struct gk20a *g = dev->session->g;
-	u8 buf[NVGPU_EVENT_IOCTL_MAX_ARG_SIZE];
-	int err = 0;
-
-	gk20a_dbg(gpu_dbg_fn, "nr=%d", _IOC_NR(cmd));
-
-	if ((_IOC_TYPE(cmd) != NVGPU_EVENT_IOCTL_MAGIC) || (_IOC_NR(cmd) == 0)
-		|| (_IOC_NR(cmd) > NVGPU_EVENT_IOCTL_LAST))
-		return -EINVAL;
-
-	BUG_ON(_IOC_SIZE(cmd) > NVGPU_EVENT_IOCTL_MAX_ARG_SIZE);
-
-	memset(buf, 0, sizeof(buf));
-	if (_IOC_DIR(cmd) & _IOC_WRITE) {
-		if (copy_from_user(buf, (void __user *) arg, _IOC_SIZE(cmd)))
-			return -EFAULT;
-	}
-
-	switch (cmd) {
-	case NVGPU_EVENT_IOCTL_SET_FILTER:
-		err = nvgpu_clk_arb_set_event_filter(dev,
-				(struct nvgpu_gpu_set_event_filter_args *)buf);
-		break;
-	default:
-		nvgpu_warn(g, "unrecognized event ioctl cmd: 0x%x", cmd);
-		err = -ENOTTY;
-	}
-
-	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
-		err = copy_to_user((void __user *) arg, buf, _IOC_SIZE(cmd));
-
-	return err;
-}
-
-int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
-	struct nvgpu_clk_session *session, int request_fd)
-{
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	struct nvgpu_clk_dev *dev;
-	struct fd fd;
-	int err = 0;
+	struct nvgpu_clk_vf_table *table;
 
 	gk20a_dbg_fn("");
 
-	fd  = fdget(request_fd);
-	if (!fd.file)
-		return -EINVAL;
-
-	if (fd.file->f_op != &completion_dev_ops) {
-		err = -EINVAL;
-		goto fdput_fd;
-	}
-
-	dev = (struct nvgpu_clk_dev *) fd.file->private_data;
-
-	if (!dev || dev->session != session) {
-		err = -EINVAL;
-		goto fdput_fd;
-	}
-	nvgpu_ref_get(&dev->refcount);
-	llist_add(&dev->node, &session->targets);
-	if (arb->update_work_queue)
-		queue_work(arb->update_work_queue, &arb->update_fn_work);
-
-fdput_fd:
-	fdput(fd);
-	return err;
-}
-
-static inline u32 __pending_event(struct nvgpu_clk_dev *dev,
-		struct nvgpu_gpu_event_info *info) {
-
-	u32 tail, head;
-	u32 events = 0;
-	struct nvgpu_clk_notification *p_notif;
-
-	tail = nvgpu_atomic_read(&dev->queue.tail);
-	head = nvgpu_atomic_read(&dev->queue.head);
-
-	head = (tail - head) < dev->queue.size ? head : tail - dev->queue.size;
-
-	if (_WRAPGTEQ(tail, head) && info) {
-		head++;
-		p_notif = &dev->queue.notifications[head % dev->queue.size];
-		events |= p_notif->notification;
-		info->event_id = ffs(events) - 1;
-		info->timestamp = p_notif->timestamp;
-		nvgpu_atomic_set(&dev->queue.head, head);
-	}
-
-	return events;
-}
-
-static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
-					size_t size, loff_t *off)
-{
-	struct nvgpu_clk_dev *dev = filp->private_data;
-	struct nvgpu_gpu_event_info info;
-	ssize_t err;
-
-	gk20a_dbg_fn("filp=%p, buf=%p, size=%zu", filp, buf, size);
-
-	if ((size - *off) < sizeof(info))
+	if (!g->ops.clk_arb.get_arbiter_clk_domains)
 		return 0;
 
-	memset(&info, 0, sizeof(info));
-	/* Get the oldest event from the queue */
-	while (!__pending_event(dev, &info)) {
-		if (filp->f_flags & O_NONBLOCK)
-			return -EAGAIN;
-		err = NVGPU_COND_WAIT_INTERRUPTIBLE(&dev->readout_wq,
-				__pending_event(dev, &info), 0);
-		if (err)
-			return err;
-		if (info.timestamp)
-			break;
+	arb = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_arb));
+	if (!arb)
+		return -ENOMEM;
+
+	err = nvgpu_mutex_init(&arb->pstate_lock);
+	if (err)
+		goto mutex_fail;
+	nvgpu_spinlock_init(&arb->sessions_lock);
+	nvgpu_spinlock_init(&arb->users_lock);
+
+	arb->mclk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
+	if (!arb->mclk_f_points) {
+		err = -ENOMEM;
+		goto init_fail;
 	}
 
-	if (copy_to_user(buf + *off, &info, sizeof(info)))
-		return -EFAULT;
+	arb->gpc2clk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
+	if (!arb->gpc2clk_f_points) {
+		err = -ENOMEM;
+		goto init_fail;
+	}
 
-	return sizeof(info);
+	for (index = 0; index < 2; index++) {
+		table = &arb->vf_table_pool[index];
+		table->gpc2clk_num_points = MAX_F_POINTS;
+		table->mclk_num_points = MAX_F_POINTS;
+
+		table->gpc2clk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
+			sizeof(struct nvgpu_clk_vf_point));
+		if (!table->gpc2clk_points) {
+			err = -ENOMEM;
+			goto init_fail;
+		}
+
+
+		table->mclk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
+			sizeof(struct nvgpu_clk_vf_point));
+		if (!table->mclk_points) {
+			err = -ENOMEM;
+			goto init_fail;
+		}
+	}
+
+	g->clk_arb = arb;
+	arb->g = g;
+
+	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
+			CTRL_CLK_DOMAIN_MCLK, &default_mhz);
+	if (err < 0) {
+		err = -EINVAL;
+		goto init_fail;
+	}
+
+	arb->mclk_default_mhz = default_mhz;
+
+	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
+			CTRL_CLK_DOMAIN_GPC2CLK, &default_mhz);
+	if (err < 0) {
+		err = -EINVAL;
+		goto init_fail;
+	}
+
+	arb->gpc2clk_default_mhz = default_mhz;
+
+	arb->actual = &arb->actual_pool[0];
+
+	nvgpu_atomic_set(&arb->req_nr, 0);
+
+	nvgpu_atomic64_set(&arb->alarm_mask, 0);
+	err = nvgpu_clk_notification_queue_alloc(g, &arb->notification_queue,
+		DEFAULT_EVENT_NUMBER);
+	if (err < 0)
+		goto init_fail;
+
+	INIT_LIST_HEAD_RCU(&arb->users);
+	INIT_LIST_HEAD_RCU(&arb->sessions);
+	init_llist_head(&arb->requests);
+
+	nvgpu_cond_init(&arb->request_wq);
+	arb->vf_table_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
+		"vf_table_update");
+	arb->update_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
+		"arbiter_update");
+
+
+	INIT_WORK(&arb->vf_table_fn_work, nvgpu_clk_arb_run_vf_table_cb);
+
+	INIT_WORK(&arb->update_fn_work, nvgpu_clk_arb_run_arbiter_cb);
+
+#ifdef CONFIG_DEBUG_FS
+	arb->debug = &arb->debug_pool[0];
+
+	if (!arb->debugfs_set) {
+		if (nvgpu_clk_arb_debugfs_init(g))
+			arb->debugfs_set = true;
+	}
+#endif
+	err = clk_vf_point_cache(g);
+	if (err < 0)
+		goto init_fail;
+
+	err = nvgpu_clk_arb_update_vf_table(arb);
+	if (err < 0)
+		goto init_fail;
+	do {
+		/* Check that first run is completed */
+		nvgpu_smp_mb();
+		NVGPU_COND_WAIT_INTERRUPTIBLE(&arb->request_wq,
+			nvgpu_atomic_read(&arb->req_nr), 0);
+	} while (!nvgpu_atomic_read(&arb->req_nr));
+
+
+	return arb->status;
+
+init_fail:
+	nvgpu_kfree(g, arb->gpc2clk_f_points);
+	nvgpu_kfree(g, arb->mclk_f_points);
+
+	for (index = 0; index < 2; index++) {
+		nvgpu_kfree(g, arb->vf_table_pool[index].gpc2clk_points);
+		nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
+	}
+
+	nvgpu_mutex_destroy(&arb->pstate_lock);
+
+mutex_fail:
+	nvgpu_kfree(g, arb);
+
+	return err;
 }
 
-static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
+void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
 {
-	struct nvgpu_clk_dev *dev = filp->private_data;
+	nvgpu_clk_arb_schedule_alarm(g,
+		(0x1UL << NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD));
+}
+
+void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+
+	nvgpu_clk_arb_set_global_alarm(g, alarm);
+	if (arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
+}
+
+void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	int index;
+
+	if (arb) {
+		cancel_work_sync(&arb->vf_table_fn_work);
+		destroy_workqueue(arb->vf_table_work_queue);
+		arb->vf_table_work_queue = NULL;
+
+		cancel_work_sync(&arb->update_fn_work);
+		destroy_workqueue(arb->update_work_queue);
+		arb->update_work_queue = NULL;
+
+		nvgpu_kfree(g, arb->gpc2clk_f_points);
+		nvgpu_kfree(g, arb->mclk_f_points);
+
+		for (index = 0; index < 2; index++) {
+			nvgpu_kfree(g,
+				arb->vf_table_pool[index].gpc2clk_points);
+			nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
+		}
+		nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
+		nvgpu_kfree(g, g->clk_arb);
+		g->clk_arb = NULL;
+	}
+}
+
+int nvgpu_clk_arb_init_session(struct gk20a *g,
+		struct nvgpu_clk_session **_session)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	struct nvgpu_clk_session *session = *(_session);
 
 	gk20a_dbg_fn("");
 
-	poll_wait(filp, &dev->readout_wq.wq, wait);
-	return nvgpu_atomic_xchg(&dev->poll_mask, 0);
-}
+	if (!g->ops.clk_arb.get_arbiter_clk_domains)
+		return 0;
 
-static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
-		struct file *filp)
-{
-	struct nvgpu_clk_dev *dev = filp->private_data;
-	struct nvgpu_clk_session *session = dev->session;
+	session = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_session));
+	if (!session)
+		return -ENOMEM;
+	session->g = g;
 
+	nvgpu_ref_init(&session->refcount);
 
-	gk20a_dbg_fn("");
+	session->zombie = false;
+	session->target_pool[0].pstate = CTRL_PERF_PSTATE_P8;
+	/* make sure that the initialization of the pool is visible
+	 * before the update
+	 */
+	nvgpu_smp_wmb();
+	session->target = &session->target_pool[0];
 
-	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
-	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	init_llist_head(&session->targets);
+
+	nvgpu_spinlock_acquire(&arb->sessions_lock);
+	list_add_tail_rcu(&session->link, &arb->sessions);
+	nvgpu_spinlock_release(&arb->sessions_lock);
+
+	*_session = session;
+
 	return 0;
 }
 
-static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
-		struct file *filp)
+void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount)
 {
-	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct nvgpu_clk_dev *dev = container_of(refcount,
+			struct nvgpu_clk_dev, refcount);
 	struct nvgpu_clk_session *session = dev->session;
-	struct nvgpu_clk_arb *arb;
 
-	arb = session->g->clk_arb;
+	nvgpu_kfree(session->g, dev);
+}
+
+void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)
+{
+	struct nvgpu_clk_session *session = container_of(refcount,
+			struct nvgpu_clk_session, refcount);
+	struct nvgpu_clk_arb *arb = session->g->clk_arb;
+	struct gk20a *g = session->g;
+	struct nvgpu_clk_dev *dev, *tmp;
+	struct llist_node *head;
 
 	gk20a_dbg_fn("");
 
 	if (arb) {
-		nvgpu_spinlock_acquire(&arb->users_lock);
-		list_del_rcu(&dev->link);
-		nvgpu_spinlock_release(&arb->users_lock);
-		nvgpu_clk_notification_queue_free(arb->g, &dev->queue);
+		nvgpu_spinlock_acquire(&arb->sessions_lock);
+		list_del_rcu(&session->link);
+		nvgpu_spinlock_release(&arb->sessions_lock);
 	}
 
+	head = llist_del_all(&session->targets);
+	llist_for_each_entry_safe(dev, tmp, head, node) {
+		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	}
 	synchronize_rcu();
-	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
-	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
-
-	return 0;
+	nvgpu_kfree(g, session);
 }
 
-int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
-		int request_fd, u32 api_domain, u16 target_mhz)
-{
-	struct nvgpu_clk_dev *dev;
-	struct fd fd;
-	int err = 0;
-
-	gk20a_dbg_fn("domain=0x%08x target_mhz=%u", api_domain, target_mhz);
-
-	fd = fdget(request_fd);
-	if (!fd.file)
-		return -EINVAL;
-
-	if (fd.file->f_op != &completion_dev_ops) {
-		err = -EINVAL;
-		goto fdput_fd;
-	}
-
-	dev = fd.file->private_data;
-	if (!dev || dev->session != session) {
-		err = -EINVAL;
-		goto fdput_fd;
-	}
-
-	switch (api_domain) {
-	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		dev->mclk_target_mhz = target_mhz;
-		break;
-
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		dev->gpc2clk_target_mhz = target_mhz * 2ULL;
-		break;
-
-	default:
-		err = -EINVAL;
-	}
-
-fdput_fd:
-	fdput(fd);
-	return err;
-}
-
-int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
-		u32 api_domain, u16 *freq_mhz)
-{
-	int err = 0;
-	struct nvgpu_clk_arb_target *target;
-
-	do {
-		target = NV_ACCESS_ONCE(session->target);
-		/* no reordering of this pointer */
-		nvgpu_smp_rmb();
-
-		switch (api_domain) {
-		case NVGPU_GPU_CLK_DOMAIN_MCLK:
-			*freq_mhz = target->mclk;
-			break;
-
-		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-			*freq_mhz = target->gpc2clk / 2ULL;
-			break;
-
-		default:
-			*freq_mhz = 0;
-			err = -EINVAL;
-		}
-	} while (target != NV_ACCESS_ONCE(session->target));
-	return err;
-}
-
-int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
-		u32 api_domain, u16 *freq_mhz)
+void nvgpu_clk_arb_release_session(struct gk20a *g,
+	struct nvgpu_clk_session *session)
 {
 	struct nvgpu_clk_arb *arb = g->clk_arb;
-	int err = 0;
-	struct nvgpu_clk_arb_target *actual;
 
-	do {
-		actual = NV_ACCESS_ONCE(arb->actual);
-		/* no reordering of this pointer */
-		nvgpu_smp_rmb();
+	gk20a_dbg_fn("");
 
-		switch (api_domain) {
-		case NVGPU_GPU_CLK_DOMAIN_MCLK:
-			*freq_mhz = actual->mclk;
-			break;
-
-		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-			*freq_mhz = actual->gpc2clk / 2ULL;
-			break;
-
-		default:
-			*freq_mhz = 0;
-			err = -EINVAL;
-		}
-	} while (actual != NV_ACCESS_ONCE(arb->actual));
-	return err;
+	session->zombie = true;
+	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
+	if (arb && arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
 }
 
-int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
-		u32 api_domain, u16 *freq_mhz)
+void nvgpu_clk_arb_schedule_vf_table_update(struct gk20a *g)
 {
-	switch (api_domain) {
-	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_MCLK) /
-			1000000ULL;
-		return 0;
+	struct nvgpu_clk_arb *arb = g->clk_arb;
 
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		*freq_mhz = g->ops.clk.measure_freq(g,
-			CTRL_CLK_DOMAIN_GPC2CLK) / 2000000ULL;
-		return 0;
-
-	default:
-		return -EINVAL;
-	}
-}
-
-int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
-		u16 *min_mhz, u16 *max_mhz)
-{
-	int ret;
-
-	switch (api_domain) {
-	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
-				CTRL_CLK_DOMAIN_MCLK, min_mhz, max_mhz);
-		return ret;
-
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
-				CTRL_CLK_DOMAIN_GPC2CLK, min_mhz, max_mhz);
-		if (!ret) {
-			*min_mhz /= 2;
-			*max_mhz /= 2;
-		}
-		return ret;
-
-	default:
-		return -EINVAL;
-	}
-}
-
-u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g)
-{
-	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
-	u32 api_domains = 0;
-
-	if (clk_domains & CTRL_CLK_DOMAIN_GPC2CLK)
-		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_GPCCLK);
-
-	if (clk_domains & CTRL_CLK_DOMAIN_MCLK)
-		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_MCLK);
-
-	return api_domains;
-}
-
-bool nvgpu_clk_arb_is_valid_domain(struct gk20a *g, u32 api_domain)
-{
-	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
-
-	switch (api_domain) {
-	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		return ((clk_domains & CTRL_CLK_DOMAIN_MCLK) != 0);
-
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		return ((clk_domains & CTRL_CLK_DOMAIN_GPC2CLK) != 0);
-
-	default:
-		return false;
-	}
-}
-
-int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
-	u32 api_domain, u32 *max_points, u16 *fpoints)
-{
-	int err;
-	u32 i;
-
-	switch (api_domain) {
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		err = clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_GPC2CLK,
-				max_points, fpoints);
-		if (err || !fpoints)
-			return err;
-		for (i = 0; i < *max_points; i++)
-			fpoints[i] /= 2;
-		return 0;
-	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		return clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_MCLK,
-				max_points, fpoints);
-	default:
-		return -EINVAL;
-	}
-}
-
-static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
-		u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
-		u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram)
-{
-	u16 gpc2clk_target, mclk_target;
-	u32 gpc2clk_voltuv, gpc2clk_voltuv_sram;
-	u32 mclk_voltuv, mclk_voltuv_sram;
-	u32 pstate = VF_POINT_INVALID_PSTATE;
-	struct nvgpu_clk_vf_table *table;
-	u32 index, index_mclk;
-	struct nvgpu_clk_vf_point *mclk_vf = NULL;
-
-	do {
-		gpc2clk_target = *gpc2clk;
-		mclk_target = *mclk;
-		gpc2clk_voltuv = 0;
-		gpc2clk_voltuv_sram = 0;
-		mclk_voltuv = 0;
-		mclk_voltuv_sram = 0;
-
-		table = NV_ACCESS_ONCE(arb->current_vf_table);
-		/* pointer to table can be updated by callback */
-		nvgpu_smp_rmb();
-
-		if (!table)
-			continue;
-		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points)) {
-			nvgpu_err(arb->g, "found empty table");
-			goto find_exit;
-		}
-		/* First we check MCLK to find out which PSTATE we are
-		 * are requesting, and from there try to find the minimum
-		 * GPC2CLK on the same PSTATE that satisfies the request.
-		 * If no GPC2CLK can be found, then we need to up the PSTATE
-		 */
-
-recalculate_vf_point:
-		for (index = 0; index < table->mclk_num_points; index++) {
-			if (table->mclk_points[index].mem_mhz >= mclk_target) {
-				mclk_vf = &table->mclk_points[index];
-				break;
-			}
-		}
-		if (index == table->mclk_num_points) {
-			mclk_vf = &table->mclk_points[index-1];
-			index = table->mclk_num_points - 1;
-		}
-		index_mclk = index;
-
-		/* round up the freq requests */
-		for (index = 0; index < table->gpc2clk_num_points; index++) {
-			pstate = VF_POINT_COMMON_PSTATE(
-					&table->gpc2clk_points[index], mclk_vf);
-
-			if ((table->gpc2clk_points[index].gpc_mhz >=
-							gpc2clk_target) &&
-					(pstate != VF_POINT_INVALID_PSTATE)) {
-				gpc2clk_target =
-					table->gpc2clk_points[index].gpc_mhz;
-				*sys2clk =
-					table->gpc2clk_points[index].sys_mhz;
-				*xbar2clk =
-					table->gpc2clk_points[index].xbar_mhz;
-
-				gpc2clk_voltuv =
-					table->gpc2clk_points[index].uvolt;
-				gpc2clk_voltuv_sram =
-					table->gpc2clk_points[index].uvolt_sram;
-				break;
-			}
-		}
-
-		if (index == table->gpc2clk_num_points) {
-			pstate = VF_POINT_COMMON_PSTATE(
-				&table->gpc2clk_points[index-1], mclk_vf);
-			if (pstate != VF_POINT_INVALID_PSTATE) {
-				gpc2clk_target =
-					table->gpc2clk_points[index-1].gpc_mhz;
-				*sys2clk =
-					table->gpc2clk_points[index-1].sys_mhz;
-				*xbar2clk  =
-					table->gpc2clk_points[index-1].xbar_mhz;
-
-				gpc2clk_voltuv =
-					table->gpc2clk_points[index-1].uvolt;
-				gpc2clk_voltuv_sram =
-					table->gpc2clk_points[index-1].
-						uvolt_sram;
-			} else if (index_mclk >= table->mclk_num_points - 1) {
-				/* There is no available combination of MCLK
-				 * and GPC2CLK, we need to fail this
-				 */
-				gpc2clk_target = 0;
-				mclk_target = 0;
-				pstate = VF_POINT_INVALID_PSTATE;
-				goto find_exit;
-			} else {
-				/* recalculate with higher PSTATE */
-				gpc2clk_target = *gpc2clk;
-				mclk_target = table->mclk_points[index_mclk+1].
-									mem_mhz;
-				goto recalculate_vf_point;
-			}
-		}
-
-		mclk_target = mclk_vf->mem_mhz;
-		mclk_voltuv = mclk_vf->uvolt;
-		mclk_voltuv_sram = mclk_vf->uvolt_sram;
-
-	} while (!table ||
-		(NV_ACCESS_ONCE(arb->current_vf_table) != table));
-
-find_exit:
-	*voltuv = gpc2clk_voltuv > mclk_voltuv ? gpc2clk_voltuv : mclk_voltuv;
-	*voltuv_sram = gpc2clk_voltuv_sram > mclk_voltuv_sram ?
-		gpc2clk_voltuv_sram : mclk_voltuv_sram;
-	/* noise unaware vmin */
-	*nuvmin = mclk_voltuv;
-	*nuvmin_sram = mclk_voltuv_sram;
-	*gpc2clk = gpc2clk_target < *gpc2clk ? gpc2clk_target : *gpc2clk;
-	*mclk = mclk_target;
-	return pstate;
+	if (arb->vf_table_work_queue)
+		queue_work(arb->vf_table_work_queue, &arb->vf_table_fn_work);
 }
 
 /* This function is inherently unsafe to call while arbiter is running
@@ -1986,60 +1322,6 @@ find_exit:
 int nvgpu_clk_arb_get_current_pstate(struct gk20a *g)
 {
 	return NV_ACCESS_ONCE(g->clk_arb->actual->pstate);
-}
-
-static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
-	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
-	u32 voltuv_sram)
-{
-	struct set_fll_clk fllclk;
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	int status;
-
-	fllclk.gpc2clkmhz = gpc2clk_target;
-	fllclk.sys2clkmhz = sys2clk_target;
-	fllclk.xbar2clkmhz = xbar2clk_target;
-
-	fllclk.voltuv = voltuv;
-
-	/* if voltage ascends we do:
-	 * (1) FLL change
-	 * (2) Voltage change
-	 * (3) MCLK change
-	 * If it goes down
-	 * (1) MCLK change
-	 * (2) Voltage change
-	 * (3) FLL change
-	 */
-
-	/* descending */
-	if (voltuv < arb->voltuv_actual) {
-		status = g->ops.clk.mclk_change(g, mclk_target);
-		if (status < 0)
-			return status;
-
-		status = volt_set_voltage(g, voltuv, voltuv_sram);
-		if (status < 0)
-			return status;
-
-		status = clk_set_fll_clks(g, &fllclk);
-		if (status < 0)
-			return status;
-	} else {
-		status = clk_set_fll_clks(g, &fllclk);
-		if (status < 0)
-			return status;
-
-		status = volt_set_voltage(g, voltuv, voltuv_sram);
-		if (status < 0)
-			return status;
-
-		status = g->ops.clk.mclk_change(g, mclk_target);
-		if (status < 0)
-			return status;
-	}
-
-	return 0;
 }
 
 void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock)
@@ -2051,71 +1333,3 @@ void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock)
 	else
 		nvgpu_mutex_release(&arb->pstate_lock);
 }
-
-#ifdef CONFIG_DEBUG_FS
-static int nvgpu_clk_arb_stats_show(struct seq_file *s, void *unused)
-{
-	struct gk20a *g = s->private;
-	struct nvgpu_clk_arb *arb = g->clk_arb;
-	struct nvgpu_clk_arb_debug *debug;
-
-	u64 num;
-	s64 tmp, avg, std, max, min;
-
-	debug = NV_ACCESS_ONCE(arb->debug);
-	/* Make copy of structure and ensure no reordering */
-	nvgpu_smp_rmb();
-	if (!debug)
-		return -EINVAL;
-
-	std = debug->switch_std;
-	avg = debug->switch_avg;
-	max = debug->switch_max;
-	min = debug->switch_min;
-	num = debug->switch_num;
-
-	tmp = std;
-	do_div(tmp, num);
-	seq_printf(s, "Number of transitions: %lld\n",
-		num);
-	seq_printf(s, "max / min : %lld / %lld usec\n",
-		max, min);
-	seq_printf(s, "avg / std : %lld / %ld usec\n",
-		avg, int_sqrt(tmp));
-
-	return 0;
-}
-
-static int nvgpu_clk_arb_stats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, nvgpu_clk_arb_stats_show, inode->i_private);
-}
-
-static const struct file_operations nvgpu_clk_arb_stats_fops = {
-	.open		= nvgpu_clk_arb_stats_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-
-static int nvgpu_clk_arb_debugfs_init(struct gk20a *g)
-{
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct dentry *gpu_root = l->debugfs;
-	struct dentry *d;
-
-	gk20a_dbg(gpu_dbg_info, "g=%p", g);
-
-	d = debugfs_create_file(
-			"arb_stats",
-			S_IRUGO,
-			gpu_root,
-			g,
-			&nvgpu_clk_arb_stats_fops);
-	if (!d)
-		return -ENOMEM;
-
-	return 0;
-}
-#endif

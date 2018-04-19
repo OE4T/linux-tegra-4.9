@@ -608,11 +608,9 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 			usb2->port_cap = USB_OTG_CAP;
 	}
 
-	if (tegra_platform_is_silicon()) {
-		usb2->supply = devm_regulator_get(&port->dev, "vbus");
-		if (IS_ERR(usb2->supply))
-			return PTR_ERR(usb2->supply);
-	}
+	usb2->supply = devm_regulator_get(&port->dev, "vbus");
+	if (IS_ERR(usb2->supply))
+		return PTR_ERR(usb2->supply);
 
 	err = of_property_read_u32(np, "nvidia,oc-pin", &value);
 	if (!err)

@@ -342,6 +342,18 @@ static unsigned int pcie_emc_client_id[] = {
 	TEGRA_BWMGR_CLIENT_PCIE_5
 };
 
+#define GEN1_CORE_CLK_FREQ	62500000
+#define GEN2_CORE_CLK_FREQ	125000000
+#define GEN3_CORE_CLK_FREQ	250000000
+#define GEN4_CORE_CLK_FREQ	500000000
+
+static unsigned int pcie_gen_freq[] = {
+	GEN1_CORE_CLK_FREQ,
+	GEN2_CORE_CLK_FREQ,
+	GEN3_CORE_CLK_FREQ,
+	GEN4_CORE_CLK_FREQ
+};
+
 static int tegra_pcie_power_on_phy(struct tegra_pcie_dw_ep *pcie);
 
 static inline void prog_atu(struct tegra_pcie_dw_ep *pcie, int i, u32 val,
@@ -742,6 +754,8 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val &= ~MISC_CONTROL_1_DBI_RO_WR_EN;
 	writel(val, pcie->dbi_base + MISC_CONTROL_1);
 
+	clk_set_rate(pcie->core_clk, GEN4_CORE_CLK_FREQ);
+
 	/* enable LTSSM */
 	val = readl(pcie->appl_base + APPL_CTRL);
 	val |= APPL_CTRL_LTSSM_EN;
@@ -777,7 +791,7 @@ static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
 
 static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 {
-	u32 val = 0;
+	u32 val = 0, speed = 0;
 	unsigned long freq;
 
 	/* If EP doesn't advertise L1SS, just return */
@@ -832,6 +846,9 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 	}
 	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
 		dev_err(pcie->dev, "can't set emc clock[%lu]\n", freq);
+
+	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
+	clk_set_rate(pcie->core_clk, pcie_gen_freq[speed - 1]);
 }
 
 static int pcie_ep_work_thread(void *p)

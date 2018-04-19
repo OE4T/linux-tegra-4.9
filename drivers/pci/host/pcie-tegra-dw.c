@@ -527,6 +527,18 @@ static unsigned int pcie_emc_client_id[] = {
 	TEGRA_BWMGR_CLIENT_PCIE_5
 };
 
+#define GEN1_CORE_CLK_FREQ	62500000
+#define GEN2_CORE_CLK_FREQ	125000000
+#define GEN3_CORE_CLK_FREQ	250000000
+#define GEN4_CORE_CLK_FREQ	500000000
+
+static unsigned int pcie_gen_freq[] = {
+	GEN1_CORE_CLK_FREQ,
+	GEN2_CORE_CLK_FREQ,
+	GEN3_CORE_CLK_FREQ,
+	GEN4_CORE_CLK_FREQ
+};
+
 static inline void dma_common_wr16(void __iomem *p, u32 val, u32 offset)
 {
 	writew(val, 0x20000 + offset + p);
@@ -2217,6 +2229,8 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 		writel(val, pcie->appl_base + APPL_GTH_PHY);
 	}
 
+	clk_set_rate(pcie->core_clk, GEN4_CORE_CLK_FREQ);
+
 	/* assert RST */
 	val = readl(pcie->appl_base + APPL_PINMUX);
 	val &= ~APPL_PINMUX_PEX_RST;
@@ -2305,7 +2319,7 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct resource_entry *win;
 	struct pci_dev *pdev = NULL, *ppdev = NULL;
-	u32 data = 0, pos = 0;
+	u32 data = 0, pos = 0, speed = 0;
 	struct pci_bus *child;
 	unsigned long freq;
 
@@ -2329,6 +2343,9 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	}
 	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
 		dev_err(pp->dev, "can't set emc clock[%lu]\n", freq);
+
+	speed = ((data >> 16) & PCI_EXP_LNKSTA_CLS);
+	clk_set_rate(pcie->core_clk, pcie_gen_freq[speed - 1]);
 
 	resource_list_for_each_entry(win, &host->windows) {
 		if (win->res->flags & IORESOURCE_IO) {

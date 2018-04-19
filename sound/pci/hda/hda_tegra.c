@@ -95,7 +95,7 @@ struct hda_tegra {
 	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
-	bool is_power_on;
+	bool init_done;
 };
 
 #ifdef CONFIG_PM
@@ -232,18 +232,15 @@ static void hda_tegra_init(struct hda_tegra *hda)
 	writel(v, hda->regs + HDA_IPFS_INTR_MASK);
 }
 
-static int hda_tegra_enable_clocks(struct hda_tegra *hda)
+static int hda_tegra_turn_on(struct hda_tegra *hda)
 {
 	struct device *dev = hda->dev;
 	int rc;
 
-	if (hda->is_power_on == false) {
-		rc = tegra_unpowergate_partition(hda->partition_id);
-		if (rc < 0) {
-			dev_err(dev, "Unpower gating HDA partition Failed\n");
-			return rc;
-		}
-		hda->is_power_on = true;
+	rc = tegra_unpowergate_partition(hda->partition_id);
+	if (rc < 0) {
+		dev_err(dev, "Unpower gating HDA partition Failed\n");
+		return rc;
 	}
 
 	rc = clk_prepare_enable(hda->hda_clk);
@@ -263,18 +260,13 @@ disable_codec_2x:
 disable_hda:
 	clk_disable_unprepare(hda->hda_clk);
 err:
-	if (hda->is_power_on) {
-		rc = tegra_powergate_partition(hda->partition_id);
-		if (rc < 0) {
-			dev_err(dev, "Power gating HDA partition Failed\n");
-			return rc;
-		}
-	}
-	hda->is_power_on = false;
+	if (tegra_powergate_partition(hda->partition_id) < 0)
+		dev_err(dev, "Power gating HDA partition Failed\n");
+
 	return rc;
 }
 
-static int hda_tegra_disable_clocks(struct hda_tegra *hda)
+static int hda_tegra_turn_off(struct hda_tegra *hda)
 {
 	struct device *dev = hda->dev;
 	int rc = 0;
@@ -283,15 +275,11 @@ static int hda_tegra_disable_clocks(struct hda_tegra *hda)
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 	clk_disable_unprepare(hda->hda_clk);
 
-	if (hda->is_power_on) {
-		rc = tegra_powergate_partition(hda->partition_id);
-		if (rc < 0) {
-			dev_err(dev, "Power gating HDA partition Failed\n");
-			return rc;
-		}
-		hda->is_power_on = false;
-	}
-	return 0;
+	rc = tegra_powergate_partition(hda->partition_id);
+	if (rc < 0)
+		dev_err(dev, "Power gating HDA partition Failed\n");
+
+	return rc;
 }
 
 /*
@@ -301,17 +289,13 @@ static int hda_tegra_disable_clocks(struct hda_tegra *hda)
 static int hda_tegra_suspend(struct device *dev)
 {
 	struct snd_card *card = dev_get_drvdata(dev);
-	struct azx *chip = card->private_data;
-	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	int rc;
 
-	if (pm_runtime_suspended(dev))
-		hda_tegra_enable_clocks(hda);
+	rc = pm_runtime_force_suspend(dev);
+	if (rc < 0)
+		return rc;
 
 	snd_power_change_state(card, SNDRV_CTL_POWER_D3hot);
-
-	azx_stop_chip(chip);
-	azx_enter_link_reset(chip);
-	hda_tegra_disable_clocks(hda);
 
 	return 0;
 }
@@ -319,25 +303,13 @@ static int hda_tegra_suspend(struct device *dev)
 static int hda_tegra_resume(struct device *dev)
 {
 	struct snd_card *card = dev_get_drvdata(dev);
-	struct azx *chip = card->private_data;
-	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	int rc;
 
-	hda_tegra_enable_clocks(hda);
-
-	if (hda->dev) {
-		pm_runtime_disable(hda->dev);
-		pm_runtime_set_active(hda->dev);
-		pm_runtime_get_noresume(hda->dev);
-		pm_runtime_enable(hda->dev);
-	}
-	hda_tegra_init(hda);
-
-	azx_init_chip(chip, 1);
+	rc = pm_runtime_force_resume(dev);
+	if (rc < 0)
+		return rc;
 
 	snd_power_change_state(card, SNDRV_CTL_POWER_D0);
-
-	if (hda->dev)
-		pm_runtime_put(hda->dev);
 
 	return 0;
 }
@@ -350,13 +322,12 @@ static int hda_tegra_runtime_suspend(struct device *dev)
 	struct azx *chip = card->private_data;
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
 
-	if (!azx_has_pm_runtime(chip))
-		return 0;
+	if (hda->init_done) {
+		azx_stop_chip(chip);
+		azx_enter_link_reset(chip);
+	}
 
-	azx_stop_chip(chip);
-	hda_tegra_disable_clocks(hda);
-
-	return 0;
+	return hda_tegra_turn_off(hda);
 }
 
 static int hda_tegra_runtime_resume(struct device *dev)
@@ -364,15 +335,16 @@ static int hda_tegra_runtime_resume(struct device *dev)
 	struct snd_card *card = dev_get_drvdata(dev);
 	struct azx *chip = card->private_data;
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	int rc;
 
-	if (!azx_has_pm_runtime(chip))
-		return 0;
+	rc = hda_tegra_turn_on(hda);
+	if (rc != 0)
+		return rc;
 
-	hda_tegra_enable_clocks(hda);
-
-	hda_tegra_init(hda);
-
-	azx_init_chip(chip, 1);
+	if (hda->init_done) {
+		hda_tegra_init(hda);
+		azx_init_chip(chip, 1);
+	}
 
 	return 0;
 }
@@ -409,8 +381,6 @@ static int hda_tegra_dev_free(struct snd_device *device)
 	azx_free_stream_pages(chip);
 	azx_free_streams(chip);
 	snd_hdac_bus_exit(azx_bus(chip));
-	hda_tegra_disable_clocks(hda);
-	pm_runtime_put(hda->dev);
 
 	return 0;
 }
@@ -628,7 +598,8 @@ static int hda_tegra_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	hda->dev = &pdev->dev;
 	chip = &hda->chip;
-	hda->is_power_on = false;
+
+	hda->init_done = false;
 
 	hda->partition_id = tegra_pd_get_powergate_id(tegra_disb_pd);
 	if (hda->partition_id < 0) {
@@ -643,32 +614,22 @@ static int hda_tegra_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (hda->dev) {
-		err = pm_runtime_set_active(hda->dev);
-		if (err < 0)
-			goto out_free;
-		pm_runtime_get_noresume(hda->dev);
-		pm_runtime_enable(hda->dev);
-	}
-
 	err = hda_tegra_init_clk(chip, pdev);
 	if (err < 0)
 		goto out_free;
 
-	err = hda_tegra_enable_clocks(hda);
-	if (err)
-		goto out_free;
-
 	err = hda_tegra_create(card, driver_flags, hda);
-	if (err < 0) {
-		pm_runtime_disable(hda->dev);
-		hda_tegra_disable_clocks(hda);
+	if (err < 0)
 		goto out_free;
-	}
 
 	card->private_data = chip;
-
 	dev_set_drvdata(&pdev->dev, card);
+
+	pm_runtime_enable(hda->dev);
+	if (!azx_has_pm_runtime(chip))
+		pm_runtime_forbid(hda->dev);
+	pm_runtime_get_sync(hda->dev);
+
 	schedule_work(&hda->probe_work);
 
 	return 0;
@@ -726,6 +687,8 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	chip->running = 1;
 	snd_hda_set_power_save(&chip->bus, power_save * 1000);
 
+	hda->init_done = true;
+
 	pm_runtime_put(hda->dev);
 
 out_free:
@@ -734,7 +697,10 @@ out_free:
 
 static int hda_tegra_remove(struct platform_device *pdev)
 {
-	pm_runtime_get_noresume(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	if (!pm_runtime_status_suspended(&pdev->dev))
+		hda_tegra_runtime_suspend(&pdev->dev);
+
 	return snd_card_free(dev_get_drvdata(&pdev->dev));
 }
 

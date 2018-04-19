@@ -29,6 +29,9 @@
 #include "gp106/hal_gp106.h"
 #include "gv100/hal_gv100.h"
 #include "gv11b/hal_gv11b.h"
+#if defined(CONFIG_TEGRA_GPU_NEXT)
+#include "nvgpu_gpuid_next.h"
+#endif
 
 #include <nvgpu/log.h>
 
@@ -59,6 +62,12 @@ int gpu_init_hal(struct gk20a *g)
 		if (gv100_init_hal(g))
 			return -ENODEV;
 		break;
+#if defined(CONFIG_TEGRA_GPU_NEXT)
+	case NVGPU_GPUID_NEXT:
+		if (NVGPU_NEXT_INIT_HAL(g))
+			return -ENODEV;
+		break;
+#endif
 
 	default:
 		nvgpu_err(g, "no support for %x", ver);

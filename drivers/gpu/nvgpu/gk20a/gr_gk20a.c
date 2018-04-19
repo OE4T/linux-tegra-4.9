@@ -53,9 +53,6 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_fbp_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
@@ -4489,12 +4486,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	/* Bug 1340570: increase the clock timeout to avoid potential
-	 * operation failure at high gpcclk rate. Default values are 0x400.
-	 */
-	gk20a_writel(g, pri_ringstation_sys_master_config_r(0x15), 0x800);
-	gk20a_writel(g, pri_ringstation_gpc_master_config_r(0xa), 0x800);
-	gk20a_writel(g, pri_ringstation_fbp_master_config_r(0x8), 0x800);
+	if (g->ops.bus.set_ppriv_timeout_settings)
+		g->ops.bus.set_ppriv_timeout_settings(g);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

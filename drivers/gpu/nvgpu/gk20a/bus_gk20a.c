@@ -34,6 +34,9 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_fbp_gk20a.h>
 
 void gk20a_bus_init_hw(struct gk20a *g)
 {
@@ -171,4 +174,15 @@ int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 		     bus_bar1_block_ptr_f(ptr_v));
 
 	return 0;
+}
+
+void gk20a_bus_set_ppriv_timeout_settings(struct gk20a *g)
+{
+	/*
+	 * Bug 1340570: increase the clock timeout to avoid potential
+	 * operation failure at high gpcclk rate. Default values are 0x400.
+	 */
+	nvgpu_writel(g, pri_ringstation_sys_master_config_r(0x15), 0x800);
+	nvgpu_writel(g, pri_ringstation_gpc_master_config_r(0xa), 0x800);
+	nvgpu_writel(g, pri_ringstation_fbp_master_config_r(0x8), 0x800);
 }

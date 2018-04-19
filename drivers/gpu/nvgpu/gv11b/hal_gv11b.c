@@ -709,6 +709,8 @@ static const struct gpu_ops gv11b_ops = {
 		.read_ptimer = gk20a_read_ptimer,
 		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = NULL,
+		.set_ppriv_timeout_settings =
+			gk20a_bus_set_ppriv_timeout_settings,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {

@@ -32,5 +32,6 @@ void gk20a_bus_isr(struct gk20a *g);
 int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 void gk20a_bus_init_hw(struct gk20a *g);
 int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst);
+void gk20a_bus_set_ppriv_timeout_settings(struct gk20a *g);
 
 #endif /* GK20A_H */

@@ -1094,6 +1094,7 @@ struct gpu_ops {
 			u32 source_id, u32 count,
 			struct nvgpu_cpu_time_correlation_sample *);
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
+		void (*set_ppriv_timeout_settings)(struct gk20a *g);
 	} bus;
 
 	struct {

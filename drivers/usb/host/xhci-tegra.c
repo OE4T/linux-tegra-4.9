@@ -4593,7 +4593,7 @@ static bool device_has_isoch_ep_and_interval_one(struct usb_device *udev)
 static int tegra_xhci_enable_usb3_lpm_timeout(struct usb_hcd *hcd,
 			struct usb_device *udev, enum usb3_link_state state)
 {
-	if (state == USB3_LPM_U1 &&
+	if ((state == USB3_LPM_U1 || state == USB3_LPM_U2) &&
 		device_has_isoch_ep_and_interval_one(udev))
 		return USB3_LPM_DISABLED;
 

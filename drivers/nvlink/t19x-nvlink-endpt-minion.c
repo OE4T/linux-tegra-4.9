@@ -798,6 +798,17 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		}
 
 		ndev->link_bitrate = LINK_BITRATE_150MHZ_20GBPS;
+	} else if ((tdev->refclk == NVLINK_REFCLK_150) &&
+			(ndev->speed == NVLINK_SPEED_16)) {
+		ret = minion_send_cmd(tdev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_9,
+				0);
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_9 command to MINION");
+			goto fail;
+		}
+
+		ndev->link_bitrate = LINK_BITRATE_150MHZ_16GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
 		ret = minion_send_cmd(tdev,
@@ -820,6 +831,17 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		}
 
 		ndev->link_bitrate = LINK_BITRATE_156MHZ_25GBPS;
+	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
+			 (ndev->speed == NVLINK_SPEED_16)) {
+		ret = minion_send_cmd(tdev,
+				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_8,
+				0);
+		if (ret < 0) {
+			nvlink_err("Error sending INITPLL_8 command to MINION");
+			goto fail;
+		}
+
+		ndev->link_bitrate = LINK_BITRATE_156MHZ_16GBPS;
 	} else {
 		nvlink_err("Invalid speed or refclk");
 		ret = -EINVAL;

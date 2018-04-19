@@ -25,6 +25,8 @@
 #define NVLINK_MAX_LINKS			2
 #define DEFAULT_LOOP_SLEEP_US                   100
 #define DEFAULT_LOOP_TIMEOUT_US                 1000000
+#define LINK_BITRATE_150MHZ_16GBPS		15500000000ULL
+#define LINK_BITRATE_156MHZ_16GBPS		16145830000ULL
 #define LINK_BITRATE_150MHZ_20GBPS		19200000000ULL
 #define LINK_BITRATE_156MHZ_20GBPS		20001280000ULL
 #define LINK_BITRATE_150MHZ_25GBPS		24750000000ULL
@@ -62,6 +64,7 @@ extern u32 nvlink_log_mask;
 
 /* Enum to represent link speed. Nvlink 2.0 can support below 2 speeds */
 enum nvlink_speed {
+	NVLINK_SPEED_16,
 	NVLINK_SPEED_20,
 	NVLINK_SPEED_25
 };

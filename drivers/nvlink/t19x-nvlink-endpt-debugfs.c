@@ -74,8 +74,11 @@ static ssize_t nvlink_refclk_rate_file_write(struct file *file,
 		tdev->refclk = NVLINK_REFCLK_150;
 	else if (!strncmp(tmp, "156", 3))
 		tdev->refclk = NVLINK_REFCLK_156;
-	else
+	else {
+		nvlink_err("Invalid refclk rate request!");
 		return -EINVAL;
+	}
+
 	return count;
 }
 
@@ -104,12 +107,18 @@ static ssize_t nvlink_speedcontrol_file_read(struct file *file,
 	int str_len;
 
 	switch (ndev->speed) {
+	case NVLINK_SPEED_16:
+		strcpy(buf, "16");
+		break;
 	case NVLINK_SPEED_20:
 		strcpy(buf, "20");
 		break;
 	case NVLINK_SPEED_25:
-	default:
 		strcpy(buf, "25");
+		break;
+	default:
+		nvlink_err("Unsupported ndev speed!");
+		strcpy(buf, "-1");
 		break;
 	}
 	strcat(buf, "\n");
@@ -141,8 +150,12 @@ static ssize_t nvlink_speedcontrol_file_write(struct file *file,
 		ndev->speed = NVLINK_SPEED_20;
 	else if (!strncmp(tmp, "25", 2))
 		ndev->speed = NVLINK_SPEED_25;
-	else
+	else if (!strncmp(tmp, "16", 2))
+		ndev->speed = NVLINK_SPEED_16;
+	else {
+		nvlink_err("Invalid speed request!");
 		return -EINVAL;
+	}
 	return count;
 }
 

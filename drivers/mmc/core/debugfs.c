@@ -505,23 +505,18 @@ DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_card_status_fops, mmc_dbg_card_status_get,
 static int mmc_get_ext_csd_byte_val(struct mmc_card *card, u64 *val,
 		unsigned int ext_csd_byte)
 {
-	u8 *ext_csd;
+	u8 *ext_csd = NULL;
 	int err = 0;
-
-	ext_csd = kmalloc(512, GFP_KERNEL);
-	if (!ext_csd) {
-		err = -ENOMEM;
-		return err;
-	}
 
 	mmc_claim_host(card->host);
 	err = mmc_get_ext_csd(card, &ext_csd);
 	mmc_release_host(card->host);
 
-	if (!err)
+	if (!err) {
 		*val = ext_csd[ext_csd_byte];
+		kfree(ext_csd);
+	}
 
-	kfree(ext_csd);
 	return err;
 }
 
@@ -557,19 +552,12 @@ static char *mmc_ext_csd_read_by_index(int start, int end,
 	struct mmc_card *card = inode->i_private;
 	char *buf;
 	ssize_t n = 0;
-	u8 *ext_csd;
+	u8 *ext_csd = NULL;
 	int err = 0, i = 0;
 
 	buf = kmalloc(strlen + 1, GFP_KERNEL);
 	if (!buf)
 		return ERR_PTR(-ENOMEM);
-
-
-	ext_csd = kmalloc(512, GFP_KERNEL);
-	if (!ext_csd) {
-		kfree(buf);
-		return ERR_PTR(-ENOMEM);
-	}
 
 	mmc_claim_host(card->host);
 	err = mmc_get_ext_csd(card, &ext_csd);
@@ -585,7 +573,6 @@ static char *mmc_ext_csd_read_by_index(int start, int end,
 	return buf;
 
 out_free:
-	kfree(ext_csd);
 	kfree(buf);
 	return NULL;
 }

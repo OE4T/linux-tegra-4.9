@@ -175,6 +175,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 	struct gk20a_event_id_data *event_id_data;
 	u32 event_id;
 	int err = 0;
+	struct gk20a *g = tsg->g;
 
 	event_id = nvgpu_event_id_to_ioctl_channel_event_id(__event_id);
 	if (event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
@@ -187,7 +188,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 
 	nvgpu_mutex_acquire(&event_id_data->lock);
 
-	gk20a_dbg_info(
+	nvgpu_log_info(g,
 		"posting event for event_id=%d on tsg=%d\n",
 		event_id, tsg->tsgid);
 	event_id_data->event_posted = true;
@@ -205,14 +206,14 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 	u32 event_id = event_id_data->event_id;
 	struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_info, " ");
 
 	poll_wait(filep, &event_id_data->event_id_wq.wq, wait);
 
 	nvgpu_mutex_acquire(&event_id_data->lock);
 
 	if (event_id_data->event_posted) {
-		gk20a_dbg_info(
+		nvgpu_log_info(g,
 			"found pending event_id=%d on TSG=%d\n",
 			event_id, tsg->tsgid);
 		mask = (POLLPRI | POLLIN);
@@ -363,7 +364,7 @@ int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp)
 
 	dev  = dev_from_gk20a(g);
 
-	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
+	nvgpu_log(g, gpu_dbg_fn, "tsg: %s", dev_name(dev));
 
 	priv = nvgpu_kmalloc(g, sizeof(*priv));
 	if (!priv) {
@@ -397,11 +398,11 @@ int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp)
 	struct gk20a *g;
 	int ret;
 
-	gk20a_dbg_fn("");
-
 	l = container_of(inode->i_cdev,
 			 struct nvgpu_os_linux, tsg.cdev);
 	g = &l->g;
+
+	nvgpu_log_fn(g, " ");
 
 	ret = gk20a_busy(g);
 	if (ret) {
@@ -412,7 +413,7 @@ int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp)
 	ret = nvgpu_ioctl_tsg_open(&l->g, filp);
 
 	gk20a_idle(g);
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return ret;
 }
 
@@ -445,7 +446,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	u32 level = arg->level;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
@@ -474,7 +475,7 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
@@ -509,7 +510,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	u8 __maybe_unused buf[NVGPU_TSG_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
-	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+	nvgpu_log_fn(g, "start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_TSG_IOCTL_MAGIC) ||
 	    (_IOC_NR(cmd) == 0) ||

@@ -57,7 +57,7 @@ int gv11b_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 	u32 inst_pa_page;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, " ");
 	err = gk20a_busy(g);
 	if (err) {
 		nvgpu_err(g, "failed to poweron");
@@ -100,7 +100,7 @@ int gv11b_perfbuf_disable_locked(struct gk20a *g)
 {
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, " ");
 	err = gk20a_busy(g);
 	if (err) {
 		nvgpu_err(g, "failed to poweron");

@@ -36,9 +36,6 @@
 
 #include <nvgpu/hw/gp106/hw_trim_gp106.h>
 
-#define gk20a_dbg_clk(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
-
 #ifdef CONFIG_DEBUG_FS
 static int clk_gp106_debugfs_init(struct gk20a *g);
 #endif
@@ -82,7 +79,7 @@ int gp106_init_clk_support(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	u32 err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_mutex_init(&clk->clk_mutex);
 	if (err)
@@ -374,7 +371,7 @@ static int clk_gp106_debugfs_init(struct gk20a *g)
 	d = debugfs_create_file("gpc", S_IRUGO | S_IWUSR, clk_freq_ctlr_root,
 				g, &gpc_cfc_fops);
 
-	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_info, "g=%p", g);
 
 	for (i = 0; i < g->clk.namemap_num; i++) {
 		if (g->clk.clk_namemap[i].is_enable) {

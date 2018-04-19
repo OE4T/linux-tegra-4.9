@@ -47,7 +47,7 @@ void channel_gm20b_bind(struct channel_gk20a *c)
 	u32 inst_ptr = nvgpu_inst_block_addr(g, &c->inst_block)
 		>> ram_in_base_shift_v();
 
-	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
+	nvgpu_log_info(g, "bind channel %d inst ptr 0x%08x",
 		c->chid, inst_ptr);
 
 

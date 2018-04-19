@@ -40,10 +40,10 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (mm->sw_ready) {
-		gk20a_dbg_fn("skip init");
+		nvgpu_log_fn(g, "skip init");
 		return 0;
 	}
 
@@ -56,7 +56,7 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE;
 	mm->channel.kernel_size = NV_MM_DEFAULT_KERNEL_SIZE;
 
-	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
+	nvgpu_log_info(g, "channel vm size: user %dMB  kernel %dMB",
 		       (int)(mm->channel.user_size >> 20),
 		       (int)(mm->channel.kernel_size >> 20));
 
@@ -69,7 +69,7 @@ int vgpu_init_mm_support(struct gk20a *g)
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = vgpu_init_mm_setup_sw(g);
 	if (err)
@@ -95,7 +95,7 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_UNMAP;
 	msg.handle = vgpu_get_handle(g);
@@ -183,8 +183,9 @@ int vgpu_vm_bind_channel(struct vm_gk20a *vm,
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_bind_share_params *p = &msg.params.as_bind_share;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	ch->vm = vm;
 	msg.cmd = TEGRA_VGPU_CMD_AS_BIND_SHARE;
@@ -220,7 +221,7 @@ static void vgpu_cache_maint(u64 handle, u8 op)
 int vgpu_mm_fb_flush(struct gk20a *g)
 {
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	vgpu_cache_maint(vgpu_get_handle(g), TEGRA_VGPU_FB_FLUSH);
 	return 0;
@@ -229,7 +230,7 @@ int vgpu_mm_fb_flush(struct gk20a *g)
 void vgpu_mm_l2_invalidate(struct gk20a *g)
 {
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	vgpu_cache_maint(vgpu_get_handle(g), TEGRA_VGPU_L2_MAINT_INV);
 }
@@ -238,7 +239,7 @@ void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 {
 	u8 op;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (invalidate)
 		op = TEGRA_VGPU_L2_MAINT_FLUSH_INV;
@@ -250,7 +251,7 @@ void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_err(g, "call to RM server not supported");
 }
@@ -261,7 +262,7 @@ void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 	struct tegra_vgpu_mmu_debug_mode *p = &msg.params.mmu_debug_mode;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE;
 	msg.handle = vgpu_get_handle(g);

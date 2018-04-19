@@ -39,8 +39,8 @@
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 
-#define gk20a_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gk20a_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos)
 {
@@ -139,7 +139,7 @@ void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 	u32 intr_mask;
 	u32 intr_dest;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.mc.intr_unit_config(g, MC_INTR_UNIT_DISABLE, true,
 			mc_intr_mask_0_pmu_enabled_f());
@@ -166,7 +166,7 @@ void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 				mc_intr_mask_0_pmu_enabled_f());
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 
@@ -179,7 +179,7 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu)
 	u64 addr_code, addr_data, addr_load;
 	u32 i, blocks, addr_args;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 		gk20a_readl(g, pwr_falcon_itfen_r()) |
@@ -286,7 +286,7 @@ int gk20a_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 
 	if (*token != PMU_INVALID_MUTEX_OWNER_ID && *token == owner) {
 		BUG_ON(mutex->ref_cnt == 0);
-		gk20a_dbg_pmu("already acquired by owner : 0x%08x", *token);
+		gk20a_dbg_pmu(g, "already acquired by owner : 0x%08x", *token);
 		mutex->ref_cnt++;
 		return 0;
 	}
@@ -313,12 +313,12 @@ int gk20a_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 
 		if (owner == data) {
 			mutex->ref_cnt = 1;
-			gk20a_dbg_pmu("mutex acquired: id=%d, token=0x%x",
+			gk20a_dbg_pmu(g, "mutex acquired: id=%d, token=0x%x",
 				mutex->index, *token);
 			*token = owner;
 			return 0;
 		} else {
-			gk20a_dbg_info("fail to acquire mutex idx=0x%08x",
+			nvgpu_log_info(g, "fail to acquire mutex idx=0x%08x",
 				mutex->index);
 
 			data = gk20a_readl(g, pwr_pmu_mutex_id_release_r());
@@ -370,7 +370,7 @@ int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 		pwr_pmu_mutex_id_release_value_f(owner));
 	gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
 
-	gk20a_dbg_pmu("mutex released: id=%d, token=0x%x",
+	gk20a_dbg_pmu(g, "mutex released: id=%d, token=0x%x",
 		mutex->index, *token);
 
 	return 0;
@@ -475,7 +475,7 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	nvgpu_flcn_reset(pmu->flcn);
@@ -554,7 +554,7 @@ static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 	struct nvgpu_pmu *pmu = param;
-	gk20a_dbg_pmu("reply ZBC_TABLE_UPDATE");
+	gk20a_dbg_pmu(g, "reply ZBC_TABLE_UPDATE");
 	pmu->zbc_save_done = 1;
 }
 
@@ -575,7 +575,7 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 
 	pmu->zbc_save_done = 0;
 
-	gk20a_dbg_pmu("cmd post ZBC_TABLE_UPDATE");
+	gk20a_dbg_pmu(g, "cmd post ZBC_TABLE_UPDATE");
 	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			   pmu_handle_zbc_msg, pmu, &seq, ~0);
 	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
@@ -587,18 +587,20 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 			struct nv_pmu_therm_msg *msg)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_pmu(pmu);
+
+	nvgpu_log_fn(g, " ");
 
 	switch (msg->msg_type) {
 	case NV_PMU_THERM_MSG_ID_EVENT_HW_SLOWDOWN_NOTIFICATION:
 		if (msg->hw_slct_msg.mask == BIT(NV_PMU_THERM_EVENT_THERMAL_1))
 			nvgpu_clk_arb_send_thermal_alarm(pmu->g);
 		else
-			gk20a_dbg_pmu("Unwanted/Unregistered thermal event received %d",
+			gk20a_dbg_pmu(g, "Unwanted/Unregistered thermal event received %d",
 				msg->hw_slct_msg.mask);
 		break;
 	default:
-		gk20a_dbg_pmu("unkown therm event received %d", msg->msg_type);
+		gk20a_dbg_pmu(g, "unkown therm event received %d", msg->msg_type);
 		break;
 	}
 
@@ -609,22 +611,22 @@ void gk20a_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
-	gk20a_dbg_pmu("pwr_pmu_idle_mask_supp_r(3): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_mask_supp_r(3): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_mask_supp_r(3)));
-	gk20a_dbg_pmu("pwr_pmu_idle_mask_1_supp_r(3): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_mask_1_supp_r(3): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_mask_1_supp_r(3)));
-	gk20a_dbg_pmu("pwr_pmu_idle_ctrl_supp_r(3): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_ctrl_supp_r(3): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_ctrl_supp_r(3)));
-	gk20a_dbg_pmu("pwr_pmu_pg_idle_cnt_r(0): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_pg_idle_cnt_r(0): 0x%08x",
 		gk20a_readl(g, pwr_pmu_pg_idle_cnt_r(0)));
-	gk20a_dbg_pmu("pwr_pmu_pg_intren_r(0): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_pg_intren_r(0): 0x%08x",
 		gk20a_readl(g, pwr_pmu_pg_intren_r(0)));
 
-	gk20a_dbg_pmu("pwr_pmu_idle_count_r(3): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_count_r(3): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_count_r(3)));
-	gk20a_dbg_pmu("pwr_pmu_idle_count_r(4): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_count_r(4): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_count_r(4)));
-	gk20a_dbg_pmu("pwr_pmu_idle_count_r(7): 0x%08x",
+	gk20a_dbg_pmu(g, "pwr_pmu_idle_count_r(7): 0x%08x",
 		gk20a_readl(g, pwr_pmu_idle_count_r(7)));
 }
 
@@ -693,7 +695,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	u32 intr, mask;
 	bool recheck = false;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	if (!pmu->isr_enabled) {
@@ -706,7 +708,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 
 	intr = gk20a_readl(g, pwr_falcon_irqstat_r());
 
-	gk20a_dbg_pmu("received falcon interrupt: 0x%08x", intr);
+	gk20a_dbg_pmu(g, "received falcon interrupt: 0x%08x", intr);
 
 	intr = gk20a_readl(g, pwr_falcon_irqstat_r()) & mask;
 	if (!intr || pmu->pmu_state == PMU_STATE_OFF) {

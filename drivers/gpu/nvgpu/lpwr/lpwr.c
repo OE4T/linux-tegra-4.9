@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -185,7 +185,7 @@ u32 nvgpu_lpwr_pg_setup(struct gk20a *g)
 {
 	u32 err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = get_lpwr_gr_table(g);
 	if (err)
@@ -206,7 +206,7 @@ static void nvgpu_pmu_handle_param_lpwr_msg(struct gk20a *g,
 {
 	u32 *ack_status = param;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "LWPR PARAM cmd aborted");
@@ -227,7 +227,7 @@ int nvgpu_lwpr_mclk_change(struct gk20a *g, u32 pstate)
 	struct clk_set_info *pstate_info;
 	u32 ack_status = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	pstate_info = pstate_get_clk_set_info(g, pstate,
 			clkwhich_mclk);
@@ -308,7 +308,7 @@ u32 nvgpu_lpwr_is_mscg_supported(struct gk20a *g, u32 pstate_num)
 	struct pstate *pstate = pstate_find(g, pstate_num);
 	u32 ms_idx;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!pstate)
 		return 0;
@@ -329,7 +329,7 @@ u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num)
 	struct pstate *pstate = pstate_find(g, pstate_num);
 	u32 idx;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!pstate)
 		return 0;
@@ -350,7 +350,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 	u32 is_rppg_supported = 0;
 	u32 present_pstate = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, true);
@@ -387,7 +387,7 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 	u32 is_rppg_supported = 0;
 	u32 present_pstate = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, true);
@@ -417,6 +417,6 @@ exit_unlock:
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, false);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return status;
 }

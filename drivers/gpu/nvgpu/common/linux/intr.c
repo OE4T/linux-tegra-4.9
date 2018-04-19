@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,7 @@ irqreturn_t nvgpu_intr_thread_stall(struct gk20a *g)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int hw_irq_count;
 
-	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
+	nvgpu_log(g, gpu_dbg_intr, "interrupt thread launched");
 
 	trace_mc_gk20a_intr_thread_stall(g->name);
 

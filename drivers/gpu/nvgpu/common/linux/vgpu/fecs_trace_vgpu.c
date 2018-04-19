@@ -46,7 +46,7 @@ int vgpu_fecs_trace_init(struct gk20a *g)
 	u32 mempool;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	vcst = nvgpu_kzalloc(g, sizeof(*vcst));
 	if (!vcst)

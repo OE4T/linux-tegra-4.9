@@ -58,7 +58,7 @@ bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
 	default:
 		break;
 	}
-	gk20a_dbg_info("class=0x%x valid=%d", class_num, valid);
+	nvgpu_log_info(g, "class=0x%x valid=%d", class_num, valid);
 	return valid;
 }
 
@@ -75,7 +75,7 @@ static void gr_gp106_set_go_idle_timeout(struct gk20a *g, u32 data)
 int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (class_num == PASCAL_COMPUTE_B) {
 		switch (offset << 2) {
@@ -177,9 +177,9 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 				  g->gr.max_tpc_count;
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
-		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
+		nvgpu_log_info(g, "gfxp context spill_size=%d", spill_size);
+		nvgpu_log_info(g, "gfxp context pagepool_size=%d", pagepool_size);
+		nvgpu_log_info(g, "gfxp context attrib_cb_size=%d",
 				attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,

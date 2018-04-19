@@ -46,7 +46,7 @@ static void volt_rpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	struct volt_rpc_pmucmdhandler_params *phandlerparams =
 		(struct volt_rpc_pmucmdhandler_params *)param;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (msg->msg.volt.msg_type != NV_PMU_VOLT_MSG_ID_RPC) {
 		nvgpu_err(g, "unsupported msg for VOLT RPC %x",

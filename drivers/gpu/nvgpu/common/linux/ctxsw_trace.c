@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,13 +79,14 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 	loff_t *off)
 {
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
+	struct gk20a *g = dev->g;
 	struct nvgpu_ctxsw_ring_header *hdr = dev->hdr;
 	struct nvgpu_ctxsw_trace_entry __user *entry =
 		(struct nvgpu_ctxsw_trace_entry *) buf;
 	size_t copied = 0;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw,
 		"filp=%p buf=%p size=%zu", filp, buf, size);
 
 	nvgpu_mutex_acquire(&dev->write_lock);
@@ -119,7 +120,7 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 		size -= sizeof(*entry);
 	}
 
-	gk20a_dbg(gpu_dbg_ctxsw, "copied=%zu read_idx=%d", copied,
+	nvgpu_log(g, gpu_dbg_ctxsw, "copied=%zu read_idx=%d", copied,
 		hdr->read_idx);
 
 	*off = hdr->read_idx;
@@ -130,7 +131,9 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 
 static int gk20a_ctxsw_dev_ioctl_trace_enable(struct gk20a_ctxsw_dev *dev)
 {
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace enabled");
+	struct gk20a *g = dev->g;
+
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "trace enabled");
 	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->write_enabled = true;
 	nvgpu_mutex_release(&dev->write_lock);
@@ -140,7 +143,9 @@ static int gk20a_ctxsw_dev_ioctl_trace_enable(struct gk20a_ctxsw_dev *dev)
 
 static int gk20a_ctxsw_dev_ioctl_trace_disable(struct gk20a_ctxsw_dev *dev)
 {
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace disabled");
+	struct gk20a *g = dev->g;
+
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "trace disabled");
 	dev->g->ops.fecs_trace.disable(dev->g);
 	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->write_enabled = false;
@@ -168,7 +173,7 @@ static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
 	dev->size = size;
 	dev->num_ents = dev->hdr->num_ents;
 
-	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu hdr=%p ents=%p num_ents=%d",
+	nvgpu_log(g, gpu_dbg_ctxsw, "size=%zu hdr=%p ents=%p num_ents=%d",
 		dev->size, dev->hdr, dev->ents, dev->hdr->num_ents);
 	return 0;
 }
@@ -208,10 +213,11 @@ int gk20a_ctxsw_dev_ring_free(struct gk20a *g)
 static int gk20a_ctxsw_dev_ioctl_ring_setup(struct gk20a_ctxsw_dev *dev,
 	struct nvgpu_ctxsw_ring_setup_args *args)
 {
+	struct gk20a *g = dev->g;
 	size_t size = args->size;
 	int ret;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "size=%zu", size);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "size=%zu", size);
 
 	if (size > GK20A_CTXSW_TRACE_MAX_VM_RING_SIZE)
 		return -EINVAL;
@@ -252,7 +258,7 @@ static int gk20a_ctxsw_dev_ioctl_poll(struct gk20a_ctxsw_dev *dev)
 	struct gk20a *g = dev->g;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, " ");
 
 	err = gk20a_busy(g);
 	if (err)
@@ -286,7 +292,7 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	if (!g)
 		return -ENODEV;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p", g);
 
 	if (!capable(CAP_SYS_ADMIN)) {
 		err = -EPERM;
@@ -322,13 +328,13 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 
 	size = sizeof(struct nvgpu_ctxsw_ring_header) +
 			n * sizeof(struct nvgpu_ctxsw_trace_entry);
-	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu entries=%d ent_size=%zu",
+	nvgpu_log(g, gpu_dbg_ctxsw, "size=%zu entries=%d ent_size=%zu",
 		size, n, sizeof(struct nvgpu_ctxsw_trace_entry));
 
 	err = gk20a_ctxsw_dev_alloc_buffer(dev, size);
 	if (!err) {
 		filp->private_data = dev;
-		gk20a_dbg(gpu_dbg_ctxsw, "filp=%p dev=%p size=%zu",
+		nvgpu_log(g, gpu_dbg_ctxsw, "filp=%p dev=%p size=%zu",
 			filp, dev, size);
 	}
 
@@ -348,7 +354,7 @@ int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp)
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
 	struct gk20a *g = dev->g;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "dev: %p", dev);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "dev: %p", dev);
 
 	g->ops.fecs_trace.disable(g);
 
@@ -372,7 +378,7 @@ long gk20a_ctxsw_dev_ioctl(struct file *filp, unsigned int cmd,
 	u8 buf[NVGPU_CTXSW_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "nr=%d", _IOC_NR(cmd));
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "nr=%d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_CTXSW_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
@@ -423,10 +429,11 @@ long gk20a_ctxsw_dev_ioctl(struct file *filp, unsigned int cmd,
 unsigned int gk20a_ctxsw_dev_poll(struct file *filp, poll_table *wait)
 {
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
+	struct gk20a *g = dev->g;
 	struct nvgpu_ctxsw_ring_header *hdr = dev->hdr;
 	unsigned int mask = 0;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, " ");
 
 	nvgpu_mutex_acquire(&dev->write_lock);
 	poll_wait(filp, &dev->readout_wq.wq, wait);
@@ -440,18 +447,20 @@ unsigned int gk20a_ctxsw_dev_poll(struct file *filp, poll_table *wait)
 static void gk20a_ctxsw_dev_vma_open(struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = vma->vm_private_data;
+	struct gk20a *g = dev->g;
 
 	nvgpu_atomic_inc(&dev->vma_ref);
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
 		nvgpu_atomic_read(&dev->vma_ref));
 }
 
 static void gk20a_ctxsw_dev_vma_close(struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = vma->vm_private_data;
+	struct gk20a *g = dev->g;
 
 	nvgpu_atomic_dec(&dev->vma_ref);
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "vma_ref=%d",
 		nvgpu_atomic_read(&dev->vma_ref));
 }
 
@@ -469,9 +478,10 @@ int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g,
 int gk20a_ctxsw_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
+	struct gk20a *g = dev->g;
 	int ret;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vm_start=%lx vm_end=%lx",
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "vm_start=%lx vm_end=%lx",
 		vma->vm_start, vma->vm_end);
 
 	ret = dev->g->ops.fecs_trace.mmap_user_buffer(dev->g, vma);
@@ -513,7 +523,7 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 	struct gk20a_ctxsw_trace *trace = g->ctxsw_trace;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p trace=%p", g, trace);
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p trace=%p", g, trace);
 
 	/* if tracing is not supported, skip this */
 	if (!g->ops.fecs_trace.init)
@@ -590,7 +600,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	dev = &g->ctxsw_trace->devs[entry->vmid];
 	hdr = dev->hdr;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"dev=%p hdr=%p", dev, hdr);
 
 	nvgpu_mutex_acquire(&dev->write_lock);
@@ -630,7 +640,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 		goto filter;
 	}
 
-	gk20a_dbg(gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_ctxsw,
 		"seqno=%d context_id=%08x pid=%lld tag=%x timestamp=%llx",
 		entry->seqno, entry->context_id, entry->pid,
 		entry->tag, entry->timestamp);
@@ -644,7 +654,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	if (unlikely(write_idx >= hdr->num_ents))
 		write_idx = 0;
 	hdr->write_idx = write_idx;
-	gk20a_dbg(gpu_dbg_ctxsw, "added: read=%d write=%d len=%d",
+	nvgpu_log(g, gpu_dbg_ctxsw, "added: read=%d write=%d len=%d",
 		hdr->read_idx, hdr->write_idx, ring_len(hdr));
 
 	nvgpu_mutex_release(&dev->write_lock);
@@ -657,7 +667,7 @@ drop:
 	hdr->drop_count++;
 
 filter:
-	gk20a_dbg(gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_ctxsw,
 			"dropping seqno=%d context_id=%08x pid=%lld "
 			"tag=%x time=%llx (%s)",
 			entry->seqno, entry->context_id, entry->pid,

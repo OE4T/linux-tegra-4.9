@@ -50,7 +50,7 @@ static u32 _clk_fll_devgrp_pmudatainit_super(struct gk20a *g,
 		pboardobjgrp;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
@@ -67,7 +67,7 @@ static u32 _clk_fll_devgrp_pmudatainit_super(struct gk20a *g,
 		pfll_objs->lut_prog_master_mask.super.bitcount,
 		&pset->lut_prog_master_mask.super);
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return status;
 }
 
@@ -80,7 +80,7 @@ static u32 _clk_fll_devgrp_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_clk_clk_fll_device_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -89,7 +89,7 @@ static u32 _clk_fll_devgrp_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -123,7 +123,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 	u8 i;
 	u8 j;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.avfs_fllobjs.super);
 	if (status) {
@@ -202,7 +202,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 		}
 	}
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -211,7 +211,7 @@ u32 clk_fll_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->clk_pmu.avfs_fllobjs.super.super;
 
@@ -220,7 +220,7 @@ u32 clk_fll_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -241,7 +241,7 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 	u32 vbios_domain = NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SKIP;
 	struct avfsvinobjs *pvinobjs = &g->clk_pmu.avfs_vinobjs;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	fll_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			  g->bios.clock_token, FLL_TABLE);
@@ -350,7 +350,7 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -399,7 +399,7 @@ static struct fll_device *construct_fll_device(struct gk20a *g,
 	struct fll_device *board_obj_fll_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		sizeof(struct fll_device), pargs);
 	if (status)
@@ -429,7 +429,7 @@ static struct fll_device *construct_fll_device(struct gk20a *g,
 	boardobjgrpmask_e32_init(
 		&board_obj_fll_ptr->lut_prog_broadcast_slave_mask, NULL);
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return (struct fll_device *)board_obj_ptr;
 }
@@ -442,7 +442,7 @@ static u32 fll_device_init_pmudata_super(struct gk20a *g,
 	struct fll_device *pfll_dev;
 	struct nv_pmu_clk_clk_fll_device_boardobj_set *perf_pmu_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -473,7 +473,7 @@ static u32 fll_device_init_pmudata_super(struct gk20a *g,
 		pfll_dev->lut_prog_broadcast_slave_mask.super.bitcount,
 		&perf_pmu_data->lut_prog_broadcast_slave_mask.super);
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return status;
 }

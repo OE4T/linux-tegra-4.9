@@ -25,5 +25,5 @@ void nvgpu_usermode_writel(struct gk20a *g, u32 r, u32 v)
 	void __iomem *reg = l->usermode_regs + (r - usermode_cfg0_r());
 
 	writel_relaxed(v, reg);
-	gk20a_dbg(gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
+	nvgpu_log(g, gpu_dbg_reg, "usermode r=0x%x v=0x%x", r, v);
 }

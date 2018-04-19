@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -98,14 +98,14 @@ u32 gp106_pmu_pg_engines_list(struct gk20a *g)
 static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "PG PARAM cmd aborted");
 		return;
 	}
 
-	gp106_dbg_pmu("PG PARAM is acknowledged from PMU %x",
+	gp106_dbg_pmu(g, "PG PARAM is acknowledged from PMU %x",
 			msg->msg.pg.msg_type);
 }
 
@@ -135,7 +135,7 @@ int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param.featuremask =
 				NVGPU_PMU_GR_FEATURE_MASK_RPPG;
 
-		gp106_dbg_pmu("cmd post GR PMU_PG_CMD_ID_PG_PARAM");
+		gp106_dbg_pmu(g, "cmd post GR PMU_PG_CMD_ID_PG_PARAM");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_param_msg, pmu, &seq, ~0);
 	} else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
@@ -152,7 +152,7 @@ int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 			NVGPU_PMU_MS_FEATURE_MASK_RPPG |
 			NVGPU_PMU_MS_FEATURE_MASK_FB_TRAINING;
 
-		gp106_dbg_pmu("cmd post MS PMU_PG_CMD_ID_PG_PARAM");
+		gp106_dbg_pmu(g, "cmd post MS PMU_PG_CMD_ID_PG_PARAM");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_param_msg, pmu, &seq, ~0);
 	}
@@ -240,9 +240,9 @@ static void gp106_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
-	gp106_dbg_pmu("wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
+	gp106_dbg_pmu(g, "wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
 	if (g->pmu_lsf_pmu_wpr_init_done) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -258,13 +258,13 @@ static void gp106_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo = 0;
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi = 0;
 
-		gp106_dbg_pmu("PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
+		gp106_dbg_pmu(g, "PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
 				falconidmask);
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)

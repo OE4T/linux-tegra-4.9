@@ -37,8 +37,8 @@
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
-#define gp10b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gp10b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 /* PROD settings for ELPG sequencing registers*/
 static struct pg_init_sequence_list _pginitseq_gp10b[] = {
@@ -147,9 +147,9 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
-	gp10b_dbg_pmu("wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
+	gp10b_dbg_pmu(g, "wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
 	if (g->pmu_lsf_pmu_wpr_init_done) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -164,13 +164,13 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 		cmd.cmd.acr.boot_falcons.usevamask = 0;
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo = 0x0;
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi = 0x0;
-		gp10b_dbg_pmu("PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
+		gp10b_dbg_pmu(g, "PMU_ACR_CMD_ID_BOOTSTRAP_MULTIPLE_FALCONS:%x\n",
 				falconidmask);
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return;
 }
 
@@ -209,7 +209,7 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "GR PARAM cmd aborted");
@@ -217,7 +217,7 @@ static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	gp10b_dbg_pmu("GR PARAM is acknowledged from PMU %x \n",
+	gp10b_dbg_pmu(g, "GR PARAM is acknowledged from PMU %x \n",
 			msg->msg.pg.msg_type);
 
 	return;
@@ -243,7 +243,7 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param_v2.ldiv_slowdown_factor =
 				g->ldiv_slowdown_factor;
 
-		gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM ");
+		gp10b_dbg_pmu(g, "cmd post PMU_PG_CMD_ID_PG_PARAM ");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_gr_param_msg, pmu, &seq, ~0);
 
@@ -276,7 +276,7 @@ int gp10b_pmu_setup_elpg(struct gk20a *g)
 	u32 reg_writes;
 	u32 index;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->elpg_enabled) {
 		reg_writes = ((sizeof(_pginitseq_gp10b) /
@@ -288,7 +288,7 @@ int gp10b_pmu_setup_elpg(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return ret;
 }
 
@@ -305,7 +305,7 @@ int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	nvgpu_flcn_reset(pmu->flcn);
@@ -333,7 +333,7 @@ int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 	if (err)
 		return err;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 }

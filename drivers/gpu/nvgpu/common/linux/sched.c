@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,10 +37,11 @@ ssize_t gk20a_sched_dev_read(struct file *filp, char __user *buf,
 	size_t size, loff_t *off)
 {
 	struct gk20a_sched_ctrl *sched = filp->private_data;
+	struct gk20a *g = sched->g;
 	struct nvgpu_sched_event_arg event = { 0 };
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched,
 		"filp=%p buf=%p size=%zu", filp, buf, size);
 
 	if (size < sizeof(event))
@@ -77,9 +78,10 @@ ssize_t gk20a_sched_dev_read(struct file *filp, char __user *buf,
 unsigned int gk20a_sched_dev_poll(struct file *filp, poll_table *wait)
 {
 	struct gk20a_sched_ctrl *sched = filp->private_data;
+	struct gk20a *g = sched->g;
 	unsigned int mask = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, " ");
 
 	nvgpu_mutex_acquire(&sched->status_lock);
 	poll_wait(filp, &sched->readout_wq.wq, wait);
@@ -93,7 +95,9 @@ unsigned int gk20a_sched_dev_poll(struct file *filp, poll_table *wait)
 static int gk20a_sched_dev_ioctl_get_tsgs(struct gk20a_sched_ctrl *sched,
 	struct nvgpu_sched_get_tsgs_args *arg)
 {
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "size=%u buffer=%llx",
+	struct gk20a *g = sched->g;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "size=%u buffer=%llx",
 			arg->size, arg->buffer);
 
 	if ((arg->size < sched->bitmap_size) || (!arg->buffer)) {
@@ -115,7 +119,9 @@ static int gk20a_sched_dev_ioctl_get_tsgs(struct gk20a_sched_ctrl *sched,
 static int gk20a_sched_dev_ioctl_get_recent_tsgs(struct gk20a_sched_ctrl *sched,
 	struct nvgpu_sched_get_tsgs_args *arg)
 {
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "size=%u buffer=%llx",
+	struct gk20a *g = sched->g;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "size=%u buffer=%llx",
 			arg->size, arg->buffer);
 
 	if ((arg->size < sched->bitmap_size) || (!arg->buffer)) {
@@ -139,7 +145,8 @@ static int gk20a_sched_dev_ioctl_get_recent_tsgs(struct gk20a_sched_ctrl *sched,
 static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 	struct nvgpu_sched_get_tsgs_by_pid_args *arg)
 {
-	struct fifo_gk20a *f = &sched->g->fifo;
+	struct gk20a *g = sched->g;
+	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg;
 	u64 *bitmap;
 	unsigned int tsgid;
@@ -147,7 +154,7 @@ static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 	pid_t tgid = (pid_t)arg->pid;
 	int err = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "pid=%d size=%u buffer=%llx",
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "pid=%d size=%u buffer=%llx",
 			(pid_t)arg->pid, arg->size, arg->buffer);
 
 	if ((arg->size < sched->bitmap_size) || (!arg->buffer)) {
@@ -186,7 +193,7 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
@@ -221,7 +228,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	u32 tsgid = arg->tsgid;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
@@ -256,7 +263,7 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 	u32 tsgid = arg->tsgid;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
@@ -283,7 +290,9 @@ done:
 
 static int gk20a_sched_dev_ioctl_lock_control(struct gk20a_sched_ctrl *sched)
 {
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
+	struct gk20a *g = sched->g;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, " ");
 
 	nvgpu_mutex_acquire(&sched->control_lock);
 	sched->control_locked = true;
@@ -293,7 +302,9 @@ static int gk20a_sched_dev_ioctl_lock_control(struct gk20a_sched_ctrl *sched)
 
 static int gk20a_sched_dev_ioctl_unlock_control(struct gk20a_sched_ctrl *sched)
 {
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
+	struct gk20a *g = sched->g;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, " ");
 
 	nvgpu_mutex_acquire(&sched->control_lock);
 	sched->control_locked = false;
@@ -304,7 +315,9 @@ static int gk20a_sched_dev_ioctl_unlock_control(struct gk20a_sched_ctrl *sched)
 static int gk20a_sched_dev_ioctl_get_api_version(struct gk20a_sched_ctrl *sched,
 	struct nvgpu_sched_api_version_args *args)
 {
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
+	struct gk20a *g = sched->g;
+
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, " ");
 
 	args->version = NVGPU_SCHED_API_VERSION;
 	return 0;
@@ -318,7 +331,7 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
@@ -355,7 +368,7 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
@@ -390,7 +403,7 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 		return -ENODEV;
 	sched = &l->sched_ctrl;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "g=%p", g);
 
 	if (!sched->sw_ready) {
 		err = gk20a_busy(g);
@@ -410,7 +423,7 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 	memset(sched->ref_tsg_bitmap, 0, sched->bitmap_size);
 
 	filp->private_data = sched;
-	gk20a_dbg(gpu_dbg_sched, "filp=%p sched=%p", filp, sched);
+	nvgpu_log(g, gpu_dbg_sched, "filp=%p sched=%p", filp, sched);
 
 free_ref:
 	if (err)
@@ -426,7 +439,7 @@ long gk20a_sched_dev_ioctl(struct file *filp, unsigned int cmd,
 	u8 buf[NVGPU_CTXSW_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "nr=%d", _IOC_NR(cmd));
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "nr=%d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_SCHED_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
@@ -509,7 +522,7 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 	struct tsg_gk20a *tsg;
 	unsigned int tsgid;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "sched: %p", sched);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "sched: %p", sched);
 
 	/* release any reference to TSGs */
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
@@ -535,7 +548,7 @@ void gk20a_sched_ctrl_tsg_added(struct gk20a *g, struct tsg_gk20a *tsg)
 	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 	int err;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	if (!sched->sw_ready) {
 		err = gk20a_busy(g);
@@ -560,7 +573,7 @@ void gk20a_sched_ctrl_tsg_removed(struct gk20a *g, struct tsg_gk20a *tsg)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	nvgpu_mutex_acquire(&sched->status_lock);
 	NVGPU_SCHED_CLR(tsg->tsgid, sched->active_tsg_bitmap);
@@ -592,7 +605,7 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 	sched->bitmap_size = roundup(f->num_channels, 64) / 8;
 	sched->status = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p sched=%p size=%zu",
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "g=%p sched=%p size=%zu",
 			g, sched, sched->bitmap_size);
 
 	sched->active_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);

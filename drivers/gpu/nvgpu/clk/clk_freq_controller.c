@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -321,7 +321,7 @@ u32 clk_freq_controller_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->clk_pmu.clk_freq_controllers.super.super;
 
@@ -330,7 +330,7 @@ u32 clk_freq_controller_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -343,7 +343,7 @@ static u32 _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_clk_clk_freq_controller_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -352,7 +352,7 @@ static u32 _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -392,7 +392,7 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 	u8 i;
 	u8 j;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pclk_freq_controllers = &g->clk_pmu.clk_freq_controllers;
 	status = boardobjgrpconstruct_e32(g, &pclk_freq_controllers->super);
@@ -447,6 +447,6 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 			freq_ctrl_load_mask.super, i);
 	}
 done:
-		gk20a_dbg_info(" done status %x", status);
+		nvgpu_log_info(g, " done status %x", status);
 		return status;
 }

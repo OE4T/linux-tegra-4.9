@@ -87,7 +87,7 @@ static void nvgpu_init_gr_vars(struct gk20a *g)
 {
 	gk20a_init_gr(g);
 
-	gk20a_dbg_info("total ram pages : %lu", totalram_pages);
+	nvgpu_log_info(g, "total ram pages : %lu", totalram_pages);
 	g->gr.max_comptag_mem = totalram_pages
 				 >> (10 - (PAGE_SHIFT - 10));
 }

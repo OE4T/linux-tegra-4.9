@@ -43,8 +43,8 @@
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
 /*Defines*/
-#define gp106_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gp106_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 typedef int (*get_ucode_details)(struct gk20a *g,
 		struct flcn_ucode_img_v1 *udata);
@@ -113,7 +113,7 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	struct lsf_ucode_desc_v1 *lsf_desc;
 	int err;
 
-	gp106_dbg_pmu("requesting PMU ucode in gp106\n");
+	gp106_dbg_pmu(g, "requesting PMU ucode in gp106\n");
 	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_fw) {
@@ -121,9 +121,9 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 		return -ENOENT;
 	}
 	g->acr.pmu_fw = pmu_fw;
-	gp106_dbg_pmu("Loaded PMU ucode in for blob preparation");
+	gp106_dbg_pmu(g, "Loaded PMU ucode in for blob preparation");
 
-	gp106_dbg_pmu("requesting PMU ucode desc in GM20B\n");
+	gp106_dbg_pmu(g, "requesting PMU ucode desc in GM20B\n");
 	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_desc) {
@@ -164,7 +164,7 @@ int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc_v1 *)lsf_desc;
-	gp106_dbg_pmu("requesting PMU ucode in GM20B exit\n");
+	gp106_dbg_pmu(g, "requesting PMU ucode in GM20B exit\n");
 
 	nvgpu_release_firmware(g, pmu_sig);
 	return 0;
@@ -262,7 +262,7 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc_v1 *)lsf_desc;
-	gp106_dbg_pmu("fecs fw loaded\n");
+	gp106_dbg_pmu(g, "fecs fw loaded\n");
 	nvgpu_release_firmware(g, fecs_sig);
 	return 0;
 free_lsf_desc:
@@ -358,7 +358,7 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc_v1 *)lsf_desc;
-	gp106_dbg_pmu("gpccs fw loaded\n");
+	gp106_dbg_pmu(g, "gpccs fw loaded\n");
 	nvgpu_release_firmware(g, gpccs_sig);
 	return 0;
 free_lsf_desc:
@@ -381,7 +381,7 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 		non WPR blob of ucodes*/
 		err = nvgpu_init_pmu_fw_support(pmu);
 		if (err) {
-			gp106_dbg_pmu("failed to set function pointers\n");
+			gp106_dbg_pmu(g, "failed to set function pointers\n");
 			return err;
 		}
 		return 0;
@@ -391,12 +391,12 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 	gr_gk20a_init_ctxsw_ucode(g);
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	gp106_dbg_pmu("wpr carveout base:%llx\n", (wpr_inf.wpr_base));
-	gp106_dbg_pmu("wpr carveout size :%x\n", (u32)wpr_inf.size);
+	gp106_dbg_pmu(g, "wpr carveout base:%llx\n", (wpr_inf.wpr_base));
+	gp106_dbg_pmu(g, "wpr carveout size :%x\n", (u32)wpr_inf.size);
 
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
-	gp106_dbg_pmu(" Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
+	gp106_dbg_pmu(g, " Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
 	if (err)
 		goto exit_err;
 
@@ -412,14 +412,14 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 		if (err)
 			goto exit_err;
 
-		gp106_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
+		gp106_dbg_pmu(g, "managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
 
 		lsfm_init_wpr_contents(g, plsfm, &g->acr.ucode_blob);
 	} else {
-		gp106_dbg_pmu("LSFM is managing no falcons.\n");
+		gp106_dbg_pmu(g, "LSFM is managing no falcons.\n");
 	}
-	gp106_dbg_pmu("prepare ucode blob return 0\n");
+	gp106_dbg_pmu(g, "prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
 
  exit_err:
@@ -465,14 +465,14 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 
 			plsfm->managed_flcn_cnt++;
 		} else {
-			gp106_dbg_pmu("id not managed %d\n",
+			gp106_dbg_pmu(g, "id not managed %d\n",
 				ucode_img.lsf_desc->falcon_id);
 		}
 	}
 
 	/*Free any ucode image resources if not managing this falcon*/
 	if (!(pmu->pmu_mode & PMU_LSFM_MANAGED)) {
-		gp106_dbg_pmu("pmu is not LSFM managed\n");
+		gp106_dbg_pmu(g, "pmu is not LSFM managed\n");
 		lsfm_free_ucode_img_res(g, &ucode_img);
 	}
 
@@ -503,7 +503,7 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 						== 0)
 						plsfm->managed_flcn_cnt++;
 				} else {
-					gp106_dbg_pmu("not managed %d\n",
+					gp106_dbg_pmu(g, "not managed %d\n",
 						ucode_img.lsf_desc->falcon_id);
 					lsfm_free_nonpmu_ucode_img_res(g,
 						&ucode_img);
@@ -511,7 +511,7 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 			}
 		} else {
 			/* Consumed all available falcon objects */
-			gp106_dbg_pmu("Done checking for ucodes %d\n", i);
+			gp106_dbg_pmu(g, "Done checking for ucodes %d\n", i);
 			break;
 		}
 	}
@@ -549,19 +549,19 @@ int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += (wpr_inf.wpr_base);
 
-	gp106_dbg_pmu("pmu loader cfg addrbase 0x%llx\n", addr_base);
+	gp106_dbg_pmu(g, "pmu loader cfg addrbase 0x%llx\n", addr_base);
 	/*From linux*/
 	addr_code = addr_base +
 				desc->app_start_offset +
 				desc->app_resident_code_offset;
-	gp106_dbg_pmu("app start %d app res code off %d\n",
+	gp106_dbg_pmu(g, "app start %d app res code off %d\n",
 		desc->app_start_offset, desc->app_resident_code_offset);
 	addr_data = addr_base +
 				desc->app_start_offset +
 				desc->app_resident_data_offset;
-	gp106_dbg_pmu("app res data offset%d\n",
+	gp106_dbg_pmu(g, "app res data offset%d\n",
 		desc->app_resident_data_offset);
-	gp106_dbg_pmu("bl start off %d\n", desc->bootloader_start_offset);
+	gp106_dbg_pmu(g, "bl start off %d\n", desc->bootloader_start_offset);
 
 	addr_args = ((pwr_falcon_hwcfg_dmem_size_v(
 			gk20a_readl(g, pwr_falcon_hwcfg_r())))
@@ -569,7 +569,7 @@ int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 
 	addr_args -= g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu);
 
-	gp106_dbg_pmu("addr_args %x\n", addr_args);
+	gp106_dbg_pmu(g, "addr_args %x\n", addr_args);
 
 	/* Populate the LOADER_CONFIG state */
 	memset((void *) ldr_cfg, 0, sizeof(struct flcn_bl_dmem_desc_v1));
@@ -621,8 +621,8 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
 
-	gp106_dbg_pmu("falcon ID %x", p_lsfm->wpr_header.falcon_id);
-	gp106_dbg_pmu("gen loader cfg addrbase %llx ", addr_base);
+	gp106_dbg_pmu(g, "falcon ID %x", p_lsfm->wpr_header.falcon_id);
+	gp106_dbg_pmu(g, "gen loader cfg addrbase %llx ", addr_base);
 	addr_code = addr_base +
 				desc->app_start_offset +
 				desc->app_resident_code_offset;
@@ -630,7 +630,7 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 				desc->app_start_offset +
 				desc->app_resident_data_offset;
 
-	gp106_dbg_pmu("gen cfg addrcode %llx data %llx load offset %x",
+	gp106_dbg_pmu(g, "gen cfg addrcode %llx data %llx load offset %x",
 			addr_code, addr_data, desc->bootloader_start_offset);
 
 	/* Populate the LOADER_CONFIG state */
@@ -653,7 +653,7 @@ int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 	struct nvgpu_pmu *pmu = &g->pmu;
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
-		gp106_dbg_pmu("non pmu. write flcn bl gen desc\n");
+		gp106_dbg_pmu(g, "non pmu. write flcn bl gen desc\n");
 		g->ops.pmu.flcn_populate_bl_dmem_desc(g,
 				pnode, &pnode->bl_gen_desc_size,
 					pnode->wpr_header.falcon_id);
@@ -661,7 +661,7 @@ int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 	}
 
 	if (pmu->pmu_mode & PMU_LSFM_MANAGED) {
-		gp106_dbg_pmu("pmu write flcn bl gen desc\n");
+		gp106_dbg_pmu(g, "pmu write flcn bl gen desc\n");
 		if (pnode->wpr_header.falcon_id == pmu->falcon_id)
 			return g->ops.pmu.pmu_populate_loader_cfg(g, pnode,
 				&pnode->bl_gen_desc_size);
@@ -694,46 +694,46 @@ void lsfm_init_wpr_contents(struct gk20a *g,
 		nvgpu_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
 				&pnode->wpr_header, sizeof(pnode->wpr_header));
 
-		gp106_dbg_pmu("wpr header");
-		gp106_dbg_pmu("falconid :%d",
+		gp106_dbg_pmu(g, "wpr header");
+		gp106_dbg_pmu(g, "falconid :%d",
 				pnode->wpr_header.falcon_id);
-		gp106_dbg_pmu("lsb_offset :%x",
+		gp106_dbg_pmu(g, "lsb_offset :%x",
 				pnode->wpr_header.lsb_offset);
-		gp106_dbg_pmu("bootstrap_owner :%d",
+		gp106_dbg_pmu(g, "bootstrap_owner :%d",
 			pnode->wpr_header.bootstrap_owner);
-		gp106_dbg_pmu("lazy_bootstrap :%d",
+		gp106_dbg_pmu(g, "lazy_bootstrap :%d",
 				pnode->wpr_header.lazy_bootstrap);
-		gp106_dbg_pmu("status :%d",
+		gp106_dbg_pmu(g, "status :%d",
 				pnode->wpr_header.status);
 
 		/*Flush LSB header to memory*/
 		nvgpu_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
 				&pnode->lsb_header, sizeof(pnode->lsb_header));
 
-		gp106_dbg_pmu("lsb header");
-		gp106_dbg_pmu("ucode_off :%x",
+		gp106_dbg_pmu(g, "lsb header");
+		gp106_dbg_pmu(g, "ucode_off :%x",
 				pnode->lsb_header.ucode_off);
-		gp106_dbg_pmu("ucode_size :%x",
+		gp106_dbg_pmu(g, "ucode_size :%x",
 				pnode->lsb_header.ucode_size);
-		gp106_dbg_pmu("data_size :%x",
+		gp106_dbg_pmu(g, "data_size :%x",
 				pnode->lsb_header.data_size);
-		gp106_dbg_pmu("bl_code_size :%x",
+		gp106_dbg_pmu(g, "bl_code_size :%x",
 				pnode->lsb_header.bl_code_size);
-		gp106_dbg_pmu("bl_imem_off :%x",
+		gp106_dbg_pmu(g, "bl_imem_off :%x",
 				pnode->lsb_header.bl_imem_off);
-		gp106_dbg_pmu("bl_data_off :%x",
+		gp106_dbg_pmu(g, "bl_data_off :%x",
 				pnode->lsb_header.bl_data_off);
-		gp106_dbg_pmu("bl_data_size :%x",
+		gp106_dbg_pmu(g, "bl_data_size :%x",
 				pnode->lsb_header.bl_data_size);
-		gp106_dbg_pmu("app_code_off :%x",
+		gp106_dbg_pmu(g, "app_code_off :%x",
 				pnode->lsb_header.app_code_off);
-		gp106_dbg_pmu("app_code_size :%x",
+		gp106_dbg_pmu(g, "app_code_size :%x",
 				pnode->lsb_header.app_code_size);
-		gp106_dbg_pmu("app_data_off :%x",
+		gp106_dbg_pmu(g, "app_data_off :%x",
 				pnode->lsb_header.app_data_off);
-		gp106_dbg_pmu("app_data_size :%x",
+		gp106_dbg_pmu(g, "app_data_size :%x",
 				pnode->lsb_header.app_data_size);
-		gp106_dbg_pmu("flags :%x",
+		gp106_dbg_pmu(g, "flags :%x",
 				pnode->lsb_header.flags);
 
 		/*If this falcon has a boot loader and related args,
@@ -1049,7 +1049,7 @@ int gp106_bootstrap_hs_flcn(struct gk20a *g)
 	u32 *acr_ucode_data_t210_load;
 	struct wpr_carveout_info wpr_inf;
 
-	gp106_dbg_pmu("");
+	gp106_dbg_pmu(g, " ");
 
 	if (!acr_fw) {
 		/*First time init case*/

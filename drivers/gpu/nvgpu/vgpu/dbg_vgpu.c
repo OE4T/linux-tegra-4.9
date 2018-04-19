@@ -42,8 +42,9 @@ int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 	size_t oob_size, ops_size;
 	void *handle = NULL;
 	int err = 0;
+	struct gk20a *g = dbg_s->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	BUG_ON(sizeof(*ops) != sizeof(struct tegra_vgpu_reg_op));
 
 	handle = vgpu_ivc_oob_get_ptr(vgpu_ivc_get_server_vmid(),
@@ -82,8 +83,9 @@ int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powerga
 	struct tegra_vgpu_set_powergate_params *p = &msg.params.set_powergate;
 	int err = 0;
 	u32 mode;
+	struct gk20a *g = dbg_s->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* Just return if requested mode is the same as the session's mode */
 	if (disable_powergate) {

@@ -33,7 +33,7 @@ static unsigned long vgpu_clk_get_rate(struct gk20a *g, u32 api_domain)
 	int err;
 	unsigned long ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	switch (api_domain) {
 	case CTRL_CLK_DOMAIN_GPCCLK:
@@ -65,7 +65,7 @@ static int vgpu_clk_set_rate(struct gk20a *g,
 	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	int err = -EINVAL;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	switch (api_domain) {
 	case CTRL_CLK_DOMAIN_GPCCLK:
@@ -121,7 +121,7 @@ int vgpu_clk_get_freqs(struct device *dev,
 	unsigned int i;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_GET_GPU_FREQ_TABLE;
 	msg.handle = vgpu_get_handle(g);
@@ -152,7 +152,7 @@ int vgpu_clk_cap_rate(struct device *dev, unsigned long rate)
 	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CAP_GPU_CLK_RATE;
 	msg.handle = vgpu_get_handle(g);

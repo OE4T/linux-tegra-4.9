@@ -296,7 +296,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 		struct pci_ext_data_struct *pci_ext_data;
 
 		pci_rom = (struct pci_exp_rom *)&g->bios.data[offset];
-		gk20a_dbg_fn("pci rom sig %04x ptr %04x block %x",
+		nvgpu_log_fn(g, "pci rom sig %04x ptr %04x block %x",
 				pci_rom->sig, pci_rom->pci_data_struct_ptr,
 				pci_rom->size_of_block);
 
@@ -309,7 +309,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 		pci_data =
 			(struct pci_data_struct *)
 			&g->bios.data[offset + pci_rom->pci_data_struct_ptr];
-		gk20a_dbg_fn("pci data sig %08x len %d image len %x type %x last %d max %08x",
+		nvgpu_log_fn(g, "pci data sig %08x len %d image len %x type %x last %d max %08x",
 				pci_data->sig, pci_data->pci_data_struct_len,
 				pci_data->image_len, pci_data->code_type,
 				pci_data->last_image,
@@ -322,7 +322,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 					       pci_data->pci_data_struct_len +
 					       0xf)
 					      & ~0xf];
-			gk20a_dbg_fn("pci ext data sig %08x rev %x len %x sub_image_len %x priv_last %d flags %x",
+			nvgpu_log_fn(g, "pci ext data sig %08x rev %x len %x sub_image_len %x priv_last %d flags %x",
 					pci_ext_data->sig,
 					pci_ext_data->nv_pci_data_ext_rev,
 					pci_ext_data->nv_pci_data_ext_len,
@@ -330,7 +330,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 					pci_ext_data->priv_last_image,
 					pci_ext_data->flags);
 
-			gk20a_dbg_fn("expansion rom offset %x",
+			nvgpu_log_fn(g, "expansion rom offset %x",
 					pci_data->image_len * 512);
 			g->bios.expansion_rom_offset =
 				pci_data->image_len * 512;
@@ -342,7 +342,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_info("read bios");
+	nvgpu_log_info(g, "read bios");
 	for (i = 0; i < g->bios.size - 6; i++) {
 		if (nvgpu_bios_rdu16(g, i) == BIT_HEADER_ID &&
 		    nvgpu_bios_rdu32(g, i+2) ==  BIT_HEADER_SIGNATURE) {
@@ -362,7 +362,7 @@ static void nvgpu_bios_parse_biosdata(struct gk20a *g, int offset)
 	struct biosdata biosdata;
 
 	memcpy(&biosdata, &g->bios.data[offset], sizeof(biosdata));
-	gk20a_dbg_fn("bios version %x, oem version %x",
+	nvgpu_log_fn(g, "bios version %x, oem version %x",
 			biosdata.version,
 			biosdata.oem_version);
 
@@ -375,9 +375,9 @@ static void nvgpu_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
 	struct nvinit_ptrs nvinit_ptrs;
 
 	memcpy(&nvinit_ptrs, &g->bios.data[offset], sizeof(nvinit_ptrs));
-	gk20a_dbg_fn("devinit ptr %x size %d", nvinit_ptrs.devinit_tables_ptr,
+	nvgpu_log_fn(g, "devinit ptr %x size %d", nvinit_ptrs.devinit_tables_ptr,
 			nvinit_ptrs.devinit_tables_size);
-	gk20a_dbg_fn("bootscripts ptr %x size %d", nvinit_ptrs.bootscripts_ptr,
+	nvgpu_log_fn(g, "bootscripts ptr %x size %d", nvinit_ptrs.bootscripts_ptr,
 			nvinit_ptrs.bootscripts_size);
 
 	g->bios.devinit_tables = &g->bios.data[nvinit_ptrs.devinit_tables_ptr];
@@ -449,7 +449,7 @@ static void nvgpu_bios_parse_devinit_appinfo(struct gk20a *g, int dmem_offset)
 	struct devinit_engine_interface interface;
 
 	memcpy(&interface, &g->bios.devinit.dmem[dmem_offset], sizeof(interface));
-	gk20a_dbg_fn("devinit version %x tables phys %x script phys %x size %d",
+	nvgpu_log_fn(g, "devinit version %x tables phys %x script phys %x size %d",
 			interface.version,
 			interface.tables_phys_base,
 			interface.script_phys_base,
@@ -468,7 +468,7 @@ static int nvgpu_bios_parse_appinfo_table(struct gk20a *g, int offset)
 
 	memcpy(&hdr, &g->bios.data[offset], sizeof(hdr));
 
-	gk20a_dbg_fn("appInfoHdr ver %d size %d entrySize %d entryCount %d",
+	nvgpu_log_fn(g, "appInfoHdr ver %d size %d entrySize %d entryCount %d",
 			hdr.version, hdr.header_size,
 			hdr.entry_size, hdr.entry_count);
 
@@ -481,7 +481,7 @@ static int nvgpu_bios_parse_appinfo_table(struct gk20a *g, int offset)
 
 		memcpy(&entry, &g->bios.data[offset], sizeof(entry));
 
-		gk20a_dbg_fn("appInfo id %d dmem_offset %d",
+		nvgpu_log_fn(g, "appInfo id %d dmem_offset %d",
 				entry.id, entry.dmem_offset);
 
 		if (entry.id == APPINFO_ID_DEVINIT)
@@ -530,26 +530,26 @@ static int nvgpu_bios_parse_falcon_ucode_desc(struct gk20a *g,
 		memcpy(&desc, &udesc, sizeof(udesc.v2));
 		break;
 	default:
-		gk20a_dbg_info("invalid version");
+		nvgpu_log_info(g, "invalid version");
 		return -EINVAL;
 	}
 
-	gk20a_dbg_info("falcon ucode desc version %x len %x", version, desc_size);
+	nvgpu_log_info(g, "falcon ucode desc version %x len %x", version, desc_size);
 
-	gk20a_dbg_info("falcon ucode desc stored size %x uncompressed size %x",
+	nvgpu_log_info(g, "falcon ucode desc stored size %x uncompressed size %x",
 			desc.stored_size, desc.uncompressed_size);
-	gk20a_dbg_info("falcon ucode desc virtualEntry %x, interfaceOffset %x",
+	nvgpu_log_info(g, "falcon ucode desc virtualEntry %x, interfaceOffset %x",
 			desc.virtual_entry, desc.interface_offset);
-	gk20a_dbg_info("falcon ucode IMEM phys base %x, load size %x virt base %x sec base %x sec size %x",
+	nvgpu_log_info(g, "falcon ucode IMEM phys base %x, load size %x virt base %x sec base %x sec size %x",
 			desc.imem_phys_base, desc.imem_load_size,
 			desc.imem_virt_base, desc.imem_sec_base,
 			desc.imem_sec_size);
-	gk20a_dbg_info("falcon ucode DMEM offset %x phys base %x, load size %x",
+	nvgpu_log_info(g, "falcon ucode DMEM offset %x phys base %x, load size %x",
 			desc.dmem_offset, desc.dmem_phys_base,
 			desc.dmem_load_size);
 
 	if (desc.stored_size != desc.uncompressed_size) {
-		gk20a_dbg_info("does not match");
+		nvgpu_log_info(g, "does not match");
 		return -EINVAL;
 	}
 
@@ -575,7 +575,7 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 	int i;
 
 	memcpy(&hdr, &g->bios.data[offset], sizeof(hdr));
-	gk20a_dbg_fn("falcon ucode table ver %d size %d entrySize %d entryCount %d descVer %d descSize %d",
+	nvgpu_log_fn(g, "falcon ucode table ver %d size %d entrySize %d entryCount %d descVer %d descSize %d",
 			hdr.version, hdr.header_size,
 			hdr.entry_size, hdr.entry_count,
 			hdr.desc_version, hdr.desc_size);
@@ -590,7 +590,7 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 
 		memcpy(&entry, &g->bios.data[offset], sizeof(entry));
 
-		gk20a_dbg_fn("falcon ucode table entry appid %x targetId %x descPtr %x",
+		nvgpu_log_fn(g, "falcon ucode table entry appid %x targetId %x descPtr %x",
 				entry.application_id, entry.target_id,
 				entry.desc_ptr);
 
@@ -638,7 +638,7 @@ static void nvgpu_bios_parse_falcon_data_v2(struct gk20a *g, int offset)
 	int err;
 
 	memcpy(&falcon_data, &g->bios.data[offset], sizeof(falcon_data));
-	gk20a_dbg_fn("falcon ucode table ptr %x",
+	nvgpu_log_fn(g, "falcon ucode table ptr %x",
 			falcon_data.falcon_ucode_table_ptr);
 	err = nvgpu_bios_parse_falcon_ucode_table(g,
 			falcon_data.falcon_ucode_table_ptr);
@@ -676,7 +676,7 @@ void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
 
 	if (table_id < (ptoken->data_size/data_size)) {
 
-		gk20a_dbg_info("Perf_Tbl_ID-offset 0x%x Tbl_ID_Ptr-offset- 0x%x",
+		nvgpu_log_info(g, "Perf_Tbl_ID-offset 0x%x Tbl_ID_Ptr-offset- 0x%x",
 					(ptoken->data_ptr +
 					(table_id * data_size)),
 					perf_table_id_offset);
@@ -705,18 +705,18 @@ static void nvgpu_bios_parse_bit(struct gk20a *g, int offset)
 	struct bit_token bit_token;
 	int i;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	memcpy(&bit, &g->bios.data[offset], sizeof(bit));
 
-	gk20a_dbg_info("BIT header: %04x %08x", bit.id, bit.signature);
-	gk20a_dbg_info("tokens: %d entries * %d bytes",
+	nvgpu_log_info(g, "BIT header: %04x %08x", bit.id, bit.signature);
+	nvgpu_log_info(g, "tokens: %d entries * %d bytes",
 			bit.token_entries, bit.token_size);
 
 	offset += bit.header_size;
 	for (i = 0; i < bit.token_entries; i++) {
 		memcpy(&bit_token, &g->bios.data[offset], sizeof(bit_token));
 
-		gk20a_dbg_info("BIT token id %d ptr %d size %d ver %d",
+		nvgpu_log_info(g, "BIT token id %d ptr %d size %d ver %d",
 				bit_token.token_id, bit_token.data_ptr,
 				bit_token.data_size, bit_token.data_version);
 
@@ -753,7 +753,7 @@ static void nvgpu_bios_parse_bit(struct gk20a *g, int offset)
 
 		offset += bit.token_size;
 	}
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 static u32 __nvgpu_bios_readbyte(struct gk20a *g, u32 offset)

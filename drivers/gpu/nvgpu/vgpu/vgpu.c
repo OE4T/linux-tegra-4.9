@@ -249,7 +249,7 @@ void vgpu_detect_chip(struct gk20a *g)
 	p->gpu_impl = priv->constants.impl;
 	p->gpu_rev = priv->constants.rev;
 
-	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
+	nvgpu_log_info(g, "arch: %x, impl: %x, rev: %x\n",
 			p->gpu_arch,
 			p->gpu_impl,
 			p->gpu_rev);
@@ -259,7 +259,7 @@ int vgpu_init_gpu_characteristics(struct gk20a *g)
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_init_gpu_characteristics(g);
 	if (err)
@@ -279,7 +279,7 @@ int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 	struct tegra_vgpu_read_ptimer_params *p = &msg.params.read_ptimer;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_READ_PTIMER;
 	msg.handle = vgpu_get_handle(g);
@@ -304,7 +304,7 @@ int vgpu_get_timestamps_zipper(struct gk20a *g,
 	int err;
 	u32 i;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (count > TEGRA_VGPU_GET_TIMESTAMPS_ZIPPER_MAX_COUNT) {
 		nvgpu_err(g, "count %u overflow", count);
@@ -338,7 +338,7 @@ int vgpu_init_hal(struct gk20a *g)
 
 	switch (ver) {
 	case NVGPU_GPUID_GP10B:
-		gk20a_dbg_info("gp10b detected");
+		nvgpu_log_info(g, "gp10b detected");
 		err = vgpu_gp10b_init_hal(g);
 		break;
 	case NVGPU_GPUID_GV11B:
@@ -360,7 +360,7 @@ int vgpu_get_constants(struct gk20a *g)
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_GET_CONSTANTS;
 	msg.handle = vgpu_get_handle(g);

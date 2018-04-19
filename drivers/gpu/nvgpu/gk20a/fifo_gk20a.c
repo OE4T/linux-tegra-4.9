@@ -94,7 +94,7 @@ u32 gk20a_fifo_get_engine_ids(struct gk20a *g,
 					engine_id[instance_cnt] = active_engine_id;
 					++instance_cnt;
 				} else {
-					gk20a_dbg_info("warning engine_id table sz is small %d",
+					nvgpu_log_info(g, "warning engine_id table sz is small %d",
 							engine_id_sz);
 				}
 			}
@@ -320,7 +320,7 @@ int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 {
 	int ret = ENGINE_INVAL_GK20A;
 
-	gk20a_dbg_info("engine type %d", engine_type);
+	nvgpu_log_info(g, "engine type %d", engine_type);
 	if (engine_type == top_device_info_type_enum_graphics_v())
 		ret = ENGINE_GR_GK20A;
 	else if ((engine_type >= top_device_info_type_enum_copy0_v()) &&
@@ -354,7 +354,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 	u32 gr_runlist_id = ~0;
 	bool found_pbdma_for_runlist = false;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	f->num_engines = 0;
 
@@ -367,7 +367,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 			if (top_device_info_engine_v(table_entry)) {
 				engine_id =
 					top_device_info_engine_enum_v(table_entry);
-				gk20a_dbg_info("info: engine_id %d",
+				nvgpu_log_info(g, "info: engine_id %d",
 					top_device_info_engine_enum_v(table_entry));
 			}
 
@@ -375,7 +375,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 			if (top_device_info_runlist_v(table_entry)) {
 				runlist_id =
 					top_device_info_runlist_enum_v(table_entry);
-				gk20a_dbg_info("gr info: runlist_id %d", runlist_id);
+				nvgpu_log_info(g, "gr info: runlist_id %d", runlist_id);
 
 				runlist_bit = BIT(runlist_id);
 
@@ -384,7 +384,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 								pbdma_id++) {
 					if (f->pbdma_map[pbdma_id] &
 								runlist_bit) {
-						gk20a_dbg_info(
+						nvgpu_log_info(g,
 						"gr info: pbdma_map[%d]=%d",
 							pbdma_id,
 							f->pbdma_map[pbdma_id]);
@@ -402,13 +402,13 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 			if (top_device_info_intr_v(table_entry)) {
 				intr_id =
 					top_device_info_intr_enum_v(table_entry);
-				gk20a_dbg_info("gr info: intr_id %d", intr_id);
+				nvgpu_log_info(g, "gr info: intr_id %d", intr_id);
 			}
 
 			if (top_device_info_reset_v(table_entry)) {
 				reset_id =
 					top_device_info_reset_enum_v(table_entry);
-				gk20a_dbg_info("gr info: reset_id %d",
+				nvgpu_log_info(g, "gr info: reset_id %d",
 						reset_id);
 			}
 		} else if (entry == top_device_info_entry_engine_type_v()) {
@@ -538,7 +538,7 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	struct gk20a *g = f->g;
 	unsigned int i = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_channel_worker_deinit(g);
 	/*
@@ -616,7 +616,7 @@ static void fifo_pbdma_exception_status(struct gk20a *g,
 	get_exception_pbdma_info(g, eng_info);
 	e = &eng_info->pbdma_exception_info;
 
-	gk20a_dbg_fn("pbdma_id %d, "
+	nvgpu_log_fn(g, "pbdma_id %d, "
 		      "id_type %s, id %d, chan_status %d, "
 		      "next_id_type %s, next_id %d, "
 		      "chsw_in_progress %d",
@@ -657,7 +657,7 @@ static void fifo_engine_exception_status(struct gk20a *g,
 	get_exception_engine_info(g, eng_info);
 	e = &eng_info->engine_exception_info;
 
-	gk20a_dbg_fn("engine_id %d, id_type %s, id %d, ctx_status %d, "
+	nvgpu_log_fn(g, "engine_id %d, id_type %s, id %d, ctx_status %d, "
 		      "faulted %d, idle %d, ctxsw_in_progress %d, ",
 		      eng_info->engine_id, e->id_is_chid ? "chid" : "tsgid",
 		      e->id, e->ctx_status_v,
@@ -745,7 +745,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 
 clean_up_runlist:
 	gk20a_fifo_delete_runlist(f);
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	return -ENOMEM;
 }
 
@@ -784,7 +784,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	unsigned int i;
 	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* enable pmc pfifo */
 	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
@@ -805,7 +805,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
 	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
 			fifo_fb_timeout_period_max_f());
-	gk20a_dbg_info("fifo_fb_timeout reg val = 0x%08x", timeout);
+	nvgpu_log_info(g, "fifo_fb_timeout reg val = 0x%08x", timeout);
 	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
 
 	/* write pbdma timeout value */
@@ -813,7 +813,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		timeout = gk20a_readl(g, pbdma_timeout_r(i));
 		timeout = set_field(timeout, pbdma_timeout_period_m(),
 				    pbdma_timeout_period_max_f());
-		gk20a_dbg_info("pbdma_timeout reg val = 0x%08x", timeout);
+		nvgpu_log_info(g, "pbdma_timeout reg val = 0x%08x", timeout);
 		gk20a_writel(g, pbdma_timeout_r(i), timeout);
 	}
 	if (g->ops.fifo.apply_pb_timeout)
@@ -837,10 +837,10 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
 		intr_stall &= ~pbdma_intr_stall_lbreq_enabled_f();
 		gk20a_writel(g, pbdma_intr_stall_r(i), intr_stall);
-		gk20a_dbg_info("pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
+		nvgpu_log_info(g, "pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
 		gk20a_writel(g, pbdma_intr_en_0_r(i), intr_stall);
 
-		gk20a_dbg_info("pbdma id:%u, intr_en_1 0x%08x", i,
+		nvgpu_log_info(g, "pbdma id:%u, intr_en_1 0x%08x", i,
 				 ~pbdma_intr_en_0_lbreq_enabled_f());
 		gk20a_writel(g, pbdma_intr_en_1_r(i),
 			~pbdma_intr_en_0_lbreq_enabled_f());
@@ -852,12 +852,12 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* clear and enable pfifo interrupt */
 	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
 	mask = gk20a_fifo_intr_0_en_mask(g);
-	gk20a_dbg_info("fifo_intr_en_0 0x%08x", mask);
+	nvgpu_log_info(g, "fifo_intr_en_0 0x%08x", mask);
 	gk20a_writel(g, fifo_intr_en_0_r(), mask);
-	gk20a_dbg_info("fifo_intr_en_1 = 0x80000000");
+	nvgpu_log_info(g, "fifo_intr_en_1 = 0x80000000");
 	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -868,7 +868,7 @@ int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 	unsigned int chid, i;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	f->g = g;
 
@@ -945,7 +945,7 @@ int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 		goto clean_up;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up:
@@ -972,10 +972,10 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	u64 userd_base;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (f->sw_ready) {
-		gk20a_dbg_fn("skip init");
+		nvgpu_log_fn(g, "skip init");
 		return 0;
 	}
 
@@ -997,7 +997,7 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		nvgpu_err(g, "userd memory allocation failed");
 		goto clean_up;
 	}
-	gk20a_dbg(gpu_dbg_map, "userd gpu va = 0x%llx", f->userd.gpu_va);
+	nvgpu_log(g, gpu_dbg_map, "userd gpu va = 0x%llx", f->userd.gpu_va);
 
 	userd_base = nvgpu_mem_get_addr(g, &f->userd);
 	for (chid = 0; chid < f->num_channels; chid++) {
@@ -1013,11 +1013,11 @@ int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->sw_ready = true;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up:
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	if (nvgpu_mem_is_valid(&f->userd)) {
 		if (g->ops.mm.is_bar1_supported(g))
 			nvgpu_dma_unmap_free(g->mm.bar1.vm, &f->userd);
@@ -1032,7 +1032,7 @@ void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 {
 	u32 runlist_event = gk20a_readl(g, fifo_intr_runlist_r());
 
-	gk20a_dbg(gpu_dbg_intr, "runlist event %08x",
+	nvgpu_log(g, gpu_dbg_intr, "runlist event %08x",
 		  runlist_event);
 
 	gk20a_writel(g, fifo_intr_runlist_r(), runlist_event);
@@ -1042,7 +1042,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* test write, read through bar1 @ userd region before
 	 * turning on the snooping */
@@ -1053,7 +1053,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g)
 		u32 bar1_vaddr = f->userd.gpu_va;
 		volatile u32 *cpu_vaddr = f->userd.cpu_va;
 
-		gk20a_dbg_info("test bar1 @ vaddr 0x%x",
+		nvgpu_log_info(g, "test bar1 @ vaddr 0x%x",
 			   bar1_vaddr);
 
 		v = gk20a_bar1_readl(g, bar1_vaddr);
@@ -1093,7 +1093,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g)
 			fifo_bar1_base_ptr_f(f->userd.gpu_va >> 12) |
 			fifo_bar1_base_valid_true_f());
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -1261,7 +1261,7 @@ void gk20a_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	u32 fault_info;
 	u32 addr_lo, addr_hi;
 
-	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
+	nvgpu_log_fn(g, "mmu_fault_id %d", mmu_fault_id);
 
 	memset(mmfault, 0, sizeof(*mmfault));
 
@@ -1291,7 +1291,7 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	u32 engine_enum = ENGINE_INVAL_GK20A;
 	struct fifo_engine_info_gk20a *engine_info;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!g)
 		return;
@@ -1489,7 +1489,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 	struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 	struct channel_gk20a *ch;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.fifo.disable_tsg(tsg);
 
@@ -1556,7 +1556,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 	bool verbose = true;
 	u32 grfifo_ctl;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->fifo.deferred_reset_pending = false;
 
@@ -1693,7 +1693,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 				/* handled during channel free */
 				g->fifo.deferred_reset_pending = true;
-				gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 					   "sm debugger attached,"
 					   " deferring channel recovery to channel free");
 			} else {
@@ -2196,6 +2196,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	struct channel_gk20a *ch;
 	bool recover = false;
 	bool progress = false;
+	struct gk20a *g = tsg->g;
 
 	*verbose = false;
 	*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
@@ -2221,7 +2222,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	 * this resets timeout for channels that already completed their work
 	 */
 	if (progress) {
-		gk20a_dbg_info("progress on tsg=%d ch=%d",
+		nvgpu_log_info(g, "progress on tsg=%d ch=%d",
 				tsg->tsgid, ch->chid);
 		gk20a_channel_put(ch);
 		*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
@@ -2239,7 +2240,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	 * caused the problem, so set timeout error notifier for all channels.
 	 */
 	if (recover) {
-		gk20a_dbg_info("timeout on tsg=%d ch=%d",
+		nvgpu_log_info(g, "timeout on tsg=%d ch=%d",
 				tsg->tsgid, ch->chid);
 		*ms = ch->timeout_accumulated_ms;
 		gk20a_channel_put(ch);
@@ -2311,7 +2312,7 @@ bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 					is_tsg, true, verbose,
 					RC_TYPE_CTXSW_TIMEOUT);
 		} else {
-			gk20a_dbg_info(
+			nvgpu_log_info(g,
 				"fifo is waiting for ctx switch for %d ms, "
 				"%s=%d", ms, is_tsg ? "tsg" : "ch", id);
 		}
@@ -2330,7 +2331,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	bool print_channel_reset_log = false;
 	u32 handled = 0;
 
-	gk20a_dbg_fn("fifo_intr=0x%08x", fifo_intr);
+	nvgpu_log_fn(g, "fifo_intr=0x%08x", fifo_intr);
 
 	if (fifo_intr & fifo_intr_0_pio_error_pending_f()) {
 		/* pio mode is unused.  this shouldn't happen, ever. */
@@ -2381,7 +2382,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 		     engine_id++) {
 				u32 active_engine_id = g->fifo.active_engines_list[engine_id];
 				u32 engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
-				gk20a_dbg_fn("enum:%d -> engine_id:%d", engine_enum,
+				nvgpu_log_fn(g, "enum:%d -> engine_id:%d", engine_enum,
 					active_engine_id);
 				fifo_pbdma_exception_status(g,
 						&g->fifo.engine_info[active_engine_id]);
@@ -2632,7 +2633,7 @@ static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 
 	for (i = 0; i < host_num_pbdma; i++) {
 		if (fifo_intr_pbdma_id_status_v(pbdma_pending, i)) {
-			gk20a_dbg(gpu_dbg_intr, "pbdma id %d intr pending", i);
+			nvgpu_log(g, gpu_dbg_intr, "pbdma id %d intr pending", i);
 			clear_intr |=
 				gk20a_fifo_handle_pbdma_intr(g, f, i, RC_YES);
 		}
@@ -2653,7 +2654,7 @@ void gk20a_fifo_isr(struct gk20a *g)
 		 * in a threaded interrupt context... */
 		nvgpu_mutex_acquire(&g->fifo.intr.isr.mutex);
 
-		gk20a_dbg(gpu_dbg_intr, "fifo isr %08x\n", fifo_intr);
+		nvgpu_log(g, gpu_dbg_intr, "fifo isr %08x\n", fifo_intr);
 
 		/* handle runlist update */
 		if (fifo_intr & fifo_intr_0_runlist_event_pending_f()) {
@@ -2681,7 +2682,7 @@ int gk20a_fifo_nonstall_isr(struct gk20a *g)
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
 	u32 clear_intr = 0;
 
-	gk20a_dbg(gpu_dbg_intr, "fifo nonstall isr %08x\n", fifo_intr);
+	nvgpu_log(g, gpu_dbg_intr, "fifo nonstall isr %08x\n", fifo_intr);
 
 	if (fifo_intr & fifo_intr_0_channel_intr_pending_f())
 		clear_intr = fifo_intr_0_channel_intr_pending_f();
@@ -2769,7 +2770,7 @@ int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	int ret;
 	unsigned int id_type;
 
-	gk20a_dbg_fn("%d", id);
+	nvgpu_log_fn(g, "%d", id);
 
 	/* issue preempt */
 	gk20a_fifo_issue_preempt(g, id, is_tsg);
@@ -2794,7 +2795,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	gk20a_dbg_fn("%d", chid);
+	nvgpu_log_fn(g, "%d", chid);
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++)
@@ -2821,7 +2822,7 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	gk20a_dbg_fn("%d", tsgid);
+	nvgpu_log_fn(g, "%d", tsgid);
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++)
@@ -2938,7 +2939,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	u32 mutex_ret;
 	u32 err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gr_stat =
 		gk20a_readl(g, fifo_engine_status_r(eng_info->engine_id));
@@ -2988,12 +2989,12 @@ clean_up:
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	if (err) {
-		gk20a_dbg_fn("failed");
+		nvgpu_log_fn(g, "failed");
 		if (gk20a_fifo_enable_engine_activity(g, eng_info))
 			nvgpu_err(g,
 				"failed to enable gr engine activity");
 	} else {
-		gk20a_dbg_fn("done");
+		nvgpu_log_fn(g, "done");
 	}
 	return err;
 }
@@ -3129,8 +3130,9 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 	bool skip_next = false;
 	u32 tsgid, count = 0;
 	u32 runlist_entry_words = f->runlist_entry_size / sizeof(u32);
+	struct gk20a *g = f->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* for each TSG, T, on this level, insert all higher-level channels
 	   and TSGs before inserting T. */
@@ -3156,9 +3158,9 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 			return NULL;
 
 		/* add TSG entry */
-		gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
+		nvgpu_log_info(g, "add TSG %d to runlist", tsg->tsgid);
 		f->g->ops.fifo.get_tsg_runlist_entry(tsg, runlist_entry);
-		gk20a_dbg_info("tsg runlist count %d runlist [0] %x [1] %x\n",
+		nvgpu_log_info(g, "tsg runlist count %d runlist [0] %x [1] %x\n",
 				count, runlist_entry[0], runlist_entry[1]);
 		runlist_entry += runlist_entry_words;
 		count++;
@@ -3177,10 +3179,10 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				return NULL;
 			}
 
-			gk20a_dbg_info("add channel %d to runlist",
+			nvgpu_log_info(g, "add channel %d to runlist",
 				ch->chid);
 			f->g->ops.fifo.get_ch_runlist_entry(ch, runlist_entry);
-			gk20a_dbg_info(
+			nvgpu_log_info(g,
 				"run list count %d runlist [0] %x [1] %x\n",
 				count, runlist_entry[0], runlist_entry[1]);
 			count++;
@@ -3222,7 +3224,7 @@ int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 				u32 runlist_id,
 				u32 new_level)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->fifo.tsg[id].interleave_level = new_level;
 
@@ -3313,7 +3315,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	runlist_iova = nvgpu_mem_get_addr(g, &runlist->mem[new_buf]);
 
-	gk20a_dbg_info("runlist_id : %d, switch to new buffer 0x%16llx",
+	nvgpu_log_info(g, "runlist_id : %d, switch to new buffer 0x%16llx",
 		runlist_id, (u64)runlist_iova);
 
 	if (!runlist_iova) {
@@ -3445,7 +3447,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 chid,
 	u32 mutex_ret;
 	u32 ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	runlist = &f->runlist_info[runlist_id];
 
@@ -3465,7 +3467,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 chid,
 
 int gk20a_fifo_suspend(struct gk20a *g)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* stop bar1 snooping */
 	if (g->ops.mm.is_bar1_supported(g))
@@ -3476,7 +3478,7 @@ int gk20a_fifo_suspend(struct gk20a *g)
 	gk20a_writel(g, fifo_intr_en_0_r(), 0);
 	gk20a_writel(g, fifo_intr_en_1_r(), 0);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -3511,7 +3513,7 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 	int ret = -ETIMEDOUT;
 	u32 i, host_num_engines;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	host_num_engines =
 		 nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
@@ -3533,12 +3535,12 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 		} while (!nvgpu_timeout_expired(&timeout));
 
 		if (ret) {
-			gk20a_dbg_info("cannot idle engine %u", i);
+			nvgpu_log_info(g, "cannot idle engine %u", i);
 			break;
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return ret;
 }
@@ -3839,7 +3841,7 @@ void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a)
 {
 	struct gk20a *g = ch_gk20a->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
 		gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->chid),
@@ -3854,12 +3856,12 @@ static int gk20a_fifo_commit_userd(struct channel_gk20a *c)
 	u32 addr_hi;
 	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	addr_lo = u64_lo32(c->userd_iova >> ram_userd_base_shift_v());
 	addr_hi = u64_hi32(c->userd_iova);
 
-	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
+	nvgpu_log_info(g, "channel %d : set ramfc userd 0x%16llx",
 		c->chid, (u64)c->userd_iova);
 
 	nvgpu_mem_wr32(g, &c->inst_block,
@@ -3885,7 +3887,7 @@ int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct nvgpu_mem *mem = &c->inst_block;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
@@ -3946,7 +3948,7 @@ void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 	struct gk20a *g = c->g;
 	struct nvgpu_mem *mem = &c->inst_block;
 
-	gk20a_dbg_info("channel %d : set ramfc privileged_channel", c->chid);
+	nvgpu_log_info(g, "channel %d : set ramfc privileged_channel", c->chid);
 
 	/* Enable HCE priv mode for phys mode transfer */
 	nvgpu_mem_wr32(g, mem, ram_fc_hce_ctrl_w(),
@@ -3959,7 +3961,7 @@ int gk20a_fifo_setup_userd(struct channel_gk20a *c)
 	struct nvgpu_mem *mem;
 	u32 offset;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_mem_is_valid(&c->usermode_userd)) {
 		mem = &c->usermode_userd;
@@ -3987,16 +3989,16 @@ int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = g->ops.mm.alloc_inst_block(g, &ch->inst_block);
 	if (err)
 		return err;
 
-	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
+	nvgpu_log_info(g, "channel %d inst block physical addr: 0x%16llx",
 		ch->chid, nvgpu_inst_block_addr(g, &ch->inst_block));
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -4086,7 +4088,7 @@ void gk20a_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 		struct priv_cmd_entry *cmd, u32 off,
 		u32 id, u32 thresh, u64 gpu_va)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	off = cmd->off + off;
 	/* syncpoint_a */
@@ -4115,7 +4117,7 @@ void gk20a_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 {
 	u32 off = cmd->off;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	if (wfi_cmd) {
 		/* wfi */
 		nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001E);

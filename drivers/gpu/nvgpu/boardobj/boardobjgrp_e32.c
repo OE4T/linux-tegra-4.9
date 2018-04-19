@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,7 +34,7 @@ u32  boardobjgrpconstruct_e32(struct gk20a *g,
 	u32 status;
 	u8  objslots;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	objslots = 32;
 
 	status = boardobjgrpmask_e32_init(&pboardobjgrp_e32->mask, NULL);
@@ -65,7 +65,7 @@ u32 boardobjgrp_pmuhdrdatainit_e32(struct gk20a *g,
 		(struct nv_pmu_boardobjgrp_e32 *)pboardobjgrppmu;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;

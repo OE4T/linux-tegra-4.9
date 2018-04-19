@@ -54,7 +54,7 @@ void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
+	nvgpu_log_info(g, "inst block phys = 0x%llx, kv = 0x%p",
 		nvgpu_inst_block_addr(g, inst_block), inst_block->cpu_va);
 
 	g->ops.mm.init_pdb(g, inst_block, vm);

@@ -1427,7 +1427,7 @@ static int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 	u32 reg_val;
 	struct nvgpu_timeout timeout;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&g->mm.tlb_lock);
 

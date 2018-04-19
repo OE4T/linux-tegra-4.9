@@ -394,7 +394,7 @@ int nvgpu_vidmem_get_space(struct gk20a *g, u64 *space)
 {
 	struct nvgpu_allocator *allocator = &g->mm.vidmem.allocator;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!nvgpu_alloc_initialized(allocator))
 		return -ENOSYS;

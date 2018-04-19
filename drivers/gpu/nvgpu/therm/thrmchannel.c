@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -90,7 +90,7 @@ static struct boardobj *construct_channel_device(struct gk20a *g,
 	pchannel_device->therm_dev_idx = therm_device->therm_dev_idx;
 	pchannel_device->therm_dev_prov_idx = therm_device->therm_dev_prov_idx;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return board_obj_ptr;
 }
@@ -104,7 +104,7 @@ static u32 _therm_channel_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_therm_therm_channel_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -114,7 +114,7 @@ static u32 _therm_channel_pmudata_instget(struct gk20a *g,
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return 0;
 }
@@ -137,7 +137,7 @@ static u32 devinit_get_therm_channel_table(struct gk20a *g,
 		struct therm_channel_device device;
 	} therm_channel_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	therm_channel_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, THERMAL_CHANNEL_TABLE);
@@ -206,7 +206,7 @@ static u32 devinit_get_therm_channel_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -248,6 +248,6 @@ u32 therm_channel_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

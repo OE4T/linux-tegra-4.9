@@ -35,8 +35,9 @@ int vgpu_tsg_open(struct tsg_gk20a *tsg)
 	struct tegra_vgpu_tsg_open_rel_params *p =
 				&msg.params.tsg_open;
 	int err;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_OPEN;
 	msg.handle = vgpu_get_handle(tsg->g);
@@ -57,8 +58,9 @@ void vgpu_tsg_release(struct tsg_gk20a *tsg)
 	struct tegra_vgpu_tsg_open_rel_params *p =
 				&msg.params.tsg_release;
 	int err;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_RELEASE;
 	msg.handle = vgpu_get_handle(tsg->g);
@@ -91,8 +93,9 @@ int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 	struct tegra_vgpu_tsg_bind_unbind_channel_params *p =
 				&msg.params.tsg_bind_unbind_channel;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_tsg_bind_channel(tsg, ch);
 	if (err)
@@ -120,8 +123,9 @@ int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 	struct tegra_vgpu_tsg_bind_unbind_channel_params *p =
 				&msg.params.tsg_bind_unbind_channel;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_fifo_tsg_unbind_channel(ch);
 	if (err)
@@ -143,8 +147,9 @@ int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	struct tegra_vgpu_tsg_timeslice_params *p =
 				&msg.params.tsg_timeslice;
 	int err;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_TIMESLICE;
 	msg.handle = vgpu_get_handle(tsg->g);

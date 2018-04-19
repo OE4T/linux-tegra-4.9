@@ -90,8 +90,9 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 {
 	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, " ");
 
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
@@ -100,9 +101,9 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->dbg_events.events_enabled) {
-			gk20a_dbg(gpu_dbg_gpu_dbg, "posting event on session id %d",
+			nvgpu_log(g, gpu_dbg_gpu_dbg, "posting event on session id %d",
 					dbg_s->id);
-			gk20a_dbg(gpu_dbg_gpu_dbg, "%d events pending",
+			nvgpu_log(g, gpu_dbg_gpu_dbg, "%d events pending",
 					dbg_s->dbg_events.num_pending_events);
 
 			dbg_s->dbg_events.num_pending_events++;
@@ -119,8 +120,9 @@ bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
 	bool broadcast = false;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
@@ -129,7 +131,7 @@ bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
-			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
+			nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
 					"stop trigger broadcast enabled");
 			broadcast = true;
 			break;
@@ -145,8 +147,9 @@ int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 {
 	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
@@ -155,7 +158,7 @@ int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
-			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
+			nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
 					"stop trigger broadcast disabled");
 			dbg_s->broadcast_stop_trigger = false;
 		}

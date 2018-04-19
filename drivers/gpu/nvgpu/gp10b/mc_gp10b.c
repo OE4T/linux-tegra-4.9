@@ -87,7 +87,7 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_r(0));
 
-	gk20a_dbg(gpu_dbg_intr, "stall intr 0x%08x\n", mc_intr_0);
+	nvgpu_log(g, gpu_dbg_intr, "stall intr 0x%08x\n", mc_intr_0);
 
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
@@ -126,7 +126,7 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 			g->ops.mc.is_intr_nvlink_pending(g, mc_intr_0))
 		g->ops.nvlink.isr(g);
 
-	gk20a_dbg(gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
+	nvgpu_log(g, gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -49,11 +49,11 @@ enum xv_speed_change_steps {
 	CLEANUP
 };
 
-#define xv_dbg(fmt, args...)			\
-	gk20a_dbg(gpu_dbg_xv, fmt, ##args)
+#define xv_dbg(g, fmt, args...)			\
+	nvgpu_log(g, gpu_dbg_xv, fmt, ##args)
 
-#define xv_sc_dbg(step, fmt, args...)					\
-	xv_dbg("[%d] %15s | " fmt, step, __stringify(step), ##args)
+#define xv_sc_dbg(g, step, fmt, args...)					\
+	xv_dbg(g, "[%d] %15s | " fmt, step, __stringify(step), ##args)
 
 void xve_xve_writel_gp106(struct gk20a *g, u32 reg, u32 val);
 u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg);

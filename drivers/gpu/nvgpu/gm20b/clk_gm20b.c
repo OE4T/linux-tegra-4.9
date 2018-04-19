@@ -1,7 +1,7 @@
 /*
  * GM20B Clocks
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,8 +36,8 @@
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
-#define gk20a_dbg_clk(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
+#define gk20a_dbg_clk(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_clk, fmt, ##arg)
 
 #define DFS_DET_RANGE	6	/* -2^6 ... 2^6-1 */
 #define SDM_DIN_RANGE	12	/* -2^12 ... 2^12-1 */
@@ -138,6 +138,7 @@ static u32 get_interim_pldiv(struct gk20a *g, u32 old_pl, u32 new_pl)
 static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	struct pll_parms *pll_params, u32 *target_freq, bool best_fit)
 {
+	struct gk20a *g = clk->g;
 	u32 min_vco_f, max_vco_f;
 	u32 best_M, best_N;
 	u32 low_PL, high_PL, best_PL;
@@ -149,7 +150,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 
 	BUG_ON(target_freq == NULL);
 
-	gk20a_dbg_fn("request target freq %d MHz", *target_freq);
+	nvgpu_log_fn(g, "request target freq %d MHz", *target_freq);
 
 	ref_clk_f = pll->clk_in;
 	target_clk_f = *target_freq;
@@ -172,7 +173,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	low_PL = min(low_PL, pll_params->max_PL);
 	low_PL = max(low_PL, pll_params->min_PL);
 
-	gk20a_dbg_info("low_PL %d(div%d), high_PL %d(div%d)",
+	nvgpu_log_info(g, "low_PL %d(div%d), high_PL %d(div%d)",
 			low_PL, nvgpu_pl_to_div(low_PL), high_PL, nvgpu_pl_to_div(high_PL));
 
 	for (pl = low_PL; pl <= high_PL; pl++) {
@@ -217,7 +218,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 							goto found_match;
 						}
 
-						gk20a_dbg_info("delta %d @ M %d, N %d, PL %d",
+						nvgpu_log_info(g, "delta %d @ M %d, N %d, PL %d",
 							delta, m, n, pl);
 					}
 				}
@@ -229,7 +230,7 @@ found_match:
 	BUG_ON(best_delta == ~0U);
 
 	if (best_fit && best_delta != 0)
-		gk20a_dbg_clk("no best match for target @ %dMHz on gpc_pll",
+		gk20a_dbg_clk(g, "no best match for target @ %dMHz on gpc_pll",
 			target_clk_f);
 
 	pll->M = best_M;
@@ -241,10 +242,10 @@ found_match:
 
 	*target_freq = pll->freq;
 
-	gk20a_dbg_clk("actual target freq %d kHz, M %d, N %d, PL %d(div%d)",
+	gk20a_dbg_clk(g, "actual target freq %d kHz, M %d, N %d, PL %d(div%d)",
 		*target_freq, pll->M, pll->N, pll->PL, nvgpu_pl_to_div(pll->PL));
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -810,7 +811,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	if (gpll->mode == GPC_PLL_MODE_DVFS) {
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		nvgpu_udelay(gpc_pll_params.na_lock_delay);
-		gk20a_dbg_clk("NA config_pll under bypass: %u (%u) kHz %d mV",
+		gk20a_dbg_clk(g, "NA config_pll under bypass: %u (%u) kHz %d mV",
 			      gpll->freq, gpll->freq / 2,
 			      (trim_sys_gpcpll_cfg3_dfs_testout_v(
 				      gk20a_readl(g, trim_sys_gpcpll_cfg3_r()))
@@ -843,7 +844,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 	return -EBUSY;
 
 pll_locked:
-	gk20a_dbg_clk("locked config_pll under bypass r=0x%x v=0x%x",
+	gk20a_dbg_clk(g, "locked config_pll under bypass r=0x%x v=0x%x",
 		trim_sys_gpcpll_cfg_r(), cfg);
 
 	/* set SYNC_MODE for glitchless switch out of bypass */
@@ -878,7 +879,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	bool can_slide, pldiv_only;
 	struct pll gpll;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!nvgpu_platform_is_silicon(g))
 		return 0;
@@ -1028,7 +1029,7 @@ static void clk_config_pll_safe_dvfs(struct gk20a *g, struct pll *gpll)
 	gpll->N = nsafe;
 	clk_config_dvfs_ndiv(gpll->dvfs.mv, gpll->N, &gpll->dvfs);
 
-	gk20a_dbg_clk("safe freq %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
+	gk20a_dbg_clk(g, "safe freq %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
 		gpll->freq, gpll->M, gpll->N, gpll->PL, nvgpu_pl_to_div(gpll->PL),
 		gpll->dvfs.mv, gpll->dvfs.uv_cal / 1000, gpll->dvfs.dfs_coeff);
 }
@@ -1103,7 +1104,7 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	clk_set_dfs_ext_cal(g, gpll_new->dvfs.dfs_ext_cal);
 	clk_set_dfs_coeff(g, gpll_new->dvfs.dfs_coeff);
 
-	gk20a_dbg_clk("config_pll  %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
+	gk20a_dbg_clk(g, "config_pll  %d kHz, M %d, N %d, PL %d(div%d), mV(cal) %d(%d), DC %d",
 		gpll_new->freq, gpll_new->M, gpll_new->N, gpll_new->PL,
 		nvgpu_pl_to_div(gpll_new->PL),
 		max(gpll_new->dvfs.mv, gpll_old->dvfs.mv),
@@ -1168,14 +1169,14 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 	unsigned long safe_rate;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_mutex_init(&clk->clk_mutex);
 	if (err)
 		return err;
 
 	if (clk->sw_ready) {
-		gk20a_dbg_fn("skip init");
+		nvgpu_log_fn(g, "skip init");
 		return 0;
 	}
 
@@ -1229,7 +1230,7 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 
 	clk->sw_ready = true;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	nvgpu_info(g,
 		"GPCPLL initial settings:%s M=%u, N=%u, P=%u (id = %u)",
 		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
@@ -1321,7 +1322,7 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 {
 	u32 data;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* LDIV: Div4 mode (required); both  bypass and vco ratios 1:1 */
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
@@ -1394,7 +1395,7 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 	struct clk_gk20a *clk = &g->clk;
 	int err = 0;
 
-	gk20a_dbg_fn("last freq: %dMHz, target freq %dMHz",
+	nvgpu_log_fn(g, "last freq: %dMHz, target freq %dMHz",
 		     clk->gpc_pll_last.freq, clk->gpc_pll.freq);
 
 	/* If programming with dynamic sliding failed, re-try under bypass */
@@ -1427,7 +1428,7 @@ int gm20b_init_clk_support(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	u32 err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&clk->clk_mutex);
 	clk->clk_hw_on = true;

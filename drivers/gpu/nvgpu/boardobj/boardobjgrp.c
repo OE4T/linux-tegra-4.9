@@ -50,7 +50,7 @@ struct boardobjgrp_pmucmdhandler_params {
 
 u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -101,7 +101,9 @@ u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgr
 
 u32 boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
 {
-	gk20a_dbg_info("");
+	struct gk20a *g = pboardobjgrp->g;
+
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -120,7 +122,7 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 	u32 stat;
 	u8  index;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp->mask == NULL)
 		return -EINVAL;
@@ -165,7 +167,7 @@ u32 boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
 	u8 hdrsize, u8 entrysize, u16 fbsize,  u32 ss_offset, u8 rpc_func_id)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/* Copy the parameters into the CMD*/
 	cmd->id   = id;
@@ -234,7 +236,7 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 	u32 status = 0;
 	struct nvgpu_mem *sysmem_desc = &pcmd->surf.sysmem_desc;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (g->ops.pmu_ver.boardobj.is_boardobjgrp_pmucmd_id_valid(g,
 			pboardobjgrp, pcmd))
@@ -259,7 +261,7 @@ u32 boardobjgrp_pmuinithandle_impl(struct gk20a *g,
 {
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrp_pmucmd_pmuinithandle_impl(g, pboardobjgrp,
 		&pboardobjgrp->pmu.set);
@@ -295,7 +297,7 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct nv_pmu_boardobjgrp_super *pboardobjgrppmu,
 	struct boardobjgrpmask *mask)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -306,7 +308,7 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	pboardobjgrppmu->obj_slots = BOARDOBJGRP_PMU_SLOTS_GET(pboardobjgrp);
 	pboardobjgrppmu->flags = 0;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -314,7 +316,7 @@ static u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
 	struct nv_pmu_boardobjgrp *boardobjgrppmu,
 	struct nv_pmu_boardobj **ppboardobjpmudata, u8 idx)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return -EINVAL;
 }
 
@@ -323,7 +325,7 @@ static u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
 	void *pboardobjgrppmu,
 	struct nv_pmu_boardobj_query **ppBoardobjpmustatus, u8 idx)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return -EINVAL;
 }
 
@@ -336,7 +338,7 @@ u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 	struct nv_pmu_boardobj *ppmudata = NULL;
 	u8 index;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -374,7 +376,7 @@ u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 	BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK_END
 
 boardobjgrppmudatainit_legacy_done:
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return status;
 }
 
@@ -386,7 +388,7 @@ u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 	struct nv_pmu_boardobj	*ppmudata = NULL;
 	u8 index;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -420,7 +422,7 @@ u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 	}
 
 boardobjgrppmudatainit_super_done:
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return status;
 }
 
@@ -452,7 +454,7 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.set);
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (check_boardobjgrp_param(g, pboardobjgrp))
 		return -EINVAL;
@@ -511,7 +513,7 @@ u32 boardobjgrp_pmuset_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjgrp
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.set);
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (check_boardobjgrp_param(g, pboardobjgrp))
 		return -EINVAL;
@@ -568,7 +570,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrp_pmu_cmd *pset =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.set);
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (check_boardobjgrp_param(g, pboardobjgrp))
 		return -EINVAL;
@@ -635,7 +637,7 @@ boardobjgrp_pmugetstatus_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjg
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.getstatus);
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (check_boardobjgrp_param(g, pboardobjgrp))
 		return -EINVAL;
@@ -690,8 +692,9 @@ static u32
 boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 	struct boardobj *pboardobj, u8 index)
 {
+	struct gk20a *g = pboardobjgrp->g;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pboardobjgrp == NULL)
 		return -EINVAL;
@@ -719,7 +722,7 @@ boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 
 	pboardobjgrp->objmask |= BIT(index);
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return boardobjgrpmask_bitset(pboardobjgrp->mask, index);
 }
@@ -789,8 +792,9 @@ static u32 boardobjgrp_objremoveanddestroy_final(
 {
 	u32 status = 0;
 	u32 stat;
+	struct gk20a *g = pboardobjgrp->g;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (!boardobjgrp_idxisvalid(pboardobjgrp, index))
 		return -EINVAL;
@@ -824,8 +828,6 @@ void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask)
 {
 	u32 slots = objmask;
 
-	gk20a_dbg_info("");
-
 	HIGHESTBITIDX_32(slots);
 	slots++;
 
@@ -844,7 +846,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	struct boardobjgrp *pboardobjgrp = phandlerparams->pboardobjgrp;
 	struct boardobjgrp_pmu_cmd *pgrpcmd = phandlerparams->pcmd;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pgrpmsg = &msg->msg.boardobj.grp;
 
@@ -895,7 +897,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 	u32 seqdesc;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	memset(&payload, 0, sizeof(payload));
 	memset(&handlerparams, 0, sizeof(handlerparams));

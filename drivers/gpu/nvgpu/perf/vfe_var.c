@@ -69,7 +69,7 @@ static u32 _vfe_vars_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_perf_vfe_var_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (idx >= CTRL_BOARDOBJGRP_E32_MAX_OBJECTS)
@@ -78,7 +78,7 @@ static u32 _vfe_vars_pmudata_instget(struct gk20a *g,
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -105,7 +105,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct vfe_vars *pvfevarobjs;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g, &g->perf_pmu.vfe_varobjs.super);
 	if (status) {
@@ -148,7 +148,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -157,7 +157,7 @@ u32 vfe_var_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->perf_pmu.vfe_varobjs.super.super;
 
@@ -166,7 +166,7 @@ u32 vfe_var_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -301,7 +301,7 @@ static u32 _vfe_var_pmudatainit_super(struct gk20a *g,
 	struct vfe_var *pvfe_var;
 	struct nv_pmu_vfe_var *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -329,7 +329,7 @@ static u32 vfe_var_construct_super(struct gk20a *g,
 	struct vfe_var *ptmpvar = (struct vfe_var *)pargs;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_construct_super(g, ppboardobj, size, pargs);
 	if (status)
@@ -345,7 +345,7 @@ static u32 vfe_var_construct_super(struct gk20a *g,
 	pvfevar->b_is_dynamic_valid = false;
 	status = boardobjgrpmask_e32_init(&pvfevar->mask_dependent_vars, NULL);
 	status = boardobjgrpmask_e255_init(&pvfevar->mask_dependent_equs, NULL);
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	return status;
 }
@@ -356,7 +356,7 @@ static u32 _vfe_var_pmudatainit_derived(struct gk20a *g,
 {
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_super(g, board_obj_ptr, ppmudata);
 
@@ -392,7 +392,7 @@ static u32 _vfe_var_pmudatainit_derived_product(struct gk20a *g,
 	struct vfe_var_derived_product *pvfe_var_derived_product;
 	struct nv_pmu_vfe_var_derived_product *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_derived(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -446,7 +446,7 @@ static u32 _vfe_var_pmudatainit_derived_sum(struct gk20a *g,
 	struct vfe_var_derived_sum *pvfe_var_derived_sum;
 	struct nv_pmu_vfe_var_derived_sum *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_derived(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -498,7 +498,7 @@ static u32 _vfe_var_pmudatainit_single(struct gk20a *g,
 	struct vfe_var_single *pvfe_var_single;
 	struct nv_pmu_vfe_var_single *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -520,7 +520,7 @@ static u32 _vfe_var_pmudatainit_single_frequency(struct gk20a *g,
 {
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_single(g, board_obj_ptr, ppmudata);
 
@@ -535,7 +535,7 @@ static u32 vfe_var_construct_single_frequency(struct gk20a *g,
 	struct vfe_var_single_frequency *pvfevar;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_PERF_VFE_VAR_TYPE_SINGLE_FREQUENCY)
 		return -EINVAL;
@@ -553,7 +553,7 @@ static u32 vfe_var_construct_single_frequency(struct gk20a *g,
 	pvfevar->super.super.b_is_dynamic = false;
 	pvfevar->super.super.b_is_dynamic_valid = true;
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -563,7 +563,7 @@ static u32 _vfe_var_pmudatainit_single_sensed(struct gk20a *g,
 {
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_single(g, board_obj_ptr, ppmudata);
 
@@ -578,7 +578,7 @@ static u32 _vfe_var_pmudatainit_single_sensed_fuse(struct gk20a *g,
 	struct vfe_var_single_sensed_fuse *pvfe_var_single_sensed_fuse;
 	struct nv_pmu_vfe_var_single_sensed_fuse *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_single_sensed(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -614,7 +614,7 @@ static u32 vfe_var_construct_single_sensed(struct gk20a *g,
 
 	u32 status = 0;
 
-	gk20a_dbg_info(" ");
+	nvgpu_log_info(g, " ");
 
 	ptmpobj->type_mask |= BIT(CTRL_PERF_VFE_VAR_TYPE_SINGLE_SENSED);
 	status = vfe_var_construct_single(g, ppboardobj, size, pargs);
@@ -626,7 +626,7 @@ static u32 vfe_var_construct_single_sensed(struct gk20a *g,
 	pvfevar->super.super.super.pmudatainit =
 			_vfe_var_pmudatainit_single_sensed;
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 
 	return status;
 }
@@ -641,7 +641,7 @@ static u32 vfe_var_construct_single_sensed_fuse(struct gk20a *g,
 			(struct vfe_var_single_sensed_fuse *)pargs;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_PERF_VFE_VAR_TYPE_SINGLE_SENSED_FUSE)
 		return -EINVAL;
@@ -704,7 +704,7 @@ static u32 _vfe_var_pmudatainit_single_sensed_temp(struct gk20a *g,
 	struct vfe_var_single_sensed_temp *pvfe_var_single_sensed_temp;
 	struct nv_pmu_vfe_var_single_sensed_temp *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_single_sensed(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -769,7 +769,7 @@ static u32 _vfe_var_pmudatainit_single_voltage(struct gk20a *g,
 {
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_var_pmudatainit_single(g, board_obj_ptr, ppmudata);
 
@@ -808,7 +808,7 @@ static struct vfe_var *construct_vfe_var(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_PERF_VFE_VAR_TYPE_DERIVED_PRODUCT:
 		status = vfe_var_construct_derived_product(g, &board_obj_ptr,
@@ -850,7 +850,7 @@ static struct vfe_var *construct_vfe_var(struct gk20a *g, void *pargs)
 	if (status)
 		return NULL;
 
-	gk20a_dbg_info("done");
+	nvgpu_log_info(g, "done");
 
 	return (struct vfe_var *)board_obj_ptr;
 }
@@ -877,7 +877,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 		struct vfe_var_single_sensed_temp single_sensed_temp;
 	} var_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	vfevars_tbl_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token,
@@ -1031,7 +1031,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 	}
 	pvfevarobjs->polling_periodms = vfevars_tbl_header.polling_periodms;
 done:
-	gk20a_dbg_info("done status %x", status);
+	nvgpu_log_info(g, "done status %x", status);
 	return status;
 }
 
@@ -1043,7 +1043,7 @@ static u32 vfe_var_construct_single(struct gk20a *g,
 	struct vfe_var_single *pvfevar;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	ptmpobj->type_mask |= BIT(CTRL_PERF_VFE_VAR_TYPE_SINGLE);
 	status = vfe_var_construct_super(g, ppboardobj, size, pargs);
@@ -1058,6 +1058,6 @@ static u32 vfe_var_construct_single(struct gk20a *g,
 	pvfevar->override_type = CTRL_PERF_VFE_VAR_SINGLE_OVERRIDE_TYPE_NONE;
 	pvfevar->override_value = 0;
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }

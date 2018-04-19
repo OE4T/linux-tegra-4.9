@@ -1,7 +1,7 @@
 /*
  * GK20A memory interface
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@ void fb_gk20a_reset(struct gk20a *g)
 {
 	u32 val;
 
-	gk20a_dbg_info("reset gk20a fb");
+	nvgpu_log_info(g, "reset gk20a fb");
 
 	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
 			mc_enable_l2_enabled_f() |
@@ -63,7 +63,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	u32 addr_lo;
 	u32 data;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* pagetables are considered sw states which are preserved after
 	   prepare_poweroff. When gk20a deinit releases those pagetables,

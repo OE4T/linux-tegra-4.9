@@ -50,8 +50,9 @@ static int gk20a_as_ioctl_bind_channel(
 {
 	int err = 0;
 	struct channel_gk20a *ch;
+	struct gk20a *g = gk20a_from_vm(as_share->vm);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
 	if (!ch)
@@ -76,7 +77,7 @@ static int gk20a_as_ioctl_alloc_space(
 {
 	struct gk20a *g = gk20a_from_vm(as_share->vm);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	return nvgpu_vm_area_alloc(as_share->vm, args->pages, args->page_size,
 				   &args->o_a.offset,
 				   gk20a_as_translate_linux_flags(g,
@@ -87,7 +88,9 @@ static int gk20a_as_ioctl_free_space(
 		struct gk20a_as_share *as_share,
 		struct nvgpu_as_free_space_args *args)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_vm(as_share->vm);
+
+	nvgpu_log_fn(g, " ");
 	return nvgpu_vm_area_free(as_share->vm, args->offset);
 }
 
@@ -95,7 +98,9 @@ static int gk20a_as_ioctl_map_buffer_ex(
 		struct gk20a_as_share *as_share,
 		struct nvgpu_as_map_buffer_ex_args *args)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_vm(as_share->vm);
+
+	nvgpu_log_fn(g, " ");
 
 	/* unsupported, direct kind control must be used */
 	if (!(args->flags & NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL)) {
@@ -117,7 +122,9 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct gk20a_as_share *as_share,
 		struct nvgpu_as_unmap_buffer_args *args)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_vm(as_share->vm);
+
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_vm_unmap(as_share->vm, args->offset, NULL);
 
@@ -128,6 +135,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 	struct gk20a_as_share *as_share,
 	struct nvgpu_as_map_buffer_batch_args *args)
 {
+	struct gk20a *g = gk20a_from_vm(as_share->vm);
 	u32 i;
 	int err = 0;
 
@@ -140,7 +148,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 
 	struct vm_gk20a_mapping_batch batch;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->num_unmaps > NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT ||
 	    args->num_maps > NVGPU_IOCTL_AS_MAP_BUFFER_BATCH_LIMIT)
@@ -220,9 +228,10 @@ static int gk20a_as_ioctl_get_va_regions(
 	unsigned int write_entries;
 	struct nvgpu_as_va_region __user *user_region_ptr;
 	struct vm_gk20a *vm = as_share->vm;
+	struct gk20a *g = gk20a_from_vm(vm);
 	unsigned int page_sizes = gmmu_page_size_kernel;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!vm->big_pages)
 		page_sizes--;
@@ -293,14 +302,14 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 	struct gk20a *g;
 	int err;
 
-	gk20a_dbg_fn("");
-
 	l = container_of(inode->i_cdev, struct nvgpu_os_linux, as_dev.cdev);
 	g = &l->g;
 
+	nvgpu_log_fn(g, " ");
+
 	err = gk20a_as_alloc_share(g, 0, 0, &as_share);
 	if (err) {
-		gk20a_dbg_fn("failed to alloc share");
+		nvgpu_log_fn(g, "failed to alloc share");
 		return err;
 	}
 
@@ -311,8 +320,6 @@ int gk20a_as_dev_open(struct inode *inode, struct file *filp)
 int gk20a_as_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_as_share *as_share = filp->private_data;
-
-	gk20a_dbg_fn("");
 
 	if (!as_share)
 		return 0;
@@ -328,7 +335,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	u8 buf[NVGPU_AS_IOCTL_MAX_ARG_SIZE];
 
-	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+	nvgpu_log_fn(g, "start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_AS_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||

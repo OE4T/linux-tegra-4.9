@@ -464,7 +464,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			new_data = cde_ctx->user_param_values[user_id];
 		}
 
-		gk20a_dbg(gpu_dbg_cde, "cde: patch: idx_in_file=%d	param_id=%d	target_buf=%u	target_byte_offset=%lld	data_value=0x%llx	data_offset/data_diff=%lld	data_type=%d	data_shift=%d	data_mask=0x%llx",
+		nvgpu_log(g, gpu_dbg_cde, "cde: patch: idx_in_file=%d	param_id=%d	target_buf=%u	target_byte_offset=%lld	data_value=0x%llx	data_offset/data_diff=%lld	data_type=%d	data_shift=%d	data_mask=0x%llx",
 			  i, param->id, param->target_buf,
 			  param->target_byte_offset, new_data,
 			  param->data_offset, param->type, param->shift,
@@ -790,8 +790,9 @@ __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &cde_ctx->l->cde_app;
+	struct gk20a *g = &cde_ctx->l->g;
 
-	gk20a_dbg(gpu_dbg_cde_ctx, "releasing use on %p", cde_ctx);
+	nvgpu_log(g, gpu_dbg_cde_ctx, "releasing use on %p", cde_ctx);
 	trace_gk20a_cde_release(cde_ctx);
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
@@ -801,7 +802,7 @@ __releases(&cde_app->mutex)
 		nvgpu_list_move(&cde_ctx->list, &cde_app->free_contexts);
 		cde_app->ctx_usecount--;
 	} else {
-		gk20a_dbg_info("double release cde context %p", cde_ctx);
+		nvgpu_log_info(g, "double release cde context %p", cde_ctx);
 	}
 
 	nvgpu_mutex_release(&cde_app->mutex);
@@ -823,7 +824,7 @@ __releases(&cde_app->mutex)
 	if (cde_ctx->in_use || !cde_app->initialised)
 		return;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: attempting to delete temporary %p", cde_ctx);
 
 	err = gk20a_busy(g);
@@ -837,7 +838,7 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
 	if (cde_ctx->in_use || !cde_app->initialised) {
-		gk20a_dbg(gpu_dbg_cde_ctx,
+		nvgpu_log(g, gpu_dbg_cde_ctx,
 				"cde: context use raced, not deleting %p",
 				cde_ctx);
 		goto out;
@@ -847,7 +848,7 @@ __releases(&cde_app->mutex)
 			"double pending %p", cde_ctx);
 
 	gk20a_cde_remove_ctx(cde_ctx);
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: destroyed %p count=%d use=%d max=%d",
 			cde_ctx, cde_app->ctx_count, cde_app->ctx_usecount,
 			cde_app->ctx_count_top);
@@ -874,7 +875,7 @@ __must_hold(&cde_app->mutex)
 	if (!nvgpu_list_empty(&cde_app->free_contexts)) {
 		cde_ctx = nvgpu_list_first_entry(&cde_app->free_contexts,
 				gk20a_cde_ctx, list);
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx,
 				"cde: got free %p count=%d use=%d max=%d",
 				cde_ctx, cde_app->ctx_count,
 				cde_app->ctx_usecount,
@@ -893,7 +894,7 @@ __must_hold(&cde_app->mutex)
 
 	/* no free contexts, get a temporary one */
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: no free contexts, count=%d",
 			cde_app->ctx_count);
 
@@ -967,7 +968,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l
 	INIT_DELAYED_WORK(&cde_ctx->ctx_deleter_work,
 			gk20a_cde_ctx_deleter_fn);
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: allocated %p", cde_ctx);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: allocated %p", cde_ctx);
 	trace_gk20a_cde_allocate_context(cde_ctx);
 	return cde_ctx;
 }
@@ -1005,7 +1006,7 @@ __releases(&l->cde_app->mutex)
 	u32 submit_op;
 	struct dma_buf_attachment *attachment;
 
-	gk20a_dbg(gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
+	nvgpu_log(g, gpu_dbg_cde, "compbits_byte_offset=%llu scatterbuffer_byte_offset=%llu",
 		  compbits_byte_offset, scatterbuffer_byte_offset);
 
 	/* scatter buffer must be after compbits buffer */
@@ -1055,11 +1056,11 @@ __releases(&l->cde_app->mutex)
 				compbits_byte_offset;
 	}
 
-	gk20a_dbg(gpu_dbg_cde, "map_offset=%llu map_size=%llu",
+	nvgpu_log(g, gpu_dbg_cde, "map_offset=%llu map_size=%llu",
 		  map_offset, map_size);
-	gk20a_dbg(gpu_dbg_cde, "mapped_compbits_offset=%llu compbits_size=%llu",
+	nvgpu_log(g, gpu_dbg_cde, "mapped_compbits_offset=%llu compbits_size=%llu",
 		  mapped_compbits_offset, compbits_size);
-	gk20a_dbg(gpu_dbg_cde, "mapped_scatterbuffer_offset=%llu scatterbuffer_size=%llu",
+	nvgpu_log(g, gpu_dbg_cde, "mapped_scatterbuffer_offset=%llu scatterbuffer_size=%llu",
 		  mapped_scatterbuffer_offset, scatterbuffer_size);
 
 
@@ -1096,7 +1097,7 @@ __releases(&l->cde_app->mutex)
 
 		scatter_buffer = surface + scatterbuffer_byte_offset;
 
-		gk20a_dbg(gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
+		nvgpu_log(g, gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
 			  surface, scatter_buffer);
 		sgt = gk20a_mm_pin(dev_from_gk20a(g), compbits_scatter_buf,
 				   &attachment);
@@ -1163,11 +1164,11 @@ __releases(&l->cde_app->mutex)
 		goto exit_unmap_surface;
 	}
 
-	gk20a_dbg(gpu_dbg_cde, "cde: buffer=cbc, size=%zu, gpuva=%llx\n",
+	nvgpu_log(g, gpu_dbg_cde, "cde: buffer=cbc, size=%zu, gpuva=%llx\n",
 		 g->gr.compbit_store.mem.size, cde_ctx->backing_store_vaddr);
-	gk20a_dbg(gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
+	nvgpu_log(g, gpu_dbg_cde, "cde: buffer=compbits, size=%llu, gpuva=%llx\n",
 		 cde_ctx->compbit_size, cde_ctx->compbit_vaddr);
-	gk20a_dbg(gpu_dbg_cde, "cde: buffer=scatterbuffer, size=%llu, gpuva=%llx\n",
+	nvgpu_log(g, gpu_dbg_cde, "cde: buffer=scatterbuffer, size=%llu, gpuva=%llx\n",
 		 cde_ctx->scatterbuffer_size, cde_ctx->scatterbuffer_vaddr);
 
 	/* take always the postfence as it is needed for protecting the
@@ -1234,9 +1235,9 @@ __releases(&cde_app->mutex)
 		return;
 
 	trace_gk20a_cde_finished_ctx_cb(cde_ctx);
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: finished %p", cde_ctx);
 	if (!cde_ctx->in_use)
-		gk20a_dbg_info("double finish cde context %p on channel %p",
+		nvgpu_log_info(g, "double finish cde context %p on channel %p",
 				cde_ctx, ch);
 
 	if (ch->has_timedout) {
@@ -1406,12 +1407,13 @@ __acquires(&cde_app->mutex)
 __releases(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &l->cde_app;
+	struct gk20a *g = &l->g;
 	int err;
 
 	if (cde_app->initialised)
 		return 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: init");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: init");
 
 	err = nvgpu_mutex_init(&cde_app->mutex);
 	if (err)
@@ -1430,7 +1432,7 @@ __releases(&cde_app->mutex)
 		cde_app->initialised = true;
 
 	nvgpu_mutex_release(&cde_app->mutex);
-	gk20a_dbg(gpu_dbg_cde_ctx, "cde: init finished: %d", err);
+	nvgpu_log(g, gpu_dbg_cde_ctx, "cde: init finished: %d", err);
 
 	if (err)
 		nvgpu_mutex_destroy(&cde_app->mutex);
@@ -1528,14 +1530,14 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		nvgpu_warn(g, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
 
-	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx, scatterbuffer_offset=0x%llx",
+	nvgpu_log(g, gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx, scatterbuffer_offset=0x%llx",
 		  width, height, block_height_log2,
 		  compbits_hoffset, compbits_voffset, scatterbuffer_offset);
-	gk20a_dbg(gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
+	nvgpu_log(g, gpu_dbg_cde, "resolution (%d, %d) tiles (%d, %d)",
 		  width, height, xtiles, ytiles);
-	gk20a_dbg(gpu_dbg_cde, "group (%d, %d) gridH (%d, %d) gridV (%d, %d)",
+	nvgpu_log(g, gpu_dbg_cde, "group (%d, %d) gridH (%d, %d) gridV (%d, %d)",
 		  wgx, wgy, gridw_h, gridh_h, gridw_v, gridh_v);
-	gk20a_dbg(gpu_dbg_cde, "hprog=%d, offset=0x%x, regs=%d, vprog=%d, offset=0x%x, regs=%d",
+	nvgpu_log(g, gpu_dbg_cde, "hprog=%d, offset=0x%x, regs=%d, vprog=%d, offset=0x%x, regs=%d",
 		  hprog,
 		  l->cde_app.arrays[ARRAY_PROGRAM_OFFSET][hprog],
 		  l->cde_app.arrays[ARRAY_REGISTER_COUNT][hprog],
@@ -1634,7 +1636,7 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	if (!l->cde_app.initialised)
 		return -ENOSYS;
 
-	gk20a_dbg(gpu_dbg_cde, "firmware version = %d\n",
+	nvgpu_log(g, gpu_dbg_cde, "firmware version = %d\n",
 		l->cde_app.firmware_version);
 
 	if (l->cde_app.firmware_version == 1) {

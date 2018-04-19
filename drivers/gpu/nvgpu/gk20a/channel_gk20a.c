@@ -116,7 +116,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.mm.init_inst_block(&c->inst_block, c->vm,
 			c->vm->gmmu_page_sizes[gmmu_page_size_big]);
@@ -208,7 +208,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(ch->g, " ");
 
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		return gk20a_fifo_abort_tsg(ch->g, ch->tsgid, channel_preempt);
@@ -291,7 +291,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	struct dbg_session_channel_data *ch_data, *tmp;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	WARN_ON(ch->g == NULL);
 
@@ -351,7 +351,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	/* if engine reset was deferred, perform it now */
 	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
 	if (g->fifo.deferred_reset_pending) {
-		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
+		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
@@ -365,7 +365,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
 
-	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
+	nvgpu_log_info(g, "freeing bound channel context, timeout=%ld",
 			timeout);
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
@@ -626,7 +626,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		runlist_id = gk20a_fifo_get_gr_runlist_id(g);
 	}
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	ch = allocate_channel(f);
 	if (ch == NULL) {
@@ -765,7 +765,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	u32 free_count;
 	u32 size = orig_size;
 
-	gk20a_dbg_fn("size %d", orig_size);
+	nvgpu_log_fn(c->g, "size %d", orig_size);
 
 	if (!e) {
 		nvgpu_err(c->g,
@@ -779,7 +779,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	if (q->put + size > q->size)
 		size = orig_size + (q->size - q->put);
 
-	gk20a_dbg_info("ch %d: priv cmd queue get:put %d:%d",
+	nvgpu_log_info(c->g, "ch %d: priv cmd queue get:put %d:%d",
 			c->chid, q->get, q->put);
 
 	free_count = (q->size - (q->put - q->get) - 1) % q->size;
@@ -812,7 +812,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	nvgpu_smp_wmb();
 
 	e->valid = true;
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(c->g, "done");
 
 	return 0;
 }
@@ -1132,7 +1132,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	c->gpfifo.entry_num = gpfifo_size;
 	c->gpfifo.get = c->gpfifo.put = 0;
 
-	gk20a_dbg_info("channel %d : gpfifo_base 0x%016llx, size %d",
+	nvgpu_log_info(g, "channel %d : gpfifo_base 0x%016llx, size %d",
 		c->chid, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
 
 	g->ops.fifo.setup_userd(c);
@@ -1184,7 +1184,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.bind_channel(c);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up_priv_cmd:
@@ -1400,7 +1400,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	u64 pb_get;
 	u64 new_pb_get;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* Get status and clear the timer */
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
@@ -1480,7 +1480,7 @@ static void gk20a_channel_poll_timeouts(struct gk20a *g)
  */
 static void gk20a_channel_worker_process_ch(struct channel_gk20a *ch)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(ch->g, " ");
 
 	gk20a_channel_clean_up_jobs(ch, true);
 
@@ -1499,7 +1499,7 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
 {
 	int put;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/*
 	 * Currently, the only work type is associated with a lock, which deals
@@ -1596,7 +1596,7 @@ static int gk20a_channel_poll_worker(void *arg)
 	struct nvgpu_timeout timeout;
 	int get = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_timeout_init(g, &timeout, watchdog_interval,
 			NVGPU_TIMER_CPU_TIMER);
@@ -1699,7 +1699,7 @@ static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/*
 	 * Warn if worker thread cannot run
@@ -2142,12 +2142,12 @@ int gk20a_channel_suspend(struct gk20a *g)
 	bool channels_in_use = false;
 	u32 active_runlist_ids = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
 		if (gk20a_channel_get(ch)) {
-			gk20a_dbg_info("suspend channel %d", chid);
+			nvgpu_log_info(g, "suspend channel %d", chid);
 			/* disable channel */
 			gk20a_disable_channel_tsg(g, ch);
 			/* preempt the channel */
@@ -2175,7 +2175,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -2186,11 +2186,11 @@ int gk20a_channel_resume(struct gk20a *g)
 	bool channels_in_use = false;
 	u32 active_runlist_ids = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (gk20a_channel_get(&f->channel[chid])) {
-			gk20a_dbg_info("resume channel %d", chid);
+			nvgpu_log_info(g, "resume channel %d", chid);
 			g->ops.fifo.bind_channel(&f->channel[chid]);
 			channels_in_use = true;
 			active_runlist_ids |= BIT(f->channel[chid].runlist_id);
@@ -2201,7 +2201,7 @@ int gk20a_channel_resume(struct gk20a *g)
 	if (channels_in_use)
 		gk20a_fifo_update_runlist_ids(g, active_runlist_ids, ~0, true, true);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -2210,7 +2210,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/*
 	 * Ensure that all pending writes are actually done  before trying to

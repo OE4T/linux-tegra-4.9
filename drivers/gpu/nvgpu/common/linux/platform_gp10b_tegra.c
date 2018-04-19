@@ -273,11 +273,11 @@ void gp10b_tegra_prescale(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	u32 avg = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_pmu_load_norm(g, &avg);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 void gp10b_tegra_postscale(struct device *pdev,
@@ -288,7 +288,7 @@ void gp10b_tegra_postscale(struct device *pdev,
 	struct gk20a *g = get_gk20a(pdev);
 	unsigned long emc_rate;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	if (profile && !platform->is_railgated(pdev)) {
 		unsigned long emc_scale;
 
@@ -306,7 +306,7 @@ void gp10b_tegra_postscale(struct device *pdev,
 			(struct tegra_bwmgr_client *)profile->private_data,
 			emc_rate, TEGRA_BWMGR_SET_EMC_FLOOR);
 	}
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
@@ -328,6 +328,7 @@ int gp10b_clk_get_freqs(struct device *dev,
 				unsigned long **freqs, int *num_freqs)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
 	unsigned long max_rate;
 	unsigned long new_rate = 0, prev_rate = 0;
 	int i = 0, freq_counter = 0;
@@ -358,7 +359,7 @@ int gp10b_clk_get_freqs(struct device *dev,
 	*freqs = gp10b_freq_table;
 	*num_freqs = freq_counter;
 
-	gk20a_dbg_info("min rate: %ld max rate: %ld num_of_freq %d\n",
+	nvgpu_log_info(g, "min rate: %ld max rate: %ld num_of_freq %d\n",
 				gp10b_freq_table[0], max_rate, *num_freqs);
 
 	return 0;

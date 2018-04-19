@@ -1,7 +1,7 @@
 /*
  * GM20B THERMAL
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@ int gm20b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* program NV_THERM registers */
 	gk20a_writel(g, therm_use_a_r(), therm_use_a_ext_therm_0_enable_f() |

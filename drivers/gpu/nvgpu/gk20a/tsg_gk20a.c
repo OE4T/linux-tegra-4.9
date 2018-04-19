@@ -107,7 +107,9 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = ch->g;
+
+	nvgpu_log_fn(g, " ");
 
 	/* check if channel is already bound to some TSG */
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
@@ -137,10 +139,10 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 
 	nvgpu_ref_get(&tsg->refcount);
 
-	gk20a_dbg(gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
+	nvgpu_log(g, gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
 					tsg->tsgid, ch->chid);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -167,7 +169,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
 
-	gk20a_dbg(gpu_dbg_fn, "UNBIND tsg:%d channel:%d\n",
+	nvgpu_log(g, gpu_dbg_fn, "UNBIND tsg:%d channel:%d\n",
 					tsg->tsgid, ch->chid);
 
 	return 0;
@@ -204,7 +206,7 @@ int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	struct gk20a *g = tsg->g;
 	int ret;
 
-	gk20a_dbg(gpu_dbg_sched, "tsgid=%u interleave=%u", tsg->tsgid, level);
+	nvgpu_log(g, gpu_dbg_sched, "tsgid=%u interleave=%u", tsg->tsgid, level);
 
 	switch (level) {
 	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW:
@@ -227,7 +229,7 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
 	struct gk20a *g = tsg->g;
 
-	gk20a_dbg(gpu_dbg_sched, "tsgid=%u timeslice=%u us", tsg->tsgid, timeslice);
+	nvgpu_log(g, gpu_dbg_sched, "tsgid=%u timeslice=%u us", tsg->tsgid, timeslice);
 
 	return g->ops.fifo.tsg_set_timeslice(tsg, timeslice);
 }
@@ -300,7 +302,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 		}
 	}
 
-	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
 
 	return tsg;
 
@@ -343,7 +345,7 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 
 	tsg->runlist_id = ~0;
 
-	gk20a_dbg(gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
+	nvgpu_log(g, gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
 }
 
 struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,8 +23,8 @@
 #ifndef __PMU_GP106_H_
 #define __PMU_GP106_H_
 
-#define gp106_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gp106_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 struct gk20a;
 

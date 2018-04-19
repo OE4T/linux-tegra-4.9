@@ -60,7 +60,7 @@
 
 void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
-
+	struct gk20a *g = tsg->g;
 	u32 runlist_entry_0 = ram_rl_entry_type_tsg_v();
 
 	if (tsg->timeslice_timeout)
@@ -79,7 +79,7 @@ void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 	runlist[2] = ram_rl_entry_tsg_tsgid_f(tsg->tsgid);
 	runlist[3] = 0;
 
-	gk20a_dbg_info("gv11b tsg runlist [0] %x [1]  %x [2] %x [3] %x\n",
+	nvgpu_log_info(g, "gv11b tsg runlist [0] %x [1]  %x [2] %x [3] %x\n",
 		runlist[0], runlist[1], runlist[2], runlist[3]);
 
 }
@@ -119,7 +119,7 @@ void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 				ram_rl_entry_chid_f(c->chid);
 	runlist[3] = ram_rl_entry_chan_inst_ptr_hi_f(addr_hi);
 
-	gk20a_dbg_info("gv11b channel runlist [0] %x [1]  %x [2] %x [3] %x\n",
+	nvgpu_log_info(g, "gv11b channel runlist [0] %x [1]  %x [2] %x [3] %x\n",
 			runlist[0], runlist[1], runlist[2], runlist[3]);
 }
 
@@ -139,7 +139,7 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	struct nvgpu_mem *mem = &c->inst_block;
 	u32 data;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
@@ -211,10 +211,11 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {
-	struct fifo_gk20a *f = &c->g->fifo;
+	struct gk20a *g = c->g;
+	struct fifo_gk20a *f = &g->fifo;
 	u32 hw_chid = f->channel_base + c->chid;
 
-	gk20a_dbg_info("channel ring door bell %d\n", c->chid);
+	nvgpu_log_info(g, "channel ring door bell %d\n", c->chid);
 
 	nvgpu_usermode_writel(c->g, usermode_notify_channel_pending_r(),
 		usermode_notify_channel_pending_id_f(hw_chid));
@@ -256,7 +257,7 @@ void channel_gv11b_unbind(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_atomic_cmpxchg(&ch->bound, true, false)) {
 		gk20a_writel(g, ccsr_channel_inst_r(ch->chid),
@@ -729,7 +730,7 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		func_ret = gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
 							 timeout_rc_type);
 		if (func_ret != 0) {
-			gk20a_dbg_info("preempt timeout pbdma %d", pbdma_id);
+			nvgpu_log_info(g, "preempt timeout pbdma %d", pbdma_id);
 			ret |= func_ret;
 		}
 	}
@@ -743,7 +744,7 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 				 timeout_rc_type);
 
 		if (func_ret != 0) {
-			gk20a_dbg_info("preempt timeout engine %d", act_eng_id);
+			nvgpu_log_info(g, "preempt timeout engine %d", act_eng_id);
 			ret |= func_ret;
 		}
 	}
@@ -812,10 +813,10 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 runlist_id;
 
-	gk20a_dbg_fn("%d", tsgid);
+	nvgpu_log_fn(g, "%d", tsgid);
 
 	runlist_id = f->tsg[tsgid].runlist_id;
-	gk20a_dbg_fn("runlist_id %d", runlist_id);
+	nvgpu_log_fn(g, "runlist_id %d", runlist_id);
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
@@ -839,7 +840,7 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 	u32 mutex_ret = 0;
 	u32 runlist_id;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
 		if (runlists_mask & fifo_runlist_preempt_runlist_m(runlist_id))
@@ -910,11 +911,11 @@ int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 		return -EINVAL;
 
 	if (runlist_id >= g->fifo.max_runlists) {
-		gk20a_dbg_info("runlist_id = %d", runlist_id);
+		nvgpu_log_info(g, "runlist_id = %d", runlist_id);
 		return -EINVAL;
 	}
 
-	gk20a_dbg_fn("preempt id = %d, runlist_id = %d", id, runlist_id);
+	nvgpu_log_fn(g, "preempt id = %d, runlist_id = %d", id, runlist_id);
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
@@ -1155,7 +1156,7 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	unsigned int i;
 	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* enable pmc pfifo */
 	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
@@ -1208,11 +1209,11 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, pbdma_intr_1_r(i), 0xFFFFFFFF);
 
 		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
-		gk20a_dbg_info("pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
+		nvgpu_log_info(g, "pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
 		gk20a_writel(g, pbdma_intr_en_0_r(i), intr_stall);
 
 		intr_stall = gk20a_readl(g, pbdma_intr_stall_1_r(i));
-		gk20a_dbg_info("pbdma id:%u, intr_en_1 0x%08x", i, intr_stall);
+		nvgpu_log_info(g, "pbdma id:%u, intr_en_1 0x%08x", i, intr_stall);
 		gk20a_writel(g, pbdma_intr_en_1_r(i), intr_stall);
 	}
 
@@ -1246,12 +1247,12 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* clear and enable pfifo interrupt */
 	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
 	mask = gv11b_fifo_intr_0_en_mask(g);
-	gk20a_dbg_info("fifo_intr_en_0 0x%08x", mask);
+	nvgpu_log_info(g, "fifo_intr_en_0 0x%08x", mask);
 	gk20a_writel(g, fifo_intr_en_0_r(), mask);
-	gk20a_dbg_info("fifo_intr_en_1 = 0x80000000");
+	nvgpu_log_info(g, "fifo_intr_en_1 = 0x80000000");
 	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -1350,7 +1351,7 @@ static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id,
 
 		tsgid = fifo_intr_ctxsw_timeout_info_prev_tsgid_v(timeout_info);
 	}
-	gk20a_dbg_info("ctxsw timeout info: tsgid = %d", tsgid);
+	nvgpu_log_info(g, "ctxsw timeout info: tsgid = %d", tsgid);
 
 	/*
 	 * STATUS indicates whether the context request ack was eventually
@@ -1391,14 +1392,14 @@ static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id,
 	if (*info_status ==
 		 fifo_intr_ctxsw_timeout_info_status_ack_received_v()) {
 
-		gk20a_dbg_info("ctxsw timeout info : ack received");
+		nvgpu_log_info(g, "ctxsw timeout info : ack received");
 		/* no need to recover */
 		tsgid = FIFO_INVAL_TSG_ID;
 
 	} else if (*info_status ==
 		fifo_intr_ctxsw_timeout_info_status_dropped_timeout_v()) {
 
-		gk20a_dbg_info("ctxsw timeout info : dropped timeout");
+		nvgpu_log_info(g, "ctxsw timeout info : dropped timeout");
 		/* no need to recover */
 		tsgid = FIFO_INVAL_TSG_ID;
 
@@ -1429,7 +1430,7 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 	timeout_val = gk20a_readl(g, fifo_eng_ctxsw_timeout_r());
 	timeout_val = fifo_eng_ctxsw_timeout_period_v(timeout_val);
 
-	gk20a_dbg_info("eng ctxsw timeout period = 0x%x", timeout_val);
+	nvgpu_log_info(g, "eng ctxsw timeout period = 0x%x", timeout_val);
 
 	for (engine_id = 0; engine_id < g->fifo.num_engines; engine_id++) {
 		active_eng_id = g->fifo.active_engines_list[engine_id];
@@ -1469,7 +1470,7 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 						true, true, verbose,
 						RC_TYPE_CTXSW_TIMEOUT);
 			} else {
-				gk20a_dbg_info(
+				nvgpu_log_info(g,
 					"fifo is waiting for ctx switch: "
 					"for %d ms, %s=%d", ms, "tsg", tsgid);
 			}
@@ -1490,7 +1491,7 @@ unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
 			 pbdma_intr_0, handled, error_notifier);
 
 	if (pbdma_intr_0 & pbdma_intr_0_clear_faulted_error_pending_f()) {
-		gk20a_dbg(gpu_dbg_intr, "clear faulted error on pbdma id %d",
+		nvgpu_log(g, gpu_dbg_intr, "clear faulted error on pbdma id %d",
 				 pbdma_id);
 		gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
 		*handled |= pbdma_intr_0_clear_faulted_error_pending_f();
@@ -1498,7 +1499,7 @@ unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
 	}
 
 	if (pbdma_intr_0 & pbdma_intr_0_eng_reset_pending_f()) {
-		gk20a_dbg(gpu_dbg_intr, "eng reset intr on pbdma id %d",
+		nvgpu_log(g, gpu_dbg_intr, "eng reset intr on pbdma id %d",
 				 pbdma_id);
 		*handled |= pbdma_intr_0_eng_reset_pending_f();
 		rc_type = RC_TYPE_PBDMA_FAULT;
@@ -1545,7 +1546,7 @@ unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
 		return RC_TYPE_NO_RC;
 
 	if (pbdma_intr_1 & pbdma_intr_1_ctxnotvalid_pending_f()) {
-		gk20a_dbg(gpu_dbg_intr, "ctxnotvalid intr on pbdma id %d",
+		nvgpu_log(g, gpu_dbg_intr, "ctxnotvalid intr on pbdma id %d",
 				 pbdma_id);
 		nvgpu_err(g, "pbdma_intr_1(%d)= 0x%08x ",
 				pbdma_id, pbdma_intr_1);
@@ -1753,7 +1754,7 @@ void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 	u64 gpu_va = gpu_va_base +
 		nvgpu_nvhost_syncpt_unit_interface_get_byte_offset(id);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	off = cmd->off + off;
 
@@ -1792,7 +1793,7 @@ void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 {
 	u32 off = cmd->off;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* semaphore_a */
 	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -108,6 +108,7 @@ static const struct seq_operations gk20a_fifo_sched_debugfs_seq_ops = {
 static int gk20a_fifo_sched_debugfs_open(struct inode *inode,
 	struct file *file)
 {
+	struct gk20a *g = inode->i_private;
 	int err;
 
 	if (!capable(CAP_SYS_ADMIN))
@@ -117,7 +118,7 @@ static int gk20a_fifo_sched_debugfs_open(struct inode *inode,
 	if (err)
 		return err;
 
-	gk20a_dbg(gpu_dbg_info, "i_private=%p", inode->i_private);
+	nvgpu_log(g, gpu_dbg_info, "i_private=%p", inode->i_private);
 
 	((struct seq_file *)file->private_data)->private = inode->i_private;
 	return 0;
@@ -301,7 +302,7 @@ void gk20a_fifo_debugfs_init(struct gk20a *g)
 	if (IS_ERR_OR_NULL(fifo_root))
 		return;
 
-	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_info, "g=%p", g);
 
 	debugfs_create_file("sched", 0600, fifo_root, g,
 		&gk20a_fifo_sched_debugfs_fops);

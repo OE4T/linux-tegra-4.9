@@ -43,7 +43,7 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = vgpu_gr_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
 	if (err)
@@ -78,7 +78,7 @@ int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return err;
 
 fail:
@@ -132,11 +132,11 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
-		gk20a_dbg_info("gfxp context preempt size=%d",
+		nvgpu_log_info(g, "gfxp context preempt size=%d",
 			g->gr.ctx_vars.preempt_image_size);
-		gk20a_dbg_info("gfxp context spill size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib cb size=%d",
+		nvgpu_log_info(g, "gfxp context spill size=%d", spill_size);
+		nvgpu_log_info(g, "gfxp context pagepool size=%d", pagepool_size);
+		nvgpu_log_info(g, "gfxp context attrib cb size=%d",
 			attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,
@@ -293,7 +293,7 @@ int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = vgpu_gr_init_ctx_state(g);
 	if (err)

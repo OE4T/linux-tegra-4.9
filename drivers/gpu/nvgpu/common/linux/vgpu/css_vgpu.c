@@ -86,7 +86,7 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 	int err;
 	u64 size;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (data->hw_snapshot)
 		return 0;
@@ -125,6 +125,7 @@ fail:
 void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 {
 	struct gk20a_cs_snapshot *data = gr->cs_data;
+	struct gk20a *g = gr->g;
 
 	if (!data->hw_snapshot)
 		return;
@@ -135,7 +136,7 @@ void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 	vgpu_ivm_mempool_unreserve(css_cookie);
 	css_cookie = NULL;
 
-	gk20a_dbg_info("cyclestats(vgpu): buffer for snapshots released\n");
+	nvgpu_log_info(g, "cyclestats(vgpu): buffer for snapshots released\n");
 }
 
 int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
@@ -148,7 +149,7 @@ int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
 	struct gk20a_cs_snapshot *data = gr->cs_data;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT;
 	msg.handle = vgpu_get_handle(g);
@@ -176,7 +177,7 @@ static int vgpu_css_attach(struct channel_gk20a *ch,
 				&msg.params.cyclestats_snapshot;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT;
 	msg.handle = vgpu_get_handle(g);
@@ -203,7 +204,7 @@ int vgpu_css_detach(struct channel_gk20a *ch,
 				&msg.params.cyclestats_snapshot;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT;
 	msg.handle = vgpu_get_handle(g);

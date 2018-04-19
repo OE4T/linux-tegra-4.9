@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2998,7 +2998,7 @@ static void mclk_seq_pmucmdhandler(struct gk20a *g, struct pmu_msg *_msg,
 	struct nv_pmu_seq_msg_run_script *seq_msg;
 	u32 msg_status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "mclk seq_script cmd aborted");
@@ -3041,7 +3041,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 	u8 *mem_entry_ptr = NULL;
 	int index;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	mem_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 					g->bios.perf_token,
@@ -3213,7 +3213,7 @@ int gp106_mclk_init(struct gk20a *g)
 	u32 index;
 	struct memory_config *m;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	mclk = &g->clk_pmu.clk_mclk;
 
@@ -3316,7 +3316,7 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 #endif
 	u32 speed;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	memset(&payload, 0, sizeof(struct pmu_payload));
 
@@ -3508,7 +3508,7 @@ static int mclk_debugfs_init(struct gk20a *g)
 	struct dentry *gpu_root = l->debugfs;
 	struct dentry *d;
 
-	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_info, "g=%p", g);
 
 	d = debugfs_create_file(
 			"mclk_speed_set",

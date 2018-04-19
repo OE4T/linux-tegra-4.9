@@ -476,7 +476,7 @@ static int __gk20a_channel_open(struct gk20a *g,
 	struct channel_gk20a *ch;
 	struct channel_priv *priv;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g = gk20a_get(g);
 	if (!g)
@@ -529,10 +529,10 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 	struct gk20a *g = &l->g;
 	int ret;
 
-	gk20a_dbg_fn("start");
+	nvgpu_log_fn(g, "start");
 	ret = __gk20a_channel_open(g, filp, -1);
 
-	gk20a_dbg_fn("end");
+	nvgpu_log_fn(g, "end");
 	return ret;
 }
 
@@ -676,7 +676,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	int remain, ret = 0;
 	u64 end;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
@@ -760,7 +760,7 @@ static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 	struct gk20a *g = ch->g;
 	struct gr_gk20a *gr = &g->gr;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(gr->g, " ");
 
 	return g->ops.gr.bind_ctxsw_zcull(g, gr, ch,
 				args->gpu_va, args->mode);
@@ -775,9 +775,10 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct fifo_profile_gk20a *profile = NULL;
 	u32 submit_flags = 0;
 	int fd = -1;
+	struct gk20a *g = ch->g;
 
 	int ret = 0;
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 #ifdef CONFIG_DEBUG_FS
 	profile = gk20a_fifo_profile_acquire(ch->g);
@@ -1064,8 +1065,9 @@ long gk20a_channel_ioctl(struct file *filp,
 	struct device *dev = dev_from_gk20a(ch->g);
 	u8 buf[NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE] = {0};
 	int err = 0;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+	nvgpu_log_fn(g, "start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
@@ -1224,7 +1226,7 @@ long gk20a_channel_ioctl(struct file *filp,
 	{
 		u32 timeout =
 			(u32)((struct nvgpu_set_timeout_args *)buf)->timeout;
-		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
+		nvgpu_log(g, gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->chid);
 		ch->timeout_ms_max = timeout;
 		gk20a_channel_trace_sched_param(
@@ -1238,7 +1240,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		bool timeout_debug_dump = !((u32)
 			((struct nvgpu_set_timeout_ex_args *)buf)->flags &
 			(1 << NVGPU_TIMEOUT_FLAG_DISABLE_DUMP));
-		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
+		nvgpu_log(g, gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->chid);
 		ch->timeout_ms_max = timeout;
 		ch->timeout_debug_dump = timeout_debug_dump;
@@ -1367,7 +1369,7 @@ long gk20a_channel_ioctl(struct file *filp,
 
 	gk20a_channel_put(ch);
 
-	gk20a_dbg_fn("end");
+	nvgpu_log_fn(g, "end");
 
 	return err;
 }

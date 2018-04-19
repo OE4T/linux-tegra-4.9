@@ -88,8 +88,9 @@ int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		      u64 *offset)
 {
 	struct nvgpu_mapped_buf *mapped_buffer;
+	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_fn("gpu_va=0x%llx", gpu_va);
+	nvgpu_log_fn(g, "gpu_va=0x%llx", gpu_va);
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 

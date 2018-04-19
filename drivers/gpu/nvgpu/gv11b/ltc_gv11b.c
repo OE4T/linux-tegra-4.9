@@ -56,7 +56,7 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 	u32 ltc_intr;
 	u32 reg;
 
-	gk20a_dbg_info("initialize gv11b l2");
+	nvgpu_log_info(g, "initialize gv11b l2");
 
 	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
 				mc_enable_l2_enabled_f());
@@ -67,7 +67,7 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());
-	gk20a_dbg_info("%u ltcs out of %u", g->ltc_count, g->max_ltc_count);
+	nvgpu_log_info(g, "%u ltcs out of %u", g->ltc_count, g->max_ltc_count);
 
 	/* Disable LTC interrupts */
 	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 	struct boardobj  *pboardobj = NULL;
 	struct boardobj  *devtmp = (struct boardobj *)args;
 
-	gk20a_dbg_info(" ");
+	nvgpu_log_info(g, " ");
 
 	if (devtmp == NULL)
 		return -EINVAL;
@@ -61,7 +61,9 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 
 u32 boardobj_destruct_super(struct boardobj *pboardobj)
 {
-	gk20a_dbg_info("");
+	struct gk20a *g = pboardobj->g;
+
+	nvgpu_log_info(g, " ");
 	if (pboardobj == NULL)
 		return -EINVAL;
 
@@ -75,7 +77,7 @@ u32 boardobj_destruct_super(struct boardobj *pboardobj)
 bool boardobj_implements_super(struct gk20a *g, struct boardobj *pboardobj,
 	u8 type)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	return (0 != (pboardobj->type_mask & BIT(type)));
 }
@@ -83,12 +85,12 @@ bool boardobj_implements_super(struct gk20a *g, struct boardobj *pboardobj,
 u32 boardobj_pmudatainit_super(struct gk20a *g, struct boardobj *pboardobj,
 				struct nv_pmu_boardobj *pmudata)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	if (pboardobj == NULL)
 		return -EINVAL;
 	if (pmudata == NULL)
 		return -EINVAL;
 	pmudata->type = pboardobj->type;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }

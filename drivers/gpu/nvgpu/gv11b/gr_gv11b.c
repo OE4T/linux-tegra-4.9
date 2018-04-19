@@ -96,7 +96,7 @@ bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 	default:
 		break;
 	}
-	gk20a_dbg_info("class=0x%x valid=%d", class_num, valid);
+	nvgpu_log_info(g, "class=0x%x valid=%d", class_num, valid);
 	return valid;
 }
 
@@ -190,7 +190,7 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_total_counter_overflow_v(l1_tag_ecc_status);
 
 	if ((l1_tag_corrected_err_count_delta > 0) || is_l1_tag_ecc_corrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"corrected error (SBE) detected in SM L1 tag! err_mask [%08x] is_overf [%d]",
 			l1_tag_ecc_corrected_err_status, is_l1_tag_ecc_corrected_total_err_overflow);
 
@@ -205,7 +205,7 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			0);
 	}
 	if ((l1_tag_uncorrected_err_count_delta > 0) || is_l1_tag_ecc_uncorrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Uncorrected error (DBE) detected in SM L1 tag! err_mask [%08x] is_overf [%d]",
 			l1_tag_ecc_uncorrected_err_status, is_l1_tag_ecc_uncorrected_total_err_overflow);
 
@@ -282,7 +282,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_total_counter_overflow_v(lrf_ecc_status);
 
 	if ((lrf_corrected_err_count_delta > 0) || is_lrf_ecc_corrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"corrected error (SBE) detected in SM LRF! err_mask [%08x] is_overf [%d]",
 			lrf_ecc_corrected_err_status, is_lrf_ecc_corrected_total_err_overflow);
 
@@ -297,7 +297,7 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			0);
 	}
 	if ((lrf_uncorrected_err_count_delta > 0) || is_lrf_ecc_uncorrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Uncorrected error (DBE) detected in SM LRF! err_mask [%08x] is_overf [%d]",
 			lrf_ecc_uncorrected_err_status, is_lrf_ecc_uncorrected_total_err_overflow);
 
@@ -441,7 +441,7 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_total_counter_overflow_v(cbu_ecc_status);
 
 	if ((cbu_corrected_err_count_delta > 0) || is_cbu_ecc_corrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"corrected error (SBE) detected in SM CBU! err_mask [%08x] is_overf [%d]",
 			cbu_ecc_corrected_err_status, is_cbu_ecc_corrected_total_err_overflow);
 
@@ -456,7 +456,7 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			0);
 	}
 	if ((cbu_uncorrected_err_count_delta > 0) || is_cbu_ecc_uncorrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Uncorrected error (DBE) detected in SM CBU! err_mask [%08x] is_overf [%d]",
 			cbu_ecc_uncorrected_err_status, is_cbu_ecc_uncorrected_total_err_overflow);
 
@@ -521,7 +521,7 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_total_counter_overflow_v(l1_data_ecc_status);
 
 	if ((l1_data_corrected_err_count_delta > 0) || is_l1_data_ecc_corrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"corrected error (SBE) detected in SM L1 data! err_mask [%08x] is_overf [%d]",
 			l1_data_ecc_corrected_err_status, is_l1_data_ecc_corrected_total_err_overflow);
 
@@ -536,7 +536,7 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			0);
 	}
 	if ((l1_data_uncorrected_err_count_delta > 0) || is_l1_data_ecc_uncorrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Uncorrected error (DBE) detected in SM L1 data! err_mask [%08x] is_overf [%d]",
 			l1_data_ecc_uncorrected_err_status, is_l1_data_ecc_uncorrected_total_err_overflow);
 
@@ -605,7 +605,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_total_counter_overflow_v(icache_ecc_status);
 
 	if ((icache_corrected_err_count_delta > 0) || is_icache_ecc_corrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"corrected error (SBE) detected in SM L0 && L1 icache! err_mask [%08x] is_overf [%d]",
 			icache_ecc_corrected_err_status, is_icache_ecc_corrected_total_err_overflow);
 
@@ -620,7 +620,7 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			0);
 	}
 	if ((icache_uncorrected_err_count_delta > 0) || is_icache_ecc_uncorrected_total_err_overflow) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Uncorrected error (DBE) detected in SM L0 && L1 icache! err_mask [%08x] is_overf [%d]",
 			icache_ecc_uncorrected_err_status, is_icache_ecc_uncorrected_total_err_overflow);
 
@@ -1129,14 +1129,14 @@ static void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = gk20a_readl(g, gr_gpcs_tc_debug0_r());
 	val = set_field(val, gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(),
 			     gr_gpcs_tc_debug0_limit_coalesce_buffer_size_f(data));
 	gk20a_writel(g, gr_gpcs_tc_debug0_r(), val);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
@@ -1144,7 +1144,7 @@ static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
 	u32 val;
 	bool flag;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = gk20a_readl(g, gr_gpcs_tpcs_tex_in_dbg_r());
 	flag = (data & NVC397_SET_TEX_IN_DBG_TSL1_RVCH_INVALIDATE) ? 1 : 0;
@@ -1190,7 +1190,7 @@ static void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
 
 static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (data == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE) {
 		gk20a_writel(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(),
@@ -1224,7 +1224,7 @@ static void gr_gv11b_set_shader_cut_collector(struct gk20a *g, u32 data)
 int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (class_num == VOLTA_COMPUTE_A) {
 		switch (offset << 2) {
@@ -1315,7 +1315,7 @@ void gr_gv11b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 pd_ab_max_output;
 	u32 alpha_cb_size = data * 4;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (alpha_cb_size > gr->alpha_cb_size)
 		alpha_cb_size = gr->alpha_cb_size;
@@ -1360,7 +1360,7 @@ void gr_gv11b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_index, ppc_index, stride, val;
 	u32 cb_size_steady = data * 4, cb_size;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (cb_size_steady > gr->attrib_cb_size)
 		cb_size_steady = gr->attrib_cb_size;
@@ -1423,8 +1423,9 @@ int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem)
 {
 	int err;
+	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_dma_alloc_sys(vm->mm->g, size, mem);
 	if (err)
@@ -1500,9 +1501,9 @@ int gr_gv11b_set_ctxsw_preemption_mode(struct gk20a *g,
 				  g->gr.max_tpc_count;
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
-		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
+		nvgpu_log_info(g, "gfxp context spill_size=%d", spill_size);
+		nvgpu_log_info(g, "gfxp context pagepool_size=%d", pagepool_size);
+		nvgpu_log_info(g, "gfxp context attrib_cb_size=%d",
 				attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,
@@ -1590,7 +1591,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		ctxsw_prog_main_image_compute_preemption_options_control_cta_f();
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -1600,7 +1601,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->graphics_preempt_mode ==
 					NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) {
-		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
+		nvgpu_log_info(g, "GfxP: %x", gfxp_preempt_option);
 		nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_graphics_preemption_options_o(),
 			gfxp_preempt_option);
@@ -1608,7 +1609,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->compute_preempt_mode ==
 					NVGPU_PREEMPTION_MODE_COMPUTE_CILP) {
-		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
+		nvgpu_log_info(g, "CILP: %x", cilp_preempt_option);
 		nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_compute_preemption_options_o(),
 			cilp_preempt_option);
@@ -1616,7 +1617,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->compute_preempt_mode ==
 					NVGPU_PREEMPTION_MODE_COMPUTE_CTA) {
-		gk20a_dbg_info("CTA: %x", cta_preempt_option);
+		nvgpu_log_info(g, "CTA: %x", cta_preempt_option);
 		nvgpu_mem_wr(g, mem,
 			ctxsw_prog_main_image_compute_preemption_options_o(),
 			cta_preempt_option);
@@ -1647,7 +1648,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 			(u64_hi32(gr_ctx->betacb_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
-		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
+		nvgpu_log_info(g, "attrib cb addr : 0x%016x", addr);
 		g->ops.gr.commit_global_attrib_cb(g, gr_ctx, addr, true);
 
 		addr = (u64_lo32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) >>
@@ -1698,7 +1699,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 	}
 
 out:
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 static void gr_gv11b_dump_gr_per_sm_regs(struct gk20a *g,
 			struct gk20a_debug_output *o,
@@ -1949,7 +1950,7 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 	u32 activity0, activity1, activity2, activity4;
 	struct nvgpu_timeout timeout;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_timeout_init(g, &timeout, duration_ms, NVGPU_TIMER_CPU_TIMER);
 
@@ -1974,7 +1975,7 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			    gr_activity_empty_or_preempted(activity4));
 
 		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
-			gk20a_dbg_fn("done");
+			nvgpu_log_fn(g, "done");
 			return 0;
 		}
 
@@ -2191,7 +2192,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			NVGPU_PREEMPTION_MODE_COMPUTE_CILP);
 	}
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"SM Exception received on gpc %d tpc %d sm %d = 0x%08x",
 			gpc, tpc, sm, global_esr);
 
@@ -2210,13 +2211,13 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
 			*ignore_debugger = true;
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"CILP: starting wait for LOCKED_DOWN on "
 				"gpc %d tpc %d sm %d",
 				gpc, tpc, sm);
 
 			if (gk20a_dbg_gpu_broadcast_stop_trigger(fault_ch)) {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: Broadcasting STOP_TRIGGER from "
 					"gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
@@ -2225,7 +2226,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 
 				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
 			} else {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: STOP_TRIGGER from "
 					"gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
@@ -2238,12 +2239,12 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 							gpc, tpc, sm);
 			g->ops.gr.clear_sm_hww(g,
 					gpc, tpc, sm, global_esr_copy);
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for "
 					"gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
 				nvgpu_err(g, "CILP: error while setting CILP preempt pending!");
@@ -2252,7 +2253,7 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 
 			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
 			if (dbgr_control0 & gr_gpc0_tpc0_sm0_dbgr_control0_single_step_mode_enable_f()) {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: clearing SINGLE_STEP_MODE "
 					"before resume for gpc %d tpc %d sm %d",
 						gpc, tpc, sm);
@@ -2262,13 +2263,13 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 				gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset, dbgr_control0);
 			}
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"CILP: resume for gpc %d tpc %d sm %d",
 					gpc, tpc, sm);
 			g->ops.gr.resume_single_sm(g, gpc, tpc, sm);
 
 			*ignore_debugger = true;
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"CILP: All done on gpc %d, tpc %d sm %d",
 				gpc, tpc, sm);
 		}
@@ -2388,7 +2389,7 @@ int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 				GPU_LIT_NUM_TPC_PER_GPC);
 	u32 num_tpcs = num_gpcs * num_tpc_per_gpc;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!gr->map_tiles)
 		return -1;
@@ -2535,7 +2536,7 @@ void gr_gv11b_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
 {
 	u32 val, i, j;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	for (i = 0, j = 0; i < (zcull_num_entries / 8); i++, j += 8) {
 		val =
@@ -2666,8 +2667,9 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	u32 addr_hi;
 	struct ctx_header_desc *ctx;
 	int err;
+	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gv11b_alloc_subctx_header(c);
 	if (err)
@@ -2704,7 +2706,7 @@ int gr_gv11b_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c)
 	u32 pe_vaf;
 	u32 pe_vsc_vpc;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	pd_ab_dist_cfg0 = gk20a_readl(g, gr_pd_ab_dist_cfg0_r());
 	ds_debug = gk20a_readl(g, gr_ds_debug_r());
@@ -2814,7 +2816,7 @@ void gr_gv11b_load_tpc_mask(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_info("pes_tpc_mask %u\n", pes_tpc_mask);
+	nvgpu_log_info(g, "pes_tpc_mask %u\n", pes_tpc_mask);
 	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, gpc);
 	if (g->tpc_fs_mask_user &&
 			g->tpc_fs_mask_user != fuse_tpc_mask &&
@@ -2860,7 +2862,7 @@ int gr_gv11b_init_fs_state(struct gk20a *g)
 	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
 	u32 rev = g->params.gpu_rev;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	data = gk20a_readl(g, gr_gpcs_tpcs_sm_texio_control_r());
 	data = set_field(data, gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(),
@@ -2928,14 +2930,14 @@ void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc);
 
 	reg_val = gk20a_readl(g, gr_gpc0_tpc0_sm_tpc_esr_sm_sel_r() + offset);
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"sm tpc esr sm sel reg val: 0x%x", reg_val);
 	*esr_sm_sel = 0;
 	if (gr_gpc0_tpc0_sm_tpc_esr_sm_sel_sm0_error_v(reg_val))
 		*esr_sm_sel = 1;
 	if (gr_gpc0_tpc0_sm_tpc_esr_sm_sel_sm1_error_v(reg_val))
 		*esr_sm_sel |= 1 << 1;
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"esr_sm_sel bitmask: 0x%x", *esr_sm_sel);
 }
 
@@ -2954,7 +2956,7 @@ int gv11b_gr_sm_trigger_suspend(struct gk20a *g)
 	gk20a_writel(g,
 		gr_gpcs_tpcs_sms_dbgr_control0_r(), dbgr_control0);
 
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 			"stop trigger enable: broadcast dbgr_control0: 0x%x ",
 			dbgr_control0);
 
@@ -3012,19 +3014,19 @@ void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 
 	/* Only for debug purpose */
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
-		gk20a_dbg_fn("w_state[%d].valid_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].valid_warps[0]: %llx\n",
 					sm_id, w_state[sm_id].valid_warps[0]);
-		gk20a_dbg_fn("w_state[%d].valid_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].valid_warps[1]: %llx\n",
 					sm_id, w_state[sm_id].valid_warps[1]);
 
-		gk20a_dbg_fn("w_state[%d].trapped_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].trapped_warps[0]: %llx\n",
 					sm_id, w_state[sm_id].trapped_warps[0]);
-		gk20a_dbg_fn("w_state[%d].trapped_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].trapped_warps[1]: %llx\n",
 					sm_id, w_state[sm_id].trapped_warps[1]);
 
-		gk20a_dbg_fn("w_state[%d].paused_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].paused_warps[0]: %llx\n",
 					sm_id, w_state[sm_id].paused_warps[0]);
-		gk20a_dbg_fn("w_state[%d].paused_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].paused_warps[1]: %llx\n",
 					sm_id, w_state[sm_id].paused_warps[1]);
 	}
 }
@@ -3257,7 +3259,7 @@ bool gv11b_gr_sm_debugger_attached(struct gk20a *g)
 	 */
 	debugger_mode =
 		gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_v(dbgr_control0);
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 			"SM Debugger Mode: %d", debugger_mode);
 	if (debugger_mode ==
 			gr_gpc0_tpc0_sm0_dbgr_control0_debugger_mode_on_v())
@@ -3576,7 +3578,7 @@ static void gv11b_gr_sm_dump_warp_bpt_pause_trap_mask_regs(struct gk20a *g,
 		dbgr_status0, dbgr_control0, warps_valid,
 		warps_paused, warps_trapped);
 	else
-		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"STATUS0=0x%x CONTROL0=0x%x VALID_MASK=0x%llx "
 		"PAUSE_MASK=0x%llx TRAP_MASK=0x%llx\n",
 		dbgr_status0, dbgr_control0, warps_valid,
@@ -3598,7 +3600,7 @@ int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 			gk20a_gr_tpc_offset(g, tpc) +
 			gv11b_gr_sm_offset(g, sm);
 
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"GPC%d TPC%d: locking down SM%d", gpc, tpc, sm);
 
 	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
@@ -3642,7 +3644,7 @@ int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 		}
 
 		if (locked_down || no_error_pending) {
-			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: locked down SM%d", gpc, tpc, sm);
 			return 0;
 		}
@@ -3677,7 +3679,7 @@ int gv11b_gr_lock_down_sm(struct gk20a *g,
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) + gk20a_gr_tpc_offset(g, tpc) +
 			gv11b_gr_sm_offset(g, sm);
 
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 			"GPC%d TPC%d SM%d: assert stop trigger", gpc, tpc, sm);
 
 	/* assert stop trigger */
@@ -3699,13 +3701,13 @@ void gv11b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 
 	gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset,
 			global_esr);
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"Cleared HWW global esr, current reg val: 0x%x",
 			gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() +
 						offset));
 
 	gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset, 0);
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"Cleared HWW warp esr, current reg val: 0x%x",
 			gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_warp_esr_r() +
 						offset));
@@ -4440,7 +4442,7 @@ int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
 {
 	u32 gpc_addr;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
 	/* setup defaults */
 	*addr_type = CTXSW_ADDR_TYPE_SYS;
@@ -4591,12 +4593,12 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 	t = 0;
 	*num_registers = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
 	err = g->ops.gr.decode_priv_addr(g, addr, &addr_type,
 					&gpc_num, &tpc_num, &ppc_num, &be_num,
 					&broadcast_flags);
-	gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type = %d", addr_type);
+	nvgpu_log(g, gpu_dbg_gpu_dbg, "addr_type = %d", addr_type);
 	if (err)
 		return err;
 
@@ -4690,7 +4692,7 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 	} else if (((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
 			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
 				g->ops.gr.egpc_etpc_priv_addr_table) {
-		gk20a_dbg(gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
+		nvgpu_log(g, gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
 		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num, tpc_num,
 				broadcast_flags, priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {

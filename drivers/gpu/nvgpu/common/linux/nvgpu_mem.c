@@ -140,7 +140,7 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 		WARN_ON(!ptr);
 		data = ptr[w];
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+		nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
 		u32 value;
@@ -177,7 +177,7 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 		memcpy(dest, src, size);
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 		if (size)
-			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
+			nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
 					src, *dest, size);
 #endif
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
@@ -215,7 +215,7 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 
 		WARN_ON(!ptr);
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+		nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
 		ptr[w] = data;
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
@@ -249,7 +249,7 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		WARN_ON(!mem->cpu_va);
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 		if (size)
-			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
+			nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
 					dest, *src, size);
 #endif
 		memcpy(dest, src, size);
@@ -296,7 +296,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		WARN_ON(!mem->cpu_va);
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 		if (size)
-			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x [times %d]",
+			nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x [times %d]",
 				dest, c, size);
 #endif
 		memset(dest, c, size);

@@ -38,7 +38,7 @@
 
 void fb_gm20b_init_fs_state(struct gk20a *g)
 {
-	gk20a_dbg_info("initialize gm20b fb");
+	nvgpu_log_info(g, "initialize gm20b fb");
 
 	gk20a_writel(g, fb_fbhub_num_active_ltcs_r(),
 			g->ltc_count);

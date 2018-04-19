@@ -30,7 +30,7 @@ int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = vgpu_init_gpu_characteristics(g);
 	if (err) {

@@ -1,7 +1,7 @@
 /*
  * GK20A Address Spaces
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,13 +34,17 @@
 /* dumb allocator... */
 static int generate_as_share_id(struct gk20a_as *as)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_as(as);
+
+	nvgpu_log_fn(g, " ");
 	return ++as->last_share_id;
 }
 /* still dumb */
 static void release_as_share_id(struct gk20a_as *as, int id)
 {
-	gk20a_dbg_fn("");
+	struct gk20a *g = gk20a_from_as(as);
+
+	nvgpu_log_fn(g, " ");
 	return;
 }
 
@@ -56,7 +60,7 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	const bool userspace_managed =
 		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (big_page_size == 0) {
 		big_page_size = g->ops.mm.get_default_big_page_size();
@@ -92,7 +96,7 @@ int gk20a_as_alloc_share(struct gk20a *g,
 	struct gk20a_as_share *as_share;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	g = gk20a_get(g);
 	if (!g)
 		return -ENODEV;
@@ -126,8 +130,9 @@ failed:
 int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 {
 	struct vm_gk20a *vm = as_share->vm;
+	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	vm->as_share = NULL;
 	as_share->vm = NULL;
@@ -146,7 +151,7 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 	struct gk20a *g = as_share->vm->mm->g;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_busy(g);
 

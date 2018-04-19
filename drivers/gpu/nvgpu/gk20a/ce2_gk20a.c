@@ -50,21 +50,21 @@
 
 static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
-	gk20a_dbg(gpu_dbg_intr, "ce2 non-blocking pipe interrupt\n");
+	nvgpu_log(g, gpu_dbg_intr, "ce2 non-blocking pipe interrupt\n");
 
 	return ce2_intr_status_nonblockpipe_pending_f();
 }
 
 static u32 ce2_blockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
-	gk20a_dbg(gpu_dbg_intr, "ce2 blocking pipe interrupt\n");
+	nvgpu_log(g, gpu_dbg_intr, "ce2 blocking pipe interrupt\n");
 
 	return ce2_intr_status_blockpipe_pending_f();
 }
 
 static u32 ce2_launcherr_isr(struct gk20a *g, u32 fifo_intr)
 {
-	gk20a_dbg(gpu_dbg_intr, "ce2 launch error interrupt\n");
+	nvgpu_log(g, gpu_dbg_intr, "ce2 launch error interrupt\n");
 
 	return ce2_intr_status_launcherr_pending_f();
 }
@@ -74,7 +74,7 @@ void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
 	u32 clear_intr = 0;
 
-	gk20a_dbg(gpu_dbg_intr, "ce2 isr %08x\n", ce2_intr);
+	nvgpu_log(g, gpu_dbg_intr, "ce2 isr %08x\n", ce2_intr);
 
 	/* clear blocking interrupts: they exibit broken behavior */
 	if (ce2_intr & ce2_intr_status_blockpipe_pending_f())
@@ -92,7 +92,7 @@ int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	int ops = 0;
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
 
-	gk20a_dbg(gpu_dbg_intr, "ce2 nonstall isr %08x\n", ce2_intr);
+	nvgpu_log(g, gpu_dbg_intr, "ce2 nonstall isr %08x\n", ce2_intr);
 
 	if (ce2_intr & ce2_intr_status_nonblockpipe_pending_f()) {
 		gk20a_writel(g, ce2_intr_status_r(),
@@ -340,7 +340,7 @@ int gk20a_init_ce_support(struct gk20a *g)
 		return 0;
 	}
 
-	gk20a_dbg(gpu_dbg_fn, "ce: init");
+	nvgpu_log(g, gpu_dbg_fn, "ce: init");
 
 	err = nvgpu_mutex_init(&ce_app->app_mutex);
 	if (err)
@@ -355,7 +355,7 @@ int gk20a_init_ce_support(struct gk20a *g)
 	ce_app->app_state = NVGPU_CE_ACTIVE;
 
 	nvgpu_mutex_release(&ce_app->app_mutex);
-	gk20a_dbg(gpu_dbg_cde_ctx, "ce: init finished");
+	nvgpu_log(g, gpu_dbg_cde_ctx, "ce: init finished");
 
 	return 0;
 }

@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/gr_ctx_sim_gk20a.c
- *
  * GK20A Graphics Context for Simulation
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,7 +33,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	int err = 0;
 	u32 i, temp;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_info,
 		   "querying grctx info from chiplib");
 
 	g->gr.ctx_vars.dynamic = true;
@@ -250,7 +248,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 				    i, &l[i].value);
 	}
 
-	gk20a_dbg(gpu_dbg_info | gpu_dbg_fn, "query GRCTX_REG_LIST_ETPC");
+	nvgpu_log(g, gpu_dbg_info | gpu_dbg_fn, "query GRCTX_REG_LIST_ETPC");
 	for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.etpc.count; i++) {
 		struct aiv_gk20a *l = g->gr.ctx_vars.ctxsw_regs.etpc.l;
 		g->sim->esc_readl(g, "GRCTX_REG_LIST_ETPC:ADDR",
@@ -259,7 +257,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 				    i, &l[i].index);
 		g->sim->esc_readl(g, "GRCTX_REG_LIST_ETPC:VALUE",
 				    i, &l[i].value);
-		gk20a_dbg(gpu_dbg_info | gpu_dbg_fn,
+		nvgpu_log(g, gpu_dbg_info | gpu_dbg_fn,
 				"addr:0x%#08x index:0x%08x value:0x%08x",
 				l[i].addr, l[i].index, l[i].value);
 	}
@@ -269,7 +267,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	g->sim->esc_readl(g, "GRCTX_GEN_CTX_REGS_BASE_INDEX", 0,
 			    &g->gr.ctx_vars.regs_base_index);
 
-	gk20a_dbg(gpu_dbg_info | gpu_dbg_fn, "finished querying grctx info from chiplib");
+	nvgpu_log(g, gpu_dbg_info | gpu_dbg_fn, "finished querying grctx info from chiplib");
 	return 0;
 fail:
 	nvgpu_err(g, "failed querying grctx info from chiplib");

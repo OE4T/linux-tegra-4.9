@@ -77,7 +77,7 @@ int gk20a_detect_chip(struct gk20a *g)
 
 	gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
 
-	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
+	nvgpu_log_info(g, "arch: %x, impl: %x, rev: %x\n",
 			g->params.gpu_arch,
 			g->params.gpu_impl,
 			g->params.gpu_rev);
@@ -89,7 +89,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 {
 	int ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->ops.fifo.channel_suspend) {
 		ret = g->ops.fifo.channel_suspend(g);
@@ -126,7 +126,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	u32 nr_pages;
 #endif
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->power_on)
 		return 0;
@@ -434,7 +434,7 @@ static void gk20a_free_cb(struct nvgpu_ref *refcount)
 	struct gk20a *g = container_of(refcount,
 		struct gk20a, refcount);
 
-	gk20a_dbg(gpu_dbg_shutdown, "Freeing GK20A struct!");
+	nvgpu_log(g, gpu_dbg_shutdown, "Freeing GK20A struct!");
 
 	gk20a_ce_destroy(g);
 
@@ -465,7 +465,7 @@ struct gk20a * __must_check gk20a_get(struct gk20a *g)
 	 */
 	success = nvgpu_ref_get_unless_zero(&g->refcount);
 
-	gk20a_dbg(gpu_dbg_shutdown, "GET: refs currently %d %s",
+	nvgpu_log(g, gpu_dbg_shutdown, "GET: refs currently %d %s",
 		nvgpu_atomic_read(&g->refcount.refcount),
 			success ? "" : "(FAILED)");
 
@@ -490,7 +490,7 @@ void gk20a_put(struct gk20a *g)
 	 *  ... PUT: refs currently 2
 	 *  ... Freeing GK20A struct!
 	 */
-	gk20a_dbg(gpu_dbg_shutdown, "PUT: refs currently %d",
+	nvgpu_log(g, gpu_dbg_shutdown, "PUT: refs currently %d",
 		nvgpu_atomic_read(&g->refcount.refcount));
 
 	nvgpu_ref_put(&g->refcount, gk20a_free_cb);

@@ -45,8 +45,9 @@ void vgpu_channel_bind(struct channel_gk20a *ch)
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_info("bind channel %d", ch->chid);
+	nvgpu_log_info(g, "bind channel %d", ch->chid);
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -60,8 +61,9 @@ void vgpu_channel_bind(struct channel_gk20a *ch)
 
 void vgpu_channel_unbind(struct channel_gk20a *ch)
 {
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_atomic_cmpxchg(&ch->bound, true, false)) {
 		struct tegra_vgpu_cmd_msg msg;
@@ -84,7 +86,7 @@ int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_HWCTX;
 	msg.handle = vgpu_get_handle(g);
@@ -97,7 +99,7 @@ int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	}
 
 	ch->virt_ctx = p->handle;
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -107,7 +109,7 @@ void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_HWCTX;
 	msg.handle = vgpu_get_handle(g);
@@ -122,8 +124,9 @@ void vgpu_channel_enable(struct channel_gk20a *ch)
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ENABLE;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -138,8 +141,9 @@ void vgpu_channel_disable(struct channel_gk20a *ch)
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_DISABLE;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -155,8 +159,9 @@ int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ramfc_params *p = &msg.params.ramfc;
 	int err;
+	struct gk20a *g = ch->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SETUP_RAMFC;
 	msg.handle = vgpu_get_handle(ch->g);
@@ -175,8 +180,9 @@ int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(f->g);
 	struct tegra_vgpu_engines_info *engines = &priv->constants.engines_info;
 	u32 i;
+	struct gk20a *g = f->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (engines->num_engines > TEGRA_VGPU_MAX_ENGINES) {
 		nvgpu_err(f->g, "num_engines %d larger than max %d",
@@ -207,7 +213,7 @@ int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
 		f->active_engines_list[i] = engines->info[i].engine_id;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -219,7 +225,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	u32 i;
 	u64 runlist_size;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	f->max_runlists = g->ops.fifo.eng_runlist_base_size();
 	f->runlist_info = nvgpu_kzalloc(g,
@@ -256,12 +262,12 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist->cur_buffer = MAX_RUNLIST_BUFFERS;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up_runlist:
 	gk20a_fifo_delete_runlist(f);
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	return -ENOMEM;
 }
 
@@ -272,10 +278,10 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	unsigned int chid;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (f->sw_ready) {
-		gk20a_dbg_fn("skip init");
+		nvgpu_log_fn(g, "skip init");
 		return 0;
 	}
 
@@ -306,7 +312,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 			f->userd.gpu_va = 0;
 	}
 
-	gk20a_dbg(gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
+	nvgpu_log(g, gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
 	f->channel = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->channel));
 	f->tsg = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->tsg));
@@ -350,11 +356,11 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	f->sw_ready = true;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up:
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	/* FIXME: unmap from bar1 */
 	nvgpu_dma_free(g, &f->userd);
 
@@ -374,7 +380,7 @@ clean_up:
 
 int vgpu_init_fifo_setup_hw(struct gk20a *g)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* test write, read through bar1 @ userd region before
 	 * turning on the snooping */
@@ -385,7 +391,7 @@ int vgpu_init_fifo_setup_hw(struct gk20a *g)
 		u32 bar1_vaddr = f->userd.gpu_va;
 		volatile u32 *cpu_vaddr = f->userd.cpu_va;
 
-		gk20a_dbg_info("test bar1 @ vaddr 0x%x",
+		nvgpu_log_info(g, "test bar1 @ vaddr 0x%x",
 			   bar1_vaddr);
 
 		v = gk20a_bar1_readl(g, bar1_vaddr);
@@ -415,7 +421,7 @@ int vgpu_init_fifo_setup_hw(struct gk20a *g)
 		gk20a_bar1_writel(g, bar1_vaddr, v);
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -424,7 +430,7 @@ int vgpu_init_fifo_support(struct gk20a *g)
 {
 	u32 err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = vgpu_init_fifo_setup_sw(g);
 	if (err)
@@ -444,7 +450,7 @@ int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 			&msg.params.channel_config;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!nvgpu_atomic_read(&ch->bound))
 		return 0;
@@ -470,7 +476,7 @@ int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 			&msg.params.tsg_preempt;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_PREEMPT;
 	msg.handle = vgpu_get_handle(g);
@@ -533,7 +539,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	u16 *runlist_entry = NULL;
 	u32 count = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	runlist = &f->runlist_info[runlist_id];
 
@@ -558,7 +564,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		runlist_entry = runlist->mem[0].cpu_va;
 		for_each_set_bit(cid,
 			runlist->active_channels, f->num_channels) {
-			gk20a_dbg_info("add channel %d to runlist", cid);
+			nvgpu_log_info(g, "add channel %d to runlist", cid);
 			runlist_entry[0] = cid;
 			runlist_entry++;
 			count++;
@@ -581,7 +587,7 @@ int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	runlist = &f->runlist_info[runlist_id];
 
@@ -596,7 +602,7 @@ int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 
 int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return 0;
 }
@@ -611,7 +617,7 @@ int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 			&msg.params.tsg_interleave;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_RUNLIST_INTERLEAVE;
 	msg.handle = vgpu_get_handle(g);
@@ -633,7 +639,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 			&msg.params.channel_config;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];
@@ -716,7 +722,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = gk20a_channel_get(&f->channel[info->chid]);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	if (!ch)
 		return 0;
 
@@ -750,7 +756,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 int vgpu_fifo_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_fifo_nonstall_intr_info *info)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_NONSTALL_INTR_CHANNEL:

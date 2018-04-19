@@ -30,7 +30,7 @@
 int vgpu_ce2_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_ce2_nonstall_intr_info *info)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	switch (info->type) {
 	case TEGRA_VGPU_CE2_NONSTALL_INTR_NONBLOCKPIPE:

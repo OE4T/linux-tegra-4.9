@@ -47,7 +47,7 @@ void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
 	u32 temp;
 
-	gk20a_dbg_info("initialize gpc mmu");
+	nvgpu_log_info(g, "initialize gpc mmu");
 
 	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		/* Bypass MMU check for non-secure boot. For
@@ -168,7 +168,7 @@ void gr_gm20b_commit_global_bundle_cb(struct gk20a *g,
 
 	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
 
-	gk20a_dbg_info("bundle cb token limit : %d, state limit : %d",
+	nvgpu_log_info(g, "bundle cb token limit : %d, state limit : %d",
 		   g->gr.bundle_cb_token_limit, data);
 
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
@@ -193,7 +193,7 @@ int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	u32 num_pes_per_gpc = nvgpu_get_litter_value(g,
 			GPU_LIT_NUM_PES_PER_GPC);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -280,20 +280,20 @@ void gr_gm20b_set_rd_coalesce(struct gk20a *g, u32 data)
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = gk20a_readl(g, gr_gpcs_tpcs_tex_m_dbg2_r());
 	val = set_field(val, gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_m(),
 			     gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_f(data));
 	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), val);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
 					  u32 class_num, u32 offset, u32 data)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (class_num == MAXWELL_COMPUTE_B) {
 		switch (offset << 2) {
@@ -341,7 +341,7 @@ void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	/* if (NO_ALPHA_BETA_TIMESLICE_SUPPORT_DEF)
 		return; */
 
@@ -390,7 +390,7 @@ void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (cb_size > gr->attrib_cb_size)
 		cb_size = gr->attrib_cb_size;
@@ -665,7 +665,7 @@ int gr_gm20b_init_fs_state(struct gk20a *g)
 {
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gr_gk20a_init_fs_state(g);
 	if (err)
@@ -762,7 +762,7 @@ int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	  gr_fecs_falcon_hwcfg_r();
 	u8 falcon_id_mask = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
@@ -829,7 +829,7 @@ int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(6), 0xffffffff);
 	gk20a_writel(g, gr_fecs_cpuctl_alias_r(),
 			gr_fecs_cpuctl_startcpu_f(1));
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -858,7 +858,7 @@ int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
 	if (err)
@@ -867,7 +867,7 @@ int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 	if (class == MAXWELL_COMPUTE_B)
 		gr_ctx->compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CTA;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -881,7 +881,7 @@ void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 	u32 cta_preempt_option =
 		ctxsw_prog_main_image_preemption_options_control_cta_enabled_f();
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -889,13 +889,13 @@ void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	gr_ctx = &tsg->gr_ctx;
 	if (gr_ctx->compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CTA) {
-		gk20a_dbg_info("CTA: %x", cta_preempt_option);
+		nvgpu_log_info(g, "CTA: %x", cta_preempt_option);
 		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_preemption_options_o(),
 				cta_preempt_option);
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
@@ -1044,7 +1044,7 @@ int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 	struct nvgpu_mem *mem;
 	u32 v;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(c->g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -1066,7 +1066,7 @@ int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 
 	nvgpu_mem_end(c->g, mem);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(c->g, "done");
 
 	return 0;
 }
@@ -1220,19 +1220,19 @@ void gr_gm20b_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state)
 
 	/* Only for debug purpose */
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
-		gk20a_dbg_fn("w_state[%d].valid_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].valid_warps[0]: %llx\n",
 						sm_id, w_state[sm_id].valid_warps[0]);
-		gk20a_dbg_fn("w_state[%d].valid_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].valid_warps[1]: %llx\n",
 						sm_id, w_state[sm_id].valid_warps[1]);
 
-		gk20a_dbg_fn("w_state[%d].trapped_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].trapped_warps[0]: %llx\n",
 							sm_id, w_state[sm_id].trapped_warps[0]);
-		gk20a_dbg_fn("w_state[%d].trapped_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].trapped_warps[1]: %llx\n",
 						sm_id, w_state[sm_id].trapped_warps[1]);
 
-		gk20a_dbg_fn("w_state[%d].paused_warps[0]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].paused_warps[0]: %llx\n",
 						sm_id, w_state[sm_id].paused_warps[0]);
-		gk20a_dbg_fn("w_state[%d].paused_warps[1]: %llx\n",
+		nvgpu_log_fn(g, "w_state[%d].paused_warps[1]: %llx\n",
 						sm_id, w_state[sm_id].paused_warps[1]);
 	}
 }

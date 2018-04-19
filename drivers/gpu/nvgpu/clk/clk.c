@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	struct clkrpc_pmucmdhandler_params *phandlerparams =
 		(struct clkrpc_pmucmdhandler_params *)param;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (msg->msg.clk.msg_type != NV_PMU_CLK_MSG_ID_RPC) {
 		nvgpu_err(g, "unsupported msg for VFE LOAD RPC %x",

@@ -62,13 +62,13 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	struct gk20a_ctrl_priv *priv;
 	int err = 0;
 
-	gk20a_dbg_fn("");
-
 	l = container_of(inode->i_cdev,
 			 struct nvgpu_os_linux, ctrl.cdev);
 	g = gk20a_get(&l->g);
 	if (!g)
 		return -ENODEV;
+
+	nvgpu_log_fn(g, " ");
 
 	priv = nvgpu_kzalloc(g, sizeof(struct gk20a_ctrl_priv));
 	if (!priv) {
@@ -102,7 +102,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 	struct gk20a_ctrl_priv *priv = filp->private_data;
 	struct gk20a *g = priv->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (priv->clk_session)
 		nvgpu_clk_arb_release_session(g, priv->clk_session);
@@ -684,7 +684,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	/* Copy to user space - pointed by "args->pwarpstate" */
 	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate,
 	    w_state, ioctl_size)) {
-		gk20a_dbg_fn("copy_to_user failed!");
+		nvgpu_log_fn(g, "copy_to_user failed!");
 		err = -EFAULT;
 	}
 
@@ -901,7 +901,7 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 	u32 align = args->in.alignment ? args->in.alignment : SZ_4K;
 	int fd;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* not yet supported */
 	if (WARN_ON(args->in.flags & NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_MASK))
@@ -933,7 +933,7 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 
 	args->out.dmabuf_fd = fd;
 
-	gk20a_dbg_fn("done, fd=%d", fd);
+	nvgpu_log_fn(g, "done, fd=%d", fd);
 
 	return 0;
 }
@@ -943,7 +943,7 @@ static int nvgpu_gpu_get_memory_state(struct gk20a *g,
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved[0] || args->reserved[1] ||
 	    args->reserved[2] || args->reserved[3])
@@ -951,7 +951,7 @@ static int nvgpu_gpu_get_memory_state(struct gk20a *g,
 
 	err = nvgpu_vidmem_get_space(g, &args->total_free_bytes);
 
-	gk20a_dbg_fn("done, err=%d, bytes=%lld", err, args->total_free_bytes);
+	nvgpu_log_fn(g, "done, err=%d, bytes=%lld", err, args->total_free_bytes);
 
 	return err;
 }
@@ -973,7 +973,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	u16 min_mhz;
 	u16 max_mhz;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!session || args->flags)
 		return -EINVAL;
@@ -1059,7 +1059,7 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 	int err;
 	u16 min_mhz, max_mhz;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!session)
 		return -EINVAL;
@@ -1138,7 +1138,7 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	int i;
 	int ret;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!session || args->flags)
 		return -EINVAL;
@@ -1201,7 +1201,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	int err;
 	int bit;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!session)
 		return -EINVAL;
@@ -1287,7 +1287,7 @@ static int nvgpu_gpu_get_event_fd(struct gk20a *g,
 {
 	struct nvgpu_clk_session *session = priv->clk_session;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!session)
 		return -EINVAL;
@@ -1301,7 +1301,7 @@ static int nvgpu_gpu_get_voltage(struct gk20a *g,
 {
 	int err = -EINVAL;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved)
 		return -EINVAL;
@@ -1337,7 +1337,7 @@ static int nvgpu_gpu_get_current(struct gk20a *g,
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
@@ -1361,7 +1361,7 @@ static int nvgpu_gpu_get_power(struct gk20a *g,
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
@@ -1386,7 +1386,7 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 	int err;
 	u32 temp_f24_8;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
@@ -1415,7 +1415,7 @@ static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
 		return -EINVAL;
@@ -1491,7 +1491,7 @@ static int nvgpu_gpu_set_deterministic_opts(struct gk20a *g,
 	u32 i = 0;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	user_channels = (int __user *)(uintptr_t)args->channels;
 
@@ -1556,7 +1556,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	struct zbc_query_params *zbc_tbl;
 	int i, err = 0;
 
-	gk20a_dbg_fn("start %d", _IOC_NR(cmd));
+	nvgpu_log_fn(g, "start %d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_GPU_IOCTL_MAGIC) ||
 		(_IOC_NR(cmd) == 0) ||
@@ -1855,7 +1855,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	default:
-		gk20a_dbg_info("unrecognized gpu ioctl cmd: 0x%x", cmd);
+		nvgpu_log_info(g, "unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

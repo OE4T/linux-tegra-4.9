@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,7 +39,7 @@ void gp106_fb_reset(struct gk20a *g)
 	do {
 		u32 w = gk20a_readl(g, fb_niso_scrub_status_r());
 		if (fb_niso_scrub_status_flag_v(w)) {
-			gk20a_dbg_fn("done");
+			nvgpu_log_fn(g, "done");
 			break;
 		}
 		nvgpu_udelay(HW_SCRUB_TIMEOUT_DEFAULT);

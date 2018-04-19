@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -56,13 +56,13 @@ static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)
 	u32 *src_u32 = (u32 *)src;
 	u32 blk;
 
-	gk20a_dbg_info("upload %d bytes to %x", size, dst);
+	nvgpu_log_info(g, "upload %d bytes to %x", size, dst);
 
 	words = DIV_ROUND_UP(size, 4);
 
 	blk = dst >> 8;
 
-	gk20a_dbg_info("upload %d words to %x blk %d",
+	nvgpu_log_info(g, "upload %d words to %x blk %d",
 			words, dst, blk);
 	gk20a_writel(g, pwr_falcon_dmemc_r(port),
 		pwr_falcon_dmemc_offs_f(dst >> 2) |
@@ -79,7 +79,7 @@ static int gp106_bios_devinit(struct gk20a *g)
 	int devinit_completed;
 	struct nvgpu_timeout timeout;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_flcn_reset(g->pmu.flcn)) {
 		err = -ETIMEDOUT;
@@ -128,7 +128,7 @@ static int gp106_bios_devinit(struct gk20a *g)
 		gk20a_get_gr_idle_timeout(g));
 
 out:
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return err;
 }
 
@@ -146,7 +146,7 @@ static int gp106_bios_preos(struct gk20a *g)
 {
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_flcn_reset(g->pmu.flcn)) {
 		err = -ETIMEDOUT;
@@ -177,7 +177,7 @@ static int gp106_bios_preos(struct gk20a *g)
 			gk20a_get_gr_idle_timeout(g));
 
 out:
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return err;
 }
 
@@ -186,12 +186,12 @@ int gp106_bios_init(struct gk20a *g)
 	unsigned int i;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->bios_is_init)
 		return 0;
 
-	gk20a_dbg_info("reading bios from EEPROM");
+	nvgpu_log_info(g, "reading bios from EEPROM");
 	g->bios.size = BIOS_SIZE;
 	g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
 	if (!g->bios.data)
@@ -218,7 +218,7 @@ int gp106_bios_init(struct gk20a *g)
 		goto free_firmware;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	err = gp106_bios_devinit(g);
 	if (err) {

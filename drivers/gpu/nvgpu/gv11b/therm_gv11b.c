@@ -34,7 +34,7 @@ int gv11b_init_therm_setup_hw(struct gk20a *g)
 {
 	u32 v;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* program NV_THERM registers */
 	gk20a_writel(g, therm_use_a_r(), therm_use_a_ext_therm_0_enable_f() |
@@ -108,7 +108,7 @@ int gv11b_elcg_init_idle_filters(struct gk20a *g)
 	if (nvgpu_platform_is_simulation(g))
 		return 0;
 
-	gk20a_dbg_info("init clock/power gate reg");
+	nvgpu_log_info(g, "init clock/power gate reg");
 
 	for (engine_id = 0; engine_id < f->num_engines; engine_id++) {
 		active_engine_id = f->active_engines_list[engine_id];

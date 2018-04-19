@@ -1,7 +1,7 @@
 /*
  * GM20B MMU
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@ int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 	u64 iova = nvgpu_inst_block_addr(g, bar1_inst);
 	u32 ptr_v = (u32)(iova >> bus_bar1_block_ptr_shift_v());
 
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
+	nvgpu_log_info(g, "bar1 inst block ptr: 0x%08x", ptr_v);
 
 	gk20a_writel(g, bus_bar1_block_r(),
 		     nvgpu_aperture_mask(g, bar1_inst,

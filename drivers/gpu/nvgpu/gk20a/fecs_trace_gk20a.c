@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -137,7 +137,7 @@ static int gk20a_fecs_trace_get_write_index(struct gk20a *g)
 
 static int gk20a_fecs_trace_set_read_index(struct gk20a *g, int index)
 {
-	gk20a_dbg(gpu_dbg_ctxsw, "set read=%d", index);
+	nvgpu_log(g, gpu_dbg_ctxsw, "set read=%d", index);
 	return gr_gk20a_elpg_protected_call(g,
 			(gk20a_writel(g, gr_fecs_mailbox1_r(), index), 0));
 }
@@ -148,12 +148,12 @@ void gk20a_fecs_trace_hash_dump(struct gk20a *g)
 	struct gk20a_fecs_trace_hash_ent *ent;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_dbg(gpu_dbg_ctxsw, "dumping hash table");
+	nvgpu_log(g, gpu_dbg_ctxsw, "dumping hash table");
 
 	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each(trace->pid_hash_table, bkt, ent, node)
 	{
-		gk20a_dbg(gpu_dbg_ctxsw, " ent=%p bkt=%x context_ptr=%x pid=%d",
+		nvgpu_log(g, gpu_dbg_ctxsw, " ent=%p bkt=%x context_ptr=%x pid=%d",
 			ent, bkt, ent->context_ptr, ent->pid);
 
 	}
@@ -165,7 +165,7 @@ static int gk20a_fecs_trace_hash_add(struct gk20a *g, u32 context_ptr, pid_t pid
 	struct gk20a_fecs_trace_hash_ent *he;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"adding hash entry context_ptr=%x -> pid=%d", context_ptr, pid);
 
 	he = nvgpu_kzalloc(g, sizeof(*he));
@@ -190,7 +190,7 @@ static void gk20a_fecs_trace_hash_del(struct gk20a *g, u32 context_ptr)
 	struct gk20a_fecs_trace_hash_ent *ent;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"freeing hash entry context_ptr=%x", context_ptr);
 
 	nvgpu_mutex_acquire(&trace->hash_lock);
@@ -198,7 +198,7 @@ static void gk20a_fecs_trace_hash_del(struct gk20a *g, u32 context_ptr)
 		context_ptr) {
 		if (ent->context_ptr == context_ptr) {
 			hash_del(&ent->node);
-			gk20a_dbg(gpu_dbg_ctxsw,
+			nvgpu_log(g, gpu_dbg_ctxsw,
 				"freed hash entry=%p context_ptr=%x", ent,
 				ent->context_ptr);
 			nvgpu_kfree(g, ent);
@@ -215,7 +215,7 @@ static void gk20a_fecs_trace_free_hash_table(struct gk20a *g)
 	struct gk20a_fecs_trace_hash_ent *ent;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw, "trace=%p", trace);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw, "trace=%p", trace);
 
 	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_safe(trace->pid_hash_table, bkt, tmp, ent, node) {
@@ -235,7 +235,7 @@ static pid_t gk20a_fecs_trace_find_pid(struct gk20a *g, u32 context_ptr)
 	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_possible(trace->pid_hash_table, ent, node, context_ptr) {
 		if (ent->context_ptr == context_ptr) {
-			gk20a_dbg(gpu_dbg_ctxsw,
+			nvgpu_log(g, gpu_dbg_ctxsw,
 				"found context_ptr=%x -> pid=%d",
 				ent->context_ptr, ent->pid);
 			pid = ent->pid;
@@ -265,7 +265,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 	struct gk20a_fecs_trace_record *r = gk20a_fecs_trace_get_record(
 		trace, index);
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"consuming record trace=%p read=%d record=%p", trace, index, r);
 
 	if (unlikely(!gk20a_fecs_trace_is_valid_record(r))) {
@@ -284,7 +284,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 	cur_pid = gk20a_fecs_trace_find_pid(g, r->context_ptr);
 	new_pid = gk20a_fecs_trace_find_pid(g, r->new_context_ptr);
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_ctxsw,
 		"context_ptr=%x (pid=%d) new_context_ptr=%x (pid=%d)",
 		r->context_ptr, cur_pid, r->new_context_ptr, new_pid);
 
@@ -298,7 +298,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 		entry.timestamp = gk20a_fecs_trace_record_ts_timestamp_v(r->ts[i]);
 		entry.timestamp <<= GK20A_FECS_TRACE_PTIMER_SHIFT;
 
-		gk20a_dbg(gpu_dbg_ctxsw,
+		nvgpu_log(g, gpu_dbg_ctxsw,
 			"tag=%x timestamp=%llx context_id=%08x new_context_id=%08x",
 			entry.tag, entry.timestamp, r->context_id,
 			r->new_context_id);
@@ -327,7 +327,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 			continue;
 		}
 
-		gk20a_dbg(gpu_dbg_ctxsw, "tag=%x context_id=%x pid=%lld",
+		nvgpu_log(g, gpu_dbg_ctxsw, "tag=%x context_id=%x pid=%lld",
 			entry.tag, entry.context_id, entry.pid);
 
 		if (!entry.context_id)
@@ -368,7 +368,7 @@ int gk20a_fecs_trace_poll(struct gk20a *g)
 	if (!cnt)
 		goto done;
 
-	gk20a_dbg(gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_ctxsw,
 		"circular buffer: read=%d (mailbox=%d) write=%d cnt=%d",
 		read, gk20a_fecs_trace_get_read_index(g), write, cnt);
 
@@ -633,7 +633,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	pid_t pid;
 	u32 aperture;
 
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw,
 			"chid=%d context_ptr=%x inst_block=%llx",
 			ch->chid, context_ptr,
 			nvgpu_inst_block_addr(g, &ch->inst_block));
@@ -662,7 +662,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	lo = u64_lo32(pa);
 	hi = u64_hi32(pa);
 
-	gk20a_dbg(gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
+	nvgpu_log(g, gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
 		lo, GK20A_FECS_TRACE_NUM_RECORDS);
 
 	nvgpu_mem_wr(g, mem,
@@ -696,7 +696,7 @@ int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch)
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
 
 	if (g->fecs_trace) {
-		gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
+		nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw,
 			"ch=%p context_ptr=%x", ch, context_ptr);
 
 		if (g->ops.fecs_trace.is_enabled(g)) {
@@ -711,7 +711,7 @@ int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch)
 
 int gk20a_fecs_trace_reset(struct gk20a *g)
 {
-	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, " ");
 
 	if (!g->ops.fecs_trace.is_enabled(g))
 		return 0;

@@ -1,7 +1,7 @@
 /*
  * GK20A priv ring
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -66,11 +66,11 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
-	gk20a_dbg(gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
+	nvgpu_log(g, gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
-		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
+		nvgpu_log(g, gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
 			gk20a_readl(g, pri_ringstation_sys_priv_error_adr_r()),
 			gk20a_readl(g, pri_ringstation_sys_priv_error_wrdat_r()),
 			gk20a_readl(g, pri_ringstation_sys_priv_error_info_r()),
@@ -79,7 +79,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		if (status1 & BIT(gpc)) {
-			gk20a_dbg(gpu_dbg_intr, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
+			nvgpu_log(g, gpu_dbg_intr, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_adr_r() + gpc * gpc_priv_stride),
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + gpc * gpc_priv_stride),
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_info_r() + gpc * gpc_priv_stride),

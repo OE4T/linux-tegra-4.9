@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,7 +37,7 @@ static void perfrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	struct perfrpc_pmucmdhandler_params *phandlerparams =
 		(struct perfrpc_pmucmdhandler_params *)param;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (msg->msg.perf.msg_type != NV_PMU_PERF_MSG_ID_RPC) {
 		nvgpu_err(g, "unsupported msg for VFE LOAD RPC %x",
@@ -53,7 +53,7 @@ static int pmu_handle_perf_event(struct gk20a *g, void *pmu_msg)
 {
 	struct nv_pmu_perf_msg *msg = (struct nv_pmu_perf_msg *)pmu_msg;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	switch (msg->msg_type) {
 	case NV_PMU_PERF_MSG_ID_VFE_CALLBACK:
 		nvgpu_clk_arb_schedule_vf_table_update(g);

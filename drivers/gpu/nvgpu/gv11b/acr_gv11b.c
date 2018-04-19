@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,8 +43,8 @@
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 
 /*Defines*/
-#define gv11b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gv11b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 {
@@ -60,7 +60,7 @@ int gv11b_alloc_blob_space(struct gk20a *g,
 {
 	int err;
 
-	gv11b_dbg_pmu("alloc blob space: NVGPU_DMA_FORCE_CONTIGUOUS");
+	gv11b_dbg_pmu(g, "alloc blob space: NVGPU_DMA_FORCE_CONTIGUOUS");
 	err = nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_FORCE_CONTIGUOUS,
 						size, mem);
 
@@ -87,10 +87,10 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 	start = nvgpu_mem_get_addr(g, &acr->ucode_blob);
 	size = acr->ucode_blob.size;
 
-	gv11b_dbg_pmu("acr ucode blob start %llx\n", start);
-	gv11b_dbg_pmu("acr ucode blob size %x\n", size);
+	gv11b_dbg_pmu(g, "acr ucode blob start %llx\n", start);
+	gv11b_dbg_pmu(g, "acr ucode blob size %x\n", size);
 
-	gv11b_dbg_pmu("");
+	gv11b_dbg_pmu(g, " ");
 
 	if (!acr_fw) {
 		/*First time init case*/
@@ -110,17 +110,17 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 				acr->fw_hdr->hdr_offset);
 		img_size_in_bytes = ALIGN((acr->hsbin_hdr->data_size), 256);
 
-		gv11b_dbg_pmu("sig dbg offset %u\n",
+		gv11b_dbg_pmu(g, "sig dbg offset %u\n",
 						acr->fw_hdr->sig_dbg_offset);
-		gv11b_dbg_pmu("sig dbg size %u\n", acr->fw_hdr->sig_dbg_size);
-		gv11b_dbg_pmu("sig prod offset %u\n",
+		gv11b_dbg_pmu(g, "sig dbg size %u\n", acr->fw_hdr->sig_dbg_size);
+		gv11b_dbg_pmu(g, "sig prod offset %u\n",
 						acr->fw_hdr->sig_prod_offset);
-		gv11b_dbg_pmu("sig prod size %u\n",
+		gv11b_dbg_pmu(g, "sig prod size %u\n",
 						acr->fw_hdr->sig_prod_size);
-		gv11b_dbg_pmu("patch loc  %u\n", acr->fw_hdr->patch_loc);
-		gv11b_dbg_pmu("patch sig  %u\n", acr->fw_hdr->patch_sig);
-		gv11b_dbg_pmu("header offset %u\n", acr->fw_hdr->hdr_offset);
-		gv11b_dbg_pmu("header size %u\n", acr->fw_hdr->hdr_size);
+		gv11b_dbg_pmu(g, "patch loc  %u\n", acr->fw_hdr->patch_loc);
+		gv11b_dbg_pmu(g, "patch sig  %u\n", acr->fw_hdr->patch_sig);
+		gv11b_dbg_pmu(g, "header offset %u\n", acr->fw_hdr->hdr_offset);
+		gv11b_dbg_pmu(g, "header size %u\n", acr->fw_hdr->hdr_size);
 
 		/* Lets patch the signatures first.. */
 		if (acr_ucode_patch_sig(g, acr_ucode_data_t210_load,
@@ -144,7 +144,7 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 		}
 
 		for (index = 0; index < 9; index++)
-			gv11b_dbg_pmu("acr_ucode_header_t210_load %u\n",
+			gv11b_dbg_pmu(g, "acr_ucode_header_t210_load %u\n",
 					acr_ucode_header_t210_load[index]);
 
 		acr_dmem = (u64 *)
@@ -212,7 +212,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
 	u32 dst;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 			gk20a_readl(g, pwr_falcon_itfen_r()) |
@@ -237,7 +237,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
 		pmu_bl_gm10x_desc->bl_start_tag);
 
-	gv11b_dbg_pmu("Before starting falcon with BL\n");
+	gv11b_dbg_pmu(g, "Before starting falcon with BL\n");
 
 	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
 
@@ -281,7 +281,7 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	nvgpu_flcn_reset(pmu->flcn);

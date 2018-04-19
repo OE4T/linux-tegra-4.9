@@ -142,7 +142,7 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!g->power_on)
 		return 0;
@@ -162,7 +162,7 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->power_on)
 		return 0;
@@ -227,7 +227,7 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	u32 max_freq;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	max_freq = (u32)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS);
 	err = vgpu_clk_cap_rate(profile->dev, max_freq);
@@ -277,7 +277,7 @@ static int vgpu_pm_init(struct device *dev)
 	int num_freqs;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (nvgpu_platform_is_simulation(g))
 		return 0;
@@ -321,14 +321,15 @@ int vgpu_probe(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	gk20a_dbg_fn("");
-
 	l = kzalloc(sizeof(*l), GFP_KERNEL);
 	if (!l) {
 		dev_err(dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
 	gk20a = &l->g;
+
+	nvgpu_log_fn(gk20a, " ");
+
 	nvgpu_init_gk20a(gk20a);
 
 	nvgpu_kmem_init(gk20a);
@@ -428,7 +429,7 @@ int vgpu_probe(struct platform_device *pdev)
 	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
 
-	gk20a_dbg_info("total ram pages : %lu", totalram_pages);
+	nvgpu_log_info(gk20a, "total ram pages : %lu", totalram_pages);
 	gk20a->gr.max_comptag_mem = totalram_pages
 				 >> (10 - (PAGE_SHIFT - 10));
 
@@ -442,7 +443,7 @@ int vgpu_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	vgpu_pm_qos_remove(dev);
 	if (g->remove_support)

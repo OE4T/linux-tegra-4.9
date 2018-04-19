@@ -1,7 +1,7 @@
 /*
  * GK20A Master Control
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,7 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 
 	mc_intr_0 = g->ops.mc.intr_stall(g);
 
-	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
+	nvgpu_log(g, gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
@@ -200,7 +200,7 @@ void gk20a_mc_disable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
-	gk20a_dbg(gpu_dbg_info, "pmc disable: %08x\n", units);
+	nvgpu_log(g, gpu_dbg_info, "pmc disable: %08x\n", units);
 
 	nvgpu_spinlock_acquire(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());
@@ -213,7 +213,7 @@ void gk20a_mc_enable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
-	gk20a_dbg(gpu_dbg_info, "pmc enable: %08x\n", units);
+	nvgpu_log(g, gpu_dbg_info, "pmc enable: %08x\n", units);
 
 	nvgpu_spinlock_acquire(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());

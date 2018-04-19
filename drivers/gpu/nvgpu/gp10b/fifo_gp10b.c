@@ -43,7 +43,7 @@ static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = nvgpu_mem_rd32(g, mem,
 			ram_in_page_dir_base_fault_replay_tex_w());
@@ -59,7 +59,7 @@ static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 	nvgpu_mem_wr32(g, mem,
 		ram_in_page_dir_base_fault_replay_gcc_w(), val);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 int channel_gp10b_commit_userd(struct channel_gk20a *c)
@@ -68,12 +68,12 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	u32 addr_hi;
 	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	addr_lo = u64_lo32(c->userd_iova >> ram_userd_base_shift_v());
 	addr_hi = u64_hi32(c->userd_iova);
 
-	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
+	nvgpu_log_info(g, "channel %d : set ramfc userd 0x%16llx",
 		c->chid, (u64)c->userd_iova);
 
 	nvgpu_mem_wr32(g, &c->inst_block,
@@ -98,7 +98,7 @@ int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct nvgpu_mem *mem = &c->inst_block;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
@@ -167,8 +167,9 @@ int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 {
 	u32 new_syncpt = 0, old_syncpt;
 	u32 v;
+	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	v = nvgpu_mem_rd32(c->g, &c->inst_block,
 			ram_fc_allowed_syncpoints_w());
@@ -185,7 +186,7 @@ int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 
 		v = pbdma_allowed_syncpoints_0_valid_f(1);
 
-		gk20a_dbg_info("Channel %d, syncpt id %d\n",
+		nvgpu_log_info(g, "Channel %d, syncpt id %d\n",
 				c->chid, new_syncpt);
 
 		v |= pbdma_allowed_syncpoints_0_index_f(new_syncpt);
@@ -197,7 +198,7 @@ int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	/* enable channel */
 	gk20a_enable_channel_tsg(c->g, c);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -207,7 +208,7 @@ int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 {
 	int ret = ENGINE_INVAL_GK20A;
 
-	gk20a_dbg_info("engine type %d", engine_type);
+	nvgpu_log_info(g, "engine type %d", engine_type);
 	if (engine_type == top_device_info_type_enum_graphics_v())
 		ret = ENGINE_GR_GK20A;
 	else if (engine_type == top_device_info_type_enum_lce_v()) {
@@ -229,13 +230,13 @@ void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 			*pri_base =
 			    (top_device_info_data_pri_base_v(table_entry)
 			    << top_device_info_data_pri_base_align_v());
-			gk20a_dbg_info("device info: pri_base: %d", *pri_base);
+			nvgpu_log_info(g, "device info: pri_base: %d", *pri_base);
 		}
 		if (fault_id && (top_device_info_data_fault_id_v(table_entry) ==
 		    top_device_info_data_fault_id_valid_v())) {
 			*fault_id =
 				 g->ops.fifo.device_info_fault_id(table_entry);
-			gk20a_dbg_info("device info: fault_id: %d", *fault_id);
+			nvgpu_log_info(g, "device info: fault_id: %d", *fault_id);
 		}
 	} else
 		nvgpu_err(g, "unknown device_info_data %d",
@@ -293,7 +294,7 @@ void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	u32 fault_info;
 	u32 addr_lo, addr_hi;
 
-	gk20a_dbg_fn("mmu_fault_id %d", mmu_fault_id);
+	nvgpu_log_fn(g, "mmu_fault_id %d", mmu_fault_id);
 
 	memset(mmfault, 0, sizeof(*mmfault));
 

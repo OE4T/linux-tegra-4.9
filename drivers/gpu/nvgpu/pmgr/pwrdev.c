@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@ static u32 _pwr_device_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_pmgr_pwr_device_desc_table *ppmgrdevice =
 		(struct nv_pmu_pmgr_pwr_device_desc_table *)pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -46,7 +46,7 @@ static u32 _pwr_device_pmudata_instget(struct gk20a *g,
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&ppmgrdevice->devices[idx].data.board_obj;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return 0;
 }
@@ -122,7 +122,7 @@ static struct boardobj *construct_pwr_device(struct gk20a *g,
 		pwrdev->r_shuntm_ohm[indx] = ina3221->r_shuntm_ohm[indx];
 	}
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return board_obj_ptr;
 }
@@ -145,7 +145,7 @@ static u32 devinit_get_pwr_device_table(struct gk20a *g,
 		struct pwr_device_ina3221 ina3221;
 	} pwr_device_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pwr_device_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, POWER_SENSORS_TABLE);
@@ -280,7 +280,7 @@ static u32 devinit_get_pwr_device_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -310,6 +310,6 @@ u32 pmgr_device_sw_setup(struct gk20a *g)
 		goto done;
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

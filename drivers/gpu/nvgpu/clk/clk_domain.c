@@ -153,7 +153,7 @@ static u32 _clk_domains_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_clk_clk_domain_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -162,7 +162,7 @@ static u32 _clk_domains_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -176,7 +176,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 	struct clk_domain_3x_slave *pdomain_slave;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.clk_domainobjs.super);
 	if (status) {
@@ -255,7 +255,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -264,7 +264,7 @@ u32 clk_domain_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->clk_pmu.clk_domainobjs.super.super;
 
@@ -273,7 +273,7 @@ u32 clk_domain_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -298,7 +298,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 		struct clk_domain_3x_slave v3x_slave;
 	} clk_domain_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	clocks_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.clock_token, CLOCKS_TABLE);
@@ -459,7 +459,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -467,7 +467,7 @@ static u32 clkdomainclkproglink_not_supported(struct gk20a *g,
 					      struct clk_pmupstate *pclk,
 					      struct clk_domain *pdomain)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return -EINVAL;
 }
 
@@ -480,7 +480,7 @@ static int clkdomainvfsearch_stub(
 	u8 rail)
 
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return -EINVAL;
 }
 
@@ -492,7 +492,7 @@ static u32 clkdomaingetfpoints_stub(
 	u16 *pfreqpointsinmhz,
 	u8 rail)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return -EINVAL;
 }
 
@@ -541,7 +541,7 @@ static u32 _clk_domain_pmudatainit_3x(struct gk20a *g,
 	struct clk_domain_3x *pclk_domain_3x;
 	struct nv_pmu_clk_clk_domain_3x_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = clk_domain_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -592,7 +592,7 @@ static u32 clkdomainclkproglink_3x_prog(struct gk20a *g,
 	struct clk_prog *pprog = NULL;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	for (i = p3xprog->clk_prog_idx_first;
 	     i <= p3xprog->clk_prog_idx_last;
@@ -616,7 +616,7 @@ static int clkdomaingetslaveclk(struct gk20a *g,
 	u8 slaveidx;
 	struct clk_domain_3x_master *p3xmaster;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pclkmhz == NULL)
 		return -EINVAL;
@@ -657,7 +657,7 @@ static int clkdomainvfsearch(struct gk20a *g,
 	u16 bestclkmhz;
 	u32 bestvoltuv;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if ((pclkmhz == NULL) || (pvoltuv == NULL))
 		return -EINVAL;
@@ -719,7 +719,7 @@ static int clkdomainvfsearch(struct gk20a *g,
 		goto done;
 	}
 done:
-	gk20a_dbg_info("done status %x", status);
+	nvgpu_log_info(g, "done status %x", status);
 	return status;
 }
 
@@ -744,7 +744,7 @@ static u32 clkdomaingetfpoints
 	u16 *freqpointsdata;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	if (pfpointscount == NULL)
 		return -EINVAL;
@@ -783,7 +783,7 @@ static u32 clkdomaingetfpoints
 
 	*pfpointscount = totalcount;
 done:
-	gk20a_dbg_info("done status %x", status);
+	nvgpu_log_info(g, "done status %x", status);
 	return status;
 }
 
@@ -796,7 +796,7 @@ static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set *pset;
 	struct clk_domains *pdomains = &(g->clk_pmu.clk_domainobjs);
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -876,7 +876,7 @@ static u32 _clk_domain_pmudatainit_3x_slave(struct gk20a *g,
 	struct clk_domain_3x_slave *pclk_domain_3x_slave;
 	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x_prog(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -935,7 +935,7 @@ static u32 clkdomainclkproglink_3x_master(struct gk20a *g,
 	u16 freq_max_last_mhz = 0;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = clkdomainclkproglink_3x_prog(g, pclk, pdomain);
 	if (status)
@@ -961,7 +961,7 @@ static u32 clkdomainclkproglink_3x_master(struct gk20a *g,
 			goto done;
 	}
 done:
-	gk20a_dbg_info("done status %x", status);
+	nvgpu_log_info(g, "done status %x", status);
 	return status;
 }
 
@@ -973,7 +973,7 @@ static u32 _clk_domain_pmudatainit_3x_master(struct gk20a *g,
 	struct clk_domain_3x_master *pclk_domain_3x_master;
 	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x_prog(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -1021,7 +1021,7 @@ static u32 clkdomainclkproglink_fixed(struct gk20a *g,
 				      struct clk_pmupstate *pclk,
 				      struct clk_domain *pdomain)
 {
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	return 0;
 }
 
@@ -1033,7 +1033,7 @@ static u32 _clk_domain_pmudatainit_3x_fixed(struct gk20a *g,
 	struct clk_domain_3x_fixed *pclk_domain_3x_fixed;
 	struct nv_pmu_clk_clk_domain_3x_fixed_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -1085,7 +1085,7 @@ static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info(" %d", BOARDOBJ_GET_TYPE(pargs));
+	nvgpu_log_info(g, " %d", BOARDOBJ_GET_TYPE(pargs));
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED:
 		status = clk_domain_construct_3x_fixed(g, &board_obj_ptr,
@@ -1109,7 +1109,7 @@ static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs)
 	if (status)
 		return NULL;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return (struct clk_domain *)board_obj_ptr;
 }
@@ -1122,7 +1122,7 @@ static u32 clk_domain_pmudatainit_super(struct gk20a *g,
 	struct clk_domain *pclk_domain;
 	struct nv_pmu_clk_clk_domain_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)

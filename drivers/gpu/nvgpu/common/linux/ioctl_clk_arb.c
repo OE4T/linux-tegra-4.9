@@ -209,9 +209,10 @@ static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
 static int nvgpu_clk_arb_set_event_filter(struct nvgpu_clk_dev *dev,
 		struct nvgpu_gpu_set_event_filter_args *args)
 {
+	struct gk20a *g = dev->session->g;
 	u32 mask;
 
-	gk20a_dbg(gpu_dbg_fn, "");
+	nvgpu_log(g, gpu_dbg_fn, " ");
 
 	if (args->flags)
 		return -EINVAL;
@@ -237,7 +238,7 @@ static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
 	u8 buf[NVGPU_EVENT_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
-	gk20a_dbg(gpu_dbg_fn, "nr=%d", _IOC_NR(cmd));
+	nvgpu_log(g, gpu_dbg_fn, "nr=%d", _IOC_NR(cmd));
 
 	if ((_IOC_TYPE(cmd) != NVGPU_EVENT_IOCTL_MAGIC) || (_IOC_NR(cmd) == 0)
 		|| (_IOC_NR(cmd) > NVGPU_EVENT_IOCTL_LAST))
@@ -681,7 +682,7 @@ int nvgpu_clk_arb_debugfs_init(struct gk20a *g)
 	struct dentry *gpu_root = l->debugfs;
 	struct dentry *d;
 
-	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+	nvgpu_log(g, gpu_dbg_info, "g=%p", g);
 
 	d = debugfs_create_file(
 			"arb_stats",

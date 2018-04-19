@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -270,7 +270,7 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 	pwrpolicyhwthreshold = (struct pwr_policy_hw_threshold*)board_obj_ptr;
 	pwrpolicy = (struct pwr_policy *)board_obj_ptr;
 
-	gk20a_dbg_fn("min=%u rated=%u max=%u",
+	nvgpu_log_fn(g, "min=%u rated=%u max=%u",
 		pwrpolicyparams->limit_min,
 		pwrpolicyparams->limit_rated,
 		pwrpolicyparams->limit_max);
@@ -358,7 +358,7 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 		pwrpolicyswthreshold->event_id = swthreshold->event_id;
 	}
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return board_obj_ptr;
 }
@@ -527,7 +527,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 	u32 hw_threshold_policy_index = 0;
 	union pwr_policy_data_union pwr_policy_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, POWER_CAPPING_TABLE);
@@ -702,7 +702,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -773,6 +773,6 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 	g->pmgr_pmu.pmgr_policyobjs.client_work_item.b_pending = false;
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

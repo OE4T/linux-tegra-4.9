@@ -59,7 +59,7 @@ static u32 _clk_vf_points_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_clk_clk_vf_point_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (idx >= CTRL_BOARDOBJGRP_E255_MAX_OBJECTS)
@@ -67,7 +67,7 @@ static u32 _clk_vf_points_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -94,7 +94,7 @@ u32 clk_vf_point_sw_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e255(g, &g->clk_pmu.clk_vf_pointobjs.super);
 	if (status) {
@@ -132,7 +132,7 @@ u32 clk_vf_point_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmustatusinstget  = _clk_vf_points_pmustatus_instget;
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -141,7 +141,7 @@ u32 clk_vf_point_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->clk_pmu.clk_vf_pointobjs.super.super;
 
@@ -150,7 +150,7 @@ u32 clk_vf_point_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -187,7 +187,7 @@ static u32 _clk_vf_point_pmudatainit_volt(struct gk20a *g,
 	struct clk_vf_point_volt *pclk_vf_point_volt;
 	struct nv_pmu_clk_clk_vf_point_volt_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_vf_point_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -214,7 +214,7 @@ static u32 _clk_vf_point_pmudatainit_freq(struct gk20a *g,
 	struct clk_vf_point_freq *pclk_vf_point_freq;
 	struct nv_pmu_clk_clk_vf_point_freq_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _clk_vf_point_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -297,7 +297,7 @@ struct clk_vf_point *construct_clk_vf_point(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_CLK_CLK_VF_POINT_TYPE_FREQ:
 		status = clk_vf_point_construct_freq(g, &board_obj_ptr,
@@ -316,7 +316,7 @@ struct clk_vf_point *construct_clk_vf_point(struct gk20a *g, void *pargs)
 	if (status)
 		return NULL;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return (struct clk_vf_point *)board_obj_ptr;
 }
@@ -329,7 +329,7 @@ static u32 _clk_vf_point_pmudatainit_super(struct gk20a *g,
 	struct clk_vf_point *pclk_vf_point;
 	struct nv_pmu_clk_clk_vf_point_boardobj_set *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -355,7 +355,7 @@ static u32 clk_vf_point_update(struct gk20a *g,
 	struct clk_vf_point *pclk_vf_point;
 	struct nv_pmu_clk_clk_vf_point_boardobj_get_status *pstatus;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 
 	pclk_vf_point =
@@ -388,7 +388,7 @@ u32 clk_vf_point_cache(struct gk20a *g)
 	u32 status;
 	u8 index;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	pclk_vf_points = &g->clk_pmu.clk_vf_pointobjs;
 	pboardobjgrp = &pclk_vf_points->super.super;
 	pboardobjgrpmask = &pclk_vf_points->super.mask.super;

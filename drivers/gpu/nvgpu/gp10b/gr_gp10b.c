@@ -69,7 +69,7 @@ bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	default:
 		break;
 	}
-	gk20a_dbg_info("class=0x%x valid=%d", class_num, valid);
+	nvgpu_log_info(g, "class=0x%x valid=%d", class_num, valid);
 	return valid;
 }
 
@@ -169,7 +169,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset,
 		0);
 	if (lrf_ecc_sed_status) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Single bit error detected in SM LRF!");
 
 		gr_gp10b_sm_lrf_ecc_overcount_war(1,
@@ -181,7 +181,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 							lrf_single_count_delta;
 	}
 	if (lrf_ecc_ded_status) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Double bit error detected in SM LRF!");
 
 		gr_gp10b_sm_lrf_ecc_overcount_war(0,
@@ -208,7 +208,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm1_pending_f()) ) {
 		u32 ecc_stats_reg_val;
 
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Single bit error detected in SM SHM!");
 
 		ecc_stats_reg_val =
@@ -230,7 +230,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pending_f()) ) {
 		u32 ecc_stats_reg_val;
 
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Double bit error detected in SM SHM!");
 
 		ecc_stats_reg_val =
@@ -260,14 +260,14 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 esr;
 	u32 ecc_stats_reg_val;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, " ");
 
 	esr = gk20a_readl(g,
 			 gr_gpc0_tpc0_tex_m_hww_esr_r() + offset);
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
+	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
 
 	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_sec_pending_f()) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Single bit error detected in TEX!");
 
 		/* Pipe 0 counters */
@@ -323,7 +323,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_pri_gpc0_tpc0_tex_m_routing_sel_default_f());
 	}
 	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_ded_pending_f()) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_intr,
 			"Double bit error detected in TEX!");
 
 		/* Pipe 0 counters */
@@ -403,7 +403,7 @@ int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 	u32 num_pes_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_PES_PER_GPC);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -660,21 +660,21 @@ static void gr_gp10b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = gk20a_readl(g, gr_gpcs_tc_debug0_r());
 	val = set_field(val, gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(),
 			     gr_gpcs_tc_debug0_limit_coalesce_buffer_size_f(data));
 	gk20a_writel(g, gr_gpcs_tc_debug0_r(), val);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 void gr_gp10b_set_bes_crop_debug3(struct gk20a *g, u32 data)
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	val = gk20a_readl(g, gr_bes_crop_debug3_r());
 	if ((data & 1)) {
@@ -722,7 +722,7 @@ void gr_gp10b_set_bes_crop_debug4(struct gk20a *g, u32 data)
 int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (class_num == PASCAL_COMPUTE_A) {
 		switch (offset << 2) {
@@ -800,7 +800,7 @@ void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (alpha_cb_size > gr->alpha_cb_size)
 		alpha_cb_size = gr->alpha_cb_size;
@@ -853,7 +853,7 @@ void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (cb_size_steady > gr->attrib_cb_size)
 		cb_size_steady = gr->attrib_cb_size;
@@ -923,7 +923,7 @@ int gr_gp10b_init_ctx_state(struct gk20a *g)
 		};
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gr_gk20a_init_ctx_state(g);
 	if (err)
@@ -940,10 +940,10 @@ int gr_gp10b_init_ctx_state(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_info("preempt image size: %u",
+	nvgpu_log_info(g, "preempt image size: %u",
 		g->gr.ctx_vars.preempt_image_size);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }
@@ -952,8 +952,9 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem)
 {
 	int err;
+	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_dma_alloc_sys(vm->mm->g, size, mem);
 	if (err)
@@ -1029,9 +1030,9 @@ int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				  g->gr.max_tpc_count;
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 
-		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
+		nvgpu_log_info(g, "gfxp context spill_size=%d", spill_size);
+		nvgpu_log_info(g, "gfxp context pagepool_size=%d", pagepool_size);
+		nvgpu_log_info(g, "gfxp context attrib_cb_size=%d",
 				attrib_cb_size);
 
 		err = gr_gp10b_alloc_buffer(vm,
@@ -1112,7 +1113,7 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	u32 graphics_preempt_mode = 0;
 	u32 compute_preempt_mode = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
 	if (err)
@@ -1137,7 +1138,7 @@ int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			goto fail_free_gk20a_ctx;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 
@@ -1215,7 +1216,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		ctxsw_prog_main_image_compute_preemption_options_control_cta_f();
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -1224,21 +1225,21 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 	gr_ctx = &tsg->gr_ctx;
 
 	if (gr_ctx->graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) {
-		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
+		nvgpu_log_info(g, "GfxP: %x", gfxp_preempt_option);
 		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_graphics_preemption_options_o(),
 				gfxp_preempt_option);
 	}
 
 	if (gr_ctx->compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP) {
-		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
+		nvgpu_log_info(g, "CILP: %x", cilp_preempt_option);
 		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_compute_preemption_options_o(),
 				cilp_preempt_option);
 	}
 
 	if (gr_ctx->compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CTA) {
-		gk20a_dbg_info("CTA: %x", cta_preempt_option);
+		nvgpu_log_info(g, "CTA: %x", cta_preempt_option);
 		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_compute_preemption_options_o(),
 				cta_preempt_option);
@@ -1269,7 +1270,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 			(u64_hi32(gr_ctx->betacb_ctxsw_buffer.gpu_va) <<
 			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
 
-		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
+		nvgpu_log_info(g, "attrib cb addr : 0x%016x", addr);
 		g->ops.gr.commit_global_attrib_cb(g, gr_ctx, addr, true);
 
 		addr = (u64_lo32(gr_ctx->pagepool_ctxsw_buffer.gpu_va) >>
@@ -1315,7 +1316,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 	}
 
 out:
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 int gr_gp10b_dump_gr_status_regs(struct gk20a *g,
@@ -1475,7 +1476,7 @@ int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 	u32 activity0, activity1, activity2, activity4;
 	struct nvgpu_timeout timeout;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_timeout_init(g, &timeout, duration_ms, NVGPU_TIMER_CPU_TIMER);
 
@@ -1500,7 +1501,7 @@ int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			    gr_activity_empty_or_preempted(activity4));
 
 		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
-			gk20a_dbg_fn("done");
+			nvgpu_log_fn(g, "done");
 			return 0;
 		}
 
@@ -1569,7 +1570,7 @@ void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
 
 	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
 
-	gk20a_dbg_info("bundle cb token limit : %d, state limit : %d",
+	nvgpu_log_info(g, "bundle cb token limit : %d, state limit : %d",
 		   g->gr.bundle_cb_token_limit, data);
 
 	gr_gk20a_ctx_patch_write(g, gr_ctx, gr_pd_ab_dist_cfg2_r(),
@@ -1626,7 +1627,7 @@ int gr_gp10b_init_fs_state(struct gk20a *g)
 {
 	u32 data;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	data = gk20a_readl(g, gr_gpcs_tpcs_sm_texio_control_r());
 	data = set_field(data, gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(),
@@ -1705,7 +1706,7 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 {
 	int ret = 0;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	ret = gk20a_disable_channel_tsg(g, fault_ch);
 	if (ret) {
@@ -1721,18 +1722,18 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 		return ret;
 	}
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: tsgid: 0x%x", fault_ch->tsgid);
 
 	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
 		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: preempted tsg");
 	} else {
 		gk20a_fifo_issue_preempt(g, fault_ch->chid, false);
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: preempted channel");
 	}
 
@@ -1746,7 +1747,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	tsg = tsg_gk20a_from_ch(fault_ch);
 	if (!tsg)
@@ -1755,7 +1756,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	gr_ctx = &tsg->gr_ctx;
 
 	if (gr_ctx->cilp_preempt_pending) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already pending for chid %d",
 				fault_ch->chid);
 		return 0;
@@ -1763,7 +1764,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 
 	/* get ctx_id from the ucode image */
 	if (!gr_ctx->ctx_id_valid) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP: looking up ctx id");
 		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->ctx_id);
 		if (ret) {
@@ -1773,7 +1774,7 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 		gr_ctx->ctx_id_valid = true;
 	}
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: ctx id is 0x%x", gr_ctx->ctx_id);
 
 	/* send ucode method to set ctxsw interrupt */
@@ -1795,10 +1796,10 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 		return ret;
 	}
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP: enabled ctxsw completion interrupt");
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: disabling channel %d",
 			fault_ch->chid);
 
@@ -1826,7 +1827,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	tsg = tsg_gk20a_from_ch(fault_ch);
 	if (!tsg)
@@ -1837,7 +1838,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
 	/* The ucode is self-clearing, so all we need to do here is
 	   to clear cilp_preempt_pending. */
 	if (!gr_ctx->cilp_preempt_pending) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP is already cleared for chid %d\n",
 				fault_ch->chid);
 		return 0;
@@ -1878,7 +1879,7 @@ int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 			NVGPU_PREEMPTION_MODE_COMPUTE_CILP);
 	}
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "SM Exception received on gpc %d tpc %d = %u\n",
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "SM Exception received on gpc %d tpc %d = %u\n",
 			gpc, tpc, global_esr);
 
 	if (cilp_enabled && sm_debugger_attached) {
@@ -1900,19 +1901,19 @@ int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
 			*ignore_debugger = true;
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: starting wait for LOCKED_DOWN on gpc %d tpc %d\n",
 					gpc, tpc);
 
 			if (gk20a_dbg_gpu_broadcast_stop_trigger(fault_ch)) {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: Broadcasting STOP_TRIGGER from gpc %d tpc %d\n",
 						gpc, tpc);
 				g->ops.gr.suspend_all_sms(g, global_mask, false);
 
 				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
 			} else {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: STOP_TRIGGER from gpc %d tpc %d\n",
 						gpc, tpc);
 				g->ops.gr.suspend_single_sm(g, gpc, tpc, sm, global_mask, true);
@@ -1923,11 +1924,11 @@ int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 							gpc, tpc, sm);
 			g->ops.gr.clear_sm_hww(g,
 						gpc, tpc, sm, global_esr_copy);
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for gpc %d tpc %d\n",
 					gpc, tpc);
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
 				nvgpu_err(g, "CILP: error while setting CILP preempt pending!");
@@ -1936,7 +1937,7 @@ int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 
 			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
 			if (dbgr_control0 & gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_enable_f()) {
-				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
 						gpc, tpc);
 				dbgr_control0 = set_field(dbgr_control0,
@@ -1945,13 +1946,13 @@ int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 				gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 			}
 
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: resume for gpc %d tpc %d\n",
 					gpc, tpc);
 			g->ops.gr.resume_single_sm(g, gpc, tpc, sm);
 
 			*ignore_debugger = true;
-			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: All done on gpc %d, tpc %d\n", gpc, tpc);
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: All done on gpc %d, tpc %d\n", gpc, tpc);
 		}
 
 		*early_exit = true;
@@ -1999,14 +2000,14 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 	int ret = 0;
 	struct tsg_gk20a *tsg;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
 	/*
 	 * INTR1 (bit 1 of the HOST_INT_STATUS_CTXSW_INTR)
 	 * indicates that a CILP ctxsw save has finished
 	 */
 	if (gr_fecs_intr & gr_fecs_host_int_status_ctxsw_intr_f(2)) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP: ctxsw save completed!\n");
 
 		/* now clear the interrupt */
@@ -2162,7 +2163,7 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 		struct nvgpu_gr_ctx *gr_ctx;
 		struct nvgpu_timeout timeout;
 
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP preempt pending, waiting %lu msecs for preemption",
 			gk20a_get_gr_idle_timeout(g));
 
@@ -2285,7 +2286,7 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 	if (g->ops.gr.set_ctxsw_preemption_mode) {
 
-		gk20a_dbg(gpu_dbg_sched, "chid=%d tsgid=%d pid=%d "
+		nvgpu_log(g, gpu_dbg_sched, "chid=%d tsgid=%d pid=%d "
 				"graphics_preempt=%d compute_preempt=%d",
 				ch->chid,
 				ch->tsgid,

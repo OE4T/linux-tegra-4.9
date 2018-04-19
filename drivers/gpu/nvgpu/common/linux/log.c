@@ -38,8 +38,6 @@
  */
 #define LOG_FMT			"nvgpu: %s %33s:%-4d [%s]  %s\n"
 
-u64 nvgpu_dbg_mask = NVGPU_DEFAULT_DBG_MASK;
-
 static const char *log_types[] = {
 	"ERR",
 	"WRN",

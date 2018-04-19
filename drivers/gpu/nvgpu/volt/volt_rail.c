@@ -135,7 +135,7 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 	struct nv_pmu_volt_volt_rail_boardobj_set *rail_pmu_data;
 	u32 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status)
@@ -170,7 +170,7 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 		nvgpu_err(g,
 			"Failed to export BOARDOBJGRPMASK of VOLTAGE_DEVICEs");
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 
 	return status;
 }
@@ -182,7 +182,7 @@ static struct voltage_rail *construct_volt_rail(struct gk20a *g, void *pargs)
 	struct voltage_rail  *board_obj_volt_rail_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		sizeof(struct voltage_rail), pargs);
 	if (status)
@@ -211,7 +211,7 @@ static struct voltage_rail *construct_volt_rail(struct gk20a *g, void *pargs)
 	board_obj_volt_rail_ptr->volt_scale_exp_pwr_equ_idx =
 			ptemp_rail->volt_scale_exp_pwr_equ_idx;
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 
 	return (struct voltage_rail *)board_obj_ptr;
 }
@@ -242,7 +242,7 @@ u32 volt_rail_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->perf_pmu.volt.volt_rail_metadata.volt_rails.super;
 
@@ -251,7 +251,7 @@ u32 volt_rail_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -366,7 +366,7 @@ static u32 _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_volt_volt_rail_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -375,7 +375,7 @@ static u32 _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -404,7 +404,7 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 	struct voltage_rail *pvolt_rail;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g,
 			&g->perf_pmu.volt.volt_rail_metadata.volt_rails);
@@ -465,6 +465,6 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

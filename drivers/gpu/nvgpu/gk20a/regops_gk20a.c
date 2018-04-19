@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -72,7 +72,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	bool skip_read_lo, skip_read_hi;
 	bool ok;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, " ");
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 
@@ -108,7 +108,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		case REGOP(READ_32):
 			ops[i].value_hi = 0;
 			ops[i].value_lo = gk20a_readl(g, ops[i].offset);
-			gk20a_dbg(gpu_dbg_gpu_dbg, "read_32 0x%08x from 0x%08x",
+			nvgpu_log(g, gpu_dbg_gpu_dbg, "read_32 0x%08x from 0x%08x",
 				   ops[i].value_lo, ops[i].offset);
 
 			break;
@@ -118,7 +118,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 			ops[i].value_hi =
 				gk20a_readl(g, ops[i].offset + 4);
 
-			gk20a_dbg(gpu_dbg_gpu_dbg, "read_64 0x%08x:%08x from 0x%08x",
+			nvgpu_log(g, gpu_dbg_gpu_dbg, "read_64 0x%08x:%08x from 0x%08x",
 				   ops[i].value_hi, ops[i].value_lo,
 				   ops[i].offset);
 		break;
@@ -157,12 +157,12 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 			/* now update first 32bits */
 			gk20a_writel(g, ops[i].offset, data32_lo);
-			gk20a_dbg(gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
+			nvgpu_log(g, gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
 				   data32_lo, ops[i].offset);
 			/* if desired, update second 32bits */
 			if (ops[i].op == REGOP(WRITE_64)) {
 				gk20a_writel(g, ops[i].offset + 4, data32_hi);
-				gk20a_dbg(gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
+				nvgpu_log(g, gpu_dbg_gpu_dbg, "Wrote 0x%08x to 0x%08x ",
 					   data32_hi, ops[i].offset + 4);
 
 			}
@@ -189,7 +189,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	}
 
  clean_up:
-	gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
+	nvgpu_log(g, gpu_dbg_gpu_dbg, "ret=%d", err);
 	return err;
 
 }
@@ -395,7 +395,7 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 		}
 	}
 
-	gk20a_dbg(gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d",
+	nvgpu_log(g, gpu_dbg_gpu_dbg, "ctx_wrs:%d ctx_rds:%d",
 		   *ctx_wr_count, *ctx_rd_count);
 
 	return ok;

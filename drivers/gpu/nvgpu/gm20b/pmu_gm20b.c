@@ -1,7 +1,7 @@
 /*
  * GM20B PMU
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,8 +37,8 @@
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
-#define gm20b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gm20b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 
 /* PROD settings for ELPG sequencing registers*/
@@ -108,7 +108,7 @@ int gm20b_pmu_setup_elpg(struct gk20a *g)
 	u32 reg_writes;
 	u32 index;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->elpg_enabled) {
 		reg_writes = ((sizeof(_pginitseq_gm20b) /
@@ -120,20 +120,20 @@ int gm20b_pmu_setup_elpg(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return ret;
 }
 
 static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
-	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
+	gm20b_dbg_pmu(g, "reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
 
 	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS)
 		g->pmu_lsf_pmu_wpr_init_done = 1;
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 
@@ -143,7 +143,7 @@ int gm20b_pmu_init_acr(struct gk20a *g)
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* init ACR */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -153,11 +153,11 @@ int gm20b_pmu_init_acr(struct gk20a *g)
 	cmd.cmd.acr.init_wpr.cmd_type = PMU_ACR_CMD_ID_INIT_WPR_REGION;
 	cmd.cmd.acr.init_wpr.regionid = 0x01;
 	cmd.cmd.acr.init_wpr.wproffset = 0x00;
-	gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_INIT_WPR_REGION");
+	gm20b_dbg_pmu(g, "cmd post PMU_ACR_CMD_ID_INIT_WPR_REGION");
 	nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_acr_init_wpr_msg, pmu, &seq, ~0);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -165,14 +165,14 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 
-	gm20b_dbg_pmu("reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
+	gm20b_dbg_pmu(g, "reply PMU_ACR_CMD_ID_BOOTSTRAP_FALCON");
 
-	gm20b_dbg_pmu("response code = %x\n", msg->msg.acr.acrmsg.falconid);
+	gm20b_dbg_pmu(g, "response code = %x\n", msg->msg.acr.acrmsg.falconid);
 	g->pmu_lsf_loaded_falcon_id = msg->msg.acr.acrmsg.falconid;
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
@@ -182,7 +182,7 @@ static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
 	u32 reg;
 	struct nvgpu_timeout timeout;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
 
 	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
@@ -203,9 +203,9 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
-	gm20b_dbg_pmu("wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
+	gm20b_dbg_pmu(g, "wprinit status = %x\n", g->pmu_lsf_pmu_wpr_init_done);
 	if (g->pmu_lsf_pmu_wpr_init_done) {
 		/* send message to load FECS falcon */
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -216,13 +216,13 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 		  PMU_ACR_CMD_ID_BOOTSTRAP_FALCON;
 		cmd.cmd.acr.bootstrap_falcon.flags = flags;
 		cmd.cmd.acr.bootstrap_falcon.falconid = falcon_id;
-		gm20b_dbg_pmu("cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON: %x\n",
+		gm20b_dbg_pmu(g, "cmd post PMU_ACR_CMD_ID_BOOTSTRAP_FALCON: %x\n",
 				falcon_id);
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_fecs_boot_acr_msg, pmu, &seq, ~0);
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return;
 }
 

@@ -1,7 +1,7 @@
 /*
  * GP10B MMU
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -53,7 +53,7 @@ int gp10b_init_mm_setup_hw(struct gk20a *g)
 	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.fb.set_mmu_page_size(g);
 
@@ -73,7 +73,7 @@ int gp10b_init_mm_setup_hw(struct gk20a *g)
 
 	err = gp10b_replayable_pagefault_buffer_init(g);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return err;
 
 }
@@ -87,7 +87,7 @@ int gp10b_init_bar2_vm(struct gk20a *g)
 
 	/* BAR2 aperture size is 32MB */
 	mm->bar2.aperture_size = 32 << 20;
-	gk20a_dbg_info("bar2 vm size = 0x%x", mm->bar2.aperture_size);
+	nvgpu_log_info(g, "bar2 vm size = 0x%x", mm->bar2.aperture_size);
 
 	mm->bar2.vm = nvgpu_vm_init(g, big_page_size, SZ_4K,
 		mm->bar2.aperture_size - SZ_4K,
@@ -115,12 +115,12 @@ int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
 	u64 inst_pa = nvgpu_inst_block_addr(g, inst_block);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.fb.set_mmu_page_size(g);
 
 	inst_pa = (u32)(inst_pa >> bus_bar2_block_ptr_shift_v());
-	gk20a_dbg_info("bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
+	nvgpu_log_info(g, "bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
 
 	gk20a_writel(g, bus_bar2_block_r(),
 		     nvgpu_aperture_mask(g, inst_block,
@@ -130,7 +130,7 @@ int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
 		     bus_bar2_block_mode_virtual_f() |
 		     bus_bar2_block_ptr_f(inst_pa));
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -433,7 +433,7 @@ void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
+	nvgpu_log_info(g, "pde pa=0x%llx", pdb_addr);
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
 		nvgpu_aperture_mask(g, vm->pdb.mem,

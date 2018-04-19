@@ -307,10 +307,6 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 	debugfs_create_u32("disable_syncpoints", S_IRUGO,
 		l->debugfs, &g->disable_syncpoints);
 
-	/* Legacy debugging API. */
-	debugfs_create_u64("dbg_mask", S_IRUGO|S_IWUSR,
-		l->debugfs, &nvgpu_dbg_mask);
-
 	/* New debug logging API. */
 	debugfs_create_u64("log_mask", S_IRUGO|S_IWUSR,
 		l->debugfs, &g->log_mask);

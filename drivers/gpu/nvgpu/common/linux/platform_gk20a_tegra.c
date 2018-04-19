@@ -551,6 +551,7 @@ static void gk20a_tegra_scale_init(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *emc_params;
+	struct gk20a *g = platform->g;
 
 	if (!profile)
 		return;
@@ -568,7 +569,7 @@ static void gk20a_tegra_scale_init(struct device *dev)
 #ifdef CONFIG_TEGRA_BWMGR
 	emc_params->bwmgr_cl = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_GPU);
 	if (!emc_params->bwmgr_cl) {
-		gk20a_dbg_info("%s Missing GPU BWMGR client\n", __func__);
+		nvgpu_log_info(g, "%s Missing GPU BWMGR client\n", __func__);
 		return;
 	}
 #endif
@@ -767,6 +768,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	struct device_node *np = dev->of_node;
 	bool joint_xpu_rail = false;
 	int ret;
+	struct gk20a *g = platform->g;
 
 #ifdef CONFIG_COMMON_CLK
 	/* DVFS is not guaranteed to be initialized at the time of probe on
@@ -775,13 +777,13 @@ static int gk20a_tegra_probe(struct device *dev)
 	if (!platform->gpu_rail) {
 		platform->gpu_rail = tegra_dvfs_get_rail_by_name(GPU_RAIL_NAME);
 		if (!platform->gpu_rail) {
-			gk20a_dbg_info("deferring probe no gpu_rail\n");
+			nvgpu_log_info(g, "deferring probe no gpu_rail");
 			return -EPROBE_DEFER;
 		}
 	}
 
 	if (!tegra_dvfs_is_rail_ready(platform->gpu_rail)) {
-		gk20a_dbg_info("deferring probe gpu_rail not ready\n");
+		nvgpu_log_info(g, "deferring probe gpu_rail not ready");
 		return -EPROBE_DEFER;
 	}
 #endif
@@ -798,7 +800,7 @@ static int gk20a_tegra_probe(struct device *dev)
 #endif
 
 	if (joint_xpu_rail) {
-		gk20a_dbg_info("XPU rails are joint\n");
+		nvgpu_log_info(g, "XPU rails are joint\n");
 		platform->g->can_railgate = false;
 	}
 

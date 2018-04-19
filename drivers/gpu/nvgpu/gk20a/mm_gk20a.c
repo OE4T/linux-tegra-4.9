@@ -91,7 +91,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.fb.set_mmu_page_size(g);
 	if (g->ops.fb.set_use_full_comp_tag_line)
@@ -112,7 +112,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
 		return -EBUSY;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -336,7 +336,7 @@ int gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 {
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(ch->g, " ");
 
 	nvgpu_vm_get(vm);
 	ch->vm = vm;
@@ -357,7 +357,7 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
+	nvgpu_log_info(g, "pde pa=0x%llx", pdb_addr);
 
 	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
 		       nvgpu_aperture_mask(g, vm->pdb.mem,
@@ -376,7 +376,7 @@ void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
+	nvgpu_log_info(g, "inst block phys = 0x%llx, kv = 0x%p",
 		nvgpu_inst_block_addr(g, inst_block), inst_block->cpu_va);
 
 	g->ops.mm.init_pdb(g, inst_block, vm);
@@ -395,7 +395,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_dma_alloc(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
@@ -403,7 +403,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 		return err;
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -415,7 +415,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 	u32 retries;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_busy_noresume(g);
 	if (!g->power_on) {
@@ -448,7 +448,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 			flush_fb_flush_outstanding_true_v() ||
 		    flush_fb_flush_pending_v(data) ==
 			flush_fb_flush_pending_busy_v()) {
-				gk20a_dbg_info("fb_flush 0x%x", data);
+				nvgpu_log_info(g, "fb_flush 0x%x", data);
 				nvgpu_udelay(5);
 		} else
 			break;
@@ -494,7 +494,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 			flush_l2_system_invalidate_outstanding_true_v() ||
 		    flush_l2_system_invalidate_pending_v(data) ==
 			flush_l2_system_invalidate_pending_busy_v()) {
-				gk20a_dbg_info("l2_system_invalidate 0x%x",
+				nvgpu_log_info(g, "l2_system_invalidate 0x%x",
 						data);
 				nvgpu_udelay(5);
 		} else
@@ -526,7 +526,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	struct nvgpu_timeout timeout;
 	u32 retries = 2000;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_busy_noresume(g);
 	if (!g->power_on)
@@ -553,7 +553,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			flush_l2_flush_dirty_outstanding_true_v() ||
 		    flush_l2_flush_dirty_pending_v(data) ==
 			flush_l2_flush_dirty_pending_busy_v()) {
-				gk20a_dbg_info("l2_flush_dirty 0x%x", data);
+				nvgpu_log_info(g, "l2_flush_dirty 0x%x", data);
 				nvgpu_udelay(5);
 		} else
 			break;
@@ -578,7 +578,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 	u32 retries = 200;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_busy_noresume(g);
 	if (!g->power_on)
@@ -602,7 +602,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 			flush_l2_clean_comptags_outstanding_true_v() ||
 		    flush_l2_clean_comptags_pending_v(data) ==
 			flush_l2_clean_comptags_pending_busy_v()) {
-				gk20a_dbg_info("l2_clean_comptags 0x%x", data);
+				nvgpu_log_info(g, "l2_clean_comptags 0x%x", data);
 				nvgpu_udelay(5);
 		} else
 			break;

@@ -37,8 +37,8 @@
 
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 
-#define gv11b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gv11b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 #define ALIGN_4KB     12
 
@@ -121,7 +121,7 @@ int gv11b_pmu_setup_elpg(struct gk20a *g)
 	u32 reg_writes;
 	u32 index;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->elpg_enabled) {
 		reg_writes = ((sizeof(_pginitseq_gv11b) /
@@ -133,7 +133,7 @@ int gv11b_pmu_setup_elpg(struct gk20a *g)
 		}
 	}
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return ret;
 }
 
@@ -187,7 +187,7 @@ int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 	u64 addr_code_hi, addr_data_hi;
 	u32 i, blocks, addr_args;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 		gk20a_readl(g, pwr_falcon_itfen_r()) |
@@ -407,28 +407,28 @@ u32 gv11b_pmu_get_irqdest(struct gk20a *g)
 static void pmu_handle_pg_sub_feature_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "Sub-feature mask update cmd aborted\n");
 		return;
 	}
 
-	gv11b_dbg_pmu("sub-feature mask update is acknowledged from PMU %x\n",
+	gv11b_dbg_pmu(g, "sub-feature mask update is acknowledged from PMU %x\n",
 							msg->msg.pg.msg_type);
 }
 
 static void pmu_handle_pg_param_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (status != 0) {
 		nvgpu_err(g, "GR PARAM cmd aborted\n");
 		return;
 	}
 
-	gv11b_dbg_pmu("GR PARAM is acknowledged from PMU %x\n",
+	gv11b_dbg_pmu(g, "GR PARAM is acknowledged from PMU %x\n",
 							msg->msg.pg.msg_type);
 }
 
@@ -450,7 +450,7 @@ int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		cmd.cmd.pg.gr_init_param_v1.featuremask =
 				NVGPU_PMU_GR_FEATURE_MASK_ALL;
 
-		gv11b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM_INIT\n");
+		gv11b_dbg_pmu(g, "cmd post PMU_PG_CMD_ID_PG_PARAM_INIT\n");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 					pmu_handle_pg_param_msg, pmu, &seq, ~0);
 
@@ -488,7 +488,7 @@ int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 				NVGPU_PMU_GR_FEATURE_MASK_ELPG_LOGIC |
 				NVGPU_PMU_GR_FEATURE_MASK_ELPG_L2RPPG;
 
-		gv11b_dbg_pmu("cmd post PMU_PG_CMD_SUB_FEATURE_MASK_UPDATE\n");
+		gv11b_dbg_pmu(g, "cmd post PMU_PG_CMD_SUB_FEATURE_MASK_UPDATE\n");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_pg_sub_feature_msg, pmu, &seq, ~0);
 	} else

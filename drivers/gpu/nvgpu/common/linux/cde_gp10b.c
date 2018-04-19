@@ -1,7 +1,7 @@
 /*
  * GP10B CDE
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -117,7 +117,7 @@ int gp10b_populate_scatter_buffer(struct gk20a *g,
 		u64 surf_pa = sg_phys(sg);
 		unsigned int n = (int)(sg->length >> page_size_log2);
 
-		gk20a_dbg(gpu_dbg_cde, "surfPA=0x%llx + %d pages", surf_pa, n);
+		nvgpu_log(g, gpu_dbg_cde, "surfPA=0x%llx + %d pages", surf_pa, n);
 
 		for (j=0; j < n && pages_left > 0; j++, surf_pa += page_size) {
 			u32 addr = (((u32)(surf_pa>>7)) & getSliceMaskGP10B) >> page_size_shift;
@@ -143,9 +143,9 @@ int gp10b_populate_scatter_buffer(struct gk20a *g,
 		scatter_buffer[page >> 3] = d;
 
 	if (nvgpu_log_mask_enabled(g, gpu_dbg_cde)) {
-		gk20a_dbg(gpu_dbg_cde, "scatterBuffer content:");
+		nvgpu_log(g, gpu_dbg_cde, "scatterBuffer content:");
 		for (i = 0; i < page >> 3; i++) {
-			gk20a_dbg(gpu_dbg_cde, " %x", scatter_buffer[i]);
+			nvgpu_log(g, gpu_dbg_cde, " %x", scatter_buffer[i]);
 		}
 	}
 

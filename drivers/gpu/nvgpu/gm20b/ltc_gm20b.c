@@ -61,7 +61,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (max_comptag_lines == 0U)
 		return 0;
@@ -87,9 +87,9 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
 
-	gk20a_dbg_info("compbit backing store size : %d",
+	nvgpu_log_info(g, "compbit backing store size : %d",
 		compbit_backing_size);
-	gk20a_dbg_info("max comptag lines : %d",
+	nvgpu_log_info(g, "max comptag lines : %d",
 		max_comptag_lines);
 
 	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
@@ -121,7 +121,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 	const u32 max_lines = 16384U;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
 
@@ -134,7 +134,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 		nvgpu_mutex_acquire(&g->mm.l2_op_lock);
 
-		gk20a_dbg_info("clearing CBC lines %u..%u", min, iter_max);
+		nvgpu_log_info(g, "clearing CBC lines %u..%u", min, iter_max);
 
 		if (op == gk20a_cbc_op_clear) {
 			gk20a_writel(
@@ -205,11 +205,11 @@ void gm20b_ltc_init_fs_state(struct gk20a *g)
 {
 	u32 reg;
 
-	gk20a_dbg_info("initialize gm20b l2");
+	nvgpu_log_info(g, "initialize gm20b l2");
 
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());
-	gk20a_dbg_info("%d ltcs out of %d", g->ltc_count, g->max_ltc_count);
+	nvgpu_log_info(g, "%d ltcs out of %d", g->ltc_count, g->max_ltc_count);
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r(),
 	g->ltc_count);
@@ -459,7 +459,7 @@ void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
 
-	gk20a_dbg(gpu_dbg_info | gpu_dbg_map_v | gpu_dbg_pte,
+	nvgpu_log(g, gpu_dbg_info | gpu_dbg_map_v | gpu_dbg_pte,
 		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
 		   (u32)(compbit_store_iova >> 32),
 		   (u32)(compbit_store_iova & 0xffffffff),

@@ -408,7 +408,7 @@ static u32 _volt_device_devgrp_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_volt_volt_device_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -417,7 +417,7 @@ static u32 _volt_device_devgrp_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return 0;
 }
 
@@ -506,7 +506,7 @@ u32 volt_dev_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->perf_pmu.volt.volt_dev_metadata.volt_devices.super;
 
@@ -515,7 +515,7 @@ u32 volt_dev_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -526,7 +526,7 @@ u32 volt_dev_sw_setup(struct gk20a *g)
 	struct voltage_device *pvolt_device;
 	u8 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g,
 			&g->perf_pmu.volt.volt_dev_metadata.volt_devices);
@@ -585,6 +585,6 @@ u32 volt_dev_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

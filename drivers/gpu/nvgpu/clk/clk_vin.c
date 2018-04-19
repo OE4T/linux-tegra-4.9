@@ -323,13 +323,13 @@ static u32 _clk_vin_devgrp_pmudatainit_super(struct gk20a *g,
 	struct avfsvinobjs *pvin_obbj = (struct avfsvinobjs *)pboardobjgrp;
 	u32 status = 0;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 
 	pset->b_vin_is_disable_allowed = pvin_obbj->vin_is_disable_allowed;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return status;
 }
 
@@ -342,7 +342,7 @@ static u32 _clk_vin_devgrp_pmudata_instget(struct gk20a *g,
 		(struct nv_pmu_clk_clk_vin_device_boardobj_grp_set *)
 		pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -351,7 +351,7 @@ static u32 _clk_vin_devgrp_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -381,7 +381,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 	struct vin_device_v20 *pvindev = NULL;
 	struct avfsvinobjs *pvinobjs;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e32(g, &g->clk_pmu.avfs_vinobjs.super);
 	if (status) {
@@ -427,7 +427,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -436,7 +436,7 @@ u32 clk_vin_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->clk_pmu.avfs_vinobjs.super.super;
 
@@ -445,7 +445,7 @@ u32 clk_vin_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -470,7 +470,7 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 		struct vin_device_v20 vin_device_v20;
 	} vin_device_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	vin_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.clock_token, VIN_TABLE);
@@ -557,7 +557,7 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -645,7 +645,7 @@ static struct vin_device *construct_vin_device(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info(" %d", BOARDOBJ_GET_TYPE(pargs));
+	nvgpu_log_info(g, " %d", BOARDOBJ_GET_TYPE(pargs));
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_CLK_VIN_TYPE_V10:
 		status = vin_device_construct_v10(g, &board_obj_ptr,
@@ -664,7 +664,7 @@ static struct vin_device *construct_vin_device(struct gk20a *g, void *pargs)
 	if (status)
 		return NULL;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return (struct vin_device *)board_obj_ptr;
 }
@@ -679,7 +679,7 @@ static u32 vin_device_init_pmudata_v10(struct gk20a *g,
 	struct vin_device_v20 *pvin_dev_v20;
 	struct nv_pmu_clk_clk_vin_device_v10_boardobj_set *perf_pmu_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = vin_device_init_pmudata_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -692,7 +692,7 @@ static u32 vin_device_init_pmudata_v10(struct gk20a *g,
 	perf_pmu_data->data.vin_cal.intercept = pvin_dev_v20->data.vin_cal.cal_v10.intercept;
 	perf_pmu_data->data.vin_cal.slope = pvin_dev_v20->data.vin_cal.cal_v10.slope;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return status;
 }
@@ -705,7 +705,7 @@ static u32 vin_device_init_pmudata_v20(struct gk20a *g,
 	struct vin_device_v20 *pvin_dev_v20;
 	struct nv_pmu_clk_clk_vin_device_v20_boardobj_set *perf_pmu_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = vin_device_init_pmudata_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -718,7 +718,7 @@ static u32 vin_device_init_pmudata_v20(struct gk20a *g,
 	perf_pmu_data->data.vin_cal.cal_v20.offset = pvin_dev_v20->data.vin_cal.cal_v20.offset;
 	perf_pmu_data->data.vin_cal.cal_v20.gain = pvin_dev_v20->data.vin_cal.cal_v20.gain;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return status;
 }
@@ -731,7 +731,7 @@ static u32 vin_device_init_pmudata_super(struct gk20a *g,
 	struct vin_device *pvin_dev;
 	struct nv_pmu_clk_clk_vin_device_boardobj_set *perf_pmu_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -745,7 +745,7 @@ static u32 vin_device_init_pmudata_super(struct gk20a *g,
 	perf_pmu_data->volt_domain = pvin_dev->volt_domain;
 	perf_pmu_data->flls_shared_mask = pvin_dev->flls_shared_mask;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return status;
 }

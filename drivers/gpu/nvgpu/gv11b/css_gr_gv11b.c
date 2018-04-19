@@ -1,7 +1,7 @@
 /*
  * GV11B Cycle stats snapshots support
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -148,7 +148,7 @@ int gv11b_css_hw_enable_snapshot(struct channel_gk20a *ch,
 				perf_pmasys_mem_block_target_lfb_f()));
 
 
-	gk20a_dbg_info("cyclestats: buffer for hardware snapshots enabled\n");
+	nvgpu_log_info(g, "cyclestats: buffer for hardware snapshots enabled\n");
 
 	return 0;
 
@@ -186,7 +186,7 @@ void gv11b_css_hw_disable_snapshot(struct gr_gk20a *gr)
 	memset(&data->hw_memdesc, 0, sizeof(data->hw_memdesc));
 	data->hw_snapshot = NULL;
 
-	gk20a_dbg_info("cyclestats: buffer for hardware snapshots disabled\n");
+	nvgpu_log_info(g, "cyclestats: buffer for hardware snapshots disabled\n");
 }
 
 int gv11b_css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,

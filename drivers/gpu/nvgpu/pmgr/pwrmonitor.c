@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@ static u32 _pwr_channel_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_pmgr_pwr_channel_desc *ppmgrchannel =
 		(struct nv_pmu_pmgr_pwr_channel_desc *)pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -49,7 +49,7 @@ static u32 _pwr_channel_pmudata_instget(struct gk20a *g,
 	/* handle Global/common data here as we need index */
 	ppmgrchannel->channels[idx].data.pwr_channel.ch_idx = idx;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return 0;
 }
@@ -62,7 +62,7 @@ static u32 _pwr_channel_rels_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_pmgr_pwr_chrelationship_desc *ppmgrchrels =
 		(struct nv_pmu_pmgr_pwr_chrelationship_desc *)pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
@@ -72,7 +72,7 @@ static u32 _pwr_channel_rels_pmudata_instget(struct gk20a *g,
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&ppmgrchrels->ch_rels[idx].data.board_obj;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return 0;
 }
@@ -169,7 +169,7 @@ static struct boardobj *construct_pwr_topology(struct gk20a *g,
 	pwrchannel->pwr_dev_idx = sensor->pwr_dev_idx;
 	pwrchannel->pwr_dev_prov_idx = sensor->pwr_dev_prov_idx;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return board_obj_ptr;
 }
@@ -192,7 +192,7 @@ static u32 devinit_get_pwr_topology_table(struct gk20a *g,
 		struct pwr_channel_sensor sensor;
 	} pwr_topology_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pwr_topology_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, POWER_TOPOLOGY_TABLE);
@@ -292,7 +292,7 @@ static u32 devinit_get_pwr_topology_table(struct gk20a *g,
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -365,6 +365,6 @@ u32 pmgr_monitor_sw_setup(struct gk20a *g)
 	}
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }

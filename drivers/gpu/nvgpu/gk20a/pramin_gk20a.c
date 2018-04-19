@@ -45,7 +45,7 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 			bus_bar0_window_target_vid_mem_f()) |
 		bus_bar0_window_base_f(hi);
 
-	gk20a_dbg(gpu_dbg_mem,
+	nvgpu_log(g, gpu_dbg_mem,
 			"0x%08x:%08x begin for %p,%p at [%llx,%llx] (sz %llx)",
 			hi, lo, mem, sgl, bufbase,
 			bufbase + nvgpu_sgt_get_phys(g, sgt, sgl),
@@ -67,7 +67,7 @@ u32 gk20a_pramin_enter(struct gk20a *g, struct nvgpu_mem *mem,
 void gk20a_pramin_exit(struct gk20a *g, struct nvgpu_mem *mem,
 		       struct nvgpu_sgl *sgl)
 {
-	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, sgl);
+	nvgpu_log(g, gpu_dbg_mem, "end for %p,%p", mem, sgl);
 
 	nvgpu_spinlock_release(&g->mm.pramin_window_lock);
 }

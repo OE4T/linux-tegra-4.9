@@ -46,7 +46,7 @@ int gk20a_init_pstate_support(struct gk20a *g)
 {
 	u32 err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = volt_rail_sw_setup(g);
 	if (err)
@@ -114,7 +114,7 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 {
 	u32 err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->ops.clk.mclk_init) {
 		err = g->ops.clk.mclk_init(g);
@@ -269,7 +269,7 @@ static int parse_pstate_entry_5x(struct gk20a *g,
 	pstate->clklist.num_info = hdr->clock_entry_count;
 	pstate->lpwr_entry_idx = entry->lpwr_entry_idx;
 
-	gk20a_dbg_info("pstate P%u", pstate->num);
+	nvgpu_log_info(g, "pstate P%u", pstate->num);
 
 	for (clkidx = 0; clkidx < hdr->clock_entry_count; clkidx++) {
 		struct clk_set_info *pclksetinfo;
@@ -293,7 +293,7 @@ static int parse_pstate_entry_5x(struct gk20a *g,
 			BIOS_GET_FIELD(clk_entry->param1,
 				VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MAX_FREQ_MHZ);
 
-		gk20a_dbg_info(
+		nvgpu_log_info(g,
 			"clk_domain=%u nominal_mhz=%u min_mhz=%u max_mhz=%u",
 			pclksetinfo->clkwhich, pclksetinfo->nominal_mhz,
 			pclksetinfo->min_mhz, pclksetinfo->max_mhz);
@@ -355,7 +355,7 @@ static int pstate_sw_setup(struct gk20a *g)
 	struct vbios_pstate_header_5x *hdr = NULL;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_cond_init(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
 
@@ -401,11 +401,11 @@ struct pstate *pstate_find(struct gk20a *g, u32 num)
 	struct pstate *pstate;
 	u8 i;
 
-	gk20a_dbg_info("pstates = %p", pstates);
+	nvgpu_log_info(g, "pstates = %p", pstates);
 
 	BOARDOBJGRP_FOR_EACH(&pstates->super.super,
 			struct pstate *, pstate, i) {
-		gk20a_dbg_info("pstate=%p num=%u (looking for num=%u)",
+		nvgpu_log_info(g, "pstate=%p num=%u (looking for num=%u)",
 				pstate, pstate->num, num);
 		if (pstate->num == num)
 			return pstate;
@@ -420,7 +420,7 @@ struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g,
 	struct clk_set_info *info;
 	u32 clkidx;
 
-	gk20a_dbg_info("pstate = %p", pstate);
+	nvgpu_log_info(g, "pstate = %p", pstate);
 
 	if (!pstate)
 		return NULL;

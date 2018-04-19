@@ -1,7 +1,7 @@
 /*
  * GK20A Therm
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ int gk20a_init_therm_support(struct gk20a *g)
 {
 	u32 err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_init_therm_reset_enable_hw(g);
 	if (err)
@@ -73,7 +73,7 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 	u32 active_engine_id = 0;
 	struct fifo_gk20a *f = &g->fifo;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	for (engine_id = 0; engine_id < f->num_engines; engine_id++) {
 		active_engine_id = f->active_engines_list[engine_id];
@@ -104,6 +104,6 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 	idle_filter &= ~therm_hubmmu_idle_filter_value_m();
 	gk20a_writel(g, therm_hubmmu_idle_filter_r(), idle_filter);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }

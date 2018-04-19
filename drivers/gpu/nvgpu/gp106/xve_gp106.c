@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -204,19 +204,19 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	int attempts = 10, err_status = 0;
 
 	g->ops.xve.get_speed(g, &current_link_speed);
-	xv_sc_dbg(PRE_CHANGE, "Executing PCIe link change.");
-	xv_sc_dbg(PRE_CHANGE, "  Current speed:  %s",
+	xv_sc_dbg(g, PRE_CHANGE, "Executing PCIe link change.");
+	xv_sc_dbg(g, PRE_CHANGE, "  Current speed:  %s",
 		  xve_speed_to_str(current_link_speed));
-	xv_sc_dbg(PRE_CHANGE, "  Next speed:     %s",
+	xv_sc_dbg(g, PRE_CHANGE, "  Next speed:     %s",
 		  xve_speed_to_str(next_link_speed));
-	xv_sc_dbg(PRE_CHANGE, "  PL_LINK_CONFIG: 0x%08x",
+	xv_sc_dbg(g, PRE_CHANGE, "  PL_LINK_CONFIG: 0x%08x",
 		  gk20a_readl(g, xp_pl_link_config_r(0)));
 
-	xv_sc_dbg(DISABLE_ASPM, "Disabling ASPM...");
+	xv_sc_dbg(g, DISABLE_ASPM, "Disabling ASPM...");
 	disable_aspm_gp106(g);
-	xv_sc_dbg(DISABLE_ASPM, "  Done!");
+	xv_sc_dbg(g, DISABLE_ASPM, "  Done!");
 
-	xv_sc_dbg(DL_SAFE_MODE, "Putting DL in safe mode...");
+	xv_sc_dbg(g, DL_SAFE_MODE, "Putting DL in safe mode...");
 	saved_dl_mgr = gk20a_readl(g, xp_dl_mgr_r(0));
 
 	/*
@@ -225,12 +225,12 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	dl_mgr = saved_dl_mgr;
 	dl_mgr |= xp_dl_mgr_safe_timing_f(1);
 	gk20a_writel(g, xp_dl_mgr_r(0), dl_mgr);
-	xv_sc_dbg(DL_SAFE_MODE, "  Done!");
+	xv_sc_dbg(g, DL_SAFE_MODE, "  Done!");
 
 	nvgpu_timeout_init(g, &timeout, GPU_XVE_TIMEOUT_MS,
 			NVGPU_TIMER_CPU_TIMER);
 
-	xv_sc_dbg(CHECK_LINK, "Checking for link idle...");
+	xv_sc_dbg(g, CHECK_LINK, "Checking for link idle...");
 	do {
 		pl_link_config = gk20a_readl(g, xp_pl_link_config_r(0));
 		if ((xp_pl_link_config_ltssm_status_f(pl_link_config) ==
@@ -245,9 +245,9 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		goto done;
 	}
 
-	xv_sc_dbg(CHECK_LINK, "  Done");
+	xv_sc_dbg(g, CHECK_LINK, "  Done");
 
-	xv_sc_dbg(LINK_SETTINGS, "Preparing next link settings");
+	xv_sc_dbg(g, LINK_SETTINGS, "Preparing next link settings");
 	pl_link_config &= ~xp_pl_link_config_max_link_rate_m();
 	switch (next_link_speed) {
 	case GPU_XVE_SPEED_2P5:
@@ -297,10 +297,10 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	else
 		BUG();
 
-	xv_sc_dbg(LINK_SETTINGS, "  pl_link_config = 0x%08x", pl_link_config);
-	xv_sc_dbg(LINK_SETTINGS, "  Done");
+	xv_sc_dbg(g, LINK_SETTINGS, "  pl_link_config = 0x%08x", pl_link_config);
+	xv_sc_dbg(g, LINK_SETTINGS, "  Done");
 
-	xv_sc_dbg(EXEC_CHANGE, "Running link speed change...");
+	xv_sc_dbg(g, EXEC_CHANGE, "Running link speed change...");
 
 	nvgpu_timeout_init(g, &timeout, GPU_XVE_TIMEOUT_MS,
 			NVGPU_TIMER_CPU_TIMER);
@@ -316,7 +316,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		goto done;
 	}
 
-	xv_sc_dbg(EXEC_CHANGE, "  Wrote PL_LINK_CONFIG.");
+	xv_sc_dbg(g, EXEC_CHANGE, "  Wrote PL_LINK_CONFIG.");
 
 	pl_link_config = gk20a_readl(g, xp_pl_link_config_r(0));
 
@@ -326,7 +326,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			  xp_pl_link_config_ltssm_directive_f(
 			  xp_pl_link_config_ltssm_directive_change_speed_v()));
 
-		xv_sc_dbg(EXEC_CHANGE, "  Executing change (0x%08x)!",
+		xv_sc_dbg(g, EXEC_CHANGE, "  Executing change (0x%08x)!",
 			  pl_link_config);
 		gk20a_writel(g, xp_pl_link_config_r(0), pl_link_config);
 
@@ -348,11 +348,11 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 
 		if (nvgpu_timeout_peek_expired(&timeout)) {
 			err_status = -ETIMEDOUT;
-			xv_sc_dbg(EXEC_CHANGE, "  timeout; pl_link_config = 0x%x",
+			xv_sc_dbg(g, EXEC_CHANGE, "  timeout; pl_link_config = 0x%x",
 				pl_link_config);
 		}
 
-		xv_sc_dbg(EXEC_CHANGE, "  Change done... Checking status");
+		xv_sc_dbg(g, EXEC_CHANGE, "  Change done... Checking status");
 
 		if (pl_link_config == 0xffffffff) {
 			WARN(1, "GPU fell of PCI bus!?");
@@ -366,19 +366,19 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 
 		link_control_status =
 			g->ops.xve.xve_readl(g, xve_link_control_status_r());
-		xv_sc_dbg(EXEC_CHANGE, "  target %d vs current %d",
+		xv_sc_dbg(g, EXEC_CHANGE, "  target %d vs current %d",
 			  link_speed_setting,
 			  xve_link_control_status_link_speed_v(link_control_status));
 
 		if (err_status == -ETIMEDOUT) {
-			xv_sc_dbg(EXEC_CHANGE, "  Oops timed out?");
+			xv_sc_dbg(g, EXEC_CHANGE, "  Oops timed out?");
 			break;
 		}
 	} while (attempts-- > 0 &&
 		 link_speed_setting !=
 		 xve_link_control_status_link_speed_v(link_control_status));
 
-	xv_sc_dbg(EXEC_VERIF, "Verifying speed change...");
+	xv_sc_dbg(g, EXEC_VERIF, "Verifying speed change...");
 
 	/*
 	 * Check that the new link speed is actually active. If we failed to
@@ -390,10 +390,10 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	if (link_speed_setting != new_link_speed) {
 		u32 link_config = gk20a_readl(g, xp_pl_link_config_r(0));
 
-		xv_sc_dbg(EXEC_VERIF, "  Current and target speeds mismatch!");
-		xv_sc_dbg(EXEC_VERIF, "    LINK_CONTROL_STATUS: 0x%08x",
+		xv_sc_dbg(g, EXEC_VERIF, "  Current and target speeds mismatch!");
+		xv_sc_dbg(g, EXEC_VERIF, "    LINK_CONTROL_STATUS: 0x%08x",
 			  g->ops.xve.xve_readl(g, xve_link_control_status_r()));
-		xv_sc_dbg(EXEC_VERIF, "    Link speed is %s - should be %s",
+		xv_sc_dbg(g, EXEC_VERIF, "    Link speed is %s - should be %s",
 			  xve_speed_to_str(new_link_speed),
 			  xve_speed_to_str(link_speed_setting));
 
@@ -417,19 +417,19 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		gk20a_writel(g, xp_pl_link_config_r(0), link_config);
 		err_status = -ENODEV;
 	} else {
-		xv_sc_dbg(EXEC_VERIF, "  Current and target speeds match!");
+		xv_sc_dbg(g, EXEC_VERIF, "  Current and target speeds match!");
 		err_status = 0;
 	}
 
 done:
 	/* Restore safe timings. */
-	xv_sc_dbg(CLEANUP, "Restoring saved DL settings...");
+	xv_sc_dbg(g, CLEANUP, "Restoring saved DL settings...");
 	gk20a_writel(g, xp_dl_mgr_r(0), saved_dl_mgr);
-	xv_sc_dbg(CLEANUP, "  Done");
+	xv_sc_dbg(g, CLEANUP, "  Done");
 
-	xv_sc_dbg(CLEANUP, "Re-enabling ASPM settings...");
+	xv_sc_dbg(g, CLEANUP, "Re-enabling ASPM settings...");
 	enable_aspm_gp106(g);
-	xv_sc_dbg(CLEANUP, "  Done");
+	xv_sc_dbg(g, CLEANUP, "  Done");
 
 	return err_status;
 }

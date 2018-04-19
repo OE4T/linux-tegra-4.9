@@ -41,7 +41,7 @@ int gp10b_determine_L2_size_bytes(struct gk20a *g)
 	u32 tmp;
 	int ret;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tmp = gk20a_readl(g, ltc_ltc0_lts0_tstg_info_1_r());
 
@@ -49,9 +49,9 @@ int gp10b_determine_L2_size_bytes(struct gk20a *g)
 		ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(tmp)*1024 *
 		ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(tmp);
 
-	gk20a_dbg(gpu_dbg_info, "L2 size: %d\n", ret);
+	nvgpu_log(g, gpu_dbg_info, "L2 size: %d\n", ret);
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return ret;
 }
@@ -83,7 +83,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (max_comptag_lines == 0U)
 		return 0;
@@ -109,11 +109,11 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	/* must be a multiple of 64KB */
 	compbit_backing_size = roundup(compbit_backing_size, 64*1024);
 
-	gk20a_dbg_info("compbit backing store size : %d",
+	nvgpu_log_info(g, "compbit backing store size : %d",
 		compbit_backing_size);
-	gk20a_dbg_info("max comptag lines : %d",
+	nvgpu_log_info(g, "max comptag lines : %d",
 		max_comptag_lines);
-	gk20a_dbg_info("gobs_per_comptagline_per_slice: %d",
+	nvgpu_log_info(g, "gobs_per_comptagline_per_slice: %d",
 		gobs_per_comptagline_per_slice);
 
 	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);

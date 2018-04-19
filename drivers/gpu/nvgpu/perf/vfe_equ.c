@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -59,7 +59,7 @@ static u32 _vfe_equs_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_perf_vfe_equ_boardobj_grp_set  *pgrp_set =
 		(struct nv_pmu_perf_vfe_equ_boardobj_grp_set *)pmuboardobjgrp;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	/* check whether pmuboardobjgrp has a valid boardobj in index */
 	if (idx >= CTRL_BOARDOBJGRP_E255_MAX_OBJECTS)
@@ -67,7 +67,7 @@ static u32 _vfe_equs_pmudata_instget(struct gk20a *g,
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 	return 0;
 }
 
@@ -77,7 +77,7 @@ u32 vfe_equ_sw_setup(struct gk20a *g)
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct vfe_equs *pvfeequobjs;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobjgrpconstruct_e255(g, &g->perf_pmu.vfe_equobjs.super);
 	if (status) {
@@ -109,7 +109,7 @@ u32 vfe_equ_sw_setup(struct gk20a *g)
 		goto done;
 
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -118,7 +118,7 @@ u32 vfe_equ_pmu_setup(struct gk20a *g)
 	u32 status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	pboardobjgrp = &g->perf_pmu.vfe_equobjs.super.super;
 
@@ -127,7 +127,7 @@ u32 vfe_equ_pmu_setup(struct gk20a *g)
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
-	gk20a_dbg_info("Done");
+	nvgpu_log_info(g, "Done");
 	return status;
 }
 
@@ -152,7 +152,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 		struct vfe_equ_quadratic quadratic;
 	} equ_data;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	vfeequs_tbl_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token,
@@ -325,7 +325,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 		}
 	}
 done:
-	gk20a_dbg_info(" done status %x", status);
+	nvgpu_log_info(g, " done status %x", status);
 	return status;
 }
 
@@ -337,7 +337,7 @@ static u32 _vfe_equ_pmudatainit_super(struct gk20a *g,
 	struct vfe_equ *pvfe_equ;
 	struct nv_pmu_vfe_equ *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -392,7 +392,7 @@ static u32 _vfe_equ_pmudatainit_compare(struct gk20a *g,
 	struct vfe_equ_compare *pvfe_equ_compare;
 	struct nv_pmu_vfe_equ_compare *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_equ_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -451,7 +451,7 @@ static u32 _vfe_equ_pmudatainit_minmax(struct gk20a *g,
 	struct vfe_equ_minmax *pvfe_equ_minmax;
 	struct nv_pmu_vfe_equ_minmax *pset;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_equ_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -507,7 +507,7 @@ static u32 _vfe_equ_pmudatainit_quadratic(struct gk20a *g,
 	struct nv_pmu_vfe_equ_quadratic *pset;
 	u32 i;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	status = _vfe_equ_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status != 0)
@@ -558,7 +558,7 @@ static struct vfe_equ *construct_vfe_equ(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status;
 
-	gk20a_dbg_info("");
+	nvgpu_log_info(g, " ");
 
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_PERF_VFE_EQU_TYPE_COMPARE:
@@ -584,7 +584,7 @@ static struct vfe_equ *construct_vfe_equ(struct gk20a *g, void *pargs)
 	if (status)
 		return NULL;
 
-	gk20a_dbg_info(" Done");
+	nvgpu_log_info(g, " Done");
 
 	return (struct vfe_equ *)board_obj_ptr;
 }

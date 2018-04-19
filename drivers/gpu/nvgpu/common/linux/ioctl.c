@@ -1,7 +1,7 @@
 /*
  * NVGPU IOCTLs
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -139,8 +139,9 @@ static int gk20a_create_device(
 {
 	struct device *subdev;
 	int err;
+	struct gk20a *g = gk20a_from_dev(dev);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	cdev_init(cdev, ops);
 	cdev->owner = THIS_MODULE;

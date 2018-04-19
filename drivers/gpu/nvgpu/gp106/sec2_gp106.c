@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 
 /*Defines*/
-#define gm20b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gm20b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 {
@@ -56,7 +56,7 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	}
 
 	g->acr.capabilities = gk20a_readl(g, psec_falcon_mailbox1_r());
-	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
+	gm20b_dbg_pmu(g, "ACR capabilities %x\n", g->acr.capabilities);
 	data = gk20a_readl(g, psec_falcon_mailbox0_r());
 	if (data) {
 		nvgpu_err(g, "ACR boot failed, err %x", data);
@@ -87,7 +87,7 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	u32 data = 0;
 	u32 dst;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* SEC2 Config */
 	gk20a_writel(g, psec_falcon_itfen_r(),
@@ -123,7 +123,7 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
 		pmu_bl_gm10x_desc->bl_start_tag);
 
-	gm20b_dbg_pmu("Before starting falcon with BL\n");
+	gm20b_dbg_pmu(g, "Before starting falcon with BL\n");
 
 	gk20a_writel(g, psec_falcon_mailbox0_r(), 0xDEADA5A5);
 

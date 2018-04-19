@@ -218,7 +218,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->power_on)
 		return 0;
@@ -331,7 +331,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	bool irqs_enabled;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&g->poweroff_lock);
 
@@ -1013,7 +1013,7 @@ static int gk20a_pm_init(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* Initialise pm runtime */
 	if (g->railgate_delay) {
@@ -1043,7 +1043,7 @@ void gk20a_driver_start_unload(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
-	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
+	nvgpu_log(g, gpu_dbg_shutdown, "Driver is now going down!\n");
 
 	down_write(&l->busy_lock);
 	__nvgpu_set_enabled(g, NVGPU_DRIVER_IS_DYING, true);
@@ -1134,8 +1134,6 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
-	gk20a_dbg_fn("");
-
 	platform_set_drvdata(dev, platform);
 
 	if (gk20a_gpu_is_virtual(&dev->dev))
@@ -1148,6 +1146,9 @@ static int gk20a_probe(struct platform_device *dev)
 	}
 
 	gk20a = &l->g;
+
+	nvgpu_log_fn(gk20a, " ");
+
 	nvgpu_init_gk20a(gk20a);
 	set_gk20a(dev, gk20a);
 	l->dev = &dev->dev;
@@ -1248,7 +1249,7 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_quiesce(g);
 	WARN(err, "gpu failed to idle during driver removal");
@@ -1288,7 +1289,7 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	if (platform->remove)
 		platform->remove(dev);
 
-	gk20a_dbg_fn("removed");
+	nvgpu_log_fn(g, "removed");
 
 	return err;
 }

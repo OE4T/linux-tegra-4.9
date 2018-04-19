@@ -1,7 +1,7 @@
 /*
  * GM20B MMU
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -36,9 +36,9 @@ void gm20b_mm_set_big_page_size(struct gk20a *g,
 {
 	u32 val;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
-	gk20a_dbg_info("big page size %d\n", size);
+	nvgpu_log_info(g, "big page size %d\n", size);
 	val = nvgpu_mem_rd32(g, mem, ram_in_big_page_size_w());
 	val &= ~ram_in_big_page_size_m();
 
@@ -48,7 +48,7 @@ void gm20b_mm_set_big_page_size(struct gk20a *g,
 		val |= ram_in_big_page_size_128kb_f();
 
 	nvgpu_mem_wr32(g, mem, ram_in_big_page_size_w(), val);
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 }
 
 u32 gm20b_mm_get_big_page_sizes(void)

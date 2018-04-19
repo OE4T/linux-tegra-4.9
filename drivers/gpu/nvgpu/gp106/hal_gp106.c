@@ -765,7 +765,7 @@ int gp106_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gops->bios = gp106_ops.bios;
 	gops->ltc = gp106_ops.ltc;
@@ -828,7 +828,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	g->name = "gp10x";
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 
 	return 0;
 }

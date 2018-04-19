@@ -834,7 +834,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* update debug settings */
 	nvgpu_ltc_sync_enabled(g);
 
-	gk20a_dbg_info("channel %d", c->chid);
+	nvgpu_log_info(g, "channel %d", c->chid);
 
 	/*
 	 * Job tracking is necessary for any of the following conditions:
@@ -943,7 +943,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					  fence ? fence->id : 0,
 					  fence ? fence->value : 0);
 
-	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
+	nvgpu_log_info(g, "pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
 	/*
@@ -1023,18 +1023,18 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				post_fence ? post_fence->syncpt_id : 0,
 				post_fence ? post_fence->syncpt_value : 0);
 
-	gk20a_dbg_info("post-submit put %d, get %d, size %d",
+	nvgpu_log_info(g, "post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
 	if (profile)
 		profile->timestamp[PROFILE_END] = sched_clock();
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return err;
 
 clean_up_job:
 	channel_gk20a_free_job(c, job);
 clean_up:
-	gk20a_dbg_fn("fail");
+	nvgpu_log_fn(g, "fail");
 	gk20a_fence_put(post_fence);
 	if (c->deterministic)
 		nvgpu_rwsem_up_read(&g->deterministic_busy);

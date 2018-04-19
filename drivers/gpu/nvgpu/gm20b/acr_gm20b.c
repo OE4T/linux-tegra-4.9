@@ -42,8 +42,8 @@
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 
 /*Defines*/
-#define gm20b_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
+#define gm20b_dbg_pmu(g, fmt, arg...) \
+	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
 typedef int (*get_ucode_details)(struct gk20a *g, struct flcn_ucode_img *udata);
 
@@ -101,16 +101,16 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
-	gm20b_dbg_pmu("requesting PMU ucode in GM20B\n");
+	gm20b_dbg_pmu(g, "requesting PMU ucode in GM20B\n");
 	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE, 0);
 	if (!pmu_fw) {
 		nvgpu_err(g, "failed to load pmu ucode!!");
 		return -ENOENT;
 	}
 	g->acr.pmu_fw = pmu_fw;
-	gm20b_dbg_pmu("Loaded PMU ucode in for blob preparation");
+	gm20b_dbg_pmu(g, "Loaded PMU ucode in for blob preparation");
 
-	gm20b_dbg_pmu("requesting PMU ucode desc in GM20B\n");
+	gm20b_dbg_pmu(g, "requesting PMU ucode desc in GM20B\n");
 	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC, 0);
 	if (!pmu_desc) {
 		nvgpu_err(g, "failed to load pmu ucode desc!!");
@@ -129,7 +129,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 
 	err = nvgpu_init_pmu_fw_support(pmu);
 	if (err) {
-		gm20b_dbg_pmu("failed to set function pointers\n");
+		gm20b_dbg_pmu(g, "failed to set function pointers\n");
 		goto release_sig;
 	}
 
@@ -148,7 +148,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
-	gm20b_dbg_pmu("requesting PMU ucode in GM20B exit\n");
+	gm20b_dbg_pmu(g, "requesting PMU ucode in GM20B exit\n");
 	nvgpu_release_firmware(g, pmu_sig);
 	return 0;
 release_sig:
@@ -221,7 +221,7 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
-	gm20b_dbg_pmu("fecs fw loaded\n");
+	gm20b_dbg_pmu(g, "fecs fw loaded\n");
 	nvgpu_release_firmware(g, fecs_sig);
 	return 0;
 free_lsf_desc:
@@ -292,7 +292,7 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->fw_ver = NULL;
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
-	gm20b_dbg_pmu("gpccs fw loaded\n");
+	gm20b_dbg_pmu(g, "gpccs fw loaded\n");
 	nvgpu_release_firmware(g, gpccs_sig);
 	return 0;
 free_lsf_desc:
@@ -361,24 +361,24 @@ int prepare_ucode_blob(struct gk20a *g)
 		non WPR blob of ucodes*/
 		err = nvgpu_init_pmu_fw_support(pmu);
 		if (err) {
-			gm20b_dbg_pmu("failed to set function pointers\n");
+			gm20b_dbg_pmu(g, "failed to set function pointers\n");
 			return err;
 		}
 		return 0;
 	}
 	plsfm = &lsfm_l;
 	memset((void *)plsfm, 0, sizeof(struct ls_flcn_mgr));
-	gm20b_dbg_pmu("fetching GMMU regs\n");
+	gm20b_dbg_pmu(g, "fetching GMMU regs\n");
 	g->ops.fb.vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
-	gm20b_dbg_pmu("wpr carveout base:%llx\n", wpr_inf.wpr_base);
-	gm20b_dbg_pmu("wpr carveout size :%llx\n", wpr_inf.size);
+	gm20b_dbg_pmu(g, "wpr carveout base:%llx\n", wpr_inf.wpr_base);
+	gm20b_dbg_pmu(g, "wpr carveout size :%llx\n", wpr_inf.size);
 
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
-	gm20b_dbg_pmu(" Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
+	gm20b_dbg_pmu(g, " Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
 	if (err)
 		goto free_sgt;
 
@@ -394,13 +394,13 @@ int prepare_ucode_blob(struct gk20a *g)
 		if (err)
 			goto free_sgt;
 
-		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
+		gm20b_dbg_pmu(g, "managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
 		lsfm_init_wpr_contents(g, plsfm, &g->acr.ucode_blob);
 	} else {
-		gm20b_dbg_pmu("LSFM is managing no falcons.\n");
+		gm20b_dbg_pmu(g, "LSFM is managing no falcons.\n");
 	}
-	gm20b_dbg_pmu("prepare ucode blob return 0\n");
+	gm20b_dbg_pmu(g, "prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
 free_sgt:
 	return err;
@@ -444,13 +444,13 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 
 		plsfm->managed_flcn_cnt++;
 	} else {
-		gm20b_dbg_pmu("id not managed %d\n",
+		gm20b_dbg_pmu(g, "id not managed %d\n",
 			ucode_img.lsf_desc->falcon_id);
 	}
 
 	/*Free any ucode image resources if not managing this falcon*/
 	if (!(pmu->pmu_mode & PMU_LSFM_MANAGED)) {
-		gm20b_dbg_pmu("pmu is not LSFM managed\n");
+		gm20b_dbg_pmu(g, "pmu is not LSFM managed\n");
 		lsfm_free_ucode_img_res(g, &ucode_img);
 	}
 
@@ -481,7 +481,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 						== 0)
 						plsfm->managed_flcn_cnt++;
 				} else {
-					gm20b_dbg_pmu("not managed %d\n",
+					gm20b_dbg_pmu(g, "not managed %d\n",
 						ucode_img.lsf_desc->falcon_id);
 					lsfm_free_nonpmu_ucode_img_res(g,
 						&ucode_img);
@@ -489,7 +489,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 			}
 		} else {
 			/* Consumed all available falcon objects */
-			gm20b_dbg_pmu("Done checking for ucodes %d\n", i);
+			gm20b_dbg_pmu(g, "Done checking for ucodes %d\n", i);
 			break;
 		}
 	}
@@ -526,26 +526,26 @@ int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
-	gm20b_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
+	gm20b_dbg_pmu(g, "pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
 	/*From linux*/
 	addr_code = u64_lo32((addr_base +
 				desc->app_start_offset +
 				desc->app_resident_code_offset) >> 8);
-	gm20b_dbg_pmu("app start %d app res code off %d\n",
+	gm20b_dbg_pmu(g, "app start %d app res code off %d\n",
 		desc->app_start_offset, desc->app_resident_code_offset);
 	addr_data = u64_lo32((addr_base +
 				desc->app_start_offset +
 				desc->app_resident_data_offset) >> 8);
-	gm20b_dbg_pmu("app res data offset%d\n",
+	gm20b_dbg_pmu(g, "app res data offset%d\n",
 		desc->app_resident_data_offset);
-	gm20b_dbg_pmu("bl start off %d\n", desc->bootloader_start_offset);
+	gm20b_dbg_pmu(g, "bl start off %d\n", desc->bootloader_start_offset);
 
 	addr_args = ((pwr_falcon_hwcfg_dmem_size_v(
 			gk20a_readl(g, pwr_falcon_hwcfg_r())))
 			<< GK20A_PMU_DMEM_BLKSIZE2);
 	addr_args -= g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu);
 
-	gm20b_dbg_pmu("addr_args %x\n", addr_args);
+	gm20b_dbg_pmu(g, "addr_args %x\n", addr_args);
 
 	/* Populate the loader_config state*/
 	ldr_cfg->dma_idx = GK20A_PMU_DMAIDX_UCODE;
@@ -599,7 +599,7 @@ int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
 
-	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
+	gm20b_dbg_pmu(g, "gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 			p_lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
 				desc->app_start_offset +
@@ -608,7 +608,7 @@ int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 				desc->app_start_offset +
 				desc->app_resident_data_offset) >> 8);
 
-	gm20b_dbg_pmu("gen cfg %x u32 addrcode %x & data %x load offset %xID\n",
+	gm20b_dbg_pmu(g, "gen cfg %x u32 addrcode %x & data %x load offset %xID\n",
 		(u32)addr_code, (u32)addr_data, desc->bootloader_start_offset,
 		p_lsfm->wpr_header.falcon_id);
 
@@ -631,7 +631,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 	struct nvgpu_pmu *pmu = &g->pmu;
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
-		gm20b_dbg_pmu("non pmu. write flcn bl gen desc\n");
+		gm20b_dbg_pmu(g, "non pmu. write flcn bl gen desc\n");
 		g->ops.pmu.flcn_populate_bl_dmem_desc(g,
 				pnode, &pnode->bl_gen_desc_size,
 				pnode->wpr_header.falcon_id);
@@ -639,7 +639,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 	}
 
 	if (pmu->pmu_mode & PMU_LSFM_MANAGED) {
-		gm20b_dbg_pmu("pmu write flcn bl gen desc\n");
+		gm20b_dbg_pmu(g, "pmu write flcn bl gen desc\n");
 		if (pnode->wpr_header.falcon_id == pmu->falcon_id)
 			return g->ops.pmu.pmu_populate_loader_cfg(g, pnode,
 				&pnode->bl_gen_desc_size);
@@ -672,46 +672,46 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 		nvgpu_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
 				&pnode->wpr_header, sizeof(pnode->wpr_header));
 
-		gm20b_dbg_pmu("wpr header");
-		gm20b_dbg_pmu("falconid :%d",
+		gm20b_dbg_pmu(g, "wpr header");
+		gm20b_dbg_pmu(g, "falconid :%d",
 				pnode->wpr_header.falcon_id);
-		gm20b_dbg_pmu("lsb_offset :%x",
+		gm20b_dbg_pmu(g, "lsb_offset :%x",
 				pnode->wpr_header.lsb_offset);
-		gm20b_dbg_pmu("bootstrap_owner :%d",
+		gm20b_dbg_pmu(g, "bootstrap_owner :%d",
 			pnode->wpr_header.bootstrap_owner);
-		gm20b_dbg_pmu("lazy_bootstrap :%d",
+		gm20b_dbg_pmu(g, "lazy_bootstrap :%d",
 				pnode->wpr_header.lazy_bootstrap);
-		gm20b_dbg_pmu("status :%d",
+		gm20b_dbg_pmu(g, "status :%d",
 				pnode->wpr_header.status);
 
 		/*Flush LSB header to memory*/
 		nvgpu_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
 				&pnode->lsb_header, sizeof(pnode->lsb_header));
 
-		gm20b_dbg_pmu("lsb header");
-		gm20b_dbg_pmu("ucode_off :%x",
+		gm20b_dbg_pmu(g, "lsb header");
+		gm20b_dbg_pmu(g, "ucode_off :%x",
 				pnode->lsb_header.ucode_off);
-		gm20b_dbg_pmu("ucode_size :%x",
+		gm20b_dbg_pmu(g, "ucode_size :%x",
 				pnode->lsb_header.ucode_size);
-		gm20b_dbg_pmu("data_size :%x",
+		gm20b_dbg_pmu(g, "data_size :%x",
 				pnode->lsb_header.data_size);
-		gm20b_dbg_pmu("bl_code_size :%x",
+		gm20b_dbg_pmu(g, "bl_code_size :%x",
 				pnode->lsb_header.bl_code_size);
-		gm20b_dbg_pmu("bl_imem_off :%x",
+		gm20b_dbg_pmu(g, "bl_imem_off :%x",
 				pnode->lsb_header.bl_imem_off);
-		gm20b_dbg_pmu("bl_data_off :%x",
+		gm20b_dbg_pmu(g, "bl_data_off :%x",
 				pnode->lsb_header.bl_data_off);
-		gm20b_dbg_pmu("bl_data_size :%x",
+		gm20b_dbg_pmu(g, "bl_data_size :%x",
 				pnode->lsb_header.bl_data_size);
-		gm20b_dbg_pmu("app_code_off :%x",
+		gm20b_dbg_pmu(g, "app_code_off :%x",
 				pnode->lsb_header.app_code_off);
-		gm20b_dbg_pmu("app_code_size :%x",
+		gm20b_dbg_pmu(g, "app_code_size :%x",
 				pnode->lsb_header.app_code_size);
-		gm20b_dbg_pmu("app_data_off :%x",
+		gm20b_dbg_pmu(g, "app_data_off :%x",
 				pnode->lsb_header.app_data_off);
-		gm20b_dbg_pmu("app_data_size :%x",
+		gm20b_dbg_pmu(g, "app_data_size :%x",
 				pnode->lsb_header.app_data_size);
-		gm20b_dbg_pmu("flags :%x",
+		gm20b_dbg_pmu(g, "flags :%x",
 				pnode->lsb_header.flags);
 
 		/*If this falcon has a boot loader and related args,
@@ -1028,7 +1028,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	start = nvgpu_mem_get_addr(g, &acr->ucode_blob);
 	size = acr->ucode_blob.size;
 
-	gm20b_dbg_pmu("");
+	gm20b_dbg_pmu(g, " ");
 
 	if (!acr_fw) {
 		/*First time init case*/
@@ -1141,14 +1141,14 @@ int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_patch_ind)
 {
 	unsigned int i, *p_sig;
-	gm20b_dbg_pmu("");
+	gm20b_dbg_pmu(g, " ");
 
 	if (!pmu_is_debug_mode_en(g)) {
 		p_sig = p_prod_sig;
-		gm20b_dbg_pmu("PRODUCTION MODE\n");
+		gm20b_dbg_pmu(g, "PRODUCTION MODE\n");
 	} else {
 		p_sig = p_dbg_sig;
-		gm20b_dbg_pmu("DEBUG MODE\n");
+		gm20b_dbg_pmu(g, "DEBUG MODE\n");
 	}
 
 	/* Patching logic:*/
@@ -1171,7 +1171,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
 	u32 dst;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	gk20a_writel(g, pwr_falcon_itfen_r(),
 			gk20a_readl(g, pwr_falcon_itfen_r()) |
 			pwr_falcon_itfen_ctxen_enable_f());
@@ -1193,7 +1193,7 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
 		pmu_bl_gm10x_desc->bl_start_tag);
 
-	gm20b_dbg_pmu("Before starting falcon with BL\n");
+	gm20b_dbg_pmu(g, "Before starting falcon with BL\n");
 
 	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
 
@@ -1207,7 +1207,7 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	nvgpu_flcn_reset(pmu->flcn);
@@ -1279,7 +1279,7 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	nvgpu_flcn_reset(pmu->flcn);
@@ -1324,7 +1324,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	struct nvgpu_firmware *hsbl_fw = acr->hsbl_fw;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc;
 	u32 *pmu_bl_gm10x = NULL;
-	gm20b_dbg_pmu("");
+	gm20b_dbg_pmu(g, " ");
 
 	if (!hsbl_fw) {
 		hsbl_fw = nvgpu_request_firmware(g,
@@ -1343,7 +1343,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		bl_sz = ALIGN(pmu_bl_gm10x_desc->bl_img_hdr.bl_code_size,
 				256);
 		acr->hsbl_ucode.size = bl_sz;
-		gm20b_dbg_pmu("Executing Generic Bootloader\n");
+		gm20b_dbg_pmu(g, "Executing Generic Bootloader\n");
 
 		/*TODO in code verify that enable PMU is done,
 			scrubbing etc is done*/
@@ -1366,7 +1366,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		}
 
 		nvgpu_mem_wr_n(g, &acr->hsbl_ucode, 0, pmu_bl_gm10x, bl_sz);
-		gm20b_dbg_pmu("Copied bl ucode to bl_cpuva\n");
+		gm20b_dbg_pmu(g, "Copied bl ucode to bl_cpuva\n");
 	}
 	/*
 	 * Disable interrupts to avoid kernel hitting breakpoint due
@@ -1377,9 +1377,9 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			gk20a_get_gr_idle_timeout(g)))
 		goto err_unmap_bl;
 
-	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
+	gm20b_dbg_pmu(g, "phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
-	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
+	gm20b_dbg_pmu(g, "sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
 
 	g->ops.pmu.init_falcon_setup_hw(g, desc, acr->hsbl_ucode.size);
 
@@ -1396,10 +1396,10 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		else
 			goto err_unmap_bl;
 	}
-	gm20b_dbg_pmu("after waiting for halt, err %x\n", err);
-	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
+	gm20b_dbg_pmu(g, "after waiting for halt, err %x\n", err);
+	gm20b_dbg_pmu(g, "phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
-	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
+	gm20b_dbg_pmu(g, "sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
 	start_gm20b_pmu(g);
 	return 0;
 err_unmap_bl:
@@ -1430,7 +1430,7 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 	}
 
 	g->acr.capabilities = gk20a_readl(g, pwr_falcon_mailbox1_r());
-	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
+	gm20b_dbg_pmu(g, "ACR capabilities %x\n", g->acr.capabilities);
 	data = gk20a_readl(g, pwr_falcon_mailbox0_r());
 	if (data) {
 		nvgpu_err(g, "ACR boot failed, err %x", data);

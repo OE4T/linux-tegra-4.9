@@ -33,8 +33,9 @@ int vgpu_gv11b_tsg_bind_channel(struct tsg_gk20a *tsg,
 	struct tegra_vgpu_tsg_bind_channel_ex_params *p =
 				&msg.params.tsg_bind_channel_ex;
 	int err;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	err = gk20a_tsg_bind_channel(tsg, ch);
 	if (err)

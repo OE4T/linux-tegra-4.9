@@ -43,7 +43,7 @@ void vgpu_gr_detect_sm_arch(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->params.sm_arch_sm_version =
 			priv->constants.sm_arch_sm_version;
@@ -58,8 +58,9 @@ int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
+	struct gk20a *g = c->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_COMMIT_GR_CTX;
 	msg.handle = vgpu_get_handle(c->g);
@@ -76,7 +77,7 @@ static int vgpu_gr_commit_global_ctx_buffers(struct gk20a *g,
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_COMMIT_GR_GLOBAL_CTX;
 	msg.handle = vgpu_get_handle(g);
@@ -94,7 +95,7 @@ static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_LOAD_GR_GOLDEN_CTX;
 	msg.handle = vgpu_get_handle(g);
@@ -109,7 +110,7 @@ int vgpu_gr_init_ctx_state(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	g->gr.ctx_vars.golden_image_size = priv->constants.golden_ctx_size;
 	g->gr.ctx_vars.zcull_ctxsw_image_size = priv->constants.zcull_ctx_size;
@@ -135,20 +136,20 @@ static int vgpu_gr_alloc_global_ctx_buffers(struct gk20a *g)
 	u32 pagepool_buffer_size = g->ops.gr.pagepool_default_size(g) *
 		gr_scc_pagepool_total_pages_byte_granularity_v();
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	attr_buffer_size = g->ops.gr.calc_global_ctx_buffer_size(g);
 
-	gk20a_dbg_info("cb_buffer_size : %d", cb_buffer_size);
+	nvgpu_log_info(g, "cb_buffer_size : %d", cb_buffer_size);
 	gr->global_ctx_buffer[CIRCULAR].mem.size = cb_buffer_size;
 
-	gk20a_dbg_info("pagepool_buffer_size : %d", pagepool_buffer_size);
+	nvgpu_log_info(g, "pagepool_buffer_size : %d", pagepool_buffer_size);
 	gr->global_ctx_buffer[PAGEPOOL].mem.size = pagepool_buffer_size;
 
-	gk20a_dbg_info("attr_buffer_size : %d", attr_buffer_size);
+	nvgpu_log_info(g, "attr_buffer_size : %d", attr_buffer_size);
 	gr->global_ctx_buffer[ATTRIBUTE].mem.size = attr_buffer_size;
 
-	gk20a_dbg_info("priv access map size : %d",
+	nvgpu_log_info(g, "priv access map size : %d",
 		gr->ctx_vars.priv_access_map_size);
 	gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size =
 		gr->ctx_vars.priv_access_map_size;
@@ -170,7 +171,7 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 	u32 i;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -249,8 +250,9 @@ static void vgpu_gr_unmap_global_ctx_buffers(struct tsg_gk20a *tsg)
 	u64 *g_bfr_va = tsg->gr_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = tsg->gr_ctx.global_ctx_buffer_size;
 	u32 i;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (tsg->gr_ctx.global_ctx_buffer_mapped) {
 		/* server will unmap on channel close */
@@ -279,7 +281,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	struct gr_gk20a *gr = &g->gr;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (gr->ctx_vars.buffer_size == 0)
 		return 0;
@@ -328,7 +330,7 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
 	if (!tsg)
@@ -359,8 +361,9 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 static void vgpu_gr_free_channel_patch_ctx(struct tsg_gk20a *tsg)
 {
 	struct patch_desc *patch_ctx = &tsg->gr_ctx.patch_ctx;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (patch_ctx->mem.gpu_va) {
 		/* server will free on channel close */
@@ -375,8 +378,9 @@ static void vgpu_gr_free_channel_pm_ctx(struct tsg_gk20a *tsg)
 {
 	struct nvgpu_gr_ctx *ch_ctx = &tsg->gr_ctx;
 	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
+	struct gk20a *g = tsg->g;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* check if hwpm was ever initialized. If not, nothing to do */
 	if (pm_ctx->mem.gpu_va == 0)
@@ -394,7 +398,7 @@ void vgpu_gr_free_gr_ctx(struct gk20a *g,
 {
 	struct tsg_gk20a *tsg;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (gr_ctx->mem.gpu_va) {
 		struct tegra_vgpu_cmd_msg msg;
@@ -477,7 +481,7 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	struct tsg_gk20a *tsg = NULL;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	/* an address space needs to have been bound at this point.*/
 	if (!gk20a_channel_as_bound(c)) {
@@ -577,7 +581,7 @@ int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	/* PM ctxt switch is off by default */
 	gr_ctx->pm_ctx.pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 out:
 	/* 1. gr_ctx, patch_ctx and global ctx buffer mapping
@@ -595,7 +599,7 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	u32 sm_per_tpc;
 	int err = -ENOMEM;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	gr->max_gpc_count = priv->constants.max_gpc_count;
 	gr->gpc_count = priv->constants.gpc_count;
@@ -658,7 +662,7 @@ int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	struct tegra_vgpu_zcull_bind_params *p = &msg.params.zcull_bind;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_ZCULL;
 	msg.handle = vgpu_get_handle(g);
@@ -677,7 +681,7 @@ int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	struct tegra_vgpu_zcull_info_params *p = &msg.params.zcull_info;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_GET_ZCULL_INFO;
 	msg.handle = vgpu_get_handle(g);
@@ -712,7 +716,7 @@ u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return priv->constants.num_fbps;
 }
@@ -721,7 +725,7 @@ u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return priv->constants.fbp_en_mask;
 }
@@ -730,7 +734,7 @@ u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return priv->constants.ltc_per_fbp;
 }
@@ -739,7 +743,7 @@ u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return priv->constants.max_lts_per_ltc;
 }
@@ -749,7 +753,7 @@ u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 i, max_fbps_count = priv->constants.num_fbps;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (g->gr.fbp_rop_l2_en_mask == NULL) {
 		g->gr.fbp_rop_l2_en_mask =
@@ -772,7 +776,7 @@ int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	struct tegra_vgpu_zbc_set_table_params *p = &msg.params.zbc_set_table;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_ZBC_SET_TABLE;
 	msg.handle = vgpu_get_handle(g);
@@ -804,7 +808,7 @@ int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 					&msg.params.zbc_query_table;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_ZBC_QUERY_TABLE;
 	msg.handle = vgpu_get_handle(g);
@@ -840,7 +844,7 @@ int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(gr->g, " ");
 
 	gk20a_comptag_allocator_destroy(gr->g, &gr->comp_tags);
 
@@ -865,10 +869,10 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	struct gr_gk20a *gr = &g->gr;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (gr->sw_ready) {
-		gk20a_dbg_fn("skip init");
+		nvgpu_log_fn(g, "skip init");
 		return 0;
 	}
 
@@ -907,7 +911,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	gr->remove_support = vgpu_remove_gr_support;
 	gr->sw_ready = true;
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 
 clean_up:
@@ -918,7 +922,7 @@ clean_up:
 
 int vgpu_init_gr_support(struct gk20a *g)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	return vgpu_gr_init_gr_setup_sw(g);
 }
@@ -928,7 +932,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = gk20a_channel_get(&f->channel[info->chid]);
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	if (!ch)
 		return 0;
 
@@ -985,7 +989,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 int vgpu_gr_nonstall_isr(struct gk20a *g,
 			struct tegra_vgpu_gr_nonstall_intr_info *info)
 {
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	switch (info->type) {
 	case TEGRA_VGPU_GR_NONSTALL_INTR_SEMAPHORE:
@@ -1006,7 +1010,7 @@ int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	struct tegra_vgpu_sm_debug_mode *p = &msg.params.sm_debug_mode;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE;
 	msg.handle = vgpu_get_handle(g);
@@ -1026,7 +1030,7 @@ int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE;
 	msg.handle = vgpu_get_handle(g);
@@ -1053,7 +1057,7 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
 	int err;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(ch);
 	if (!tsg)

@@ -1,7 +1,7 @@
 /*
  * GP10B RPFB
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,7 +42,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 	size_t rbfb_size = NV_UVM_FAULT_BUF_SIZE *
 		fifo_replay_fault_buffer_size_hw_entries_v();
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	if (!g->mm.bar2_desc.gpu_va) {
 		err = nvgpu_dma_alloc_map_sys(vm, rbfb_size,
@@ -60,7 +60,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 	gk20a_writel(g, fifo_replay_fault_buffer_lo_r(),
 			fifo_replay_fault_buffer_lo_base_f(addr_lo) |
 			fifo_replay_fault_buffer_lo_enable_true_v());
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return 0;
 }
 
@@ -75,14 +75,14 @@ u32 gp10b_replayable_pagefault_buffer_get_index(struct gk20a *g)
 {
 	u32 get_idx = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 
 	get_idx = gk20a_readl(g, fifo_replay_fault_buffer_get_r());
 
 	if (get_idx >= fifo_replay_fault_buffer_size_hw_entries_v())
 		nvgpu_err(g, "Error in replayable fault buffer");
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return get_idx;
 }
 
@@ -90,13 +90,13 @@ u32 gp10b_replayable_pagefault_buffer_put_index(struct gk20a *g)
 {
 	u32 put_idx = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log_fn(g, " ");
 	put_idx = gk20a_readl(g, fifo_replay_fault_buffer_put_r());
 
 	if (put_idx >= fifo_replay_fault_buffer_size_hw_entries_v())
 		nvgpu_err(g, "Error in UVM");
 
-	gk20a_dbg_fn("done");
+	nvgpu_log_fn(g, "done");
 	return put_idx;
 }
 

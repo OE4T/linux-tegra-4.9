@@ -839,11 +839,6 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 			"pmd=%llx, pte=%llx\n", smmu_id, iova, fsynr, cfg->cbndx,
 			sid, sid, tegra_mc_get_sid_name(sid), pgd,
 			pud, pmd, pte);
-		trace_printk("Unhandled context fault: smmu=%d, iova=0x%08lx, "
-			"fsynr=0x%x, cb=%d, sid=%d(0x%x - %s), pgd=%llx "
-			"pud=%llx, pmd=%llx, pte=%llx\n", smmu_id, iova, fsynr,
-			cfg->cbndx, sid, sid, tegra_mc_get_sid_name(sid),
-			pgd, pud, pmd, pte);
 		ret = IRQ_NONE;
 		resume = RESUME_TERMINATE;
 	}
@@ -919,11 +914,6 @@ static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
 	dev_err_ratelimited(smmu->dev,
 		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x, "
 		"fault_addr=0x%llx, sid=%d(0x%x - %s)\n",
-		gfsr, gfsynr0, gfsynr1, gfsynr2, gfar, sid, sid, tegra_mc_get_sid_name(sid));
-
-	trace_printk("SMMU%d: Unexpected {global,context} fault, this could be serious\n", smmu_id);
-	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x, "
-		"fault_addr=0x%llx, sid=%d(0x%x - %s\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2, gfar, sid, sid, tegra_mc_get_sid_name(sid));
 
 	writel_single(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);

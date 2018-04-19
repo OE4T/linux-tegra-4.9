@@ -153,7 +153,6 @@ struct mcerr_ops {
 #define mcerr_pr(fmt, ...)					\
 	do {							\
 		if (!mcerr_silenced) {				\
-			trace_printk(fmt, ##__VA_ARGS__);	\
 			pr_err(fmt, ##__VA_ARGS__);		\
 		}						\
 	} while (0)

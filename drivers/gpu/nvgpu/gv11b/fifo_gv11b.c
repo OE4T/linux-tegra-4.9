@@ -160,7 +160,6 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		c->g->ops.fifo.get_pbdma_signature(c->g));
 
 	nvgpu_mem_wr32(g, mem, ram_fc_pb_header_w(),
-		pbdma_pb_header_priv_user_f() |
 		pbdma_pb_header_method_zero_f() |
 		pbdma_pb_header_subchannel_zero_f() |
 		pbdma_pb_header_level_main_f() |

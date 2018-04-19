@@ -68,6 +68,7 @@
 				"mphy-l1-tx-rst", "mphy-clk-ctl-rst", "ufs-rst",
 				"ufs-axi-m-rst", "ufshc-lp-rst";
 		nvidia,enable-x2-config;
+		nvidia,enable-scramble;
 		nvidia,mask-fast-auto-mode;
 		nvidia,max-hs-gear = <3>;
 		nvidia,max-pwm-gear = <4>;

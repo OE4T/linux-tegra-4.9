@@ -27,6 +27,7 @@
 #define  TO_DSP_CMD_REQ_STOP_BUF_TRANS    0x1D
 #define  TO_DSP_CMD_REQ_ENTER_PSM         0x0D
 #define  TO_DSP_CMD_REQ_ENTER_NORMAL      0x11
+#define  TO_DSP_CMD_REQ_ENTER_BYPASS      0x6D
 //Fuli 20170922 to support SPI recording
 #define  TO_DSP_CMD_REQ_SWITCH_SPI_REC    0x59
 //
@@ -140,7 +141,9 @@ enum DEV_COMMAND {
 	//
 	//Fuli 20171022 to support general message interface
 	FM_SMVD_SEND_MESSAGE,
-	//
+	// Nvidia commands
+	FM_SMVD_ENABLE_HOTWORD_DETECT,
+	FM_SMVD_DISABLE_HOTWORD_DETECT
 };
 
 enum IM501_FW_TYPE {

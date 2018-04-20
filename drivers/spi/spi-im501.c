@@ -80,6 +80,7 @@ struct rtc_time rt;
 //#define FW_MEM_RD_CHECK
 
 //#define ENABLE_KERNEL_DUMP
+#define ENABLE_KFIFO
 #define MAX_KFIFO_BUFFER_SIZE		(131072*2)	/* >4 seconds */
 #define CODEC2IM501_PDM_CLKI
 
@@ -89,6 +90,7 @@ struct rtc_time rt;
 
 extern int tegra210_dmic_enable(int dmic_inst);
 extern int tegra210_dmic_disable(int dmic_inst);
+extern int tegra210_dmic_set_start_callback(int id, void (*callback)(void));
 
 void enable_pdm_clock(void);
 void disable_pdm_clock(void);
@@ -109,7 +111,7 @@ u32 g_pcm_size;
 u32 g_offset;
 #endif				//VERIFY_PCM_KFIFO
 
-#define IM501_CDEV_NAME		"fm_smp"
+#define IM501_CDEV_NAME		"im501_pcm"
 #define REC_FILE_PATH		"/data/im501_oneshot_kernel.pcm"
 #define SPI_REC_FILE_PATH	"/data/im501_spi_rec_kernel.pcm"
 
@@ -457,7 +459,7 @@ int check_dsp_status(void)
 		return err;
 	}
 
-	mdelay(500);
+	msleep(50);
 
 	err =
 		im501_spi_read_dram(TO_DSP_FRAMECOUNTER_ADDR, (u8 *) &framecount2);
@@ -491,11 +493,11 @@ int codec2im501_pdm_clki_set(bool set_flag, u32 rate)
 	if (set_flag == NORMAL_MODE) {
 		dev_dbg(&im501_spi->dev, "%s: enable pdm_clki rate %d\n", __func__, rate);
 		enable_pdm_clock();
-		mdelay(10);
+		msleep(20);
 	} else {
 		dev_dbg(&im501_spi->dev, "%s: disable pdm_clki rate %d\n", __func__, rate);
 		disable_pdm_clock();
-		mdelay(10);
+		msleep(20);
 	}
 	return 0;
 }
@@ -509,10 +511,10 @@ int im501_reset(void)
 
 	dev_dbg(&im501_spi->dev, "%s: set reset pin to low.\n", __func__);
 	gpio_set_value(im501_data->reset_gpio, 0);
-	mdelay(200);
+	msleep(20);
 	dev_dbg(&im501_spi->dev, "%s: set reset pin to high.\n", __func__);
 	gpio_set_value(im501_data->reset_gpio, 1);
-	mdelay(200);
+	msleep(20);
 
 	return 0;
 }
@@ -565,7 +567,6 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 	unsigned char *pbuf;
 	unsigned int i, a, b;
 	unsigned int read_size = 2048;
-	int fifo_len;
 
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
@@ -599,11 +600,9 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 		//fuli 20170515 to reduce output dev_err(&im501_spi->dev, "%s: put the voice data to pcm FIFO.\n", __func__);
 		//if(i % 10 == 0) dev_err(&im501_spi->dev, "%s: put the voice data to pcm FIFO.\n", __func__);
 		//
-		while (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) < read_size)
-			msleep(10);
+#ifdef ENABLE_KFIFO
 
-		if (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) >= read_size) {
-		//if (!kfifo_is_full(im501_data->pcm_kfifo)) {
+		if (!kfifo_is_full(im501_data->pcm_kfifo)) {
 			spin_lock(&im501_data->pcm_fifo_lock);
 			kfifo_in(im501_data->pcm_kfifo, pbuf, read_size);
 			spin_unlock(&im501_data->pcm_fifo_lock);
@@ -611,6 +610,7 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 		else {
 			dev_err(&im501_spi->dev, "%s: PCM FIFO is full.\n", __func__);
 		}
+#endif
 	}
 
 	if (b > 0) {
@@ -628,15 +628,8 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 			writeDataFile(pbuf, b);
 #endif
 
-		fifo_len = kfifo_len(im501_data->pcm_kfifo);
-
-		// TODO: Remove infinite wait, use timeout
-		while (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) < read_size)
-			msleep(10);
-
-		if (MAX_KFIFO_BUFFER_SIZE - kfifo_len(im501_data->pcm_kfifo) >= read_size) {
-		//if (!kfifo_is_full(im501_data->pcm_kfifo)) {
-			//dev_err(&im501_spi->dev, "%s_b: put %d bytes voice data to PCM FIFO.\n", __func__, b);
+#ifdef ENABLE_KFIFO
+		if (!kfifo_is_full(im501_data->pcm_kfifo)) {
 			spin_lock(&im501_data->pcm_fifo_lock);
 			kfifo_in(im501_data->pcm_kfifo, pbuf, b);
 			spin_unlock(&im501_data->pcm_fifo_lock);
@@ -644,6 +637,7 @@ unsigned char fetch_voice_data(unsigned int start_addr, unsigned int data_length
 		else {
 			dev_err(&im501_spi->dev, "%s: PCM FIFO is full.\n", __func__);
 		}
+#endif
 	}
 
 	if (pbuf)
@@ -669,6 +663,7 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 	u8 *pdata;
 	u32 spi_speed = SPI_HIGH_SPEED;
 	int ret;
+	char *hotword_str[2] = { "IM501_HOTWORD", NULL };
 	//fuli 20170629 for new protocol
 	int bank, sync_word_pos, data_size = HW_VOICE_BUF_BANK_SIZE;
 	//
@@ -695,7 +690,7 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 #endif
 
 		if (im501_host_irqstatus == 1)
-			dev_info(&im501_spi->dev, "%s: data ready at address=%x, data_size=%x\n",
+			dev_dbg(&im501_spi->dev, "%s: data ready at address=%x, data_size=%x\n",
 				   __func__, address, data_size);
 		err = fetch_voice_data(address, data_size);
 		if (err != ESUCCESS) {
@@ -742,7 +737,7 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 						"spi_setup() failed\n");
 					return -EIO;
 				}
-				msleep(10);
+				msleep(20);
 
 				ap_sleep_flag = 0;
 			}
@@ -761,6 +756,8 @@ unsigned char parse_to_host_command(to_host_cmd cmd)
 			//dev_err(&im501_spi->dev, "%s: start to get oneshot and save to file!!!!!!!!!!!!!!!!!!!!!!\n", __func__);
 			openFileForWrite(REC_FILE_PATH);
 			request_start_voice_buf_trans();
+			kobject_uevent_env(&im501_spi->dev.kobj, KOBJ_CHANGE, hotword_str);
+
 		} else {
 			dev_info(&im501_spi->dev,
 				"%s: Do not process other interrupt during process "
@@ -821,7 +818,7 @@ unsigned char im501_send_to_dsp_command(to_501_cmd cmd)
 			err = ESUCCESS;
 			break;
 		}
-		msleep(1);
+		msleep(20);
 	}
 
 	return err;
@@ -838,7 +835,7 @@ unsigned char im501_send_message_to_dsp(unsigned char cmd_index, unsigned int pa
 
 	cmd.cmd_byte = cmd_index;	//((cmd_index & 0x3F) << 2) | 0x01; //D[1] : "1", interrupt DSP. This bit generates NMI (non-mask-able interrupt), D[0]: "1" generate mask-able interrupt
 
-	dev_info(&im501_spi->dev, "%s: attri=%#x, cmd_byte_ext=%#x, status=%#x, cmd_byte=%#x\n",
+	dev_dbg(&im501_spi->dev, "%s: attri=%#x, cmd_byte_ext=%#x, status=%#x, cmd_byte=%#x\n",
 		   __func__, cmd.attri, cmd.cmd_byte_ext, cmd.status, cmd.cmd_byte);
 	err = im501_send_to_dsp_command(cmd);
 
@@ -855,7 +852,7 @@ unsigned char request_start_voice_buf_trans(void)
 	err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_START_BUF_TRANS, 0);
 
 	//Fuli 20161216 clear fifo when start to detect ketwords.
-	dev_info(&im501_spi->dev, "%s: clear pcm fifo, it may contains data which is not be fetched.\n", __func__);
+	dev_info(&im501_spi->dev, "%s: clear pcm fifo", __func__);
 	spin_lock(&im501_data->pcm_fifo_lock);
 	kfifo_reset(im501_data->pcm_kfifo);
 	spin_unlock(&im501_data->pcm_fifo_lock);
@@ -867,6 +864,7 @@ unsigned char request_stop_voice_buf_trans(void)
 {
 	unsigned char err = ESUCCESS;
 
+	dev_info(&im501_spi->dev, "%s: stop voice transfer\n", __func__);
 	err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_STOP_BUF_TRANS, 0);
 	im501_vbuf_trans_status = 0;
 
@@ -878,9 +876,7 @@ unsigned char request_enter_psm(void)
 	unsigned char err = ESUCCESS;
 
 	if (im501_vbuf_trans_status == 1) {
-		dev_err(&im501_spi->dev, "%s: im501_vbuf_trans_status = %d, stop it.\n", __func__,
-			   im501_vbuf_trans_status);
-		//Call this function to guarantee there is no voice transferring.
+		// stop voice transfer.
 		request_stop_voice_buf_trans();
 	}
 
@@ -890,7 +886,7 @@ unsigned char request_enter_psm(void)
 		dev_info(&im501_spi->dev,
 			"ap_sleep_flag = %d, im501_dsp_mode_old = %d. iM501 is going to sleep.\n",
 			 ap_sleep_flag, im501_dsp_mode_old);
-		dev_info(&im501_spi->dev,
+		dev_dbg(&im501_spi->dev,
 			"%s: the command is %#x\n", __func__, TO_DSP_CMD_REQ_ENTER_PSM);
 
 		err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_ENTER_PSM, 0);
@@ -906,7 +902,7 @@ unsigned char request_enter_psm(void)
 #endif
 		ap_sleep_flag = 1;
 		im501_dsp_mode_old = POWER_SAVING_MODE;
-		dev_info(&im501_spi->dev, "%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
+		dev_dbg(&im501_spi->dev, "%s: ap_sleep_flag = %d, im501_dsp_mode_old = %d\n",
 			   __func__, ap_sleep_flag, im501_dsp_mode_old);
 	}
 
@@ -917,8 +913,15 @@ unsigned char request_enter_normal(void)
 {
 	unsigned char err = ESUCCESS;
 
+	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
+	if (im501_vbuf_trans_status == 1) {
+		// stop voice transfer.
+		request_stop_voice_buf_trans();
+	}
+
+	im501_vbuf_trans_status = 0;
+
 	if (im501_dsp_mode_old != NORMAL_MODE) {	//The current dsp mode is not NORMAL
-		dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
 #ifdef CODEC2IM501_PDM_CLKI
 		mdelay(5);
 		codec2im501_pdm_clki_set(NORMAL_MODE, 0);
@@ -987,6 +990,7 @@ int im501_spi_burst_read_check(u32 start_addr, u8 *buf, u32 data_length)
 
 EXPORT_SYMBOL_GPL(im501_spi_burst_read_check);
 
+#ifdef FW_RD_CHECK
 static void im501_8byte_swap(u8 *rxbuf, u32 len)
 {
 	u8 local_buf[8];
@@ -1012,6 +1016,7 @@ static void im501_8byte_swap(u8 *rxbuf, u32 len)
 		rxbuf[i + 7] = local_buf[0];
 	}
 }
+#endif
 
 static size_t im501_read_file(char *file_path, const u8 **buf)
 {
@@ -1049,9 +1054,12 @@ static size_t im501_read_file(char *file_path, const u8 **buf)
 
 static int im501_dsp_load_single_fw_file(u8 *fw_name, u32 addr, int fw_type)
 {
-	u8 *local_buf, *data;
-	int i;
+	u8 *data;
 	size_t size = 0;
+#ifdef FW_RD_CHECK
+	u8 *local_buf;
+	int i;
+#endif
 
 #ifdef SHOW_DL_TIME
 	do_gettimeofday(&(txc.time));
@@ -1109,9 +1117,12 @@ static int im501_dsp_load_fw(u8 firmware_type)
 {				//0: wakeup firmware; 1: ultrasound firmware
 	int err = 0;
 	const struct firmware *fw = NULL;
-	u8 *local_buf;
 	int fw_type = IM501_DSP_FW;
+
+#ifdef FW_RD_CHECK
+	u8 *local_buf;
 	int i;
+#endif
 
 	dev_info(&im501_spi->dev, "%s: firmware_type=%d\n", __func__, firmware_type);
 #ifdef SHOW_DL_TIME
@@ -1275,14 +1286,18 @@ void im501_write_check_spi_reg(u8 reg, u8 val)
 void enable_pdm_clock(void)
 {
 	int retry_count = 100;
+	if (atomic_read(&dmic_clk_cnt) > 0) {
+		dev_info(&im501_spi->dev, "PDM clock already enabled\n");
+		return;
+	}
 	while (retry_count > 0) {
 		if (tegra210_dmic_enable(0))
 			dev_info(&im501_spi->dev, "DMIC not yet registered\n");
 		else {
-			atomic_inc_return(&dmic_clk_cnt);
+			atomic_set(&dmic_clk_cnt, 1);
 			break;
 		}
-		msleep(10);
+		msleep(20);
 		retry_count--;
 	};
 }
@@ -1291,8 +1306,23 @@ void disable_pdm_clock(void)
 {
 	if (atomic_read(&dmic_clk_cnt) > 0) {
 		tegra210_dmic_disable(0);
-		atomic_sub(1, &dmic_clk_cnt);
+		atomic_set(&dmic_clk_cnt, 0);
+	} else {
+		dev_info(&im501_spi->dev, "PDM clock already disabled\n");
 	}
+}
+
+void im501_start_capture_cb(void)
+{
+	int err;
+
+	err = im501_send_message_to_dsp(TO_DSP_CMD_REQ_ENTER_BYPASS, 0x1);
+	if (ESUCCESS != err) {
+	dev_err(&im501_spi->dev,
+		"%s: error when enabling hw bypass mode, error = %d\n",
+		__func__, err);
+	}
+	msleep(20);
 }
 
 static void im501_fw_load(struct work_struct *work)
@@ -1305,7 +1335,6 @@ static void im501_fw_load(struct work_struct *work)
 	codec2im501_pdm_clki_set(NORMAL_MODE, 0);
 	mdelay(5);		//Apply PDM_CLKI, and then wait for 1024 clock cycles
 #endif
-	mdelay(100);		//make sure PDMCLKI is ready for external PDMCLKI
 
 	//reset DSP
 	im501_reset();
@@ -1337,9 +1366,10 @@ static void im501_fw_load(struct work_struct *work)
 
 	im501_dsp_mode_old = NORMAL_MODE;
 
-	//Here after download the firmware, force DSP enter PSM mode for testing.
-	//Should be changed according to the real requirement.
-	request_enter_psm();
+	//after firmware download, keep DSP in NORMAL mode
+	codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
+
+	tegra210_dmic_set_start_callback(0, im501_start_capture_cb);
 
 	return;
 }
@@ -1386,7 +1416,7 @@ static void im501_irq_handling_work(struct work_struct *work)
 			dev_err(&im501_spi->dev, "spi_setup() failed\n");
 			return;	// -EIO;
 		}
-		msleep(10);
+		msleep(20);
 	}
 
 	pdata = (u8 *) &cmd;
@@ -1398,7 +1428,7 @@ static void im501_irq_handling_work(struct work_struct *work)
 	}
 
 	if ((im501_host_irqstatus == 1) || ((output_counter % 100) == 0)) {
-		dev_info(&im501_spi->dev, "%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0],
+		dev_dbg(&im501_spi->dev, "%s: pdata[%#x, %#x, %#x, %#x]\n", __func__, pdata[0],
 			   pdata[1], pdata[2], pdata[3]);
 	}
 	output_counter++;
@@ -1427,8 +1457,11 @@ static void im501_irq_handling_work(struct work_struct *work)
 
 static irqreturn_t im501_irq_handler(int irq, void *para)
 {
-	dev_dbg(&im501_spi->dev, "%s: entering...\n", __func__);
-	queue_work(im501_irq_wq, &im501_irq_work);
+	bool ret;
+
+	ret = queue_work(im501_irq_wq, &im501_irq_work);
+	if (!ret)
+		dev_err(&im501_spi->dev, "%s: queue_work failed", __func__);
 
 	return IRQ_HANDLED;
 }
@@ -1437,7 +1470,7 @@ static irqreturn_t im501_irq_handler(int irq, void *para)
  * character device can be opened. */
 static int im501_record_open(struct inode *inode, struct file *file)
 {
-	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
+	dev_dbg(&im501_spi->dev, "%s: entering...\n", __func__);
 	if (!atomic_add_unless(&im501_data->audio_owner, 1, 1))
 		return -EBUSY;
 	dev_dbg(&im501_spi->dev, "%s: im501_data->audio_owner.counter = %d\n", __func__,
@@ -1473,34 +1506,37 @@ static ssize_t im501_record_read(struct file *file,
 				 char __user *buf,
 				 size_t count_want, loff_t *f_pos)
 {
-	struct im501_data_t *im501_data_tmp = (struct im501_data_t *)file->private_data;
+	struct im501_data_t *im501_data = (struct im501_data_t *)file->private_data;
 	size_t not_copied;
 	ssize_t to_copy = count_want;
 	int avail;
 	unsigned int copied, total_copied = 0;
-	unsigned long timeout = jiffies + msecs_to_jiffies(2000);
+	unsigned long timeout = jiffies + msecs_to_jiffies(500);
 
-	//dev_err(&im501_spi->dev, "%s: entering... count_want = %d, *f_pos = %ld\n", __func__, count_want, *f_pos);
-	avail = kfifo_len(im501_data_tmp->pcm_kfifo);
-	//dev_err(&im501_spi->dev, "%s: avail = %d\n", __func__, avail);
+	dev_dbg(&im501_spi->dev, "%s: entering... count_want = %d, *f_pos = %d\n",
+		__func__, (int)count_want, (int)*f_pos);
+	avail = kfifo_len(im501_data->pcm_kfifo);
+	//dev_info(&im501_spi->dev, "%s: avail = %d\n", __func__, avail);
 
-	while ((total_copied < count_want) && time_before(jiffies, timeout) && avail) {
+	while ((total_copied < count_want) && time_before(jiffies, timeout)) {
 		int ret;
 		to_copy = avail;
 		if (count_want - total_copied < avail)
 			to_copy = count_want - total_copied;
 
-		ret = kfifo_to_user(im501_data_tmp->pcm_kfifo, buf + total_copied,
+		ret = kfifo_to_user(im501_data->pcm_kfifo, buf + total_copied,
 			to_copy, &copied);
 		if (ret)
 			return -EIO;
 		dev_dbg(&im501_spi->dev, "%s: %d bytes are copied:\n", __func__, copied);
 
 		total_copied += copied;
-		avail = kfifo_len(im501_data_tmp->pcm_kfifo);
+		avail = kfifo_len(im501_data->pcm_kfifo);
+		if ((total_copied < count_want) && !avail)
+			msleep(20);
 	}
 
-	if (avail && (total_copied < count_want))
+	if (total_copied < count_want)
 		dev_err(&im501_spi->dev, "im501: timeout during reading\n");
 
 	not_copied = count_want - total_copied;
@@ -1555,8 +1591,8 @@ static int im501_create_cdev(struct spi_device *spi)
 	dev_info(&im501_spi->dev, "%s: cdev_add ok...\n", __func__);
 
 	im501_data->record_dev = device_create(im501_data->cdev_class, NULL,
-						   dev_no, NULL, "%s%d",
-						   IM501_CDEV_NAME, 1);
+						   dev_no, NULL, "%s",
+						   IM501_CDEV_NAME);
 	if (IS_ERR(im501_data->record_dev)) {
 		dev_err(&im501_spi->dev, "%s: could not create device\n",
 			__func__);
@@ -1657,7 +1693,7 @@ static ssize_t im501_spi_device_write(struct file *file,
 					  const char __user *buffer, size_t length,
 					  loff_t *offset)
 {
-	dev_cmd_long *local_dev_cmd;
+	dev_cmd_long *local_dev_cmd = NULL;
 	dev_cmd_fwdl *local_dev_cmd_fwdl;
 	/*if spi speed is fast enough, we can get total data from SPI together
 	   dev_cmd_start_rec *local_rec_cmd;
@@ -1670,10 +1706,17 @@ static ssize_t im501_spi_device_write(struct file *file,
 	unsigned char err = ESUCCESS;
 
 	dev_info(&im501_spi->dev, "%s: entering...\n", __func__);
+	if (im501_dsp_mode_old == -1) {
+		dev_err(&im501_spi->dev, "%s: iM501 firmware not loaded.\n", __func__);
+		err = -EIO;
+		goto out;
+	}
+
 	local_dev_cmd =
 		(dev_cmd_long *) kzalloc(sizeof(dev_cmd_long), GFP_KERNEL);
 	if (!local_dev_cmd) {
 		dev_err(&im501_spi->dev, "%s: local_dev_cmd allocation failure.\n", __func__);
+		err = -ENOMEM;
 		goto out;
 	}
 
@@ -1789,6 +1832,21 @@ static ssize_t im501_spi_device_write(struct file *file,
 				((local_msg_cmd->message_index & 0x3F) << 2) | 0x01,
 				local_msg_cmd->message_data);
 		break;
+
+	case FM_SMVD_ENABLE_HOTWORD_DETECT:
+		dev_info(&im501_spi->dev, "%s: enable hotword\n", __func__);
+		codec2im501_pdm_clki_set(NORMAL_MODE, 0);
+		mdelay(100);
+		request_enter_psm();
+		break;
+
+	case FM_SMVD_DISABLE_HOTWORD_DETECT:
+		dev_info(&im501_spi->dev, "%s: disable hotword\n", __func__);
+		request_enter_normal();
+		mdelay(100);
+		codec2im501_pdm_clki_set(POWER_SAVING_MODE, 0);
+		break;
+
 
 	default:
 		break;

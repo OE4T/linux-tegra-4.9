@@ -2036,8 +2036,6 @@ static bool is_host_mode_phy(struct tegra_xusb *tegra,
 static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, bool on)
 {
 	struct xhci_hcd *xhci;
-	int port = tegra->usb2_otg_port_base_1 - 1;
-	struct phy *otg_phy;
 	u32 status;
 	int wait, ret;
 
@@ -2059,14 +2057,11 @@ static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, bool on)
 		return;
 	}
 
-	otg_phy = tegra->typed_phys[USB2_PHY][port];
-	if (on)
-		ret = tegra_xusb_padctl_set_id_override(tegra->padctl);
-	else
+	if (!on) {
 		ret = tegra_xusb_padctl_clear_id_override(tegra->padctl);
-	if (ret) {
-		dev_dbg(tegra->dev, "%s ID override failed\n",
-			on ? "set" : "clear");
+		if (ret)
+			dev_dbg(tegra->dev, "clear ID override failed:%d\n"
+				, ret);
 	}
 
 	if (!tegra->otg_role_initialized) {
@@ -3679,6 +3674,13 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 				goto out;
 			}
 		}
+	}
+
+	/* ID override to ground needs to be set after VCORE_DOWN is 0 */
+	if (tegra->host_mode) {
+		ret = tegra_xusb_padctl_set_id_override(tegra->padctl);
+		if (ret)
+			dev_dbg(tegra->dev, "set ID override failed:%d\n", ret);
 	}
 
 	if (tegra->suspended)

@@ -524,6 +524,8 @@ static const struct gpu_ops gp106_ops = {
 #endif
 		.resetup_ramfc = gp10b_fifo_resetup_ramfc,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
+		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
+		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gp106_get_netlist_name,

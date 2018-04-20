@@ -3217,6 +3217,29 @@ int gk20a_fifo_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	return g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 }
 
+void gk20a_fifo_runlist_hw_submit(struct gk20a *g, u32 runlist_id,
+	u32 count, u32 buffer_index)
+{
+	struct fifo_runlist_info_gk20a *runlist = NULL;
+	u64 runlist_iova;
+
+	runlist = &g->fifo.runlist_info[runlist_id];
+	runlist_iova = nvgpu_mem_get_addr(g, &runlist->mem[buffer_index]);
+
+	if (count != 0) {
+		gk20a_writel(g, fifo_runlist_base_r(),
+			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
+			nvgpu_aperture_mask(g, &runlist->mem[buffer_index],
+				fifo_runlist_base_target_sys_mem_ncoh_f(),
+				fifo_runlist_base_target_sys_mem_coh_f(),
+				fifo_runlist_base_target_vid_mem_f()));
+	}
+
+	gk20a_writel(g, fifo_runlist_r(),
+		fifo_runlist_engine_f(runlist_id) |
+		fifo_eng_runlist_length_f(count));
+}
+
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 chid, bool add,
 					    bool wait_for_finish)
@@ -3297,21 +3320,10 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	} else	/* suspend to remove all channels */
 		count = 0;
 
-	if (count != 0) {
-		gk20a_writel(g, fifo_runlist_base_r(),
-			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
-			nvgpu_aperture_mask(g, &runlist->mem[new_buf],
-				fifo_runlist_base_target_sys_mem_ncoh_f(),
-				fifo_runlist_base_target_sys_mem_coh_f(),
-				fifo_runlist_base_target_vid_mem_f()));
-	}
-
-	gk20a_writel(g, fifo_runlist_r(),
-		fifo_runlist_engine_f(runlist_id) |
-		fifo_eng_runlist_length_f(count));
+	g->ops.fifo.runlist_hw_submit(g, runlist_id, count, new_buf);
 
 	if (wait_for_finish) {
-		ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
+		ret = g->ops.fifo.runlist_wait_pending(g, runlist_id);
 
 		if (ret == -ETIMEDOUT) {
 			nvgpu_err(g,
@@ -3321,7 +3333,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 			/* engine reset needs the lock. drop it */
 			/* wait until the runlist is active again */
-			ret = gk20a_fifo_runlist_wait_pending(g, runlist_id);
+			ret = g->ops.fifo.runlist_wait_pending(g, runlist_id);
 			/* get the lock back. at this point everything should
 			 * should be fine */
 

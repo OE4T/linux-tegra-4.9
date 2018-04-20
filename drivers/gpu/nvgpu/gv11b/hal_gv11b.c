@@ -558,6 +558,8 @@ static const struct gpu_ops gv11b_ops = {
 		.free_channel_ctx_header = gv11b_free_subctx_header,
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
+		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
+		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv11b_get_netlist_name,

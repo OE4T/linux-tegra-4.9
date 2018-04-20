@@ -385,6 +385,8 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				bool interleave_enabled,
 				bool prev_empty,
 				u32 *entries_left);
+void gk20a_fifo_runlist_hw_submit(struct gk20a *g, u32 runlist_id,
+	u32 count, u32 buffer_index);
 int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id);
 int gk20a_init_fifo_setup_sw_common(struct gk20a *g);
 int gk20a_init_fifo_setup_sw(struct gk20a *g);

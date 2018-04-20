@@ -669,6 +669,9 @@ struct gpu_ops {
 				u64 *base_gpuva, u32 *sync_size);
 		u32 (*get_syncpt_incr_per_release)(void);
 #endif
+		void (*runlist_hw_submit)(struct gk20a *g, u32 runlist_id,
+			u32 count, u32 buffer_index);
+		int (*runlist_wait_pending)(struct gk20a *g, u32 runlist_id);
 	} fifo;
 	struct pmu_v {
 		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);

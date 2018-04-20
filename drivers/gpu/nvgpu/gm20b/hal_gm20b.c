@@ -461,6 +461,8 @@ static const struct gpu_ops gm20b_ops = {
 		.get_syncpt_incr_cmd_size = gk20a_fifo_get_syncpt_incr_cmd_size,
 		.get_sync_ro_map = NULL,
 #endif
+		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
+		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gm20b_get_netlist_name,

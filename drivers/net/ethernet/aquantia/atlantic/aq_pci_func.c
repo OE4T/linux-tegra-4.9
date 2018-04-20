@@ -289,15 +289,20 @@ static int aq_pci_probe(struct pci_dev *pdev,
 	self->pdev = pdev;
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	pci_set_drvdata(pdev, self);
-	
+
 	sema_init(&self->fwreq_sem, 1);
 
 	err = aq_pci_probe_get_hw_by_id(pdev, &self->aq_hw_ops,
 					&aq_nic_get_cfg(self)->aq_hw_caps);
 	if (err)
-		goto err_ioremap;
+		goto err_aqhw;
 
 	self->aq_hw = kzalloc(sizeof(*self->aq_hw), GFP_KERNEL);
+	if (!self->aq_hw) {
+		err = -ENOMEM;
+		goto err_aqhw;
+	}
+
 	self->aq_hw->aq_nic_cfg = aq_nic_get_cfg(self);
 
 	for (bar = 0; bar < 4; ++bar) {
@@ -387,10 +392,12 @@ err_register:
 err_hwinit:
 	iounmap(self->aq_hw->mmio);
 err_ioremap:
+	kfree(self->aq_hw);
+err_aqhw:
 	free_netdev(ndev);
-err_pci_func:
-	pci_release_regions(pdev);
 err_ndev:
+	pci_release_regions(pdev);
+err_pci_func:
 	pci_disable_device(pdev);
 	return err;
 }

@@ -24,7 +24,6 @@
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>
@@ -1184,7 +1183,7 @@ mutex_fail:
 void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
 {
 	nvgpu_clk_arb_schedule_alarm(g,
-		(0x1UL << NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD));
+		(0x1UL << NVGPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD));
 }
 
 void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)

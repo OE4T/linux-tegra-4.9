@@ -57,8 +57,36 @@ struct nvgpu_clk_session;
 	__fls((a)->pstates & (b)->pstates) :\
 	VF_POINT_INVALID_PSTATE)
 
+/*
+ * These events, defined in common code are the counterparts of the uapi
+ * events. There should be a conversion function to take care to convert
+ * these to the uapi events.
+ */
+/* Event associated to a VF update */
+#define NVGPU_EVENT_VF_UPDATE				0
+
+/* Recoverable alarms (POLLPRI) */
+/* Alarm when target frequency on any session is not possible */
+#define NVGPU_EVENT_ALARM_TARGET_VF_NOT_POSSIBLE		1
+/* Alarm when target frequency on current session is not possible */
+#define NVGPU_EVENT_ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE	2
+/* Alarm when Clock Arbiter failed */
+#define NVGPU_EVENT_ALARM_CLOCK_ARBITER_FAILED		3
+/* Alarm when VF table update failed */
+#define NVGPU_EVENT_ALARM_VF_TABLE_UPDATE_FAILED		4
+/* Alarm on thermal condition */
+#define NVGPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD		5
+/* Alarm on power condition */
+#define NVGPU_EVENT_ALARM_POWER_ABOVE_THRESHOLD		6
+
+/* Non recoverable alarm (POLLHUP) */
+/* Alarm on GPU shutdown/fall from bus */
+#define NVGPU_EVENT_ALARM_GPU_LOST				7
+
+#define NVGPU_EVENT_LAST	NVGPU_EVENT_ALARM_GPU_LOST
+
 /* Local Alarms */
-#define EVENT(alarm)	(0x1UL << NVGPU_GPU_EVENT_##alarm)
+#define EVENT(alarm)	(0x1UL << NVGPU_EVENT_##alarm)
 
 #define LOCAL_ALARM_MASK (EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE) | \
 				EVENT(VF_UPDATE))

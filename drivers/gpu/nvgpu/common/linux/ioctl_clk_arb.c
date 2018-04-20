@@ -97,6 +97,43 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 	return 0;
 }
 
+static inline u32 nvgpu_convert_gpu_event(u32 nvgpu_event)
+{
+	u32 nvgpu_gpu_event;
+
+	switch (nvgpu_event) {
+	case NVGPU_EVENT_VF_UPDATE:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_VF_UPDATE;
+		break;
+	case NVGPU_EVENT_ALARM_TARGET_VF_NOT_POSSIBLE:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_TARGET_VF_NOT_POSSIBLE;
+		break;
+	case NVGPU_EVENT_ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE;
+		break;
+	case NVGPU_EVENT_ALARM_CLOCK_ARBITER_FAILED:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_CLOCK_ARBITER_FAILED;
+		break;
+	case NVGPU_EVENT_ALARM_VF_TABLE_UPDATE_FAILED:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_VF_TABLE_UPDATE_FAILED;
+		break;
+	case NVGPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD;
+		break;
+	case NVGPU_EVENT_ALARM_POWER_ABOVE_THRESHOLD:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_POWER_ABOVE_THRESHOLD;
+		break;
+	case NVGPU_EVENT_ALARM_GPU_LOST:
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_GPU_LOST;
+		break;
+		default:
+		/* Control shouldn't come here */
+		nvgpu_gpu_event = NVGPU_GPU_EVENT_ALARM_GPU_LOST + 1;
+		break;
+	}
+	return nvgpu_gpu_event;
+}
+
 static inline u32 __pending_event(struct nvgpu_clk_dev *dev,
 		struct nvgpu_gpu_event_info *info) {
 
@@ -112,7 +149,7 @@ static inline u32 __pending_event(struct nvgpu_clk_dev *dev,
 	if (_WRAPGTEQ(tail, head) && info) {
 		head++;
 		p_notif = &dev->queue.notifications[head % dev->queue.size];
-		events |= p_notif->notification;
+		events |= nvgpu_convert_gpu_event(p_notif->notification);
 		info->event_id = ffs(events) - 1;
 		info->timestamp = p_notif->timestamp;
 		nvgpu_atomic_set(&dev->queue.head, head);

@@ -86,9 +86,7 @@ static bool check_mce_version(void)
 
 static void t19x_cpu_enter_c6(u32 wake_time)
 {
-	cpu_pm_enter();
 	arm_cpuidle_suspend(T19x_CPUIDLE_C6_STATE);
-	cpu_pm_exit();
 }
 
 static void t19x_cpu_enter_c7(u32 wake_time)

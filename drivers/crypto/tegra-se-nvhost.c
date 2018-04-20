@@ -1543,6 +1543,12 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
 		aes_ctx = crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
+		/* Ensure there is valid slot info */
+		if (!aes_ctx->slot) {
+			dev_err(se_dev->dev, "Invalid AES Ctx Slot\n");
+			return -EINVAL;
+		}
+
 		req_ctx = ablkcipher_request_ctx(req);
 
 		if (req->info) {

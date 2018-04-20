@@ -38,6 +38,7 @@
 #include <linux/poll.h>
 #include <linux/anon_inodes.h>
 #include <linux/kref.h>
+#include <linux/nospec.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -332,7 +333,8 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 		return -EINVAL;
 	}
 
-	speculation_barrier();
+	args->id = array_index_nospec(args->id,
+				nvhost_syncpt_nb_mlocks(&ctx->dev->syncpt));
 
 	trace_nvhost_ioctl_ctrl_module_mutex(args->lock, args->id);
 	if (args->lock && !ctx->mod_locks[args->id]) {

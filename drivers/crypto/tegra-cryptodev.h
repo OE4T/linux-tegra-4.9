@@ -174,7 +174,7 @@ struct tegra_crypt_req_32 {
 	int skip_iv;
 };
 #define TEGRA_CRYPTO_IOCTL_PROCESS_REQ_32	\
-		_IOWR(0x98, 101, struct tegra_crypt_req_32)
+		_IOWR(0x98, 121, struct tegra_crypt_req_32)
 #endif
 
 /* pointer to this struct should be passed to:
@@ -195,14 +195,14 @@ struct tegra_rng_req {
 #ifdef CONFIG_COMPAT
 struct tegra_rng_req_32 {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
-	__u32 rdata; /* random generated data */
+	__u64 rdata; /* random generated data */
 	int nbytes; /* random data length */
 	int type;
 };
 #define TEGRA_CRYPTO_IOCTL_SET_SEED_32	\
-		_IOWR(0x98, 102, struct tegra_rng_req_32)
+		_IOWR(0x98, 122, struct tegra_rng_req_32)
 #define TEGRA_CRYPTO_IOCTL_GET_RANDOM_32	\
-		_IOWR(0x98, 103, struct tegra_rng_req_32)
+		_IOWR(0x98, 123, struct tegra_rng_req_32)
 #endif
 
 struct tegra_rsa_req {
@@ -250,7 +250,7 @@ struct tegra_rsa_req_32 {
 	int skip_key;
 };
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ_32	\
-		_IOWR(0x98, 105, struct tegra_rsa_req_32)
+		_IOWR(0x98, 125, struct tegra_rsa_req_32)
 #endif
 
 struct tegra_sha_req {
@@ -285,7 +285,7 @@ struct tegra_sha_req_32 {
 	int plaintext_sz;
 };
 #define TEGRA_CRYPTO_IOCTL_GET_SHA_32	\
-		_IOWR(0x98, 104, struct tegra_sha_req_32)
+		_IOWR(0x98, 124, struct tegra_sha_req_32)
 #endif
 
 #endif

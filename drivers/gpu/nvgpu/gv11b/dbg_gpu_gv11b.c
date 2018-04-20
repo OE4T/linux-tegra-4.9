@@ -1,7 +1,7 @@
 /*
  * Tegra GV11B GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,8 +24,10 @@
 
 #include <nvgpu/log.h>
 #include "gk20a/gk20a.h"
+#include "gv11b/dbg_gpu_gv11b.h"
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
+#include <nvgpu/bug.h>
 
 static void gv11b_perfbuf_reset_streaming(struct gk20a *g)
 {

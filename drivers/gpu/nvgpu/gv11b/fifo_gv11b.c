@@ -58,11 +58,6 @@
 #include "gr_gv11b.h"
 #include "mc_gv11b.h"
 
-#define PBDMA_SUBDEVICE_ID  1
-
-static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
-			struct channel_gk20a *ch, struct nvgpu_mem *mem);
-
 void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
 
@@ -128,7 +123,7 @@ void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 			runlist[0], runlist[1], runlist[2], runlist[3]);
 }
 
-static void gv11b_userd_writeback_config(struct gk20a *g)
+void gv11b_userd_writeback_config(struct gk20a *g)
 {
 	gk20a_writel(g, fifo_userd_writeback_r(), fifo_userd_writeback_timer_f(
 				fifo_userd_writeback_timer_100us_v()));
@@ -1567,7 +1562,7 @@ unsigned int gv11b_fifo_handle_pbdma_intr_1(struct gk20a *g,
 	return rc_type;
 }
 
-static void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
+void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
 			struct channel_gk20a *ch, struct nvgpu_mem *mem)
 {
 	struct tsg_gk20a *tsg;

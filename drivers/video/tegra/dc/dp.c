@@ -2974,7 +2974,7 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 	if (is_hotplug_supported(dp))
 		reinit_completion(&dc->hpd_complete);
 
-	dp->hpd_data.dc_resumed = true;
+	dp->hpd_data.hpd_resuming = true;
 	tegra_dp_pending_hpd(dp);
 
 	if (is_hotplug_supported(dp))

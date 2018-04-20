@@ -76,7 +76,7 @@ struct tegra_hpd_data {
 
 	struct tegra_edid_hdmi_eld eld;
 	bool eld_retrieved;
-	bool dc_resumed;
+	bool hpd_resuming;
 
 	struct rt_mutex lock;
 

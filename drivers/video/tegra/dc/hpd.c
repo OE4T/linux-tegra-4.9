@@ -191,7 +191,7 @@ static void hpd_plug_state(struct tegra_hpd_data *data)
 		 */
 		data->edid_reads = 0;
 
-		if (data->dc->suspended && data->dc->connected)
+		if (data->hpd_resuming && data->dc->connected)
 			set_hpd_state(data, STATE_RECHECK_EDID,
 					CHECK_EDID_DELAY_US);
 		else
@@ -310,14 +310,14 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 	}
 
 	/*
-	 * During dc suspend/resume sequnce put "dc->suspended = false"
-	 * when new mointor connected/edid read failed so state machine
+	 * During dc suspend/resume sequence put "hpd_resuming = false"
+	 * when new mointor connected/edid read failed. So state machine
 	 * does not go in loop between STATE_RECHECK_EDID and
 	 * STATE_HPD_RESET.
 	 */
 	if (data->dc->suspended && !match) {
 		data->dc->enabled = false;
-		data->dc->suspended = false;
+		data->hpd_resuming = false;
 
 		tgt_state = STATE_HPD_RESET;
 		timeout = 0;
@@ -466,14 +466,14 @@ static void sched_hpd_work(struct tegra_hpd_data *data, int resched_time)
 				&data->dwork,
 				usecs_to_jiffies(resched_time));
 
-	} else if (data->dc_resumed && resched_time < 0) {
+	} else if (data->dc->suspended && resched_time < 0) {
 		/*
 		 * We reach here when hpd state machine completes i.e
 		 * hpd state is ENABLE or DISABLE and during DC suspend
 		 * resume sequence.
 		 */
 		complete(&data->dc->hpd_complete);
-		data->dc_resumed = false;
+		data->hpd_resuming = false;
 	}
 }
 
@@ -584,7 +584,7 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 	tegra_dc_set_edid(dc, data->edid);
 	data->eld_retrieved = false;
 	data->edid_reads = 0;
-	data->dc_resumed = false;
+	data->hpd_resuming = false;
 
 	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
 

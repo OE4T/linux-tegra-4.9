@@ -1306,7 +1306,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* bind the channel to the vm */
-	err = __gk20a_vm_bind_channel(g->mm.cde.vm, ch);
+	err = g->ops.mm.vm_bind_channel(g->mm.cde.vm, ch);
 	if (err) {
 		nvgpu_warn(g, "cde: could not bind vm");
 		goto err_commit_va;

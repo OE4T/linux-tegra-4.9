@@ -37,7 +37,7 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				int rw_flag,
 				bool sparse,
 				struct vm_gk20a_mapping_batch *batch);
-int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
+int vgpu_vm_bind_channel(struct vm_gk20a *vm,
 				struct channel_gk20a *ch);
 int vgpu_mm_fb_flush(struct gk20a *g);
 void vgpu_mm_l2_invalidate(struct gk20a *g);

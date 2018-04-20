@@ -177,10 +177,9 @@ u64 vgpu_bar1_map(struct gk20a *g, struct nvgpu_mem *mem)
 	return addr;
 }
 
-int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
+int vgpu_vm_bind_channel(struct vm_gk20a *vm,
 				struct channel_gk20a *ch)
 {
-	struct vm_gk20a *vm = as_share->vm;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_bind_share_params *p = &msg.params.as_bind_share;
 	int err;

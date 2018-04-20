@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -165,9 +165,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;
 int gk20a_vm_release_share(struct gk20a_as_share *as_share);
-int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
-			  struct channel_gk20a *ch);
-int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
+int gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
 
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,

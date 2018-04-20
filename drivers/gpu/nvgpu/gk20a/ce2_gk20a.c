@@ -449,7 +449,7 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	ce_ctx->ch->timeout.enabled = false;
 
 	/* bind the channel to the vm */
-	err = __gk20a_vm_bind_channel(g->mm.ce.vm, ce_ctx->ch);
+	err = g->ops.mm.vm_bind_channel(g->mm.ce.vm, ce_ctx->ch);
 	if (err) {
 		nvgpu_err(g, "ce: could not bind vm");
 		goto end;

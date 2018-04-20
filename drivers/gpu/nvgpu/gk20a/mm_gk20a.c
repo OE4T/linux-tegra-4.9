@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -332,7 +332,7 @@ const struct gk20a_mmu_level gk20a_mm_levels_128k[] = {
 	{.update_entry = NULL}
 };
 
-int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
+int gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 {
 	int err = 0;
 
@@ -348,12 +348,6 @@ int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 		  ch->chid, vm->name);
 
 	return err;
-}
-
-int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
-			  struct channel_gk20a *ch)
-{
-	return __gk20a_vm_bind_channel(as_share->vm, ch);
 }
 
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,

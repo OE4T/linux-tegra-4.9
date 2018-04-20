@@ -901,7 +901,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			dc_win->csc_dirty = false;
 		}
 
-		if (dc->yuv_bypass)
+		if (dc->yuv_bypass && win->fmt != TEGRA_DC_EXT_FMT_T_P8)
 			win_options &= ~CP_ENABLE;
 
 		tegra_dc_writel(dc, win_options, DC_WIN_WIN_OPTIONS);

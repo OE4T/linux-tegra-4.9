@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -129,7 +129,7 @@ static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,
 int gm20b_fb_vpr_info_fetch(struct gk20a *g)
 {
 	if (gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
-		return -ETIME;
+		return -ETIMEDOUT;
 	}
 
 	gk20a_writel(g, fb_mmu_vpr_info_r(),

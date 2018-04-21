@@ -123,4 +123,5 @@ u32 gv11b_fifo_get_preempt_timeout(struct gk20a *g);
 void gv11b_fifo_init_ramfc_eng_method_buffer(struct gk20a *g,
 			struct channel_gk20a *ch, struct nvgpu_mem *mem);
 void gv11b_userd_writeback_config(struct gk20a *g);
+void gv11b_ring_channel_doorbell(struct channel_gk20a *c);
 #endif

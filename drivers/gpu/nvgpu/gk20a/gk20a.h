@@ -672,6 +672,7 @@ struct gpu_ops {
 		void (*runlist_hw_submit)(struct gk20a *g, u32 runlist_id,
 			u32 count, u32 buffer_index);
 		int (*runlist_wait_pending)(struct gk20a *g, u32 runlist_id);
+		void (*ring_channel_doorbell)(struct channel_gk20a *c);
 	} fifo;
 	struct pmu_v {
 		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);

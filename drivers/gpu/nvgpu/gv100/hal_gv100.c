@@ -587,6 +587,7 @@ static const struct gpu_ops gv100_ops = {
 		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
+		.ring_channel_doorbell = gv11b_ring_channel_doorbell,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv100_get_netlist_name,

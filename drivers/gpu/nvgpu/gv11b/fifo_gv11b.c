@@ -209,7 +209,7 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 }
 
 
-static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
+void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {
 	struct fifo_gk20a *f = &c->g->fifo;
 	u32 hw_chid = f->channel_base + c->chid;
@@ -249,7 +249,7 @@ void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 	/* Commit everything to GPU. */
 	nvgpu_mb();
 
-	gv11b_ring_channel_doorbell(c);
+	g->ops.fifo.ring_channel_doorbell(c);
 }
 
 void channel_gv11b_unbind(struct channel_gk20a *ch)

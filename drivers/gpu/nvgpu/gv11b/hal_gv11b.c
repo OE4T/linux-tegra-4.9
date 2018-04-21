@@ -560,6 +560,7 @@ static const struct gpu_ops gv11b_ops = {
 		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
+		.ring_channel_doorbell = gv11b_ring_channel_doorbell,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv11b_get_netlist_name,

@@ -14,8 +14,6 @@
  */
 
 / {
-	nvidia,dtsfilename = __FILE__;
-
 	/* Change hardware identifier for k4.14 ap_sanity test */
 	firmware {
 		android {

@@ -177,7 +177,7 @@ static int pva_init_fw(struct platform_device *pdev)
 	if (pva->vmem_war_disable)
 		sema_value |= PVA_VMEM_RD_WAR_DISABLE;
 
-	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT);
+	sema_value |= (PVA_BOOT_INT | PVA_TEST_WAIT | PVA_VMEM_MBX_WAR_ENABLE);
 	host1x_writel(pdev, hsp_ss0_set_r(), sema_value);
 
 	/* Take R5 out of reset */

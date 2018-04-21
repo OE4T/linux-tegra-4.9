@@ -36,6 +36,7 @@
 #define PVA_WAIT_DEBUG		PVA_BIT(24)	/* Spin-wait early in boot */
 #define PVA_CG_DISABLE		PVA_BIT(20)	/* Disable PVA clock gating */
 #define PVA_VMEM_RD_WAR_DISABLE	PVA_BIT(19)	/* Disable VMEM RD fail WAR */
+#define PVA_VMEM_MBX_WAR_ENABLE	PVA_BIT(18)	/* WAR for Bug 2090939 enabled*/
 
 /*
  * Bits set by the R5 and examined by the OS
@@ -50,15 +51,20 @@
 /*
  * Symbolic definitions of the mailbox registers (rather than using 0-7)
  */
-#define PVA_MBOX_COMMAND	0U
-#define PVA_MBOX_ADDR		1U
-#define PVA_MBOX_LENGTH		2U
-#define PVA_MBOX_ARG		3U
-#define PVA_MBOX_4		4U
-#define PVA_MBOX_AISR		5U
-#define PVA_MBOX_UART		6U
-#define PVA_MBOX_ISR		7U
+#define PVA_MBOX_COMMAND		0U
+#define PVA_MBOX_ADDR			1U
+#define PVA_MBOX_LENGTH			2U
+#define PVA_MBOX_ARG			3U
+#define PVA_MBOX_SIDE_CHANNEL_HOST_WR	4U
+#define PVA_MBOX_AISR			5U
+#define PVA_MBOX_SIDE_CHANNEL_HOST_RD	6U
+#define PVA_MBOX_ISR			7U
 
+ /*
+  * Mailbox side channel bit definitions
+  */
+#define PVA_SIDE_CHANNEL_MBOX_BIT	0U
+#define PVA_SIDE_CHANNEL_MBOX_BIT_MASK	(~(1U << PVA_SIDE_CHANNEL_MBOX_BIT))
 
 /*
  * Code checking the version of the R5 uCode should check
@@ -1327,7 +1333,5 @@ pva_cmd_set_sched_attr(struct pva_cmd * const cmd,
 	cmd->mbox[2] = attrs->attr_b;
 	return 3U;
 }
-
-
 
 #endif

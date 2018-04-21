@@ -1,7 +1,7 @@
 /*
  * PVA uCode Self Test
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -80,7 +80,7 @@ int pva_run_ucode_selftest(struct platform_device *pdev)
 		goto err_selftest;
 	}
 
-	reg_status = host1x_readl(pdev, hsp_sm7_r());
+	reg_status = pva_read_mailbox(pdev, PVA_MBOX_ISR);
 
 	/* check test passed bit set and test status done*/
 	if ((ucode_mode & PVA_TESTS_PASSED) &&

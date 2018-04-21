@@ -28,16 +28,59 @@
 #include "pva.h"
 #include "pva_mailbox.h"
 
-static u32 pva_get_mb_reg(u32 i)
+static u32 pva_get_mb_reg_id(u32 i)
 {
-	u32 mb_reg[VALID_MB_INPUT_REGS] = {
+	u32 mb_reg_id[VALID_MB_INPUT_REGS] = {
+		0,
+		1,
+		2,
+		3
+	};
+
+	return mb_reg_id[i];
+}
+
+static u32 pva_get_mb_reg_ex(u32 i)
+{
+	u32 mb_reg[VALID_MB_INPUT_REGS_EX] = {
 		hsp_sm0_r(),
 		hsp_sm1_r(),
 		hsp_sm2_r(),
-		hsp_sm3_r()
+		hsp_sm3_r(),
+		hsp_sm4_r(),
+		hsp_sm5_r(),
+		hsp_sm6_r(),
+		hsp_sm7_r()
 	};
 
 	return mb_reg[i];
+}
+
+u32 pva_read_mailbox(struct platform_device *pdev, u32 mbox_id)
+{
+	u32 side_bits = 0;
+	u32 mbox_value = 0;
+	u32 side_channel_addr = pva_get_mb_reg_ex(PVA_MBOX_SIDE_CHANNEL_HOST_RD);
+
+	side_bits = host1x_readl(pdev, side_channel_addr);
+	mbox_value = host1x_readl(pdev, pva_get_mb_reg_ex(mbox_id));
+	side_bits = ((side_bits >> mbox_id) & 0x1) << PVA_SIDE_CHANNEL_MBOX_BIT;
+	mbox_value = (mbox_value & PVA_SIDE_CHANNEL_MBOX_BIT_MASK) | side_bits;
+
+	return mbox_value;
+}
+
+void pva_write_mailbox(struct platform_device *pdev, u32 mbox_id, u32 value)
+{
+	u32 side_bits = 0;
+	u32 side_channel_addr = pva_get_mb_reg_ex(PVA_MBOX_SIDE_CHANNEL_HOST_WR);
+
+	side_bits = host1x_readl(pdev, side_channel_addr);
+	side_bits &= ~(1 << mbox_id);
+	side_bits |= ((value >> PVA_SIDE_CHANNEL_MBOX_BIT) & 0x1) << mbox_id;
+	value = (value & PVA_SIDE_CHANNEL_MBOX_BIT_MASK);
+	host1x_writel(pdev, side_channel_addr, side_bits);
+	host1x_writel(pdev, pva_get_mb_reg_ex(mbox_id), value);
 }
 
 static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd *cmd,
@@ -53,7 +96,7 @@ static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd *cmd,
 	}
 
 	/* Make sure the state is what we expect it to be. */
-	status = host1x_readl(pdev, hsp_sm7_r());
+	status = pva_read_mailbox(pdev, PVA_MBOX_ISR);
 
 	WARN_ON((status & PVA_INT_PENDING));
 	WARN_ON((status & PVA_READY) == 0);
@@ -63,8 +106,8 @@ static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd *cmd,
 	 * registers before writing mailbox 0.
 	 */
 	for (i = (nregs - 1); i >= 0; i--) {
-		reg = pva_get_mb_reg(i);
-		host1x_writel(pdev, reg, cmd->mbox[i]);
+		reg = pva_get_mb_reg_id(i);
+		pva_write_mailbox(pdev, reg, cmd->mbox[i]);
 	}
 
 	return 0;
@@ -100,7 +143,7 @@ int pva_mailbox_wait_event(struct pva *pva, int wait_time)
 void pva_mailbox_isr(struct pva *pva)
 {
 	struct platform_device *pdev = pva->pdev;
-	u32 int_status = host1x_readl(pdev, hsp_sm7_r());
+	u32 int_status = pva_read_mailbox(pdev, PVA_MBOX_ISR);
 
 	if (pva->mailbox_status != PVA_MBOX_STATUS_WFI) {
 		nvhost_warn(&pdev->dev, "Unexpected PVA ISR (%x)", int_status);
@@ -108,7 +151,7 @@ void pva_mailbox_isr(struct pva *pva)
 	}
 
 	/* Save the current command and subcommand for later processing */
-	pva->mailbox_status_regs.cmd = host1x_readl(pdev, hsp_sm0_r());
+	pva->mailbox_status_regs.cmd = pva_read_mailbox(pdev, PVA_MBOX_COMMAND);
 
 	/* Get all the valid status register data */
 	if (int_status & PVA_VALID_STATUS3) {
@@ -140,7 +183,7 @@ void pva_mailbox_isr(struct pva *pva)
 
 	/* Clear the mailbox interrupt status */
 	int_status = int_status & PVA_READY;
-	host1x_writel(pdev, hsp_sm7_r(), int_status);
+	pva_write_mailbox(pdev, PVA_MBOX_ISR, int_status);
 
 	/* Wake up the waiters */
 	pva->mailbox_status = PVA_MBOX_STATUS_DONE;

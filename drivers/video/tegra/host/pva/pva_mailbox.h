@@ -1,7 +1,7 @@
 /*
  * PVA mailbox header
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,7 +39,8 @@
 
 /* Number of valid MBOX registers used for sending commands */
 #define VALID_MB_INPUT_REGS 4
-
+/* Number of valid MBOX registers */
+#define VALID_MB_INPUT_REGS_EX 8
 struct pva;
 
 /**
@@ -129,5 +130,33 @@ void pva_mailbox_isr(struct pva *pva);
  * the mailbox register set by the ucode.
  */
 int pva_mailbox_wait_event(struct pva *pva, int wait_time);
+
+/**
+ * pva_read_mailbox() - read a mailbox register
+ *
+ * @pva:			Pointer to PVA structure
+ * @mbox:		mailbox register to be written
+ *
+ * This function will read the indicated mailbox register and return its
+ * contents.  it uses side channel B as host would.
+ *
+ * Return Value:
+ *	contents of the indicated mailbox register
+ */
+u32 pva_read_mailbox(struct platform_device *pdev, u32 mbox_id);
+
+/**
+ * pva_write_mailbox() - write to a mailbox register
+ *
+ * @pva:			Pointer to PVA structure
+ * @mbox:		mailbox register to be written
+ * @value:		value to be written into the mailbox register
+ *
+ * This function will write a value into the indicated mailbox register.
+ *
+ * Return Value:
+ *	none
+ */
+void pva_write_mailbox(struct platform_device *pdev, u32 mbox_id, u32 value);
 
 #endif /*__PVA_MAINBOX_H__*/

@@ -30,9 +30,8 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 	struct pva *pva = dev_id;
 	struct platform_device *pdev = pva->pdev;
 	u32 checkpoint = host1x_readl(pdev, cfg_ccq_status8_r());
-	u32 status7 = host1x_readl(pdev, hsp_sm7_r());
-	u32 status6 = host1x_readl(pdev, hsp_sm6_r());
-	u32 status5 = host1x_readl(pdev, hsp_sm5_r());
+	u32 status7 = pva_read_mailbox(pdev, PVA_MBOX_ISR);
+	u32 status5 = pva_read_mailbox(pdev, PVA_MBOX_AISR);
 	u32 lic_int_status = host1x_readl(pdev, sec_lic_intr_status_r());
 	bool recover = false;
 
@@ -58,12 +57,7 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 			recover = true;
 		}
 
-		host1x_writel(pdev, hsp_sm5_r(), 0x0);
-	}
-
-	if (status6 & PVA_INT_PENDING) {
-		nvhost_warn(&pdev->dev, "Unhandled SWUART ISR (%x)", status6);
-		host1x_writel(pdev, hsp_sm6_r(), 0x0);
+		pva_write_mailbox(pdev, PVA_MBOX_AISR, 0x0);
 	}
 
 	if (status7 & PVA_INT_PENDING) {

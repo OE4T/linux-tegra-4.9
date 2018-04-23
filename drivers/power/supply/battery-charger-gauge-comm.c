@@ -37,7 +37,7 @@
 #include <linux/timer.h>
 #include <linux/power/battery-charger-gauge-comm.h>
 #include <linux/power/reset/system-pmic.h>
-#include <linux/wakelock.h>
+#include <linux/device.h>
 #include <linux/iio/consumer.h>
 #include <linux/iio/types.h>
 #include <linux/iio/iio.h>
@@ -66,7 +66,7 @@ struct battery_charger_dev {
 	int				polling_time_sec;
 	struct thermal_zone_device	*battery_tz;
 	bool				start_monitoring;
-	struct wake_lock		charger_wake_lock;
+	struct wakeup_source		charger_wake_lock;
 	bool				locked;
 	struct rtc_device		*rtc;
 	bool				enable_thermal_monitor;
@@ -219,7 +219,7 @@ EXPORT_SYMBOL_GPL(battery_charger_thermal_stop_monitoring);
 int battery_charger_acquire_wake_lock(struct battery_charger_dev *bc_dev)
 {
 	if (!bc_dev->locked) {
-		wake_lock(&bc_dev->charger_wake_lock);
+		__pm_stay_awake(&bc_dev->charger_wake_lock);
 		bc_dev->locked = true;
 	}
 	return 0;
@@ -229,7 +229,7 @@ EXPORT_SYMBOL_GPL(battery_charger_acquire_wake_lock);
 int battery_charger_release_wake_lock(struct battery_charger_dev *bc_dev)
 {
 	if (bc_dev->locked) {
-		wake_unlock(&bc_dev->charger_wake_lock);
+		__pm_relax(&bc_dev->charger_wake_lock);
 		bc_dev->locked = false;
 	}
 	return 0;
@@ -511,8 +511,8 @@ struct battery_charger_dev *battery_charger_register(struct device *dev,
 	INIT_DELAYED_WORK(&bc_dev->restart_charging_wq,
 			battery_charger_restart_charging_wq);
 
-	wake_lock_init(&bc_dev->charger_wake_lock, WAKE_LOCK_SUSPEND,
-						"charger-suspend-lock");
+	wakeup_source_init(&bc_dev->charger_wake_lock, "charger-suspend-lock");
+
 	list_add(&bc_dev->list, &charger_list);
 	mutex_unlock(&charger_gauge_list_mutex);
 	return bc_dev;
@@ -526,7 +526,7 @@ void battery_charger_unregister(struct battery_charger_dev *bc_dev)
 	if (bc_dev->polling_time_sec)
 		cancel_delayed_work(&bc_dev->poll_temp_monitor_wq);
 	cancel_delayed_work(&bc_dev->restart_charging_wq);
-	wake_lock_destroy(&bc_dev->charger_wake_lock);
+	wakeup_source_trash(&bc_dev->charger_wake_lock);
 	mutex_unlock(&charger_gauge_list_mutex);
 	kfree(bc_dev);
 }

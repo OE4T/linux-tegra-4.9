@@ -509,7 +509,7 @@ static const struct gpu_ops gv100_ops = {
 			gr_gv100_pg_gr_load_gating_prod,
 	},
 	.fifo = {
-		.get_preempt_timeout = gv100_fifo_get_preempt_timeout,
+		.get_preempt_timeout = gv11b_fifo_get_preempt_timeout,
 		.init_fifo_setup_hw = gv11b_init_fifo_setup_hw,
 		.bind_channel = channel_gm20b_bind,
 		.unbind_channel = channel_gv11b_unbind,

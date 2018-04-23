@@ -726,7 +726,9 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 				struct camrtc_event_struct *event)
 {
-#ifndef CONFIG_EVENTLIB
+#if !defined(CONFIG_EVENTLIB) || \
+	!defined(camrtc_trace_vi_frame_begin) || \
+	!defined(camrtc_trace_vi_frame_end)
 	trace_rtcpu_unknown(event->header.tstamp,
 		event->header.id,
 		event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
@@ -735,6 +737,7 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 	struct nvhost_device_data *pdata;
 	struct nvhost_task_begin task_begin;
 	struct nvhost_task_end task_end;
+	u64 ts = 0;
 
 	pdata = platform_get_drvdata(tracer->vi_platform_device);
 
@@ -745,29 +748,33 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 	}
 
 	switch (event->header.id) {
-	case camrtc_trace_vi_task_begin:
+	case camrtc_trace_vi_frame_begin:
 		/* Write task start event */
 		task_begin.syncpt_id = event->data.data32[0];
 		task_begin.syncpt_thresh = event->data.data32[1];
 		task_begin.class_id = pdata->class;
 
+		ts = ((u64)event->data.data32[5] << 32) |
+			(u64)event->data.data32[4];
 		keventlib_write(pdata->eventlib_id,
 			&task_begin,
 			sizeof(task_begin),
 			NVHOST_TASK_BEGIN,
-			event->header.tstamp);
+			ts);
 		break;
-	case camrtc_trace_vi_task_end:
+	case camrtc_trace_vi_frame_end:
 		/* Write task end event */
 		task_end.syncpt_id = event->data.data32[0];
 		task_end.syncpt_thresh = event->data.data32[1];
 		task_end.class_id = pdata->class;
 
+		ts = ((u64)event->data.data32[5] << 32) |
+			(u64)event->data.data32[4];
 		keventlib_write(pdata->eventlib_id,
 			&task_end,
 			sizeof(task_end),
 			NVHOST_TASK_END,
-			event->header.tstamp);
+			ts);
 		break;
 	default:
 		pr_warn("%pFn event id %d cannot be found\n",

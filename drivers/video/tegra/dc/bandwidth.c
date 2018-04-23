@@ -155,7 +155,9 @@ static void calc_disp_params(struct tegra_dc *dc,
 			((tegra_dc_fmt(w->fmt) ==
 				TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8) ||
 			(tegra_dc_fmt(w->fmt) ==
-				TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE));
+				TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE) ||
+			(tegra_dc_fmt(w->fmt) ==
+				TEGRA_DC_EXT_FMT_T_Y8_U8__Y8_V8));
 	/* all of tegra's YUV formats(420 and 422) fetch 2 bytes per pixel,
 	 * but the size reported by tegra_dc_fmt_bpp for the planar version
 	 * is of the luma plane's size only. */
@@ -337,6 +339,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 
 	/* YUV 422 case */
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8:
+	case TEGRA_DC_EXT_FMT_T_Y8_U8__Y8_V8:
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422_TRUE:

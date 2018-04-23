@@ -678,6 +678,7 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 
 	/* YUV packed into 32-bits */
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8:
+	case TEGRA_DC_EXT_FMT_T_Y8_U8__Y8_V8:
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE:
 		return 16;
 
@@ -697,6 +698,7 @@ static inline bool tegra_dc_is_yuv(int fmt)
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422_TRUE:
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8:
+	case TEGRA_DC_EXT_FMT_T_Y8_U8__Y8_V8:
 	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R_TRUE:

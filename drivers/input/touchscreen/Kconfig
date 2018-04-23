@@ -54,4 +54,16 @@ config TOUCHSCREEN_EXC80
 	  To compile this driver as a module, choose M here: the
 	  module will be called EGALAX.
 
+config TOUCHSCREEN_EXC80_USB
+	tristate "EGALAX_EXC80 USB based touchscreens"
+	help
+	  Say Y here if you have a touchscreen interface using the
+	  EGALAX controller, and your board-specific initialization
+	  code includes that in its table.
+
+	  If unsure, say N (but it's safe to say "Y").
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called egalax_ts_usb.
+
 endif

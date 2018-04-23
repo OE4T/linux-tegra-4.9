@@ -111,7 +111,6 @@
 			/* ie. clocks, io pins, power sources */
 			avdd-reg = "vana";
 			iovdd-reg = "vif";
-			dvdd-reg = "vdig";
 
 			/* Defines number of frames to be dropped by driver internally after applying */
 			/* sensor crop settings. Some sensors send corrupt frames after applying */
@@ -400,7 +399,6 @@
 			/* ie. clocks, io pins, power sources */
 			avdd-reg = "vana";
 			iovdd-reg = "vif";
-			dvdd-reg = "vdig";
 
 			/* Defines number of frames to be dropped by driver internally after applying */
 			/* sensor crop settings. Some sensors send corrupt frames after applying */

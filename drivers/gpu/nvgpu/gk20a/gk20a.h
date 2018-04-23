@@ -820,6 +820,7 @@ struct gpu_ops {
 				struct nv_pmu_clk_rpc *rpccall,
 				struct set_fll_clk *setfllclk);
 			u32 (*perf_pmu_vfe_load)(struct gk20a *g);
+			u32 (*clk_set_boot_clk)(struct gk20a *g);
 		}clk;
 	} pmu_ver;
 	struct {

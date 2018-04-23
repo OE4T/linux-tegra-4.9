@@ -448,6 +448,12 @@ struct nv_pmu_clk_cmd_rpc {
 	struct nv_pmu_allocation request;
 };
 
+struct nv_pmu_clk_cmd_generic {
+	u8 cmd_type;
+	bool b_perf_daemon_cmd;
+	u8 pad[2];
+};
+
 #define NV_PMU_CLK_CMD_RPC_ALLOC_OFFSET                                        \
 	(offsetof(struct nv_pmu_clk_cmd_rpc, request))
 
@@ -455,6 +461,7 @@ struct nv_pmu_clk_cmd {
 	union {
 		u8 cmd_type;
 		struct nv_pmu_boardobj_cmd_grp grp_set;
+		struct nv_pmu_clk_cmd_generic generic;
 		struct nv_pmu_clk_cmd_rpc rpc;
 		struct nv_pmu_boardobj_cmd_grp grp_get_status;
 	};

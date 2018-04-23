@@ -281,10 +281,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-	err = nvgpu_clk_arb_init_arbiter(g);
-	if (err) {
-		nvgpu_err(g, "failed to init clk arb");
-		goto done;
+	if (g->ops.pmu_ver.clk.clk_set_boot_clk && nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
+		g->ops.pmu_ver.clk.clk_set_boot_clk(g);
+	else {
+		err = nvgpu_clk_arb_init_arbiter(g);
+		if (err) {
+			nvgpu_err(g, "failed to init clk arb");
+			goto done;
+		}
 	}
 
 	err = gk20a_init_therm_support(g);

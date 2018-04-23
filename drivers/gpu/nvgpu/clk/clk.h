@@ -35,8 +35,11 @@
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SKIP 0x10
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_MASK 0x1F
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SHIFT 0
+#define BOOT_GPCCLK_MHZ 952
 
 struct gk20a;
+
+int clk_set_boot_fll_clk(struct gk20a *g);
 
 /* clock related defines for GPUs supporting clock control from pmu*/
 struct clk_pmupstate {
@@ -54,6 +57,12 @@ struct clockentry {
 		u8 clk_which;
 		u8 perf_index;
 		u32 api_clk_domain;
+};
+
+struct change_fll_clk {
+		u32 api_clk_domain;
+		u16 clkmhz;
+		u32 voltuv;
 };
 
 struct set_fll_clk {
@@ -133,4 +142,5 @@ u32 nvgpu_clk_vf_change_inject_data_fill_gv10x(struct gk20a *g,
 u32 nvgpu_clk_vf_change_inject_data_fill_gp10x(struct gk20a *g,
 	struct nv_pmu_clk_rpc *rpccall,
 	struct set_fll_clk *setfllclk);
+u32 nvgpu_clk_set_boot_fll_clk_gv10x(struct gk20a *g);
 #endif

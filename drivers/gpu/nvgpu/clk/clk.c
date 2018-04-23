@@ -182,6 +182,7 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
+	cmd.cmd.clk.generic.b_perf_daemon_cmd =false;
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);
@@ -544,6 +545,156 @@ u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain)
 				CLK_PROG_VFE_ENTRY_SRAM);
 		}
 	}
+	return status;
+}
+
+static int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
+{
+	int status = -EINVAL;
+	struct clk_domain *pdomain;
+	u8 i;
+	struct clk_pmupstate *pclk = &g->clk_pmu;
+	u16 clkmhz = 0;
+	struct clk_domain_3x_master *p3xmaster;
+	struct clk_domain_3x_slave *p3xslave;
+	unsigned long slaveidxmask;
+	struct set_fll_clk setfllclk;
+
+	if (fllclk->api_clk_domain != CTRL_CLK_DOMAIN_GPCCLK)
+		return -EINVAL;
+	if (fllclk->voltuv == 0)
+		return -EINVAL;
+	if (fllclk->clkmhz == 0)
+		return -EINVAL;
+
+	setfllclk.voltuv = fllclk->voltuv;
+	setfllclk.gpc2clkmhz = fllclk->clkmhz;
+
+	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
+			struct clk_domain *, pdomain, i) {
+
+		if (pdomain->api_domain == fllclk->api_clk_domain) {
+
+			if (!pdomain->super.implements(g, &pdomain->super,
+				CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER)) {
+				status = -EINVAL;
+				goto done;
+			}
+			p3xmaster = (struct clk_domain_3x_master *)pdomain;
+			slaveidxmask = p3xmaster->slave_idxs_mask;
+			for_each_set_bit(i, &slaveidxmask, 32) {
+				p3xslave = (struct clk_domain_3x_slave *)
+						CLK_CLK_DOMAIN_GET(pclk, i);
+				if ((p3xslave->super.super.super.api_domain !=
+				     CTRL_CLK_DOMAIN_XBARCLK) &&
+				    (p3xslave->super.super.super.api_domain !=
+				     CTRL_CLK_DOMAIN_SYSCLK))
+					continue;
+				clkmhz = 0;
+				status = p3xslave->clkdomainclkgetslaveclk(g,
+						pclk,
+						(struct clk_domain *)p3xslave,
+						&clkmhz,
+						fllclk->clkmhz);
+				if (status) {
+					status = -EINVAL;
+					goto done;
+				}
+				if (p3xslave->super.super.super.api_domain ==
+				     CTRL_CLK_DOMAIN_XBARCLK)
+					setfllclk.xbar2clkmhz = clkmhz;
+				if (p3xslave->super.super.super.api_domain ==
+				     CTRL_CLK_DOMAIN_SYSCLK)
+					setfllclk.sys2clkmhz = clkmhz;
+			}
+		}
+	}
+	/*set regime ids */
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_GPCCLK,
+			&setfllclk.current_regime_id_gpc);
+	if (status)
+		goto done;
+
+	setfllclk.target_regime_id_gpc = find_regime_id(g,
+			CTRL_CLK_DOMAIN_GPCCLK, setfllclk.gpc2clkmhz);
+
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_SYSCLK,
+			&setfllclk.current_regime_id_sys);
+	if (status)
+		goto done;
+
+	setfllclk.target_regime_id_sys = find_regime_id(g,
+			CTRL_CLK_DOMAIN_SYSCLK, setfllclk.sys2clkmhz);
+
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_XBARCLK,
+			&setfllclk.current_regime_id_xbar);
+	if (status)
+		goto done;
+
+	setfllclk.target_regime_id_xbar = find_regime_id(g,
+			CTRL_CLK_DOMAIN_XBARCLK, setfllclk.xbar2clkmhz);
+
+	status = clk_pmu_vf_inject(g, &setfllclk);
+
+	if (status)
+		nvgpu_err(g,
+			"vf inject to change clk failed");
+
+	/* save regime ids */
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBARCLK,
+			setfllclk.target_regime_id_xbar);
+	if (status)
+		goto done;
+
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_GPCCLK,
+			setfllclk.target_regime_id_gpc);
+	if (status)
+		goto done;
+
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_SYSCLK,
+			setfllclk.target_regime_id_sys);
+	if (status)
+		goto done;
+done:
+	return status;
+}
+
+u32 nvgpu_clk_set_boot_fll_clk_gv10x(struct gk20a *g)
+{
+	int status;
+	struct change_fll_clk bootfllclk;
+	u16 gpcclk_clkmhz = BOOT_GPCCLK_MHZ;
+	u32 gpcclk_voltuv = 0;
+	u32 voltuv = 0;
+
+	status = clk_vf_point_cache(g);
+	if (status) {
+		nvgpu_err(g,"caching failed");
+		return status;
+	}
+
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPCCLK,
+		&gpcclk_clkmhz, &gpcclk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
+	if (status) {
+		nvgpu_err(g,"failed 1");
+		return status;
+	}
+
+	voltuv = gpcclk_voltuv;
+
+	status = volt_set_voltage(g, voltuv, 0);
+	if (status)
+		nvgpu_err(g,
+			"attempt to set boot voltage failed %d",
+			voltuv);
+
+	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPCCLK;
+	bootfllclk.clkmhz = gpcclk_clkmhz;
+	bootfllclk.voltuv = voltuv;
+	status = clk_program_fllclks(g, &bootfllclk);
+	if (status)
+		nvgpu_err(g, "attempt to set boot gpcclk failed");
+
 	return status;
 }
 

@@ -55,15 +55,15 @@ void nvgpu_os_fence_android_drop_ref(struct nvgpu_os_fence *s)
 int nvgpu_os_fence_fdget(struct nvgpu_os_fence *fence_out,
 	struct channel_gk20a *c, int fd)
 {
-	int err;
+	int err = -ENOSYS;
 
-	err = nvgpu_os_fence_sema_fdget(fence_out, c, fd);
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	err = nvgpu_os_fence_syncpt_fdget(fence_out, c, fd);
+#endif
 
-	/* TO-DO
-	 * check if fence is empty and if CONFIG_TEGRA_GK20A_NVHOST
-	 * is enabled, try to get a sync_fence using
-	 * corresponding nvhost method.
-	 */
+	if (err)
+		err = nvgpu_os_fence_sema_fdget(fence_out, c, fd);
+
 	if (err)
 		nvgpu_err(c->g, "error obtaining fence from fd %d", fd);
 

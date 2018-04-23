@@ -108,6 +108,10 @@ void gk20a_channel_gen_sema_wait_cmd(struct channel_gk20a *c,
 	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
 	u32 wait_cmd_size, int pos);
 
+int gk20a_channel_gen_syncpt_wait_cmd(struct channel_gk20a *c,
+		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
+		u32 wait_cmd_size, int pos, bool preallocated);
+
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
 	bool set_safe_state);
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,

@@ -164,6 +164,10 @@ nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o \
 		common/linux/os_fence_android.o \
 		common/linux/os_fence_android_sema.o
 
+ifeq ($(CONFIG_TEGRA_GK20A_NVHOST), y)
+nvgpu-$(CONFIG_SYNC) += common/linux/os_fence_android_syncpt.o
+endif
+
 nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o \
 	common/linux/pci_usermode.o \
 

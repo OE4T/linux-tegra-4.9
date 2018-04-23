@@ -28,6 +28,7 @@
 struct nvgpu_semaphore;
 struct channel_gk20a;
 struct priv_cmd_entry;
+struct nvgpu_nvhost_dev;
 
 /*
  * struct nvgpu_os_fence adds an abstraction to the earlier Android Sync
@@ -107,5 +108,23 @@ static inline int nvgpu_os_fence_fdget(
 }
 
 #endif /* CONFIG_SYNC */
+
+#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_SYNC)
+
+int nvgpu_os_fence_syncpt_create(struct nvgpu_os_fence *fence_out,
+	struct channel_gk20a *c, struct nvgpu_nvhost_dev *nvhost_dev,
+	u32 id, u32 thresh);
+
+#else
+
+static inline int nvgpu_os_fence_syncpt_create(
+	struct nvgpu_os_fence *fence_out, struct channel_gk20a *c,
+	struct nvgpu_nvhost_dev *nvhost_dev,
+	u32 id, u32 thresh)
+{
+	return -ENOSYS;
+}
+
+#endif /* CONFIG_TEGRA_GK20A_NVHOST && CONFIG_SYNC */
 
 #endif /* __NVGPU_OS_FENCE__ */

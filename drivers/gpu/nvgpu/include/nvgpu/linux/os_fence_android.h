@@ -39,4 +39,8 @@ void nvgpu_os_fence_init(struct nvgpu_os_fence *fence_out,
 	struct gk20a *g, const struct nvgpu_os_fence_ops *fops,
 	struct sync_fence *fence);
 
-#endif
+int nvgpu_os_fence_syncpt_fdget(
+	struct nvgpu_os_fence *fence_out,
+	struct channel_gk20a *c, int fd);
+
+#endif /* __NVGPU_OS_FENCE_ANDROID_H__ */

@@ -32,14 +32,6 @@
 			regulator-max-microvolt = <1800000>;
 		};
 
-		p2822_vdd_1v2_cvb: regulator@103 {
-			compatible = "regulator-fixed";
-			reg = <103>;
-			regulator-name = "vdd-1v2-cvb";
-			regulator-min-microvolt = <1200000>;
-			regulator-max-microvolt = <1200000>;
-		};
-
 		p2822_vdd_1v8_sd: regulator@104 {
 			compatible = "regulator-fixed";
 			reg = <104>;

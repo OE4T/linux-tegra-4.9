@@ -336,10 +336,22 @@ struct nv_pmu_clk_clk_domain_list {
 		NV_PMU_VF_INJECT_MAX_CLOCK_DOMAINS];
 };
 
+struct nv_pmu_clk_clk_domain_list_v1 {
+	u8 num_domains;
+	struct ctrl_clk_clk_domain_list_item_v1 clk_domains[
+		NV_PMU_VF_INJECT_MAX_CLOCK_DOMAINS];
+};
+
 struct nv_pmu_clk_vf_change_inject {
 	u8 flags;
 	struct nv_pmu_clk_clk_domain_list clk_list;
 	struct nv_pmu_volt_volt_rail_list volt_list;
+};
+
+struct nv_pmu_clk_vf_change_inject_v1 {
+	u8 flags;
+	struct nv_pmu_clk_clk_domain_list_v1 clk_list;
+	struct nv_pmu_volt_volt_rail_list_v1 volt_list;
 };
 
 #define NV_NV_PMU_CLK_LOAD_FEATURE_VIN                              (0x00000002)
@@ -400,12 +412,14 @@ union nv_pmu_clk_clk_freq_controller_boardobj_set_union {
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(clk, clk_freq_controller);
 
 /* CLK CMD ID definitions.  */
-#define NV_PMU_CLK_CMD_ID_BOARDOBJ_GRP_SET                          (0x00000000)
-#define NV_PMU_CLK_CMD_ID_RPC                                       (0x00000001)
+#define NV_PMU_CLK_CMD_ID_BOARDOBJ_GRP_SET                          (0x00000001)
+#define NV_PMU_CLK_CMD_ID_RPC                                       (0x00000000)
 #define NV_PMU_CLK_CMD_ID_BOARDOBJ_GRP_GET_STATUS                   (0x00000002)
 
-#define NV_PMU_CLK_RPC_ID_LOAD                                      (0x00000002)
-#define NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT                      (0x00000001)
+#define NV_PMU_CLK_RPC_ID_LOAD                                      (0x00000001)
+#define NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT                      (0x00000000)
+#define NV_PMU_CLK_RPC_ID_CLK_FREQ_EFF_AVG                          (0x00000002)
+
 
 struct nv_pmu_clk_cmd_rpc {
 	u8 cmd_type;
@@ -432,13 +446,14 @@ struct nv_pmu_clk_rpc {
 	flcn_status flcn_status;
 	union {
 		struct nv_pmu_clk_vf_change_inject clk_vf_change_inject;
+		struct nv_pmu_clk_vf_change_inject_v1 clk_vf_change_inject_v1;
 		struct nv_pmu_clk_load clk_load;
 	} params;
 };
 
 /* CLK MSG ID definitions */
-#define NV_PMU_CLK_MSG_ID_BOARDOBJ_GRP_SET                          (0x00000000)
-#define NV_PMU_CLK_MSG_ID_RPC                                       (0x00000001)
+#define NV_PMU_CLK_MSG_ID_BOARDOBJ_GRP_SET                          (0x00000001)
+#define NV_PMU_CLK_MSG_ID_RPC                                       (0x00000000)
 #define NV_PMU_CLK_MSG_ID_BOARDOBJ_GRP_GET_STATUS                   (0x00000002)
 
 struct nv_pmu_clk_msg_rpc {

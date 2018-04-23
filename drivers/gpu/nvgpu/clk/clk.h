@@ -127,4 +127,10 @@ u32 clk_domain_get_f_points(
 int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
 int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
 int clk_pmu_freq_controller_load(struct gk20a *g, bool bload, u8 bit_idx);
+u32 nvgpu_clk_vf_change_inject_data_fill_gv10x(struct gk20a *g,
+	struct nv_pmu_clk_rpc *rpccall,
+	struct set_fll_clk *setfllclk);
+u32 nvgpu_clk_vf_change_inject_data_fill_gp10x(struct gk20a *g,
+	struct nv_pmu_clk_rpc *rpccall,
+	struct set_fll_clk *setfllclk);
 #endif

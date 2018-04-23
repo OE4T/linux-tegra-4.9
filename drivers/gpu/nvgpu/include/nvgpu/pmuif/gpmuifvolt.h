@@ -343,7 +343,7 @@ struct nv_pmu_volt_volt_rail_list {
 	rails[NV_PMU_VF_INJECT_MAX_VOLT_RAILS];
 };
 
-struct nv_pmu_volt_volt_rail_list_V1 {
+struct nv_pmu_volt_volt_rail_list_v1 {
 	u8 num_rails;
 	struct ctrl_volt_volt_rail_list_item_v1
 	rails[NV_PMU_VF_INJECT_MAX_VOLT_RAILS];

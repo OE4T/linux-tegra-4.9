@@ -219,31 +219,13 @@ done:
 	return status;
 }
 
-static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
+u32 nvgpu_clk_vf_change_inject_data_fill_gp10x(struct gk20a *g,
+	struct nv_pmu_clk_rpc *rpccall,
+	struct set_fll_clk *setfllclk)
 {
-	struct pmu_cmd cmd;
-	struct pmu_payload payload;
-	u32 status;
-	u32 seqdesc;
-	struct nv_pmu_clk_rpc rpccall;
-	struct clkrpc_pmucmdhandler_params handler;
 	struct nv_pmu_clk_vf_change_inject *vfchange;
 
-	memset(&payload, 0, sizeof(struct pmu_payload));
-	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
-	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
-
-	if ((setfllclk->gpc2clkmhz == 0) || (setfllclk->xbar2clkmhz == 0) ||
-		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0))
-		return -EINVAL;
-
-	if ((setfllclk->target_regime_id_gpc > CTRL_CLK_FLL_REGIME_ID_FR) ||
-		(setfllclk->target_regime_id_sys > CTRL_CLK_FLL_REGIME_ID_FR) ||
-		(setfllclk->target_regime_id_xbar > CTRL_CLK_FLL_REGIME_ID_FR))
-		return -EINVAL;
-
-	rpccall.function = NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT;
-	vfchange = &rpccall.params.clk_vf_change_inject;
+	vfchange = &rpccall->params.clk_vf_change_inject;
 	vfchange->flags = 0;
 	vfchange->clk_list.num_domains = 3;
 	vfchange->clk_list.clk_domains[0].clk_domain = CTRL_CLK_DOMAIN_GPC2CLK;
@@ -275,6 +257,69 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 	vfchange->volt_list.rails[0].voltage_uv = setfllclk->voltuv;
 	vfchange->volt_list.rails[0].voltage_min_noise_unaware_uv =
 				setfllclk->voltuv;
+
+	return 0;
+}
+
+u32 nvgpu_clk_vf_change_inject_data_fill_gv10x(struct gk20a *g,
+	struct nv_pmu_clk_rpc *rpccall,
+	struct set_fll_clk *setfllclk)
+{
+	struct nv_pmu_clk_vf_change_inject_v1 *vfchange;
+
+	vfchange = &rpccall->params.clk_vf_change_inject_v1;
+	vfchange->flags = 0;
+	vfchange->clk_list.num_domains = 4;
+	vfchange->clk_list.clk_domains[0].clk_domain = CTRL_CLK_DOMAIN_GPCCLK;
+	vfchange->clk_list.clk_domains[0].clk_freq_khz =
+			setfllclk->gpc2clkmhz * 1000;
+
+	vfchange->clk_list.clk_domains[1].clk_domain = CTRL_CLK_DOMAIN_XBARCLK;
+	vfchange->clk_list.clk_domains[1].clk_freq_khz =
+			setfllclk->xbar2clkmhz * 1000;
+
+	vfchange->clk_list.clk_domains[2].clk_domain = CTRL_CLK_DOMAIN_SYSCLK;
+	vfchange->clk_list.clk_domains[2].clk_freq_khz =
+			setfllclk->sys2clkmhz * 1000;
+
+	vfchange->clk_list.clk_domains[3].clk_domain = CTRL_CLK_DOMAIN_NVDCLK;
+	vfchange->clk_list.clk_domains[3].clk_freq_khz = 855 * 1000;
+
+	vfchange->volt_list.num_rails = 1;
+	vfchange->volt_list.rails[0].rail_idx = 0;
+	vfchange->volt_list.rails[0].voltage_uv = setfllclk->voltuv;
+	vfchange->volt_list.rails[0].voltage_min_noise_unaware_uv =
+			setfllclk->voltuv;
+
+	return 0;
+}
+
+static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
+{
+	struct pmu_cmd cmd;
+	struct pmu_payload payload;
+	u32 status;
+	u32 seqdesc;
+	struct nv_pmu_clk_rpc rpccall;
+	struct clkrpc_pmucmdhandler_params handler;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
+	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
+
+	if ((setfllclk->gpc2clkmhz == 0) || (setfllclk->xbar2clkmhz == 0) ||
+		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0))
+		return -EINVAL;
+
+	if ((setfllclk->target_regime_id_gpc > CTRL_CLK_FLL_REGIME_ID_FR) ||
+		(setfllclk->target_regime_id_sys > CTRL_CLK_FLL_REGIME_ID_FR) ||
+		(setfllclk->target_regime_id_xbar > CTRL_CLK_FLL_REGIME_ID_FR))
+		return -EINVAL;
+
+	rpccall.function = NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT;
+
+	g->ops.pmu_ver.clk.clk_vf_change_inject_data_fill(g,
+		&rpccall, setfllclk);
 
 	cmd.hdr.unit_id = PMU_UNIT_CLK;
 	cmd.hdr.size =  (u32)sizeof(struct nv_pmu_clk_cmd) +

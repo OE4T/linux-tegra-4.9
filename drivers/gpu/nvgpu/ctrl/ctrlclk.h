@@ -176,6 +176,19 @@ struct ctrl_clk_clk_domain_list_item {
 	u8   target_regime_id;
 };
 
+struct ctrl_clk_clk_domain_list_item_v1 {
+	u32  clk_domain;
+	u32  clk_freq_khz;
+	u8   regime_id;
+	u8   source;
+};
+
+struct ctrl_clk_clk_domain_list {
+	u8 num_domains;
+	struct ctrl_clk_clk_domain_list_item_v1
+		clk_domains[CTRL_BOARDOBJ_MAX_BOARD_OBJECTS];
+};
+
 #define CTRL_CLK_VF_PAIR_FREQ_MHZ_GET(pvfpair)                          \
 	((pvfpair)->freq_mhz)
 

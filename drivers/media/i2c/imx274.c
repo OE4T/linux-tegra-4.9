@@ -1,7 +1,7 @@
 /*
  * imx274.c - imx274 sensor driver
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,37 +27,17 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 
-#include <media/tegra-v4l2-camera.h>
-#include <media/camera_common.h>
+#include <media/tegra_v4l2_camera.h>
+#include <media/tegracam_core.h>
 #include <media/imx274.h>
 
 #include "imx274_mode_tbls.h"
 
-#define IMX274_MAX_COARSE_DIFF		10
-
-#define IMX274_GAIN_SHIFT		8
-#define IMX274_MIN_GAIN		(1 << IMX274_GAIN_SHIFT)
-#define IMX274_MAX_ANALOG_GAIN		(IMX274_MIN_GAIN * 111 / 5)
+#define IMX274_GAIN_FACTOR		10
+#define IMX274_MIN_GAIN			(1 * IMX274_GAIN_FACTOR)
+#define IMX274_MAX_ANALOG_GAIN	(IMX274_MIN_GAIN * 111 / 5)
 #define IMX274_MAX_DIGITAL_GAIN	64
 #define IMX274_MAX_GAIN	(IMX274_MAX_ANALOG_GAIN * IMX274_MAX_DIGITAL_GAIN)
-
-#define IMX274_MIN_FRAME_LENGTH	(0x8ED)
-#define IMX274_MAX_FRAME_LENGTH	(0xFFFF)
-#define IMX274_MIN_EXPOSURE_COARSE	(0x0001)
-#define IMX274_MAX_EXPOSURE_COARSE	\
-	(IMX274_MAX_FRAME_LENGTH-IMX274_MAX_COARSE_DIFF)
-
-#define IMX274_DEFAULT_GAIN		IMX274_MIN_GAIN
-#define IMX274_DEFAULT_FRAME_LENGTH	(0x111B)
-#define IMX274_DEFAULT_EXPOSURE_COARSE	\
-	(IMX274_DEFAULT_FRAME_LENGTH-IMX274_MAX_COARSE_DIFF)
-
-#define IMX274_DEFAULT_MODE	IMX274_MODE_3840X2160
-
-#define IMX274_DEFAULT_WIDTH	3840
-#define IMX274_DEFAULT_HEIGHT	2160
-#define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
-#define IMX274_DEFAULT_CLK_FREQ	24000000
 
 #define IMX274_SENSOR_INTERNAL_CLK_FREQ	72000000
 #define IMX274_4K_MODE_HMAX			263
@@ -76,111 +56,60 @@
 #define IMX274_1080P_MODE_MIN_VMAX		4620
 #define IMX274_1080P_MODE_OFFSET		112
 
+#define IMX274_EEPROM_ADDRESS		0x57
+#define IMX274_EEPROM_SIZE			256
+#define IMX274_EEPROM_STR_SIZE		(IMX274_EEPROM_SIZE * 2)
+#define IMX274_EEPROM_BLOCK_SIZE	(1 << 8)
+#define IMX274_EEPROM_NUM_BLOCKS \
+	(IMX274_EEPROM_SIZE / IMX274_EEPROM_BLOCK_SIZE)
+
+#define IMX274_FUSE_ID_START_ADDR	91
+#define IMX274_FUSE_ID_SIZE		8
+#define IMX274_FUSE_ID_STR_SIZE		(IMX274_FUSE_ID_SIZE * 2)
+
+static const struct of_device_id imx274_of_match[] = {
+	{ .compatible = "nvidia,imx274", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, imx274_of_match);
+
+static const u32 ctrl_cid_list[] = {
+	TEGRA_CAMERA_CID_GAIN,
+	TEGRA_CAMERA_CID_EXPOSURE,
+	TEGRA_CAMERA_CID_EXPOSURE_SHORT,
+	TEGRA_CAMERA_CID_FRAME_RATE,
+	TEGRA_CAMERA_CID_GROUP_HOLD,
+	TEGRA_CAMERA_CID_HDR_EN,
+	TEGRA_CAMERA_CID_FUSE_ID,
+};
+
 struct imx274 {
-	struct camera_common_power_rail	power;
-	int				num_ctrls;
-	struct v4l2_ctrl_handler	ctrl_handler;
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
-	struct media_pad		pad;
 
 	const char			*devname;
 	struct dentry			*debugfs_dir;
 	struct mutex			streaming_lock;
 	bool				streaming;
 
+	struct camera_common_eeprom_data eeprom[IMX274_EEPROM_NUM_BLOCKS];
+	u8				eeprom_buf[IMX274_EEPROM_STR_SIZE];
+	u8				fuse_id[IMX274_FUSE_ID_SIZE];
 	u32				frame_length;
 	u32				vmax;
-	s32				last_coarse_long;
-	s32				last_coarse_short;
+	s64				last_exposure_long;
+	s64				last_exposure_short;
 	s32				group_hold_prev;
 	bool				group_hold_en;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
-	struct camera_common_pdata	*pdata;
-	struct v4l2_ctrl		*ctrls[];
+	struct tegracam_device		*tc_dev;
 };
 
 static const struct regmap_config sensor_regmap_config = {
 	.reg_bits = 16,
 	.val_bits = 8,
 	.cache_type = REGCACHE_RBTREE,
-};
-
-static int imx274_s_ctrl(struct v4l2_ctrl *ctrl);
-
-static const struct v4l2_ctrl_ops imx274_ctrl_ops = {
-	.s_ctrl		= imx274_s_ctrl,
-};
-
-static struct v4l2_ctrl_config ctrl_config_list[] = {
-/* Do not change the name field for the controls! */
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_GAIN,
-		.name = "Gain",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX274_MIN_GAIN,
-		.max = IMX274_MAX_GAIN,
-		.def = IMX274_DEFAULT_GAIN,
-		.step = 1,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_FRAME_LENGTH,
-		.name = "Frame Length",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX274_MIN_FRAME_LENGTH,
-		.max = IMX274_MAX_FRAME_LENGTH,
-		.def = IMX274_DEFAULT_FRAME_LENGTH,
-		.step = 1,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_COARSE_TIME,
-		.name = "Coarse Time",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX274_MIN_EXPOSURE_COARSE,
-		.max = IMX274_MAX_EXPOSURE_COARSE,
-		.def = IMX274_DEFAULT_EXPOSURE_COARSE,
-		.step = 1,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT,
-		.name = "Coarse Time Short",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX274_MIN_EXPOSURE_COARSE,
-		.max = IMX274_MAX_EXPOSURE_COARSE,
-		.def = IMX274_DEFAULT_EXPOSURE_COARSE,
-		.step = 1,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
-		.name = "Group Hold",
-		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
-		.min = 0,
-		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
-		.menu_skip_mask = 0,
-		.def = 0,
-		.qmenu_int = switch_ctrl_qmenu,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_HDR_EN,
-		.name = "HDR enable",
-		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
-		.min = 0,
-		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
-		.menu_skip_mask = 0,
-		.def = 0,
-		.qmenu_int = switch_ctrl_qmenu,
-	},
 };
 
 static inline void imx274_get_vmax_regs(imx274_reg *regs,
@@ -236,11 +165,10 @@ module_param(test_mode, int, 0644);
 static inline int imx274_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
 	int err = 0;
 	u32 reg_val = 0;
 
-	err = regmap_read(priv->regmap, addr, &reg_val);
+	err = regmap_read(s_data->regmap, addr, &reg_val);
 	*val = reg_val & 0xFF;
 
 	return err;
@@ -249,10 +177,9 @@ static inline int imx274_read_reg(struct camera_common_data *s_data,
 static int imx274_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 {
 	int err;
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
-	struct device *dev = &priv->i2c_client->dev;
+	struct device *dev = s_data->dev;
 
-	err = regmap_write(priv->regmap, addr, val);
+	err = regmap_write(s_data->regmap, addr, val);
 	if (err)
 		dev_err(dev, "%s: i2c write failed, %x = %x\n",
 			__func__, addr, val);
@@ -263,24 +190,535 @@ static int imx274_write_reg(struct camera_common_data *s_data, u16 addr, u8 val)
 static int imx274_write_table(struct imx274 *priv,
 				const imx274_reg table[])
 {
-	return regmap_util_write_table_8(priv->regmap,
+	return regmap_util_write_table_8(priv->s_data->regmap,
 					 table,
 					 NULL, 0,
 					 IMX274_TABLE_WAIT_MS,
 					 IMX274_TABLE_END);
 }
 
+static int imx274_set_gain(struct tegracam_device *tc_dev, s64 val);
+static int imx274_set_frame_rate(struct tegracam_device *tc_dev, s64 val);
+static int imx274_set_exposure(struct tegracam_device *tc_dev, s64 val);
+static int imx274_set_exposure_shr(struct tegracam_device *tc_dev, s64 val);
+static int imx274_set_exposure_shr_dol_short(struct tegracam_device *tc_dev,
+			s64 val);
+static int imx274_set_exposure_shr_dol_long(struct tegracam_device *tc_dev,
+			s64 val);
+static bool imx274_in_dol_mode(const struct imx274 *priv);
+
+static int imx274_set_group_hold(struct tegracam_device *tc_dev, bool val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	int err;
+
+	priv->group_hold_prev = val;
+	err = imx274_write_reg(s_data,
+				IMX274_GROUP_HOLD_ADDR, val);
+	if (err) {
+		dev_err(dev,
+			"%s: Group hold control error\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int imx274_set_gain(struct tegracam_device *tc_dev, s64 val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	imx274_reg reg_list[2];
+	int err;
+	int i = 0;
+	u32 again;
+	u8 dgain;
+	u16 reg_again;
+	u8 reg_dgain;
+
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
+
+	if (val < IMX274_MIN_GAIN)
+		val = IMX274_MIN_GAIN;
+	else if (val > IMX274_MAX_GAIN)
+		val = IMX274_MAX_GAIN;
+
+	if  (val > (IMX274_MAX_ANALOG_GAIN * 32)) {
+		dgain = 64;
+		reg_dgain = 0x06;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 16)) {
+		dgain = 32;
+		reg_dgain = 0x05;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 8)) {
+		dgain = 16;
+		reg_dgain = 0x04;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 4)) {
+		dgain = 8;
+		reg_dgain = 0x03;
+	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 2)) {
+		dgain = 4;
+		reg_dgain = 0x02;
+	} else if (val > (IMX274_MAX_ANALOG_GAIN)) {
+		dgain = 2;
+		reg_dgain = 0x01;
+	} else  {
+		dgain = 1;
+		reg_dgain = 0x00;
+	}
+	again = val / (dgain * mode->control_properties.gain_factor);
+
+	reg_again = 2048 - (2048 / again);
+	if (reg_again > 1957)
+		reg_again = 1957;
+
+	imx274_get_gain_reg(reg_list, reg_again);
+
+	dev_dbg(dev, "%s: val:%lld, gain:%lld, again:(%d, %d), dgain:(%d, %d)\n",
+			__func__,
+			val,
+			val / IMX274_MIN_GAIN,
+			again / IMX274_MIN_GAIN,
+			reg_again,
+			dgain,
+			reg_dgain);
+
+	/* writing analog gain */
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	/* writing digital gain */
+	err = imx274_write_reg(priv->s_data, IMX274_DIGITAL_GAIN_ADDR,
+				reg_dgain);
+	if (err)
+		goto fail;
+
+	return 0;
+
+fail:
+	dev_err(dev, "%s: GAIN control error\n", __func__);
+	return err;
+}
+
+static
+int imx274_set_exposure_shr_dol_short(struct tegracam_device *tc_dev, s64 val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	struct v4l2_control control;
+	int hdr_en;
+	imx274_reg reg_list[2];
+	u16 rhs1, hmax;
+	s32 shr_dol1, min_shr;
+	int err;
+	int i = 0;
+	u64 freq = IMX274_SENSOR_INTERNAL_CLK_FREQ;
+
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(dev, "could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if (hdr_en != SWITCH_ON)  {
+		dev_dbg(dev, "%s: SHR DOL1 is ignored for non-HDR mode\n",
+			__func__);
+		goto fail;
+	}
+
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_4K_MODE_HMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_1080P_MODE_HMAX;
+	} else {
+		dev_err(dev, "%s: error, invalid dol mode\n", __func__);
+		err = -EINVAL;
+		goto fail;
+	}
+
+
+	priv->last_exposure_short = val;
+	shr_dol1 = rhs1 -
+		(val * freq /
+		mode->control_properties.exposure_factor  -
+		IMX274_DOL_MODE_CLOCKS_OFFSET) /
+		hmax - 1 / 4;
+
+	if (shr_dol1 <= min_shr)
+		shr_dol1 = min_shr;
+
+	if (shr_dol1 > rhs1 - 2)
+		shr_dol1 = rhs1 - 2;
+
+	dev_dbg(dev,
+		 "%s: et:%d, shr_dol1:%d, rhs1:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
+		 __func__,
+		(int)(val * 1000000 / mode->control_properties.exposure_factor),
+		shr_dol1,
+		rhs1,
+		mode->signal_properties.pixel_clock.val,
+		mode->image_properties.line_length,
+		hmax);
+
+	imx274_get_shr_dol1_regs(reg_list, (u16)shr_dol1);
+
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+	return 0;
+
+fail:
+	dev_err(dev, "%s: EXPOSURE short control is not set\n", __func__);
+	return err;
+}
+
+static
+int imx274_set_exposure_shr_dol_long(struct tegracam_device *tc_dev, s64 val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	imx274_reg reg_list[2];
+	u16 hmax, rhs1;
+	s32 shr_dol2, min_shr;
+	int err;
+	int i = 0;
+	u64 freq = IMX274_SENSOR_INTERNAL_CLK_FREQ;
+
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_4K_MODE_HMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_1080P_MODE_HMAX;
+	} else {
+		dev_err(dev, "%s: error, invalid dol mode\n", __func__);
+		err = -EINVAL;
+		goto fail;
+	}
+
+	priv->last_exposure_long = val;
+
+	shr_dol2 = priv->vmax  -
+		(val * freq /
+		mode->control_properties.exposure_factor -
+		IMX274_DOL_MODE_CLOCKS_OFFSET) /
+		hmax - 1 / 4;
+
+	if (shr_dol2 < rhs1 + min_shr)
+		shr_dol2 = rhs1 + min_shr;
+
+	if (shr_dol2 > priv->vmax - 4)
+		shr_dol2 = priv->vmax - 4;
+
+	dev_dbg(dev,
+		 "%s: et:%d, shr_dol2:%d, vmax:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
+		 __func__,
+		(int)(val * 1000000 / mode->control_properties.exposure_factor),
+		shr_dol2,
+		priv->vmax,
+		mode->signal_properties.pixel_clock.val,
+		mode->image_properties.line_length,
+		hmax);
+
+	imx274_get_shr_dol2_regs(reg_list, (u16)shr_dol2);
+
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+	return 0;
+
+fail:
+	dev_err(dev, "%s: EXPOSURE_SHORT control error\n", __func__);
+	return err;
+}
+
+static bool imx274_in_dol_mode(const struct imx274 *priv)
+{
+	const struct camera_common_data *s_data = priv->s_data;
+
+	switch (s_data->mode) {
+	case IMX274_MODE_3840X2160_DOL_30FPS:
+	case IMX274_MODE_1920X1080_DOL_60FPS:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static int imx274_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	struct v4l2_control control;
+	int hdr_en;
+	imx274_reg reg_list[3];
+	int err;
+	int i = 0;
+	u8 svr;
+	u64 freq = IMX274_SENSOR_INTERNAL_CLK_FREQ;
+
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
+
+	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
+
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		priv->vmax = (u32)(freq *
+				mode->control_properties.framerate_factor /
+				(val *
+				IMX274_DOL_4K_MODE_HMAX));
+		if (priv->vmax < IMX274_DOL_4K_MODE_MIN_VMAX)
+			priv->vmax = IMX274_DOL_4K_MODE_MIN_VMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		priv->vmax = (u32)(freq *
+				mode->control_properties.framerate_factor /
+				(val *
+				IMX274_DOL_1080P_MODE_HMAX));
+		if (priv->vmax < IMX274_DOL_1080P_MODE_MIN_VMAX)
+			priv->vmax = IMX274_DOL_1080P_MODE_MIN_VMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080) {
+		priv->vmax = (u32)(freq *
+				mode->control_properties.framerate_factor /
+				(val *
+				IMX274_1080P_MODE_HMAX));
+		if (priv->vmax < IMX274_1080P_MODE_MIN_VMAX)
+			priv->vmax = IMX274_1080P_MODE_MIN_VMAX;
+	} else {
+		priv->vmax = (u32)(freq *
+				mode->control_properties.framerate_factor /
+				(val *
+				IMX274_4K_MODE_HMAX));
+		if (priv->vmax < IMX274_4K_MODE_MIN_VMAX)
+			priv->vmax = IMX274_4K_MODE_MIN_VMAX;
+	}
+
+	imx274_get_vmax_regs(reg_list, priv->vmax);
+
+	for (i = 0; i < 3; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	dev_dbg(dev, "%s: PCLK:%lld, LL:%d, fps:%lld, VMAX:%d\n", __func__,
+			mode->signal_properties.pixel_clock.val,
+			mode->image_properties.line_length,
+			val / mode->control_properties.framerate_factor,
+			priv->vmax);
+
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(dev, "could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if ((hdr_en == SWITCH_ON && imx274_in_dol_mode(priv))
+		&& (priv->last_exposure_long != 0)) {
+		err = imx274_set_exposure_shr_dol_long(tc_dev,
+					priv->last_exposure_long);
+		if (err)
+			dev_err(dev, "%s: error exposure time dol long\n",
+				__func__);
+
+		err = imx274_set_exposure_shr_dol_short(tc_dev,
+					priv->last_exposure_short);
+		if (err)
+			dev_err(dev, "%s: error exposure time dol short\n",
+				__func__);
+	}
+
+	return 0;
+
+fail:
+	dev_err(dev, "%s: FRAME_RATE control error\n", __func__);
+	return err;
+}
+
+static
+u16 imx274_calculate_exposure_shr(struct tegracam_device *tc_dev, s64 val)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
+	u8 svr;
+	u16 shr;
+	u64 freq = IMX274_SENSOR_INTERNAL_CLK_FREQ;
+
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
+
+	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
+
+	if (s_data->mode == IMX274_MODE_1920X1080) {
+		shr = priv->vmax  -
+			(u32) (val * freq /
+			mode->control_properties.exposure_factor -
+			IMX274_1080P_MODE_OFFSET) /
+			IMX274_1080P_MODE_HMAX;
+
+		if (shr > priv->vmax - 4)
+			shr = priv->vmax - 4;
+		if (shr < 8)
+			shr = 8;
+	} else {
+
+		shr = priv->vmax  -
+			(u32) (val  * freq /
+			mode->control_properties.exposure_factor -
+			IMX274_4K_MODE_OFFSET) /
+			IMX274_4K_MODE_HMAX;
+
+		if (shr < 12)
+			shr = 12;
+
+		if (shr > priv->vmax - 4)
+			shr = priv->vmax - 4;
+	}
+
+	dev_dbg(dev, "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax);
+	return shr;
+}
+
+static int imx274_set_exposure(struct tegracam_device *tc_dev, s64 val)
+{
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	struct v4l2_control control;
+	int hdr_en;
+	int err;
+
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
+
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(dev, "could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+
+	if (hdr_en == SWITCH_ON && imx274_in_dol_mode(priv)) {
+		err = imx274_set_exposure_shr_dol_long(tc_dev, val);
+		if (err)
+			dev_err(dev,
+			"%s: error exposure time dol long override\n", __func__);
+	} else {
+		err = imx274_set_exposure_shr(tc_dev, val);
+		if (err)
+			dev_err(dev,
+			"%s: error exposure time SHR override\n", __func__);
+	}
+	return err;
+}
+
+static int imx274_set_exposure_shr(struct tegracam_device *tc_dev, s64 val)
+{
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
+	imx274_reg reg_list[2];
+	int err;
+	u16 shr;
+	int i = 0;
+
+	dev_dbg(dev, "%s: val: %lld\n", __func__, val);
+
+	shr = imx274_calculate_exposure_shr(tc_dev, val);
+
+	imx274_get_shr_regs(reg_list, shr);
+
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+
+	return 0;
+
+fail:
+	dev_err(dev, "%s: Exposure control error\n", __func__);
+	return err;
+}
+
+static int imx274_fill_string_ctrl(struct tegracam_device *tc_dev,
+				struct v4l2_ctrl *ctrl)
+{
+	struct imx274 *priv = (struct imx274 *)tc_dev->priv;
+	int i;
+
+	switch (ctrl->id) {
+	case TEGRA_CAMERA_CID_FUSE_ID:
+		for (i = 0; i < IMX274_FUSE_ID_SIZE; i++)
+			sprintf(&ctrl->p_new.p_char[i*2], "%02x",
+				priv->fuse_id[i]);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ctrl->p_cur.p_char = ctrl->p_new.p_char;
+
+	return 0;
+}
+
+static struct tegracam_ctrl_ops imx274_ctrl_ops = {
+	.numctrls = ARRAY_SIZE(ctrl_cid_list),
+	.ctrl_cid_list = ctrl_cid_list,
+	.string_ctrl_size = {0, IMX274_FUSE_ID_STR_SIZE},
+	.set_gain = imx274_set_gain,
+	.set_exposure = imx274_set_exposure,
+	.set_exposure_short = imx274_set_exposure_shr_dol_short,
+	.set_frame_rate = imx274_set_frame_rate,
+	.set_group_hold = imx274_set_group_hold,
+	.fill_string_ctrl = imx274_fill_string_ctrl,
+};
+
 static int imx274_power_on(struct camera_common_data *s_data)
 {
 	int err = 0;
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
-	struct camera_common_power_rail *pw = &priv->power;
-	struct device *dev = &priv->i2c_client->dev;
+	struct camera_common_power_rail *pw = s_data->power;
+	struct camera_common_pdata *pdata = s_data->pdata;
+	struct device *dev = s_data->dev;
 
 	dev_dbg(dev, "%s: power on\n", __func__);
 
-	if (priv->pdata && priv->pdata->power_on) {
-		err = priv->pdata->power_on(pw);
+	if (pdata && pdata->power_on) {
+		err = pdata->power_on(pw);
 		if (err)
 			dev_err(dev, "%s failed.\n", __func__);
 		else
@@ -295,7 +733,6 @@ static int imx274_power_on(struct camera_common_data *s_data)
 	if (pw->pwdn_gpio)
 		gpio_set_value(pw->pwdn_gpio, 0);
 	usleep_range(10, 20);
-
 
 	if (pw->dvdd)
 		err = regulator_enable(pw->dvdd);
@@ -343,14 +780,14 @@ imx274_avdd_fail:
 static int imx274_power_off(struct camera_common_data *s_data)
 {
 	int err = 0;
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
-	struct camera_common_power_rail *pw = &priv->power;
-	struct device *dev = &priv->i2c_client->dev;
+	struct camera_common_power_rail *pw = s_data->power;
+	struct camera_common_pdata *pdata = s_data->pdata;
+	struct device *dev = s_data->dev;
 
 	dev_dbg(dev, "%s: power off\n", __func__);
 
-	if (priv->pdata->power_off) {
-		err = priv->pdata->power_off(pw);
+	if (pdata && pdata->power_off) {
+		err = pdata->power_off(pw);
 		if (err) {
 			dev_err(dev, "%s failed.\n", __func__);
 			return err;
@@ -379,27 +816,54 @@ power_off_done:
 	return 0;
 }
 
-static int imx274_power_get(struct imx274 *priv)
+static int imx274_power_put(struct tegracam_device *tc_dev)
 {
-	struct camera_common_power_rail *pw = &priv->power;
-	struct camera_common_pdata *pdata = priv->pdata;
-	struct device *dev = &priv->i2c_client->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct camera_common_power_rail *pw = s_data->power;
+
+	if (unlikely(!pw))
+		return -EFAULT;
+
+	if (likely(pw->avdd))
+		regulator_put(pw->avdd);
+	if (likely(pw->dvdd))
+		regulator_put(pw->dvdd);
+	if (likely(pw->iovdd))
+		regulator_put(pw->iovdd);
+
+	pw->avdd = NULL;
+	pw->dvdd = NULL;
+	pw->iovdd = NULL;
+
+	gpio_free(pw->pwdn_gpio);
+	gpio_free(pw->reset_gpio);
+	gpio_free(pw->af_gpio);
+
+	return 0;
+}
+
+static int imx274_power_get(struct tegracam_device *tc_dev)
+{
+	struct device *dev = tc_dev->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct camera_common_power_rail *pw = s_data->power;
+	struct camera_common_pdata *pdata = s_data->pdata;
 	const char *mclk_name;
 	const char *parentclk_name;
 	struct clk *parent;
 	int err = 0;
 
-	mclk_name = priv->pdata->mclk_name ?
-		    priv->pdata->mclk_name : "cam_mclk1";
+	mclk_name = pdata->mclk_name ?
+		    pdata->mclk_name : "cam_mclk1";
 	pw->mclk = devm_clk_get(dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
 		dev_err(dev, "unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
 
-	parentclk_name = priv->pdata->parentclk_name;
+	parentclk_name = pdata->parentclk_name;
 	if (parentclk_name) {
-		parent = devm_clk_get(&priv->i2c_client->dev, parentclk_name);
+		parent = devm_clk_get(dev, parentclk_name);
 		if (IS_ERR(parent)) {
 			dev_err(dev, "unable to get parent clcok %s",
 				parentclk_name);
@@ -408,15 +872,14 @@ static int imx274_power_get(struct imx274 *priv)
 	}
 
 	/* ananlog 2.7v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->avdd, pdata->regulators.avdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
+	err |= camera_common_regulator_get(dev,
 			&pw->iovdd, pdata->regulators.iovdd);
-
 	/* digital 1.2v, not all imx274 modules draw this from CVB */
 	if (pdata->regulators.dvdd != NULL)
-		err |= camera_common_regulator_get(&priv->i2c_client->dev,
+		err |= camera_common_regulator_get(dev,
 			&pw->dvdd, pdata->regulators.dvdd);
 
 	if (!err) {
@@ -429,796 +892,11 @@ static int imx274_power_get(struct imx274 *priv)
 	return err;
 }
 
-static int imx274_set_gain(struct imx274 *priv, s32 val);
-static int imx274_set_frame_length(struct imx274 *priv, s32 val);
-static int imx274_set_coarse_time(struct imx274 *priv, s32 val);
-static int imx274_set_coarse_time_shr(struct imx274 *priv, s32 val);
-static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val);
-static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val);
-static bool imx274_has_dol_mode(const struct imx274 *priv);
-
-static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
+static
+struct camera_common_pdata *imx274_parse_dt(struct tegracam_device *tc_dev)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
-	struct device *dev = &client->dev;
-	struct v4l2_control control;
-	int hdr_en;
-	int err;
-
-	dev_dbg(dev, "%s++\n", __func__);
-
-	if (!enable) {
-		mutex_lock(&priv->streaming_lock);
-		err = imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
-		if (err) {
-			mutex_unlock(&priv->streaming_lock);
-			return err;
-		} else  {
-			priv->streaming = false;
-			mutex_unlock(&priv->streaming_lock);
-		}
-
-		return 0;
-	}
-
-	dev_dbg(dev, "%s mode[%d]\n", __func__, s_data->mode);
-
-	err = imx274_write_table(priv, mode_table[s_data->mode]);
-	if (err)
-		goto exit;
-
-
-	if (s_data->override_enable) {
-		/* write list of override regs for the asking frame length, */
-		/* coarse integration time, and gain.                       */
-		control.id = TEGRA_CAMERA_CID_GAIN;
-		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-		err |= imx274_set_gain(priv, control.value);
-		if (err)
-			dev_dbg(dev, "%s: error gain override\n", __func__);
-
-		control.id = TEGRA_CAMERA_CID_FRAME_LENGTH;
-		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-		err |= imx274_set_frame_length(priv, control.value);
-		if (err)
-			dev_dbg(dev, "%s: error frame length override\n",
-				__func__);
-
-		control.id = TEGRA_CAMERA_CID_COARSE_TIME;
-		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-		err |= imx274_set_coarse_time(priv, control.value);
-		if (err)
-			dev_dbg(dev, "%s: error coarse time override\n",
-				__func__);
-
-		control.id = TEGRA_CAMERA_CID_HDR_EN;
-		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-		if (err < 0) {
-			dev_err(dev, "could not find device ctrl.\n");
-			return err;
-		}
-
-		hdr_en = switch_ctrl_qmenu[control.value];
-		if (hdr_en == SWITCH_ON && imx274_has_dol_mode(priv)) {
-			control.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT;
-			err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-			err |= imx274_set_coarse_time_shr_dol_short(priv,
-						control.value);
-			if (err)
-				dev_dbg(dev,
-					"%s: error short coarse override\n",
-					 __func__);
-		}
-	}
-
-	if (test_mode) {
-		err = imx274_write_table(priv,
-			mode_table[IMX274_MODE_TEST_PATTERN]);
-		if (err)
-			goto exit;
-		}
-
-	mutex_lock(&priv->streaming_lock);
-	err = imx274_write_table(priv, mode_table[IMX274_MODE_START_STREAM]);
-	if (err) {
-		mutex_unlock(&priv->streaming_lock);
-		goto exit;
-	} else {
-		priv->streaming = true;
-		mutex_unlock(&priv->streaming_lock);
-	}
-
-
-	return 0;
-exit:
-	dev_dbg(dev, "%s: error setting stream\n", __func__);
-	return err;
-}
-
-static int imx274_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
-		struct v4l2_subdev_format *format)
-{
-	return camera_common_g_fmt(sd, &format->format);
-}
-
-static int imx274_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
-	struct v4l2_subdev_format *format)
-{
-	int ret;
-
-	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		ret = camera_common_try_fmt(sd, &format->format);
-	else
-		ret = camera_common_s_fmt(sd, &format->format);
-
-	return ret;
-}
-
-static int imx274_g_input_status(struct v4l2_subdev *sd, u32 *status)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
-	struct imx274 *priv = (struct imx274 *)s_data->priv;
-	struct camera_common_power_rail *pw = &priv->power;
-
-	*status = pw->state == SWITCH_ON;
-	return 0;
-}
-
-static struct v4l2_subdev_video_ops imx274_subdev_video_ops = {
-	.s_stream	= imx274_s_stream,
-	.g_mbus_config	= camera_common_g_mbus_config,
-	.g_input_status	= imx274_g_input_status,
-};
-
-static struct v4l2_subdev_core_ops imx274_subdev_core_ops = {
-	.s_power	= camera_common_s_power,
-};
-
-static struct v4l2_subdev_pad_ops imx274_subdev_pad_ops = {
-	.set_fmt	= imx274_set_fmt,
-	.get_fmt	= imx274_get_fmt,
-	.enum_mbus_code = camera_common_enum_mbus_code,
-	.enum_frame_size        = camera_common_enum_framesizes,
-	.enum_frame_interval    = camera_common_enum_frameintervals,
-};
-
-static struct v4l2_subdev_ops imx274_subdev_ops = {
-	.core	= &imx274_subdev_core_ops,
-	.video	= &imx274_subdev_video_ops,
-	.pad	= &imx274_subdev_pad_ops,
-};
-
-static const struct of_device_id imx274_of_match[] = {
-	{ .compatible = "nvidia,imx274", },
-	{ },
-};
-
-static struct camera_common_sensor_ops imx274_common_ops = {
-	.power_on = imx274_power_on,
-	.power_off = imx274_power_off,
-	.write_reg = imx274_write_reg,
-	.read_reg = imx274_read_reg,
-};
-
-static int imx274_set_group_hold(struct imx274 *priv)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	int err;
-	int gh_prev = switch_ctrl_qmenu[priv->group_hold_prev];
-
-	if (priv->group_hold_en == true && gh_prev == SWITCH_OFF) {
-		err = imx274_write_reg(priv->s_data,
-				       IMX274_GROUP_HOLD_ADDR, 0x1);
-		if (err)
-			goto fail;
-		priv->group_hold_prev = 1;
-	} else if (priv->group_hold_en == false && gh_prev == SWITCH_ON) {
-		err = imx274_write_reg(priv->s_data,
-				       IMX274_GROUP_HOLD_ADDR, 0x0);
-		if (err)
-			goto fail;
-		priv->group_hold_prev = 0;
-	}
-
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: Group hold control error\n", __func__);
-	return err;
-}
-
-static int imx274_set_gain(struct imx274 *priv, s32 val)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	imx274_reg reg_list[2];
-	int err;
-	int i = 0;
-	u32 again;
-	u8 dgain;
-	u16 reg_again;
-	u8 reg_dgain;
-
-	dev_dbg(dev, "%s: val: %d\n", __func__, val);
-
-	if (val < IMX274_MIN_GAIN)
-		val = IMX274_MIN_GAIN;
-	else if (val > IMX274_MAX_GAIN)
-		val = IMX274_MAX_GAIN;
-
-	if  (val > (IMX274_MAX_ANALOG_GAIN * 32)) {
-		dgain = 64;
-		reg_dgain = 0x06;
-		again = val / dgain;
-	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 16)) {
-		dgain = 32;
-		reg_dgain = 0x05;
-		again = val  / dgain;
-	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 8)) {
-		dgain = 16;
-		reg_dgain = 0x04;
-		again = val / dgain;
-	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 4)) {
-		dgain = 8;
-		reg_dgain = 0x03;
-		again = val / dgain;
-	} else if  (val > (IMX274_MAX_ANALOG_GAIN * 2)) {
-		dgain = 4;
-		reg_dgain = 0x02;
-		again = val / dgain;
-	} else if (val > (IMX274_MAX_ANALOG_GAIN)) {
-		dgain = 2;
-		reg_dgain = 0x01;
-		again = val / dgain;
-	} else  {
-		dgain = 1;
-		reg_dgain = 0x00;
-		again = val / dgain;
-	}
-
-	reg_again = 2048 - (2048 * IMX274_MIN_GAIN / again);
-	if (reg_again > 1957)
-		reg_again = 1957;
-
-	imx274_get_gain_reg(reg_list, reg_again);
-	imx274_set_group_hold(priv);
-
-	dev_dbg(dev, "%s: val:%d, gain:%d, again:(%d, %d), dgain:(%d, %d)\n",
-			__func__,
-			val,
-			val / IMX274_MIN_GAIN,
-			again / IMX274_MIN_GAIN,
-			reg_again,
-			dgain,
-			reg_dgain);
-
-	/* writing analog gain */
-	for (i = 0; i < 2; i++) {
-		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
-		if (err)
-			goto fail;
-	}
-
-	/* writing digital gain */
-	err = imx274_write_reg(priv->s_data, IMX274_DIGITAL_GAIN_ADDR,
-				reg_dgain);
-	if (err)
-		goto fail;
-
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: GAIN control error\n", __func__);
-	return err;
-}
-
-static bool imx274_has_dol_mode(const struct imx274 *priv)
-{
-	const struct camera_common_data *s_data = priv->s_data;
-
-	switch (s_data->mode) {
-	case IMX274_MODE_3840X2160_DOL_30FPS:
-	case IMX274_MODE_1920X1080_DOL_60FPS:
-		return true;
-	default:
-		return false;
-	}
-}
-
-static int imx274_set_frame_length(struct imx274 *priv, s32 val)
-{
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
-	struct device *dev = &priv->i2c_client->dev;
-	struct v4l2_control control;
-	int hdr_en;
-	imx274_reg reg_list[3];
-	int err;
-	u32 frame_length;
-	u32 frame_rate;
-	int i = 0;
-	u8 svr;
-
-	dev_dbg(dev, "%s: val: %u\n", __func__, val);
-
-	frame_length = (u32)val;
-
-	frame_rate = (u32)(mode->signal_properties.pixel_clock.val /
-			(u32)(frame_length *
-			mode->image_properties.line_length));
-
-	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
-
-	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
-		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
-				(frame_rate *
-				IMX274_DOL_4K_MODE_HMAX));
-		if (priv->vmax < IMX274_DOL_4K_MODE_MIN_VMAX)
-			priv->vmax = IMX274_DOL_4K_MODE_MIN_VMAX;
-	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
-		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
-				(frame_rate *
-				IMX274_DOL_1080P_MODE_HMAX));
-		if (priv->vmax < IMX274_DOL_1080P_MODE_MIN_VMAX)
-			priv->vmax = IMX274_DOL_1080P_MODE_MIN_VMAX;
-	} else if (s_data->mode == IMX274_MODE_1920X1080) {
-		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
-				(frame_rate *
-				IMX274_1080P_MODE_HMAX));
-		if (priv->vmax < IMX274_1080P_MODE_MIN_VMAX)
-			priv->vmax = IMX274_1080P_MODE_MIN_VMAX;
-	} else {
-		priv->vmax = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
-				(frame_rate *
-				IMX274_4K_MODE_HMAX));
-		if (priv->vmax < IMX274_4K_MODE_MIN_VMAX)
-			priv->vmax = IMX274_4K_MODE_MIN_VMAX;
-	}
-
-	imx274_get_vmax_regs(reg_list, priv->vmax);
-
-	imx274_set_group_hold(priv);
-
-	for (i = 0; i < 3; i++) {
-		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
-		if (err)
-			goto fail;
-	}
-
-	dev_dbg(dev, "%s: PCLK:%lld, FL:%d, LL:%d, fps:%d, VMAX:%d\n", __func__,
-			mode->signal_properties.pixel_clock.val,
-			frame_length,
-			mode->image_properties.line_length,
-			frame_rate,
-			priv->vmax);
-
-	control.id = TEGRA_CAMERA_CID_HDR_EN;
-	err = camera_common_g_ctrl(priv->s_data, &control);
-	if (err < 0) {
-		dev_err(dev, "could not find device ctrl.\n");
-		return err;
-	}
-
-	hdr_en = switch_ctrl_qmenu[control.value];
-	if ((hdr_en == SWITCH_ON) && imx274_has_dol_mode(priv) &&
-		(priv->last_coarse_long != 0)) {
-		err = imx274_set_coarse_time_shr_dol_long(priv,
-					priv->last_coarse_long);
-		if (err)
-			dev_err(dev, "%s: error coarse time dol long\n",
-				__func__);
-
-		err = imx274_set_coarse_time_shr_dol_short(priv,
-					priv->last_coarse_short);
-		if (err)
-			dev_err(dev, "%s: error coarse time dol short\n",
-				__func__);
-	}
-
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
-	return err;
-}
-
-static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
-{
-	const struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
-	struct device *dev = &priv->i2c_client->dev;
-	u8 svr;
-	u16 shr;
-	u64 et_long;
-
-	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
-
-	if (s_data->mode == IMX274_MODE_1920X1080) {
-		et_long = mode->image_properties.line_length * rep *
-			FIXED_POINT_SCALING_FACTOR /
-			mode->signal_properties.pixel_clock.val;
-
-		shr = priv->vmax  -
-			(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
-			FIXED_POINT_SCALING_FACTOR  -
-			IMX274_1080P_MODE_OFFSET) /
-			IMX274_1080P_MODE_HMAX;
-
-		if (shr > priv->vmax - 4)
-			shr = priv->vmax - 4;
-		if (shr < 8)
-			shr = 8;
-	} else {
-		et_long = mode->image_properties.line_length * rep *
-			FIXED_POINT_SCALING_FACTOR /
-			mode->signal_properties.pixel_clock.val;
-
-		shr = priv->vmax  -
-			(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
-			FIXED_POINT_SCALING_FACTOR  -
-			IMX274_4K_MODE_OFFSET) /
-			IMX274_4K_MODE_HMAX;
-
-		if (shr < 12)
-			shr = 12;
-
-		if (shr > priv->vmax - 4)
-			shr = priv->vmax - 4;
-	}
-
-	dev_dbg(dev, "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax);
-	return shr;
-}
-
-static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	struct v4l2_control control;
-	int hdr_en;
-	int err;
-
-	control.id = TEGRA_CAMERA_CID_HDR_EN;
-	err = camera_common_g_ctrl(priv->s_data, &control);
-	if (err < 0) {
-		dev_err(dev, "could not find device ctrl.\n");
-		return err;
-	}
-
-	hdr_en = switch_ctrl_qmenu[control.value];
-
-	if ((hdr_en == SWITCH_ON) && imx274_has_dol_mode(priv)) {
-		err = imx274_set_coarse_time_shr_dol_long(priv, val);
-		if (err)
-			dev_dbg(dev,
-			"%s: error coarse time dol long override\n", __func__);
-	} else {
-		err = imx274_set_coarse_time_shr(priv, val);
-		if (err)
-			dev_dbg(dev,
-			"%s: error coarse time SHR override\n", __func__);
-	}
-	return err;
-}
-
-static int imx274_set_coarse_time_shr(struct imx274 *priv, s32 val)
-{
-	struct device *dev = &priv->i2c_client->dev;
-	imx274_reg reg_list[2];
-	int err;
-	u32 coarse_time;
-	u16 shr;
-	int i = 0;
-
-	coarse_time = val;
-
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d\n", __func__, coarse_time);
-
-	shr = imx274_calculate_coarse_time_shr(priv, coarse_time);
-
-	imx274_get_shr_regs(reg_list, shr);
-	imx274_set_group_hold(priv);
-
-	for (i = 0; i < 2; i++) {
-		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
-		if (err)
-			goto fail;
-	}
-
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
-	return err;
-}
-
-static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
-{
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
-	struct device *dev = &priv->i2c_client->dev;
-	struct v4l2_control control;
-	int hdr_en;
-	imx274_reg reg_list[2];
-	u16 rhs1, hmax;
-	s32 shr_dol1, min_shr;
-	int err;
-	int i = 0;
-	u64 et_short;
-
-	control.id = TEGRA_CAMERA_CID_HDR_EN;
-	err = camera_common_g_ctrl(priv->s_data, &control);
-	if (err < 0) {
-		dev_err(dev, "could not find device ctrl.\n");
-		return err;
-	}
-
-	hdr_en = switch_ctrl_qmenu[control.value];
-	if (hdr_en != SWITCH_ON)  {
-		dev_dbg(dev, "%s: SHR DOL1 is ignored for non-HDR mode\n",
-			__func__);
-		goto fail;
-	}
-
-	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
-		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
-		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
-		hmax = IMX274_DOL_4K_MODE_HMAX;
-	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
-		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
-		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
-		hmax = IMX274_DOL_1080P_MODE_HMAX;
-	} else {
-		dev_dbg(dev, "%s: error, invalid dol mode\n", __func__);
-		err = -EINVAL;
-		goto fail;
-	}
-
-
-	priv->last_coarse_short = val;
-	et_short = mode->image_properties.line_length * val *
-		FIXED_POINT_SCALING_FACTOR /
-		mode->signal_properties.pixel_clock.val;
-
-	shr_dol1 = rhs1 -
-		(et_short * IMX274_SENSOR_INTERNAL_CLK_FREQ /
-		FIXED_POINT_SCALING_FACTOR  -
-		IMX274_DOL_MODE_CLOCKS_OFFSET) /
-		hmax - 1 / 4;
-
-	if (shr_dol1 <= min_shr)
-		shr_dol1 = min_shr;
-
-	if (shr_dol1 > rhs1 - 2)
-		shr_dol1 = rhs1 - 2;
-
-	dev_dbg(dev,
-		 "%s: coarse:%d, et:%d, shr_dol1:%d, rhs1:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
-		 __func__,
-		val,
-		(int)(et_short * 1000000 / FIXED_POINT_SCALING_FACTOR),
-		shr_dol1,
-		rhs1,
-		mode->signal_properties.pixel_clock.val,
-		mode->image_properties.line_length,
-		hmax);
-
-	imx274_get_shr_dol1_regs(reg_list, (u16)shr_dol1);
-	imx274_set_group_hold(priv);
-
-	for (i = 0; i < 2; i++) {
-		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
-		if (err)
-			goto fail;
-	}
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: COARSE_TIME Short control is not set\n", __func__);
-	return err;
-}
-
-static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
-{
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
-	struct device *dev = &priv->i2c_client->dev;
-	imx274_reg reg_list[2];
-	u16 hmax, rhs1;
-	s32 shr_dol2, min_shr;
-	u64 et_long;
-	int err;
-	int i = 0;
-
-	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
-		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
-		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
-		hmax = IMX274_DOL_4K_MODE_HMAX;
-	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
-		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
-		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
-		hmax = IMX274_DOL_1080P_MODE_HMAX;
-	} else {
-		dev_dbg(dev, "%s: error, invalid dol mode\n", __func__);
-		err = -EINVAL;
-		goto fail;
-	}
-
-	priv->last_coarse_long = val;
-	et_long = mode->image_properties.line_length * val *
-		FIXED_POINT_SCALING_FACTOR /
-		mode->signal_properties.pixel_clock.val;
-
-	shr_dol2 = priv->vmax  -
-		(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
-		FIXED_POINT_SCALING_FACTOR  -
-		IMX274_DOL_MODE_CLOCKS_OFFSET) /
-		hmax - 1 / 4;
-
-	if (shr_dol2 < rhs1 + min_shr)
-		shr_dol2 = rhs1 + min_shr;
-
-	if (shr_dol2 > priv->vmax - 4)
-		shr_dol2 = priv->vmax - 4;
-
-	dev_dbg(dev,
-		 "%s: coarse:%d, et:%d, shr_dol2:%d, vmax:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
-		 __func__,
-		val,
-		(int)(et_long * 1000000 / FIXED_POINT_SCALING_FACTOR),
-		shr_dol2,
-		priv->vmax,
-		mode->signal_properties.pixel_clock.val,
-		mode->image_properties.line_length,
-		hmax);
-
-	imx274_get_shr_dol2_regs(reg_list, (u16)shr_dol2);
-	imx274_set_group_hold(priv);
-
-	for (i = 0; i < 2; i++) {
-		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
-		if (err)
-			goto fail;
-	}
-	return 0;
-
-fail:
-	dev_dbg(dev, "%s: COARSE_TIME_SHORT control error\n", __func__);
-	return err;
-}
-
-static int imx274_verify_streaming(struct imx274 *priv)
-{
-	int err = 0;
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return err;
-
-	err = imx274_s_stream(priv->subdev, true);
-	if (err)
-		goto error;
-
-error:
-	imx274_s_stream(priv->subdev, false);
-	camera_common_s_power(priv->subdev, false);
-
-	return err;
-}
-
-static int imx274_s_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct imx274 *priv =
-		container_of(ctrl->handler, struct imx274, ctrl_handler);
-	struct device *dev = &priv->i2c_client->dev;
-	int err = 0;
-
-	if (priv->power.state == SWITCH_OFF)
-		return 0;
-
-	switch (ctrl->id) {
-	case TEGRA_CAMERA_CID_GAIN:
-		err = imx274_set_gain(priv, ctrl->val);
-		break;
-	case TEGRA_CAMERA_CID_FRAME_LENGTH:
-		err = imx274_set_frame_length(priv, ctrl->val);
-		break;
-	case TEGRA_CAMERA_CID_COARSE_TIME:
-		err = imx274_set_coarse_time(priv, ctrl->val);
-		break;
-	case TEGRA_CAMERA_CID_COARSE_TIME_SHORT:
-		err = imx274_set_coarse_time_shr_dol_short(priv, ctrl->val);
-		break;
-	case TEGRA_CAMERA_CID_GROUP_HOLD:
-		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
-			priv->group_hold_en = true;
-		} else {
-			priv->group_hold_en = false;
-			err = imx274_set_group_hold(priv);
-		}
-		break;
-	case TEGRA_CAMERA_CID_HDR_EN:
-		break;
-	default:
-		dev_err(dev, "%s: unknown ctrl id.\n", __func__);
-		return -EINVAL;
-	}
-
-	return err;
-}
-
-static int imx274_ctrls_init(struct imx274 *priv)
-{
-	struct i2c_client *client = priv->i2c_client;
-	struct v4l2_ctrl *ctrl;
-	int num_ctrls;
-	int err;
-	int i;
-
-	dev_dbg(&client->dev, "%s++\n", __func__);
-
-	num_ctrls = ARRAY_SIZE(ctrl_config_list);
-	v4l2_ctrl_handler_init(&priv->ctrl_handler, num_ctrls);
-
-	for (i = 0; i < num_ctrls; i++) {
-		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
-			&ctrl_config_list[i], NULL);
-		if (ctrl == NULL) {
-			dev_err(&client->dev, "Failed to init %s ctrl\n",
-				ctrl_config_list[i].name);
-			continue;
-		}
-
-		if (ctrl_config_list[i].type == V4L2_CTRL_TYPE_STRING &&
-			ctrl_config_list[i].flags & V4L2_CTRL_FLAG_READ_ONLY) {
-			ctrl->p_new.p_char = devm_kzalloc(&client->dev,
-				ctrl_config_list[i].max + 1, GFP_KERNEL);
-		}
-		priv->ctrls[i] = ctrl;
-	}
-
-	priv->num_ctrls = num_ctrls;
-	priv->subdev->ctrl_handler = &priv->ctrl_handler;
-	if (priv->ctrl_handler.error) {
-		dev_err(&client->dev, "Error %d adding controls\n",
-			priv->ctrl_handler.error);
-		err = priv->ctrl_handler.error;
-		goto error;
-	}
-
-	err = v4l2_ctrl_handler_setup(&priv->ctrl_handler);
-	if (err) {
-		dev_err(&client->dev,
-			"Error %d setting default controls\n", err);
-		goto error;
-	}
-
-	return 0;
-
-error:
-	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	return err;
-}
-
-MODULE_DEVICE_TABLE(of, imx274_of_match);
-
-static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client,
-				const struct camera_common_data *s_data)
-{
-	struct device_node *node = client->dev.of_node;
+	struct device *dev = tc_dev->dev;
+	struct device_node *node = dev->of_node;
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
 	int err;
@@ -1226,30 +904,21 @@ static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client,
 	if (!node)
 		return NULL;
 
-	match = of_match_device(imx274_of_match, &client->dev);
+	match = of_match_device(imx274_of_match, dev);
 	if (!match) {
-		dev_err(&client->dev, " Failed to find matching dt id\n");
+		dev_err(dev, "Failed to find matching dt id\n");
 		return NULL;
 	}
 
-	board_priv_pdata = devm_kzalloc(&client->dev,
+	board_priv_pdata = devm_kzalloc(dev,
 			   sizeof(*board_priv_pdata), GFP_KERNEL);
-	if (!board_priv_pdata) {
-		dev_err(&client->dev, "Failed to allocate pdata\n");
+	if (!board_priv_pdata)
 		return NULL;
-	}
-
-
-	err = camera_common_parse_clocks(&client->dev, board_priv_pdata);
-	if (err) {
-		dev_err(&client->dev, "Failed to find clocks\n");
-		goto error;
-	}
 
 	err = of_property_read_string(node, "mclk",
 				      &board_priv_pdata->mclk_name);
 	if (err)
-		dev_err(&client->dev, "mclk not in DT\n");
+		dev_err(dev, "mclk not in DT\n");
 
 	board_priv_pdata->reset_gpio = of_get_named_gpio(node,
 			"reset-gpios", 0);
@@ -1261,11 +930,219 @@ static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client,
 	of_property_read_string(node, "iovdd-reg",
 			&board_priv_pdata->regulators.iovdd);
 
+	board_priv_pdata->has_eeprom =
+		of_property_read_bool(node, "has-eeprom");
+
+	of_property_read_u32(node, "fuse_id_start_addr",
+		&board_priv_pdata->fuse_id_addr);
+
 	return board_priv_pdata;
+}
+
+
+static int imx274_set_mode(struct tegracam_device *tc_dev)
+{
+	struct imx274 *priv = (struct imx274 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = s_data->dev;
+	int err;
+
+	err = imx274_write_table(priv, mode_table[s_data->mode]);
+	if (err)
+		return err;
+
+	if (test_mode) {
+		err = imx274_write_table(priv,
+			mode_table[IMX274_MODE_TEST_PATTERN]);
+		if (err)
+			goto exit;
+	}
+
+	return 0;
+
+exit:
+	dev_err(dev, "%s: error setting mode\n", __func__);
+	return err;
+}
+
+static int imx274_start_streaming(struct tegracam_device *tc_dev)
+{
+	struct imx274 *priv = (struct imx274 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = s_data->dev;
+	int err;
+
+	mutex_lock(&priv->streaming_lock);
+	err = imx274_write_table(priv, mode_table[IMX274_MODE_START_STREAM]);
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
+		goto exit;
+	} else {
+		priv->streaming = true;
+		mutex_unlock(&priv->streaming_lock);
+	}
+
+	return 0;
+
+exit:
+	dev_err(dev, "%s: error starting stream\n", __func__);
+	return err;
+}
+
+static int imx274_stop_streaming(struct tegracam_device *tc_dev)
+{
+	struct imx274 *priv = (struct imx274 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = s_data->dev;
+	int err;
+
+	mutex_lock(&priv->streaming_lock);
+	err = imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
+		goto exit;
+	} else  {
+		priv->streaming = false;
+		mutex_unlock(&priv->streaming_lock);
+	}
+
+	return 0;
+
+exit:
+	dev_err(dev, "%s: error stopping stream\n", __func__);
+	return err;
+}
+
+static struct camera_common_sensor_ops imx274_common_ops = {
+	.numfrmfmts = ARRAY_SIZE(imx274_frmfmt),
+	.frmfmt_table = imx274_frmfmt,
+	.power_on = imx274_power_on,
+	.power_off = imx274_power_off,
+	.write_reg = imx274_write_reg,
+	.read_reg = imx274_read_reg,
+	.parse_dt = imx274_parse_dt,
+	.power_get = imx274_power_get,
+	.power_put = imx274_power_put,
+	.set_mode = imx274_set_mode,
+	.start_streaming = imx274_start_streaming,
+	.stop_streaming = imx274_stop_streaming,
+};
+
+static int imx274_eeprom_device_release(struct imx274 *priv)
+{
+	int i;
+
+	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
+		if (priv->eeprom[i].i2c_client != NULL) {
+			i2c_unregister_device(priv->eeprom[i].i2c_client);
+			priv->eeprom[i].i2c_client = NULL;
+		}
+	}
+
+	return 0;
+}
+
+static int imx274_eeprom_device_init(struct imx274 *priv)
+{
+	char *dev_name = "eeprom_imx274";
+	struct camera_common_pdata *pdata = priv->s_data->pdata;
+	static struct regmap_config eeprom_regmap_config = {
+		.reg_bits = 8,
+		.val_bits = 8,
+	};
+	int i;
+	int err;
+
+	if (!pdata || !pdata->has_eeprom)
+		return -EINVAL;
+
+	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
+		priv->eeprom[i].adap = i2c_get_adapter(
+				priv->i2c_client->adapter->nr);
+		memset(&priv->eeprom[i].brd, 0, sizeof(priv->eeprom[i].brd));
+		strncpy(priv->eeprom[i].brd.type, dev_name,
+				sizeof(priv->eeprom[i].brd.type));
+		priv->eeprom[i].brd.addr = IMX274_EEPROM_ADDRESS + i;
+		priv->eeprom[i].i2c_client = i2c_new_device(
+				priv->eeprom[i].adap, &priv->eeprom[i].brd);
+
+		priv->eeprom[i].regmap = devm_regmap_init_i2c(
+			priv->eeprom[i].i2c_client, &eeprom_regmap_config);
+		if (IS_ERR(priv->eeprom[i].regmap)) {
+			err = PTR_ERR(priv->eeprom[i].regmap);
+			imx274_eeprom_device_release(priv);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+static int imx274_read_fuse_id(struct imx274 *priv)
+{
+	struct camera_common_pdata *pdata = priv->s_data->pdata;
+	int err, i;
+
+	if (!pdata->has_eeprom)
+		return -EINVAL;
+
+	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
+		err = regmap_bulk_read(priv->eeprom[i].regmap, 0,
+			&priv->eeprom_buf[i * IMX274_EEPROM_BLOCK_SIZE],
+			IMX274_EEPROM_BLOCK_SIZE);
+		if (err)
+			return err;
+	}
+
+	for (i = 0; i < IMX274_FUSE_ID_SIZE; i++)
+		priv->fuse_id[i] =
+			priv->eeprom_buf[i + pdata->fuse_id_addr];
+
+	return 0;
+}
+
+static int imx274_board_setup(struct imx274 *priv)
+{
+	struct camera_common_data *s_data = priv->s_data;
+	struct device *dev = s_data->dev;
+	int err = 0;
+
+	if (!s_data->pdata->has_eeprom)
+		return 0;
+
+	/* eeprom for fuse id*/
+	err = imx274_eeprom_device_init(priv);
+	if (err && s_data->pdata->has_eeprom) {
+		dev_err(dev,
+			"Failed to allocate eeprom reg map: %d\n", err);
+		return err;
+	}
+
+	err = camera_common_mclk_enable(s_data);
+	if (err) {
+		dev_err(dev,
+			"Error %d turning on mclk\n", err);
+		return err;
+	}
+
+	err = imx274_power_on(s_data);
+	if (err) {
+		dev_err(dev,
+			"Error %d during power on sensor\n", err);
+		return err;
+	}
+
+	err = imx274_read_fuse_id(priv);
+	if (err) {
+		dev_err(dev,
+			"Error %d reading fuse id data\n", err);
+		goto error;
+	}
 
 error:
-	devm_kfree(&client->dev, board_priv_pdata);
-	return NULL;
+	imx274_power_off(s_data);
+	camera_common_mclk_disable(s_data);
+	return err;
 }
 
 static int imx274_debugfs_streaming_show(void *data, u64 *val)
@@ -1364,117 +1241,61 @@ static const struct v4l2_subdev_internal_ops imx274_subdev_internal_ops = {
 	.open = imx274_open,
 };
 
-static const struct media_entity_operations imx274_media_ops = {
-#ifdef CONFIG_MEDIA_CONTROLLER
-	.link_validate = v4l2_subdev_link_validate,
-#endif
-};
-
 static int imx274_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	struct camera_common_data *common_data;
+	struct device *dev = &client->dev;
 	struct device_node *node = client->dev.of_node;
+	struct tegracam_device *tc_dev;
 	struct imx274 *priv;
 	int err;
 
-	dev_info(&client->dev, "probing v4l2 sensor.\n");
+	dev_info(dev, "probing v4l2 sensor.\n");
 
 	if (!IS_ENABLED(CONFIG_OF) || !node)
 		return -EINVAL;
 
-	common_data = devm_kzalloc(&client->dev,
-			    sizeof(struct camera_common_data), GFP_KERNEL);
-	if (!common_data) {
-		dev_err(&client->dev, "unable to allocate memory!\n");
+	priv = devm_kzalloc(dev,
+			sizeof(struct imx274), GFP_KERNEL);
+	if (!priv)
 		return -ENOMEM;
-	}
 
-	priv = devm_kzalloc(&client->dev,
-			    sizeof(struct imx274) + sizeof(struct v4l2_ctrl *) *
-			    ARRAY_SIZE(ctrl_config_list),
-			    GFP_KERNEL);
-	if (!priv) {
-		dev_err(&client->dev, "unable to allocate memory!\n");
+	tc_dev = devm_kzalloc(dev,
+			sizeof(struct tegracam_device), GFP_KERNEL);
+	if (!tc_dev)
 		return -ENOMEM;
-	}
 
-	priv->regmap = devm_regmap_init_i2c(client, &sensor_regmap_config);
-	if (IS_ERR(priv->regmap)) {
-		dev_err(&client->dev,
-			"regmap init failed: %ld\n", PTR_ERR(priv->regmap));
-		return -ENODEV;
-	}
-
-	priv->pdata = imx274_parse_dt(client, common_data);
-	if (!priv->pdata) {
-		dev_err(&client->dev, " unable to get platform data\n");
-		return -EFAULT;
-	}
-
-	common_data->ops		= &imx274_common_ops;
-	common_data->ctrl_handler	= &priv->ctrl_handler;
-	common_data->dev		= &client->dev;
-	common_data->frmfmt		= &imx274_frmfmt[0];
-	common_data->colorfmt		= camera_common_find_datafmt(
-					  IMX274_DEFAULT_DATAFMT);
-	common_data->power		= &priv->power;
-	common_data->ctrls		= priv->ctrls;
-	common_data->priv		= (void *)priv;
-	common_data->numctrls		= ARRAY_SIZE(ctrl_config_list);
-	common_data->numfmts		= ARRAY_SIZE(imx274_frmfmt);
-	common_data->def_mode		= IMX274_DEFAULT_MODE;
-	common_data->def_width		= IMX274_DEFAULT_WIDTH;
-	common_data->def_height		= IMX274_DEFAULT_HEIGHT;
-	common_data->fmt_width		= common_data->def_width;
-	common_data->fmt_height		= common_data->def_height;
-	common_data->def_clk_freq	= IMX274_DEFAULT_CLK_FREQ;
-
-	priv->i2c_client		= client;
-	priv->s_data			= common_data;
-	priv->subdev			= &common_data->subdev;
-	priv->subdev->dev		= &client->dev;
+	priv->i2c_client = tc_dev->client = client;
+	tc_dev->dev = dev;
+	strncpy(tc_dev->name, "imx274", sizeof(tc_dev->name));
+	tc_dev->dev_regmap_config = &sensor_regmap_config;
+	tc_dev->sensor_ops = &imx274_common_ops;
+	tc_dev->v4l2sd_internal_ops = &imx274_subdev_internal_ops;
+	tc_dev->tcctrl_ops = &imx274_ctrl_ops;
 
 	mutex_init(&priv->streaming_lock);
 
-	err = imx274_power_get(priv);
-	if (err)
-		return err;
-
-	err = camera_common_initialize(common_data, "imx274");
+	err = tegracam_device_register(tc_dev);
 	if (err) {
-		dev_err(&client->dev, "Failed to initialize imx274.\n");
+		dev_err(dev, "tegra camera driver registration failed\n");
+		return err;
+	}
+	priv->tc_dev = tc_dev;
+	priv->s_data = tc_dev->s_data;
+	priv->subdev = &tc_dev->s_data->subdev;
+	tegracam_set_privdata(tc_dev, (void *)priv);
+
+	err = imx274_board_setup(priv);
+	if (err) {
+		dev_err(dev, "board setup failed\n");
 		return err;
 	}
 
-	v4l2_i2c_subdev_init(priv->subdev, client, &imx274_subdev_ops);
-
-	err = imx274_ctrls_init(priv);
-	if (err)
-		return err;
-
-	err = imx274_verify_streaming(priv);
-	if (err)
-		return err;
-
-	priv->subdev->internal_ops = &imx274_subdev_internal_ops;
-	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
-			       V4L2_SUBDEV_FL_HAS_EVENTS;
-
-#if defined(CONFIG_MEDIA_CONTROLLER)
-	priv->pad.flags = MEDIA_PAD_FL_SOURCE;
-	priv->subdev->entity.ops = &imx274_media_ops;
-	err = tegra_media_entity_init(&priv->subdev->entity, 1,
-				&priv->pad, true, true);
-	if (err < 0) {
-		dev_err(&client->dev, "unable to init media entity\n");
+	err = tegracam_v4l2subdev_register(tc_dev, true);
+	if (err) {
+		dev_err(dev, "tegra camera subdev registration failed\n");
 		return err;
 	}
-#endif
-
-	err = v4l2_async_register_subdev(priv->subdev);
-	if (err)
-		return err;
 
 	err = imx274_debugfs_create(priv);
 	if (err) {
@@ -1483,26 +1304,20 @@ static int imx274_probe(struct i2c_client *client,
 		return err;
 	}
 
-	dev_dbg(&client->dev, "Detected IMX274 sensor\n");
+	dev_info(dev, "Detected IMX274 sensor\n");
 
 	return 0;
 }
 
-static int
-imx274_remove(struct i2c_client *client)
+static int imx274_remove(struct i2c_client *client)
 {
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
 
 	imx274_debugfs_remove(priv);
 
-	v4l2_async_unregister_subdev(priv->subdev);
-#if defined(CONFIG_MEDIA_CONTROLLER)
-	media_entity_cleanup(&priv->subdev->entity);
-#endif
-
-	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	camera_common_cleanup(s_data);
+	tegracam_v4l2subdev_unregister(priv->tc_dev);
+	tegracam_device_unregister(priv->tc_dev);
 
 	mutex_destroy(&priv->streaming_lock);
 

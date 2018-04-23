@@ -732,7 +732,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		pdata->default_out->depth = 0;
-		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+		if (tegra_fb_is_console_enabled(pdata)) {
 			if (!of_property_read_u32(out_np,
 						"nvidia,out-depth", &temp)) {
 				pdata->default_out->depth = (unsigned) temp;
@@ -3223,6 +3223,15 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		goto fail_parse;
 	}
 
+	of_property_for_each_u32(np, "nvidia,dc-flags", prop, p, temp) {
+		if (!is_dc_default_flag(temp)) {
+			pr_err("invalid dc-flags\n");
+			goto fail_parse;
+		}
+		pdata->flags |= (unsigned long)temp;
+	}
+	OF_DC_LOG("dc flag %lu\n", pdata->flags);
+
 	err = parse_disp_default_out(ndev, pdata);
 	if (err) {
 		dev_err(&ndev->dev, "failed to parse disp_default_out,%d\n",
@@ -3269,7 +3278,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 				goto fail_parse;
 			}
 		} else {
-			if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+			if (tegra_fb_is_console_enabled(pdata)) {
 				/*
 				 * Should never happen !
 				 */
@@ -3429,15 +3438,6 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	if (of_property_read_u32(pdata->panel_np, "nvidia,default_color_space",
 					&pdata->default_clr_space))
 		pdata->default_clr_space = 0;
-
-	of_property_for_each_u32(np, "nvidia,dc-flags", prop, p, temp) {
-		if (!is_dc_default_flag(temp)) {
-			pr_err("invalid dc-flags\n");
-			goto fail_parse;
-		}
-		pdata->flags |= (unsigned long)temp;
-	}
-	OF_DC_LOG("dc flag %lu\n", pdata->flags);
 
 	if (!pdata_initialized) {
 		if (!of_property_read_u32(np, "nvidia,fb-win", &temp)) {

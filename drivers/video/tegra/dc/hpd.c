@@ -210,7 +210,7 @@ static void edid_check_state(struct tegra_hpd_data *data)
 {
 	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
 
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+	if (tegra_fb_is_console_enabled(data->dc->pdata)) {
 		/* Set default videomode on dc before enabling it */
 		tegra_dc_set_default_videomode(data->dc);
 	}

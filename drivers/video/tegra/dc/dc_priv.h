@@ -251,6 +251,8 @@ struct clk *tegra_disp_clk_get(struct device *dev, const char *id);
 void tegra_disp_clk_put(struct device *dev, struct clk *clk);
 struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
 						const char *name);
+/* defined in fb.c */
+bool tegra_fb_is_console_enabled(struct tegra_dc_platform_data *pdata);
 
 /* core IMP calls */
 int tegra_dc_reserve_common_channel(struct tegra_dc *dc);
@@ -358,8 +360,6 @@ void __attribute__((weak))
 int tegra_dc_en_dis_latency_msrmnt_mode(struct tegra_dc *dc, int enable);
 
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
-
-int tegra_fb_release_fbmem(struct tegra_fb_info *);
 
 int tegra_dc_client_handle_event(struct tegra_dc *dc,
 		enum tegra_dc_client_cllbck_event_type event_type);

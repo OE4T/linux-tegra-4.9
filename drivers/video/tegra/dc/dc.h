@@ -992,6 +992,7 @@ int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask);
 struct fb_videomode *tegra_fb_get_mode(struct tegra_dc *dc);
 void tegra_fbcon_set_fb_mode(struct tegra_fb_info *fb_info,
 					struct fb_videomode *mode);
+int tegra_fb_release_fbmem(struct tegra_fb_info *info);
 #else
 int tegra_fb_redisplay_console(struct tegra_fb_info *tegra_info)
 {
@@ -1062,6 +1063,10 @@ static int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
 void tegra_fbcon_set_fb_mode(struct tegra_fb_info *fb_info,
 					struct fb_videomode *mode)
 {
+}
+static int tegra_fb_release_fbmem(struct tegra_fb_info *info)
+{
+	return 0;
 }
 #endif
 /* finish merge */

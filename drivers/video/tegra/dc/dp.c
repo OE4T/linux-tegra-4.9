@@ -1795,7 +1795,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	if ((
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))
-			|| IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)
+			|| tegra_fb_is_console_enabled(dc->pdata)
 		) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP
 	) {
@@ -2195,7 +2195,7 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 		if (!dp->dc->enabled)
 			tegra_dc_enable(dp->dc);
 		dp->early_enable = false;
-		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+		if (tegra_fb_is_console_enabled(dc->pdata)) {
 			tegra_fb_update_monspecs(dc->fb,
 				&dp->hpd_data.mon_spec,
 				tegra_dc_dp_ops.mode_filter);

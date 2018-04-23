@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -898,8 +898,8 @@ int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc)
 	int	ret = 0;
 
 	specs.modedb = NULL;
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) && (!dc->initialized) &&
-							tegra_dc_hpd(dc)) {
+	if (tegra_fb_is_console_enabled(dc->pdata) &&
+		(!dc->initialized) && tegra_dc_hpd(dc)) {
 		switch (dc->out->type) {
 		case TEGRA_DC_OUT_HDMI:
 			break;

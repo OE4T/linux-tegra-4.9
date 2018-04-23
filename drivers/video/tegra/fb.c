@@ -445,7 +445,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		if (dc->enabled)
 			tegra_fb->curr_xoffset = -1;
 		dc->blanked = true;
-		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+		if (tegra_fb_is_console_enabled(dc->pdata))
 			tegra_dc_cursor_suspend(dc);
 		tegra_dc_blank_wins(dc, BLANK_ALL);
 		return 0;
@@ -460,7 +460,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 
 		if (dc->enabled)
 			tegra_dc_disable(dc);
-		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+		if (tegra_fb_is_console_enabled(dc->pdata))
 			dc->blanked = true;
 
 		return 0;
@@ -918,12 +918,12 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 				sizeof(struct fb_videomode));
 	}
 
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) &&
-		!(dc->pdata->flags & TEGRA_DC_FLAG_FBCON_DISABLED)) {
+	if (tegra_fb_is_console_enabled(dc->pdata)) {
 		fb_info->info->state = FBINFO_STATE_RUNNING;
 		tegra_fbcon_set_fb_mode(fb_info, &fb_mode);
 	} else {
-		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+		if (!IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+			fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 	}
 	if (b_locked_fb_info)
 		unlock_fb_info(fb_info->info);
@@ -1185,7 +1185,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.idx = fb_data->win;
 	tegra_fb->win.dc = dc;
 
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) ||
+	if (tegra_fb_is_console_enabled(dc->pdata) ||
 				(fb_mem && fb_mem->start)) {
 		fb_base = tegra_fb_check_and_alloc_framebuffer(info);
 		if (!fb_base) {
@@ -1345,4 +1345,15 @@ void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 	unregister_framebuffer(info);
 	framebuffer_release(info);
 	dev_info(dev, "fb unregistered\n");
+}
+
+/*
+ * framebuffer console status is depends on both
+ * kernel config option and DT based flag
+ */
+
+inline bool tegra_fb_is_console_enabled(struct tegra_dc_platform_data *pdata)
+{
+	return (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) &&
+		!(pdata->flags & TEGRA_DC_FLAG_FBCON_DISABLED));
 }

@@ -342,7 +342,7 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 		}
 
 		tegra_dc_blank_wins(ext->dc, windows);
-		if (!IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
+		if (!tegra_fb_is_console_enabled(ext->dc->pdata)) {
 			for_each_set_bit(i, &windows,
 					tegra_dc_get_numof_dispwindows()) {
 				tegra_dc_ext_unpin_window(&ext->win[i]);
@@ -3631,14 +3631,14 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 
 	if (!atomic_dec_return(&ext->users_count)) {
 		tegra_dc_crc_drop_ref_cnts(ext->dc);
-#if IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)
-		i = tegra_fb_redisplay_console(ext->dc->fb);
-		if (i && i != -ENODEV) {
-			pr_err("%s: redisplay console failed with error %d\n",
-				__func__, i);
-			return i;
-		}
-#endif /* IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) */
+		if (tegra_fb_is_console_enabled(ext->dc->pdata)) {
+			i = tegra_fb_redisplay_console(ext->dc->fb);
+			if (i && i != -ENODEV) {
+				pr_err("%s: redisplay console failed with error %d\n",
+					__func__, i);
+				return i;
+			}
+		} /* tegra_fb_is_console_enabled() */
 	}
 	return 0;
 }

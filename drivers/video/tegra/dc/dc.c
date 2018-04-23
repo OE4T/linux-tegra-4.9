@@ -1415,7 +1415,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		dc->dbg_dc_out_info[out_type].edid = dc->edid;
 
 	}
-	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+	if (tegra_fb_is_console_enabled(dc->pdata))
 		switch (out_type) {
 		case TEGRA_DC_OUT_DSI:
 		case TEGRA_DC_OUT_DP:

@@ -73,9 +73,15 @@ static void nvgpu_init_vars(struct gk20a *g)
 	dev->dma_parms = &l->dma_parms;
 	dma_set_max_seg_size(dev, UINT_MAX);
 
-	/* 34 bit mask - can be expanded for later chips is needed. */
-	dma_set_mask(dev, DMA_BIT_MASK(34));
-	dma_set_coherent_mask(dev, DMA_BIT_MASK(34));
+	/*
+	 * A default of 16GB is the largest supported DMA size that is
+	 * acceptable to all currently supported Tegra SoCs.
+	 */
+	if (!platform->dma_mask)
+		platform->dma_mask = DMA_BIT_MASK(34);
+
+	dma_set_mask(dev, platform->dma_mask);
+	dma_set_coherent_mask(dev, platform->dma_mask);
 
 	nvgpu_init_list_node(&g->profiler_objects);
 

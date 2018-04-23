@@ -101,6 +101,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x86063000,
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
@@ -137,6 +138,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x86062d00,
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
@@ -173,6 +175,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x86063000,
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
@@ -209,6 +212,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x86065300,
 	.hardcode_sw_threshold = false,
 	.ina3221_dcb_index = 1,
@@ -245,6 +249,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x88001e00,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
@@ -279,6 +284,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x88001e00,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
@@ -313,6 +319,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x88000126,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
@@ -348,6 +355,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x1,
 	.hardcode_sw_threshold = false,
 	.run_preos = true,
@@ -386,6 +394,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 30000,
 
 	.honors_aperture = true,
+	.dma_mask = DMA_BIT_MASK(40),
 	.vbios_min_version = 0x1,
 	.hardcode_sw_threshold = false,
 	.unified_memory = false,

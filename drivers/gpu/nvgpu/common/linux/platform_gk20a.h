@@ -242,6 +242,12 @@ struct gk20a_platform {
 	/* unified or split memory with separate vidmem? */
 	bool unified_memory;
 
+	/*
+	 * DMA mask for Linux (both coh and non-coh). If not set defaults to
+	 * 0x3ffffffff (i.e a 34 bit mask).
+	 */
+	u64 dma_mask;
+
 	/* minimum supported VBIOS version */
 	u32 vbios_min_version;
 

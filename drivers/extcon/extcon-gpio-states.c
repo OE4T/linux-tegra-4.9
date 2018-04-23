@@ -33,7 +33,7 @@
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <linux/spinlock.h>
-#include <linux/wakelock.h>
+#include <linux/device.h>
 
 #define EXTCON_GPIO_STATE_WAKEUP_TIME		5000
 
@@ -75,8 +75,7 @@ struct gpio_extcon_info {
 	spinlock_t lock;
 	int *gpio_curr_state;
 	struct gpio_extcon_platform_data *pdata;
-	struct wake_lock wake_lock;
-	int cable_detect_jiffies;
+	struct wakeup_source wake_lock;
 	bool wakeup_source;
 	int last_cstate;
 	unsigned int wakeup_cables;
@@ -164,8 +163,9 @@ static void gpio_extcon_notifier_timer(unsigned long _data)
 	struct gpio_extcon_info *gpex = (struct gpio_extcon_info *)_data;
 
 	/*take wakelock to complete cable detection */
-	if (!wake_lock_active(&gpex->wake_lock))
-		wake_lock_timeout(&gpex->wake_lock, gpex->cable_detect_jiffies);
+	if (!(gpex->wake_lock.active))
+		__pm_wakeup_event(&gpex->wake_lock,
+				  gpex->pdata->cable_detect_delay);
 
 	schedule_delayed_work(&gpex->work, gpex->gpio_scan_work_jiffies);
 }
@@ -338,8 +338,6 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 	gpex->debounce_jiffies = msecs_to_jiffies(pdata->debounce);
 	gpex->gpio_scan_work_jiffies = msecs_to_jiffies(
 						pdata->wait_for_gpio_scan);
-	gpex->cable_detect_jiffies =
-			msecs_to_jiffies(pdata->cable_detect_delay);
 	gpex->wakeup_source = pdata->wakeup_source;
 	gpex->pdata = pdata;
 	spin_lock_init(&gpex->lock);
@@ -360,8 +358,7 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	wake_lock_init(&gpex->wake_lock, WAKE_LOCK_SUSPEND,
-				"extcon-suspend-lock");
+	wakeup_source_init(&gpex->wake_lock, "extcon-suspend-lock");
 
 	INIT_DELAYED_WORK(&gpex->work, gpio_extcon_scan_work);
 	setup_timer(&gpex->timer, gpio_extcon_notifier_timer,

@@ -1,7 +1,7 @@
 /*
  * extcon-cable-xlate: Cable translator based on different cable states.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -25,7 +25,7 @@
 #include <linux/slab.h>
 #include <linux/extcon.h>
 #include <linux/spinlock.h>
-#include <linux/wakelock.h>
+#include <linux/device.h>
 
 #define DEFAULT_CABLE_WAITTIME_MS		500
 #define EXTCON_XLATE_WAKEUP_TIME		1000
@@ -78,11 +78,10 @@ struct extcon_cable_xlate {
 	int timer_to_work_jiffies;
 	spinlock_t lock;
 	struct mutex cable_lock;
-	struct wake_lock wake_lock;
+	struct wakeup_source wake_lock;
 	bool extcon_init_done;
 	int last_cable_in_state;
 	int last_cable_out_state;
-	int detect_suspend_jiffies;
 };
 
 static int ecx_extcon_notifier(struct notifier_block *self,
@@ -239,9 +238,9 @@ static int ecx_extcon_notifier(struct notifier_block *self,
 	unsigned long flags;
 
 	/*Hold wakelock to complete cable detection */
-	if (!wake_lock_active(&ecx->wake_lock))
-		wake_lock_timeout(&ecx->wake_lock,
-				  ecx->detect_suspend_jiffies);
+	if (!(ecx->wake_lock.active))
+		__pm_wakeup_event(&ecx->wake_lock,
+				  ecx->pdata->cable_detect_suspend_delay);
 
 	spin_lock_irqsave(&ecx->lock, flags);
 	mod_timer(&ecx->timer, jiffies + ecx->debounce_jiffies);
@@ -427,12 +426,9 @@ static int ecx_probe(struct platform_device *pdev)
 	ecx->edev->name = pdata->name;
 	ecx->debounce_jiffies = msecs_to_jiffies(pdata->cable_insert_delay);
 	ecx->timer_to_work_jiffies = msecs_to_jiffies(500);
-	ecx->detect_suspend_jiffies =
-			msecs_to_jiffies(pdata->cable_detect_suspend_delay);
 	ecx->pdata = pdata;
 
-	wake_lock_init(&ecx->wake_lock, WAKE_LOCK_SUSPEND,
-		       "extcon-suspend-lock");
+	wakeup_source_init(&ecx->wake_lock, "extcon-suspend-lock");
 
 	ret = devm_extcon_dev_register(&pdev->dev, ecx->edev);
 	if (ret < 0) {

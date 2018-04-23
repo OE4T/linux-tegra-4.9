@@ -1776,11 +1776,13 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 			host->timeout_clk = host->mmc->actual_clock ?
 						host->mmc->actual_clock / 1000 :
 						host->clock / 1000;
-			host->mmc->max_busy_timeout =
-				host->ops->get_max_timeout_count ?
-				host->ops->get_max_timeout_count(host) :
-				1 << 27;
-			host->mmc->max_busy_timeout /= host->timeout_clk;
+			if (!(host->quirks2 & SDHCI_QUIRK2_NO_CALC_MAX_BUSY_TO)) {
+				host->mmc->max_busy_timeout =
+					host->ops->get_max_timeout_count ?
+					host->ops->get_max_timeout_count(host) :
+					1 << 27;
+				host->mmc->max_busy_timeout /= host->timeout_clk;
+			}
 		}
 	}
 	if (mmc->skip_host_clkgate)
@@ -3708,10 +3710,11 @@ int sdhci_setup_host(struct sdhci_host *host)
 
 		if (override_timeout_clk)
 			host->timeout_clk = override_timeout_clk;
-
-		mmc->max_busy_timeout = host->ops->get_max_timeout_count ?
-			host->ops->get_max_timeout_count(host) : 1 << 27;
-		mmc->max_busy_timeout /= host->timeout_clk;
+		if (!(host->quirks2 & SDHCI_QUIRK2_NO_CALC_MAX_BUSY_TO)) {
+			mmc->max_busy_timeout = host->ops->get_max_timeout_count ?
+				host->ops->get_max_timeout_count(host) : 1 << 27;
+			mmc->max_busy_timeout /= host->timeout_clk;
+		}
 	}
 
 	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE | MMC_CAP_CMD23;

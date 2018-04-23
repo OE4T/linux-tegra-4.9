@@ -452,6 +452,8 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_SEL_SDR104_UHS_MODE_IN_SDR50	(1<<18)
 /* Turn off/on card clock before sending/after tuning command */
 #define SDHCI_QUIRK2_NON_STD_TUN_CARD_CLOCK		(1<<19)
+/* Controller doesn't calculate max_busy_timeout */
+#define SDHCI_QUIRK2_NO_CALC_MAX_BUSY_TO		(1<<20)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */

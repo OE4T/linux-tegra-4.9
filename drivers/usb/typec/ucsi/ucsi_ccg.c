@@ -29,6 +29,7 @@
 #include "ucsi.h"
 
 /* #define CCG_DUMP_EVT_RESP_DATA */
+#define PORT_MAX_NUM	2
 
 /* CCGx dev info registers */
 #define REG_DEVICE_MODE		0x0000
@@ -65,6 +66,9 @@
 #define  PDO_2                  (1<<2)
 #define  PDO_3                  (1<<3)
 #define  PDO_4                  (1<<4)
+#define REG_PD_CTRL(x)		(0x1006 + (x * 0x1000))
+#define  GET_SOURCE_CAP		0x0A
+#define  SOFT_RESET		0x0E
 #define REG_PD_STATUS(x)        (0x1008 + (x * 0x1000))
 #define REG_CURRENT_PDO(x)      (0x1010 + (x * 0x1000))
 #define REG_TYPEC_STATUS(x)     (0x100C + (x * 0x1000))
@@ -72,7 +76,7 @@
 #define  OC_DET			(1<<1)
 #define	 OV_DET			(1<<2)
 #define  CONN_DET		((1<<3) | (1<<4))
-#define  PD_EVT_DET		((1<<5) | (1<<6))
+#define  PD_EVT_DET		((1<<5) | (1<<6) | (1<<11))
 #define  VDM_EVT_DET		(1<<7)
 #define  DP_EVT_DET		(1<<10)
 #define REG_PD_RESPONSE(x)      (0x1400 + (x * 0x1000))
@@ -82,7 +86,10 @@
 
 /* CCGx user defined register (0x40~0x4F) */
 #define REG_VENDOR_DEFINED_0	0x0040
-#define  CMD_UPDATE_OUTPUT_CURRENT	0x1
+#define	 NV_HPI_CMD_UTILITIES		0
+#define   CMD_UPDATE_OUTPUT_CURRENT	0x1
+#define   CMD_GET_NV_PORT_USAGE		0x2
+#define	 NV_HPI_CMD_DEBUGGER_CTRL	1
 
 /* UCSI memory region */
 #define REG_UCSI_VERSION	0xF000
@@ -102,9 +109,10 @@
 #define FW2_METADATA_ROW        0x1FE
 
 #define CCG_RESP_DATA_MAX_NUM	256
+#define CHARGER_SWAP_DELAY_MS	500
 
 #define PD_CURRENT_TO_UA(x)		(x*10*1000)	/* PD is in 10mA*/
-#define PD_VOLT_TO_UA(x)		(x*50*1000)	/* PD is in 50mV*/
+#define PD_VOLT_TO_UV(x)		(x*50*1000)	/* PD is in 50mV*/
 
 enum enum_fw_mode {
 	BOOT,   /* bootloader */
@@ -122,6 +130,7 @@ enum enum_fw_mode {
 #define ROLE_SWAP_COMPELETE	0x87
 #define VDM_RECEIVED		0x90
 #define ALT_MODE_EVT		0xB0
+#define PORT_ERROR_RECOVERY	0xA1
 
 /* CCGx response codes */
 enum ccg_resp_code {
@@ -144,6 +153,23 @@ enum ccg_pdo_type {
 	PDO_BATTERY,
 	PDO_VARIABLE_SUPPLY,
 	PDO_AUGMENTED
+};
+
+enum ccg_swap_type {
+	SWAP_TYPE_DR = 0,
+	SWAP_TYPE_PR,
+	SWAP_TYPE_VCONN
+};
+
+enum ccg_power_role {
+	POWER_ROLE_SINK = 0,
+	POWER_ROLE_SOURCE
+};
+
+enum ccg_power_path_status_type {
+	CCG_POWER_PATH_STATUS_NONE      = 0x00,
+	CCG_POWER_PATH_STATUS_SUSPENDED = 0x01,
+	CCG_POWER_PATH_STATUS_USING     = 0x02,
 };
 
 static const char * const ccg_resp_strs[] = {
@@ -290,6 +316,28 @@ union ccg_pd_do_data {
 	} bat_snk;
 };
 
+union ccg_pd_rdo_data {
+	uint32_t val;
+
+	struct GENERIC_RDO {
+		uint32_t max_op_current             : 10;
+		uint32_t op_current                 : 10;
+		uint32_t rsvd1                      : 3;
+		uint32_t unchunk_sup                : 1;
+		uint32_t usb_suspend_sup            : 1;
+		uint32_t usb_comm_cap               : 1;
+		uint32_t cap_mismatch               : 1;
+		uint32_t give_back_flag             : 1;
+		uint32_t obj_pos                    : 3;
+		uint32_t rsvd2                      : 1;
+	} rdo_val;
+} __packed;
+
+struct ccg_pd_swap_status {
+	u8 type:4;
+	u8 resp_to_swap:4;
+} __packed;
+
 struct ccg_cmd {
 	u16 reg;
 	u32 data;
@@ -357,6 +405,20 @@ struct ccg_typec_pd_info {
 	u8 typec_current:2;
 } __packed;
 
+struct contract_neg_comp_resp_data {
+	u8 success:1;
+	u8 cap_mismatch:1;
+	u8 failure_reason:3;
+	u8:3;	/* Byte[0] b5~b7 reserved */
+	u32:24;	/* Byte[1:3] reserved */
+	union ccg_pd_rdo_data rdo;
+} __packed;
+
+struct nv_pwr_path_info {
+	u8 state:4;
+	u8 path:4;
+} __packed;
+
 struct ucsi_ccg_extcon {
 	struct device dev;
 	struct extcon_dev *edev;
@@ -374,6 +436,12 @@ struct ccg_dp {
 	bool prefer_multi_func;
 };
 
+struct ccg_port_info {
+	struct ccg_typec_pd_info pd_info;
+	union ccg_pd_do_data do_data;
+	struct nv_pwr_path_info nv_pwr_path;
+};
+
 struct ucsi_ccg {
 	struct device *dev;
 	struct i2c_client *i2c_cl;
@@ -382,7 +450,7 @@ struct ucsi_ccg {
 	struct ucsi *ucsi;
 	struct ucsi_ppm ppm;
 
-	struct ucsi_ccg_extcon *typec_extcon[2];
+	struct ucsi_ccg_extcon *typec_extcon[PORT_MAX_NUM];
 	struct ucsi_ccg_extcon *typec_pd_extcon;
 	int port_num;
 
@@ -394,16 +462,18 @@ struct ucsi_ccg {
 #define PD1_CMD_PENDING 3
 #define INIT_PENDING	4
 	struct ccg_resp dev_resp;
-	struct ccg_resp pd_resp[2];
+	struct ccg_resp pd_resp[PORT_MAX_NUM];
 	u8 cmd_resp;
 	struct completion hpi_cmd_done;
 	struct completion reset_comp;
 	struct ccg_dev_info info;
-	struct ccg_typec_pd_info port[2];
-	union ccg_pd_do_data do_data[2];
+	struct ccg_port_info port_info[PORT_MAX_NUM];
 	struct regulator *charger_reg;
-	struct regulator *otg_reg;
-	struct ccg_dp dp[2];
+	struct ccg_dp dp[PORT_MAX_NUM];
+
+	struct delayed_work chg_work;
+	struct mutex work_lock;
+	bool chg_resel;
 };
 
 struct ccg_pd_contract {
@@ -599,6 +669,18 @@ static void ucsi_ccg_notify(struct ucsi_ccg *ccg)
 	ucsi_notify(ccg->ucsi);
 }
 
+static bool
+port_connected_to_suspended_chg(const struct ccg_port_info *port_info)
+{
+	if (port_info->pd_info.cur_power_role == POWER_ROLE_SOURCE ||
+				!port_info->pd_info.pd_contract)
+		return false;
+	if (port_info->nv_pwr_path.state == CCG_POWER_PATH_STATUS_SUSPENDED)
+		return true;
+
+	return false;
+}
+
 static int get_typec_info(struct ucsi_ccg *ccg, int port)
 {
 	int ret;
@@ -607,8 +689,8 @@ static int get_typec_info(struct ucsi_ccg *ccg, int port)
 		return -EINVAL;
 
 	ret = ccg_reg_read(ccg, REG_PD_STATUS(port),
-			(u8 *)(&ccg->port[port]),
-			sizeof(ccg->port[port]));
+			(u8 *)(&ccg->port_info[port].pd_info),
+			sizeof(ccg->port_info[port].pd_info));
 
 	if (ret)
 		return -EIO;
@@ -619,6 +701,7 @@ static int get_typec_info(struct ucsi_ccg *ccg, int port)
 void show_typec_info(struct ucsi_ccg *ccg, int port)
 {
 	struct device *dev = ccg->dev;
+	const struct ccg_typec_pd_info *pd_info = &ccg->port_info[port].pd_info;
 
 	dev_info(dev, "port%d typec_info:\n"
 		"dflt_data_role: %d\n"
@@ -632,14 +715,14 @@ void show_typec_info(struct ucsi_ccg *ccg, int port)
 		"connect_status: %d\n"
 		"cc_polarity: %d\n"
 		"dev_type: %d\n"
-		"typec_current: %d\n", port, ccg->port[port].dflt_data_role,
-		ccg->port[port].drd_dflt, ccg->port[port].dflt_power_role,
-		ccg->port[port].drp_dflt,
-		(ccg->port[port].cur_data_role) ? "DFP" : "UFP",
-		(ccg->port[port].cur_power_role) ? "Source" : "Sink",
-		ccg->port[port].pd_contract, ccg->port[port].pd_rev,
-		ccg->port[port].connect_status, ccg->port[port].cc_polarity,
-		ccg->port[port].dev_type, ccg->port[port].typec_current);
+		"typec_current: %d\n", port, pd_info->dflt_data_role,
+		pd_info->drd_dflt, pd_info->dflt_power_role,
+		pd_info->drp_dflt,
+		(pd_info->cur_data_role) ? "DFP" : "UFP",
+		(pd_info->cur_power_role) ? "Source" : "Sink",
+		pd_info->pd_contract, pd_info->pd_rev,
+		pd_info->connect_status, pd_info->cc_polarity,
+		pd_info->dev_type, pd_info->typec_current);
 }
 
 static int get_fw_info(struct ucsi_ccg *ccg)
@@ -697,7 +780,7 @@ static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
 	struct ccg_typec_pd_info *info;
 	int last_cstate;
 
-	info = &ccg->port[index];
+	info = &ccg->port_info[index].pd_info;
 	extcon = ccg->typec_extcon[index];
 
 	if (!extcon || !info)
@@ -706,8 +789,6 @@ static void update_typec_extcon_state(struct ucsi_ccg *ccg, int index)
 	mutex_lock(&extcon->lock);
 
 	last_cstate = extcon->cstate;
-
-	get_typec_info(ccg, index);
 
 	if (!info->connect_status)
 		extcon->cstate = EXTCON_NONE;
@@ -763,50 +844,83 @@ static void update_typec_pd_extcon_state(struct ucsi_ccg *ccg, bool enable)
 	mutex_unlock(&extcon->lock);
 }
 
-static int ccg_cmd_get_current_pdo(struct ucsi_ccg *ccg, int port)
+static int get_current_pdo(struct ucsi_ccg *ccg, int port)
 {
 	int ret;
+	struct ccg_port_info *port_info = &ccg->port_info[port];
 
 	if (port > ccg->info.two_pd_ports)
 		return -EINVAL;
 
-	if (ccg->port[port].pd_contract == 0) {
+	if (port_info->pd_info.pd_contract == 0) {
 		dev_info(ccg->dev,
 			"[typec-port%d] PD contract not established\n", port);
 		return -EINVAL;
 	}
 
 	ret = ccg_reg_read(ccg, REG_CURRENT_PDO(port),
-			(u8 *)(&ccg->do_data[port]),
-			sizeof(ccg->do_data[port]));
+			(u8 *)(&port_info->do_data),
+			sizeof(port_info->do_data));
 
-	if (ret)
+	if (ret) {
+		dev_err(ccg->dev, "read PDO failed\n");
 		return -EIO;
+	}
 
-	dev_info(ccg->dev, "ccg_cmd_get_current_pdo: %08x:\n",
-			(unsigned int)(ccg->do_data[port].val));
+	dev_info(ccg->dev, "get_current_pdo: %08x:\n",
+			(unsigned int)(port_info->do_data.val));
 	dev_info(ccg->dev,
 		"[typec-port%d] DO type %d, max_current %d, voltage %d\n",
-			port, ccg->do_data[port].fixed_src.supply_type,
-			ccg->do_data[port].fixed_src.max_current,
-			ccg->do_data[port].fixed_src.voltage);
+			port, port_info->do_data.fixed_src.supply_type,
+			port_info->do_data.fixed_src.max_current,
+			port_info->do_data.fixed_src.voltage);
 
 	return 0;
+}
+
+static void dump_pwr_path_info(struct ucsi_ccg *ccg)
+{
+	dev_dbg(ccg->dev, "state/path P0(%d/%d), P1(%d/%d)\n",
+			ccg->port_info[0].nv_pwr_path.state,
+			ccg->port_info[0].nv_pwr_path.path,
+			ccg->port_info[1].nv_pwr_path.state,
+			ccg->port_info[1].nv_pwr_path.path);
+}
+
+static int
+get_ccg_power_path_info(struct ucsi_ccg *ccg, struct nv_pwr_path_info *pwr_path)
+{
+	uint16_t raw_data = 0;
+	int err, i;
+
+	err = ccg_reg_read(ccg, REG_FLASH_RW_MEM,
+			(u8 *)&raw_data, PORT_MAX_NUM);
+	if (err) {
+		dev_err(ccg->dev, "read NV port usage failed\n");
+		return err;
+	}
+	for (i = 0; i < PORT_MAX_NUM; i++) {
+		pwr_path[i].state = (raw_data >> (8 * i)) & 0x0F;
+		pwr_path[i].path = ((raw_data) >> (8 * i + 4)) & 0x0F;
+	}
+
+	return err;
 }
 
 static void pd_charger_disable(struct ucsi_ccg *ccg, int index)
 {
 	mutex_lock(&ccg->lock);
 
-	if (ccg->charger_reg != NULL) {
-		dev_info(ccg->dev,
-			"[typec-port%d] Disable the charger\n", index);
-		regulator_set_current_limit(ccg->charger_reg, 0, 0);
-		regulator_set_voltage(ccg->charger_reg, 0, 0);
-	} else {
-		dev_info(ccg->dev, "No charger available to be disabled\n");
-	}
+	if (ccg->charger_reg == NULL)
+		goto out;
 
+	dev_info(ccg->dev, "[typec-port%d] Disable the charger\n", index);
+	regulator_set_current_limit(ccg->charger_reg, 0, 0);
+	regulator_set_voltage(ccg->charger_reg, 0, 0);
+	if (ccg->port_info[index].nv_pwr_path.state ==
+					CCG_POWER_PATH_STATUS_USING)
+		ccg->chg_resel = true;
+out:
 	update_typec_pd_extcon_state(ccg, false);
 	mutex_unlock(&ccg->lock);
 }
@@ -815,53 +929,48 @@ static int pd_charger_enable(struct ucsi_ccg *ccg, int index)
 {
 	int ret = 0;
 	int reg_max_cur_uA = 0, reg_max_vol_uV = 0;
+	const struct ccg_port_info *port_info = &ccg->port_info[index];
 
 	mutex_lock(&ccg->lock);
+	if (ccg->charger_reg == NULL)
+		goto out;
 
-	if (ccg->charger_reg != NULL) {
-		switch (ccg->do_data[index].fixed_src.supply_type) {
-		case PDO_FIXED_SUPPLY:
-			reg_max_cur_uA =
-				PD_CURRENT_TO_UA(
-				    ccg->do_data[index].fixed_src.max_current);
-			reg_max_vol_uV =
-				PD_VOLT_TO_UA(
-				    ccg->do_data[index].fixed_src.voltage);
-			break;
-		case PDO_VARIABLE_SUPPLY:
-		case PDO_BATTERY:
-		default:
-			break;
-		}
-		if ((reg_max_cur_uA > 0) && (reg_max_vol_uV > 0)) {
-			dev_info(ccg->dev,
-			    "[typec-port%d] Enable charger (cur=%d, volt=%d)\n",
-					index, reg_max_cur_uA, reg_max_vol_uV);
-		} else {
-			dev_err(ccg->dev, "current/ voltage value invalied\n");
-			ret = EINVAL;
-			goto __out;
-		}
-
-		ret = regulator_set_current_limit(ccg->charger_reg,
-							0, reg_max_cur_uA);
-		if (ret < 0) {
-			dev_err(ccg->dev,
-				"regulator_set_current_limit failed %d\n", ret);
-			goto __out;
-		}
-		ret = regulator_set_voltage(ccg->charger_reg,
-							0, reg_max_vol_uV);
-		if (ret < 0) {
-			dev_err(ccg->dev,
-				"regulator_set_voltage failed %d\n", ret);
-			goto __out;
-		}
-	} else {
-		dev_info(ccg->dev, "No charger available to be enabled\n");
+	switch (port_info->do_data.fixed_src.supply_type) {
+	case PDO_FIXED_SUPPLY:
+		reg_max_cur_uA =
+		  PD_CURRENT_TO_UA(port_info->do_data.fixed_src.max_current);
+		reg_max_vol_uV =
+		  PD_VOLT_TO_UV(port_info->do_data.fixed_src.voltage);
+		break;
+	case PDO_VARIABLE_SUPPLY:
+	case PDO_BATTERY:
+	default:
+		break;
 	}
 
-__out:
+	if ((reg_max_cur_uA > 0) && (reg_max_vol_uV > 0)) {
+		dev_info(ccg->dev,
+		    "[typec-port%d] Enable charger (cur=%d, volt=%d)\n",
+				index, reg_max_cur_uA, reg_max_vol_uV);
+	} else {
+		dev_err(ccg->dev, "current/ voltage value invalid\n");
+		ret = EINVAL;
+		goto out;
+	}
+
+	ret = regulator_set_current_limit(ccg->charger_reg, 0, reg_max_cur_uA);
+	if (ret < 0) {
+		dev_err(ccg->dev,
+			"regulator_set_current_limit failed %d\n", ret);
+		goto out;
+	}
+	ret = regulator_set_voltage(ccg->charger_reg, 0, reg_max_vol_uV);
+	if (ret < 0) {
+		dev_err(ccg->dev, "regulator_set_voltage failed %d\n", ret);
+		goto out;
+	}
+
+out:
 	if (ret >= 0)
 		update_typec_pd_extcon_state(ccg, true);
 
@@ -892,49 +1001,82 @@ static void ccg_pd_read_resp_data(struct ucsi_ccg *ccg, int index)
 	}
 }
 
+static bool is_power_path_suspended(struct ucsi_ccg *ccg, int index)
+{
+	struct nv_pwr_path_info pwr_path = ccg->port_info[index].nv_pwr_path;
+	bool ret_val = false;
+
+	if (pwr_path.state == CCG_POWER_PATH_STATUS_SUSPENDED)
+		ret_val = true;
+
+	return ret_val;
+}
+
 static void pd_event_handle_disconnect_det(struct ucsi_ccg *ccg, int index)
 {
-	if (ccg->port[index].pd_contract == 1) {
-		if (!ccg->port[index].cur_power_role) {
-			/* Battery Charging handling */
-			dev_info(ccg->dev, "Battery Charging handling\n");
-			pd_charger_disable(ccg, index);
-		} else {
-			/* OTG handling */
-			dev_info(ccg->dev, "OTG handling\n");
-		}
+	if (is_power_path_suspended(ccg, index)) {
+		dev_info(ccg->dev,
+			"Path not enabled, no EC handling required\n");
+		return;
 	}
+	if (ccg->port_info[index].pd_info.cur_power_role == POWER_ROLE_SINK &&
+		ccg->port_info[index].pd_info.pd_contract) {
+		/* Battery Charging handling */
+		dev_dbg(ccg->dev, "Battery Charging handling\n");
+		pd_charger_disable(ccg, index);
+	}
+}
+
+static void pd_event_handle_swap_comp(struct ucsi_ccg *ccg, int index)
+{
+	struct ccg_pd_swap_status *resp_data =
+		(struct ccg_pd_swap_status *)ccg->pd_resp[index].data;
+
+	if (resp_data->type == SWAP_TYPE_PR)
+		pd_event_handle_disconnect_det(ccg, index);
 }
 
 static void pd_event_handle_contract_comp(struct ucsi_ccg *ccg, int index)
 {
 	int ret = 0;
+	struct contract_neg_comp_resp_data *resp_data =
+		(struct contract_neg_comp_resp_data *)ccg->pd_resp[index].data;
 
-	if (ccg_cmd_get_current_pdo(ccg, index) < 0)
-		goto __err_disable_reg;
+	if (is_power_path_suspended(ccg, index)) {
+		dev_info(ccg->dev,
+			"Path not enabled by CCG\n");
+		return;
+	}
 
-	if (!ccg->port[index].cur_power_role) {
+	if (!resp_data->success && resp_data->failure_reason) {
+		dev_warn(ccg->dev,
+			"Contract negotiation failed with err 0x%x\n",
+			resp_data->failure_reason);
+		return;
+	}
+
+	if (get_current_pdo(ccg, index) != 0) {
+		dev_err(ccg->dev, "Get PDO failed\n");
+		return;
+	}
+
+	if (ccg->port_info[index].pd_info.cur_power_role == POWER_ROLE_SINK &&
+		ccg->port_info[index].pd_info.pd_contract) {
 		/* Battery Charging handling */
-		dev_info(ccg->dev, "Battery Charging handling\n");
+		dev_dbg(ccg->dev, "Battery Charging handling\n");
 		ret = pd_charger_enable(ccg, index);
-		if (ret < 0)
-			goto __err_disable_reg;
-	} else {
-		/* OTG handling */
-		dev_info(ccg->dev, "OTG handling\n");
+		if (ret < 0) {
+			dev_err(ccg->dev,
+				"port %d: %s with error\n", index, __func__);
+			pd_charger_disable(ccg, index);
+		}
 	}
 
 	return;
-
-__err_disable_reg:
-	dev_err(ccg->dev,
-		"PD port%d error in pd_event_handle_contract_comp\n", index);
-	pd_charger_disable(ccg, index);
 }
 
 static void
-update_typec_extcon_dp_mode
-(struct ucsi_ccg *ccg, int index, int lane_num)
+update_typec_extcon_dp_mode(struct ucsi_ccg *ccg, int index, int lane_num)
 {
 	struct ucsi_ccg_extcon *extcon;
 
@@ -1158,6 +1300,29 @@ static void ccg_pd_alt_mode_evt(struct ucsi_ccg *ccg, int index)
 	mutex_unlock(&ccg->lock);
 }
 
+static void update_ccg_power_path_info(struct ucsi_ccg *ccg)
+{
+	int i = 0;
+	struct nv_pwr_path_info new_pwr_path[PORT_MAX_NUM] = {};
+
+	if (get_ccg_power_path_info(ccg, new_pwr_path) < 0) {
+		dev_dbg(ccg->dev, "CCG FW not supporting nv_pwr_path\n");
+		return;
+	}
+
+	for (i = 0; i < PORT_MAX_NUM; i++) {
+		ccg->port_info[i].nv_pwr_path.state = new_pwr_path[i].state;
+		ccg->port_info[i].nv_pwr_path.path = new_pwr_path[i].path;
+	}
+	dump_pwr_path_info(ccg);
+}
+
+static void update_typec_data(struct ucsi_ccg *ccg, int index)
+{
+	update_ccg_power_path_info(ccg);
+	get_typec_info(ccg, index);
+}
+
 static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 {
 	struct device *dev = ccg->dev;
@@ -1182,17 +1347,15 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 				index, ccg_evt_strs[resp->code - EVENT_INDEX]);
 
 			switch (resp->code) {
-			case PORT_DISCONNECT_DET:
-				pd_event_handle_disconnect_det(ccg, index);
-				update_typec_extcon_state(ccg, index);
-				update_typec_extcon_dp_mode(ccg, index, 0);
-				break;
-			case PORT_CONNECT_DET:
 			case ROLE_SWAP_COMPELETE:
+				pd_event_handle_swap_comp(ccg, index);
+				/* fall through */
+			case PORT_CONNECT_DET:
+				update_typec_data(ccg, index);
 				update_typec_extcon_state(ccg, index);
 				break;
 			case PORT_PD_CONTRACT_COMPL:
-				update_typec_extcon_state(ccg, index);
+				update_typec_data(ccg, index);
 				pd_event_handle_contract_comp(ccg, index);
 				break;
 			case VDM_RECEIVED:
@@ -1200,6 +1363,14 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 				break;
 			case ALT_MODE_EVT:
 				ccg_pd_alt_mode_evt(ccg, index);
+				break;
+			case PORT_DISCONNECT_DET:
+				update_typec_extcon_dp_mode(ccg, index, 0);
+				/* fall through */
+			case PORT_ERROR_RECOVERY:
+				pd_event_handle_disconnect_det(ccg, index);
+				update_typec_data(ccg, index);
+				update_typec_extcon_state(ccg, index);
 				break;
 			default:
 				break;
@@ -1216,6 +1387,12 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 			dev_err(dev,
 				"PD port%d resp 0x%04x but no cmd pending\n",
 				index, resp->code);
+	}
+
+	if (ccg->chg_resel) {
+		ccg->chg_resel = false;
+		schedule_delayed_work(&ccg->chg_work,
+				msecs_to_jiffies(CHARGER_SWAP_DELAY_MS));
 	}
 }
 
@@ -1449,6 +1626,27 @@ static int ccg_cmd_enter_flashing(struct ucsi_ccg *ccg)
 	return 0;
 }
 
+static int ccg_cmd_get_source_cap(struct ucsi_ccg *ccg, int port)
+{
+	struct ccg_cmd cmd;
+	int ret;
+
+	cmd.reg = REG_PD_CTRL(port);
+	cmd.data = GET_SOURCE_CAP;
+	cmd.len = 2;
+
+	mutex_lock(&ccg->lock);
+	ret = ccg_send_command(ccg, &cmd);
+	mutex_unlock(&ccg->lock);
+
+	if (ret != CMD_SUCCESS) {
+		dev_err(ccg->dev, "%s: failed ret=%d\n", __func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int ccg_cmd_reset(struct ucsi_ccg *ccg)
 {
 	struct ccg_cmd cmd;
@@ -1641,8 +1839,7 @@ static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port)
 }
 
 static int
-ccg_cmd_vendor_defined_reg
-(struct ucsi_ccg *ccg, int reg_offset, int data)
+ccg_cmd_vendor_defined_reg(struct ucsi_ccg *ccg, int reg_offset, int data)
 {
 	struct ccg_cmd cmd;
 	int ret;
@@ -1840,7 +2037,8 @@ get_runtime_output_current(struct ucsi_ccg *ccg, int *rt_current_ma)
 	u16 raw_data = 0;
 	int err;
 
-	err = ccg_cmd_vendor_defined_reg(ccg, 0, CMD_UPDATE_OUTPUT_CURRENT);
+	err = ccg_cmd_vendor_defined_reg(ccg,
+			NV_HPI_CMD_UTILITIES, CMD_UPDATE_OUTPUT_CURRENT);
 	if (err) {
 		dev_err(ccg->dev, "send CMD_UPDATE_OUTPUT_CURRENT failed\n");
 		return err;
@@ -1874,8 +2072,9 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 
 	/* Perform initial detection */
 	for (i = 0; i < ccg->port_num; i++) {
+		update_typec_data(ccg, i);
 		update_typec_extcon_state(ccg, i);
-		if (ccg->port[i].pd_contract == 1)
+		if (ccg->port_info[i].pd_info.pd_contract == 1)
 			pd_event_handle_contract_comp(ccg, i);
 	}
 
@@ -1981,7 +2180,7 @@ static ssize_t set_debugger_store(struct device *dev,
 		return -EINVAL;
 
 	/* write debugger mode to vendor defined reg 0x41 */
-	ccg_cmd_vendor_defined_reg(ccg, 1, mode);
+	ccg_cmd_vendor_defined_reg(ccg, NV_HPI_CMD_DEBUGGER_CTRL, mode);
 
 	return n;
 }
@@ -2194,16 +2393,37 @@ static int ucsi_ccg_setup_pd_extcon(struct ucsi_ccg *ccg)
 	return 0;
 }
 
+void pd_chg_reselect(struct work_struct *work)
+{
+	struct ucsi_ccg *ccg =
+			container_of(work, struct ucsi_ccg, chg_work.work);
+	u8 i = 0;
+
+	mutex_lock(&ccg->work_lock);
+	for (i = 0; i < PORT_MAX_NUM; i++) {
+		if (port_connected_to_suspended_chg(&ccg->port_info[i])) {
+			dev_info(ccg->dev,
+				"trigger PD renegotiation on port %d\n", i);
+			/* Snet the Get_Source_Cap command will trigger
+			 * the CCGx to re-negotiate PD contract
+			 */
+			ccg_cmd_get_source_cap(ccg, i);
+
+			break;
+		}
+	}
+	mutex_unlock(&ccg->work_lock);
+}
+
 static int ucsi_ccg_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct ucsi_ccg *ccg;
 	struct device *dev = &client->dev;
-	struct regulator *charger_reg, *otg_reg;
+	struct regulator *charger_reg;
 	int err = 0;
 
 	ccg = devm_kzalloc(dev, sizeof(struct ucsi_ccg), GFP_KERNEL);
-
 	if (ccg == NULL)
 		return -ENOMEM;
 
@@ -2212,6 +2432,9 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 
 	mutex_init(&ccg->lock);
 
+	mutex_init(&ccg->work_lock);
+	INIT_DELAYED_WORK(&ccg->chg_work, pd_chg_reselect);
+
 	init_completion(&ccg->hpi_cmd_done);
 	init_completion(&ccg->reset_comp);
 
@@ -2219,11 +2442,6 @@ static int ucsi_ccg_probe(struct i2c_client *client,
 	charger_reg = regulator_get(ccg->dev, "pd_bat_chg");
 	if (!IS_ERR(charger_reg))
 		ccg->charger_reg = charger_reg;
-
-	/* Get the vbus regulator for charging */
-	otg_reg = regulator_get(ccg->dev, "pd_otg_chg");
-	if (!IS_ERR(otg_reg))
-		ccg->otg_reg = otg_reg;
 
 	err = get_fw_info(ccg);
 	if (err) {

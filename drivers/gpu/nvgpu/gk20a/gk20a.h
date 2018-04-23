@@ -678,6 +678,12 @@ struct gpu_ops {
 			u32 count, u32 buffer_index);
 		int (*runlist_wait_pending)(struct gk20a *g, u32 runlist_id);
 		void (*ring_channel_doorbell)(struct channel_gk20a *c);
+		u32 (*get_sema_wait_cmd_size)(void);
+		u32 (*get_sema_incr_cmd_size)(void);
+		void (*add_sema_cmd)(struct gk20a *g,
+			struct nvgpu_semaphore *s, u64 sema_va,
+			struct priv_cmd_entry *cmd,
+			u32 off, bool acquire, bool wfi);
 	} fifo;
 	struct pmu_v {
 		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);

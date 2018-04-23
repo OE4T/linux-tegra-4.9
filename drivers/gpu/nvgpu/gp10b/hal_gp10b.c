@@ -504,6 +504,9 @@ static const struct gpu_ops gp10b_ops = {
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
+		.get_sema_wait_cmd_size = gk20a_fifo_get_sema_wait_cmd_size,
+		.get_sema_incr_cmd_size = gk20a_fifo_get_sema_incr_cmd_size,
+		.add_sema_cmd = gk20a_fifo_add_sema_cmd,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gp10b_get_netlist_name,

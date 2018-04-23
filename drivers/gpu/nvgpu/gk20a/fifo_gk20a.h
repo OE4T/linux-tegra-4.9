@@ -444,4 +444,10 @@ void gk20a_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 void gk20a_fifo_get_mmu_fault_desc(struct mmu_fault_info *mmfault);
 void gk20a_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault);
 void gk20a_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault);
+u32 gk20a_fifo_get_sema_wait_cmd_size(void);
+u32 gk20a_fifo_get_sema_incr_cmd_size(void);
+void gk20a_fifo_add_sema_cmd(struct gk20a *g,
+	struct nvgpu_semaphore *s, u64 sema_va,
+	struct priv_cmd_entry *cmd,
+	u32 off, bool acquire, bool wfi);
 #endif /*__GR_GK20A_H__*/

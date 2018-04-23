@@ -4077,6 +4077,60 @@ const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
 	}
 }
 
+u32 gk20a_fifo_get_sema_wait_cmd_size(void)
+{
+	return 8;
+}
+
+u32 gk20a_fifo_get_sema_incr_cmd_size(void)
+{
+	return 10;
+}
+
+void gk20a_fifo_add_sema_cmd(struct gk20a *g,
+	struct nvgpu_semaphore *s, u64 sema_va,
+	struct priv_cmd_entry *cmd,
+	u32 off, bool acquire, bool wfi)
+{
+	nvgpu_log_fn(g, " ");
+
+	/* semaphore_a */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
+	/* offset_upper */
+	nvgpu_mem_wr32(g, cmd->mem, off++, (sema_va >> 32) & 0xff);
+	/* semaphore_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
+	/* offset */
+	nvgpu_mem_wr32(g, cmd->mem, off++, sema_va & 0xffffffff);
+
+	if (acquire) {
+		/* semaphore_c */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		/* payload */
+		nvgpu_mem_wr32(g, cmd->mem, off++,
+			       nvgpu_semaphore_get_value(s));
+		/* semaphore_d */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
+		/* operation: acq_geq, switch_en */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
+	} else {
+		/* semaphore_c */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		/* payload */
+		nvgpu_mem_wr32(g, cmd->mem, off++,
+			       nvgpu_semaphore_get_value(s));
+		/* semaphore_d */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
+		/* operation: release, wfi */
+		nvgpu_mem_wr32(g, cmd->mem, off++,
+				0x2 | ((wfi ? 0x0 : 0x1) << 20));
+		/* non_stall_int */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010008);
+		/* ignored */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+	}
+}
+
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 void gk20a_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 		struct priv_cmd_entry *cmd, u32 off,

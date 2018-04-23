@@ -467,6 +467,9 @@ static const struct gpu_ops gm20b_ops = {
 #endif
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
+		.get_sema_wait_cmd_size = gk20a_fifo_get_sema_wait_cmd_size,
+		.get_sema_incr_cmd_size = gk20a_fifo_get_sema_incr_cmd_size,
+		.add_sema_cmd = gk20a_fifo_add_sema_cmd,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gm20b_get_netlist_name,

@@ -372,41 +372,7 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	if (!acquire)
 		nvgpu_semaphore_prepare(s, c->hw_sema);
 
-	/* semaphore_a */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
-	/* offset_upper */
-	nvgpu_mem_wr32(g, cmd->mem, off++, (va >> 32) & 0xff);
-	/* semaphore_b */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
-	/* offset */
-	nvgpu_mem_wr32(g, cmd->mem, off++, va & 0xffffffff);
-
-	if (acquire) {
-		/* semaphore_c */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
-		/* payload */
-		nvgpu_mem_wr32(g, cmd->mem, off++,
-			       nvgpu_semaphore_get_value(s));
-		/* semaphore_d */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
-		/* operation: acq_geq, switch_en */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
-	} else {
-		/* semaphore_c */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
-		/* payload */
-		nvgpu_mem_wr32(g, cmd->mem, off++,
-			       nvgpu_semaphore_get_value(s));
-		/* semaphore_d */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
-		/* operation: release, wfi */
-		nvgpu_mem_wr32(g, cmd->mem, off++,
-				0x2 | ((wfi ? 0x0 : 0x1) << 20));
-		/* non_stall_int */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010008);
-		/* ignored */
-		nvgpu_mem_wr32(g, cmd->mem, off++, 0);
-	}
+	g->ops.fifo.add_sema_cmd(g, s, va, cmd, off, acquire, wfi);
 
 	if (acquire)
 		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u pool=%-3d"
@@ -495,7 +461,7 @@ static int __gk20a_channel_semaphore_incr(
 		return -ENOMEM;
 	}
 
-	incr_cmd_size = 10;
+	incr_cmd_size = c->g->ops.fifo.get_sema_incr_cmd_size();
 	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, incr_cmd);
 	if (err) {
 		nvgpu_err(c->g,

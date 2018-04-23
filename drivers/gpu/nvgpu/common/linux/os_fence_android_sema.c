@@ -34,11 +34,13 @@ int nvgpu_os_fence_sema_wait_gen_cmd(struct nvgpu_os_fence *s,
 	int max_wait_cmds)
 {
 	int err;
-	const int wait_cmd_size = 8;
+	int wait_cmd_size;
 	int num_wait_cmds;
 	int i;
 	struct nvgpu_semaphore *sema;
 	struct sync_fence *sync_fence = nvgpu_get_sync_fence(s);
+
+	wait_cmd_size = c->g->ops.fifo.get_sema_wait_cmd_size();
 
 	num_wait_cmds = sync_fence->num_fences;
 	if (num_wait_cmds == 0)

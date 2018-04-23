@@ -1,7 +1,7 @@
 /*
  * imx274.c - imx274 sensor driver
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -321,10 +321,12 @@ imx274_dvdd_fail:
 		gpio_set_value(pw->af_gpio, 0);
 
 imx274_iovdd_fail:
-	regulator_disable(pw->dvdd);
+	if (pw->dvdd)
+		regulator_disable(pw->dvdd);
 
 imx274_avdd_fail:
-	regulator_disable(pw->iovdd);
+	if (pw->iovdd)
+		regulator_disable(pw->iovdd);
 
 	dev_err(dev, "%s failed.\n", __func__);
 	return -ENODEV;
@@ -400,12 +402,14 @@ static int imx274_power_get(struct imx274 *priv)
 	/* ananlog 2.7v */
 	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->avdd, pdata->regulators.avdd);
-	/* digital 1.2v */
-	err |= camera_common_regulator_get(&priv->i2c_client->dev,
-			&pw->dvdd, pdata->regulators.dvdd);
 	/* IO 1.8v */
 	err |= camera_common_regulator_get(&priv->i2c_client->dev,
 			&pw->iovdd, pdata->regulators.iovdd);
+
+	/* digital 1.2v, not all imx274 modules draw this from CVB */
+	if (pdata->regulators.dvdd != NULL)
+		err |= camera_common_regulator_get(&priv->i2c_client->dev,
+			&pw->dvdd, pdata->regulators.dvdd);
 
 	if (!err) {
 		pw->reset_gpio = pdata->reset_gpio;

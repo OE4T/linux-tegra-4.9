@@ -35,26 +35,26 @@ enum {
 
 static int tegra_mce_id = TEGRA_MCE_ID_MAX;
 
-int (*_tegra_mce_enter_cstate)(u32, u32);
-int (*_tegra_mce_update_cstate_info)(u32, u32, u32, u8, u32, bool);
-int (*_tegra_mce_update_crossover_time)(u32, u32);
-int (*_tegra_mce_read_cstate_stats)(u32, u64 *);
-int (*_tegra_mce_write_cstate_stats)(u32, u32);
-int (*_tegra_mce_is_sc7_allowed)(u32, u32, u32 *);
-int (*_tegra_mce_online_core)(int);
-int (*_tegra_mce_cc3_ctrl)(u32, u32, u8);
-int (*_tegra_mce_echo_data)(u32, int *);
-int (*_tegra_mce_read_versions)(u32 *, u32 *);
-int (*_tegra_mce_enum_features)(u64 *);
-int (*_tegra_mce_read_uncore_mca)(mca_cmd_t, u64 *, u32 *);
-int (*_tegra_mce_write_uncore_mca)(mca_cmd_t, u64, u32 *);
-int (*_tegra_mce_read_uncore_perfmon)(u32, u32 *);
-int (*_tegra_mce_write_uncore_perfmon)(u32, u32);
-int (*_tegra_mce_enable_latic)(void);
-int (*_tegra_mce_write_dda_ctrl)(u32 index, u64 value);
-int (*_tegra_mce_read_dda_ctrl)(u32 index, u64 *value);
-int (*_tegra_mce_read_l3_cache_ways)(u64 *value);
-int (*_tegra_mce_write_l3_cache_ways)(u64 data, u64 *value);
+static int (*_tegra_mce_enter_cstate)(u32, u32);
+static int (*_tegra_mce_update_cstate_info)(u32, u32, u32, u8, u32, bool);
+static int (*_tegra_mce_update_crossover_time)(u32, u32);
+static int (*_tegra_mce_read_cstate_stats)(u32, u64 *);
+static int (*_tegra_mce_write_cstate_stats)(u32, u32);
+static int (*_tegra_mce_is_sc7_allowed)(u32, u32, u32 *);
+static int (*_tegra_mce_online_core)(int);
+static int (*_tegra_mce_cc3_ctrl)(u32, u32, u8);
+static int (*_tegra_mce_echo_data)(u32, int *);
+static int (*_tegra_mce_read_versions)(u32 *, u32 *);
+static int (*_tegra_mce_enum_features)(u64 *);
+static int (*_tegra_mce_read_uncore_mca)(mca_cmd_t, u64 *, u32 *);
+static int (*_tegra_mce_write_uncore_mca)(mca_cmd_t, u64, u32 *);
+static int (*_tegra_mce_read_uncore_perfmon)(u32, u32 *);
+static int (*_tegra_mce_write_uncore_perfmon)(u32, u32);
+static int (*_tegra_mce_enable_latic)(void);
+static int (*_tegra_mce_write_dda_ctrl)(u32 index, u64 value);
+static int (*_tegra_mce_read_dda_ctrl)(u32 index, u64 *value);
+static int (*_tegra_mce_read_l3_cache_ways)(u64 *value);
+static int (*_tegra_mce_write_l3_cache_ways)(u64 data, u64 *value);
 
 /**
  * Specify power state and wake time for entering upon STANDBYWFI

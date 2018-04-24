@@ -1399,42 +1399,17 @@ int eqos_remove(struct platform_device *pdev)
 static struct platform_driver eqos_driver = {
 	.probe = eqos_probe,
 	.remove = eqos_remove,
-#if 0
-	.suspend_late = eqos_suspend_late,
-	.resume_early = eqos_resume_early,
-#endif
 #ifdef CONFIG_PM
 	.suspend = eqos_suspend,
 	.resume = eqos_resume,
 #endif
 	.driver = {
-		   .name = DEV_NAME,
-		   .owner = THIS_MODULE,
-		   .probe_type = PROBE_PREFER_ASYNCHRONOUS,
-			 .of_match_table = eqos_of_match,
+		.name = DEV_NAME,
+		.owner = THIS_MODULE,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+		.of_match_table = eqos_of_match,
 	},
 };
-
-#if 0
-static INT eqos_suspend_late(struct platform_device *pdev, pm_message_t state)
-{
-	pr_err("-->eqos_suspend_late\n");
-	pr_err("Handle the suspend_late\n");
-	pr_err("<--eqos_suspend_late\n");
-
-	return 0;
-}
-
-static INT eqos_resume_early(struct platform_device *pdev)
-{
-	pr_err("-->eqos_resume_early\n");
-	pr_err("Handle the resume_early\n");
-	pr_err("<--eqos_resume_early\n");
-
-	return 0;
-}
-
-#endif
 
 #ifdef CONFIG_PM
 

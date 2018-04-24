@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,12 +48,6 @@
 int eqos_probe(struct platform_device *);
 
 int eqos_remove(struct platform_device *);
-
-#if 0
-static INT eqos_suspend_late(struct platform_device *, pm_message_t);
-
-static INT eqos_resume_early(struct platform_device *);
-#endif
 
 #ifdef CONFIG_PM
 static INT eqos_suspend(struct platform_device *, pm_message_t);

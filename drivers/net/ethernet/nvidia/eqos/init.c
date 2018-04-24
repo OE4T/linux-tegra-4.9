@@ -1396,41 +1396,11 @@ int eqos_remove(struct platform_device *pdev)
 	return ret_val;
 }
 
-static struct platform_driver eqos_driver = {
-	.probe = eqos_probe,
-	.remove = eqos_remove,
 #ifdef CONFIG_PM
-	.suspend = eqos_suspend,
-	.resume = eqos_resume,
-#endif
-	.driver = {
-		.name = DEV_NAME,
-		.owner = THIS_MODULE,
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
-		.of_match_table = eqos_of_match,
-	},
-};
-
-#ifdef CONFIG_PM
-
-/*!
- * \brief Routine to put the device in suspend mode
- *
- * \details This function gets called by the kernel core when the device is
- * being suspended. The suspended state is passed as input argument to it.
- *
- * \param[in] pdev – pointer to platform device structure.
- * \param[in] state – suspend state of device.
- *
- * \return int
- *
- * \retval 0
- */
-
-static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
+static int eqos_suspend_noirq(struct device *dev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct eqos_prv_data *pdata = netdev_priv(ndev);
 
 	if (pdata->suspended) {
 		pr_err("eqos already suspended\n");
@@ -1439,18 +1409,9 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 
 	pdata->suspended = 1;
 
-	if (netif_running(dev)) {
-		if (pdata->phydev && pdata->phydev->drv &&
-		    pdata->phydev->drv->low_power_mode)
-			pdata->phydev->drv->low_power_mode(pdata->phydev, true);
-
-		/* Stop and disconnect the PHY */
+	if (netif_running(ndev)) {
 		if (pdata->phydev) {
-			if (phy_interrupt_is_valid(pdata->phydev))
-				phy_stop_interrupts(pdata->phydev);
-
 			phy_stop(pdata->phydev);
-
 			if (gpio_is_valid(pdata->phy_reset_gpio))
 				gpio_set_value(pdata->phy_reset_gpio, 0);
 		}
@@ -1471,24 +1432,10 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-/*!
- * \brief Routine to resume device operation
- *
- * \details This function gets called by the kernel when the device is being
- * resumed. It is always called after suspend has been called. These function
- * reverse operations performed at suspend time.
- *
- * \param[in] pdev – pointer to platform device structure.
- *
- * \return int
- *
- * \retval 0
- */
-
-static INT eqos_resume(struct platform_device *pdev)
+static int eqos_resume_noirq(struct device *dev)
 {
-	struct net_device *dev = platform_get_drvdata(pdev);
-	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct net_device *ndev = dev_get_drvdata(dev);
+	struct eqos_prv_data *pdata = netdev_priv(ndev);
 
 	if (!pdata->suspended) {
 		pr_err("eqos already resumed\n");
@@ -1501,39 +1448,45 @@ static INT eqos_resume(struct platform_device *pdev)
 	/* enable clocks */
 	eqos_clock_init(pdata);
 
-	if (netif_running(dev)) {
-		if (pdata->phydev && pdata->phydev->drv &&
-		    pdata->phydev->drv->low_power_mode) {
-			/* reset the PHY Broadcom PHY needs minimum of 2us delay */
-			pr_info("%s(): exit from iddq-lp mode\n", __func__);
-			if (gpio_is_valid(pdata->phy_reset_gpio)) {
-				gpio_set_value(pdata->phy_reset_gpio, 0);
-				usleep_range(10, 11);
-				gpio_set_value(pdata->phy_reset_gpio, 1);
-			}
-			pdata->phydev->drv->low_power_mode(pdata->phydev, false);
-		} else if (gpio_is_valid(pdata->phy_reset_gpio) &&
-			   !gpio_get_value(pdata->phy_reset_gpio)) {
+	if (netif_running(ndev)) {
+		if (gpio_is_valid(pdata->phy_reset_gpio) &&
+		    !gpio_get_value(pdata->phy_reset_gpio)) {
 			/* deassert phy reset */
 			gpio_set_value(pdata->phy_reset_gpio, 1);
 		}
+
 		/* first start eqos  */
 		eqos_start_dev(pdata);
 
 		/* Init the PHY */
 		pdata->phydev->drv->config_init(pdata->phydev);
-
-		/* Enable PHY interrupts */
-		if (phy_interrupt_is_valid(pdata->phydev))
-			phy_start_interrupts(pdata->phydev);
 	}
+
 	pdata->suspended = 0;
 	pdata->hw_stopped = false;
 
 	return 0;
 }
 
-#endif	/* CONFIG_PM */
+static const struct dev_pm_ops eqos_pm_ops = {
+	.suspend_noirq = eqos_suspend_noirq,
+	.resume_noirq = eqos_resume_noirq,
+};
+#endif
+
+static struct platform_driver eqos_driver = {
+	.probe = eqos_probe,
+	.remove = eqos_remove,
+	.driver = {
+		.name = DEV_NAME,
+		.owner = THIS_MODULE,
+#ifdef CONFIG_PM
+		.pm    = &eqos_pm_ops,
+#endif
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+		.of_match_table = eqos_of_match,
+	},
+};
 
 /*!
 * \brief API to register the driver.

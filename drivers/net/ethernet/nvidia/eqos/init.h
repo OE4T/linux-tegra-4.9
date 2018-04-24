@@ -49,11 +49,6 @@ int eqos_probe(struct platform_device *);
 
 int eqos_remove(struct platform_device *);
 
-#ifdef CONFIG_PM
-static INT eqos_suspend(struct platform_device *, pm_message_t);
-
-static INT eqos_resume(struct platform_device *);
-#endif				/* end of CONFIG_PM */
 extern void eqos_stop_dev(struct eqos_prv_data *pdata);
 extern void eqos_start_dev(struct eqos_prv_data *pdata);
 extern int eqos_config_mac_loopback_mode(struct net_device *dev,

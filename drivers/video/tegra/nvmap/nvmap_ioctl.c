@@ -785,7 +785,6 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 	struct vm_area_struct *vma;
 	struct nvmap_handle *handle;
 	int nr_page;
-	int user_pages;
 	struct page **pages;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
@@ -810,11 +809,13 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 	err = -ENOMEM;
 	nr_page = handle->size >> PAGE_SHIFT;
 	pages = nvmap_altalloc(nr_page * sizeof(*pages));
-	if (!pages)
+	if (IS_ERR_OR_NULL(pages)) {
+		err = PTR_ERR(pages);
 		goto put_handle;
+	}
 
-	user_pages = nvmap_get_user_pages(op.va & PAGE_MASK, nr_page, pages);
-	if (user_pages != nr_page)
+	err = nvmap_get_user_pages(op.va & PAGE_MASK, nr_page, pages);
+	if (err)
 		goto put_user_pages;
 
 	for (i = 0; i < nr_page; i++) {
@@ -832,9 +833,6 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 		err = -EFAULT;
 
 put_user_pages:
-	pr_info("get_user_pages requested/got: %d/%d]\n", nr_page, user_pages);
-	while (--user_pages >= 0)
-		put_page(pages[user_pages]);
 	nvmap_altfree(pages, nr_page * sizeof(*pages));
 put_handle:
 	nvmap_handle_put(handle);

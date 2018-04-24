@@ -268,16 +268,18 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 				 ulong vaddr)
 {
 	int nr_page = h->size >> PAGE_SHIFT;
-	int user_pages;
 	struct page **pages;
+	int ret = 0;
 
 	pages = nvmap_altalloc(nr_page * sizeof(*pages));
-	if (!pages)
-		return -ENOMEM;
+	if (IS_ERR_OR_NULL(pages))
+		return PTR_ERR(pages);
 
-	user_pages = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
-	if (user_pages != nr_page)
-		goto fail_get_user_pages;
+	ret = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
+	if (ret) {
+		nvmap_altfree(pages, nr_page * sizeof(*pages));
+		return ret;
+	}
 
 	nvmap_clean_cache(&pages[0], nr_page);
 	h->pgalloc.pages = pages;
@@ -287,14 +289,7 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 	h->from_va = true;
 	mb();
 	h->alloc = true;
-	return 0;
-
-fail_get_user_pages:
-	pr_debug("get_user_pages requested/got: %d/%d]\n", nr_page, user_pages);
-	while (--user_pages >= 0)
-		put_page(pages[user_pages]);
-	nvmap_altfree(pages, nr_page * sizeof(*pages));
-	return -ENOMEM;
+	return ret;
 }
 
 /* small allocations will try to allocate from generic OS memory before

@@ -226,6 +226,7 @@ struct nv_pmu_clk_lut_device_desc {
 
 struct nv_pmu_clk_regime_desc {
 	u8 regime_id;
+	u8 target_regime_id_override;
 	u16 fixed_freq_regime_limit_mhz;
 };
 
@@ -389,6 +390,12 @@ struct nv_pmu_clk_load {
 		struct nv_pmu_clk_load_payload_freq_controllers freq_controllers;
 	} payload;
 };
+
+struct nv_pmu_clk_freq_effective_avg {
+    u32  clkDomainMask;
+    u32  freqkHz[CTRL_BOARDOBJ_MAX_BOARD_OBJECTS];
+};
+
 /* CLK_FREQ_CONTROLLER */
 #define NV_NV_PMU_CLK_LOAD_FEATURE_FREQ_CONTROLLER (0x00000003)
 
@@ -432,6 +439,10 @@ union nv_pmu_clk_clk_freq_controller_boardobj_set_union {
 
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(clk, clk_freq_controller);
 
+#define NV_NV_PMU_CLK_LOAD_FEATURE_FREQ_EFFECTIVE_AVG               (0x00000004)
+#define NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_EFFECTIVE_AVG_CALLBACK_NO  (0x00000000)
+#define NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_EFFECTIVE_AVG_CALLBACK_YES (0x00000004)
+
 /* CLK CMD ID definitions.  */
 #define NV_PMU_CLK_CMD_ID_BOARDOBJ_GRP_SET                          (0x00000001)
 #define NV_PMU_CLK_CMD_ID_RPC                                       (0x00000000)
@@ -440,7 +451,6 @@ NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(clk, clk_freq_controller);
 #define NV_PMU_CLK_RPC_ID_LOAD                                      (0x00000001)
 #define NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT                      (0x00000000)
 #define NV_PMU_CLK_RPC_ID_CLK_FREQ_EFF_AVG                          (0x00000002)
-
 
 struct nv_pmu_clk_cmd_rpc {
 	u8 cmd_type;
@@ -476,6 +486,7 @@ struct nv_pmu_clk_rpc {
 		struct nv_pmu_clk_vf_change_inject clk_vf_change_inject;
 		struct nv_pmu_clk_vf_change_inject_v1 clk_vf_change_inject_v1;
 		struct nv_pmu_clk_load clk_load;
+		struct nv_pmu_clk_freq_effective_avg clk_freq_effective_avg;
 	} params;
 };
 

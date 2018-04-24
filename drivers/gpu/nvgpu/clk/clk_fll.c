@@ -340,6 +340,7 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 			CTRL_CLK_FLL_REGIME_ID_FFR;
 		fll_dev_data.regime_desc.fixed_freq_regime_limit_mhz =
 			(u16)fll_desc_table_entry.ffr_cutoff_freq_mhz;
+		fll_dev_data.regime_desc.target_regime_id_override=0;
 
 		/*construct fll device*/
 		pfll_dev = construct_fll_device(g, (void *)&fll_dev_data);

@@ -54,7 +54,7 @@
 
 #define NS_IN_MS (1000 * 1000)
 
-struct tegra_vrr *vrr_buf;
+static struct tegra_vrr *vrr_buf;
 
 static int hdmivrr_i2c_read(struct tegra_hdmi *hdmi, size_t len, void *data)
 {
@@ -385,7 +385,7 @@ static int hdmivrr_dpcd_write_u32(struct tegra_hdmi *hdmi, u32 reg, u32 val)
 }
 
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
-void hdmivrr_te_service_commands(u32 ta_cmd, struct tegra_vrr *vrr)
+static void hdmivrr_te_service_commands(u32 ta_cmd, struct tegra_vrr *vrr)
 {
 
 	int status;
@@ -416,7 +416,7 @@ void hdmivrr_te_service_commands(u32 ta_cmd, struct tegra_vrr *vrr)
 }
 
 /* Open the  tz session for vrr service */
-int hdmivrr_te_init(struct tegra_vrr *vrr)
+static int hdmivrr_te_init(struct tegra_vrr *vrr)
 {
 	int status = -ENODEV;
 
@@ -449,7 +449,7 @@ int hdmivrr_te_init(struct tegra_vrr *vrr)
 }
 
 /* Close the tz session which was created for vrr */
-void hdmivrr_te_deinit(struct tegra_vrr *vrr)
+static void hdmivrr_te_deinit(struct tegra_vrr *vrr)
 {
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	u32 vrr_auth_uuid[4] = VRR_AUTH_UUID;

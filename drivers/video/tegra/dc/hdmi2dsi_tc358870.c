@@ -1,7 +1,7 @@
 /*
  * tc358870.c: HDMI to DSI bridge driver.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,7 +38,7 @@
 #include "hdmi2.0.h"
 
 static struct tc358870_state *gstate[MAX_BRIDGE_INSTANCES];
-int greset_gpio[MAX_BRIDGE_INSTANCES];
+static int greset_gpio[MAX_BRIDGE_INSTANCES];
 
 /* To get parent (struct tc358870_state) of memeber (i2c_client *) */
 static inline struct tc358870_state *to_state(struct i2c_client *client)
@@ -565,7 +565,7 @@ static void tc358870_set_dsi(struct tc358870_state *state)
 }
 
 /* Panel functions */
-int dcs_panel_command(struct tc358870_state *state,
+static int dcs_panel_command(struct tc358870_state *state,
 		struct tegra_dsi_cmd *cmd, u32 n_cmd)
 {
 	struct i2c_client *client = state->i2c_client;

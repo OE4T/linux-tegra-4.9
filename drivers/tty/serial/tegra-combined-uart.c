@@ -15,6 +15,7 @@
  */
 
 #include <linux/serial_core.h>
+#include <linux/spinlock.h>
 #include <linux/console.h>
 #include <linux/tty_flip.h>
 #include <linux/platform_device.h>
@@ -44,6 +45,8 @@ static struct uart_driver tegra_combined_uart_driver;
 static void tegra_combined_uart_console_write(struct console *co,
 						const char *s,
 						unsigned int count);
+
+static DEFINE_SPINLOCK(tx_lock);
 
 /*
  * This function does nothing. This function is used to fill in the function
@@ -169,7 +172,10 @@ static void tegra_combined_uart_console_write(struct console *co,
 						unsigned int count)
 {
 	u32 mbox_val = BIT(INTR_TRIGGER_BIT);
+	unsigned long flags;
 	unsigned int i;
+
+	spin_lock_irqsave(&tx_lock, flags);
 
 	/* Loop for processing each 3 char packet */
 	for (i = 0; i < count; i++) {
@@ -183,6 +189,8 @@ static void tegra_combined_uart_console_write(struct console *co,
 	while (readl(spe_mbox_reg) & BIT(INTR_TRIGGER_BIT))
 		cpu_relax();
 	writel(mbox_val, spe_mbox_reg);
+
+	spin_unlock_irqrestore(&tx_lock, flags);
 }
 
 static int __init tegra_combined_uart_console_setup(struct console *co,

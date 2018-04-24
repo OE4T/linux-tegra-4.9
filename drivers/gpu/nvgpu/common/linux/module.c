@@ -668,7 +668,7 @@ void gk20a_remove_support(struct gk20a *g)
 	if (g->mm.remove_support)
 		g->mm.remove_support(&g->mm);
 
-	if (g->sim->remove_support)
+	if (g->sim && g->sim->remove_support)
 		g->sim->remove_support(g->sim);
 
 	/* free mappings to registers, etc */

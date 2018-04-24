@@ -1142,8 +1142,8 @@ static int dmirror_probe(struct platform_device *pdev)
 	cdev_init(&mdevice->cdevice, &dmirror_fops);
 	ret = cdev_add(&mdevice->cdevice, mdevice->dev, 1);
 	if (ret) {
-		class_destroy(mdevice->cl);
 		device_destroy(mdevice->cl, mdevice->dev);
+		class_destroy(mdevice->cl);
 		unregister_chrdev_region(mdevice->dev, 1);
 		hmm_devmem_remove(mdevice->devmem);
 		hmm_device_put(mdevice->hmm_device);
@@ -1171,12 +1171,12 @@ static int dmirror_remove(struct platform_device *pdev)
 {
 	struct dmirror_device *mdevice = platform_get_drvdata(pdev);
 
-	hmm_devmem_remove(mdevice->devmem);
-	hmm_device_put(mdevice->hmm_device);
 	cdev_del(&mdevice->cdevice);
-	unregister_chrdev_region(mdevice->dev, 1);
 	device_destroy(mdevice->cl, mdevice->dev);
 	class_destroy(mdevice->cl);
+	unregister_chrdev_region(mdevice->dev, 1);
+	hmm_devmem_remove(mdevice->devmem);
+	hmm_device_put(mdevice->hmm_device);
 	return 0;
 }
 

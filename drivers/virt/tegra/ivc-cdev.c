@@ -1,7 +1,7 @@
 /*
  * IVC character device driver
  *
- * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -125,9 +125,10 @@ static int ivc_dev_release(struct inode *inode, struct file *filp)
 	BUG_ON(!ivc);
 
 	ivck = ivc->ivck;
-	ivc->ivck = NULL;
 
-	free_irq(ivck->irq, ivc);
+	devm_free_irq(ivc->device, ivck->irq, ivc);
+
+	ivc->ivck = NULL;
 
 	/*
 	 * Unreserve after clearing ivck; we no longer have exclusive

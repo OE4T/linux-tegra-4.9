@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2020, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2023, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -411,6 +411,7 @@ void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 void nvdisp_dc_feature_register(struct tegra_dc *dc);
 int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
 					struct tegra_dc *dc);
+int tegra_nvdisp_switch_compclk(struct tegra_dc *dc, bool inuse);
 int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode);
 int tegra_nvdisp_powergate_dc(struct tegra_dc *dc);

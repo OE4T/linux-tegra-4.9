@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdisp.c
  *
- * Copyright (c) 2014-2021, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2023, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1068,6 +1068,17 @@ static int _tegra_nvdisp_init_pd_table(struct tegra_dc *dc)
 			}
 		}
 	}
+
+	return 0;
+}
+
+int tegra_nvdisp_switch_compclk(struct tegra_dc *dc, bool inuse)
+{
+	mutex_lock(&tegra_nvdisp_lock);
+	dc->comp_clk_inuse = inuse;
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	tegra_nvdisp_set_compclk(dc);
 
 	return 0;
 }

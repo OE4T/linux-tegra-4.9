@@ -360,7 +360,4 @@ void tegra_pmc_sata_pwrgt_update(unsigned long mask,
 unsigned long tegra_pmc_sata_pwrgt_get(void);
 int tegra_pmc_save_se_context_buffer_address(u32 add);
 u32 tegra_pmc_get_se_context_buffer_address(void);
-void tegra_pmc_nvlink_pwrgt_update(unsigned long mask, unsigned long val);
-unsigned long tegra_pmc_nvlink_get_pwrgt_control(void);
-unsigned long tegra_pmc_nvlink_get_pwrgt_status(void);
 #endif /* __SOC_TEGRA_PMC_H__ */

@@ -441,8 +441,6 @@ enum pmc_regs {
 	TEGRA_PMC_LED_BREATHING_COUNTER2,
 	TEGRA_PMC_LED_BREATHING_COUNTER3,
 	TEGRA_PMC_LED_BREATHING_STATUS,
-	TEGRA_PMC_NVL_PWRGT_CONTROL_0,
-	TEGRA_PMC_NVL_PWRGT_STATUS_0,
 
 	/* Last entry */
 	TEGRA_PMC_MAX_REG,
@@ -1173,29 +1171,6 @@ unsigned long tegra_pmc_sata_pwrgt_get(void)
 		return tegra_pmc_readl(TEGRA_PMC_SATA_PWRGT_0);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
-
-void tegra_pmc_nvlink_pwrgt_update(unsigned long mask, unsigned long val)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&pwr_lock, flags);
-	tegra_pmc_register_update(TEGRA_PMC_NVL_PWRGT_CONTROL_0,
-				  mask, val);
-	spin_unlock_irqrestore(&pwr_lock, flags);
-}
-EXPORT_SYMBOL(tegra_pmc_nvlink_pwrgt_update);
-
-unsigned long tegra_pmc_nvlink_get_pwrgt_control(void)
-{
-	return tegra_pmc_readl(TEGRA_PMC_NVL_PWRGT_CONTROL_0);
-}
-EXPORT_SYMBOL(tegra_pmc_nvlink_get_pwrgt_control);
-
-unsigned long tegra_pmc_nvlink_get_pwrgt_status(void)
-{
-	return tegra_pmc_readl(TEGRA_PMC_NVL_PWRGT_STATUS_0);
-}
-EXPORT_SYMBOL(tegra_pmc_nvlink_get_pwrgt_status);
 
 int tegra_pmc_save_se_context_buffer_address(u32 add)
 {
@@ -4532,8 +4507,6 @@ static const unsigned long tegra194_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_IO_DPD2_REQ]			= 0x7C,
 	[TEGRA_PMC_IO_DPD2_STATUS]		= 0x80,
 	[TEGRA_PMC_SCRATCH0]			= 0x2000,
-	[TEGRA_PMC_NVL_PWRGT_CONTROL_0]		= 0x448,
-	[TEGRA_PMC_NVL_PWRGT_STATUS_0]		= 0x44c,
 };
 
 #define TEGRA194_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)		\

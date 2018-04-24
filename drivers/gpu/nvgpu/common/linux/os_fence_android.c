@@ -52,6 +52,14 @@ void nvgpu_os_fence_android_drop_ref(struct nvgpu_os_fence *s)
 	nvgpu_os_fence_clear(s);
 }
 
+void nvgpu_os_fence_android_install_fd(struct nvgpu_os_fence *s, int fd)
+{
+	struct sync_fence *fence = nvgpu_get_sync_fence(s);
+
+	sync_fence_get(fence);
+	sync_fence_install(fence, fd);
+}
+
 int nvgpu_os_fence_fdget(struct nvgpu_os_fence *fence_out,
 	struct channel_gk20a *c, int fd)
 {

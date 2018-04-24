@@ -37,10 +37,6 @@
 #include "sync_gk20a.h"
 #include "mm_gk20a.h"
 
-#ifdef CONFIG_SYNC
-#include "../drivers/staging/android/sync.h"
-#endif
-
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 
 struct gk20a_channel_syncpt {
@@ -145,7 +141,6 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
-	struct sync_fence *sync_fence = NULL;
 	struct nvgpu_os_fence os_fence = {0};
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c,
@@ -194,12 +189,10 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 		if (err)
 			goto clean_up_priv_cmd;
-
-		sync_fence = (struct sync_fence *)os_fence.priv;
 	}
 
 	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev,
-	 sp->id, thresh, sync_fence);
+	 sp->id, thresh, os_fence);
 
 	if (err) {
 		if (nvgpu_os_fence_is_initialized(&os_fence))
@@ -494,7 +487,6 @@ static int __gk20a_channel_semaphore_incr(
 	struct channel_gk20a *c = sp->c;
 	struct nvgpu_semaphore *semaphore;
 	int err = 0;
-	struct sync_fence *sync_fence = NULL;
 	struct nvgpu_os_fence os_fence = {0};
 
 	semaphore = nvgpu_semaphore_alloc(c);
@@ -521,14 +513,12 @@ static int __gk20a_channel_semaphore_incr(
 
 		if (err)
 			goto clean_up_sema;
-
-		sync_fence = (struct sync_fence *)os_fence.priv;
 	}
 
 	err = gk20a_fence_from_semaphore(fence,
 		semaphore,
 		&c->semaphore_wq,
-		sync_fence);
+		os_fence);
 
 	if (err) {
 		if (nvgpu_os_fence_is_initialized(&os_fence))

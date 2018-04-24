@@ -28,13 +28,13 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/os_fence.h>
 
 struct platform_device;
-struct sync_timeline;
-struct sync_fence;
 struct nvgpu_semaphore;
 struct channel_gk20a;
 struct gk20a;
+struct nvgpu_os_fence;
 
 struct gk20a_fence_ops;
 
@@ -46,7 +46,7 @@ struct gk20a_fence {
 	struct nvgpu_ref ref;
 	const struct gk20a_fence_ops *ops;
 
-	struct sync_fence *os_fence;
+	struct nvgpu_os_fence os_fence;
 
 	/* Valid for fences created from semaphores: */
 	struct nvgpu_semaphore *semaphore;
@@ -66,13 +66,13 @@ int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_semaphore *semaphore,
 		struct nvgpu_cond *semaphore_wq,
-		struct sync_fence *os_fence);
+		struct nvgpu_os_fence os_fence);
 
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
 		u32 id, u32 value,
-		struct sync_fence *os_fence);
+		struct nvgpu_os_fence os_fence);
 
 int gk20a_alloc_fence_pool(
 		struct channel_gk20a *c,
@@ -86,7 +86,7 @@ struct gk20a_fence *gk20a_alloc_fence(
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,
-		struct sync_fence *os_fence);
+		struct nvgpu_os_fence os_fence);
 
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);

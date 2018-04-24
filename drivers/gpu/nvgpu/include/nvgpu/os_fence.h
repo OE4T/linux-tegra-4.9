@@ -60,6 +60,12 @@ struct nvgpu_os_fence_ops {
 	 * for the underlying sync_fence.
 	 */
 	void (*drop_ref)(struct nvgpu_os_fence *s);
+
+	/*
+	 * Used to install the fd in the corresponding OS. The underlying
+	 * implementation varies from OS to OS.
+	 */
+	void (*install_fence)(struct nvgpu_os_fence *s, int fd);
 };
 
 /*

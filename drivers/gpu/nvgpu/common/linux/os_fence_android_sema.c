@@ -69,6 +69,7 @@ int nvgpu_os_fence_sema_wait_gen_cmd(struct nvgpu_os_fence *s,
 static const struct nvgpu_os_fence_ops sema_ops = {
 	.program_waits = nvgpu_os_fence_sema_wait_gen_cmd,
 	.drop_ref = nvgpu_os_fence_android_drop_ref,
+	.install_fence = nvgpu_os_fence_android_install_fd,
 };
 
 int nvgpu_os_fence_sema_create(

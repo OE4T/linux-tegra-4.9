@@ -22,24 +22,16 @@
 
 #include "fence_gk20a.h"
 
-#ifdef CONFIG_SYNC
-#include <linux/file.h>
-#include <linux/fs.h>
-#endif
-
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/os_fence.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
 #include "sync_gk20a.h"
-
-#ifdef CONFIG_SYNC
-#include "../drivers/staging/android/sync.h"
-#endif
 
 struct gk20a_fence_ops {
 	int (*wait)(struct gk20a_fence *, long timeout);
@@ -53,10 +45,8 @@ static void gk20a_fence_free(struct nvgpu_ref *ref)
 		container_of(ref, struct gk20a_fence, ref);
 	struct gk20a *g = f->g;
 
-#ifdef CONFIG_SYNC
-	if (f->os_fence)
-		sync_fence_put(f->os_fence);
-#endif
+	if (nvgpu_os_fence_is_initialized(&f->os_fence))
+		f->os_fence.ops->drop_ref(&f->os_fence);
 
 	if (f->semaphore)
 		nvgpu_semaphore_put(f->semaphore);
@@ -91,17 +81,13 @@ inline bool gk20a_fence_is_valid(struct gk20a_fence *f)
 
 int gk20a_fence_install_fd(struct gk20a_fence *f, int fd)
 {
-#ifdef CONFIG_SYNC
-	if (!f || !gk20a_fence_is_valid(f) || !f->os_fence)
-		return -EINVAL;
+	if (!f || !gk20a_fence_is_valid(f) ||
+		!nvgpu_os_fence_is_initialized(&f->os_fence))
+			return -EINVAL;
 
-	sync_fence_get(f->os_fence);
-	sync_fence_install(f->os_fence, fd);
+	f->os_fence.ops->install_fence(&f->os_fence, fd);
 
 	return 0;
-#else
-	return -ENODEV;
-#endif
 }
 
 int gk20a_fence_wait(struct gk20a *g, struct gk20a_fence *f,
@@ -191,7 +177,7 @@ struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,
-		struct sync_fence *os_fence)
+		struct nvgpu_os_fence os_fence)
 {
 	if (!f)
 		return;
@@ -229,7 +215,7 @@ int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_semaphore *semaphore,
 		struct nvgpu_cond *semaphore_wq,
-		struct sync_fence *os_fence)
+		struct nvgpu_os_fence os_fence)
 {
 	struct gk20a_fence *f = fence_out;
 
@@ -290,7 +276,7 @@ static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u32 id, u32 value, struct sync_fence *os_fence)
+		u32 id, u32 value, struct nvgpu_os_fence os_fence)
 {
 	struct gk20a_fence *f = fence_out;
 
@@ -312,7 +298,7 @@ int gk20a_fence_from_syncpt(
 int gk20a_fence_from_syncpt(
 		struct gk20a_fence *fence_out,
 		struct nvgpu_nvhost_dev *nvhost_dev,
-		u32 id, u32 value, struct sync_fence *os_fence)
+		u32 id, u32 value, struct nvgpu_os_fence os_fence)
 {
 	return -EINVAL;
 }

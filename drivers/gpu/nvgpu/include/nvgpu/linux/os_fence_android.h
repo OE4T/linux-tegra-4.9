@@ -39,6 +39,8 @@ void nvgpu_os_fence_init(struct nvgpu_os_fence *fence_out,
 	struct gk20a *g, const struct nvgpu_os_fence_ops *fops,
 	struct sync_fence *fence);
 
+void nvgpu_os_fence_android_install_fd(struct nvgpu_os_fence *s, int fd);
+
 int nvgpu_os_fence_syncpt_fdget(
 	struct nvgpu_os_fence *fence_out,
 	struct channel_gk20a *c, int fd);

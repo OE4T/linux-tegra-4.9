@@ -59,7 +59,6 @@
 					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
 					vif-supply = <&en_vdd_cam>;
-					vdig-supply = <&en_vdd_cam_1v2>;
 				};
 			};
 		};

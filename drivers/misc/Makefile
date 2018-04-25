@@ -70,6 +70,8 @@ obj-$(CONFIG_GPS_HWGEOFENCING)  += gps_wake.o
 obj-$(CONFIG_BLUEDROID_PM)      += bluedroid_pm.o
 obj-$(CONFIG_TEGRA_PROC_POWER_MODEL) += tegra_ppm.o
 
+KCOV_INSTRUMENT_lkdtm_rodata.o	:= n
+
 OBJCOPYFLAGS :=
 OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \
 			--set-section-flags .text=alloc,readonly \

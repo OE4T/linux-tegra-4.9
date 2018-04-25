@@ -1199,7 +1199,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		tegra_fb->valid = false;
 		tegra_fb->fb_size = 0;
 		tegra_fb->phys_start = 0;
-		tegra_fb->win.virt_addr = 0;
+		tegra_fb->win.virt_addr = NULL;
 		tegra_fb->win.phys_addr = 0;
 	}
 

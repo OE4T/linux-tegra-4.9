@@ -24,6 +24,16 @@
 			};
 		};
 
+		fragment-disable-uphy-rx-idle {
+			ids = "<=2822-0000-300";
+			override@0 {
+				target = <&{/hsio_p2u/p2u@03e10000}>;
+				_overlay_ {
+					append-string-property = "nvidia,disable-uphy-rx-idle";
+				};
+			};
+		};
+
 		fragment-pcie-c5-rp {
 			odm-data = "disable-pcie-c5-endpoint";
 			override@0 {

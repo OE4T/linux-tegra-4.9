@@ -23,6 +23,7 @@
 #include "gk20a/sim_gk20a.h"
 #include "sim.h"
 
-int nvgpu_pci_init_sim_support(struct gk20a *g);
-
+int nvgpu_init_sim_support_pci(struct gk20a *g); /* this will be moved */
+int nvgpu_init_sim_support_linux_pci(struct gk20a *g);
+void nvgpu_remove_sim_support_linux_pci(struct gk20a *g);
 #endif

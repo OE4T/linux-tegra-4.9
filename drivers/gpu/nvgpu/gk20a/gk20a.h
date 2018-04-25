@@ -28,7 +28,7 @@ struct gk20a;
 struct fifo_gk20a;
 struct channel_gk20a;
 struct gr_gk20a;
-struct sim_gk20a;
+struct sim_nvgpu;
 struct gk20a_ctxsw_ucode_segments;
 struct gk20a_fecs_trace;
 struct gk20a_ctxsw_trace;
@@ -1287,7 +1287,7 @@ struct gk20a {
 	struct fifo_gk20a fifo;
 	struct nvgpu_nvlink_dev nvlink;
 	struct gr_gk20a gr;
-	struct sim_gk20a *sim;
+	struct sim_nvgpu *sim;
 	struct mm_gk20a mm;
 	struct nvgpu_pmu pmu;
 	struct acr_desc acr;

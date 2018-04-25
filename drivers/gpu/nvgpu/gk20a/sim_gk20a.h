@@ -28,7 +28,7 @@
 
 struct gk20a;
 
-struct sim_gk20a {
+struct sim_nvgpu {
 	struct gk20a *g;
 	u32 send_ring_put;
 	u32 recv_ring_get;
@@ -37,7 +37,7 @@ struct sim_gk20a {
 	struct nvgpu_mem send_bfr;
 	struct nvgpu_mem recv_bfr;
 	struct nvgpu_mem msg_bfr;
-	void (*remove_support)(struct sim_gk20a *);
+	void (*remove_support)(struct gk20a *);
 	int (*esc_readl)(
 		struct gk20a *g, char *path, u32 index, u32 *data);
 };

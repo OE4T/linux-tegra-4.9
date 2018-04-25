@@ -25,7 +25,8 @@ int nvgpu_quiesce(struct gk20a *g);
 int nvgpu_remove(struct device *dev, struct class *class);
 void nvgpu_free_irq(struct gk20a *g);
 struct device_node *nvgpu_get_node(struct gk20a *g);
-
+void __iomem *nvgpu_ioremap_resource(struct platform_device *dev, int i,
+		struct resource **out);
 extern struct class nvgpu_class;
 
 #endif

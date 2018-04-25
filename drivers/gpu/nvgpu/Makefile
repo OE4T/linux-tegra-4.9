@@ -122,7 +122,9 @@ nvgpu-y := \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
 	boardobj/boardobjgrp_e255.o \
-	boardobj/boardobjgrp_e32.o
+	boardobj/boardobjgrp_e32.o \
+	common/sim.o \
+	common/sim_pci.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
 	common/mm/vidmem.o \

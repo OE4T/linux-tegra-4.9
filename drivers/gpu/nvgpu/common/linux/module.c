@@ -601,7 +601,7 @@ static int gk20a_do_unidle(void *_g)
 }
 #endif
 
-static void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
+void __iomem *nvgpu_ioremap_resource(struct platform_device *dev, int i,
 					    struct resource **out)
 {
 	struct resource *r = platform_get_resource(dev, IORESOURCE_MEM, i);
@@ -637,6 +637,7 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 void gk20a_remove_support(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct sim_nvgpu_linux *sim_linux;
 
 	tegra_unregister_idle_unidle(gk20a_do_idle);
 
@@ -659,8 +660,13 @@ void gk20a_remove_support(struct gk20a *g)
 	if (g->mm.remove_support)
 		g->mm.remove_support(&g->mm);
 
-	if (g->sim && g->sim->remove_support)
-		g->sim->remove_support(g->sim);
+	if (g->sim) {
+		sim_linux = container_of(g->sim, struct sim_nvgpu_linux, sim);
+		if (g->sim->remove_support)
+			g->sim->remove_support(g);
+		if (sim_linux->remove_support_linux)
+			sim_linux->remove_support_linux(g);
+	}
 
 	/* free mappings to registers, etc */
 	if (l->regs) {
@@ -679,18 +685,13 @@ void gk20a_remove_support(struct gk20a *g)
 
 static int gk20a_init_support(struct platform_device *dev)
 {
-	int err = 0;
+	int err = -ENOMEM;
 	struct gk20a *g = get_gk20a(&dev->dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct sim_gk20a_linux *sim_linux = nvgpu_kzalloc(g, sizeof(*sim_linux));
-	if (!sim_linux)
-		goto fail;
-
-	g->sim = &sim_linux->sim;
 
 	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle, g);
 
-	l->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
+	l->regs = nvgpu_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &l->reg_mem);
 	if (IS_ERR(l->regs)) {
 		nvgpu_err(g, "failed to remap gk20a registers");
@@ -698,7 +699,7 @@ static int gk20a_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	l->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
+	l->bar1 = nvgpu_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
 					 &l->bar1_mem);
 	if (IS_ERR(l->bar1)) {
 		nvgpu_err(g, "failed to remap gk20a bar1");
@@ -706,29 +707,28 @@ static int gk20a_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	if (nvgpu_platform_is_simulation(g)) {
-		g->sim->g = g;
-		sim_linux->regs = gk20a_ioremap_resource(dev,
-						     GK20A_SIM_IORESOURCE_MEM,
-						     &sim_linux->reg_mem);
-		if (IS_ERR(sim_linux->regs)) {
-			nvgpu_err(g, "failed to remap gk20a sim regs");
-			err = PTR_ERR(sim_linux->regs);
-			goto fail;
-		}
-
-		err = gk20a_init_sim_support(g);
-		if (err)
-			goto fail;
-	}
+	err = nvgpu_init_sim_support_linux(g, dev);
+	if (err)
+		goto fail;
+	err = nvgpu_init_sim_support(g);
+	if (err)
+		goto fail_sim;
 
 	nvgpu_init_usermode_support(g);
-
 	return 0;
 
+fail_sim:
+	nvgpu_remove_sim_support_linux(g);
 fail:
-	nvgpu_kfree(g, sim_linux);
-	g->sim = NULL;
+	if (l->regs) {
+		iounmap(l->regs);
+		l->regs = NULL;
+	}
+	if (l->bar1) {
+		iounmap(l->bar1);
+		l->bar1 = NULL;
+	}
+
 	return err;
 }
 
@@ -1227,18 +1227,6 @@ static int gk20a_probe(struct platform_device *dev)
 	return 0;
 
 return_err:
-	/*
-	 * Make sure to clean up any memory allocs made in this function -
-	 * especially since we can be called many times due to probe deferal.
-	 */
-	if (gk20a->sim) {
-		struct sim_gk20a_linux *sim_linux;
-		sim_linux = container_of(gk20a->sim,
-					 struct sim_gk20a_linux,
-					 sim);
-		nvgpu_kfree(gk20a, sim_linux);
-	}
-
 	nvgpu_free_enabled_flags(gk20a);
 
 	/*

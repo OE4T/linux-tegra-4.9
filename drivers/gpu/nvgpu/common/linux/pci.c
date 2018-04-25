@@ -498,15 +498,29 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		goto fail;
 	}
 
-	err = nvgpu_pci_init_sim_support(g);
+	err = nvgpu_init_sim_support_linux_pci(g);
 	if (err)
 		goto fail;
+	err = nvgpu_init_sim_support_pci(g);
+	if (err)
+		goto fail_sim;
 
 	nvgpu_pci_init_usermode_support(l);
 
 	return 0;
 
+ fail_sim:
+	nvgpu_remove_sim_support_linux_pci(g);
  fail:
+	if (l->regs) {
+		iounmap(l->regs);
+		l->regs = NULL;
+	}
+	if (l->bar1) {
+		iounmap(l->bar1);
+		l->bar1 = NULL;
+	}
+
 	return err;
 }
 

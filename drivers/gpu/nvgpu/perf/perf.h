@@ -74,5 +74,6 @@ struct perf_pmupstate {
 };
 
 u32 perf_pmu_vfe_load(struct gk20a *g);
+u32 perf_pmu_vfe_load_gv10x(struct gk20a *g);
 
 #endif

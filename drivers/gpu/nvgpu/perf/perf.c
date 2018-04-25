@@ -65,6 +65,21 @@ static int pmu_handle_perf_event(struct gk20a *g, void *pmu_msg)
 	return 0;
 }
 
+u32 perf_pmu_vfe_load_gv10x(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	struct nv_pmu_rpc_struct_perf_load rpc;
+	u32 status = 0;
+
+	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perf_load));
+	PMU_RPC_EXECUTE_CPB(status, pmu, PERF, VFE_INVALIDATE, &rpc, 0);
+	if (status) {
+		nvgpu_err(g, "Failed to execute RPC status=0x%x",
+			status);
+	}
+	return status;
+}
+
 u32 perf_pmu_vfe_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;

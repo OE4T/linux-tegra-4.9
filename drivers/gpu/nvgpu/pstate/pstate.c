@@ -184,7 +184,7 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = perf_pmu_vfe_load(g);
+	err = g->ops.pmu_ver.clk.perf_pmu_vfe_load(g);
 	if (err)
 		return err;
 

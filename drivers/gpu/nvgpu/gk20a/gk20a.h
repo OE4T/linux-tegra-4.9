@@ -819,6 +819,7 @@ struct gpu_ops {
 			u32 (*clk_vf_change_inject_data_fill)(struct gk20a *g,
 				struct nv_pmu_clk_rpc *rpccall,
 				struct set_fll_clk *setfllclk);
+			u32 (*perf_pmu_vfe_load)(struct gk20a *g);
 		}clk;
 	} pmu_ver;
 	struct {

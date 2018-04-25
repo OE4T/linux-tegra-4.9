@@ -37,6 +37,34 @@
 #define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_SET                      (0x00000003)
 #define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_GET_STATUS               (0x00000004)
 
+/*!
+ * RPC calls serviced by PERF unit.
+ */
+#define NV_PMU_RPC_ID_PERF_BOARD_OBJ_GRP_CMD                                0x00
+#define NV_PMU_RPC_ID_PERF_LOAD                                             0x01
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_GET                              0x02
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_SET                              0x03
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_SET_CONTROL                           0x04
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUEUE_CHANGE                          0x05
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOCK                                  0x06
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOAD                                  0x07
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUERY                                 0x08
+#define NV_PMU_RPC_ID_PERF_PERF_LIMITS_INVALIDATE                           0x09
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_EVAL                                     0x0A
+#define NV_PMU_RPC_ID_PERF_VFE_INVALIDATE                                   0x0B
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_SET                              0x0C
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_GET                              0x0D
+#define NV_PMU_RPC_ID_PERF__COUNT                                           0x0E
+/*
+ * Defines the structure that holds data
+ * used to execute LOAD RPC.
+ */
+struct nv_pmu_rpc_struct_perf_load {
+	/*[IN/OUT] Must be first field in RPC structure */
+    struct nv_pmu_rpc_header hdr;
+	u32  scratch[1];
+};
+
 struct nv_pmu_perf_cmd_set_object {
 	u8 cmd_type;
 	u8 pad[2];

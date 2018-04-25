@@ -32,6 +32,7 @@ u32 mc_gk20a_intr_stall(struct gk20a *g);
 void mc_gk20a_intr_stall_pause(struct gk20a *g);
 void mc_gk20a_intr_stall_resume(struct gk20a *g);
 u32 mc_gk20a_intr_nonstall(struct gk20a *g);
+int mc_gk20a_isr_nonstall(struct gk20a *g);
 void mc_gk20a_intr_nonstall_pause(struct gk20a *g);
 void mc_gk20a_intr_nonstall_resume(struct gk20a *g);
 void gk20a_mc_enable(struct gk20a *g, u32 units);

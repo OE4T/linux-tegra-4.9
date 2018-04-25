@@ -1066,6 +1066,7 @@ struct gpu_ops {
 		u32 (*intr_nonstall)(struct gk20a *g);
 		void (*intr_nonstall_pause)(struct gk20a *g);
 		void (*intr_nonstall_resume)(struct gk20a *g);
+		int (*isr_nonstall)(struct gk20a *g);
 		void (*enable)(struct gk20a *g, u32 units);
 		void (*disable)(struct gk20a *g, u32 units);
 		void (*reset)(struct gk20a *g, u32 units);

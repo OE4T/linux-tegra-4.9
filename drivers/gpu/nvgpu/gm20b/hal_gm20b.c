@@ -573,6 +573,7 @@ static const struct gpu_ops gm20b_ops = {
 		.intr_nonstall = mc_gk20a_intr_nonstall,
 		.intr_nonstall_pause = mc_gk20a_intr_nonstall_pause,
 		.intr_nonstall_resume = mc_gk20a_intr_nonstall_resume,
+		.isr_nonstall = mc_gk20a_isr_nonstall,
 		.enable = gk20a_mc_enable,
 		.disable = gk20a_mc_disable,
 		.reset = gk20a_mc_reset,

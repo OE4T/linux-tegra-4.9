@@ -74,6 +74,45 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 		g->ops.bus.isr(g);
 }
 
+int mc_gk20a_isr_nonstall(struct gk20a *g)
+{
+	int ops = 0;
+	u32 mc_intr_1;
+	u32 engine_id_idx;
+	u32 active_engine_id = 0;
+	u32 engine_enum = ENGINE_INVAL_GK20A;
+
+	mc_intr_1 = g->ops.mc.intr_nonstall(g);
+
+	if (g->ops.mc.is_intr1_pending(g, NVGPU_UNIT_FIFO, mc_intr_1))
+		ops |= gk20a_fifo_nonstall_isr(g);
+
+	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines;
+							engine_id_idx++) {
+		struct fifo_engine_info_gk20a *engine_info;
+
+		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
+		engine_info = &g->fifo.engine_info[active_engine_id];
+
+		if (mc_intr_1 & engine_info->intr_mask) {
+			engine_enum = engine_info->engine_enum;
+			/* GR Engine */
+			if (engine_enum == ENGINE_GR_GK20A)
+				ops |= gk20a_gr_nonstall_isr(g);
+
+			/* CE Engine */
+			if (((engine_enum == ENGINE_GRCE_GK20A) ||
+			     (engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
+			      g->ops.ce2.isr_nonstall)
+				ops |= g->ops.ce2.isr_nonstall(g,
+					engine_info->inst_id,
+					engine_info->pri_base);
+		}
+	}
+
+	return ops;
+}
+
 void mc_gk20a_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);

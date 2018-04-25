@@ -169,8 +169,8 @@
 				readout_orientation = "0";
 				line_length = "4200";
 				inherent_gain = "1";
-				mclk_multiplier = "31.25";
-				pix_clk_hz = "750000000";
+				mclk_multiplier = "12.5";
+				pix_clk_hz = "300000000";
 
 				gain_factor = "16";
 				framerate_factor = "1000000";
@@ -242,9 +242,9 @@
 		* Isp bandwidth margin in percentage
 		*/
 		num_csi_lanes = <4>;
-		max_lane_speed = <750000>;
-		min_bits_per_pixel = <10>
-;		vi_peak_byte_per_pixel = <2>;
+		max_lane_speed = <1500000>;
+		min_bits_per_pixel = <10>;
+		vi_peak_byte_per_pixel = <2>;
 		vi_bw_margin_pct = <25>;
 		max_pixel_rate = <300000>;
 		isp_peak_byte_per_pixel = <5>;

@@ -128,7 +128,13 @@ EXPORT_SYMBOL_GPL(smp_call_function_denver);
 static void _denver_get_bg_allowed(void *ret)
 {
 	unsigned long regval;
-	int cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(smp_processor_id()), 0);
+	int cpu;
+
+	if (tegra_get_chip_id() == TEGRA186)
+		cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(
+			smp_processor_id()), 0);
+	else
+		cpu = smp_processor_id();
 
 	asm volatile("mrs %0, s3_0_c15_c0_2" : "=r" (regval) : );
 	regval = (regval >> BG_STATUS_SHIFT) & 0xffff;
@@ -150,7 +156,13 @@ static void _denver_set_bg_allowed(void *_enable)
 	unsigned long regval;
 	bool enabled = 1;
 	bool enable = (bool) _enable;
-	int cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(smp_processor_id()), 0);
+	int cpu;
+
+	if (tegra_get_chip_id() == TEGRA186)
+		cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(
+			smp_processor_id()), 0);
+	else
+		cpu = smp_processor_id();
 
 	regval = 1 << cpu;
 	if (!enable)

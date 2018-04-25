@@ -32,10 +32,10 @@
  * this is mostly a preference to work around monitors users
  * reported that occasionally drop HPD.
  */
-#define HPD_STABILIZE_MS 40
-#define HPD_DROP_TIMEOUT_MS 1500
-#define CHECK_PLUG_STATE_DELAY_MS 10
-#define CHECK_EDID_DELAY_MS 60
+#define HPD_STABILIZE_US 40000
+#define HPD_DROP_TIMEOUT_US 1500000
+#define CHECK_PLUG_STATE_DELAY_US 10000
+#define CHECK_EDID_DELAY_US 400
 
 static const char * const state_names[] = {
 	"Reset",
@@ -179,7 +179,7 @@ static void hpd_reset_state(struct tegra_hpd_data *data)
 	 */
 	hpd_disable(data);
 	set_hpd_state(data, STATE_PLUG,
-			CHECK_PLUG_STATE_DELAY_MS);
+			CHECK_PLUG_STATE_DELAY_US);
 }
 
 static void hpd_plug_state(struct tegra_hpd_data *data)
@@ -193,10 +193,10 @@ static void hpd_plug_state(struct tegra_hpd_data *data)
 
 		if (data->dc->suspended && data->dc->connected)
 			set_hpd_state(data, STATE_RECHECK_EDID,
-					CHECK_EDID_DELAY_MS);
+					CHECK_EDID_DELAY_US);
 		else
 			set_hpd_state(data, STATE_CHECK_EDID,
-					CHECK_EDID_DELAY_MS);
+					CHECK_EDID_DELAY_US);
 	} else {
 		/*
 		 * Nothing plugged in, so we are finished. Go to the
@@ -239,7 +239,7 @@ static void edid_check_state(struct tegra_hpd_data *data)
 			goto end_disabled;
 		} else {
 			set_hpd_state(data, STATE_CHECK_EDID,
-					CHECK_EDID_DELAY_MS);
+					CHECK_EDID_DELAY_US);
 		}
 
 		return;
@@ -292,7 +292,7 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 				data->edid_reads);
 		} else {
 			tgt_state = STATE_RECHECK_EDID;
-			timeout = CHECK_EDID_DELAY_MS;
+			timeout = CHECK_EDID_DELAY_US;
 		}
 	} else {
 		/*
@@ -362,7 +362,7 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		 * steady and wait to see if it comes back.
 		 */
 		tgt_state = STATE_WAIT_FOR_HPD_REASSERT;
-		timeout = HPD_DROP_TIMEOUT_MS;
+		timeout = HPD_DROP_TIMEOUT_US;
 	} else if (STATE_WAIT_FOR_HPD_REASSERT == data->state &&
 		cur_hpd) {
 		/*
@@ -371,7 +371,7 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		 */
 		data->edid_reads = 0;
 		tgt_state = STATE_RECHECK_EDID;
-		timeout = CHECK_EDID_DELAY_MS;
+		timeout = CHECK_EDID_DELAY_US;
 	} else if (STATE_DONE_ENABLED == data->state && cur_hpd) {
 		if (!tegra_dc_ext_is_userspace_active()) {
 			/* No userspace running. Enable DC with cached mode */
@@ -395,7 +395,7 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		 * level again when it's woke up after 40ms.
 		 */
 		tgt_state = STATE_PLUG;
-		timeout = HPD_STABILIZE_MS;
+		timeout = HPD_STABILIZE_US;
 	} else {
 		/*
 		 * Looks like there was HPD activity while we were neither
@@ -405,7 +405,7 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		 * state machine.
 		 */
 		tgt_state = STATE_HPD_RESET;
-		timeout = HPD_STABILIZE_MS;
+		timeout = HPD_STABILIZE_US;
 	}
 
 	set_hpd_state(data, tgt_state, timeout);
@@ -464,7 +464,7 @@ static void sched_hpd_work(struct tegra_hpd_data *data, int resched_time)
 	if ((resched_time >= 0) && !data->shutdown) {
 		queue_delayed_work(system_wq,
 				&data->dwork,
-				msecs_to_jiffies(resched_time));
+				usecs_to_jiffies(resched_time));
 
 	} else if (data->dc_resumed && resched_time < 0) {
 		/*

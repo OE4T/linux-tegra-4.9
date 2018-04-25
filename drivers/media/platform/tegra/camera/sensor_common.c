@@ -251,27 +251,36 @@ static int sensor_common_parse_image_props(
 
 	err = of_property_read_string(node, "pixel_t", &temp_str);
 	if (err) {
-		dev_err(dev, "%s:pixel_t property missing\n", __func__);
+		/* pixel_t missing is only an error if alternate not provided */
 
 		/* check for alternative format string */
 		err = of_property_read_string(node, "pixel_phase", &phase_str);
 		if (err) {
 			dev_err(dev,
-				"%s:pixel_phase property missing\n",
+				"%s:pixel_phase property missing.\n",
+				__func__);
+			dev_err(dev,
+				"%s:Either pixel_t or alternate must be present.\n",
 				__func__);
 			goto fail;
 		}
 		err = of_property_read_string(node, "mode_type", &mode_str);
 		if (err) {
 			dev_err(dev,
-				"%s:mode_type property missing\n",
+				"%s:mode_type property missing.\n",
+				__func__);
+			dev_err(dev,
+				"%s:Either pixel_t or alternate must be present.\n",
 				__func__);
 			goto fail;
 		}
 		err = read_property_u32(node, "csi_pixel_bit_depth", &depth);
 		if (err) {
 			dev_err(dev,
-				"%s:csi_pixel_bit_depth property missing\n",
+				"%s:csi_pixel_bit_depth property missing.\n",
+				__func__);
+			dev_err(dev,
+				"%s:Either pixel_t or alternate must be present.\n",
 				__func__);
 			goto fail;
 		}

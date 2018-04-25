@@ -1148,7 +1148,7 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	 */
 	if (is_copy_back) {
 		/* clear buff */
-		memset(rpc_buff, 0, size_rpc);
+		memset(rpc_buff, 0xFF, size_rpc);
 		/* wait till RPC execute in PMU & ACK */
 		pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
 			&((struct nv_pmu_rpc_header *)rpc_buff)->function,

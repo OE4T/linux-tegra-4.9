@@ -2254,7 +2254,7 @@ static void tegra_xhci_ivc_work(struct work_struct *work)
 	tegra_xusb_padctl_irq(tegra->ivck->irq, tegra);
 }
 
-int init_ivc_communication(struct platform_device *pdev)
+static int init_ivc_communication(struct platform_device *pdev)
 {
 	uint32_t id;
 	int ret;
@@ -4351,7 +4351,7 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 	return xhci_update_device(hcd, udev);
 }
 
-int tegra_xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
+static int tegra_xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 				struct usb_host_endpoint *ep)
 {
 	struct usb_endpoint_descriptor *desc = &ep->desc;

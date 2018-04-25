@@ -27,9 +27,6 @@ struct sim_gk20a_linux {
 	struct sim_gk20a sim;
 	struct resource *reg_mem;
 	void __iomem *regs;
-	struct nvgpu_mem send_bfr;
-	struct nvgpu_mem recv_bfr;
-	struct nvgpu_mem msg_bfr;
 };
 
 int gk20a_init_sim_support(struct gk20a *g);

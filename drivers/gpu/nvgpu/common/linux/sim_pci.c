@@ -75,12 +75,9 @@ static void gk20a_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)
 
 static void gk20a_free_sim_support(struct gk20a *g)
 {
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
-
-	gk20a_free_sim_buffer(g, &sim_linux->send_bfr);
-	gk20a_free_sim_buffer(g, &sim_linux->recv_bfr);
-	gk20a_free_sim_buffer(g, &sim_linux->msg_bfr);
+	gk20a_free_sim_buffer(g, &g->sim->send_bfr);
+	gk20a_free_sim_buffer(g, &g->sim->recv_bfr);
+	gk20a_free_sim_buffer(g, &g->sim->msg_bfr);
 }
 
 static void gk20a_remove_sim_support(struct sim_gk20a *s)
@@ -91,12 +88,12 @@ static void gk20a_remove_sim_support(struct sim_gk20a *s)
 
 	if (sim_linux->regs)
 		sim_writel(s, sim_config_r(), sim_config_mode_disabled_v());
-	gk20a_free_sim_support(g);
 
 	if (sim_linux->regs) {
 		iounmap(sim_linux->regs);
 		sim_linux->regs = NULL;
 	}
+	gk20a_free_sim_support(g);
 
 	nvgpu_kfree(g, sim_linux);
 	g->sim = NULL;
@@ -109,8 +106,6 @@ static inline u32 sim_msg_header_size(void)
 
 static inline u32 *sim_msg_bfr(struct gk20a *g, u32 byte_offset)
 {
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
 	u8 *cpu_va;
 
 	cpu_va = (u8 *)sim_linux->msg_bfr.cpu_va;
@@ -148,8 +143,6 @@ static inline u32 sim_escape_read_hdr_size(void)
 
 static u32 *sim_send_ring_bfr(struct gk20a *g, u32 byte_offset)
 {
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
 	u8 *cpu_va;
 
 	cpu_va = (u8 *)sim_linux->send_bfr.cpu_va;
@@ -163,8 +156,6 @@ static int rpc_send_message(struct gk20a *g)
 	u32 send_base = sim_send_put_pointer_v(g->sim->send_ring_put) * 2;
 	u32 dma_offset = send_base + sim_dma_r()/sizeof(u32);
 	u32 dma_hi_offset = send_base + sim_dma_hi_r()/sizeof(u32);
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
 
 	*sim_send_ring_bfr(g, dma_offset*sizeof(u32)) =
 		sim_dma_target_phys_pci_coherent_f() |
@@ -173,7 +164,7 @@ static int rpc_send_message(struct gk20a *g)
 		sim_dma_addr_lo_f(nvgpu_mem_get_addr(g, &sim_linux->msg_bfr) >> PAGE_SHIFT);
 
 	*sim_send_ring_bfr(g, dma_hi_offset*sizeof(u32)) =
-		u64_hi32(nvgpu_mem_get_addr(g, &sim_linux->msg_bfr));
+		u64_hi32(nvgpu_mem_get_addr(g, &g->sim->msg_bfr));
 
 	*sim_msg_hdr(g, sim_msg_sequence_r()) = g->sim->sequence_base++;
 
@@ -188,8 +179,6 @@ static int rpc_send_message(struct gk20a *g)
 
 static inline u32 *sim_recv_ring_bfr(struct gk20a *g, u32 byte_offset)
 {
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
 	u8 *cpu_va;
 
 	cpu_va = (u8 *)sim_linux->recv_bfr.cpu_va;
@@ -200,8 +189,6 @@ static inline u32 *sim_recv_ring_bfr(struct gk20a *g, u32 byte_offset)
 static int rpc_recv_poll(struct gk20a *g)
 {
 	u64 recv_phys_addr;
-	struct sim_gk20a_linux *sim_linux =
-		container_of(g->sim, struct sim_gk20a_linux, sim);
 
 	/* Poll the recv ring get pointer in an infinite loop */
 	do {
@@ -223,7 +210,7 @@ static int rpc_recv_poll(struct gk20a *g)
 				 (u64)recv_phys_addr_lo << PAGE_SHIFT;
 
 		if (recv_phys_addr !=
-				nvgpu_mem_get_addr(g, &sim_linux->msg_bfr)) {
+				nvgpu_mem_get_addr(g, &g->sim->msg_bfr)) {
 			nvgpu_err(g, "Error in RPC reply");
 			return -EINVAL;
 		}
@@ -320,9 +307,9 @@ int nvgpu_pci_init_sim_support(struct gk20a *g)
 	sim_linux->regs = l->regs + sim_r();
 
 	/* allocate sim event/msg buffers */
-	err = gk20a_alloc_sim_buffer(g, &sim_linux->send_bfr);
-	err = err || gk20a_alloc_sim_buffer(g, &sim_linux->recv_bfr);
-	err = err || gk20a_alloc_sim_buffer(g, &sim_linux->msg_bfr);
+	err = gk20a_alloc_sim_buffer(g, &g->sim->send_bfr);
+	err = err || gk20a_alloc_sim_buffer(g, &g->sim->recv_bfr);
+	err = err || gk20a_alloc_sim_buffer(g, &g->sim->msg_bfr);
 
 	if (err)
 		goto fail;
@@ -334,7 +321,7 @@ int nvgpu_pci_init_sim_support(struct gk20a *g)
 	sim_writel(g->sim, sim_send_put_r(), g->sim->send_ring_put);
 
 	/* write send ring address and make it valid */
-	phys = nvgpu_mem_get_addr(g, &sim_linux->send_bfr);
+	phys = nvgpu_mem_get_addr(g, &g->sim->send_bfr);
 	sim_writel(g->sim, sim_send_ring_hi_r(),
 		   sim_send_ring_hi_addr_f(u64_hi32(phys)));
 	sim_writel(g->sim, sim_send_ring_r(),
@@ -351,7 +338,7 @@ int nvgpu_pci_init_sim_support(struct gk20a *g)
 	sim_writel(g->sim, sim_recv_get_r(), g->sim->recv_ring_get);
 
 	/* write send ring address and make it valid */
-	phys = nvgpu_mem_get_addr(g, &sim_linux->recv_bfr);
+	phys = nvgpu_mem_get_addr(g, &g->sim->recv_bfr);
 	sim_writel(g->sim, sim_recv_ring_hi_r(),
 		   sim_recv_ring_hi_addr_f(u64_hi32(phys)));
 	sim_writel(g->sim, sim_recv_ring_r(),

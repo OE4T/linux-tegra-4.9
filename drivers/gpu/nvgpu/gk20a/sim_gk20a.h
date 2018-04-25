@@ -3,7 +3,7 @@
  *
  * GK20A sim support
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,6 +34,9 @@ struct sim_gk20a {
 	u32 recv_ring_get;
 	u32 recv_ring_put;
 	u32 sequence_base;
+	struct nvgpu_mem send_bfr;
+	struct nvgpu_mem recv_bfr;
+	struct nvgpu_mem msg_bfr;
 	void (*remove_support)(struct sim_gk20a *);
 	int (*esc_readl)(
 		struct gk20a *g, char *path, u32 index, u32 *data);

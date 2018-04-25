@@ -32,6 +32,8 @@
 #define dsb(opt)	asm volatile("dsb " #opt : : : "memory")
 #define csdb()		asm volatile("hint #20" : : : "memory")
 
+#define csdb()		asm volatile("hint #20" : : : "memory")
+
 #define mb()		dsb(sy)
 #define rmb()		dsb(ld)
 #define wmb()		dsb(st)

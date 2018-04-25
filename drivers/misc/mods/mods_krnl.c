@@ -216,10 +216,6 @@ static int __init mods_init_module(void)
 	if (rc < 0)
 		return rc;
 
-	rc = mods_init_tegradc();
-	if (rc < 0)
-		return rc;
-
 	rc = mods_init_dmabuf();
 	if (rc < 0)
 		return rc;
@@ -242,8 +238,6 @@ static void __exit mods_exit_module(void)
 	LOG_ENT();
 
 	mods_exit_dmabuf();
-
-	mods_exit_tegradc();
 
 	mods_remove_debugfs();
 
@@ -554,7 +548,7 @@ static void mods_krnl_vma_close(struct vm_area_struct *vma)
 	LOG_EXT();
 }
 
-static struct vm_operations_struct mods_krnl_vm_ops = {
+static const struct vm_operations_struct mods_krnl_vm_ops = {
 	.open	= mods_krnl_vma_open,
 	.close	= mods_krnl_vma_close
 };
@@ -1773,11 +1767,6 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_TEGRA_DC_CONFIG_POSSIBLE,
 				   esc_mods_tegra_dc_config_possible,
 				   MODS_TEGRA_DC_CONFIG_POSSIBLE);
-		break;
-	case MODS_ESC_TEGRA_DC_SETUP_SD:
-		MODS_IOCTL_NORETVAL(MODS_ESC_TEGRA_DC_SETUP_SD,
-				    esc_mods_tegra_dc_setup_sd,
-				    MODS_TEGRA_DC_SETUP_SD);
 		break;
 #endif
 #ifdef MODS_HAS_NET

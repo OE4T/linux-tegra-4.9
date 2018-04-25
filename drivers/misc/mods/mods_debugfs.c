@@ -1,7 +1,7 @@
 /*
  * mods_debugfs.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -294,6 +294,7 @@ static int mods_dc_border_get(void *data, u64 *val)
 {
 	struct tegra_dc *dc = data;
 	u32 blender_reg = DC_DISP_BLEND_BACKGROUND_COLOR;
+
 	if (!dc->enabled)
 		*val = 0ULL;
 	else
@@ -304,6 +305,7 @@ static int mods_dc_border_set(void *data, u64 val)
 {
 	struct tegra_dc *dc = data;
 	u32 blender_reg = DC_DISP_BLEND_BACKGROUND_COLOR;
+
 	if (!dc->enabled)
 		return 0;
 	mutex_lock(&dc->lock);
@@ -316,97 +318,6 @@ static int mods_dc_border_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(mods_dc_border_fops, mods_dc_border_get,
 	mods_dc_border_set, "0x%llx\n");
-
-static int mods_sd_brightness_get(void *data, u64 *val)
-{
-	struct tegra_dc *dc = data;
-
-	if (!dc->enabled)
-		*val = 0ULL;
-	else {
-		*val = (u64)tegra_dc_readl_exported(dc, DC_DISP_SD_BL_CONTROL);
-		*val = SD_BLC_BRIGHTNESS(*val);
-	}
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(mods_sd_brightness_fops, mods_sd_brightness_get,
-	NULL, "%llu\n");
-
-static int mods_sd_pixel_count_get(void *data, u64 *val)
-{
-	struct tegra_dc *dc = data;
-
-	if (!dc->enabled)
-		*val = 0ULL;
-	else
-		*val = (u64)tegra_dc_readl_exported(dc, DC_DISP_SD_PIXEL_COUNT);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(mods_sd_pixel_count_fops, mods_sd_pixel_count_get,
-	NULL, "%llu\n");
-
-static int mods_sd_hw_k_rgb_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc *dc = s->private;
-	u32 val;
-
-	if (!dc->enabled)
-		val = 0U;
-	else
-		val = tegra_dc_readl_exported(dc, DC_DISP_SD_HW_K_VALUES);
-
-	seq_printf(s, "%u %u %u\n", SD_HW_K_R(val), SD_HW_K_G(val),
-		SD_HW_K_B(val));
-	return 0;
-}
-
-static int mods_sd_hw_k_rgb_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, mods_sd_hw_k_rgb_show, inode->i_private);
-}
-
-static const struct file_operations mods_sd_hw_k_rgb_fops = {
-	.open		= mods_sd_hw_k_rgb_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static int mods_sd_histogram_show(struct seq_file *s, void *unused)
-{
-	struct tegra_dc *dc = s->private;
-	u32 i;
-
-	for (i = 0; i < DC_DISP_SD_HISTOGRAM_NUM; i++) {
-		u32 val;
-
-		if (!dc->enabled)
-			val = 0U;
-		else
-			val = tegra_dc_readl_exported(dc,
-						      DC_DISP_SD_HISTOGRAM(i));
-		seq_printf(s, "%u %u %u %u\n",
-			SD_HISTOGRAM_BIN_0(val),
-			SD_HISTOGRAM_BIN_1(val),
-			SD_HISTOGRAM_BIN_2(val),
-			SD_HISTOGRAM_BIN_3(val));
-	}
-
-	return 0;
-}
-
-static int mods_sd_histogram_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, mods_sd_histogram_show, inode->i_private);
-}
-
-static const struct file_operations mods_sd_histogram_fops = {
-	.open		= mods_sd_histogram_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
 
 static int mods_dc_ocp_show(struct seq_file *s, void *unused)
 {
@@ -626,9 +537,6 @@ int mods_create_debugfs(struct miscdevice *modsdev)
 #ifdef CONFIG_TEGRA_DC
 	for (dc_idx = 0; dc_idx < nheads; dc_idx++) {
 		struct dentry *dc_debugfs_dir;
-#ifdef CONFIG_TEGRA_NVSD
-		struct dentry *sd_debugfs_dir;
-#endif
 		char devname[16];
 		struct tegra_dc *dc = tegra_dc_get_dc(dc_idx);
 
@@ -711,36 +619,6 @@ int mods_create_debugfs(struct miscdevice *modsdev)
 			err = -EIO;
 			goto remove_out;
 		}
-
-#if defined(CONFIG_TEGRA_NVSD)
-		sd_debugfs_dir = debugfs_create_dir("smartdimmer",
-			dc_debugfs_dir);
-
-		retval = debugfs_create_file("brightness", 0444,
-			sd_debugfs_dir, dc, &mods_sd_brightness_fops);
-		if (IS_ERR(retval)) {
-			err = -EIO;
-			goto remove_out;
-		}
-		retval = debugfs_create_file("pixel_count", 0444,
-			sd_debugfs_dir, dc, &mods_sd_pixel_count_fops);
-		if (IS_ERR(retval)) {
-			err = -EIO;
-			goto remove_out;
-		}
-		retval = debugfs_create_file("hw_k_rgb", 0444,
-			sd_debugfs_dir, dc, &mods_sd_hw_k_rgb_fops);
-		if (IS_ERR(retval)) {
-			err = -EIO;
-			goto remove_out;
-		}
-		retval = debugfs_create_file("histogram", 0444,
-			sd_debugfs_dir, dc, &mods_sd_histogram_fops);
-		if (IS_ERR(retval)) {
-			err = -EIO;
-			goto remove_out;
-		}
-#endif
 
 		if (dc->out && dc->out->type == TEGRA_DC_OUT_DSI) {
 			struct dentry *dsi_debugfs_dir;

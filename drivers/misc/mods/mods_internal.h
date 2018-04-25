@@ -81,7 +81,7 @@ struct mods_file_private_data {
 	u32                  access_token;
 };
 
-typedef struct mods_file_private_data *MODS_PRIV;
+#define MODS_PRIV struct mods_file_private_data *
 
 /* VM private data */
 struct mods_vm_private_data {
@@ -549,8 +549,6 @@ int esc_mods_dma_async_issue_pending(struct file *fp,
 #ifdef CONFIG_TEGRA_DC
 int esc_mods_tegra_dc_config_possible(struct file *fp,
 				struct MODS_TEGRA_DC_CONFIG_POSSIBLE *p);
-int esc_mods_tegra_dc_setup_sd(struct file *fp,
-			       struct MODS_TEGRA_DC_SETUP_SD *p);
 #endif
 
 #ifdef MODS_HAS_NET
@@ -600,14 +598,6 @@ static inline int mods_create_debugfs(struct miscdevice *modsdev)
 }
 static inline void mods_remove_debugfs(void) {}
 #endif /* CONFIG_DEBUG_FS */
-
-#ifdef CONFIG_TEGRA_DC
-int mods_init_tegradc(void);
-void mods_exit_tegradc(void);
-#else
-static inline int mods_init_tegradc(void) { return 0; }
-static inline void mods_exit_tegradc(void) {}
-#endif
 
 #if defined(MODS_TEGRA) && defined(MODS_HAS_DMABUF)
 int mods_init_dmabuf(void);

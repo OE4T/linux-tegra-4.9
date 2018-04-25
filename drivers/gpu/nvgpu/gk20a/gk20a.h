@@ -1032,6 +1032,7 @@ struct gpu_ops {
 		int (*mclk_init)(struct gk20a *g);
 		void (*mclk_deinit)(struct gk20a *g);
 		int (*mclk_change)(struct gk20a *g, u16 val);
+		bool split_rail_support;
 	} clk;
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);

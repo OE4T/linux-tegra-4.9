@@ -131,7 +131,10 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 	pset->b_debug_mode = false;
 	pset->b_enforce_vf_monotonicity = pdomains->b_enforce_vf_monotonicity;
 	pset->b_enforce_vf_smoothening = pdomains->b_enforce_vf_smoothening;
-	pset->volt_rails_max = 2;
+	if (g->ops.clk.split_rail_support)
+		pset->volt_rails_max = 2;
+	else
+		pset->volt_rails_max = 1;
 	status = boardobjgrpmask_export(
 				&pdomains->master_domains_mask.super,
 				pdomains->master_domains_mask.super.bitcount,

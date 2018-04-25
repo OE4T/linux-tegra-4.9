@@ -1415,7 +1415,6 @@ void pci_restore_aer_state(struct pci_dev *dev);
 static inline void pci_no_aer(void) { }
 static inline bool pci_aer_available(void) { return false; }
 static inline int pci_aer_init(struct pci_dev *d) { return -ENODEV; }
-static void pci_restore_aer_state(struct pci_dev *d) { }
 #endif
 
 #ifdef CONFIG_PCIE_ECRC

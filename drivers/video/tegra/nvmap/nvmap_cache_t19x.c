@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_cache_t19x.c
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,7 +62,7 @@ static void nvmap_t19x_clean_cache(void)
 	tegra_clean_dcache_all(unused);
 }
 
-void nvmap_setup_t19x_cache_ops(struct nvmap_chip_cache_op *op)
+static void nvmap_setup_t19x_cache_ops(struct nvmap_chip_cache_op *op)
 {
 	op->inner_flush_cache_all = nvmap_t19x_flush_cache;
 	op->inner_clean_cache_all = nvmap_t19x_clean_cache;

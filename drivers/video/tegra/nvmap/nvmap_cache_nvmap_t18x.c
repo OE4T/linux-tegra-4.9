@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_cache.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,7 +55,7 @@ static void nvmap_roc_clean_cache(void)
 	}
 }
 
-void nvmap_setup_t18x_cache_ops(struct nvmap_chip_cache_op *op)
+static void nvmap_setup_t18x_cache_ops(struct nvmap_chip_cache_op *op)
 {
 	op->inner_flush_cache_all = nvmap_roc_flush_cache;
 	op->inner_clean_cache_all = nvmap_roc_clean_cache;

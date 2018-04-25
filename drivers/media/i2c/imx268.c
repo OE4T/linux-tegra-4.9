@@ -31,7 +31,13 @@
 #include "../platform/tegra/camera/camera_gpio.h"
 #include "imx268_mode_tbls.h"
 
-#define IMX268_MAX_COARSE_DIFF	10
+/* imx268 - sensor parameter limits */
+#define IMX268_MIN_ANALOG_GAIN		0
+#define IMX268_MAX_ANALOG_GAIN		480
+#define IMX268_MAX_FRAME_LENGTH		0xFFFF
+#define IMX268_MIN_COARSE_EXPOSURE	0x0001
+#define IMX268_MAX_COARSE_DIFF		0x0A
+#define IMX268_FINE_INTEG_TIME		0x0298
 
 /* imx268 - sensor i2c register addresses */
 #define IMX268_GROUP_HOLD_ADDR			0x0104
@@ -135,6 +141,9 @@ static int imx268_set_group_hold(struct camera_common_data *s_data, bool val)
 	struct device *dev = s_data->dev;
 	int err = 0;
 
+	dev_dbg(dev, "%s: %s group_hold\n",
+		__func__, (val ? "enabling" : "disabling"));
+
 	priv->group_hold_prev = val;
 	err = imx268_write_reg(s_data, IMX268_GROUP_HOLD_ADDR, val);
 	if (err) {
@@ -164,16 +173,16 @@ static int imx268_set_gain(struct camera_common_data *s_data, s64 val)
 	else if (val > mode->control_properties.max_gain_val)
 		val = mode->control_properties.max_gain_val;
 
-	/* translate value (from normalized gain) */
+	/* translate value (from normalized analog gain) */
 	gain = (s16)((512 * mode->control_properties.gain_factor) / val);
 	gain = 512 - gain;
 
-	if (gain < 0)
-		gain = 0;
-	else if (gain > 480)
-		gain = 480;
+	if (gain < IMX268_MIN_ANALOG_GAIN)
+		gain = IMX268_MIN_ANALOG_GAIN;
+	else if (gain > IMX268_MAX_ANALOG_GAIN)
+		gain = IMX268_MAX_ANALOG_GAIN;
 
-	dev_dbg(dev, "%s: gain: %d, times: %lld\n", __func__, gain, val);
+	dev_dbg(dev, "%s: val: %lld [times], gain: %d\n", __func__, val, gain);
 
 	imx268_get_gain_regs(reg_list, gain);
 
@@ -207,7 +216,9 @@ static int imx268_set_frame_rate(struct camera_common_data *s_data, s64 val)
 		(u64)mode->control_properties.framerate_factor /
 		mode->image_properties.line_length / val);
 
-	dev_dbg(dev, "%s: frame_length: %u\n", __func__, frame_length);
+	dev_dbg(dev,
+		"%s: val: %llde-6 [fps], frame_length: %u [lines/frame]\n",
+		__func__, val, frame_length);
 
 	imx268_get_frame_length_regs(reg_list, frame_length);
 
@@ -241,19 +252,21 @@ static int imx268_set_exposure(struct camera_common_data *s_data, s64 val)
 	if (!priv->group_hold_prev)
 		imx268_set_group_hold(s_data, 1);
 
-	coarse_time = mode->signal_properties.pixel_clock.val *
+	coarse_time = (mode->signal_properties.pixel_clock.val *
 		val / mode->image_properties.line_length /
-		mode->control_properties.exposure_factor;
+		mode->control_properties.exposure_factor) -
+		(IMX268_FINE_INTEG_TIME / mode->image_properties.line_length);
 
-	if (coarse_time < 1)
-		coarse_time = 1;
+	if (coarse_time < IMX268_MIN_COARSE_EXPOSURE)
+		coarse_time = IMX268_MIN_COARSE_EXPOSURE;
 	else if (coarse_time > max_coarse_time) {
 		coarse_time = max_coarse_time;
-		dev_dbg(dev, "%s: exposure limited by frame_length: %d\n",
-			__func__, max_coarse_time);
+		dev_dbg(dev, "%s: exposure limited by frame_length: %d " \
+			"[lines/frame]\n", __func__, max_coarse_time);
 	}
 
-	dev_dbg(dev, "%s: coarse_time: %u\n", __func__, coarse_time);
+	dev_dbg(dev, "%s: val: %lld [us], coarse_time: %u [lines]\n",
+		__func__, val, coarse_time);
 
 	imx268_get_coarse_time_regs(reg_list, coarse_time);
 

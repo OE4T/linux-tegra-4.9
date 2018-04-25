@@ -96,15 +96,23 @@ int gk20a_init_pstate_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = pmgr_domain_sw_setup(g);
-	if (err)
-		return err;
+	if(g->ops.clk.support_pmgr_domain) {
+		err = pmgr_domain_sw_setup(g);
+		if (err)
+			return err;
+	}
 
-	err = clk_freq_controller_sw_setup(g);
-	if (err)
-		return err;
+	if (g->ops.clk.support_clk_freq_controller) {
+		err = clk_freq_controller_sw_setup(g);
+		if (err)
+			return err;
+	}
 
-	err = nvgpu_lpwr_pg_setup(g);
+	if(g->ops.clk.support_lpwr_pg) {
+		err = nvgpu_lpwr_pg_setup(g);
+		if (err)
+			return err;
+	}
 
 	return err;
 }
@@ -176,10 +184,11 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = clk_freq_controller_pmu_setup(g);
-	if (err)
-		return err;
-
+	if (g->ops.clk.support_clk_freq_controller) {
+		err = clk_freq_controller_pmu_setup(g);
+		if (err)
+			return err;
+	}
 	err = clk_pmu_vin_load(g);
 	if (err)
 		return err;
@@ -188,7 +197,9 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = pmgr_domain_pmu_setup(g);
+	if (g->ops.clk.support_pmgr_domain)
+		err = pmgr_domain_pmu_setup(g);
+
 	return err;
 }
 

@@ -1034,6 +1034,9 @@ struct gpu_ops {
 		void (*mclk_deinit)(struct gk20a *g);
 		int (*mclk_change)(struct gk20a *g, u16 val);
 		bool split_rail_support;
+		bool support_clk_freq_controller;
+		bool support_pmgr_domain;
+		bool support_lpwr_pg;
 	} clk;
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);

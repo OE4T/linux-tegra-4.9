@@ -908,6 +908,9 @@ int gv100_init_hal(struct gk20a *g)
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 	gops->clk.split_rail_support = false;
+	gops->clk.support_clk_freq_controller = false;
+	gops->clk.support_pmgr_domain = false;
+	gops->clk.support_lpwr_pg = false;
 
 	g->name = "gv10x";
 

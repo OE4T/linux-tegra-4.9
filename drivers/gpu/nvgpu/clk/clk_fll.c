@@ -362,6 +362,8 @@ u32 nvgpu_clk_get_vbios_clk_domain_gv10x( u32 vbios_domain)
 		return CTRL_CLK_DOMAIN_XBARCLK;
 	else if (vbios_domain == 3)
 		return CTRL_CLK_DOMAIN_SYSCLK;
+	else if (vbios_domain == 5)
+		return CTRL_CLK_DOMAIN_NVDCLK;
 	return 0;
 }
 

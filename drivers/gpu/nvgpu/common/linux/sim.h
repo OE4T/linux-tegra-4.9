@@ -2,7 +2,7 @@
  *
  * GK20A sim support
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,17 +20,16 @@
 #ifndef __SIM_LINUX_H__
 #define __SIM_LINUX_H__
 
+#include <nvgpu/nvgpu_mem.h>
 #include "gk20a/sim_gk20a.h"
 
 struct sim_gk20a_linux {
 	struct sim_gk20a sim;
 	struct resource *reg_mem;
 	void __iomem *regs;
-	struct {
-		struct page *page;
-		void *kvaddr;
-		u64 phys;
-	} send_bfr, recv_bfr, msg_bfr;
+	struct nvgpu_mem send_bfr;
+	struct nvgpu_mem recv_bfr;
+	struct nvgpu_mem msg_bfr;
 };
 
 int gk20a_init_sim_support(struct gk20a *g);

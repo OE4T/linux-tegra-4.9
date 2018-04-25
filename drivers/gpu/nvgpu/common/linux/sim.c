@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,47 +20,67 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/linux/vm.h>
-
+#include <nvgpu/bitops.h>
+#include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/dma.h>
 #include "gk20a/gk20a.h"
 #include "sim.h"
 
 #include <nvgpu/hw/gk20a/hw_sim_gk20a.h>
 
-static inline void sim_writel(struct sim_gk20a_linux *sim_linux, u32 r, u32 v)
+static inline void sim_writel(struct sim_gk20a *sim, u32 r, u32 v)
 {
+	struct sim_gk20a_linux *sim_linux =
+		container_of(sim, struct sim_gk20a_linux, sim);
+
 	writel(v, sim_linux->regs + r);
 }
 
-static inline u32 sim_readl(struct sim_gk20a_linux *sim_linux, u32 r)
+static inline u32 sim_readl(struct sim_gk20a *sim, u32 r)
 {
+	struct sim_gk20a_linux *sim_linux =
+		container_of(sim, struct sim_gk20a_linux, sim);
+
 	return readl(sim_linux->regs + r);
 }
 
-static void kunmap_and_free_iopage(void **kvaddr, struct page **page)
+static int gk20a_alloc_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	if (*kvaddr) {
-		kunmap(*kvaddr);
-		*kvaddr = NULL;
+	int err;
+
+	err = nvgpu_dma_alloc(g, PAGE_SIZE, mem);
+
+	if (err)
+		return err;
+	/*
+	 * create a valid cpu_va mapping
+	 */
+	nvgpu_mem_begin(g, mem);
+
+	return 0;
+}
+
+static void gk20a_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	if (nvgpu_mem_is_valid(mem)) {
+		/*
+		 * invalidate the cpu_va mapping
+		 */
+		nvgpu_mem_end(g, mem);
+		nvgpu_dma_free(g, mem);
 	}
-	if (*page) {
-		__free_page(*page);
-		*page = NULL;
-	}
+
+	memset(mem, 0, sizeof(*mem));
 }
 
 static void gk20a_free_sim_support(struct gk20a *g)
 {
 	struct sim_gk20a_linux *sim_linux =
 		container_of(g->sim, struct sim_gk20a_linux, sim);
-	/* free sim mappings, bfrs */
-	kunmap_and_free_iopage(&sim_linux->send_bfr.kvaddr,
-			       &sim_linux->send_bfr.page);
 
-	kunmap_and_free_iopage(&sim_linux->recv_bfr.kvaddr,
-			       &sim_linux->recv_bfr.page);
-
-	kunmap_and_free_iopage(&sim_linux->msg_bfr.kvaddr,
-			       &sim_linux->msg_bfr.page);
+	gk20a_free_sim_buffer(g, &sim_linux->send_bfr);
+	gk20a_free_sim_buffer(g, &sim_linux->recv_bfr);
+	gk20a_free_sim_buffer(g, &sim_linux->msg_bfr);
 }
 
 static void gk20a_remove_sim_support(struct sim_gk20a *s)
@@ -70,7 +90,7 @@ static void gk20a_remove_sim_support(struct sim_gk20a *s)
 		container_of(g->sim, struct sim_gk20a_linux, sim);
 
 	if (sim_linux->regs)
-		sim_writel(sim_linux, sim_config_r(), sim_config_mode_disabled_v());
+		sim_writel(s, sim_config_r(), sim_config_mode_disabled_v());
 	gk20a_free_sim_support(g);
 
 	if (sim_linux->regs) {
@@ -82,35 +102,6 @@ static void gk20a_remove_sim_support(struct sim_gk20a *s)
 	g->sim = NULL;
 }
 
-static int alloc_and_kmap_iopage(struct gk20a *g,
-				 void **kvaddr,
-				 u64 *phys,
-				 struct page **page)
-{
-	int err = 0;
-	*page = alloc_page(GFP_KERNEL);
-
-	if (!*page) {
-		err = -ENOMEM;
-		nvgpu_err(g, "couldn't allocate io page");
-		goto fail;
-	}
-
-	*kvaddr = kmap(*page);
-	if (!*kvaddr) {
-		err = -ENOMEM;
-		nvgpu_err(g, "couldn't kmap io page");
-		goto fail;
-	}
-	*phys = page_to_phys(*page);
-	return 0;
-
- fail:
-	kunmap_and_free_iopage(kvaddr, page);
-	return err;
-
-}
-
 static inline u32 sim_msg_header_size(void)
 {
 	return 24;/*TBD: fix the header to gt this from NV_VGPU_MSG_HEADER*/
@@ -120,7 +111,11 @@ static inline u32 *sim_msg_bfr(struct gk20a *g, u32 byte_offset)
 {
 	struct sim_gk20a_linux *sim_linux =
 		container_of(g->sim, struct sim_gk20a_linux, sim);
-	return (u32 *)(sim_linux->msg_bfr.kvaddr + byte_offset);
+	u8 *cpu_va;
+
+	cpu_va = (u8 *)sim_linux->msg_bfr.cpu_va;
+
+	return (u32 *)(cpu_va + byte_offset);
 }
 
 static inline u32 *sim_msg_hdr(struct gk20a *g, u32 byte_offset)
@@ -153,7 +148,11 @@ static u32 *sim_send_ring_bfr(struct gk20a *g, u32 byte_offset)
 {
 	struct sim_gk20a_linux *sim_linux =
 		container_of(g->sim, struct sim_gk20a_linux, sim);
-	return (u32 *)(sim_linux->send_bfr.kvaddr + byte_offset);
+	u8 *cpu_va;
+
+	cpu_va = (u8 *)sim_linux->send_bfr.cpu_va;
+
+	return (u32 *)(cpu_va + byte_offset);
 }
 
 static int rpc_send_message(struct gk20a *g)
@@ -169,18 +168,17 @@ static int rpc_send_message(struct gk20a *g)
 		sim_dma_target_phys_pci_coherent_f() |
 		sim_dma_status_valid_f() |
 		sim_dma_size_4kb_f() |
-		sim_dma_addr_lo_f(sim_linux->msg_bfr.phys >> PAGE_SHIFT);
+		sim_dma_addr_lo_f(nvgpu_mem_get_addr(g, &sim_linux->msg_bfr) >> PAGE_SHIFT);
 
 	*sim_send_ring_bfr(g, dma_hi_offset*sizeof(u32)) =
-		u64_hi32(sim_linux->msg_bfr.phys);
+		u64_hi32(nvgpu_mem_get_addr(g, &sim_linux->msg_bfr));
 
 	*sim_msg_hdr(g, sim_msg_sequence_r()) = g->sim->sequence_base++;
 
-	g->sim->send_ring_put = (g->sim->send_ring_put + 2 * sizeof(u32)) %
-		PAGE_SIZE;
+	g->sim->send_ring_put = (g->sim->send_ring_put + 2 * sizeof(u32)) % PAGE_SIZE;
 
 	/* Update the put pointer. This will trap into the host. */
-	sim_writel(sim_linux, sim_send_put_r(), g->sim->send_ring_put);
+	sim_writel(g->sim, sim_send_put_r(), g->sim->send_ring_put);
 
 	return 0;
 }
@@ -189,7 +187,11 @@ static inline u32 *sim_recv_ring_bfr(struct gk20a *g, u32 byte_offset)
 {
 	struct sim_gk20a_linux *sim_linux =
 		container_of(g->sim, struct sim_gk20a_linux, sim);
-	return (u32 *)(sim_linux->recv_bfr.kvaddr + byte_offset);
+	u8 *cpu_va;
+
+	cpu_va = (u8 *)sim_linux->recv_bfr.cpu_va;
+
+	return (u32 *)(cpu_va + byte_offset);
 }
 
 static int rpc_recv_poll(struct gk20a *g)
@@ -203,7 +205,7 @@ static int rpc_recv_poll(struct gk20a *g)
 
 	/* Poll the recv ring get pointer in an infinite loop*/
 	do {
-		g->sim->recv_ring_put = sim_readl(sim_linux, sim_recv_put_r());
+		g->sim->recv_ring_put = sim_readl(g->sim, sim_recv_put_r());
 	} while (g->sim->recv_ring_put == g->sim->recv_ring_get);
 
 	/* process all replies */
@@ -220,19 +222,19 @@ static int rpc_recv_poll(struct gk20a *g)
 		recv_phys_addr = (u64)recv_phys_addr_hi << 32 |
 				 (u64)recv_phys_addr_lo << PAGE_SHIFT;
 
-		if (recv_phys_addr != sim_linux->msg_bfr.phys) {
+		if (recv_phys_addr !=
+				nvgpu_mem_get_addr(g, &sim_linux->msg_bfr)) {
 			nvgpu_err(g, "%s Error in RPC reply",
 				__func__);
 			return -1;
 		}
 
 		/* Update GET pointer */
-		g->sim->recv_ring_get = (g->sim->recv_ring_get + 2*sizeof(u32)) %
-			PAGE_SIZE;
+		g->sim->recv_ring_get = (g->sim->recv_ring_get + 2*sizeof(u32)) % PAGE_SIZE;
 
-		sim_writel(sim_linux, sim_recv_get_r(), g->sim->recv_ring_get);
+		sim_writel(g->sim, sim_recv_get_r(), g->sim->recv_ring_get);
 
-		g->sim->recv_ring_put = sim_readl(sim_linux, sim_recv_put_r());
+		g->sim->recv_ring_put = sim_readl(g->sim, sim_recv_put_r());
 	}
 
 	return 0;
@@ -295,53 +297,41 @@ int gk20a_init_sim_support(struct gk20a *g)
 		container_of(g->sim, struct sim_gk20a_linux, sim);
 
 	/* allocate sim event/msg buffers */
-	err = alloc_and_kmap_iopage(g, &sim_linux->send_bfr.kvaddr,
-				    &sim_linux->send_bfr.phys,
-				    &sim_linux->send_bfr.page);
+	err = gk20a_alloc_sim_buffer(g, &sim_linux->send_bfr);
+	err = err || gk20a_alloc_sim_buffer(g, &sim_linux->recv_bfr);
+	err = err || gk20a_alloc_sim_buffer(g, &sim_linux->msg_bfr);
 
-	err = err || alloc_and_kmap_iopage(g, &sim_linux->recv_bfr.kvaddr,
-					   &sim_linux->recv_bfr.phys,
-					   &sim_linux->recv_bfr.page);
-
-	err = err || alloc_and_kmap_iopage(g, &sim_linux->msg_bfr.kvaddr,
-					   &sim_linux->msg_bfr.phys,
-					   &sim_linux->msg_bfr.page);
-
-	if (!(sim_linux->send_bfr.kvaddr && sim_linux->recv_bfr.kvaddr &&
-	      sim_linux->msg_bfr.kvaddr)) {
-		nvgpu_err(g, "couldn't allocate all sim buffers");
+	if (err)
 		goto fail;
-	}
-
 	/*mark send ring invalid*/
-	sim_writel(sim_linux, sim_send_ring_r(), sim_send_ring_status_invalid_f());
+	sim_writel(g->sim, sim_send_ring_r(), sim_send_ring_status_invalid_f());
 
 	/*read get pointer and make equal to put*/
-	g->sim->send_ring_put = sim_readl(sim_linux, sim_send_get_r());
-	sim_writel(sim_linux, sim_send_put_r(), g->sim->send_ring_put);
+	g->sim->send_ring_put = sim_readl(g->sim, sim_send_get_r());
+	sim_writel(g->sim, sim_send_put_r(), g->sim->send_ring_put);
 
 	/*write send ring address and make it valid*/
-	phys = sim_linux->send_bfr.phys;
-	sim_writel(sim_linux, sim_send_ring_hi_r(),
+	phys = nvgpu_mem_get_addr(g, &sim_linux->send_bfr);
+	sim_writel(g->sim, sim_send_ring_hi_r(),
 		   sim_send_ring_hi_addr_f(u64_hi32(phys)));
-	sim_writel(sim_linux, sim_send_ring_r(),
+	sim_writel(g->sim, sim_send_ring_r(),
 		   sim_send_ring_status_valid_f() |
 		   sim_send_ring_target_phys_pci_coherent_f() |
 		   sim_send_ring_size_4kb_f() |
 		   sim_send_ring_addr_lo_f(phys >> PAGE_SHIFT));
 
 	/*repeat for recv ring (but swap put,get as roles are opposite) */
-	sim_writel(sim_linux, sim_recv_ring_r(), sim_recv_ring_status_invalid_f());
+	sim_writel(g->sim, sim_recv_ring_r(), sim_recv_ring_status_invalid_f());
 
 	/*read put pointer and make equal to get*/
-	g->sim->recv_ring_get = sim_readl(sim_linux, sim_recv_put_r());
-	sim_writel(sim_linux, sim_recv_get_r(), g->sim->recv_ring_get);
+	g->sim->recv_ring_get = sim_readl(g->sim, sim_recv_put_r());
+	sim_writel(g->sim, sim_recv_get_r(), g->sim->recv_ring_get);
 
 	/*write send ring address and make it valid*/
-	phys = sim_linux->recv_bfr.phys;
-	sim_writel(sim_linux, sim_recv_ring_hi_r(),
+	phys = nvgpu_mem_get_addr(g, &sim_linux->recv_bfr);
+	sim_writel(g->sim, sim_recv_ring_hi_r(),
 		   sim_recv_ring_hi_addr_f(u64_hi32(phys)));
-	sim_writel(sim_linux, sim_recv_ring_r(),
+	sim_writel(g->sim, sim_recv_ring_r(),
 		   sim_recv_ring_status_valid_f() |
 		   sim_recv_ring_target_phys_pci_coherent_f() |
 		   sim_recv_ring_size_4kb_f() |

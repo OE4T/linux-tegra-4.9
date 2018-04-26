@@ -285,6 +285,9 @@ extern void (*flush_ptc_and_tlb_range)(struct smmu_device *smmu, struct smmu_as 
 extern void (*flush_ptc_and_tlb_as)(struct smmu_as *as, dma_addr_t start, dma_addr_t end);
 extern void (*free_pdir)(struct smmu_as *as);
 
+int tegra_smmu_suspend(struct device *dev);
+int tegra_smmu_resume(struct device *dev);
+
 #ifdef CONFIG_TEGRA_HV_MANAGER
 extern int tegra_smmu_probe_hv(struct platform_device *pdev,
 					struct smmu_device *smmu);

@@ -148,12 +148,12 @@ struct tegra_crypt_req {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	unsigned int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
-	int ivlen;
+	unsigned int ivlen;
 	u8 *plaintext;
 	u8 *result;
-	int plaintext_sz;
-	int skip_key;
-	int skip_iv;
+	unsigned int plaintext_sz;
+	unsigned int skip_key;
+	unsigned int skip_iv;
 	bool skip_exit;
 };
 #define TEGRA_CRYPTO_IOCTL_PROCESS_REQ	\
@@ -166,12 +166,12 @@ struct tegra_crypt_req_32 {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	unsigned int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
-	int ivlen;
+	unsigned int ivlen;
 	__u32 plaintext;
 	__u32 result;
-	int plaintext_sz;
-	int skip_key;
-	int skip_iv;
+	unsigned int plaintext_sz;
+	unsigned int skip_key;
+	unsigned int skip_iv;
 };
 #define TEGRA_CRYPTO_IOCTL_PROCESS_REQ_32	\
 		_IOWR(0x98, 121, struct tegra_crypt_req_32)
@@ -184,8 +184,8 @@ struct tegra_crypt_req_32 {
 struct tegra_rng_req {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	u8 *rdata; /* random generated data */
-	int nbytes; /* random data length */
-	int type;
+	unsigned int nbytes; /* random data length */
+	unsigned int type;
 };
 #define TEGRA_CRYPTO_IOCTL_SET_SEED	\
 		_IOWR(0x98, 102, struct tegra_rng_req)
@@ -196,8 +196,8 @@ struct tegra_rng_req {
 struct tegra_rng_req_32 {
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	__u64 rdata; /* random generated data */
-	int nbytes; /* random data length */
-	int type;
+	unsigned int nbytes; /* random data length */
+	unsigned int type;
 };
 #define TEGRA_CRYPTO_IOCTL_SET_SEED_32	\
 		_IOWR(0x98, 122, struct tegra_rng_req_32)
@@ -215,7 +215,7 @@ struct tegra_rsa_req {
 	unsigned int modlen;
 	unsigned int pub_explen;
 	unsigned int prv_explen;
-	int skip_key;
+	unsigned int skip_key;
 	enum tegra_rsa_op_mode op_mode;
 };
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ	\
@@ -225,13 +225,13 @@ struct tegra_rsa_req_ahash {
 	char *key;
 	char *message;
 	char *result;
-	int algo;
-	int keylen;
-	int msg_len;
-	int modlen;
-	int pub_explen;
-	int prv_explen;
-	int skip_key;
+	unsigned int algo;
+	unsigned int keylen;
+	unsigned int msg_len;
+	unsigned int modlen;
+	unsigned int pub_explen;
+	unsigned int prv_explen;
+	unsigned int skip_key;
 };
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ_AHASH	\
 		_IOWR(0x98, 110, struct tegra_rsa_req_ahash)
@@ -241,13 +241,13 @@ struct tegra_rsa_req_32 {
 	__u32 key;
 	__u32 message;
 	__u32 result;
-	int algo;
-	int keylen;
-	int msg_len;
-	int modlen;
-	int pub_explen;
-	int prv_explen;
-	int skip_key;
+	unsigned int algo;
+	unsigned int keylen;
+	unsigned int msg_len;
+	unsigned int modlen;
+	unsigned int pub_explen;
+	unsigned int prv_explen;
+	unsigned int skip_key;
 };
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ_32	\
 		_IOWR(0x98, 125, struct tegra_rsa_req_32)
@@ -259,7 +259,7 @@ struct tegra_sha_req {
 	unsigned char *algo;
 	unsigned char *plaintext;
 	unsigned char *result;
-	int plaintext_sz;
+	unsigned int plaintext_sz;
 };
 #define TEGRA_CRYPTO_IOCTL_GET_SHA	\
 		_IOWR(0x98, 104, struct tegra_sha_req)
@@ -282,7 +282,7 @@ struct tegra_sha_req_32 {
 	__u32 algo;
 	__u32 plaintext;
 	__u32 result;
-	int plaintext_sz;
+	unsigned int plaintext_sz;
 };
 #define TEGRA_CRYPTO_IOCTL_GET_SHA_32	\
 		_IOWR(0x98, 124, struct tegra_sha_req_32)

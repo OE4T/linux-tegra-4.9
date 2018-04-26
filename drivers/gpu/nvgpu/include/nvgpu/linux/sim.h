@@ -20,8 +20,7 @@
 #ifndef __SIM_LINUX_H__
 #define __SIM_LINUX_H__
 
-#include <nvgpu/nvgpu_mem.h>
-#include "gk20a/sim_gk20a.h"
+#include <linux/platform_device.h>
 
 struct sim_nvgpu_linux {
 	struct sim_nvgpu sim;
@@ -32,11 +31,7 @@ struct sim_nvgpu_linux {
 
 void sim_writel(struct sim_nvgpu *sim, u32 r, u32 v);
 u32 sim_readl(struct sim_nvgpu *sim, u32 r);
-int nvgpu_init_sim_support(struct gk20a *g); /* will be moved to common in subsequent patch */
-int nvgpu_alloc_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem); /* will be moved to common in subsequent patch */
-void nvgpu_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem); /* will be moved to common in subsequent patch */
-void nvgpu_free_sim_support(struct gk20a *g); /* will be moved to common in subsequent patch */
-void nvgpu_remove_sim_support(struct gk20a *g); /* will be moved to common in subsequent patch */
+
 int nvgpu_init_sim_support_linux(struct gk20a *g,
 		struct platform_device *dev);
 void nvgpu_remove_sim_support_linux(struct gk20a *g);

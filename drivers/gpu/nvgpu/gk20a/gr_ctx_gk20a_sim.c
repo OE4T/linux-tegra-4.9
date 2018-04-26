@@ -25,7 +25,7 @@
  */
 
 #include "gk20a.h"
-#include "sim_gk20a.h"
+#include <nvgpu/sim.h>
 #include "gr_ctx_gk20a.h"
 
 #include <nvgpu/log.h>

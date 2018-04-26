@@ -41,6 +41,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/vidmem.h>
+#include <nvgpu/sim.h>
 
 #include "platform_gk20a.h"
 #include "sysfs.h"
@@ -51,7 +52,6 @@
 #include "module_usermode.h"
 #include "intr.h"
 #include "ioctl.h"
-#include "sim.h"
 
 #include "os_linux.h"
 #include "ctxsw_trace.h"

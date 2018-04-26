@@ -1,9 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/sim_gk20a.h
- *
- * GK20A sim support
- *
- * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,11 +19,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __SIM_GK20A_H__
-#define __SIM_GK20A_H__
+#ifndef __NVGPU_SIM_H__
+#define __NVGPU_SIM_H__
+
+#include <nvgpu/nvgpu_mem.h>
 
 struct gk20a;
-
 struct sim_nvgpu {
 	struct gk20a *g;
 	u32 send_ring_put;
@@ -41,5 +38,17 @@ struct sim_nvgpu {
 	int (*esc_readl)(
 		struct gk20a *g, char *path, u32 index, u32 *data);
 };
+#ifdef __KERNEL__
+#include "linux/sim.h"
+#include "linux/sim_pci.h"
+#else
 
-#endif /*__SIM_GK20A_H__*/
+#endif
+int nvgpu_init_sim_support(struct gk20a *g);
+int nvgpu_init_sim_support_pci(struct gk20a *g);
+int nvgpu_alloc_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem);
+void nvgpu_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem);
+void nvgpu_free_sim_support(struct gk20a *g);
+void nvgpu_remove_sim_support(struct gk20a *g);
+
+#endif

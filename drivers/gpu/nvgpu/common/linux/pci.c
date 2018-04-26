@@ -35,8 +35,7 @@
 #include "sysfs.h"
 #include "os_linux.h"
 #include "platform_gk20a.h"
-#include "sim.h"
-#include "sim_pci.h"
+#include <nvgpu/sim.h>
 
 #include "pci.h"
 #include "pci_usermode.h"

@@ -25,11 +25,11 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/hw_sim.h>
+#include <nvgpu/sim.h>
 #include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "os_linux.h"
 #include "module.h"
-#include "sim.h"				/* will be removed in next patch */
 
 void sim_writel(struct sim_nvgpu *sim, u32 r, u32 v)
 {
@@ -51,10 +51,9 @@ void nvgpu_remove_sim_support_linux(struct gk20a *g)
 {
 	struct sim_nvgpu_linux *sim_linux;
 
-	if (!g->sim) {
-		nvgpu_warn(g, "sim not allocated or not in sim_mode");
+	if (!g->sim)
 		return;
-	}
+
 	sim_linux = container_of(g->sim, struct sim_nvgpu_linux, sim);
 	if (sim_linux->regs) {
 		sim_writel(g->sim, sim_config_r(), sim_config_mode_disabled_v());

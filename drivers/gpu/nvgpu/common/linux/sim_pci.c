@@ -24,11 +24,10 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/hw_sim_pci.h>
+#include <nvgpu/sim.h>
 #include "gk20a/gk20a.h"
 #include "os_linux.h"
 #include "module.h"
-#include "sim.h"	/* will be removed in subsequent patches */
-#include "sim_pci.h"/* will be removed in subsequent patches */
 
 static bool _nvgpu_pci_is_simulation(struct gk20a *g, u32 sim_base)
 {
@@ -50,7 +49,6 @@ void nvgpu_remove_sim_support_linux_pci(struct gk20a *g)
 	is_simulation = _nvgpu_pci_is_simulation(g, sim_r());
 
 	if (!is_simulation) {
-		nvgpu_warn(g, "not in sim_mode");
 		return;
 	}
 

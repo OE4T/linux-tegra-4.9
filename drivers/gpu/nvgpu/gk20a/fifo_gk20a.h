@@ -95,6 +95,7 @@ struct fifo_runlist_info_gk20a {
 	u32  pbdma_bitmask;      /* pbdmas supported for this runlist*/
 	u32  eng_bitmask;        /* engines using this runlist */
 	u32  reset_eng_bitmask;  /* engines to be reset during recovery */
+	u32  count;              /* cached runlist_hw_submit parameter */
 	bool stopped;
 	bool support_tsg;
 	/* protect ch/tsg/runlist preempt & runlist update */
@@ -249,7 +250,9 @@ void gk20a_fifo_disable_tsg_sched(struct gk20a *g, struct tsg_gk20a *tsg);
 
 u32 gk20a_fifo_engines_on_ch(struct gk20a *g, u32 chid);
 
-int gk20a_fifo_reschedule_runlist(struct gk20a *g, u32 runlist_id);
+int gk20a_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next);
+int nvgpu_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next,
+		bool wait_preempt);
 
 int gk20a_fifo_update_runlist(struct gk20a *g, u32 engine_id, u32 chid,
 			      bool add, bool wait_for_finish);

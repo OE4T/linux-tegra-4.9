@@ -54,7 +54,6 @@ struct fifo_profile_gk20a;
 #define NVGPU_SUBMIT_FLAGS_SYNC_FENCE	(1 << 3)
 #define NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI	(1 << 4)
 #define NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
-#define NVGPU_SUBMIT_FLAGS_RESCHEDULE_RUNLIST	(1 << 6)
 
 /*
  * The binary format of 'struct nvgpu_channel_fence' introduced here

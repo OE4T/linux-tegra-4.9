@@ -789,10 +789,6 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
-	if ((NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST & args->flags) &&
-		!capable(CAP_SYS_NICE))
-		return -EPERM;
-
 	nvgpu_get_fence_args(&args->fence, &fence);
 	submit_flags =
 		nvgpu_submit_gpfifo_user_flags_to_common_flags(args->flags);
@@ -1289,6 +1285,27 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = gk20a_fifo_preempt(ch->g, ch);
+		gk20a_idle(ch->g);
+		break;
+	case NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST:
+		if (!capable(CAP_SYS_NICE)) {
+			err = -EPERM;
+			break;
+		}
+		if (!ch->g->ops.fifo.reschedule_runlist) {
+			err = -ENOSYS;
+			break;
+		}
+		err = gk20a_busy(ch->g);
+		if (err) {
+			dev_err(dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+		err = ch->g->ops.fifo.reschedule_runlist(ch,
+			NVGPU_RESCHEDULE_RUNLIST_PREEMPT_NEXT &
+			((struct nvgpu_reschedule_runlist_args *)buf)->flags);
 		gk20a_idle(ch->g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_FORCE_RESET:

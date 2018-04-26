@@ -76,6 +76,7 @@ void gv11b_dump_channel_status_ramfc(struct gk20a *g,
 void gv11b_dump_eng_status(struct gk20a *g,
 				 struct gk20a_debug_output *o);
 u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g);
+int gv11b_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next);
 int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		 unsigned int id_type, unsigned int timeout_rc_type);
 int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid);

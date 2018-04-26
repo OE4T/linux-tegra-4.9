@@ -566,7 +566,8 @@ struct gpu_ops {
 		int (*tsg_verify_channel_status)(struct channel_gk20a *ch);
 		void (*tsg_verify_status_ctx_reload)(struct channel_gk20a *ch);
 		void (*tsg_verify_status_faulted)(struct channel_gk20a *ch);
-		int (*reschedule_runlist)(struct gk20a *g, u32 runlist_id);
+		int (*reschedule_runlist)(struct channel_gk20a *ch,
+				bool preempt_next);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add,
 				bool wait_for_finish);

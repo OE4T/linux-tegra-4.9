@@ -664,6 +664,13 @@ static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 	return runlists_mask;
 }
 
+int gv11b_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next)
+{
+	/* gv11b allows multiple outstanding preempts,
+	   so always preempt next for best reschedule effect */
+	return nvgpu_fifo_reschedule_runlist(ch, true, false);
+}
+
 static void gv11b_fifo_issue_runlist_preempt(struct gk20a *g,
 					 u32 runlists_mask)
 {
@@ -841,7 +848,6 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	return ret;
 }
-
 
 static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 {

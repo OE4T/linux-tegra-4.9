@@ -64,9 +64,6 @@ u32 nvgpu_submit_gpfifo_user_flags_to_common_flags(u32 user_flags)
 	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING)
 		flags |= NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING;
 
-	if (user_flags & NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST)
-		flags |= NVGPU_SUBMIT_FLAGS_RESCHEDULE_RUNLIST;
-
 	return flags;
 }
 
@@ -1007,10 +1004,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		profile->timestamp[PROFILE_APPEND] = sched_clock();
 
 	g->ops.fifo.userd_gp_put(g, c);
-
-	if ((NVGPU_SUBMIT_FLAGS_RESCHEDULE_RUNLIST & flags) &&
-		g->ops.fifo.reschedule_runlist)
-		g->ops.fifo.reschedule_runlist(g, c->runlist_id);
 
 	/* No hw access beyond this point */
 	if (c->deterministic)

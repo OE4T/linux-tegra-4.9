@@ -53,6 +53,7 @@
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
 #define FECS_METHOD_WFI_RESTORE 0x80000
+#define FECS_MAILBOX_0_ACK_RESTORE 0x4
 
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 chid, bool add,
@@ -3282,7 +3283,6 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	u32 new_buf;
 	struct channel_gk20a *ch = NULL;
 	struct tsg_gk20a *tsg = NULL;
-	u32 count = 0;
 	u32 runlist_entry_words = f->runlist_entry_size / sizeof(u32);
 
 	runlist = &f->runlist_info[runlist_id];
@@ -3345,12 +3345,13 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			ret = -E2BIG;
 			goto clean_up;
 		}
-		count = (runlist_end - runlist_entry_base) / runlist_entry_words;
-		WARN_ON(count > f->num_runlist_entries);
+		runlist->count = (runlist_end - runlist_entry_base) /
+			runlist_entry_words;
+		WARN_ON(runlist->count > f->num_runlist_entries);
 	} else	/* suspend to remove all channels */
-		count = 0;
+		runlist->count = 0;
 
-	g->ops.fifo.runlist_hw_submit(g, runlist_id, count, new_buf);
+	g->ops.fifo.runlist_hw_submit(g, runlist_id, runlist->count, new_buf);
 
 	if (wait_for_finish) {
 		ret = g->ops.fifo.runlist_wait_pending(g, runlist_id);
@@ -3406,31 +3407,98 @@ end:
 	return ret;
 }
 
-/* trigger host to expire current timeslice and reschedule runlist from front */
-int gk20a_fifo_reschedule_runlist(struct gk20a *g, u32 runlist_id)
+/* trigger host preempt of GR pending load ctx if that ctx is not for ch */
+static int __locked_fifo_reschedule_preempt_next(struct channel_gk20a *ch,
+		bool wait_preempt)
 {
+	struct gk20a *g = ch->g;
+	struct fifo_runlist_info_gk20a *runlist =
+		&g->fifo.runlist_info[ch->runlist_id];
+	int ret = 0;
+	u32 gr_eng_id = 0;
+	u32 engstat = 0, ctxstat = 0, fecsstat0 = 0, fecsstat1 = 0;
+	s32 preempt_id = -1;
+	u32 preempt_type = 0;
+
+	if (1 != gk20a_fifo_get_engine_ids(
+		g, &gr_eng_id, 1, ENGINE_GR_GK20A))
+		return ret;
+	if (!(runlist->eng_bitmask & (1 << gr_eng_id)))
+		return ret;
+
+	if (wait_preempt && gk20a_readl(g, fifo_preempt_r()) &
+		fifo_preempt_pending_true_f())
+		return ret;
+
+	fecsstat0 = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
+	engstat = gk20a_readl(g, fifo_engine_status_r(gr_eng_id));
+	ctxstat = fifo_engine_status_ctx_status_v(engstat);
+	if (ctxstat == fifo_engine_status_ctx_status_ctxsw_switch_v()) {
+		/* host switching to next context, preempt that if needed */
+		preempt_id = fifo_engine_status_next_id_v(engstat);
+		preempt_type = fifo_engine_status_next_id_type_v(engstat);
+	} else
+		return ret;
+	if (preempt_id == ch->tsgid && preempt_type)
+		return ret;
+	fecsstat1 = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
+	if (fecsstat0 != FECS_MAILBOX_0_ACK_RESTORE ||
+		fecsstat1 != FECS_MAILBOX_0_ACK_RESTORE) {
+		/* preempt useless if FECS acked save and started restore */
+		return ret;
+	}
+
+	gk20a_fifo_issue_preempt(g, preempt_id, preempt_type);
+#ifdef TRACEPOINTS_ENABLED
+	trace_gk20a_reschedule_preempt_next(ch->chid, fecsstat0, engstat,
+		fecsstat1, gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0)),
+		gk20a_readl(g, fifo_preempt_r()));
+#endif
+	if (wait_preempt) {
+		g->ops.fifo.is_preempt_pending(
+			g, preempt_id, preempt_type, PREEMPT_TIMEOUT_RC);
+	}
+#ifdef TRACEPOINTS_ENABLED
+	trace_gk20a_reschedule_preempted_next(ch->chid);
+#endif
+	return ret;
+}
+
+int gk20a_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next)
+{
+	return nvgpu_fifo_reschedule_runlist(ch, preempt_next, true);
+}
+
+/* trigger host to expire current timeslice and reschedule runlist from front */
+int nvgpu_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next,
+		bool wait_preempt)
+{
+	struct gk20a *g = ch->g;
 	struct fifo_runlist_info_gk20a *runlist;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
 	int ret = 0;
 
-	runlist = &g->fifo.runlist_info[runlist_id];
-	if (nvgpu_mutex_tryacquire(&runlist->runlist_lock)) {
-		mutex_ret = nvgpu_pmu_mutex_acquire(
+	runlist = &g->fifo.runlist_info[ch->runlist_id];
+	if (!nvgpu_mutex_tryacquire(&runlist->runlist_lock))
+		return -EBUSY;
+
+	mutex_ret = nvgpu_pmu_mutex_acquire(
+		&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	g->ops.fifo.runlist_hw_submit(
+		g, ch->runlist_id, runlist->count, runlist->cur_buffer);
+
+	if (preempt_next)
+		__locked_fifo_reschedule_preempt_next(ch, wait_preempt);
+
+	gk20a_fifo_runlist_wait_pending(g, ch->runlist_id);
+
+	if (!mutex_ret)
+		nvgpu_pmu_mutex_release(
 			&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	nvgpu_mutex_release(&runlist->runlist_lock);
 
-		gk20a_writel(g, fifo_runlist_r(),
-			gk20a_readl(g, fifo_runlist_r()));
-		gk20a_fifo_runlist_wait_pending(g, runlist_id);
-
-		if (!mutex_ret)
-			nvgpu_pmu_mutex_release(
-				&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-		nvgpu_mutex_release(&runlist->runlist_lock);
-	} else {
-		/* someone else is writing fifo_runlist_r so not needed here */
-		ret = -EBUSY;
-	}
 	return ret;
 }
 

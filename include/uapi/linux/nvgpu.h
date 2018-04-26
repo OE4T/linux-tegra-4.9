@@ -141,7 +141,7 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL (1ULL << 19)
 /* IO coherence support is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_IO_COHERENCE		(1ULL << 20)
-/* NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST is available */
+/* NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST	(1ULL << 21)
 /*  subcontexts are available */
 #define NVGPU_GPU_FLAGS_SUPPORT_TSG_SUBCONTEXTS         (1ULL << 22)
@@ -1477,8 +1477,6 @@ struct nvgpu_fence {
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	(1 << 4)
 /* skip buffer refcounting during submit */
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
-/* expire current timeslice and reschedule runlist from front */
-#define NVGPU_SUBMIT_GPFIFO_FLAGS_RESCHEDULE_RUNLIST	(1 << 6)
 
 struct nvgpu_submit_gpfifo_args {
 	__u64 gpfifo;
@@ -1659,6 +1657,11 @@ struct nvgpu_get_user_syncpoint_args {
 	__u32 syncpoint_max;	/* out */
 };
 
+struct nvgpu_reschedule_runlist_args {
+#define NVGPU_RESCHEDULE_RUNLIST_PREEMPT_NEXT           (1 << 0)
+	__u32 flags;
+};
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -1711,9 +1714,11 @@ struct nvgpu_get_user_syncpoint_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 125, struct nvgpu_timeslice_args)
 #define NVGPU_IOCTL_CHANNEL_GET_USER_SYNCPOINT \
 	_IOR(NVGPU_IOCTL_MAGIC, 126, struct nvgpu_get_user_syncpoint_args)
+#define NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST	\
+	_IOW(NVGPU_IOCTL_MAGIC, 127, struct nvgpu_reschedule_runlist_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_GET_USER_SYNCPOINT)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -40,24 +40,32 @@ phys_addr_t tegra_bootloader_fb2_start;
 phys_addr_t tegra_bootloader_fb2_size;
 phys_addr_t tegra_bootloader_fb3_start;
 phys_addr_t tegra_bootloader_fb3_size;
+phys_addr_t tegra_bootloader_fb4_start;
+phys_addr_t tegra_bootloader_fb4_size;
 phys_addr_t tegra_bootloader_lut_start;
 phys_addr_t tegra_bootloader_lut_size;
 phys_addr_t tegra_bootloader_lut2_start;
 phys_addr_t tegra_bootloader_lut2_size;
 phys_addr_t tegra_bootloader_lut3_start;
 phys_addr_t tegra_bootloader_lut3_size;
+phys_addr_t tegra_bootloader_lut4_start;
+phys_addr_t tegra_bootloader_lut4_size;
 phys_addr_t tegra_fb_start;
 phys_addr_t tegra_fb_size;
 phys_addr_t tegra_fb2_start;
 phys_addr_t tegra_fb2_size;
 phys_addr_t tegra_fb3_start;
 phys_addr_t tegra_fb3_size;
+phys_addr_t tegra_fb4_start;
+phys_addr_t tegra_fb4_size;
 phys_addr_t tegra_lut_start;
 phys_addr_t tegra_lut_size;
 phys_addr_t tegra_lut2_start;
 phys_addr_t tegra_lut2_size;
 phys_addr_t tegra_lut3_start;
 phys_addr_t tegra_lut3_size;
+phys_addr_t tegra_lut4_start;
+phys_addr_t tegra_lut4_size;
 
 static int usb_port_owner_info;
 static int panel_id;
@@ -173,6 +181,35 @@ static int __init tegra_bootloader_fb3_arg(char *options)
 }
 early_param("tegra_fbmem3", tegra_bootloader_fb3_arg);
 
+static int __init tegra_bootloader_fb4_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_fb4_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_fb4_start = memparse(p+1, &p);
+
+	pr_info("Found tegra_fbmem4: %08llx@%08llx\n",
+		(u64)tegra_bootloader_fb4_size,
+		(u64)tegra_bootloader_fb4_start);
+
+	if (tegra_bootloader_fb4_size) {
+		tegra_bootloader_fb4_size =
+				PAGE_ALIGN(tegra_bootloader_fb4_size);
+		if (memblock_reserve(tegra_bootloader_fb4_start,
+				tegra_bootloader_fb4_size)) {
+			pr_err("Failed to reserve bootloader fb4 %08llx@%08llx\n",
+				(u64)tegra_bootloader_fb4_size,
+				(u64)tegra_bootloader_fb4_start);
+			tegra_bootloader_fb4_start = 0;
+			tegra_bootloader_fb4_size = 0;
+		}
+	}
+
+	return 0;
+}
+early_param("tegra_fbmem4", tegra_bootloader_fb4_arg);
+
 static int __init tegra_bootloader_lut_arg(char *options)
 {
 	char *p = options;
@@ -260,6 +297,36 @@ static int __init tegra_bootloader_lut3_arg(char *options)
 }
 early_param("lut_mem3", tegra_bootloader_lut3_arg);
 
+static int __init tegra_bootloader_lut4_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_lut4_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_lut4_start = memparse(p+1, &p);
+
+	pr_info("Found lut_mem4: %08llx@%08llx\n",
+		(u64)tegra_bootloader_lut4_size,
+		(u64)tegra_bootloader_lut4_start);
+
+	if (tegra_bootloader_lut4_size) {
+		tegra_bootloader_lut4_size =
+				PAGE_ALIGN(tegra_bootloader_lut4_size);
+		if (memblock_reserve(tegra_bootloader_lut4_start,
+				tegra_bootloader_lut4_size)) {
+			pr_err("Failed to reserve bootloader lut_mem4 %08llx@%08llx\n",
+				(u64)tegra_bootloader_lut4_size,
+				(u64)tegra_bootloader_lut4_start);
+			tegra_bootloader_lut4_start = 0;
+			tegra_bootloader_lut4_size = 0;
+		}
+	}
+
+	return 0;
+}
+early_param("lut_mem4", tegra_bootloader_lut4_arg);
+
+
 /* returns true if bl initialized the display */
 bool tegra_is_bl_display_initialized(int instance)
 {
@@ -273,6 +340,8 @@ bool tegra_is_bl_display_initialized(int instance)
 		return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
 	case 2:
 		return tegra_bootloader_fb3_start && tegra_bootloader_fb3_size;
+	case 3:
+		return tegra_bootloader_fb4_start && tegra_bootloader_fb4_size;
 	default:
 		pr_err("Could not find DC instance %d\n", instance);
 		return false;
@@ -304,6 +373,12 @@ void tegra_get_fb_resource(struct resource *fb_res, int instance)
 				(resource_size_t) tegra_bootloader_fb3_start;
 			fb_res->end = fb_res->start +
 				(resource_size_t) tegra_bootloader_fb3_size - 1;
+			break;
+		case 3:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb4_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb4_size - 1;
 			break;
 		default:
 			pr_err("Could not find DC instance %d\n", instance);

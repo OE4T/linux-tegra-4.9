@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,9 +36,16 @@ bool tegra_vpr_resize;
 /* FIXME: Use DT reserved-memory node */
 phys_addr_t __weak tegra_fb_start, tegra_fb_size,
 	tegra_fb2_start, tegra_fb2_size,
+	tegra_fb3_start, tegra_fb3_size,
+	tegra_fb4_start, tegra_fb4_size,
 	tegra_bootloader_fb_start, tegra_bootloader_fb_size,
 	tegra_bootloader_fb2_start, tegra_bootloader_fb2_size,
-	tegra_bootloader_lut_start, tegra_bootloader_lut_size;
+	tegra_bootloader_fb3_start, tegra_bootloader_fb3_size,
+	tegra_bootloader_fb4_start, tegra_bootloader_fb4_size,
+	tegra_bootloader_lut_start, tegra_bootloader_lut_size,
+	tegra_bootloader_lut2_start, tegra_bootloader_lut2_size,
+	tegra_bootloader_lut3_start, tegra_bootloader_lut3_size,
+	tegra_bootloader_lut4_start, tegra_bootloader_lut4_size;
 
 static struct iommu_linear_map tegra_fb_linear_map[16]; /* Terminated with 0 */
 
@@ -88,12 +95,15 @@ void tegra_fb_linear_set(struct iommu_linear_map *map)
 	LINEAR_MAP_ADD(tegra_fb);
 	LINEAR_MAP_ADD(tegra_fb2);
 	LINEAR_MAP_ADD(tegra_fb3);
+	LINEAR_MAP_ADD(tegra_fb4);
 	LINEAR_MAP_ADD(tegra_bootloader_fb);
 	LINEAR_MAP_ADD(tegra_bootloader_fb2);
 	LINEAR_MAP_ADD(tegra_bootloader_fb3);
+	LINEAR_MAP_ADD(tegra_bootloader_fb4);
 	LINEAR_MAP_ADD(tegra_bootloader_lut);
 	LINEAR_MAP_ADD(tegra_bootloader_lut2);
 	LINEAR_MAP_ADD(tegra_bootloader_lut3);
+	LINEAR_MAP_ADD(tegra_bootloader_lut4);
 #ifdef CONFIG_TEGRA_NVMAP
 	if (!tegra_vpr_resize) {
 		LINEAR_MAP_ADD(tegra_vpr);

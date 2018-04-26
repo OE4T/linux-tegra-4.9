@@ -3341,6 +3341,8 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	} else
 		pr_debug("%s: nvidia,hdmi-vrr-caps not present\n", __func__);
 
+	pdata->default_out->vrr_hotplug_state = TEGRA_HPD_STATE_NORMAL;
+
 	sd_np = of_get_child_by_name(np_target_disp,
 		"smartdimmer");
 	if (!sd_np) {

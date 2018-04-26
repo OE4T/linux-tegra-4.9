@@ -412,6 +412,21 @@ int t19x_nvlink_dev_early_init(struct nvlink_device *ndev)
 	ret = tegra_nvlink_car_enable(tdev);
 	if (ret < 0)
 		goto fail;
+
+	/*
+	 * Make sure clocks and resets are enabled before installing
+	 * interrupt handler. It will prevent from accessing clock
+	 * gated block in case of spurious interrupt.
+	 */
+	ret = devm_request_threaded_irq(tdev->dev, tdev->irq,
+					NULL, t19x_nvlink_endpt_isr,
+					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
+					dev_name(tdev->dev), tdev);
+	if (ret < 0) {
+		nvlink_err("Failed to register irq %d", tdev->irq);
+		goto fail;
+	}
+
 	ret = minion_boot(tdev);
 	if (ret < 0)
 		goto fail;
@@ -1058,15 +1073,6 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	if (tdev->irq < 0) {
 		nvlink_err("Couldn't get interrupt listed in device tree");
 		ret = -EINVAL;
-		goto err_mapping;
-	}
-
-	ret = devm_request_threaded_irq(&pdev->dev, tdev->irq,
-					NULL, t19x_nvlink_endpt_isr,
-					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
-					dev_name(&pdev->dev), tdev);
-	if (ret < 0) {
-		nvlink_err("Failed to register irq %d", tdev->irq);
 		goto err_mapping;
 	}
 

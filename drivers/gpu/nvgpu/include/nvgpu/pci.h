@@ -27,11 +27,11 @@
 #include <linux/pci_ids.h>
 #elif defined(__NVGPU_POSIX__)
 #include <nvgpu/posix/pci.h>
+#elif defined(__QNX__)
+#include <nvgpu_rmos/include/pci.h>
 #else
 /*
- * In case someone tries to use this without implementing support! QNX currently
- * does it's own thing with regard to PCI so they don't need this, but just in
- * case they accidentally include this.
+ * In case someone tries to use this without implementing support!
  */
 #error "Build bug: need PCI headers!"
 #endif

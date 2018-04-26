@@ -2300,6 +2300,18 @@ static int gr_gv11b_handle_all_warp_esr_errors(struct gk20a *g,
 	return -EFAULT;
 }
 
+static bool gr_gv11b_is_debug_session_active(struct channel_gk20a *ch)
+{
+	struct dbg_session_data *session_data;
+
+	session_data = nvgpu_list_first_entry(&ch->dbg_s_list,
+			dbg_session_data, dbg_s_entry);
+	if (session_data)
+		return true;
+
+	return false;
+}
+
 /* @brief pre-process work on the SM exceptions to determine if we clear them or not.
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
@@ -2317,10 +2329,13 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gv11b_gr_sm_offset(g, sm);
 	u32 warp_esr_error = gr_gpc0_tpc0_sm0_hww_warp_esr_error_v(warp_esr);
 	struct tsg_gk20a *tsg;
-
+	bool debug_session_active = false;
 
 	*early_exit = false;
 	*ignore_debugger = false;
+
+	if (fault_ch)
+		debug_session_active = gr_gv11b_is_debug_session_active(fault_ch);
 
 	/*
 	 * We don't need to trigger CILP in case of MMU_NACK
@@ -2330,14 +2345,16 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		return gr_gv11b_handle_warp_esr_error_mmu_nack(g, gpc, tpc, sm,
 				warp_esr_error, fault_ch);
 
-	/*
-	 * Proceed to trigger CILP preemption if the return value
-	 * from this function is zero, else proceed to recovery
-	 */
-	ret = gr_gv11b_handle_all_warp_esr_errors(g, gpc, tpc, sm,
-				warp_esr_error, fault_ch);
-	if (ret) {
-		return ret;
+	if (!debug_session_active) {
+		/*
+		 * Proceed to trigger CILP preemption if the return value
+		 * from this function is zero, else proceed to recovery
+		 */
+		ret = gr_gv11b_handle_all_warp_esr_errors(g, gpc, tpc, sm,
+					warp_esr_error, fault_ch);
+		if (ret) {
+			return ret;
+		}
 	}
 
 	if (fault_ch) {

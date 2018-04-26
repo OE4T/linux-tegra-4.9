@@ -225,9 +225,8 @@ struct nvmap_page_pool {
 	u32 count;  /* Number of pages in the page & dirty list. */
 	u32 max;    /* Max no. of pages in all lists. */
 	u32 to_zero; /* Number of pages on the zero list */
-	u32 dirty_pages; /* Number of pages in the dirty list */
+	u32 under_zero; /* Number of pages getting zeroed */
 	struct list_head page_list;
-	struct list_head dirty_list;
 	struct list_head zero_list;
 
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG

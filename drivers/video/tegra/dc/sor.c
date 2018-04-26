@@ -241,12 +241,6 @@ void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor)
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
 		return;
 
-	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_DIFF_DPCLK);
-	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
-			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
-
 	/*
 	 * HW bug 1425607
 	 * Disable clocks to avoid glitch when switching
@@ -1250,6 +1244,11 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
+
+	/*
+	 * TERM_ENABLE is disabled at the end of rterm calibration. Re-enable it
+	 * here.
+	 */
 	tegra_sor_write_field(sor, nv_sor_pll1_reg,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE);
@@ -1299,14 +1298,21 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 /* 3	1	1	0	1	1	0	1 */
 /* 4	1	0	0	0	0	0	1 */
 /* 5	0	0	0	0	0	0	1 */
-static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
-					bool is_lvds)
+static void tegra_sor_dp_pad_power_up(struct tegra_dc_sor_data *sor)
 {
 	u32 nv_sor_pll0_reg = nv_sor_pll0();
+	u32 nv_sor_pll1_reg = nv_sor_pll1();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
 
 	if (sor->power_is_up)
 		return;
+
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+		NV_SOR_PLL2_AUX2_MASK,
+		NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN);
+	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+		NV_SOR_PLL2_AUX1_SEQ_MASK,
+		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE);
 
 	/* step 1 */
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
@@ -1321,9 +1327,7 @@ static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 		NV_SOR_PLL0_VCOPD_MASK, /* PLLVCOPD */
 		NV_SOR_PLL0_PWR_OFF |
 		NV_SOR_PLL0_VCOPD_ASSERT);
-	tegra_sor_write_field(sor, nv_sor_dp_padctl(sor->portnum),
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN, /* PDCAL */
-		NV_SOR_DP_PADCTL_PAD_CAL_PD_POWERDOWN);
+	tegra_sor_pad_cal_power(sor, false); /* PDCAL */
 
 	/* step 2 */
 	tegra_dc_sor_io_set_dpd(sor, true);
@@ -1333,7 +1337,7 @@ static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
-	usleep_range(20, 100);	/* sleep > 20 us */
+	usleep_range(100, 150);
 
 	/* step 4 */
 	tegra_sor_write_field(sor, nv_sor_pll0_reg,
@@ -1350,6 +1354,15 @@ static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK, /* PDPORT */
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
 
+	/*
+	 * TERM_ENABLE is disabled at the end of rterm calibration. Re-enable it
+	 * here.
+	 */
+	tegra_sor_write_field(sor, nv_sor_pll1_reg,
+				NV_SOR_PLL1_TMDS_TERM_ENABLE,
+				NV_SOR_PLL1_TMDS_TERM_ENABLE);
+	usleep_range(10, 20);
+
 	sor->power_is_up = true;
 }
 
@@ -1360,7 +1373,7 @@ static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 /* 3	1	1	0	1	1	0	1 */
 /* 4	1	1	1	1	1	0	1 */
 /* 5	1	1	1	1	1	1	1 */
-static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
+static void tegra_sor_dp_pad_power_down(struct tegra_dc_sor_data *sor)
 {
 	u32 nv_sor_pll0_reg = nv_sor_pll0();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
@@ -1374,7 +1387,7 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK, /* PDPORT */
 		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_ENABLE);
-	udelay(5);	/* sleep > 5us */
+	usleep_range(25, 30);
 
 	/* step 3 */
 	tegra_sor_write_field(sor, nv_sor_pll0_reg,
@@ -1382,18 +1395,22 @@ static void tegra_dc_sor_power_down(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL0_VCOPD_MASK, /* PLLVCOPD */
 		NV_SOR_PLL0_PWR_OFF | NV_SOR_PLL0_VCOPD_ASSERT);
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
+		NV_SOR_PLL2_AUX1_SEQ_MASK |
 		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK, /* PLLCAPD */
+		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
 		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_ENABLE);
-	udelay(5);	/* sleep > 5us */
+	usleep_range(25, 30);
 
 	/* step 4 */
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
-	udelay(5);
+	tegra_sor_pad_cal_power(sor, false); /* PDCAL */
+	usleep_range(70, 120);
 
 	/* step 5 */
 	tegra_dc_sor_io_set_dpd(sor, false);
+	usleep_range(70, 120);
 
 	sor->power_is_up = false;
 }
@@ -1678,40 +1695,16 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
-static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
-{
-	int err = 0;
-
-	if (!IS_ERR(dp->prod_list)) {
-		err = tegra_prod_set_by_name(&dp->sor->base, "prod_c_dp",
-							dp->prod_list);
-		if (err) {
-			dev_warn(&dp->dc->ndev->dev,
-				"dp: prod set failed\n");
-			return -EINVAL;
-		}
-	}
-
-	return err;
-}
-
-void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
+void tegra_sor_cal(struct tegra_dc_sor_data *sor)
 {
 	u32 nv_sor_pll1_reg = nv_sor_pll1();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
-	int ret = 0;
 
-	/* rterm calibration is currently enabled only for T19x*/
-	if (!tegra_dc_is_t19x())
+	/* For HDMI, rterm calibration is currently enabled only on T19x. */
+	if (!tegra_dc_is_t19x() && sor->dc->out->type == TEGRA_DC_OUT_HDMI)
 		return;
 
-	if (sor->io_padctrl) {
-		ret = padctrl_power_enable(sor->io_padctrl);
-
-		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
-				 ret);
-	}
+	tegra_dc_sor_io_set_dpd(sor, true);
 	usleep_range(5, 20);
 
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
@@ -1738,62 +1731,8 @@ void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor)
 		NV_SOR_PLL1_TMDS_TERM_DISABLE);
 	usleep_range(20, 100);
 
-	if (sor->io_padctrl) {
-		ret = padctrl_power_disable(sor->io_padctrl);
-
-		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
-				ret);
-	}
+	tegra_dc_sor_io_set_dpd(sor, false);
 	usleep_range(5, 20);
-}
-
-static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
-{
-	u32 nv_sor_pll0_reg = nv_sor_pll0();
-	u32 nv_sor_pll1_reg = nv_sor_pll1();
-	u32 nv_sor_pll2_reg = nv_sor_pll2();
-
-	tegra_sor_pad_cal_power(sor, true);
-
-	tegra_sor_config_dp_prods(tegra_dc_get_outdata(sor->dc));
-
-	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
-		NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
-	usleep_range(20, 100);
-
-	tegra_sor_write_field(sor, nv_sor_pll0_reg,
-		NV_SOR_PLL0_PLLREG_LEVEL_DEFAULT_MASK |
-		NV_SOR_PLL0_PWR_MASK | NV_SOR_PLL0_VCOPD_MASK,
-		NV_SOR_PLL0_PLLREG_LEVEL_V45 |
-		NV_SOR_PLL0_PWR_ON | NV_SOR_PLL0_VCOPD_RESCIND);
-	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-		NV_SOR_PLL2_AUX1_SEQ_MASK | NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
-		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
-		NV_SOR_PLL2_AUX1_SEQ_PLLCAPPD_OVERRIDE |
-		NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE |
-		NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-	tegra_sor_write_field(sor, nv_sor_pll1_reg,
-		NV_SOR_PLL1_TERM_COMPOUT_HIGH,
-		NV_SOR_PLL1_TERM_COMPOUT_HIGH);
-
-	if (tegra_dc_sor_poll_register(sor, nv_sor_pll2_reg,
-			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
-			NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE,
-			100, TEGRA_SOR_TIMEOUT_MS)) {
-		dev_err(&sor->dc->ndev->dev, "DP failed to lock PLL\n");
-		return;
-	}
-
-	tegra_sor_write_field(sor, nv_sor_pll2_reg,
-		NV_SOR_PLL2_AUX2_MASK | NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
-		NV_SOR_PLL2_AUX2_OVERRIDE_POWERDOWN |
-		NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
-
-	tegra_dc_sor_termination_cal(sor);
-
-	tegra_sor_pad_cal_power(sor, false);
 }
 
 void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor)
@@ -1814,17 +1753,9 @@ void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor)
 
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
-
 	if (!sor->dc->initialized) {
-		tegra_sor_reset(sor);
-		tegra_sor_config_safe_clk(sor);
-	}
-	/* This need to be invoked for seamless */
-	tegra_sor_clk_enable(sor);
-
-	if (!sor->dc->initialized) {
-		tegra_sor_dp_cal(sor);
-		tegra_sor_pad_power_up(sor, false);
+		tegra_sor_cal(sor);
+		tegra_sor_dp_pad_power_up(sor);
 	} else {
 		/* Update sor power state for seamless */
 		sor->power_is_up = true;
@@ -2146,14 +2077,15 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 
 	tegra_sor_config_safe_clk(sor);
 
-	tegra_dc_sor_power_down(sor);
-
 	/* Power down DP lanes */
 	if (!is_lvds && tegra_sor_power_lanes(sor, 4, false)) {
 		dev_err(&dc->ndev->dev,
 			"Failed to power down dp lanes\n");
 		return;
 	}
+
+	/* Power down pad macro */
+	tegra_sor_dp_pad_power_down(sor);
 
 	if (tegra_platform_is_vdk())
 		return;

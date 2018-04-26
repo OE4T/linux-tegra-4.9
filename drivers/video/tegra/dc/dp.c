@@ -1506,6 +1506,19 @@ static inline unsigned int tegra_dp_link_speed_get(struct tegra_dc_dp_data *dp,
 	return key;
 }
 
+static void tegra_dp_config_common_prods(struct tegra_dc_dp_data *dp)
+{
+	if (!IS_ERR_OR_NULL(dp->prod_list)) {
+		int err = 0;
+
+		err = tegra_prod_set_by_name(&dp->sor->base, "prod_c_dp",
+					dp->prod_list);
+		if (err)
+			dev_warn(&dp->dc->ndev->dev,
+				"dp: prod set failed\n");
+	}
+}
+
 static void tegra_dp_link_cal(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
@@ -2495,6 +2508,43 @@ static void tegra_dp_vsc_col_ext(struct tegra_dc_dp_data *dp)
 	tegra_dp_vsc_col_ext_enable(dp);
 }
 
+static void tegra_dp_prepare_pad(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc *dc = dp->dc;
+	struct tegra_dc_sor_data *sor = dp->sor;
+
+	if (!dc->initialized) {
+		tegra_sor_reset(sor);
+
+		/*
+		 * Enable PLLDP and the PLLD* pixel clock reference.
+		 * Select the SOR safe clock before powering up the pads.
+		 *
+		 * For nvdisplay, the above steps are performed as part of
+		 * out_ops->setup_clk(), which is invoked during the head enable
+		 * sequence prior to this point.
+		 */
+		if (!tegra_dc_is_nvdisplay()) {
+			tegra_dp_clk_enable(dp);
+			tegra_dc_setup_clk(dc, dc->clk);
+			tegra_sor_config_safe_clk(sor);
+		}
+	}
+
+	tegra_sor_clk_enable(sor);
+
+	if (!dc->initialized) {
+		tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_DIFF_DPCLK);
+		tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw);
+
+		/* Program common and linkspeed-specific PROD settings. */
+		tegra_dp_config_common_prods(dp);
+		tegra_dp_link_cal(dp);
+	}
+}
+
 static void tegra_dc_dp_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2555,7 +2605,18 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		return;
 	}
 
+	tegra_dp_prepare_pad(dp);
 	tegra_dc_sor_enable_dp(dp->sor);
+
+	/* Select the macro feedback clock. */
+	if (!dc->initialized) {
+		if (tegra_dc_is_nvdisplay()) {
+			tegra_sor_clk_switch_setup(sor, true);
+			clk_set_parent(sor->sor_clk, sor->pad_clk);
+		} else {
+			tegra_sor_config_dp_clk_t21x(sor);
+		}
+	}
 
 	if (cfg->alt_scramber_reset_cap)
 		tegra_dc_dp_set_assr(dp, true);
@@ -2570,7 +2631,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE,
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE);
 
-		tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
+		tegra_dc_dp_dpcd_write(dp, NV_DPCD_LINK_BANDWIDTH_SET,
+				cfg->link_bw);
 
 		/*
 		 * enhanced framing enable field shares DPCD offset
@@ -2582,32 +2644,11 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 		tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
 
-		tegra_dp_link_cal(dp);
 		tegra_dp_tu_config(dp, cfg);
 	}
 
 	tegra_sor_port_enable(sor, true);
 	tegra_sor_config_xbar(dp->sor);
-
-	if (tegra_dc_is_nvdisplay()) {
-		if (!dp->dc->initialized) {
-			tegra_sor_clk_switch_setup(sor, true);
-
-			tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-				NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-				NV_SOR_CLK_CNTRL_DP_CLK_SEL_DIFF_DPCLK);
-			tegra_dc_sor_set_link_bandwidth(sor,
-				dp->link_cfg.link_bw ? :
-				NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
-
-			/* switch to macro feedback clock */
-			clk_set_parent(sor->sor_clk, sor->pad_clk);
-		}
-	} else {
-		tegra_dp_clk_enable(dp);
-		tegra_sor_config_dp_clk_t21x(dp->sor);
-		tegra_dc_setup_clk(dc, dc->clk);
-	}
 
 	/* Host is ready. Start link training. */
 	dp->enabled = true;

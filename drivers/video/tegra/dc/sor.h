@@ -252,7 +252,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor);
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_termination_cal(struct tegra_dc_sor_data *sor);
-void tegra_sor_hdmi_cal(struct tegra_dc_sor_data *sor);
+void tegra_sor_cal(struct tegra_dc_sor_data *sor);
 unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 					u32 reg, u32 mask, u32 exp_val,
 					u32 poll_interval_us,

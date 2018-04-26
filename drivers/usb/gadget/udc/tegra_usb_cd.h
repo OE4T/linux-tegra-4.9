@@ -18,7 +18,7 @@
 
 #include <linux/phy/phy.h>
 #include <linux/usb/tegra_usb_charger.h>
-#include <linux/wakelock.h>
+#include <linux/device.h>
 #include <linux/phy/tegra/xusb.h>
 
 /* Charger current limits, as per BC1.2 spec */
@@ -69,7 +69,7 @@ struct tegra_usb_cd_soc_data {
 };
 
 struct vbus_lock {
-	struct wake_lock wakelock;
+	struct wakeup_source wakelock;
 	bool held;
 };
 

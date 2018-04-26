@@ -37,7 +37,7 @@ static struct vbus_lock lock;
 static void vbus_hold_wl(struct vbus_lock *lock)
 {
 	if (!lock->held) {
-		wake_lock(&lock->wakelock);
+		__pm_stay_awake(&lock->wakelock);
 		lock->held = true;
 		pr_debug("[hold VBUS wakelock]\n");
 	}
@@ -46,8 +46,7 @@ static void vbus_hold_wl(struct vbus_lock *lock)
 #define TEMPORARY_WAKELOCK_HOLD_TIME	2000
 static void vbus_hold_temp_wl(struct vbus_lock *lock)
 {
-	wake_lock_timeout(&lock->wakelock,
-			  msecs_to_jiffies(TEMPORARY_WAKELOCK_HOLD_TIME));
+	__pm_wakeup_event(&lock->wakelock, TEMPORARY_WAKELOCK_HOLD_TIME);
 	lock->held = false;
 	pr_debug("[hold temporary VBUS wakelock for %d ms]\n",
 		 TEMPORARY_WAKELOCK_HOLD_TIME);
@@ -56,7 +55,7 @@ static void vbus_hold_temp_wl(struct vbus_lock *lock)
 static void vbus_drop_wl(struct vbus_lock *lock)
 {
 	if (lock->held) {
-		wake_unlock(&lock->wakelock);
+		__pm_relax(&lock->wakelock);
 		lock->held = false;
 		pr_debug("[drop VBUS wakelock]\n");
 	}
@@ -467,7 +466,7 @@ static int tegra_usb_cd_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	wake_lock_init(&lock.wakelock, WAKE_LOCK_SUSPEND, "vbus-wakelock");
+	wakeup_source_init(&lock.wakelock, "vbus-wakelock");
 
 	return 0;
 }
@@ -485,7 +484,7 @@ static int tegra_usb_cd_remove(struct platform_device *pdev)
 	if (ucd->hw_ops != NULL && ucd->hw_ops->close)
 		ucd->hw_ops->close(ucd);
 
-	wake_lock_destroy(&lock.wakelock);
+	wakeup_source_trash(&lock.wakelock);
 
 	return 0;
 }

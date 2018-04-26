@@ -31,6 +31,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/defaults.h>
+#include <nvgpu/ltc.h>
 
 #include "vgpu_linux.h"
 #include "vgpu/fecs_trace_vgpu.h"
@@ -176,6 +177,12 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 
 	if (g->ops.ltc.init_fs_state)
 		g->ops.ltc.init_fs_state(g);
+
+	err = nvgpu_init_ltc_support(g);
+	if (err) {
+		nvgpu_err(g, "failed to init ltc");
+		goto done;
+	}
 
 	err = vgpu_init_mm_support(g);
 	if (err) {

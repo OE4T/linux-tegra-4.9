@@ -42,6 +42,9 @@ int nvgpu_init_ltc_support(struct gk20a *g)
 
 void nvgpu_ltc_sync_enabled(struct gk20a *g)
 {
+	if (!g->ops.ltc.set_enabled)
+		return;
+
 	nvgpu_spinlock_acquire(&g->ltc_enabled_lock);
 	if (g->mm.ltc_enabled_current != g->mm.ltc_enabled_target) {
 		g->ops.ltc.set_enabled(g, g->mm.ltc_enabled_target);

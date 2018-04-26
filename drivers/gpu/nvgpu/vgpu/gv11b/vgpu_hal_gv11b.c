@@ -104,7 +104,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.cbc_ctrl = NULL,
 		.isr = gv11b_ltc_isr,
 		.flush = gm20b_flush_ltc,
-		.set_enabled = gp10b_ltc_set_enabled,
+		.set_enabled = NULL,
 	},
 	.ce2 = {
 		.isr_stall = gv11b_ce_isr,

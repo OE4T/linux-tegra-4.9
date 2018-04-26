@@ -124,6 +124,7 @@ tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
  * output mode:
  * - RGB444/YUV444 12bpc requires a 2:3 pclk:orclk ratio
  * - YUV420 8bpc requires a 2:1 pclk:orclk ratio
+ * - YUV420 10bpc requires a 8:5 pclk:orclk ratio
  */
 static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
 {
@@ -135,6 +136,13 @@ static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
 			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
 			rate = rate >> 1;
 			rate = rate * 3;
+		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
+			rate = rate >> 1;
+		}
+	} else {
+		if (tegra_dc_is_yuv420_10bpc(&dc->mode)) {
+			rate = 5 * rate;
+			rate = rate / 8;
 		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
 			rate = rate >> 1;
 		}
@@ -2878,7 +2886,8 @@ static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
 		u32 val;
 		struct tegra_dc_sor_data *sor = hdmi->sor;
-		int div = hdmi->dc->mode.pclk < 340000000 ? 1 : 2;
+		int div = (tegra_sor_get_link_rate(hdmi->dc) < 340000000) ?
+			1 : 2;
 		unsigned long rate = clk_get_rate(sor->ref_clk);
 		unsigned long parent_rate =
 			clk_get_rate(clk_get_parent(sor->ref_clk));
@@ -2889,7 +2898,7 @@ static void tegra_hdmi_config_clk_t21x(struct tegra_hdmi *hdmi, u32 clk_type)
 			clk_set_rate(sor->ref_clk, rate);
 		}
 
-		val = (hdmi->dc->mode.pclk < 340000000) ?
+		val = (tegra_sor_get_link_rate(hdmi->dc) < 340000000) ?
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7 :
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
 

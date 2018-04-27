@@ -1,12 +1,11 @@
 /*
  * USB hub driver.
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  * (C) Copyright 1999 Linus Torvalds
  * (C) Copyright 1999 Johannes Erdfelt
  * (C) Copyright 1999 Gregory P. Smith
  * (C) Copyright 2001 Brad Hards (bhards@bigpond.net.au)
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  */
 
@@ -2810,16 +2809,27 @@ static int hub_port_reset(struct usb_hub *hub, int port1,
 					USB_PORT_FEAT_C_BH_PORT_RESET);
 			usb_clear_port_feature(hub->hdev, port1,
 					USB_PORT_FEAT_C_PORT_LINK_STATE);
-			usb_clear_port_feature(hub->hdev, port1,
-					USB_PORT_FEAT_C_CONNECTION);
 
 			/*
 			 * If a USB 3.0 device migrates from reset to an error
 			 * state, re-issue the warm reset.
 			 */
 			if (hub_port_status(hub, port1,
-					&portstatus, &portchange) < 0)
+					&portstatus, &portchange) < 0) {
+				usb_clear_port_feature(hub->hdev, port1,
+					USB_PORT_FEAT_C_CONNECTION);
 				goto done;
+			}
+
+			/*
+			 * Avoid clear CSC if device recovered after warm reset
+			 * with CCS set, oterwise there will be no portchange
+			 * event to trigger hub_port_connect_change in coming
+			 * port_event for further device enumeration.
+			 */
+			if (status || !(portstatus & USB_PORT_STAT_CONNECTION))
+				usb_clear_port_feature(hub->hdev, port1,
+					USB_PORT_FEAT_C_CONNECTION);
 
 			if (!hub_port_warm_reset_required(hub, port1,
 					portstatus))

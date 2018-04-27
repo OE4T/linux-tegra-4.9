@@ -443,7 +443,7 @@ fail:
 	return err;
 }
 
-int nvdla_update_postfences(struct nvdla_task *task,
+static int nvdla_update_postfences(struct nvdla_task *task,
 			struct nvdla_ioctl_submit_task *user_task)
 {
 	int err = 0, i;

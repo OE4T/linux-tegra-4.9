@@ -698,9 +698,9 @@ static int dummy_write(struct dmirror *dmirror,
 	if (dwrite->addr >= (dwrite->addr + (dwrite->npages << PAGE_SHIFT)))
 		return -EINVAL;
 
-	start = dwrite->addr & PAGE_MASK;
-	size = (dwrite->npages << PAGE_SHIFT);
-	end = start + (dwrite->npages << PAGE_SHIFT);
+	start = (unsigned long)dwrite->addr & PAGE_MASK;
+	size = (unsigned long)(dwrite->npages << PAGE_SHIFT);
+	end = (unsigned long)(start + (dwrite->npages << PAGE_SHIFT));
 
 	ret = dummy_bounce_init(&bounce, size, dwrite->addr & PAGE_MASK);
 	if (ret)

@@ -78,7 +78,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 {
 	struct tegra_vi_channel *chan = file->private_data;
 	struct vi_capture *capture = chan->capture_data;
-	void __user *ptr = (void *)arg;
+	void __user *ptr = (void __user *)arg;
 	int err = -EFAULT;
 
 	switch (_IOC_NR(cmd)) {

@@ -1,7 +1,7 @@
 /*
  * ISP channel driver for T186
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -68,7 +68,7 @@ static long isp_channel_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct tegra_isp_channel *chan = file->private_data;
-	void __user *ptr = (void *)arg;
+	void __user *ptr = (void __user *)arg;
 	long err = -EFAULT;
 
 	switch (_IOC_NR(cmd)) {

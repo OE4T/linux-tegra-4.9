@@ -1856,6 +1856,7 @@ static void sdhci_delayed_detect(struct work_struct *work)
 
 	/* Initialize debugfs */
 	sdhci_tegra_debugfs_init(host);
+	return;
 
 err_add_host:
 	if (!tegra_host->disable_rtpm)

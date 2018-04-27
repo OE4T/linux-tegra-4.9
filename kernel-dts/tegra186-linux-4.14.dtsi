@@ -31,4 +31,12 @@
 		/delete-property/ mmc-ddr-1_8v;
 		/delete-property/ mmc-hs400-1_8v;
 	};
+
+	reserved-memory {
+		/delete-node/ vpr-carveout;
+	};
+
+	tegra-carveouts {
+		memory-region = <&generic_reserved>;
+	};
 };

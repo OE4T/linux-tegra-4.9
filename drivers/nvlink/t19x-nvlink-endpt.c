@@ -1090,7 +1090,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 
 	tdev->dev = &pdev->dev;
 	tdev->class.owner = THIS_MODULE;
-	tdev->class.name = NVLINK_DRV_NAME;
+	tdev->class.name = NVLINK_MODULE_NAME;
 
 	/* Create device node */
 	ret = class_register(&tdev->class);
@@ -1118,7 +1118,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 				NULL,
 				tdev->dev_t,
 				NULL,
-				NVLINK_DRV_NAME);
+				NVLINK_MODULE_NAME);
 	if (IS_ERR(dev)) {
 		nvlink_err("Failed to create device");
 		ret = PTR_ERR(dev);
@@ -1368,7 +1368,7 @@ static struct platform_driver t19x_nvlink_endpt_pdrv = {
 	.probe		= t19x_nvlink_endpt_probe,
 	.remove		= t19x_nvlink_endpt_remove,
 	.driver		= {
-		.name	= NVLINK_DRV_NAME,
+		.name	= NVLINK_MODULE_NAME,
 #if IS_ENABLED(CONFIG_PM_SLEEP)
 		.pm     = &tegra_nvlink_pm_ops,
 #endif
@@ -1397,6 +1397,6 @@ static void __exit t19x_nvlink_endpt_exit(void)
 module_init(t19x_nvlink_endpt_init);
 module_exit(t19x_nvlink_endpt_exit);
 
-MODULE_ALIAS(NVLINK_DRV_NAME);
+MODULE_ALIAS(NVLINK_MODULE_NAME);
 MODULE_DESCRIPTION("T19x NVLINK Endpoint Driver");
 MODULE_LICENSE("GPL v2");

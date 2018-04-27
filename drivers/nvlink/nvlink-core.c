@@ -25,8 +25,11 @@
 #include <linux/module.h>
 #include <linux/platform/tegra/tegra-nvlink.h>
 
-#define NVLINK_DRV_NAME				"nvlink-core"
+#include <asm/cacheflush.h>
+
+#define NVLINK_MODULE_NAME			"nvlink-core"
 #define NVLINK_DEBUGFS_ROOT			"nvlink"
+#define NVLINK_DEBUGFS_TESTS			"tests"
 #define DEFAULT_LOOP_SLEEP_US			100
 #define DEFAULT_LOOP_TIMEOUT_US			1000000
 #define NVLINK_TRANSITION_HS_TIMEOUT_MS		2000
@@ -52,11 +55,25 @@ struct nvlink_core {
 	struct mutex mutex;
 };
 
+/*
+ * We're exporting the NVLINK driver stack's logging APIs to the NVLINK kernel
+ * test modules. The logging APIs use nvlink_log_mask. Therefore, we have to
+ * export nvlink_log_mask along with the logging APIs.
+ */
 u32 nvlink_log_mask = NVLINK_DEFAULT_LOG_MASK;
+EXPORT_SYMBOL(nvlink_log_mask);
 
 #ifdef CONFIG_DEBUG_FS
 /* This is the root debugfs directory for the entire NVLINK driver stack */
-struct dentry *nvlink_debugfs;
+struct dentry *nvlink_debugfs_root;
+
+/*
+ * This is the parent debugfs directory for NVLINK tests. We need to export this
+ * symbol so that the NVLINK kernel test modules can create their debugfs nodes
+ * under the correct path.
+ */
+struct dentry *nvlink_debugfs_tests;
+EXPORT_SYMBOL(nvlink_debugfs_tests);
 #endif /* CONFIG_DEBUG_FS */
 
 static struct nvlink_core nvlink_core;
@@ -243,6 +260,20 @@ success:
 	mutex_unlock(&nvlink_core.mutex);
 	return ret;
 }
+
+/*
+ * This is a wrapper function for an ARM64 cache flush API. This API is used in
+ * NVLINK kernel test modules. We've created this NVLINK wrapper because we
+ * don't want to directly export the ARM64 API. We want to minimize the exposure
+ * of this API outside of the kernel. By creating this NVLINK wrapper we're
+ * trying to ensure that only NVLINK kernel test modules will use this API
+ * outside of the kernel.
+ */
+void __nvlink_dma_flush_area(const void *ptr, size_t size)
+{
+	__dma_flush_area(ptr, size);
+}
+EXPORT_SYMBOL(__nvlink_dma_flush_area);
 
 int nvlink_register_device(struct nvlink_device *ndev)
 {
@@ -1459,13 +1490,21 @@ void nvlink_core_debugfs_init(void)
 	struct dentry *core_debugfs = NULL;
 	struct dentry *debugfs_node = NULL;
 
-	nvlink_debugfs = debugfs_create_dir(NVLINK_DEBUGFS_ROOT, NULL);
-	if (!nvlink_debugfs) {
+	nvlink_debugfs_root = debugfs_create_dir(NVLINK_DEBUGFS_ROOT, NULL);
+	if (!nvlink_debugfs_root) {
 		nvlink_err("Failed to create NVLINK debugfs root directory");
 		goto fail;
 	}
 
-	core_debugfs = debugfs_create_dir(NVLINK_DRV_NAME, nvlink_debugfs);
+	nvlink_debugfs_tests = debugfs_create_dir(NVLINK_DEBUGFS_TESTS,
+						nvlink_debugfs_root);
+	if (!nvlink_debugfs_tests) {
+		nvlink_err("Failed to create NVLINK tests debugfs directory");
+		goto fail;
+	}
+
+	core_debugfs = debugfs_create_dir(NVLINK_MODULE_NAME,
+					nvlink_debugfs_root);
 	if (!core_debugfs) {
 		nvlink_err("Failed to create NVLINK core driver's debugfs directory");
 		goto fail;
@@ -1484,14 +1523,16 @@ void nvlink_core_debugfs_init(void)
 
 fail:
 	nvlink_err("Failed to create debugfs nodes");
-	debugfs_remove_recursive(nvlink_debugfs);
-	nvlink_debugfs = NULL;
+	debugfs_remove_recursive(nvlink_debugfs_root);
+	nvlink_debugfs_root = NULL;
+	nvlink_debugfs_tests = NULL;
 }
 
 void nvlink_core_debugfs_deinit(void)
 {
-	debugfs_remove_recursive(nvlink_debugfs);
-	nvlink_debugfs = NULL;
+	debugfs_remove_recursive(nvlink_debugfs_root);
+	nvlink_debugfs_root = NULL;
+	nvlink_debugfs_tests = NULL;
 }
 #endif /* CONFIG_DEBUG_FS */
 

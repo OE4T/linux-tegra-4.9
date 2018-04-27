@@ -37,7 +37,7 @@
 #include <linux/cdev.h>
 #include <linux/platform/tegra/tegra-nvlink.h>
 
-#define NVLINK_DRV_NAME				"t19x-nvlink-endpt"
+#define NVLINK_MODULE_NAME			"t19x-nvlink-endpt"
 #define NVLINK_IP_VERSION			2 /* NVLINK VERSION 2.0 */
 #define DEFAULT_IS_NEA				0
 

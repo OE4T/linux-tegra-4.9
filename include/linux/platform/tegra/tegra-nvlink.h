@@ -45,7 +45,10 @@ enum nvlink_log_categories {
 
 #ifdef CONFIG_DEBUG_FS
 /* This is the root debugfs directory for the entire NVLINK driver stack */
-extern struct dentry *nvlink_debugfs;
+extern struct dentry *nvlink_debugfs_root;
+
+/* This is the parent debugfs directory for NVLINK tests */
+extern struct dentry *nvlink_debugfs_tests;
 #endif /* CONFIG_DEBUG_FS */
 
 extern u32 nvlink_log_mask;
@@ -55,7 +58,7 @@ extern u32 nvlink_log_mask;
 	do {						\
 		if ((log_mask) & nvlink_log_mask)	\
 			printk("%s: %s: %d: " fmt "\n",	\
-				NVLINK_DRV_NAME,	\
+				NVLINK_MODULE_NAME,	\
 				__func__,		\
 				__LINE__,		\
 				##arg);			\
@@ -298,6 +301,7 @@ struct nvlink_device {
 
 /* APIs used by endpoint drivers for interfacing with the core driver */
 void nvlink_print_topology(void);
+void __nvlink_dma_flush_area(const void *ptr, size_t size);
 int nvlink_register_device(struct nvlink_device* device);
 int nvlink_register_link(struct nvlink_link* link);
 int nvlink_unregister_device(struct nvlink_device* device);

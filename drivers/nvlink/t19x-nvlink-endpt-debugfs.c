@@ -293,13 +293,13 @@ fail:
 
 void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev)
 {
-	if (!nvlink_debugfs) {
+	if (!nvlink_debugfs_root) {
 		nvlink_err("Root NVLINK debugfs directory doesn't exist");
 		goto fail;
 	}
 
-	tdev->tegra_debugfs = debugfs_create_dir(NVLINK_DRV_NAME,
-						nvlink_debugfs);
+	tdev->tegra_debugfs = debugfs_create_dir(NVLINK_MODULE_NAME,
+						nvlink_debugfs_root);
 	if (!tdev->tegra_debugfs) {
 		nvlink_err("Failed to create Tegra NVLINK endpoint driver's"
 			" debugfs directory");

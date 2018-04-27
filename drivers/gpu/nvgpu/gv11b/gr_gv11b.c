@@ -1202,6 +1202,25 @@ static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 	}
 }
 
+static void gr_gv11b_set_shader_cut_collector(struct gk20a *g, u32 data)
+{
+	u32 val;
+
+	nvgpu_log_fn(g, "gr_gv11b_set_shader_cut_collector");
+
+	val = gk20a_readl(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r());
+	if (data & NVC397_SET_SHADER_CUT_COLLECTOR_STATE_ENABLE)
+		val = set_field(val,
+			gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_m(),
+			gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_enable_f());
+	else
+		val = set_field(val,
+			gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_m(),
+			gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_disable_f());
+	gk20a_writel(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r(), val);
+}
+
+
 int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -1248,6 +1267,9 @@ int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC397_SET_BES_CROP_DEBUG4:
 			g->ops.gr.set_bes_crop_debug4(g, data);
+			break;
+		case NVC397_SET_SHADER_CUT_COLLECTOR:
+			gr_gv11b_set_shader_cut_collector(g, data);
 			break;
 		default:
 			goto fail;

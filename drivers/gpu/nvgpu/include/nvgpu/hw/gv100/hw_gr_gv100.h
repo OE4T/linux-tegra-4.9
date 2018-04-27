@@ -3884,6 +3884,18 @@ static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_cache_surface_st_m(void)
 {
 	return 0x1U << 10U;
 }
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_m(void)
+{
+	return 0x1U << 28U;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_disable_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_gpcs_tpcs_sm_l1tag_ctrl_always_cut_collector_enable_f(void)
+{
+	return 0x10000000U;
+}
 static inline u32 gr_fe_pwr_mode_r(void)
 {
 	return 0x00404170U;

@@ -747,6 +747,88 @@ int tegra_camera_device_unregister(void *priv)
 }
 EXPORT_SYMBOL(tegra_camera_device_unregister);
 
+int tegra_camera_get_device_list_entry(const u32 hw_type, const void *priv,
+		struct tegra_camera_dev_info *cdev_info)
+{
+	struct tegra_camera_dev_info *cdev;
+	struct tegra_camera_info *info;
+	int found = 0;
+	int ret = 0;
+
+	if (tegra_camera_misc.parent == NULL)
+		return -EINVAL;
+
+	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -EINVAL;
+
+	mutex_lock(&info->device_list_mutex);
+	list_for_each_entry(cdev, &info->device_list, device_node) {
+		if (hw_type == cdev->hw_type) {
+			/*
+			 * If priv is NULL yet the hw_type is set to that of a
+			 * sensor the first sensor in the device list will be
+			 * returned. Otherwise, a NULL priv and a matching
+			 * hw_type will return the hw unit (VI, CSI etc.).
+			 *
+			 * Otherwise, a non NULL priv is used as an additional
+			 * constraint to return specific devices who may or
+			 * may not share common hw_types.
+			 */
+			if (!priv) {
+				found = 1;
+				break;
+			} else if (priv == cdev->priv) {
+				found = 1;
+				break;
+			}
+		}
+	}
+
+	if (found && (cdev_info != NULL))
+		*cdev_info = *cdev;
+
+	mutex_unlock(&info->device_list_mutex);
+
+	if (!found)
+		return -ENOENT;
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_camera_get_device_list_entry);
+
+int tegra_camera_get_device_list_stats(u32 *n_sensors, u32 *n_hwtypes)
+{
+	struct tegra_camera_dev_info *cdev;
+	struct tegra_camera_info *info;
+	int ret = 0;
+
+	if (!n_sensors || !n_hwtypes)
+		return -EINVAL;
+
+	if (tegra_camera_misc.parent == NULL)
+		return -EINVAL;
+
+	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -EINVAL;
+
+	*n_sensors = 0;
+	*n_hwtypes = 0;
+
+	mutex_lock(&info->device_list_mutex);
+	list_for_each_entry(cdev, &info->device_list, device_node) {
+		if (cdev->hw_type == HWTYPE_NONE)
+			(*n_sensors)++;
+		else
+			(*n_hwtypes)++;
+	}
+	mutex_unlock(&info->device_list_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_camera_get_device_list_stats);
+
 static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 		struct tegra_camera_dev_info *cdev)
 {

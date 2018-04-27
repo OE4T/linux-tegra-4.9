@@ -103,6 +103,9 @@ int tegra_camera_emc_clk_disable(void);
 int tegra_camera_device_register(struct tegra_camera_dev_info *cdev_info,
 					void *priv);
 int tegra_camera_device_unregister(void *priv);
+int tegra_camera_get_device_list_entry(const u32 hw_type, const void *priv,
+		struct tegra_camera_dev_info *cdev_info);
+int tegra_camera_get_device_list_stats(u32 *n_sensors, u32 *n_hwtypes);
 int tegra_camera_update_clknbw(void *priv, bool stream_on);
 
 #endif

@@ -187,8 +187,11 @@ static void bpmp_mrq_ping(int code, void *data, int ch)
 {
 	int challenge;
 	int reply;
+
 	challenge = tegra_bpmp_mail_readl(ch, 0);
-	reply = challenge  << (smp_processor_id() + 1);
+
+	reply = challenge  << 1;
+
 	tegra_bpmp_mail_return(ch, 0, reply);
 }
 

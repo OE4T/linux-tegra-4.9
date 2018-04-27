@@ -1155,6 +1155,8 @@ static int dmirror_probe(struct platform_device *pdev)
 
 	/* Build list of free struct page */
 	spin_lock_init(&mdevice->lock);
+
+	spin_lock(&mdevice->lock);
 	mdevice->frees = NULL;
 
 	for (pfn = mdevice->devmem->pfn_first; pfn < mdevice->devmem->pfn_last; pfn++) {
@@ -1166,6 +1168,7 @@ static int dmirror_probe(struct platform_device *pdev)
 
 	mdevice->calloc = 0;
 	mdevice->cfree = 0;
+	spin_unlock(&mdevice->lock);
 
 	return 0;
 }

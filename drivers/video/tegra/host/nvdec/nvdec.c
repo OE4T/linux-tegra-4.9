@@ -263,6 +263,11 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		bool skip_wpr_settings = debug &&
 			(tegra_platform_is_qt() || tegra_platform_is_vdk());
 
+		/*
+		 * debuginfo is cleared by the firmware on boot, write a dummy
+		 * value here so that a successful boot can be detected.
+		 */
+		host1x_writel(dev, nvdec_debuginfo_r(), 0xDEADBEEF);
 
 		fb_data_offset = (m[0]->os.bin_data_offset +
 					m[0]->os.data_offset)/(sizeof(u32));

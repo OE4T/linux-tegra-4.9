@@ -840,6 +840,9 @@ static void dummy_migrate_finalize_and_map(struct vm_area_struct *vma,
 	for (addr = start; addr < end; addr+= PAGE_SIZE, src_pfns++, dst_pfns++) {
 		struct page *page = migrate_pfn_to_page(*dst_pfns);
 
+		if (!page)
+			continue;
+
 		if (!(*src_pfns & MIGRATE_PFN_MIGRATE))
 			continue;
 		if (!dummy_device_is_mine(dmigrate->mdevice, page))

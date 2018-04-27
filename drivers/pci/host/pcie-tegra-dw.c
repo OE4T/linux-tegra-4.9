@@ -543,6 +543,8 @@ static unsigned int pcie_gen_freq[] = {
 	GEN4_CORE_CLK_FREQ
 };
 
+static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie);
+
 static inline void dma_common_wr16(void __iomem *p, u32 val, u32 offset)
 {
 	writew(val, 0x20000 + offset + p);
@@ -1412,16 +1414,8 @@ static int apply_speed_change(struct seq_file *s, void *data)
 static int apply_pme_turnoff(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
-	u32 val = 0;
 
-	val = readl(pcie->appl_base + APPL_RADM_STATUS);
-	val |= APPL_PM_XMT_TURNOFF_STATE;
-	writel(val, pcie->appl_base + APPL_RADM_STATUS);
-
-	mdelay(1000);
-
-	val = readl(pcie->appl_base + APPL_DEBUG);
-	if (val & APPL_DEBUG_PM_LINKST_IN_L2_LAT)
+	if (!tegra_pcie_dw_pme_turnoff(pcie))
 		seq_puts(s, "PME_TurnOff sent and Link is in L2 state\n");
 	else
 		seq_puts(s, "PME_TurnOff failed\n");
@@ -2845,16 +2839,18 @@ static int tegra_pcie_try_link_l2(struct tegra_pcie_dw *pcie)
 				 1, PME_ACK_TIMEOUT);
 }
 
-static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 {
 	struct pci_dev *pdev = NULL;
 	struct pci_bus *child;
 	struct pcie_port *pp = &pcie->pp;
 	u32 data;
-	int err;
+	int err, ret = 0;
 
-	if (!tegra_pcie_dw_link_up(&pcie->pp))
-		return;
+	if (!tegra_pcie_dw_link_up(&pcie->pp)) {
+		dev_info(pcie->dev, "PCIe link is not up...!\n");
+		return -1;
+	}
 
 	list_for_each_entry(child, &pp->bus->children, node) {
 		/* Bring downstream devices to D0 if they are not already in */
@@ -2870,6 +2866,7 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	}
 
 	if (tegra_pcie_try_link_l2(pcie)) {
+		ret = -1;
 		dev_info(pcie->dev, "Link didn't transit to L2 state\n");
 		/* TX lane clock freq will reset to Gen1 only if link is in L2
 		 * or detect state. So disable LTSMM to enter detect state.
@@ -2891,6 +2888,7 @@ static void tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	data = readl(pcie->appl_base + APPL_PINMUX);
 	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);
 	writel(data, pcie->appl_base + APPL_PINMUX);
+	return ret;
 }
 
 static int tegra_pcie_dw_remove(struct platform_device *pdev)

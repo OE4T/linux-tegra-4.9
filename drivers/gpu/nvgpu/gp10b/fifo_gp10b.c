@@ -1,7 +1,7 @@
 /*
  * GP10B fifo
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -316,4 +316,58 @@ void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 		 gk20a_readl(g, fifo_intr_mmu_fault_inst_r(mmu_fault_id)));
 	/* note: inst_ptr is a 40b phys addr.  */
 	mmfault->inst_ptr <<= fifo_intr_mmu_fault_inst_ptr_align_shift_v();
+}
+/* fault info/descriptions */
+static const char * const gp10b_fault_type_descs[] = {
+	 "pde", /*fifo_intr_mmu_fault_info_type_pde_v() == 0 */
+	 "pde size",
+	 "pte",
+	 "va limit viol",
+	 "unbound inst",
+	 "priv viol",
+	 "ro viol",
+	 "wo viol",
+	 "pitch mask",
+	 "work creation",
+	 "bad aperture",
+	 "compression failure",
+	 "bad kind",
+	 "region viol",
+	 "dual ptes",
+	 "poisoned",
+	 "atomic violation",
+};
+
+static const char * const gp10b_hub_client_descs[] = {
+	"vip", "ce0", "ce1", "dniso", "fe", "fecs", "host", "host cpu",
+	"host cpu nb", "iso", "mmu", "mspdec", "msppp", "msvld",
+	"niso", "p2p", "pd", "perf", "pmu", "raster twod", "scc",
+	"scc nb", "sec", "ssync", "gr copy", "xv", "mmu nb",
+	"msenc", "d falcon", "sked", "a falcon", "n/a",
+	"hsce0", "hsce1", "hsce2", "hsce3", "hsce4", "hsce5",
+	"hsce6", "hsce7", "hsce8", "hsce9", "hshub",
+	"ptp x0", "ptp x1", "ptp x2", "ptp x3", "ptp x4",
+	"ptp x5", "ptp x6", "ptp x7", "vpr scrubber0", "vpr scrubber1",
+};
+
+/* fill in mmu fault desc */
+void gp10b_fifo_get_mmu_fault_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->fault_type >= ARRAY_SIZE(gp10b_fault_type_descs))
+		WARN_ON(mmfault->fault_type >=
+				ARRAY_SIZE(gp10b_fault_type_descs));
+	else
+		mmfault->fault_type_desc =
+			 gp10b_fault_type_descs[mmfault->fault_type];
+}
+
+/* fill in mmu fault client description */
+void gp10b_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->client_id >= ARRAY_SIZE(gp10b_hub_client_descs))
+		WARN_ON(mmfault->client_id >=
+				ARRAY_SIZE(gp10b_hub_client_descs));
+	else
+		mmfault->client_id_desc =
+			 gp10b_hub_client_descs[mmfault->client_id];
 }

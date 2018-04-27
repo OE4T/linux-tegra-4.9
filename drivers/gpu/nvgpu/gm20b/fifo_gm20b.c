@@ -1,7 +1,7 @@
 /*
  * GM20B Fifo
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -222,4 +222,35 @@ void gm20b_fifo_tsg_verify_status_ctx_reload(struct channel_gk20a *ch)
 		}
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	}
+}
+
+static const char * const gm20b_gpc_client_descs[] = {
+	"l1 0", "t1 0", "pe 0",
+	"l1 1", "t1 1", "pe 1",
+	"l1 2", "t1 2", "pe 2",
+	"l1 3", "t1 3", "pe 3",
+	"rast", "gcc", "gpccs",
+	"prop 0", "prop 1", "prop 2", "prop 3",
+	"l1 4", "t1 4", "pe 4",
+	"l1 5", "t1 5", "pe 5",
+	"l1 6", "t1 6", "pe 6",
+	"l1 7", "t1 7", "pe 7",
+	"l1 9", "t1 9", "pe 9",
+	"l1 10", "t1 10", "pe 10",
+	"l1 11", "t1 11", "pe 11",
+	"unknown", "unknown", "unknown", "unknown",
+	"tpccs 0", "tpccs 1", "tpccs 2",
+	"tpccs 3", "tpccs 4", "tpccs 5",
+	"tpccs 6", "tpccs 7", "tpccs 8",
+	"tpccs 9", "tpccs 10", "tpccs 11",
+};
+
+void gm20b_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->client_id >= ARRAY_SIZE(gm20b_gpc_client_descs))
+		WARN_ON(mmfault->client_id >=
+				ARRAY_SIZE(gm20b_gpc_client_descs));
+	else
+		mmfault->client_id_desc =
+			 gm20b_gpc_client_descs[mmfault->client_id];
 }

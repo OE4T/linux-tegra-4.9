@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,5 +23,9 @@
 #ifndef NVGPU_FIFO_GP106_H
 #define NVGPU_FIFO_GP106_H
 struct gk20a;
+struct mmu_fault_info;
+
 u32 gp106_fifo_get_num_fifos(struct gk20a *g);
+void gp106_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault);
+void gp106_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault);
 #endif

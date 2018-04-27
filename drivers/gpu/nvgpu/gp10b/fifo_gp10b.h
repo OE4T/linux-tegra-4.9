@@ -1,7 +1,7 @@
 /*
  * GP10B Fifo
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,6 +42,8 @@ void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f);
 void gp10b_fifo_get_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	struct mmu_fault_info *mmfault);
+void gp10b_fifo_get_mmu_fault_desc(struct mmu_fault_info *mmfault);
+void gp10b_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault);
 int channel_gp10b_commit_userd(struct channel_gk20a *c);
 
 #endif

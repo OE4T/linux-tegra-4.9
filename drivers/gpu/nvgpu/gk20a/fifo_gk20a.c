@@ -1143,7 +1143,7 @@ gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr)
 /* fault info/descriptions.
  * tbd: move to setup
  *  */
-static const char * const fault_type_descs[] = {
+static const char * const gk20a_fault_type_descs[] = {
 	 "pde", /*fifo_intr_mmu_fault_info_type_pde_v() == 0 */
 	 "pde size",
 	 "pte",
@@ -1167,15 +1167,15 @@ static const char * const engine_subid_descs[] = {
 	"hub",
 };
 
-static const char * const hub_client_descs[] = {
+static const char * const gk20a_hub_client_descs[] = {
 	"vip", "ce0", "ce1", "dniso", "fe", "fecs", "host", "host cpu",
 	"host cpu nb", "iso", "mmu", "mspdec", "msppp", "msvld",
 	"niso", "p2p", "pd", "perf", "pmu", "raster twod", "scc",
-	"scc nb", "sec", "ssync", "gr copy", "ce2", "xv", "mmu nb",
+	"scc nb", "sec", "ssync", "gr copy", "xv", "mmu nb",
 	"msenc", "d falcon", "sked", "a falcon", "n/a",
 };
 
-static const char * const gpc_client_descs[] = {
+static const char * const gk20a_gpc_client_descs[] = {
 	"l1 0", "t1 0", "pe 0",
 	"l1 1", "t1 1", "pe 1",
 	"l1 2", "t1 2", "pe 2",
@@ -1186,14 +1186,44 @@ static const char * const gpc_client_descs[] = {
 	"l1 5", "t1 5", "pe 5",
 	"l1 6", "t1 6", "pe 6",
 	"l1 7", "t1 7", "pe 7",
-	"gpm",
-	"ltp utlb 0", "ltp utlb 1", "ltp utlb 2", "ltp utlb 3",
-	"rgg utlb",
 };
 
 static const char * const does_not_exist[] = {
 	"does not exist"
 };
+
+/* fill in mmu fault desc */
+void gk20a_fifo_get_mmu_fault_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->fault_type >= ARRAY_SIZE(gk20a_fault_type_descs))
+		WARN_ON(mmfault->fault_type >=
+				ARRAY_SIZE(gk20a_fault_type_descs));
+	else
+		mmfault->fault_type_desc =
+			 gk20a_fault_type_descs[mmfault->fault_type];
+}
+
+/* fill in mmu fault client description */
+void gk20a_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->client_id >= ARRAY_SIZE(gk20a_hub_client_descs))
+		WARN_ON(mmfault->client_id >=
+				ARRAY_SIZE(gk20a_hub_client_descs));
+	else
+		mmfault->client_id_desc =
+			 gk20a_hub_client_descs[mmfault->client_id];
+}
+
+/* fill in mmu fault gpc description */
+void gk20a_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault)
+{
+	if (mmfault->client_id >= ARRAY_SIZE(gk20a_gpc_client_descs))
+		WARN_ON(mmfault->client_id >=
+				ARRAY_SIZE(gk20a_gpc_client_descs));
+	else
+		mmfault->client_id_desc =
+			 gk20a_gpc_client_descs[mmfault->client_id];
+}
 
 static void get_exception_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	struct mmu_fault_info *mmfault)
@@ -1201,13 +1231,9 @@ static void get_exception_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	g->ops.fifo.get_mmu_fault_info(g, mmu_fault_id, mmfault);
 
 	/* parse info */
-	if (mmfault->fault_type >= ARRAY_SIZE(fault_type_descs)) {
-		WARN_ON(mmfault->fault_type >= ARRAY_SIZE(fault_type_descs));
-		mmfault->fault_type_desc =  does_not_exist[0];
-	} else {
-		mmfault->fault_type_desc =
-			 fault_type_descs[mmfault->fault_type];
-	}
+	mmfault->fault_type_desc =  does_not_exist[0];
+	if (g->ops.fifo.get_mmu_fault_desc)
+		g->ops.fifo.get_mmu_fault_desc(mmfault);
 
 	if (mmfault->client_type >= ARRAY_SIZE(engine_subid_descs)) {
 		WARN_ON(mmfault->client_type >= ARRAY_SIZE(engine_subid_descs));
@@ -1218,25 +1244,14 @@ static void get_exception_mmu_fault_info(struct gk20a *g, u32 mmu_fault_id,
 	}
 
 	mmfault->client_id_desc = does_not_exist[0];
-	if (mmfault->client_type ==
-	    fifo_intr_mmu_fault_info_engine_subid_hub_v()) {
-
-		if (mmfault->client_id >=
-				 ARRAY_SIZE(hub_client_descs))
-			WARN_ON(mmfault->client_id >=
-				 ARRAY_SIZE(hub_client_descs));
-		else
-			mmfault->client_id_desc =
-				 hub_client_descs[mmfault->client_id];
-	} else if (mmfault->client_type ==
-			fifo_intr_mmu_fault_info_engine_subid_gpc_v()) {
-		if (mmfault->client_id >= ARRAY_SIZE(gpc_client_descs))
-			WARN_ON(mmfault->client_id >=
-				 ARRAY_SIZE(gpc_client_descs));
-		else
-			mmfault->client_id_desc =
-				 gpc_client_descs[mmfault->client_id];
-	}
+	if ((mmfault->client_type ==
+		fifo_intr_mmu_fault_info_engine_subid_hub_v())
+		&& g->ops.fifo.get_mmu_fault_client_desc)
+		g->ops.fifo.get_mmu_fault_client_desc(mmfault);
+	else if ((mmfault->client_type ==
+			fifo_intr_mmu_fault_info_engine_subid_gpc_v())
+			&& g->ops.fifo.get_mmu_fault_gpc_desc)
+		g->ops.fifo.get_mmu_fault_gpc_desc(mmfault);
 }
 
 /* reads info from hardware and fills in mmu fault info record */

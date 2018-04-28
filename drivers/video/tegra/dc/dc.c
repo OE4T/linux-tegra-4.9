@@ -75,6 +75,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dc_priv.h"
 #include "dc_shared_isr.h"
 #include "nvhost_sync.h"
+#include "nvhost_syncpt.h"	/* Preset and flush vblank_syncpt*/
 #include "dpaux.h"
 #include "lvds.h"
 #include "dc_common.h"
@@ -5644,6 +5645,26 @@ int tegra_dc_set_default_videomode(struct tegra_dc *dc)
 	return _tegra_dc_set_default_videomode(dc);
 }
 
+/* Preset sync point maxval for maximum range. */
+static u32 tegra_dc_syncpt_preset_maxval(struct platform_device *dev, u32 id)
+{
+	u32 old;
+
+	old = nvhost_syncpt_read_minval(dev, id);
+	nvhost_syncpt_set_maxval(dev, id, old - 2);
+	return old;
+}
+
+/* Advance sync point to flush all waiters, return value before advancing. */
+static u32 tegra_dc_syncpt_flush(struct platform_device *dev, u32 id)
+{
+	u32 old;
+
+	old = nvhost_syncpt_read_minval(dev, id);
+	nvhost_syncpt_set_min_eq_max_ext(dev, id);
+	return old;
+}
+
 static bool _tegra_dc_enable(struct tegra_dc *dc)
 {
 	if (dc->mode.pclk == 0)
@@ -5700,7 +5721,7 @@ void tegra_dc_enable(struct tegra_dc *dc)
 
 			return;
 		}
-
+		tegra_dc_syncpt_preset_maxval(dc->ndev, dc->vblank_syncpt);
 		dc->enabled = _tegra_dc_enable(dc);
 		tegra_dc_release_common_channel(dc);
 	}
@@ -5939,6 +5960,7 @@ void tegra_dc_disable(struct tegra_dc *dc)
 {
 	dc->shutdown = true;
 	tegra_dc_disable_irq_ops(dc, false);
+	tegra_dc_syncpt_flush(dc->ndev, dc->vblank_syncpt);
 }
 
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
@@ -6909,6 +6931,7 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	if (!ret)
 		tegra_dc_io_end(dc);
 
+	tegra_dc_syncpt_flush(dc->ndev, dc->vblank_syncpt);
 	mutex_unlock(&dc->lock);
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
@@ -6928,6 +6951,7 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	dev_info(&ndev->dev, "resume\n");
 
 	mutex_lock(&dc->lock);
+	tegra_dc_syncpt_preset_maxval(dc->ndev, dc->vblank_syncpt);
 
 	/* To pan the fb on resume */
 	tegra_fb_pan_display_reset(dc->fb);

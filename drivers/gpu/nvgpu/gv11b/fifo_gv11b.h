@@ -106,6 +106,12 @@ void gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
 					struct nvgpu_mem *syncpt_buf);
 int gv11b_fifo_get_sync_ro_map(struct vm_gk20a *vm,
 	u64 *base_gpuva, u32 *sync_size);
+u32 gv11b_fifo_get_sema_wait_cmd_size(void);
+u32 gv11b_fifo_get_sema_incr_cmd_size(void);
+void gv11b_fifo_add_sema_cmd(struct gk20a *g,
+	struct nvgpu_semaphore *s, u64 sema_va,
+	struct priv_cmd_entry *cmd,
+	u32 off, bool acquire, bool wfi);
 void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 		struct priv_cmd_entry *cmd, u32 off,
 		u32 id, u32 thresh, u64 gpu_va_base);

@@ -1659,6 +1659,55 @@ void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 	nvgpu_log_info(g, "eng method buffers de-allocated");
 }
 
+u32 gv11b_fifo_get_sema_wait_cmd_size(void)
+{
+	return 10;
+}
+
+u32 gv11b_fifo_get_sema_incr_cmd_size(void)
+{
+	return 12;
+}
+
+void gv11b_fifo_add_sema_cmd(struct gk20a *g,
+	struct nvgpu_semaphore *s, u64 sema_va,
+	struct priv_cmd_entry *cmd,
+	u32 off, bool acquire, bool wfi)
+{
+	nvgpu_log_fn(g, " ");
+
+	/* sema_addr_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010017);
+	nvgpu_mem_wr32(g, cmd->mem, off++, sema_va & 0xffffffff);
+
+	/* sema_addr_hi */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010018);
+	nvgpu_mem_wr32(g, cmd->mem, off++, (sema_va >> 32) & 0xff);
+
+	/* payload_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010019);
+	nvgpu_mem_wr32(g, cmd->mem, off++, nvgpu_semaphore_get_value(s));
+
+	/* payload_hi : ignored */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001a);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+
+	if (acquire) {
+		/* sema_execute : acq_strict_geq | switch_en | 32bit */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001b);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x2 | (1 << 12));
+	} else {
+		/* sema_execute : release | wfi | 32bit */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001b);
+		nvgpu_mem_wr32(g, cmd->mem, off++,
+			0x1 | ((wfi ? 0x1 : 0x0) << 20));
+
+		/* non_stall_int : payload is ignored */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010008);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+	}
+}
+
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 static int set_syncpt_ro_map_gpu_va_locked(struct vm_gk20a *vm)
 {
@@ -1751,28 +1800,30 @@ void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
 
 	off = cmd->off + off;
 
-	/* semaphore_a */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
-	nvgpu_mem_wr32(g, cmd->mem, off++,
-			(gpu_va >> 32) & 0xff);
-	/* semaphore_b */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
-	/* offset */
+	/* sema_addr_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010017);
 	nvgpu_mem_wr32(g, cmd->mem, off++, gpu_va & 0xffffffff);
 
-	/* semaphore_c */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
-	/* payload */
+	/* sema_addr_hi */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010018);
+	nvgpu_mem_wr32(g, cmd->mem, off++, (gpu_va >> 32) & 0xff);
+
+	/* payload_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010019);
 	nvgpu_mem_wr32(g, cmd->mem, off++, thresh);
-	/* semaphore_d */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
-	/* operation: acq_geq, switch_en */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
+
+	/* payload_hi : ignored */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001a);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+
+	/* sema_execute : acq_strict_geq | switch_en | 32bit */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001b);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2 | (1 << 12));
 }
 
 u32 gv11b_fifo_get_syncpt_wait_cmd_size(void)
 {
-	return 8;
+	return 10;
 }
 
 u32 gv11b_fifo_get_syncpt_incr_per_release(void)
@@ -1788,30 +1839,31 @@ void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
 
 	nvgpu_log_fn(g, " ");
 
-	/* semaphore_a */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
-	nvgpu_mem_wr32(g, cmd->mem, off++,
-			(gpu_va >> 32) & 0xff);
-	/* semaphore_b */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
-	/* offset */
+	/* sema_addr_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010017);
 	nvgpu_mem_wr32(g, cmd->mem, off++, gpu_va & 0xffffffff);
 
-	/* semaphore_c */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
-	/* payload */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x0);
-	/* semaphore_d */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
+	/* sema_addr_hi */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010018);
+	nvgpu_mem_wr32(g, cmd->mem, off++, (gpu_va >> 32) & 0xff);
 
-	/* operation: 4 byte payload, release, wfi */
+	/* payload_lo */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010019);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+
+	/* payload_hi : ignored */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001a);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+
+	/* sema_execute : release | wfi | 32bit */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001b);
 	nvgpu_mem_wr32(g, cmd->mem, off++,
-		(0x1 << 24) | 0x2 | ((wfi_cmd ? 0x0 : 0x1) << 20));
+		0x1 | ((wfi_cmd ? 0x1 : 0x0) << 20));
 }
 
 u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
 {
-	return 8;
+	return 10;
 }
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 

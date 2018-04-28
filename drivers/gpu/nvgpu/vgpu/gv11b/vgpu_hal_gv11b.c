@@ -425,9 +425,9 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
 		.ring_channel_doorbell = gv11b_ring_channel_doorbell,
-		.get_sema_wait_cmd_size = gk20a_fifo_get_sema_wait_cmd_size,
-		.get_sema_incr_cmd_size = gk20a_fifo_get_sema_incr_cmd_size,
-		.add_sema_cmd = gk20a_fifo_add_sema_cmd,
+		.get_sema_wait_cmd_size = gv11b_fifo_get_sema_wait_cmd_size,
+		.get_sema_incr_cmd_size = gv11b_fifo_get_sema_incr_cmd_size,
+		.add_sema_cmd = gv11b_fifo_add_sema_cmd,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv11b_get_netlist_name,

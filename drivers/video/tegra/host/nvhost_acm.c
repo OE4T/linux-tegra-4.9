@@ -345,6 +345,7 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 	nvhost_module_idle(dev);
 	return err;
 }
+EXPORT_SYMBOL(nvhost_module_get_rate);
 
 static int nvhost_module_update_rate(struct platform_device *dev, int index)
 {

@@ -20,10 +20,6 @@
 #include <linux/rculist.h>
 #include <linux/llist.h>
 #include <linux/uaccess.h>
-#include <linux/poll.h>
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>
@@ -678,7 +674,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 		if ((target->gpc2clk < session->target->gpc2clk)
 			|| (target->mclk < session->target->mclk)) {
 
-			poll_mask |= (POLLIN | POLLPRI);
+			poll_mask |= (NVGPU_POLLIN | NVGPU_POLLPRI);
 			nvgpu_clk_arb_queue_notification(arb->g, &dev->queue,
 				EVENT(ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE));
 		}
@@ -686,7 +682,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 
 	/* Check if there is a new VF update */
 	if (queue_alarm_mask & EVENT(VF_UPDATE))
-		poll_mask |= (POLLIN | POLLRDNORM);
+		poll_mask |= (NVGPU_POLLIN | NVGPU_POLLRDNORM);
 
 	/* Notify sticky alarms that were not reported on previous run*/
 	new_alarms_reported = (queue_alarm_mask |
@@ -695,9 +691,9 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 	if (new_alarms_reported & ~LOCAL_ALARM_MASK) {
 		/* check that we are not re-reporting */
 		if (new_alarms_reported & EVENT(ALARM_GPU_LOST))
-			poll_mask |= POLLHUP;
+			poll_mask |= NVGPU_POLLHUP;
 
-		poll_mask |= (POLLIN | POLLPRI);
+		poll_mask |= (NVGPU_POLLIN | NVGPU_POLLPRI);
 		/* On next run do not report global alarms that were already
 		 * reported, but report SHUTDOWN always
 		 */
@@ -1016,7 +1012,7 @@ exit_arb:
 	/* notify completion for all requests */
 	head = llist_del_all(&arb->requests);
 	llist_for_each_entry_safe(dev, tmp, head, node) {
-		nvgpu_atomic_set(&dev->poll_mask, POLLIN | POLLRDNORM);
+		nvgpu_atomic_set(&dev->poll_mask, NVGPU_POLLIN | NVGPU_POLLRDNORM);
 		nvgpu_cond_signal_interruptible(&dev->readout_wq);
 		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	}

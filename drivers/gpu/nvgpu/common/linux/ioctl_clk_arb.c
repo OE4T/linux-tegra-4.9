@@ -62,6 +62,24 @@ static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 	return 0;
 }
 
+static inline unsigned int nvgpu_convert_poll_mask(unsigned int nvgpu_poll_mask)
+{
+	unsigned int poll_mask = 0;
+
+	if (nvgpu_poll_mask & NVGPU_POLLIN)
+		poll_mask |= POLLIN;
+	if (nvgpu_poll_mask & NVGPU_POLLPRI)
+		poll_mask |= POLLPRI;
+	if (nvgpu_poll_mask & NVGPU_POLLOUT)
+		poll_mask |= POLLOUT;
+	if (nvgpu_poll_mask & NVGPU_POLLRDNORM)
+		poll_mask |= POLLRDNORM;
+	if (nvgpu_poll_mask & NVGPU_POLLHUP)
+		poll_mask |= POLLHUP;
+
+	return poll_mask;
+}
+
 static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 {
 	struct nvgpu_clk_dev *dev = filp->private_data;
@@ -69,7 +87,7 @@ static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 	nvgpu_log(dev->session->g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	poll_wait(filp, &dev->readout_wq.wq, wait);
-	return nvgpu_atomic_xchg(&dev->poll_mask, 0);
+	return nvgpu_convert_poll_mask(nvgpu_atomic_xchg(&dev->poll_mask, 0));
 }
 
 static int nvgpu_clk_arb_release_event_dev(struct inode *inode,

@@ -93,6 +93,16 @@ struct nvgpu_clk_session;
 
 #define _WRAPGTEQ(a, b) ((a-b) > 0)
 
+/*
+ * NVGPU_POLL* defines equivalent to the POLL* linux defines
+ */
+#define NVGPU_POLLIN (1 << 0)
+#define NVGPU_POLLPRI (1 << 1)
+#define NVGPU_POLLOUT (1 << 2)
+#define NVGPU_POLLRDNORM (1 << 3)
+#define NVGPU_POLLHUP (1 << 4)
+
+
 struct nvgpu_clk_notification {
 	u32 notification;
 	u64 timestamp;

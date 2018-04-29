@@ -200,6 +200,7 @@
 #define CFG_LINK_STATUS_CONTROL_2	0xA0
 #define CFG_LINK_STATUS_CONTROL_2_PCIE_CAP_EQ_CPL	BIT(17)
 #define CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK	0xF
+#define CFG_LINK_STATUS_CONTROL_2_HW_AUTO_SPEED_DISABLE	BIT(5)
 
 #define CFG_LINK_CAP_L1SUB		0x154
 
@@ -434,6 +435,7 @@ struct tegra_pcie_dw {
 	void __iomem		*appl_base;
 	void __iomem		*atu_dma_base;
 	struct clk		*core_clk;
+	struct clk		*core_clk_m;
 	struct reset_control	*core_apb_rst;
 	struct reset_control	*core_rst;
 	struct pcie_port	pp;
@@ -448,6 +450,7 @@ struct tegra_pcie_dw {
 	void *cpu_virt_addr;
 	bool disable_clock_request;
 	bool power_down_en;
+	bool is_safety_platform;
 	bool td_bit;
 	bool disable_l1_cpm;
 	u8 init_link_width;
@@ -2216,6 +2219,19 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 				  PORT_LOGIC_PL_CHK_REG_CONTROL_STATUS, 4, tmp);
 	}
 
+	if (pcie->is_safety_platform) {
+		/* Disable HW autonomous speed change */
+		val = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2);
+		val &= ~CFG_LINK_STATUS_CONTROL_2_HW_AUTO_SPEED_DISABLE;
+		writel(val, pp->dbi_base + CFG_LINK_STATUS_CONTROL_2);
+
+		/* Disable all ASPM states */
+		disable_aspm_l0s(pcie); /* Disable L0s */
+		disable_aspm_l10(pcie); /* Disable L1 */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
+
 	val = readl(pp->dbi_base + PORT_LOGIC_MISC_CONTROL);
 	val &= ~PORT_LOGIC_MISC_CONTROL_DBI_RO_WR_EN;
 	writel(val, pp->dbi_base + PORT_LOGIC_MISC_CONTROL);
@@ -2335,6 +2351,11 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 
 	speed = ((data >> 16) & PCI_EXP_LNKSTA_CLS);
 	clk_set_rate(pcie->core_clk, pcie_gen_freq[speed - 1]);
+
+	if (pcie->is_safety_platform)
+		if (clk_prepare_enable(pcie->core_clk_m))
+			dev_err(pcie->dev,
+				"Failed to enable monitored core clock\n");
 
 	resource_list_for_each_entry(win, &host->windows) {
 		if (win->res->flags & IORESOURCE_IO) {
@@ -2655,6 +2676,12 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		return PTR_ERR(pcie->core_clk);
 	}
 
+	pcie->core_clk_m = devm_clk_get(&pdev->dev, "core_clk_m");
+	if (IS_ERR(pcie->core_clk_m))
+		pcie->is_safety_platform = 0;
+	else
+		pcie->is_safety_platform = 1;
+
 	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
 	if (!appl_res) {
 		dev_err(&pdev->dev, "missing appl space\n");
@@ -2925,6 +2952,10 @@ static int tegra_pcie_dw_runtime_suspend(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 
 	dw_pcie_host_deinit(&pcie->pp);
+
+	if (pcie->is_safety_platform)
+		clk_disable_unprepare(pcie->core_clk_m);
+
 	tegra_pcie_dw_pme_turnoff(pcie);
 
 	reset_control_assert(pcie->core_rst);
@@ -3053,6 +3084,8 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	reset_control_assert(pcie->core_rst);
 	tegra_pcie_disable_phy(pcie);
 	reset_control_assert(pcie->core_apb_rst);
+	if (pcie->is_safety_platform)
+		clk_disable_unprepare(pcie->core_clk_m);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
 	if (pcie->cid != CTRL_5) {

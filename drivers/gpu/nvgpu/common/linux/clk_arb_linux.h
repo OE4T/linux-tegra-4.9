@@ -41,11 +41,12 @@
 struct nvgpu_clk_arb {
 	struct nvgpu_spinlock sessions_lock;
 	struct nvgpu_spinlock users_lock;
+	struct nvgpu_spinlock requests_lock;
 
 	struct nvgpu_mutex pstate_lock;
 	struct list_head users;
 	struct list_head sessions;
-	struct llist_head requests;
+	struct list_head requests;
 
 	struct gk20a *g;
 	int status;
@@ -92,7 +93,7 @@ struct nvgpu_clk_dev {
 	struct nvgpu_clk_session *session;
 	union {
 		struct list_head link;
-		struct llist_node node;
+		struct list_head node;
 	};
 	struct nvgpu_cond readout_wq;
 	nvgpu_atomic_t poll_mask;
@@ -110,8 +111,9 @@ struct nvgpu_clk_session {
 	struct gk20a *g;
 	struct nvgpu_ref refcount;
 	struct list_head link;
-	struct llist_head targets;
+	struct list_head targets;
 
+	struct nvgpu_spinlock session_lock;
 	struct nvgpu_clk_arb_target target_pool[2];
 	struct nvgpu_clk_arb_target *target;
 };

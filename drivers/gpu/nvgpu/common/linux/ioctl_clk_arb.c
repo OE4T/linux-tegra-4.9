@@ -16,9 +16,8 @@
 
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/list.h>
 #include <linux/anon_inodes.h>
-#include <linux/rculist.h>
-#include <linux/llist.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #ifdef CONFIG_DEBUG_FS
@@ -103,12 +102,11 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 
 	if (arb) {
 		nvgpu_spinlock_acquire(&arb->users_lock);
-		list_del_rcu(&dev->link);
+		list_del(&dev->link);
 		nvgpu_spinlock_release(&arb->users_lock);
 		nvgpu_clk_notification_queue_free(arb->g, &dev->queue);
 	}
 
-	synchronize_rcu();
 	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 
@@ -372,7 +370,7 @@ int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
 	dev->arb_queue_head = nvgpu_atomic_read(&arb->notification_queue.head);
 
 	nvgpu_spinlock_acquire(&arb->users_lock);
-	list_add_tail_rcu(&dev->link, &arb->users);
+	list_add_tail(&dev->link, &arb->users);
 	nvgpu_spinlock_release(&arb->users_lock);
 
 	*event_fd = fd;
@@ -423,7 +421,9 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 		goto fdput_fd;
 	}
 	nvgpu_ref_get(&dev->refcount);
-	llist_add(&dev->node, &session->targets);
+	nvgpu_spinlock_acquire(&session->session_lock);
+	list_add(&dev->node, &session->targets);
+	nvgpu_spinlock_release(&session->session_lock);
 	if (arb->update_work_queue)
 		queue_work(arb->update_work_queue, &arb->update_fn_work);
 

@@ -16,9 +16,8 @@
 
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/list.h>
 #include <linux/anon_inodes.h>
-#include <linux/rculist.h>
-#include <linux/llist.h>
 #include <linux/uaccess.h>
 
 #include <nvgpu/bitops.h>
@@ -740,7 +739,6 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	struct nvgpu_clk_dev *tmp;
 	struct nvgpu_clk_arb_target *target, *actual;
 	struct gk20a *g = arb->g;
-	struct llist_node *head;
 
 	u32 pstate = VF_POINT_INVALID_PSTATE;
 	u32 voltuv, voltuv_sram;
@@ -775,25 +773,21 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	gpc2clk_target = 0;
 	mclk_target = 0;
 
-	rcu_read_lock();
-	list_for_each_entry_rcu(session, &arb->sessions, link) {
+	nvgpu_spinlock_acquire(&arb->sessions_lock);
+	list_for_each_entry(session, &arb->sessions, link) {
 		if (!session->zombie) {
 			mclk_set = false;
 			gpc2clk_set = false;
-			target = NV_ACCESS_ONCE(session->target) ==
-				&session->target_pool[0] ?
+			target = (session->target == &session->target_pool[0] ?
 					&session->target_pool[1] :
-					&session->target_pool[0];
-			/* Do not reorder pointer */
-			nvgpu_smp_rmb();
-			head = llist_del_all(&session->targets);
-			if (head) {
-
+					&session->target_pool[0]);
+			nvgpu_spinlock_acquire(&session->session_lock);
+			if (!list_empty(&session->targets)) {
 				/* Copy over state */
 				target->mclk = session->target->mclk;
 				target->gpc2clk = session->target->gpc2clk;
 				/* Query the latest committed request */
-				llist_for_each_entry_safe(dev, tmp, head,
+				list_for_each_entry_safe(dev, tmp, &session->targets,
 									node) {
 					if (!mclk_set && dev->mclk_target_mhz) {
 						target->mclk =
@@ -807,12 +801,14 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 						gpc2clk_set = true;
 					}
 					nvgpu_ref_get(&dev->refcount);
-					llist_add(&dev->node, &arb->requests);
+					list_del(&dev->node);
+					nvgpu_spinlock_acquire(&arb->requests_lock);
+					list_add(&dev->node, &arb->requests);
+					nvgpu_spinlock_release(&arb->requests_lock);
 				}
-				/* Ensure target is updated before ptr sawp */
-				nvgpu_smp_wmb();
 				xchg(&session->target, target);
 			}
+			nvgpu_spinlock_release(&session->session_lock);
 
 			mclk_target = mclk_target > session->target->mclk ?
 				mclk_target : session->target->mclk;
@@ -822,7 +818,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 				gpc2clk_target : session->target->gpc2clk;
 		}
 	}
-	rcu_read_unlock();
+	nvgpu_spinlock_release(&arb->sessions_lock);
 
 	gpc2clk_target = (gpc2clk_target > 0) ? gpc2clk_target :
 			arb->gpc2clk_default_mhz;
@@ -1010,22 +1006,24 @@ exit_arb:
 
 	current_alarm = (u32) nvgpu_atomic64_read(&arb->alarm_mask);
 	/* notify completion for all requests */
-	head = llist_del_all(&arb->requests);
-	llist_for_each_entry_safe(dev, tmp, head, node) {
+	nvgpu_spinlock_acquire(&arb->requests_lock);
+	list_for_each_entry_safe(dev, tmp, &arb->requests, node) {
 		nvgpu_atomic_set(&dev->poll_mask, NVGPU_POLLIN | NVGPU_POLLRDNORM);
 		nvgpu_cond_signal_interruptible(&dev->readout_wq);
 		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+		list_del(&dev->node);
 	}
+	nvgpu_spinlock_release(&arb->requests_lock);
 
 	nvgpu_atomic_set(&arb->notification_queue.head,
 		nvgpu_atomic_read(&arb->notification_queue.tail));
 	/* notify event for all users */
-	rcu_read_lock();
-	list_for_each_entry_rcu(dev, &arb->users, link) {
+	nvgpu_spinlock_acquire(&arb->users_lock);
+	list_for_each_entry(dev, &arb->users, link) {
 		alarms_notified |=
 			nvgpu_clk_arb_notify(dev, arb->actual, current_alarm);
 	}
-	rcu_read_unlock();
+	nvgpu_spinlock_release(&arb->users_lock);
 
 	/* clear alarms */
 	nvgpu_clk_arb_clear_global_alarm(g, alarms_notified &
@@ -1054,6 +1052,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 		goto mutex_fail;
 	nvgpu_spinlock_init(&arb->sessions_lock);
 	nvgpu_spinlock_init(&arb->users_lock);
+	nvgpu_spinlock_init(&arb->requests_lock);
 
 	arb->mclk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
 	if (!arb->mclk_f_points) {
@@ -1119,9 +1118,9 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	if (err < 0)
 		goto init_fail;
 
-	INIT_LIST_HEAD_RCU(&arb->users);
-	INIT_LIST_HEAD_RCU(&arb->sessions);
-	init_llist_head(&arb->requests);
+	INIT_LIST_HEAD(&arb->users);
+	INIT_LIST_HEAD(&arb->sessions);
+	INIT_LIST_HEAD(&arb->requests);
 
 	nvgpu_cond_init(&arb->request_wq);
 	arb->vf_table_work_queue = alloc_workqueue("%s", WQ_HIGHPRI, 1,
@@ -1245,10 +1244,11 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	nvgpu_smp_wmb();
 	session->target = &session->target_pool[0];
 
-	init_llist_head(&session->targets);
+	INIT_LIST_HEAD(&session->targets);
+	nvgpu_spinlock_init(&session->session_lock);
 
 	nvgpu_spinlock_acquire(&arb->sessions_lock);
-	list_add_tail_rcu(&session->link, &arb->sessions);
+	list_add_tail(&session->link, &arb->sessions);
 	nvgpu_spinlock_release(&arb->sessions_lock);
 
 	*_session = session;
@@ -1272,21 +1272,22 @@ void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)
 	struct nvgpu_clk_arb *arb = session->g->clk_arb;
 	struct gk20a *g = session->g;
 	struct nvgpu_clk_dev *dev, *tmp;
-	struct llist_node *head;
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	if (arb) {
 		nvgpu_spinlock_acquire(&arb->sessions_lock);
-		list_del_rcu(&session->link);
+		list_del(&session->link);
 		nvgpu_spinlock_release(&arb->sessions_lock);
 	}
 
-	head = llist_del_all(&session->targets);
-	llist_for_each_entry_safe(dev, tmp, head, node) {
+	nvgpu_spinlock_acquire(&session->session_lock);
+	list_for_each_entry_safe(dev, tmp, &session->targets, node) {
 		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+		list_del(&dev->node);
 	}
-	synchronize_rcu();
+	nvgpu_spinlock_release(&session->session_lock);
+
 	nvgpu_kfree(g, session);
 }
 

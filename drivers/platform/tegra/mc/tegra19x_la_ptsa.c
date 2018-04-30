@@ -965,6 +965,8 @@ void tegra_la_get_t19x_specific(struct la_chip_specific *cs_la)
 	cs_la->check_disp_la = t19x_check_display_la_ptsa;
 	cs_la->save_ptsa = save_ptsa;
 	cs_la->program_ptsa = program_ptsa;
+	cs_la->save_non_la_ptsa = save_non_la_ptsa;
+	cs_la->program_non_la_ptsa = program_non_la_ptsa;
 	cs_la->suspend = la_suspend;
 	cs_la->resume = la_resume;
 	cs_la->mc_pcie_init = t19x_mc_pcie_init;

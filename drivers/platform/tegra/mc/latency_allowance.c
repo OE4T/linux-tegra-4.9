@@ -210,6 +210,10 @@ int la_suspend(void)
 	}
 
 	cs.save_ptsa();
+
+	if (cs.save_non_la_ptsa)
+		cs.save_non_la_ptsa();
+
 	return 0;
 }
 
@@ -224,6 +228,9 @@ void la_resume(void)
 	}
 
 	cs.program_ptsa();
+
+	if (cs.program_non_la_ptsa)
+		cs.program_non_la_ptsa();
 }
 
 int tegra_set_disp_latency_allowance(enum tegra_la_id id,

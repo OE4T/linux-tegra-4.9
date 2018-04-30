@@ -617,6 +617,8 @@ struct la_chip_specific {
 	void (*disable_la_scaling)(enum tegra_la_id id);
 	void (*save_ptsa)(void);
 	void (*program_ptsa)(void);
+	void (*save_non_la_ptsa)(void);
+	void (*program_non_la_ptsa)(void);
 	int (*suspend)(void);
 	void (*resume)(void);
 	void (*mc_pcie_init)(void);

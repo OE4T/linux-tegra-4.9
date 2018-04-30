@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,11 +64,11 @@ static void __init early_tcu_write(struct console *console,
 		mbox_val = update_and_send_mbox(addr, mbox_val, s[i]);
 	}
 
-	mbox_val |= BIT(FLUSH_BIT);
-
-	while (readl(addr) & BIT(INTR_TRIGGER_BIT))
-		cpu_relax();
-	writel(mbox_val, addr);
+	if ((mbox_val >> NUM_BYTES_FIELD_BIT) & 0x3) {
+		while (readl(addr) & BIT(INTR_TRIGGER_BIT))
+			cpu_relax();
+		writel(mbox_val, addr);
+	}
 }
 
 int __init early_tegra_combined_uart_setup(struct earlycon_device *device,

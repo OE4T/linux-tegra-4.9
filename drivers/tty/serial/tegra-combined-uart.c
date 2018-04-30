@@ -184,11 +184,11 @@ static void tegra_combined_uart_console_write(struct console *co,
 		mbox_val = update_and_send_mbox(mbox_val, s[i]);
 	}
 
-	mbox_val |= BIT(FLUSH_BIT);
-
-	while (readl(spe_mbox_reg) & BIT(INTR_TRIGGER_BIT))
-		cpu_relax();
-	writel(mbox_val, spe_mbox_reg);
+	if ((mbox_val >> NUM_BYTES_FIELD_BIT) & 0x3) {
+		while (readl(spe_mbox_reg) & BIT(INTR_TRIGGER_BIT))
+			cpu_relax();
+		writel(mbox_val, spe_mbox_reg);
+	}
 
 	spin_unlock_irqrestore(&tx_lock, flags);
 }

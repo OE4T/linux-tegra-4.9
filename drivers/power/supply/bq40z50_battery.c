@@ -29,6 +29,7 @@
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/machine.h>
 
+#define BQ40Z50_CAPACITY_ALARM		0x01
 #define BQ40Z50_TEMPERATURE		0x08
 #define BQ40Z50_VOLTAGE			0x09
 #define BQ40Z50_CURRENT			0x0A
@@ -47,15 +48,21 @@
 #define BQ40Z50_CYCLE_COUNT		0x17
 #define BQ40Z50_DESIGN_CAPACITY		0x18
 #define BQ40Z50_DESIGN_VOLTAGE		0x19
+#define BQ40Z50_SERIAL_NUMBER		0x1C
 #define BQ40Z50_MANUFACTURER		0x20
 #define BQ40Z50_DEVICE_NAME		0x21
 #define BQ40Z50_DEVICE_TYPE		0x22
+#define BQ40Z50_MANUFACTURER_DATA	0x23
+
 #define BQ40Z50_CELL_VOLTAGE4		0x3C
 #define BQ40Z50_CELL_VOLTAGE3		0x3D
 #define BQ40Z50_CELL_VOLTAGE2		0x3E
 #define BQ40Z50_CELL_VOLTAGE1		0x3F
 #define BQ40Z50_BTP_DISCHARGE		0x4A
 #define BQ40Z50_BTP_CHARGE		0x4B
+
+#define BQ40Z50_SAFETY_ALERT		0x50
+#define BQ40Z50_TURBO_CURRENT		0x5E
 
 #define BQ40Z50_MAX_REGS		0x7F
 
@@ -122,21 +129,43 @@ struct bq40z50_chip {
 	u32 full_charge_capacity;
 };
 
+static const struct regmap_range bq40z50_readable_ranges[] = {
+	regmap_reg_range(BQ40Z50_CAPACITY_ALARM, BQ40Z50_SERIAL_NUMBER),
+	regmap_reg_range(BQ40Z50_MANUFACTURER, BQ40Z50_MANUFACTURER_DATA),
+	regmap_reg_range(BQ40Z50_CELL_VOLTAGE4, BQ40Z50_CELL_VOLTAGE1),
+	regmap_reg_range(BQ40Z50_BTP_DISCHARGE, BQ40Z50_BTP_CHARGE),
+	regmap_reg_range(BQ40Z50_SAFETY_ALERT, BQ40Z50_TURBO_CURRENT),
+};
+
+static const struct regmap_access_table bq40z50_readable_table = {
+	.yes_ranges = bq40z50_readable_ranges,
+	.n_yes_ranges = ARRAY_SIZE(bq40z50_readable_ranges),
+};
+
 static const struct regmap_config bq40z50_rmap_config = {
 	.reg_bits		= 8,
 	.val_bits		= 16,
 	.max_register		= BQ40Z50_MAX_REGS,
 	.cache_type		= REGCACHE_NONE,
+	.val_format_endian	= REGMAP_ENDIAN_NATIVE,
+	.rd_table		= &bq40z50_readable_table,
 };
 
 static int bq40z50_read_word(struct bq40z50_chip *chip, u8 reg)
 {
-	return i2c_smbus_read_word_data(chip->client, reg);
+	unsigned int reg_val;
+	int ret;
+
+	ret = regmap_read(chip->rmap, reg, &reg_val);
+	if (ret < 0)
+		return ret;
+
+	return reg_val;
 }
 
 static int bq40z50_write_word(struct bq40z50_chip *chip, u8 reg, u32 val)
 {
-	return i2c_smbus_write_word_data(chip->client, reg, val);
+	return regmap_write(chip->rmap, reg, val);
 }
 
 static int bq40z50_update_soc_voltage(struct bq40z50_chip *chip)
@@ -242,6 +271,7 @@ static enum power_supply_property bq40z50_battery_props[] = {
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_HEALTH,
 	POWER_SUPPLY_PROP_PRESENT,
@@ -274,6 +304,9 @@ static int bq40z50_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = 1000 * chip->vcell;
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		val->intval = bq40z50_read_word(chip, BQ40Z50_CURRENT);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = chip->soc;
@@ -445,6 +478,13 @@ static int bq40z50_report_battery_voltage(struct battery_gauge_dev *bg_dev)
 	return val;
 }
 
+static int bq40z50_report_battery_current(struct battery_gauge_dev *bg_dev)
+{
+	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
+
+	return bq40z50_read_word(chip, BQ40Z50_CURRENT);
+}
+
 static int bq40z50_report_battery_soc(struct battery_gauge_dev *bg_dev)
 {
 	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
@@ -516,6 +556,7 @@ static struct battery_gauge_ops bq40z50_bg_ops = {
 	.update_battery_status = bq40z50_update_battery_state,
 	.get_battery_soc = bq40z50_report_battery_soc,
 	.get_battery_voltage = bq40z50_report_battery_voltage,
+	.get_battery_current = bq40z50_report_battery_current,
 };
 
 static struct battery_gauge_info bq40z50_bgi = {
@@ -537,7 +578,7 @@ static int bq40z50_fg_init(struct bq40z50_chip *chip)
 		}
 	}
 
-	if (chip->design_capacity) {
+	if (chip->design_voltage) {
 		ret = bq40z50_write_word(chip, BQ40Z50_DESIGN_VOLTAGE,
 					 chip->design_voltage);
 		if (ret < 0) {

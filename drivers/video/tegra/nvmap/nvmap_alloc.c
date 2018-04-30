@@ -58,7 +58,6 @@ static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 	struct page *page, *p, *e;
 	unsigned int order;
 
-	size = PAGE_ALIGN(size);
 	order = get_order(size);
 	page = alloc_pages(gfp, order);
 
@@ -76,7 +75,7 @@ static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 static int handle_page_alloc(struct nvmap_client *client,
 			     struct nvmap_handle *h, bool contiguous)
 {
-	size_t size = PAGE_ALIGN(h->size);
+	size_t size = h->size;
 	unsigned int __maybe_unused nr_page = size >> PAGE_SHIFT;
 	unsigned int i = 0, page_index = 0;
 	struct page **pages;
@@ -106,7 +105,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 								 nr_page);
 #endif
 		for (i = page_index; i < nr_page; i++) {
-			pages[i] = nvmap_alloc_pages_exact(gfp,	PAGE_SIZE);
+			pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
 		}
@@ -122,7 +121,6 @@ static int handle_page_alloc(struct nvmap_client *client,
 	if (page_index < nr_page)
 		nvmap_clean_cache(&pages[page_index], nr_page - page_index);
 
-	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = contiguous;
 	atomic_set(&h->pgalloc.ndirty, 0);
@@ -161,7 +159,7 @@ static struct device *nvmap_heap_pgalloc_dev(unsigned long type)
 static int nvmap_heap_pgalloc(struct nvmap_client *client,
 			struct nvmap_handle *h, unsigned long type)
 {
-	size_t size = PAGE_ALIGN(h->size);
+	size_t size = h->size;
 	struct page **pages;
 	struct device *dma_dev;
 	DEFINE_DMA_ATTRS(attrs);
@@ -181,7 +179,6 @@ static int nvmap_heap_pgalloc(struct nvmap_client *client,
 	if (dma_mapping_error(dma_dev, pa))
 		return -ENOMEM;
 
-	h->size = size;
 	h->pgalloc.pages = pages;
 	h->pgalloc.contig = 0;
 	atomic_set(&h->pgalloc.ndirty, 0);
@@ -190,7 +187,7 @@ static int nvmap_heap_pgalloc(struct nvmap_client *client,
 
 static int nvmap_heap_pgfree(struct nvmap_handle *h)
 {
-	size_t size = PAGE_ALIGN(h->size);
+	size_t size = h->size;
 	struct device *dma_dev;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t pa = ~(dma_addr_t)0;
@@ -341,8 +338,8 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		return -EEXIST;
 	}
 
-	nvmap_stats_inc(NS_TOTAL, PAGE_ALIGN(h->orig_size));
-	nvmap_stats_inc(NS_ALLOC, PAGE_ALIGN(h->size));
+	nvmap_stats_inc(NS_TOTAL, h->size);
+	nvmap_stats_inc(NS_ALLOC, h->size);
 	trace_nvmap_alloc_handle(client, h,
 		h->size, heap_mask, align, flags,
 		nvmap_stats_read(NS_TOTAL),
@@ -427,8 +424,8 @@ out:
 			NVMAP_TP_ARGS_CHR(client, h, NULL));
 		err = 0;
 	} else {
-		nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
-		nvmap_stats_dec(NS_ALLOC, PAGE_ALIGN(h->orig_size));
+		nvmap_stats_dec(NS_TOTAL, h->size);
+		nvmap_stats_dec(NS_ALLOC, h->size);
 	}
 	nvmap_handle_put(h);
 	return err;
@@ -497,7 +494,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 		goto out;
 
 	nvmap_stats_inc(NS_RELEASE, h->size);
-	nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
+	nvmap_stats_dec(NS_TOTAL, h->size);
 	if (!h->heap_pgalloc) {
 		if (h->vaddr) {
 			struct vm_struct *vm;

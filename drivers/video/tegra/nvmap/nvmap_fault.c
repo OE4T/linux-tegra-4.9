@@ -63,7 +63,7 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	mutex_lock(&h->lock);
 	vma_open_count = atomic_inc_return(&priv->count);
 	if (vma_open_count == 1 && h->heap_pgalloc) {
-		nr_page = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+		nr_page = h->size >> PAGE_SHIFT;
 		for (i = 0; i < nr_page; i++) {
 			struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 			/* This is necessry to avoid page being accounted
@@ -136,7 +136,7 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	BUG_ON(!priv->handle);
 
 	h = priv->handle;
-	nr_page = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
+	nr_page = h->size >> PAGE_SHIFT;
 
 	mutex_lock(&h->lock);
 	list_for_each_entry(vma_list, &h->vmas, list) {

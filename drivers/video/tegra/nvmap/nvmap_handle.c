@@ -80,7 +80,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 
 	if (!size)
 		size = vma->vm_end - vaddr;
-	ref = nvmap_create_handle(client, PAGE_ALIGN(size));
+	ref = nvmap_create_handle(client, size);
 	if (!IS_ERR(ref))
 		ref->handle->orig_size = size;
 	return ref;
@@ -111,7 +111,8 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	atomic_set(&h->pin, 0);
 	h->owner = client;
 	BUG_ON(!h->owner);
-	h->size = h->orig_size = size;
+	h->orig_size = size;
+	h->size = PAGE_ALIGN(size);
 	h->flags = NVMAP_HANDLE_WRITE_COMBINE;
 	h->peer = NVMAP_IVM_INVALID_PEER;
 	mutex_init(&h->lock);

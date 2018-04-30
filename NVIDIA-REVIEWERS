@@ -233,7 +233,6 @@ F:	drivers/iommu/*
 F:	drivers/md/*
 F:	drivers/memory/*
 F:	drivers/staging/android/ion/*
-F:	drivers/platform/tegra/tegra_fd.c
 F:	include/linux/mm.h
 F:	include/linux/nvmap.h
 F:	include/linux/vmstat.h

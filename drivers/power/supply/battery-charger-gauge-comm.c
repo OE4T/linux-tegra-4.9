@@ -290,6 +290,28 @@ static const struct attribute_group battery_sysfs_attr_group = {
 	.attrs = battery_sysfs_attributes,
 };
 
+int battery_gauge_get_charging_current(struct battery_charger_dev *bc_dev)
+{
+	struct battery_gauge_dev *bg_dev;
+	int ret = 0;
+
+	if (!bc_dev)
+		return -EINVAL;
+
+	mutex_lock(&charger_gauge_list_mutex);
+
+	list_for_each_entry(bg_dev, &gauge_list, list) {
+		if (bg_dev->cell_id != bc_dev->cell_id)
+			continue;
+		if (bg_dev->ops && bg_dev->ops->get_battery_current)
+			ret = bg_dev->ops->get_battery_current(bg_dev);
+	}
+
+	mutex_unlock(&charger_gauge_list_mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(battery_gauge_get_charging_current);
+
 int battery_gauge_get_battery_voltage(struct battery_charger_dev *bc_dev)
 {
 	struct battery_gauge_dev *bg_dev;

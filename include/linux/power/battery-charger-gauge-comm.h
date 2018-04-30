@@ -2,7 +2,7 @@
  * battery-charger-gauge-comm.h -- Communication APIS between battery charger
  *		and battery gauge driver.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -42,6 +42,7 @@ struct battery_gauge_ops {
 	int (*get_battery_temp)(void);
 	int (*get_battery_soc)(struct battery_gauge_dev *bg_device);
 	int (*get_battery_voltage)(struct battery_gauge_dev *bg_device);
+	int (*get_battery_current)(struct battery_gauge_dev *bg_device);
 };
 
 struct battery_charging_ops {
@@ -116,6 +117,7 @@ int battery_gauge_report_battery_soc(struct battery_gauge_dev *bg_dev,
 		int battery_soc);
 int battery_gauge_get_battery_soc(struct battery_charger_dev *bc_dev);
 int battery_gauge_get_battery_voltage(struct battery_charger_dev *bc_dev);
+int battery_gauge_get_charging_current(struct battery_charger_dev *bc_dev);
 int battery_gauge_get_input_current_limit(struct battery_gauge_dev *bg_dev);
 int battery_gauge_get_input_power(struct battery_gauge_dev *bg_dev,
 		int *power_mw);

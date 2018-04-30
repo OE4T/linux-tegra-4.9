@@ -1,7 +1,7 @@
 /*
  * RAS driver for T194
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,12 +110,12 @@ static struct ras_error lsd_3_errors[] = {
 static struct error_record core_ers[] = {
 	{.name = "IFU", .errx = 0,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		RAS_IFU_CTL_ITLB_SNP_ERR | RAS_IFU_CTL_ICMH_ERR |
-		RAS_IFU_CTL_ICTP_ERR | RAS_IFU_CTL_ICDP_ERR |
-		RAS_IFU_CTL_THERR_ERR | RAS_IFU_CTL_ITLBP_ERR |
-		RAS_IFU_CTL_ICMHSNP_ERR | RAS_IFU_CTL_ICTPSNP_ERR |
-		RAS_IFU_CTL_L2UC_ERR | RAS_IFU_CTL_IMQDP_ERR |
-		RAS_IFU_CTL_MITGRP_ERR,
+		ERR_CTL_IFU_ITLB_SNP_ERR | ERR_CTL_IFU_ICMH_ERR |
+		ERR_CTL_IFU_ICTP_ERR | ERR_CTL_IFU_ICDP_ERR |
+		ERR_CTL_IFU_THERR_ERR | ERR_CTL_IFU_ITLBP_ERR |
+		ERR_CTL_IFU_ICMHSNP_ERR | ERR_CTL_IFU_ICTPSNP_ERR |
+		ERR_CTL_IFU_L2UC_ERR | ERR_CTL_IFU_IMQDP_ERR |
+		ERR_CTL_IFU_MITGRP_ERR,
 	 .errors = ifu_errors},
 	{.name = "RET_JSR", .errx = 1,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE |
@@ -381,7 +381,7 @@ static struct error_record ccplex_ers[] = {
 /* This is called for each online CPU during probe and is also used
  * as hotplug callback to enable RAS every time a core comes online
  */
-void carmel_ras_enable(void *info)
+static void carmel_ras_enable(void *info)
 {
 	u64 errx;
 	int i;
@@ -784,10 +784,13 @@ static struct ras_fhi_callback ccplex_fhi_callback = {
 	.fn = carmel_ccplex_fhi_callback
 };
 
-static int scf_iob_cbb_put(void *data, u64 val)
+/* This function is used to trigger RAS Errors
+ * depending upon the error record and error enabled
+ * in the pfgctl passed to it
+ */
+static int ras_trip(u64 errx, u64 pfgctl)
 {
 	unsigned long flags, err_ctl;
-	u64 scf_iob_errx = 1025;
 
 	flags = arch_local_save_flags();
 
@@ -798,7 +801,7 @@ static int scf_iob_cbb_put(void *data, u64 val)
 		return 0;
 	}
 
-	ras_write_errselr(scf_iob_errx);
+	ras_write_errselr(errx);
 	pr_info("%s: Error Record Selected = %lld\n",
 		__func__, ras_read_errselr());
 
@@ -810,18 +813,55 @@ static int scf_iob_cbb_put(void *data, u64 val)
 	}
 
 	/* Write some value to MISC0 */
-	ras_write_error_misc0(0x2222222222222222UL);
+	ras_write_error_misc0(ERRi_MISC0_CONST);
 	/* Write some value to MISC1 */
-	ras_write_error_misc1(0x3333333333333333UL);
+	ras_write_error_misc1(ERRi_MISC1_CONST);
 	/* Write some value to ADDR */
-	ras_write_error_addr(0x4444444444444444UL);
+	ras_write_error_addr(ERRi_ADDR_CONST);
 	is_debug = 1;
 	/* Set coundown value */
 	ras_write_pfg_cdn(ERRi_PFGCDN_CDN_1);
 	/* Write to ERR<X>PFGCTL */
-	pr_info("%s:Writing val=0x%llx to ERRXPFGCTL\n", __func__, val);
-	ras_write_pfg_control(val);
+	pr_info("%s:Writing 0x%llx to ERRXPFGCTL\n", __func__, pfgctl);
+	ras_write_pfg_control(pfgctl);
 	return 0;
+}
+
+static int l3_cecc_put(void *data, u64 val)
+{
+	return ras_trip(ERRX_SCFL3, val);
+}
+
+/* This will return the special value to be written to debugfs node
+ * L3_0_CECC_ERR-trip to trigger L3_0_CECC Error
+ * Value is written to PFGCTL register.
+ * Enables bits CECC_ERR|CDNEN|MV|AV|CE|UC
+ */
+static int l3_cecc_get(void *data, u64 *val)
+{
+	*val = ERRi_PFGCTL_UC | ERRi_PFGCTL_CE | ERRi_PFGCTL_CDNEN |
+		ERR_CTL_SCFL3_CECC_ERR;
+	return 0;
+}
+
+static int scf_iob_cecc_put(void *data, u64 val)
+{
+	return ras_trip(ERRX_SCFIOB, val);
+}
+
+/* This will return the special value to be written to debugfs node
+ * SCF_IOB-PUTDATA_CECC_ERR-trip to trigger SCF IOB PUTDATA_CECC Error
+ */
+static int scf_iob_cecc_get(void *data, u64 *val)
+{
+	*val = ERRi_PFGCTL_UC | ERRi_PFGCTL_CE | ERRi_PFGCTL_CDNEN |
+		ERR_CTL_SCFIOB_PUT_CECC_ERR;
+	return 0;
+}
+
+static int scf_iob_cbb_put(void *data, u64 val)
+{
+	return ras_trip(ERRX_SCFIOB, val);
 }
 
 /* This will return the special value to be written to debugfs node
@@ -829,7 +869,8 @@ static int scf_iob_cbb_put(void *data, u64 val)
  */
 static int scf_iob_cbb_get(void *data, u64 *val)
 {
-	*val = 0x4080000042UL;
+	*val = ERRi_PFGCTL_UC | ERRi_PFGCTL_CE | ERRi_PFGCTL_CDNEN |
+		ERR_CTL_SCFIOB_CBB_ERR;
 	return 0;
 }
 
@@ -839,10 +880,36 @@ static int scf_iob_cbb_open(struct inode *inode, struct file *file)
 				"0x%08lx");
 }
 
+static int scf_iob_cecc_open(struct inode *inode, struct file *file)
+{
+	return simple_attr_open(inode, file, scf_iob_cecc_get, scf_iob_cecc_put,
+				"0x%08lx");
+}
+
+static int l3_cecc_open(struct inode *inode, struct file *file)
+{
+	return simple_attr_open(inode, file, l3_cecc_get, l3_cecc_put,
+				"0x%08lx");
+}
+
 static const struct file_operations fops_scf_iob_cbb = {
 	.read =		simple_attr_read,
 	.write =	simple_attr_write,
 	.open =		scf_iob_cbb_open,
+	.llseek =	noop_llseek,
+};
+
+static const struct file_operations fops_scf_iob_cecc = {
+	.read =		simple_attr_read,
+	.write =	simple_attr_write,
+	.open =		scf_iob_cecc_open,
+	.llseek =	noop_llseek,
+};
+
+static const struct file_operations fops_l3_cecc = {
+	.read =		simple_attr_read,
+	.write =	simple_attr_write,
+	.open =		l3_cecc_open,
 	.llseek =	noop_llseek,
 };
 
@@ -856,10 +923,24 @@ static int ras_carmel_dbgfs_init(void)
 		return -ENODEV;
 	}
 
-	debugfs_node = debugfs_create_file("SCF_IOB-CBB_ERR-trip", 0600, debugfs_dir, NULL,
-					   &fops_scf_iob_cbb);
+	debugfs_node = debugfs_create_file("SCF_IOB-CBB_ERR-trip", 0600,
+			 debugfs_dir, NULL, &fops_scf_iob_cbb);
 	if (!debugfs_node) {
 		pr_err("Error creating SCF_IOB-CBB_ERR-trip debugfs node.\n");
+		return -ENODEV;
+	}
+
+	debugfs_node = debugfs_create_file("SCF_IOB-PUTDATA_CECC_ERR-trip",
+			 0600, debugfs_dir, NULL, &fops_scf_iob_cecc);
+	if (!debugfs_node) {
+		pr_err("Error creating SCF_IOB-PUTDATA_CECC_ERR-trip debugfs node.\n");
+		return -ENODEV;
+	}
+
+	debugfs_node = debugfs_create_file("L3_0_CECC_ERR-trip", 0600,
+					debugfs_dir, NULL, &fops_l3_cecc);
+	if (!debugfs_node) {
+		pr_err("Error creating L3_0_CECC_ERR-trip debugfs node.\n");
 		return -ENODEV;
 	}
 	return 0;

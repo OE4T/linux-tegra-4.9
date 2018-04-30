@@ -76,13 +76,7 @@ do {                                                    \
 	}                                               \
 } while (0)
 
-#ifdef CONFIG_NVMAP_HIGHMEM_ONLY
-#define __GFP_NVMAP     __GFP_HIGHMEM
-#else
-#define __GFP_NVMAP     (GFP_KERNEL | __GFP_HIGHMEM)
-#endif
-
-#define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN)
+#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
 
 struct page;
 struct nvmap_device;

@@ -79,9 +79,7 @@ static int handle_page_alloc(struct nvmap_client *client,
 	unsigned int __maybe_unused nr_page = size >> PAGE_SHIFT;
 	unsigned int i = 0, page_index = 0;
 	struct page **pages;
-	gfp_t gfp = GFP_NVMAP;
-
-	gfp |= __GFP_ZERO;
+	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
 
 	pages = nvmap_altalloc(nr_page * sizeof(*pages));
 	if (!pages)

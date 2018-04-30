@@ -12,7 +12,10 @@ Optional properties:
 - isl,charge-current-limit-ma: to set the charging current limit in ma
 
 - isl,max-system-voltage-mv: to set the maximum charging voltage or
-			 system regualting voltage
+			 system regulating voltage
+
+- isl,max-init-voltage-mv: to set the maximum init charging voltage or
+			 system default regulating voltage
 
 - isl,min-system-voltage-mv: to set the minimum system voltage
 
@@ -70,9 +73,31 @@ Optional properties:
 - isl,enable-psys-monitor: enables system power monitor PSYS function
 			by default PSYS function is disabled
 
-vbus properties:
+- isl,thermal-zone: thermal zone name to get battery temperature
+
+- isl,temp-polling-time-sec: polling time to read battey temp and apply
+		thermal profile
+
+-isl,terminate-chg-current: terminate chagring current, if battery current
+		below terminate charging current then disable charging.
+
+- isl,temp-range: temperature range for thermal profile
+
+- isl,current-voltage-table: current and voltage table for thermal profile
+< 0C - No Charge
+0C to 9C - 1.17A to 13.2V
+10C to 19C - 1.95A to 13.2V
+20C to 49C - 3.90A to 12.75V; then 1.95A 12.75V to 13.2V
+50C to 59C - 1.95A to 12.3V
+> 60C - No Charge
+
+vbus regulator properties:
 ================
 regulator-name: vbus regulator name.
+
+charger regulator properties:
+================
+regulator-name: charger regulator name.
 
 Example
 bc_isl9238: isl9238@9 {
@@ -84,7 +109,19 @@ bc_isl9238: isl9238@9 {
 	isl,input-voltage-limit = <2730000>;
 	isl,enable-auto-charging;
 
+	isl,thermal-zone = "battery";
+	isl,temp-polling-time-sec = <5>;
+	isl,terminate-chg-current = <78000>;
+	isl,temp-range = <0 10 20 50 60>;
+	isl,current-voltage-table = <0 780 1170 3900 1950
+				     0 780 1170 1950 1950
+				     0 13200 13200 12550 12300>;
+
 	vbus {
-		regulator-name = "vbus-regulator";
+		regulator-name = "otg-vbus-reg";
+	};
+
+	charger {
+		regulator-name = "charger-vbus-reg";
 	};
 };

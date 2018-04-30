@@ -74,6 +74,10 @@
 #define EXTCON_DISP_VGA		43	/* Video Graphics Array */
 #define EXTCON_DISP_DP		44	/* Display Port */
 #define EXTCON_DISP_HMD		45	/* Head-Mounted Display */
+#define EXTCON_DISP_AUDIO_AUX0	46	/* Audio for SOR 0 */
+#define EXTCON_DISP_AUDIO_AUX1	47	/* Audio for SOR 1 */
+#define EXTCON_DISP_AUDIO_AUX2	48	/* Audio for SOR 2 */
+#define EXTCON_DISP_AUDIO_AUX3	49	/* Audio for SOR 3 */
 
 /* Miscellaneous external connector */
 #define EXTCON_DOCK		60

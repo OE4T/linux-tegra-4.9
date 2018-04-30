@@ -14,6 +14,8 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION, All rights reserved.
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -172,6 +174,26 @@ struct __extcon_info {
 		.type = EXTCON_TYPE_DISP | EXTCON_TYPE_USB,
 		.id = EXTCON_DISP_HMD,
 		.name = "HMD",
+	},
+	[EXTCON_DISP_AUDIO_AUX0] = {
+		.type = EXTCON_TYPE_DISP,
+		.id = EXTCON_DISP_AUDIO_AUX0,
+		.name = "AUDIO_AUX0",
+	},
+	[EXTCON_DISP_AUDIO_AUX1] = {
+		.type = EXTCON_TYPE_DISP,
+		.id = EXTCON_DISP_AUDIO_AUX1,
+		.name = "AUDIO_AUX1",
+	},
+	[EXTCON_DISP_AUDIO_AUX2] = {
+		.type = EXTCON_TYPE_DISP,
+		.id = EXTCON_DISP_AUDIO_AUX2,
+		.name = "AUDIO_AUX2",
+	},
+	[EXTCON_DISP_AUDIO_AUX3] = {
+		.type = EXTCON_TYPE_DISP,
+		.id = EXTCON_DISP_AUDIO_AUX3,
+		.name = "AUDIO_AUX3",
 	},
 
 	/* Miscellaneous external connector */

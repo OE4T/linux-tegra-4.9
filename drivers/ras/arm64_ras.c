@@ -201,16 +201,6 @@ void ras_write_pfg_cdn(u64 pfg_cdn)
 }
 EXPORT_SYMBOL(ras_write_pfg_cdn);
 
-void register_fhi_callback(struct ras_fhi_callback *callback)
-{
-	unsigned long flags;
-
-	raw_spin_lock_irqsave(&fhi_lock, flags);
-	list_add(&callback->node, &fhi_callback_list);
-	raw_spin_unlock_irqrestore(&fhi_lock, flags);
-}
-EXPORT_SYMBOL(register_fhi_callback);
-
 void unregister_fhi_callback(struct ras_fhi_callback *callback)
 {
 	unsigned long flags;
@@ -338,7 +328,8 @@ static irqreturn_t ras_fhi_isr(int irq, void *dev_id)
 	struct ras_fhi_callback *callback;
 
 	/* Iterate through the banks looking for one with an error */
-	pr_crit("RAS: Fault Handling Interrupt detected\n");
+	pr_crit("CPU%d RAS: Fault Handling Interrupt %d detected\n",
+		smp_processor_id(), irq);
 
 	raw_spin_lock_irqsave(&fhi_lock, flags);
 	list_for_each_entry(callback, &fhi_callback_list, node) {
@@ -362,19 +353,34 @@ static int ras_register_fhi_isr(struct platform_device *pdev)
 		err = -ENOENT;
 		goto isr_err;
 	}
+isr_err:
+	return err;
+}
+
+/* This is an API for CPU specific FHI callbacks
+ * to be registered with fhi_isr handler
+ */
+int register_fhi_callback(struct ras_fhi_callback *callback, void *cookie)
+{
+	unsigned long flags;
+	int err = 0;
+
+	raw_spin_lock_irqsave(&fhi_lock, flags);
+	list_add(&callback->node, &fhi_callback_list);
+	raw_spin_unlock_irqrestore(&fhi_lock, flags);
+
 	err = request_irq(fhi_irq, ras_fhi_isr,
-				IRQF_SHARED, "ras-fhi", pdev);
+				IRQF_SHARED, "ras-fhi", cookie);
 	if (err) {
 		pr_err("%s: request_irq(%d) failed (%d)\n", __func__,
 		fhi_irq, err);
 		goto isr_err;
 	}
-
-	disable_irq(fhi_irq);
-
 isr_err:
 	return err;
 }
+
+EXPORT_SYMBOL(register_fhi_callback);
 
 static int ras_probe(struct platform_device *pdev)
 {
@@ -405,13 +411,6 @@ static int ras_probe(struct platform_device *pdev)
 			" ISR");
 		return err;
 	}
-
-
-	/* Cant enable FHI. MTS doesn't have support for Correctable Errors.
-	 * Bug 200319716
-	 *
-	 * enable_irq(fhi_irq);
-	 */
 
 	/* make sure we have executed everything in the probe
 	 * before setting is_ras_probe_done

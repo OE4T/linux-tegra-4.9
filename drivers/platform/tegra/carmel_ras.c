@@ -516,10 +516,11 @@ static void ras_unregister_core_ers(void)
 		unregister_core_er(&core_ers[i]);
 }
 
-/* FHI is triggered for Correctable errors.
- * This is FHI Callback for error records per core.
+/*
+ * This is used to handle FHI or Correctable Errors triggered from
+ * error records per core.
  */
-static void carmel_core_fhi_callback(void)
+static void handle_fhi_core(void)
 {
 	u64 err_status;
 	int cpu, errx;
@@ -553,10 +554,6 @@ static void carmel_core_fhi_callback(void)
 		}
 	}
 }
-
-static struct ras_fhi_callback core_fhi_callback = {
-	.fn = carmel_core_fhi_callback
-};
 
 /* SERROR is triggered for Uncorrectable errors.
  * This is SERR Callback for error records per Core Cluster.
@@ -637,10 +634,10 @@ static void ras_unregister_corecluster_ers(void)
 		unregister_corecluster_er(&corecluster_ers[i]);
 }
 
-/* FHI is triggered for Correctable errors.
- * This is FHI Callback for error records per Core Cluster.
+/* This is used to handle FHI or Correctable Errors
+ * triggered from error records per Core Cluster
  */
-static void carmel_corecluster_fhi_callback(void)
+static void handle_fhi_corecluster(void)
 {
 	u64 err_status;
 	int cpu, errx;
@@ -672,10 +669,6 @@ static void carmel_corecluster_fhi_callback(void)
 		}
 	}
 }
-
-static struct ras_fhi_callback corecluster_fhi_callback = {
-	.fn = carmel_corecluster_fhi_callback
-};
 
 /* SERROR is triggered for Uncorrectable errors.
  * This is SERR Callback for error records per CCPLEX.
@@ -748,10 +741,10 @@ static void ras_unregister_ccplex_ers(void)
 		unregister_ccplex_er(&ccplex_ers[i]);
 }
 
-/* FHI is triggered for Correctable errors.
- * This is FHI Callback for error records per CCPLEX.
+/* This is used to handle FHI or Correctable Errors
+ * triggered from error records per CCPLEX.
  */
-static void carmel_ccplex_fhi_callback(void)
+static void handle_fhi_ccplex(void)
 {
 	u64 err_status;
 	struct error_record *record;
@@ -780,8 +773,19 @@ static void carmel_ccplex_fhi_callback(void)
 	}
 }
 
-static struct ras_fhi_callback ccplex_fhi_callback = {
-	.fn = carmel_ccplex_fhi_callback
+/* FHI is triggered for Correctable errors.
+ * This is FHI Callback for handling error records per core,
+ * per core cluster and per CCPLEX
+ */
+static void carmel_fhi_callback(void)
+{
+	handle_fhi_core();
+	handle_fhi_corecluster();
+	handle_fhi_ccplex();
+}
+
+static struct ras_fhi_callback fhi_callback = {
+	.fn = carmel_fhi_callback
 };
 
 /* This function is used to trigger RAS Errors
@@ -971,10 +975,12 @@ static int ras_carmel_probe(struct platform_device *pdev)
 	ras_register_corecluster_ers();
 	ras_register_ccplex_ers();
 
-	/* register FHI for Correctable Errors */
-	register_fhi_callback(&core_fhi_callback);
-	register_fhi_callback(&corecluster_fhi_callback);
-	register_fhi_callback(&ccplex_fhi_callback);
+	/* register FHI callback for Correctable Errors */
+	ret = register_fhi_callback(&fhi_callback, pdev);
+	if (ret) {
+		dev_err(dev, "Failed to register FHI callback\n");
+		return -ENOENT;
+	}
 
 	/* register SERR for Uncorrectable Errors */
 	register_serr_hook(&core_serr_callback);
@@ -999,9 +1005,7 @@ static int ras_carmel_probe(struct platform_device *pdev)
 
 static int ras_carmel_remove(struct platform_device *pdev)
 {
-	unregister_fhi_callback(&core_fhi_callback);
-	unregister_fhi_callback(&corecluster_fhi_callback);
-	unregister_fhi_callback(&ccplex_fhi_callback);
+	unregister_fhi_callback(&fhi_callback);
 
 	unregister_serr_hook(&core_serr_callback);
 	unregister_serr_hook(&corecluster_serr_callback);

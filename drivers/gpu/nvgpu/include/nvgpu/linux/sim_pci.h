@@ -1,6 +1,6 @@
 /*
  *
- * GK20A sim support
+ * nvgpu sim support pci
  *
  * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *

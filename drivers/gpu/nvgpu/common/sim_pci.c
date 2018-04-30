@@ -201,21 +201,14 @@ static int nvgpu_sim_esc_readl(struct gk20a *g,
 	return err;
 }
 
-int nvgpu_init_sim_support_pci(struct gk20a *g)
+static void nvgpu_sim_init_late(struct gk20a *g)
 {
-	int err = -ENOMEM;
 	u64 phys;
 
 	if (!g->sim)
-		return 0;
+		return;
 
-	/* allocate sim event/msg buffers */
-	err = nvgpu_alloc_sim_buffer(g, &g->sim->send_bfr);
-	err = err || nvgpu_alloc_sim_buffer(g, &g->sim->recv_bfr);
-	err = err || nvgpu_alloc_sim_buffer(g, &g->sim->msg_bfr);
-
-	if (err)
-		goto fail;
+	nvgpu_info(g, "sim init late pci");
 	/* mark send ring invalid */
 	sim_writel(g->sim, sim_send_ring_r(), sim_send_ring_status_invalid_f());
 
@@ -249,7 +242,24 @@ int nvgpu_init_sim_support_pci(struct gk20a *g)
 		   sim_recv_ring_target_phys_pci_coherent_f() |
 		   sim_recv_ring_size_4kb_f() |
 		   sim_recv_ring_addr_lo_f(phys >> PAGE_SHIFT));
+}
 
+int nvgpu_init_sim_support_pci(struct gk20a *g)
+{
+	int err = -ENOMEM;
+
+	if(!g->sim)
+		return 0;
+
+	/* allocate sim event/msg buffers */
+	err = nvgpu_alloc_sim_buffer(g, &g->sim->send_bfr);
+	err = err || nvgpu_alloc_sim_buffer(g, &g->sim->recv_bfr);
+	err = err || nvgpu_alloc_sim_buffer(g, &g->sim->msg_bfr);
+
+	if (err)
+		goto fail;
+
+	g->sim->sim_init_late = nvgpu_sim_init_late;
 	g->sim->remove_support = nvgpu_remove_sim_support;
 	g->sim->esc_readl = nvgpu_sim_esc_readl;
 	return 0;

@@ -249,6 +249,11 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		return err;
 
+	if (g->sim) {
+		if (g->sim->sim_init_late)
+			g->sim->sim_init_late(g);
+	}
+
 	err = gk20a_finalize_poweron(g);
 	if (err)
 		goto done;

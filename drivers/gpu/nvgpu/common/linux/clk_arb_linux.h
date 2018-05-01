@@ -27,6 +27,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/cond.h>
+#include <nvgpu/list.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
@@ -44,9 +45,9 @@ struct nvgpu_clk_arb {
 	struct nvgpu_spinlock requests_lock;
 
 	struct nvgpu_mutex pstate_lock;
-	struct list_head users;
-	struct list_head sessions;
-	struct list_head requests;
+	struct nvgpu_list_node users;
+	struct nvgpu_list_node sessions;
+	struct nvgpu_list_node requests;
 
 	struct gk20a *g;
 	int status;
@@ -92,8 +93,8 @@ struct nvgpu_clk_arb {
 struct nvgpu_clk_dev {
 	struct nvgpu_clk_session *session;
 	union {
-		struct list_head link;
-		struct list_head node;
+		struct nvgpu_list_node link;
+		struct nvgpu_list_node node;
 	};
 	struct nvgpu_cond readout_wq;
 	nvgpu_atomic_t poll_mask;
@@ -110,12 +111,33 @@ struct nvgpu_clk_session {
 	bool zombie;
 	struct gk20a *g;
 	struct nvgpu_ref refcount;
-	struct list_head link;
-	struct list_head targets;
+	struct nvgpu_list_node link;
+	struct nvgpu_list_node targets;
 
 	struct nvgpu_spinlock session_lock;
 	struct nvgpu_clk_arb_target target_pool[2];
 	struct nvgpu_clk_arb_target *target;
+};
+
+static inline struct nvgpu_clk_session *
+nvgpu_clk_session_from_link(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_clk_session *)
+	   ((uintptr_t)node - offsetof(struct nvgpu_clk_session, link));
+};
+
+static inline struct nvgpu_clk_dev *
+nvgpu_clk_dev_from_node(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_clk_dev *)
+	   ((uintptr_t)node - offsetof(struct nvgpu_clk_dev, node));
+};
+
+static inline struct nvgpu_clk_dev *
+nvgpu_clk_dev_from_link(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_clk_dev *)
+	   ((uintptr_t)node - offsetof(struct nvgpu_clk_dev, link));
 };
 
 #endif /* __NVGPU_CLK_ARB_LINUX_H__ */

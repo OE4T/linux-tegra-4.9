@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA CORPORATION and its licensors retain all intellectual property
+ * NVIDIA Corporation and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
  * and any modifications thereto.  Any use, reproduction, disclosure or
  * distribution of this software and related documentation without an express
@@ -345,6 +345,21 @@ struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
+/* Start TPG for an NvCsi stream*/
+struct CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG {
+	uint8_t stream_id;
+	uint8_t virtual_channel_id;
+	uint16_t __pad16[1];
+	uint32_t frame_rate;
+	uint32_t csi_clk_rate;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
+	int32_t result;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
 /* Stop TPG for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
 	uint8_t stream_id;
@@ -454,6 +469,8 @@ struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
 #define CAPTURE_CSI_STREAM_TPG_START_RESP	U32_C(0x47)
 #define CAPTURE_CSI_STREAM_TPG_STOP_REQ		U32_C(0x48)
 #define CAPTURE_CSI_STREAM_TPG_STOP_RESP	U32_C(0x49)
+#define CAPTURE_CSI_STREAM_TPG_START_RATE_REQ	U32_C(0x4A)
+#define CAPTURE_CSI_STREAM_TPG_START_RATE_RESP	U32_C(0x4B)
 
 /** Set up RTCPU side resources for ISP capture pipe-line.
  *
@@ -544,6 +561,10 @@ struct CAPTURE_CONTROL_MSG {
 			csi_stream_tpg_stop_req;
 		struct CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG
 			csi_stream_tpg_stop_resp;
+		struct CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG
+			csi_stream_tpg_start_rate_req;
+		struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG
+			csi_stream_tpg_start_rate_resp;
 
 		/* DEPRECATED - to be removed */
 		struct CAPTURE_CHANNEL_TPG_SETUP_REQ_MSG tpg_setup_req;

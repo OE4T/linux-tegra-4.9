@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -12,6 +12,8 @@
 #define INCLUDE_CAMRTC_TRACE_H
 
 #include "camrtc-common.h"
+
+#pragma GCC diagnostic error "-Wpadded"
 
 /*
  * Trace memory consists of three part.
@@ -85,7 +87,7 @@ struct camrtc_trace_memory_header {
 	uint32_t exception_next_idx;
 	uint32_t event_next_idx;
 	uint32_t reserved_ptrs[0x38 / 4];
-} __packed;
+};
 
 /*
  * Exception entry
@@ -105,7 +107,7 @@ enum camrtc_trace_armv7_exception_type {
 struct camrtc_trace_callstack {
 	uint32_t lr_stack_addr;		/* address in stack where lr is saved */
 	uint32_t lr;			/* value of saved lr */
-} __packed;
+};
 
 struct camrtc_trace_armv7_exception {
 	uint32_t len;		/* length in byte including this */
@@ -129,7 +131,7 @@ struct camrtc_trace_armv7_exception {
 	/* instruction fault status/address register */
 	uint32_t ifsr, ifar, aifsr;
 	struct camrtc_trace_callstack callstack[CAMRTC_TRACE_CALLSTACK_MAX];
-} __packed;
+};
 
 /*
  * Each trace event shares the header.
@@ -391,5 +393,7 @@ struct camrtc_event_struct {
 		camrtc_trace_isp_ids_begin + U32_C(1)
 #define	camrtc_trace_isp_task_end \
 		camrtc_trace_isp_ids_begin + U32_C(2)
+
+#pragma GCC diagnostic ignored "-Wpadded"
 
 #endif /* INCLUDE_CAMRTC_TRACE_H */

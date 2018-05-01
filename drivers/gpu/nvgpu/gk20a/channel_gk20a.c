@@ -1591,7 +1591,7 @@ static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 static int gk20a_channel_poll_worker(void *arg)
 {
 	struct gk20a *g = (struct gk20a *)arg;
-	struct gk20a_channel_worker *worker = &g->channel_worker;
+	struct gk20a_worker *worker = &g->channel_worker;
 	unsigned long watchdog_interval = 100; /* milliseconds */
 	struct nvgpu_timeout timeout;
 	int get = 0;

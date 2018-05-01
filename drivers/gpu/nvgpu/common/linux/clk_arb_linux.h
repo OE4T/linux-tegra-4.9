@@ -39,6 +39,18 @@
  * The defines here should finally move to clk_arb.h, once these are
  * refactored to be free of Linux fields.
  */
+
+enum clk_arb_work_item_type {
+	CLK_ARB_WORK_UPDATE_VF_TABLE,
+	CLK_ARB_WORK_UPDATE_ARB
+};
+
+struct nvgpu_clk_arb_work_item {
+	enum clk_arb_work_item_type item_type;
+	struct nvgpu_clk_arb *arb;
+	struct nvgpu_list_node worker_item;
+};
+
 struct nvgpu_clk_arb {
 	struct nvgpu_spinlock sessions_lock;
 	struct nvgpu_spinlock users_lock;
@@ -62,10 +74,8 @@ struct nvgpu_clk_arb {
 	u16 gpc2clk_min, gpc2clk_max;
 	u16 mclk_min, mclk_max;
 
-	struct work_struct update_fn_work;
-	struct workqueue_struct *update_work_queue;
-	struct work_struct vf_table_fn_work;
-	struct workqueue_struct *vf_table_work_queue;
+	struct nvgpu_clk_arb_work_item update_vf_table_work_item;
+	struct nvgpu_clk_arb_work_item update_arb_work_item;
 
 	struct nvgpu_cond request_wq;
 
@@ -140,5 +150,14 @@ nvgpu_clk_dev_from_link(struct nvgpu_list_node *node)
 	   ((uintptr_t)node - offsetof(struct nvgpu_clk_dev, link));
 };
 
+static inline struct nvgpu_clk_arb_work_item *
+nvgpu_clk_arb_work_item_from_worker_item(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_clk_arb_work_item *)
+	   ((uintptr_t)node - offsetof(struct nvgpu_clk_arb_work_item, worker_item));
+};
+
+void nvgpu_clk_arb_worker_enqueue(struct gk20a *g,
+		struct nvgpu_clk_arb_work_item *work_item);
 #endif /* __NVGPU_CLK_ARB_LINUX_H__ */
 

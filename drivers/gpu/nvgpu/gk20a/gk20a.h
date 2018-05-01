@@ -1406,14 +1406,14 @@ struct gk20a {
 	u32 ltc_count;
 	u32 ltc_streamid;
 
-	struct gk20a_channel_worker {
+	struct gk20a_worker {
 		struct nvgpu_thread poll_task;
 		nvgpu_atomic_t put;
 		struct nvgpu_cond wq;
 		struct nvgpu_list_node items;
 		struct nvgpu_spinlock items_lock;
 		struct nvgpu_mutex start_lock;
-	} channel_worker;
+	} channel_worker, clk_arb_worker;
 
 	struct {
 		void (*open)(struct channel_gk20a *ch);

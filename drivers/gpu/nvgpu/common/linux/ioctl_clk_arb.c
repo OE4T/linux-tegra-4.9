@@ -424,8 +424,7 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 	nvgpu_spinlock_acquire(&session->session_lock);
 	nvgpu_list_add(&dev->node, &session->targets);
 	nvgpu_spinlock_release(&session->session_lock);
-	if (arb->update_work_queue)
-		queue_work(arb->update_work_queue, &arb->update_fn_work);
+	nvgpu_clk_arb_worker_enqueue(g, &arb->update_arb_work_item);
 
 fdput_fd:
 	fdput(fd);

@@ -23,6 +23,7 @@
  */
 
 #include "gk20a/gk20a.h"
+#include "therm_gv11b.h"
 
 #include <nvgpu/soc.h>
 

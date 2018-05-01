@@ -27,7 +27,6 @@ early_param("nohugeiomap", set_nohugeiomap);
 
 void __init ioremap_huge_init(void)
 {
-	ioremap_huge_disabled = 1;
 	if (!ioremap_huge_disabled) {
 		if (arch_ioremap_pud_supported())
 			ioremap_pud_capable = 1;

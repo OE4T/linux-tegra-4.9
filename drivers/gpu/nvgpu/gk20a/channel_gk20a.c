@@ -1606,7 +1606,7 @@ static int gk20a_channel_poll_worker(void *arg)
 		ret = NVGPU_COND_WAIT_INTERRUPTIBLE(
 				&worker->wq,
 				__gk20a_channel_worker_pending(g, get),
-				watchdog_interval) > 0;
+				watchdog_interval);
 
 		if (ret == 0)
 			gk20a_channel_worker_process(g, &get);

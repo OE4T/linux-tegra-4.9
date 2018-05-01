@@ -99,7 +99,8 @@ static unsigned long tegra_throt_calc_rate(unsigned long idx,
 	unsigned long throt_rate, throt_amt;
 
 	throt_amt = ((idx * step * 100) / slope_adj);
-	throt_rate = (throt_amt > maxf) ? minf : (maxf - throt_amt + offset);
+	throt_amt = (throt_amt > offset) ? (throt_amt - offset) : 0;
+	throt_rate = (throt_amt > maxf) ? minf : (maxf - throt_amt);
 	throt_rate = max(minf, min(throt_rate, maxf));
 
 	return throt_rate;

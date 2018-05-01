@@ -1435,11 +1435,26 @@ static int tegra_machine_driver_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if CONFIG_PM
+static void tegra_asoc_machine_resume(struct device *dev)
+{
+	WARN_ON(snd_soc_resume(dev));
+}
+#else
+#define tegra_asoc_machine_resume NULL
+#endif
+
+static const struct dev_pm_ops tegra_asoc_machine_pm_ops = {
+	.prepare = snd_soc_suspend,
+	.complete = tegra_asoc_machine_resume,
+	.poweroff = snd_soc_poweroff,
+};
+
 static struct platform_driver tegra_asoc_machine_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
-		.pm = &snd_soc_pm_ops,
+		.pm = &tegra_asoc_machine_pm_ops,
 		.of_match_table = tegra_machine_of_match,
 	},
 	.probe = tegra_machine_driver_probe,

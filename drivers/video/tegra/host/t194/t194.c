@@ -181,7 +181,7 @@ static struct host1x_device_info host1x04_info = {
 
 struct nvhost_device_data t19_host1x_info = {
 	.clocks			= {
-		{"host1x", UINT_MAX},
+		{"host1x", 204000000},
 		{"actmon", UINT_MAX}
 	},
 	.autosuspend_delay      = 50,
@@ -193,7 +193,7 @@ struct nvhost_device_data t19_host1x_info = {
 
 struct nvhost_device_data t19_host1x_hv_info = {
 	.clocks			= {
-		{"host1x", UINT_MAX},
+		{"host1x", 204000000},
 		{"actmon", UINT_MAX}
 	},
 	.autosuspend_delay      = 2000,

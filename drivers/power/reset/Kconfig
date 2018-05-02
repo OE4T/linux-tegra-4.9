@@ -219,12 +219,5 @@ config SYSCON_REBOOT_MODE
 config SYSTEM_PMIC
 	bool "System PMIC reset ot power off"
 
-config POWER_OFF_TMPM32X_I2C
-	tristate "Toshiba MCU TMPM32x I2C power off driver"
-	depends on MFD_TMPM32X_I2C
-	help
-	  This driver supports an external power off trigger via
-	  Toshiba MCU TMPM32x I2C.
-
 endif
 

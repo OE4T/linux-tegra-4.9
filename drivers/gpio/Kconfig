@@ -1067,13 +1067,6 @@ config GPIO_WM8994
 	  Say yes here to access the GPIO signals of WM8994 audio hub
 	  CODECs from Wolfson Microelectronics.
 
-config GPIO_TMPM32X_I2C
-	tristate "GPIO support for Toshiba MCU TMPM32x I2C"
-	depends on MFD_TMPM32X_I2C
-	select GPIOLIB_IRQCHIP
-	help
-	  GPIO driver for Toshiba MCU TMPM32x I2C.
-
 endmenu
 
 menu "PCI GPIO expanders"

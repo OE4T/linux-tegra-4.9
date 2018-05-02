@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -28,6 +28,9 @@ static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 
+	/* APE and APB2APE clocks which are required by NVADSP are controlled
+	 * from parent ACONNECT bus driver
+	 */
 	if (drv_data->adsp_clk) {
 		clk_disable_unprepare(drv_data->adsp_clk);
 		dev_dbg(dev, "adsp clocks disabled\n");
@@ -46,18 +49,6 @@ static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 		drv_data->adsp_neon_clk = NULL;
 	}
 
-	if (drv_data->ape_clk) {
-		clk_disable_unprepare(drv_data->ape_clk);
-		dev_dbg(dev, "ape clock disabled\n");
-		drv_data->ape_clk = NULL;
-	}
-
-	if (drv_data->apb2ape_clk) {
-		clk_disable_unprepare(drv_data->apb2ape_clk);
-		dev_dbg(dev, "apb2ape clock disabled\n");
-		drv_data->apb2ape_clk = NULL;
-	}
-
 	return 0;
 }
 
@@ -66,20 +57,9 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 	int ret = 0;
-
-	drv_data->ape_clk = devm_clk_get(dev, "adsp.ape");
-	if (IS_ERR_OR_NULL(drv_data->ape_clk)) {
-		dev_err(dev, "unable to find adsp.ape clock\n");
-		ret = PTR_ERR(drv_data->ape_clk);
-		goto end;
-	}
-	ret = clk_prepare_enable(drv_data->ape_clk);
-	if (ret) {
-		dev_err(dev, "unable to enable adsp.ape clock\n");
-		goto end;
-	}
-	dev_dbg(dev, "adsp.ape clock enabled\n");
-
+	/* APE and APB2APE clocks which are required by NVADSP are controlled
+	 * from parent ACONNECT bus driver
+	 */
 	drv_data->adsp_clk = devm_clk_get(dev, "adsp");
 	if (IS_ERR_OR_NULL(drv_data->adsp_clk)) {
 		dev_err(dev, "unable to find adsp clock\n");
@@ -116,19 +96,6 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 		goto end;
 	}
 	dev_dbg(dev, "adsp neon clock enabled\n");
-
-	drv_data->apb2ape_clk = devm_clk_get(dev, "adsp.apb2ape");
-	if (IS_ERR_OR_NULL(drv_data->apb2ape_clk)) {
-		dev_err(dev, "unable to find adsp.apb2ape clk\n");
-		ret = PTR_ERR(drv_data->apb2ape_clk);
-		goto end;
-	}
-	ret = clk_prepare_enable(drv_data->apb2ape_clk);
-	if (ret) {
-		dev_err(dev, "unable to enable adsp.apb2ape clock\n");
-		goto end;
-	}
-	dev_dbg(dev, "adsp.apb2ape clock enabled\n");
 
 	dev_dbg(dev, "all clocks enabled\n");
 	return 0;

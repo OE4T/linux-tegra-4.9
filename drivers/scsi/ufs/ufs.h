@@ -139,6 +139,7 @@ enum flag_idn {
 /* Attribute idn for Query requests */
 enum attr_idn {
 	QUERY_ATTR_IDN_BOOTLUN_EN	= 0x0,
+	QUERY_ATTR_IDN_PWR_MODE		= 0x02,
 	QUERY_ATTR_IDN_ACTIVE_ICC_LVL	= 0x03,
 	QUERY_ATTR_IDN_BKOPS_STATUS	= 0x05,
 	QUERY_ATTR_IDN_REF_CLK_FREQ	= 0x0A,

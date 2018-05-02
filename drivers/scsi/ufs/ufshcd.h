@@ -905,4 +905,5 @@ int ufshcd_get_bootlun_en_value(struct ufs_hba *hba, u32 *value);
 int ufshcd_set_bootlun_en_value(struct ufs_hba *hba, u32 *value);
 int ufshcd_get_config_desc_lock(struct ufs_hba *hba, u32 *value);
 int ufshcd_set_config_desc(struct ufs_hba *hba, u8 *desc_buf);
+int ufshcd_get_dev_pwr_mode_value(struct ufs_hba *hba, u32 *value);
 #endif /* End of Header */

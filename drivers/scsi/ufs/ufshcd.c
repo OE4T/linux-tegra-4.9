@@ -2022,6 +2022,13 @@ int ufshcd_get_config_desc_lock(struct ufs_hba *hba, u32 *value)
 }
 EXPORT_SYMBOL(ufshcd_get_config_desc_lock);
 
+int ufshcd_get_dev_pwr_mode_value(struct ufs_hba *hba, u32 *value)
+{
+	return ufshcd_query_attr(hba, UPIU_QUERY_OPCODE_READ_ATTR,
+				 QUERY_ATTR_IDN_PWR_MODE, 0, 0, value);
+}
+EXPORT_SYMBOL(ufshcd_get_dev_pwr_mode_value);
+
 /**
  * ufshcd_query_attr_retry() - API function for sending query
  * attribute with retries

@@ -167,6 +167,7 @@
 #define EVENT_COUNTER_DATA_REG		0x1dC
 
 #define PORT_LOGIC_ACK_F_ASPM_CTRL	0x70C
+#define ENTER_ASPM			BIT(30)
 #define L0S_ENTRANCE_LAT_SHIFT		24
 #define L0S_ENTRANCE_LAT_MASK		0x07000000
 #define L1_ENTRANCE_LAT_SHIFT		27
@@ -705,6 +706,7 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val &= ~(L0S_ENTRANCE_LAT_MASK | L1_ENTRANCE_LAT_MASK);
 	val |= (0x3 << L0S_ENTRANCE_LAT_SHIFT);	/* 4us */
 	val |= (0x5 << L1_ENTRANCE_LAT_SHIFT);	/* 32us */
+	val |= ENTER_ASPM;
 	writel(val, pcie->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
 
 	if (pcie->disabled_aspm_states & 0x1)

@@ -244,6 +244,9 @@
 #define DL_FEATURE_EXCHANGE_EN		BIT(31)
 
 #define PORT_LOGIC_ACK_F_ASPM_CTRL			0x70C
+#define ENTER_ASPM					BIT(30)
+#define L0S_ENTRANCE_LAT_SHIFT				24
+#define L0S_ENTRANCE_LAT_MASK				0x07000000
 #define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_SHIFT	8
 #define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_MASK	0xFF
 #define PORT_LOGIC_ACK_F_ASPM_CTRL_ACK_N_FTS_VAL	52
@@ -2180,6 +2183,13 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	val |= (0x3C << PCI_L1SS_CAP_CM_RTM_SHIFT);	/* 60us */
 	val |= (0x14 << PCI_L1SS_CAP_PWRN_VAL_SHIFT);	/* 40us */
 	dw_pcie_cfg_write(pcie->pp.dbi_base + pcie->cfg_link_cap_l1sub, 4, val);
+
+	/* Program L0s and L1 entrance latencies */
+	val = readl(pp->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
+	val &= ~L0S_ENTRANCE_LAT_MASK;
+	val |= (0x3 << L0S_ENTRANCE_LAT_SHIFT); /* 4us */
+	val |= ENTER_ASPM;
+	writel(val, pp->dbi_base + PORT_LOGIC_ACK_F_ASPM_CTRL);
 
 	/* Program what ASPM states sould get advertised */
 	err = of_property_read_u32(np, "nvidia,disable-aspm-states", &val);

@@ -4,7 +4,7 @@
  *
  * Support for Tegra Virtual Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2637,7 +2637,7 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 400,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
@@ -2657,7 +2657,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ecb(aes)",
 		.cra_driver_name = "ecb-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 400,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
@@ -2677,7 +2677,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ctr(aes)",
 		.cra_driver_name = "ctr-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 400,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
@@ -2698,7 +2698,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ofb(aes)",
 		.cra_driver_name = "ofb-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 400,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
@@ -2731,7 +2731,7 @@ static struct ahash_alg cmac_alg = {
 	.halg.base = {
 		.cra_name = "cmac(aes)",
 		.cra_driver_name = "tegra-hv-vse-cmac(aes)",
-		.cra_priority = 300,
+		.cra_priority = 400,
 		.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 		.cra_blocksize = TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_cmac_context),

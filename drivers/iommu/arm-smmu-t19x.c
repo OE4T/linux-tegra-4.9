@@ -2193,23 +2193,100 @@ static bool arm_smmu_pte_is_contiguous_range(unsigned long addr,
 		!(phys & ~ARM_SMMU_PTE_CONT_MASK);
 }
 
-static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
-				   unsigned long addr, unsigned long end,
-				   unsigned long pfn, int prot, int stage)
+static void *arm_smmu_alloc_pgtable_page(struct arm_smmu_domain *domain, int lvl,
+					void * entry, unsigned long addr)
 {
-	pte_t *pte, *start;
-	pteval_t pteval = ARM_SMMU_PTE_PAGE | ARM_SMMU_PTE_AF | ARM_SMMU_PTE_XN;
+	struct arm_smmu_device *smmu = domain->smmu;
+	void * ret = NULL;
 
-	if (pmd_none(*pmd)) {
-		/* Allocate a new set of tables */
-		pgtable_t table = alloc_page(GFP_ATOMIC|__GFP_ZERO);
+	pr_debug("Alloc for address %lx level: %d\n", addr, lvl);
 
+	if (lvl == 0) {
+#ifndef __PAGETABLE_PUD_FOLDED
+		pgd_t *pgd = (pgd_t *) entry;
+		pud_t *pud;
+
+		if (!pgd_none(*pgd)) {
+			ret = pud_offset(pgd, adr);
+			goto unlock_ret;
+		}
+
+		pud = (pud_t *)get_zeroed_page(GFP_ATOMIC);
+		if (!pud)
+			goto unlock_ret;
+
+		arm_smmu_flush_pgtable(smmu, pud, PAGE_SIZE);
+		pgd_populate(NULL, pgd, pud);
+		arm_smmu_flush_pgtable(smmu, pgd, sizeof(*pgd));
+
+		ret = pud + pud_index(addr);
+		goto unlock_ret;
+#else
+		goto unlock_ret;
+#endif
+
+	} else if (lvl == 1) {
+#ifndef __PAGETABLE_PMD_FOLDED
+		pud_t *pud = (pud_t *) entry;
+		pmd_t *pmd;
+
+		if (!pud_none(*pud)) {
+			ret = pmd_offset(pud, addr);
+			goto unlock_ret;
+		}
+
+		pmd = (pmd_t *) get_zeroed_page(GFP_ATOMIC);
+		if (!pmd)
+			goto unlock_ret;
+
+		arm_smmu_flush_pgtable(smmu, pmd, PAGE_SIZE);
+		pud_populate(NULL, pud, pmd);
+		arm_smmu_flush_pgtable(smmu, pud, sizeof(*pud));
+
+		ret = pmd + pmd_index(addr);
+		goto unlock_ret;
+#else
+		goto unlock_ret;
+#endif
+	} else if (lvl == 2) {
+		pmd_t *pmd = (pmd_t *) entry;
+		pgtable_t table;
+
+		if (!pmd_none(*pmd)) {
+			ret = pmd_page_vaddr(*pmd) + pte_index(addr);
+			goto unlock_ret;
+		}
+
+		table = alloc_page(GFP_ATOMIC|__GFP_ZERO);
 		if (!table)
-			return -ENOMEM;
+			goto unlock_ret;
 
 		arm_smmu_flush_pgtable(smmu, page_address(table), PAGE_SIZE);
 		pmd_populate(NULL, pmd, table);
 		arm_smmu_flush_pgtable(smmu, pmd, sizeof(*pmd));
+
+		ret = table;
+		goto unlock_ret;
+	}
+
+unlock_ret:
+	return ret;
+}
+
+static int arm_smmu_alloc_init_pte(struct arm_smmu_domain *domain, pmd_t *pmd,
+				   unsigned long addr, unsigned long end,
+				   unsigned long pfn, int prot, int stage)
+{
+	pte_t *pte, *start;
+	struct arm_smmu_device *smmu = domain->smmu;
+	pteval_t pteval = ARM_SMMU_PTE_PAGE | ARM_SMMU_PTE_AF | ARM_SMMU_PTE_XN;
+
+	if (pmd_none(*pmd)) {
+		/* Allocate a new set of tables */
+		pgtable_t table = (pgtable_t) arm_smmu_alloc_pgtable_page(
+							domain, 2, pmd, addr);
+		if (!table)
+			return -ENOMEM;
 	}
 
 	if (stage == 1) {
@@ -2309,32 +2386,28 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 	return 0;
 }
 
-static int arm_smmu_alloc_init_pmd(struct arm_smmu_device *smmu, pud_t *pud,
+static int arm_smmu_alloc_init_pmd(struct arm_smmu_domain *domain, pud_t *pud,
 				   unsigned long addr, unsigned long end,
 				   phys_addr_t phys, int prot, int stage)
 {
 	int ret;
-	pmd_t *pmd;
+	pmd_t *pmd = NULL;
 	unsigned long next, pfn = __phys_to_pfn(phys);
 
 #ifndef __PAGETABLE_PMD_FOLDED
 	if (pud_none(*pud)) {
-		pmd = (pmd_t *)get_zeroed_page(GFP_ATOMIC);
+		pmd = (pmd_t *) arm_smmu_alloc_pgtable_page(domain, 1,
+								pud, addr);
 		if (!pmd)
 			return -ENOMEM;
-
-		arm_smmu_flush_pgtable(smmu, pmd, PAGE_SIZE);
-		pud_populate(NULL, pud, pmd);
-		arm_smmu_flush_pgtable(smmu, pud, sizeof(*pud));
-
-		pmd += pmd_index(addr);
-	} else
+	}
 #endif
+	if (!pmd)
 		pmd = pmd_offset(pud, addr);
 
 	do {
 		next = pmd_addr_end(addr, end);
-		ret = arm_smmu_alloc_init_pte(smmu, pmd, addr, next, pfn,
+		ret = arm_smmu_alloc_init_pte(domain, pmd, addr, next, pfn,
 					      prot, stage);
 		if (phys)
 			phys += next - addr;
@@ -2344,32 +2417,28 @@ static int arm_smmu_alloc_init_pmd(struct arm_smmu_device *smmu, pud_t *pud,
 	return ret;
 }
 
-static int arm_smmu_alloc_init_pud(struct arm_smmu_device *smmu, pgd_t *pgd,
+static int arm_smmu_alloc_init_pud(struct arm_smmu_domain *domain, pgd_t *pgd,
 				   unsigned long addr, unsigned long end,
 				   phys_addr_t phys, int prot, int stage)
 {
 	int ret = 0;
-	pud_t *pud;
+	pud_t *pud = NULL;
 	unsigned long next;
 
 #ifndef __PAGETABLE_PUD_FOLDED
 	if (pgd_none(*pgd)) {
-		pud = (pud_t *)get_zeroed_page(GFP_ATOMIC);
+		pud = (pud_t *) arm_smmu_alloc_pgtable_page(domain, 0,
+								pgd, addr);
 		if (!pud)
 			return -ENOMEM;
-
-		arm_smmu_flush_pgtable(smmu, pud, PAGE_SIZE);
-		pgd_populate(NULL, pgd, pud);
-		arm_smmu_flush_pgtable(smmu, pgd, sizeof(*pgd));
-
-		pud += pud_index(addr);
-	} else
+	}
 #endif
+	if (!pud)
 		pud = pud_offset(pgd, addr);
 
 	do {
 		next = pud_addr_end(addr, end);
-		ret = arm_smmu_alloc_init_pmd(smmu, pud, addr, next, phys,
+		ret = arm_smmu_alloc_init_pmd(domain, pud, addr, next, phys,
 					      prot, stage);
 		if (phys)
 			phys += next - addr;
@@ -2464,7 +2533,7 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 	do {
 		unsigned long next = pgd_addr_end(iova, end);
 
-		ret = arm_smmu_alloc_init_pud(smmu, pgd, iova, next, paddr,
+		ret = arm_smmu_alloc_init_pud(smmu_domain, pgd, iova, next, paddr,
 					      prot, stage);
 		if (ret)
 			goto out_unlock;

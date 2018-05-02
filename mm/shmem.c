@@ -1410,6 +1410,7 @@ static struct page *shmem_alloc_hugepage(gfp_t gfp,
 	rcu_read_unlock();
 
 	shmem_pseudo_vma_init(&pvma, info, hindex);
+	gfp &= ~__GFP_MOVABLE;
 	page = alloc_pages_vma(gfp | __GFP_COMP | __GFP_NORETRY | __GFP_NOWARN,
 			HPAGE_PMD_ORDER, &pvma, 0, numa_node_id(), true);
 	shmem_pseudo_vma_destroy(&pvma);

@@ -401,7 +401,7 @@ struct wl_pmk_list {
 };
 
 
-#define ESCAN_BUF_SIZE (64 * 1024)
+#define ESCAN_BUF_SIZE (3 * 64 * 1024)
 
 struct escan_info {
 	u32 escan_state;

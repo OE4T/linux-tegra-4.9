@@ -484,7 +484,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSEC},
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {
-		{"tsec", UINT_MAX},
+		{"tsec", 115200000},
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}

@@ -201,6 +201,7 @@ struct isl9238_charger {
 	bool	cable_connected;
 	bool	thermal_chg_disable;
 	bool	terminate_charging;
+	bool	emulate_input_disconnected;
 	u32	chg_status;
 	u32	in_current_limit;
 	u32	last_adapter_current;
@@ -262,6 +263,143 @@ static int isl9238_val_to_reg(int val, int offset, int div, int nbits,
 }
 
 #if defined(CONFIG_SYSFS)
+static ssize_t charging_state_show(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	int ret;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+	ret = isl9238_read(isl9238_bc, ISL9238_CHG_CURR_LIMIT);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(dev, "register read fail: %d\n", ret);
+		return ret;
+	}
+
+	if (ret)
+		return snprintf(buf, MAX_STR_PRINT, "enabled\n");
+	else
+		return snprintf(buf, MAX_STR_PRINT, "disabled\n");
+}
+
+static ssize_t charging_state_store(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	unsigned int rval;
+	int ret;
+	bool enabled;
+
+	if ((*buf == 'E') || (*buf == 'e'))
+		enabled = true;
+	else if ((*buf == 'D') || (*buf == 'd'))
+		enabled = false;
+	else
+		return -EINVAL;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	if (enabled) {
+		rval = isl9238_bc->charging_current_lim *
+				isl9238_bc->curnt_sense_res /
+				ISL9238_CURR_SENSE_RES_OTP;
+		rval = rval & ISL9238_CHG_CURR_LIMIT_MASK;
+		isl9238_bc->last_temp = 0;
+		battery_charger_thermal_start_monitoring(isl9238_bc->bc_dev);
+	} else {
+		rval = 0;
+		isl9238_bc->last_temp = 0;
+		battery_charger_thermal_stop_monitoring(isl9238_bc->bc_dev);
+	}
+
+	ret = isl9238_write(isl9238_bc, ISL9238_CHG_CURR_LIMIT, rval);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "register write fail: %d\n", ret);
+		return ret;
+	}
+
+	return count;
+}
+
+static ssize_t input_cable_state_show(struct device *dev,
+				      struct device_attribute *attr, char *buf)
+
+{
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+	mutex_unlock(&isl9238_bc->mutex);
+
+	if (isl9238_bc->emulate_input_disconnected)
+		return snprintf(buf, MAX_STR_PRINT, "Disconnected\n");
+	else
+		return snprintf(buf, MAX_STR_PRINT, "Connected\n");
+}
+
+static ssize_t input_cable_state_store(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
+
+{
+	unsigned int rval;
+	int ret;
+	bool connect;
+
+	if ((*buf == 'C') || (*buf == 'c'))
+		connect = true;
+	else if ((*buf == 'D') || (*buf == 'd'))
+		connect = false;
+	else
+		return -EINVAL;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	if (connect) {
+		isl9238_bc->emulate_input_disconnected = false;
+		rval = isl9238_bc->adapter_curr_lim1 *
+				isl9238_bc->adptr_sense_res /
+				ISL9238_ADPTR_SENSE_RES_OTP;
+		rval = rval & ISL9238_ADPTR_CURR_LIMIT1_MASK;
+		isl9238_bc->last_temp = 0;
+		battery_charger_thermal_start_monitoring(isl9238_bc->bc_dev);
+	} else {
+		isl9238_bc->emulate_input_disconnected = true;
+		rval = 0;
+		isl9238_bc->last_temp = 0;
+		battery_charger_thermal_stop_monitoring(isl9238_bc->bc_dev);
+	}
+
+	ret = isl9238_write(isl9238_bc, ISL9238_ADPTR_CURR_LIMIT1, rval);
+	mutex_unlock(&isl9238_bc->mutex);
+	if (ret < 0) {
+		dev_err(isl9238_bc->dev, "register write fail: %d\n", ret);
+		return ret;
+	}
+
+	if (connect)
+		dev_info(isl9238_bc->dev,
+			 "Emulation of charger cable disconnect disabled\n");
+	else
+		dev_info(isl9238_bc->dev,
+			 "Emulated as charger cable disconnected\n");
+	return count;
+}
+
 static ssize_t isl9238_sysfs_show_chg_curnt_limit(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -422,6 +560,10 @@ static ssize_t isl9238_sysfs_show_adptr_curnt_range(struct device *dev,
 	return ret;
 }
 
+static DEVICE_ATTR_RW(charging_state);
+
+static DEVICE_ATTR_RW(input_cable_state);
+
 static DEVICE_ATTR(output_charging_current, 0644,
 		isl9238_sysfs_show_chg_curnt_limit,
 		isl9238_sysfs_set_chg_curnt_limit);
@@ -440,6 +582,8 @@ static DEVICE_ATTR(max_system_voltage, 0444,
 		isl9238_sysfs_show_max_sys_voltage, NULL);
 
 static struct attribute *isl9238_attributes[] = {
+	&dev_attr_charging_state.attr,
+	&dev_attr_input_cable_state.attr,
 	&dev_attr_output_charging_current.attr,
 	&dev_attr_output_charging_current_range.attr,
 	&dev_attr_input_charging_current.attr,

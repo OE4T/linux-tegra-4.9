@@ -68,7 +68,7 @@
 					dev = "/dev/block/platform/3460000.sdhci/by-name/odm";
 					type = "ext4";
 					mnt_flags = "ro";
-					fsmgr_flags = "wait,slotselect";
+					fsmgr_flags = "wait,slotselect,avb";
 				};
 			};
 		};

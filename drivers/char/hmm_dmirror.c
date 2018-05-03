@@ -1,6 +1,6 @@
 /*
  * Copyright 2013 Red Hat Inc.
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -53,6 +53,10 @@ struct dummy_bounce {
 	unsigned long		addr;
 	unsigned long		cpages;
 };
+#define FLAG_HMM_PFN_VALID (1 << 0)
+#define FLAG_HMM_PFN_WRITE (1 << 1)
+#define VALUE_HMM_PFN_NONE (1 << 4)
+#define HPFN_SHIFT			7
 
 #define DPT_SHIFT PAGE_SHIFT
 #define DPT_VALID (1 << 0)
@@ -136,20 +140,20 @@ static inline unsigned long dmirror_pt_pte_end(unsigned long addr)
 }
 
 typedef int (*dmirror_walk_cb_t)(struct dmirror *dmirror,
-				 unsigned long start,
-				 unsigned long end,
-				 unsigned long *dpte,
-				 void *private);
+				struct hmm_range *range,
+				unsigned long *dpte,
+				void *private);
 
 static int dummy_pt_walk(struct dmirror *dmirror,
 			 dmirror_walk_cb_t cb,
-			 unsigned long start,
-			 unsigned long end,
+			 struct hmm_range *range,
 			 void *private,
 			 bool populate)
 {
+	unsigned long start = range->start;
 	unsigned long *dpgd = &dmirror->pt.pgd[dmirror_pt_pgd(start)];
 	unsigned long addr = start & PAGE_MASK;
+	unsigned long end = range->end;
 
 	BUG_ON(start == end);
 
@@ -194,10 +198,17 @@ static int dummy_pt_walk(struct dmirror *dmirror,
 			dpmd = &dpmd[dmirror_pt_pmd(addr)];
 			for (; addr != pmd_end; dpmd++) {
 				unsigned long *dpte, pte_end;
+				struct hmm_range pte_range;
 				struct page *pte_page;
 				int ret;
 
+				memcpy(&pte_range, range,
+						sizeof(struct hmm_range));
+				pte_range.flags = range->flags;
+				pte_range.values = range->values;
 				pte_end = min(end, dmirror_pt_pte_end(addr));
+				pte_range.start = addr;
+				pte_range.end = pte_end;
 				pte_page = dmirror_pt_page(*dpmd);
 				if (!pte_page) {
 					if (!populate) {
@@ -214,7 +225,7 @@ static int dummy_pt_walk(struct dmirror *dmirror,
 				}
 				dpte = kmap(pte_page);
 				dpte = &dpte[dmirror_pt_pte(addr)];
-				ret = cb(dmirror, addr, pte_end, dpte, private);
+				ret = cb(dmirror, &pte_range, dpte, private);
 				kunmap(pte_page);
 				addr = pte_end;
 				if (ret) {
@@ -285,11 +296,13 @@ void dummy_bounce_fini(struct dummy_bounce *bounce)
 }
 
 static int dummy_do_update(struct dmirror *dmirror,
-			   unsigned long addr,
-			   unsigned long end,
-			   unsigned long *dpte,
-			   void *private)
+			struct hmm_range *range,
+			unsigned long *dpte,
+			void *private)
 {
+	unsigned long addr = range->start;
+	unsigned long end = range->end;
+
 	for (; addr < end; addr += PAGE_SIZE, ++dpte) {
 		/* Clear pte */
 		*dpte = 0;
@@ -304,9 +317,12 @@ static void dummy_update(struct hmm_mirror *mirror,
 			 unsigned long end)
 {
 	struct dmirror *dmirror = container_of(mirror, struct dmirror, mirror);
+	struct hmm_range range;
 
+	range.start = start;
+	range.end = end;
 	down_write(&dmirror->pt.lock);
-	dummy_pt_walk(dmirror, dummy_do_update, start, end, NULL, false);
+	dummy_pt_walk(dmirror, dummy_do_update, &range, NULL, false);
 	up_write(&dmirror->pt.lock);
 }
 
@@ -434,7 +450,7 @@ static int dummy_fops_release(struct inode *inode, struct file *filp)
 }
 
 struct dummy_fault {
-	hmm_pfn_t		*pfns;
+	uint64_t		*pfns;
 	unsigned long		start;
 	unsigned long		missing;
 	bool			write;
@@ -442,18 +458,18 @@ struct dummy_fault {
 };
 
 static int dummy_do_fault(struct dmirror *dmirror,
-			  unsigned long addr,
-			  unsigned long end,
+			  struct hmm_range *range,
 			  unsigned long *dpte,
 			  void *private)
 {
+	unsigned long addr = range->start;
 	struct dummy_fault *dfault = private;
 	unsigned long idx = (addr - dfault->start) >> PAGE_SHIFT;
-	hmm_pfn_t *pfns = dfault->pfns;
+	unsigned long end = range->end;
+	uint64_t *pfns = dfault->pfns;
 
 	for (; addr < end; addr += PAGE_SIZE, ++dpte, ++idx) {
 		struct page *page;
-
 		/*
 		 * Special pfn are device memory ie page inserted inside the
 		 * CPU page table with either vm_insert_pfn or vm_insert_page
@@ -465,16 +481,21 @@ static int dummy_do_fault(struct dmirror *dmirror,
 		 * corruption) or more likely because of truncate on mmap
 		 * file.
 		 */
-		if ((pfns[idx] & (HMM_PFN_SPECIAL | HMM_PFN_ERROR))) {
+		if ((pfns[idx] & (range->values[HMM_PFN_SPECIAL] |
+					range->values[HMM_PFN_ERROR]))) {
 			dfault->invalid = true;
 			continue;
 		}
-		if (!(pfns[idx] & HMM_PFN_VALID)) {
+
+		if (!(pfns[idx] & range->flags[HMM_PFN_VALID])) {
 			dfault->missing++;
 			continue;
 		}
-		page = hmm_pfn_t_to_page(pfns[idx]);
+
+		page = hmm_pfn_to_page(range, pfns[idx]);
+
 		*dpte = dmirror_pt_from_page(page);
+
 		if (pfns[idx] & HMM_PFN_WRITE) {
 			*dpte |= DPT_WRITE;
 		} else if (dfault->write) {
@@ -492,7 +513,18 @@ static int dummy_fault(struct dmirror *dmirror,
 {
 	struct mm_struct *mm = dmirror->mm;
 	unsigned long addr = start;
-	hmm_pfn_t pfns[64];
+	uint64_t pfns[64];
+	uint64_t flags[64];
+	uint64_t values[64];
+
+	memset(pfns, 0, sizeof(pfns));
+	memset(flags, 0, sizeof(flags));
+	memset(values, 0, sizeof(values));
+
+	flags[HMM_PFN_VALID] = FLAG_HMM_PFN_VALID;
+	flags[HMM_PFN_WRITE] = FLAG_HMM_PFN_WRITE;
+
+	values[HMM_PFN_NONE] = VALUE_HMM_PFN_NONE;
 
 	do {
 		struct vm_area_struct *vma;
@@ -518,8 +550,16 @@ static int dummy_fault(struct dmirror *dmirror,
 		}
 		addr = max(vma->vm_start, addr);
 		next = min(min(addr + (64 << PAGE_SHIFT), end), vma->vm_end);
+		range.vma = vma;
+		range.start = addr;
+		range.end = next;
+		range.pfns = pfns;
+		range.flags = flags;
+		range.values = values;
+		range.pfn_shift = HPFN_SHIFT;
 
-		ret = hmm_vma_fault(vma, &range, addr, next, pfns, write, false);
+		ret = hmm_vma_fault(&range, false);
+
 		switch (ret) {
 		case 0:
 			break;
@@ -530,7 +570,7 @@ static int dummy_fault(struct dmirror *dmirror,
 			return ret;
 		}
 		down_read(&dmirror->pt.lock);
-		if (!hmm_vma_range_done(vma, &range)) {
+		if (!hmm_vma_range_done(&range)) {
 			up_read(&dmirror->pt.lock);
 			up_read(&mm->mmap_sem);
 			continue;
@@ -542,7 +582,7 @@ static int dummy_fault(struct dmirror *dmirror,
 		dfault.start = addr;
 		dfault.pfns = pfns;
 		ret = dummy_pt_walk(dmirror, dummy_do_fault,
-				    addr, next, &dfault, true);
+				    &range, &dfault, true);
 		up_read(&dmirror->pt.lock);
 		up_read(&mm->mmap_sem);
 		if (ret)
@@ -569,13 +609,14 @@ static bool dummy_device_is_mine(struct dmirror_device *mdevice,
 }
 
 static int dummy_do_read(struct dmirror *dmirror,
-			 unsigned long addr,
-			 unsigned long end,
-			 unsigned long *dpte,
-			 void *private)
+			struct hmm_range *range,
+			unsigned long *dpte,
+			void *private)
 {
 	struct dmirror_device *mdevice = dmirror->mdevice;
 	struct dummy_bounce *bounce = private;
+	unsigned long addr = range->start;
+	unsigned long end = range->end;
 	void *ptr;
 
 	ptr = bounce->ptr + ((addr - bounce->addr) & PAGE_MASK);
@@ -609,6 +650,7 @@ static int dummy_read(struct dmirror *dmirror,
 		      struct hmm_dmirror_read *dread)
 {
 	struct dummy_bounce bounce;
+	struct hmm_range range;
 	unsigned long start, end;
 	unsigned long size;
 	int ret;
@@ -629,9 +671,11 @@ static int dummy_read(struct dmirror *dmirror,
 again:
 	dread->dpages = 0;
 	bounce.cpages = 0;
+	range.start = start;
+	range.end = end;
 	down_read(&dmirror->pt.lock);
 	ret = dummy_pt_walk(dmirror, dummy_do_read,
-			    start, end, &bounce, true);
+			    &range, &bounce, true);
 	up_read(&dmirror->pt.lock);
 
 	if (ret == -ENOENT) {
@@ -650,13 +694,14 @@ again:
 }
 
 static int dummy_do_write(struct dmirror *dmirror,
-			  unsigned long addr,
-			  unsigned long end,
-			  unsigned long *dpte,
-			  void *private)
+			struct hmm_range *range,
+			unsigned long *dpte,
+			void *private)
 {
 	struct dmirror_device *mdevice = dmirror->mdevice;
 	struct dummy_bounce *bounce = private;
+	unsigned long addr = range->start;
+	unsigned long end = range->end;
 	void *ptr;
 
 	ptr = bounce->ptr + ((addr - bounce->addr) & PAGE_MASK);
@@ -689,6 +734,7 @@ static int dummy_write(struct dmirror *dmirror,
 		       struct hmm_dmirror_write *dwrite)
 {
 	struct dummy_bounce bounce;
+	struct hmm_range range;
 	unsigned long start, end;
 	unsigned long size;
 	int ret;
@@ -712,9 +758,11 @@ static int dummy_write(struct dmirror *dmirror,
 again:
 	bounce.cpages = 0;
 	dwrite->dpages = 0;
+	range.start = start;
+	range.end = end;
 	down_read(&dmirror->pt.lock);
 	ret = dummy_pt_walk(dmirror, dummy_do_write,
-			    start, end, &bounce, true);
+			    &range, &bounce, true);
 	up_read(&dmirror->pt.lock);
 
 	if (ret == -ENOENT) {

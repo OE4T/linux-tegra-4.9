@@ -4,7 +4,7 @@
  *
  * Support for Tegra Virtual Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2016-2020, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3606,12 +3606,9 @@ static int tegra_vse_kthread(void *unused)
 	if (!ivc_resp_msg)
 		return -ENOMEM;
 
-	disable_irq(g_ivck->irq);
 	while (!kthread_should_stop()) {
-		enable_irq(g_ivck->irq);
 		err = 0;
 		ret = wait_for_completion_interruptible(&tegra_vse_complete);
-		disable_irq(g_ivck->irq);
 		if (ret < 0) {
 			pr_err("%s completion err\n", __func__);
 			reinit_completion(&tegra_vse_complete);
@@ -3750,6 +3747,14 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 		tegra_hv_ivc_channel_reset(g_ivck);
 		init_completion(&tegra_vse_complete);
 
+		if (devm_request_irq(se_dev->dev, g_ivck->irq,
+			tegra_vse_irq_handler, 0, "vse", se_dev)) {
+			dev_err(se_dev->dev,
+				"Failed to request irq %d\n", g_ivck->irq);
+			err = -EINVAL;
+			goto exit;
+		}
+
 		tegra_vse_task = kthread_run(tegra_vse_kthread,
 				NULL, "tegra_vse_kthread");
 		if (IS_ERR(tegra_vse_task)) {
@@ -3759,13 +3764,6 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 			goto exit;
 		}
 
-		if (request_irq(g_ivck->irq,
-			tegra_vse_irq_handler, 0, "vse", se_dev)) {
-			dev_err(se_dev->dev,
-				"Failed to request irq %d\n", g_ivck->irq);
-			err = -EINVAL;
-			goto exit;
-		}
 	}
 
 	if (of_property_read_bool(pdev->dev.of_node, "disable-keyslot-label"))

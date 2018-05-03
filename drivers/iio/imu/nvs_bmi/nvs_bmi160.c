@@ -1746,6 +1746,8 @@ static int bmi_remove(struct i2c_client *client)
 	unsigned int i;
 
 	if (st != NULL) {
+		if (st->i2c->irq > 0)
+			free_irq(st->i2c->irq, st);
 		bmi_shutdown(client);
 		if (st->nvs) {
 			for (i = 0; i < st->hw_n; i++)

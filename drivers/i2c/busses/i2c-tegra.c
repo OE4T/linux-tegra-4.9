@@ -40,6 +40,7 @@
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 
 #include <asm/unaligned.h>
 
@@ -929,7 +930,7 @@ static int tegra_i2c_set_clk_rate(struct tegra_i2c_dev *i2c_dev)
 
 static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
 {
-	char *prod_name;
+	char *prod_name, prod_pad_name[20] = {0};
 	int ret;
 
 	switch (i2c_dev->bus_clk_rate) {
@@ -941,6 +942,11 @@ static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
 		break;
 	case I2C_HS_MODE:
 		prod_name = "prod_c_hs";
+		sprintf(prod_pad_name, "i2c%d_hs_prod", i2c_dev->cont_id);
+		ret = tegra_pinctrl_config_prod(i2c_dev->dev, prod_pad_name);
+		if (ret < 0)
+			dev_warn(i2c_dev->dev, "Failed to set %s setting\n",
+				 prod_pad_name);
 		break;
 	case I2C_STANDARD_MODE:
 	default:

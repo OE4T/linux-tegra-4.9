@@ -79,6 +79,7 @@ void __nvgpu_log_dbg(struct gk20a *g, u64 log_mask,
 #define	gpu_dbg_sgl		BIT(23) /* SGL related traces. */
 #define	gpu_dbg_vidmem		BIT(24) /* VIDMEM tracing. */
 #define	gpu_dbg_nvlink		BIT(25) /* nvlink Operation tracing. */
+#define	gpu_dbg_clk_arb		BIT(26) /* Clk arbiter debugging. */
 #define	gpu_dbg_mem		BIT(31) /* memory accesses; very verbose. */
 
 /**

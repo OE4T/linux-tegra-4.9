@@ -766,7 +766,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 
 #endif
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	/* bail out if gpu is down */
 	if (nvgpu_atomic64_read(&arb->alarm_mask) & EVENT(ALARM_GPU_LOST))
@@ -1045,7 +1045,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	int index;
 	struct nvgpu_clk_vf_table *table;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	if (!g->ops.clk_arb.get_arbiter_clk_domains)
 		return 0;
@@ -1230,7 +1230,7 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	struct nvgpu_clk_arb *arb = g->clk_arb;
 	struct nvgpu_clk_session *session = *(_session);
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	if (!g->ops.clk_arb.get_arbiter_clk_domains)
 		return 0;
@@ -1279,7 +1279,7 @@ void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)
 	struct nvgpu_clk_dev *dev, *tmp;
 	struct llist_node *head;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	if (arb) {
 		nvgpu_spinlock_acquire(&arb->sessions_lock);
@@ -1300,7 +1300,7 @@ void nvgpu_clk_arb_release_session(struct gk20a *g,
 {
 	struct nvgpu_clk_arb *arb = g->clk_arb;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	session->zombie = true;
 	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);

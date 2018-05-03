@@ -55,7 +55,7 @@ static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 	struct nvgpu_clk_session *session = dev->session;
 
 
-	gk20a_dbg_fn("");
+	nvgpu_log(session->g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
@@ -66,7 +66,7 @@ static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 {
 	struct nvgpu_clk_dev *dev = filp->private_data;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(dev->session->g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	poll_wait(filp, &dev->readout_wq.wq, wait);
 	return nvgpu_atomic_xchg(&dev->poll_mask, 0);
@@ -81,7 +81,7 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 
 	arb = session->g->clk_arb;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(session->g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	if (arb) {
 		nvgpu_spinlock_acquire(&arb->users_lock);
@@ -128,7 +128,8 @@ static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp, char __user *buf,
 	struct nvgpu_gpu_event_info info;
 	ssize_t err;
 
-	gk20a_dbg_fn("filp=%p, buf=%p, size=%zu", filp, buf, size);
+	nvgpu_log(dev->session->g, gpu_dbg_fn | gpu_dbg_clk_arb,
+			"filp=%p, buf=%p, size=%zu", filp, buf, size);
 
 	if ((size - *off) < sizeof(info))
 		return 0;
@@ -242,7 +243,7 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 	char name[64];
 	struct nvgpu_clk_dev *dev;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	dev = nvgpu_kzalloc(g, sizeof(*dev));
 	if (!dev)
@@ -298,7 +299,7 @@ int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
 	struct nvgpu_clk_dev *dev;
 	int fd;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	fd = nvgpu_clk_arb_install_fd(g, session, &event_dev_ops, &dev);
 	if (fd < 0)
@@ -330,7 +331,7 @@ int nvgpu_clk_arb_install_request_fd(struct gk20a *g,
 	struct nvgpu_clk_dev *dev;
 	int fd;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	fd = nvgpu_clk_arb_install_fd(g, session, &completion_dev_ops, &dev);
 	if (fd < 0)
@@ -349,7 +350,7 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 	struct fd fd;
 	int err = 0;
 
-	gk20a_dbg_fn("");
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_clk_arb, " ");
 
 	fd  = fdget(request_fd);
 	if (!fd.file)
@@ -383,7 +384,8 @@ int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
 	struct fd fd;
 	int err = 0;
 
-	gk20a_dbg_fn("domain=0x%08x target_mhz=%u", api_domain, target_mhz);
+	nvgpu_log(session->g, gpu_dbg_fn | gpu_dbg_clk_arb,
+			"domain=0x%08x target_mhz=%u", api_domain, target_mhz);
 
 	fd = fdget(request_fd);
 	if (!fd.file)

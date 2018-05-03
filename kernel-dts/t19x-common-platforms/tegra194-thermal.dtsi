@@ -86,13 +86,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <90500>;
+					temperature = <92000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <85000>;
+					temperature = <86500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -111,7 +111,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <85000>;
+					temperature = <91500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -129,13 +129,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <97000>;
+					temperature = <93500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <91500>;
+					temperature = <88000>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;

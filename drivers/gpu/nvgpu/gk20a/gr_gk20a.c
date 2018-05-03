@@ -567,6 +567,9 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				      op.cond.ok, op.mailbox.ok,
 				      op.cond.fail, op.mailbox.fail,
 				      sleepduringwait);
+	if (ret)
+		nvgpu_err(g,"fecs method: data=0x%08x push adr=0x%08x",
+			op.method.data, op.method.addr);
 
 	nvgpu_mutex_release(&gr->fecs_mutex);
 
@@ -593,6 +596,9 @@ int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
 				      op.cond.ok, op.mailbox.ok,
 				      op.cond.fail, op.mailbox.fail,
 				      false);
+	if (ret)
+		nvgpu_err(g,"fecs method: data=0x%08x push adr=0x%08x",
+			op.method.data, op.method.addr);
 
 	nvgpu_mutex_release(&gr->fecs_mutex);
 

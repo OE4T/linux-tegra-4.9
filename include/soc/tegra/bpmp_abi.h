@@ -155,6 +155,7 @@ struct mrq_response {
 #define MRQ_STRAP               68
 #define MRQ_UPHY		69
 #define MRQ_CPU_AUTO_CC3	70
+#define MRQ_QUERY_FW_TAG	71
 
 /** @} */
 
@@ -246,7 +247,9 @@ struct mrq_ping_response {
 /**
  * @ingroup MRQ_Codes
  * @def MRQ_QUERY_TAG
- * @brief Query BPMP firmware's tag (i.e. version information)
+ * @brief Query BPMP firmware's tag (i.e. unique identifer)
+ *
+ * @deprecated Use #MRQ_QUERY_FW_TAG instead.
  *
  * * Platforms: All
  * * Initiators: CCPLEX
@@ -260,15 +263,39 @@ struct mrq_ping_response {
  * @ingroup Query_Tag
  * @brief Request with #MRQ_QUERY_TAG
  *
- * Used by #MRQ_QUERY_TAG call to ask BPMP to fill in the memory
- * pointed by #addr with BPMP firmware header.
- *
- * The sender is reponsible for ensuring that #addr is mapped in to
- * the recipient's address map.
+ * @deprecated This structure will be removed in future version.
+ * Use MRQ_QUERY_FW_TAG instead.
  */
 struct mrq_query_tag_request {
-  /** @brief Base address to store the firmware header */
+  /** @brief Base address to store the firmware tag */
 	uint32_t addr;
+} __ABI_PACKED;
+
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_QUERY_FW_TAG
+ * @brief Query BPMP firmware's tag (i.e. unique identifier)
+ *
+ * * Platforms: All
+ * * Initiators: Any
+ * * Targets: BPMP
+ * * Request Payload: N/A
+ * * Response Payload: @ref mrq_query_fw_tag_response
+ *
+ */
+
+/**
+ * @ingroup Query_Tag
+ * @brief Response to #MRQ_QUERY_FW_TAG
+ *
+ * Sent in response to #MRQ_QUERY_FW_TAG message. #tag contains the unique
+ * identifier for the version of firmware issuing the reply.
+ *
+ */
+struct mrq_query_fw_tag_response {
+  /** @brief Array to store tag information */
+	uint8_t tag[32];
 } __ABI_PACKED;
 
 /**

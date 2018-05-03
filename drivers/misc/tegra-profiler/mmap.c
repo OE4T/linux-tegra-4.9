@@ -229,18 +229,11 @@ static void get_all_processes(struct pid *root_pid)
 		if (root_pid && !is_sample_process(p, root_pid))
 			continue;
 
-		rcu_read_lock();
 		task_lock(p);
-		if (likely(p->mm)) {
-			mm = p->mm;
-		} else {
-			mm = NULL;
-			task_unlock(p);
-		}
-		rcu_read_unlock();
 
-		if (!mm)
-			continue;
+		if (unlikely(!p->mm))
+			goto __continue;
+		mm = p->mm;
 
 		if (!down_read_trylock(&mm->mmap_sem))
 			goto __continue;

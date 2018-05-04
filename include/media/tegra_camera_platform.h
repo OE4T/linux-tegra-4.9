@@ -67,6 +67,7 @@ enum tegra_camera_sensor_type {
  * @actual_clk_rate: clk rate set by nvhost
  * @bw: calculated bw for this node
  * @use_max: populated by hw engine to decide it's clocking policy
+ * @memory_latency: latency allowed for memory freq scaling
  * @pdev: pointer to platform_data
  * @sensor_type: type of sensor as defined by the enum above
  * @pixel_rate: pixel rate coming out of the sensor
@@ -88,6 +89,7 @@ struct tegra_camera_dev_info {
 	unsigned long actual_clk_rate;
 	u64 bw;
 	bool use_max;
+	u32 memory_latency;
 	struct platform_device *pdev;
 	u32 sensor_type;
 	u64 pixel_rate;

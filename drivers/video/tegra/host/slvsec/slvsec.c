@@ -84,7 +84,10 @@
 /* HW capabilities */
 #define BUS_WIDTH	64
 #define LANE_NUM	8
-#define LANE_SPEED	2304000000
+/* split in two to satisfy static code analysis tool */
+#define LANE_SPEED_MHZ	U64_C(2304)
+#define ONE_MILLION	U64_C(1000000)
+
 /* uses 8b10b encoding */
 #define ENCODE_NR	8
 #define ENCODE_DR	10
@@ -326,7 +329,8 @@ static int slvsec_probe(struct platform_device *pdev)
 	slvsec_info.pdev = pdev;
 	slvsec_info.hw_type = HWTYPE_SLVSEC;
 	slvsec_info.use_max = true;
-	slvsec_info.lane_speed = LANE_SPEED * ENCODE_NR / ENCODE_DR;
+	slvsec_info.lane_speed =
+		LANE_SPEED_MHZ * ONE_MILLION * ENCODE_NR / ENCODE_DR;
 	slvsec_info.lane_num = LANE_NUM;
 	slvsec_info.bus_width = BUS_WIDTH;
 	err = tegra_camera_device_register(&slvsec_info, slvsec);

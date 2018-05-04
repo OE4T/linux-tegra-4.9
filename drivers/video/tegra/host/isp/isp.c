@@ -118,102 +118,6 @@ int nvhost_isp_t210_finalize_poweron(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_TEGRA_ISOMGR)
-static int isp_isomgr_register(struct isp *tegra_isp)
-{
-	int iso_client_id = TEGRA_ISO_CLIENT_ISP_A;
-	struct clk *isp_clk;
-	struct nvhost_device_data *pdata =
-				platform_get_drvdata(tegra_isp->ndev);
-
-	dev_dbg(&tegra_isp->ndev->dev, "%s++\n", __func__);
-
-	if (WARN_ONCE(pdata == NULL, "pdata not found, %s failed\n", __func__))
-		return -ENODEV;
-
-	if (tegra_isp->dev_id == ISPB_DEV_ID)
-		iso_client_id = TEGRA_ISO_CLIENT_ISP_B;
-	if (tegra_isp->dev_id == ISPA_DEV_ID)
-		iso_client_id = TEGRA_ISO_CLIENT_ISP_A;
-
-	/* Get max ISP BW */
-	isp_clk = pdata->clk[0];
-	tegra_isp->max_bw =
-		(clk_round_rate(isp_clk, UINT_MAX) / 1000) * ISP_MAX_BPP;
-
-	/* Register with max possible BW for ISP usecases.*/
-	tegra_isp->isomgr_handle = tegra_isomgr_register(iso_client_id,
-					tegra_isp->max_bw,
-					NULL,	/* tegra_isomgr_renegotiate */
-					NULL);	/* *priv */
-
-	if (!tegra_isp->isomgr_handle) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: unable to register isomgr\n",
-				__func__);
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-
-static int isp_isomgr_unregister(struct isp *tegra_isp)
-{
-	tegra_isomgr_unregister(tegra_isp->isomgr_handle);
-	tegra_isp->isomgr_handle = NULL;
-
-	return 0;
-}
-
-static int isp_isomgr_request(struct isp *tegra_isp, uint isp_bw, uint lt)
-{
-	int ret = 0;
-
-	dev_dbg(&tegra_isp->ndev->dev,
-		"%s++ bw=%u, lt=%u\n", __func__, isp_bw, lt);
-
-	/* return value of tegra_isomgr_reserve is dvfs latency in usec */
-	ret = tegra_isomgr_reserve(tegra_isp->isomgr_handle,
-				isp_bw,	/* KB/sec */
-				lt);	/* usec */
-	if (!ret) {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: failed to reserve %u KBps\n", __func__, isp_bw);
-		return -ENOMEM;
-	}
-
-	/* return value of tegra_isomgr_realize is dvfs latency in usec */
-	ret = tegra_isomgr_realize(tegra_isp->isomgr_handle);
-	if (ret) {
-		dev_dbg(&tegra_isp->ndev->dev,
-			"%s: tegra_isp isomgr latency is %d usec",
-			__func__, ret);
-	} else {
-		dev_err(&tegra_isp->ndev->dev,
-			"%s: failed to realize %u KBps\n", __func__, isp_bw);
-		return -ENOMEM;
-	}
-	return 0;
-}
-
-static int isp_isomgr_release(struct isp *tegra_isp)
-{
-	int ret = 0;
-	dev_dbg(&tegra_isp->ndev->dev, "%s++\n", __func__);
-
-	/* deallocate isomgr bw */
-	ret = isp_isomgr_request(tegra_isp, 0, 0);
-	if (ret) {
-		dev_err(&tegra_isp->ndev->dev,
-		"%s: failed to deallocate memory in isomgr\n",
-		__func__);
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-#endif
-
 static inline u32 __maybe_unused
 tegra_isp_read(struct isp *tegra_isp, u32 offset)
 {
@@ -421,10 +325,6 @@ static int __exit isp_remove(struct platform_device *dev)
 
 	tegra_camera_device_unregister(tegra_isp);
 
-#if defined(CONFIG_TEGRA_ISOMGR)
-	if (tegra_isp->isomgr_handle)
-		isp_isomgr_unregister(tegra_isp);
-#endif
 	nvhost_client_device_release(dev);
 	disable_irq(tegra_isp->irq);
 	kfree(tegra_isp->my_isr_work);
@@ -494,9 +394,6 @@ static long isp_ioctl(struct file *file,
 		return -EFAULT;
 
 	switch (_IOC_NR(cmd)) {
-	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
-		return 0;
-	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
 		u32 ret = 0;
 		struct isp_la_bw isp_info;
@@ -523,85 +420,6 @@ static long isp_ioctl(struct file *file,
 
 		return 0;
 
-	}
-	case _IOC_NR(NVHOST_ISP_IOCTL_SET_EMC): {
-		int ret;
-		uint la_client = 0;
-		uint isp_bw = 0;
-		struct isp_emc emc_info;
-		if (copy_from_user(&emc_info,
-			(const void __user *)arg, sizeof(struct isp_emc))) {
-			dev_err(&tegra_isp->ndev->dev,
-				"%s: Failed to copy arg from user\n", __func__);
-			return -EFAULT;
-			}
-
-		if (emc_info.bpp_output && emc_info.bpp_input)
-			la_client = ISP_SOFT_ISO_CLIENT;
-		else
-			la_client = ISP_HARD_ISO_CLIENT;
-
-		isp_bw = (((emc_info.isp_clk/1000) * emc_info.bpp_output) >> 3);
-
-		/* Set latency allowance for given BW of ISP clients */
-		ret = isp_set_la(tegra_isp, isp_bw, la_client);
-		if (ret) {
-			dev_err(&tegra_isp->ndev->dev,
-			"%s: failed to set la for isp_bw %u MBps\n",
-			__func__, isp_bw);
-			return -ENOMEM;
-		}
-
-#if defined(CONFIG_TEGRA_ISOMGR)
-		/*
-		 * Register ISP as isomgr client.
-		 */
-		if (!tegra_isp->isomgr_handle) {
-			ret = isp_isomgr_register(tegra_isp);
-			if (ret) {
-				dev_err(&tegra_isp->ndev->dev,
-				"%s: failed to register ISP as isomgr client\n",
-				__func__);
-				return -ENOMEM;
-			}
-		}
-
-		if (tegra_isp->isomgr_handle &&
-			la_client == ISP_HARD_ISO_CLIENT) {
-			/*
-			 * Set ISP ISO BW requirements, only if it is
-			 * hard ISO client, i.e. VI is in streaming mode.
-			 * There is no way to figure out what latency
-			 * can be tolerated in ISP without reading ISP
-			 * registers for now. 3 usec is minimum time
-			 * to switch PLL source. Let's put 4 usec as
-			 * latency for now.
-			 */
-
-			/* isomgr driver expects BW in KBps */
-			isp_bw = isp_bw * 1000;
-
-			if (isp_bw > tegra_isp->max_bw) {
-				dev_err(&tegra_isp->ndev->dev,
-				"%s: Requested ISO BW %u is more than "
-				"ISP's max BW %u possible\n",
-				__func__, isp_bw, tegra_isp->max_bw);
-				return -EINVAL;
-			}
-
-			ret = isp_isomgr_request(tegra_isp, isp_bw, 4);
-			if (ret) {
-				dev_err(&tegra_isp->ndev->dev,
-				"%s: failed to reserve %u KBps with isomgr\n",
-				__func__, isp_bw);
-				return -ENOMEM;
-			}
-		}
-#endif
-		return ret;
-	}
-	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
-		return 0;
 	}
 	default:
 		dev_err(&tegra_isp->ndev->dev,
@@ -633,25 +451,7 @@ static int isp_open(struct inode *inode, struct file *file)
 
 static int isp_release(struct inode *inode, struct file *file)
 {
-	int ret = 0;
-
-	struct isp *tegra_isp = file->private_data;
-
-#if defined(CONFIG_TEGRA_ISOMGR)
-
-	/* nullify isomgr request */
-	if (tegra_isp->isomgr_handle) {
-		ret = isp_isomgr_release(tegra_isp);
-		if (ret) {
-			dev_err(&tegra_isp->ndev->dev,
-			"%s: failed to deallocate memory in isomgr\n",
-			__func__);
-			return -ENOMEM;
-		}
-	}
-#endif
-
-	return ret;
+	return 0;
 }
 
 const struct file_operations tegra_isp_ctrl_ops = {

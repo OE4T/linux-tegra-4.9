@@ -236,64 +236,7 @@ put_vi:
 struct t194_vi5_file_private {
 	struct platform_device *pdev;
 	struct tegra_mc_vi mc_vi;
-	struct mutex update_la_lock;
 	unsigned int vi_bypass_bw;
-};
-
-static long nvhost_vi5_ioctl(struct file *file, unsigned int cmd,
-				unsigned long arg)
-{
-	switch (cmd) {
-	case NVHOST_VI_IOCTL_SET_VI_CLK: {
-		return 0;
-	}
-	case _IOC_NR(NVHOST_VI_IOCTL_GET_VI_CLK): {
-		return 0;
-	}
-	case NVHOST_VI_IOCTL_SET_VI_LA_BW: {
-		/* TODO add LA setting later. */
-		return 0;
-	}
-	}
-	return -ENOIOCTLCMD;
-}
-
-static int nvhost_vi5_open(struct inode *inode, struct file *file)
-{
-	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
-					struct nvhost_device_data, ctrl_cdev);
-	struct platform_device *pdev = pdata->pdev;
-	struct t194_vi5_file_private *filepriv;
-
-	filepriv = kzalloc(sizeof(*filepriv), GFP_KERNEL);
-	if (unlikely(filepriv == NULL))
-		return -ENOMEM;
-
-	filepriv->pdev = pdev;
-
-	file->private_data = filepriv;
-
-	return nonseekable_open(inode, file);
-}
-
-static int nvhost_vi5_release(struct inode *inode, struct file *file)
-{
-	struct t194_vi5_file_private *filepriv = file->private_data;
-
-	kfree(filepriv);
-
-	return 0;
-}
-
-const struct file_operations tegra194_vi5_ctrl_ops = {
-	.owner = THIS_MODULE,
-	.llseek = no_llseek,
-	.unlocked_ioctl = nvhost_vi5_ioctl,
-#ifdef CONFIG_COMPAT
-	.compat_ioctl = nvhost_vi5_ioctl,
-#endif
-	.open = nvhost_vi5_open,
-	.release = nvhost_vi5_release,
 };
 
 static int vi5_remove(struct platform_device *pdev)

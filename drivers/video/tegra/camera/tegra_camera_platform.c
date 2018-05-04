@@ -23,6 +23,8 @@
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/platform/tegra/bwmgr_mc.h>
+#include <linux/platform/tegra/latency_allowance.h>
+#include <linux/platform/tegra/isomgr.h>
 #include <linux/list.h>
 
 #include <media/vi.h>
@@ -70,6 +72,7 @@ struct tegra_camera_info {
 	u32 ppc_divider;
 	u32 num_active_streams;
 	u32 sensor_type;
+	u32 memory_latency;
 	bool pg_mode;
 	struct list_head device_list;
 	struct mutex device_list_mutex;
@@ -396,6 +399,22 @@ int tegra_camera_update_isobw(void)
 	if (info->num_active_streams == 0)
 		bw = 0;
 
+#ifdef CONFIG_TEGRA_MC
+	/*
+	 * Different chip versions use different APIs to set LA for VI.
+	 * If one fails, try another, and fail if both of them don't work.
+	 */
+	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, bw, 1);
+	if (ret) {
+		ret = tegra_set_latency_allowance(TEGRA_LA_VI_W, bw);
+		if (ret) {
+			dev_err(info->dev, "%s: set la failed: %d\n",
+				__func__, ret);
+			return ret;
+		}
+	}
+#endif
+
 	/* Use Khz to prevent overflow */
 	total_khz = bwmgr_bw_to_freq(bw);
 	total_khz = min(ULONG_MAX / 1000, total_khz);
@@ -410,10 +429,8 @@ int tegra_camera_update_isobw(void)
 #endif
 	/*
 	 * Request to ISOMGR.
-	 * 3 usec is minimum time to switch PLL source.
-	 * Let's put 4 usec as latency for now.
 	 */
-	ret = tegra_camera_isomgr_request(info, bw, 4);
+	ret = tegra_camera_isomgr_request(info, bw, info->memory_latency);
 	if (ret) {
 		dev_err(info->dev,
 		"%s: failed to reserve %lu KBps with isomgr\n",
@@ -581,7 +598,8 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		"default-max-bw");
 	if (info->en_max_bw == true) {
 #if defined(CONFIG_TEGRA_ISOMGR)
-		ret = tegra_camera_isomgr_request(info, info->max_bw, 4);
+		ret = tegra_camera_isomgr_request(info, info->max_bw,
+				info->memory_latency);
 		if (ret) {
 			dev_err(info->dev,
 			"%s: failed to request max bw\n", __func__);
@@ -598,6 +616,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	info->ppc_divider = 1;
 	info->num_active_streams = 0;
 	info->sensor_type = 0;
+	info->memory_latency = 0;
 	info->pg_mode = false;
 	mutex_init(&info->device_list_mutex);
 	INIT_LIST_HEAD(&info->device_list);
@@ -634,6 +653,8 @@ static void update_platform_data(struct tegra_camera_dev_info *cdev,
 		info->total_pixel_rate += cdev->pixel_rate;
 		if (info->max_pixel_depth < cdev->pixel_bit_depth)
 			info->max_pixel_depth = cdev->pixel_bit_depth;
+		if (info->memory_latency < cdev->memory_latency)
+			info->memory_latency = cdev->memory_latency;
 	} else {
 		info->total_pixel_rate -= cdev->pixel_rate;
 	}
@@ -973,7 +994,7 @@ static int tegra_camera_remove(struct platform_device *pdev)
 
 	/* deallocate isomgr bw */
 	if (info->en_max_bw)
-		tegra_camera_isomgr_request(info, 0, 4);
+		tegra_camera_isomgr_request(info, 0, info->memory_latency);
 
 	tegra_vi_unregister_mfi_cb();
 	tegra_camera_isomgr_unregister(info);

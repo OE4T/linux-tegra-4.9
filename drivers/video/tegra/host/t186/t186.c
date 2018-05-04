@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T186 Architecture Chips
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -220,7 +220,6 @@ struct nvhost_device_data t18_vi_info = {
 		{"nvcsilp", 204000000, 0, 0, 0, true},
 	},
 	.num_channels		= 15,
-	.ctrl_ops               = &nvhost_vi4_ctrl_ops,
 	.prepare_poweroff	= nvhost_vi4_prepare_poweroff,
 	.finalize_poweron	= nvhost_vi4_finalize_poweron,
 	.busy			= nvhost_vi4_busy,

@@ -226,16 +226,6 @@ void tegra_vi_deinit_mfi(struct tegra_vi_mfi_ctx **pmfi_ctx)
 }
 EXPORT_SYMBOL(tegra_vi_deinit_mfi);
 
-#if defined(CONFIG_TEGRA_ISOMGR)
-static int vi_isomgr_unregister(struct vi *tegra_vi)
-{
-	tegra_isomgr_unregister(tegra_vi->isomgr_handle);
-	tegra_vi->isomgr_handle = NULL;
-
-	return 0;
-}
-#endif
-
 static int vi_out_show(struct seq_file *s, void *unused)
 {
 	struct vi *vi = s->private;
@@ -421,7 +411,6 @@ static int vi_probe(struct platform_device *dev)
 
 	i2c_ctrl = pdata->private_data;
 	pdata->private_data = tegra_vi;
-	mutex_init(&tegra_vi->update_la_lock);
 
 	/* Create I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->new_devices)
@@ -487,6 +476,8 @@ static int vi_probe(struct platform_device *dev)
 	memset(&vi_info, 0, sizeof(vi_info));
 	vi_info.pdev = dev;
 	vi_info.hw_type = HWTYPE_VI;
+	/* 4 uS latency allowed for memory freq switch */
+	vi_info.memory_latency = 4;
 	err = tegra_camera_device_register(&vi_info, tegra_vi);
 	if (err)
 		goto vi_probe_fail;
@@ -529,11 +520,6 @@ static int __exit vi_remove(struct platform_device *dev)
 #endif
 
 	dev_info(&dev->dev, "%s: ++\n", __func__);
-
-#if defined(CONFIG_TEGRA_ISOMGR)
-	if (tegra_vi->isomgr_handle)
-		vi_isomgr_unregister(tegra_vi);
-#endif
 
 	tegra_vi_deinit_mfi(&tegra_vi->mfi_ctx);
 

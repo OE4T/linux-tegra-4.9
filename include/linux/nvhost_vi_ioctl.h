@@ -3,7 +3,7 @@
  *
  * Tegra VI Driver
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,10 +43,5 @@
  */
 
 #define NVHOST_VI_IOCTL_ENABLE_TPG _IOW(NVHOST_VI_IOCTL_MAGIC, 1, uint)
-
-#define NVHOST_VI_IOCTL_SET_EMC_INFO _IOW(NVHOST_VI_IOCTL_MAGIC, 2, uint)
-#define NVHOST_VI_IOCTL_SET_VI_CLK _IOW(NVHOST_VI_IOCTL_MAGIC, 3, long)
-#define NVHOST_VI_IOCTL_GET_VI_CLK _IOW(NVHOST_VI_IOCTL_MAGIC, 4, u64)
-#define NVHOST_VI_IOCTL_SET_VI_LA_BW _IOW(NVHOST_VI_IOCTL_MAGIC, 5, u32)
 
 #endif

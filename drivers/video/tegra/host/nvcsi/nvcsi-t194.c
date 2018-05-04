@@ -87,9 +87,6 @@ static long t194_nvcsi_ioctl(struct file *file, unsigned int cmd,
 	int ret;
 
 	switch (cmd) {
-	case NVHOST_NVCSI_IOCTL_SET_NVCSI_CLK: {
-		return 0;
-		}
 	// sensor must be turned on before calling this ioctl, and streaming
 	// should be started shortly after.
 	case NVHOST_NVCSI_IOCTL_DESKEW_SETUP: {

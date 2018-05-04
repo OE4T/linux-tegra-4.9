@@ -202,12 +202,6 @@ static long isp_ioctl(struct file *file,
 		return -EFAULT;
 
 	switch (_IOC_NR(cmd)) {
-	case _IOC_NR(NVHOST_ISP_IOCTL_GET_ISP_CLK): {
-		return 0;
-	}
-	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_CLK): {
-		return 0;
-	}
 	case _IOC_NR(NVHOST_ISP_IOCTL_SET_ISP_LA_BW): {
 		/* No BW control needed. Return without error. */
 		return 0;

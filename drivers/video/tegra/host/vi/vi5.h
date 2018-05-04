@@ -3,7 +3,7 @@
  *
  * Tegra VI5
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,8 +23,6 @@
 
 #include <linux/platform_device.h>
 #include <media/mc_common.h>
-
-extern const struct file_operations tegra194_vi5_ctrl_ops;
 
 int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
 				int clk_index,

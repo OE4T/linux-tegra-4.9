@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host ISP
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,6 @@
 #if defined(CONFIG_TEGRA_CAMERA)
 #include "camera_priv_defs.h"
 #endif
-#include <linux/platform/tegra/isomgr.h>
 
 typedef void (*isp_callback)(void *);
 
@@ -32,9 +31,6 @@ struct tegra_isp_mfi {
 
 struct isp {
 	struct platform_device *ndev;
-#if defined(CONFIG_TEGRA_ISOMGR)
-	tegra_isomgr_handle isomgr_handle;
-#endif
 	int dev_id;
 	void __iomem    *base;
 	spinlock_t lock;

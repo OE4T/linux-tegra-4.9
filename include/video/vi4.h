@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,7 +37,6 @@ struct nvhost_vi_dev {
 	atomic_t notify_overflow;
 	atomic_t fmlite_overflow;
 	struct tegra_mc_vi mc_vi;
-	struct mutex update_la_lock;
 	unsigned int vi_bypass_bw;
 };
 
@@ -46,7 +45,6 @@ int nvhost_vi4_finalize_poweron(struct platform_device *);
 void nvhost_vi4_idle(struct platform_device *);
 void nvhost_vi4_busy(struct platform_device *);
 void nvhost_vi4_reset(struct platform_device *);
-extern const struct file_operations nvhost_vi4_ctrl_ops;
 int nvhost_vi4_aggregate_constraints(struct platform_device *dev,
 				int clk_index,
 				unsigned long floor_rate,

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,6 @@
 #ifndef __NVHOST_VI_H__
 #define __NVHOST_VI_H__
 
-#include <linux/platform/tegra/isomgr.h>
 #include <linux/tegra-powergate.h>
 #include <linux/clk/tegra.h>
 
@@ -95,13 +94,9 @@ struct vi {
 	struct tegra_vi_stats vi_out;
 	struct work_struct stats_work;
 	struct tegra_vi_mfi_ctx *mfi_ctx;
-#if defined(CONFIG_TEGRA_ISOMGR)
-	tegra_isomgr_handle isomgr_handle;
-#endif
 	int vi_irq;
 	uint vi_bypass_bw;
 	uint max_bw;
-	struct mutex update_la_lock;
 	bool master_deinitialized;
 	bool tpg_opened;
 	bool sensor_opened;

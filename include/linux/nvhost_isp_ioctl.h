@@ -3,7 +3,7 @@
  *
  * Tegra ISP Driver
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,10 +59,6 @@ struct isp_la_bw {
  * isp device.
  */
 
-#define NVHOST_ISP_IOCTL_SET_EMC \
-		_IOW(NVHOST_ISP_IOCTL_MAGIC, 1, struct isp_emc)
-#define NVHOST_ISP_IOCTL_SET_ISP_CLK _IOW(NVHOST_ISP_IOCTL_MAGIC, 2, long)
-#define NVHOST_ISP_IOCTL_GET_ISP_CLK _IOW(NVHOST_ISP_IOCTL_MAGIC, 3, u64)
 #define NVHOST_ISP_IOCTL_SET_ISP_LA_BW \
 		_IOW(NVHOST_ISP_IOCTL_MAGIC, 4, struct isp_la_bw)
 #endif

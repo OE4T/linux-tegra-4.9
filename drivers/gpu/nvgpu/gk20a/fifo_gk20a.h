@@ -44,6 +44,7 @@ enum {
 #define FIFO_INVAL_ENGINE_ID		((u32)~0)
 #define FIFO_INVAL_CHANNEL_ID		((u32)~0)
 #define FIFO_INVAL_TSG_ID		((u32)~0)
+#define FIFO_INVAL_RUNLIST_ID		((u32)~0)
 
 #define ID_TYPE_CHANNEL			0
 #define ID_TYPE_TSG			1
@@ -374,7 +375,7 @@ u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
 int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id, unsigned int id_type,
 					 unsigned int timeout_rc_type);
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
-void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
+void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 					 unsigned int id_type);
 int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,

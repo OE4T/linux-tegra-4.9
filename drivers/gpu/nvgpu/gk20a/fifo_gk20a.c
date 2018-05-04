@@ -2721,7 +2721,7 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	return ret;
 }
 
-void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
+void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 					 unsigned int id_type)
 {
 	if (id_type == ID_TYPE_TSG) {
@@ -2764,7 +2764,7 @@ int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	int ret;
 	unsigned int id_type;
 
-	nvgpu_log_fn(g, "%d", id);
+	nvgpu_log_fn(g, "id: %d is_tsg: %d", id, is_tsg);
 
 	/* issue preempt */
 	gk20a_fifo_issue_preempt(g, id, is_tsg);
@@ -2774,10 +2774,6 @@ int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	/* wait for preempt */
 	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,
 					 PREEMPT_TIMEOUT_RC);
-
-	if (ret)
-		__locked_fifo_preempt_timeout_rc(g, id, id_type);
-
 	return ret;
 }
 
@@ -2789,7 +2785,9 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	nvgpu_log_fn(g, "%d", chid);
+	nvgpu_log_fn(g, "chid: %d", chid);
+	if (chid == FIFO_INVAL_CHANNEL_ID)
+		return 0;
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++)
@@ -2805,6 +2803,9 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
 
+	if (ret)
+		gk20a_fifo_preempt_timeout_rc(g, chid, false);
+
 	return ret;
 }
 
@@ -2816,7 +2817,9 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	nvgpu_log_fn(g, "%d", tsgid);
+	nvgpu_log_fn(g, "tsgid: %d", tsgid);
+	if (tsgid == FIFO_INVAL_TSG_ID)
+		return 0;
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++)
@@ -2831,6 +2834,9 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
+
+	if (ret)
+		gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
 
 	return ret;
 }

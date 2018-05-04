@@ -757,6 +757,9 @@ int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 tsgid;
 
+	if (chid == FIFO_INVAL_CHANNEL_ID)
+		return 0;
+
 	tsgid = f->channel[chid].tsgid;
 	nvgpu_log_info(g, "chid:%d tsgid:%d", chid, tsgid);
 
@@ -813,10 +816,14 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 runlist_id;
 
-	nvgpu_log_fn(g, "%d", tsgid);
+	nvgpu_log_fn(g, "tsgid: %d", tsgid);
+	if (tsgid == FIFO_INVAL_TSG_ID)
+		return 0;
 
 	runlist_id = f->tsg[tsgid].runlist_id;
-	nvgpu_log_fn(g, "runlist_id %d", runlist_id);
+	nvgpu_log_fn(g, "runlist_id: %d", runlist_id);
+	if (runlist_id == FIFO_INVAL_RUNLIST_ID)
+		return 0;
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
@@ -828,6 +835,9 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
+
+	if (ret)
+		gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
 
 	return ret;
 }
@@ -888,7 +898,7 @@ static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 					 timeout_rc_type);
 
 	if (ret && (timeout_rc_type == PREEMPT_TIMEOUT_RC))
-		__locked_fifo_preempt_timeout_rc(g, id, id_type);
+		gk20a_fifo_preempt_timeout_rc(g, id, id_type);
 
 	return ret;
 }

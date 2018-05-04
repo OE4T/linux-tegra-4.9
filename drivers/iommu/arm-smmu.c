@@ -1935,14 +1935,6 @@ static void arm_smmu_detach_dev(struct iommu_domain *domain, struct device *dev)
 	arm_smmu_domain_remove_master(smmu_domain, cfg);
 }
 
-static bool arm_smmu_pte_is_contiguous_range(unsigned long addr,
-					unsigned long end, unsigned long phys)
-{
-	return !(addr & ~ARM_SMMU_PTE_CONT_MASK) &&
-		(addr + ARM_SMMU_PTE_CONT_SIZE <= end) &&
-		!(phys & ~ARM_SMMU_PTE_CONT_MASK);
-}
-
 static void *arm_smmu_alloc_pgtable_page(struct arm_smmu_domain *domain, int lvl,
 					void * entry, unsigned long addr)
 {
@@ -2083,63 +2075,17 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_domain *domain, pmd_t *pmd,
 	start = pmd_page_vaddr(*pmd) + pte_index(addr);
 	pte = start;
 
-	/*
-	 * Install the page table entries. This is fairly complicated
-	 * since we attempt to make use of the contiguous hint in the
-	 * ptes where possible. The contiguous hint indicates a series
-	 * of ARM_SMMU_PTE_CONT_ENTRIES ptes mapping a physically
-	 * contiguous region with the following constraints:
-	 *
-	 *   - The region start is aligned to ARM_SMMU_PTE_CONT_SIZE
-	 *   - Each pte in the region has the contiguous hint bit set
-	 *
-	 * This complicates unmapping (also handled by this code, when
-	 * neither IOMMU_READ or IOMMU_WRITE are set) because it is
-	 * possible, yet highly unlikely, that a client may unmap only
-	 * part of a contiguous range. This requires clearing of the
-	 * contiguous hint bits in the range before installing the new
-	 * faulting entries.
-	 *
-	 * Note that re-mapping an address range without first unmapping
-	 * it is not supported, so TLB invalidation is not required here
-	 * and is instead performed at unmap and domain-init time.
-	 */
 	do {
-		int i = 1;
-
-		pteval &= ~ARM_SMMU_PTE_CONT;
-
-		if (arm_smmu_pte_is_contiguous_range(addr, end,
-							__pfn_to_phys(pfn))) {
-			i = ARM_SMMU_PTE_CONT_ENTRIES;
-			pteval |= ARM_SMMU_PTE_CONT;
-		} else if (pte_val(*pte) &
-			   (ARM_SMMU_PTE_CONT | ARM_SMMU_PTE_PAGE)) {
-			int j;
-			pte_t *cont_start;
-			unsigned long idx = pte_index(addr);
-
-			idx &= ~(ARM_SMMU_PTE_CONT_ENTRIES - 1);
-			cont_start = pmd_page_vaddr(*pmd) + idx;
-			for (j = 0; j < ARM_SMMU_PTE_CONT_ENTRIES; ++j)
-				pte_val(*(cont_start + j)) &=
-					~ARM_SMMU_PTE_CONT;
-
-			arm_smmu_flush_pgtable(smmu, cont_start,
-					       sizeof(*pte) *
-					       ARM_SMMU_PTE_CONT_ENTRIES);
-		}
 
 		if (!pfn) {
-			memset(pte, 0, i * sizeof(*pte));
-			addr += i * PAGE_SIZE;
-			pte += i;
-			continue;
+			memset(pte, 0, sizeof(*pte));
+		} else {
+			*pte = pfn_pte(pfn, __pgprot(pteval));
+			pfn++;
 		}
 
-		do {
-			*pte = pfn_pte(pfn, __pgprot(pteval));
-		} while (pte++, pfn++, addr += PAGE_SIZE, --i);
+		pte++;
+		addr += PAGE_SIZE;
 	} while (addr != end);
 
 	arm_smmu_flush_pgtable(smmu, start, sizeof(*pte) * (pte - start));

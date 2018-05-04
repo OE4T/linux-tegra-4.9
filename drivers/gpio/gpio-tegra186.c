@@ -84,9 +84,13 @@
 #define MAX_GPIO_CONTROLLERS			7
 #define MAX_GPIO_PORTS				8
 #define MAX_IRQS				8
+#define MAX_GPIO_IRQS (MAX_GPIO_CONTROLLERS * MAX_GPIO_PORTS * 8)
 
 #define GPIO_PORT(g)				((g) >> 3)
 #define GPIO_PIN(g)				((g) & 0x7)
+
+#define GPIO_INTERRUPT_UNMASK_ENABLE		0x1
+#define GPIO_PIN_DIRECTION_INPUT		0x2
 
 static const int tegra186_gpio_wakes[] = {
 	TEGRA_MAIN_GPIO(A, 6),		/* wake0 */
@@ -642,6 +646,7 @@ struct tegra_gpio_controller {
 	int irq[MAX_IRQS];
 	struct tegra_gpio_info *tgi;
 	struct tegra_gpio_irq_info irq_info[MAX_IRQS];
+	unsigned long int_state[MAX_GPIO_IRQS];
 	int num_ports;
 };
 
@@ -943,22 +948,38 @@ static void tegra_gpio_irq_mask(struct irq_data *d)
 
 	tegra_gpio_update(c->tgi, d->hwirq, GPIO_ENB_CONFIG_REG,
 			  GPIO_INT_FUNC_BIT, 0);
+	c->int_state[d->hwirq] &= ~GPIO_INTERRUPT_UNMASK_ENABLE;
 }
 
 static void tegra_gpio_irq_unmask(struct irq_data *d)
 {
 	struct tegra_gpio_controller *c = irq_data_get_irq_chip_data(d);
-	struct gpio_chip *chip = &c->tgi->gc;
-	int ret;
-
-	ret = tegra_gpio_direction_input(chip, d->hwirq);
-	if (ret < 0)
-		dev_err(chip->parent,
-			"Failed to set input direction for irq-unmask: %d\n",
-			ret);
 
 	tegra_gpio_update(c->tgi, d->hwirq, GPIO_ENB_CONFIG_REG,
 			  GPIO_INT_FUNC_BIT, GPIO_INT_FUNC_BIT);
+	c->int_state[d->hwirq] |= GPIO_INTERRUPT_UNMASK_ENABLE;
+}
+
+static void tegra_gpio_irq_bus_sync_unlock(struct irq_data *d)
+{
+	struct tegra_gpio_controller *c = irq_data_get_irq_chip_data(d);
+	struct gpio_chip *chip = &c->tgi->gc;
+	int ret;
+
+	if (!(c->int_state[d->hwirq] & GPIO_INTERRUPT_UNMASK_ENABLE))
+		return;
+
+	if (c->int_state[d->hwirq] & GPIO_PIN_DIRECTION_INPUT)
+		return;
+
+	ret = tegra_gpio_direction_input(chip, d->hwirq);
+	if (ret < 0) {
+		dev_err(chip->parent,
+			"Failed to set input direction for pin %lu: %d\n",
+			d->hwirq, ret);
+		return;
+	}
+	c->int_state[d->hwirq] |= GPIO_PIN_DIRECTION_INPUT;
 }
 
 static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
@@ -1294,6 +1315,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi->ic.irq_ack			= tegra_gpio_irq_ack;
 	tgi->ic.irq_mask		= tegra_gpio_irq_mask;
 	tgi->ic.irq_unmask		= tegra_gpio_irq_unmask;
+	tgi->ic.irq_bus_sync_unlock	= tegra_gpio_irq_bus_sync_unlock;
 	tgi->ic.irq_set_type		= tegra_gpio_irq_set_type;
 	tgi->ic.irq_shutdown		= tegra_gpio_irq_mask;
 	tgi->ic.irq_set_wake		= tegra_gpio_irq_set_wake;

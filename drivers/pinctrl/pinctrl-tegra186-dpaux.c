@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <linux/clk.h>
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -21,11 +22,14 @@
 #include <linux/pinctrl/pinmux.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/pinconf-generic.h>
-#include <linux/nvhost.h>
+#include <linux/reset.h>
+#include <linux/tegra-powergate.h>
+
+#include <dt-bindings/soc/tegra186-powergate.h>
+#include <dt-bindings/soc/tegra194-powergate.h>
 
 #include "core.h"
 #include "pinctrl-utils.h"
-#include "nvhost_acm.h"
 
 #define DPAUX_HYBRID_PADCTL		0x124
 #define I2C_SDA_INPUT			BIT(15)
@@ -34,30 +38,6 @@
 
 #define DPAUX_HYBRID_SPARE		0x134
 #define PAD_PWR				BIT(0)
-
-#define DPAUX_NVHOST_DEVICE_DATA(aux_name)	\
-	{					\
-	.clocks = {{#aux_name, UINT_MAX},	\
-			{} },			\
-	.devfs_name	= "pinctrl-dpaux",	\
-	.can_powergate	= false,		\
-	.autosuspend_delay = 500,		\
-	.serialize	= 1,			\
-	.push_work_done = 1,			\
-	.kernel_only	= true,			\
-	}
-
-static struct nvhost_device_data tegra186_dpaux_nvhost_device_data[] = {
-	DPAUX_NVHOST_DEVICE_DATA(dpaux),
-	DPAUX_NVHOST_DEVICE_DATA(dpaux1),
-};
-
-static struct nvhost_device_data tegra194_dpaux_nvhost_device_data[] = {
-	DPAUX_NVHOST_DEVICE_DATA(dpaux),
-	DPAUX_NVHOST_DEVICE_DATA(dpaux1),
-	DPAUX_NVHOST_DEVICE_DATA(dpaux2),
-	DPAUX_NVHOST_DEVICE_DATA(dpaux3),
-};
 
 struct tegra_dpaux_function {
 	const char *name;
@@ -86,16 +66,18 @@ struct tegra_dpaux_pinctl {
 	unsigned int nfunctions;
 	const struct tegra_dpaux_pingroup *groups;
 	unsigned ngroups;
+	int powergate_id;
+	struct clk *dpaux_clk;
 };
 
 struct tegra_dpaux_chip_data {
-	struct nvhost_device_data *nvhost_data;
 	const struct pinctrl_pin_desc *pins;
 	u32 npins;
 	const struct tegra_dpaux_pingroup *pin_group;
 	u32 npin_groups;
 	struct tegra_dpaux_function *functions;
 	u32 nfunctions;
+	int powergate_id;
 };
 
 #define TEGRA_PIN_DPAUX_0 0
@@ -174,61 +156,61 @@ static const struct tegra_dpaux_pingroup tegra194_dpaux_groups[] = {
 
 static struct tegra_dpaux_chip_data tegra186_dpaux_chip_data[] = {
 	{
-		.nvhost_data = &tegra186_dpaux_nvhost_device_data[0],
 		.pins = tegra186_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra186_dpaux_pins),
 		.pin_group = tegra186_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra186_dpaux_groups),
 		.functions = tegra186_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra186_dpaux_functions),
+		.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
 	},
 	{
-		.nvhost_data = &tegra186_dpaux_nvhost_device_data[1],
 		.pins = tegra186_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra186_dpaux_pins),
 		.pin_group = tegra186_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra186_dpaux_groups),
 		.functions = tegra186_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra186_dpaux_functions),
+		.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
 	},
 };
 
 static struct tegra_dpaux_chip_data tegra194_dpaux_chip_data[] = {
 	{
-		.nvhost_data = &tegra194_dpaux_nvhost_device_data[0],
 		.pins = tegra194_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra194_dpaux_pins),
 		.pin_group = tegra194_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra194_dpaux_groups),
 		.functions = tegra194_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra194_dpaux_functions),
+		.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
 	},
 	{
-		.nvhost_data = &tegra194_dpaux_nvhost_device_data[1],
 		.pins = tegra194_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra194_dpaux_pins),
 		.pin_group = tegra194_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra194_dpaux_groups),
 		.functions = tegra194_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra194_dpaux_functions),
+		.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
 	},
 	{
-		.nvhost_data = &tegra194_dpaux_nvhost_device_data[2],
 		.pins = tegra194_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra194_dpaux_pins),
 		.pin_group = tegra194_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra194_dpaux_groups),
 		.functions = tegra194_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra194_dpaux_functions),
+		.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
 	},
 	{
-		.nvhost_data = &tegra194_dpaux_nvhost_device_data[3],
 		.pins = tegra194_dpaux_pins,
 		.npins = ARRAY_SIZE(tegra194_dpaux_pins),
 		.pin_group = tegra194_dpaux_groups,
 		.npin_groups = ARRAY_SIZE(tegra194_dpaux_groups),
 		.functions = tegra194_dpaux_functions,
 		.nfunctions = ARRAY_SIZE(tegra194_dpaux_functions),
+		.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
 	},
 };
 
@@ -245,23 +227,24 @@ static void tegra_dpaux_update(struct tegra_dpaux_pinctl *tdp_aux,
 static int tegra_dpaux_pinctrl_set_mode(struct tegra_dpaux_pinctl *tdpaux_ctl,
 					unsigned function)
 {
-	int ret;
+	int ret = 0;
 	u32 mask;
 
-	ret = nvhost_module_busy(tdpaux_ctl->pdev);
+	ret =  clk_prepare_enable(tdpaux_ctl->dpaux_clk);
 	if (ret < 0) {
-		dev_err(tdpaux_ctl->dev, "nvhost module is busy: %d\n", ret);
+		dev_err(tdpaux_ctl->dev, "clock enabled failed: %d\n", ret);
 		return ret;
 	}
 
 	mask = I2C_SDA_INPUT | I2C_SCL_INPUT | MODE;
+
 	if (function == TEGRA_DPAUX_MUX_DISPLAY)
 		tegra_dpaux_update(tdpaux_ctl, DPAUX_HYBRID_PADCTL, mask, 0);
 	else if (function == TEGRA_DPAUX_MUX_I2C)
 		tegra_dpaux_update(tdpaux_ctl, DPAUX_HYBRID_PADCTL, mask, mask);
 	tegra_dpaux_update(tdpaux_ctl, DPAUX_HYBRID_SPARE, 0x1, 0);
 
-	nvhost_module_idle(tdpaux_ctl->pdev);
+	clk_disable_unprepare(tdpaux_ctl->dpaux_clk);
 
 	return ret;
 }
@@ -345,7 +328,7 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 {
 	struct tegra_dpaux_chip_data *cdata;
 	struct tegra_dpaux_pinctl *tdpaux_ctl;
-	struct nvhost_device_data *nhd_data;
+	struct reset_control *rst;
 	int ret;
 
 	tdpaux_ctl = devm_kzalloc(&pdev->dev, sizeof(*tdpaux_ctl), GFP_KERNEL);
@@ -355,32 +338,14 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 	tdpaux_ctl->dev = &pdev->dev;
 	cdata = (struct tegra_dpaux_chip_data *)
 				of_device_get_match_data(&pdev->dev);
-	nhd_data = cdata->nvhost_data;
 
-	mutex_init(&nhd_data->lock);
 	tdpaux_ctl->pdev = pdev;
-	nhd_data->pdev = pdev;
-	platform_set_drvdata(pdev, nhd_data);
-
-	ret = nvhost_client_device_get_resources(pdev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "nvhost get_resources failed: %d\n", ret);
-		return ret;
+	tdpaux_ctl->regs = devm_ioremap_resource(&pdev->dev,
+			 platform_get_resource(pdev, IORESOURCE_MEM, 0));
+	if (!tdpaux_ctl->regs) {
+		dev_err(&pdev->dev, "Unable to map resource");
+		return -EINVAL;
 	}
-
-	ret = nvhost_module_init(pdev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "nvhost module init failed: %d\n", ret);
-		return ret;
-	}
-
-	ret = nvhost_client_device_init(pdev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "nvhost device_init failed: %d\n", ret);
-		return ret;
-	}
-
-	tdpaux_ctl->regs = nhd_data->aperture[0];
 
 	tdpaux_ctl->pins = cdata->pins;
 	tdpaux_ctl->npins = cdata->npins;
@@ -396,7 +361,28 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 	tdpaux_ctl->desc.pctlops = &tegra_dpaux_pinctrl_ops;
 	tdpaux_ctl->desc.pmxops = &tegra_dpaux_pinmux_ops;
 	tdpaux_ctl->desc.owner = THIS_MODULE;
+	tdpaux_ctl->powergate_id = cdata->powergate_id;
+	platform_set_drvdata(pdev, tdpaux_ctl);
 
+	ret = tegra_unpowergate_partition(tdpaux_ctl->powergate_id);
+	if (ret < 0) {
+		dev_err(tdpaux_ctl->dev, "unpowergate failed: %d\n", ret);
+		return ret;
+	}
+
+	tdpaux_ctl->dpaux_clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(tdpaux_ctl->dpaux_clk)) {
+		dev_err(&pdev->dev, "can not get clock\n");
+		return PTR_ERR(tdpaux_ctl->dpaux_clk);
+	}
+
+	rst = devm_reset_control_get(&pdev->dev, NULL);
+	if (IS_ERR(rst)) {
+		dev_err(&pdev->dev, "can not get reset\n");
+		return PTR_ERR(rst);
+	}
+
+	reset_control_deassert(rst);
 	tdpaux_ctl->pinctrl = devm_pinctrl_register(&pdev->dev,
 				 &tdpaux_ctl->desc, tdpaux_ctl);
 	if (IS_ERR(tdpaux_ctl->pinctrl)) {
@@ -409,43 +395,13 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int tegra186_dpaux_probe(struct platform_device *pdev)
+static int tegra_dpaux_remove(struct platform_device *pdev)
 {
-	const struct of_device_id *odev_id, *next_id;
-	struct device *dev = &pdev->dev;
-	struct nvhost_device_data *pdata;
+	struct tegra_dpaux_pinctl *tdpaux_ctl = platform_get_drvdata(pdev);
 
-	odev_id = of_match_device(dev->driver->of_match_table, dev);
-	if (!odev_id)
-		return -ENODEV;
+	tegra_powergate_partition(tdpaux_ctl->powergate_id);
 
-	next_id = odev_id->data;
-	if (!next_id) {
-		dev_err(dev, "ERROR, no data for '%s', please fix\n",
-				odev_id->compatible);
-		return -EINVAL;
-	}
-
-	/*
-	 * TODO: we should not discard const qualifier here
-	 */
-	pdata = (struct nvhost_device_data *)next_id->data;
-	if (!pdata) {
-		/*
-		 * if data is NULL this means that tegra_dpaux_pinctl_of_match
-		 * has entry with data == NULL. Needs to be fixed.
-		 */
-		dev_err(dev, "ERROR, data == NULL please check the source");
-		return -EINVAL;
-	}
-
-	mutex_init(&pdata->lock);
-
-	/*
-	 * TODO: here I discard const qualifier, but it is better
-	 * to change nvhost_domain_init to accept const parameter
-	 */
-	return nvhost_domain_init((struct of_device_id *)next_id);
+	return 0;
 }
 
 static struct of_device_id tegra_dpaux_pinctl_of_match[] = {
@@ -469,59 +425,12 @@ static struct platform_driver tegra186_dpaux_pinctrl = {
 	.driver = {
 		.name = "tegra186-dpaux-pinctrl",
 		.of_match_table = tegra_dpaux_pinctl_of_match,
-		.pm = &nvhost_module_pm_ops,
 	},
 	.probe = tegra186_dpaux_pinctrl_probe,
+	.remove = tegra_dpaux_remove,
 };
 
-static const struct of_device_id tegra186_nvdisp_disa_pd_match[] = {
-	{ .compatible = "nvidia,tegra186-disa-pd",
-		.data = &tegra186_dpaux_nvhost_device_data[0]},
-	{ .compatible = "nvidia,tegra186-disa-pd",
-		.data = &tegra186_dpaux_nvhost_device_data[1]},
-	{},
-};
-MODULE_DEVICE_TABLE(of, tegra186_nvdisp_disa_pd_match);
 
-static const struct of_device_id tegra194_nvdisp_disa_pd_match[] = {
-	{ .compatible = "nvidia,tegra194-disa-pd",
-		.data = &tegra194_dpaux_nvhost_device_data[0]},
-	{ .compatible = "nvidia,tegra194-disa-pd",
-		.data = &tegra194_dpaux_nvhost_device_data[1]},
-	{ .compatible = "nvidia,tegra194-disa-pd",
-		.data = &tegra194_dpaux_nvhost_device_data[2]},
-	{ .compatible = "nvidia,tegra194-disa-pd",
-		.data = &tegra194_dpaux_nvhost_device_data[3]},
-	{},
-};
-MODULE_DEVICE_TABLE(of, tegra194_nvdisp_disa_pd_match);
-
-static struct of_device_id tegra_dpaux_of_match[] = {
-	{.compatible = "nvidia,tegra186-dpaux-pinctrl",
-		.data = &tegra186_nvdisp_disa_pd_match[0]},
-	{.compatible = "nvidia,tegra186-dpaux1-pinctrl",
-		.data = &tegra186_nvdisp_disa_pd_match[1]},
-	{.compatible = "nvidia,tegra194-dpaux-pinctrl",
-		.data = &tegra194_nvdisp_disa_pd_match[0]},
-	{.compatible = "nvidia,tegra194-dpaux1-pinctrl",
-		.data = &tegra194_nvdisp_disa_pd_match[1]},
-	{.compatible = "nvidia,tegra194-dpaux2-pinctrl",
-		.data = &tegra194_nvdisp_disa_pd_match[2]},
-	{.compatible = "nvidia,tegra194-dpaux3-pinctrl",
-		.data = &tegra194_nvdisp_disa_pd_match[3]},
-	{ }
-};
-MODULE_DEVICE_TABLE(of, tegra_dpaux_of_match);
-
-static struct platform_driver tegra186_dpaux_driver = {
-	.driver = {
-		.name = "tegra186-dpaux-driver",
-		.of_match_table = tegra_dpaux_of_match,
-	},
-	.probe = tegra186_dpaux_probe,
-};
-
-module_platform_driver(tegra186_dpaux_driver);
 module_platform_driver(tegra186_dpaux_pinctrl);
 
 MODULE_DESCRIPTION("NVIDIA Tegra dpaux pinctrl driver");

@@ -602,10 +602,12 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_reset(hdmi->sor);
 	tegra_hdmi_put(dc);
 
-	ret = clk_set_parent(sor->ref_clk, dc->parent_clk_safe);
-	if (ret)
-		dev_err(&dc->ndev->dev,
-			"can't set parent_clk_safe for sor->ref_clk\n");
+	if (tegra_dc_is_nvdisplay()) {
+		ret = clk_set_parent(sor->ref_clk, dc->parent_clk_safe);
+		if (ret)
+			dev_err(&dc->ndev->dev,
+				"can't set parent_clk_safe for sor->ref_clk\n");
+	}
 
 	cancel_delayed_work_sync(&hdmi->hdr_worker);
 	tegra_dc_put(dc);

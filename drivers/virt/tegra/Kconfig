@@ -1,0 +1,6 @@
+config TEGRA_HV_PM_CTL
+	bool "Nvidia Tegra hypervisor PM control"
+	depends on TEGRA_HV_MANAGER
+	help
+	  Nvidia Tegra hypervisor PM control driver handles power state
+	  transition commands over IVC channel.

@@ -253,6 +253,7 @@ void print_error_record(struct error_record *record, u64 status)
 	u16 ierr, serr;
 	u64 i;
 	int found = 0;
+	u64 err_status = 0;
 
 	pr_crit("**************************************\n");
 	pr_crit("RAS Error in %s:\n", record->name);
@@ -291,30 +292,44 @@ void print_error_record(struct error_record *record, u64 status)
 	if (!found)
 		pr_crit("\tUnknown SERR: 0x%x\n", serr);
 
-	if (status & ERRi_STATUS_OF)
+	if (status & ERRi_STATUS_OF) {
 		pr_crit("\tOverflow (there may be more errors) - Uncorrectable\n");
-	if (status & ERRi_STATUS_UE)
-		pr_crit("\tUncorrected (this is fatal)\n");
-	else
-		pr_crit("\tCorrectable (but, not corrected)\n");
-
-	if (get_error_status_ce(status))
-		pr_crit("\tCorrected Error\n");
-	else
-		pr_crit("\tNo errors were corrected\n");
-
+		/* Clear the error by writing 1 to ERRi_STATUS:OF */
+		err_status |= ERRi_STATUS_OF;
+	}
+	if (status & ERRi_STATUS_UE) {
+		pr_crit("\tUncorrectable (this is fatal)\n");
+		/* Clear the error by writing 1 to ERR_STATUS:UE
+		 * and 11 to ERR_STATUS:UET
+		 */
+		err_status |= ERRi_STATUS_UE;
+		err_status |= ERRi_STATUS_UET;
+	}
+	if (get_error_status_ce(status)) {
+		pr_crit("\tCorrectable Error\n");
+		/* Clear the error by writing 1 to ERR_STATUS:CE */
+		err_status |= ERRi_STATUS_CE;
+	}
 	if (status & ERRi_STATUS_MV) {
-		ras_write_errselr(record->errx);
 		misc0 = ras_read_error_misc0();
 		misc1 = ras_read_error_misc1();
 		pr_crit("\tMISC0 = 0x%llx\n", misc0);
 		pr_crit("\tMISC1 = 0x%llx\n", misc1);
+		/* write 1 to clear ERR_STATUS:MV */
+		err_status |= ERRi_STATUS_MV;
 	}
 	if (status & ERRi_STATUS_AV) {
-		ras_write_errselr(record->errx);
 		addr = ras_read_error_address();
 		pr_crit("\tADDR = 0x%llx\n", addr);
+		/* write 1 to clear ERR_STATUS:AV */
+		err_status |= ERRi_STATUS_AV;
 	}
+
+	/* Write 1 to clear ERR_STATUS:V */
+	err_status |= ERRi_STATUS_VALID;
+
+	/* Write to ERR_STATUS to clear the error */
+	ras_write_error_status(err_status);
 	pr_crit("**************************************\n");
 }
 EXPORT_SYMBOL(print_error_record);

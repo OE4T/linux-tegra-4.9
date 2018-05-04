@@ -470,15 +470,6 @@ static int ras_core_serr_callback(struct pt_regs *regs, int reason,
 				(err_status & ERRi_STATUS_VALID)) {
 				print_error_record(record, err_status);
 				retval = 0;
-
-				/* SError is raised for Uncorrectable errors
-				 * Clear the error by writing 1 to
-				 * ERR_STATUS:UE and 11 to ERR_STATUS:UET
-				 */
-				err_status = 0;
-				err_status |= ERRi_STATUS_UE;
-				err_status |= ERRi_STATUS_UET;
-				ras_write_error_status(err_status);
 			}
 		}
 	}
@@ -541,16 +532,8 @@ static void handle_fhi_core(void)
 			ras_write_errselr(errx);
 			err_status = ras_read_error_status();
 			if (get_error_status_ce(err_status) &&
-				(err_status & ERRi_STATUS_VALID)) {
+				(err_status & ERRi_STATUS_VALID))
 				print_error_record(record, err_status);
-
-				/* FHI is raised only for Correctable errors,
-				 * Clear the error by writing 11 to
-				 * ERR_STATUS:CE
-				 */
-				err_status |= ERRi_STATUS_CE;
-				ras_write_error_status(err_status);
-			}
 		}
 	}
 }
@@ -588,15 +571,6 @@ static int ras_corecluster_serr_callback(struct pt_regs *regs, int reason,
 				(err_status & ERRi_STATUS_VALID)) {
 				print_error_record(record, err_status);
 				retval = 0;
-
-				/* SError is raised for UnCorrectable errors,
-				 * Clear the error by writing 1 to
-				 * ERR_STATUS:UE and 11 to ERR_STATUS:UET
-				 */
-				err_status = 0;
-				err_status |= ERRi_STATUS_UE;
-				err_status |= ERRi_STATUS_UET;
-				ras_write_error_status(err_status);
 			}
 		}
 	}
@@ -656,16 +630,8 @@ static void handle_fhi_corecluster(void)
 			err_status = ras_read_error_status();
 
 			if (get_error_status_ce(err_status) &&
-				(err_status & ERRi_STATUS_VALID)) {
+				(err_status & ERRi_STATUS_VALID))
 				print_error_record(record, err_status);
-
-				/* FHI is raised only for Correctable errors,
-				 * Clear the error by writing 11 to
-				 * ERR_STATUS:CE
-				 */
-				err_status |= ERRi_STATUS_CE;
-				ras_write_error_status(err_status);
-			}
 		}
 	}
 }
@@ -696,15 +662,6 @@ static int ras_ccplex_serr_callback(struct pt_regs *regs, int reason,
 			(err_status & ERRi_STATUS_VALID)) {
 			print_error_record(record, err_status);
 			retval = 0;
-
-			/* SError is raised only for UnCorrectable errors
-			 * Clear the error by writing 1 to ERR_STATUS:UE
-			 * and 11 to ERR_STATUS:UET
-			 */
-			err_status = 0;
-			err_status |= ERRi_STATUS_UE;
-			err_status |= ERRi_STATUS_UET;
-			ras_write_error_status(err_status);
 		}
 	}
 	raw_spin_unlock_irqrestore(&ccplex_ras_lock, flags);
@@ -761,15 +718,8 @@ static void handle_fhi_ccplex(void)
 		err_status = ras_read_error_status();
 
 		if (get_error_status_ce(err_status) &&
-			(err_status & ERRi_STATUS_VALID)) {
+			(err_status & ERRi_STATUS_VALID))
 			print_error_record(record, err_status);
-
-			/* FHI is raised only for Correctable errors, hence
-			 * Clear the error by writing 11 to ERR_STATUS:CE
-			 */
-			err_status |= ERRi_STATUS_CE;
-			ras_write_error_status(err_status);
-		}
 	}
 }
 

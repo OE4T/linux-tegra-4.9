@@ -257,6 +257,31 @@ static int tegra_aon_shub_ivc_msg_send(struct tegra_aon_shub *shub, int len, int
 	return status;
 }
 
+static int tegra_aon_shub_batch_read(void *client, int snsr_id,
+				     unsigned int *period_us,
+				     unsigned int *timeout_us)
+{
+	struct tegra_aon_shub *shub = (struct tegra_aon_shub *)client;
+	int ret;
+
+	mutex_lock(&shub->shub_mutex);
+	shub->shub_req->req_type = AON_SHUB_REQUEST_BATCH_RD;
+	shub->shub_req->data.batch_rd.snsr_id = snsr_id;
+	ret = tegra_aon_shub_ivc_msg_send(shub,
+					  sizeof(struct aon_shub_request),
+					  IVC_TIMEOUT);
+	if (ret)
+		dev_err(shub->dev, "batch_read ERR: snsr_id: %d!\n", snsr_id);
+
+	if (timeout_us)
+		*timeout_us = shub->shub_resp->data.batch_rd.timeout_us;
+	if (period_us)
+		*period_us = shub->shub_resp->data.batch_rd.period_us;
+	mutex_unlock(&shub->shub_mutex);
+
+	return ret;
+}
+
 static int tegra_aon_shub_batch(void *client, int snsr_id, int flags,
 				unsigned int period, unsigned int timeout)
 {
@@ -384,6 +409,7 @@ exit:
 static struct nvs_fn_dev aon_shub_nvs_fn = {
 	.enable	= tegra_aon_shub_enable,
 	.batch	= tegra_aon_shub_batch,
+	.batch_read = tegra_aon_shub_batch_read,
 	.max_range = tegra_aon_shub_max_range,
 };
 

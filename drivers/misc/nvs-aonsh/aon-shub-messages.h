@@ -45,7 +45,8 @@ enum aon_shub_request_type {
 	AON_SHUB_REQUEST_CHIP_CFG_IDS = 8,
 	AON_SHUB_REQUEST_SNSR_CHIPS = 9,
 	AON_SHUB_REQUEST_RANGE = 10,
-	AON_SHUB_REQUEST_MAX = 10,
+	AON_SHUB_REQUEST_BATCH_RD = 11,
+	AON_SHUB_REQUEST_MAX = 11,
 };
 
 /* This enum represents the types of init requests to sensor hub associated
@@ -130,6 +131,29 @@ struct aon_shub_enable_request {
  */
 struct aon_shub_enable_response {
 	s32 enable;
+};
+
+/* This struct is used to represent batch read request of a sensor
+ * to the SHUB.
+ * Fields:
+ * snsr_id:	Sensor handle to identify the sensor
+ */
+struct aon_shub_batch_rd_request {
+	s32 snsr_id;
+};
+
+/* This struct is used to represent data in response to a sensor batch read
+ * request to the SHUB.
+ *
+ * Fields:
+ * snsr_id:	Sensor handle to identify the sensor
+ * period_us:	Sampling period in microseconds
+ * timeout_us:	Batch timeout in microseconds
+ */
+struct aon_shub_batch_rd_response {
+	s32 snsr_id;
+	u32 period_us;
+	u32 timeout_us;
 };
 
 /* This struct is used to represent batching data required for a batch
@@ -434,6 +458,7 @@ struct aon_shub_request {
 		struct aon_shub_chip_cfg_ids_request cfg_ids;
 		struct aon_shub_enable_request enable;
 		struct aon_shub_batch_request batch;
+		struct aon_shub_batch_rd_request batch_rd;
 		struct aon_shub_flush_request flush;
 		struct aon_shub_range_request range;
 	} data;
@@ -458,6 +483,7 @@ struct aon_shub_response {
 		struct aon_shub_snsr_chips_response snsr_chips;
 		struct aon_shub_xfer_response xfer;
 		struct aon_shub_enable_response enable;
+		struct aon_shub_batch_rd_response batch_rd;
 		struct aon_shub_range_response range;
 		struct aon_shub_payload_response payload;
 	} data;

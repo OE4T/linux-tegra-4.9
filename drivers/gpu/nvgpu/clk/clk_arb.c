@@ -395,7 +395,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	/* make table visible when all data has resolved in the tables */
 	nvgpu_smp_wmb();
-	xchg(&arb->current_vf_table, table);
+	arb->current_vf_table = table;
 
 exit_vf_table:
 
@@ -800,7 +800,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct nvgpu_clk_arb *arb)
 					nvgpu_list_add(&dev->node, &arb->requests);
 					nvgpu_spinlock_release(&arb->requests_lock);
 				}
-				xchg(&session->target, target);
+				session->target = target;
 			}
 			nvgpu_spinlock_release(&session->session_lock);
 
@@ -933,7 +933,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct nvgpu_clk_arb *arb)
 
 	/* Make changes visible to other threads */
 	nvgpu_smp_wmb();
-	xchg(&arb->actual, actual);
+	arb->actual = actual;
 
 	status = nvgpu_lpwr_enable_pg(g, false);
 	if (status < 0) {
@@ -988,7 +988,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct nvgpu_clk_arb *arb)
 	}
 	/* commit changes before exchanging debug pointer */
 	nvgpu_smp_wmb();
-	xchg(&arb->debug, debug);
+	arb->debug = debug;
 #endif
 
 exit_arb:

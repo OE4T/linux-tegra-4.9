@@ -117,6 +117,7 @@ enum {
 	TEGRA_VGPU_CMD_FREE_CTX_HEADER = 78,
 	TEGRA_VGPU_CMD_MAP_SYNCPT = 79,
 	TEGRA_VGPU_CMD_TSG_BIND_CHANNEL_EX = 80,
+	TEGRA_VGPU_CMD_UPDATE_PC_SAMPLING = 81,
 };
 
 struct tegra_vgpu_connect_params {
@@ -354,9 +355,18 @@ enum {
 	TEGRA_VGPU_CTXSW_MODE_CTXSW,
 };
 
+enum {
+	TEGRA_VGPU_DISABLE_SAMPLING = 0,
+	TEGRA_VGPU_ENABLE_SAMPLING,
+};
 struct tegra_vgpu_channel_set_ctxsw_mode {
 	u64 handle;
 	u64 gpu_va;
+	u32 mode;
+};
+
+struct tegra_vgpu_channel_update_pc_sampling {
+	u64 handle;
 	u32 mode;
 };
 
@@ -638,6 +648,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_free_ctx_header_params free_ctx_header;
 		struct tegra_vgpu_map_syncpt_params map_syncpt;
 		struct tegra_vgpu_tsg_bind_channel_ex_params tsg_bind_channel_ex;
+		struct tegra_vgpu_channel_update_pc_sampling update_pc_sampling;
 		char padding[192];
 	} params;
 };

@@ -156,7 +156,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.update_ctxsw_preemption_mode =
 			gr_gv11b_update_ctxsw_preemption_mode,
 		.dump_gr_regs = NULL,
-		.update_pc_sampling = gr_gm20b_update_pc_sampling,
+		.update_pc_sampling = vgpu_gr_update_pc_sampling,
 		.get_fbp_en_mask = vgpu_gr_get_fbp_en_mask,
 		.get_max_ltc_per_fbp = vgpu_gr_get_max_ltc_per_fbp,
 		.get_max_lts_per_ltc = vgpu_gr_get_max_lts_per_ltc,

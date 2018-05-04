@@ -1310,3 +1310,30 @@ int vgpu_gr_init_fs_state(struct gk20a *g)
 
 	return g->ops.gr.init_sm_id_table(g);
 }
+
+int vgpu_gr_update_pc_sampling(struct channel_gk20a *ch, bool enable)
+{
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_update_pc_sampling *p =
+						&msg.params.update_pc_sampling;
+	struct gk20a *g;
+	int err = -EINVAL;
+
+	if (!ch->g)
+		return err;
+	g = ch->g;
+	nvgpu_log_fn(g, " ");
+
+	msg.cmd = TEGRA_VGPU_CMD_UPDATE_PC_SAMPLING;
+	msg.handle = vgpu_get_handle(g);
+	p->handle = ch->virt_ctx;
+	if (enable)
+		p->mode = TEGRA_VGPU_ENABLE_SAMPLING;
+	else
+		p->mode = TEGRA_VGPU_DISABLE_SAMPLING;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	return err ? err : msg.ret;
+}

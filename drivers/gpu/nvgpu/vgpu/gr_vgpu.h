@@ -70,5 +70,5 @@ int vgpu_gr_resume_contexts(struct gk20a *g,
 int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 int vgpu_gr_init_sm_id_table(struct gk20a *g);
 int vgpu_gr_init_fs_state(struct gk20a *g);
-
+int vgpu_gr_update_pc_sampling(struct channel_gk20a *ch, bool enable);
 #endif

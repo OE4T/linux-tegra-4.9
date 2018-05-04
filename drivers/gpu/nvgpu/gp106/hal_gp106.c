@@ -234,6 +234,9 @@ static const struct gpu_ops gp106_ops = {
 	.bios = {
 		.init = gp106_bios_init,
 		.preos_wait_for_halt = gp106_bios_preos_wait_for_halt,
+		.devinit = gp106_bios_devinit,
+		.preos = gp106_bios_preos,
+		.verify_devinit = NULL,
 	},
 	.ltc = {
 		.determine_L2_size_bytes = gp10b_determine_L2_size_bytes,

@@ -1124,6 +1124,9 @@ struct gpu_ops {
 		int (*init)(struct gk20a *g);
 		int (*preos_wait_for_halt)(struct gk20a *g);
 		void (*preos_reload_check)(struct gk20a *g);
+		int (*devinit)(struct gk20a *g);
+		int (*preos)(struct gk20a *g);
+		int (*verify_devinit)(struct gk20a *g);
 	} bios;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)

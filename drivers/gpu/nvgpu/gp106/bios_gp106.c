@@ -73,7 +73,7 @@ static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)
 		gk20a_writel(g, pwr_falcon_dmemd_r(port), src_u32[i]);
 }
 
-static int gp106_bios_devinit(struct gk20a *g)
+int gp106_bios_devinit(struct gk20a *g)
 {
 	int err = 0;
 	int devinit_completed;
@@ -142,7 +142,7 @@ int gp106_bios_preos_wait_for_halt(struct gk20a *g)
 	return err;
 }
 
-static int gp106_bios_preos(struct gk20a *g)
+int gp106_bios_preos(struct gk20a *g)
 {
 	int err = 0;
 
@@ -220,19 +220,31 @@ int gp106_bios_init(struct gk20a *g)
 
 	nvgpu_log_fn(g, "done");
 
-	err = gp106_bios_devinit(g);
-	if (err) {
-		nvgpu_err(g, "devinit failed");
-		goto free_firmware;
+	if (g->ops.bios.devinit) {
+		err = g->ops.bios.devinit(g);
+		if (err) {
+			nvgpu_err(g, "devinit failed");
+			goto free_firmware;
+		}
 	}
 
-	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS)) {
-		err = gp106_bios_preos(g);
+	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS) &&
+	    g->ops.bios.preos) {
+		err = g->ops.bios.preos(g);
 		if (err) {
 			nvgpu_err(g, "pre-os failed");
 			goto free_firmware;
 		}
 	}
+
+	if (g->ops.bios.verify_devinit) {
+		err = g->ops.bios.verify_devinit(g);
+		if (err) {
+			nvgpu_err(g, "devinit status verification failed");
+			goto free_firmware;
+		}
+	}
+
 	g->bios_is_init = true;
 
 	return 0;

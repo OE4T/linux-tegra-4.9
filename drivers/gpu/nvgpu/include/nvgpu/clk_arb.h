@@ -102,6 +102,11 @@ struct nvgpu_clk_session;
 #define NVGPU_POLLRDNORM (1 << 3)
 #define NVGPU_POLLHUP (1 << 4)
 
+#define clk_arb_dbg(g, fmt, args...)	\
+	do {								\
+		nvgpu_log(g, gpu_dbg_clk_arb,	\
+				fmt, ##args);	\
+	} while (0)
 
 struct nvgpu_clk_notification {
 	u32 notification;

@@ -102,6 +102,16 @@ struct nvgpu_clk_session;
 #define NVGPU_POLLRDNORM (1 << 3)
 #define NVGPU_POLLHUP (1 << 4)
 
+/* NVGPU_CLK_DOMAIN_* defines equivalent to NVGPU_GPU_CLK_DOMAIN_*
+ * defines in uapi header
+ */
+/* Memory clock */
+#define NVGPU_CLK_DOMAIN_MCLK	(0)
+/* Main graphics core clock */
+#define NVGPU_CLK_DOMAIN_GPCCLK	(1)
+
+#define NVGPU_CLK_DOMAIN_MAX	(NVGPU_CLK_DOMAIN_GPCCLK)
+
 #define clk_arb_dbg(g, fmt, args...)	\
 	do {								\
 		nvgpu_log(g, gpu_dbg_clk_arb,	\

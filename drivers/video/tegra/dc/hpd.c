@@ -191,7 +191,7 @@ static void hpd_plug_state(struct tegra_hpd_data *data)
 		 */
 		data->edid_reads = 0;
 
-		if (data->dc->suspended)
+		if (data->dc->suspended && data->dc->connected)
 			set_hpd_state(data, STATE_RECHECK_EDID,
 					CHECK_EDID_DELAY_MS);
 		else
@@ -276,7 +276,7 @@ static void wait_for_hpd_reassert_state(struct tegra_hpd_data *data)
 
 static void edid_recheck_state(struct tegra_hpd_data *data)
 {
-	int match, tgt_state, timeout;
+	int match = 0, tgt_state, timeout;
 
 	tgt_state = STATE_HPD_RESET;
 	timeout = 0;
@@ -305,19 +305,22 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 			tgt_state = STATE_DONE_ENABLED;
 			timeout = -1;
 		} else {
-			if (data->dc->suspended) {
-				/*
-				 * During dc suspend/resume sequnce put
-				 * "dc->suspended = false", when new mointor
-				 * connected so state machine does not go in
-				 * loop between STATE_RECHECK_EDID and
-				 * STATE_HPD_RESET.
-				 */
-				data->dc->enabled = false;
-				data->dc->suspended = false;
-			}
 			pr_info("hpd: EDID change, reset hpd state machine\n");
 		}
+	}
+
+	/*
+	 * During dc suspend/resume sequnce put "dc->suspended = false"
+	 * when new mointor connected/edid read failed so state machine
+	 * does not go in loop between STATE_RECHECK_EDID and
+	 * STATE_HPD_RESET.
+	 */
+	if (data->dc->suspended && !match) {
+		data->dc->enabled = false;
+		data->dc->suspended = false;
+
+		tgt_state = STATE_HPD_RESET;
+		timeout = 0;
 	}
 
 	set_hpd_state(data, tgt_state, timeout);

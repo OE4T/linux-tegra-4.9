@@ -38,7 +38,6 @@
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
-#include "clk_arb_linux.h"
 #include "pstate/pstate.h"
 #include "lpwr/lpwr.h"
 #include "volt/volt.h"

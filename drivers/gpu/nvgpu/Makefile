@@ -29,6 +29,7 @@ nvgpu-y := \
 	common/linux/ioctl_channel.o \
 	common/linux/ioctl_tsg.o \
 	common/linux/ioctl_dbg.o \
+	common/linux/ioctl_clk_arb.o \
 	common/linux/log.o \
 	common/linux/cond.o \
 	common/linux/nvgpu_mem.o \
@@ -282,8 +283,7 @@ nvgpu-y += \
 	clk/clk_domain.o \
 	clk/clk_prog.o \
 	clk/clk_vf_point.o \
-	common/linux/ioctl_clk_arb.o \
-	common/linux/clk_arb.o \
+	clk/clk_arb.o \
 	clk/clk_freq_controller.o \
 	perf/vfe_var.o \
 	perf/vfe_equ.o \

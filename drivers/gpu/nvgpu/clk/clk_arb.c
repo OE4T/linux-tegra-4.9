@@ -1,17 +1,23 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include <nvgpu/bitops.h>
@@ -28,7 +34,6 @@
 
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
-#include "clk_arb_linux.h"
 #include "pstate/pstate.h"
 #include "lpwr/lpwr.h"
 #include "volt/volt.h"
@@ -1198,7 +1203,7 @@ void nvgpu_clk_arb_worker_enqueue(struct gk20a *g,
 /**
  * Initialize the clk arb worker's metadata and start the background thread.
  */
-int nvgpu_clk_arb_worker_init(struct gk20a *g)
+static int nvgpu_clk_arb_worker_init(struct gk20a *g)
 {
 	int err;
 
@@ -1380,7 +1385,7 @@ void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)
 	nvgpu_clk_arb_worker_enqueue(g, &arb->update_arb_work_item);
 }
 
-void nvgpu_clk_arb_worker_deinit(struct gk20a *g)
+static void nvgpu_clk_arb_worker_deinit(struct gk20a *g)
 {
 	nvgpu_mutex_acquire(&g->clk_arb_worker.start_lock);
 	nvgpu_thread_stop(&g->clk_arb_worker.poll_task);

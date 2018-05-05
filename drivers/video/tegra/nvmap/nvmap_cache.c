@@ -36,9 +36,30 @@ size_t cache_maint_inner_threshold = 8 * SZ_2M;
 
 static struct static_key nvmap_disable_vaddr_for_cache_maint;
 
+inline static void nvmap_flush_dcache_all(void *dummy)
+{
+#if defined(CONFIG_DENVER_CPU)
+	u64 id_afr0;
+	u64 midr;
+
+	asm volatile ("mrs %0, MIDR_EL1" : "=r"(midr));
+	/* check if current core is a Denver processor */
+	if ((midr & 0xFF8FFFF0) == 0x4e0f0000) {
+		asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
+		/* check if complete cache flush through msr is supported */
+		if (likely((id_afr0 & 0xf00) == 0x100)) {
+			asm volatile ("msr s3_0_c15_c13_0, %0" : : "r" (0));
+			asm volatile ("dsb sy");
+			return;
+		}
+	}
+#endif
+	tegra_flush_dcache_all(NULL);
+}
+
 static void nvmap_inner_flush_cache_all(void)
 {
-	tegra_flush_dcache_all(NULL);
+	nvmap_flush_dcache_all(NULL);
 }
 void (*inner_flush_cache_all)(void) = nvmap_inner_flush_cache_all;
 

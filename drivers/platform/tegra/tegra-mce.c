@@ -573,26 +573,9 @@ EXPORT_SYMBOL(tegra_flush_cache_all);
 int tegra_flush_dcache_all(void *__maybe_unused unused)
 {
 	int ret = 0;
-	u64 id_afr0;
-	u64 midr;
 
 	switch (tegra_get_chip_id()) {
 	case TEGRA186:
-		/* Dcache flush on Denver cores can be done through
-		 * custom instruction, which avoids ARI call to EL3 mode.
-		 */
-		asm volatile ("mrs %0, MIDR_EL1" : "=r"(midr));
-		/* check if current core is a Denver processor */
-		if ((midr & 0xFF8FFFF0) == 0x4e0f0000) {
-			asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
-			/* check if full dcache flush through msr is supported */
-			if (likely((id_afr0 & 0xf00) == 0x100)) {
-				asm volatile ("msr s3_0_c15_c13_0, %0" : : "r" (0));
-				asm volatile ("dsb sy");
-				break;
-			}
-		}
-
 		ret = tegra18x_roc_flush_cache_only();
 		break;
 	case TEGRA194:

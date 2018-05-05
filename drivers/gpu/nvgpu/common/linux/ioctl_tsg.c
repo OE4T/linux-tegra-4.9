@@ -120,6 +120,33 @@ mutex_release:
 	return err;
 }
 
+static int gk20a_tsg_unbind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
+{
+	struct channel_gk20a *ch;
+	int err = 0;
+
+	ch = gk20a_get_channel_from_file(ch_fd);
+	if (!ch)
+		return -EINVAL;
+
+	if (ch->tsgid != tsg->tsgid) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	err = gk20a_tsg_unbind_channel(ch);
+
+	/*
+	 * Mark the channel timedout since channel unbound from TSG
+	 * has no context of its own so it can't serve any job
+	 */
+	ch->has_timedout = true;
+
+out:
+	gk20a_channel_put(ch);
+	return err;
+}
+
 static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 				unsigned int event_id,
 				struct gk20a_event_id_data **event_id_data)
@@ -552,10 +579,23 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 	case NVGPU_TSG_IOCTL_UNBIND_CHANNEL:
-		/* We do not support explicitly unbinding channel from TSG.
-		 * Channel will be unbounded from TSG when it is closed.
-		 */
+		{
+		int ch_fd = *(int *)buf;
+
+		if (ch_fd < 0) {
+			err = -EINVAL;
+			break;
+		}
+		err = gk20a_busy(g);
+		if (err) {
+			nvgpu_err(g,
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			break;
+		}
+		err = gk20a_tsg_unbind_channel_fd(tsg, ch_fd);
+		gk20a_idle(g);
 		break;
+		}
 
 	case NVGPU_IOCTL_TSG_ENABLE:
 		{

@@ -314,7 +314,11 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 					"failed to unbind channel %d from TSG",
 					ch->chid);
 		} else {
-			gk20a_disable_channel(ch);
+			/*
+			 * Channel is already unbound from TSG by User with
+			 * explicit call
+			 * Nothing to do here in that case
+			 */
 		}
 	}
 	/* wait until there's only our ref to the channel */

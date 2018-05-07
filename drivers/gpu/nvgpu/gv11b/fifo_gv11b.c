@@ -755,10 +755,20 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -EBUSY;
+	unsigned int loop_count = 0;
 
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt runlist retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
+
 		if (!((gk20a_readl(g, fifo_runlist_preempt_r())) &
 				 runlists_mask)) {
 			ret = 0;
@@ -768,8 +778,11 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "runlist preempt timeout"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret)
+		nvgpu_err(g, "preempt runlist timeout, runlists_mask:0x%08x",
+				runlists_mask);
 	return ret;
 }
 
@@ -1068,6 +1081,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	runlists_mask =  gv11b_fifo_get_runlists_mask(g, act_eng_bitmask, id,
 					 id_type, rc_type, mmfault);
 
+	/* Disable runlist scheduler */
 	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_DISABLED);
 
 	g->fifo.deferred_reset_pending = false;
@@ -1111,9 +1125,21 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	else if (refch)
 		g->ops.fifo.disable_channel(refch);
 
-	/* Preempt tsg/ch */
+	/*
+	 * Even though TSG preempt timed out, the RC sequence would by design
+	 * require s/w to issue another preempt.
+	 * If recovery includes an ENGINE_RESET, to not have race conditions,
+	 * use RUNLIST_PREEMPT to kick all work off, and cancel any context
+	 * load which may be pending. This is also needed to make sure
+	 * that all PBDMAs serving the engine are not loaded when engine is
+	 * reset.
+	 */
 	if (id_type == ID_TYPE_TSG || id_type == ID_TYPE_CHANNEL) {
-		g->ops.fifo.preempt_ch_tsg(g, id, id_type);
+		int preempt_failed;
+
+		preempt_failed = g->ops.fifo.preempt_ch_tsg(g, id, id_type);
+		if (preempt_failed)
+			gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
 	} else {
 		gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
 	}

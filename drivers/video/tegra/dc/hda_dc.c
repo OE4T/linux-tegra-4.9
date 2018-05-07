@@ -1,7 +1,7 @@
 /*
  * hda_dc.c: tegra dc hda dc driver.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  * Author: Rahul Mittal <rmittal@nvidia.com>
  *
@@ -644,6 +644,9 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 			hda->eld_valid =
 			&to_dp(hda->client_data)->hpd_data.eld_retrieved;
 		}
+		mutex_lock(&hda_inst[hda->sor->ctrl_num].hda_inst_lock);
+		hda_inst[hda->sor->ctrl_num].initialized = true;
+		mutex_unlock(&hda_inst[hda->sor->ctrl_num].hda_inst_lock);
 	}
 	return;
 err:
@@ -662,7 +665,7 @@ void tegra_hda_destroy(void *hda_handle)
 		goto err;
 
 	if (hda) {
-		sor_num = tegra_hda_get_sor_num(hda->dev_id);
+		sor_num = hda->sor->ctrl_num;
 		if (sor_num < 0)
 			goto err;
 
@@ -670,11 +673,12 @@ void tegra_hda_destroy(void *hda_handle)
 		tegra_dc_hda_put_clocks(hda);
 		kfree(hda);
 		hda = NULL;
+		hda_inst[sor_num].initialized = false;
 		mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 	}
 
 	for (i = 0; i < tegra_dc_get_numof_dispsors(); i++) {
-		if (hda_inst[i].valid) {
+		if (hda_inst[i].initialized) {
 			free_hda_mem = false;
 			break;
 		}

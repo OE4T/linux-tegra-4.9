@@ -1,7 +1,7 @@
 /*
  * hda_dc.h: hd audio dc driver.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  * Author: Rahul Mittal <rmittal@nvidia.com>
  *
@@ -38,6 +38,7 @@ struct tegra_dc_hda_data {
 
 struct tegra_hda_inst {
 	bool valid; /* set to true only after tegra_hda_set_data */
+	bool initialized; /* set to true in tegra_hda_init */
 	struct tegra_dc_hda_data *hda;
 	struct mutex hda_inst_lock;
 };

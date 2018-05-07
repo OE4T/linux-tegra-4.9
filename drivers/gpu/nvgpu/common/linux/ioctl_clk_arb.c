@@ -88,6 +88,11 @@ static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 	return nvgpu_convert_poll_mask(nvgpu_atomic_xchg(&dev->poll_mask, 0));
 }
 
+void nvgpu_clk_arb_event_post_event(struct nvgpu_clk_dev *dev)
+{
+	nvgpu_cond_broadcast_interruptible(&dev->readout_wq);
+}
+
 static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 		struct file *filp)
 {

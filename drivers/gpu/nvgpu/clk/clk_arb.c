@@ -697,7 +697,7 @@ static u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
 
 	if (poll_mask) {
 		nvgpu_atomic_set(&dev->poll_mask, poll_mask);
-		nvgpu_cond_broadcast_interruptible(&dev->readout_wq);
+		nvgpu_clk_arb_event_post_event(dev);
 	}
 
 	return new_alarms_reported;
@@ -1004,7 +1004,7 @@ exit_arb:
 	nvgpu_list_for_each_entry_safe(dev, tmp, &arb->requests,
 			nvgpu_clk_dev, node) {
 		nvgpu_atomic_set(&dev->poll_mask, NVGPU_POLLIN | NVGPU_POLLRDNORM);
-		nvgpu_cond_signal_interruptible(&dev->readout_wq);
+		nvgpu_clk_arb_event_post_event(dev);
 		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 		nvgpu_list_del(&dev->node);
 	}

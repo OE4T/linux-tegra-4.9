@@ -349,6 +349,9 @@ int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 
 void nvgpu_clk_notification_queue_free(struct gk20a *g,
 		struct nvgpu_clk_notification_queue *queue);
+
+void nvgpu_clk_arb_event_post_event(struct nvgpu_clk_dev *dev);
+
 #ifdef CONFIG_DEBUG_FS
 int nvgpu_clk_arb_debugfs_init(struct gk20a *g);
 #endif

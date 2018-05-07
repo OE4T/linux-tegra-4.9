@@ -550,6 +550,7 @@ static unsigned int pcie_gen_freq[] = {
 	GEN4_CORE_CLK_FREQ
 };
 
+static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie);
 static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie);
 
 static inline void dma_common_wr16(void __iomem *p, u32 val, u32 offset)
@@ -1421,6 +1422,8 @@ static int apply_speed_change(struct seq_file *s, void *data)
 static int apply_pme_turnoff(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
+
+	tegra_pcie_downstream_dev_to_D0(pcie);
 
 	if (!tegra_pcie_dw_pme_turnoff(pcie))
 		seq_puts(s, "PME_TurnOff sent and Link is in L2 state\n");
@@ -2882,18 +2885,11 @@ static int tegra_pcie_try_link_l2(struct tegra_pcie_dw *pcie)
 				 1, PME_ACK_TIMEOUT);
 }
 
-static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie)
 {
 	struct pci_dev *pdev = NULL;
 	struct pci_bus *child;
 	struct pcie_port *pp = &pcie->pp;
-	u32 data;
-	int err, ret = 0;
-
-	if (!tegra_pcie_dw_link_up(&pcie->pp)) {
-		dev_info(pcie->dev, "PCIe link is not up...!\n");
-		return -1;
-	}
 
 	list_for_each_entry(child, &pp->bus->children, node) {
 		/* Bring downstream devices to D0 if they are not already in */
@@ -2902,10 +2898,20 @@ static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 			if (!pdev)
 				break;
 
-			err = pci_set_power_state(pdev, PCI_D0);
-			if (err)
+			if (pci_set_power_state(pdev, PCI_D0))
 				dev_err(pcie->dev, "D0 transition failed\n");
 		}
+	}
+}
+
+static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
+{
+	u32 data;
+	int err, ret = 0;
+
+	if (!tegra_pcie_dw_link_up(&pcie->pp)) {
+		dev_info(pcie->dev, "PCIe link is not up...!\n");
+		return -1;
 	}
 
 	if (tegra_pcie_try_link_l2(pcie)) {
@@ -2966,6 +2972,8 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 static int tegra_pcie_dw_runtime_suspend(struct device *dev)
 {
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+
+	tegra_pcie_downstream_dev_to_D0(pcie);
 
 	dw_pcie_host_deinit(&pcie->pp);
 
@@ -3096,12 +3104,13 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	/* save MSI interrutp vector*/
 	dw_pcie_cfg_read(pcie->pp.dbi_base + PORT_LOGIC_MSI_CTRL_INT_0_EN,
 			 4, &pcie->msi_ctrl_int);
+	if (pcie->is_safety_platform)
+		clk_disable_unprepare(pcie->core_clk_m);
+	tegra_pcie_downstream_dev_to_D0(pcie);
 	tegra_pcie_dw_pme_turnoff(pcie);
 	reset_control_assert(pcie->core_rst);
 	tegra_pcie_disable_phy(pcie);
 	reset_control_assert(pcie->core_apb_rst);
-	if (pcie->is_safety_platform)
-		clk_disable_unprepare(pcie->core_clk_m);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
 	if (pcie->cid != CTRL_5) {
@@ -3222,6 +3231,32 @@ fail_core_clk:
 	return ret;
 }
 
+static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
+{
+	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
+	int i;
+
+	if (!pcie->link_state && pcie->power_down_en)
+		return;
+
+	if (!pcie->dma_disable)
+		dma_free_coherent(pcie->dev, pcie->dma_size,
+				  pcie->cpu_virt_addr, pcie->dma_addr);
+
+	debugfs_remove_recursive(pcie->debugfs);
+
+	if (!pcie->dma_disable) {
+		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+			mutex_destroy(&pcie->wr_lock[i]);
+
+		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+			mutex_destroy(&pcie->rd_lock[i]);
+	}
+
+	tegra_pcie_dw_runtime_suspend(pcie->dev);
+	tegra_bwmgr_unregister(pcie->emc_bw);
+}
+
 static const struct of_device_id tegra_pcie_dw_of_match[] = {
 	{ .compatible = "nvidia,tegra194-pcie", },
 	{},
@@ -3238,6 +3273,7 @@ static const struct dev_pm_ops tegra_pcie_dw_pm_ops = {
 static struct platform_driver tegra_pcie_dw_driver = {
 	.probe = tegra_pcie_dw_probe,
 	.remove = tegra_pcie_dw_remove,
+	.shutdown = tegra_pcie_dw_shutdown,
 	.driver = {
 		.name	= "tegra-pcie-dw",
 #ifdef CONFIG_PM

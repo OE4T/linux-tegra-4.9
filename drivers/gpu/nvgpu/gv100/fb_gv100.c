@@ -83,18 +83,12 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	/* Check vpr enable status */
-	val = gk20a_readl(g, fb_mmu_vpr_info_r());
-	val &= ~fb_mmu_vpr_info_index_m();
-	val |= fb_mmu_vpr_info_index_cya_lo_v();
-	gk20a_writel(g, fb_mmu_vpr_info_r(), val);
-	val = gk20a_readl(g, fb_mmu_vpr_info_r());
-	if (!(val & fb_mmu_vpr_info_cya_lo_in_use_m())) {
-		nvgpu_log_info(g, "mem unlock not required on this SKU, skipping");
-		goto exit;
-	}
-
-	/* get mem unlock ucode binary */
+	nvgpu_log_info(g, "fb_mmu_vpr_info = 0x%08x",
+			gk20a_readl(g, fb_mmu_vpr_info_r()));
+	/*
+	 * mem_unlock.bin should be written to install
+	 * traps even if VPR isn’t actually supported
+	 */
 	mem_unlock_fw = nvgpu_request_firmware(g, "mem_unlock.bin", 0);
 	if (!mem_unlock_fw) {
 		nvgpu_err(g, "mem unlock ucode get fail");

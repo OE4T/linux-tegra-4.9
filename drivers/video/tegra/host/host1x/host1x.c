@@ -565,7 +565,7 @@ static int nvhost_event_poll_fd_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-const struct file_operations nvhost_event_poll_fd_ops = {
+static const struct file_operations nvhost_event_poll_fd_ops = {
 	.owner = THIS_MODULE,
 	.poll = nvhost_event_poll,
 	.release = nvhost_event_poll_fd_release,

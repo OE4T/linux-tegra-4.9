@@ -30,23 +30,18 @@
 #include <linux/of.h>
 #include <linux/platform/tegra/tegra_fd.h>
 #include <linux/version.h>
+#include <linux/iommu.h>
 
 #include <trace/events/nvmap.h>
 
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
-#ifdef CONFIG_IOMMU_API
-#define nvmap_masid_mapping(attach)   to_dma_iommu_mapping((attach)->dev)
-#else
-#define nvmap_masid_mapping(attach)   NULL
-#endif
-
 /**
  * List node for maps of nvmap handles via the dma_buf API. These store the
  * necessary info for stashing mappings.
  *
- * @mapping Mapping for which this SGT is valid - for supporting multi-asid.
+ * @iommu_domain Domain for which this SGT is valid - for supporting multi-asid.
  * @dir DMA direction.
  * @sgt The scatter gather table to stash.
  * @refs Reference counting.
@@ -55,7 +50,7 @@
  * @owner The owner of this struct. There can be only one.
  */
 struct nvmap_handle_sgt {
-	struct dma_iommu_mapping *mapping;
+	struct iommu_domain *domain;
 	enum dma_data_direction dir;
 	struct sg_table *sgt;
 	struct device *dev;
@@ -72,6 +67,13 @@ static DEFINE_MUTEX(nvmap_stashed_maps_lock);
 static LIST_HEAD(nvmap_stashed_maps);
 static struct kmem_cache *handle_sgt_cache;
 static struct dma_buf_ops nvmap_dma_buf_ops;
+
+static bool nvmap_attach_handle_same_asid(struct dma_buf_attachment *attach,
+					struct nvmap_handle_sgt *nvmap_sgt)
+{
+	return iommu_get_domain_for_dev(attach->dev) == nvmap_sgt->domain;
+
+}
 
 /*
  * Initialize a kmem cache for allocating nvmap_handle_sgt's.
@@ -208,7 +210,7 @@ static int __nvmap_dmabuf_prep_sgt_locked(struct dma_buf_attachment *attach,
 		return -ENOMEM;
 	}
 
-	nvmap_sgt->mapping = nvmap_masid_mapping(attach);
+	nvmap_sgt->domain = iommu_get_domain_for_dev(attach->dev);
 	nvmap_sgt->dir = dir;
 	nvmap_sgt->sgt = sgt;
 	nvmap_sgt->dev = attach->dev;
@@ -262,7 +264,7 @@ static struct sg_table *__nvmap_dmabuf_get_sgt_locked(
 
 	pr_debug("Getting SGT from stash.\n");
 	list_for_each_entry(nvmap_sgt, &info->maps, maps_entry) {
-		if (nvmap_masid_mapping(attach) != nvmap_sgt->mapping)
+		if (!nvmap_attach_handle_same_asid(attach, nvmap_sgt))
 			continue;
 
 		/* We have a hit. */

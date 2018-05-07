@@ -391,7 +391,7 @@ u32 gv11b_fifo_get_preempt_timeout(struct gk20a *g)
 }
 
 static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
-				 u32 pbdma_id, unsigned int timeout_rc_type)
+				 u32 pbdma_id)
 {
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
@@ -476,8 +476,7 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 }
 
 static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
-			 u32 act_eng_id, u32 *reset_eng_bitmask,
-			 unsigned int timeout_rc_type)
+			 u32 act_eng_id, u32 *reset_eng_bitmask)
 {
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
@@ -775,7 +774,7 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 }
 
 int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
-		 unsigned int id_type, unsigned int timeout_rc_type)
+		 unsigned int id_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned long runlist_served_pbdmas;
@@ -800,14 +799,13 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	runlist_served_engines = f->runlist_info[runlist_id].eng_bitmask;
 
 	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma)
-		ret |= gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
-							 timeout_rc_type);
+		ret |= gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id);
+
 	f->runlist_info[runlist_id].reset_eng_bitmask = 0;
 
 	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines)
 		ret |= gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
-				&f->runlist_info[runlist_id].reset_eng_bitmask,
-				 timeout_rc_type);
+				&f->runlist_info[runlist_id].reset_eng_bitmask);
 	return ret;
 }
 
@@ -944,7 +942,7 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 }
 
 static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type, unsigned int timeout_rc_type)
+			 unsigned int id_type)
 {
 	int ret;
 	struct fifo_gk20a *f = &g->fifo;
@@ -958,18 +956,18 @@ static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 		gk20a_fifo_issue_preempt(g, id, true);
 
 	/* wait for preempt */
-	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,
-					 timeout_rc_type);
+	ret = g->ops.fifo.is_preempt_pending(g, id, id_type);
 
-	if (ret && (timeout_rc_type == PREEMPT_TIMEOUT_RC))
-		gk20a_fifo_preempt_timeout_rc(g, id, id_type);
+	/* No recovery even if preempt timed out since
+	 * this is called from recovery path
+	 */
 
 	return ret;
 }
 
 
 int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type, unsigned int timeout_rc_type)
+			 unsigned int id_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
@@ -995,7 +993,7 @@ int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type, timeout_rc_type);
+	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type);
 
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
@@ -1068,8 +1066,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 	/* Preempt tsg/ch */
 	if (id_type == ID_TYPE_TSG || id_type == ID_TYPE_CHANNEL) {
-		g->ops.fifo.preempt_ch_tsg(g, id, id_type,
-					 PREEMPT_TIMEOUT_NORC);
+		g->ops.fifo.preempt_ch_tsg(g, id, id_type);
 	} else {
 		gv11b_fifo_preempt_runlists(g, runlists_mask);
 	}

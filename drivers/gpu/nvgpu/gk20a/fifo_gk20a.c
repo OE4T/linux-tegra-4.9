@@ -2704,7 +2704,7 @@ void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)
 }
 
 int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
-		unsigned int id_type, unsigned int timeout_rc_type)
+		unsigned int id_type)
 {
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -2777,8 +2777,8 @@ int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	id_type = is_tsg ? ID_TYPE_TSG : ID_TYPE_CHANNEL;
 
 	/* wait for preempt */
-	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,
-					 PREEMPT_TIMEOUT_RC);
+	ret = g->ops.fifo.is_preempt_pending(g, id, id_type);
+
 	return ret;
 }
 
@@ -3448,8 +3448,7 @@ static int __locked_fifo_reschedule_preempt_next(struct channel_gk20a *ch,
 		gk20a_readl(g, fifo_preempt_r()));
 #endif
 	if (wait_preempt) {
-		g->ops.fifo.is_preempt_pending(
-			g, preempt_id, preempt_type, PREEMPT_TIMEOUT_RC);
+		g->ops.fifo.is_preempt_pending(g, preempt_id, preempt_type);
 	}
 #ifdef TRACEPOINTS_ENABLED
 	trace_gk20a_reschedule_preempted_next(ch->chid);

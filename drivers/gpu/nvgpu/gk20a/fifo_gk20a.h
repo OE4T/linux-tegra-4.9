@@ -50,9 +50,6 @@ enum {
 #define ID_TYPE_TSG			1
 #define ID_TYPE_UNKNOWN			((u32)~0)
 
-#define PREEMPT_TIMEOUT_RC		1
-#define PREEMPT_TIMEOUT_NORC		0
-
 #define RC_YES				1
 #define RC_NO				0
 
@@ -390,8 +387,8 @@ void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a);
 
 u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
 
-int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id, unsigned int id_type,
-					 unsigned int timeout_rc_type);
+int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
+			unsigned int id_type);
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
 void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 					 unsigned int id_type);

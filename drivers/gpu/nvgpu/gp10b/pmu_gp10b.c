@@ -1,7 +1,7 @@
 /*
  * GP10B PMU
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -233,13 +233,15 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		memset(&cmd, 0, sizeof(struct pmu_cmd));
 		cmd.hdr.unit_id = PMU_UNIT_PG;
 		cmd.hdr.size = PMU_CMD_HDR_SIZE +
-				sizeof(struct pmu_pg_cmd_gr_init_param);
-		cmd.cmd.pg.gr_init_param.cmd_type =
+				sizeof(struct pmu_pg_cmd_gr_init_param_v2);
+		cmd.cmd.pg.gr_init_param_v2.cmd_type =
 				PMU_PG_CMD_ID_PG_PARAM;
-		cmd.cmd.pg.gr_init_param.sub_cmd_id =
+		cmd.cmd.pg.gr_init_param_v2.sub_cmd_id =
 				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
-		cmd.cmd.pg.gr_init_param.featuremask =
+		cmd.cmd.pg.gr_init_param_v2.featuremask =
 				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING;
+		cmd.cmd.pg.gr_init_param_v2.ldiv_slowdown_factor =
+				g->ldiv_slowdown_factor;
 
 		gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM ");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,

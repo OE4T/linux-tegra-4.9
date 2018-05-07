@@ -74,6 +74,9 @@ struct gk20a_platform {
 	/* Delay before rail gated */
 	int railgate_delay_init;
 
+	/* init value for slowdown factor */
+	u8 ldiv_slowdown_factor_init;
+
 	/* Second Level Clock Gating: true = enable false = disable */
 	bool enable_slcg;
 

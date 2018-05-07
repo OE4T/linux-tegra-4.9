@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -503,6 +503,58 @@ static ssize_t elpg_enable_read(struct device *dev,
 }
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
+
+static ssize_t ldiv_slowdown_factor_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long val = 0;
+	int err;
+
+	if (kstrtoul(buf, 10, &val) < 0) {
+		nvgpu_err(g, "parse error for input SLOWDOWN factor\n");
+		return -EINVAL;
+	}
+
+	if (val >= SLOWDOWN_FACTOR_FPDIV_BYMAX) {
+		nvgpu_err(g, "Invalid SLOWDOWN factor\n");
+		return -EINVAL;
+	}
+
+	if (val == g->ldiv_slowdown_factor)
+		return count;
+
+	if (!g->power_on) {
+		g->ldiv_slowdown_factor = val;
+	} else {
+		err = gk20a_busy(g);
+		if (err)
+			return -EAGAIN;
+
+		g->ldiv_slowdown_factor = val;
+
+		if (g->ops.pmu.pmu_pg_init_param)
+			g->ops.pmu.pmu_pg_init_param(g,
+				PMU_PG_ELPG_ENGINE_ID_GRAPHICS);
+
+		gk20a_idle(g);
+	}
+
+	nvgpu_info(g, "ldiv_slowdown_factor is %x\n", g->ldiv_slowdown_factor);
+
+	return count;
+}
+
+static ssize_t ldiv_slowdown_factor_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->ldiv_slowdown_factor);
+}
+
+static DEVICE_ATTR(ldiv_slowdown_factor, ROOTRW,
+			ldiv_slowdown_factor_read, ldiv_slowdown_factor_store);
 
 static ssize_t mscg_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -1114,6 +1166,7 @@ int nvgpu_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_elpg_enable);
 	error |= device_create_file(dev, &dev_attr_mscg_enable);
 	error |= device_create_file(dev, &dev_attr_emc3d_ratio);
+	error |= device_create_file(dev, &dev_attr_ldiv_slowdown_factor);
 #ifdef CONFIG_TEGRA_DVFS
 	error |= device_create_file(dev, &dev_attr_fmax_at_vmin_safe);
 #endif

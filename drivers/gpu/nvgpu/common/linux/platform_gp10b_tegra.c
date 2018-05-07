@@ -370,6 +370,9 @@ struct gk20a_platform gp10b_tegra_platform = {
 	/* power management configuration */
 	.railgate_delay_init	= 500,
 
+	/* ldiv slowdown factor */
+	.ldiv_slowdown_factor_init = SLOWDOWN_FACTOR_FPDIV_BY16,
+
 	/* power management configuration */
 	.can_railgate_init	= true,
 	.enable_elpg            = true,

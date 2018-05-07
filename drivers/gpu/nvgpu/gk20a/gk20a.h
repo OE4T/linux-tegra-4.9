@@ -1333,7 +1333,7 @@ struct gk20a {
 	bool can_railgate;
 	bool user_railgate_disabled;
 	int railgate_delay;
-
+	u8 ldiv_slowdown_factor;
 	unsigned int aggressive_sync_destroy_thresh;
 	bool aggressive_sync_destroy;
 

@@ -159,6 +159,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->support_pmu = support_gk20a_pmu(dev_from_gk20a(g));
 	g->can_railgate = platform->can_railgate_init;
 	g->railgate_delay = platform->railgate_delay_init;
+	g->ldiv_slowdown_factor = platform->ldiv_slowdown_factor_init;
 	__nvgpu_set_enabled(g, NVGPU_PMU_PERFMON, platform->enable_perfmon);
 
 	/* set default values to aelpg parameters */

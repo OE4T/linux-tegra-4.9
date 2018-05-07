@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -122,6 +122,57 @@ enum {
 	PMU_PG_STAT_CMD_ALLOC_DMEM = 0,
 };
 
+enum {
+	SLOWDOWN_FACTOR_FPDIV_BY1 = 0,
+	SLOWDOWN_FACTOR_FPDIV_BY1P5,
+	SLOWDOWN_FACTOR_FPDIV_BY2,
+	SLOWDOWN_FACTOR_FPDIV_BY2P5,
+	SLOWDOWN_FACTOR_FPDIV_BY3,
+	SLOWDOWN_FACTOR_FPDIV_BY3P5,
+	SLOWDOWN_FACTOR_FPDIV_BY4,
+	SLOWDOWN_FACTOR_FPDIV_BY4P5,
+	SLOWDOWN_FACTOR_FPDIV_BY5,
+	SLOWDOWN_FACTOR_FPDIV_BY5P5,
+	SLOWDOWN_FACTOR_FPDIV_BY6,
+	SLOWDOWN_FACTOR_FPDIV_BY6P5,
+	SLOWDOWN_FACTOR_FPDIV_BY7,
+	SLOWDOWN_FACTOR_FPDIV_BY7P5,
+	SLOWDOWN_FACTOR_FPDIV_BY8,
+	SLOWDOWN_FACTOR_FPDIV_BY8P5,
+	SLOWDOWN_FACTOR_FPDIV_BY9,
+	SLOWDOWN_FACTOR_FPDIV_BY9P5,
+	SLOWDOWN_FACTOR_FPDIV_BY10,
+	SLOWDOWN_FACTOR_FPDIV_BY10P5,
+	SLOWDOWN_FACTOR_FPDIV_BY11,
+	SLOWDOWN_FACTOR_FPDIV_BY11P5,
+	SLOWDOWN_FACTOR_FPDIV_BY12,
+	SLOWDOWN_FACTOR_FPDIV_BY12P5,
+	SLOWDOWN_FACTOR_FPDIV_BY13,
+	SLOWDOWN_FACTOR_FPDIV_BY13P5,
+	SLOWDOWN_FACTOR_FPDIV_BY14,
+	SLOWDOWN_FACTOR_FPDIV_BY14P5,
+	SLOWDOWN_FACTOR_FPDIV_BY15,
+	SLOWDOWN_FACTOR_FPDIV_BY15P5,
+	SLOWDOWN_FACTOR_FPDIV_BY16,
+	SLOWDOWN_FACTOR_FPDIV_BY16P5,
+	SLOWDOWN_FACTOR_FPDIV_BY17 = 0x20,
+	SLOWDOWN_FACTOR_FPDIV_BY18 = 0x22,
+	SLOWDOWN_FACTOR_FPDIV_BY19 = 0x24,
+	SLOWDOWN_FACTOR_FPDIV_BY20 = 0x26,
+	SLOWDOWN_FACTOR_FPDIV_BY21 = 0x28,
+	SLOWDOWN_FACTOR_FPDIV_BY22 = 0x2a,
+	SLOWDOWN_FACTOR_FPDIV_BY23 = 0x2c,
+	SLOWDOWN_FACTOR_FPDIV_BY24 = 0x2e,
+	SLOWDOWN_FACTOR_FPDIV_BY25 = 0x30,
+	SLOWDOWN_FACTOR_FPDIV_BY26 = 0x32,
+	SLOWDOWN_FACTOR_FPDIV_BY27 = 0x34,
+	SLOWDOWN_FACTOR_FPDIV_BY28 = 0x36,
+	SLOWDOWN_FACTOR_FPDIV_BY29 = 0x38,
+	SLOWDOWN_FACTOR_FPDIV_BY30 = 0x3a,
+	SLOWDOWN_FACTOR_FPDIV_BY31 = 0x3c,
+	SLOWDOWN_FACTOR_FPDIV_BYMAX,
+};
+
 #define PMU_PG_PARAM_CMD_GR_INIT_PARAM  0x0
 #define PMU_PG_PARAM_CMD_MS_INIT_PARAM  0x01
 #define PMU_PG_PARAM_CMD_MCLK_CHANGE  0x04
@@ -212,6 +263,13 @@ struct pmu_pg_cmd_gr_init_param {
 	u8 featuremask;
 };
 
+struct pmu_pg_cmd_gr_init_param_v2 {
+	u8 cmd_type;
+	u16 sub_cmd_id;
+	u8 featuremask;
+	u8 ldiv_slowdown_factor;
+};
+
 struct pmu_pg_cmd_gr_init_param_v1 {
 	u8 cmd_type;
 	u16 sub_cmd_id;
@@ -277,6 +335,7 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_stat stat;
 		struct pmu_pg_cmd_gr_init_param gr_init_param;
 		struct pmu_pg_cmd_gr_init_param_v1 gr_init_param_v1;
+		struct pmu_pg_cmd_gr_init_param_v2 gr_init_param_v2;
 		struct pmu_pg_cmd_ms_init_param ms_init_param;
 		struct pmu_pg_cmd_mclk_change mclk_change;
 		struct pmu_pg_cmd_post_init_param post_init;

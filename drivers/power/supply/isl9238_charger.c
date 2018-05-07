@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/power_supply.h>
 #include <linux/power/battery-charger-gauge-comm.h>
 #include <linux/regmap.h>
 #include <linux/regulator/driver.h>
@@ -1004,6 +1005,7 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 		dev_info(isl9238->dev, "charging disabled\n");
 		battery_charging_status_update(isl9238->bc_dev,
 					       isl9238->chg_status);
+		battery_charger_release_wake_lock(isl9238->bc_dev);
 
 		/* set default adapter current limit */
 		adapter_curr_limit = isl9238->adapter_curr_lim1;
@@ -1083,6 +1085,7 @@ static int isl9238_set_charging_current(struct regulator_dev *rdev,
 	dev_info(isl9238->dev, "start thermal monitor\n");
 	isl9238->last_temp = 0;
 	battery_charger_thermal_start_monitoring(isl9238->bc_dev);
+	battery_charger_acquire_wake_lock(isl9238->bc_dev);
 
 	return 0;
 }
@@ -1258,6 +1261,7 @@ static int isl9238_charger_thermal_configure(
 	unsigned int val;
 	int temp_chg_curr_lim = 0, volt_chg_curr_lim = 0;
 	int bat_voltage, bat_current, max_system_voltage = 0;
+	int charging_state = 0;
 	int ret, i;
 
 	if (isl9238->shutdown_complete)
@@ -1268,6 +1272,14 @@ static int isl9238_charger_thermal_configure(
 		return 0;
 
 	dev_info(isl9238->dev, "battery temp %d\n", temp);
+
+	charging_state = battery_gauge_get_charging_status(isl9238->bc_dev);
+	if (charging_state == POWER_SUPPLY_STATUS_FULL) {
+		dev_info(isl9238->dev, "charging done:stop thermal monitor\n");
+		battery_charger_thermal_stop_monitoring(isl9238->bc_dev);
+		battery_charger_release_wake_lock(isl9238->bc_dev);
+		return 0;
+	}
 
 	if ((isl9238->last_temp == temp) && !isl9238->terminate_charging)
 		return 0;
@@ -1978,6 +1990,38 @@ static void isl9238_shutdown(struct i2c_client *client)
 	battery_charger_thermal_stop_monitoring(isl9238->bc_dev);
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int isl9238_suspend(struct device *dev)
+{
+	struct isl9238_charger *isl9238 = dev_get_drvdata(dev);
+	int charging_state = 0;
+	int ret = 0;
+
+	charging_state = battery_gauge_get_charging_status(isl9238->bc_dev);
+	if (charging_state != POWER_SUPPLY_STATUS_FULL) {
+		dev_err(isl9238->dev, "charging in progress: block suspend\n");
+		ret = -EINVAL;
+	}
+
+	dev_info(isl9238->dev, "charging status:%d\n", charging_state);
+
+	return ret;
+}
+
+static int isl9238_resume(struct device *dev)
+{
+	struct isl9238_charger *isl9238 = dev_get_drvdata(dev);
+
+	isl9238_charger_get_op_modes(isl9238);
+
+	return 0;
+};
+#endif
+
+static const struct dev_pm_ops isl9238_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(isl9238_suspend, isl9238_resume)
+};
+
 static const struct of_device_id isl9238_of_match[] = {
 	{ .compatible = "isil,isl9238", },
 	{},
@@ -1994,6 +2038,7 @@ static struct i2c_driver isl9238_i2c_driver = {
 		.name = "isl9238",
 		.owner = THIS_MODULE,
 		.of_match_table = isl9238_of_match,
+		.pm = &isl9238_pm_ops,
 	},
 	.probe = isl9238_probe,
 	.shutdown = isl9238_shutdown,

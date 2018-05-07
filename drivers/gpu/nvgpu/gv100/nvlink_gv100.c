@@ -95,19 +95,6 @@
 		minion_falcon_irqdest_target_swgen0_host_normal_f() | \
 		minion_falcon_irqdest_target_swgen1_host_normal_f())
 
-/* Minion FW header format */
-union gv100_minion_hdr {
-	struct {
-		u32 os_code_offset;
-		u32 os_code_size;
-		u32 os_data_offset;
-		u32 os_data_size;
-		u32 num_apps;
-		u32 app_0_code_start;
-	};
-	u8 raw_data[256];
-};
-
 struct __nvlink_reginit {
 	u32 addr;
 	u32 value;
@@ -443,20 +430,35 @@ static bool gv100_nvlink_minion_isr(struct gk20a *g) {
 	return (intr == 0);
 }
 
+/* Extract a WORD from the MINION ucode */
+static inline u32 minion_extract_word(struct nvgpu_firmware *fw, u32 idx)
+{
+	u32 out_data = 0;
+	u8 byte = 0;
+	u32 i = 0;
+
+	for (i = 0; i < 4; i++) {
+		byte = fw->data[idx + i];
+		out_data |= ((u32)byte) << (8 * i);
+	}
+
+	return out_data;
+}
+
 /*
  * Load minion FW and set up bootstrap
  */
 static u32 gv100_nvlink_minion_load(struct gk20a *g)
 {
-	struct bin_hdr  *hdr = NULL;
-	struct nvgpu_firmware *minion_fw = NULL;
-	union gv100_minion_hdr *minion_hdr;
-	u32 *minion_ucode = NULL;
 	u32 err = 0;
+	struct nvlink_device *ndev = (struct nvlink_device *) g->nvlink.priv;
+	struct nvgpu_firmware *nvgpu_minion_fw = NULL;
+	struct minion_hdr *minion_hdr = &ndev->minion_hdr;
+	u32 data_idx = 0;
+	u32 app = 0;
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	u32 reg;
-	u32 app;
 
 	nvgpu_log_fn(g, " ");
 
@@ -464,8 +466,8 @@ static u32 gv100_nvlink_minion_load(struct gk20a *g)
 		return 0;
 
 	/* get mem unlock ucode binary */
-	minion_fw = nvgpu_request_firmware(g, "minion.bin", 0);
-	if (!minion_fw) {
+	nvgpu_minion_fw = nvgpu_request_firmware(g, "minion.bin", 0);
+	if (!nvgpu_minion_fw) {
 		nvgpu_err(g, "minion ucode get fail");
 		err = -ENOENT;
 		goto exit;
@@ -474,24 +476,125 @@ static u32 gv100_nvlink_minion_load(struct gk20a *g)
 	/* nvdec falcon reset */
 	nvgpu_flcn_reset(&g->minion_flcn);
 
-	hdr = (struct bin_hdr *) minion_fw->data;
+	/* Read ucode header */
+	minion_hdr->os_code_offset = minion_extract_word(nvgpu_minion_fw,
+							data_idx);
+	data_idx += 4;
+	minion_hdr->os_code_size = minion_extract_word(nvgpu_minion_fw,
+							data_idx);
+	data_idx += 4;
+	minion_hdr->os_data_offset = minion_extract_word(nvgpu_minion_fw,
+							data_idx);
+	data_idx += 4;
+	minion_hdr->os_data_size = minion_extract_word(nvgpu_minion_fw,
+							data_idx);
+	data_idx += 4;
+	minion_hdr->num_apps = minion_extract_word(nvgpu_minion_fw,
+						data_idx);
+	data_idx += 4;
 
-	minion_hdr = (union gv100_minion_hdr *) (minion_fw->data +
-		hdr->header_offset);
-	minion_ucode = (u32 *) (minion_fw->data + hdr->data_offset);
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"MINION Ucode Header Info:");
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"-------------------------");
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"  - OS Code Offset = %u", minion_hdr->os_code_offset);
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"  - OS Code Size = %u", minion_hdr->os_code_size);
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"  - OS Data Offset = %u", minion_hdr->os_data_offset);
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"  - OS Data Size = %u", minion_hdr->os_data_size);
+	nvgpu_log(g, gpu_dbg_nvlink,
+		"  - Num Apps = %u", minion_hdr->num_apps);
+
+	/* Allocate offset/size arrays for all the ucode apps */
+	minion_hdr->app_code_offsets = nvgpu_kcalloc(g,
+						minion_hdr->num_apps,
+						sizeof(u32));
+	if (!minion_hdr->app_code_offsets) {
+		nvgpu_err(g, "Couldn't allocate MINION app_code_offsets array");
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	minion_hdr->app_code_sizes = nvgpu_kcalloc(g,
+						minion_hdr->num_apps,
+						sizeof(u32));
+	if (!minion_hdr->app_code_sizes) {
+		nvgpu_err(g, "Couldn't allocate MINION app_code_sizes array");
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	minion_hdr->app_data_offsets = nvgpu_kcalloc(g,
+						minion_hdr->num_apps,
+						sizeof(u32));
+	if (!minion_hdr->app_data_offsets) {
+		nvgpu_err(g, "Couldn't allocate MINION app_data_offsets array");
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	minion_hdr->app_data_sizes = nvgpu_kcalloc(g,
+						minion_hdr->num_apps,
+						sizeof(u32));
+	if (!minion_hdr->app_data_sizes) {
+		nvgpu_err(g, "Couldn't allocate MINION app_data_sizes array");
+		err = -ENOMEM;
+		goto exit;
+	}
+
+	/* Get app code offsets and sizes */
+	for (app = 0; app < minion_hdr->num_apps; app++) {
+		minion_hdr->app_code_offsets[app] =
+				minion_extract_word(nvgpu_minion_fw, data_idx);
+		data_idx += 4;
+		minion_hdr->app_code_sizes[app] =
+				minion_extract_word(nvgpu_minion_fw, data_idx);
+		data_idx += 4;
+
+		nvgpu_log(g, gpu_dbg_nvlink,
+			"  - App Code:");
+		nvgpu_log(g, gpu_dbg_nvlink,
+			"      - App #%d: Code Offset = %u, Code Size = %u",
+			app,
+			minion_hdr->app_code_offsets[app],
+			minion_hdr->app_code_sizes[app]);
+	}
+
+	/* Get app data offsets and sizes */
+	for (app = 0; app < minion_hdr->num_apps; app++) {
+		minion_hdr->app_data_offsets[app] =
+				minion_extract_word(nvgpu_minion_fw, data_idx);
+		data_idx += 4;
+		minion_hdr->app_data_sizes[app] =
+				minion_extract_word(nvgpu_minion_fw, data_idx);
+		data_idx += 4;
+
+		nvgpu_log(g, gpu_dbg_nvlink,
+			"  - App Data:");
+		nvgpu_log(g, gpu_dbg_nvlink,
+			"      - App #%d: Data Offset = %u, Data Size = %u",
+			app,
+			minion_hdr->app_data_offsets[app],
+			minion_hdr->app_data_sizes[app]);
+	}
+
+	minion_hdr->ovl_offset = minion_extract_word(nvgpu_minion_fw, data_idx);
+	data_idx += 4;
+	minion_hdr->ovl_size = minion_extract_word(nvgpu_minion_fw, data_idx);
+	data_idx += 4;
+
+	ndev->minion_img = &(nvgpu_minion_fw->data[data_idx]);
+	minion_hdr->ucode_data_size = nvgpu_minion_fw->size - data_idx;
 
 	nvgpu_log(g, gpu_dbg_nvlink,
-		"os_code_offset: 0x%x", minion_hdr->os_code_offset);
+		"  - Overlay Offset = %u", minion_hdr->ovl_offset);
 	nvgpu_log(g, gpu_dbg_nvlink,
-		"os_code_size: 0x%x", minion_hdr->os_code_size);
+		"  - Overlay Size = %u", minion_hdr->ovl_size);
 	nvgpu_log(g, gpu_dbg_nvlink,
-		"os_data_offset: 0x%x", minion_hdr->os_data_offset);
-	nvgpu_log(g, gpu_dbg_nvlink,
-		"os_data_size: 0x%x", minion_hdr->os_data_size);
-	nvgpu_log(g, gpu_dbg_nvlink,
-		"num_apps: 0x%x", minion_hdr->num_apps);
-	nvgpu_log(g, gpu_dbg_nvlink,
-		"app_0_code_start: 0x%x", minion_hdr->app_0_code_start);
+		"  - Ucode Data Size = %u", minion_hdr->ucode_data_size);
 
 	/* Clear interrupts */
 	nvgpu_flcn_set_irq(&g->minion_flcn, true, MINION_FALCON_INTR_MASK,
@@ -499,58 +602,34 @@ static u32 gv100_nvlink_minion_load(struct gk20a *g)
 
 	/* Copy Non Secure IMEM code */
 	nvgpu_flcn_copy_to_imem(&g->minion_flcn, 0,
-		(u8 *)&minion_ucode[minion_hdr->os_code_offset >> 2],
+		(u8 *)&ndev->minion_img[minion_hdr->os_code_offset],
 		minion_hdr->os_code_size, 0, false,
 		GET_IMEM_TAG(minion_hdr->os_code_offset));
 
 	/* Copy Non Secure DMEM code */
 	nvgpu_flcn_copy_to_dmem(&g->minion_flcn, 0,
-		(u8 *)&minion_ucode[minion_hdr->os_data_offset >> 2],
+		(u8 *)&ndev->minion_img[minion_hdr->os_data_offset],
 		minion_hdr->os_data_size, 0);
 
-	/* If apps are there load them securely */
-	if (minion_hdr->num_apps) {
-		for (app = 0; app < minion_hdr->num_apps; app++) {
-			u32 app_code_start, app_code_size;
-			u32 app_data_start, app_data_size;
+	/* Load the apps securely */
+	for (app = 0; app < minion_hdr->num_apps; app++) {
+		u32 app_code_start = minion_hdr->app_code_offsets[app];
+		u32 app_code_size = minion_hdr->app_code_sizes[app];
+		u32 app_data_start = minion_hdr->app_data_offsets[app];
+		u32 app_data_size = minion_hdr->app_data_sizes[app];
 
-			app_code_start =
-				*((u32 *) &minion_hdr->app_0_code_start +
-					2*app);
-			app_code_size =
-				*((u32 *) &minion_hdr->app_0_code_start +
-					2*app + 1);
-			app_data_start =
-				*((u32 *) &minion_hdr->app_0_code_start +
-					2*minion_hdr->num_apps + 2*app);
-			app_data_size =
-				*((u32 *) &minion_hdr->app_0_code_start +
-					2*minion_hdr->num_apps + 2*app + 1);
+		if (app_code_size)
+			nvgpu_flcn_copy_to_imem(&g->minion_flcn,
+				app_code_start,
+				(u8 *)&ndev->minion_img[app_code_start],
+				app_code_size, 0, true,
+				GET_IMEM_TAG(app_code_start));
 
-			nvgpu_log(g, gpu_dbg_nvlink,
-				" app %d code_offset 0x%x", app, app_code_start);
-			nvgpu_log(g, gpu_dbg_nvlink,
-				" app %d code_size 0x%x", app, app_code_size);
-			nvgpu_log(g, gpu_dbg_nvlink,
-				" app %d data_offset 0x%x", app, app_data_start);
-			nvgpu_log(g, gpu_dbg_nvlink,
-				" app %d data_size 0x%x", app, app_data_size);
-
-			if (app_code_size)
-				nvgpu_flcn_copy_to_imem(&g->minion_flcn,
-					app_code_start,
-					(u8 *)&minion_ucode[
-						app_code_start >> 2],
-					app_code_size, 0, true,
-					GET_IMEM_TAG(app_code_start));
-
-			if (app_data_size)
-				nvgpu_flcn_copy_to_dmem(&g->minion_flcn,
-					app_data_start,
-					(u8 *)&minion_ucode[
-						app_data_start >> 2],
-					app_data_size, 0);
-		}
+		if (app_data_size)
+			nvgpu_flcn_copy_to_dmem(&g->minion_flcn,
+				app_data_start,
+				(u8 *)&ndev->minion_img[app_data_start],
+				app_data_size, 0);
 	}
 
 	/* set BOOTVEC to start of non-secure code */
@@ -595,8 +674,15 @@ static u32 gv100_nvlink_minion_load(struct gk20a *g)
 	gv100_nvlink_initialize_minion(g);
 
 exit:
-	if (minion_fw)
-		nvgpu_release_firmware(g, minion_fw);
+	nvgpu_kfree(g, minion_hdr->app_code_offsets);
+	nvgpu_kfree(g, minion_hdr->app_code_sizes);
+	nvgpu_kfree(g, minion_hdr->app_data_offsets);
+	nvgpu_kfree(g, minion_hdr->app_data_sizes);
+
+	if (nvgpu_minion_fw) {
+		nvgpu_release_firmware(g, nvgpu_minion_fw);
+		ndev->minion_img = NULL;
+	}
 
 	return err;
 }

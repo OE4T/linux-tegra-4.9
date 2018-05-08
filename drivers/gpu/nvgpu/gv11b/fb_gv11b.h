@@ -68,5 +68,17 @@ void gv11b_fb_enable_hub_intr(struct gk20a *g,
 void gv11b_fb_disable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
 bool gv11b_fb_mmu_fault_pending(struct gk20a *g);
+void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status);
+void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
+			 u32 fault_status);
+void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
+		 u32 fault_status, unsigned int index);
+void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
+			 u32 fault_status);
+void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
+			 u32 fault_status);
+void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status);
+void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status);
+void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status);
 
 #endif

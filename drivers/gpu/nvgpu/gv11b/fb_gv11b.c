@@ -501,7 +501,7 @@ void gv11b_fb_disable_hub_intr(struct gk20a *g,
 		gv11b_fb_intr_en_clr(g, index, mask);
 }
 
-static void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
+void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 {
 	u32 ecc_addr, corrected_cnt, uncorrected_cnt;
 	u32 corrected_delta, uncorrected_delta;
@@ -559,7 +559,7 @@ static void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		g->ecc.fb.mmu_l2tlb_uncorrected_err_count.counters[0]);
 }
 
-static void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
+void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 {
 	u32 ecc_addr, corrected_cnt, uncorrected_cnt;
 	u32 corrected_delta, uncorrected_delta;
@@ -617,7 +617,7 @@ static void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		g->ecc.fb.mmu_hubtlb_uncorrected_err_count.counters[0]);
 }
 
-static void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
+void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 {
 	u32 ecc_addr, corrected_cnt, uncorrected_cnt;
 	u32 corrected_delta, uncorrected_delta;
@@ -992,7 +992,7 @@ static int gv11b_fb_replay_or_cancel_faults(struct gk20a *g,
 	return err;
 }
 
-static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
+void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 		 u32 fault_status, unsigned int index)
 {
 	u32 get_indx, offset, rd32_val, entries;
@@ -1140,7 +1140,7 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 
 }
 
-static void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
+void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
 			 u32 fault_status)
 {
 	u32 reg_val;
@@ -1175,7 +1175,7 @@ static void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
 	gk20a_writel(g, fb_mmu_fault_buffer_get_r(index), reg_val);
 }
 
-static void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
+void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 			 u32 fault_status)
 {
 	u32 reg_val;
@@ -1239,7 +1239,7 @@ static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 		HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 }
 
-static void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
+void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
 			 u32 fault_status)
 {
 	struct mmu_fault_info *mmfault;
@@ -1269,7 +1269,7 @@ static void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
 	}
 }
 
-static void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status)
+void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status)
 {
 	u32 dropped_faults = 0;
 

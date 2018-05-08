@@ -61,6 +61,8 @@ static struct cpu_emc_map *cpu_emc_map_ptr;
 static uint16_t cpu_emc_map_num;
 static uint8_t tegra_hypervisor_mode;
 
+static int cpufreq_single_policy;
+
 enum cluster {
 	CLUSTER0,
 	CLUSTER1,
@@ -733,7 +735,10 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
 
-	cpumask_copy(policy->cpus, &tfreq_data.pcluster[cl].cpu_mask);
+	if (cpufreq_single_policy)
+		cpumask_copy(policy->cpus, cpu_possible_mask);
+	else
+		cpumask_copy(policy->cpus, &tfreq_data.pcluster[cl].cpu_mask);
 
 	return 0;
 }
@@ -1060,6 +1065,17 @@ static void tegra_cpufreq_cpu_emc_map_init(struct device_node *dn)
 	}
 }
 
+static bool tegra_cpufreq_single_policy(struct device_node *dn)
+{
+	struct property *prop;
+
+	prop = of_find_property(dn, "cpufreq_single_policy", NULL);
+	if (prop)
+		return 1;
+	else
+		return 0;
+}
+
 static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device_node *dn;
@@ -1068,6 +1084,7 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 
 	dn = pdev->dev.of_node;
 	tegra_cpufreq_cpu_emc_map_init(dn);
+	cpufreq_single_policy = tegra_cpufreq_single_policy(dn);
 
 	mutex_init(&tfreq_data.mlock);
 	tfreq_data.freq_compute_delay = US_DELAY;

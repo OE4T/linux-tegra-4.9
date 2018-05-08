@@ -1249,16 +1249,16 @@ int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data)
 	return max_lane_count;
 }
 
-static inline u32 tegra_dp_get_bpp(struct tegra_dc_dp_data *dp)
+static inline u32 tegra_dp_get_bpp(struct tegra_dc_dp_data *dp, u32 vmode)
 {
-	int yuv_flag = dp->dc->mode.vmode & FB_VMODE_YUV_MASK;
+	int yuv_flag = vmode & FB_VMODE_YUV_MASK;
 
 	if (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y24)) {
 		return 16;
 	} else if (yuv_flag & (FB_VMODE_Y422 | FB_VMODE_Y420)) {
 		/* YUV 422 non 8bpc and YUV 420 modes are not supported in hw */
 		dev_err(&dp->dc->ndev->dev, "%s: Unsupported mode with vmode: 0x%x for DP\n",
-				__func__, dp->dc->mode.vmode);
+				__func__, vmode);
 		return 0;
 	} else if (yuv_flag & FB_VMODE_Y24) {
 		return 24;
@@ -1267,6 +1267,8 @@ static inline u32 tegra_dp_get_bpp(struct tegra_dc_dp_data *dp)
 	} else if (yuv_flag & FB_VMODE_Y36) {
 		return 36;
 	} else {
+		dev_info(&dp->dc->ndev->dev, "%s: vmode=0x%x did not specify bpp\n",
+				__func__, vmode);
 		return dp->dc->out->depth ? dp->dc->out->depth : 24;
 	}
 }
@@ -1412,7 +1414,7 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 	if (ret)
 		return ret;
 
-	cfg->bits_per_pixel = tegra_dp_get_bpp(dp);
+	cfg->bits_per_pixel = tegra_dp_get_bpp(dp, dp->dc->mode.vmode);
 
 	cfg->lane_count = cfg->max_lane_count;
 
@@ -3112,8 +3114,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 		u64 total_max_link_bw;
 		u64 mode_bw;
 
-		bits_per_pixel = tegra_dp_get_bpp(dp);
-
+		bits_per_pixel = tegra_dp_get_bpp(dp, mode->vmode);
 		key = tegra_dp_link_speed_get(dp, link_rate);
 		if (WARN_ON(key == dp->sor->num_link_speeds)) {
 			dev_info(&dc->ndev->dev, "invalid link bw\n");

@@ -30,6 +30,7 @@
 #include <linux/err.h>
 #include <linux/kref.h>
 #include <linux/sched.h>
+#include <linux/version.h>
 #include <soc/tegra/chip-id.h>
 #include <asm/processor.h>
 #include <asm/current.h>
@@ -66,6 +67,17 @@ do { \
 		goto validation_fail; \
 	} \
 } while (0)
+
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#define OBJ_REF_SET		refcount_set
+#define OBJ_REF_READ		refcount_read
+#define OBJ_REF_INC_NOT_ZERO	refcount_inc_not_zero
+#else
+#define OBJ_REF_SET		atomic_set
+#define OBJ_REF_READ		atomic_read
+#define OBJ_REF_INC_NOT_ZERO	atomic_inc_not_zero
+#endif
 
 /* To allow test code take over control */
 static bool test_mode;
@@ -255,7 +267,7 @@ static void update_mc_clock(void)
 static void purge_isomgr_client(struct isomgr_client *cp)
 {
 	cp->magic = 0;
-	atomic_set(&cp->kref.refcount, 0);
+	OBJ_REF_SET(&cp->kref.refcount, 0);
 	cp->dedi_bw = 0;
 	cp->rsvd_bw = 0;
 	cp->real_bw = 0;
@@ -339,7 +351,7 @@ static tegra_isomgr_handle __tegra_isomgr_register(
 	}
 	cp = &isomgr_clients[client];
 
-	if (unlikely(atomic_read(&cp->kref.refcount)))
+	if (unlikely(OBJ_REF_READ(&cp->kref.refcount)))
 		goto fail_unlock;
 
 	if (isomgr.ops->isomgr_plat_register) {
@@ -461,7 +473,7 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 			__func__, cname[client]);
 		goto validation_fail;
 	}
-	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
+	if (unlikely(!OBJ_REF_INC_NOT_ZERO(&cp->kref.refcount)))
 		goto handle_unregistered;
 
 	if (cp->rsvd_bw == ubw && cp->lti == ult) {
@@ -555,7 +567,7 @@ static u32 __tegra_isomgr_realize(tegra_isomgr_handle handle)
 			__func__, cname[client]);
 		goto validation_fail;
 	}
-	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
+	if (unlikely(!OBJ_REF_INC_NOT_ZERO(&cp->kref.refcount)))
 		goto handle_unregistered;
 
 	if (cp->rsvd_bw == cp->real_bw && cp->rsvd_mf == cp->real_mf) {
@@ -635,7 +647,7 @@ static int __tegra_isomgr_set_margin(enum tegra_iso_client client,
 		goto validation_fail;
 	}
 	cp = &isomgr_clients[client];
-	if (unlikely(!atomic_inc_not_zero(&cp->kref.refcount)))
+	if (unlikely(!OBJ_REF_INC_NOT_ZERO(&cp->kref.refcount)))
 		goto handle_unregistered;
 
 	if (bw > cp->dedi_bw)
@@ -990,7 +1002,7 @@ int __init isomgr_init(void)
 		if (isoclient_info[i].name) {
 			enum tegra_iso_client c = isoclient_info[i].client;
 
-			atomic_set(&isomgr_clients[c].kref.refcount, 0);
+			OBJ_REF_SET(&isomgr_clients[c].kref.refcount, 0);
 			init_completion(&isomgr_clients[c].cmpl);
 #ifdef CONFIG_COMMON_CLK
 			isomgr_clients[c].bwmgr_handle = tegra_bwmgr_register(
@@ -1044,7 +1056,7 @@ int tegra_isomgr_enable_test_mode(void)
 		cp = &isomgr_clients[i];
 retry:
 		__tegra_isomgr_unregister(cp);
-		if (atomic_read(&cp->kref.refcount))
+		if (OBJ_REF_READ(&cp->kref.refcount))
 			goto retry;
 	}
 	return 0;

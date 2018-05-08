@@ -508,7 +508,6 @@ bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *pair)
 	u32 cvalue, pvalue;
 
 	/* Ensure any pending full ISR invocation has emptied the mailbox */
-	might_sleep();
 	synchronize_irq(pair->full.irq);
 
 	pvalue = readl(tegra_hsp_sm_reg(dev, pair->empty.index));

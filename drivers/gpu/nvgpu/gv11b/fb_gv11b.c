@@ -1214,7 +1214,7 @@ void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 			struct mmu_fault_info *mmfault, u32 fault_status)
 {
-	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX,
+	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX,
 		HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 
 
@@ -1235,7 +1235,7 @@ static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 		gk20a_channel_put(mmfault->refch);
 		mmfault->refch = NULL;
 	}
-	gv11b_fb_enable_hub_intr(g, STALL_REG_INDEX,
+	g->ops.fb.enable_hub_intr(g, STALL_REG_INDEX,
 		HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 }
 
@@ -1372,7 +1372,7 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 		nvgpu_info(g, "ecc uncorrected error notify");
 
 		/* disable interrupts during handling */
-		gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX,
+		g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX,
 						HUB_INTR_TYPE_ECC_UNCORRECTED);
 
 		status = gk20a_readl(g, fb_mmu_l2tlb_ecc_status_r());
@@ -1388,7 +1388,7 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 			gv11b_handle_fillunit_ecc_isr(g, status);
 
 		/* re-enable interrupts after handling */
-		gv11b_fb_enable_hub_intr(g, STALL_REG_INDEX,
+		g->ops.fb.enable_hub_intr(g, STALL_REG_INDEX,
 						HUB_INTR_TYPE_ECC_UNCORRECTED);
 
 	}

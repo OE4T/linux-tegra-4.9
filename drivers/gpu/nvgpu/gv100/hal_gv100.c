@@ -464,6 +464,8 @@ static const struct gpu_ops gv100_ops = {
 		.mem_unlock = gv100_fb_memory_unlock,
 		.init_nvlink = gv100_fb_init_nvlink,
 		.enable_nvlink = gv100_fb_enable_nvlink,
+		.enable_hub_intr = gv11b_fb_enable_hub_intr,
+		.disable_hub_intr = gv11b_fb_disable_hub_intr,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

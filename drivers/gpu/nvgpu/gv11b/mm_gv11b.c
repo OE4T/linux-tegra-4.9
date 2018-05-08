@@ -76,7 +76,7 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
-	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_OTHER |
+	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_OTHER |
 			 HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 
 	nvgpu_kfree(g, g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY]);
@@ -163,7 +163,7 @@ static void gv11b_mm_mmu_hw_fault_buf_deinit(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_NONREPLAY |
+	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_NONREPLAY |
 					 HUB_INTR_TYPE_REPLAY);
 
 	g->mm.hub_intr_types &= (~(HUB_INTR_TYPE_NONREPLAY |

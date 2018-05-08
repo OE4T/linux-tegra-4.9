@@ -515,6 +515,10 @@ struct gpu_ops {
 		int (*mem_unlock)(struct gk20a *g);
 		int (*init_nvlink)(struct gk20a *g);
 		int (*enable_nvlink)(struct gk20a *g);
+		void (*enable_hub_intr)(struct gk20a *g, unsigned int index,
+			unsigned int intr_type);
+		void (*disable_hub_intr)(struct gk20a *g, unsigned int index,
+			unsigned int intr_type);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

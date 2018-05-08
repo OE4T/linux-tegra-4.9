@@ -429,6 +429,8 @@ static const struct gpu_ops gv11b_ops = {
 		.tlb_invalidate = gk20a_fb_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.mem_unlock = NULL,
+		.enable_hub_intr = gv11b_fb_enable_hub_intr,
+		.disable_hub_intr = gv11b_fb_disable_hub_intr,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

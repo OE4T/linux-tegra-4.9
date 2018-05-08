@@ -62,9 +62,10 @@ struct vi_capture_setup {
 	uint64_t vi_channel_mask;
 	uint32_t queue_depth;
 	uint32_t request_size;
-	uint32_t mem;
-	uint32_t __pad_mem;
-	uint64_t iova;
+	union {
+		uint32_t mem;
+		uint64_t iova;
+	};
 	uint8_t slvsec_stream_main;
 	uint8_t slvsec_stream_sub;
 	uint16_t __pad_slvsec1;

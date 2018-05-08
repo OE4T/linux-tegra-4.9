@@ -202,7 +202,8 @@ static const struct gating_desc gp10b_blcg_gr[] = {
 	{.addr = 0x0040590c, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x00408040, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x00407000, .prod = 0x4000c242, .disable = 0x00000000},
-	{.addr = 0x00405bf0, .prod = 0x0000c444, .disable = 0x00000000},
+	/* fix priv error */
+	/*{.addr = 0x00405bf0, .prod = 0x0000c444, .disable = 0x00000000},*/
 	{.addr = 0x0041a890, .prod = 0x0000427f, .disable = 0x00000000},
 	{.addr = 0x0041a8b0, .prod = 0x0000007f, .disable = 0x00000000},
 	{.addr = 0x00418500, .prod = 0x0000c244, .disable = 0x00000000},

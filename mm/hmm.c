@@ -93,7 +93,6 @@ static struct hmm *hmm_register(struct mm_struct *mm)
 	hmm = kmalloc(sizeof(*hmm), GFP_KERNEL);
 	if (!hmm)
 		return NULL;
-	kmemleak_not_leak(hmm);
 	INIT_LIST_HEAD(&hmm->mirrors);
 	init_rwsem(&hmm->mirrors_sem);
 	atomic_set(&hmm->sequence, 0);

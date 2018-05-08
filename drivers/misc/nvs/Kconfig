@@ -57,6 +57,8 @@ config NVS_PROXIMITY
 
 config NVS_TRIGGERED_BUFFER
 	bool "Alias for IIO_TRIGGERED_BUFFER"
+	select IIO_TRIGGER
+	select IIO_BUFFER
 	select IIO_TRIGGERED_BUFFER
 	default n
 	help

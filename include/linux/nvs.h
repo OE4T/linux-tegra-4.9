@@ -114,6 +114,19 @@ enum nvs_float_significance {
 	NVS_FLOAT_N_MAX,
 };
 
+enum NVS_KIF {				/* Define kernel interface type */
+	NVS_KIF_AUTO	=0,		/* AUTO		*/
+	NVS_KIF_IIO,			/* IIO		*/
+	NVS_KIF_INPUT,			/* INPUT	*/
+	NVS_KIF_RELAY,			/* RELAYFS	*/
+	NVS_KIF_N,			/* N-Count	*/
+};
+
+/* Set the default kernel interface type	*/
+#ifndef NVS_CFG_KIF
+#define NVS_CFG_KIF			NVS_KIF_AUTO
+#endif
+
 struct nvs_float {
 	int ival;
 	int fval;
@@ -465,7 +478,7 @@ struct nvs_fn_if {
 
 extern const char * const nvs_float_significances[];
 
-struct nvs_fn_if *nvs_auto(void);
+struct nvs_fn_if *nvs_auto(int);
 struct nvs_fn_if *nvs_relay(void);
 struct nvs_fn_if *nvs_iio(void);
 struct nvs_fn_if *nvs_input(void);

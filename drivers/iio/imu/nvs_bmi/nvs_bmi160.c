@@ -1870,7 +1870,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 	bmi_disable(st, -1); /* disable all devices and power down */
 	bmi_fn_dev.errs = &st->errs;
 	bmi_fn_dev.sts = &st->sts;
-	st->nvs = nvs_iio();
+	st->nvs = nvs_auto(NVS_CFG_KIF);
 	if (st->nvs == NULL) {
 		dev_err(&st->i2c->dev, "%s nvs_ ERR\n", __func__);
 		return -ENODEV;

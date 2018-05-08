@@ -178,9 +178,8 @@ static struct ras_error l2_errors[] = {
 	{.name = "L2 MLT Tag Parity Error", .error_code = 0x58},
 	{.name = "L2 URD Data", .error_code = 0x57},
 	{.name = "L2 NTP Data", .error_code = 0x56},
-	{.name = "L2 URD Uncorrectable Clean", .error_code = 0x55},
 	{.name = "L2 MLC Uncorrectable Clean", .error_code = 0x54},
-	{.name = "L2 URD Uncorrectable Dirty", .error_code = 0x53},
+	{.name = "L2 URD Uncorrectable", .error_code = 0x53},
 	{.name = "L2 MLC Uncorrectable Dirty", .error_code = 0x52},
 	{.name = "L2 URD Correctable Error", .error_code = 0x51},
 	{.name = "L2 MLC Correctable Error", .error_code = 0x50},
@@ -206,8 +205,8 @@ static struct error_record corecluster_ers[] = {
 	{.name = "L2", .errx = 0,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_L2_MLD_ECCC_ERR | ERR_CTL_L2_URD_ECCC_ERR |
-		ERR_CTL_L2_MLD_ECCUD_ERR | ERR_CTL_L2_MLD_ECCUC_ERR |
-		ERR_CTL_L2_URD_ECCUC_ERR | ERR_CTL_L2_NTDP_ERR |
+		ERR_CTL_L2_MLD_ECCUD_ERR | ERR_CTL_L2_URD_ECCU_ERR |
+		ERR_CTL_L2_MLD_ECCUC_ERR | ERR_CTL_L2_NTDP_ERR |
 		ERR_CTL_L2_URDP | ERR_CTL_L2_MLTP_ERR | ERR_CTL_L2_NTTP_ERR |
 		ERR_CTL_L2_URTP_ERR | ERR_CTL_L2_L2MH_ERR |
 		ERR_CTL_L2_CORE02L2CP_ERR | ERR_CTL_L2_CORE12L2CP_ERR |

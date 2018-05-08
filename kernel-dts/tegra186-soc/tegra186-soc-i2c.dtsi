@@ -37,7 +37,6 @@
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		interrupts = <0 TEGRA186_IRQ_I2C1 0x04>;
 		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(C, 5) 0>;
 		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(C, 6) 0>;
@@ -59,7 +58,6 @@
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc240000 0x0 0x100>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		interrupts = <0 TEGRA186_IRQ_I2C2 0x04>;
 		scl-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(EE, 0) 0>;
 		sda-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(EE, 1) 0>;
@@ -81,7 +79,6 @@
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		interrupts = <0 TEGRA186_IRQ_I2C3 0x04>;
 		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(O, 2) 0>;
 		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(O, 3) 0>;
@@ -103,7 +100,6 @@
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		interrupts = <0 TEGRA186_IRQ_I2C4 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -131,7 +127,6 @@
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31b0000 0x0 0x100>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		interrupts = <0 TEGRA186_IRQ_I2C6 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -148,7 +143,6 @@
 	gen7_i2c: i2c@31c0000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
@@ -171,7 +165,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C8 0x04>;
@@ -193,7 +186,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
-		dma-ranges = <0x0 0x51500000 0x0 0x0 0x0 0x7FF00000>;
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C9 0x04>;

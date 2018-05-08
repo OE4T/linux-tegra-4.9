@@ -1388,10 +1388,9 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 /**
  * Check if a timed out channel has hung and recover it if it has.
  *
- * Test if this channel has really got stuck at this point (should be called
- * when the watchdog timer has expired) by checking if its gp_get has advanced
- * or not. If no gp_get action happened since when the watchdog was started,
- * force-reset the channel.
+ * Test if this channel has really got stuck at this point by checking if its
+ * {gp,pb}_get has advanced or not. If no {gp,pb}_get action happened since
+ * when the watchdog was started and it's timed out, force-reset the channel.
  *
  * The gpu is implicitly on at this point, because the watchdog can only run on
  * channels that have submitted jobs pending for cleanup.
@@ -1406,19 +1405,24 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 
 	nvgpu_log_fn(g, " ");
 
-	/* Get status and clear the timer */
+	/* Get status but keep timer running */
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	gp_get = ch->timeout.gp_get;
 	pb_get = ch->timeout.pb_get;
-	ch->timeout.running = false;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	new_gp_get = g->ops.fifo.userd_gp_get(ch->g, ch);
 	new_pb_get = g->ops.fifo.userd_pb_get(ch->g, ch);
 
 	if (new_gp_get != gp_get || new_pb_get != pb_get) {
-		/* Channel has advanced, reschedule */
+		/* Channel has advanced, rewind timer */
+		gk20a_channel_timeout_stop(ch);
 		gk20a_channel_timeout_start(ch);
+		return;
+	}
+
+	if (!nvgpu_timeout_peek_expired(&ch->timeout.timer)) {
+		/* Seems stuck but waiting to time out */
 		return;
 	}
 
@@ -1435,28 +1439,25 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 }
 
 /**
- * Test if the per-channel timeout is expired and handle the timeout in that case.
+ * Test if the per-channel watchdog is on; check the timeout in that case.
  *
  * Each channel has an expiration time based watchdog. The timer is
  * (re)initialized in two situations: when a new job is submitted on an idle
- * channel and when the timeout is checked but progress is detected.
- *
- * Watchdog timeout does not yet necessarily mean a stuck channel so this may
- * or may not cause recovery.
+ * channel and when the timeout is checked but progress is detected. The
+ * watchdog timeout limit is a coarse sliding window.
  *
  * The timeout is stopped (disabled) after the last job in a row finishes
- * making the channel idle.
+ * and marks the channel idle.
  */
 static void gk20a_channel_timeout_check(struct channel_gk20a *ch)
 {
-	bool timed_out;
+	bool running;
 
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-	timed_out = ch->timeout.running &&
-		nvgpu_timeout_peek_expired(&ch->timeout.timer);
+	running = ch->timeout.running;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
-	if (timed_out)
+	if (running)
 		gk20a_channel_timeout_handler(ch);
 }
 

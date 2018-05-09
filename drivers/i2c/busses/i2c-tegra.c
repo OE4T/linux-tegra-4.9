@@ -1917,7 +1917,7 @@ static int tegra_i2c_multi_pkt_xfer(struct tegra_i2c_dev *i2c_dev,
 		memcpy(&temp_msg, &msgs[i], sizeof(struct i2c_msg));
 		temp_buff = temp_msg.buf;
 		msg_len = msgs[i].len;
-		do {
+		while (msg_len > 0) {
 			if (msg_len > max_xfer_len) {
 				temp_end_t = MSG_END_CONTINUE;
 				temp_msg.len = max_xfer_len;
@@ -1954,7 +1954,7 @@ static int tegra_i2c_multi_pkt_xfer(struct tegra_i2c_dev *i2c_dev,
 			if (tx_len > I2C_TOTAL_BUFFER_LEN ||
 					rx_len > I2C_TOTAL_BUFFER_LEN)
 				return -EINVAL;
-		} while (msg_len);
+		}
 	}
 
 	ret = tegra_i2c_xfer_msg(i2c_dev, i2c_dev->tx_pio_buffer,

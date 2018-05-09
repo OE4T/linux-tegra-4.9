@@ -1002,7 +1002,7 @@ struct gpu_ops {
 		unsigned long (*measure_freq)(struct gk20a *g, u32 api_domain);
 		unsigned long (*get_rate)(struct gk20a *g, u32 api_domain);
 		int (*set_rate)(struct gk20a *g, u32 api_domain, unsigned long rate);
-		unsigned long (*get_fmax_at_vmin_safe)(struct clk_gk20a *clk);
+		unsigned long (*get_fmax_at_vmin_safe)(struct gk20a *g);
 		u32 (*get_ref_clock_rate)(struct gk20a *g);
 		int (*predict_mv_at_hz_cur_tfloor)(struct clk_gk20a *clk,
 			unsigned long rate);

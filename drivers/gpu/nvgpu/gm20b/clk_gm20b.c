@@ -1197,7 +1197,7 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 		goto fail;
 	}
 
-	safe_rate = g->ops.clk.get_fmax_at_vmin_safe(clk);
+	safe_rate = g->ops.clk.get_fmax_at_vmin_safe(g);
 	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
 	clk->dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 	clk->gpc_pll.PL = (clk->dvfs_safe_max_freq == 0) ? 0 :

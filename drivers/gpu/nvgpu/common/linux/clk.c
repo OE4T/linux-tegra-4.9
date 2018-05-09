@@ -84,15 +84,18 @@ static int nvgpu_linux_clk_set_rate(struct gk20a *g,
 	return ret;
 }
 
-static unsigned long nvgpu_linux_get_fmax_at_vmin_safe(struct clk_gk20a *clk)
+static unsigned long nvgpu_linux_get_fmax_at_vmin_safe(struct gk20a *g)
 {
 	/*
-	 * On Tegra GPU clock exposed to frequency governor is a shared user on
-	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
-	 * Respectively the grandparent is PLL reference clock.
+	 * On Tegra platforms with GPCPLL bus (gbus) GPU tegra_clk clock exposed
+	 * to frequency governor is a shared user on the gbus. The latter can be
+	 * accessed as GPU clock parent, and incorporate DVFS related data.
 	 */
-	return tegra_dvfs_get_fmax_at_vmin_safe_t(
-			clk_get_parent(clk->tegra_clk));
+	if (g->clk.tegra_clk)
+		return tegra_dvfs_get_fmax_at_vmin_safe_t(
+			clk_get_parent(g->clk.tegra_clk));
+
+	return 0;
 }
 
 static u32 nvgpu_linux_get_ref_clock_rate(struct gk20a *g)

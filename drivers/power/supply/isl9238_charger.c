@@ -76,17 +76,24 @@
 #define ISL9238_REREAD_PROG_MASK	BIT(15)
 
 #define ISL9238_TRICKLE_CHG_MODE		BIT(4)
+#define ISL9238_LOW_VSYS_PROCHOT		BIT(10)
+#define ISL9238_DC_PROCHOT_TRIP			BIT(11)
+#define ISL9238_AC_OTG_CURR_PROCHOT		BIT(12)
+#define ISL9238_LOW_POWER_MODE			BIT(15)
+#define ISL9238_BATGON_PIN_STATE		BIT(12)
+#define ISL9238_COMPARATOR_OUTPUT		BIT(13)
+#define ISL9238_ACOK_PIN_STATE			BIT(14)
 #define ISL9238_ACTIVE_CNTRL_LOOP_MASK		0x6000
-#define ISL9238_CHG_CURRENT_LOOP		0x10
-#define ISL9238_ADAPTER_CURRENT_LOOP		0x20
-#define ISL9238_INPUT_VOLTAGE_LOOP		0x30
+#define ISL9238_CHG_CURRENT_LOOP		0x2000
+#define ISL9238_ADAPTER_CURRENT_LOOP		0x4000
+#define ISL9238_INPUT_VOLTAGE_LOOP		0x6000
 #define ISL9238_CHARGER_MODE_MASK		0xE0
-#define ISL9238_BOOST_MODE			0x10
-#define ISL9238_BUCK_MODE			0x20
-#define ISL9238_BUCK_BOOST_MODE			0x30
-#define ISL9238_OTG_BOOST_MODE			0x50
-#define ISL9238_OTG_BUCK_MODE			0x60
-#define ISL9238_OTG_BUCK_BOOST_MODE		0x70
+#define ISL9238_BOOST_MODE			0x20
+#define ISL9238_BUCK_MODE			0x40
+#define ISL9238_BUCK_BOOST_MODE			0x60
+#define ISL9238_OTG_BOOST_MODE			0xA0
+#define ISL9238_OTG_BUCK_MODE			0xC0
+#define ISL9238_OTG_BUCK_BOOST_MODE		0xE0
 #define ISL9238_BATTERY_STATE			BIT(12)
 #define ISL9238_ADAPTER_STATE			BIT(14)
 #define ISL9238_SMBUS_TIMER_ENABLE		BIT(7)
@@ -400,11 +407,11 @@ static ssize_t input_cable_state_store(struct device *dev,
 	return count;
 }
 
-static ssize_t isl9238_sysfs_show_chg_curnt_limit(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t charge_current_limit_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	int ret;
-	unsigned int data;
 
 	mutex_lock(&isl9238_bc->mutex);
 	if (isl9238_bc->shutdown_complete) {
@@ -412,7 +419,7 @@ static ssize_t isl9238_sysfs_show_chg_curnt_limit(struct device *dev,
 		return -EIO;
 	}
 
-	ret = regmap_read(isl9238_bc->rmap, ISL9238_CHG_CURR_LIMIT, &data);
+	ret = isl9238_read(isl9238_bc, ISL9238_CHG_CURR_LIMIT);
 	mutex_unlock(&isl9238_bc->mutex);
 	if (ret < 0) {
 		dev_err(isl9238_bc->dev, "charge curnt read fail:%d", ret);
@@ -420,14 +427,15 @@ static ssize_t isl9238_sysfs_show_chg_curnt_limit(struct device *dev,
 	}
 
 	if (isl9238_bc->curnt_sense_res)
-		data = data * ISL9238_CURR_SENSE_RES_OTP /
+		ret = ret * ISL9238_CURR_SENSE_RES_OTP /
 			isl9238_bc->curnt_sense_res;
 
-	return snprintf(buf, MAX_STR_PRINT, "%u mA\n", data);
+	return snprintf(buf, MAX_STR_PRINT, "%u mA\n", ret);
 }
 
-static ssize_t isl9238_sysfs_set_chg_curnt_limit(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t charge_current_limit_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
 {
 	int curr_val, rval, ret;
 
@@ -457,8 +465,9 @@ static ssize_t isl9238_sysfs_set_chg_curnt_limit(struct device *dev,
 	return count;
 }
 
-static ssize_t isl9238_sysfs_show_chg_curnt_range(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t charge_current_range_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
 {
 	int ret = 0;
 
@@ -468,10 +477,10 @@ static ssize_t isl9238_sysfs_show_chg_curnt_range(struct device *dev,
 	return ret;
 }
 
-static ssize_t isl9238_sysfs_show_adptr_curnt_limit(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t adapter_current_limit_show(struct device *dev,
+					  struct device_attribute *attr,
+					  char *buf)
 {
-	unsigned int data;
 	int ret;
 
 	mutex_lock(&isl9238_bc->mutex);
@@ -480,7 +489,7 @@ static ssize_t isl9238_sysfs_show_adptr_curnt_limit(struct device *dev,
 		return -EIO;
 	}
 
-	ret = regmap_read(isl9238_bc->rmap, ISL9238_ADPTR_CURR_LIMIT1, &data);
+	ret = isl9238_read(isl9238_bc, ISL9238_ADPTR_CURR_LIMIT1);
 	mutex_unlock(&isl9238_bc->mutex);
 	if (ret < 0) {
 		dev_err(isl9238_bc->dev, "adptr curnt1 read fail:%d\n", ret);
@@ -488,14 +497,15 @@ static ssize_t isl9238_sysfs_show_adptr_curnt_limit(struct device *dev,
 	}
 
 	if (isl9238_bc->adptr_sense_res)
-		data = data * ISL9238_ADPTR_SENSE_RES_OTP /
+		ret = ret * ISL9238_ADPTR_SENSE_RES_OTP /
 			isl9238_bc->adptr_sense_res;
 
-	return snprintf(buf, MAX_STR_PRINT, "%d mA\n", data);
+	return snprintf(buf, MAX_STR_PRINT, "%d mA\n", ret);
 }
 
-static ssize_t isl9238_sysfs_set_adptr_curnt_limit(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t adapter_current_limit_store(struct device *dev,
+					   struct device_attribute *attr,
+					   const char *buf, size_t count)
 {
 	int curnt_val, rval, ret;
 
@@ -524,10 +534,10 @@ static ssize_t isl9238_sysfs_set_adptr_curnt_limit(struct device *dev,
 	return count;
 }
 
-static ssize_t isl9238_sysfs_show_max_sys_voltage(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t max_system_voltage_show(struct device *dev,
+				       struct device_attribute *attr,
+				       char *buf)
 {
-	unsigned int data;
 	int ret;
 
 	mutex_lock(&isl9238_bc->mutex);
@@ -536,20 +546,21 @@ static ssize_t isl9238_sysfs_show_max_sys_voltage(struct device *dev,
 		return -EIO;
 	}
 
-	ret = regmap_read(isl9238_bc->rmap, ISL9238_MAX_SYS_VOLTAGE, &data);
+	ret = isl9238_read(isl9238_bc, ISL9238_MAX_SYS_VOLTAGE);
 	mutex_unlock(&isl9238_bc->mutex);
 	if (ret < 0) {
 		dev_err(isl9238_bc->dev, "system voltage read fail:%d\n", ret);
 		return ret;
 	}
 
-	data = data & ISL9238_MAX_SYS_VOLTAGE_MASK;
+	ret = ret & ISL9238_MAX_SYS_VOLTAGE_MASK;
 
-	return snprintf(buf, MAX_STR_PRINT, "%d mV\n", data);
+	return snprintf(buf, MAX_STR_PRINT, "%d mV\n", ret);
 }
 
-static ssize_t isl9238_sysfs_show_adptr_curnt_range(struct device *dev,
-			struct device_attribute *attr, char *buf)
+static ssize_t adapter_current_range_show(struct device *dev,
+					  struct device_attribute *attr,
+					  char *buf)
 {
 	int ret = 0;
 
@@ -560,35 +571,166 @@ static ssize_t isl9238_sysfs_show_adptr_curnt_range(struct device *dev,
 	return ret;
 }
 
+static ssize_t operating_modes_show(struct device *dev,
+				    struct device_attribute *attr,
+				    char *buf)
+{
+	int rval;
+	int ret = 0;
+
+	mutex_lock(&isl9238_bc->mutex);
+	if (isl9238_bc->shutdown_complete) {
+		mutex_unlock(&isl9238_bc->mutex);
+		return -EIO;
+	}
+
+	rval = isl9238_read(isl9238_bc, ISL9238_INFO1_CHG_STATUS);
+	if (rval < 0) {
+		dev_err(isl9238_bc->dev, "info1 reg read fail: %d\n", rval);
+		mutex_unlock(&isl9238_bc->mutex);
+		return rval;
+	}
+
+	if (rval & ISL9238_TRICKLE_CHG_MODE)
+		ret = snprintf(buf, MAX_STR_PRINT,
+			       "trickle charging mode is active\n");
+	else
+		ret = snprintf(buf, MAX_STR_PRINT,
+			       "trickle charging mode is not active\n");
+
+	if (rval & ISL9238_LOW_VSYS_PROCHOT)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"low_vsys prochot is tripped\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"low_vsys prochot is not tripped\n");
+
+	if (rval & ISL9238_DC_PROCHOT_TRIP)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"dcprochot is tripped\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"dcprochot is not tripped\n");
+
+	if (rval & ISL9238_AC_OTG_CURR_PROCHOT)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"acprochot/otgcurrentprochot is tripped\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"acprochot/otgcurrentprochot is not tripped\n");
+
+	switch (rval & ISL9238_ACTIVE_CNTRL_LOOP_MASK) {
+	case ISL9238_CHG_CURRENT_LOOP:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"charging current loop is active\n");
+		break;
+	case ISL9238_ADAPTER_CURRENT_LOOP:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"adapter current loop is active\n");
+		break;
+	case ISL9238_INPUT_VOLTAGE_LOOP:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"input voltage loop is active\n");
+		break;
+	default:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"max system voltage control loop is active\n");
+		break;
+	}
+
+	if (rval & ISL9238_LOW_POWER_MODE)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"internal reference circuit is active\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"internal reference circuit is not active\n");
+
+	rval = isl9238_read(isl9238_bc, ISL9238_INFO2_CHG_STATUS);
+	if (rval < 0) {
+		dev_err(isl9238_bc->dev, "info2 reg read fail: %d\n", rval);
+		mutex_unlock(&isl9238_bc->mutex);
+		return rval;
+	}
+
+	switch (rval & ISL9238_CHARGER_MODE_MASK) {
+	case ISL9238_BOOST_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"boost mode is active\n");
+		break;
+	case ISL9238_BUCK_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"buck mode is active\n");
+		break;
+	case ISL9238_BUCK_BOOST_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"buck boost mode is active\n");
+		break;
+	case ISL9238_OTG_BOOST_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"otg boost mode is active\n");
+		break;
+	case ISL9238_OTG_BUCK_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"otg buck mode is active\n");
+		break;
+	case ISL9238_OTG_BUCK_BOOST_MODE:
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"otg buck boost mode is active\n");
+		break;
+	default:
+		break;
+	}
+
+	if (rval & ISL9238_BATGON_PIN_STATE)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"no battery\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"battery is present\n");
+
+	if (rval & ISL9238_COMPARATOR_OUTPUT)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"comparator output is high\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"comparator output is low\n");
+
+	if (rval & ISL9238_ACOK_PIN_STATE)
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"adapter is present\n");
+	else
+		ret += snprintf(buf + strlen(buf), MAX_STR_PRINT,
+				"no adapter\n");
+
+	mutex_unlock(&isl9238_bc->mutex);
+	return ret;
+}
+
 static DEVICE_ATTR_RW(charging_state);
 
 static DEVICE_ATTR_RW(input_cable_state);
 
-static DEVICE_ATTR(output_charging_current, 0644,
-		isl9238_sysfs_show_chg_curnt_limit,
-		isl9238_sysfs_set_chg_curnt_limit);
+static DEVICE_ATTR_RW(charge_current_limit);
 
-static DEVICE_ATTR(output_charging_current_range, 0444,
-		isl9238_sysfs_show_chg_curnt_range, NULL);
+static DEVICE_ATTR_RO(charge_current_range);
 
-static DEVICE_ATTR(input_charging_current, 0644,
-		isl9238_sysfs_show_adptr_curnt_limit,
-		isl9238_sysfs_set_adptr_curnt_limit);
+static DEVICE_ATTR_RW(adapter_current_limit);
 
-static DEVICE_ATTR(input_charging_current_range, 0444,
-		isl9238_sysfs_show_adptr_curnt_range, NULL);
+static DEVICE_ATTR_RO(adapter_current_range);
 
-static DEVICE_ATTR(max_system_voltage, 0444,
-		isl9238_sysfs_show_max_sys_voltage, NULL);
+static DEVICE_ATTR_RO(max_system_voltage);
+
+static DEVICE_ATTR_RO(operating_modes);
 
 static struct attribute *isl9238_attributes[] = {
 	&dev_attr_charging_state.attr,
 	&dev_attr_input_cable_state.attr,
-	&dev_attr_output_charging_current.attr,
-	&dev_attr_output_charging_current_range.attr,
-	&dev_attr_input_charging_current.attr,
-	&dev_attr_input_charging_current_range.attr,
+	&dev_attr_charge_current_limit.attr,
+	&dev_attr_charge_current_range.attr,
+	&dev_attr_adapter_current_limit.attr,
+	&dev_attr_adapter_current_range.attr,
 	&dev_attr_max_system_voltage.attr,
+	&dev_attr_operating_modes.attr,
 	NULL,
 };
 

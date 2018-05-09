@@ -19,13 +19,15 @@
 
 #include "mods_internal.h"
 
-#include <linux/module.h>
+#include <linux/fs.h>
 #include <linux/init.h>
-#include <linux/poll.h>
 #include <linux/miscdevice.h>
+#include <linux/module.h>
+#include <linux/poll.h>
+#include <linux/random.h>
+#include <linux/sched.h>
 #include <linux/screen_info.h>
 #include <linux/uaccess.h>
-#include <linux/random.h>
 #ifdef MODS_HAS_CONSOLE_LOCK
 #   include <linux/console.h>
 #   include <linux/kd.h>
@@ -43,8 +45,12 @@ static unsigned int mods_krnl_poll(struct file *, poll_table *);
 static int mods_krnl_mmap(struct file *, struct vm_area_struct *);
 static long mods_krnl_ioctl(struct file *, unsigned int, unsigned long);
 
+#ifdef MODS_HAS_SRIOV
+static int mods_pci_sriov_configure(struct pci_dev *dev, int numvfs);
+#endif
+
 /* character driver entry points */
-const struct file_operations mods_fops = {
+static const struct file_operations mods_fops = {
 	.owner			= THIS_MODULE,
 	.open			= mods_krnl_open,
 	.release		= mods_krnl_close,
@@ -98,14 +104,20 @@ static const struct pci_device_id mods_pci_table[] = {
 
 static int mods_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
+	mods_debug_printk(DEBUG_PCI, "probed vendor %x device %x devfn %x\n",
+		dev->vendor, dev->device, dev->devfn);
+
 	return 0;
 }
 
 struct pci_driver mods_pci_driver = {
-	.name		= DEVICE_NAME,
-	.id_table	= mods_pci_table,
-	.probe		= mods_pci_probe,
-	.err_handler	= &mods_pci_error_handlers,
+	.name            = DEVICE_NAME,
+	.id_table        = mods_pci_table,
+	.probe           = mods_pci_probe,
+	.err_handler     = &mods_pci_error_handlers,
+#ifdef MODS_HAS_SRIOV
+	.sriov_configure = mods_pci_sriov_configure,
+#endif
 };
 #endif
 
@@ -117,6 +129,105 @@ struct pci_driver mods_pci_driver = {
 static int debug = -0x80000000;
 static int multi_instance = MODS_MULTI_INSTANCE_DEFAULT_VALUE;
 static u32 access_token = MODS_ACCESS_TOKEN_NONE;
+
+#ifdef MODS_HAS_SRIOV
+static int mods_pci_sriov_configure(struct pci_dev *dev, int numvfs)
+{
+	int rv = 0;
+
+	LOG_ENT();
+
+	mods_debug_printk(DEBUG_PCI,
+		"(numvfs=%d, totalvfs=%d, dev->is_physfn=%d)\n",
+		numvfs,
+		pci_sriov_get_totalvfs(dev),
+		dev->is_physfn);
+
+	if (numvfs > 0) {
+		rv = pci_enable_sriov(dev, numvfs);
+		if (rv) {
+			mods_error_printk(
+				"pci_enable_sriov failed error %d\n", rv);
+			return rv;
+		}
+
+		rv = numvfs;
+	} else {
+		pci_disable_sriov(dev);
+		rv = 0;
+	}
+
+	LOG_EXT();
+	return rv;
+}
+
+static int esc_mods_set_num_vf(struct file *pfile, struct MODS_SET_NUM_VF *p)
+{
+	int rv = 0;
+	struct pci_dev *dev;
+	unsigned int devfn;
+
+	LOG_ENT();
+
+	/* Get the PCI device structure for the specified device from kernel */
+	devfn = PCI_DEVFN(p->dev.device, p->dev.function);
+	dev = MODS_PCI_GET_SLOT(p->dev.domain, p->dev.bus, devfn);
+	if (!dev) {
+		mods_error_printk(
+			"unknown dev %04x:%x:%02x.%x\n",
+			(unsigned int)p->dev.domain,
+			(unsigned int)p->dev.bus,
+			(unsigned int)p->dev.device,
+			(unsigned int)p->dev.function);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	rv = mods_pci_sriov_configure(dev, p->numvfs);
+
+	LOG_EXT();
+
+	return rv;
+}
+
+static int esc_mods_set_total_vf(struct file *pfile, struct MODS_SET_NUM_VF *p)
+{
+	int rv = 0;
+	struct pci_dev *dev;
+	unsigned int devfn;
+
+	LOG_ENT();
+
+	mods_debug_printk(DEBUG_PCI,
+		"pci_sriov_set_totalvfs(totalvfs=%d)\n", p->numvfs);
+
+	/* Get the PCI device structure for the specified device from kernel */
+	devfn = PCI_DEVFN(p->dev.device, p->dev.function);
+	dev = MODS_PCI_GET_SLOT(p->dev.domain, p->dev.bus, devfn);
+	if (!dev) {
+		mods_error_printk(
+			"unknown dev %04x:%x:%02x.%x\n",
+			(unsigned int)p->dev.domain,
+			(unsigned int)p->dev.bus,
+			(unsigned int)p->dev.device,
+			(unsigned int)p->dev.function);
+		LOG_EXT();
+		return -EINVAL;
+	}
+
+	rv = pci_sriov_set_totalvfs(dev, p->numvfs);
+
+	if (rv) {
+		mods_error_printk(
+			"pci_sriov_set_totalvfs failed error %d\n", rv);
+		return rv;
+	}
+
+	LOG_EXT();
+
+	return rv;
+}
+#endif
 
 #if defined(CONFIG_PPC64)
 static int ppc_tce_bypass = MODS_PPC_TCE_BYPASS_ON;
@@ -229,6 +340,10 @@ static int __init mods_init_module(void)
 	mods_info_printk("driver loaded, version %x.%02x\n",
 			 (MODS_DRIVER_VERSION>>8),
 			 (MODS_DRIVER_VERSION&0xFF));
+
+	if (debug)
+		mods_info_printk("debug level 0x%x\n", debug);
+
 	LOG_EXT();
 	return OK;
 }
@@ -301,7 +416,7 @@ static void mods_disable_all_devices(struct mods_file_private_data *priv)
 	while (priv->enabled_devices != 0) {
 		struct en_dev_entry *old = priv->enabled_devices;
 
-		pci_disable_device(old->dev);
+		mods_disable_device(old->dev);
 		priv->enabled_devices = old->next;
 		kfree(old);
 	}
@@ -320,7 +435,7 @@ static int mods_register_mapping(
 	struct MODS_MEM_INFO *p_mem_info,
 	u64                   dma_addr,
 	u64                   virtual_address,
-	u32                   mapping_length)
+	u64                   mapping_length)
 {
 	struct SYS_MAP_MEMORY *p_map_mem;
 	MODS_PRIV private_data = fp->private_data;
@@ -342,7 +457,7 @@ static int mods_register_mapping(
 	list_add(&p_map_mem->list, private_data->mods_mapping_list);
 
 	mods_debug_printk(DEBUG_MEM_DETAILED,
-	    "map alloc %p as %p: phys 0x%llx, virt 0x%llx, size 0x%x\n",
+	    "map alloc %p as %p: phys 0x%llx, virt 0x%llx, size 0x%llx\n",
 	    p_mem_info, p_map_mem, dma_addr, virtual_address, mapping_length);
 
 	LOG_EXT();
@@ -463,7 +578,7 @@ static const char *mods_get_prot_str_for_range(struct file *fp,
 static pci_ers_result_t mods_pci_error_detected(struct pci_dev *dev,
 						enum pci_channel_state state)
 {
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci_error_detected %04x:%x:%02x.%x\n",
 			  pci_domain_nr(dev->bus),
 			  dev->bus->number,
@@ -475,7 +590,7 @@ static pci_ers_result_t mods_pci_error_detected(struct pci_dev *dev,
 
 static pci_ers_result_t mods_pci_mmio_enabled(struct pci_dev *dev)
 {
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci_mmio_enabled %04x:%x:%02x.%x\n",
 			  pci_domain_nr(dev->bus),
 			  dev->bus->number,
@@ -487,7 +602,7 @@ static pci_ers_result_t mods_pci_mmio_enabled(struct pci_dev *dev)
 
 static void mods_pci_resume(struct pci_dev *dev)
 {
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci_resume %04x:%x:%02x.%x\n",
 			  pci_domain_nr(dev->bus),
 			  dev->bus->number,
@@ -913,10 +1028,10 @@ static int mods_krnl_map_inner(struct file *fp, struct vm_area_struct *vma)
 		/* device memory */
 
 		mods_debug_printk(DEBUG_MEM,
-		    "map dev: phys 0x%llx, virt 0x%lx, size 0x%x, %s\n",
+		    "map dev: phys 0x%llx, virt 0x%lx, size 0x%lx, %s\n",
 		    req_pa,
 		    (unsigned long)vma->vm_start,
-		    (unsigned int)MODS_VMA_SIZE(vma),
+		    (unsigned long)MODS_VMA_SIZE(vma),
 		    mods_get_prot_str_for_range(fp, req_pa,
 						MODS_VMA_SIZE(vma)));
 
@@ -1201,6 +1316,87 @@ static int esc_mods_verify_access_token(struct file *pfile,
 	return ret;
 }
 
+struct mods_sysfs_work {
+	struct work_struct      work;
+	struct MODS_SYSFS_NODE *pdata;
+	int                     ret;
+};
+
+#ifdef MODS_OLD_INIT_WORK
+static void sysfs_write_task(void *w)
+#else
+static void sysfs_write_task(struct work_struct *w)
+#endif
+{
+	struct mods_sysfs_work *task = container_of(w,
+						    struct mods_sysfs_work,
+						    work);
+	struct file *f;
+	mm_segment_t old_fs;
+
+	LOG_ENT();
+
+	task->ret = -EINVAL;
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	f = filp_open(task->pdata->path, O_WRONLY, 0);
+	if (IS_ERR(f))
+		task->ret = PTR_ERR(f);
+	else {
+		f->f_pos = 0;
+		if (task->pdata->size <= MODS_MAX_SYSFS_FILE_SIZE)
+			task->ret = f->f_op->write(f,
+						   task->pdata->contents,
+						   task->pdata->size,
+						   &f->f_pos);
+		filp_close(f, NULL);
+	}
+
+	set_fs(old_fs);
+
+	LOG_EXT();
+}
+
+static int esc_mods_write_sysfs_node(struct file            *pfile,
+				     struct MODS_SYSFS_NODE *pdata)
+{
+	int ret = -EINVAL;
+	struct mods_sysfs_work task;
+	struct workqueue_struct *wq;
+
+	LOG_ENT();
+
+	memmove(&pdata->path[5], pdata->path, MODS_MAX_SYSFS_PATH_LEN);
+	memcpy(pdata->path, "/sys/", 5);
+	pdata->path[MODS_MAX_SYSFS_PATH_BUF_SIZE - 1] = 0;
+
+	task.pdata = pdata;
+
+	wq = create_singlethread_workqueue("mods_sysfs_write");
+	if (!wq) {
+		LOG_EXT();
+		return ret;
+	}
+
+#ifdef MODS_OLD_INIT_WORK
+	INIT_WORK(&task.work, sysfs_write_task, &task);
+#else
+	INIT_WORK(&task.work, sysfs_write_task);
+#endif
+	queue_work(wq, &task.work);
+	flush_workqueue(wq);
+	destroy_workqueue(wq);
+
+	ret = task.ret;
+	if (ret > 0)
+		ret = OK;
+
+	LOG_EXT();
+	return ret;
+}
+
 /**************
  * IO control *
  **************/
@@ -1446,6 +1642,12 @@ static long mods_krnl_ioctl(struct file  *fp,
 			   MODS_GET_PHYSICAL_ADDRESS);
 		break;
 
+	case MODS_ESC_GET_PHYSICAL_ADDRESS_2:
+		MODS_IOCTL(MODS_ESC_GET_PHYSICAL_ADDRESS_2,
+			   esc_mods_get_phys_addr_2,
+			   MODS_GET_PHYSICAL_ADDRESS_3);
+		break;
+
 	case MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS:
 		MODS_IOCTL(MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS,
 			   esc_mods_get_mapped_phys_addr,
@@ -1456,6 +1658,12 @@ static long mods_krnl_ioctl(struct file  *fp,
 		MODS_IOCTL(MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS_2,
 			   esc_mods_get_mapped_phys_addr_2,
 			   MODS_GET_PHYSICAL_ADDRESS_2);
+		break;
+
+	case MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS_3:
+		MODS_IOCTL(MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS_3,
+			   esc_mods_get_mapped_phys_addr_3,
+			   MODS_GET_PHYSICAL_ADDRESS_3);
 		break;
 
 	case MODS_ESC_SET_MEMORY_TYPE:
@@ -1891,8 +2099,38 @@ static long mods_krnl_ioctl(struct file  *fp,
 				    MODS_ACCESS_TOKEN);
 		break;
 
+	case MODS_ESC_WRITE_SYSFS_NODE:
+		MODS_IOCTL_NORETVAL(MODS_ESC_WRITE_SYSFS_NODE,
+				    esc_mods_write_sysfs_node,
+				    MODS_SYSFS_NODE);
+		break;
+
+	case MODS_ESC_REGISTER_IRQ_4:
+		MODS_IOCTL_NORETVAL(MODS_ESC_REGISTER_IRQ_4,
+				esc_mods_register_irq_4, MODS_REGISTER_IRQ_4);
+		break;
+
+	case MODS_ESC_QUERY_IRQ_3:
+		MODS_IOCTL(MODS_ESC_QUERY_IRQ_3,
+			   esc_mods_query_irq_3, MODS_QUERY_IRQ_3);
+		break;
+
+#ifdef MODS_HAS_SRIOV
+	case MODS_ESC_SET_NUM_VF:
+		MODS_IOCTL_NORETVAL(MODS_ESC_SET_NUM_VF,
+			   esc_mods_set_num_vf, MODS_SET_NUM_VF);
+		break;
+
+	case MODS_ESC_SET_TOTAL_VF:
+		MODS_IOCTL_NORETVAL(MODS_ESC_SET_TOTAL_VF,
+			   esc_mods_set_total_vf, MODS_SET_NUM_VF);
+		break;
+#endif
+
 	default:
-		mods_error_printk("unrecognized ioctl (0x%x)\n", cmd);
+		mods_error_printk("unrecognized ioctl (0x%x) dir(0x%x) type (0x%x) nr (0x%x) size (0x%x)\n",
+			cmd, _IOC_DIR(cmd), _IOC_TYPE(cmd),
+			_IOC_NR(cmd), _IOC_SIZE(cmd));
 		ret = -EINVAL;
 		break;
 	}

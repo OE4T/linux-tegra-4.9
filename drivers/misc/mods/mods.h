@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 83
+#define MODS_DRIVER_VERSION_MINOR 86
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -107,6 +107,17 @@ struct MODS_GET_PHYSICAL_ADDRESS_2 {
 	/* IN */
 	__u64                 memory_handle;
 	__u32	              offset;
+	struct mods_pci_dev_2 pci_device;
+
+	/* OUT */
+	__u64                 physical_address;
+};
+
+/* MODS_ESC_GET_PHYSICAL_ADDRESS_3 */
+struct MODS_GET_PHYSICAL_ADDRESS_3 {
+	/* IN */
+	__u64                 memory_handle;
+	__u64                 offset;
 	struct mods_pci_dev_2 pci_device;
 
 	/* OUT */
@@ -393,6 +404,18 @@ struct mods_mask_info2 {
 	__u64	or_mask;    /*or mask for setting bit in this register */
 };
 
+struct MODS_REGISTER_IRQ_4 {
+	/* IN */
+	struct	mods_pci_dev_2 dev; /* device identifying interrupt for */
+				    /* which the mask will be applied */
+	__u64	aperture_addr;	    /* physical address of aperture */
+	__u32	aperture_size;	    /* size of the mapped region */
+	__u32	mask_info_cnt;	    /* number of entries in mask_info[]*/
+	struct	mods_mask_info2 mask_info[MODS_IRQ_MAX_MASKS];
+	__u32	irq_count;	    /* number of irq's to allocate */
+	__u32   irq_flags;          /* irq type and affinity */
+};
+
 struct MODS_REGISTER_IRQ_3 {
 	/* IN */
 	struct	mods_pci_dev_2 dev; /* device identifying interrupt for */
@@ -424,6 +447,13 @@ struct MODS_REGISTER_IRQ {
 	__u8		    type;  /* MODS_IRQ_TYPE_* */
 };
 
+struct mods_irq_3 {
+	struct mods_pci_dev_2 dev;  /* device which generated the interrupt */
+	__u32	irq_index;	    /* index of irq 0 for INTx & MSI */
+	__u32	delay;	            /* delay in ns between the irq */
+				    /* occurring and MODS querying for it */
+};
+
 struct mods_irq_2 {
 	__u32			delay; /* delay in ns between the irq        */
 				       /* occurring and MODS querying for it */
@@ -439,6 +469,14 @@ struct mods_irq {
 };
 
 #define MODS_MAX_IRQS 32
+
+/* MODS_ESC_QUERY_IRQ_3 */
+struct MODS_QUERY_IRQ_3 {
+	/* OUT */
+	struct mods_irq_3 irq_list[MODS_MAX_IRQS];
+	__u8              more;	/* indicates that more interrupts */
+				/* are waiting                    */
+};
 
 /* MODS_ESC_QUERY_IRQ_2 */
 struct MODS_QUERY_IRQ_2 {
@@ -458,6 +496,8 @@ struct MODS_QUERY_IRQ {
 #define MODS_IRQ_TYPE_INT  0
 #define MODS_IRQ_TYPE_MSI  1
 #define MODS_IRQ_TYPE_CPU  2
+#define MODS_IRQ_TYPE_MSIX 3
+#define MODS_IRQ_TYPE_MASK 0xff
 
 /* MODS_ESC_SET_IRQ_MULTIMASK */
 struct mods_mask_info {
@@ -989,7 +1029,6 @@ struct MODS_GET_NVLINK_LINE_RATE {
 	__u32             speed;
 };
 
-
 /* MODS_ESC_ACQUIRE_ACCESS_TOKEN
  * MODS_ESC_RELEASE_ACCESS_TOKEN
  * MODS_ESC_VERIFY_ACCESS_TOKEN
@@ -998,6 +1037,27 @@ struct MODS_GET_NVLINK_LINE_RATE {
 struct MODS_ACCESS_TOKEN {
 	/* IN/OUT */
 	__u32             token;
+};
+
+#define MODS_MAX_SYSFS_PATH_BUF_SIZE 512
+#define MODS_MAX_SYSFS_PATH_LEN (512 - 6)
+#define MODS_MAX_SYSFS_FILE_SIZE 4096
+
+/* MODS_ESC_WRITE_SYSFS_NODE */
+struct MODS_SYSFS_NODE {
+	/* IN */
+	char path[MODS_MAX_SYSFS_PATH_BUF_SIZE];
+	char contents[MODS_MAX_SYSFS_FILE_SIZE];
+	__u32 size;
+};
+
+#define MODS_IRQ_TYPE_FROM_FLAGS(flags) ((flags)&0xf)
+
+/* MODS_ESC_SET_NUM_VF */
+struct MODS_SET_NUM_VF {
+	/* IN */
+	struct mods_pci_dev_2 dev;
+	__u32                 numvfs;  /* number of virtual functions */
 };
 
 #pragma pack(pop)
@@ -1247,5 +1307,21 @@ struct MODS_ACCESS_TOKEN {
 		    _IOW(MODS_IOC_MAGIC, 109, struct MODS_ACCESS_TOKEN)
 #define MODS_ESC_GET_IOMMU_STATE			\
 		    _IOWR(MODS_IOC_MAGIC, 110, struct MODS_GET_IOMMU_STATE)
+#define MODS_ESC_WRITE_SYSFS_NODE		\
+		    _IOW(MODS_IOC_MAGIC, 111, struct MODS_SYSFS_NODE)
+#define MODS_ESC_GET_PHYSICAL_ADDRESS_2			\
+		    _IOWR(MODS_IOC_MAGIC, 112,		\
+			  struct MODS_GET_PHYSICAL_ADDRESS_3)
+#define MODS_ESC_GET_MAPPED_PHYSICAL_ADDRESS_3			\
+		    _IOWR(MODS_IOC_MAGIC, 113,			\
+			  struct MODS_GET_PHYSICAL_ADDRESS_3)
+#define MODS_ESC_REGISTER_IRQ_4			\
+		    _IOW(MODS_IOC_MAGIC, 114, struct MODS_REGISTER_IRQ_4)
+#define MODS_ESC_QUERY_IRQ_3			\
+		    _IOR(MODS_IOC_MAGIC, 115, struct MODS_QUERY_IRQ_3)
+#define MODS_ESC_SET_NUM_VF			\
+		    _IOW(MODS_IOC_MAGIC, 116, struct MODS_SET_NUM_VF)
+#define MODS_ESC_SET_TOTAL_VF			\
+		    _IOW(MODS_IOC_MAGIC, 117, struct MODS_SET_NUM_VF)
 
 #endif /* _MODS_H_  */

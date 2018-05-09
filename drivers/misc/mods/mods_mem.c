@@ -1,7 +1,7 @@
 /*
  * mods_mem.c - This file is part of NVIDIA MODS kernel driver.
  *
- * Copyright (c) 2008-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2008-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA MODS kernel driver is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License,
@@ -559,7 +559,7 @@ int mods_unregister_all_alloc(struct file *fp)
  */
 int mods_get_alloc_offset(struct MODS_MEM_INFO *p_mem_info,
 			  u64			dma_addr,
-			  u32		       *ret_offs)
+			  u64		       *ret_offs)
 {
 	u32 i;
 	u64 offset = 0;
@@ -567,7 +567,7 @@ int mods_get_alloc_offset(struct MODS_MEM_INFO *p_mem_info,
 	for (i = 0; i < p_mem_info->max_chunks; i++) {
 		struct MODS_PHYS_CHUNK *pt = &p_mem_info->pages[i];
 		u64 addr = pt->dma_addr;
-		u32 size = PAGE_SIZE << pt->order;
+		u64 size = PAGE_SIZE << pt->order;
 
 		if (!pt->allocated)
 			break;
@@ -591,7 +591,7 @@ struct MODS_MEM_INFO *mods_find_alloc(struct file *fp, u64 phys_addr)
 	struct list_head     *plist_head   = private_data->mods_alloc_list;
 	struct list_head     *plist_iter;
 	struct MODS_MEM_INFO *p_mem_info;
-	u32		      offset;
+	u64		      offset;
 
 	list_for_each(plist_iter, plist_head) {
 		p_mem_info = list_entry(plist_iter,
@@ -631,12 +631,12 @@ static u32 mods_estimate_max_chunks(u32 num_pages)
 
 static struct MODS_PHYS_CHUNK *mods_find_phys_chunk(
 					struct MODS_MEM_INFO *p_mem_info,
-					u32 offset,
-					u32 *chunk_offset)
+					u64 offset,
+					u64 *chunk_offset)
 {
 	struct MODS_PHYS_CHUNK	*pt = NULL;
-	u32			pages_left;
-	u32			page_offs;
+	u64			pages_left;
+	u64			page_offs;
 	u32			i;
 
 	if (!p_mem_info)
@@ -918,9 +918,30 @@ int esc_mods_set_mem_type(struct file *fp, struct MODS_MEMORY_TYPE *p)
 
 int esc_mods_get_phys_addr(struct file *fp, struct MODS_GET_PHYSICAL_ADDRESS *p)
 {
+	int retval;
+	struct MODS_GET_PHYSICAL_ADDRESS_3 get_phys_addr_3;
+
+	LOG_ENT();
+
+	memset(&get_phys_addr_3, 0,
+	       sizeof(struct MODS_GET_PHYSICAL_ADDRESS_3));
+	get_phys_addr_3.memory_handle	     = p->memory_handle;
+	get_phys_addr_3.offset	             = p->offset;
+
+	retval = esc_mods_get_phys_addr_2(fp, &get_phys_addr_3);
+	if (!retval)
+		p->physical_address = get_phys_addr_3.physical_address;
+
+	LOG_EXT();
+	return retval;
+}
+
+int esc_mods_get_phys_addr_2(struct file *fp,
+			     struct MODS_GET_PHYSICAL_ADDRESS_3 *p)
+{
 	struct MODS_MEM_INFO	*p_mem_info;
 	struct MODS_PHYS_CHUNK	*pt = NULL;
-	u32			chunk_offset;
+	u64			chunk_offset;
 
 	LOG_ENT();
 
@@ -935,7 +956,7 @@ int esc_mods_get_phys_addr(struct file *fp, struct MODS_GET_PHYSICAL_ADDRESS *p)
 
 	p->physical_address = pt->dma_addr + chunk_offset;
 	mods_debug_printk(DEBUG_MEM_DETAILED,
-		"get phys: %p+0x%x -> 0x%llx\n",
+		"get phys: %p+0x%llx -> 0x%llx\n",
 		p_mem_info, p->offset, p->physical_address);
 	LOG_EXT();
 	return 0;
@@ -945,30 +966,30 @@ int esc_mods_get_mapped_phys_addr(struct file *fp,
 				  struct MODS_GET_PHYSICAL_ADDRESS *p)
 {
 	int retval;
-	struct MODS_GET_PHYSICAL_ADDRESS_2 get_mapped_phys_addr_2;
+	struct MODS_GET_PHYSICAL_ADDRESS_3 get_mapped_phys_addr_3;
 	struct MODS_MEM_INFO *p_mem_info;
 
 	LOG_ENT();
 
-	memset(&get_mapped_phys_addr_2, 0,
-	       sizeof(struct MODS_GET_PHYSICAL_ADDRESS_2));
-	get_mapped_phys_addr_2.memory_handle	     = p->memory_handle;
-	get_mapped_phys_addr_2.offset	             = p->offset;
+	memset(&get_mapped_phys_addr_3, 0,
+	       sizeof(struct MODS_GET_PHYSICAL_ADDRESS_3));
+	get_mapped_phys_addr_3.memory_handle	     = p->memory_handle;
+	get_mapped_phys_addr_3.offset	             = p->offset;
 	p_mem_info = (struct MODS_MEM_INFO *)(size_t)p->memory_handle;
 	if (p_mem_info->dev) {
-		get_mapped_phys_addr_2.pci_device.domain   =
+		get_mapped_phys_addr_3.pci_device.domain   =
 			pci_domain_nr(p_mem_info->dev->bus);
-		get_mapped_phys_addr_2.pci_device.bus	   =
+		get_mapped_phys_addr_3.pci_device.bus	   =
 			p_mem_info->dev->bus->number;
-		get_mapped_phys_addr_2.pci_device.device   =
+		get_mapped_phys_addr_3.pci_device.device   =
 			PCI_SLOT(p_mem_info->dev->devfn);
-		get_mapped_phys_addr_2.pci_device.function =
+		get_mapped_phys_addr_3.pci_device.function =
 			PCI_FUNC(p_mem_info->dev->devfn);
 	}
 
-	retval = esc_mods_get_mapped_phys_addr_2(fp, &get_mapped_phys_addr_2);
+	retval = esc_mods_get_mapped_phys_addr_3(fp, &get_mapped_phys_addr_3);
 	if (!retval)
-		p->physical_address = get_mapped_phys_addr_2.physical_address;
+		p->physical_address = get_mapped_phys_addr_3.physical_address;
 
 	LOG_EXT();
 	return retval;
@@ -977,11 +998,33 @@ int esc_mods_get_mapped_phys_addr(struct file *fp,
 int esc_mods_get_mapped_phys_addr_2(struct file *fp,
 				  struct MODS_GET_PHYSICAL_ADDRESS_2 *p)
 {
+	int retval;
+	struct MODS_GET_PHYSICAL_ADDRESS_3 get_mapped_phys_addr_3;
+
+	LOG_ENT();
+
+	memset(&get_mapped_phys_addr_3, 0,
+	       sizeof(struct MODS_GET_PHYSICAL_ADDRESS_3));
+	get_mapped_phys_addr_3.memory_handle  = p->memory_handle;
+	get_mapped_phys_addr_3.offset	      = p->offset;
+	get_mapped_phys_addr_3.pci_device     = p->pci_device;
+
+	retval = esc_mods_get_mapped_phys_addr_3(fp, &get_mapped_phys_addr_3);
+	if (!retval)
+		p->physical_address = get_mapped_phys_addr_3.physical_address;
+
+	LOG_EXT();
+	return retval;
+}
+
+int esc_mods_get_mapped_phys_addr_3(struct file *fp,
+				  struct MODS_GET_PHYSICAL_ADDRESS_3 *p)
+{
 	struct pci_dev         *dev = NULL;
 	struct MODS_MEM_INFO   *p_mem_info;
 	struct MODS_PHYS_CHUNK *pt;
 	struct MODS_MAP_CHUNK  *pm;
-	u32			chunk_offset;
+	u64			chunk_offset;
 
 	p_mem_info = (struct MODS_MEM_INFO *)(size_t)p->memory_handle;
 	pt = mods_find_phys_chunk(p_mem_info, p->offset, &chunk_offset);
@@ -1002,7 +1045,7 @@ int esc_mods_get_mapped_phys_addr_2(struct file *fp,
 
 	if (!dev) {
 		mods_debug_printk(DEBUG_MEM_DETAILED,
-				  "get mapped phys: %p+0x%x -> 0x%llx\n",
+				  "get mapped phys: %p+0x%llx -> 0x%llx\n",
 				  p_mem_info, p->offset, p->physical_address);
 		p->physical_address = pt->dma_addr + chunk_offset;
 		LOG_EXT();
@@ -1018,7 +1061,7 @@ int esc_mods_get_mapped_phys_addr_2(struct file *fp,
 
 	p->physical_address = pm->map_addr + chunk_offset;
 	mods_debug_printk(DEBUG_MEM_DETAILED,
-		"get mapped phys: %p+0x%x -> 0x%llx\n",
+		"get mapped phys: %p+0x%llx -> 0x%llx\n",
 		p_mem_info, p->offset, p->physical_address);
 	LOG_EXT();
 	return 0;
@@ -1044,7 +1087,7 @@ int esc_mods_virtual_to_phys(struct file *fp,
 	list_for_each(iter, head) {
 		struct SYS_MAP_MEMORY *p_map_mem;
 		u64		       begin, end;
-		u32                    phys_offs;
+		u64                    phys_offs;
 
 		p_map_mem = list_entry(iter, struct SYS_MAP_MEMORY, list);
 
@@ -1053,7 +1096,7 @@ int esc_mods_virtual_to_phys(struct file *fp,
 
 		if (p->virtual_address >= begin && p->virtual_address < end) {
 
-			u32 virt_offs = p->virtual_address - begin;
+			u64 virt_offs = p->virtual_address - begin;
 			int ret;
 
 			/* device memory mapping */
@@ -1110,8 +1153,8 @@ int esc_mods_phys_to_virtual(struct file *fp,
 	MODS_PRIV              private_data = fp->private_data;
 	struct list_head      *head;
 	struct list_head      *iter;
-	u32	               offset;
-	u32	               map_offset;
+	u64	               offset;
+	u64	               map_offset;
 
 	LOG_ENT();
 

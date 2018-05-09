@@ -58,6 +58,8 @@
 #ifdef CONFIG_PCI
 #define MODS_CAN_REGISTER_PCI_DEV 1
 #endif
+#define MODS_HAS_MSIX_RANGE 1
+#define MODS_HAS_SRIOV 1
 
 #endif /* _MODS_CONFIG_H_  */
 

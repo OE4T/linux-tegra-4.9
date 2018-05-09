@@ -38,7 +38,7 @@ static int mods_free_pci_res_map(struct file *fp,
 	struct list_head             *head;
 	struct list_head             *iter;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "free pci resource map %p\n",
 			  p_del_map);
 
@@ -60,7 +60,7 @@ static int mods_free_pci_res_map(struct file *fp,
 					   p_res_map->va,
 					   p_res_map->page_count * PAGE_SIZE,
 					   PCI_DMA_BIDIRECTIONAL);
-			mods_debug_printk(DEBUG_PCICFG,
+			mods_debug_printk(DEBUG_PCI,
 					  "unmapped pci resource at 0x%llx from %u:%u:%u.%u\n",
 					  p_res_map->va,
 					  pci_domain_nr(p_res_map->dev->bus),
@@ -114,7 +114,7 @@ static int mods_find_pci_dev(struct file                   *pfile,
 	struct pci_dev *dev   = NULL;
 	int             index = -1;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "find pci dev %04x:%04x, index %d\n",
 			  (int) p->vendor_id,
 			  (int) p->device_id,
@@ -184,7 +184,7 @@ static int mods_find_pci_class_code(struct file                       *pfile,
 	struct pci_dev *dev   = NULL;
 	int             index = -1;
 
-	mods_debug_printk(DEBUG_PCICFG, "find pci class code %04x, index %d\n",
+	mods_debug_printk(DEBUG_PCI, "find pci class code %04x, index %d\n",
 			  (int) p->class_code, (int) p->index);
 
 	do {
@@ -258,7 +258,7 @@ int esc_mods_pci_get_bar_info_2(struct file *pfile,
 	if (dev == NULL)
 		return -EINVAL;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci get bar info %04x:%x:%02x:%x, bar index %d\n",
 			  (int) p->pci_device.domain,
 			  (int) p->pci_device.bus, (int) p->pci_device.device,
@@ -320,7 +320,7 @@ int esc_mods_pci_get_irq_2(struct file *pfile,
 	if (dev == NULL)
 		return -EINVAL;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci get irq %04x:%x:%02x:%x\n",
 			  (int) p->pci_device.domain,
 			  (int) p->pci_device.bus, (int) p->pci_device.device,
@@ -361,7 +361,7 @@ int esc_mods_pci_read_2(struct file *pfile, struct MODS_PCI_READ_2 *p)
 	if (dev == NULL)
 		return -EINVAL;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci read %04x:%x:%02x.%x, addr 0x%04x, size %d\n",
 			  (int) p->pci_device.domain,
 			  (int) p->pci_device.bus, (int) p->pci_device.device,
@@ -371,17 +371,17 @@ int esc_mods_pci_read_2(struct file *pfile, struct MODS_PCI_READ_2 *p)
 	p->data = 0;
 	switch (p->data_size) {
 	case 1: {
-		    u8 value;
+			u8 value;
 
-		    pci_read_config_byte(dev, p->address, &value);
-		    p->data = value;
+			pci_read_config_byte(dev, p->address, &value);
+			p->data = value;
 		}
 		break;
 	case 2: {
-		    u16 value;
+			u16 value;
 
-		    pci_read_config_word(dev, p->address, &value);
-		    p->data = value;
+			pci_read_config_word(dev, p->address, &value);
+			p->data = value;
 		}
 		break;
 	case 4:
@@ -418,7 +418,7 @@ int esc_mods_pci_write_2(struct file *pfile, struct MODS_PCI_WRITE_2 *p)
 	struct pci_dev *dev;
 	unsigned int devfn;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 		"pci write %04x:%x:%02x.%x, addr 0x%04x, size %d, data 0x%x\n",
 		(int) p->pci_device.domain,
 		(int) p->pci_device.bus, (int) p->pci_device.device,
@@ -498,7 +498,7 @@ int esc_mods_pci_hot_reset(struct file *pfile,
 	unsigned int devfn;
 	int retval;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "pci_hot_reset %04x:%x:%02x.%x\n",
 			  (int) p->pci_device.domain,
 			  (int) p->pci_device.bus,
@@ -765,7 +765,7 @@ int esc_mods_pci_map_resource(struct file *fp,
 
 	p->va = p_res_map->va;
 
-	mods_debug_printk(DEBUG_PCICFG,
+	mods_debug_printk(DEBUG_PCI,
 			  "mapped pci resource %u from %u:%u:%u.%u to %u:%u:%u.%u at 0x%llx\n",
 			  p->resource_index,
 			  p->remote_pci_device.domain,
@@ -845,9 +845,10 @@ int esc_mods_get_iommu_state(struct file                 *pfile,
 			     struct MODS_GET_IOMMU_STATE *state)
 {
 #if !defined(CONFIG_SWIOTLB)
-	/* SW IOTLB turned off in the kernel, HW IOMMU active */
+	/* SWIOTLB turned off in the kernel, HW IOMMU active */
 	state->state = 1;
-#elif defined(MODS_HAS_DMA_OPS)
+#elif defined(MODS_HAS_DMA_OPS) && \
+	(defined(MODS_HAS_NONCOH_DMA_OPS) || defined(MODS_HAS_MAP_SG_ATTRS))
 
 	unsigned int    devfn = PCI_DEVFN(state->pci_device.device,
 					  state->pci_device.function);
@@ -858,13 +859,16 @@ int esc_mods_get_iommu_state(struct file                 *pfile,
 	const struct dma_map_ops *ops = get_dma_ops(&dev->dev);
 
 #if defined(MODS_HAS_NONCOH_DMA_OPS)
-	state->state = ops->map_sg != &noncoherent_swiotlb_dma_ops &&
-			ops->map_sg != &coherent_swiotlb_dma_ops;
+	state->state = ops != &noncoherent_swiotlb_dma_ops &&
+		       ops != &coherent_swiotlb_dma_ops;
 #else
 	state->state = ops->map_sg != swiotlb_map_sg_attrs;
 #endif
+#elif defined(CONFIG_PPC64) || defined(CONFIG_ARM64)
+	/* Old/new kernels, no way to detect, default to HW IOMMU active */
+	state->state = 1;
 #else
-	/* Old kernels, only x86 support, assume no IOMMU */
+	/* Old/new kernels, no way to detect, on x86 default to no IOMMU */
 	state->state = 0;
 #endif
 	return OK;

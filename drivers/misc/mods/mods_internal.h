@@ -55,6 +55,10 @@
 struct en_dev_entry {
 	struct pci_dev	    *dev;
 	struct en_dev_entry *next;
+	__u32                irqs_allocated;
+	__u32                irq_flags;
+	__u32                nvecs;
+	struct msix_entry   *msix_entries;
 };
 
 struct mem_type {
@@ -150,7 +154,7 @@ struct SYS_MAP_MEMORY {
 			     * machine address on Xen
 			     */
 	u64 virtual_addr;   /* virtual address of given mapping */
-	u32 mapping_length; /* tells how many bytes were mapped */
+	u64 mapping_length; /* tells how many bytes were mapped */
 
 	struct list_head   list;
 };
@@ -193,7 +197,7 @@ struct NVL_TRAINED {
 
 /* debug print masks */
 #define DEBUG_IOCTL		0x2
-#define DEBUG_PCICFG		0x4
+#define DEBUG_PCI		0x4
 #define DEBUG_ACPI		0x8
 #define DEBUG_ISR		0x10
 #define DEBUG_MEM		0x20
@@ -204,7 +208,7 @@ struct NVL_TRAINED {
 #define DEBUG_TEGRADMA		0x400
 #define DEBUG_ISR_DETAILED	(DEBUG_ISR | DEBUG_DETAILED)
 #define DEBUG_MEM_DETAILED	(DEBUG_MEM | DEBUG_DETAILED)
-#define DEBUG_ALL	        (DEBUG_IOCTL | DEBUG_PCICFG | DEBUG_ACPI | \
+#define DEBUG_ALL	        (DEBUG_IOCTL | DEBUG_PCI | DEBUG_ACPI | \
 	DEBUG_ISR | DEBUG_MEM | DEBUG_FUNC | DEBUG_CLOCK | DEBUG_DETAILED | \
 	DEBUG_TEGRADC | DEBUG_TEGRADMA)
 
@@ -230,6 +234,7 @@ struct irq_q_data {
 	u32		time;
 	struct pci_dev *dev;
 	u32		irq;
+	u32		irq_index;
 };
 
 struct irq_q_info {
@@ -250,6 +255,7 @@ struct irq_mask_info {
 struct dev_irq_map {
 	void	*dev_irq_aperture;
 	u32	apic_irq;
+	u32	entry;
 	u8	type;
 	u8	channel;
 	u8	mask_info_cnt;
@@ -388,6 +394,7 @@ int mods_unregister_all_nvlink_sysmem_trained(struct file *fp);
 #ifdef CONFIG_PCI
 int mods_enable_device(struct mods_file_private_data *priv,
 		       struct pci_dev *pdev);
+void mods_disable_device(struct pci_dev *pdev);
 int mods_unregister_all_pci_res_mappings(struct file *fp);
 #define MODS_UNREGISTER_PCI_MAP(fp) mods_unregister_all_pci_res_mappings(fp)
 #else
@@ -412,10 +419,14 @@ int esc_mods_free_pages(struct file *fp, struct MODS_FREE_PAGES *p);
 int esc_mods_set_mem_type(struct file *fp, struct MODS_MEMORY_TYPE *p);
 int esc_mods_get_phys_addr(struct file *fp,
 			   struct MODS_GET_PHYSICAL_ADDRESS *p);
+int esc_mods_get_phys_addr_2(struct file *fp,
+			     struct MODS_GET_PHYSICAL_ADDRESS_3 *p);
 int esc_mods_get_mapped_phys_addr(struct file *fp,
 			  struct MODS_GET_PHYSICAL_ADDRESS *p);
 int esc_mods_get_mapped_phys_addr_2(struct file *fp,
 				    struct MODS_GET_PHYSICAL_ADDRESS_2 *p);
+int esc_mods_get_mapped_phys_addr_3(struct file *fp,
+				    struct MODS_GET_PHYSICAL_ADDRESS_3 *p);
 int esc_mods_virtual_to_phys(struct file *fp,
 			     struct MODS_VIRTUAL_TO_PHYSICAL *p);
 int esc_mods_phys_to_virtual(struct file *fp,
@@ -507,6 +518,11 @@ int esc_mods_set_irq_multimask(struct file *fp,
 int esc_mods_irq_handled(struct file *fp, struct MODS_REGISTER_IRQ *p);
 int esc_mods_irq_handled_2(struct file *fp,
 			   struct MODS_REGISTER_IRQ_2 *p);
+
+int esc_mods_register_irq_4(struct file *fp,
+			    struct MODS_REGISTER_IRQ_4 *p);
+int esc_mods_query_irq_3(struct file *fp, struct MODS_QUERY_IRQ_3 *p);
+
 #ifdef MODS_TEGRA
 
 /* clock */

@@ -240,4 +240,12 @@
 		};
 	};
 
+	vgpu {
+		compatible = "nvidia,gv11b-vgpu";
+		reg = <0x0 0x17810000 0x0 0x10000>;
+		reg-names = "usermode";
+		nvidia,host1x = <&host1x>;
+		dma-noncontig;
+		status = "disabled";
+	};
 };

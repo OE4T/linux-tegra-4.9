@@ -796,12 +796,6 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		g->ops.clock_gating.blcg_fifo_load_gating_prod(g,
 				g->blcg_enabled);
 
-	/* enable pbdma */
-	mask = 0;
-	for (i = 0; i < host_num_pbdma; ++i)
-		mask |= mc_enable_pb_sel_f(mc_enable_pb_0_enabled_v(), i);
-	gk20a_writel(g, mc_enable_pb_r(), mask);
-
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
 	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
 			fifo_fb_timeout_period_max_f());

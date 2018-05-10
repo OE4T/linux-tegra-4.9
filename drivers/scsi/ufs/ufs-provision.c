@@ -395,15 +395,23 @@ static ssize_t program_refclk_debugfs_write(struct file *file,
 
 		pm_runtime_get_sync(hba->dev);
 		/* Write brefclkFreq value */
-		if (ufshcd_set_refclk_value(hba, &(ufs_tegra->refclk_value))) {
+		err = ufshcd_set_refclk_value(hba, &(ufs_tegra->refclk_value));
+		if (err) {
 			dev_err(hba->dev,
-				"%s: Write bRefClkFreq failed\n", __func__);
+				"%s: Write bRefClkFreq failed %d\n",
+					__func__, err);
+			ret = err;
+			goto out;
 		}
 
 		/* Read brefclkFreq value */
-		if (ufshcd_get_refclk_value(hba, &(ufs_tegra->refclk_value))) {
+		err = ufshcd_get_refclk_value(hba, &(ufs_tegra->refclk_value));
+		if (err) {
 			dev_err(hba->dev,
-				"%s: Read bRefClkFreq failed\n", __func__);
+				"%s: Read bRefClkFreq failed %d\n",
+					__func__, err);
+			ret = err;
+			goto out;
 		}
 		dev_info(hba->dev, "%s: bRefclkFreq value is %d\n",
 				__func__, ufs_tegra->refclk_value);

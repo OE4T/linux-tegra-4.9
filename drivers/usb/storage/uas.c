@@ -5,6 +5,7 @@
  * Copyright Hans de Goede <hdegoede@redhat.com> for Red Hat, Inc. 2013 - 2016
  * Copyright Matthew Wilcox for Intel Corp, 2010
  * Copyright Sarah Sharp for Intel Corp, 2010
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Distributed under the terms of the GNU GPL, version two.
  */
@@ -821,6 +822,8 @@ static int uas_slave_alloc(struct scsi_device *sdev)
 		blk_queue_max_hw_sectors(sdev->request_queue, 64);
 	else if (devinfo->flags & US_FL_MAX_SECTORS_240)
 		blk_queue_max_hw_sectors(sdev->request_queue, 240);
+
+	blk_queue_rq_timeout(sdev->request_queue, HZ);
 
 	return 0;
 }

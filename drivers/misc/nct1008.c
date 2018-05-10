@@ -1244,8 +1244,9 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 
 	data->workqueue = create_singlethread_workqueue(data->chip_name);
 	INIT_WORK(&data->work, nct1008_work_func);
-	return request_irq(data->client->irq, nct1008_irq, IRQF_TRIGGER_LOW,
+	return request_irq(data->client->irq, nct1008_irq, IRQF_TRIGGER_NONE,
 				data->chip_name, data);
+
 }
 
 static int nct1008_dt_parse(struct i2c_client *client,

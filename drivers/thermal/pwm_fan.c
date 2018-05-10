@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -77,6 +77,7 @@ struct fan_dev_data {
 	int fan_state_cap;
 	int pwm_gpio;
 	int pwm_id;
+	enum pwm_polarity fan_pwm_polarity;
 	const char *name;
 	struct regulator *fan_reg;
 	bool is_fan_reg_enabled;
@@ -424,11 +425,19 @@ static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
 	int duty;
 
 	if (fan_data != NULL && fan_data->pwm_dev != NULL) {
-		if (pwm == 0)
-			duty = fan_data->pwm_period;
-		else
-			duty = (fan_data->fan_pwm_max - pwm)
-				* fan_data->precision_multiplier;
+		if (pwm == 0) {
+			if (fan_data->fan_pwm_polarity == PWM_POLARITY_INVERSED)
+				duty = fan_data->pwm_period;
+			else
+				duty = 0;
+		} else {
+			if (fan_data->fan_pwm_polarity == PWM_POLARITY_INVERSED)
+				duty = fan_data->fan_pwm_max - pwm;
+			else
+				duty = pwm;
+			duty *= fan_data->precision_multiplier;
+		}
+
 		pwm_config(fan_data->pwm_dev,
 			duty, fan_data->pwm_period);
 		pwm_enable(fan_data->pwm_dev);
@@ -925,6 +934,14 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	of_err |= of_property_read_u32(data_node, "state_cap", &value);
 	fan_data->fan_state_cap = (int)value;
 
+	if (of_property_read_u32(data_node, "pwm_polarity", &value))
+		fan_data->fan_pwm_polarity = PWM_POLARITY_INVERSED;
+	else if (value > PWM_POLARITY_INVERSED) {
+		dev_warn(&pdev->dev, "invalid polarity, use inversed by default\n");
+		fan_data->fan_pwm_polarity = PWM_POLARITY_INVERSED;
+	} else
+		fan_data->fan_pwm_polarity = value;
+
 	fan_data->pwm_gpio = pwm_fan_gpio;
 
 	if (of_err) {
@@ -1042,7 +1059,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "unable to request PWM for fan\n");
 		goto pwm_req_fail;
 	} else {
-		dev_info(&pdev->dev, "got pwm for fan\n");
+		dev_info(&pdev->dev, "got pwm for fan. polarity is %s\n",
+			fan_data->fan_pwm_polarity ? "inversed" : "normal");
 	}
 
 	spin_lock_init(&fan_data->irq_lock);

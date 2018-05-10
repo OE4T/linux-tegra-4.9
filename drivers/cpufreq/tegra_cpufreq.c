@@ -963,11 +963,7 @@ static int cluster_freq_notify(struct notifier_block *b,
 		if (!policy)
 			continue;
 
-		ret = cpufreq_update_policy(policy->cpu);
-		if (ret) {
-			cpufreq_cpu_put(policy);
-			break;
-		}
+		cpufreq_update_policy(policy->cpu);
 		cpumask_or(&updated_cpus, &updated_cpus, policy->cpus);
 		cpufreq_cpu_put(policy);
 	}

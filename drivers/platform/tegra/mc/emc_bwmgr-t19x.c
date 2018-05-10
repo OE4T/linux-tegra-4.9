@@ -483,7 +483,7 @@ static u32 dvfs_latency(u32 ufreq)
 	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
 }
 
-unsigned long t19x_bwmgr_apply_efficiency(
+static unsigned long t19x_bwmgr_apply_efficiency(
 		unsigned long total_bw, unsigned long iso_bw,
 		unsigned long max_rate, u64 usage_flags,
 		unsigned long *iso_bw_min, unsigned long iso_bw_nvdis,

@@ -63,7 +63,7 @@ static struct {
 	struct bwmgr_ops *ops;
 } bwmgr;
 
-struct dram_refresh_alrt {
+static struct dram_refresh_alrt {
 	unsigned long cur_state;
 	u32 max_cooling_state;
 	struct thermal_cooling_device *cdev;
@@ -862,7 +862,7 @@ void __exit bwmgr_exit(void)
 }
 module_exit(bwmgr_exit);
 
-int __init bwmgr_cooling_init(void)
+static int __init bwmgr_cooling_init(void)
 {
 	struct device_node *dn;
 	char *cdev_type;

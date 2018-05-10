@@ -9,6 +9,17 @@
 #ifndef _DT_BINDINGS_PWM_PWM_H
 #define _DT_BINDINGS_PWM_PWM_H
 
+/*
+ * polarity of a PWM signal
+ * @PWM_POLARITY_NORMAL: a high signal for the duration of the duty-
+ * cycle, followed by a low signal for the remainder of the pulse
+ * period
+ * @PWM_POLARITY_INVERTED: a low signal for the duration of the duty-
+ * cycle, followed by a high signal for the remainder of the pulse
+ * period
+*/
+
+#define PWM_POLARITY_NORMAL				(0)
 #define PWM_POLARITY_INVERTED			(1 << 0)
 
 #endif

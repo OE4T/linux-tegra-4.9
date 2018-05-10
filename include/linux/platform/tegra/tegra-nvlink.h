@@ -21,6 +21,8 @@
 #ifndef TEGRA_NVLINK_H
 #define TEGRA_NVLINK_H
 
+#include <linux/mutex.h>
+
 #define NVLINK_MAX_DEVICES			2
 #define NVLINK_MAX_LINKS			2
 #define DEFAULT_LOOP_SLEEP_US                   100
@@ -208,6 +210,22 @@ struct remote_device_info {
 	struct nvlink_device_pci_info pci_info;
 };
 
+/* Structure representing the MINION ucode header */
+struct minion_hdr {
+	u32 os_code_offset;
+	u32 os_code_size;
+	u32 os_data_offset;
+	u32 os_data_size;
+	u32 num_apps;
+	u32 *app_code_offsets;
+	u32 *app_code_sizes;
+	u32 *app_data_offsets;
+	u32 *app_data_sizes;
+	u32 ovl_offset;
+	u32 ovl_size;
+	u32 ucode_data_size;
+};
+
 /*
  * nvlink_link struct stores all link specific data which is relevant
  * to core-driver.
@@ -262,6 +280,12 @@ struct nvlink_device {
 	enum nvlink_speed speed;
 	/* The bitrate at which the link is operating */
 	u64 link_bitrate;
+	/* MINION FW - contains both the ucode header and image */
+	const struct firmware *minion_fw;
+	/* MINION ucode header */
+	struct minion_hdr minion_hdr;
+	/* MINION ucode image */
+	const u8 *minion_img;
 	/*nvlink link data. We assume there is single link per device*/
 	struct nvlink_link link;
 	/* Pointer to struct containing callback functions to do device specific

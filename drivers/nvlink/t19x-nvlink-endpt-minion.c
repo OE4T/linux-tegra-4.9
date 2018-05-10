@@ -31,12 +31,13 @@
 /* Extract a WORD from the MINION ucode */
 static inline u32 minion_extract_word(struct tnvlink_dev *tdev, int idx)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	u32 out_data = 0;
 	u8 byte = 0;
 	int i = 0;
 
 	for (i = 0; i < 4; i++) {
-		byte = tdev->minion_fw->data[idx + i];
+		byte = ndev->minion_fw->data[idx + i];
 		out_data |= ((u32)byte) << (8 * i);
 	}
 
@@ -70,21 +71,22 @@ static int minion_load_ucode_section(struct tnvlink_dev *tdev,
 					int use_app_tag,
 					u32 app_tag)
 {
+	struct nvlink_device *ndev = tdev->ndev;
 	u32 i = offset;
 	u32 byte_pos = 0;
 	u8 byte = 0;
 	u32 word = 0;
 	u32 tag = 0;
 
-	if ((offset + size) > tdev->minion_hdr.ucode_img_size) {
-		nvlink_err("Section size is bigger than MINION ucode binary");
+	if ((offset + size) > ndev->minion_hdr.ucode_data_size) {
+		nvlink_err("Section size is invalid");
 		return -1;
 	}
 
 	/* Extract bytes from ucode image and write them to IMEM or DMEM */
 	for (i = offset; i < (offset + size); i++) {
 		byte_pos = i % 4;
-		byte = tdev->minion_img[i];
+		byte = ndev->minion_img[i];
 
 		/* Increment app tag at the start of each new 256B block */
 		if (use_app_tag &&
@@ -94,7 +96,7 @@ static int minion_load_ucode_section(struct tnvlink_dev *tdev,
 		}
 
 		/* Last byte */
-		if (i == tdev->minion_hdr.ucode_img_size - 1) {
+		if (i == ndev->minion_hdr.ucode_data_size - 1) {
 			if (byte_pos != 0) {
 				if (is_imem) {
 					if (use_app_tag)
@@ -185,11 +187,12 @@ int minion_send_cmd(struct tnvlink_dev *tdev,
  */
 static void minion_print_ucode(struct tnvlink_dev *tdev)
 {
+	struct nvlink_device *ndev = tdev->ndev;
+	struct minion_hdr *hdr = &(ndev->minion_hdr);
 	int i = 0;
 	int j = 0;
 	u32 reg_val = 0;
 	u32 byte_num = 0;
-	struct minion_hdr *hdr = &(tdev->minion_hdr);
 
 	/* Dump the IMEM's contents */
 	nvlink_dbg("");
@@ -395,6 +398,8 @@ void minion_dump_registers(struct tnvlink_dev *tdev)
 int minion_boot(struct tnvlink_dev *tdev)
 {
 	int ret = 0;
+	struct nvlink_device *ndev = tdev->ndev;
+	struct minion_hdr *hdr = &(ndev->minion_hdr);
 	int data_idx = 0;
 	int i = 0;
 	u32 elapsed_us = 0;
@@ -404,10 +409,9 @@ int minion_boot(struct tnvlink_dev *tdev)
 	int dump_ucode = 0;
 	u32 minion_status = 0;
 	u32 intr_code = 0;
-	struct minion_hdr *hdr = &(tdev->minion_hdr);
 
 	/* Get MINION ucode from the filesystem */
-	ret = request_firmware(&(tdev->minion_fw), MINION_FW_PATH, tdev->dev);
+	ret = request_firmware(&(ndev->minion_fw), MINION_FW_PATH, tdev->dev);
 	if (ret) {
 		nvlink_err("Can't get MINION ucode binary");
 		goto exit;
@@ -495,12 +499,12 @@ int minion_boot(struct tnvlink_dev *tdev)
 	hdr->ovl_size = minion_extract_word(tdev, data_idx);
 	data_idx += 4;
 
-	tdev->minion_img = &(tdev->minion_fw->data[data_idx]);
-	hdr->ucode_img_size = tdev->minion_fw->size - data_idx;
+	ndev->minion_img = &(ndev->minion_fw->data[data_idx]);
+	hdr->ucode_data_size = ndev->minion_fw->size - data_idx;
 
 	nvlink_dbg("  - Overlay Offset = %u", hdr->ovl_offset);
 	nvlink_dbg("  - Overlay Size = %u", hdr->ovl_size);
-	nvlink_dbg("  - Ucode Image Size = %u", hdr->ucode_img_size);
+	nvlink_dbg("  - Ucode Data Size = %u", hdr->ucode_data_size);
 
 	/* Do memory scrub */
 	nvlw_minion_writel(tdev, CMINION_FALCON_DMACTL, 0);
@@ -713,7 +717,7 @@ err_dump:
 	minion_dump_registers(tdev);
 
 cleanup:
-	release_firmware(tdev->minion_fw);
+	release_firmware(ndev->minion_fw);
 	kfree(hdr->app_code_offsets);
 	kfree(hdr->app_code_sizes);
 	kfree(hdr->app_data_offsets);
@@ -721,8 +725,8 @@ cleanup:
 	memset(hdr, 0, sizeof(struct minion_hdr));
 
 exit:
-	tdev->minion_fw = NULL;
-	tdev->minion_img = NULL;
+	ndev->minion_fw = NULL;
+	ndev->minion_img = NULL;
 	return ret;
 }
 

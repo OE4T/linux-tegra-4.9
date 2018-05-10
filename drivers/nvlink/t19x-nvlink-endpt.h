@@ -46,22 +46,6 @@ enum nvlink_refclk {
 	NVLINK_REFCLK_156
 };
 
-/* Structure representing the MINION ucode header */
-struct minion_hdr {
-	u32 os_code_offset;
-	u32 os_code_size;
-	u32 os_data_offset;
-	u32 os_data_size;
-	u32 num_apps;
-	u32 *app_code_offsets;
-	u32 *app_code_sizes;
-	u32 *app_data_offsets;
-	u32 *app_data_sizes;
-	u32 ovl_offset;
-	u32 ovl_size;
-	u32 ucode_img_size;
-};
-
 /* Struct used for passing around error masks in error handling functions */
 struct nvlink_link_error_masks {
 	u32 dl;
@@ -236,12 +220,6 @@ struct tnvlink_dev {
 	int pgid_nvl;
 	struct tegra_prod *prod_list;
 	bool is_nea;
-	/* MINION FW - contains both the ucode header and image */
-	const struct firmware *minion_fw;
-	/* MINION ucode header */
-	struct minion_hdr minion_hdr;
-	/* MINION ucode image */
-	const u8 *minion_img;
 	/* Nvlink refclk*/
 	enum nvlink_refclk refclk;
 	struct tnvlink_link tlink;

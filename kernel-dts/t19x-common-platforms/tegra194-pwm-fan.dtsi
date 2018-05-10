@@ -11,6 +11,8 @@
  * more details.
  */
 #include <dt-bindings/gpio/tegra194-gpio.h>
+#include <dt-bindings/pwm/pwm.h>
+
 / {
 	pwm_fan_shared_data: pfsd {
 		num_resources = <0>;
@@ -23,6 +25,7 @@
 		state_cap_lookup = <2 2 2 2 3 3 3 4 4 4>;
 		pwm_period = <45334>;
 		pwm_id = <4>;
+		pwm_polarity = <PWM_POLARITY_INVERTED>;
 		step_time = <100>; /* mesecs */
 		state_cap = <7>;
 		active_pwm_max = <256>;

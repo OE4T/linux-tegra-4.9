@@ -208,7 +208,12 @@ static struct platform_driver tegra_fuse_driver = {
 	},
 	.probe = tegra_fuse_probe,
 };
-module_platform_driver(tegra_fuse_driver);
+
+static int __init tegra_fuse_init(void)
+{
+	return platform_driver_register(&tegra_fuse_driver);
+}
+subsys_initcall(tegra_fuse_init);
 
 bool tegra_fuse_read_spare(unsigned int spare)
 {

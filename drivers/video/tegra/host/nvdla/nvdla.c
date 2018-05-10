@@ -46,6 +46,27 @@
 
 static DEFINE_DMA_ATTRS(attrs);
 
+/*
+ * Work to handle engine reset for error recovery
+ */
+static void nvdla_reset_handler(struct work_struct *work)
+{
+	struct nvdla_device *nvdla_dev = container_of(work,
+					struct nvdla_device, reset_work);
+
+	struct platform_device *pdev = nvdla_dev->pdev;
+
+	/* reset engine */
+	nvhost_module_reset(pdev, true);
+
+	nvdla_dbg_info(pdev, "Engine reset done\n");
+}
+
+static void nvdla_reset_handler_init(struct nvdla_device *nvdla_dev)
+{
+	INIT_WORK(&nvdla_dev->reset_work, nvdla_reset_handler);
+}
+
 int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 {
 	uint32_t message;
@@ -58,6 +79,14 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 
 	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
 
+	/* handles engine timeout,
+	 * schedule work for reset handler and clears interrupt
+	 */
+	if (message == DLA_MSG_TASK_TIMEOUT) {
+		nvdla_dbg_err(pdev, "engine timeout detected");
+		schedule_work(&nvdla_dev->reset_work);
+		goto clear_interrupt;
+	}
 	if (message == DLA_MSG_DEBUG_PRINT)
 		nvdla_dbg_fw(pdev, "falcon: %s",
 				(char *)nvdla_dev->debug_dump_va);
@@ -72,6 +101,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 		complete(&nvdla_dev->cmd_completion);
 	}
 
+clear_interrupt:
 	/* logic to clear the interrupt */
 	host1x_writel(pdev, flcn_irqmclr_r(), flcn_irqmclr_swgen1_set_f());
 	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
@@ -733,6 +763,9 @@ static int nvdla_probe(struct platform_device *pdev)
 		err = PTR_ERR(nvdla_dev->pool);
 		goto err_queue_init;
 	}
+
+	/* init reset handler workqueue */
+	nvdla_reset_handler_init(nvdla_dev);
 
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)

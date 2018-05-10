@@ -220,6 +220,7 @@ struct nvdla_device {
 	dma_addr_t gcov_dump_pa;
 	u32 *gcov_dump_va;
 	u32 quirks;
+	struct work_struct reset_work;
 };
 
 /**

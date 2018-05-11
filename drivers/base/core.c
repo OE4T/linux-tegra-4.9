@@ -540,7 +540,7 @@ struct kset *devices_kset;
  */
 static void devices_kset_move_before(struct device *deva, struct device *devb)
 {
-	if (!devices_kset)
+	if (!devices_kset || !deva || !devb)
 		return;
 	pr_debug("devices_kset: Moving %s before %s\n",
 		 dev_name(deva), dev_name(devb));

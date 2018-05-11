@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 
 #include <soc/tegra/tegra-dvfs.h>
+#include <soc/tegra/tegra-bpmp-dvfs.h>
 
 #include "clk.h"
 #include "os_linux.h"
@@ -86,6 +87,8 @@ static int nvgpu_linux_clk_set_rate(struct gk20a *g,
 
 static unsigned long nvgpu_linux_get_fmax_at_vmin_safe(struct gk20a *g)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(dev_from_gk20a(g));
+
 	/*
 	 * On Tegra platforms with GPCPLL bus (gbus) GPU tegra_clk clock exposed
 	 * to frequency governor is a shared user on the gbus. The latter can be
@@ -94,6 +97,10 @@ static unsigned long nvgpu_linux_get_fmax_at_vmin_safe(struct gk20a *g)
 	if (g->clk.tegra_clk)
 		return tegra_dvfs_get_fmax_at_vmin_safe_t(
 			clk_get_parent(g->clk.tegra_clk));
+
+	if (platform->maxmin_clk_id)
+		return tegra_bpmp_dvfs_get_fmax_at_vmin(
+			platform->maxmin_clk_id);
 
 	return 0;
 }

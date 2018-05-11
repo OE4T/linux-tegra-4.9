@@ -65,6 +65,7 @@ struct gk20a_platform {
 	 * for filling this data. */
 	struct clk *clk[GK20A_CLKS_MAX];
 	int num_clks;
+	int maxmin_clk_id;
 
 #ifdef CONFIG_RESET_CONTROLLER
 	/* Reset control for device */

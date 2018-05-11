@@ -83,8 +83,7 @@ int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state)
 }
 EXPORT_SYMBOL(nvlink_get_init_state);
 
-static int nvlink_set_init_state(struct nvlink_device *ndev,
-							enum init_state state)
+int nvlink_set_init_state(struct nvlink_device *ndev, enum init_state state)
 {
 	int ret = 0;
 
@@ -102,6 +101,7 @@ static int nvlink_set_init_state(struct nvlink_device *ndev,
 
 	return ret;
 }
+EXPORT_SYMBOL(nvlink_set_init_state);
 
 void nvlink_print_topology(void)
 {

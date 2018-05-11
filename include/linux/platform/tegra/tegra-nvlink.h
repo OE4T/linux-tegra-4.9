@@ -303,6 +303,7 @@ int nvlink_register_link(struct nvlink_link* link);
 int nvlink_unregister_device(struct nvlink_device* device);
 int nvlink_unregister_link(struct nvlink_link* link);
 int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state);
+int nvlink_set_init_state(struct nvlink_device *ndev, enum init_state state);
 int nvlink_enumerate(struct nvlink_device *ndev);
 int nvlink_transition_intranode_conn_off_to_safe(struct nvlink_device *ndev);
 int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev);

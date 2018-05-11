@@ -260,6 +260,8 @@ int wait_for_reg_cond_nvlink(
 			u32 *reg_val,
 			u32 timeout_us);
 
+int t19x_nvlink_dev_interface_disable(struct nvlink_device *ndev);
+
 void minion_dump_pc_trace(struct tnvlink_dev *tdev);
 void minion_dump_registers(struct tnvlink_dev *tdev);
 int minion_boot(struct tnvlink_dev *tdev);

@@ -76,6 +76,10 @@ static int get_local_pci_info_ioctl(struct tnvlink_dev *tdev,
 					void *ioctl_struct);
 static int set_topology_info_ioctl(struct tnvlink_dev *tdev,
 					void *ioctl_struct);
+static int interface_disable_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
+static int finalize_shutdown_ioctl(struct tnvlink_dev *tdev,
+					void *ioctl_struct);
 
 struct tnvlink_ioctl {
 	const char *const name;
@@ -236,6 +240,18 @@ static const struct tnvlink_ioctl ioctls[] = {
 		.name			= "set_topology_info",
 		.struct_size = sizeof(struct tegra_nvlink_set_topology_info),
 		.handler		= set_topology_info_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_INTERFACE_DISABLE] = {
+		.name			= "interface_disable",
+		.struct_size		= 0,
+		.handler		= interface_disable_ioctl,
+		.is_rm_shim_ioctl	= true,
+	},
+	[TNVLINK_IOCTL_FINALIZE_SHUTDOWN] = {
+		.name			= "finalize_shutdown",
+		.struct_size		= 0,
+		.handler		= finalize_shutdown_ioctl,
 		.is_rm_shim_ioctl	= true,
 	},
 };
@@ -1027,6 +1043,7 @@ static int enable_shim_driver_ioctl(struct tnvlink_dev *tdev,
 
 	tdev->rm_shim_enabled = true;
 	ndev->device_id = NVLINK_ENDPT_T19X;
+	ndev->link.device_id = ndev->device_id;
 	ndev->is_master = false;
 	/*
 	 * Right now we only support a T19x+GV100 topology for the RM shim
@@ -1328,6 +1345,24 @@ fail:
 		0,
 		sizeof(*kernel_remote_pci_info));
 exit:
+	return ret;
+}
+
+static int interface_disable_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	return t19x_nvlink_dev_interface_disable(tdev->ndev);
+}
+
+static int finalize_shutdown_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
+{
+	int ret = 0;
+
+	devm_free_irq(tdev->dev, tdev->irq, tdev);
+
+	ret = nvlink_set_init_state(tdev->ndev, NVLINK_DEV_OFF);
+	if (ret < 0)
+		nvlink_err("Failed to set init_state to NVLINK_DEV_OFF");
+
 	return ret;
 }
 

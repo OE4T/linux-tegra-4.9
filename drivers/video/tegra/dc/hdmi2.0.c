@@ -41,7 +41,7 @@
 #include "sor_regs.h"
 #include "edid.h"
 #include "hdmi2.0.h"
-#include "hdcp/hdmihdcp.h"
+#include "hdmihdcp.h"
 #include "dpaux.h"
 #include "hda_dc.h"
 #include "hdmivrr.h"

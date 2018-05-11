@@ -271,6 +271,14 @@ int usb_hcd_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 		down_write(&companions_rwsem);
 		dev_set_drvdata(&dev->dev, hcd);
 		for_each_companion(dev, hcd, ehci_pre_add);
+		if ((dev->vendor == PCI_VENDOR_ID_NETMOS) &&
+		    (dev->device == PCI_DEVICE_ID_NETMOS_9990)) {
+			retval = pci_enable_msi(dev);
+			if (retval)
+				dev_err(&dev->dev, "MSI enable failed:%s, %d\n",
+					pci_name(dev), retval);
+		}
+		hcd_irq = dev->irq;
 		retval = usb_add_hcd(hcd, hcd_irq, IRQF_SHARED);
 		if (retval != 0)
 			dev_set_drvdata(&dev->dev, NULL);
@@ -279,6 +287,14 @@ int usb_hcd_pci_probe(struct pci_dev *dev, const struct pci_device_id *id)
 	} else {
 		down_read(&companions_rwsem);
 		dev_set_drvdata(&dev->dev, hcd);
+		if ((dev->vendor == PCI_VENDOR_ID_NETMOS) &&
+		    (dev->device == PCI_DEVICE_ID_NETMOS_9990)) {
+			retval = pci_enable_msi(dev);
+			if (retval)
+				dev_err(&dev->dev, "MSI enable failed:%s, %d\n",
+					pci_name(dev), retval);
+		}
+		hcd_irq = dev->irq;
 		retval = usb_add_hcd(hcd, hcd_irq, IRQF_SHARED);
 		if (retval != 0)
 			dev_set_drvdata(&dev->dev, NULL);

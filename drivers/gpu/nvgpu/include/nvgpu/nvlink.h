@@ -27,6 +27,8 @@
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/nvlink.h>
+#elif defined(__NVGPU_POSIX__)
+#include <nvgpu/posix/nvlink.h>
 #else
 #include <nvgpu_rmos/include/nvlink.h>
 #endif

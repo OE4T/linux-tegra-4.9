@@ -1365,6 +1365,13 @@ static int apply_speed_change(struct seq_file *s, void *data)
 		}
 	}
 
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,
+			 &val);
+	val &= ~PCI_EXP_LNKSTA_CLS;
+	val |= pcie->target_speed;
+	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,
+			  val);
+
 	/* Wait for previous link training to complete */
 	start_jiffies = jiffies;
 	for (;;) {
@@ -1372,8 +1379,11 @@ static int apply_speed_change(struct seq_file *s, void *data)
 				 4, &val);
 		if (!(val & CFG_LINK_STATUS_LT))
 			break;
-		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
+		if (time_after(jiffies, start_jiffies +
+		    msecs_to_jiffies(1000))) {
+			seq_puts(s, "Link Retrain Timeout\n");
 			break;
+		}
 		usleep_range(1000, 1100);
 	}
 	if (val & CFG_LINK_STATUS_LT) {
@@ -1381,11 +1391,11 @@ static int apply_speed_change(struct seq_file *s, void *data)
 		return 0;
 	}
 
-	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,
-			 &val);
-	val &= ~PCI_EXP_LNKSTA_CLS;
-	val |= pcie->target_speed;
-	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL_2, 4,
+	/* Clear BW Management Status */
+	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
+			 4, &val);
+	val |= CFG_LINK_STATUS_BW_MAN_STATUS;
+	dw_pcie_cfg_write(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4,
 			  val);
 
 	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL, 4,
@@ -1401,10 +1411,16 @@ static int apply_speed_change(struct seq_file *s, void *data)
 				 4, &val);
 		if (val & CFG_LINK_STATUS_BW_MAN_STATUS)
 			break;
-		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
+		if (time_after(jiffies, start_jiffies +
+		     msecs_to_jiffies(1000))) {
+			seq_puts(s, "Bandwidth Management Status Timeout\n");
 			break;
+		}
 		usleep_range(1000, 1100);
 	}
+
+	/* Give 20ms time for new link status to appear in LnkSta register */
+	msleep(20);
 
 	dw_pcie_cfg_read(pcie->pp.dbi_base + CFG_LINK_STATUS_CONTROL,
 			 4, &val);

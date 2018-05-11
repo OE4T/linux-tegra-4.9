@@ -294,4 +294,9 @@
 		compatible = "nvidia,tegra194-dpaux3-pinctrl";
 		status = "okay";
 	};
+
+	hardwood {
+		compatible = "nvidia,denver-hardwood";
+		interrupts = <0 24 0x4>;
+	};
 };

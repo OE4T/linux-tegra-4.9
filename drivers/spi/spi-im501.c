@@ -2,6 +2,9 @@
  * drivers/spi/spi-im501.c
  * (C) Copyright 2014-2018
  * Fortemedia, Inc. <www.fortemedia.com>
+ *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  * Author: HenryZhang <henryhzhang@fortemedia.com>;
  * 			LiFu <fuli@fortemedia.com>
  *
@@ -1718,6 +1721,8 @@ static ssize_t im501_spi_device_write(struct file *file,
 
 	case FM_SMVD_DL_EFT_FW:
 		local_dev_cmd_fwdl = (dev_cmd_fwdl *) local_dev_cmd;
+		// Ensure filename is terminated
+		local_dev_cmd_fwdl->buf[sizeof(local_dev_cmd_fwdl->buf)-1] = '\0';
 		im501_dsp_load_single_fw_file(local_dev_cmd_fwdl->buf,
 						  local_dev_cmd_fwdl->dsp_addr,
 						  IM501_EFT_FW);

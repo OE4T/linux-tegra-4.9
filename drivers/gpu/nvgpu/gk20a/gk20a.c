@@ -34,6 +34,7 @@
 #include <nvgpu/vidmem.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/soc.h>
 
 #include <trace/events/gk20a.h>
 
@@ -76,6 +77,14 @@ int gk20a_detect_chip(struct gk20a *g)
 		return 0;
 
 	gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
+
+	if ((p->gpu_arch + p->gpu_impl) == NVGPU_GPUID_GV11B) {
+
+		/* overwrite gpu revison for A02  */
+		if (!nvgpu_is_soc_t194_a01(g))
+			p->gpu_rev = 0xa2;
+
+	}
 
 	nvgpu_log_info(g, "arch: %x, impl: %x, rev: %x\n",
 			g->params.gpu_arch,

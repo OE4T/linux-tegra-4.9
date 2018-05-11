@@ -406,11 +406,68 @@ static void config_cmrt(struct pci_dev *pdev, u32 val)
 	}
 }
 
+static void encode_l12_threshold(u32 threshold_us, u32 *scale, u32 *value)
+{
+	u32 threshold_ns = threshold_us * 1000;
+
+	/* See PCIe r3.1, sec 7.33.3 and sec 6.18 */
+	if (threshold_ns < 32) {
+		*scale = 0;
+		*value = threshold_ns;
+	} else if (threshold_ns < 1024) {
+		*scale = 1;
+		*value = threshold_ns >> 5;
+	} else if (threshold_ns < 32768) {
+		*scale = 2;
+		*value = threshold_ns >> 10;
+	} else if (threshold_ns < 1048576) {
+		*scale = 3;
+		*value = threshold_ns >> 15;
+	} else if (threshold_ns < 33554432) {
+		*scale = 4;
+		*value = threshold_ns >> 20;
+	} else {
+		*scale = 5;
+		*value = threshold_ns >> 25;
+	}
+}
+
+static void config_l12_thtime(struct pci_dev *pdev, u32 t_common_mode,
+			      u32 t_power_on)
+{
+	u32 l1_2_threshold, scale, value, data;
+	int pos = 0;
+
+	/*
+	 * Set LTR_L1.2_THRESHOLD to the time required to transition the
+	 * Link from L0 to L1.2 and back to L0 so we enter L1.2 only if
+	 * downstream devices report (via LTR) that they can tolerate at
+	 * least that much latency.
+	 *
+	 * Based on PCIe r3.1, sec 5.5.3.3.1, Figures 5-16 and 5-17, and
+	 * Table 5-11.  T(POWER_OFF) is at most 2us and T(L1.2) is at
+	 * least 4us.
+	 */
+	l1_2_threshold = 2 + 4 + t_common_mode + t_power_on;
+	encode_l12_threshold(l1_2_threshold, &scale, &value);
+
+	pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
+	if (pos) {
+		pci_read_config_dword(pdev, pos + PCI_L1SS_CTRL1, &data);
+		data &= ~(PCI_L1SS_CTRL1_L12TH_VAL_MASK |
+			PCI_L1SS_CTRL1_L12TH_SCALE_MASK);
+		data |= value << PCI_L1SS_CTRL1_L12TH_VAL_SHIFT;
+		data |= scale << PCI_L1SS_CTRL1_L12TH_SCALE_SHIFT;
+		pci_write_config_dword(pdev, pos + PCI_L1SS_CTRL1, data);
+	}
+}
+
 static void pcie_aspm_cap_init(struct pcie_link_state *link, int blacklist)
 {
 	struct pci_dev *child, *parent = link->pdev;
 	struct pci_bus *linkbus = parent->subordinate;
 	struct aspm_register_info upreg, dwreg;
+	u32 t_common_mode, t_power_on;
 
 	if (blacklist) {
 		/* Set enabled/disable so that we will disable ASPM later */
@@ -458,10 +515,16 @@ static void pcie_aspm_cap_init(struct pcie_link_state *link, int blacklist)
 		link->aspm_support |= ASPM_STATE_L11;
 	if (upreg.l12_support & dwreg.l12_support)
 		link->aspm_support |= ASPM_STATE_L12;
-	config_t_power_on(parent, max(upreg.t_power_on, dwreg.t_power_on));
-	config_t_power_on(child, max(upreg.t_power_on, dwreg.t_power_on));
-	config_cmrt(parent, max(upreg.cmrt, dwreg.cmrt));
-	config_cmrt(child, max(upreg.cmrt, dwreg.cmrt));
+	t_power_on = max(upreg.t_power_on, dwreg.t_power_on);
+	t_common_mode = max(upreg.cmrt, dwreg.cmrt);
+	config_t_power_on(parent, t_power_on);
+	config_t_power_on(child, t_power_on);
+	config_cmrt(parent, t_common_mode);
+	config_cmrt(child, t_common_mode);
+	if (link->aspm_support & ASPM_STATE_L1SS) {
+		config_l12_thtime(parent, t_common_mode, t_power_on);
+		config_l12_thtime(child, t_common_mode, t_power_on);
+	}
 
 	/* Save default state */
 	link->aspm_default = link->aspm_enabled;

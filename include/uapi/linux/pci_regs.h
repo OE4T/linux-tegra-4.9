@@ -975,7 +975,9 @@
 #define  PCI_L1SS_CTRL1_ASPM_L11SC	0x0C	/* ASPM L1SS Enable */
 #define  PCI_L1SS_CTRL1_CMRT_MASK	0xFF00	/* CM restore time mask */
 #define  PCI_L1SS_CTRL1_CMRT_SHIFT	8	/* CM restore time shift */
+#define  PCI_L1SS_CTRL1_L12TH_VAL_MASK	0x3FF0000	/* L1.2 threshold val mask */
 #define  PCI_L1SS_CTRL1_L12TH_VAL_SHIFT	16	/* L1.2 threshold val shift */
+#define  PCI_L1SS_CTRL1_L12TH_SCALE_MASK	0xE0000000	/* L1.2 threshold scale mask */
 #define  PCI_L1SS_CTRL1_L12TH_SCALE_SHIFT	29	/* L1.2 threshold scale shift */
 #define PCI_L1SS_CTRL2		0x0C	/* L1SS control 2 register */
 #define PCI_L1SS_CTRL2_PWRN_SCL_MASK	0x03	/* L1SS ctrl 2 reg scale mask */

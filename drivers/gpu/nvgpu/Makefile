@@ -160,7 +160,7 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += \
 	common/linux/platform_gp10b_tegra.o \
 	common/linux/platform_gv11b_tegra.o
 
-nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o \
+nvgpu-$(CONFIG_SYNC) += common/linux/sync_sema_android.o \
 		common/linux/os_fence_android.o \
 		common/linux/os_fence_android_sema.o
 

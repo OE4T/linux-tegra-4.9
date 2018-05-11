@@ -34,7 +34,6 @@
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
 #include "fence_gk20a.h"
-#include "sync_gk20a.h"
 #include "mm_gk20a.h"
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST

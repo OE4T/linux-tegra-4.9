@@ -24,7 +24,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
-#include "gk20a/sync_gk20a.h"
 #include "gk20a/channel_sync_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 

@@ -21,9 +21,10 @@
 #include <nvgpu/linux/os_fence_android.h>
 #include <nvgpu/semaphore.h>
 
-#include "gk20a/sync_gk20a.h"
 #include "gk20a/channel_sync_gk20a.h"
 #include "gk20a/mm_gk20a.h"
+
+#include "sync_sema_android.h"
 
 #include "../drivers/staging/android/sync.h"
 

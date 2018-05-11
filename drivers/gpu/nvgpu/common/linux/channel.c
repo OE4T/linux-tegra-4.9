@@ -40,7 +40,7 @@
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 
-#include "gk20a/sync_gk20a.h"
+#include "sync_sema_android.h"
 
 u32 nvgpu_submit_gpfifo_user_flags_to_common_flags(u32 user_flags)
 {

@@ -31,7 +31,6 @@
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
-#include "sync_gk20a.h"
 
 struct gk20a_fence_ops {
 	int (*wait)(struct gk20a_fence *, long timeout);

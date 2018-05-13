@@ -112,6 +112,11 @@ Optional properties:
     2 - Gen-2
     3 - Gen-3
     4 - Gen-4
+- nvidia,init-speed: limits controllers init speed to this value.
+    1 - Gen-1
+    2 - Gen-2
+    3 - Gen-3
+    4 - Gen-4
 - nvidia,disable-aspm-states : controls advertisement of ASPM states
     bit-0 to '1' : disables advertisement of ASPM-L0s
     bit-1 to '1' : disables advertisement of ASPM-L1. This also disables

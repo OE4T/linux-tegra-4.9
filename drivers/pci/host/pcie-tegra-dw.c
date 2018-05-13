@@ -490,6 +490,7 @@ struct tegra_pcie_dw {
 
 	u32 num_lanes;
 	u32 max_speed;
+	u32 init_speed;
 	bool cdm_check;
 	u32 cid;
 	u32 msi_ctrl_int;
@@ -2161,7 +2162,7 @@ static void tegra_pcie_dw_host_init(struct pcie_port *pp)
 	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_CAP, 4, tmp);
 	dw_pcie_cfg_read(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, &tmp);
 	tmp &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
-	tmp |= pcie->max_speed;
+	tmp |= pcie->init_speed;
 	dw_pcie_cfg_write(pp->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, tmp);
 
 	/* Configure Max lane width from DT */
@@ -2537,6 +2538,11 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 		dev_err(pcie->dev, "invalid max-speed (err=%d), set to Gen-1\n",
 			ret);
 		pcie->max_speed = 1;
+	}
+	ret = of_property_read_u32(np, "nvidia,init-speed", &pcie->init_speed);
+	if ((ret < 0) || (pcie->init_speed < 1 || pcie->init_speed > 4)) {
+		dev_info(pcie->dev, "Setting init speed to max speed\n");
+		pcie->init_speed = pcie->max_speed;
 	}
 	pcie->pex_wake = of_get_named_gpio(np, "nvidia,pex-wake", 0);
 	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,

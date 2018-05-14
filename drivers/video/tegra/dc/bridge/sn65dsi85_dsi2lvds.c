@@ -1,7 +1,7 @@
 /*
  * sn65dsi85_dsi2lvds.c: dsi to lvds sn65dsi85 controller driver.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Tow Wang <toww@nvidia.com>
@@ -212,7 +212,7 @@ static void sn65dsi85_dsi2lvds_postpoweron(struct tegra_dc_dsi_data *dsi)
 	unsigned val = 0;
 	unsigned retry = 0;
 
-	if (NULL == dsi2lvds)
+	if (dsi2lvds == NULL)
 		return;
 
 	WARN_ON(!dsi2lvds->dsi2lvds_enabled);
@@ -397,7 +397,7 @@ static int sn65dsi85_dsi2lvds_panel_create_debugfs(
 	pEntry = debugfs_create_file("regs", 0644,
 		dsi2lvds->debugdir, dsi2lvds, &regs_fops);
 	pr_info("%s: debugfs_create_file returned %p\n", __func__, pEntry);
-	if (NULL == pEntry) {
+	if (pEntry == NULL) {
 		ret = ENOENT;
 		goto err;
 	}
@@ -568,7 +568,7 @@ static int sn65dsi85_i2c_probe(struct i2c_client *client,
 	sn65dsi85_dsi2lvds = devm_kzalloc(&client->dev,
 					sizeof(*sn65dsi85_dsi2lvds),
 					GFP_KERNEL);
-	if (NULL == sn65dsi85_dsi2lvds)
+	if (sn65dsi85_dsi2lvds == NULL)
 		return -ENOMEM;
 
 	memset(sn65dsi85_dsi2lvds, 0, sizeof(struct tegra_dc_dsi2lvds_data));

@@ -50,7 +50,7 @@
 #include "fake_panel.h"
 #include <linux/tegra_prod.h>
 
-#include "hdmi2fpd_ds90uh949.h"
+#include "bridge/hdmi2fpd_ds90uh949.h"
 static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");

@@ -1,7 +1,7 @@
 /*
  * FPDLink Deserializer driver
  *
- * Copyright (C) 2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -305,7 +305,7 @@ static const struct i2c_device_id ds90uh948_id[] = {
 MODULE_DEVICE_TABLE(i2c, ds90uh948_id);
 
 #ifdef CONFIG_OF
-static struct of_device_id ds90uh948_of_match[] = {
+static const struct of_device_id ds90uh948_of_match[] = {
 	{.compatible = "ti,ds90uh948", },
 	{.compatible = "ti,ds90uh926", },
 	{ },

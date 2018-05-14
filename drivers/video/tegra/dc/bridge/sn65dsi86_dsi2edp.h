@@ -1,7 +1,7 @@
 /*
  * sn65dsi86_dsi2edp.h: dsi to edp controller sn65dsi86 driver.
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>

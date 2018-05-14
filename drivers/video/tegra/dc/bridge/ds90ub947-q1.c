@@ -1,7 +1,7 @@
 /*
  * DS90UB947-Q1 1080p OpenLDS to FPD-Link III Serializer driver
  *
- * Copyright (C) 2016-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,13 +55,13 @@ bool ds90ub947_lvds2fpdlink3_detect(struct tegra_dc *dc)
 {
 	int ret, val;
 
-	if (NULL == g_ds90ub947_data)
+	if (g_ds90ub947_data == NULL)
 		return false;
 	mutex_lock(&g_ds90ub947_data->lock);
 	ret = regmap_read(g_ds90ub947_data->regmap, DS90UB947_GENERAL_STATUS,
 		&val);
 	mutex_unlock(&g_ds90ub947_data->lock);
-	if (0 == ret && (val & 0x01))
+	if (ret == 0 && (val & 0x01))
 		return true;
 	return false;
 }
@@ -219,7 +219,7 @@ static void ds90ub947_panel_create_debugfs(struct ds90ub947_data *data)
 	pEntry = debugfs_create_file("init_regs", 0644,
 		data->debugdir, data, &init_regs_fops);
 	pr_debug("%s: debugfs_create_file returned %p\n", __func__, pEntry);
-	if (NULL == pEntry)
+	if (pEntry == NULL)
 		goto err;
 
 	return;
@@ -227,7 +227,7 @@ static void ds90ub947_panel_create_debugfs(struct ds90ub947_data *data)
 err:
 	ds90ub947_panel_remove_debugfs(data);
 	dev_err(&data->client->dev, "Failed to create debugfs\n");
-	return;
+
 }
 #else
 static void ds90ub947_panel_create_debugfs(struct ds90ub947_data *data) { }
@@ -253,8 +253,10 @@ static int of_ds90ub947_parse_pdata(struct i2c_client *client,
 		dev_err(&client->dev, "lvds2fpdl: gpio number not provided\n");
 	else if (!gpio_is_valid(data->en_gpio))
 		dev_err(&client->dev, "lvds2fpdl: en gpio is invalid\n");
-	/* init-regs is an array of groups of 3 values: reg address, mask, and
-	 * value to write */
+	/*
+	 * init-regs is an array of groups of 3 values: reg address, mask,
+	 * and value to write
+	 */
 	of_property_for_each_u32(np, "init-regs", prop, p, u)
 		count++;
 
@@ -391,7 +393,7 @@ static const struct i2c_device_id ds90ub947_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ds90ub947_id);
 
-static struct of_device_id ds90ub947_of_match[] = {
+static const struct of_device_id ds90ub947_of_match[] = {
 	{.compatible = "ti,ds90ub947-q1", },
 	{ },
 };

@@ -11,15 +11,6 @@ obj-y += csc.o
 obj-y += lut.o
 obj-y += cursor.o
 obj-y += of_dc.o
-obj-$(CONFIG_TEGRA_HDMI2FPD_DS90UH949) += hdmi2fpd_ds90uh949.o
-#obj-y += dsi2lvds.o
-obj-$(CONFIG_TEGRA_HDMI2DSI_TC358870) += hdmi2dsi_tc358870.o
-obj-$(CONFIG_TEGRA_DSI2EDP_TC358767) += tc358767_dsi2edp.o
-obj-$(CONFIG_TEGRA_DSI2EDP_SN65DSI86) += sn65dsi86_dsi2edp.o
-obj-$(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) += sn65dsi85_dsi2lvds.o
-obj-$(CONFIG_TEGRA_LVDS2FPDL_DS90UB947) += ds90ub947-q1.o
-obj-$(CONFIG_TEGRA_DS90UH948Q_DESER)    += ds90uh948q_deser.o
-obj-$(CONFIG_TEGRA_EDP2LVDS_PS8625) += ps8625_edp2lvds.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
 	-I$(overlay)/drivers/media/platform/tegra
 
@@ -40,13 +31,13 @@ obj-$(CONFIG_TEGRA_DP) += dp_auto.o
 obj-$(CONFIG_TEGRA_DP) += hpd.o
 obj-$(CONFIG_TEGRA_DC) += ext/
 obj-$(CONFIG_TEGRA_HDMI2_0) += hdmi2.0.o
-obj-$(CONFIG_TEGRA_HDMI2GMSL_MAX929x) += max929x_hdmi2gmsl.o
 obj-$(CONFIG_TEGRA_HDA_DC) += hda_dc.o
 obj-$(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) += fake_panel.o null_or.o
 obj-$(CONFIG_TEGRA_VRR) += vrr.o
 obj-y += dsi_padctrl.o
 obj-$(CONFIG_TEGRA_HDMIVRR) += hdmivrr.o
 obj-y += panel/
+obj-y += bridge/
 obj-$(CONFIG_TEGRA_CEC_SUPPORT) += ../../../misc/tegra-cec/
 obj-y += crc.o
 

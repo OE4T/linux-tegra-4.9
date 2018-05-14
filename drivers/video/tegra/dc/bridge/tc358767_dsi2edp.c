@@ -1,7 +1,7 @@
 /*
  * tc358767_dsi2edp.h: dsi-edp controller tc358767 driver.
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,

@@ -1,7 +1,7 @@
 /*
  * max929x_hdmi2gmsl.c: hdmi max929x controller driver.
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Tow Wang <toww@nvidia.com>
@@ -196,7 +196,7 @@ static int max929x_i2c_probe(struct i2c_client *client,
 	max929x_hdmi2gmsl = devm_kzalloc(&client->dev,
 					sizeof(*max929x_hdmi2gmsl),
 					GFP_KERNEL);
-	if (NULL == max929x_hdmi2gmsl)
+	if (max929x_hdmi2gmsl == NULL)
 		return -ENOMEM;
 
 	memset(max929x_hdmi2gmsl, 0, sizeof(*max929x_hdmi2gmsl));

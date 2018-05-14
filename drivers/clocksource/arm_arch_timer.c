@@ -29,6 +29,7 @@
 
 #include <asm/arch_timer.h>
 #include <asm/virt.h>
+#include <asm/trace_clock.h>
 
 #include <clocksource/arm_arch_timer.h>
 
@@ -571,6 +572,11 @@ static cycle_t arch_counter_read(struct clocksource *cs)
 }
 
 static cycle_t arch_counter_read_cc(const struct cyclecounter *cc)
+{
+	return arch_timer_read_counter();
+}
+
+u64 trace_arm64_tsc()
 {
 	return arch_timer_read_counter();
 }

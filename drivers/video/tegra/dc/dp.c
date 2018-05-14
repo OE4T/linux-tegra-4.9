@@ -41,7 +41,7 @@
 #include "dpaux.h"
 #include "dc_priv.h"
 #include "edid.h"
-#include "dphdcp.h"
+#include "hdcp/dphdcp.h"
 #include "dp_lt.h"
 #include "dp_auto.h"
 

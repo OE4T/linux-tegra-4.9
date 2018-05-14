@@ -615,7 +615,7 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 			}
 
 			end_offset = (u64)g->offset + (u64)g->words * 4;
-			if (end_offset >= g->buf->size) {
+			if (end_offset > g->buf->size) {
 				dma_buf_put(g->buf);
 				g->buf = NULL;
 				err = -EINVAL;

@@ -33,7 +33,7 @@
 #define BITS_TO_LONGS(bits)			\
 	(bits + (BITS_PER_LONG - 1) / BITS_PER_LONG)
 
-#define BIT(i)		(1UL << (i))
+#define BIT(i)		(1ULL << (i))
 
 #define GENMASK(h, l) \
 	(((~0UL) - (1UL << (l)) + 1) & (~0UL >> (BITS_PER_LONG - 1 - (h))))

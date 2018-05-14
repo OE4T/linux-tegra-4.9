@@ -871,6 +871,7 @@ enum {
 	CMD_CLK_DISABLE = 8,
 	CMD_CLK_GET_ALL_INFO = 14,
 	CMD_CLK_GET_MAX_CLK_ID = 15,
+	CMD_CLK_GET_FMAX_AT_VMIN = 16,
 	CMD_CLK_MAX,
 };
 
@@ -976,6 +977,15 @@ struct cmd_clk_get_max_clk_id_response {
 	uint32_t max_id;
 } __ABI_PACKED;
 
+/** @private */
+struct cmd_clk_get_fmax_at_vmin_request {
+	EMPTY
+} __ABI_PACKED;
+
+struct cmd_clk_get_fmax_at_vmin_response {
+	int64_t rate;
+} __ABI_PACKED;
+
 /**
  * @ingroup Clocks
  * @brief Request with #MRQ_CLK
@@ -997,6 +1007,8 @@ struct cmd_clk_get_max_clk_id_response {
  * |CMD_CLK_DISABLE             |-                      |
  * |CMD_CLK_GET_ALL_INFO        |-                      |
  * |CMD_CLK_GET_MAX_CLK_ID      |-                      |
+ * |CMD_CLK_GET_FMAX_AT_VMIN    |-
+ * |
  *
  */
 
@@ -1025,6 +1037,8 @@ struct mrq_clk_request {
 		struct cmd_clk_get_all_info_request clk_get_all_info;
 		/** @private */
 		struct cmd_clk_get_max_clk_id_request clk_get_max_clk_id;
+		/** @private */
+		struct cmd_clk_get_fmax_at_vmin_request clk_get_fmax_at_vmin;
 	} __UNION_ANON;
 } __ABI_PACKED;
 
@@ -1048,6 +1062,7 @@ struct mrq_clk_request {
  * |CMD_CLK_DISABLE             |-                       |
  * |CMD_CLK_GET_ALL_INFO        |clk_get_all_info        |
  * |CMD_CLK_GET_MAX_CLK_ID      |clk_get_max_id          |
+ * |CMD_CLK_GET_FMAX_AT_VMIN    |clk_get_fmax_at_vmin    |
  *
  */
 
@@ -1065,6 +1080,7 @@ struct mrq_clk_response {
 		struct cmd_clk_is_enabled_response clk_is_enabled;
 		struct cmd_clk_get_all_info_response clk_get_all_info;
 		struct cmd_clk_get_max_clk_id_response clk_get_max_clk_id;
+		struct cmd_clk_get_fmax_at_vmin_response clk_get_fmax_at_vmin;
 	} __UNION_ANON;
 } __ABI_PACKED;
 
@@ -1271,8 +1287,10 @@ enum pg_states {
 	/** @brief Power domain is ON */
 	PG_STATE_ON = 1,
 	/**
-	 * @brief power domain is ON and made into directly usable
-	 * state by turning on the clocks associated with the domain
+	 * @brief a legacy state where power domain and the clock
+	 * associated to the domain are ON.
+	 * This state is only supported in T186, and the use of it is
+	 * deprecated.
 	 */
 	PG_STATE_RUNNING = 2,
 };
@@ -1801,7 +1819,8 @@ struct mrq_cpu_auto_cc3_response {
 	/**
 	 * @brief auto-CC3 configuration
 	 *
-	 * - bits[31..1] reserved.
+	 * - bits[31..10] reserved.
+	 * - bits[9..1] cc3 ndiv
 	 * - bit [0] if "1" auto-CC3 is allowed, if "0" auto-CC3 is not allowed
 	 */
 	uint32_t auto_cc3_config;

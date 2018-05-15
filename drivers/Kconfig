@@ -4,6 +4,7 @@ if ARCH_TEGRA
 source "drivers/misc/tegra186-ahc/Kconfig"
 source "drivers/nvpmodel/Kconfig"
 source "drivers/nvlink/Kconfig"
+source "drivers/iommu/Kconfig"
 endif
 
 endmenu

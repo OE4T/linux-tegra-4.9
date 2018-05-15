@@ -177,7 +177,9 @@ static ssize_t nvlink_shutdown_file_write(struct file *file,
 					const char __user *ubuf,
 					size_t count, loff_t *offp)
 {
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 	struct tnvlink_dev *tdev = file->private_data;
+#endif
 	char tmp[3];
 	int ret = 0;
 
@@ -185,9 +187,11 @@ static ssize_t nvlink_shutdown_file_write(struct file *file,
 
 	if (!strncmp(tmp, "1", 1)) {
 		nvlink_dbg("nvlink shutdown request from debugfs node");
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 		ret = t19x_nvlink_suspend(tdev->dev);
 		if (ret < 0)
 			nvlink_err("t19x_nvlink_suspend failed");
+#endif
 	} else {
 		nvlink_err("Unsupported value. Write 1 to shutdown nvlink");
 		ret = -EINVAL;

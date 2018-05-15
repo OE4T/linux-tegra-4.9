@@ -622,7 +622,7 @@ static const struct dev_pm_ops nvcvnas_pm_ops = {
 
 #define NVCVNAS_PM_OPS (&nvcvnas_pm_ops)
 #else
-#define NVCVNAs_PM_OPS NULL
+#define NVCVNAS_PM_OPS NULL
 #endif
 
 static struct platform_driver nvcvnas_driver = {

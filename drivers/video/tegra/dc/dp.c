@@ -1895,21 +1895,20 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->dc = dc;
 	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
-#ifdef CONFIG_SWITCH
-	dp->hpd_data.hpd_switch.name = "dp";
-	dp->audio_switch.name = "dp_audio";
-#endif
 
 	if (dp_instance) {
 		snprintf(dp->hpd_switch_name, CHAR_BUF_SIZE_MAX,
 			"dp%d", dp_instance);
 		snprintf(dp->audio_switch_name, CHAR_BUF_SIZE_MAX,
 			"dp%d_audio", dp_instance);
-#ifdef CONFIG_SWITCH
-		dp->hpd_data.hpd_switch.name = dp->hpd_switch_name;
-		dp->audio_switch.name = dp->audio_switch_name;
-#endif
+	} else {
+		snprintf(dp->hpd_switch_name, CHAR_BUF_SIZE_MAX, "dp");
+		snprintf(dp->audio_switch_name, CHAR_BUF_SIZE_MAX, "dp_audio");
 	}
+#ifdef CONFIG_SWITCH
+	dp->hpd_data.hpd_switch.name = dp->hpd_switch_name;
+	dp->audio_switch.name = dp->audio_switch_name;
+#endif
 
 	/*
 	 * If the new output type is fakeDP and an SOR instance

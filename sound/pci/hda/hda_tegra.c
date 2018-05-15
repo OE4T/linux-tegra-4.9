@@ -87,6 +87,17 @@ static const struct of_device_id tegra_disb_pd[] = {
 /* GSC_ID register */
 #define HDA_GSC_REG		0x1e0
 
+#define CHAR_BUF_SIZE_MAX	50
+
+struct hda_pcm_devices {
+	struct azx_pcm *apcm;
+	struct kobject *kobj;
+	struct kobj_attribute pcm_attr;
+	struct kobj_attribute name_attr;
+	char switch_name[CHAR_BUF_SIZE_MAX];
+	int dev_id;
+};
+
 struct hda_tegra {
 	struct azx chip;
 	struct device *dev;
@@ -100,6 +111,9 @@ struct hda_tegra {
 	struct work_struct probe_work;
 	bool init_done;
 	bool do_reset;
+	int num_codecs;
+	struct kobject *kobj;
+	struct hda_pcm_devices *hda_pcm_dev;
 };
 
 #ifdef CONFIG_PM
@@ -671,13 +685,125 @@ out_free:
 	return err;
 }
 
+static ssize_t hda_get_pcm_device_id(struct kobject *kobj,
+	struct kobj_attribute *attr,
+	char *buf)
+{
+	struct hda_pcm_devices *pcm_dev = container_of(attr,
+		struct hda_pcm_devices, pcm_attr);
+	return snprintf(buf, PAGE_SIZE, "%d\n", pcm_dev->apcm->info->device);
+}
+
+static ssize_t hda_get_pcm_switch_name(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf) {
+	struct hda_pcm_devices *pcm_dev = container_of(attr,
+		struct hda_pcm_devices, name_attr);
+	return snprintf(buf, PAGE_SIZE, "%s\n", pcm_dev->switch_name);
+}
+
+/* switches are registered from display driver, get the names w.r.t dev ID */
+int tegra_hda_get_switch_name(int dev_id, char *name);
+
+static int hda_tegra_create_sysfs(struct hda_tegra *hda)
+{
+	struct azx *chip = &hda->chip;
+	char dirname[CHAR_BUF_SIZE_MAX] = "hda_pcm_map";
+	int dev_count = 0, ret = 0;
+	struct azx_pcm *apcm;
+	struct kobject *parent = hda->dev->kobj.parent;
+
+	/* maintains list of all hda codecs */
+	hda->hda_pcm_dev =
+		(struct hda_pcm_devices *) devm_kzalloc(hda->dev,
+		sizeof(struct hda_pcm_devices) * hda->num_codecs,
+		GFP_KERNEL);
+	if (!hda->hda_pcm_dev)
+		return -ENOMEM;
+
+	hda->kobj = kobject_create_and_add(dirname, parent);
+	if (!hda->kobj)
+		return -ENOMEM;
+
+	list_for_each_entry(apcm, &chip->pcm_list, list) {
+		char subdirname[CHAR_BUF_SIZE_MAX];
+		struct hda_pcm_devices *pcm_dev = &hda->hda_pcm_dev[dev_count];
+
+		pcm_dev->apcm = apcm;
+		snprintf(subdirname, sizeof(subdirname), "hda%d", dev_count);
+		pcm_dev->kobj = kobject_create_and_add(subdirname, hda->kobj);
+		if (!pcm_dev->kobj)
+			return -ENOMEM;
+
+		/* attributes for pcm device ID */
+		pcm_dev->pcm_attr.attr.name = "pcm_dev_id";
+		pcm_dev->pcm_attr.attr.mode = 0644;
+		pcm_dev->pcm_attr.show = hda_get_pcm_device_id;
+
+		/* attributes for switch name */
+		pcm_dev->name_attr.attr.name = "switch_name";
+		pcm_dev->name_attr.attr.mode = 0644;
+		pcm_dev->name_attr.show = hda_get_pcm_switch_name;
+
+		/* gets registered switch name for give dev ID
+		 * TODO: may be we can create extcon node here itself and
+		 * not rely on display driver
+		 */
+		pcm_dev->dev_id = (apcm->codec->core.vendor_id) & 0xffff;
+		if (tegra_hda_get_switch_name(pcm_dev->dev_id,
+			pcm_dev->switch_name) < 0) {
+			dev_info(hda->dev, "error in getting switch name"
+				" for hda_pcm_id(%d)\n", apcm->info->device);
+			kobject_put(pcm_dev->kobj);
+			continue;
+		}
+
+		/* create files for read from userspace */
+		ret = sysfs_create_file(pcm_dev->kobj,
+			&(pcm_dev->pcm_attr.attr));
+		if (ret < 0)
+			break;
+
+		ret = sysfs_create_file(pcm_dev->kobj,
+			&(pcm_dev->name_attr.attr));
+		if (ret < 0)
+			break;
+
+		dev_count++;
+	}
+	return ret;
+}
+
+static void hda_tegra_remove_sysfs(struct device *dev)
+{
+	struct snd_card *card = dev_get_drvdata(dev);
+	struct azx *chip = card->private_data;
+	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	int i;
+
+	if (!hda || !hda->hda_pcm_dev || !hda->kobj)
+		return;
+
+	for (i = 0; i < hda->num_codecs; i++) {
+		struct hda_pcm_devices *pcm_dev = &hda->hda_pcm_dev[i];
+
+		if (pcm_dev->kobj) {
+			sysfs_remove_file(pcm_dev->kobj,
+				&pcm_dev->pcm_attr.attr);
+			sysfs_remove_file(pcm_dev->kobj,
+				&pcm_dev->name_attr.attr);
+			kobject_put(pcm_dev->kobj);
+		}
+	}
+	kobject_put(hda->kobj);
+}
+
 static void hda_tegra_probe_work(struct work_struct *work)
 {
 	struct hda_tegra *hda = container_of(work, struct hda_tegra, probe_work);
 	struct azx *chip = &hda->chip;
 	struct platform_device *pdev = to_platform_device(hda->dev);
 	struct device_node *np = pdev->dev.of_node;
-	int num_codec_slots = 0, gsc_id;
+	int gsc_id;
 	struct hdac_bus *bus = azx_bus(chip);
 	int err;
 
@@ -686,8 +812,8 @@ static void hda_tegra_probe_work(struct work_struct *work)
 		goto out_free;
 
 	if (of_property_read_u32(np, "nvidia,max-codec-slot",
-			&num_codec_slots) < 0)
-		num_codec_slots = 0;
+			&hda->num_codecs) < 0)
+		hda->num_codecs = 0;
 
 	bus->avoid_compact_sdo_bw = of_property_read_bool(np,
 		"nvidia,avoid-compact-sdo-bw");
@@ -704,7 +830,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 		hda_tegra_writel(gsc_id, hda->regs + HDA_GSC_REG);
 
 	/* create codec instances */
-	err = azx_probe_codecs(chip, num_codec_slots);
+	err = azx_probe_codecs(chip, hda->num_codecs);
 	if (err < 0)
 		goto out_free;
 
@@ -723,6 +849,14 @@ static void hda_tegra_probe_work(struct work_struct *work)
 
 	pm_runtime_put(hda->dev);
 
+	/* export pcm device mapping to userspace - needed for android */
+	err = hda_tegra_create_sysfs(hda);
+	if (err < 0) {
+		dev_err(&pdev->dev,
+			"error:%d in creating sysfs nodes for hda\n", err);
+		/* free allocated resources */
+		hda_tegra_remove_sysfs(&pdev->dev);
+	}
 out_free:
 	return; /* no error return from async probe */
 }
@@ -732,6 +866,9 @@ static int hda_tegra_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		hda_tegra_runtime_suspend(&pdev->dev);
+
+	/* remove sysfs files */
+	hda_tegra_remove_sysfs(&pdev->dev);
 
 	return snd_card_free(dev_get_drvdata(&pdev->dev));
 }

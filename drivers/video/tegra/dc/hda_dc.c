@@ -41,6 +41,9 @@ int tegra_hda_get_dev_id(struct tegra_dc_sor_data *sor)
 {
 	int dev_id;
 
+	if (!sor)
+		return -ENODEV;
+
 	tegra_unpowergate_partition(sor->powergate_id);
 	tegra_sor_safe_clk_enable(sor);
 	tegra_sor_clk_enable(sor);
@@ -71,7 +74,7 @@ static int tegra_hda_get_sor_num(int dev_id)
 		if (!hda)
 			continue;
 
-		if (hda_inst[i].valid && (dev_id == hda->dev_id)) {
+		if ((dev_id == hda->dev_id) && hda->sor) {
 			val = hda->sor->ctrl_num;
 			if (val >= tegra_dc_get_numof_dispsors())
 				val = -EINVAL;
@@ -165,6 +168,31 @@ static int tegra_hda_eld_config(struct tegra_dc_hda_data *hda)
 	devm_kfree(&hda->dc->ndev->dev, eld_mem);
 	return 0;
 }
+
+int tegra_hda_get_switch_name(int dev_id, char *name)
+{
+	int sor_num;
+	struct tegra_dc_hda_data *hda;
+
+	mutex_lock(&global_hda_lock);
+	sor_num = tegra_hda_get_sor_num(dev_id);
+	if (sor_num < 0) {
+		mutex_unlock(&global_hda_lock);
+		return -EINVAL;
+	}
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	mutex_unlock(&global_hda_lock);
+	hda = hda_inst[sor_num].hda;
+	if (hda) {
+		snprintf(name, CHAR_BUF_SIZE_MAX, "%s",
+			hda->audio_switch_name);
+		mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+		return 0;
+	}
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+	return -EINVAL;
+}
+EXPORT_SYMBOL(tegra_hda_get_switch_name);
 
 /* Applicable for dp too, func name still uses hdmi as per generic hda driver */
 int tegra_hdmi_setup_hda_presence(int dev_id)
@@ -560,14 +588,6 @@ void tegra_hda_enable(void *hda_handle)
 	if (hda->sink == TEGRA_DC_OUT_DP)
 		hda->eld->conn_type = 1; /* For DP, conn_type = 1 */
 
-	/* Read the dev_id of the sor */
-	hda->dev_id = tegra_hda_get_dev_id(hda->sor);
-
-	mutex_lock(&global_hda_lock);
-	hda_inst[sor_num].valid = true;
-	hda_inst[sor_num].hda = hda;
-	mutex_unlock(&global_hda_lock);
-
 	tegra_hdmi_setup_hda_presence(hda->dev_id);
 	tegra_hdmi_setup_audio_freq_source(hda->audio_freq, HDA, hda->dev_id);
 }
@@ -589,7 +609,6 @@ void tegra_hda_disable(void *hda_handle)
 		return;
 	}
 
-	hda_inst[sor_num].valid = false;
 	mutex_unlock(&global_hda_lock);
 }
 
@@ -619,11 +638,17 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 		if (!hda)
 			goto err;
 
+		hda->audio_switch_name = kzalloc(sizeof(char) *
+			CHAR_BUF_SIZE_MAX, GFP_KERNEL);
+		if (!hda->audio_switch_name)
+			goto err;
+
 		hda->sink = dc->out->type;
 		hda->client_data = data;
 		hda->sink = dc->out->type;
 		hda->null_sample_inject = false;
 		tegra_dc_hda_get_clocks(dc, hda);
+
 		if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 			struct tegra_hdmi *hdmi = data;
 
@@ -633,6 +658,8 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 			hda->eld = &to_hdmi(hda->client_data)->eld;
 			hda->enabled = &to_hdmi(hda->client_data)->enabled;
 			hda->eld_valid = &to_hdmi(hda->client_data)->eld_valid;
+			snprintf(hda->audio_switch_name, CHAR_BUF_SIZE_MAX,
+				"%s", hdmi->audio_switch_name);
 		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
 			struct tegra_dc_dp_data *dp = data;
 
@@ -643,10 +670,26 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 			hda->enabled = &to_dp(hda->client_data)->enabled;
 			hda->eld_valid =
 			&to_dp(hda->client_data)->hpd_data.eld_retrieved;
+			snprintf(hda->audio_switch_name, CHAR_BUF_SIZE_MAX,
+				"%s", dp->audio_switch_name);
 		}
-		mutex_lock(&hda_inst[hda->sor->ctrl_num].hda_inst_lock);
-		hda_inst[hda->sor->ctrl_num].initialized = true;
-		mutex_unlock(&hda_inst[hda->sor->ctrl_num].hda_inst_lock);
+
+		if (hda->sor) {
+			int sor_num = hda->sor->ctrl_num;
+
+			mutex_lock(&global_hda_lock);
+			if ((sor_num >= 0) &&
+				(sor_num < tegra_dc_get_numof_dispsors()) &&
+				hda_inst) {
+				mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+				hda->dev_id = tegra_hda_get_dev_id(hda->sor);
+				hda_inst[sor_num].hda = hda;
+				hda_inst[sor_num].initialized =
+					true;
+				mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+			}
+			mutex_unlock(&global_hda_lock);
+		}
 	}
 	return;
 err:
@@ -671,6 +714,7 @@ void tegra_hda_destroy(void *hda_handle)
 
 		mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 		tegra_dc_hda_put_clocks(hda);
+		kfree(hda->audio_switch_name);
 		kfree(hda);
 		hda = NULL;
 		hda_inst[sor_num].initialized = false;

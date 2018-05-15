@@ -1613,21 +1613,21 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->mon_spec_valid = false;
 	hdmi->eld_valid = false;
 	hdmi->device_shutdown = false;
-#ifdef CONFIG_SWITCH
-	hdmi->hpd_switch.name = "hdmi";
-	hdmi->audio_switch.name = "hdmi_audio";
-#endif
 
 	if (hdmi_instance) {
 		snprintf(hdmi->hpd_switch_name, CHAR_BUF_SIZE_MAX,
 			"hdmi%d", hdmi_instance);
 		snprintf(hdmi->audio_switch_name, CHAR_BUF_SIZE_MAX,
 			"hdmi%d_audio", hdmi_instance);
-#ifdef CONFIG_SWITCH
-		hdmi->hpd_switch.name = hdmi->hpd_switch_name;
-		hdmi->audio_switch.name = hdmi->audio_switch_name;
-#endif
+	} else {
+		snprintf(hdmi->hpd_switch_name, CHAR_BUF_SIZE_MAX, "hdmi");
+		snprintf(hdmi->audio_switch_name, CHAR_BUF_SIZE_MAX,
+			"hdmi_audio");
 	}
+#ifdef CONFIG_SWITCH
+	hdmi->hpd_switch.name = hdmi->hpd_switch_name;
+	hdmi->audio_switch.name = hdmi->audio_switch_name;
+#endif
 
 	if (0) {
 		/* TODO: seamless boot mode needs initialize the state */

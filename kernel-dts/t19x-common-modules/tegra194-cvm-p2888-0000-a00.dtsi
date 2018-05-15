@@ -39,4 +39,15 @@
 	pmc@c370000 {
 		nvidia,invert-interrupt;
 	};
+	plugin-manager {
+		fragment-p2888-mods {
+			odm-data = "mods-build";
+			override@0 {
+				target = <&gpcdma>;
+				_overlay_ {
+					nvidia,bypass-smmu;
+				};
+			};
+		};
+	};
 };

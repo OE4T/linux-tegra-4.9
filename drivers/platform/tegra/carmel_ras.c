@@ -20,6 +20,7 @@
 #include <linux/platform/tegra/tegra-cpu.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
+#include <linux/cpuhotplug.h>
 
 static LIST_HEAD(core_ras_list);
 static DEFINE_RAW_SPINLOCK(core_ras_lock);
@@ -31,6 +32,9 @@ static DEFINE_RAW_SPINLOCK(ccplex_ras_lock);
 static struct dentry *debugfs_dir;
 static struct dentry *debugfs_node;
 static int is_debug;
+
+/* saved hotplug state */
+static enum cpuhp_state hp_state;
 
 /* Error Records per CORE - IFU errors
  * error_code = value of ARM_ERR_STATUS:IERR[15:8]
@@ -417,22 +421,14 @@ static void carmel_ras_enable(void *info)
 	pr_info("%s:RAS enabled on cpu%d\n", __func__, cpu);
 }
 
-static int carmel_ras_enable_callback(struct notifier_block *nfb,
-				     unsigned long action, void *hcpu)
+static int carmel_ras_enable_callback(unsigned int cpu)
 {
-	int cpu = (int)(uintptr_t) hcpu;
 
-	if (((action == CPU_ONLINE) || (action == CPU_ONLINE_FROZEN)) &&
-		is_this_ras_cpu()) {
+	if (is_this_ras_cpu())
 		smp_call_function_single(cpu, carmel_ras_enable, NULL, 1);
-	}
 
 	return 0;
 }
-
-static struct notifier_block ras_notifier = {
-	.notifier_call = carmel_ras_enable_callback
-};
 
 /* SERROR is triggered for Uncorrectable errors.
  * This is SERR Callback for error records per core.
@@ -931,13 +927,22 @@ static int ras_carmel_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+	/* Ensure that any CPU brought online sets up RAS */
+	ret = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN,
+				  "ras_carmel:online",
+				  carmel_ras_enable_callback,
+				  NULL);
+	if (ret < 0) {
+		dev_err(dev, "unable to register cpu hotplug state\n");
+		return ret;
+	}
+
+	hp_state = ret;
+
 	/* register SERR for Uncorrectable Errors */
 	register_serr_hook(&core_serr_callback);
 	register_serr_hook(&corecluster_serr_callback);
 	register_serr_hook(&ccplex_serr_callback);
-
-	/* Ensure that any CPU brought online sets up RAS */
-	register_hotcpu_notifier(&ras_notifier);
 
 	/* Enable RAS on all online CPUs */
 	for_each_online_cpu(cpu) {
@@ -960,7 +965,8 @@ static int ras_carmel_remove(struct platform_device *pdev)
 	unregister_serr_hook(&corecluster_serr_callback);
 	unregister_serr_hook(&ccplex_serr_callback);
 
-	unregister_hotcpu_notifier(&ras_notifier);
+	cpuhp_remove_state(hp_state);
+
 	ras_unregister_core_ers();
 	ras_unregister_corecluster_ers();
 	ras_unregister_ccplex_ers();

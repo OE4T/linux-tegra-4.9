@@ -43,9 +43,6 @@
 
 static struct quadd_hrt_ctx hrt;
 
-static void
-read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched);
-
 struct hrt_event_value {
 	struct quadd_event event;
 	u32 value;
@@ -54,47 +51,6 @@ struct hrt_event_value {
 static inline u32 get_task_state(struct task_struct *task)
 {
 	return (u32)(task->state | task->exit_state);
-}
-
-static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
-{
-	struct pt_regs *regs;
-
-	regs = get_irq_regs();
-
-	if (!atomic_read(&hrt.active))
-		return HRTIMER_NORESTART;
-
-	qm_debug_handler_sample(regs);
-
-	if (regs)
-		read_all_sources(regs, current, 0);
-
-	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
-	qm_debug_timer_forward(regs, hrt.sample_period);
-
-	return HRTIMER_RESTART;
-}
-
-static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
-{
-	u64 period = hrt.sample_period;
-
-	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
-		      HRTIMER_MODE_REL_PINNED);
-	qm_debug_timer_start(NULL, period);
-}
-
-static void cancel_hrtimer(struct quadd_cpu_context *cpu_ctx)
-{
-	hrtimer_cancel(&cpu_ctx->hrtimer);
-	qm_debug_timer_cancel();
-}
-
-static void init_hrtimer(struct quadd_cpu_context *cpu_ctx)
-{
-	hrtimer_init(&cpu_ctx->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	cpu_ctx->hrtimer.function = hrtimer_handler;
 }
 
 static inline u64 get_posix_clock_monotonic_time(void)
@@ -554,6 +510,47 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	quadd_put_sample_this_cpu(&record_data, vec, vec_idx);
 }
 
+static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
+{
+	struct pt_regs *regs;
+
+	regs = get_irq_regs();
+
+	if (!atomic_read(&hrt.active))
+		return HRTIMER_NORESTART;
+
+	qm_debug_handler_sample(regs);
+
+	if (regs)
+		read_all_sources(regs, current, 0);
+
+	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
+	qm_debug_timer_forward(regs, hrt.sample_period);
+
+	return HRTIMER_RESTART;
+}
+
+static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
+{
+	u64 period = hrt.sample_period;
+
+	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
+		      HRTIMER_MODE_REL_PINNED);
+	qm_debug_timer_start(NULL, period);
+}
+
+static void cancel_hrtimer(struct quadd_cpu_context *cpu_ctx)
+{
+	hrtimer_cancel(&cpu_ctx->hrtimer);
+	qm_debug_timer_cancel();
+}
+
+static void init_hrtimer(struct quadd_cpu_context *cpu_ctx)
+{
+	hrtimer_init(&cpu_ctx->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	cpu_ctx->hrtimer.function = hrtimer_handler;
+}
+
 static inline int
 is_profile_process(struct task_struct *task, int is_trace)
 {
@@ -587,15 +584,9 @@ is_profile_process(struct task_struct *task, int is_trace)
 }
 
 static inline int
-is_swapper_task(struct task_struct *task)
-{
-	return task_pid_nr(task) == 0;
-}
-
-static inline int
 validate_task(struct task_struct *task)
 {
-	return task && task->mm && !is_swapper_task(task);
+	return task && !is_idle_task(task);
 }
 
 static inline int

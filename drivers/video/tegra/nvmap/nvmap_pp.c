@@ -91,6 +91,22 @@ static inline struct page *get_page_list_page(struct nvmap_page_pool *pool)
 	return page;
 }
 
+static inline struct page *get_page_list_page_bp(struct nvmap_page_pool *pool)
+{
+	struct page *page;
+
+	if (list_empty(&pool->page_list_bp))
+		return NULL;
+
+	page = list_first_entry(&pool->page_list_bp, struct page, lru);
+	list_del(&page->lru);
+
+	pool->count -= pool->pages_per_big_pg;
+	pool->big_page_count -= pool->pages_per_big_pg;
+
+	return page;
+}
+
 static inline bool nvmap_bg_should_run(struct nvmap_page_pool *pool)
 {
 	return !list_empty(&pool->zero_list);
@@ -196,9 +212,16 @@ static ulong nvmap_page_pool_free_pages_locked(struct nvmap_page_pool *pool,
 {
 	struct page *page;
 	bool use_page_list = false;
+	bool use_page_list_bp = false;
+
+	pr_debug("req to release pages=%ld\n", nr_pages);
 
 	while (nr_pages) {
-		if (use_page_list)
+		int i;
+
+		if (use_page_list_bp)
+			page = get_page_list_page_bp(pool);
+		else if (use_page_list)
 			page = get_page_list_page(pool);
 		else
 			page = get_zero_list_page(pool);
@@ -207,13 +230,29 @@ static ulong nvmap_page_pool_free_pages_locked(struct nvmap_page_pool *pool,
 			if (!use_page_list) {
 				use_page_list = true;
 				continue;
+			} else if (!use_page_list_bp) {
+				use_page_list_bp = true;
+				continue;
 			}
 			break;
 		}
-		__free_page(page);
-		nr_pages--;
+
+		if (use_page_list_bp) {
+			for (i = 0; i < pool->pages_per_big_pg; i++)
+				__free_page(nth_page(page, i));
+			pr_debug("released %d pages\n", pool->pages_per_big_pg);
+			if (nr_pages > pool->pages_per_big_pg)
+				nr_pages -= pool->pages_per_big_pg;
+			else
+				nr_pages = 0;
+		} else {
+			__free_page(page);
+			nr_pages--;
+			pr_debug("released 1 page\n");
+		}
 	}
 
+	pr_debug("remaining pages to release=%ld\n", nr_pages);
 	return nr_pages;
 }
 
@@ -229,7 +268,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	u32 non_zero_idx;
 	u32 non_zero_cnt = 0;
 
-	if (!enable_pp)
+	if (!enable_pp || !nr)
 		return 0;
 
 	rt_mutex_lock(&pool->lock);
@@ -271,6 +310,58 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	return ind;
 }
 
+int nvmap_page_pool_alloc_lots_bp(struct nvmap_page_pool *pool,
+				struct page **pages, u32 nr)
+{
+	int ind = 0, nr_pages = nr;
+	struct page *page;
+
+	if (!enable_pp || pool->pages_per_big_pg <= 1 ||
+	    nr_pages < pool->pages_per_big_pg)
+		return 0;
+
+	rt_mutex_lock(&pool->lock);
+
+	while (nr_pages - ind >= pool->pages_per_big_pg) {
+		int i;
+
+		page = get_page_list_page_bp(pool);
+		if (!page)
+			break;
+
+		for (i = 0; i < pool->pages_per_big_pg; i++)
+			pages[ind + i] = nth_page(page, i);
+
+		ind += pool->pages_per_big_pg;
+	}
+
+	rt_mutex_unlock(&pool->lock);
+	return ind;
+}
+
+static bool nvmap_is_big_page(struct nvmap_page_pool *pool,
+			      struct page **pages, int idx, int nr)
+{
+	int i;
+	struct page *page = pages[idx];
+
+	if (pool->pages_per_big_pg <= 1)
+		return false;
+
+	if (nr - idx < pool->pages_per_big_pg)
+		return false;
+
+	/* Allow coalescing pages at big page boundary only */
+	if (page_to_phys(page) & (pool->big_pg_sz - 1))
+		return false;
+
+	for (i = 1; i < pool->pages_per_big_pg; i++)
+		if (pages[idx + i] != nth_page(page, i))
+			break;
+
+	return i == pool->pages_per_big_pg ? true: false;
+}
+
 /*
  * Fill a bunch of pages into the page pool. This will fill as many as it can
  * and return the number of pages filled. Pages are used from the start of the
@@ -281,25 +372,36 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr)
 {
-	u32 real_nr;
-	u32 ind = 0;
+	int real_nr;
+	int ind = 0;
 
 	if (!enable_pp)
 		return 0;
 
 	real_nr = min_t(u32, pool->max - pool->count, nr);
+	BUG_ON(real_nr < 0);
 	if (real_nr == 0)
 		return 0;
 
-	while (real_nr--) {
+	while (real_nr > 0) {
 		if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
 			nvmap_pgcount(pages[ind], true);
 			BUG_ON(page_count(pages[ind]) != 2);
 		}
-		list_add_tail(&pages[ind++]->lru, &pool->page_list);
+
+		if (nvmap_is_big_page(pool, pages, ind, nr)) {
+			list_add_tail(&pages[ind]->lru, &pool->page_list_bp);
+			ind += pool->pages_per_big_pg;
+			real_nr -= pool->pages_per_big_pg;
+			pool->big_page_count += pool->pages_per_big_pg;
+		} else {
+			list_add_tail(&pages[ind++]->lru, &pool->page_list);
+			real_nr--;
+		}
 	}
 
 	pool->count += ind;
+	BUG_ON(pool->count > pool->max);
 	pp_fill_add(pool, ind);
 
 	return ind;
@@ -542,6 +644,19 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 	debugfs_create_u32("page_pool_pages_to_zero",
 			   S_IRUGO, pp_root,
 			   &nvmap_dev->pool.to_zero);
+	debugfs_create_u32("page_pool_available_big_pages",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.big_page_count);
+	debugfs_create_u32("page_pool_big_page_size",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.big_pg_sz);
+	debugfs_create_u64("total_big_page_allocs",
+			   S_IRUGO, pp_root,
+			   &nvmap_big_page_allocs);
+	debugfs_create_u64("total_page_allocs",
+			   S_IRUGO, pp_root,
+			   &nvmap_total_page_allocs);
+
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 	debugfs_create_u64("page_pool_allocs",
 			   S_IRUGO, pp_root,
@@ -569,6 +684,10 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	rt_mutex_init(&pool->lock);
 	INIT_LIST_HEAD(&pool->page_list);
 	INIT_LIST_HEAD(&pool->zero_list);
+	INIT_LIST_HEAD(&pool->page_list_bp);
+
+	pool->big_pg_sz = NVMAP_PP_BIG_PAGE_SIZE;
+	pool->pages_per_big_pg = NVMAP_PP_BIG_PAGE_SIZE >> PAGE_SHIFT;
 
 	si_meminfo(&info);
 	pr_info("Total RAM pages: %lu\n", info.totalram);

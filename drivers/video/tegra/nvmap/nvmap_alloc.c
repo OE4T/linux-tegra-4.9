@@ -27,6 +27,8 @@ bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;
 
 u32 nvmap_max_handle_count;
+u64 nvmap_big_page_allocs;
+u64 nvmap_total_page_allocs;
 
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to
@@ -65,8 +67,8 @@ static struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 		return NULL;
 
 	split_page(page, order);
-	e = page + (1 << order);
-	for (p = page + (size >> PAGE_SHIFT); p < e; p++)
+	e = nth_page(page, (1 << order));
+	for (p = nth_page(page, (size >> PAGE_SHIFT)); p < e; p++)
 		__free_page(p);
 
 	return page;
@@ -76,10 +78,11 @@ static int handle_page_alloc(struct nvmap_client *client,
 			     struct nvmap_handle *h, bool contiguous)
 {
 	size_t size = h->size;
-	unsigned int __maybe_unused nr_page = size >> PAGE_SHIFT;
-	unsigned int i = 0, page_index = 0;
+	int nr_page = size >> PAGE_SHIFT;
+	int i = 0, page_index = 0;
 	struct page **pages;
 	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
+	int pages_per_big_pg = NVMAP_PP_BIG_PAGE_SIZE >> PAGE_SHIFT;
 
 	pages = nvmap_altalloc(nr_page * sizeof(*pages));
 	if (!pages)
@@ -96,17 +99,46 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	} else {
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-		/*
-		 * Get as many pages from the pools as possible.
-		 */
-		page_index = nvmap_page_pool_alloc_lots(&nvmap_dev->pool, pages,
+		/* Get as many big pages from the pool as possible. */
+		page_index = nvmap_page_pool_alloc_lots_bp(&nvmap_dev->pool, pages,
 								 nr_page);
+		pages_per_big_pg = nvmap_dev->pool.pages_per_big_pg;
 #endif
+		/* Try to allocate big pages from page allocator */
+		for (i = page_index;
+		     i < nr_page && pages_per_big_pg > 1 && (nr_page - i) >= pages_per_big_pg;
+		     i += pages_per_big_pg, page_index += pages_per_big_pg) {
+			struct page *page;
+			int idx;
+			/*
+			 * set the gfp not to trigger direct/kswapd reclaims and
+			 * not to use emergency reserves.
+			 */
+			gfp_t gfp_no_reclaim = (gfp | __GFP_NOMEMALLOC) & ~__GFP_RECLAIM;
+
+			page = nvmap_alloc_pages_exact(gfp_no_reclaim,
+					pages_per_big_pg << PAGE_SHIFT);
+			if (!page)
+				break;
+
+			for (idx = 0; idx < pages_per_big_pg; idx++)
+				pages[i + idx] = nth_page(page, idx);
+			nvmap_clean_cache(&pages[i], pages_per_big_pg);
+		}
+		nvmap_big_page_allocs += page_index;
+
+#ifdef CONFIG_NVMAP_PAGE_POOLS
+		/* Get as many 4K pages from the pool as possible. */
+		page_index += nvmap_page_pool_alloc_lots(&nvmap_dev->pool, &pages[page_index],
+								 nr_page - page_index);
+#endif
+
 		for (i = page_index; i < nr_page; i++) {
 			pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
 		}
+		nvmap_total_page_allocs += nr_page;
 	}
 
 	/*

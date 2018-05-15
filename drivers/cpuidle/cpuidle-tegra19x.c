@@ -62,6 +62,9 @@ static void program_cg_state(void *data);
 static u32 tsc_per_sec, nsec_per_tsc_tick;
 static u32 tsc_per_usec;
 
+/* saved hotplug state */
+static enum cpuhp_state hp_state;
+
 #ifdef CPUIDLE_FLAG_TIME_VALID
 #define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
 #else
@@ -573,33 +576,23 @@ static int tegra_suspend_notify_callback(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static int tegra_cpu_notify_callback(struct notifier_block *nb,
-	unsigned long action, void *pcpu)
-{
-	int cpu = (long) pcpu;
+static struct notifier_block suspend_notifier = {
+	.notifier_call = tegra_suspend_notify_callback,
+};
 
-	switch (action) {
-	case CPU_ONLINE:
+static int tegra_cpu_online(unsigned int cpu)
+{
 	/*
 	 * Re-program deepest allowed cluster and cluster group power state
 	 * after a core in that cluster is onlined.
 	 */
-		smp_call_function_single(cpu, program_cc_state,
-			&deepest_cc_state, 1);
-		smp_call_function_single(cpu, program_cg_state,
-			&deepest_cg_state, 1);
-		break;
-	}
-	return NOTIFY_OK;
+	smp_call_function_single(cpu, program_cc_state,
+		&deepest_cc_state, 1);
+	smp_call_function_single(cpu, program_cg_state,
+		&deepest_cg_state, 1);
+
+	return 0;
 }
-
-static struct notifier_block cpu_on_notifier = {
-	.notifier_call = tegra_cpu_notify_callback,
-};
-
-static struct notifier_block suspend_notifier = {
-	.notifier_call = tegra_suspend_notify_callback,
-};
 
 static int __init tegra19x_cpuidle_probe(struct platform_device *pdev)
 {
@@ -664,11 +657,24 @@ static int __init tegra19x_cpuidle_probe(struct platform_device *pdev)
 		goto probe_exit;
 	}
 
+	err = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN,
+				  "tegra_cpu:online",
+				  tegra_cpu_online,
+				  NULL);
+	if (err < 0) {
+		pr_err("unable to register cpuhp state\n");
+		goto cpuhp_error;
+	}
+
+	hp_state = err;
+
 	cpuidle_debugfs_init();
-	register_cpu_notifier(&cpu_on_notifier);
+
 	register_pm_notifier(&suspend_notifier);
 	return 0;
 
+cpuhp_error:
+	cpuidle_unregister(&t19x_cpu_idle_driver);
 probe_exit:
 	kfree(cpumask);
 	pr_err("cpuidle: failed to register cpuidle driver\n");
@@ -679,7 +685,7 @@ static int tegra19x_cpuidle_remove(struct platform_device *pdev)
 {
 	cpuidle_unregister(&t19x_cpu_idle_driver);
 	kfree(t19x_cpu_idle_driver.cpumask);
-	unregister_cpu_notifier(&cpu_on_notifier);
+	cpuhp_remove_state(hp_state);
 	unregister_pm_notifier(&suspend_notifier);
 	return 0;
 }

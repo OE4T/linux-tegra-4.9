@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 	aconnect@2a41000 {
 		adsp_audio {
 			compr-ops = <1>;
-			num-plugin = <5>;
+			num-plugin = <6>;
 			plugin-info-1 {
 				plugin-name = "mp3-dec1";
 				firmware-name = "nvmp3dec.elf";
@@ -47,6 +47,11 @@
 				plugin-name = "aec";
 				firmware-name = "nvoice.elf";
 				widget-name = "AEC";
+			};
+			plugin-info-6 {
+				plugin-name = "wire";
+				firmware-name = "libnvwirefx.elf";
+				widget-name = "WIRE";
 			};
 		};
 	};

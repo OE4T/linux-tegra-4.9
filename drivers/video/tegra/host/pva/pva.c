@@ -694,6 +694,7 @@ static int pva_probe(struct platform_device *pdev)
 	pva->submit_mode = PVA_SUBMIT_MODE_MMIO_CCQ;
 	pva->slcg_disable = 0;
 	pva->vmem_war_disable = 0;
+	pva->vpu_perf_counters_enable = false;
 
 #ifdef __linux__
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)

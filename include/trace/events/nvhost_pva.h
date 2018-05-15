@@ -140,6 +140,59 @@ TRACE_EVENT(nvhost_pva_task_stats,
 		__entry->complete_time, __entry->vpu_assigned)
 );
 
+TRACE_EVENT(nvhost_pva_task_vpu_perf,
+
+	TP_PROTO(
+		const char *name,
+		u32 index,
+		u32 count,
+		u32 sum,
+		u64 sum_squared,
+		u32 min,
+		u32 max
+		),
+
+	TP_ARGS(
+		name,
+		index,
+		count,
+		sum,
+		sum_squared,
+		min,
+		max
+		),
+
+	TP_STRUCT__entry(
+		__field(const char *, name)
+		__field(u32, index)
+		__field(u32, count)
+		__field(u32, sum)
+		__field(u64, sum_squared)
+		__field(u32, min)
+		__field(u32, max)
+		),
+
+	TP_fast_assign(
+		__entry->name = name;
+		__entry->index = index;
+		__entry->count = count;
+		__entry->sum = sum;
+		__entry->sum_squared = sum_squared;
+		__entry->min = min;
+		__entry->max = max;
+		),
+
+	TP_printk("%s\tindex: %u\tcount: %u\taverage: %u\t"
+		"variance: %llu\tminimum: %u\t"
+		"maximum: %u",
+		__entry->name, __entry->index, __entry->count,
+		__entry->sum / __entry->count,
+		((u64)__entry->count * __entry->sum_squared -
+			(u64)__entry->sum * (u64)__entry->sum)
+			/ __entry->count / __entry->count,
+		__entry->min, __entry->max)
+);
+
 #endif /*  _TRACE_NVHOST_PVA_H */
 
 /* This part must be outside protection */

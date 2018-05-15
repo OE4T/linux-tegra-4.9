@@ -67,6 +67,16 @@ struct nvhost_task_end {
 	u32 syncpt_thresh;
 } __packed;
 
+struct nvhost_vpu_perf_counter {
+	u32 operation;
+	u32 tag;
+	u32 count;
+	u32 average;
+	u64 variance;
+	u32 minimum;
+	u32 maximum;
+} __packed;
+
 enum {
 	/* struct nvhost_task_submit */
 	NVHOST_TASK_SUBMIT = 0,
@@ -77,7 +87,10 @@ enum {
 	/* struct nvhost_task_end */
 	NVHOST_TASK_END = 2,
 
-	NVHOST_NUM_EVENT_TYPES = 3
+	/* struct nvhost_vpu_perf_counter */
+	NVHOST_VPU_PERF_COUNTER = 3,
+
+	NVHOST_NUM_EVENT_TYPES = 4
 };
 
 enum {

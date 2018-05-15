@@ -208,6 +208,7 @@ struct pva {
 	bool timeout_enabled;
 	u32 slcg_disable;
 	u32 vmem_war_disable;
+	bool vpu_perf_counters_enable;
 
 	struct work_struct pva_abort_handler_work;
 	bool booted;

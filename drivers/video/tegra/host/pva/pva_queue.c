@@ -27,6 +27,12 @@
 
 #include <trace/events/nvhost.h>
 
+#ifdef CONFIG_EVENTLIB
+#include <linux/keventlib.h>
+#include <uapi/linux/nvhost_events.h>
+#endif
+
+
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
 #include "nvhost_syncpt_unit_interface.h"
@@ -41,6 +47,7 @@
 #include "dev.h"
 #include "hw_cfg_pva.h"
 #include "t194/hardware_t194.h"
+#include "pva-vpu-perf.h"
 
 #include <trace/events/nvhost_pva.h>
 
@@ -71,7 +78,7 @@
 #define OUTPUT_ACTION_BUFFER_SIZE ( \
 	ALIGN(PVA_MAX_POSTFENCES * ACTION_LIST_FENCE_SIZE + \
 	      PVA_MAX_OUTPUT_STATUS * ACTION_LIST_STATUS_OPERATION_SIZE  + \
-	      ACTION_LIST_STATS_SIZE + \
+	      ACTION_LIST_STATS_SIZE * 2 + \
 	      ACTION_LIST_FENCE_SIZE  * 2 + \
 	      ACTION_LIST_TERMINATION_SIZE, 256))
 
@@ -88,6 +95,8 @@ struct pva_hw_task {
 	struct pva_task_parameter_desc output_surface_desc;
 	struct pva_task_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_task_statistics statistics;
+	struct pva_task_vpu_perf_counter
+		vpu_perf_counters[PVA_TASK_VPU_NUM_PERF_COUNTERS];
 	u8 opaque_data[PVA_MAX_PRIMARY_PAYLOAD_SIZE];
 };
 
@@ -439,7 +448,8 @@ static inline int pva_task_write_atomic_op(u8 *base, u8 action)
 	return 1;
 }
 
-static inline int pva_task_write_stats_op(u8 *base, u8 action, u64 addr, u16 val)
+static inline int
+pva_task_write_struct_ptr_op(u8 *base, u8 action, u64 addr, u16 val)
 {
 	int i = 0;
 
@@ -674,10 +684,19 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 
 	output_status_addr = task->dma_addr +
 			     offsetof(struct pva_hw_task, statistics);
-	ptr += pva_task_write_stats_op(
+	ptr += pva_task_write_struct_ptr_op(
 				&hw_postactions[ptr],
 				TASK_ACT_PVA_STATISTICS,
 				output_status_addr, 1);
+
+	if (task->pva->vpu_perf_counters_enable) {
+		ptr += pva_task_write_struct_ptr_op(
+				&hw_postactions[ptr],
+				TASK_ACT_PVA_VPU_PERF_COUNTERS,
+				task->dma_addr + offsetof(struct pva_hw_task,
+					vpu_perf_counters),
+				1);
+	}
 
 	ptr += pva_task_write_atomic_op(&hw_postactions[ptr],
 		TASK_ACT_TERMINATE);
@@ -961,6 +980,53 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	return 0;
 }
 
+#ifdef CONFIG_EVENTLIB
+static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
+				      u32 operation,
+				      u32 tag,
+				      u32 count,
+				      u32 sum,
+				      u64 sum_squared,
+				      u32 min,
+				      u32 max,
+				      u64 timestamp)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_vpu_perf_counter perf_counter;
+
+	if (!pdata->eventlib_id)
+		return;
+
+	perf_counter.operation = operation;
+	perf_counter.tag = tag;
+	perf_counter.count = count;
+	perf_counter.average = sum / count;
+	perf_counter.variance =
+		((u64)count * sum_squared - (u64)sum * (u64)sum)
+			/ (u64)count / (u64)count;
+	perf_counter.minimum = min;
+	perf_counter.maximum = max;
+
+	keventlib_write(pdata->eventlib_id,
+			&perf_counter,
+			sizeof(perf_counter),
+			NVHOST_VPU_PERF_COUNTER,
+			timestamp);
+}
+#else
+static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
+				      u32 operation,
+				      u32 tag,
+				      u32 count,
+				      u32 average,
+				      u64 variance,
+				      u32 min,
+				      u32 max,
+				      u64 timestamp)
+{
+}
+#endif
+
 static void pva_task_update(struct pva_submit_task *task)
 {
 	struct nvhost_queue *queue = task->queue;
@@ -969,6 +1035,8 @@ static void pva_task_update(struct pva_submit_task *task)
 	struct platform_device *pdev = pva->pdev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva_task_statistics *stats = &hw_task->statistics;
+	struct pva_task_vpu_perf_counter *perf;
+	u32 idx;
 
 	trace_nvhost_task_timestamp(dev_name(&pdev->dev),
 				    pdata->class,
@@ -1008,6 +1076,23 @@ static void pva_task_update(struct pva_submit_task *task)
 			stats->vpu_complete_time,
 			stats->complete_time,
 			stats->vpu_assigned);
+
+	if (task->pva->vpu_perf_counters_enable) {
+		for (idx = 0; idx < PVA_TASK_VPU_NUM_PERF_COUNTERS; idx++) {
+			perf = &hw_task->vpu_perf_counters[idx];
+			if (perf->count != 0) {
+				trace_nvhost_pva_task_vpu_perf(
+					pdev->name, idx, perf->count,
+					perf->sum, perf->sum_squared,
+					perf->min, perf->max);
+				pva_eventlib_record_perf_counter(
+					pdev, task->operation, idx, perf->count,
+					perf->sum, perf->sum_squared,
+					perf->min, perf->max,
+					stats->complete_time);
+			}
+		}
+	}
 
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);

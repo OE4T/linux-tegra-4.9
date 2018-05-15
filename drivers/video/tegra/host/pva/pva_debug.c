@@ -243,4 +243,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				 &pva->slcg_disable);
 	if (!ret)
 		nvhost_dbg_info("Failed to create cg_disable node");
+
+	ret = debugfs_create_bool("vpu_perf_counters_enable", 0644, de,
+				  &pva->vpu_perf_counters_enable);
+	if (!ret)
+		nvhost_dbg_info("Failed to create vpu_perf_counters_enable node");
 }

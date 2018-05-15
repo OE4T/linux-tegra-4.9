@@ -49,6 +49,27 @@
                 { "Name": "syncpt_thresh",   "Comment": "Threshold for task completion",
                   "Type": "uint32_t",        "Format": "%u" }
             ]
+        },
+
+        {
+            "Name"   : "vpu_perf_counter",
+            "Comment": "Performance counters from Vision Processing Unit",
+            "Fields" : [
+                { "Name": "operation",       "Comment": "VPU Operation ID",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "tag",             "Comment": "Numeric tag for performance counter",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "count",           "Comment": "Hit count",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "average",         "Comment": "Average cycle count",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "variance",        "Comment": "Variance of cycle count",
+                  "Type": "uint64_t",        "Format": "%llu" },
+                { "Name": "minimum",         "Comment": "Best case (minimum VPU cycles)",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "maximum",         "Comment": "Worst case (maximum VPU cycles)",
+                  "Type": "uint32_t",        "Format": "%u" }
+            ]
         }
 
 

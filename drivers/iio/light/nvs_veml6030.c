@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,7 @@
 #include <linux/nvs_light.h>
 
 /* increment VEML_VERSION_DRIVER each time this driver changes */
-#define VEML_VERSION_DRIVER		(1)
+#define VEML_VERSION_DRIVER		(2)
 /* increment VEML_VERSION_SNSRCFG if data behaves differently */
 #define VEML_VERSION_SNSRCFG		(1)
 #define VEML_VENDOR			"Vishay"
@@ -169,6 +169,10 @@ static int veml_i2c_wr(struct veml_state *st, u8 reg, u16 val)
 		return -EIO;
 	}
 
+	if (st->sts & NVS_STS_SPEW_MSG)
+		dev_info(&st->i2c->dev,
+			 "%s reg=0x%02X: 0x%02X=>0x%02X\n",
+			 __func__, reg, st->rc[reg], val);
 	st->rc[reg] = val;
 	return 0;
 }
@@ -251,11 +255,21 @@ static int veml_cmd_wr(struct veml_state *st, bool irq_en)
 	return ret;
 }
 
-static int veml_rd(struct veml_state *st)
+static int veml_rd(struct veml_state *st, bool irq)
 {
 	u16 hw;
 	s64 ts;
 	int ret;
+
+	if (irq) {
+		ret = veml_i2c_rd(st, VEML_REG_ALS_INT, &hw);
+		if (ret < 0)
+			return ret;
+
+		if (!hw)
+			/* not our device - no changes */
+			return RET_HW_UPDATE;
+	}
 
 	ret = veml_i2c_rd(st, VEML_REG_ALS, &hw);
 	if (ret)
@@ -292,17 +306,25 @@ static int veml_rd(struct veml_state *st)
 	return ret;
 }
 
+static int veml_read(struct veml_state *st, bool irq)
+{
+	int ret;
+
+	st->nvs->nvs_mutex_lock(st->light.nvs_st);
+	ret = veml_rd(st, irq);
+	st->nvs->nvs_mutex_unlock(st->light.nvs_st);
+	return ret;
+}
+
 static void veml_work(struct work_struct *ws)
 {
 	struct veml_state *st = container_of((struct work_struct *)ws,
-					   struct veml_state, ws);
+					     struct veml_state, ws);
 	int ret;
 
 	while (st->enabled) {
 		msleep(st->light.poll_delay_ms);
-		st->nvs->nvs_mutex_lock(st->light.nvs_st);
-		ret = veml_rd(st);
-		st->nvs->nvs_mutex_unlock(st->light.nvs_st);
+		ret = veml_read(st, false);
 		if (ret == RET_HW_UPDATE)
 			/* switch to IRQ driven */
 			break;
@@ -312,28 +334,17 @@ static void veml_work(struct work_struct *ws)
 static irqreturn_t veml_irq_thread(int irq, void *dev_id)
 {
 	struct veml_state *st = (struct veml_state *)dev_id;
-	u16 hw;
 	int ret;
 
 	if (st->sts & NVS_STS_SPEW_IRQ)
 		dev_info(&st->i2c->dev, "%s\n", __func__);
 	if (st->enabled) {
-		st->nvs->nvs_mutex_lock(st->light.nvs_st);
-		ret = veml_i2c_rd(st, VEML_REG_ALS_INT, &hw);
-		if (ret >= 0) {
-			if (hw)
-				/* IRQ so our device */
-				ret = veml_rd(st);
-			else
-				/* not our device - no changes */
-				ret = RET_HW_UPDATE;
-		}
+		ret = veml_read(st, true);
 		if (ret < RET_HW_UPDATE) {
 			/* switch to polling */
 			cancel_work_sync(&st->ws);
 			queue_work(st->wq, &st->ws);
 		}
-		st->nvs->nvs_mutex_unlock(st->light.nvs_st);
 	}
 	return IRQ_HANDLED;
 }
@@ -489,7 +500,7 @@ static int veml_nvs_write(void *client, int snsr_id, unsigned int nvs)
 
 	case VEML_DBG_RD:
 		st->nvs->nvs_mutex_lock(st->light.nvs_st);
-		veml_rd(st);
+		veml_rd(st, false);
 		st->nvs->nvs_mutex_unlock(st->light.nvs_st);
 		dev_info(&st->i2c->dev, "%s veml_read done\n", __func__);
 		return 0;
@@ -575,6 +586,7 @@ static int veml_remove(struct i2c_client *client)
 		if (st->nvs && st->light.nvs_st)
 			st->nvs->remove(st->light.nvs_st);
 		if (st->wq) {
+			cancel_work_sync(&st->ws);
 			destroy_workqueue(st->wq);
 			st->wq = NULL;
 		}

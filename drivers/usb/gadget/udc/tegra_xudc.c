@@ -3637,7 +3637,7 @@ static void tegra_xudc_clk_disable(struct tegra_xudc *xudc)
 		return;
 
 	for (i = 0; i < xudc->num_clks; i++)
-		clk_disable(xudc->clks[i]);
+		clk_disable_unprepare(xudc->clks[i]);
 
 	xudc->clk_enabled = false;
 }

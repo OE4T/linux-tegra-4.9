@@ -1704,7 +1704,8 @@ static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
 		    NVQUIRK_SDMMC_CLK_OVERRIDE |
-		    SDHCI_MISC_CTRL_ENABLE_SDR50,
+		    SDHCI_MISC_CTRL_ENABLE_SDR50 |
+		    NVQUIRK_HAS_PADCALIB,
 	.cqequirks = CMDQ_QUIRK_SET_CMD_TIMING_R1B_DCMD,
 };
 

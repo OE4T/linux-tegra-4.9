@@ -693,6 +693,14 @@ static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
 		dev_info(&hdmi->dc->ndev->dev,
 			"hdmi: EDID change after HPD bounce, resetting\n");
 		hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
+
+		/*
+		 * In dc resume context DC has to be in disable state if EDID
+		 * is changed, setting dc->enabled to false make sure DC does
+		 * not get enabled.
+		 */
+		if (hdmi->dc->suspended)
+			hdmi->dc->enabled = false;
 	}
 
 	return ret;

@@ -57,17 +57,17 @@
 #define NVGPU_DBG_REG_OP_STATUS_INVALID_MASK                 (0x00000010)
 
 struct nvgpu_dbg_reg_op {
-	__u8    op;
-	__u8    type;
-	__u8    status;
-	__u8    quad;
-	__u32   group_mask;
-	__u32   sub_group_mask;
-	__u32   offset;
-	__u32   value_lo;
-	__u32   value_hi;
-	__u32   and_n_mask_lo;
-	__u32   and_n_mask_hi;
+	u8    op;
+	u8    type;
+	u8    status;
+	u8    quad;
+	u32   group_mask;
+	u32   sub_group_mask;
+	u32   offset;
+	u32   value_lo;
+	u32   value_hi;
+	u32   and_n_mask_lo;
+	u32   and_n_mask_hi;
 };
 
 struct regop_offset_range {

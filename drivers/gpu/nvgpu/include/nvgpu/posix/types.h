@@ -38,15 +38,10 @@
  */
 #include <netinet/in.h>
 
-typedef unsigned char		__u8;
-typedef unsigned short		__u16;
-typedef unsigned int		__u32;
-typedef unsigned long long	__u64;
-
-typedef __u8			u8;
-typedef __u16			u16;
-typedef __u32			u32;
-typedef __u64			u64;
+typedef unsigned char		u8;
+typedef unsigned short		u16;
+typedef unsigned int		u32;
+typedef unsigned long long	u64;
 
 typedef char			s8;
 typedef short			s16;

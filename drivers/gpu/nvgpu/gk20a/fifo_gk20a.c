@@ -2672,7 +2672,7 @@ void gk20a_fifo_isr(struct gk20a *g)
 	return;
 }
 
-int gk20a_fifo_nonstall_isr(struct gk20a *g)
+u32 gk20a_fifo_nonstall_isr(struct gk20a *g)
 {
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
 	u32 clear_intr = 0;

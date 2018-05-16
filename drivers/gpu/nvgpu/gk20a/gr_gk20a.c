@@ -6134,18 +6134,18 @@ int gk20a_gr_isr(struct gk20a *g)
 	return 0;
 }
 
-int gk20a_gr_nonstall_isr(struct gk20a *g)
+u32 gk20a_gr_nonstall_isr(struct gk20a *g)
 {
-	int ops = 0;
+	u32 ops = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_nonstall_r());
 
 	nvgpu_log(g, gpu_dbg_intr, "pgraph nonstall intr %08x", gr_intr);
 
-	if (gr_intr & gr_intr_nonstall_trap_pending_f()) {
+	if ((gr_intr & gr_intr_nonstall_trap_pending_f()) != 0U) {
 		/* Clear the interrupt */
 		gk20a_writel(g, gr_intr_nonstall_r(),
 			gr_intr_nonstall_trap_pending_f());
-		ops |= (gk20a_nonstall_ops_wakeup_semaphore |
+		ops |= (u32)(gk20a_nonstall_ops_wakeup_semaphore |
 			gk20a_nonstall_ops_post_events);
 	}
 	return ops;

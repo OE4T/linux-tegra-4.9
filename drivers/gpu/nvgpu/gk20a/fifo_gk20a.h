@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __FIFO_GK20A_H__
-#define __FIFO_GK20A_H__
+#ifndef FIFO_GK20A_H
+#define FIFO_GK20A_H
 
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
@@ -103,10 +103,10 @@ struct fifo_runlist_info_gk20a {
 };
 
 enum {
-	ENGINE_GR_GK20A	    = 0,
-	ENGINE_GRCE_GK20A    = 1,
-	ENGINE_ASYNC_CE_GK20A  = 2,
-	ENGINE_INVAL_GK20A
+	ENGINE_GR_GK20A	       = 0U,
+	ENGINE_GRCE_GK20A      = 1U,
+	ENGINE_ASYNC_CE_GK20A  = 2U,
+	ENGINE_INVAL_GK20A     = 3U,
 };
 
 struct fifo_pbdma_exception_info_gk20a {
@@ -140,7 +140,7 @@ struct fifo_engine_info_gk20a {
 };
 
 enum {
-	PROFILE_IOCTL_ENTRY = 0,
+	PROFILE_IOCTL_ENTRY = 0U,
 	PROFILE_ENTRY,
 	PROFILE_JOB_TRACKING,
 	PROFILE_APPEND,
@@ -231,7 +231,7 @@ int gk20a_init_fifo_support(struct gk20a *g);
 int gk20a_init_fifo_setup_hw(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
-int gk20a_fifo_nonstall_isr(struct gk20a *g);
+u32 gk20a_fifo_nonstall_isr(struct gk20a *g);
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid);
 int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
@@ -454,4 +454,4 @@ void gk20a_fifo_add_sema_cmd(struct gk20a *g,
 	struct nvgpu_semaphore *s, u64 sema_va,
 	struct priv_cmd_entry *cmd,
 	u32 off, bool acquire, bool wfi);
-#endif /*__GR_GK20A_H__*/
+#endif /* FIFO_GK20A_H */

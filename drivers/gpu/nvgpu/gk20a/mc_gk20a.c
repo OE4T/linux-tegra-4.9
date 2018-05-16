@@ -45,7 +45,7 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
 
-		if (mc_intr_0 & g->fifo.engine_info[active_engine_id].intr_mask) {
+		if ((mc_intr_0 & g->fifo.engine_info[active_engine_id].intr_mask) != 0U) {
 			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
 			/* GR Engine */
 			if (engine_enum == ENGINE_GR_GK20A) {
@@ -55,28 +55,33 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 			/* CE Engine */
 			if (((engine_enum == ENGINE_GRCE_GK20A) ||
 				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
-				g->ops.ce2.isr_stall){
+				(g->ops.ce2.isr_stall != NULL)) {
 					g->ops.ce2.isr_stall(g,
 					g->fifo.engine_info[active_engine_id].inst_id,
 					g->fifo.engine_info[active_engine_id].pri_base);
 			}
 		}
 	}
-	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
+	if ((mc_intr_0 & mc_intr_0_pfifo_pending_f()) != 0U) {
 		gk20a_fifo_isr(g);
-	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_0_pmu_pending_f()) != 0U) {
 		gk20a_pmu_isr(g);
-	if (mc_intr_0 & mc_intr_0_priv_ring_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_0_priv_ring_pending_f()) != 0U) {
 		g->ops.priv_ring.isr(g);
-	if (mc_intr_0 & mc_intr_0_ltc_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_0_ltc_pending_f()) != 0U) {
 		g->ops.ltc.isr(g);
-	if (mc_intr_0 & mc_intr_0_pbus_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_0_pbus_pending_f()) != 0U) {
 		g->ops.bus.isr(g);
+	}
 }
 
-int mc_gk20a_isr_nonstall(struct gk20a *g)
+u32 mc_gk20a_isr_nonstall(struct gk20a *g)
 {
-	int ops = 0;
+	u32 ops = 0;
 	u32 mc_intr_1;
 	u32 engine_id_idx;
 	u32 active_engine_id = 0;
@@ -84,8 +89,9 @@ int mc_gk20a_isr_nonstall(struct gk20a *g)
 
 	mc_intr_1 = g->ops.mc.intr_nonstall(g);
 
-	if (g->ops.mc.is_intr1_pending(g, NVGPU_UNIT_FIFO, mc_intr_1))
+	if (g->ops.mc.is_intr1_pending(g, NVGPU_UNIT_FIFO, mc_intr_1) != 0U) {
 		ops |= gk20a_fifo_nonstall_isr(g);
+	}
 
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines;
 							engine_id_idx++) {
@@ -94,19 +100,20 @@ int mc_gk20a_isr_nonstall(struct gk20a *g)
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
 		engine_info = &g->fifo.engine_info[active_engine_id];
 
-		if (mc_intr_1 & engine_info->intr_mask) {
+		if ((mc_intr_1 & engine_info->intr_mask) != 0U) {
 			engine_enum = engine_info->engine_enum;
 			/* GR Engine */
-			if (engine_enum == ENGINE_GR_GK20A)
+			if (engine_enum == ENGINE_GR_GK20A) {
 				ops |= gk20a_gr_nonstall_isr(g);
-
+			}
 			/* CE Engine */
 			if (((engine_enum == ENGINE_GRCE_GK20A) ||
 			     (engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
-			      g->ops.ce2.isr_nonstall)
+			      (g->ops.ce2.isr_nonstall != NULL)) {
 				ops |= g->ops.ce2.isr_nonstall(g,
 					engine_info->inst_id,
 					engine_info->pri_base);
+			}
 		}
 	}
 
@@ -219,7 +226,7 @@ void gk20a_mc_enable(struct gk20a *g, u32 units)
 	pmc = gk20a_readl(g, mc_enable_r());
 	pmc |= units;
 	gk20a_writel(g, mc_enable_r(), pmc);
-	gk20a_readl(g, mc_enable_r());
+	pmc = gk20a_readl(g, mc_enable_r());
 	nvgpu_spinlock_release(&g->mc_enable_lock);
 
 	nvgpu_udelay(20);
@@ -228,10 +235,11 @@ void gk20a_mc_enable(struct gk20a *g, u32 units)
 void gk20a_mc_reset(struct gk20a *g, u32 units)
 {
 	g->ops.mc.disable(g, units);
-	if (units & gk20a_fifo_get_all_ce_engine_reset_mask(g))
+	if ((units & gk20a_fifo_get_all_ce_engine_reset_mask(g)) != 0U) {
 		nvgpu_udelay(500);
-	else
+	} else {
 		nvgpu_udelay(20);
+	}
 	g->ops.mc.enable(g, units);
 }
 
@@ -239,19 +247,22 @@ u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
 {
 	u32 val = __nvgpu_readl(g, mc_boot_0_r());
 
-	if (val == 0xffffffff)
-		return val;
+	if (val != 0xffffffffU) {
 
-	if (arch)
-		*arch = mc_boot_0_architecture_v(val) <<
-			NVGPU_GPU_ARCHITECTURE_SHIFT;
+		if (arch != NULL) {
+			*arch = mc_boot_0_architecture_v(val) <<
+				NVGPU_GPU_ARCHITECTURE_SHIFT;
+		}
 
-	if (impl)
-		*impl = mc_boot_0_implementation_v(val);
+		if (impl != NULL) {
+			*impl = mc_boot_0_implementation_v(val);
+		}
 
-	if (rev)
-		*rev = (mc_boot_0_major_revision_v(val) << 4) |
-			mc_boot_0_minor_revision_v(val);
+		if (rev != NULL) {
+			*rev = (mc_boot_0_major_revision_v(val) << 4) |
+				mc_boot_0_minor_revision_v(val);
+		}
+	}
 
 	return val;
 }
@@ -259,7 +270,7 @@ u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
 bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 			       enum nvgpu_unit unit, u32 mc_intr_1)
 {
-	u32 mask = 0;
+	u32 mask = 0U;
 	bool is_pending;
 
 	switch (unit) {
@@ -270,11 +281,11 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 		break;
 	}
 
-	if (mask == 0) {
+	if (mask == 0U) {
 		nvgpu_err(g, "unknown unit %d", unit);
 		is_pending = false;
 	} else {
-		is_pending = (mc_intr_1 & mask) ? true : false;
+		is_pending = ((mc_intr_1 & mask) != 0U) ? true : false;
 	}
 
 	return is_pending;
@@ -284,9 +295,12 @@ void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops)
 {
 	bool semaphore_wakeup, post_events;
 
-	semaphore_wakeup = ops & gk20a_nonstall_ops_wakeup_semaphore;
-	post_events = ops & gk20a_nonstall_ops_post_events;
+	semaphore_wakeup = (((ops & (u32)gk20a_nonstall_ops_wakeup_semaphore) != 0U) ?
+					true : false);
+	post_events = (((ops & (u32)gk20a_nonstall_ops_post_events) != 0U) ?
+					true: false);
 
-	if (semaphore_wakeup)
+	if (semaphore_wakeup) {
 		g->ops.semaphore_wakeup(g, post_events);
+	}
 }

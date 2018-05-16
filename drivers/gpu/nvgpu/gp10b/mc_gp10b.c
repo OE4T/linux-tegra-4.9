@@ -23,7 +23,6 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/mc_gk20a.h"
 
 #include "mc_gp10b.h"
 
@@ -37,7 +36,7 @@ void mc_gp10b_intr_enable(struct gk20a *g)
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING),
-				0xffffffff);
+				0xffffffffU);
 	g->mc_intr_mask_restore[NVGPU_MC_INTR_STALLING] =
 				mc_intr_pfifo_pending_f() |
 				 mc_intr_priv_ring_pending_f() |
@@ -49,7 +48,7 @@ void mc_gp10b_intr_enable(struct gk20a *g)
 			g->mc_intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
-				0xffffffff);
+				0xffffffffU);
 	g->mc_intr_mask_restore[NVGPU_MC_INTR_NONSTALLING] =
 				mc_intr_pfifo_pending_f() |
 				 eng_intr_mask;
@@ -92,7 +91,7 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
 
-		if (mc_intr_0 & g->fifo.engine_info[active_engine_id].intr_mask) {
+		if ((mc_intr_0 & g->fifo.engine_info[active_engine_id].intr_mask) != 0U) {
 			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
 			/* GR Engine */
 			if (engine_enum == ENGINE_GR_GK20A) {
@@ -102,29 +101,36 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 			/* CE Engine */
 			if (((engine_enum == ENGINE_GRCE_GK20A) ||
 				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
-				g->ops.ce2.isr_stall){
+				(g->ops.ce2.isr_stall != NULL)) {
 					g->ops.ce2.isr_stall(g,
 					g->fifo.engine_info[active_engine_id].inst_id,
 					g->fifo.engine_info[active_engine_id].pri_base);
 			}
 		}
 	}
-	if (g->ops.mc.is_intr_hub_pending &&
-		 g->ops.mc.is_intr_hub_pending(g, mc_intr_0))
+	if ((g->ops.mc.is_intr_hub_pending != NULL) &&
+		 g->ops.mc.is_intr_hub_pending(g, mc_intr_0)) {
 		g->ops.fb.hub_isr(g);
-	if (mc_intr_0 & mc_intr_pfifo_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_pfifo_pending_f()) != 0U) {
 		gk20a_fifo_isr(g);
-	if (mc_intr_0 & mc_intr_pmu_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_pmu_pending_f()) != 0U) {
 		gk20a_pmu_isr(g);
-	if (mc_intr_0 & mc_intr_priv_ring_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_priv_ring_pending_f()) != 0U) {
 		g->ops.priv_ring.isr(g);
-	if (mc_intr_0 & mc_intr_ltc_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_ltc_pending_f()) != 0U) {
 		g->ops.ltc.isr(g);
-	if (mc_intr_0 & mc_intr_pbus_pending_f())
+	}
+	if ((mc_intr_0 & mc_intr_pbus_pending_f()) != 0U) {
 		g->ops.bus.isr(g);
-	if (g->ops.mc.is_intr_nvlink_pending &&
-			g->ops.mc.is_intr_nvlink_pending(g, mc_intr_0))
+	}
+	if ((g->ops.mc.is_intr_nvlink_pending != NULL) &&
+			g->ops.mc.is_intr_nvlink_pending(g, mc_intr_0)) {
 		g->ops.nvlink.isr(g);
+	}
 
 	nvgpu_log(g, gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 
@@ -137,7 +143,7 @@ u32 mc_gp10b_intr_stall(struct gk20a *g)
 
 void mc_gp10b_intr_stall_pause(struct gk20a *g)
 {
-	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING), 0xffffffff);
+	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING), 0xffffffffU);
 }
 
 void mc_gp10b_intr_stall_resume(struct gk20a *g)
@@ -154,7 +160,7 @@ u32 mc_gp10b_intr_nonstall(struct gk20a *g)
 void mc_gp10b_intr_nonstall_pause(struct gk20a *g)
 {
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
-		     0xffffffff);
+		     0xffffffffU);
 }
 
 void mc_gp10b_intr_nonstall_resume(struct gk20a *g)
@@ -177,11 +183,11 @@ bool mc_gp10b_is_intr1_pending(struct gk20a *g,
 		break;
 	}
 
-	if (mask == 0) {
+	if (mask == 0U) {
 		nvgpu_err(g, "unknown unit %d", unit);
 		is_pending = false;
 	} else {
-		is_pending = (mc_intr_1 & mask) ? true : false;
+		is_pending = ((mc_intr_1 & mask) != 0U) ? true : false;
 	}
 
 	return is_pending;

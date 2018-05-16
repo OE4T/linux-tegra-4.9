@@ -1,7 +1,7 @@
 /*
  * GV11B FB
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,11 +37,11 @@
 #define	FAULT_BUF_INVALID		0
 #define	FAULT_BUF_VALID			1
 
-#define	HUB_INTR_TYPE_OTHER		1	/* bit 0 */
-#define	HUB_INTR_TYPE_NONREPLAY		2	/* bit 1 */
-#define	HUB_INTR_TYPE_REPLAY		4	/* bit 2 */
-#define	HUB_INTR_TYPE_ECC_UNCORRECTED	8	/* bit 3 */
-#define	HUB_INTR_TYPE_ACCESS_COUNTER	16	/* bit 4 */
+#define	HUB_INTR_TYPE_OTHER		1U	/* bit 0 */
+#define	HUB_INTR_TYPE_NONREPLAY		2U	/* bit 1 */
+#define	HUB_INTR_TYPE_REPLAY		4U	/* bit 2 */
+#define	HUB_INTR_TYPE_ECC_UNCORRECTED	8U	/* bit 3 */
+#define	HUB_INTR_TYPE_ACCESS_COUNTER	16U	/* bit 4 */
 #define	HUB_INTR_TYPE_ALL		(HUB_INTR_TYPE_OTHER | \
 					 HUB_INTR_TYPE_NONREPLAY | \
 					 HUB_INTR_TYPE_REPLAY | \

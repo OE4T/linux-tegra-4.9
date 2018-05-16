@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,7 +32,7 @@ u32 mc_gk20a_intr_stall(struct gk20a *g);
 void mc_gk20a_intr_stall_pause(struct gk20a *g);
 void mc_gk20a_intr_stall_resume(struct gk20a *g);
 u32 mc_gk20a_intr_nonstall(struct gk20a *g);
-int mc_gk20a_isr_nonstall(struct gk20a *g);
+u32 mc_gk20a_isr_nonstall(struct gk20a *g);
 void mc_gk20a_intr_nonstall_pause(struct gk20a *g);
 void mc_gk20a_intr_nonstall_resume(struct gk20a *g);
 void gk20a_mc_enable(struct gk20a *g, u32 units);
@@ -42,4 +42,4 @@ u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 		enum nvgpu_unit unit, u32 mc_intr_1);
 void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops);
-#endif
+#endif /* MC_GK20A_H */

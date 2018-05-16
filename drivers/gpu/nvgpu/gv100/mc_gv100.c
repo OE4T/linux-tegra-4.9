@@ -38,9 +38,9 @@ void mc_gv100_intr_enable(struct gk20a *g)
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING),
-				0xffffffff);
+				0xffffffffU);
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
-				0xffffffff);
+				0xffffffffU);
 	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_ALL);
 
 	g->mc_intr_mask_restore[NVGPU_MC_INTR_STALLING] =
@@ -69,7 +69,7 @@ void mc_gv100_intr_enable(struct gk20a *g)
 
 bool gv100_mc_is_intr_nvlink_pending(struct gk20a *g, u32 mc_intr_0)
 {
-	return ((mc_intr_0 & mc_intr_nvlink_pending_f()) ? true : false);
+	return (((mc_intr_0 & mc_intr_nvlink_pending_f()) != 0U) ? true : false);
 }
 
 bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id)
@@ -78,8 +78,9 @@ bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id)
 	u32 stall_intr, eng_intr_mask;
 
 	eng_intr_mask = gk20a_fifo_act_eng_interrupt_mask(g, act_eng_id);
-	if (mc_intr_0 & eng_intr_mask)
+	if ((mc_intr_0 & eng_intr_mask) != 0U) {
 		return true;
+	}
 
 	stall_intr = mc_intr_pfifo_pending_f() |
 			mc_intr_hub_pending_f() |
@@ -87,8 +88,9 @@ bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id)
 			mc_intr_pbus_pending_f() |
 			mc_intr_ltc_pending_f() |
 			mc_intr_nvlink_pending_f();
-	if (mc_intr_0 & stall_intr)
+	if ((mc_intr_0 & stall_intr) != 0U) {
 		return true;
+	}
 
 	return false;
 }

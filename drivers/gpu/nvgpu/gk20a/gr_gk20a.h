@@ -24,6 +24,8 @@
 #ifndef GR_GK20A_H
 #define GR_GK20A_H
 
+#include <nvgpu/types.h>
+
 #include "gr_ctx_gk20a.h"
 #include "mm_gk20a.h"
 
@@ -566,7 +568,7 @@ int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags);
 
 int gk20a_gr_isr(struct gk20a *g);
-int gk20a_gr_nonstall_isr(struct gk20a *g);
+u32 gk20a_gr_nonstall_isr(struct gk20a *g);
 
 /* zcull */
 u32 gr_gk20a_get_ctxsw_zcull_size(struct gk20a *g, struct gr_gk20a *gr);
@@ -603,15 +605,17 @@ u32 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g);
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \
 		int err = 0; \
-		if (g->support_pmu && g->elpg_enabled) {\
+		if ((g->support_pmu) && (g->elpg_enabled)) {\
 			err = nvgpu_pmu_disable_elpg(g); \
-			if (err) \
+			if (err != 0) {\
 				nvgpu_pmu_enable_elpg(g); \
+			} \
 		} \
-		if (!err) { \
+		if (err == 0) { \
 			err = func; \
-			if (g->support_pmu && g->elpg_enabled) \
+			if ((g->support_pmu) && (g->elpg_enabled)) {\
 				nvgpu_pmu_enable_elpg(g); \
+			} \
 		} \
 		err; \
 	})

@@ -1326,6 +1326,26 @@ static int t19x_nvlink_endpt_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void t19x_nvlink_endpt_shutdown(struct platform_device *pdev)
+{
+	struct tnvlink_dev *tdev = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	if (!tdev) {
+		nvlink_err("Invalid tnvlink_dev struct pointer");
+		nvlink_err("t19x nvlink shutdown failed!");
+		return;
+	}
+
+	ret = nvlink_shutdown(tdev->ndev);
+	if (ret < 0) {
+		nvlink_err("t19x nvlink shutdown failed!");
+		return;
+	}
+
+	nvlink_dbg("t19x nvlink shutdown successful");
+}
+
 static struct platform_driver t19x_nvlink_endpt_pdrv = {
 	.probe		= t19x_nvlink_endpt_probe,
 	.remove		= t19x_nvlink_endpt_remove,
@@ -1336,6 +1356,7 @@ static struct platform_driver t19x_nvlink_endpt_pdrv = {
 #endif
 		.of_match_table = of_match_ptr(t19x_nvlink_controller_of_match),
 	},
+	.shutdown	= t19x_nvlink_endpt_shutdown,
 };
 
 static int __init t19x_nvlink_endpt_init(void)

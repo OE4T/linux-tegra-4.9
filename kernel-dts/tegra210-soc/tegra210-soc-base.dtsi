@@ -54,7 +54,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -66,7 +66,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -78,7 +78,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -90,7 +90,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7>;
+			cpu-idle-states = <&C7 &CC6>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;

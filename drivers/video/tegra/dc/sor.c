@@ -1700,6 +1700,9 @@ void tegra_sor_cal(struct tegra_dc_sor_data *sor)
 	u32 nv_sor_pll1_reg = nv_sor_pll1();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
 
+	if (sor->dc->initialized)
+		return;
+
 	/* For HDMI, rterm calibration is currently enabled only on T19x. */
 	if (!tegra_dc_is_t19x() && sor->dc->out->type == TEGRA_DC_OUT_HDMI)
 		return;

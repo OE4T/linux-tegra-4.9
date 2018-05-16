@@ -1,5 +1,6 @@
 /*
  * Copyright 2013 Red Hat Inc.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -393,6 +394,37 @@ static int hmm_vma_walk_hole_(unsigned long addr, unsigned long end,
 	return (fault || write_fault) ? -EAGAIN : 0;
 }
 
+/*
+ * If pfns is not available, set fault using range->flags.
+*/
+static inline void __hmm_pte_need_fault(const struct hmm_vma_walk *hmm_vma_walk,
+				      uint64_t cpu_flags, bool *fault,
+				      bool *write_fault)
+{
+	struct hmm_range *range = hmm_vma_walk->range;
+
+	*fault = *write_fault = false;
+	if (!hmm_vma_walk->fault)
+		return;
+
+	/* If this is device memory than only fault if explicitly requested */
+	if (range->flags[HMM_PFN_DEVICE_PRIVATE] &&
+		(cpu_flags & range->flags[HMM_PFN_DEVICE_PRIVATE])) {
+		/* Do we fault on device memory ? */
+		*write_fault = true;
+		*fault = true;
+		return;
+	}
+
+	/* If CPU page table is not valid then we need to fault */
+	*fault = !(cpu_flags & range->flags[HMM_PFN_VALID]);
+	/* Need to write fault ? */
+	if (!(cpu_flags & range->flags[HMM_PFN_WRITE])) {
+		*write_fault = true;
+		*fault = true;
+	}
+}
+
 static inline void hmm_pte_need_fault(const struct hmm_vma_walk *hmm_vma_walk,
 				      uint64_t pfns, uint64_t cpu_flags,
 				      bool *fault, bool *write_fault)
@@ -402,6 +434,13 @@ static inline void hmm_pte_need_fault(const struct hmm_vma_walk *hmm_vma_walk,
 	*fault = *write_fault = false;
 	if (!hmm_vma_walk->fault)
 		return;
+
+	/* if pfns not set read/write fault using range->flags array only */
+	if (!pfns) {
+		__hmm_pte_need_fault(hmm_vma_walk, cpu_flags,
+			fault, write_fault);
+		return;
+	}
 
 	/* We aren't ask to do anything ... */
 	if (!(pfns & range->flags[HMM_PFN_VALID]))

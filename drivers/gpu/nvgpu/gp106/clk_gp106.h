@@ -43,16 +43,11 @@ struct namemap_cfg {
 	u32 is_enable;	/* Namemap enabled */
 	u32 is_counter;	/* Using cntr */
 	struct gk20a *g;
-	union {
-		struct {
-			u32 reg_ctrl_addr;
-			u32 reg_ctrl_idx;
-			u32 reg_cntr_addr;
-		} cntr;
-		struct {
-			/* Todo */
-		} pll;
-	};
+	struct {
+		u32 reg_ctrl_addr;
+		u32 reg_ctrl_idx;
+		u32 reg_cntr_addr;
+	} cntr;
 	u32 scale;
 	char name[24];
 };

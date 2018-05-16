@@ -106,47 +106,56 @@ int gp106_init_clk_support(struct gk20a *g)
 		.is_enable = 1,
 		.is_counter = 1,
 		.g = g,
-		.cntr.reg_ctrl_addr = trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_r(),
-		.cntr.reg_ctrl_idx  =
-			trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_source_gpc2clk_f(),
-		.cntr.reg_cntr_addr = trim_gpc_bcast_clk_cntr_ncgpcclk_cnt_r(),
+		.cntr = {
+			.reg_ctrl_addr = trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_r(),
+			.reg_ctrl_idx  = trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_source_gpc2clk_f(),
+			.reg_cntr_addr = trim_gpc_bcast_clk_cntr_ncgpcclk_cnt_r()
+		},
 		.name = "gpc2clk",
 		.scale = 1
 	};
 	clk->namemap_xlat_table[0] = CTRL_CLK_DOMAIN_GPC2CLK;
+
 	clk->clk_namemap[1] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_SYS2CLK,
 		.is_enable = 1,
 		.is_counter = 1,
 		.g = g,
-		.cntr.reg_ctrl_addr = trim_sys_clk_cntr_ncsyspll_cfg_r(),
-		.cntr.reg_ctrl_idx  = trim_sys_clk_cntr_ncsyspll_cfg_source_sys2clk_f(),
-		.cntr.reg_cntr_addr = trim_sys_clk_cntr_ncsyspll_cnt_r(),
+		.cntr = {
+			.reg_ctrl_addr = trim_sys_clk_cntr_ncsyspll_cfg_r(),
+			.reg_ctrl_idx  = trim_sys_clk_cntr_ncsyspll_cfg_source_sys2clk_f(),
+			.reg_cntr_addr = trim_sys_clk_cntr_ncsyspll_cnt_r()
+		},
 		.name = "sys2clk",
 		.scale = 1
 	};
 	clk->namemap_xlat_table[1] = CTRL_CLK_DOMAIN_SYS2CLK;
+
 	clk->clk_namemap[2] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_XBAR2CLK,
 		.is_enable = 1,
 		.is_counter = 1,
 		.g = g,
-		.cntr.reg_ctrl_addr = trim_sys_clk_cntr_ncltcpll_cfg_r(),
-		.cntr.reg_ctrl_idx  = trim_sys_clk_cntr_ncltcpll_cfg_source_xbar2clk_f(),
-		.cntr.reg_cntr_addr = trim_sys_clk_cntr_ncltcpll_cnt_r(),
+		.cntr = {
+			.reg_ctrl_addr = trim_sys_clk_cntr_ncltcpll_cfg_r(),
+			.reg_ctrl_idx  = trim_sys_clk_cntr_ncltcpll_cfg_source_xbar2clk_f(),
+			.reg_cntr_addr = trim_sys_clk_cntr_ncltcpll_cnt_r()
+		},
 		.name = "xbar2clk",
 		.scale = 1
 	};
 	clk->namemap_xlat_table[2] = CTRL_CLK_DOMAIN_XBAR2CLK;
+
 	clk->clk_namemap[3] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_DRAMCLK,
 		.is_enable = 1,
 		.is_counter = 1,
 		.g = g,
-		.cntr.reg_ctrl_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_r(),
-		.cntr.reg_ctrl_idx  =
-			trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_source_dramdiv4_rec_clk1_f(),
-		.cntr.reg_cntr_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cnt_r(),
+		.cntr = {
+			.reg_ctrl_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_r(),
+			.reg_ctrl_idx  = trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_source_dramdiv4_rec_clk1_f(),
+			.reg_cntr_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cnt_r()
+		},
 		.name = "dramdiv2_rec_clk1",
 		.scale = 2
 	};

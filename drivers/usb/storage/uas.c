@@ -1192,6 +1192,7 @@ static struct usb_driver uas_driver = {
 	.resume = uas_resume,
 	.reset_resume = uas_reset_resume,
 	.drvwrap.driver.shutdown = uas_shutdown,
+	.drvwrap.driver.probe_type = PROBE_FORCE_SYNCHRONOUS,
 	.id_table = uas_usb_ids,
 };
 

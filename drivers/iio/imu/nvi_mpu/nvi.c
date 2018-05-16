@@ -4357,7 +4357,7 @@ static int nvi_init(struct nvi_state *st,
 
 	nvi_nvs_fn.sts = &st->sts;
 	nvi_nvs_fn.errs = &st->errs;
-	st->nvs = nvs_iio();
+	st->nvs = nvs_auto(NVS_CFG_KIF);
 	if (st->nvs == NULL)
 		return -ENODEV;
 

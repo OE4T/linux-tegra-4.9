@@ -47,6 +47,11 @@
 #include <linux/workqueue.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
+
+#ifndef BMP_NVI_MPU_SUPPORT
+#define BMP_NVI_MPU_SUPPORT	0
+#endif
+
 #if BMP_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
 #endif /* BMP_NVI_MPU_SUPPORT */

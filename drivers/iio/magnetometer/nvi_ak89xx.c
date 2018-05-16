@@ -59,6 +59,11 @@
 #include <linux/interrupt.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
+
+#ifndef AKM_NVI_MPU_SUPPORT
+#define AKM_NVI_MPU_SUPPORT	0
+#endif
+
 #if AKM_NVI_MPU_SUPPORT
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
@@ -924,10 +929,10 @@ static int akm_batch_read(void *client, int snsr_id,
 
 static int akm_flush(void *client, int snsr_id)
 {
-	struct akm_state *st = (struct akm_state *)client;
 	int ret = -EINVAL;
-
 #if AKM_NVI_MPU_SUPPORT
+	struct akm_state *st = (struct akm_state *)client;
+
 	if (st->mpu_en)
 		ret = nvi_mpu_flush(st->port_id[RD]);
 #endif /* AKM_NVI_MPU_SUPPORT */

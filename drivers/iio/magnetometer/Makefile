@@ -13,7 +13,14 @@ ifneq (,$(filter $(CONFIG_NVI_AK89XX),m))
 # CFLAGS_nvi_ak89xx.o     += -DCREATE_TRACE_POINTS
 #
 endif
-ifdef CONFIG_NVI_MPU
+
+ifneq (,$(filter $(CONFIG_NVI_MPU_IIO),y m))
+	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
+endif
+ifneq (,$(filter $(CONFIG_NVI_MPU_INPUT),y m))
+	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
+endif
+ifneq (,$(filter $(CONFIG_NVI_MPU_RELAY),y m))
 	CFLAGS_nvi_ak89xx.o += -DAKM_NVI_MPU_SUPPORT=1
 endif
 nvi-ak89xx-objs += nvi_ak89xx.o

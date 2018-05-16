@@ -2526,6 +2526,8 @@ static int __free_buffer_pages(struct device *dev, struct page **pages,
 
 
 #ifdef CONFIG_DMA_API_DEBUG
+#define  __iommu_alloc_remap(pages, size, gfp, prot, caller)	\
+	 ___iommu_alloc_remap(dev, pages, size, gfp, prot, caller)
 static void *
 ___iommu_alloc_remap(struct device *dev, struct page **pages, size_t size,
 		    gfp_t gfp, pgprot_t prot, const void *caller)
@@ -2536,8 +2538,6 @@ ___iommu_alloc_remap(struct device *dev, struct page **pages, size_t size,
 		dmastats_alloc_or_map(dev, size, CPU_MAP_OR_UNMAP);
 	return ptr;
 }
-#define  __iommu_alloc_remap(pages, size, gfp, prot, caller)	\
-	 ___iommu_alloc_remap(dev, pages, size, gfp, prot, caller)
 #endif
 
 /*

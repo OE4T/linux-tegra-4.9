@@ -55,16 +55,22 @@ typedef long long		s64;
 		__a < __b ? __a : __b;	\
 	})
 
+#if defined(min)
+#undef min
+#endif
+#if defined(max)
+#undef max
+#endif
+
 #define min(a, b)			\
 	({				\
 		(a) < (b) ? a : b;	\
 	})
-#define min3(a, b, c)			min(min(a, b), c)
-
 #define max(a, b)			\
 	({				\
 		(a) > (b) ? a : b;	\
 	})
+#define min3(a, b, c)			min(min(a, b), c)
 
 #define PAGE_SIZE	4096
 

@@ -938,8 +938,8 @@ out:
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 450
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 450
 
-#define MAX_AESBUF_TIMEOUT_FACTOR	20
-#define WAIT_UDELAY			500
+#define MAX_AESBUF_TIMEOUT_FACTOR	200
+#define WAIT_UDELAY			300
 
 static atomic_t atomic_counter;
 
@@ -1188,9 +1188,13 @@ static int customized_test_acipher_speed(const char *algo, unsigned int bsize,
 
 	for (i = 0; i < no_runs; i++) {
 		speed = acipher_speed(algo, ENCRYPT, bsize, bcnt);
+		if (speed < 0)
+			return 1;
 		if (max_enc_speed < speed)
 			max_enc_speed = speed;
 		speed = acipher_speed(algo, DECRYPT, bsize, bcnt);
+		if (speed < 0)
+			return 1;
 		if (max_dec_speed < speed)
 			max_dec_speed = speed;
 	}

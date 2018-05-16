@@ -27,7 +27,6 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
-#include <linux/wakelock.h>
 #include <linux/thermal.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
@@ -85,7 +84,7 @@ struct tegra_fuse_hw_feature {
 struct tegra_fuse_burn_dev {
 	struct device *dev;
 	struct tegra_fuse_hw_feature *hw;
-	struct wake_lock wake_lock;
+	struct wakeup_source wake_lock;
 	struct clk *pgm_clk;
 	u32 pgm_width;
 	struct thermal_zone_device *tz;
@@ -473,11 +472,11 @@ static ssize_t tegra_fuse_store(struct device *dev,
 		memcpy(input_data, temp_data, sizeof(input_data));
 	}
 
-	wake_lock(&fuse_dev->wake_lock);
+	__pm_stay_awake(&fuse_dev->wake_lock);
 	mutex_lock(&fuse_lock);
 	ret = tegra_fuse_burn_fuse(fuse_dev, fuse_data, input_data);
 	mutex_unlock(&fuse_lock);
-	wake_unlock(&fuse_dev->wake_lock);
+	__pm_relax(&fuse_dev->wake_lock);
 	if (ret)
 		return ret;
 
@@ -740,8 +739,7 @@ static int tegra_fuse_burn_probe(struct platform_device *pdev)
 	WARN(sysfs_create_link(&platform_bus.kobj, &pdev->dev.kobj,
 			"tegra-fuse"), "Unable to create symlink\n");
 
-	wake_lock_init(&fuse_dev->wake_lock, WAKE_LOCK_SUSPEND,
-		       "fuse_wake_lock");
+	wakeup_source_init(&fuse_dev->wake_lock, "fuse_wake_lock");
 
 	tz_np = of_parse_phandle(np, "nvidia,tz", 0);
 	if (tz_np) {

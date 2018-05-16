@@ -3957,6 +3957,8 @@ static int nvi_remove(struct i2c_client *client)
 	unsigned int i;
 
 	if (st != NULL) {
+		if (st->i2c->irq > 0)
+			free_irq(st->i2c->irq, st);
 		nvi_shutdown(client);
 		if (st->nvs) {
 			for (i = 0; i < DEV_N; i++)

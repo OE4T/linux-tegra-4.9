@@ -36,6 +36,11 @@ struct gk20a_as_share {
 	int id;
 };
 
+/*
+ * AS allocation flags.
+ */
+#define NVGPU_AS_ALLOC_USERSPACE_MANAGED	(1 << 0)
+
 int gk20a_as_release_share(struct gk20a_as_share *as_share);
 
 /* if big_page_size == 0, the default big page size is used */

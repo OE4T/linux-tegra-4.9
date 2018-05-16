@@ -23,7 +23,6 @@
  */
 
 #include <trace/events/gk20a.h>
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/vm.h>
@@ -58,7 +57,7 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	struct vm_gk20a *vm;
 	char name[32];
 	const bool userspace_managed =
-		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
+		(flags & NVGPU_AS_ALLOC_USERSPACE_MANAGED) != 0;
 
 	nvgpu_log_fn(g, " ");
 

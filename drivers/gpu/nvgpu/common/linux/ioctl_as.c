@@ -32,7 +32,7 @@
 #include "ioctl_as.h"
 #include "os_linux.h"
 
-static u32 gk20a_as_translate_linux_flags(struct gk20a *g, u32 flags)
+static u32 gk20a_as_translate_as_alloc_space_flags(struct gk20a *g, u32 flags)
 {
 	u32 core_flags = 0;
 
@@ -80,8 +80,8 @@ static int gk20a_as_ioctl_alloc_space(
 	nvgpu_log_fn(g, " ");
 	return nvgpu_vm_area_alloc(as_share->vm, args->pages, args->page_size,
 				   &args->o_a.offset,
-				   gk20a_as_translate_linux_flags(g,
-								  args->flags));
+				   gk20a_as_translate_as_alloc_space_flags(g,
+								args->flags));
 }
 
 static int gk20a_as_ioctl_free_space(

@@ -55,6 +55,16 @@ struct gk20a_ctrl_priv {
 	struct nvgpu_clk_session *clk_session;
 };
 
+static u32 gk20a_as_translate_as_alloc_flags(struct gk20a *g, u32 flags)
+{
+	u32 core_flags = 0;
+
+	if (flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED)
+		core_flags |= NVGPU_AS_ALLOC_USERSPACE_MANAGED;
+
+	return core_flags;
+}
+
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l;
@@ -439,7 +449,9 @@ static int gk20a_ctrl_alloc_as(
 		goto clean_up;
 	}
 
-	err = gk20a_as_alloc_share(g, args->big_page_size, args->flags,
+	err = gk20a_as_alloc_share(g, args->big_page_size,
+				   gk20a_as_translate_as_alloc_flags(g,
+					   args->flags),
 				   &as_share);
 	if (err)
 		goto clean_up_file;

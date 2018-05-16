@@ -33,6 +33,8 @@
 #include <linux/interrupt.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
+#include <linux/device.h>
+#include <linux/version.h>
 
 #define BMI_NAME			"bmi160"
 #define BMI_VENDOR			"Bosch"
@@ -1989,6 +1991,11 @@ static int bmi_probe(struct i2c_client *client,
 	if (ret)
 		bmi_remove(client);
 	dev_info(&client->dev, "%s done\n", __func__);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	device_resource_registered();
+#else
+	device_unblock_probing();
+#endif
 	return ret;
 }
 

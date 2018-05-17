@@ -1015,7 +1015,7 @@
 					status = "okay";
 					pcl_id = "v4l2_sensor";
 					devname = "imx274 31-001a";
-					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@1/imx274_a@1a";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
 				};
 			};
 			override@7 {

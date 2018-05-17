@@ -381,7 +381,7 @@
 				};
 			};
 			i2c@1 {
-			imx274_a@1a {
+			imx274_c@1a {
 			compatible = "nvidia,imx274";
 			/* I2C device address */
 			reg = <0x1a>;
@@ -750,7 +750,7 @@
 					/* Driver v4l2 device name */
 					devname = "imx274 31-001a";
 					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@1/imx274_a@1a";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@1/imx274_c@1a";
 				};
 				drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */

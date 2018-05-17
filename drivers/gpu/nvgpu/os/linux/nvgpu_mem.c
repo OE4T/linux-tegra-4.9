@@ -28,6 +28,7 @@
 #include <nvgpu/linux/vidmem.h>
 
 #include <linux/vmalloc.h>
+#include <linux/dma-mapping.h>
 
 #include "os_linux.h"
 

@@ -2659,6 +2659,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE,
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE);
 
+		tegra_dc_dp_dpcd_write(dp, NV_DPCD_DOWNSPREAD_CTRL,
+				NV_DPCD_DOWNSPREAD_CTRL_SPREAD_AMP_LT_0_5);
+
 		tegra_dc_dp_dpcd_write(dp, NV_DPCD_LINK_BANDWIDTH_SET,
 				cfg->link_bw);
 

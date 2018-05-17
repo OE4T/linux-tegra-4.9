@@ -3357,23 +3357,12 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		ret = g->ops.fifo.runlist_wait_pending(g, runlist_id);
 
 		if (ret == -ETIMEDOUT) {
-			nvgpu_err(g,
-				   "runlist update timeout");
+			nvgpu_err(g, "runlist %d update timeout", runlist_id);
+			/* trigger runlist update timeout recovery */
+			return ret;
 
-			gk20a_fifo_runlist_reset_engines(g, runlist_id);
-
-			/* engine reset needs the lock. drop it */
-			/* wait until the runlist is active again */
-			ret = g->ops.fifo.runlist_wait_pending(g, runlist_id);
-			/* get the lock back. at this point everything should
-			 * should be fine */
-
-			if (ret)
-				nvgpu_err(g,
-					   "runlist update failed: %d", ret);
 		} else if (ret == -EINTR)
-			nvgpu_err(g,
-				   "runlist update interrupted");
+			nvgpu_err(g, "runlist update interrupted");
 	}
 
 	runlist->cur_buffer = new_buf;
@@ -3513,7 +3502,7 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 chid,
 	struct fifo_gk20a *f = &g->fifo;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
-	u32 ret = 0;
+	int ret = 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -3530,6 +3519,10 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 chid,
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&runlist->runlist_lock);
+
+	if (ret == -ETIMEDOUT)
+		gk20a_fifo_runlist_reset_engines(g, runlist_id);
+
 	return ret;
 }
 

@@ -384,8 +384,11 @@ int register_fhi_callback(struct ras_fhi_callback *callback, void *cookie)
 	list_add(&callback->node, &fhi_callback_list);
 	raw_spin_unlock_irqrestore(&fhi_lock, flags);
 
+	if (!cookie)
+		goto isr_err;
+
 	err = request_irq(fhi_irq, ras_fhi_isr,
-				IRQF_SHARED, "ras-fhi", cookie);
+		IRQF_SHARED, "ras-fhi", cookie);
 	if (err) {
 		pr_err("%s: request_irq(%d) failed (%d)\n", __func__,
 		fhi_irq, err);

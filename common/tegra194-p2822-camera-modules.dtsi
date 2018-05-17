@@ -280,7 +280,7 @@
 				};
 			};
 			i2c@1 {
-				imx274_cam1: imx274_a@1a {
+				imx274_cam1: imx274_c@1a {
 					status = "disabled";
 				};
 			};

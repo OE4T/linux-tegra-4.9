@@ -19,6 +19,7 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/timers.h>
 
 /*
  * This is required for nvgpu_vm_find_buf() which is used in the tracing
@@ -817,7 +818,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (profile)
-		profile->timestamp[PROFILE_ENTRY] = sched_clock();
+		profile->timestamp[PROFILE_ENTRY] = nvgpu_current_time_ns();
 
 	/* update debug settings */
 	nvgpu_ltc_sync_enabled(g);
@@ -966,7 +967,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (profile)
-		profile->timestamp[PROFILE_JOB_TRACKING] = sched_clock();
+		profile->timestamp[PROFILE_JOB_TRACKING] = nvgpu_current_time_ns();
 
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
@@ -991,7 +992,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		/* TODO! Check for errors... */
 		gk20a_channel_add_job(c, job, skip_buffer_refcounting);
 	if (profile)
-		profile->timestamp[PROFILE_APPEND] = sched_clock();
+		profile->timestamp[PROFILE_APPEND] = nvgpu_current_time_ns();
 
 	g->ops.fifo.userd_gp_put(g, c);
 
@@ -1010,7 +1011,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
 	if (profile)
-		profile->timestamp[PROFILE_END] = sched_clock();
+		profile->timestamp[PROFILE_END] = nvgpu_current_time_ns();
 	nvgpu_log_fn(g, "done");
 	return err;
 

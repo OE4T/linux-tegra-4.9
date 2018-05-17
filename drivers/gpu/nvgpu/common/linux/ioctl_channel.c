@@ -784,7 +784,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	profile = gk20a_fifo_profile_acquire(ch->g);
 
 	if (profile)
-		profile->timestamp[PROFILE_IOCTL_ENTRY] = sched_clock();
+		profile->timestamp[PROFILE_IOCTL_ENTRY] = nvgpu_current_time_ns();
 #endif
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
@@ -827,7 +827,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	gk20a_fence_put(fence_out);
 #ifdef CONFIG_DEBUG_FS
 	if (profile) {
-		profile->timestamp[PROFILE_IOCTL_EXIT] = sched_clock();
+		profile->timestamp[PROFILE_IOCTL_EXIT] = nvgpu_current_time_ns();
 		gk20a_fifo_profile_release(ch->g, profile);
 	}
 #endif

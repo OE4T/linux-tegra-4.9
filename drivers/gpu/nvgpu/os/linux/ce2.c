@@ -130,9 +130,8 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 		nvgpu_smp_wmb();
 
-		ret = gk20a_submit_channel_gpfifo(ce_ctx->ch, &gpfifo, NULL,
-					1, submit_flags, &fence,
-					&ce_cmd_buf_fence_out, NULL);
+		ret = gk20a_submit_channel_gpfifo_kernel(ce_ctx->ch, &gpfifo,
+				1, submit_flags, &fence, &ce_cmd_buf_fence_out);
 
 		if (!ret) {
 			ce_ctx->postfences[ce_ctx->cmd_buf_read_queue_offset] =

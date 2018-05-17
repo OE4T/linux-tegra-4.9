@@ -84,13 +84,19 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		int runlist_id,
 		bool is_privileged_channel);
 
-int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
-				struct nvgpu_gpfifo_entry *gpfifo,
+int gk20a_submit_channel_gpfifo_user(struct channel_gk20a *c,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
 				struct fifo_profile_gk20a *profile);
+
+int gk20a_submit_channel_gpfifo_kernel(struct channel_gk20a *c,
+				struct nvgpu_gpfifo_entry *gpfifo,
+				u32 num_entries,
+				u32 flags,
+				struct nvgpu_channel_fence *fence,
+				struct gk20a_fence **fence_out);
 
 #endif /* __NVGPU_CHANNEL_H__ */

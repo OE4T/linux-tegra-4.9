@@ -798,9 +798,8 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 				return fd;
 	}
 
-	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
-					  submit_flags, &fence,
-					  &fence_out, profile);
+	ret = gk20a_submit_channel_gpfifo_user(ch, args, args->num_entries,
+			submit_flags, &fence, &fence_out, profile);
 
 	if (ret) {
 		if (fd != -1)

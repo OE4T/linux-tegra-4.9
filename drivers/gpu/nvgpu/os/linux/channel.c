@@ -752,7 +752,7 @@ out:
 	return 0;
 }
 
-int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
+static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo_entry *gpfifo,
 				struct nvgpu_submit_gpfifo_args *args,
 				u32 num_entries,
@@ -1019,3 +1019,25 @@ clean_up:
 	return err;
 }
 
+int gk20a_submit_channel_gpfifo_user(struct channel_gk20a *c,
+				struct nvgpu_submit_gpfifo_args *args,
+				u32 num_entries,
+				u32 flags,
+				struct nvgpu_channel_fence *fence,
+				struct gk20a_fence **fence_out,
+				struct fifo_profile_gk20a *profile)
+{
+	return gk20a_submit_channel_gpfifo(c, NULL, args, num_entries,
+			flags, fence, fence_out, profile);
+}
+
+int gk20a_submit_channel_gpfifo_kernel(struct channel_gk20a *c,
+				struct nvgpu_gpfifo_entry *gpfifo,
+				u32 num_entries,
+				u32 flags,
+				struct nvgpu_channel_fence *fence,
+				struct gk20a_fence **fence_out)
+{
+	return gk20a_submit_channel_gpfifo(c, gpfifo, NULL, num_entries, flags,
+			fence, fence_out, NULL);
+}

@@ -17,6 +17,7 @@
 #include <linux/reboot.h>
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/defaults.h>

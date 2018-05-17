@@ -2515,6 +2515,22 @@ static void tegra_dp_vsc_col_ext(struct tegra_dc_dp_data *dp)
 	tegra_dp_vsc_col_ext_enable(dp);
 }
 
+static inline void tegra_dp_set_sor_clk_src(struct tegra_dc_dp_data *dp,
+					struct clk *src)
+{
+	struct tegra_dc_sor_data *sor = dp->sor;
+
+	/*
+	 * Disable and re-enable the sor_clk while switching the source to avoid
+	 * any momentary glitches. This shouldn't really matter since the SOR
+	 * wouldn't be actively sending any data at this point in time, but
+	 * we're doing this to be safe.
+	 */
+	tegra_disp_clk_disable_unprepare(sor->sor_clk);
+	clk_set_parent(sor->sor_clk, src);
+	tegra_disp_clk_prepare_enable(sor->sor_clk);
+}
+
 static void tegra_dp_prepare_pad(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc *dc = dp->dc;
@@ -2615,16 +2631,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dp_prepare_pad(dp);
 	tegra_dc_sor_enable_dp(dp->sor);
 
-	/* Select the macro feedback clock. */
-	if (!dc->initialized) {
-		if (tegra_dc_is_nvdisplay()) {
-			tegra_sor_clk_switch_setup(sor, true);
-			clk_set_parent(sor->sor_clk, sor->pad_clk);
-		} else {
-			tegra_sor_config_dp_clk_t21x(sor);
-		}
-	}
-
 	if (cfg->alt_scramber_reset_cap)
 		tegra_dc_dp_set_assr(dp, true);
 	else
@@ -2647,7 +2653,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		 * before enhanced framing enable. CTS waits on first
 		 * write to this offset to check for lane count set.
 		 */
-		tegra_dp_set_lane_count(dp, cfg->lane_count);
+		tegra_dp_dpcd_write_field(dp, NV_DPCD_LANE_COUNT_SET,
+					NV_DPCD_LANE_COUNT_SET_MASK,
+					cfg->lane_count);
 
 		tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
 
@@ -2656,6 +2664,16 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_sor_port_enable(sor, true);
 	tegra_sor_config_xbar(dp->sor);
+
+	/* Select the macro feedback clock. */
+	if (!dc->initialized) {
+		if (tegra_dc_is_nvdisplay()) {
+			tegra_sor_clk_switch_setup(sor, true);
+			tegra_dp_set_sor_clk_src(dp, sor->pad_clk);
+		} else {
+			tegra_sor_config_dp_clk_t21x(sor);
+		}
+	}
 
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
@@ -2806,10 +2824,10 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	if (tegra_dc_is_nvdisplay()) {
 		tegra_sor_clk_switch_setup(dp->sor, false);
-		clk_set_parent(dp->sor->sor_clk, dp->sor->safe_clk);
+		tegra_dp_set_sor_clk_src(dp, dp->sor->safe_clk);
 	}
 
-	tegra_dc_sor_disable(dp->sor, false);
+	tegra_dc_sor_disable(dp->sor);
 
 	tegra_dp_clk_disable(dp);
 

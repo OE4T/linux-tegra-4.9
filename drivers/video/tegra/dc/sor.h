@@ -228,7 +228,7 @@ void tegra_dc_sor_crc_en_dis(struct tegra_dc_sor_data *sor,
 			     struct tegra_dc_ext_crc_sor_params params,
 			     bool en);
 void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val);
-void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);
+void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor,
 	bool is_int);
 void tegra_dc_sor_set_link_bandwidth(struct tegra_dc_sor_data *sor,

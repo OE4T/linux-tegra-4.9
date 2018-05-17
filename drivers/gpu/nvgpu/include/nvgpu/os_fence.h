@@ -25,6 +25,8 @@
 #ifndef __NVGPU_OS_FENCE__
 #define __NVGPU_OS_FENCE__
 
+#include <nvgpu/errno.h>
+
 struct nvgpu_semaphore;
 struct channel_gk20a;
 struct priv_cmd_entry;

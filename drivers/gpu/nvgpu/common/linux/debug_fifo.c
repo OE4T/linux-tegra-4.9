@@ -222,10 +222,11 @@ static unsigned int __gk20a_fifo_create_stats(struct gk20a *g,
 		__profile_cmp, NULL);
 
 	/* build ranges */
-	for (index = 0; index < PERCENTILE_RANGES; index++)
-		percentiles[index] =
+	for (index = 0; index < PERCENTILE_RANGES; index++) {
+		percentiles[index] = nelem < PERCENTILE_RANGES ? 0 :
 			g->fifo.profile.sorted[(PERCENTILE_WIDTH * (index + 1) *
 						nelem)/100 - 1];
+	}
 	return nelem;
 }
 

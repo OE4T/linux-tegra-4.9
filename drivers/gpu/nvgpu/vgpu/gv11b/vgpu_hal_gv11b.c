@@ -75,7 +75,7 @@
 #include <gv11b/regops_gv11b.h>
 #include <gv11b/gr_ctx_gv11b.h>
 #include <gv11b/ltc_gv11b.h>
-#include <gv11b/gv11b_gating_reglist.h>
+#include <clock_gating/gv11b_gating_reglist.h>
 #include <gv11b/gr_gv11b.h>
 
 #include <nvgpu/enabled.h>

@@ -43,7 +43,7 @@
 #include "gr_gm20b.h"
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
-#include "gm20b_gating_reglist.h"
+#include "clock_gating/gm20b_gating_reglist.h"
 #include "fifo_gm20b.h"
 #include "gr_ctx_gm20b.h"
 #include "mm_gm20b.h"

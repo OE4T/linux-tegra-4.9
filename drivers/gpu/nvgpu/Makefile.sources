@@ -71,6 +71,11 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/posix/nvlink.c \
 	common/posix/lock.c \
 	common/posix/stubs.c \
+	common/clock_gating/gm20b_gating_reglist.c \
+	common/clock_gating/gp10b_gating_reglist.c \
+	common/clock_gating/gv11b_gating_reglist.c \
+	common/clock_gating/gp106_gating_reglist.c \
+	common/clock_gating/gv100_gating_reglist.c \
 	boardobj/boardobj.c \
 	boardobj/boardobjgrp.c \
 	boardobj/boardobjgrpmask.c \
@@ -120,7 +125,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gk20a/therm_gk20a.c \
 	gk20a/gr_ctx_gk20a_sim.c \
 	gk20a/gr_ctx_gk20a.c \
-	gk20a/gk20a_gating_reglist.c \
 	gk20a/fb_gk20a.c \
 	gk20a/hal.c \
 	gk20a/tsg_gk20a.c \
@@ -133,7 +137,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gm20b/fb_gm20b.c \
 	gm20b/fifo_gm20b.c \
 	gm20b/gr_ctx_gm20b.c \
-	gm20b/gm20b_gating_reglist.c \
 	gm20b/acr_gm20b.c \
 	gm20b/pmu_gm20b.c \
 	gm20b/mm_gm20b.c \
@@ -151,7 +154,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/pmu_gp10b.c \
 	gp10b/hal_gp10b.c \
 	gp10b/rpfb_gp10b.c \
-	gp10b/gp10b_gating_reglist.c \
 	gp10b/regops_gp10b.c \
 	gp10b/therm_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \
@@ -163,7 +165,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gv11b/mc_gv11b.c  \
 	gv11b/ltc_gv11b.c  \
 	gv11b/hal_gv11b.c \
-	gv11b/gv11b_gating_reglist.c \
 	gv11b/gr_gv11b.c \
 	gv11b/fb_gv11b.c \
 	gv11b/fifo_gv11b.c \
@@ -191,7 +192,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp106/fuse_gp106.c \
 	gp106/clk_gp106.c \
 	gp106/clk_arb_gp106.c \
-	gp106/gp106_gating_reglist.c \
 	gp106/xve_gp106.c \
 	gp106/therm_gp106.c \
 	gv100/mm_gv100.c \
@@ -205,5 +205,4 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gv100/mc_gv100.c \
 	gv100/nvlink_gv100.c \
 	gv100/hal_gv100.c \
-	gv100/pmu_gv100.c \
-	gv100/gv100_gating_reglist.c
+	gv100/pmu_gv100.c

@@ -78,7 +78,7 @@
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
 #include "gp106/fb_gp106.h"
-#include "gp106/gp106_gating_reglist.h"
+#include "clock_gating/gp106_gating_reglist.h"
 #include "gp106/flcn_gp106.h"
 #include "gp106/fuse_gp106.h"
 

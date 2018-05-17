@@ -76,7 +76,7 @@
 #include "acr_gv11b.h"
 #include "fb_gv11b.h"
 #include "fifo_gv11b.h"
-#include "gv11b_gating_reglist.h"
+#include "clock_gating/gv11b_gating_reglist.h"
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
 #include "therm_gv11b.h"

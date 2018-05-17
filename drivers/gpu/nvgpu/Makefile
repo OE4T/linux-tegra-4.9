@@ -2,6 +2,7 @@ GCOV_PROFILE := y
 
 ccflags-y += -I$(srctree.nvgpu)/drivers/gpu/nvgpu/include
 ccflags-y += -I$(srctree.nvgpu)/drivers/gpu/nvgpu
+ccflags-y += -I$(srctree.nvgpu)/drivers/gpu/nvgpu/common
 ccflags-y += -I$(srctree.nvgpu)/include
 ccflags-y += -I$(srctree.nvgpu)/include/uapi
 ccflags-y += -I$(srctree.nvgpu-next)/drivers/gpu/nvgpu
@@ -80,6 +81,11 @@ nvgpu-y := \
 	common/pmu/pmu_perfmon.o \
 	common/pmu/pmu_debug.o \
 	common/ltc.o \
+	common/clock_gating/gm20b_gating_reglist.o \
+	common/clock_gating/gp106_gating_reglist.o \
+	common/clock_gating/gp10b_gating_reglist.o \
+	common/clock_gating/gv100_gating_reglist.o \
+	common/clock_gating/gv11b_gating_reglist.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \
@@ -98,7 +104,6 @@ nvgpu-y := \
 	gk20a/therm_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
-	gk20a/gk20a_gating_reglist.o \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \
@@ -112,7 +117,6 @@ nvgpu-y := \
 	gm20b/fb_gm20b.o \
 	gm20b/fifo_gm20b.o \
 	gm20b/gr_ctx_gm20b.o \
-	gm20b/gm20b_gating_reglist.o \
 	gm20b/acr_gm20b.o \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
@@ -225,7 +229,6 @@ nvgpu-y += \
 	gp10b/pmu_gp10b.o \
 	gp10b/hal_gp10b.o \
 	gp10b/rpfb_gp10b.o \
-	gp10b/gp10b_gating_reglist.o \
 	gp10b/regops_gp10b.o \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
@@ -252,7 +255,6 @@ nvgpu-y += \
 	gv11b/mc_gv11b.o  \
 	gv11b/ltc_gv11b.o  \
 	gv11b/hal_gv11b.o \
-	gv11b/gv11b_gating_reglist.o \
 	gv11b/gr_gv11b.o \
 	gv11b/fb_gv11b.o \
 	gv11b/fifo_gv11b.o \
@@ -276,7 +278,6 @@ nvgpu-y += \
 	gv100/nvlink_gv100.o \
 	gv100/hal_gv100.o \
 	gv100/pmu_gv100.o \
-	gv100/gv100_gating_reglist.o \
 	pstate/pstate.o \
 	clk/clk_vin.o \
 	clk/clk_fll.o \
@@ -291,7 +292,6 @@ nvgpu-y += \
 	clk/clk.o \
 	gp106/clk_gp106.o \
 	gp106/clk_arb_gp106.o \
-	gp106/gp106_gating_reglist.o \
 	gp106/xve_gp106.o \
 	gp106/therm_gp106.o \
 	gp106/xve_gp106.o \

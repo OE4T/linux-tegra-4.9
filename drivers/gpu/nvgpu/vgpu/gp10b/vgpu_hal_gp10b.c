@@ -50,7 +50,7 @@
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
-#include "gp10b/gp10b_gating_reglist.h"
+#include "clock_gating/gp10b_gating_reglist.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"

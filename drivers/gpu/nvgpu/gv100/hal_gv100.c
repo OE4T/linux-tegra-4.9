@@ -97,7 +97,7 @@
 #include "gv100/pmu_gv100.h"
 #include "gv100/nvlink_gv100.h"
 #include "gv100/regops_gv100.h"
-#include "gv100/gv100_gating_reglist.h"
+#include "clock_gating/gv100_gating_reglist.h"
 
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>

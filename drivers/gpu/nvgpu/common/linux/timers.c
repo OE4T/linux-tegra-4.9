@@ -243,6 +243,18 @@ s64 nvgpu_current_time_ms(void)
 }
 
 /**
+ * nvgpu_current_time_ns - Time in nanoseconds from a monotonic clock.
+ *
+ * Return a clock in nanosecond units. The start time of the clock is
+ * unspecified; the time returned can be compared with older ones to measure
+ * durations. The source clock does not jump when the system clock is adjusted.
+ */
+s64 nvgpu_current_time_ns(void)
+{
+	return ktime_to_ns(ktime_get());
+}
+
+/**
  * nvgpu_hr_timestamp - Opaque 'high resolution' time stamp.
  *
  * Return a "high resolution" time stamp. It does not really matter exactly what

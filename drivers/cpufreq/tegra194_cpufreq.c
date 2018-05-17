@@ -41,6 +41,8 @@
 /* cpufreq transisition latency */
 #define TEGRA_CPUFREQ_TRANSITION_LATENCY (300 * 1000) /* unit in nanoseconds */
 
+#define CC3_NDIV_WIDTH		9 /* the number of bits for ndiv for auto-cc3 */
+
 #define KHZ_TO_HZ		1000
 #define REF_CLK_MHZ		408 /* 408 MHz */
 #define US_DELAY		5000
@@ -370,9 +372,6 @@ static void enable_cc3(struct device_node *dn)
 		nltbl = &tfreq_data.pcluster[cl].ndiv_limits_tbl;
 		cc3 = &tfreq_data.pcluster[cl].cc3;
 
-		if (!nltbl->ref_clk_hz)
-			continue;
-
 		mreq.cluster_id = cl;
 		ret = tegra_bpmp_send_receive(MRQ_CPU_AUTO_CC3, &mreq,
 				sizeof(struct mrq_cpu_auto_cc3_request),
@@ -381,15 +380,14 @@ static void enable_cc3(struct device_node *dn)
 		if (ret || !(mres.auto_cc3_config & 1))
 			continue;
 
-		ret = of_property_read_u32_index(dn, "nvidia,autocc3-freq",
+		ret = of_property_read_u32_index(dn, "ndivida,autocc3-freq",
 			cl, &freq);
-		if (ret)
-			freq = 0;
-
-		ndiv = map_freq_to_ndiv(nltbl, freq);
-		ndiv = clamp_ndiv(nltbl, ndiv);
+		if (!ret && nltbl->ref_clk_hz) {
+			ndiv = map_freq_to_ndiv(nltbl, freq);
+			cc3->ndiv = clamp_ndiv(nltbl, ndiv);
+		} else
+			cc3->ndiv = (GENMASK(9, 1) & mres.auto_cc3_config) >> 1;
 		cc3->enable = 1;
-		cc3->ndiv = ndiv;
 
 		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
 				__tegra_mce_cc3_ctrl,

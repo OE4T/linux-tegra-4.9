@@ -803,7 +803,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  submit_flags, &fence,
-					  &fence_out, false, profile);
+					  &fence_out, profile);
 
 	if (ret) {
 		if (fd != -1)

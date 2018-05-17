@@ -132,7 +132,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 		ret = gk20a_submit_channel_gpfifo(ce_ctx->ch, &gpfifo, NULL,
 					1, submit_flags, &fence,
-					&ce_cmd_buf_fence_out, false, NULL);
+					&ce_cmd_buf_fence_out, NULL);
 
 		if (!ret) {
 			ce_ctx->postfences[ce_ctx->cmd_buf_read_queue_offset] =

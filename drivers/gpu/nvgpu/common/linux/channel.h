@@ -91,7 +91,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags,
 				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence,
 				struct fifo_profile_gk20a *profile);
 
 #endif /* __NVGPU_CHANNEL_H__ */

@@ -781,7 +781,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	return gk20a_submit_channel_gpfifo(cde_ctx->ch, gpfifo, NULL,
-				   num_entries, flags, fence, fence_out, true,
+				   num_entries, flags, fence, fence_out,
 				   NULL);
 }
 

@@ -527,7 +527,6 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      struct priv_cmd_entry **wait_cmd,
 				      struct priv_cmd_entry **incr_cmd,
 				      struct gk20a_fence **post_fence,
-				      bool force_need_sync_fence,
 				      bool register_irq,
 				      u32 flags)
 {
@@ -538,13 +537,6 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	int err = 0;
 	bool need_wfi = !(flags & NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI);
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
-
-	/*
-	 * If user wants to always allocate sync_fence_fds then respect that;
-	 * otherwise, allocate sync_fence_fd based on user flags.
-	 */
-	if (force_need_sync_fence)
-		need_sync_fence = true;
 
 	if (g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
@@ -772,7 +764,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags,
 				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence,
 				struct fifo_profile_gk20a *profile)
 {
 	struct gk20a *g = c->g;
@@ -861,7 +852,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		if (c->deterministic && !channel_gk20a_is_prealloc_enabled(c))
 			return -EINVAL;
 
-		need_sync_framework = force_need_sync_fence ||
+		need_sync_framework =
 			gk20a_channel_sync_needs_sync_framework(g) ||
 			(flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE &&
 			 flags & NVGPU_SUBMIT_FLAGS_FENCE_GET);
@@ -968,7 +959,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		err = gk20a_submit_prepare_syncs(c, fence, job,
 						 &wait_cmd, &incr_cmd,
 						 &post_fence,
-						 force_need_sync_fence,
 						 need_deferred_cleanup,
 						 flags);
 		if (err)

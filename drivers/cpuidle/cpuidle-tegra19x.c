@@ -33,6 +33,7 @@
 #include <linux/cpu_pm.h>
 #include <linux/psci.h>
 #include <linux/version.h>
+#include <linux/cpuhotplug.h>
 
 #include <linux/of_gpio.h>
 #include <asm/cpuidle.h>

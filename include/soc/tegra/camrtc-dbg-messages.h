@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -19,44 +19,47 @@
 
 /* Requests and responses
  */
-enum camrtc_request {
-	/* Ping request. RTCPU returns the fw version in the data field and
-	 * 0 in the status field.
-	 */
-	CAMRTC_REQ_PING = 1,                            /*  1 (0x01) */
-	/* PM sleep request */
-	CAMRTC_REQ_PM_SLEEP,                            /*  2 (0x02) */
-	/* Test request */
-	CAMRTC_REQ_MODS_TEST,                           /*  3 (0x03) */
-	/* Set log level */
-	CAMRTC_REQ_SET_LOGLEVEL,                        /*  4 (0x04) */
-	CAMRTC_REQ_LOGLEVEL = CAMRTC_REQ_SET_LOGLEVEL,  /*  4 (0x04) */
-	/* Get FreeRTOS state */
-	CAMRTC_REQ_RTOS_STATE,                          /*  5 (0x05) */
 
-	/* Read memory */
-	CAMRTC_REQ_READ_MEMORY_32BIT,                   /*  6 (0x06) */
-	CAMRTC_REQ_READ_MEMORY,                         /*  7 (0x07) */
+/* Ping request. RTCPU returns the fw version in the data field and
+ * 0 in the status field.
 
-	/* Performance counter */
-	CAMRTC_REQ_SET_PERF_COUNTERS,                   /*  8 (0x08) */
-	CAMRTC_REQ_GET_PERF_COUNTERS,                   /*  9 (0x09) */
+*/
+#define CAMRTC_REQ_PING                 0x01U
+/* PM sleep request */
+#define CAMRTC_REQ_PM_SLEEP             0x02U
 
-	CAMRTC_REQ_GET_LOGLEVEL,                        /* 10 (0x0a) */
+/* Test request */
+#define CAMRTC_REQ_MODS_TEST            0x03U
 
-	CAMRTC_REQ_RUN_TEST,                            /* 11 (0x0b) */
+/* Set log level */
+#define CAMRTC_REQ_SET_LOGLEVEL         0x04U
+#define CAMRTC_REQ_LOGLEVEL             CAMRTC_REQ_SET_LOGLEVEL
 
-	CAMRTC_REQ_GET_TASK_STAT,                       /* 12 (0x0c) */
+/* Get FreeRTOS state */
+#define CAMRTC_REQ_RTOS_STATE           0x05U
 
-	CAMRTC_REQ_ENABLE_VI_STAT,                      /* 13 (0x0d) */
-	CAMRTC_REQ_GET_VI_STAT,                         /* 14 (0x0e) */
+/* Read memory */
+#define CAMRTC_REQ_READ_MEMORY_32BIT    0x06U
+#define CAMRTC_REQ_READ_MEMORY          0x07U
 
-	CAMRTC_REQ_GET_MEM_USAGE,                       /* 15 (0x0f) */
+    /* Performance counter */
+#define CAMRTC_REQ_SET_PERF_COUNTERS    0x08U
+#define CAMRTC_REQ_GET_PERF_COUNTERS    0x09U
 
-	CAMRTC_REQ_RUN_MEM_TEST,                        /* 16 (0x10) */
+#define CAMRTC_REQ_GET_LOGLEVEL         0x0AU
 
-	CAMRTC_REQUEST_TYPE_MAX,
-};
+#define CAMRTC_REQ_RUN_TEST             0x0BU
+
+#define CAMRTC_REQ_GET_TASK_STAT        0x0CU
+
+#define CAMRTC_REQ_ENABLE_VI_STAT       0x0DU
+#define CAMRTC_REQ_GET_VI_STAT          0x0EU
+
+#define CAMRTC_REQ_GET_MEM_USAGE        0x0FU
+
+#define CAMRTC_REQ_RUN_MEM_TEST         0x10U
+
+#define CAMRTC_REQUEST_TYPE_MAX         0x11U
 
 enum camrtc_response {
 	CAMRTC_RESP_PONG = 1,
@@ -74,13 +77,12 @@ enum camrtc_response {
 	CAMRTC_RESPONSE_TYPE_MAX,
 };
 
-enum camrtc_response_status {
-	CAMRTC_STATUS_OK = 0U,
-	CAMRTC_STATUS_ERROR = 1U,		/* Generic error */
-	CAMRTC_STATUS_REQ_UNKNOWN = 2U,		/* Unknown req_type */
-	CAMRTC_STATUS_NOT_IMPLEMENTED = 3U,	/* Request not implemented */
-	CAMRTC_STATUS_INVALID_PARAM = 4U,	/* Invalid parameter */
-};
+#define CAMRTC_STATUS_OK                0U
+#define CAMRTC_STATUS_ERROR             1U /* Generic error */
+#define CAMRTC_STATUS_REQ_UNKNOWN       2U /* Unknown req_type */
+#define CAMRTC_STATUS_NOT_IMPLEMENTED   3U /* Request not implemented */
+#define CAMRTC_STATUS_INVALID_PARAM     4U /* Invalid parameter */
+
 
 enum {
 	CAMRTC_DBG_FRAME_SIZE = 384U,

@@ -88,6 +88,7 @@ typedef struct syncpoint_info {
 
 #define VI_NUM_GOS_TABLES	12U
 #define VI_NUM_ATOMP_SURFACES	4
+#define VI_NUM_STATUS_SURFACES	1
 
 /* Generic */
 #define VI_ATOMP_SURFACE0	0
@@ -312,6 +313,11 @@ struct vi_channel_config {
 
 } __CAPTURE_IVC_ALIGN;
 
+struct engine_status_surface {
+	uint32_t offset;
+	uint32_t offset_hi;
+} __CAPTURE_IVC_ALIGN;
+
 struct capture_status {
 	uint8_t src_stream;
 	uint8_t virtual_channel;
@@ -453,11 +459,16 @@ struct capture_descriptor {
 	struct vi_channel_config ch_cfg;
 	struct vi_fmlite_config fm_cfg;
 
-	/* Result record – written by RTCPU */
-	struct capture_status status;
+	/* Result record – written by Falcon */
+	struct engine_status_surface engine_status;
+
 	/* FMLITE result – written by RTCPU */
 	struct vi_fmlite_result fm_result;
-	uint32_t __pad[14];
+
+	/* Result record – written by RTCPU */
+	struct capture_status status;
+
+	uint32_t __pad[12];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -1171,11 +1182,14 @@ struct isp_capture_descriptor {
 
 	struct syncpoint_info prefences[ISP_MAX_PREFENCES];
 
+	/* Result record – written by Falcon */
+	struct engine_status_surface engine_status;
+
 	/** Result record – written by RTCPU */
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[6];
+	uint32_t __pad[4];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**

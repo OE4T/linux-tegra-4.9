@@ -1001,3 +1001,181 @@ fail:
 exit:
 	return ret;
 }
+
+
+/*
+ *-----------------------------------------------------------------------------*
+ * TLC THROUGHPUT COUNTERS
+ *-----------------------------------------------------------------------------*
+ */
+
+/* Reset the TLC throughput counters for both RX and TX */
+int t19x_nvlink_reset_tp_counters(struct tnvlink_dev *tdev)
+{
+	int ret = 0;
+	u32 data;
+
+	if(tdev == NULL) {
+		nvlink_err("Invalid tnvlink_dev pointer");
+		return -EINVAL;
+	}
+
+	/* Reset TX tp counters */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL);
+	data |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX0);
+	data |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_RESETTX1);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL, data);
+
+	/* Reset RX tp counters */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL);
+	data |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX0);
+	data |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_RESETRX1);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL, data);
+
+	return ret;
+}
+
+/* Start/Stop the TLC throughput counters for both RX and TX */
+int t19x_nvlink_freeze_tp_counters(struct tnvlink_dev *tdev, bool freeze)
+{
+	int ret = 0;
+	u32 data_tx, data_rx;
+
+	if(tdev == NULL) {
+		nvlink_err("Invalid tnvlink_dev pointer");
+		return -EINVAL;
+	}
+
+
+	/* TX tp counters */
+	data_tx = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL);
+
+	/* RX tp counters */
+	data_rx = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL);
+
+	if (!freeze) {
+		tdev->is_tp_cntr_running = true;
+		data_tx |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_ENTX0);
+		data_tx |= BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_ENTX1);
+		data_rx |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_ENRX0);
+		data_rx |= BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_ENRX1);
+	} else {
+		tdev->is_tp_cntr_running = false;
+		data_tx &= ~(BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_ENTX0));
+		data_tx &= ~(BIT(NVLTLC_TX_DEBUG_TP_CNTR_CTRL_ENTX1));
+		data_rx &= ~(BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_ENRX0));
+		data_rx &= ~(BIT(NVLTLC_RX_DEBUG_TP_CNTR_CTRL_ENRX1));
+	}
+
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_DEBUG_TP_CNTR_CTRL, data_tx);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_DEBUG_TP_CNTR_CTRL, data_rx);
+
+	return ret;
+}
+
+/* Configure the TLC throughput counters 0 and 1 for both RX and TX
+ * Configuration for cntr0-
+ * 1. Setting CTRL0.UNIT of traffic the counter will counter to "PACKETS"
+ * 2. Setting CTRL0.VCSETFILTERMODE to count both VCSET0 and 1
+ * Configuration for cntr1-
+ * 1. Setting CTRL0.UNIT of traffic the counter will counter to "CYCLES"
+ * 2. Setting CTRL0.VCSETFILTERMODE to count both VCSET0 and 1
+ * 3. Setting CTRL0.FLITFILTER to count idle cycles
+ */
+int t19x_nvlink_config_tp_counters(struct tnvlink_dev *tdev)
+{
+	int ret = 0;
+	u32 data;
+
+	if(tdev == NULL) {
+		nvlink_err("Invalid tnvlink_dev pointer");
+		return -EINVAL;
+	}
+
+	/* TX tp counter cntr0 */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0);
+	data &= ~(NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_UNIT_M() |
+			NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_M());
+	data |= NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_UNIT_F(
+			NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_UNIT_PACKETS);
+	data |= NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_F(
+			NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_INIT);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_CTRL_0, data);
+
+	/* TX tp counter cntr1 */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0);
+	data &= ~(NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_UNIT_M() |
+			NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_M() |
+			NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_M());
+	data |= NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_UNIT_F(
+			NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_UNIT_CYCLES);
+	data |= NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_F(
+			NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_INIT);
+	data |= NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_F(
+			NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_IDLE);
+	nvlw_nvltlc_writel(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_CTRL_0, data);
+
+	/* RX tp counter cntr0 */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0);
+	data &= ~(NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_UNIT_M() |
+			NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_M());
+	data |= NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_UNIT_F(
+			NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_UNIT_PACKETS);
+	data |= NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_F(
+			NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0_VCSETFILTERMODE_INIT);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_CTRL_0, data);
+
+	/* RX tp counter cntr1 */
+	data = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0);
+	data &= ~(NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_UNIT_M() |
+			NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_M() |
+			NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_M());
+	data |= NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_UNIT_F(
+			NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_UNIT_CYCLES);
+	data |= NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_F(
+			NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_VCSETFILTERMODE_INIT);
+	data |= NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_F(
+			NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0_FLITFILTER_IDLE);
+	nvlw_nvltlc_writel(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_CTRL_0, data);
+
+	return ret;
+};
+
+/* Get the value of TLC throughput counters/controls for both RX and TX */
+int t19x_nvlink_get_tp_counters(struct tnvlink_dev *tdev, u64 *tx0cnt,
+					u64 *tx1cnt, u64 *rx0cnt, u64 *rx1cnt)
+{
+	int ret = 0;
+	u64 tx0cntlo, tx1cntlo, rx0cntlo, rx1cntlo;
+	u64 tx0cnthi, tx1cnthi, rx0cnthi, rx1cnthi;
+
+	if(tdev == NULL) {
+		nvlink_err("Invalid tnvlink_dev pointer");
+		return -EINVAL;
+	}
+
+	/* TX tp counters */
+	tx0cntlo = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_LO);
+	tx0cnthi = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR0_HI);
+	tx1cntlo = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_LO);
+	tx1cnthi = nvlw_nvltlc_readl(tdev, NVLTLC_TX_DEBUG_TP_CNTR1_HI);
+
+	/* RX tp counters */
+	rx0cntlo = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_LO);
+	rx0cnthi = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR0_HI);
+	rx1cntlo = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_LO);
+	rx1cnthi = nvlw_nvltlc_readl(tdev, NVLTLC_RX_DEBUG_TP_CNTR1_HI);
+
+	*tx0cnt = ((u64)tx0cnthi << 32) | tx0cntlo;
+	*tx1cnt = ((u64)tx1cnthi << 32) | tx1cntlo;
+	*rx0cnt = ((u64)rx0cnthi << 32) | rx0cntlo;
+	*rx1cnt = ((u64)rx1cnthi << 32) | rx1cntlo;
+
+	nvlink_dbg("tx packets        : %llu\n", *tx0cnt);
+	nvlink_dbg("tx idle cycles    : %llu\n", *tx1cnt);
+	nvlink_dbg("rx packets        : %llu\n", *rx0cnt);
+	nvlink_dbg("rx idle cycles    : %llu\n", *rx1cnt);
+
+	return ret;
+}
+

@@ -537,6 +537,13 @@ int t19x_nvlink_dev_interface_init(struct nvlink_device *ndev)
 
 	mssnvlink_init(tdev);
 	program_scf_tom();
+
+	ret = t19x_nvlink_config_tp_counters(tdev);
+	if (ret < 0)
+		return -EINVAL;
+	ret = t19x_nvlink_reset_tp_counters(tdev);
+	if (ret < 0)
+		return -EINVAL;
 	nvlink_dbg("Link interface init done for dev%u", ndev->device_id);
 
 	return ret;
@@ -1121,6 +1128,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	}
 
 	tdev->is_nea = DEFAULT_IS_NEA;
+	tdev->is_tp_cntr_running = false;
 	tdev->irq = platform_get_irq(pdev, 0);
 	if (tdev->irq < 0) {
 		nvlink_err("Couldn't get interrupt listed in device tree");

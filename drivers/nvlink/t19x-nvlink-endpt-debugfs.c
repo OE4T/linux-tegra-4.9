@@ -291,6 +291,106 @@ fail:
 	return ret;
 }
 
+static int start_tp_cntrs_read(void *data, u64 *val)
+{
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)data;
+	bool start = tdev->is_tp_cntr_running;
+
+	/* val = 1 implies tp_cntrs are running */
+	*val = start ? 1 : 0;
+	return 0;
+}
+
+static int start_tp_cntrs_write(void *data, u64 val)
+{
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)data;
+	int status;
+	/* val = 1 implies start the tp_cntrs */
+	bool freeze = val ? false : true;
+
+	status = t19x_nvlink_freeze_tp_counters(tdev, freeze);
+	return status;
+}
+DEFINE_SIMPLE_ATTRIBUTE(start_tp_cntrs_fops, start_tp_cntrs_read,
+					start_tp_cntrs_write, "%llu\n");
+
+static int reset_tp_cntrs_write(void *data, u64 val)
+{
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)data;
+	int status;
+
+	status = t19x_nvlink_reset_tp_counters(tdev);
+	return status;
+}
+DEFINE_SIMPLE_ATTRIBUTE(reset_tp_cntrs_fops, NULL,
+					reset_tp_cntrs_write, "%llu\n");
+
+static int tp_cntrs_show(struct seq_file *s, void *unused)
+{
+	struct tnvlink_dev *tdev = (struct tnvlink_dev *)s->private;
+	int ret = 0;
+	u64 tx0cnt, tx1cnt;
+	u64 rx0cnt, rx1cnt;
+
+	t19x_nvlink_get_tp_counters(tdev, &tx0cnt, &tx1cnt, &rx0cnt, &rx1cnt);
+	seq_printf(s, "TX packets: %llu\n", tx0cnt);
+	seq_printf(s, "TX idle cycles : %llu\n", tx1cnt);
+	seq_printf(s, "RX packets: %llu\n", rx0cnt);
+	seq_printf(s, "RX idle cycles : %llu\n", rx1cnt);
+
+	return ret;
+}
+
+static int tp_cntrs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tp_cntrs_show, inode->i_private);
+}
+
+static const struct file_operations tp_cntrs_fops = {
+	.open		= tp_cntrs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int nvlink_tlc_debugfs_init(struct tnvlink_dev *tdev)
+{
+	int ret = 0;
+	struct dentry *tlc_root;
+	struct dentry *d;
+
+	tlc_root = debugfs_create_dir("tlc", tdev->tegra_debugfs);
+	if (!tlc_root) {
+		nvlink_err("Failed to create Tegra TLC debugfs root dir");
+		return -ENOMEM;
+	}
+
+	d = debugfs_create_file("tp_cntrs", 0444, tlc_root, tdev,
+							&tp_cntrs_fops);
+	if (!d) {
+		nvlink_err(
+		"Unable to create debugfs node for tp_cntrs");
+		return -ENOMEM;
+	}
+
+	d = debugfs_create_file("start_tp_cntrs", 0644, tlc_root, tdev,
+							&start_tp_cntrs_fops);
+	if (!d) {
+		nvlink_err(
+		"Unable to create debugfs node for start_tp_cntrs");
+		return -ENOMEM;
+	}
+
+	d = debugfs_create_file("reset_tp_cntrs", 0244, tlc_root, tdev,
+							&reset_tp_cntrs_fops);
+	if (!d) {
+		nvlink_err(
+		"Unable to create debugfs node for reset_tp_cntrs");
+		return -ENOMEM;
+	}
+	return ret;
+}
+
 void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev)
 {
 	if (!nvlink_debugfs_root) {
@@ -336,6 +436,9 @@ void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev)
 	}
 
 	if (nvlink_single_lane_debugfs_init(tdev) < 0)
+		goto fail;
+
+	if (nvlink_tlc_debugfs_init(tdev) < 0)
 		goto fail;
 
 	if (!debugfs_create_bool("is_nea", (S_IWUSR | S_IRUGO),

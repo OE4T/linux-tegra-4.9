@@ -222,6 +222,7 @@ struct tnvlink_dev {
 	bool is_nea;
 	/* Nvlink refclk*/
 	enum nvlink_refclk refclk;
+	bool is_tp_cntr_running;
 	struct tnvlink_link tlink;
 	struct nvlink_device *ndev;
 };
@@ -297,7 +298,11 @@ bool is_link_connected(struct tnvlink_link *tlink);
 int nvlink_retrain_link(struct tnvlink_dev *tdev, bool from_off);
 int t19x_nvlink_write_discovery_token(struct tnvlink_dev *tdev, u64 token);
 int t19x_nvlink_read_discovery_token(struct tnvlink_dev *tdev, u64 *token);
-
+int t19x_nvlink_reset_tp_counters(struct tnvlink_dev *tdev);
+int t19x_nvlink_freeze_tp_counters(struct tnvlink_dev *tdev, bool bFreeze);
+int t19x_nvlink_config_tp_counters(struct tnvlink_dev *tdev);
+int t19x_nvlink_get_tp_counters(struct tnvlink_dev *tdev, u64 *tx0cnt,
+					u64 *tx1cnt, u64 *rx0cnt, u64 *rx1cnt);
 #ifdef CONFIG_DEBUG_FS
 void t19x_nvlink_endpt_debugfs_init(struct tnvlink_dev *tdev);
 void t19x_nvlink_endpt_debugfs_deinit(struct tnvlink_dev *tdev);

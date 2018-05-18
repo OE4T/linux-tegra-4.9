@@ -597,6 +597,37 @@ static ssize_t show_xhci_stats(struct device *dev,
 
 static DEVICE_ATTR(xhci_stats, 0444, show_xhci_stats, NULL);
 
+/* sysfs node for fw check*/
+static ssize_t fw_version_show(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct tegra_xusb_fw_header *header = NULL;
+	time_t timestamp;
+	struct tm fw_tm;
+
+	if (!tegra)
+		return scnprintf(buf, PAGE_SIZE, "device is not available\n");
+
+	header = (struct tegra_xusb_fw_header *)tegra->fw.virt;
+
+	timestamp = le32_to_cpu(header->fwimg_created_time);
+	time_to_tm(timestamp, 0, &fw_tm);
+
+	return scnprintf(buf, PAGE_SIZE,
+			"Firmware timestamp: %ld-%02d-%02d %02d:%02d:%02d UTC, "
+			"Version: %02x.%02x %s\n",
+			fw_tm.tm_year + 1900,
+			fw_tm.tm_mon + 1, fw_tm.tm_mday, fw_tm.tm_hour,
+			fw_tm.tm_min, fw_tm.tm_sec,
+			FW_MAJOR_VERSION(header->version_id),
+			FW_MINOR_VERSION(header->version_id),
+			(header->build_log == LOG_MEMORY) ?
+			"debug" : "release");
+}
+
+static DEVICE_ATTR(fw_version, 0444, fw_version_show, NULL);
+
 static struct attribute *tegra_sysfs_entries_errs[] = {
 	&dev_attr_xhci_stats.attr,
 	NULL,
@@ -2525,6 +2556,12 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 		goto remove_padctl_irq;
 	}
 
+	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_fw_version.attr);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to create tegra sysfs file fw_version\n");
+		goto err_create_sysfs;
+	}
+
 	/* Enable EU3S bit of USBCMD */
 	val = readl(&xhci->op_regs->command);
 	val |= CMD_PM_INDEX;
@@ -2537,6 +2574,7 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	return;
 
 	/* Free up as much as we can and wait to be unbound. */
+err_create_sysfs:
 remove_padctl_irq:
 	if (!tegra->soc->is_xhci_vf) {
 		devm_free_irq(dev, tegra->padctl_irq, tegra);
@@ -3172,6 +3210,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 					EXTCON_USB_HOST, &tegra->id_extcon_nb);
 		}
 	}
+
+	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_fw_version.attr);
 
 	if (!tegra->soc->is_xhci_vf)
 		cancel_delayed_work_sync(&tegra->firmware_retry_work);

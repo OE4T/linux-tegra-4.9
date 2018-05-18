@@ -12,4 +12,3 @@ obj-y					+= speedo-tegra114.o
 obj-y					+= speedo-tegra124.o
 obj-y					+= speedo-tegra124.o
 obj-y					+= speedo-tegra210.o
-obj-y					+= kfuse.o

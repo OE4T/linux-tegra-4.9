@@ -480,14 +480,15 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 
 int nvhost_flcn_common_isr(struct platform_device *pdev)
 {
-	u32 irqstat, mailbox0, mailbox1;
+	u32 irqstat, exci, mailbox0, mailbox1;
 
 	irqstat = host1x_readl(pdev, flcn_irqstat_r());
+	exci = host1x_readl(pdev, flcn_exci_r());
 	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
 	mailbox1 = host1x_readl(pdev, flcn_mailbox1_r());
 
-	dev_err(&pdev->dev, "irqstat: %08x, mailbox0: %08x, mailbox1: %08x",
-		irqstat, mailbox0, mailbox1);
+	dev_err(&pdev->dev, "irqstat: %08x, exci: %08x, mailbox0: %08x, mailbox1: %08x",
+		irqstat, exci, mailbox0, mailbox1);
 
 	/* logic to clear the interrupt */
 	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());

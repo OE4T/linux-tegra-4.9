@@ -244,6 +244,7 @@ struct nvhost_device_data t19_vi_thi_info = {
 
 struct nvhost_device_data t19_vi5_info = {
 	.devfs_name		= "vi",
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	.keepalive		= true,
 	.autosuspend_delay	= 500,
 	.poweron_reset		= true,
@@ -292,6 +293,7 @@ struct nvhost_device_data t19_isp_thi_info = {
 
 struct nvhost_device_data t19_isp5_info = {
 	.devfs_name		= "isp",
+	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.keepalive		= true,
 	.autosuspend_delay      = 500,
 	.poweron_reset		= true,

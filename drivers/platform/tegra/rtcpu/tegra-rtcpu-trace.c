@@ -39,7 +39,7 @@
 
 #ifdef CONFIG_EVENTLIB
 #include <linux/keventlib.h>
-#include <uapi/linux/rtcpu_trace_eventlib_events.h>
+#include <uapi/linux/nvhost_events.h>
 #include "rtcpu/device-group.h"
 #endif
 
@@ -727,7 +727,8 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 				struct camrtc_event_struct *event)
 {
 	struct nvhost_device_data *pdata;
-	union rtcpu_trace_event_union trace_event;
+	struct nvhost_task_begin task_begin;
+	struct nvhost_task_end task_end;
 
 #ifndef CONFIG_EVENTLIB
 	trace_rtcpu_unknown(event->header.tstamp,
@@ -746,26 +747,26 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 	switch (event->header.id) {
 	case camrtc_trace_vi_task_begin:
 		/* Write task start event */
-		trace_event.task_begin.syncpt_id = event->data.data32[0];
-		trace_event.task_begin.syncpt_thresh = event->data.data32[1];
-		trace_event.task_begin.class_id = pdata->class;
+		task_begin.syncpt_id = event->data.data32[0];
+		task_begin.syncpt_thresh = event->data.data32[1];
+		task_begin.class_id = pdata->class;
 
 		keventlib_write(pdata->eventlib_id,
-			&trace_event,
-			sizeof(trace_event),
-			RTCPU_TRACE_TASK_BEGIN,
+			&task_begin,
+			sizeof(task_begin),
+			NVHOST_TASK_BEGIN,
 			event->header.tstamp);
 		break;
 	case camrtc_trace_vi_task_end:
 		/* Write task end event */
-		trace_event.task_end.syncpt_id = event->data.data32[0];
-		trace_event.task_end.syncpt_thresh = event->data.data32[1];
-		trace_event.task_end.class_id = pdata->class;
+		task_end.syncpt_id = event->data.data32[0];
+		task_end.syncpt_thresh = event->data.data32[1];
+		task_end.class_id = pdata->class;
 
 		keventlib_write(pdata->eventlib_id,
-			&trace_event,
-			sizeof(trace_event),
-			RTCPU_TRACE_TASK_END,
+			&task_end,
+			sizeof(task_end),
+			NVHOST_TASK_END,
 			event->header.tstamp);
 		break;
 	default:
@@ -780,7 +781,8 @@ static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
 	struct nvhost_device_data *pdata;
-	union rtcpu_trace_event_union trace_event;
+	struct nvhost_task_begin task_begin;
+	struct nvhost_task_end task_end;
 
 #ifndef CONFIG_EVENTLIB
 	trace_rtcpu_unknown(event->header.tstamp,
@@ -799,26 +801,26 @@ static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 	switch (event->header.id) {
 	case camrtc_trace_isp_task_begin:
 		/* Write task start event */
-		trace_event.task_begin.syncpt_id = event->data.data32[0];
-		trace_event.task_begin.syncpt_thresh = event->data.data32[1];
-		trace_event.task_begin.class_id = pdata->class;
+		task_begin.syncpt_id = event->data.data32[0];
+		task_begin.syncpt_thresh = event->data.data32[1];
+		task_begin.class_id = pdata->class;
 
 		keventlib_write(pdata->eventlib_id,
-			&trace_event,
-			sizeof(trace_event),
-			RTCPU_TRACE_TASK_BEGIN,
+			&task_begin,
+			sizeof(task_begin),
+			NVHOST_TASK_BEGIN,
 			event->header.tstamp);
 		break;
 	case camrtc_trace_isp_task_end:
 		/* Write task end event */
-		trace_event.task_end.syncpt_id = event->data.data32[0];
-		trace_event.task_end.syncpt_thresh = event->data.data32[1];
-		trace_event.task_end.class_id = pdata->class;
+		task_end.syncpt_id = event->data.data32[0];
+		task_end.syncpt_thresh = event->data.data32[1];
+		task_end.class_id = pdata->class;
 
 		keventlib_write(pdata->eventlib_id,
-			&trace_event,
-			sizeof(trace_event),
-			RTCPU_TRACE_TASK_END,
+			&task_end,
+			sizeof(task_end),
+			NVHOST_TASK_END,
 			event->header.tstamp);
 		break;
 	default:

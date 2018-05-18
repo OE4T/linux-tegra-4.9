@@ -18,6 +18,7 @@
 #include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/tegra-capture-ivc.h>
+#include <asm/arch_timer.h>
 #include <media/capture.h>
 
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
@@ -801,6 +802,12 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 	capture_desc.header.msg_id = CAPTURE_REQUEST_REQ;
 	capture_desc.header.channel_id = capture->channel_id;
 	capture_desc.capture_request_req.buffer_index = req->buffer_index;
+
+	nvhost_eventlib_log_submit(
+			chan->ndev,
+			capture->progress_sp.id,
+			capture->progress_sp.threshold,
+			arch_counter_get_cntvct());
 
 	dev_dbg(chan->dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
 			__func__, capture_desc.header.channel_id,

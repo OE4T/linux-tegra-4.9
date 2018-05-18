@@ -121,12 +121,6 @@ config THERMAL_GOV_BANG_BANG
 	  used for fans without throttling.  Some fan drivers depend on this
 	  governor to be enabled (e.g. acerhdf).
 
-config THERMAL_GOV_PID
-	bool "PID thermal governor"
-	help
-	  This governor manages thermals based on output values of
-	  PID controller.
-
 config THERMAL_GOV_USER_SPACE
 	bool "User_space thermal governor"
 	help

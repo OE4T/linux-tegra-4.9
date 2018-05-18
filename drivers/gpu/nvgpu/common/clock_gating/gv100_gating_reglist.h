@@ -20,7 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#ifndef GV100_GATING_REGLIST_H
+#define GV100_GATING_REGLIST_H
+
+struct gk20a;
 
 void gv100_slcg_bus_load_gating_prod(struct gk20a *g,
 	bool prod);
@@ -96,4 +99,4 @@ void gv100_blcg_xbar_load_gating_prod(struct gk20a *g,
 
 void gr_gv100_pg_gr_load_gating_prod(struct gk20a *g,
 	bool prod);
-
+#endif /* GV100_GATING_REGLIST_H */

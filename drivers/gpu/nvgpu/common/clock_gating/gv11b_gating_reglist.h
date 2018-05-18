@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,7 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#ifndef GV11B_GATING_REGLIST_H
+#define GV11B_GATING_REGLIST_H
+
+struct gk20a;
 
 void gv11b_slcg_bus_load_gating_prod(struct gk20a *g,
 	bool prod);
@@ -96,4 +99,4 @@ void gv11b_blcg_xbar_load_gating_prod(struct gk20a *g,
 
 void gr_gv11b_pg_gr_load_gating_prod(struct gk20a *g,
 	bool prod);
-
+#endif /* GV11B_GATING_REGLIST_H */

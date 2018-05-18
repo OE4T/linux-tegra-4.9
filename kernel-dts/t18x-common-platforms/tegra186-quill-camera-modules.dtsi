@@ -17,7 +17,7 @@
 #include "t18x-common-platforms/tegra186-quill-camera-e3331-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-e3333-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-e3322-a00.dtsi"
-#include "t18x-common-platforms/tegra186-quill-camera-li-mipi-adpt-a00.dtsi"
+#include "t18x-common-platforms/tegra186-quill-camera-imx185-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-dual.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-vivid.dtsi"

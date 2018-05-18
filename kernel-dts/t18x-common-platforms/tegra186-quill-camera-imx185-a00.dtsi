@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <t18x-common-modules/tegra186-camera-li-mipi-adpt-a00.dtsi>
+#include <t18x-common-modules/tegra186-camera-imx185-a00.dtsi>
 #include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)

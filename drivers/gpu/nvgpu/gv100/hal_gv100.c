@@ -664,7 +664,8 @@ static const struct gpu_ops gv100_ops = {
 #ifdef CONFIG_DEBUG_FS
 		.therm_debugfs_init = gp106_therm_debugfs_init,
 #endif /* CONFIG_DEBUG_FS */
-		.elcg_init_idle_filters = gp106_elcg_init_idle_filters,
+		/* PROD values match with H/W INIT values */
+		.elcg_init_idle_filters = NULL,
 		.get_internal_sensor_curr_temp =
 			gp106_get_internal_sensor_curr_temp,
 	},

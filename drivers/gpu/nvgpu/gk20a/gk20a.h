@@ -148,6 +148,14 @@ enum gk20a_cbc_op {
 enum nvgpu_unit;
 
 enum nvgpu_flush_op;
+
+struct _resmgr_context;
+
+struct nvgpu_gpfifo_userdata {
+	struct nvgpu_gpfifo_entry __user *entries;
+	struct _resmgr_context *context;
+};
+
 /*
  * gpu_ops should only contain function pointers! Non-function pointer members
  * should go in struct gk20a or be implemented with the boolean flag API defined
@@ -1488,6 +1496,9 @@ struct gk20a {
 			struct channel_gk20a *ch, const char *fmt, ...);
 		void (*signal_os_fence_framework)(struct channel_gk20a *ch);
 		void (*destroy_os_fence_framework)(struct channel_gk20a *ch);
+		int (*copy_user_gpfifo)(struct nvgpu_gpfifo_entry *dest,
+				struct nvgpu_gpfifo_userdata userdata,
+				u32 start, u32 length);
 	} os_channel;
 
 	struct gk20a_scale_profile *scale_profile;

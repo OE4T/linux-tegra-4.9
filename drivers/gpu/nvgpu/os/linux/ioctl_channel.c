@@ -776,6 +776,7 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	u32 submit_flags = 0;
 	int fd = -1;
 	struct gk20a *g = ch->g;
+	struct nvgpu_gpfifo_userdata userdata;
 
 	int ret = 0;
 	nvgpu_log_fn(g, " ");
@@ -798,7 +799,12 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 				return fd;
 	}
 
-	ret = gk20a_submit_channel_gpfifo_user(ch, args, args->num_entries,
+	userdata.entries = (struct nvgpu_gpfifo_entry __user*)
+		(uintptr_t)args->gpfifo;
+	userdata.context = NULL;
+
+	ret = gk20a_submit_channel_gpfifo_user(ch,
+			userdata, args->num_entries,
 			submit_flags, &fence, &fence_out, profile);
 
 	if (ret) {

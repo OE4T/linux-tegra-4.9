@@ -372,6 +372,18 @@ static bool nvgpu_channel_fence_framework_exists(struct channel_gk20a *ch)
 	return (fence_framework->timeline != NULL);
 }
 
+static int nvgpu_channel_copy_user_gpfifo(struct nvgpu_gpfifo_entry *dest,
+		struct nvgpu_gpfifo_userdata userdata, u32 start, u32 length)
+{
+	struct nvgpu_gpfifo_entry __user *user_gpfifo = userdata.entries;
+	unsigned long n;
+
+	n = copy_from_user(dest, user_gpfifo + start,
+			length * sizeof(struct nvgpu_gpfifo_entry));
+
+	return n == 0 ? 0 : -EFAULT;
+}
+
 int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l)
 {
 	struct gk20a *g = &l->g;
@@ -402,6 +414,9 @@ int nvgpu_init_channel_support_linux(struct nvgpu_os_linux *l)
 		nvgpu_channel_signal_os_fence_framework;
 	g->os_channel.destroy_os_fence_framework =
 		nvgpu_channel_destroy_os_fence_framework;
+
+	g->os_channel.copy_user_gpfifo =
+		nvgpu_channel_copy_user_gpfifo;
 
 	return 0;
 
@@ -673,20 +688,20 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
  */
 static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 		struct nvgpu_gpfifo_entry *kern_gpfifo,
-		struct nvgpu_gpfifo_entry __user *user_gpfifo,
+		struct nvgpu_gpfifo_userdata userdata,
 		u32 num_entries)
 {
-	/* byte offsets */
-	u32 gpfifo_size =
-		c->gpfifo.entry_num * sizeof(struct nvgpu_gpfifo_entry);
-	u32 len = num_entries * sizeof(struct nvgpu_gpfifo_entry);
-	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo_entry);
+	struct gk20a *g = c->g;
+	u32 gpfifo_size = c->gpfifo.entry_num;
+	u32 len = num_entries;
+	u32 start = c->gpfifo.put;
 	u32 end = start + len; /* exclusive */
 	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
 	struct nvgpu_gpfifo_entry *cpu_src;
 	int err;
 
-	if (user_gpfifo && !c->gpfifo.pipe) {
+	if (!kern_gpfifo && !c->gpfifo.pipe) {
+		struct nvgpu_gpfifo_entry *gpfifo_cpu = gpfifo_mem->cpu_va;
 		/*
 		 * This path (from userspace to sysmem) is special in order to
 		 * avoid two copies unnecessarily (from user to pipe, then from
@@ -696,37 +711,45 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 			/* wrap-around */
 			int length0 = gpfifo_size - start;
 			int length1 = len - length0;
-			void __user *user2 = (u8 __user *)user_gpfifo + length0;
 
-			err = copy_from_user(gpfifo_mem->cpu_va + start,
-					user_gpfifo, length0);
+			err = g->os_channel.copy_user_gpfifo(
+					gpfifo_cpu + start, userdata,
+					0, length0);
 			if (err)
 				return err;
 
-			err = copy_from_user(gpfifo_mem->cpu_va,
-					user2, length1);
+			err = g->os_channel.copy_user_gpfifo(
+					gpfifo_cpu, userdata,
+					length0, length1);
 			if (err)
 				return err;
+
+			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
+					start, length0);
+			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
+					0, length1);
 		} else {
-			err = copy_from_user(gpfifo_mem->cpu_va + start,
-					user_gpfifo, len);
+			err = g->os_channel.copy_user_gpfifo(
+					gpfifo_cpu + start, userdata,
+					0, len);
 			if (err)
 				return err;
-		}
 
-		trace_write_pushbuffer_range(c, NULL, user_gpfifo,
-				0, num_entries);
+			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
+					start, len);
+		}
 		goto out;
-	} else if (user_gpfifo) {
+	} else if (!kern_gpfifo) {
 		/* from userspace to vidmem, use the common copy path below */
-		err = copy_from_user(c->gpfifo.pipe, user_gpfifo, len);
+		err = g->os_channel.copy_user_gpfifo(c->gpfifo.pipe, userdata,
+				0, len);
 		if (err)
 			return err;
 
 		cpu_src = c->gpfifo.pipe;
 	} else {
 		/* from kernel to either sysmem or vidmem, don't need
-		 * copy_from_user so use the common path below */
+		 * copy_user_gpfifo so use the common path below */
 		cpu_src = kern_gpfifo;
 	}
 
@@ -734,13 +757,18 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 		/* wrap-around */
 		int length0 = gpfifo_size - start;
 		int length1 = len - length0;
-		void *src2 = (u8 *)cpu_src + length0;
+		struct nvgpu_gpfifo_entry *src2 = cpu_src + length0;
+		int s_bytes = start * sizeof(struct nvgpu_gpfifo_entry);
+		int l0_bytes = length0 * sizeof(struct nvgpu_gpfifo_entry);
+		int l1_bytes = length1 * sizeof(struct nvgpu_gpfifo_entry);
 
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, length0);
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, 0, src2, length1);
+		nvgpu_mem_wr_n(c->g, gpfifo_mem, s_bytes, cpu_src, l0_bytes);
+		nvgpu_mem_wr_n(c->g, gpfifo_mem, 0, src2, l1_bytes);
 	} else {
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, len);
-
+		nvgpu_mem_wr_n(c->g, gpfifo_mem,
+				start * sizeof(struct nvgpu_gpfifo_entry),
+				cpu_src,
+				len * sizeof(struct nvgpu_gpfifo_entry));
 	}
 
 	trace_write_pushbuffer_range(c, cpu_src, NULL, 0, num_entries);
@@ -754,7 +782,7 @@ out:
 
 static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo_entry *gpfifo,
-				struct nvgpu_submit_gpfifo_args *args,
+				struct nvgpu_gpfifo_userdata userdata,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_channel_fence *fence,
@@ -774,8 +802,6 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	int err = 0;
 	bool need_job_tracking;
 	bool need_deferred_cleanup = false;
-	struct nvgpu_gpfifo_entry __user *user_gpfifo = args ?
-		(struct nvgpu_gpfifo_entry __user *)(uintptr_t)args->gpfifo : NULL;
 
 	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
 		return -ENODEV;
@@ -794,9 +820,6 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		nvgpu_err(g, "not enough gpfifo space allocated");
 		return -ENOMEM;
 	}
-
-	if (!gpfifo && !args)
-		return -EINVAL;
 
 	if ((flags & (NVGPU_SUBMIT_FLAGS_FENCE_WAIT |
 		      NVGPU_SUBMIT_FLAGS_FENCE_GET)) &&
@@ -964,9 +987,8 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
 
-	if (gpfifo || user_gpfifo)
-		err = gk20a_submit_append_gpfifo(c, gpfifo, user_gpfifo,
-				num_entries);
+	err = gk20a_submit_append_gpfifo(c, gpfifo, userdata,
+			num_entries);
 	if (err)
 		goto clean_up_job;
 
@@ -1020,14 +1042,14 @@ clean_up:
 }
 
 int gk20a_submit_channel_gpfifo_user(struct channel_gk20a *c,
-				struct nvgpu_submit_gpfifo_args *args,
+				struct nvgpu_gpfifo_userdata userdata,
 				u32 num_entries,
 				u32 flags,
 				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out,
 				struct fifo_profile_gk20a *profile)
 {
-	return gk20a_submit_channel_gpfifo(c, NULL, args, num_entries,
+	return gk20a_submit_channel_gpfifo(c, NULL, userdata, num_entries,
 			flags, fence, fence_out, profile);
 }
 
@@ -1038,6 +1060,7 @@ int gk20a_submit_channel_gpfifo_kernel(struct channel_gk20a *c,
 				struct nvgpu_channel_fence *fence,
 				struct gk20a_fence **fence_out)
 {
-	return gk20a_submit_channel_gpfifo(c, gpfifo, NULL, num_entries, flags,
-			fence, fence_out, NULL);
+	struct nvgpu_gpfifo_userdata userdata = { NULL, NULL };
+	return gk20a_submit_channel_gpfifo(c, gpfifo, userdata, num_entries,
+			flags, fence, fence_out, NULL);
 }

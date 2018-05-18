@@ -398,7 +398,7 @@ static int bpmp_fwdebug_init(struct dentry *root)
 	uint32_t nbytes;
 	int ret;
 
-	if (WARN_ON(!root))
+	if (!root)
 		return -EINVAL;
 
 	if (!bpmp_mrq_is_supported(MRQ_DEBUGFS))

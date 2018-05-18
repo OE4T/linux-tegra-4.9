@@ -204,7 +204,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 				if (vco_f >= min_vco_f && vco_f <= max_vco_f) {
 					lwv = (vco_f + (nvgpu_pl_to_div(pl) / 2))
 						/ nvgpu_pl_to_div(pl);
-					delta = abs(lwv - target_clk_f);
+					delta = abs((s32)(lwv - target_clk_f));
 
 					if (delta < best_delta) {
 						best_delta = delta;

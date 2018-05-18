@@ -764,7 +764,7 @@ static int rtl8168_sysfs_remove(void)
 
     for (i = 0; i < ARRAY_SIZE(rt8168_psaver_attr); i++)
         sysfs_remove_file(rt8168_ps_kobj, &rt8168_psaver_attr[i].attr);
-
+    kobject_put(rt8168_ps_kobj);
     return 0;
 }
 

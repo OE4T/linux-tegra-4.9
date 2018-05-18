@@ -1274,7 +1274,7 @@ static int __init hmm_dmirror_init(void)
 		return ret;
 	}
 
-	pr_info("hmm_dmirror loaded THIS IS A DANGEROUS MODULE !!!\n");
+	pr_debug("hmm_dmirror loaded THIS IS A DANGEROUS MODULE !!!\n");
 	return 0;
 }
 

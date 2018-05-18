@@ -35,8 +35,6 @@
 
 #include "priv_ring_gp10b.h"
 
-static const char * const invalid_str = "invalid";
-
 static const char *const error_type_badf1xyy[] = {
 	"client timeout",
 	"decode error",

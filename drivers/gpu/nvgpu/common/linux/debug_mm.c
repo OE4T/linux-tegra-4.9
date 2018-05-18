@@ -19,8 +19,4 @@
 
 void gk20a_mm_debugfs_init(struct gk20a *g)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-
-	debugfs_create_bool("force_pramin", 0664, l->debugfs,
-			   &g->mm.force_pramin);
 }

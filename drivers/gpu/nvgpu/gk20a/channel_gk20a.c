@@ -1124,7 +1124,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		goto clean_up_usermode;
 	}
 
-	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM) {
 		c->gpfifo.pipe = nvgpu_big_malloc(g,
 				gpfifo_size * gpfifo_entry_size);
 		if (!c->gpfifo.pipe) {

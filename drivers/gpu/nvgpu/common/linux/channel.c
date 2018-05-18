@@ -692,10 +692,6 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 		 * This path (from userspace to sysmem) is special in order to
 		 * avoid two copies unnecessarily (from user to pipe, then from
 		 * pipe to gpu sysmem buffer).
-		 *
-		 * As a special case, the pipe buffer exists if PRAMIN writes
-		 * are forced, although the buffers may not be in vidmem in
-		 * that case.
 		 */
 		if (end > gpfifo_size) {
 			/* wrap-around */
@@ -723,8 +719,7 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 				0, num_entries);
 		goto out;
 	} else if (user_gpfifo) {
-		/* from userspace to vidmem or sysmem when pramin forced, use
-		 * the common copy path below */
+		/* from userspace to vidmem, use the common copy path below */
 		err = copy_from_user(c->gpfifo.pipe, user_gpfifo, len);
 		if (err)
 			return err;

@@ -54,7 +54,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 		PAGE_KERNEL :
 		pgprot_writecombine(PAGE_KERNEL);
 
-	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+	if (mem->aperture != APERTURE_SYSMEM)
 		return 0;
 
 	/*
@@ -91,7 +91,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 
 void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+	if (mem->aperture != APERTURE_SYSMEM)
 		return;
 
 	/*
@@ -134,7 +134,7 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 {
 	u32 data = 0;
 
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+	if (mem->aperture == APERTURE_SYSMEM) {
 		u32 *ptr = mem->cpu_va;
 
 		WARN_ON(!ptr);
@@ -142,7 +142,7 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
 		nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 value;
 		u32 *p = &value;
 
@@ -170,7 +170,7 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 	WARN_ON(offset & 3);
 	WARN_ON(size & 3);
 
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *src = (u8 *)mem->cpu_va + offset;
 
 		WARN_ON(!mem->cpu_va);
@@ -180,7 +180,7 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 			nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
 					src, *dest, size);
 #endif
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 *dest_u32 = dest;
 
 		nvgpu_pramin_access_batched(g, mem, offset, size,
@@ -210,7 +210,7 @@ static void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 
 
 void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 {
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+	if (mem->aperture == APERTURE_SYSMEM) {
 		u32 *ptr = mem->cpu_va;
 
 		WARN_ON(!ptr);
@@ -218,7 +218,7 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 		nvgpu_log(g, gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
 		ptr[w] = data;
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 value = data;
 		u32 *p = &value;
 
@@ -243,7 +243,7 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 	WARN_ON(offset & 3);
 	WARN_ON(size & 3);
 
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;
 
 		WARN_ON(!mem->cpu_va);
@@ -253,7 +253,7 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 					dest, *src, size);
 #endif
 		memcpy(dest, src, size);
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 *src_u32 = src;
 
 		nvgpu_pramin_access_batched(g, mem, offset, size,
@@ -290,7 +290,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 
 	c &= 0xff;
 
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;
 
 		WARN_ON(!mem->cpu_va);
@@ -300,7 +300,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 				dest, c, size);
 #endif
 		memset(dest, c, size);
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 repeat_value = c | (c << 8) | (c << 16) | (c << 24);
 		u32 *p = &repeat_value;
 

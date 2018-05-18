@@ -28,13 +28,6 @@
 #include "gk20a/gk20a.h"
 
 /*
- * Flip this to force all gk20a_mem* accesses via PRAMIN from the start of the
- * boot, even for buffers that would work via cpu_va. In runtime, the flag is
- * in debugfs, called "force_pramin".
- */
-#define GK20A_FORCE_PRAMIN_DEFAULT false
-
-/*
  * The PRAMIN range is 1 MB, must change base addr if a buffer crosses that.
  * This same loop is used for read/write/memset. Offset and size in bytes.
  * One call to "loop" is done per range, with "arg" supplied.
@@ -96,5 +89,4 @@ void nvgpu_init_pramin(struct mm_gk20a *mm)
 {
 	mm->pramin_window = 0;
 	nvgpu_spinlock_init(&mm->pramin_window_lock);
-	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
 }

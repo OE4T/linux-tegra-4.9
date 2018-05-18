@@ -151,7 +151,6 @@ struct mm_gk20a {
 
 	u32 pramin_window;
 	struct nvgpu_spinlock pramin_window_lock;
-	bool force_pramin; /* via debugfs */
 
 	struct {
 		size_t size;

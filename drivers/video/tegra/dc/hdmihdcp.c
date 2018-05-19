@@ -125,7 +125,7 @@ static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
+static uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
 static uint32_t session_id;
 #endif
 

@@ -579,6 +579,53 @@ int tegra_bpmp_clk_init(struct device_node *np, int staged)
 #include <linux/debugfs.h>
 #include "clk.h"
 
+static int fmon_clamp_read(void *data, u64 *val)
+{
+	struct mrq_fmon_request req;
+	struct mrq_fmon_response rsp;
+	int ret;
+	struct clk_hw *hw = data;
+	struct tegra_clk_bpmp *bpmp_clk = to_clk_bpmp(hw);
+
+	req.cmd_and_id = BPMP_CLK_CMD(CMD_FMON_GEAR_GET, bpmp_clk->clk_num);
+
+	ret = tegra_bpmp_send_receive(MRQ_FMON, &req, sizeof(req),
+				      &rsp, sizeof(rsp));
+	*val = ret < 0 ? ret : rsp.fmon_gear_get.rate;
+
+	return 0;
+}
+
+static int fmov_clamp_write(void *data, u64 val)
+{
+	struct mrq_fmon_request req;
+	struct clk_hw *hw = data;
+	struct tegra_clk_bpmp *bpmp_clk = to_clk_bpmp(hw);
+
+	if (val) {
+		req.cmd_and_id = BPMP_CLK_CMD(CMD_FMON_GEAR_CLAMP,
+					      bpmp_clk->clk_num);
+		if (val > S64_MAX)
+			val = S64_MAX;
+		req.fmon_gear_clamp.rate = val;
+	} else {
+		req.cmd_and_id = BPMP_CLK_CMD(CMD_FMON_GEAR_FREE,
+					      bpmp_clk->clk_num);
+	}
+	return tegra_bpmp_send_receive(MRQ_FMON, &req, sizeof(req), NULL, 0);
+}
+DEFINE_SIMPLE_ATTRIBUTE(fmon_clamp_fops, fmon_clamp_read, fmov_clamp_write,
+			"%lld\n");
+
+static void tegra_clk_bpmp_debugfs_add(struct clk *c)
+{
+	struct clk_hw *hw = __clk_get_hw(c);
+
+	if (IS_ERR(clk_debugfs_add_file(hw, "fmon_clamp_rate",
+					0644, hw, &fmon_clamp_fops)))
+		pr_err("debugfs fmon_clamp failed for %s\n", __clk_get_name(c));
+}
+
 static int clk_init_set(void *data, u64 val)
 {
 	int i;
@@ -596,9 +643,8 @@ static int clk_init_set(void *data, u64 val)
 		if (IS_ERR_OR_NULL(c))
 			continue;
 
-#ifdef CONFIG_TEGRA_CLK_DEBUG
 		tegra_clk_debugfs_add(c);
-#endif
+		tegra_clk_bpmp_debugfs_add(c);
 	}
 	return 0;
 }

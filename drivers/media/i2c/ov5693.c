@@ -512,6 +512,7 @@ skip_clkvdd:
 				dev_dbg(dev, "%s can't request pwdn_gpio %d\n",
 					__func__, ret);
 			}
+			gpio_direction_output(pw->pwdn_gpio, 1);
 		}
 		if (gpio_is_valid(pw->reset_gpio)) {
 			ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
@@ -519,6 +520,7 @@ skip_clkvdd:
 				dev_dbg(dev, "%s can't request reset_gpio %d\n",
 					__func__, ret);
 			}
+			gpio_direction_output(pw->reset_gpio, 1);
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,22 @@
 #warning "acr_lsfm.h not included from nvgpu_acr.h!" \
 	"Include nvgpu_acr.h instead of acr_xxx.h to get access to ACR interfaces"
 #endif
+
+/*
+ * READ/WRITE masks for WPR region
+ */
+/* Readable only from level 2 and 3 client */
+#define LSF_WPR_REGION_RMASK	(0xC)
+/* Writable only from level 2 and 3 client */
+#define LSF_WPR_REGION_WMASK	(0xC)
+/* Readable only from level 3 client */
+#define LSF_WPR_REGION_RMASK_SUB_WPR_ENABLED	(0x8)
+/* Writable only from level 3 client */
+#define LSF_WPR_REGION_WMASK_SUB_WPR_ENABLED	(0x8)
+/* Disallow read mis-match for all clients */
+#define LSF_WPR_REGION_ALLOW_READ_MISMATCH_NO	(0x0)
+/* Disallow write mis-match for all clients */
+#define LSF_WPR_REGION_ALLOW_WRITE_MISMATCH_NO	(0x0)
 
 /*
  * Falcon Id Defines
@@ -84,6 +100,42 @@ struct lsf_wpr_header_v1 {
 	u32 bin_version;
 	u32 status;
 };
+
+
+/*
+ * LSF shared SubWpr Header
+ *
+ * use_case_id - Shared SubWpr use case ID (updated by nvgpu)
+ * start_addr  - start address of subWpr (updated by nvgpu)
+ * size_4K     - size of subWpr in 4K (updated by nvgpu)
+ */
+struct lsf_shared_sub_wpr_header {
+	u32 use_case_id;
+	u32 start_addr;
+	u32 size_4K;
+};
+
+/* shared sub_wpr use case IDs */
+enum {
+	LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_FRTS_VBIOS_TABLES	= 1,
+	LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_PLAYREADY_SHARED_DATA = 2
+};
+
+#define LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_MAX \
+	LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_PLAYREADY_SHARED_DATA
+
+#define LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_INVALID	(0xFFFFFFFF)
+
+#define MAX_SUPPORTED_SHARED_SUB_WPR_USE_CASES	\
+	LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_MAX
+
+/* Static sizes of shared subWPRs */
+/* Minimum granularity supported is 4K */
+/* 1MB in 4K */
+#define LSF_SHARED_DATA_SUB_WPR_FRTS_VBIOS_TABLES_SIZE_IN_4K	(0x100)
+/* 4K */
+#define LSF_SHARED_DATA_SUB_WPR_PLAYREADY_SHARED_DATA_SIZE_IN_4K	(0x1)
+
 /*
  * Bootstrap Owner Defines
  */
@@ -147,12 +199,39 @@ struct lsf_lsb_header_v1 {
 /*
  * Light Secure WPR Content Alignments
  */
-#define LSF_LSB_HEADER_ALIGNMENT    256
-#define LSF_BL_DATA_ALIGNMENT       256
-#define LSF_BL_DATA_SIZE_ALIGNMENT  256
-#define LSF_BL_CODE_SIZE_ALIGNMENT  256
+#define LSF_WPR_HEADER_ALIGNMENT        (256U)
+#define LSF_SUB_WPR_HEADER_ALIGNMENT    (256U)
+#define LSF_LSB_HEADER_ALIGNMENT        (256U)
+#define LSF_BL_DATA_ALIGNMENT           (256U)
+#define LSF_BL_DATA_SIZE_ALIGNMENT      (256U)
+#define LSF_BL_CODE_SIZE_ALIGNMENT      (256U)
+#define LSF_DATA_SIZE_ALIGNMENT         (256U)
+#define LSF_CODE_SIZE_ALIGNMENT         (256U)
+
+/* MMU excepts sub_wpr sizes in units of 4K */
+#define SUB_WPR_SIZE_ALIGNMENT	(4096U)
+
+/*
+ * Maximum WPR Header size
+ */
+#define LSF_WPR_HEADERS_TOTAL_SIZE_MAX	\
+	(ALIGN_UP((sizeof(struct lsf_wpr_header_v1) * LSF_FALCON_ID_END), \
+		LSF_WPR_HEADER_ALIGNMENT))
+#define LSF_LSB_HEADER_TOTAL_SIZE_MAX	(\
+	ALIGN_UP(sizeof(struct lsf_lsb_header_v1), LSF_LSB_HEADER_ALIGNMENT))
+
+/* Maximum SUB WPR header size */
+#define LSF_SUB_WPR_HEADERS_TOTAL_SIZE_MAX	(ALIGN_UP( \
+	(sizeof(struct lsf_shared_sub_wpr_header) * \
+	LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_MAX), \
+	LSF_SUB_WPR_HEADER_ALIGNMENT))
+
 
 #define LSF_UCODE_DATA_ALIGNMENT 4096
+
+/* Defined for 1MB alignment */
+#define SHIFT_1MB	(20)
+#define SHIFT_4KB	(12)
 
 /*
  * Supporting maximum of 2 regions.

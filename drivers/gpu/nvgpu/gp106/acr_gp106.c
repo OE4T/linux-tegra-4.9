@@ -368,6 +368,50 @@ rel_sig:
 	return err;
 }
 
+/*
+ * Discover all supported shared data falcon SUB WPRs
+ */
+static u32 lsfm_discover_and_add_sub_wprs(struct gk20a *g,
+		struct ls_flcn_mgr_v1 *plsfm)
+{
+	struct lsfm_sub_wpr *pnode;
+	u32 size_4K = 0;
+	u32 sub_wpr_index;
+
+	for (sub_wpr_index = 1;
+		sub_wpr_index <= LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_MAX;
+		sub_wpr_index++) {
+
+		switch (sub_wpr_index) {
+		case LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_FRTS_VBIOS_TABLES:
+			size_4K = LSF_SHARED_DATA_SUB_WPR_FRTS_VBIOS_TABLES_SIZE_IN_4K;
+			break;
+		case LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_PLAYREADY_SHARED_DATA:
+			size_4K = LSF_SHARED_DATA_SUB_WPR_PLAYREADY_SHARED_DATA_SIZE_IN_4K;
+			break;
+		default:
+			size_4K = 0; /* subWpr not supported */
+			break;
+		}
+
+		if (size_4K) {
+			pnode = nvgpu_kzalloc(g, sizeof(struct lsfm_sub_wpr));
+			if (pnode == NULL)
+				return -ENOMEM;
+
+			pnode->sub_wpr_header.use_case_id = sub_wpr_index;
+			pnode->sub_wpr_header.size_4K = size_4K;
+
+			pnode->pnext = plsfm->psub_wpr_list;
+			plsfm->psub_wpr_list = pnode;
+
+			plsfm->managed_sub_wpr_count++;
+		}
+	}
+
+	return 0;
+}
+
 int gp106_prepare_ucode_blob(struct gk20a *g)
 {
 
@@ -399,6 +443,9 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 	gp106_dbg_pmu(g, " Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
 	if (err)
 		goto exit_err;
+
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR))
+		lsfm_discover_and_add_sub_wprs(g, plsfm);
 
 	if (plsfm->managed_flcn_cnt && !g->acr.ucode_blob.cpu_va) {
 		/* Generate WPR requirements*/
@@ -671,6 +718,40 @@ int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 	return -ENOENT;
 }
 
+static u32 lsfm_init_sub_wpr_contents(struct gk20a *g,
+	struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *ucode)
+{
+	struct lsfm_sub_wpr *psub_wpr_node;
+	struct lsf_shared_sub_wpr_header last_sub_wpr_header;
+	u32 temp_size = sizeof(struct lsf_shared_sub_wpr_header);
+	u32 sub_wpr_header_offset = 0;
+	u32 i = 0;
+
+	/* SubWpr headers are placed after WPR headers */
+	sub_wpr_header_offset = LSF_WPR_HEADERS_TOTAL_SIZE_MAX;
+
+	/* Walk through the managed shared subWPRs headers
+	 * and flush them to FB
+	 */
+	psub_wpr_node = plsfm->psub_wpr_list;
+	i = 0;
+	while (psub_wpr_node) {
+		nvgpu_mem_wr_n(g, ucode,
+			sub_wpr_header_offset + (i * temp_size),
+			&psub_wpr_node->sub_wpr_header, temp_size);
+
+		psub_wpr_node = psub_wpr_node->pnext;
+		i++;
+	}
+	last_sub_wpr_header.use_case_id =
+		LSF_SHARED_DATA_SUB_WPR_USE_CASE_ID_INVALID;
+	nvgpu_mem_wr_n(g, ucode, sub_wpr_header_offset +
+		(plsfm->managed_sub_wpr_count * temp_size),
+		&last_sub_wpr_header, temp_size);
+
+	return 0;
+}
+
 /* Initialize WPR contents */
 void lsfm_init_wpr_contents(struct gk20a *g,
 		struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *ucode)
@@ -683,6 +764,9 @@ void lsfm_init_wpr_contents(struct gk20a *g,
 	pnode = plsfm->ucode_img_list;
 	memset(&last_wpr_hdr, 0, sizeof(struct lsf_wpr_header_v1));
 	i = 0;
+
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR))
+		lsfm_init_sub_wpr_contents(g, plsfm, ucode);
 
 	/*
 	 * Walk the managed falcons, flush WPR and LSB headers to FB.
@@ -956,6 +1040,7 @@ int lsf_gen_wpr_requirements(struct gk20a *g,
 		struct ls_flcn_mgr_v1 *plsfm)
 {
 	struct lsfm_managed_ucode_img_v2 *pnode = plsfm->ucode_img_list;
+	struct lsfm_sub_wpr *pnode_sub_wpr = plsfm->psub_wpr_list;
 	u32 wpr_offset;
 
 	/* Calculate WPR size required */
@@ -966,6 +1051,22 @@ int lsf_gen_wpr_requirements(struct gk20a *g,
 	 Also, we add 1 to the falcon count to indicate the end of the array.*/
 	wpr_offset = sizeof(struct lsf_wpr_header_v1) *
 		(plsfm->managed_flcn_cnt+1);
+
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR)) {
+		wpr_offset = ALIGN_UP(wpr_offset,
+			LSF_WPR_HEADERS_TOTAL_SIZE_MAX);
+		/*
+		 * SUB WPR header is appended after
+		 * LSF_WPR_HEADER in WPR blob.
+		 * The size is allocated as per the managed
+		 * SUB WPR count.
+		 */
+		wpr_offset = ALIGN_UP(wpr_offset,
+			LSF_SUB_WPR_HEADER_ALIGNMENT);
+		wpr_offset = wpr_offset +
+			(sizeof(struct lsf_shared_sub_wpr_header) *
+			(plsfm->managed_sub_wpr_count + 1));
+	}
 
 	/* Walk the managed falcons, accounting for the LSB structs
 	as well as the ucode images. */
@@ -1028,6 +1129,23 @@ int lsf_gen_wpr_requirements(struct gk20a *g,
 		}
 		pnode = pnode->next;
 	}
+
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR)) {
+		/* Walk through the sub wpr headers to accommodate
+		 * sub wprs in WPR request
+		 */
+		while (pnode_sub_wpr) {
+			wpr_offset = ALIGN_UP(wpr_offset,
+					SUB_WPR_SIZE_ALIGNMENT);
+			pnode_sub_wpr->sub_wpr_header.start_addr = wpr_offset;
+			wpr_offset = wpr_offset +
+				(pnode_sub_wpr->sub_wpr_header.size_4K
+				<< SHIFT_4KB);
+			pnode_sub_wpr = pnode_sub_wpr->pnext;
+		}
+		wpr_offset = ALIGN_UP(wpr_offset, SUB_WPR_SIZE_ALIGNMENT);
+	}
+
 	plsfm->wpr_size = wpr_offset;
 	return 0;
 }

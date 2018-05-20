@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -73,12 +73,24 @@ struct ls_flcn_mgr {
 	void *wpr_client_req_state;/*PACR_CLIENT_REQUEST_STATE originally*/
 };
 
+/*
+ * LSFM SUB WPRs struct
+ * pnext        : Next entry in the list, NULL if last
+ * sub_wpr_header : SubWpr Header struct
+ */
+struct lsfm_sub_wpr {
+	struct lsfm_sub_wpr *pnext;
+	struct lsf_shared_sub_wpr_header sub_wpr_header;
+};
+
 struct ls_flcn_mgr_v1 {
 	u16 managed_flcn_cnt;
 	u32 wpr_size;
 	u32 disable_mask;
 	struct lsfm_managed_ucode_img_v2 *ucode_img_list;
 	void *wpr_client_req_state;/*PACR_CLIENT_REQUEST_STATE originally*/
+	u16 managed_sub_wpr_count;
+	struct lsfm_sub_wpr *psub_wpr_list;
 };
 
 

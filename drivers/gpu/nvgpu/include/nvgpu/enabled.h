@@ -163,10 +163,13 @@ struct gk20a;
 /* USERMODE enable bit */
 #define NVGPU_SUPPORT_USERMODE_SUBMIT		67
 
+/* Multiple WPR support */
+#define NVGPU_SUPPORT_MULTIPLE_WPR	68
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			68
+#define NVGPU_MAX_ENABLED_BITS			69
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

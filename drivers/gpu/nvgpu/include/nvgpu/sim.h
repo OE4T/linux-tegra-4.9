@@ -43,7 +43,8 @@ struct sim_nvgpu {
 #include "linux/sim.h"
 #include "linux/sim_pci.h"
 #else
-
+#include <nvgpu_rmos/include/sim.h>
+#include <nvgpu_rmos/include/sim_pci.h>
 #endif
 int nvgpu_init_sim_support(struct gk20a *g);
 int nvgpu_init_sim_support_pci(struct gk20a *g);

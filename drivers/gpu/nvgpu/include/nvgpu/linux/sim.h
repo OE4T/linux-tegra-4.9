@@ -20,7 +20,7 @@
 #ifndef __SIM_LINUX_H__
 #define __SIM_LINUX_H__
 
-#include <linux/platform_device.h>
+struct platform_device;
 
 struct sim_nvgpu_linux {
 	struct sim_nvgpu sim;

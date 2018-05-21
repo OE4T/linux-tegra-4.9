@@ -491,45 +491,22 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 }
 #endif
 
-static void trace_write_pushbuffer_range(struct channel_gk20a *c,
-					 struct nvgpu_gpfifo_entry *g,
-					 struct nvgpu_gpfifo_entry __user *user_gpfifo,
-					 int offset,
-					 int count)
+static void trace_write_pushbuffers(struct channel_gk20a *c, u32 count)
 {
 #ifdef CONFIG_DEBUG_FS
-	u32 size;
-	int i;
-	struct nvgpu_gpfifo_entry *gp;
-	bool gpfifo_allocated = false;
+	struct nvgpu_gpfifo_entry *gp = c->gpfifo.mem.cpu_va;
+	u32 n = c->gpfifo.entry_num;
+	u32 start = c->gpfifo.put;
+	u32 i;
 
 	if (!gk20a_debug_trace_cmdbuf)
 		return;
 
-	if (!g && !user_gpfifo)
+	if (!gp)
 		return;
 
-	if (!g) {
-		size = count * sizeof(struct nvgpu_gpfifo_entry);
-		if (size) {
-			g = nvgpu_big_malloc(c->g, size);
-			if (!g)
-				return;
-
-			if (copy_from_user(g, user_gpfifo, size)) {
-				nvgpu_big_free(c->g, g);
-				return;
-			}
-		}
-		gpfifo_allocated = true;
-	}
-
-	gp = g + offset;
-	for (i = 0; i < count; i++, gp++)
-		trace_write_pushbuffer(c, gp);
-
-	if (gpfifo_allocated)
-		nvgpu_big_free(c->g, g);
+	for (i = 0; i < count; i++)
+		trace_write_pushbuffer(c, &gp[(start + i) % n]);
 #endif
 }
 
@@ -682,98 +659,109 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
 }
 
-/*
- * Copy source gpfifo entries into the gpfifo ring buffer, potentially
- * splitting into two memcpys to handle wrap-around.
- */
-static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_gpfifo_entry *kern_gpfifo,
+static int nvgpu_submit_append_gpfifo_user_direct(struct channel_gk20a *c,
 		struct nvgpu_gpfifo_userdata userdata,
 		u32 num_entries)
 {
 	struct gk20a *g = c->g;
+	struct nvgpu_gpfifo_entry *gpfifo_cpu = c->gpfifo.mem.cpu_va;
 	u32 gpfifo_size = c->gpfifo.entry_num;
 	u32 len = num_entries;
 	u32 start = c->gpfifo.put;
 	u32 end = start + len; /* exclusive */
-	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
-	struct nvgpu_gpfifo_entry *cpu_src;
 	int err;
-
-	if (!kern_gpfifo && !c->gpfifo.pipe) {
-		struct nvgpu_gpfifo_entry *gpfifo_cpu = gpfifo_mem->cpu_va;
-		/*
-		 * This path (from userspace to sysmem) is special in order to
-		 * avoid two copies unnecessarily (from user to pipe, then from
-		 * pipe to gpu sysmem buffer).
-		 */
-		if (end > gpfifo_size) {
-			/* wrap-around */
-			int length0 = gpfifo_size - start;
-			int length1 = len - length0;
-
-			err = g->os_channel.copy_user_gpfifo(
-					gpfifo_cpu + start, userdata,
-					0, length0);
-			if (err)
-				return err;
-
-			err = g->os_channel.copy_user_gpfifo(
-					gpfifo_cpu, userdata,
-					length0, length1);
-			if (err)
-				return err;
-
-			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
-					start, length0);
-			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
-					0, length1);
-		} else {
-			err = g->os_channel.copy_user_gpfifo(
-					gpfifo_cpu + start, userdata,
-					0, len);
-			if (err)
-				return err;
-
-			trace_write_pushbuffer_range(c, gpfifo_cpu, NULL,
-					start, len);
-		}
-		goto out;
-	} else if (!kern_gpfifo) {
-		/* from userspace to vidmem, use the common copy path below */
-		err = g->os_channel.copy_user_gpfifo(c->gpfifo.pipe, userdata,
-				0, len);
-		if (err)
-			return err;
-
-		cpu_src = c->gpfifo.pipe;
-	} else {
-		/* from kernel to either sysmem or vidmem, don't need
-		 * copy_user_gpfifo so use the common path below */
-		cpu_src = kern_gpfifo;
-	}
 
 	if (end > gpfifo_size) {
 		/* wrap-around */
 		int length0 = gpfifo_size - start;
 		int length1 = len - length0;
-		struct nvgpu_gpfifo_entry *src2 = cpu_src + length0;
-		int s_bytes = start * sizeof(struct nvgpu_gpfifo_entry);
-		int l0_bytes = length0 * sizeof(struct nvgpu_gpfifo_entry);
-		int l1_bytes = length1 * sizeof(struct nvgpu_gpfifo_entry);
 
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, s_bytes, cpu_src, l0_bytes);
-		nvgpu_mem_wr_n(c->g, gpfifo_mem, 0, src2, l1_bytes);
+		err = g->os_channel.copy_user_gpfifo(
+				gpfifo_cpu + start, userdata,
+				0, length0);
+		if (err)
+			return err;
+
+		err = g->os_channel.copy_user_gpfifo(
+				gpfifo_cpu, userdata,
+				length0, length1);
+		if (err)
+			return err;
 	} else {
-		nvgpu_mem_wr_n(c->g, gpfifo_mem,
-				start * sizeof(struct nvgpu_gpfifo_entry),
-				cpu_src,
-				len * sizeof(struct nvgpu_gpfifo_entry));
+		err = g->os_channel.copy_user_gpfifo(
+				gpfifo_cpu + start, userdata,
+				0, len);
+		if (err)
+			return err;
 	}
 
-	trace_write_pushbuffer_range(c, cpu_src, NULL, 0, num_entries);
+	return 0;
+}
 
-out:
+static void nvgpu_submit_append_gpfifo_common(struct channel_gk20a *c,
+		struct nvgpu_gpfifo_entry *src, u32 num_entries)
+{
+	struct gk20a *g = c->g;
+	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
+	/* in bytes */
+	u32 gpfifo_size =
+		c->gpfifo.entry_num * sizeof(struct nvgpu_gpfifo_entry);
+	u32 len = num_entries * sizeof(struct nvgpu_gpfifo_entry);
+	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo_entry);
+	u32 end = start + len; /* exclusive */
+
+	if (end > gpfifo_size) {
+		/* wrap-around */
+		int length0 = gpfifo_size - start;
+		int length1 = len - length0;
+		struct nvgpu_gpfifo_entry *src2 = src + length0;
+
+		nvgpu_mem_wr_n(g, gpfifo_mem, start, src, length0);
+		nvgpu_mem_wr_n(g, gpfifo_mem, 0, src2, length1);
+	} else {
+		nvgpu_mem_wr_n(g, gpfifo_mem, start, src, len);
+	}
+}
+
+/*
+ * Copy source gpfifo entries into the gpfifo ring buffer, potentially
+ * splitting into two memcpys to handle wrap-around.
+ */
+static int nvgpu_submit_append_gpfifo(struct channel_gk20a *c,
+		struct nvgpu_gpfifo_entry *kern_gpfifo,
+		struct nvgpu_gpfifo_userdata userdata,
+		u32 num_entries)
+{
+	struct gk20a *g = c->g;
+	int err;
+
+	if (!kern_gpfifo && !c->gpfifo.pipe) {
+		/*
+		 * This path (from userspace to sysmem) is special in order to
+		 * avoid two copies unnecessarily (from user to pipe, then from
+		 * pipe to gpu sysmem buffer).
+		 */
+		err = nvgpu_submit_append_gpfifo_user_direct(c, userdata,
+				num_entries);
+		if (err)
+			return err;
+	} else if (!kern_gpfifo) {
+		/* from userspace to vidmem, use the common path */
+		err = g->os_channel.copy_user_gpfifo(c->gpfifo.pipe, userdata,
+				0, num_entries);
+		if (err)
+			return err;
+
+		nvgpu_submit_append_gpfifo_common(c, c->gpfifo.pipe,
+				num_entries);
+	} else {
+		/* from kernel to either sysmem or vidmem, don't need
+		 * copy_user_gpfifo so use the common path */
+		nvgpu_submit_append_gpfifo_common(c, kern_gpfifo, num_entries);
+	}
+
+	trace_write_pushbuffers(c, num_entries);
+
 	c->gpfifo.put = (c->gpfifo.put + num_entries) &
 		(c->gpfifo.entry_num - 1);
 
@@ -987,7 +975,7 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
 
-	err = gk20a_submit_append_gpfifo(c, gpfifo, userdata,
+	err = nvgpu_submit_append_gpfifo(c, gpfifo, userdata,
 			num_entries);
 	if (err)
 		goto clean_up_job;

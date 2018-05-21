@@ -232,6 +232,25 @@ int tegra210_dmic_disable(int id)
 }
 EXPORT_SYMBOL_GPL(tegra210_dmic_disable);
 
+int tegra210_dmic_set_start_callback(int id, void (*callback)(void))
+{
+	struct tegra210_dmic *dmic;
+	struct platform_device *pdev = pdev_bkp[id];
+
+	if (!pdev) {
+		pr_err("No dmic registered for id %d\n", id);
+		return -EINVAL;
+	}
+
+	if (!callback)
+		return -EINVAL;
+
+	dmic = dev_get_drvdata(&pdev->dev);
+	dmic->start_capture_cb = callback;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra210_dmic_set_start_callback);
+
 static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -244,6 +263,9 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	int channel_select;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+
+	if (dmic->start_capture_cb && !strcmp(dai->name, "DAP"))
+		dmic->start_capture_cb();
 
 	srate = params_rate(params);
 	if (dmic->sample_rate_via_control)

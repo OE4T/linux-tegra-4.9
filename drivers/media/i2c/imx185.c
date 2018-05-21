@@ -429,11 +429,6 @@ static int imx185_set_exposure(struct camera_common_data *s_data, s64 val)
 			"%s: error coarse time SHS1 override\n", __func__);
 	}
 
-	err = imx185_set_coarse_time(priv, val);
-	if (err)
-		dev_dbg(dev,
-		"%s: error coarse time SHS1 override\n", __func__);
-
 	return err;
 }
 

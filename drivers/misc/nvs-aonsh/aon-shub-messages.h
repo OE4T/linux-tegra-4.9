@@ -253,8 +253,9 @@ struct aon_shub_init_snsrs_request {
  * request before init.
  *
  * Fields:
- * gpio:		GPIO number.
+ * gpios:		GPIO numbers associated with chip. Max 2 gpios.
  * reset_gpio:		RESET GPIO number.
+ * ngpios:		Number of gpios for this chip.
  * gpio_ctlr_id:	GPIO controller id.
  * chip_id:		sensor chip id.
  * i2c_id:		I2C controller id.
@@ -263,8 +264,9 @@ struct aon_shub_init_snsrs_request {
  * slave_i2c_addr:	slave device i2c address on the aux I2C bus.
  */
 struct aon_shub_init_setup_request {
-	u32 gpio;
+	u32 gpios[2];
 	s32 reset_gpio;
+	u8 ngpios;
 	u8 gpio_ctlr_id;
 	u8 chip_id;
 	u8 i2c_id;

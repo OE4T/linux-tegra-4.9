@@ -688,9 +688,11 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 	struct device_node *cn;
 	struct device *dev;
 	struct aon_shub_init_setup_request *setup_req;
-	u32 gpio, chip_id, gpio_ctlr_id;
+	u32 chip_id, gpio_ctlr_id;
 	s32 rst_gpio;
 	u32 i2c_info[3];
+	u32 gpios[2];
+	int ngpios;
 	u32 aux_chip_info[2];
 	bool aux_slave = false;
 	const char *aux_chip_name;
@@ -730,9 +732,22 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 		if (ret)
 			rst_gpio = -1;
 
-		ret = of_property_read_u32(cn, "gpio", &gpio);
-		if (ret) {
+		ngpios = of_property_count_u32_elems(cn, "gpios");
+		if (ngpios < 0) {
 			dev_err(dev, "missing <%s> property\n", "gpio");
+			return ngpios;
+		}
+
+		if (ngpios > ARRAY_SIZE(gpios)) {
+			dev_err(dev, "Invalid element count of <%s> property\n",
+				"gpio");
+			return -EINVAL;
+		}
+
+		ret = of_property_read_u32_array(cn, "gpios", gpios, ngpios);
+		if (ret) {
+			dev_err(dev, "<%s> property parsing failed : %d\n",
+				"gpio", ret);
 			return ret;
 		}
 
@@ -784,7 +799,9 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 		shub->shub_req->req_type = AON_SHUB_REQUEST_INIT;
 		shub->shub_req->data.init.req = AON_SHUB_INIT_REQUEST_SETUP;
 		setup_req = &shub->shub_req->data.init.data.setup;
-		setup_req->gpio = gpio;
+		for (i = 0; i < ngpios; i++)
+			setup_req->gpios[i] = gpios[i];
+		setup_req->ngpios = ngpios;
 		setup_req->reset_gpio = rst_gpio;
 		setup_req->gpio_ctlr_id = gpio_ctlr_id;
 		setup_req->chip_id = chip_id;

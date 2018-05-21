@@ -520,6 +520,8 @@ struct gpu_ops {
 			unsigned int intr_type);
 		void (*disable_hub_intr)(struct gk20a *g, unsigned int index,
 			unsigned int intr_type);
+		int (*init_fbpa)(struct gk20a *g);
+		void (*fbpa_isr)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

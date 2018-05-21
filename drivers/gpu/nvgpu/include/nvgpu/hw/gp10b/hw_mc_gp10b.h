@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -87,6 +87,10 @@ static inline u32 mc_intr_pfifo_pending_f(void)
 static inline u32 mc_intr_replayable_fault_pending_f(void)
 {
 	return 0x200U;
+}
+static inline u32 mc_intr_pfb_pending_f(void)
+{
+	return 0x2000U;
 }
 static inline u32 mc_intr_pgraph_pending_f(void)
 {

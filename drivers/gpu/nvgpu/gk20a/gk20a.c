@@ -198,6 +198,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
+	if (g->ops.fb.init_fbpa) {
+		err = g->ops.fb.init_fbpa(g);
+		if (err) {
+			nvgpu_err(g, "failed to init fbpa");
+			goto done;
+		}
+	}
+
 	if (g->ops.fb.mem_unlock) {
 		err = g->ops.fb.mem_unlock(g);
 		if (err) {

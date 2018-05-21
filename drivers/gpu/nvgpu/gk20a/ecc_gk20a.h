@@ -91,6 +91,11 @@ struct ecc_gk20a {
 		struct gk20a_ecc_stat pmu_uncorrected_err_count;
 	} pmu;
 
+	struct {
+		struct gk20a_ecc_stat fbpa_sec_err_count;
+		struct gk20a_ecc_stat fbpa_ded_err_count;
+	} fbpa;
+
 };
 
 #endif /*__ECC_GK20A_H__*/

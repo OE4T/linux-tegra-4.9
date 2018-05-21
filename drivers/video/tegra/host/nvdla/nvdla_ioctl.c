@@ -388,7 +388,7 @@ fail:
 	return err;
 }
 
-int nvdla_send_emu_postfences(struct nvdla_emu_task *task,
+static int nvdla_send_emu_postfences(struct nvdla_emu_task *task,
 			struct nvdla_ioctl_emu_submit_task *user_task)
 {
 	int err = 0, i;

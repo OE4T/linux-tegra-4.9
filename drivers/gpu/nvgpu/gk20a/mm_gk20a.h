@@ -1,6 +1,4 @@
 /*
- * GK20A memory management
- *
  * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -128,8 +126,6 @@ void gk20a_mm_l2_invalidate(struct gk20a *g);
 void gk20a_mm_ltc_isr(struct gk20a *g);
 
 bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
-
-int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g);
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
 void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,9 +19,6 @@
  * NOTE: These OTE structures need to be in sync with the ones defined on
  * $TOP/ote/lib
  */
-
-/*! Defines the maximum number of parameters in a te_operation_t */
-#define TE_OPER_MAX_PARAMS 10
 
 /*! Specifies the operation object's parameter types. */
 typedef enum {
@@ -79,35 +76,6 @@ typedef enum {
         /// Indicates no answer was received from the command target.
 	OTE_ERROR_NO_ANSWER = 0xFFFF1003,
 } te_error_t;
-
-/*! Holds a pointer large enough to support 32- and 64-bit clients. */
-typedef uint64_t	cmnptr_t;
-
-/*! Holds the operation object parameters. */
-typedef struct {
-	uint32_t index;
-	te_oper_param_type_t type;
-	union {
-		struct {
-			uint32_t val;
-		} Int;
-		struct {
-			cmnptr_t base;
-			uint32_t len;
-			uint32_t type;
-		} Mem;
-	} u;
-	cmnptr_t next;
-} te_oper_param_t;
-
-/*! Holds operation object params in a static array instead of linked list */
-typedef struct {
-	uint32_t command;
-	te_error_t status;
-	uint32_t list_count;
-	uint32_t interface_side;
-	te_oper_param_t params[TE_OPER_MAX_PARAMS];
-} te_operation_container_t;
 
 /*
  * Serialized buffer format

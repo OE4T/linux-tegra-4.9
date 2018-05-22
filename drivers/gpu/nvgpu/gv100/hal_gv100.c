@@ -942,7 +942,7 @@ int gv100_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
 
 	/* for now */
-	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
+	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;

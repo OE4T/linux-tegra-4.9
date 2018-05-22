@@ -24,7 +24,7 @@
 #ifndef __gv100_gating_reglist_h__
 #define __gv100_gating_reglist_h__
 
-#include <linux/types.h>
+#include <nvgpu/types.h>
 #include "gv100_gating_reglist.h"
 
 struct gating_desc {

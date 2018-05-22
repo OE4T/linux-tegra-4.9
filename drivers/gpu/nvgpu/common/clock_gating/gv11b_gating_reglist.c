@@ -25,7 +25,7 @@
 #ifndef __gv11b_gating_reglist_h__
 #define __gv11b_gating_reglist_h__
 
-#include <linux/types.h>
+#include <nvgpu/types.h>
 #include "gv11b_gating_reglist.h"
 #include <nvgpu/enabled.h>
 

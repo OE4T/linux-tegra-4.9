@@ -13,9 +13,6 @@ endif
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG)    += tegra_bootloader_debug.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
 
-obj-y					+= tegra_vpr.o
-obj-y					+= smc-calls.o
-
 ifeq ($(CONFIG_TEGRA_PTM),y)
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= tegra_ptm_t210.o
 endif

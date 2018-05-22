@@ -224,6 +224,8 @@ static struct usb_device_id disable_usb_persist_quirk_list[] = {
 static struct usb_device_id max_burst_quirk_list[] = {
 	/* Seagate BUP Slim B */
 	{ USB_DEVICE_SS(0x0bc2, 0xab26) },
+	/* Seagate Expansion Portable Drive 1TB */
+	{ USB_DEVICE_SS(0x0bc2, 0x231a) },
 	{ }  /* terminating entry must be last */
 };
 

@@ -205,7 +205,7 @@
 					active_w = "3840";
 					active_h = "2160";
 					pixel_t = "bayer_rggb";
-					readout_orientation = "90";
+					readout_orientation = "0";
 					line_length = "4208";
 					inherent_gain = "1";
 					mclk_multiplier = "24";

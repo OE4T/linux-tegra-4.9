@@ -42,6 +42,8 @@ struct sim_nvgpu {
 #ifdef __KERNEL__
 #include "linux/sim.h"
 #include "linux/sim_pci.h"
+#elif defined(__NVGPU_POSIX__)
+/* Nothing for POSIX-nvgpu. */
 #else
 #include <nvgpu_rmos/include/sim.h>
 #include <nvgpu_rmos/include/sim_pci.h>

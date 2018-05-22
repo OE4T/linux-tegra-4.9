@@ -242,7 +242,7 @@ ENDPROC(__flush_cache_user_range)
  *	- end     - virtual end address of region
  */
 ENTRY(flush_cache_kernel_range)
-	dcache_line_size x2, x3
+	raw_dcache_line_size x2, x3
 	sub	x3, x2, #1
 	bic	x4, x0, x3
 1:
@@ -255,7 +255,7 @@ ENTRY(flush_cache_kernel_range)
 	b.lo	1b
 	dsb	ish
 
-	icache_line_size x2, x3
+	raw_icache_line_size x2, x3
 	sub	x3, x2, #1
 	bic	x4, x0, x3
 1:

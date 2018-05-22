@@ -147,11 +147,15 @@ void nvhost_job_get(struct nvhost_job *job)
 static void job_free(struct kref *ref)
 {
 	struct nvhost_job *job = container_of(ref, struct nvhost_job, ref);
+	struct nvhost_channel *ch = job->ch;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 
 	if (job->engine_timestamps.ptr) {
 		if (job->engine_timestamps.ptr[0] != 0) {
+			/* don't log kernel added syncpt added for op_done */
 			nvhost_eventlib_log_task(job->ch->dev, job->sp->id,
-				job->sp->fence,
+				pdata->push_work_done ? (job->sp->fence - 1) :
+					job->sp->fence,
 				job->engine_timestamps.ptr[0] >> 5,
 				job->engine_timestamps.ptr[1] >> 5);
 		}

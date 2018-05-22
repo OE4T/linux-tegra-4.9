@@ -780,12 +780,9 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	int ret = 0;
 	nvgpu_log_fn(g, " ");
 
-#ifdef CONFIG_DEBUG_FS
 	profile = gk20a_fifo_profile_acquire(ch->g);
+	gk20a_fifo_profile_snapshot(profile, PROFILE_IOCTL_ENTRY);
 
-	if (profile)
-		profile->timestamp[PROFILE_IOCTL_ENTRY] = nvgpu_current_time_ns();
-#endif
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
 
@@ -825,12 +822,11 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 		}
 	}
 	gk20a_fence_put(fence_out);
-#ifdef CONFIG_DEBUG_FS
-	if (profile) {
-		profile->timestamp[PROFILE_IOCTL_EXIT] = nvgpu_current_time_ns();
+
+	gk20a_fifo_profile_snapshot(profile, PROFILE_IOCTL_EXIT);
+	if (profile)
 		gk20a_fifo_profile_release(ch->g, profile);
-	}
-#endif
+
 clean_up:
 	return ret;
 }

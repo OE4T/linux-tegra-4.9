@@ -19,6 +19,7 @@
 #include <linux/seq_file.h>
 
 #include <nvgpu/sort.h>
+#include <nvgpu/timers.h>
 
 void __gk20a_fifo_profile_free(struct nvgpu_ref *ref);
 
@@ -323,6 +324,12 @@ void gk20a_fifo_debugfs_init(struct gk20a *g)
 	debugfs_create_file("stats", 0600, profile_root, g,
 		&gk20a_fifo_profile_stats_debugfs_fops);
 
+}
+
+void gk20a_fifo_profile_snapshot(struct fifo_profile_gk20a *profile, int idx)
+{
+	if (profile)
+		profile->timestamp[idx] = nvgpu_current_time_ns();
 }
 
 void __gk20a_fifo_profile_free(struct nvgpu_ref *ref)

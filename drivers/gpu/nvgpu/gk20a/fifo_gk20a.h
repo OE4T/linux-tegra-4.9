@@ -349,6 +349,21 @@ bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid);
 struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g);
 void gk20a_fifo_profile_release(struct gk20a *g,
 	struct fifo_profile_gk20a *profile);
+void gk20a_fifo_profile_snapshot(struct fifo_profile_gk20a *profile, int idx);
+#else
+static inline struct fifo_profile_gk20a *
+gk20a_fifo_profile_acquire(struct gk20a *g)
+{
+	return NULL;
+}
+static inline void gk20a_fifo_profile_release(struct gk20a *g,
+	struct fifo_profile_gk20a *profile)
+{
+}
+static inline void gk20a_fifo_profile_snapshot(
+		struct fifo_profile_gk20a *profile, int idx)
+{
+}
 #endif
 
 void gk20a_dump_channel_status_ramfc(struct gk20a *g,

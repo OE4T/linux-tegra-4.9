@@ -2714,8 +2714,14 @@ int test_clear_page_writeback(struct page *page)
 {
 	struct address_space *mapping = page_mapping(page);
 	int ret;
+#ifdef CONFIG_MEMCG
+	struct mem_cgroup __attribute__((__unused__)) *memcg;
+#endif
 
 	lock_page_memcg(page);
+#ifdef CONFIG_MEMCG
+	memcg = mem_cgroup_disabled() ? NULL : page->mem_cgroup;
+#endif
 	if (mapping && mapping_use_writeback_tags(mapping)) {
 		struct inode *inode = mapping->host;
 		struct backing_dev_info *bdi = inode_to_bdi(inode);
@@ -2744,7 +2750,12 @@ int test_clear_page_writeback(struct page *page)
 		ret = TestClearPageWriteback(page);
 	}
 	if (ret) {
-		mem_cgroup_dec_page_stat(page, MEM_CGROUP_STAT_WRITEBACK);
+#ifdef CONFIG_MEMCG
+		if (memcg)
+			this_cpu_add(
+				memcg->stat->count[MEM_CGROUP_STAT_WRITEBACK],
+				-1);
+#endif
 		dec_node_page_state(page, NR_WRITEBACK);
 		dec_zone_page_state(page, NR_ZONE_WRITE_PENDING);
 		inc_node_page_state(page, NR_WRITTEN);

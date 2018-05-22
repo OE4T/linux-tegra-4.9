@@ -22,6 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include "common/clock_gating/gm20b_gating_reglist.h"
+
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -43,7 +45,6 @@
 #include "gr_gm20b.h"
 #include "ltc_gm20b.h"
 #include "fb_gm20b.h"
-#include "clock_gating/gm20b_gating_reglist.h"
 #include "fifo_gm20b.h"
 #include "gr_ctx_gm20b.h"
 #include "mm_gm20b.h"

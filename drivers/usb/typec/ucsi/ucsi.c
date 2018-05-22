@@ -89,6 +89,7 @@ struct ucsi {
 #define EVENT_PENDING	0
 #define COMMAND_PENDING	1
 #define ACK_PENDING	2
+#define RESET_PENDING	3
 };
 
 static inline int ucsi_sync(struct ucsi *ucsi)
@@ -395,6 +396,9 @@ void ucsi_notify(struct ucsi *ucsi)
 		complete(&ucsi->complete);
 	} else if (cci->ack_complete && test_bit(ACK_PENDING, &ucsi->flags)) {
 		complete(&ucsi->complete);
+	} else if (cci->reset_complete
+				&& test_bit(RESET_PENDING, &ucsi->flags)) {
+		complete(&ucsi->complete);
 	} else if (cci->connector_change) {
 		struct ucsi_connector *con;
 
@@ -422,45 +426,24 @@ static int ucsi_reset_connector(struct ucsi_connector *con, bool hard)
 static int ucsi_reset_ppm(struct ucsi *ucsi)
 {
 	struct ucsi_control ctrl;
-	unsigned long tmo;
 	int ret;
 
 	ctrl.raw_cmd = 0;
 	ctrl.cmd.cmd = UCSI_PPM_RESET;
 	trace_ucsi_command(&ctrl);
+	set_bit(RESET_PENDING, &ucsi->flags);
 	ret = ucsi->ppm->cmd(ucsi->ppm, &ctrl);
 	if (ret)
 		goto err;
 
-	tmo = jiffies + msecs_to_jiffies(UCSI_TIMEOUT_MS);
-
-	do {
-		/* Here sync is critical. */
-		ret = ucsi_sync(ucsi);
-		if (ret)
-			goto err;
-
-		if (ucsi->ppm->data->cci.reset_complete)
-			break;
-
-		/* If the PPM is still doing something else, reset it again. */
-		if (ucsi->ppm->data->raw_cci) {
-			dev_warn_ratelimited(ucsi->dev,
-				"Failed to reset PPM! Trying again..\n");
-
-			trace_ucsi_command(&ctrl);
-			ret = ucsi->ppm->cmd(ucsi->ppm, &ctrl);
-			if (ret)
-				goto err;
-		}
-
-		/* Letting the PPM settle down. */
-		msleep(20);
-
+	if (!wait_for_completion_timeout(&ucsi->complete,
+				msecs_to_jiffies(UCSI_TIMEOUT_MS))) {
+		dev_warn(ucsi->dev, "Failed to reset PPM!\n");
 		ret = -ETIMEDOUT;
-	} while (time_is_after_jiffies(tmo));
+	}
 
 err:
+	clear_bit(RESET_PENDING, &ucsi->flags);
 	trace_ucsi_reset_ppm(&ctrl, ret);
 
 	return ret;

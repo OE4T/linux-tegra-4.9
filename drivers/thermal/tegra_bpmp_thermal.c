@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -52,29 +52,7 @@ struct tegra_bpmp_thermal {
 	struct work_struct tz_device_update_work;
 };
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
-typedef long temp_t;
-#else
-typedef int temp_t;
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-typedef struct thermal_of_sensor_ops sensor_ops_t;
-typedef struct thermal_zone_device *(*tz_of_sensor_register_fn)
-				(struct device *, int, void *,
-				 struct thermal_of_sensor_ops*);
-static tz_of_sensor_register_fn of_sensor_register =
-				thermal_zone_of_sensor_register2;
-#else
-typedef struct thermal_zone_of_device_ops sensor_ops_t;
-typedef struct thermal_zone_device * (*tz_of_sensor_register_fn)
-				(struct device *, int, void *,
-				 const struct thermal_zone_of_device_ops*);
-static tz_of_sensor_register_fn of_sensor_register =
-				thermal_zone_of_sensor_register;
-#endif
-
-static int tegra_bpmp_thermal_get_temp(void *data, temp_t *out_temp)
+static int tegra_bpmp_thermal_get_temp(void *data, int *out_temp)
 {
 	struct tegra_bpmp_thermal_zone *zone = data;
 	struct mrq_thermal_host_to_bpmp_request req;
@@ -99,7 +77,7 @@ static int tegra_bpmp_thermal_get_trend(void *data, int trip,
 {
 	struct tegra_bpmp_thermal_zone *zone = data;
 	int ret;
-	temp_t trip_temp, temp, last_temp;
+	int trip_temp, temp, last_temp;
 
 	if (!zone->tzd)
 		return -ENODEV;
@@ -256,7 +234,7 @@ static int tegra_bpmp_thermal_abi_probe(void)
 	return 0;
 }
 
-static sensor_ops_t tegra_of_thermal_ops = {
+struct thermal_zone_of_device_ops tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
 	.get_trend = tegra_bpmp_thermal_get_trend,
 	.set_trips = tegra_bpmp_set_trips,
@@ -313,7 +291,7 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 
 	/* Initialize thermal zones */
 	for (i = 0; i < tegra->zone_count; ++i) {
-		temp_t temp;
+		int temp;
 		tegra->zones[i].idx = i;
 		tegra->zones[i].tegra = tegra;
 		atomic_set(&tegra->zones[i].needs_update, false);
@@ -322,8 +300,9 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 		if (err < 0)
 			continue;
 
-		tzd = of_sensor_register(tegra->dev, i, &tegra->zones[i],
-				&tegra_of_thermal_ops);
+		tzd = thermal_zone_of_sensor_register(tegra->dev, i,
+						      &tegra->zones[i],
+						      &tegra_of_thermal_ops);
 
 		if (IS_ERR(tzd)) {
 			err = PTR_ERR(tzd);

@@ -132,10 +132,14 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_START_PLAYBACK;
 	msg.params.dmaif_info.id = data->admaif_id;
-	err = nvaudio_ivc_send(data->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
+	msg.ack_required = true;
+	err = nvaudio_ivc_send_retry(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+
+	if (err >= 0) {
+		nvaudio_ivc_receive(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+	} else if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -150,10 +154,15 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_STOP_PLAYBACK;
 	msg.params.dmaif_info.id = data->admaif_id;
-	err = nvaudio_ivc_send(data->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
+
+	msg.ack_required = true;
+	err = nvaudio_ivc_send_retry(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+
+	if (err >= 0) {
+		nvaudio_ivc_receive(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+	} else if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -168,10 +177,15 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_START_CAPTURE;
 	msg.params.dmaif_info.id = data->admaif_id;
-	err = nvaudio_ivc_send(data->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
+
+	msg.ack_required = true;
+	err = nvaudio_ivc_send_retry(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+
+	if (err >= 0) {
+		nvaudio_ivc_receive(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+	} else if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -186,10 +200,15 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_STOP_CAPTURE;
 	msg.params.dmaif_info.id = data->admaif_id;
-	err = nvaudio_ivc_send(data->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
+
+	msg.ack_required = true;
+	err = nvaudio_ivc_send_retry(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+
+	if (err >= 0) {
+		nvaudio_ivc_receive(data->hivc_client,
+			&msg, sizeof(struct nvaudio_ivc_msg));
+	} else if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 

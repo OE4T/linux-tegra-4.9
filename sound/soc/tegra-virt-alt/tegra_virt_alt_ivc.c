@@ -1,7 +1,7 @@
 /*
  * IVC based librabry for AUDIO server
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/spinlock.h>
 #include <linux/hardirq.h>
 #include <linux/interrupt.h>
+#include <linux/iopoll.h>
 
 #include "tegra_virt_alt_ivc.h"
 #include "tegra_virt_alt_ivc_common.h"
@@ -115,13 +116,14 @@ int nvaudio_ivc_receive(struct nvaudio_ivc_ctxt *ictxt,
 			struct nvaudio_ivc_msg *rx_msg, int size)
 {
 	unsigned long flags;
+	unsigned int status;
 	int err = 0;
 	u32 len = 0;
 
 	while (!tegra_hv_ivc_can_read(ictxt->ivck)) {
-		wait_event_timeout(ictxt->wait,
-					ictxt->rx_state == RX_AVAIL,
-					msecs_to_jiffies(ictxt->timeout));
+		readx_poll_timeout_atomic(readl, &(ictxt->rx_state),
+			status, (status == RX_AVAIL),
+			10, 10000);
 	}
 
 	if (tegra_hv_ivc_channel_notified(ictxt->ivck)) {

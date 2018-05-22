@@ -1219,6 +1219,19 @@ static void ccg_pd_event(struct ucsi_ccg *ccg, int index)
 	}
 }
 
+static void clear_int(struct ucsi_ccg *ccg, u8 intval)
+{
+	int ret;
+
+	if (!intval)
+		return;
+
+	ret = ccg_reg_write(ccg, REG_INTR, &intval, 1);
+	if (ret)
+		dev_err(ccg->dev, "clear intr fail\n");
+}
+
+
 static void ccg_int_handler(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
@@ -1232,9 +1245,9 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 
 	/* UCSI event */
 	if (intval & UCSI_READ_INT) {
+		clear_int(ccg, UCSI_READ_INT);
 		if (!test_bit(INIT_PENDING, &ccg->flags))
 			ucsi_ccg_notify(ccg);
-		intval = UCSI_READ_INT;
 	}
 
 	/* DEV event */
@@ -1246,6 +1259,8 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 		}
 		dev_info(dev, "dev event code: 0x%02x, data len: %d\n",
 				ccg->dev_resp.code, ccg->dev_resp.length);
+
+		clear_int(ccg, DEV_INT);
 
 		if (ccg->dev_resp.code & ASYNC_EVENT) {
 			if (ccg->dev_resp.code == RESET_COMPLETE) {
@@ -1273,24 +1288,19 @@ static void ccg_int_handler(struct ucsi_ccg *ccg)
 					"dev resp 0x%04x but no cmd pending\n",
 					ccg->dev_resp.code);
 		}
-		intval = DEV_INT;
 	}
 
 	/* PD port0 event */
 	if (intval & PORT0_INT) {
 		ccg_pd_event(ccg, 0);
-		intval = PORT0_INT;
+		clear_int(ccg, PORT0_INT);
 	}
 
 	/* PD port1 event */
 	if (intval & PORT1_INT) {
 		ccg_pd_event(ccg, 1);
-		intval = PORT1_INT;
+		clear_int(ccg, PORT1_INT);
 	}
-
-	/* Clear INTR */
-	if (intval && ccg_reg_write(ccg, REG_INTR, &intval, 1))
-		dev_err(dev, "clear intr fail\n");
 }
 
 static irqreturn_t ccg_irq(int irq, void *data)

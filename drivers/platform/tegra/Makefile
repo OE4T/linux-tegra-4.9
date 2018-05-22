@@ -49,6 +49,9 @@ tegra-safety-objs += tegra-safety-ivc.o tegra-safety-dev.o
 
 obj-$(CONFIG_TEGRA_NVADSP) += nvadsp/
 
+obj-y += tegra_vpr.o
+obj-y += smc-calls.o
+
 ifeq ($(CONFIG_CPU_FREQ),y)
 obj-$(CONFIG_ARCH_TEGRA_210_SOC) += cpu_emc.o
 endif

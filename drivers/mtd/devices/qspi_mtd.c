@@ -123,7 +123,7 @@ static int max_qpi_set(struct qspi *flash, uint8_t is_set)
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
 		dev_err(&flash->spi->dev,
-			"error: %s spi_sync call failed %d\n", __func__, err);
+			"error: %s spi_sync call failed %d", __func__, err);
 		status = FAIL;
 	}
 
@@ -140,7 +140,7 @@ static int qspi_qpi_flag_set(struct qspi *flash, uint8_t is_set)
 	uint8_t regval;
 	int status = PASS;
 
-	pr_debug("%s: %s %d\n", dev_name(&flash->spi->dev), __func__, is_set);
+	dev_dbg(&flash->spi->dev, "%s %d\n", __func__, is_set);
 
 	if (((flash->curr_cmd_mode == X4) && is_set) ||
 			((flash->curr_cmd_mode == X1) && !is_set)) {
@@ -448,7 +448,7 @@ static int max_enable_4byte(struct qspi *flash)
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
 		dev_err(&flash->spi->dev,
-			"error: %s spi_sync call failed %d\n", __func__, err);
+			"error: %s spi_sync call failed %d", __func__, err);
 		status = FAIL;
 	}
 
@@ -488,7 +488,9 @@ static int read_sr1_reg(struct qspi *flash, uint8_t *regval)
 
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
-		pr_err("error: %s spi_sync call failed %d", __func__, status);
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync call failed %d",
+			__func__, status);
 		status = FAIL;
 	}
 
@@ -565,7 +567,7 @@ static int qspi_write_status_reg(struct qspi *flash, uint8_t sr, uint8_t cfgr)
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
 		dev_err(&flash->spi->dev,
-			"error: %s spi_sync call failed %d\n", __func__, err);
+			"error: %s spi_sync call failed %d", __func__, err);
 		status = FAIL;
 	}
 
@@ -601,7 +603,9 @@ static __maybe_unused int read_multi(struct qspi *flash, uint8_t code,
 
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
-		pr_err("error: %s spi_sync call failed %d", __func__, err);
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync call failed %d",
+			__func__, err);
 		return err;
 	}
 
@@ -627,7 +631,8 @@ static int qspi_write_any_reg(struct qspi *flash,
 
 	err = qspi_write_en(flash, TRUE, FALSE);
 	if (err) {
-		pr_err("error: %s: WE failed: reg:x%x data:x%x, Status: x%x ",
+		dev_err(&flash->spi->dev,
+			"error: %s: WE failed: reg:x%x data:x%x, Status: x%x ",
 			__func__, regaddr, data, err);
 		return err;
 	}
@@ -657,7 +662,8 @@ static int qspi_write_any_reg(struct qspi *flash,
 
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
-		pr_err("error: %s spi_sync Failed: reg:x%x dat:x%x sts:x%x\n",
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync Failed: reg:x%x dat:x%x sts:x%x\n",
 			__func__, regaddr, data, err);
 		return err;
 	}
@@ -719,8 +725,10 @@ static int qspi_read_any_reg(struct qspi *flash,
 
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
-		pr_err("error: %s spi_sync call Failed: reg:x%x, Status: x%x ",
-			__func__, regaddr, err);
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync call Failed: ", __func__);
+		dev_err(&flash->spi->dev, "reg:x%x, Status: x%x ",
+			regaddr, err);
 		return err;
 	}
 
@@ -825,7 +833,7 @@ static int qspi_quad_flag_set(struct qspi *flash, uint8_t is_set)
 	int status = PASS;
 	uint8_t my_status, my_cfg;
 
-	pr_debug("%s: %s %d\n", dev_name(&flash->spi->dev), __func__, is_set);
+	dev_dbg(&flash->spi->dev, "%s %d\n", __func__, is_set);
 
 	if ((flash->is_quad_set && is_set) ||
 		(!flash->is_quad_set && !is_set)) {
@@ -896,7 +904,8 @@ static int qspi_write_en(struct qspi *flash,
 
 	do {
 		if (tried++ == WE_RETRY_COUNT) {
-			pr_err("tired max times not changing WE bit\n");
+			dev_err(&flash->spi->dev,
+				"tired max times not changing WE bit\n");
 			return FAIL;
 		}
 		memset(t, 0, sizeof(t));
@@ -921,7 +930,8 @@ static int qspi_write_en(struct qspi *flash,
 
 		err = spi_sync(flash->spi, &m);
 		if (err < 0) {
-			pr_err("error: %s spi_sync call failed x%x",
+			dev_err(&flash->spi->dev,
+				"error: %s spi_sync call failed x%x",
 				__func__, status);
 			return 1;
 		}
@@ -933,7 +943,8 @@ static int qspi_write_en(struct qspi *flash,
 
 		status = read_sr1_reg(flash, &regval);
 		if (status) {
-			pr_err("error: %s: RDSR1 failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: RDSR1 failed: Status: x%x ",
 				__func__, status);
 			return status;
 		}
@@ -954,11 +965,13 @@ static int wait_till_ready(struct qspi *flash, uint8_t is_sleep)
 
 	do {
 		if (tried++ == WIP_RETRY_COUNT) {
-			pr_err("tired max times not changing WIP bit\n");
+			dev_err(&flash->spi->dev,
+				"tired max times not changing WIP bit\n");
 			return FAIL;
 		}
 		if ((tried % 20) == 0)
-			pr_debug("Waiting in WIP iter: %d\n", tried);
+			dev_dbg(&flash->spi->dev,
+				"Waiting in WIP iter: %d\n", tried);
 
 		if (is_sleep)
 			msleep(WIP_ENABLE_SLEEP_TIME);
@@ -967,7 +980,8 @@ static int wait_till_ready(struct qspi *flash, uint8_t is_sleep)
 
 		status = read_sr1_reg(flash, &regval);
 		if (status) {
-			pr_err("error: %s: RDSR1 failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: RDSR1 failed: Status: x%x ",
 				__func__, status);
 			return status;
 		}
@@ -989,14 +1003,15 @@ static int erase_chip(struct qspi *flash)
 	struct spi_message m;
 	int status;
 
-	pr_debug("%s: %s %lldKiB\n",
-		dev_name(&flash->spi->dev), __func__,
+	dev_dbg(&flash->spi->dev, "%s %lldKiB\n", __func__,
 		(long long)(flash->mtd.size >> 10));
 
 	/* Send write enable, then erase commands. */
 	status = qspi_write_en(flash, TRUE, TRUE);
 	if (status) {
-		pr_err("error: %s: WE failed: Status: x%x ", __func__, status);
+		dev_err(&flash->spi->dev,
+			"error: %s: WE failed: Status: x%x ", __func__,
+			status);
 		return status;
 	}
 	copy_cmd_default(&flash->cmd_table,
@@ -1022,13 +1037,16 @@ static int erase_chip(struct qspi *flash)
 	spi_message_add_tail(&t[0], &m);
 	status = spi_sync(flash->spi, &m);
 	if (status < 0) {
-		pr_err("error: %s spi_sync call failed x%x", __func__, status);
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync call failed x%x", __func__, status);
 		return status;
 	}
 
 	status = wait_till_ready(flash, TRUE);
 	if (status) {
-		pr_err("error: %s: WIP failed: Status: x%x ", __func__, status);
+		dev_err(&flash->spi->dev,
+			"error: %s: WIP failed: Status: x%x ", __func__,
+			status);
 		return status;
 	}
 
@@ -1049,14 +1067,14 @@ static int erase_sector(struct qspi *flash, u32 offset,
 	struct spi_message m;
 	int err = 0;
 
-	pr_debug("%s: %s %dKiB at 0x%08x\n",
-		dev_name(&flash->spi->dev),
-		__func__, size / 1024, offset);
+	dev_dbg(&flash->spi->dev, "%s %dKiB at 0x%08x\n", __func__,
+		size / 1024, offset);
 
 	/* Send write enable, then erase commands. */
 	err = qspi_write_en(flash, TRUE, TRUE);
 	if (err) {
-		pr_err("error: %s: WE failed: Status: x%x ", __func__, err);
+		dev_err(&flash->spi->dev,
+			"error: %s: WE failed: Status: x%x ", __func__, err);
 		return err;
 	}
 	copy_cmd_default(&flash->cmd_table,
@@ -1090,13 +1108,15 @@ static int erase_sector(struct qspi *flash, u32 offset,
 
 	err = spi_sync(flash->spi, &m);
 	if (err < 0) {
-		pr_err("error: %s spi_sync call failed x%x", __func__, err);
+		dev_err(&flash->spi->dev,
+			"error: %s spi_sync call failed x%x", __func__, err);
 		return err;
 	}
 
 	err = wait_till_ready(flash, TRUE);
 	if (err) {
-		pr_err("error: %s: WIP failed: Status: x%x ", __func__, err);
+		dev_err(&flash->spi->dev,
+			"error: %s: WIP failed: Status: x%x ", __func__, err);
 		return err;
 	}
 
@@ -1121,10 +1141,8 @@ static int qspi_erase(struct mtd_info *mtd, struct erase_info *instr)
 	u32 addr, len;
 	uint32_t rem;
 
-	pr_debug("%s: %s at 0x%llx, len %lld\n",
-		dev_name(&flash->spi->dev),
-		__func__, (long long)instr->addr,
-		(long long)instr->len);
+	dev_dbg(&flash->spi->dev, "%s at 0x%llx, len %lld\n", __func__,
+		(long long)instr->addr, (long long)instr->len);
 
 	div_u64_rem(instr->len, mtd->erasesize, &rem);
 
@@ -1162,9 +1180,11 @@ static int qspi_erase(struct mtd_info *mtd, struct erase_info *instr)
 				while ((ssaddr >= flinfo->ss_soffset) &&
 					((ssaddr + flinfo->ss_size) <= eaddr)) {
 
-					pr_debug("%s: Erasing subblock @ x%x, len x%x\n",
-						dev_name(&flash->spi->dev),
-						ssaddr, flinfo->ss_size);
+					dev_dbg(&flash->spi->dev,
+						"Erasing subblock @ x%x, ",
+						ssaddr);
+					dev_dbg(&flash->spi->dev, "len x%x\n",
+						flinfo->ss_size);
 
 					if (erase_sector(flash, ssaddr,
 						flinfo->ss_erase_opcode,
@@ -1208,9 +1228,8 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 	u8 bytes_per_word = flash->qspi_bits_per_word / 8;
 #endif
 
-	pr_debug("%s: %s from 0x%08x, len %zd\n",
-		dev_name(&flash->spi->dev),
-		__func__, (u32)from, len);
+	dev_dbg(&flash->spi->dev, "%s from 0x%08x, len %zd\n", __func__,
+		(u32)from, len);
 
 	spi_message_init(&m);
 	memset(t, 0, sizeof(t));
@@ -1422,8 +1441,8 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 	u8 bytes_per_word = flash->qspi_bits_per_word / 8;
 #endif
 
-	pr_debug("%s: %s to 0x%08x, len %zd\n", dev_name(&flash->spi->dev),
-			__func__, (u32)to, len);
+	dev_dbg(&flash->spi->dev, "%s to 0x%08x, len %zd\n", __func__, (u32)to,
+		len);
 
 	mutex_lock(&flash->lock);
 
@@ -1493,7 +1512,8 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 			err = qspi_qpi_flag_set(flash, TRUE);
 #endif
 		if (err) {
-			pr_err("error: %s: QPI/QUAD set failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: QPI/QUAD set failed: Status: x%x ",
 				__func__, err);
 			mutex_unlock(&flash->lock);
 			return err;
@@ -1501,7 +1521,8 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 		err = qspi_write_en(flash, TRUE, FALSE);
 		if (err) {
-			pr_err("error: %s: WE failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: WE failed: Status: x%x ",
 				__func__, err);
 			goto clear_qmode;
 		}
@@ -1510,7 +1531,8 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 
 		err = wait_till_ready(flash, FALSE);
 		if (err) {
-			pr_err("error: %s: WIP failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: WIP failed: Status: x%x ",
 				__func__, err);
 			goto clear_qmode;
 		}
@@ -1556,7 +1578,8 @@ clear_qmode:
 			err = qspi_qpi_flag_set(flash, TRUE);
 #endif
 		if (err) {
-			pr_err("error: %s: QPI/QUAD set failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: QPI/QUAD set failed: Status: x%x ",
 				__func__, err);
 			mutex_unlock(&flash->lock);
 			return 1;
@@ -1564,7 +1587,8 @@ clear_qmode:
 
 		err = qspi_write_en(flash, TRUE, FALSE);
 		if (err) {
-			pr_err("error: %s: WE failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: WE failed: Status: x%x ",
 				__func__, err);
 			goto clear_qmode1;
 		}
@@ -1573,7 +1597,8 @@ clear_qmode:
 
 		err = wait_till_ready(flash, FALSE);
 		if (err) {
-			pr_err("error: %s: WIP failed: Status: x%x ",
+			dev_err(&flash->spi->dev,
+				"error: %s: WIP failed: Status: x%x ",
 				__func__, err);
 			goto clear_qmode1;
 		}
@@ -1630,7 +1655,8 @@ clear_qmode:
 
 			err = qspi_write_en(flash, TRUE, FALSE);
 			if (err) {
-				pr_err("error: %s: WE failed: Status: x%x ",
+				dev_err(&flash->spi->dev,
+					"error: %s: WE failed: Status: x%x ",
 					__func__, err);
 				goto clear_qmode1;
 			}
@@ -1639,7 +1665,8 @@ clear_qmode:
 
 			err = wait_till_ready(flash, FALSE);
 			if (err) {
-				pr_err("error: %s: WIP failed: Status: x%x ",
+				dev_err(&flash->spi->dev,
+					"error: %s: WIP failed: Status: x%x ",
 					__func__, err);
 				goto clear_qmode1;
 			}
@@ -1669,8 +1696,7 @@ static const struct spi_device_id *jedec_probe(struct spi_device *spi)
 	 */
 	tmp = spi_write_then_read(spi, &code, 1, id, 5);
 	if (tmp < 0) {
-		pr_debug("%s: error %d reading JEDEC ID\n",
-				dev_name(&spi->dev), tmp);
+		dev_dbg(&spi->dev, "error %d reading JEDEC ID\n", tmp);
 		return ERR_PTR(tmp);
 	}
 
@@ -1690,7 +1716,7 @@ static const struct spi_device_id *jedec_probe(struct spi_device *spi)
 			return &qspi_ids[tmp];
 		}
 	}
-	pr_err("unrecognized JEDEC id %06x\n", jedec);
+	dev_err(&spi->dev, "unrecognized JEDEC id %06x\n", jedec);
 	return ERR_PTR(-ENODEV);
 }
 
@@ -1757,7 +1783,7 @@ static int qspi_probe(struct spi_device *spi)
 	else if (info->jedec_id == JEDEC_ID_S25FX512S)
 		flash->cmd_info_table = spansion_cmd_info_table;
 	else {
-		pr_err("error: %s: unsupported flash\n", __func__);
+		dev_err(&spi->dev, "error: %s: unsupported flash\n", __func__);
 		kfree(flash);
 		return -EINVAL;
 	}
@@ -1836,7 +1862,8 @@ static int qspi_probe(struct spi_device *spi)
 	 */
 	status = qspi_read_any_reg(flash, RWAR_SR1NV, &regval);
 	if (status) {
-		pr_err("error: %s RWAR_CR2V read failed: Status: x%x ",
+		dev_err(&spi->dev,
+			"error: %s RWAR_CR2V read failed: Status: x%x ",
 			__func__, status);
 		return status;
 	}
@@ -1851,7 +1878,8 @@ static int qspi_probe(struct spi_device *spi)
 	if ((info->jedec_id == JEDEC_ID_S25FX512S) && (info->page_size == 512)) {
 		status = qspi_read_any_reg(flash, RWAR_CR3V, &regval);
 		if (status) {
-			pr_err("error: %s RWAR_CR3V read failed: Status: x%x ",
+			dev_err(&spi->dev,
+				"error: %s RWAR_CR3V read failed: Status: x%x ",
 				__func__, status);
 			return status;
 		}

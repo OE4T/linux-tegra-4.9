@@ -17,7 +17,11 @@
 #
 # Components common to all builds
 #
+NV_REPOSITORY_COMPONENTS :=
+
+ifneq ($(NV_BUILD_CONFIGURATION_OS_IS_INTEGRITY),1)
 NV_REPOSITORY_COMPONENTS := drivers/gpu/nvgpu
+endif
 
 # Local Variables:
 # indent-tabs-mode: t

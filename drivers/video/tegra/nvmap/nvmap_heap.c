@@ -509,3 +509,44 @@ void nvmap_heap_deinit(void)
 
 	heap_block_cache = NULL;
 }
+
+/*
+ * This routine is used to flush the carveout memory from cache.
+ * Why cache flush is needed for carveout? Consider the case, where a piece of
+ * carveout is allocated as cached and released. After this, if the same memory is
+ * allocated for uncached request and the memory is not flushed out from cache.
+ * In this case, the client might pass this to H/W engine and it could start modify
+ * the memory. As this was cached earlier, it might have some portion of it in cache.
+ * During cpu request to read/write other memory, the cached portion of this memory
+ * might get flushed back to main memory and would cause corruptions, if it happens
+ * after H/W writes data to memory.
+ *
+ * But flushing out the memory blindly on each carveout allocation is redundant.
+ *
+ * In order to optimize the carveout buffer cache flushes, the following
+ * strategy is used.
+ *
+ * The whole Carveout is flushed out from cache during its initialization.
+ * During allocation, carveout buffers are not flused from cache.
+ * During deallocation, carveout buffers are flushed, if they were allocated as cached.
+ * if they were allocated as uncached/writecombined, no cache flush is needed.
+ * Just draining store buffers is enough.
+ */
+int nvmap_flush_heap_block(struct nvmap_client *client,
+	struct nvmap_heap_block *block, size_t len, unsigned int prot)
+{
+	phys_addr_t phys = block->base;
+	phys_addr_t end = block->base + len;
+	int ret = 0;
+
+	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
+		goto out;
+
+	ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end,
+				true, prot != NVMAP_HANDLE_INNER_CACHEABLE);
+	if (ret)
+		goto out;
+out:
+	wmb();
+	return ret;
+}

@@ -36,7 +36,7 @@ config SENSORS_NCT1008
 	 NCT1008 Temperature sensor.
 
 config TEGRA_CPC
-	bool "Tegra content protection controller"
+	tristate "Tegra content protection controller"
 	depends on I2C
 	help
 	  This driver allows authenticated IO access to storage blocks on

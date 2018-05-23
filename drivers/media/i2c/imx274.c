@@ -311,7 +311,8 @@ static int imx274_power_on(struct camera_common_data *s_data)
 	if (pw->pwdn_gpio)
 		gpio_set_value(pw->pwdn_gpio, 1);
 
-	usleep_range(300, 310);
+	/* 1.2v input is generated on module board, adds more latency */
+	usleep_range(10000, 10010);
 
 	pw->state = SWITCH_ON;
 	return 0;
@@ -440,10 +441,10 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_dbg(dev, "%s++\n", __func__);
 
-	imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
-
-	if (!enable)
+	if (!enable) {
+		imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
 		return 0;
+	}
 
 	dev_dbg(dev, "%s mode[%d]\n", __func__, s_data->mode);
 
@@ -787,7 +788,7 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_info(dev, "%s: FRAME_LENGTH control error\n", __func__);
+	dev_dbg(dev, "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 

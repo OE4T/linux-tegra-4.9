@@ -146,7 +146,6 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	common/linux/debug_ce.o \
 	common/linux/debug_pmu.o \
 	common/linux/debug_sched.o \
-	common/linux/debug_mm.o \
 	common/linux/debug_allocator.o \
 	common/linux/debug_hal.o \
 	common/linux/debug_clk.o \

@@ -16,7 +16,6 @@
 #include "debug_ce.h"
 #include "debug_fifo.h"
 #include "debug_gr.h"
-#include "debug_mm.h"
 #include "debug_allocator.h"
 #include "debug_kmem.h"
 #include "debug_pmu.h"
@@ -433,7 +432,6 @@ void gk20a_debug_init(struct gk20a *g, const char *debugfs_symlink)
 	gk20a_ce_debugfs_init(g);
 	nvgpu_alloc_debugfs_init(g);
 	nvgpu_hal_debugfs_init(g);
-	gk20a_mm_debugfs_init(g);
 	gk20a_fifo_debugfs_init(g);
 	gk20a_sched_debugfs_init(g);
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE

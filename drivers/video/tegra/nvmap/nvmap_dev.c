@@ -298,47 +298,6 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
-{
-	struct nvmap_vma_priv *priv;
-
-	h = nvmap_handle_get(h);
-	if (!h)
-		return -EINVAL;
-
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
-		nvmap_handle_put(h);
-		return -EPERM;
-	}
-
-	/*
-	 * Don't allow mmap on VPR memory as it would be mapped
-	 * as device memory. User space shouldn't be accessing
-	 * device memory.
-	 */
-	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
-		nvmap_handle_put(h);
-		return -EPERM;
-	}
-
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
-		nvmap_handle_put(h);
-		return -ENOMEM;
-	}
-	priv->handle = h;
-
-	vma->vm_flags |= VM_SHARED | VM_DONTEXPAND |
-			  VM_DONTDUMP | VM_DONTCOPY |
-			  (h->heap_pgalloc ? 0 : VM_PFNMAP);
-	vma->vm_ops = &nvmap_vma_ops;
-	BUG_ON(vma->vm_private_data != NULL);
-	vma->vm_private_data = priv;
-	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
-	nvmap_vma_open(vma);
-	return 0;
-}
-
 static int nvmap_map(struct file *filp, struct vm_area_struct *vma)
 {
 	char task_comm[TASK_COMM_LEN];

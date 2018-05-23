@@ -48,6 +48,7 @@
 #include <asm/outercache.h>
 #endif
 #include "nvmap_heap.h"
+#include "nvmap_stats.h"
 
 #define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
 
@@ -298,35 +299,9 @@ struct nvmap_device {
 	u32 cpu_access_mask;
 };
 
-enum nvmap_stats_t {
-	NS_ALLOC = 0,
-	NS_RELEASE,
-	NS_UALLOC,
-	NS_URELEASE,
-	NS_KALLOC,
-	NS_KRELEASE,
-	NS_CFLUSH_RQ,
-	NS_CFLUSH_DONE,
-	NS_UCFLUSH_RQ,
-	NS_UCFLUSH_DONE,
-	NS_KCFLUSH_RQ,
-	NS_KCFLUSH_DONE,
-	NS_TOTAL,
-	NS_NUM,
-};
 
-struct nvmap_stats {
-	atomic64_t stats[NS_NUM];
-	atomic64_t collect;
-};
-
-extern struct nvmap_stats nvmap_stats;
 extern struct nvmap_device *nvmap_dev;
 extern ulong nvmap_init_time;
-
-void nvmap_stats_inc(enum nvmap_stats_t, size_t size);
-void nvmap_stats_dec(enum nvmap_stats_t, size_t size);
-u64 nvmap_stats_read(enum nvmap_stats_t);
 
 static inline void nvmap_ref_lock(struct nvmap_client *priv)
 {

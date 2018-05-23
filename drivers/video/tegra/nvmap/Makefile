@@ -22,6 +22,7 @@ obj-y += nvmap_ioctl.o
 obj-y += nvmap_init.o
 obj-y += nvmap_tag.o
 obj-y += nvmap_mm.o
+obj-y += nvmap_stats.o
 
 obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
 

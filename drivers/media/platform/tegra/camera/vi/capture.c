@@ -396,6 +396,9 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	config->request_size = setup->request_size;
 	config->requests = setup->iova;
 
+	config->error_mask_correctable = setup->error_mask_correctable;
+	config->error_mask_uncorrectable = setup->error_mask_uncorrectable;
+
 #ifdef HAVE_VI_GOS_TABLES
 	dev_dbg(chan->dev, "%u GoS tables configured.\n",
 		capture->num_gos_tables);

@@ -62,7 +62,7 @@ struct vi_capture {
 
 struct vi_capture_setup {
 	uint32_t channel_flags;
-	uint32_t __pad_flags;
+	uint32_t error_mask_correctable;
 	uint64_t vi_channel_mask;
 	uint32_t queue_depth;
 	uint32_t request_size;
@@ -73,7 +73,7 @@ struct vi_capture_setup {
 	uint8_t slvsec_stream_main;
 	uint8_t slvsec_stream_sub;
 	uint16_t __pad_slvsec1;
-	uint32_t __pad_slvsec2;
+	uint32_t error_mask_uncorrectable;
 } __VI_CAPTURE_ALIGN;
 
 struct vi_capture_info {

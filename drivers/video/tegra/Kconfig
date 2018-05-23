@@ -62,6 +62,14 @@ config TEGRA_GRHOST_NVCSI
 	  Enables support for camera CSI support under nvhost
 	  Say N here if not sure.
 
+config TEGRA_GRHOST_SCALE
+       depends on TEGRA_GRHOST && PM_DEVFREQ
+       bool "Tegra host load based clock scaling support"
+       default y
+       help
+         Enables load based clock scaling for nvhost engines
+	 Say Y here if not sure.
+
 config TEGRA_GRHOST_DEFAULT_TIMEOUT
         depends on TEGRA_GRHOST
         int "Default timeout for submits"

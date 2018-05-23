@@ -36,6 +36,7 @@ struct nvhost_emc_params {
 	bool				linear;
 };
 
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 /* Suspend is called when powering down module */
 void nvhost_scale_emc_suspend(struct device *);
 
@@ -53,4 +54,23 @@ void nvhost_scale_emc_calibrate_emc(struct nvhost_emc_params *emc_params,
 				  bool linear_emc);
 long nvhost_scale_emc_get_emc_rate(struct nvhost_emc_params *emc_params,
 				 long freq);
+
+#else
+static inline void nvhost_scale_emc_suspend(struct device *d) { }
+static inline void nvhost_scale_emc_init(struct platform_device *pdev) { }
+static inline void nvhost_scale_emc_deinit(struct platform_device *pdev) { }
+static inline void nvhost_scale_emc_callback(struct nvhost_device_profile *profile,
+					     unsigned long freq) { }
+
+static inline void nvhost_scale_emc_calibrate_emc(struct nvhost_emc_params *emc_params,
+						  struct clk *clk_3d,
+						  struct clk *clk_3d_emc,
+						  bool linear_emc) { }
+
+static inline long nvhost_scale_emc_get_emc_rate(struct nvhost_emc_params *emc_params,
+						 long freq)
+{
+	return 0;
+}
+#endif
 #endif

@@ -429,7 +429,9 @@ static void t210_remove_support(struct nvhost_chip_support *op)
 #include "host1x/host1x_syncpt.c"
 #include "host1x/host1x_intr.c"
 #define NVHOST_T210_ACTMON
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 #include "host1x/host1x_actmon_t124.c"
+#endif
 #include "host1x/host1x_debug.c"
 
 int nvhost_init_t210_support(struct nvhost_master *host,
@@ -452,7 +454,9 @@ int nvhost_init_t210_support(struct nvhost_master *host,
 	host->sync_aperture = host->aperture + HOST1X_CHANNEL_SYNC_REG_BASE;
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 	op->actmon = host1x_actmon_ops;
+#endif
 
 	if (nvhost_dev_is_virtual(host->dev)) {
 		data->can_powergate = false;

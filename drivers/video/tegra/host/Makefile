@@ -18,9 +18,7 @@ nvhost-objs = \
 	debug.o \
 	bus_client.o \
 	chip_support.o \
-	nvhost_scale.o \
 	nvhost_vm.o \
-	scale_emc.o \
 	nvhost_pd.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
@@ -31,6 +29,7 @@ obj-$(CONFIG_TEGRA_GRHOST_ISP) += isp/
 obj-$(CONFIG_TEGRA_GRHOST) += t124/
 obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/
+obj-$(CONFIG_TEGRA_GRHOST_SCALE) += scale_emc.o nvhost_scale.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-$(CONFIG_TEGRA_GRHOST) += iommu_context_dev.o

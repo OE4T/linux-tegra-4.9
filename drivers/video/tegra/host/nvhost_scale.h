@@ -50,6 +50,7 @@ struct nvhost_device_profile {
 	int				num_actmons;
 };
 
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 /* Initialization and de-initialization for module */
 void nvhost_scale_init(struct platform_device *);
 void nvhost_scale_deinit(struct platform_device *);
@@ -64,8 +65,18 @@ void nvhost_scale_notify_idle(struct platform_device *);
 int nvhost_scale_hw_init(struct platform_device *);
 void nvhost_scale_hw_deinit(struct platform_device *);
 
-int nvhost_get_actmon_irq(struct nvhost_device_profile *profile);
-
 void nvhost_actmon_debug_init(struct host1x_actmon *actmon,
 				     struct dentry *de);
+#else
+static inline void nvhost_scale_init(struct platform_device *d) { }
+static inline void nvhost_scale_deinit(struct platform_device *d) { }
+static inline void nvhost_scale_notify_busy(struct platform_device *d) { }
+static inline void nvhost_scale_notify_idle(struct platform_device *d) { }
+static inline int nvhost_scale_hw_init(struct platform_device *d)
+{
+	return 0;
+}
+static inline void nvhost_scale_hw_deinit(struct platform_device *d) { }
+
+#endif
 #endif

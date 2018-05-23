@@ -529,7 +529,9 @@ static void t186_init_regs(struct platform_device *pdev, bool prod)
 #include "host1x/host1x_intr_t186.c"
 #include "host1x/host1x_debug_t186.c"
 #include "host1x/host1x_vm_t186.c"
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 #include "host1x/host1x_actmon_t186.c"
+#endif
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op)
@@ -552,7 +554,9 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	op->syncpt = host1x_syncpt_ops;
 	op->intr = host1x_intr_ops;
 	op->vm = host1x_vm_ops;
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 	op->actmon = host1x_actmon_ops;
+#endif
 
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */

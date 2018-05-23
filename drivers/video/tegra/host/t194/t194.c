@@ -812,7 +812,9 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 #include "host1x/host1x_intr_t186.c"
 #include "host1x/host1x_debug_t186.c"
 #include "host1x/host1x_vm_t186.c"
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 #include "host1x/host1x_actmon_t186.c"
+#endif
 
 int nvhost_init_t194_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op)
@@ -835,7 +837,9 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	op->intr = host1x_intr_ops;
 	op->vm = host1x_vm_ops;
 	op->vm.init_syncpt_interface = nvhost_syncpt_unit_interface_init;
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 	op->actmon = host1x_actmon_ops;
+#endif
 	op->nvhost_dev.load_gating_regs = t194_init_regs;
 
 	op->syncpt.alloc = nvhost_syncpt_alloc_gos_backing;

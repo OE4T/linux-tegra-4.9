@@ -163,6 +163,10 @@ void nvhost_intr_disable_module_intr(struct nvhost_intr *intr, int module_irq);
 
 void nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);
+#if defined(CONFIG_TEGRA_GRHOST_SCALE)
 void nvhost_scale_actmon_irq(struct platform_device *pdev, int type);
-
+#else
+static inline void nvhost_scale_actmon_irq(struct platform_device *pdev,
+					   int type) { }
+#endif
 #endif

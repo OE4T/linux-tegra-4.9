@@ -35,6 +35,104 @@
 #include "nvmap_priv.h"
 #include "nvmap_ioctl.h"
 
+/*
+ * Verifies that the passed ID is a valid handle ID. Then the passed client's
+ * reference to the handle is returned.
+ *
+ * Note: to call this function make sure you own the client ref lock.
+ */
+struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *c,
+						 struct nvmap_handle *h)
+{
+	struct rb_node *n = c->handle_refs.rb_node;
+
+	while (n) {
+		struct nvmap_handle_ref *ref;
+		ref = rb_entry(n, struct nvmap_handle_ref, node);
+		if (ref->handle == h)
+			return ref;
+		else if ((uintptr_t)h > (uintptr_t)ref->handle)
+			n = n->rb_right;
+		else
+			n = n->rb_left;
+	}
+
+	return NULL;
+}
+/* adds a newly-created handle to the device master tree */
+void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h)
+{
+	struct rb_node **p;
+	struct rb_node *parent = NULL;
+
+	spin_lock(&dev->handle_lock);
+	p = &dev->handles.rb_node;
+	while (*p) {
+		struct nvmap_handle *b;
+
+		parent = *p;
+		b = rb_entry(parent, struct nvmap_handle, node);
+		if (h > b)
+			p = &parent->rb_right;
+		else
+			p = &parent->rb_left;
+	}
+	rb_link_node(&h->node, parent, p);
+	rb_insert_color(&h->node, &dev->handles);
+	nvmap_lru_add(h);
+	spin_unlock(&dev->handle_lock);
+}
+
+/* remove a handle from the device's tree of all handles; called
+ * when freeing handles. */
+int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h)
+{
+	spin_lock(&dev->handle_lock);
+
+	/* re-test inside the spinlock if the handle really has no clients;
+	 * only remove the handle if it is unreferenced */
+	if (atomic_add_return(0, &h->ref) > 0) {
+		spin_unlock(&dev->handle_lock);
+		return -EBUSY;
+	}
+	smp_rmb();
+	BUG_ON(atomic_read(&h->ref) < 0);
+	BUG_ON(atomic_read(&h->pin) != 0);
+
+	nvmap_lru_del(h);
+	rb_erase(&h->node, &dev->handles);
+
+	spin_unlock(&dev->handle_lock);
+	return 0;
+}
+
+/* Validates that a handle is in the device master tree and that the
+ * client has permission to access it. */
+struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
+{
+	struct nvmap_handle *h = NULL;
+	struct rb_node *n;
+
+	spin_lock(&nvmap_dev->handle_lock);
+
+	n = nvmap_dev->handles.rb_node;
+
+	while (n) {
+		h = rb_entry(n, struct nvmap_handle, node);
+		if (h == id) {
+			h = nvmap_handle_get(h);
+			spin_unlock(&nvmap_dev->handle_lock);
+			return h;
+		}
+		if (id > h)
+			n = n->rb_right;
+		else
+			n = n->rb_left;
+	}
+	spin_unlock(&nvmap_dev->handle_lock);
+	return NULL;
+}
+
 static void add_handle_ref(struct nvmap_client *client,
 			   struct nvmap_handle_ref *ref)
 {

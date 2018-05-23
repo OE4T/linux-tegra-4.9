@@ -612,6 +612,13 @@ module_param(u2_enable, bool, 0644);
 static bool lpm_enable;
 module_param(lpm_enable, bool, 0644);
 
+static bool vbus_wakelock = true;
+static DEFINE_SPINLOCK(wl_spinlock);
+struct vbus_lock {
+	struct wakeup_source wakelock;
+	bool held;
+} lock;
+
 static inline u32 fpci_readl(struct tegra_xudc *xudc, u32 addr)
 {
 	return readl(xudc->fpci + addr);
@@ -697,6 +704,57 @@ static void tegra_fpga_hack_init(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0x0, 0x19c);
 }
 
+static void vbus_hold_wl(struct vbus_lock *lock)
+{
+	if (!lock->held) {
+		__pm_stay_awake(&lock->wakelock);
+		lock->held = true;
+		pr_debug("[hold VBUS wakelock]\n");
+	}
+}
+
+#define TEMPORARY_WAKELOCK_HOLD_TIME	2000
+static void vbus_hold_temp_wl(struct vbus_lock *lock)
+{
+	__pm_wakeup_event(&lock->wakelock, TEMPORARY_WAKELOCK_HOLD_TIME);
+	lock->held = false;
+	pr_debug("[hold temporary VBUS wakelock for %d ms]\n",
+			TEMPORARY_WAKELOCK_HOLD_TIME);
+}
+
+static void vbus_drop_wl(struct vbus_lock *lock)
+{
+	if (lock->held) {
+		__pm_relax(&lock->wakelock);
+		lock->held = false;
+		pr_debug("[drop VBUS wakelock]\n");
+	}
+}
+
+static void tegra_xudc_update_wakelock(struct tegra_xudc *xudc)
+{
+	unsigned long flags;
+
+	if (!vbus_wakelock)
+		return;
+
+	spin_lock_irqsave(&wl_spinlock, flags);
+
+	switch (xudc->connect_type) {
+	case EXTCON_USB:
+	case EXTCON_CHG_USB_CDP:
+		vbus_hold_wl(&lock);
+		break;
+	case EXTCON_NONE:
+		vbus_drop_wl(&lock);
+		break;
+	default:
+		vbus_hold_temp_wl(&lock);
+	};
+
+	spin_unlock_irqrestore(&wl_spinlock, flags);
+}
+
 static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc, int i)
 {
 	unsigned long flags;
@@ -721,6 +779,8 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc, int i)
 				msecs_to_jiffies(NON_STD_CHARGER_DET_TIME_MS));
 		spin_unlock_irqrestore(&xudc->lock, flags);
 	}
+
+	tegra_xudc_update_wakelock(xudc);
 
 	pm_runtime_get_sync(xudc->dev);
 
@@ -765,7 +825,6 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc, int i)
 	dev_info(xudc->dev, "device mode off: %d\n", i);
 
 	if (xudc->ucd) {
-		xudc->connect_type = EXTCON_NONE;
 		cancel_delayed_work(&xudc->non_std_charger_work);
 		xudc->current_ma = 0;
 	}
@@ -820,6 +879,8 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc, int i)
 	if (xudc->ucd)
 		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);
 
+	tegra_xudc_update_wakelock(xudc);
+
 	pm_runtime_put(xudc->dev);
 }
 
@@ -835,9 +896,11 @@ static void tegra_xudc_update_data_role(struct tegra_xudc *xudc, int i)
 	edev = xudc->data_role_extcons[i];
 
 	if (extcon_get_cable_state_(edev, EXTCON_USB)) {
+		xudc->connect_type = EXTCON_USB;
 		tegra_xudc_device_mode_on(xudc, i);
 		xudc->device_active = i + 1;
 	} else {
+		xudc->connect_type = EXTCON_NONE;
 		tegra_xudc_device_mode_off(xudc, i);
 		xudc->device_active = 0;
 	}
@@ -3699,6 +3762,7 @@ static void tegra_xudc_non_std_charger_work(struct work_struct *work)
 		spin_unlock_irqrestore(&xudc->lock, flags);
 		tegra_ucd_set_charger_type(xudc->ucd,
 					   EXTCON_CHG_USB_SLOW);
+		tegra_xudc_update_wakelock(xudc);
 	}
 }
 
@@ -4149,12 +4213,14 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	}
 
 	INIT_DELAYED_WORK(&xudc->plc_reset_work, tegra_xudc_plc_reset_work);
+
+	wakeup_source_init(&lock.wakelock, "vbus-wakelock");
+
 	tegra_xudc_update_extcon(xudc);
 	INIT_DELAYED_WORK(&xudc->restore_emc, tegra_xudc_restore_emc_work);
 	INIT_WORK(&xudc->boost_emc, tegra_xudc_boost_emc_work);
 	INIT_DELAYED_WORK(&xudc->port_reset_war_work,
 				tegra_xudc_port_reset_war_work);
-
 
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);
@@ -4253,6 +4319,7 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	tegra_xudc_clk_deinit(xudc);
 
 	tegra_xusb_padctl_put(xudc->padctl);
+	wakeup_source_trash(&lock.wakelock);
 
 	return 0;
 }
@@ -4448,6 +4515,33 @@ static struct platform_driver tegra_xudc_driver = {
 	},
 };
 module_platform_driver(tegra_xudc_driver);
+
+static int set_vbus_wakelock(const char *val, const struct kernel_param *kp)
+{
+	int rv = param_set_bool(val, kp);
+	unsigned long flags;
+
+	if (rv)
+		return rv;
+
+	/* release wakelock if held */
+	if (!*(bool *)kp->arg) {
+		spin_lock_irqsave(&wl_spinlock, flags);
+		vbus_drop_wl(&lock);
+		spin_unlock_irqrestore(&wl_spinlock, flags);
+	}
+
+	return 0;
+}
+
+static struct kernel_param_ops vbus_wakelock_param_ops = {
+	.set = set_vbus_wakelock,
+	.get = param_get_bool,
+};
+
+module_param_cb(vbus_wakelock, &vbus_wakelock_param_ops, &vbus_wakelock, 0644);
+MODULE_PARM_DESC(vbus_wakelock,
+		 "enable wakelock when detected as USB downstream port");
 
 MODULE_DESCRIPTION("NVIDIA Tegra XUSB Device Controller");
 MODULE_AUTHOR("Andrew Bresticker <abrestic@chromium.org>");

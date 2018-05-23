@@ -68,11 +68,6 @@ struct tegra_usb_cd_soc_data {
 	int (*init_hw_ops)(struct tegra_usb_cd *ucd);
 };
 
-struct vbus_lock {
-	struct wakeup_source wakelock;
-	bool held;
-};
-
 enum tegra_usb_cd_apple_chargers {
 	APPLE_500MA,
 	APPLE_1000MA,

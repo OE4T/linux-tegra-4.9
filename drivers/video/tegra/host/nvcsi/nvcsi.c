@@ -48,6 +48,16 @@
 /* width of interface between VI and CSI */
 #define CSI_BUS_WIDTH	64
 
+#define CSIA			(1 << 20)
+#define CSIF			(1 << 25)
+
+struct nvcsi {
+	struct platform_device *pdev;
+	struct regulator *regulator;
+	struct tegra_csi_device csi;
+	struct dentry *dir;
+};
+
 static long long input_stats;
 
 static struct tegra_csi_device *mc_csi;
@@ -125,6 +135,30 @@ static int nvcsi_probe_regulator(struct nvcsi *nvcsi)
 
 	return 0;
 }
+
+
+int nvcsi_cil_sw_reset(int lanes, int enable)
+{
+	unsigned int phy_num = 0U;
+	unsigned int val = enable ? (SW_RESET1_EN | SW_RESET0_EN) : 0U;
+	unsigned int addr, i;
+
+	for (i = CSIA; i < CSIF; i = i << 2U) {
+		if (lanes & i) {
+			addr = CSI4_BASE_ADDRESS + NVCSI_CIL_A_SW_RESET +
+						(CSI4_PHY_OFFSET * phy_num);
+			host1x_writel(mc_csi->pdev, addr, val);
+		}
+		if (lanes & (i << 1U)) {
+			addr = CSI4_BASE_ADDRESS + NVCSI_CIL_B_SW_RESET +
+						(CSI4_PHY_OFFSET * phy_num);
+			host1x_writel(mc_csi->pdev, addr, val);
+		}
+		phy_num++;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(nvcsi_cil_sw_reset);
 
 static int nvcsi_probe(struct platform_device *dev)
 {

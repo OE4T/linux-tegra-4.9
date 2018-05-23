@@ -21,9 +21,6 @@
 #ifndef __NVHOST_NVCSI_H__
 #define __NVHOST_NVCSI_H__
 
-#include <media/csi.h>
-#include <linux/completion.h>
-
 #define CFG_ERR_STATUS2VI_MASK_VC3			(0x1 << 24)
 #define CFG_ERR_STATUS2VI_MASK_VC2			(0x1 << 16)
 #define CFG_ERR_STATUS2VI_MASK_VC1			(0x1 << 8)
@@ -31,15 +28,10 @@
 
 extern const struct file_operations tegra_nvcsi_ctrl_ops;
 
-struct nvcsi {
-	struct platform_device *pdev;
-	struct regulator *regulator;
-	struct tegra_csi_device csi;
-	struct dentry *dir;
-};
-
 int nvcsi_finalize_poweron(struct platform_device *pdev);
 int nvcsi_prepare_poweroff(struct platform_device *pdev);
+
+int nvcsi_cil_sw_reset(int lanes, int enable);
 
 struct tegra_csi_device *tegra_get_mc_csi(void);
 #endif

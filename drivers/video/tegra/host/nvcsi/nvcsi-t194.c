@@ -47,10 +47,18 @@
 #include "t194/t194.h"
 #include "media/csi.h"
 
+#include "deskew.h"
+
 /* PG rate based on max ISP throughput */
 #define PG_CLK_RATE	102000000
 /* width of interface between VI and CSI */
 #define CSI_BUS_WIDTH	64
+
+#define PHY_OFFSET			0x10000U
+#define CIL_A_SW_RESET			0x11024U
+#define CIL_B_SW_RESET			0x110b0U
+#define CSIA				(1 << 20)
+#define CSIH				(1 << 27)
 
 static long long input_stats;
 
@@ -244,6 +252,27 @@ int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 	return tegra_csi_mipi_calibrate(&nvcsi->csi, false);
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_prepare_poweroff);
+
+int tegra194_nvcsi_cil_sw_reset(int lanes, int enable)
+{
+	unsigned int phy_num = 0U;
+	unsigned int val = enable ? (SW_RESET1_EN | SW_RESET0_EN) : 0U;
+	unsigned int addr, i;
+
+	for (i = CSIA; i < CSIH; i = i << 2U) {
+		if (lanes & i) {
+			addr = CIL_A_SW_RESET + (PHY_OFFSET * phy_num);
+			host1x_writel(mc_csi->pdev, addr, val);
+		}
+		if (lanes & (i << 1U)) {
+			addr = CIL_B_SW_RESET + (PHY_OFFSET * phy_num);
+			host1x_writel(mc_csi->pdev, addr, val);
+		}
+		phy_num++;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra194_nvcsi_cil_sw_reset);
 
 static int t194_nvcsi_probe(struct platform_device *pdev)
 {

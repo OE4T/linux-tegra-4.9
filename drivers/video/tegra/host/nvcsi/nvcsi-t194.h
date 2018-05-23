@@ -21,8 +21,6 @@
 #ifndef __NVHOST_NVCSI_T194_H__
 #define __NVHOST_NVCSI_T194_H__
 
-#include "deskew.h"
-
 struct file_operations;
 struct platform_device;
 
@@ -30,5 +28,7 @@ extern const struct file_operations tegra194_nvcsi_ctrl_ops;
 
 int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev);
 int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev);
+
+int tegra194_nvcsi_cil_sw_reset(int lanes, int enable);
 
 #endif

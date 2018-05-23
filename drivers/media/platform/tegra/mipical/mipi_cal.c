@@ -42,6 +42,20 @@
 #include "mipi_cal.h"
 #include "vmipi/vmipi.h"
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+int nvcsi_cil_sw_reset(int lanes, int enable)
+{
+	return 0;
+}
+int tegra194_nvcsi_cil_sw_reset(int lanes, int enable)
+{
+	return 0;
+}
+#else
+#include "nvcsi/nvcsi.h"
+#include "nvcsi/nvcsi-t194.h"
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/mipical.h>
 
@@ -137,6 +151,7 @@ struct tegra_mipi_soc {
 	char ppsb_war;
 	int (*pad_enable)(struct tegra_mipi *mipi);
 	int (*pad_disable)(struct tegra_mipi *mipi);
+	int (*cil_sw_reset)(int lanes, int enable);
 	int (*calibrate)(struct tegra_mipi *mipi, int lanes);
 	int (*parse_cfg)(struct platform_device *pdev, struct tegra_mipi *mipi);
 	u8 virtual_dev;
@@ -800,6 +815,7 @@ static const struct tegra_mipi_soc tegra21x_mipi_soc = {
 	.debug_table_id = DEBUGFS_TABLE_T21x,
 	.pad_enable = &_t21x_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_t21x_tegra_mipi_bias_pad_disable,
+	.cil_sw_reset = NULL,
 	.calibrate = &t21x_tegra_mipical_using_prod,
 	.parse_cfg = &t21x_tegra_prod_get_config,
 	.powergate_id = TEGRA210_POWER_DOMAIN_SOR,
@@ -814,6 +830,7 @@ static const struct tegra_mipi_soc tegra18x_mipi_soc = {
 	.debug_table_id = DEBUGFS_TABLE_T18x,
 	.pad_enable = &_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_tegra_mipi_bias_pad_disable,
+	.cil_sw_reset = &nvcsi_cil_sw_reset,
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
 	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
@@ -833,6 +850,7 @@ static const struct tegra_mipi_soc tegra19x_mipi_soc = {
 	.debug_table_id = DEBUGFS_TABLE_T19x,
 	.pad_enable = &_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_tegra_mipi_bias_pad_disable,
+	.cil_sw_reset = &tegra194_nvcsi_cil_sw_reset,
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
 // temporary WAR to get 4.4 builds working
@@ -907,17 +925,23 @@ static long mipi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	}
 	case _IOC_NR(TEGRA_MIPI_IOCTL_CAL): {
 		int lanes = 0;
+		int err = 0;
 
 		if (copy_from_user(&lanes, (const void __user *)arg,
 					sizeof(int))) {
 			dev_err(mipi->dev, "Fail to get user data\n");
 			return -EFAULT;
 		}
-		if (lanes)
-			return tegra_mipi_calibration(lanes);
-
-		dev_err(mipi->dev, "Selected lane %x, skip mipical\n", lanes);
-		return 0;
+		if (lanes) {
+			if (mipi->soc->cil_sw_reset)
+				mipi->soc->cil_sw_reset(lanes, 1);
+			err = tegra_mipi_calibration(lanes);
+			if (mipi->soc->cil_sw_reset)
+				mipi->soc->cil_sw_reset(lanes, 0);
+		}
+		if (err)
+			dev_err(mipi->dev, "Selected lane %x, skip mipical\n", lanes);
+		return err;
 	}
 	case _IOC_NR(TEGRA_MIPI_IOCTL_CAL_STATUS): {
 		u32 status = 0;

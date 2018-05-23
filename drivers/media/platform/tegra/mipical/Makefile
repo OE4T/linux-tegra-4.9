@@ -1,4 +1,5 @@
 GCOV_PROFILE := y
+ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/host
 #
 # Makefile for Mipical driver
 #

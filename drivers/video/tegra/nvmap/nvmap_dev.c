@@ -266,7 +266,7 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
 	return NULL;
 }
 
-static const struct file_operations debug_handles_by_pid_fops;
+const struct file_operations debug_handles_by_pid_fops;
 
 struct nvmap_pid_data {
 	struct rb_node node;
@@ -699,7 +699,7 @@ static int nvmap_debug_##name##_open(struct inode *inode, \
 			    inode->i_private); \
 } \
 \
-static const struct file_operations debug_##name##_fops = { \
+const struct file_operations debug_##name##_fops = { \
 	.open = nvmap_debug_##name##_open, \
 	.read = seq_read, \
 	.llseek = seq_lseek, \
@@ -1360,94 +1360,6 @@ ulong nvmap_iovmm_get_used_pages(void)
 
 	nvmap_get_total_mss(NULL, &total, NVMAP_HEAP_IOVMM);
 	return total >> PAGE_SHIFT;
-}
-
-int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
-{
-	int i, err = 0;
-	struct nvmap_carveout_node *node;
-
-	if (!nvmap_dev->heaps) {
-		nvmap_dev->nr_carveouts = 0;
-		nvmap_dev->nr_heaps = nvmap_dev->plat->nr_carveouts + 1;
-		nvmap_dev->heaps = kzalloc(sizeof(struct nvmap_carveout_node) *
-				     nvmap_dev->nr_heaps, GFP_KERNEL);
-		if (!nvmap_dev->heaps) {
-			err = -ENOMEM;
-			pr_err("couldn't allocate carveout memory\n");
-			goto out;
-		}
-	} else if (nvmap_dev->nr_carveouts >= nvmap_dev->nr_heaps) {
-		node = krealloc(nvmap_dev->heaps,
-				sizeof(*node) * (nvmap_dev->nr_carveouts + 1),
-				GFP_KERNEL);
-		if (!node) {
-			err = -ENOMEM;
-			pr_err("nvmap heap array resize failed\n");
-			goto out;
-		}
-		nvmap_dev->heaps = node;
-		nvmap_dev->nr_heaps = nvmap_dev->nr_carveouts + 1;
-	}
-
-	for (i = 0; i < nvmap_dev->nr_heaps; i++)
-		if ((co->usage_mask != NVMAP_HEAP_CARVEOUT_IVM) &&
-		    (nvmap_dev->heaps[i].heap_bit & co->usage_mask)) {
-			pr_err("carveout %s already exists\n", co->name);
-			return -EEXIST;
-		}
-
-	node = &nvmap_dev->heaps[nvmap_dev->nr_carveouts];
-
-	node->base = round_up(co->base, PAGE_SIZE);
-	node->size = round_down(co->size -
-				(node->base - co->base), PAGE_SIZE);
-	if (!co->size)
-		goto out;
-
-	node->carveout = nvmap_heap_create(
-			nvmap_dev->dev_user.this_device, co,
-			node->base, node->size, node);
-
-	if (!node->carveout) {
-		err = -ENOMEM;
-		pr_err("couldn't create %s\n", co->name);
-		goto out;
-	}
-	node->index = nvmap_dev->nr_carveouts;
-	nvmap_dev->nr_carveouts++;
-	node->heap_bit = co->usage_mask;
-
-	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
-		struct dentry *heap_root =
-			debugfs_create_dir(co->name, nvmap_dev->debug_root);
-		if (!IS_ERR_OR_NULL(heap_root)) {
-			debugfs_create_file("clients", S_IRUGO,
-				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
-				&debug_clients_fops);
-			debugfs_create_file("allocations", S_IRUGO,
-				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
-				&debug_allocations_fops);
-			debugfs_create_file("all_allocations", S_IRUGO,
-				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
-				&debug_all_allocations_fops);
-			debugfs_create_file("orphan_handles", S_IRUGO,
-				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
-				&debug_orphan_handles_fops);
-			debugfs_create_file("maps", S_IRUGO,
-				heap_root,
-				(void *)(uintptr_t)node->heap_bit,
-				&debug_maps_fops);
-			nvmap_heap_debugfs_init(heap_root,
-						node->carveout);
-		}
-	}
-out:
-	return err;
 }
 
 static void nvmap_iovmm_debugfs_init(void)

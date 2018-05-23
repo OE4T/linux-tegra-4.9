@@ -17,7 +17,7 @@
  *
  */
 
-#define RELEASE_DATE "2018/04/23"
+#define RELEASE_DATE "2018/05/18"
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -62,12 +62,12 @@
 #define MODE_IDLE	2
 #define MODE_SUSPEND	3
 
-struct tagMTContacts {
-	unsigned char ID;
-	signed char Status;
-	unsigned short X;
-	unsigned short Y;
-	unsigned short Z;
+struct tag_mt_contacts {
+	unsigned char id;
+	signed char status;
+	unsigned short x;
+	unsigned short y;
+	unsigned short z;
 };
 
 struct _egalax_i2c {
@@ -77,6 +77,7 @@ struct _egalax_i2c {
 	struct mutex mutex_wq;
 	struct i2c_client *client;
 	unsigned char work_state;
+	bool is_disabled;
 	unsigned char skip_packet;
 	unsigned int ioctl_cmd;
 	int interrupt_gpio;
@@ -95,10 +96,10 @@ struct _egalax_i2c {
 };
 
 struct egalax_char_dev {
-	int OpenCnts;
-	struct kfifo DataKFiFo;
-	unsigned char *pFiFoBuf;
-	spinlock_t FiFoLock;
+	int open_cnts;
+	struct kfifo data_kfifo;
+	unsigned char *p_fifo_buf;
+	spinlock_t fifo_lock;
 	struct semaphore sem;
 	wait_queue_head_t fifo_inq;
 };
@@ -108,10 +109,10 @@ static struct egalax_char_dev *p_char_dev;
 static atomic_t egalax_char_available = ATOMIC_INIT(1);
 static atomic_t wait_command_ack = ATOMIC_INIT(0);
 static struct input_dev *input_dev;
-static struct tagMTContacts pContactBuf[MAX_SUPPORT_POINT];
+static struct tag_mt_contacts p_contact_buf[MAX_SUPPORT_POINT];
 static unsigned char input_report_buf[MAX_I2C_LEN+2];
 static char fifo_read_buf[MAX_I2C_LEN];
-static int TotalPtsCnt, RecvPtsCnt;
+static int total_pts_cnt, recv_pts_cnt;
 
 #define DBG_MODULE	0x00000001U
 #define DBG_CDEV	0x00000002U
@@ -125,29 +126,29 @@ static int TotalPtsCnt, RecvPtsCnt;
 #define DBG_IDLE	0x00000200U
 #define DBG_WAKEUP	0x00000400U
 #define DBG_BUTTON	0x00000800U
-static unsigned int DbgLevel = DBG_MODULE|DBG_SUSP;
+static unsigned int dbg_level = DBG_MODULE|DBG_SUSP;
 
 #define PROC_FS_NAME	"egalax_dbg"
 #define PROC_FS_MAX_LEN	8
-static struct proc_dir_entry *dbgProcFile;
+static struct proc_dir_entry *dbg_proc_file;
 
 #define EGALAX_DBG(level, fmt, args...) \
-do { if ((level & DbgLevel) > 0U) { \
+do { if ((level & dbg_level) > 0U) { \
 pr_debug("egalax_i2c: " fmt, ## args); } \
 } while (false)
 
-static int egalax_I2C_read(unsigned char *pBuf, unsigned short len)
+static int egalax_i2c_read(unsigned char *p_buf, unsigned short len)
 {
 	struct i2c_msg xfer;
 
-	if (pBuf == NULL)
+	if (p_buf == NULL)
 		return -1;
 
 	/* Read device data */
 	xfer.addr = p_egalax_i2c_dev->client->addr;
 	xfer.flags = I2C_M_RD;
 	xfer.len = len;
-	xfer.buf = pBuf;
+	xfer.buf = p_buf;
 
 	if (i2c_transfer(p_egalax_i2c_dev->client->adapter, &xfer, 1) != 1) {
 		EGALAX_DBG(DBG_I2C, " %s: i2c transfer fail\n", __func__);
@@ -159,20 +160,20 @@ static int egalax_I2C_read(unsigned char *pBuf, unsigned short len)
 	return 0;
 }
 
-static int egalax_I2C_write(unsigned short reg, unsigned char *pBuf,
+static int egalax_i2c_write(unsigned short reg, unsigned char *p_buf,
 			    unsigned short len)
 {
 	unsigned char cmdbuf[4+len];
 	struct i2c_msg xfer;
 
-	if (pBuf == NULL)
+	if (p_buf == NULL)
 		return -1;
 
 	cmdbuf[0] = reg & 0x00FFU;
 	cmdbuf[1] = (reg >> 8) & 0x00FFU;
 	cmdbuf[2] = (len+2) & 0x00FFU;
 	cmdbuf[3] = ((len+2) >> 8) & 0x00FFU;
-	memcpy(cmdbuf+4, pBuf, len);
+	memcpy(cmdbuf+4, p_buf, len);
 
 	/* Write data to device */
 	xfer.addr = p_egalax_i2c_dev->client->addr;
@@ -197,7 +198,7 @@ static int egalax_cdev_open(struct inode *inode, struct file *filp)
 		return -EBUSY;
 	}
 
-	p_char_dev->OpenCnts++;
+	p_char_dev->open_cnts++;
 	filp->private_data = p_char_dev;
 
 	EGALAX_DBG(DBG_CDEV, " CDev open done!\n");
@@ -211,9 +212,9 @@ static int egalax_cdev_release(struct inode *inode, struct file *filp)
 
 	atomic_inc(&egalax_char_available);
 
-	cdev->OpenCnts--;
+	cdev->open_cnts--;
 
-	kfifo_reset(&cdev->DataKFiFo);
+	kfifo_reset(&cdev->data_kfifo);
 
 	EGALAX_DBG(DBG_CDEV, " CDev release done!\n");
 	module_put(THIS_MODULE);
@@ -223,22 +224,22 @@ static int egalax_cdev_release(struct inode *inode, struct file *filp)
 static ssize_t egalax_cdev_read(struct file *file, char __user *buf,
 				size_t count, loff_t *offset)
 {
-	int read_cnt, ret, fifoLen;
+	int read_cnt, ret, fifo_len;
 	struct egalax_char_dev *cdev = file->private_data;
 
 	if (down_interruptible(&cdev->sem))
 		return -ERESTARTSYS;
 
-	fifoLen = kfifo_len(&cdev->DataKFiFo);
+	fifo_len = kfifo_len(&cdev->data_kfifo);
 
-	while (fifoLen < 1) {
+	while (fifo_len < 1) {
 		/* release the lock */
 		up(&cdev->sem);
 		if (file->f_flags & O_NONBLOCK)
 			return -EAGAIN;
 
 		if (wait_event_interruptible(cdev->fifo_inq,
-					kfifo_len(&cdev->DataKFiFo) > 0)) {
+					kfifo_len(&cdev->data_kfifo) > 0)) {
 			/* signal: tell the fs layer to handle it */
 			return -ERESTARTSYS;
 		}
@@ -250,8 +251,8 @@ static ssize_t egalax_cdev_read(struct file *file, char __user *buf,
 	if (count > MAX_I2C_LEN)
 		count = MAX_I2C_LEN;
 
-	read_cnt = kfifo_out_locked(&cdev->DataKFiFo, fifo_read_buf, count,
-				    &cdev->FiFoLock);
+	read_cnt = kfifo_out_locked(&cdev->data_kfifo, fifo_read_buf, count,
+				    &cdev->fifo_lock);
 
 	EGALAX_DBG(DBG_CDEV, " \"%s\" reading fifo data count=%d\n",
 		   current->comm, read_cnt);
@@ -288,7 +289,7 @@ static ssize_t egalax_cdev_write(struct file *file, const char __user *buf,
 		return -EFAULT;
 	}
 
-	ret = egalax_I2C_write(0x0067, tmp, MAX_I2C_LEN);
+	ret = egalax_i2c_write(0x0067, tmp, MAX_I2C_LEN);
 
 	up(&cdev->sem);
 	EGALAX_DBG(DBG_CDEV, " I2C writing %zu bytes.\n", count);
@@ -302,17 +303,17 @@ static unsigned int egalax_cdev_poll(struct file *filp,
 {
 	struct egalax_char_dev *cdev = filp->private_data;
 	unsigned int mask = 0;
-	int fifoLen;
+	int fifo_len;
 
 	down(&cdev->sem);
 	poll_wait(filp, &cdev->fifo_inq,  wait);
 
-	fifoLen = kfifo_len(&cdev->DataKFiFo);
+	fifo_len = kfifo_len(&cdev->data_kfifo);
 
-	if (fifoLen > 0)
+	if (fifo_len > 0)
 		mask |= POLLIN | POLLRDNORM;
 
-	if ((FIFO_SIZE - fifoLen) > MAX_I2C_LEN)
+	if ((FIFO_SIZE - fifo_len) > MAX_I2C_LEN)
 		mask |= POLLOUT | POLLWRNORM;
 
 	up(&cdev->sem);
@@ -323,7 +324,7 @@ static int egalax_proc_show(struct seq_file *seqfilp, void *v)
 {
 	seq_printf(seqfilp,
 	"EETI I2C for All Points.\nDebug Level: 0x%08X\nRelease Date: %s\n",
-		DbgLevel, RELEASE_DATE);
+		dbg_level, RELEASE_DATE);
 
 	return 0;
 }
@@ -339,7 +340,7 @@ static ssize_t egalax_proc_write(struct file *file, const char __user *buf,
 {
 	char procfs_buffer_size = 0;
 	unsigned char procfs_buf[PROC_FS_MAX_LEN+1] = {0};
-	unsigned int newLevel = 0;
+	unsigned int new_level = 0;
 
 	EGALAX_DBG(DBG_PROC, " \"%s\" call proc_write\n", current->comm);
 
@@ -352,47 +353,47 @@ static ssize_t egalax_proc_write(struct file *file, const char __user *buf,
 		return -EFAULT;
 	}
 
-	if (!kstrtouint(procfs_buf, 16, &newLevel))
-		DbgLevel = newLevel;
+	if (!kstrtouint(procfs_buf, 16, &new_level))
+		dbg_level = new_level;
 
-	EGALAX_DBG(DBG_PROC, " Switch Debug Level to 0x%08X\n", DbgLevel);
+	EGALAX_DBG(DBG_PROC, " Switch Debug Level to 0x%08X\n", dbg_level);
 
 	return procfs_buffer_size;
 }
 
-static bool sys_sendcmd_wait(unsigned char *bySendCmd, int nSendCmdLen,
-			     unsigned char *byHookCmd, int nHookCmdLen,
-			     int nTimeOut)
+static bool sys_sendcmd_wait(unsigned char *by_send_cmd, int n_send_cmd_len,
+			     unsigned char *by_hook_cmd, int n_hook_cmd_len,
+			     int n_time_out)
 {
 	int i;
-	bool bRet = true;
+	bool b_ret = true;
 
 	memset(p_egalax_i2c_dev->sysfs_cmd_result, 0,
 	       sizeof(p_egalax_i2c_dev->sysfs_cmd_result));
 
 	for (i = 0; i < 3; i++) {
-		if (i < nHookCmdLen)
-			p_egalax_i2c_dev->sysfs_hook_cmd[i] = byHookCmd[i];
+		if (i < n_hook_cmd_len)
+			p_egalax_i2c_dev->sysfs_hook_cmd[i] = by_hook_cmd[i];
 		else
 			p_egalax_i2c_dev->sysfs_hook_cmd[i] = 0xFF;
 	}
 	p_egalax_i2c_dev->sysfs_query_wait = true;
 
-	if (egalax_I2C_write(0x0067, bySendCmd, nSendCmdLen) != 0) {
-		bRet = false;
+	if (egalax_i2c_write(0x0067, by_send_cmd, n_send_cmd_len) != 0) {
+		b_ret = false;
 	} else {
 		wait_event_interruptible_timeout(
 				p_egalax_i2c_dev->sysfs_query_queue,
 				!p_egalax_i2c_dev->sysfs_query_wait,
-				nTimeOut);
+				n_time_out);
 
 		if (p_egalax_i2c_dev->sysfs_query_wait)
-			bRet = false;
+			b_ret = false;
 		else
-			bRet = true;
+			b_ret = true;
 	}
 	p_egalax_i2c_dev->sysfs_query_wait = false;
-	return bRet;
+	return b_ret;
 }
 
 #define OP_MODE_GET		0x00
@@ -400,12 +401,13 @@ static bool sys_sendcmd_wait(unsigned char *bySendCmd, int nSendCmdLen,
 static ssize_t sys_show_version(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x04, 0x36, 0x91, 0x01, OP_MODE_GET};
-	bool bRet = true;
+	bool b_ret = true;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet)
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret)
 		return snprintf(buf, PAGE_SIZE, "Driver: %s  FW: %s\n",
 			RELEASE_DATE, p_egalax_i2c_dev->sysfs_cmd_result+6);
 	else
@@ -417,13 +419,14 @@ static ssize_t sys_show_version(struct device *dev,
 static ssize_t sys_show_touchevent(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x04, 0x36, 0x91, 0x02, OP_MODE_GET};
-	bool bRet = true;
+	bool b_ret = true;
 	int code = 0;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet) {
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret) {
 		code = p_egalax_i2c_dev->sysfs_cmd_result[6];
 		code += (p_egalax_i2c_dev->sysfs_cmd_result[7]<<8);
 		code += (p_egalax_i2c_dev->sysfs_cmd_result[8]<<16);
@@ -436,12 +439,13 @@ static ssize_t sys_show_touchevent(struct device *dev,
 static ssize_t sys_show_reportmode(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x04, 0x36, 0x91, 0x04, OP_MODE_GET};
-	bool bRet = true;
+	bool b_ret = true;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet)
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret)
 		return snprintf(buf, PAGE_SIZE, "%02X\n",
 			       p_egalax_i2c_dev->sysfs_cmd_result[6]);
 	else
@@ -453,9 +457,9 @@ static ssize_t sys_store_reportmode(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x05, 0x36, 0x91, 0x04, OP_MODE_SET};
-	bool bRet = true;
+	bool b_ret = true;
 	char mode;
 
 	if (count != 2)
@@ -465,10 +469,11 @@ static ssize_t sys_store_reportmode(struct device *dev,
 	if (mode > NV_REPORTMODE_MAX || mode < 0)
 		return -EINVAL;
 
-	SendCmdBuf[6] = mode;
+	send_cmd_buf[6] = mode;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet)
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret)
 		return count;
 	else
 		return -EIO;
@@ -477,12 +482,13 @@ static ssize_t sys_store_reportmode(struct device *dev,
 static ssize_t sys_show_bypassmode(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x04, 0x36, 0x91, 0x05, OP_MODE_GET};
-	bool bRet = true;
+	bool b_ret = true;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet)
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret)
 		return snprintf(buf, PAGE_SIZE, "%02X\n",
 			       p_egalax_i2c_dev->sysfs_cmd_result[6]);
 	else
@@ -494,9 +500,9 @@ static ssize_t sys_store_bypassmode(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x05, 0x36, 0x91, 0x05, OP_MODE_SET};
-	bool bRet = true;
+	bool b_ret = true;
 	char mode;
 
 	if (count != 2)
@@ -506,10 +512,11 @@ static ssize_t sys_store_bypassmode(struct device *dev,
 	if (mode > NV_BYPASSMODE_MAX || mode < 0)
 		return -EINVAL;
 
-	SendCmdBuf[6] = mode;
+	send_cmd_buf[6] = mode;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet)
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret)
 		return count;
 	else
 		return -EIO;
@@ -519,13 +526,14 @@ static ssize_t sys_show_calibration(struct device *dev,
 				    struct device_attribute *attr,
 				    char *buf)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
 			0x03, 0x02, 0x3F, 0x4E};
-	bool bRet = true;
+	bool b_ret = true;
 	unsigned int status = 0;
 
-	bRet = sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ);
-	if (bRet) {
+	b_ret = sys_sendcmd_wait(send_cmd_buf, MAX_I2C_LEN,
+				 send_cmd_buf+2, 3, HZ);
+	if (b_ret) {
 		status = p_egalax_i2c_dev->sysfs_cmd_result[4];
 		status += p_egalax_i2c_dev->sysfs_cmd_result[5]<<8;
 		if (status & 0x00000100)
@@ -562,25 +570,25 @@ static const struct attribute_group egalax_attr_group = {
 #define STYLUS_MASK	0x10
 #define MAX_POINT_PER_PACKET	5U
 #define POINT_STRUCT_SIZE	10U
-static void ProcessReport(unsigned char *buf,
+static void process_report(unsigned char *buf,
 			  struct _egalax_i2c *p_egalax_i2c)
 {
 	unsigned char i, index = 0, cnt_down = 0, cnt_up = 0, shift = 0;
 	unsigned char status = 0;
-	unsigned short contactID = 0, x = 0, y = 0, z = 0;
+	unsigned short contact_id = 0, x = 0, y = 0, z = 0;
 
-	if (TotalPtsCnt <= 0) {
+	if (total_pts_cnt <= 0) {
 		if ((buf[1] == 0) || (buf[1] > MAX_SUPPORT_POINT)) {
 			EGALAX_DBG(DBG_POINT,
 				   " NumsofContacts mismatch, skip packet\n");
 			return;
 		}
 
-		TotalPtsCnt = buf[1];
-		RecvPtsCnt = 0;
+		total_pts_cnt = buf[1];
+		recv_pts_cnt = 0;
 	} else if (buf[1] > 0) {
-		TotalPtsCnt = 0;
-		RecvPtsCnt = 0;
+		total_pts_cnt = 0;
+		recv_pts_cnt = 0;
 		EGALAX_DBG(DBG_POINT,
 			   " NumsofContacts mismatch, skip packet\n");
 		return;
@@ -589,21 +597,21 @@ static void ProcessReport(unsigned char *buf,
 	while (index < MAX_POINT_PER_PACKET) {
 		shift = index * POINT_STRUCT_SIZE + 2;
 		status = buf[shift];
-		contactID = buf[shift+1];
+		contact_id = buf[shift+1];
 		x = ((buf[shift+3]<<8) + buf[shift+2]);
 		y = ((buf[shift+5]<<8) + buf[shift+4]);
 		z = ((buf[shift+7]<<8) + buf[shift+6]);
 
-		if (contactID >= MAX_SUPPORT_POINT) {
-			TotalPtsCnt = 0;
-			RecvPtsCnt = 0;
+		if (contact_id >= MAX_SUPPORT_POINT) {
+			total_pts_cnt = 0;
+			recv_pts_cnt = 0;
 			EGALAX_DBG(DBG_POINT, " Get error ContactID.\n");
 			return;
 		}
 
 		EGALAX_DBG(DBG_POINT,
 			   " Get Point[%d] Update: Status=%d X=%d Y=%d\n",
-			   contactID, status, x, y);
+			   contact_id, status, x, y);
 
 	#ifdef _SWITCH_XY
 		short tmp = x;
@@ -618,45 +626,45 @@ static void ProcessReport(unsigned char *buf,
 		if (p_egalax_i2c_dev->flip_y)
 			y = MAX_RESOLUTION-y;
 
-		pContactBuf[RecvPtsCnt].ID = contactID;
-		pContactBuf[RecvPtsCnt].Status = status;
-		pContactBuf[RecvPtsCnt].X = x;
-		pContactBuf[RecvPtsCnt].Y = y;
-		pContactBuf[RecvPtsCnt].Z = z;
+		p_contact_buf[recv_pts_cnt].id = contact_id;
+		p_contact_buf[recv_pts_cnt].status = status;
+		p_contact_buf[recv_pts_cnt].x = x;
+		p_contact_buf[recv_pts_cnt].y = y;
+		p_contact_buf[recv_pts_cnt].z = z;
 
-		RecvPtsCnt++;
+		recv_pts_cnt++;
 		index++;
 
 		/* Recv all points, send input report */
-		if (RecvPtsCnt == TotalPtsCnt) {
-			for (i = 0; i < RecvPtsCnt; i++) {
-				input_mt_slot(input_dev, pContactBuf[i].ID);
-				if ((pContactBuf[i].Status &
+		if (recv_pts_cnt == total_pts_cnt) {
+			for (i = 0; i < recv_pts_cnt; i++) {
+				input_mt_slot(input_dev, p_contact_buf[i].id);
+				if ((p_contact_buf[i].status &
 					STYLUS_MASK) != 0) {
 					input_mt_report_slot_state(input_dev,
 						MT_TOOL_PEN,
-						((pContactBuf[i].Status&0x01)
+						((p_contact_buf[i].status&0x01)
 						!= 0));
 				} else {
 					input_mt_report_slot_state(input_dev,
 						MT_TOOL_FINGER,
-						((pContactBuf[i].Status&0x01)
+						((p_contact_buf[i].status&0x01)
 						!= 0));
 				}
 
-				if ((pContactBuf[i].Status & 0x01) != 0) {
+				if ((p_contact_buf[i].status & 0x01) != 0) {
 					input_report_abs(input_dev,
 							ABS_MT_POSITION_X,
-							pContactBuf[i].X);
+							p_contact_buf[i].x);
 					input_report_abs(input_dev,
 							ABS_MT_POSITION_Y,
-							pContactBuf[i].Y);
+							p_contact_buf[i].y);
 					input_report_abs(input_dev,
 							ABS_MT_PRESSURE,
-							pContactBuf[i].Z);
+							p_contact_buf[i].z);
 				}
 
-				if ((pContactBuf[i].Status & 0x01) != 0)
+				if ((p_contact_buf[i].status & 0x01) != 0)
 					cnt_down++;
 				else
 					cnt_up++;
@@ -667,8 +675,8 @@ static void ProcessReport(unsigned char *buf,
 			" Input sync point data done! (Down:%d Up:%d)\n",
 				cnt_down, cnt_up);
 
-			TotalPtsCnt = 0;
-			RecvPtsCnt = 0;
+			total_pts_cnt = 0;
+			recv_pts_cnt = 0;
 			return;
 		}
 	}
@@ -685,88 +693,94 @@ static void exc80_input_close(struct input_dev *dev)
 
 static int exc80_input_disable(struct input_dev *dev)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
-		0x03, 0x04, 0x36, 0x67, 0x02, 0x00};
+	unsigned char send_cmd_buf[MAX_I2C_LEN] = {
+			0x03, 0x03, 0x36, 0x3F, 0x02, 0x00};
 
-	if (sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ))
-		return 0;
+	p_egalax_i2c_dev->is_disabled = true;
+	if (egalax_i2c_write(0x0067, send_cmd_buf, MAX_I2C_LEN) < 0)
+		return -EIO;
 
-	return -EIO;
+	return 0;
 }
 
 static int exc80_input_enable(struct input_dev *dev)
 {
-	unsigned char SendCmdBuf[MAX_I2C_LEN] = {
-		0x03, 0x04, 0x36, 0x67, 0x02, 0x01};
+	disable_irq(p_egalax_i2c_dev->client->irq);
 
-	if (sys_sendcmd_wait(SendCmdBuf, MAX_I2C_LEN, SendCmdBuf+2, 3, HZ))
-		return 0;
+	/* pull the int pin to low level */
+	gpio_direction_output(p_egalax_i2c_dev->interrupt_gpio, 0);
+	udelay(200);
+	/* return to high level */
+	gpio_direction_input(p_egalax_i2c_dev->interrupt_gpio);
 
-	return -EIO;
+	enable_irq(p_egalax_i2c_dev->client->irq);
+	p_egalax_i2c_dev->is_disabled = false;
+
+	return 0;
 }
 
-static struct input_dev *allocate_Input_Dev(void)
+static struct input_dev *allocate_input_dev(void)
 {
 	int ret;
-	struct input_dev *pInputDev = NULL;
+	struct input_dev *p_input_dev = NULL;
 
-	pInputDev = input_allocate_device();
-	if (pInputDev == NULL) {
+	p_input_dev = input_allocate_device();
+	if (p_input_dev == NULL) {
 		EGALAX_DBG(DBG_MODULE, " Failed to allocate input device\n");
 		return NULL;
 	}
 
-	pInputDev->name = "eGalax_Touch_Screen";
-	pInputDev->phys = "I2C";
-	pInputDev->id.bustype = BUS_I2C;
-	pInputDev->id.vendor = 0x0EEF;
-	pInputDev->id.product = 0x0020;
-	pInputDev->id.version = 0x0001;
+	p_input_dev->name = "eGalax_Touch_Screen";
+	p_input_dev->phys = "I2C";
+	p_input_dev->id.bustype = BUS_I2C;
+	p_input_dev->id.vendor = 0x0EEF;
+	p_input_dev->id.product = 0x0020;
+	p_input_dev->id.version = 0x0001;
 	/* Input control */
-	pInputDev->open = exc80_input_open;
-	pInputDev->close = exc80_input_close;
-	pInputDev->enable = exc80_input_enable;
-	pInputDev->disable = exc80_input_disable;
-	pInputDev->enabled = true;
-	pInputDev->dev.parent = &p_egalax_i2c_dev->client->dev;
-	input_set_drvdata(pInputDev, p_egalax_i2c_dev);
+	p_input_dev->open = exc80_input_open;
+	p_input_dev->close = exc80_input_close;
+	p_input_dev->enable = exc80_input_enable;
+	p_input_dev->disable = exc80_input_disable;
+	p_input_dev->enabled = true;
+	p_input_dev->dev.parent = &p_egalax_i2c_dev->client->dev;
+	input_set_drvdata(p_input_dev, p_egalax_i2c_dev);
 
-	set_bit(EV_ABS, pInputDev->evbit);
-	__set_bit(INPUT_PROP_DIRECT, pInputDev->propbit);
-	input_mt_init_slots(pInputDev, MAX_SUPPORT_POINT, 0);
-	input_set_abs_params(pInputDev, ABS_MT_POSITION_X, 0,
+	set_bit(EV_ABS, p_input_dev->evbit);
+	__set_bit(INPUT_PROP_DIRECT, p_input_dev->propbit);
+	input_mt_init_slots(p_input_dev, MAX_SUPPORT_POINT, 0);
+	input_set_abs_params(p_input_dev, ABS_MT_POSITION_X, 0,
 			     MAX_RESOLUTION, 0, 0);
-	input_set_abs_params(pInputDev, ABS_MT_POSITION_Y, 0,
+	input_set_abs_params(p_input_dev, ABS_MT_POSITION_Y, 0,
 			     MAX_RESOLUTION, 0, 0);
-	input_set_abs_params(pInputDev, ABS_MT_PRESSURE, 0,
+	input_set_abs_params(p_input_dev, ABS_MT_PRESSURE, 0,
 			     MAX_Z_RESOLUTION, 0, 0);
-	input_set_abs_params(pInputDev, ABS_MT_TOOL_TYPE, 0,
+	input_set_abs_params(p_input_dev, ABS_MT_TOOL_TYPE, 0,
 			     MT_TOOL_MAX, 0, 0);
 
-	input_set_events_per_packet(pInputDev, MAX_EVENTS);
+	input_set_events_per_packet(p_input_dev, MAX_EVENTS);
 
-	ret = input_register_device(pInputDev);
+	ret = input_register_device(p_input_dev);
 	if (ret) {
 		EGALAX_DBG(DBG_MODULE, " Unable to register input device.\n");
-		input_free_device(pInputDev);
-		pInputDev = NULL;
+		input_free_device(p_input_dev);
+		p_input_dev = NULL;
 	}
 
-	return pInputDev;
+	return p_input_dev;
 }
 
 static int egalax_i2c_measure(struct _egalax_i2c *egalax_i2c)
 {
-	int ret = 0, frameLen = 0, loop = 3, i;
+	int ret = 0, frame_len = 0, loop = 3, i;
 
 	EGALAX_DBG(DBG_INT, " egalax_i2c_measure\n");
 
-	if (egalax_I2C_read(input_report_buf, MAX_I2C_LEN+2) < 0) {
+	if (egalax_i2c_read(input_report_buf, MAX_I2C_LEN+2) < 0) {
 		EGALAX_DBG(DBG_I2C, " I2C read input report fail!\n");
 		return -1;
 	}
 
-	if ((DbgLevel & DBG_I2C) != 0U) {
+	if ((dbg_level & DBG_I2C) != 0U) {
 		char dbgmsg[(MAX_I2C_LEN+2)*4];
 
 		for (i = 0; i < (MAX_I2C_LEN+2); i++)
@@ -776,10 +790,10 @@ static int egalax_i2c_measure(struct _egalax_i2c *egalax_i2c)
 		EGALAX_DBG(DBG_I2C, " Buf=%s\n", dbgmsg);
 	}
 
-	frameLen = input_report_buf[0] + (input_report_buf[1]<<8);
-	EGALAX_DBG(DBG_I2C, " I2C read data with Len=%d\n", frameLen);
+	frame_len = input_report_buf[0] + (input_report_buf[1]<<8);
+	EGALAX_DBG(DBG_I2C, " I2C read data with Len=%d\n", frame_len);
 
-	if (frameLen == 0) {
+	if (frame_len == 0) {
 		EGALAX_DBG(DBG_MODULE, " Device reset\n");
 		return -1;
 	}
@@ -788,7 +802,7 @@ static int egalax_i2c_measure(struct _egalax_i2c *egalax_i2c)
 	case REPORTID_MTOUCH:
 		if (!egalax_i2c->skip_packet &&
 		    egalax_i2c->work_state == MODE_WORKING) {
-			ProcessReport(input_report_buf+2, egalax_i2c);
+			process_report(input_report_buf+2, egalax_i2c);
 		}
 		ret = 0;
 		break;
@@ -811,19 +825,19 @@ static int egalax_i2c_measure(struct _egalax_i2c *egalax_i2c)
 		}
 
 		/* If someone reading now! put the data into the buffer! */
-		if (p_char_dev->OpenCnts > 0) {
+		if (p_char_dev->open_cnts > 0) {
 			loop = 3;
 			do {
 				ret = wait_event_timeout(p_char_dev->fifo_inq,
-					(kfifo_avail(&p_char_dev->DataKFiFo) >=
+					(kfifo_avail(&p_char_dev->data_kfifo) >=
 					MAX_I2C_LEN), HZ);
 			} while (ret <= 0 && --loop);
 
 			/* fifo size is ready */
 			if (ret > 0) {
-				ret = kfifo_in_locked(&p_char_dev->DataKFiFo,
+				ret = kfifo_in_locked(&p_char_dev->data_kfifo,
 					(input_report_buf+2), MAX_I2C_LEN,
-					&p_char_dev->FiFoLock);
+					&p_char_dev->fifo_lock);
 				wake_up_interruptible(&p_char_dev->fifo_inq);
 			} else {
 				EGALAX_DBG(DBG_CDEV,
@@ -884,9 +898,9 @@ static void egalax_i2c_senduppoint(void)
 	EGALAX_DBG(DBG_SUSP, " %s\n", __func__);
 
 	for (i = 0; i < MAX_SUPPORT_POINT; i++) {
-		input_mt_slot(input_dev, pContactBuf[i].ID);
+		input_mt_slot(input_dev, p_contact_buf[i].id);
 		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, false);
-		pContactBuf[i].Status = 0;
+		p_contact_buf[i].status = 0;
 	}
 
 	input_sync(input_dev);
@@ -958,9 +972,14 @@ static int egalax_i2c_pm_suspend(struct i2c_client *client, pm_message_t mesg)
 	if (!p_egalax_i2c_dev)
 		goto fail_suspend;
 
-	egalax_power_off();
-
-	p_egalax_i2c_dev->work_state = MODE_SUSPEND;
+	if (!p_egalax_i2c_dev->is_disabled) {
+		/* only called when input device is not disabled/enabled via
+		 * /sys/class/input/input0/enabled interface.
+		 * Android uses sysfs by default and will not run into here
+		 */
+		egalax_power_off();
+		p_egalax_i2c_dev->work_state = MODE_SUSPEND;
+	}
 
 	EGALAX_DBG(DBG_SUSP, " pm_suspend done!!\n");
 	return 0;
@@ -978,13 +997,17 @@ static int egalax_i2c_pm_resume(struct i2c_client *client)
 	if (!p_egalax_i2c_dev)
 		goto fail_resume;
 
-	p_egalax_i2c_dev->work_state = MODE_WORKING;
+	if (!p_egalax_i2c_dev->is_disabled) {
+		/* only called when input device is not disabled/enabled via
+		 * /sys/class/input/input0/enabled interface.
+		 * Android uses sysfs by default and will not run into here
+		 */
+		p_egalax_i2c_dev->work_state = MODE_WORKING;
+		egalax_power_on();
+		egalax_i2c_senduppoint();
 
-	egalax_power_on();
-
-	egalax_i2c_senduppoint();
-
-	EGALAX_DBG(DBG_SUSP, " pm_resume done!!\n");
+		EGALAX_DBG(DBG_SUSP, " pm_resume done!!\n");
+	}
 	return 0;
 
 fail_resume:
@@ -1128,32 +1151,32 @@ static const struct file_operations egalax_proc_fops = {
 
 static struct egalax_char_dev *setup_chardev(void)
 {
-	struct egalax_char_dev *pCharDev;
+	struct egalax_char_dev *p_char_dev;
 
-	pCharDev = kzalloc(1*sizeof(struct egalax_char_dev), GFP_KERNEL);
-	if (pCharDev == NULL)
+	p_char_dev = kzalloc(1*sizeof(struct egalax_char_dev), GFP_KERNEL);
+	if (p_char_dev == NULL)
 		goto fail_cdev;
 
-	spin_lock_init(&pCharDev->FiFoLock);
-	pCharDev->pFiFoBuf = kzalloc(sizeof(unsigned char)*FIFO_SIZE,
+	spin_lock_init(&p_char_dev->fifo_lock);
+	p_char_dev->p_fifo_buf = kzalloc(sizeof(unsigned char)*FIFO_SIZE,
 				 GFP_KERNEL);
-	if (pCharDev->pFiFoBuf == NULL)
+	if (p_char_dev->p_fifo_buf == NULL)
 		goto fail_fifobuf;
 
-	kfifo_init(&pCharDev->DataKFiFo, pCharDev->pFiFoBuf, FIFO_SIZE);
-	if (!kfifo_initialized(&pCharDev->DataKFiFo))
+	kfifo_init(&p_char_dev->data_kfifo, p_char_dev->p_fifo_buf, FIFO_SIZE);
+	if (!kfifo_initialized(&p_char_dev->data_kfifo))
 		goto fail_kfifo;
 
-	pCharDev->OpenCnts = 0;
-	sema_init(&pCharDev->sem, 1);
-	init_waitqueue_head(&pCharDev->fifo_inq);
+	p_char_dev->open_cnts = 0;
+	sema_init(&p_char_dev->sem, 1);
+	init_waitqueue_head(&p_char_dev->fifo_inq);
 
-	return pCharDev;
+	return p_char_dev;
 
 fail_kfifo:
-	kfree(pCharDev->pFiFoBuf);
+	kfree(p_char_dev->p_fifo_buf);
 fail_fifobuf:
-	kfree(pCharDev);
+	kfree(p_char_dev);
 fail_cdev:
 	return NULL;
 }
@@ -1166,8 +1189,8 @@ static int egalax_i2c_probe(struct i2c_client *client,
 	p_egalax_i2c_dev = NULL;
 	p_char_dev = NULL;
 	input_dev = NULL;
-	TotalPtsCnt = 0;
-	RecvPtsCnt = 0;
+	total_pts_cnt = 0;
+	recv_pts_cnt = 0;
 	EGALAX_DBG(DBG_MODULE, " Start probe\n");
 
 	p_egalax_i2c_dev = kzalloc(sizeof(struct _egalax_i2c), GFP_KERNEL);
@@ -1187,7 +1210,7 @@ static int egalax_i2c_probe(struct i2c_client *client,
 
 	egalax_power_on();
 
-	input_dev = allocate_Input_Dev();
+	input_dev = allocate_input_dev();
 	if (input_dev == NULL) {
 		EGALAX_DBG(DBG_MODULE, " allocate_Input_Dev failed\n");
 		result = -EINVAL;
@@ -1209,6 +1232,7 @@ static int egalax_i2c_probe(struct i2c_client *client,
 		p_egalax_i2c_dev->skip_packet = 1;
 
 	p_egalax_i2c_dev->work_state = MODE_WORKING;
+	p_egalax_i2c_dev->is_disabled = false;
 
 	result = request_irq(client->irq, egalax_i2c_interrupt,
 			     IRQF_TRIGGER_LOW, client->name, p_egalax_i2c_dev);
@@ -1238,9 +1262,9 @@ static int egalax_i2c_probe(struct i2c_client *client,
 		goto fail6;
 	}
 
-	dbgProcFile = proc_create(PROC_FS_NAME, 0660, NULL,
+	dbg_proc_file = proc_create(PROC_FS_NAME, 0660, NULL,
 				  &egalax_proc_fops);
-	if (dbgProcFile == NULL) {
+	if (dbg_proc_file == NULL) {
 		remove_proc_entry(PROC_FS_NAME, NULL);
 		EGALAX_DBG(DBG_MODULE, " Could not initialize /proc/%s\n",
 			   PROC_FS_NAME);
@@ -1257,7 +1281,7 @@ static int egalax_i2c_probe(struct i2c_client *client,
 fail6:
 	misc_deregister(&egalax_misc_dev);
 fail5:
-	kfree(p_char_dev->pFiFoBuf);
+	kfree(p_char_dev->p_fifo_buf);
 	kfree(p_char_dev);
 	p_char_dev = NULL;
 fail4:
@@ -1282,7 +1306,7 @@ static int egalax_i2c_remove(struct i2c_client *client)
 	struct _egalax_i2c *egalax_i2c = i2c_get_clientdata(client);
 
 	if (p_char_dev != NULL) {
-		kfree(p_char_dev->pFiFoBuf);
+		kfree(p_char_dev->p_fifo_buf);
 		kfree(p_char_dev);
 		p_char_dev = NULL;
 	}
@@ -1315,7 +1339,7 @@ static int egalax_i2c_remove(struct i2c_client *client)
 		input_dev = NULL;
 	}
 
-	if (dbgProcFile != NULL)
+	if (dbg_proc_file != NULL)
 		remove_proc_entry(PROC_FS_NAME, NULL);
 
 	i2c_set_clientdata(client, NULL);

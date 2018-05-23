@@ -23,12 +23,6 @@ config TEGRA_WAKEUP_MONITOR
 	  send out wakeup source and uevents which indicate suspend_prepare and
 	  post_suspend.
 
-config TEGRA3_PM
-	bool "Tegra3 power and cluster management"
-	default y
-	help
-	  Enable Tegra3 power and cluster management.
-
 config TEGRA_POWERGATE
 	bool "Tegra powergate support"
 	default y
@@ -51,14 +45,6 @@ config TEGRA_BOOTLOADER_DEBUG
 config TEGRA_BOOTLOADER_DEBUG_INIT
 	bool
 	depends on TEGRA_BOOTLOADER_DEBUG
-
-config TEGRA_CBUS_CAN_USE_SKIPPERS
-	bool "Allow to use clock skippers on cbus users"
-	depends on ARCH_TEGRA_21x_SOC
-	default n
-	help
-	  When enabled, clock skippers for cbus modules can be used to provide
-	  fine granularity clock rate control
 
 config TEGRA_CENTRAL_ACTMON
 	bool "Tegra Activity Monitor"
@@ -92,13 +78,6 @@ config TEGRA_NVDUMPER
 	default n
 	help
 	  This is debug feature to dump whole memory when system crashes.
-
-config TEGRA_13x_SERROR
-	tristate "Tegra13 SError handler"
-	depends on ARCH_TEGRA_13x_SOC
-	select DENVER_MCA
-	help
-	  The Tegra13 SError handler. This handles Denver SErrors.
 
 config TEGRA_THERMAL_THROTTLE
        bool "Enable throttling of CPU speed on overtemp"

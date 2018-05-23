@@ -6,9 +6,6 @@
 GCOV_PROFILE := y
 
 subdir-ccflags-y += -Werror
-subdir-ccflags-y += -I$(srctree)/drivers/platform/tegra/include \
-		    -I$(srctree)/drivers/video/tegra/dc/panel/ \
-		    -I$(srctree)/arch/arm/mach-tegra
 
 ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
 obj-$(CONFIG_USB_SUPPORT)		+= tegra_usb_pmc.o
@@ -20,7 +17,7 @@ obj-y					+= tegra_vpr.o
 obj-y					+= smc-calls.o
 
 ifeq ($(CONFIG_TEGRA_PTM),y)
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)         += tegra_ptm_t210.o
+obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= tegra_ptm_t210.o
 endif
 
 obj-y += nvdumper/
@@ -42,18 +39,9 @@ obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 
 obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
 
-ccflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
-             -I$(srctree)/arch/arm/mach-tegra
-asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
-             -I$(srctree)/arch/arm/mach-tegra
-
-
-
-
-
 obj-y += bond_out.o
 
-obj-$(CONFIG_NV_TEGRA_IVC)			+= tegra-ivc.o
+obj-$(CONFIG_NV_TEGRA_IVC)		+= tegra-ivc.o
 
 obj-y					+= mselect.o
 
@@ -69,4 +57,3 @@ obj-$(CONFIG_TEGRA_FIRMWARES_CLASS)	+= firmwares.o
 obj-$(CONFIG_TEGRA_FIRMWARES_INVENTORY)	+= firmwares-all.o
 obj-$(CONFIG_TEGRA_HV_XHCI_DEBUG)	+= tegra-hv-xhci-debug.o
 
-obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o

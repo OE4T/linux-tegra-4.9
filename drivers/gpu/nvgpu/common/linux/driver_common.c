@@ -107,6 +107,7 @@ static void nvgpu_init_timeout(struct gk20a *g)
 		g->gr_idle_timeout_default = (u32)ULONG_MAX;
 	}
 	g->ch_wdt_timeout_ms = platform->ch_wdt_timeout_ms;
+	g->fifo_eng_timeout_us = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
 }
 
 static void nvgpu_init_timeslice(struct gk20a *g)

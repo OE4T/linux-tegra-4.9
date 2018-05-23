@@ -817,7 +817,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	if (g->ops.fifo.apply_ctxsw_timeout_intr)
 		g->ops.fifo.apply_ctxsw_timeout_intr(g);
 	else {
-		timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
+		timeout = g->fifo_eng_timeout_us;
 		timeout = scale_ptimer(timeout,
 			ptimer_scalingfactor10x(g->ptimer_src_freq));
 		timeout |= fifo_eng_timeout_detection_enabled_f();
@@ -2169,15 +2169,16 @@ bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
 {
 	bool recover = false;
 	bool progress = false;
+	struct gk20a *g = ch->g;
 
 	if (gk20a_channel_get(ch)) {
 		recover = gk20a_channel_update_and_check_timeout(ch,
-				GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000,
+				g->fifo_eng_timeout_us / 1000,
 				&progress);
 		*verbose = ch->timeout_debug_dump;
 		*ms = ch->timeout_accumulated_ms;
 		if (recover)
-			ch->g->ops.fifo.set_error_notifier(ch,
+			g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
 
 		gk20a_channel_put(ch);
@@ -2194,7 +2195,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	struct gk20a *g = tsg->g;
 
 	*verbose = false;
-	*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
+	*ms = g->fifo_eng_timeout_us / 1000;
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
@@ -2220,7 +2221,7 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 		nvgpu_log_info(g, "progress on tsg=%d ch=%d",
 				tsg->tsgid, ch->chid);
 		gk20a_channel_put(ch);
-		*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
+		*ms = g->fifo_eng_timeout_us / 1000;
 		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch)) {

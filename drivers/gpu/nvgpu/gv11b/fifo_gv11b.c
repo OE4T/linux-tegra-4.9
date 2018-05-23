@@ -1231,7 +1231,7 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	if (nvgpu_platform_is_silicon(g)) {
 		/* enable ctxsw timeout */
-		timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
+		timeout = g->fifo_eng_timeout_us;
 		timeout = scale_ptimer(timeout,
 			ptimer_scalingfactor10x(g->ptimer_src_freq));
 		timeout |= fifo_eng_ctxsw_timeout_detection_enabled_f();

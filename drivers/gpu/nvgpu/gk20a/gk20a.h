@@ -1320,6 +1320,7 @@ struct gk20a {
 	u32 gr_idle_timeout_default;
 	bool timeouts_disabled_by_user;
 	unsigned int ch_wdt_timeout_ms;
+	u32 fifo_eng_timeout_us;
 
 	struct nvgpu_mutex poweron_lock;
 	struct nvgpu_mutex poweroff_lock;

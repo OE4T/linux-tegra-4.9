@@ -40,8 +40,6 @@ obj-y += bond_out.o
 
 obj-$(CONFIG_NV_TEGRA_IVC)		+= tegra-ivc.o
 
-obj-y					+= mselect.o
-
 obj-$(CONFIG_TEGRA_WDT_RECOVERY)        += wdt-recovery.o
 
 obj-y					+= tegra_prod.o

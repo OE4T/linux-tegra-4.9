@@ -569,11 +569,18 @@ static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 static int eqos_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
+	int ret;
 
 	if (!pdata->phydev)
 		return -ENOTSUPP;
 
-	return phy_ethtool_set_wol(pdata->phydev, wol);
+	ret = phy_ethtool_set_wol(pdata->phydev, wol);
+	if (ret < 0)
+		return ret;
+
+	device_init_wakeup(&dev->dev, true);
+
+	return ret;
 }
 
 u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)

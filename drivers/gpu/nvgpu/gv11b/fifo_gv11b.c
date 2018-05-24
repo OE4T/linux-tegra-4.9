@@ -1458,7 +1458,7 @@ bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 			if (tsgid == FIFO_INVAL_TSG_ID)
 				continue;
 
-			if (gk20a_fifo_check_tsg_ctxsw_timeout(
+			if (g->ops.fifo.check_tsg_ctxsw_timeout(
 				&f->tsg[tsgid], &verbose, &ms)) {
 				ret = true;
 

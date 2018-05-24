@@ -28,8 +28,6 @@
 #include "bus_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
 
 void gk20a_bus_init_hw(struct gk20a *g)
@@ -70,9 +68,6 @@ void gk20a_bus_isr(struct gk20a *g)
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
 
-		nvgpu_log(g, gpu_dbg_intr, "pmc_enable : 0x%x",
-			gk20a_readl(g, mc_enable_r()));
-
 		save0 = gk20a_readl(g, timer_pri_timeout_save_0_r());
 		if (timer_pri_timeout_save_0_fecs_tgt_v(save0)) {
 			/*
@@ -99,11 +94,6 @@ void gk20a_bus_isr(struct gk20a *g)
 			if (g->ops.priv_ring.decode_error_code)
 				g->ops.priv_ring.decode_error_code(g,
 							fecs_errcode);
-
-			if ((fecs_errcode & 0xffffff00) == 0xbadf1300)
-				nvgpu_err(g, "NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: "
-					"0x%08x",
-					gk20a_readl(g, gr_gpc0_fs_gpc_r()));
 		}
 
 	} else {

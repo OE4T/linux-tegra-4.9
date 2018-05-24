@@ -32,6 +32,7 @@
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_fbp_gk20a.h>
 
 void gk20a_enable_priv_ring(struct gk20a *g)
 {
@@ -102,4 +103,15 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	}
 	if (retry == 0 && cmd != pri_ringmaster_command_cmd_no_cmd_v())
 		nvgpu_warn(g, "priv ringmaster intr ack too many retries");
+}
+
+void gk20a_priv_set_timeout_settings(struct gk20a *g)
+{
+	/*
+	 * Bug 1340570: increase the clock timeout to avoid potential
+	 * operation failure at high gpcclk rate. Default values are 0x400.
+	 */
+	nvgpu_writel(g, pri_ringstation_sys_master_config_r(0x15), 0x800);
+	nvgpu_writel(g, pri_ringstation_gpc_master_config_r(0xa), 0x800);
+	nvgpu_writel(g, pri_ringstation_fbp_master_config_r(0x8), 0x800);
 }

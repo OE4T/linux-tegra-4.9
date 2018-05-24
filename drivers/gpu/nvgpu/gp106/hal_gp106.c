@@ -726,8 +726,7 @@ static const struct gpu_ops gp106_ops = {
 		.read_ptimer = gk20a_read_ptimer,
 		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = gk20a_bus_bar1_bind,
-		.set_ppriv_timeout_settings =
-			gk20a_bus_set_ppriv_timeout_settings,
+
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
@@ -760,6 +759,8 @@ static const struct gpu_ops gp106_ops = {
 	.priv_ring = {
 		.isr = gp10b_priv_ring_isr,
 		.decode_error_code = gp10b_priv_ring_decode_error_code,
+		.set_ppriv_timeout_settings =
+			gk20a_priv_set_timeout_settings,
 	},
 	.fuse = {
 		.check_priv_security = gp106_fuse_check_priv_security,

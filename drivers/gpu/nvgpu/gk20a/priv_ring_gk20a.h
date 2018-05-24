@@ -28,5 +28,6 @@ struct gpu_ops;
 
 void gk20a_priv_ring_isr(struct gk20a *g);
 void gk20a_enable_priv_ring(struct gk20a *g);
+void gk20a_priv_set_timeout_settings(struct gk20a *g);
 
 #endif /*__PRIV_RING_GK20A_H__*/

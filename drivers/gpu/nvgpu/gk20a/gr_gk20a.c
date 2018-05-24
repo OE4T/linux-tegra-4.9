@@ -4502,8 +4502,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	if (g->ops.bus.set_ppriv_timeout_settings)
-		g->ops.bus.set_ppriv_timeout_settings(g);
+	if (g->ops.priv_ring.set_ppriv_timeout_settings)
+		g->ops.priv_ring.set_ppriv_timeout_settings(g);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),

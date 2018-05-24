@@ -21,8 +21,13 @@
 
 #if !defined(__KERNEL__)
 #define __user
+
+/* Some userspace builds have __packed defined already */
+#if !defined(__packed)
 #define __packed __attribute__((packed))
-#endif
+#endif /* __packed */
+
+#endif /* __KERNEL__ */
 
 /*
  * /dev/nvhost-ctrl-gpu device
@@ -1376,7 +1381,7 @@ struct nvgpu_dbg_gpu_profiler_reserve_args {
  */
 
 #define NVGPU_IOCTL_MAGIC 'H'
-#define NVGPU_NO_TIMEOUT ((u32)~0)
+#define NVGPU_NO_TIMEOUT ((__u32)~0U)
 #define NVGPU_TIMEOUT_FLAG_DISABLE_DUMP		0
 
 /* this is also the hardware memory format */
@@ -1996,8 +2001,6 @@ struct nvgpu_as_get_sync_ro_map_args {
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 2, struct nvgpu32_as_alloc_space_args)
 #define NVGPU_AS_IOCTL_FREE_SPACE \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 3, struct nvgpu_as_free_space_args)
-#define NVGPU_AS_IOCTL_MAP_BUFFER \
-	_IOWR(NVGPU_AS_IOCTL_MAGIC, 4, struct nvgpu_as_map_buffer_args)
 #define NVGPU_AS_IOCTL_UNMAP_BUFFER \
 	_IOWR(NVGPU_AS_IOCTL_MAGIC, 5, struct nvgpu_as_unmap_buffer_args)
 #define NVGPU_AS_IOCTL_ALLOC_SPACE \

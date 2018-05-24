@@ -10,13 +10,6 @@ menuconfig TEGRA_NVMAP
 
 if TEGRA_NVMAP
 
-config TEGRA_NVMAP_V2
-	bool "Use NVMAP version 2"
-	default n
-	help
-	  say Y here to use nvmap version 2 which has been rewritten for
-	  code clarify and safety.
-
 config NVMAP_PAGE_POOLS
 	bool "Use page pools to reduce allocation overhead"
 	default y

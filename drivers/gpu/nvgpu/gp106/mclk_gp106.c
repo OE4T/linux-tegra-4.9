@@ -3353,7 +3353,7 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	pseq_cmd->cmd_type = NV_PMU_SEQ_CMD_ID_RUN_SCRIPT;
 
 #ifdef CONFIG_DEBUG_FS
-	g->ops.bus.read_ptimer(g, &t0);
+	g->ops.ptimer.read_ptimer(g, &t0);
 #endif
 
 	if (speed == GP106_MCLK_HIGH_SPEED) {
@@ -3402,7 +3402,7 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	mclk->speed = speed;
 
 #ifdef CONFIG_DEBUG_FS
-	g->ops.bus.read_ptimer(g, &t1);
+	g->ops.ptimer.read_ptimer(g, &t1);
 
 	nvgpu_mutex_acquire(&mclk->data_lock);
 	mclk->switch_num++;

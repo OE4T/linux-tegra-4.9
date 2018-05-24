@@ -32,7 +32,6 @@
 #include <nvgpu/types.h>
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_timer_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 

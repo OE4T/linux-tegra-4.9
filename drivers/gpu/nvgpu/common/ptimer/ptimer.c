@@ -1,6 +1,4 @@
 /*
- * GM20B BUS
- *
  * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,12 +20,32 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NVGPU_GM20B_BUS
-#define NVGPU_GM20B_BUS
+#include <nvgpu/ptimer.h>
 
-struct gk20a;
-struct nvgpu_mem;
+#include "gk20a/gk20a.h"
 
-int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst);
+int nvgpu_get_timestamps_zipper(struct gk20a *g,
+		u32 source_id, u32 count,
+		struct nvgpu_cpu_time_correlation_sample *samples)
+{
+	int err = 0;
+	unsigned int i = 0;
 
-#endif
+	if (gk20a_busy(g)) {
+		nvgpu_err(g, "GPU not powered on\n");
+		err = -EINVAL;
+		goto end;
+	}
+
+	for (i = 0; i < count; i++) {
+		err = g->ops.ptimer.read_ptimer(g, &samples[i].gpu_timestamp);
+		if (err)
+			return err;
+
+		samples[i].cpu_timestamp = nvgpu_hr_timestamp();
+	}
+
+end:
+	gk20a_idle(g);
+	return err;
+}

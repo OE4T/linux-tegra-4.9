@@ -23,9 +23,10 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 # OS independent parts of nvgpu. The work to collect files here
 # is in progress.
 
-nvgpu-y += common/bus/bus.o \
-	common/bus/bus_gk20a.o \
-	common/bus/bus_gm20b.o
+nvgpu-y += common/bus/bus_gk20a.o \
+	common/bus/bus_gm20b.o \
+	common/ptimer/ptimer.o \
+	common/ptimer/ptimer_gk20a.o
 
 nvgpu-y += \
 	common/linux/kmem.o \

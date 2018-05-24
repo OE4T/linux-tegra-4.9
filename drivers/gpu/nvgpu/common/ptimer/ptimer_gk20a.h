@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,33 +19,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#ifndef PTIMER_GK20A_H
+#define PTIMER_GK20A_H
 
-#include <nvgpu/bus.h>
+#include <nvgpu/types.h>
 
-#include "gk20a/gk20a.h"
+struct gk20a;
 
-int nvgpu_get_timestamps_zipper(struct gk20a *g,
-		u32 source_id, u32 count,
-		struct nvgpu_cpu_time_correlation_sample *samples)
-{
-	int err = 0;
-	unsigned int i = 0;
+void gk20a_ptimer_isr(struct gk20a *g);
+int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 
-	if (gk20a_busy(g)) {
-		nvgpu_err(g, "GPU not powered on\n");
-		err = -EINVAL;
-		goto end;
-	}
-
-	for (i = 0; i < count; i++) {
-		err = g->ops.bus.read_ptimer(g, &samples[i].gpu_timestamp);
-		if (err)
-			return err;
-
-		samples[i].cpu_timestamp = nvgpu_hr_timestamp();
-	}
-
-end:
-	gk20a_idle(g);
-	return err;
-}
+#endif /* PTIMER_GK20A_H */

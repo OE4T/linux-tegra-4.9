@@ -24,6 +24,7 @@
 
 #include "common/bus/bus_gk20a.h"
 #include "common/clock_gating/gv11b_gating_reglist.h"
+#include "common/ptimer/ptimer_gk20a.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -82,7 +83,7 @@
 #include "subctx_gv11b.h"
 #include "therm_gv11b.h"
 
-#include <nvgpu/bus.h>
+#include <nvgpu/ptimer.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
@@ -722,10 +723,13 @@ static const struct gpu_ops gv11b_ops = {
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
-		.read_ptimer = gk20a_read_ptimer,
-		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = NULL,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
+	},
+	.ptimer = {
+		.isr = gk20a_ptimer_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
@@ -776,6 +780,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->debugger = gv11b_ops.debugger;
 	gops->dbg_session_ops = gv11b_ops.dbg_session_ops;
 	gops->bus = gv11b_ops.bus;
+	gops->ptimer = gv11b_ops.ptimer;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gv11b_ops.css;
 #endif

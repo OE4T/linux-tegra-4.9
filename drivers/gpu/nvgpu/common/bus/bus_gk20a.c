@@ -28,7 +28,6 @@
 #include "bus_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
 
 void gk20a_bus_init_hw(struct gk20a *g)
 {
@@ -45,7 +44,7 @@ void gk20a_bus_init_hw(struct gk20a *g)
 
 void gk20a_bus_isr(struct gk20a *g)
 {
-	u32 val, save0, save1, fecs_errcode = 0;
+	u32 val;
 
 	val = gk20a_readl(g, bus_intr_0_r());
 
@@ -53,78 +52,11 @@ void gk20a_bus_isr(struct gk20a *g)
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
 
-		save0 = gk20a_readl(g, timer_pri_timeout_save_0_r());
-		if (timer_pri_timeout_save_0_fecs_tgt_v(save0)) {
-			/*
-			 * write & addr fields in timeout_save0
-			 * might not be reliable
-			 */
-			fecs_errcode = gk20a_readl(g,
-					timer_pri_timeout_fecs_errcode_r());
-		}
-
-		save1 = gk20a_readl(g, timer_pri_timeout_save_1_r());
-		nvgpu_err(g, "NV_PBUS_INTR_0: 0x%08x ADR 0x%08x "
-			"%s  DATA 0x%08x ",
-			val,
-			timer_pri_timeout_save_0_addr_v(save0) << 2,
-			timer_pri_timeout_save_0_write_v(save0) ?
-			"WRITE" : "READ", save1);
-
-		gk20a_writel(g, timer_pri_timeout_save_0_r(), 0);
-		gk20a_writel(g, timer_pri_timeout_save_1_r(), 0);
-
-		if (fecs_errcode) {
-			nvgpu_err(g, "FECS_ERRCODE 0x%08x", fecs_errcode);
-			if (g->ops.priv_ring.decode_error_code)
-				g->ops.priv_ring.decode_error_code(g,
-							fecs_errcode);
-		}
-
+		g->ops.ptimer.isr(g);
 	} else {
 		nvgpu_err(g, "Unhandled NV_PBUS_INTR_0: 0x%08x", val);
 	}
 	gk20a_writel(g, bus_intr_0_r(), val);
-}
-
-int gk20a_read_ptimer(struct gk20a *g, u64 *value)
-{
-	const unsigned int max_iterations = 3;
-	unsigned int i = 0;
-	u32 gpu_timestamp_hi_prev = 0;
-
-	if (!value)
-		return -EINVAL;
-
-	/* Note. The GPU nanosecond timer consists of two 32-bit
-	 * registers (high & low). To detect a possible low register
-	 * wrap-around between the reads, we need to read the high
-	 * register before and after low. The wraparound happens
-	 * approximately once per 4 secs. */
-
-	/* get initial gpu_timestamp_hi value */
-	gpu_timestamp_hi_prev = gk20a_readl(g, timer_time_1_r());
-
-	for (i = 0; i < max_iterations; ++i) {
-		u32 gpu_timestamp_hi = 0;
-		u32 gpu_timestamp_lo = 0;
-
-		gpu_timestamp_lo = gk20a_readl(g, timer_time_0_r());
-		gpu_timestamp_hi = gk20a_readl(g, timer_time_1_r());
-
-		if (gpu_timestamp_hi == gpu_timestamp_hi_prev) {
-			*value = (((u64)gpu_timestamp_hi) << 32) |
-				gpu_timestamp_lo;
-			return 0;
-		}
-
-		/* wrap-around detected, retry */
-		gpu_timestamp_hi_prev = gpu_timestamp_hi;
-	}
-
-	/* too many iterations, bail out */
-	nvgpu_err(g, "failed to read ptimer");
-	return -EBUSY;
 }
 
 int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)

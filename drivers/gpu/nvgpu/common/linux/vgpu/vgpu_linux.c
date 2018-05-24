@@ -27,7 +27,6 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
-#include <nvgpu/bus.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/defaults.h>

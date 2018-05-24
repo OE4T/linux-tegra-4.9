@@ -1120,15 +1120,19 @@ struct gpu_ops {
 	struct {
 		void (*init_hw)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
-		int (*read_ptimer)(struct gk20a *g, u64 *value);
-		int (*get_timestamps_zipper)(struct gk20a *g,
-			u32 source_id, u32 count,
-			struct nvgpu_cpu_time_correlation_sample *);
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 		u32 (*set_bar0_window)(struct gk20a *g, struct nvgpu_mem *mem,
 			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
 			u32 w);
 	} bus;
+
+	struct {
+		void (*isr)(struct gk20a *g);
+		int (*read_ptimer)(struct gk20a *g, u64 *value);
+		int (*get_timestamps_zipper)(struct gk20a *g,
+			u32 source_id, u32 count,
+			struct nvgpu_cpu_time_correlation_sample *);
+	} ptimer;
 
 	struct {
 		int (*init)(struct gk20a *g);

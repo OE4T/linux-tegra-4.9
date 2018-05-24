@@ -21,7 +21,7 @@
  */
 
 #include <nvgpu/enabled.h>
-#include <nvgpu/bus.h>
+#include <nvgpu/ptimer.h>
 #include <nvgpu/vgpu/vgpu_ivc.h>
 #include <nvgpu/vgpu/vgpu.h>
 

@@ -523,10 +523,13 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
-		.read_ptimer = vgpu_read_ptimer,
-		.get_timestamps_zipper = vgpu_get_timestamps_zipper,
 		.bar1_bind = gk20a_bus_bar1_bind,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
+	},
+	.ptimer = {
+		.isr = NULL,
+		.read_ptimer = vgpu_read_ptimer,
+		.get_timestamps_zipper = vgpu_get_timestamps_zipper,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
@@ -578,6 +581,7 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 	gops->debugger = vgpu_gp10b_ops.debugger;
 	gops->dbg_session_ops = vgpu_gp10b_ops.dbg_session_ops;
 	gops->bus = vgpu_gp10b_ops.bus;
+	gops->ptimer = vgpu_gp10b_ops.ptimer;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = vgpu_gp10b_ops.css;
 #endif

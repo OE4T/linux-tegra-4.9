@@ -25,6 +25,7 @@
 #include "common/clock_gating/gm20b_gating_reglist.h"
 #include "common/bus/bus_gm20b.h"
 #include "common/bus/bus_gk20a.h"
+#include "common/ptimer/ptimer_gk20a.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -60,7 +61,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
-#include <nvgpu/bus.h>
+#include <nvgpu/ptimer.h>
 #include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
@@ -605,10 +606,13 @@ static const struct gpu_ops gm20b_ops = {
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
-		.read_ptimer = gk20a_read_ptimer,
-		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 		.bar1_bind = gm20b_bus_bar1_bind,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
+	},
+	.ptimer = {
+		.isr = gk20a_ptimer_isr,
+		.read_ptimer = gk20a_read_ptimer,
+		.get_timestamps_zipper = nvgpu_get_timestamps_zipper,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {
@@ -667,6 +671,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->debug = gm20b_ops.debug;
 	gops->debugger = gm20b_ops.debugger;
 	gops->bus = gm20b_ops.bus;
+	gops->ptimer = gm20b_ops.ptimer;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gops->css = gm20b_ops.css;
 #endif

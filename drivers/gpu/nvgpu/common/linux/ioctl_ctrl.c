@@ -24,7 +24,7 @@
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
-#include <nvgpu/bus.h>
+#include <nvgpu/ptimer.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
@@ -811,7 +811,7 @@ static int nvgpu_gpu_get_cpu_time_correlation_info(
 		return -ENOMEM;
 	}
 
-	err = g->ops.bus.get_timestamps_zipper(g,
+	err = g->ops.ptimer.get_timestamps_zipper(g,
 			args->source_id, args->count, samples);
 	if (!err) {
 		for (i = 0; i < args->count; i++) {
@@ -836,7 +836,7 @@ static int nvgpu_gpu_get_gpu_time(
 	if (err)
 		return err;
 
-	err = g->ops.bus.read_ptimer(g, &time);
+	err = g->ops.ptimer.read_ptimer(g, &time);
 	if (!err)
 		args->gpu_timestamp = time;
 

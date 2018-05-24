@@ -1460,6 +1460,8 @@ static int eqos_resume_noirq(struct device *dev)
 
 		/* Init the PHY */
 		pdata->phydev->drv->config_init(pdata->phydev);
+		phy_start(pdata->phydev);
+		netif_tx_start_all_queues(pdata->dev);
 	}
 
 	pdata->suspended = 0;

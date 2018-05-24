@@ -1144,6 +1144,10 @@ static int eqos_open(struct net_device *dev)
 	pdata->hw_stopped = false;
 	mutex_unlock(&pdata->hw_change_lock);
 
+	phy_start(pdata->phydev);
+
+	netif_tx_start_all_queues(pdata->dev);
+
 	pr_debug("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
@@ -5343,14 +5347,11 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	if (pdata->hw_feat.pcs_sel)
 		hw_if->control_an(1, 0);
 
-	phy_start(pdata->phydev);
-
 #ifdef EQOS_ENABLE_EEE
 	pdata->eee_enabled = eqos_eee_init(pdata);
 #else
 	pdata->eee_enabled = false;
 #endif
-	netif_tx_start_all_queues(pdata->dev);
 
 	pr_debug("<--%s()\n", __func__);
 }

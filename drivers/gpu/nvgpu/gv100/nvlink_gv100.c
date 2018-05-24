@@ -735,10 +735,10 @@ static u32 gv100_nvlink_minion_command_complete(struct gk20a *g, u32 link_id)
 /*
  * Send Minion command (can be async)
  */
-static u32 gv100_nvlink_minion_send_command(struct gk20a *g,
-	u32 link_id, u32 command, u32 scratch_0, bool sync)
+int gv100_nvlink_minion_send_command(struct gk20a *g, u32 link_id,
+				u32 command, u32 scratch_0, bool sync)
 {
-	u32 err = 0;
+	int err = 0;
 
 	/* Check last command succeded */
 	err = gv100_nvlink_minion_command_complete(g, link_id);
@@ -1578,6 +1578,15 @@ static int gv100_nvlink_enable_links_pre_top(struct gk20a *g, u32 links)
 		reg |= ioctrl_debug_reset_link_f(BIT(link_id));
 		IOCTRL_REG_WR32(g, ioctrl_debug_reset_r(), reg);
 		nvgpu_udelay(delay);
+
+		/* Before  doing any link initialization, run RXDET to check
+		 * if link is connected on  other end.
+		 */
+		if (g->ops.nvlink.rxdet) {
+			err = g->ops.nvlink.rxdet(g, link_id);
+			if (err)
+				return err;
+		}
 
 		/* Enable Link DLPL for AN0 */
 		reg = DLPL_REG_RD32(g, link_id, nvl_link_config_r());

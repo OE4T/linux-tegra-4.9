@@ -33,6 +33,22 @@
 #include <nvgpu_rmos/include/nvlink.h>
 #endif
 
+#define NV_NVLINK_REG_POLL_TIMEOUT_MS           3000
+#define NV_NVLINK_TIMEOUT_DELAY_US              5
+
+#define MINION_REG_RD32(g, off) gk20a_readl(g, g->nvlink.minion_base + (off))
+#define MINION_REG_WR32(g, off, v) gk20a_writel(g, g->nvlink.minion_base + (off), (v))
+#define IOCTRL_REG_RD32(g, off) gk20a_readl(g, g->nvlink.ioctrl_base + (off))
+#define IOCTRL_REG_WR32(g, off, v) gk20a_writel(g, g->nvlink.ioctrl_base + (off), (v))
+#define MIF_REG_RD32(g, id, off) gk20a_readl(g, g->nvlink.links[(id)].mif_base + (off))
+#define MIF_REG_WR32(g, id, off, v) gk20a_writel(g, g->nvlink.links[(id)].mif_base + (off), (v))
+#define IPT_REG_RD32(g, off) gk20a_readl(g, g->nvlink.ipt_base + (off))
+#define IPT_REG_WR32(g, off, v) gk20a_writel(g, g->nvlink.ipt_base + (off), (v))
+#define TLC_REG_RD32(g, id, off) gk20a_readl(g, g->nvlink.links[(id)].tl_base + (off))
+#define TLC_REG_WR32(g, id, off, v) gk20a_writel(g, g->nvlink.links[(id)].tl_base + (off), (v))
+#define DLPL_REG_RD32(g, id, off) gk20a_readl(g, g->nvlink.links[(id)].dlpl_base + (off))
+#define DLPL_REG_WR32(g, id, off, v) gk20a_writel(g, g->nvlink.links[(id)].dlpl_base + (off), (v))
+
 struct gk20a;
 
 struct nvgpu_nvlink_ioctrl_list {

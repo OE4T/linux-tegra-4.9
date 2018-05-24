@@ -83,7 +83,7 @@
 		status = "okay";
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-		nvidia,disable-aspm-states = <0x8>;
+		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
 
 		phys = <&p2u_2>,
@@ -97,6 +97,7 @@
 		status = "okay";
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
+		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
 
 		nvidia,max-speed = <1>;
@@ -111,6 +112,7 @@
 		nvidia,pex-wake = <&tegra_main_gpio TEGRA194_MAIN_GPIO(L, 2)
 					GPIO_ACTIVE_HIGH>;
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
+		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
 
 		phys = <&p2u_7>;
@@ -121,7 +123,7 @@
 		status = "disabled";
 
 		vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-		nvidia,disable-aspm-states = <0x8>;
+		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
 
 		phys = <&p2u_12>,

@@ -24,6 +24,16 @@
 			};
 		};
 
+		fragment-pcie-c1-rp-aspm {
+			ids = ">=2822-0000-400";
+			override@0 {
+				target = <&{/pcie@14100000}>;
+				_overlay_ {
+					nvidia,disable-aspm-states = <0xc>;
+				};
+			};
+		};
+
 		fragment-disable-uphy-rx-idle {
 			ids = "<=2822-0000-300";
 			override@0 {

@@ -1353,8 +1353,6 @@ struct gk20a {
 	bool forced_reset;
 	bool allow_all;
 
-	u32 default_pri_timeout;
-
 	u32 ptimer_src_freq;
 
 	bool can_railgate;

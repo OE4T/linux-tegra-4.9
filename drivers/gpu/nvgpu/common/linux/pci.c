@@ -90,7 +90,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = true,
 	.can_blcg    = true,
 	.can_elcg    = true,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -127,7 +126,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = true,
 	.can_blcg    = true,
 	.can_elcg    = true,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -164,7 +162,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = true,
 	.can_blcg    = true,
 	.can_elcg    = true,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -201,7 +198,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = true,
 	.can_blcg    = true,
 	.can_elcg    = true,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -238,7 +234,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = false,
 	.can_blcg    = false,
 	.can_elcg    = false,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -273,7 +268,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = false,
 	.can_blcg    = false,
 	.can_elcg    = false,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -308,7 +302,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = false,
 	.can_blcg    = false,
 	.can_elcg    = false,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -344,7 +337,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = true,
 	.can_blcg    = true,
 	.can_elcg    = true,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 
@@ -380,7 +372,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_slcg    = false,
 	.can_blcg    = false,
 	.can_elcg    = false,
-	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
 

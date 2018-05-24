@@ -120,11 +120,6 @@ struct gk20a_platform {
 	 */
 	bool force_reset_in_do_idle;
 
-	/* default pri timeout, on PCIe it should be lower than timeout
-	 * detection
-	 */
-	u32 default_pri_timeout;
-
 	/* guest/vm id, needed for IPA to PA transation */
 	int vmid;
 

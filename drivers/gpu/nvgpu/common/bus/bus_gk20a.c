@@ -32,29 +32,14 @@
 
 void gk20a_bus_init_hw(struct gk20a *g)
 {
-	u32 timeout_period, intr_en_mask = 0;
-
-	if (nvgpu_platform_is_silicon(g))
-		timeout_period = g->default_pri_timeout ?
-					g->default_pri_timeout : 0x186A0;
-	else
-		timeout_period = 0x186A0;
+	u32 intr_en_mask = 0;
 
 	if (nvgpu_platform_is_silicon(g) || nvgpu_platform_is_fpga(g)) {
 		intr_en_mask = bus_intr_en_0_pri_squash_m() |
 				bus_intr_en_0_pri_fecserr_m() |
 				bus_intr_en_0_pri_timeout_m();
-		gk20a_writel(g,
-			timer_pri_timeout_r(),
-			timer_pri_timeout_period_f(timeout_period) |
-			timer_pri_timeout_en_en_enabled_f());
-
-	} else {
-		gk20a_writel(g,
-			timer_pri_timeout_r(),
-			timer_pri_timeout_period_f(timeout_period) |
-			timer_pri_timeout_en_en_disabled_f());
 	}
+
 	gk20a_writel(g, bus_intr_en_0_r(), intr_en_mask);
 }
 

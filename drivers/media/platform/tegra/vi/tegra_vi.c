@@ -33,6 +33,7 @@
 #include "chip_support.h"
 #include "host1x/host1x.h"
 #include "vi/vi_irq.h"
+#include "camera/csi/csi2_fops.h"
 
 #define T12_VI_CFG_CG_CTRL	0xb8
 #define T12_CG_2ND_LEVEL_EN	1
@@ -131,9 +132,6 @@ static long vi_ioctl(struct file *file,
 	case _IOC_NR(NVHOST_VI_IOCTL_ENABLE_TPG): {
 		uint enable;
 		int ret = 0;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-		struct clk *clk;
-#endif
 
 		if (copy_from_user(&enable,
 			(const void __user *)arg, sizeof(uint))) {
@@ -142,19 +140,10 @@ static long vi_ioctl(struct file *file,
 			return -EFAULT;
 		}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-		clk = clk_get(NULL, "pll_d");
-		if (IS_ERR(clk))
-			return -EINVAL;
-
 		if (enable)
-			ret = tegra_clk_cfg_ex(clk,
-				TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+			csi_source_from_plld();
 		else
-			ret = tegra_clk_cfg_ex(clk,
-				TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
-		clk_put(clk);
-#endif
+			csi_source_from_brick();
 
 		return ret;
 	}

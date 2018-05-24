@@ -291,8 +291,6 @@ create_debugfs_fail:
 static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
-	/* TODO: Resolve this during T210 bringup */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	int ret = 0;
 
 	struct nvhost_device_data *pdata =
@@ -305,7 +303,7 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 		return NOTIFY_OK;
 
 	/* Make CSI sourced from PLL_D */
-	tegra210_csi_source_from_plld();
+	csi_source_from_plld();
 	ret = clk_prepare_enable(csi->plld);
 	if (ret) {
 		dev_err(tegra_vi->dev, "pll_d enable failed");
@@ -325,13 +323,12 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 	clk_disable_unprepare(csi->plld);
 
 	/* Restore CSI source */
-	tegra210_csi_source_from_brick();
+	csi_source_from_brick();
 	return NOTIFY_OK;
 
 plld_dsi_err:
 	clk_disable_unprepare(csi->plld);
-	tegra210_csi_source_from_brick();
-#endif
+	csi_source_from_brick();
 
 	return NOTIFY_OK;
 }

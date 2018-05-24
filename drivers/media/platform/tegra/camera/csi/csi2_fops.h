@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -17,5 +17,25 @@
 #define TEGRA_CSICIL_CLK_MHZ 102
 
 extern const struct tegra_csi_fops csi2_fops;
+
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+static inline void csi_source_from_plld(void)
+{
+	tegra210_csi_source_from_plld();
+}
+
+static inline void csi_source_from_brick(void)
+{
+	tegra210_csi_source_from_brick();
+}
+#else
+static inline void csi_source_from_plld(void)
+{
+}
+
+static inline void csi_source_from_brick(void)
+{
+}
+#endif
 
 #endif

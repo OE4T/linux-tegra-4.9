@@ -742,8 +742,8 @@ static struct phy_driver broadcom_drivers[] = {
 	.low_power_mode = bcm54xx_low_power_mode,
 	.ack_interrupt  = bcm_phy_ack_intr,
 	.config_intr    = bcm_phy_config_intr,
-	.resume		= bcm89610_resume,
-	.suspend	= bcm89610_suspend,
+	.resume		= genphy_resume,
+	.suspend	= genphy_suspend,
 } };
 
 module_phy_driver(broadcom_drivers);

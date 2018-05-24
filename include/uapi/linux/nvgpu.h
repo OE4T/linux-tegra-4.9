@@ -1411,8 +1411,27 @@ struct nvgpu_dbg_gpu_profiler_reserve_args {
 #define NVGPU_DBG_GPU_IOCTL_PROFILER_RESERVE			\
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 22, struct nvgpu_dbg_gpu_profiler_reserve_args)
 
+/*
+ * This struct helps to set the exception mask. If mask is not set
+ * or set to NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_NONE
+ * then kernel code will follow recovery path on sm exception.
+ * If mask is set to NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL, then
+ * kernel code will skip recovery path on sm exception.
+ */
+struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args {
+#define NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_NONE	(0x0U)
+#define NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL	(0x1U << 0U)
+	/* exception type mask value */
+	__u32 exception_type_mask;
+	__u32 reserved;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK \
+	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 23, \
+			struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PROFILER_RESERVE)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_access_fb_memory_args)

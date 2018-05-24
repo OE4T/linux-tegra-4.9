@@ -2182,9 +2182,9 @@ static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
 
 	struct warp_esr_error_table_s warp_esr_error_table[] = {
 		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_stack_error_f(),
-			"STACK ERROR"},
+				"STACK ERROR"},
 		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_api_stack_error_f(),
-			"API STACK ERROR"},
+				"API STACK ERROR"},
 		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_pc_wrap_f(),
 				"PC WRAP ERROR"},
 		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_pc_f(),
@@ -2221,7 +2221,7 @@ static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
 		if (warp_esr_error_table[index].error_value == warp_esr_error) {
 			esr_err = warp_esr_error_table[index].error_value;
 			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
-				"ESR %s(0x%x)",
+				"WARP_ESR %s(0x%x)",
 				warp_esr_error_table[index].error_name,
 				esr_err);
 			break;
@@ -2247,6 +2247,21 @@ static int gr_gv11b_handle_all_warp_esr_errors(struct gk20a *g,
 	if (!is_esr_error) {
 		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"No ESR error, Skip RC recovery and Trigeer CILP");
+		return 0;
+	}
+
+	/*
+	 * Check SET_EXCEPTION_TYPE_MASK is being set.
+	 * If set, skip the recovery and trigger CILP
+	 * If not set, trigger the recovery.
+	 */
+	if ((g->gr.sm_exception_mask_type &
+					NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) ==
+					NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) {
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"SM Exception Type Mask set %d,"
+			"skip recovery",
+			g->gr.sm_exception_mask_type);
 		return 0;
 	}
 
@@ -2293,7 +2308,6 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gv11b_gr_sm_offset(g, sm);
 	u32 warp_esr_error = gr_gpc0_tpc0_sm0_hww_warp_esr_error_v(warp_esr);
 	struct tsg_gk20a *tsg;
-
 
 	*early_exit = false;
 	*ignore_debugger = false;

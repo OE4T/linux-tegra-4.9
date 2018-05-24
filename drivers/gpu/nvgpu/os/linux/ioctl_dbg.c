@@ -151,6 +151,10 @@ static int dbg_unbind_all_channels_gk20a(struct dbg_session_gk20a *dbg_s);
 static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 		struct file *filp, bool is_profiler);
 
+static int nvgpu_set_sm_exception_type_mask_locked(
+					struct dbg_session_gk20a *dbg_s,
+					u32 exception_mask);
+
 unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait)
 {
 	unsigned int mask = 0;
@@ -217,6 +221,10 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 			nvgpu_kfree(g, prof_obj);
 		}
 	}
+
+	nvgpu_set_sm_exception_type_mask_locked(dbg_s,
+					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE);
+
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	nvgpu_mutex_destroy(&dbg_s->ch_list_lock);
@@ -466,6 +474,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_s->is_profiler = is_profiler;
 	dbg_s->is_pg_disabled = false;
 	dbg_s->is_timeout_disabled = false;
+	dbg_s->is_sm_exception_type_mask_set = false;
 
 	nvgpu_cond_init(&dbg_s->dbg_events.wait_queue);
 	nvgpu_init_list_node(&dbg_s->ch_list);
@@ -477,6 +486,9 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 		goto err_destroy_lock;
 	dbg_s->dbg_events.events_enabled = false;
 	dbg_s->dbg_events.num_pending_events = 0;
+
+	nvgpu_set_sm_exception_type_mask_locked(dbg_s,
+					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE);
 
 	return 0;
 
@@ -1839,6 +1851,57 @@ out:
 	return err;
 }
 
+static int nvgpu_set_sm_exception_type_mask_locked(
+					struct dbg_session_gk20a *dbg_s,
+					u32 exception_mask)
+{
+	struct gk20a *g = dbg_s->g;
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+
+	switch (exception_mask) {
+	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL:
+		gr->sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL;
+		if (dbg_s->is_sm_exception_type_mask_set == false) {
+			gr->sm_exception_mask_refcount++;
+			dbg_s->is_sm_exception_type_mask_set = true;
+		}
+		break;
+	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_NONE:
+		if (dbg_s->is_sm_exception_type_mask_set) {
+			gr->sm_exception_mask_refcount--;
+			dbg_s->is_sm_exception_type_mask_set = false;
+		}
+		if (gr->sm_exception_mask_refcount == 0)
+			gr->sm_exception_mask_type =
+					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
+		break;
+	default:
+		nvgpu_err(g,
+			   "unrecognized dbg sm exception type mask: 0x%x",
+			   exception_mask);
+		err = -EINVAL;
+		break;
+	}
+
+	return err;
+}
+
+static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args *args)
+{
+	int err = 0;
+	struct gk20a *g = dbg_s->g;
+
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+	err = nvgpu_set_sm_exception_type_mask_locked(dbg_s,
+					args->exception_type_mask);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	return err;
+}
+
 int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l = container_of(inode->i_cdev,
@@ -1992,6 +2055,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_PROFILER_RESERVE:
 		err = nvgpu_ioctl_profiler_reserve(dbg_s,
 			   (struct nvgpu_dbg_gpu_profiler_reserve_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK:
+		err = nvgpu_dbg_gpu_set_sm_exception_type_mask(dbg_s,
+		   (struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args *)buf);
 		break;
 
 	default:

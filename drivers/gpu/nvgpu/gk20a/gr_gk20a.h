@@ -437,6 +437,12 @@ struct gr_gk20a {
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
 	struct nvgpu_gr_sm_error_state *sm_error_states;
+
+#define NVGPU_SM_EXCEPTION_TYPE_MASK_NONE		(0x0U)
+#define NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL		(0x1U << 0)
+	u32 sm_exception_mask_type;
+	u32 sm_exception_mask_refcount;
+
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct nvgpu_mutex			cs_lock;
 	struct gk20a_cs_snapshot	*cs_data;

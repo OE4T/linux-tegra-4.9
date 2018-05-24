@@ -72,6 +72,12 @@ struct dbg_session_gk20a {
 	bool broadcast_stop_trigger;
 
 	struct nvgpu_mutex ioctl_lock;
+
+	/*
+	 * sm set exception type mask flag, to check whether
+	 * exception type mask is requested or not.
+	 */
+	bool is_sm_exception_type_mask_set;
 };
 
 struct dbg_session_data {

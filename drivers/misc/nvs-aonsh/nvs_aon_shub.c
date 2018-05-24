@@ -1034,7 +1034,7 @@ static int tegra_aon_shub_init(struct tegra_aon_shub *shub)
 	snsrs_req->chip_id_mask = shub->chip_id_mask;
 	ret = tegra_aon_shub_ivc_msg_send(shub,
 					sizeof(struct aon_shub_request),
-					IVC_TIMEOUT);
+					INIT_TOUT_COUNT * IVC_TIMEOUT);
 	if (ret) {
 		dev_err(shub->dev, "%s : No response from AON SHUB...!\n",
 			__func__);

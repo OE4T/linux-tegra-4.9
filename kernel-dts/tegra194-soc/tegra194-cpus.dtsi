@@ -74,6 +74,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_0>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 		};
 		cl0_1: cpu@1 {
 			device_type = "cpu";
@@ -88,6 +90,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_0>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl1_0: cpu@2 {
@@ -103,6 +107,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_1>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl1_1: cpu@3 {
@@ -118,6 +124,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_1>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl2_0: cpu@4 {
@@ -133,6 +141,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_2>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl2_1: cpu@5 {
@@ -148,6 +158,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_2>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl3_0: cpu@6 {
@@ -163,6 +175,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_3>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 		cl3_1: cpu@7 {
@@ -178,6 +192,8 @@
 			d-cache-line-size = <64>;
 			d-cache-sets = <256>;
 			l2-cache = <&L2_3>;
+			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_CARMEL &CPU_COST_CARMEL>;
 			status = "disabled";
 		};
 	};
@@ -219,6 +235,10 @@
 		cache-sets = <4096>;
 	};
 
+	CPU_COST_CARMEL: core-cost1 {
+		busy-cost-data = <1024 0>;
+		idle-cost-data = <0>;
+	};
        	arm-pmu {
 		compatible = "arm,armv8-pmuv3";
 		interrupts = <0 384 0x4>,

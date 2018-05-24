@@ -20,11 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/page_allocator.h>
-#include <nvgpu/enabled.h>
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
-#include <nvgpu/bus.h>
 #include <nvgpu/mm.h>
 
 #include "gk20a/gk20a.h"

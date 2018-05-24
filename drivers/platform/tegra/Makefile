@@ -40,6 +40,4 @@ obj-y					+= tegra-hv-mode.o
 
 obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o
 
-obj-$(CONFIG_TEGRA_FIRMWARES_CLASS)	+= firmwares.o
-obj-$(CONFIG_TEGRA_FIRMWARES_INVENTORY)	+= firmwares-all.o
-
+obj-$(CONFIG_TEGRA_HV_XHCI_DEBUG)	+= tegra-hv-xhci-debug.o

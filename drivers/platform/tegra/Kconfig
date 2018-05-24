@@ -69,14 +69,9 @@ config TEGRA_THERMAL_THROTTLE
        help
          Also requires enabling a temperature sensor such as NCT1008.
 
-config TEGRA_FIRMWARES_CLASS
-	bool
+config TEGRA_HV_XHCI_DEBUG
+	bool "Enable Tegra Hypervisor XHCI Server Debug"
+	depends on TEGRA_HV_MANAGER
 	default n
-
-config TEGRA_FIRMWARES_INVENTORY
-	tristate "Tegra firmwares inventory"
-	select TEGRA_FIRMWARES_CLASS
-	default y
 	help
-	  Register version readers for firmwares
-
+	  Enable Tegra XHCI Server debugging when runs in virtualization.

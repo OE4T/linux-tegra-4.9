@@ -92,7 +92,6 @@ nvgpu-y += \
 	common/clock_gating/gv100_gating_reglist.o \
 	common/clock_gating/gv11b_gating_reglist.o \
 	gk20a/gk20a.o \
-	gk20a/pramin_gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
 	gk20a/channel_gk20a.o \

@@ -61,7 +61,8 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 	while (size) {
 		u32 sgl_len = (u32)nvgpu_sgt_get_length(sgt, sgl);
 
-		byteoff = g->ops.pramin.enter(g, mem, sgt, sgl,
+		nvgpu_spinlock_acquire(&g->mm.pramin_window_lock);
+		byteoff = g->ops.bus.set_bar0_window(g, mem, sgt, sgl,
 					      offset / sizeof(u32));
 		start_reg = g->ops.pramin.data032_r(byteoff / sizeof(u32));
 		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
@@ -72,7 +73,8 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 
 		/* read back to synchronize accesses */
 		gk20a_readl(g, start_reg);
-		g->ops.pramin.exit(g, mem, sgl);
+
+		nvgpu_spinlock_release(&g->mm.pramin_window_lock);
 
 		size -= n;
 

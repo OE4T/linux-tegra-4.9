@@ -37,7 +37,6 @@
 #include "vgpu_mm_gp10b.h"
 #include "vgpu_fuse_gp10b.h"
 
-#include "gk20a/pramin_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/mc_gk20a.h"
 #include "gk20a/fb_gk20a.h"
@@ -433,8 +432,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.get_kind_pitch = gm20b_get_kind_pitch,
 	},
 	.pramin = {
-		.enter = gk20a_pramin_enter,
-		.exit = gk20a_pramin_exit,
 		.data032_r = pram_data032_r,
 	},
 	.therm = {
@@ -529,6 +526,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.read_ptimer = vgpu_read_ptimer,
 		.get_timestamps_zipper = vgpu_get_timestamps_zipper,
 		.bar1_bind = gk20a_bus_bar1_bind,
+		.set_bar0_window = gk20a_bus_set_bar0_window,
 	},
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	.css = {

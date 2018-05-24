@@ -925,9 +925,6 @@ struct gpu_ops {
 				struct gr_ctx_buffer_desc *desc,
 				size_t size);
 	struct {
-		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,
-			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
-			u32 w);
 		void (*exit)(struct gk20a *g, struct nvgpu_mem *mem,
 			struct nvgpu_sgl *sgl);
 		u32 (*data032_r)(u32 i);
@@ -1128,6 +1125,9 @@ struct gpu_ops {
 			u32 source_id, u32 count,
 			struct nvgpu_cpu_time_correlation_sample *);
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
+		u32 (*set_bar0_window)(struct gk20a *g, struct nvgpu_mem *mem,
+			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
+			u32 w);
 	} bus;
 
 	struct {

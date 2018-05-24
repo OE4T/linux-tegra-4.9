@@ -23,6 +23,8 @@
 #ifndef GV100_GATING_REGLIST_H
 #define GV100_GATING_REGLIST_H
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 
 void gv100_slcg_bus_load_gating_prod(struct gk20a *g,

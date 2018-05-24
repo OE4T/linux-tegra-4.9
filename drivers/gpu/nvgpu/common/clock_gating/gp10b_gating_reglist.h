@@ -23,6 +23,8 @@
 #ifndef GP10B_GATING_REGLIST_H
 #define GP10B_GATING_REGLIST_H
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 
 void gp10b_slcg_bus_load_gating_prod(struct gk20a *g,

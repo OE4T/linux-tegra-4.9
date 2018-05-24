@@ -25,6 +25,8 @@
 #ifndef GATING_REGLIST_H
 #define GATING_REGLIST_H
 
+#include <nvgpu/types.h>
+
 struct gating_desc {
 	u32 addr;
 	u32 prod;
@@ -32,4 +34,3 @@ struct gating_desc {
 };
 
 #endif /* GATING_REGLIST_H */
-

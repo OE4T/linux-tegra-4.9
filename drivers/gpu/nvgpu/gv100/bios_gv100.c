@@ -29,7 +29,6 @@
 #include "bios_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_pwr_gv100.h>
-#include <nvgpu/hw/gv100/hw_bus_gv100.h>
 
 #define PMU_BOOT_TIMEOUT_DEFAULT	100 /* usec */
 #define PMU_BOOT_TIMEOUT_MAX		2000000 /* usec */
@@ -53,14 +52,13 @@
 
 void gv100_bios_preos_reload_check(struct gk20a *g)
 {
-	u32 progress = gk20a_readl(g,
-				bus_sw_scratch_r(SCRATCH_PREOS_PROGRESS));
+	u32 progress = g->ops.bus.read_sw_scratch(g, SCRATCH_PREOS_PROGRESS);
 
 	if (PREOS_PROGRESS_MASK(progress) != PREOS_PROGRESS_NOT_STARTED) {
-		u32 reload = gk20a_readl(g,
-				bus_sw_scratch_r(SCRATCH_PRE_OS_RELOAD));
+		u32 reload = g->ops.bus.read_sw_scratch(g,
+				SCRATCH_PRE_OS_RELOAD);
 
-		gk20a_writel(g, bus_sw_scratch_r(SCRATCH_PRE_OS_RELOAD),
+		g->ops.bus.write_sw_scratch(g, SCRATCH_PRE_OS_RELOAD,
 			PRE_OS_RELOAD_SET(reload, PRE_OS_RELOAD_YES));
 	}
 }
@@ -76,16 +74,15 @@ int gv100_bios_preos_wait_for_halt(struct gk20a *g)
 	nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 
 	/* Check the progress */
-	progress = gk20a_readl(g, bus_sw_scratch_r(SCRATCH_PREOS_PROGRESS));
+	progress = g->ops.bus.read_sw_scratch(g, SCRATCH_PREOS_PROGRESS);
 
 	if (PREOS_PROGRESS_MASK(progress) == PREOS_PROGRESS_STARTED) {
 		err = 0;
 
 		/* Complete the handshake */
-		tmp = gk20a_readl(g,
-			bus_sw_scratch_r(SCRATCH_PMU_EXIT_AND_HALT));
+		tmp = g->ops.bus.read_sw_scratch(g, SCRATCH_PMU_EXIT_AND_HALT);
 
-		gk20a_writel(g, bus_sw_scratch_r(SCRATCH_PMU_EXIT_AND_HALT),
+		g->ops.bus.write_sw_scratch(g, SCRATCH_PMU_EXIT_AND_HALT,
 			PMU_EXIT_AND_HALT_SET(tmp, PMU_EXIT_AND_HALT_YES));
 
 		nvgpu_timeout_init(g, &timeout,
@@ -94,8 +91,7 @@ int gv100_bios_preos_wait_for_halt(struct gk20a *g)
 			   NVGPU_TIMER_RETRY_TIMER);
 
 		do {
-			progress = gk20a_readl(g,
-				bus_sw_scratch_r(SCRATCH_PREOS_PROGRESS));
+			progress = g->ops.bus.read_sw_scratch(g, SCRATCH_PREOS_PROGRESS);
 			preos_completed = pwr_falcon_cpuctl_halt_intr_v(
 				gk20a_readl(g, pwr_falcon_cpuctl_r())) &&
 					(PREOS_PROGRESS_MASK(progress) ==

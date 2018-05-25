@@ -26,6 +26,7 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 nvgpu-y += common/bus/bus_gk20a.o \
 	common/bus/bus_gm20b.o \
 	common/bus/bus_gp10b.o \
+	common/bus/bus_gv100.o \
 	common/ptimer/ptimer.o \
 	common/ptimer/ptimer_gk20a.o
 

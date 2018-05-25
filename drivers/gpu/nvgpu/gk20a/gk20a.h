@@ -1124,6 +1124,8 @@ struct gpu_ops {
 		u32 (*set_bar0_window)(struct gk20a *g, struct nvgpu_mem *mem,
 			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
 			u32 w);
+		u32 (*read_sw_scratch)(struct gk20a *g, u32 index);
+		void (*write_sw_scratch)(struct gk20a *g, u32 index, u32 val);
 	} bus;
 
 	struct {

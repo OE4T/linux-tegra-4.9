@@ -25,6 +25,7 @@
 #include "common/bus/bus_gk20a.h"
 #include "common/clock_gating/gp10b_gating_reglist.h"
 #include "common/ptimer/ptimer_gk20a.h"
+#include "common/bus/bus_gm20b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -651,7 +652,7 @@ static const struct gpu_ops gp10b_ops = {
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
-		.bar1_bind = gk20a_bus_bar1_bind,
+		.bar1_bind = gm20b_bus_bar1_bind,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
 	},
 	.ptimer = {

@@ -59,24 +59,6 @@ void gk20a_bus_isr(struct gk20a *g)
 	gk20a_writel(g, bus_intr_0_r(), val);
 }
 
-int gk20a_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
-{
-	u64 iova = nvgpu_inst_block_addr(g, bar1_inst);
-	u32 ptr_v = (u32)(iova >> bus_bar1_block_ptr_shift_v());
-
-	nvgpu_log(g, gpu_dbg_info, "bar1 inst block ptr: 0x%08x", ptr_v);
-
-	gk20a_writel(g, bus_bar1_block_r(),
-		     nvgpu_aperture_mask(g, bar1_inst,
-					 bus_bar1_block_target_sys_mem_ncoh_f(),
-					 bus_bar1_block_target_sys_mem_coh_f(),
-					 bus_bar1_block_target_vid_mem_f()) |
-		     bus_bar1_block_mode_virtual_f() |
-		     bus_bar1_block_ptr_f(ptr_v));
-
-	return 0;
-}
-
 u32 gk20a_bus_set_bar0_window(struct gk20a *g, struct nvgpu_mem *mem,
 		       struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl, u32 w)
 {

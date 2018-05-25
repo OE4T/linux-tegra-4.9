@@ -1118,6 +1118,10 @@ static int eqos_open(struct net_device *dev)
 		gpio_set_value(pdata->phy_reset_gpio, 1);
 	}
 
+	ret = eqos_clock_enable(pdata);
+	if (ret)
+		return ret;
+
 	/* PHY initialisation */
 	ret = eqos_init_phy(dev);
 	if (ret) {
@@ -1198,6 +1202,8 @@ static int eqos_close(struct net_device *dev)
 
 	pdata->hw_stopped = true;
 	mutex_unlock(&pdata->hw_change_lock);
+
+	eqos_clock_disable(pdata);
 
 	/* cancel iso work */
 	cancel_work_sync(&pdata->iso_work);

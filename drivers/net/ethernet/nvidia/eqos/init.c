@@ -231,12 +231,14 @@ static void eqos_clock_deinit(struct eqos_prv_data *pdata)
 	clk_disable_unprepare(pdata->rx_clk);
 	clk_disable_unprepare(pdata->axi_clk);
 	clk_disable_unprepare(pdata->axi_cbb_clk);
+	clk_disable_unprepare(pdata->pllrefe_clk);
 
 	devm_clk_put(&pdev->dev, pdata->tx_clk);
 	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
 	devm_clk_put(&pdev->dev, pdata->rx_clk);
 	devm_clk_put(&pdev->dev, pdata->axi_clk);
 	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
+	devm_clk_put(&pdev->dev, pdata->pllrefe_clk);
 }
 
 static int eqos_set_ptp_ref_clk(struct eqos_prv_data *pdata,
@@ -271,16 +273,104 @@ static int eqos_set_ptp_ref_clk(struct eqos_prv_data *pdata,
 	return ret;
 }
 
-static int eqos_clock_init(struct eqos_prv_data *pdata)
+int eqos_clock_enable(struct eqos_prv_data *pdata)
+{
+	int ret;
+
+	if (!IS_ERR(pdata->pllrefe_clk)) {
+		ret = clk_prepare_enable(pdata->pllrefe_clk);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (!IS_ERR(pdata->axi_cbb_clk)) {
+		ret = clk_prepare_enable(pdata->axi_cbb_clk);
+		if (ret)
+			goto err_axi_cbb;
+	}
+
+	if (!IS_ERR(pdata->axi_clk)) {
+		ret = clk_prepare_enable(pdata->axi_clk);
+		if (ret < 0)
+			goto err_axi;
+	}
+
+	if (!IS_ERR(pdata->rx_clk)) {
+		ret = clk_prepare_enable(pdata->rx_clk);
+		if (ret < 0)
+			goto err_rx;
+	}
+
+	if (!IS_ERR(pdata->ptp_ref_clk)) {
+		ret = clk_prepare_enable(pdata->ptp_ref_clk);
+		if (ret < 0)
+			goto err_ptp_ref;
+	}
+
+	if (!IS_ERR(pdata->tx_clk)) {
+		ret = clk_prepare_enable(pdata->tx_clk);
+		if (ret < 0)
+			goto err_tx;
+	}
+
+	return 0;
+
+err_axi_cbb:
+	if (!IS_ERR(pdata->pllrefe_clk))
+		clk_disable_unprepare(pdata->pllrefe_clk);
+err_tx:
+	if (!IS_ERR(pdata->ptp_ref_clk))
+		clk_disable_unprepare(pdata->ptp_ref_clk);
+err_ptp_ref:
+	if (!IS_ERR(pdata->rx_clk))
+		clk_disable_unprepare(pdata->rx_clk);
+err_rx:
+	if (!IS_ERR(pdata->axi_clk))
+		clk_disable_unprepare(pdata->axi_clk);
+err_axi:
+	if (!IS_ERR(pdata->axi_cbb_clk))
+		clk_disable_unprepare(pdata->axi_cbb_clk);
+
+	return ret;
+}
+
+void eqos_clock_disable(struct eqos_prv_data *pdata)
+{
+	if (!IS_ERR(pdata->axi_cbb_clk))
+		clk_disable_unprepare(pdata->axi_cbb_clk);
+
+	if (!IS_ERR(pdata->axi_clk))
+		clk_disable_unprepare(pdata->axi_clk);
+
+	if (!IS_ERR(pdata->rx_clk))
+		clk_disable_unprepare(pdata->rx_clk);
+
+	if (!IS_ERR(pdata->ptp_ref_clk))
+		clk_disable_unprepare(pdata->ptp_ref_clk);
+
+	if (!IS_ERR(pdata->tx_clk))
+		clk_disable_unprepare(pdata->tx_clk);
+
+	if (!IS_ERR(pdata->pllrefe_clk))
+		clk_disable_unprepare(pdata->pllrefe_clk);
+}
+
+static int eqos_get_clocks(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	int ret;
+
+	pdata->pllrefe_clk = devm_clk_get(&pdev->dev, "pllrefe_vcoout");
+	if (IS_ERR(pdata->pllrefe_clk)) {
+		ret = PTR_ERR(pdata->pllrefe_clk);
+		dev_info(&pdev->dev, "can't get pllrefe_vcoout clk (%d)\n", ret);
+	}
 
 	pdata->axi_cbb_clk = devm_clk_get(&pdev->dev, "axi_cbb");
 	if (IS_ERR(pdata->axi_cbb_clk)) {
 		ret = PTR_ERR(pdata->axi_cbb_clk);
 		dev_err(&pdev->dev, "can't get axi_cbb clk (%d)\n", ret);
-		return ret;
+		goto axi_cbb_get_fail;
 	}
 	pdata->axi_clk = devm_clk_get(&pdev->dev, "eqos_axi");
 	if (IS_ERR(pdata->axi_clk)) {
@@ -307,44 +397,8 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 		goto tx_get_fail;
 	}
 
-	ret = clk_prepare_enable(pdata->axi_cbb_clk);
-	if (ret < 0)
-		goto axi_cbb_en_fail;
-
-	ret = clk_prepare_enable(pdata->axi_clk);
-	if (ret < 0)
-		goto axi_en_fail;
-
-	ret = clk_prepare_enable(pdata->rx_clk);
-	if (ret < 0)
-		goto rx_en_fail;
-
-	ret = clk_prepare_enable(pdata->ptp_ref_clk);
-	if (ret < 0)
-		goto ptp_ref_en_fail;
-
-	ret = clk_prepare_enable(pdata->tx_clk);
-	if (ret < 0)
-		goto tx_en_fail;
-
-	pr_debug("%s(): axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
-		__func__,
-		clk_get_rate(pdata->axi_cbb_clk),
-		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
-		clk_get_rate(pdata->ptp_ref_clk), clk_get_rate(pdata->tx_clk));
-
 	return 0;
 
-tx_en_fail:
-	clk_disable_unprepare(pdata->ptp_ref_clk);
-ptp_ref_en_fail:
-	clk_disable_unprepare(pdata->rx_clk);
-rx_en_fail:
-	clk_disable_unprepare(pdata->axi_clk);
-axi_en_fail:
-	clk_disable_unprepare(pdata->axi_cbb_clk);
-axi_cbb_en_fail:
-	devm_clk_put(&pdev->dev, pdata->tx_clk);
 tx_get_fail:
 	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
 ptp_ref_get_fail:
@@ -353,6 +407,8 @@ rx_get_fail:
 	devm_clk_put(&pdev->dev, pdata->axi_clk);
 axi_get_fail:
 	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
+axi_cbb_get_fail:
+	devm_clk_put(&pdev->dev, pdata->pllrefe_clk);
 	return ret;
 }
 
@@ -640,7 +696,7 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 	struct eqos_prv_data *pdata = tcd->devdata;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	if (pdata->suspended)
+	if (pdata->suspended || pdata->hw_stopped)
 		return -ENODEV;
 
 	mutex_lock(&pdata->hw_change_lock);
@@ -969,9 +1025,15 @@ int eqos_probe(struct platform_device *pdev)
 		}
 
 		/* clock initialization */
-		ret = eqos_clock_init(pdata);
+		ret = eqos_get_clocks(pdata);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "eqos_clock_init failed\n");
+			goto err_out_clock_init_failed;
+		}
+
+		ret = eqos_clock_enable(pdata);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "eqos_clock_enable failed\n");
 			goto err_out_clock_init_failed;
 		}
 
@@ -1243,6 +1305,8 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_therm_init;
 	}
 
+	eqos_clock_disable(pdata);
+
 	return 0;
 
  err_therm_init:
@@ -1420,7 +1484,7 @@ static int eqos_suspend_noirq(struct device *dev)
 	/* Cancel FBE handling work */
 	cancel_work_sync(&pdata->fbe_work);
 	/* disable clocks */
-	eqos_clock_deinit(pdata);
+	eqos_clock_disable(pdata);
 	/* disable regulators */
 	eqos_regulator_deinit(pdata);
 
@@ -1441,7 +1505,7 @@ static int eqos_resume_noirq(struct device *dev)
 	eqos_regulator_init(pdata);
 
 	/* enable clocks */
-	eqos_clock_init(pdata);
+	eqos_clock_enable(pdata);
 
 	if (netif_running(ndev)) {
 		if (device_may_wakeup(&ndev->dev)) {

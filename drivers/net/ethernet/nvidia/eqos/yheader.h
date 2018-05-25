@@ -1327,6 +1327,7 @@ struct eqos_prv_data {
 	int phy_intr_gpio;
 	int phy_reset_gpio;
 
+	struct clk *pllrefe_clk;
 	struct clk *axi_clk;
 	struct clk *axi_cbb_clk;
 	struct clk *rx_clk;

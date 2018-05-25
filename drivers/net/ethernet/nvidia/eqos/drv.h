@@ -104,4 +104,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata);
 void eqos_start_dev(struct eqos_prv_data *pdata);
 int eqos_init_phy(struct net_device *ndev);
 int eqos_config_mac_loopback_mode(struct net_device *dev, unsigned int flags);
+extern int eqos_clock_enable(struct eqos_prv_data *pdata);
+extern void eqos_clock_disable(struct eqos_prv_data *pdata);
 #endif

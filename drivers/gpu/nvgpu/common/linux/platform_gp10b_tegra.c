@@ -796,6 +796,9 @@ static void gr_gp10b_remove_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
+	if (!g->ecc.gr.sm_lrf_single_err_count.counters)
+		return;
+
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->ecc.gr.sm_lrf_single_err_count,

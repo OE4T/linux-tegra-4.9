@@ -502,6 +502,9 @@ static void gr_gv11b_remove_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
+	if (!g->ecc.gr.sm_l1_tag_corrected_err_count.counters)
+		return;
+
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->ecc.gr.sm_l1_tag_corrected_err_count,

@@ -1476,7 +1476,6 @@ static int nct1008_remove(struct i2c_client *client)
 		regulator_put(data->nct_reg);
 
 	mutex_destroy(&data->mutex);
-	kfree(data);
 
 	return 0;
 }

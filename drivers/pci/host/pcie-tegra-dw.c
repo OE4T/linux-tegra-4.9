@@ -387,6 +387,8 @@
 #define NUM_TIMING_STEPS 0x14
 #define NUM_VOLTAGE_STEPS 0x14
 
+#define DMA_TEST_BUF_SIZE SZ_512M
+
 /* Max error count limit is 0x3f, payload=(0xc0 | 0x3f) */
 #define MAX_ERR_CNT_PAYLOAD 0xff
 #define NORMAL_PAYLOAD 0x0f
@@ -448,8 +450,6 @@ struct tegra_pcie_dw {
 
 	struct dentry *debugfs;
 	u32 target_speed;
-	dma_addr_t dma_addr;
-	u32 dma_size;
 	void *cpu_virt_addr;
 	bool disable_clock_request;
 	bool power_down_en;
@@ -460,7 +460,9 @@ struct tegra_pcie_dw {
 
 	struct tegra_bwmgr_client *emc_bw;
 
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
 	/* DMA operation */
+	dma_addr_t dma_addr;
 	u64 src;
 	u64 dst;
 	u32 size;
@@ -478,6 +480,7 @@ struct tegra_pcie_dw {
 	ktime_t rd_end_time;
 	unsigned long wr_busy;
 	unsigned long rd_busy;
+#endif
 
 	u32 cfg_link_cap_l1sub;
 	u32 cap_pl16g_status;
@@ -497,7 +500,6 @@ struct tegra_pcie_dw {
 	int pex_wake;
 	u32 tsa_config_addr;
 	bool link_state;
-	bool dma_disable;
 
 	int n_gpios;
 	int *gpios;
@@ -620,8 +622,8 @@ static void check_apply_link_bad_war(struct pcie_port *pp)
 
 static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 {
-	u32 val = 0, bit = 0, tmp = 0;
-	int handled = 0;
+	u32 val, tmp;
+	int handled;
 	struct pcie_port *pp = (struct pcie_port *)arg;
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 
@@ -654,40 +656,41 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 	if (val & APPL_INTR_STATUS_L0_INT_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
 		dev_dbg(pp->dev, "APPL_INTR_STATUS_L1_8_0 = 0x%08X\n", val);
-		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK &&
-		    !pcie->dma_disable) {
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
+		if (val & APPL_INTR_STATUS_L1_8_0_EDMA_INT_MASK) {
 			val = dma_common_rd(pcie->atu_dma_base,
 					    DMA_WRITE_INT_STATUS_OFF);
 			/* check the status of all busy marked channels */
-			for_each_set_bit(bit, &pcie->wr_busy,
+			for_each_set_bit(tmp, &pcie->wr_busy,
 					 DMA_WR_CHNL_NUM) {
-				if (BIT(bit) & val) {
+				if (BIT(tmp) & val) {
 					dma_common_wr(pcie->atu_dma_base,
-						      BIT(bit),
+						      BIT(tmp),
 						      DMA_WRITE_INT_CLEAR_OFF);
 					/* send completion to channel */
-					complete(&pcie->wr_cpl[bit]);
+					complete(&pcie->wr_cpl[tmp]);
 					/* clear status */
-					pcie->wr_busy &= ~(BIT(bit));
+					pcie->wr_busy &= ~(BIT(tmp));
 				}
 			}
 
 			val = dma_common_rd(pcie->atu_dma_base,
 					    DMA_READ_INT_STATUS_OFF);
 			/* check the status of all busy marked channels */
-			for_each_set_bit(bit, &pcie->rd_busy,
+			for_each_set_bit(tmp, &pcie->rd_busy,
 					 DMA_RD_CHNL_NUM) {
-				if (BIT(bit) & val) {
+				if (BIT(tmp) & val) {
 					dma_common_wr(pcie->atu_dma_base,
-						      BIT(bit),
+						      BIT(tmp),
 						      DMA_READ_INT_CLEAR_OFF);
 					/* send completion to channel */
-					complete(&pcie->rd_cpl[bit]);
+					complete(&pcie->rd_cpl[tmp]);
 					/* clear status */
-					pcie->rd_busy &= ~(BIT(bit));
+					pcie->rd_busy &= ~(BIT(tmp));
 				}
 			}
 		}
+#endif
 		if (val & APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS) {
 			writel(APPL_INTR_STATUS_L1_8_0_AUTO_BW_INT_STS,
 			       pcie->appl_base + APPL_INTR_STATUS_L1_8_0);
@@ -849,6 +852,7 @@ static int tegra_pcie_dw_rd_other_conf(struct pcie_port *pp,
 	return ret;
 }
 
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
 static int dma_write(struct tegra_pcie_dw *pcie, struct dma_tx *tx)
 {
 	struct device *dev = pcie->dev;
@@ -1330,6 +1334,7 @@ err_out:
 	iounmap(dst_cpu_virt);
 	return ret;
 }
+#endif
 
 static void config_plat_gpio(struct tegra_pcie_dw *pcie, bool flag)
 {
@@ -1772,16 +1777,105 @@ static const struct file_operations __name ## _fops = {	\
 }
 
 /* common */
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
 DEFINE_ENTRY(write);
 DEFINE_ENTRY(write_ll);
 DEFINE_ENTRY(read);
 DEFINE_ENTRY(read_ll);
+#endif
 DEFINE_ENTRY(apply_speed_change);
 DEFINE_ENTRY(apply_pme_turnoff);
 DEFINE_ENTRY(apply_sbr);
 DEFINE_ENTRY(aspm_state_cnt);
 DEFINE_ENTRY(verify_timing_margin);
 DEFINE_ENTRY(verify_voltage_margin);
+
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
+static void init_dma_test_debugfs(struct tegra_pcie_dw *pcie)
+{
+	struct dentry *d;
+	int i;
+
+	for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
+		mutex_init(&pcie->wr_lock[i]);
+		init_completion(&pcie->wr_cpl[i]);
+	}
+
+	for (i = 0; i < DMA_RD_CHNL_NUM; i++) {
+		mutex_init(&pcie->rd_lock[i]);
+		init_completion(&pcie->rd_cpl[i]);
+	}
+
+	/* alloc memory required for RP-DMA testing */
+	pcie->cpu_virt_addr = dma_alloc_coherent(pcie->dev, DMA_TEST_BUF_SIZE,
+					    &pcie->dma_addr, GFP_KERNEL);
+	if (!pcie->cpu_virt_addr) {
+		dev_err(pcie->dev,
+			"Memory allocation for DMA failed...! exiting...!");
+		return;
+	}
+	dev_info(pcie->dev,
+		 "---> Allocated memory for DMA @ 0x%llX\n", pcie->dma_addr);
+
+	d = debugfs_create_x64("src", 0644, pcie->debugfs, &pcie->src);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for src addr failed\n");
+
+	d = debugfs_create_x64("dst", 0644, pcie->debugfs, &pcie->dst);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for dst addr failed\n");
+
+	d = debugfs_create_x32("size", 0644, pcie->debugfs, &pcie->size);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for size failed\n");
+
+	d = debugfs_create_x8("channel", 0644, pcie->debugfs, &pcie->channel);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for channel failed\n");
+
+	d = debugfs_create_file("write", 0444, pcie->debugfs, (void *)pcie,
+				&write_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for write failed\n");
+
+	d = debugfs_create_file("write_ll", 0444, pcie->debugfs, (void *)pcie,
+				&write_ll_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for write failed\n");
+
+	d = debugfs_create_file("read", 0444, pcie->debugfs, (void *)pcie,
+				&read_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for read failed\n");
+
+	d = debugfs_create_file("read_ll", 0444, pcie->debugfs, (void *)pcie,
+				&read_ll_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for read failed\n");
+}
+
+static void destroy_dma_test_debugfs(struct tegra_pcie_dw *pcie)
+{
+	int i;
+
+	dma_free_coherent(pcie->dev, DMA_TEST_BUF_SIZE, pcie->cpu_virt_addr,
+			  pcie->dma_addr);
+
+	for (i = 0; i < DMA_WR_CHNL_NUM; i++)
+		mutex_destroy(&pcie->wr_lock[i]);
+
+	for (i = 0; i < DMA_RD_CHNL_NUM; i++)
+		mutex_destroy(&pcie->rd_lock[i]);
+}
+#else
+static void init_dma_test_debugfs(struct tegra_pcie_dw *pcie)
+{
+}
+
+static void destroy_dma_test_debugfs(struct tegra_pcie_dw *pcie)
+{
+}
+#endif
 
 static int init_debugfs(struct tegra_pcie_dw *pcie)
 {
@@ -1822,55 +1916,7 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 	if (!d)
 		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
 
-	if (pcie->dma_disable)
-		return 0;
-
-	/* alloc memory required for RP-DMA testing */
-	pcie->cpu_virt_addr = dma_alloc_coherent(pcie->dev, pcie->dma_size,
-					    &pcie->dma_addr, GFP_KERNEL);
-	if (!pcie->cpu_virt_addr) {
-		dev_err(pcie->dev,
-			"Memory allocation for DMA failed...! exiting...!");
-		return -ENOMEM;
-	}
-	dev_info(pcie->dev,
-		 "---> Allocated memory for DMA @ 0x%llX\n", pcie->dma_addr);
-
-	d = debugfs_create_x64("src", 0644, pcie->debugfs, &pcie->src);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for src addr failed\n");
-
-	d = debugfs_create_x64("dst", 0644, pcie->debugfs, &pcie->dst);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for dst addr failed\n");
-
-	d = debugfs_create_x32("size", 0644, pcie->debugfs, &pcie->size);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for size failed\n");
-
-	d = debugfs_create_x8("channel", 0644, pcie->debugfs, &pcie->channel);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for channel failed\n");
-
-	d = debugfs_create_file("write", 0444, pcie->debugfs, (void *)pcie,
-				&write_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for write failed\n");
-
-	d = debugfs_create_file("write_ll", 0444, pcie->debugfs, (void *)pcie,
-				&write_ll_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for write failed\n");
-
-	d = debugfs_create_file("read", 0444, pcie->debugfs, (void *)pcie,
-				&read_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for read failed\n");
-
-	d = debugfs_create_file("read_ll", 0444, pcie->debugfs, (void *)pcie,
-				&read_ll_fops);
-	if (!d)
-		dev_err(pcie->dev, "debugfs for read failed\n");
+	init_dma_test_debugfs(pcie);
 
 	return 0;
 }
@@ -1966,12 +2012,14 @@ static void tegra_pcie_enable_legacy_interrupts(struct pcie_port *pp)
 		val |= APPL_INTR_EN_L1_8_AER_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
 
-	if (!pcie->dma_poll && !pcie->dma_disable) {
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
+	if (!pcie->dma_poll) {
 		/* Enable Interrupt for DMA completion */
 		val = readl(pcie->appl_base + APPL_INTR_EN_L1_8_0);
 		val |= APPL_INTR_EN_L1_8_EDMA_INT_EN;
 		writel(val, pcie->appl_base + APPL_INTR_EN_L1_8_0);
 	}
+#endif
 }
 
 static void tegra_pcie_enable_msi_interrupts(struct pcie_port *pp)
@@ -2577,26 +2625,14 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 	pcie->pex_wake = of_get_named_gpio(np, "nvidia,pex-wake", 0);
 	pcie->power_down_en = of_property_read_bool(pcie->dev->of_node,
 		"nvidia,enable-power-down");
-	ret = of_property_read_u32(np, "nvidia,dma-size", &pcie->dma_size);
-	if (ret) {
-		dev_dbg(pcie->dev, "Setting default dma size to 1MB\n");
-		pcie->dma_size = SZ_1M;
-	}
 
-	if (device_property_read_bool(pcie->dev, "nvidia,dma-poll"))
-		pcie->dma_poll = true;
-	else
-		pcie->dma_poll = false;
+#ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
+	pcie->dma_poll = device_property_read_bool(pcie->dev,
+						   "nvidia,dma-poll");
+#endif
 
-	if (device_property_read_bool(pcie->dev, "nvidia,dma-disable"))
-		pcie->dma_disable = true;
-	else
-		pcie->dma_disable = false;
-
-	if (device_property_read_bool(pcie->dev, "nvidia,disable-l1-cpm"))
-		pcie->disable_l1_cpm = true;
-	else
-		pcie->disable_l1_cpm = false;
+	pcie->disable_l1_cpm =
+		device_property_read_bool(pcie->dev, "nvidia,disable-l1-cpm");
 
 	ret = of_property_read_u32_index(np, "nvidia,controller-id", 1,
 					 &pcie->cid);
@@ -2886,22 +2922,10 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		goto fail_host_init;
 	}
 
-	/* Enable DMA processing engines */
-	if (!pcie->dma_disable) {
-		for (i = 0; i < DMA_WR_CHNL_NUM; i++) {
-			mutex_init(&pcie->wr_lock[i]);
-			init_completion(&pcie->wr_cpl[i]);
-		}
-
-		for (i = 0; i < DMA_RD_CHNL_NUM; i++) {
-			mutex_init(&pcie->rd_lock[i]);
-			init_completion(&pcie->rd_cpl[i]);
-		}
-	}
 	name = kasprintf(GFP_KERNEL, "pcie-%u", pcie->cid);
 	if (!name) {
 		ret = -ENOMEM;
-		goto fail_debugfs;
+		goto fail_host_init;
 	}
 	pcie->debugfs = debugfs_create_dir(name, NULL);
 	if (!pcie->debugfs)
@@ -2912,14 +2936,6 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 
 	return 0;
 
-fail_debugfs:
-	if (!pcie->dma_disable) {
-		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
-			mutex_destroy(&pcie->wr_lock[i]);
-
-		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-			mutex_destroy(&pcie->rd_lock[i]);
-	}
 fail_host_init:
 	pm_runtime_put_sync(pcie->dev);
 	tegra_bwmgr_unregister(pcie->emc_bw);
@@ -3001,25 +3017,12 @@ static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 static int tegra_pcie_dw_remove(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
-	int i;
 
 	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
-	if (!pcie->dma_disable)
-		dma_free_coherent(pcie->dev, pcie->dma_size,
-				  pcie->cpu_virt_addr, pcie->dma_addr);
-
+	destroy_dma_test_debugfs(pcie);
 	debugfs_remove_recursive(pcie->debugfs);
-
-	if (!pcie->dma_disable) {
-		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
-			mutex_destroy(&pcie->wr_lock[i]);
-
-		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-			mutex_destroy(&pcie->rd_lock[i]);
-	}
-
 	pm_runtime_put_sync(pcie->dev);
 	pm_runtime_disable(pcie->dev);
 	tegra_bwmgr_unregister(pcie->emc_bw);
@@ -3300,25 +3303,12 @@ fail_core_clk:
 static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
-	int i;
 
 	if (!pcie->link_state && pcie->power_down_en)
 		return;
 
-	if (!pcie->dma_disable)
-		dma_free_coherent(pcie->dev, pcie->dma_size,
-				  pcie->cpu_virt_addr, pcie->dma_addr);
-
+	destroy_dma_test_debugfs(pcie);
 	debugfs_remove_recursive(pcie->debugfs);
-
-	if (!pcie->dma_disable) {
-		for (i = 0; i < DMA_WR_CHNL_NUM; i++)
-			mutex_destroy(&pcie->wr_lock[i]);
-
-		for (i = 0; i < DMA_RD_CHNL_NUM; i++)
-			mutex_destroy(&pcie->rd_lock[i]);
-	}
-
 	tegra_pcie_dw_runtime_suspend(pcie->dev);
 	tegra_bwmgr_unregister(pcie->emc_bw);
 }

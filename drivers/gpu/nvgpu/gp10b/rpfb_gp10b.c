@@ -30,7 +30,6 @@
 
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fb_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_bus_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
 int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)

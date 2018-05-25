@@ -26,6 +26,7 @@
 #include "common/clock_gating/gp106_gating_reglist.h"
 #include "common/ptimer/ptimer_gk20a.h"
 #include "common/bus/bus_gm20b.h"
+#include "common/bus/bus_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -583,7 +584,6 @@ static const struct gpu_ops gp106_ops = {
 		.init_inst_block = gk20a_init_inst_block,
 		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
 		.init_bar2_vm = gp10b_init_bar2_vm,
-		.init_bar2_mm_hw_setup = gp10b_init_bar2_mm_hw_setup,
 		.remove_bar2_vm = gp10b_remove_bar2_vm,
 		.get_vidmem_size = gp106_mm_get_vidmem_size,
 		.get_kind_invalid = gm20b_get_kind_invalid,
@@ -723,6 +723,7 @@ static const struct gpu_ops gp106_ops = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
 		.bar1_bind = gm20b_bus_bar1_bind,
+		.bar2_bind = gp10b_bus_bar2_bind,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
 	},
 	.ptimer = {

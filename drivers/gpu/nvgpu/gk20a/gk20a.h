@@ -895,7 +895,6 @@ struct gpu_ops {
 		int (*init_mm_setup_hw)(struct gk20a *g);
 		bool (*is_bar1_supported)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);
-		int (*init_bar2_mm_hw_setup)(struct gk20a *g);
 		void (*remove_bar2_vm)(struct gk20a *g);
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
@@ -1121,6 +1120,7 @@ struct gpu_ops {
 		void (*init_hw)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
+		int (*bar2_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 		u32 (*set_bar0_window)(struct gk20a *g, struct nvgpu_mem *mem,
 			struct nvgpu_sgt *sgt, struct nvgpu_sgl *sgl,
 			u32 w);

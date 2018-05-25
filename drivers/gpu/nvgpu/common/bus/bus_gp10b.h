@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * GM20B BUS
+ *
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,22 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MM_GP10B_H
-#define MM_GP10B_H
+#ifndef _NVGPU_GP10B_BUS
+#define _NVGPU_GP10B_BUS
 
 struct gk20a;
-struct gk20a_mmu_level;
 struct nvgpu_mem;
-struct vm_gk20a;
 
-u32 gp10b_mm_get_default_big_page_size(void);
-u32 gp10b_mm_get_iommu_bit(struct gk20a *g);
-int gp10b_init_mm_setup_hw(struct gk20a *g);
-int gp10b_init_bar2_vm(struct gk20a *g);
-const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
-	u32 big_page_size);
-void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
-		struct vm_gk20a *vm);
-void gp10b_remove_bar2_vm(struct gk20a *g);
+int gp10b_bus_bar2_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 
 #endif

@@ -1229,7 +1229,7 @@ static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 	}
 	gv11b_ce_mthd_buffer_fault_in_bar2_fault(g);
 
-	g->ops.mm.init_bar2_mm_hw_setup(g);
+	g->ops.bus.bar2_bind(g, &g->mm.bar2.inst_block);
 
 	if (mmfault->refch) {
 		gk20a_channel_put(mmfault->refch);

@@ -23,6 +23,7 @@
  */
 
 #include "common/bus/bus_gk20a.h"
+#include "common/bus/bus_gp10b.h"
 #include "common/clock_gating/gv11b_gating_reglist.h"
 #include "common/ptimer/ptimer_gk20a.h"
 
@@ -621,7 +622,6 @@ static const struct gpu_ops gv11b_ops = {
 		.get_kind_invalid = gm20b_get_kind_invalid,
 		.get_kind_pitch = gm20b_get_kind_pitch,
 		.init_bar2_vm = gp10b_init_bar2_vm,
-		.init_bar2_mm_hw_setup = gv11b_init_bar2_mm_hw_setup,
 		.remove_bar2_vm = gv11b_mm_remove_bar2_vm,
 		.fault_info_mem_destroy = gv11b_mm_fault_info_mem_destroy,
 	},
@@ -724,6 +724,7 @@ static const struct gpu_ops gv11b_ops = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
 		.bar1_bind = NULL,
+		.bar2_bind = gp10b_bus_bar2_bind,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
 	},
 	.ptimer = {

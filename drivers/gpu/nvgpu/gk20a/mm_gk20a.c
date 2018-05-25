@@ -50,7 +50,6 @@
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
@@ -103,8 +102,8 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	if (g->ops.bus.bar1_bind)
 		g->ops.bus.bar1_bind(g, &mm->bar1.inst_block);
 
-	if (g->ops.mm.init_bar2_mm_hw_setup) {
-		err = g->ops.mm.init_bar2_mm_hw_setup(g);
+	if (g->ops.bus.bar2_bind) {
+		err = g->ops.bus.bar2_bind(g, &mm->bar2.inst_block);
 		if (err)
 			return err;
 	}

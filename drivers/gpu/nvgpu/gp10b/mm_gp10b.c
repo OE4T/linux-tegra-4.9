@@ -34,7 +34,6 @@
 
 #include <nvgpu/hw/gp10b/hw_fb_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_bus_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
 u32 gp10b_mm_get_default_big_page_size(void)
@@ -62,8 +61,8 @@ int gp10b_init_mm_setup_hw(struct gk20a *g)
 
 	g->ops.bus.bar1_bind(g, inst_block);
 
-	if (g->ops.mm.init_bar2_mm_hw_setup) {
-		err = g->ops.mm.init_bar2_mm_hw_setup(g);
+	if (g->ops.bus.bar2_bind) {
+		err = g->ops.bus.bar2_bind(g, &g->mm.bar2.inst_block);
 		if (err)
 			return err;
 	}
@@ -107,29 +106,6 @@ int gp10b_init_bar2_vm(struct gk20a *g)
 clean_up_va:
 	nvgpu_vm_put(mm->bar2.vm);
 	return err;
-}
-
-int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
-{
-	struct mm_gk20a *mm = &g->mm;
-	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
-	u64 inst_pa = nvgpu_inst_block_addr(g, inst_block);
-
-	nvgpu_log_fn(g, " ");
-
-	inst_pa = (u32)(inst_pa >> bus_bar2_block_ptr_shift_v());
-	nvgpu_log_info(g, "bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
-
-	gk20a_writel(g, bus_bar2_block_r(),
-		     nvgpu_aperture_mask(g, inst_block,
-					 bus_bar2_block_target_sys_mem_ncoh_f(),
-					 bus_bar2_block_target_sys_mem_coh_f(),
-					 bus_bar2_block_target_vid_mem_f()) |
-		     bus_bar2_block_mode_virtual_f() |
-		     bus_bar2_block_ptr_f(inst_pa));
-
-	nvgpu_log_fn(g, "done");
-	return 0;
 }
 
 static void update_gmmu_pde3_locked(struct vm_gk20a *vm,

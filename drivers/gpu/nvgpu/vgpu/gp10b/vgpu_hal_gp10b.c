@@ -427,7 +427,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.init_inst_block = gk20a_init_inst_block,
 		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
 		.init_bar2_vm = gp10b_init_bar2_vm,
-		.init_bar2_mm_hw_setup = gp10b_init_bar2_mm_hw_setup,
 		.remove_bar2_vm = gp10b_remove_bar2_vm,
 		.get_kind_invalid = gm20b_get_kind_invalid,
 		.get_kind_pitch = gm20b_get_kind_pitch,
@@ -524,7 +523,8 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 	.bus = {
 		.init_hw = gk20a_bus_init_hw,
 		.isr = gk20a_bus_isr,
-		.bar1_bind = gm20b_bus_bar1_bind,
+		.bar1_bind = NULL,
+		.bar2_bind = NULL,
 		.set_bar0_window = gk20a_bus_set_bar0_window,
 	},
 	.ptimer = {

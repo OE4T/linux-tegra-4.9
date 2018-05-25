@@ -46,37 +46,6 @@ u32 gp10b_mm_get_iommu_bit(struct gk20a *g)
 	return 36;
 }
 
-int gp10b_init_mm_setup_hw(struct gk20a *g)
-{
-	struct mm_gk20a *mm = &g->mm;
-	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
-	int err = 0;
-
-	nvgpu_log_fn(g, " ");
-
-	g->ops.fb.set_mmu_page_size(g);
-
-	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
-		     nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8ULL);
-
-	g->ops.bus.bar1_bind(g, inst_block);
-
-	if (g->ops.bus.bar2_bind) {
-		err = g->ops.bus.bar2_bind(g, &g->mm.bar2.inst_block);
-		if (err)
-			return err;
-	}
-
-	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
-		return -EBUSY;
-
-	err = gp10b_replayable_pagefault_buffer_init(g);
-
-	nvgpu_log_fn(g, "done");
-	return err;
-
-}
-
 int gp10b_init_bar2_vm(struct gk20a *g)
 {
 	int err;

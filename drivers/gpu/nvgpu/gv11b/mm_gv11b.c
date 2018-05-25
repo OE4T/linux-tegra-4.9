@@ -232,15 +232,7 @@ int gv11b_init_mm_setup_hw(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	g->ops.fb.set_mmu_page_size(g);
-	g->ops.fb.init_hw(g);
-
-	err = g->ops.bus.bar2_bind(g, &g->mm.bar2.inst_block);
-	if (err)
-		return err;
-
-	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
-		return -EBUSY;
+	err = gk20a_init_mm_setup_hw(g);
 
 	err = gv11b_mm_mmu_fault_setup_sw(g);
 	if (!err)

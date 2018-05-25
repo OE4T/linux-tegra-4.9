@@ -117,8 +117,6 @@ int gp10b_init_bar2_mm_hw_setup(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	g->ops.fb.set_mmu_page_size(g);
-
 	inst_pa = (u32)(inst_pa >> bus_bar2_block_ptr_shift_v());
 	nvgpu_log_info(g, "bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
 

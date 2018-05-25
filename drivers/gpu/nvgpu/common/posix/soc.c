@@ -46,3 +46,8 @@ bool nvgpu_is_bpmp_running(struct gk20a *g)
 {
 	return false;
 }
+
+bool nvgpu_is_soc_t194_a01(struct gk20a *g)
+{
+	return false;
+}

@@ -172,4 +172,15 @@ config TEGRA_HSP
 	bool "Enable Tegra Hardware Synchronization Primitives driver"
 	default y
 
+config TEGRA_CENTRAL_ACTMON
+	bool "Tegra Activity Monitor"
+	depends on ARCH_TEGRA
+	default n
+	help
+	  Actmon is a hardware block that can be used to track the activity of
+	  certain hardware units. It can boost EMC clock depending
+	  on the memory trafic among various client. It is called central actmon
+	  as it monitors central activity for example MC activity. HW fabric of
+	  central and unit actmon is different. If unsure, say Y here.
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

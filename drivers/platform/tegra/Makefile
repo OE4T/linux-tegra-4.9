@@ -20,6 +20,7 @@ obj-$(CONFIG_TEGRA_PM_IRQ) += pm-irq-t18x.o
 ifeq ($(CONFIG_PM_SLEEP),y)
 obj-$(CONFIG_TEGRA_WAKEUP) += wakeups-t18x.o
 endif
+obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += central_actmon/
 obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o
 obj-$(CONFIG_TEGRA_AON) += tegra-aon-ivc-echo.o

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,15 +25,19 @@
 #include <linux/irq.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/version.h>
 
 #include <linux/platform/tegra/actmon_common.h>
-#include <linux/platform/tegra/emc_bwmgr.h>
 
 /* Global definitions */
 static struct actmon_drv_data *actmon;
 static struct device *mon_dev;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+#include <linux/platform/tegra/emc_bwmgr.h>
 static u8 max_dram_channels;
 static u8 ch_num;
+#endif
 
 #define offs(dev_reg_offs) (actmon->base + dev_reg_offs)
 
@@ -223,6 +227,21 @@ static const struct file_operations type_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+static int actv_get(void *data, u64 *val)
+{
+	struct actmon_dev *dev = data;
+	unsigned long flags;
+
+	spin_lock_irqsave(&dev->lock, flags);
+	*val = actmon_dev_avg_freq_get(dev);
+	spin_unlock_irqrestore(&dev->lock, flags);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(actv_fops, actv_get, NULL,
+	"%llu\n");
+#endif
 
 static int step_get(void *data, u64 *val)
 {
@@ -432,6 +451,13 @@ static int actmon_debugfs_create_dev(struct actmon_dev *dev)
 		"actv_type", RO_MODE, dir, dev, &type_fops);
 	if (!d)
 		return -ENOMEM;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	d = debugfs_create_file(
+		"avg_activity", RO_MODE, dir, dev, &actv_fops);
+	if (!d)
+		return -ENOMEM;
+#endif
 
 	d = debugfs_create_file(
 		"boost_step", RW_MODE, dir, dev, &step_fops);
@@ -824,6 +850,7 @@ static int actmon_dev_parse_dt(struct actmon_dev *dev,
 			dev->dn->name, dev->count_weight);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	ret = of_property_read_u8(dev->dn, "nvidia,max_dram_channels",
 			&max_dram_channels);
 	if (ret) {
@@ -832,6 +859,7 @@ static int actmon_dev_parse_dt(struct actmon_dev *dev,
 	ch_num = tegra_bwmgr_get_dram_num_channels();
 	if (ch_num && max_dram_channels)
 		dev->count_weight *= (u32)(max_dram_channels / ch_num);
+#endif
 
 	ret = of_property_read_u32(dev->dn, "nvidia,type",
 			&dev->type);
@@ -941,6 +969,8 @@ static int __init actmon_map_resource(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dev_err(mon_dev, "Failed to get virtual irq for actmon interrupt\n");
+		if (actmon->base)
+			devm_iounmap(mon_dev, actmon->base);
 		return -EINVAL;
 	}
 	actmon->virq = res->start;

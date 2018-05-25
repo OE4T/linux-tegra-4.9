@@ -31,6 +31,7 @@ int gv100_nvlink_init(struct gk20a *g);
 int gv100_nvlink_isr(struct gk20a *g);
 int gv100_nvlink_minion_send_command(struct gk20a *g, u32 link_id, u32 command,
 						u32 scratch_0, bool sync);
+int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask);
 /* API */
 int gv100_nvlink_link_early_init(struct gk20a *g, unsigned long mask);
 u32 gv100_nvlink_link_get_mode(struct gk20a *g, u32 link_id);

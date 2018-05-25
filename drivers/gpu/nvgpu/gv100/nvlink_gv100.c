@@ -219,7 +219,6 @@ static const char *__gv100_device_type_to_str(u32 type)
 /*
  * Function prototypes
  */
-static int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long mask);
 static u32 __gv100_nvlink_get_link_reset_mask(struct gk20a *g);
 static u32 gv100_nvlink_rxcal_en(struct gk20a *g, unsigned long mask);
 static u32 gv100_nvlink_minion_data_ready_en(struct gk20a *g,
@@ -826,7 +825,7 @@ static u32 gv100_nvlink_minion_init_uphy(struct gk20a *g, unsigned long mask,
 		}
 	}
 
-	err = gv100_nvlink_setup_pll(g, mask);
+	err = g->ops.nvlink.setup_pll(g, mask);
 	if (err) {
 		nvgpu_err(g, "Error setting up PLL");
 		return err;
@@ -1462,7 +1461,7 @@ static u32 __gv100_nvlink_state_load_hal(struct gk20a *g)
 #define TRIM_SYS_NVLINK_CTRL(i) (trim_sys_nvlink0_ctrl_r() + 16*i)
 #define TRIM_SYS_NVLINK_STATUS(i) (trim_sys_nvlink0_status_r() + 16*i)
 
-static int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long mask)
+int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask)
 {
 	u32 reg;
 	u32 i;
@@ -1481,7 +1480,7 @@ static int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long mask)
 	pad_ctrl = top_nvhsclk_ctrl_e_clk_nvl_v(reg);
 	swap_ctrl = top_nvhsclk_ctrl_swap_clk_nvl_v(reg);
 
-	for_each_set_bit(i, &mask, 32) {
+	for_each_set_bit(i, &link_mask, 32) {
 		/* There are 3 PLLs for 6 links. We have 3 bits for each PLL.
 		 * The PLL bit corresponding to a link is /2 of its master link.
                  */
@@ -1501,7 +1500,7 @@ static int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long mask)
 
 	gk20a_writel(g, top_nvhsclk_ctrl_r(), reg);
 
-	for_each_set_bit(i, &mask, 32) {
+	for_each_set_bit(i, &link_mask, 32) {
 		reg = gk20a_readl(g, TRIM_SYS_NVLINK_CTRL(i));
 		reg = set_field(reg,
 			trim_sys_nvlink0_ctrl_unit2clks_pll_turn_off_m(),
@@ -1510,12 +1509,12 @@ static int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long mask)
 	}
 
 	/* Poll for links to go up */
-	links_off = mask;
+	links_off = link_mask;
 
 	nvgpu_timeout_init(g, &timeout,
 		NVLINK_PLL_ON_TIMEOUT_MS, NVGPU_TIMER_CPU_TIMER);
 	do {
-		for_each_set_bit(i, &mask, 32) {
+		for_each_set_bit(i, &link_mask, 32) {
 			reg = gk20a_readl(g, TRIM_SYS_NVLINK_STATUS(i));
 			if (trim_sys_nvlink0_status_pll_off_v(reg) == 0)
 				links_off &= ~BIT(i);

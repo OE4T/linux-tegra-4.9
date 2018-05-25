@@ -1183,6 +1183,7 @@ struct gpu_ops {
 		int (*discover_link)(struct gk20a *g);
 		int (*isr)(struct gk20a *g);
 		int (*rxdet)(struct gk20a *g, u32 link_id);
+		int (*setup_pll)(struct gk20a *g, unsigned long link_mask);
 		/* API */
 		int (*link_early_init)(struct gk20a *g, unsigned long mask);
 		u32 (*link_get_mode)(struct gk20a *g, u32 link_id);

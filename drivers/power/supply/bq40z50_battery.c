@@ -504,6 +504,13 @@ static int bq40z50_report_battery_soc(struct battery_gauge_dev *bg_dev)
 	return val;
 }
 
+static int bq40z50_report_charging_status(struct battery_gauge_dev *bg_dev)
+{
+	struct bq40z50_chip *chip = battery_gauge_get_drvdata(bg_dev);
+
+	return chip->status;
+}
+
 static int bq40z50_update_battery_state(struct battery_gauge_dev *bg_dev,
 					enum battery_charger_status status)
 {
@@ -557,6 +564,7 @@ static struct battery_gauge_ops bq40z50_bg_ops = {
 	.get_battery_soc = bq40z50_report_battery_soc,
 	.get_battery_voltage = bq40z50_report_battery_voltage,
 	.get_battery_current = bq40z50_report_battery_current,
+	.get_charging_status = bq40z50_report_charging_status,
 };
 
 static struct battery_gauge_info bq40z50_bgi = {

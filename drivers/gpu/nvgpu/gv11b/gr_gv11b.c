@@ -1235,6 +1235,9 @@ int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 		case NVC3C0_SET_SKEDCHECK:
 			gr_gv11b_set_skedcheck(g, data);
 			break;
+		case NVC3C0_SET_SHADER_CUT_COLLECTOR:
+			gr_gv11b_set_shader_cut_collector(g, data);
+			break;
 		default:
 			goto fail;
 		}

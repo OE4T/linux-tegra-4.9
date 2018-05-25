@@ -1110,6 +1110,7 @@ void nvgpu_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_mscg_enable);
 	device_remove_file(dev, &dev_attr_emc3d_ratio);
+	device_remove_file(dev, &dev_attr_ldiv_slowdown_factor);
 
 	device_remove_file(dev, &dev_attr_fmax_at_vmin_safe);
 

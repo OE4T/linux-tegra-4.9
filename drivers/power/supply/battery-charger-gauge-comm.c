@@ -380,6 +380,28 @@ int battery_gauge_report_battery_soc(struct battery_gauge_dev *bg_dev,
 }
 EXPORT_SYMBOL_GPL(battery_gauge_report_battery_soc);
 
+int battery_gauge_get_charging_status(struct battery_charger_dev *bc_dev)
+{
+	struct battery_gauge_dev *bg_dev;
+	int ret = 0;
+
+	if (!bc_dev)
+		return -EINVAL;
+
+	mutex_lock(&charger_gauge_list_mutex);
+
+	list_for_each_entry(bg_dev, &gauge_list, list) {
+		if (bg_dev->cell_id != bc_dev->cell_id)
+			continue;
+		if (bg_dev->ops && bg_dev->ops->get_charging_status)
+			ret = bg_dev->ops->get_charging_status(bg_dev);
+	}
+
+	mutex_unlock(&charger_gauge_list_mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(battery_gauge_get_charging_status);
+
 int battery_gauge_get_scaled_soc(struct battery_gauge_dev *bg_dev,
 	int actual_soc_semi, int thresod_soc)
 {

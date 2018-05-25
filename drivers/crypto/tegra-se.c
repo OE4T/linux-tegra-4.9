@@ -2844,7 +2844,7 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 100,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2864,7 +2864,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ecb(aes)",
 		.cra_driver_name = "ecb-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 100,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2884,7 +2884,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ctr(aes)",
 		.cra_driver_name = "ctr-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 100,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2905,7 +2905,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ofb(aes)",
 		.cra_driver_name = "ofb-aes-tegra",
-		.cra_priority = 300,
+		.cra_priority = 100,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),

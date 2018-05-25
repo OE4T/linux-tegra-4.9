@@ -21,6 +21,7 @@
  */
 
 #include "common/bus/bus_gk20a.h"
+#include "common/clock_gating/gv11b_gating_reglist.h"
 
 #include <gk20a/gk20a.h>
 #include <gv11b/hal_gv11b.h>
@@ -76,7 +77,6 @@
 #include <gv11b/regops_gv11b.h>
 #include <gv11b/gr_ctx_gv11b.h>
 #include <gv11b/ltc_gv11b.h>
-#include <clock_gating/gv11b_gating_reglist.h>
 #include <gv11b/gr_gv11b.h>
 
 #include <nvgpu/enabled.h>

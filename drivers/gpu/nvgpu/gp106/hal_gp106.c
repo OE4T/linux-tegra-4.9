@@ -23,6 +23,7 @@
  */
 
 #include "common/bus/bus_gk20a.h"
+#include "common/clock_gating/gp106_gating_reglist.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -79,7 +80,6 @@
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
 #include "gp106/fb_gp106.h"
-#include "clock_gating/gp106_gating_reglist.h"
 #include "gp106/flcn_gp106.h"
 #include "gp106/fuse_gp106.h"
 

@@ -23,6 +23,7 @@
  */
 
 #include "common/bus/bus_gk20a.h"
+#include "common/clock_gating/gp10b_gating_reglist.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -49,7 +50,6 @@
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
-#include "clock_gating/gp10b_gating_reglist.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"

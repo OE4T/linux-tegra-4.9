@@ -23,6 +23,7 @@
  */
 
 #include "common/bus/bus_gk20a.h"
+#include "common/clock_gating/gv100_gating_reglist.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -98,7 +99,6 @@
 #include "gv100/pmu_gv100.h"
 #include "gv100/nvlink_gv100.h"
 #include "gv100/regops_gv100.h"
-#include "clock_gating/gv100_gating_reglist.h"
 
 #include <nvgpu/bus.h>
 #include <nvgpu/debug.h>

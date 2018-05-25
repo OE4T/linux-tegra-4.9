@@ -2089,7 +2089,7 @@ void gr_gv11b_get_access_map(struct gk20a *g,
 
 static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 	u32 gpc, u32 tpc, u32 sm,
-	u32 warp_esr,
+	u32 warp_esr_error,
 	struct channel_gk20a *fault_ch)
 {
 	struct tsg_gk20a *tsg;
@@ -2117,17 +2117,92 @@ static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 	nvgpu_writel(g,
 		gr_gpc0_tpc0_sm0_hww_warp_esr_r() + offset, 0);
 
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"ESR %s(0x%x)",
+			"MMU NACK ERROR",
+			warp_esr_error);
 	return 0;
 }
 
-static int gr_gv11b_handle_warp_esr_error_misaligned_addr(struct gk20a *g,
-	u32 gpc, u32 tpc, u32 sm,
-	u32 warp_esr,
-	struct channel_gk20a *fault_ch)
+static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
+{
+	u32 index = 0U;
+	u32 esr_err = gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f();
+
+	struct warp_esr_error_table_s {
+		u32 error_value;
+		const char *error_name;
+	};
+
+	struct warp_esr_error_table_s warp_esr_error_table[] = {
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_stack_error_f(),
+			"STACK ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_api_stack_error_f(),
+			"API STACK ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_pc_wrap_f(),
+				"PC WRAP ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_pc_f(),
+				"MISALIGNED PC ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_pc_overflow_f(),
+				"PC OVERFLOW ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_reg_f(),
+				"MISALIGNED REG ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_illegal_instr_encoding_f(),
+				"ILLEGAL INSTRUCTION ENCODING ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_illegal_instr_param_f(),
+				"ILLEGAL INSTRUCTION PARAM ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_oor_reg_f(),
+				"OOR REG ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_oor_addr_f(),
+				"OOR ADDR ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_addr_f(),
+				"MISALIGNED ADDR ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_invalid_addr_space_f(),
+				"INVALID ADDR SPACE ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_invalid_const_addr_ldc_f(),
+				"INVALID ADDR LDC ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_stack_overflow_f(),
+				"STACK OVERFLOW ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_fault_f(),
+				"MMU FAULT ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_tex_format_f(),
+				"TEX FORMAT ERROR"},
+		{ gr_gpc0_tpc0_sm0_hww_warp_esr_error_tex_layout_f(),
+				"TEX LAYOUT ERROR"},
+	};
+
+	for (index = 0; index < ARRAY_SIZE(warp_esr_error_table); index++) {
+		if (warp_esr_error_table[index].error_value == warp_esr_error) {
+			esr_err = warp_esr_error_table[index].error_value;
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"ESR %s(0x%x)",
+				warp_esr_error_table[index].error_name,
+				esr_err);
+			break;
+		}
+	}
+
+	return (esr_err == 0U) ? false : true;
+}
+static int gr_gv11b_handle_all_warp_esr_errors(struct gk20a *g,
+						u32 gpc, u32 tpc, u32 sm,
+						u32 warp_esr_error,
+						struct channel_gk20a *fault_ch)
 {
 	struct tsg_gk20a *tsg;
-	u32 offset;
 	struct channel_gk20a *ch_tsg;
+	u32 offset = 0U;
+	bool is_esr_error = false;
+
+	/*
+	 * Check for an esr error
+	 */
+	is_esr_error = gr_gv11b_check_warp_esr_error(g, warp_esr_error);
+	if (!is_esr_error) {
+		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"No ESR error, Skip RC recovery and Trigeer CILP");
+		return 0;
+	}
 
 	if (fault_ch) {
 		tsg = &g->fifo.tsg[fault_ch->tsgid];
@@ -2170,7 +2245,9 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 	u32 offset = gk20a_gr_gpc_offset(g, gpc) +
 			gk20a_gr_tpc_offset(g, tpc) +
 			gv11b_gr_sm_offset(g, sm);
+	u32 warp_esr_error = gr_gpc0_tpc0_sm0_hww_warp_esr_error_v(warp_esr);
 	struct tsg_gk20a *tsg;
+
 
 	*early_exit = false;
 	*ignore_debugger = false;
@@ -2179,13 +2256,19 @@ int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 	 * We don't need to trigger CILP in case of MMU_NACK
 	 * So just handle MMU_NACK and return
 	 */
-	if (warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f())
+	if (warp_esr_error == gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f())
 		return gr_gv11b_handle_warp_esr_error_mmu_nack(g, gpc, tpc, sm,
-				warp_esr, fault_ch);
+				warp_esr_error, fault_ch);
 
-	if (warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_addr_f())
-		return gr_gv11b_handle_warp_esr_error_misaligned_addr(g, gpc, tpc, sm,
-				warp_esr, fault_ch);
+	/*
+	 * Proceed to trigger CILP preemption if the return value
+	 * from this function is zero, else proceed to recovery
+	 */
+	ret = gr_gv11b_handle_all_warp_esr_errors(g, gpc, tpc, sm,
+				warp_esr_error, fault_ch);
+	if (ret) {
+		return ret;
+	}
 
 	if (fault_ch) {
 		tsg = tsg_gk20a_from_ch(fault_ch);

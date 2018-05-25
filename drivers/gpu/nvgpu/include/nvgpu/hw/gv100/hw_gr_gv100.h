@@ -3632,17 +3632,81 @@ static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_v(void)
 {
 	return 0x00000000U;
 }
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_stack_error_f(void)
+{
+	return 0x1U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_api_stack_error_f(void)
+{
+	return 0x2U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_pc_wrap_f(void)
+{
+	return 0x4U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_pc_f(void)
+{
+	return 0x5U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_pc_overflow_f(void)
+{
+	return 0x6U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_reg_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_illegal_instr_encoding_f(void)
+{
+	return 0x9U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_illegal_instr_param_f(void)
+{
+	return 0xbU;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_oor_reg_f(void)
+{
+	return 0xdU;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_oor_addr_f(void)
+{
+	return 0xeU;
+}
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_misaligned_addr_f(void)
 {
 	return 0xfU;
 }
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_invalid_addr_space_f(void)
+{
+	return 0x10U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_invalid_const_addr_ldc_f(void)
+{
+	return 0x12U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_stack_overflow_f(void)
+{
+	return 0x16U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_fault_f(void)
+{
+	return 0x17U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_tex_format_f(void)
+{
+	return 0x18U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_tex_layout_f(void)
+{
+	return 0x19U;
+}
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_mmu_nack_f(void)
 {
 	return 0x20U;
-}
-static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f(void)
-{
-	return 0x0U;
 }
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_wrap_id_m(void)
 {
@@ -3671,6 +3735,10 @@ static inline u32 gr_gpc0_tpc0_sm_tpc_esr_sm_sel_sm1_error_v(u32 r)
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_pc_r(void)
 {
 	return 0x00504738U;
+}
+static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_pc_hi_r(void)
+{
+	return 0x0050473cU;
 }
 static inline u32 gr_gpc0_tpc0_sm_halfctl_ctrl_r(void)
 {

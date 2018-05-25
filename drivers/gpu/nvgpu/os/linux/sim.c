@@ -78,9 +78,9 @@ int nvgpu_init_sim_support_linux(struct gk20a *g,
 		return err;
 	g->sim = &sim_linux->sim;
 	g->sim->g = g;
-	sim_linux->regs = nvgpu_ioremap_resource(dev,
-						 GK20A_SIM_IORESOURCE_MEM,
-						 &sim_linux->reg_mem);
+	sim_linux->regs = nvgpu_devm_ioremap_resource(dev,
+						      GK20A_SIM_IORESOURCE_MEM,
+						      &sim_linux->reg_mem);
 	if (IS_ERR(sim_linux->regs)) {
 		nvgpu_err(g, "failed to remap gk20a sim regs");
 		err = PTR_ERR(sim_linux->regs);

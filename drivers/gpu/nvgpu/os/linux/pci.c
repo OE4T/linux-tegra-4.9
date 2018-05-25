@@ -525,17 +525,18 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 	int err = 0;
 	struct gk20a *g = get_gk20a(&pdev->dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct device *dev = &pdev->dev;
 
-	l->regs = ioremap(pci_resource_start(pdev, 0),
-			  pci_resource_len(pdev, 0));
+	l->regs = nvgpu_devm_ioremap(dev, pci_resource_start(pdev, 0),
+				     pci_resource_len(pdev, 0));
 	if (IS_ERR(l->regs)) {
 		nvgpu_err(g, "failed to remap gk20a registers");
 		err = PTR_ERR(l->regs);
 		goto fail;
 	}
 
-	l->bar1 = ioremap(pci_resource_start(pdev, 1),
-			  pci_resource_len(pdev, 1));
+	l->bar1 = nvgpu_devm_ioremap(dev, pci_resource_start(pdev, 1),
+				     pci_resource_len(pdev, 1));
 	if (IS_ERR(l->bar1)) {
 		nvgpu_err(g, "failed to remap gk20a bar1");
 		err = PTR_ERR(l->bar1);
@@ -556,14 +557,11 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
  fail_sim:
 	nvgpu_remove_sim_support_linux_pci(g);
  fail:
-	if (l->regs) {
-		iounmap(l->regs);
+	if (l->regs)
 		l->regs = NULL;
-	}
-	if (l->bar1) {
-		iounmap(l->bar1);
+
+	if (l->bar1)
 		l->bar1 = NULL;
-	}
 
 	return err;
 }

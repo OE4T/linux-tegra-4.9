@@ -39,6 +39,14 @@
 void nvgpu_vidmem_destroy(struct gk20a *g)
 {
 	struct nvgpu_timeout timeout;
+	size_t size;
+
+	size = g->ops.mm.get_vidmem_size ?
+			g->ops.mm.get_vidmem_size(g) : 0;
+
+	/* Nothing to destroy if no vidmem */
+	if (!size)
+		return;
 
 	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);
 
@@ -73,6 +81,9 @@ void nvgpu_vidmem_destroy(struct gk20a *g)
 
 	if (nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		nvgpu_alloc_destroy(&g->mm.vidmem.allocator);
+
+	if (nvgpu_alloc_initialized(&g->mm.vidmem.bootstrap_allocator))
+		nvgpu_alloc_destroy(&g->mm.vidmem.bootstrap_allocator);
 }
 
 static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
@@ -297,15 +308,16 @@ static int nvgpu_vidmem_clear_pending_allocs_thr(void *mm_ptr)
 int nvgpu_vidmem_init(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
-	size_t size = g->ops.mm.get_vidmem_size ?
-		g->ops.mm.get_vidmem_size(g) : 0;
 	u64 bootstrap_base, bootstrap_size, base;
 	u64 default_page_size = SZ_64K;
+	size_t size;
 	int err;
 
 	static struct nvgpu_alloc_carveout wpr_co =
 		NVGPU_CARVEOUT("wpr-region", 0, SZ_16M);
 
+	size = g->ops.mm.get_vidmem_size ?
+			g->ops.mm.get_vidmem_size(g) : 0;
 	if (!size)
 		return 0;
 

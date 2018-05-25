@@ -366,7 +366,6 @@ static void __tegra_mce_cc3_ctrl(void *data)
 
 static void enable_cc3(struct device_node *dn)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	struct mrq_cpu_ndiv_limits_response *nltbl;
 	struct mrq_cpu_auto_cc3_request mreq;
 	struct mrq_cpu_auto_cc3_response mres;
@@ -404,7 +403,6 @@ static void enable_cc3(struct device_node *dn)
 				cc3, 1);
 		WARN_ON_ONCE(ret);
 	}
-#endif
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -722,13 +720,8 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 	cpufreq_table_validate_and_show(policy, ftbl);
 
 	/* clip boot frequency to table entry */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	ret = cpufreq_frequency_table_target(policy, ftbl, freq,
-		CPUFREQ_RELATION_L, &idx);
-#else
 	idx = cpufreq_frequency_table_target(policy, freq,
 					     CPUFREQ_RELATION_L);
-#endif
 	if (!ret && (freq != ftbl[idx].frequency)) {
 		freq = ftbl[idx].frequency;
 		if (tegra_hypervisor_mode)

@@ -26,12 +26,6 @@
 		 bootargs ="console=ttyS0,115200 androidboot.presilicon=true firmware_class.path=/etc/firmware androidboot.selinux=permissive";
 	};
 
-	/* Disable HS400 for emmc */
-	sdhci@3460000 {
-		/delete-property/ mmc-ddr-1_8v;
-		/delete-property/ mmc-hs400-1_8v;
-	};
-
 	reserved-memory {
 		/delete-node/ vpr-carveout;
 	};

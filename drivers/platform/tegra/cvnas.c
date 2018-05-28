@@ -236,6 +236,7 @@ static int nvcvnas_debugfs_init(struct cvnas_device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int nvcvsram_ecc_setup(struct cvnas_device *dev)
 {
 	u32 mem_init = 0;
@@ -327,6 +328,7 @@ err_deassert_reset:
 err_enable_clk:
 	return err;
 }
+#endif /* CONFIG_PM_SLEEP */
 
 static int nvcvnas_power_off(struct cvnas_device *cvnas_dev)
 {

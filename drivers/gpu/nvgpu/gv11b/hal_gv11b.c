@@ -761,6 +761,8 @@ static const struct gpu_ops gv11b_ops = {
 		.set_handled_snapshots = gv11b_css_hw_set_handled_snapshots,
 		.allocate_perfmon_ids = css_gr_allocate_perfmon_ids,
 		.release_perfmon_ids = css_gr_release_perfmon_ids,
+		.get_overflow_status = gv11b_css_hw_get_overflow_status,
+		.get_pending_snapshots = gv11b_css_hw_get_pending_snapshots,
 	},
 #endif
 	.falcon = {

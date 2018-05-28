@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/dma-mapping.h>
-#include <linux/dma-buf.h>
-
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/lock.h>
@@ -33,7 +30,9 @@
 #include <nvgpu/sizes.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/log.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
@@ -44,14 +43,14 @@
 
 
 /* reports whether the hw queue overflowed */
-static inline bool css_hw_get_overflow_status(struct gk20a *g)
+bool gv11b_css_hw_get_overflow_status(struct gk20a *g)
 {
 	const u32 st = perf_pmasys_control_membuf_status_overflowed_f();
 	return st == (gk20a_readl(g, perf_pmasys_control_r()) & st);
 }
 
 /* returns how many pending snapshot entries are pending */
-static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
+u32 gv11b_css_hw_get_pending_snapshots(struct gk20a *g)
 {
 	return gk20a_readl(g, perf_pmasys_mem_bytes_r()) /
 			sizeof(struct gk20a_cs_snapshot_fifo_entry);
@@ -74,7 +73,7 @@ static void gv11b_css_hw_reset_streaming(struct gk20a *g)
 			perf_pmasys_control_membuf_clear_status_doit_f());
 
 	/* pointing all pending snapshots as handled */
-	gv11b_css_hw_set_handled_snapshots(g, css_hw_get_pending_snapshots(g));
+	gv11b_css_hw_set_handled_snapshots(g, gv11b_css_hw_get_pending_snapshots(g));
 }
 
 /* informs hw how many snapshots have been processed (frees up fifo space) */
@@ -199,10 +198,10 @@ int gv11b_css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
 	if (!css->hw_snapshot)
 		return -EINVAL;
 
-	*pending = css_hw_get_pending_snapshots(g);
+	*pending = gv11b_css_hw_get_pending_snapshots(g);
 	if (!*pending)
 		return 0;
 
-	*hw_overflow = css_hw_get_overflow_status(g);
+	*hw_overflow = gv11b_css_hw_get_overflow_status(g);
 	return 0;
 }

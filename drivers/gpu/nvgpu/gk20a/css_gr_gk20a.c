@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <linux/dma-mapping.h>
-#include <linux/dma-buf.h>
-
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/lock.h>
@@ -61,14 +58,14 @@
 #define CSS_MAX_PERFMON_IDS	256
 
 /* reports whether the hw queue overflowed */
-static inline bool css_hw_get_overflow_status(struct gk20a *g)
+bool css_hw_get_overflow_status(struct gk20a *g)
 {
 	const u32 st = perf_pmasys_control_membuf_status_overflowed_f();
 	return st == (gk20a_readl(g, perf_pmasys_control_r()) & st);
 }
 
 /* returns how many pending snapshot entries are pending */
-static inline u32 css_hw_get_pending_snapshots(struct gk20a *g)
+u32 css_hw_get_pending_snapshots(struct gk20a *g)
 {
 	return gk20a_readl(g, perf_pmasys_mem_bytes_r()) /
 			sizeof(struct gk20a_cs_snapshot_fifo_entry);
@@ -245,7 +242,7 @@ static void css_gr_free_shared_data(struct gr_gk20a *gr)
 }
 
 
-static struct gk20a_cs_snapshot_client*
+struct gk20a_cs_snapshot_client*
 css_gr_search_client(struct nvgpu_list_node *clients, u32 perfmon)
 {
 	struct gk20a_cs_snapshot_client *client;

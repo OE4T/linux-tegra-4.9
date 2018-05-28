@@ -1185,6 +1185,8 @@ struct gpu_ops {
 				      u32 count);
 		int (*detach_snapshot)(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *client);
+		bool (*get_overflow_status)(struct gk20a *g);
+		u32 (*get_pending_snapshots)(struct gk20a *g);
 	} css;
 #endif
 	struct {

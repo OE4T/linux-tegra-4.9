@@ -129,6 +129,8 @@ struct gk20a_cs_snapshot {
 	struct gk20a_cs_snapshot_fifo_entry	*hw_get;
 };
 
+bool css_hw_get_overflow_status(struct gk20a *g);
+u32 css_hw_get_pending_snapshots(struct gk20a *g);
 void css_hw_set_handled_snapshots(struct gk20a *g, u32 done);
 int css_hw_enable_snapshot(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client);
@@ -140,5 +142,7 @@ u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
 				      u32 count);
 int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
 					bool *hw_overflow);
+struct gk20a_cs_snapshot_client*
+css_gr_search_client(struct nvgpu_list_node *clients, u32 perfmon);
 
 #endif /* CSS_GR_GK20A_H */

@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,11 +51,6 @@
 /* Private IOCTL for handling device specific task */
 #define EQOS_PRV_IOCTL		SIOCDEVPRIVATE
 #define EQOS_PRV_TS_IOCTL	(SIOCDEVPRIVATE + 1)
-
-#define EQOS_POWERUP_MAGIC_CMD	1
-#define EQOS_POWERDOWN_MAGIC_CMD	2
-#define EQOS_POWERUP_REMOTE_WAKEUP_CMD	3
-#define EQOS_POWERDOWN_REMOTE_WAKEUP_CMD	4
 
 /* for TX and RX threshold configures */
 #define EQOS_RX_THRESHOLD_CMD	5

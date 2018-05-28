@@ -343,8 +343,8 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	/* some non-compliant edids list 420vdb modes in vdb */
 	if ((mode->vmode & FB_VMODE_Y420) &&
 		!(mode->flag & FB_MODE_IS_FROM_VAR) &&
-		!(tegra_edid_is_hfvsdb_present(hdmi->edid)) &&
-		tegra_edid_is_scdc_present(hdmi->edid) &&
+		!(tegra_edid_is_hfvsdb_present(hdmi->edid) &&
+		tegra_edid_is_scdc_present(hdmi->edid)) &&
 		tegra_edid_is_420db_present(hdmi->edid)) {
 		mode->vmode &= ~FB_VMODE_Y420;
 		mode->vmode |= FB_VMODE_Y420_ONLY;

@@ -710,6 +710,7 @@ static int azx_pcm_silence(struct snd_pcm_substream *substream,
 		frames_to_bytes(substream->runtime, pos));
 	int j;
 
+	memset(buf16, 0, frames_to_bytes(substream->runtime, count));
 	silence_frame_cnt += count;
 
 	if (silence_frame_cnt >= ((substream->runtime->rate / 1000) * inject_freq_ms)) {

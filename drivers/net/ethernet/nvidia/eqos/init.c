@@ -127,8 +127,6 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 			pdata->xstats.pmt_irq_n++;
 			MAC_PMTCSR_RD(mac_pmtcsr);
 			pr_debug("power_isr: PMTCSR : %#lx\n", mac_pmtcsr);
-			if (pdata->power_down)
-				eqos_powerup(pdata->dev, EQOS_IOCTL_CONTEXT);
 		}
 
 		/* RxLPI exit EEE interrupts */

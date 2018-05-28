@@ -144,32 +144,6 @@ static void eqos_stop_all_ch_rx_dma(struct eqos_prv_data *pdata)
 	pr_debug("<--eqos_stop_all_ch_rx_dma\n");
 }
 
-static void eqos_start_all_ch_tx_dma(struct eqos_prv_data *pdata)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	UINT i;
-
-	pr_debug("-->eqos_start_all_ch_tx_dma\n");
-
-	for (i = 0; i < EQOS_TX_QUEUE_CNT; i++)
-		hw_if->start_dma_tx(i);
-
-	pr_debug("<--eqos_start_all_ch_tx_dma\n");
-}
-
-static void eqos_start_all_ch_rx_dma(struct eqos_prv_data *pdata)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	UINT i;
-
-	pr_debug("-->eqos_start_all_ch_rx_dma\n");
-
-	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++)
-		hw_if->start_dma_rx(i);
-
-	pr_debug("<--eqos_start_all_ch_rx_dma\n");
-}
-
 static void eqos_napi_enable_mq(struct eqos_prv_data *pdata)
 {
 	int qinx;
@@ -341,8 +315,6 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 			eqos_status = S_MAC_ISR_PMTIS;
 			MAC_PMTCSR_RD(mac_pmtcsr);
 			pr_debug("commonisr: PMTCSR : %#lx\n", mac_pmtcsr);
-			if (pdata->power_down)
-				eqos_powerup(pdata->dev, EQOS_IOCTL_CONTEXT);
 		}
 
 		/* RGMII/SMII interrupt */
@@ -934,7 +906,6 @@ static void eqos_default_common_confs(struct eqos_prv_data *pdata)
 	pdata->incr_incrx = EQOS_INCR_ENABLE;
 	pdata->flow_ctrl = EQOS_FLOW_CTRL_TX_RX;
 	pdata->oldflow_ctrl = EQOS_FLOW_CTRL_TX_RX;
-	pdata->power_down = 0;
 	pdata->tx_sa_ctrl_via_desc = EQOS_SA0_NONE;
 	pdata->tx_sa_ctrl_via_reg = EQOS_SA0_NONE;
 	pdata->hwts_tx_en = 0;
@@ -3151,57 +3122,6 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	prx_ring = GET_RX_WRAPPER_DESC(qinx);
 
 	switch (req.cmd) {
-	case EQOS_POWERUP_MAGIC_CMD:
-		if (pdata->hw_feat.mgk_sel) {
-			ret = eqos_powerup(dev, EQOS_IOCTL_CONTEXT);
-			if (ret == 0)
-				ret = EQOS_CONFIG_SUCCESS;
-			else
-				ret = EQOS_CONFIG_FAIL;
-		} else {
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-
-	case EQOS_POWERDOWN_MAGIC_CMD:
-		if (pdata->hw_feat.mgk_sel) {
-			ret =
-			    eqos_powerdown(dev,
-					   EQOS_MAGIC_WAKEUP,
-					   EQOS_IOCTL_CONTEXT);
-			if (ret == 0)
-				ret = EQOS_CONFIG_SUCCESS;
-			else
-				ret = EQOS_CONFIG_FAIL;
-		} else {
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-
-	case EQOS_POWERUP_REMOTE_WAKEUP_CMD:
-		if (pdata->hw_feat.rwk_sel) {
-			ret = eqos_powerup(dev, EQOS_IOCTL_CONTEXT);
-			if (ret == 0)
-				ret = EQOS_CONFIG_SUCCESS;
-			else
-				ret = EQOS_CONFIG_FAIL;
-		} else {
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-
-	case EQOS_POWERDOWN_REMOTE_WAKEUP_CMD:
-		if (pdata->hw_feat.rwk_sel) {
-			ret = eqos_configure_remotewakeup(dev, &req);
-			if (ret == 0)
-				ret = EQOS_CONFIG_SUCCESS;
-			else
-				ret = EQOS_CONFIG_FAIL;
-		} else {
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-
 	case EQOS_RX_THRESHOLD_CMD:
 		prx_ring->rx_threshold_val = req.flags;
 		hw_if->config_rx_threshold(qinx,
@@ -4028,183 +3948,6 @@ static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 	return 0;
 }
 
-/*!
- * \brief API called to put device in powerdown mode
- *
- * \details This function is invoked by ioctl function when the user issues an
- * ioctl command to move the device to power down state. Following operations
- * are performed in this function.
- * - stop the phy.
- * - stop the queue.
- * - Disable napi.
- * - Stop DMA TX and RX process.
- * - Enable power down mode using PMT module.
- *
- * \param[in] dev – pointer to net device structure.
- * \param[in] wakeup_type – remote wake-on-lan or magic packet.
- * \param[in] caller – netif_detach gets called conditionally based
- *                     on caller, IOCTL or DRIVER-suspend
- *
- * \return int
- *
- * \retval zero on success and -ve number on failure.
- */
-
-INT eqos_powerdown(struct net_device *dev, UINT wakeup_type, UINT caller)
-{
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	pr_debug("-->eqos_powerdown\n");
-
-	if (!dev || !netif_running(dev) ||
-	    (caller == EQOS_IOCTL_CONTEXT && pdata->power_down)) {
-		pr_err
-		    ("Device is already powered down and will powerup for %s\n",
-		     EQOS_POWER_DOWN_TYPE(pdata));
-		pr_debug("<--eqos_powerdown\n");
-		return -EINVAL;
-	}
-
-	if (pdata->phydev)
-		phy_stop(pdata->phydev);
-
-	spin_lock(&pdata->pmt_lock);
-
-	if (caller == EQOS_DRIVER_CONTEXT)
-		netif_device_detach(dev);
-
-	netif_tx_disable(dev);
-	eqos_all_ch_napi_disable(pdata);
-
-	/* stop DMA TX/RX */
-	eqos_stop_all_ch_tx_dma(pdata);
-	eqos_stop_all_ch_rx_dma(pdata);
-
-	/* enable power down mode by programming the PMT regs */
-	if (wakeup_type & EQOS_REMOTE_WAKEUP)
-		hw_if->enable_remote_pmt();
-	if (wakeup_type & EQOS_MAGIC_WAKEUP)
-		hw_if->enable_magic_pmt();
-	pdata->power_down_type = wakeup_type;
-
-	if (caller == EQOS_IOCTL_CONTEXT)
-		pdata->power_down = 1;
-
-	spin_unlock(&pdata->pmt_lock);
-
-	pr_debug("<--eqos_powerdown\n");
-
-	return 0;
-}
-
-/*!
- * \brief API to powerup the device
- *
- * \details This function is invoked by ioctl function when the user issues an
- * ioctl command to move the device to out of power down state. Following
- * operations are performed in this function.
- * - Wakeup the device using PMT module if supported.
- * - Starts the phy.
- * - Enable MAC and DMA TX and RX process.
- * - Enable napi.
- * - Starts the queue.
- *
- * \param[in] dev – pointer to net device structure.
- * \param[in] caller – netif_attach gets called conditionally based
- *                     on caller, IOCTL or DRIVER-suspend
- *
- * \return int
- *
- * \retval zero on success and -ve number on failure.
- */
-
-INT eqos_powerup(struct net_device *dev, UINT caller)
-{
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	pr_debug("-->eqos_powerup\n");
-
-	if (!dev || !netif_running(dev) ||
-	    (caller == EQOS_IOCTL_CONTEXT && !pdata->power_down)) {
-		pr_err("Device is already powered up\n");
-		return -EINVAL;
-	}
-
-	spin_lock(&pdata->pmt_lock);
-
-	if (pdata->power_down_type & EQOS_MAGIC_WAKEUP) {
-		hw_if->disable_magic_pmt();
-		pdata->power_down_type &= ~EQOS_MAGIC_WAKEUP;
-	}
-
-	if (pdata->power_down_type & EQOS_REMOTE_WAKEUP) {
-		hw_if->disable_remote_pmt();
-		pdata->power_down_type &= ~EQOS_REMOTE_WAKEUP;
-	}
-
-	pdata->power_down = 0;
-
-	if (pdata->phydev)
-		phy_start(pdata->phydev);
-
-	/* enable MAC TX/RX */
-	hw_if->start_mac_tx_rx();
-
-	/* enable DMA TX/RX */
-	eqos_start_all_ch_tx_dma(pdata);
-	eqos_start_all_ch_rx_dma(pdata);
-
-	if (caller == EQOS_DRIVER_CONTEXT)
-		netif_device_attach(dev);
-
-	eqos_napi_enable_mq(pdata);
-
-	netif_tx_start_all_queues(dev);
-
-	spin_unlock(&pdata->pmt_lock);
-
-	pr_debug("<--eqos_powerup\n");
-
-	return 0;
-}
-
-/*!
- * \brief API to configure remote wakeup
- *
- * \details This function is invoked by ioctl function when the user issues an
- * ioctl command to move the device to power down state using remote wakeup.
- *
- * \param[in] dev – pointer to net device structure.
- * \param[in] req – pointer to ioctl data structure.
- *
- * \return int
- *
- * \retval zero on success and -ve number on failure.
- */
-
-INT eqos_configure_remotewakeup(struct net_device *dev,
-				struct ifr_data_struct *req)
-{
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	if (!dev || !netif_running(dev) || !pdata->hw_feat.rwk_sel
-	    || pdata->power_down) {
-		pr_err
-		    ("Device is already powered down and will powerup for %s\n",
-		     EQOS_POWER_DOWN_TYPE(pdata));
-		return -EINVAL;
-	}
-
-	hw_if->configure_rwk_filter(req->rwk_filter_values,
-				    req->rwk_filter_length);
-
-	eqos_powerdown(dev, EQOS_REMOTE_WAKEUP, EQOS_IOCTL_CONTEXT);
-
-	return 0;
-}
 
 /*!
  * \details This function is invoked by ioctl function when the user issues an

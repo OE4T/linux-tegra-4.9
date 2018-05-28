@@ -1556,8 +1556,6 @@ void print_pkt(struct sk_buff *skb, int len, bool tx_rx, int desc_idx);
 void eqos_get_all_hw_features(struct eqos_prv_data *pdata);
 void eqos_print_all_hw_features(struct eqos_prv_data *pdata);
 void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata);
-INT eqos_powerup(struct net_device *, UINT);
-INT eqos_powerdown(struct net_device *, UINT, UINT);
 u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata);
 void eqos_init_rx_coalesce(struct eqos_prv_data *pdata);
 void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata);

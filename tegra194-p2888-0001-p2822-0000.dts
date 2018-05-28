@@ -295,3 +295,7 @@
 		interrupts = <0 24 0x4>;
 	};
 };
+
+#if LINUX_VERSION >= 414
+#include <tegra194-linux-4.14.dtsi>
+#endif

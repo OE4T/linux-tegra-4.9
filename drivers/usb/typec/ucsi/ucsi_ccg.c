@@ -1815,11 +1815,9 @@ static int ccg_cmd_validate_fw(struct ucsi_ccg *ccg, unsigned int fwid)
 	return 0;
 }
 
-static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port)
+static int ccg_cmd_update_event_mask(struct ucsi_ccg *ccg, int port, u16 mask)
 {
 	struct ccg_cmd cmd;
-	u16 mask = OC_DET | OV_DET | CONN_DET | PD_EVT_DET |
-			VDM_EVT_DET | DP_EVT_DET;
 	int ret;
 
 	cmd.reg = REG_EVENT_MASK(port);
@@ -2061,6 +2059,7 @@ get_runtime_output_current(struct ucsi_ccg *ccg, int *rt_current_ma)
 static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 {
 	struct device *dev = ccg->dev;
+	u16 mask;
 	int i;
 
 	/* Asymmetric FW should always run on FW2 (primary FW) */
@@ -2079,10 +2078,10 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 	}
 
 	/* Update event mask for ports */
-	ccg_cmd_update_event_mask(ccg, 0);
-
-	if (ccg->info.two_pd_ports)
-		ccg_cmd_update_event_mask(ccg, 1);
+	mask = OC_DET | OV_DET | CONN_DET | PD_EVT_DET |
+		VDM_EVT_DET | DP_EVT_DET;
+	for (i = 0; i < ccg->port_num; i++)
+		ccg_cmd_update_event_mask(ccg, i, mask);
 
 	clear_bit(INIT_PENDING, &ccg->flags);
 
@@ -2095,6 +2094,20 @@ static int ucsi_ccg_init(struct ucsi_ccg *ccg)
 	dev_info(dev, "%s: complete\n", __func__);
 
 	return 0;
+}
+
+static void ucsi_ccg_deinit(struct ucsi_ccg *ccg)
+{
+	int i;
+	u16 mask;
+
+	/* Clear event mask for ports */
+	mask = 0;
+	for (i = 0; i < ccg->port_num; i++)
+		ccg_cmd_update_event_mask(ccg, i, mask);
+
+	/* UCSI unregister */
+	ucsi_unregister_ppm(ccg->ucsi);
 }
 
 static ssize_t do_flash_store(struct device *dev,
@@ -2498,10 +2511,26 @@ static int ucsi_ccg_remove(struct i2c_client *client)
 {
 	struct ucsi_ccg *ccg = i2c_get_clientdata(client);
 
-	if (ccg->irq)
-		free_irq(ccg->irq, ccg);
+	if (!ccg)
+		return 0;
+
+	ucsi_ccg_deinit(ccg);
+	sysfs_remove_group(&ccg->dev->kobj, &ucsi_ccg_attr_group);
 
 	return 0;
+}
+
+static void ucsi_ccg_shutdown(struct i2c_client *client)
+{
+	struct ucsi_ccg *ccg = i2c_get_clientdata(client);
+
+	if (!ccg)
+		return;
+
+	ucsi_ccg_deinit(ccg);
+
+	if (ccg->irq)
+		devm_free_irq(ccg->dev, ccg->irq, ccg);
 }
 
 static const struct of_device_id ucsi_ccg_of_match_table[] = {
@@ -2524,6 +2553,7 @@ static struct i2c_driver ucsi_ccg_driver = {
 	.id_table = ucsi_ccg_i2c_ids,
 	.probe = ucsi_ccg_probe,
 	.remove = ucsi_ccg_remove,
+	.shutdown = ucsi_ccg_shutdown,
 };
 module_i2c_driver(ucsi_ccg_driver);
 

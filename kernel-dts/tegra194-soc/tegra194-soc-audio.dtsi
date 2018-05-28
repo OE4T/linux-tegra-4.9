@@ -640,4 +640,16 @@
 		interrupts = <0 161 0x04>;
 		status = "disabled";
 	};
+
+	eqos_ape@2990000 {
+		status = "disabled";
+		compatible = "nvidia,tegra18x-eqos-ape";
+		wakeup-disable;
+		reg = <0x0 0x02990054 0x0 0x4>, /* AMISC IDLE*/
+			<0x0 0x029900c0 0x0 0x28>;  /* AMISC EAVB*/
+		clocks = <&bpmp_clks TEGRA194_CLK_APE>,
+			<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
+			<&bpmp_clks TEGRA194_CLK_PLLA>;
+		clock-names = "eqos_ape.ape", "pll_a_out0", "pll_a";
+	};
 };

@@ -543,6 +543,14 @@ static int mmc_dbg_ext_csd_life_time_type_b(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_ext_csd_life_time_type_b_fops,
 		mmc_dbg_ext_csd_life_time_type_b, NULL, "%llu\n");
 
+static int mmc_dbg_ext_csd_device_type(void *data, u64 *val)
+{
+	struct mmc_card *card = data;
+	return mmc_get_ext_csd_byte_val(card, val, EXT_CSD_CARD_TYPE);
+}
+DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_ext_csd_device_type_fops,
+			mmc_dbg_ext_csd_device_type, NULL, "%llu\n");
+
 #define EXT_CSD_STR_LEN 1025
 
 /* Here index starts with zero*/
@@ -689,6 +697,9 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 			goto err;
 		if (!debugfs_create_file("dhs_type_b", 0400, root, card,
 					&mmc_dbg_ext_csd_life_time_type_b_fops))
+			goto err;
+		if (!debugfs_create_file("emmc_device_type", S_IRUSR, root, card,
+					&mmc_dbg_ext_csd_device_type_fops))
 			goto err;
 	}
 

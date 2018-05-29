@@ -46,7 +46,8 @@
 
 #define KHZ_TO_HZ		1000
 #define REF_CLK_MHZ		408 /* 408 MHz */
-#define US_DELAY		5000
+#define US_DELAY		500
+#define US_DELAY_MIN		2
 #define CPUFREQ_TBL_STEP_HZ	(50 * KHZ_TO_HZ * KHZ_TO_HZ)
 
 #define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = 0; \
@@ -93,6 +94,7 @@ struct tegra_cpufreq_data {
 static struct tegra_cpufreq_data tfreq_data;
 struct tegra_cpu_ctr {
 	uint32_t cpu;
+	uint32_t delay;
 	uint32_t coreclk_cnt, last_coreclk_cnt;
 	uint32_t refclk_cnt, last_refclk_cnt;
 };
@@ -170,7 +172,7 @@ static void tegra_read_counters(struct work_struct *work)
 	val = read_freq_feedback();
 	c->last_refclk_cnt = (uint32_t)(val & 0xffffffff);
 	c->last_coreclk_cnt = (uint32_t) (val >> 32);
-	udelay(tfreq_data.freq_compute_delay);
+	udelay(c->delay);
 	val = read_freq_feedback();
 	c->refclk_cnt = (uint32_t)(val & 0xffffffff);
 	c->coreclk_cnt = (uint32_t) (val >> 32);
@@ -197,7 +199,7 @@ static void tegra_read_counters(struct work_struct *work)
  * @cpu - logical cpu whose freq to be updated
  * Returns freq in KHz on success, 0 if cpu is offline
  */
-static unsigned int tegra194_get_speed(uint32_t cpu)
+static unsigned int tegra194_get_speed_common(uint32_t cpu, uint32_t delay)
 {
 	uint32_t delta_ccnt = 0;
 	uint32_t delta_refcnt = 0;
@@ -206,6 +208,7 @@ static unsigned int tegra194_get_speed(uint32_t cpu)
 	struct read_counters_work read_counters_work;
 
 	read_counters_work.c.cpu = cpu;
+	read_counters_work.c.delay = delay;
 	INIT_WORK_ONSTACK(&read_counters_work.work, tegra_read_counters);
 	queue_work_on(cpu, read_counters_wq, &read_counters_work.work);
 	flush_work(&read_counters_work.work);
@@ -223,6 +226,16 @@ static unsigned int tegra194_get_speed(uint32_t cpu)
 	rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ) / delta_refcnt;
 err_out:
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
+}
+
+static unsigned int tegra194_get_speed(uint32_t cpu)
+{
+	return tegra194_get_speed_common(cpu, tfreq_data.freq_compute_delay);
+}
+
+static unsigned int tegra194_fast_get_speed(uint32_t cpu)
+{
+	return tegra194_get_speed_common(cpu, US_DELAY_MIN);
 }
 
 /**
@@ -711,7 +724,7 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
 
-	freq = tegra194_get_speed(policy->cpu); /* boot freq */
+	freq = tegra194_fast_get_speed(policy->cpu); /* boot freq */
 	if (!freq) /* 0 is invalid */
 		return -EIO;
 
@@ -730,7 +743,7 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 			tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
-	policy->cur = tegra194_get_speed(policy->cpu);
+	policy->cur = tegra194_fast_get_speed(policy->cpu);
 	if (!policy->cur) /* '0' is invalid */
 		return -EIO;
 

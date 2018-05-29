@@ -447,6 +447,7 @@ struct tegra_xusb_padctl_ops {
 	void (*utmi_pad_power_on)(struct phy *phy);
 	void (*utmi_pad_power_down)(struct phy *phy);
 	int (*utmi_port_reset_quirk)(struct phy *phy);
+	int (*usb3_port_gen1_only)(struct phy *phy, bool on);
 };
 
 struct tegra_xusb_padctl_soc {

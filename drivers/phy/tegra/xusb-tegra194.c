@@ -179,6 +179,7 @@
 #define   PORTX_SPEED_SUPPORT_SHIFT(x)		((x) * 4)
 #define   PORTX_SPEED_SUPPORT_MASK		(0x3)
 #define     PORT_SPEED_SUPPORT_GEN1		(0x0)
+#define     PORT_SPEED_SUPPORT_GEN2		(0x1)
 
 /* XUSB AO registers */
 #define XUSB_AO_USB_DEBOUNCE_DEL		(0x4)
@@ -1365,10 +1366,21 @@ static int tegra194_usb3_phy_power_on(struct phy *phy)
 	}
 	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
 
-	if (port->port_cap == USB_OTG_CAP || port->gen1_only) {
+	if (port->gen1_only) {
+		dev_dbg(dev, "set USB3 %d GEN1\n", index);
 		reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
-		reg &= ~(PORTX_SPEED_SUPPORT_MASK << PORTX_SPEED_SUPPORT_SHIFT(index));
-		reg |= (PORT_SPEED_SUPPORT_GEN1 << PORTX_SPEED_SUPPORT_SHIFT(index));
+		reg &= ~(PORTX_SPEED_SUPPORT_MASK <<
+					PORTX_SPEED_SUPPORT_SHIFT(index));
+		reg |= (PORT_SPEED_SUPPORT_GEN1 <<
+					PORTX_SPEED_SUPPORT_SHIFT(index));
+		padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CFG);
+	} else {
+		dev_dbg(dev, "set USB3 %d GEN2\n", index);
+		reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
+		reg &= ~(PORTX_SPEED_SUPPORT_MASK <<
+					PORTX_SPEED_SUPPORT_SHIFT(index));
+		reg |= (PORT_SPEED_SUPPORT_GEN2 <<
+					PORTX_SPEED_SUPPORT_SHIFT(index));
 		padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CFG);
 	}
 
@@ -2627,6 +2639,29 @@ void tegra194_phy_xusb_handle_overcurrent(struct tegra_xusb_padctl *padctl)
 	mutex_unlock(&padctl->lock);
 }
 
+static int tegra194_usb3_port_gen1_only(struct phy *phy, bool gen1)
+{
+	struct tegra_xusb_lane *lane;
+	unsigned int index;
+	struct tegra_xusb_padctl *padctl;
+	struct tegra_xusb_usb3_port *port;
+
+	if (!phy)
+		return 0;
+
+	lane = phy_get_drvdata(phy);
+	index = lane->index;
+	padctl = lane->pad->padctl;
+	port = tegra_xusb_find_usb3_port(padctl, index);
+	if (!port) {
+		dev_err(padctl->dev, "no port found for USB3 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	port->gen1_only = gen1;
+	return 0;
+}
+
 static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 	.probe = tegra194_xusb_padctl_probe,
 	.remove = tegra194_xusb_padctl_remove,
@@ -2660,6 +2695,7 @@ static const struct tegra_xusb_padctl_ops tegra194_xusb_padctl_ops = {
 			tegra194_xusb_padctl_utmi_pad_secondary_charger_detect,
 	.overcurrent_detected = tegra194_phy_xusb_overcurrent_detected,
 	.handle_overcurrent = tegra194_phy_xusb_handle_overcurrent,
+	.usb3_port_gen1_only = tegra194_usb3_port_gen1_only,
 };
 
 static const char * const tegra194_supply_names[] = {

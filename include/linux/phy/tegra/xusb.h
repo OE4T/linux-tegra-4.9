@@ -107,5 +107,6 @@ void tegra_xusb_padctl_handle_overcurrent(struct tegra_xusb_padctl *padctl);
 int tegra_xusb_padctl_get_vbus_id_num(struct tegra_xusb_padctl *padctl);
 void tegra_xusb_padctl_get_vbus_id_ports(struct tegra_xusb_padctl *padctl,
 	int i, int *usb2_port, int *usb3_port);
+int tegra_xusb_padctl_usb3_port_gen1_only(struct phy *phy, bool on);
 
 #endif /* PHY_TEGRA_XUSB_H */

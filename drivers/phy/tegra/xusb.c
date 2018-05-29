@@ -1771,6 +1771,24 @@ void tegra_xusb_padctl_get_vbus_id_ports(struct tegra_xusb_padctl *padctl,
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_get_vbus_id_ports);
 
+int tegra_xusb_padctl_usb3_port_gen1_only(struct phy *phy, bool gen1)
+{
+	struct tegra_xusb_lane *lane;
+	struct tegra_xusb_padctl *padctl;
+
+	if (!phy)
+		return -ENODEV;
+
+	lane = phy_get_drvdata(phy);
+	padctl = lane->pad->padctl;
+
+	if (padctl->soc->ops->usb3_port_gen1_only)
+		return padctl->soc->ops->usb3_port_gen1_only(phy, gen1);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_usb3_port_gen1_only);
+
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");
 MODULE_LICENSE("GPL v2");

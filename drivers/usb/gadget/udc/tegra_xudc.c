@@ -724,6 +724,9 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc, int i)
 
 	pm_runtime_get_sync(xudc->dev);
 
+	if (xudc->usb3_phy[i])
+		tegra_xusb_padctl_usb3_port_gen1_only(xudc->usb3_phy[i], true);
+
 	tegra_xusb_padctl_set_vbus_override_early(xudc->padctl, i);
 
 	err = phy_power_on(xudc->utmi_phy[i]);
@@ -810,6 +813,9 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc, int i)
 	if (err < 0)
 		dev_err(xudc->dev, "usb3_phy power off failed %d @ %d\n", err,
 			i);
+
+	if (xudc->usb3_phy[i])
+		tegra_xusb_padctl_usb3_port_gen1_only(xudc->usb3_phy[i], false);
 
 	if (xudc->ucd)
 		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);
@@ -4025,8 +4031,10 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	xudc->emc_frequency_boosted = false;
 	xudc->restore_work_scheduled = false;
 
-	of_property_read_u32(pdev->dev.of_node, "nvidia,boost_cpu_freq",
+	err = of_property_read_u32(pdev->dev.of_node, "nvidia,boost_cpu_freq",
 						&xudc->boost_cpu_freq);
+	if (err)
+		dev_dbg(xudc->dev, "PMQOS CPU boost disabled\n");
 
 	if (xudc->boost_cpu_freq > 0) {
 		dev_info(xudc->dev, "PMQOS CPU boost enabled\n");

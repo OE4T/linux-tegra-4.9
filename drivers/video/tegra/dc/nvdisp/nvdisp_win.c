@@ -500,14 +500,38 @@ int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 {
 	int ret = 0;
 
-	if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_SRGB)
+	if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_SRGB) {
 		ret |= win_win_set_params_degamma_range_srgb_f();
-	else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10)
+	} else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10) {
 		ret |= win_win_set_params_degamma_range_yuv8_10_f();
-	else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_12)
+	} else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_12) {
 		ret |= win_win_set_params_degamma_range_yuv12_f();
-	else
+	} else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_NONE) {
 		ret |= win_win_set_params_degamma_range_none_f();
+	} else {
+		/* If degamma is not programmed through window flip flags,
+		 * set degamma based on window format.
+		 */
+		if (tegra_dc_is_yuv(win->fmt)) {
+			/* yuv8_10 for rec601/709/2020-10 and
+			 * yuv12 for rec2020-12 yuv inputs
+			 */
+			if (tegra_dc_is_yuv_12bpc(win->fmt))
+				ret |=
+				win_win_set_params_degamma_range_yuv12_f();
+			else
+				ret |=
+				win_win_set_params_degamma_range_yuv8_10_f();
+		} else {
+			/* srgb for rgb, none for I8 */
+			if (win->fmt == TEGRA_DC_EXT_FMT_T_P8)
+				ret |=
+				win_win_set_params_degamma_range_none_f();
+			else
+				ret |=
+				win_win_set_params_degamma_range_srgb_f();
+		}
+	}
 
 	return ret;
 }

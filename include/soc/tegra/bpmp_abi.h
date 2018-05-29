@@ -156,6 +156,7 @@ struct mrq_response {
 #define MRQ_UPHY		69
 #define MRQ_CPU_AUTO_CC3	70
 #define MRQ_QUERY_FW_TAG	71
+#define MRQ_FMON		72
 
 /** @} */
 
@@ -187,6 +188,7 @@ struct mrq_response {
  *   @defgroup Strap Straps
  *   @defgroup UPHY UPHY
  *   @defgroup CC3 Auto-CC3
+ *   @defgroup FMON FMON
  * @}
  */
 
@@ -2182,6 +2184,137 @@ struct mrq_uphy_request {
 struct mrq_uphy_response {
 	union {
 		struct cmd_uphy_margin_status_response uphy_get_margin_status;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/** @} */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_FMON
+ * @brief Perform a frequency monitor configuration operations
+ *
+ * * Platforms: T194
+ * * Initiators: CCPLEX
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_fmon_request
+ * * Response Payload: @ref mrq_fmon_response
+ *
+ * @addtogroup FMON
+ * @{
+ */
+enum {
+	/**
+	 * @brief Clamp FMON configuration to specified rate.
+	 *
+	 * The monitored clock must be running for clamp to succeed. If
+	 * clamped, FMON configuration is preserved when clock rate
+	 * and/or state is changed.
+	 */
+	CMD_FMON_GEAR_CLAMP = 1,
+	/**
+	 * @brief Release clamped FMON configuration.
+	 *
+	 * Allow FMON configuration to follow monitored clock rate
+	 * and/or state changes.
+	 */
+	CMD_FMON_GEAR_FREE = 2,
+	/**
+	 * @brief Return rate FMON is clamped at, or 0 if FMON is not
+	 *         clamped.
+	 *
+	 * Inherently racy, since clamp state can be changed
+	 * concurrently. Useful for testing.
+	 */
+	CMD_FMON_GEAR_GET = 3,
+	CMD_FMON_NUM,
+};
+
+struct cmd_fmon_gear_clamp_request {
+	int32_t unused;
+	int64_t rate;
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_fmon_gear_clamp_response {
+	EMPTY
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_fmon_gear_free_request {
+	EMPTY
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_fmon_gear_free_response {
+	EMPTY
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_fmon_gear_get_request {
+	EMPTY
+} __ABI_PACKED;
+
+struct cmd_fmon_gear_get_response {
+	int64_t rate;
+} __ABI_PACKED;
+
+/**
+ * @ingroup FMON
+ * @brief Request with #MRQ_FMON
+ *
+ * Used by the sender of an #MRQ_FMON message to configure clock
+ * frequency monitors. The FMON request is split into several
+ * sub-commands. Some sub-commands require no additional data.
+ * Others have a sub-command specific payload
+ *
+ * |sub-command                 |payload                |
+ * |----------------------------|-----------------------|
+ * |CMD_FMON_GEAR_CLAMP         |fmon_gear_clamp        |
+ * |CMD_FMON_GEAR_FREE          |-                      |
+ * |CMD_FMON_GEAR_GET           |-                      |
+ *
+ */
+
+struct mrq_fmon_request {
+	/** @brief Sub-command and clock id concatenated to 32-bit word.
+	 * - bits[31..24] is the sub-cmd.
+	 * - bits[23..0] is monitored clock id used to select target
+	 *   FMON
+	 */
+	uint32_t cmd_and_id;
+
+	union {
+		struct cmd_fmon_gear_clamp_request fmon_gear_clamp;
+		/** @private */
+		struct cmd_fmon_gear_free_request fmon_gear_free;
+		/** @private */
+		struct cmd_fmon_gear_get_request fmon_gear_get;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup FMON
+ * @brief Response to MRQ_FMON
+ *
+ * Each sub-command supported by @ref mrq_fmon_request may
+ * return sub-command-specific data as indicated below.
+ *
+ * |sub-command                 |payload                 |
+ * |----------------------------|------------------------|
+ * |CMD_FMON_GEAR_CLAMP         |-                       |
+ * |CMD_FMON_GEAR_FREE          |-                       |
+ * |CMD_FMON_GEAR_GET           |fmon_gear_get           |
+ *
+ */
+
+struct mrq_fmon_response {
+	union {
+		/** @private */
+		struct cmd_fmon_gear_clamp_response fmon_gear_clamp;
+		/** @private */
+		struct cmd_fmon_gear_free_response fmon_gear_free;
+		struct cmd_fmon_gear_get_response fmon_gear_get;
 	} __UNION_ANON;
 } __ABI_PACKED;
 

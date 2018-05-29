@@ -15,7 +15,10 @@
  */
 
 #include <nvgpu/vgpu/vgpu_ivm.h>
+
 #include <linux/tegra-ivc.h>
+
+#include "common/linux/os_linux.h"
 
 struct tegra_hv_ivm_cookie *vgpu_ivm_mempool_reserve(unsigned int id)
 {
@@ -35,4 +38,16 @@ u64 vgpu_ivm_get_ipa(struct tegra_hv_ivm_cookie *cookie)
 u64 vgpu_ivm_get_size(struct tegra_hv_ivm_cookie *cookie)
 {
 	return cookie->size;
+}
+
+void *vgpu_ivm_mempool_map(struct tegra_hv_ivm_cookie *cookie)
+{
+	return ioremap_cache(vgpu_ivm_get_ipa(cookie),
+				vgpu_ivm_get_size(cookie));
+}
+
+void vgpu_ivm_mempool_unmap(struct tegra_hv_ivm_cookie *cookie,
+		void *addr)
+{
+	iounmap(addr);
 }

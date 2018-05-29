@@ -453,15 +453,24 @@ static int css_gr_create_client_data(struct gk20a *g,
 			u32 perfmon_count,
 			struct gk20a_cs_snapshot_client *cur)
 {
-	memset(cur->snapshot, 0, sizeof(*cur->snapshot));
-	cur->snapshot->start = sizeof(*cur->snapshot);
-	/* we should be ensure that can fit all fifo entries here */
-	cur->snapshot->end =
-		CSS_FIFO_ENTRY_CAPACITY(cur->snapshot_size)
-			* sizeof(struct gk20a_cs_snapshot_fifo_entry)
-			+ sizeof(struct gk20a_cs_snapshot_fifo);
-	cur->snapshot->get = cur->snapshot->start;
-	cur->snapshot->put = cur->snapshot->start;
+	/*
+	 * Special handling in-case of rm-server
+	 *
+	 * client snapshot buffer will not be mapped
+	 * in-case of rm-server its only mapped in
+	 * guest side
+	 */
+	if (cur->snapshot) {
+		memset(cur->snapshot, 0, sizeof(*cur->snapshot));
+		cur->snapshot->start = sizeof(*cur->snapshot);
+		/* we should be ensure that can fit all fifo entries here */
+		cur->snapshot->end =
+			CSS_FIFO_ENTRY_CAPACITY(cur->snapshot_size)
+				* sizeof(struct gk20a_cs_snapshot_fifo_entry)
+				+ sizeof(struct gk20a_cs_snapshot_fifo);
+		cur->snapshot->get = cur->snapshot->start;
+		cur->snapshot->put = cur->snapshot->start;
+	}
 
 	cur->perfmon_count = perfmon_count;
 

@@ -31,5 +31,7 @@ struct tegra_hv_ivm_cookie *vgpu_ivm_mempool_reserve(unsigned int id);
 int vgpu_ivm_mempool_unreserve(struct tegra_hv_ivm_cookie *cookie);
 u64 vgpu_ivm_get_ipa(struct tegra_hv_ivm_cookie *cookie);
 u64 vgpu_ivm_get_size(struct tegra_hv_ivm_cookie *cookie);
-
+void *vgpu_ivm_mempool_map(struct tegra_hv_ivm_cookie *cookie);
+void vgpu_ivm_mempool_unmap(struct tegra_hv_ivm_cookie *cookie,
+		void *addr);
 #endif

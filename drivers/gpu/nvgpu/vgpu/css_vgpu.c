@@ -1,51 +1,51 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 
 #include <nvgpu/vgpu/vgpu_ivm.h>
-#include <nvgpu/vgpu/tegra_vgpu.h>
-#include <uapi/linux/nvgpu.h>
 #include <nvgpu/vgpu/vgpu.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
+#include <nvgpu/dt.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
-#include "common/linux/platform_gk20a.h"
-#include "common/linux/os_linux.h"
+
 #include "vgpu/css_vgpu.h"
 
 static struct tegra_hv_ivm_cookie *css_cookie;
 
 static struct tegra_hv_ivm_cookie *vgpu_css_reserve_mempool(struct gk20a *g)
 {
-	struct device *dev = dev_from_gk20a(g);
-	struct device_node *np = dev->of_node;
-	struct of_phandle_args args;
 	struct tegra_hv_ivm_cookie *cookie;
 	u32 mempool;
 	int err;
 
-	err = of_parse_phandle_with_fixed_args(np,
-			"mempool-css", 1, 0, &args);
+	err = nvgpu_dt_read_u32_index(g, "mempool-css", 1, &mempool);
 	if (err) {
 		nvgpu_err(g, "dt missing mempool-css");
 		return ERR_PTR(err);
 	}
 
-	mempool = args.args[0];
 	cookie = vgpu_ivm_mempool_reserve(mempool);
 	if (IS_ERR_OR_NULL(cookie)) {
 		nvgpu_err(g, "mempool  %u reserve failed", mempool);
@@ -103,9 +103,9 @@ static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 		goto fail;
 	}
 
-	buf = ioremap_cache(vgpu_ivm_get_ipa(css_cookie), size);
+	buf = vgpu_ivm_mempool_map(css_cookie);
 	if (!buf) {
-		nvgpu_info(g, "ioremap_cache failed");
+		nvgpu_info(g, "vgpu_ivm_mempool_map failed");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -130,7 +130,7 @@ void vgpu_css_release_snapshot_buffer(struct gr_gk20a *gr)
 	if (!data->hw_snapshot)
 		return;
 
-	iounmap(data->hw_snapshot);
+	vgpu_ivm_mempool_unmap(css_cookie, data->hw_snapshot);
 	data->hw_snapshot = NULL;
 
 	vgpu_ivm_mempool_unreserve(css_cookie);
@@ -155,7 +155,7 @@ int vgpu_css_flush_snapshots(struct channel_gk20a *ch,
 	msg.handle = vgpu_get_handle(g);
 	p = &msg.params.cyclestats_snapshot;
 	p->handle = ch->virt_ctx;
-	p->subcmd = NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH;
+	p->subcmd = TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_FLUSH;
 	p->buf_info = (uintptr_t)data->hw_get - (uintptr_t)data->hw_snapshot;
 
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -182,7 +182,7 @@ static int vgpu_css_attach(struct channel_gk20a *ch,
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
-	p->subcmd = NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH;
+	p->subcmd = TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_ATTACH;
 	p->perfmon_count = cs_client->perfmon_count;
 
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -209,7 +209,7 @@ int vgpu_css_detach(struct channel_gk20a *ch,
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
-	p->subcmd = NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH;
+	p->subcmd = TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_DETACH;
 	p->perfmon_start = cs_client->perfmon_start;
 	p->perfmon_count = cs_client->perfmon_count;
 
@@ -233,4 +233,5 @@ int vgpu_css_enable_snapshot_buffer(struct channel_gk20a *ch,
 	ret = vgpu_css_init_snapshot_buffer(&ch->g->gr);
 	return ret;
 }
+
 #endif /* CONFIG_GK20A_CYCLE_STATS */

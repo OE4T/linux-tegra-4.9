@@ -509,6 +509,12 @@ struct tegra_vgpu_constants_params {
 	u32 l2_en_mask[TEGRA_VGPU_L2_EN_MASK];
 };
 
+enum {
+	TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_FLUSH = 0,
+	TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_ATTACH = 1,
+	TEGRA_VGPU_CYCLE_STATS_SNAPSHOT_CMD_DETACH = 2,
+};
+
 struct tegra_vgpu_channel_cyclestats_snapshot_params {
 	u64 handle;
 	u32 perfmon_start;

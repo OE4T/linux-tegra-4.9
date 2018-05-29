@@ -95,6 +95,8 @@ nvgpu-y += \
 	common/clock_gating/gp10b_gating_reglist.o \
 	common/clock_gating/gv100_gating_reglist.o \
 	common/clock_gating/gv11b_gating_reglist.o \
+	common/sim.o \
+	common/sim_pci.o \
 	gk20a/gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
@@ -133,9 +135,7 @@ nvgpu-y += \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
 	boardobj/boardobjgrp_e255.o \
-	boardobj/boardobjgrp_e32.o \
-	common/sim.o \
-	common/sim_pci.o
+	boardobj/boardobjgrp_e32.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
 	common/mm/vidmem.o \
@@ -192,6 +192,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/vgpu.o \
 	vgpu/dbg_vgpu.o \
 	vgpu/tsg_vgpu.o \
+	vgpu/css_vgpu.o \
 	vgpu/gm20b/vgpu_gr_gm20b.o \
 	vgpu/gp10b/vgpu_hal_gp10b.o  \
 	vgpu/gp10b/vgpu_gr_gp10b.o  \
@@ -206,7 +207,6 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	common/linux/vgpu/platform_vgpu_tegra.o \
 	common/linux/vgpu/fecs_trace_vgpu.o \
 	common/linux/vgpu/clk_vgpu.o \
-	common/linux/vgpu/css_vgpu.o \
 	common/linux/vgpu/sysfs_vgpu.o \
 	common/linux/vgpu/vgpu_ivc.o \
 	common/linux/vgpu/vgpu_ivm.o \

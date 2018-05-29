@@ -2482,7 +2482,8 @@ int gv100_nvlink_link_set_sublink_mode(struct gk20a *g, u32 link_id,
 					bool is_rx_sublink, u32 mode)
 {
 	int err = 0;
-	u32 rx_sublink_state, tx_sublink_state;
+	u32 rx_sublink_state = nvgpu_nvlink_sublink_rx__last;
+	u32 tx_sublink_state = nvgpu_nvlink_sublink_tx__last;
 	u32 reg;
 
 	if (!(BIT(link_id) & g->nvlink.enabled_links))
@@ -2492,8 +2493,12 @@ int gv100_nvlink_link_set_sublink_mode(struct gk20a *g, u32 link_id,
 	if (err)
 		return err;
 
-	rx_sublink_state = g->ops.nvlink.get_rx_sublink_state(g, link_id);
-	tx_sublink_state = g->ops.nvlink.get_tx_sublink_state(g, link_id);
+	if (is_rx_sublink)
+		rx_sublink_state = g->ops.nvlink.get_rx_sublink_state(g,
+								link_id);
+	else
+		tx_sublink_state = g->ops.nvlink.get_tx_sublink_state(g,
+								link_id);
 
 	switch (mode) {
 	case nvgpu_nvlink_sublink_tx_hs:
@@ -2656,7 +2661,7 @@ u32 gv100_nvlink_link_get_sublink_mode(struct gk20a *g, u32 link_id,
 			return nvgpu_nvlink_sublink_tx_safe;
 		if (state == nvl_sl0_slsm_status_tx_primary_state_off_v())
 			return nvgpu_nvlink_sublink_tx_off;
-		return nvgpu_nvlink_sublink_tx_off;
+		return nvgpu_nvlink_sublink_tx__last;
 	} else {
 		state = g->ops.nvlink.get_rx_sublink_state(g, link_id);
 		if (state == nvl_sl1_slsm_status_rx_primary_state_hs_v())
@@ -2667,7 +2672,7 @@ u32 gv100_nvlink_link_get_sublink_mode(struct gk20a *g, u32 link_id,
 			return nvgpu_nvlink_sublink_rx_safe;
 		if (state == nvl_sl1_slsm_status_rx_primary_state_off_v())
 			return nvgpu_nvlink_sublink_rx_off;
-		return nvgpu_nvlink_sublink_rx_off;
+		return nvgpu_nvlink_sublink_rx__last;
 	}
 	return nvgpu_nvlink_sublink_tx__last;
 }

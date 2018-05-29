@@ -3130,6 +3130,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.gpc_router.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_ltc.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_cau.l);
 
 	nvgpu_vfree(g, gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
@@ -7583,6 +7584,18 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
 					count, offset, max_cnt, base, ~0))
 			return -EINVAL;
 
+		/* Counter Aggregation Unit, if available */
+		if (g->gr.ctx_vars.ctxsw_regs.pm_cau.count) {
+			base = gpc_base + (gpc_stride * gpc_num)
+					+ tpc_in_gpc_base;
+			if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_cau,
+					count, offset, max_cnt, base, num_tpcs,
+					tpc_in_gpc_stride,
+					(tpc_in_gpc_stride - 1)))
+				return -EINVAL;
+		}
+
 		*offset = ALIGN(*offset, 256);
 	}
 	return 0;
@@ -7648,6 +7661,8 @@ int gr_gk20a_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
  *|  LIST_pm_ctx_reg_GPC             REGn TPC1  |
  *|  List_pm_ctx_reg_uc_GPC          REGn TPCn  |
  *|  LIST_nv_perf_ctx_reg_GPC                   |
+ *|  LIST_nv_perf_gpcrouter_ctx_reg             |
+ *|  LIST_nv_perf_ctx_reg_CAU                   |
  *|                                       ----  |--
  *|                            GPC1         .   |
  *|                                         .   |<----

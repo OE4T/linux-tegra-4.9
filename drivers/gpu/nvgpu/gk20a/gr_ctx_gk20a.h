@@ -105,6 +105,7 @@ union __max_name {
 #define NETLIST_REGIONID_CTXREG_PMROP           31
 #define NETLIST_REGIONID_CTXREG_PMUCGPC         32
 #define NETLIST_REGIONID_CTXREG_ETPC            33
+#define NETLIST_REGIONID_NVPERF_PMCAU		35
 
 struct netlist_region {
 	u32 region_id;

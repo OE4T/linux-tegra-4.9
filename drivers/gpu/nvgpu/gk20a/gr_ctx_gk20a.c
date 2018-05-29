@@ -343,6 +343,14 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				if (err)
 					goto clean_up;
 				break;
+			case NETLIST_REGIONID_NVPERF_PMCAU:
+				nvgpu_log_info(g, "NETLIST_REGIONID_NVPERF_PMCAU");
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
+					src, size,
+					&g->gr.ctx_vars.ctxsw_regs.pm_cau);
+				if (err)
+					goto clean_up;
+				break;
 
 			default:
 				nvgpu_log_info(g, "unrecognized region %d skipped", i);
@@ -395,6 +403,7 @@ clean_up:
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.etpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_cau.l);
 		nvgpu_release_firmware(g, netlist_fw);
 		err = -ENOENT;
 	}

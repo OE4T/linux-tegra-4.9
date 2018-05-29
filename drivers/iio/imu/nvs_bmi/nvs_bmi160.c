@@ -38,7 +38,7 @@
 
 #define BMI_NAME			"bmi160"
 #define BMI_VENDOR			"Bosch"
-#define BMI_DRIVER_VERSION		(5)
+#define BMI_DRIVER_VERSION		(6)
 #define BMI_ACC_VERSION			(1)
 #define BMI_GYR_VERSION			(1)
 #define BMI_HW_DELAY_POR_MS		(10)
@@ -504,6 +504,7 @@ struct bmi_state {
 	s64 ts_lo;			/* timestamp threshold low */
 	s64 ts_hi;			/* timestamp threshold high */
 	s64 ts_odr;			/* timestamp ODR */
+	s64 period_ns;			/* global period in ns */
 	u8 int_out_ctrl;		/* user interrupt cfg */
 	u8 int_latch;			/* " */
 	u8 int_map_0;			/* " */
@@ -797,28 +798,11 @@ static int bmi_ts_init(struct bmi_state *st)
 {
 	int ret;
 
-	st->ts = 0;
-	st->frame_n = 0;
 	ret = bmi_sensortime_rd(st, &st->snsr_t);
 	ret |= bmi_cmd_wr(st, &bmi_cmd_fifo_clr);
+	if (!ret)
+		st->ts = 0;
 	return ret;
-}
-
-static void bmi_ts_thr(struct bmi_state *st)
-{
-	s64 ts_irq;
-	s64 ts_odr;
-
-	ts_irq = atomic64_read(&st->ts_irq);
-	ts_odr = st->ts_odr >> 1;
-	st->ts_lo = ts_irq - ts_odr;
-	st->ts_hi = ts_irq + ts_odr;
-	if (st->sts & BMI_STS_SPEW_TS)
-		dev_info(&st->i2c->dev,
-			 "%s irq=%lld->%lld (%lld) odr=%lld lo=%lld hi=%lld\n",
-			 __func__, st->ts_st_irq, ts_irq,
-			 ts_irq - st->ts_st_irq, ts_odr, st->ts_lo, st->ts_hi);
-	st->ts_st_irq = ts_irq;
 }
 
 static int bmi_pm(struct bmi_state *st, bool en)
@@ -842,7 +826,6 @@ static int bmi_pm(struct bmi_state *st, bool en)
 		ret |= bmi_i2c_wr(st, BMI_REG_INT_OUT_CTRL, st->int_out_ctrl);
 		ret |= bmi_i2c_wr(st, BMI_REG_INT_LATCH, st->int_latch);
 		ret |= bmi_i2c_wr(st, BMI_REG_INT_EN_1, 0x10);
-		bmi_ts_init(st);
 	} else {
 		st->ts = 0;
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(bmi_vregs));
@@ -926,8 +909,11 @@ static void bmi_work(struct work_struct *ws)
 		else
 			sleep_us = 0;
 		bmi_mutex_unlock(st);
-		if (sleep_us)
-			usleep_range(sleep_us, sleep_us);
+		if (sleep_us > 10000) /* SLEEPING FOR LARGER MSECS ( 10ms+ ) */
+			msleep(sleep_us / 1000);
+		else if (sleep_us)
+			/* SLEEPING FOR ~USECS OR SMALL MSECS ( 10us - 20ms) */
+			usleep_range(sleep_us, st->period_us);
 	}
 }
 
@@ -973,20 +959,66 @@ static unsigned int fifo_hw_frame_seqs[] = {
 	BMI_HW_ACC,
 };
 
+static void bmi_dbg_thr(struct bmi_state *st, s64 ts_irq)
+{
+	s64 ns;
+
+	if (st->ts_odr)
+		ns = st->ts_odr;
+	else
+		ns = st->period_ns;
+	dev_info(&st->i2c->dev,
+		 "%s CALC ts=%lld irq=%lld->%lld (%lld) odr=%lld\n",
+		 __func__, st->ts, st->ts_st_irq, ts_irq,
+		 ts_irq - st->ts_st_irq, ns);
+}
+
 static int bmi_frame_regular(struct bmi_state *st, u16 buf_n)
 {
 	u8 hdr;
+	s64 ns;
+	s64 ts_irq;
 	unsigned int hw;
 	unsigned int i;
 	unsigned int n;
 
 	st->frame_n++;
-	if (st->ts > st->ts_hi)
-		/* missed this TS sync */
-		bmi_ts_thr(st);
-	else if (st->ts >= st->ts_lo)
-		/* IRQ TS within range */
-		st->ts = st->ts_st_irq;
+	if (st->ts_hi) {
+		if (st->ts > st->ts_hi) {
+			/* missed this TS sync - calculate new thresholds */
+			ts_irq = atomic64_read(&st->ts_irq);
+			if (st->ts_odr)
+				ns = st->ts_odr;
+			else
+				ns = st->period_ns;
+			ns >>= 1;
+			st->ts_lo = ts_irq - ns;
+			st->ts_hi = ts_irq + ns;
+			if (st->sts & BMI_STS_SPEW_TS)
+				bmi_dbg_thr(st, ts_irq);
+			st->ts_st_irq = ts_irq;
+		} else if (st->ts >= st->ts_lo) {
+			/* IRQ TS within range */
+			if (st->sts & BMI_STS_SPEW_TS)
+				dev_info(&st->i2c->dev,
+					 "%s IRQ SYNC ts=%lld=>%lld (%lld)\n",
+					 __func__, st->ts, st->ts_st_irq,
+					 st->ts - st->ts_st_irq);
+			st->ts = st->ts_st_irq;
+		}
+	} else {
+		/* first timestamp and event */
+		st->ts_st_irq = st->ts + st->period_ns;
+		st->ts_lo = st->period_ns;
+		st->ts_lo >>= 1;
+		st->ts_lo += st->ts;
+		st->ts_hi = st->ts_lo + st->period_ns;
+		if (st->sts & BMI_STS_SPEW_TS)
+			dev_info(&st->i2c->dev,
+				 "%s START ts=%lld lo=%lld hi=%lld odr=%lld\n",
+				 __func__, st->ts, st->ts_lo, st->ts_hi,
+				 st->period_ns);
+	}
 	hdr = st->buf[st->buf_i];
 	st->buf_i++;
 	for (i = 0; i < BMI_HW_N; i++) {
@@ -1001,10 +1033,10 @@ static int bmi_frame_regular(struct bmi_state *st, u16 buf_n)
 		}
 	}
 
-	if (st->ts)
+	if (st->ts_odr)
 		st->ts += st->ts_odr;
 	else
-		bmi_ts_init(st);
+		st->ts += st->period_ns;
 	return 0;
 }
 
@@ -1033,7 +1065,11 @@ static int bmi_frame_control(struct bmi_state *st, u16 buf_n)
 			/* rollover */
 			st->lost_frame_n = -1;
 		/* update timestamp to include lost frames */
-		ns = st->ts_odr * n;
+		if (st->ts_odr)
+			ns = st->ts_odr;
+		else
+			ns = st->period_ns;
+		ns *= n;
 		ns += st->ts;
 		if (st->sts & BMI_STS_SPEW_FIFO)
 			dev_info(&st->i2c->dev,
@@ -1051,18 +1087,32 @@ static int bmi_frame_control(struct bmi_state *st, u16 buf_n)
 			break;
 
 		snsr_t = bmi_buf2sensortime(&st->buf[st->buf_i]);
-		if (snsr_t > st->snsr_t)
-			n = snsr_t - st->snsr_t;
-		else
-			/* counter rolled over */
-			n = (~st->snsr_t + 1) + snsr_t;
-		/* n is the number of sensortime ticks since last time.
-		 * Each tick is 39us.  So ns = n * 39000.
-		 */
-		ns = n;
-		ns *= 39000;
-		if (st->frame_n)
-			st->ts_odr = ns / st->frame_n;
+		if (st->ts_odr) {
+			if (st->frame_n) {
+				if (snsr_t > st->snsr_t)
+					n = snsr_t - st->snsr_t;
+				else
+					/* counter rolled over */
+					n = (~st->snsr_t + 1) + snsr_t;
+				/* n is the number of sensortime ticks since
+				 * last time.  Each tick is 39062.5ns.
+				 */
+				ns = n;
+				ns *= 390625;
+				n = st->frame_n;
+				n *= 10;
+				st->ts_odr = ns / n;
+			}
+		} else {
+			/* starting count for sensortime */
+			if (st->sts & BMI_STS_SPEW_TS)
+				dev_info(&st->i2c->dev,
+					 "%s START ts=%lld odr=%lld->%lld\n",
+					 __func__, st->ts, st->ts_odr,
+					 st->period_ns);
+
+			st->ts_odr = st->period_ns;
+		}
 		if (st->sts & BMI_STS_SPEW_ST) {
 			for (i = 0; i < 3; i++) {
 				dev_info(&st->i2c->dev,
@@ -1085,7 +1135,9 @@ static int bmi_frame_control(struct bmi_state *st, u16 buf_n)
 		if (n < 2)
 			break;
 
-		if (st->sts & BMI_STS_SPEW_FIFO)
+		/* ODR has changed - use st->period_ns until next sensortime */
+		st->ts_odr = 0;
+		if (st->sts & (BMI_STS_SPEW_FIFO | BMI_STS_SPEW_TS))
 			dev_info(&st->i2c->dev,
 				 "CONFIG: buf[%u]=0x%02X\n",
 				 st->buf_i, st->buf[st->buf_i]);
@@ -1093,7 +1145,10 @@ static int bmi_frame_control(struct bmi_state *st, u16 buf_n)
 		return 0;
 
 	default:
-		if (st->sts & BMI_STS_SPEW_FIFO) {
+		/* should never get here */
+		if (st->sts & (BMI_STS_SPEW_FIFO |
+			       BMI_STS_SPEW_ST |
+			       BMI_STS_SPEW_TS)) {
 			for (i = 0; i < n; i++) {
 				dev_info(&st->i2c->dev,
 					 "ERR: buf[%u]=0x%02X\n",
@@ -1193,32 +1248,17 @@ static irqreturn_t bmi_irq_handler(int irq, void *dev_id)
 	if (!st->ts) {
 		/* first timestamp */
 		st->ts = ts;
-		bmi_ts_thr(st);
+		st->ts_hi = 0;
+		st->ts_odr = 0;
+		st->frame_n = 0;
 	}
 	return IRQ_WAKE_THREAD;
 }
-#if 0
-static void bmi_disable_irq(struct bmi_state *st)
-{
-	if (st->i2c->irq > 0 && !st->irq_dis) {
-		disable_irq_nosync(st->i2c->irq);
-		st->irq_dis = true;
-	}
-}
 
-static void bmi_enable_irq(struct bmi_state *st)
-{
-	if (st->irq_dis) {
-		enable_irq(st->i2c->irq);
-		st->irq_dis = false;
-	}
-}
-#endif //0
 static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 {
-	s64 ts_odr;
+	unsigned int us;
 	unsigned int i;
-	unsigned int us = st->period_us_max;
 	int ret = 0;
 
 	if (st->i2c->irq > 0) {
@@ -1226,6 +1266,7 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 			us = st->snsrs[snsr_id].period_us;
 			ret = st->snsrs[snsr_id].hw->fn_batch(st, us);
 		}
+		us = st->period_us_max;
 		for (i = 0; i < st->hw_n; i++) {
 			if (msk_en & (1 << i)) {
 				if (st->snsrs[i].period_us) {
@@ -1234,15 +1275,8 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 				}
 			}
 		}
-
-		ts_odr = us;
-		ts_odr *= 1000; /* us => ns */
-		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev,
-				 "%s msk_en=%X ts_odr: %lld->%lld\n",
-				 __func__, msk_en, st->ts_odr, ts_odr);
-		st->ts_odr = ts_odr;
 	} else {
+		us = st->period_us_max;
 		for (i = 0; i < st->hw_n; i++) {
 			if (msk_en & (1 << i)) {
 				if (st->snsrs[i].period_us) {
@@ -1259,14 +1293,14 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 					return ret;
 			}
 		}
-
-		if (st->sts & NVS_STS_SPEW_MSG)
-			dev_info(&st->i2c->dev,
-				 "%s msk_en=%X period_us: %u->%u\n",
-				 __func__, msk_en, st->period_us, us);
 	}
 
+	if (st->sts & (NVS_STS_SPEW_MSG & BMI_STS_SPEW_TS))
+		dev_info(&st->i2c->dev,
+			 "%s msk_en=%X period_us: %u->%u\n",
+			 __func__, msk_en, st->period_us, us);
 	st->period_us = us;
+	st->period_ns = (s64)us * 1000; /* us=> ns */
 	return ret;
 }
 
@@ -1297,7 +1331,6 @@ static int bmi_disable(struct bmi_state *st, int snsr_id)
 		}
 	}
 	if (disable) {
-//		bmi_disable_irq(st);
 		ret = bmi_i2c_wr(st, BMI_REG_FIFO_CONFIG_1, 0);
 		ret |= bmi_pm(st, false);
 		if (!ret)
@@ -1323,13 +1356,15 @@ static int bmi_enable(void *client, int snsr_id, int enable)
 
 		ret = bmi_period(st, enable, snsr_id);
 		if (st->i2c->irq > 0) {
+			if (!st->enabled)
+				/* first enabled device */
+				ret |= bmi_ts_init(st);
 			ret |= st->snsrs[snsr_id].hw->fn_enable(st);
 			val = enable << BMI_REG_FIFO_CONFIG_1_ENS;
 			val |= 0x1A;
 			ret |= bmi_i2c_wr(st, BMI_REG_FIFO_CONFIG_1, val);
 			if (!ret)
 				st->enabled = enable;
-//				bmi_enable_irq(st);
 		} else {
 			ret |= st->snsrs[snsr_id].hw->fn_enable(st);
 			if (!ret) {
@@ -1388,8 +1423,14 @@ static int bmi_batch_read(void *client, int snsr_id,
 {
 	struct bmi_state *st = (struct bmi_state *)client;
 
-	if (period_us)
-		*period_us = st->snsrs[snsr_id].odr_us;
+	if (period_us) {
+		if (st->i2c->irq > 0)
+			/* IRQ driven */
+			*period_us = st->snsrs[snsr_id].odr_us;
+		else
+			/* poll mode */
+			*period_us = st->period_us;
+	}
 	if (timeout_us)
 		*timeout_us = st->timeout_us;
 	return 0;
@@ -1543,9 +1584,9 @@ static int bmi_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	case BMI_INF_SPEW_TS:
 		ts_irq = atomic64_read(&st->ts_irq);
 		dev_info(&st->i2c->dev,
-			"irq=%lld sti=%lld lo=%lld hi=%lld odr=%lld ts=%lld\n",
-			 ts_irq, st->ts_st_irq, st->ts_lo, st->ts_hi,
-			 st->ts_odr, st->ts);
+			"ts=%lld irq=%lld sti=%lld odr=%lld lo=%lld hi=%lld\n",
+			 st->ts, ts_irq, st->ts_st_irq, st->ts_odr,
+			 st->ts_lo, st->ts_hi);
 		st->sts ^= BMI_STS_SPEW_TS;
 		break;
 
@@ -1609,7 +1650,11 @@ static int bmi_nvs_read(void *client, int snsr_id, char *buf)
 		for (i = 0; i < st->hw_n; i++) {
 			t += snprintf(buf + t, PAGE_SIZE - t, "%s:\n",
 				      st->snsrs[i].cfg.name);
-			t += snprintf(buf + t, PAGE_SIZE - t, "period_us=%u\n",
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_odr=%u\n",
+				      st->snsrs[i].odr_us);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_req=%u\n",
 				      st->snsrs[i].period_us);
 			t += snprintf(buf + t, PAGE_SIZE - t,
 				      "timeout_us=%u\n",
@@ -1982,11 +2027,6 @@ static int bmi_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, st);
 	st->i2c = client;
-
-
-	st->sts |= NVS_STS_SPEW_MSG;
-
-
 	ret = bmi_init(st, id);
 	if (ret)
 		bmi_remove(client);

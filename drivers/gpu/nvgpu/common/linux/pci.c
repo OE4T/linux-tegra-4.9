@@ -757,6 +757,8 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	if (gk20a_gpu_is_virtual(dev))
 		return;
 
+	nvgpu_nvlink_remove(g);
+
 	gk20a_driver_start_unload(g);
 	err = nvgpu_quiesce(g);
 	/* TODO: handle failure to idle */

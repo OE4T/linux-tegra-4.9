@@ -503,3 +503,33 @@ free_ndev:
 	return -ENODEV;
 #endif
 }
+
+int nvgpu_nvlink_remove(struct gk20a *g)
+{
+#ifdef CONFIG_TEGRA_NVLINK
+	struct nvlink_device *ndev;
+	int err;
+
+	ndev = g->nvlink.priv;
+
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, false);
+
+	err = nvlink_unregister_link(&ndev->link);
+	if (err) {
+		nvgpu_err(g, "failed on nvlink link unregistration");
+		return err;
+	}
+
+	err = nvlink_unregister_device(ndev);
+	if (err) {
+		nvgpu_err(g, "failed on nvlink device unregistration");
+		return err;
+	}
+
+	nvgpu_kfree(g, ndev);
+
+	return 0;
+#else
+	return -ENODEV;
+#endif
+}

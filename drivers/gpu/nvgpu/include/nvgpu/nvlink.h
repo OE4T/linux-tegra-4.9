@@ -236,6 +236,7 @@ int nvgpu_nvlink_train(struct gk20a *g, u32 link_id, bool from_off);
 int nvgpu_nvlink_read_dt_props(struct gk20a *g);
 
 int nvgpu_nvlink_probe(struct gk20a *g);
+int nvgpu_nvlink_remove(struct gk20a *g);
 
 void nvgpu_mss_nvlink_init_credits(struct gk20a *g);
 

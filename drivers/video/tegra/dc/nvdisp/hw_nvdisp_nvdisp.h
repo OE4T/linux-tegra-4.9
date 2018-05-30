@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1161,6 +1161,10 @@ static inline u32 nvdisp_rg_ext_r(void)
 static inline u32 nvdisp_rg_elv_0_r(void)
 {
 	return 0x00000413U;
+}
+static inline u32 nvdisp_start_fetch_dly_r(void)
+{
+	return 0x00000418U;
 }
 static inline u32 nvdisp_color_ctl_r(void)
 {

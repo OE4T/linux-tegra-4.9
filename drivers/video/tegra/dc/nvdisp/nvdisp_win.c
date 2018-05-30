@@ -607,6 +607,41 @@ int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win)
 	return degamma_flag;
 }
 
+/*
+ * Wait/sleep for until start fetch occurs if scan line present between
+ * loadv line and start fetch, for more info refer to Bug 200293633.
+ */
+static void tegra_nvdisp_wait_for_start_fetch(struct tegra_dc *dc)
+{
+#define NVDISP_CRITICAL_REGION_IN_LINES 3
+
+	int loadv_line = 0, rg_elv = 0;
+	int line_in_usec = 0, cur_sline = 0;
+	int lines = NVDISP_CRITICAL_REGION_IN_LINES;
+
+	rg_elv = tegra_dc_readl(dc, nvdisp_rg_elv_0_r());
+
+	/* calculate loadv line */
+	loadv_line = dc->mode_metadata.vtotal_lines
+			- dc->mode.v_front_porch + rg_elv;
+
+	/* time required to scan one line in micro seconds */
+	line_in_usec = (u64)dc->mode_metadata.line_in_nsec / (u64)1000;
+
+	/*
+	 * if cur_sline in b/w loadvline and start fetch then sleep
+	 * till startFecth completed
+	 */
+	do {
+		/* read current scan line */
+		cur_sline = tegra_dc_get_v_count(dc);
+	} while ((cur_sline >= (loadv_line - lines)) &&
+		(cur_sline <= (loadv_line + lines)) &&
+		(udelay((loadv_line + lines - cur_sline) * line_in_usec), 1));
+
+#undef NVDISP_CRITICAL_REGION_IN_LINES
+}
+
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				      bool wait_for_vblank)
 {
@@ -1040,6 +1075,12 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		act_req_mask |= nvdisp_cmd_state_ctrl_host_trig_enable_f();
 
+	/*
+	 * For immediate flips on t186 wait for start fetch, for more info
+	 * refer to Bug 200293633.
+	 */
+	if (!wait_for_vblank && tegra_dc_is_t18x())
+		tegra_nvdisp_wait_for_start_fetch(dc);
 	/* cannot set fields related to UPDATE and ACT_REQ in the same write */
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */

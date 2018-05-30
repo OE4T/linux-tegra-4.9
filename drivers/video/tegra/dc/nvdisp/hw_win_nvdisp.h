@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -353,6 +353,10 @@ static inline u32 win_ihub_thread_group_enable_yes_f(void)
 static inline u32 win_ihub_thread_group_enable_no_f(void)
 {
 	return 0x0U;
+}
+static inline u32 win_precomp_wgrp_rgb_color_r(void)
+{
+	return 0x00000524U;
 }
 static inline u32 win_streamid_r(void)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -91,6 +91,7 @@ DUMP_REG(nvdisp_rg_ext_back_porch_r());
 DUMP_REG(nvdisp_rg_ext_front_porch_r());
 DUMP_REG(nvdisp_rg_ext_r());
 DUMP_REG(nvdisp_rg_elv_0_r());
+DUMP_REG(nvdisp_start_fetch_dly_r());
 DUMP_REG(nvdisp_color_ctl_r());
 DUMP_REG(nvdisp_output_lut_ctl_r());
 DUMP_REG(nvdisp_output_lut_base_r());

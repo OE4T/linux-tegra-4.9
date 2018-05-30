@@ -29,14 +29,15 @@
 #define BIT_MASK(nr)	(1UL << ((nr) % BITS_PER_LONG))
 #define BIT_WORD(nr)	((nr) / BITS_PER_LONG)
 
-unsigned long __nvgpu_posix_fls(unsigned long word)
-{
-	return __builtin_clzl(word);
-}
-
 unsigned long __nvgpu_posix_ffs(unsigned long word)
 {
-	return __builtin_ffsl(word);
+	return (__builtin_ffsl(word) - 1) &
+		((sizeof(unsigned long) * 8UL) - 1UL);
+}
+
+unsigned long __nvgpu_posix_fls(unsigned long word)
+{
+	return ((sizeof(unsigned long) * 8UL) - 1UL) - __builtin_clzl(word);
 }
 
 static unsigned long __find_next_bit(const unsigned long *addr,

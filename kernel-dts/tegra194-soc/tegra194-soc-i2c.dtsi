@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x0>;
 		interrupts = <0 TEGRA194_IRQ_I2C1 0x04>;
 		scl-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(I, 3) 0>;
 		sda-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(I, 4) 0>;
@@ -59,6 +60,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0xc240000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x1>;
 		interrupts = <0 TEGRA194_IRQ_I2C2 0x04>;
 		scl-gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(CC, 7) 0>;
 		sda-gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(DD, 0) 0>;
@@ -80,6 +82,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x2>;
 		interrupts = <0 TEGRA194_IRQ_I2C3 0x04>;
 		scl-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(P, 2) 0>;
 		sda-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(P, 3) 0>;
@@ -101,6 +104,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x3>;
 		interrupts = <0 TEGRA194_IRQ_I2C4 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -118,6 +122,7 @@
 		#size-cells = <0>;
 		compatible = "nvidia,tegra186-bpmp-i2c";
 		status = "disabled";
+		nvidia,hw-instance-id = <0x4>;
 		adapter = <5>;
 	};
 
@@ -128,6 +133,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31b0000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x5>;
 		interrupts = <0 TEGRA194_IRQ_I2C6 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -147,6 +153,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x6>;
 		interrupts = <0 TEGRA194_IRQ_I2C7 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
@@ -166,6 +173,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x7>;
 		interrupts = <0 TEGRA194_IRQ_I2C8 0x04>;
 		scl-gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(DD, 1) 0>;
 		sda-gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(DD, 2) 0>;
@@ -187,6 +195,7 @@
 		dma-coherent;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
+		nvidia,hw-instance-id = <0x8>;
 		interrupts = <0 TEGRA194_IRQ_I2C9 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;

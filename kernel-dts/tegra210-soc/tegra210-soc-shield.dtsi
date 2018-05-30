@@ -82,6 +82,12 @@
 		status = "okay";
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 414
+	memory-controller@70019000 {
+		status = "okay";
+	};
+#endif
+
 	interrupt-controller {
 		status = "okay";
 	};

@@ -22,6 +22,7 @@
 #include "os/linux/vgpu/clk_vgpu.h"
 #include "os/linux/platform_gk20a.h"
 #include "os/linux/os_linux.h"
+#include "os/linux/vgpu/vgpu_linux.h"
 
 static int gv11b_vgpu_probe(struct device *dev)
 {
@@ -94,4 +95,8 @@ struct gk20a_platform gv11b_vgpu_tegra_platform = {
 	.devfreq_governor = "userspace",
 
 	.virtual_dev = true,
+
+	/* power management callbacks */
+	.suspend = vgpu_tegra_suspend,
+	.resume = vgpu_tegra_resume,
 };

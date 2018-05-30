@@ -967,9 +967,15 @@ static int gk20a_pm_suspend(struct device *dev)
 	int idle_usage_count = 0;
 
 	if (!g->power_on) {
+		if (platform->suspend)
+			ret = platform->suspend(dev);
+		if (ret)
+			return ret;
+
 		if (!pm_runtime_enabled(dev))
-			gk20a_pm_railgate(dev);
-		return 0;
+			ret = gk20a_pm_railgate(dev);
+
+		return ret;
 	}
 
 	if (nvgpu_atomic_read(&g->usage_count) > idle_usage_count)
@@ -980,25 +986,41 @@ static int gk20a_pm_suspend(struct device *dev)
 		return ret;
 
 	if (platform->suspend)
-		platform->suspend(dev);
+		ret = platform->suspend(dev);
+	if (ret)
+		return ret;
 
 	g->suspended = true;
 
-	return 0;
+	return ret;
 }
 
 static int gk20a_pm_resume(struct device *dev)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
 	if (!g->suspended) {
+		if (platform->resume)
+			ret = platform->resume(dev);
+		if (ret)
+			return ret;
+
 		if (!pm_runtime_enabled(dev))
-			gk20a_pm_unrailgate(dev);
-		return 0;
+			ret = gk20a_pm_unrailgate(dev);
+
+		return ret;
 	}
 
+	if (platform->resume)
+		ret = platform->resume(dev);
+	if (ret)
+		return ret;
+
 	ret = gk20a_pm_runtime_resume(dev);
+	if (ret)
+		return ret;
 
 	g->suspended = false;
 

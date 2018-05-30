@@ -147,7 +147,9 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		return 0;
 
-	ret = gk20a_channel_suspend(g);
+	if (g->ops.fifo.channel_suspend)
+		ret = g->ops.fifo.channel_suspend(g);
+
 	if (ret)
 		return ret;
 
@@ -472,4 +474,36 @@ bool vgpu_is_reduced_bar1(struct gk20a *g)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	return resource_size(l->bar1_mem) == (resource_size_t)f->userd.size;
+}
+
+int vgpu_tegra_suspend(struct device *dev)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct gk20a *g = get_gk20a(dev);
+	int err = 0;
+
+	msg.cmd = TEGRA_VGPU_CMD_SUSPEND;
+	msg.handle = vgpu_get_handle(g);
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err)
+		nvgpu_err(g, "vGPU suspend failed\n");
+
+	return err;
+}
+
+int vgpu_tegra_resume(struct device *dev)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct gk20a *g = get_gk20a(dev);
+	int err = 0;
+
+	msg.cmd = TEGRA_VGPU_CMD_RESUME;
+	msg.handle = vgpu_get_handle(g);
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err)
+		nvgpu_err(g, "vGPU resume failed\n");
+
+	return err;
 }

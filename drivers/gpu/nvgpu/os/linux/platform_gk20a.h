@@ -158,6 +158,9 @@ struct gk20a_platform {
 	/* Device is going to be suspended */
 	int (*suspend)(struct device *);
 
+	/* Device is going to be resumed */
+	int (*resume)(struct device *);
+
 	/* Called to turn off the device */
 	int (*railgate)(struct device *dev);
 

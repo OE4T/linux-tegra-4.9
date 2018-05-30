@@ -67,8 +67,6 @@ static struct {
 	{"gpu", GPCCLK_INIT_RATE},
 	{"gpu_sys", 204000000} };
 
-static void gr_gp10b_remove_sysfs(struct device *dev);
-
 /*
  * gp10b_tegra_get_clocks()
  *
@@ -174,9 +172,12 @@ static int gp10b_tegra_late_probe(struct device *dev)
 	return 0;
 }
 
-int gp10b_tegra_remove(struct device *dev)
+static int gp10b_tegra_remove(struct device *dev)
 {
-	gr_gp10b_remove_sysfs(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	if (g->ops.gr.remove_gr_sysfs)
+		g->ops.gr.remove_gr_sysfs(g);
 
 	/* deinitialise tegra specific scaling quirks */
 	gp10b_tegra_scale_exit(dev);
@@ -792,9 +793,9 @@ void gr_gp10b_create_sysfs(struct gk20a *g)
 		dev_err(dev, "Failed to create sysfs attributes!\n");
 }
 
-static void gr_gp10b_remove_sysfs(struct device *dev)
+void gr_gp10b_remove_sysfs(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = dev_from_gk20a(g);
 
 	if (!g->ecc.gr.sm_lrf_single_err_count.counters)
 		return;

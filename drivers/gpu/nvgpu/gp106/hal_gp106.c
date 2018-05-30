@@ -381,7 +381,10 @@ static const struct gpu_ops gp106_ops = {
 		.update_boosted_ctx = NULL,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.set_bes_crop_debug4 = gr_gp10b_set_bes_crop_debug4,
+#ifdef CONFIG_SYSFS
 		.create_gr_sysfs = NULL,
+		.remove_gr_sysfs = NULL,
+#endif
 		.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode,
 		.load_ctxsw_ucode = gr_gm20b_load_ctxsw_ucode,
 		.fecs_host_int_enable = gr_gk20a_fecs_host_int_enable,

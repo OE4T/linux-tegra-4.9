@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,7 +42,5 @@ void gp10b_ecc_stat_remove(struct device *dev,
 				int hw_units,
 				struct gk20a_ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array);
-
-int gp10b_tegra_remove(struct device *dev);
 
 #endif

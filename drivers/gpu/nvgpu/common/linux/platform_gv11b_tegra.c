@@ -44,7 +44,15 @@
 #include "platform_gk20a_tegra.h"
 #include "gv11b/gr_gv11b.h"
 
-static void gr_gv11b_remove_sysfs(struct device *dev);
+static void gv11b_tegra_scale_exit(struct device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+
+	if (profile)
+		tegra_bwmgr_unregister(
+			(struct tegra_bwmgr_client *)profile->private_data);
+}
 
 static int gv11b_tegra_probe(struct device *dev)
 {
@@ -82,11 +90,19 @@ static int gv11b_tegra_late_probe(struct device *dev)
 	return 0;
 }
 
+
 static int gv11b_tegra_remove(struct device *dev)
 {
-	gp10b_tegra_remove(dev);
+	struct gk20a *g = get_gk20a(dev);
 
-	gr_gv11b_remove_sysfs(dev);
+	if (g->ops.gr.remove_gr_sysfs)
+		g->ops.gr.remove_gr_sysfs(g);
+
+	gv11b_tegra_scale_exit(dev);
+
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	nvgpu_free_nvhost_dev(get_gk20a(dev));
+#endif
 
 	return 0;
 }
@@ -498,12 +514,13 @@ void gr_gv11b_create_sysfs(struct gk20a *g)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
 }
 
-static void gr_gv11b_remove_sysfs(struct device *dev)
+void gr_gv11b_remove_sysfs(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct device *dev = dev_from_gk20a(g);
 
 	if (!g->ecc.gr.sm_l1_tag_corrected_err_count.counters)
 		return;
+	gr_gp10b_remove_sysfs(g);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,

@@ -791,12 +791,6 @@ static u32 gv100_nvlink_minion_init_uphy(struct gk20a *g, unsigned long mask,
 
 	link_enable = __gv100_nvlink_get_link_reset_mask(g);
 
-	/* Cannot use links 0/1 without refclk buffer */
-	if (mask & (BIT(1)|BIT(0))) {
-		nvgpu_err(g, "links 0/1 not supported on GV100");
-		return -EINVAL;
-	}
-
 	for_each_set_bit(link_id, &mask, 32) {
 		master_pll = g->nvlink.links[link_id].pll_master_link_id;
 		slave_pll = g->nvlink.links[link_id].pll_slave_link_id;

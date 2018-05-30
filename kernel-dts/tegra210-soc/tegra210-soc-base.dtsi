@@ -2178,7 +2178,6 @@
 		interrupts = <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
 
 		#iommu-cells = <1>;
-		#mc-client-cells = <1>;
 		status = "disabled";
 	};
 

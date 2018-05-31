@@ -138,14 +138,12 @@ static struct tegra210_mc_client_info tegra210_pg_mc_info[] = {
 			[2] = MC_CLIENT_LAST,
 		},
 	},
-#ifdef CONFIG_ARCH_TEGRA_HAS_PCIE
 	[TEGRA210_POWER_DOMAIN_PCIE] = {
 		.hot_reset_clients = {
 			[0] = MC_CLIENT_AFI,
 			[1] = MC_CLIENT_LAST,
 		},
 	},
-#endif
 #ifdef CONFIG_ARCH_TEGRA_HAS_SATA
 	[TEGRA210_POWER_DOMAIN_SATA] = {
 		.hot_reset_clients = {
@@ -257,19 +255,10 @@ static struct powergate_partition_info tegra210_pg_partition_info[] = {
 			      TEGRA210_CLK_CSI, TEGRA210_CLK_VI_I2C },
 		.reset_id_num = 4,
 	},
-#ifdef CONFIG_ARCH_TEGRA_HAS_PCIE
 	[TEGRA210_POWER_DOMAIN_PCIE] = {
 		.name = "pcie",
-		.clk_info = {
-			{ .clk_name = "afi", .clk_type = CLK_ONLY },
-			{ .clk_name = "pcie", .clk_type = CLK_ONLY },
-		},
-		.reset_id = { TEGRA210_CLK_AFI, TEGRA210_CLK_PCIE,
-			      TEGRA210_CLK_PCIEX },
-		.reset_id_num = 3,
 		.skip_reset = true,
 	},
-#endif
 #ifdef CONFIG_ARCH_TEGRA_HAS_SATA
 	[TEGRA210_POWER_DOMAIN_SATA] = {
 		.name = "sata",

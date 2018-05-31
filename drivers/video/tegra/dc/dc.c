@@ -4602,11 +4602,12 @@ static void tegra_dc_vblank(struct work_struct *work)
 				clear_bit(V_BLANK_NVSD, &dc->vblank_ref_count);
 			}
 		}
-
-		/* Mask vblank interrupt if ref-count is zero. */
-		if (!dc->vblank_ref_count)
-			tegra_dc_mask_interrupt(dc, V_BLANK_INT);
 	}
+
+	/* Mask vblank interrupt if ref-count is zero. */
+	if (!dc->vblank_ref_count)
+		tegra_dc_mask_interrupt(dc, V_BLANK_INT);
+
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 

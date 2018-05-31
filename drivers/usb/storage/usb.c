@@ -1,6 +1,8 @@
 /*
  * Driver for USB Mass Storage compliant devices
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  * Current development and maintenance by:
  *   (c) 1999-2003 Matthew Dharm (mdharm-usb@one-eyed-alien.net)
  *
@@ -1164,6 +1166,28 @@ static int storage_probe(struct usb_interface *intf,
 	return result;
 }
 
+#ifdef CONFIG_PM
+static int usb_storage_suspend(struct device *dev)
+{
+	pm_runtime_disable(dev);
+
+	return 0;
+}
+
+static int usb_storage_resume(struct device *dev)
+{
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
+	return 0;
+}
+
+static const struct dev_pm_ops usb_storage_pm_ops = {
+	.suspend = usb_storage_suspend,
+	.resume = usb_storage_resume,
+};
+#endif
+
 static struct usb_driver usb_storage_driver = {
 	.name =		DRV_NAME,
 	.probe =	storage_probe,
@@ -1176,6 +1200,9 @@ static struct usb_driver usb_storage_driver = {
 	.id_table =	usb_storage_usb_ids,
 	.supports_autosuspend = 1,
 	.soft_unbind =	1,
+#ifdef CONFIG_PM
+	.drvwrap.driver.pm = &usb_storage_pm_ops,
+#endif
 };
 
 module_usb_stor_driver(usb_storage_driver, usb_stor_host_template, DRV_NAME);

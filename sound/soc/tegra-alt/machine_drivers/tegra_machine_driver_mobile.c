@@ -1137,7 +1137,9 @@ static void dai_link_setup(struct platform_device *pdev)
 	for (i = 0; i < machine->num_codec_links; i++) {
 		if (tegra_machine_codec_links[i].name) {
 			if (strstr(tegra_machine_codec_links[i].name,
-				"rt565x-playback")) {
+				"rt565x-playback") ||
+			    strstr(tegra_machine_codec_links[i].name,
+				"rt565x-codec-sysclk-bclk1")) {
 				codec_dai_name =
 				 tegra_machine_codec_links[i].codec_dai_name;
 				if (!strcmp("dit-hifi", codec_dai_name)) {

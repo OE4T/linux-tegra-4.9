@@ -37,6 +37,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
 #include <soc/tegra/common.h>
+#include <linux/reset.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -92,10 +93,13 @@ struct hda_tegra {
 	struct clk *hda_clk;
 	struct clk *hda2codec_2x_clk;
 	struct clk *hda2hdmi_clk;
+	struct reset_control *hda_rst;
+	struct reset_control *hda2hdmi_rst;
 	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
 	bool init_done;
+	bool do_reset;
 };
 
 #ifdef CONFIG_PM
@@ -341,6 +345,11 @@ static int hda_tegra_runtime_resume(struct device *dev)
 	if (rc != 0)
 		return rc;
 
+	if (hda->do_reset) {
+		reset_control_reset(hda->hda_rst);
+		reset_control_reset(hda->hda2hdmi_rst);
+	}
+
 	if (hda->init_done) {
 		hda_tegra_init(hda);
 		azx_init_chip(chip, 1);
@@ -408,6 +417,26 @@ static int hda_tegra_init_clk(struct azx *chip, struct platform_device *pdev)
 		return PTR_ERR(hda->hda2hdmi_clk);
 	}
 
+	if (!hda->do_reset)
+		goto end;
+
+	hda->hda_rst = devm_reset_control_get(dev,"hda_rst");
+	if (IS_ERR(hda->hda_rst)) {
+		dev_err(dev,
+		"HDA Reset control is not found, err: %ld\n",
+		PTR_ERR(hda->hda_rst));
+		return PTR_ERR(hda->hda_rst);
+	}
+
+	hda->hda2hdmi_rst = devm_reset_control_get(dev,"hda2hdmi_rst");
+	if (IS_ERR(hda->hda2hdmi_rst)) {
+		dev_err(dev,
+		"HDA2HDMI Reset control is not found, err: %ld\n",
+		PTR_ERR(hda->hda2hdmi_rst));
+		return PTR_ERR(hda->hda2hdmi_rst);
+        }
+
+end:
 	return 0;
 }
 
@@ -587,6 +616,7 @@ static int hda_tegra_probe(struct platform_device *pdev)
 	struct snd_card *card;
 	struct azx *chip;
 	struct hda_tegra *hda;
+	struct device_node *np = pdev->dev.of_node;
 	int err;
 
 #if defined(CONFIG_ANDROID)
@@ -600,6 +630,8 @@ static int hda_tegra_probe(struct platform_device *pdev)
 	chip = &hda->chip;
 
 	hda->init_done = false;
+
+	hda->do_reset = of_property_read_bool(np, "nvidia,do-reset");
 
 	hda->partition_id = tegra_pd_get_powergate_id(tegra_disb_pd);
 	if (hda->partition_id < 0) {

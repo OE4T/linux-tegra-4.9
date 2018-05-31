@@ -125,6 +125,7 @@
 		phy-names = "usb2", "usb3";
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
+		nvidia,boost_cpu_freq = <1200>;
 		status = "okay";
 	};
 

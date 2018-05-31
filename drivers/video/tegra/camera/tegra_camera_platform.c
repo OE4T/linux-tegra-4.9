@@ -230,18 +230,6 @@ static int tegra_camera_isomgr_request(
 	return 0;
 }
 
-static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
-{
-#if defined(CONFIG_TEGRA_ISOMGR)
-	dev_dbg(info->dev, "%s++\n", __func__);
-
-	/* deallocate bypass mode isomgr bw */
-	info->bypass_mode_isobw = 0;
-	return tegra_camera_update_isobw();
-#endif
-
-	return 0;
-}
 int tegra_camera_emc_clk_enable(void)
 {
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -320,7 +308,6 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 {
 
 	struct tegra_camera_info *info;
-	int ret;
 
 	info = file->private_data;
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -328,15 +315,7 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 #else
 	tegra_camera_emc_clk_disable();
 #endif
-	/* nullify isomgr request */
-	ret = tegra_camera_isomgr_release(info);
-	if (ret) {
-		dev_err(info->dev,
-		"%s: failed to deallocate memory in isomgr\n",
-		__func__);
-		return -ENOMEM;
-	}
-	return ret;
+	return 0;
 }
 
 #ifdef CONFIG_DEBUG_FS

@@ -463,7 +463,7 @@ static int tegra_mc_remove(struct platform_device *pdev)
 
 static struct platform_driver mc_driver = {
 	.driver = {
-		.name	= "tegra-mc",
+		.name	= "nv-tegra-mc",
 		.of_match_table = tegra_mc_of_ids,
 		.owner	= THIS_MODULE,
 	},

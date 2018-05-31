@@ -85,7 +85,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 #include "fake_panel.h"
-#include "null_or.h"
 #endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
 
 
@@ -1387,7 +1386,6 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		} else if (out_type == TEGRA_DC_OUT_NULL) {
 			if (!dc->dbg_dc_out_info[TEGRA_DC_OUT_NULL].out_data) {
 				allocate = true;
-				tegra_dc_init_null_or(dc);
 			}
 		} else {
 			/* set  back to existing one */
@@ -4073,7 +4071,6 @@ bypass_init_check:
 #endif
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 	case TEGRA_DC_OUT_NULL:
-		dc->out_ops = &tegra_dc_null_ops;
 		break;
 #endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
 

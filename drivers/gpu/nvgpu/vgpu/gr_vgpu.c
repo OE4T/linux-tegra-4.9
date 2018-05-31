@@ -987,23 +987,6 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	return 0;
 }
 
-int vgpu_gr_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_gr_nonstall_intr_info *info)
-{
-	nvgpu_log_fn(g, " ");
-
-	switch (info->type) {
-	case TEGRA_VGPU_GR_NONSTALL_INTR_SEMAPHORE:
-		g->ops.semaphore_wakeup(g, true);
-		break;
-	default:
-		WARN_ON(1);
-		break;
-	}
-
-	return 0;
-}
-
 int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {

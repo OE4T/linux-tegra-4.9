@@ -27,23 +27,6 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/vgpu/vgpu.h>
 
-int vgpu_ce2_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_ce2_nonstall_intr_info *info)
-{
-	nvgpu_log_fn(g, " ");
-
-	switch (info->type) {
-	case TEGRA_VGPU_CE2_NONSTALL_INTR_NONBLOCKPIPE:
-		g->ops.semaphore_wakeup(g, true);
-		break;
-	default:
-		WARN_ON(1);
-		break;
-	}
-
-	return 0;
-}
-
 u32 vgpu_ce_get_num_pce(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);

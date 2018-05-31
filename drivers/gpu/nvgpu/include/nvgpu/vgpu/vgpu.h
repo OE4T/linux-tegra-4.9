@@ -76,8 +76,6 @@ int vgpu_init_hal(struct gk20a *g);
 int vgpu_get_constants(struct gk20a *g);
 u64 vgpu_bar1_map(struct gk20a *g, struct nvgpu_mem *mem);
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info);
-int vgpu_gr_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_gr_nonstall_intr_info *info);
 int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 			struct nvgpu_gr_ctx *gr_ctx,
 			struct vm_gk20a *vm,
@@ -89,10 +87,6 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 			struct tegra_vgpu_sm_esr_info *info);
 int vgpu_gr_init_ctx_state(struct gk20a *g);
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info);
-int vgpu_fifo_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_fifo_nonstall_intr_info *info);
-int vgpu_ce2_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_ce2_nonstall_intr_info *info);
 u32 vgpu_ce_get_num_pce(struct gk20a *g);
 int vgpu_init_mm_support(struct gk20a *g);
 int vgpu_init_gr_support(struct gk20a *g);

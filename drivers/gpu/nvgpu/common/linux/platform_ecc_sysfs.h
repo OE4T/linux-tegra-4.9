@@ -19,27 +19,19 @@
 
 #include "gp10b/gr_gp10b.h"
 
-int gr_gp10b_ecc_stat_create(struct device *dev,
-				int is_l2,
-				char *ecc_stat_name,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute **dev_attr_array);
-int gp10b_ecc_stat_create(struct device *dev,
-				int num_hw_units,
-				int num_subunits,
-				char *ecc_unit_name,
-				char *ecc_subunit_name,
-				char *ecc_stat_name,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute **__dev_attr_array);
+#define ECC_STAT_NAME_MAX_SIZE	100
 
-void gr_gp10b_ecc_stat_remove(struct device *dev,
-				int is_l2,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array);
-
-void gp10b_ecc_stat_remove(struct device *dev,
-				int hw_units,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array);
+int nvgpu_gr_ecc_stat_create(struct device *dev,
+			     int is_l2, char *ecc_stat_name,
+			     struct gk20a_ecc_stat *ecc_stat);
+int nvgpu_ecc_stat_create(struct device *dev,
+			  int num_hw_units, int num_subunits,
+			  char *ecc_unit_name, char *ecc_subunit_name,
+			  char *ecc_stat_name,
+			  struct gk20a_ecc_stat *ecc_stat);
+void nvgpu_gr_ecc_stat_remove(struct device *dev,
+			      int is_l2, struct gk20a_ecc_stat *ecc_stat);
+void nvgpu_ecc_stat_remove(struct device *dev,
+			   int num_hw_units, int num_subunits,
+			   struct gk20a_ecc_stat *ecc_stat);
 #endif

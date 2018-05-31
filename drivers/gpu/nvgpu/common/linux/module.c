@@ -1146,6 +1146,8 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENOMEM;
 	}
 
+	hash_init(l->ecc_sysfs_stats_htable);
+
 	gk20a = &l->g;
 
 	nvgpu_log_fn(gk20a, " ");

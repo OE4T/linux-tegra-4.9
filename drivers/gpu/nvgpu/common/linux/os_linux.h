@@ -19,6 +19,7 @@
 
 #include <linux/cdev.h>
 #include <linux/iommu.h>
+#include <linux/hashtable.h>
 
 #include "gk20a/gk20a.h"
 #include "cde.h"
@@ -139,6 +140,8 @@ struct nvgpu_os_linux {
 	struct dentry *debugfs_force_preemption_gfxp;
 	struct dentry *debugfs_dump_ctxsw_stats;
 #endif
+	DECLARE_HASHTABLE(ecc_sysfs_stats_htable, 5);
+
 	struct gk20a_cde_app cde_app;
 
 	struct rw_semaphore busy_lock;

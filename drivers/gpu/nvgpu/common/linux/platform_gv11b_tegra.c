@@ -39,6 +39,7 @@
 
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
+#include "platform_ecc_sysfs.h"
 
 #include "os_linux.h"
 #include "platform_gk20a_tegra.h"
@@ -261,41 +262,11 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.secure_buffer_size = 667648,
 };
 
-static struct device_attribute *dev_attr_sm_l1_tag_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_sm_cbu_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_sm_cbu_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_sm_l1_data_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_sm_l1_data_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_sm_icache_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_sm_icache_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_gcc_l15_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_gcc_l15_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_l1tlb_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_l1tlb_ecc_uncorrected_err_count_array;
-
-static struct device_attribute *dev_attr_fecs_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_fecs_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_gpccs_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_gpccs_ecc_uncorrected_err_count_array;
-
-static struct device_attribute *dev_attr_l2_cache_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_l2_cache_ecc_uncorrected_err_count_array;
-
-static struct device_attribute *dev_attr_mmu_l2tlb_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_hubtlb_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_fillunit_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array;
-
-static struct device_attribute *dev_attr_pmu_ecc_corrected_err_count_array;
-static struct device_attribute *dev_attr_pmu_ecc_uncorrected_err_count_array;
-
 void gr_gv11b_create_sysfs(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);
 	int error = 0;
+
 	/* This stat creation function is called on GR init. GR can get
        initialized multiple times but we only need to create the ECC
        stats once. Therefore, add the following check to avoid
@@ -305,210 +276,183 @@ void gr_gv11b_create_sysfs(struct gk20a *g)
 
 	gr_gp10b_create_sysfs(g);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_l1_tag_ecc_corrected_err_count",
-				&g->ecc.gr.sm_l1_tag_corrected_err_count,
-				&dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
+				&g->ecc.gr.sm_l1_tag_corrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_l1_tag_ecc_uncorrected_err_count",
-				&g->ecc.gr.sm_l1_tag_uncorrected_err_count,
-				&dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.sm_l1_tag_uncorrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_cbu_ecc_corrected_err_count",
-				&g->ecc.gr.sm_cbu_corrected_err_count,
-				&dev_attr_sm_cbu_ecc_corrected_err_count_array);
+				&g->ecc.gr.sm_cbu_corrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_cbu_ecc_uncorrected_err_count",
-				&g->ecc.gr.sm_cbu_uncorrected_err_count,
-				&dev_attr_sm_cbu_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.sm_cbu_uncorrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_l1_data_ecc_corrected_err_count",
-				&g->ecc.gr.sm_l1_data_corrected_err_count,
-				&dev_attr_sm_l1_data_ecc_corrected_err_count_array);
+				&g->ecc.gr.sm_l1_data_corrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_l1_data_ecc_uncorrected_err_count",
-				&g->ecc.gr.sm_l1_data_uncorrected_err_count,
-				&dev_attr_sm_l1_data_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.sm_l1_data_uncorrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_icache_ecc_corrected_err_count",
-				&g->ecc.gr.sm_icache_corrected_err_count,
-				&dev_attr_sm_icache_ecc_corrected_err_count_array);
+				&g->ecc.gr.sm_icache_corrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"sm_icache_ecc_uncorrected_err_count",
-				&g->ecc.gr.sm_icache_uncorrected_err_count,
-				&dev_attr_sm_icache_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.sm_icache_uncorrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"gcc_l15_ecc_corrected_err_count",
-				&g->ecc.gr.gcc_l15_corrected_err_count,
-				&dev_attr_gcc_l15_ecc_corrected_err_count_array);
+				&g->ecc.gr.gcc_l15_corrected_err_count);
 
-	error |= gr_gp10b_ecc_stat_create(dev,
+	error |= nvgpu_gr_ecc_stat_create(dev,
 				0,
 				"gcc_l15_ecc_uncorrected_err_count",
-				&g->ecc.gr.gcc_l15_uncorrected_err_count,
-				&dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.gcc_l15_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->ltc_count,
 				0,
 				"ltc",
 				NULL,
 				"l2_cache_uncorrected_err_count",
-				&g->ecc.ltc.l2_cache_uncorrected_err_count,
-				&dev_attr_l2_cache_ecc_uncorrected_err_count_array);
+				&g->ecc.ltc.l2_cache_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->ltc_count,
 				0,
 				"ltc",
 				NULL,
 				"l2_cache_corrected_err_count",
-				&g->ecc.ltc.l2_cache_corrected_err_count,
-				&dev_attr_l2_cache_ecc_corrected_err_count_array);
+				&g->ecc.ltc.l2_cache_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"gpc",
 				NULL,
 				"fecs_ecc_uncorrected_err_count",
-				&g->ecc.gr.fecs_uncorrected_err_count,
-				&dev_attr_fecs_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.fecs_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"gpc",
 				NULL,
 				"fecs_ecc_corrected_err_count",
-				&g->ecc.gr.fecs_corrected_err_count,
-				&dev_attr_fecs_ecc_corrected_err_count_array);
+				&g->ecc.gr.fecs_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->gr.gpc_count,
 				0,
 				"gpc",
 				NULL,
 				"gpccs_ecc_uncorrected_err_count",
-				&g->ecc.gr.gpccs_uncorrected_err_count,
-				&dev_attr_gpccs_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.gpccs_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->gr.gpc_count,
 				0,
 				"gpc",
 				NULL,
 				"gpccs_ecc_corrected_err_count",
-				&g->ecc.gr.gpccs_corrected_err_count,
-				&dev_attr_gpccs_ecc_corrected_err_count_array);
+				&g->ecc.gr.gpccs_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->gr.gpc_count,
 				0,
 				"gpc",
 				NULL,
 				"mmu_l1tlb_ecc_uncorrected_err_count",
-				&g->ecc.gr.mmu_l1tlb_uncorrected_err_count,
-				&dev_attr_mmu_l1tlb_ecc_uncorrected_err_count_array);
+				&g->ecc.gr.mmu_l1tlb_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				g->gr.gpc_count,
 				0,
 				"gpc",
 				NULL,
 				"mmu_l1tlb_ecc_corrected_err_count",
-				&g->ecc.gr.mmu_l1tlb_corrected_err_count,
-				&dev_attr_mmu_l1tlb_ecc_corrected_err_count_array);
+				&g->ecc.gr.mmu_l1tlb_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_l2tlb_ecc_uncorrected_err_count",
-				&g->ecc.fb.mmu_l2tlb_uncorrected_err_count,
-				&dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array);
+				&g->ecc.fb.mmu_l2tlb_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_l2tlb_ecc_corrected_err_count",
-				&g->ecc.fb.mmu_l2tlb_corrected_err_count,
-				&dev_attr_mmu_l2tlb_ecc_corrected_err_count_array);
+				&g->ecc.fb.mmu_l2tlb_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_hubtlb_ecc_uncorrected_err_count",
-				&g->ecc.fb.mmu_hubtlb_uncorrected_err_count,
-				&dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array);
+				&g->ecc.fb.mmu_hubtlb_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_hubtlb_ecc_corrected_err_count",
-				&g->ecc.fb.mmu_hubtlb_corrected_err_count,
-				&dev_attr_mmu_hubtlb_ecc_corrected_err_count_array);
+				&g->ecc.fb.mmu_hubtlb_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_fillunit_ecc_uncorrected_err_count",
-				&g->ecc.fb.mmu_fillunit_uncorrected_err_count,
-				&dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array);
+				&g->ecc.fb.mmu_fillunit_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"mmu_fillunit_ecc_corrected_err_count",
-				&g->ecc.fb.mmu_fillunit_corrected_err_count,
-				&dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
+				&g->ecc.fb.mmu_fillunit_corrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"pmu_ecc_uncorrected_err_count",
-				&g->ecc.pmu.pmu_uncorrected_err_count,
-				&dev_attr_pmu_ecc_uncorrected_err_count_array);
+				&g->ecc.pmu.pmu_uncorrected_err_count);
 
-	error |= gp10b_ecc_stat_create(dev,
+	error |= nvgpu_ecc_stat_create(dev,
 				1,
 				0,
 				"eng",
 				NULL,
 				"pmu_ecc_corrected_err_count",
-				&g->ecc.pmu.pmu_corrected_err_count,
-				&dev_attr_pmu_ecc_corrected_err_count_array);
-
+				&g->ecc.pmu.pmu_corrected_err_count);
 
 	if (error)
 		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
@@ -522,133 +466,123 @@ void gr_gv11b_remove_sysfs(struct gk20a *g)
 		return;
 	gr_gp10b_remove_sysfs(g);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_l1_tag_corrected_err_count,
-			dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
+			&g->ecc.gr.sm_l1_tag_corrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_l1_tag_uncorrected_err_count,
-			dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
+			&g->ecc.gr.sm_l1_tag_uncorrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_cbu_corrected_err_count,
-			dev_attr_sm_cbu_ecc_corrected_err_count_array);
+			&g->ecc.gr.sm_cbu_corrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_cbu_uncorrected_err_count,
-			dev_attr_sm_cbu_ecc_uncorrected_err_count_array);
+			&g->ecc.gr.sm_cbu_uncorrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_l1_data_corrected_err_count,
-			dev_attr_sm_l1_data_ecc_corrected_err_count_array);
+			&g->ecc.gr.sm_l1_data_corrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_l1_data_uncorrected_err_count,
-			dev_attr_sm_l1_data_ecc_uncorrected_err_count_array);
+			&g->ecc.gr.sm_l1_data_uncorrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_icache_corrected_err_count,
-			dev_attr_sm_icache_ecc_corrected_err_count_array);
+			&g->ecc.gr.sm_icache_corrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.sm_icache_uncorrected_err_count,
-			dev_attr_sm_icache_ecc_uncorrected_err_count_array);
+			&g->ecc.gr.sm_icache_uncorrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.gcc_l15_corrected_err_count,
-			dev_attr_gcc_l15_ecc_corrected_err_count_array);
+			&g->ecc.gr.gcc_l15_corrected_err_count);
 
-	gr_gp10b_ecc_stat_remove(dev,
+	nvgpu_gr_ecc_stat_remove(dev,
 			0,
-			&g->ecc.gr.gcc_l15_uncorrected_err_count,
-			dev_attr_gcc_l15_ecc_uncorrected_err_count_array);
+			&g->ecc.gr.gcc_l15_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->ltc_count,
-			&g->ecc.ltc.l2_cache_uncorrected_err_count,
-			dev_attr_l2_cache_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.ltc.l2_cache_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->ltc_count,
-			&g->ecc.ltc.l2_cache_corrected_err_count,
-			dev_attr_l2_cache_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.ltc.l2_cache_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.gr.fecs_uncorrected_err_count,
-			dev_attr_fecs_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.gr.fecs_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.gr.fecs_corrected_err_count,
-			dev_attr_fecs_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.gr.fecs_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->gr.gpc_count,
-			&g->ecc.gr.gpccs_uncorrected_err_count,
-			dev_attr_gpccs_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.gr.gpccs_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->gr.gpc_count,
-			&g->ecc.gr.gpccs_corrected_err_count,
-			dev_attr_gpccs_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.gr.gpccs_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->gr.gpc_count,
-			&g->ecc.gr.mmu_l1tlb_uncorrected_err_count,
-			dev_attr_mmu_l1tlb_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.gr.mmu_l1tlb_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			g->gr.gpc_count,
-			&g->ecc.gr.mmu_l1tlb_corrected_err_count,
-			dev_attr_mmu_l1tlb_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.gr.mmu_l1tlb_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_l2tlb_uncorrected_err_count,
-			dev_attr_mmu_l2tlb_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_l2tlb_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_l2tlb_corrected_err_count,
-			dev_attr_mmu_l2tlb_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_l2tlb_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_hubtlb_uncorrected_err_count,
-			dev_attr_mmu_hubtlb_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_hubtlb_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_hubtlb_corrected_err_count,
-			dev_attr_mmu_hubtlb_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_hubtlb_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_fillunit_uncorrected_err_count,
-			dev_attr_mmu_fillunit_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_fillunit_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.fb.mmu_fillunit_corrected_err_count,
-			dev_attr_mmu_fillunit_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.fb.mmu_fillunit_corrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.pmu.pmu_uncorrected_err_count,
-			dev_attr_pmu_ecc_uncorrected_err_count_array);
+			0,
+			&g->ecc.pmu.pmu_uncorrected_err_count);
 
-	gp10b_ecc_stat_remove(dev,
+	nvgpu_ecc_stat_remove(dev,
 			1,
-			&g->ecc.pmu.pmu_corrected_err_count,
-			dev_attr_pmu_ecc_corrected_err_count_array);
+			0,
+			&g->ecc.pmu.pmu_corrected_err_count);
 }

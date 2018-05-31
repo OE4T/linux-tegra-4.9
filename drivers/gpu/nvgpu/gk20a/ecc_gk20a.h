@@ -30,6 +30,7 @@ struct gk20a_ecc_stat {
 	u32 count;
 #ifdef CONFIG_SYSFS
 	struct hlist_node hash_node;
+	struct device_attribute *attr_array;
 #endif
 };
 

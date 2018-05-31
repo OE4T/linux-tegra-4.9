@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/hashtable.h>
+
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/hashtable.h>
@@ -27,10 +29,6 @@
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
 #include "platform_ecc_sysfs.h"
-
-#define ECC_STAT_NAME_MAX_SIZE	100
-
-static DEFINE_HASHTABLE(ecc_hash_table, 5);
 
 static u32 gen_ecc_hash_key(char *str)
 {
@@ -57,6 +55,7 @@ static ssize_t ecc_stat_show(struct device *dev,
 	struct gk20a_ecc_stat *ecc_stat;
 	u32 hash_key;
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	if (sscanf(ecc_stat_full_name, "ltc%u_lts%u", &hw_unit,
 							&subunit) == 2) {
@@ -78,7 +77,7 @@ static ssize_t ecc_stat_show(struct device *dev,
 
 	hash_key = gen_ecc_hash_key((char *)ecc_stat_base_name);
 
-	hash_for_each_possible(ecc_hash_table,
+	hash_for_each_possible(l->ecc_sysfs_stats_htable,
 				ecc_stat,
 				hash_node,
 				hash_key) {
@@ -91,11 +90,9 @@ static ssize_t ecc_stat_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "Error: No ECC stat found!\n");
 }
 
-int gr_gp10b_ecc_stat_create(struct device *dev,
-				int is_l2,
-				char *ecc_stat_name,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute **dev_attr_array)
+int nvgpu_gr_ecc_stat_create(struct device *dev,
+			     int is_l2, char *ecc_stat_name,
+			     struct gk20a_ecc_stat *ecc_stat)
 {
 	struct gk20a *g = get_gk20a(dev);
 	char *ltc_unit_name = "ltc";
@@ -113,32 +110,29 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 		num_hw_units = g->gr.tpc_count;
 
 
-	return gp10b_ecc_stat_create(dev, num_hw_units, num_subunits,
+	return nvgpu_ecc_stat_create(dev, num_hw_units, num_subunits,
 				is_l2 ? ltc_unit_name : gr_unit_name,
 				num_subunits ? lts_unit_name: NULL,
 				ecc_stat_name,
-				ecc_stat,
-				dev_attr_array);
+				ecc_stat);
 }
 
-int gp10b_ecc_stat_create(struct device *dev,
-				int num_hw_units,
-				int num_subunits,
-				char *ecc_unit_name,
-				char *ecc_subunit_name,
-				char *ecc_stat_name,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute **__dev_attr_array)
+int nvgpu_ecc_stat_create(struct device *dev,
+			  int num_hw_units, int num_subunits,
+			  char *ecc_unit_name, char *ecc_subunit_name,
+			  char *ecc_stat_name,
+			  struct gk20a_ecc_stat *ecc_stat)
 {
 	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int hw_unit = 0;
 	int subunit = 0;
 	int element = 0;
 	u32 hash_key = 0;
 	struct device_attribute *dev_attr_array;
 
-	int num_elements = num_subunits ? num_subunits*num_hw_units :
+	int num_elements = num_subunits ? num_subunits * num_hw_units :
 		num_hw_units;
 
 	/* Allocate arrays */
@@ -146,6 +140,7 @@ int gp10b_ecc_stat_create(struct device *dev,
 				       num_elements);
 	ecc_stat->counters = nvgpu_kzalloc(g, sizeof(u32) * num_elements);
 	ecc_stat->names = nvgpu_kzalloc(g, sizeof(char *) * num_elements);
+
 	for (hw_unit = 0; hw_unit < num_elements; hw_unit++) {
 		ecc_stat->names[hw_unit] = nvgpu_kzalloc(g, sizeof(char) *
 						ECC_STAT_NAME_MAX_SIZE);
@@ -206,44 +201,58 @@ int gp10b_ecc_stat_create(struct device *dev,
 
 	/* Add hash table entry */
 	hash_key = gen_ecc_hash_key(ecc_stat_name);
-	hash_add(ecc_hash_table,
+	hash_add(l->ecc_sysfs_stats_htable,
 		&ecc_stat->hash_node,
 		hash_key);
 
-	*__dev_attr_array = dev_attr_array;
+	ecc_stat->attr_array = dev_attr_array;
 
 	return error;
 }
 
-void gr_gp10b_ecc_stat_remove(struct device *dev,
-				int is_l2,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array)
+void nvgpu_gr_ecc_stat_remove(struct device *dev,
+			      int is_l2, struct gk20a_ecc_stat *ecc_stat)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int num_hw_units = 0;
+	int num_subunits = 0;
 
 	if (is_l2 == 1)
 		num_hw_units = g->ltc_count;
-	else if (is_l2 == 2)
-		num_hw_units = g->ltc_count * g->gr.slices_per_ltc;
-	else
+	else if (is_l2 == 2) {
+		num_hw_units = g->ltc_count;
+		num_subunits = g->gr.slices_per_ltc;
+	} else
 		num_hw_units = g->gr.tpc_count;
 
-	gp10b_ecc_stat_remove(dev, num_hw_units, ecc_stat, dev_attr_array);
+	nvgpu_ecc_stat_remove(dev, num_hw_units, num_subunits, ecc_stat);
 }
 
-void gp10b_ecc_stat_remove(struct device *dev,
-				int num_hw_units,
-				struct gk20a_ecc_stat *ecc_stat,
-				struct device_attribute *dev_attr_array)
+void nvgpu_ecc_stat_remove(struct device *dev,
+			   int num_hw_units, int num_subunits,
+			   struct gk20a_ecc_stat *ecc_stat)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct device_attribute *dev_attr_array = ecc_stat->attr_array;
 	int hw_unit = 0;
+	int subunit = 0;
+	int element = 0;
+	int num_elements = num_subunits ? num_subunits * num_hw_units :
+		num_hw_units;
 
 	/* Remove sysfs files */
-	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
-		device_remove_file(dev, &dev_attr_array[hw_unit]);
+	if (num_subunits) {
+		for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+			for (subunit = 0; subunit < num_subunits; subunit++) {
+				element = hw_unit * num_subunits + subunit;
+
+				device_remove_file(dev,
+						   &dev_attr_array[element]);
+			}
+		}
+	} else {
+		for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++)
+			device_remove_file(dev, &dev_attr_array[hw_unit]);
 	}
 
 	/* Remove hash table entry */
@@ -251,9 +260,10 @@ void gp10b_ecc_stat_remove(struct device *dev,
 
 	/* Free arrays */
 	nvgpu_kfree(g, ecc_stat->counters);
-	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+
+	for (hw_unit = 0; hw_unit < num_elements; hw_unit++)
 		nvgpu_kfree(g, ecc_stat->names[hw_unit]);
-	}
+
 	nvgpu_kfree(g, ecc_stat->names);
 	nvgpu_kfree(g, dev_attr_array);
 }

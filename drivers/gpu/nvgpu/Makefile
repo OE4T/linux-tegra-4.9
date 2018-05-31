@@ -166,6 +166,7 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += \
 	common/linux/module_usermode.o \
 	common/linux/soc.o \
 	common/linux/fuse.o \
+	common/linux/platform_ecc_sysfs.o \
 	common/linux/platform_gk20a_tegra.o \
 	common/linux/platform_gp10b_tegra.o \
 	common/linux/platform_gv11b_tegra.o

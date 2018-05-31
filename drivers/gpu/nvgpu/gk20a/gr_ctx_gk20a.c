@@ -57,6 +57,18 @@ static int gr_gk20a_alloc_load_netlist_av(struct gk20a *g, u32 *src, u32 len,
 	return 0;
 }
 
+static int gr_gk20a_alloc_load_netlist_av64(struct gk20a *g, u32 *src, u32 len,
+			struct av64_list_gk20a *av64_list)
+{
+	av64_list->count = len / sizeof(struct av64_gk20a);
+	if (!alloc_av64_list_gk20a(g, av64_list))
+		return -ENOMEM;
+
+	memcpy(av64_list->l, src, len);
+
+	return 0;
+}
+
 static int gr_gk20a_alloc_load_netlist_aiv(struct gk20a *g, u32 *src, u32 len,
 			struct aiv_list_gk20a *aiv_list)
 {
@@ -343,6 +355,14 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				if (err)
 					goto clean_up;
 				break;
+			case NETLIST_REGIONID_SW_BUNDLE64_INIT:
+				nvgpu_log_info(g, "NETLIST_REGIONID_SW_BUNDLE64_INIT");
+				err = gr_gk20a_alloc_load_netlist_av64(g,
+					src, size,
+					&g->gr.ctx_vars.sw_bundle64_init);
+				if (err)
+					goto clean_up;
+				break;
 			case NETLIST_REGIONID_NVPERF_PMCAU:
 				nvgpu_log_info(g, "NETLIST_REGIONID_NVPERF_PMCAU");
 				err = gr_gk20a_alloc_load_netlist_aiv(g,
@@ -403,6 +423,7 @@ clean_up:
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.etpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_bundle64_init.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_cau.l);
 		nvgpu_release_firmware(g, netlist_fw);
 		err = -ENOENT;

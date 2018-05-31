@@ -63,6 +63,8 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 			    &g->gr.ctx_vars.sw_ctx_load.count);
 	g->sim->esc_readl(g, "GRCTX_SW_VEID_BUNDLE_INIT_SIZE", 0,
 			    &g->gr.ctx_vars.sw_veid_bundle_init.count);
+	g->sim->esc_readl(g, "GRCTX_SW_BUNDLE64_INIT_SIZE", 0,
+			    &g->gr.ctx_vars.sw_bundle64_init.count);
 
 	g->sim->esc_readl(g, "GRCTX_NONCTXSW_REG_SIZE", 0,
 			    &g->gr.ctx_vars.sw_non_ctx_load.count);
@@ -92,6 +94,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.inst);
 	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.data);
 	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_bundle_init);
+	err |= !alloc_av64_list_gk20a(g, &g->gr.ctx_vars.sw_bundle64_init);
 	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_method_init);
 	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.sw_ctx_load);
 	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_non_ctx_load);
@@ -166,6 +169,17 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 				    i, &l[i].addr);
 		g->sim->esc_readl(g, "GRCTX_SW_VEID_BUNDLE_INIT:VALUE",
 				    i, &l[i].value);
+	}
+
+	for (i = 0; i < g->gr.ctx_vars.sw_bundle64_init.count; i++) {
+		struct av64_gk20a *l = g->gr.ctx_vars.sw_bundle64_init.l;
+
+		g->sim->esc_readl(g, "GRCTX_SW_BUNDLE64_INIT:ADDR",
+				i, &l[i].addr);
+		g->sim->esc_readl(g, "GRCTX_SW_BUNDLE64_INIT:VALUE_LO",
+				i, &l[i].value_lo);
+		g->sim->esc_readl(g, "GRCTX_SW_BUNDLE64_INIT:VALUE_HI",
+				i, &l[i].value_hi);
 	}
 
 	for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.sys.count; i++) {

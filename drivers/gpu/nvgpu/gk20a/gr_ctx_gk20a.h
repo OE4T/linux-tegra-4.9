@@ -105,6 +105,7 @@ union __max_name {
 #define NETLIST_REGIONID_CTXREG_PMROP           31
 #define NETLIST_REGIONID_CTXREG_PMUCGPC         32
 #define NETLIST_REGIONID_CTXREG_ETPC            33
+#define NETLIST_REGIONID_SW_BUNDLE64_INIT	34
 #define NETLIST_REGIONID_NVPERF_PMCAU		35
 
 struct netlist_region {
@@ -127,6 +128,11 @@ struct av_gk20a {
 	u32 addr;
 	u32 value;
 };
+struct av64_gk20a {
+	u32 addr;
+	u32 value_lo;
+	u32 value_hi;
+};
 struct aiv_gk20a {
 	u32 addr;
 	u32 index;
@@ -138,6 +144,10 @@ struct aiv_list_gk20a {
 };
 struct av_list_gk20a {
 	struct av_gk20a *l;
+	u32 count;
+};
+struct av64_list_gk20a {
+	struct av64_gk20a *l;
 	u32 count;
 };
 struct u32_list_gk20a {
@@ -152,6 +162,13 @@ struct ctxsw_buf_offset_map_entry {
 
 static inline
 struct av_gk20a *alloc_av_list_gk20a(struct gk20a *g, struct av_list_gk20a *avl)
+{
+	avl->l = nvgpu_kzalloc(g, avl->count * sizeof(*avl->l));
+	return avl->l;
+}
+
+static inline
+struct av64_gk20a *alloc_av64_list_gk20a(struct gk20a *g, struct av64_list_gk20a *avl)
 {
 	avl->l = nvgpu_kzalloc(g, avl->count * sizeof(*avl->l));
 	return avl->l;

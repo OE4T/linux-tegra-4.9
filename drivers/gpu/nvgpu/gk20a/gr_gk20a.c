@@ -1373,6 +1373,12 @@ u32 gk20a_init_sw_bundle(struct gk20a *g)
 			goto error;
 	}
 
+	if (g->ops.gr.init_sw_bundle64) {
+		err = g->ops.gr.init_sw_bundle64(g);
+		if (err)
+			goto error;
+	}
+
 	/* disable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),
 		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
@@ -3130,6 +3136,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.gpc_router.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_ltc.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_bundle64_init.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_cau.l);
 
 	nvgpu_vfree(g, gr->ctx_vars.local_golden_image);

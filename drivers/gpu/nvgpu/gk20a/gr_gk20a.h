@@ -297,6 +297,7 @@ struct gr_gk20a {
 		struct aiv_list_gk20a sw_ctx_load;
 		struct av_list_gk20a  sw_non_ctx_load;
 		struct av_list_gk20a  sw_veid_bundle_init;
+		struct av64_list_gk20a sw_bundle64_init;
 		struct {
 			struct aiv_list_gk20a sys;
 			struct aiv_list_gk20a gpc;

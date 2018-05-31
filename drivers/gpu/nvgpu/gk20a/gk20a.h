@@ -475,6 +475,7 @@ struct gpu_ops {
 					u32 *priv_addr_table,
 					u32 *priv_addr_table_index);
 		u32 (*fecs_ctxsw_mailbox_size)(void);
+		int (*init_sw_bundle64)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

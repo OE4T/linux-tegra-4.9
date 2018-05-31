@@ -160,10 +160,13 @@ struct gk20a;
 /* Allocating per-channel syncpoint in user space is supported */
 #define NVGPU_SUPPORT_USER_SYNCPOINT		66
 
+/* USERMODE enable bit */
+#define NVGPU_SUPPORT_USERMODE_SUBMIT		67
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			67
+#define NVGPU_MAX_ENABLED_BITS			68
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

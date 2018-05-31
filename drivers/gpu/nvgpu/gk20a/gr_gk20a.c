@@ -5837,19 +5837,14 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 	return ret;
 }
 
-static int gk20a_gr_post_bpt_events(struct gk20a *g, struct channel_gk20a *ch,
+static int gk20a_gr_post_bpt_events(struct gk20a *g, struct tsg_gk20a *tsg,
 				    u32 global_esr)
 {
-	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
-
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f())
 		g->ops.fifo.post_event_id(tsg, NVGPU_EVENT_ID_BPT_INT);
-	}
-	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
-		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f())
 		g->ops.fifo.post_event_id(tsg, NVGPU_EVENT_ID_BPT_PAUSE);
-	}
 
 	return 0;
 }
@@ -5864,6 +5859,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	struct channel_gk20a *ch = NULL;
 	struct channel_gk20a *fault_ch = NULL;
 	int tsgid = NVGPU_INVALID_TSG_ID;
+	struct tsg_gk20a *tsg = NULL;
 	u32 gr_engine_id;
 	u32 global_esr = 0;
 
@@ -5902,6 +5898,9 @@ int gk20a_gr_isr(struct gk20a *g)
 		isr_data.chid = FIFO_INVAL_CHANNEL_ID;
 		nvgpu_err(g, "ch id is INVALID 0xffffffff");
 	}
+
+	if (ch && gk20a_is_channel_marked_as_tsg(ch))
+		tsg = &g->fifo.tsg[ch->tsgid];
 
 	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"channel %d: addr 0x%08x, "
@@ -6126,8 +6125,8 @@ int gk20a_gr_isr(struct gk20a *g)
 			   "unhandled gr interrupt 0x%08x", gr_intr);
 
 	/* Posting of BPT events should be the last thing in this function */
-	if (global_esr && fault_ch)
-		gk20a_gr_post_bpt_events(g, fault_ch, global_esr);
+	if (global_esr && tsg)
+		gk20a_gr_post_bpt_events(g, tsg, global_esr);
 
 	if (ch)
 		gk20a_channel_put(ch);

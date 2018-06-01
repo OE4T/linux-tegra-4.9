@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 - 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -2254,8 +2254,6 @@ static void soctherm_init_hw_throt_cdev(struct platform_device *pdev)
 				stc->init = true;
 			}
 		}
-
-		of_node_put(c);
 	}
 
 	of_node_put(np);

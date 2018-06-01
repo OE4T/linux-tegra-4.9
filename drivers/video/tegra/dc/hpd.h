@@ -60,6 +60,39 @@ struct tegra_hpd_ops {
 	void (*edid_notify)(void *drv_data);
 };
 
+struct tegra_hpd_timer_data {
+	/* How long HPD must be HIGH to be a legitimate PLUG event */
+	u32	plug_stabilize_delay_us;
+
+	/* How long HPD must be LOW to be a legitimate UNPLUG event */
+	u32	unplug_stabilize_delay_us;
+
+	/* How long to wait for HPD to be re-asserted once it goes LOW */
+	u32	reassert_delay_us;
+
+	/* How long to wait before attempting to read the EDID */
+	u32	check_edid_delay_us;
+
+	/*
+	 * If this flag is true, the HPD state machine will categorically reset
+	 * itself if HPD comes back up within the reassert_delay_us period.
+	 *
+	 * If this flag is false and HPD comes back up within the
+	 * reassert_delay_us period, the HPD state machine will only reset
+	 * itself if the EDID has changed.
+	 */
+	bool	reset_on_reassert;
+
+	/*
+	 * If this flag is true, the HPD state machine will categorically reset
+	 * itself if it receives a PLUG event while still enabled.
+	 *
+	 * If this flag is false, the state machine will ignore PLUG events that
+	 * occur in the above scenario.
+	 */
+	bool	reset_on_plug_bounce;
+};
+
 struct tegra_hpd_data {
 	struct delayed_work dwork;
 	int shutdown;
@@ -68,6 +101,7 @@ struct tegra_hpd_data {
 	int pending_hpd_evt;
 	void *drv_data;
 	struct tegra_hpd_ops *ops;
+	struct tegra_hpd_timer_data timer_data;
 
 	struct fb_monspecs mon_spec;
 

@@ -27,16 +27,6 @@
 #define MAX_EDID_READ_ATTEMPTS 5
 #define HPD_EDID_MAX_LENGTH 512
 
-/*
- * how long of an HPD drop before we consider it gone for good.
- * this is mostly a preference to work around monitors users
- * reported that occasionally drop HPD.
- */
-#define HPD_STABILIZE_US 40000
-#define HPD_DROP_TIMEOUT_US 1500000
-#define CHECK_PLUG_STATE_DELAY_US 10000
-#define CHECK_EDID_DELAY_US 400
-
 static const char * const state_names[] = {
 	"Reset",
 	"Check Plug",
@@ -174,29 +164,29 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 static void hpd_reset_state(struct tegra_hpd_data *data)
 {
 	/*
-	 * Shut everything down, then schedule a
-	 * check of the plug state in the near future.
+	 * Shut everything down, and then schedule a check of the plug state.
 	 */
 	hpd_disable(data);
-	set_hpd_state(data, STATE_PLUG,
-			CHECK_PLUG_STATE_DELAY_US);
+	set_hpd_state(data, STATE_PLUG, 0);
 }
 
 static void hpd_plug_state(struct tegra_hpd_data *data)
 {
 	if (data->ops->get_hpd_state(data->drv_data)) {
+		int tgt_state;
+
 		/*
 		 * Looks like there is something plugged in.
 		 * Get ready to read the sink's EDID information.
 		 */
 		data->edid_reads = 0;
-
 		if (data->hpd_resuming && data->dc->connected)
-			set_hpd_state(data, STATE_RECHECK_EDID,
-					CHECK_EDID_DELAY_US);
+			tgt_state = STATE_RECHECK_EDID;
 		else
-			set_hpd_state(data, STATE_CHECK_EDID,
-					CHECK_EDID_DELAY_US);
+			tgt_state = STATE_CHECK_EDID;
+
+		set_hpd_state(data, tgt_state,
+			data->timer_data.check_edid_delay_us);
 	} else {
 		/*
 		 * Nothing plugged in, so we are finished. Go to the
@@ -239,7 +229,7 @@ static void edid_check_state(struct tegra_hpd_data *data)
 			goto end_disabled;
 		} else {
 			set_hpd_state(data, STATE_CHECK_EDID,
-					CHECK_EDID_DELAY_US);
+				data->timer_data.check_edid_delay_us);
 		}
 
 		return;
@@ -269,9 +259,10 @@ static void wait_for_hpd_reassert_state(struct tegra_hpd_data *data)
 {
 	/*
 	 * Looks like HPD dropped and really did stay low.
-	 * Go ahead and reset the system.
+	 * Go ahead and disable the system.
 	 */
-	set_hpd_state(data, STATE_HPD_RESET, 0);
+	hpd_disable(data);
+	set_hpd_state(data, STATE_DONE_DISABLED, -1);
 }
 
 static void edid_recheck_state(struct tegra_hpd_data *data)
@@ -292,7 +283,7 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 				data->edid_reads);
 		} else {
 			tgt_state = STATE_RECHECK_EDID;
-			timeout = CHECK_EDID_DELAY_US;
+			timeout = data->timer_data.check_edid_delay_us;
 		}
 	} else {
 		/*
@@ -348,6 +339,7 @@ static const dispatch_func_t state_machine_dispatch[] = {
 
 static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 {
+	struct tegra_hpd_timer_data *timer_data = &data->timer_data;
 	int tgt_state;
 	int timeout = 0;
 
@@ -357,55 +349,66 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		timeout = -1;
 		data->req_suspend = false;
 	} else if ((STATE_DONE_ENABLED == data->state) && !cur_hpd) {
-		/*
-		 * Did HPD drop while we were in DONE_ENABLED ? If so, hold
-		 * steady and wait to see if it comes back.
-		 */
+		/* If HPD drops, wait for it to be re-asserted. */
 		tgt_state = STATE_WAIT_FOR_HPD_REASSERT;
-		timeout = HPD_DROP_TIMEOUT_US;
+		timeout = timer_data->reassert_delay_us;
 	} else if (STATE_WAIT_FOR_HPD_REASSERT == data->state &&
 		cur_hpd) {
 		/*
-		 * Looks like HPD dropped and eventually came back.  Re-read the
-		 * EDID and reset the system only if the EDID has changed.
+		 * HPD dropped, but came back up.
+		 *
+		 * If reset_on_reassert is true, the state machine should reset
+		 * itself. Otherwise, re-check the EDID, and only reset if the
+		 * EDID has changed.
 		 */
-		data->edid_reads = 0;
-		tgt_state = STATE_RECHECK_EDID;
-		timeout = CHECK_EDID_DELAY_US;
+		if (timer_data->reset_on_reassert) {
+			tgt_state = STATE_HPD_RESET;
+			timeout = 0;
+		} else {
+			data->edid_reads = 0;
+			tgt_state = STATE_RECHECK_EDID;
+			timeout = timer_data->check_edid_delay_us;
+		}
 	} else if (STATE_DONE_ENABLED == data->state && cur_hpd) {
 		if (!tegra_dc_ext_is_userspace_active()) {
-			/* No userspace running. Enable DC with cached mode */
+			/* No userspace running. Enable DC with cached mode. */
 			pr_info("hpd: No EDID change. No userspace active. "
 			"Using cached mode to initialize dc!\n");
 			data->dc->use_cached_mode = true;
 			tgt_state = STATE_CHECK_EDID;
 		} else  {
 			/*
-			 * Looks like HPD dropped but came back quickly,
-			 * ignore it.
+			 * Looks like HPD dropped but came back quickly.
+			 *
+			 * If reset_on_plug_bounce is true, reset the state
+			 * machine. Otherwise, ignore this event.
 			 */
-			pr_info("hpd: ignoring bouncing hpd\n");
-			return;
+			if (timer_data->reset_on_plug_bounce) {
+				tgt_state = STATE_HPD_RESET;
+				timeout = 0;
+			} else {
+				pr_info("hpd: ignoring bouncing hpd\n");
+				return;
+			}
 		}
 	} else if (STATE_INIT_FROM_BOOTLOADER == data->state && cur_hpd) {
 		/*
 		 * We follow the same protocol as STATE_HPD_RESET in the
 		 * last branch here, but avoid actually entering that state so
-		 * we do not actively disable HPD.  Worker will check HPD
-		 * level again when it's woke up after 40ms.
+		 * we do not actively disable HPD.
 		 */
 		tgt_state = STATE_PLUG;
-		timeout = HPD_STABILIZE_US;
+		timeout = timer_data->plug_stabilize_delay_us;
 	} else {
 		/*
 		 * Looks like there was HPD activity while we were neither
 		 * waiting for it to go away during steady state output, nor
 		 * looking for it to come back after such an event.  Wait until
-		 * HPD has been steady for at least 40 mSec, then restart the
-		 * state machine.
+		 * HPD has been steady, and then restart the state machine.
 		 */
 		tgt_state = STATE_HPD_RESET;
-		timeout = HPD_STABILIZE_US;
+		timeout = cur_hpd ? timer_data->plug_stabilize_delay_us :
+				timer_data->unplug_stabilize_delay_us;
 	}
 
 	set_hpd_state(data, tgt_state, timeout);
@@ -565,6 +568,7 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 		!ops->get_hpd_state ||
 		!ops->edid_read);
 
+	memset(&data->timer_data, 0, sizeof(data->timer_data));
 	if (ops->init)
 		ops->init(drv_data);
 

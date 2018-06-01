@@ -585,7 +585,6 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 	struct tegra_dc_sor_data *sor;
 	int tgt_state;
 	int timeout;
-	bool cur_hpd;
 	bool lt_status;
 
 	BUG_ON(!lt_data || !lt_data->dp || !lt_data->dp->sor);
@@ -593,17 +592,6 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 	sor = dp->sor;
 
 	BUG_ON(!lt_data->no_aux_handshake);
-
-	cur_hpd = tegra_dc_hpd(dp->dc);
-	if (!cur_hpd) {
-		pr_info("dp lt: hpd deasserted, wait and reset\n");
-
-		lt_failed(lt_data);
-		tgt_state = STATE_RESET;
-		timeout = HPD_DROP_TIMEOUT_MS;
-		goto done;
-	}
-
 	WARN_ON(lt_data->tps != TEGRA_DC_DP_TRAINING_PATTERN_DISABLE);
 
 	mutex_lock(&lt_data->lock);
@@ -628,7 +616,6 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 
 	pr_info("dp lt: fast link training %s\n",
 		tgt_state == STATE_DONE_PASS ? "pass" : "fail");
-done:
 	set_lt_state(lt_data, tgt_state, timeout);
 }
 
@@ -660,16 +647,6 @@ static void lt_reduce_link_rate_state(struct tegra_dp_lt_data *lt_data)
 {
 	struct tegra_dc_dp_data *dp = lt_data->dp;
 	struct tegra_dc_dp_link_config tmp_cfg;
-	bool cur_hpd;
-
-	cur_hpd = tegra_dc_hpd(dp->dc);
-	if (!cur_hpd) {
-		pr_info("dp lt: hpd deasserted, wait and reset\n");
-
-		lt_failed(lt_data);
-		set_lt_state(lt_data, STATE_RESET, HPD_DROP_TIMEOUT_MS);
-		return;
-	}
 
 	dp->link_cfg.is_valid = false;
 	tmp_cfg = dp->link_cfg;
@@ -695,16 +672,6 @@ static void lt_reduce_lane_count_state(struct tegra_dp_lt_data *lt_data)
 {
 	struct tegra_dc_dp_data *dp = lt_data->dp;
 	struct tegra_dc_dp_link_config tmp_cfg;
-	bool cur_hpd;
-
-	cur_hpd = tegra_dc_hpd(dp->dc);
-	if (!cur_hpd) {
-		pr_info("dp lt: hpd deasserted, wait and reset\n");
-
-		lt_failed(lt_data);
-		set_lt_state(lt_data, STATE_RESET, HPD_DROP_TIMEOUT_MS);
-		return;
-	}
 
 	dp->link_cfg.is_valid = false;
 	tmp_cfg = dp->link_cfg;
@@ -778,18 +745,7 @@ static void lt_channel_equalization_state(struct tegra_dp_lt_data *lt_data)
 	int timeout = 0;
 	bool cr_done = true;
 	bool ce_done = true;
-	bool cur_hpd;
 	u32 cr_lane_mask;
-
-	cur_hpd = tegra_dc_hpd(lt_data->dp->dc);
-	if (!cur_hpd) {
-		pr_info("dp lt: hpd deasserted, wait and reset\n");
-
-		lt_failed(lt_data);
-		tgt_state = STATE_RESET;
-		timeout = HPD_DROP_TIMEOUT_MS;
-		goto done;
-	}
 
 	/*
 	 * See comment above the TEGRA_DC_DP_TRAINING_PATTERN_BS_CSTM entry in
@@ -925,21 +881,11 @@ static void lt_clock_recovery_state(struct tegra_dp_lt_data *lt_data)
 	u32 *vs = lt_data->drive_current;
 	bool cr_done;
 	u32 vs_temp[4], cr_lane_mask;
-	bool cur_hpd, need_fallback = false;
+	bool need_fallback = false;
 
 	BUG_ON(!lt_data || !lt_data->dp || !lt_data->dp->sor);
 	dp = lt_data->dp;
 	sor = dp->sor;
-
-	cur_hpd = tegra_dc_hpd(dp->dc);
-	if (!cur_hpd) {
-		pr_info("dp lt: hpd deasserted, wait and reset\n");
-
-		lt_failed(lt_data);
-		tgt_state = STATE_RESET;
-		timeout = HPD_DROP_TIMEOUT_MS;
-		goto done;
-	}
 
 	set_lt_tpg(lt_data, TEGRA_DC_DP_TRAINING_PATTERN_1);
 	set_lt_config(lt_data);
@@ -1016,32 +962,21 @@ static const dispatch_func_t state_machine_dispatch[] = {
 	lt_reduce_lane_count_state,	/* STATE_REDUCE_LANE_COUNT */
 };
 
-static void handle_lt_hpd_evt(struct tegra_dp_lt_data *lt_data, int cur_hpd)
+static void handle_lt_hpd_evt(struct tegra_dp_lt_data *lt_data)
 {
 	int tgt_state = STATE_RESET;
-	int timeout = 0;
-
-	/*
-	 * hpd deasserted while we are still in middle
-	 * of link training. Wait for HPD_DROP_TIMEOUT_MS
-	 * for hpd to come up. Thereafter, reset link training
-	 * state machine.
-	 */
-	if (!cur_hpd && !lt_data->force_disable)
-		timeout = HPD_DROP_TIMEOUT_MS;
 
 	if (lt_data->lt_config_valid &&
 		lt_data->no_aux_handshake &&
 		!lt_data->force_disable)
 		tgt_state = STATE_FAST_LT;
 
-	set_lt_state(lt_data, tgt_state, timeout);
+	set_lt_state(lt_data, tgt_state, 0);
 }
 
 static void lt_worker(struct work_struct *work)
 {
 	int pending_lt_evt;
-	int cur_hpd;
 	struct tegra_dp_lt_data *lt_data = container_of(to_delayed_work(work),
 					struct tegra_dp_lt_data, dwork);
 
@@ -1053,14 +988,13 @@ static void lt_worker(struct work_struct *work)
 	pending_lt_evt = lt_data->pending_evt;
 	lt_data->pending_evt = 0;
 	mutex_unlock(&lt_data->lock);
-	cur_hpd = !!tegra_dc_hpd(lt_data->dp->dc);
 
-	pr_info("dp lt: state %d (%s), hpd %d, pending_lt_evt %d\n",
+	pr_info("dp lt: state %d (%s), pending_lt_evt %d\n",
 		lt_data->state, tegra_dp_lt_state_names[lt_data->state],
-		cur_hpd, pending_lt_evt);
+		pending_lt_evt);
 
 	if (pending_lt_evt) {
-		handle_lt_hpd_evt(lt_data, cur_hpd);
+		handle_lt_hpd_evt(lt_data);
 	} else if (lt_data->state < ARRAY_SIZE(state_machine_dispatch)) {
 		dispatch_func_t func = state_machine_dispatch[lt_data->state];
 

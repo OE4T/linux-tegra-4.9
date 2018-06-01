@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -254,8 +254,7 @@ static void submit_work(struct nvhost_job *job)
 			if (cur_class != NV_HOST1X_CLASS_ID &&
 			    pdata->init_class_context)
 				pdata->init_class_context(
-					job->ch->dev, &job->ch->cdma,
-					job->engine_timestamps.dma);
+					job->ch->dev, &job->ch->cdma);
 		}
 
 		op1 = nvhost_opcode_gather(g->words);

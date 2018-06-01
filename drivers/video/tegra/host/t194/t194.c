@@ -338,6 +338,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.engine_can_cg		= true,
 	.can_powergate		= true,
 	.isolate_contexts	= true,
+	.enable_timestamps	= flcn_enable_timestamps,
 };
 
 struct nvhost_device_data t19_nvenc1_info = {
@@ -370,6 +371,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.engine_can_cg		= true,
 	.can_powergate		= true,
 	.isolate_contexts	= true,
+	.enable_timestamps	= flcn_enable_timestamps,
 };
 #endif
 
@@ -566,7 +568,6 @@ struct nvhost_device_data t19_vic_info = {
 	.engine_cg_regs		= t19x_vic_gating_registers,
 	.engine_can_cg		= true,
 	.can_powergate		= true,
-	.supports_task_timestamps = true,
 	.isolate_contexts	= true,
 };
 #endif

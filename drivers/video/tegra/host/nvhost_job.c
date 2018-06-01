@@ -124,7 +124,7 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 
 	init_fields(job, num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 
-	if (pdata->supports_task_timestamps) {
+	if (pdata->enable_timestamps) {
 		job->engine_timestamps.ptr =
 			dma_zalloc_coherent(&ch->vm->pdev->dev, sizeof(u64) * 2,
 			&job->engine_timestamps.dma, GFP_KERNEL);

@@ -200,20 +200,18 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 
 	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 	/* endian problems would show up right here */
-	if (ucode.bin_header->bin_magic != 0x10de && ucode.bin_header->bin_magic != 0x10fe) {
-		dev_err(&dev->dev,
-			   "failed to get firmware magic");
+	if (ucode.bin_header->bin_magic != 0x10de &&
+		ucode.bin_header->bin_magic != 0x10fe) {
+		dev_err(&dev->dev, "failed to get firmware magic");
 		return -EINVAL;
 	}
 	if (ucode.bin_header->bin_ver != 1) {
-		dev_err(&dev->dev,
-			   "unsupported firmware version");
+		dev_err(&dev->dev, "unsupported firmware version");
 		return -ENOENT;
 	}
 	/* shouldn't be bigger than what firmware thinks */
 	if (ucode.bin_header->bin_size > ucode_fw->size) {
-		dev_err(&dev->dev,
-			   "ucode image size inconsistency");
+		dev_err(&dev->dev, "ucode image size inconsistency");
 		return -EINVAL;
 	}
 
@@ -567,25 +565,23 @@ int nvhost_vic_finalize_poweron(struct platform_device *pdev)
 
 	v = get_flcn(pdev);
 
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_OFFSET * 4,
 		      NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, 1);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_DATA * 4, 1);
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_OFFSET * 4,
 		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4, v->fce.size);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_OFFSET * 4,
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_DATA * 4, v->fce.size);
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_OFFSET * 4,
 		      NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
-	host1x_writel(pdev, VIC_UCLASS_METHOD_DATA * 4,
+	host1x_writel(pdev, FLCN_UCLASS_METHOD_DATA * 4,
 		      (v->dma_addr + v->fce.data_offset) >> 8);
 
 	return 0;
 }
 
 int nvhost_vic_init_context(struct platform_device *pdev,
-			    struct nvhost_cdma *cdma,
-			    dma_addr_t timestamp_addr)
+			    struct nvhost_cdma *cdma)
 {
-	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	struct flcn *v;
 	int err;
 
@@ -598,44 +594,47 @@ int nvhost_vic_init_context(struct platform_device *pdev,
 	/* load application id */
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-			VIC_UCLASS_METHOD_OFFSET, 1),
+			FLCN_UCLASS_METHOD_OFFSET, 1),
 		NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID >> 2);
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-				       VIC_UCLASS_METHOD_DATA, 1), 1);
+				       FLCN_UCLASS_METHOD_DATA, 1), 1);
 
 	/* set fce ucode size */
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-			VIC_UCLASS_METHOD_OFFSET, 1),
+			FLCN_UCLASS_METHOD_OFFSET, 1),
 		NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE >> 2);
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-			VIC_UCLASS_METHOD_DATA, 1), v->fce.size);
+			FLCN_UCLASS_METHOD_DATA, 1), v->fce.size);
 
 	/* set fce ucode offset */
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-			VIC_UCLASS_METHOD_OFFSET, 1),
+			FLCN_UCLASS_METHOD_OFFSET, 1),
 		NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET >> 2);
 	nvhost_cdma_push(cdma,
 		nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-			VIC_UCLASS_METHOD_DATA, 1),
+			FLCN_UCLASS_METHOD_DATA, 1),
 		v->fce_dma_addr >> 8);
 
-	if (pdata->supports_task_timestamps) {
-		/* set timestamp buffer offset */
-		nvhost_cdma_push(cdma,
-			nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-				VIC_UCLASS_METHOD_OFFSET, 1),
-			NVB1B6_VIDEO_COMPOSITOR_SET_STATUS_OFFSET >> 2);
-		nvhost_cdma_push(cdma,
-			nvhost_opcode_setclass(NV_GRAPHICS_VIC_CLASS_ID,
-				VIC_UCLASS_METHOD_DATA, 1),
-			timestamp_addr >> 8);
-	}
-
 	return 0;
+}
+
+void flcn_enable_timestamps(struct platform_device *pdev,
+				struct nvhost_cdma *cdma,
+				dma_addr_t timestamp_addr)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	/* set timestamp buffer offset */
+	nvhost_cdma_push(cdma, nvhost_opcode_setclass(pdata->class,
+			FLCN_UCLASS_METHOD_OFFSET, 1),
+			FLCN_UCLASS_METHOD_ADDR_TSP);
+	nvhost_cdma_push(cdma, nvhost_opcode_setclass(pdata->class,
+			FLCN_UCLASS_METHOD_DATA, 1),
+			timestamp_addr >> 8);
 }
 
 int nvhost_vic_aggregate_constraints(struct platform_device *dev,

@@ -1,7 +1,7 @@
 /*
  * Tegra flcn common Module Support
  *
- * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,8 +102,11 @@ static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);
-int nvhost_vic_init_context(struct platform_device *, struct nvhost_cdma *,
-			    dma_addr_t);
+int nvhost_vic_init_context(struct platform_device *pdev,
+			    struct nvhost_cdma *cdma);
+void flcn_enable_timestamps(struct platform_device *pdev,
+				struct nvhost_cdma *cdma,
+				dma_addr_t timestamp_addr);
 int nvhost_flcn_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_common_isr(struct platform_device *);
 
@@ -131,9 +134,12 @@ int flcn_reload_fw(struct platform_device *pdev);
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_SIZE		(0x0000071C)
 #define NVA0B6_VIDEO_COMPOSITOR_SET_FCE_UCODE_OFFSET		(0x0000072C)
-#define NVB1B6_VIDEO_COMPOSITOR_SET_STATUS_OFFSET		(0x00000738)
-#define VIC_UCLASS_METHOD_OFFSET 0x10
-#define VIC_UCLASS_METHOD_DATA 0x11
+#define FLCN_UCLASS_METHOD_ADDR_TSP	0xC8
+#define VIC_UCLASS_METHOD_OFFSET	0x10
+#define VIC_UCLASS_METHOD_DATA		0x11
+#define FLCN_UCLASS_METHOD_OFFSET	0x10
+#define FLCN_UCLASS_METHOD_DATA		0x11
+
 
 #define NVHOST_ENCODE_FLCN_VER(maj, min) \
 	((((maj) & 0xff) << 8) | ((min) & 0xff))

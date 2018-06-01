@@ -1,7 +1,7 @@
-From 56f80a45db4c199e61f3bd045c03d0d4e2c88cc6 Mon Sep 17 00:00:00 2001
+From 928cccffaac6ad561a8c078e1aad982b628c669c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
-Subject: [PATCH 037/356] iommu/vt-d: don't disable preemption while accessing
+Subject: [PATCH 037/357] iommu/vt-d: don't disable preemption while accessing
  deferred_flush()
 
 get_cpu() disables preemption and returns the current CPU number. The

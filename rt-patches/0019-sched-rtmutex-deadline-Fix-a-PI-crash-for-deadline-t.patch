@@ -1,7 +1,7 @@
-From 942dd25557223cf2f722e35f6cc1b6b4987a1629 Mon Sep 17 00:00:00 2001
+From 66de23845f2860e4f1682bf20e9d35299208a326 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/356] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/357] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22

@@ -1,7 +1,7 @@
-From 25c6900b110a533d20c190f08fed044d5a2548ce Mon Sep 17 00:00:00 2001
+From c0893f6c5100f6f03073eade6f06a9c6495abde5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 7 Sep 2017 12:38:47 +0200
-Subject: [PATCH 347/356] locking/rtmutex: don't drop the wait_lock twice
+Subject: [PATCH 347/357] locking/rtmutex: don't drop the wait_lock twice
 
 Since the futex rework, __rt_mutex_start_proxy_lock() does no longer
 acquire the wait_lock so it must not drop it. Otherwise the lock is not

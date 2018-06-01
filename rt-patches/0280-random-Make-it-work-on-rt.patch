@@ -1,7 +1,7 @@
-From cf94eed3e5021505fa4172d3bde3610d3961c023 Mon Sep 17 00:00:00 2001
+From 4b551e7ea68619d59ee0229a3c8dd6836df0617d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Aug 2012 20:38:50 +0200
-Subject: [PATCH 280/356] random: Make it work on rt
+Subject: [PATCH 280/357] random: Make it work on rt
 
 Delegate the random insertion to the forced threaded interrupt
 handler. Store the return IP of the hard interrupt handler in the irq
@@ -19,10 +19,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  6 files changed, 23 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 1e10b00..a42fbf6 100644
+index 6879566..556d6b4 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -1124,28 +1124,27 @@ static __u32 get_reg(struct fast_pool *f, struct pt_regs *regs)
+@@ -1183,28 +1183,27 @@ static __u32 get_reg(struct fast_pool *f, struct pt_regs *regs)
  	return *ptr;
  }
  

@@ -1,7 +1,7 @@
-From 2c6b597ef51ac6165a7510ba747559b81dcc8e6a Mon Sep 17 00:00:00 2001
+From 17b83a3fa8b92497a3950765af408f39ca5412de Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:30 -0500
-Subject: [PATCH 055/356] drivers: random: Reduce preempt disabled region
+Subject: [PATCH 055/357] drivers: random: Reduce preempt disabled region
 
 No need to keep preemption disabled across the whole function.
 
@@ -12,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 deletions(-)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 0c23ced..1e10b00 100644
+index ddeac4ee..6879566 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -1028,8 +1028,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
+@@ -1087,8 +1087,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
  	} sample;
  	long delta, delta2, delta3;
  
@@ -24,7 +24,7 @@ index 0c23ced..1e10b00 100644
  	sample.jiffies = jiffies;
  	sample.cycles = random_get_entropy();
  	sample.num = num;
-@@ -1070,7 +1068,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
+@@ -1129,7 +1127,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)
  		 */
  		credit_entropy_bits(r, min_t(int, fls(delta>>1), 11));
  	}

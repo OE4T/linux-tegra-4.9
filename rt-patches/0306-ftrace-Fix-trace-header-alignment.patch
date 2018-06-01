@@ -1,7 +1,7 @@
-From c2d17858d3547b2737c548bf0a468ffb9b4610e5 Mon Sep 17 00:00:00 2001
+From b0e410ec0a88e9b6e34de701085ef9b37a64e9ff Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:08:30 +0200
-Subject: [PATCH 306/356] ftrace: Fix trace header alignment
+Subject: [PATCH 306/357] ftrace: Fix trace header alignment
 
 Line up helper arrows to the right column.
 

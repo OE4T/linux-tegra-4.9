@@ -1,7 +1,7 @@
-From 7f81bcd66ccaa06db6e2a3a59cb9efc84b3ec9f7 Mon Sep 17 00:00:00 2001
+From 8f03ac8c0535ae2d6fcefc113b9448a7c33dd487 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 119/356] panic: skip get_random_bytes for RT_FULL in
+Subject: [PATCH 119/357] panic: skip get_random_bytes for RT_FULL in
  init_oops_id
 
 Disable on -RT. If this is invoked from irq-context we will have problems

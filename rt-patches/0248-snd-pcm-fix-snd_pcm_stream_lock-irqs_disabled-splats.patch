@@ -1,7 +1,7 @@
-From c69c03b1507c9e95a666a9423898adc7319f3070 Mon Sep 17 00:00:00 2001
+From ed73e3843ebfc4cf14c00764a28dbf5e6a81e5a9 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 15:09:23 +0100
-Subject: [PATCH 248/356] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
+Subject: [PATCH 248/357] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
  splats
 
 Locking functions previously using read_lock_irq()/read_lock_irqsave() were
@@ -32,7 +32,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/sound/core/pcm_native.c b/sound/core/pcm_native.c
-index d503285..f9af3a7 100644
+index 7901869..8313482 100644
 --- a/sound/core/pcm_native.c
 +++ b/sound/core/pcm_native.c
 @@ -135,7 +135,7 @@ EXPORT_SYMBOL_GPL(snd_pcm_stream_unlock);

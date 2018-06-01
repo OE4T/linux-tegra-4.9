@@ -1,7 +1,7 @@
-From 77a79c2a9e6f83e7f8c5305dca220e556ff740a6 Mon Sep 17 00:00:00 2001
+From c658dd7ac00ed24193457cc6a831cc3b2af4408d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Apr 2010 16:51:31 +0200
-Subject: [PATCH 218/356] md: raid5: Make raid5_percpu handling RT aware
+Subject: [PATCH 218/357] md: raid5: Make raid5_percpu handling RT aware
 
 __raid_run_ops() disables preemption with get_cpu() around the access
 to the raid5_percpu variables. That causes scheduling while atomic

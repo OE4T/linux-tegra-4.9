@@ -1,7 +1,7 @@
-From 1f399aeee612133a73d38483177251b044a81292 Mon Sep 17 00:00:00 2001
+From df0e067b42f3ac6b341324446502b263aca2d31a Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Wed, 14 Feb 2018 23:05:10 +0200
-Subject: [PATCH 355/356] printk: make rt aware (again)
+Subject: [PATCH 355/357] printk: make rt aware (again)
 
 Similar to patch "printk: Make rt aware", make changes to downstream
 added code as well:

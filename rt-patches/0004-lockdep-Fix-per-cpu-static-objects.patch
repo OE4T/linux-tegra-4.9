@@ -1,7 +1,7 @@
-From 77a70d4af33caea10530b7f03978ede51d5cb213 Mon Sep 17 00:00:00 2001
+From 83914d3183d83eb5d74ba8502bcd7124203d0045 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
-Subject: [PATCH 004/356] lockdep: Fix per-cpu static objects
+Subject: [PATCH 004/357] lockdep: Fix per-cpu static objects
 
 Since commit 383776fa7527 ("locking/lockdep: Handle statically initialized
 PER_CPU locks properly") we try to collapse per-cpu locks into a single
@@ -114,10 +114,10 @@ index 6a6ed7f..3a851cb 100644
  				return true;
  			}
 diff --git a/mm/percpu.c b/mm/percpu.c
-index 9034915..4e739fc 100644
+index a42fb6c..88b57ee 100644
 --- a/mm/percpu.c
 +++ b/mm/percpu.c
-@@ -1295,8 +1295,11 @@ bool __is_kernel_percpu_address(unsigned long addr, unsigned long *can_addr)
+@@ -1296,8 +1296,11 @@ bool __is_kernel_percpu_address(unsigned long addr, unsigned long *can_addr)
  		void *va = (void *)addr;
  
  		if (va >= start && va < start + static_size) {

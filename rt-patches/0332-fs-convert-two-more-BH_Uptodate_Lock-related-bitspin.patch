@@ -1,7 +1,7 @@
-From e8935ea5face6206ba8e875f65fa266c8f97ac66 Mon Sep 17 00:00:00 2001
+From 8326c05cf3a28f2a80dfd0e942391f9e5d6e872f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
-Subject: [PATCH 332/356] fs: convert two more BH_Uptodate_Lock related
+Subject: [PATCH 332/357] fs: convert two more BH_Uptodate_Lock related
  bitspinlocks
 
 We convert all BH_Uptodate_Lock based bit-spinlocks to use

@@ -1,7 +1,7 @@
-From 3b0eae855e6670acd5a4629bcccc299dbef51779 Mon Sep 17 00:00:00 2001
+From 4fbfc5e53bb258d5f099bdc87b609a006d4cc754 Mon Sep 17 00:00:00 2001
 From: abhijit <abhijit@nvidia.com>
 Date: Tue, 24 Apr 2018 11:35:30 +0530
-Subject: [PATCH] futex: fix crash in exit pi path.
+Subject: [PATCH 357/357] futex: fix crash in exit pi path.
 
 This patch is taken from below upstream commit 153fbd1226fb.
 

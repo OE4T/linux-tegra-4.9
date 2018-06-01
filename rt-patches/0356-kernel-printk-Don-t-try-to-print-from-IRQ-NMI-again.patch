@@ -1,7 +1,7 @@
-From fb6959d513fbb4265106e535d4ada7ee7fbc0274 Mon Sep 17 00:00:00 2001
+From c4aa835554d7b8d62eafa9ae725ec934eaef4537 Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Thu, 15 Feb 2018 12:28:18 +0200
-Subject: [PATCH 356/356] kernel/printk: Don't try to print from IRQ/NMI
+Subject: [PATCH 356/357] kernel/printk: Don't try to print from IRQ/NMI
  (again)
 
 Similar to patch "kernel/printk: Don't try to print from IRQ/NMI

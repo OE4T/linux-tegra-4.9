@@ -1,7 +1,7 @@
-From cf5c4a2b4fbb5e05a79edd4fa2a82cf7e6023136 Mon Sep 17 00:00:00 2001
+From eac98a7b3163333fab657af551cbe58128026e6e Mon Sep 17 00:00:00 2001
 From: Marc Kleine-Budde <mkl@pengutronix.de>
 Date: Wed, 5 Mar 2014 00:49:47 +0100
-Subject: [PATCH 062/356] net: sched: Use msleep() instead of yield()
+Subject: [PATCH 062/357] net: sched: Use msleep() instead of yield()
 
 On PREEMPT_RT enabled systems the interrupt handler run as threads at prio 50
 (by default). If a high priority userspace process tries to shut down a busy

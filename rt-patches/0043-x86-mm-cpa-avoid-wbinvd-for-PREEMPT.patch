@@ -1,7 +1,7 @@
-From ccb999cb6d9dc4aaf66f36c395af7e834c459ace Mon Sep 17 00:00:00 2001
+From fe0bf16a906bd473020198d44240fd5903afba57 Mon Sep 17 00:00:00 2001
 From: John Ogness <john.ogness@linutronix.de>
 Date: Mon, 30 Jan 2017 09:41:21 +0100
-Subject: [PATCH 043/356] x86/mm/cpa: avoid wbinvd() for PREEMPT
+Subject: [PATCH 043/357] x86/mm/cpa: avoid wbinvd() for PREEMPT
 
 Although wbinvd() is faster than flushing many individual pages, it
 blocks the memory bus for "long" periods of time (>100us), thus

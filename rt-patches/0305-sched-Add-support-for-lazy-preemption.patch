@@ -1,7 +1,7 @@
-From fe99df79a85dbdcb3b49dc8f7f33d1ee921b8465 Mon Sep 17 00:00:00 2001
+From 4a7f49146db3a69d6fee484cf474fa130516c39e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
-Subject: [PATCH 305/356] sched: Add support for lazy preemption
+Subject: [PATCH 305/357] sched: Add support for lazy preemption
 
 It has become an obsession to mitigate the determinism vs. throughput
 loss of RT. Looking at the mainline semantics of preemption points

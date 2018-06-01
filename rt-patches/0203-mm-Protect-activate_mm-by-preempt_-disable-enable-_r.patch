@@ -1,7 +1,7 @@
-From a4fadf70d6688eedcdfa87df9519b7a816d07ea2 Mon Sep 17 00:00:00 2001
+From f9124d94f672a2c75eba2701f877264321055600 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Tue, 15 May 2012 13:53:56 +0800
-Subject: [PATCH 203/356] mm: Protect activate_mm() by
+Subject: [PATCH 203/357] mm: Protect activate_mm() by
  preempt_[disable&enable]_rt()
 
 User preempt_*_rt instead of local_irq_*_rt or otherwise there will be

@@ -1,7 +1,7 @@
-From ca21bafee694cd8fe039a2b01e316292c2dc2bcf Mon Sep 17 00:00:00 2001
+From 75cf8941012a60bc5256baf1c5bda1c0d1f15e9e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Dec 2015 11:34:07 +0100
-Subject: [PATCH 164/356] rtmutex: trylock is okay on -RT
+Subject: [PATCH 164/357] rtmutex: trylock is okay on -RT
 
 non-RT kernel could deadlock on rt_mutex_trylock() in softirq context. On
 -RT we don't run softirqs in IRQ context but in thread context so it is

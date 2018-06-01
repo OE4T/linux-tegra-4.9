@@ -1,7 +1,7 @@
-From e94971d5ee5debeeececa13fa53db2302d2b579a Mon Sep 17 00:00:00 2001
+From a3fd4eb5e9364a6040eeeb0491f3fdcf14e8b454 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Wed, 30 Oct 2013 11:48:33 -0700
-Subject: [PATCH 113/356] mm/memcontrol: Don't call schedule_work_on in
+Subject: [PATCH 113/357] mm/memcontrol: Don't call schedule_work_on in
  preemption disabled context
 
 The following trace is triggered when running ltp oom test cases:

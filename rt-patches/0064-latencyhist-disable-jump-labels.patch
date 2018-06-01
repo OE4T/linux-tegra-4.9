@@ -1,7 +1,7 @@
-From 96e0627183b5c79ffead2a4bdb85e9fa0612bf87 Mon Sep 17 00:00:00 2001
+From 9fb7b19834ef109779180968acdd8dbfb0bbaa62 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 4 Feb 2016 14:08:06 +0100
-Subject: [PATCH 064/356] latencyhist: disable jump-labels
+Subject: [PATCH 064/357] latencyhist: disable jump-labels
 
 Atleast on X86 we die a recursive death
 

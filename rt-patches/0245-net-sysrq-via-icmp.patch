@@ -1,7 +1,7 @@
-From d8d8b6cdd4b35bf78b3592bb68439395818528a9 Mon Sep 17 00:00:00 2001
+From 57c1f9052926e05eede000f297bb6381e902f80c Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 13:51:17 +0100
-Subject: [PATCH 245/356] net: sysrq via icmp
+Subject: [PATCH 245/357] net: sysrq via icmp
 
 There are (probably rare) situations when a system crashed and the system
 console becomes unresponsive but the network icmp layer still is alive.

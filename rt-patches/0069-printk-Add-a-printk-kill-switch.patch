@@ -1,7 +1,7 @@
-From f066cdc816a93be3d3b7ee4c4f2b0a621516b770 Mon Sep 17 00:00:00 2001
+From c1035aebd121ab6992fe15e99ef1b4f1d0810407 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 069/356] printk: Add a printk kill switch
+Subject: [PATCH 069/357] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.

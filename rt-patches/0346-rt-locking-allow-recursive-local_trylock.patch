@@ -1,7 +1,7 @@
-From ed5eb312a4ea0e4374f47ea8eed787f527cdb2a1 Mon Sep 17 00:00:00 2001
+From 9caedb0c5069face10fef08cda6bec61a6d522e9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:39:56 +0200
-Subject: [PATCH 346/356] rt/locking: allow recursive local_trylock()
+Subject: [PATCH 346/357] rt/locking: allow recursive local_trylock()
 
 required for following networking patch which does recursive try-lock.
 While at it, add the !RT version of it because it did not yet exist.

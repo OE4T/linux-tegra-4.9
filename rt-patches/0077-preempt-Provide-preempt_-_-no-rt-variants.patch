@@ -1,7 +1,7 @@
-From dcb900c55ea1aab2ec60b8f0f2704eb306b9a855 Mon Sep 17 00:00:00 2001
+From 7c38a4022685adeba6b400c04433ad18a76ecb9e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 24 Jul 2009 12:38:56 +0200
-Subject: [PATCH 077/356] preempt: Provide preempt_*_(no)rt variants
+Subject: [PATCH 077/357] preempt: Provide preempt_*_(no)rt variants
 
 RT needs a few preempt_disable/enable points which are not necessary
 otherwise. Implement variants to avoid #ifdeffery.

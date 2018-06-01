@@ -1,7 +1,7 @@
-From 717d25c45167756a0431c6838295d2552bcfdefa Mon Sep 17 00:00:00 2001
+From f0b3be4b13863126e3dcc2866510eb7e2d4694f6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Feb 2012 12:03:30 +0100
-Subject: [PATCH 234/356] seqlock: Prevent rt starvation
+Subject: [PATCH 234/357] seqlock: Prevent rt starvation
 
 If a low prio writer gets preempted while holding the seqlock write
 locked, a high prio reader spins forever on RT.

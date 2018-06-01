@@ -1,7 +1,7 @@
-From 1e96fca897c531a96c6b1f7dd41d2e52728ded9c Mon Sep 17 00:00:00 2001
+From 2d70dc24ca98c316e613f4bea8fbe759575c18ea Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 197/356] completion: Use simple wait queues
+Subject: [PATCH 197/357] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -37,7 +37,7 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index 0683783..7aaa0e8 100644
+index 617b430..ff6f607 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
 @@ -1593,7 +1593,7 @@ static void ffs_data_put(struct ffs_data *ffs)

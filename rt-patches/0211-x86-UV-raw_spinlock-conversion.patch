@@ -1,7 +1,7 @@
-From 66245832a2dd95fc9685bdc135b2a469edfde13b Mon Sep 17 00:00:00 2001
+From 137eda33c1799aa7c3d748e1523870a23b0c5901 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 2 Nov 2014 08:31:37 +0100
-Subject: [PATCH 211/356] x86: UV: raw_spinlock conversion
+Subject: [PATCH 211/357] x86: UV: raw_spinlock conversion
 
 Shrug.  Lots of hobbyists have a beast in their basement, right?
 
@@ -51,7 +51,7 @@ index 57ab86d..35d25e2 100644
  }
  
 diff --git a/arch/x86/platform/uv/tlb_uv.c b/arch/x86/platform/uv/tlb_uv.c
-index 0f017518..39b5d5b 100644
+index 0f01751..39b5d5b 100644
 --- a/arch/x86/platform/uv/tlb_uv.c
 +++ b/arch/x86/platform/uv/tlb_uv.c
 @@ -748,9 +748,9 @@ static void destination_plugged(struct bau_desc *bau_desc,

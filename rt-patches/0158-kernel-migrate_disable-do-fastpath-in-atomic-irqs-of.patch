@@ -1,7 +1,7 @@
-From b6fec63790d2d777ae67a74f82234fd69c452c3a Mon Sep 17 00:00:00 2001
+From 4a3f8e528088e1a21d36cc036cf95063d9e2447e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:18:01 +0100
-Subject: [PATCH 158/356] kernel: migrate_disable() do fastpath in atomic &
+Subject: [PATCH 158/357] kernel: migrate_disable() do fastpath in atomic &
  irqs-off
 
 With interrupts off it makes no sense to do the long path since we can't

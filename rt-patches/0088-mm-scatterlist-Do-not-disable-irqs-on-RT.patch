@@ -1,7 +1,7 @@
-From e0a4546e118f4967d30b25d226e222faf18237d3 Mon Sep 17 00:00:00 2001
+From 5fa001d289ce77492ab83ea9f4f91c8612bb0b73 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:34 -0500
-Subject: [PATCH 088/356] mm/scatterlist: Do not disable irqs on RT
+Subject: [PATCH 088/357] mm/scatterlist: Do not disable irqs on RT
 
 The local_irq_save() is not only used to get things done "fast" but
 also to ensure that in case of SG_MITER_ATOMIC we are in "atomic"

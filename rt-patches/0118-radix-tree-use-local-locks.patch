@@ -1,7 +1,7 @@
-From 77273e1481cde173b46828aa9cad51cd522bd16e Mon Sep 17 00:00:00 2001
+From 0fa47dc8a65832ebc7fb0013110bba4ab30d495b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 25 Jan 2017 16:34:27 +0100
-Subject: [PATCH 118/356] radix-tree: use local locks
+Subject: [PATCH 118/357] radix-tree: use local locks
 
 The preload functionality uses per-CPU variables and preempt-disable to
 ensure that it does not switch CPUs during its usage. This patch adds

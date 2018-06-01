@@ -1,7 +1,7 @@
-From e22c2adb72190c7dee5df2093688513e68b739f2 Mon Sep 17 00:00:00 2001
+From 76fb0cc1d599c1554c22d0494e038fc1a4fbd16d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 156/356] softirq: Split softirq locks
+Subject: [PATCH 156/357] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -830,7 +830,7 @@ index 79f10fc..78ef19f 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 5f6acef..5ae6e84 100644
+index 00ff1f2..992e80f 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3894,11 +3894,9 @@ int netif_rx_ni(struct sk_buff *skb)

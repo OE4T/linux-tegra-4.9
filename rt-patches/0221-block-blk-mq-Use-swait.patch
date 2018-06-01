@@ -1,7 +1,7 @@
-From 423338020bf118834fd64bb5817b982eb6563704 Mon Sep 17 00:00:00 2001
+From 979c599d851c50a719f434a9d450d026e0e02d8d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 221/356] block: blk-mq: Use swait
+Subject: [PATCH 221/357] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -76,7 +76,7 @@ index 2595747..0a39cb7 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 5f37fbe..929dd17 100644
+index 3d99e26..c0396dc 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -72,7 +72,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);

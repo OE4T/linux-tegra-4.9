@@ -1,7 +1,7 @@
-From de0dec5126a7289dd17b387c09a3a2ce5317df81 Mon Sep 17 00:00:00 2001
+From 81458248f695e59294663ab74c5f1e80f8cd857b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 074/356] bug: BUG_ON/WARN_ON variants dependend on RT/!RT
+Subject: [PATCH 074/357] bug: BUG_ON/WARN_ON variants dependend on RT/!RT
 
 Introduce RT/NON-RT WARN/BUG statements to avoid ifdefs in the code.
 

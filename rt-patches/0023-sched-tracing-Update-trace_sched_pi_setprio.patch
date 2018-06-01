@@ -1,7 +1,7 @@
-From c5e13cd20a80e12c93e3444671c479bf68e3c9ae Mon Sep 17 00:00:00 2001
+From b3d5a127cfaa19dcedd40fb862412f629270db3d Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
-Subject: [PATCH 023/356] sched,tracing: Update trace_sched_pi_setprio()
+Subject: [PATCH 023/357] sched,tracing: Update trace_sched_pi_setprio()
 
 Upstream commit b91473ff6e979c0028f02f90e40c844959c736d8
 

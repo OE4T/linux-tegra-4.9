@@ -1,7 +1,7 @@
-From eca48e11fc1ca4f44637661612855e71d25071ac Mon Sep 17 00:00:00 2001
+From d4da790878266e024dd4804562a168dce092d54d Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
-Subject: [PATCH 343/356] kernel/hrtimer/hotplug: don't wake ktimersoftd while
+Subject: [PATCH 343/357] kernel/hrtimer/hotplug: don't wake ktimersoftd while
  holding the hrtimer base lock
 
 kernel/hrtimer: don't wakeup a process while holding the hrtimer base lock

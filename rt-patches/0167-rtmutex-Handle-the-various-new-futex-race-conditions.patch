@@ -1,7 +1,7 @@
-From 3cf6016687601f3a961f437b84db363faaefedeb Mon Sep 17 00:00:00 2001
+From 040922aacac57b605a6765c38bb4eb9d621688a7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 10 Jun 2011 11:04:15 +0200
-Subject: [PATCH 167/356] rtmutex: Handle the various new futex race conditions
+Subject: [PATCH 167/357] rtmutex: Handle the various new futex race conditions
 
 RT opens a few new interesting race conditions in the rtmutex/futex
 combo due to futex hash bucket lock being a 'sleeping' spinlock and

@@ -1,7 +1,7 @@
-From ecbb504792deb80630b43ff7566a418cbdea2f2d Mon Sep 17 00:00:00 2001
+From 196c5adcb1d25b2e243de486e27267e44919dfe2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 180/356] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 180/357] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit

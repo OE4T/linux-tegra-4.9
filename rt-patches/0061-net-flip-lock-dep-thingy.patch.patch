@@ -1,7 +1,7 @@
-From 2baac4d0a0371f436d67d663ab9553d579315419 Mon Sep 17 00:00:00 2001
+From 3cd045838b690e061aa38dcdf73fcac803ecd2f5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
-Subject: [PATCH 061/356] net-flip-lock-dep-thingy.patch
+Subject: [PATCH 061/357] net-flip-lock-dep-thingy.patch
 
 =======================================================
 [ INFO: possible circular locking dependency detected ]

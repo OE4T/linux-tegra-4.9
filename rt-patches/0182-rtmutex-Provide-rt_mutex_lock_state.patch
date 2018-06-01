@@ -1,7 +1,7 @@
-From 408f5b0477d0f9012f22f1645a3d15980494e21d Mon Sep 17 00:00:00 2001
+From 5c036c060b57b2be80f1841c87bd2a40eded4f97 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:00 +0200
-Subject: [PATCH 182/356] rtmutex: Provide rt_mutex_lock_state()
+Subject: [PATCH 182/357] rtmutex: Provide rt_mutex_lock_state()
 
 Allow rtmutex to be locked with arbitrary states. Preparatory patch for the
 rt rwsem rework.

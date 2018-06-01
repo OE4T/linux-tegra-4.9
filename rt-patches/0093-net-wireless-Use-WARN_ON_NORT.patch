@@ -1,7 +1,7 @@
-From ee0afe251bbc69cb7cd3f44747f8dcbb1caffdb2 Mon Sep 17 00:00:00 2001
+From 417248a4d165657e3b8302442d090b0c3d806b50 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 21 Jul 2011 21:05:33 +0200
-Subject: [PATCH 093/356] net/wireless: Use WARN_ON_NORT()
+Subject: [PATCH 093/357] net/wireless: Use WARN_ON_NORT()
 
 The softirq counter is meaningless on RT, so the check triggers a
 false positive.

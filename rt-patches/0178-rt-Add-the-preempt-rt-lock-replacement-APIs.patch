@@ -1,7 +1,7 @@
-From 86456213b69763dcd08d0e9a80a5a8c7f4eacfda Mon Sep 17 00:00:00 2001
+From 498abf1a911558997e37d4fd5c9a9553ab4dbdbc Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
-Subject: [PATCH 178/356] rt: Add the preempt-rt lock replacement APIs
+Subject: [PATCH 178/357] rt: Add the preempt-rt lock replacement APIs
 
 Map spinlocks, rwlocks, rw_semaphores and semaphores to the rt_mutex
 based locking functions for preempt-rt.

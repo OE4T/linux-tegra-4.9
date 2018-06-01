@@ -1,7 +1,7 @@
-From 44957524b6cb8dfdb10871ac87d0114beac03036 Mon Sep 17 00:00:00 2001
+From c669b638f0411e13ba6999f32e5381ebe4069530 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 13 Feb 2013 09:26:05 -0500
-Subject: [PATCH 278/356] acpi/rt: Convert acpi_gbl_hardware lock back to a
+Subject: [PATCH 278/357] acpi/rt: Convert acpi_gbl_hardware lock back to a
  raw_spinlock_t
 
 We hit the following bug with 3.6-rt:

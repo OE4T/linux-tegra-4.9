@@ -1,7 +1,7 @@
-From 14369a64acc86ea342d40ec8841895b7bb37c820 Mon Sep 17 00:00:00 2001
+From b8ac5b65e1b77fc8873b7070fcac74d7b21e99de Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Tue, 26 May 2015 10:43:43 -0500
-Subject: [PATCH 319/356] i915: bogus warning from i915 when running on
+Subject: [PATCH 319/357] i915: bogus warning from i915 when running on
  PREEMPT_RT
 
 The i915 driver has a 'WARN_ON(!in_interrupt())' in the display
@@ -19,10 +19,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/drm/i915/intel_display.c b/drivers/gpu/drm/i915/intel_display.c
-index ce32303..c0a53bf 100644
+index c185625..6c9f9c8 100644
 --- a/drivers/gpu/drm/i915/intel_display.c
 +++ b/drivers/gpu/drm/i915/intel_display.c
-@@ -12138,7 +12138,7 @@ void intel_check_page_flip(struct drm_i915_private *dev_priv, int pipe)
+@@ -12139,7 +12139,7 @@ void intel_check_page_flip(struct drm_i915_private *dev_priv, int pipe)
  	struct intel_crtc *intel_crtc = to_intel_crtc(crtc);
  	struct intel_flip_work *work;
  

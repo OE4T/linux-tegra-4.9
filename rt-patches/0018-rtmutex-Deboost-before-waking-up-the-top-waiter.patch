@@ -1,7 +1,7 @@
-From 6a6101095e58864b6be9bdc12b1f377e27db44fd Mon Sep 17 00:00:00 2001
+From 7f0b262597d1e0deb709c576873f8bd770b98be6 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
-Subject: [PATCH 018/356] rtmutex: Deboost before waking up the top waiter
+Subject: [PATCH 018/357] rtmutex: Deboost before waking up the top waiter
 
 Upstream commit 2a1c6029940675abb2217b590512dbf691867ec4
 

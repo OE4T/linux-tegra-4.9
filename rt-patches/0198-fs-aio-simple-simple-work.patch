@@ -1,7 +1,7 @@
-From 33b3ac1e3a98eb4c4553c62b51464b14788b5845 Mon Sep 17 00:00:00 2001
+From 6c0ff7236779aa09fb820124dc6bd200bb70869a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 16 Feb 2015 18:49:10 +0100
-Subject: [PATCH 198/356] fs/aio: simple simple work
+Subject: [PATCH 198/357] fs/aio: simple simple work
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:768
 |in_atomic(): 1, irqs_disabled(): 0, pid: 26, name: rcuos/2
@@ -25,11 +25,11 @@ Reported-By: Mike Galbraith <umgwanakikbuti@gmail.com>
 Suggested-by: Benjamin LaHaise <bcrl@kvack.org>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- fs/aio.c | 24 +++++++++++++++++-------
- 1 file changed, 17 insertions(+), 7 deletions(-)
+ fs/aio.c | 15 +++++++++++++--
+ 1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/fs/aio.c b/fs/aio.c
-index 975c9fa..33dd3b9 100644
+index 975c9fa..f319dd6 100644
 --- a/fs/aio.c
 +++ b/fs/aio.c
 @@ -40,6 +40,7 @@
@@ -40,16 +40,15 @@ index 975c9fa..33dd3b9 100644
  
  #include <asm/kmap_types.h>
  #include <asm/uaccess.h>
-@@ -116,7 +117,7 @@ struct kioctx {
- 	long			nr_pages;
+@@ -117,6 +118,7 @@ struct kioctx {
  
  	struct rcu_head		free_rcu;
--	struct work_struct	free_work;	/* see free_ioctx() */
-+	struct swork_event	free_work;
+ 	struct work_struct	free_work;	/* see free_ioctx() */
++	struct swork_event	free_swork;	/* see free_ioctx_users() */
  
  	/*
  	 * signals when all in-flight requests are done
-@@ -259,6 +260,7 @@ static int __init aio_setup(void)
+@@ -259,6 +261,7 @@ static int __init aio_setup(void)
  		.mount		= aio_mount,
  		.kill_sb	= kill_anon_super,
  	};
@@ -57,30 +56,7 @@ index 975c9fa..33dd3b9 100644
  	aio_mnt = kern_mount(&aio_fs);
  	if (IS_ERR(aio_mnt))
  		panic("Failed to create aio fs mount.");
-@@ -596,9 +598,9 @@ static int kiocb_cancel(struct aio_kiocb *kiocb)
-  * aio_free_ring(), so the double bouncing through kioctx->free_rcu and
-  * ->free_work.
-  */
--static void free_ioctx(struct work_struct *work)
-+static void free_ioctx(struct swork_event *sev)
- {
--	struct kioctx *ctx = container_of(work, struct kioctx, free_work);
-+	struct kioctx *ctx = container_of(sev, struct kioctx, free_work);
- 
- 	pr_debug("freeing %p\n", ctx);
- 
-@@ -613,8 +615,8 @@ static void free_ioctx_rcufn(struct rcu_head *head)
- {
- 	struct kioctx *ctx = container_of(head, struct kioctx, free_rcu);
- 
--	INIT_WORK(&ctx->free_work, free_ioctx);
--	schedule_work(&ctx->free_work);
-+	INIT_SWORK(&ctx->free_work, free_ioctx);
-+	swork_queue(&ctx->free_work);
- }
- 
- static void free_ioctx_reqs(struct percpu_ref *ref)
-@@ -634,9 +636,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
+@@ -634,9 +637,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
   * and ctx->users has dropped to 0, so we know no more kiocbs can be submitted -
   * now it's safe to cancel any that need to be.
   */
@@ -88,11 +64,11 @@ index 975c9fa..33dd3b9 100644
 +static void free_ioctx_users_work(struct swork_event *sev)
  {
 -	struct kioctx *ctx = container_of(ref, struct kioctx, users);
-+	struct kioctx *ctx = container_of(sev, struct kioctx, free_work);
++	struct kioctx *ctx = container_of(sev, struct kioctx, free_swork);
  	struct aio_kiocb *req;
  
  	spin_lock_irq(&ctx->ctx_lock);
-@@ -655,6 +657,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
+@@ -655,6 +658,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
  	percpu_ref_put(&ctx->reqs);
  }
  
@@ -100,8 +76,8 @@ index 975c9fa..33dd3b9 100644
 +{
 +	struct kioctx *ctx = container_of(ref, struct kioctx, users);
 +
-+	INIT_SWORK(&ctx->free_work, free_ioctx_users_work);
-+	swork_queue(&ctx->free_work);
++	INIT_SWORK(&ctx->free_swork, free_ioctx_users_work);
++	swork_queue(&ctx->free_swork);
 +}
 +
  static int ioctx_add_table(struct kioctx *ctx, struct mm_struct *mm)

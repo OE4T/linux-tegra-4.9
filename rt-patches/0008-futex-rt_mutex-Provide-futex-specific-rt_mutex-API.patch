@@ -1,7 +1,7 @@
-From 21f0449718bd28beb6470959acdf3ea3335cb5dd Mon Sep 17 00:00:00 2001
+From d1c17805a9ec61d5efffd206c3154658ba3ec002 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
-Subject: [PATCH 008/356] futex,rt_mutex: Provide futex specific rt_mutex API
+Subject: [PATCH 008/357] futex,rt_mutex: Provide futex specific rt_mutex API
 
 Upstream commit 5293c2efda37775346885c7e924d4ef7018ea60b
 

@@ -1,7 +1,7 @@
-From 1599b91c4d1bcc4a5d0bfbe8f7db0891675c9d43 Mon Sep 17 00:00:00 2001
+From 4221bc0b09bc6d0005bb4f07b8f37dd90a3f51a4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Feb 2014 17:24:04 +0100
-Subject: [PATCH 276/356] crypto: Reduce preempt disabled regions, more algos
+Subject: [PATCH 276/357] crypto: Reduce preempt disabled regions, more algos
 
 Don Estabrook reported
 | kernel: WARNING: CPU: 2 PID: 858 at kernel/sched/core.c:2428 migrate_disable+0xed/0x100()

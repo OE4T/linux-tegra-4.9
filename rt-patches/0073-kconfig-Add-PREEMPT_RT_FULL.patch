@@ -1,7 +1,7 @@
-From d83e34be0783767497f76d5a8c0ae825bcd964a6 Mon Sep 17 00:00:00 2001
+From b797464793ae70fd7747cd8555a84433d8742f77 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 14:58:57 +0200
-Subject: [PATCH 073/356] kconfig: Add PREEMPT_RT_FULL
+Subject: [PATCH 073/357] kconfig: Add PREEMPT_RT_FULL
 
 Introduce the final symbol for PREEMPT_RT_FULL.
 

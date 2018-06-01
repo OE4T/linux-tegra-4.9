@@ -1,7 +1,7 @@
-From 5d8e7ba30786ba6d046859bfd07e3cefa7d3aaa2 Mon Sep 17 00:00:00 2001
+From 76883b6a33356db7774bcdb8cc0852f198d72d1c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
-Subject: [PATCH 150/356] hotplug: Use migrate disable on unplug
+Subject: [PATCH 150/357] hotplug: Use migrate disable on unplug
 
 Migration needs to be disabled accross the unplug handling to make
 sure that the unplug thread is off the unplugged cpu.

@@ -1,7 +1,7 @@
-From d98217b74465322cf952b7100df9856217849e94 Mon Sep 17 00:00:00 2001
+From a9689fa25e10e7e58fcca34e690e5cf82a63718c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/356] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/357] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.

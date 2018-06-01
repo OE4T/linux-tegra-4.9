@@ -1,7 +1,7 @@
-From af18c0cadd5cc9992bad9bcb762d975823d83811 Mon Sep 17 00:00:00 2001
+From 949c2fb3523b86e81cae835f94765fd1b0bf68b9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 238/356] net: move xmit_recursion to per-task variable on -RT
+Subject: [PATCH 238/357] net: move xmit_recursion to per-task variable on -RT
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -96,7 +96,7 @@ index 3fed5c2..730a52f 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 72b9a60..388a4ae 100644
+index 82d66c4..fe08366 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3203,8 +3203,10 @@ static void skb_update_prio(struct sk_buff *skb)

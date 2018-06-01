@@ -1,7 +1,7 @@
-From 0777d53b60ffe91349c5670c38e433d5757f796e Mon Sep 17 00:00:00 2001
+From 015a9509811d6a9b3f7c7ead210f3f1a2322db85 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
-Subject: [PATCH 075/356] iommu/amd: Use WARN_ON_NORT in __attach_device()
+Subject: [PATCH 075/357] iommu/amd: Use WARN_ON_NORT in __attach_device()
 
 RT does not disable interrupts here, but the protection is still
 correct. Fixup the WARN_ON so it won't yell on RT.

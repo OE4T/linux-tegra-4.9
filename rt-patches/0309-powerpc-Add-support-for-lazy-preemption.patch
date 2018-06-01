@@ -1,7 +1,7 @@
-From e70ca317ff12bbc4c0c1ff69907d0d492bd0f2af Mon Sep 17 00:00:00 2001
+From 4f303a688f5d88eafd2ab3c745e9b63363b188d9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 10:14:11 +0100
-Subject: [PATCH 309/356] powerpc: Add support for lazy preemption
+Subject: [PATCH 309/357] powerpc: Add support for lazy preemption
 
 Implement the powerpc pieces for lazy preempt.
 
@@ -141,7 +141,7 @@ index 3841d74..6dbaeff 100644
  	andi.	r0,r9,_TIF_USER_WORK_MASK
  	beq	restore_user
 diff --git a/arch/powerpc/kernel/entry_64.S b/arch/powerpc/kernel/entry_64.S
-index 2dc52e6..34631e3a4 100644
+index 2dc52e6..34631e3 100644
 --- a/arch/powerpc/kernel/entry_64.S
 +++ b/arch/powerpc/kernel/entry_64.S
 @@ -670,7 +670,7 @@ _GLOBAL(ret_from_except_lite)

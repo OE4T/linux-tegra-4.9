@@ -1,7 +1,7 @@
-From 682241483cc21aa478065aa3670ae2a7817d2abe Mon Sep 17 00:00:00 2001
+From f01923f427964b00cab0617e5fa6ebce07498302 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 5 Apr 2017 10:08:27 +0200
-Subject: [PATCH 025/356] rtmutex: Plug preempt count leak in
+Subject: [PATCH 025/357] rtmutex: Plug preempt count leak in
  rt_mutex_futex_unlock()
 
 Upstream commit def34eaae5ce04b324e48e1bfac873091d945213

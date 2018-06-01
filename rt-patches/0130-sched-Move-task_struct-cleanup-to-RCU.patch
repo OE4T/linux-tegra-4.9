@@ -1,7 +1,7 @@
-From fbfe9bbc4adf04768e7153202734dbc1019435a6 Mon Sep 17 00:00:00 2001
+From 41fc303e035cd197e9f2ba0741f08a73ceee2124 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 130/356] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 130/357] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.

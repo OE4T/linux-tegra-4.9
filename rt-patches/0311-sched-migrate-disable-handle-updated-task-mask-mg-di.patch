@@ -1,7 +1,7 @@
-From ca83b1602aa8ba0dd467782a1f8baa30bc32a0a5 Mon Sep 17 00:00:00 2001
+From fbfd4223569aa5bf6de00a199d303415adc15654 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
-Subject: [PATCH 311/356] sched/migrate disable: handle updated task-mask
+Subject: [PATCH 311/357] sched/migrate disable: handle updated task-mask
  mg-dis section
 
 If task's cpumask changes while in the task is in a migrate_disable()

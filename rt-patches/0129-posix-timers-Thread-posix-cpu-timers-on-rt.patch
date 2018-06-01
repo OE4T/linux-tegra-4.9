@@ -1,7 +1,7 @@
-From a74ae34b01a76bf1f7656c4c773942333765b3cd Mon Sep 17 00:00:00 2001
+From 1a58dff27f47762ddbd6834dbafab3528b9c7edc Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 129/356] posix-timers: Thread posix-cpu-timers on -rt
+Subject: [PATCH 129/357] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.

@@ -1,7 +1,7 @@
-From cfd21432d1eb94ecb069614e3047b85a1a590d00 Mon Sep 17 00:00:00 2001
+From bc421386dcde003e0b058e67bee0a46770dd50e3 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
-Subject: [PATCH 011/356] futex: Rework inconsistent rt_mutex/futex_q state
+Subject: [PATCH 011/357] futex: Rework inconsistent rt_mutex/futex_q state
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 

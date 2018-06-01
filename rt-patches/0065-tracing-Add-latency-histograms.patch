@@ -1,7 +1,7 @@
-From f7f471c2f4e086279401b18afe8f96a08c3d2c81 Mon Sep 17 00:00:00 2001
+From 3607e0dc85c7a99e334616eea0ea85c953bdaab3 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 065/356] tracing: Add latency histograms
+Subject: [PATCH 065/357] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the

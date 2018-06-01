@@ -1,7 +1,7 @@
-From 05dbca2d00ea67b0f01b2da6c290f296254215a6 Mon Sep 17 00:00:00 2001
+From 2735e7382d8f2fdebe3619c3a86d849b68527531 Mon Sep 17 00:00:00 2001
 From: "Steven Rostedt (VMware)" <rostedt@goodmis.org>
 Date: Wed, 22 Nov 2017 07:31:19 -0500
-Subject: [PATCH 335/356] Revert "memcontrol: Prevent scheduling while atomic
+Subject: [PATCH 335/357] Revert "memcontrol: Prevent scheduling while atomic
  in cgroup code"
 
 The commit "memcontrol: Prevent scheduling while atomic in cgroup code"

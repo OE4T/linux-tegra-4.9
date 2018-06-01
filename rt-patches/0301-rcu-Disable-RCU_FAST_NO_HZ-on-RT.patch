@@ -1,7 +1,7 @@
-From da79c0b3f10126c24590e23ab47c43fabe620bd8 Mon Sep 17 00:00:00 2001
+From a4e73bde532f6400a22d9ebd3534a0ec46d660a7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 13:26:09 +0000
-Subject: [PATCH 301/356] rcu: Disable RCU_FAST_NO_HZ on RT
+Subject: [PATCH 301/357] rcu: Disable RCU_FAST_NO_HZ on RT
 
 This uses a timer_list timer from the irq disabled guts of the idle
 code. Disable it for now to prevent wreckage.

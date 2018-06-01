@@ -1,7 +1,7 @@
-From f15ce74ab3c3b9fa0b42a50a5b3c280a0a207f49 Mon Sep 17 00:00:00 2001
+From aac5fb8d136fdb69cbec790d8156549ccca1c303 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 17:19:44 +0100
-Subject: [PATCH 089/356] mm/workingset: Do not protect workingset_shadow_nodes
+Subject: [PATCH 089/357] mm/workingset: Do not protect workingset_shadow_nodes
  with irq off
 
 workingset_shadow_nodes is protected by local_irq_disable(). Some users
@@ -40,7 +40,7 @@ index c1111f9..e8d2c44 100644
  static inline unsigned int workingset_node_pages(struct radix_tree_node *node)
  {
 diff --git a/mm/filemap.c b/mm/filemap.c
-index 8cf5c94..1e29a6f 100644
+index a26dd43..e8bd3d0 100644
 --- a/mm/filemap.c
 +++ b/mm/filemap.c
 @@ -159,9 +159,12 @@ static int page_cache_tree_insert(struct address_space *mapping,

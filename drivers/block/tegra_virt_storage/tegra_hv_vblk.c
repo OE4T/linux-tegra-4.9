@@ -52,6 +52,10 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 	unsigned long bit;
 
 	mutex_lock(&vblkdev->req_lock);
+
+	if (vblkdev->queue_state != VBLK_QUEUE_ACTIVE)
+		goto exit;
+
 	bit = find_first_zero_bit(vblkdev->pending_reqs, vblkdev->max_requests);
 	if (bit < vblkdev->max_requests) {
 		req = &vblkdev->reqs[bit];
@@ -59,8 +63,9 @@ static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
 		set_bit(bit, vblkdev->pending_reqs);
 		vblkdev->inflight_reqs++;
 	}
-	mutex_unlock(&vblkdev->req_lock);
 
+exit:
+	mutex_unlock(&vblkdev->req_lock);
 	return req;
 }
 
@@ -124,6 +129,11 @@ static void vblk_put_req(struct vsc_request *req)
 		req->req = NULL;
 		memset(&req->iter, 0, sizeof(struct req_iterator));
 		vblkdev->inflight_reqs--;
+
+		if ((vblkdev->inflight_reqs == 0) &&
+			(vblkdev->queue_state == VBLK_QUEUE_SUSPENDED)) {
+			complete(&vblkdev->req_queue_empty);
+		}
 	}
 exit:
 	mutex_unlock(&vblkdev->req_lock);
@@ -830,6 +840,10 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto free_mempool;
 	}
+
+	init_completion(&vblkdev->req_queue_empty);
+	vblkdev->queue_state = VBLK_QUEUE_ACTIVE;
+
 	INIT_WORK(&vblkdev->init, vblk_init_device);
 	INIT_WORK(&vblkdev->work, vblk_request_work);
 
@@ -909,9 +923,21 @@ static int tegra_hv_vblk_suspend(struct device *dev)
 		blk_stop_queue(vblkdev->queue);
 		spin_unlock_irqrestore(vblkdev->queue->queue_lock, flags);
 
+		mutex_lock(&vblkdev->req_lock);
+		vblkdev->queue_state = VBLK_QUEUE_SUSPENDED;
+
+		/* Mark the queue as empty if inflight requests are 0 */
+		if (vblkdev->inflight_reqs == 0)
+			complete(&vblkdev->req_queue_empty);
+		mutex_unlock(&vblkdev->req_lock);
+
+		wait_for_completion(&vblkdev->req_queue_empty);
 		disable_irq(vblkdev->ivck->irq);
 
 		flush_workqueue(vblkdev->wq);
+
+		/* Reset the channel */
+		tegra_hv_ivc_channel_reset(vblkdev->ivck);
 	}
 
 	return 0;
@@ -923,6 +949,11 @@ static int tegra_hv_vblk_resume(struct device *dev)
 	unsigned long flags;
 
 	if (vblkdev->queue) {
+		mutex_lock(&vblkdev->req_lock);
+		vblkdev->queue_state = VBLK_QUEUE_ACTIVE;
+		reinit_completion(&vblkdev->req_queue_empty);
+		mutex_unlock(&vblkdev->req_lock);
+
 		enable_irq(vblkdev->ivck->irq);
 
 		spin_lock_irqsave(vblkdev->queue->queue_lock, flags);

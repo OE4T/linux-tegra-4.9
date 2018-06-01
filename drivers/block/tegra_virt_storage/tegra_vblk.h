@@ -55,6 +55,12 @@ struct vsc_request {
 	struct vblk_dev* vblkdev;
 };
 
+enum vblk_queue_state {
+	VBLK_UNKNOWN,
+	VBLK_QUEUE_SUSPENDED,
+	VBLK_QUEUE_ACTIVE,
+};
+
 /*
 * The drvdata of virtual device.
 */
@@ -84,6 +90,8 @@ struct vblk_dev {
 	uint32_t inflight_reqs;
 	uint32_t max_requests;
 	struct mutex req_lock;
+	enum vblk_queue_state queue_state;
+	struct completion req_queue_empty;
 };
 
 int vblk_complete_ioctl_req(struct vblk_dev *vblkdev,

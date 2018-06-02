@@ -1329,11 +1329,11 @@ int nvlink_enumerate(struct nvlink_device *ndev)
 	 * Initialize the clocks, resets, minion, uphy, interrupts,
 	 * memory interface on both the endpoints
 	 */
-	ret = nvlink_initialize_endpoint(master_dev);
+	ret = nvlink_initialize_endpoint(slave_dev);
 	if (ret < 0)
 		goto fail;
 
-	ret = nvlink_initialize_endpoint(slave_dev);
+	ret = nvlink_initialize_endpoint(master_dev);
 	if (ret < 0)
 		goto fail;
 

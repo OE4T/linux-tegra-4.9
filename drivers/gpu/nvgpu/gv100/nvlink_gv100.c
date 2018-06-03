@@ -1625,23 +1625,28 @@ static int gv100_nvlink_enable_links_pre_top(struct gk20a *g, u32 links)
 	return -EINVAL;
 }
 
+void gv100_nvlink_set_sw_war(struct gk20a *g, u32 link_id)
+{
+	u32 reg;
+
+	/* WAR for HW bug 1888034 */
+	reg = DLPL_REG_RD32(g, link_id, nvl_sl0_safe_ctrl2_tx_r());
+	reg = set_field(reg, nvl_sl0_safe_ctrl2_tx_ctr_init_m(),
+		nvl_sl0_safe_ctrl2_tx_ctr_init_init_f());
+	reg = set_field(reg, nvl_sl0_safe_ctrl2_tx_ctr_initscl_m(),
+		nvl_sl0_safe_ctrl2_tx_ctr_initscl_init_f());
+	DLPL_REG_WR32(g, link_id, nvl_sl0_safe_ctrl2_tx_r(), reg);
+}
+
 static int gv100_nvlink_enable_links_post_top(struct gk20a *g, u32 links)
 {
 	u32 link_id;
 	unsigned long enabled_links = (links & g->nvlink.enabled_links) &
 			~g->nvlink.initialized_links;
-	u32 reg;
 
 	for_each_set_bit(link_id, &enabled_links, 32) {
-
-		/* WAR for HW bug 1888034 */
-		reg = DLPL_REG_RD32(g, link_id, nvl_sl0_safe_ctrl2_tx_r());
-		reg = set_field(reg, nvl_sl0_safe_ctrl2_tx_ctr_init_m(),
-			nvl_sl0_safe_ctrl2_tx_ctr_init_init_f());
-		reg = set_field(reg, nvl_sl0_safe_ctrl2_tx_ctr_initscl_m(),
-			nvl_sl0_safe_ctrl2_tx_ctr_initscl_init_f());
-		DLPL_REG_WR32(g, link_id, nvl_sl0_safe_ctrl2_tx_r(), reg);
-
+		if (g->ops.nvlink.set_sw_war)
+			g->ops.nvlink.set_sw_war(g, link_id);
 		gv100_nvlink_initialize_tlc(g, link_id);
 		gv100_nvlink_initialize_nvlipt(g, link_id);
 		gv100_nvlink_enable_link_intr(g, link_id, true);

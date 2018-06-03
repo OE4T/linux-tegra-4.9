@@ -1201,6 +1201,7 @@ struct gpu_ops {
 		int (*minion_data_ready_en)(struct gk20a *g,
 					unsigned long link_mask, bool sync);
 		void (*get_connected_link_mask)(u32 *link_mask);
+		void (*set_sw_war)(struct gk20a *g, u32 link_id);
 		/* API */
 		int (*link_early_init)(struct gk20a *g, unsigned long mask);
 		u32 (*link_get_mode)(struct gk20a *g, u32 link_id);

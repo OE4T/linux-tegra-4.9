@@ -186,8 +186,10 @@ static int csi5_stream_set_config(struct tegra_csi_channel *chan, int csi_port,
 static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 	enum tegra_csi_port_num port_num)
 {
+	int err = 0;
 	struct tegra_csi_device *csi = chan->csi;
 	struct tegra_csi_port *port = &chan->ports[port_num];
+	unsigned long csi_rate = 0;
 
 	int csi_port = chan->ports[port_num].num;
 
@@ -215,7 +217,15 @@ static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 	tpg_config->t194.virtual_channel_id = chan->virtual_channel;
 	tpg_config->t194.datatype = port->core_format->img_dt;
 
-	tpg_config->t194.lane_count = chan->numlanes;
+	/*
+	 * T19x TPG is generating 64 bits per cycle
+	 * it will insert (TPG_LANE_NUM-8) * nvcsi_clock cycles between
+	 * two 64bit pixel_packages to reduce framerate
+	 * TPG_LANE_NUM=8 means no blank insertion.
+	 * 7 means insert 1 clock between two 64bit pixel packages,
+	 * 6 means 2 clocks blank, …, 1 means 7 blank clocks.
+	 */
+	tpg_config->t194.lane_count = 8;
 	tpg_config->t194.flags	= NVCSI_TPG_FLAG_PATCH_MODE;
 
 	tpg_config->t194.initial_frame_number = 1;
@@ -236,18 +246,20 @@ static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 
 	/* Enable TPG on a stream */
 	memset(&msg, 0, sizeof(msg));
-	msg.header.msg_id = CAPTURE_CSI_STREAM_TPG_START_REQ;
+	msg.header.msg_id = CAPTURE_CSI_STREAM_TPG_START_RATE_REQ;
 	msg.header.channel_id = TEMP_CHANNEL_ID;
 
 	msg.csi_stream_tpg_start_req.stream_id = csi_port;
 	msg.csi_stream_tpg_start_req.virtual_channel_id = chan->virtual_channel;
-	msg.csi_stream_tpg_start_req.tpg_rate_config.hblank = TPG_HBLANK;
-	msg.csi_stream_tpg_start_req.tpg_rate_config.vblank = TPG_VBLANK;
-	msg.csi_stream_tpg_start_req.tpg_rate_config.pixel_interval = 0;
+	msg.csi_stream_tpg_start_rate_req.frame_rate = port->framerate;
+	err = nvhost_module_get_rate(csi->pdev, &csi_rate, 0);
+	if (err)
+		return err;
 
+	msg.csi_stream_tpg_start_rate_req.csi_clk_rate = csi_rate / 1000;
 	tegra_capture_ivc_control_submit(&msg, sizeof(msg));
 
-	return 0;
+	return err;
 }
 
 static void csi5_stream_tpg_stop(struct tegra_csi_channel *chan, int csi_port)
@@ -272,6 +284,7 @@ static void csi5_stream_tpg_stop(struct tegra_csi_channel *chan, int csi_port)
 static int csi5_start_streaming(struct tegra_csi_channel *chan,
 	enum tegra_csi_port_num port_num)
 {
+	int err = 0;
 	struct tegra_csi_device *csi = chan->csi;
 
 	int csi_port = chan->ports[port_num].num;
@@ -285,10 +298,13 @@ static int csi5_start_streaming(struct tegra_csi_channel *chan,
 
 	csi5_stream_open(chan, csi_port);
 
-	if (chan->pg_mode)
-		csi5_stream_tpg_start(chan, port_num);
+	if (chan->pg_mode) {
+		err = csi5_stream_tpg_start(chan, port_num);
+		if (err)
+			return err;
+	}
 
-	return 0;
+	return err;
 }
 
 static void csi5_stop_streaming(struct tegra_csi_channel *chan,

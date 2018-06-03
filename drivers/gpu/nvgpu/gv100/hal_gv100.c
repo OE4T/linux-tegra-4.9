@@ -842,6 +842,7 @@ static const struct gpu_ops gv100_ops = {
 		.isr = gv100_nvlink_isr,
 		.rxdet = NULL,
 		.setup_pll = gv100_nvlink_setup_pll,
+		.minion_data_ready_en = gv100_nvlink_minion_data_ready_en,
 		/* API */
 		.link_early_init = gv100_nvlink_link_early_init,
 		.link_get_state = gv100_nvlink_link_get_state,

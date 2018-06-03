@@ -221,8 +221,6 @@ static const char *__gv100_device_type_to_str(u32 type)
  */
 static u32 __gv100_nvlink_get_link_reset_mask(struct gk20a *g);
 static u32 gv100_nvlink_rxcal_en(struct gk20a *g, unsigned long mask);
-static u32 gv100_nvlink_minion_data_ready_en(struct gk20a *g,
-						unsigned long mask, bool sync);
 
 
 /*
@@ -876,31 +874,32 @@ static u32 gv100_nvlink_minion_configure_ac_coupling(struct gk20a *g,
 /*
  * Set Data ready
  */
-static u32 gv100_nvlink_minion_data_ready_en(struct gk20a *g,
-						unsigned long mask, bool sync)
+int gv100_nvlink_minion_data_ready_en(struct gk20a *g,
+					unsigned long link_mask, bool sync)
 {
-	u32 err = 0;
-	u32 i;
+	int ret = 0;
+	u32 link_id;
 
-	for_each_set_bit(i, &mask, 32) {
-		err = gv100_nvlink_minion_send_command(g, i,
+	for_each_set_bit(link_id, &link_mask, 32) {
+		ret = gv100_nvlink_minion_send_command(g, link_id,
 			minion_nvlink_dl_cmd_command_initlaneenable_v(), 0,
 									sync);
-		if (err) {
-			nvgpu_err(g, "Failed init lane enable on minion");
-			return err;
+		if (ret) {
+			nvgpu_err(g, "Failed initlaneenable on link %u",
+								link_id);
+			return ret;
 		}
 	}
 
-	for_each_set_bit(i, &mask, 32) {
-		err = gv100_nvlink_minion_send_command(g, i,
+	for_each_set_bit(link_id, &link_mask, 32) {
+		ret = gv100_nvlink_minion_send_command(g, link_id,
 			minion_nvlink_dl_cmd_command_initdlpl_v(), 0, sync);
-		if (err) {
-			nvgpu_err(g, "Failed init DLPL on minion");
-			return err;
+		if (ret) {
+			nvgpu_err(g, "Failed initdlpl on link %u", link_id);
+			return ret;
 		}
 	}
-	return err;
+	return ret;
 }
 
 /*

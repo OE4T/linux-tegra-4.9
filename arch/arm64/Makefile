@@ -111,7 +111,13 @@ all:	$(KBUILD_IMAGE) $(KBUILD_DTBS) zImage
 
 boot := arch/arm64/boot
 
-Image Image.gz zImage: vmlinux
+Image: vmlinux
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+
+zImage: Image
+	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
+
+Image.gz: Image
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 zinstall install:

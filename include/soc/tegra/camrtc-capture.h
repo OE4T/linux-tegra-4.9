@@ -979,16 +979,6 @@ struct stats_surface {
  *
  * @param surface_configs: surfaces related config details.
  *
- * @param surface_configs.tile_of_config_h: Horizontal tile overfetch
- *                  configuration of RCE task submit driver. Information
- *                  in this field must match configuration in ISP PB2.
- *                  Deprecated, will be removed.
- *
- * @param surface_configs.tile_of_config_v: Vertical tile overfetch
- *                  configuration of RCE task submit driver. Information
- *                  in this field must match configuration in ISP PB2.
- *                  Deprecated. will be removed
- *
  * @param surface_configs.mr_width: Width of input surface in pixels
  *
  * @param surface_configs.mr_height: Height of input surface in pixels
@@ -1107,24 +1097,6 @@ struct isp_capture_descriptor {
 	/** surfaces related configuration */
 
 	struct {
-		/**
-		 * DEPRECATED. Overfetch information will be moved to ISP program
-		 */
-		struct {
-			uint8_t l_adj_of;
-			uint8_t l_of;
-			uint8_t r_adj_of;
-			uint8_t r_of;
-		} tile_of_config_h CAMRTC_DEPRECATED;
-
-		/**
-		 * DEPRECATED. Overfetch information will be moved of ISP program
-		 */
-		struct {
-			uint16_t t_of;
-			uint16_t b_of;
-		} tile_of_config_v CAMRTC_DEPRECATED;
-
 		/** Input image resolution */
 		uint16_t mr_width;
 		uint16_t mr_height;
@@ -1189,7 +1161,7 @@ struct isp_capture_descriptor {
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[4];
+	uint32_t __pad[6];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -1244,7 +1216,7 @@ struct isp5_downscaler_configbuf {
 	* Lowest 16 bits - Width of destination image
 	*/
 	uint32_t destsize;
-} __CAPTURE_IVC_ALIGN;
+};
 
 
 enum isp5_block_enabled {
@@ -1279,73 +1251,6 @@ enum isp5_block_enabled {
 
 struct isp5_program
 {
-	/**
-	* Push buffer containing ISP settings related to this program.
-	* No relocations will be done for this push buffer; all registers
-	* that contain memory addresses that require relocation must be
-	* specified in the capture descriptor ISP payload.
-	*
-	* NOTE : DO NOT move the pushbuffer[] array from the beginning of struct.
-	* 	pushbuffer has to be ATOM aligned. Memory layout in isp_program_descriptor queue is,
-	* 	isp5_program struct begins after every corresponding isp_program_descriptor entry.
-	* 	isp_program_descriptor is guaranteed to be 64Byte aligned. So keeping this at beginning
-	* 	ensures the alignement. Keeping pushbuffer else where in this array means, we have to
-	* 	keep an eye on 64B alignment for pushbuffer.
-	*/
-	uint32_t pushbuffer[NVISP5_ISP_PROGRAM_PB_SIZE / sizeof(uint32_t)];
-
-	/**
-	 * DEPRECATED. Frame size will come from input surface
-	 */
-	uint16_t frame_width CAMRTC_DEPRECATED;
-
-	/**
-	 * DEPRECATED. Frame size will come from input surface
-	 */
-	uint16_t frame_height CAMRTC_DEPRECATED;
-
-	/**
-	 * Tiles are divided to 3 groups. First, Middle and last
-	 *
-	 * tile_width_first   : This holds width of very first tile.
-	 * tiles_width_middle : This holds width of all middle tiles. Can be more than 1.
-	 *
-	 * Falcon fw automatically calculates last tile width based on above 2 values.
-	 * Falcon fw automatically calculates last tile width based on above 2 values.
-	 *
-	 * DEPRECATED - moved to capture descriptor
-	 *
-	*/
-	uint16_t tile_width_first CAMRTC_DEPRECATED;
-
-	uint16_t tiles_width_middle CAMRTC_DEPRECATED;
-
-	/*
-	 * Slice height is now ISP channel attribute
-	 * DEPRECATED - moved to capture descriptor
-	 */
-	uint16_t tile_height CAMRTC_DEPRECATED;
-	/**
-	 * Number of tiles in a slice is determined from image resolution and tile width
-	 * DEPRECATED - moved to capture descriptor
-	 */
-	uint8_t tiles_per_slice CAMRTC_DEPRECATED;
-	/**
-	 * Number of slices is determined from image resolution and slice height
-	 * DEPRECATED - moved to capture descriptor
-	 */
-	uint8_t slices_per_frame CAMRTC_DEPRECATED;
-	/**
-	 * DEPRECATED - moved to capture descriptor
-	 */
-	uint8_t frames_per_capture CAMRTC_DEPRECATED;
-
-	/**
-	 *
-	 * Settings ID for this ISP program
-	*/
-	uint8_t settings_id;
-	uint8_t _pad0[2];
 	/*
 	 * Settings needed by RCE ISP driver to generate config buffer.
 	 * Content and format of these fields is the same as corresponding
@@ -1399,12 +1304,24 @@ struct isp5_program
 	uint32_t pushbuffer_size;
 
 	/**
-	* Downscaler configuration for DS[0-2]
+	* Horizontal pixel increment for downscalers, in
+	* U5.20 format. I.e. 2.5 means downscaling
+	* by factor of 2.5. Corresponds to ISP_DM_H_PI register.
+	* This is needed by ISP Falcon firmware to program
+	* tile starting state correctly.
 	*/
-	uint8_t __pad[8];
-	struct isp5_downscaler_configbuf ds0;
-	struct isp5_downscaler_configbuf ds1;
-	struct isp5_downscaler_configbuf ds2;
+	union {
+		uint32_t ds0_pixel_incr_h;
+		struct isp5_downscaler_configbuf ds0 CAMRTC_DEPRECATED;
+	};
+	union {
+		uint32_t ds1_pixel_incr_h;
+		struct isp5_downscaler_configbuf ds1 CAMRTC_DEPRECATED;
+	};
+	union {
+		uint32_t ds2_pixel_incr_h;
+		struct isp5_downscaler_configbuf ds2 CAMRTC_DEPRECATED;
+	};
 
 	/**
 	 *  Overfetch needed by this ISP program.
@@ -1447,7 +1364,23 @@ struct isp5_program
 		uint8_t alignment;
 		uint8_t __pad1[2];
 	} overfetch;
-	uint32_t _pad1[4];
+	uint32_t _pad1[10];
+
+	/**
+	 * Push buffer containing ISP settings related to this program.
+	 * No relocations will be done for this push buffer; all registers
+	 * that contain memory addresses that require relocation must be
+	 * specified in the capture descriptor ISP payload.
+	 */
+	uint32_t pushbuffer[NVISP5_ISP_PROGRAM_PB_SIZE / sizeof(uint32_t)]
+			__CAPTURE_DESCRIPTOR_ALIGN;
+
+} __CAPTURE_DESCRIPTOR_ALIGN;
+
+
+struct isp5_program_entry {
+	struct isp_program_descriptor prog_desc;
+	struct isp5_program isp_prog;
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 #pragma GCC diagnostic ignored "-Wpadded"

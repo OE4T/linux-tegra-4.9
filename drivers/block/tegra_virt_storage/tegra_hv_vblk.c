@@ -697,6 +697,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 	vblkdev->gd->fops = &vblk_ops;
 	vblkdev->gd->queue = vblkdev->queue;
 	vblkdev->gd->private_data = vblkdev;
+	vblkdev->gd->flags |= GENHD_FL_EXT_DEVT;
 
 	/* Don't allow scanning of the device when block
 	 * requests are not supported */

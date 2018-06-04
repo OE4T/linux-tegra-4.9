@@ -53,6 +53,9 @@
 		_IOW('I', 7, struct isp_program_req)
 #define ISP_CAPTURE_PROGRAM_STATUS	\
 		_IOW('I', 8, __u32)
+#define ISP_CAPTURE_REQUEST_EX \
+		_IOW('I', 9, struct isp_capture_req_ex)
+
 
 struct isp_channel_drv {
 	struct device *dev;
@@ -150,6 +153,18 @@ static long isp_channel_ioctl(struct file *file, unsigned int cmd,
 		if (err)
 			dev_err(chan->isp_dev,
 				"isp program get status failed\n");
+		break;
+	}
+
+	case _IOC_NR(ISP_CAPTURE_REQUEST_EX): {
+		struct isp_capture_req_ex req;
+
+		if (copy_from_user(&req, ptr, sizeof(req)))
+			break;
+		err = isp_capture_request_ex(chan, &req);
+		if (err)
+			dev_err(chan->isp_dev,
+					"isp capture request extended submit failed\n");
 		break;
 	}
 

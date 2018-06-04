@@ -74,6 +74,12 @@ struct isp_program_req {
 	struct capture_isp_reloc isp_program_relocs;
 } __ISP_CAPTURE_ALIGN;
 
+struct isp_capture_req_ex {
+	struct isp_capture_req capture_req;
+	struct isp_program_req program_req;
+	uint32_t __pad[4];
+} __ISP_CAPTURE_ALIGN;
+
 int isp_capture_init(struct tegra_isp_channel *chan);
 void isp_capture_shutdown(struct tegra_isp_channel *chan);
 int isp_capture_setup(struct tegra_isp_channel *chan,
@@ -91,4 +97,6 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 int isp_capture_program_request(struct tegra_isp_channel *chan,
 		struct isp_program_req *req);
 int isp_capture_program_status(struct tegra_isp_channel *chan);
+int isp_capture_request_ex(struct tegra_isp_channel *chan,
+		struct isp_capture_req_ex *capture_req_ex);
 #endif

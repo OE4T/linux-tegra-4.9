@@ -1200,3 +1200,17 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 
 	return 0;
 }
+
+int isp_capture_request_ex(struct tegra_isp_channel *chan,
+		struct isp_capture_req_ex *capture_req_ex)
+{
+	int ret = isp_capture_request(chan, &capture_req_ex->capture_req);
+
+	/* Handle program request if process request is successful */
+	if (ret == 0 && capture_req_ex->program_req.buffer_index != U32_MAX) {
+		ret = isp_capture_program_request(chan,
+				&capture_req_ex->program_req);
+	}
+
+	return ret;
+}

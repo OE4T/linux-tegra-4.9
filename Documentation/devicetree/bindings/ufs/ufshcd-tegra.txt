@@ -21,6 +21,9 @@ Optional properties:
 - nvidia,configure-uphy-pll3 : Provides an option to configure uphy_pll3 for
 			       ufs rate_a and rate_b modes.
 
+- nvidia,enable-scramble : Enables scramble functionality.
+			   It is required to enable scramble functionality, which is used for
+			   encryption.
 - nvidia,enable-rx-calib : Enables rx calibration functionality.
 			   It is required for UFS High Speed modes.
 - nvidia,enable-x2-config : Enables 2 lane register programming support.

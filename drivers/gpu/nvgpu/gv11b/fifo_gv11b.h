@@ -51,6 +51,7 @@
 #define CHANNEL_INFO_VEID0		0
 
 #define MAX_PRE_SI_RETRIES		200000	/* 1G/500KHz * 100 */
+#define PREEMPT_TIMEOUT_1000_MS		1000
 
 struct gpu_ops;
 

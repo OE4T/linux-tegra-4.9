@@ -381,7 +381,13 @@ u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
 
 u32 gv11b_fifo_get_preempt_timeout(struct gk20a *g)
 {
-	return gk20a_get_gr_idle_timeout(g);
+	/* if timeouts are enabled, using 3000ms timeout
+	 * for polling pdma/eng/runlist might kick in
+	 * timeout handler in the cases where preempt
+	 * is stuck. Use 1000ms timeout for polling when
+	 * timeouts are enabled */
+	return nvgpu_is_timeouts_enabled(g) ? PREEMPT_TIMEOUT_1000_MS :
+		g->gr_idle_timeout_default;
 }
 
 static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,

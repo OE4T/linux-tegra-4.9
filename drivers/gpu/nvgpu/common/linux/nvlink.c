@@ -28,7 +28,6 @@ int nvgpu_nvlink_read_dt_props(struct gk20a *g)
 	u32 local_link_id;
 	u32 remote_dev_id;
 	u32 remote_link_id;
-	u32 physical_link;
 	bool is_master;
 
 	/* Parse DT */
@@ -49,7 +48,6 @@ int nvgpu_nvlink_read_dt_props(struct gk20a *g)
 	of_property_read_u32(np, "local_link_id", &local_link_id);
 	of_property_read_u32(np, "remote_dev_id", &remote_dev_id);
 	of_property_read_u32(np, "remote_link_id", &remote_link_id);
-	of_property_read_u32(np, "physical_link", &physical_link);
 	is_master = of_property_read_bool(np, "is_master");
 
 	/* Check that we are in dGPU mode */
@@ -64,7 +62,6 @@ int nvgpu_nvlink_read_dt_props(struct gk20a *g)
 	ndev->link.remote_dev_info.device_id = remote_dev_id;
 	ndev->link.remote_dev_info.link_id = remote_link_id;
 
-	g->nvlink.connected_links = BIT(physical_link);
 	return 0;
 
 fail:

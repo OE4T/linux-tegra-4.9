@@ -2696,6 +2696,13 @@ u32 gv100_nvlink_link_get_rx_sublink_state(struct gk20a *g, u32 link_id)
 	return nvl_sl1_slsm_status_rx_primary_state_v(reg);
 }
 
+/* Hardcode the link_mask while we wait for VBIOS link_disable_mask field
+ * to be updated.
+ */
+void gv100_nvlink_get_connected_link_mask(u32 *link_mask)
+{
+	*link_mask = GV100_CONNECTED_LINK_MASK;
+}
 /*
  * Performs nvlink device level initialization by discovering the topology
  * taking device out of reset, boot minion, set clocks up and common interrupts
@@ -2735,10 +2742,20 @@ int gv100_nvlink_early_init(struct gk20a *g)
 	/* Links in reset should be removed from initialized link sw state */
 	g->nvlink.initialized_links &= __gv100_nvlink_get_link_reset_mask(g);
 
-	nvgpu_log(g, gpu_dbg_nvlink, "connected_links = 0x%08x (from DT)",
-		g->nvlink.connected_links);
+	/* VBIOS link_disable_mask should be sufficient to find the connected
+	 * links. As VBIOS is not updated with correct mask, we parse the DT
+	 * node where we hardcode the link_id. DT method is not scalable as same
+	 * DT node is used for different dGPUs connected over PCIE.
+	 * Remove the DT parsing of link id and use HAL to get link_mask based
+	 * on the GPU. This is temporary WAR while we get the VBIOS updated with
+	 * correct mask.
+	 */
+	g->ops.nvlink.get_connected_link_mask(&(g->nvlink.connected_links));
 
-	/* Track unconnected links */
+	nvgpu_log(g, gpu_dbg_nvlink, "connected_links = 0x%08x",
+						g->nvlink.connected_links);
+
+	/* Track only connected links */
 	g->nvlink.discovered_links &= g->nvlink.connected_links;
 
 	nvgpu_log(g, gpu_dbg_nvlink, "discovered_links = 0x%08x (combination)",

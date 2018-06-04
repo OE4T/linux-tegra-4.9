@@ -23,6 +23,8 @@
 #ifndef NVGPU_NVLINK_GV100_H
 #define NVGPU_NVLINK_GV100_H
 
+#define GV100_CONNECTED_LINK_MASK		0x8
+
 struct gk20a;
 
 int gv100_nvlink_discover_ioctrl(struct gk20a *g);
@@ -34,6 +36,7 @@ int gv100_nvlink_minion_send_command(struct gk20a *g, u32 link_id, u32 command,
 int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask);
 int gv100_nvlink_minion_data_ready_en(struct gk20a *g,
 					unsigned long link_mask, bool sync);
+void gv100_nvlink_get_connected_link_mask(u32 *link_mask);
 /* API */
 int gv100_nvlink_link_early_init(struct gk20a *g, unsigned long mask);
 u32 gv100_nvlink_link_get_mode(struct gk20a *g, u32 link_id);

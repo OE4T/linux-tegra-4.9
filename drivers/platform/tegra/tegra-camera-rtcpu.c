@@ -58,6 +58,12 @@
 #define RTCPU_DRIVER_SM5_VERSION U32_C(5)
 #endif
 
+#if defined(LINUX_VERSION) && (LINUX_VERSION < 409)
+#define DISABLE_APE_RUNTIME_PM 1
+#else
+#define DISABLE_APE_RUNTIME_PM 0
+#endif
+
 enum tegra_cam_rtcpu_id {
 	TEGRA_CAM_RTCPU_SCE,
 	TEGRA_CAM_RTCPU_APE,
@@ -1206,13 +1212,12 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto put_and_fail;
 	}
 
-#if defined(LINUX_VERSION) && LINUX_VERSION < 409
-	if (pdata->id == TEGRA_CAM_RTCPU_APE) {
+	if (of_property_read_bool(dev->of_node, NV(disable-runtime-pm)) ||
 		/* APE power domain powergates APE block when suspending */
 		/* This won't do */
+		(DISABLE_APE_RUNTIME_PM && pdata->id == TEGRA_CAM_RTCPU_APE)) {
 		pm_runtime_get(dev);
 	}
-#endif
 
 	ret = tegra_camrtc_get_fw_hash(dev, rtcpu->fw_hash);
 	if (ret == 0)

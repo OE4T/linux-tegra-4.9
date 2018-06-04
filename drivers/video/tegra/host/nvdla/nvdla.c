@@ -621,6 +621,11 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	}
 	nvdla_dev->is_gos_enabled = true;
 
+	if (nvdla_dev->quirks & NVDLA_QUIRK_T194_A01_WAR) {
+		host1x_writel(pdev,
+			NVDLA_MCIF_CFG_OUTSTANDING_CNT_0_OFFSET, 0xff);
+		nvdla_dbg_info(pdev, "enabled T194-A01 WAR");
+	}
 	return 0;
 
 fail_to_alloc_trace:

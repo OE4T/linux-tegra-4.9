@@ -48,6 +48,12 @@
 #define MAX_GRID_SIZE			SZ_256
 
 /**
+ * DLA MCIF (Matrix Convolution Image Filter) outstanding AXI transactions
+ * count register offset
+ */
+#define NVDLA_MCIF_CFG_OUTSTANDING_CNT_0_OFFSET	0x00005014	/* RW-4R */
+
+/**
  * Method ID and Method data THI registers
  */
 #define NV_DLA_THI_METHOD_ID	0x00000040      /* RW-4R */
@@ -113,6 +119,11 @@
  */
 #define MAX_CMD_SIZE			SZ_256
 #define NVDLA_CMD_OFFSET(index)		(MAX_CMD_SIZE * index)
+
+/*
+ * Tegra/DLA Hardware version specific Quirks
+ */
+#define NVDLA_QUIRK_T194_A01_WAR	BIT(0)
 
 /**
  * data structure to keep command memory
@@ -183,6 +194,7 @@ enum nvdla_submit_mode {
  * @en_fw_gcov		flag to enable firmware gcov
  * @gcov_dump_pa	physical address of fw gcov buffer
  * @gcov_dump_va	virtual address of fw gcovbuffer
+ * @quirks		Tegra/DLA Hardware version specific settings
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -206,6 +218,7 @@ struct nvdla_device {
 	u32 en_fw_gcov;
 	dma_addr_t gcov_dump_pa;
 	u32 *gcov_dump_va;
+	u32 quirks;
 };
 
 /**

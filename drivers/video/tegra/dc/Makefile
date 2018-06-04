@@ -14,7 +14,16 @@ obj-y += of_dc.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
 	-I$(overlay)/drivers/media/platform/tegra
 
-obj-y += hdcp/
+#obj-y += hdcp/
+
+ifneq ($(filter y,$(CONFIG_TRUSTY) $(CONFIG_TRUSTED_LITTLE_KERNEL)),)
+obj-$(CONFIG_TEGRA_HDMIHDCP) += hdcp/hdmihdcp.o
+obj-$(CONFIG_TEGRA_HDMIHDCP) += hdcp/nvhdcp_hdcp22_methods.o
+obj-$(CONFIG_TEGRA_DPHDCP) += hdcp/dphdcp.o
+ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
+ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
+endif
+
 obj-y += edid.o edid_disp_id_ext.o edid_quirks.o
 obj-y += nvsd.o
 obj-y += dsi.o

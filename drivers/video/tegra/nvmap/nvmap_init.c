@@ -308,7 +308,11 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 		err = dma_declare_coherent_memory(co->dma_dev, 0,
 				co->base, co->size,
 				DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		if (!err) {
+#else
 		if (err & DMA_MEMORY_NOMAP) {
+#endif
 			dev_info(dev,
 				 "%s :dma coherent mem declare %pa,%zu\n",
 				 co->name, &co->base, co->size);

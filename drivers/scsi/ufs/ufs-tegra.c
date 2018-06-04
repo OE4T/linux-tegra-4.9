@@ -1090,6 +1090,18 @@ static void ufs_tegra_print_power_mode_config(struct ufs_hba *hba,
 	}
 }
 
+static void ufs_tegra_scramble_enable(struct ufs_hba *hba)
+{
+	u32 pa_val;
+
+	ufshcd_dme_get(hba, UIC_ARG_MIB(PA_PEERSCRAMBLING), &pa_val);
+	if (pa_val & SCREN) {
+		ufshcd_dme_get(hba, UIC_ARG_MIB(PA_SCRAMBLING), &pa_val);
+		pa_val |= SCREN;
+		ufshcd_dme_set(hba, UIC_ARG_MIB(PA_SCRAMBLING), pa_val);
+	}
+}
+
 static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		enum ufs_notify_change_status status,
 		struct ufs_pa_layer_attr *dev_max_params,
@@ -1098,6 +1110,7 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 	struct ufs_tegra_host *ufs_tegra = hba->priv;
 	u32 vs_save_config;
 	int ret = 0;
+	u32 pa_reg_check;
 
 	if (!dev_req_params) {
 		pr_err("%s: incoming dev_req_params is NULL\n", __func__);
@@ -1149,6 +1162,8 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 			} else {
 				ufs_tegra_enable_ufs_uphy_pll3(ufs_tegra, true);
 			}
+			if (ufs_tegra->enable_scramble)
+				ufs_tegra_scramble_enable(hba);
 		} else {
 			if (ufs_tegra->max_pwm_gear) {
 				ufshcd_dme_get(hba,
@@ -1178,6 +1193,9 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		break;
 	case POST_CHANGE:
 		ufs_tegra_print_power_mode_config(hba, dev_req_params);
+		ufshcd_dme_get(hba, UIC_ARG_MIB(PA_SCRAMBLING), &pa_reg_check);
+		if (pa_reg_check & SCREN)
+			dev_info(hba->dev, "ufs scrambling feature enabled\n");
 		break;
 	default:
 		break;
@@ -1363,6 +1381,8 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->cd_gpio = of_get_named_gpio(np, "nvidia,cd-gpios", 0);
 	ufs_tegra->cd_wakeup_capable =
 		of_property_read_bool(np, "nvidia,cd-wakeup-capable");
+	ufs_tegra->enable_scramble =
+		of_property_read_bool(np, "nvidia,enable-scramble");
 }
 
 /**

@@ -300,6 +300,7 @@ struct ufs_tegra_host {
 	bool wake_enable_failed;
 	struct delayed_work detect;
 	struct gpio_desc *cd_gpio_desc;
+	bool enable_scramble;
 #ifdef CONFIG_DEBUG_FS
 	u32 refclk_value;
 	long program_refclk;

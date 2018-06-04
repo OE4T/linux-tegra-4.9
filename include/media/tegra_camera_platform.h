@@ -20,6 +20,7 @@
 
 #define TEGRA_CAMERA_IOCTL_SET_BW _IOW('o', 1, struct bw_info)
 #define TEGRA_CAMERA_IOCTL_GET_BW _IOR('o', 2, u64)
+#define TEGRA_CAMERA_IOCTL_GET_CURR_REQ_ISO_BW _IOR('o', 3, u64)
 
 /* avoid overflows */
 #define DEFAULT_PG_CLK_RATE (UINT_MAX - 1)

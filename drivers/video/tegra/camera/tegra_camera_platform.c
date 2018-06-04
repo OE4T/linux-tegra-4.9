@@ -60,7 +60,7 @@ struct tegra_camera_info {
 	u64 max_bw;
 #endif
 	struct mutex update_bw_lock;
-	u32 vi_mode_isobw;
+	u64 vi_mode_isobw;
 	u64 bypass_mode_isobw;
 	/* set max bw by default */
 	bool en_max_bw;
@@ -418,6 +418,7 @@ int tegra_camera_update_isobw(void)
 		return -ENOMEM;
 	}
 
+	info->vi_mode_isobw = bw;
 #ifdef CONFIG_DEBUG_FS
 	vi_mode_d = bw;
 	bypass_mode_d = info->bypass_mode_isobw;
@@ -492,6 +493,30 @@ static long tegra_camera_ioctl(struct file *file,
 		mc_hz = clk_get_rate(info->emc);
 #endif
 		bw = bwmgr_freq_to_bw(mc_hz / 1000);
+
+		if (copy_to_user((void __user *)arg, (const void *)&bw,
+			sizeof(bw))) {
+			dev_err(info->dev,
+				"%s:Failed to copy data to user\n",
+				__func__);
+			return -EFAULT;
+		}
+
+		break;
+	}
+
+	case _IOC_NR(TEGRA_CAMERA_IOCTL_GET_CURR_REQ_ISO_BW):
+	{
+		struct tegra_camera_info *state;
+		u64 bw;
+
+		state = dev_get_drvdata(tegra_camera_misc.parent);
+		if (!state)
+			return -ENODEV;
+
+		mutex_lock(&state->update_bw_lock);
+		bw = state->vi_mode_isobw;
+		mutex_unlock(&state->update_bw_lock);
 
 		if (copy_to_user((void __user *)arg, (const void *)&bw,
 			sizeof(bw))) {

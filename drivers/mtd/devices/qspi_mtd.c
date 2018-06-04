@@ -1732,6 +1732,7 @@ static int qspi_probe(struct spi_device *spi)
 	struct tegra_qspi_device_controller_data *cdata = spi->controller_data;
 	uint8_t regval;
 	int status = PASS;
+	int ret;
 
 	id = spi_get_device_id(spi);
 	np = spi->dev.of_node;
@@ -1830,7 +1831,8 @@ static int qspi_probe(struct spi_device *spi)
 			dev_err(&spi->dev, "%s SSErr %x %x %x %llx\n", id->name,
 				info->n_subsectors, info->ss_soffset,
 					info->ss_size, flash->mtd.size);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto err_free_flash;
 		}
 		dev_info(&spi->dev, "%s SSG %x %x %x %llx\n", id->name,
 				info->n_subsectors, info->ss_soffset,
@@ -1865,7 +1867,8 @@ static int qspi_probe(struct spi_device *spi)
 		dev_err(&spi->dev,
 			"error: %s RWAR_CR2V read failed: Status: x%x ",
 			__func__, status);
-		return status;
+		ret = status;
+		goto err_free_flash;
 	}
 
 	if (regval & (SR1NV_WRITE_DIS | SR1NV_BLOCK_PROT)) {
@@ -1881,7 +1884,8 @@ static int qspi_probe(struct spi_device *spi)
 			dev_err(&spi->dev,
 				"error: %s RWAR_CR3V read failed: Status: x%x ",
 				__func__, status);
-			return status;
+			ret =  status;
+			goto err_free_flash;
 		}
 
 		if ((regval & CR3V_512PAGE_SIZE) == 0) {
@@ -1897,19 +1901,46 @@ static int qspi_probe(struct spi_device *spi)
 	}
 
 #ifdef QSPI_BRINGUP_BUILD
-	device_create_file(&spi->dev, &dev_attr_qspi_force_sdr);
-	device_create_file(&spi->dev, &dev_attr_qspi_mode);
-	device_create_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
-	device_create_file(&spi->dev, &dev_attr_qspi_force_bus_width);
-	device_create_file(&spi->dev, &dev_attr_qspi_bits_per_word);
+	ret = device_create_file(&spi->dev, &dev_attr_qspi_force_sdr);
+	if (ret < 0)
+		goto err_free_flash;
+	ret = device_create_file(&spi->dev, &dev_attr_qspi_mode);
+	if (ret < 0)
+		goto err_remove_qspi_force_sdr;
+	ret = device_create_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
+	if (ret < 0)
+		goto err_remove_attr_qspi_mode;
+	ret = device_create_file(&spi->dev, &dev_attr_qspi_force_bus_width);
+	if (ret < 0)
+		goto err_remove_attr_qspi_enable_qpi_mode;
+	ret = device_create_file(&spi->dev, &dev_attr_qspi_bits_per_word);
+	if (ret < 0)
+		goto err_remove_attr_qspi_force_bus_width;
 #endif
 
 	/* partitions should match sector boundaries; and it may be good to
 	 * use readonly partitions for writeprotected sectors (BP2..BP0).
 	 */
-	return mtd_device_parse_register(&flash->mtd, NULL, &ppdata,
+	ret = mtd_device_parse_register(&flash->mtd, NULL, &ppdata,
 			data ? data->parts : NULL,
 			data ? data->nr_parts : 0);
+	if (ret < 0)
+		goto err_remove_attr_qspi_bits_per_word;
+	return ret;
+
+err_remove_attr_qspi_bits_per_word:
+	device_remove_file(&spi->dev, &dev_attr_qspi_bits_per_word);
+err_remove_attr_qspi_force_bus_width:
+	device_remove_file(&spi->dev, &dev_attr_qspi_force_bus_width);
+err_remove_attr_qspi_enable_qpi_mode:
+	device_remove_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
+err_remove_attr_qspi_mode:
+	device_remove_file(&spi->dev, &dev_attr_qspi_mode);
+err_remove_qspi_force_sdr:
+	device_remove_file(&spi->dev, &dev_attr_qspi_force_sdr);
+err_free_flash:
+	kfree(flash);
+	return ret;
 }
 
 static int qspi_remove(struct spi_device *spi)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -417,7 +417,6 @@ void tegra_bpmp_resume(void)
 {
 	if (mail_ops->resume)
 		mail_ops->resume();
-
 }
 
 int tegra_bpmp_suspend(void)
@@ -427,6 +426,9 @@ int tegra_bpmp_suspend(void)
 				__func__, to_complete);
 		return -EBUSY;
 	}
+
+	if (mail_ops->suspend)
+		mail_ops->suspend();
 
 	return 0;
 }

@@ -202,6 +202,35 @@ static int virt_connect(const struct channel_cfg *cfg,
 	return 0;
 }
 
+void tegra_hv_ivc_disconnect(void)
+{
+	int index;
+	struct tegra_hv_ivc_cookie *cookie;
+
+	for (index = 0; index < num_ivc_queues; index++) {
+		cookie = hv_bpmp_ivc_cookies[index];
+		disable_irq(cookie->irq);
+		tegra_hv_ivc_channel_reset(cookie);
+		pr_debug("%s: cookie %d, channel reset\n", __func__, index);
+	}
+}
+
+static void tegra_hv_ivc_connect(void)
+{
+	int index;
+	struct tegra_hv_ivc_cookie *cookie;
+
+	for (index = 0; index < num_ivc_queues; index++) {
+		cookie = hv_bpmp_ivc_cookies[index];
+		enable_irq(cookie->irq);
+		tegra_hv_ivc_channel_reset(cookie);
+		while (tegra_hv_ivc_channel_notified(cookie)) {
+			cpu_relax();
+			udelay(1000);
+		}
+	}
+}
+
 static int native_init_prepare(void)
 {
 	return tegra_hsp_init();
@@ -268,6 +297,16 @@ dbwait:
 	pr_info("bpmp: handshake completed\n");
 
 	return 0;
+}
+
+static void tegra_virt_suspend(void)
+{
+	tegra_hv_ivc_disconnect();
+}
+
+static void tegra_virt_resume(void)
+{
+	tegra_hv_ivc_connect();
 }
 
 static void native_resume(void)
@@ -478,6 +517,8 @@ static void bpmp_return_data(const struct mail_ops *ops,
 const struct mail_ops t186_hv_mail_ops = {
 	.connect = virt_connect,
 	.ivc_obj = virt_ivc_obj,
+	.suspend = tegra_virt_suspend,
+	.resume = tegra_virt_resume,
 	.master_free = bpmp_master_free,
 	.free_master = bpmp_free_master,
 	.master_acked = bpmp_master_acked,

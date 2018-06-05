@@ -1,7 +1,7 @@
-From ad76557ecaa902dd101729512e199c14368ff6af Mon Sep 17 00:00:00 2001
+From 3f165b6c9f8d92c951449ee1a93a4933c2a58674 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
-Subject: [PATCH 010/357] futex: Cleanup refcounting
+Subject: [PATCH 010/356] futex: Cleanup refcounting
 
 Upstream commit bf92cf3a5100f5a0d5f9834787b130159397cb22
 
@@ -25,7 +25,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 9782a92..aea641b 100644
+index 78c7d74..768eb16 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -801,7 +801,7 @@ static int refill_pi_state_cache(void)
@@ -67,7 +67,7 @@ index 9782a92..aea641b 100644
  	raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  	*ps = pi_state;
  	return 0;
-@@ -1992,7 +1997,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
+@@ -2031,7 +2036,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
  			 * refcount on the pi_state and store the pointer in
  			 * the futex_q object of the waiter.
  			 */

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtualization Support
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,6 +58,8 @@ struct nvhost_channel *vhost_find_chan_by_clientid(struct nvhost_master *dev,
 			u32 clientid);
 int vhost_rdwr_module_regs(struct platform_device *ndev, u32 count,
 	u32 block_size, u32 __user *offsets, u32 __user *values, u32 write);
+int vhost_suspend(struct platform_device *pdev);
+int vhost_resume(struct platform_device *pdev);
 int nvhost_virt_init(struct platform_device *dev, int moduleid);
 void nvhost_virt_deinit(struct platform_device *dev);
 void vhost_cdma_timeout(struct nvhost_master *dev,
@@ -91,6 +93,17 @@ static inline int vhost_rdwr_module_regs(struct platform_device *ndev,
 {
 	return -ENOTSUPP;
 }
+
+static inline int vhost_suspend(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static inline int vhost_resume(struct platform_device *pdev)
+{
+	return 0;
+}
+
 static inline void *nvhost_get_virt_data(struct platform_device *dev)
 {
 	return NULL;

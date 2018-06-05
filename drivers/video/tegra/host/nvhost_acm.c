@@ -42,6 +42,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #endif
 
+#include "vhost/vhost.h"
 #include "nvhost_acm.h"
 #include "nvhost_pd.h"
 #include "nvhost_vm.h"
@@ -61,6 +62,8 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 
 static int nvhost_module_prepare_suspend(struct device *dev);
 static void nvhost_module_complete_resume(struct device *dev);
+static int nvhost_module_suspend(struct device *dev);
+static int nvhost_module_resume(struct device *dev);
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -863,6 +866,8 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 				pm_runtime_force_resume)
 	.prepare = nvhost_module_prepare_suspend,
 	.complete = nvhost_module_complete_resume,
+	.suspend = nvhost_module_suspend,
+	.resume = nvhost_module_resume,
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
@@ -1010,6 +1015,30 @@ static int nvhost_module_prepare_suspend(struct device *dev)
 	}
 
 	return 0;
+}
+
+static int nvhost_module_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	int err;
+
+	err = vhost_suspend(pdev);
+	if (err)
+		nvhost_err(dev, "vhost suspend has failed %d", err);
+
+	return err;
+}
+
+static int nvhost_module_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	int err;
+
+	err = vhost_resume(pdev);
+	if (err)
+		nvhost_err(dev, "vhost resume has failed %d", err);
+
+	return err;
 }
 
 static void nvhost_module_complete_resume(struct device *dev)

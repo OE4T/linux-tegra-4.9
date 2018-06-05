@@ -1463,15 +1463,20 @@ static void nvhost_suspend_complete(struct device *dev)
 static int nvhost_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	int err = 0;
 
 	nvhost_module_enable_clk(dev);
 	disable_irq_host(pdev);
 	power_off_host(pdev);
 	nvhost_module_disable_clk(dev);
 
-	dev_info(dev, "suspended\n");
+	err = vhost_suspend(pdev);
+	if (err)
+		dev_err(dev, "Failed to do vhost suspend %d\n", err);
+	else
+		dev_info(dev, "suspended\n");
 
-	return 0;
+	return err;
 }
 
 static int nvhost_resume(struct device *dev)
@@ -1479,6 +1484,12 @@ static int nvhost_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_master *host = nvhost_get_host(pdev);
 	int index, err = 0;
+
+	err = vhost_resume(pdev);
+	if (err) {
+		dev_err(dev, "Failed to do vhost resume %d", err);
+		return err;
+	}
 
 	nvhost_module_enable_clk(dev);
 	power_on_host(pdev);

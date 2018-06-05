@@ -214,6 +214,32 @@ void nvhost_virt_deinit(struct platform_device *dev)
 	}
 }
 
+int vhost_suspend(struct platform_device *pdev)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(pdev);
+
+	if (!ctx)
+		return 0;
+
+	msg.cmd = TEGRA_VHOST_CMD_SUSPEND;
+	msg.handle = ctx->handle;
+	return vhost_sendrecv(&msg);
+}
+
+int vhost_resume(struct platform_device *pdev)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(pdev);
+
+	if (!ctx)
+		return 0;
+
+	msg.cmd = TEGRA_VHOST_CMD_RESUME;
+	msg.handle = ctx->handle;
+	return vhost_sendrecv(&msg);
+}
+
 static int vhost_host1x_regrdwr(u64 handle, u32 moduleid, u32 num_offsets,
 			u32 block_size, u32 *offs, u32 *vals, u32 write)
 {

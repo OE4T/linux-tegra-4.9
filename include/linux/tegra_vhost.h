@@ -1,7 +1,7 @@
 /*
  * Tegra Host Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,6 +57,8 @@ enum {
 	TEGRA_VHOST_CMD_CHANNEL_ALLOC_CLIENTID,
 	TEGRA_VHOST_CMD_HOST1X_CDMA_SUBMIT,
 	TEGRA_VHOST_CMD_HOST1X_REGRDWR,
+	TEGRA_VHOST_CMD_SUSPEND,
+	TEGRA_VHOST_CMD_RESUME,
 };
 
 struct tegra_vhost_connect_params {

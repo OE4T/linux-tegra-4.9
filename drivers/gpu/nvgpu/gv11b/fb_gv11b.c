@@ -1289,6 +1289,18 @@ void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status)
 	}
 }
 
+void gv11b_fb_handle_replayable_mmu_fault(struct gk20a *g)
+{
+	u32 fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+
+	if (!(fault_status & fb_mmu_fault_status_replayable_m()))
+		return;
+
+	if (gv11b_fb_is_fault_buf_enabled(g, NONREPLAY_REG_INDEX)) {
+		gv11b_fb_handle_mmu_nonreplay_replay_fault(g,
+				fault_status, REPLAY_REG_INDEX);
+	}
+}
 
 static void gv11b_fb_handle_mmu_fault(struct gk20a *g, u32 niso_intr)
 {

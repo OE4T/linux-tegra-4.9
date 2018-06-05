@@ -77,6 +77,7 @@ void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 			 u32 fault_status);
 void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
 			 u32 fault_status);
+void gv11b_fb_handle_replayable_mmu_fault(struct gk20a *g);
 void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status);
 void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status);
 void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status);

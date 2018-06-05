@@ -48,6 +48,7 @@
 #include "gv11b/subctx_gv11b.h"
 #include "gv11b/gv11b.h"
 #include "gv11b/gr_pri_gv11b.h"
+#include "gv11b/fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
@@ -3735,15 +3736,19 @@ int gv11b_gr_wait_for_sm_lock_down(struct gk20a *g,
 			return 0;
 		}
 
-		/* if an mmu fault is pending and mmu debug mode is not
-		 * enabled, the sm will never lock down.
-		 */
-		if (!mmu_debug_mode_enabled &&
-		     (g->ops.mm.mmu_fault_pending(g))) {
-			nvgpu_err(g,
-				"GPC%d TPC%d: mmu fault pending,"
-				" SM%d will never lock down!", gpc, tpc, sm);
-			return -EFAULT;
+		if (mmu_debug_mode_enabled) {
+			gv11b_fb_handle_replayable_mmu_fault(g);
+		} else {
+			/* if an mmu fault is pending and mmu debug mode is not
+			 * enabled, the sm will never lock down.
+			 */
+			if (g->ops.mm.mmu_fault_pending(g)) {
+				nvgpu_err(g,
+					"GPC%d TPC%d: mmu fault pending,"
+					" SM%d will never lock down!",
+					gpc, tpc, sm);
+				return -EFAULT;
+			}
 		}
 
 		nvgpu_usleep_range(delay, delay * 2);

@@ -175,8 +175,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_find_mapping(struct vm_gk20a *vm,
 
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
-		       u64 offset_align,
+		       u64 map_addr,
 		       u32 flags,
+		       u32 page_size,
 		       s16 compr_kind,
 		       s16 incompr_kind,
 		       int rw_flag,
@@ -192,11 +193,7 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 	struct nvgpu_sgt *nvgpu_sgt = NULL;
 	struct nvgpu_mapped_buf *mapped_buffer = NULL;
 	struct dma_buf_attachment *attachment;
-	u64 map_addr = 0ULL;
 	int err = 0;
-
-	if (flags & NVGPU_VM_MAP_FIXED_OFFSET)
-		map_addr = offset_align;
 
 	sgt = gk20a_mm_pin(dev, dmabuf, &attachment);
 	if (IS_ERR(sgt)) {
@@ -253,8 +250,9 @@ clean_up:
 
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
-			u64 *offset_align,
+			u64 *map_addr,
 			u32 flags, /*NVGPU_AS_MAP_BUFFER_FLAGS_*/
+			u32 page_size,
 			s16 compr_kind,
 			s16 incompr_kind,
 			u64 buffer_offset,
@@ -274,8 +272,28 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return PTR_ERR(dmabuf);
 	}
 
+	/*
+	 * For regular maps we do not accept either an input address or a
+	 * buffer_offset.
+	 */
+	if (!(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) &&
+	    (buffer_offset || *map_addr)) {
+		nvgpu_err(g,
+			  "Regular map with addr/buf offset is not supported!");
+		return -EINVAL;
+	}
+
+	/*
+	 * Map size is always buffer size for non fixed mappings. As such map
+	 * size should be left as zero by userspace for non-fixed maps.
+	 */
+	if (mapping_size && !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
+		nvgpu_err(g, "map_size && non-fixed-mapping!");
+		return -EINVAL;
+	}
+
 	/* verify that we're not overflowing the buffer, i.e.
-	 * (buffer_offset + mapping_size)> dmabuf->size.
+	 * (buffer_offset + mapping_size) > dmabuf->size.
 	 *
 	 * Since buffer_offset + mapping_size could overflow, first check
 	 * that mapping size < dmabuf_size, at which point we can subtract
@@ -284,7 +302,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	if ((mapping_size > dmabuf->size) ||
 			(buffer_offset > (dmabuf->size - mapping_size))) {
 		nvgpu_err(g,
-			  "buf size %llx < (offset(%llx) + map_size(%llx))\n",
+			  "buf size %llx < (offset(%llx) + map_size(%llx))",
 			  (u64)dmabuf->size, buffer_offset, mapping_size);
 		dma_buf_put(dmabuf);
 		return -EINVAL;
@@ -296,8 +314,9 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 		return err;
 	}
 
-	err = nvgpu_vm_map_linux(vm, dmabuf, *offset_align,
+	err = nvgpu_vm_map_linux(vm, dmabuf, *map_addr,
 				 nvgpu_vm_translate_linux_flags(g, flags),
+				 page_size,
 				 compr_kind, incompr_kind,
 				 gk20a_mem_flag_none,
 				 buffer_offset,
@@ -306,7 +325,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 				 &ret_va);
 
 	if (!err)
-		*offset_align = ret_va;
+		*map_addr = ret_va;
 	else
 		dma_buf_put(dmabuf);
 

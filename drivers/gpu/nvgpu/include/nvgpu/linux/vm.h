@@ -54,8 +54,9 @@ struct nvgpu_mapped_buf_priv {
 /* NVGPU_AS_MAP_BUFFER_FLAGS_DIRECT_KIND_CTRL must be set */
 int nvgpu_vm_map_linux(struct vm_gk20a *vm,
 		       struct dma_buf *dmabuf,
-		       u64 offset_align,
+		       u64 map_addr,
 		       u32 flags,
+		       u32 page_size,
 		       s16 compr_kind,
 		       s16 incompr_kind,
 		       int rw_flag,
@@ -71,8 +72,9 @@ int nvgpu_vm_map_linux(struct vm_gk20a *vm,
  */
 int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
-			u64 *offset_align,
+			u64 *map_addr,
 			u32 flags, /* NVGPU_AS_MAP_BUFFER_FLAGS_ */
+			u32 page_size,
 			s16 compr_kind,
 			s16 incompr_kind,
 			u64 buffer_offset,

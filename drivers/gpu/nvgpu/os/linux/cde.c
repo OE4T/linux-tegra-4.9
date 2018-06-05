@@ -975,6 +975,30 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct nvgpu_os_linux *l
 	return cde_ctx;
 }
 
+static u32 gk20a_cde_mapping_page_size(struct vm_gk20a *vm,
+				       u32 map_offset, u32 map_size)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+
+	/*
+	 * To be simple we will just make the map size depend on the
+	 * iommu'ability of the driver. If there's an IOMMU we can rely on
+	 * buffers being contiguous. If not, then we'll use 4k pages since we
+	 * know that will work for any buffer.
+	 */
+	if (!nvgpu_iommuable(g))
+		return SZ_4K;
+
+	/*
+	 * If map size or offset is not 64K aligned then use small pages.
+	 */
+	if (map_size & (vm->big_page_size - 1) ||
+	    map_offset & (vm->big_page_size - 1))
+		return SZ_4K;
+
+	return vm->big_page_size;
+}
+
 int gk20a_cde_convert(struct nvgpu_os_linux *l,
 		      struct dma_buf *compbits_scatter_buf,
 		      u64 compbits_byte_offset,
@@ -1071,7 +1095,10 @@ __releases(&l->cde_app->mutex)
 	err = nvgpu_vm_map_linux(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_VM_MAP_CACHEABLE |
 				 NVGPU_VM_MAP_DIRECT_KIND_CTRL,
-				 NVGPU_KIND_INVALID,
+				 gk20a_cde_mapping_page_size(cde_ctx->vm,
+							     map_offset,
+							     map_size),
+				 NV_KIND_INVALID,
 				 compbits_kind, /* incompressible kind */
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,

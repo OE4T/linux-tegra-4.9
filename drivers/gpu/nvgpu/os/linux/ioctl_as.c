@@ -111,6 +111,7 @@ static int gk20a_as_ioctl_map_buffer_ex(
 
 	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->offset, args->flags,
+				   args->page_size,
 				   args->compr_kind,
 				   args->incompr_kind,
 				   args->buffer_offset,
@@ -201,7 +202,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 
 		err = nvgpu_vm_map_buffer(
 			as_share->vm, map_args.dmabuf_fd,
-			&map_args.offset, map_args.flags,
+			&map_args.offset, map_args.flags, map_args.page_size,
 			compressible_kind, incompressible_kind,
 			map_args.buffer_offset,
 			map_args.mapping_size,

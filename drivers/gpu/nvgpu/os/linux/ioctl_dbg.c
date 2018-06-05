@@ -1372,10 +1372,11 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 			args->dmabuf_fd,
 			&args->offset,
 			0,
+			SZ_4K,
 			0,
 			0,
 			0,
-			args->mapping_size,
+			0,
 			NULL);
 	if (err)
 		goto err_remove_vm;

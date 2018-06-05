@@ -28,7 +28,6 @@
 struct platform_device;
 
 extern int TEGRA_POWERGATE_DISA;
-extern int TEGRA_POWERGATE_SOR;
 
 #ifdef CONFIG_POWERGATE_TEGRA_BPMP
 int tegra_bpmp_init_powergate(struct platform_device *pdev);

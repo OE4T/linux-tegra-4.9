@@ -670,6 +670,7 @@ static inline int tegra_dc_fmt_bpp(int fmt)
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R:
@@ -736,6 +737,7 @@ static inline bool tegra_dc_is_yuv(int fmt)
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R:
@@ -841,6 +843,7 @@ static inline bool tegra_dc_is_yuv_semi_planar(int fmt)
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422:
 	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444:
 	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444:

@@ -70,6 +70,10 @@ struct isp_capture {
 
 	struct mutex control_msg_lock;
 	struct CAPTURE_CONTROL_MSG control_resp_msg;
+
+	struct mutex reset_lock;
+	bool reset_capture_program_flag;
+	bool reset_capture_flag;
 };
 
 static void isp_capture_ivc_control_callback(const void *ivc_resp,
@@ -133,9 +137,10 @@ static void isp_capture_ivc_status_callback(const void *ivc_resp,
 		buffer_index = status_msg->capture_isp_status_ind.buffer_index;
 		isp_capture_request_unpin(chan, buffer_index);
 		dma_sync_single_range_for_cpu(capture->rtcpu_dev,
-		    capture->capture_desc_ctx.requests.iova,
-		    buffer_index * capture->capture_desc_ctx.request_size,
-		    capture->capture_desc_ctx.request_size, DMA_FROM_DEVICE);
+			capture->capture_desc_ctx.requests.iova,
+			buffer_index * capture->capture_desc_ctx.request_size,
+			capture->capture_desc_ctx.request_size,
+			DMA_FROM_DEVICE);
 		complete(&capture->capture_resp);
 		dev_dbg(chan->isp_dev, "%s: status chan_id %u msg_id %u\n",
 				__func__, status_msg->header.channel_id,
@@ -146,9 +151,10 @@ static void isp_capture_ivc_status_callback(const void *ivc_resp,
 			status_msg->capture_isp_program_status_ind.buffer_index;
 		isp_capture_program_request_unpin(chan, buffer_index);
 		dma_sync_single_range_for_cpu(capture->rtcpu_dev,
-		    capture->program_desc_ctx.requests.iova,
-		    buffer_index * capture->program_desc_ctx.request_size,
-		    capture->program_desc_ctx.request_size, DMA_FROM_DEVICE);
+			capture->program_desc_ctx.requests.iova,
+			buffer_index * capture->program_desc_ctx.request_size,
+			capture->program_desc_ctx.request_size,
+			DMA_FROM_DEVICE);
 		complete(&capture->capture_program_resp);
 		dev_dbg(chan->isp_dev,
 			"%s: isp_ program status chan_id %u msg_id %u\n",
@@ -195,11 +201,15 @@ int isp_capture_init(struct tegra_isp_channel *chan)
 	mutex_init(&capture->control_msg_lock);
 	mutex_init(&capture->capture_desc_ctx.unpins_list_lock);
 	mutex_init(&capture->program_desc_ctx.unpins_list_lock);
+	mutex_init(&capture->reset_lock);
 
 	capture->isp_channel = chan;
 	chan->capture_data = capture;
 
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
+
+	capture->reset_capture_program_flag = false;
+	capture->reset_capture_flag = false;
 
 	return 0;
 }
@@ -585,6 +595,11 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 		return -ENODEV;
 	}
 
+	mutex_lock(&capture->reset_lock);
+	capture->reset_capture_program_flag = true;
+	capture->reset_capture_flag = true;
+	mutex_unlock(&capture->reset_lock);
+
 	memset(&control_msg, 0, sizeof(control_msg));
 	control_msg.header.msg_id = CAPTURE_CHANNEL_ISP_RESET_REQ;
 	control_msg.header.channel_id = capture->channel_id;
@@ -602,11 +617,15 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 		goto error;
 	}
 
-	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++)
+	for (i = 0; i < capture->program_desc_ctx.queue_depth; i++) {
 		isp_capture_program_request_unpin(chan, i);
+		complete(&capture->capture_program_resp);
+	}
 
-	for (i = 0; i < capture->capture_desc_ctx.queue_depth; i++)
+	for (i = 0; i < capture->capture_desc_ctx.queue_depth; i++) {
 		isp_capture_request_unpin(chan, i);
+		complete(&capture->capture_resp);
+	}
 
 	return 0;
 
@@ -970,6 +989,15 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 		return -EINVAL;
 	}
 
+	mutex_lock(&capture->reset_lock);
+	if (capture->reset_capture_program_flag) {
+		/* consume any pending completions when coming out of reset */
+		while (try_wait_for_completion(&capture->capture_program_resp))
+			; /* do nothing */
+	}
+	capture->reset_capture_program_flag = false;
+	mutex_unlock(&capture->reset_lock);
+
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_PROGRAM_REQUEST_REQ;
 	capture_msg.header.channel_id = capture->channel_id;
@@ -1048,6 +1076,13 @@ int isp_capture_program_status(struct tegra_isp_channel *chan)
 		return err;
 	}
 
+	mutex_lock(&capture->reset_lock);
+	if (capture->reset_capture_program_flag) {
+		mutex_unlock(&capture->reset_lock);
+		return -EIO;
+	}
+	mutex_unlock(&capture->reset_lock);
+
 	return 0;
 }
 
@@ -1083,6 +1118,15 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 			"%s: req must have non-zero relocs\n", __func__);
 		return -EINVAL;
 	}
+
+	mutex_lock(&capture->reset_lock);
+	if (capture->reset_capture_flag) {
+		/* consume any pending completions when coming out of reset */
+		while (try_wait_for_completion(&capture->capture_resp))
+			; /* do nothing */
+	}
+	capture->reset_capture_flag = false;
+	mutex_unlock(&capture->reset_lock);
 
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_REQUEST_REQ;
@@ -1197,6 +1241,13 @@ int isp_capture_status(struct tegra_isp_channel *chan,
 			"wait for capture status failed\n");
 		return err;
 	}
+
+	mutex_lock(&capture->reset_lock);
+	if (capture->reset_capture_flag) {
+		mutex_unlock(&capture->reset_lock);
+		return -EIO;
+	}
+	mutex_unlock(&capture->reset_lock);
 
 	return 0;
 }

@@ -383,11 +383,15 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 		return -EFAULT;
 
 	if ((start >= h->size) || (end > h->size)) {
+		pr_debug("%s start: %ld end: %ld h->size: %zu\n", __func__,
+				start, end, h->size);
 		nvmap_handle_put(h);
 		return -EFAULT;
 	}
 
 	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
+		pr_debug("%s heap_type %u access_mask 0x%x\n", __func__,
+				h->heap_type, nvmap_dev->cpu_access_mask);
 		nvmap_handle_put(h);
 		return -EPERM;
 	}
@@ -477,14 +481,12 @@ out:
  * NOTE: this omits outer cache operations which is fine for ARM64
  */
 static int __nvmap_do_cache_maint_list(struct nvmap_handle **handles,
-				u64 *offsets, u64 *sizes, int op, int nr)
+				u64 *offsets, u64 *sizes, int op, int nr,
+				bool is_32)
 {
 	int i;
 	u64 total = 0;
 	u64 thresh = ~0;
-	bool is_32 = (op & NVMAP_ELEM_SIZE_U64) ? false : true;
-
-	op &= ~NVMAP_ELEM_SIZE_U64;
 
 	WARN(!IS_ENABLED(CONFIG_ARM64),
 		"cache list operation may not function properly");
@@ -548,7 +550,8 @@ static int __nvmap_do_cache_maint_list(struct nvmap_handle **handles,
 						     offset + size,
 						     op, false);
 			if (err) {
-				pr_err("cache maint per handle failed\n");
+				pr_err("cache maint per handle failed [%d]\n",
+						err);
 				return err;
 			}
 		}
@@ -558,7 +561,8 @@ static int __nvmap_do_cache_maint_list(struct nvmap_handle **handles,
 }
 
 inline int nvmap_do_cache_maint_list(struct nvmap_handle **handles,
-				u64 *offsets, u64 *sizes, int op, int nr)
+				u64 *offsets, u64 *sizes, int op, int nr,
+				bool is_32)
 {
 	int ret = 0;
 
@@ -571,7 +575,7 @@ inline int nvmap_do_cache_maint_list(struct nvmap_handle **handles,
 		break;
 	default:
 		ret = __nvmap_do_cache_maint_list(handles,
-					offsets, sizes, op, nr);
+					offsets, sizes, op, nr, is_32);
 		break;
 	}
 

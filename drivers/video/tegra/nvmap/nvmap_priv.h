@@ -459,7 +459,7 @@ int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 		phys_addr_t pend, int inner, int outer);
 
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
-			      u64 *sizes, int op, int nr);
+			      u64 *sizes, int op, int nr, bool is_32);
 int __nvmap_cache_maint(struct nvmap_client *client,
 			       struct nvmap_cache_op_64 *op);
 int nvmap_cache_debugfs_init(struct dentry *nvmap_root);
@@ -596,7 +596,7 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size);
 void nvmap_vma_open(struct vm_area_struct *vma);
 
 int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets,
-			u64 *sizes, u32 nr, u32 op);
+			u64 *sizes, u32 nr, u32 op, bool is_32);
 
 static inline void nvmap_kmaps_inc(struct nvmap_handle *h)
 {

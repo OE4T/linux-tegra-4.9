@@ -659,6 +659,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	u32 i, n_unmarshal_handles = 0, count = 0;
 	size_t bytes;
 	size_t elem_size;
+	bool is_32;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -672,6 +673,8 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 
 	elem_size  = (op.op & NVMAP_ELEM_SIZE_U64) ?
 			sizeof(u64) : sizeof(u32);
+	op.op &= ~NVMAP_ELEM_SIZE_U64;
+	is_32 = elem_size == sizeof(u32) ? 1 : 0;
 
 	bytes += 2 * op.nr * elem_size;
 	bytes += op.nr * sizeof(u32);
@@ -766,10 +769,10 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 
 	if (is_reserve_ioctl)
 		err = nvmap_reserve_pages(refs, offset_ptr, size_ptr,
-					  op.nr, op.op);
+					  op.nr, op.op, is_32);
 	else
 		err = nvmap_do_cache_maint_list(refs, offset_ptr, size_ptr,
-						op.op, op.nr);
+						op.op, op.nr, is_32);
 
 free_mem:
 	for (i = 0; i < n_unmarshal_handles; i++)

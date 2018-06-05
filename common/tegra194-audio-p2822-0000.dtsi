@@ -59,6 +59,13 @@
 
 	hda@3510000 {
 		status = "okay";
+		resets = <&bpmp_resets TEGRA194_RESET_HDA>,
+			<&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
+			<&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
+		reset-names = "hda_rst", "hda2codec_2x_rst",
+		       "hda2hdmi_rst";
+		nvidia,do-reset;
+
 	};
 
 	tegra_sound: sound {

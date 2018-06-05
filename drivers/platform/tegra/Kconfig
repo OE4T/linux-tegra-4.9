@@ -190,4 +190,15 @@ config TEGRA_CENTRAL_ACTMON
 	  as it monitors central activity for example MC activity. HW fabric of
 	  central and unit actmon is different. If unsure, say Y here.
 
+config TEGRA_FIRMWARES_CLASS
+	bool
+	default n
+
+config TEGRA_FIRMWARES_INVENTORY
+	tristate "Tegra firmwares inventory"
+	select TEGRA_FIRMWARES_CLASS
+	default y
+	help
+	  Register version readers for firmwares
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

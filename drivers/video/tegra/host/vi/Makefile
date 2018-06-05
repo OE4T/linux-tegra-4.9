@@ -14,6 +14,6 @@ ccflags-y += -Werror
 
 nvhost-vi5-objs = vi5.o
 
-obj-y += nvhost-vi5.o
+obj-$(CONFIG_VIDEO_TEGRA_VI) += nvhost-vi5.o
 
 endif

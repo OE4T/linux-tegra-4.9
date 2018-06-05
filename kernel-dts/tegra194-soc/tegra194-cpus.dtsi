@@ -259,4 +259,11 @@
 					<&cl3_1>;
 		status = "disabled";
 	};
+
+	carmel-pmu {
+		compatible = "nvidia,carmel-pmu";
+		interrupts = <0 290 0x4>;
+		interrupt-affinity = <&{/cpus/cpu@0}>;
+		status = "disabled";
+	};
 };

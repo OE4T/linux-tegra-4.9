@@ -620,7 +620,7 @@ static int mc_ecc_debugfs_init(struct dentry *mc_parent)
 	return 0;
 }
 
-static u32 mc_ecc_check_err_handling(void)
+static u32 mc_ecc_check_err_handling(struct platform_device *pdev)
 {
 	struct device_node *rtcpu_sce = of_find_node_by_path("/rtcpu@b000000");
 	u32 handle_ecc_err;
@@ -633,11 +633,19 @@ static u32 mc_ecc_check_err_handling(void)
 
 	if (of_device_is_available(rtcpu_sce)) {
 		/*
-		 * if rtcpu@b000000 is enabled SCE is booted with Camera FW
-		 * ,So we handle DRAM ECC errors @ CCPLEX from Kernel
-		*/
-		pr_info("DRAM ECC interrupts handled in Kernel\n");
-		handle_ecc_err = 1;
+		 * if rtcpu@b000000 is enabled, SCE is booted with Camera FW.
+		 *     if ecc_on_camera_fw, then handle ECC errors in Camera FW.
+		 *     else, we handle DRAM ECC errors @ CCPLEX from Kernel
+		 */
+		pr_info("SCE-R5 is booted with Camera FW\n");
+		if (of_property_read_bool(pdev->dev.of_node,
+					"ecc_on_camera_fw")) {
+			pr_info("DRAM ECC interrupts handled in Camera FW\n");
+			handle_ecc_err = 0;
+		} else {
+			pr_info("DRAM ECC interrupts handled in Kernel\n");
+			handle_ecc_err = 1;
+		}
 	} else {
 		/*
 		 * if rtcpu@b000000 is disabled SCE is booted with sample
@@ -737,7 +745,7 @@ void tegra_emcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 		pr_info("DRAM ECC enabled-MC_ECC_CONTROL:0x%08x\n",
 							mc_ecc_control);
 
-		if (mc_ecc_check_err_handling()) {
+		if (mc_ecc_check_err_handling(pdev)) {
 			if (mc_ecc_err_init(mc_parent, pdev))
 				pr_err("ecc error init failed\n");
 		}

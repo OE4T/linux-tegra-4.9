@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <linux/nvmap_t19x.h>
 #include <linux/nvhost_t194.h>
+#include <linux/slab.h>
 #include <linux/dma-attrs.h>
 
 #include "bus_client_t194.h"

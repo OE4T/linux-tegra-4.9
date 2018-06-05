@@ -24,8 +24,6 @@ obj-$(CONFIG_TEGRA_WAKEUP_MONITOR)      += tegra_wakeup_monitor.o
 
 obj-y += powergate/
 
-obj-$(CONFIG_TEGRA_THERMAL_THROTTLE)        += tegra_throttle.o
-
 obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o
 
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o

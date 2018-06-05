@@ -935,12 +935,37 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 				id = mmfault->chid;
 				id_type = ID_TYPE_CHANNEL;
 			}
+			if (mmfault->refch->mmu_nack_handled) {
+				/* We have already recovered for the same
+				 * context, skip doing another recovery.
+				 */
+				mmfault->refch->mmu_nack_handled = false;
+				/*
+				 * Recovery path can be entered twice for the
+				 * same error in case of mmu nack. If mmu
+				 * nack interrupt is handled before mmu fault
+				 * then channel reference is increased to avoid
+				 * closing the channel by userspace. Decrement
+				 * channel reference.
+				 */
+				gk20a_channel_put(mmfault->refch);
+				/* refch in mmfault is assigned at the time
+				 * of copying fault info from snap reg or bar2
+				 * fault buf.
+				 */
+				gk20a_channel_put(mmfault->refch);
+				return;
+			}
 		} else {
 			id_type = ID_TYPE_UNKNOWN;
 		}
 		if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
 			act_eng_bitmask = BIT(mmfault->faulted_engine);
 
+		/* Indicate recovery is handled if mmu fault is a result of
+		 * mmu nack.
+		 */
+		mmfault->refch->mmu_nack_handled = true;
 		g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
 			id, id_type, RC_TYPE_MMU_FAULT, mmfault);
 	} else {

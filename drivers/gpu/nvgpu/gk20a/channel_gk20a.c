@@ -684,6 +684,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->subctx_id = 0;
 	ch->runqueue_sel = 0;
 
+	ch->mmu_nack_handled = false;
+
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
 

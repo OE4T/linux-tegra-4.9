@@ -2093,23 +2093,30 @@ static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 	u32 warp_esr_error,
 	struct channel_gk20a *fault_ch)
 {
-	struct tsg_gk20a *tsg;
 	u32 offset;
+	int err = 0;
 
+	fault_ch = gk20a_channel_get(fault_ch);
 	if (fault_ch) {
-		tsg = &g->fifo.tsg[fault_ch->tsgid];
-
-		/*
-		 * Upon receiving MMU_FAULT error, MMU will forward MMU_NACK
-		 * to SM. So MMU_FAULT handling path will take care of
-		 * triggering RC recovery
-		 *
-		 * In MMU_NACK handling path, we just set the error notifier
-		 * and clear the interrupt so that the User Space sees the error
-		 * as soon as semaphores are released by SM
-		 */
-		gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
+		if (!fault_ch->mmu_nack_handled) {
+			/* recovery is not done for the channel implying mmu
+			 * nack interrupt is serviced before mmu fault. Force
+			 * recovery by returning an error. Also indicate we
+			 * should skip a second recovery.
+			 */
+			fault_ch->mmu_nack_handled = true;
+			err = -EFAULT;
+		}
 	}
+	/* else mmu fault is serviced first and channel is closed */
+
+	/* do not release reference to ch as we do not want userspace to close
+	 * this channel on recovery. Otherwise mmu fault handler will enter
+	 * recovery path even if channel is invalid. We want to explicitly check
+	 * for teardown value in mmu fault handler.
+	 */
+	if (!err)
+		gk20a_channel_put(fault_ch);
 
 	/* clear interrupt */
 	offset = gk20a_gr_gpc_offset(g, gpc) +
@@ -2122,7 +2129,7 @@ static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 			"ESR %s(0x%x)",
 			"MMU NACK ERROR",
 			warp_esr_error);
-	return 0;
+	return err;
 }
 
 static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)

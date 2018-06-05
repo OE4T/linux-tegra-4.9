@@ -596,6 +596,9 @@ void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
 	nvgpu_log(g, gpu_dbg_intr, "reset faulted pbdma:0x%x eng:0x%x",
 				faulted_pbdma, faulted_engine);
 
+	if (!refch)
+		return;
+
 	if (gk20a_is_channel_marked_as_tsg(refch)) {
 		tsg = &g->fifo.tsg[refch->tsgid];
 		if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)

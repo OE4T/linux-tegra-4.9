@@ -295,6 +295,8 @@ struct channel_gk20a {
 
 	/* Any operating system specific data. */
 	void *os_priv;
+
+	bool mmu_nack_handled;
 };
 
 static inline struct channel_gk20a *

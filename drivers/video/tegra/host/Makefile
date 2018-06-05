@@ -49,7 +49,7 @@ obj-y  += nvhost_queue.o \
 	  nvhost_syncpt_unit_interface.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
-obj-$(CONFIG_TEGRA_GRHOST) += capture/
+obj-$(CONFIG_TEGRA_GRHOST_CAPTURE_SUPPORT) += capture/
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/
 obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/

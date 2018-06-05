@@ -31,6 +31,14 @@ config TEGRA_GRHOST_SLVSEC
 	  Enables SLVS-EC Camera interface support under nvhost
 	  Say Y here if not sure.
 
+config TEGRA_GRHOST_CAPTURE_SUPPORT
+	bool "Tegra camera capture support module"
+	depends on TEGRA_T19X_GRHOST && VIDEO_TEGRA_VI && TEGRA_GRHOST_ISP
+	default y
+	help
+	  Enables support module for camera capture using VI and ISP
+	  Say Y here if not sure.
+
 config TEGRA_NVDLA_TRACE_PRINTK
 	bool "Enable trace_printk debugging in NVDLA driver"
 	depends on FTRACE_PRINTK && TEGRA_GRHOST_NVDLA

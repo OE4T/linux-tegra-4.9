@@ -45,16 +45,6 @@ enum tegra_asoc_utils_clkrate {
 	MAX_NUM_RATES,
 };
 
-/* Note: WiredAccessoryManager.java monitors these h2w switch values,
- * these values should not be changed independently.
- */
-enum headset_state {
-	SWITCH_STATE_NONE = 0,
-	SWITCH_STATE_HS,
-	SWITCH_STATE_HP,
-	SWITCH_STATE_MIC,
-};
-
 struct tegra_asoc_audio_clock_info {
 	struct device *dev;
 	struct snd_soc_card *card;

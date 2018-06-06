@@ -123,8 +123,6 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
 		int, int, u64, bool);
 static int tegra_machine_set_params(struct snd_soc_card *,
 		struct tegra_machine *, int, int, u64);
-static int tegra_machine_jack_notifier(struct notifier_block *,
-		unsigned long, void *);
 static int tegra_machine_codec_get_rate(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_rate(struct snd_kcontrol *,
@@ -335,18 +333,17 @@ static const struct snd_soc_dapm_widget tegra_mystique_dapm_widgets[] = {
 static const struct snd_soc_dapm_route tegra_machine_audio_map[] = {
 };
 
+/*
+ * The order of the following definitions should align with
+ * the 'snd_jack_types' enum as defined in include/sound/jack.h.
+ */
 static const char * const tegra_machine_jack_state_text[] = {
 	"None",
-	"HS",
 	"HP",
 	"MIC",
+	"HS",
 };
 
-enum headset_state headset_jack_state;
-
-static struct notifier_block tegra_machine_jack_detect_nb = {
-	.notifier_call = tegra_machine_jack_notifier,
-};
 static const struct soc_enum tegra_machine_jack_state =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_jack_state_text),
 		tegra_machine_jack_state_text);
@@ -546,7 +543,8 @@ static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *kcontrol,
 static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = headset_jack_state;
+	ucontrol->value.integer.value[0] = tegra_machine_hp_jack.status;
+
 	return 0;
 }
 
@@ -554,69 +552,10 @@ static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 
-	if (ucontrol->value.integer.value[0] == SWITCH_STATE_NONE)
-		snd_soc_jack_report(&tegra_machine_hp_jack, 0,
-			SND_JACK_HEADSET);
-	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HS)
-		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_HEADSET,
-			SND_JACK_HEADSET);
-	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_HP)
-		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_HEADPHONE,
-			SND_JACK_HEADSET);
-	else if (ucontrol->value.integer.value[0] == SWITCH_STATE_MIC)
-		snd_soc_jack_report(&tegra_machine_hp_jack, SND_JACK_MICROPHONE,
-			SND_JACK_HEADSET);
+	snd_soc_jack_report(&tegra_machine_hp_jack,
+			    ucontrol->value.integer.value[0], SND_JACK_HEADSET);
+
 	return 0;
-}
-
-static int tegra_machine_jack_notifier(struct notifier_block *self,
-				  unsigned long action, void *dev)
-{
-	struct snd_soc_jack *jack = dev;
-	struct snd_soc_card *card = jack->card;
-
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	static bool button_pressed;
-	struct snd_soc_pcm_runtime *rtd;
-	headset_jack_state = SWITCH_STATE_NONE;
-
-	if (!machine->is_hs_supported)
-		return NOTIFY_OK;
-
-	rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
-	if (!rtd) {
-		/* spurious interrupt */
-		dev_dbg(card->dev, "rt565x dai-link not found\n");
-		return -EINVAL;
-	}
-
-	dev_dbg(card->dev, "jack status = %d", jack->status);
-	if (jack->status & (SND_JACK_BTN_0 | SND_JACK_BTN_1 |
-		SND_JACK_BTN_2 | SND_JACK_BTN_3)) {
-		button_pressed = true;
-		return NOTIFY_OK;
-	} else if ((jack->status & SND_JACK_HEADSET) && button_pressed) {
-		button_pressed = false;
-		return NOTIFY_OK;
-	}
-
-	switch (jack->status) {
-	case SND_JACK_HEADPHONE:
-		headset_jack_state = SWITCH_STATE_HP;
-		break;
-	case SND_JACK_HEADSET:
-		headset_jack_state = SWITCH_STATE_HS;
-		break;
-	case SND_JACK_MICROPHONE:
-		/* special case for intel HDA header */
-		headset_jack_state = SWITCH_STATE_MIC;
-		break;
-	default:
-		headset_jack_state = SWITCH_STATE_NONE;
-	}
-
-	dev_dbg(card->dev, "switch state to %x\n", headset_jack_state);
-	return NOTIFY_OK;
 }
 
 static struct snd_soc_pcm_runtime *tegra_machine_get_codec_link(
@@ -1077,9 +1016,6 @@ static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *rtd)
 		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
 		return err;
 	}
-
-	snd_soc_jack_notifier_register(&tegra_machine_hp_jack,
-		&tegra_machine_jack_detect_nb);
 
 	/* single button supporting play/pause */
 	snd_jack_set_key(tegra_machine_hp_jack.jack,

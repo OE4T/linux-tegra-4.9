@@ -70,6 +70,10 @@
 		avdd-usb-supply = <&p2888_spmic_ldo5>;
 	};
 
+	pwm-fan {
+		vdd-fan-supply = <&p2822_vdd_fan>;
+	};
+
 	bpmp_i2c {
 		spmic@3c {
 			regulators {

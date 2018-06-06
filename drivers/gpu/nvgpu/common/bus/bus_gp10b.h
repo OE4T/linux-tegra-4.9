@@ -1,7 +1,5 @@
 /*
- * GM20B BUS
- *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GP10B_BUS
-#define _NVGPU_GP10B_BUS
+#ifndef NVGPU_BUS_GP10B
+#define NVGPU_BUS_GP10B
 
 struct gk20a;
 struct nvgpu_mem;

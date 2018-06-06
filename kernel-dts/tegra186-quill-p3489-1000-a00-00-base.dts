@@ -251,6 +251,10 @@
                ecc_on_camera_fw;
         };
 
+	rtcpu@b000000 {
+		/delete-property/ autosuspend-delay-ms;
+		nvidia,disable-runtime-pm;
+	};
 };
 
 #ifdef KERNEL_VERSION_4_9

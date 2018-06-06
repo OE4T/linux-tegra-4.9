@@ -30,8 +30,6 @@ obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o
 
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 
-obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
-
 obj-y += bond_out.o
 
 obj-$(CONFIG_NV_TEGRA_IVC)		+= tegra-ivc.o

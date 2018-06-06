@@ -104,7 +104,7 @@ static int tegra_machine_driver_probe(struct platform_device *);
 static void dai_link_setup(struct platform_device *);
 static void ignore_suspend(struct snd_soc_card *);
 static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *);
-static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *);
+static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *);
 
 #if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_machine_compr_set_params(struct snd_compr_stream *);
@@ -139,8 +139,6 @@ static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
-static struct snd_soc_pcm_runtime *tegra_machine_get_codec_link(
-		struct snd_soc_card *card);
 
 /* rt565x specific APIs */
 static int tegra_rt565x_event_int_spk(struct snd_soc_dapm_widget *,
@@ -558,21 +556,6 @@ static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static struct snd_soc_pcm_runtime *tegra_machine_get_codec_link(
-						struct snd_soc_card *card)
-{
-	struct snd_soc_pcm_runtime *rtd;
-
-	rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
-	if (rtd)
-		goto end;
-	rtd = snd_soc_get_pcm_runtime(card, "tas2557-playback");
-	if (rtd)
-		goto end;
-end:
-	return rtd;
-}
-
 static int tegra_machine_set_bclk_ratio(struct tegra_machine *machine,
 					struct snd_soc_pcm_runtime *rtd)
 {
@@ -913,7 +896,7 @@ static int tegra_machine_resume_post(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd;
 
 	if (machine->is_hs_supported) {
-		rtd = tegra_machine_get_codec_link(card);
+		rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
 		if (rtd)
 			return trigger_jack_status_check(rtd->codec);
 	}
@@ -997,7 +980,7 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 }
 #endif
 
-static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *rtd)
+static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -1014,6 +997,12 @@ static int tegra_machine_ext_codec_init(struct snd_soc_pcm_runtime *rtd)
 					&tegra_machine_hp_jack, NULL, 0);
 	if (err) {
 		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
+		return err;
+	}
+
+	err = rt5659_set_jack_detect(rtd->codec, &tegra_machine_hp_jack);
+	if (err) {
+		dev_err(card->dev, "Failed to set jack for RT565x: %d\n", err);
 		return err;
 	}
 
@@ -1081,9 +1070,11 @@ static void dai_link_setup(struct platform_device *pdev)
 				if (!strcmp("dit-hifi", codec_dai_name)) {
 					dev_info(&pdev->dev, "This is a dummy codec\n");
 					machine->is_hs_supported = false;
-				} else
+				} else {
 					machine->is_hs_supported = true;
-
+					tegra_machine_codec_links[i].init =
+						tegra_machine_rt565x_init;
+				}
 				snd_soc_tegra_card.controls =
 					tegra_machine_controls;
 				snd_soc_tegra_card.num_controls =
@@ -1092,8 +1083,6 @@ static void dai_link_setup(struct platform_device *pdev)
 					tegra_machine_dapm_widgets;
 				snd_soc_tegra_card.num_dapm_widgets =
 					ARRAY_SIZE(tegra_machine_dapm_widgets);
-				tegra_machine_codec_links[i].init =
-					tegra_machine_ext_codec_init;
 			} else if (strstr(tegra_machine_codec_links[i].name,
 				"tas2557-playback")) {
 				snd_soc_tegra_card.controls =
@@ -1219,10 +1208,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	struct snd_soc_card *card = &snd_soc_tegra_card;
 	struct tegra_machine *machine;
 	struct tegra_asoc_platform_data *pdata = NULL;
-	struct snd_soc_codec *codec = NULL;
 	int ret = 0;
-	const char *codec_dai_name;
-	struct snd_soc_pcm_runtime *rtd;
 	const struct of_device_id *match;
 
 	card->dev = &pdev->dev;
@@ -1335,22 +1321,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	tegra_machine_add_i2s_codec_controls(card,
 					machine->soc_data->num_xbar_dai_links +
 					machine->num_codec_links);
-
-	rtd = tegra_machine_get_codec_link(card);
-	if (!rtd)
-		dev_warn(&pdev->dev,
-		"codec link not defined - codec not part of sound card");
-	else {
-		codec = rtd->codec;
-		codec_dai_name = rtd->dai_link->codec_dai_name;
-
-		dev_info(&pdev->dev,
-			"codec-dai \"%s\" registered\n", codec_dai_name);
-		if (machine->is_hs_supported) {
-			/* setup for jack detection only in non-dummy case */
-			rt5659_set_jack_detect(codec, &tegra_machine_hp_jack);
-		}
-	}
 
 	return 0;
 

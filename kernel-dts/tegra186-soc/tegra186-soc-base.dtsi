@@ -85,6 +85,25 @@
 			alloc-ranges = <0x0 0x80000000 0x0 0x70000000>;
 			reusable;
 		};
+
+		fb0_reserved: fb0_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb1_reserved: fb1_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb2_reserved: fb2_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
 	};
 
 	timer {
@@ -840,6 +859,8 @@
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head0";
 			status = "disabled";
+			fb_reserved = <&fb0_reserved>;
+			iommu-direct-regions = <&fb0_reserved>;
 		};
 
 		head1: nvdisplay@15210000 {
@@ -878,6 +899,8 @@
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head1";
 			status = "disabled";
+			fb_reserved = <&fb1_reserved>;
+			iommu-direct-regions = <&fb1_reserved>;
 		};
 
 		head2: nvdisplay@15220000 {
@@ -914,6 +937,8 @@
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head2";
 			status = "disabled";
+			fb_reserved = <&fb2_reserved>;
+			iommu-direct-regions = <&fb2_reserved>;
 		};
 
 		dsi: dsi {	/* dsi@15300000 */

@@ -212,6 +212,11 @@ struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev,
 	struct tegra_dc_platform_data *boot_pdata);
 
+struct tegra_dc *find_dc_by_ctrl_num(u32 ctrl_num);
+int of_tegra_get_fb_resource(struct device_node *np,
+		struct resource *res,
+		const char *reg_name);
+
 struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np);
 void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops);

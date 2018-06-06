@@ -15,12 +15,12 @@
 #include <linux/slab.h>
 #include <linux/of_platform.h>
 #include <linux/tegra-firmwares.h>
-#include <linux/trusty/trusty.h>
-#include <linux/trusty/smcall.h>
 #include <linux/cpu.h>
 #include <asm/cpu.h>
 
-#ifdef CONFIG_TRUSTY
+#if IS_ENABLED(CONFIG_TRUSTY)
+#include <linux/trusty/trusty.h>
+
 static ssize_t tegrafw_read_trusty(struct device *dev,
 				char *data, size_t size)
 {
@@ -83,7 +83,7 @@ static int __init tegra_firmwares_init(void)
 	check_out_of_bounds(dev, 0);
 	*dev++ = tegrafw_register("MTS", TFW_NORMAL, tegrafw_read_denver, NULL);
 
-#ifdef CONFIG_TRUSTY
+#if IS_ENABLED(CONFIG_TRUSTY)
 	check_out_of_bounds(dev, 0);
 	*dev++ = tegrafw_register("trusty", TFW_DONT_CACHE,
 				tegrafw_read_trusty, NULL);

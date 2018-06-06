@@ -743,6 +743,7 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 			tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
+	policy->suspend_freq = policy->max;
 	policy->cur = tegra194_fast_get_speed(policy->cpu);
 	if (!policy->cur) /* '0' is invalid */
 		return -EIO;
@@ -784,6 +785,7 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.init = tegra194_cpufreq_init,
 	.exit = tegra194_cpufreq_exit,
 	.attr = cpufreq_generic_attr,
+	.suspend = cpufreq_generic_suspend,
 };
 
 static int cpu_freq_notify(struct notifier_block *b,

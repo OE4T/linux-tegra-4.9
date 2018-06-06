@@ -1357,8 +1357,6 @@ static int finalize_shutdown_ioctl(struct tnvlink_dev *tdev, void *ioctl_struct)
 {
 	int ret = 0;
 
-	devm_free_irq(tdev->dev, tdev->irq, tdev);
-
 	ret = nvlink_set_init_state(tdev->ndev, NVLINK_DEV_OFF);
 	if (ret < 0)
 		nvlink_err("Failed to set init_state to NVLINK_DEV_OFF");

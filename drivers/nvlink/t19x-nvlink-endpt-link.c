@@ -657,6 +657,9 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 			return -EPERM;
 		}
 
+		/* Free the interrupt line on the device */
+		devm_free_irq(tdev->dev, tdev->irq, tdev);
+
 		status = t19x_nvlink_dev_car_disable(ndev);
 		if (status < 0) {
 			nvlink_err("set link mode to OFF failed");

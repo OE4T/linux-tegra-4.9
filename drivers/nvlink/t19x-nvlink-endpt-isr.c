@@ -20,6 +20,30 @@
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
 
+/* Enable minion falcon Interrupts and route to Host */
+void nvlink_config_minion_falcon_intr(struct tnvlink_dev *tdev)
+{
+	u32 reg_val = 0;
+
+	/* Enable interrupts. Writing a '1' to any bit in IRQMSET
+	 * will set the corresponding bit in IRQMASK.
+	 */
+	reg_val = BIT(CMINION_FALCON_IRQMSET_WDTMR) |
+		BIT(CMINION_FALCON_IRQMSET_HALT) |
+		BIT(CMINION_FALCON_IRQMSET_EXTERR);
+	nvlw_minion_writel(tdev, CMINION_FALCON_IRQMSET, reg_val);
+
+	/* interrrupts destination setting to HOST */
+	reg_val = BIT(CMINION_FALCON_IRQDEST_HOST_WDTMR) |
+		BIT(CMINION_FALCON_IRQDEST_HOST_HALT) |
+		BIT(CMINION_FALCON_IRQDEST_HOST_EXTERR);
+	/* Send the interrupts on the "normal" interrupt lines to host */
+	reg_val &= ~(BIT(CMINION_FALCON_IRQDEST_TARGET_WDTMR) |
+		BIT(CMINION_FALCON_IRQDEST_TARGET_HALT) |
+		BIT(CMINION_FALCON_IRQDEST_TARGET_EXTERR));
+	nvlw_minion_writel(tdev, CMINION_FALCON_IRQDEST, reg_val);
+}
+
 /* Configure NVLW interrupts */
 static void nvlw_config_intr(struct tnvlink_dev *tdev)
 {
@@ -250,58 +274,6 @@ static void nvlink_disable_nvlipt_interrupts(struct tnvlink_dev *tdev)
 	nvlw_nvlipt_writel(tdev, NVLIPT_INTR_CONTROL_LINK0, reg_val);
 }
 
-/* Service MINION Falcon interrupts */
-void minion_service_falcon_intr(struct tnvlink_dev *tdev)
-{
-	u32 irq_stat = 0;
-	u32 irq_mask = 0;
-	u32 irq_dest = 0;
-	u32 interrupts = 0;
-	u32 clear_bits = 0;
-
-	/*
-	 * Get the current IRQ status and mask the sources not directed to
-	 * host
-	 */
-	irq_stat = nvlw_minion_readl(tdev, CMINION_FALCON_IRQSTAT);
-
-	/* TODO: Fix this when interrupts are enabled */
-	irq_mask = 0x7;
-
-	irq_dest = nvlw_minion_readl(tdev, CMINION_FALCON_IRQDEST);
-
-	interrupts = irq_stat & irq_mask & irq_dest;
-
-	/* Exit if there is nothing to do */
-	if (interrupts == 0)
-		return;
-
-	/* Service the pending interrupt(s) */
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_WDTMR)) {
-		nvlink_dbg("Received MINION Falcon WDTMR interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_WDTMR);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_HALT)) {
-		nvlink_dbg("Received MINION Falcon HALT interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_HALT);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_EXTERR)) {
-		nvlink_dbg("Received MINION Falcon EXTERR interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_EXTERR);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_SWGEN0)) {
-		nvlink_dbg("Received MINION Falcon SWGEN0 interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_SWGEN0);
-	}
-	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_SWGEN1)) {
-		nvlink_dbg("Received MINION Falcon SWGEN1 interrupt");
-		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_SWGEN1);
-	}
-
-	/* Clear interrupt (W1C) */
-	nvlw_minion_writel(tdev, CMINION_FALCON_IRQSCLR, clear_bits);
-}
-
 /* Disable MINION FALCON interrupts */
 static void nvlink_minion_disable_falcon_interrupts(struct tnvlink_dev *tdev)
 {
@@ -313,6 +285,53 @@ static void nvlink_minion_disable_falcon_interrupts(struct tnvlink_dev *tdev)
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_FALCON_STALL);
 	reg_data &= ~BIT(MINION_MINION_INTR_STALL_EN_FALCON_NOSTALL);
 	nvlw_minion_writel(tdev, MINION_MINION_INTR_STALL_EN, reg_data);
+}
+
+/* Service MINION Falcon interrupts */
+void minion_service_falcon_intr(struct tnvlink_dev *tdev)
+{
+	u32 irq_stat = 0;
+	u32 irq_mask = 0;
+	u32 interrupts = 0;
+	u32 clear_bits = 0;
+
+	/*
+	 * Get the current IRQ status and mask for the sources not directed to
+	 * host
+	 */
+	irq_stat = nvlw_minion_readl(tdev, CMINION_FALCON_IRQSTAT);
+
+	irq_mask = nvlw_minion_readl(tdev, CMINION_FALCON_IRQMASK);
+
+	interrupts = irq_stat & irq_mask;
+
+	/* Exit if there is nothing to do */
+	if (interrupts == 0)
+		return;
+
+	/* Service the pending interrupt(s) */
+	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_WDTMR)) {
+		nvlink_err("Received MINION Falcon WDTMR interrupt");
+		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_WDTMR);
+	}
+	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_HALT)) {
+		nvlink_err("Received MINION Falcon HALT interrupt");
+		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_HALT);
+	}
+	if (interrupts & BIT(CMINION_FALCON_IRQSTAT_EXTERR)) {
+		nvlink_err("Received MINION Falcon EXTERR interrupt");
+		clear_bits |= BIT(CMINION_FALCON_IRQSTAT_EXTERR);
+	}
+
+	/* We are considering all falcon interrupts as fatal.
+	 * Disable MINION Falcon interrupts.
+	 */
+	nvlink_minion_disable_falcon_interrupts(tdev);
+
+	nvlink_err("MINION Falcon interrupts disabled due to fatal interrupt");
+
+	/* Clear interrupt (W1C) */
+	nvlw_minion_writel(tdev, CMINION_FALCON_IRQSCLR, clear_bits);
 }
 
 /* Service MINION FATAL notification interrupt */

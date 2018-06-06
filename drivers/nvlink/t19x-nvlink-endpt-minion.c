@@ -410,6 +410,9 @@ int minion_boot(struct tnvlink_dev *tdev)
 	u32 minion_status = 0;
 	u32 intr_code = 0;
 
+	/* Configure minion falcon Interrupts */
+	nvlink_config_minion_falcon_intr(tdev);
+
 	/* Get MINION ucode from the filesystem */
 	ret = request_firmware(&(ndev->minion_fw), MINION_FW_PATH, tdev->dev);
 	if (ret) {

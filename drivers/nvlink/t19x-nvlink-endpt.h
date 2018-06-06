@@ -272,6 +272,7 @@ int minion_send_cmd(struct tnvlink_dev *tdev,
 				u32 scratch0_val);
 void nvlink_enable_AN0_packets(struct tnvlink_dev *tdev);
 
+void nvlink_config_minion_falcon_intr(struct tnvlink_dev *tdev);
 void nvlink_config_common_intr(struct tnvlink_dev *tdev);
 void nvlink_enable_dl_interrupts(struct tnvlink_dev *tdev);
 void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev);

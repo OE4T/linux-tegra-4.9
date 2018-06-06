@@ -1,7 +1,7 @@
 /*
  * CY8C4014 LED chip driver
  *
- * Copyright (C) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,12 @@
 #include <linux/debugfs.h>
 #include <linux/mutex.h>
 #include <linux/miscdevice.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/uaccess.h>
+#else
 #include <asm/uaccess.h>
+#endif
 #include <linux/delay.h>
 
 /* register definitions */

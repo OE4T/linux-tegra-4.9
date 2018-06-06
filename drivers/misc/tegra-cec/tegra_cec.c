@@ -50,6 +50,12 @@
 #define LOGICAL_ADDRESS_BROADCAST 0xF
 #define TEXT_VIEW_ON 0x0D
 #define ACTIVE_SOURCE 0x82
+/*
+ * 400 ms is the time it takes for one 16 byte message to be
+ * transferred and 5 is the maximum number of retries. Add
+ * another 100 ms as a margin.
+ */
+#define CEC_XFER_TIMEOUT_MS (5 * 400 + 100)
 
 static bool previous_reboot_reason_is_recovery, text_view_on_sent;
 static u8 text_view_on_command[] = {
@@ -110,6 +116,16 @@ static inline void tegra_cec_native_tx(const struct tegra_cec *cec, u32 block)
 		cec->cec_base + TEGRA_CEC_INT_STAT);
 }
 
+static inline void tegra_cec_error_recovery(struct tegra_cec *cec)
+{
+	u32 hw_ctrl;
+
+	hw_ctrl = readl(cec->cec_base + TEGRA_CEC_HW_CONTROL);
+	writel(0x0, cec->cec_base + TEGRA_CEC_HW_CONTROL);
+	writel(0xFFFFFFFF, cec->cec_base + TEGRA_CEC_INT_STAT);
+	writel(hw_ctrl, cec->cec_base + TEGRA_CEC_HW_CONTROL);
+}
+
 static
 int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 {
@@ -125,8 +141,10 @@ int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 	 *  subsequent transmission.
 	 */
 	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1,
-			msecs_to_jiffies(1000));
-	if (ret <= 0)
+			msecs_to_jiffies(CEC_XFER_TIMEOUT_MS));
+	if (ret == 0)
+		return -ETIME;
+	else if (ret < 0)
 		return ret;
 
 	mode = TEGRA_CEC_LADDR_MODE(buf[0]) << TEGRA_CEC_TX_REG_ADDR_MODE_SHIFT;
@@ -147,9 +165,15 @@ int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 		cec->cec_base + TEGRA_CEC_INT_MASK);
 
 	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1,
-			msecs_to_jiffies(1000));
-	if (ret > 0)
+			msecs_to_jiffies(CEC_XFER_TIMEOUT_MS));
+	if (ret > 0) {
 		ret = cec->tx_error;
+	} else if (ret == 0) {
+		dev_err(cec->dev, "timeout in %s:%d.", __func__, __LINE__);
+		tegra_cec_error_recovery(cec);
+		cec->tx_wake = 1;
+		ret = -ETIME;
+	}
 
 	return ret;
 }
@@ -212,16 +236,6 @@ static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	cec->rx_buffer = 0x0;
 	cec->rx_wake = 0;
 	return count;
-}
-
-static inline void tegra_cec_error_recovery(struct tegra_cec *cec)
-{
-	u32 hw_ctrl;
-
-	hw_ctrl = readl(cec->cec_base + TEGRA_CEC_HW_CONTROL);
-	writel(0x0, cec->cec_base + TEGRA_CEC_HW_CONTROL);
-	writel(0xFFFFFFFF, cec->cec_base + TEGRA_CEC_INT_STAT);
-	writel(hw_ctrl, cec->cec_base + TEGRA_CEC_HW_CONTROL);
 }
 
 static irqreturn_t tegra_cec_irq_handler(int irq, void *data)

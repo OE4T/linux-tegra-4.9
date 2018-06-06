@@ -4041,12 +4041,6 @@ bypass_init_check:
 #if	defined(CONFIG_TEGRA_HDMI2_0)
 		dc->out_ops = &tegra_dc_hdmi2_0_ops;
 #endif
-		if (tegra_dc_is_t21x() && tegra_bonded_out_dev(BOND_OUT_SOR1)) {
-			dev_info(&dc->ndev->dev,
-				"SOR1 instance is bonded out\n");
-			dc->out_ops = NULL;
-			err = -ENODEV;
-		}
 		break;
 
 	case TEGRA_DC_OUT_DSI:
@@ -4054,13 +4048,6 @@ bypass_init_check:
 	case TEGRA_DC_OUT_FAKE_DSIB:
 	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 		dc->out_ops = &tegra_dc_dsi_ops;
-		if (tegra_dc_is_t21x() && (tegra_bonded_out_dev(BOND_OUT_DSI) ||
-			tegra_bonded_out_dev(BOND_OUT_DSIB))) {
-			dev_info(&dc->ndev->dev,
-				"DSI instance is bonded out\n");
-			dc->out_ops = NULL;
-			err = -ENODEV;
-		}
 		break;
 
 #ifdef CONFIG_TEGRA_DP

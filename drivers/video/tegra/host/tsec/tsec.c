@@ -1,7 +1,7 @@
 /*
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -837,12 +837,6 @@ static int tsec_probe(struct platform_device *dev)
 	if (!pdata) {
 		dev_info(&dev->dev, "no platform data\n");
 		return -ENODATA;
-	}
-
-	err = nvhost_check_bondout(pdata->bond_out_id);
-	if (err) {
-		dev_err(&dev->dev, "No TSEC unit present. err:%d", err);
-		return err;
 	}
 
 	pdata->pdev = dev;

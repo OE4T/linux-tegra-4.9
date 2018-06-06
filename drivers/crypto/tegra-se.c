@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -3326,9 +3326,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 	struct device_node *node;
 	int err = 0, i = 0, j = 0, k = 0, val;
 	const char *rsa_name;
-
-	if (tegra_bonded_out_dev(BOND_OUT_SE))
-		return -ENODEV;
 
 	se_dev = devm_kzalloc(&pdev->dev, sizeof(*se_dev), GFP_KERNEL);
 	if (!se_dev)

@@ -1259,12 +1259,6 @@ static int nvhost_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
-	err = nvhost_check_bondout(pdata->bond_out_id);
-	if (err) {
-		dev_err(&dev->dev, "No HOST1X unit present. err:%d", err);
-		return err;
-	}
-
 	syncpt_irq = platform_get_irq(dev, 0);
 	if (syncpt_irq < 0) {
 		dev_err(&dev->dev, "missing syncpt irq\n");

@@ -718,7 +718,6 @@ int nvhost_channel_submit(struct nvhost_job *job);
 int nvhost_client_device_get_resources(struct platform_device *dev);
 int nvhost_client_device_release(struct platform_device *dev);
 int nvhost_client_device_init(struct platform_device *dev);
-int nvhost_check_bondout(unsigned int id);
 
 /* common runtime pm and power domain APIs */
 int nvhost_module_init(struct platform_device *ndev);

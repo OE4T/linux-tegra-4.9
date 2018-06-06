@@ -363,12 +363,6 @@ static int vi_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
-	err = nvhost_check_bondout(pdata->bond_out_id);
-	if (err) {
-		dev_warn(&dev->dev, "No VI unit present. err:%d", err);
-		return err;
-	}
-
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);

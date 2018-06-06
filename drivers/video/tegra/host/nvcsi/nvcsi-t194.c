@@ -114,7 +114,41 @@ static long t194_nvcsi_ioctl(struct file *file, unsigned int cmd,
 		dev_dbg(mc_csi->dev, "ioctl: deskew_apply\n");
 		ret = nvcsi_deskew_apply_check(&filepriv->deskew_ctx);
 		return ret;
+	}
+	case NVHOST_NVCSI_IOCTL_PROD_APPLY: {
+		unsigned int phy_mode;
+		int err;
+		struct t194_nvcsi *nvcsi = nvhost_get_private_data(
+							filepriv->pdev);
+
+		dev_dbg(mc_csi->dev, "ioctl: prod_apply\n");
+		ret = copy_from_user(&phy_mode, (const void __user *)arg,
+							sizeof(unsigned int));
+		if (ret)
+			return -EINVAL;
+
+		err = tegra_prod_set_by_name(&nvcsi->io, "prod",
+							nvcsi->prod_list);
+		if (err) {
+			dev_err(&nvcsi->pdev->dev,
+			"%s: prod set fail (err=%d)\n", __func__, err);
+			return err;
 		}
+		if (phy_mode == PHY_CPHY_MODE)
+			err = tegra_prod_set_by_name(&nvcsi->io,
+							"prod_c_cphy_mode",
+							nvcsi->prod_list);
+		else
+			err = tegra_prod_set_by_name(&nvcsi->io,
+							"prod_c_dphy_mode",
+							nvcsi->prod_list);
+		if (err)
+			dev_err(&nvcsi->pdev->dev,
+				"%s: phy_prod set fail (err=%d)\n", __func__,
+				err);
+		return err;
+	}
+
 	}
 
 	return -ENOIOCTLCMD;

@@ -74,3 +74,4 @@ endif
 obj-$(CONFIG_TEGRA_HSP) += tegra-hsp.o
 obj-$(CONFIG_TEGRA_HSP) += tegra186-hsp.o
 obj-$(CONFIG_TEGRA_THERMAL_THROTTLE)        += tegra_thermal_throttle.o
+obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o

@@ -29,12 +29,6 @@ config TEGRA_POWERGATE
 	help
 	  Enable Tegra powergate support.
 
-config TEGRA_BOND_OUT
-	bool "Tegra bond out support"
-	default n
-	help
-	  Enable Tegra bond out support
-
 config TEGRA_BOOTLOADER_DEBUG
 	tristate "Creates sys-fs interface dumping registers read by bootloader"
 	default n

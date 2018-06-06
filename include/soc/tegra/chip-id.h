@@ -313,8 +313,6 @@ static inline bool tegra_platform_is_sim(void)
 	return tegra_platform_is_vdk();
 }
 
-bool tegra_bonded_out_dev(enum tegra_bondout_dev);
-
 extern void tegra_set_tegraid(u32 chipid, u32 major, u32 minor,
 	u32 pre_si_plat, u32 nlist, u32 patch, const char *priv);
 extern void tegra_get_tegraid_from_hw(void);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,6 +11,7 @@
  * more details.
  */
 #include <linux/module.h>
+#include <linux/version.h>
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/of.h>
@@ -84,24 +85,31 @@ static ssize_t versions_show(struct class *cls,
 
 static DEVICE_ATTR_RO(version);
 
-static struct class_attribute tegrafw_class_attrs[] = {
-	__ATTR(versions, S_IRUGO, versions_show, NULL),
-	__ATTR_NULL,
-};
-
 static struct attribute *tegrafw_attrs[] = {
 	&dev_attr_version.attr,
 	NULL,
 };
 
-static struct attribute_group tegrafw_attr_group = {
-	.attrs = tegrafw_attrs,
-};
+ATTRIBUTE_GROUPS(tegrafw);
 
-static const struct attribute_group *tegrafw_attr_groups[] = {
-	&tegrafw_attr_group,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+/*
+ * old kernels, deprecated
+ */
+static struct class_attribute tegrafw_class_attrs[] = {
+	__ATTR(versions, S_IRUGO, versions_show, NULL),
+	__ATTR_NULL,
+};
+#else
+static CLASS_ATTR_RO(versions);
+
+static struct attribute *tegrafw_class_attrs[] = {
+	&class_attr_versions.attr,
 	NULL,
 };
+
+ATTRIBUTE_GROUPS(tegrafw_class);
+#endif
 
 static void tegrafw_release(struct device *dev)
 {
@@ -113,7 +121,12 @@ static bool tegrafw_class_registered;
 static struct class tegrafw_class = {
 	.name = "tegra-firmware",
 	.owner = THIS_MODULE,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+	/* old kernels... */
 	.class_attrs = tegrafw_class_attrs,
+#else
+	.class_groups = tegrafw_class_groups,
+#endif
 };
 
 
@@ -175,7 +188,7 @@ struct device *tegrafw_register(const char *name,
 	fwdev->platform_data = tfw;
 	fwdev->release = tegrafw_release;
 	fwdev->class = &tegrafw_class;
-	fwdev->groups = tegrafw_attr_groups;
+	fwdev->groups = tegrafw_groups;
 
 	err = device_add(fwdev);
 	if (err < 0)

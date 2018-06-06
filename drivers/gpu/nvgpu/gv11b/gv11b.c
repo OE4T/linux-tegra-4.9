@@ -152,7 +152,6 @@ int gv11b_init_gpu_characteristics(struct gk20a *g)
 {
 	gk20a_init_gpu_characteristics(g);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SCG, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_RESCHEDULE_RUNLIST, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS, true);

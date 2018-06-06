@@ -68,8 +68,21 @@ struct nvhost_task_end {
 } __packed;
 
 struct nvhost_vpu_perf_counter {
+	/* Engine class ID */
+	u32 class_id;
+
+	/* Syncpoint ID */
+	u32 syncpt_id;
+
+	/* Threshold for task completion */
+	u32 syncpt_thresh;
+
+	/* Identifier for the R5/VPU algorithm executed */
 	u32 operation;
+
+	/* Algorithm specific identifying tag for the perf counter */
 	u32 tag;
+
 	u32 count;
 	u32 average;
 	u64 variance;
@@ -102,6 +115,20 @@ struct nvhost_task_fence {
 	u32 semaphore_value;
 } __packed;
 
+struct nvhost_pva_task_state {
+	/* Engine class ID */
+	u32 class_id;
+
+	/* Syncpoint ID */
+	u32 syncpt_id;
+
+	/* Threshold for task completion */
+	u32 syncpt_thresh;
+
+	/* Identifier for the R5/VPU algorithm executed */
+	u32 operation;
+} __packed;
+
 enum {
 	/* struct nvhost_task_submit */
 	NVHOST_TASK_SUBMIT = 0,
@@ -112,13 +139,25 @@ enum {
 	/* struct nvhost_task_end */
 	NVHOST_TASK_END = 2,
 
-	/* struct nvhost_vpu_perf_counter */
-	NVHOST_VPU_PERF_COUNTER = 3,
-
 	/* struct nvhost_task_fence */
-	NVHOST_TASK_FENCE = 4,
+	NVHOST_TASK_FENCE = 3,
 
-	NVHOST_NUM_EVENT_TYPES = 5
+	NVHOST_VPU_PERF_COUNTER_BEGIN = 4,
+	NVHOST_VPU_PERF_COUNTER_END = 5,
+
+	/* struct nvhost_pva_task_state */
+	NVHOST_PVA_QUEUE_BEGIN = 6,
+	NVHOST_PVA_QUEUE_END = 7,
+	NVHOST_PVA_PREPARE_BEGIN = 8,
+	NVHOST_PVA_PREPARE_END = 9,
+	NVHOST_PVA_VPU0_BEGIN = 10,
+	NVHOST_PVA_VPU0_END = 11,
+	NVHOST_PVA_VPU1_BEGIN = 12,
+	NVHOST_PVA_VPU1_END = 13,
+	NVHOST_PVA_POST_BEGIN = 14,
+	NVHOST_PVA_POST_END = 15,
+
+	NVHOST_NUM_EVENT_TYPES = 16
 };
 
 enum {

@@ -986,15 +986,19 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 }
 
 #ifdef CONFIG_EVENTLIB
-static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
-				      u32 operation,
-				      u32 tag,
-				      u32 count,
-				      u32 sum,
-				      u64 sum_squared,
-				      u32 min,
-				      u32 max,
-				      u64 timestamp)
+static void
+pva_eventlib_record_perf_counter(struct platform_device *pdev,
+				 u32 syncpt_id,
+				 u32 syncpt_thresh,
+				 u32 operation,
+				 u32 tag,
+				 u32 count,
+				 u32 sum,
+				 u64 sum_squared,
+				 u32 min,
+				 u32 max,
+				 u64 timestamp_begin,
+				 u64 timestamp_end)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_vpu_perf_counter perf_counter;
@@ -1002,6 +1006,9 @@ static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
 	if (!pdata->eventlib_id)
 		return;
 
+	perf_counter.class_id = pdata->class;
+	perf_counter.syncpt_id = syncpt_id;
+	perf_counter.syncpt_thresh = syncpt_thresh;
 	perf_counter.operation = operation;
 	perf_counter.tag = tag;
 	perf_counter.count = count;
@@ -1015,19 +1022,103 @@ static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
 	keventlib_write(pdata->eventlib_id,
 			&perf_counter,
 			sizeof(perf_counter),
-			NVHOST_VPU_PERF_COUNTER,
-			timestamp);
+			NVHOST_VPU_PERF_COUNTER_BEGIN,
+			timestamp_begin);
+
+	keventlib_write(pdata->eventlib_id,
+			&perf_counter,
+			sizeof(perf_counter),
+			NVHOST_VPU_PERF_COUNTER_END,
+			timestamp_end);
+}
+static void
+pva_eventlib_record_r5_states(struct platform_device *pdev,
+			      u32 syncpt_id,
+			      u32 syncpt_thresh,
+			      struct pva_task_statistics *stats,
+			      u32 operation)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_pva_task_state state;
+
+	if (!pdata->eventlib_id)
+		return;
+
+	state.class_id = pdata->class;
+	state.syncpt_id = syncpt_id;
+	state.syncpt_thresh = syncpt_thresh;
+	state.operation = operation;
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_QUEUE_BEGIN,
+			stats->queued_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_QUEUE_END,
+			stats->vpu_assigned_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_PREPARE_BEGIN,
+			stats->vpu_assigned_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_PREPARE_END,
+			stats->vpu_start_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			stats->vpu_assigned == 0 ? NVHOST_PVA_VPU0_BEGIN
+						 : NVHOST_PVA_VPU1_BEGIN,
+			stats->vpu_start_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			stats->vpu_assigned == 0 ? NVHOST_PVA_VPU0_END
+						 : NVHOST_PVA_VPU1_END,
+			stats->vpu_complete_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_POST_BEGIN,
+			stats->vpu_complete_time);
+
+	keventlib_write(pdata->eventlib_id,
+			&state,
+			sizeof(state),
+			NVHOST_PVA_POST_END,
+			stats->complete_time);
 }
 #else
-static void pva_eventlib_record_perf_counter(struct platform_device *pdev,
-				      u32 operation,
-				      u32 tag,
-				      u32 count,
-				      u32 average,
-				      u64 variance,
-				      u32 min,
-				      u32 max,
-				      u64 timestamp)
+static void
+pva_eventlib_record_perf_counter(struct platform_device *pdev,
+				 u32 syncpt_id,
+				 u32 syncpt_thresh,
+				 u32 operation,
+				 u32 tag,
+				 u32 count,
+				 u32 sum,
+				 u64 sum_squared,
+				 u32 min,
+				 u32 max,
+				 u64 timestamp_begin,
+				 u64 timestamp_end)
+{
+}
+static void
+pva_eventlib_record_r5_states(struct platform_device *pdev,
+			      struct pva_task_statistics *stats,
+			      u32 operation)
 {
 }
 #endif
@@ -1082,6 +1173,12 @@ static void pva_task_update(struct pva_submit_task *task)
 			stats->complete_time,
 			stats->vpu_assigned);
 
+	pva_eventlib_record_r5_states(pdev,
+			queue->syncpt_id,
+			task->syncpt_thresh,
+			stats, task->operation);
+
+
 	if (task->pva->vpu_perf_counters_enable) {
 		for (idx = 0; idx < PVA_TASK_VPU_NUM_PERF_COUNTERS; idx++) {
 			perf = &hw_task->vpu_perf_counters[idx];
@@ -1091,9 +1188,12 @@ static void pva_task_update(struct pva_submit_task *task)
 					perf->sum, perf->sum_squared,
 					perf->min, perf->max);
 				pva_eventlib_record_perf_counter(
-					pdev, task->operation, idx, perf->count,
+					pdev, queue->syncpt_id,
+					task->syncpt_thresh,
+					task->operation, idx, perf->count,
 					perf->sum, perf->sum_squared,
 					perf->min, perf->max,
+					stats->vpu_assigned_time,
 					stats->complete_time);
 			}
 		}

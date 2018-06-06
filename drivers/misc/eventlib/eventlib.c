@@ -45,7 +45,7 @@ struct eventlib_provider_info {
 	struct kobject *kobj;
 
 	struct bin_attribute attr;
-	struct kobj_attribute attr_schema;
+	struct bin_attribute attr_schema;
 
 	void *data;
 	size_t data_size;
@@ -145,18 +145,22 @@ sysfs_mmap(struct file *filp, struct kobject *kobj,
 }
 
 static ssize_t
-sysfs_schema_show(struct kobject *kobj,
-		  struct kobj_attribute *attr, char *buf)
+sysfs_schema_read(struct file *filp, struct kobject *kobj,
+		  struct bin_attribute *attr,
+		  char *buf, loff_t off, size_t len)
 {
-	int ret = 0;
 	struct eventlib_provider_info *info =
 		container_of(attr, struct eventlib_provider_info, attr_schema);
 
-	if (info->schema && info->schema_size > 0)
-		ret = snprintf(buf, info->schema_size + 1, "%s\n",
-			       info->schema);
+	if (info->schema == NULL)
+		return -ENOENT;
 
-	return ret;
+	if (len > info->schema_size - off)
+		len = info->schema_size - off;
+
+	memcpy(buf, info->schema + off, len);
+
+	return len;
 }
 
 static int
@@ -189,20 +193,21 @@ create_sysfs_entry(struct eventlib_provider_info *info,
 	}
 
 	if (info->schema) {
-		struct kobj_attribute *attr_schema = &info->attr_schema;
+		struct bin_attribute *attr_schema = &info->attr_schema;
 
 		sysfs_bin_attr_init(attr_schema);
 
 		attr_schema->attr.name = EVENTLIB_SYSFS_SCHEMA_FILE_NAME;
 		attr_schema->attr.mode = 0444;
-		attr_schema->show = sysfs_schema_show;
-		attr_schema->store = NULL;
+		attr_schema->mmap = NULL;
+		attr_schema->read = sysfs_schema_read;
+		attr_schema->write = NULL;
+		attr_schema->size = info->schema_size;
 
-		ret = sysfs_create_file(info->kobj, &attr_schema->attr);
+		ret = sysfs_create_bin_file(info->kobj, attr_schema);
 		if (ret) {
 			pr_err("Unable to create sysfs file: %s\n",
 			       attr_schema->attr.name);
-			sysfs_remove_file(info->kobj, &attr_schema->attr);
 			kobject_put(info->kobj);
 			return ret;
 		}
@@ -215,7 +220,7 @@ static void remove_sysfs_entry(struct eventlib_provider_info *info)
 {
 	sysfs_remove_bin_file(info->kobj, &info->attr);
 	if (info->schema)
-		sysfs_remove_file(info->kobj, &info->attr_schema.attr);
+		sysfs_remove_bin_file(info->kobj, &info->attr_schema);
 
 	kobject_put(info->kobj);
 
@@ -269,14 +274,13 @@ provider_init(struct eventlib_provider_info *info,
 	info->data_size = size;
 
 	if (schema && schema_size > 0) {
-		info->schema_size = schema_size + 1;
+		info->schema_size = schema_size;
 
 		info->schema = kmalloc(info->schema_size, GFP_KERNEL);
 		if (!info->schema)
 			return -ENOMEM;
 
 		memcpy(info->schema, schema, schema_size);
-		info->schema[schema_size] = '\0';
 	} else {
 		info->schema = NULL;
 		info->schema_size = 0;

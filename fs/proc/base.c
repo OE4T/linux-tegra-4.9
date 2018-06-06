@@ -268,11 +268,11 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 		p = arg_start + *pos;
 		len = len1 - *pos;
 		while (count > 0 && len > 0) {
-			unsigned int temp_count;
+			unsigned int _count;
 			int nr_read;
 
-			temp_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, temp_count, 0);
+			_count = min3(count, len, PAGE_SIZE);
+			nr_read = access_remote_vm(mm, p, page, _count, 0);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)
@@ -302,12 +302,12 @@ static ssize_t proc_pid_cmdline_read(struct file *file, char __user *buf,
 		p = arg_start + *pos;
 		len = len1 - *pos;
 		while (count > 0 && len > 0) {
-			unsigned int temp_count, l;
+			unsigned int _count, l;
 			int nr_read;
 			bool final;
 
-			temp_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, temp_count, 0);
+			_count = min3(count, len, PAGE_SIZE);
+			nr_read = access_remote_vm(mm, p, page, _count, 0);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)
@@ -351,12 +351,12 @@ skip_argv:
 			len = len2;
 		}
 		while (count > 0 && len > 0) {
-			unsigned int temp_count, l;
+			unsigned int _count, l;
 			int nr_read;
 			bool final;
 
-			temp_count = min3(count, len, PAGE_SIZE);
-			nr_read = access_remote_vm(mm, p, page, temp_count, 0);
+			_count = min3(count, len, PAGE_SIZE);
+			nr_read = access_remote_vm(mm, p, page, _count, 0);
 			if (nr_read < 0)
 				rv = nr_read;
 			if (nr_read <= 0)

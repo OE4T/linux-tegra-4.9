@@ -26,36 +26,63 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_powergate.h>
+#include <linux/slab.h>
 #include "bpmp.h"
 
 static void *hv_virt_base;
 static struct device *device;
-char firmware_tag[32];
+char firmware_tag[sizeof(struct mrq_query_fw_tag_response)];
 
 static int bpmp_get_fwtag(void)
 {
-	const size_t sz = sizeof(firmware_tag) + 1;
-	dma_addr_t phys;
-	char *virt;
+	const size_t sz = sizeof(struct mrq_query_fw_tag_response);
+	struct mrq_query_abi_request abi_req = { .mrq = MRQ_QUERY_FW_TAG };
+	struct mrq_query_abi_response abi_resp;
 	int r;
+	char *virt;
+	dma_addr_t phys;
 
-	virt = tegra_bpmp_alloc_coherent(sz, &phys, GFP_KERNEL);
-	if (!virt)
-		return -ENOMEM;
-
-	r = tegra_bpmp_send_receive(MRQ_QUERY_TAG,
-			&phys, sizeof(phys), NULL, 0);
-	if (r)
+	r = tegra_bpmp_send_receive(MRQ_QUERY_ABI, &abi_req,
+		 sizeof(abi_req), &abi_resp, sizeof(abi_resp));
+	if (r) {
+		dev_err(device, "ABI query failed! %d\n", r);
 		goto exit;
+	}
+	/*
+	 * If MRQ_QUERY_FW_TAG is not supported, read tag using
+	 * MRQ_QUERY_TAG
+	 */
+	if (abi_resp.status) {
+		virt = tegra_bpmp_alloc_coherent(sz + 1, &phys,
+							GFP_KERNEL);
+		if (virt)
+			r = tegra_bpmp_send_receive(MRQ_QUERY_TAG,
+				&phys, sizeof(phys), NULL, 0);
+	} else {
+		virt = kmalloc(sz + 1, GFP_KERNEL);
+		if (virt)
+			r = tegra_bpmp_send_receive(MRQ_QUERY_FW_TAG,
+				NULL, 0, virt, sz);
+	}
+	if (!virt) {
+		r = -ENOMEM;
+		goto exit;
+	}
 
-	memcpy(firmware_tag, virt, sz - 1);
+	if (!r) {
+		/* Copy to global buffer */
+		memcpy(firmware_tag, virt, sz);
+		virt[sz] = '\0';
+		dev_info(device, "firmware tag is %s\n", virt);
+	} else {
+		dev_err(device, "TAG query failed! %d\n", r);
+	}
 
-	virt[sz - 1] = 0;
-	dev_info(device, "firmware tag is %s\n", virt);
-
+	if (abi_resp.status)
+		tegra_bpmp_free_coherent(sz + 1, virt, phys);
+	else
+		kfree(virt);
 exit:
-	tegra_bpmp_free_coherent(sz, virt, phys);
-
 	return r;
 }
 

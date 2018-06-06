@@ -81,7 +81,7 @@ extern const struct mail_ops t186_native_mail_ops;
 extern const struct mail_ops t186_hv_mail_ops;
 
 extern struct channel_data channel_area[NR_MAX_CHANNELS];
-extern char firmware_tag[32];
+extern char firmware_tag[sizeof(struct mrq_query_fw_tag_response)];
 
 struct dentry *bpmp_init_debug(struct platform_device *pdev);
 int bpmp_init_cpuidle_debug(struct dentry *root);

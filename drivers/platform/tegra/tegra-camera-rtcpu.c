@@ -775,13 +775,14 @@ int tegra_camrtc_prefix_command(struct device *dev,
 }
 EXPORT_SYMBOL(tegra_camrtc_prefix_command);
 
-static int tegra_camrtc_poweron(struct device *dev)
+static int tegra_camrtc_poweron(struct device *dev, bool full_speed)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	int ret;
 
 	if (rtcpu->powered) {
-		camrtc_clk_group_adjust_fast(rtcpu->clocks);
+		if (full_speed)
+			camrtc_clk_group_adjust_fast(rtcpu->clocks);
 		return 0;
 	}
 
@@ -797,7 +798,8 @@ static int tegra_camrtc_poweron(struct device *dev)
 		return ret;
 	}
 
-	camrtc_clk_group_adjust_fast(rtcpu->clocks);
+	if (full_speed)
+		camrtc_clk_group_adjust_fast(rtcpu->clocks);
 	camrtc_device_group_reset(rtcpu->camera_devices);
 
 	ret = tegra_camrtc_deassert_resets(dev);
@@ -895,7 +897,7 @@ static int tegra_camrtc_boot(struct device *dev)
 {
 	int ret;
 
-	ret = tegra_camrtc_poweron(dev);
+	ret = tegra_camrtc_poweron(dev, true);
 	if (ret)
 		return ret;
 
@@ -1009,7 +1011,7 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 	if (ret < 0)
 		return ret;
 
-	ret = tegra_camrtc_poweron(dev);
+	ret = tegra_camrtc_poweron(dev, true);
 	if (ret)
 		goto error;
 
@@ -1329,6 +1331,11 @@ static int tegra_camrtc_halt(struct device *dev)
 	return 0;
 }
 
+static int tegra_camrtc_resume(struct device *dev)
+{
+	return tegra_camrtc_poweron(dev, false);
+}
+
 static void tegra_cam_rtcpu_shutdown(struct platform_device *pdev)
 {
 	tegra_camrtc_halt(&pdev->dev);
@@ -1350,7 +1357,7 @@ MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 
 static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.suspend = tegra_camrtc_halt,
-	.resume = tegra_camrtc_poweron,
+	.resume = tegra_camrtc_resume,
 	.runtime_suspend = tegra_cam_rtcpu_runtime_suspend,
 	.runtime_resume = tegra_cam_rtcpu_runtime_resume,
 };

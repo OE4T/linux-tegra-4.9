@@ -19,9 +19,11 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/version.h>
+#include <sound/jack.h>
 #include <sound/soc.h>
 
 #include "tegra_asoc_machine_alt.h"
+#include "tegra_asoc_utils_alt.h"
 
 #define MAX_STR_SIZE		20
 
@@ -3679,13 +3681,13 @@ static const struct soc_enum tegra_machine_codec_master_mode =
 
 static int tegra_machine_add_ctl(struct snd_soc_card *card,
 				 struct snd_kcontrol_new *knew,
-				 struct snd_soc_pcm_runtime *rtd,
+				 void *private_data,
 				 const unsigned char *name)
 {
 	struct snd_kcontrol *kctl;
 	int ret;
 
-	kctl = snd_ctl_new1(knew, rtd);
+	kctl = snd_ctl_new1(knew, private_data);
 	if (!kctl)
 		return -ENOMEM;
 
@@ -3776,6 +3778,67 @@ int tegra_machine_add_i2s_codec_controls(struct snd_soc_card *card,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_add_i2s_codec_controls);
+
+/*
+ * The order of the following definitions should align with
+ * the 'snd_jack_types' enum as defined in include/sound/jack.h.
+ */
+static const char * const tegra_machine_jack_state_text[] = {
+	"None",
+	"HP",
+	"MIC",
+	"HS",
+};
+
+static const struct soc_enum tegra_machine_jack_state =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_jack_state_text),
+		tegra_machine_jack_state_text);
+
+static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_jack *jack = kcontrol->private_data;
+
+	ucontrol->value.integer.value[0] = jack->status;
+
+	return 0;
+}
+
+static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_jack *jack = kcontrol->private_data;
+
+	snd_soc_jack_report(jack, ucontrol->value.integer.value[0],
+			    SND_JACK_HEADSET);
+
+	return 0;
+}
+
+int tegra_machine_add_codec_jack_control(struct snd_soc_card *card,
+					 struct snd_soc_pcm_runtime *rtd,
+					 struct snd_soc_jack *jack)
+{
+	char name[SNDRV_CTL_ELEM_ID_NAME_MAXLEN];
+	struct snd_kcontrol_new knew = {
+		.iface		= SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name		= name,
+		.info		= snd_soc_info_enum_double,
+		.index		= 0,
+		.get		= tegra_machine_codec_get_jack_state,
+		.put		= tegra_machine_codec_put_jack_state,
+		.private_value	= (unsigned long)&tegra_machine_jack_state,
+	};
+
+	if (rtd->codec->component.name_prefix)
+		snprintf(name, sizeof(name), "%s Jack-state",
+			 rtd->codec->component.name_prefix);
+	else
+		snprintf(name, sizeof(name), "Jack-state");
+
+	return tegra_machine_add_ctl(card, &knew, jack, name);
+}
+EXPORT_SYMBOL_GPL(tegra_machine_add_codec_jack_control);
 
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");

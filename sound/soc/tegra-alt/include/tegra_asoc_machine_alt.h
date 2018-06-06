@@ -439,5 +439,8 @@ unsigned int tegra_machine_get_tx_mask_t18x(
 void tegra_machine_remove_adsp_links_t18x(void);
 int tegra_machine_add_i2s_codec_controls(struct snd_soc_card *card,
 					 unsigned int num_dai_links);
+int tegra_machine_add_codec_jack_control(struct snd_soc_card *card,
+					 struct snd_soc_pcm_runtime *rtd,
+					 struct snd_soc_jack *jack);
 
 #endif

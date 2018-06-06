@@ -86,9 +86,3 @@ config TEGRA_FIRMWARES_INVENTORY
 	help
 	  Register version readers for firmwares
 
-config TEGRA_HV_XHCI_DEBUG
-	bool "Enable Tegra Hypervisor XHCI Server Debug"
-	depends on TEGRA_HV_MANAGER
-	default n
-	help
-	  Enable Tegra XHCI Server debugging when runs in virtualization.

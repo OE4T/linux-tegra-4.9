@@ -3,7 +3,7 @@
  *
  * adsp dynamic frequency scaling
  *
- * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,7 +21,12 @@
 #include <linux/debugfs.h>
 #include <linux/clk/tegra.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 #include <asm/cputime.h>
+#else
+#include <linux/sched/cputime.h>
+#endif
 #include <linux/slab.h>
 
 #include "dev.h"
@@ -607,7 +612,7 @@ static void dump_stats_table(struct seq_file *s, struct adsp_freq_stats *fstats)
 	for (i = 0; i < fstats->state_num; i++) {
 		seq_printf(s, "%lu %llu\n",
 			(long unsigned int)(adsp_cpu_freq_table[i] / 1000),
-			cputime64_to_clock_t(fstats->time_in_state[i]));
+			nsec_to_clock_t(fstats->time_in_state[i]));
 	}
 	mutex_unlock(&policy_mutex);
 }

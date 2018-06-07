@@ -3,7 +3,7 @@
  *
  * adsp mailbox console driver
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,7 @@
 #include <linux/tegra_nvadsp.h>
 #include <linux/platform_device.h>
 
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 
 #include "dev.h"
 #include "adsp_console_ioctl.h"

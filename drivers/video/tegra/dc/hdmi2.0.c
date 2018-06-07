@@ -2054,7 +2054,7 @@ static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 		u32 temp = 0;
 		temp = tegra_sor_readl(hdmi->sor,
 			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
-		temp = (temp >> 12) & 0x3;
+		temp = (temp >> 13) & 0x3;
 		switch (temp) {
 		case HDMI_AVI_RGB:
 			return HDMI_AVI_RGB;
@@ -2098,6 +2098,28 @@ static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 #if 0
 	u32 vmode = hdmi->dc->mode.vmode;
 
+	/*
+	 * For seamless HDMI, read Q0/Q1 from bootloader
+	 * set AVI Infoframe packet contents of the HDMI SPEC
+	 */
+	if (hdmi->dc->initialized) {
+		u32 temp = 0;
+
+		temp = tegra_sor_readl(hdmi->sor,
+			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_LOW);
+		temp = (temp >> 26) & 0x3;
+		switch (temp) {
+		case HDMI_AVI_RGB_QUANT_DEFAULT:
+		case HDMI_AVI_RGB_QUANT_LIMITED:
+		case HDMI_AVI_RGB_QUANT_FULL:
+			return temp;
+		default:
+			dev_warn(&hdmi->dc->ndev->dev,
+				"hdmi: BL didn't set quantization range\n");
+			return HDMI_AVI_RGB_QUANT_DEFAULT;
+		}
+	}
+
 	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_RGB_QUANT_SELECTABLE)
 		return vmode & FB_VMODE_LIMITED_RANGE ?
 			HDMI_AVI_RGB_QUANT_LIMITED : HDMI_AVI_RGB_QUANT_FULL;
@@ -2118,6 +2140,27 @@ static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
 #if 0
 
 	u32 vmode = hdmi->dc->mode.vmode;
+
+	/*
+	 * For seamless HDMI, read YQ1/YQ1 from bootloader
+	 * set AVI Infoframe packet contents of the HDMI SPEC
+	 */
+	if (hdmi->dc->initialized) {
+		u32 temp = 0;
+
+		temp = tegra_sor_readl(hdmi->sor,
+			NV_SOR_HDMI_AVI_INFOFRAME_SUBPACK0_HIGH);
+		temp = (temp >> 14) & 0x3;
+		switch (temp) {
+		case HDMI_AVI_YCC_QUANT_LIMITED:
+		case HDMI_AVI_YCC_QUANT_FULL:
+			return temp;
+		default:
+			dev_warn(&hdmi->dc->ndev->dev,
+				"hdmi: BL didn't set ycc quantization range\n");
+			return HDMI_AVI_YCC_QUANT_NONE;
+		}
+	}
 
 	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_YUV_QUANT_SELECTABLE)
 		return vmode & FB_VMODE_LIMITED_RANGE ?

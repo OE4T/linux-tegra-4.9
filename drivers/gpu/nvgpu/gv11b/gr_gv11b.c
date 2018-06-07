@@ -3263,24 +3263,22 @@ int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	return err;
 }
 
-int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc,
+int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 				struct channel_gk20a *fault_ch)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;
-	u32 offset, sm, sm_per_tpc;
-	u32 gpc_tpc_offset;
+	u32 offset, sm_per_tpc, tpc_id;
+	u32 gpc_offset, gpc_tpc_offset;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	sm_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
-	gpc_tpc_offset = gk20a_gr_gpc_offset(g, gpc) +
-				 gk20a_gr_tpc_offset(g, tpc);
+	gpc_offset = gk20a_gr_gpc_offset(g, gpc);
+	gpc_tpc_offset = gpc_offset + gk20a_gr_tpc_offset(g, tpc);
 
-	sm_id = gr_gpc0_tpc0_sm_cfg_tpc_id_v(gk20a_readl(g,
-			gr_gpc0_tpc0_sm_cfg_r() + gpc_tpc_offset));
-
-	sm = sm_id % sm_per_tpc;
+	tpc_id = gk20a_readl(g, gr_gpc0_gpm_pd_sm_id_r(tpc) + gpc_offset);
+	sm_id = tpc_id * sm_per_tpc + sm;
 
 	offset = gpc_tpc_offset + gv11b_gr_sm_offset(g, sm);
 
@@ -3301,7 +3299,7 @@ int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc,
 
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
-	return 0;
+	return sm_id;
 }
 
 void gv11b_gr_set_hww_esr_report_mask(struct gk20a *g)

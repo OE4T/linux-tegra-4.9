@@ -368,8 +368,8 @@ struct gpu_ops {
 		void (*enable_exceptions)(struct gk20a *g);
 		void (*create_gr_sysfs)(struct gk20a *g);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
-		int (*record_sm_error_state)(struct gk20a *g, u32 gpc,
-				u32 tpc, struct channel_gk20a *fault_ch);
+		int (*record_sm_error_state)(struct gk20a *g, u32 gpc, u32 tpc,
+				u32 sm, struct channel_gk20a *fault_ch);
 		int (*update_sm_error_state)(struct gk20a *g,
 				struct channel_gk20a *ch, u32 sm_id,
 				struct nvgpu_gr_sm_error_state *sm_error_state);

@@ -114,11 +114,43 @@ struct platform_device *nvhost_device_list_match_by_id(u32 id)
 	return NULL;
 }
 
+void nvhost_client_devfs_name_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_device_data *other_pdata;
+	struct list_head *pos;
+	struct nvhost_device_list *nlist;
+	char *name_family = pdata->devfs_name_family;
+	int cur_max_id = -1;
+
+	if (!name_family)
+		return;
+
+	list_for_each(pos, &ndev_head.list) {
+		nlist = list_entry(pos, struct nvhost_device_list, list);
+
+		other_pdata = platform_get_drvdata(nlist->pdev);
+		if (other_pdata->devfs_name_family &&
+		    strcmp(name_family, other_pdata->devfs_name_family) == 0 &&
+		    other_pdata->id > cur_max_id) {
+			cur_max_id = other_pdata->id;
+		}
+	}
+
+	pdata->id = cur_max_id + 1;
+	pdata->devfs_name = kasprintf(GFP_KERNEL, "%s%d",
+				      name_family, pdata->id);
+}
+
 /* Removes a device from the host1x device list */
 void nvhost_device_list_remove(struct platform_device *pdev)
 {
 	struct list_head *pos;
 	struct nvhost_device_list *nlist;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (pdata && pdata->devfs_name_family)
+		kfree(pdata->devfs_name);
 
 	list_for_each(pos, &ndev_head.list) {
 		nlist = list_entry(pos, struct nvhost_device_list, list);

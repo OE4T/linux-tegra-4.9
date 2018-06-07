@@ -1743,6 +1743,8 @@ int nvhost_client_device_init(struct platform_device *dev)
 	mutex_init(&pdata->userctx_list_lock);
 	INIT_LIST_HEAD(&pdata->userctx_list);
 
+	nvhost_client_devfs_name_init(dev);
+
 	/* Create debugfs directory for the device */
 	nvhost_device_debug_init(dev);
 

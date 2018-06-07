@@ -185,6 +185,7 @@ struct nvhost_device_data {
 	bool		poweron_reset;	/* Reset the engine before powerup */
 	bool		virtual_dev;	/* True if virtualized device */
 	char		*devfs_name;	/* Name in devfs */
+	char		*devfs_name_family; /* Core of devfs name */
 
 	/* Support aborting the channel with close(channel_fd) */
 	bool		support_abort_on_close;

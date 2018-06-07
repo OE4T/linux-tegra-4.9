@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/dev.h
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -30,6 +30,7 @@ void nvhost_device_list_for_all(void *data,
 	int locked_id);
 struct platform_device *nvhost_device_list_match_by_id(u32 id);
 void nvhost_device_list_remove(struct platform_device *pdev);
+void nvhost_client_devfs_name_init(struct platform_device *dev);
 
 
 #ifdef CONFIG_DEBUG_FS

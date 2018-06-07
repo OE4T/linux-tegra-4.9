@@ -581,7 +581,7 @@ struct nvhost_device_data t19_pva1_info = {
 		{"vps1", UINT_MAX,},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
-	.devfs_name		= "pva1",
+	.devfs_name_family	= "pva",
 	.class			= NV_PVA1_CLASS_ID,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,
@@ -608,7 +608,7 @@ struct nvhost_device_data t19_pva0_info = {
 		{"vps1", UINT_MAX,},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
-	.devfs_name		= "pva0",
+	.devfs_name_family	= "pva",
 	.class			= NV_PVA0_CLASS_ID,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,
@@ -629,7 +629,7 @@ struct nvhost_device_data t19_pva0_info = {
 
 #if defined(CONFIG_TEGRA_GRHOST_NVDLA)
 struct nvhost_device_data t19_nvdla0_info = {
-	.devfs_name		= "nvdla0",
+	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA0_CLASS_ID,
 	.clocks			= {
 		{"nvdla0", UINT_MAX},
@@ -662,7 +662,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
-	.devfs_name		= "nvdla1",
+	.devfs_name_family	= "nvdla",
 	.class			= NV_DLA1_CLASS_ID,
 	.clocks			= {
 		{"nvdla1", UINT_MAX},

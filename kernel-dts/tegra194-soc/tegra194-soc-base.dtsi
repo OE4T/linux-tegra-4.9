@@ -1892,7 +1892,6 @@
 		dma-coherent;
 
 		status = "disabled";
-		charger-detector = <&tegra_usb_cd>;
 	};
 
 	tegra_xhci: xhci@3610000 {

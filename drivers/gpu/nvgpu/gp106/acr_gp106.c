@@ -38,6 +38,9 @@
 #include "gv100/acr_gv100.h"
 
 #include "sec2_gp106.h"
+#if defined(CONFIG_TEGRA_GPU_NEXT)
+#include "nvgpu_gpuid_next.h"
+#endif
 
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
@@ -206,6 +209,18 @@ int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GV100_FECS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
+#if defined(CONFIG_TEGRA_GPU_NEXT)
+		case NVGPU_GPUID_NEXT:
+			fecs_sig = nvgpu_request_firmware(g,
+					NVGPU_GPU_NEXT_FECS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
+			break;
+		case NVGPU_GPUID_NEXT_2:
+			fecs_sig = nvgpu_request_firmware(g,
+					NVGPU_GPU_NEXT_FECS_UCODE_SIG_2,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
+			break;
+#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
@@ -302,6 +317,18 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					GV100_GPCCS_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
+#if defined(CONFIG_TEGRA_GPU_NEXT)
+		case NVGPU_GPUID_NEXT:
+			gpccs_sig = nvgpu_request_firmware(g,
+					NVGPU_GPU_NEXT_GPCCS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
+			break;
+		case NVGPU_GPUID_NEXT_2:
+			gpccs_sig = nvgpu_request_firmware(g,
+					NVGPU_GPU_NEXT_GPCCS_UCODE_SIG_2,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
+			break;
+#endif
 		default:
 			nvgpu_err(g, "no support for GPUID %x", ver);
 	}

@@ -124,8 +124,9 @@ int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 	 *  this means we have to wait for it to finish before beginning
 	 *  subsequent transmission.
 	 */
-	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1, HZ);
-	if (ret)
+	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1,
+			msecs_to_jiffies(1000));
+	if (ret <= 0)
 		return ret;
 
 	mode = TEGRA_CEC_LADDR_MODE(buf[0]) << TEGRA_CEC_TX_REG_ADDR_MODE_SHIFT;
@@ -145,8 +146,9 @@ int tegra_cec_native_write_l(struct tegra_cec *cec, const u8 *buf, size_t cnt)
 	writel(mask | TEGRA_CEC_INT_MASK_TX_REGISTER_EMPTY,
 		cec->cec_base + TEGRA_CEC_INT_MASK);
 
-	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1, HZ);
-	if (!ret)
+	ret = wait_event_interruptible_timeout(cec->tx_waitq, cec->tx_wake == 1,
+			msecs_to_jiffies(1000));
+	if (ret > 0)
 		ret = cec->tx_error;
 
 	return ret;

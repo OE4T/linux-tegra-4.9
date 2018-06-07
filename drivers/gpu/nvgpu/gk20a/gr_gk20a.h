@@ -79,7 +79,7 @@ enum /* global_ctx_buffer */ {
 	ATTRIBUTE_VPR		= 5,
 	GOLDEN_CTX		= 6,
 	PRIV_ACCESS_MAP		= 7,
-	NR_GLOBAL_CTX_BUF	= 8
+	NR_GLOBAL_CTX_BUF	= 9
 };
 
 /* either ATTRIBUTE or ATTRIBUTE_VPR maps to ATTRIBUTE_VA */
@@ -89,7 +89,7 @@ enum  /*global_ctx_buffer_va */ {
 	ATTRIBUTE_VA		= 2,
 	GOLDEN_CTX_VA		= 3,
 	PRIV_ACCESS_MAP_VA	= 4,
-	NR_GLOBAL_CTX_BUF_VA	= 5
+	NR_GLOBAL_CTX_BUF_VA	= 6
 };
 
 enum {

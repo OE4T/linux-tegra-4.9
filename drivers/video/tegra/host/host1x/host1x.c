@@ -355,113 +355,6 @@ static int nvhost_ioctl_ctrl_module_mutex(struct nvhost_ctrl_userctx *ctx,
 	return err;
 }
 
-static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
-	struct nvhost_ctrl_module_regrdwr_args *args)
-{
-	u32 num_offsets = args->num_offsets;
-	u32 __user *offsets = (u32 __user *)(uintptr_t)args->offsets;
-	u32 __user *values = (u32 __user *)(uintptr_t)args->values;
-	u32 *vals;
-	u32 count;
-	int err;
-
-	struct platform_device *ndev;
-	trace_nvhost_ioctl_ctrl_module_regrdwr(args->id,
-			args->num_offsets, args->write);
-
-	/* Check that there is something to read */
-	if (num_offsets == 0) {
-		nvhost_err(&ctx->dev->dev->dev,
-			   "invalid regrdwr parameters: num_offsets=0");
-		return -EINVAL;
-	}
-
-	ndev = nvhost_device_list_match_by_id(args->id);
-	if (!ndev) {
-		nvhost_err(&ctx->dev->dev->dev,
-			   "could not find the device with id 0x%x",
-			   args->id);
-		return -ENODEV;
-	}
-
-	err = validate_max_size(ndev, args->block_size);
-	if (err)
-		return err;
-
-	count = args->block_size >> 2;
-
-	if (nvhost_dev_is_virtual(ndev))
-		return vhost_rdwr_module_regs(ndev, num_offsets,
-				args->block_size, offsets, values, args->write);
-
-	vals = kmalloc(args->block_size, GFP_KERNEL);
-	if (!vals) {
-		vals = vmalloc(args->block_size);
-		if (!vals) {
-			nvhost_err(&ndev->dev, "could not allocate vals");
-			return -ENOMEM;
-		}
-	}
-
-	if (args->write) {
-		while (num_offsets--) {
-			u32 offs;
-
-			if (copy_from_user((char *)vals,
-					(char __user *)values,
-					args->block_size)) {
-				nvhost_err(&ndev->dev,
-					   "failed to copy from user values=%px",
-					   (char __user *)values);
-				kvfree(vals);
-				return -EFAULT;
-			}
-			if (get_user(offs, offsets)) {
-				nvhost_err(&ndev->dev,
-					   "failed to copy offsets from userspace");
-				kvfree(vals);
-				return -EFAULT;
-			}
-			err = nvhost_write_module_regs(ndev,
-					offs, count, vals);
-			if (err) {
-				kvfree(vals);
-				return err;
-			}
-			offsets++;
-			values += count;
-		}
-	} else {
-		while (num_offsets--) {
-			u32 offs;
-			if (get_user(offs, offsets)) {
-				nvhost_err(&ndev->dev, "failed to get user");
-				kvfree(vals);
-				return -EFAULT;
-			}
-			err = nvhost_read_module_regs(ndev,
-					offs, count, vals);
-			if (err) {
-				kvfree(vals);
-				return err;
-			}
-			if (copy_to_user((void __user *)values,
-					(void const *)vals,
-					args->block_size)) {
-				nvhost_err(&ndev->dev,
-					   "failed to copy to user");
-				kvfree(vals);
-				return -EFAULT;
-			}
-			offsets++;
-			values += count;
-		}
-	}
-
-	kvfree(vals);
-	return 0;
-}
-
 static int nvhost_ioctl_ctrl_get_version(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_get_param_args *args)
 {
@@ -728,23 +621,6 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_MODULE_MUTEX:
 		err = nvhost_ioctl_ctrl_module_mutex(priv, (void *)buf);
-		break;
-	case NVHOST32_IOCTL_CTRL_MODULE_REGRDWR:
-	{
-		struct nvhost32_ctrl_module_regrdwr_args *args32 =
-			(struct nvhost32_ctrl_module_regrdwr_args *)buf;
-		struct nvhost_ctrl_module_regrdwr_args args;
-		args.id = args32->id;
-		args.num_offsets = args32->num_offsets;
-		args.block_size = args32->block_size;
-		args.offsets = args32->offsets;
-		args.values = args32->values;
-		args.write = args32->write;
-		err = nvhost_ioctl_ctrl_module_regrdwr(priv, &args);
-		break;
-	}
-	case NVHOST_IOCTL_CTRL_MODULE_REGRDWR:
-		err = nvhost_ioctl_ctrl_module_regrdwr(priv, (void *)buf);
 		break;
 	case NVHOST_IOCTL_CTRL_SYNCPT_WAITEX:
 		err = nvhost_ioctl_ctrl_syncpt_waitex(priv, (void *)buf);

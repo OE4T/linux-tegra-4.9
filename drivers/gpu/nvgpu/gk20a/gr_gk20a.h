@@ -843,4 +843,9 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 num_fbpas,
 	u32 *priv_addr_table, u32 *t);
+
+void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,
+	struct gr_ctx_buffer_desc *desc);
+int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
+	struct gr_ctx_buffer_desc *desc, size_t size);
 #endif /*__GR_GK20A_H__*/

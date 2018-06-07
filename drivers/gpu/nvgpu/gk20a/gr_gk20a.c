@@ -40,6 +40,7 @@
 #include <nvgpu/error_notifier.h>
 
 #include "gk20a.h"
+#include "gr_gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
@@ -73,14 +74,6 @@
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
 
-/* global ctx buffer */
-static int  gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g);
-static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g);
-static int  gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
-					    struct channel_gk20a *c);
-static void gr_gk20a_unmap_global_ctx_buffers(struct gk20a *g,
-					      struct vm_gk20a *vm,
-					      struct nvgpu_gr_ctx *gr_ctx);
 static void gr_gk20a_free_channel_pm_ctx(struct gk20a *g,
 					 struct vm_gk20a *vm,
 					 struct nvgpu_gr_ctx *gr_ctx);
@@ -1535,7 +1528,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
 		gr_fe_go_idle_timeout_count_disabled_f());
 
-	err = gr_gk20a_commit_global_ctx_buffers(g, c, false);
+	err = g->ops.gr.commit_global_ctx_buffers(g, c, false);
 	if (err)
 		goto clean_up;
 
@@ -2558,7 +2551,7 @@ static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
 	nvgpu_log_fn(g, "done");
 }
 
-static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
+int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int attr_buffer_size, err;
@@ -2679,8 +2672,8 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct gk20a *g,
 	gr_ctx->global_ctx_buffer_mapped = false;
 }
 
-static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
-					struct channel_gk20a *c)
+int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
+				struct channel_gk20a *c)
 {
 	struct tsg_gk20a *tsg;
 	struct vm_gk20a *ch_vm = c->vm;
@@ -3004,13 +2997,13 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		}
 
 		/* map global buffer to channel gpu_va and commit */
-		err = gr_gk20a_map_global_ctx_buffers(g, c);
+		err = g->ops.gr.map_global_ctx_buffers(g, c);
 		if (err) {
 			nvgpu_err(g,
 				"fail to map global ctx buffer");
 			goto out;
 		}
-		gr_gk20a_commit_global_ctx_buffers(g, c, true);
+		g->ops.gr.commit_global_ctx_buffers(g, c, true);
 
 		/* commit gr ctx buffer */
 		err = g->ops.gr.commit_inst(c, gr_ctx->mem.gpu_va);
@@ -4877,7 +4870,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	err = gr_gk20a_alloc_global_ctx_buffers(g);
+	err = g->ops.gr.alloc_global_ctx_buffers(g);
 	if (err)
 		goto clean_up;
 

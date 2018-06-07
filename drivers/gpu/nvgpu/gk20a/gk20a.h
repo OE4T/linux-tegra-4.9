@@ -476,6 +476,11 @@ struct gpu_ops {
 					u32 *priv_addr_table_index);
 		u32 (*fecs_ctxsw_mailbox_size)(void);
 		int (*init_sw_bundle64)(struct gk20a *g);
+		int (*alloc_global_ctx_buffers)(struct gk20a *g);
+		int (*map_global_ctx_buffers)(struct gk20a *g,
+			struct channel_gk20a *c);
+		int (*commit_global_ctx_buffers)(struct gk20a *g,
+			struct channel_gk20a *c, bool patch);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -806,8 +806,13 @@ void gk20a_gr_init_ctxsw_hdr_data(struct gk20a *g,
 u32 gr_gk20a_get_patch_slots(struct gk20a *g);
 int gk20a_gr_handle_notify_pending(struct gk20a *g,
 				struct gr_gk20a_isr_data *isr_data);
+
+int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g);
+int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
+				struct channel_gk20a *c);
 int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 			struct channel_gk20a *c, bool patch);
+
 int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c);
 u32 gk20a_init_sw_bundle(struct gk20a *g);

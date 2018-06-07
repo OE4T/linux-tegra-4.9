@@ -267,6 +267,9 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.get_pmm_per_chiplet_offset =
 			gr_gv11b_get_pmm_per_chiplet_offset,
 		.split_fbpa_broadcast_addr = gr_gk20a_split_fbpa_broadcast_addr,
+		.alloc_global_ctx_buffers = gr_gk20a_alloc_global_ctx_buffers,
+		.map_global_ctx_buffers = gr_gk20a_map_global_ctx_buffers,
+		.commit_global_ctx_buffers = gr_gk20a_commit_global_ctx_buffers,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

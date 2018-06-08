@@ -2661,7 +2661,7 @@ void gr_gv11b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
 }
 
-static u32 gr_gv11b_get_nonpes_aware_tpc(struct gk20a *g, u32 gpc, u32 tpc)
+u32 gr_gv11b_get_nonpes_aware_tpc(struct gk20a *g, u32 gpc, u32 tpc)
 {
 	u32 tpc_new = 0;
 	u32 temp;
@@ -2691,7 +2691,7 @@ void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 	u32 tpc_offset = tpc_in_gpc_stride * tpc;
 	u32 global_tpc_index = g->gr.sm_to_cluster[smid].global_tpc_index;
 
-	tpc = gr_gv11b_get_nonpes_aware_tpc(g, gpc, tpc);
+	tpc = g->ops.gr.get_nonpes_aware_tpc(g, gpc, tpc);
 
 	gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
 		gr_gpc0_tpc0_sm_cfg_tpc_id_f(global_tpc_index));

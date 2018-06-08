@@ -415,6 +415,7 @@ static const struct gpu_ops gv11b_ops = {
 		.alloc_global_ctx_buffers = gr_gk20a_alloc_global_ctx_buffers,
 		.map_global_ctx_buffers = gr_gk20a_map_global_ctx_buffers,
 		.commit_global_ctx_buffers = gr_gk20a_commit_global_ctx_buffers,
+		.get_nonpes_aware_tpc = gr_gv11b_get_nonpes_aware_tpc,
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,

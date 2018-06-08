@@ -782,7 +782,14 @@ static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
 
 	for (i = 0; i < gr->no_of_sm; i++) {
 		vsms_buf[i].gpc_index = gr->sm_to_cluster[i].gpc_index;
-		vsms_buf[i].tpc_index = gr->sm_to_cluster[i].tpc_index;
+		if (g->ops.gr.get_nonpes_aware_tpc)
+			vsms_buf[i].tpc_index =
+				g->ops.gr.get_nonpes_aware_tpc(g,
+					gr->sm_to_cluster[i].gpc_index,
+					gr->sm_to_cluster[i].tpc_index);
+		else
+			vsms_buf[i].tpc_index =
+				gr->sm_to_cluster[i].tpc_index;
 	}
 
 	err = copy_to_user((void __user *)(uintptr_t)

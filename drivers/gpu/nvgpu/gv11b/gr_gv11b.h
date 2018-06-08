@@ -248,4 +248,5 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 	u32 addr,
 	u32 *priv_addr_table,
 	u32 *num_registers);
+u32 gr_gv11b_get_nonpes_aware_tpc(struct gk20a *g, u32 gpc, u32 tpc);
 #endif

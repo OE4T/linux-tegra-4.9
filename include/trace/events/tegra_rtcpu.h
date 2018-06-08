@@ -112,6 +112,10 @@ TRACE_EVENT(rtcpu_start,
 	TP_printk("tstamp:%llu", __entry->tstamp)
 );
 
+#ifndef TEGRA_RTCPU_TRACE_STRING_SIZE
+#define TEGRA_RTCPU_TRACE_STRING_SIZE 48
+#endif
+
 TRACE_EVENT(rtcpu_string,
 	TP_PROTO(u64 tstamp, u32 id, u32 len, const char *data),
 	TP_ARGS(tstamp, id, len, data),
@@ -119,17 +123,17 @@ TRACE_EVENT(rtcpu_string,
 		__field(u64, tstamp)
 		__field(u32, id)
 		__field(u32, len)
-		__string(data, data)
+		__array(char, data, TEGRA_RTCPU_TRACE_STRING_SIZE)
 	),
 	TP_fast_assign(
 		__entry->tstamp = tstamp;
 		__entry->id = id;
 		__entry->len = len;
-		__assign_str(data, data);
+		strncpy(__entry->data, data, sizeof(__entry->data));
 	),
-	TP_printk("tstamp:%llu id:0x%08x len:%u str:\"%s\"",
-		__entry->tstamp, __entry->id, __entry->len,
-		__get_str(data))
+	TP_printk("tstamp:%llu id:0x%08x str:\"%.*s\"",
+		__entry->tstamp, __entry->id,
+		(int)__entry->len, __entry->data)
 );
 
 DEFINE_EVENT(rtcpu__dump, rtcpu_bulk,

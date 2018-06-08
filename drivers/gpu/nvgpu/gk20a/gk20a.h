@@ -528,6 +528,22 @@ struct gpu_ops {
 			unsigned int intr_type);
 		int (*init_fbpa)(struct gk20a *g);
 		void (*fbpa_isr)(struct gk20a *g);
+		void (*write_mmu_fault_buffer_lo_hi)(struct gk20a *g, u32 index,
+			u32 addr_lo, u32 addr_hi);
+		void (*write_mmu_fault_buffer_get)(struct gk20a *g, u32 index,
+			u32 reg_val);
+		void (*write_mmu_fault_buffer_size)(struct gk20a *g, u32 index,
+			u32 reg_val);
+		void (*write_mmu_fault_status)(struct gk20a *g, u32 reg_val);
+		u32 (*read_mmu_fault_buffer_get)(struct gk20a *g, u32 index);
+		u32 (*read_mmu_fault_buffer_put)(struct gk20a *g, u32 index);
+		u32 (*read_mmu_fault_buffer_size)(struct gk20a *g, u32 index);
+		void (*read_mmu_fault_addr_lo_hi)(struct gk20a *g,
+			u32 *addr_lo, u32 *addr_hi);
+		void (*read_mmu_fault_inst_lo_hi)(struct gk20a *g,
+			u32 *inst_lo, u32 *inst_hi);
+		u32 (*read_mmu_fault_info)(struct gk20a *g);
+		u32 (*read_mmu_fault_status)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

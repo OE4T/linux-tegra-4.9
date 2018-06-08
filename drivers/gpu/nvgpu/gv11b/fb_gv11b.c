@@ -231,7 +231,7 @@ u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_size_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_size(g, index);
 	return fb_mmu_fault_buffer_size_enable_v(reg_val);
 }
 
@@ -242,7 +242,7 @@ static void gv11b_fb_fault_buffer_get_ptr_update(struct gk20a *g,
 
 	nvgpu_log(g, gpu_dbg_intr, "updating get index with = %d", next);
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_get_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_get(g, index);
 	reg_val = set_field(reg_val, fb_mmu_fault_buffer_get_ptr_m(),
 			 fb_mmu_fault_buffer_get_ptr_f(next));
 
@@ -252,7 +252,7 @@ static void gv11b_fb_fault_buffer_get_ptr_update(struct gk20a *g,
 	if (reg_val & fb_mmu_fault_buffer_get_overflow_m())
 		reg_val |= fb_mmu_fault_buffer_get_overflow_clear_f();
 
-	gk20a_writel(g, fb_mmu_fault_buffer_get_r(index), reg_val);
+	g->ops.fb.write_mmu_fault_buffer_get(g, index, reg_val);
 
 	/* make sure get ptr update is visible to everyone to avoid
 	 * reading already read entry
@@ -265,7 +265,7 @@ static u32 gv11b_fb_fault_buffer_get_index(struct gk20a *g,
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_get_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_get(g, index);
 	return fb_mmu_fault_buffer_get_ptr_v(reg_val);
 }
 
@@ -274,7 +274,7 @@ static u32 gv11b_fb_fault_buffer_put_index(struct gk20a *g,
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_put_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_put(g, index);
 	return fb_mmu_fault_buffer_put_ptr_v(reg_val);
 }
 
@@ -283,7 +283,7 @@ static u32 gv11b_fb_fault_buffer_size_val(struct gk20a *g,
 {
 	u32 reg_val;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_size_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_size(g, index);
 	return fb_mmu_fault_buffer_size_val_v(reg_val);
 }
 
@@ -321,14 +321,14 @@ void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
 
 	nvgpu_log_fn(g, " ");
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_size_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_size(g, index);
 	if (state) {
 		if (gv11b_fb_is_fault_buf_enabled(g, index)) {
 			nvgpu_log_info(g, "fault buffer is already enabled");
 		} else {
 			reg_val |= fb_mmu_fault_buffer_size_enable_true_f();
-			gk20a_writel(g, fb_mmu_fault_buffer_size_r(index),
-					 reg_val);
+			g->ops.fb.write_mmu_fault_buffer_size(g, index,
+				reg_val);
 		}
 
 	} else {
@@ -339,9 +339,9 @@ void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
 			   NVGPU_TIMER_CPU_TIMER);
 
 		reg_val &= (~(fb_mmu_fault_buffer_size_enable_m()));
-		gk20a_writel(g, fb_mmu_fault_buffer_size_r(index), reg_val);
+		g->ops.fb.write_mmu_fault_buffer_size(g, index, reg_val);
 
-		fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+		fault_status = g->ops.fb.read_mmu_fault_status(g);
 
 		do {
 			if (!(fault_status & fb_mmu_fault_status_busy_true_f()))
@@ -352,7 +352,7 @@ void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
 			 * during the window BAR2 is being unmapped by s/w
 			 */
 			nvgpu_log_info(g, "fault status busy set, check again");
-			fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+			fault_status = g->ops.fb.read_mmu_fault_status(g);
 
 			nvgpu_usleep_range(delay, delay * 2);
 			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
@@ -374,13 +374,11 @@ void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index)
 					ram_in_base_shift_v());
 	addr_hi = u64_hi32(g->mm.hw_fault_buf[index].gpu_va);
 
-	gk20a_writel(g, fb_mmu_fault_buffer_lo_r(index),
-			fb_mmu_fault_buffer_lo_addr_f(addr_lo));
+	g->ops.fb.write_mmu_fault_buffer_lo_hi(g, index,
+		fb_mmu_fault_buffer_lo_addr_f(addr_lo),
+		fb_mmu_fault_buffer_hi_addr_f(addr_hi));
 
-	gk20a_writel(g, fb_mmu_fault_buffer_hi_r(index),
-			fb_mmu_fault_buffer_hi_addr_f(addr_hi));
-
-	gk20a_writel(g, fb_mmu_fault_buffer_size_r(index),
+	g->ops.fb.write_mmu_fault_buffer_size(g, index,
 		fb_mmu_fault_buffer_size_val_f(g->ops.fifo.get_num_fifos(g)) |
 		fb_mmu_fault_buffer_size_overflow_intr_enable_f());
 
@@ -1083,11 +1081,11 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 		return;
 	}
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_inst_lo_r());
+	g->ops.fb.read_mmu_fault_inst_lo_hi(g, &reg_val, &addr_hi);
+
 	addr_lo = fb_mmu_fault_inst_lo_addr_v(reg_val);
 	addr_lo = addr_lo << ram_in_base_shift_v();
 
-	addr_hi = gk20a_readl(g, fb_mmu_fault_inst_hi_r());
 	addr_hi = fb_mmu_fault_inst_hi_addr_v(addr_hi);
 	inst_ptr = hi32_lo32_to_u64(addr_hi, addr_lo);
 
@@ -1107,18 +1105,18 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 		 &mmfault->faulted_engine, &mmfault->faulted_subid,
 		 &mmfault->faulted_pbdma);
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_addr_lo_r());
+	g->ops.fb.read_mmu_fault_addr_lo_hi(g, &reg_val, &addr_hi);
+
 	addr_lo = fb_mmu_fault_addr_lo_addr_v(reg_val);
 	addr_lo = addr_lo << ram_in_base_shift_v();
 
 	mmfault->fault_addr_aperture =
 			 fb_mmu_fault_addr_lo_phys_aperture_v(reg_val);
 
-	addr_hi = gk20a_readl(g, fb_mmu_fault_addr_hi_r());
 	addr_hi = fb_mmu_fault_addr_hi_addr_v(addr_hi);
 	mmfault->fault_addr = hi32_lo32_to_u64(addr_hi, addr_lo);
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_info_r());
+	reg_val = g->ops.fb.read_mmu_fault_info(g);
 	mmfault->fault_type = fb_mmu_fault_info_fault_type_v(reg_val);
 	mmfault->replayable_fault =
 			 fb_mmu_fault_info_replayable_fault_v(reg_val);
@@ -1134,7 +1132,7 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 	mmfault->valid = fb_mmu_fault_info_valid_v(reg_val);
 
 	fault_status &= ~(fb_mmu_fault_status_valid_m());
-	gk20a_writel(g, fb_mmu_fault_status_r(), fault_status);
+	g->ops.fb.write_mmu_fault_status(g, fault_status);
 
 	gv11b_fb_parse_mmfault(mmfault);
 
@@ -1146,7 +1144,7 @@ void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
 	u32 reg_val;
 	unsigned int index = REPLAY_REG_INDEX;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_get_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_get(g, index);
 
 	if (fault_status &
 		 fb_mmu_fault_status_replayable_getptr_corrupted_m()) {
@@ -1172,7 +1170,7 @@ void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,
 			fb_mmu_fault_buffer_get_overflow_clear_f());
 	}
 
-	gk20a_writel(g, fb_mmu_fault_buffer_get_r(index), reg_val);
+	g->ops.fb.write_mmu_fault_buffer_get(g, index, reg_val);
 }
 
 void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
@@ -1181,7 +1179,7 @@ void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 	u32 reg_val;
 	unsigned int index = NONREPLAY_REG_INDEX;
 
-	reg_val = gk20a_readl(g, fb_mmu_fault_buffer_get_r(index));
+	reg_val = g->ops.fb.read_mmu_fault_buffer_get(g, index);
 
 	if (fault_status &
 		 fb_mmu_fault_status_non_replayable_getptr_corrupted_m()) {
@@ -1208,7 +1206,7 @@ void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 			fb_mmu_fault_buffer_get_overflow_clear_f());
 	}
 
-	gk20a_writel(g, fb_mmu_fault_buffer_get_r(index), reg_val);
+	g->ops.fb.write_mmu_fault_buffer_get(g, index, reg_val);
 }
 
 static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
@@ -1285,7 +1283,7 @@ void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status)
 	if (fault_status & dropped_faults) {
 		nvgpu_err(g, "dropped mmu fault (0x%08x)",
 				 fault_status & dropped_faults);
-		gk20a_writel(g, fb_mmu_fault_status_r(), dropped_faults);
+		g->ops.fb.write_mmu_fault_status(g, dropped_faults);
 	}
 }
 
@@ -1304,7 +1302,7 @@ void gv11b_fb_handle_replayable_mmu_fault(struct gk20a *g)
 
 static void gv11b_fb_handle_mmu_fault(struct gk20a *g, u32 niso_intr)
 {
-	u32 fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
+	u32 fault_status = g->ops.fb.read_mmu_fault_status(g);
 
 	nvgpu_log(g, gpu_dbg_intr, "mmu_fault_status = 0x%08x", fault_status);
 
@@ -1357,8 +1355,8 @@ static void gv11b_fb_handle_mmu_fault(struct gk20a *g, u32 niso_intr)
 	}
 
 	nvgpu_log(g, gpu_dbg_intr, "clear mmu fault status");
-	gk20a_writel(g, fb_mmu_fault_status_r(),
-				fb_mmu_fault_status_valid_clear_f());
+	g->ops.fb.write_mmu_fault_status(g,
+			fb_mmu_fault_status_valid_clear_f());
 }
 
 void gv11b_fb_hub_isr(struct gk20a *g)
@@ -1524,4 +1522,67 @@ static int gv11b_fb_fix_page_fault(struct gk20a *g,
 			"pte after tlb invalidate: %#08x %#08x",
 			pte[1], pte[0]);
 	return err;
+}
+
+void fb_gv11b_write_mmu_fault_buffer_lo_hi(struct gk20a *g, u32 index,
+	u32 addr_lo, u32 addr_hi)
+{
+	nvgpu_writel(g, fb_mmu_fault_buffer_lo_r(index), addr_lo);
+	nvgpu_writel(g, fb_mmu_fault_buffer_hi_r(index), addr_hi);
+}
+
+u32 fb_gv11b_read_mmu_fault_buffer_get(struct gk20a *g, u32 index)
+{
+	return nvgpu_readl(g, fb_mmu_fault_buffer_get_r(index));
+}
+
+void fb_gv11b_write_mmu_fault_buffer_get(struct gk20a *g, u32 index,
+	u32 reg_val)
+{
+	nvgpu_writel(g, fb_mmu_fault_buffer_get_r(index), reg_val);
+}
+
+u32 fb_gv11b_read_mmu_fault_buffer_put(struct gk20a *g, u32 index)
+{
+	return nvgpu_readl(g, fb_mmu_fault_buffer_put_r(index));
+}
+
+u32 fb_gv11b_read_mmu_fault_buffer_size(struct gk20a *g, u32 index)
+{
+	return nvgpu_readl(g, fb_mmu_fault_buffer_size_r(index));
+}
+
+void fb_gv11b_write_mmu_fault_buffer_size(struct gk20a *g, u32 index,
+	u32 reg_val)
+{
+	nvgpu_writel(g, fb_mmu_fault_buffer_size_r(index), reg_val);
+}
+
+void fb_gv11b_read_mmu_fault_addr_lo_hi(struct gk20a *g,
+	u32 *addr_lo, u32 *addr_hi)
+{
+	*addr_lo = nvgpu_readl(g, fb_mmu_fault_addr_lo_r());
+	*addr_hi = nvgpu_readl(g, fb_mmu_fault_addr_hi_r());
+}
+
+void fb_gv11b_read_mmu_fault_inst_lo_hi(struct gk20a *g,
+	u32 *inst_lo, u32 *inst_hi)
+{
+	*inst_lo = nvgpu_readl(g, fb_mmu_fault_inst_lo_r());
+	*inst_hi = nvgpu_readl(g, fb_mmu_fault_inst_hi_r());
+}
+
+u32 fb_gv11b_read_mmu_fault_info(struct gk20a *g)
+{
+	return nvgpu_readl(g, fb_mmu_fault_info_r());
+}
+
+u32 fb_gv11b_read_mmu_fault_status(struct gk20a *g)
+{
+	return nvgpu_readl(g, fb_mmu_fault_status_r());
+}
+
+void fb_gv11b_write_mmu_fault_status(struct gk20a *g, u32 reg_val)
+{
+	nvgpu_writel(g, fb_mmu_fault_status_r(), reg_val);
 }

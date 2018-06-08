@@ -438,6 +438,23 @@ static const struct gpu_ops gv11b_ops = {
 		.mem_unlock = NULL,
 		.enable_hub_intr = gv11b_fb_enable_hub_intr,
 		.disable_hub_intr = gv11b_fb_disable_hub_intr,
+		.write_mmu_fault_buffer_lo_hi =
+				fb_gv11b_write_mmu_fault_buffer_lo_hi,
+		.write_mmu_fault_buffer_get =
+				fb_gv11b_write_mmu_fault_buffer_get,
+		.write_mmu_fault_buffer_size =
+				fb_gv11b_write_mmu_fault_buffer_size,
+		.write_mmu_fault_status = fb_gv11b_write_mmu_fault_status,
+		.read_mmu_fault_buffer_get =
+				fb_gv11b_read_mmu_fault_buffer_get,
+		.read_mmu_fault_buffer_put =
+				fb_gv11b_read_mmu_fault_buffer_put,
+		.read_mmu_fault_buffer_size =
+				fb_gv11b_read_mmu_fault_buffer_size,
+		.read_mmu_fault_addr_lo_hi = fb_gv11b_read_mmu_fault_addr_lo_hi,
+		.read_mmu_fault_inst_lo_hi = fb_gv11b_read_mmu_fault_inst_lo_hi,
+		.read_mmu_fault_info = fb_gv11b_read_mmu_fault_info,
+		.read_mmu_fault_status = fb_gv11b_read_mmu_fault_status,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

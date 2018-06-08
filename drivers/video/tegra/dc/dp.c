@@ -27,6 +27,8 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/ctype.h>
+#include <linux/extcon/extcon-disp.h>
+#include <linux/extcon.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -259,6 +261,16 @@ static inline u64 tegra_div64(u64 dividend, u32 divisor)
 {
 	do_div(dividend, divisor);
 	return dividend;
+}
+
+static inline bool tegra_dp_is_audio_supported(struct tegra_dc_dp_data *dp)
+{
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)
+		&& tegra_dc_is_ext_dp_panel(dp->dc) &&
+		dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		return true;
+	else
+		return false;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -540,10 +552,22 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	dp->dc->out->hotplug_state = TEGRA_HPD_STATE_NORMAL;
 	tegra_dp_pending_hpd(dp);
 
+	if (tegra_dp_is_audio_supported(dp)) {
+		disp_state_extcon_aux_report(dp->sor->ctrl_num,
+			EXTCON_DISP_AUX_STATE_DISABLED);
+		pr_info("Extcon AUX%d(DP): disable\n", dp->sor->ctrl_num);
+
+		usleep_range(1000, 1020);
+
+		disp_state_extcon_aux_report(dp->sor->ctrl_num,
+			EXTCON_DISP_AUX_STATE_ENABLED);
+		pr_info("Extcon AUX%d(DP): enable\n", dp->sor->ctrl_num);
+	}
+
 #ifdef CONFIG_SWITCH
-	if (tegra_edid_audio_supported(dp->hpd_data.edid)
-				&& tegra_dc_is_ext_dp_panel(dp->dc) &&
-				dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+	if (tegra_edid_audio_supported(dp->hpd_data.edid) &&
+		tegra_dc_is_ext_dp_panel(dp->dc) &&
+		dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		switch_set_state(&dp->audio_switch, 0);
 		msleep(1);
 		pr_info("audio_switch toggle 0\n");
@@ -2687,6 +2711,12 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	dc->connected = true;
 	tegra_dc_io_end(dc);
 
+	if (tegra_dp_is_audio_supported(dp)) {
+		disp_state_extcon_aux_report(dp->sor->ctrl_num,
+			EXTCON_DISP_AUX_STATE_ENABLED);
+		pr_info("Extcon AUX%d(DP): enable\n", dp->sor->ctrl_num);
+	}
+
 #ifdef CONFIG_SWITCH
 	if (tegra_edid_audio_supported(dp->hpd_data.edid)
 				&& tegra_dc_is_ext_dp_panel(dc) &&
@@ -2811,6 +2841,12 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (tegra_dc_is_ext_dp_panel(dc) && dp->sor->audio_support)
 		tegra_hda_disable(dp->hda_handle);
 #endif
+
+	if (tegra_dp_is_audio_supported(dp)) {
+		disp_state_extcon_aux_report(dp->sor->ctrl_num,
+			EXTCON_DISP_AUX_STATE_DISABLED);
+		pr_info("Extcon AUX%d(DP) disable\n", dp->sor->ctrl_num);
+	}
 
 #ifdef CONFIG_SWITCH
 	if (tegra_edid_audio_supported(dp->hpd_data.edid)

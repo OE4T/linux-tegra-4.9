@@ -44,6 +44,8 @@
 #include <video/tegrafb.h>
 #include <drm/drm_fixed.h>
 #include <linux/dma-buf.h>
+#include <linux/extcon/extcon-disp.h>
+#include <linux/extcon.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -167,6 +169,8 @@ static u64 tegra_dc_get_scanline_timestamp(struct tegra_dc *dc,
 static void tegra_dc_collect_latency_data(struct tegra_dc *dc);
 
 static DEFINE_MUTEX(tegra_dc_lock);
+/* Lock to serialize extcon switch reporting across heads*/
+static DEFINE_MUTEX(tegra_dc_extcon_lock);
 /* Lock to serialize dc registration during probe */
 static DEFINE_MUTEX(tegra_dc_registration_lock);
 
@@ -3363,6 +3367,59 @@ unsigned int tegra_dc_has_multiple_dc(void)
 	mutex_unlock(&tegra_dc_lock);
 
 	return (cnt > 1);
+}
+
+static bool tegra_dc_is_out_type_connected(int out_type)
+{
+	unsigned int idx;
+	bool ret = false;
+
+	for (idx = 0; idx < tegra_dc_get_numof_dispheads(); idx++) {
+		struct tegra_dc *dc = tegra_dcs[idx];
+
+		if (dc && dc->out && dc->out->type == out_type
+			&& dc->connected) {
+			ret = true;
+			break;
+		}
+	}
+	return ret;
+}
+
+void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
+{
+	unsigned int cable = 0;
+
+	mutex_lock(&tegra_dc_extcon_lock);
+	if (dc && dc->out) {
+		if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+			cable = EXTCON_DISP_HDMI;
+		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
+			cable = EXTCON_DISP_DP;
+		} else {
+			mutex_unlock(&tegra_dc_extcon_lock);
+			return;
+		}
+
+		if (dc->connected) {
+			disp_state_extcon_switch_report(cable,
+				EXTCON_DISP_HPD_STATE_ENABLED);
+			pr_info("Extcon %s: HPD enabled\n",
+				cable == EXTCON_DISP_HDMI ? "HDMI" : "DP");
+		} else {
+			/*
+			 * send hpd disable notification only when all
+			 * instances of the given out type are disconnected
+			 */
+			if (!tegra_dc_is_out_type_connected(dc->out->type)) {
+				disp_state_extcon_switch_report(cable,
+					EXTCON_DISP_HPD_STATE_DISABLED);
+				pr_info("Extcon %s: HPD disabled\n",
+					cable == EXTCON_DISP_HDMI ? "HDMI" : "DP");
+			}
+		}
+	}
+	mutex_unlock(&tegra_dc_extcon_lock);
 }
 
 /* get the stride size of a window.

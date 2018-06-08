@@ -27,6 +27,8 @@
 #include <linux/interrupt.h>
 #include <linux/debugfs.h>
 #include <linux/unistd.h>
+#include <linux/extcon/extcon-disp.h>
+#include <linux/extcon.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
@@ -536,6 +538,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id);
 
+	tegra_dc_extcon_hpd_notify(dc);
 #ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
 #endif
@@ -634,6 +637,7 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	if (!hdmi->enabled) {
 		dc->connected = false;
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
+		tegra_dc_extcon_hpd_notify(dc);
 #ifdef CONFIG_SWITCH
 		switch_set_state(&hdmi->hpd_switch, 0);
 #endif
@@ -2848,6 +2852,12 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_hda_enable(hdmi->hda_handle);
 #endif
 
+	if (!hdmi->dvi) {
+		disp_state_extcon_aux_report(hdmi->sor->ctrl_num,
+			EXTCON_DISP_AUX_STATE_ENABLED);
+		pr_info("Extcon AUX%d(HDMI) enable\n", hdmi->sor->ctrl_num);
+	}
+
 #ifdef CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
@@ -3156,6 +3166,10 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 		hdmi->out_ops->disable(hdmi);
 
 	hdmi->enabled = false;
+
+	disp_state_extcon_aux_report(hdmi->sor->ctrl_num,
+		EXTCON_DISP_AUX_STATE_DISABLED);
+	pr_info("Extcon AUX%d(HDMI) disable\n", hdmi->sor->ctrl_num);
 
 #ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->audio_switch, 0);

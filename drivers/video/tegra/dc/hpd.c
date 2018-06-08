@@ -58,6 +58,7 @@ static void hpd_disable(struct tegra_hpd_data *data)
 		data->ops->disable(data->drv_data);
 
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+	tegra_dc_extcon_hpd_notify(data->dc);
 #ifdef CONFIG_SWITCH
 	if (data->hpd_switch.name) {
 		switch_set_state(&data->hpd_switch, 0);
@@ -150,6 +151,7 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 	data->dc->connected = true;
 
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+	tegra_dc_extcon_hpd_notify(data->dc);
 #ifdef CONFIG_SWITCH
 		if (data->hpd_switch.name) {
 			switch_set_state(&data->hpd_switch, 1);

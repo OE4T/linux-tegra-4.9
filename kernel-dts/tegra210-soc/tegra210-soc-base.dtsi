@@ -159,10 +159,14 @@
 
 	bwmgr {
 		compatible = "nvidia,bwmgr";
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 414
+		clocks = <&tegra_car TEGRA210_CLK_EMC>;
+#else
 		clocks = <&tegra_car TEGRA210_CLK_BWMGR_EMC>;
+		nvidia,bwmgr-use-shared-master;
+#endif
 		clock-names = "emc";
 		status = "okay";
-		nvidia,bwmgr-use-shared-master;
 	};
 
 	reserved-memory {

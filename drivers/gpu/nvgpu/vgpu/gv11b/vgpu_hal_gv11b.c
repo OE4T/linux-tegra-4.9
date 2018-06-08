@@ -289,6 +289,8 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.set_debug_mode = vgpu_mm_mmu_set_debug_mode,
 		.tlb_invalidate = vgpu_mm_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
+		.enable_hub_intr = gv11b_fb_enable_hub_intr,
+		.disable_hub_intr = gv11b_fb_disable_hub_intr,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

@@ -20,6 +20,7 @@
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
 #include <linux/thermal.h>
+#include <linux/version.h>
 #include <soc/tegra/chip-id.h>
 
 #define CREATE_TRACE_POINTS
@@ -800,6 +801,9 @@ int __init bwmgr_init(void)
 		WARN_ON(true);
 		return -ENODEV;
 	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	clk_prepare_enable(bwmgr.emc_clk);
+#endif
 
 	emc_master_clk = bwmgr.emc_clk;
 	if (of_property_read_bool(dn, "nvidia,bwmgr-use-shared-master"))

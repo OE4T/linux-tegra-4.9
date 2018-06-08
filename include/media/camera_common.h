@@ -1,7 +1,7 @@
 /**
  * camera_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -90,6 +90,7 @@ struct camera_common_pdata {
 	bool has_eeprom;
 	bool v_flip;
 	bool h_mirror;
+	unsigned int fuse_id_addr;
 };
 
 struct camera_common_eeprom_data {
@@ -185,6 +186,7 @@ struct tegracam_ctrl_ops {
 	const u32 *ctrl_cid_list;
 	int (*set_gain)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_exposure)(struct tegracam_device *tc_dev, s64 val);
+	int (*set_exposure_short)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_frame_rate)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_group_hold)(struct tegracam_device *tc_dev, bool val);
 	int (*fill_string_ctrl)(struct tegracam_device *tc_dev,

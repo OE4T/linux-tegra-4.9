@@ -46,6 +46,7 @@ struct vmtd_dev {
 	struct completion msg_complete;
 	void *cmd_frame;
 	struct mtd_info mtd;
+	bool is_setup;
 };
 
 #define IVC_RESET_RETRIES 30
@@ -343,6 +344,38 @@ fail:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_virt_mtd_suspend(struct device *dev)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+
+	if (vmtddev->is_setup) {
+		mutex_lock(&vmtddev->lock);
+		disable_irq(vmtddev->ivck->irq);
+		/* Reset the channel */
+		tegra_hv_ivc_channel_reset(vmtddev->ivck);
+	}
+	return 0;
+}
+
+static int tegra_virt_mtd_resume(struct device *dev)
+{
+	struct vmtd_dev *vmtddev = dev_get_drvdata(dev);
+
+	if (vmtddev->is_setup) {
+		enable_irq(vmtddev->ivck->irq);
+		mutex_unlock(&vmtddev->lock);
+	}
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_hv_vmtd_pm_ops = {
+	.suspend = tegra_virt_mtd_suspend,
+	.resume = tegra_virt_mtd_resume,
+
+};
+#endif /* CONFIG_PM_SLEEP */
+
 static int vmtd_setup_device(struct vmtd_dev *vmtddev)
 {
 	mutex_init(&vmtddev->lock);
@@ -437,6 +470,8 @@ static int32_t vmtd_init_device(struct vmtd_dev *vmtddev)
 			"Setting up vmtd devices failed!\n");
 		return ret;
 	}
+
+	vmtddev->is_setup = true;
 
 	return ret;
 }
@@ -574,6 +609,9 @@ static struct platform_driver tegra_virt_mtd_driver = {
 		.name = "Virtual MTD device",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra_virt_mtd_match),
+#ifdef CONFIG_PM_SLEEP
+		.pm = &tegra_hv_vmtd_pm_ops,
+#endif
 	},
 };
 

@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  * This file holds the definitions of quirks found in USB devices.
  * Only quirks that affect the whole device, not an interface,
  * belong here.
@@ -55,6 +57,9 @@
  * USB 2.0 calculation.
  */
 #define USB_QUIRK_LINEAR_FRAME_INTR_BINTERVAL	BIT(11)
+
+/* Downgrade SS device to USB2 mode */
+#define USB_QUIRK_DOWNGRADE_USB3		BIT(12)
 
 /* Device needs a pause after every control message. */
 #define USB_QUIRK_DELAY_CTRL_MSG		BIT(13)

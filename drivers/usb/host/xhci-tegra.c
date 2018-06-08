@@ -41,7 +41,7 @@
 #include <linux/usb/quirks.h>
 
 #include "xhci.h"
-#include "../core/usb.h"
+#include "../core/hub.h"
 
 static bool en_hcd_reinit = false;
 module_param(en_hcd_reinit, bool, 0644);
@@ -542,6 +542,7 @@ struct tegra_xusb {
 	bool hsic_set_idle;
 	bool xhci_err_init;
 	struct usb_downgraded_port degraded_port[DEGRADED_PORT_COUNT];
+	unsigned int downgrade_enabled;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -561,6 +562,11 @@ static const struct of_device_id tegra_xusbc_pd[] = {
 	{},
 };
 #endif
+
+static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
+{
+	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
+}
 
 static struct xusb_otg_port *find_otg_port(struct tegra_xusb *tegra,
 				enum tegra_xhci_phy_type type, int index)
@@ -2523,6 +2529,119 @@ static int tegra_xusb_power(struct tegra_xusb *tegra, bool on)
 	return 0;
 }
 
+static void tegra_xhci_downgrade_check_to_disable(struct usb_hcd *hcd,
+	struct usb_device *udev)
+{
+	struct list_head *ptr;
+	struct usb_downgraded_port *port_ptr;
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	u32 portsc;
+	char serial[31];
+
+	if (udev->serial) {
+		strncpy(serial, udev->serial, 30);
+		serial[30] = 0;
+	} else {
+		serial[0] = 0;
+	}
+
+	mutex_lock(&tegra->lock);
+	if (!list_empty(&hub_downgraded_list)) {
+		list_for_each(ptr, &hub_downgraded_list) {
+			port_ptr = list_entry(ptr,
+				struct usb_downgraded_port, downgraded_list);
+			if ((udev->descriptor.idVendor ==
+				port_ptr->id_vendor) &&
+			    (udev->descriptor.idProduct ==
+				port_ptr->id_product)) {
+				if (!port_ptr->serial[0] && !serial[0])
+					break;
+				if (port_ptr->serial[0] && serial[0] &&
+				    !strcmp(port_ptr->serial, serial))
+					break;
+			}
+		}
+
+		if (ptr != &hub_downgraded_list) {
+			pm_runtime_get_noresume(hcd->self.controller);
+			/* Port Power on for downgraded USB3.0 port */
+			spin_lock(&xhci->lock);
+			portsc = readl(xhci->usb3_ports[port_ptr->portnum
+				- 1]);
+			portsc |= PORT_POWER;
+			writel(portsc, xhci->usb3_ports[port_ptr->portnum
+				- 1]);
+			spin_unlock(&xhci->lock);
+			usleep_range(10000, 12000);
+			/* Warm reset */
+			spin_lock(&xhci->lock);
+			portsc = readl(xhci->usb3_ports[port_ptr->portnum
+				- 1]);
+			portsc |= PORT_WR;
+			writel(portsc, xhci->usb3_ports[port_ptr->portnum
+				- 1]);
+			spin_unlock(&xhci->lock);
+			pm_runtime_put_noidle(hcd->self.controller);
+
+			list_del(&port_ptr->downgraded_list);
+			/* Clear id_vendor as empty entry */
+			port_ptr->id_vendor = 0;
+		}
+	}
+	mutex_unlock(&tegra->lock);
+}
+
+static ssize_t downgrade_usb3_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+
+	return sprintf(buf, "%d\n", tegra->downgrade_enabled);
+}
+
+static void tegra_xhci_downgrade_check_to_enable(struct usb_hcd *hcd,
+				    struct usb_device *udev);
+
+static ssize_t downgrade_usb3_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+	/* USB3.0 root hub */
+	struct usb_device *hdev = xhci->shared_hcd->self.root_hub;
+	struct usb_hub *hub = usb_hub_to_struct_hub(hdev);
+	unsigned int downgrade_enabled;
+	struct usb_hcd *hcd;
+	struct usb_device *udev;
+	unsigned int port1;
+
+	if (kstrtouint(buf, 16, &downgrade_enabled))
+		return -EINVAL;
+
+	hcd = tegra->hcd;
+
+	for (port1 = 1; port1 <= hdev->maxchild; port1++) {
+		udev = hub->ports[port1 - 1]->child;
+		if (udev) {
+			if (downgrade_enabled)
+				tegra_xhci_downgrade_check_to_enable(hcd,
+					udev);
+			else
+				tegra_xhci_downgrade_check_to_disable(hcd,
+					udev);
+			tegra->downgrade_enabled = downgrade_enabled;
+		}
+	}
+
+	return n;
+}
+
+static DEVICE_ATTR(
+	downgrade_usb3, 0644, downgrade_usb3_show, downgrade_usb3_store);
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -2693,6 +2812,13 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 		TFW_NORMAL, fw_version_show, NULL)))
 		dev_warn(dev, "cannot register firmware reader");
 
+	ret = sysfs_create_file(&pdev->dev.kobj, &dev_attr_downgrade_usb3.attr);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"failed to create tegra sysfs file downgrade_usb3\n");
+		goto err_create_sysfs;
+	}
+
 	/* Enable EU3S bit of USBCMD */
 	val = readl(&xhci->op_regs->command);
 	val |= CMD_PM_INDEX;
@@ -2705,6 +2831,7 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	return;
 
 	/* Free up as much as we can and wait to be unbound. */
+err_create_sysfs:
 remove_padctl_irq:
 	if (!tegra->soc->is_xhci_vf) {
 		devm_free_irq(dev, tegra->padctl_irq, tegra);
@@ -3410,6 +3537,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 		cancel_work_sync(&tegra->id_extcons_work);
 		tegra_xusb_deinit_extcon(tegra);
 	}
+
+	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_downgrade_usb3.attr);
 
 	if (!tegra->soc->is_xhci_vf)
 		cancel_delayed_work_sync(&tegra->firmware_retry_work);
@@ -4576,15 +4705,9 @@ static const struct xhci_driver_overrides tegra_xhci_overrides __initconst = {
 	.reset = tegra_xhci_setup,
 };
 
-static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
-{
-	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
-}
-
-static int tegra_xhci_update_device(struct usb_hcd *hcd,
+static void tegra_xhci_downgrade_check_to_enable(struct usb_hcd *hcd,
 				    struct usb_device *udev)
 {
-	const struct usb_device_id *id;
 	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 	int to_downgrade = 0;
@@ -4609,6 +4732,13 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 	}
 
 	if (to_downgrade) {
+		for (i = 0; i < DEGRADED_PORT_COUNT; i++) {
+			if (!tegra->degraded_port[i].id_vendor)
+				continue;
+			/* If degraded already */
+			if (udev->portnum == tegra->degraded_port[i].portnum)
+				return;
+		}
 		dev_info(&udev->dev,
 			"Downgrade idVendor=%04x idProduct=%04x to USB2.0\n",
 			le16_to_cpu(udev->descriptor.idVendor),
@@ -4635,17 +4765,26 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 			}
 			INIT_LIST_HEAD(&port_ptr->downgraded_list);
 
+			pm_runtime_get(hcd->self.controller);
 			mutex_lock(&tegra->lock);
 			list_add_tail(&port_ptr->downgraded_list,
 				&hub_downgraded_list);
 			/* Port Power off for downgraded USB3.0 port */
+			spin_lock(&xhci->lock);
 			portsc = readl(xhci->usb3_ports[udev->portnum - 1]);
 			portsc &= ~PORT_POWER;
 			writel(portsc, xhci->usb3_ports[udev->portnum - 1]);
+			spin_unlock(&xhci->lock);
 			mutex_unlock(&tegra->lock);
+			pm_runtime_put(hcd->self.controller);
 		}
 	}
+}
 
+static int tegra_xhci_update_device(struct usb_hcd *hcd,
+				    struct usb_device *udev)
+{
+	const struct usb_device_id *id;
 	for (id = disable_usb_persist_quirk_list; id->match_flags; id++) {
 		if (usb_match_device(udev, id) && usb_match_speed(udev, id)) {
 			udev->persist_enabled = 0;
@@ -4653,6 +4792,7 @@ static int tegra_xhci_update_device(struct usb_hcd *hcd,
 		}
 	}
 
+	tegra_xhci_downgrade_check_to_enable(hcd, udev);
 	return xhci_update_device(hcd, udev);
 }
 
@@ -4724,68 +4864,15 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
 	u8 port = udev->portnum - 1;
 	bool is_roothub_port = udev->parent == udev->bus->root_hub;
-	struct list_head *ptr;
-	struct usb_downgraded_port *port_ptr;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 	u32 portsc;
-	char serial[31];
 
 	portsc = readl(xhci->usb2_ports[udev->portnum - 1]);
 	/* If disconnected from USB2.0 root hub */
 	if ((xhci->main_hcd->self.root_hub == udev->parent) &&
-	    !(portsc & PORT_CONNECT)) {
-		if (udev->serial) {
-			strncpy(serial, udev->serial, 30);
-			serial[30] = 0;
-		} else {
-			serial[0] = 0;
-		}
+	    !(portsc & PORT_CONNECT))
+		tegra_xhci_downgrade_check_to_disable(hcd, udev);
 
-		mutex_lock(&tegra->lock);
-		if (!list_empty(&hub_downgraded_list)) {
-			list_for_each(ptr, &hub_downgraded_list) {
-				port_ptr = list_entry(ptr, struct
-					usb_downgraded_port, downgraded_list);
-				if ((udev->descriptor.idVendor ==
-					port_ptr->id_vendor) &&
-				    (udev->descriptor.idProduct ==
-					port_ptr->id_product)) {
-					if (!port_ptr->serial[0] && !serial[0])
-						break;
-					if (port_ptr->serial[0] && serial[0] &&
-					    !strcmp(port_ptr->serial, serial))
-						break;
-				}
-			}
-
-			if (ptr != &hub_downgraded_list) {
-				pm_runtime_get_noresume(hcd->self.controller);
-				/* Port Power on for downgraded USB3.0 port */
-				portsc = readl(
-					xhci->usb3_ports[port_ptr->portnum
-						- 1]);
-				portsc |= PORT_POWER;
-				writel(portsc,
-					xhci->usb3_ports[port_ptr->portnum
-						- 1]);
-				usleep_range(10000, 12000);
-				/* Warm reset */
-				portsc = readl(
-					xhci->usb3_ports[port_ptr->portnum
-						- 1]);
-				portsc |= PORT_WR;
-				writel(portsc,
-					xhci->usb3_ports[port_ptr->portnum
-						- 1]);
-				pm_runtime_put_noidle(hcd->self.controller);
-
-				list_del(&port_ptr->downgraded_list);
-				/* Clear id_vendor as empty entry */
-				port_ptr->id_vendor = 0;
-			}
-		}
-		mutex_unlock(&tegra->lock);
-	}
 	xhci_free_dev(hcd, udev);
 
 	/* make sure CDP is enabled for for USB2.0 root hub ports */

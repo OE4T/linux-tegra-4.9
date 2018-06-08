@@ -38,14 +38,27 @@
 #include <linux/tegra-powergate.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/tegra-firmwares.h>
+#include <linux/usb/quirks.h>
 
 #include "xhci.h"
+#include "../core/usb.h"
 
 static bool en_hcd_reinit = false;
 module_param(en_hcd_reinit, bool, 0644);
 MODULE_PARM_DESC(en_hcd_reinit, "Enable hcd reinit when hc died");
 static void xhci_reinit_work(struct work_struct *work);
 static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
+
+#define BLACKLIST_SIZE	100
+static uint downgraded_usb3[BLACKLIST_SIZE];
+static int downgraded_count;
+
+/* S_IRUGO | S_IWUSR | S_IWGRP */
+module_param_array(downgraded_usb3, uint, &downgraded_count, 0664);
+MODULE_PARM_DESC(downgraded_usb3,
+"Downgraded USB3 devices with idVendoridProduct,e.g., 0x11112222,0x33334444");
+
+static LIST_HEAD(hub_downgraded_list);
 
 #define TEGRA_XHCI_SS_HIGH_SPEED 120000000
 #define TEGRA_XHCI_SS_LOW_SPEED   12000000
@@ -275,6 +288,8 @@ static int usb_match_speed(struct usb_device *udev,
 #define FW_MAJOR_VERSION(x)             (((x) >> 24) & 0xff)
 #define FW_MINOR_VERSION(x)             (((x) >> 16) & 0xff)
 
+#define DEGRADED_PORT_COUNT		2
+
 enum build_info_log {
 	LOG_NONE = 0,
 	LOG_MEMORY
@@ -423,6 +438,14 @@ struct xusb_otg_port {
 	bool inited;
 };
 
+struct usb_downgraded_port {
+	int portnum;
+	u16 id_vendor;
+	u16 id_product;
+	char serial[31];
+	struct list_head downgraded_list;
+};
+
 struct tegra_xusb {
 	struct device *dev;
 	void __iomem *regs;
@@ -518,6 +541,7 @@ struct tegra_xusb {
 	bool hsic_power_on;
 	bool hsic_set_idle;
 	bool xhci_err_init;
+	struct usb_downgraded_port degraded_port[DEGRADED_PORT_COUNT];
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -4552,10 +4576,75 @@ static const struct xhci_driver_overrides tegra_xhci_overrides __initconst = {
 	.reset = tegra_xhci_setup,
 };
 
+static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
+{
+	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
+}
+
 static int tegra_xhci_update_device(struct usb_hcd *hcd,
 				    struct usb_device *udev)
 {
 	const struct usb_device_id *id;
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	int to_downgrade = 0;
+	u32 portsc;
+	int i;
+	struct usb_downgraded_port *port_ptr;
+	char *buf;
+
+	/* If connected to USB3.0 root hub */
+	if (xhci->shared_hcd->self.root_hub == udev->parent) {
+		for (i = 0; i < downgraded_count; i++) {
+			if ((le16_to_cpu(udev->descriptor.idVendor) ==
+			    (downgraded_usb3[i] >> 16)) &&
+			    (le16_to_cpu(udev->descriptor.idProduct) ==
+			    (downgraded_usb3[i] & 0xFFFF))) {
+				to_downgrade = 1;
+				break;
+			}
+		}
+		if (udev->quirks & USB_QUIRK_DOWNGRADE_USB3)
+			to_downgrade = 1;
+	}
+
+	if (to_downgrade) {
+		dev_info(&udev->dev,
+			"Downgrade idVendor=%04x idProduct=%04x to USB2.0\n",
+			le16_to_cpu(udev->descriptor.idVendor),
+			le16_to_cpu(udev->descriptor.idProduct));
+
+		for (i = 0; i < DEGRADED_PORT_COUNT; i++)
+			if (tegra->degraded_port[i].id_vendor == 0)
+				break;
+		if (i < DEGRADED_PORT_COUNT) {
+			port_ptr = &tegra->degraded_port[i];
+
+			/* Save information to be used by disconnect */
+			port_ptr->portnum = udev->portnum;
+			port_ptr->id_vendor = udev->descriptor.idVendor;
+			port_ptr->id_product = udev->descriptor.idProduct;
+			buf = usb_cache_string(udev,
+				udev->descriptor.iSerialNumber);
+			if (buf) {
+				strncpy(port_ptr->serial, buf, 30);
+				port_ptr->serial[30] = 0;
+				kfree(buf);
+			} else {
+				port_ptr->serial[0] = 0;
+			}
+			INIT_LIST_HEAD(&port_ptr->downgraded_list);
+
+			mutex_lock(&tegra->lock);
+			list_add_tail(&port_ptr->downgraded_list,
+				&hub_downgraded_list);
+			/* Port Power off for downgraded USB3.0 port */
+			portsc = readl(xhci->usb3_ports[udev->portnum - 1]);
+			portsc &= ~PORT_POWER;
+			writel(portsc, xhci->usb3_ports[udev->portnum - 1]);
+			mutex_unlock(&tegra->lock);
+		}
+	}
 
 	for (id = disable_usb_persist_quirk_list; id->match_flags; id++) {
 		if (usb_match_device(udev, id) && usb_match_speed(udev, id)) {
@@ -4587,11 +4676,6 @@ static int tegra_xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 	}
 
 	return xhci_add_endpoint(hcd, udev, ep);
-}
-
-static inline struct tegra_xusb *hcd_to_tegra_xusb(struct usb_hcd *hcd)
-{
-	return (struct tegra_xusb *) dev_get_drvdata(hcd->self.controller);
 }
 
 static inline bool port_connected(struct tegra_xusb *tegra, unsigned int port)
@@ -4640,7 +4724,68 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
 	u8 port = udev->portnum - 1;
 	bool is_roothub_port = udev->parent == udev->bus->root_hub;
+	struct list_head *ptr;
+	struct usb_downgraded_port *port_ptr;
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	u32 portsc;
+	char serial[31];
 
+	portsc = readl(xhci->usb2_ports[udev->portnum - 1]);
+	/* If disconnected from USB2.0 root hub */
+	if ((xhci->main_hcd->self.root_hub == udev->parent) &&
+	    !(portsc & PORT_CONNECT)) {
+		if (udev->serial) {
+			strncpy(serial, udev->serial, 30);
+			serial[30] = 0;
+		} else {
+			serial[0] = 0;
+		}
+
+		mutex_lock(&tegra->lock);
+		if (!list_empty(&hub_downgraded_list)) {
+			list_for_each(ptr, &hub_downgraded_list) {
+				port_ptr = list_entry(ptr, struct
+					usb_downgraded_port, downgraded_list);
+				if ((udev->descriptor.idVendor ==
+					port_ptr->id_vendor) &&
+				    (udev->descriptor.idProduct ==
+					port_ptr->id_product)) {
+					if (!port_ptr->serial[0] && !serial[0])
+						break;
+					if (port_ptr->serial[0] && serial[0] &&
+					    !strcmp(port_ptr->serial, serial))
+						break;
+				}
+			}
+
+			if (ptr != &hub_downgraded_list) {
+				pm_runtime_get_noresume(hcd->self.controller);
+				/* Port Power on for downgraded USB3.0 port */
+				portsc = readl(
+					xhci->usb3_ports[port_ptr->portnum
+						- 1]);
+				portsc |= PORT_POWER;
+				writel(portsc,
+					xhci->usb3_ports[port_ptr->portnum
+						- 1]);
+				usleep_range(10000, 12000);
+				/* Warm reset */
+				portsc = readl(
+					xhci->usb3_ports[port_ptr->portnum
+						- 1]);
+				portsc |= PORT_WR;
+				writel(portsc,
+					xhci->usb3_ports[port_ptr->portnum
+						- 1]);
+				pm_runtime_put_noidle(hcd->self.controller);
+
+				list_del(&port_ptr->downgraded_list);
+				/* Clear id_vendor as empty entry */
+				port_ptr->id_vendor = 0;
+			}
+		}
+		mutex_unlock(&tegra->lock);
+	}
 	xhci_free_dev(hcd, udev);
 
 	/* make sure CDP is enabled for for USB2.0 root hub ports */

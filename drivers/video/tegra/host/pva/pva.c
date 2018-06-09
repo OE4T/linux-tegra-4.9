@@ -553,6 +553,33 @@ err_alloc_vpu_function_table:
 
 }
 
+/**
+ * @brief	Set trace log level of PVA
+ *
+ * @param pva	Pointer to a PVA device node
+ * @param log_level	32-bit mask for logs that we want to receive
+ *
+ * @return	0 on success, otherwise a negative error code
+ */
+static int pva_set_log_level(struct pva *pva,
+			     u32 log_level)
+{
+	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	struct pva_mailbox_status_regs status;
+	struct pva_cmd cmd;
+	int err = 0;
+	u32 nregs;
+
+	nregs = pva_cmd_set_logging_level(&cmd, log_level, flags);
+
+	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+	if (err < 0)
+		nvhost_warn(&pva->pdev->dev,
+			"mbox set log level failed: %d\n", err);
+
+	return err;
+}
+
 static void pva_restore_attributes(struct pva * pva)
 {
 	struct nvhost_queue_pool *pool = pva->pool;
@@ -611,6 +638,8 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	err = pva_init_fw(pdev);
 	if (err < 0)
 		goto err_poweron;
+
+	pva_set_log_level(pva, pva->log_level);
 
 	/* Restore the attributes */
 	pva_restore_attributes(pva);

@@ -248,4 +248,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				  &pva->vpu_perf_counters_enable);
 	if (!ret)
 		nvhost_dbg_info("Failed to create vpu_perf_counters_enable node");
+
+	ret = debugfs_create_u32("log_level", 0644, de,
+				 &pva->log_level);
+	if (!ret)
+		nvhost_dbg_info("Failed to create log_lovel node");
 }

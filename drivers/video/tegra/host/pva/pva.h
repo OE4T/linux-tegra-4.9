@@ -212,6 +212,8 @@ struct pva {
 
 	struct work_struct pva_abort_handler_work;
 	bool booted;
+
+	u32 log_level;
 };
 
 /**

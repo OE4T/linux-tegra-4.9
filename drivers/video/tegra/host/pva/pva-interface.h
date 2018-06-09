@@ -1058,16 +1058,11 @@ pva_cmd_set_region(struct pva_cmd * const cmd,
 
 static inline uint32_t
 pva_cmd_set_logging_level(struct pva_cmd * const cmd,
-			  const uint32_t pva_log_level,
-			  const uint32_t r5_log_level,
-			  const uint32_t vpu_log_level,
+			  const uint32_t log_level,
 			  const uint32_t flags)
 {
-	cmd->mbox[0] = PVA_CMD_GO | flags
-		       | PVA_SET_COMMAND(CMD_SET_LOGGING);
-	cmd->mbox[1] = PVA_INSERT(pva_log_level, 23, 16)
-		       | PVA_INSERT(r5_log_level, 15, 8)
-		       | PVA_INSERT(vpu_log_level, 7, 0);
+	cmd->mbox[0] = PVA_CMD_GO | flags | PVA_SET_COMMAND(CMD_SET_LOGGING);
+	cmd->mbox[1] = log_level;
 	return 2U;
 }
 

@@ -886,6 +886,18 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		goto fail;
 	}
 
+	/* INITRXTERM is required if connected to nvlink 2.2 device.
+	 * For RXDET functionality to succeed on 2.2 devices, the opposite
+	 * endpoint must initialize the RX termination.It does no harm when
+	 * connected to 2.0 device.
+	 */
+	ret = minion_send_cmd(tdev, MINION_NVLINK_DL_CMD_COMMAND_INITRXTERM,
+									0);
+	if (ret < 0) {
+		nvlink_err("Error sending INITRXTERM command to MINION");
+		goto fail;
+	}
+
 	ret = minion_send_cmd(tdev,
 				MINION_NVLINK_DL_CMD_COMMAND_INITPHY,
 				0);

@@ -38,7 +38,7 @@
 
 #define BMI_NAME			"bmi160"
 #define BMI_VENDOR			"Bosch"
-#define BMI_DRIVER_VERSION		(6)
+#define BMI_DRIVER_VERSION		(7)
 #define BMI_ACC_VERSION			(1)
 #define BMI_GYR_VERSION			(1)
 #define BMI_HW_DELAY_POR_MS		(10)
@@ -1089,11 +1089,21 @@ static int bmi_frame_control(struct bmi_state *st, u16 buf_n)
 		snsr_t = bmi_buf2sensortime(&st->buf[st->buf_i]);
 		if (st->ts_odr) {
 			if (st->frame_n) {
-				if (snsr_t > st->snsr_t)
+				if (snsr_t > st->snsr_t) {
 					n = snsr_t - st->snsr_t;
-				else
+				} else {
 					/* counter rolled over */
-					n = (~st->snsr_t + 1) + snsr_t;
+					n = ~0xFFFFFFU; /* 24->32 */
+					n |= st->snsr_t;
+					n = ~n;
+					n++;
+					n += snsr_t;
+					if (st->sts & BMI_STS_SPEW_TS)
+						dev_info(&st->i2c->dev,
+							"%s st: %u->%u n=%u\n",
+							 __func__, st->snsr_t,
+							 snsr_t, n);
+				}
 				/* n is the number of sensortime ticks since
 				 * last time.  Each tick is 39062.5ns.
 				 */

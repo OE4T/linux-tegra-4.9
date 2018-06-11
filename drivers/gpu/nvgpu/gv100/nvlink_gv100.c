@@ -2269,6 +2269,11 @@ int gv100_nvlink_interface_init(struct gk20a *g)
 	return 0;
 }
 
+int gv100_nvlink_interface_disable(struct gk20a *g)
+{
+	return 0;
+}
+
 int gv100_nvlink_reg_init(struct gk20a *g)
 {
 	u32 i = 0;

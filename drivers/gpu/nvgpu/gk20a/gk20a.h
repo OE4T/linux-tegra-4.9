@@ -1267,6 +1267,7 @@ struct gpu_ops {
 		int (*set_sublink_mode)(struct gk20a *g, u32 link_id,
 			bool is_rx_sublink, u32 mode);
 		int (*interface_init)(struct gk20a *g);
+		int (*interface_disable)(struct gk20a *g);
 		int (*reg_init)(struct gk20a *g);
 		int (*shutdown)(struct gk20a *g);
 		int (*early_init)(struct gk20a *g);

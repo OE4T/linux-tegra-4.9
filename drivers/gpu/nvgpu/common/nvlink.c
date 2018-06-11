@@ -92,6 +92,16 @@ static int nvgpu_nvlink_interface_init(struct nvlink_device *ndev)
 	return err;
 }
 
+static int nvgpu_nvlink_interface_disable(struct nvlink_device *ndev)
+{
+	int err = 0;
+	struct gk20a *g = (struct gk20a *) ndev->priv;
+
+	if (g->ops.nvlink.interface_disable)
+		err = g->ops.nvlink.interface_disable(g);
+	return err;
+}
+
 static int nvgpu_nvlink_shutdown(struct nvlink_device *ndev)
 {
 	int err;
@@ -401,6 +411,7 @@ static int nvgpu_nvlink_init_ops(struct gk20a *g)
 	ndev->dev_ops.dev_early_init = nvgpu_nvlink_early_init;
 	ndev->dev_ops.dev_interface_init = nvgpu_nvlink_interface_init;
 	ndev->dev_ops.dev_reg_init = nvgpu_nvlink_reg_init;
+	ndev->dev_ops.dev_interface_disable = nvgpu_nvlink_interface_disable;
 	ndev->dev_ops.dev_shutdown = nvgpu_nvlink_shutdown;
 
 	/* Fill in the link struct */

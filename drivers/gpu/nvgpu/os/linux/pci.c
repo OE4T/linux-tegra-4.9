@@ -26,7 +26,9 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/nvlink.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/sim.h>
 
+#include "nvlink.h"
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "clk/clk_mclk.h"
@@ -35,12 +37,10 @@
 #include "sysfs.h"
 #include "os_linux.h"
 #include "platform_gk20a.h"
-#include <nvgpu/sim.h>
 
 #include "pci.h"
 #include "pci_usermode.h"
 
-#include "os_linux.h"
 #include "driver_common.h"
 
 #define PCI_INTERFACE_NAME "card-%s%%s"
@@ -828,9 +828,11 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	if (gk20a_gpu_is_virtual(dev))
 		return;
 
-	nvgpu_nvlink_remove(g);
+	err = nvgpu_nvlink_deinit(g);
+	WARN(err, "gpu failed to remove nvlink");
 
 	gk20a_driver_start_unload(g);
+
 	err = nvgpu_quiesce(g);
 	/* TODO: handle failure to idle */
 	WARN(err, "gpu failed to idle during driver removal");

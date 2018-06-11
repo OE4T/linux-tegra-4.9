@@ -50,6 +50,7 @@ u32 gv100_nvlink_link_get_rx_sublink_state(struct gk20a *g, u32 link_id);
 int gv100_nvlink_link_set_sublink_mode(struct gk20a *g, u32 link_id,
 	bool is_rx_sublink, u32 mode);
 int gv100_nvlink_interface_init(struct gk20a *g);
+int gv100_nvlink_interface_disable(struct gk20a *g);
 int gv100_nvlink_reg_init(struct gk20a *g);
 int gv100_nvlink_shutdown(struct gk20a *g);
 int gv100_nvlink_early_init(struct gk20a *g);

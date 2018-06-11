@@ -896,6 +896,7 @@ static const struct gpu_ops gv100_ops = {
 		.get_rx_sublink_state = gv100_nvlink_link_get_rx_sublink_state,
 		.set_sublink_mode = gv100_nvlink_link_set_sublink_mode,
 		.interface_init = gv100_nvlink_interface_init,
+		.interface_disable = gv100_nvlink_interface_disable,
 		.reg_init = gv100_nvlink_reg_init,
 		.shutdown = gv100_nvlink_shutdown,
 		.early_init = gv100_nvlink_early_init,

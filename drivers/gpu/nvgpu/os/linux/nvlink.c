@@ -14,6 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef CONFIG_TEGRA_NVLINK
+#include <linux/platform/tegra/tegra-nvlink.h>
+#endif
+
 #include <gk20a/gk20a.h>
 #include <nvgpu/nvlink.h>
 #include <nvgpu/enabled.h>
@@ -103,4 +107,26 @@ void nvgpu_mss_nvlink_init_credits(struct gk20a *g)
 		writel_relaxed(val, soc4);
 		val = readl_relaxed(soc4 + 4);
 		writel_relaxed(val, soc4 + 4);
+}
+
+int nvgpu_nvlink_deinit(struct gk20a *g)
+{
+#ifdef CONFIG_TEGRA_NVLINK
+	struct nvlink_device *ndev = g->nvlink.priv;
+	int err;
+
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK))
+		return -ENODEV;
+
+	err = nvlink_shutdown(ndev);
+	if (err) {
+		nvgpu_err(g, "failed to shut down nvlink");
+		return err;
+	}
+
+	nvgpu_nvlink_remove(g);
+
+	return 0;
+#endif
+	return -ENODEV;
 }

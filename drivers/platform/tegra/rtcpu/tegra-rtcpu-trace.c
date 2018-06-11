@@ -726,16 +726,16 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 				struct camrtc_event_struct *event)
 {
-	struct nvhost_device_data *pdata;
-	struct nvhost_task_begin task_begin;
-	struct nvhost_task_end task_end;
-
 #ifndef CONFIG_EVENTLIB
 	trace_rtcpu_unknown(event->header.tstamp,
 		event->header.id,
 		event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
 		event->data.data8);
 #else
+	struct nvhost_device_data *pdata;
+	struct nvhost_task_begin task_begin;
+	struct nvhost_task_end task_end;
+
 	pdata = platform_get_drvdata(tracer->vi_platform_device);
 
 	if (!pdata->eventlib_id) {
@@ -780,16 +780,16 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
-	struct nvhost_device_data *pdata;
-	struct nvhost_task_begin task_begin;
-	struct nvhost_task_end task_end;
-
 #ifndef CONFIG_EVENTLIB
 	trace_rtcpu_unknown(event->header.tstamp,
 		event->header.id,
 		event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
 		event->data.data8);
 #else
+	struct nvhost_device_data *pdata;
+	struct nvhost_task_begin task_begin;
+	struct nvhost_task_end task_end;
+
 	pdata = platform_get_drvdata(tracer->isp_platform_device);
 
 	if (!pdata->eventlib_id) {

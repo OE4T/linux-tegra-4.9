@@ -2464,6 +2464,7 @@ static int tegra_pmc_io_pad_poll(const struct tegra_pmc_io_pad_soc *pad,
 
 	timeout = jiffies + msecs_to_jiffies(timeout);
 
+	usleep_range(10, 10);
 	while (time_after(timeout, jiffies)) {
 		value = tegra_pmc_reg_readl(pad->dpd_status_reg);
 		if ((value & mask) == val)

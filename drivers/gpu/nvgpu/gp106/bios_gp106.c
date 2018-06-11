@@ -41,7 +41,7 @@
 #define BIOS_OVERLAY_NAME "bios-%04x.rom"
 #define BIOS_OVERLAY_NAME_FORMATTED "bios-xxxx.rom"
 #define ROM_FILE_PAYLOAD_OFFSET 0xa00
-#define BIOS_SIZE 0x40000
+#define BIOS_SIZE 0x90000
 
 static void upload_code(struct gk20a *g, u32 dst,
 			u8 *src, u32 size, u8 port, bool sec)

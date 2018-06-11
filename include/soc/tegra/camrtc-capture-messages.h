@@ -241,9 +241,10 @@ struct CAPTURE_SYNCGEN_DISABLE_RESP_MSG {
 
 /* Open an Phy stream */
 struct CAPTURE_PHY_STREAM_OPEN_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t __pad8[3];
+	uint32_t stream_id;
+	uint32_t csi_port;
 	uint32_t phy_type;
+	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_OPEN_RESP_MSG {
@@ -253,9 +254,10 @@ struct CAPTURE_PHY_STREAM_OPEN_RESP_MSG {
 
 /* Close an NvPhy stream */
 struct CAPTURE_PHY_STREAM_CLOSE_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t __pad8[3];
+	uint32_t stream_id;
+	uint32_t csi_port;
 	uint32_t phy_type;
+	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_CLOSE_RESP_MSG {
@@ -265,9 +267,10 @@ struct CAPTURE_PHY_STREAM_CLOSE_RESP_MSG {
 
 /* Reset an NvPhy stream */
 struct CAPTURE_PHY_STREAM_RESET_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t __pad8[3];
+	uint32_t stream_id;
+	uint32_t csi_port;
 	uint32_t phy_type;
+	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_RESET_RESP_MSG {
@@ -277,9 +280,8 @@ struct CAPTURE_PHY_STREAM_RESET_RESP_MSG {
 
 /* Debug: Dump Registers for an NvPhy stream */
 struct CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t __pad8[3];
-	uint32_t phy_type;
+	uint32_t stream_id;
+	uint32_t csi_port;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
@@ -293,8 +295,8 @@ struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
 
 /* Set config for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t __pad8[7];
+	uint32_t stream_id;
+	uint32_t csi_port;
 	struct nvcsi_brick_config brick_config;
 	struct nvcsi_cil_config cil_config;
 } __CAPTURE_IVC_ALIGN;
@@ -306,10 +308,10 @@ struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
 
 /* Set DPCM config for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t virtual_channel_id;
-	uint16_t __pad16;
+	uint32_t stream_id;
+	uint32_t virtual_channel_id;
 	uint32_t param_type;
+	uint32_t __pad32;
 	union {
 		struct nvcsi_dpcm_config dpcm_config;
 		struct nvcsi_dt_override_config dt_override_config;
@@ -334,9 +336,8 @@ struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG {
 
 /* Start TPG for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_TPG_START_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t virtual_channel_id;
-	uint16_t __pad16[3];
+	uint32_t stream_id;
+	uint32_t virtual_channel_id;
 	struct nvcsi_tpg_rate_config tpg_rate_config;
 } __CAPTURE_IVC_ALIGN;
 
@@ -347,12 +348,10 @@ struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
 
 /* Start TPG for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t virtual_channel_id;
-	uint16_t __pad16[1];
+	uint32_t stream_id;
+	uint32_t virtual_channel_id;
 	uint32_t frame_rate;
 	uint32_t csi_clk_rate;
-	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
@@ -362,9 +361,8 @@ struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
 
 /* Stop TPG for an NvCsi stream*/
 struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
-	uint8_t stream_id;
-	uint8_t virtual_channel_id;
-	uint16_t __pad16[3];
+	uint32_t stream_id;
+	uint32_t virtual_channel_id;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG {

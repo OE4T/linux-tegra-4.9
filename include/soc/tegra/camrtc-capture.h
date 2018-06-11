@@ -480,19 +480,56 @@ struct capture_descriptor {
 #define NVPHY_TYPE_SLVSEC	U32_C(1)
 
 /**
- * NvCsi attributes
+ * NVCSI attributes
  */
+
+/* NVCSI ports */
+#define NVCSI_PORT_A		U32_C(0x0)
+#define NVCSI_PORT_B		U32_C(0x1)
+#define NVCSI_PORT_C		U32_C(0x2)
+#define NVCSI_PORT_D		U32_C(0x3)
+#define NVCSI_PORT_E		U32_C(0x4)
+#define NVCSI_PORT_F		U32_C(0x5)
+#define NVCSI_PORT_G		U32_C(0x6)
+#define NVCSI_PORT_H		U32_C(0x7)
+#define NVCSI_PORT_UNSPECIFIED	U32_C(0xFFFFFFFF)
+
+/* NVCSI streams */
+#define NVCSI_STREAM_0		U32_C(0x0)
+#define NVCSI_STREAM_1		U32_C(0x1)
+#define NVCSI_STREAM_2		U32_C(0x2)
+#define NVCSI_STREAM_3		U32_C(0x3)
+#define NVCSI_STREAM_4		U32_C(0x4)
+#define NVCSI_STREAM_5		U32_C(0x5)
+
+/* NVCSI virtual channels */
+#define NVCSI_VIRTUAL_CHANNEL_0		U32_C(0x0)
+#define NVCSI_VIRTUAL_CHANNEL_1		U32_C(0x1)
+#define NVCSI_VIRTUAL_CHANNEL_2		U32_C(0x2)
+#define NVCSI_VIRTUAL_CHANNEL_3		U32_C(0x3)
+#define NVCSI_VIRTUAL_CHANNEL_4		U32_C(0x4)
+#define NVCSI_VIRTUAL_CHANNEL_5		U32_C(0x5)
+#define NVCSI_VIRTUAL_CHANNEL_6		U32_C(0x6)
+#define NVCSI_VIRTUAL_CHANNEL_7		U32_C(0x7)
+#define NVCSI_VIRTUAL_CHANNEL_8		U32_C(0x8)
+#define NVCSI_VIRTUAL_CHANNEL_9		U32_C(0x9)
+#define NVCSI_VIRTUAL_CHANNEL_10	U32_C(0xA)
+#define NVCSI_VIRTUAL_CHANNEL_11	U32_C(0xB)
+#define NVCSI_VIRTUAL_CHANNEL_12	U32_C(0xC)
+#define NVCSI_VIRTUAL_CHANNEL_13	U32_C(0xD)
+#define NVCSI_VIRTUAL_CHANNEL_14	U32_C(0xE)
+#define NVCSI_VIRTUAL_CHANNEL_15	U32_C(0xF)
 
 /* Number of lanes/trios per brick */
 #define NVCSI_BRICK_NUM_LANES	U32_C(4)
 /* Number of override exception data types */
 #define NVCSI_NUM_NOOVERRIDE_DT	U32_C(5)
 
-/* CSI Phy types */
+/* NVCSI phy types */
 #define NVCSI_PHY_TYPE_DPHY	U32_C(0)
 #define NVCSI_PHY_TYPE_CPHY	U32_C(1)
 
-/* NvCsi lane swizzle */
+/* NVCSI lane swizzles */
 /* 00000 := A0 A1 B0 B1 -->  A0 A1 B0 B1 */
 #define NVCSI_LANE_SWIZZLE_A0A1B0B1	U32_C(0x00)
 /* 00001 := A0 A1 B0 B1 -->  A0 A1 B1 B0 */
@@ -542,11 +579,11 @@ struct capture_descriptor {
 /* 10111 := A0 A1 B0 B1 -->  B1 A0 B0 A1 */
 #define NVCSI_LANE_SWIZZLE_B1A0B0A1	U32_C(0x17)
 
-/* NvCsi D-phy polarity */
+/* NVCSI D-phy polarity */
 #define NVCSI_DPHY_POLARITY_NOSWAP	U32_C(0)
 #define NVCSI_DPHY_POLARITY_SWAP	U32_C(1)
 
-/* NvCsi C-phy polarity */
+/* NVCSI C-phy polarity */
 #define NVCSI_CPHY_POLARITY_ABC	U32_C(0x00) /* 000 := A B C --> A B C */
 #define NVCSI_CPHY_POLARITY_ACB	U32_C(0x01) /* 001 := A B C --> A C B */
 #define NVCSI_CPHY_POLARITY_BCA	U32_C(0x02) /* 010 := A B C --> B C A */
@@ -581,7 +618,7 @@ struct nvcsi_cil_config {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* NvCsi datatypes */
+/* NVCSI datatypes */
 #define NVCSI_DATATYPE_UNSPECIFIED	U32_C(0)
 #define NVCSI_DATATYPE_YUV420_8		U32_C(24)
 #define NVCSI_DATATYPE_YUV420_10	U32_C(25)
@@ -645,7 +682,7 @@ struct nvcsi_cil_config {
 #define NVCSI_DATA_TYPE_RAW20			U32_C(47)
 #define NVCSI_DATA_TYPE_Unknown			U32_C(64)
 
-/* NvCsi DPCM ratio */
+/* NVCSI DPCM ratio */
 #define NVCSI_DPCM_RATIO_BYPASS		U32_C(0)
 #define NVCSI_DPCM_RATIO_10_8_10	U32_C(1)
 #define NVCSI_DPCM_RATIO_10_7_10	U32_C(2)
@@ -657,7 +694,7 @@ struct nvcsi_cil_config {
 #define NVCSI_DPCM_RATIO_14_8_14	U32_C(8)
 #define NVCSI_DPCM_RATIO_12_10_12	U32_C(9)
 
-/* NvCsi param type */
+/* NVCSI param type */
 #define NVCSI_PARAM_TYPE_UNSPECIFIED	U32_C(0)
 #define NVCSI_PARAM_TYPE_DPCM		U32_C(1)
 #define NVCSI_PARAM_TYPE_DT_OVERRIDE	U32_C(2)
@@ -684,7 +721,7 @@ struct nvcsi_watchdog_config {
 } __CAPTURE_IVC_ALIGN;
 
 /**
- * NvCsi - TPG attributes
+ * NVCSI - TPG attributes
  */
 
 /* Number of vertical color bars in TPG (t186) */

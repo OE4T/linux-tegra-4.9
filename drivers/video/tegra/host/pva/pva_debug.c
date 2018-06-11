@@ -179,6 +179,27 @@ static const struct file_operations print_version_fops = {
 	.release = single_release,
 };
 
+static int get_log_level(void *data, u64 *val)
+{
+	struct pva *pva = (struct pva *) data;
+
+	*val = pva->log_level;
+	return 0;
+}
+
+static int set_log_level(void *data, u64 val)
+{
+	struct pva *pva = (struct pva *) data;
+
+	pva->log_level = val;
+	if (pva->booted)
+		return pva_set_log_level(pva, val);
+	else
+		return 0;
+}
+
+DEFINE_DEBUGFS_ATTRIBUTE(log_level_fops, get_log_level, set_log_level, "%llu");
+
 void pva_debugfs_init(struct platform_device *pdev)
 {
 	struct dentry *ret;
@@ -249,8 +270,8 @@ void pva_debugfs_init(struct platform_device *pdev)
 	if (!ret)
 		nvhost_dbg_info("Failed to create vpu_perf_counters_enable node");
 
-	ret = debugfs_create_u32("log_level", 0644, de,
-				 &pva->log_level);
+	ret = debugfs_create_file("log_level", 0644, de,
+				  pva, &log_level_fops);
 	if (!ret)
 		nvhost_dbg_info("Failed to create log_lovel node");
 }

@@ -346,4 +346,15 @@ void pva_dealloc_vpu_function_table(struct pva *pva,
  */
 int pva_get_firmware_version(struct pva *pva,
 			     struct pva_version_info *info);
+
+/**
+ * @brief	Set trace log level of PVA
+ *
+ * @param pva	Pointer to a PVA device node
+ * @param log_level	32-bit mask for logs that we want to receive
+ *
+ * @return	0 on success, otherwise a negative error code
+ */
+int pva_set_log_level(struct pva *pva,
+			     u32 log_level);
 #endif

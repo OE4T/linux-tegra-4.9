@@ -554,15 +554,7 @@ err_alloc_vpu_function_table:
 
 }
 
-/**
- * @brief	Set trace log level of PVA
- *
- * @param pva	Pointer to a PVA device node
- * @param log_level	32-bit mask for logs that we want to receive
- *
- * @return	0 on success, otherwise a negative error code
- */
-static int pva_set_log_level(struct pva *pva,
+int pva_set_log_level(struct pva *pva,
 			     u32 log_level)
 {
 	uint32_t flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;

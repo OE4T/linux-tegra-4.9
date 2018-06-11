@@ -449,62 +449,6 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 
 			break;
 
-		case NVLINK_TX_OFF:
-			if (tx_sublink_state ==
-				NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_OFF) {
-				nvlink_dbg("TX already in OFF state");
-				break;
-			} else if (tx_sublink_state ==
-				NVL_SL0_SLSM_STATUS_TX_PRIMARY_STATE_HS) {
-				nvlink_err("TX cannot be taken from HS to"
-					" OFF state directly");
-				return -EPERM;
-			}
-
-			nvlink_dbg("Changing TX sublink state to OFF");
-			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
-			reg_val &= ~NVL_SUBLINK_CHANGE_COUNTDOWN_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_COUNTDOWN_F(
-					NVL_SUBLINK_CHANGE_COUNTDOWN_IMMEDIATE);
-			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
-					NVL_SUBLINK_CHANGE_NEWSTATE_OFF);
-			reg_val &= ~NVL_SUBLINK_CHANGE_SUBLINK_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_SUBLINK_F(
-					NVL_SUBLINK_CHANGE_SUBLINK_TX);
-			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
-					NVL_SUBLINK_CHANGE_ACTION_SLSM_CHANGE);
-			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
-
-			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
-			do {
-				reg_val = nvlw_nvl_readl(tdev,
-							NVL_SUBLINK_CHANGE);
-				if ((reg_val &
-				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
-				NVL_SUBLINK_CHANGE_STATUS_DONE)
-					break;
-				else if ((reg_val &
-				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
-				NVL_SUBLINK_CHANGE_STATUS_FAULT) {
-					nvlink_err("Fault while changing TX"
-						" sublink to OFF state");
-					return -EPROTO;
-				}
-				usleep_range(DEFAULT_LOOP_SLEEP_US,
-					DEFAULT_LOOP_SLEEP_US * 2);
-				timeout_us = timeout_us - DEFAULT_LOOP_SLEEP_US;
-			} while (timeout_us > 0);
-
-			if (timeout_us <= 0) {
-				nvlink_err("Timeout while waiting for TX"
-					" sublink to go to OFF state");
-				return -ETIMEDOUT;
-			}
-
-			break;
-
 		default:
 			nvlink_err("Invalid TX sublink mode"
 				" (sublink mode = %u)",
@@ -514,65 +458,6 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 		}
 	} else {
 		switch (mode) {
-		case NVLINK_RX_OFF:
-			if (rx_sublink_state ==
-				NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_OFF) {
-				nvlink_dbg("RX already in OFF state");
-				break;
-			} else if (rx_sublink_state ==
-				NVL_SL1_SLSM_STATUS_RX_PRIMARY_STATE_HS) {
-				nvlink_err("RX cannot be taken from HS to"
-					" OFF state directly");
-				return -EPERM;
-			}
-
-			nvlink_dbg("Changing RX sublink state to OFF");
-			reg_val = nvlw_nvl_readl(tdev, NVL_SUBLINK_CHANGE);
-			reg_val &= ~NVL_SUBLINK_CHANGE_COUNTDOWN_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_COUNTDOWN_F(
-					NVL_SUBLINK_CHANGE_COUNTDOWN_IMMEDIATE);
-			reg_val &= ~NVL_SUBLINK_CHANGE_OLDSTATE_MASK_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_OLDSTATE_MASK_F(
-				NVL_SUBLINK_CHANGE_OLDSTATE_MASK_DONTCARE);
-			reg_val &= ~NVL_SUBLINK_CHANGE_NEWSTATE_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_NEWSTATE_F(
-					NVL_SUBLINK_CHANGE_NEWSTATE_OFF);
-			reg_val &= ~NVL_SUBLINK_CHANGE_SUBLINK_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_SUBLINK_F(
-					NVL_SUBLINK_CHANGE_SUBLINK_RX);
-			reg_val &= ~NVL_SUBLINK_CHANGE_ACTION_F(~0);
-			reg_val |= NVL_SUBLINK_CHANGE_ACTION_F(
-					NVL_SUBLINK_CHANGE_ACTION_SLSM_FORCE);
-			nvlw_nvl_writel(tdev, NVL_SUBLINK_CHANGE, reg_val);
-
-			timeout_us = SUBLINK_TIMEOUT_MS * 1000;
-			do {
-				reg_val = nvlw_nvl_readl(tdev,
-							NVL_SUBLINK_CHANGE);
-				if ((reg_val &
-				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
-				NVL_SUBLINK_CHANGE_STATUS_DONE)
-					break;
-				else if ((reg_val &
-				NVL_SUBLINK_CHANGE_STATUS_MASK) ==
-				NVL_SUBLINK_CHANGE_STATUS_FAULT) {
-					nvlink_err("Fault while changing RX"
-						" sublink to OFF state");
-					return -EPROTO;
-				}
-				usleep_range(DEFAULT_LOOP_SLEEP_US,
-					DEFAULT_LOOP_SLEEP_US * 2);
-				timeout_us = timeout_us - DEFAULT_LOOP_SLEEP_US;
-			} while (timeout_us > 0);
-
-			if (timeout_us <= 0) {
-				nvlink_err("Timeout while waiting for RX"
-					" sublink to go to OFF state");
-				return -ETIMEDOUT;
-			}
-
-			break;
-
 		case NVLINK_RX_RXCAL:
 			status = t19x_nvlink_rxcal_enable(tdev);
 			if (status) {

@@ -1177,35 +1177,6 @@ int nvlink_transition_intranode_conn_safe_to_off(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-	/* First force TX sublinks to OFF for each direction.
-	 * Then  force RX sublinks to OFF for each direction.
-	 */
-	ret = ndev0->link.link_ops.set_sublink_mode(ndev0, false,
-						NVLINK_TX_OFF);
-	if (ret < 0) {
-		nvlink_err("ndev0 set TX sublink_mode to OFF failed");
-		goto fail;
-	}
-	ret = ndev1->link.link_ops.set_sublink_mode(ndev1, false,
-						NVLINK_TX_OFF);
-	if (ret < 0) {
-		nvlink_err("ndev1 set TX sublink_mode to OFF failed");
-		goto fail;
-	}
-
-	ret = ndev0->link.link_ops.set_sublink_mode(ndev0, true,
-						NVLINK_RX_OFF);
-	if (ret < 0) {
-		nvlink_err("ndev0 set RX sublink_mode to OFF failed");
-		goto fail;
-	}
-	ret = ndev1->link.link_ops.set_sublink_mode(ndev1, true,
-						NVLINK_RX_OFF);
-	if (ret < 0) {
-		nvlink_err("ndev1 set RX sublink_mode to OFF failed");
-		goto fail;
-	}
-
 	ret = ndev0->link.link_ops.set_link_mode(ndev0, NVLINK_LINK_OFF);
 	if (ret < 0) {
 		nvlink_err("ndev0 set link mode to OFF failed");

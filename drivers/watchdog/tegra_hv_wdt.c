@@ -1,7 +1,7 @@
 /*
  * drivers/watchdog/tegra_hv_wdt.c
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ struct tegra_hv_wdt {
 	wait_queue_head_t notify;
 	struct mutex lock;
 	bool interrupt;
-	bool user;
+	bool do_ping;
 	int saved;
 };
 
@@ -58,7 +58,7 @@ static int tegra_hv_wdt_start(struct watchdog_device *wdt)
 	struct tegra_hv_wdt *hv = container_of(wdt, struct tegra_hv_wdt, wdt);
 
 	dev_info(&hv->pdev->dev, "device opened\n");
-	hv->user = true;
+	hv->do_ping = true;
 
 	return 0;
 }
@@ -72,7 +72,7 @@ static int tegra_hv_wdt_stop(struct watchdog_device *wdt)
 	struct tegra_hv_wdt *hv = container_of(wdt, struct tegra_hv_wdt, wdt);
 
 	dev_info(&hv->pdev->dev, "device closed\n");
-	hv->user = false;
+	hv->do_ping = false;
 
 	return 0;
 }
@@ -135,7 +135,7 @@ static int tegra_hv_wdt_loop(void *arg)
 	hv->interrupt = false;
 
 	while (!kthread_should_stop()) {
-		if (!hv->user)
+		if (hv->do_ping)
 			tegra_hv_wdt_ping(&hv->wdt);
 		ssleep(REFRESH_INTERVAL_SECS);
 	}
@@ -196,7 +196,7 @@ static int tegra_hv_wdt_setup_no_cleanup(struct tegra_hv_wdt *hv,
 	init_waitqueue_head(&hv->notify);
 	mutex_init(&hv->lock);
 
-	hv->user = false;
+	hv->do_ping = true;
 	hv->saved = IVC_SUCCESS_CODE;
 	hv->pdev = pdev;
 

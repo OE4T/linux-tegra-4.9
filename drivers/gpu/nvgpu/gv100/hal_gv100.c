@@ -637,20 +637,20 @@ static const struct gpu_ops gv100_ops = {
 	},
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 	.fecs_trace = {
-		.alloc_user_buffer = NULL,
-		.free_user_buffer = NULL,
-		.mmap_user_buffer = NULL,
-		.init = NULL,
-		.deinit = NULL,
-		.enable = NULL,
-		.disable = NULL,
-		.is_enabled = NULL,
-		.reset = NULL,
+		.alloc_user_buffer = gk20a_ctxsw_dev_ring_alloc,
+		.free_user_buffer = gk20a_ctxsw_dev_ring_free,
+		.mmap_user_buffer = gk20a_ctxsw_dev_mmap_buffer,
+		.init = gk20a_fecs_trace_init,
+		.deinit = gk20a_fecs_trace_deinit,
+		.enable = gk20a_fecs_trace_enable,
+		.disable = gk20a_fecs_trace_disable,
+		.is_enabled = gk20a_fecs_trace_is_enabled,
+		.reset = gk20a_fecs_trace_reset,
 		.flush = NULL,
-		.poll = NULL,
-		.bind_channel = NULL,
-		.unbind_channel = NULL,
-		.max_entries = NULL,
+		.poll = gk20a_fecs_trace_poll,
+		.bind_channel = gk20a_fecs_trace_bind_channel,
+		.unbind_channel = gk20a_fecs_trace_unbind_channel,
+		.max_entries = gk20a_gr_max_entries,
 	},
 #endif /* CONFIG_GK20A_CTXSW_TRACE */
 	.mm = {
@@ -939,6 +939,8 @@ int gv100_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
+	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
+
 	/* for now */
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 

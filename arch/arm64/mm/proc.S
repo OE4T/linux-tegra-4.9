@@ -380,21 +380,6 @@ ENTRY(__cpu_setup)
 	tlbi	vmalle1				// Invalidate local TLB
 	dsb	nsh
 
-	mrs	x0, midr_el1
-	/*
-	 * cpuactlr_el1 is not defined on denver since it is an
-	 * implementation defined register. Accessing this on Denver
-	 * would cause undefined instruction exception on Denver.
-	 * So, skip accessing the register on Denver.
-	 */
-	lsr	x0, x0, #24
-	cmp	x0, #0x4e
-	beq	skip_ncse
-	mrs	x0, s3_1_c15_c2_0
-	/* enable non-cacheable streaming enhancement */
-	orr	x0, x0, #(1<<24)
-	msr	s3_1_c15_c2_0, x0
-skip_ncse:
 	mov	x0, #3 << 20
 	msr	cpacr_el1, x0			// Enable FP/ASIMD
 	mov	x0, #1 << 12			// Reset mdscr_el1 and disable

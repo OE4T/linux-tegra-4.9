@@ -28,8 +28,6 @@ obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o
 
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 
-obj-$(CONFIG_NV_TEGRA_IVC)		+= tegra-ivc.o
-
 obj-$(CONFIG_TEGRA_WDT_RECOVERY)        += wdt-recovery.o
 
 obj-y					+= tegra_prod.o

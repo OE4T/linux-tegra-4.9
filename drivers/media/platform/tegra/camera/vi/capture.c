@@ -24,6 +24,8 @@
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
 #define CAPTURE_CHANNEL_INVALID_ID 0xFFFF
 #define CAPTURE_CHANNEL_INVALID_MASK 0llu
+#define NVCSI_STREAM_INVALID_ID 0xFFFF
+#define NVCSI_TPG_INVALID_ID 0xFFFF
 
 static void vi_capture_ivc_control_callback(const void *ivc_resp,
 		const void *pcontext)
@@ -52,7 +54,6 @@ static void vi_capture_ivc_control_callback(const void *ivc_resp,
 	case CAPTURE_SYNCGEN_DISABLE_RESP:
 	case CAPTURE_PHY_STREAM_OPEN_RESP:
 	case CAPTURE_PHY_STREAM_CLOSE_RESP:
-	case CAPTURE_PHY_STREAM_RESET_RESP:
 	case CAPTURE_PHY_STREAM_DUMPREGS_RESP:
 	case CAPTURE_CSI_STREAM_SET_CONFIG_RESP:
 	case CAPTURE_CSI_STREAM_SET_PARAM_RESP:
@@ -153,6 +154,10 @@ int vi_capture_init(struct tegra_vi_channel *chan, bool is_mem_pinned)
 	capture->is_mem_pinned = is_mem_pinned;
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 
+	capture->stream_id = NVCSI_STREAM_INVALID_ID;
+	capture->csi_port = NVCSI_PORT_UNSPECIFIED;
+	capture->virtual_channel_id = NVCSI_TPG_INVALID_ID;
+
 	return 0;
 }
 
@@ -166,6 +171,9 @@ void vi_capture_shutdown(struct tegra_vi_channel *chan)
 
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
 		vi_capture_release(chan, 0);
+
+	if (capture->stream_id != NVCSI_STREAM_INVALID_ID)
+		csi_stream_release(chan);
 
 	kfree(capture);
 	chan->capture_data = NULL;
@@ -535,6 +543,85 @@ int vi_capture_set_compand(struct tegra_vi_channel *chan,
 	return 0;
 }
 
+int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
+{
+	struct vi_capture *capture = chan->capture_data;
+	struct CAPTURE_CONTROL_MSG control_desc;
+	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int err = 0;
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_CSI_STREAM_TPG_STOP_REQ;
+	control_desc.header.channel_id = capture->channel_id;
+	control_desc.csi_stream_tpg_stop_req.stream_id = capture->stream_id;
+	control_desc.csi_stream_tpg_stop_req.virtual_channel_id =
+		capture->virtual_channel_id;
+
+	err = vi_capture_ivc_send_control(chan, &control_desc,
+		sizeof(control_desc), CAPTURE_CSI_STREAM_TPG_STOP_RESP);
+	if ((err < 0) ||
+			(resp_msg->csi_stream_tpg_stop_resp.result
+				!= CAPTURE_OK))
+		return err;
+
+	capture->virtual_channel_id = NVCSI_TPG_INVALID_ID;
+
+	return 0;
+}
+
+int csi_stream_close(struct tegra_vi_channel *chan)
+{
+	struct vi_capture *capture = chan->capture_data;
+	struct CAPTURE_CONTROL_MSG control_desc;
+	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int err = 0;
+
+	memset(&control_desc, 0, sizeof(control_desc));
+	control_desc.header.msg_id = CAPTURE_PHY_STREAM_CLOSE_REQ;
+	control_desc.header.channel_id = capture->channel_id;
+	control_desc.phy_stream_close_req.phy_type = NVPHY_TYPE_CSI;
+	control_desc.phy_stream_close_req.stream_id = capture->stream_id;
+	control_desc.phy_stream_close_req.csi_port = capture->csi_port;
+
+	err = vi_capture_ivc_send_control(chan, &control_desc,
+		sizeof(control_desc), CAPTURE_PHY_STREAM_CLOSE_RESP);
+	if ((err < 0) ||
+			(resp_msg->phy_stream_close_resp.result != CAPTURE_OK))
+		return err;
+
+	capture->stream_id = NVCSI_STREAM_INVALID_ID;
+
+	return 0;
+}
+
+int csi_stream_release(struct tegra_vi_channel *chan)
+{
+	struct vi_capture *capture = chan->capture_data;
+	int err = 0;
+
+	if (capture->stream_id == NVCSI_STREAM_INVALID_ID)
+		return 0;
+
+	if (capture->virtual_channel_id != NVCSI_TPG_INVALID_ID) {
+		err = csi_stream_tpg_disable(chan);
+		if (err < 0) {
+			dev_err(chan->dev,
+				"%s: failed to disable nvcsi tpg on" \
+				"stream %u virtual channel %u\n",
+				__func__, capture->stream_id,
+				capture->virtual_channel_id);
+			return err;
+		}
+	}
+
+	err = csi_stream_close(chan);
+	if (err < 0)
+		dev_err(chan->dev, "%s: failed to close nvcsi stream %u\n",
+			__func__, capture->stream_id);
+
+	return err;
+}
+
 int vi_capture_release(struct tegra_vi_channel *chan,
 		uint32_t reset_flags)
 {
@@ -671,6 +758,7 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	void *msg_cpy;
 	struct CAPTURE_MSG_HEADER *header;
 	uint32_t resp_id;
+	struct CAPTURE_CONTROL_MSG *req_msg = NULL;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
 	int err = 0;
 
@@ -696,6 +784,8 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	header = (struct CAPTURE_MSG_HEADER *)msg_cpy;
 	header->channel_id = capture->channel_id;
 
+	req_msg = (struct CAPTURE_CONTROL_MSG*)msg_cpy;
+
 	switch (header->msg_id) {
 	case CAPTURE_COMPAND_CONFIG_REQ:
 		resp_id = CAPTURE_COMPAND_CONFIG_RESP;
@@ -711,12 +801,13 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 		break;
 	case CAPTURE_PHY_STREAM_OPEN_REQ:
 		resp_id = CAPTURE_PHY_STREAM_OPEN_RESP;
+		capture->stream_id = req_msg->phy_stream_open_req.stream_id;
+		capture->csi_port = req_msg->phy_stream_open_req.csi_port;
 		break;
 	case CAPTURE_PHY_STREAM_CLOSE_REQ:
 		resp_id = CAPTURE_PHY_STREAM_CLOSE_RESP;
-		break;
-	case CAPTURE_PHY_STREAM_RESET_REQ:
-		resp_id = CAPTURE_PHY_STREAM_RESET_RESP;
+		capture->stream_id = NVCSI_STREAM_INVALID_ID;
+		capture->csi_port = NVCSI_PORT_UNSPECIFIED;
 		break;
 	case CAPTURE_PHY_STREAM_DUMPREGS_REQ:
 		resp_id = CAPTURE_PHY_STREAM_DUMPREGS_RESP;
@@ -732,12 +823,17 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 		break;
 	case CAPTURE_CSI_STREAM_TPG_START_REQ:
 		resp_id = CAPTURE_CSI_STREAM_TPG_START_RESP;
+		capture->virtual_channel_id =
+			req_msg->csi_stream_tpg_start_req.virtual_channel_id;
 		break;
 	case CAPTURE_CSI_STREAM_TPG_START_RATE_REQ:
 		resp_id = CAPTURE_CSI_STREAM_TPG_START_RATE_RESP;
+		capture->virtual_channel_id =
+			req_msg->csi_stream_tpg_start_rate_req.virtual_channel_id;
 		break;
 	case CAPTURE_CSI_STREAM_TPG_STOP_REQ:
 		resp_id = CAPTURE_CSI_STREAM_TPG_STOP_RESP;
+		capture->virtual_channel_id = NVCSI_TPG_INVALID_ID;
 		break;
 	case CAPTURE_CHANNEL_TPG_SETUP_REQ:
 		resp_id = CAPTURE_CHANNEL_TPG_SETUP_RESP;

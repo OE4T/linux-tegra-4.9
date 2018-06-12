@@ -40,6 +40,10 @@ struct vi_capture {
 	uint32_t request_size;
 	bool is_mem_pinned;
 
+	uint32_t stream_id;
+	uint32_t csi_port;
+	uint32_t virtual_channel_id;
+
 	uint32_t num_gos_tables;
 	const dma_addr_t *gos_tables;
 
@@ -130,5 +134,6 @@ int vi_capture_set_compand(struct tegra_vi_channel *chan,
 		struct vi_capture_compand *compand);
 long vi_capture_ioctl(struct file *file, void *fh,
 		bool use_prio, unsigned int cmd, void *arg);
+int csi_stream_release(struct tegra_vi_channel *chan);
 #endif
 

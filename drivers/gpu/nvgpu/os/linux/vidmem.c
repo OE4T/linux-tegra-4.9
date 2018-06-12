@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,7 @@
  */
 
 #include <linux/dma-buf.h>
+#include <linux/version.h>
 #include <uapi/linux/nvgpu.h>
 
 #ifdef CONFIG_NVGPU_USE_TEGRA_ALLOC_FD
@@ -134,8 +135,13 @@ static const struct dma_buf_ops gk20a_vidbuf_ops = {
 	.map_dma_buf      = gk20a_vidbuf_map_dma_buf,
 	.unmap_dma_buf    = gk20a_vidbuf_unmap_dma_buf,
 	.release          = gk20a_vidbuf_release,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.map_atomic      = gk20a_vidbuf_kmap_atomic,
+	.map             = gk20a_vidbuf_kmap,
+#else
 	.kmap_atomic      = gk20a_vidbuf_kmap_atomic,
 	.kmap             = gk20a_vidbuf_kmap,
+#endif
 	.mmap             = gk20a_vidbuf_mmap,
 	.set_drvdata      = gk20a_vidbuf_set_private,
 	.get_drvdata      = gk20a_vidbuf_get_private,

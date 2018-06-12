@@ -574,7 +574,7 @@ static struct platform_driver gpio_timed_keys_device_driver = {
 
 module_platform_driver(gpio_timed_keys_device_driver);
 
-MODULE_LICENSE("GPLv2");
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Ankita Garg <ankitag@nvidia.com>");
 MODULE_DESCRIPTION("Timed Keyboard driver for GPIOs");
 MODULE_ALIAS("platform:gpio-timed-keys");

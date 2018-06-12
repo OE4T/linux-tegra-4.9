@@ -901,6 +901,10 @@ static int tegra_machine_resume_post(struct snd_soc_card *card)
 			return trigger_jack_status_check(rtd->codec);
 	}
 
+	rtd = snd_soc_get_pcm_runtime(card, "rt565x-codec-sysclk-bclk1");
+	if (rtd)
+		return trigger_jack_status_check(rtd->codec);
+
 	return 0;
 }
 

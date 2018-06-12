@@ -135,10 +135,6 @@ static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
 
 /* rt565x specific APIs */
 static int tegra_rt565x_event_int_spk(struct snd_soc_dapm_widget *,
@@ -248,8 +244,6 @@ static const int tegra_machine_srate_values[] = {
 	192000,
 };
 
-static struct snd_soc_jack tegra_machine_hp_jack;
-
 static struct snd_soc_ops tegra_machine_pcm_ops = {
 	.hw_params	= tegra_machine_pcm_hw_params,
 	.startup	= tegra_machine_pcm_startup,
@@ -331,21 +325,6 @@ static const struct snd_soc_dapm_widget tegra_mystique_dapm_widgets[] = {
 static const struct snd_soc_dapm_route tegra_machine_audio_map[] = {
 };
 
-/*
- * The order of the following definitions should align with
- * the 'snd_jack_types' enum as defined in include/sound/jack.h.
- */
-static const char * const tegra_machine_jack_state_text[] = {
-	"None",
-	"HP",
-	"MIC",
-	"HS",
-};
-
-static const struct soc_enum tegra_machine_jack_state =
-	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_jack_state_text),
-		tegra_machine_jack_state_text);
-
 static const struct snd_kcontrol_new tegra_machine_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Spk"),
 	SOC_DAPM_PIN_SWITCH("x Headphone Jack"),
@@ -358,9 +337,6 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 	SOC_SINGLE_EXT("bclk ratio override", SND_SOC_NOPM, 0, INT_MAX, 0,
 		tegra_machine_codec_get_bclk_ratio,
 		tegra_machine_codec_put_bclk_ratio),
-	SOC_ENUM_EXT("Jack-state", tegra_machine_jack_state,
-		tegra_machine_codec_get_jack_state,
-		tegra_machine_codec_put_jack_state),
 };
 
 static const struct snd_kcontrol_new tegra_mystique_controls[] = {
@@ -534,24 +510,6 @@ static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *kcontrol,
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 
 	machine->bclk_ratio_override = ucontrol->value.integer.value[0];
-
-	return 0;
-}
-
-static int tegra_machine_codec_get_jack_state(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.integer.value[0] = tegra_machine_hp_jack.status;
-
-	return 0;
-}
-
-static int tegra_machine_codec_put_jack_state(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-
-	snd_soc_jack_report(&tegra_machine_hp_jack,
-			    ucontrol->value.integer.value[0], SND_JACK_HEADSET);
 
 	return 0;
 }
@@ -988,6 +946,7 @@ static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_jack *jack;
 	int err;
 
 	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
@@ -997,30 +956,36 @@ static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
+	jack = devm_kzalloc(card->dev, sizeof(struct snd_soc_jack), GFP_KERNEL);
+	if (!jack)
+		return -ENOMEM;
+
 	err = snd_soc_card_jack_new(card, "Headset Jack", SND_JACK_HEADSET,
-					&tegra_machine_hp_jack, NULL, 0);
+				    jack, NULL, 0);
 	if (err) {
 		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
 		return err;
 	}
 
-	err = rt5659_set_jack_detect(rtd->codec, &tegra_machine_hp_jack);
+	err = tegra_machine_add_codec_jack_control(card, rtd, jack);
+	if (err) {
+		dev_err(card->dev, "Failed to add jack control: %d\n", err);
+		return err;
+	}
+
+	err = rt5659_set_jack_detect(rtd->codec, jack);
 	if (err) {
 		dev_err(card->dev, "Failed to set jack for RT565x: %d\n", err);
 		return err;
 	}
 
 	/* single button supporting play/pause */
-	snd_jack_set_key(tegra_machine_hp_jack.jack,
-		SND_JACK_BTN_0, KEY_MEDIA);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_0, KEY_MEDIA);
 
 	/* multiple buttons supporting play/pause and volume up/down */
-	snd_jack_set_key(tegra_machine_hp_jack.jack,
-		SND_JACK_BTN_1, KEY_MEDIA);
-	snd_jack_set_key(tegra_machine_hp_jack.jack,
-		SND_JACK_BTN_2, KEY_VOLUMEUP);
-	snd_jack_set_key(tegra_machine_hp_jack.jack,
-		SND_JACK_BTN_3, KEY_VOLUMEDOWN);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_1, KEY_MEDIA);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_2, KEY_VOLUMEUP);
+	snd_jack_set_key(jack->jack, SND_JACK_BTN_3, KEY_VOLUMEDOWN);
 
 	snd_soc_dapm_sync(&card->dapm);
 

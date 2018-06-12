@@ -64,6 +64,9 @@
 
 /* Configuration registers */
 #define ARM_SMMU_GR0_sCR0		0x0
+#define ARM_SMMU_GR0_sCR2		0x8
+#define ARM_SMMU_GR0_sACR		0x10
+
 #define sCR0_CLIENTPD			(1 << 0)
 #define sCR0_GFRE			(1 << 1)
 #define sCR0_GFIE			(1 << 2)
@@ -224,7 +227,10 @@
 #define ARM_SMMU_CB_TTBCR2		0x10
 #define ARM_SMMU_CB_TTBR0_LO		0x20
 #define ARM_SMMU_CB_TTBR0_HI		0x24
+#define ARM_SMMU_CB_TTBR1_LO		0x28
+#define ARM_SMMU_CB_TTBR1_HI		0x2c
 #define ARM_SMMU_CB_TTBCR		0x30
+#define ARM_SMMU_CB_CONTEXTIDR		0x34
 #define ARM_SMMU_CB_S1_MAIR0		0x38
 #define ARM_SMMU_CB_FSR			0x58
 #define ARM_SMMU_CB_FAR_LO		0x60

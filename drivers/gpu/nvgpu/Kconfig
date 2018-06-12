@@ -15,18 +15,10 @@ config GK20A_PMU
 choice
 	depends on GK20A
 	prompt "Enable GK20A frequency scaling"
-	default GK20A_PERFMON
+	default GK20A_DEVFREQ
 	optional
 	help
 	  Select this entry to enable gk20a scaling
-
-config GK20A_PERFMON
-	bool "Use Perfmon"
-	help
-	  Select this to enable built-in perfmon scaling.
-	  The built-in scaling option uses simplistic
-	  scaling mechanism (if busy, increase frequency and
-	  decrease frequency if idle).
 
 config GK20A_DEVFREQ
 	depends on COMMON_CLK

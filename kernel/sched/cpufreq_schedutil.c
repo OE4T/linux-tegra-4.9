@@ -222,7 +222,7 @@ static void sugov_get_util(unsigned long *util, unsigned long *max, u64 time)
 		*util = max(rq->cfs.avg.scaling_avg,
 				rq->cfs.avg.scaling_fast_avg);
 #else
-		*util = max(rq->cfs.avg.util_avg, rq->cfs.avg.util_fast_avg);
+		*util = max(*util, rq->cfs.avg.util_fast_avg);
 #endif
 		*util = min((*util + rt), max_cap);
 	}

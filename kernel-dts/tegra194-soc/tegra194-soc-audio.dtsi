@@ -21,11 +21,15 @@
 / {
 	sound {
 		iommus = <&smmu TEGRA_SID_APE>;
+		dma-mask = <0x0 0x5e000000>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
 		status = "disabled";
 	};
 
 	sound_ref {
 		iommus = <&smmu TEGRA_SID_APE>;
+		dma-mask = <0x0 0x5e000000>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
 		status = "disabled";
 	};
 
@@ -128,6 +132,8 @@
 			resets = <&bpmp_resets TEGRA194_RESET_ADSP_ALL>;
 			reset-names = "adspall";
 			iommus = <&smmu TEGRA_SID_APE>;
+			dma-mask = <0x0 0x5e000000>;
+			iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
 			status = "disabled";
 		};
 
@@ -564,6 +570,7 @@
 			nvidia,adma_ch_start = <16>;
 			nvidia,adma_ch_cnt = <16>;
 			iommus = <&smmu TEGRA_SID_APE>;
+			iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
 			interrupt-parent = <&tegra_agic>;
 			interrupts = <GIC_SPI INT_ADMA_EOT16 IRQ_TYPE_LEVEL_HIGH
 					ROUTE_TO_ADSP>,

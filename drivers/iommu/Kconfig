@@ -8,3 +8,12 @@ config TEGRA_ARM_SMMU_T19x
 
 	  Say Y here if your SoC includes an IOMMU device implementing
 	  the ARM SMMU architecture for T19x based architectures.
+
+config ARM_SMMU_SUSPEND
+	bool "ARM SMMU SUSPEND"
+	depends on ARM_SMMU
+	default n
+	help
+	  Support for ARM System MMU suspend where all the required SMMU
+	  registers will be saved to memory and upon resume warmboot/bootloader
+	  will restore SMMU registers from memory.

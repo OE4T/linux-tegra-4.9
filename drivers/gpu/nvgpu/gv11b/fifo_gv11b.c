@@ -1222,6 +1222,11 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, pbdma_intr_en_0_r(i), intr_stall);
 
 		intr_stall = gk20a_readl(g, pbdma_intr_stall_1_r(i));
+		/*
+		 * For bug 2082123
+		 * Mask the unused HCE_RE_ILLEGAL_OP bit from the interrupt.
+		 */
+		intr_stall &= ~pbdma_intr_stall_1_hce_illegal_op_enabled_f();
 		nvgpu_log_info(g, "pbdma id:%u, intr_en_1 0x%08x", i, intr_stall);
 		gk20a_writel(g, pbdma_intr_en_1_r(i), intr_stall);
 	}

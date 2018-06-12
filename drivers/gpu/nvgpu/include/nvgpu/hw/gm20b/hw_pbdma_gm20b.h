@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -515,6 +515,14 @@ static inline u32 pbdma_intr_stall_r(u32 i)
 static inline u32 pbdma_intr_stall_lbreq_enabled_f(void)
 {
 	return 0x100U;
+}
+static inline u32 pbdma_intr_stall_1_r(u32 i)
+{
+	return 0x00040140U + i*8192U;
+}
+static inline u32 pbdma_intr_stall_1_hce_illegal_op_enabled_f(void)
+{
+	return 0x1U;
 }
 static inline u32 pbdma_udma_nop_r(void)
 {

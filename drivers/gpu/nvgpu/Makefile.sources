@@ -32,7 +32,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/mm/nvgpu_mem.c \
 	common/mm/comptags.c \
 	common/mm/mm.c \
-	common/bus/bus.c \
 	common/enabled.c \
 	common/pramin.c \
 	common/semaphore.c \
@@ -71,6 +70,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/posix/nvlink.c \
 	common/posix/lock.c \
 	common/posix/stubs.c \
+	common/ptimer/ptimer.c \
 	common/clock_gating/gm20b_gating_reglist.c \
 	common/clock_gating/gp10b_gating_reglist.c \
 	common/clock_gating/gv11b_gating_reglist.c \
@@ -109,7 +109,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	lpwr/rppg.c \
 	gk20a/gk20a.c \
 	common/bus/bus_gk20a.c \
-	gk20a/pramin_gk20a.c \
+	common/ptimer/ptimer_gk20a.c \
 	gk20a/ce2_gk20a.c \
 	gk20a/fifo_gk20a.c \
 	gk20a/channel_gk20a.c \

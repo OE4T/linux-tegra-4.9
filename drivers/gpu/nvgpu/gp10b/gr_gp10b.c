@@ -529,28 +529,6 @@ int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	/* update l2 table */
 	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
 
-	/* update ds table */
-	gk20a_writel(g, gr_ds_zbc_color_r_r(),
-		gr_ds_zbc_color_r_val_f(color_val->color_ds[0]));
-	gk20a_writel(g, gr_ds_zbc_color_g_r(),
-		gr_ds_zbc_color_g_val_f(color_val->color_ds[1]));
-	gk20a_writel(g, gr_ds_zbc_color_b_r(),
-		gr_ds_zbc_color_b_val_f(color_val->color_ds[2]));
-	gk20a_writel(g, gr_ds_zbc_color_a_r(),
-		gr_ds_zbc_color_a_val_f(color_val->color_ds[3]));
-
-	gk20a_writel(g, gr_ds_zbc_color_fmt_r(),
-		gr_ds_zbc_color_fmt_val_f(color_val->format));
-
-	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
-
-	/* trigger the write */
-	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-		gr_ds_zbc_tbl_ld_select_c_f() |
-		gr_ds_zbc_tbl_ld_action_write_f() |
-		gr_ds_zbc_tbl_ld_trigger_active_f());
-
 	/* update local copy */
 	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
 		gr->zbc_col_tbl[index].color_l2[i] = color_val->color_l2[i];
@@ -589,22 +567,6 @@ int gr_gp10b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 
 	/* update l2 table */
 	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
-
-	/* update ds table */
-	gk20a_writel(g, gr_ds_zbc_z_r(),
-		gr_ds_zbc_z_val_f(depth_val->depth));
-
-	gk20a_writel(g, gr_ds_zbc_z_fmt_r(),
-		gr_ds_zbc_z_fmt_val_f(depth_val->format));
-
-	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
-
-	/* trigger the write */
-	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-		gr_ds_zbc_tbl_ld_select_z_f() |
-		gr_ds_zbc_tbl_ld_action_write_f() |
-		gr_ds_zbc_tbl_ld_trigger_active_f());
 
 	/* update local copy */
 	gr->zbc_dep_tbl[index].depth = depth_val->depth;

@@ -58,6 +58,7 @@
 #include <linux/amba/bus.h>
 #include <linux/version.h>
 
+#include <linux/arm-smmu-suspend.h>
 
 #include <asm/pgalloc.h>
 #include <asm/dma-iommu.h>
@@ -125,6 +126,7 @@ struct arm_smmu_device {
 	struct device			*dev;
 
 	void __iomem			*base[MAX_SMMUS];
+	u32				base_pa[MAX_SMMUS];
 	u32				num_smmus;
 	s8				iso_smmu_id;
 
@@ -3103,7 +3105,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
 	int num_irqs, i, err;
-	u32 emu_id = 0;
+	u32 emu_id = 0, suspend_save_reg;
 
 	if (tegra_platform_is_unit_fpga())
 		return -ENODEV;
@@ -3136,6 +3138,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 				return PTR_ERR(smmu->base[i]);
 			break;
 		}
+		smmu->base_pa[i] = res->start;
 
 		if (i == 0)
 			smmu->size = resource_size(res);
@@ -3217,6 +3220,18 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		if (err) {
 			dev_err(dev, "failed to request global IRQ %d (%u)\n",
 				i, smmu->irqs[i]);
+			goto out_free_irqs;
+		}
+	}
+
+	if (!of_property_read_u32(dev->of_node, "suspend-save-reg",
+			&suspend_save_reg)) {
+
+		err = arm_smmu_suspend_init(smmu->base, smmu->base_pa,
+					smmu->num_smmus, smmu->size,
+					smmu->pgshift, suspend_save_reg);
+		if (err) {
+			dev_err(dev, "failed to init arm_smu_suspend\n");
 			goto out_free_irqs;
 		}
 	}

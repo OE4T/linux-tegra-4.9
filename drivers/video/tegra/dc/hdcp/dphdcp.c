@@ -717,6 +717,7 @@ static int get_srm_signature(struct hdcp_context_t *hdcp_context,
 	}
 	/* pass the nonce to hdcp TA and get the signature back */
 	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
+	*(pkt + HDCP_NONCE_SIZE) = HDCP_1x;
 	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
 	if (err)
 		dphdcp_err("te launch operation failed with error %d\n", err);

@@ -811,7 +811,7 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 
 /* validate srm signature for hdcp 2.2 */
 static int get_srm_signature(struct hdcp_context_t *hdcp_context,
-			char *nonce, uint64_t *pkt, void *ta_ctx)
+		char *nonce, uint64_t *pkt, void *ta_ctx, uint8_t version)
 {
 	int err = 0;
 	/* generate nonce in the ucode */
@@ -823,6 +823,7 @@ static int get_srm_signature(struct hdcp_context_t *hdcp_context,
 
 	/* pass the nonce to hdcp TA and get the signature back */
 	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
+	*(pkt + HDCP_NONCE_SIZE) = version;
 
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	if (te_is_secos_dev_enabled())
@@ -910,7 +911,8 @@ static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
 		goto exit;
 
 	if (tegra_dc_is_nvdisplay()) {
-		e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
+		e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx,
+					HDCP_1x);
 		if (e) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
@@ -1241,7 +1243,8 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		nvhdcp_err("Error opening trusted session\n");
 		goto exit;
 	}
-	err = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx);
+	err = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx,
+			HDCP_22);
 	if (err) {
 		nvhdcp_err("Error getting srm signature!\n");
 		goto exit;
@@ -1339,7 +1342,7 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 			goto exit;
 		}
 		err = get_srm_signature(hdcp_context, nonce, pkt,
-				nvhdcp->ta_ctx);
+				nvhdcp->ta_ctx, HDCP_22);
 		if (err) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
@@ -1940,7 +1943,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			goto exit;
 		}
 		err = get_srm_signature(hdcp_context, nonce, pkt,
-				nvhdcp->ta_ctx);
+					nvhdcp->ta_ctx, HDCP_22);
 		if (err) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;

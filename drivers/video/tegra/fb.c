@@ -1289,7 +1289,6 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		struct tegra_dc_mode mode = dc->out->modes[mode_idx];
 		struct fb_videomode vmode;
 
-		mode.pclk = dc->mode.pclk;
 
 		if (mode.pclk > 1000) {
 			tegra_dc_to_fb_videomode(&vmode, &mode);

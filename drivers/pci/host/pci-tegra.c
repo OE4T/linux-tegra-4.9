@@ -2784,6 +2784,20 @@ change:
 	}
 	pcie_capability_write_word(dn_dev, PCI_EXP_LNKCTL2, val);
 
+	/* LTSSM might be in recovery or configuration, so wait for current
+	 * link training to end. Break out after waiting for timeout */
+	start_jiffies = jiffies;
+	for (;;) {
+		pcie_capability_read_word(dn_dev, PCI_EXP_LNKSTA, &val);
+		if (!(val & PCI_EXP_LNKSTA_LT))
+			break;
+		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
+			break;
+		usleep_range(1000, 1100);
+	}
+	if (val & PCI_EXP_LNKSTA_LT)
+		dev_err(pcie->dev, "Link training failed before speed change\n");
+
 	/* Retrain the link */
 	pcie_capability_read_word(dn_dev, PCI_EXP_LNKCTL, &val);
 	val |= PCI_EXP_LNKCTL_RL;
@@ -2897,10 +2911,10 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 		pcie_bus_configure_settings(child);
 
 	tegra_pcie_postinit();
+	tegra_pcie_enable_features(pcie);
 
 	pci_bus_add_devices(host->bus);
 
-	tegra_pcie_enable_features(pcie);
 	/* register pcie device as wakeup source */
 	device_init_wakeup(pcie->dev, true);
 

@@ -442,8 +442,11 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 		case TYPE_PARAM_SOURCE_SMMU_ADDR:
 			new_data = gpuva_to_iova_base(cde_ctx->vm,
 						      cde_ctx->surf_vaddr);
-			if (new_data == 0)
+			if (new_data == 0) {
+				nvgpu_warn(g, "cde: failed to find 0x%llx",
+						cde_ctx->surf_vaddr);
 				return -EINVAL;
+			}
 			break;
 		case TYPE_PARAM_BACKINGSTORE_BASE_HW:
 			new_data = g->gr.compbit_store.base_hw;

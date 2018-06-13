@@ -593,7 +593,7 @@ static int camrtc_test_run_and_show_result(struct seq_file *file,
 	if (ret < 0) {
 		if (ret != -ECONNRESET) {
 			dev_info(&ch->dev, "rebooting after a failed test run");
-			(void)tegra_camrtc_reboot(&ch->dev);
+			(void)tegra_camrtc_reboot(camrtc_get_device(ch));
 		}
 		goto runtime_put;
 	}

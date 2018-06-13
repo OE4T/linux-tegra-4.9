@@ -30,6 +30,7 @@
 #include <linux/thermal.h>
 #include <linux/tsensor-fuse.h>
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/pmc.h>
 
 #define PDEV2DEVICE(pdev) (&(pdev->dev))
 #define PDEV2SENSOR_INFO(pdev) \
@@ -250,7 +251,6 @@ struct aotag_sensor_info_t {
 	struct thermal_zone_device *tzd;
 	s32 therm_a;
 	s32 therm_b;
-	void __iomem *pmc_base;
 };
 
 static void aotag_thermtrip_enable(struct aotag_sensor_info_t *info, int temp)
@@ -263,11 +263,11 @@ static void aotag_thermtrip_enable(struct aotag_sensor_info_t *info, int temp)
 		temp = MIN_THRESHOLD_TEMP;
 
 	r = REG_SET(r, THRESH3_CFG, temp/1000);
-	writel(r, info->pmc_base + PMC_AOTAG_THRESH3_CFG);
+	tegra_pmc_writel(r, PMC_AOTAG_THRESH3_CFG);
 
-	r = readl(info->pmc_base + PMC_AOTAG_CFG);
+	r = tegra_pmc_readl(PMC_AOTAG_CFG);
 	set_bit(CFG_THERMTRIP_EN_POS, &r);
-	writel(r, info->pmc_base + PMC_AOTAG_CFG);
+	tegra_pmc_writel(r, PMC_AOTAG_CFG);
 }
 
 static int aotag_set_trip_temp(void *data, int trip, int trip_temp)
@@ -295,7 +295,6 @@ static int aotag_get_temp_generic(void *data, int *temp)
 	int ret = 0;
 	u32 regval = 0, abs = 0, fraction = 0, valid = 0, sign = 0;
 	struct platform_device *pdev = (struct platform_device *) data;
-	struct aotag_sensor_info_t *ps_info = PDEV2SENSOR_INFO(pdev);
 
 	if (unlikely(!data)) {
 		pr_err(" Invalid data pointer\n");
@@ -304,7 +303,7 @@ static int aotag_get_temp_generic(void *data, int *temp)
 		goto out;
 	}
 
-	regval = readl(ps_info->pmc_base + PMC_TSENSOR_STATUS1);
+	regval = tegra_pmc_readl(PMC_TSENSOR_STATUS1);
 	valid = REG_GET(regval, STATUS1_TEMP_VALID);
 	if (!valid) {
 		*temp = -125;
@@ -347,16 +346,6 @@ static int aotag_init(struct platform_device *pdev)
 	}
 
 	pdev->dev.platform_data = info;
-
-	/*
-	 * reading PMC reg base here from the already parsed pmc DT node,
-	 * rather than adding this (an extra) value to the DT.
-	 */
-	info->pmc_base = of_iomap(pmc_np, 0);
-	if (!info->pmc_base) {
-		dev_err(&pdev->dev, " - unable to map PMC\n");
-		return -ENOMEM;
-	}
 
 	info->config = pdata->config;
 	/* HW WAR for early parts. Account for incorrect ATE fusing during the
@@ -452,7 +441,7 @@ static int aotag_calib_init(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "thermA:%d, thermB:%d\n",
 			ps_info->therm_a, ps_info->therm_b);
-	writel(therm_ab, ps_info->pmc_base + PMC_TSENSOR_CONFIG2);
+	tegra_pmc_writel(therm_ab, PMC_TSENSOR_CONFIG2);
 
 	return 0;
 }
@@ -467,7 +456,7 @@ static int aotag_hw_init(struct platform_device *pdev)
 	/* clear CONFIG0_STOP, CONFIG0_RO_SEL, CONFIG0_STATUS_CLR */
 	r = 0;
 	r = REG_SET(r, CONFIG0_TALL, i->config->tall);
-	writel(r, i->pmc_base + PMC_TSENSOR_CONFIG0);
+	tegra_pmc_writel(r, PMC_TSENSOR_CONFIG0);
 
 	/* init CONFIG_1 registers */
 	r = 0;
@@ -478,18 +467,18 @@ static int aotag_hw_init(struct platform_device *pdev)
 	 */
 	r = REG_SET(r, CONFIG1_TSAMPLE, (i->config->tsample - 1));
 	set_bit(CONFIG1_TEMP_ENABLE_POS, &r);
-	writel(r, i->pmc_base + PMC_TSENSOR_CONFIG1);
+	tegra_pmc_writel(r, PMC_TSENSOR_CONFIG1);
 
 	/* init CONFIG_2 registers */
 	r = 0;
 	r = REG_SET(r, TSENSOR_PDIV, i->config->pdiv);
-	writel(r, i->pmc_base + PMC_TSENSOR_PDIV0);
+	tegra_pmc_writel(r, PMC_TSENSOR_PDIV0);
 
 	/* Enable AOTAG*/
 	r = 0;
 	set_bit(CFG_TAG_EN_POS, &r);
 	clear_bit(CFG_DISABLE_CLK_POS, &r);
-	writel(r, i->pmc_base + PMC_AOTAG_CFG);
+	tegra_pmc_writel(r, PMC_AOTAG_CFG);
 
 	return ret;
 }

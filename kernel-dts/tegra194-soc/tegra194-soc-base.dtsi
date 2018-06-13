@@ -919,8 +919,9 @@
 			compatible = "nvidia,tegra194-tsec";
 			reg = <0x0 0x15500000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_TSEC>;
-			clocks = <&bpmp_clks TEGRA194_CLK_TSEC>;
-			clock-names = "tsec";
+			clocks = <&bpmp_clks TEGRA194_CLK_TSEC>,
+			         <&bpmp_clks TEGRA194_CLK_FUSE>;
+			clock-names = "tsec", "efuse";
 
 			iommus = <&smmu TEGRA_SID_TSEC>;
 			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
@@ -931,8 +932,9 @@
 			compatible = "nvidia,tegra194-tsec";
 			reg = <0x0 0x15100000 0x0 0x00040000>;
 			resets = <&bpmp_resets TEGRA194_RESET_TSECB>;
-			clocks = <&bpmp_clks TEGRA194_CLK_TSECB>;
-			clock-names = "tsecb";
+			clocks = <&bpmp_clks TEGRA194_CLK_TSECB>,
+			         <&bpmp_clks TEGRA194_CLK_FUSE>;
+			clock-names = "tsecb", "efuse";
 
 			iommus = <&smmu TEGRA_SID_TSECB>;
 			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;

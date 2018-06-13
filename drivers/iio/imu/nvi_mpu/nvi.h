@@ -22,6 +22,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/mpu_iio.h>
 #include <linux/nvs.h>
+#include <linux/version.h>
 
 #define NVI_BYPASS_TIMEOUT_MS		(1000)
 #define POWER_UP_TIME			(100)
@@ -145,6 +146,12 @@
 #define AUX_EXT_DATA_REG_MAX		(24)
 #define AUX_DEV_VALID_READ_LOOP_MAX	(20)
 #define AUX_DEV_VALID_READ_DELAY_MS	(5)
+
+/* Kernel compatibility section */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#define REGULATOR_EVENT_POST_ENABLE	REGULATOR_EVENT_ENABLE
+#endif
+
 
 struct nvi_state;
 

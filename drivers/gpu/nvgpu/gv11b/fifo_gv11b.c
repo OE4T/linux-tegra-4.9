@@ -373,7 +373,7 @@ u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
 		fifo_intr_0_bind_error_pending_f() |
 		fifo_intr_0_sched_error_pending_f() |
 		fifo_intr_0_chsw_error_pending_f() |
-		fifo_intr_0_fb_flush_timeout_pending_f() |
+		fifo_intr_0_memop_timeout_pending_f() |
 		fifo_intr_0_lb_error_pending_f();
 
 	return intr_0_error_mask;

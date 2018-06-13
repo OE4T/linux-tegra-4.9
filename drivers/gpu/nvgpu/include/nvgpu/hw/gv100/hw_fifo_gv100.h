@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -208,11 +208,11 @@ static inline u32 fifo_intr_0_chsw_error_reset_f(void)
 {
 	return 0x10000U;
 }
-static inline u32 fifo_intr_0_fb_flush_timeout_pending_f(void)
+static inline u32 fifo_intr_0_memop_timeout_pending_f(void)
 {
 	return 0x800000U;
 }
-static inline u32 fifo_intr_0_fb_flush_timeout_reset_f(void)
+static inline u32 fifo_intr_0_memop_timeout_reset_f(void)
 {
 	return 0x800000U;
 }

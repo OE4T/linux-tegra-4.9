@@ -82,6 +82,9 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/iio/buffer_impl.h>
+#endif
 
 #define NVS_IIO_DRIVER_VERSION		(223)
 

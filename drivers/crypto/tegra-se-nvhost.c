@@ -87,10 +87,13 @@ enum tegra_se_aes_op_mode {
 /* Security Engine key table type */
 enum tegra_se_key_table_type {
 	SE_KEY_TABLE_TYPE_KEY,	/* Key */
+	SE_KEY_TABLE_TYPE_KEY_IN_MEM,	/* Key in Memory */
 	SE_KEY_TABLE_TYPE_ORGIV,	/* Original IV */
 	SE_KEY_TABLE_TYPE_UPDTDIV,	/* Updated IV */
 	SE_KEY_TABLE_TYPE_XTS_KEY1,	/* XTS Key1 */
-	SE_KEY_TABLE_TYPE_XTS_KEY2	/* XTS Key2 */
+	SE_KEY_TABLE_TYPE_XTS_KEY2,	/* XTS Key2 */
+	SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM,	/* XTS Key1 in Memory */
+	SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM	/* XTS Key2 in Memory */
 };
 
 struct tegra_se_chipdata {
@@ -223,6 +226,8 @@ struct tegra_se_aes_context {
 	struct tegra_se_slot *slot;	/* Security Engine key slot */
 	u32 keylen;	/* key length in bits */
 	u32 op_mode;	/* AES operation mode */
+	bool is_key_in_mem; /* Whether key is in memory */
+	u8 key[64]; /* To store key if is_key_in_mem set */
 };
 
 /* Security Engine random number generator context */
@@ -284,6 +289,11 @@ struct tegra_se_slot {
 
 static struct tegra_se_slot ssk_slot = {
 	.slot_num = 15,
+	.available = false,
+};
+
+static struct tegra_se_slot keymem_slot = {
+	.slot_num = 14,
 	.available = false,
 };
 
@@ -471,11 +481,13 @@ static int tegra_init_key_slot(struct tegra_se_dev *se_dev)
 	spin_lock(&key_slot_lock);
 	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
 		/*
-		 * Slot 0 and 15 are reserved and will not be added to the
-		 * free slots pool. Slot 0 is used for SRK generation and
-		 * Slot 15 is used for SSK operation
+		 * Slot 0, 14 and 15 are reserved and will not be added to the
+		 * free slots pool. Slot 0 is used for SRK generation, Slot 14
+		 * for handling keys which are stored in memories and Slot 15 is
+		 * is used for SSK operation.
 		 */
-		if ((i == srk_slot.slot_num) || (i == ssk_slot.slot_num))
+		if ((i == srk_slot.slot_num) || (i == ssk_slot.slot_num)
+				|| (i == keymem_slot.slot_num))
 			continue;
 		se_dev->slot_list[i].available = true;
 		se_dev->slot_list[i].slot_num = i;
@@ -1020,12 +1032,15 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 	}
 
 	if ((type == SE_KEY_TABLE_TYPE_ORGIV) ||
-	    (type == SE_KEY_TABLE_TYPE_XTS_KEY2))
+	    (type == SE_KEY_TABLE_TYPE_XTS_KEY2) ||
+	    (type == SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM))
 		quad = QUAD_ORG_IV;
 	else if (type == SE_KEY_TABLE_TYPE_UPDTDIV)
 		quad = QUAD_UPDTD_IV;
 	else if ((type == SE_KEY_TABLE_TYPE_KEY) ||
-		 (type == SE_KEY_TABLE_TYPE_XTS_KEY1))
+		 (type == SE_KEY_TABLE_TYPE_XTS_KEY1) ||
+		 (type == SE_KEY_TABLE_TYPE_KEY_IN_MEM) ||
+		 (type == SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM))
 		quad = QUAD_KEYS_128;
 
 	i = se_dev->cmdbuf_cnt;
@@ -1040,9 +1055,11 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 	data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
 
 	do {
-		if (type == SE_KEY_TABLE_TYPE_XTS_KEY2)
+		if (type == SE_KEY_TABLE_TYPE_XTS_KEY2 ||
+				type == SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM)
 			pkt = SE_CRYPTO_KEYIV_PKT_SUBKEY_SEL(SUBKEY_SEL_KEY2);
-		else if (type == SE_KEY_TABLE_TYPE_XTS_KEY1)
+		else if (type == SE_KEY_TABLE_TYPE_XTS_KEY1 ||
+				type == SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM)
 			pkt = SE_CRYPTO_KEYIV_PKT_SUBKEY_SEL(SUBKEY_SEL_KEY1);
 
 		pkt |= (SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad));
@@ -1062,15 +1079,21 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 		}
 		data_size = data_len;
 		if ((type == SE_KEY_TABLE_TYPE_KEY) ||
-		    (type == SE_KEY_TABLE_TYPE_XTS_KEY1))
+		    (type == SE_KEY_TABLE_TYPE_XTS_KEY1) ||
+		    (type == SE_KEY_TABLE_TYPE_KEY_IN_MEM) ||
+		    (type == SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM))
 			quad = QUAD_KEYS_256;
-		else if (type == SE_KEY_TABLE_TYPE_XTS_KEY2)
+		else if ((type == SE_KEY_TABLE_TYPE_XTS_KEY2) ||
+			(type == SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM))
 			quad = QUAD_UPDTD_IV;
 
 	} while (data_len);
 
 	if ((type != SE_KEY_TABLE_TYPE_ORGIV) &&
-	    (type != SE_KEY_TABLE_TYPE_UPDTDIV)) {
+	    (type != SE_KEY_TABLE_TYPE_UPDTDIV) &&
+		(type != SE_KEY_TABLE_TYPE_KEY_IN_MEM) &&
+		(type != SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM) &&
+		(type != SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM)) {
 		cpuvaddr[i++] = __nvhost_opcode_nonincr(
 				opcode_addr + SE_AES_OPERATION_OFFSET, 1);
 		cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
@@ -1081,7 +1104,10 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
 	se_dev->cmdbuf_cnt = i;
 
 	if ((type != SE_KEY_TABLE_TYPE_ORGIV) &&
-	    (type != SE_KEY_TABLE_TYPE_UPDTDIV))
+	    (type != SE_KEY_TABLE_TYPE_UPDTDIV) &&
+		(type != SE_KEY_TABLE_TYPE_KEY_IN_MEM) &&
+		(type != SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM) &&
+		(type != SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM))
 		err = tegra_se_channel_submit_gather(
 			se_dev, cpuvaddr, iova, 0, cmdbuf_num_words, callback);
 
@@ -1539,14 +1565,52 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 	struct tegra_se_aes_context *aes_ctx;
 	struct ablkcipher_request *req;
 	struct tegra_se_req_context *req_ctx;
+	struct crypto_ablkcipher *tfm;
+	u32 keylen;
 
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
-		aes_ctx = crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
+		tfm = crypto_ablkcipher_reqtfm(req);
+		aes_ctx = crypto_ablkcipher_ctx(tfm);
 		/* Ensure there is valid slot info */
 		if (!aes_ctx->slot) {
 			dev_err(se_dev->dev, "Invalid AES Ctx Slot\n");
 			return -EINVAL;
+		}
+
+		if (aes_ctx->is_key_in_mem) {
+			if (strcmp(crypto_tfm_alg_name(&tfm->base),
+					       "xts(aes)")) {
+				ret = tegra_se_send_key_data(
+					se_dev, aes_ctx->key, aes_ctx->keylen,
+					aes_ctx->slot->slot_num,
+					SE_KEY_TABLE_TYPE_KEY_IN_MEM,
+					se_dev->opcode_addr, cpuvaddr, iova,
+					AES_CB);
+			} else {
+				keylen = aes_ctx->keylen / 2;
+				ret = tegra_se_send_key_data(se_dev,
+					aes_ctx->key, keylen,
+					aes_ctx->slot->slot_num,
+					SE_KEY_TABLE_TYPE_XTS_KEY1_IN_MEM,
+					se_dev->opcode_addr, cpuvaddr, iova,
+					AES_CB);
+				if (ret) {
+					dev_err(se_dev->dev, "Error in setting Key\n");
+					goto out;
+				}
+
+				ret = tegra_se_send_key_data(se_dev,
+					aes_ctx->key + keylen, keylen,
+					aes_ctx->slot->slot_num,
+					SE_KEY_TABLE_TYPE_XTS_KEY2_IN_MEM,
+					se_dev->opcode_addr, cpuvaddr, iova,
+					AES_CB);
+			}
+			if (ret) {
+				dev_err(se_dev->dev, "Error in setting Key\n");
+				goto out;
+			}
 		}
 
 		req_ctx = ablkcipher_request_ctx(req);
@@ -1581,6 +1645,7 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 				   se_dev->opcode_addr, cpuvaddr);
 	}
 
+out:
 	return ret;
 }
 
@@ -1887,6 +1952,15 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 		dev_err(se_dev->dev, "invalid key size");
 		return -EINVAL;
 	}
+
+	if ((keylen >> SE_MAGIC_PATTERN_OFFSET) == SE_STORE_KEY_IN_MEM) {
+		ctx->is_key_in_mem = true;
+		ctx->keylen = (keylen & SE_KEY_LEN_MASK);
+		ctx->slot = &keymem_slot;
+		memcpy(ctx->key, key, ctx->keylen);
+		return 0;
+	}
+	ctx->is_key_in_mem = false;
 
 	mutex_lock(&se_dev->mtx);
 	if (key) {

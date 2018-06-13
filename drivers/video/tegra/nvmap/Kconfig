@@ -35,6 +35,17 @@ config NVMAP_PAGE_POOL_SIZE
 	hex "Page pool size in pages"
 	default 0x0
 
+config NVMAP_COLOR_PAGES
+	bool "Color pages allocated"
+	default y
+	help
+	  Say Y here to enable page coloring.
+	  Page coloring rearranges the pages allocated based on the color
+	  of the page. It can improve memory access performance.
+	  The coloring option enable can optionally overallocate a portion of
+	  reqeusted allcoation size to improve the probabilty of better
+	  page coloring. If unsure, say Y.
+
 config NVMAP_CACHE_MAINT_BY_SET_WAYS
 	bool "Enable cache maintenance by set/ways"
 	help

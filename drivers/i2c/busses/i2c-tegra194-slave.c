@@ -704,6 +704,7 @@ static int tegra_i2cslv_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int tegra_i2cslv_suspend(struct device *dev)
 {
 	struct tegra_i2cslv_dev *i2cslv_dev = dev_get_drvdata(dev);
@@ -739,6 +740,7 @@ exit:
 	raw_spin_unlock_irqrestore(&i2cslv_dev->xfer_lock, flags);
 	return ret;
 }
+#endif
 
 static const struct dev_pm_ops tegra_i2cslv_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_i2cslv_suspend, tegra_i2cslv_resume)

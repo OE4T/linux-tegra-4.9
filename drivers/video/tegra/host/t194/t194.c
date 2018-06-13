@@ -485,6 +485,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {
 		{"tsec", 115200000},
+		{"efuse", 0, 0},
 		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
@@ -512,6 +513,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	.class			= NV_TSECB_CLASS_ID,
 	.clocks			= {
 		{"tsecb", UINT_MAX},
+		{"efuse", 0, 0},
 		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}

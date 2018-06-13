@@ -277,6 +277,14 @@
 	ufshci@2450000 {
 		nvidia,enable-wlu-scsi-device-add;
 	};
+
+	pmc@c360000 {
+		status = "okay";
+		/*export: SCRATCH_99*/
+		export-pmc-scratch-reg-offset = <0x568>;
+		export-pmc-scratch-reg-name = "boot-chain-type";
+	};
+
 	se_elp@3ad0000 {
 		status = "okay";
 	};

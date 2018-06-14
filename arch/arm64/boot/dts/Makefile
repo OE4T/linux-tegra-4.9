@@ -66,6 +66,13 @@ DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t19x/kernel-dts
 DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/t19x/common/kernel-dts
 endif
 
+ifeq ($(CONFIG_ARCH_TEGRA_23x_SOC),y)
+DTC_FLAGS += -i $(tegra-dtstree)/soc/t23x/kernel-include
+DTC_FLAGS += -i $(tegra-dtstree)/soc/t23x/kernel-dts
+DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t23x/kernel-include
+DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t23x/kernel-dts
+endif
+
 ifeq ($(CONFIG_ANDROID),y)
 DTCCPP_FLAGS += -DCONFIG_ANDROID
 endif

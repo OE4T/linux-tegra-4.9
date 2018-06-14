@@ -47,14 +47,6 @@ config NV_TEGRA_IVC
 	  Enable the Tegra IVC library, which implements a lockless, shared-
 	  memory queue.
 
-config TEGRA_FIQ_DEBUGGER
-	bool "Enable the FIQ serial debugger on Tegra"
-	default n
-	select FIQ_DEBUGGER
-	select FIQ_GLUE
-	help
-	  Enables the FIQ serial debugger on Tegra
-
 config TEGRA_NVDUMPER
 	bool "Enable nvdumper"
 	depends on ARCH_TEGRA

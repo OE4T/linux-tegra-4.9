@@ -34,6 +34,4 @@ obj-y					+= tegra_prod.o
 
 obj-y					+= tegra-hv-mode.o
 
-obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o
-
 obj-$(CONFIG_TEGRA_HV_XHCI_DEBUG)	+= tegra-hv-xhci-debug.o

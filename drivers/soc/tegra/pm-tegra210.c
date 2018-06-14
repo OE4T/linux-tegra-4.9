@@ -30,6 +30,7 @@
 #include <linux/spinlock.h>
 #include <linux/syscore_ops.h>
 #include <linux/tick.h>
+#include <linux/version.h>
 #include <soc/tegra/bpmp_t210_abi.h>
 #include <soc/tegra/flowctrl.h>
 #include <soc/tegra/fuse.h>
@@ -401,7 +402,11 @@ static int idle_write(void *data, u64 val)
 
 	sleep = ktime_sub(ktime_get(), time);
 	time = ktime_sub(sleep, interval);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+#else
+	trace_printk("idle: %lld, exit latency: %lld\n", sleep, time);
+#endif
 
 	local_irq_enable();
 	local_fiq_enable();

@@ -67,6 +67,13 @@ int nvgpu_current_tid(struct gk20a *g)
 	return (int)pthread_self();
 }
 
+void __nvgpu_print_current(struct gk20a *g, const char *func_name, int line,
+		void *ctx, enum nvgpu_log_type type)
+{
+	__nvgpu_log_msg(g, func_name, line, type,
+			"Current process: (nvgpu userspace)");
+}
+
 /*
  * Somewhat meaningless in userspace...
  */

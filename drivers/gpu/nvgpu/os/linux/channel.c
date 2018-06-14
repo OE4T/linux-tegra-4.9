@@ -890,8 +890,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			err = gk20a_busy(g);
 			if (err) {
 				nvgpu_err(g,
-					"failed to host gk20a to submit gpfifo, process %s",
-					current->comm);
+					"failed to host gk20a to submit gpfifo");
+				nvgpu_print_current(g, NULL, NVGPU_ERROR);
 				return err;
 			}
 		}

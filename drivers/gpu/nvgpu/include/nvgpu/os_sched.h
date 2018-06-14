@@ -23,6 +23,8 @@
 #ifndef __NVGPU_OS_SCHED_H__
 #define __NVGPU_OS_SCHED_H__
 
+#include <nvgpu/log.h>
+
 struct gk20a;
 
 /**
@@ -36,5 +38,14 @@ int nvgpu_current_tid(struct gk20a *g);
  *
  */
 int nvgpu_current_pid(struct gk20a *g);
+
+void __nvgpu_print_current(struct gk20a *g, const char *func_name, int line,
+		void *ctx, enum nvgpu_log_type type);
+/**
+ * nvgpu_print_current - print the name of current calling process
+ *
+ */
+#define nvgpu_print_current(g, ctx, type) \
+	__nvgpu_print_current(g, __func__, __LINE__, ctx, type)
 
 #endif /* __NVGPU_OS_SCHED_H__ */

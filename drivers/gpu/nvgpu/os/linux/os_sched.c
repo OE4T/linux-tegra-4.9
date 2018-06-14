@@ -24,3 +24,9 @@ int nvgpu_current_pid(struct gk20a *g)
 {
 	return current->tgid;
 }
+
+void __nvgpu_print_current(struct gk20a *g, const char *func_name, int line,
+		void *ctx, enum nvgpu_log_type type)
+{
+	__nvgpu_log_msg(g, func_name, line, type, current->comm);
+}

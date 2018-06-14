@@ -39,7 +39,13 @@ static int dbg_dsi_show(struct seq_file *s, void *unused)
 	struct tegra_dc *dc;
 	unsigned long i = 0, j = 0;
 	u32 col = 0;
-	u32 base[] = {tegra_dc_get_dsi_base(), tegra_dc_get_dsib_base()};
+
+	/*
+	 * on T210 and earlier, max->instances = 2 which means the last two
+	 * array elements are unused (as desired) on those platforms
+	 */
+	u32 base[] = {tegra_dc_get_dsi_base(), tegra_dc_get_dsib_base(),
+		TEGRA_DSIC_BASE, TEGRA_DSID_BASE};
 
 	dc = ((struct tegra_dc_dsi_data *) s->private)->dc;
 	dsi = (struct tegra_dc_dsi_data *) dc->out_data;

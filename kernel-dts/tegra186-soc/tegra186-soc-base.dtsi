@@ -656,6 +656,89 @@
 		iopad_default: iopad-defaults {
 		};
 
+		hdmi_dp0_dpd_enable: hdmi-dp0-dpd-enable {
+			hdmi-dp0-pad-lowpower-enable {
+				pins = "hdmi-dp0";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp0_dpd_disable: hdmi-dp0-dpd-disable {
+			hdmi-dp0-pad-lowpower-disable {
+				pins = "hdmi-dp0";
+				low-power-disable;
+			};
+		};
+
+		hdmi_dp1_dpd_enable: hdmi-dp1-dpd-enable {
+			hdmi-dp1-pad-lowpower-enable {
+				pins = "hdmi-dp1";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp1_dpd_disable: hdmi-dp1-dpd-disable {
+			hdmi-dp1-pad-lowpower-disable {
+				pins = "hdmi-dp1";
+				low-power-disable;
+			};
+		};
+
+		dsi_dpd_enable: dsi-dpd-enable {
+			dsi-pad-lowpower-enable {
+				pins = "dsi";
+				low-power-enable;
+			};
+		};
+
+		dsi_dpd_disable: dsi-dpd-disable {
+			dsi-pad-lowpower-disable {
+				pins = "dsi";
+				low-power-disable;
+			};
+		};
+
+		dsib_dpd_enable: dsib-dpd-enable {
+			dsib-pad-lowpower-enable {
+				pins = "dsib";
+				low-power-enable;
+			};
+		};
+
+		dsib_dpd_disable: dsib-dpd-disable {
+			dsib-pad-lowpower-disable {
+				pins = "dsib";
+				low-power-disable;
+			};
+		};
+
+		dsic_dpd_enable: dsic-dpd-enable {
+			dsic-pad-lowpower-enable {
+				pins = "dsic";
+				low-power-enable;
+			};
+		};
+
+		dsic_dpd_disable: dsic-dpd-disable {
+			dsic-pad-lowpower-disable {
+				pins = "dsic";
+				low-power-disable;
+			};
+		};
+
+		dsid_dpd_enable: dsid-dpd-enable {
+			dsid-pad-lowpower-enable {
+				pins = "dsid";
+				low-power-enable;
+			};
+		};
+
+		dsid_dpd_disable: dsid-dpd-disable {
+			dsidpad-lowpower-disable {
+				pins = "dsid";
+				low-power-disable;
+			};
+		};
 	};
 
 	tegra_aowake: pmc@c370000 {
@@ -858,6 +941,24 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD0>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head0";
+			pinctrl-names = "dsi-dpd-disable", "dsi-dpd-enable",
+					"dsib-dpd-disable", "dsib-dpd-enable",
+					"dsic-dpd-disable", "dsic-dpd-enable",
+					"dsid-dpd-disable", "dsid-dpd-enable",
+					"hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable";
+			pinctrl-0 = <&dsi_dpd_disable>;
+			pinctrl-1 = <&dsi_dpd_enable>;
+			pinctrl-2 = <&dsib_dpd_disable>;
+			pinctrl-3 = <&dsib_dpd_enable>;
+			pinctrl-4 = <&dsic_dpd_disable>;
+			pinctrl-5 = <&dsic_dpd_enable>;
+			pinctrl-6 = <&dsid_dpd_disable>;
+			pinctrl-7 = <&dsid_dpd_enable>;
+			pinctrl-8 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-9 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-10 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb0_reserved>;
 			iommu-direct-regions = <&fb0_reserved>;
@@ -898,6 +999,24 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD1>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head1";
+			pinctrl-names = "dsi-dpd-disable", "dsi-dpd-enable",
+					"dsib-dpd-disable", "dsib-dpd-enable",
+					"dsic-dpd-disable", "dsic-dpd-enable",
+					"dsid-dpd-disable", "dsid-dpd-enable",
+					"hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable";
+			pinctrl-0 = <&dsi_dpd_disable>;
+			pinctrl-1 = <&dsi_dpd_enable>;
+			pinctrl-2 = <&dsib_dpd_disable>;
+			pinctrl-3 = <&dsib_dpd_enable>;
+			pinctrl-4 = <&dsic_dpd_disable>;
+			pinctrl-5 = <&dsic_dpd_enable>;
+			pinctrl-6 = <&dsid_dpd_disable>;
+			pinctrl-7 = <&dsid_dpd_enable>;
+			pinctrl-8 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-9 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-10 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb1_reserved>;
 			iommu-direct-regions = <&fb1_reserved>;
@@ -936,6 +1055,24 @@
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_HEAD2>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head2";
+			pinctrl-names = "dsi-dpd-disable", "dsi-dpd-enable",
+					"dsib-dpd-disable", "dsib-dpd-enable",
+					"dsic-dpd-disable", "dsic-dpd-enable",
+					"dsid-dpd-disable", "dsid-dpd-enable",
+					"hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable";
+			pinctrl-0 = <&dsi_dpd_disable>;
+			pinctrl-1 = <&dsi_dpd_enable>;
+			pinctrl-2 = <&dsib_dpd_disable>;
+			pinctrl-3 = <&dsib_dpd_enable>;
+			pinctrl-4 = <&dsic_dpd_disable>;
+			pinctrl-5 = <&dsic_dpd_enable>;
+			pinctrl-6 = <&dsid_dpd_disable>;
+			pinctrl-7 = <&dsid_dpd_enable>;
+			pinctrl-8 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-9 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-10 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb2_reserved>;
 			iommu-direct-regions = <&fb2_reserved>;
@@ -966,11 +1103,6 @@
 				<&tegra_car TEGRA186_RESET_DSIPADCTL>;
 			reset-names = "dsia", "dsib", "dsic", "dsid", "dsi_padctrl";
 			nvidia,enable-hs-clk-in-lp-mode = <1>;
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_DSI>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIB>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIC>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSID>;
-			pad-names = "dsia", "dsib", "dsic", "dsid";
 			status = "disabled";
 		};
 
@@ -1072,8 +1204,6 @@
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				      "hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP0>;
-			pad-names = "hdmi-dp0";
 			status = "disabled";
 			sor0_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1111,8 +1241,6 @@
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				      "hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP1>;
-			pad-names = "hdmi-dp1";
 			status = "disabled";
 			sor1_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";

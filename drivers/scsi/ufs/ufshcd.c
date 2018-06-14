@@ -2326,7 +2326,6 @@ static int ufshcd_read_desc_param(struct ufs_hba *hba,
 	ret = ufshcd_query_descriptor_retry(hba, UPIU_QUERY_OPCODE_READ_DESC,
 					desc_id, desc_index, 0,
 					desc_buf, &buff_len);
-
 	if (ret) {
 		dev_err(hba->dev, "%s: Failed reading descriptor. desc_id %d, desc_index %d, param_offset %d, ret %d",
 			__func__, desc_id, desc_index, param_offset, ret);
@@ -3591,6 +3590,8 @@ static int ufshcd_slave_alloc(struct scsi_device *sdev)
 	/* REPORT SUPPORTED OPERATION CODES is not supported */
 	sdev->no_report_opcodes = 1;
 
+	/* WRITE_SAME command is not supported */
+	sdev->no_write_same = 1;
 
 	ufshcd_set_queue_depth(sdev);
 
@@ -5168,8 +5169,8 @@ out:
 	return ret;
 }
 
-static int ufs_get_device_info(struct ufs_hba *hba,
-				struct ufs_device_info *card_data)
+static int ufs_get_device_desc(struct ufs_hba *hba,
+			       struct ufs_dev_desc *dev_desc)
 {
 	int err;
 	u8 model_index;
@@ -5187,7 +5188,7 @@ static int ufs_get_device_info(struct ufs_hba *hba,
 	 * getting vendor (manufacturerID) and Bank Index in big endian
 	 * format
 	 */
-	card_data->wmanufacturerid = desc_buf[DEVICE_DESC_PARAM_MANF_ID] << 8 |
+	dev_desc->wmanufacturerid = desc_buf[DEVICE_DESC_PARAM_MANF_ID] << 8 |
 				     desc_buf[DEVICE_DESC_PARAM_MANF_ID + 1];
 
 	model_index = desc_buf[DEVICE_DESC_PARAM_PRDCT_NAME];
@@ -5201,36 +5202,26 @@ static int ufs_get_device_info(struct ufs_hba *hba,
 	}
 
 	str_desc_buf[QUERY_DESC_MAX_SIZE] = '\0';
-	strlcpy(card_data->model, (str_desc_buf + QUERY_DESC_HDR_SIZE),
+	strlcpy(dev_desc->model, (str_desc_buf + QUERY_DESC_HDR_SIZE),
 		min_t(u8, str_desc_buf[QUERY_DESC_LENGTH_OFFSET],
 		      MAX_MODEL_LEN));
 
 	/* Null terminate the model string */
-	card_data->model[MAX_MODEL_LEN] = '\0';
+	dev_desc->model[MAX_MODEL_LEN] = '\0';
 
 out:
 	return err;
 }
 
-void ufs_advertise_fixup_device(struct ufs_hba *hba)
+static void ufs_fixup_device_setup(struct ufs_hba *hba,
+				   struct ufs_dev_desc *dev_desc)
 {
-	int err;
 	struct ufs_dev_fix *f;
-	struct ufs_device_info card_data;
-
-	card_data.wmanufacturerid = 0;
-
-	err = ufs_get_device_info(hba, &card_data);
-	if (err) {
-		dev_err(hba->dev, "%s: Failed getting device info. err = %d\n",
-			__func__, err);
-		return;
-	}
 
 	for (f = ufs_fixups; f->quirk; f++) {
-		if (((f->card.wmanufacturerid == card_data.wmanufacturerid) ||
-		    (f->card.wmanufacturerid == UFS_ANY_VENDOR)) &&
-		    (STR_PRFX_EQUAL(f->card.model, card_data.model) ||
+		if ((f->card.wmanufacturerid == dev_desc->wmanufacturerid ||
+		     f->card.wmanufacturerid == UFS_ANY_VENDOR) &&
+		    (STR_PRFX_EQUAL(f->card.model, dev_desc->model) ||
 		     !strcmp(f->card.model, UFS_ANY_MODEL)))
 			hba->dev_quirks |= f->quirk;
 	}
@@ -5453,6 +5444,7 @@ static void ufshcd_def_desc_sizes(struct ufs_hba *hba)
  */
 static int ufshcd_probe_hba(struct ufs_hba *hba)
 {
+	struct ufs_dev_desc card = {0};
 	int ret;
 	ktime_t start = ktime_get();
 	u32 ref_clk;
@@ -5481,7 +5473,14 @@ static int ufshcd_probe_hba(struct ufs_hba *hba)
 	/* Init check for device descriptor sizes */
 	ufshcd_init_desc_sizes(hba);
 
-	ufs_advertise_fixup_device(hba);
+	ret = ufs_get_device_desc(hba, &card);
+	if (ret) {
+		dev_err(hba->dev, "%s: Failed getting device info. err = %d\n",
+			__func__, ret);
+		goto out;
+	}
+
+	ufs_fixup_device_setup(hba, &card);
 	ufshcd_tune_unipro_params(hba);
 
 	ret = ufshcd_set_vccq_rail_unused(hba,

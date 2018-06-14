@@ -21,7 +21,6 @@
 #include <linux/err.h>
 #include <linux/debugfs.h>
 #include <linux/fs.h>
-#include <asm/uaccess.h>
 #include <linux/delay.h>
 #include <linux/string.h>
 #include <linux/regulator/consumer.h>
@@ -29,6 +28,12 @@
 #include <linux/of.h>
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/uaccess.h>
+#else
+#include <asm/uaccess.h>
+#endif
 
 #define BH1730_VENDOR			"ROHM"
 #define BH1730_NAME			"bh1730fvc"

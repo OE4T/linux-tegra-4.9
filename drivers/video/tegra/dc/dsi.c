@@ -39,7 +39,6 @@
 #include <linux/nvhost.h>
 #include <linux/of_address.h>
 #include <linux/io.h>
-#include <linux/padctrl/padctrl.h>
 #include <linux/tegra_prod.h>
 
 #include "dc.h"
@@ -4472,14 +4471,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dsi_fixed_clk = NULL;
 	struct clk *dsi_lp_clk = NULL;
 	struct reset_control *dsi_reset = NULL;
-	struct padctrl *dsi_io_padctrl = NULL;
-
 	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
 	int dsi_instance;
 	int index = 0;
 
-	char *dsi_io_padctrl_name[4] = {"dsia", "dsib", "dsic", "dsid"};
+	char *dsi_pad_dpd_on[4] = {"dsi-dpd-enable", "dsib-dpd-enable",
+			"dsic-dpd-enable", "dsid-dpd-enable"};
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
 	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
@@ -4538,14 +4536,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_free_dsi_lp_clk;
 	}
 
-	dsi->dsi_io_padctrl = kzalloc(tegra_dc_get_max_dsi_instance() *
-				      sizeof(struct tegra_dsi_padctrl *),
-				      GFP_KERNEL);
-	if (!dsi->dsi_io_padctrl) {
-		err = -ENOMEM;
-		goto err_free_dsi_reset;
-	}
-
 	/* Detect when user provides wrong dsi_instance or
 	 * max dsi instances.
 	 */
@@ -4556,6 +4546,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_free_dsi_reset;
 	}
 
+	dsi->dsi_io_pad_pinctrl = devm_pinctrl_get(&dc->ndev->dev);
+	if (IS_ERR_OR_NULL(dsi->dsi_io_pad_pinctrl)) {
+		dev_err(&dc->ndev->dev, "dsi: missing io pinctrl info:%ld\n",
+			PTR_ERR(dsi->dsi_io_pad_pinctrl));
+		dsi->dsi_io_pad_pinctrl = NULL;
+	}
+
 	for (i = 0; i < dsi->max_instances; i++) {
 
 		index = i + dsi_instance; /*index for dsi instance*/
@@ -4564,13 +4561,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		if (!base) {
 			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");
 			err = -ENOENT;
-			goto err_free_dsi_io_padctrl;
+			goto err_free_dsi_reset;
 		}
 
 		dsi_pdata = dc->pdata->default_out->dsi;
 		if (!dsi_pdata) {
 			dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
-			goto err_free_dsi_io_padctrl;
+			goto err_free_dsi_reset;
 		}
 
 		dsi_clk = tegra_disp_of_clk_get_by_name(np_dsi,
@@ -4596,19 +4593,20 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			reset_control_reset(dsi_reset);
 		}
 
-		dsi_io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
-			np_dsi, dsi_io_padctrl_name[index]);
-		if (IS_ERR_OR_NULL(dsi_io_padctrl)) {
-			dev_err(&dc->ndev->dev, "dsi: %s IO padctrl unavailable\n",
-				dsi_io_padctrl_name[index]);
-			dsi_io_padctrl = NULL;
+		if (dsi->dsi_io_pad_pinctrl) {
+			dsi->dpd_enable[i] = pinctrl_lookup_state(dsi->dsi_io_pad_pinctrl,
+								  dsi_pad_dpd_on[i]);
+			if (IS_ERR_OR_NULL(dsi->dpd_enable[i])) {
+				dev_err(&dc->ndev->dev, "dsi: dpd lookup fail:%ld\n",
+					PTR_ERR(dsi->dpd_enable[i]));
+				dsi->dpd_enable[i] = NULL;
+			}
 		}
 
 		dsi->base[i] = base;
 		dsi->dsi_clk[i] = dsi_clk;
 		dsi->dsi_lp_clk[i] = dsi_lp_clk;
 		dsi->dsi_reset[i] = dsi_reset;
-		dsi->dsi_io_padctrl[i] = dsi_io_padctrl;
 	}
 
 	if (tegra_dc_is_t21x()) {
@@ -4687,8 +4685,13 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		int i;
 		for (i = 0; i < tegra_dc_get_max_dsi_instance(); i++) {
 			if ((dsi->info.dpd_dsi_pads & DSI_DPD_EN(i)) &&
-				dsi->dsi_io_padctrl[i])
-				padctrl_power_disable(dsi->dsi_io_padctrl[i]);
+				dsi->dpd_enable[i]) {
+				err = pinctrl_select_state(dsi->dsi_io_pad_pinctrl,
+							   dsi->dpd_enable[i]);
+				if (err < 0)
+					dev_err(&dc->ndev->dev,
+						"io pad power-down fail:%d\n", err);
+			}
 		}
 	}
 
@@ -4718,8 +4721,6 @@ err_dsi_clk_put:
 		if (dsi->dsi_reset[i])
 			reset_control_put(dsi->dsi_reset[i]);
 	}
-err_free_dsi_io_padctrl:
-	kfree(dsi->dsi_io_padctrl);
 err_free_dsi_reset:
 	kfree(dsi->dsi_reset);
 err_free_dsi_lp_clk:

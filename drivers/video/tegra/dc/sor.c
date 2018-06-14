@@ -27,7 +27,6 @@
 #include <linux/tegra_prod.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-#include <linux/padctrl/padctrl.h>
 #include <linux/tegra_pm_domains.h>
 #include <video/tegra_dc_ext.h>
 
@@ -740,7 +739,8 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	u32 temp;
 	int err, i;
 	char res_name[CHAR_BUF_SIZE_MAX] = {0};
-	char io_padctrl_name[CHAR_BUF_SIZE_MAX] = {0};
+	char io_pinctrl_en_name[CHAR_BUF_SIZE_MAX] = {0};
+	char io_pinctrl_dis_name[CHAR_BUF_SIZE_MAX] = {0};
 	struct clk *sor_clk = NULL;
 	struct clk *safe_clk = NULL;
 	struct clk *pad_clk = NULL;
@@ -844,20 +844,45 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		sor->xbar_ctrl[i] = i;
 
 	if (tegra_dc_is_t21x() && (sor->ctrl_num == 1)) { /* todo: fix this */
-		snprintf(io_padctrl_name, CHAR_BUF_SIZE_MAX, "hdmi");
+		snprintf(io_pinctrl_en_name, CHAR_BUF_SIZE_MAX,
+			 "hdmi-dpd-enable");
+		snprintf(io_pinctrl_dis_name, CHAR_BUF_SIZE_MAX,
+			 "hdmi-dpd-disable");
 	} else {
-		snprintf(io_padctrl_name, CHAR_BUF_SIZE_MAX, "hdmi-dp%d",
-			sor->ctrl_num);
+		snprintf(io_pinctrl_en_name, CHAR_BUF_SIZE_MAX,
+			 "hdmi-dp%d-dpd-enable", sor->ctrl_num);
+		snprintf(io_pinctrl_dis_name, CHAR_BUF_SIZE_MAX,
+			 "hdmi-dp%d-dpd-disable", sor->ctrl_num);
 	}
 
-	sor->io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
-					sor_np, io_padctrl_name);
-	if (IS_ERR(sor->io_padctrl)) {
-		dev_err(&dc->ndev->dev, "sor: %s IO padctrl unavailable\n",
-			io_padctrl_name);
-		sor->io_padctrl = NULL;
+	sor->pinctrl_sor = devm_pinctrl_get(&dc->ndev->dev);
+	if (IS_ERR_OR_NULL(sor->pinctrl_sor)) {
+		dev_err(&dc->ndev->dev, "pinctrl get fail: %ld\n",
+			PTR_ERR(sor->pinctrl_sor));
+		sor->pinctrl_sor = NULL;
+		goto bypass_pads;
 	}
 
+	if (sor->pinctrl_sor) {
+		sor->dpd_enable = pinctrl_lookup_state(sor->pinctrl_sor,
+						       io_pinctrl_en_name);
+		if (IS_ERR_OR_NULL(sor->dpd_enable)) {
+			dev_err(&dc->ndev->dev, "dpd enable lookup fail:%ld\n",
+				PTR_ERR(sor->dpd_enable));
+			sor->dpd_enable = NULL;
+			goto bypass_pads;
+		}
+
+		sor->dpd_disable = pinctrl_lookup_state(sor->pinctrl_sor,
+							io_pinctrl_dis_name);
+		if (IS_ERR_OR_NULL(sor->dpd_disable)) {
+			dev_err(&dc->ndev->dev, "dpd disable lookup fail:%ld\n",
+				PTR_ERR(sor->dpd_disable));
+			sor->dpd_disable = NULL;
+		}
+	}
+
+bypass_pads:
 	if (of_property_read_u32_array(sor_np, "nvidia,xbar-ctrl",
 		sor->xbar_ctrl, sizeof(sor->xbar_ctrl)/sizeof(u32)))
 		dev_err(&dc->ndev->dev, "%s: error reading nvidia,xbar-ctrl\n",
@@ -960,6 +985,10 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_debug_destroy(sor);
 
 	iounmap(sor->base);
+
+	devm_pinctrl_put(sor->pinctrl_sor);
+	sor->dpd_enable = NULL;
+	sor->dpd_disable = NULL;
 
 	if (tegra_dc_is_nvdisplay())
 		devm_kfree(dev, sor->win_state_arr);
@@ -1153,21 +1182,26 @@ static inline void tegra_dc_sor_update(struct tegra_dc_sor_data *sor)
 
 static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 {
+	int ret = 0;
+
 	if (tegra_platform_is_vdk())
 		return;
 
-	if (sor->io_padctrl) {
-		int ret;
+	if (!sor->pinctrl_sor)
+		return;
 
-		if (up)
-			ret = padctrl_power_enable(sor->io_padctrl);
-		else
-			ret = padctrl_power_disable(sor->io_padctrl);
-		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev,
-				 "padctrl power %s fail %d\n",
-				 up ? "up" : "down", ret);
+	if (up) {
+		if (sor->dpd_disable)
+			ret = pinctrl_select_state(sor->pinctrl_sor,
+						   sor->dpd_disable);
+	} else {
+		if (sor->dpd_enable)
+			ret = pinctrl_select_state(sor->pinctrl_sor,
+						   sor->dpd_enable);
 	}
+	if (ret < 0)
+		dev_err(&sor->dc->ndev->dev, "io pad power %s fail:%d\n",
+			up ? "disable" : "enable", ret);
 }
 
 /* hdmi uses sor sequencer for pad power up */
@@ -1176,6 +1210,7 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	u32 nv_sor_pll0_reg = nv_sor_pll0();
 	u32 nv_sor_pll1_reg = nv_sor_pll1();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
+	int ret = 0;
 
 	/* seamless */
 	if (sor->dc->initialized)
@@ -1212,12 +1247,11 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_sor_pad_cal_power(sor, false);
 	usleep_range(20, 70);
 
-	if (sor->io_padctrl) {
-		int ret = padctrl_power_enable(sor->io_padctrl);
-
+	if (sor->dpd_disable) {
+		ret = pinctrl_select_state(sor->pinctrl_sor, sor->dpd_disable);
 		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
-				 ret);
+			dev_err(&sor->dc->ndev->dev,
+				"io pad power-up fail:%d\n", ret);
 	}
 	usleep_range(20, 70);
 
@@ -1253,6 +1287,7 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 {
 	u32 nv_sor_pll0_reg = nv_sor_pll0();
 	u32 nv_sor_pll2_reg = nv_sor_pll2();
+	int ret = 0;
 
 	tegra_sor_write_field(sor, nv_sor_pll2_reg,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
@@ -1273,12 +1308,11 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
 	tegra_sor_pad_cal_power(sor, false);
 
-	if (sor->io_padctrl) {
-		int ret = padctrl_power_disable(sor->io_padctrl);
-
+	if (sor->dpd_enable) {
+		ret = pinctrl_select_state(sor->pinctrl_sor, sor->dpd_enable);
 		if (ret < 0)
-			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
-				ret);
+			dev_err(&sor->dc->ndev->dev,
+				"io pad power-down fail:%d\n", ret);
 	}
 	usleep_range(20, 70);
 }

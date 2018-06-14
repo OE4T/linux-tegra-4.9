@@ -146,7 +146,8 @@ struct tegra_dc_dsi_data {
 	u32 device_shutdown;
 
 	struct sysedp_consumer *sysedpc;
-	struct padctrl **dsi_io_padctrl;
+	struct pinctrl *dsi_io_pad_pinctrl;
+	struct pinctrl_state *dpd_enable[4];
 
 	struct tegra_dsi_padctrl *pad_ctrl;
 	struct tegra_prod *prod_list;

@@ -202,7 +202,9 @@ struct tegra_dc_sor_data {
 	u8	clk_type;
 	u32  xbar_ctrl[5];
 	bool audio_support;
-	struct padctrl *io_padctrl;
+	struct pinctrl *pinctrl_sor;
+	struct pinctrl_state *dpd_enable;
+	struct pinctrl_state *dpd_disable;
 	int powergate_id;
 	struct rw_semaphore reset_lock;
 	struct dentry	*debugdir;

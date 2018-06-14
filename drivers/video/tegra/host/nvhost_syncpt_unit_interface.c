@@ -163,7 +163,14 @@ int nvhost_syncpt_get_gos(struct platform_device *engine_pdev,
 
 	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
 	if (!syncpt_gos_backing) {
-		nvhost_err(&engine_pdev->dev, "failed to find gos backing");
+		/*
+		 * It is absolutely valid for some dev syncpoints to not to
+		 * have GoS backing support. So it is up to the clients to
+		 * consider this as real error or not.
+		 * Keeping this error message verbose, increases CPU load when
+		 * this is called frequently in some usecases.
+		 */
+		dev_dbg(&engine_pdev->dev, "failed to find gos backing");
 		return -EINVAL;
 	}
 

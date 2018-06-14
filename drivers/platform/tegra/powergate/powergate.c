@@ -358,6 +358,7 @@ static int __init tegra_powergate_init(void)
 		TEGRA_POWERGATE_SOR = TEGRA186_POWER_DOMAIN_DISP;
 		break;
 
+	case TEGRA234:
 	case TEGRA194:
 		pg_ops = tegra194_powergate_init_chip_support();
 		break;

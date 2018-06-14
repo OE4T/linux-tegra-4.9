@@ -1309,6 +1309,8 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 		goto err_get_gk20a_channel;
 	}
 
+	ch->timeout.enabled = false;
+
 	/* bind the channel to the vm */
 	err = g->ops.mm.vm_bind_channel(g->mm.cde.vm, ch);
 	if (err) {

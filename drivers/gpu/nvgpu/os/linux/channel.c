@@ -662,7 +662,7 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 
 	if (cmd->mem->aperture == APERTURE_SYSMEM)
 		trace_gk20a_push_cmdbuf(g->name, 0, cmd->size, 0,
-				cmd->mem->cpu_va + cmd->off * sizeof(u32));
+				(u32 *)cmd->mem->cpu_va + cmd->off);
 
 	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
 }

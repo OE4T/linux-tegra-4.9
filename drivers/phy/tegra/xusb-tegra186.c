@@ -2381,6 +2381,7 @@ static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 		reg &= ~VBUS_OVERRIDE;
 	padctl_writel(padctl, reg, USB2_VBUS_ID);
 
+	padctl->otg_vbus_updating[i] = true;
 	schedule_work(&padctl->otg_vbus_work);
 	return 0;
 }
@@ -2408,6 +2409,7 @@ static int tegra186_xusb_padctl_id_override(struct tegra_xusb_padctl *padctl,
 	}
 	padctl_writel(padctl, reg, USB2_VBUS_ID);
 
+	padctl->otg_vbus_updating[i] = true;
 	schedule_work(&padctl->otg_vbus_work);
 
 	return 0;

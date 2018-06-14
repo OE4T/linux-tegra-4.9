@@ -307,6 +307,7 @@ int iommu_get_linear_map(struct device *dev, struct iommu_linear_map **map)
 	case TEGRA_CHIPID_TEGRA18:
 		table = t186_linear_map;
 		break;
+	case TEGRA_CHIPID_TEGRA23:
 	case TEGRA_CHIPID_TEGRA19:
 		table = t194_linear_map;
 		break;

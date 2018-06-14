@@ -3045,6 +3045,10 @@ static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 
+	/* In case of seamless display, kernel carries forward BL config */
+	if (dc->initialized)
+		return;
+
 	tegra_dc_io_start(dc);
 	tegra_dpaux_clk_en(dpaux);
 

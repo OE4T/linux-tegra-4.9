@@ -3346,6 +3346,10 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	/* In case of seamless display, kernel carries forward BL config */
+	if (dc->initialized)
+		return;
+
 	tegra_hdmi_get(dc);
 	tegra_dc_io_start(dc);
 

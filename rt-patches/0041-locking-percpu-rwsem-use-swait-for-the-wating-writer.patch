@@ -1,7 +1,7 @@
-From dbb938d19851f66a4230bd7d3ec65d7c58a1ecf9 Mon Sep 17 00:00:00 2001
+From 6f04a9e364b4d86b4b11a6a541fb5cfa65b020e4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:26:15 +0100
-Subject: [PATCH 041/357] locking/percpu-rwsem: use swait for the wating writer
+Subject: [PATCH 041/356] locking/percpu-rwsem: use swait for the wating writer
 
 Use struct swait_queue_head instead of wait_queue_head_t for the waiting
 writer. The swait implementation is smaller and lightweight compared to

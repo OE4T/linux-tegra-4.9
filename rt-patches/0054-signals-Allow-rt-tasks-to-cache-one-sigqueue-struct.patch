@@ -1,7 +1,7 @@
-From a9689fa25e10e7e58fcca34e690e5cf82a63718c Mon Sep 17 00:00:00 2001
+From 1ab56e65f31c3c2862a65fee41b709f4c83b7d43 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/357] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/356] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index fcd4012..ee42b75 100644
+index d8e814e..4d87727 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1858,6 +1858,7 @@ struct task_struct {
@@ -28,10 +28,10 @@ index fcd4012..ee42b75 100644
  	sigset_t blocked, real_blocked;
  	sigset_t saved_sigmask;	/* restored if set_restore_sigmask() was used */
 diff --git a/include/linux/signal.h b/include/linux/signal.h
-index b63f63e..295540f 100644
+index 5308304..aa9c1a6 100644
 --- a/include/linux/signal.h
 +++ b/include/linux/signal.h
-@@ -233,6 +233,7 @@ static inline void init_sigpending(struct sigpending *sig)
+@@ -250,6 +250,7 @@ static inline void init_sigpending(struct sigpending *sig)
  }
  
  extern void flush_sigqueue(struct sigpending *queue);
@@ -40,7 +40,7 @@ index b63f63e..295540f 100644
  /* Test if 'sig' is valid signal. Use this instead of testing _NSIG directly */
  static inline int valid_signal(unsigned long sig)
 diff --git a/kernel/exit.c b/kernel/exit.c
-index 46a7c2b..08ebedd 100644
+index 61921bc..d472298 100644
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
 @@ -145,7 +145,7 @@ static void __exit_signal(struct task_struct *tsk)
@@ -65,7 +65,7 @@ index c9f28b1..41f1929 100644
  	p->utime = p->stime = p->gtime = 0;
  	p->utimescaled = p->stimescaled = 0;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index bdb44e3..64e8df5 100644
+index 145b39c..5fac80c 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
 @@ -14,6 +14,7 @@
@@ -196,7 +196,7 @@ index bdb44e3..64e8df5 100644
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1495,7 +1555,8 @@ EXPORT_SYMBOL(kill_pid);
+@@ -1499,7 +1559,8 @@ EXPORT_SYMBOL(kill_pid);
   */
  struct sigqueue *sigqueue_alloc(void)
  {

@@ -59,7 +59,6 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 int clk_pmu_freq_effective_avg_load(struct gk20a *g, bool bload)
 {
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -84,7 +83,6 @@ int clk_pmu_freq_effective_avg_load(struct gk20a *g, bool bload)
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);
@@ -124,7 +122,6 @@ done:
 u32 clk_freq_effective_avg(struct gk20a *g, u32  clkDomainMask) {
 
 	struct pmu_cmd cmd;
-	struct pmu_msg msg;
 	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
@@ -146,7 +143,6 @@ u32 clk_freq_effective_avg(struct gk20a *g, u32  clkDomainMask) {
 			(u32)sizeof(struct pmu_hdr);
 
 	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
-	msg.hdr.size = sizeof(struct pmu_msg);
 
 	payload.in.buf = (u8 *)&rpccall;
 	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);

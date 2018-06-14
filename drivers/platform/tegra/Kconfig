@@ -201,4 +201,12 @@ config TEGRA_FIRMWARES_INVENTORY
 	help
 	  Register version readers for firmwares
 
+config TEGRA_FIQ_DEBUGGER
+	bool "Enable the FIQ serial debugger on Tegra"
+	default n
+	select FIQ_DEBUGGER
+	select FIQ_GLUE
+	help
+	  Enables the FIQ serial debugger on Tegra
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

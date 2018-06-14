@@ -1499,41 +1499,6 @@ static void add_smmu_master_debugfs(struct iommu_domain *domain,
 	master->debugfs_root = dent;
 }
 
-static void arm_smmu_do_linear_map(struct device *dev)
-{
-	struct iommu_linear_map *map = NULL;
-
-	if (iommu_get_linear_map(dev, &map)) {
-		int err;
-		DEFINE_DMA_ATTRS(attrs);
-
-		if (map->is_mapped)
-			return;
-
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs);
-
-		while (map && map->size) {
-
-			size_t size = PAGE_ALIGN(map->size);
-
-			err = dma_map_linear_attrs(dev, map->start,
-							size, 0, attrs);
-			if (err == DMA_ERROR_CODE) {
-				dev_err(dev,
-					"IOVA linear map %pad(%zx) failed\n",
-					&map->start, size);
-			} else {
-				dev_info(dev,
-					"IOVA linear map %pad(%zx)\n",
-					&map->start, size);
-				map->is_mapped = true;
-			}
-			map++;
-		}
-	}
-}
-
 static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 {
 	int ret, i;
@@ -1597,7 +1562,7 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 		pr_err("iommu_dma_init_domain failed, %s\n",
 				dev_name(dev));
 
-	arm_smmu_do_linear_map(dev);
+	of_map_iommu_direct_regions(dev);
 
 	/* Enable stream Id override, which enables SMMU translation for dev */
 	for (i = 0; i < cfg->num_streamids; i++)

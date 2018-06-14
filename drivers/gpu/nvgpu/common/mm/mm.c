@@ -159,10 +159,8 @@ static void nvgpu_remove_mm_support(struct mm_gk20a *mm)
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
 
-	if (g->ops.mm.is_bar1_supported(g)) {
-		nvgpu_free_inst_block(g, &mm->bar1.inst_block);
-		nvgpu_vm_put(mm->bar1.vm);
-	}
+	nvgpu_free_inst_block(g, &mm->bar1.inst_block);
+	nvgpu_vm_put(mm->bar1.vm);
 
 	nvgpu_free_inst_block(g, &mm->pmu.inst_block);
 	nvgpu_free_inst_block(g, &mm->hwpm.inst_block);
@@ -377,11 +375,10 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (g->ops.mm.is_bar1_supported(g)) {
-		err = nvgpu_init_bar1_vm(mm);
-		if (err)
-			return err;
-	}
+	err = nvgpu_init_bar1_vm(mm);
+	if (err)
+		return err;
+
 	if (g->ops.mm.init_bar2_vm) {
 		err = g->ops.mm.init_bar2_vm(g);
 		if (err)

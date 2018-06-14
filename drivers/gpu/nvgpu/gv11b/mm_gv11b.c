@@ -249,7 +249,11 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	g->ops.mm.fb_flush(g);
 	gk20a_mm_l2_flush(g, invalidate);
-	g->ops.mm.fb_flush(g);
+	if (g->ops.bus.bar1_bind)
+		g->ops.fb.tlb_invalidate(g,
+				g->mm.bar1.vm->pdb.mem);
+	else
+		g->ops.mm.fb_flush(g);
 }
 
 /*

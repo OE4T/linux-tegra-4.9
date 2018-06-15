@@ -31,6 +31,18 @@ void nvgpu_writel(struct gk20a *g, u32 r, u32 v)
 	}
 }
 
+void nvgpu_writel_relaxed(struct gk20a *g, u32 r, u32 v)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	if (unlikely(!l->regs)) {
+		__gk20a_warn_on_no_regs();
+		nvgpu_log(g, gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
+	} else {
+		writel_relaxed(v, l->regs + r);
+	}
+}
+
 u32 nvgpu_readl(struct gk20a *g, u32 r)
 {
 	u32 v = __nvgpu_readl(g, r);

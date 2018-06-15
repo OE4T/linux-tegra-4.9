@@ -27,65 +27,6 @@
 #include <nvgpu/nvgpu_mem.h>
 
 /*
- * DMA memory buffers - obviously we don't really have DMA in userspace but we
- * can emulate a lot of the DMA mem functionality for unit testing purposes.
- */
-
-u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
-{
-	u32 *mem_ptr = (u32 *)mem->cpu_va;
-
-	return mem_ptr[w];
-}
-
-u32 nvgpu_mem_rd(struct gk20a *g, struct nvgpu_mem *mem, u32 offset)
-{
-	if (offset & 0x3)
-		BUG();
-
-	return nvgpu_mem_rd32(g, mem, offset >> 2);
-}
-
-void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
-		    void *dest, u32 size)
-{
-	if (offset & 0x3 || size & 0x3)
-		BUG();
-
-	memcpy(dest, ((char *)mem->cpu_va) + offset, size);
-}
-
-void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
-{
-	u32 *mem_ptr = (u32 *)mem->cpu_va;
-
-	mem_ptr[w] = data;
-}
-
-void nvgpu_mem_wr(struct gk20a *g, struct nvgpu_mem *mem, u32 offset, u32 data)
-{
-	if (offset & 0x3)
-		BUG();
-
-	nvgpu_mem_wr32(g, mem, offset >> 2, data);
-}
-
-void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
-		    void *src, u32 size)
-{
-	if (offset & 0x3 || size & 0x3)
-		BUG();
-
-	memcpy(((char *)mem->cpu_va) + offset, src, size);
-}
-
-void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
-		  u32 c, u32 size)
-{
-	memset(((char *)mem->cpu_va) + offset, c, size);
-}
-
-/*
  * These functions are somewhat meaningless.
  */
 u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem)

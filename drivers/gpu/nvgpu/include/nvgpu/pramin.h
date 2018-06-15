@@ -29,16 +29,10 @@ struct gk20a;
 struct mm_gk20a;
 struct nvgpu_mem;
 
-/*
- * This typedef is for functions that get called during the access_batched()
- * operation.
- */
-typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
-				       u32 **arg);
 
-void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
-				 u32 offset, u32 size,
-				 pramin_access_batch_fn loop, u32 **arg);
+void nvgpu_pramin_rd_n(struct gk20a *g, struct nvgpu_mem *mem, u32 start, u32 words, void *dest);
+void nvgpu_pramin_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 start, u32 words, void *src);
+void nvgpu_pramin_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 start, u32 words, u32 w);
 
 void nvgpu_init_pramin(struct mm_gk20a *mm);
 

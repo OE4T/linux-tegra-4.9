@@ -806,11 +806,7 @@ static int cpu_freq_notify(struct notifier_block *b,
 		policy = cpufreq_cpu_get(cpu);
 		if (!policy)
 			continue;
-		ret = cpufreq_update_policy(policy->cpu);
-		if (ret) {
-			cpufreq_cpu_put(policy);
-			break;
-		}
+		(void)cpufreq_update_policy(policy->cpu);
 		cpumask_or(&updated_cpus, &updated_cpus, policy->cpus);
 		cpufreq_cpu_put(policy);
 	}

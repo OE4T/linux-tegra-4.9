@@ -1780,8 +1780,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	if (enable_hwpm_ctxsw) {
 		/* Allocate buffer if necessary */
 		if (pm_ctx->mem.gpu_va == 0) {
-			ret = nvgpu_dma_alloc_flags_sys(g,
-					NVGPU_DMA_NO_KERNEL_MAPPING,
+			ret = nvgpu_dma_alloc_sys(g,
 					g->gr.ctx_vars.pm_ctxsw_image_size,
 					&pm_ctx->mem);
 			if (ret) {
@@ -2530,8 +2529,7 @@ int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 	if (nvgpu_mem_is_valid(&desc->mem))
 		return 0;
 
-	err = nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_NO_KERNEL_MAPPING,
-				    size, &desc->mem);
+	err = nvgpu_dma_alloc_sys(g, size, &desc->mem);
 	if (err)
 		return err;
 
@@ -2828,9 +2826,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	err = nvgpu_dma_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
-					gr->ctx_vars.buffer_total_size,
-					&gr_ctx->mem);
+	err = nvgpu_dma_alloc(g, gr->ctx_vars.buffer_total_size, &gr_ctx->mem);
 	if (err)
 		return err;
 
@@ -2933,7 +2929,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	nvgpu_log(g, gpu_dbg_info, "patch buffer size in entries: %d",
 		alloc_size);
 
-	err = nvgpu_dma_alloc_map_flags_sys(ch_vm, NVGPU_DMA_NO_KERNEL_MAPPING,
+	err = nvgpu_dma_alloc_map_sys(ch_vm,
 			alloc_size * sizeof(u32), &patch_ctx->mem);
 	if (err)
 		return err;

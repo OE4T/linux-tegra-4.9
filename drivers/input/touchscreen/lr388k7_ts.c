@@ -2,7 +2,7 @@
  * LR388K7 touchscreen driver
  *
  * Copyright (C) 2014, Sharp Corporation
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Makoto Itsuki <itsuki.makoto@sharp.co.jp>
  *
@@ -35,6 +35,11 @@
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>
 #include <linux/spinlock_types.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/signal.h>
+#endif
 
 /* DEBUG */
 /* #define DEBUG_LR388K7 */

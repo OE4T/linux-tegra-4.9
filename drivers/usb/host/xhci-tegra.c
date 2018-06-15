@@ -2111,7 +2111,8 @@ static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, int i, bool on)
 	struct xhci_hcd *xhci;
 	u32 status;
 	int wait;
-
+	struct tegra_xusb_mbox_msg msg;
+	int ret;
 	struct xusb_otg_port *port;
 	struct phy *usb2_phy = NULL, *usb3_phy = NULL;
 
@@ -2186,6 +2187,43 @@ role_update:
 	if (on) {
 		/* switch to host mode */
 		if (port->usb3_otg_port_base_1) {
+			if (XHCI_IS_T210(tegra)) {
+				/* set PP=0 */
+				xhci_hub_control(xhci->shared_hcd, GetPortStatus
+					, 0, port->usb3_otg_port_base_1
+					, (char *) &status, sizeof(status));
+				if (status & USB_SS_PORT_STAT_POWER) {
+					xhci_hub_control(xhci->shared_hcd,
+						ClearPortFeature,
+						USB_PORT_FEAT_POWER,
+						port->usb3_otg_port_base_1,
+						NULL, 0);
+				}
+
+				wait = 10;
+				do {
+					xhci_hub_control(xhci->shared_hcd
+						, GetPortStatus, 0
+						, port->usb3_otg_port_base_1
+						, (char *) &status
+						, sizeof(status));
+					if (!(status & USB_SS_PORT_STAT_POWER))
+						break;
+					usleep_range(10, 20);
+				} while (--wait > 0);
+
+				/* reset OTG port SSPI */
+				msg.cmd = MBOX_CMD_RESET_SSPI;
+				msg.data = port->usb3_otg_port_base_1;
+
+				ret = tegra_xusb_mbox_send(tegra, &msg);
+				if (ret < 0) {
+					dev_err(tegra->dev,
+						"failed to RESET_SSPI %d\n",
+						ret);
+				}
+			}
+
 			xhci_hub_control(xhci->shared_hcd, SetPortFeature,
 				USB_PORT_FEAT_POWER, port->usb3_otg_port_base_1
 				, NULL, 0);

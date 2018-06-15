@@ -97,14 +97,14 @@ int gp106_alloc_blob_space(struct gk20a *g,
 	 * Even though this mem_desc wouldn't be used, the wpr region needs to
 	 * be reserved in the allocator.
 	 */
-	err = nvgpu_dma_alloc_flags_vid_at(g,
-			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size,
+	err = nvgpu_dma_alloc_vid_at(g,
+			wpr_inf.size,
 			&g->acr.wpr_dummy, wpr_inf.wpr_base);
 	if (err)
 		return err;
 
-	return nvgpu_dma_alloc_flags_vid_at(g,
-			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size, mem,
+	return nvgpu_dma_alloc_vid_at(g,
+			wpr_inf.size, mem,
 			wpr_inf.nonwpr_base);
 }
 /* TODO - check if any free blob res needed*/

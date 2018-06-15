@@ -126,20 +126,6 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 
 void gv11b_fb_reset(struct gk20a *g)
 {
-	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
-		nvgpu_log(g, gpu_dbg_info, "mc_elpg_enable set by bpmp");
-	} else {
-		u32 mc_elpg_enable_val;
-
-		nvgpu_log(g, gpu_dbg_info, "enable xbar, pfb and hub");
-		mc_elpg_enable_val = mc_elpg_enable_xbar_enabled_f() |
-					mc_elpg_enable_pfb_enabled_f() |
-					mc_elpg_enable_hub_enabled_f();
-		mc_elpg_enable_val |= gk20a_readl(g, mc_elpg_enable_r());
-		gk20a_writel(g, mc_elpg_enable_r(), mc_elpg_enable_val);
-
-	}
-	/* fs hub should be out of reset by now */
 	gv11b_init_nvlink_soc_credits(g);
 }
 

@@ -1457,8 +1457,7 @@ static int ov5693_debugfs_create(struct ov5693 *priv)
 	if (priv->debugfs_dir == NULL)
 		return -ENOMEM;
 
-	if (!debugfs_create_file("streaming", S_IRUGO | S_IWUSR,
-			priv->debugfs_dir, priv,
+	if (!debugfs_create_file("streaming", 0644, priv->debugfs_dir, priv,
 			&ov5693_debugfs_streaming_fops))
 		goto error;
 
@@ -1635,6 +1634,8 @@ ov5693_remove(struct i2c_client *client)
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	ov5693_power_put(priv);
 	camera_common_cleanup(s_data);
+
+	mutex_destroy(&priv->streaming_lock);
 
 	return 0;
 }

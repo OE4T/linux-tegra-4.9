@@ -1,7 +1,7 @@
 /*
  * This header provides constants for binding nvidia,swgroup ID
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -257,5 +257,16 @@
  * instead of TEGRA_SWGROUP_*.
  */
 #define TEGRA_SID(x) 		(TEGRA_SID_ ## x)
+
+/*
+ * These are unique id's that the IOMMU uses to put different
+ * devices into the same IOMMU group and shared address space
+ * Add this to a devices iommu-group-id property
+ */
+#define TEGRA_IOMMU_GROUP_HOST1X		0x1
+#define TEGRA_IOMMU_GROUP_APE			0x2
+#define TEGRA_IOMMU_GROUP_RTCPU			0x3
+#define TEGRA_IOMMU_GROUP_SE			0x4
+
 
 #endif /* _DT_BINDINGS_MEMORY_TEGRA_SWGROUP_H */

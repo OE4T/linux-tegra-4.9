@@ -20,6 +20,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dp.h"
@@ -27,7 +28,11 @@
 #include "sor_regs.h"
 #include "sor.h"
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/uaccess.h>
+#else
 #include <asm/uaccess.h>
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 

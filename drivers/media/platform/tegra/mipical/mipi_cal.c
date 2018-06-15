@@ -830,7 +830,11 @@ static const struct tegra_mipi_soc tegra18x_mipi_soc = {
 	.debug_table_id = DEBUGFS_TABLE_T18x,
 	.pad_enable = &_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_tegra_mipi_bias_pad_disable,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.cil_sw_reset = NULL,
+#else
 	.cil_sw_reset = &nvcsi_cil_sw_reset,
+#endif
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
 	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
@@ -850,7 +854,11 @@ static const struct tegra_mipi_soc tegra19x_mipi_soc = {
 	.debug_table_id = DEBUGFS_TABLE_T19x,
 	.pad_enable = &_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_tegra_mipi_bias_pad_disable,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.cil_sw_reset = NULL,
+#else
 	.cil_sw_reset = &tegra194_nvcsi_cil_sw_reset,
+#endif
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
 // temporary WAR to get 4.4 builds working

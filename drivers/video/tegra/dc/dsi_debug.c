@@ -14,7 +14,12 @@
  *
  */
 
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/uaccess.h>
+#else
 #include <asm/uaccess.h>
+#endif
 /* HACK! This needs to come from DT */
 #include <iomap.h>
 #include <linux/kernel.h>

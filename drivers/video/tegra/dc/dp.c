@@ -21,6 +21,7 @@
 #include <linux/interrupt.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/version.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/clk/tegra.h>
 #include <linux/moduleparam.h>
@@ -33,7 +34,12 @@
 #include <linux/switch.h>
 #endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/uaccess.h>
+#include <linux/miscdevice.h>
+#else
 #include <asm/uaccess.h>
+#endif
 
 #include "dc.h"
 #include "dp.h"

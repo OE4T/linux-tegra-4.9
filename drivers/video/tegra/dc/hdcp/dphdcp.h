@@ -15,6 +15,10 @@
  */
 
 #include <video/nvhdcp.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/miscdevice.h>
+#endif
 
 #define HDCP_HDCP2_VERSION		0x50
 #define HDCP_HDCP2_VERSION_HDCP22_YES	0x04 /* DP 2.2 */

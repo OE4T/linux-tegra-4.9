@@ -29,6 +29,11 @@
 #include <linux/version.h>
 #include <linux/string.h>
 #include <linux/nospec.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/types.h>
+#include <uapi/linux/sched/types.h>
+#endif
 #include <video/tegra_dc_ext.h>
 #include <trace/events/display.h>
 

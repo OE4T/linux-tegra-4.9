@@ -94,10 +94,6 @@
 		status = "okay";
 	};
 
-	psci {
-		status = "disabled";
-	};
-
 	power-domain {
 		status = "disabled";
 	};

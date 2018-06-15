@@ -20,6 +20,7 @@
 #include <linux/uaccess.h>
 #include <linux/gpio.h>
 #include <linux/module.h>
+#include <linux/debugfs.h>
 
 #include <linux/seq_file.h>
 #include <linux/of.h>
@@ -82,6 +83,12 @@ struct imx274 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
+
+	const char			*devname;
+	struct dentry			*debugfs_dir;
+	struct mutex			streaming_lock;
+	bool				streaming;
+
 	u32				frame_length;
 	u32				vmax;
 	s32				last_coarse_long;
@@ -442,7 +449,16 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_dbg(dev, "%s++\n", __func__);
 
 	if (!enable) {
-		imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
+		mutex_lock(&priv->streaming_lock);
+		err = imx274_write_table(priv, mode_table[IMX274_MODE_STOP_STREAM]);
+		if (err) {
+			mutex_unlock(&priv->streaming_lock);
+			return err;
+		} else  {
+			priv->streaming = false;
+			mutex_unlock(&priv->streaming_lock);
+		}
+
 		return 0;
 	}
 
@@ -503,9 +519,15 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 			goto exit;
 		}
 
+	mutex_lock(&priv->streaming_lock);
 	err = imx274_write_table(priv, mode_table[IMX274_MODE_START_STREAM]);
-	if (err)
+	if (err) {
+		mutex_unlock(&priv->streaming_lock);
 		goto exit;
+	} else {
+		priv->streaming = true;
+		mutex_unlock(&priv->streaming_lock);
+	}
 
 
 	return 0;
@@ -1231,6 +1253,89 @@ error:
 	return NULL;
 }
 
+static int imx274_debugfs_streaming_show(void *data, u64 *val)
+{
+	struct imx274 *priv = data;
+
+	mutex_lock(&priv->streaming_lock);
+	*val = priv->streaming;
+	mutex_unlock(&priv->streaming_lock);
+
+	return 0;
+}
+
+static int imx274_debugfs_streaming_write(void *data, u64 val)
+{
+	int err = 0;
+	struct imx274 *priv = data;
+	struct i2c_client *client = priv->i2c_client;
+	bool enable = (val != 0);
+	int mode_index = enable ?
+		(IMX274_MODE_START_STREAM) : (IMX274_MODE_STOP_STREAM);
+
+	dev_info(&client->dev, "%s: %s sensor\n",
+			__func__, (enable ? "enabling" : "disabling"));
+
+	mutex_lock(&priv->streaming_lock);
+
+	err = imx274_write_table(priv, mode_table[mode_index]);
+	if (err) {
+		dev_err(&client->dev, "%s: error setting sensor streaming\n",
+			__func__);
+		goto done;
+	}
+
+	priv->streaming = enable;
+
+done:
+	mutex_unlock(&priv->streaming_lock);
+
+	return err;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(imx274_debugfs_streaming_fops,
+	imx274_debugfs_streaming_show,
+	imx274_debugfs_streaming_write,
+	"%lld\n");
+
+static void imx274_debugfs_remove(struct imx274 *priv);
+
+static int imx274_debugfs_create(struct imx274 *priv)
+{
+	int err = 0;
+	struct i2c_client *client = priv->i2c_client;
+	const char *devnode;
+	char debugfs_dir[16];
+
+	err = of_property_read_string(client->dev.of_node, "devnode", &devnode);
+	if (err) {
+		dev_err(&client->dev, "devnode not in DT\n");
+		return err;
+	}
+	snprintf(debugfs_dir, sizeof(debugfs_dir), "camera-%s", devnode);
+
+	priv->debugfs_dir = debugfs_create_dir(debugfs_dir, NULL);
+	if (priv->debugfs_dir == NULL)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("streaming", 0644, priv->debugfs_dir, priv,
+			&imx274_debugfs_streaming_fops))
+		goto error;
+
+	return 0;
+
+error:
+	imx274_debugfs_remove(priv);
+
+	return -ENOMEM;
+}
+
+static void imx274_debugfs_remove(struct imx274 *priv)
+{
+	debugfs_remove_recursive(priv->debugfs_dir);
+	priv->debugfs_dir = NULL;
+}
+
 static int imx274_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1315,6 +1420,8 @@ static int imx274_probe(struct i2c_client *client,
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
 
+	mutex_init(&priv->streaming_lock);
+
 	err = imx274_power_get(priv);
 	if (err)
 		return err;
@@ -1354,6 +1461,13 @@ static int imx274_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
+	err = imx274_debugfs_create(priv);
+	if (err) {
+		dev_err(&client->dev, "error creating debugfs interface");
+		imx274_debugfs_remove(priv);
+		return err;
+	}
+
 	dev_dbg(&client->dev, "Detected IMX274 sensor\n");
 
 	return 0;
@@ -1365,6 +1479,8 @@ imx274_remove(struct i2c_client *client)
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
 
+	imx274_debugfs_remove(priv);
+
 	v4l2_async_unregister_subdev(priv->subdev);
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	media_entity_cleanup(&priv->subdev->entity);
@@ -1372,6 +1488,8 @@ imx274_remove(struct i2c_client *client)
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	camera_common_cleanup(s_data);
+
+	mutex_destroy(&priv->streaming_lock);
 
 	return 0;
 }

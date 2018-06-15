@@ -1268,13 +1268,6 @@ exit:
 	return err;
 }
 
-
-static void tegra_ahci_save_initial_config(struct platform_device *pdev,
-					   struct ahci_host_priv *hpriv)
-{
-	ahci_save_initial_config(&pdev->dev, hpriv);
-}
-
 static void tegra_ahci_controller_remove(struct platform_device *pdev)
 {
 	struct ata_host *host = dev_get_drvdata(&pdev->dev);
@@ -2409,13 +2402,12 @@ static int tegra_ahci_init_one(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	const struct of_device_id *match;
 	struct ata_port_info pi = ahci_port_info;
-	const struct ata_port_info *ppi[] = { &pi, NULL };
 	struct device *dev = &pdev->dev;
 	struct ahci_host_priv *hpriv = NULL;
 	struct tegra_ahci_host_priv *tegra_hpriv = NULL;
 	struct tegra_ahci_platform_data *ahci_pdata;
 	struct ata_host *host = NULL;
-	int n_ports, i, rc = 0;
+	int i, rc = 0;
 	struct resource *res, *irq_res;
 	struct phy *phy = NULL;
 	void __iomem *mmio;
@@ -2612,59 +2604,6 @@ static int tegra_ahci_init_one(struct platform_device *pdev)
 		goto fail;
 	}
 
-
-	/* save initial config */
-	tegra_ahci_save_initial_config(pdev, hpriv);
-	dev_dbg(dev, "past save init config\n");
-
-	/* prepare host */
-	if (hpriv->cap & HOST_CAP_NCQ) {
-		pi.flags |= ATA_FLAG_NCQ;
-		pi.flags |= ATA_FLAG_FPDMA_AA;
-	}
-	if (hpriv->cap & HOST_CAP_PMP)
-		pi.flags |= ATA_FLAG_PMP;
-
-	/* Disable DIPM */
-	pi.flags |= ATA_FLAG_NO_DIPM;
-
-	/*
-	 * CAP.NP sometimes indicate the index of the last enabled
-	 * port, at other times, that of the last possible port, so
-	 * determining the maximum port number requires looking at
-	 * both CAP.NP and port_map.
-	 */
-	n_ports = max(ahci_nr_ports(hpriv->cap), fls(hpriv->port_map));
-	host = ata_host_alloc_pinfo(dev, ppi, n_ports);
-	if (!host) {
-		rc = -ENOMEM;
-		goto fail;
-	}
-	host->private_data = hpriv;
-	tegra_hpriv->host = host;
-	host->iomap = tegra_hpriv->bars_table;
-
-	if (!(hpriv->cap & HOST_CAP_SSS))
-		host->flags |= ATA_HOST_PARALLEL_SCAN;
-	else
-		pr_info("ahci: SSS flag set, parallel bus scan disabled\n");
-
-	for (i = 0; i < host->n_ports; i++) {
-		struct ata_port *ap = host->ports[i];
-
-		/* set initial link pm policy */
-		ap->target_lpm_policy = ATA_LPM_UNKNOWN;
-
-		/* disabled/not-implemented port */
-		if (!(hpriv->port_map & (1 << i)))
-			ap->ops = &ata_dummy_port_ops;
-		else
-			ap->target_lpm_policy = ATA_LPM_MAX_POWER;
-	}
-
-	ahci_print_info(host, "TEGRA-SATA");
-	dev_dbg(dev, "controller init okay\n");
-
 #if defined(CONFIG_TEGRA_AHCI_CONTEXT_RESTORE)
 	/* Setup PG save/restore area: */
 
@@ -2696,10 +2635,34 @@ static int tegra_ahci_init_one(struct platform_device *pdev)
 		dev_dbg(dev, "Drive not present\n");
 	}
 
-	rc = ahci_platform_init_host(pdev, hpriv, &ahci_port_info, &ahci_sht);
+	/* Disable DIPM */
+	pi.flags |= ATA_FLAG_NO_DIPM;
+
+	rc = ahci_platform_init_host(pdev, hpriv, &pi, &ahci_sht);
 
 	if (rc)
 		goto fail;
+
+	host = dev_get_drvdata(&pdev->dev);
+	tegra_hpriv->host = host;
+	host->iomap = tegra_hpriv->bars_table;
+
+	ahci_print_info(host, "TEGRA-SATA");
+	dev_dbg(dev, "controller init okay\n");
+
+	for (i = 0; i < host->n_ports; i++) {
+		struct ata_port *ap = host->ports[i];
+
+		/* set initial link pm policy */
+		ap->target_lpm_policy = ATA_LPM_UNKNOWN;
+
+		/* disabled/not-implemented port */
+		if (!(hpriv->port_map & (1 << i)))
+			ap->ops = &ata_dummy_port_ops;
+		else
+			ap->target_lpm_policy = ATA_LPM_MIN_POWER;
+	}
+
 #ifdef CONFIG_PM
 #ifdef CONFIG_TEGRA_SATA_IDLE_POWERGATE
 	rc = pm_runtime_set_active(dev);

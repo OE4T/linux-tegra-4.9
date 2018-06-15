@@ -198,6 +198,7 @@
 		reg-names = "ape-evp", "ape-amisc", "ast-cpu";
 
 		iommus = <&smmu TEGRA_SID_APE_CAM>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_RTCPU>;
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_APE>,

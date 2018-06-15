@@ -757,6 +757,7 @@
 				      "nvcsilp_parent";
 			interrupts = <0 119 0x04>;
 			iommus = <&smmu TEGRA_SID_NVCSI>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 			num-ports = <6>;
 		};
@@ -776,6 +777,7 @@
 				 <&tegra_car TEGRA186_CLK_NVCSILP>;
 			clock-names = "vi", "nvcsi", "nvcsilp";
 			iommus = <&smmu TEGRA_SID_VI>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -788,6 +790,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
 			iommus = <&smmu TEGRA_SID_ISP>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -804,6 +807,7 @@
 			interrupts = <0 153 0x04>;
 			win-mask = <0x7>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
@@ -951,6 +955,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_VIC>;
 			clock-names = "vic";
 			iommus = <&smmu TEGRA_SID_VIC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 			interrupts = <0 206 0x04>;
 		};
@@ -963,6 +968,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVENC>;
 			clock-names = "nvenc";
 			iommus = <&smmu TEGRA_SID_NVENC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -975,6 +981,7 @@
 				 <&tegra_car TEGRA186_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 			iommus = <&smmu TEGRA_SID_NVDEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -986,6 +993,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVJPG>;
 			clock-names = "nvjpg";
 			iommus = <&smmu TEGRA_SID_NVJPG>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 			interrupts = <0 198 0x04>;
 		};
@@ -997,6 +1005,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSEC>;
 			clock-names = "tsec";
 			iommus = <&smmu TEGRA_SID_TSEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1007,6 +1016,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSECB>;
 			clock-names = "tsecb";
 			iommus = <&smmu TEGRA_SID_TSECB>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1122,6 +1132,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			iommus = <&smmu TEGRA_SID_SE>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1134,6 +1145,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			iommus = <&smmu TEGRA_SID_SE1>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1146,6 +1158,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			iommus = <&smmu TEGRA_SID_SE2>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1158,6 +1171,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			iommus = <&smmu TEGRA_SID_SE3>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 	};
@@ -1736,6 +1750,7 @@
 		iommus = <&smmu TEGRA_SID_APE>;
 		dma-mask = <0x0 0x5e000000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -1743,6 +1758,7 @@
 		iommus = <&smmu TEGRA_SID_APE>;
 		dma-mask = <0x0 0x5e000000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -2267,6 +2283,7 @@
 		wakeup-disable;
 		iommus = <&smmu TEGRA_SID_APE>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
@@ -2358,6 +2375,7 @@
 			iommus = <&smmu TEGRA_SID_APE>;
 			dma-mask = <0x0 0x5e000000>;
 			iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		};
 	};
 #else
@@ -2420,6 +2438,7 @@
 		iommus = <&smmu TEGRA_SID_APE>;
 		dma-mask = <0x0 0x5e000000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 	};
 #endif
 	eqos_ape@2990000 {

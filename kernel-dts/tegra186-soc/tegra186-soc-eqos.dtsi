@@ -83,6 +83,7 @@
 		resets = <&tegra_car TEGRA186_RESET_EQOS>;
 		reset-names = "eqos_rst";
 		iommus = <&smmu TEGRA_SID_EQOS>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		iommu_sodev_map;
 		phy-mode = "rgmii";
 		status = "disabled";

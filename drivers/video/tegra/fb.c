@@ -1272,7 +1272,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.out_y = 0;
 	tegra_fb->win.out_w = fb_data->xres;
 	tegra_fb->win.out_h = fb_data->yres;
-	tegra_fb->win.z = 0;
+	tegra_fb->win.z = 0xFF;
 	tegra_fb->win.phys_addr_u = 0;
 	tegra_fb->win.phys_addr_v = 0;
 	tegra_fb->win.stride = info->fix.line_length;

@@ -167,6 +167,24 @@ int nvgpu_dma_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
+
+/**
+ * nvgpu_dma_alloc_flags_vid_at - Allocate DMA memory
+ *
+ * @g     - The GPU.
+ * @size  - Size of the allocation in bytes.
+ * @mem   - Struct for storing the allocation information.
+ * @at    - A specific location to attempt to allocate memory from or 0 if the
+ *          caller does not care what the address is.
+ *
+ * Allocate memory suitable for doing DMA. Store the allocation info in @mem.
+ * Returns 0 on success and a suitable error code when there's an error. This
+ * allocates memory specifically in VIDMEM.
+ *
+ */
+int nvgpu_dma_alloc_vid_at(struct gk20a *g,
+		size_t size, struct nvgpu_mem *mem, u64 at);
+
 /**
  * nvgpu_dma_alloc_flags_vid_at - Allocate DMA memory
  *

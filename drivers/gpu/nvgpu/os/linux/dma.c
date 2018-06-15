@@ -313,6 +313,13 @@ int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 	return nvgpu_dma_alloc_flags_vid_at(g, flags, size, mem, 0);
 }
 
+int nvgpu_dma_alloc_vid_at(struct gk20a *g,
+		size_t size, struct nvgpu_mem *mem, u64 at)
+{
+	return nvgpu_dma_alloc_flags_vid_at(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem, at);
+}
+
 int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem, u64 at)
 {

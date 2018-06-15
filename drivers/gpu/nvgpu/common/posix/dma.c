@@ -110,6 +110,14 @@ int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 	return __nvgpu_do_dma_alloc(g, flags, size, mem, APERTURE_VIDMEM);
 }
 
+int nvgpu_dma_alloc_vid_at(struct gk20a *g,
+				 size_t size, struct nvgpu_mem *mem, u64 at)
+{
+	BUG();
+
+	return 0;
+}
+
 int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 				 size_t size, struct nvgpu_mem *mem, u64 at)
 {

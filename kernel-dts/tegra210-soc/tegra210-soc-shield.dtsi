@@ -75,7 +75,7 @@
 	};
 
 	bpmp {
-		status = "okay";
+		status = "disabled";
 	};
 
 	mc {

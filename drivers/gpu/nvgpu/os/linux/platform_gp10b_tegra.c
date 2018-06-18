@@ -50,6 +50,8 @@
 
 /* Select every GP10B_FREQ_SELECT_STEP'th frequency from h/w table */
 #define GP10B_FREQ_SELECT_STEP	8
+/* Allow limited set of frequencies to be available */
+#define GP10B_NUM_SUPPORTED_FREQS 15
 /* Max number of freq supported in h/w */
 #define GP10B_MAX_SUPPORTED_FREQS 120
 static unsigned long
@@ -343,33 +345,60 @@ int gp10b_clk_get_freqs(struct device *dev,
 	struct gk20a *g = platform->g;
 	unsigned long max_rate;
 	unsigned long new_rate = 0, prev_rate = 0;
-	int i = 0, freq_counter = 0;
+	int i, freq_counter = 0;
+	int sel_freq_cnt;
+	unsigned long loc_freq_table[GP10B_MAX_SUPPORTED_FREQS];
 
 	max_rate = clk_round_rate(platform->clk[0], (UINT_MAX - 1));
 
 	/*
-	 * Walk the h/w frequency table and only select
-	 * GP10B_FREQ_SELECT_STEP'th frequencies and
-	 * add MAX freq to last
+	 * Walk the h/w frequency table and update the local table
 	 */
-	for (; i < GP10B_MAX_SUPPORTED_FREQS; ++i) {
+	for (i = 0; i < GP10B_MAX_SUPPORTED_FREQS; ++i) {
 		prev_rate = new_rate;
-		new_rate = clk_round_rate(platform->clk[0], prev_rate + 1);
-
-		if (i % GP10B_FREQ_SELECT_STEP == 0 ||
-				new_rate == max_rate) {
-			gp10b_freq_table[freq_counter++] = new_rate;
-
-			if (new_rate == max_rate)
-				break;
-		}
+		new_rate = clk_round_rate(platform->clk[0],
+						prev_rate + 1);
+		loc_freq_table[i] = new_rate;
+		if (new_rate == max_rate)
+			break;
 	}
+	freq_counter = i;
+	WARN_ON(freq_counter == GP10B_MAX_SUPPORTED_FREQS);
 
-	WARN_ON(i == GP10B_MAX_SUPPORTED_FREQS);
+	/*
+	 * If the number of achievable frequencies is less than or
+	 * equal to GP10B_NUM_SUPPORTED_FREQS, select all frequencies
+	 * else, select one out of every 8 frequencies
+	 */
+	if (freq_counter <= GP10B_NUM_SUPPORTED_FREQS) {
+		for (sel_freq_cnt = 0; sel_freq_cnt < freq_counter; ++sel_freq_cnt)
+			gp10b_freq_table[sel_freq_cnt] =
+					loc_freq_table[sel_freq_cnt];
+	} else {
+		/*
+		 * Walk the h/w frequency table and only select
+		 * GP10B_FREQ_SELECT_STEP'th frequencies and
+		 * add MAX freq to last
+		 */
+		sel_freq_cnt = 0;
+		for (i = 0; i < GP10B_MAX_SUPPORTED_FREQS; ++i) {
+			new_rate = loc_freq_table[i];
+
+			if (i % GP10B_FREQ_SELECT_STEP == 0 ||
+					new_rate == max_rate) {
+				gp10b_freq_table[sel_freq_cnt++] =
+							new_rate;
+
+				if (new_rate == max_rate)
+					break;
+			}
+		}
+		WARN_ON(sel_freq_cnt == GP10B_MAX_SUPPORTED_FREQS);
+	}
 
 	/* Fill freq table */
 	*freqs = gp10b_freq_table;
-	*num_freqs = freq_counter;
+	*num_freqs = sel_freq_cnt;
 
 	nvgpu_log_info(g, "min rate: %ld max rate: %ld num_of_freq %d\n",
 				gp10b_freq_table[0], max_rate, *num_freqs);

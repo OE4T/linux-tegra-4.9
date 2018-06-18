@@ -1078,6 +1078,19 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD0>;
 			fb_reserved = <&fb0_reserved>;
 			iommu-direct-regions = <&fb0_reserved>;
+
+			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
+					"hdmi-dp2-dpd-disable", "hdmi-dp2-dpd-enable",
+					"hdmi-dp3-dpd-disable", "hdmi-dp3-dpd-enable";
+			pinctrl-0 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-1 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-2 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-3 = <&hdmi_dp1_dpd_enable>;
+			pinctrl-4 = <&hdmi_dp2_dpd_disable>;
+			pinctrl-5 = <&hdmi_dp2_dpd_enable>;
+			pinctrl-6 = <&hdmi_dp3_dpd_disable>;
+			pinctrl-7 = <&hdmi_dp3_dpd_enable>;
 		}; //nvdisplay@15200000
 
 		head1: nvdisplay@15210000 {
@@ -1124,6 +1137,19 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD1>;
 			fb_reserved = <&fb1_reserved>;
 			iommu-direct-regions = <&fb1_reserved>;
+
+			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
+					"hdmi-dp2-dpd-disable", "hdmi-dp2-dpd-enable",
+					"hdmi-dp3-dpd-disable", "hdmi-dp3-dpd-enable";
+			pinctrl-0 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-1 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-2 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-3 = <&hdmi_dp1_dpd_enable>;
+			pinctrl-4 = <&hdmi_dp2_dpd_disable>;
+			pinctrl-5 = <&hdmi_dp2_dpd_enable>;
+			pinctrl-6 = <&hdmi_dp3_dpd_disable>;
+			pinctrl-7 = <&hdmi_dp3_dpd_enable>;
 		}; //nvdisplay@15210000
 
 		head2: nvdisplay@15220000 {
@@ -1170,6 +1196,19 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD2>;
 			fb_reserved = <&fb2_reserved>;
 			iommu-direct-regions = <&fb2_reserved>;
+
+			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
+					"hdmi-dp2-dpd-disable", "hdmi-dp2-dpd-enable",
+					"hdmi-dp3-dpd-disable", "hdmi-dp3-dpd-enable";
+			pinctrl-0 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-1 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-2 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-3 = <&hdmi_dp1_dpd_enable>;
+			pinctrl-4 = <&hdmi_dp2_dpd_disable>;
+			pinctrl-5 = <&hdmi_dp2_dpd_enable>;
+			pinctrl-6 = <&hdmi_dp3_dpd_disable>;
+			pinctrl-7 = <&hdmi_dp3_dpd_enable>;
 		}; //nvdisplay@15220000
 
 		head3: nvdisplay@15230000 {
@@ -1216,6 +1255,19 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD3>;
 			fb_reserved = <&fb3_reserved>;
 			iommu-direct-regions = <&fb3_reserved>;
+
+			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
+					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
+					"hdmi-dp2-dpd-disable", "hdmi-dp2-dpd-enable",
+					"hdmi-dp3-dpd-disable", "hdmi-dp3-dpd-enable";
+			pinctrl-0 = <&hdmi_dp0_dpd_disable>;
+			pinctrl-1 = <&hdmi_dp0_dpd_enable>;
+			pinctrl-2 = <&hdmi_dp1_dpd_disable>;
+			pinctrl-3 = <&hdmi_dp1_dpd_enable>;
+			pinctrl-4 = <&hdmi_dp2_dpd_disable>;
+			pinctrl-5 = <&hdmi_dp2_dpd_enable>;
+			pinctrl-6 = <&hdmi_dp3_dpd_disable>;
+			pinctrl-7 = <&hdmi_dp3_dpd_enable>;
 		}; //nvdisplay@15230000
 
 		sor0: sor {
@@ -1247,8 +1299,6 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP0>;
-			pad-names = "hdmi-dp0";
 
 			sor0_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1289,8 +1339,6 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP1>;
-			pad-names = "hdmi-dp1";
 
 			sor1_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1331,8 +1379,6 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor2","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP2>;
-			pad-names = "hdmi-dp2";
 
 			sor2_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1373,8 +1419,6 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor3","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP3>;
-			pad-names = "hdmi-dp3";
 
 			sor3_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
@@ -1891,6 +1935,62 @@
 		pinctrl-0 = <&iopad_defaults>;
 		status = "disabled";
 		iopad_defaults: iopad-defaults {
+		};
+
+		hdmi_dp0_dpd_enable: hdmi-dp0-dpd-enable {
+			hdmi-dp0-pad-lowpower-enable {
+				pins = "hdmi-dp0";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp0_dpd_disable: hdmi-dp0-dpd-disable {
+			hdmi-dp0-pad-lowpower-disable {
+				pins = "hdmi-dp0";
+				low-power-disable;
+			};
+		};
+
+		hdmi_dp1_dpd_enable: hdmi-dp1-dpd-enable {
+			hdmi-dp1-pad-lowpower-enable {
+				pins = "hdmi-dp1";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp1_dpd_disable: hdmi-dp1-dpd-disable {
+			hdmi-dp1-pad-lowpower-disable {
+				pins = "hdmi-dp1";
+				low-power-disable;
+			};
+		};
+
+		hdmi_dp2_dpd_enable: hdmi-dp2-dpd-enable {
+			hdmi-dp2-pad-lowpower-enable {
+				pins = "hdmi-dp2";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp2_dpd_disable: hdmi-dp2-dpd-disable {
+			hdmi-dp2-pad-lowpower-disable {
+				pins = "hdmi-dp2";
+				low-power-disable;
+			};
+		};
+
+		hdmi_dp3_dpd_enable: hdmi-dp3-dpd-enable {
+			hdmi-dp3-pad-lowpower-enable {
+				pins = "hdmi-dp3";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dp3_dpd_disable: hdmi-dp3-dpd-disable {
+			hdmi-dp3-pad-lowpower-disable {
+				pins = "hdmi-dp3";
+				low-power-disable;
+			};
 		};
 	};
 

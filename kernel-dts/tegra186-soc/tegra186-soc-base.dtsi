@@ -805,6 +805,7 @@
 			win-mask = <0x7>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <0>;
+			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
@@ -842,6 +843,7 @@
 			win-mask = <0x38>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <1>;
+			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
@@ -879,6 +881,7 @@
 			win-mask = <0x0>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
 			nvidia,dc-ctrlnum = <2>;
+			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,

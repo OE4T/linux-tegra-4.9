@@ -1116,6 +1116,17 @@
 			nvidia,dc-ctrlnum = <0>;
 			fb_reserved = <&fb0_reserved>;
 			iommu-direct-regions = <&fb0_reserved>;
+
+			pinctrl-names = "dsi-dpd-disable", "dsi-dpd-enable",
+					"dsib-dpd-disable", "dsib-dpd-enable",
+					"hdmi-dpd-disable", "hdmi-dpd-enable";
+			pinctrl-0 = <&dsi_dpd_disable>;
+			pinctrl-1 = <&dsi_dpd_enable>;
+			pinctrl-2 = <&dsib_dpd_disable>;
+			pinctrl-3 = <&dsib_dpd_enable>;
+			pinctrl-4 = <&hdmi_dpd_disable>;
+			pinctrl-5 = <&hdmi_dpd_enable>;
+
 			rgb {
 				status = "disabled";
 			};
@@ -1140,6 +1151,16 @@
 			reset-names = "dc_rst";
 			fb_reserved = <&fb1_reserved>;
 			iommu-direct-regions = <&fb1_reserved>;
+			pinctrl-names = "dsi-dpd-disable", "dsi-dpd-enable",
+					"dsib-dpd-disable", "dsib-dpd-enable",
+					"hdmi-dpd-disable", "hdmi-dpd-enable";
+			pinctrl-0 = <&dsi_dpd_disable>;
+			pinctrl-1 = <&dsi_dpd_enable>;
+			pinctrl-2 = <&dsib_dpd_disable>;
+			pinctrl-3 = <&dsib_dpd_enable>;
+			pinctrl-4 = <&hdmi_dpd_disable>;
+			pinctrl-5 = <&hdmi_dpd_enable>;
+
 			rgb {
 				status = "disabled";
 			};
@@ -1159,11 +1180,6 @@
 			resets = <&tegra_car TEGRA210_CLK_DSIA>,
 				<&tegra_car TEGRA210_CLK_DSIB>;
 			reset-names = "dsia", "dsib";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_DSI>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIB>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIC>,
-					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSID>;
-			pad-names = "dsia", "dsib", "dsic", "dsid";
 			status = "disabled";
 		};
 
@@ -1289,8 +1305,6 @@
 			       <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
 			       <&tegra_car TEGRA210_CLK_HDA2HDMI>;
 			reset-names = "sor1", "hda_rst", "hda2codec_2x_rst", "hda2hdmi_rst";
-			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI>;
-			pad-names = "hdmi";
 			sor1_hdmi_display: hdmi-display {
 				compatible = "hdmi,display";
 				disp-default-out {
@@ -1399,6 +1413,47 @@
 			};
 		};
 
+		hdmi_dpd_enable: hdmi-dpd-enable {
+			hdmi-pad-lowpower-enable {
+				pins = "hdmi";
+				low-power-enable;
+			};
+		};
+
+		hdmi_dpd_disable: hdmi-dpd-disable {
+			hdmi-pad-lowpower-disable {
+				pins = "hdmi";
+				low-power-disable;
+			};
+		};
+
+		dsi_dpd_enable: dsi-dpd-enable {
+			dsi-pad-lowpower-enable {
+				pins = "dsi";
+				low-power-enable;
+			};
+		};
+
+		dsi_dpd_disable: dsi-dpd-disable {
+			dsi-pad-lowpower-disable {
+				pins = "dsi";
+				low-power-disable;
+			};
+		};
+
+		dsib_dpd_enable: dsib-dpd-enable {
+			dsib-pad-lowpower-enable {
+				pins = "dsib";
+				low-power-enable;
+			};
+		};
+
+		dsib_dpd_disable: dsib-dpd-disable {
+			dsib-pad-lowpower-disable {
+				pins = "dsib";
+				low-power-disable;
+			};
+		};
 	};
 
 	se: se@70012000 {

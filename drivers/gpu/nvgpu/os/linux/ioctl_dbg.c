@@ -181,7 +181,9 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	 * calling powergate/timeout enable ioctl
 	 */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	g->ops.dbg_session_ops.dbg_set_powergate(dbg_s, false);
+	if (dbg_s->is_pg_disabled) {
+		nvgpu_set_powergate_locked(dbg_s, false);
+	}
 	nvgpu_dbg_timeout_enable(dbg_s, NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE);
 
 	/* If this session owned the perf buffer, release it */
@@ -867,9 +869,10 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		/* In the virtual case, the server will handle
 		 * disabling/enabling powergating when processing reg ops
 		 */
-		powergate_err = g->ops.dbg_session_ops.dbg_set_powergate(dbg_s,
-					true);
-		is_pg_disabled = true;
+		powergate_err = nvgpu_set_powergate_locked(dbg_s, true);
+		if (!powergate_err) {
+			is_pg_disabled = true;
+		}
 	}
 
 	if (!powergate_err) {
@@ -938,9 +941,8 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 		/* enable powergate, if previously disabled */
 		if (is_pg_disabled) {
-			powergate_err =
-				g->ops.dbg_session_ops.dbg_set_powergate(dbg_s,
-					false);
+			powergate_err =	nvgpu_set_powergate_locked(dbg_s,
+									false);
 		}
 	}
 
@@ -964,14 +966,16 @@ static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 		      g->name, args->mode);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	if (args->mode == NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE) {
-		err = g->ops.dbg_session_ops.dbg_set_powergate(dbg_s, true);
-	} else if (args->mode == NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE) {
-		err = g->ops.dbg_session_ops.dbg_set_powergate(dbg_s, false);
-	} else {
+	if ((args->mode != NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE) &&
+	    (args->mode != NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE)) {
 		nvgpu_err(g, "invalid powergate mode");
 		err = -EINVAL;
+		goto pg_err_end;
 	}
+
+	err = nvgpu_set_powergate_locked(dbg_s,
+			args->mode == NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE);
+pg_err_end:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return  err;
 }
@@ -1053,7 +1057,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 		err = -EINVAL;
 		goto clean_up;
 	}
-	if (!dbg_s->is_pg_disabled) {
+	if (g->dbg_powergating_disabled_refcount == 0) {
 		nvgpu_err(g, "powergate is not disabled");
 		err = -ENOSYS;
 		goto clean_up;

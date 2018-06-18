@@ -349,9 +349,24 @@ static void init_tlc(struct tnvlink_dev *tdev)
 }
 
 /*
+ * Enable the MSSNVLINK core master and slave clocks.
+ */
+static void diasble_nvlink_slcg(struct tnvlink_dev *tdev)
+{
+	u32 val;
+
+	val = mssnvlink_0_readl(tdev, MSSNVLINK_CLK_SLCG);
+	val |= BIT(MSSNVLINK_CLK_SLCG_MCF_MASTER_CLK_ENBL);
+	val |= BIT(MSSNVLINK_CLK_SLCG_MCF_SLAVE_CLK_ENBL);
+	val |= BIT(MSSNVLINK_CLK_SLCG_CORE_CLK_UPDATE_ENBL);
+	mssnvlink_0_writel(tdev, MSSNVLINK_CLK_SLCG, val);
+}
+
+/*
  * mssnvlink_init:
  * Do the folllwing to initialize MSSNVLINK. This initialization is required to
  * allow traffic to flow between the NVLINK controller and MSSNVLINK:
+ *    - Enable the MSSNVLINK core master and slave clocks.
  *    - Program the upper limit of the NVLINK aperture in MSSNVLINK. The bottom
  *      of the aperture is fixed at 128 GB. So we don't need to program that.
  *    - Release MSSNVLINK header and data credits to the NVLINK controller.
@@ -361,6 +376,8 @@ static void init_tlc(struct tnvlink_dev *tdev)
  */
 static void mssnvlink_init(struct tnvlink_dev *tdev)
 {
+	diasble_nvlink_slcg(tdev);
+
 	/* Program the upper limit of the NVLINK aperture in MSSNVLINK */
 	nvlink_dbg("Programming MSSNVLINK_TOM to %u GB", NVLINK_TOM_GB);
 	non_nvlink_writel(MCB_BASE + MC_MSSNVLINK_TOM, NVLINK_TOM_MB);

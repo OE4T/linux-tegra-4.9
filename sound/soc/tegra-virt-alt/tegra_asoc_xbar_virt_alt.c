@@ -856,20 +856,11 @@ int tegra_virt_get_route(struct snd_kcontrol *kcontrol,
 	msg.cmd = NVAUDIO_XBAR_GET_ROUTE;
 	msg.params.xbar_info.rx_reg = (int) reg;
 
-	err = nvaudio_ivc_send_retry(hivc_client,
-			&msg,
-			sizeof(struct nvaudio_ivc_msg));
-
-	if (err < 0) {
-		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
-		return err;
-	}
-
-	err = nvaudio_ivc_receive(hivc_client,
+	err = nvaudio_ivc_send_receive(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("%s: error on ivc_receive\n", __func__);
+		pr_err("%s: error on ivc_send_receive\n", __func__);
 
 	for (i = 0; i < e->items; i++) {
 		if (msg.params.xbar_info.bit_pos ==

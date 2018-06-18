@@ -133,13 +133,10 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 	msg.cmd = NVAUDIO_START_PLAYBACK;
 	msg.params.dmaif_info.id = data->admaif_id;
 	msg.ack_required = true;
-	err = nvaudio_ivc_send_retry(data->hivc_client,
+	err = nvaudio_ivc_send_receive(data->hivc_client,
 			&msg, sizeof(struct nvaudio_ivc_msg));
 
-	if (err >= 0) {
-		nvaudio_ivc_receive(data->hivc_client,
-			&msg, sizeof(struct nvaudio_ivc_msg));
-	} else if (err < 0)
+	if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -156,13 +153,10 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 	msg.params.dmaif_info.id = data->admaif_id;
 
 	msg.ack_required = true;
-	err = nvaudio_ivc_send_retry(data->hivc_client,
+	err = nvaudio_ivc_send_receive(data->hivc_client,
 			&msg, sizeof(struct nvaudio_ivc_msg));
 
-	if (err >= 0) {
-		nvaudio_ivc_receive(data->hivc_client,
-			&msg, sizeof(struct nvaudio_ivc_msg));
-	} else if (err < 0)
+	if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -179,13 +173,10 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 	msg.params.dmaif_info.id = data->admaif_id;
 
 	msg.ack_required = true;
-	err = nvaudio_ivc_send_retry(data->hivc_client,
+	err = nvaudio_ivc_send_receive(data->hivc_client,
 			&msg, sizeof(struct nvaudio_ivc_msg));
 
-	if (err >= 0) {
-		nvaudio_ivc_receive(data->hivc_client,
-			&msg, sizeof(struct nvaudio_ivc_msg));
-	} else if (err < 0)
+	if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 
@@ -202,13 +193,9 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 	msg.params.dmaif_info.id = data->admaif_id;
 
 	msg.ack_required = true;
-	err = nvaudio_ivc_send_retry(data->hivc_client,
+	err = nvaudio_ivc_send_receive(data->hivc_client,
 			&msg, sizeof(struct nvaudio_ivc_msg));
-
-	if (err >= 0) {
-		nvaudio_ivc_receive(data->hivc_client,
-			&msg, sizeof(struct nvaudio_ivc_msg));
-	} else if (err < 0)
+	if (err < 0)
 		pr_err("%s: error on ivc_send\n", __func__);
 }
 

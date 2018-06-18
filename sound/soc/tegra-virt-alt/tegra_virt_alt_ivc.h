@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 
 #include "tegra_virt_alt_ivc_common.h"
 
+#define NVAUDIO_IVC_WAIT_TIMEOUT	1000000
 struct nvaudio_ivc_dev;
 
 struct nvaudio_ivc_ctxt {
@@ -49,12 +50,7 @@ int nvaudio_ivc_send_retry(struct nvaudio_ivc_ctxt *ictxt,
 				struct nvaudio_ivc_msg *msg,
 				int size);
 
-int nvaudio_ivc_receive_cmd(struct nvaudio_ivc_ctxt *ictxt,
-				struct nvaudio_ivc_msg *msg,
-				int size,
-				enum nvaudio_ivc_cmd_t cmd);
-
-int nvaudio_ivc_receive(struct nvaudio_ivc_ctxt *ictxt,
+int nvaudio_ivc_send_receive(struct nvaudio_ivc_ctxt *ictxt,
 				struct nvaudio_ivc_msg *msg,
 				int size);
 

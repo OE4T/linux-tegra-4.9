@@ -1850,14 +1850,16 @@ static int tegra_ivc_start_playback(
 	msg.cmd = NVAUDIO_START_PLAYBACK;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send_retry(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (ack_required && err >= 0) {
-		nvaudio_ivc_receive(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	}
+
+
+	if (ack_required)
+		err = nvaudio_ivc_send_receive(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
+	else
+		err = nvaudio_ivc_send_retry(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
 	return err;
 }
 
@@ -1873,14 +1875,15 @@ static int tegra_ivc_start_capture(
 	msg.cmd = NVAUDIO_START_CAPTURE;
 	msg.ack_required = ack_required;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
-	err = nvaudio_ivc_send_retry(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (ack_required && err >= 0) {
-		nvaudio_ivc_receive(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	}
+
+	if (ack_required)
+		err = nvaudio_ivc_send_receive(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
+	else
+		err = nvaudio_ivc_send_retry(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
 	return err;
 }
 
@@ -1896,14 +1899,15 @@ static int tegra_ivc_stop_playback(
 	msg.cmd = NVAUDIO_STOP_PLAYBACK;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send_retry(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (ack_required && err >= 0) {
-		nvaudio_ivc_receive(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	}
+
+	if (ack_required)
+		err = nvaudio_ivc_send_receive(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
+	else
+		err = nvaudio_ivc_send_retry(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
 	return err;
 }
 
@@ -1919,14 +1923,16 @@ static int tegra_ivc_stop_capture(
 	msg.cmd = NVAUDIO_STOP_CAPTURE;
 	msg.params.dmaif_info.id = ivc_msg_admaif_id;
 	msg.ack_required = ack_required;
-	err = nvaudio_ivc_send_retry(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (ack_required && err >= 0) {
-		nvaudio_ivc_receive(adsp->hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	}
+
+	if (ack_required)
+		err = nvaudio_ivc_send_receive(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
+	else
+		err = nvaudio_ivc_send_retry(adsp->hivc_client,
+					&msg,
+					sizeof(struct nvaudio_ivc_msg));
+
 	return err;
 }
 

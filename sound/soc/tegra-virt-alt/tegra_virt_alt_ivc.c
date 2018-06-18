@@ -18,7 +18,6 @@
 #include <linux/resource.h>
 #include <linux/of.h>
 #include <linux/sched.h>
-#include <linux/wait.h>
 #include <linux/delay.h>
 #include <linux/tegra-ivc.h>
 #include <linux/spinlock.h>
@@ -95,71 +94,73 @@ fail:
 }
 EXPORT_SYMBOL_GPL(nvaudio_ivc_send);
 
-int nvaudio_ivc_receive_cmd(struct nvaudio_ivc_ctxt *ictxt,
-			struct nvaudio_ivc_msg *rx_msg,
-			int size, enum nvaudio_ivc_cmd_t  cmd)
-{
-	int err = -1;
-
-	while (size == nvaudio_ivc_receive(ictxt, rx_msg, size)) {
-		if (rx_msg->cmd == cmd) {
-			err = 0;
-			break;
-		}
-	}
-	return err;
-
-}
-EXPORT_SYMBOL_GPL(nvaudio_ivc_receive_cmd);
-
-int nvaudio_ivc_receive(struct nvaudio_ivc_ctxt *ictxt,
+int nvaudio_ivc_send_receive(struct nvaudio_ivc_ctxt *ictxt,
 			struct nvaudio_ivc_msg *rx_msg, int size)
 {
-	unsigned long flags;
-	unsigned int status;
+
+	int len = 0;
+	unsigned long flags = 0, flags1 = 0;
 	int err = 0;
-	u32 len = 0;
+	int dcnt = 50;
+	int status = -1;
+	struct nvaudio_ivc_msg *msg = rx_msg;
 
-	while (!tegra_hv_ivc_can_read(ictxt->ivck)) {
-		readx_poll_timeout_atomic(readl, &(ictxt->rx_state),
-			status, (status == RX_AVAIL),
-			10, 10000);
-	}
+	if (!ictxt || !ictxt->ivck || !msg || !size)
+		return -EINVAL;
 
-	if (tegra_hv_ivc_channel_notified(ictxt->ivck)) {
-		dev_err(ictxt->dev, "tegra_hv_ivc_channel_notified failed\n");
-		return 0;
+	while (tegra_hv_ivc_channel_notified(ictxt->ivck) != 0) {
+		dev_err(ictxt->dev, "channel notified returns non zero\n");
+		dcnt--;
+		udelay(100);
+		if (!dcnt)
+			return -EIO;
 	}
 
 	spin_lock_irqsave(&ictxt->ivck_rx_lock, flags);
-	if (tegra_hv_ivc_can_read(ictxt->ivck)) {
-		/* Message available */
-		memset(rx_msg, 0, sizeof(struct nvaudio_ivc_msg));
-		ictxt->rx_state = RX_DONE;
-		len = tegra_hv_ivc_read(ictxt->ivck,
-					rx_msg,
-					sizeof(struct nvaudio_ivc_msg));
-		if (len != sizeof(struct nvaudio_ivc_msg)) {
-			dev_err(ictxt->dev, "IVC read failure (msg size error)\n");
-			err = -1;
-			goto fail;
-		}
+	spin_lock_irqsave(&ictxt->ivck_tx_lock, flags1);
+
+	if (!tegra_hv_ivc_can_write(ictxt->ivck)) {
+		err = -EBUSY;
+		spin_unlock_irqrestore(&ictxt->ivck_tx_lock, flags1);
+		goto fail;
+	}
+
+	len = tegra_hv_ivc_write(ictxt->ivck, msg, size);
+	if (len != size) {
+		pr_err("%s: write Error\n", __func__);
+		err = -EIO;
+		spin_unlock_irqrestore(&ictxt->ivck_tx_lock, flags1);
+		goto fail;
+	}
+	spin_unlock_irqrestore(&ictxt->ivck_tx_lock, flags1);
+
+	err = readx_poll_timeout_atomic(tegra_hv_ivc_can_read, ictxt->ivck,
+			status, status, 10, NVAUDIO_IVC_WAIT_TIMEOUT);
+
+	if (err == -ETIMEDOUT) {
+		pr_err("%s: Waited too long for msg reply\n", __func__);
+		goto fail;
+	}
+
+	/* Message available */
+	memset(rx_msg, 0, sizeof(struct nvaudio_ivc_msg));
+	len = tegra_hv_ivc_read(ictxt->ivck,
+				rx_msg,
+				sizeof(struct nvaudio_ivc_msg));
+	if (len != sizeof(struct nvaudio_ivc_msg)) {
+		dev_err(ictxt->dev, "IVC read failure (msg size error)\n");
+		err = -1;
+		goto fail;
 	}
 	err = len;
+
 fail:
 	spin_unlock_irqrestore(&ictxt->ivck_rx_lock, flags);
+
 	return err;
-}
-EXPORT_SYMBOL_GPL(nvaudio_ivc_receive);
 
-static irqreturn_t nvaudio_ivc_isr(int irq, void *pvt)
-{
-	struct nvaudio_ivc_ctxt *ictxt = (struct nvaudio_ivc_ctxt *)pvt;
-
-	ictxt->rx_state = RX_AVAIL;
-	wake_up(&ictxt->wait);
-	return IRQ_HANDLED;
 }
+EXPORT_SYMBOL_GPL(nvaudio_ivc_send_receive);
 
 /* Every communication with the server is identified
  * with this ivc context.
@@ -181,9 +182,7 @@ struct nvaudio_ivc_ctxt *nvaudio_ivc_alloc_ctxt(struct device *dev)
 	}
 	saved_ivc_ctxt = ictxt;
 	ictxt->dev = dev;
-	init_waitqueue_head(&ictxt->wait);
 	ictxt->timeout = 250; /* Not used in polling */
-	ictxt->rx_state = RX_INIT;
 	if (nvaudio_ivc_init(ictxt) != 0) {
 		dev_err(dev, "nvaudio_ivc_init failed\n");
 		goto fail;
@@ -191,7 +190,6 @@ struct nvaudio_ivc_ctxt *nvaudio_ivc_alloc_ctxt(struct device *dev)
 
 	spin_lock_init(&ictxt->ivck_rx_lock);
 	spin_lock_init(&ictxt->ivck_tx_lock);
-	spin_lock_init(&ictxt->lock);
 
 	tegra_hv_ivc_channel_reset(ictxt->ivck);
 
@@ -261,12 +259,6 @@ static int nvaudio_ivc_init(struct nvaudio_ivc_ctxt *ictxt)
 
 	of_node_put(hv_dn);
 
-	err = request_threaded_irq(ivck->irq, nvaudio_ivc_isr, NULL, 0,
-			dev_name(dev), ictxt);
-	if (err) {
-		tegra_hv_ivc_unreserve(ivck);
-		return -EINVAL;
-	}
 	ictxt->ivc_queue = ivc_queue;
 	ictxt->ivck = ivck;
 

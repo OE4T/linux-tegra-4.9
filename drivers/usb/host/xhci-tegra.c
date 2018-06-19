@@ -4675,8 +4675,32 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
 
 {
 	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct xhci_bus_state *bus_state = &xhci->bus_state[hcd_index(hcd)];
 	int port = (index & 0xff) - 1;
 	int ret;
+
+	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
+		__le32 __iomem **port_array;
+		int max_ports;
+		u32 portsc;
+		int i;
+
+		max_ports = xhci->num_usb2_ports;
+		port_array = xhci->usb2_ports;
+
+		for (i = 0; i < max_ports; i++) {
+			if (!test_bit(i, &bus_state->resuming_ports))
+				continue;
+
+			portsc = readl(port_array[i]);
+
+			if ((i < tegra->soc->num_typed_phys[USB2_PHY])
+				&& ((portsc & PORT_PLS_MASK) == XDEV_RESUME))
+				tegra_phy_xusb_utmi_pad_power_on(
+						tegra->typed_phys[USB2_PHY][i]);
+		}
+	}
 
 	if (hcd->speed == HCD_USB2) {
 		if ((type_req == ClearPortFeature) &&
@@ -4725,37 +4749,6 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
 	}
 
 	return ret;
-}
-
-static int tegra_xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
-{
-	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
-	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
-	struct xhci_bus_state *bus_state = &xhci->bus_state[hcd_index(hcd)];
-
-	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
-		__le32 __iomem **port_array;
-		int max_ports;
-		u32 portsc;
-		int i;
-
-		max_ports = xhci->num_usb2_ports;
-		port_array = xhci->usb2_ports;
-
-		for (i = 0; i < max_ports; i++) {
-			if (!test_bit(i, &bus_state->resuming_ports))
-				continue;
-
-			portsc = readl(port_array[i]);
-
-			if ((i < tegra->soc->num_typed_phys[USB2_PHY])
-				&& ((portsc & PORT_PLS_MASK) == XDEV_RESUME))
-				tegra_phy_xusb_utmi_pad_power_on(
-						tegra->typed_phys[USB2_PHY][i]);
-		}
-	}
-
-	return xhci_hub_status_data(hcd, buf);
 }
 
 static bool device_has_isoch_ep_and_interval_one(struct usb_device *udev)
@@ -4904,7 +4897,6 @@ static int __init tegra_xusb_init(void)
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
 	tegra_xhci_hc_driver.hcd_reinit = tegra_xhci_hcd_reinit;
 	tegra_xhci_hc_driver.hub_control = tegra_xhci_hub_control;
-	tegra_xhci_hc_driver.hub_status_data = tegra_xhci_hub_status_data;
 	tegra_xhci_hc_driver.enable_usb3_lpm_timeout =
 		tegra_xhci_enable_usb3_lpm_timeout;
 	tegra_xhci_hc_driver.urb_enqueue = tegra_xhci_urb_enqueue;

@@ -70,8 +70,8 @@ int nvgpu_os_fence_syncpt_wait_gen_cmd(struct nvgpu_os_fence *s,
 	}
 
 	for (i = 0; i < sync_fence->num_fences; i++) {
-		struct fence *f = sync_fence->cbs[i].sync_pt;
-		struct sync_pt *pt = sync_pt_from_fence(f);
+		struct sync_pt *pt = sync_pt_from_fence(
+			sync_fence->cbs[i].sync_pt);
 		u32 wait_id = nvgpu_nvhost_sync_pt_id(pt);
 		u32 wait_value = nvgpu_nvhost_sync_pt_thresh(pt);
 

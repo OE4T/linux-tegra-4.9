@@ -58,8 +58,8 @@ int nvgpu_os_fence_sema_wait_gen_cmd(struct nvgpu_os_fence *s,
 	}
 
 	for (i = 0; i < num_wait_cmds; i++) {
-		struct fence *f = sync_fence->cbs[i].sync_pt;
-		struct sync_pt *pt = sync_pt_from_fence(f);
+		struct sync_pt *pt = sync_pt_from_fence(
+			sync_fence->cbs[i].sync_pt);
 
 		sema = gk20a_sync_pt_sema(pt);
 		gk20a_channel_gen_sema_wait_cmd(c, sema, wait_cmd,

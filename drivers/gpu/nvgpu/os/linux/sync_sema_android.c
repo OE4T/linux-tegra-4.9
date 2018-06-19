@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/hrtimer.h>
@@ -324,8 +323,7 @@ struct sync_fence *gk20a_sync_fence_fdget(int fd)
 		return NULL;
 
 	for (i = 0; i < fence->num_fences; i++) {
-		struct fence *pt = fence->cbs[i].sync_pt;
-		struct sync_pt *spt = sync_pt_from_fence(pt);
+		struct sync_pt *spt = sync_pt_from_fence(fence->cbs[i].sync_pt);
 		struct sync_timeline *t;
 
 		if (spt == NULL) {

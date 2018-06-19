@@ -24,7 +24,7 @@
 
 /* Driver version */
 #define MODS_DRIVER_VERSION_MAJOR 3
-#define MODS_DRIVER_VERSION_MINOR 86
+#define MODS_DRIVER_VERSION_MINOR 87
 #define MODS_DRIVER_VERSION ((MODS_DRIVER_VERSION_MAJOR << 8) | \
 			     ((MODS_DRIVER_VERSION_MINOR/10) << 4) | \
 			     (MODS_DRIVER_VERSION_MINOR%10))
@@ -160,6 +160,17 @@ struct MODS_DMA_MAP_MEMORY {
 	__u64                 memory_handle;
 	struct mods_pci_dev_2 pci_device;
 };
+
+/* MODS_ESC_PCI_SET_DMA_MASK */
+struct MODS_PCI_DMA_MASK {
+	/* IN */
+	struct mods_pci_dev_2 pci_device;
+	__u32                 num_bits;
+};
+
+#define MODS_SWIOTLB_DISABLED      0
+#define MODS_SWIOTLB_ACTIVE        1
+#define MODS_SWIOTLB_INDETERMINATE 2
 
 /* MODS_ESC_GET_IOMMU_STATE */
 struct MODS_GET_IOMMU_STATE {
@@ -507,6 +518,7 @@ struct mods_mask_info {
 	__u64	and_mask;   /*and mask for clearing bits in this register */
 	__u64	or_mask;    /*or value for setting bit in this register */
 };
+
 struct MODS_SET_IRQ_MULTIMASK {
 	/* IN */
 	__u64	aperture_addr;	    /* physical address of aperture */
@@ -517,7 +529,6 @@ struct MODS_SET_IRQ_MULTIMASK {
 	struct	mods_mask_info mask_info[MODS_IRQ_MAX_MASKS];
 	__u8	irq_type;	    /* irq type */
 };
-
 
 /* MODS_ESC_SET_IRQ_MASK_2 */
 struct MODS_SET_IRQ_MASK_2 {
@@ -783,6 +794,37 @@ struct MODS_TEGRA_DC_CONFIG_POSSIBLE {
 
 	/* OUT */
 	__u8  possible;
+};
+
+
+#define MODS_TEGRA_DC_SETUP_SD_LUT_SIZE  9
+#define MODS_TEGRA_DC_SETUP_BLTF_SIZE   16
+/* MODS_ESC_TEGRA_DC_SETUP_SD */
+struct MODS_TEGRA_DC_SETUP_SD {
+	/* IN */
+	__u8 head;
+	__u8 enable;
+
+	__u8 use_vid_luma;
+	__u8 csc_r;
+	__u8 csc_g;
+	__u8 csc_b;
+	__u8 aggressiveness;
+	__u8 bin_width_log2;
+
+	__u32 lut[MODS_TEGRA_DC_SETUP_SD_LUT_SIZE];
+	__u32 bltf[MODS_TEGRA_DC_SETUP_BLTF_SIZE];
+
+	__u32 klimit;
+	__u32 soft_clipping_threshold;
+	__u32 smooth_k_inc;
+	__u8  k_init_bias;
+
+
+	__u32 win_x;
+	__u32 win_y;
+	__u32 win_w;
+	__u32 win_h;
 };
 
 /* MODS_ESC_DMABUF_GET_PHYSICAL_ADDRESS */
@@ -1132,6 +1174,8 @@ struct MODS_SET_NUM_VF {
 #define MODS_ESC_TEGRA_DC_CONFIG_POSSIBLE	\
 		   _IOWR(MODS_IOC_MAGIC, 47,	\
 			 struct MODS_TEGRA_DC_CONFIG_POSSIBLE)
+#define MODS_ESC_TEGRA_DC_SETUP_SD		\
+		    _IOW(MODS_IOC_MAGIC, 48, struct MODS_TEGRA_DC_SETUP_SD)
 #define MODS_ESC_DMABUF_GET_PHYSICAL_ADDRESS	\
 		   _IOWR(MODS_IOC_MAGIC, 49,    \
 			 struct MODS_DMABUF_GET_PHYSICAL_ADDRESS)
@@ -1290,5 +1334,9 @@ struct MODS_SET_NUM_VF {
 		    _IOW(MODS_IOC_MAGIC, 116, struct MODS_SET_NUM_VF)
 #define MODS_ESC_SET_TOTAL_VF			\
 		    _IOW(MODS_IOC_MAGIC, 117, struct MODS_SET_NUM_VF)
+#define MODS_ESC_PCI_SET_DMA_MASK \
+		    _IOW(MODS_IOC_MAGIC, 118, struct MODS_PCI_DMA_MASK)
+#define MODS_ESC_GET_IOMMU_STATE_2	\
+		    _IOWR(MODS_IOC_MAGIC, 119, struct MODS_GET_IOMMU_STATE)
 
 #endif /* _MODS_H_  */

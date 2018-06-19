@@ -77,7 +77,7 @@ static int mods_dma_unmap_and_free(struct MODS_MEM_INFO *p_mem_info,
 	struct list_head  *head;
 	struct list_head  *iter;
 
-	head = p_mem_info->dma_map_list;
+	head = &p_mem_info->dma_map_list;
 
 	list_for_each(iter, head) {
 		p_dma_map = list_entry(iter, struct MODS_DMA_MAP, list);
@@ -115,12 +115,9 @@ static int mods_dma_unmap_and_free(struct MODS_MEM_INFO *p_mem_info,
 int mods_dma_unmap_all(struct MODS_MEM_INFO *p_mem_info,
 		       struct pci_dev *p_pci_dev)
 {
-	struct list_head *head = p_mem_info->dma_map_list;
+	struct list_head *head = &p_mem_info->dma_map_list;
 	struct list_head *iter;
 	struct list_head *tmp;
-
-	if (!p_mem_info->dma_map_list)
-		return OK;
 
 	list_for_each_safe(iter, tmp, head) {
 		struct MODS_DMA_MAP *p_dma_map;
@@ -182,17 +179,7 @@ static int mods_create_dma_map(struct MODS_MEM_INFO *p_mem_info,
 			       struct pci_dev *p_pci_dev)
 {
 	struct MODS_DMA_MAP *p_dma_map;
-	int list_allocated = 0;
-	u32    alloc_size;
-
-	if (!p_mem_info->dma_map_list) {
-		p_mem_info->dma_map_list = kmalloc(sizeof(struct list_head),
-						   GFP_KERNEL | __GFP_NORETRY);
-		if (unlikely(!p_mem_info->dma_map_list))
-			return -ENOMEM;
-		INIT_LIST_HEAD(p_mem_info->dma_map_list);
-		list_allocated = 1;
-	}
+	u32                  alloc_size;
 
 	alloc_size = sizeof(*p_dma_map) +
 		     (p_mem_info->max_chunks - 1) *
@@ -201,18 +188,14 @@ static int mods_create_dma_map(struct MODS_MEM_INFO *p_mem_info,
 	p_dma_map = kmalloc(alloc_size, GFP_KERNEL | __GFP_NORETRY);
 	if (unlikely(!p_dma_map)) {
 		mods_error_printk("failed to allocate device map data\n");
-		if (list_allocated) {
-			kfree(p_mem_info->dma_map_list);
-			p_mem_info->dma_map_list = NULL;
-			return -ENOMEM;
-		}
+		return -ENOMEM;
 	}
 
 	memset(p_dma_map, 0, alloc_size);
 
 	p_dma_map->dev = p_pci_dev;
 	mods_dma_map_pages(p_mem_info, p_dma_map);
-	list_add(&p_dma_map->list, p_mem_info->dma_map_list);
+	list_add(&p_dma_map->list, &p_mem_info->dma_map_list);
 
 	return OK;
 }
@@ -230,7 +213,7 @@ static struct MODS_MAP_CHUNK *mods_find_dma_map_chunk(
 	struct list_head  *iter;
 	int i;
 
-	head = p_mem_info->dma_map_list;
+	head = &p_mem_info->dma_map_list;
 	if (!head)
 		return NULL;
 
@@ -485,12 +468,12 @@ failed:
 static int mods_register_alloc(struct file          *fp,
 			       struct MODS_MEM_INFO *p_mem_info)
 {
-	MODS_PRIV private_data = fp->private_data;
+	struct mods_client *client = fp->private_data;
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx)))
+	if (unlikely(mutex_lock_interruptible(&client->mtx)))
 		return -EINTR;
-	list_add(&p_mem_info->list, private_data->mods_alloc_list);
-	mutex_unlock(&private_data->mtx);
+	list_add(&p_mem_info->list, &client->mem_alloc_list);
+	mutex_unlock(&client->mtx);
 	return OK;
 }
 
@@ -498,16 +481,16 @@ static int mods_unregister_and_free(struct file          *fp,
 				    struct MODS_MEM_INFO *p_del_mem)
 {
 	struct MODS_MEM_INFO *p_mem_info;
-	MODS_PRIV             private_data = fp->private_data;
+	struct mods_client   *client = fp->private_data;
 	struct list_head     *head;
 	struct list_head     *iter;
 
 	mods_debug_printk(DEBUG_MEM_DETAILED, "free %p\n", p_del_mem);
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx)))
+	if (unlikely(mutex_lock_interruptible(&client->mtx)))
 		return -EINTR;
 
-	head = private_data->mods_alloc_list;
+	head = &client->mem_alloc_list;
 
 	list_for_each(iter, head) {
 		p_mem_info = list_entry(iter, struct MODS_MEM_INFO, list);
@@ -515,7 +498,7 @@ static int mods_unregister_and_free(struct file          *fp,
 		if (p_del_mem == p_mem_info) {
 			list_del(iter);
 
-			mutex_unlock(&private_data->mtx);
+			mutex_unlock(&client->mtx);
 
 			mods_dma_unmap_all(p_mem_info, NULL);
 			mods_restore_cache(p_mem_info);
@@ -527,7 +510,7 @@ static int mods_unregister_and_free(struct file          *fp,
 		}
 	}
 
-	mutex_unlock(&private_data->mtx);
+	mutex_unlock(&client->mtx);
 
 	mods_error_printk("failed to unregister allocation %p\n",
 			  p_del_mem);
@@ -536,10 +519,10 @@ static int mods_unregister_and_free(struct file          *fp,
 
 int mods_unregister_all_alloc(struct file *fp)
 {
-	MODS_PRIV         private_data = fp->private_data;
-	struct list_head *head         = private_data->mods_alloc_list;
-	struct list_head *iter;
-	struct list_head *tmp;
+	struct mods_client *client = fp->private_data;
+	struct list_head   *head   = &client->mem_alloc_list;
+	struct list_head   *iter;
+	struct list_head   *tmp;
 
 	list_for_each_safe(iter, tmp, head) {
 		struct MODS_MEM_INFO *p_mem_info;
@@ -587,8 +570,8 @@ int mods_get_alloc_offset(struct MODS_MEM_INFO *p_mem_info,
 
 struct MODS_MEM_INFO *mods_find_alloc(struct file *fp, u64 phys_addr)
 {
-	MODS_PRIV             private_data = fp->private_data;
-	struct list_head     *plist_head   = private_data->mods_alloc_list;
+	struct mods_client   *client     = fp->private_data;
+	struct list_head     *plist_head = &client->mem_alloc_list;
 	struct list_head     *plist_iter;
 	struct MODS_MEM_INFO *p_mem_info;
 	u64		      offset;
@@ -732,8 +715,9 @@ int esc_mods_device_alloc_pages_2(struct file	*fp,
 	p_mem_info->addr_bits	 = p->address_bits;
 	p_mem_info->num_pages	 = num_pages;
 	p_mem_info->numa_node    = numa_node_id();
-	p_mem_info->dma_map_list = NULL;
 	p_mem_info->dev          = NULL;
+
+	INIT_LIST_HEAD(&p_mem_info->dma_map_list);
 
 	if (p->pci_device.bus || p->pci_device.device) {
 		unsigned int devfn = PCI_DEVFN(p->pci_device.device,
@@ -799,13 +783,11 @@ int esc_mods_device_alloc_pages_2(struct file	*fp,
 	mods_debug_printk(DEBUG_MEM_DETAILED, "alloc %p\n", p_mem_info);
 
 	ret = mods_register_alloc(fp, p_mem_info);
-	LOG_EXT();
-	return ret;
+
 failed:
-	if (p_mem_info) {
-		kfree(p_mem_info->dma_map_list);
+	if (ret)
 		kfree(p_mem_info);
-	}
+
 	LOG_EXT();
 	return ret;
 }
@@ -876,7 +858,7 @@ int esc_mods_free_pages(struct file *fp, struct MODS_FREE_PAGES *p)
 int esc_mods_set_mem_type(struct file *fp, struct MODS_MEMORY_TYPE *p)
 {
 	struct MODS_MEM_INFO *p_mem_info;
-	MODS_PRIV             private_data = fp->private_data;
+	struct mods_client   *client = fp->private_data;
 
 	LOG_ENT();
 
@@ -892,25 +874,25 @@ int esc_mods_set_mem_type(struct file *fp, struct MODS_MEMORY_TYPE *p)
 		return -EINVAL;
 	}
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx))) {
+	if (unlikely(mutex_lock_interruptible(&client->mtx))) {
 		LOG_EXT();
 		return -EINTR;
 	}
 
 	p_mem_info = mods_find_alloc(fp, p->physical_address);
 	if (p_mem_info) {
-		mutex_unlock(&private_data->mtx);
+		mutex_unlock(&client->mtx);
 		mods_error_printk("cannot set mem type on phys addr 0x%llx\n",
 				  p->physical_address);
 		LOG_EXT();
 		return -EINVAL;
 	}
 
-	private_data->mem_type.dma_addr = p->physical_address;
-	private_data->mem_type.size     = p->size;
-	private_data->mem_type.type     = p->type;
+	client->mem_type.dma_addr = p->physical_address;
+	client->mem_type.size     = p->size;
+	client->mem_type.type     = p->type;
 
-	mutex_unlock(&private_data->mtx);
+	mutex_unlock(&client->mtx);
 
 	LOG_EXT();
 	return OK;
@@ -1071,18 +1053,18 @@ int esc_mods_virtual_to_phys(struct file *fp,
 			     struct MODS_VIRTUAL_TO_PHYSICAL *p)
 {
 	struct MODS_GET_PHYSICAL_ADDRESS get_phys_addr;
-	MODS_PRIV         private_data = fp->private_data;
-	struct list_head *head;
-	struct list_head *iter;
+	struct mods_client *client = fp->private_data;
+	struct list_head   *head;
+	struct list_head   *iter;
 
 	LOG_ENT();
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx))) {
+	if (unlikely(mutex_lock_interruptible(&client->mtx))) {
 		LOG_EXT();
 		return -EINTR;
 	}
 
-	head = private_data->mods_mapping_list;
+	head = &client->mem_map_list;
 
 	list_for_each(iter, head) {
 		struct SYS_MAP_MEMORY *p_map_mem;
@@ -1103,7 +1085,7 @@ int esc_mods_virtual_to_phys(struct file *fp,
 			if (!p_map_mem->p_mem_info) {
 				p->physical_address = p_map_mem->dma_addr
 						      + virt_offs;
-				mutex_unlock(&private_data->mtx);
+				mutex_unlock(&client->mtx);
 
 				mods_debug_printk(DEBUG_MEM_DETAILED,
 				    "get phys: map %p virt 0x%llx -> 0x%llx\n",
@@ -1123,7 +1105,7 @@ int esc_mods_virtual_to_phys(struct file *fp,
 				(u64)(size_t)p_map_mem->p_mem_info;
 			get_phys_addr.offset = virt_offs + phys_offs;
 
-			mutex_unlock(&private_data->mtx);
+			mutex_unlock(&client->mtx);
 
 			ret = esc_mods_get_phys_addr(fp, &get_phys_addr);
 			if (ret != OK)
@@ -1140,7 +1122,7 @@ int esc_mods_virtual_to_phys(struct file *fp,
 		}
 	}
 
-	mutex_unlock(&private_data->mtx);
+	mutex_unlock(&client->mtx);
 
 	mods_error_printk("invalid virtual address\n");
 	return -EINVAL;
@@ -1150,7 +1132,7 @@ int esc_mods_phys_to_virtual(struct file *fp,
 			     struct MODS_PHYSICAL_TO_VIRTUAL *p)
 {
 	struct SYS_MAP_MEMORY *p_map_mem;
-	MODS_PRIV              private_data = fp->private_data;
+	struct mods_client    *client = fp->private_data;
 	struct list_head      *head;
 	struct list_head      *iter;
 	u64	               offset;
@@ -1158,12 +1140,12 @@ int esc_mods_phys_to_virtual(struct file *fp,
 
 	LOG_ENT();
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx))) {
+	if (unlikely(mutex_lock_interruptible(&client->mtx))) {
 		LOG_EXT();
 		return -EINTR;
 	}
 
-	head = private_data->mods_mapping_list;
+	head = &client->mem_map_list;
 
 	list_for_each(iter, head) {
 		p_map_mem = list_entry(iter, struct SYS_MAP_MEMORY, list);
@@ -1180,7 +1162,7 @@ int esc_mods_phys_to_virtual(struct file *fp,
 				 - p_map_mem->dma_addr;
 			p->virtual_address = p_map_mem->virtual_addr
 					     + offset;
-			mutex_unlock(&private_data->mtx);
+			mutex_unlock(&client->mtx);
 
 			mods_debug_printk(DEBUG_MEM_DETAILED,
 			    "get virt: map %p phys 0x%llx -> 0x%llx\n",
@@ -1207,7 +1189,7 @@ int esc_mods_phys_to_virtual(struct file *fp,
 			p->virtual_address = p_map_mem->virtual_addr
 					   + offset - map_offset;
 
-			mutex_unlock(&private_data->mtx);
+			mutex_unlock(&client->mtx);
 			mods_debug_printk(DEBUG_MEM_DETAILED,
 			    "get virt: map %p phys 0x%llx -> 0x%llx\n",
 			    p_map_mem, p->physical_address, p->virtual_address);
@@ -1216,7 +1198,7 @@ int esc_mods_phys_to_virtual(struct file *fp,
 			return OK;
 		}
 	}
-	mutex_unlock(&private_data->mtx);
+	mutex_unlock(&client->mtx);
 	mods_error_printk("phys addr 0x%llx is not mapped\n",
 			  p->physical_address);
 	return -EINVAL;
@@ -1402,9 +1384,9 @@ static void clear_entry_cache_mappings
 int esc_mods_flush_cpu_cache_range(struct file *fp,
 				   struct MODS_FLUSH_CPU_CACHE_RANGE *p)
 {
-	MODS_PRIV         private_data = fp->private_data;
-	struct list_head *head;
-	struct list_head *iter;
+	struct mods_client *client = fp->private_data;
+	struct list_head   *head;
+	struct list_head   *iter;
 
 	if (irqs_disabled() || in_interrupt() ||
 	    p->virt_addr_start > p->virt_addr_end ||
@@ -1414,12 +1396,12 @@ int esc_mods_flush_cpu_cache_range(struct file *fp,
 		return -EINVAL;
 	}
 
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx))) {
+	if (unlikely(mutex_lock_interruptible(&client->mtx))) {
 		LOG_EXT();
 		return -EINTR;
 	}
 
-	head = private_data->mods_mapping_list;
+	head = &client->mem_map_list;
 
 	list_for_each(iter, head) {
 		struct SYS_MAP_MEMORY *p_map_mem
@@ -1455,7 +1437,7 @@ int esc_mods_flush_cpu_cache_range(struct file *fp,
 						   virt_end);
 		}
 	}
-	mutex_unlock(&private_data->mtx);
+	mutex_unlock(&client->mtx);
 	return OK;
 }
 

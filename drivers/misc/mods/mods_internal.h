@@ -55,10 +55,10 @@
 struct en_dev_entry {
 	struct pci_dev	    *dev;
 	struct en_dev_entry *next;
-	__u32                irqs_allocated;
-	__u32                irq_flags;
-	__u32                nvecs;
 	struct msix_entry   *msix_entries;
+	u32                  irq_flags;
+	u32                  nvecs;
+	u8                   client_id;
 };
 
 struct mem_type {
@@ -67,25 +67,40 @@ struct mem_type {
 	u32 type;
 };
 
-/* file private data */
-struct mods_file_private_data {
-	struct list_head    *mods_alloc_list;
-	struct list_head    *mods_mapping_list;
-	struct list_head    *mods_pci_res_map_list;
+struct irq_q_data {
+	u32		time;
+	struct pci_dev *dev;
+	u32		irq;
+	u32		irq_index;
+};
+
+struct irq_q_info {
+	struct irq_q_data data[MODS_MAX_IRQS];
+	u32		  head;
+	u32		  tail;
+};
+
+/* The driver can be opened simultaneously multiple times, from the same or from
+ * different processes.  This structure tracks data specific to each open fd.
+ */
+struct mods_client {
+	struct list_head     irq_list;
+	struct list_head     mem_alloc_list;
+	struct list_head     mem_map_list;
 #if defined(CONFIG_PPC64)
-	struct list_head    *mods_ppc_tce_bypass_list;
-	struct list_head    *mods_nvlink_sysmem_trained_list;
+	struct list_head     ppc_tce_bypass_list;
+	struct list_head     nvlink_sysmem_trained_list;
 #endif
 	wait_queue_head_t    interrupt_event;
+	struct irq_q_info    irq_queue;
+	spinlock_t           irq_lock;
 	struct en_dev_entry *enabled_devices;
-	int                  mods_id;
 	struct mem_type      mem_type;
 	struct mutex         mtx;
 	int                  mods_fb_suspended[FB_MAX];
 	u32                  access_token;
+	u8                   client_id;
 };
-
-#define MODS_PRIV struct mods_file_private_data *
 
 /* VM private data */
 struct mods_vm_private_data {
@@ -133,7 +148,7 @@ struct MODS_MEM_INFO {
 				* memory was allocated on
 				*/
 
-	struct list_head *dma_map_list;
+	struct list_head dma_map_list;
 
 	struct list_head list;
 
@@ -191,7 +206,7 @@ struct NVL_TRAINED {
 
 #define IRQ_MAX			(256+PCI_IRQ_MAX)
 #define PCI_IRQ_MAX		15
-#define MODS_CHANNEL_MAX	32
+#define MODS_MAX_CLIENTS	32
 
 #define IRQ_VAL_POISON		0xfafbfcfdU
 
@@ -230,19 +245,6 @@ struct NVL_TRAINED {
 #define mods_warning_printk(fmt, args...)\
 	pr_info("mods warning: " fmt, ##args)
 
-struct irq_q_data {
-	u32		time;
-	struct pci_dev *dev;
-	u32		irq;
-	u32		irq_index;
-};
-
-struct irq_q_info {
-	struct irq_q_data data[MODS_MAX_IRQS];
-	u32		  head;
-	u32		  tail;
-};
-
 struct irq_mask_info {
 	u32	*dev_irq_mask_reg;  /*IRQ mask register, read-only reg*/
 	u32	*dev_irq_state;     /* IRQ status register*/
@@ -257,7 +259,7 @@ struct dev_irq_map {
 	u32	apic_irq;
 	u32	entry;
 	u8	type;
-	u8	channel;
+	u8	client_id;
 	u8	mask_info_cnt;
 	struct	irq_mask_info mask_info[MODS_IRQ_MAX_MASKS];
 	struct	pci_dev      *dev;
@@ -265,16 +267,14 @@ struct dev_irq_map {
 };
 
 struct mods_priv {
-	/* map info from pci irq to apic irq */
-	struct list_head  irq_head[MODS_CHANNEL_MAX];
+	/* Bitmap for each allocated client id. */
+	unsigned long      client_flags;
 
-	/* bits map for each allocated id. Each mods has an id. */
-	/* the design is to take  into	account multi mods. */
-	unsigned long     channel_flags;
+	/* Client structures */
+	struct mods_client clients[MODS_MAX_CLIENTS];
 
-	/* fifo loop queue */
-	struct irq_q_info rec_info[MODS_CHANNEL_MAX];
-	spinlock_t	  lock;
+	/* Mutex for guarding interrupt logic and PCI device enablement */
+	struct mutex       mtx;
 };
 
 #ifndef MODS_HAS_SET_MEMORY
@@ -362,9 +362,15 @@ struct mods_priv {
 #define MODS_ACPI_HANDLE(dev) DEVICE_ACPI_HANDLE(dev)
 #endif
 
-/* FILE */
-#define MODS_GET_FILE_PRIVATE_ID(fp) (((struct mods_file_private_data *)(fp) \
-				      ->private_data)->mods_id)
+static inline u8 get_client_id(struct file *fp)
+{
+	return ((struct mods_client *)(fp->private_data))->client_id;
+}
+
+static inline int is_client_id_valid(u8 client_id)
+{
+	return client_id > 0 && client_id <= MODS_MAX_CLIENTS;
+}
 
 /* ************************************************************************* */
 /* ** MODULE WIDE FUNCTIONS						     */
@@ -373,11 +379,11 @@ struct mods_priv {
 /* irq */
 void mods_init_irq(void);
 void mods_cleanup_irq(void);
-unsigned char mods_alloc_channel(void);
-void mods_free_channel(unsigned char channel);
-void mods_irq_dev_clr_pri(unsigned char id);
-void mods_irq_dev_set_pri(unsigned char id, void *pri);
-int mods_irq_event_check(unsigned char channel);
+struct mutex *mods_get_irq_mutex(void);
+struct mods_client *mods_alloc_client(void);
+void mods_free_client_interrupts(struct mods_client *client);
+void mods_free_client(u8 client_id);
+int mods_irq_event_check(u8 client_id);
 
 /* mem */
 const char *mods_get_prot_str(u32 mem_type);
@@ -392,13 +398,9 @@ int mods_unregister_all_nvlink_sysmem_trained(struct file *fp);
 #endif
 
 #ifdef CONFIG_PCI
-int mods_enable_device(struct mods_file_private_data *priv,
-		       struct pci_dev *pdev);
+struct en_dev_entry *mods_enable_device(struct mods_client *client,
+					struct pci_dev     *dev);
 void mods_disable_device(struct pci_dev *pdev);
-int mods_unregister_all_pci_res_mappings(struct file *fp);
-#define MODS_UNREGISTER_PCI_MAP(fp) mods_unregister_all_pci_res_mappings(fp)
-#else
-#define MODS_UNREGISTER_PCI_MAP(fp) 0
 #endif
 
 /* clock */
@@ -489,12 +491,12 @@ int esc_mods_device_numa_info(struct file *fp,
 			      struct MODS_DEVICE_NUMA_INFO *p);
 int esc_mods_device_numa_info_2(struct file *fp,
 				struct MODS_DEVICE_NUMA_INFO_2 *p);
-int esc_mods_pci_map_resource(struct file *fp,
-			      struct MODS_PCI_MAP_RESOURCE *p);
-int esc_mods_pci_unmap_resource(struct file *fp,
-				struct MODS_PCI_UNMAP_RESOURCE *p);
 int esc_mods_get_iommu_state(struct file                 *pfile,
 			     struct MODS_GET_IOMMU_STATE *state);
+int esc_mods_get_iommu_state_2(struct file                 *pfile,
+			       struct MODS_GET_IOMMU_STATE *state);
+int esc_mods_pci_set_dma_mask(struct file             *pfile,
+			     struct MODS_PCI_DMA_MASK *dma_mask);
 #endif
 /* irq */
 #if defined(MODS_TEGRA) && defined(CONFIG_OF_IRQ) && defined(CONFIG_OF)
@@ -510,11 +512,6 @@ int esc_mods_unregister_irq_2(struct file *fp,
 			      struct MODS_REGISTER_IRQ_2 *p);
 int esc_mods_query_irq(struct file *fp, struct MODS_QUERY_IRQ *p);
 int esc_mods_query_irq_2(struct file *fp, struct MODS_QUERY_IRQ_2 *p);
-int esc_mods_set_irq_mask(struct file *fp, struct MODS_SET_IRQ_MASK *p);
-int esc_mods_set_irq_mask_2(struct file *fp,
-			    struct MODS_SET_IRQ_MASK_2 *p);
-int esc_mods_set_irq_multimask(struct file *fp,
-			       struct MODS_SET_IRQ_MULTIMASK *p);
 int esc_mods_irq_handled(struct file *fp, struct MODS_REGISTER_IRQ *p);
 int esc_mods_irq_handled_2(struct file *fp,
 			   struct MODS_REGISTER_IRQ_2 *p);

@@ -26,84 +26,6 @@
 #endif
 
 /************************
- * PCI HELPER FUNCTIONS *
- ************************/
-
-static int mods_free_pci_res_map(struct file *fp,
-				 struct MODS_PCI_RES_MAP_INFO *p_del_map)
-{
-#if defined(MODS_HAS_PCI_MAP_RESOURCE)
-	struct MODS_PCI_RES_MAP_INFO *p_res_map;
-	MODS_PRIV                     private_data = fp->private_data;
-	struct list_head             *head;
-	struct list_head             *iter;
-
-	mods_debug_printk(DEBUG_PCI,
-			  "free pci resource map %p\n",
-			  p_del_map);
-
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx)))
-		return -EINTR;
-
-	head = private_data->mods_pci_res_map_list;
-
-	list_for_each(iter, head) {
-		p_res_map =
-			list_entry(iter, struct MODS_PCI_RES_MAP_INFO, list);
-
-		if (p_del_map == p_res_map) {
-			list_del(iter);
-
-			mutex_unlock(&private_data->mtx);
-
-			pci_unmap_resource(p_res_map->dev,
-					   p_res_map->va,
-					   p_res_map->page_count * PAGE_SIZE,
-					   PCI_DMA_BIDIRECTIONAL);
-			mods_debug_printk(DEBUG_PCI,
-					  "unmapped pci resource at 0x%llx from %u:%u:%u.%u\n",
-					  p_res_map->va,
-					  pci_domain_nr(p_res_map->dev->bus),
-					  p_res_map->dev->bus->number,
-					  PCI_SLOT(p_res_map->dev->devfn),
-					  PCI_FUNC(p_res_map->dev->devfn));
-			kfree(p_res_map);
-			return OK;
-		}
-	}
-
-	mutex_unlock(&private_data->mtx);
-
-	mods_error_printk("failed to unregister pci resource mapping %p\n",
-			  p_del_map);
-	return -EINVAL;
-#else
-	return OK;
-#endif
-}
-
-int mods_unregister_all_pci_res_mappings(struct file *fp)
-{
-	MODS_PRIV         private_data = fp->private_data;
-	struct list_head *head         = private_data->mods_pci_res_map_list;
-	struct list_head *iter;
-	struct list_head *tmp;
-
-	list_for_each_safe(iter, tmp, head) {
-		struct MODS_PCI_RES_MAP_INFO *p_pci_res_map_info;
-		int ret;
-
-		p_pci_res_map_info =
-			list_entry(iter, struct MODS_PCI_RES_MAP_INFO, list);
-		ret = mods_free_pci_res_map(fp, p_pci_res_map_info);
-		if (ret)
-			return ret;
-	}
-
-	return OK;
-}
-
-/************************
  * PCI ESCAPE FUNCTIONS *
  ************************/
 
@@ -133,19 +55,6 @@ static int mods_find_pci_dev(struct file                   *pfile,
 	p->pci_device.bus      = dev->bus->number;
 	p->pci_device.device   = PCI_SLOT(dev->devfn);
 	p->pci_device.function = PCI_FUNC(dev->devfn);
-
-#if defined(CONFIG_PPC64)
-	/* Enable device on the PCI bus */
-	if (mods_enable_device(pfile->private_data, dev)) {
-		mods_error_printk(
-		    "unable to enable dev %04x:%02x:%02x.%x\n",
-		    (unsigned int)p->pci_device.domain,
-		    (unsigned int)p->pci_device.bus,
-		    (unsigned int)p->pci_device.device,
-		    (unsigned int)p->pci_device.function);
-		return -EINVAL;
-	}
-#endif
 
 	return OK;
 }
@@ -201,19 +110,6 @@ static int mods_find_pci_class_code(struct file                       *pfile,
 	p->pci_device.device   = PCI_SLOT(dev->devfn);
 	p->pci_device.function = PCI_FUNC(dev->devfn);
 
-#if defined(CONFIG_PPC64)
-	/* Enable device on the PCI bus */
-	if (mods_enable_device(pfile->private_data, dev)) {
-		mods_error_printk(
-		    "unable to enable dev %04x:%02x:%02x.%x\n",
-		    (unsigned int)p->pci_device.domain,
-		    (unsigned int)p->pci_device.bus,
-		    (unsigned int)p->pci_device.device,
-		    (unsigned int)p->pci_device.function);
-		return -EINVAL;
-	}
-#endif
-
 	return OK;
 }
 
@@ -263,6 +159,27 @@ int esc_mods_pci_get_bar_info_2(struct file *pfile,
 			  (int) p->pci_device.domain,
 			  (int) p->pci_device.bus, (int) p->pci_device.device,
 			  (int) p->pci_device.function, (int) p->bar_index);
+
+#if defined(CONFIG_PPC64)
+	if (unlikely(mutex_lock_interruptible(mods_get_irq_mutex()))) {
+		LOG_EXT();
+		return -EINTR;
+	}
+
+	/* Enable device on the PCI bus */
+	if (mods_enable_device(pfile->private_data, dev) == 0) {
+		mods_error_printk(
+		    "unable to enable dev %04x:%02x:%02x.%x\n",
+		    (unsigned int)p->pci_device.domain,
+		    (unsigned int)p->pci_device.bus,
+		    (unsigned int)p->pci_device.device,
+		    (unsigned int)p->pci_device.function);
+		mutex_unlock(mods_get_irq_mutex());
+		return -EINVAL;
+	}
+
+	mutex_unlock(mods_get_irq_mutex());
+#endif
 
 	bar_resource_offset = 0;
 	for (i = 0; i < p->bar_index; i++) {
@@ -665,188 +582,22 @@ int esc_mods_device_numa_info(struct file *fp,
 	return OK;
 }
 
-int esc_mods_pci_map_resource(struct file *fp,
-			      struct MODS_PCI_MAP_RESOURCE  *p)
-{
-#if defined(MODS_HAS_PCI_MAP_RESOURCE)
-	MODS_PRIV                     private_data = fp->private_data;
-	unsigned int                  devfn;
-	struct pci_dev               *rem_dev;
-	struct pci_dev               *loc_dev;
-	struct MODS_PCI_RES_MAP_INFO *p_res_map;
-
-	LOG_ENT();
-
-	devfn = PCI_DEVFN(p->local_pci_device.device,
-			  p->local_pci_device.function);
-	loc_dev = MODS_PCI_GET_SLOT(p->local_pci_device.domain,
-				    p->local_pci_device.bus, devfn);
-	if (!loc_dev) {
-		mods_error_printk("Local PCI device %04x:%x:%02x.%x not found\n",
-				  p->local_pci_device.domain,
-				  p->local_pci_device.bus,
-				  p->local_pci_device.device,
-				  p->local_pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	devfn = PCI_DEVFN(p->remote_pci_device.device,
-			  p->remote_pci_device.function);
-	rem_dev = MODS_PCI_GET_SLOT(p->remote_pci_device.domain,
-				    p->remote_pci_device.bus, devfn);
-	if (!rem_dev) {
-		mods_error_printk("Remote PCI device %04x:%x:%02x.%x not found\n",
-				  p->remote_pci_device.domain,
-				  p->remote_pci_device.bus,
-				  p->remote_pci_device.device,
-				  p->remote_pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	if ((p->resource_index >= DEVICE_COUNT_RESOURCE) ||
-	    !pci_resource_len(rem_dev, p->resource_index)) {
-		mods_error_printk(
-			"Resource %u on device %04x:%x:%02x.%x not found\n",
-			p->resource_index,
-			p->remote_pci_device.domain,
-			p->remote_pci_device.bus,
-			p->remote_pci_device.device,
-			p->remote_pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	if ((p->va < pci_resource_start(rem_dev, p->resource_index)) ||
-	    (p->va > pci_resource_end(rem_dev, p->resource_index)) ||
-	    (p->va + p->page_count * PAGE_SIZE >
-			pci_resource_end(rem_dev, p->resource_index))) {
-		mods_error_printk(
-			"bad resource address 0x%04x:%x:%02x.%x on device %u:%u:%u.%u\n"
-			(unsigned long long)p->va,
-			p->remote_pci_device.domain,
-			p->remote_pci_device.bus,
-			p->remote_pci_device.device,
-			p->remote_pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	p_res_map = kmalloc(sizeof(struct MODS_PCI_RES_MAP_INFO),
-			    GFP_KERNEL | __GFP_NORETRY);
-	if (unlikely(!p_res_map)) {
-		mods_error_printk("failed to allocate pci res map struct\n");
-		LOG_EXT();
-		return -ENOMEM;
-	}
-
-	p_res_map->dev = loc_dev;
-	p_res_map->page_count = p->page_count;
-	p_res_map->va = pci_map_resource(loc_dev,
-		&rem_dev->resource[resource_index],
-		p->va - pci_resource_start(rem_dev, p->resource_index),
-		p->page_count * PAGE_SIZE,
-		PCI_DMA_BIDIRECTIONAL);
-	p_res_map->va = p->va;
-	if (pci_dma_mapping_error(loc_dev, p_res_map->va)) {
-		kfree(p_res_map);
-		LOG_EXT();
-		return -ENOMEM;
-	}
-
-	if (unlikely(mutex_lock_interruptible(&private_data->mtx))) {
-		kfree(p_res_map);
-		LOG_EXT();
-		return -EINTR;
-	}
-	list_add(&p_res_map->list, private_data->mods_pci_res_map_list);
-	mutex_unlock(&private_data->mtx);
-
-	p->va = p_res_map->va;
-
-	mods_debug_printk(DEBUG_PCI,
-			  "mapped pci resource %u from %u:%u:%u.%u to %u:%u:%u.%u at 0x%llx\n",
-			  p->resource_index,
-			  p->remote_pci_device.domain,
-			  p->remote_pci_device.bus,
-			  p->remote_pci_device.device,
-			  p->remote_pci_device.function,
-			  p->local_pci_device.domain,
-			  p->local_pci_device.bus,
-			  p->local_pci_device.device,
-			  p->local_pci_device.function,
-			  p->va);
-#else
-	/*
-	 * We still return OK, in case the system is running an older kernel
-	 * with the IOMMU disabled. The va parameter will still contain the
-	 * input physical address, which is what the device should use in this
-	 * fallback case.
-	 */
-#endif
-	return OK;
-}
-
-int esc_mods_pci_unmap_resource(struct file *fp,
-				struct MODS_PCI_UNMAP_RESOURCE  *p)
-{
-#if defined(MODS_HAS_PCI_MAP_RESOURCE)
-	MODS_PRIV         private_data = fp->private_data;
-	unsigned int      devfn = PCI_DEVFN(p->pci_device.device,
-					    p->pci_device.function);
-	struct pci_dev   *dev   = MODS_PCI_GET_SLOT(p->pci_device.domain,
-						    p->pci_device.bus, devfn);
-	struct list_head *head  = private_data->mods_pci_res_map_list;
-	struct list_head *iter;
-	struct list_head *tmp;
-
-	LOG_ENT();
-
-	if (!dev) {
-		mods_error_printk("PCI device %04x:%x:%02x.%x not found\n",
-				  p->pci_device.domain,
-				  p->pci_device.bus,
-				  p->pci_device.device,
-				  p->pci_device.function);
-		LOG_EXT();
-		return -EINVAL;
-	}
-
-	list_for_each_safe(iter, tmp, head) {
-		struct MODS_PCI_RES_MAP_INFO *p_pci_res_map_info;
-
-		p_pci_res_map_info =
-		    list_entry(iter, struct MODS_PCI_RES_MAP_INFO, list);
-
-		if ((p_pci_res_map_info->dev == dev) &&
-		    (p_pci_res_map_info->va == p->va)) {
-			int ret = mods_free_pci_res_map(fp, p_pci_res_map_info);
-
-			LOG_EXT();
-			return ret;
-		}
-	}
-
-	mods_error_printk(
-		"PCI mapping 0x%llx on device %04x:%x:%02x.%x not found\n",
-		p->va,
-		p->pci_device.domain,
-		p->pci_device.bus,
-		p->pci_device.device,
-		p->pci_device.function);
-	return -EINVAL;
-#else
-	return OK;
-#endif
-}
-
 int esc_mods_get_iommu_state(struct file                 *pfile,
 			     struct MODS_GET_IOMMU_STATE *state)
 {
+	int err = esc_mods_get_iommu_state_2(pfile, state);
+
+	if (!err)
+		state->state = (state->state == MODS_SWIOTLB_DISABLED) ? 1 : 0;
+
+	return err;
+}
+
+int esc_mods_get_iommu_state_2(struct file                 *pfile,
+			       struct MODS_GET_IOMMU_STATE *state)
+{
 #if !defined(CONFIG_SWIOTLB)
-	/* SWIOTLB turned off in the kernel, HW IOMMU active */
-	state->state = 1;
+	state->state = MODS_SWIOTLB_DISABLED;
 #elif defined(MODS_HAS_DMA_OPS) && \
 	(defined(MODS_HAS_NONCOH_DMA_OPS) || defined(MODS_HAS_MAP_SG_ATTRS))
 
@@ -859,18 +610,53 @@ int esc_mods_get_iommu_state(struct file                 *pfile,
 	const struct dma_map_ops *ops = get_dma_ops(&dev->dev);
 
 #if defined(MODS_HAS_NONCOH_DMA_OPS)
-	state->state = ops != &noncoherent_swiotlb_dma_ops &&
-		       ops != &coherent_swiotlb_dma_ops;
+	state->state = (ops != &noncoherent_swiotlb_dma_ops &&
+			ops != &coherent_swiotlb_dma_ops)
+		       ? MODS_SWIOTLB_DISABLED : MODS_SWIOTLB_ACTIVE;
 #else
-	state->state = ops->map_sg != swiotlb_map_sg_attrs;
+	state->state = ops->map_sg != swiotlb_map_sg_attrs
+		       ? MODS_SWIOTLB_DISABLED : MODS_SWIOTLB_ACTIVE;
 #endif
 #elif defined(CONFIG_PPC64) || defined(CONFIG_ARM64)
-	/* Old/new kernels, no way to detect, default to HW IOMMU active */
-	state->state = 1;
+	/* No way to detect, assume SW I/O TLB is disabled on ppc64/arm64 */
+	state->state = MODS_SWIOTLB_DISABLED;
 #else
-	/* Old/new kernels, no way to detect, on x86 default to no IOMMU */
-	state->state = 0;
+	/* No way to detect on old kernel */
+	state->state = MODS_SWIOTLB_INDETERMINATE;
 #endif
 	return OK;
 }
 
+int esc_mods_pci_set_dma_mask(struct file              *file,
+			      struct MODS_PCI_DMA_MASK *dma_mask)
+{
+	int             err;
+	unsigned int    devfn = PCI_DEVFN(dma_mask->pci_device.device,
+					  dma_mask->pci_device.function);
+	struct pci_dev *dev   = MODS_PCI_GET_SLOT(dma_mask->pci_device.domain,
+						  dma_mask->pci_device.bus,
+						  devfn);
+	u64             mask;
+
+	if (dma_mask->num_bits > 64)
+		return -EINVAL;
+	mask = dma_mask->num_bits == 64 ? ~0ULL : (1ULL<<dma_mask->num_bits)-1;
+
+	err = pci_set_dma_mask(dev, mask);
+	if (err) {
+		mods_error_printk("failed to set dma mask 0x%llx for dev %04x:%x:%02x.%x\n",
+				  mask,
+				  (unsigned int)dma_mask->pci_device.domain,
+				  (unsigned int)dma_mask->pci_device.bus,
+				  (unsigned int)dma_mask->pci_device.device,
+				  (unsigned int)dma_mask->pci_device.function);
+#if defined(CONFIG_PPC64)
+		/* Ignore error if TCE bypass is on */
+		if (dev->dma_mask == ~0ULL)
+			err = OK;
+#endif
+	} else
+		err = pci_set_consistent_dma_mask(dev, mask);
+
+	return err;
+}

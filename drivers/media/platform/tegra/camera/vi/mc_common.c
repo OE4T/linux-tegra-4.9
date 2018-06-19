@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input device common APIs
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -192,6 +192,7 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 {
 	int err = 0, i;
 	struct tegra_channel *item;
+	const unsigned int num_pre_channels = mc_vi->num_channels;
 
 	/* Allocate TPG channel */
 	v4l2_ctrl_handler_init(&mc_vi->ctrl_handler, 1);
@@ -210,15 +211,16 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 	for (i = 0; i < mc_vi->csi->num_tpg_channels; i++) {
 		item = devm_kzalloc(mc_vi->dev, sizeof(*item), GFP_KERNEL);
 		if (!item)
-			continue;
-		item->id = mc_vi->num_channels + i;
+			goto channel_init_error;
+
+		item->id = num_pre_channels + i;
 		item->pg_mode = pg_mode;
 		item->vi = mc_vi;
 
 		err = tegra_channel_init(item);
 		if (err) {
 			devm_kfree(mc_vi->dev, item);
-			continue;
+			goto channel_init_error;
 		}
 
 		err = video_register_device(&item->video, VFL_TYPE_GRABBER, -1);
@@ -231,10 +233,10 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 		vi_tpg_fmts_bitmap_init(item);
 		/* only inited tpg channels are added */
 		list_add_tail(&item->list, &mc_vi->vi_chans);
-		mc_vi->num_channels++;
 		if (mc_vi->tpg_start == NULL)
 			mc_vi->tpg_start = item;
 	}
+	mc_vi->num_channels += mc_vi->csi->num_tpg_channels;
 
 	err = tegra_vi_tpg_graph_init(mc_vi);
 	if (err)

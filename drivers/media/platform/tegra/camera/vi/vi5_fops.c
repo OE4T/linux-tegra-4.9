@@ -62,7 +62,7 @@ static const struct capture_descriptor capture_template = {
 			.stream = 0,		/* one-hot bit encoding */
 			.stream_mask = 0x3f,
 			.vc = (1u << 0),	/* one-hot bit encoding */
-			.vc_mask = 0xf,
+			.vc_mask = 0xffff,
 		},
 	},
 };

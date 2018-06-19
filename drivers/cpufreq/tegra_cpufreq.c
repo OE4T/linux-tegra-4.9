@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -982,8 +982,10 @@ static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
 	if (event != CPUFREQ_ADJUST)
 		return NOTIFY_OK;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	qmin = pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
 	qmax = pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
+#endif
 
 	/*
 	 * Clamp pmqos to stay within sysfs upper boundary
@@ -1055,10 +1057,14 @@ static struct notifier_block tegra_cpu_pm_nb = {
 
 static void pm_qos_register_notifier(void)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	pm_qos_add_min_notifier(PM_QOS_CPU_FREQ_BOUNDS,
 		&cluster_freq_nb);
 	pm_qos_add_max_notifier(PM_QOS_CPU_FREQ_BOUNDS,
 		&cluster_freq_nb);
+#else
+	pr_info("pm_qos for cpufreq yet to be done: %p\n", &cluster_freq_nb);
+#endif
 }
 
 /* Free lut space shared beteen CPU and BPMP */

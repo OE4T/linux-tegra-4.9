@@ -668,7 +668,6 @@ static bool tegra186_arad_volatile_reg(struct device *dev, unsigned int reg)
 	}
 
 	switch (reg) {
-	case TEGRA186_ARAD_LANE_ENABLE:
 	case TEGRA186_ARAD_LANE_STATUS:
 	case TEGRA186_ARAD_LANE_INT_STATUS:
 	case TEGRA186_ARAD_STATUS:

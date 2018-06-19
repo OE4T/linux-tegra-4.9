@@ -17,6 +17,7 @@
 #include <linux/hid.h>
 #include <linux/module.h>
 #include <linux/time.h>
+#include <linux/version.h>
 
 #include "hid-ids.h"
 
@@ -115,9 +116,15 @@ static int raven_raw_event(struct hid_device *hdev, struct hid_report *report,
 				__func__, report->id, debug_info->seq_num, seq);
 
 		/* Ignore first packet time diff */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		if (debug_info->time &&
+		    time_diff < MAX_TIME_BETWEEN_PACKETS &&
+		    packet_delay > MAX_PACKET_DIFF_TOLERANCE)
+#else
 		if (debug_info->time.tv64 &&
 		    time_diff < MAX_TIME_BETWEEN_PACKETS &&
 		    packet_delay > MAX_PACKET_DIFF_TOLERANCE)
+#endif
 			hid_err(hdev, "%s: id:%d Packet delay:%d ms at seq %d host diff :%lli ms fw diff %d",
 				__func__, report->id, packet_delay, seq,
 				time_diff, fw_time_diff);

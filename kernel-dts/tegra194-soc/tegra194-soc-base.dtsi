@@ -87,6 +87,31 @@
 			no-map;
 		};
 
+		fb0_reserved: fb0_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb1_reserved: fb1_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb2_reserved: fb2_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb3_reserved: fb3_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+
 	};
 
 	tegra-carveouts {
@@ -1051,6 +1076,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD0>;
+			fb_reserved = <&fb0_reserved>;
+			iommu-direct-regions = <&fb0_reserved>;
 		}; //nvdisplay@15200000
 
 		head1: nvdisplay@15210000 {
@@ -1095,6 +1122,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD1>;
+			fb_reserved = <&fb1_reserved>;
+			iommu-direct-regions = <&fb1_reserved>;
 		}; //nvdisplay@15210000
 
 		head2: nvdisplay@15220000 {
@@ -1139,6 +1168,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD2>;
+			fb_reserved = <&fb2_reserved>;
+			iommu-direct-regions = <&fb2_reserved>;
 		}; //nvdisplay@15220000
 
 		head3: nvdisplay@15230000 {
@@ -1183,6 +1214,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD3>;
+			fb_reserved = <&fb3_reserved>;
+			iommu-direct-regions = <&fb3_reserved>;
 		}; //nvdisplay@15230000
 
 		sor0: sor {

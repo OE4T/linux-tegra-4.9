@@ -247,8 +247,10 @@ static int skcipher_setkey(struct crypto_skcipher *tfm, const u8 *key,
 {
 	struct skcipher_alg *cipher = crypto_skcipher_alg(tfm);
 	unsigned long alignmask = crypto_skcipher_alignmask(tfm);
+	int in_mem = IS_KEY_IN_MEM(keylen);
 
-	if (keylen < cipher->min_keysize || keylen > cipher->max_keysize) {
+	if ((keylen < cipher->min_keysize || keylen > cipher->max_keysize)
+				&& !in_mem) {
 		crypto_skcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
 	}

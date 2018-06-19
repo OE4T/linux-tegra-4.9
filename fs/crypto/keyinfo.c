@@ -12,6 +12,12 @@
 #include <linux/scatterlist.h>
 #include <linux/fscrypto.h>
 
+#define SE_STORE_KEY_IN_MEM    0x0001
+#define SE_MAGIC_PATTERN_OFFSET 16
+#define CLEAR_PATTERN(x) ((x) & 0xFFFF)
+#define ENABLE_KEY_IN_MEM(x) \
+	(CLEAR_PATTERN(x) | (SE_STORE_KEY_IN_MEM << SE_MAGIC_PATTERN_OFFSET))
+
 static void derive_crypt_complete(struct crypto_async_request *req, int rc)
 {
 	struct fscrypt_completion_result *ecr = req->data;
@@ -56,7 +62,7 @@ static int derive_key_aes(u8 deriving_key[FS_AES_128_ECB_KEY_SIZE],
 			CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
 			derive_crypt_complete, &ecr);
 	res = crypto_skcipher_setkey(tfm, deriving_key,
-					FS_AES_128_ECB_KEY_SIZE);
+				ENABLE_KEY_IN_MEM(FS_AES_128_ECB_KEY_SIZE));
 	if (res < 0)
 		goto out;
 
@@ -271,7 +277,7 @@ got_key:
 	crypt_info->ci_ctfm = ctfm;
 	crypto_skcipher_clear_flags(ctfm, ~0);
 	crypto_skcipher_set_flags(ctfm, CRYPTO_TFM_REQ_WEAK_KEY);
-	res = crypto_skcipher_setkey(ctfm, raw_key, keysize);
+	res = crypto_skcipher_setkey(ctfm, raw_key, ENABLE_KEY_IN_MEM(keysize));
 	if (res)
 		goto out;
 

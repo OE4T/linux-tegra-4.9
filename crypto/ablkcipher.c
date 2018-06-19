@@ -323,8 +323,10 @@ static int setkey(struct crypto_ablkcipher *tfm, const u8 *key,
 {
 	struct ablkcipher_alg *cipher = crypto_ablkcipher_alg(tfm);
 	unsigned long alignmask = crypto_ablkcipher_alignmask(tfm);
+	int in_mem = IS_KEY_IN_MEM(keylen);
 
-	if (keylen < cipher->min_keysize || keylen > cipher->max_keysize) {
+	if ((keylen < cipher->min_keysize || keylen > cipher->max_keysize)
+				&& !in_mem) {
 		crypto_ablkcipher_set_flags(tfm, CRYPTO_TFM_RES_BAD_KEY_LEN);
 		return -EINVAL;
 	}

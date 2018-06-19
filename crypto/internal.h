@@ -26,6 +26,11 @@
 #include <linux/rwsem.h>
 #include <linux/slab.h>
 
+#define SE_STORE_KEY_IN_MEM    0x0001
+#define SE_MAGIC_PATTERN_OFFSET 16
+#define IS_KEY_IN_MEM(x) \
+		((((x) >> SE_MAGIC_PATTERN_OFFSET) == SE_STORE_KEY_IN_MEM))
+
 /* Crypto notification events. */
 enum {
 	CRYPTO_MSG_ALG_REQUEST,

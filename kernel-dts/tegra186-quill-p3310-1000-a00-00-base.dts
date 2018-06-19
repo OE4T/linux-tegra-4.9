@@ -52,7 +52,7 @@
 			hardware = "quill";
 			vbmeta {
 				compatible = "android,vbmeta";
-				parts = "vbmeta,kernel,kernel-dtb,APP,vendor";
+				parts = "vbmeta,kernel,kernel-dtb,kernel-dtbo,APP,vendor";
 			};
 			fstab {
 				compatible = "android,fstab";

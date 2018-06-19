@@ -193,6 +193,19 @@
 			alloc-ranges = <0x0 0x80000000 0x0 0x70000000>;
 			reusable;
 		};
+
+		fb0_reserved: fb0_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
+		fb1_reserved: fb1_carveout {
+			reg = <0x00 0x00 0x00 0x00
+			       0x00 0x00 0x00 0x00>;
+			reg-names = "surface", "lut";
+			no-map;
+		};
 	};
 
 	tegra-carveouts {
@@ -1101,7 +1114,8 @@
 			reset-names = "dc_rst";
 			status = "disabled";
 			nvidia,dc-ctrlnum = <0>;
-
+			fb_reserved = <&fb0_reserved>;
+			iommu-direct-regions = <&fb0_reserved>;
 			rgb {
 				status = "disabled";
 			};
@@ -1124,7 +1138,8 @@
 			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc", "pll_d2_out0", "pll_d2";
 			resets = <&tegra_car TEGRA210_CLK_DISP2>;
 			reset-names = "dc_rst";
-
+			fb_reserved = <&fb1_reserved>;
+			iommu-direct-regions = <&fb1_reserved>;
 			rgb {
 				status = "disabled";
 			};

@@ -317,7 +317,7 @@ int nvlink_register_device(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-	nvlink_err("Device registration successful!");
+	nvlink_dbg("Device registration successful!");
 	goto success;
 
 release_mutex:

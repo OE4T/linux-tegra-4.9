@@ -4772,6 +4772,7 @@ static bool get_secure_pmc_setting(void)
 	struct device_node *np;
 	static bool secure_pmc;
 	static bool initialized;
+	struct resource regs;
 
 	if (!initialized) {
 		initialized = true;
@@ -4783,6 +4784,18 @@ static bool get_secure_pmc_setting(void)
 		}
 		secure_pmc = of_find_property(np,"nvidia,secure-pmc",NULL);
 		pr_info("%s: done secure_pmc=%d\n", __func__, secure_pmc);
+
+		/*
+		 * Initialize pmc->base for calls which are performed much
+		 * before tegra_pmc_probe() or tegra_pmc_early_init().
+		 */
+		if (!secure_pmc) {
+			if (!(of_address_to_resource(np, 0, &regs) < 0))
+				pmc->base = ioremap_nocache(regs.start,
+						resource_size(&regs));
+			else
+				pr_err("failed to set pmc-base\n");
+		}
 	}
 	return secure_pmc;
 }

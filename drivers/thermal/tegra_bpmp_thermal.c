@@ -234,7 +234,7 @@ static int tegra_bpmp_thermal_abi_probe(void)
 	return 0;
 }
 
-struct thermal_zone_of_device_ops tegra_of_thermal_ops = {
+static struct thermal_zone_of_device_ops tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
 	.get_trend = tegra_bpmp_thermal_get_trend,
 	.set_trips = tegra_bpmp_set_trips,

@@ -209,7 +209,7 @@ static int tegra_throt_get_max_state(struct thermal_cooling_device *cdev,
 	return 0;
 }
 
-const struct thermal_cooling_device_ops tegra_throt_ops = {
+static const struct thermal_cooling_device_ops tegra_throt_ops = {
 	.get_max_state = tegra_throt_get_max_state,
 	.get_cur_state = tegra_throt_get_cur_state,
 	.set_cur_state = tegra_throt_set_cur_state,

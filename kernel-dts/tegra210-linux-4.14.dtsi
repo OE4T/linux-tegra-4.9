@@ -1,0 +1,45 @@
+/*
+ * tegra210-linux-4.14.dtsi
+ *
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+
+	/* Make SELinux permissive mode */
+	chosen {
+		 bootargs ="androidboot.selinux=permissive";
+	};
+
+	/* Enable generic carveout, because SMMU is not enabled for k4.14 */
+	reserved-memory {
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			size = <0 0x10000000>;
+			alignment = <0 0x100000>;
+			alloc-ranges = <0 0 0x1 0>;
+			no-map;
+		};
+	};
+
+	sound {
+		status = "disabled";
+	};
+
+	sound_ref {
+		status = "disabled";
+	};
+
+	aconnect@2a41000 {
+		status = "disabled";
+	};
+};

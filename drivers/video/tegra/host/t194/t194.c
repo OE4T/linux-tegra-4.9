@@ -67,9 +67,6 @@
 #include "streamid_regs.c"
 #include "cg_regs.c"
 
-#define HOST_EMC_FLOOR 204000000
-#define HOST_NVDEC_EMC_FLOOR 102000000
-
 /*
  * TODO: Move following functions to the corresponding files under
  * kernel-3.18 once kernel-t19x gets merged there. Until that
@@ -316,7 +313,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.autosuspend_delay      = 500,
 	.clocks			= {
 		{"nvenc", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
 	},
@@ -349,7 +346,7 @@ struct nvhost_device_data t19_nvenc1_info = {
 	.autosuspend_delay      = 500,
 	.clocks			= {
 		{"nvenc", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
 	},
@@ -386,7 +383,7 @@ struct nvhost_device_data t19_nvdec_info = {
 		{"nvdec", UINT_MAX},
 		{"kfuse", 0, 0},
 		{"efuse", 0, 0},
-		{"emc", HOST_NVDEC_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -421,7 +418,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 		{"nvdec", UINT_MAX},
 		{"kfuse", 0, 0},
 		{"efuse", 0, 0},
-		{"emc", HOST_NVDEC_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -456,7 +453,7 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.autosuspend_delay      = 500,
 	.clocks			= {
 		{"nvjpg", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
 	},
@@ -488,7 +485,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {
 		{"tsec", 115200000},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -515,7 +512,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	.class			= NV_TSECB_CLASS_ID,
 	.clocks			= {
 		{"tsecb", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -541,7 +538,7 @@ struct nvhost_device_data t19_vic_info = {
 	.devfs_name		= "vic",
 	.clocks			= {
 		{"vic", UINT_MAX, 0},
-		{"emc", UINT_MAX, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW},
 	},
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 2),
@@ -634,7 +631,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.clocks			= {
 		{"nvdla0", UINT_MAX},
 		{"nvdla0_flcn", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -666,7 +663,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.clocks			= {
 		{"nvdla1", UINT_MAX},
 		{"nvdla1_flcn", UINT_MAX},
-		{"emc", HOST_EMC_FLOOR,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},

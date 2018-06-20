@@ -287,6 +287,8 @@
 
 		iso-smmu-id = <2>;
 
+		suspend-save-reg = <0x0c3902ac>; /* SCRATCH_SECURE_RSV73_SCRATCH_0 */
+
 		status = "disabled";
 
 		#iommu-cells = <1>;

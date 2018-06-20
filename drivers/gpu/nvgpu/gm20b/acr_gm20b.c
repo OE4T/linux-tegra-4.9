@@ -1165,11 +1165,8 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	struct flcn_bl_dmem_desc *pbl_desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct acr_desc *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
-	u32 virt_addr = 0;
-	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
-	u32 dst;
+	struct nvgpu_falcon_bl_info bl_info;
 
 	nvgpu_log_fn(g, " ");
 	gk20a_writel(g, pwr_falcon_itfen_r(),
@@ -1181,23 +1178,12 @@ static int bl_bootstrap(struct nvgpu_pmu *pmu,
 			pwr_pmu_new_instblk_valid_f(1) |
 			pwr_pmu_new_instblk_target_sys_coh_f());
 
-	/*copy bootloader interface structure to dmem*/
-	nvgpu_flcn_copy_to_dmem(pmu->flcn, 0, (u8 *)pbl_desc,
-		sizeof(struct flcn_bl_dmem_desc), 0);
-
-	/* copy bootloader to TOP of IMEM */
-	dst = (pwr_falcon_hwcfg_imem_size_v(
-			gk20a_readl(g, pwr_falcon_hwcfg_r())) << 8) - bl_sz;
-
-	nvgpu_flcn_copy_to_imem(pmu->flcn, dst,
-		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
-		pmu_bl_gm10x_desc->bl_start_tag);
-
-	gm20b_dbg_pmu(g, "Before starting falcon with BL\n");
-
-	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-
-	nvgpu_flcn_bootstrap(pmu->flcn, virt_addr);
+	bl_info.bl_src = g->acr.hsbl_ucode.cpu_va;
+	bl_info.bl_desc = (u8 *)pbl_desc;
+	bl_info.bl_desc_size = sizeof(struct flcn_bl_dmem_desc);
+	bl_info.bl_size = bl_sz;
+	bl_info.bl_start_tag = g->acr.pmu_hsbl_desc->bl_start_tag;
+	nvgpu_flcn_bl_bootstrap(&g->pmu_flcn, &bl_info);
 
 	return 0;
 }

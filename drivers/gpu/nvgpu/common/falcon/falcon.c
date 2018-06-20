@@ -357,6 +357,24 @@ void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn)
 			flcn->flcn_id);
 }
 
+int nvgpu_flcn_bl_bootstrap(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_bl_info *bl_info)
+{
+	struct nvgpu_falcon_ops *flcn_ops = &flcn->flcn_ops;
+	int status = 0;
+
+	if (flcn_ops->bl_bootstrap != NULL) {
+		status = flcn_ops->bl_bootstrap(flcn, bl_info);
+	}
+	else {
+		nvgpu_warn(flcn->g, "Invalid op on falcon 0x%x ",
+			flcn->flcn_id);
+		status = -EINVAL;
+	}
+
+	return status;
+}
+
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 {
 	struct nvgpu_falcon *flcn = NULL;

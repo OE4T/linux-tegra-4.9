@@ -82,12 +82,9 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	void *desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct acr_desc *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
-	u32 virt_addr = 0;
-	struct hsflcn_bl_desc *pmu_bl_gm10x_desc = g->acr.pmu_hsbl_desc;
+	struct nvgpu_falcon_bl_info bl_info;
 	u32 data = 0;
-	u32 dst;
 
 	nvgpu_log_fn(g, " ");
 
@@ -113,25 +110,12 @@ int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	data |= (1 << 3);
 	gk20a_writel(g, psec_falcon_engctl_r(), data);
 
-	/*copy bootloader interface structure to dmem*/
-	nvgpu_flcn_copy_to_dmem(&g->sec2_flcn, 0, (u8 *)desc,
-		sizeof(struct flcn_bl_dmem_desc), 0);
-
-	/* copy bootloader to TOP of IMEM */
-	dst = (psec_falcon_hwcfg_imem_size_v(
-			gk20a_readl(g, psec_falcon_hwcfg_r())) << 8) - bl_sz;
-
-	nvgpu_flcn_copy_to_imem(&g->sec2_flcn, dst,
-		(u8 *)(acr->hsbl_ucode.cpu_va), bl_sz, 0, 0,
-		pmu_bl_gm10x_desc->bl_start_tag);
-
-	gm20b_dbg_pmu(g, "Before starting falcon with BL\n");
-
-	gk20a_writel(g, psec_falcon_mailbox0_r(), 0xDEADA5A5);
-
-	virt_addr = pmu_bl_gm10x_desc->bl_start_tag << 8;
-
-	nvgpu_flcn_bootstrap(&g->sec2_flcn, virt_addr);
+	bl_info.bl_src = g->acr.hsbl_ucode.cpu_va;
+	bl_info.bl_desc = desc;
+	bl_info.bl_desc_size = sizeof(struct flcn_bl_dmem_desc_v1);
+	bl_info.bl_size = bl_sz;
+	bl_info.bl_start_tag = g->acr.pmu_hsbl_desc->bl_start_tag;
+	nvgpu_flcn_bl_bootstrap(&g->sec2_flcn, &bl_info);
 
 	return 0;
 }

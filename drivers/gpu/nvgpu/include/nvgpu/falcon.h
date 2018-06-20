@@ -165,6 +165,7 @@ struct nvgpu_falcon_dma_info {
 
 struct gk20a;
 struct nvgpu_falcon;
+struct nvgpu_falcon_bl_info;
 
 struct nvgpu_falcon_version_ops {
 	void (*start_cpu_secure)(struct nvgpu_falcon *flcn);
@@ -198,6 +199,16 @@ struct nvgpu_falcon_ops {
 		u32 data);
 	int (*bootstrap)(struct nvgpu_falcon *flcn, u32 boot_vector);
 	void (*dump_falcon_stats)(struct nvgpu_falcon *flcn);
+	int (*bl_bootstrap)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_bl_info *bl_info);
+};
+
+struct nvgpu_falcon_bl_info {
+	void *bl_src;
+	u8 *bl_desc;
+	u32 bl_desc_size;
+	u32 bl_size;
+	u32 bl_start_tag;
 };
 
 struct nvgpu_falcon {
@@ -245,8 +256,9 @@ int nvgpu_flcn_bootstrap(struct nvgpu_falcon *flcn, u32 boot_vector);
 void nvgpu_flcn_print_dmem(struct nvgpu_falcon *flcn, u32 src, u32 size);
 void nvgpu_flcn_print_imem(struct nvgpu_falcon *flcn, u32 src, u32 size);
 void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn);
+int nvgpu_flcn_bl_bootstrap(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_bl_info *bl_info);
 
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);
-
 
 #endif /* __FALCON_H__ */

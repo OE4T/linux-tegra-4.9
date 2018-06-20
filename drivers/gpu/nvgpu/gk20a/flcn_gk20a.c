@@ -432,6 +432,46 @@ static void gk20a_falcon_mailbox_write(struct nvgpu_falcon *flcn,
 		nvgpu_err(g, "incorrect mailbox id %d", mailbox_index);
 }
 
+static int gk20a_falcon_bl_bootstrap(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_bl_info *bl_info)
+{
+	struct gk20a *g = flcn->g;
+	u32 base_addr = flcn->flcn_base;
+	u32 virt_addr = 0;
+	u32 dst = 0;
+	int err = 0;
+
+	/*copy bootloader interface structure to dmem*/
+	err = gk20a_flcn_copy_to_dmem(flcn, 0, (u8 *)bl_info->bl_desc,
+		bl_info->bl_desc_size, (u8)0);
+	if (err != 0) {
+		goto exit;
+	}
+
+	/* copy bootloader to TOP of IMEM */
+	dst = (falcon_falcon_hwcfg_imem_size_v(gk20a_readl(g,
+		base_addr + falcon_falcon_hwcfg_r())) << 8) - bl_info->bl_size;
+
+	err = gk20a_flcn_copy_to_imem(flcn, dst, (u8 *)(bl_info->bl_src),
+		bl_info->bl_size, (u8)0, false, bl_info->bl_start_tag);
+	if (err != 0) {
+		goto exit;
+	}
+
+	gk20a_falcon_mailbox_write(flcn, FALCON_MAILBOX_0, 0xDEADA5A5U);
+
+	virt_addr = bl_info->bl_start_tag << 8;
+
+	err = gk20a_falcon_bootstrap(flcn, virt_addr);
+
+exit:
+	if (err != 0) {
+		nvgpu_err(g, "falcon id-0x%x bootstrap failed", flcn->flcn_id);
+	}
+
+	return err;
+}
+
 static void gk20a_falcon_dump_imblk(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
@@ -644,6 +684,7 @@ void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_ops->dump_falcon_stats = gk20a_falcon_dump_stats;
 	flcn_ops->mailbox_read = gk20a_falcon_mailbox_read;
 	flcn_ops->mailbox_write = gk20a_falcon_mailbox_write;
+	flcn_ops->bl_bootstrap = gk20a_falcon_bl_bootstrap;
 
 	gk20a_falcon_engine_dependency_ops(flcn);
 }

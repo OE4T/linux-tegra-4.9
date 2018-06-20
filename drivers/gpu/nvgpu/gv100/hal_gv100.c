@@ -708,9 +708,9 @@ static const struct gpu_ops gv100_ops = {
 		.alloc_blob_space = gp106_alloc_blob_space,
 		.pmu_populate_loader_cfg = gp106_pmu_populate_loader_cfg,
 		.flcn_populate_bl_dmem_desc = gp106_flcn_populate_bl_dmem_desc,
-		.falcon_wait_for_halt = sec2_wait_for_halt,
+		.falcon_wait_for_halt = gp106_sec2_wait_for_halt,
 		.falcon_clear_halt_interrupt_status =
-			sec2_clear_halt_interrupt_status,
+			gp106_sec2_clear_halt_interrupt_status,
 		.init_falcon_setup_hw = init_sec2_setup_hw1,
 		.pmu_queue_tail = gk20a_pmu_queue_tail,
 		.pmu_get_queue_head = pwr_pmu_queue_head_r,

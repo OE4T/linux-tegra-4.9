@@ -23,8 +23,9 @@
 #ifndef __SEC2_H_
 #define __SEC2_H_
 
-int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
-int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout);
+int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
+	unsigned int timeout);
+int gp106_sec2_wait_for_halt(struct gk20a *g, unsigned int timeout);
 int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	void *desc, u32 bl_sz);
 void init_pmu_setup_hw1(struct gk20a *g);

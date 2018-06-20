@@ -34,7 +34,8 @@
 #define gm20b_dbg_pmu(g, fmt, arg...) \
 	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
 
-int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
+int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
+	unsigned int timeout)
 {
 	int status = 0;
 
@@ -44,7 +45,7 @@ int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 	return status;
 }
 
-int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
+int gp106_sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
 	int completion = 0;
@@ -55,9 +56,10 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 		goto exit;
 	}
 
-	g->acr.capabilities = gk20a_readl(g, psec_falcon_mailbox1_r());
+	g->acr.capabilities = nvgpu_flcn_mailbox_read(&g->sec2_flcn,
+		FALCON_MAILBOX_1);
 	gm20b_dbg_pmu(g, "ACR capabilities %x\n", g->acr.capabilities);
-	data = gk20a_readl(g, psec_falcon_mailbox0_r());
+	data = nvgpu_flcn_mailbox_read(&g->sec2_flcn, FALCON_MAILBOX_0);
 	if (data) {
 		nvgpu_err(g, "ACR boot failed, err %x", data);
 		completion = -EAGAIN;

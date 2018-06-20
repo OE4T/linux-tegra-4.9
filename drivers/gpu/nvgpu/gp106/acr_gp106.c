@@ -1297,11 +1297,7 @@ int gp106_bootstrap_hs_flcn(struct gk20a *g)
 	}
 
 	/* sec2 reset - to keep it idle */
-	gk20a_writel(g, psec_falcon_engine_r(),
-		pwr_falcon_engine_reset_true_f());
-	nvgpu_udelay(10);
-	gk20a_writel(g, psec_falcon_engine_r(),
-		pwr_falcon_engine_reset_false_f());
+	nvgpu_flcn_reset(&g->sec2_flcn);
 
 	return 0;
 err_free_ucode_map:

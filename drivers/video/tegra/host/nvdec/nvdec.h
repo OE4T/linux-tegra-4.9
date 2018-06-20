@@ -3,7 +3,7 @@
  *
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +35,7 @@ int nvhost_nvdec_t210_finalize_poweron(struct platform_device *dev);
 #define NVHOST_ENCODE_NVDEC_VER(maj, min) \
 	((((maj) & 0xff) << 8) | ((min) & 0xff))
 
-static inline void decode_nvdec_ver(int version, u8 *maj, u8 *min)
+static inline void nvdec_decode_ver(int version, u8 *maj, u8 *min)
 {
 	u32 uv32 = (u32)version;
 	*maj = (u8)((uv32 >> 8) & 0xff);

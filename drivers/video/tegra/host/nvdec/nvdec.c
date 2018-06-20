@@ -72,65 +72,54 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev);
 static unsigned int tegra_nvdec_enabled_in_bootcmd = -1;
 static unsigned int tegra_nvdec_bootloader_enabled;
 
-/* caller is responsible for freeing */
-enum {
-	host_nvdec_fw_bl = 0,
-	host_nvdec_fw_ls
-};
-
-static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
+static int nvdec_get_bl_fw_name(struct platform_device *pdev, char *name)
 {
-	char *fw_name;
 	u8 maj, min;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	u32 debug_mode = host1x_readl(dev, nvdec_scp_ctl_stat_r()) &
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	u32 debug_mode = host1x_readl(pdev, nvdec_scp_ctl_stat_r()) &
+					nvdec_scp_ctl_stat_debug_mode_m();
+	bool sim_mode = tegra_platform_is_qt() || tegra_platform_is_vdk();
+
+	nvdec_decode_ver(pdata->version, &maj, &min);
+	if (!tegra_nvdec_bootloader_enabled) {
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec0%d%d_ns.fw",
+			maj, min);
+		return 0;
+	}
+
+	if (sim_mode && debug_mode) {
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec_bl_no_wpr0%d%d.fw",
+			maj, min);
+	} else if (sim_mode && !debug_mode) {
+		dev_info(&pdev->dev, "Prod + No-WPR not allowed\n");
+		return -EINVAL;
+	} else if (debug_mode) {
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec_bl0%d%d.fw",
+			maj, min);
+	} else {
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec_bl0%d%d_prod.fw",
+			maj, min);
+	}
+
+	dev_info(&pdev->dev, "fw name:%s\n", name);
+	return 0;
+}
+
+static void nvdec_get_fw_name(struct platform_device *pdev, char *name)
+{
+	u8 maj, min;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	u32 debug_mode = host1x_readl(pdev, nvdec_scp_ctl_stat_r()) &
 					nvdec_scp_ctl_stat_debug_mode_m();
 
-	/* note size here is a little over...*/
-	fw_name = kzalloc(FW_NAME_SIZE, GFP_KERNEL);
-	if (!fw_name)
-		return NULL;
+	nvdec_decode_ver(pdata->version, &maj, &min);
+	if (debug_mode)
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec0%d%d.fw", maj, min);
+	else
+		snprintf(name, FW_NAME_SIZE, "nvhost_nvdec0%d%d_prod.fw", maj,
+			min);
 
-	decode_nvdec_ver(pdata->version, &maj, &min);
-	if (tegra_nvdec_bootloader_enabled) {
-		if (debug_mode) {
-			if (fw == host_nvdec_fw_bl) {
-				if (tegra_platform_is_qt() ||
-					tegra_platform_is_vdk())
-					snprintf(fw_name, FW_NAME_SIZE,
-							"nvhost_nvdec_bl_no_wpr0%d%d.fw",
-							maj, min);
-				else
-					snprintf(fw_name, FW_NAME_SIZE,
-							"nvhost_nvdec_bl0%d%d.fw",
-							maj, min);
-			} else
-				snprintf(fw_name, FW_NAME_SIZE,
-						"nvhost_nvdec0%d%d.fw",
-						maj, min);
-		} else {
-			if (fw == host_nvdec_fw_bl)
-				if (tegra_platform_is_qt() ||
-					tegra_platform_is_vdk()) {
-					dev_info(&dev->dev,
-						"Prod + No-WPR not allowed\n");
-					kfree(fw_name);
-					return NULL;
-				} else
-					snprintf(fw_name, FW_NAME_SIZE,
-							"nvhost_nvdec_bl0%d%d_prod.fw",
-							maj, min);
-			else
-				snprintf(fw_name, FW_NAME_SIZE,
-						"nvhost_nvdec0%d%d_prod.fw",
-						maj, min);
-		}
-	} else
-		snprintf(fw_name, FW_NAME_SIZE, "nvhost_nvdec0%d%d_ns.fw", maj, min);
-
-	dev_info(&dev->dev, "fw name:%s\n", fw_name);
-
-	return fw_name;
+	dev_info(&pdev->dev, "fw name:%s\n", name);
 }
 
 static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
@@ -491,45 +480,29 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvdec **m = get_nvdec(dev);
-	char **fw_name;
+	char fw_name[2][FW_NAME_SIZE];
 	int i;
 
 	nvhost_dbg_fn("in dev:%p", dev);
-
 	/* check if firmware resources already allocated */
 	if (m)
 		return 0;
 
-	m = kzalloc(2*sizeof(struct nvdec *), GFP_KERNEL);
+	err = nvdec_get_bl_fw_name(dev, fw_name[0]);
+	if (err)
+		return -EINVAL;
+
+	if (tegra_nvdec_bootloader_enabled)
+		nvdec_get_fw_name(dev, fw_name[1]);
+
+	m = kzalloc(2 * sizeof(struct nvdec *), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't allocate ucode ptr");
 		return -ENOMEM;
 	}
+
 	set_nvdec(dev, m);
 	nvhost_dbg_fn("primed dev:%p", dev);
-
-	fw_name = kzalloc(2*sizeof(char *), GFP_KERNEL);
-	if (!fw_name) {
-		dev_err(&dev->dev, "couldn't allocate firmware ptr");
-		err = -ENOMEM;
-		goto error;
-	}
-
-	fw_name[0] = nvdec_get_fw_name(dev, host_nvdec_fw_bl);
-	if (!fw_name[0]) {
-		dev_err(&dev->dev, "couldn't determine BL fw name");
-		err = -EINVAL;
-		goto error_fw_name;
-	}
-	if (tegra_nvdec_bootloader_enabled) {
-		fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
-		if (!fw_name[1]) {
-			dev_err(&dev->dev, "couldn't determine LS fw name");
-			err = -EINVAL;
-			goto err_fw;
-		}
-	}
-
 	for (i = 0; i < (1 + tegra_nvdec_bootloader_enabled); i++) {
 		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
 		if (!m[i]) {
@@ -539,30 +512,18 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 		}
 
 		err = nvdec_read_ucode(dev, fw_name[i], m[i]);
-		kfree(fw_name[i]);
-		fw_name[i] = NULL;
 		if (err || !m[i]->valid) {
 			dev_err(&dev->dev, "ucode not valid");
 			goto err_ucode;
 		}
 	}
-	kfree(fw_name);
-	fw_name = NULL;
 
 	return 0;
 
 err_ucode:
 	kfree(m[0]);
 	kfree(m[1]);
-	kfree(fw_name[1]);
-err_fw:
-	kfree(fw_name[0]);
-error_fw_name:
-	kfree(fw_name);
-error:
-	kfree(m);
-	set_nvdec(dev, NULL);
-	dev_err(&dev->dev, "failed");
+
 	return err;
 }
 

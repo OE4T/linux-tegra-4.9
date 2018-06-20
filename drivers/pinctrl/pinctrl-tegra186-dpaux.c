@@ -52,6 +52,11 @@ struct tegra_dpaux_pingroup {
 	u8 funcs[2];
 };
 
+struct dpaux_context {
+	u32 val_padctl;
+	u32 val_spare;
+};
+
 struct tegra_dpaux_pinctl {
 	struct device *dev;
 	void __iomem *regs;
@@ -68,6 +73,7 @@ struct tegra_dpaux_pinctl {
 	unsigned ngroups;
 	int powergate_id;
 	struct clk *dpaux_clk;
+	struct dpaux_context dpaux_context;
 };
 
 struct tegra_dpaux_chip_data {
@@ -404,6 +410,64 @@ static int tegra_dpaux_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void tegra186_dpaux_save(struct tegra_dpaux_pinctl *dpaux_ctl)
+{
+	dpaux_ctl->dpaux_context.val_padctl =
+		__raw_readl(dpaux_ctl->regs + DPAUX_HYBRID_PADCTL);
+
+	dpaux_ctl->dpaux_context.val_spare =
+		__raw_readl(dpaux_ctl->regs + DPAUX_HYBRID_SPARE);
+}
+
+static void tegra186_dpaux_restore(struct tegra_dpaux_pinctl *dpaux_ctl)
+{
+	__raw_writel(dpaux_ctl->dpaux_context.val_padctl,
+			dpaux_ctl->regs + DPAUX_HYBRID_PADCTL);
+	__raw_writel(dpaux_ctl->dpaux_context.val_spare,
+			dpaux_ctl->regs + DPAUX_HYBRID_SPARE);
+}
+
+static int tegra186_dpaux_suspend(struct device *dev)
+{
+	int ret;
+	struct tegra_dpaux_pinctl *dpaux_ctl = dev_get_drvdata(dev);
+
+	ret = clk_prepare_enable(dpaux_ctl->dpaux_clk);
+	if (ret < 0) {
+		dev_err(dpaux_ctl->dev, "clock enable failed: %d\n", ret);
+		return ret;
+	}
+
+	tegra186_dpaux_save(dpaux_ctl);
+
+	clk_disable_unprepare(dpaux_ctl->dpaux_clk);
+
+	return 0;
+}
+
+static int tegra186_dpaux_resume(struct device *dev)
+{
+	int ret;
+	struct tegra_dpaux_pinctl *dpaux_ctl = dev_get_drvdata(dev);
+
+	ret =  clk_prepare_enable(dpaux_ctl->dpaux_clk);
+	if (ret < 0) {
+		dev_err(dpaux_ctl->dev, "clock enabled failed: %d\n", ret);
+		return ret;
+	}
+
+	tegra186_dpaux_restore(dpaux_ctl);
+
+	clk_disable_unprepare(dpaux_ctl->dpaux_clk);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra186_dpaux_pm_ops = {
+	.suspend = tegra186_dpaux_suspend,
+	.resume = tegra186_dpaux_resume,
+};
+
 static struct of_device_id tegra_dpaux_pinctl_of_match[] = {
 	{.compatible = "nvidia,tegra186-dpaux-padctl",
 		.data = &tegra186_dpaux_chip_data[0]},
@@ -425,6 +489,7 @@ static struct platform_driver tegra186_dpaux_pinctrl = {
 	.driver = {
 		.name = "tegra186-dpaux-pinctrl",
 		.of_match_table = tegra_dpaux_pinctl_of_match,
+		.pm = &tegra186_dpaux_pm_ops,
 	},
 	.probe = tegra186_dpaux_pinctrl_probe,
 	.remove = tegra_dpaux_remove,

@@ -380,10 +380,10 @@ struct camrtc_event_struct {
 #define camrtc_trace_vi_ids_begin \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
 			CAMRTC_EVENT_MODULE_VI, U32_C(0))
-#define	camrtc_trace_vi_task_begin \
-		camrtc_trace_vi_ids_begin + U32_C(1)
-#define	camrtc_trace_vi_task_end \
-		camrtc_trace_vi_ids_begin + U32_C(2)
+#define	camrtc_trace_vi_frame_begin \
+		(camrtc_trace_vi_ids_begin + U32_C(1))
+#define	camrtc_trace_vi_frame_end \
+		(camrtc_trace_vi_ids_begin + U32_C(2))
 
 // camrtc_trace_isp_ids
 #define camrtc_trace_isp_ids_begin \

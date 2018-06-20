@@ -590,6 +590,8 @@ static int tegra186_m3420_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	tegra_machine_dma_set_mask(pdev);
+
 	err = dai_link_setup(pdev);
 	if (err < 0) {
 		dev_err(&pdev->dev, "Failed to configured DAIs!\n");

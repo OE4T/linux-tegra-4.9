@@ -597,6 +597,8 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 			machine->amx_adx_conf.adx_slot_size[i] = 0;
 	}
 
+	tegra_machine_dma_set_mask(pdev);
+
 	/* set new codec links and conf */
 	tegra_t186ref_codec_links = tegra_machine_new_codec_links(pdev,
 		tegra_t186ref_codec_links,

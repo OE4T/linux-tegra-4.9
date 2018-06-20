@@ -17,6 +17,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/dma-mapping.h>
 #include <linux/of.h>
 #include <linux/version.h>
 #include <sound/jack.h>
@@ -3839,6 +3840,24 @@ int tegra_machine_add_codec_jack_control(struct snd_soc_card *card,
 	return tegra_machine_add_ctl(card, &knew, jack, name);
 }
 EXPORT_SYMBOL_GPL(tegra_machine_add_codec_jack_control);
+
+void tegra_machine_dma_set_mask(struct platform_device *pdev)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
+	struct device_node *np = pdev->dev.of_node;
+	uint64_t dma_mask;
+	int ret;
+
+	ret = of_property_read_u64(np, "dma-mask", &dma_mask);
+	if (ret)
+		dev_err(&pdev->dev, "Missing property dma-mask\n");
+	else
+		dma_set_mask_and_coherent(&pdev->dev, dma_mask);
+#endif
+#endif
+}
+EXPORT_SYMBOL_GPL(tegra_machine_dma_set_mask);
 
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");

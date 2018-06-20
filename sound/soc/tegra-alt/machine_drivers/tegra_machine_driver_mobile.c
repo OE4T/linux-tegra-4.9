@@ -1251,6 +1251,8 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 		}
 	}
 
+	tegra_machine_dma_set_mask(pdev);
+
 	dai_link_setup(pdev);
 
 	pdata = devm_kzalloc(&pdev->dev,

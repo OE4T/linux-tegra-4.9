@@ -447,6 +447,8 @@ static int tegra186_driver_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	tegra_machine_dma_set_mask(pdev);
+
 	dai_link_setup(pdev);
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);

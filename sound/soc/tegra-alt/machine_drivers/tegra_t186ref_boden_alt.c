@@ -612,6 +612,8 @@ static int tegra_t186ref_boden_driver_probe(struct platform_device *pdev)
 		}
 	}
 
+	tegra_machine_dma_set_mask(pdev);
+
 	tegra_t186ref_boden_codec_links = tegra_machine_new_codec_links(pdev,
 			tegra_t186ref_boden_codec_links,
 			&machine->num_codec_links);

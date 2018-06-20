@@ -201,6 +201,8 @@
 #endif
 		#iommu-cells = <1>;
 
+		suspend-save-reg = <0x0c390868>; /* SCRATCH_SECURE_RSV67_SCRATCH_0 */
+
 		status = "disabled";
 
 		/*

@@ -24,5 +24,15 @@
 				};
 			};
 		};
+
+		usb-vbus-en0-gpio-value {
+			ids = "<2822-0000-400";
+			override@0 {
+				target = <&p2822_vdd_5v_sata>;
+				_overlay_ {
+					delete-target-property = "enable-active-high";
+				};
+			};
+		};
 	};
 };

@@ -130,6 +130,7 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 1) 0>;
+			enable-active-high;
 			vin-supply = <&battery_reg>;
 		};
 	};

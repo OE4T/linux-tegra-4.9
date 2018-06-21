@@ -617,7 +617,8 @@ static DEFINE_SPINLOCK(wl_spinlock);
 struct vbus_lock {
 	struct wakeup_source wakelock;
 	bool held;
-} lock;
+};
+static struct vbus_lock lock;
 
 static inline u32 fpci_readl(struct tegra_xudc *xudc, u32 addr)
 {

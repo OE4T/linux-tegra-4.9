@@ -34,6 +34,8 @@
 #include <linux/psci.h>
 #include <linux/version.h>
 #include <linux/cpuhotplug.h>
+#include <linux/atomic.h>
+#include <linux/platform/tegra/t19x-cpuidle.h>
 
 #include <linux/of_gpio.h>
 #include <asm/cpuidle.h>
@@ -49,12 +51,15 @@
 #define CORE_WAKE_MASK			0x180C
 #define T19x_CPUIDLE_C7_STATE		2
 #define T19x_CPUIDLE_C6_STATE		1
+#define MCE_STAT_ID_SHIFT		16UL
 
 static u32 read_cluster_info(struct device_node *of_states);
 static u32 deepest_cc_state;
 static u32 deepest_cg_state;
 static u64 forced_idle_state;
 static u64 forced_cluster_idle_state;
+static u64 test_c6_exit_latency;
+atomic_t entered_c6_cpu_count = ATOMIC_INIT(0);
 static u32 testmode;
 static struct cpuidle_driver t19x_cpu_idle_driver;
 static int crossover_init(void);
@@ -88,9 +93,43 @@ static bool check_mce_version(void)
 		return false;
 }
 
+int read_cpu_counter(void)
+{
+	return atomic_read(&entered_c6_cpu_count);
+}
+EXPORT_SYMBOL(read_cpu_counter);
+
+void clear_cpu_counter(void)
+{
+	atomic_set(&entered_c6_cpu_count, 0);
+}
+EXPORT_SYMBOL(clear_cpu_counter);
+
 static void t19x_cpu_enter_c6(u32 wake_time)
 {
 	arm_cpuidle_suspend(T19x_CPUIDLE_C6_STATE);
+}
+
+/*enter C6 function used in measuring C6 latency*/
+static void test_t19x_cpu_enter_c6(u32 wake_time)
+{
+	int cpu;
+	u64 val;
+	u32 mce_index;
+
+	cpu = smp_processor_id();
+	mce_index = (NVG_STAT_QUERY_C6_ENTRIES << MCE_STAT_ID_SHIFT)
+					+ (u32)cpu;
+	tegra_mce_read_cstate_stats(mce_index, &val);
+	trace_printk("cpu = %d C6_COUNT_BEFORE = %llu\n", cpu, val);
+
+	atomic_inc(&entered_c6_cpu_count);
+
+	t19x_cpu_enter_c6(0);
+
+	trace_printk("Exiting C6\n");
+	tegra_mce_read_cstate_stats(mce_index, &val);
+	trace_printk("cpu = %d C6_COUNT_AFTER = %llu\n", cpu, val);
 }
 
 static void t19x_cpu_enter_c7(u32 wake_time)
@@ -147,7 +186,7 @@ static u32 t19x_make_power_state(u32 state)
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
-	if (testmode)
+	if (testmode || test_c6_exit_latency)
 		wake_time = 0xFFFFEEEE;
 
 	/* The 8-LSB bits of wake time is lost and only 24 MSB bits
@@ -267,8 +306,12 @@ static int forced_idle_write(void *data, u64 val)
 
 	if (pmstate == T19x_CPUIDLE_C7_STATE)
 		t19x_cpu_enter_c7(wake_time);
-	else if (pmstate == T19x_CPUIDLE_C6_STATE)
-		t19x_cpu_enter_c6(wake_time);
+	else if (pmstate == T19x_CPUIDLE_C6_STATE) {
+		if (test_c6_exit_latency)
+			test_t19x_cpu_enter_c6(wake_time);
+		else
+			t19x_cpu_enter_c6(wake_time);
+	}
 	else
 		asm volatile("wfi\n");
 
@@ -292,6 +335,12 @@ static int forced_idle_write(void *data, u64 val)
 
 	return 0;
 }
+
+void force_idle_c6(u64 delay)
+{
+	forced_idle_write(NULL, delay);
+}
+EXPORT_SYMBOL(force_idle_c6);
 
 struct xover_smp_call_data {
 	int index;
@@ -403,6 +452,12 @@ static int cpuidle_debugfs_init(void)
 
 	dfs_file = debugfs_create_u64("forced_idle_state", 0644,
 		cpuidle_debugfs_node, &forced_idle_state);
+
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_u64("test_c6_exit_latency", 0644,
+		cpuidle_debugfs_node, &test_c6_exit_latency);
 
 	if (!dfs_file)
 		goto err_out;

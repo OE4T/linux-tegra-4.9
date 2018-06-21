@@ -630,7 +630,8 @@ clean_up_post_fence:
 	gk20a_fence_put(job->post_fence);
 	job->post_fence = NULL;
 clean_up_wait_cmd:
-	free_priv_cmdbuf(c, job->wait_cmd);
+	if (job->wait_cmd)
+		free_priv_cmdbuf(c, job->wait_cmd);
 	if (!pre_alloc_enabled)
 		job->wait_cmd = NULL;
 fail:

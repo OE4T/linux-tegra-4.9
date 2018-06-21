@@ -320,6 +320,10 @@ struct nvhost_device_data {
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			struct nvhost_channel *ch);
 
+	/* engine specific init functions */
+	int (*pre_virt_init)(struct platform_device *pdev);
+	int (*post_virt_init)(struct platform_device *pdev);
+
 	/* bond out device id */
 	unsigned int bond_out_id;
 

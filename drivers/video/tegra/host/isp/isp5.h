@@ -3,7 +3,7 @@
  *
  * Tegra ISP5
  *
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,5 +28,8 @@ extern const struct file_operations tegra194_isp5_ctrl_ops;
 struct t194_isp5_file_private {
 	struct platform_device *pdev;
 };
+
+int isp5_priv_early_probe(struct platform_device *pdev);
+int isp5_priv_late_probe(struct platform_device *pdev);
 
 #endif

@@ -30,4 +30,7 @@ int nvhost_vi5_aggregate_constraints(struct platform_device *dev,
 				unsigned long pixelrate,
 				unsigned long bw_constraint);
 
+int vi5_priv_early_probe(struct platform_device *pdev);
+int vi5_priv_late_probe(struct platform_device *pdev);
+
 #endif

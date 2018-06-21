@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/tegra_vhost.h>
+#include <linux/nvhost.h>
 
 #include "vhost.h"
 #include "../host1x/host1x.h"
@@ -70,6 +71,8 @@ int vhost_virt_moduleid(int moduleid)
 		return TEGRA_VHOST_MODULE_NVDEC1;
 	case NVHOST_MODULE_NVENC1:
 		return TEGRA_VHOST_MODULE_NVENC1;
+	case NVHOST_MODULE_NVCSI:
+		return TEGRA_VHOST_MODULE_NVCSI;
 	default:
 		pr_err("module %d not virtualized\n", moduleid);
 		return -1;
@@ -97,6 +100,8 @@ int vhost_moduleid_virt_to_hw(int moduleid)
 		return NVHOST_MODULE_NVDEC;
 	case TEGRA_VHOST_MODULE_NVJPG:
 		return NVHOST_MODULE_NVJPG;
+	case TEGRA_VHOST_MODULE_NVCSI:
+		return NVHOST_MODULE_NVCSI;
 	default:
 		pr_err("unknown virtualized module %d\n", moduleid);
 		return -1;

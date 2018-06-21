@@ -25,7 +25,7 @@
 
 #include <soc/tegra/kfuse.h>
 
-#include <linux/nvhost_ioctl_t194.h>
+#include <linux/tegra_vhost.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -256,12 +256,15 @@ struct nvhost_device_data t19_vi5_info = {
 	.num_ppc		= 8,
 	.aggregate_constraints	= nvhost_vi5_aggregate_constraints,
 	.can_powergate		= true,
+	.pre_virt_init		= vi5_priv_early_probe,
+	.post_virt_init		= vi5_priv_late_probe,
 };
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 struct nvhost_device_data t19_nvcsi_info = {
 	.num_channels		= 1,
+	.moduleid		= NVHOST_MODULE_NVCSI,
 	.clocks			= {
 		{"nvcsi", 400000000},
 		{"nvcsilp", 204000000},
@@ -278,6 +281,8 @@ struct nvhost_device_data t19_nvcsi_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.can_powergate		= true,
+	.pre_virt_init		= t194_nvcsi_early_probe,
+	.post_virt_init		= t194_nvcsi_late_probe,
 };
 #endif
 
@@ -301,6 +306,8 @@ struct nvhost_device_data t19_isp5_info = {
 	.ctrl_ops		= &tegra194_isp5_ctrl_ops,
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.can_powergate		= true,
+	.pre_virt_init		= isp5_priv_early_probe,
+	.post_virt_init		= isp5_priv_late_probe,
 };
 #endif
 

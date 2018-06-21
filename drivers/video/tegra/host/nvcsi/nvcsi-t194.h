@@ -31,4 +31,7 @@ int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev);
 
 int tegra194_nvcsi_cil_sw_reset(int lanes, int enable);
 
+int t194_nvcsi_early_probe(struct platform_device *pdev);
+int t194_nvcsi_late_probe(struct platform_device *pdev);
+
 #endif

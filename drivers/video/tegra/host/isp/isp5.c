@@ -104,14 +104,13 @@ static struct isp_channel_drv_ops isp5_channel_drv_ops = {
 	.get_syncpt_gos_backing = isp5_get_syncpt_gos_backing,
 };
 
-static int isp5_probe(struct platform_device *pdev)
+int isp5_priv_early_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
 	struct host_isp5 *isp5;
-	struct tegra_camera_dev_info isp_info;
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -162,19 +161,21 @@ static int isp5_probe(struct platform_device *pdev)
 	/* A bit was stolen */
 	(void) dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(39));
 
-	err = nvhost_client_device_get_resources(pdev);
-	if (err)
-		goto put_thi;
+	return 0;
 
-	err = nvhost_module_init(pdev);
-	if (err)
-		goto put_thi;
+error:
+	info->private_data = NULL;
+	if (err != -EPROBE_DEFER)
+		dev_err(&pdev->dev, "probe failed: %d\n", err);
+	return err;
+}
 
-	err = nvhost_client_device_init(pdev);
-	if (err) {
-		nvhost_module_deinit(pdev);
-		goto put_thi;
-	}
+int isp5_priv_late_probe(struct platform_device *pdev)
+{
+	struct tegra_camera_dev_info isp_info;
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *isp5 = info->private_data;
+	int err;
 
 	memset(&isp_info, 0, sizeof(isp_info));
 	isp_info.overhead = ISP_OVERHEAD;
@@ -195,12 +196,48 @@ static int isp5_probe(struct platform_device *pdev)
 
 device_release:
 	nvhost_client_device_release(pdev);
+
+	return err;
+}
+
+static int isp5_probe(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata;
+	struct host_isp5 *isp5;
+	int err = 0;
+
+	err = isp5_priv_early_probe(pdev);
+	if (err)
+		goto error;
+
+	pdata = platform_get_drvdata(pdev);
+	isp5 = pdata->private_data;
+
+	err = nvhost_client_device_get_resources(pdev);
+	if (err)
+		goto put_thi;
+
+	err = nvhost_module_init(pdev);
+	if (err)
+		goto put_thi;
+
+	err = nvhost_client_device_init(pdev);
+	if (err) {
+		nvhost_module_deinit(pdev);
+		goto put_thi;
+	}
+
+	err = isp5_priv_late_probe(pdev);
+	if (err)
+		goto put_thi;
+
+	return 0;
+
 put_thi:
-	platform_device_put(thi);
+	platform_device_put(isp5->isp_thi);
 error:
-	info->private_data = NULL;
 	if (err != -EPROBE_DEFER)
-		dev_err(dev, "probe failed: %d\n", err);
+		dev_err(&pdev->dev, "probe failed: %d\n", err);
 	return err;
 }
 

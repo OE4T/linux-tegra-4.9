@@ -24,7 +24,6 @@
 #include <linux/cdev.h>
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
-#include <linux/nvhost_ioctl_t194.h>
 
 #include "nvhost_syncpt.h"
 #include "nvhost_channel.h"

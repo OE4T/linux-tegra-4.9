@@ -1,7 +1,7 @@
 /*
 * Tegra Host1x Virtualization client common driver
 *
-* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -141,6 +141,18 @@ static struct of_device_id tegra_client_of_match[] = {
 		.data = (struct nvhost_device_data *)&t19_nvdec1_info,
 		.name = "nvdec1" },
 #endif
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
+	{ .compatible = "nvidia,tegra194-vhost-vi",
+		.data = (struct nvhost_device_data *)&t19_vi5_info },
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_ISP
+	{ .compatible = "nvidia,tegra194-vhost-isp",
+		.data = (struct nvhost_device_data *)&t19_isp5_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
+	{ .compatible = "nvidia,tegra194-vhost-nvcsi",
+		.data = (struct nvhost_device_data *)&t19_nvcsi_info },
+#endif
 #endif
 #endif
 	{ },
@@ -148,7 +160,7 @@ static struct of_device_id tegra_client_of_match[] = {
 
 static int vhost_client_probe(struct platform_device *dev)
 {
-	int err;
+	int err = 0;
 	struct nvhost_device_data *pdata = NULL;
 
 	if (dev->dev.of_node) {
@@ -216,6 +228,11 @@ static int vhost_client_probe(struct platform_device *dev)
 
 	dev->dev.platform_data = NULL;
 
+	if (pdata->pre_virt_init)
+		err = pdata->pre_virt_init(dev);
+	if (err)
+		goto early_probe_fail;
+
 	nvhost_module_init(dev);
 
 	err = nvhost_virt_init(dev, pdata->moduleid);
@@ -234,7 +251,21 @@ static int vhost_client_probe(struct platform_device *dev)
 		return err;
 	}
 
-	return 0;
+	if (!err && pdata->post_virt_init)
+		err = pdata->post_virt_init(dev);
+
+early_probe_fail:
+	if (err) {
+		if (err != -EPROBE_DEFER) {
+			dev_err(&dev->dev,
+				"failed to perform engine specific init for %s",
+				dev->name);
+		}
+		pm_runtime_put(&dev->dev);
+		return err;
+	}
+
+	return err;
 }
 
 static int __exit vhost_client_remove(struct platform_device *dev)

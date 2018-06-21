@@ -318,14 +318,10 @@ int tegra194_nvcsi_cil_sw_reset(int lanes, int enable)
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_cil_sw_reset);
 
-static int t194_nvcsi_probe(struct platform_device *pdev)
+int t194_nvcsi_early_probe(struct platform_device *pdev)
 {
-	int err = 0;
 	struct nvhost_device_data *pdata;
 	struct t194_nvcsi *nvcsi;
-	struct resource *mem;
-	void __iomem *regs;
-	struct tegra_camera_dev_info csi_info;
 
 	pdata = (void *)of_device_get_match_data(&pdev->dev);
 	if (unlikely(pdata == NULL)) {
@@ -346,6 +342,63 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 
 	pdata->private_data = nvcsi;
 
+	return 0;
+}
+
+int t194_nvcsi_late_probe(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct t194_nvcsi *nvcsi = pdata->private_data;
+	struct tegra_camera_dev_info csi_info;
+	int err;
+
+	nvcsi->prod_list = devm_tegra_prod_get(&pdev->dev);
+
+	if (IS_ERR(nvcsi->prod_list)) {
+		pr_err("%s: Can not find nvcsi prod node\n", __func__);
+		return -ENODEV;
+	}
+
+	memset(&csi_info, 0, sizeof(csi_info));
+	csi_info.pdev = pdev;
+	csi_info.hw_type = HWTYPE_CSI;
+	csi_info.use_max = true;
+	csi_info.bus_width = CSI_BUS_WIDTH;
+	csi_info.lane_num = NUM_LANES;
+	csi_info.pg_clk_rate = PG_CLK_RATE;
+	err = tegra_camera_device_register(&csi_info, nvcsi);
+	if (err)
+		return err;
+
+	nvcsi->pdev = pdev;
+	nvcsi->csi.fops = &csi5_fops;
+	atomic_set(&nvcsi->on, 0);
+	err = tegra_csi_media_controller_init(&nvcsi->csi, pdev);
+
+	nvcsi_deskew_platform_setup(&nvcsi->csi, true);
+
+	if (err < 0)
+		return err;
+
+	nvcsi_deskew_debugfs_init(nvcsi);
+
+	return 0;
+}
+
+static int t194_nvcsi_probe(struct platform_device *pdev)
+{
+	struct resource *mem;
+	void __iomem *regs;
+	int err;
+	struct nvhost_device_data *pdata;
+	struct t194_nvcsi *nvcsi;
+
+	err = t194_nvcsi_early_probe(pdev);
+	if (err)
+		return err;
+
+	pdata = platform_get_drvdata(pdev);
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -356,13 +409,9 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "ioremap failed\n");
 		return -ENOMEM;
 	}
-	nvcsi->io = regs;
-	nvcsi->prod_list = devm_tegra_prod_get(&pdev->dev);
 
-	if (IS_ERR(nvcsi->prod_list)) {
-		pr_err("%s: Can not find nvcsi prod node\n", __func__);
-		return -ENODEV;
-	}
+	nvcsi = pdata->private_data;
+	nvcsi->io = regs;
 
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
@@ -378,28 +427,9 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 		goto err_client_device_init;
 	}
 
-	memset(&csi_info, 0, sizeof(csi_info));
-	csi_info.pdev = pdev;
-	csi_info.hw_type = HWTYPE_CSI;
-	csi_info.use_max = true;
-	csi_info.bus_width = CSI_BUS_WIDTH;
-	csi_info.lane_num = NUM_LANES;
-	csi_info.pg_clk_rate = PG_CLK_RATE;
-	err = tegra_camera_device_register(&csi_info, nvcsi);
+	err = t194_nvcsi_late_probe(pdev);
 	if (err)
 		goto err_mediacontroller_init;
-
-	nvcsi->pdev = pdev;
-	nvcsi->csi.fops = &csi5_fops;
-	atomic_set(&nvcsi->on, 0);
-	err = tegra_csi_media_controller_init(&nvcsi->csi, pdev);
-
-	nvcsi_deskew_platform_setup(&nvcsi->csi, true);
-
-	if (err < 0)
-		goto err_mediacontroller_init;
-
-	nvcsi_deskew_debugfs_init(nvcsi);
 
 	return 0;
 

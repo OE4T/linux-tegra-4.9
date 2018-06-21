@@ -140,14 +140,13 @@ static struct vi_channel_drv_ops vi5_channel_drv_ops = {
 	.get_syncpt_gos_backing = vi5_get_syncpt_gos_backing,
 };
 
-static int vi5_probe(struct platform_device *pdev)
+int vi5_priv_early_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *info;
 	struct device_node *thi_np;
 	struct platform_device *thi = NULL;
 	struct host_vi5 *vi5;
-	struct tegra_camera_dev_info vi_info;
 	int err = 0;
 
 	info = (void *)of_device_get_match_data(dev);
@@ -188,17 +187,24 @@ static int vi5_probe(struct platform_device *pdev)
 
 	(void) dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 
-	err = nvhost_client_device_get_resources(pdev);
-	if (err)
-		goto put_vi;
+	return 0;
 
-	err = nvhost_module_init(pdev);
-	if (err)
-		goto put_vi;
+put_vi:
+	platform_device_put(thi);
+	if (err != -EPROBE_DEFER)
+		dev_err(&pdev->dev, "probe failed: %d\n", err);
 
-	err = nvhost_client_device_init(pdev);
-	if (err)
-		goto deinit;
+	info->private_data = NULL;
+
+	return err;
+}
+
+int vi5_priv_late_probe(struct platform_device *pdev)
+{
+	struct tegra_camera_dev_info vi_info;
+	struct nvhost_device_data *info = platform_get_drvdata(pdev);
+	struct host_vi5 *vi5 = info->private_data;
+	int err;
 
 	memset(&vi_info, 0, sizeof(vi_info));
 	vi_info.pdev = pdev;
@@ -219,7 +225,7 @@ static int vi5_probe(struct platform_device *pdev)
 	vi5->vi_common.mc_vi.fops = &vi5_fops;
 	err = tegra_vi_media_controller_init(&vi5->vi_common.mc_vi, pdev);
 	if (err) {
-		dev_warn(dev, "media controller init failed\n");
+		dev_warn(&pdev->dev, "media controller init failed\n");
 		err = 0;
 	}
 
@@ -227,13 +233,46 @@ static int vi5_probe(struct platform_device *pdev)
 
 device_release:
 	nvhost_client_device_release(pdev);
+
+	return err;
+}
+
+static int vi5_probe(struct platform_device *pdev)
+{
+	int err;
+	struct nvhost_device_data *pdata;
+	struct host_vi5 *vi5;
+
+	err = vi5_priv_early_probe(pdev);
+	if (err)
+		goto error;
+
+	pdata = platform_get_drvdata(pdev);
+	vi5 = pdata->private_data;
+
+	err = nvhost_client_device_get_resources(pdev);
+	if (err)
+		goto put_vi;
+
+	err = nvhost_module_init(pdev);
+	if (err)
+		goto put_vi;
+
+	err = nvhost_client_device_init(pdev);
+	if (err)
+		goto deinit;
+
+	vi5_priv_late_probe(pdev);
+
+	return 0;
+
 deinit:
 	nvhost_module_deinit(pdev);
 put_vi:
-	platform_device_put(thi);
+	platform_device_put(vi5->vi_thi);
 	if (err != -EPROBE_DEFER)
-		dev_err(dev, "probe failed: %d\n", err);
-	info->private_data = NULL;
+		dev_err(&pdev->dev, "probe failed: %d\n", err);
+error:
 	return err;
 }
 

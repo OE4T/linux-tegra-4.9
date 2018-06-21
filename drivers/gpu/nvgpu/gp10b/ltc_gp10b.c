@@ -70,10 +70,6 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r());
 	u32 comptags_per_cacheline =
 		ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(cbc_param);
-	u32 cacheline_size =
-		512U << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
-	u32 slices_per_ltc =
-		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
 	u32 cbc_param2 =
 		gk20a_readl(g, ltc_ltcs_ltss_cbc_param2_r());
 	u32 gobs_per_comptagline_per_slice =
@@ -89,7 +85,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		return 0;
 
 	/* Already initialized */
-	if (gr->cacheline_size)
+	if (gr->max_comptag_lines)
 		return 0;
 
 	if (max_comptag_lines > hw_max_comptag_lines)
@@ -97,10 +93,10 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	compbit_backing_size =
 		roundup(max_comptag_lines * gobs_per_comptagline_per_slice,
-			cacheline_size);
-	compbit_backing_size =
-		roundup(compbit_backing_size * slices_per_ltc * g->ltc_count,
-			g->ops.fb.compressible_page_size(g));
+			gr->cacheline_size);
+	compbit_backing_size = roundup(
+		compbit_backing_size * gr->slices_per_ltc * g->ltc_count,
+		g->ops.fb.compressible_page_size(g));
 
 	/* aligned to 2KB * ltc_count */
 	compbit_backing_size +=
@@ -126,8 +122,6 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->max_comptag_lines = max_comptag_lines;
 	gr->comptags_per_cacheline = comptags_per_cacheline;
-	gr->slices_per_ltc = slices_per_ltc;
-	gr->cacheline_size = cacheline_size;
 	gr->gobs_per_comptagline_per_slice = gobs_per_comptagline_per_slice;
 
 	return 0;

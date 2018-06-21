@@ -44,9 +44,7 @@ int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvgpu_log_fn(g, " ");
 
-	gr->cacheline_size = priv->constants.cacheline_size;
 	gr->comptags_per_cacheline = priv->constants.comptags_per_cacheline;
-	gr->slices_per_ltc = priv->constants.slices_per_ltc;
 	max_comptag_lines = priv->constants.comptag_lines;
 
 	if (max_comptag_lines < 2)
@@ -64,8 +62,11 @@ int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 void vgpu_ltc_init_fs_state(struct gk20a *g)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+	struct gr_gk20a *gr = &g->gr;
 
 	nvgpu_log_fn(g, " ");
 
 	g->ltc_count = priv->constants.ltc_count;
+	gr->cacheline_size = priv->constants.cacheline_size;
+	gr->slices_per_ltc = priv->constants.slices_per_ltc;
 }

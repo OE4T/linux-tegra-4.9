@@ -52,10 +52,6 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r());
 	u32 comptags_per_cacheline =
 		ltc_ltcs_ltss_cbc_param_comptags_per_cache_line_v(cbc_param);
-	u32 cacheline_size =
-		512U << ltc_ltcs_ltss_cbc_param_cache_line_size_v(cbc_param);
-	u32 slices_per_ltc =
-		ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(cbc_param);
 
 	u32 compbit_backing_size;
 
@@ -71,7 +67,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	compbit_backing_size =
 		DIV_ROUND_UP(max_comptag_lines, comptags_per_cacheline) *
-		cacheline_size * slices_per_ltc * g->ltc_count;
+		gr->cacheline_size * gr->slices_per_ltc * g->ltc_count;
 
 	/* aligned to 2KB * ltc_count */
 	compbit_backing_size +=
@@ -82,7 +78,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	max_comptag_lines =
 		(compbit_backing_size * comptags_per_cacheline) /
-		(cacheline_size * slices_per_ltc * g->ltc_count);
+		(gr->cacheline_size * gr->slices_per_ltc * g->ltc_count);
 
 	if (max_comptag_lines > hw_max_comptag_lines)
 		max_comptag_lines = hw_max_comptag_lines;
@@ -102,8 +98,6 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->max_comptag_lines = max_comptag_lines;
 	gr->comptags_per_cacheline = comptags_per_cacheline;
-	gr->slices_per_ltc = slices_per_ltc;
-	gr->cacheline_size = cacheline_size;
 
 	return 0;
 }
@@ -203,6 +197,7 @@ out:
 
 void gm20b_ltc_init_fs_state(struct gk20a *g)
 {
+	struct gr_gk20a *gr = &g->gr;
 	u32 reg;
 
 	nvgpu_log_info(g, "initialize gm20b l2");
@@ -210,6 +205,11 @@ void gm20b_ltc_init_fs_state(struct gk20a *g)
 	g->max_ltc_count = gk20a_readl(g, top_num_ltcs_r());
 	g->ltc_count = gk20a_readl(g, pri_ringmaster_enum_ltc_r());
 	nvgpu_log_info(g, "%d ltcs out of %d", g->ltc_count, g->max_ltc_count);
+
+	reg = gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r());
+	gr->slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(reg);;
+	gr->cacheline_size =
+		512U << ltc_ltcs_ltss_cbc_param_cache_line_size_v(reg);
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r(),
 	g->ltc_count);

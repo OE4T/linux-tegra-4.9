@@ -170,6 +170,7 @@ static inline unsigned long __hweight64(uint64_t x)
 #define __must_check
 #define __maybe_unused		__attribute__((unused))
 #define __iomem
+#define __user
 #define unlikely
 #define likely
 

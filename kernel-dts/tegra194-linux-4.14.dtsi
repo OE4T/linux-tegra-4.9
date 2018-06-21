@@ -46,4 +46,9 @@
 	tegra-carveouts {
 		memory-region = <&generic_reserved>;
 	};
+
+	psci {
+		status = "okay";
+	};
+
 };

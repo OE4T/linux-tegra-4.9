@@ -351,7 +351,7 @@ static void init_tlc(struct tnvlink_dev *tdev)
 /*
  * Enable the MSSNVLINK core master and slave clocks.
  */
-static void diasble_nvlink_slcg(struct tnvlink_dev *tdev)
+static void disable_nvlink_slcg(struct tnvlink_dev *tdev)
 {
 	u32 val;
 
@@ -360,6 +360,26 @@ static void diasble_nvlink_slcg(struct tnvlink_dev *tdev)
 	val |= BIT(MSSNVLINK_CLK_SLCG_MCF_SLAVE_CLK_ENBL);
 	val |= BIT(MSSNVLINK_CLK_SLCG_CORE_CLK_UPDATE_ENBL);
 	mssnvlink_0_writel(tdev, MSSNVLINK_CLK_SLCG, val);
+}
+
+static void mssnvlink_lock_ila(struct tnvlink_dev *tdev)
+{
+	u32 val;
+
+	/* Enable PM clocks */
+	val = mssnvlink_0_readl(tdev, MSSNVLINK_CLK_CONTROL);
+	val |= BIT(MSSNVLINK_CLK_CONTROL_PM_CLK_ENBL);
+	mssnvlink_0_writel(tdev, MSSNVLINK_CLK_CONTROL, val);
+
+	/* Set ILA LOCK bit */
+	val = mssnvlink_0_readl(tdev, MSSNVLINK_PM_MODE);
+	val |= BIT(MSSNVLINK_PM_MODE_LOCK_ILA);
+	mssnvlink_0_writel(tdev, MSSNVLINK_PM_MODE, val);
+
+	/* Disable PM clocks */
+	val = mssnvlink_0_readl(tdev, MSSNVLINK_CLK_CONTROL);
+	val &= ~BIT(MSSNVLINK_CLK_CONTROL_PM_CLK_ENBL);
+	mssnvlink_0_writel(tdev, MSSNVLINK_CLK_CONTROL, val);
 }
 
 /*
@@ -376,7 +396,7 @@ static void diasble_nvlink_slcg(struct tnvlink_dev *tdev)
  */
 static void mssnvlink_init(struct tnvlink_dev *tdev)
 {
-	diasble_nvlink_slcg(tdev);
+	disable_nvlink_slcg(tdev);
 
 	/* Program the upper limit of the NVLINK aperture in MSSNVLINK */
 	nvlink_dbg("Programming MSSNVLINK_TOM to %u GB", NVLINK_TOM_GB);
@@ -395,6 +415,9 @@ static void mssnvlink_init(struct tnvlink_dev *tdev)
 	 */
 	non_nvlink_writel(MCB_BASE + MC_MCF_IREQX_VCARB_CONFIG, 0x8f0);
 	non_nvlink_writel(MCB_BASE + MC_MCF_OREQX_VCARB_CONFIG, 0x8f0);
+
+	mssnvlink_lock_ila(tdev);
+
 }
 
 /*

@@ -1510,7 +1510,7 @@ static const struct tegra_gpio_soc_info t186_gpio_soc = {
 
 static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
 	.name = "tegra-gpio-aon",
-	.debug_fs_name = "tegra-gpio-on",
+	.debug_fs_name = "tegra-gpio-aon",
 	.port = tegra186_aon_gpio_cinfo,
 	.nports = ARRAY_SIZE(tegra186_aon_gpio_cinfo),
 	.wake_table = tegra186_aon_gpio_wakes,

@@ -51,4 +51,31 @@
 		status = "okay";
 	};
 
+	cpus {
+		CPU_CORE_POWER_STATES: cpu_core_power_states {
+			C1: c1 {
+				idle-state-name = "Clock gated";
+			};
+
+			C6: c6 {
+				idle-state-name = "Virtual core powergate";
+			};
+
+			C7: c7 {
+				idle-state-name = "Core powergate";
+			};
+		};
+
+		cpu_cluster_power_states {
+			cc6 {
+				idle-state-name = "Cluster powergate";
+			};
+		};
+
+		cpu_cluster_group_power_states {
+			cg7 {
+				idle-state-name = "Cluster group railgate";
+			};
+		};
+	};
 };

@@ -20,13 +20,7 @@
 NV_REPOSITORY_COMPONENTS :=
 
 ifneq ($(NV_BUILD_CONFIGURATION_OS_IS_INTEGRITY),1)
-#
-# Temporary change to prevent build failures when the dev-other change to enable
-# the userspace build hits dev-kernel.
-#
-# Simply revert this change to fully enable the build on dev-kernel.
-#
-# NV_REPOSITORY_COMPONENTS := drivers/gpu/nvgpu
+NV_REPOSITORY_COMPONENTS := drivers/gpu/nvgpu
 endif
 
 # Local Variables:

@@ -27,6 +27,7 @@
 				status = "disabled";
 				compatible = "p-edp,3000-2000-13-5";
 				nvidia,tx-pu-disable = <1>;
+				backlight = <&lp8556_backlight>;
 				disp-default-out {
 					nvidia,is_ext_dp_panel=<0>;
 					nvidia,out-type = <TEGRA_DC_OUT_DP>;

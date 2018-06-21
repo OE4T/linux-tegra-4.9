@@ -89,20 +89,6 @@ dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain, size_t size,
 void iommu_dma_free_iova(struct iova_domain *iovad,
 		dma_addr_t iova, size_t size);
 
-static dma_addr_t arm__alloc_iova(struct device *dev, size_t size)
-{
-	struct dma_iommu_mapping *mapping = dev->archdata.mapping;
-	struct iommu_domain *domain = mapping->domain;
-	struct iova_domain *iovad = cookie_iovad(domain);
-	dma_addr_t addr;
-
-	addr = iommu_dma_alloc_iova(domain, PAGE_ALIGN(size), dma_get_mask(dev),
-					true);
-	if (!addr)
-		return DMA_ERROR_CODE;
-	return addr;
-}
-
 static void arm__free_iova(struct device *dev,
 			       dma_addr_t addr, size_t size)
 {
@@ -1324,10 +1310,6 @@ static void __dma_page_cpu_to_dev(struct page *, unsigned long,
 		size_t, enum dma_data_direction);
 static void __dma_page_dev_to_cpu(struct page *, unsigned long,
 		size_t, enum dma_data_direction);
-static void __dma_page_cpu_to_dev_no_dsb(struct page *, unsigned long,
-		size_t, enum dma_data_direction);
-static void __dma_page_dev_to_cpu_no_dsb(struct page *, unsigned long,
-		size_t, enum dma_data_direction);
 
 __weak void dma_qualify_ioprot(enum dma_data_direction dir,
 	unsigned long *ioprot) {}
@@ -1975,28 +1957,10 @@ static void __dma_page_cpu_to_dev(struct page *page, unsigned long off,
 	dma_cache_maint_page(page, off, size, dir, __dma_map_area);
 }
 
-static void __dma_page_cpu_to_dev_no_dsb(struct page *page, unsigned long off,
-	size_t size, enum dma_data_direction dir)
-{
-	dma_cache_maint_page(page, off, size, dir, __dma_map_area_no_dsb);
-}
-
 static void __dma_page_dev_to_cpu(struct page *page, unsigned long off,
 	size_t size, enum dma_data_direction dir)
 {
 	dma_cache_maint_page(page, off, size, dir, __dma_unmap_area);
-
-	/*
-	 * Mark the D-cache clean for this page to avoid extra flushing.
-	 */
-	if (dir != DMA_TO_DEVICE && off == 0 && size >= PAGE_SIZE)
-		set_bit(PG_dcache_clean, &page->flags);
-}
-
-static void __dma_page_dev_to_cpu_no_dsb(struct page *page, unsigned long off,
-	size_t size, enum dma_data_direction dir)
-{
-	dma_cache_maint_page(page, off, size, dir, __dma_unmap_area_no_dsb);
 
 	/*
 	 * Mark the D-cache clean for this page to avoid extra flushing.

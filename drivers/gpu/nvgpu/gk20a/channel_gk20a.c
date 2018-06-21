@@ -1012,6 +1012,8 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 		goto clean_up_priv_cmd;
 
 	c->joblist.pre_alloc.length = num_jobs;
+	c->joblist.pre_alloc.put = 0;
+	c->joblist.pre_alloc.get = 0;
 
 	/*
 	 * commit the previous writes before setting the flag.

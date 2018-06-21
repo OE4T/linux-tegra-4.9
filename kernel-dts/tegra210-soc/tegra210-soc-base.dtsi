@@ -2491,6 +2491,7 @@
 
 	cpuidle {
 		compatible = "nvidia,tegra210-cpuidle";
+		cc4-no-retention;
 	};
 
 	apbmisc@70000800 {

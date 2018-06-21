@@ -29,21 +29,10 @@
 #include "dla_os_interface.h"
 #include "dla_fw_version.h"
 
-/**
- * get current firmware version in number
- * TODO: move to dla_fw_version.h
- *
- */
-#define FW_VERSION(a, b, c) 	(((a) << 16) + ((b) << 8) + (c))
-#define CURRENT_FW_VERSION	FW_VERSION(FIRMWARE_VERSION_MAJOR, \
-					   FIRMWARE_VERSION_MINOR, \
-					   FIRMWARE_VERSION_SUBMINOR)
-
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
 /*
  * Max grid size
- * TODO: This should come from nvhost, remove this when API available
  */
 #define MAX_GRID_SIZE			SZ_256
 
@@ -412,5 +401,6 @@ int nvdla_emulator_submit(struct nvhost_queue *queue,
 				struct nvdla_emu_task *task);
 void task_free(struct kref *ref);
 int nvdla_get_postfences(struct nvhost_queue *queue, void *in_task);
+int nvdla_send_gos_region(struct platform_device *pdev);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

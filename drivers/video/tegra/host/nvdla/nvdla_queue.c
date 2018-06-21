@@ -39,10 +39,6 @@
 #include "dla_os_interface.h"
 #include "t194/hardware_t194.h"
 
-/* TODO: 1. revisit timeout post silicon
- *       2. when silicon and sim tests go live at same time,
- *          make timeout selection runtime based on platform
- */
 #define NVDLA_QUEUE_ABORT_TIMEOUT	10000	/* 10 sec */
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
@@ -468,6 +464,7 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	int err = 0;
 
+	/* confirm if gos fetched, if not fetch through poweron */
 	if (!nvdla_dev->is_gos_fetched) {
 		nvdla_dbg_info(pdev, "fetch GoS regions and send to ucode\n");
 		err = nvhost_module_busy(pdev);
@@ -475,6 +472,22 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 			nvdla_dbg_info(pdev, "failed to poweron[%d]\n",
 					nvdla_dev->is_gos_fetched);
 			goto fail_to_poweron;
+		}
+
+		/*
+		 * confirm if gos fetched through previous poweron
+		 * if not explicitly attempt to refetch
+		 */
+		if (!nvdla_dev->is_gos_fetched) {
+			err = nvdla_send_gos_region(pdev);
+			if (err) {
+				nvdla_dbg_err(pdev, "set gos region fail\n");
+				nvdla_dev->is_gos_enabled = false;
+				nvhost_module_idle(pdev);
+				goto fail_to_send_gos;
+			} else {
+				nvdla_dev->is_gos_enabled = true;
+			}
 		}
 		nvhost_module_idle(pdev);
 	}
@@ -492,6 +505,7 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 	}
 
 gos_disabled:
+fail_to_send_gos:
 fail_to_poweron:
 	return err;
 }

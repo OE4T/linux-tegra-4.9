@@ -482,11 +482,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	region = (struct dla_region_printf *)debug_cmd_mem_info.va;
 	region->region = DLA_REGION_PRINTF;
 	region->size = DEBUG_BUFFER_SIZE;
-#if CURRENT_FW_VERSION > FW_VERSION(0, 6, 0)
 	region->address = nvdla_dev->debug_dump_pa;
-#else
-	region->address = ALIGNED_DMA(nvdla_dev->debug_dump_pa);
-#endif
 	if (nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL)
 		region->address = 0;
 
@@ -521,7 +517,7 @@ fail_to_alloc_debug_dump:
 	return err;
 }
 
-static int nvdla_send_gos_region(struct platform_device *pdev)
+int nvdla_send_gos_region(struct platform_device *pdev)
 {
 	int i;
 	int err;
@@ -555,6 +551,7 @@ static int nvdla_send_gos_region(struct platform_device *pdev)
 		nvdla_dbg_err(pdev, "num_grid[%d] > than [%d]", num_grids,
 				MAX_NUM_GRIDS);
 		nvdla_dev->is_gos_fetched = false;
+		err = -EINVAL;
 		goto fail_to_get_grid;
 	}
 	nvdla_dev->is_gos_fetched = true;
@@ -654,6 +651,7 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	if (ret) {
 		nvdla_dbg_err(pdev, "set gos region is failed\n");
 		nvdla_dev->is_gos_enabled = false;
+		/* ignore send gos region failure */
 	}
 
 	if (nvdla_dev->quirks & NVDLA_QUIRK_T194_A01_WAR) {

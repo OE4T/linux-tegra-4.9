@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <linux/version.h>
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
@@ -415,6 +416,18 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.ldiv_slowdown_factor_init = SLOWDOWN_FACTOR_FPDIV_BY16,
 
 	/* power management configuration */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.can_railgate_init	= false,
+	.enable_elpg            = false,
+	.can_elpg_init          = false,
+	.enable_blcg		= false,
+	.enable_slcg		= false,
+	.enable_elcg		= false,
+	.can_slcg               = false,
+	.can_blcg               = false,
+	.can_elcg               = false,
+	.enable_aelpg       = false,
+#else
 	.can_railgate_init	= true,
 	.enable_elpg            = true,
 	.can_elpg_init          = true,
@@ -425,6 +438,7 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.can_blcg               = true,
 	.can_elcg               = true,
 	.enable_aelpg       = true,
+#endif
 	.enable_perfmon         = true,
 
 	/* ptimer src frequency in hz*/

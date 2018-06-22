@@ -784,7 +784,7 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	header = (struct CAPTURE_MSG_HEADER *)msg_cpy;
 	header->channel_id = capture->channel_id;
 
-	req_msg = (struct CAPTURE_CONTROL_MSG*)msg_cpy;
+	req_msg = (struct CAPTURE_CONTROL_MSG *)msg_cpy;
 
 	switch (header->msg_id) {
 	case CAPTURE_COMPAND_CONFIG_REQ:
@@ -828,8 +828,8 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 		break;
 	case CAPTURE_CSI_STREAM_TPG_START_RATE_REQ:
 		resp_id = CAPTURE_CSI_STREAM_TPG_START_RATE_RESP;
-		capture->virtual_channel_id =
-			req_msg->csi_stream_tpg_start_rate_req.virtual_channel_id;
+		capture->virtual_channel_id = req_msg->
+			csi_stream_tpg_start_rate_req.virtual_channel_id;
 		break;
 	case CAPTURE_CSI_STREAM_TPG_STOP_REQ:
 		resp_id = CAPTURE_CSI_STREAM_TPG_STOP_RESP;

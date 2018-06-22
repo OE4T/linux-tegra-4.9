@@ -1420,12 +1420,6 @@ static irqreturn_t rt5659_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-irqreturn_t trigger_jack_status_check(struct snd_soc_codec *codec)
-{
-	return 0;
-}
-EXPORT_SYMBOL_GPL(trigger_jack_status_check);
-
 int rt5659_set_jack_detect(struct snd_soc_codec *codec,
 	struct snd_soc_jack *hs_jack)
 {

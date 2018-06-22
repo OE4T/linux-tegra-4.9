@@ -1828,6 +1828,4 @@ void rt565x_parse_codec_pll_source(struct platform_device *pdev,
 int rt565x_manage_codec_sysclk(struct snd_soc_pcm_stream *dai_params,
 	struct snd_soc_dai *dai, int pll_source_id);
 
-irqreturn_t trigger_jack_status_check(struct snd_soc_codec *codec);
-
 #endif /* __RT5659_H__ */

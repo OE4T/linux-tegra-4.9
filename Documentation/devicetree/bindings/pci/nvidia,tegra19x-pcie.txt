@@ -147,6 +147,8 @@ Optional properties:
     and creating DMA specific debugfs entries
 - "nvidia,disable-l1-cpm" : Add this property to disable ASPM L1-CPM for the
     immediate end point
+- "nvidia,plat-gpios" : Add gpio number that needs to be configured before
+   system goes for enumeration
 
 Power supplies for Tegra194:
 //TODO

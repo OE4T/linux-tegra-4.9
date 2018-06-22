@@ -873,6 +873,7 @@
 			clock-names = "vic";
 
 			iommus = <&smmu TEGRA_SID_VIC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -885,6 +886,7 @@
 			clock-names = "nvjpg";
 
 			iommus = <&smmu TEGRA_SID_NVJPG>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -896,6 +898,7 @@
 			clock-names = "tsec";
 
 			iommus = <&smmu TEGRA_SID_TSEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -907,6 +910,7 @@
 			clock-names = "tsecb";
 
 			iommus = <&smmu TEGRA_SID_TSECB>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -921,6 +925,7 @@
 			clock-names = "nvdec", "kfuse", "efuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -935,6 +940,7 @@
 			clock-names = "nvdec", "kfuse", "efuse";
 
 			iommus = <&smmu TEGRA_SID_NVDEC1>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -947,6 +953,7 @@
 			clock-names = "nvenc";
 
 			iommus = <&smmu TEGRA_SID_NVENC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -959,6 +966,7 @@
 			clock-names = "nvenc";
 
 			iommus = <&smmu TEGRA_SID_NVENC1>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -974,6 +982,7 @@
 			clock-names = "nvdla0", "nvdla0_flcn";
 
 			iommus = <&smmu TEGRA_SID_NVDLA0>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -989,6 +998,7 @@
 			clock-names = "nvdla1", "nvdla1_flcn";
 
 			iommus = <&smmu TEGRA_SID_NVDLA1>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			dma-coherent;
 		};
 
@@ -1538,6 +1548,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_SE>;
 			dma-coherent;
 
 			status = "disabled";
@@ -1554,6 +1565,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE1>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_SE>;
 			dma-coherent;
 
 			status = "disabled";
@@ -1570,6 +1582,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE2>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_SE>;
 			dma-coherent;
 
 			status = "disabled";
@@ -1586,6 +1599,7 @@
 			clock-names = "se";
 
 			iommus = <&smmu TEGRA_SID_SE3>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_SE>;
 			dma-coherent;
 
 			status = "disabled";

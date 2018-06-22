@@ -62,6 +62,7 @@
 		/* bootloader should update MAC address */
 		nvidia,local-mac-address = <0x00 0x00 0x00 0x00 0x00 0x00>;
 		iommus = <&smmu TEGRA_SID_EQOS>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		nvidia,iso_bw = <81920>; /* sum of read and write bw, 80Mb/s */
 		nvidia,slot_intvl_val = <0x07C>;

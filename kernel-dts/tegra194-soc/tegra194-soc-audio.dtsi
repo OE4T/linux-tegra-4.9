@@ -23,6 +23,7 @@
 		iommus = <&smmu TEGRA_SID_APE>;
 		dma-mask = <0x0 0x5e000000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -30,6 +31,7 @@
 		iommus = <&smmu TEGRA_SID_APE>;
 		dma-mask = <0x0 0x5e000000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -134,6 +136,7 @@
 			iommus = <&smmu TEGRA_SID_APE>;
 			dma-mask = <0x0 0x5e000000>;
 			iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 			status = "disabled";
 		};
 
@@ -571,6 +574,7 @@
 			nvidia,adma_ch_cnt = <16>;
 			iommus = <&smmu TEGRA_SID_APE>;
 			iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 			interrupt-parent = <&tegra_agic>;
 			interrupts = <GIC_SPI INT_ADMA_EOT16 IRQ_TYPE_LEVEL_HIGH
 					ROUTE_TO_ADSP>,

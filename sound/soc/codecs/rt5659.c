@@ -1411,26 +1411,18 @@ static irqreturn_t rt5659_irq(int irq, void *data)
 {
 	struct rt5659_priv *rt5659 = data;
 
-	queue_delayed_work(system_power_efficient_wq,
-			   &rt5659->jack_detect_work, msecs_to_jiffies(250));
+	if (rt5659->pdata.jd_src == RT5659_JD3 ||
+	    rt5659->pdata.jd_src == RT5659_JD_NULL)
+		queue_delayed_work(system_power_efficient_wq,
+				   &rt5659->jack_detect_work,
+				   msecs_to_jiffies(250));
 
 	return IRQ_HANDLED;
 }
 
 irqreturn_t trigger_jack_status_check(struct snd_soc_codec *codec)
 {
-	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
-	irqreturn_t ret;
-
-	switch (rt5659->pdata.jd_src) {
-	case RT5659_JD_NULL:
-		ret = rt5659_irq(0, rt5659);
-		break;
-	default:
-		ret = 0;
-		break;
-	}
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(trigger_jack_status_check);
 
@@ -3924,16 +3916,19 @@ static int rt5659_remove(struct snd_soc_codec *codec)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int rt5659_suspend(struct snd_soc_codec *codec)
+#ifdef CONFIG_PM_SLEEP
+static int rt5659_suspend(struct device *dev)
 {
-	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
+	struct rt5659_priv *rt5659 = dev_get_drvdata(dev);
 
 	if (rt5659->i2c->irq) {
 		/* disable jack interrupts during system suspend */
 		disable_irq(rt5659->i2c->irq);
 	}
-	cancel_delayed_work_sync(&rt5659->jack_detect_work);
+
+	if (rt5659->pdata.jd_src == RT5659_JD3 ||
+	    rt5659->pdata.jd_src == RT5659_JD_NULL)
+		cancel_delayed_work_sync(&rt5659->jack_detect_work);
 
 	regcache_cache_only(rt5659->regmap, true);
 	regcache_mark_dirty(rt5659->regmap);
@@ -3941,22 +3936,22 @@ static int rt5659_suspend(struct snd_soc_codec *codec)
 	return 0;
 }
 
-static int rt5659_resume(struct snd_soc_codec *codec)
+static int rt5659_resume(struct device *dev)
 {
-	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
+	struct rt5659_priv *rt5659 = dev_get_drvdata(dev);
 
 	regcache_cache_only(rt5659->regmap, false);
 	regcache_sync(rt5659->regmap);
-	if (rt5659->i2c->irq) {
-		rt5659_irq(0, rt5659);
+	if (rt5659->i2c->irq)
 		enable_irq(rt5659->i2c->irq);
-	}
+
+	if (rt5659->pdata.jd_src == RT5659_JD3 ||
+	    rt5659->pdata.jd_src == RT5659_JD_NULL)
+		queue_delayed_work(system_power_efficient_wq,
+				   &rt5659->jack_detect_work, 0);
 
 	return 0;
 }
-#else
-#define rt5659_suspend NULL
-#define rt5659_resume NULL
 #endif
 
 #define RT5659_STEREO_RATES SNDRV_PCM_RATE_8000_192000
@@ -4036,8 +4031,6 @@ static struct snd_soc_dai_driver rt5659_dai[] = {
 static struct snd_soc_codec_driver soc_codec_dev_rt5659 = {
 	.probe = rt5659_probe,
 	.remove = rt5659_remove,
-	.suspend = rt5659_suspend,
-	.resume = rt5659_resume,
 	.set_bias_level = rt5659_set_bias_level,
 	.idle_bias_off = true,
 	.component_driver = {
@@ -4535,7 +4528,10 @@ static int rt5659_i2c_remove(struct i2c_client *i2c)
 		/* disable jack interrupts during system suspend */
 		disable_irq(i2c->irq);
 	}
-	cancel_delayed_work_sync(&rt5659->jack_detect_work);
+
+	if (rt5659->pdata.jd_src == RT5659_JD3 ||
+	    rt5659->pdata.jd_src == RT5659_JD_NULL)
+		cancel_delayed_work_sync(&rt5659->jack_detect_work);
 
 	return 0;
 }
@@ -4565,12 +4561,17 @@ static struct acpi_device_id rt5659_acpi_match[] = {
 MODULE_DEVICE_TABLE(acpi, rt5659_acpi_match);
 #endif
 
+static const struct dev_pm_ops rt5659_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rt5659_suspend, rt5659_resume)
+};
+
 struct i2c_driver rt5659_i2c_driver = {
 	.driver = {
 		.name = "rt5659",
 		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(rt5659_of_match),
 		.acpi_match_table = ACPI_PTR(rt5659_acpi_match),
+		.pm = &rt5659_pm_ops,
 	},
 	.probe = rt5659_i2c_probe,
 	.remove = rt5659_i2c_remove,

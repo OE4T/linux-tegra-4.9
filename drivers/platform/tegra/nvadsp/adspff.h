@@ -1,7 +1,7 @@
 /*
 * tegra_adspff.h - Shared ADSPFF interface between Tegra ADSP File
 *			System driver and ADSP side user space code.
-* Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+* Copyright (c) 2016-2018 NVIDIA Corporation.  All rights reserved.
 *
 * NVIDIA Corporation and its licensors retain all intellectual property
 * and proprietary rights in and to this software, related documentation
@@ -45,6 +45,7 @@ enum adspff_mbx_cmd {
 	adspff_cmd_fread,
 	adspff_cmd_fopen_recv,
 	adspff_cmd_ack,
+	adspff_cmd_fsize,
 };
 
 
@@ -76,6 +77,10 @@ struct fopen_recv_msg_t {
 	int64_t file;
 };
 
+struct fsize_msg_t {
+	int64_t file;
+};
+
 struct ack_msg_t {
 	int32_t size;
 };
@@ -93,6 +98,7 @@ union adspff_message_t {
 			struct fclose_msg_t fclose_msg;
 			struct fopen_recv_msg_t fopen_recv_msg;
 			struct ack_msg_t ack_msg;
+			struct fsize_msg_t fsize_msg;
 		} payload;
 	} msg;
 };

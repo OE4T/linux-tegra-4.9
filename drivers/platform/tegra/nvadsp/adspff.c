@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,6 +86,23 @@ uint32_t file_read(struct file *file, unsigned long long *offset,
 	set_fs(oldfs);
 
 	return ret;
+}
+
+uint32_t file_size(struct file *file)
+{
+	mm_segment_t oldfs;
+	uint32_t size = 0;
+
+	oldfs = get_fs();
+	set_fs(get_ds());
+
+	size = vfs_llseek(file, 0, SEEK_END);
+
+	vfs_llseek(file, 0, SEEK_SET);
+
+	set_fs(oldfs);
+
+	return size;
 }
 
 /******************************************************************************
@@ -201,6 +218,46 @@ void adspff_fclose(struct work_struct *work)
 		file = NULL;
 	}
 	kfree(message);
+}
+
+void adspff_fsize(struct work_struct *work)
+{
+	union adspff_message_t *msg_recv;
+	union adspff_message_t message;
+	struct file_struct *file = NULL;
+	int32_t ret = 0;
+	uint32_t size = 0;
+
+	msg_recv = kzalloc(sizeof(union adspff_message_t), GFP_KERNEL);
+	msg_recv->msgq_msg.size = MSGQ_MSG_SIZE(struct ack_msg_t);
+
+	message.msgq_msg.size = MSGQ_MSG_SIZE(struct fsize_msg_t);
+	ret = msgq_dequeue_message(&adspff->msgq_send.msgq,
+				(msgq_message_t *)&message);
+
+	if (ret < 0) {
+		pr_err("fsize Dequeue failed %d.", ret);
+		kfree(msg_recv);
+		return;
+	}
+	file = (struct file_struct *)message.msg.payload.fsize_msg.file;
+	if (file) {
+		size = file_size(file->fp);
+	}
+
+	/* send ack */
+	msg_recv->msg.payload.ack_msg.size = size;
+	ret = msgq_queue_message(&adspff->msgq_recv.msgq,
+			(msgq_message_t *)msg_recv);
+
+	if (ret < 0) {
+		pr_err("fsize Enqueue failed %d.", ret);
+		kfree(msg_recv);
+		return;
+	}
+	nvadsp_mbox_send(&rx_mbox, adspff_cmd_ack,
+			NVADSP_MBOX_SMSG, 0, 0);
+	kfree(msg_recv);
 }
 
 void adspff_fwrite(struct work_struct *work)
@@ -344,6 +401,7 @@ DECLARE_WORK(fopen_work, adspff_fopen);
 DECLARE_WORK(fwrite_work, adspff_fwrite);
 DECLARE_WORK(fread_work, adspff_fread);
 DECLARE_WORK(fclose_work, adspff_fclose);
+DECLARE_WORK(fsize_work, adspff_fsize);
 
 /******************************************************************************
 * ADSP mailbox message handler
@@ -370,6 +428,10 @@ static int adspff_msg_handler(uint32_t msg, void *data)
 	break;
 	case adspff_cmd_fread: {
 		queue_work(adspff_wq, &fread_work);
+	}
+	break;
+	case adspff_cmd_fsize: {
+		queue_work(adspff_wq, &fsize_work);
 	}
 	break;
 	default:

@@ -225,10 +225,9 @@ static void tegra_channel_ec_init(struct tegra_channel *chan)
 	 * error recover initialization sequence
 	 * set timeout as 200 ms, use default if fps not available
 	 * Time limit allow CSI to capture good frames and drop error frames
-	 * Timeout units is jiffies, 1 jiffy = 10ms
 	 * TODO: Get frame rate from sub-device and adopt timeout
 	 */
-	chan->timeout = 20;
+	chan->timeout = msecs_to_jiffies(200);
 
 	/*
 	 * Sync point FIFO full blocks host interface

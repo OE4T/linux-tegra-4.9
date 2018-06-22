@@ -928,7 +928,7 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 
 	hdr_en = switch_ctrl_qmenu[control.value];
 	if (hdr_en != SWITCH_ON)  {
-		dev_err(dev, "%s: error coarse time SHR DOL1 override\n",
+		dev_dbg(dev, "%s: SHR DOL1 is ignored for non-HDR mode\n",
 			__func__);
 		goto fail;
 	}
@@ -988,7 +988,7 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 	return 0;
 
 fail:
-	dev_dbg(dev, "%s: COARSE_TIME control error\n", __func__);
+	dev_dbg(dev, "%s: COARSE_TIME Short control is not set\n", __func__);
 	return err;
 }
 

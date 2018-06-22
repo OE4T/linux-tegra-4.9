@@ -410,7 +410,7 @@ static int tegra_channel_capture_frame_single_thread(
 	if (!chan->bfirst_fstart) {
 		err = tegra_channel_enable_stream(chan);
 		if (err) {
-			state = VB2_BUF_STATE_ERROR;
+			state = VB2_BUF_STATE_REQUEUEING;
 			chan->capture_state = CAPTURE_ERROR;
 			tegra_channel_ring_buffer(chan, vb, &ts, state);
 			return err;
@@ -437,7 +437,7 @@ static int tegra_channel_capture_frame_single_thread(
 		if (err) {
 			dev_err(&chan->video.dev,
 				"frame start syncpt timeout!%d\n", index);
-			state = VB2_BUF_STATE_ERROR;
+			state = VB2_BUF_STATE_REQUEUEING;
 			/* perform error recovery for timeout */
 			tegra_channel_ec_recover(chan);
 			chan->capture_state = CAPTURE_TIMEOUT;
@@ -450,7 +450,7 @@ static int tegra_channel_capture_frame_single_thread(
 		/* TODO: TPG has frame height short error always set */
 		err = tegra_channel_error_status(chan);
 		if (err) {
-			state = VB2_BUF_STATE_ERROR;
+			state = VB2_BUF_STATE_REQUEUEING;
 			chan->capture_state = CAPTURE_ERROR;
 			/* do we have to run recover here ?? */
 			/* tegra_channel_ec_recover(chan); */
@@ -547,7 +547,7 @@ static int tegra_channel_capture_frame_multi_thread(
 			dev_err(&chan->video.dev,
 				"failed to enable stream. ERROR: %d\n", err);
 
-			buf->state = VB2_BUF_STATE_ERROR;
+			buf->state = VB2_BUF_STATE_REQUEUEING;
 			chan->capture_state = CAPTURE_ERROR;
 			getrawmonotonic(&ts);
 			set_timestamp(buf, &ts);
@@ -576,7 +576,7 @@ static int tegra_channel_capture_frame_multi_thread(
 		if (err) {
 			dev_err(&chan->video.dev,
 				"frame start syncpt timeout!%d\n", index);
-			buf->state = VB2_BUF_STATE_ERROR;
+			buf->state = VB2_BUF_STATE_REQUEUEING;
 			/* perform error recovery for timeout */
 			tegra_channel_ec_recover(chan);
 			chan->capture_state = CAPTURE_TIMEOUT;
@@ -592,7 +592,7 @@ static int tegra_channel_capture_frame_multi_thread(
 		/* TODO: TPG has frame height short error always set */
 		err = tegra_channel_error_status(chan);
 		if (err) {
-			buf->state = VB2_BUF_STATE_ERROR;
+			buf->state = VB2_BUF_STATE_REQUEUEING;
 			chan->capture_state = CAPTURE_ERROR;
 			/* do we have to run recover here ?? */
 			/* tegra_channel_ec_recover(chan); */
@@ -644,7 +644,7 @@ static void tegra_channel_release_frame(struct tegra_channel *chan,
 	 */
 	restart_version = atomic_read(&chan->restart_version);
 	if (buf->version != restart_version) {
-		buf->state = VB2_BUF_STATE_ERROR;
+		buf->state = VB2_BUF_STATE_REQUEUEING;
 		release_buffer(chan, buf);
 		return;
 	}
@@ -657,7 +657,7 @@ static void tegra_channel_release_frame(struct tegra_channel *chan,
 			dev_err(&chan->video.dev,
 				"%s: MW_ACK_DONE syncpoint time out!%d\n",
 				__func__, index);
-			buf->state = VB2_BUF_STATE_ERROR;
+			buf->state = VB2_BUF_STATE_REQUEUEING;
 			atomic_inc(&chan->restart_version);
 		} else
 			dev_dbg(&chan->video.dev,
@@ -776,7 +776,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 			dev_err(&chan->video.dev,
 				"%s: MW_ACK_DONE syncpoint time out!%d\n",
 				__func__, index);
-			state = VB2_BUF_STATE_ERROR;
+			state = VB2_BUF_STATE_REQUEUEING;
 			/* perform error recovery for timeout */
 			tegra_channel_ec_recover(chan);
 			chan->capture_state = CAPTURE_TIMEOUT;

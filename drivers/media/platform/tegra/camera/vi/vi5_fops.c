@@ -251,7 +251,7 @@ static int tegra_channel_capture_enqueue(struct tegra_channel *chan,
 	if (err) {
 		dev_err(chan->vi->dev, "vi capture request enqueue failed\n");
 
-		buf->vb2_state = VB2_BUF_STATE_ERROR;
+		buf->vb2_state = VB2_BUF_STATE_REQUEUEING;
 
 		spin_lock_irqsave(&chan->capture_state_lock, flags);
 		chan->capture_state = CAPTURE_ERROR;
@@ -302,7 +302,7 @@ static void tegra_channel_capture_dequeue(struct tegra_channel *chan,
 	if (err || (descr->status.status != CAPTURE_STATUS_SUCCESS)) {
 		dev_err(chan->vi->dev, "vi capture dequeue status failed\n");
 
-		buf->vb2_state = VB2_BUF_STATE_ERROR;
+		buf->vb2_state = VB2_BUF_STATE_REQUEUEING;
 
 		spin_lock_irqsave(&chan->capture_state_lock, flags);
 		chan->capture_state = CAPTURE_ERROR;

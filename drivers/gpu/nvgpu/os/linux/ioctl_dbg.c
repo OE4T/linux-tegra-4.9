@@ -1383,7 +1383,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 
 	/* perf output buffer may not cross a 4GB boundary */
 	virt_size = u64_lo32(args->mapping_size);
-	if (u64_hi32(args->offset) != u64_hi32(args->offset + virt_size)) {
+	if (u64_hi32(args->offset) != u64_hi32(args->offset + virt_size - 1)) {
 		err = -EINVAL;
 		goto err_unmap;
 	}

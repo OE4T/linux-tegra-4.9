@@ -31,11 +31,22 @@ unsigned long boosted_cpu_util(int cpu);
 
 #define SUGOV_KTHREAD_PRIORITY	50
 
+/* This is the maximum allowed value of capacity margin knob present in sysfs */
+#define CAPACITY_MARGIN_MAX_VALUE		(1024)
+#define CAPACITY_MARGIN_FLOOR_FACTOR		(10)
+
 struct sugov_tunables {
 	struct gov_attr_set attr_set;
 	unsigned long iowait_boost_max;
 	unsigned int up_rate_limit_us;
 	unsigned int down_rate_limit_us;
+
+	/*
+	 * This knob can be used to control the aggressiveness of schedutil
+	 * frequency scaling. Increasing the value will make scaling more
+	 * aggressive.
+	 */
+	unsigned int capacity_margin;
 };
 
 struct sugov_policy {
@@ -170,7 +181,9 @@ static void sugov_update_commit(struct sugov_policy *sg_policy, u64 time,
  *
  * next_freq = C * curr_freq * util_raw / max
  *
- * Take C = 1.25 for the frequency tipping point at (util / max) = 0.8.
+ * By default, take C = 1.25 for the frequency tipping point at (util / max) =
+ * 0.8. The value of C can be changed indirectly via sysfs knob
+ * 'capacity_margin'
  *
  * The lowest driver-supported frequency which is equal or greater than the raw
  * next_freq (as calculated above) is returned, subject to policy min/max and
@@ -180,10 +193,12 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 				  unsigned long util, unsigned long max)
 {
 	struct cpufreq_policy *policy = sg_policy->policy;
+	unsigned int capacity_margin = sg_policy->tunables->capacity_margin;
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 
-	freq = (freq + (freq >> 2)) * util / max;
+	freq = (((freq * capacity_margin) >> CAPACITY_MARGIN_FLOOR_FACTOR) +
+		freq) * util / max;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;
@@ -490,6 +505,32 @@ static ssize_t iowait_boost_max_store(struct gov_attr_set *attr_set,
 	return count;
 }
 
+static ssize_t capacity_margin_show(struct gov_attr_set *attr_set, char *buf)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+
+	return sprintf(buf, "%u\n", tunables->capacity_margin);
+}
+
+static ssize_t capacity_margin_store(struct gov_attr_set *attr_set,
+				  const char *buf, size_t count)
+{
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
+	unsigned int capacity_margin;
+
+	if (kstrtouint(buf, 10, &capacity_margin))
+		return -EINVAL;
+
+	if (capacity_margin > CAPACITY_MARGIN_MAX_VALUE) {
+		pr_info("capacity_margin value exceeds maximum");
+		return -EINVAL;
+	}
+
+	tunables->capacity_margin = capacity_margin;
+
+	return count;
+}
+
 static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 					const char *buf, size_t count)
 {
@@ -513,11 +554,13 @@ static ssize_t down_rate_limit_us_store(struct gov_attr_set *attr_set,
 static struct governor_attr iowait_boost_max = __ATTR_RW(iowait_boost_max);
 static struct governor_attr up_rate_limit_us = __ATTR_RW(up_rate_limit_us);
 static struct governor_attr down_rate_limit_us = __ATTR_RW(down_rate_limit_us);
+static struct governor_attr capacity_margin = __ATTR_RW(capacity_margin);
 
 static struct attribute *sugov_attributes[] = {
 	&up_rate_limit_us.attr,
 	&down_rate_limit_us.attr,
 	&iowait_boost_max.attr,
+	&capacity_margin.attr,
 	NULL
 };
 
@@ -671,6 +714,7 @@ static int sugov_init(struct cpufreq_policy *policy)
 
 	tunables->up_rate_limit_us = 500;
 	tunables->down_rate_limit_us = 2000;
+	tunables->capacity_margin = 256;
 
 	policy->governor_data = sg_policy;
 	sg_policy->tunables = tunables;

@@ -2,6 +2,7 @@
     "Type"   : "EventProvider",
     "Version": "1",
 
+    "EventProviderDomain": "NvMedia",
     "EventProviderName": "nv_mm_nvhost",
     "StructPrefix"     : "nv_mm_nvhost_",
     "MacroPrefix"      : "NV_MM_NVHOST_",

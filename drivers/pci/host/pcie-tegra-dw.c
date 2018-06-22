@@ -499,6 +499,9 @@ struct tegra_pcie_dw {
 	bool link_state;
 	bool dma_disable;
 
+	int n_gpios;
+	int *gpios;
+
 	struct regulator *pex_ctl_reg;
 	struct margin_cmd mcmd;
 	u32 dvfs_tbl[4][4]; /* for x1/x2/x3/x4 and Gen-1/2/3/4 */
@@ -1326,6 +1329,14 @@ static int read_ll(struct seq_file *s, void *data)
 err_out:
 	iounmap(dst_cpu_virt);
 	return ret;
+}
+
+static void config_plat_gpio(struct tegra_pcie_dw *pcie, bool flag)
+{
+	int count;
+
+	for (count = 0; count < pcie->n_gpios; ++count)
+		gpiod_set_value(gpio_to_desc(pcie->gpios[count]), flag);
 }
 
 static int apply_speed_change(struct seq_file *s, void *data)
@@ -2605,6 +2616,38 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 		return pcie->phy_count;
 	}
 
+	pcie->n_gpios = of_gpio_named_count(np, "nvidia,plat-gpios");
+	if (pcie->n_gpios > 0) {
+		int count, gpio;
+		enum of_gpio_flags flags;
+		unsigned long f;
+
+		pcie->gpios = devm_kzalloc(pcie->dev,
+					   pcie->n_gpios * sizeof(int),
+					   GFP_KERNEL);
+		if (!pcie->gpios)
+			return -ENOMEM;
+
+		for (count = 0; count < pcie->n_gpios; ++count) {
+			gpio = of_get_named_gpio_flags(np, "nvidia,plat-gpios",
+						       count, &flags);
+			if ((gpio < 0) && (gpio != -ENOENT))
+				return gpio;
+
+			f = (flags & OF_GPIO_ACTIVE_LOW) ?
+			    (GPIOF_OUT_INIT_HIGH | GPIOF_ACTIVE_LOW) :
+			     GPIOF_OUT_INIT_LOW;
+
+			ret = devm_gpio_request_one(pcie->dev, gpio, f, NULL);
+			if (ret < 0) {
+				dev_err(pcie->dev, "gpio %d request failed\n",
+					gpio);
+				return ret;
+			}
+			pcie->gpios[count] = gpio;
+		}
+	}
+
 	return 0;
 }
 
@@ -3003,6 +3046,7 @@ static int tegra_pcie_dw_runtime_suspend(struct device *dev)
 	reset_control_assert(pcie->core_apb_rst);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
+	config_plat_gpio(pcie, 0);
 
 	if (pcie->cid != CTRL_5)
 		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
@@ -3025,6 +3069,8 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 			return ret;
 		}
 	}
+
+	config_plat_gpio(pcie, 1);
 
 	ret = regulator_enable(pcie->pex_ctl_reg);
 	if (ret < 0) {
@@ -3102,6 +3148,7 @@ fail_phy:
 	clk_disable_unprepare(pcie->core_clk);
 fail_core_clk:
 	regulator_disable(pcie->pex_ctl_reg);
+	config_plat_gpio(pcie, 0);
 fail_reg_en:
 	if (pcie->cid != CTRL_5)
 		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
@@ -3129,6 +3176,7 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	reset_control_assert(pcie->core_apb_rst);
 	clk_disable_unprepare(pcie->core_clk);
 	regulator_disable(pcie->pex_ctl_reg);
+	config_plat_gpio(pcie, 0);
 	if (pcie->cid != CTRL_5) {
 		ret = uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
 		if (ret) {
@@ -3169,6 +3217,8 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 			return ret;
 		}
 	}
+
+	config_plat_gpio(pcie, 1);
 
 	ret = regulator_enable(pcie->pex_ctl_reg);
 	if (ret < 0) {
@@ -3244,6 +3294,7 @@ fail_phy:
 	clk_disable_unprepare(pcie->core_clk);
 fail_core_clk:
 	regulator_disable(pcie->pex_ctl_reg);
+	config_plat_gpio(pcie, 0);
 	return ret;
 }
 

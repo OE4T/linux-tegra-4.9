@@ -116,7 +116,6 @@ static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
 static int tegra_machine_pcm_startup(struct snd_pcm_substream *);
 static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
 static int tegra_machine_suspend_pre(struct snd_soc_card *);
-static int tegra_machine_resume_post(struct snd_soc_card *);
 static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *,
 		struct snd_pcm_hw_params *);
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
@@ -349,7 +348,6 @@ static const struct snd_kcontrol_new tegra_mystique_controls[] = {
 static struct snd_soc_card snd_soc_tegra_card = {
 	.owner = THIS_MODULE,
 	.suspend_pre = tegra_machine_suspend_pre,
-	.resume_post = tegra_machine_resume_post,
 	.fully_routed = true,
 };
 
@@ -844,24 +842,6 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *card)
 		if (rtd->dai_link->params)
 			INIT_DELAYED_WORK(&rtd->delayed_work, NULL);
 	}
-
-	return 0;
-}
-
-static int tegra_machine_resume_post(struct snd_soc_card *card)
-{
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	struct snd_soc_pcm_runtime *rtd;
-
-	if (machine->is_hs_supported) {
-		rtd = snd_soc_get_pcm_runtime(card, "rt565x-playback");
-		if (rtd)
-			return trigger_jack_status_check(rtd->codec);
-	}
-
-	rtd = snd_soc_get_pcm_runtime(card, "rt565x-codec-sysclk-bclk1");
-	if (rtd)
-		return trigger_jack_status_check(rtd->codec);
 
 	return 0;
 }

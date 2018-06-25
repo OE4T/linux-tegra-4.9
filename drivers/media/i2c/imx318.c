@@ -784,25 +784,12 @@ static int imx318_read_eeprom(struct imx318 *priv)
 	return 0;
 }
 
-/* TODO Validate id from sensor */
 static int imx318_read_fuse_id(struct imx318 *priv)
 {
-	int err;
-	int i;
-	struct camera_common_data *s_data = priv->s_data;
-	struct device *dev = s_data->dev;
-	u8 bak = 0;
-
-	for (i = 0; i < IMX318_FUSE_ID_SIZE; i++) {
-		err |= imx318_read_reg(s_data,
-			IMX318_FUSE_ID_START_ADDR + i, &bak);
-		if (!err)
-			priv->fuse_id[i] = bak;
-		else {
-			dev_err(dev, "%s: can not read fuse id\n", __func__);
-			return -EINVAL;
-		}
-	}
+	/* fuse id is stored in eeprom */
+	memcpy(priv->fuse_id,
+			&priv->eeprom_buf[IMX318_FUSE_ID_START_ADDR],
+			IMX318_FUSE_ID_SIZE);
 
 	return 0;
 }
@@ -844,13 +831,12 @@ static int imx318_board_setup(struct imx318 *priv)
 				"Error %d reading eeprom data\n", err);
 			goto error;
 		}
-	}
-
-	err = imx318_read_fuse_id(priv);
-	if (err) {
-		dev_err(dev,
-			"Error %d reading fuse id data\n", err);
-		goto error;
+		err = imx318_read_fuse_id(priv);
+		if (err) {
+			dev_err(dev,
+				"Error %d reading fuse id data\n", err);
+			goto error;
+		}
 	}
 
 error:

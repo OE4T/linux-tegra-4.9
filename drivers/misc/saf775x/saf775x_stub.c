@@ -1,7 +1,7 @@
 /*
  * saf775x.c -- SAF775X Soc Audio driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,6 @@
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/spi/spi.h>
-#include <linux/spi/spi-tegra.h>
 #include <linux/delay.h>
 
 #include "saf775x_ioctl.h"

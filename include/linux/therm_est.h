@@ -19,7 +19,6 @@
 
 #include <linux/workqueue.h>
 #include <linux/thermal.h>
-#include <linux/platform_data/thermal_sensors.h>
 
 #define HIST_LEN (20)
 

@@ -1713,9 +1713,6 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 		}
 	}
 
-	if (status & DPAUX_INTR_AUX_TX_DONE_PENDING)
-		complete_all(&dpaux->aux_tx);
-
 	return IRQ_HANDLED;
 }
 

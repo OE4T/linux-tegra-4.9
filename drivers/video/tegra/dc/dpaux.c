@@ -35,6 +35,28 @@ static struct of_device_id tegra_dpaux_pd[] = {
 	{},
 };
 
+static inline unsigned long
+tegra_dpaux_poll_register(struct tegra_dc_dpaux_data *dpaux,
+			u32 reg, u32 mask, u32 exp_val,
+			u32 poll_interval_us, u32 timeout_ms)
+{
+	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
+	u32 reg_val = 0;
+
+	do {
+		usleep_range(poll_interval_us, poll_interval_us << 1);
+		reg_val = tegra_dpaux_readl(dpaux, reg);
+	} while (((reg_val & mask) != exp_val) &&
+		time_after(timeout_jf, jiffies));
+
+	if ((reg_val & mask) == exp_val)
+		return 0;
+
+	dev_dbg(&dpaux->dc->ndev->dev,
+		"dpaux_poll_register 0x%x: timeout\n", reg);
+	return jiffies - timeout_jf + 1;
+}
+
 static void tegra_dpaux_reset(struct tegra_dc_dpaux_data *dpaux)
 {
 	if (tegra_platform_is_sim())
@@ -137,19 +159,16 @@ static inline int tegra_dpaux_wait_transaction(
 
 	if (likely(tegra_platform_is_silicon()) ||
 		unlikely(tegra_platform_is_fpga())) {
-		reinit_completion(&dpaux->aux_tx);
-		tegra_dpaux_int_toggle(dpaux, DPAUX_INTR_EN_AUX_TX_DONE, true);
-		if (tegra_dpaux_readl(dpaux, DPAUX_DP_AUXCTL) &
-				DPAUX_DP_AUXCTL_TRANSACTREQ_PENDING) {
-			if (!wait_for_completion_timeout(&dpaux->aux_tx,
-				msecs_to_jiffies(DP_AUX_TIMEOUT_MS)))
-				err = -EBUSY;
-		}
-		tegra_dpaux_int_toggle(dpaux, DPAUX_INTR_EN_AUX_TX_DONE, false);
+		if (tegra_dpaux_poll_register(dpaux, DPAUX_DP_AUXCTL,
+			DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
+			DPAUX_DP_AUXCTL_TRANSACTREQ_DONE,
+			100, DP_AUX_TIMEOUT_MS) != 0)
+			err = -EFAULT;
 	}
 
 	if (err)
 		dev_err(&dpaux->dc->ndev->dev, "dp: aux tx timeout\n");
+
 	return err;
 }
 
@@ -818,7 +837,6 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
 	}
 
 	mutex_init(&dpaux->lock);
-	init_completion(&dpaux->aux_tx);
 	dpaux->powergate_id = tegra_pd_get_powergate_id(tegra_dpaux_pd);
 	dpaux->dc = dc;
 	dpaux->base = base;

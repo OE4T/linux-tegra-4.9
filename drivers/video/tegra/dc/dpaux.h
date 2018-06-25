@@ -32,7 +32,6 @@ struct tegra_dc_dpaux_data {
 	struct tegra_prod *prod_list;
 	struct device_node *np; /* dpaux@******** */
 	atomic_t enable_count;
-	struct completion aux_tx;
 	struct mutex lock;
 	int ctrl_num; /* this should match with sor->ctrl_num */
 	int powergate_id;

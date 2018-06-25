@@ -26,6 +26,7 @@
 #include <soc/tegra/chip-id.h>
 #include <uapi/linux/tegra_l3_cache.h>
 #include <soc/tegra/chip-id.h>
+#include <linux/delay.h>
 
 #define MASK GENMASK(15, 12)
 #define T19x_CACHE_STR	"l3_cache"
@@ -33,6 +34,8 @@
 #define CCPLEX_CC_GPU_ONLY_BITS_SHIFT	8
 
 #define L3_WAYS_MASK			GENMASK(4, 0)
+
+#define PROFILE_DCACHE_FLUSH		0
 
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *t19x_l3cache_root;
@@ -45,6 +48,7 @@ struct cache_drv_data {
 };
 
 static struct cache_drv_data *cache_data;
+
 
 int t19x_flush_cache_all(void)
 {
@@ -73,8 +77,70 @@ int t19x_flush_cache_all(void)
 	return 0;
 }
 
+#if PROFILE_DCACHE_FLUSH
+struct flush_error {
+	u64 run_time;
+	u64 ret;
+};
+
+static int __t19x_flush_dcache_all(void)
+{
+#define FLUSH_TO_IN_MS 1000
+#define RETRY 10
+	static struct flush_error fe[RETRY] = { { 0 } };
+	ktime_t kt, tt = { 0 };
+	u64 id_afr0;
+	u64 i = 0;
+	u64 ret;
+
+	asm volatile ("mrs %0, ID_AFR0_EL1" : "=r"(id_afr0));
+	/* check if dcache flush through mts is supported */
+	if (!likely(id_afr0 & MASK)) {
+		pr_warn("SCF dcache flush is not supported in MTS\n");
+		return -ENOTSUPP;
+	}
+
+	do {
+		kt = ktime_get();
+		asm volatile ("mrs %0, s3_0_c15_c3_6" : "=r" (ret));
+		kt = ktime_sub(ktime_get(), kt);
+
+		fe[i].run_time = ktime_to_ns(kt);
+		fe[i].ret = ret;
+		i++;
+
+		tt = ktime_add(tt, kt);
+		if (ktime_to_ms(tt) >= FLUSH_TO_IN_MS)
+			break;
+
+		udelay(1);
+	} while (!ret);
+	asm volatile ("dsb sy");
+
+	i = 0;
+
+	if (!ret) {
+		pr_err("SCF dcache flush: instruction error\n");
+		while (fe[i].run_time) {
+			pr_err("flush_dcache_all_exec_time[%llu]:%lluns\n",
+				 i,  fe[i].run_time);
+			pr_err("flush_dcache_all_return[%llu]:%llu\n",
+				 i,  fe[i].ret);
+			i++;
+		}
+		WARN_ONCE(!ret, "%s failed\n", __func__);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+#endif
+
 int t19x_flush_dcache_all(void)
 {
+#if PROFILE_DCACHE_FLUSH
+	return __t19x_flush_dcache_all();
+#else
 	u64 id_afr0;
 	u64 ret;
 	u64 retry = 10;
@@ -88,6 +154,7 @@ int t19x_flush_dcache_all(void)
 
 	do {
 		asm volatile ("mrs %0, s3_0_c15_c3_6" : "=r" (ret));
+		udelay(1);
 	} while (!ret && retry--);
 	asm volatile ("dsb sy");
 
@@ -98,6 +165,7 @@ int t19x_flush_dcache_all(void)
 	}
 
 	return 0;
+#endif
 }
 
 int t19x_clean_dcache_all(void)

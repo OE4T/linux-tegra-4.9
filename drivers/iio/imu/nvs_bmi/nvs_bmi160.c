@@ -498,6 +498,7 @@ struct bmi_state {
 	bool irq_dis;			/* interrupt host disable flag */
 	bool irq_set_irq_wake;		/* interrupt wake enable status */
 	bool no_irq_no_wake_on;		/* user cfg when no IRQ */
+	bool irq_setup_done;		/* irq probe status: true=setup complete; */
 	atomic64_t ts_irq;		/* interrupt timestamp */
 	s64 ts_st_irq;			/* sensor time IRQ timestamp */
 	s64 ts;				/* timestamp */
@@ -1803,9 +1804,9 @@ static int bmi_remove(struct i2c_client *client)
 	unsigned int i;
 
 	if (st != NULL) {
-		if (st->i2c->irq > 0)
-			free_irq(st->i2c->irq, st);
 		bmi_shutdown(client);
+		if (st->irq_setup_done && st->i2c->irq > 0)
+			free_irq(st->i2c->irq, st);
 		if (st->nvs) {
 			for (i = 0; i < st->hw_n; i++)
 				st->nvs->remove(st->snsrs[i].nvs_st);
@@ -1817,6 +1818,7 @@ static int bmi_remove(struct i2c_client *client)
 		}
 		bmi_pm_exit(st);
 	}
+	st->irq_setup_done = false; /* clear IRQ setup flag */
 	dev_info(&client->dev, "%s\n", __func__);
 	return 0;
 }
@@ -1981,6 +1983,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 				__func__, ret);
 			return -ENODEV;
 		}
+		st->irq_setup_done = true;
 
 		for (i = 0; i < st->hw_n; i++) {
 			if (st->snsrs[i].cfg.delay_us_max > hi)

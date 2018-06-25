@@ -47,7 +47,7 @@ struct fifo_profile_gk20a;
 #define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
 #define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1 << 3)
 
-/* Flags to be passed to gk20a_submit_channel_gpfifo() */
+/* Flags to be passed to nvgpu_submit_channel_gpfifo() */
 #define NVGPU_SUBMIT_FLAGS_FENCE_WAIT	(1 << 0)
 #define NVGPU_SUBMIT_FLAGS_FENCE_GET	(1 << 1)
 #define NVGPU_SUBMIT_FLAGS_HW_FORMAT	(1 << 2)

@@ -15,6 +15,7 @@
  */
 
 #include <nvgpu/types.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
@@ -130,7 +131,7 @@ int gk20a_ce_execute_ops(struct gk20a *g,
 
 		nvgpu_smp_wmb();
 
-		ret = gk20a_submit_channel_gpfifo_kernel(ce_ctx->ch, &gpfifo,
+		ret = nvgpu_submit_channel_gpfifo_kernel(ce_ctx->ch, &gpfifo,
 				1, submit_flags, &fence, &ce_cmd_buf_fence_out);
 
 		if (!ret) {

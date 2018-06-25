@@ -646,4 +646,8 @@ DEFINE_EVENT(gk20a_cde, gk20a_cde_finished_ctx_cb,
 #define trace_gk20a_ltc_cbc_ctrl_start(arg...)		((void)(NULL))
 #define trace_gk20a_ltc_cbc_ctrl_done(arg...)		((void)(NULL))
 
+#define trace_gk20a_channel_submit_gpfifo(arg...)	((void)(NULL))
+#define trace_gk20a_channel_submitted_gpfifo(arg...)	((void)(NULL))
+#define trace_gk20a_push_cmdbuf(arg...)			((void)(NULL))
+
 #endif

@@ -32,6 +32,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/firmware.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/linux/vm.h>
 
@@ -783,7 +784,7 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 		return -ENOSYS;
 	}
 
-	return gk20a_submit_channel_gpfifo_kernel(cde_ctx->ch, gpfifo,
+	return nvgpu_submit_channel_gpfifo_kernel(cde_ctx->ch, gpfifo,
 			num_entries, flags, fence, fence_out);
 }
 

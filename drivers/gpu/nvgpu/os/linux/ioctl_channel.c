@@ -34,6 +34,7 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -799,11 +800,11 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 				return fd;
 	}
 
-	userdata.entries = (struct nvgpu_gpfifo_entry __user*)
+	userdata.entries = (struct nvgpu_gpfifo_entry __user *)
 		(uintptr_t)args->gpfifo;
 	userdata.context = NULL;
 
-	ret = gk20a_submit_channel_gpfifo_user(ch,
+	ret = nvgpu_submit_channel_gpfifo_user(ch,
 			userdata, args->num_entries,
 			submit_flags, &fence, &fence_out, profile);
 

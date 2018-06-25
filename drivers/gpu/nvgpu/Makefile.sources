@@ -80,6 +80,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/clock_gating/gv11b_gating_reglist.c \
 	common/clock_gating/gp106_gating_reglist.c \
 	common/clock_gating/gv100_gating_reglist.c \
+	common/fifo/submit.c \
 	boardobj/boardobj.c \
 	boardobj/boardobjgrp.c \
 	boardobj/boardobjgrpmask.c \

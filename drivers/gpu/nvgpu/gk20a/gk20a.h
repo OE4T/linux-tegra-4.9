@@ -150,6 +150,7 @@ enum nvgpu_unit;
 enum nvgpu_flush_op;
 
 struct _resmgr_context;
+struct nvgpu_gpfifo_entry;
 
 struct nvgpu_gpfifo_userdata {
 	struct nvgpu_gpfifo_entry __user *entries;

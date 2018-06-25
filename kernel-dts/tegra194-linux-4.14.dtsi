@@ -31,11 +31,6 @@
 		/delete-node/ vpr-carveout;
 	};
 
-	sdhci@3460000 { /* Used for eMMC */
-		/delete-property/ iommus;
-		/delete-property/ dma-coherent;
-	};
-
 	reserved-memory {
 		generic_reserved: generic_carveout {
 			size = <0 0x10000000>;

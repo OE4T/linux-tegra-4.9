@@ -986,7 +986,6 @@ static void gv11b_fifo_locked_abort_runlist_active_tsgs(struct gk20a *g,
 			unsigned int rc_type,
 			u32 runlists_mask)
 {
-	bool verbose = false;
 	struct tsg_gk20a *tsg = NULL;
 	u32 rlid, tsgid;
 	struct fifo_runlist_info_gk20a *runlist = NULL;
@@ -1025,7 +1024,7 @@ static void gv11b_fifo_locked_abort_runlist_active_tsgs(struct gk20a *g,
 			if (!g->fifo.deferred_reset_pending) {
 				if (rc_type == RC_TYPE_MMU_FAULT) {
 					gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
-					verbose = gk20a_fifo_error_tsg(g, tsg);
+					gk20a_fifo_error_tsg(g, tsg);
 				}
 			}
 

@@ -78,7 +78,7 @@
 		};
 	};
 
-	usb_cd: usb_cd@7009f000 {
+	tegra_usb_cd: usb_cd {
 		compatible = "nvidia,tegra210-usb-cd";
 		reg = <0x0 0x7009f000 0x0 0x1000>;
 		#extcon-cells = <1>;
@@ -88,9 +88,9 @@
 
 	psy_extcon_xudc {
 		compatible = "power-supply-extcon";
-		extcon-cables = <&usb_cd 1 &usb_cd 2 &usb_cd 3
-				&usb_cd 4 &usb_cd 5 &usb_cd 6
-				&usb_cd 7 &usb_cd 8 &usb_cd 9>;
+		extcon-cables = <&tegra_usb_cd 1 &tegra_usb_cd 2 &tegra_usb_cd 3
+				&tegra_usb_cd 4 &tegra_usb_cd 5 &tegra_usb_cd 6
+				&tegra_usb_cd 7 &tegra_usb_cd 8 &tegra_usb_cd 9>;
 		extcon-cable-names = "usb-charger", "ta-charger", "maxim-charger",
 				"qc2-charger", "downstream-charger", "slow-charger",
 				"apple-500ma", "apple-1a", "apple-2a";

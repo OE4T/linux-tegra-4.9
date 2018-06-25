@@ -3105,7 +3105,10 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	struct arm_smmu_device *smmu;
 	struct device *dev = &pdev->dev;
 	int num_irqs, i, err;
-	u32 emu_id = 0, suspend_save_reg;
+	u32 emu_id = 0;
+#ifdef CONFIG_ARM_SMMU_SUSPEND
+	u32 suspend_save_reg;
+#endif
 
 	if (tegra_platform_is_unit_fpga())
 		return -ENODEV;
@@ -3224,6 +3227,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_ARM_SMMU_SUSPEND
 	if (!of_property_read_u32(dev->of_node, "suspend-save-reg",
 			&suspend_save_reg)) {
 
@@ -3235,6 +3239,7 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 			goto out_free_irqs;
 		}
 	}
+#endif
 
 	INIT_LIST_HEAD(&smmu->list);
 	spin_lock(&arm_smmu_devices_lock);

@@ -1056,15 +1056,10 @@ int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 		return -EINVAL;
 
 
-	if (nvgpu_mem_begin(c->g, mem))
-		return -ENOMEM;
-
 	v = nvgpu_mem_rd(c->g, mem, ctxsw_prog_main_image_pm_o());
 	v &= ~ctxsw_prog_main_image_pm_pc_sampling_m();
 	v |= ctxsw_prog_main_image_pm_pc_sampling_f(enable);
 	nvgpu_mem_wr(c->g, mem, ctxsw_prog_main_image_pm_o(), v);
-
-	nvgpu_mem_end(c->g, mem);
 
 	nvgpu_log_fn(c->g, "done");
 

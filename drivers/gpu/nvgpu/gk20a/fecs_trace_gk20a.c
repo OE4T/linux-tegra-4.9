@@ -657,9 +657,6 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 
 	mem = &ch_ctx->mem;
 
-	if (nvgpu_mem_begin(g, mem))
-		return -ENOMEM;
-
 	nvgpu_log(g, gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
 		lo, GK20A_FECS_TRACE_NUM_RECORDS);
 
@@ -668,13 +665,8 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
-	nvgpu_mem_end(g, mem);
-
 	if (nvgpu_is_enabled(g, NVGPU_FECS_TRACE_VA))
 		mem = &ch->ctx_header.mem;
-
-	if (nvgpu_mem_begin(g, mem))
-		return -ENOMEM;
 
 	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),
@@ -683,8 +675,6 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi) |
 		aperture_mask);
-
-	nvgpu_mem_end(g, mem);
 
 	/* pid (process identifier) in user space, corresponds to tgid (thread
 	 * group id) in kernel space.

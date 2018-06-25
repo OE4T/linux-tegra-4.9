@@ -82,11 +82,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			return -ENOMEM;
 		}
 		/* Now clear the buffer */
-		if (nvgpu_mem_begin(g, &ctx->mem))
-			return -ENOMEM;
-
 		nvgpu_memset(g, &ctx->mem, 0, 0, ctx->mem.size);
-		nvgpu_mem_end(g, &ctx->mem);
 	}
 	return ret;
 }
@@ -117,8 +113,6 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 
 	gr_mem = &ctx->mem;
 	g->ops.mm.l2_flush(g, true);
-	if (nvgpu_mem_begin(g, gr_mem))
-		return -ENOMEM;
 
 	/* set priv access map */
 	addr_lo = u64_lo32(gr_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
@@ -153,7 +147,7 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 	nvgpu_mem_wr(g, gr_mem,
                 ctxsw_prog_main_image_ctl_o(),
                 ctxsw_prog_main_image_ctl_type_per_veid_header_v());
-	nvgpu_mem_end(g, gr_mem);
+
 	return ret;
 }
 

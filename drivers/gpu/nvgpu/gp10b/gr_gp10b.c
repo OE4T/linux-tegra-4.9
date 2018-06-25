@@ -1115,10 +1115,6 @@ void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
 {
 	struct nvgpu_mem *mem = &gr_ctx->mem;
 
-	if (nvgpu_mem_begin(g, mem)) {
-		WARN_ON("Cannot map context");
-		return;
-	}
 	nvgpu_err(g, "ctxsw_prog_main_image_magic_value_o : %x (expect %x)",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_magic_value_o()),
@@ -1159,7 +1155,6 @@ void gr_gp10b_dump_ctxsw_stats(struct gk20a *g, struct vm_gk20a *vm,
 		"image compute preemption option (CTA is 1) %x",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_compute_preemption_options_o()));
-	nvgpu_mem_end(g, mem);
 }
 
 void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
@@ -2175,12 +2170,9 @@ int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
 	gr_ctx->boosted_ctx = boost;
 	mem = &gr_ctx->mem;
 
-	if (nvgpu_mem_begin(g, mem))
-		return -ENOMEM;
-
 	err = gk20a_disable_channel_tsg(g, ch);
 	if (err)
-		goto unmap_ctx;
+		return err;
 
 	err = gk20a_fifo_preempt(g, ch);
 	if (err)
@@ -2193,8 +2185,6 @@ int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
 
 enable_ch:
 	gk20a_enable_channel_tsg(g, ch);
-unmap_ctx:
-	nvgpu_mem_end(g, mem);
 
 	return err;
 }
@@ -2217,8 +2207,6 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	struct tsg_gk20a *tsg;
 	struct vm_gk20a *vm;
 	struct nvgpu_mem *mem;
-	struct ctx_header_desc *ctx = &ch->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
 	u32 class;
 	int err = 0;
 
@@ -2263,15 +2251,9 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		}
 	}
 
-	if (nvgpu_mem_begin(g, mem))
-		return -ENOMEM;
-
-	if (nvgpu_mem_begin(g, ctxheader))
-		goto unamp_ctx_header;
-
 	err = gk20a_disable_channel_tsg(g, ch);
 	if (err)
-		goto unmap_ctx;
+		return err;
 
 	err = gk20a_fifo_preempt(g, ch);
 	if (err)
@@ -2292,11 +2274,6 @@ int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 enable_ch:
 	gk20a_enable_channel_tsg(g, ch);
-unmap_ctx:
-	nvgpu_mem_end(g, ctxheader);
-unamp_ctx_header:
-	nvgpu_mem_end(g, mem);
-
 	return err;
 }
 

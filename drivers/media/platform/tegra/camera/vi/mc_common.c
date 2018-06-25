@@ -104,6 +104,7 @@ static void tegra_vi_notify(struct v4l2_subdev *sd,
 {
 	struct tegra_mc_vi *vi = container_of(sd->v4l2_dev,
 			struct tegra_mc_vi, v4l2_dev);
+	const struct v4l2_event *ev = arg;
 	unsigned i;
 	struct tegra_channel *chan;
 
@@ -112,8 +113,12 @@ static void tegra_vi_notify(struct v4l2_subdev *sd,
 
 	list_for_each_entry(chan, &vi->vi_chans, list) {
 		for (i = 0; i < chan->num_subdevs; i++)
-			if (sd == chan->subdev[i])
+			if (sd == chan->subdev[i]) {
 				v4l2_event_queue(&chan->video, arg);
+				if (ev->type == V4L2_EVENT_SOURCE_CHANGE &&
+						vb2_is_streaming(&chan->queue))
+					vb2_queue_error(&chan->queue);
+			}
 	}
 }
 

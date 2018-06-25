@@ -64,11 +64,6 @@
 		status = "okay";
 	};
 
-	i2c@3180000 {
-		compatible = "nvidia,tegra-i2c-rtcpu";
-		status = "okay";
-	};
-
 	i2c@3160000 {
 		status = "okay";
 		lp8557_backlight: lp8557-backlight-s-wuxga-8-0@2c {

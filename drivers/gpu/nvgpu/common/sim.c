@@ -31,28 +31,13 @@
 
 int nvgpu_alloc_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	int err;
-
-	err = nvgpu_dma_alloc_sys(g, PAGE_SIZE, mem);
-	if (err)
-		return err;
-	/*
-	 * create a valid cpu_va mapping
-	 */
-	nvgpu_mem_begin(g, mem);
-
-	return 0;
+	return nvgpu_dma_alloc_sys(g, PAGE_SIZE, mem);
 }
 
 void nvgpu_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	if (nvgpu_mem_is_valid(mem)) {
-		/*
-		 * invalidate the cpu_va mapping
-		 */
-		nvgpu_mem_end(g, mem);
+	if (nvgpu_mem_is_valid(mem))
 		nvgpu_dma_free(g, mem);
-	}
 
 	memset(mem, 0, sizeof(*mem));
 }

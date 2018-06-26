@@ -327,6 +327,10 @@ cifs_reconnect(struct TCP_Server_Info *server)
 	struct cifs_tcon *tcon;
 	struct mid_q_entry *mid_entry;
 	struct list_head retry_list;
+#ifdef CONFIG_CIFS_SYSFS
+	bool notify_reconnect_error = true;
+	int reconnect_error_count = 0;
+#endif
 
 	spin_lock(&GlobalMid_Lock);
 	if (server->tcpStatus == CifsExiting) {
@@ -409,6 +413,15 @@ cifs_reconnect(struct TCP_Server_Info *server)
 		mutex_lock(&server->srv_mutex);
 		rc = generic_ip_connect(server);
 		if (rc) {
+#ifdef CONFIG_CIFS_SYSFS
+			if (notify_reconnect_error) {
+				if (reconnect_error_count == 2) {
+					cifs_sysfs_notify_change(server->hostname, RECONNECT_ERROR);
+					notify_reconnect_error = false;
+				}
+				reconnect_error_count++;
+			}
+#endif
 			cifs_dbg(FYI, "reconnect error %d\n", rc);
 			mutex_unlock(&server->srv_mutex);
 			msleep(3000);

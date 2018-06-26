@@ -51,5 +51,12 @@
 			nvidia,throttle-clocks = <TEGRA_THROTTLE_CPU 10 38400000
 						TEGRA_THROTTLE_GPU 10 25500000>;
 		};
+		aux_balanced {
+			cdev-type = "aux-balanced";
+			#cooling-cells = <2>;
+			nvidia,cutoff = <1>;
+			nvidia,throttle-clocks = <TEGRA_THROTTLE_CPU 400 0
+						TEGRA_THROTTLE_GPU 400 0>;
+		};
 	};
 };

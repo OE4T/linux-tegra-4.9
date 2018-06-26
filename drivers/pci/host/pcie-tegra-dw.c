@@ -2879,7 +2879,6 @@ fail_debugfs:
 	}
 fail_host_init:
 	pm_runtime_put_sync(pcie->dev);
-	pm_runtime_disable(pcie->dev);
 	tegra_bwmgr_unregister(pcie->emc_bw);
 
 	return ret;

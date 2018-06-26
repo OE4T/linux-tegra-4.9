@@ -86,6 +86,23 @@ static void nvlipt_config_common_intr(struct tnvlink_dev *tdev)
 			BIT(NVLIPT_INTR_CONTROL_COMMON_NOSTALLENABLE);
 
 	nvlw_nvlipt_writel(tdev, NVLIPT_INTR_CONTROL_COMMON, reg_val);
+
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_ERR_UC_MASK_LINK0);
+	reg_val &= ~BIT(NVLIPT_ERR_UC_MASK_LINK0_UCINTERNAL);
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_UC_MASK_LINK0, reg_val);
+
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_ERR_UC_SEVERITY_LINK0);
+	reg_val |= BIT(NVLIPT_ERR_UC_SEVERITY_LINK0_UCINTERNAL);
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_UC_SEVERITY_LINK0, reg_val);
+
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_ERR_C_MASK_LINK0);
+	reg_val &= ~BIT(NVLIPT_ERR_C_MASK_LINK0_CINTERNAL);
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_C_MASK_LINK0, reg_val);
+
+	reg_val = nvlw_nvlipt_readl(tdev, NVLIPT_ERR_CONTROL_LINK0);
+	reg_val |= BIT(NVLIPT_ERR_CONTROL_LINK0_FATALENABLE) |
+		BIT(NVLIPT_ERR_CONTROL_LINK0_CORRECTABLEENABLE);
+	nvlw_nvlipt_writel(tdev, NVLIPT_ERR_CONTROL_LINK0, reg_val);
 }
 
 /* Initialize MINION common interrupts */
@@ -238,6 +255,54 @@ static void nvlink_enable_tl_interrupts(struct tnvlink_dev *tdev)
 	nvlw_nvltlc_writel(tdev, NVLTLC_TX_ERR_REPORT_EN_0, reg_val);
 }
 
+static void nvlink_enable_sync2x_interrupts(struct tnvlink_dev *tdev)
+{
+	u32 reg_val = 0;
+
+	reg_val = nvlw_sync2x_readl(tdev, NVSYNC2X_ECCPARITY_CTRL);
+	reg_val |= BIT(NVSYNC2X_ECCPARITY_CTRL_RX_PARITY_CTRL2_ENB) |
+		BIT(NVSYNC2X_ECCPARITY_CTRL_TX_ECCENB0) |
+		BIT(NVSYNC2X_ECCPARITY_CTRL_TX_PARITY_CTRL1_ENB) |
+		BIT(NVSYNC2X_ECCPARITY_CTRL_TX_ECCPARITYCOUNTERENB0) |
+		BIT(NVSYNC2X_ECCPARITY_CTRL_TX_ECCPARITYCOUNTSINGLEBIT0);
+	nvlw_sync2x_writel(tdev, NVSYNC2X_ECCPARITY_CTRL, reg_val);
+
+	/* Set TX ECC parity error limit */
+	reg_val = nvlw_sync2x_readl(tdev, NVSYNC2X_TX_ECCPARITY_ERROR_LIMIT);
+	reg_val &= ~NVSYNC2X_TX_ECCPARITY_ERROR_LIMIT_ERROR_LIMIT_F(~0);
+	reg_val |= NVSYNC2X_TX_ECCPARITY_ERROR_LIMIT_ERROR_LIMIT_F(0x100);
+	nvlw_sync2x_writel(tdev, NVSYNC2X_TX_ECCPARITY_ERROR_LIMIT, reg_val);
+
+	/* Enable logging of the errors */
+	reg_val = nvlw_sync2x_readl(tdev, NVSYNC2X_ERR_LOG_EN_0);
+	reg_val |= BIT(NVSYNC2X_ERR_LOG_EN_0_RXPARITYCTRL2ERR) |
+		BIT(NVSYNC2X_ERR_LOG_EN_0_TXECCPARITYLIMITERR) |
+		BIT(NVSYNC2X_ERR_LOG_EN_0_TXECCHDRDOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_LOG_EN_0_TXECCDATADOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_LOG_EN_0_TXPARITYCTRL0ERR) |
+		BIT(NVSYNC2X_ERR_LOG_EN_0_TXPARITYCTRL1ERR);
+	nvlw_sync2x_writel(tdev, NVSYNC2X_ERR_LOG_EN_0, reg_val);
+
+	/* Enable interrupt generation on logged errors */
+	reg_val = nvlw_sync2x_readl(tdev, NVSYNC2X_ERR_REPORT_EN_0);
+	reg_val |= BIT(NVSYNC2X_ERR_REPORT_EN_0_RXPARITYCTRL2ERR) |
+		BIT(NVSYNC2X_ERR_REPORT_EN_0_TXECCPARITYLIMITERR) |
+		BIT(NVSYNC2X_ERR_REPORT_EN_0_TXECCHDRDOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_REPORT_EN_0_TXECCDATADOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_REPORT_EN_0_TXPARITYCTRL0ERR) |
+		BIT(NVSYNC2X_ERR_REPORT_EN_0_TXPARITYCTRL1ERR);
+	nvlw_sync2x_writel(tdev, NVSYNC2X_ERR_REPORT_EN_0, reg_val);
+
+	/* Enable freezing of the link interface on logged errors */
+	reg_val = nvlw_sync2x_readl(tdev, NVSYNC2X_ERR_CONTAIN_EN_0);
+	reg_val |= BIT(NVSYNC2X_ERR_CONTAIN_EN_0_RXPARITYCTRL2ERR) |
+		BIT(NVSYNC2X_ERR_CONTAIN_EN_0_TXECCHDRDOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_CONTAIN_EN_0_TXECCDATADOUBLEBITERR) |
+		BIT(NVSYNC2X_ERR_CONTAIN_EN_0_TXPARITYCTRL0ERR) |
+		BIT(NVSYNC2X_ERR_CONTAIN_EN_0_TXPARITYCTRL1ERR);
+	nvlw_sync2x_writel(tdev, NVSYNC2X_ERR_CONTAIN_EN_0, reg_val);
+}
+
 /* Enable NVLIPT Link interrupts */
 static void nvlink_enable_nvlipt_interrupts(struct tnvlink_dev *tdev)
 {
@@ -260,6 +325,7 @@ void nvlink_enable_link_interrupts(struct tnvlink_dev *tdev)
 	nvlink_enable_minion_link_intr(tdev);
 	nvlink_enable_dl_interrupts(tdev);
 	nvlink_enable_tl_interrupts(tdev);
+	nvlink_enable_sync2x_interrupts(tdev);
 	nvlink_enable_nvlipt_interrupts(tdev);
 }
 

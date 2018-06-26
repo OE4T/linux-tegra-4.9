@@ -849,6 +849,9 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 num_fbpas,
 	u32 *priv_addr_table, u32 *t);
+int gr_gk20a_get_offset_in_gpccs_segment(struct gk20a *g,
+	int addr_type, u32 num_tpcs, u32 num_ppcs,
+	u32 reg_list_ppc_count, u32 *__offset_in_segment);
 
 void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,
 	struct gr_ctx_buffer_desc *desc);

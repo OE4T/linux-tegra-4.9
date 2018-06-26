@@ -492,6 +492,9 @@ struct gpu_ops {
 		int (*commit_global_ctx_buffers)(struct gk20a *g,
 			struct channel_gk20a *c, bool patch);
 		u32 (*get_nonpes_aware_tpc)(struct gk20a *g, u32 gpc, u32 tpc);
+		int (*get_offset_in_gpccs_segment)(struct gk20a *g,
+			int addr_type, u32 num_tpcs, u32 num_ppcs,
+			u32 reg_list_ppc_count, u32 *__offset_in_segment);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

@@ -7136,6 +7136,69 @@ static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
 	return 0;
 }
 
+int gr_gk20a_get_offset_in_gpccs_segment(struct gk20a *g,
+					int addr_type,
+					u32 num_tpcs,
+					u32 num_ppcs,
+					u32 reg_list_ppc_count,
+					u32 *__offset_in_segment)
+{
+	u32 offset_in_segment = 0;
+	struct gr_gk20a *gr = &g->gr;
+
+	if (addr_type == CTXSW_ADDR_TYPE_TPC) {
+		/*
+		 * reg = gr->ctx_vars.ctxsw_regs.tpc.l;
+		 * offset_in_segment = 0;
+		 */
+	} else if ((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
+			(addr_type == CTXSW_ADDR_TYPE_ETPC)) {
+		offset_in_segment =
+			((gr->ctx_vars.ctxsw_regs.tpc.count *
+				num_tpcs) << 2);
+
+		nvgpu_log(g, gpu_dbg_info | gpu_dbg_gpu_dbg,
+			"egpc etpc offset_in_segment 0x%#08x",
+			offset_in_segment);
+	} else if (addr_type == CTXSW_ADDR_TYPE_PPC) {
+		/*
+		 * The ucode stores TPC data before PPC data.
+		 * Advance offset past TPC data to PPC data.
+		 */
+		offset_in_segment =
+			(((gr->ctx_vars.ctxsw_regs.tpc.count +
+				gr->ctx_vars.ctxsw_regs.etpc.count) *
+			  num_tpcs) << 2);
+	} else if (addr_type == CTXSW_ADDR_TYPE_GPC) {
+		/*
+		 * The ucode stores TPC/PPC data before GPC data.
+		 * Advance offset past TPC/PPC data to GPC data.
+		 *
+		 * Note 1 PES_PER_GPC case
+		 */
+		u32 num_pes_per_gpc = nvgpu_get_litter_value(g,
+				GPU_LIT_NUM_PES_PER_GPC);
+		if (num_pes_per_gpc > 1) {
+			offset_in_segment =
+				((((gr->ctx_vars.ctxsw_regs.tpc.count +
+					gr->ctx_vars.ctxsw_regs.etpc.count) *
+					num_tpcs) << 2) +
+					((reg_list_ppc_count * num_ppcs) << 2));
+		} else {
+			offset_in_segment =
+				(((gr->ctx_vars.ctxsw_regs.tpc.count +
+					gr->ctx_vars.ctxsw_regs.etpc.count) *
+					num_tpcs) << 2);
+		}
+	} else {
+		nvgpu_log_fn(g, "Unknown address type.");
+		return -EINVAL;
+	}
+
+	*__offset_in_segment = offset_in_segment;
+	return 0;
+}
+
 /*
  *  This function will return the 32 bit offset for a priv register if it is
  *  present in the context buffer. The context buffer is in CPU memory.
@@ -7147,7 +7210,6 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					       u32 context_buffer_size,
 					       u32 *priv_offset)
 {
-	struct gr_gk20a *gr = &g->gr;
 	u32 i, data32;
 	int err;
 	int addr_type; /*enum ctxsw_addr_type */
@@ -7158,7 +7220,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	u32 sys_priv_offset, gpc_priv_offset;
 	u32 ppc_mask, reg_list_ppc_count;
 	u8 *context;
-	u32 offset_to_segment;
+	u32 offset_to_segment, offset_in_segment = 0;
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
@@ -7266,45 +7328,18 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 			offset_to_segment = gpc_priv_offset *
 				ctxsw_prog_ucode_header_size_in_bytes();
 
-			if (addr_type == CTXSW_ADDR_TYPE_TPC) {
-				/*reg = gr->ctx_vars.ctxsw_regs.tpc.l;*/
-			} else if ((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
-					(addr_type == CTXSW_ADDR_TYPE_ETPC)) {
-				nvgpu_log(g, gpu_dbg_info | gpu_dbg_gpu_dbg,
-					"egpc etpc offset_to_segment 0x%#08x",
-					offset_to_segment);
-				offset_to_segment +=
-					((gr->ctx_vars.ctxsw_regs.tpc.count *
-					  num_tpcs) << 2);
-			} else if (addr_type == CTXSW_ADDR_TYPE_PPC) {
-				/* The ucode stores TPC data before PPC data.
-				 * Advance offset past TPC data to PPC data. */
-				offset_to_segment +=
-					(((gr->ctx_vars.ctxsw_regs.tpc.count +
-						gr->ctx_vars.ctxsw_regs.etpc.count) *
-					  num_tpcs) << 2);
-			} else if (addr_type == CTXSW_ADDR_TYPE_GPC) {
-				/* The ucode stores TPC/PPC data before GPC data.
-				 * Advance offset past TPC/PPC data to GPC data. */
-				/* note 1 PES_PER_GPC case */
-				u32 num_pes_per_gpc = nvgpu_get_litter_value(g,
-						GPU_LIT_NUM_PES_PER_GPC);
-				if (num_pes_per_gpc > 1) {
-					offset_to_segment +=
-						((((gr->ctx_vars.ctxsw_regs.tpc.count +
-							gr->ctx_vars.ctxsw_regs.etpc.count) *
-							num_tpcs) << 2) +
-							((reg_list_ppc_count * num_ppcs) << 2));
-				} else {
-					offset_to_segment +=
-						(((gr->ctx_vars.ctxsw_regs.tpc.count +
-							gr->ctx_vars.ctxsw_regs.etpc.count) *
-							num_tpcs) << 2);
-				}
-			} else {
-				nvgpu_log_fn(g, "Unknown address type.");
+			err = g->ops.gr.get_offset_in_gpccs_segment(g,
+					addr_type,
+					num_tpcs, num_ppcs, reg_list_ppc_count,
+					&offset_in_segment);
+			if (err)
 				return -EINVAL;
-			}
+
+			offset_to_segment += offset_in_segment;
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"offset_to_segment 0x%#08x",
+				offset_to_segment);
+
 			err = gr_gk20a_process_context_buffer_priv_segment(g,
 							   addr_type, addr,
 							   i, num_tpcs,

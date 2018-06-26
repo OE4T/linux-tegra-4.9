@@ -129,6 +129,8 @@ struct nvgpu_flags_mapping {
 };
 
 static struct nvgpu_flags_mapping flags_mapping[] = {
+	{NVGPU_GPU_FLAGS_CAN_RAILGATE,
+		NVGPU_CAN_RAILGATE},
 	{NVGPU_GPU_FLAGS_HAS_SYNCPOINTS,
 		NVGPU_HAS_SYNCPOINTS},
 	{NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS,

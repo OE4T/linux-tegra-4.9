@@ -458,7 +458,7 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 	 * If User disables rail gating, we take one more
 	 * extra refcount
 	 */
-	if (g->can_railgate)
+	if (nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE))
 		target_ref_cnt = 1;
 	else
 		target_ref_cnt = 2;
@@ -485,7 +485,7 @@ int __gk20a_do_idle(struct gk20a *g, bool force_reset)
 	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
 			   NVGPU_TIMER_CPU_TIMER);
 
-	if (g->can_railgate && !force_reset) {
+	if (nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE) && !force_reset) {
 		/*
 		 * Case 1 : GPU railgate is supported
 		 *
@@ -1047,7 +1047,7 @@ static int gk20a_pm_init(struct device *dev)
 	 * case, set autosuspend delay to negative which
 	 * will suspend runtime pm
 	 */
-	if (g->railgate_delay && g->can_railgate)
+	if (g->railgate_delay && nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE))
 		pm_runtime_set_autosuspend_delay(dev,
 				 g->railgate_delay);
 	else

@@ -605,7 +605,7 @@ static int nvgpu_pci_pm_init(struct device *dev)
 #ifdef CONFIG_PM
 	struct gk20a *g = get_gk20a(dev);
 
-	if (!g->can_railgate) {
+	if (!nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE)) {
 		pm_runtime_disable(dev);
 	} else {
 		if (g->railgate_delay)

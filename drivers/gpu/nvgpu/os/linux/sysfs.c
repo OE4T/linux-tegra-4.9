@@ -305,16 +305,17 @@ static ssize_t railgate_enable_store(struct device *dev,
 	unsigned long railgate_enable = 0;
 	/* dev is guaranteed to be valid here. Ok to de-reference */
 	struct gk20a *g = get_gk20a(dev);
+	bool enabled = nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE);
 	int err;
 
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
 		return -EINVAL;
 
-	if (railgate_enable && !g->can_railgate) {
-		g->can_railgate = true;
+	if (railgate_enable && !enabled) {
+		__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, true);
 		pm_runtime_set_autosuspend_delay(dev, g->railgate_delay);
-	} else if (railgate_enable == 0 && g->can_railgate) {
-		g->can_railgate = false;
+	} else if (railgate_enable == 0 && enabled) {
+		__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, false);
 		pm_runtime_set_autosuspend_delay(dev, -1);
 	}
 	/* wake-up system to make rail-gating setting effective */
@@ -323,8 +324,9 @@ static ssize_t railgate_enable_store(struct device *dev,
 		return err;
 	gk20a_idle(g);
 
-	nvgpu_info(g, "railgate is %s.", g->can_railgate ?
-		"enabled" : "disabled");
+	nvgpu_info(g, "railgate is %s.",
+			nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE) ?
+			"enabled" : "disabled");
 
 	return count;
 }
@@ -334,7 +336,8 @@ static ssize_t railgate_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", g->can_railgate ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+			nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE) ? 1 : 0);
 }
 
 static DEVICE_ATTR(railgate_enable, ROOTRW, railgate_enable_read,
@@ -349,7 +352,7 @@ static ssize_t railgate_delay_store(struct device *dev,
 	struct gk20a *g = get_gk20a(dev);
 	int err;
 
-	if (!g->can_railgate) {
+	if (!nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE)) {
 		nvgpu_info(g, "does not support power-gating");
 		return count;
 	}

@@ -209,25 +209,6 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 }
 
 /*
- * Ensure that there's a CPU mapping for the page directory memory. This won't
- * always be the case for 32 bit systems since we may need to save kernel
- * virtual memory.
- */
-static int map_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
-{
-	return nvgpu_mem_begin(g, pd->mem);
-}
-
-/*
- * Handle any necessary CPU unmap semantics for a page directories DMA memory.
- * For 64 bit platforms this is a noop.
- */
-static void unmap_gmmu_pages(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
-{
-	nvgpu_mem_end(g, pd->mem);
-}
-
-/*
  * Return the _physical_ address of a page directory.
  */
 static u64 nvgpu_pde_phys_addr(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
@@ -451,21 +432,12 @@ static int __set_pd_level(struct vm_gk20a *vm,
 				attrs);
 
 		if (next_l->update_entry) {
-			err = map_gmmu_pages(g, next_pd);
-			if (err) {
-				nvgpu_err(g,
-					  "couldn't map ptes for update as=%d",
-					  vm_aspace_id(vm));
-				return err;
-			}
-
 			err = __set_pd_level(vm, next_pd,
 					     lvl + 1,
 					     phys_addr,
 					     virt_addr,
 					     chunk_size,
 					     attrs);
-			unmap_gmmu_pages(g, next_pd);
 
 			if (err)
 				return err;
@@ -634,13 +606,6 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 	 */
 	length = nvgpu_align_map_length(vm, length, attrs);
 
-	err = map_gmmu_pages(g, &vm->pdb);
-	if (err) {
-		nvgpu_err(g, "couldn't map ptes for update as=%d",
-			  vm_aspace_id(vm));
-		return err;
-	}
-
 	__gmmu_dbg(g, attrs,
 		   "vm=%s "
 		   "%-5s GPU virt %#-12llx +%#-9llx    phys %#-12llx "
@@ -669,7 +634,6 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 						length,
 						attrs);
 
-	unmap_gmmu_pages(g, &vm->pdb);
 	nvgpu_mb();
 
 	__gmmu_dbg(g, attrs, "%-5s Done!", sgt ? "MAP" : "UNMAP");
@@ -897,10 +861,8 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 	pte_size = (u32)(l->entry_size / sizeof(u32));
 
 	if (data) {
-		map_gmmu_pages(g, pd);
 		for (i = 0; i < pte_size; i++)
 			data[i] = nvgpu_mem_rd32(g, pd->mem, pte_base + i);
-		unmap_gmmu_pages(g, pd);
 	}
 
 	if (pd_out)
@@ -944,13 +906,11 @@ int __nvgpu_set_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte)
 
 	pte_size = __nvgpu_pte_words(g);
 
-	map_gmmu_pages(g, pd);
 	for (i = 0; i < pte_size; i++) {
 		pd_write(g, pd, pd_offs + i, pte[i]);
 		pte_dbg(g, attrs_ptr,
 			"PTE: idx=%-4u (%d) 0x%08x", pd_idx, i, pte[i]);
 	}
-	unmap_gmmu_pages(g, pd);
 
 	/*
 	 * Ensures the pd_write()s are done. The pd_write() does not do this

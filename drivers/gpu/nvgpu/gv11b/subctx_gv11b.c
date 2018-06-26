@@ -62,9 +62,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	nvgpu_log(g, gpu_dbg_fn, "gv11b_alloc_subctx_header");
 
 	if (!nvgpu_mem_is_valid(&ctx->mem)) {
-		ret = nvgpu_dma_alloc_flags_sys(g,
-				0, /* No Special flags */
-				ctxsw_prog_fecs_header_v(),
+		ret = nvgpu_dma_alloc_sys(g, ctxsw_prog_fecs_header_v(),
 				&ctx->mem);
 		if (ret) {
 			nvgpu_err(g, "failed to allocate sub ctx header");

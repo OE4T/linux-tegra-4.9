@@ -319,13 +319,9 @@ int nvgpu_mem_create_from_mem(struct gk20a *g,
 void __nvgpu_mem_free_vidmem_alloc(struct gk20a *g, struct nvgpu_mem *vidmem);
 
 /*
- * Buffer accessors - wrap between begin() and end() if there is no permanent
- * kernel mapping for this buffer.
+ * Buffer accessors. Sysmem buffers always have a CPU mapping and vidmem
+ * buffers are accessed via PRAMIN.
  */
-
-int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem);
-/* nop for null mem, like with free() or vunmap() */
-void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem);
 
 /* word-indexed offset */
 u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w);

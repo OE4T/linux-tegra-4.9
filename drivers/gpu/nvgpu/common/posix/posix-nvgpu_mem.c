@@ -31,16 +31,6 @@
  * can emulate a lot of the DMA mem functionality for unit testing purposes.
  */
 
-int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
-{
-	return 0;
-}
-
-void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
-{
-	return;
-}
-
 u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 {
 	u32 *mem_ptr = (u32 *)mem->cpu_va;

@@ -22,6 +22,7 @@
 #define __MACH_TEGRA_CPU_TEGRA_H
 
 #include <linux/fs.h>
+#include <linux/tegra_throttle.h>
 
 unsigned int tegra_getspeed(unsigned int cpu);
 int tegra_update_cpu_speed(unsigned long rate);
@@ -86,6 +87,13 @@ static inline int tegra_update_cpu_edp_limits(void)
 { return 0; }
 static inline int tegra_cpu_reg_mode_force_normal(bool force)
 { return 0; }
+#endif
+
+#ifdef CONFIG_TEGRA_CPU_VOLT_CAP
+struct tegra_cooling_device *tegra_vc_get_cdev(void);
+#else
+static inline struct tegra_cooling_device *tegra_vc_get_cdev(void)
+{ return NULL; }
 #endif
 
 #ifdef CONFIG_TEGRA_HMP_CLUSTER_CONTROL

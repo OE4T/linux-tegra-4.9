@@ -365,7 +365,8 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	need_job_tracking = (flags & NVGPU_SUBMIT_FLAGS_FENCE_WAIT) ||
 			(flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) ||
 			c->timeout.enabled ||
-			(g->can_railgate && !c->deterministic) ||
+			(nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE)
+			 && !c->deterministic) ||
 			!skip_buffer_refcounting;
 
 	if (need_job_tracking) {
@@ -402,7 +403,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		need_deferred_cleanup = !c->deterministic ||
 					need_sync_framework ||
 					c->timeout.enabled ||
-					(g->can_railgate &&
+					(nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE) &&
 					 !c->deterministic) ||
 					!skip_buffer_refcounting;
 

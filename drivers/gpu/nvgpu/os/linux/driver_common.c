@@ -167,7 +167,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 #endif
 	g->ptimer_src_freq = platform->ptimer_src_freq;
 	g->support_pmu = support_gk20a_pmu(dev_from_gk20a(g));
-	g->can_railgate = platform->can_railgate_init;
+	__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, platform->can_railgate_init);
 	g->ldiv_slowdown_factor = platform->ldiv_slowdown_factor_init;
 	/* if default delay is not set, set default delay to 500msec */
 	if (platform->railgate_delay_init)

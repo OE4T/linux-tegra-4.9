@@ -35,6 +35,7 @@ struct gk20a;
 #define NVGPU_DRIVER_IS_DYING			2
 #define NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP 3
 #define NVGPU_FECS_TRACE_VA			4
+#define NVGPU_CAN_RAILGATE			5
 
 /*
  * ECC flags

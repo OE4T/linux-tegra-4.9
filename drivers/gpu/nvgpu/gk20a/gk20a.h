@@ -1400,7 +1400,6 @@ struct gk20a {
 
 	u32 ptimer_src_freq;
 
-	bool can_railgate;
 	int railgate_delay;
 	u8 ldiv_slowdown_factor;
 	unsigned int aggressive_sync_destroy_thresh;

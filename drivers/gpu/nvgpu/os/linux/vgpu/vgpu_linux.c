@@ -84,7 +84,7 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
 	g->has_syncpoints = platform->has_syncpoints;
 	g->ptimer_src_freq = platform->ptimer_src_freq;
-	g->can_railgate = platform->can_railgate_init;
+	__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, platform->can_railgate_init);
 	g->railgate_delay = platform->railgate_delay_init;
 
 	__nvgpu_set_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES,

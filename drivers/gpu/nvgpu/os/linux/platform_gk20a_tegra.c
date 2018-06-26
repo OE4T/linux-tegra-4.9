@@ -792,7 +792,7 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	if (joint_xpu_rail) {
 		nvgpu_log_info(g, "XPU rails are joint\n");
-		platform->g->can_railgate = false;
+		__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, false);
 	}
 
 	platform->g->clk.gpc_pll.id = GK20A_GPC_PLL;

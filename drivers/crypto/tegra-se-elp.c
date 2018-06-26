@@ -28,6 +28,7 @@
 #include <linux/of_device.h>
 #include <linux/types.h>
 #include <linux/errno.h>
+#include <linux/version.h>
 #include <soc/tegra/chip-id.h>
 #include <crypto/akcipher.h>
 #include <crypto/hash.h>
@@ -3244,7 +3245,11 @@ free_pt:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_eddsa_max_size(struct crypto_akcipher *tfm)
+#else
 static int tegra_se_eddsa_max_size(struct crypto_akcipher *tfm)
+#endif
 {
 	struct tegra_se_eddsa_ctx *ctx = akcipher_tfm_ctx(tfm);
 	int nbytes = ctx->nwords * 4;
@@ -3477,8 +3482,13 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int tegra_se_ecdh_set_secret(struct crypto_kpp *tfm, const void *buf,
+				    unsigned int len)
+#else
 static int tegra_se_ecdh_set_secret(struct crypto_kpp *tfm, void *buf,
 				    unsigned int len)
+#endif
 {
 	struct tegra_se_ecdh_context *ctx = kpp_tfm_ctx(tfm);
 	struct ecdh params;
@@ -3499,7 +3509,11 @@ static int tegra_se_ecdh_set_secret(struct crypto_kpp *tfm, void *buf,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_ecdh_max_size(struct crypto_kpp *tfm)
+#else
 static int tegra_se_ecdh_max_size(struct crypto_kpp *tfm)
+#endif
 {
 	struct tegra_se_ecdh_context *ctx = kpp_tfm_ctx(tfm);
 	const struct tegra_se_ecc_curve *curve =
@@ -3649,7 +3663,11 @@ clk_dis:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_pka1_rsa_max_size(struct crypto_akcipher *tfm)
+#else
 static int tegra_se_pka1_rsa_max_size(struct crypto_akcipher *tfm)
+#endif
 {
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 
@@ -4361,8 +4379,13 @@ static int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm,
 	ctx->ndigits = ndigits;
 	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	if (ecc_is_key_valid(ctx->curve_id, ctx->ndigits,
+			     (const u64 *)params.key, params.key_size) < 0)
+#else
 	if (ecc_is_key_valid(ctx->curve_id, ctx->ndigits,
 			     (const u8 *)params.key, params.key_size) < 0)
+#endif
 		return -EINVAL;
 
 	vli_copy_from_buf(ctx->private_key, ndigits, params.key, nbytes);
@@ -4372,7 +4395,11 @@ static int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
+#else
 static int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
+#endif
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
 	unsigned int nbytes = ctx->ndigits << ECC_DIGITS_TO_BYTES_SHIFT;

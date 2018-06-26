@@ -708,7 +708,7 @@ static unsigned int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
 
 	while (sl) {
 		sg_nents++;
-		nbytes -= min(sl->length, (size_t)nbytes);
+		nbytes -= min((size_t)sl->length, (size_t)nbytes);
 		if (!nbytes)
 			break;
 		sl = sg_next(sl);
@@ -1439,8 +1439,8 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 			return ret;
 		}
 		se_ll->addr = sg_dma_address(sg);
-		se_ll->data_len = min(sg->length, (size_t)total_loop);
-		total_loop -= min(sg->length, (size_t)total_loop);
+		se_ll->data_len = min((size_t)sg->length, (size_t)total_loop);
+		total_loop -= min((size_t)sg->length, (size_t)total_loop);
 		sg = sg_next(sg);
 		se_ll++;
 	}
@@ -3009,7 +3009,11 @@ static int tegra_init_rsa_key_slot(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_rsa_max_size(struct crypto_akcipher *tfm)
+#else
 static int tegra_se_rsa_max_size(struct crypto_akcipher *tfm)
+#endif
 {
 	struct tegra_se_aes_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 
@@ -3642,8 +3646,14 @@ free:
 	return err;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int tegra_se_dh_set_secret(struct crypto_kpp *tfm,
+				  const void *buf,
+				  unsigned int len)
+#else
 static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, void *buf,
 				  unsigned int len)
+#endif
 {
 	int ret = 0;
 
@@ -3669,7 +3679,11 @@ static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, void *buf,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_dh_max_size(struct crypto_kpp *tfm)
+#else
 static int tegra_se_dh_max_size(struct crypto_kpp *tfm)
+#endif
 {
 	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
 

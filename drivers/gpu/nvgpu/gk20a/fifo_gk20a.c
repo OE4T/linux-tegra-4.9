@@ -2743,6 +2743,17 @@ void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			fifo_preempt_type_channel_f());
 }
 
+static u32 gk20a_fifo_get_preempt_timeout(struct gk20a *g)
+{
+	/* Use fifo_eng_timeout converted to ms for preempt
+	 * polling. gr_idle_timeout i.e 3000 ms is and not appropriate
+	 * for polling preempt done as context switch timeout gets
+	 * triggered every 100 ms and context switch recovery
+	 * happens every 3000 ms */
+
+	return g->fifo_eng_timeout_us / 1000;
+}
+
 int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		unsigned int id_type)
 {
@@ -2750,7 +2761,7 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -EBUSY;
 
-	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+	nvgpu_timeout_init(g, &timeout, gk20a_fifo_get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		if (!(gk20a_readl(g, fifo_preempt_r()) &
@@ -2761,8 +2772,12 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout, "preempt timeout"));
+	} while (!nvgpu_timeout_expired(&timeout));
 
+	if (ret) {
+		nvgpu_err(g, "preempt timeout: id: %u id_type: %d ",
+			id, id_type);
+	}
 	return ret;
 }
 
@@ -2848,8 +2863,16 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
 
-	if (ret)
-		gk20a_fifo_preempt_timeout_rc(g, chid, false);
+	if (ret) {
+		if (nvgpu_platform_is_silicon(g)) {
+			nvgpu_err(g, "preempt timed out for chid: %u, "
+			"ctxsw timeout will trigger recovery if needed", chid);
+		} else {
+			gk20a_fifo_preempt_timeout_rc(g, chid, false);
+		}
+	}
+
+
 
 	return ret;
 }
@@ -2880,8 +2903,14 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
 
-	if (ret)
-		gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+	if (ret) {
+		if (nvgpu_platform_is_silicon(g)) {
+			nvgpu_err(g, "preempt timed out for tsgid: %u, "
+			"ctxsw timeout will trigger recovery if needed", tsgid);
+		} else {
+			gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+		}
+	}
 
 	return ret;
 }
@@ -3120,6 +3149,11 @@ int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret) {
+		nvgpu_err(g, "runlist wait timeout: runlist id: %u",
+			runlist_id);
+	}
 
 	return ret;
 }

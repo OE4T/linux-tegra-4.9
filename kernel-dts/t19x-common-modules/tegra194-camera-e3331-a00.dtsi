@@ -77,6 +77,8 @@
 					iovdd-reg = "vif";
 					dvdd-reg = "vdig";
 
+					has-eeprom;
+
 					/**
 					* ==== Modes ====
 					* A modeX node is required to support v4l2 driver

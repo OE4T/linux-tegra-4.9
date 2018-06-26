@@ -5045,7 +5045,6 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	u8 port = udev->portnum - 1;
 	bool is_roothub_port;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
-	u32 portsc;
 
 	if (udev == NULL)
 		return;
@@ -5055,11 +5054,13 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 		return;
 	}
 
-	portsc = readl(xhci->usb2_ports[udev->portnum - 1]);
 	/* If disconnected from USB2.0 root hub */
-	if ((xhci->main_hcd->self.root_hub == udev->parent) &&
-	    !(portsc & PORT_CONNECT))
-		tegra_xhci_downgrade_check_to_disable(hcd, udev, true);
+	if (xhci->main_hcd->self.root_hub == udev->parent) {
+		u32 portsc = readl(xhci->usb2_ports[udev->portnum - 1]);
+
+		if (!(portsc & PORT_CONNECT))
+			tegra_xhci_downgrade_check_to_disable(hcd, udev, true);
+	}
 
 	xhci_free_dev(hcd, udev);
 

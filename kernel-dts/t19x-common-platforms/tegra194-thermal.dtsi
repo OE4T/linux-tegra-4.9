@@ -116,6 +116,20 @@
 					hysteresis = <0>;
 					writable;
 				};
+
+				trip_bthrot {
+					temperature = <86000>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/AUX-therm/trips/trip_bthrot}>;
+					cdev-type = "aux-balanced";
+					cooling-device = <&{/bthrot_cdev/aux_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
 			};
 		};
 

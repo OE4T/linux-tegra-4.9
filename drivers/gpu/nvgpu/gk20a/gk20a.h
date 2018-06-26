@@ -662,9 +662,9 @@ struct gpu_ops {
 				struct ch_state *ch_state);
 		u32 (*intr_0_error_mask)(struct gk20a *g);
 		int (*is_preempt_pending)(struct gk20a *g, u32 id,
-			unsigned int id_type);
+			unsigned int id_type, unsigned int timeout_rc_type);
 		int (*preempt_ch_tsg)(struct gk20a *g, u32 id,
-			unsigned int id_type);
+			unsigned int id_type, unsigned int timeout_rc_type);
 		void (*init_pbdma_intr_descs)(struct fifo_gk20a *f);
 		int (*reset_enable_hw)(struct gk20a *g);
 		int (*setup_userd)(struct channel_gk20a *c);
@@ -1109,7 +1109,7 @@ struct gpu_ops {
 		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
 		bool (*is_intr_nvlink_pending)(struct gk20a *g, u32 mc_intr);
 		bool (*is_stall_and_eng_intr_pending)(struct gk20a *g,
-					u32 act_eng_id, u32 *eng_intr_pending);
+								u32 act_eng_id);
 		u32 (*intr_stall)(struct gk20a *g);
 		void (*intr_stall_pause)(struct gk20a *g);
 		void (*intr_stall_resume)(struct gk20a *g);

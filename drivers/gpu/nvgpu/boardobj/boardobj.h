@@ -28,6 +28,7 @@
 #include "ctrl/ctrlboardobj.h"
 
 struct boardobj;
+struct nvgpu_list_node;
 
 /*
 * check whether the specified BOARDOBJ object implements the queried

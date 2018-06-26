@@ -287,6 +287,10 @@ nvgpu_clk_arb_work_item_from_worker_item(struct nvgpu_list_node *node)
 void nvgpu_clk_arb_worker_enqueue(struct gk20a *g,
 		struct nvgpu_clk_arb_work_item *work_item);
 
+int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb);
+
+int nvgpu_clk_arb_worker_init(struct gk20a *g);
+
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g);
 
 int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
@@ -338,11 +342,19 @@ void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock);
 
 void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g);
 
+void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm);
+
 void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm);
+
+void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm);
 
 void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount);
 
 void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount);
+
+u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
+				struct nvgpu_clk_arb_target *target,
+				u32 alarm);
 
 int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue,

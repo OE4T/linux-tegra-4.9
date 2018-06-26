@@ -42,6 +42,16 @@ int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	return -ENOSYS;
 }
 
+int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
+{
+	return -ENOSYS;
+}
+
+int nvgpu_clk_arb_worker_init(struct gk20a *g)
+{
+	return -ENOSYS;
+}
+
 int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 					 u32 api_domain, u16 *actual_mhz)
 {
@@ -53,7 +63,6 @@ int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 {
 	return -ENOSYS;
 }
-
 
 int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 					   u32 api_domain,
@@ -127,6 +136,17 @@ int nvgpu_clk_arb_install_request_fd(struct gk20a *g,
 	return -ENOSYS;
 }
 
+u32 nvgpu_clk_arb_notify(struct nvgpu_clk_dev *dev,
+				struct nvgpu_clk_arb_target *target,
+				u32 alarm)
+{
+	return 0;
+}
+
+void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount)
+{
+}
+
 void nvgpu_clk_arb_schedule_vf_table_update(struct gk20a *g)
 {
 }
@@ -146,4 +166,28 @@ void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
 
 void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)
 {
+}
+
+void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm)
+{
+}
+
+void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm)
+{
+}
+
+void nvgpu_clk_arb_event_post_event(struct nvgpu_clk_dev *dev)
+{
+}
+
+void nvgpu_clk_arb_worker_enqueue(struct gk20a *g,
+		struct nvgpu_clk_arb_work_item *work_item)
+{
+}
+
+int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
+				struct nvgpu_clk_notification_queue *queue,
+				size_t events_number)
+{
+	return -ENOSYS;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,10 +22,16 @@
 #ifndef CLK_ARB_GP106_H
 #define CLK_ARB_GP106_H
 
+struct nvgpu_clk_session;
+struct nvgpu_clk_arb;
+
 u32 gp106_get_arbiter_clk_domains(struct gk20a *g);
 int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 		u16 *min_mhz, u16 *max_mhz);
 int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 		u16 *default_mhz);
+int gp106_init_clk_arbiter(struct gk20a *g);
+void gp106_clk_arb_run_arbiter_cb(struct nvgpu_clk_arb *arb);
+void gp106_clk_arb_cleanup(struct nvgpu_clk_arb *arb);
 
 #endif /* CLK_ARB_GP106_H */

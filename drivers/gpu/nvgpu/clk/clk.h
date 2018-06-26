@@ -1,7 +1,7 @@
 /*
  * general clock structures & definitions
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -126,12 +126,6 @@ u32 clk_domain_get_f_or_v(
 	u16 *pclkmhz,
 	u32 *pvoltuv,
 	u8 railidx
-);
-u32 clk_domain_get_f_points(
-	struct gk20a *g,
-	u32 clkapidomain,
-	u32 *fpointscount,
-	u16 *freqpointsinmhz
 );
 int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
 int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);

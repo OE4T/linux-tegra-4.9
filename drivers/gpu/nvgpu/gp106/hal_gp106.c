@@ -675,6 +675,7 @@ static const struct gpu_ops gp106_ops = {
 		.get_crystal_clk_hz = gp106_crystal_clk_hz,
 		.measure_freq = gp106_clk_measure_freq,
 		.suspend_clk_support = gp106_suspend_clk_support,
+		.clk_domain_get_f_points = gp106_clk_domain_get_f_points,
 		.mclk_init = gp106_mclk_init,
 		.mclk_change = gp106_mclk_change,
 		.mclk_deinit = gp106_mclk_deinit,
@@ -684,6 +685,9 @@ static const struct gpu_ops gp106_ops = {
 		.get_arbiter_clk_range = gp106_get_arbiter_clk_range,
 		.get_arbiter_clk_default = gp106_get_arbiter_clk_default,
 		.get_current_pstate = nvgpu_clk_arb_get_current_pstate,
+		.arbiter_clk_init = gp106_init_clk_arbiter,
+		.clk_arb_run_arbiter_cb = gp106_clk_arb_run_arbiter_cb,
+		.clk_arb_cleanup = gp106_clk_arb_cleanup,
 	},
 	.regops = {
 		.exec_regops = exec_regops_gk20a,
@@ -849,6 +853,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->clk.mclk_init = gp106_ops.clk.mclk_init;
 	gops->clk.mclk_change = gp106_ops.clk.mclk_change;
 	gops->clk.mclk_deinit = gp106_ops.clk.mclk_deinit;
+	gops->clk.clk_domain_get_f_points = gp106_ops.clk.clk_domain_get_f_points;
 
 	gops->clk_arb = gp106_ops.clk_arb;
 	gops->regops = gp106_ops.regops;

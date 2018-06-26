@@ -32,7 +32,9 @@
 #include <nvgpu/list.h>
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/pmu.h>
 
+#include "clk/clk.h"
 #include "gk20a/gk20a.h"
 #include "gp106/mclk_gp106.h"
 
@@ -242,6 +244,37 @@ read_err:
 	return cntr;
 
 }
+
+int gp106_clk_domain_get_f_points(
+	struct gk20a *g,
+	u32 clkapidomain,
+	u32 *pfpointscount,
+	u16 *pfreqpointsinmhz)
+{
+	int status = -EINVAL;
+	struct clk_domain *pdomain;
+	u8 i;
+	struct clk_pmupstate *pclk = &g->clk_pmu;
+
+	if (pfpointscount == NULL)
+		return -EINVAL;
+
+	if ((pfreqpointsinmhz == NULL) && (*pfpointscount != 0))
+		return -EINVAL;
+
+	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
+			struct clk_domain *, pdomain, i) {
+		if (pdomain->api_domain == clkapidomain) {
+			status = pdomain->clkdomainclkgetfpoints(g, pclk,
+				pdomain, pfpointscount,
+				pfreqpointsinmhz,
+				CLK_PROG_VFE_ENTRY_LOGIC);
+			return status;
+		}
+	}
+	return status;
+}
+
 
 #ifdef CONFIG_DEBUG_FS
 static int gp106_get_rate_show(void *data , u64 *val) {

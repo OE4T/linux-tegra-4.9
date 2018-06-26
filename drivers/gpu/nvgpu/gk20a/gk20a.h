@@ -41,6 +41,7 @@ struct nvgpu_nvhost_dev;
 struct nvgpu_cpu_time_correlation_sample;
 struct nvgpu_mem_sgt;
 struct nvgpu_warpstate;
+struct nvgpu_clk_session;
 struct nvgpu_clk_arb;
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 struct nvgpu_gpu_ctxsw_trace_filter;
@@ -1083,6 +1084,9 @@ struct gpu_ops {
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
 		u32 (*get_crystal_clk_hz)(struct gk20a *g);
+		int (*clk_domain_get_f_points)(struct gk20a *g,
+			u32 clkapidomain, u32 *pfpointscount,
+			u16 *pfreqpointsinmhz);
 		unsigned long (*measure_freq)(struct gk20a *g, u32 api_domain);
 		unsigned long (*get_rate)(struct gk20a *g, u32 api_domain);
 		int (*set_rate)(struct gk20a *g, u32 api_domain, unsigned long rate);
@@ -1107,15 +1111,18 @@ struct gpu_ops {
 		bool support_lpwr_pg;
 	} clk;
 	struct {
+		int (*arbiter_clk_init)(struct gk20a *g);
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);
 		int (*get_arbiter_clk_range)(struct gk20a *g, u32 api_domain,
 				u16 *min_mhz, u16 *max_mhz);
 		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,
 				u16 *default_mhz);
+		void (*clk_arb_run_arbiter_cb)(struct nvgpu_clk_arb *arb);
 		/* This function is inherently unsafe to call while
 		 *  arbiter is running arbiter must be blocked
 		 *  before calling this function */
 		int (*get_current_pstate)(struct gk20a *g);
+		void (*clk_arb_cleanup)(struct nvgpu_clk_arb *arb);
 	} clk_arb;
 	struct {
 		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);

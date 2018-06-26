@@ -156,8 +156,8 @@ int gp106_init_clk_support(struct gk20a *g)
 			.reg_ctrl_idx  = trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_source_dramdiv4_rec_clk1_f(),
 			.reg_cntr_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cnt_r()
 		},
-		.name = "dramdiv2_rec_clk1",
-		.scale = 2
+		.name = "dramdiv4_rec_clk1",
+		.scale = 4
 	};
 	clk->namemap_xlat_table[3] = CTRL_CLK_DOMAIN_MCLK;
 

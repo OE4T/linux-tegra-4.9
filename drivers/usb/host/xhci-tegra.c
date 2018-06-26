@@ -5043,9 +5043,17 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 {
 	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
 	u8 port = udev->portnum - 1;
-	bool is_roothub_port = udev->parent == udev->bus->root_hub;
+	bool is_roothub_port;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 	u32 portsc;
+
+	if (udev == NULL)
+		return;
+
+	if (xhci == NULL) {
+		dev_info(&udev->dev, "xhci is NULL");
+		return;
+	}
 
 	portsc = readl(xhci->usb2_ports[udev->portnum - 1]);
 	/* If disconnected from USB2.0 root hub */
@@ -5056,6 +5064,7 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	xhci_free_dev(hcd, udev);
 
 	/* make sure CDP is enabled for for USB2.0 root hub ports */
+	is_roothub_port = udev->parent == udev->bus->root_hub;
 	if (is_roothub_port && tegra->connected_usb2_ports[port] &&
 			tegra->cdp_enabled && usb_hcd_is_primary_hcd(hcd)) {
 		/* we have to make sure CDP is turned on before VBUS on */

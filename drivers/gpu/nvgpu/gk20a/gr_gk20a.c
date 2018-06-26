@@ -1763,9 +1763,6 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				return -ENOMEM;
 			}
 		}
-
-		/* Now clear the buffer */
-		nvgpu_memset(g, &pm_ctx->mem, 0, 0, pm_ctx->mem.size);
 	}
 
 	data = nvgpu_mem_rd(g, gr_mem, ctxsw_prog_main_image_pm_o());

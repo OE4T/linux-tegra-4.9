@@ -79,8 +79,6 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			nvgpu_dma_free(g, &ctx->mem);
 			return -ENOMEM;
 		}
-		/* Now clear the buffer */
-		nvgpu_memset(g, &ctx->mem, 0, 0, ctx->mem.size);
 	}
 	return ret;
 }

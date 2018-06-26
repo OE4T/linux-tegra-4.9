@@ -145,7 +145,8 @@
 	power-domain {
 		compatible = "tegra-power-domains";
 
-		ape_pd: ape-pd {
+#if defined(LINUX_VERSION) && LINUX_VERSION < 414
+		pd_audio: ape-pd {
 			compatible = "nvidia,tegra210-ape-pd";
 			is_off;
 			#power-domain-cells = <0>;
@@ -160,8 +161,9 @@
 			compatible = "nvidia,tegra210-adsp-pd";
 			is_off;
 			#power-domain-cells = <0>;
-			power-domains = <&ape_pd>;
+			power-domains = <&pd_audio>;
 		};
+#endif
 
 		host1x_pd: host1x-pd {
 			compatible = "nvidia,tegra210-host1x-pd";

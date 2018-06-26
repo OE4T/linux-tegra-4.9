@@ -1829,7 +1829,7 @@
 
 	pcie-controller@1003000 {
 		compatible = "nvidia,tegra210-pcie", "nvidia,tegra124-pcie";
-		power-domains = <&pcie_pd>;
+		power-domains = <&pd_pcie>;
 		device_type = "pci";
 		reg = <0x0 0x01003000 0x0 0x00000800   /* PADS registers */
 		       0x0 0x01003800 0x0 0x00000800   /* AFI registers */

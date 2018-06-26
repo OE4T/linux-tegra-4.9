@@ -227,12 +227,14 @@
 			partition-id = <TEGRA210_POWER_DOMAIN_NVJPG>;
 		};
 
-		pcie_pd: pcie-pd {
+#if defined(LINUX_VERSION) && LINUX_VERSION < 414
+		pd_pcie: pcie-pd {
 			compatible = "nvidia,tegra210-pcie-pd";
 			is_off;
 			#power-domain-cells = <0>;
 			partition-id = <TEGRA210_POWER_DOMAIN_PCIE>;
 		};
+#endif
 
 		sata_pd: sata-pd {
 			compatible = "nvidia,tegra210-sata-pd";

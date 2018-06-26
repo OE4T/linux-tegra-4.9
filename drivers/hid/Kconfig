@@ -579,16 +579,6 @@ config HID_NTRIG
 	---help---
 	Support for N-Trig touch screen.
 
-config HID_NVIDIA_STAND
-	tristate "NVIDIA Stand driver support"
-	depends on HID
-	---help---
-	  Provides support for NVIDIA Stand device to process vendor specific
-	  HID data.
-
-	  Say Y here to enable this driver and to compile this driver as a module,
-	  choose M here. If unsure, say N
-
 config HID_ORTEK
 	tristate "Ortek PKB-1700/WKB-2000/Skycable wireless keyboard and mouse trackpad"
 	depends on HID

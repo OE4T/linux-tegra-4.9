@@ -1545,7 +1545,7 @@ clean_up:
 	return 0;
 }
 
-static bool gk20a_fifo_handle_mmu_fault(
+static bool gk20a_fifo_handle_mmu_fault_locked(
 	struct gk20a *g,
 	u32 mmu_fault_engines, /* queried from HW if 0 */
 	u32 hw_id, /* queried from HW if ~(u32)0 OR mmu_fault_engines == 0*/
@@ -1783,6 +1783,32 @@ static bool gk20a_fifo_handle_mmu_fault(
 	return verbose;
 }
 
+static bool gk20a_fifo_handle_mmu_fault(
+	struct gk20a *g,
+	u32 mmu_fault_engines, /* queried from HW if 0 */
+	u32 hw_id, /* queried from HW if ~(u32)0 OR mmu_fault_engines == 0*/
+	bool id_is_tsg)
+{
+	u32 rlid;
+	bool verbose;
+
+	nvgpu_log_fn(g, " ");
+
+	nvgpu_log_info(g, "acquire runlist_lock for all runlists");
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+		nvgpu_mutex_acquire(&g->fifo.runlist_info[rlid].runlist_lock);
+	}
+
+	verbose = gk20a_fifo_handle_mmu_fault_locked(g, mmu_fault_engines,
+			hw_id, id_is_tsg);
+
+	nvgpu_log_info(g, "release runlist_lock for all runlists");
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+		nvgpu_mutex_release(&g->fifo.runlist_info[rlid].runlist_lock);
+	}
+	return verbose;
+}
+
 static void gk20a_fifo_get_faulty_id_type(struct gk20a *g, int engine_id,
 					  u32 *id, u32 *type)
 {
@@ -1906,6 +1932,12 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 	u32 ref_id_is_tsg = false;
 	bool id_is_known = (id_type != ID_TYPE_UNKNOWN) ? true : false;
 	bool id_is_tsg = (id_type == ID_TYPE_TSG) ? true : false;
+	u32 rlid;
+
+	nvgpu_log_info(g, "acquire runlist_lock for all runlists");
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+		nvgpu_mutex_acquire(&g->fifo.runlist_info[rlid].runlist_lock);
+	}
 
 	if (id_is_known) {
 		engine_ids = gk20a_fifo_engines_on_id(g, hw_id, id_is_tsg);
@@ -1963,13 +1995,18 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 				fifo_intr_0_sched_error_reset_f());
 
 		g->ops.fifo.trigger_mmu_fault(g, engine_ids);
-		gk20a_fifo_handle_mmu_fault(g, mmu_fault_engines, ref_id,
+		gk20a_fifo_handle_mmu_fault_locked(g, mmu_fault_engines, ref_id,
 				ref_id_is_tsg);
 
 		val = gk20a_readl(g, fifo_intr_en_0_r());
 		val |= fifo_intr_en_0_mmu_fault_f(1)
 			| fifo_intr_en_0_sched_error_f(1);
 		gk20a_writel(g, fifo_intr_en_0_r(), val);
+	}
+
+	nvgpu_log_info(g, "release runlist_lock for all runlists");
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+		nvgpu_mutex_release(&g->fifo.runlist_info[rlid].runlist_lock);
 	}
 }
 

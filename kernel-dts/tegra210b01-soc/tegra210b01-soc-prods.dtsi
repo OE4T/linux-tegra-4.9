@@ -14,7 +14,6 @@
  */
 #include "tegra210b01-prods-legacy.dtsi"
 #include "tegra210b01-soc-i2c-prods.dtsi"
-#include "tegra210b01-hdmi-prods.dtsi"
 
 / {
         pinmux@700008d4 {

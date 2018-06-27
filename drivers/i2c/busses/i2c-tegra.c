@@ -1115,6 +1115,14 @@ static int tegra_i2c_disable_packet_mode(struct tegra_i2c_dev *i2c_dev)
 {
 	u32 cnfg;
 
+	/*
+	 * NACK interrupt is generated before the I2C controller generates
+	 * the STOP condition on the bus. So wait for 2 clock periods
+	 * before disabling the controller so that the STOP condition has
+	 * been delivered properly.
+	 */
+	udelay(DIV_ROUND_UP(2 * 1000000, i2c_dev->bus_clk_rate));
+
 	cnfg = i2c_readl(i2c_dev, I2C_CNFG);
 	if (cnfg & I2C_CNFG_PACKET_MODE_EN)
 		i2c_writel(i2c_dev, cnfg & ~I2C_CNFG_PACKET_MODE_EN, I2C_CNFG);
@@ -1579,14 +1587,6 @@ static int tegra_i2c_handle_xfer_error(struct tegra_i2c_dev *i2c_dev)
 	if (i2c_dev->msg_err & I2C_INT_RX_FIFO_UNDERFLOW)
 		dev_warn(i2c_dev->dev, "Rx fifo underflow to add 0x%x\n",
 				i2c_dev->msg_add);
-	/*
-	 * NACK interrupt is generated before the I2C controller generates
-	 * the STOP condition on the bus. So wait for 2 clock periods
-	 * before resetting the controller so that the STOP condition has
-	 * been delivered properly.
-	 */
-	if (i2c_dev->msg_err == I2C_ERR_NO_ACK)
-		udelay(DIV_ROUND_UP(2 * 1000000, i2c_dev->bus_clk_rate));
 
 	ret = tegra_i2c_init(i2c_dev, false);
 	if (ret) {

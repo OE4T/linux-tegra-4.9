@@ -1094,6 +1094,11 @@ static void __nvgpu_vm_unmap(struct nvgpu_mapped_buf *mapped_buffer,
 	nvgpu_kfree(g, mapped_buffer);
 }
 
+/*
+ * Note: the update_gmmu_lock of the VM that owns this buffer must be locked
+ * before calling nvgpu_ref_put() with this function as the unref function
+ * argument since this can modify the tree of maps.
+ */
 void __nvgpu_vm_unmap_ref(struct nvgpu_ref *ref)
 {
 	struct nvgpu_mapped_buf *mapped_buffer =

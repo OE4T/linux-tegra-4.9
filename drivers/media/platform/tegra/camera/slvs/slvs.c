@@ -1161,9 +1161,11 @@ static int tegra_slvs_parse_dt(struct tegra_mc_slvs *slvs)
 
 		stream = &slvs->streams[i];
 		stream->slvs = slvs;
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		stream->subdev.fwnode = of_fwnode_handle(stream_node);
+#else
 		stream->subdev.of_node = stream_node;
-
+#endif
 		stream->pads[0].flags = MEDIA_PAD_FL_SINK;
 		stream->pads[1].flags = MEDIA_PAD_FL_SOURCE;
 
@@ -1173,9 +1175,13 @@ static int tegra_slvs_parse_dt(struct tegra_mc_slvs *slvs)
 	return 0;
 
 error:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	for (i = 0; i < num_streams; i++)
+		of_node_put(to_of_node(slvs->streams[i].subdev.fwnode));
+#else
 	for (i = 0; i < num_streams; i++)
 		of_node_put(slvs->streams[i].subdev.of_node);
-
+#endif
 	return -ENODEV;
 }
 
@@ -1247,8 +1253,11 @@ void tegra_slvs_media_controller_remove(struct tegra_mc_slvs *slvs)
 		struct tegra_slvs_stream *stream = &slvs->streams[i];
 		v4l2_async_unregister_subdev(&stream->subdev);
 		media_entity_cleanup(&stream->subdev.entity);
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		of_node_put(to_of_node(stream->subdev.fwnode));
+#else
 		of_node_put(stream->subdev.of_node);
+#endif
 	}
 }
 EXPORT_SYMBOL(tegra_slvs_media_controller_remove);

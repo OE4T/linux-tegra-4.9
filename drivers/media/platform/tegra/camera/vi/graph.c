@@ -1,7 +1,7 @@
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -26,7 +26,11 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-device.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <media/v4l2-fwnode.h>
+#else
 #include <media/v4l2-of.h>
+#endif
 #include <media/tegra_v4l2_camera.h>
 #include <media/mc_common.h>
 #include <media/csi.h>
@@ -60,7 +64,11 @@ static int tegra_vi_graph_build_one(struct tegra_channel *chan,
 	struct media_pad *local_pad;
 	struct media_pad *remote_pad;
 	struct tegra_vi_graph_entity *ent;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	struct v4l2_fwnode_link link;
+#else
 	struct v4l2_of_link link;
+#endif
 	struct device_node *ep = NULL;
 	struct device_node *next;
 	int ret = 0;
@@ -82,20 +90,37 @@ static int tegra_vi_graph_build_one(struct tegra_channel *chan,
 
 		ep = next;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		dev_dbg(chan->vi->dev, "processing endpoint %pOF\n",
+				ep);
+		ret = v4l2_fwnode_parse_link(of_fwnode_handle(ep), &link);
+		if (ret < 0) {
+			dev_err(chan->vi->dev,
+			"failed to parse link for %pOF\n", ep);
+			continue;
+		}
+#else
 		dev_dbg(chan->vi->dev, "processing endpoint %s\n",
 				ep->full_name);
-
 		ret = v4l2_of_parse_link(ep, &link);
 		if (ret < 0) {
 			dev_err(chan->vi->dev, "failed to parse link for %s\n",
 				ep->full_name);
 			continue;
 		}
+#endif
 
 		if (link.local_port >= local->num_pads) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			dev_err(chan->vi->dev,
+				"invalid port number %u for %pOF\n",
+				link.local_port, to_of_node(link.local_node));
+			v4l2_fwnode_put_link(&link);
+#else
 			dev_err(chan->vi->dev, "invalid port number %u on %s\n",
 				link.local_port, link.local_node->full_name);
 			v4l2_of_put_link(&link);
+#endif
 			ret = -EINVAL;
 			break;
 		}
@@ -106,26 +131,52 @@ static int tegra_vi_graph_build_one(struct tegra_channel *chan,
 		 * the link.
 		 */
 		if (local_pad->flags & MEDIA_PAD_FL_SINK) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			dev_dbg(chan->vi->dev, "skipping sink port %pOF:%u\n",
+				to_of_node(link.local_node), link.local_port);
+			v4l2_fwnode_put_link(&link);
+#else
 			dev_dbg(chan->vi->dev, "skipping sink port %s:%u\n",
 				link.local_node->full_name, link.local_port);
 			v4l2_of_put_link(&link);
+#endif
 			continue;
 		}
 
 		/* Skip channel entity , they will be processed separately. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		if (link.remote_node == of_fwnode_handle(chan->vi->dev->of_node)) {
+			dev_dbg(chan->vi->dev, "skipping channel port %pOF:%u\n",
+				to_of_node(link.local_node), link.local_port);
+			v4l2_fwnode_put_link(&link);
+			continue;
+		}
+#else
 		if (link.remote_node == chan->vi->dev->of_node) {
 			dev_dbg(chan->vi->dev, "skipping channel port %s:%u\n",
 				link.local_node->full_name, link.local_port);
 			v4l2_of_put_link(&link);
 			continue;
 		}
+#endif
+
 
 		/* Find the remote entity. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		ent = tegra_vi_graph_find_entity(chan, to_of_node(link.remote_node));
+#else
 		ent = tegra_vi_graph_find_entity(chan, link.remote_node);
+#endif
 		if (ent == NULL) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			dev_err(chan->vi->dev, "no entity found for %pOF\n",
+				to_of_node(link.remote_node));
+			v4l2_fwnode_put_link(&link);
+#else
 			dev_err(chan->vi->dev, "no entity found for %s\n",
 				link.remote_node->full_name);
 			v4l2_of_put_link(&link);
+#endif
 			ret = -EINVAL;
 			break;
 		}
@@ -133,16 +184,26 @@ static int tegra_vi_graph_build_one(struct tegra_channel *chan,
 		remote = ent->entity;
 
 		if (link.remote_port >= remote->num_pads) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			dev_err(chan->vi->dev, "invalid port number %u on %pOF\n",
+				link.remote_port, to_of_node(link.remote_node));
+			v4l2_fwnode_put_link(&link);
+#else
 			dev_err(chan->vi->dev, "invalid port number %u on %s\n",
 				link.remote_port, link.remote_node->full_name);
 			v4l2_of_put_link(&link);
+#endif
 			ret = -EINVAL;
 			break;
 		}
 
 		remote_pad = &remote->pads[link.remote_port];
 
-		v4l2_of_put_link(&link);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			v4l2_fwnode_put_link(&link);
+#else
+			v4l2_of_put_link(&link);
+#endif
 
 		/* Create the media link. */
 		dev_dbg(chan->vi->dev, "creating %s:%u -> %s:%u link\n",
@@ -171,7 +232,11 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 	struct media_pad *source_pad;
 	struct media_pad *sink_pad;
 	struct tegra_vi_graph_entity *ent;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	struct v4l2_fwnode_link link;
+#else
 	struct v4l2_of_link link;
+#endif
 	struct device_node *ep = NULL;
 	int ret = 0;
 
@@ -183,19 +248,32 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 
 	ep = chan->endpoint_node;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	dev_dbg(chan->vi->dev, "processing endpoint %pOF\n", ep);
+	ret = v4l2_fwnode_parse_link(of_fwnode_handle(ep), &link);
+	if (ret < 0) {
+		dev_err(chan->vi->dev, "failed to parse link for %pOF\n",
+			ep);
+		return -EINVAL;
+	}
+#else
 	dev_dbg(chan->vi->dev, "processing endpoint %s\n", ep->full_name);
-
 	ret = v4l2_of_parse_link(ep, &link);
 	if (ret < 0) {
 		dev_err(chan->vi->dev, "failed to parse link for %s\n",
 			ep->full_name);
 		return -EINVAL;
 	}
+#endif
 
 	if (link.local_port >= chan->vi->num_channels) {
 		dev_err(chan->vi->dev, "wrong channel number for port %u\n",
 			link.local_port);
-		v4l2_of_put_link(&link);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			v4l2_fwnode_put_link(&link);
+#else
+			v4l2_of_put_link(&link);
+#endif
 		return  -EINVAL;
 	}
 
@@ -203,18 +281,34 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 		chan->video.name);
 
 	/* Find the remote entity. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	ent = tegra_vi_graph_find_entity(chan, to_of_node(link.remote_node));
+	if (ent == NULL) {
+		dev_err(chan->vi->dev, "no entity found for %pOF\n",
+			to_of_node(link.remote_node));
+			v4l2_fwnode_put_link(&link);
+		return -EINVAL;
+	}
+#else
 	ent = tegra_vi_graph_find_entity(chan, link.remote_node);
 	if (ent == NULL) {
 		dev_err(chan->vi->dev, "no entity found for %s\n",
 			link.remote_node->full_name);
-		v4l2_of_put_link(&link);
+			v4l2_of_put_link(&link);
 		return -EINVAL;
 	}
+#endif
 
 	if (ent->entity == NULL) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		dev_err(chan->vi->dev, "entity not bounded %pOF\n",
+			to_of_node(link.remote_node));
+		v4l2_fwnode_put_link(&link);
+#else
 		dev_err(chan->vi->dev, "entity not bounded %s\n",
 			link.remote_node->full_name);
 		v4l2_of_put_link(&link);
+#endif
 		return -EINVAL;
 	}
 
@@ -223,7 +317,11 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 	sink = &chan->video.entity;
 	sink_pad = &chan->pad;
 
-	v4l2_of_put_link(&link);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			v4l2_fwnode_put_link(&link);
+#else
+			v4l2_of_put_link(&link);
+#endif
 
 	/* Create the media link. */
 	dev_dbg(chan->vi->dev, "creating %s:%u -> %s:%u link\n",
@@ -301,13 +399,24 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 	 * subdev pointer.
 	 */
 	list_for_each_entry(entity, &chan->entities, list) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		if (entity->node != to_of_node(subdev->dev->fwnode) &&
+			entity->node != to_of_node(subdev->fwnode))
+			continue;
+#else
 		if (entity->node != subdev->dev->of_node &&
 			entity->node != subdev->of_node)
 			continue;
+#endif
 
 		if (entity->subdev) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+			dev_err(chan->vi->dev, "duplicate subdev for node %pOF\n",
+				entity->node);
+#else
 			dev_err(chan->vi->dev, "duplicate subdev for node %s\n",
 				entity->node->full_name);
+#endif
 			return -EINVAL;
 		}
 
@@ -442,8 +551,13 @@ static int tegra_vi_graph_parse_one(struct tegra_channel *chan,
 		}
 
 		entity->node = remote;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
+		entity->asd.match.fwnode.fwnode = of_fwnode_handle(remote);
+#else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_OF;
 		entity->asd.match.of.node = remote;
+#endif
 		list_add_tail(&entity->list, &chan->entities);
 		chan->num_subdevs++;
 
@@ -593,8 +707,13 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 
 		/* Add the remote entity of this endpoint */
 		entity->node = remote;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		entity->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
+		entity->asd.match.fwnode.fwnode = of_fwnode_handle(remote);
+#else
 		entity->asd.match_type = V4L2_ASYNC_MATCH_OF;
 		entity->asd.match.of.node = remote;
+#endif
 		list_add_tail(&entity->list, &chan->entities);
 		chan->num_subdevs++;
 

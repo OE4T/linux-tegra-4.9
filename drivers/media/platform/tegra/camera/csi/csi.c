@@ -744,7 +744,11 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 			break;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	chan->subdev.fwnode = of_fwnode_handle(chan_dt);
+#else
 	chan->subdev.of_node = chan_dt;
+#endif
 	ports = of_get_child_by_name(chan_dt, "ports");
 	if (ports == NULL)
 		return -EINVAL;

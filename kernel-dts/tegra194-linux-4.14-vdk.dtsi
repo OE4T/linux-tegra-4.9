@@ -1,5 +1,5 @@
 /*
- * tegra194-linux-4.14.dtsi
+ * tegra194-linux-4.14-vdk.dtsi
  *
  * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -16,10 +16,18 @@
 #include "tegra194-linux-4.14-core.dtsi"
 / {
 
-	/* Change hardware identifier for k4.14 ap_sanity test */
-	firmware {
-		android {
-			hardware = "galen-k414";
+	reserved-memory {
+		/delete-node/ vpr-carveout;
+	};
+
+	reserved-memory {
+		generic_reserved: generic_carveout {
+			size = <0 0x10000000>;
+			status = "okay";
 		};
+	};
+
+	tegra-carveouts {
+		memory-region = <&generic_reserved>;
 	};
 };

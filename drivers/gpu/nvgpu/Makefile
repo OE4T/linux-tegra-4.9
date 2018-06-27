@@ -176,6 +176,7 @@ nvgpu-y += \
 	common/pmu/pmu_perfmon.o \
 	common/pmu/pmu_debug.o \
 	common/ltc.o \
+	common/io_common.o \
 	common/clock_gating/gm20b_gating_reglist.o \
 	common/clock_gating/gp106_gating_reglist.o \
 	common/clock_gating/gp10b_gating_reglist.o \

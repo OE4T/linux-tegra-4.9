@@ -48,6 +48,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/as.c \
 	common/rbtree.c \
 	common/ltc.c \
+	common/io_common.c \
 	common/vbios/bios.c \
 	common/falcon/falcon.c \
 	common/pmu/pmu.c \

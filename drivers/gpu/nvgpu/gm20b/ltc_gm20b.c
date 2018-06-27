@@ -276,7 +276,7 @@ void gm20b_flush_ltc(struct gk20a *g)
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 
 	/* Clean... */
-	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt1_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_tstg_cmgmt1_r(),
 		ltc_ltcs_ltss_tstg_cmgmt1_clean_pending_f() |
 		ltc_ltcs_ltss_tstg_cmgmt1_max_cycles_between_cleans_3_f() |
 		ltc_ltcs_ltss_tstg_cmgmt1_clean_wait_for_fb_to_pull_true_f() |
@@ -318,7 +318,7 @@ void gm20b_flush_ltc(struct gk20a *g)
 	}
 
 	/* And invalidate. */
-	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt0_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_tstg_cmgmt0_r(),
 	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_pending_f() |
 	     ltc_ltcs_ltss_tstg_cmgmt0_max_cycles_between_invalidates_3_f() |
 	     ltc_ltcs_ltss_tstg_cmgmt0_invalidate_evict_last_class_true_f() |
@@ -393,15 +393,15 @@ void gm20b_ltc_set_zbc_color_entry(struct gk20a *g,
 	u32 i;
 	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
 		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
 
 	for (i = 0;
 	     i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++) {
-		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
-			     color_val->color_l2[i]);
+		nvgpu_writel_check(g,
+			ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
+			color_val->color_l2[i]);
 	}
-	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
 }
 
 /*
@@ -413,13 +413,12 @@ void gm20b_ltc_set_zbc_depth_entry(struct gk20a *g,
 {
 	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
 		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
-		     depth_val->depth);
-
-	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
+	nvgpu_writel_check(g,
+			ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
+			depth_val->depth);
 }
 
 void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)

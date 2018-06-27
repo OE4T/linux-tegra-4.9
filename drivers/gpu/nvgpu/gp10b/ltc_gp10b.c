@@ -156,14 +156,16 @@ int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		nvgpu_log_info(g, "clearing CBC lines %u..%u", min, iter_max);
 
 		if (op == gk20a_cbc_op_clear) {
-			gk20a_writel(
+			nvgpu_writel_check(
 				g, ltc_ltcs_ltss_cbc_ctrl2_r(),
 				ltc_ltcs_ltss_cbc_ctrl2_clear_lower_bound_f(
 					min));
-			gk20a_writel(
+
+			nvgpu_writel_check(
 				g, ltc_ltcs_ltss_cbc_ctrl3_r(),
 				ltc_ltcs_ltss_cbc_ctrl3_clear_upper_bound_f(
 					iter_max));
+
 			hw_op = ltc_ltcs_ltss_cbc_ctrl1_clear_active_f();
 			full_cache_op = false;
 		} else if (op == gk20a_cbc_op_clean) {
@@ -251,10 +253,9 @@ void gp10b_ltc_isr(struct gk20a *g)
 					ltc_ltc0_lts0_dstg_ecc_report_sec_count_v(ecc_stats_reg_val);
 				ecc_stats_reg_val &=
 					~(ltc_ltc0_lts0_dstg_ecc_report_sec_count_m());
-				gk20a_writel(g,
+				nvgpu_writel_check(g,
 					ltc_ltc0_lts0_dstg_ecc_report_r() + offset,
 					ecc_stats_reg_val);
-
 				g->ops.mm.l2_flush(g, true);
 			}
 			if (ltc_intr &
@@ -271,16 +272,16 @@ void gp10b_ltc_isr(struct gk20a *g)
 					ltc_ltc0_lts0_dstg_ecc_report_ded_count_v(ecc_stats_reg_val);
 				ecc_stats_reg_val &=
 					~(ltc_ltc0_lts0_dstg_ecc_report_ded_count_m());
-				gk20a_writel(g,
+				nvgpu_writel_check(g,
 					ltc_ltc0_lts0_dstg_ecc_report_r() + offset,
 					ecc_stats_reg_val);
 			}
 
 			nvgpu_err(g, "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
-			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
-					   ltc_stride * ltc + lts_stride * slice,
-				     ltc_intr);
+			nvgpu_writel_check(g, ltc_ltc0_lts0_intr_r() +
+				ltc_stride * ltc + lts_stride * slice,
+				ltc_intr);
 		}
 	}
 }
@@ -314,5 +315,5 @@ void gp10b_ltc_set_enabled(struct gk20a *g, bool enabled)
 		/* bypass enabled (no caching) */
 		reg |= reg_f;
 
-	gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
+	nvgpu_writel_check(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
 }

@@ -69,7 +69,7 @@ u32 __nvgpu_readl(struct gk20a *g, u32 r)
 	return v;
 }
 
-void nvgpu_writel_check(struct gk20a *g, u32 r, u32 v)
+void nvgpu_writel_loop(struct gk20a *g, u32 r, u32 v)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 

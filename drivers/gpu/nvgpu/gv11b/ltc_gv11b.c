@@ -42,13 +42,12 @@ void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
 {
 	u32 real_index = index + GK20A_STARTOF_ZBC_TABLE;
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
 		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
 
-	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_r(),
-		     stencil_val->depth);
-
-	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
+	nvgpu_writel_check(g,
+			   ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_r(),
+			   stencil_val->depth);
 }
 
 void gv11b_ltc_init_fs_state(struct gk20a *g)
@@ -72,13 +71,13 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
 	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();
 	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_access_m();
-	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
+	nvgpu_writel_check(g, ltc_ltcs_ltss_intr_r(), reg);
 
 	/* Enable ECC interrupts */
 	ltc_intr = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
 	ltc_intr |= ltc_ltcs_ltss_intr_en_ecc_sec_error_enabled_f() |
 		ltc_ltcs_ltss_intr_en_ecc_ded_error_enabled_f();
-	gk20a_writel(g, ltc_ltcs_ltss_intr_r(),
+	nvgpu_writel_check(g, ltc_ltcs_ltss_intr_r(),
 				ltc_intr);
 }
 
@@ -133,14 +132,16 @@ void gv11b_ltc_isr(struct gk20a *g)
 
 				/* clear the interrupt */
 				if ((corrected_delta > 0U) || corrected_overflow) {
-					gk20a_writel(g, ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset, 0);
+					nvgpu_writel_check(g,
+						ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset, 0);
 				}
 				if ((uncorrected_delta > 0U) || uncorrected_overflow) {
-					gk20a_writel(g,
+					nvgpu_writel_check(g,
 						ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset, 0);
 				}
 
-				gk20a_writel(g, ltc_ltc0_lts0_l2_cache_ecc_status_r() + offset,
+				nvgpu_writel_check(g,
+					ltc_ltc0_lts0_l2_cache_ecc_status_r() + offset,
 					ltc_ltc0_lts0_l2_cache_ecc_status_reset_task_f());
 
 				/* update counters per slice */

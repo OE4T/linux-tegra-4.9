@@ -40,15 +40,20 @@ enum {
 	HDA,
 };
 
+#if IS_ENABLED(CONFIG_TEGRA_DC)
+int tegra_hdmi_setup_hda_presence(int sor_num);
 int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 					unsigned audio_source,
 					int sor_num);
-#if IS_ENABLED(CONFIG_TEGRA_DC)
-int tegra_hdmi_setup_hda_presence(int sor_num);
+int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num);
 #else
 static inline int tegra_hdmi_setup_hda_presence(int sor_num) { return -ENODEV; }
+static inline int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
+					unsigned audio_source,
+					int sor_num) { return -ENODEV; }
+static inline int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num) { return -ENODEV; }
 #endif
-int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num);
+
 
 bool is_os_l4t(void);
 #endif /* __MACH_TEGRA_HDMI_AUDIO_H */

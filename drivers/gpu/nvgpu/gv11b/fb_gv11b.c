@@ -870,10 +870,11 @@ static void gv11b_fb_copy_from_hw_fault_buf(struct gk20a *g,
 static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		 struct mmu_fault_info *mmfault, u32 *invalidate_replay_val)
 {
-	unsigned int id_type;
+	unsigned int id_type = ID_TYPE_UNKNOWN;
 	u32 num_lce, act_eng_bitmask = 0;
 	int err = 0;
-	u32 id = ((u32)~0);
+	u32 id = FIFO_INVAL_TSG_ID;
+	unsigned int rc_type = RC_TYPE_NO_RC;
 
 	if (!mmfault->valid)
 		return;
@@ -888,18 +889,23 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		/* CE page faults are not reported as replayable */
 		nvgpu_log(g, gpu_dbg_intr, "CE Faulted");
 		err = gv11b_fb_fix_page_fault(g, mmfault);
-		gv11b_fifo_reset_pbdma_and_eng_faulted(g, mmfault->refch,
-			mmfault->faulted_pbdma, mmfault->faulted_engine);
+		if (mmfault->refch &&
+			(u32)mmfault->refch->tsgid != FIFO_INVAL_TSG_ID) {
+			gv11b_fifo_reset_pbdma_and_eng_faulted(g,
+				&g->fifo.tsg[mmfault->refch->tsgid],
+				mmfault->faulted_pbdma,
+				mmfault->faulted_engine);
+		}
 		if (!err) {
 			nvgpu_log(g, gpu_dbg_intr, "CE Page Fault Fixed");
 			*invalidate_replay_val = 0;
-			/* refch in mmfault is assigned at the time of copying
-			 * fault info from snap reg or bar2 fault buf
-			 */
-			gk20a_channel_put(mmfault->refch);
+			if (mmfault->refch) {
+				gk20a_channel_put(mmfault->refch);
+				mmfault->refch = NULL;
+			}
 			return;
 		}
-		/* Do recovery. Channel recovery needs refch */
+		/* Do recovery */
 		nvgpu_log(g, gpu_dbg_intr, "CE Page Fault Not Fixed");
 	}
 
@@ -911,16 +917,9 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		 * instance block, the fault cannot be isolated to a
 		 * single context so we need to reset the entire runlist
 		 */
-		id_type = ID_TYPE_UNKNOWN;
+			rc_type = RC_TYPE_MMU_FAULT;
 
 		} else if (mmfault->refch) {
-			if (gk20a_is_channel_marked_as_tsg(mmfault->refch)) {
-				id = mmfault->refch->tsgid;
-				id_type = ID_TYPE_TSG;
-			} else {
-				id = mmfault->chid;
-				id_type = ID_TYPE_CHANNEL;
-			}
 			if (mmfault->refch->mmu_nack_handled) {
 				/* We have already recovered for the same
 				 * context, skip doing another recovery.
@@ -941,19 +940,40 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 				 */
 				gk20a_channel_put(mmfault->refch);
 				return;
+			} else {
+				/* Indicate recovery is handled if mmu fault is
+				 * a result of mmu nack.
+				 */
+				mmfault->refch->mmu_nack_handled = true;
 			}
-		} else {
-			id_type = ID_TYPE_UNKNOWN;
-		}
-		if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
-			act_eng_bitmask = BIT(mmfault->faulted_engine);
 
-		/* Indicate recovery is handled if mmu fault is a result of
-		 * mmu nack.
+			rc_type = RC_TYPE_MMU_FAULT;
+			if (gk20a_is_channel_marked_as_tsg(mmfault->refch)) {
+				id = mmfault->refch->tsgid;
+				if (id != FIFO_INVAL_TSG_ID)
+					id_type = ID_TYPE_TSG;
+			} else {
+				nvgpu_err(g, "bare channels not supported");
+			}
+		}
+
+		/* engine is faulted */
+		if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID) {
+			act_eng_bitmask = BIT(mmfault->faulted_engine);
+			rc_type = RC_TYPE_MMU_FAULT;
+		}
+
+		/* refch in mmfault is assigned at the time of copying
+		 * fault info from snap reg or bar2 fault buf
 		 */
-		mmfault->refch->mmu_nack_handled = true;
-		g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
-			id, id_type, RC_TYPE_MMU_FAULT, mmfault);
+		if (mmfault->refch) {
+			gk20a_channel_put(mmfault->refch);
+			mmfault->refch = NULL;
+		}
+
+		if (rc_type != RC_TYPE_NO_RC)
+			g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
+				id, id_type, rc_type, mmfault);
 	} else {
 		if (mmfault->fault_type == gmmu_fault_type_pte_v()) {
 			nvgpu_log(g, gpu_dbg_intr, "invalid pte! try to fix");
@@ -972,7 +992,10 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		/* refch in mmfault is assigned at the time of copying
 		 * fault info from snap reg or bar2 fault buf
 		 */
-		gk20a_channel_put(mmfault->refch);
+		if (mmfault->refch) {
+			gk20a_channel_put(mmfault->refch);
+			mmfault->refch = NULL;
+		}
 	}
 }
 
@@ -1061,8 +1084,10 @@ void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 			next_fault_addr = mmfault->fault_addr;
 			if (prev_fault_addr == next_fault_addr) {
 				nvgpu_log(g, gpu_dbg_intr, "pte already scanned");
-				if (mmfault->refch)
+				if (mmfault->refch) {
 					gk20a_channel_put(mmfault->refch);
+					mmfault->refch = NULL;
+				}
 				continue;
 			}
 		}

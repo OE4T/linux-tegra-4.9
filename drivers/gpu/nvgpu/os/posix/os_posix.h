@@ -25,8 +25,34 @@
 
 #include "gk20a/gk20a.h"
 
+struct nvgpu_posix_io_callbacks;
+
 struct nvgpu_os_posix {
 	struct gk20a g;
+
+
+	/*
+	 * IO callbacks for handling the nvgpu IO accessors.
+	 */
+	struct nvgpu_posix_io_callbacks *callbacks;
+
+	/*
+	 * Memory-mapped register space for unit tests.
+	 */
+	struct nvgpu_list_node reg_space_head;
+	int error_code;
+
+
+	/*
+	 * List to record sequence of register writes.
+	 */
+	struct nvgpu_list_node recorder_head;
+	bool recording;
 };
+
+static inline struct nvgpu_os_posix *nvgpu_os_posix_from_gk20a(struct gk20a *g)
+{
+	return container_of(g, struct nvgpu_os_posix, g);
+}
 
 #endif

@@ -52,6 +52,11 @@
 #include <linux/debugfs.h>
 #include <linux/time.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/signal.h>
+#include <linux/sched/clock.h>
+#endif
 
 #include <soc/tegra/tegra-ivc-rpc.h>
 

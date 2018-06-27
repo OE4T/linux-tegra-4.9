@@ -25,6 +25,10 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/clock.h>
+#endif
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
 

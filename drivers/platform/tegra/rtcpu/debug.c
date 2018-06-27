@@ -28,6 +28,11 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/signal.h>
+#include <linux/sched/clock.h>
+#endif
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/tegra-camera-rtcpu.h>

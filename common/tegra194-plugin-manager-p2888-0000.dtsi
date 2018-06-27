@@ -45,5 +45,15 @@
 				};
 			};
 		};
+
+		fragment-tegra-ufs-lane10 {
+			odm-data = "enable-ufs-uphy-l10";
+			override@0 {
+				target = <&tegra_ufs>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
 	};
 };

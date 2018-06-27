@@ -2042,9 +2042,6 @@ void tegra_pmc_enter_suspend_mode(enum tegra_suspend_mode mode)
 
 	switch (mode) {
 	case TEGRA_SUSPEND_SC7:
-		if (pmc->lp0_vec_phys != 0)
-			tegra_pmc_reg_writel(pmc->lp0_vec_phys,
-					     TEGRA_PMC_SCRATCH1);
 		rate = 32768;
 		break;
 

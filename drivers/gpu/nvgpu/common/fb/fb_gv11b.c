@@ -445,9 +445,9 @@ void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		uncorrected_delta += (0x1UL << fb_mmu_l2tlb_ecc_uncorrected_err_count_total_s());
 
 
-	g->ecc.fb.mmu_l2tlb_corrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_l2tlb_ecc_corrected_err_count[0].counter +=
 							corrected_delta;
-	g->ecc.fb.mmu_l2tlb_uncorrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_l2tlb_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
 	if (ecc_status & fb_mmu_l2tlb_ecc_status_corrected_err_l2tlb_sa_data_m())
@@ -461,8 +461,8 @@ void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		"ecc error address: 0x%x", ecc_addr);
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error count corrected: %d, uncorrected %d",
-		g->ecc.fb.mmu_l2tlb_corrected_err_count.counters[0],
-		g->ecc.fb.mmu_l2tlb_uncorrected_err_count.counters[0]);
+		g->ecc.fb.mmu_l2tlb_ecc_corrected_err_count[0].counter,
+		g->ecc.fb.mmu_l2tlb_ecc_uncorrected_err_count[0].counter);
 }
 
 void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
@@ -503,9 +503,9 @@ void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		uncorrected_delta += (0x1UL << fb_mmu_hubtlb_ecc_uncorrected_err_count_total_s());
 
 
-	g->ecc.fb.mmu_hubtlb_corrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_hubtlb_ecc_corrected_err_count[0].counter +=
 							corrected_delta;
-	g->ecc.fb.mmu_hubtlb_uncorrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_hubtlb_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
 	if (ecc_status & fb_mmu_hubtlb_ecc_status_corrected_err_sa_data_m())
@@ -519,8 +519,8 @@ void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		"ecc error address: 0x%x", ecc_addr);
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error count corrected: %d, uncorrected %d",
-		g->ecc.fb.mmu_hubtlb_corrected_err_count.counters[0],
-		g->ecc.fb.mmu_hubtlb_uncorrected_err_count.counters[0]);
+		g->ecc.fb.mmu_hubtlb_ecc_corrected_err_count[0].counter,
+		g->ecc.fb.mmu_hubtlb_ecc_uncorrected_err_count[0].counter);
 }
 
 void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
@@ -561,9 +561,9 @@ void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 		uncorrected_delta += (0x1UL << fb_mmu_fillunit_ecc_uncorrected_err_count_total_s());
 
 
-	g->ecc.fb.mmu_fillunit_corrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_fillunit_ecc_corrected_err_count[0].counter +=
 							corrected_delta;
-	g->ecc.fb.mmu_fillunit_uncorrected_err_count.counters[0] +=
+	g->ecc.fb.mmu_fillunit_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
 	if (ecc_status & fb_mmu_fillunit_ecc_status_corrected_err_pte_data_m())
@@ -582,8 +582,8 @@ void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 		"ecc error address: 0x%x", ecc_addr);
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error count corrected: %d, uncorrected %d",
-		g->ecc.fb.mmu_fillunit_corrected_err_count.counters[0],
-		g->ecc.fb.mmu_fillunit_uncorrected_err_count.counters[0]);
+		g->ecc.fb.mmu_fillunit_ecc_corrected_err_count[0].counter,
+		g->ecc.fb.mmu_fillunit_ecc_uncorrected_err_count[0].counter);
 }
 
 static void gv11b_fb_parse_mmfault(struct mmu_fault_info *mmfault)

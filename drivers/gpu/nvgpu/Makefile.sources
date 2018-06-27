@@ -49,6 +49,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/rbtree.c \
 	common/ltc.c \
 	common/io_common.c \
+	common/ecc.c \
 	common/vbios/bios.c \
 	common/falcon/falcon.c \
 	common/pmu/pmu.c \
@@ -166,6 +167,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/priv_ring_gp10b.c \
 	gp10b/gp10b.c \
 	gp10b/fuse_gp10b.c \
+	gp10b/ecc_gp10b.c \
 	gv11b/gv11b.c  \
 	gv11b/dbg_gpu_gv11b.c  \
 	gv11b/mc_gv11b.c  \
@@ -181,6 +183,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gv11b/subctx_gv11b.c \
 	gv11b/regops_gv11b.c \
 	gv11b/therm_gv11b.c \
+	gv11b/ecc_gv11b.c \
 	gp106/hal_gp106.c \
 	gp106/mm_gp106.c \
 	gp106/flcn_gp106.c \

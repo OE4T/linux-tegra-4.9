@@ -52,11 +52,6 @@ static int nvgpu_pci_tegra_probe(struct device *dev)
 
 static int nvgpu_pci_tegra_remove(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
-
-	if (g->ops.gr.remove_gr_sysfs)
-		g->ops.gr.remove_gr_sysfs(g);
-
 	return 0;
 }
 

@@ -69,7 +69,8 @@ nvgpu-y += \
 	os/linux/sim_pci.o \
 	os/linux/os_sched.o \
 	os/linux/nvlink.o \
-	os/linux/dt.o
+	os/linux/dt.o \
+	os/linux/ecc_sysfs.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
 	os/linux/dmabuf_vidmem.o
@@ -100,7 +101,6 @@ nvgpu-$(CONFIG_TEGRA_GK20A) += \
 	os/linux/module_usermode.o \
 	os/linux/soc.o \
 	os/linux/fuse.o \
-	os/linux/platform_ecc_sysfs.o \
 	os/linux/platform_gk20a_tegra.o \
 	os/linux/platform_gp10b_tegra.o \
 	os/linux/platform_gv11b_tegra.o
@@ -185,6 +185,7 @@ nvgpu-y += \
 	common/sim.o \
 	common/sim_pci.o \
 	common/fifo/submit.o \
+	common/ecc.o \
 	gk20a/gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
@@ -267,6 +268,7 @@ nvgpu-y += \
 	gp10b/priv_ring_gp10b.o \
 	gp10b/gp10b.o \
 	gp10b/fuse_gp10b.o \
+	gp10b/ecc_gp10b.o \
 	gp106/hal_gp106.o \
 	gp106/mm_gp106.o \
 	gp106/flcn_gp106.o \
@@ -296,6 +298,7 @@ nvgpu-y += \
 	gv11b/subctx_gv11b.o \
 	gv11b/regops_gv11b.o \
 	gv11b/therm_gv11b.o \
+	gv11b/ecc_gv11b.o \
 	gv100/mm_gv100.o \
 	gv100/gr_ctx_gv100.o \
 	gv100/bios_gv100.o \

@@ -35,7 +35,6 @@ struct gk20a_ctxsw_trace;
 struct acr_desc;
 struct nvgpu_mem_alloc_tracker;
 struct dbg_profiler_object_data;
-struct ecc_gk20a;
 struct gk20a_debug_output;
 struct nvgpu_clk_pll_debug_data;
 struct nvgpu_nvhost_dev;
@@ -64,6 +63,7 @@ struct nvgpu_ctxsw_trace_filter;
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/nvlink.h>
 #include <nvgpu/sim.h>
+#include <nvgpu/ecc.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -77,7 +77,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
-#include "ecc_gk20a.h"
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -384,8 +383,7 @@ struct gpu_ops {
 						u32 gpc_exception);
 		void (*enable_gpc_exceptions)(struct gk20a *g);
 		void (*enable_exceptions)(struct gk20a *g);
-		void (*create_gr_sysfs)(struct gk20a *g);
-		void (*remove_gr_sysfs)(struct gk20a *g);
+		int (*init_ecc)(struct gk20a *g);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
 		int (*record_sm_error_state)(struct gk20a *g, u32 gpc, u32 tpc,
 				u32 sm, struct channel_gk20a *fault_ch);
@@ -1385,7 +1383,7 @@ struct gk20a {
 	struct mm_gk20a mm;
 	struct nvgpu_pmu pmu;
 	struct acr_desc acr;
-	struct ecc_gk20a ecc;
+	struct nvgpu_ecc ecc;
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;
 	struct pmgr_pmupstate pmgr_pmu;

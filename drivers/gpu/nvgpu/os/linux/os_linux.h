@@ -141,6 +141,7 @@ struct nvgpu_os_linux {
 	struct dentry *debugfs_dump_ctxsw_stats;
 #endif
 	DECLARE_HASHTABLE(ecc_sysfs_stats_htable, 5);
+	struct dev_ext_attribute *ecc_attrs;
 
 	struct gk20a_cde_app cde_app;
 

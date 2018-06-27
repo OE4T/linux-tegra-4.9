@@ -18,6 +18,5 @@
 #define _PLATFORM_GP10B_TEGRA_H_
 
 #include "gp10b/gr_gp10b.h"
-#include "platform_ecc_sysfs.h"
 
 #endif

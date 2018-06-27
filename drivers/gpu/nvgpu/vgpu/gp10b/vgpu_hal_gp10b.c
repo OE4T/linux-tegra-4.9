@@ -215,10 +215,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.update_boosted_ctx = NULL,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
 		.set_bes_crop_debug4 = gr_gp10b_set_bes_crop_debug4,
-#ifdef CONFIG_SYSFS
-		.create_gr_sysfs = gr_gp10b_create_sysfs,
-		.remove_gr_sysfs = gr_gp10b_remove_sysfs,
-#endif
 		.set_ctxsw_preemption_mode =
 					vgpu_gr_gp10b_set_ctxsw_preemption_mode,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,

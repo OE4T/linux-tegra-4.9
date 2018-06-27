@@ -56,6 +56,7 @@
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
+#include "gp10b/ecc_gp10b.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
@@ -339,11 +340,8 @@ static const struct gpu_ops gp10b_ops = {
 		.init_preemption_state = gr_gp10b_init_preemption_state,
 		.update_boosted_ctx = gr_gp10b_update_boosted_ctx,
 		.set_bes_crop_debug3 = gr_gp10b_set_bes_crop_debug3,
-#ifdef CONFIG_SYSFS
-		.create_gr_sysfs = gr_gp10b_create_sysfs,
-		.remove_gr_sysfs = gr_gp10b_remove_sysfs,
-#endif
 		.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode,
+		.init_ecc = gp10b_ecc_init,
 		.init_ctxsw_hdr_data = gr_gp10b_init_ctxsw_hdr_data,
 		.init_gfxp_wfi_timeout_count =
 				gr_gp10b_init_gfxp_wfi_timeout_count,

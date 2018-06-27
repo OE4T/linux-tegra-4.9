@@ -343,8 +343,8 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 			if (uncorrected_overflow)
 				uncorrected_delta += (0x1UL << pwr_pmu_falcon_ecc_uncorrected_err_count_total_s());
 
-			g->ecc.pmu.pmu_corrected_err_count.counters[0] += corrected_delta;
-			g->ecc.pmu.pmu_uncorrected_err_count.counters[0] += uncorrected_delta;
+			g->ecc.pmu.pmu_ecc_corrected_err_count[0].counter += corrected_delta;
+			g->ecc.pmu.pmu_ecc_uncorrected_err_count[0].counter += uncorrected_delta;
 
 			nvgpu_log(g, gpu_dbg_intr,
 				"pmu ecc interrupt intr1: 0x%x", intr1);
@@ -371,8 +371,8 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 
 			nvgpu_log(g, gpu_dbg_intr,
 				"ecc error count corrected: %d, uncorrected %d",
-				g->ecc.pmu.pmu_corrected_err_count.counters[0],
-				g->ecc.pmu.pmu_uncorrected_err_count.counters[0]);
+				g->ecc.pmu.pmu_ecc_corrected_err_count[0].counter,
+				g->ecc.pmu.pmu_ecc_uncorrected_err_count[0].counter);
 		}
 	}
 }

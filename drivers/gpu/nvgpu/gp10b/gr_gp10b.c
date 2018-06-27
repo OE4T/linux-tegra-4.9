@@ -176,7 +176,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 						lrf_ecc_ded_status,
 						&lrf_single_count_delta,
 						lrf_double_count_delta);
-		g->ecc.gr.sm_lrf_single_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_ecc_single_err_count[gpc][tpc].counter +=
 							lrf_single_count_delta;
 	}
 	if (lrf_ecc_ded_status) {
@@ -188,7 +188,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 						lrf_ecc_ded_status,
 						&lrf_double_count_delta,
 						lrf_single_count_delta);
-		g->ecc.gr.sm_lrf_double_err_count.counters[tpc] +=
+		g->ecc.gr.sm_lrf_ecc_double_err_count[gpc][tpc].counter +=
 							lrf_double_count_delta;
 	}
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
@@ -213,9 +213,9 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		ecc_stats_reg_val =
 			gk20a_readl(g,
 				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->ecc.gr.sm_shm_sec_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_ecc_sec_count[gpc][tpc].counter +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_v(ecc_stats_reg_val);
-		g->ecc.gr.sm_shm_sed_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_ecc_sed_count[gpc][tpc].counter +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_m() |
 					gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_m());
@@ -235,7 +235,7 @@ int gr_gp10b_handle_sm_exception(struct gk20a *g,
 		ecc_stats_reg_val =
 			gk20a_readl(g,
 				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->ecc.gr.sm_shm_ded_count.counters[tpc] +=
+		g->ecc.gr.sm_shm_ecc_ded_count[gpc][tpc].counter +=
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_m());
 		gk20a_writel(g,
@@ -276,7 +276,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.tex_total_sec_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_ecc_total_sec_pipe0_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
 		gk20a_writel(g,
@@ -285,7 +285,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.tex_unique_sec_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ecc_sec_pipe0_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
 		gk20a_writel(g,
@@ -300,7 +300,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.tex_total_sec_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_ecc_total_sec_pipe1_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
 		gk20a_writel(g,
@@ -309,7 +309,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.tex_unique_sec_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ecc_sec_pipe1_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
 		gk20a_writel(g,
@@ -332,7 +332,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.tex_total_ded_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_ecc_total_ded_pipe0_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
 		gk20a_writel(g,
@@ -341,7 +341,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.tex_unique_ded_pipe0_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ecc_ded_pipe0_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
 		gk20a_writel(g,
@@ -356,7 +356,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->ecc.gr.tex_total_ded_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_ecc_total_ded_pipe1_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
 		gk20a_writel(g,
@@ -365,7 +365,7 @@ int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		ecc_stats_reg_val = gk20a_readl(g,
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->ecc.gr.tex_unique_ded_pipe1_count.counters[tpc] +=
+		g->ecc.gr.tex_unique_ecc_ded_pipe1_count[gpc][tpc].counter +=
 				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
 		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
 		gk20a_writel(g,

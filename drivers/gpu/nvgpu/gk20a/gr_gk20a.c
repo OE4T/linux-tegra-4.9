@@ -38,6 +38,7 @@
 #include <nvgpu/mm.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/ecc.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -3127,6 +3128,8 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->ctx_vars.hwpm_ctxsw_buffer_offset_map = NULL;
 
 	gk20a_comptag_allocator_destroy(g, &gr->comp_tags);
+
+	nvgpu_ecc_remove_support(g);
 }
 
 static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
@@ -4872,8 +4875,9 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;
 
-	if (g->ops.gr.create_gr_sysfs)
-		g->ops.gr.create_gr_sysfs(g);
+	err = nvgpu_ecc_init_support(g);
+	if (err)
+		goto clean_up;
 
 	nvgpu_log_fn(g, "done");
 	return 0;

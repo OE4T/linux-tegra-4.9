@@ -90,13 +90,11 @@ void gv11b_ltc_isr(struct gk20a *g)
 	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
 	u32 corrected_delta, uncorrected_delta;
 	u32 corrected_overflow, uncorrected_overflow;
-	u32 ltc_corrected, ltc_uncorrected;
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		if ((mc_intr & 1U << ltc) == 0)
 			continue;
-		ltc_corrected = ltc_uncorrected = 0U;
 
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			u32 offset = ltc_stride * ltc + lts_stride * slice;
@@ -150,8 +148,8 @@ void gv11b_ltc_isr(struct gk20a *g)
 				if (uncorrected_overflow)
 					uncorrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s());
 
-				ltc_corrected += corrected_delta;
-				ltc_uncorrected += uncorrected_delta;
+				g->ecc.ltc.ecc_sec_count[ltc][slice].counter += corrected_delta;
+				g->ecc.ltc.ecc_ded_count[ltc][slice].counter += uncorrected_delta;
 				nvgpu_log(g, gpu_dbg_intr,
 					"ltc:%d lts: %d cache ecc interrupt intr: 0x%x", ltc, slice, ltc_intr3);
 
@@ -177,10 +175,6 @@ void gv11b_ltc_isr(struct gk20a *g)
 			}
 
 		}
-		g->ecc.ltc.l2_cache_corrected_err_count.counters[ltc] +=
-			ltc_corrected;
-		g->ecc.ltc.l2_cache_uncorrected_err_count.counters[ltc] +=
-			ltc_uncorrected;
 
 	}
 

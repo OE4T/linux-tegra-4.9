@@ -20,24 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/**
- * Here lie OS stubs that do not have an implementation yet nor has any plans
- * for an implementation.
- */
+#ifndef __ECC_GP10B_H__
+#define __ECC_GP10B_H__
 
-#include <nvgpu/ecc.h>
+int gp10b_ecc_init(struct gk20a *g);
 
-#include "gk20a/dbg_gpu_gk20a.h"
-
-void nvgpu_dbg_session_post_event(struct dbg_session_gk20a *dbg_s)
-{
-}
-
-int nvgpu_ecc_sysfs_init(struct gk20a *g)
-{
-	return 0;
-}
-
-void nvgpu_ecc_sysfs_remove(struct gk20a *g)
-{
-}
+#endif

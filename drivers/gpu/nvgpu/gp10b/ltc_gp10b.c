@@ -249,7 +249,7 @@ void gp10b_ltc_isr(struct gk20a *g)
 				ecc_stats_reg_val =
 					gk20a_readl(g,
 						ltc_ltc0_lts0_dstg_ecc_report_r() + offset);
-				g->ecc.ltc.l2_sec_count.counters[ltc*g->ltc_count + slice] +=
+				g->ecc.ltc.ecc_sec_count[ltc][slice].counter +=
 					ltc_ltc0_lts0_dstg_ecc_report_sec_count_v(ecc_stats_reg_val);
 				ecc_stats_reg_val &=
 					~(ltc_ltc0_lts0_dstg_ecc_report_sec_count_m());
@@ -268,7 +268,7 @@ void gp10b_ltc_isr(struct gk20a *g)
 				ecc_stats_reg_val =
 					gk20a_readl(g,
 						ltc_ltc0_lts0_dstg_ecc_report_r() + offset);
-				g->ecc.ltc.l2_ded_count.counters[ltc*g->ltc_count + slice] +=
+				g->ecc.ltc.ecc_ded_count[ltc][slice].counter +=
 					ltc_ltc0_lts0_dstg_ecc_report_ded_count_v(ecc_stats_reg_val);
 				ecc_stats_reg_val &=
 					~(ltc_ltc0_lts0_dstg_ecc_report_ded_count_m());

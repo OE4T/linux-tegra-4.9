@@ -37,6 +37,7 @@
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
 #include <nvgpu/hw/gv100/hw_fuse_gv100.h>
+#include <nvgpu/hw/gv100/hw_top_gv100.h>
 
 
 /*
@@ -371,9 +372,13 @@ u32 gr_gv100_get_patch_slots(struct gk20a *g)
 	return size;
 }
 
-static u32 gr_gv100_get_active_fpba_mask(struct gk20a *g, u32 num_fbpas)
+static u32 gr_gv100_get_active_fpba_mask(struct gk20a *g)
 {
 	u32 active_fbpa_mask;
+	u32 num_fbpas, val;
+
+	val = nvgpu_readl(g, top_num_fbpas_r());
+	num_fbpas = top_num_fbpas_value_v(val);
 
 	/*
 	 * Read active fbpa mask from fuse
@@ -404,7 +409,7 @@ int gr_gv100_add_ctxsw_reg_pm_fbpa(struct gk20a *g,
 	if ((cnt + (regs->count * num_fbpas)) > max_cnt)
 		return -EINVAL;
 
-	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g, num_fbpas);
+	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g);
 
 	for (idx = 0; idx < regs->count; idx++) {
 		for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
@@ -439,7 +444,7 @@ void gr_gv100_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 active_fbpa_mask;
 	u32 fbpa_id;
 
-	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g, num_fbpas);
+	active_fbpa_mask = gr_gv100_get_active_fpba_mask(g);
 
 	for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
 		if (active_fbpa_mask & BIT(fbpa_id)) {

@@ -80,6 +80,14 @@ static inline u32 top_num_fbps_value_v(u32 r)
 {
 	return (r >> 0U) & 0x1fU;
 }
+static inline u32 top_num_fbpas_r(void)
+{
+	return 0x0002243cU;
+}
+static inline u32 top_num_fbpas_value_v(u32 r)
+{
+	return (r >> 0U) & 0x1fU;
+}
 static inline u32 top_ltc_per_fbp_r(void)
 {
 	return 0x00022450U;

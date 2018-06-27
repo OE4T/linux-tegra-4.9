@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -690,7 +690,7 @@ u32 tegra_edid_get_quirks(struct tegra_edid *edid)
 {
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
-		return false;
+		return 0;
 	}
 
 	return edid->data->quirks;

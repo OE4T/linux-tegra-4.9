@@ -1,7 +1,7 @@
 /*
  * edid_quirks.c: edid specific exceptions.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  * Author: Anshuman Nath Kar <anshumank@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -33,6 +33,9 @@ static const struct hdmi_blacklist {
 	{ "BMD", 0,    "BMD HDMI",  TEGRA_EDID_QUIRK_NO_HDCP    },
 	/* Denon 2313 doesn't support YUV422, but declares support for it */
 	{ "DON", 48, "DENON-AVR",   TEGRA_EDID_QUIRK_NO_YUV_422 },
+	/* Few TVs causing HPD bounce for 1-4 seconds */
+	{ "YMH", 12774,"RX-A1070",  TEGRA_EDID_QUIRK_HPD_BOUNCE },
+	{ "SAM", 3387, "SAMSUNG",   TEGRA_EDID_QUIRK_HPD_BOUNCE },
 };
 
 u32 tegra_edid_lookup_quirks(const char *manufacturer, u32 model,

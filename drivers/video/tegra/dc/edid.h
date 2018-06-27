@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -140,6 +140,8 @@ enum {
 #define TEGRA_EDID_QUIRK_NO_HDCP    (1 << 2)
 /* Denon 2313 doesn't support YUV422, but declares support for it */
 #define TEGRA_EDID_QUIRK_NO_YUV_422	(1 << 3)
+/* TVs that send HPD bounce upto 4 seconds */
+#define TEGRA_EDID_QUIRK_HPD_BOUNCE (1 << 4)
 
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;

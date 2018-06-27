@@ -199,7 +199,6 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 		return 0;
 	}
 	nvgpu_list_del(&vm_area->vm_area_list);
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	nvgpu_log(g, gpu_dbg_map,
 		  "DEL vm_area: pgsz=%#-8x pages=%-9llu "
@@ -218,6 +217,8 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 		nvgpu_list_del(&buffer->buffer_list);
 		nvgpu_ref_put(&buffer->ref, __nvgpu_vm_unmap_ref);
 	}
+
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	/* if this was a sparse mapping, free the va */
 	if (vm_area->sparse)

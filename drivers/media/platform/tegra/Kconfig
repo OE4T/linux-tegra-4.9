@@ -10,8 +10,9 @@ config VIDEO_CAMERA
 
 config VIDEO_TEGRA_VI
 	depends on TEGRA_GRHOST
-        depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && OF
-        select VIDEOBUF2_DMA_CONTIG
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && OF
+	select VIDEOBUF2_DMA_CONTIG
+	select V4L2_FWNODE
 	tristate "Tegra video input host1x client driver"
 	default y
 	help

@@ -1536,6 +1536,13 @@
 					status = "okay";
 				};
 			};
+			/* GPIO expander */
+			override@15 {
+				target = <&pca9570_a_24>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 
 	};

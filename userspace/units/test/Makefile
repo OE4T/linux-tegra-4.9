@@ -1,5 +1,3 @@
-# -*- mode: makefile -*-
-#
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -20,26 +18,14 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-#
-# Inlcude this in unit test makefiles to get useful rules.
-#
-
-LOCAL_HEADERS = (shell ls *.h)
-
-.PHONY: all clean
-all: lib$(MODULE).so
-	@true
+.SUFFIXES:
 
 #
-# Inherits from the top level makefile. As such the unit test make files cannot
-# be invoked by themselves.
-%.o : %.c # $(LOCAL_HEADERS)
-	$(CC) $(CFLAGS) -c -o $@ $<
+# Simple test unit test.
+#
 
-lib$(MODULE).so: $(OBJS)
-	$(CC) -shared -o $@ $(OBJS) $(LIB_PATHS) -lnvgpu_unit
-	@mkdir -p $(UNIT_OUT)/
-	@cp $@ $(UNIT_OUT)/
+OBJS   = test.o
+MODULE = test
 
-clean:
-	rm -rf *.o *.so
+# Defines all the rules for building a typical module.
+include ../Makefile.units

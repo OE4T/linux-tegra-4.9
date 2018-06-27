@@ -45,4 +45,5 @@ CORE_HEADERS :=	\
 	$(CORE_SRC)/../include/unit/*.h
 
 # Each directory under the UNIT_SRC directory should correspond to one module.
-UNITS :=
+UNITS :=	\
+      $(UNIT_SRC)/test

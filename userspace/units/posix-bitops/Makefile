@@ -1,5 +1,3 @@
-# -*- mode: makefile -*-
-#
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -20,33 +18,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-include ../drivers/gpu/nvgpu/Makefile.sources
+.SUFFIXES:
 
-OBJS := $(srcs:%.c=$(NVGPU_OUT)/%.o)
+OBJS   = posix-bitops.o
+MODULE = posix-bitops
 
-HEADERS :=	\
-	$(NVGPU_SRC)/include/nvgpu/*.h		\
-	$(NVGPU_SRC)/include/nvgpu/hw/*/*.h	\
-	$(NVGPU_SRC)/gk20a/*.h			\
-	$(NVGPU_SRC)/gm20b/*.h			\
-	$(NVGPU_SRC)/gp10b/*.h			\
-	$(NVGPU_SRC)/gv11b/*.h
-
-CORE_OBJS :=	\
-	$(CORE_OUT)/unit_main.o			\
-	$(CORE_OUT)/nvgpu.o			\
-	$(CORE_OUT)/args.o			\
-	$(CORE_OUT)/io.o			\
-	$(CORE_OUT)/module.o			\
-	$(CORE_OUT)/results.o			\
-	$(CORE_OUT)/exec.o
-
-CORE_HEADERS :=	\
-	$(CORE_SRC)/../include/unit/*.h
-
-# Each directory under the UNIT_SRC directory should correspond to one module.
-UNITS :=			\
-	$(UNIT_SRC)/posix-bitops
-
-# A test unit. Not really needed any more...
-#	$(UNIT_SRC)/test
+include ../Makefile.units

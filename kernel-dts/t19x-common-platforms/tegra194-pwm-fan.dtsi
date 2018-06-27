@@ -26,6 +26,7 @@
 		pwm_period = <45334>;
 		pwm_id = <4>;
 		pwm_polarity = <PWM_POLARITY_INVERTED>;
+		suspend_state = <1>;
 		step_time = <100>; /* mesecs */
 		state_cap = <7>;
 		active_pwm_max = <256>;

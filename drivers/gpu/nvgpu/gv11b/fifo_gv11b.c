@@ -387,17 +387,24 @@ u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
 
 u32 gv11b_fifo_get_preempt_timeout(struct gk20a *g)
 {
-	return gk20a_get_gr_idle_timeout(g);
+	/* if timeouts are enabled, using 3000ms timeout
+	 * for polling pdma/eng/runlist might kick in
+	 * timeout handler in the cases where preempt
+	 * is stuck. Use 1000ms timeout for polling when
+	 * timeouts are enabled */
+	return nvgpu_is_timeouts_enabled(g) ? PREEMPT_TIMEOUT_1000_MS :
+		g->gr_idle_timeout_default;
 }
 
 static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
-				 u32 pbdma_id, unsigned int timeout_rc_type)
+				 u32 pbdma_id)
 {
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
 	u32 pbdma_stat;
 	u32 chan_stat;
 	int ret = -EBUSY;
+	unsigned int loop_count = 0;
 
 	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
@@ -406,6 +413,14 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 	nvgpu_log(g, gpu_dbg_info, "wait preempt pbdma %d", pbdma_id);
 	/* Verify that ch/tsg is no longer on the pbdma */
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt pbdma retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
 		/*
 		 * If the PBDMA has a stalling interrupt and receives a NACK,
 		 * the PBDMA won't save out until the STALLING interrupt is
@@ -458,21 +473,24 @@ static int gv11b_fifo_poll_pbdma_chan_status(struct gk20a *g, u32 id,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "preempt timeout pbdma"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret)
+		nvgpu_err(g, "preempt timeout pbdma: %u pbdma_stat: %u "
+				"tsgid: %u", pbdma_id, pbdma_stat, id);
 	return ret;
 }
 
 static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
-			 u32 act_eng_id, u32 *reset_eng_bitmask,
-			 unsigned int timeout_rc_type)
+			 u32 act_eng_id, u32 *reset_eng_bitmask)
 {
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT; /* in micro seconds */
 	u32 eng_stat;
 	u32 ctx_stat;
 	int ret = -EBUSY;
-	bool stall_intr = false;
+	unsigned int loop_count = 0;
+	u32 eng_intr_pending;
 
 	/* timeout in milli seconds */
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
@@ -482,20 +500,56 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			act_eng_id);
 	/* Check if ch/tsg has saved off the engine or if ctxsw is hung */
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt eng retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
 		eng_stat = gk20a_readl(g, fifo_engine_status_r(act_eng_id));
 		ctx_stat  = fifo_engine_status_ctx_status_v(eng_stat);
 
-		if (g->ops.mc.is_stall_and_eng_intr_pending(g, act_eng_id)) {
-			stall_intr = true;
+		if (g->ops.mc.is_stall_and_eng_intr_pending(g, act_eng_id,
+					&eng_intr_pending)) {
+		/* From h/w team
+		 * Engine save can be blocked by eng  stalling interrupts.
+		 * FIFO interrupts shouldn’t block an engine save from
+		 * finishing, but could block FIFO from reporting preempt done.
+		 * No immediate reason to reset the engine if FIFO interrupt is
+		 * pending.
+		 * The hub, priv_ring, and ltc interrupts could block context
+		 * switch (or memory), but doesn’t necessarily have to.
+		 * For Hub interrupts they just report access counters and page
+		 * faults. Neither of these necessarily block context switch
+		 * or preemption, but they could.
+		 * For example a page fault for graphics would prevent graphics
+		 * from saving out. An access counter interrupt is a
+		 * notification and has no effect.
+		 * SW should handle page faults though for preempt to complete.
+		 * PRI interrupt (due to a failed PRI transaction) will result
+		 * in ctxsw failure reported to HOST.
+		 * LTC interrupts are generally ECC related and if so,
+		 * certainly don’t block preemption/ctxsw but they could.
+		 * Bus interrupts shouldn’t have anything to do with preemption
+		 * state as they are part of the Host EXT pipe, though they may
+		 * exhibit a symptom that indicates that GPU is in a bad state.
+		 * To be completely fair, when an engine is preempting SW
+		 * really should just handle other interrupts as they come in.
+		 * It’s generally bad to just poll and wait on a preempt
+		 * to complete since there are many things in the GPU which may
+		 * cause a system to hang/stop responding.
+		 */
 			nvgpu_log(g, gpu_dbg_info | gpu_dbg_intr,
 					"stall intr set, "
-					"preemption will not finish");
+					"preemption might not finish");
 		}
 		if (ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_switch_v()) {
 			/* Eng save hasn't started yet. Continue polling */
-			if (stall_intr) {
-				/* if stall intr stop polling */
+			if (eng_intr_pending) {
+				/* if eng intr, stop polling */
 				*reset_eng_bitmask |= BIT(act_eng_id);
 				ret = 0;
 				break;
@@ -507,8 +561,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			 fifo_engine_status_ctx_status_ctxsw_save_v()) {
 
 			if (id == fifo_engine_status_id_v(eng_stat)) {
-				if (stall_intr ||
-					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				if (eng_intr_pending) {
 					/* preemption will not finish */
 					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
@@ -524,9 +577,7 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 			 fifo_engine_status_ctx_status_ctxsw_load_v()) {
 
 			if (id == fifo_engine_status_next_id_v(eng_stat)) {
-
-				if (stall_intr ||
-					timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				if (eng_intr_pending) {
 					/* preemption will not finish */
 					*reset_eng_bitmask |= BIT(act_eng_id);
 					ret = 0;
@@ -546,8 +597,21 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "preempt timeout eng"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret) {
+		/*
+		* The reasons a preempt can fail are:
+		* 1.Some other stalling interrupt is asserted preventing
+		*   channel or context save.
+		* 2.The memory system hangs.
+		* 3.The engine hangs during CTXSW.
+		*/
+		nvgpu_err(g, "preempt timeout eng: %u ctx_stat: %u tsgid: %u",
+			act_eng_id, ctx_stat, id);
+		*reset_eng_bitmask |= BIT(act_eng_id);
+	}
+
 	return ret;
 }
 
@@ -594,29 +658,19 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 }
 
 void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
-			struct channel_gk20a *refch,
+			struct tsg_gk20a *tsg,
 			u32 faulted_pbdma, u32 faulted_engine)
 {
-	struct tsg_gk20a *tsg;
+	if (!tsg)
+		return;
 
 	nvgpu_log(g, gpu_dbg_intr, "reset faulted pbdma:0x%x eng:0x%x",
 				faulted_pbdma, faulted_engine);
 
-	if (!refch)
-		return;
-
-	if (gk20a_is_channel_marked_as_tsg(refch)) {
-		tsg = &g->fifo.tsg[refch->tsgid];
-		if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-			gv11b_reset_pbdma_faulted_tsg(tsg);
-		if (faulted_engine != FIFO_INVAL_ENGINE_ID)
-			gv11b_reset_eng_faulted_tsg(tsg);
-	} else {
-		if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-			gv11b_reset_pbdma_faulted_ch(g, refch->chid);
-		if (faulted_engine != FIFO_INVAL_ENGINE_ID)
-			gv11b_reset_eng_faulted_ch(g, refch->chid);
-	}
+	if (faulted_pbdma != FIFO_INVAL_PBDMA_ID)
+		gv11b_reset_pbdma_faulted_tsg(tsg);
+	if (faulted_engine != FIFO_INVAL_ENGINE_ID)
+		gv11b_reset_eng_faulted_tsg(tsg);
 }
 
 static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
@@ -626,7 +680,7 @@ static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 	u32 runlists_mask = 0;
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist;
-	u32 pbdma_bitmask = 0;
+	u32 rlid, pbdma_bitmask = 0;
 
 	if (id_type != ID_TYPE_UNKNOWN) {
 		if (id_type == ID_TYPE_TSG)
@@ -641,31 +695,31 @@ static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 		if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
 			pbdma_bitmask = BIT(mmfault->faulted_pbdma);
 
-		for (id = 0; id < f->max_runlists; id++) {
+		for (rlid = 0; rlid < f->max_runlists; rlid++) {
 
-			runlist = &f->runlist_info[id];
+			runlist = &f->runlist_info[rlid];
 
 			if (runlist->eng_bitmask & act_eng_bitmask)
 				runlists_mask |=
-				 fifo_sched_disable_runlist_m(id);
+				 fifo_sched_disable_runlist_m(rlid);
 
 			if (runlist->pbdma_bitmask & pbdma_bitmask)
 				runlists_mask |=
-				 fifo_sched_disable_runlist_m(id);
+				 fifo_sched_disable_runlist_m(rlid);
 		}
 	}
 
 	if (id_type == ID_TYPE_UNKNOWN) {
-		for (id = 0; id < f->max_runlists; id++) {
+		for (rlid = 0; rlid < f->max_runlists; rlid++) {
 			if (act_eng_bitmask) {
 				/* eng ids are known */
-				runlist = &f->runlist_info[id];
+				runlist = &f->runlist_info[rlid];
 				if (runlist->eng_bitmask & act_eng_bitmask)
 					runlists_mask |=
-					fifo_sched_disable_runlist_m(id);
+					fifo_sched_disable_runlist_m(rlid);
 			} else {
 				runlists_mask |=
-					fifo_sched_disable_runlist_m(id);
+					fifo_sched_disable_runlist_m(rlid);
 			}
 		}
 	}
@@ -697,10 +751,20 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -EBUSY;
+	unsigned int loop_count = 0;
 
 	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
+		if (!nvgpu_platform_is_silicon(g)) {
+			if (loop_count >= MAX_PRE_SI_RETRIES) {
+				nvgpu_err(g, "preempt runlist retries: %u",
+					loop_count);
+				break;
+			}
+			loop_count++;
+		}
+
 		if (!((gk20a_readl(g, fifo_runlist_preempt_r())) &
 				 runlists_mask)) {
 			ret = 0;
@@ -710,13 +774,16 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(unsigned long,
 				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-				 "runlist preempt timeout"));
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret)
+		nvgpu_err(g, "preempt runlist timeout, runlists_mask:0x%08x",
+				runlists_mask);
 	return ret;
 }
 
 int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
-		 unsigned int id_type, unsigned int timeout_rc_type)
+		 unsigned int id_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	unsigned long runlist_served_pbdmas;
@@ -724,7 +791,6 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	u32 pbdma_id;
 	u32 act_eng_id;
 	u32 runlist_id;
-	int func_ret;
 	int ret = 0;
 	u32 tsgid;
 
@@ -741,30 +807,14 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	runlist_served_pbdmas = f->runlist_info[runlist_id].pbdma_bitmask;
 	runlist_served_engines = f->runlist_info[runlist_id].eng_bitmask;
 
-	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma) {
-
-		func_ret = gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id,
-							 timeout_rc_type);
-		if (func_ret != 0) {
-			nvgpu_log_info(g, "preempt timeout pbdma %d", pbdma_id);
-			ret |= func_ret;
-		}
-	}
+	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma)
+		ret |= gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id);
 
 	f->runlist_info[runlist_id].reset_eng_bitmask = 0;
 
-	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines) {
-
-		func_ret = gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
-				&f->runlist_info[runlist_id].reset_eng_bitmask,
-				 timeout_rc_type);
-
-		if (func_ret != 0) {
-			nvgpu_log_info(g, "preempt timeout engine %d", act_eng_id);
-			ret |= func_ret;
-		}
-	}
-
+	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines)
+		ret |= gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
+				&f->runlist_info[runlist_id].reset_eng_bitmask);
 	return ret;
 }
 
@@ -848,12 +898,18 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
+	/* WAR for Bug 2065990 */
+	gk20a_fifo_disable_tsg_sched(g, &f->tsg[tsgid]);
+
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt(g, tsgid, true);
 
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	/* WAR for Bug 2065990 */
+	gk20a_fifo_enable_tsg_sched(g, &f->tsg[tsgid]);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 
@@ -863,44 +919,36 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	return ret;
 }
 
-static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
+static void gv11b_fifo_locked_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 {
 	int ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret = 0;
-	u32 runlist_id;
+	u32 rlid;
 
-	nvgpu_log_fn(g, " ");
-
-	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
-		if (runlists_mask & fifo_runlist_preempt_runlist_m(runlist_id))
-			nvgpu_mutex_acquire(&g->fifo.
-				runlist_info[runlist_id].runlist_lock);
-	}
+	/* runlist_lock are locked by teardown and sched are disabled too */
+	nvgpu_log_fn(g, "preempt runlists_mask:0x%08x", runlists_mask);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt_runlists(g, runlists_mask);
 
-	if (!mutex_ret)
-		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
-		if (runlists_mask &
-				fifo_runlist_preempt_runlist_m(runlist_id)) {
-			/* during recovery reset engs served by this runlist */
-			g->fifo.runlist_info[runlist_id].reset_eng_bitmask =
-				 g->fifo.runlist_info[runlist_id].eng_bitmask;
-			nvgpu_mutex_release(&g->fifo.
-				runlist_info[runlist_id].runlist_lock);
+	if (ret) {
+		/* if preempt timed out, reset engs served by runlists */
+		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+			if (runlists_mask &
+				fifo_runlist_preempt_runlist_m(rlid))
+				g->fifo.runlist_info[rlid].reset_eng_bitmask =
+				g->fifo.runlist_info[rlid].eng_bitmask;
 		}
 	}
 
-	return ret;
+	if (!mutex_ret)
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 }
 
 static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type, unsigned int timeout_rc_type)
+			 unsigned int id_type)
 {
 	int ret;
 	struct fifo_gk20a *f = &g->fifo;
@@ -914,52 +962,97 @@ static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 		gk20a_fifo_issue_preempt(g, id, true);
 
 	/* wait for preempt */
-	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,
-					 timeout_rc_type);
+	ret = g->ops.fifo.is_preempt_pending(g, id, id_type);
 
-	if (ret && (timeout_rc_type == PREEMPT_TIMEOUT_RC))
-		gk20a_fifo_preempt_timeout_rc(g, id, id_type);
+	/* No recovery even if preempt timed out since
+	 * this is called from recovery path
+	 */
 
 	return ret;
 }
 
 
 int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type, unsigned int timeout_rc_type)
+			 unsigned int id_type)
 {
-	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret = 0;
-	u32 runlist_id;
-
-	if (id_type == ID_TYPE_TSG)
-		runlist_id = f->tsg[id].runlist_id;
-	else if (id_type == ID_TYPE_CHANNEL)
-		runlist_id = f->channel[id].runlist_id;
-	else
-		return -EINVAL;
-
-	if (runlist_id >= g->fifo.max_runlists) {
-		nvgpu_log_info(g, "runlist_id = %d", runlist_id);
-		return -EINVAL;
-	}
-
-	nvgpu_log_fn(g, "preempt id = %d, runlist_id = %d", id, runlist_id);
-
-	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type, timeout_rc_type);
+	/*
+	 * This is called from teardown path only. runlist_lock
+	 * is already acquired before calling this function.
+	 */
+	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type);
 
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
-
 	return ret;
 
+}
+
+static void gv11b_fifo_locked_abort_runlist_active_tsgs(struct gk20a *g,
+			unsigned int rc_type,
+			u32 runlists_mask)
+{
+	struct tsg_gk20a *tsg = NULL;
+	u32 rlid, tsgid;
+	struct fifo_runlist_info_gk20a *runlist = NULL;
+	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
+	u32 mutex_ret = 0;
+	bool add = false, wait_for_finish = false;
+	int err;
+
+	nvgpu_err(g, "runlist id unknown, abort active tsgs in runlists");
+
+	/* runlist_lock  are locked by teardown */
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+
+	for (rlid = 0; rlid < g->fifo.max_runlists;
+						 rlid++) {
+		if (!(runlists_mask & BIT(rlid)))
+			continue;
+		nvgpu_log(g, gpu_dbg_info, "abort runlist id %d",
+				rlid);
+		runlist = &g->fifo.runlist_info[rlid];
+
+		for_each_set_bit(tsgid, runlist->active_tsgs,
+			g->fifo.num_channels) {
+			nvgpu_log(g, gpu_dbg_info, "abort tsg id %d", tsgid);
+			tsg = &g->fifo.tsg[tsgid];
+			gk20a_disable_tsg(tsg);
+
+			/* assume all pbdma and eng faulted are set */
+			nvgpu_log(g, gpu_dbg_info, "reset pbdma and eng faulted");
+			gv11b_reset_pbdma_faulted_tsg(tsg);
+			gv11b_reset_eng_faulted_tsg(tsg);
+
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+			gk20a_ctxsw_trace_tsg_reset(g, tsg);
+#endif
+			if (!g->fifo.deferred_reset_pending) {
+				if (rc_type == RC_TYPE_MMU_FAULT) {
+					gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
+					gk20a_fifo_error_tsg(g, tsg);
+				}
+			}
+
+			/* (chid == ~0 && !add) remove all act ch from runlist*/
+			err = gk20a_fifo_update_runlist_locked(g, rlid,
+					FIFO_INVAL_CHANNEL_ID, add, wait_for_finish);
+			if (err)
+				nvgpu_err(g, "runlist id %d is not cleaned up",
+					rlid);
+
+			gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
+
+			nvgpu_log(g, gpu_dbg_info, "aborted tsg id %d", tsgid);
+		}
+	}
+	if (!mutex_ret)
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 }
 
 void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
@@ -967,10 +1060,66 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			 struct mmu_fault_info *mmfault)
 {
 	struct tsg_gk20a *tsg = NULL;
-	struct channel_gk20a *refch = NULL;
-	u32 runlists_mask, runlist_id;
+	u32 runlists_mask, rlid;
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 engine_id, client_type = ~0;
+	struct fifo_gk20a *f = &g->fifo;
+	u32 runlist_id = FIFO_INVAL_RUNLIST_ID;
+	u32 num_runlists = 0;
+
+	nvgpu_log_fn(g, "acquire runlist_lock for all runlists");
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++)
+		nvgpu_mutex_acquire(&f->runlist_info[rlid].
+			runlist_lock);
+
+	/* get runlist id and tsg */
+	if (id_type == ID_TYPE_TSG) {
+		if (id != FIFO_INVAL_TSG_ID) {
+			tsg = &g->fifo.tsg[id];
+			runlist_id = tsg->runlist_id;
+			if (runlist_id != FIFO_INVAL_RUNLIST_ID)
+				num_runlists++;
+			else
+				nvgpu_log_fn(g, "tsg runlist id is invalid");
+		} else {
+			nvgpu_log_fn(g, "id type is tsg but tsg id is inval");
+		}
+	} else {
+		/*
+		 * id type is unknown, get runlist_id if eng mask is such that
+		 * it corresponds to single runlist id. If eng mask corresponds
+		 * to multiple runlists, then abort all runlists
+		 */
+		for (rlid = 0; rlid < f->max_runlists; rlid++) {
+			if (act_eng_bitmask) {
+				/* eng ids are known */
+				runlist = &f->runlist_info[rlid];
+				if (runlist->eng_bitmask & act_eng_bitmask) {
+					runlist_id = rlid;
+					num_runlists++;
+				}
+			} else {
+				break;
+			}
+		}
+		if (num_runlists > 1 ) /* abort all runlists */
+			runlist_id = FIFO_INVAL_RUNLIST_ID;
+	}
+
+	/* if runlist_id is valid and there is only single runlist to be
+	 * aborted, release runlist lock that are not
+	 * needed for this recovery
+	 */
+	if (runlist_id != FIFO_INVAL_RUNLIST_ID && num_runlists == 1) {
+		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+			if (rlid != runlist_id) {
+				nvgpu_log_fn(g, "release runlist_lock for "
+					"unused runlist id: %d", rlid);
+				nvgpu_mutex_release(&f->runlist_info[rlid].
+					runlist_lock);
+			}
+		}
+	}
 
 	nvgpu_log(g, gpu_dbg_info, "id = %d, id_type = %d, rc_type = %d, "
 			"act_eng_bitmask = 0x%x, mmfault ptr = 0x%p",
@@ -979,6 +1128,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	runlists_mask =  gv11b_fifo_get_runlists_mask(g, act_eng_bitmask, id,
 					 id_type, rc_type, mmfault);
 
+	/* Disable runlist scheduler */
 	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_DISABLED);
 
 	g->fifo.deferred_reset_pending = false;
@@ -1000,41 +1150,41 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
-	/* Get tsg/ch */
 	if (rc_type == RC_TYPE_MMU_FAULT) {
 		gk20a_debug_dump(g);
-		refch = mmfault->refch;
 		client_type = mmfault->client_type;
-		gv11b_fifo_reset_pbdma_and_eng_faulted(g, refch,
-			mmfault->faulted_pbdma,
-			mmfault->faulted_engine);
+		gv11b_fifo_reset_pbdma_and_eng_faulted(g, tsg,
+				mmfault->faulted_pbdma,
+				mmfault->faulted_engine);
 	}
 
-	if (id_type == ID_TYPE_TSG) {
-		tsg = &g->fifo.tsg[id];
-	} else if (id_type == ID_TYPE_CHANNEL) {
-		if (refch == NULL)
-			refch = gk20a_channel_get(&g->fifo.channel[id]);
-	}
-	/* Disable tsg/ch */
 	if (tsg)
 		gk20a_disable_tsg(tsg);
-	else if (refch)
-		g->ops.fifo.disable_channel(refch);
 
-	/* Preempt tsg/ch */
-	if (id_type == ID_TYPE_TSG || id_type == ID_TYPE_CHANNEL) {
-		g->ops.fifo.preempt_ch_tsg(g, id, id_type,
-					 PREEMPT_TIMEOUT_NORC);
+	/*
+	 * Even though TSG preempt timed out, the RC sequence would by design
+	 * require s/w to issue another preempt.
+	 * If recovery includes an ENGINE_RESET, to not have race conditions,
+	 * use RUNLIST_PREEMPT to kick all work off, and cancel any context
+	 * load which may be pending. This is also needed to make sure
+	 * that all PBDMAs serving the engine are not loaded when engine is
+	 * reset.
+	 */
+	if (tsg) {
+		int preempt_failed;
+
+		preempt_failed = g->ops.fifo.preempt_ch_tsg(g, id, id_type);
+		if (preempt_failed)
+			gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
 	} else {
-		gv11b_fifo_preempt_runlists(g, runlists_mask);
+		gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
 	}
 
 	/* check if engine reset should be deferred */
-	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 
-		runlist = &g->fifo.runlist_info[runlist_id];
-		if ((runlists_mask & BIT(runlist_id)) &&
+		runlist = &g->fifo.runlist_info[rlid];
+		if ((runlists_mask & BIT(rlid)) &&
 					runlist->reset_eng_bitmask) {
 
 			unsigned long __reset_eng_bitmask =
@@ -1042,7 +1192,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 			for_each_set_bit(engine_id, &__reset_eng_bitmask,
 							g->fifo.max_engines) {
-				if ((refch || tsg) &&
+				if (tsg &&
 					 gk20a_fifo_should_defer_engine_reset(g,
 					engine_id, client_type, false)) {
 
@@ -1074,13 +1224,9 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	}
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-	/* tsg and refch both could be valid for mmu fault. Check tsg first */
 	if (tsg)
 		gk20a_ctxsw_trace_tsg_reset(g, tsg);
-	else if (refch)
-		gk20a_ctxsw_trace_channel_reset(g, refch);
 #endif
-
 	if (tsg) {
 		if (g->fifo.deferred_reset_pending) {
 			gk20a_disable_tsg(tsg);
@@ -1090,26 +1236,9 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 
 			gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
 		}
-		if (refch)
-			gk20a_channel_put(refch);
-	} else if (refch) {
-		if (g->fifo.deferred_reset_pending) {
-			g->ops.fifo.disable_channel(refch);
-		} else {
-			if (rc_type == RC_TYPE_MMU_FAULT)
-				gk20a_fifo_set_ctx_mmu_error_ch(g, refch);
-
-			gk20a_channel_abort(refch, false);
-		}
-		gk20a_channel_put(refch);
 	} else {
-		nvgpu_err(g, "id unknown, abort runlist");
-		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
-						 runlist_id++) {
-			if (runlists_mask & BIT(runlist_id))
-				g->ops.fifo.update_runlist(g, runlist_id,
-					 FIFO_INVAL_CHANNEL_ID, false, true);
-		}
+		gv11b_fifo_locked_abort_runlist_active_tsgs(g, rc_type,
+			runlists_mask);
 	}
 
 	gk20a_fifo_set_runlist_state(g, runlists_mask, RUNLIST_ENABLED);
@@ -1117,6 +1246,18 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	/* It is safe to enable ELPG again. */
 	if (g->support_pmu && g->elpg_enabled)
 		nvgpu_pmu_enable_elpg(g);
+
+	/* release runlist_lock */
+	if (runlist_id != FIFO_INVAL_RUNLIST_ID) {
+		nvgpu_log_fn(g, "release runlist_lock runlist_id = %d",
+				runlist_id);
+		nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
+	} else {
+		nvgpu_log_fn(g, "release runlist_lock for all runlists");
+		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++)
+			nvgpu_mutex_release(&f->runlist_info[rlid].
+				runlist_lock);
+	}
 }
 
 void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)

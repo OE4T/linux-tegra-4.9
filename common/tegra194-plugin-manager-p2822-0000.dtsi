@@ -23,6 +23,12 @@
 					pwm_polarity = <PWM_POLARITY_NORMAL>;
 				};
 			};
+			override@1 {
+				target = <&pwm_fan_shared_data>;
+				_overlay_ {
+					suspend_state = <0>;
+				};
+			};
 		};
 
 		usb-vbus-en0-gpio-value {

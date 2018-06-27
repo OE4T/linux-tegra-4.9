@@ -78,6 +78,7 @@ struct fan_dev_data {
 	int pwm_gpio;
 	int pwm_id;
 	enum pwm_polarity fan_pwm_polarity;
+	int suspend_state;
 	const char *name;
 	struct regulator *fan_reg;
 	bool is_fan_reg_enabled;
@@ -942,6 +943,19 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	} else
 		fan_data->fan_pwm_polarity = value;
 
+	/*
+	 * suspend_state value is now expected from DT property but not all
+	 * platforms provide this propery via DT and expect suspend_state
+	 * to be 1. Hence keeping suspend_state to be 1 by default if
+	 * property is not provided by DT and function returns -EINVAL
+	 */
+	err = of_property_read_u32(data_node, "suspend_state", &value);
+	if (err == -EINVAL) {
+		value = 1;
+		err = 0;
+	}
+	fan_data->suspend_state = !!value;
+
 	fan_data->pwm_gpio = pwm_fan_gpio;
 
 	if (of_err) {
@@ -1228,7 +1242,7 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 			__func__, fan_data->pwm_gpio);
 	}
 
-	gpio_direction_output(fan_data->pwm_gpio, 1);
+	gpio_direction_output(fan_data->pwm_gpio, fan_data->suspend_state);
 
 	if (fan_data->is_fan_reg_enabled) {
 		err = regulator_disable(fan_data->fan_reg);

@@ -68,19 +68,41 @@ struct unit_module {
 	unsigned long			 nr_tests;
 
 	/*
+	 * Run priority. Currently 3 defined:
+	 *
+	 *   UNIT_PRIO_SELF_TEST
+	 *   UNIT_PRIO_POSIX_TEST
+	 *   UNIT_PRIO_NVGPU_TEST
+	 *
+	 * These let us run environment and POSIX API wrapper tests before the
+	 * rest of the unit tests run.
+	 */
+	unsigned int				 prio;
+
+	/*
 	 * For the core FW to use. Not for modules!!!
 	 */
 	void				*lib_handle;
 	struct unit_fw			*fw;
 };
 
-#define UNIT_MODULE(__name, __tests)					\
+/*
+ * Zero is the higest priority. Increasing the prio value decreases priority to
+ * run.
+ */
+#define UNIT_PRIO_SELF_TEST		0U
+#define UNIT_PRIO_POSIX_TEST		50U
+#define UNIT_PRIO_NVGPU_TEST		100U
+
+#define UNIT_MODULE(__name, __tests, __prio)				\
 	struct unit_module __unit_module__ = {				\
 		.name = #__name,					\
 		.tests = __tests,					\
 		.nr_tests = (sizeof(__tests) /				\
 			     sizeof(struct unit_module_test)),		\
+		.prio = __prio,						\
 		.lib_handle = NULL,					\
+		.fw = NULL,						\
 	}
 
 #define UNIT_TEST(__name, __fn, __args)					\

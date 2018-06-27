@@ -99,6 +99,23 @@ static struct unit_module *load_one_module(struct unit_fw *fw,
 	return mod;
 }
 
+static int cmp_module_prio(const void *__mod_a, const void *__mod_b)
+{
+	const struct unit_module *mod_a = __mod_a;
+	const struct unit_module *mod_b = __mod_b;
+
+	return mod_a->prio > mod_b->prio;
+}
+
+/*
+ * Sort the module list according to prio.
+ */
+static void sort_modules_by_prio(struct unit_module **modules, int nr)
+{
+	qsort(modules, (size_t)nr, sizeof(struct unit_module *),
+	      cmp_module_prio);
+}
+
 /*
  * Load all the modules we can from the module load path. Return the list of
  * loaded module as an array of pointers to modules. The returned list of
@@ -159,6 +176,9 @@ struct unit_module **core_load_modules(struct unit_fw *fw)
 	}
 
 	modules[i] = NULL;
+
+	sort_modules_by_prio(modules, i);
+
 	return modules;
 
 err:

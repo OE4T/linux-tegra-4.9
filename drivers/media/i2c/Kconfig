@@ -137,6 +137,16 @@ config I2C_IOEXPANDER_DESER_MAX9296
 	  To compile this driver as a module, choose M here: the module
 	  will be called max9296.
 
+config VIDEO_IMX390
+	tristate "IMX390 camera sensor support"
+	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && I2C_IOEXPANDER_SER_MAX9295 && I2C_IOEXPANDER_DESER_MAX9296
+	---help---
+	  This is a Video4Linux2 sensor-level driver for the Sony
+	  IMX390 camera sensor
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called imx390.
+
 endmenu
 
 endif

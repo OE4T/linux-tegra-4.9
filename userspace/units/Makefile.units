@@ -20,29 +20,26 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-include ../drivers/gpu/nvgpu/Makefile.sources
+#
+# Inlcude this in unit test makefiles to get useful rules.
+#
 
-OBJS := $(srcs:%.c=$(NVGPU_OUT)/%.o)
+LOCAL_HEADERS = (shell ls *.h)
 
-HEADERS :=	\
-	$(NVGPU_SRC)/include/nvgpu/*.h		\
-	$(NVGPU_SRC)/include/nvgpu/hw/*/*.h	\
-	$(NVGPU_SRC)/gk20a/*.h			\
-	$(NVGPU_SRC)/gm20b/*.h			\
-	$(NVGPU_SRC)/gp10b/*.h			\
-	$(NVGPU_SRC)/gv11b/*.h
+.PHONY: all clean
+all: lib$(MODULE).so
+	@true
 
-CORE_OBJS :=	\
-	$(CORE_OUT)/unit_main.o			\
-	$(CORE_OUT)/nvgpu.o			\
-	$(CORE_OUT)/args.o			\
-	$(CORE_OUT)/io.o			\
-	$(CORE_OUT)/module.o			\
-	$(CORE_OUT)/results.o			\
-	$(CORE_OUT)/exec.o
+#
+# Inherits from the top level makefile. As such the unit test make files cannot
+# be invoked by themselves.
+%.o : %.c # $(LOCAL_HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-CORE_HEADERS :=	\
-	$(CORE_SRC)/../include/unit/*.h
+lib$(MODULE).so: $(OBJS)
+	$(CC) -shared -o $@ $(OBJS)
+	@mkdir -p $(UNIT_OUT)/
+	@cp $@ $(UNIT_OUT)/
 
-# Each directory under the UNIT_SRC directory should correspond to one module.
-UNITS :=
+clean:
+	rm -rf *.o *.so

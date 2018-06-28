@@ -442,14 +442,9 @@ static void tegra210_xusb_padctl_init_usb3_port(int port,
 /* must be called under padctl->lock */
 static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
-	struct tegra_xusb_pcie_pad *pcie = to_pcie_pad(padctl->pcie);
 	unsigned long timeout;
 	u32 value;
 	int err, i;
-
-	err = reset_control_deassert(pcie->rst);
-	if (err < 0)
-		dev_err(padctl->dev, "failed to deassert UPHY PEX PLL reset\n");
 
 	if (t210b01_compatible(padctl) == 1) {
 		for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {
@@ -925,12 +920,6 @@ static int tegra210_uphy_init(struct tegra_xusb_padctl *padctl)
 	err = clk_prepare_enable(priv->plle);
 	if (err < 0)
 		return err;
-
-	if (t210b01_compatible(padctl) == 1) {
-		err = clk_prepare_enable(priv->uphy_mgmt_clk);
-		if (err < 0)
-			return err;
-	}
 
 	/* enable PCIE & SATA PLL in HW */
 	tegra210_pex_uphy_enable(padctl);
@@ -2690,6 +2679,12 @@ tegra210_pcie_pad_probe(struct tegra_xusb_padctl *padctl,
 			dev_err(&pad->dev,
 				"failed to get uphy_mgmt_clk clock: %d\n", err);
 		}
+
+		err = clk_prepare_enable(priv->uphy_mgmt_clk);
+		if (err < 0) {
+			dev_err(&pad->dev,
+				"failed to enable uphy_mgmt_clk clock: %d\n", err);
+		}
 	}
 
 	pcie->rst = devm_reset_control_get(&pad->dev, "phy");
@@ -2698,6 +2693,9 @@ tegra210_pcie_pad_probe(struct tegra_xusb_padctl *padctl,
 		dev_err(&pad->dev, "failed to get PCIe pad reset: %d\n", err);
 		goto unregister;
 	}
+	err = reset_control_deassert(pcie->rst);
+	if (err < 0)
+		dev_err(padctl->dev, "failed to deassert UPHY PEX PLL reset\n");
 
 	err = tegra_xusb_pad_register(pad, &tegra210_pcie_phy_ops);
 	if (err < 0)

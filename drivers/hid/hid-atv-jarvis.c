@@ -32,6 +32,7 @@
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
+#include <linux/version.h>
 #include <sound/core.h>
 #include <sound/control.h>
 #include <sound/info.h>
@@ -1393,9 +1394,15 @@ static snd_pcm_uframes_t snd_atvr_pcm_pointer(
 	return atvr_snd->write_index;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream, int channel,
+			unsigned long pos, void __user *dst,
+			unsigned long count)
+#else
 static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream,
-			  int channel, snd_pcm_uframes_t pos,
-			  void __user *dst, snd_pcm_uframes_t count)
+			int channel, snd_pcm_uframes_t pos,
+			void __user *dst, snd_pcm_uframes_t count)
+#endif
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 
@@ -1429,9 +1436,14 @@ static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int snd_atvr_pcm_silence(struct snd_pcm_substream *substream, int channel,
+				unsigned long pos, unsigned long count)
+#else
 static int snd_atvr_pcm_silence(struct snd_pcm_substream *substream,
 				int channel, snd_pcm_uframes_t pos,
 				snd_pcm_uframes_t count)
+#endif
 {
 	return 0; /* Do nothing. Only used by output? */
 }
@@ -1445,8 +1457,13 @@ static struct snd_pcm_ops snd_atvr_pcm_ops_no_buf = {
 	.prepare =	snd_atvr_pcm_prepare,
 	.trigger =	snd_atvr_pcm_trigger,
 	.pointer =	snd_atvr_pcm_pointer,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	.copy_user =	snd_atvr_pcm_copy,
+	.fill_silence = snd_atvr_pcm_silence,
+#else
 	.copy =		snd_atvr_pcm_copy,
 	.silence =	snd_atvr_pcm_silence,
+#endif
 };
 
 static int snd_card_atvr_pcm(struct snd_atvr *atvr_snd,
@@ -2002,7 +2019,7 @@ static void atvr_hid_miss_stats_inc(void)
 	mutex_unlock(&hid_miss_stats_lock);
 }
 
-static ssize_t atvr_show_hid_miss_stats(struct device_driver *driver, char *buf)
+static ssize_t hid_miss_stats_show(struct device_driver *driver, char *buf)
 {
 	int stats;
 
@@ -2013,8 +2030,8 @@ static ssize_t atvr_show_hid_miss_stats(struct device_driver *driver, char *buf)
 	return sprintf(buf, "%d", stats);
 }
 
-static ssize_t atvr_store_hid_miss_stats(struct device_driver *driver,
-					 const char *buf, size_t count)
+static ssize_t hid_miss_stats_store(struct device_driver *driver,
+				    const char *buf, size_t count)
 {
 	int val;
 
@@ -2027,8 +2044,12 @@ static ssize_t atvr_store_hid_miss_stats(struct device_driver *driver,
 	return count;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static DRIVER_ATTR_RW(hid_miss_stats);
+#else
 static DRIVER_ATTR(hid_miss_stats, S_IRUGO | S_IWUSR,
-		   atvr_show_hid_miss_stats, atvr_store_hid_miss_stats);
+		   hid_miss_stats_show, hid_miss_stats_store);
+#endif
 
 static int atvr_init(void)
 {

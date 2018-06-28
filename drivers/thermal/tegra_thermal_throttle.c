@@ -30,6 +30,7 @@
 #define KHZ_TO_HZ		1000
 #define CPU_STEP_HZ		(76800 * KHZ_TO_HZ)
 #define GPU_STEP_HZ		(102 * KHZ_TO_HZ * KHZ_TO_HZ)
+#define MAX_CPU_CLUSTERS	4
 
 struct tegra_throt_cdev_clk;
 struct tegra_throt_cdev {
@@ -53,6 +54,8 @@ struct tegra_throt_clk {
 	int type;
 	int steps;
 	char *name;
+	char **clk_names;
+	int num_clk_handles;
 };
 
 struct tegra_throt_cdev_clk {
@@ -70,16 +73,24 @@ static LIST_HEAD(tegra_throt_cdev_list);
 static DEFINE_MUTEX(tegra_throt_lock);
 static struct dentry *tegra_throt_root;
 
+static char *cpu_clks[MAX_CPU_CLUSTERS] = { "cpu0", "cpu1", "cpu2", "cpu3" };
+
+static char *gpu_clks[] = { "gpu" };
+
 static struct tegra_throt_clk throt_clks[TEGRA_THROTTLE_MAX] = {
 	{
 		.name = "cpu",
+		.clk_names = cpu_clks,
 		.step_hz = CPU_STEP_HZ,
-		.type = TEGRA_THROTTLE_CPU
+		.type = TEGRA_THROTTLE_CPU,
+		.num_clk_handles = MAX_CPU_CLUSTERS,
 	},
 	{
 		.name = "gpu",
+		.clk_names = gpu_clks,
 		.step_hz = GPU_STEP_HZ,
-		.type = TEGRA_THROTTLE_GPU
+		.type = TEGRA_THROTTLE_GPU,
+		.num_clk_handles = 1,
 	},
 };
 
@@ -131,7 +142,11 @@ static struct tegra_throt_clk *tegra_throt_find_clk(
 
 	for (i = 0; i < TEGRA_THROTTLE_MAX; i++)
 		if (pclks[i].type == type)
-			return &pclks[i];
+			break;
+
+	if (!IS_ERR(pclks[i].clk))
+		return &pclks[i];
+
 	return NULL;
 }
 
@@ -410,8 +425,8 @@ static int tegra_throt_cdev_clk_init(struct platform_device *pdev,
 	for (i = 0, j = 0; j < tcd->num_clks; i = i + 3, j++) {
 		tcc = &tcd->clks[j];
 		tclk = tegra_throt_find_clk(pclks, prop[i]);
-		if (IS_ERR(tclk))
-			return -EINVAL;
+		if (!tclk)
+			return -ENODEV;
 
 		tcc->throt_clk = tclk;
 		tcc->slope_adj = prop[i+1];
@@ -514,6 +529,21 @@ static int tegra_throt_freq_gov_init(int type)
 	return ret;
 }
 
+static int tegra_throt_clk_get(struct platform_device *pdev,
+				struct tegra_throt_clk *pclk)
+{
+	int i;
+
+	for (i = 0; i < pclk->num_clk_handles; i++) {
+		pclk->clk = devm_clk_get(&pdev->dev, pclk->clk_names[i]);
+		if (!IS_ERR(pclk->clk))
+			return 0;
+	}
+
+	dev_err(&pdev->dev, "failed to get clk:%s\n", pclk[i].name);
+	return -ENODEV;
+}
+
 static int tegra_throt_clk_init(struct platform_device *pdev,
 				struct tegra_throt_clk *pclks)
 {
@@ -526,8 +556,7 @@ static int tegra_throt_clk_init(struct platform_device *pdev,
 			continue;
 		}
 
-		pclks[i].clk = devm_clk_get(&pdev->dev, pclks[i].name);
-		if (IS_ERR(pclks[i].clk))
+		if (tegra_throt_clk_get(pdev, &pclks[i]) != 0)
 			continue;
 
 		INIT_LIST_HEAD(&pclks[i].cdev_clk_list);

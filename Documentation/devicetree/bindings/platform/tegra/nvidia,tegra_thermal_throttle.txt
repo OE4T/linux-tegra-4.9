@@ -31,9 +31,9 @@ Required properties:
 - clocks : This property provides a list of clocks that can be throttled. Must
   provide at least one valid clock. Must contain one entry for each entry in
   clock-names. See ../clocks/clock-bindings.txt for details.
-- clock-names: Must include one of the following entries:
-  - cpu: for throttling the clocks of all the CPUs.
-  - gpu: for thorttling the GPU clock.
+- clock-names: Must include either:
+  - Clock names for all CPUs "cpu0, cpu1, cpu2, cpu3", to throttle all CPUs. Or
+  - Clock name for GPU "gpu" to throttle the GPU.
 
 Required subnodes: The throttle node must provide at least one cooling device
 node with at least one clock to throttle.
@@ -95,8 +95,11 @@ Example:
 tegra_thermal_throttle {
 	compatible = "nvidia,tegra-thermal-throttle";
 	clocks = <&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER0>,
+			<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER1>,
+			<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER2>,
+			<&bpmp_clks TEGRA194_CLK_NAFLL_CLUSTER3>,
 			<&bpmp_clks TEGRA194_CLK_NAFLL_GPU>;
-	clock-names = "cpu", "gpu";
+	clock-names = "cpu0", "cpu1", "cpu2", "cpu3", "gpu";
 	cpu_balanced {
 		cdev-type = "cpu-balanced";
 		#cooling-cells = <2>;

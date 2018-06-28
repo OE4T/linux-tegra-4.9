@@ -5358,6 +5358,7 @@ static bool tegra_dc_dsi_detect(struct tegra_dc *dc)
 	if (dsi->info.dsi2lvds_bridge_enable)
 		result = ds90ub947_lvds2fpdlink3_detect(dc);
 #endif /*defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)*/
+	complete(&dc->hpd_complete);
 	return result;
 }
 

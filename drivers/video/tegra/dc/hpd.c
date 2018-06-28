@@ -471,11 +471,12 @@ static void sched_hpd_work(struct tegra_hpd_data *data, int resched_time)
 				&data->dwork,
 				usecs_to_jiffies(resched_time));
 
-	} else if (data->dc->suspended && resched_time < 0) {
+	} else {
 		/*
 		 * We reach here when hpd state machine completes i.e
 		 * hpd state is ENABLE or DISABLE and during DC suspend
-		 * resume sequence.
+		 * resume sequence. The hotplug detection also requires
+		 * this completion to be triggered.
 		 */
 		complete(&data->dc->hpd_complete);
 		data->hpd_resuming = false;

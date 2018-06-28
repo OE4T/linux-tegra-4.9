@@ -474,8 +474,9 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 
 	dc->out->hotplug_state = new_state;
 
+	reinit_completion(&dc->hpd_complete);
 	tegra_dp_pending_hpd(dp);
-	ssleep(2);
+	wait_for_completion(&dc->hpd_complete);
 	return len;
 }
 
@@ -2981,12 +2982,16 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
 	if ((tegra_platform_is_sim() || tegra_platform_is_fpga()) &&
-		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL)) {
+		complete(&dc->hpd_complete);
 		return true;
+	}
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && !dc->vedid &&
-		dp->edid_src != EDID_SRC_DT)
+		dp->edid_src != EDID_SRC_DT) {
+		complete(&dc->hpd_complete);
 		return false;
+	}
 
 	tegra_dp_pending_hpd(dp);
 

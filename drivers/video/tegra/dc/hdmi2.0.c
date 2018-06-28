@@ -839,8 +839,7 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 
 fail:
 	mutex_unlock(&hdmi->hpd_lock);
-	if (hdmi->dc->suspended)
-		complete(&hdmi->dc->hpd_complete);
+	complete(&hdmi->dc->hpd_complete);
 	return;
 
 reschedule_worker:
@@ -3206,8 +3205,10 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 		delay = 0;
 
 	if ((tegra_platform_is_sim() || tegra_platform_is_fpga()) &&
-		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL)) {
+		complete(&dc->hpd_complete);
 		return true;
+	}
 
 	cancel_delayed_work(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker, delay);
@@ -3406,8 +3407,10 @@ void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
 	 * wait for any already executing hpd worker thread.
 	 * No debounce delay, schedule immedately
 	 */
+	reinit_completion(&dc->hpd_complete);
 	cancel_delayed_work_sync(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker, 0);
+	wait_for_completion(&dc->hpd_complete);
 }
 
 
@@ -3452,7 +3455,6 @@ static ssize_t tegra_hdmi_hotplug_dbg_write(struct file *file,
 		return ret;
 
 	tegra_hdmi_set_hotplug_state(hdmi, new_hpd_state);
-	ssleep(2);
 	return len;
 }
 

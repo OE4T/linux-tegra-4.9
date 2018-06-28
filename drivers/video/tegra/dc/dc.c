@@ -1648,10 +1648,11 @@ skip_gpio:
 	 * state TEGRA_HPD_STATE_NORMAL since hpd_state
 	 * callback for sim always returns true
 	 * */
+	reinit_completion(&dc->hpd_complete);
 	if (dc->out_ops->detect)
 		dc->connected = dc->out_ops->detect(dc);
 	mutex_unlock(&dc->lock);
-	ssleep(2);
+	wait_for_completion(&dc->hpd_complete);
 	return len;
 }
 

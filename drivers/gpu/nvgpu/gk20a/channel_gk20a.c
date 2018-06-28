@@ -1802,8 +1802,7 @@ int gk20a_channel_add_job(struct channel_gk20a *c,
 		/*
 		 * ensure all pending write complete before adding to the list.
 		 * see corresponding nvgpu_smp_rmb in
-		 * gk20a_channel_clean_up_jobs() &
-		 * gk20a_channel_abort_clean_up()
+		 * gk20a_channel_clean_up_jobs()
 		 */
 		nvgpu_smp_wmb();
 		channel_gk20a_joblist_add(c, job);

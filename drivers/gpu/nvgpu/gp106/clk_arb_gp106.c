@@ -67,8 +67,8 @@ int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	/* WAR for DVCO min */
 	if (api_domain == CTRL_CLK_DOMAIN_GPC2CLK)
 		if ((pfllobjs->max_min_freq_mhz) &&
-		(pfllobjs->max_min_freq_mhz > limit_min_mhz))
-			limit_min_mhz = pfllobjs->max_min_freq_mhz;
+		(pfllobjs->max_min_freq_mhz >= limit_min_mhz))
+			limit_min_mhz = pfllobjs->max_min_freq_mhz + 1;
 
 	*min_mhz = limit_min_mhz;
 	*max_mhz = p0_info->max_mhz;

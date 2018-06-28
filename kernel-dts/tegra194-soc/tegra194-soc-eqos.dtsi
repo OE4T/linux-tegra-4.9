@@ -65,6 +65,7 @@
 		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		nvidia,iso_bw = <81920>; /* sum of read and write bw, 80Mb/s */
+		nvidia,rx_riwt = <124>; /* usec value for Rx watchdog interrupt */
 		nvidia,slot_intvl_val = <0x07C>;
 		status = "disabled";
 		eqos_cool_dev: eqos-cool-dev {

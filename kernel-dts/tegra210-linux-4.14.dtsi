@@ -20,17 +20,6 @@
 		 bootargs ="androidboot.selinux=permissive";
 	};
 
-	/* Enable generic carveout, because SMMU is not enabled for k4.14 */
-	reserved-memory {
-		generic_reserved: generic_carveout {
-			compatible = "nvidia,generic_carveout";
-			size = <0 0x10000000>;
-			alignment = <0 0x100000>;
-			alloc-ranges = <0 0 0x1 0>;
-			no-map;
-		};
-	};
-
 	sound {
 		status = "disabled";
 	};

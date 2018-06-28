@@ -2,7 +2,7 @@ if CRYPTO_HW
 
 config TEGRA_CRYPTO_DEV
 	tristate "Device node to access tegra aes hardware"
-	depends on CRYPTO_DEV_TEGRA_ELLIPTIC_SE
+	depends on CRYPTO_DEV_TEGRA_ELLIPTIC_SE || CRYPTO_DEV_TEGRA_SE_USE_HOST1X_INTERFACE
 	help
 	  Dev node /dev/tegra-crypto in order to get access to tegra aes
 	  hardware from user space

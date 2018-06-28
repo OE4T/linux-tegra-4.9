@@ -967,10 +967,10 @@ static int nvdla_open(struct inode *inode, struct file *file)
 
 	return nonseekable_open(inode, file);
 
-err_alloc_queue:
-	nvhost_module_remove_client(pdev, priv);
 err_alloc_buffer:
 	kfree(priv->buffers);
+err_alloc_queue:
+	nvhost_module_remove_client(pdev, priv);
 err_add_client:
 	kfree(priv);
 err_alloc_priv:

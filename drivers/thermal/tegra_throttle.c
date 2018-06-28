@@ -68,6 +68,7 @@ struct balanced_throttle {
 	int throttle_count;
 	int throt_tab_size;
 	u32 *throt_tab;
+	struct device_node *np;
 };
 
 static struct tegra_bwmgr_client *emc_throt_handle;
@@ -357,7 +358,7 @@ static void tegra_throttle_exit_debugfs(void) {}
 
 static int balanced_throttle_register(struct balanced_throttle *bthrot)
 {
-	bthrot->cdev = thermal_cooling_device_register(
+	bthrot->cdev = thermal_of_cooling_device_register(bthrot->np,
 						bthrot->cdev_type,
 						bthrot,
 						&tegra_throttle_cooling_ops);
@@ -487,6 +488,7 @@ static int parse_throttle_dt_data(struct device *dev)
 		if  (ret)
 			goto err;
 
+		pdata->np = child;
 		mutex_lock(&bthrot_list_lock);
 		list_add(&pdata->node, &bthrot_list);
 		mutex_unlock(&bthrot_list_lock);

@@ -218,8 +218,6 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 		nvgpu_ref_put(&buffer->ref, __nvgpu_vm_unmap_ref);
 	}
 
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
 	/* if this was a sparse mapping, free the va */
 	if (vm_area->sparse)
 		g->ops.mm.gmmu_unmap(vm,
@@ -230,6 +228,8 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 				     gk20a_mem_flag_none,
 				     true,
 				     NULL);
+
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	nvgpu_free(vm->vma[vm_area->pgsz_idx], vm_area->addr);
 	nvgpu_kfree(g, vm_area);

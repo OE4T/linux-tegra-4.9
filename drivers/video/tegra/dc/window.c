@@ -733,9 +733,10 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		win_options = WIN_ENABLE;
 		if (scan_column)
 			win_options |= WIN_SCAN_COLUMN;
-
-		win_options |= H_FILTER_ENABLE(filter_h);
-		win_options |= V_FILTER_ENABLE(filter_v);
+		if (!dc->yuv_bypass) {
+			win_options |= H_FILTER_ENABLE(filter_h);
+			win_options |= V_FILTER_ENABLE(filter_v);
+		}
 
 		/* Update scaling registers if window supports scaling. */
 		if (likely(tegra_dc_feature_has_scaling(dc, win->idx)))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -545,7 +545,7 @@ find_exit:
 	/* noise unaware vmin */
 	*nuvmin = mclk_voltuv;
 	*nuvmin_sram = mclk_voltuv_sram;
-	*gpc2clk = gpc2clk_target < *gpc2clk ? gpc2clk_target : *gpc2clk;
+	*gpc2clk = gpc2clk_target;
 	*mclk = mclk_target;
 	return pstate;
 }

@@ -67,10 +67,6 @@ int gpu_init_hal(struct gk20a *g)
 		if (NVGPU_NEXT_INIT_HAL(g))
 			return -ENODEV;
 		break;
-	case NVGPU_GPUID_NEXT_2:
-		if (NVGPU_NEXT_2_INIT_HAL(g))
-			return -ENODEV;
-		break;
 #endif
 
 	default:

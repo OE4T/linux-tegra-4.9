@@ -131,7 +131,7 @@ static void __apply_alternatives(void *alt_region)
 			*(origptr + i) = cpu_to_le32(insn);
 		}
 
-		flush_cache_kernel_range((uintptr_t)origptr,
+		flush_icache_range((uintptr_t)origptr,
 				   (uintptr_t)(origptr + nr_inst));
 	}
 }

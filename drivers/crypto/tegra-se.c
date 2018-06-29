@@ -32,6 +32,7 @@
 #include <linux/interrupt.h>
 #include <linux/types.h>
 #include <linux/errno.h>
+#include <linux/version.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/ahb.h>
@@ -2203,7 +2204,11 @@ static int tegra_init_rsa_key_slot(struct tegra_se_dev *se_dev)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_rsa_max_size(struct crypto_akcipher *tfm)
+#else
 static int tegra_se_rsa_max_size(struct crypto_akcipher *tfm)
+#endif
 {
 	struct tegra_se_aes_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 
@@ -2760,8 +2765,13 @@ free:
 	return err;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, const void *buf,
+				  unsigned int len)
+#else
 static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, void *buf,
 				  unsigned int len)
+#endif
 {
 	int ret = 0;
 
@@ -2787,7 +2797,11 @@ static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, void *buf,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static unsigned int tegra_se_dh_max_size(struct crypto_kpp *tfm)
+#else
 static int tegra_se_dh_max_size(struct crypto_kpp *tfm)
+#endif
 {
 	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
 

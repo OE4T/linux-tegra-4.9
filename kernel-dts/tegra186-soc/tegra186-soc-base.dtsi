@@ -1823,15 +1823,27 @@
 		       0x0 0x40000000 0x0 0x00001000>; /* configuration space */
 		reg-names = "pads", "afi", "cs";
 
+#if LINUX_VERSION >= 414
+		clocks = <&tegra_car TEGRA186_CLK_AFI>,
+			<&tegra_car TEGRA186_CLK_PCIE>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_PLLE>;
+		clock-names = "afi", "pex", "clk_m", "pll_e";
+#else
 		clocks = <&tegra_car TEGRA186_CLK_AFI>,
 			<&tegra_car TEGRA186_CLK_PCIE>,
 			<&tegra_car TEGRA186_CLK_CLK_M>;
 		clock-names = "afi", "pcie", "clk_m";
+#endif
 
 		resets = <&tegra_car TEGRA186_RESET_AFI>,
 			<&tegra_car TEGRA186_RESET_PCIE>,
 			<&tegra_car TEGRA186_RESET_PCIEXCLK>;
+#if LINUX_VERSION >= 414
+		reset-names = "afi", "pex", "pcie_x";
+#else
 		reset-names = "afi", "pcie", "pciex";
+#endif
 
 		interrupts = <0 72 0x04>, /* controller interrupt */
 			     <0 73 0x04>; /* MSI interrupt */

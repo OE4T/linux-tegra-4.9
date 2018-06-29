@@ -61,14 +61,6 @@
 		};
 	};
 
-	arm64_ras {
-		status = "okay";
-	};
-
-	carmel_ras {
-		status = "okay";
-	};
-
 	spi@3270000 {
 		status = "disabled";
 	};

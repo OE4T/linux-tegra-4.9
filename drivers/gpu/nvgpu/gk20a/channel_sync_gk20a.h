@@ -60,15 +60,6 @@ struct gk20a_channel_sync {
 		    bool need_sync_fence,
 		    bool register_irq);
 
-	/* Increment syncpoint/semaphore, preceded by a wfi.
-	 * Returns
-	 *  - a gpu cmdbuf that performs the increment when executed,
-	 *  - a fence that can be passed to wait_cpu() and is_expired().
-	 */
-	int (*incr_wfi)(struct gk20a_channel_sync *s,
-			struct priv_cmd_entry *entry,
-			struct gk20a_fence *fence);
-
 	/* Increment syncpoint/semaphore, so that the returned fence represents
 	 * work completion (may need wfi) and can be returned to user space.
 	 * Returns

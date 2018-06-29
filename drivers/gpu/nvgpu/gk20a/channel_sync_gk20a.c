@@ -206,16 +206,6 @@ clean_up_priv_cmd:
 	return err;
 }
 
-static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
-				  struct priv_cmd_entry *entry,
-				  struct gk20a_fence *fence)
-{
-	return __gk20a_channel_syncpt_incr(s,
-			true /* wfi */,
-			false /* no irq handler */,
-			entry, fence, true);
-}
-
 static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry *entry,
 			      struct gk20a_fence *fence,
@@ -328,7 +318,6 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;
 	sp->ops.wait_fd			= gk20a_channel_syncpt_wait_fd;
 	sp->ops.incr			= gk20a_channel_syncpt_incr;
-	sp->ops.incr_wfi		= gk20a_channel_syncpt_incr_wfi;
 	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
 	sp->ops.set_safe_state		= gk20a_channel_syncpt_set_safe_state;
@@ -498,16 +487,6 @@ clean_up_sema:
 	return err;
 }
 
-static int gk20a_channel_semaphore_incr_wfi(
-		struct gk20a_channel_sync *s,
-		struct priv_cmd_entry *entry,
-		struct gk20a_fence *fence)
-{
-	return __gk20a_channel_semaphore_incr(s,
-			true /* wfi */,
-			entry, fence, true);
-}
-
 static int gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s,
 		struct priv_cmd_entry *entry,
@@ -636,7 +615,6 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
 	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
 	sema->ops.incr		= gk20a_channel_semaphore_incr;
-	sema->ops.incr_wfi	= gk20a_channel_semaphore_incr_wfi;
 	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
 	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
 	sema->ops.set_safe_state = gk20a_channel_semaphore_set_safe_state;

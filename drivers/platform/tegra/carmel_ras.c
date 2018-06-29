@@ -944,11 +944,6 @@ static int ras_carmel_probe(struct platform_device *pdev)
 	register_serr_hook(&corecluster_serr_callback);
 	register_serr_hook(&ccplex_serr_callback);
 
-	/* Enable RAS on all online CPUs */
-	for_each_online_cpu(cpu) {
-		smp_call_function_single(cpu, carmel_ras_enable, NULL, 1);
-	}
-
 	ret = ras_carmel_dbgfs_init();
 	if (ret)
 		return ret;

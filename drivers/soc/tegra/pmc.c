@@ -476,7 +476,6 @@ enum pmc_regs {
 };
 
 static bool get_secure_pmc_setting(void);
-static void tegra_pmc_writel(u32 value, unsigned long offset);
 static u32 tegra_pmc_reg_readl(enum pmc_regs reg);
 static void tegra_pmc_reg_writel(u32 value, enum pmc_regs reg);
 
@@ -4816,7 +4815,7 @@ u32 tegra_pmc_readl(unsigned long offset)
 }
 EXPORT_SYMBOL(tegra_pmc_readl);
 
-static void tegra_pmc_writel(u32 value, unsigned long offset)
+void tegra_pmc_writel(u32 value, unsigned long offset)
 {
 	struct pmc_smc_regs regs;
 
@@ -4832,6 +4831,7 @@ static void tegra_pmc_writel(u32 value, unsigned long offset)
 		writel(value, pmc->base + offset);
 	}
 }
+EXPORT_SYMBOL(tegra_pmc_writel);
 
 void tegra_pmc_writel_relaxed(u32 value, unsigned long offset)
 {

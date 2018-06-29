@@ -362,5 +362,6 @@ int tegra_pmc_save_se_context_buffer_address(u32 add);
 u32 tegra_pmc_get_se_context_buffer_address(void);
 void tegra_pmc_writel_relaxed(u32 value, unsigned long offset);
 u32 tegra_pmc_readl(unsigned long offset);
+void tegra_pmc_writel(u32 value, unsigned long offset);
 
 #endif /* __SOC_TEGRA_PMC_H__ */

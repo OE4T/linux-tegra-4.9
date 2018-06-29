@@ -368,5 +368,13 @@
 		pwm-regulator = <&cpu_ovr_reg>;
 		status = "okay";
 	};
+
+	tlk {
+		clocks = <&tegra_car TEGRA210_CLK_NVDEC>;
+		clock-names = "nvdec";
+		resets = <&tegra_car TEGRA210_CLK_NVDEC>;
+		reset-names = "nvdec";
+		power-domains = <&pd_nvdec>;
+	};
 };
 

@@ -900,7 +900,7 @@ static int __init bwmgr_cooling_init(void)
 	}
 
 	galert_data->cur_state = 0;
-	galert_data->cdev = thermal_cooling_device_register(cdev_type,
+	galert_data->cdev = thermal_of_cooling_device_register(dn, cdev_type,
 				galert_data, &dram_ref_alert_cdev_ops);
 
 	if (IS_ERR(galert_data->cdev)) {

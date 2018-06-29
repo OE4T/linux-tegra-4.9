@@ -343,4 +343,12 @@
 	cpufreq {
 		status = "okay";
 	};
+
+	arm64_ras {
+		status = "okay";
+	};
+
+	carmel_ras {
+		status = "okay";
+	};
 };

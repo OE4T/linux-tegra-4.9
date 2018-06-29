@@ -413,10 +413,9 @@ int module_finalize(const Elf_Ehdr *hdr,
 	const char *secstrs = (void *)hdr + sechdrs[hdr->e_shstrndx].sh_offset;
 
 	for (s = sechdrs, se = sechdrs + hdr->e_shnum; s < se; s++) {
-		if (strcmp(".altinstructions", secstrs + s->sh_name) == 0) {
-			apply_alternatives((void *)s->sh_addr, s->sh_size);
-			return 0;
-		}
+		if (strcmp(".altinstructions", secstrs + s->sh_name) == 0)
+			apply_alternatives_module((void *)s->sh_addr,
+						  s->sh_size);
 	}
 
 	return 0;

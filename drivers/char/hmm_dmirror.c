@@ -32,7 +32,6 @@
 #include <linux/device.h>
 #include <linux/mutex.h>
 #include <linux/rwsem.h>
-#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/highmem.h>
 #include <linux/delay.h>
@@ -42,6 +41,12 @@
 #include <linux/swap.h>
 #include <linux/swapops.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/mm.h>
+#else
+#include <linux/sched.h>
+#endif
 
 #include <uapi/linux/hmm_dmirror.h>
 

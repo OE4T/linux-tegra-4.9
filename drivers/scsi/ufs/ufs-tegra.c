@@ -907,7 +907,7 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	struct device *dev = hba->dev;
 	u32 val;
 	int ret = 0;
-	int timeout = 5;
+	int timeout = 500;
 	bool is_ufs_lp_pwr_gated = false;
 
 	if (pm_op != UFS_SYSTEM_PM)

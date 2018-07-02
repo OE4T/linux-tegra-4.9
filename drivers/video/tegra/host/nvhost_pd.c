@@ -21,7 +21,6 @@
 #include <linux/pm_domain.h>
 #include <linux/slab.h>
 #include <linux/tegra-powergate.h>
-#include <linux/version.h>
 
 #include <soc/tegra/chip-id.h>
 
@@ -185,6 +184,7 @@ int nvhost_domain_init(struct of_device_id *matches)
 }
 EXPORT_SYMBOL(nvhost_domain_init);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 void nvhost_pd_slcg_install_workaround(struct nvhost_device_data *pdata,
 				       struct generic_pm_domain *genpd)
 {
@@ -210,3 +210,4 @@ void nvhost_pd_slcg_remove_workaround(struct nvhost_device_data *pdata,
 					 &pdata->toggle_slcg_notifier);
 	}
 }
+#endif

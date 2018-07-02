@@ -57,8 +57,11 @@
 #define MAX_DEVID_LENGTH			32
 
 static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
+#endif
 
 static int nvhost_module_prepare_suspend(struct device *dev);
 static void nvhost_module_complete_resume(struct device *dev);
@@ -718,6 +721,7 @@ int nvhost_module_init(struct platform_device *dev)
 			clk_disable_unprepare(pdata->clk[i]);
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	if (nvhost_is_210()) {
 		struct generic_pm_domain *gpd = pd_to_genpd(dev->dev.pm_domain);
 
@@ -729,6 +733,7 @@ int nvhost_module_init(struct platform_device *dev)
 
 		nvhost_pd_slcg_install_workaround(pdata, gpd);
 	}
+#endif
 
 	/* set pm runtime delays */
 	if (pdata->autosuspend_delay) {
@@ -822,11 +827,13 @@ void nvhost_module_deinit(struct platform_device *dev)
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	if (nvhost_is_210()) {
 		struct generic_pm_domain *gpd = pd_to_genpd(dev->dev.pm_domain);
 
 		nvhost_pd_slcg_remove_workaround(pdata, gpd);
 	}
+#endif
 
 	devfreq_suspend_device(pdata->power_manager);
 
@@ -1181,6 +1188,7 @@ out:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data)
 {
@@ -1200,6 +1208,7 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 
 	return 0;
 }
+#endif
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev)

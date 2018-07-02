@@ -21,10 +21,15 @@
 #ifndef __NVHOST_PD_H
 #define __NVHOST_PD_H
 
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 void nvhost_pd_slcg_install_workaround(struct nvhost_device_data *pdata,
 				       struct generic_pm_domain *pd);
 void nvhost_pd_slcg_remove_workaround(struct nvhost_device_data *pdata,
 				      struct generic_pm_domain *pd);
+#endif
+
 int nvhost_domain_init(struct of_device_id *matches);
 
 #endif

@@ -6297,7 +6297,7 @@ int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
 
     nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
-    for (ppc_num = 0; ppc_num < g->gr.pe_count_per_gpc; ppc_num++)
+    for (ppc_num = 0; ppc_num < g->gr.gpc_ppc_count[gpc_num]; ppc_num++)
 	    priv_addr_table[(*t)++] = pri_ppc_addr(g, pri_ppccs_addr_mask(addr),
 						   gpc_num, ppc_num);
 

@@ -176,6 +176,9 @@ void device_pm_move_before(struct device *deva, struct device *devb)
  */
 void device_pm_move_after(struct device *deva, struct device *devb)
 {
+	if (!deva || !devb)
+		return;
+
 	pr_debug("PM: Moving %s:%s after %s:%s\n",
 		 deva->bus ? deva->bus->name : "No Bus", dev_name(deva),
 		 devb->bus ? devb->bus->name : "No Bus", dev_name(devb));

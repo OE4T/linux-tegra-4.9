@@ -556,7 +556,7 @@ static void devices_kset_move_before(struct device *deva, struct device *devb)
  */
 static void devices_kset_move_after(struct device *deva, struct device *devb)
 {
-	if (!devices_kset)
+	if (!devices_kset || !deva || !devb)
 		return;
 	pr_debug("devices_kset: Moving %s after %s\n",
 		 dev_name(deva), dev_name(devb));

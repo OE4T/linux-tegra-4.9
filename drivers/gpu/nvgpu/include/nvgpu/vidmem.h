@@ -25,9 +25,6 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/errno.h>
-#include <nvgpu/nvgpu_mem.h>
-
-struct work_struct;
 
 struct gk20a;
 struct mm_gk20a;

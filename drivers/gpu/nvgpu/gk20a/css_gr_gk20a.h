@@ -25,6 +25,9 @@
 #ifndef CSS_GR_GK20A_H
 #define CSS_GR_GK20A_H
 
+#include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/list.h>
+
 /* the minimal size of HW buffer - should be enough to avoid HW overflows */
 #define CSS_MIN_HW_SNAPSHOT_SIZE	(8 * 1024 * 1024)
 

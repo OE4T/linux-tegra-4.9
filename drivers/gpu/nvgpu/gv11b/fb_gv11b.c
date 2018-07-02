@@ -47,9 +47,6 @@
 static int gv11b_fb_fix_page_fault(struct gk20a *g,
 		 struct mmu_fault_info *mmfault);
 
-static int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
-			 u32 invalidate_replay_val);
-
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
 	if (nvgpu_is_bpmp_running(g) && (!nvgpu_platform_is_simulation(g))) {
@@ -989,12 +986,12 @@ static int gv11b_fb_replay_or_cancel_faults(struct gk20a *g,
 		 * cancel faults so that next time it faults as
 		 * replayable faults and channel recovery can be done
 		 */
-		err = gv11b_fb_mmu_invalidate_replay(g,
+		err = g->ops.fb.mmu_invalidate_replay(g,
 			fb_mmu_invalidate_replay_cancel_global_f());
 	} else if (invalidate_replay_val &
 			 fb_mmu_invalidate_replay_start_ack_all_f()) {
 		/* pte valid is fixed. replay faulting request */
-		err = gv11b_fb_mmu_invalidate_replay(g,
+		err = g->ops.fb.mmu_invalidate_replay(g,
 			fb_mmu_invalidate_replay_start_ack_all_f());
 	}
 
@@ -1441,7 +1438,7 @@ bool gv11b_fb_mmu_fault_pending(struct gk20a *g)
 	return false;
 }
 
-static int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
+int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 			 u32 invalidate_replay_val)
 {
 	int err = -ETIMEDOUT;

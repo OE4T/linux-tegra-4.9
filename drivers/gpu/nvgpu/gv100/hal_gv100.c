@@ -493,6 +493,7 @@ static const struct gpu_ops gv100_ops = {
 		.read_mmu_fault_inst_lo_hi = fb_gv11b_read_mmu_fault_inst_lo_hi,
 		.read_mmu_fault_info = fb_gv11b_read_mmu_fault_info,
 		.read_mmu_fault_status = fb_gv11b_read_mmu_fault_status,
+		.mmu_invalidate_replay = gv11b_fb_mmu_invalidate_replay,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

@@ -99,4 +99,7 @@ u32 fb_gv11b_read_mmu_fault_info(struct gk20a *g);
 u32 fb_gv11b_read_mmu_fault_status(struct gk20a *g);
 void fb_gv11b_write_mmu_fault_status(struct gk20a *g, u32 reg_val);
 
+int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
+			 u32 invalidate_replay_val);
+
 #endif

@@ -557,6 +557,8 @@ struct gpu_ops {
 			u32 *inst_lo, u32 *inst_hi);
 		u32 (*read_mmu_fault_info)(struct gk20a *g);
 		u32 (*read_mmu_fault_status)(struct gk20a *g);
+		int (*mmu_invalidate_replay)(struct gk20a *g,
+			u32 invalidate_replay_val);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

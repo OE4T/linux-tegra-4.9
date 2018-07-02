@@ -66,7 +66,7 @@ nvgpu-y += \
 	os/linux/dt.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
-	os/linux/vidmem.o
+	os/linux/dmabuf_vidmem.o
 
 nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug.o \

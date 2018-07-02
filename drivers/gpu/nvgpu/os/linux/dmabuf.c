@@ -22,13 +22,13 @@
 #include <nvgpu/enabled.h>
 
 #include <nvgpu/linux/vm.h>
-#include <nvgpu/linux/vidmem.h>
 
 #include "gk20a/gk20a.h"
 
 #include "platform_gk20a.h"
 #include "dmabuf.h"
 #include "os_linux.h"
+#include "dmabuf_vidmem.h"
 
 static void gk20a_mm_delete_priv(void *_priv)
 {

@@ -27,7 +27,6 @@
 #include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/vm.h>
-#include <nvgpu/linux/vidmem.h>
 #include <nvgpu/linux/nvgpu_mem.h>
 
 #include "gk20a/gk20a.h"
@@ -36,6 +35,7 @@
 #include "platform_gk20a.h"
 #include "os_linux.h"
 #include "dmabuf.h"
+#include "dmabuf_vidmem.h"
 
 static u32 nvgpu_vm_translate_linux_flags(struct gk20a *g, u32 flags)
 {

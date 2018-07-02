@@ -27,12 +27,12 @@
 #include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/dma.h>
-#include <nvgpu/linux/vidmem.h>
 
 #include "gk20a/gk20a.h"
 
 #include "platform_gk20a.h"
 #include "os_linux.h"
+#include "dmabuf_vidmem.h"
 
 #ifdef __DMA_ATTRS_LONGS
 #define NVGPU_DEFINE_DMA_ATTRS(x)                                     \

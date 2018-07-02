@@ -30,7 +30,6 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/cond.h>
 
-#include <nvgpu/linux/vidmem.h>
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
@@ -40,6 +39,7 @@
 #include "os_linux.h"
 #include "platform_gk20a.h"
 #include "ioctl_dbg.h"
+#include "dmabuf_vidmem.h"
 
 struct dbg_session_gk20a_linux {
 	struct device	*dev;

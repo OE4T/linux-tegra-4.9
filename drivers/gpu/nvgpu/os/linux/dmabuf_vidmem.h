@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,14 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVGPU_LINUX_VIDMEM_H__
-#define __NVGPU_LINUX_VIDMEM_H__
+#ifndef __NVGPU_LINUX_DMABUF_VIDMEM_H__
+#define __NVGPU_LINUX_DMABUF_VIDMEM_H__
 
 #include <nvgpu/types.h>
 
 struct dma_buf;
 
 struct gk20a;
+struct scatterlist;
 
 #ifdef CONFIG_GK20A_VIDMEM
 

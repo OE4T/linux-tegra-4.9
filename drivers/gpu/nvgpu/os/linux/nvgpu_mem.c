@@ -25,12 +25,12 @@
 #include <nvgpu/vidmem.h>
 
 #include <nvgpu/linux/dma.h>
-#include <nvgpu/linux/vidmem.h>
 
 #include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 
 #include "os_linux.h"
+#include "dmabuf_vidmem.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

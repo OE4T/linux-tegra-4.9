@@ -21,6 +21,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/dma-buf.h>
+#include <linux/poll.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
@@ -40,6 +41,22 @@
 #include "platform_gk20a.h"
 #include "ioctl_dbg.h"
 
+struct dbg_session_gk20a_linux {
+	struct device	*dev;
+	struct dbg_session_gk20a dbg_s;
+};
+
+struct dbg_session_channel_data_linux {
+	/*
+	 * We have to keep a ref to the _file_, not the channel, because
+	 * close(channel_fd) is synchronous and would deadlock if we had an
+	 * open debug session fd holding a channel ref at that time. Holding a
+	 * ref to the file makes close(channel_fd) just drop a kernel ref to
+	 * the file; the channel will close when the last file ref is dropped.
+	 */
+	struct file *ch_f;
+	struct dbg_session_channel_data ch_data;
+};
 /* turn seriously unwieldy names -> something shorter */
 #define REGOP_LINUX(x) NVGPU_DBG_GPU_REG_OP_##x
 

@@ -46,12 +46,16 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 					unsigned audio_source,
 					int sor_num);
 int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num);
+
+/* switches are registered from display driver, get the names w.r.t dev ID */
+int tegra_hda_get_switch_name(int dev_id, char *name);
 #else
 static inline int tegra_hdmi_setup_hda_presence(int sor_num) { return -ENODEV; }
 static inline int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 					unsigned audio_source,
 					int sor_num) { return -ENODEV; }
 static inline int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num) { return -ENODEV; }
+static inline int tegra_hda_get_switch_name(int dev_id, char *name) { return -ENODEV; }
 #endif
 
 

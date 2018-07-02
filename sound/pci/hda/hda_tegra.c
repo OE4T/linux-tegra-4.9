@@ -42,6 +42,8 @@
 #include <sound/core.h>
 #include <sound/initval.h>
 
+#include <video/tegra_hdmi_audio.h>
+
 #include "hda_codec.h"
 #include "hda_controller.h"
 
@@ -700,9 +702,6 @@ static ssize_t hda_get_pcm_switch_name(struct kobject *kobj,
 		struct hda_pcm_devices, name_attr);
 	return snprintf(buf, PAGE_SIZE, "%s\n", pcm_dev->switch_name);
 }
-
-/* switches are registered from display driver, get the names w.r.t dev ID */
-int tegra_hda_get_switch_name(int dev_id, char *name);
 
 static int hda_tegra_create_sysfs(struct hda_tegra *hda)
 {

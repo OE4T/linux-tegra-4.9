@@ -23,6 +23,7 @@
 #define __MACH_TEGRA_DC_H
 
 #include <linux/pm.h>
+#include <linux/version.h>
 #include <linux/types.h>
 #include <linux/fb.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
@@ -911,7 +912,8 @@ static inline void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 {
 }
 
-static struct fb_var_screeninfo *tegra_fb_get_var(struct tegra_fb_info *fb_info)
+static inline struct fb_var_screeninfo *tegra_fb_get_var
+	(struct tegra_fb_info *fb_info)
 {
 	return NULL;
 }
@@ -942,7 +944,8 @@ static inline struct fb_videomode *tegra_fb_get_mode(struct tegra_dc *dc)
 {
 	return NULL;
 }
-static int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
+static inline int tegra_fb_set_win_index
+	(struct tegra_dc *dc, unsigned long win_mask)
 {
 	return 0;
 }
@@ -950,7 +953,7 @@ void tegra_fbcon_set_fb_mode(struct tegra_fb_info *fb_info,
 					struct fb_videomode *mode)
 {
 }
-static int tegra_fb_release_fbmem(struct tegra_fb_info *info)
+static inline int tegra_fb_release_fbmem(struct tegra_fb_info *info)
 {
 	return 0;
 }
@@ -1031,8 +1034,12 @@ int tegra_dc_get_head(const struct tegra_dc *dc);
 int tegra_dc_get_out(const struct tegra_dc *dc);
 int tegra_dc_get_source_physical_address(u8 *phy_address);
 
+#if KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
+static inline bool tegra_is_bl_display_initialized(int instance)
+{ return false; }
+#else
 bool tegra_is_bl_display_initialized(int instance);
-
+#endif
 static inline void find_dc_node(struct device_node **dc1_node,
 	struct device_node **dc2_node)
 {

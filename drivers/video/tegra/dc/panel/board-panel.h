@@ -116,6 +116,7 @@ extern struct tegra_panel dsi_j_720p_5;
 extern struct tegra_panel dsi_a_1200_1920_8_0;
 extern struct tegra_panel dsi_a_1200_800_8_0;
 
+#ifdef CONFIG_TEGRA_DC
 int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel);
 int tegra_panel_check_regulator_dt_support(const char *comp_str,
@@ -126,4 +127,18 @@ int tegra_bl_notify(struct device *dev, int brightness);
 void tegra_pwm_bl_ops_register(struct device *dev);
 
 void ti_lp855x_bl_ops_register(struct device *dev);
+#else
+static inline int tegra_panel_gpio_get_dt(const char *comp_str,
+				struct tegra_panel_of *panel) { return 0; }
+static inline int tegra_panel_check_regulator_dt_support(const char *comp_str,
+				struct tegra_panel_of *panel) { return 0; }
+
+static inline int tegra_bl_notify(struct device *dev, int brightness)
+	{ return 0; }
+
+static inline void tegra_pwm_bl_ops_register(struct device *dev) {}
+
+static inline void ti_lp855x_bl_ops_register(struct device *dev) {}
+
+#endif
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

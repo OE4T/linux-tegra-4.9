@@ -55,7 +55,8 @@
 /* HW capability, pixels per clock */
 #define NUM_PPC		8
 /* 15% bus protocol overhead */
-#define VI_OVERHEAD	15
+/* + 5% SW overhead */
+#define VI_OVERHEAD	20
 
 struct host_vi5 {
 	struct platform_device *pdev;

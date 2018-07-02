@@ -29,7 +29,6 @@
 #include "gp10b/mc_gp10b.h"
 
 #include "mc_gv100.h"
-#include "gv11b/fb_gv11b.h"
 
 #include <nvgpu/hw/gv100/hw_mc_gv100.h>
 
@@ -41,7 +40,6 @@ void mc_gv100_intr_enable(struct gk20a *g)
 				0xffffffffU);
 	gk20a_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
 				0xffffffffU);
-
 	g->mc_intr_mask_restore[NVGPU_MC_INTR_STALLING] =
 				mc_intr_pfifo_pending_f() |
 				mc_intr_hub_pending_f() |

@@ -28,7 +28,13 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/bus/bus_gp10b.o \
 	common/bus/bus_gv100.o \
 	common/ptimer/ptimer.o \
-	common/ptimer/ptimer_gk20a.o
+	common/ptimer/ptimer_gk20a.o \
+	common/fb/fb_gk20a.o \
+	common/fb/fb_gm20b.o \
+	common/fb/fb_gp10b.o \
+	common/fb/fb_gp106.o \
+	common/fb/fb_gv11b.o \
+	common/fb/fb_gv100.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
@@ -194,7 +200,6 @@ nvgpu-y += \
 	gk20a/therm_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
-	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
@@ -203,7 +208,6 @@ nvgpu-y += \
 	gm20b/ltc_gm20b.o \
 	gm20b/gr_gm20b.o \
 	gm20b/clk_gm20b.o \
-	gm20b/fb_gm20b.o \
 	gm20b/fifo_gm20b.o \
 	gm20b/gr_ctx_gm20b.o \
 	gm20b/acr_gm20b.o \
@@ -254,7 +258,6 @@ nvgpu-y += \
 	gp10b/fifo_gp10b.o  \
 	gp10b/ltc_gp10b.o \
 	gp10b/mm_gp10b.o \
-	gp10b/fb_gp10b.o \
 	gp10b/pmu_gp10b.o \
 	gp10b/hal_gp10b.o \
 	gp10b/regops_gp10b.o \
@@ -273,7 +276,6 @@ nvgpu-y += \
 	gp106/acr_gp106.o \
 	gp106/sec2_gp106.o \
 	gp106/fifo_gp106.o \
-	gp106/fb_gp106.o \
 	gp106/regops_gp106.o \
 	gp106/bios_gp106.o \
 	gp106/fuse_gp106.o \
@@ -284,7 +286,6 @@ nvgpu-y += \
 	gv11b/ltc_gv11b.o  \
 	gv11b/hal_gv11b.o \
 	gv11b/gr_gv11b.o \
-	gv11b/fb_gv11b.o \
 	gv11b/fifo_gv11b.o \
 	gv11b/mm_gv11b.o \
 	gv11b/ce_gv11b.o \
@@ -296,7 +297,6 @@ nvgpu-y += \
 	gv11b/therm_gv11b.o \
 	gv100/mm_gv100.o \
 	gv100/gr_ctx_gv100.o \
-	gv100/fb_gv100.o \
 	gv100/bios_gv100.o \
 	gv100/fifo_gv100.o \
 	gv100/gr_gv100.o \

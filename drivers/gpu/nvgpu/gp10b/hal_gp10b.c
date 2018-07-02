@@ -27,6 +27,9 @@
 #include "common/ptimer/ptimer_gk20a.h"
 #include "common/bus/bus_gm20b.h"
 #include "common/bus/bus_gp10b.h"
+#include "common/fb/fb_gk20a.h"
+#include "common/fb/fb_gm20b.h"
+#include "common/fb/fb_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -37,7 +40,6 @@
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/mc_gk20a.h"
-#include "gk20a/fb_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
@@ -48,7 +50,6 @@
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
-#include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
@@ -62,7 +63,6 @@
 #include "gm20b/acr_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
-#include "gm20b/fb_gm20b.h"
 #include "gm20b/mm_gm20b.h"
 
 #include "gp10b.h"

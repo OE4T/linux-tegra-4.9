@@ -25,8 +25,9 @@
 #include <nvgpu/sizes.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/fb_gk20a.h"
-#include "gm20b/fb_gm20b.h"
+
+#include "fb_gk20a.h"
+#include "fb_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>

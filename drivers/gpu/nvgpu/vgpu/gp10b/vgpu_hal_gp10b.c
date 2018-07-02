@@ -23,6 +23,9 @@
 #include "common/bus/bus_gk20a.h"
 #include "common/bus/bus_gm20b.h"
 #include "common/clock_gating/gp10b_gating_reglist.h"
+#include "common/fb/fb_gk20a.h"
+#include "common/fb/fb_gm20b.h"
+#include "common/fb/fb_gp10b.h"
 
 #include "vgpu/fifo_vgpu.h"
 #include "vgpu/gr_vgpu.h"
@@ -40,14 +43,12 @@
 
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/mc_gk20a.h"
-#include "gk20a/fb_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
-#include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
@@ -61,7 +62,6 @@
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
-#include "gm20b/fb_gm20b.h"
 #include "gm20b/mm_gm20b.h"
 
 #include <nvgpu/enabled.h>

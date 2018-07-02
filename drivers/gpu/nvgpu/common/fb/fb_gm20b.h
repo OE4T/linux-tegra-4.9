@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * GM20B FB
+ *
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,32 +22,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "gp10b/fb_gp10b.h"
+#ifndef _NVHOST_GM20B_FB
+#define _NVHOST_GM20B_FB
 
-#include "fb_gp106.h"
+struct gk20a;
+struct wpr_carveout_info;
 
-#include <nvgpu/hw/gp106/hw_fb_gp106.h>
+void fb_gm20b_init_fs_state(struct gk20a *g);
+void gm20b_fb_set_mmu_page_size(struct gk20a *g);
+bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g);
+u32 gm20b_fb_mmu_ctrl(struct gk20a *g);
+u32 gm20b_fb_mmu_debug_ctrl(struct gk20a *g);
+u32 gm20b_fb_mmu_debug_wr(struct gk20a *g);
+u32 gm20b_fb_mmu_debug_rd(struct gk20a *g);
+unsigned int gm20b_fb_compression_page_size(struct gk20a *g);
+unsigned int gm20b_fb_compressible_page_size(struct gk20a *g);
+u32 gm20b_fb_compression_align_mask(struct gk20a *g);
+void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g);
+void gm20b_fb_read_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
+int gm20b_fb_vpr_info_fetch(struct gk20a *g);
+bool gm20b_fb_debug_mode_enabled(struct gk20a *g);
+void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable);
 
-#define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
-#define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
-
-void gp106_fb_reset(struct gk20a *g)
-{
-	u32 val;
-
-	int retries = HW_SCRUB_TIMEOUT_MAX / HW_SCRUB_TIMEOUT_DEFAULT;
-	/* wait for memory to be accessible */
-	do {
-		u32 w = gk20a_readl(g, fb_niso_scrub_status_r());
-		if (fb_niso_scrub_status_flag_v(w)) {
-			nvgpu_log_fn(g, "done");
-			break;
-		}
-		nvgpu_udelay(HW_SCRUB_TIMEOUT_DEFAULT);
-	} while (--retries);
-
-	val = gk20a_readl(g, fb_mmu_priv_level_mask_r());
-	val &= ~fb_mmu_priv_level_mask_write_violation_m();
-	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
-}
+#endif

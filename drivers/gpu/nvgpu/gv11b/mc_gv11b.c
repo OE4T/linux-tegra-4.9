@@ -29,7 +29,6 @@
 #include "gp10b/mc_gp10b.h"
 
 #include "mc_gv11b.h"
-#include "fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 

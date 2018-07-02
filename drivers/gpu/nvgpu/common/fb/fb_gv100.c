@@ -37,8 +37,9 @@
 #include <nvgpu/falcon.h>
 
 #include "gk20a/gk20a.h"
-#include "gv100/fb_gv100.h"
 #include "gm20b/acr_gm20b.h"
+
+#include "fb_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
 #include <nvgpu/hw/gv100/hw_falcon_gv100.h>

@@ -32,13 +32,13 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
-#include "gk20a/fb_gk20a.h"
-
-#include "gp10b/fb_gp10b.h"
 
 #include "gv11b/fifo_gv11b.h"
-#include "gv11b/fb_gv11b.h"
 #include "gv11b/ce_gv11b.h"
+
+#include "fb_gk20a.h"
+#include "fb_gp10b.h"
+#include "fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>

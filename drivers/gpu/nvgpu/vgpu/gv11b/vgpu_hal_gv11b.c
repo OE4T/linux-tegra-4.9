@@ -23,6 +23,10 @@
 #include "common/bus/bus_gk20a.h"
 #include "common/bus/bus_gm20b.h"
 #include "common/clock_gating/gv11b_gating_reglist.h"
+#include "common/fb/fb_gk20a.h"
+#include "common/fb/fb_gm20b.h"
+#include "common/fb/fb_gp10b.h"
+#include "common/fb/fb_gv11b.h"
 
 #include <gk20a/gk20a.h>
 #include <gv11b/hal_gv11b.h>
@@ -40,20 +44,17 @@
 #include "vgpu/gp10b/vgpu_mm_gp10b.h"
 #include "vgpu/gp10b/vgpu_gr_gp10b.h"
 
-#include <gk20a/fb_gk20a.h>
 #include <gk20a/flcn_gk20a.h>
 #include <gk20a/mc_gk20a.h>
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include <gm20b/gr_gm20b.h>
-#include <gm20b/fb_gm20b.h>
 #include <gm20b/fifo_gm20b.h>
 #include <gm20b/pmu_gm20b.h>
 #include <gm20b/mm_gm20b.h>
 #include <gm20b/acr_gm20b.h>
 #include <gm20b/ltc_gm20b.h>
 
-#include <gp10b/fb_gp10b.h>
 #include <gp10b/pmu_gp10b.h>
 #include <gp10b/mm_gp10b.h>
 #include <gp10b/mc_gp10b.h>
@@ -67,7 +68,6 @@
 #include <gp106/pmu_gp106.h>
 #include <gp106/acr_gp106.h>
 
-#include <gv11b/fb_gv11b.h>
 #include <gv11b/pmu_gv11b.h>
 #include <gv11b/acr_gv11b.h>
 #include <gv11b/mm_gv11b.h>

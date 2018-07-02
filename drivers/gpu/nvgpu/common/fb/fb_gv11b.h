@@ -29,6 +29,7 @@
 #define	REPLAY_REG_INDEX		1
 
 struct gk20a;
+struct gr_gk20a;
 
 void gv11b_fb_init_hw(struct gk20a *g);
 

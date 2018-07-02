@@ -362,7 +362,7 @@ int gp10b_clk_get_freqs(struct device *dev,
 		if (new_rate == max_rate)
 			break;
 	}
-	freq_counter = i;
+	freq_counter = i + 1;
 	WARN_ON(freq_counter == GP10B_MAX_SUPPORTED_FREQS);
 
 	/*

@@ -322,6 +322,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (!nvgpu_mem_is_valid(&c->gpfifo.mem))
 		return -ENOMEM;
 
+	if (c->usermode_submit_enabled)
+		return -EINVAL;
+
 	/* fifo not large enough for request. Return error immediately.
 	 * Kernel can insert gpfifo entries before and after user gpfifos.
 	 * So, add extra_entries in user request. Also, HW with fifo size N

@@ -1776,7 +1776,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			goto failure;
 		}
 	}
-	/* T210/T214 vprime verification is handled in the upstream lib */
+	/* T210/T210B01 vprime verification is handled in the upstream lib */
 	if (tegra_dc_is_nvdisplay()) {
 		/* perform vprime verification for repeater or SRM
 		 * revocation check for receiver

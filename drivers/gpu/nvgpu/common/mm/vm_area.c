@@ -99,11 +99,22 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	struct nvgpu_allocator *vma;
 	struct nvgpu_vm_area *vm_area;
 	u64 vaddr_start = 0;
+	u64 our_addr = *addr;
 	u32 pgsz_idx = GMMU_PAGE_SIZE_SMALL;
 
+	/*
+	 * If we have a fixed address then use the passed address in *addr. This
+	 * corresponds to the o_a field in the IOCTL. But since we do not
+	 * support specific alignments in the buddy allocator we ignore the
+	 * field if it isn't a fixed offset.
+	 */
+	if ((flags & NVGPU_VM_AREA_ALLOC_FIXED_OFFSET) != 0U) {
+		our_addr = *addr;
+	}
+
 	nvgpu_log(g, gpu_dbg_map,
-		  "ADD vm_area: pgsz=%#-8x pages=%-9u addr=%#-14llx flags=0x%x",
-		  page_size, pages, *addr, flags);
+		  "ADD vm_area: pgsz=%#-8x pages=%-9u a/o=%#-14llx flags=0x%x",
+		  page_size, pages, our_addr, flags);
 
 	for (; pgsz_idx < GMMU_NR_PAGE_SIZES; pgsz_idx++) {
 		if (vm->gmmu_page_sizes[pgsz_idx] == page_size) {
@@ -133,14 +144,15 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 
 	vma = vm->vma[pgsz_idx];
 	if (flags & NVGPU_VM_AREA_ALLOC_FIXED_OFFSET) {
-		vaddr_start = nvgpu_alloc_fixed(vma, *addr,
+		vaddr_start = nvgpu_alloc_fixed(vma, our_addr,
 						(u64)pages *
 						(u64)page_size,
 						page_size);
 	} else {
-		vaddr_start = nvgpu_alloc(vma,
-					  (u64)pages *
-					  (u64)page_size);
+		vaddr_start = nvgpu_alloc_pte(vma,
+					      (u64)pages *
+					      (u64)page_size,
+					      page_size);
 	}
 
 	if (!vaddr_start) {

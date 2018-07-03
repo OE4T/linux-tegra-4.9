@@ -152,7 +152,7 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size, u32 pgsz_idx)
 	/* Be certain we round up to page_size if needed */
 	size = (size + ((u64)page_size - 1U)) & ~((u64)page_size - 1U);
 
-	addr = nvgpu_alloc(vma, size);
+	addr = nvgpu_alloc_pte(vma, size, page_size);
 	if (!addr) {
 		nvgpu_err(g, "(%s) oom: sz=0x%llx", vma->name, size);
 		return 0;

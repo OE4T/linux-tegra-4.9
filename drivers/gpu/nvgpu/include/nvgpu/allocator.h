@@ -49,6 +49,8 @@ struct gk20a;
  */
 struct nvgpu_allocator_ops {
 	u64  (*alloc)(struct nvgpu_allocator *allocator, u64 len);
+	u64  (*alloc_pte)(struct nvgpu_allocator *allocator, u64 len,
+			  u32 page_size);
 	void (*free)(struct nvgpu_allocator *allocator, u64 addr);
 
 	/*
@@ -242,6 +244,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
  * Allocator APIs.
  */
 u64  nvgpu_alloc(struct nvgpu_allocator *allocator, u64 len);
+u64  nvgpu_alloc_pte(struct nvgpu_allocator *a, u64 len, u32 page_size);
 void nvgpu_free(struct nvgpu_allocator *allocator, u64 addr);
 
 u64  nvgpu_alloc_fixed(struct nvgpu_allocator *allocator, u64 base, u64 len,

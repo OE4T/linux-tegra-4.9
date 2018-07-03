@@ -77,6 +77,11 @@ u64 nvgpu_alloc(struct nvgpu_allocator *a, u64 len)
 	return a->ops->alloc(a, len);
 }
 
+u64 nvgpu_alloc_pte(struct nvgpu_allocator *a, u64 len, u32 page_size)
+{
+	return a->ops->alloc_pte(a, len, page_size);
+}
+
 void nvgpu_free(struct nvgpu_allocator *a, u64 addr)
 {
 	a->ops->free(a, addr);

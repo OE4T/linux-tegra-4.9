@@ -46,18 +46,20 @@ struct nvgpu_buddy {
 	u64 end;			/* End address of this buddy. */
 	u64 order;			/* Buddy order. */
 
-#define BALLOC_BUDDY_ALLOCED	0x1
-#define BALLOC_BUDDY_SPLIT	0x2
-#define BALLOC_BUDDY_IN_LIST	0x4
-	int flags;			/* List of associated flags. */
+#define BALLOC_BUDDY_ALLOCED	0x1U
+#define BALLOC_BUDDY_SPLIT	0x2U
+#define BALLOC_BUDDY_IN_LIST	0x4U
+	u32 flags;			/* List of associated flags. */
 
 	/*
 	 * Size of the PDE this buddy is using. This allows for grouping like
-	 * sized allocations into the same PDE. This uses the gmmu_pgsz_gk20a
-	 * enum except for the BALLOC_PTE_SIZE_ANY specifier.
+	 * sized allocations into the same PDE.
 	 */
-#define BALLOC_PTE_SIZE_ANY	-1
-	int pte_size;
+#define BALLOC_PTE_SIZE_ANY	(~0U)
+#define BALLOC_PTE_SIZE_INVALID	0U
+#define BALLOC_PTE_SIZE_SMALL	1U
+#define BALLOC_PTE_SIZE_BIG	2U
+	u32 pte_size;
 };
 
 static inline struct nvgpu_buddy *

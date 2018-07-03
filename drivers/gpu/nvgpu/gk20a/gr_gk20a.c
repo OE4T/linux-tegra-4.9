@@ -1782,6 +1782,11 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				return -ENOMEM;
 			}
 		}
+
+		if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW &&
+				g->ops.gr.init_hwpm_pmm_register) {
+			g->ops.gr.init_hwpm_pmm_register(g);
+		}
 	}
 
 	data = nvgpu_mem_rd(g, gr_mem, ctxsw_prog_main_image_pm_o());

@@ -312,6 +312,7 @@ struct gpu_ops {
 				struct channel_gk20a *c,
 				u64 gpu_va,
 				u32 mode);
+		void (*init_hwpm_pmm_register)(struct gk20a *g);
 		int (*dump_gr_regs)(struct gk20a *g,
 				struct gk20a_debug_output *o);
 		int (*update_pc_sampling)(struct channel_gk20a *ch,

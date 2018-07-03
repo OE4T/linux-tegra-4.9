@@ -71,6 +71,8 @@ bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 
 void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 {
+	struct vm_gk20a *vm = g->mm.bar2.vm;
+
 	nvgpu_log_fn(g, " ");
 
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
@@ -78,10 +80,26 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_OTHER |
 			 HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 
-	nvgpu_kfree(g, g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY]);
+	g->mm.hub_intr_types &= (~(HUB_INTR_TYPE_NONREPLAY |
+				 HUB_INTR_TYPE_REPLAY));
 
-	g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY] = NULL;
-	g->mm.fault_info[FAULT_TYPE_REPLAY] = NULL;
+	if ((gv11b_fb_is_fault_buf_enabled(g, NONREPLAY_REG_INDEX))) {
+		gv11b_fb_fault_buf_set_state_hw(g, NONREPLAY_REG_INDEX,
+						 FAULT_BUF_DISABLED);
+	}
+
+	if ((gv11b_fb_is_fault_buf_enabled(g, REPLAY_REG_INDEX))) {
+		gv11b_fb_fault_buf_set_state_hw(g, REPLAY_REG_INDEX,
+						 FAULT_BUF_DISABLED);
+	}
+
+	if (nvgpu_mem_is_valid(
+		    &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]))
+		nvgpu_dma_unmap_free(vm,
+			 &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]);
+	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]))
+		nvgpu_dma_unmap_free(vm,
+			 &g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
 
 	nvgpu_mutex_release(&g->mm.hub_isr_mutex);
 	nvgpu_mutex_destroy(&g->mm.hub_isr_mutex);
@@ -90,27 +108,6 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 static int gv11b_mm_mmu_fault_info_buf_init(struct gk20a *g,
 			 u32 *hub_intr_types)
 {
-	struct mmu_fault_info *fault_info_mem;
-
-	if (g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY] != NULL &&
-		g->mm.fault_info[FAULT_TYPE_REPLAY] != NULL) {
-		*hub_intr_types |= HUB_INTR_TYPE_OTHER;
-		return 0;
-	}
-
-	fault_info_mem = nvgpu_kzalloc(g, sizeof(struct mmu_fault_info) *
-						FAULT_TYPE_NUM);
-	if (!fault_info_mem) {
-		nvgpu_log_info(g, "failed to alloc shadow fault info");
-		return -ENOMEM;
-	}
-	/* shadow buffer for copying mmu fault info */
-	g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY] =
-		 &fault_info_mem[FAULT_TYPE_OTHER_AND_NONREPLAY];
-
-	g->mm.fault_info[FAULT_TYPE_REPLAY] =
-		 &fault_info_mem[FAULT_TYPE_REPLAY];
-
 	*hub_intr_types |= HUB_INTR_TYPE_OTHER;
 	return 0;
 }
@@ -156,44 +153,11 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 	*hub_intr_types |= HUB_INTR_TYPE_REPLAY;
 }
 
-static void gv11b_mm_mmu_hw_fault_buf_deinit(struct gk20a *g)
-{
-	struct vm_gk20a *vm = g->mm.bar2.vm;
-
-	nvgpu_log_fn(g, " ");
-
-	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_NONREPLAY |
-					 HUB_INTR_TYPE_REPLAY);
-
-	g->mm.hub_intr_types &= (~(HUB_INTR_TYPE_NONREPLAY |
-				 HUB_INTR_TYPE_REPLAY));
-
-	if ((gv11b_fb_is_fault_buf_enabled(g, NONREPLAY_REG_INDEX))) {
-		gv11b_fb_fault_buf_set_state_hw(g, NONREPLAY_REG_INDEX,
-						 FAULT_BUF_DISABLED);
-	}
-
-	if ((gv11b_fb_is_fault_buf_enabled(g, REPLAY_REG_INDEX))) {
-		gv11b_fb_fault_buf_set_state_hw(g, REPLAY_REG_INDEX,
-						 FAULT_BUF_DISABLED);
-	}
-
-	if (nvgpu_mem_is_valid(
-		    &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]))
-		nvgpu_dma_unmap_free(vm,
-			 &g->mm.hw_fault_buf[FAULT_TYPE_OTHER_AND_NONREPLAY]);
-	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]))
-		nvgpu_dma_unmap_free(vm,
-			 &g->mm.hw_fault_buf[FAULT_TYPE_REPLAY]);
-}
-
 void gv11b_mm_remove_bar2_vm(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
 	nvgpu_log_fn(g, " ");
-
-	gv11b_mm_mmu_hw_fault_buf_deinit(g);
 
 	nvgpu_free_inst_block(g, &mm->bar2.inst_block);
 	nvgpu_vm_put(mm->bar2.vm);

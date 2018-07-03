@@ -1019,7 +1019,7 @@ void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 	nvgpu_log(g, gpu_dbg_intr, "get ptr = %d", get_indx);
 
 	mem = &g->mm.hw_fault_buf[index];
-	mmfault = g->mm.fault_info[index];
+	mmfault = &g->mm.fault_info[index];
 
 	entries = gv11b_fb_fault_buffer_size_val(g, index);
 	nvgpu_log(g, gpu_dbg_intr, "buffer num entries = %d", entries);
@@ -1251,7 +1251,7 @@ void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
 	struct mmu_fault_info *mmfault;
 	u32 invalidate_replay_val = 0;
 
-	mmfault = g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY];
+	mmfault = &g->mm.fault_info[FAULT_TYPE_OTHER_AND_NONREPLAY];
 
 	gv11b_mm_copy_from_fault_snap_reg(g, fault_status, mmfault);
 

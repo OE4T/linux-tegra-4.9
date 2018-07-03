@@ -24,8 +24,8 @@
 			};
 		};
 
-		fragment-pcie-c1-rp-galen-b00-war {
-			ids = "2822-0000-400";
+		fragment-pcie-c1-rp-galen-DVT-war {
+			ids = ">=2822-0000-400";
 			override@0 {
 				target = <&{/pcie@14100000}>;
 				_overlay_ {

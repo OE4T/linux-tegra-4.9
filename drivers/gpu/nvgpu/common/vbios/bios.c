@@ -407,8 +407,10 @@ u32 nvgpu_bios_get_nvlink_config_data(struct gk20a *g)
 	switch (config.hdr_size) {
 	case NVLINK_CONFIG_DATA_HDR_12_SIZE:
 		g->nvlink.ac_coupling_mask = config.ac_coupling_mask;
+		/* Fall through */
 	case NVLINK_CONFIG_DATA_HDR_11_SIZE:
 		g->nvlink.train_at_boot = config.train_at_boot;
+		/* Fall through */
 	case NVLINK_CONFIG_DATA_HDR_10_SIZE:
 		g->nvlink.link_disable_mask = config.link_disable_mask;
 		g->nvlink.link_mode_mask = config.link_mode_mask;

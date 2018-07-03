@@ -1,7 +1,7 @@
 #ifndef _DT_BINDINGS_MEMORY_TEGRA194_SWGROUP_H
 #define _DT_BINDINGS_MEMORY_TEGRA194_SWGROUP_H
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -51,6 +51,9 @@
 
 #define TEGRA_SID_NVDEC1	0x5C	/* 92 */
 
-#define TEGRA_SID_VI_VM2	0x64	/* 100 */
+#define TEGRA_SID_RCE_VM3	0x61	/* 97 */
+
+#define TEGRA_SID_VI_VM2	0x62	/* 98 */
+#define TEGRA_SID_VI_VM3	0x63	/* 99 */
 
 #endif

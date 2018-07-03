@@ -117,12 +117,18 @@ static int mmc_bus_probe(struct device *dev)
 {
 	struct mmc_driver *drv = to_mmc_driver(dev->driver);
 	struct mmc_card *card = mmc_dev_to_card(dev);
+	int card_id;
 
 	if (card_idx == MAX_CARDS_NUM) {
 		pr_err("Exceeded the total number of cards allowed");
 		return -EINVAL;
 	} else {
-		mmc_cards[card_idx++] = card;
+		for (card_id = 0; card_id < MAX_CARDS_NUM; card_id++) {
+			if (!mmc_cards[card_id])
+				break;
+		}
+		mmc_cards[card_id] = card;
+		card_idx++;
 	}
 
 	return drv->probe(card);
@@ -132,7 +138,16 @@ static int mmc_bus_remove(struct device *dev)
 {
 	struct mmc_driver *drv = to_mmc_driver(dev->driver);
 	struct mmc_card *card = mmc_dev_to_card(dev);
+	int card_id;
 
+	for (card_id = 0; card_id < MAX_CARDS_NUM; card_id++) {
+		if (mmc_cards[card_id] == card)
+			break;
+	}
+	if (card_id == MAX_CARDS_NUM)
+		card_id--;
+	mmc_cards[card_id] = NULL;
+	card_idx--;
 	drv->remove(card);
 
 	return 0;

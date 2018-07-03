@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <soc/tegra/chip-id.h>
+#include <linux/version.h>
 
 static struct cpumask denver_cpumask;
 
@@ -319,7 +320,18 @@ static void denver_setup_mca(void *info)
 
 	asm volatile("msr s3_0_c15_c3_2, %0" : : "r" (serr_ctl_enable));
 }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int denver_mca_online(unsigned int cpu)
+{
+	struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu);
 
+	if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == ARM_CPU_IMP_NVIDIA)
+	{
+		smp_call_function_single(cpu, denver_setup_mca, NULL, 1);
+	}
+	return 0;
+}
+#else
 static int denver_mca_setup_callback(struct notifier_block *nfb,
 				     unsigned long action, void *hcpu)
 {
@@ -337,6 +349,7 @@ static int denver_mca_setup_callback(struct notifier_block *nfb,
 static struct notifier_block denver_mca_notifier = {
 	.notifier_call = denver_mca_setup_callback
 };
+#endif
 
 static struct dentry *debugfs_dir;
 static struct dentry *debugfs_node;
@@ -351,7 +364,12 @@ static int __init denver_serr_init(void)
 	register_serr_hook(&hook);
 	register_serr_hook(&assert_hook);
 	/* Ensure that any CPU brough online sets up MCA */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN, "denver:online",
+		denver_mca_online, NULL);
+#else
 	register_hotcpu_notifier(&denver_mca_notifier);
+#endif
 
 	/* Enable MCA on all online CPUs */
 	for_each_online_cpu(cpu) {
@@ -385,7 +403,11 @@ static void __exit denver_serr_exit(void)
 	debugfs_remove_recursive(debugfs_dir);
 	unregister_serr_hook(&hook);
 	unregister_serr_hook(&assert_hook);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	cpuhp_remove_state_nocalls(CPUHP_AP_ONLINE_DYN);
+#else
 	unregister_hotcpu_notifier(&denver_mca_notifier);
+#endif
 }
 module_exit(denver_serr_exit);
 MODULE_LICENSE("GPL v2");

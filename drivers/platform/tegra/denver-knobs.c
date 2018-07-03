@@ -26,6 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 
 #include <asm/traps.h>
 #include <asm/cputype.h>
@@ -749,6 +750,15 @@ static void check_backdoor(void)
 
 static u32 mts_version;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int denver_cpu_online(unsigned int cpu)
+{
+	/* Record MTS version if the current CPU is Denver */
+	if (!mts_version && ((read_cpuid_id() >> 24) == 'N'))
+		asm volatile ("mrs %0, AIDR_EL1" : "=r" (mts_version));
+	return 0;
+}
+#else
 static int mts_version_cpu_notify(struct notifier_block *nb,
 					 unsigned long action, void *pcpu)
 {
@@ -761,10 +771,16 @@ static int mts_version_cpu_notify(struct notifier_block *nb,
 static struct notifier_block mts_version_cpu_nb = {
 	.notifier_call = mts_version_cpu_notify,
 };
+#endif
 
 static int __init denver_knobs_init_early(void)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	return cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
+		"denver:cpu:online", denver_cpu_online, NULL);
+#else
 	return register_cpu_notifier(&mts_version_cpu_nb);
+#endif
 }
 early_initcall(denver_knobs_init_early);
 
@@ -824,7 +840,11 @@ static int __init denver_knobs_init(void)
 #endif
 
 	/* Cancel the notifier as mts_version should be set now. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	cpuhp_remove_state_nocalls(CPUHP_AP_ONLINE_DYN);
+#else
 	unregister_cpu_notifier(&mts_version_cpu_nb);
+#endif
 
 	/* mts_version will be non-zero, only if its an NVIDIA CPU */
 	if (mts_version)

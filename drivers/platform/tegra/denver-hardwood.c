@@ -32,6 +32,7 @@
 #include <linux/cpu.h>
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 #include <asm/cacheflush.h>
 #include <asm/cpu.h>
@@ -657,6 +658,15 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+static int hardwood_cpu_online(unsigned int cpu)
+{
+	spin_lock(&hw_lock);
+	hw_run_cmd(HW_CMD(cpu, cpu, HARDWOOD_SET_IRQ_TARGET));
+	spin_unlock(&hw_lock);
+	return 0;
+}
+#else
 static int hardwood_cpu_notify(struct notifier_block *self,
 					 unsigned long action, void *hcpu)
 {
@@ -688,12 +698,19 @@ static int hardwood_cpu_notify(struct notifier_block *self,
 static struct notifier_block hardwood_cpu_notifier = {
 	.notifier_call = hardwood_cpu_notify,
 };
+#endif
 
 static void hardwood_init_agent(void)
 {
 	spin_lock_init(&agent_lock);
-	if (osdump_version < OSDUMP_VER_OSDUMP_IRQS)
+	if (osdump_version < OSDUMP_VER_OSDUMP_IRQS) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
+		 "hardwood:online", hardwood_cpu_online, NULL);
+#else
 		register_hotcpu_notifier(&hardwood_cpu_notifier);
+#endif
+	}
 	agent_thread = kthread_create(agent_thread_fn, NULL, "hardwood-agent");
 }
 

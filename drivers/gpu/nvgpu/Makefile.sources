@@ -156,7 +156,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/fb_gp10b.c \
 	gp10b/pmu_gp10b.c \
 	gp10b/hal_gp10b.c \
-	gp10b/rpfb_gp10b.c \
 	gp10b/regops_gp10b.c \
 	gp10b/therm_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \

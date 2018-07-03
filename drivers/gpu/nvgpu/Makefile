@@ -257,7 +257,6 @@ nvgpu-y += \
 	gp10b/fb_gp10b.o \
 	gp10b/pmu_gp10b.o \
 	gp10b/hal_gp10b.o \
-	gp10b/rpfb_gp10b.o \
 	gp10b/regops_gp10b.o \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \

@@ -30,9 +30,7 @@
 #include "gk20a/gk20a.h"
 #include "gm20b/mm_gm20b.h"
 #include "mm_gp10b.h"
-#include "rpfb_gp10b.h"
 
-#include <nvgpu/hw/gp10b/hw_fb_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
@@ -392,7 +390,6 @@ void gp10b_remove_bar2_vm(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
-	gp10b_replayable_pagefault_buffer_deinit(g);
 	nvgpu_free_inst_block(g, &mm->bar2.inst_block);
 	nvgpu_vm_put(mm->bar2.vm);
 }

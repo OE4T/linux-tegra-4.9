@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -374,12 +374,6 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
-		nvgpu_pmu_state_change(g,
-				PMU_STATE_ELPG_BOOTING, false);
-	else
-		nvgpu_err(g, "PMU INIT not received\n");
-
 	gk20a_pmu_pg_idle_counter_config(g, pg_engine_id);
 
 	if (g->ops.pmu.pmu_pg_init_param)
@@ -446,6 +440,7 @@ int nvgpu_pmu_init_powergating(struct gk20a *g)
 {
 	u32 pg_engine_id;
 	u32 pg_engine_id_list = 0;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	nvgpu_log_fn(g, " ");
 
@@ -459,6 +454,9 @@ int nvgpu_pmu_init_powergating(struct gk20a *g)
 			pg_engine_id++) {
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {
+			if (pmu && pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
+				nvgpu_pmu_state_change(g,
+					PMU_STATE_ELPG_BOOTING, false);
 			pmu_pg_init_send(g, pg_engine_id);
 		}
 	}

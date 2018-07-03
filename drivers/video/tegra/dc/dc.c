@@ -5965,7 +5965,7 @@ void tegra_dc_disable(struct tegra_dc *dc)
 
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 {
-	bool blank_windows = true;
+	int blank_windows;
 
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;

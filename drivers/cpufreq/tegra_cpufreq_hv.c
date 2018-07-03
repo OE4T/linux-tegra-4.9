@@ -242,7 +242,7 @@ uint32_t t194_get_cpu_speed_hv(uint32_t cpu)
 void t194_update_cpu_speed_hv(uint32_t rate, uint32_t cpu)
 {
 	int ret = 0;
-	struct cpu_rate_msg cpu_rate;
+	struct cpu_rate_msg cpu_rate = {0};
 
 	//cpu_rate.cl = tegra18_logical_to_cluster(cpu);
 	cpu_rate.rate_khz = rate;

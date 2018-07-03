@@ -36,6 +36,7 @@
 #include <linux/nvhost_ioctl.h>
 #include <linux/version.h>
 #include <linux/clk/tegra.h>
+#include <linux/clk-provider.h>
 
 #include <linux/platform/tegra/mc.h>
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -326,27 +327,28 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 		int index)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	int err = 0;
-
-	/* Need to enable client to get correct rate */
-	err = nvhost_module_busy(dev);
-	if (err)
-		return err;
 
 #if defined(CONFIG_TEGRA_BWMGR)
-	if (nvhost_is_bwmgr_clk(pdata, index))
+	if (nvhost_is_bwmgr_clk(pdata, index)) {
 		*rate = tegra_bwmgr_get_emc_rate();
-	else
+		return 0;
+	}
 #endif
-		if (pdata->clk[index])
-			*rate = clk_get_rate(pdata->clk[index]);
-		else {
-			nvhost_err(&dev->dev, "invalid clk index %d", index);
-			err = -EINVAL;
-		}
 
-	nvhost_module_idle(dev);
-	return err;
+	if (pdata->clk[index]) {
+		/* Terrible and racy, but so is the whole concept of
+		 * querying the clock rate from userspace.
+		 */
+		if (__clk_is_enabled(pdata->clk[index]))
+			*rate = clk_get_rate(pdata->clk[index]);
+		else
+			*rate = 0;
+	} else {
+		nvhost_err(&dev->dev, "invalid clk index %d", index);
+		return -EINVAL;
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(nvhost_module_get_rate);
 

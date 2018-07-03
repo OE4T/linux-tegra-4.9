@@ -459,7 +459,7 @@ static const struct gpu_ops gv100_ops = {
 	},
 	.fb = {
 		.reset = gv100_fb_reset,
-		.init_hw = gk20a_fb_init_hw,
+		.init_hw = gv11b_fb_init_hw,
 		.init_fs_state = NULL,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
@@ -481,8 +481,8 @@ static const struct gpu_ops gv100_ops = {
 		.mem_unlock = gv100_fb_memory_unlock,
 		.init_nvlink = gv100_fb_init_nvlink,
 		.enable_nvlink = gv100_fb_enable_nvlink,
-		.enable_hub_intr = gv11b_fb_enable_hub_intr,
-		.disable_hub_intr = gv11b_fb_disable_hub_intr,
+		.enable_hub_intr = gv100_fb_enable_hub_intr,
+		.disable_hub_intr = gv100_fb_disable_hub_intr,
 		.write_mmu_fault_buffer_lo_hi =
 				fb_gv11b_write_mmu_fault_buffer_lo_hi,
 		.write_mmu_fault_buffer_get =

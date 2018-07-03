@@ -70,6 +70,34 @@ void gv100_fb_reset(struct gk20a *g)
 	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
 }
 
+void gv100_fb_enable_hub_intr(struct gk20a *g)
+{
+	u32 mask = 0;
+
+	mask = fb_niso_intr_en_set_mmu_other_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_overflow_m();
+
+	gk20a_writel(g, fb_niso_intr_en_set_r(0),
+			mask);
+}
+
+void gv100_fb_disable_hub_intr(struct gk20a *g)
+{
+	u32 mask = 0;
+
+	mask = fb_niso_intr_en_set_mmu_other_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_overflow_m();
+
+	gk20a_writel(g, fb_niso_intr_en_clr_r(0),
+			mask);
+}
+
 int gv100_fb_memory_unlock(struct gk20a *g)
 {
 	struct nvgpu_firmware *mem_unlock_fw = NULL;

@@ -77,11 +77,7 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
-	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_OTHER |
-			 HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
-
-	g->mm.hub_intr_types &= (~(HUB_INTR_TYPE_NONREPLAY |
-				 HUB_INTR_TYPE_REPLAY));
+	g->ops.fb.disable_hub_intr(g);
 
 	if ((gv11b_fb_is_fault_buf_enabled(g, NONREPLAY_REG_INDEX))) {
 		gv11b_fb_fault_buf_set_state_hw(g, NONREPLAY_REG_INDEX,
@@ -105,15 +101,12 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 	nvgpu_mutex_destroy(&g->mm.hub_isr_mutex);
 }
 
-static int gv11b_mm_mmu_fault_info_buf_init(struct gk20a *g,
-			 u32 *hub_intr_types)
+static int gv11b_mm_mmu_fault_info_buf_init(struct gk20a *g)
 {
-	*hub_intr_types |= HUB_INTR_TYPE_OTHER;
 	return 0;
 }
 
-static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
-			 u32 *hub_intr_types)
+static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g)
 {
 	struct vm_gk20a *vm = g->mm.bar2.vm;
 	int err = 0;
@@ -136,8 +129,6 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 		}
 	}
 
-	*hub_intr_types |= HUB_INTR_TYPE_NONREPLAY;
-
 	if (!nvgpu_mem_is_valid(
 		&g->mm.hw_fault_buf[FAULT_TYPE_REPLAY])) {
 		err = nvgpu_dma_alloc_map_sys(vm, fb_size,
@@ -149,8 +140,6 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 			return;
 		}
 	}
-
-	*hub_intr_types |= HUB_INTR_TYPE_REPLAY;
 }
 
 static void gv11b_mm_mmu_fault_setup_hw(struct gk20a *g)
@@ -170,12 +159,10 @@ static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 
 	nvgpu_mutex_init(&g->mm.hub_isr_mutex);
 
-	g->mm.hub_intr_types = HUB_INTR_TYPE_ECC_UNCORRECTED;
-
-	err = gv11b_mm_mmu_fault_info_buf_init(g, &g->mm.hub_intr_types);
+	err = gv11b_mm_mmu_fault_info_buf_init(g);
 
 	if (!err)
-		gv11b_mm_mmu_hw_fault_buf_init(g, &g->mm.hub_intr_types);
+		gv11b_mm_mmu_hw_fault_buf_init(g);
 
 	return err;
 }

@@ -423,7 +423,7 @@ static const struct gpu_ops gv11b_ops = {
 	},
 	.fb = {
 		.reset = gv11b_fb_reset,
-		.init_hw = gk20a_fb_init_hw,
+		.init_hw = gv11b_fb_init_hw,
 		.init_fs_state = gv11b_fb_init_fs_state,
 		.init_cbc = gv11b_fb_init_cbc,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,

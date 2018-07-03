@@ -131,7 +131,6 @@ struct mm_gk20a {
 	struct nvgpu_mem hw_fault_buf[FAULT_TYPE_NUM];
 	struct mmu_fault_info fault_info[FAULT_TYPE_NUM];
 	struct nvgpu_mutex hub_isr_mutex;
-	u32    hub_intr_types;
 
 	/*
 	 * Separate function to cleanup the CE since it requires a channel to

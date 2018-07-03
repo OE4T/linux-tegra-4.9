@@ -32,6 +32,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
+#include "gk20a/fb_gk20a.h"
 
 #include "gp10b/fb_gp10b.h"
 
@@ -56,6 +57,13 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 		nvgpu_mss_nvlink_init_credits(g);
 #endif
 	}
+}
+
+void gv11b_fb_init_hw(struct gk20a *g)
+{
+	gk20a_fb_init_hw(g);
+
+	g->ops.fb.enable_hub_intr(g);
 }
 
 void gv11b_fb_init_fs_state(struct gk20a *g)
@@ -374,118 +382,34 @@ void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index)
 	gv11b_fb_fault_buf_set_state_hw(g, index, FAULT_BUF_ENABLED);
 }
 
-static void gv11b_fb_intr_en_set(struct gk20a *g,
-			 unsigned int index, u32 mask)
-{
-	u32 reg_val;
-
-	reg_val = gk20a_readl(g, fb_niso_intr_en_set_r(index));
-	reg_val |= mask;
-	gk20a_writel(g, fb_niso_intr_en_set_r(index), reg_val);
-}
-
-static void gv11b_fb_intr_en_clr(struct gk20a *g,
-			 unsigned int index, u32 mask)
-{
-	u32 reg_val;
-
-	reg_val = gk20a_readl(g, fb_niso_intr_en_clr_r(index));
-	reg_val |= mask;
-	gk20a_writel(g, fb_niso_intr_en_clr_r(index), reg_val);
-}
-
-static u32 gv11b_fb_get_hub_intr_clr_mask(struct gk20a *g,
-			 unsigned int intr_type)
+void gv11b_fb_enable_hub_intr(struct gk20a *g)
 {
 	u32 mask = 0;
 
-	if (intr_type & HUB_INTR_TYPE_OTHER) {
-		mask |=
-		 fb_niso_intr_en_clr_mmu_other_fault_notify_m();
-	}
+	mask = fb_niso_intr_en_set_mmu_other_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_m();
 
-	if (intr_type & HUB_INTR_TYPE_NONREPLAY) {
-		mask |=
-		fb_niso_intr_en_clr_mmu_nonreplayable_fault_notify_m() |
-		fb_niso_intr_en_clr_mmu_nonreplayable_fault_overflow_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_REPLAY) {
-		mask |=
-		 fb_niso_intr_en_clr_mmu_replayable_fault_notify_m() |
-		 fb_niso_intr_en_clr_mmu_replayable_fault_overflow_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
-		mask |=
-		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_ACCESS_COUNTER) {
-		mask |=
-		 fb_niso_intr_en_clr_hub_access_counter_notify_m() |
-		 fb_niso_intr_en_clr_hub_access_counter_error_m();
-	}
-
-	return mask;
+	gk20a_writel(g, fb_niso_intr_en_set_r(0),
+			mask);
 }
 
-static u32 gv11b_fb_get_hub_intr_en_mask(struct gk20a *g,
-			 unsigned int intr_type)
+void gv11b_fb_disable_hub_intr(struct gk20a *g)
 {
 	u32 mask = 0;
 
-	if (intr_type & HUB_INTR_TYPE_OTHER) {
-		mask |=
-		 fb_niso_intr_en_set_mmu_other_fault_notify_m();
-	}
+	mask = fb_niso_intr_en_set_mmu_other_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
+			fb_niso_intr_en_set_mmu_replayable_fault_overflow_m() |
+			fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_m();
 
-	if (intr_type & HUB_INTR_TYPE_NONREPLAY) {
-		mask |=
-		fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_m() |
-		fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_REPLAY) {
-		mask |=
-		fb_niso_intr_en_set_mmu_replayable_fault_notify_m() |
-		fb_niso_intr_en_set_mmu_replayable_fault_overflow_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
-		mask |=
-		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_m();
-	}
-
-	if (intr_type & HUB_INTR_TYPE_ACCESS_COUNTER) {
-		mask |=
-		 fb_niso_intr_en_set_hub_access_counter_notify_m() |
-		 fb_niso_intr_en_set_hub_access_counter_error_m();
-	}
-
-	return mask;
-}
-
-void gv11b_fb_enable_hub_intr(struct gk20a *g,
-			 unsigned int index, unsigned int intr_type)
-{
-	u32 mask = 0;
-
-	mask = gv11b_fb_get_hub_intr_en_mask(g, intr_type);
-
-	if (mask)
-		gv11b_fb_intr_en_set(g, index, mask);
-}
-
-void gv11b_fb_disable_hub_intr(struct gk20a *g,
-			 unsigned int index, unsigned int intr_type)
-{
-	u32 mask = 0;
-
-	mask = gv11b_fb_get_hub_intr_clr_mask(g, intr_type);
-
-	if (mask)
-		gv11b_fb_intr_en_clr(g, index, mask);
+	gk20a_writel(g, fb_niso_intr_en_clr_r(0),
+			mask);
 }
 
 void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
@@ -1226,10 +1150,6 @@ void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 			struct mmu_fault_info *mmfault, u32 fault_status)
 {
-	g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX,
-		HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
-
-
 	if (fault_status & fb_mmu_fault_status_non_replayable_error_m()) {
 		if (gv11b_fb_is_fault_buf_enabled(g, NONREPLAY_REG_INDEX))
 			gv11b_fb_fault_buf_configure_hw(g, NONREPLAY_REG_INDEX);
@@ -1247,8 +1167,6 @@ static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 		gk20a_channel_put(mmfault->refch);
 		mmfault->refch = NULL;
 	}
-	g->ops.fb.enable_hub_intr(g, STALL_REG_INDEX,
-		HUB_INTR_TYPE_NONREPLAY | HUB_INTR_TYPE_REPLAY);
 }
 
 void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
@@ -1395,10 +1313,6 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 
 		nvgpu_info(g, "ecc uncorrected error notify");
 
-		/* disable interrupts during handling */
-		g->ops.fb.disable_hub_intr(g, STALL_REG_INDEX,
-						HUB_INTR_TYPE_ECC_UNCORRECTED);
-
 		status = gk20a_readl(g, fb_mmu_l2tlb_ecc_status_r());
 		if (status)
 			gv11b_handle_l2tlb_ecc_isr(g, status);
@@ -1410,11 +1324,6 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 		status = gk20a_readl(g, fb_mmu_fillunit_ecc_status_r());
 		if (status)
 			gv11b_handle_fillunit_ecc_isr(g, status);
-
-		/* re-enable interrupts after handling */
-		g->ops.fb.enable_hub_intr(g, STALL_REG_INDEX,
-						HUB_INTR_TYPE_ECC_UNCORRECTED);
-
 	}
 	if (niso_intr &
 		(fb_niso_intr_mmu_other_fault_notify_m() |

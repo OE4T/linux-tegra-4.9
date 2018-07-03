@@ -542,10 +542,8 @@ struct gpu_ops {
 		int (*mem_unlock)(struct gk20a *g);
 		int (*init_nvlink)(struct gk20a *g);
 		int (*enable_nvlink)(struct gk20a *g);
-		void (*enable_hub_intr)(struct gk20a *g, unsigned int index,
-			unsigned int intr_type);
-		void (*disable_hub_intr)(struct gk20a *g, unsigned int index,
-			unsigned int intr_type);
+		void (*enable_hub_intr)(struct gk20a *g);
+		void (*disable_hub_intr)(struct gk20a *g);
 		int (*init_fbpa)(struct gk20a *g);
 		void (*fbpa_isr)(struct gk20a *g);
 		void (*write_mmu_fault_buffer_lo_hi)(struct gk20a *g, u32 index,

@@ -508,9 +508,9 @@ int t19x_nvlink_link_early_init(struct nvlink_device *ndev)
 	 */
 	ret = minion_send_cmd(tdev, MINION_NVLINK_DL_CMD_COMMAND_INITRXTERM,
 									0);
-	minion_dump_pc_trace(tdev);
 	if (ret < 0) {
 		nvlink_err("Error sending INITRXTERM command to MINION");
+		minion_dump_pc_trace(tdev);
 		goto fail;
 	}
 	nvlink_dbg("Link early init done for dev%u", ndev->device_id);

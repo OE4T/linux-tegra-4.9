@@ -150,6 +150,13 @@ typedef struct syncpoint_info {
  * <dt>ISPB:	<dd>Channel outputs to ISPB
  * <dt>ISP_DIRECT: <dd>Channel outputs directly to selected ISP (ISO mode)
  * <dt>ISPSW:	<dd>Channel outputs to software ISP (reserved)
+ * <dt>ENABLE_ERROR_ACTIONS_MASKS:  <dd>Channel handles errors according to
+ *     error_mask_correctable and error_mask_uncorrectable.
+ *     This flag take precedence over RESET_ON_ERROR.
+ * <dt>RESET_ON_ERROR:	<dd>Channel treats all errors as uncorrectable
+ *	and requires reset for recovery. This flag is ignored if
+ *	ENABLE_ERROR_ACTIONS_MASKS is set.
+ *
  * </dl>
  *
  * @param vi_channel_mask  A bit mask indicating which VI channels to
@@ -174,6 +181,7 @@ struct capture_channel_config {
 #define CAPTURE_CHANNEL_FLAG_RESET_ON_ERROR	U32_C(0x0800)
 #define CAPTURE_CHANNEL_FLAG_LINETIMER		U32_C(0x1000)
 #define CAPTURE_CHANNEL_FLAG_SLVSEC		U32_C(0x2000)
+#define CAPTURE_CHANNEL_FLAG_ENABLE_ERROR_ACTIONS_MASKS	U32_C(0x4000)
 
 	uint32_t channel_id;	/* rtcpu internal - set to zero */
 	uint64_t vi_channel_mask;
@@ -198,6 +206,35 @@ struct capture_channel_config {
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info embdata_sp;
 	struct syncpoint_info linetimer_sp;
+
+	/**
+	 * Errors defined in error_mask_uncorrectable are reported and stop channel.
+	 * User reset is required for channel recovery.
+	 */
+	uint32_t error_mask_uncorrectable;
+	/**
+	 * Errors defined in error_mask_correctable are reported, but
+	 * don't stop the channel.
+	 */
+	uint32_t error_mask_correctable;
+#define CAPTURE_CHANNEL_ERROR_ERROR_EMBED_INCOMPLETE	(U32_C(1) << 21)
+#define CAPTURE_CHANNEL_ERROR_INCOMPLETE		(U32_C(1) << 20)
+#define CAPTURE_CHANNEL_ERROR_STALE_FRAME		(U32_C(1) << 19)
+#define CAPTURE_CHANNEL_ERROR_COLLISION			(U32_C(1) << 18)
+#define CAPTURE_CHANNEL_ERROR_FORCE_FE			(U32_C(1) << 17)
+#define CAPTURE_CHANNEL_ERROR_LOAD_FRAMED		(U32_C(1) << 16)
+#define CAPTURE_CHANNEL_ERROR_DTYPE_MISMATCH		(U32_C(1) << 15)
+#define CAPTURE_CHANNEL_ERROR_EMBED_INFRINGE		(U32_C(1) << 14)
+#define CAPTURE_CHANNEL_ERROR_EMBED_LONG_LINE		(U32_C(1) << 13)
+#define CAPTURE_CHANNEL_ERROR_EMBED_SPURIOUS		(U32_C(1) << 12)
+#define CAPTURE_CHANNEL_ERROR_EMBED_RUNAWAY		(U32_C(1) << 11)
+#define CAPTURE_CHANNEL_ERROR_EMBED_MISSING_LE		(U32_C(1) << 10)
+#define CAPTURE_CHANNEL_ERROR_PIXEL_SHORT_LINE		(U32_C(1) << 9)
+#define CAPTURE_CHANNEL_ERROR_PIXEL_LONG_LINE		(U32_C(1) << 8)
+#define CAPTURE_CHANNEL_ERROR_PIXEL_SPURIOUS		(U32_C(1) << 7)
+#define CAPTURE_CHANNEL_ERROR_PIXEL_RUNAWAY		(U32_C(1) << 6)
+#define CAPTURE_CHANNEL_ERROR_PIXEL_MISSING_LE		(U32_C(1) << 5)
+
 } __CAPTURE_IVC_ALIGN;
 
 struct vi_channel_config {
@@ -340,11 +377,14 @@ struct capture_status {
 #define CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN	U32_C(13)
 #define CAPTURE_STATUS_FALCON_ERROR		U32_C(14)
 #define CAPTURE_STATUS_CHANSEL_NOMATCH		U32_C(15)
+#define CAPTURE_STATUS_ABORTED			U32_C(16)
 
 	uint64_t sof_timestamp;
 	uint64_t eof_timestamp;
 	uint32_t err_data;
-	uint32_t __pad;
+
+#define CAPTURE_STATUS_FLAG_CHANNEL_IN_ERROR U32_C(1)
+	uint32_t flags;
 } __CAPTURE_IVC_ALIGN;
 
 #define VI_AFM_NUM_ROI			8
@@ -853,6 +893,19 @@ struct nvcsi_tpg_rate_config {
  *
  * @param channel_flags channel specific flags
  *
+ * @param error_mask_correctable: Bitmask of the errors that are treated as correctable.
+ *                                In case of correctable errors syncpoints of active capture are
+ *                                advanced (in falcon) and error is reported and capture
+ *                                continues.
+ *
+ * @param error_mask_uncorrectable: Bitmask of the errors that are treated as uncorrectable.
+ *                                In case of uncorrectable errors, syncpoints of active capture are
+ *                                advanced (in falcon) and isp channel is ABORTed by ISP
+ *                                tasklist driver which halts the captures on the channel with
+ *                                immediate effect, and then error is reported. Client needs
+ *                                to RESET the channel explicitly in reaction to the
+ *                                uncorrectable errors reported.
+ *
  */
 struct capture_channel_isp_config {
 	uint8_t channel_id;
@@ -873,6 +926,17 @@ struct capture_channel_isp_config {
 	struct syncpoint_info progress_sp;
 	struct syncpoint_info stats_progress_sp;
 
+	/** Error action attributes */
+	uint32_t error_mask_correctable;
+	uint32_t error_mask_uncorrectable;
+
+#define CAPTURE_ISP_CHANNEL_ERROR_DMA_PBUF_ERR		(U32_C(1) << 0)
+#define CAPTURE_ISP_CHANNEL_ERROR_DMA_SBUF_ERR		(U32_C(1) << 1)
+#define CAPTURE_ISP_CHANNEL_ERROR_DMA_SEQ_ERR		(U32_C(1) << 2)
+#define CAPTURE_ISP_CHANNEL_ERROR_FRAMEID_ERR		(U32_C(1) << 3)
+#define CAPTURE_ISP_CHANNEL_ERROR_TIMEOUT		(U32_C(1) << 4)
+#define CAPTURE_ISP_CHANNEL_ERROR_ALL			U32_C(0x001F)
+
 #define HAVE_ISP_GOS_TABLES
 	/*
 	 * GoS tables can only be programmed when there are no
@@ -889,13 +953,13 @@ struct capture_isp_status {
 	uint8_t chan_id;
 	uint8_t __pad;
 	uint16_t frame_id;
-	uint32_t status;
+	uint32_t status;	/** SUCCESS OR ERROR */
+	uint32_t error_mask;	/** ZERO in case of SUCCESS. Error bitmask in case of ERROR */
+	uint32_t __pad2;
 
 #define CAPTURE_ISP_STATUS_UNKNOWN		U32_C(0)
 #define CAPTURE_ISP_STATUS_SUCCESS		U32_C(1)
-// TODO : Further breakdown errors to sub-types, as per http://nvbugs/200336192/11
 #define CAPTURE_ISP_STATUS_ERROR		U32_C(2)
-/** Add error codes and data if any */
 } __CAPTURE_IVC_ALIGN;
 
 
@@ -903,14 +967,14 @@ struct capture_isp_program_status {
 	uint8_t chan_id;
 	uint8_t settings_id;
 	uint16_t __pad_id;
-	uint32_t status;
+	uint32_t status;	/** SUCCESS OR ERROR */
+	uint32_t error_mask;	/** ZERO in case of SUCCESS/STALE. Error bitmask in case of ERROR */
+	uint32_t __pad2;
 
 #define CAPTURE_ISP_PROGRAM_STATUS_UNKNOWN	U32_C(0)
 #define CAPTURE_ISP_PROGRAM_STATUS_SUCCESS	U32_C(1)
-// TODO : Further breakdown errors to sub-types, as per http://nvbugs/200336192/11
 #define CAPTURE_ISP_PROGRAM_STATUS_ERROR	U32_C(2)
 #define CAPTURE_ISP_PROGRAM_STATUS_STALE	U32_C(3)
-/** Add error codes and data if any */
 } __CAPTURE_IVC_ALIGN;
 
 /**
@@ -964,7 +1028,7 @@ struct isp_program_descriptor {
 #define CAPTURE_ACTIVATE_FLAG_COUPLED		U32_C(0x4) /* 1 << 2 */
 
 	/** Pad to aligned size */
-	uint32_t __pad[7];
+	uint32_t __pad[5];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -1091,7 +1155,7 @@ struct isp_capture_descriptor {
 #define CAPTURE_ISP_FLAG_ERROR_REPORT_ENABLE	(U32_C(1) << 1)
 
 	/** 1 MR port, max 3 input surfaces */
-#define ISP_MAX_INPUT_SURFACES 3
+#define ISP_MAX_INPUT_SURFACES (3U)
 
 	/** input surfaces */
 	struct image_surface input_mr_surfaces[ISP_MAX_INPUT_SURFACES];
@@ -1099,8 +1163,8 @@ struct isp_capture_descriptor {
 	/**
 	 * 3 MW ports, max 2 surfaces (multiplanar) per port.
 	 */
-#define ISP_MAX_OUTPUTS 3U
-#define ISP_MAX_OUTPUT_SURFACES 2U
+#define ISP_MAX_OUTPUTS (3U)
+#define ISP_MAX_OUTPUT_SURFACES (2U)
 
 	/** output surfaces */
 	struct {
@@ -1184,7 +1248,7 @@ struct isp_capture_descriptor {
 	};
 
 	/* TBD: Decide exact max count */
-#define ISP_MAX_PREFENCES ISP_MAX_OUTPUTS + ISP_MAX_INPUT_SURFACES
+#define ISP_MAX_PREFENCES (ISP_MAX_OUTPUTS + ISP_MAX_INPUT_SURFACES)
 
 	uint32_t num_prefences;
 	uint32_t __pad_prefences;
@@ -1198,7 +1262,7 @@ struct isp_capture_descriptor {
 	struct capture_isp_status status;
 
 	/** Pad to aligned size */
-	uint32_t __pad[6];
+	uint32_t __pad[4];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -1347,18 +1411,9 @@ struct isp5_program
 	* This is needed by ISP Falcon firmware to program
 	* tile starting state correctly.
 	*/
-	union {
-		uint32_t ds0_pixel_incr_h;
-		struct isp5_downscaler_configbuf ds0 CAMRTC_DEPRECATED;
-	};
-	union {
-		uint32_t ds1_pixel_incr_h;
-		struct isp5_downscaler_configbuf ds1 CAMRTC_DEPRECATED;
-	};
-	union {
-		uint32_t ds2_pixel_incr_h;
-		struct isp5_downscaler_configbuf ds2 CAMRTC_DEPRECATED;
-	};
+	uint32_t ds0_pixel_incr_h;
+	uint32_t ds1_pixel_incr_h;
+	uint32_t ds2_pixel_incr_h;
 
 	/**
 	 *  Overfetch needed by this ISP program.
@@ -1401,7 +1456,7 @@ struct isp5_program
 		uint8_t alignment;
 		uint8_t __pad1[2];
 	} overfetch;
-	uint32_t _pad1[10];
+	uint32_t _pad1[3];
 
 	/**
 	 * Push buffer containing ISP settings related to this program.

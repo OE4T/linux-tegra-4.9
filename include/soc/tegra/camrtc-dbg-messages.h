@@ -239,12 +239,24 @@ struct camrtc_dbg_run_mem_test_data {
 	char data[CAMRTC_DBG_MAX_MEM_TEST_DATA];
 } __packed;
 
+/* This structure is used get information on system tasks.
+ * Fields:
+ *   n_task: number of reported tasks
+ *   total_count: total runtime
+ *   task: array of reported tasks
+ *     id: task name
+ *     count: runtime allocated to task
+ *     number: unique task number
+ *     priority: priority of task when this structure was populated
+ */
 struct camrtc_dbg_task_stat {
 	uint32_t n_task;
 	uint32_t total_count;
 	struct {
 		uint32_t id[2];
 		uint32_t count;
+		uint32_t number;
+		uint32_t priority;
 	} task[CAMRTC_DBG_TASK_STAT_MAX];
 } __packed;
 

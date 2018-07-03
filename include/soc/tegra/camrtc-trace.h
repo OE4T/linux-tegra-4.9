@@ -12,6 +12,7 @@
 #define INCLUDE_CAMRTC_TRACE_H
 
 #include "camrtc-common.h"
+#include "camrtc-channels.h"
 
 #pragma GCC diagnostic error "-Wpadded"
 
@@ -68,9 +69,18 @@
 #define CAMRTC_TRACE_SIGNATURE_1	U32_C(0x5420564e)
 #define CAMRTC_TRACE_SIGNATURE_2	U32_C(0x45434152)
 
+#define CAMRTC_TRACE_ALIGN		__aligned(U32_C(64))
+
 struct camrtc_trace_memory_header {
 	/* layout: offset 0 */
-	uint32_t signature[2];
+	union {
+		/*
+		 * Temporary union to provide source compatiblity
+		 * during the transition to new header format.
+		 */
+		struct camrtc_tlv tlv;
+		uint32_t signature[4] __attribute__((deprecated));
+	};
 	uint32_t revision;
 	uint32_t reserved1;
 	uint32_t exception_offset;
@@ -81,13 +91,14 @@ struct camrtc_trace_memory_header {
 	uint32_t event_size;
 	uint32_t event_entries;
 	uint32_t reserved3;
-	uint32_t reserved4[0xd0 / 4];
+	uint32_t reserved4[0xc8 / 4];
 
 	/* pointer: offset 0x100 */
 	uint32_t exception_next_idx;
 	uint32_t event_next_idx;
 	uint32_t reserved_ptrs[0x38 / 4];
-};
+} CAMRTC_TRACE_ALIGN;
+
 
 /*
  * Exception entry

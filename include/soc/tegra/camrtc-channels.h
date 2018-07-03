@@ -23,11 +23,10 @@
 	((uint64_t)(s4) << 32U) | ((uint64_t)(s5) << 40U) | \
 	((uint64_t)(s6) << 48U) | ((uint64_t)(s7) << 56U))
 
-#define CAMRTC_TAG_IVC_SETUP CAMRTC_TAG64('I','V','C', '-', 'S','E','T','U')
-
-#define CAMRTC_TAG_NV_TRACE CAMRTC_TAG64('N','V',' ','T','R','A','C','E')
-
-#define CAMRTC_TAG_NV_COVERAGE CAMRTC_TAG64('N','V',' ','C','O','V','E','R')
+#define CAMRTC_TAG_IVC_SETUP	CAMRTC_TAG64('I', 'V', 'C', '-', 'S', 'E', 'T', 'U')
+#define CAMRTC_TAG_NV_TRACE	CAMRTC_TAG64('N', 'V', ' ', 'T', 'R', 'A', 'C', 'E')
+#define CAMRTC_TAG_NV_CAM_TRACE	CAMRTC_TAG64('N', 'V', ' ', 'C', 'A', 'M', 'T', 'R')
+#define CAMRTC_TAG_NV_COVERAGE	CAMRTC_TAG64('N', 'V', ' ', 'C', 'O', 'V', 'E', 'R')
 
 struct camrtc_tlv {
 	uint64_t tag;

@@ -153,7 +153,7 @@ static unsigned long t18x_bwmgr_apply_efficiency(
 	}
 
 	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
-	WARN_ON(efficiency == 1);
+	WARN_ON_ONCE(efficiency == 1);
 	if (iso_bw && efficiency && (efficiency < 100)) {
 		iso_bw /= efficiency;
 		iso_bw = (iso_bw < max_rate / 100) ?

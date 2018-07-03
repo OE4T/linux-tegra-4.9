@@ -24,6 +24,7 @@
 #define __NVGPU_TIMERS_H__
 
 #include <nvgpu/types.h>
+#include <nvgpu/utils.h>
 
 struct gk20a;
 
@@ -85,10 +86,10 @@ int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout);
 
 #define nvgpu_timeout_expired(__timeout)				\
-	__nvgpu_timeout_expired_msg(__timeout, (void *)_THIS_IP_, "")
+	__nvgpu_timeout_expired_msg(__timeout, _NVGPU_GET_IP_, "")
 
 #define nvgpu_timeout_expired_msg(__timeout, fmt, args...)		\
-	__nvgpu_timeout_expired_msg(__timeout, (void *)_THIS_IP_,	\
+	__nvgpu_timeout_expired_msg(__timeout, _NVGPU_GET_IP_,		\
 				    fmt, ##args)
 
 /*

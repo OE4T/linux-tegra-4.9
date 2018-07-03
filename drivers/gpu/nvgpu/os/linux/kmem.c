@@ -69,7 +69,7 @@ void nvgpu_big_free(struct gk20a *g, void *p)
 		nvgpu_kfree(g, p);
 }
 
-void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_kmalloc(struct gk20a *g, size_t size, void *ip)
 {
 	void *alloc;
 
@@ -85,7 +85,7 @@ void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
 	return alloc;
 }
 
-void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_kzalloc(struct gk20a *g, size_t size, void *ip)
 {
 	void *alloc;
 
@@ -101,7 +101,7 @@ void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
 	return alloc;
 }
 
-void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip)
+void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, void *ip)
 {
 	void *alloc;
 
@@ -117,7 +117,7 @@ void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip)
 	return alloc;
 }
 
-void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, void *ip)
 {
 	void *alloc;
 
@@ -132,7 +132,7 @@ void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip)
 	return alloc;
 }
 
-void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, void *ip)
 {
 	void *alloc;
 
@@ -228,7 +228,7 @@ static struct nvgpu_mem_alloc *nvgpu_rem_alloc(
 
 static int __nvgpu_save_kmem_alloc(struct nvgpu_mem_alloc_tracker *tracker,
 				   unsigned long size, unsigned long real_size,
-				   u64 addr, unsigned long ip)
+				   u64 addr, void *ip)
 {
 	int ret;
 	struct nvgpu_mem_alloc *alloc;
@@ -244,7 +244,7 @@ static int __nvgpu_save_kmem_alloc(struct nvgpu_mem_alloc_tracker *tracker,
 	alloc->size = size;
 	alloc->real_size = real_size;
 	alloc->addr = addr;
-	alloc->ip = (void *)(uintptr_t)ip;
+	alloc->ip = ip;
 
 #ifdef __NVGPU_SAVE_KALLOC_STACK_TRACES
 	stack_trace.max_entries = MAX_STACK_TRACE;
@@ -322,7 +322,7 @@ static void __nvgpu_check_kalloc_size(size_t size)
 }
 
 void *__nvgpu_track_vmalloc(struct gk20a *g, unsigned long size,
-			    unsigned long ip)
+			    void *ip)
 {
 	void *alloc = vmalloc(size);
 
@@ -342,7 +342,7 @@ void *__nvgpu_track_vmalloc(struct gk20a *g, unsigned long size,
 }
 
 void *__nvgpu_track_vzalloc(struct gk20a *g, unsigned long size,
-			    unsigned long ip)
+			    void *ip)
 {
 	void *alloc = vzalloc(size);
 
@@ -361,7 +361,7 @@ void *__nvgpu_track_vzalloc(struct gk20a *g, unsigned long size,
 	return alloc;
 }
 
-void *__nvgpu_track_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_track_kmalloc(struct gk20a *g, size_t size, void *ip)
 {
 	void *alloc = kmalloc(size, GFP_KERNEL);
 
@@ -376,7 +376,7 @@ void *__nvgpu_track_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
 	return alloc;
 }
 
-void *__nvgpu_track_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_track_kzalloc(struct gk20a *g, size_t size, void *ip)
 {
 	void *alloc = kzalloc(size, GFP_KERNEL);
 
@@ -392,7 +392,7 @@ void *__nvgpu_track_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
 }
 
 void *__nvgpu_track_kcalloc(struct gk20a *g, size_t n, size_t size,
-			    unsigned long ip)
+			    void *ip)
 {
 	void *alloc = kcalloc(n, size, GFP_KERNEL);
 

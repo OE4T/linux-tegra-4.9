@@ -64,17 +64,17 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr)
 	free(ptr);
 }
 
-void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_kmalloc(struct gk20a *g, size_t size, void *ip)
 {
 	return malloc(size);
 }
 
-void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
+void *__nvgpu_kzalloc(struct gk20a *g, size_t size, void *ip)
 {
 	return calloc(1, size);
 }
 
-void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip)
+void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, void *ip)
 {
 	/*
 	 * calloc() implicitly zeros mem. So calloc a single member size bytes
@@ -91,12 +91,12 @@ void __nvgpu_kfree(struct gk20a *g, void *addr)
 /*
  * The concept of vmalloc() does not exist in userspace.
  */
-void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, void *ip)
 {
 	return __nvgpu_kmalloc(g, size, ip);
 }
 
-void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, void *ip)
 {
 	return __nvgpu_kzalloc(g, size, ip);
 }
@@ -113,8 +113,8 @@ void *__nvgpu_big_alloc(struct gk20a *g, size_t size, bool clear)
 	 * reuse k[zm]alloc() for this.
 	 */
 	return clear ?
-		__nvgpu_kzalloc(g, size, _THIS_IP_) :
-		__nvgpu_kmalloc(g, size, _THIS_IP_);
+		__nvgpu_kzalloc(g, size, _NVGPU_GET_IP_) :
+		__nvgpu_kmalloc(g, size, _NVGPU_GET_IP_);
 }
 
 void nvgpu_big_free(struct gk20a *g, void *p)

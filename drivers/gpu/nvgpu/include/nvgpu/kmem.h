@@ -24,13 +24,7 @@
 #define __NVGPU_KMEM_H__
 
 #include <nvgpu/types.h>
-
-/*
- * Incase this isn't defined already.
- */
-#ifndef _THIS_IP_
-#define _THIS_IP_  ({ __label__ __here; __here: (unsigned long)&&__here; })
-#endif
+#include <nvgpu/utils.h>
 
 struct gk20a;
 
@@ -125,7 +119,7 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  *
  * This function may sleep so cannot be used in IRQs.
  */
-#define nvgpu_kmalloc(g, size)		__nvgpu_kmalloc(g, size, _THIS_IP_)
+#define nvgpu_kmalloc(g, size)		__nvgpu_kmalloc(g, size, _NVGPU_GET_IP_)
 
 /**
  * nvgpu_kzalloc - Allocate from the kernel's allocator.
@@ -136,7 +130,7 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  * Identical to nvgpu_kalloc() except the memory will be zeroed before being
  * returned.
  */
-#define nvgpu_kzalloc(g, size)		__nvgpu_kzalloc(g, size, _THIS_IP_)
+#define nvgpu_kzalloc(g, size)		__nvgpu_kzalloc(g, size, _NVGPU_GET_IP_)
 
 /**
  * nvgpu_kcalloc - Allocate from the kernel's allocator.
@@ -148,7 +142,8 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  * Identical to nvgpu_kalloc() except the size of the memory chunk returned is
  * @n * @size.
  */
-#define nvgpu_kcalloc(g, n, size)	__nvgpu_kcalloc(g, n, size, _THIS_IP_)
+#define nvgpu_kcalloc(g, n, size)	\
+	__nvgpu_kcalloc(g, n, size, _NVGPU_GET_IP_)
 
 /**
  * nvgpu_vmalloc - Allocate memory and return a map to it.
@@ -164,7 +159,7 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  *
  * This function may sleep.
  */
-#define nvgpu_vmalloc(g, size)		__nvgpu_vmalloc(g, size, _THIS_IP_)
+#define nvgpu_vmalloc(g, size)		__nvgpu_vmalloc(g, size, _NVGPU_GET_IP_)
 
 /**
  * nvgpu_vzalloc - Allocate memory and return a map to it.
@@ -174,7 +169,7 @@ void nvgpu_kmem_cache_free(struct nvgpu_kmem_cache *cache, void *ptr);
  *
  * Identical to nvgpu_vmalloc() except this will return zero'ed memory.
  */
-#define nvgpu_vzalloc(g, size)		__nvgpu_vzalloc(g, size, _THIS_IP_)
+#define nvgpu_vzalloc(g, size)		__nvgpu_vzalloc(g, size, _NVGPU_GET_IP_)
 
 /**
  * nvgpu_kfree - Frees an alloc from nvgpu_kmalloc, nvgpu_kzalloc,

@@ -494,7 +494,7 @@ static ssize_t hardwood_read(struct file *file, char __user *p, size_t s,
 			return -EIO;
 
 		/* Invalidate the cache */
-		FLUSH_DCACHE_AREA((void *)dev->bufs[buf_id].va, buffer_size);
+		__flush_dcache_area((void *)dev->bufs[buf_id].va, buffer_size);
 
 		if (copy_to_user((void __user *)p, &buf_id, sizeof(u32)))
 			return -ENOMEM;

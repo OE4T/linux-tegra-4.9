@@ -136,7 +136,7 @@ static struct error_record core_ers[] = {
 		ERR_CTL_LSD1_CCMH_ERR |
 		ERR_CTL_LSD1_CCDLECC_S_ERR | ERR_CTL_LSD1_CCDLECC_D_ERR |
 		ERR_CTL_LSD1_CCDSECC_S_ERR | ERR_CTL_LSD1_CCDSECC_D_ERR |
-		ERR_CTL_LSD1_CCDEMLECC_ERR,
+		ERR_CTL_LSD1_CCDSMLECC_ERR,
 	 .errors = lsd_1_errors},
 	{.name = "LSD_DCC", .errx = 4,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
@@ -388,6 +388,25 @@ static struct error_record ccplex_ers[] = {
 	 .errors = scfcmu_clocks_errors},
 	{}
 };
+
+static struct tegra_ras_impl_err_bit t194_ras_impl_err_bit[] = {
+	{0xFF,			     ERR_CTL_IFU_ICDP_ERR},	  /*IFU*/
+	{ERR_CTL_RET_JSR_GB_ERR,     0xFF},			  /*JSR_RET*/
+	{ERR_CTL_MTS_JSR_CARVE_ERR,  ERR_CTL_MTS_JSR_ERRC_ERR},	  /*JSR_MTS*/
+	{ERR_CTL_LSD1_CCDSECC_D_ERR, ERR_CTL_LSD1_CCDSECC_S_ERR}, /*LSD_STQ*/
+	{ERR_CTL_LSD2_CCDEECC_D_ERR, ERR_CTL_LSD2_CCDEECC_S_ERR}, /*LSD_DCC*/
+	{0xFF,			     ERR_CTL_LSD3_L2TLBP_ERR},	  /*LSD_L1HPF*/
+	{ERR_CTL_L2_L2PCL_ERR,	     ERR_CTL_L2_SCF2L2C_ECCC_ERR},/*L2*/
+	{ERR_CTL_CC_FREQ_MON_ERR,    0xFF},		     /*Cluster_Clocks*/
+	{0xFF,			     ERR_CTL_MMU_WCPERR_ERR},	  /*MMU*/
+	{ERR_CTL_SCFL3_PROT_ERR,     ERR_CTL_SCFL3_CECC_ERR},	  /*L3*/
+	{ERR_CTL_DPMU_DMCE_CRAB_ACC_ERR, 0xFF},			  /*CCPMU*/
+	{ERR_CTL_SCFIOB_CBB_ERR,     ERR_CTL_SCFIOB_PUT_CECC_ERR},/*SCF_IOB*/
+	{ERR_CTL_SCFSNOC_CPE_TO_ERR, ERR_CTL_SCFSNOC_MISC_CECC_ERR},/*SCFSNOC*/
+	{ERR_CTL_CMUCTU_MCF_PAR_ERR, 0xFF},			  /*SCF_CTU*/
+	{ERR_CTL_SCFCMU_FREQ0_MON_ERR,	0xFF}			  /*CMU_Clocks*/
+};
+
 
 /* This is called for each online CPU during probe and is also used
  * as hotplug callback to enable RAS every time a core comes online
@@ -831,6 +850,129 @@ static int scf_iob_cbb_get(void *data, u64 *val)
 	return 0;
 }
 
+
+/*
+ * Parse fields from input to use further for injecting RAS error.
+ * These fields are used to get error record number which will be
+ * used to select specific error record using ERRSELR_EL1 for
+ * injecting error.
+ * i/p field "val" format is "EEDDCCBBAA", where:
+ *		AA[00-07] - Unit
+ *		BB[08-15] - Error type(Corr is 0, UnCorr is 1)
+ *		CC[16-23] - Logical_CPU_ID
+ *		DD[24-31] - Logical_Cluster_ID
+ *		EE[32-39] - L3_Bank_ID
+ */
+static int ras_mca_get_record_errselr(u64 val, u64 *err_inject)
+{
+	int unit = RAS_EXTRACT(val, 7, 0);
+	int uncorr_err = RAS_EXTRACT(val, 15, 8);
+	int Logical_CPU_ID = RAS_EXTRACT(val, 23, 16);
+	int Logical_Cluster_ID = RAS_EXTRACT(val, 31, 24);
+	int L3_Bank_ID = RAS_EXTRACT(val, 39, 32);
+
+	*err_inject = ERRi_PFGCTL_UC | ERRi_PFGCTL_CE | ERRi_PFGCTL_CDNEN;
+
+	pr_info("Unit:0x%x Err_type:%s Logical_CPUID:0x%x Logical_ClusterID:"
+		"0x%x L3_BankID:0x%x\n", unit, uncorr_err?"UnCorr":"Corr",
+		Logical_CPU_ID, Logical_Cluster_ID, L3_Bank_ID);
+
+	if (uncorr_err)
+		*err_inject |= t194_ras_impl_err_bit[unit].uncorr_bit;
+	else
+		*err_inject |= t194_ras_impl_err_bit[unit].corr_bit;
+
+	switch (unit) {
+	case IFU:
+		return 0*256 + Logical_CPU_ID*16 + 0;
+	case JSR_RET:
+		return 0*256 + Logical_CPU_ID*16 + 1;
+	case JSR_MTS:
+		return 0*256 + Logical_CPU_ID*16 + 2;
+	case LSD_STQ:
+		return 0*256 + Logical_CPU_ID*16 + 3;
+	case LSD_DCC:
+		return 0*256 + Logical_CPU_ID*16 + 4;
+	case LSD_L1HPF:
+		return 0*256 + Logical_CPU_ID*16 + 5;
+	case L2:
+		return 2*256 + Logical_Cluster_ID*16 + 0;
+	case Cluster_Clocks:
+		return 2*256 + Logical_Cluster_ID*16 + 1;
+	case MMU:
+		return 2*256 + Logical_Cluster_ID*16 + 2;
+	case L3:
+		return 3*256 + L3_Bank_ID;
+	case CCPMU:
+		return 4*256 + 0;
+	case SCF_IOB:
+		return 4*256 + 1;
+	case SCF_SNOC:
+		return 4*256 + 2;
+	case SCF_CTU:
+		return 4*256 + 3;
+	case CMU_Clocks:
+		return 4*256 + 4;
+	default:
+		return 0xFF;
+	}
+}
+
+/*
+ * Print help for error injection and basic register info.
+ */
+static int ras_mca_get(void *data, u64 *val)
+{
+	unsigned long errctl = ras_read_error_control();
+	*val = ras_read_pfg_control();
+
+	pr_info("ERXPFGCTL_EL1:0x%llx ERR<n>CTLR:0x%lx\n", *val, errctl);
+	pr_info("Please write data in below format to this node for "
+		"injecting RAS error.\n\techo EEDDCCBBAA > RAS_MCA_ERR-trip\n"
+		"where:\n\t"
+		"  EE[32-39] - L3_Bank_ID\n\t"
+		"  DD[24-31] - Logical_Cluster_ID\n\t"
+		"  CC[16-23] - Logical_CPU_ID\n\t"
+		"  BB[08-15] - Error type(Corr is 0, UnCorr is 1)\n\t"
+		"  AA[00-07] - Unit\n\t"
+		"    Unit values are:\n\t\t"
+		"IFU:00\n\t\tJSR_RET:01\n\t\tJSR_MTS:02\n\t\tLSD_STQ:03\n\t\t"
+		"LSD_DCC:04\n\t\tLSD_L1HPF:05\n\t\tL2:06\n\t\t"
+		"Cluster_Clocks:07\n\t\tMMU:08\n\t\tL3:09\n\t\tCCPMU:0A\n\t\t"
+		"SCF_IOB:0B\n\t\tSCF_SNOC:0C\n\t\tSCF_CTU:0D\n\t\t"
+		"CMU_Clocks:0E\n\n"
+	       );
+
+	return 0;
+}
+
+/*
+ * Read input(i/p) value and inject error based on value.
+ */
+static int ras_mca_put(void *data, u64 val)
+{
+	int err_record_no = 0;
+	u64 err_inject = 0;
+
+	err_record_no = ras_mca_get_record_errselr(val, &err_inject);
+
+	pr_info("Errx(ERRSELR_EL1):0x%x ERXPFGCTL_EL1:0x%llx PFGCTL_bits:"
+		"0x%llx\n", err_record_no, ras_read_pfg_control(), err_inject);
+
+	if (err_inject == 0xFF || err_record_no == 0xFF)
+		pr_info("Invalid input.\n");
+	else
+		return ras_trip(err_record_no, err_inject);
+
+	return 0;
+}
+
+static int ras_mca_open(struct inode *inode, struct file *file)
+{
+	return simple_attr_open(inode, file, ras_mca_get, ras_mca_put,
+				"0x%08lx");
+}
+
 static int scf_iob_cbb_open(struct inode *inode, struct file *file)
 {
 	return simple_attr_open(inode, file, scf_iob_cbb_get, scf_iob_cbb_put,
@@ -870,6 +1012,13 @@ static const struct file_operations fops_l3_cecc = {
 	.llseek =	noop_llseek,
 };
 
+static const struct file_operations fops_ras_mca = {
+	.read =		simple_attr_read,
+	.write =	simple_attr_write,
+	.open =		ras_mca_open,
+	.llseek =	noop_llseek,
+};
+
 static int ras_carmel_dbgfs_init(void)
 {
 
@@ -896,6 +1045,13 @@ static int ras_carmel_dbgfs_init(void)
 
 	debugfs_node = debugfs_create_file("L3_0_CECC_ERR-trip", 0600,
 					debugfs_dir, NULL, &fops_l3_cecc);
+	if (!debugfs_node) {
+		pr_err("Error creating L3_0_CECC_ERR-trip debugfs node.\n");
+		return -ENODEV;
+	}
+
+	debugfs_node = debugfs_create_file("RAS_MCA_ERR-trip", 0600,
+					debugfs_dir, NULL, &fops_ras_mca);
 	if (!debugfs_node) {
 		pr_err("Error creating L3_0_CECC_ERR-trip debugfs node.\n");
 		return -ENODEV;

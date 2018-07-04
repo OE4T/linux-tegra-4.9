@@ -40,7 +40,7 @@
 #define ERR_CTL_MTS_JSR_ERRUC_ERR	RAS_BIT(32)
 
 /* ERR_CTLR bits for LSD_1/LSD_STQ */
-#define ERR_CTL_LSD1_CCDEMLECC_ERR	RAS_BIT(41)
+#define ERR_CTL_LSD1_CCDSMLECC_ERR	RAS_BIT(41)
 #define ERR_CTL_LSD1_CCDSECC_D_ERR	RAS_BIT(40)
 #define ERR_CTL_LSD1_CCDSECC_S_ERR	RAS_BIT(39)
 #define ERR_CTL_LSD1_CCDLECC_D_ERR	RAS_BIT(38)
@@ -167,3 +167,28 @@
 #define ERRi_MISC0_CONST		0x2222222222222222UL
 #define ERRi_MISC1_CONST		0x3333333333333333UL
 #define ERRi_ADDR_CONST			0x4444444444444444UL
+
+
+enum {
+	IFU,		/* 0 */
+	JSR_RET,	/* 1 */
+	JSR_MTS,	/* 2 */
+	LSD_STQ,	/* 3 */
+	LSD_DCC,	/* 4 */
+	LSD_L1HPF,	/* 5 */
+	L2,		/* 6 */
+	Cluster_Clocks,	/* 7 */
+	MMU,		/* 8 */
+	L3,		/* 9 */
+	CCPMU,		/* A */
+	SCF_IOB,	/* B */
+	SCF_SNOC,	/* C */
+	SCF_CTU,	/* D */
+	CMU_Clocks,	/* E */
+};
+
+struct tegra_ras_impl_err_bit {
+	u64     uncorr_bit;
+	u64     corr_bit;
+};
+

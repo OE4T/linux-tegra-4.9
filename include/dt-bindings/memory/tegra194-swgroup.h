@@ -18,7 +18,7 @@
  * This is the t19x specific component of the new SID dt-binding.
  */
 #define TEGRA_SID_RCE		0x2a	/* 42 */
-#define TEGRA_SID_RCE_1X	0x2b	/* 43 */
+#define TEGRA_SID_RCE_VM2	0x2b	/* 43 */
 
 #define TEGRA_SID_RCE_RM	0x2F	/* 47 */
 #define TEGRA_SID_VIFALC	0x30	/* 48 */
@@ -43,3 +43,4 @@
 
 #define TEGRA_SID_NVDEC1	0x5C	/* 92 */
 
+#define TEGRA_SID_VI_VM2	0x64	/* 100 */

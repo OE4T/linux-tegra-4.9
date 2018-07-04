@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,7 +24,6 @@
 #include <linux/cpufreq.h>
 #include <linux/platform_device.h>
 #include <linux/pm_qos.h>
-#include <linux/version.h>
 
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/cpu-tegra.h>
@@ -67,10 +66,8 @@ static int cpu_freq_notify(struct notifier_block *b,
 {
 	u32 qmin = 0, qmax = UINT_MAX, cpu;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
 	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
-#endif
 
 	pr_debug("PM QoS %s %lu\n",
 		b == &tfreq_priv->min_freq_notifier ? "min" : "max", l);
@@ -95,12 +92,10 @@ static void pm_qos_register_notifier(void)
 		tfreq_priv->max_freq_notifier.notifier_call =
 			cpu_freq_notify;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	pm_qos_add_min_notifier(PM_QOS_CPU_FREQ_BOUNDS,
 		&tfreq_priv->min_freq_notifier);
 	pm_qos_add_max_notifier(PM_QOS_CPU_FREQ_BOUNDS,
 		&tfreq_priv->max_freq_notifier);
-#endif
 }
 
 struct device_node *of_get_scaling_node(const char *name)

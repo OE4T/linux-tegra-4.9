@@ -815,7 +815,7 @@ static void *__iommu_alloc_attrs(struct device *dev, size_t size,
 		addr = dma_common_pages_remap(pages, size, VM_USERMAP, prot,
 					      __builtin_return_address(0));
 		if (!addr)
-			iommu_dma_free(dev, pages, iosize, handle);
+			iommu_dma_free(dev, pages, iosize, handle, attrs);
 	} else {
 		struct page *page;
 		/*
@@ -868,13 +868,14 @@ static void __iommu_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 		iommu_dma_unmap_page(dev, handle, iosize, 0, 0);
 		__free_from_pool(cpu_addr, size);
 	} else if (dma_get_attr(DMA_ATTR_NO_KERNEL_MAPPING, attrs)) {
-		iommu_dma_free(dev, (struct page **)cpu_addr, iosize, &handle);
+		iommu_dma_free(dev, (struct page **)cpu_addr, iosize,
+			       &handle, attrs);
 	} else if (is_vmalloc_addr(cpu_addr)){
 		struct vm_struct *area = find_vm_area(cpu_addr);
 
 		if (WARN_ON(!area || !area->pages))
 			return;
-		iommu_dma_free(dev, area->pages, iosize, &handle);
+		iommu_dma_free(dev, area->pages, iosize, &handle, attrs);
 		dma_common_free_remap(cpu_addr, size, VM_USERMAP);
 	} else {
 		iommu_dma_unmap_page(dev, handle, iosize, 0, 0);

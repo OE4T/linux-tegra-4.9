@@ -275,6 +275,13 @@ static void __iommu_dma_unmap(struct iommu_domain *domain, dma_addr_t dma_addr,
 	iommu_dma_free_iova(iovad, dma_addr, size);
 }
 
+static void __iommu_dma_free_cont_pages(struct device *dev, struct page **pages,
+		int count)
+{
+	dma_release_from_contiguous(dev, pages[0], count);
+	kvfree(pages);
+}
+
 static void __iommu_dma_free_pages(struct page **pages, int count)
 {
 	while (count--)
@@ -381,10 +388,15 @@ error:
  * describing them
  */
 void iommu_dma_free(struct device *dev, struct page **pages, size_t size,
-		dma_addr_t *handle)
+		dma_addr_t *handle, unsigned long attrs)
 {
+	int count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+
 	__iommu_dma_unmap(iommu_get_domain_for_dev(dev), *handle, size);
-	__iommu_dma_free_pages(pages, PAGE_ALIGN(size) >> PAGE_SHIFT);
+	if (dma_get_attr(DMA_ATTR_FORCE_CONTIGUOUS, attrs))
+		__iommu_dma_free_cont_pages(dev, pages, count);
+	else
+		__iommu_dma_free_pages(pages, count);
 	*handle = DMA_ERROR_CODE;
 }
 

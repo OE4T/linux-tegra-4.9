@@ -55,7 +55,7 @@
 				shutdown-limit = <107>;
 			};
 			ext {
-				shutdown-limit = <113>;
+				shutdown-limit = <109>;
 			};
 		};
 	};

@@ -1060,6 +1060,13 @@ static int gk20a_pm_init(struct device *dev)
 	return err;
 }
 
+static int gk20a_pm_deinit(struct device *dev)
+{
+	pm_runtime_dont_use_autosuspend(dev);
+	pm_runtime_disable(dev);
+	return 0;
+}
+
 /*
  * Start the process for unloading the driver. Set NVGPU_DRIVER_IS_DYING.
  */
@@ -1309,9 +1316,6 @@ int nvgpu_remove(struct device *dev, struct class *class)
 		platform->secure_buffer.destroy(g,
 				&platform->secure_buffer);
 
-	if (pm_runtime_enabled(dev))
-		pm_runtime_disable(dev);
-
 	if (platform->remove)
 		platform->remove(dev);
 
@@ -1332,7 +1336,10 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	err = nvgpu_remove(dev, &nvgpu_class);
 
 	set_gk20a(pdev, NULL);
+
 	gk20a_put(g);
+
+	gk20a_pm_deinit(dev);
 
 	return err;
 }

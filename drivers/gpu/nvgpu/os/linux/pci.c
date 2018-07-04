@@ -590,11 +590,21 @@ static int nvgpu_pci_pm_runtime_suspend(struct device *dev)
 	return 0;
 }
 
+static int nvgpu_pci_pm_resume(struct device *dev)
+{
+	return gk20a_pm_finalize_poweron(dev);
+}
+
+static int nvgpu_pci_pm_suspend(struct device *dev)
+{
+	return 0;
+}
+
 static const struct dev_pm_ops nvgpu_pci_pm_ops = {
 	.runtime_resume = nvgpu_pci_pm_runtime_resume,
 	.runtime_suspend = nvgpu_pci_pm_runtime_suspend,
-	.resume = nvgpu_pci_pm_runtime_resume,
-	.suspend = nvgpu_pci_pm_runtime_suspend,
+	.resume = nvgpu_pci_pm_resume,
+	.suspend = nvgpu_pci_pm_suspend,
 };
 #endif
 
@@ -611,13 +621,31 @@ static int nvgpu_pci_pm_init(struct device *dev)
 				g->railgate_delay);
 
 		/*
-		 * Runtime PM for PCI devices is disabled by default,
-		 * so we need to enable it first
+		 * set gpu dev's use_autosuspend flag to allow
+		 * runtime power management of GPU
 		 */
 		pm_runtime_use_autosuspend(dev);
+
+		/*
+		 * runtime PM for PCI devices is forbidden
+		 * by default, so unblock RTPM of GPU
+		 */
 		pm_runtime_put_noidle(dev);
 		pm_runtime_allow(dev);
 	}
+#endif
+	return 0;
+}
+
+static int nvgpu_pci_pm_deinit(struct device *dev)
+{
+#ifdef CONFIG_PM
+	struct gk20a *g = get_gk20a(dev);
+
+	if (!nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE))
+		pm_runtime_enable(dev);
+	else
+		pm_runtime_forbid(dev);
 #endif
 	return 0;
 }
@@ -826,11 +854,12 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 		enable_irq(g->irq_stall);
 	}
 #endif
+	nvgpu_pci_pm_deinit(&pdev->dev);
 
 	/* free allocated platform data space */
+	gk20a_get_platform(&pdev->dev)->g = NULL;
 	nvgpu_kfree(g, gk20a_get_platform(&pdev->dev));
 
-	gk20a_get_platform(&pdev->dev)->g = NULL;
 	gk20a_put(g);
 }
 

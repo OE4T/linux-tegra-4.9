@@ -21,6 +21,9 @@
 #include <linux/pm_runtime.h>
 #include <linux/sched/rt.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+#include <linux/sched/types.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/input_cfboost.h>

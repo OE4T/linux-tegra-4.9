@@ -329,7 +329,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	struct nvgpu_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
-	int before_pending;
+	u64 before_pending;
 
 	if (nvgpu_mem_is_valid(mem)) {
 		nvgpu_warn(g, "memory leak !!");

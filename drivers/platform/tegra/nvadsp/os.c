@@ -239,13 +239,14 @@ static ssize_t adsp_logger_read(struct file *file, char __user *buf,
 	if ((last_char != EOT) && (last_char != 0)) {
 #if CONFIG_ADSP_DRAM_LOG_WITH_TAG
 		if ((last_char == '\n') || (last_char == '\r')) {
+			size_t num_char = min(count, sizeof(ADSP_TAG) - 1);
 
-			if (copy_to_user(buf, ADSP_TAG, sizeof(ADSP_TAG) - 1)) {
+			if (copy_to_user(buf, ADSP_TAG, num_char)) {
 				dev_err(dev, "%s failed in copying tag\n", __func__);
 				ret_num_char = -EFAULT;
 				goto exit;
 			}
-			ret_num_char = sizeof(ADSP_TAG) - 1;
+			ret_num_char = num_char;
 
 		} else
 #endif

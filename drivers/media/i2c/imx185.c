@@ -31,9 +31,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/imx185.h>
 
-#define IMX185_DEFAULT_MODE	IMX185_MODE_1920X1080_CROP_30FPS
-#define IMX185_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
-
 #define IMX185_MIN_FRAME_LENGTH	(1125)
 #define IMX185_MAX_FRAME_LENGTH	(0x1FFFF)
 #define IMX185_MIN_SHS1_1080P_HDR	(5)
@@ -57,9 +54,6 @@
 #define IMX185_FUSE_ID_ADDR	0x3382
 #define IMX185_FUSE_ID_SIZE	6
 #define IMX185_FUSE_ID_STR_SIZE	(IMX185_FUSE_ID_SIZE * 2)
-#define IMX185_DEFAULT_WIDTH	1920
-#define IMX185_DEFAULT_HEIGHT	1080
-#define IMX185_DEFAULT_CLK_FREQ	37125000
 
 static const struct of_device_id imx185_of_match[] = {
 	{ .compatible = "nvidia,imx185",},
@@ -71,7 +65,6 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
 	TEGRA_CAMERA_CID_FRAME_RATE,
-	TEGRA_CAMERA_CID_GROUP_HOLD,
 	TEGRA_CAMERA_CID_FUSE_ID,
 	TEGRA_CAMERA_CID_HDR_EN,
 	TEGRA_CAMERA_CID_SENSOR_MODE_ID,
@@ -82,8 +75,6 @@ struct imx185 {
 	struct v4l2_subdev	*subdev;
 	u8 fuse_id[IMX185_FUSE_ID_SIZE];
 	u32				frame_length;
-	s32	group_hold_prev;
-	bool	group_hold_en;
 	s64 last_wdr_et_val;
 	struct camera_common_data	*s_data;
 	struct tegracam_device		*tc_dev;
@@ -187,28 +178,19 @@ static int imx185_write_table(struct imx185 *priv,
 
 static int imx185_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
-	struct imx185 *priv = tc_dev->priv;
+	struct camera_common_data *s_data = tc_dev->s_data;
 	struct device *dev = tc_dev->dev;
 	int err;
-	int gh_en = switch_ctrl_qmenu[val];
 
-	priv->group_hold_prev = val;
-	if (gh_en == SWITCH_ON) {
-
-		err = imx185_write_reg(priv->s_data,
-				       IMX185_GROUP_HOLD_ADDR, 0x1);
-		if (err)
-			goto fail;
-	} else if (gh_en == SWITCH_OFF) {
-		err = imx185_write_reg(priv->s_data,
-				       IMX185_GROUP_HOLD_ADDR, 0x0);
-		if (err)
-			goto fail;
+	err = imx185_write_reg(s_data,
+				IMX185_GROUP_HOLD_ADDR, val);
+	if (err) {
+		dev_dbg(dev,
+			"%s: Group hold control error\n", __func__);
+		return err;
 	}
+
 	return 0;
-fail:
-	dev_dbg(dev, "%s: Group hold control error\n", __func__);
-	return err;
 }
 
 static int imx185_set_gain(struct tegracam_device *tc_dev, s64 val)

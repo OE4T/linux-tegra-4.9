@@ -912,7 +912,11 @@ int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 
 	g->ops.fifo.init_engine_info(f);
 
-	init_runlist(g, f);
+	err = init_runlist(g, f);
+	if (err) {
+		nvgpu_err(g, "failed to init runlist");
+		goto clean_up;
+	}
 
 	nvgpu_init_list_node(&f->free_chs);
 

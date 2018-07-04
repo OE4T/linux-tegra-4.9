@@ -19,6 +19,10 @@
 #include <dt-bindings/thermal/thermal.h>
 
 / {
+	tegra210_emc_dram_cdev: external-memory-controller@7001b000 {
+		#cooling-cells = <2>;
+	};
+
 	thermal-zones {
 		Tboard_tegra {
 			status = "disabled";
@@ -46,8 +50,7 @@
 			cooling-maps {
 				map-tegra-dram {
 					trip = <&tboard_dram_throttle>;
-					cooling-device = <&tboard_dram_cool_dev
-						1 1>;
+					cooling-device = <&tegra210_emc_dram_cdev 1 1>;
 					cdev-type = "tegra-dram";
 				};
 			};

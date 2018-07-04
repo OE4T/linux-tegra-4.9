@@ -240,11 +240,6 @@ static inline bool nvgpu_mem_is_valid(struct nvgpu_mem *mem)
 
 }
 
-/*
- * Create a nvgpu_sgt of the default implementation
- */
-struct nvgpu_sgt *nvgpu_sgt_create(struct gk20a *g);
-
 /**
  * nvgpu_mem_sgt_create_from_mem - Create a scatter list from an nvgpu_mem.
  *

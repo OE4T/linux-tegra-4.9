@@ -578,6 +578,7 @@ static const struct gpu_ops gm20b_ops = {
 		.apply_smpc_war = gm20b_apply_smpc_war,
 	},
 	.mc = {
+		.intr_mask = mc_gk20a_intr_mask,
 		.intr_enable = mc_gk20a_intr_enable,
 		.intr_unit_config = mc_gk20a_intr_unit_config,
 		.isr_stall = mc_gk20a_isr_stall,
@@ -593,6 +594,7 @@ static const struct gpu_ops gm20b_ops = {
 		.reset = gk20a_mc_reset,
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gk20a_is_intr1_pending,
+		.log_pending_intrs = mc_gk20a_log_pending_intrs,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

@@ -718,6 +718,7 @@ static const struct gpu_ops gv11b_ops = {
 		.apply_smpc_war = gv11b_apply_smpc_war,
 	},
 	.mc = {
+		.intr_mask = mc_gp10b_intr_mask,
 		.intr_enable = mc_gv11b_intr_enable,
 		.intr_unit_config = mc_gp10b_intr_unit_config,
 		.isr_stall = mc_gp10b_isr_stall,
@@ -733,6 +734,7 @@ static const struct gpu_ops gv11b_ops = {
 		.reset = gk20a_mc_reset,
 		.boot_0 = gk20a_mc_boot_0,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
+		.log_pending_intrs = mc_gp10b_log_pending_intrs,
 		.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending,
 		.is_stall_and_eng_intr_pending =
 					gv11b_mc_is_stall_and_eng_intr_pending,

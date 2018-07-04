@@ -93,6 +93,17 @@ int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
+static void gk20a_mask_interrupts(struct gk20a *g)
+{
+	if (g->ops.mc.intr_mask != NULL) {
+		g->ops.mc.intr_mask(g);
+	}
+
+	if (g->ops.mc.log_pending_intrs != NULL) {
+		g->ops.mc.log_pending_intrs(g);
+	}
+}
+
 int gk20a_prepare_poweroff(struct gk20a *g)
 {
 	int ret = 0;
@@ -121,6 +132,8 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
 		gk20a_deinit_pstate_support(g);
+
+	gk20a_mask_interrupts(g);
 
 	g->power_on = false;
 

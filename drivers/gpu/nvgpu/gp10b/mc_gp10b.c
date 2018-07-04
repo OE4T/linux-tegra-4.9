@@ -32,6 +32,17 @@
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
+#define MAX_MC_INTR_REGS	2U
+
+void mc_gp10b_intr_mask(struct gk20a *g)
+{
+	nvgpu_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_STALLING),
+				0xffffffffU);
+
+	nvgpu_writel(g, mc_intr_en_clear_r(NVGPU_MC_INTR_NONSTALLING),
+				0xffffffffU);
+}
+
 void mc_gp10b_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
@@ -194,4 +205,18 @@ bool mc_gp10b_is_intr1_pending(struct gk20a *g,
 	}
 
 	return is_pending;
+}
+
+void mc_gp10b_log_pending_intrs(struct gk20a *g)
+{
+	u32 i, intr;
+
+	for (i = 0; i < MAX_MC_INTR_REGS; i++) {
+		intr = nvgpu_readl(g, mc_intr_r(i));
+		if (intr == 0U) {
+			continue;
+		}
+		nvgpu_info(g, "Pending intr%d=0x%08x", i, intr);
+	}
+
 }

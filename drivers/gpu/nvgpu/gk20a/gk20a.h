@@ -1119,6 +1119,7 @@ struct gpu_ops {
 		int (*apply_smpc_war)(struct dbg_session_gk20a *dbg_s);
 	} regops;
 	struct {
+		void (*intr_mask)(struct gk20a *g);
 		void (*intr_enable)(struct gk20a *g);
 		void (*intr_unit_config)(struct gk20a *g,
 				bool enable, bool is_stalling, u32 unit);
@@ -1139,6 +1140,7 @@ struct gpu_ops {
 		void (*reset)(struct gk20a *g, u32 units);
 		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
+		void (*log_pending_intrs)(struct gk20a *g);
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,

@@ -121,6 +121,14 @@ u32 mc_gk20a_isr_nonstall(struct gk20a *g)
 	return ops;
 }
 
+void mc_gk20a_intr_mask(struct gk20a *g)
+{
+	nvgpu_writel(g, mc_intr_en_0_r(),
+		mc_intr_en_0_inta_disabled_f());
+	nvgpu_writel(g, mc_intr_en_1_r(),
+		mc_intr_en_1_inta_disabled_f());
+}
+
 void mc_gk20a_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
@@ -290,6 +298,21 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 	}
 
 	return is_pending;
+}
+
+void mc_gk20a_log_pending_intrs(struct gk20a *g)
+{
+	u32 intr;
+
+	intr = g->ops.mc.intr_stall(g);
+	if (intr != 0U) {
+		nvgpu_info(g, "Pending stall intr0=0x%08x", intr);
+	}
+
+	intr = g->ops.mc.intr_nonstall(g);
+	if (intr != 0U) {
+		nvgpu_info(g, "Pending nonstall intr1=0x%08x", intr);
+	}
 }
 
 void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops)

@@ -1016,7 +1016,9 @@
 
 	host1x: host1x {
 		compatible = "nvidia,tegra210-host1x", "simple-bus";
+#if defined(LINUX_VERSION) && LINUX_VERSION < 414
 		power-domains = <&host1x_pd>;
+#endif
 		wakeup-capable;
 		reg = <0x0 0x50000000 0x0 0x00034000>;
 		interrupts = <0 65 0x04   /* mpcore syncpt */
@@ -1085,7 +1087,7 @@
 
 		isp@54680000 {
 			compatible = "nvidia,tegra210-isp";
-			power-domains = <&ve2_pd>;
+			power-domains = <&pd_ve2>;
 			reg = <0x0 0x54680000 0x0 0x00040000>;
 			interrupts = <0 70 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_ISP2B>;
@@ -1185,7 +1187,7 @@
 
 		vic {
 			compatible = "nvidia,tegra210-vic";
-			power-domains = <&vic03_pd>;
+			power-domains = <&pd_vic>;
 			reg = <0x0 0x54340000 0x0 0x00040000>;
 			iommus = <&smmu TEGRA_SWGROUP_VIC>;
 			status = "disabled";
@@ -1200,7 +1202,7 @@
 
 		nvenc {
 			compatible = "nvidia,tegra210-nvenc";
-			power-domains = <&msenc_pd>;
+			power-domains = <&pd_nvenc>;
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_NVENC_CBUS>;
 			clock-names = "msenc";
@@ -1211,7 +1213,9 @@
 
 		tsec {
 			compatible = "nvidia,tegra210-tsec";
+#if defined(LINUX_VERSION) && LINUX_VERSION < 414
 			power-domains = <&tsec_pd>;
+#endif
 			reg = <0x0 0x54500000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_TSEC>;
 			clock-names = "tsec";
@@ -1222,7 +1226,9 @@
 
 		tsecb {
 			compatible = "nvidia,tegra210-tsec";
+#if defined(LINUX_VERSION) && LINUX_VERSION < 414
 			power-domains = <&tsec_pd>;
+#endif
 			reg = <0x0 0x54100000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_TSECB_CBUS>;
 			clock-names = "tsecb";
@@ -1233,7 +1239,7 @@
 
 		nvdec {
 			compatible = "nvidia,tegra210-nvdec";
-			power-domains = <&nvdec_pd>;
+			power-domains = <&pd_nvdec>;
 			reg = <0x0 0x54480000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_NVDEC_CBUS>;
 			clock-names = "nvdec";
@@ -1244,7 +1250,7 @@
 
 		nvjpg {
 			compatible = "nvidia,tegra210-nvjpg";
-			power-domains = <&nvjpg_pd>;
+			power-domains = <&pd_nvjpg>;
 			reg = <0x0 0x54380000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_NVJPG_CBUS>;
 			clock-names = "nvjpg";

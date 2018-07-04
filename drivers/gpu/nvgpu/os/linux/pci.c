@@ -649,6 +649,9 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	hash_init(l->ecc_sysfs_stats_htable);
 
 	g = &l->g;
+
+	g->log_mask = NVGPU_DEFAULT_DBG_MASK;
+
 	nvgpu_init_gk20a(g);
 
 	nvgpu_kmem_init(g);

@@ -936,6 +936,9 @@ static int gk20a_pm_runtime_suspend(struct device *dev)
 	int err = 0;
 	struct gk20a *g = get_gk20a(dev);
 
+	if (!g)
+		return 0;
+
 	if (gk20a_gpu_is_virtual(dev))
 		err = vgpu_pm_prepare_poweroff(dev);
 	else

@@ -181,7 +181,7 @@ static int isp_channel_power_on(struct tegra_isp_channel *chan)
 {
 	int ret = 0;
 
-	dev_info(chan->isp_dev, "isp_channel_power_on\n");
+	dev_dbg(chan->isp_dev, "isp_channel_power_on\n");
 
 	ret = nvhost_module_add_client(chan->ndev, chan->priv);
 	if (ret < 0) {
@@ -200,7 +200,7 @@ static int isp_channel_power_on(struct tegra_isp_channel *chan)
 
 static void isp_channel_power_off(struct tegra_isp_channel *chan)
 {
-	dev_info(chan->isp_dev, "isp_channel_power_off\n");
+	dev_dbg(chan->isp_dev, "isp_channel_power_off\n");
 
 	nvhost_module_idle(chan->ndev);
 	nvhost_module_remove_client(chan->ndev, chan->priv);

@@ -397,11 +397,11 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	config->requests = setup->iova;
 
 #ifdef HAVE_VI_GOS_TABLES
-	dev_info(chan->dev, "%u GoS tables configured.\n",
+	dev_dbg(chan->dev, "%u GoS tables configured.\n",
 		capture->num_gos_tables);
 	for (i = 0; i < capture->num_gos_tables; i++) {
 		config->vi_gos_tables[i] = (iova_t)capture->gos_tables[i];
-		dev_info(chan->dev, "gos[%d] = 0x%08llx\n",
+		dev_dbg(chan->dev, "gos[%d] = 0x%08llx\n",
 			i, (u64)capture->gos_tables[i]);
 	}
 	config->num_vi_gos_tables = capture->num_gos_tables;

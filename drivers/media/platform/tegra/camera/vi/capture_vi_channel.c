@@ -261,7 +261,7 @@ static int vi_channel_power_on_vi_device(struct tegra_vi_channel *chan)
 {
 	int ret = 0;
 
-	dev_info(chan->dev, "vi_channel_power_on_vi_device\n");
+	dev_dbg(chan->dev, "vi_channel_power_on_vi_device\n");
 
 	ret = nvhost_module_add_client(chan->ndev, chan->capture_data);
 	if (ret < 0) {
@@ -280,7 +280,7 @@ static int vi_channel_power_on_vi_device(struct tegra_vi_channel *chan)
 
 static void vi_channel_power_off_vi_device(struct tegra_vi_channel *chan)
 {
-	dev_info(chan->dev, "vi_channel_power_off_vi_device\n");
+	dev_dbg(chan->dev, "vi_channel_power_off_vi_device\n");
 
 	nvhost_module_idle(chan->ndev);
 	nvhost_module_remove_client(chan->ndev, chan->capture_data);

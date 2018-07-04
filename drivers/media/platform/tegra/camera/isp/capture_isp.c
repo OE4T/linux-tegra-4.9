@@ -505,11 +505,11 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 	config->stats_progress_sp = capture->stats_progress_sp;
 
 #ifdef HAVE_ISP_GOS_TABLES
-	dev_info(chan->isp_dev, "%u GoS tables configured.\n",
+	dev_dbg(chan->isp_dev, "%u GoS tables configured.\n",
 		capture->num_gos_tables);
 	for (i = 0; i < capture->num_gos_tables; i++) {
 		config->isp_gos_tables[i] = (iova_t)capture->gos_tables[i];
-		dev_info(chan->isp_dev, "gos[%d] = 0x%08llx\n",
+		dev_dbg(chan->isp_dev, "gos[%d] = 0x%08llx\n",
 			i, (u64)capture->gos_tables[i]);
 	}
 	config->num_isp_gos_tables = capture->num_gos_tables;

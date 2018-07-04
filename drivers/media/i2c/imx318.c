@@ -1,7 +1,7 @@
 /*
  * imx318.c - imx318 sensor driver
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,7 +56,6 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
 	TEGRA_CAMERA_CID_FRAME_RATE,
-	TEGRA_CAMERA_CID_GROUP_HOLD,
 	TEGRA_CAMERA_CID_EEPROM_DATA,
 	TEGRA_CAMERA_CID_FUSE_ID,
 };
@@ -68,9 +67,7 @@ struct imx318 {
 	u8				fuse_id[IMX318_FUSE_ID_SIZE];
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
-	s32				group_hold_prev;
 	u32				frame_length;
-	s32				group_hold_en;
 	struct camera_common_data	*s_data;
 	struct tegracam_device		*tc_dev;
 };
@@ -150,11 +147,9 @@ static int imx318_write_table(struct imx318 *priv,
 static int imx318_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
-	struct imx318 *priv = tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	int err;
 
-	priv->group_hold_prev = val;
 	err = imx318_write_reg(s_data,
 				IMX318_GROUP_HOLD_ADDR, val);
 	if (err) {
@@ -169,7 +164,6 @@ static int imx318_set_group_hold(struct tegracam_device *tc_dev, bool val)
 static int imx318_set_gain(struct tegracam_device *tc_dev, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
-	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
@@ -177,9 +171,6 @@ static int imx318_set_gain(struct tegracam_device *tc_dev, s64 val)
 	int err;
 	s16 gain;
 	int i;
-
-	if (!priv->group_hold_prev)
-		imx318_set_group_hold(tc_dev, 1);
 
 	if (val < mode->control_properties.min_gain_val)
 		val = mode->control_properties.min_gain_val;
@@ -223,9 +214,6 @@ static int imx318_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
 	u32 frame_length;
 	int i;
 
-	if (!priv->group_hold_prev)
-		imx318_set_group_hold(tc_dev, 1);
-
 	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
 		(u64)mode->control_properties.framerate_factor /
 		mode->image_properties.line_length / val);
@@ -259,9 +247,6 @@ static int imx318_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	u32 coarse_time;
 	s32 max_coarse_time = priv->frame_length - IMX318_MAX_COARSE_DIFF;
 	int i;
-
-	if (!priv->group_hold_prev)
-		imx318_set_group_hold(tc_dev, 1);
 
 	coarse_time = mode->signal_properties.pixel_clock.val *
 		val / mode->image_properties.line_length /
@@ -653,7 +638,6 @@ static int imx318_s_stream(struct v4l2_subdev *sd, int enable)
 				dev_err(&client->dev,
 					"%s: error exposure override\n",
 					__func__);
-
 		} else {
 			dev_err(&client->dev, "%s: faile to get overrides\n",
 				__func__);

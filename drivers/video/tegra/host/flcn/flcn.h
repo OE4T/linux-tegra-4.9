@@ -66,22 +66,25 @@ struct ucode_v1_flcn {
 	bool valid;
 };
 
+struct flcn_os_image {
+	u32 bin_magic;
+	u32 reserved_offset;
+	u32 bin_data_offset;
+	u32 data_offset;
+	u32 data_size;
+	u32 code_size;
+	u32 code_offset;
+	u32 size;
+	u32 bin_ver_tag;
+};
+
 struct flcn {
 	bool valid;
 	size_t size;
 	bool is_booted;
 
-	struct {
-		u32 bin_magic;
-		u32 reserved_offset;
-		u32 bin_data_offset;
-		u32 data_offset;
-		u32 data_size;
-		u32 code_size;
-		u32 code_offset;
-		u32 size;
-		u32 bin_ver_tag;
-	} os, fce;
+	struct flcn_os_image os;
+	struct flcn_os_image fce;
 
 	dma_addr_t dma_addr;
 	u32 *mapped;

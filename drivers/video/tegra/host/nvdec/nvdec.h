@@ -23,6 +23,7 @@
 
 #include <linux/types.h>
 #include <linux/nvhost.h>
+#include "../flcn/flcn.h"
 
 extern const struct file_operations tegra_nvdec_ctrl_ops;
 
@@ -51,14 +52,7 @@ struct nvdec {
 	bool valid;
 	size_t size;
 
-	struct {
-		u32 bin_data_offset;
-		u32 data_offset;
-		u32 data_size;
-		u32 code_offset;
-		u32 size;
-	} os;
-
+	struct flcn_os_image os;
 	struct sg_table *pa;
 	dma_addr_t phys;
 	u32 *mapped;

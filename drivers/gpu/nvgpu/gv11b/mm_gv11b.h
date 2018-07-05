@@ -32,7 +32,6 @@ bool gv11b_mm_is_bar1_supported(struct gk20a *g);
 void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm, u32 big_page_size);
 bool gv11b_mm_mmu_fault_pending(struct gk20a *g);
-void gv11b_mm_remove_bar2_vm(struct gk20a *g);
 int gv11b_init_mm_setup_hw(struct gk20a *g);
 void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate);
 u64 gv11b_gpu_phys_addr(struct gk20a *g,

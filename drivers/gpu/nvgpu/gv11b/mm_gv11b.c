@@ -153,16 +153,6 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g,
 	*hub_intr_types |= HUB_INTR_TYPE_REPLAY;
 }
 
-void gv11b_mm_remove_bar2_vm(struct gk20a *g)
-{
-	struct mm_gk20a *mm = &g->mm;
-
-	nvgpu_log_fn(g, " ");
-
-	nvgpu_free_inst_block(g, &mm->bar2.inst_block);
-	nvgpu_vm_put(mm->bar2.vm);
-}
-
 static void gv11b_mm_mmu_fault_setup_hw(struct gk20a *g)
 {
 	if (nvgpu_mem_is_valid(

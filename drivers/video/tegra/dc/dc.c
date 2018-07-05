@@ -6727,9 +6727,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 					   || !dc->mode.v_active))
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 
-		tegra_dc_get(dc);
+		ret = tegra_dc_io_start(dc);
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem);
-		tegra_dc_put(dc);
+		if (!ret)
+			tegra_dc_io_end(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;
 			dev_err(&ndev->dev, "failed to register fb\n");
@@ -6742,7 +6743,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		/* WAR: BL is putting DC in bad state for EDP configuration */
 		if (!tegra_platform_is_vdk() &&
 			(dc->out->type == TEGRA_DC_OUT_DP)) {
-			tegra_disp_clk_prepare_enable(dc->clk);
 			if (tegra_dc_is_t21x()) {
 				dc->rst = of_reset_control_get(np, "dc_rst");
 				if (IS_ERR_OR_NULL(dc->rst)) {
@@ -6754,13 +6754,15 @@ static int tegra_dc_probe(struct platform_device *ndev)
 				}
 
 				if (dc->rst) {
+					tegra_disp_clk_prepare_enable(dc->clk);
 					reset_control_assert(dc->rst);
 					udelay(10);
 					reset_control_deassert(dc->rst);
 					udelay(10);
+					tegra_disp_clk_disable_unprepare(
+								dc->clk);
 				}
 			}
-			tegra_disp_clk_disable_unprepare(dc->clk);
 		}
 	}
 

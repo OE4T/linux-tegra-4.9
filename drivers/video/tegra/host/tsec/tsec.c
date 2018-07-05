@@ -67,8 +67,6 @@
 #define TSEC_RESERVE			256
 #define TSEC_KEY_OFFSET			(TSEC_RESERVE - TSEC_KEY_LENGTH)
 
-#define TSEC_OS_START_OFFSET    256
-
 #define TSEC_CARVEOUT_ADDR_OFFSET	0
 #define TSEC_CARVEOUT_SIZE_OFFSET	8
 
@@ -551,7 +549,7 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 	int err = 0;
 	struct flcn *m;
 	struct mc_carveout_info inf;
-	u32 timeout, offset, gsc_base_addr;
+	u32 gsc_base_addr;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	err = nvhost_tsec_init_sw(dev);
@@ -559,11 +557,10 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 		return err;
 
 	m = get_flcn(dev);
-
 	if (m->is_booted)
 		return 0;
 
-	err = flcn_wait_mem_scrubbing(dev);
+	err = nvhost_flcn_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
 
@@ -571,23 +568,11 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 	if (pdata->transcfg_addr)
 		host1x_writel(dev, pdata->transcfg_addr, pdata->transcfg_val);
 
-	host1x_writel(dev, flcn_dmactl_r(), 0);
-	host1x_writel(dev, flcn_dmatrfbase_r(),
-		(m->dma_addr + m->os.bin_data_offset) >> 8);
+	err = nvhost_flcn_load_image(dev, m->dma_addr, &m->os, TSEC_RESERVE);
+	if (err)
+		return err;
 
-	for (offset = 0; offset < m->os.data_size; offset += 256)
-		flcn_dma_pa_to_internal_256b(dev,
-					   m->os.data_offset + offset,
-					   offset, false);
-
-	flcn_dma_pa_to_internal_256b(dev,
-				     m->os.code_offset+TSEC_OS_START_OFFSET,
-				     TSEC_OS_START_OFFSET, true);
-
-	/* boot tsec */
-	host1x_writel(dev, flcn_bootvec_r(),
-			     flcn_bootvec_vec_f(TSEC_OS_START_OFFSET));
-
+	nvhost_flcn_start(dev, TSEC_RESERVE);
 	if (nvhost_is_210()) {
 		/* Populate DEBUGINFO with gsc carveout address */
 		mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT4);
@@ -595,34 +580,12 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 		host1x_writel(dev, flcn_debuginfo_r(), gsc_base_addr);
 	}
 
-	/* Run TSEC */
-	host1x_writel(dev, flcn_cpuctl_r(),
-			flcn_cpuctl_startcpu_true_f());
-
-	timeout = 0; /* default */
-
-	err = flcn_wait_idle(dev, &timeout);
-	if (err != 0) {
-		dev_err(&dev->dev, "boot failed due to timeout");
-		return err;
-	}
-
-	/* setup tsec interrupts and enable interface */
-	host1x_writel(dev, flcn_irqmset_r(),
-			(flcn_irqmset_ext_f(0xff) |
-				flcn_irqmset_swgen1_set_f() |
-				flcn_irqmset_swgen0_set_f() |
-				flcn_irqmset_exterr_set_f() |
-				flcn_irqmset_halt_set_f()   |
-				flcn_irqmset_wdtmr_set_f()));
-
-	host1x_writel(dev, flcn_itfen_r(),
-			(flcn_itfen_mthden_enable_f() |
-				flcn_itfen_ctxen_enable_f()));
-
+	nvhost_flcn_irq_mask_set(dev);
+	nvhost_flcn_ctxtsw_init(dev);
 	err = tsec_load_kfuse(dev);
 	if (err)
 		return err;
+
 	m->is_booted = true;
 
 	return err;

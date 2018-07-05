@@ -61,8 +61,6 @@
 #include "t194/t194.h"
 #endif
 
-#define NVDEC_IDLE_TIMEOUT_DEFAULT	100000	/* 100 milliseconds */
-#define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
 #define FW_NAME_SIZE			32
 
 #define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)
@@ -122,118 +120,64 @@ static void nvdec_get_fw_name(struct platform_device *pdev, char *name)
 	dev_info(&pdev->dev, "fw name:%s\n", name);
 }
 
-static int nvdec_dma_wait_idle(struct platform_device *dev, u32 *timeout)
+static int nvhost_nvdec_bl_init(struct platform_device *dev)
 {
-	nvhost_dbg_fn("");
+	u32 fb_data_offset = 0;
+	struct nvdec **m = get_nvdec(dev);
+	struct nvdec_bl_shared_data shared_data;
+	u32 debug = host1x_readl(dev,
+				nvdec_scp_ctl_stat_r()) &
+				nvdec_scp_ctl_stat_debug_mode_m();
+	bool skip_wpr_settings = debug &&
+		(tegra_platform_is_qt() || tegra_platform_is_vdk());
 
-	if (!*timeout)
-		*timeout = NVDEC_IDLE_TIMEOUT_DEFAULT;
+	/*
+	 * debuginfo is cleared by the firmware on boot, write a dummy
+	 * value here so that a successful boot can be detected.
+	 */
+	host1x_writel(dev, nvdec_debuginfo_r(), 0xDEADBEEF);
+	fb_data_offset = (m[0]->os.bin_data_offset +
+				m[0]->os.data_offset) / (sizeof(u32));
+	shared_data.ls_fw_start_addr = m[1]->dma_addr >> 8;
+	shared_data.ls_fw_size = m[1]->size;
+	/* no wpr firmware does not need these */
+	if (!skip_wpr_settings) {
+		struct mc_carveout_info inf;
+		int ret;
 
-	do {
-		u32 check = min_t(u32, NVDEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = host1x_readl(dev, nvdec_dmatrfcmd_r());
-		u32 idle_v = nvdec_dmatrfcmd_idle_v(dmatrfcmd);
-
-		if (nvdec_dmatrfcmd_idle_true_v() == idle_v) {
-			nvhost_dbg_fn("done");
-			return 0;
+		ret = mc_get_carveout_info(&inf, NULL,
+					   MC_SECURITY_CARVEOUT1);
+		if (ret) {
+			dev_err(&dev->dev, "carveout memory allocation failed");
+			return -ENOMEM;
 		}
 
-		udelay(NVDEC_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
+		/* Put the 40-bit addr formed by wpr_addr_hi and
+		   wpr_addr_lo divided by 256 into 32-bit wpr_addr */
+		shared_data.wpr_addr = inf.base >> 8;
+		shared_data.wpr_size = inf.size; /* Already in bytes. */
+	}
 
-	dev_err(&dev->dev, "dma idle timeout");
+	/* store fw start address for nvdec bl to read */
+	memcpy(&(m[0]->mapped[fb_data_offset]), &shared_data,
+		sizeof(shared_data));
 
-	return -1;
-}
-
-static int nvdec_dma_pa_to_internal_256b(struct platform_device *dev,
-		u32 offset, u32 internal_offset, bool imem)
-{
-	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
-	u32 cmd = nvdec_dmatrfcmd_size_256b_f();
-	u32 pa_offset =  nvdec_dmatrffboffs_offs_f(offset);
-	u32 i_offset = nvdec_dmatrfmoffs_offs_f(internal_offset);
-	u32 timeout = 0; /* default*/
-
-	if (imem)
-		cmd |= nvdec_dmatrfcmd_imem_true_f();
-
-	if (pdata->isolate_contexts)
-		cmd |= nvdec_dmatrfcmd_dmactx_f(1);
-
-	host1x_writel(dev, nvdec_dmatrfmoffs_r(), i_offset);
-	host1x_writel(dev, nvdec_dmatrffboffs_r(), pa_offset);
-	host1x_writel(dev, nvdec_dmatrfcmd_r(), cmd);
-
-	return nvdec_dma_wait_idle(dev, &timeout);
-
-}
-
-static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
-{
-	u32 w = 0;
-
-	nvhost_dbg_fn("");
-
-	if (!*timeout)
-		*timeout = NVDEC_IDLE_TIMEOUT_DEFAULT;
-
-	do {
-		u32 check = min_t(u32, NVDEC_IDLE_CHECK_PERIOD, *timeout);
-		w = host1x_readl(dev, nvdec_idlestate_r());
-
-		if (!w) {
-			nvhost_dbg_fn("done");
-			return 0;
-		}
-		udelay(NVDEC_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
-
-	nvhost_err(&dev->dev, "nvdec_idlestate_r = %x\n", w);
-
-	return -1;
-}
-
-static int nvdec_wait_mem_scrubbing(struct platform_device *dev)
-{
-	int retries = NVDEC_IDLE_TIMEOUT_DEFAULT / NVDEC_IDLE_CHECK_PERIOD;
-	nvhost_dbg_fn("");
-
-	do {
-		u32 w = host1x_readl(dev, nvdec_dmactl_r()) &
-			(nvdec_dmactl_dmem_scrubbing_m() |
-			 nvdec_dmactl_imem_scrubbing_m());
-
-		if (!w) {
-			nvhost_dbg_fn("done");
-			return 0;
-		}
-		udelay(NVDEC_IDLE_CHECK_PERIOD);
-	} while (--retries || !tegra_platform_is_silicon());
-
-	nvhost_err(&dev->dev, "Falcon mem scrubbing timeout");
-	return -ETIMEDOUT;
+	return 0;
 }
 
 int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	u32 timeout;
-	u32 offset;
 	int err = 0;
 	struct nvdec **m;
 
-	dev_dbg(&dev->dev, "nvdec_boot: start\n");
+	dev_dbg(&dev->dev, "flcn_boot: start\n");
 	err = nvhost_nvdec_init_sw(dev);
 	if (err)
 		return err;
 
 	m = get_nvdec(dev);
-
-	err = nvdec_wait_mem_scrubbing(dev);
+	err = nvhost_flcn_wait_mem_scrubbing(dev);
 	if (err)
 		return err;
 
@@ -242,92 +186,19 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		host1x_writel(dev, pdata->transcfg_addr, pdata->transcfg_val);
 
 	if (tegra_nvdec_bootloader_enabled) {
-
-		u32 fb_data_offset = 0;
-		u32 initial_dmem_offset = 0;
-		struct nvdec_bl_shared_data shared_data;
-		u32 debug = host1x_readl(dev,
-					nvdec_scp_ctl_stat_r()) &
-					nvdec_scp_ctl_stat_debug_mode_m();
-		bool skip_wpr_settings = debug &&
-			(tegra_platform_is_qt() || tegra_platform_is_vdk());
-
-		/*
-		 * debuginfo is cleared by the firmware on boot, write a dummy
-		 * value here so that a successful boot can be detected.
-		 */
-		host1x_writel(dev, nvdec_debuginfo_r(), 0xDEADBEEF);
-
-		fb_data_offset = (m[0]->os.bin_data_offset +
-					m[0]->os.data_offset)/(sizeof(u32));
-
-		shared_data.ls_fw_start_addr = m[1]->phys >> 8;
-		shared_data.ls_fw_size = m[1]->size;
-
-		/* no wpr firmware does not need these */
-		if (!skip_wpr_settings) {
-			struct mc_carveout_info inf;
-			int ret;
-
-			ret = mc_get_carveout_info(&inf, NULL,
-						   MC_SECURITY_CARVEOUT1);
-			if (ret)
-				return -ENOMEM;
-
-			/* Put the 40-bit addr formed by wpr_addr_hi and
-			   wpr_addr_lo divided by 256 into 32-bit wpr_addr */
-			shared_data.wpr_addr = inf.base >> 8;
-			shared_data.wpr_size = inf.size; /* Already in bytes. */
-		}
-		memcpy(&(m[0]->mapped[fb_data_offset + initial_dmem_offset]),
-			&shared_data, sizeof(shared_data));
+		err = nvhost_nvdec_bl_init(dev);
+		if (err)
+			return err;
 	}
-	host1x_writel(dev, nvdec_dmactl_r(), 0);
-	host1x_writel(dev, nvdec_dmatrfbase_r(),
-		(m[0]->phys + m[0]->os.bin_data_offset) >> 8);
 
-	/* Write nvdec ucode data to dmem */
-	dev_dbg(&dev->dev, "nvdec_boot: load dmem\n");
-	for (offset = 0; offset < m[0]->os.data_size; offset += 256) {
-		nvdec_dma_pa_to_internal_256b(dev,
-					   m[0]->os.data_offset + offset,
-					   offset, false);
-	}
-	/* Write nvdec ucode to imem */
-	dev_dbg(&dev->dev, "nvdec_boot: load imem\n");
-	nvdec_dma_pa_to_internal_256b(dev, m[0]->os.code_offset, 0, true);
-
-	/* setup nvdec interrupts and enable interface */
-	host1x_writel(dev, nvdec_irqmset_r(),
-			(nvdec_irqmset_ext_f(0xff) |
-				nvdec_irqmset_swgen1_set_f() |
-				nvdec_irqmset_swgen0_set_f() |
-				nvdec_irqmset_exterr_set_f() |
-				nvdec_irqmset_halt_set_f()   |
-				nvdec_irqmset_wdtmr_set_f()));
-	host1x_writel(dev, nvdec_irqdest_r(),
-			(nvdec_irqdest_host_ext_f(0xff) |
-				nvdec_irqdest_host_swgen1_host_f() |
-				nvdec_irqdest_host_swgen0_host_f() |
-				nvdec_irqdest_host_exterr_host_f() |
-				nvdec_irqdest_host_halt_host_f()));
-	host1x_writel(dev, nvdec_itfen_r(),
-			(nvdec_itfen_mthden_enable_f() |
-				nvdec_itfen_ctxen_enable_f()));
-
-	/* boot nvdec */
-	dev_dbg(&dev->dev, "nvdec_boot: start falcon\n");
-	host1x_writel(dev, nvdec_bootvec_r(), nvdec_bootvec_vec_f(0));
-	host1x_writel(dev, nvdec_cpuctl_r(),
-			nvdec_cpuctl_startcpu_true_f());
-
-	timeout = 0; /* default */
-
-	err = nvdec_wait_idle(dev, &timeout);
-	if (err != 0) {
-		dev_err(&dev->dev, "boot failed due to timeout");
+	err = nvhost_flcn_load_image(dev, m[0]->dma_addr, &m[0]->os, 0);
+	if (err)
 		return err;
-	}
+
+	nvhost_flcn_irq_mask_set(dev);
+	nvhost_flcn_irq_dest_set(dev);
+	nvhost_flcn_ctxtsw_init(dev);
+	nvhost_flcn_start(dev, 0);
 
 	if (tegra_nvdec_bootloader_enabled) {
 		u32 debuginfo = host1x_readl(dev, nvdec_debuginfo_r());
@@ -340,7 +211,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 		}
 	}
 
-	dev_dbg(&dev->dev, "nvdec_boot: success\n");
+	dev_dbg(&dev->dev, "flcn_boot: success\n");
 
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL)
 	tlk_restore_keyslots();
@@ -409,6 +280,7 @@ static int nvdec_setup_ucode_image(struct platform_device *dev,
 	m->os.code_offset = ucode.os_header->os_code_offset;
 	m->os.data_offset = ucode.os_header->os_data_offset;
 	m->os.data_size   = ucode.os_header->os_data_size;
+	m->os.code_size   = ucode.os_header->os_code_size;
 
 	return 0;
 }
@@ -423,7 +295,7 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 #endif
 
-	m->phys = 0;
+	m->dma_addr = 0;
 	m->mapped = NULL;
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
@@ -437,10 +309,10 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	m->size = ucode_fw->size;
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->phys, GFP_KERNEL,
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr, GFP_KERNEL,
 				    &attrs);
 #else
-	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->phys, GFP_KERNEL,
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr, GFP_KERNEL,
 				    DMA_ATTR_READ_ONLY);
 #endif
 	if (!m->mapped) {
@@ -465,9 +337,10 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 clean_up:
 	if (m->mapped) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-		dma_free_attrs(&dev->dev, m->size, m->mapped, m->phys, &attrs);
+		dma_free_attrs(&dev->dev, m->size, m->mapped, m->dma_addr,
+				&attrs);
 #else
-		dma_free_attrs(&dev->dev, m->size, m->mapped, m->phys,
+		dma_free_attrs(&dev->dev, m->size, m->mapped, m->dma_addr,
 			       DMA_ATTR_READ_ONLY);
 #endif
 		m->mapped = NULL;

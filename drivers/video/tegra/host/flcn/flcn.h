@@ -119,19 +119,20 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     unsigned long pixelrate,
 				     unsigned long bw_constraint);
 
-int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
-					      phys_addr_t pa,
-					      u32 internal_offset,
-					      bool imem);
-int flcn_wait_mem_scrubbing(struct platform_device *dev);
-
-int flcn_wait_idle(struct platform_device *pdev,
-				u32 *timeout);
+int nvhost_flcn_wait_mem_scrubbing(struct platform_device *dev);
 int flcn_setup_ucode_image(struct platform_device *dev,
-				u32 *ucode_ptr,
-				const struct firmware *ucode_fw);
+			   u32 *ucode_ptr,
+			   const struct firmware *ucode_fw);
 int flcn_intr_init(struct platform_device *pdev);
 int flcn_reload_fw(struct platform_device *pdev);
+int nvhost_flcn_load_image(struct platform_device *pdev,
+			   dma_addr_t dma_addr,
+			   struct flcn_os_image *os,
+			   u32 mem_offset);
+int nvhost_flcn_start(struct platform_device *pdev, u32 bootvec);
+void nvhost_flcn_ctxtsw_init(struct platform_device *pdev);
+void nvhost_flcn_irq_dest_set(struct platform_device *pdev);
+void nvhost_flcn_irq_mask_set(struct platform_device *pdev);
 
 /* hack, get these from elsewhere */
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)

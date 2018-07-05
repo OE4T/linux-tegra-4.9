@@ -30,6 +30,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/module.h>
 #include <linux/version.h>
+#include <linux/iopoll.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -56,7 +57,7 @@
 static int nvhost_flcn_init_sw(struct platform_device *dev);
 static int nvhost_flcn_deinit_sw(struct platform_device *dev);
 
-#define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
+#define FLCN_IDLE_TIMEOUT_DEFAULT	100000	/* 100 milliseconds */
 #define FLCN_IDLE_CHECK_PERIOD		10	/* 10 usec */
 
 static irqreturn_t flcn_isr(int irq, void *dev_id)
@@ -106,67 +107,51 @@ int flcn_intr_init(struct platform_device *pdev)
 	return 0;
 }
 
-int flcn_wait_idle(struct platform_device *pdev,
-				u32 *timeout)
+static int nvhost_flcn_wait_idle(struct platform_device *pdev)
 {
+	int ret;
+	u32 val = 0;
+	void __iomem *addr = get_aperture(pdev, 0) + flcn_idlestate_r();
+
 	nvhost_dbg_fn("");
+	ret = readl_poll_timeout(addr, val, (val == 0), FLCN_IDLE_CHECK_PERIOD,
+				FLCN_IDLE_TIMEOUT_DEFAULT);
+	if (ret)
+		nvhost_err(&pdev->dev, "flcn_idle_state_r =%x\n", val);
+	else
+		nvhost_dbg_fn("done");
 
-	if (!*timeout)
-		*timeout = FLCN_IDLE_TIMEOUT_DEFAULT;
-
-	do {
-		u32 check = min_t(u32, FLCN_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = host1x_readl(pdev, flcn_idlestate_r());
-
-		if (!w) {
-			nvhost_dbg_fn("done");
-			return 0;
-		}
-		udelay(FLCN_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
-
-	dev_err(&pdev->dev, "flcn flcn idle timeout");
-
-	return -1;
+	return ret;
 }
 
-static int flcn_dma_wait_idle(struct platform_device *pdev, u32 *timeout)
+static int nvhost_flcn_dma_wait_idle(struct platform_device *pdev)
 {
+	int ret;
+	void __iomem *addr = get_aperture(pdev, 0) + flcn_dmatrfcmd_r();
+	u32 val;
+
 	nvhost_dbg_fn("");
+	ret = readl_poll_timeout(addr, val,
+				(flcn_dmatrfcmd_idle_v(val) ==
+				 flcn_dmatrfcmd_idle_true_v()),
+				FLCN_IDLE_CHECK_PERIOD,
+				FLCN_IDLE_TIMEOUT_DEFAULT);
+	if (ret)
+		nvhost_err(&pdev->dev, "flcn_idle_state_r =%x\n", val);
+	else
+		nvhost_dbg_fn("done");
 
-	if (!*timeout)
-		*timeout = FLCN_IDLE_TIMEOUT_DEFAULT;
-
-	do {
-		u32 check = min_t(u32, FLCN_IDLE_CHECK_PERIOD, *timeout);
-		u32 dmatrfcmd = host1x_readl(pdev, flcn_dmatrfcmd_r());
-		u32 idle_v = flcn_dmatrfcmd_idle_v(dmatrfcmd);
-
-		if (flcn_dmatrfcmd_idle_true_v() == idle_v) {
-			nvhost_dbg_fn("done");
-			return 0;
-		}
-		udelay(FLCN_IDLE_CHECK_PERIOD);
-		*timeout -= check;
-	} while (*timeout || !tegra_platform_is_silicon());
-
-	dev_err(&pdev->dev, "dma idle timeout");
-
-	return -1;
+	return ret;
 }
 
-
-int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
-					      phys_addr_t pa,
-					      u32 internal_offset,
-					      bool imem)
+static int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
+					phys_addr_t pa, u32 internal_offset,
+					bool imem)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	u32 cmd = flcn_dmatrfcmd_size_256b_f();
 	u32 pa_offset =  flcn_dmatrffboffs_offs_f(pa);
 	u32 i_offset = flcn_dmatrfmoffs_offs_f(internal_offset);
-	u32 timeout = 0; /* default*/
 
 	if (imem)
 		cmd |= flcn_dmatrfcmd_imem_true_f();
@@ -178,8 +163,46 @@ int flcn_dma_pa_to_internal_256b(struct platform_device *pdev,
 	host1x_writel(pdev, flcn_dmatrffboffs_r(), pa_offset);
 	host1x_writel(pdev, flcn_dmatrfcmd_r(), cmd);
 
-	return flcn_dma_wait_idle(pdev, &timeout);
+	return nvhost_flcn_dma_wait_idle(pdev);
 
+}
+
+int nvhost_flcn_load_image(struct platform_device *pdev,
+			   dma_addr_t dma_addr,
+			   struct flcn_os_image *os,
+			   u32 imem_offset)
+{
+	int ret = 0;
+	u32 offset;
+
+	host1x_writel(pdev, flcn_dmactl_r(), 0);
+	host1x_writel(pdev, flcn_dmatrfbase_r(),
+			(dma_addr + os->bin_data_offset) >> 8);
+
+	/* Write ucode data to dmem */
+	dev_dbg(&pdev->dev, "flcn_boot: load dmem\n");
+	for (offset = 0; offset < os->data_size; offset += 256) {
+		ret = flcn_dma_pa_to_internal_256b(pdev,
+						   os->data_offset + offset,
+						   offset, false);
+		if (ret)
+			goto err;
+	}
+
+	/* Write nvdec ucode to imem */
+	dev_dbg(&pdev->dev, "flcn_boot: load imem\n");
+	for (offset = imem_offset; offset < os->code_size; offset += 256) {
+		ret = flcn_dma_pa_to_internal_256b(pdev, os->code_offset + offset,
+						  offset, true);
+		if (ret)
+			goto err;
+	}
+
+err:
+	if (ret)
+		nvhost_err(&pdev->dev, "flcn_load_image failed: 0x%x\n", ret);
+
+	return ret;
 }
 
 int flcn_setup_ucode_image(struct platform_device *dev,
@@ -368,7 +391,7 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	return err;
 }
 
-int flcn_wait_mem_scrubbing(struct platform_device *dev)
+int nvhost_flcn_wait_mem_scrubbing(struct platform_device *dev)
 {
 	int retries = FLCN_IDLE_TIMEOUT_DEFAULT / FLCN_IDLE_CHECK_PERIOD;
 	nvhost_dbg_fn("");
@@ -399,45 +422,12 @@ int nvhost_flcn_prepare_poweroff(struct platform_device *pdev)
 	return 0;
 }
 
-int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
+void nvhost_flcn_irq_mask_set(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct flcn *v;
-	u32 timeout;
-	u32 offset;
-	int err = 0;
-
-	err = nvhost_flcn_init_sw(pdev);
-	if (err)
-		return err;
-
-	v = get_flcn(pdev);
-
-	err = flcn_wait_mem_scrubbing(pdev);
-	if (err)
-		return err;
-
-	/* load transcfg configuration if defined */
-	if (pdata->transcfg_addr)
-		host1x_writel(pdev, pdata->transcfg_addr, pdata->transcfg_val);
-
-	host1x_writel(pdev, flcn_dmactl_r(), 0);
-
-	host1x_writel(pdev, flcn_dmatrfbase_r(),
-			(v->dma_addr + v->os.bin_data_offset) >> 8);
-
-	for (offset = 0; offset < v->os.data_size; offset += 256)
-		flcn_dma_pa_to_internal_256b(pdev,
-					     v->os.data_offset + offset,
-					     offset, false);
-
-	for (offset = 0; offset < v->os.code_size; offset += 256)
-		flcn_dma_pa_to_internal_256b(pdev,
-					     v->os.code_offset + offset,
-					     offset, true);
 
 	/* setup falcon interrupts and enable interface */
-	if (!pdata->self_config_flcn_isr) {
+	if (!pdata->self_config_flcn_isr)
 		host1x_writel(pdev, flcn_irqmset_r(),
 			      (flcn_irqmset_ext_f(0xff)    |
 			       flcn_irqmset_swgen1_set_f() |
@@ -445,35 +435,77 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 			       flcn_irqmset_exterr_set_f() |
 			       flcn_irqmset_halt_set_f()   |
 			       flcn_irqmset_wdtmr_set_f()));
+}
+
+void nvhost_flcn_irq_dest_set(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (!pdata->self_config_flcn_isr)
 		host1x_writel(pdev, flcn_irqdest_r(),
 			      (flcn_irqdest_host_ext_f(0xff)     |
 			       flcn_irqdest_host_swgen1_host_f() |
 			       flcn_irqdest_host_swgen0_host_f() |
 			       flcn_irqdest_host_exterr_host_f() |
 			       flcn_irqdest_host_halt_host_f()));
-	}
+}
 
+void nvhost_flcn_ctxtsw_init(struct platform_device *pdev)
+{
 	host1x_writel(pdev, flcn_itfen_r(),
-			     (flcn_itfen_mthden_enable_f() |
-					flcn_itfen_ctxen_enable_f()));
+			(flcn_itfen_mthden_enable_f() |
+			 flcn_itfen_ctxen_enable_f()));
+}
 
+int nvhost_flcn_start(struct platform_device *pdev, u32 bootvec)
+{
+	int err = 0;
+
+	/* boot falcon */
+	dev_dbg(&pdev->dev, "flcn_boot: start falcon\n");
+	host1x_writel(pdev, flcn_bootvec_r(), flcn_bootvec_vec_f(bootvec));
+	host1x_writel(pdev, flcn_cpuctl_r(), flcn_cpuctl_startcpu_true_f());
+
+	err = nvhost_flcn_wait_idle(pdev);
+	if (err != 0)
+		nvhost_err(&pdev->dev, "boot failed due to timeout");
+
+	return err;
+}
+
+
+int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct flcn *v;
+	int err = 0;
+
+	err = nvhost_flcn_init_sw(pdev);
+	if (err)
+		return err;
+
+	v = get_flcn(pdev);
+	err = nvhost_flcn_wait_mem_scrubbing(pdev);
+	if (err)
+		return err;
+
+	/* load transcfg configuration if defined */
+	if (pdata->transcfg_addr)
+		host1x_writel(pdev, pdata->transcfg_addr, pdata->transcfg_val);
+
+	err = nvhost_flcn_load_image(pdev, v->dma_addr, &v->os, 0);
+	if (err)
+		return err;
+
+	nvhost_flcn_irq_mask_set(pdev);
+	nvhost_flcn_irq_dest_set(pdev);
 	if (pdata->flcn_isr)
 		enable_irq(pdata->irq);
 
-	/* boot falcon */
-	host1x_writel(pdev, flcn_bootvec_r(), flcn_bootvec_vec_f(0));
-	host1x_writel(pdev, flcn_cpuctl_r(),
-			flcn_cpuctl_startcpu_true_f());
+	nvhost_flcn_ctxtsw_init(pdev);
+	err = nvhost_flcn_start(pdev, 0);
 
-	timeout = 0; /* default */
-
-	err = flcn_wait_idle(pdev, &timeout);
-	if (err != 0) {
-		dev_err(&pdev->dev, "boot failed due to timeout");
-		return err;
-	}
-
-	return 0;
+	return err;
 }
 
 int nvhost_flcn_common_isr(struct platform_device *pdev)

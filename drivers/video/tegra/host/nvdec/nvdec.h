@@ -54,7 +54,8 @@ struct nvdec {
 
 	struct flcn_os_image os;
 	struct sg_table *pa;
-	dma_addr_t phys;
+
+	dma_addr_t dma_addr;
 	u32 *mapped;
 };
 
@@ -67,19 +68,12 @@ struct nvdec_ucode_bin_header_v1 {
 	u32 os_bin_size;
 };
 
-struct nvdec_ucode_os_code_header_v1 {
-	u32 offset;
-	u32 size;
-};
-
 struct nvdec_ucode_os_header_v1 {
 	u32 os_code_offset;
 	u32 os_code_size;
 	u32 os_data_offset;
 	u32 os_data_size;
 	u32 num_apps;
-	struct nvdec_ucode_os_code_header_v1 *app_code;
-	struct nvdec_ucode_os_code_header_v1 *app_data;
 	u32 *os_ovl_offset;
 	u32 *of_ovl_size;
 };

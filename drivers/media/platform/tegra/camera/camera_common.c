@@ -432,13 +432,13 @@ static const struct camera_common_colorfmt *find_matching_color_fmt(
 	const size_t common_fmts_size = ARRAY_SIZE(camera_common_color_fmts);
 
 	struct sensor_image_properties *cur_props;
-	bool matched[common_fmts_size];
+	bool matched[ARRAY_SIZE(camera_common_color_fmts)];
 	int match_num = -1;
 	int match_index = -1;
 	size_t i, j;
 
 	// Clear matched array so no format has been matched
-	memset(matched, 0, sizeof(matched[0]) * ARRAY_SIZE(matched));
+	memset(matched, 0, sizeof(matched));
 
 	// Find and count matching color formats
 	for (i = 0; i < common_fmts_size; i++) {

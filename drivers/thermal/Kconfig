@@ -389,12 +389,6 @@ config MTK_THERMAL
 	  Enable this option if you want to have support for thermal management
 	  controller present in Mediatek SoCs
 
-config PWM_FAN
-	tristate "PWM Fan driver"
-	depends on THERMAL
-	help
-	  Enables the fan driver that is controlled by pwm
-
 menu "Texas Instruments thermal drivers"
 depends on ARCH_HAS_BANDGAP || COMPILE_TEST
 depends on HAS_IOMEM

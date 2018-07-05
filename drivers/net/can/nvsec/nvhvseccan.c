@@ -12,6 +12,7 @@
  */
 
 #define DEBUG_SECCAN
+#undef DEBUG_SECCAN
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -120,13 +121,16 @@ struct hv_seccan_priv {
 
 static s32 nv_seccan_rx(struct hv_seccan_priv *hvn, s32 limit)
 {
-	s32 nr, i;
+	s32 nr;
 	struct net_device *ndev = hvn->ndev;
 	struct net_device_stats *stats = &ndev->stats;
 	struct sk_buff *skb;
 	u8 *buf;
 	struct seccanpkt_hdr *hdr;
 	struct canfd_frame *fd_frame;
+#ifdef DEBUG_SECCAN
+	s32 i;
+#endif
 
 	nr = 0;
 	/* grabbing a frame can fail for the following reasons:

@@ -543,7 +543,7 @@ int vi_capture_set_compand(struct tegra_vi_channel *chan,
 	return 0;
 }
 
-int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
+static int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
@@ -569,7 +569,7 @@ int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
 	return 0;
 }
 
-int csi_stream_close(struct tegra_vi_channel *chan)
+static int csi_stream_close(struct tegra_vi_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;

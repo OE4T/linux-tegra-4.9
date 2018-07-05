@@ -177,7 +177,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 
 	case _IOC_NR(VI_CAPTURE_REQUEST): {
 		struct vi_capture_req req;
-		struct capture_common_pin_req cap_common_req = {0};
+		struct capture_common_pin_req cap_common_req;
 
 		if (copy_from_user(&req, ptr, sizeof(req)))
 			break;
@@ -188,6 +188,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		/* pin and reloc */
+		memset(&cap_common_req, 0, sizeof(cap_common_req));
 		cap_common_req.dev = chan->dev;
 		cap_common_req.rtcpu_dev = capture->rtcpu_dev;
 		cap_common_req.unpins = NULL;

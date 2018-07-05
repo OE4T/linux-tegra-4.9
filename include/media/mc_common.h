@@ -312,6 +312,8 @@ int tegra_vi2_power_on(struct tegra_mc_vi *vi);
 void tegra_vi2_power_off(struct tegra_mc_vi *vi);
 int tegra_vi4_power_on(struct tegra_mc_vi *vi);
 void tegra_vi4_power_off(struct tegra_mc_vi *vi);
+int tegra_vi5_power_on(struct tegra_mc_vi *vi);
+void tegra_vi5_power_off(struct tegra_mc_vi *vi);
 int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
 int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,

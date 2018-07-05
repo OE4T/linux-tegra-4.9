@@ -97,7 +97,8 @@ static char *nvgpu_dma_flags_to_str(struct gk20a *g, unsigned long flags)
  * Please use dma_dbg_alloc() and dma_dbg_free() instead of this function.
  */
 static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
-		      const char *type, const char *what)
+		      const char *type, const char *what,
+		      const char *func, int line)
 {
 	char *flags_str = NULL;
 
@@ -111,7 +112,7 @@ static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
 	flags_str = nvgpu_dma_flags_to_str(g, flags);
 
 	__nvgpu_log_dbg(g, gpu_dbg_dma,
-			__func__, __LINE__,
+			func, line,
 			"DMA %s: [%s] size=%-7zu "
 			"aligned=%-7zu total=%-10llukB %s",
 			what, type,
@@ -124,9 +125,9 @@ static void __dma_dbg(struct gk20a *g, size_t size, unsigned long flags,
 }
 
 #define dma_dbg_alloc(g, size, flags, type)				\
-	__dma_dbg(g, size, flags, type, "alloc")
+	__dma_dbg(g, size, flags, type, "alloc", __func__, __LINE__)
 #define dma_dbg_free(g, size, flags, type)				\
-	__dma_dbg(g, size, flags, type, "free")
+	__dma_dbg(g, size, flags, type, "free", __func__, __LINE__)
 
 /*
  * For after the DMA alloc is done.

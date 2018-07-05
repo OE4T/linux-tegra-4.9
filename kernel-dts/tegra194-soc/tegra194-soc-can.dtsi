@@ -33,7 +33,7 @@
 		 clock-names = "can_core", "can_host","can","pllaon";
 		 resets = <&bpmp_resets TEGRA194_RESET_CAN1>;
 		 reset-names = "can";
-		 mram-params = <0 16 16 8 8 8 16 16 16>;
+		 mram-params = <0 16 16 24 4 4 16 16 16>;
 		 tx-config = <8 8 0 64>;
 		 rx-config = <64 64 64>;
 		 status = "disabled";
@@ -54,7 +54,7 @@
 		 clock-names = "can_core", "can_host","can","pllaon";
 		 resets = <&bpmp_resets TEGRA194_RESET_CAN2>;
 		 reset-names = "can";
-		 mram-params = <0 16 16 8 8 8 16 16 16>;
+		 mram-params = <0 16 16 24 4 4 16 16 16>;
 		 tx-config = <8 8 0 64>;
 		 rx-config = <64 64 64>;
 		 status = "disabled";

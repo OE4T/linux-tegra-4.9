@@ -356,6 +356,7 @@ struct tegra_vgpu_fecs_trace_filter {
 enum {
 	TEGRA_VGPU_CTXSW_MODE_NO_CTXSW = 0,
 	TEGRA_VGPU_CTXSW_MODE_CTXSW,
+	TEGRA_VGPU_CTXSW_MODE_STREAM_OUT_CTXSW,
 };
 
 enum {

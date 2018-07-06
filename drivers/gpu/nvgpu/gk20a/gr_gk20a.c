@@ -1684,14 +1684,14 @@ out:
 int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  struct channel_gk20a *c,
 				  u64 gpu_va,
-				  bool enable_hwpm_ctxsw)
+				  u32 mode)
 {
 	struct tsg_gk20a *tsg;
 	struct nvgpu_mem *gr_mem = NULL;
 	struct nvgpu_gr_ctx *gr_ctx;
 	struct pm_ctx_desc *pm_ctx;
 	u32 data;
-	u64 virt_addr;
+	u64 virt_addr = 0;
 	struct ctx_header_desc *ctx = &c->ctx_header;
 	struct nvgpu_mem *ctxheader = &ctx->mem;
 	int ret;
@@ -1710,12 +1710,31 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 		return -EFAULT;
 	}
 
-	if (enable_hwpm_ctxsw) {
-		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f())
+	if ((mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW) &&
+			(!g->ops.gr.get_hw_accessor_stream_out_mode)) {
+		nvgpu_err(g, "Mode-E hwpm context switch mode is not supported");
+		return -EINVAL;
+	}
+
+	switch (mode) {
+	case NVGPU_DBG_HWPM_CTXSW_MODE_CTXSW:
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f()) {
 			return 0;
-	} else {
-		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_no_ctxsw_f())
+		}
+		break;
+	case  NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW:
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_no_ctxsw_f()) {
 			return 0;
+		}
+		break;
+	case NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW:
+		if (pm_ctx->pm_mode == g->ops.gr.get_hw_accessor_stream_out_mode()) {
+			return 0;
+		}
+		break;
+	default:
+		nvgpu_err(g, "invalid hwpm context switch mode");
+		return -EINVAL;
 	}
 
 	ret = gk20a_disable_channel_tsg(g, c);
@@ -1735,7 +1754,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
-	if (enable_hwpm_ctxsw) {
+	if (mode != NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW) {
 		/* Allocate buffer if necessary */
 		if (pm_ctx->mem.gpu_va == 0) {
 			ret = nvgpu_dma_alloc_sys(g,
@@ -1768,11 +1787,16 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	data = nvgpu_mem_rd(g, gr_mem, ctxsw_prog_main_image_pm_o());
 	data = data & ~ctxsw_prog_main_image_pm_mode_m();
 
-	if (enable_hwpm_ctxsw) {
+	switch (mode) {
+	case  NVGPU_DBG_HWPM_CTXSW_MODE_CTXSW:
 		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_ctxsw_f();
-
 		virt_addr = pm_ctx->mem.gpu_va;
-	} else {
+		break;
+	case NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW:
+		pm_ctx->pm_mode = g->ops.gr.get_hw_accessor_stream_out_mode();
+		virt_addr = pm_ctx->mem.gpu_va;
+		break;
+	case NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW:
 		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 		virt_addr = 0;
 	}
@@ -1892,7 +1916,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	 * for PM context switching, including mode and possibly a pointer to
 	 * the PM backing store.
 	 */
-	if (gr_ctx->pm_ctx.pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f()) {
+	if (gr_ctx->pm_ctx.pm_mode != ctxsw_prog_main_image_pm_mode_no_ctxsw_f()) {
 		if (gr_ctx->pm_ctx.mem.gpu_va == 0) {
 			nvgpu_err(g,
 				"context switched pm with no pm buffer!");

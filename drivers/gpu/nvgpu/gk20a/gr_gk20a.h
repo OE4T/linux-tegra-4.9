@@ -655,7 +655,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  struct channel_gk20a *c,
 				  u64 gpu_va,
-				  bool enable_hwpm_ctxsw);
+				  u32 mode);
 
 struct nvgpu_gr_ctx;
 void gr_gk20a_ctx_patch_write(struct gk20a *g, struct nvgpu_gr_ctx *ch_ctx,

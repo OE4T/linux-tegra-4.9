@@ -1066,7 +1066,7 @@ int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 }
 
 int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
-	struct channel_gk20a *ch, u64 gpu_va, bool enable)
+	struct channel_gk20a *ch, u64 gpu_va, u32 mode)
 {
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *ch_ctx;
@@ -1089,16 +1089,33 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	ch_ctx = &tsg->gr_ctx;
 	pm_ctx = &ch_ctx->pm_ctx;
 
-	if (enable) {
+	if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_CTXSW) {
 		/*
 		 * send command to enable HWPM only once - otherwise server
 		 * will return an error due to using the same GPU VA twice.
 		 */
-		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f())
+
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f()) {
 			return 0;
-
+		}
 		p->mode = TEGRA_VGPU_CTXSW_MODE_CTXSW;
+	} else if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW) {
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_no_ctxsw_f()) {
+			return 0;
+		}
+		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
+	} else if ((mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW) &&
+			(g->ops.gr.get_hw_accessor_stream_out_mode)){
+		if (pm_ctx->pm_mode == g->ops.gr.get_hw_accessor_stream_out_mode()) {
+			return 0;
+		}
+		p->mode = TEGRA_VGPU_CTXSW_MODE_STREAM_OUT_CTXSW;
+	} else {
+		nvgpu_err(g, "invalid hwpm context switch mode");
+		return -EINVAL;
+	}
 
+	if (mode != NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW) {
 		/* Allocate buffer if necessary */
 		if (pm_ctx->mem.gpu_va == 0) {
 			pm_ctx->mem.gpu_va = __nvgpu_vm_alloc_va(ch->vm,
@@ -1109,11 +1126,6 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 				return -ENOMEM;
 			pm_ctx->mem.size = g->gr.ctx_vars.pm_ctxsw_image_size;
 		}
-	} else {
-		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_no_ctxsw_f())
-			return 0;
-
-		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE;
@@ -1124,10 +1136,15 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 	err = err ? err : msg.ret;
-	if (!err)
-		pm_ctx->pm_mode = enable ?
-			ctxsw_prog_main_image_pm_mode_ctxsw_f() :
-			ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
+	if (!err) {
+		if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_CTXSW) {
+			pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_ctxsw_f();
+		} else if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW) {
+			pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
+		} else {
+			pm_ctx->pm_mode = g->ops.gr.get_hw_accessor_stream_out_mode();
+		}
+	}
 
 	return err;
 }

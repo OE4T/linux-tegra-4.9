@@ -1039,12 +1039,33 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	return  err;
 }
 
+/*
+ * Convert linux hwpm ctxsw mode type of the form of NVGPU_DBG_GPU_HWPM_CTXSW_MODE_*
+ * into common hwpm ctxsw mode type of the form of NVGPU_DBG_HWPM_CTXSW_MODE_*
+ */
+
+static u32 nvgpu_hwpm_ctxsw_mode_to_common_mode(u32 mode)
+{
+	switch (mode){
+	case NVGPU_DBG_GPU_HWPM_CTXSW_MODE_NO_CTXSW:
+		return NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW;
+	case NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW:
+		return NVGPU_DBG_HWPM_CTXSW_MODE_CTXSW;
+	case NVGPU_DBG_GPU_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW:
+		return NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW;
+	}
+
+	return mode;
+}
+
+
 static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 			       struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args *args)
 {
 	int err;
 	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch_gk20a;
+	u32 mode = nvgpu_hwpm_ctxsw_mode_to_common_mode(args->mode);
 
 	nvgpu_log_fn(g, "%s pm ctxsw mode = %d", g->name, args->mode);
 
@@ -1080,7 +1101,8 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 		goto clean_up;
 	}
 	err = g->ops.gr.update_hwpm_ctxsw_mode(g, ch_gk20a, 0,
-		args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
+		mode);
+
 	if (err)
 		nvgpu_err(g,
 			"error (%d) during pm ctxsw mode update", err);

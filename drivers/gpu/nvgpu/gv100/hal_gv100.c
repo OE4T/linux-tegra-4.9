@@ -358,6 +358,8 @@ static const struct gpu_ops gv100_ops = {
 		.enable_exceptions = gr_gv11b_enable_exceptions,
 		.get_lrf_tex_ltc_dram_override = get_ecc_override_val,
 		.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode,
+		.get_hw_accessor_stream_out_mode =
+			gr_gv100_get_hw_accessor_stream_out_mode,
 		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,
 		.update_sm_error_state = gv11b_gr_update_sm_error_state,

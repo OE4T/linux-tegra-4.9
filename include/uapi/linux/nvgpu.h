@@ -1286,8 +1286,12 @@ struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args {
 
 
 /* PM Context Switch Mode */
+/*This mode says that the pms are not to be context switched. */
 #define NVGPU_DBG_GPU_HWPM_CTXSW_MODE_NO_CTXSW               (0x00000000)
+/* This mode says that the pms in Mode-B are to be context switched */
 #define NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW                  (0x00000001)
+/* This mode says that the pms in Mode-E (stream out) are to be context switched. */
+#define NVGPU_DBG_GPU_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW       (0x00000002)
 
 struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args {
 	__u32 mode;

@@ -32,6 +32,7 @@ void gv11b_free_subctx_header(struct channel_gk20a *c);
 int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va);
 
 void gv11b_init_subcontext_pdb(struct vm_gk20a *vm,
-				struct nvgpu_mem *inst_block);
+				struct nvgpu_mem *inst_block,
+				bool replayable);
 
 #endif /* __SUBCONTEXT_GV11B_H__ */

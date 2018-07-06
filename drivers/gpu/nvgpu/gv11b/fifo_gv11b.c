@@ -138,10 +138,16 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct nvgpu_mem *mem = &c->inst_block;
 	u32 data;
+	bool replayable = false;
 
 	nvgpu_log_fn(g, " ");
 
 	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
+
+	if ((flags & NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE) != 0) {
+		replayable = true;
+	}
+	gv11b_init_subcontext_pdb(c->vm, mem, replayable);
 
         nvgpu_mem_wr32(g, mem, ram_fc_gp_base_w(),
 		pbdma_gp_base_offset_f(

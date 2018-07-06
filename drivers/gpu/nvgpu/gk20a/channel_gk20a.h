@@ -42,18 +42,18 @@ struct fifo_profile_gk20a;
 #include "fence_gk20a.h"
 
 /* Flags to be passed to gk20a_channel_alloc_gpfifo() */
-#define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1 << 0)
-#define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1 << 1)
-#define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1 << 2)
-#define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1 << 3)
+#define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1U << 0U)
+#define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1U << 1U)
+#define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1U << 2U)
+#define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1U << 3U)
 
 /* Flags to be passed to nvgpu_submit_channel_gpfifo() */
-#define NVGPU_SUBMIT_FLAGS_FENCE_WAIT	(1 << 0)
-#define NVGPU_SUBMIT_FLAGS_FENCE_GET	(1 << 1)
-#define NVGPU_SUBMIT_FLAGS_HW_FORMAT	(1 << 2)
-#define NVGPU_SUBMIT_FLAGS_SYNC_FENCE	(1 << 3)
-#define NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI	(1 << 4)
-#define NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
+#define NVGPU_SUBMIT_FLAGS_FENCE_WAIT	(1U << 0U)
+#define NVGPU_SUBMIT_FLAGS_FENCE_GET	(1U << 1U)
+#define NVGPU_SUBMIT_FLAGS_HW_FORMAT	(1U << 2U)
+#define NVGPU_SUBMIT_FLAGS_SYNC_FENCE	(1U << 3U)
+#define NVGPU_SUBMIT_FLAGS_SUPPRESS_WFI	(1U << 4U)
+#define NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING	(1U << 5U)
 
 /*
  * The binary format of 'struct nvgpu_channel_fence' introduced here

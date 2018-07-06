@@ -37,7 +37,8 @@
 static void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block);
 static void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
-				struct nvgpu_mem *inst_block);
+				struct nvgpu_mem *inst_block,
+				bool replayable);
 
 void gv11b_free_subctx_header(struct channel_gk20a *c)
 {
@@ -84,9 +85,10 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 }
 
 void gv11b_init_subcontext_pdb(struct vm_gk20a *vm,
-				struct nvgpu_mem *inst_block)
+				struct nvgpu_mem *inst_block,
+				bool replayable)
 {
-	gv11b_subctx_commit_pdb(vm, inst_block);
+	gv11b_subctx_commit_pdb(vm, inst_block, replayable);
 	gv11b_subctx_commit_valid_mask(vm, inst_block);
 
 }
@@ -157,8 +159,9 @@ void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 	nvgpu_mem_wr32(g, inst_block, 167, 0xffffffff);
 }
 
-void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
-				struct nvgpu_mem *inst_block)
+static void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
+				struct nvgpu_mem *inst_block,
+				bool replayable)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 lo, hi;
@@ -179,11 +182,16 @@ void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 		aperture, 0) |
 		ram_in_sc_page_dir_base_vol_f(
 		ram_in_sc_page_dir_base_vol_true_v(), 0) |
-		ram_in_sc_page_dir_base_fault_replay_tex_f(1, 0) |
-		ram_in_sc_page_dir_base_fault_replay_gcc_f(1, 0) |
 		ram_in_sc_use_ver2_pt_format_f(1, 0) |
 		ram_in_sc_big_page_size_f(1, 0) |
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);
+
+	if (replayable) {
+		format_word |=
+			ram_in_sc_page_dir_base_fault_replay_tex_f(1, 0) |
+			ram_in_sc_page_dir_base_fault_replay_gcc_f(1, 0);
+	}
+
 	nvgpu_log(g, gpu_dbg_info, " pdb info lo %x hi %x",
 					format_word, pdb_addr_hi);
 	for (subctx_id = 0; subctx_id < max_subctx_count; subctx_id++) {

@@ -1050,7 +1050,7 @@
 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu TEGRA_SWGROUP_VI>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_VI>,
+			clocks = <&tegra_car TEGRA210_CLK_VI_V4L2_CBUS>,
 				 <&tegra_car TEGRA210_CLK_CSI>,
 				 <&tegra_car TEGRA210_CLK_CILAB>,
 				 <&tegra_car TEGRA210_CLK_CILCD>,

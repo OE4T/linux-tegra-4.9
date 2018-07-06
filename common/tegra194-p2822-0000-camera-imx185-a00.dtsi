@@ -48,6 +48,13 @@
 				i2c-mux,deselect-on-exit;
 				#address-cells = <1>;
 				#size-cells = <0>;
+				pca9570_a@24 {
+					compatible = "nvidia,pca9570";
+					reg = <0x24>;
+					channel = "a";
+					drive_ic = "DRV8838";
+				};
+
 				imx185_a@1a {
 					/* Define any required hw resources needed by driver */
 					/* ie. clocks, io pins, power sources */

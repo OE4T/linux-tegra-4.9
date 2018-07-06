@@ -2808,8 +2808,8 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	}
 
 	if (!of_property_read_u32(np, "nvidia,fbmem-size", &temp)) {
-		pdata->fb->fbmem_size = (int)temp;
-		OF_DC_LOG("fbmem size %d\n", pdata->fb->fbmem_size);
+		pdata->fb->fbmem_size = temp;
+		OF_DC_LOG("fbmem size %u\n", pdata->fb->fbmem_size);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,fb-flags", &temp)) {

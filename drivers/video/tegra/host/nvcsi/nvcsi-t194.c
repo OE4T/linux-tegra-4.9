@@ -246,6 +246,7 @@ static int nvcsi_prod_apply_thread(void *data)
 
 	nvcsi_apply_prod(pdev);
 	tegra_csi_mipi_calibrate(&nvcsi->csi, true);
+	atomic_set(&nvcsi->on, 1);
 	return 0;
 
 }
@@ -257,7 +258,6 @@ int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev)
 
 	if (atomic_read(&nvcsi->on) == 1)
 		return 0;
-	atomic_set(&nvcsi->on, 1);
 
 	/* rtcpu resets nvcsi registers, so we set prod settings
 	 * after rtcpu has finished resetting the registers
@@ -269,6 +269,7 @@ int tegra194_nvcsi_finalize_poweron(struct platform_device *pdev)
 	else {
 		nvcsi_apply_prod(pdev);
 		tegra_csi_mipi_calibrate(&nvcsi->csi, true);
+		atomic_set(&nvcsi->on, 1);
 	}
 
 	return 0;
@@ -278,12 +279,19 @@ EXPORT_SYMBOL_GPL(tegra194_nvcsi_finalize_poweron);
 int tegra194_nvcsi_prepare_poweroff(struct platform_device *pdev)
 {
 	struct t194_nvcsi *nvcsi = nvhost_get_private_data(pdev);
+	int err = 0;
 
 	if (atomic_read(&nvcsi->on) == 0)
 		return 0;
+
+	err = tegra_csi_mipi_calibrate(&nvcsi->csi, false);
+	if (err) {
+		dev_err(&pdev->dev, "calibration failed\n");
+		return err;
+	}
 	atomic_set(&nvcsi->on, 0);
 
-	return tegra_csi_mipi_calibrate(&nvcsi->csi, false);
+	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra194_nvcsi_prepare_poweroff);
 

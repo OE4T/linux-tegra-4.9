@@ -277,11 +277,7 @@ static void suspend_all_device_irqs(void)
                         continue;
 
                 raw_spin_lock_irqsave(&desc->lock, flags);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
-		__disable_irq(desc, irq);
-#else
 		__disable_irq(desc);
-#endif
                 raw_spin_unlock_irqrestore(&desc->lock, flags);
         }
 
@@ -305,11 +301,7 @@ static void resume_all_device_irqs(void)
                         continue;
 
                 raw_spin_lock_irqsave(&desc->lock, flags);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
-		__enable_irq(desc, irq);
-#else
 		__enable_irq(desc);
-#endif
                 raw_spin_unlock_irqrestore(&desc->lock, flags);
         }
 }
@@ -359,7 +351,11 @@ static int denver_idle_write(void *data, u64 val)
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
         pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+#else
+        pr_info("idle: %lld, exit latency: %lld\n", sleep, time);
+#endif
 
         local_irq_enable();
         local_fiq_enable();
@@ -412,8 +408,11 @@ static int a57_idle_write(void *data, u64 val)
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
         pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
-
+#else
+        pr_info("idle: %lld, exit latency: %lld\n", sleep, time);
+#endif
         local_irq_enable();
         local_fiq_enable();
         start_critical_timings();
@@ -797,31 +796,21 @@ static int tegra_suspend_notify_callback(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static int tegra_cpu_notify_callback(struct notifier_block *nb,
-	unsigned long action, void *pcpu)
+static int tegra_cpu_online(unsigned int cpu)
 {
-	int cpu = (long) pcpu;
-
-	switch (action) {
-	case CPU_ONLINE:
 	/* Re-program deepest allowed cluster power state after core */
 	/* in that cluster is onlined. */
-		if (tegra18_is_cpu_arm(cpu))
-			smp_call_function_any(&a57_cpumask,
-				program_cluster_state,
-				&deepest_a57_cluster_state, 1);
-		else
-			smp_call_function_any(&denver_cpumask,
-				program_cluster_state,
-				&deepest_denver_cluster_state, 1);
-		break;
-	}
-	return NOTIFY_OK;
-}
+	if (tegra18_is_cpu_arm(cpu))
+		smp_call_function_any(&a57_cpumask,
+				      program_cluster_state,
+				      &deepest_a57_cluster_state, 1);
+	else
+		smp_call_function_any(&denver_cpumask,
+				      program_cluster_state,
+				      &deepest_denver_cluster_state, 1);
 
-static struct notifier_block cpu_on_notifier = {
-	.notifier_call = tegra_cpu_notify_callback,
-};
+	return 0;
+}
 
 static struct notifier_block suspend_notifier = {
 	.notifier_call = tegra_suspend_notify_callback,
@@ -917,8 +906,20 @@ static int __init tegra18x_cpuidle_probe(struct platform_device *pdev)
 		}
 	}
 
+	err = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN,
+				"tegra_cpu:online",
+				tegra_cpu_online,
+				NULL);
+	if (err < 0) {
+		pr_err("unable to register cpuhp state\n");
+		if (!cpumask_empty(&denver_cpumask))
+			cpuidle_unregister(&t18x_denver_idle_driver);
+		if (!cpumask_empty(&a57_cpumask))
+			cpuidle_unregister(&t18x_a57_idle_driver);
+		return err;
+	}
+
 	cpuidle_debugfs_init();
-	register_cpu_notifier(&cpu_on_notifier);
 	register_pm_notifier(&suspend_notifier);
 	return 0;
 }

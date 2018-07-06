@@ -1909,6 +1909,18 @@
 			     <0 99 0x04>; /* MSI interrupt */
 		interrupt-names = "intr", "msi";
 
+#if LINUX_VERSION >= 414
+		clocks = <&tegra_car TEGRA210_CLK_PCIE>,
+			<&tegra_car TEGRA210_CLK_AFI>,
+			<&tegra_car TEGRA210_CLK_PLL_E>,
+			<&tegra_car TEGRA210_CLK_CML0>;
+		clock-names = "pex", "afi", "pll_e", "cml";
+
+		resets = <&tegra_car 70>,
+			<&tegra_car 72>,
+			<&tegra_car 74>;
+		reset-names = "pex", "afi", "pcie_x";
+#else
 		clocks = <&tegra_car 72>,
 			<&tegra_car 70>,
 			<&tegra_car 99>;
@@ -1918,6 +1930,7 @@
 			<&tegra_car 70>,
 			<&tegra_car 74>;
 		reset-names = "afi", "pcie", "pciex";
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;

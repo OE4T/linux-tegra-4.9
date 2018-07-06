@@ -68,6 +68,12 @@ void gv11b_fb_init_fs_state(struct gk20a *g)
 	nvgpu_log(g, gpu_dbg_info, "mmu active ltcs %u",
 			fb_mmu_num_active_ltcs_count_v(
 			gk20a_readl(g, fb_mmu_num_active_ltcs_r())));
+
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		/* Bypass MMU check for non-secure boot. For
+		 * secure-boot,this register write has no-effect */
+		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffffU);
+	}
 }
 
 void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)

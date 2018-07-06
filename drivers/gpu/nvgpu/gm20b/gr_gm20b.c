@@ -49,11 +49,6 @@ void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 
 	nvgpu_log_info(g, "initialize gpc mmu");
 
-	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
-		/* Bypass MMU check for non-secure boot. For
-		 * secure-boot,this register write has no-effect */
-		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
-	}
 	temp = gk20a_readl(g, fb_mmu_ctrl_r());
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |

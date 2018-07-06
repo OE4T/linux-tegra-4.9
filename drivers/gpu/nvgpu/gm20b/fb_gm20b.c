@@ -42,6 +42,12 @@ void fb_gm20b_init_fs_state(struct gk20a *g)
 
 	gk20a_writel(g, fb_fbhub_num_active_ltcs_r(),
 			g->ltc_count);
+
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		/* Bypass MMU check for non-secure boot. For
+		 * secure-boot,this register write has no-effect */
+		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffffU);
+	}
 }
 
 void gm20b_fb_set_mmu_page_size(struct gk20a *g)

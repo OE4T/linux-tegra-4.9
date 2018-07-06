@@ -659,7 +659,7 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 			hda->enabled = &to_hdmi(hda->client_data)->enabled;
 			hda->eld_valid = &to_hdmi(hda->client_data)->eld_valid;
 			snprintf(hda->audio_switch_name, CHAR_BUF_SIZE_MAX,
-				"%s", hdmi->audio_switch_name);
+				"aux%d_audio", hdmi->sor->ctrl_num);
 		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
 			struct tegra_dc_dp_data *dp = data;
 
@@ -671,7 +671,7 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 			hda->eld_valid =
 			&to_dp(hda->client_data)->hpd_data.eld_retrieved;
 			snprintf(hda->audio_switch_name, CHAR_BUF_SIZE_MAX,
-				"%s", dp->audio_switch_name);
+				"aux%d_audio", dp->sor->ctrl_num);
 		}
 
 		if (hda->sor) {

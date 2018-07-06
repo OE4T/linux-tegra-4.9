@@ -16,6 +16,8 @@
 extern int nvcvnas_busy(void);
 extern int nvcvnas_idle(void);
 extern int is_nvcvnas_probed(void);
+extern int nvcvnas_busy_no_rpm(void);
+extern int nvcvnas_idle_no_rpm(void);
 
 static char *t194_master_id[] = {
 	"CCPLEX",                               /* 0x1 */

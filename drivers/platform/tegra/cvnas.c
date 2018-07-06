@@ -635,6 +635,35 @@ static const struct dev_pm_ops nvcvnas_pm_ops = {
 #define NVCVNAS_PM_OPS NULL
 #endif
 
+/* Function to resume CV without using runtime pm.
+ * CVNOC register setting is required by CBB driver during resume to
+ * enable reporting CVNOC errors for illegal register accesses.
+ */
+int nvcvnas_busy_no_rpm(void)
+{
+#ifdef CONFIG_PM_SLEEP
+	if (cvnas_plat_dev && dev_get_drvdata(&cvnas_plat_dev->dev))
+		return nvcvnas_resume(&cvnas_plat_dev->dev);
+	else
+#endif
+		return 0;
+}
+EXPORT_SYMBOL(nvcvnas_busy_no_rpm);
+
+/*
+ * Function to suspend CV without using runtime pm.
+ */
+int nvcvnas_idle_no_rpm(struct device *dev)
+{
+#ifdef CONFIG_PM_SLEEP
+	if (cvnas_plat_dev && dev_get_drvdata(&cvnas_plat_dev->dev))
+		return nvcvnas_suspend(&cvnas_plat_dev->dev);
+	else
+#endif
+		return 0;
+}
+EXPORT_SYMBOL(nvcvnas_idle_no_rpm);
+
 static struct platform_driver nvcvnas_driver = {
 	.driver = {
 		.name	= "tegra-cvnas",

@@ -138,6 +138,12 @@ struct tegra_cbb_errlog_record {
 	bool		is_ax2apb_bridge_connected;
 	u64		*axi2abp_bases;
 	int		apb_bridge_cnt;
+	bool		is_clk_rst;
+	int		(*is_cluster_probed)(void);
+	int		(*tegra_noc_en_clk_rpm)(void);
+	int		(*tegra_noc_dis_clk_rpm)(void);
+	int		(*tegra_noc_en_clk_no_rpm)(void);
+	int		(*tegra_noc_dis_clk_no_rpm)(void);
 };
 
 struct tegra_cbb_noc_data {
@@ -157,7 +163,9 @@ struct tegra_cbb_noc_data {
 	bool		is_ax2apb_bridge_connected;
 	bool		is_clk_rst;
 	int		(*is_cluster_probed)(void);
-	int		(*tegra_noc_clk_enable)(void);
-	int		(*tegra_noc_clk_disable)(void);
+	int		(*tegra_noc_en_clk_rpm)(void);
+	int		(*tegra_noc_dis_clk_rpm)(void);
+	int		(*tegra_noc_en_clk_no_rpm)(void);
+	int		(*tegra_noc_dis_clk_no_rpm)(void);
 };
 

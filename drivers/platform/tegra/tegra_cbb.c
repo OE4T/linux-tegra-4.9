@@ -629,6 +629,7 @@ static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
 	.is_ax2apb_bridge_connected = 1
 };
 
+
 static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
 	.name   = "CV-NOC",
 	.errvld = cbb_errlogger_errvld,
@@ -644,9 +645,12 @@ static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
 	.is_ax2apb_bridge_connected = 1,
 	.is_clk_rst = true,
 	.is_cluster_probed = is_nvcvnas_probed,
-	.tegra_noc_clk_enable = nvcvnas_busy,
-	.tegra_noc_clk_disable = nvcvnas_idle
+	.tegra_noc_en_clk_rpm = nvcvnas_busy,
+	.tegra_noc_dis_clk_rpm = nvcvnas_idle,
+	.tegra_noc_en_clk_no_rpm = nvcvnas_busy_no_rpm,
+	.tegra_noc_dis_clk_no_rpm = nvcvnas_idle_no_rpm
 };
+
 
 static const struct of_device_id axi2apb_match[] = {
 	{ .compatible = "nvidia,tegra194-AXI2APB-bridge", },
@@ -806,6 +810,19 @@ isr_err:
 	return err;
 }
 
+static void tegra_cbb_error_enable(struct tegra_cbb_errlog_record *errlog)
+{
+
+	/* set “StallEn=1” to enable queuing of error packets till
+	 * first is served & cleared
+	 */
+	errlog->stallen(errlog->vaddr);
+
+	/* set “FaultEn=1” to enable error reporting signal “Fault” */
+	errlog->faulten(errlog->vaddr);
+}
+
+
 static int tegra_cbb_probe(struct platform_device *pdev)
 {
 	struct resource *res_base;
@@ -828,10 +845,9 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "No device match found\n");
 		return -EINVAL;
 	}
-
 	if (bdata->is_clk_rst) {
 		if (bdata->is_cluster_probed())
-			bdata->tegra_noc_clk_enable();
+			bdata->tegra_noc_en_clk_rpm();
 		else {
 			dev_info(&pdev->dev, "defer probe as %s not probed yet",
 								bdata->name);
@@ -895,6 +911,14 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	errlog->tegra_noc_parse_routeid = bdata->tegra_noc_parse_routeid;
 	errlog->tegra_cbb_master_id = bdata->tegra_cbb_master_id;
 	errlog->is_ax2apb_bridge_connected = bdata->is_ax2apb_bridge_connected;
+	errlog->is_clk_rst = bdata->is_clk_rst;
+	errlog->is_cluster_probed = bdata->is_cluster_probed;
+	errlog->tegra_noc_en_clk_rpm = bdata->tegra_noc_en_clk_rpm;
+	errlog->tegra_noc_dis_clk_rpm = bdata->tegra_noc_dis_clk_rpm;
+	errlog->tegra_noc_en_clk_no_rpm = bdata->tegra_noc_en_clk_no_rpm;
+	errlog->tegra_noc_dis_clk_no_rpm = bdata->tegra_noc_dis_clk_no_rpm;
+
+	platform_set_drvdata(pdev, errlog);
 
 	callback = devm_kzalloc(&pdev->dev, sizeof(*callback), GFP_KERNEL);
 	callback->fn = cbb_serr_callback;
@@ -904,11 +928,6 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	raw_spin_lock_irqsave(&cbb_noc_lock, flags);
 	list_add(&errlog->node, &cbb_noc_list);
 	raw_spin_unlock_irqrestore(&cbb_noc_lock, flags);
-
-	/* set “StallEn=1” to enable queuing of error packets till
-	 * first is served & cleared
-	 */
-	errlog->stallen(errlog->vaddr);
 
 	/* register handler for CBB errors due to CCPLEX master*/
 	register_serr_hook(callback);
@@ -920,11 +939,10 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	/* set “FaultEn=1” to enable error reporting signal “Fault” */
-	errlog->faulten(errlog->vaddr);
+	tegra_cbb_error_enable(errlog);
 
 	if ((bdata->is_clk_rst) && (bdata->is_cluster_probed()))
-		bdata->tegra_noc_clk_disable();
+		bdata->tegra_noc_dis_clk_rpm();
 
 	return 0;
 }
@@ -953,6 +971,41 @@ static int tegra_cbb_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_cbb_suspend_noirq(struct device *dev)
+{
+	return 0;
+}
+
+static int tegra_cbb_resume_noirq(struct device *dev)
+{
+	struct tegra_cbb_errlog_record *errlog = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (errlog->is_clk_rst) {
+		if (errlog->is_cluster_probed())
+			errlog->tegra_noc_en_clk_no_rpm();
+		else {
+			dev_info(dev, "%s not resumed", errlog->name);
+			return 0;
+		}
+	}
+
+	tegra_cbb_error_enable(errlog);
+	dsb(sy);
+
+	if ((errlog->is_clk_rst) && (errlog->is_cluster_probed()))
+		errlog->tegra_noc_dis_clk_no_rpm();
+
+	dev_info(dev, "%s resumed\n", errlog->name);
+	return ret;
+}
+
+static const struct dev_pm_ops tegra_cbb_pm = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(tegra_cbb_suspend_noirq,
+					tegra_cbb_resume_noirq)
+};
+#endif
 
 static struct platform_driver tegra_cbb_driver = {
 	.probe          = tegra_cbb_probe,
@@ -961,6 +1014,9 @@ static struct platform_driver tegra_cbb_driver = {
 		.owner  = THIS_MODULE,
 		.name   = "tegra-cbb",
 		.of_match_table = of_match_ptr(tegra_cbb_match),
+#ifdef CONFIG_PM_SLEEP
+		.pm	= &tegra_cbb_pm,
+#endif
 	},
 };
 

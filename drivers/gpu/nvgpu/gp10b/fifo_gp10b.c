@@ -38,30 +38,6 @@
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_top_gp10b.h>
 
-static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
-				struct nvgpu_mem *mem)
-{
-	u32 val;
-
-	nvgpu_log_fn(g, " ");
-
-	val = nvgpu_mem_rd32(g, mem,
-			ram_in_page_dir_base_fault_replay_tex_w());
-	val &= ~ram_in_page_dir_base_fault_replay_tex_m();
-	val |= ram_in_page_dir_base_fault_replay_tex_true_f();
-	nvgpu_mem_wr32(g, mem,
-		ram_in_page_dir_base_fault_replay_tex_w(), val);
-
-	val = nvgpu_mem_rd32(g, mem,
-			ram_in_page_dir_base_fault_replay_gcc_w());
-	val &= ~ram_in_page_dir_base_fault_replay_gcc_m();
-	val |= ram_in_page_dir_base_fault_replay_gcc_true_f();
-	nvgpu_mem_wr32(g, mem,
-		ram_in_page_dir_base_fault_replay_gcc_w(), val);
-
-	nvgpu_log_fn(g, "done");
-}
-
 int channel_gp10b_commit_userd(struct channel_gk20a *c)
 {
 	u32 addr_lo;
@@ -140,9 +116,6 @@ int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_runlist_timeslice_timeout_128_f() |
 		pbdma_runlist_timeslice_timescale_3_f() |
 		pbdma_runlist_timeslice_enable_true_f());
-
-	if (flags & NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
-		gp10b_set_pdb_fault_replay_flags(c->g, mem);
 
 	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->chid));
 

@@ -25,5 +25,5 @@
 
 int vgpu_gv11b_tsg_bind_channel(struct tsg_gk20a *tsg,
 				struct channel_gk20a *ch);
-
+int vgpu_gv11b_enable_tsg(struct tsg_gk20a *tsg);
 #endif

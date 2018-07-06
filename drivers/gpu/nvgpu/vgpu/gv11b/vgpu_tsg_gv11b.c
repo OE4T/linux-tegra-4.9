@@ -58,3 +58,23 @@ int vgpu_gv11b_tsg_bind_channel(struct tsg_gk20a *tsg,
 
 	return err;
 }
+
+int vgpu_gv11b_enable_tsg(struct tsg_gk20a *tsg)
+{
+	struct gk20a *g = tsg->g;
+	struct channel_gk20a *ch;
+	struct channel_gk20a *last_ch = NULL;
+
+	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
+		g->ops.fifo.enable_channel(ch);
+		last_ch = ch;
+	}
+	nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+
+	if (last_ch)
+		g->ops.fifo.ring_channel_doorbell(last_ch);
+
+	return 0;
+}
+

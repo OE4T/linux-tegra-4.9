@@ -404,8 +404,10 @@ static void send_smc(u32 func, struct pmc_smc_regs *regs)
 		: "r" (regs)
 		: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
 		  "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
-	if (ret)
-		pr_err("%s: failed (ret=%d)\n", __func__, ret);
+	if (ret) {
+			pr_err("%s: failed (ret=%d)\n", __func__, ret);
+			WARN_ON(1);
+	}
 }
 
 struct io_dpd_reg_info {
@@ -4789,8 +4791,10 @@ static bool get_secure_pmc_setting(void)
 			if (!(of_address_to_resource(np, 0, &regs) < 0))
 				pmc->base = ioremap_nocache(regs.start,
 						resource_size(&regs));
-			else
+			else {
 				pr_err("failed to set pmc-base\n");
+				WARN_ON(1);
+			}
 		}
 	}
 	return secure_pmc;

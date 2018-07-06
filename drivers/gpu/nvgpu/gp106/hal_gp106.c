@@ -411,6 +411,10 @@ static const struct gpu_ops gp106_ops = {
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
 			gm20b_fb_set_use_full_comp_tag_line,
+		.mmu_ctrl = gm20b_fb_mmu_ctrl,
+		.mmu_debug_ctrl = gm20b_fb_mmu_debug_ctrl,
+		.mmu_debug_wr = gm20b_fb_mmu_debug_wr,
+		.mmu_debug_rd = gm20b_fb_mmu_debug_rd,
 		.compression_page_size = gp10b_fb_compression_page_size,
 		.compressible_page_size = gp10b_fb_compressible_page_size,
 		.compression_align_mask = gm20b_fb_compression_align_mask,

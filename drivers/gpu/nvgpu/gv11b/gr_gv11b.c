@@ -57,7 +57,6 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 100
@@ -4248,7 +4247,7 @@ void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 
 	nvgpu_log_info(g, "initialize gpc mmu");
 
-	temp = gk20a_readl(g, fb_mmu_ctrl_r());
+	temp = g->ops.fb.mmu_ctrl(g);
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
 		gr_gpcs_pri_mmu_ctrl_vol_fault_m() |
@@ -4269,11 +4268,11 @@ void gr_gv11b_init_gpc_mmu(struct gk20a *g)
 	gk20a_writel(g, gr_gpcs_pri_mmu_pm_req_mask_r(), 0);
 
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(),
-			gk20a_readl(g, fb_mmu_debug_ctrl_r()));
+			g->ops.fb.mmu_debug_ctrl(g));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_wr_r(),
-			gk20a_readl(g, fb_mmu_debug_wr_r()));
+			g->ops.fb.mmu_debug_wr(g));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
-			gk20a_readl(g, fb_mmu_debug_rd_r()));
+			g->ops.fb.mmu_debug_rd(g));
 }
 
 int gr_gv11b_init_preemption_state(struct gk20a *g)

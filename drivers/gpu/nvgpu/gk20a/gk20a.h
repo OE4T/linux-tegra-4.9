@@ -505,6 +505,10 @@ struct gpu_ops {
 		void (*init_kind_attr)(struct gk20a *g);
 		void (*set_mmu_page_size)(struct gk20a *g);
 		bool (*set_use_full_comp_tag_line)(struct gk20a *g);
+		u32 (*mmu_ctrl)(struct gk20a *g);
+		u32 (*mmu_debug_ctrl)(struct gk20a *g);
+		u32 (*mmu_debug_wr)(struct gk20a *g);
+		u32 (*mmu_debug_rd)(struct gk20a *g);
 
 		/*
 		 * Compression tag line coverage. When mapping a compressible

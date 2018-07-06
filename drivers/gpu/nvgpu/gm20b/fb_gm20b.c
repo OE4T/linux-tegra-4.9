@@ -68,6 +68,26 @@ bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g)
 	return true;
 }
 
+u32 gm20b_fb_mmu_ctrl(struct gk20a *g)
+{
+	return gk20a_readl(g, fb_mmu_ctrl_r());
+}
+
+u32 gm20b_fb_mmu_debug_ctrl(struct gk20a *g)
+{
+	return gk20a_readl(g, fb_mmu_debug_ctrl_r());
+}
+
+u32 gm20b_fb_mmu_debug_wr(struct gk20a *g)
+{
+	return gk20a_readl(g, fb_mmu_debug_wr_r());
+}
+
+u32 gm20b_fb_mmu_debug_rd(struct gk20a *g)
+{
+	return gk20a_readl(g, fb_mmu_debug_rd_r());
+}
+
 unsigned int gm20b_fb_compression_page_size(struct gk20a *g)
 {
 	return SZ_128K;

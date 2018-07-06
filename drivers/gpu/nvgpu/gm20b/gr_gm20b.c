@@ -36,7 +36,6 @@
 
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ctxsw_prog_gm20b.h>
@@ -49,7 +48,7 @@ void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 
 	nvgpu_log_info(g, "initialize gpc mmu");
 
-	temp = gk20a_readl(g, fb_mmu_ctrl_r());
+	temp = g->ops.fb.mmu_ctrl(g);
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_full_comp_tag_line_m() |
@@ -65,14 +64,13 @@ void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 	gk20a_writel(g, gr_gpcs_pri_mmu_pm_req_mask_r(), 0);
 
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(),
-			gk20a_readl(g, fb_mmu_debug_ctrl_r()));
+			g->ops.fb.mmu_debug_ctrl(g));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_wr_r(),
-			gk20a_readl(g, fb_mmu_debug_wr_r()));
+			g->ops.fb.mmu_debug_wr(g));
 	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
-			gk20a_readl(g, fb_mmu_debug_rd_r()));
+			g->ops.fb.mmu_debug_rd(g));
 
-	gk20a_writel(g, gr_gpcs_mmu_num_active_ltcs_r(),
-		gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
+	gk20a_writel(g, gr_gpcs_mmu_num_active_ltcs_r(), g->ltc_count);
 }
 
 void gr_gm20b_bundle_cb_defaults(struct gk20a *g)

@@ -209,4 +209,15 @@ config TEGRA_FIQ_DEBUGGER
 	help
 	  Enables the FIQ serial debugger on Tegra
 
+config TEGRA_BOOTLOADER_DEBUG
+	tristate "Creates sys-fs interface dumping registers read by bootloader"
+	default n
+	select TEGRA_BOOTLOADER_DEBUG_INIT
+	help
+	  When enabled, tegra_bootloader_verify_regs sys-fs is created.
+
+config TEGRA_BOOTLOADER_DEBUG_INIT
+	bool
+	depends on TEGRA_BOOTLOADER_DEBUG
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

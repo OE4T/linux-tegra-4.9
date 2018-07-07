@@ -7,9 +7,6 @@ GCOV_PROFILE := y
 
 subdir-ccflags-y += -Werror
 
-obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG)    += tegra_bootloader_debug.o
-obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
-
 ifeq ($(CONFIG_TEGRA_PTM),y)
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= tegra_ptm_t210.o
 endif

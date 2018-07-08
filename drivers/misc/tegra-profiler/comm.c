@@ -26,6 +26,7 @@
 #include <linux/mm.h>
 #include <linux/circ_buf.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -790,14 +791,26 @@ out:
 	}
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+static int mmap_fault(struct vm_fault *vmf)
+#else
 static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+#endif
 {
 	void *data;
 	struct quadd_mmap_area *mmap;
 	unsigned long offset = vmf->pgoff << PAGE_SHIFT;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+	struct vm_area_struct *vma = vmf->vma;
+#endif
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+	pr_debug("mmap_fault: vma: %#lx - %#lx, pgoff: %#lx, vaddr: %#lx\n",
+		 vma->vm_start, vma->vm_end, vmf->pgoff, vmf->address);
+#else
 	pr_debug("mmap_fault: vma: %#lx - %#lx, pgoff: %#lx, vaddr: %p\n",
 		 vma->vm_start, vma->vm_end, vmf->pgoff, vmf->virtual_address);
+#endif
 
 	raw_spin_lock(&comm_ctx.mmaps_lock);
 

@@ -57,7 +57,7 @@ struct regions_data {
 };
 
 struct quadd_unwind_ctx {
-	struct regions_data *rd;
+	struct regions_data __rcu *rd;
 
 	pid_t pid;
 	unsigned long ex_tables_size;

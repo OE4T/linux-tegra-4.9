@@ -23,6 +23,7 @@
 #include <linux/cpu.h>
 #include <linux/timer.h>
 #include <linux/err.h>
+#include <linux/version.h>
 
 #include <linux/tegra_profiler.h>
 
@@ -623,7 +624,9 @@ int quadd_power_clk_init(struct quadd_ctx *quadd_ctx)
 
 	cpufreq_register_notifier(&s->nb[PCLK_NB_CPU_FREQ],
 				  CPUFREQ_TRANSITION_NOTIFIER);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	register_cpu_notifier(&s->nb[PCLK_NB_CPU_HOTPLUG]);
+#endif
 
 	return 0;
 }
@@ -636,5 +639,7 @@ void quadd_power_clk_deinit(void)
 
 	cpufreq_unregister_notifier(&s->nb[PCLK_NB_CPU_FREQ],
 				    CPUFREQ_TRANSITION_NOTIFIER);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	unregister_cpu_notifier(&s->nb[PCLK_NB_CPU_HOTPLUG]);
+#endif
 }

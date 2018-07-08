@@ -41,7 +41,10 @@
 #include "tegra.h"
 #include "debug.h"
 
-static struct quadd_hrt_ctx hrt;
+static struct quadd_hrt_ctx hrt = {
+	.active = ATOMIC_INIT(0),
+	.mmap_active = ATOMIC_INIT(0),
+};
 
 struct hrt_event_value {
 	struct quadd_event event;
@@ -64,7 +67,11 @@ static inline u64 get_posix_clock_monotonic_time(void)
 static inline u64 get_arch_time(struct timecounter *tc)
 {
 	u64 frac = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+	u64 value;
+#else
 	cycle_t value;
+#endif
 	const struct cyclecounter *cc = tc->cc;
 
 	value = cc->read(cc);

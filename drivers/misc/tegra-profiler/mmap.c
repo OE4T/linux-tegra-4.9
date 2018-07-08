@@ -21,6 +21,13 @@
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+#include <linux/sched/mm.h>
+#include <linux/sched/task.h>
+#include <linux/sched/signal.h>
+#endif
 
 #include <linux/tegra_profiler.h>
 

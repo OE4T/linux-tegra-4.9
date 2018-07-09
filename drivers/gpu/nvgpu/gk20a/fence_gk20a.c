@@ -139,11 +139,11 @@ fail:
 void gk20a_free_fence_pool(struct channel_gk20a *c)
 {
 	if (nvgpu_alloc_initialized(&c->fence_allocator)) {
-		void *base = (void *)(uintptr_t)
+		struct gk20a_fence *fence_pool;
+			fence_pool = (struct gk20a_fence *)(uintptr_t)
 				nvgpu_alloc_base(&c->fence_allocator);
-
 		nvgpu_alloc_destroy(&c->fence_allocator);
-		nvgpu_vfree(c->g, base);
+		nvgpu_vfree(c->g, fence_pool);
 	}
 }
 

@@ -25,6 +25,9 @@ typedef uint64_t iova_t __CAPTURE_IVC_ALIGN;
 #pragma GCC diagnostic warning "-Wdeprecated-declarations"
 #define CAMRTC_DEPRECATED __attribute__((deprecated))
 
+/*Status Fence Support*/
+#define STATUS_FENCE_SUPPORT
+
 typedef struct syncpoint_info {
 	uint32_t id;
 	uint32_t threshold;	/* When storing a fence */

@@ -6,6 +6,7 @@ source "drivers/nvpmodel/Kconfig"
 source "drivers/nvlink/Kconfig"
 source "drivers/iommu/Kconfig"
 source "drivers/nvpps/Kconfig"
+source "drivers/thermal/Kconfig"
 endif
 
 endmenu

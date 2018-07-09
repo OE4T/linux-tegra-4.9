@@ -13,6 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+config PWM_FAN
+	tristate "Tegra PWM Fan driver"
+	depends on THERMAL
+	help
+	  Enables the fan driver that is controlled by pwm.
+
 config THERMAL_GOV_PID
 	bool "PID thermal governor"
 	help

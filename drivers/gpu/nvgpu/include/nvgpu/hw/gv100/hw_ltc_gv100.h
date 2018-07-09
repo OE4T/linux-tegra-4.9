@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -363,6 +363,18 @@ static inline u32 ltc_ltcs_ltss_intr_ecc_ded_error_pending_f(void)
 static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 {
 	return 0x1U << 20U;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_m(void)
+{
+	return 0x1U << 21U;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_enabled_f(void)
+{
+	return 0x200000U;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_disabled_f(void)
+{
+	return 0x0U;
 }
 static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_access_m(void)
 {

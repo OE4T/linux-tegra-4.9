@@ -71,9 +71,12 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 	/* Disable LTC interrupts */
 	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
 	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();
-	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_m();
 	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_access_m();
 	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
+
+	if (g->ops.ltc.intr_en_illegal_compstat)
+		g->ops.ltc.intr_en_illegal_compstat(g,
+					g->ltc_intr_en_illegal_compstat);
 
 	/* Enable ECC interrupts */
 	ltc_intr = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
@@ -82,6 +85,24 @@ void gv11b_ltc_init_fs_state(struct gk20a *g)
 	gk20a_writel(g, ltc_ltcs_ltss_intr_r(),
 				ltc_intr);
 }
+
+void gv11b_ltc_intr_en_illegal_compstat(struct gk20a *g, bool enable)
+{
+	u32 val;
+
+	/* disble/enble illegal_compstat interrupt */
+	val = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
+	if (enable)
+		val = set_field(val,
+			ltc_ltcs_ltss_intr_en_illegal_compstat_m(),
+			ltc_ltcs_ltss_intr_en_illegal_compstat_enabled_f());
+	else
+		val = set_field(val,
+			ltc_ltcs_ltss_intr_en_illegal_compstat_m(),
+			ltc_ltcs_ltss_intr_en_illegal_compstat_disabled_f());
+	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), val);
+}
+
 
 void gv11b_ltc_isr(struct gk20a *g)
 {

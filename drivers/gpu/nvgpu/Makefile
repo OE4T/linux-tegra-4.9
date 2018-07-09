@@ -79,6 +79,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug_hal.o \
 	os/linux/debug_clk.o \
 	os/linux/debug_bios.o \
+	os/linux/debug_ltc.o \
 	os/linux/debug_xve.o
 
 ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)

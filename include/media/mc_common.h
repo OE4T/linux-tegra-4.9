@@ -162,6 +162,7 @@ struct tegra_channel {
 	unsigned int save_index;
 	unsigned int free_index;
 	unsigned int num_buffers;
+	spinlock_t buffer_lock;
 	unsigned int released_bufs;
 
 	unsigned int capture_descr_index;

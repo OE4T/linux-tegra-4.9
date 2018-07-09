@@ -560,7 +560,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
 		/* free all the ring buffers */
-		free_ring_buffers(chan, chan->num_buffers);
+		free_ring_buffers(chan, 0);
 		/* dequeue buffers back to app which are in capture queue */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 	}

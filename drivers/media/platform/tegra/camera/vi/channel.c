@@ -333,7 +333,12 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 	struct vb2_v4l2_buffer *vbuf;
 	s64 frame_arrived_ts = 0;
 
-	while (frames) {
+	spin_lock(&chan->buffer_lock);
+
+	if (frames == 0)
+		frames = chan->num_buffers;
+
+	while (frames > 0) {
 		vbuf = chan->buffers[chan->free_index];
 
 		/* release one frame */
@@ -376,6 +381,7 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 		chan->released_bufs++;
 		frames--;
 	}
+	spin_unlock(&chan->buffer_lock);
 }
 
 static void add_buffer_to_ring(struct tegra_channel *chan,
@@ -383,11 +389,13 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 {
 	/* save the buffer to the ring first */
 	/* Mark buffer state as error before start */
+	spin_lock(&chan->buffer_lock);
 	chan->buffer_state[chan->save_index] = VB2_BUF_STATE_ERROR;
 	chan->buffers[chan->save_index++] = vb;
 	if (chan->save_index >= QUEUED_BUFFERS)
 		chan->save_index = 0;
 	chan->num_buffers++;
+	spin_unlock(&chan->buffer_lock);
 }
 
 static void update_state_to_buffer(struct tegra_channel *chan, int state)
@@ -1958,6 +1966,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	mutex_init(&chan->stop_kthread_lock);
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);
+	spin_lock_init(&chan->buffer_lock);
 
 	/* Init video format */
 	vi->fops->vi_init_video_formats(chan);

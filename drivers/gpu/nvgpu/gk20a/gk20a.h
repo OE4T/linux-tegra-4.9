@@ -189,6 +189,7 @@ struct gpu_ops {
 		void (*isr)(struct gk20a *g);
 		u32 (*cbc_fix_config)(struct gk20a *g, int base);
 		void (*flush)(struct gk20a *g);
+		void (*intr_en_illegal_compstat)(struct gk20a *g, bool enable);
 	} ltc;
 	struct {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
@@ -1546,6 +1547,8 @@ struct gk20a {
 	struct nvgpu_clk_arb *clk_arb;
 
 	struct gk20a_ce_app ce_app;
+
+	bool ltc_intr_en_illegal_compstat;
 
 	/* PCI device identifier */
 	u16 pci_vendor_id, pci_device_id;

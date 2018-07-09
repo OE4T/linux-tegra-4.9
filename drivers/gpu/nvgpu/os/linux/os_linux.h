@@ -135,6 +135,7 @@ struct nvgpu_os_linux {
 	struct dentry *debugfs_xve;
 	struct dentry *debugfs_kmem;
 	struct dentry *debugfs_hal;
+	struct dentry *debugfs_ltc;
 
 	struct dentry *debugfs_force_preemption_cilp;
 	struct dentry *debugfs_force_preemption_gfxp;

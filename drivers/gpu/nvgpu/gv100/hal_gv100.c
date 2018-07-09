@@ -283,6 +283,7 @@ static const struct gpu_ops gv100_ops = {
 		.cbc_fix_config = NULL,
 		.flush = gm20b_flush_ltc,
 		.set_enabled = gp10b_ltc_set_enabled,
+		.intr_en_illegal_compstat = gv11b_ltc_intr_en_illegal_compstat,
 	},
 	.ce2 = {
 		.isr_stall = gv11b_ce_isr,

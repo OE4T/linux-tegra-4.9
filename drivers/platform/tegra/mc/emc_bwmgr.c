@@ -62,6 +62,7 @@ static struct {
 	struct task_struct *task;
 	bool status;
 	struct bwmgr_ops *ops;
+	bool override;
 } bwmgr;
 
 static struct dram_refresh_alrt {
@@ -233,6 +234,9 @@ static int bwmgr_update_clk(void)
 		pr_err("bwmgr: %s called without lock\n", __func__);
 		return -EINVAL;
 	}
+
+	if (bwmgr.override)
+		return 0;
 
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++) {
 		bw += bwmgr.bwmgr_client[i].bw;
@@ -725,6 +729,11 @@ static int tegra_bwmgr_update_efficiency(unsigned long cur_state,
 		return -EINVAL;
 	}
 
+	if (bwmgr.override) {
+		bwmgr_unlock();
+		return 0;
+	}
+
 	if (bwmgr.ops->update_efficiency)
 		bwmgr.ops->update_efficiency(cur_state);
 
@@ -937,7 +946,23 @@ static struct dentry *debugfs_node_dram_channels;
 
 static int bwmgr_debugfs_emc_rate_set(void *data, u64 val)
 {
-	return 0;
+	int ret = 0;
+
+	if (!bwmgr_lock())
+		return -EPERM;
+
+	if (val == 0) {
+		bwmgr.override = false;
+		bwmgr_update_clk();
+	} else if (bwmgr.emc_clk) {
+		bwmgr.override = true;
+		ret = clk_set_rate(bwmgr.emc_clk, val);
+	}
+
+	if (!bwmgr_unlock())
+		return -EPERM;
+
+	return ret;
 }
 
 static int bwmgr_debugfs_emc_rate_get(void *data, u64 *val)

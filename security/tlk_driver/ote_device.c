@@ -31,6 +31,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 
 #include "ote_protocol.h"
 
@@ -579,33 +581,72 @@ struct miscdevice tlk_misc_device = {
 
 static int tlk_driver_probe(struct platform_device *pdev)
 {
+	struct reset_control *rst;
+	struct clk *clk;
 	int ret;
 
 	INIT_LIST_HEAD(&(tlk_dev.used_cmd_list));
 	INIT_LIST_HEAD(&(tlk_dev.free_cmd_list));
 
+	clk = devm_clk_get(&pdev->dev, "nvdec");
+	if (!IS_ERR(clk)) {
+		ret = clk_prepare_enable(clk);
+		if (ret)
+			return ret;
+	} else if (PTR_ERR(clk) != -ENOENT) {
+		return PTR_ERR(clk);
+	}
+
+	rst = devm_reset_control_get(&pdev->dev, "nvdec");
+	if (!IS_ERR(rst)) {
+		ret = reset_control_deassert(rst);
+		if (ret)
+			return ret;
+	} else if (PTR_ERR(rst) != -ENOENT) {
+		return PTR_ERR(rst);
+	}
+
+	platform_set_drvdata(pdev, clk);
+
 	ret = te_create_free_cmd_list(&tlk_dev);
 	if (ret != 0) {
 		pr_err("%s: failed to create free_list\n", __func__);
-		return ret;
+		goto disable_clk;
 	}
 
 	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
 	if (ret) {
 		pr_err("%s: of_platform_populate failed\n", __func__);
-		return ret;
+		goto disable_clk;
 	}
 
 	if (!te_is_secos_dev_enabled()) {
-		return -ENODEV;
+		ret = -ENODEV;
+		goto disable_clk;
 	}
 
 	ret = misc_register(&tlk_misc_device);
 	if (ret) {
 		pr_err("%s: misc_register failed: %d\n", __func__, ret);
+		goto disable_clk;
 	}
 
+	return 0;
+
+disable_clk:
+	if (!IS_ERR(clk))
+		clk_disable_unprepare(clk);
+
 	return ret;
+}
+
+static int tlk_driver_remove(struct platform_device *pdev) {
+	struct clk *clk = platform_get_drvdata(pdev);
+
+	if (!IS_ERR(clk))
+		clk_disable_unprepare(clk);
+
+	return 0;
 }
 
 static const struct of_device_id tlk_driver_of_match[] = {
@@ -615,6 +656,7 @@ static const struct of_device_id tlk_driver_of_match[] = {
 
 static struct platform_driver tlk_driver = {
 	.probe = tlk_driver_probe,
+	.remove = tlk_driver_remove,
 	.driver = {
 		.name = "tlk-driver",
 		.owner = THIS_MODULE,

@@ -16,8 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/dma-override.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
+
 #include <soc/tegra/chip-id.h>
+#include <linux/dma-override.h>
 
 static bool is_t19x;
 
@@ -50,3 +54,4 @@ static int __init dma_override(void)
 }
 arch_initcall(dma_override);
 
+#endif

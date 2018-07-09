@@ -40,25 +40,24 @@ static enum cpuhp_state hp_state;
  * error_code = value of ARM_ERR_STATUS:IERR[15:8]
  */
 static struct ras_error ifu_errors[] = {
-	{.name = "Mitigation Parity Error", .error_code = 0x12},
-	{.name = "IMQ Data Parity", .error_code = 0x01},
-	{.name = "L2 I$ Fetch Uncorrectable", .error_code = 0x02},
-	{.name = "I$ Tag Parity Snoop", .error_code = 0x03},
-	{.name = "I$ Multi-Hit Snoop", .error_code = 0x04},
-	{.name = "ITLB Parity", .error_code = 0x05},
-	{.name = "Trace Hash Error", .error_code = 0x06},
-	{.name = "I$ Data Parity", .error_code = 0x07},
-	{.name = "I$ Tag Parity", .error_code = 0x10},
-	{.name = "I$ Multi-Hit", .error_code = 0x11},
+	{.name = "IMQ Data Parity", .error_code = 0x08},
+	{.name = "L2 I$ Fetch Uncorrectable", .error_code = 0x07},
+	{.name = "I$ Tag Parity Snoop", .error_code = 0x06},
+	{.name = "I$ Multi-Hit Snoop", .error_code = 0x05},
+	{.name = "ITLB Parity", .error_code = 0x04},
+	{.name = "Trace Hash Error", .error_code = 0x03},
+	{.name = "I$ Data Parity", .error_code = 0x02},
+	{.name = "I$ Tag Parity", .error_code = 0x01},
+	{.name = "I$ Multi-Hit", .error_code = 0x0F},
 	{}
 };
 
 /* Error Records per CORE - RET JSR errors */
 static struct ras_error ret_jsr_errors[] = {
-	{.name = "Garbage Budle", .error_code = 0x19},
-	{.name = "FRF Parity", .error_code = 0x1B},
-	{.name = "IRF Parity", .error_code = 0x1A},
-	{.name = "RET Timeout", .error_code = 0x18},
+	{.name = "FRF Parity", .error_code = 0x13},
+	{.name = "IRF Parity", .error_code = 0x12},
+	{.name = "Garbage Bundle", .error_code = 0x11},
+	{.name = "Bundle Completion Timeout", .error_code = 0x10},
 	{}
 };
 
@@ -73,40 +72,40 @@ static struct ras_error mts_jsr_errors[] = {
 	{}
 };
 
-/* Error Records per CORE - LSD_1 errors */
+/* Error Records per CORE - LSD_1/LSD_STQ errors */
 static struct ras_error lsd_1_errors[] = {
-	{.name = "Core Cache Store Multi-line parity Error",
-	 .error_code = 0x38},
-	{.name = "Core-Cache Store ECC", .error_code = 0x37},
-	{.name = "Core-Cache Store ECC", .error_code = 0x36},
-	{.name = "Core-Cache Load ECC", .error_code = 0x35},
-	{.name = "Core-Cache Load ECC", .error_code = 0x34},
-	{.name = "Mini-Cache Data Load Parity", .error_code = 0x33},
-	{.name = "Core Cache Multi-Hit", .error_code = 0x32},
-	{.name = "Mini-Cache Multi-Hit", .error_code = 0x31},
-	{.name = "Core-Cache Tag Parity", .error_code = 0x30},
+	{.name = "Coherent Cache Data Store Multi-Line ECC",
+						.error_code = 0x39},
+	{.name = "Coherent Cache Data Store Uncorrectable ECC",
+						.error_code = 0x38},
+	{.name = "Coherent Cache Data Store Correctable ECC",
+						.error_code = 0x37},
+	{.name = "Coherent Cache Data Load Uncorrectable ECC",
+						.error_code = 0x36},
+	{.name = "Coherent Cache Data Load Correctable ECC",
+						.error_code = 0x35},
+	{.name = "Coherent Cache Multi-Hit", .error_code = 0x33},
+	{.name = "Coherent Cache Tag Store Parity", .error_code = 0x31},
+	{.name = "Coherent Cache Tag Load Parity", .error_code = 0x30},
 	{}
 };
 
-/* Error Records per CORE - LSD_2 errors */
+/* Error Records per CORE - LSD_2/LSD_ECC errors */
 static struct ras_error lsd_2_errors[] = {
-	{.name = "L2 Detected Error on LSD Request", .error_code = 0x49},
-	{.name = "Coherent Cache Uncorrectable ECC", .error_code = 0x48},
-	{.name = "Coherent Cache Correctable ECC", .error_code = 0x47},
-	{.name = "Mini Cache Eviction Parity Error", .error_code = 0x46},
-	{.name = "Version Cache Eviction Parity Error", .error_code = 0x45},
-	{.name = "Version Cache Data ECC Uncorrectable", .error_code = 0x44},
-	{.name = "Version Cache Data ECC Correctable", .error_code = 0x43},
-	{.name = "BTU Core Cache Multi-Hit", .error_code = 0x42},
-	{.name = "BTU Mini Cache PPN", .error_code = 0x41},
-	{.name = "BTU Core Cache PPN", .error_code = 0x40},
+	{.name = "BTU Copy Mini-Cache PPN Multi-Hit Error", .error_code = 0x49},
+	{.name = "Coherent Cache Data Uncorrectable ECC", .error_code = 0x47},
+	{.name = "Coherent Cache Data Correctable ECC", .error_code = 0x46},
+	{.name = "Version Cache Byte-Enable Parity", .error_code = 0x45},
+	{.name = "Version Cache Data Uncorrectable ECC", .error_code = 0x44},
+	{.name = "Version Cache Data Correctable ECC", .error_code = 0x43},
+	{.name = "BTU Copy Coherent Cache PPN Parity", .error_code = 0x41},
+	{.name = "BTU Copy Coherent Cache VPN Parity", .error_code = 0x40},
 	{}
 };
 
-/* Error Records per CORE - LSD_3 errors */
+/* Error Records per CORE - LSD_3/LSD_L1HPF errors */
 static struct ras_error lsd_3_errors[] = {
-	{.name = "LSD Latent Fault 3", .error_code = 0x3D},
-	{.name = "L2 TLB Parity Error", .error_code = 0x3C},
+	{.name = "L2 TLB Parity Error", .error_code = 0xE0},
 	{}
 };
 
@@ -114,12 +113,11 @@ static struct ras_error lsd_3_errors[] = {
 static struct error_record core_ers[] = {
 	{.name = "IFU", .errx = 0,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_IFU_ITLB_SNP_ERR | ERR_CTL_IFU_ICMH_ERR |
-		ERR_CTL_IFU_ICTP_ERR | ERR_CTL_IFU_ICDP_ERR |
+		ERR_CTL_IFU_ICMH_ERR | ERR_CTL_IFU_ICTP_ERR |
+		ERR_CTL_IFU_ICDP_ERR |
 		ERR_CTL_IFU_THERR_ERR | ERR_CTL_IFU_ITLBP_ERR |
 		ERR_CTL_IFU_ICMHSNP_ERR | ERR_CTL_IFU_ICTPSNP_ERR |
-		ERR_CTL_IFU_L2UC_ERR | ERR_CTL_IFU_IMQDP_ERR |
-		ERR_CTL_IFU_MITGRP_ERR,
+		ERR_CTL_IFU_L2UC_ERR | ERR_CTL_IFU_IMQDP_ERR,
 	 .errors = ifu_errors},
 	{.name = "RET_JSR", .errx = 1,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE |
@@ -132,25 +130,24 @@ static struct error_record core_ers[] = {
 		ERR_CTL_MTS_JSR_NAFLL_ERR | ERR_CTL_MTS_JSR_CARVE_ERR |
 		ERR_CTL_MTS_JSR_CRAB_ERR | ERR_CTL_MTS_JSR_MMIO_ERR,
 	 .errors = mts_jsr_errors},
-	{.name = "LSD_1", .errx = 3,
+	{.name = "LSD_STQ", .errx = 3,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_LSD1_CCTP_ERR | ERR_CTL_LSD1_MCMH_ERR |
-		ERR_CTL_LSD1_CCMH_ERR | ERR_CTL_LSD1_MCDLP_ERR |
+		ERR_CTL_LSD1_CCTLP_ERR | ERR_CTL_LSD1_CCTSP_ERR |
+		ERR_CTL_LSD1_CCMH_ERR |
 		ERR_CTL_LSD1_CCDLECC_S_ERR | ERR_CTL_LSD1_CCDLECC_D_ERR |
 		ERR_CTL_LSD1_CCDSECC_S_ERR | ERR_CTL_LSD1_CCDSECC_D_ERR |
 		ERR_CTL_LSD1_CCDEMLECC_ERR,
 	 .errors = lsd_1_errors},
-	{.name = "LSD_2", .errx = 4,
+	{.name = "LSD_DCC", .errx = 4,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
 		ERR_CTL_LSD2_BTCCVPP_ERR | ERR_CTL_LSD2_BTCCPPP_ERR |
-		ERR_CTL_LSD2_BTCCMH_ERR | ERR_CTL_LSD2_VRCDECC_S_ERR |
-		ERR_CTL_LSD2_VRCDECC_D_ERR | ERR_CTL_LSD2_VRCDP_ERR |
-		ERR_CTL_LSD2_MCDEP_ERR | ERR_CTL_LSD2_CCDEECC_S_ERR |
-		ERR_CTL_LSD2_CCDEECC_D_ERR | ERR_CTL_LSD2_L2REQ_UNCORR_ERR,
+		ERR_CTL_LSD2_VRCDECC_S_ERR | ERR_CTL_LSD2_VRCDECC_D_ERR |
+		ERR_CTL_LSD2_BTMCMH_ERR | ERR_CTL_LSD2_VRCBP_ERR |
+		ERR_CTL_LSD2_CCDEECC_S_ERR | ERR_CTL_LSD2_CCDEECC_D_ERR,
 	 .errors = lsd_2_errors},
-	{.name = "LSD_3", .errx = 5,
+	{.name = "LSD_L1HPF", .errx = 5,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_LSD3_L2TLBP_ERR | ERR_CTL_LSD3_LATENT_ERR,
+		ERR_CTL_LSD3_L2TLBP_ERR,
 	 .errors = lsd_3_errors},
 	{}
 };
@@ -166,14 +163,14 @@ static struct ras_error l2_errors[] = {
 	{.name = "SCF to L2 Decode Error Read", .error_code = 0x64},
 	{.name = "SCF to L2 Decode Error Write", .error_code = 0x63},
 	{.name = "SCF to L2 Request Response Interface Parity Errors",
-	 .error_code = 0x62},
+		.error_code = 0x62},
 	{.name = "SCF to L2 Advance notice interface parity errors",
-	 .error_code = 0x61},
+		.error_code = 0x61},
 	{.name = "SCF to L2 Filldata Parity Errors", .error_code = 0x60},
 	{.name = "SCF to L2 UnCorrectable ECC Data Error on interface",
-	 .error_code = 0x5F},
+		.error_code = 0x5F},
 	{.name = "SCF to L2 Correctable ECC Data Error on interface",
-	 .error_code = 0x5E},
+		.error_code = 0x5E},
 	{.name = "Core 1 to L2 Parity Error", .error_code = 0x5D},
 	{.name = "Core 0 to L2 Parity Error", .error_code = 0x5C},
 	{.name = "L2 Multi-Hit", .error_code = 0x5B},
@@ -192,15 +189,14 @@ static struct ras_error l2_errors[] = {
 
 /* Error Records per CORE CLUSTER - MMU errors */
 static struct ras_error mmu_errors[] = {
-	{.name = "Walker Cache Parity Error", .error_code = 0x2D},
-	{.name = "A$ Parity Error", .error_code = 0x2C},
+	{.name = "Walker Cache Parity Error", .error_code = 0xE9},
+	{.name = "A$ Parity Error", .error_code = 0xE8},
 	{}
 };
 
 /* Error Records per CORE CLUSTER - Cluster Clocks errors */
 static struct ras_error cluster_clocks_errors[] = {
-	{.name = "Walker Cache Parity Error", .error_code = 0x2D},
-	{.name = "A$ Parity Error", .error_code = 0x2C},
+	{.name = "Frequency Monitor Error", .error_code = 0xE4},
 	{}
 };
 
@@ -224,13 +220,13 @@ static struct error_record corecluster_ers[] = {
 		ERR_CTL_L2_SCF2L2C_SLVRDERR_ERR | ERR_CTL_L2_L2PCL_ERR |
 		ERR_CTL_L2_URTTO_ERR,
 	.errors = l2_errors},
+	{.name = "CLUSTER_CLOCKS", .errx = 1,
+	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | ERR_CTL_CC_FREQ_MON_ERR,
+	 .errors = cluster_clocks_errors},
 	{.name = "MMU", .errx = 2,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_CFI |
 		ERR_CTL_MMU_ACPERR_ERR | ERR_CTL_MMU_WCPERR_ERR,
 	 .errors = mmu_errors},
-	{.name = "CLUSTER_CLOCKS", .errx = 1,
-	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | ERR_CTL_CC_FREQ_MON_ERR,
-	 .errors = cluster_clocks_errors},
 	{}
 };
 
@@ -238,76 +234,84 @@ static struct error_record corecluster_ers[] = {
  * error_code = value of ARM_ERR_STATUS:IERR[15:8]
  */
 static struct ras_error cmu_ccpmu_errors[] = {
-	{.name = "DMCE Ucode Error", .error_code = 0x2A},
-	{.name = "Crab Access Error", .error_code = 0x29},
-	{.name = "DMCE Crab Access Error", .error_code = 0x28},
+	{.name = "MCE Ucode Error", .error_code = 0x84},
+	{.name = "MCE IL1 Parity Error", .error_code = 0x83},
+	{.name = "MCE Timeout Error", .error_code = 0x82},
+	{.name = "CRAB Access Error", .error_code = 0x81},
+	{.name = "MCE Memory Access Error", .error_code = 0x80},
 	{}
 };
 
 /* Error Records per CCPLEX - SCF:IOB errors */
 static struct ras_error scf_iob_errors[] = {
-	{.name = "CBB Interface Error", .error_code = 0x76},
-	{.name = "IHI Interface Error", .error_code = 0x74},
-	{.name = "MMCRAB Error", .error_code = 0x75},
-	{.name = "CRI Error", .error_code = 0x73},
-	{.name = "TBX Interface Error", .error_code = 0x72},
-	{.name = "EVP Interface Error", .error_code = 0x71},
-	{.name = "Uncorrectable ECC on Putdata", .error_code = 0x77},
-	{.name = "Correctable ECC on Putdata", .error_code = 0x70},
-	{.name = "Putdata parity Error", .error_code = 0x78},
-	{.name = "Request Parity Error", .error_code = 0x79},
+	{.name = "Request parity error", .error_code = 0x99},
+	{.name = "Putdata parity error", .error_code = 0x98},
+	{.name = "Uncorrectable ECC on Putdata", .error_code = 0x97},
+	{.name = "CBB Interface Error", .error_code = 0x96},
+	{.name = "MMCRAB Error", .error_code = 0x95},
+	{.name = "IHI Interface Error", .error_code = 0x94},
+	{.name = "CRI Error", .error_code = 0x93},
+	{.name = "TBX Interface Error", .error_code = 0x92},
+	{.name = "EVP Interface Error", .error_code = 0x91},
+	{.name = "Correctable ECC on Putdata", .error_code = 0x90},
 	{}
 };
 
 /* Error Records per CCPLEX - SCF:SNOC errors */
 static struct ras_error scf_snoc_errors[] = {
-	{.name = "Carveout Error", .error_code = 0x81},
-	{.name = "Misc Client Parity Error", .error_code = 0x89},
-	{.name = "Misc Filldata Parity Error", .error_code = 0x88},
-	{.name = "Uncorrectable ECC Misc Client", .error_code = 0x87},
-	{.name = "Correctable ECC Misc Client", .error_code = 0x80},
-	{.name = "DVMU Interface Parity Error", .error_code = 0x86},
-	{.name = "DVMU Interface Timeout Error", .error_code = 0x85},
-	{.name = "CPE Request Error", .error_code = 0x84},
-	{.name = "CPE Response Error", .error_code = 0x83},
-	{.name = "CPE Timeout Error", .error_code = 0x82},
+	{.name = "Misc Client Parity  Error", .error_code = 0xAA},
+	{.name = "Misc Filldata Parity  Error", .error_code = 0xA9},
+	{.name = "Uncorrectable ECC Misc Client", .error_code = 0xA8},
+	{.name = "DVMU Interface Parity  Error", .error_code = 0xA7},
+	{.name = "DVMU Interface Timeout  Error", .error_code = 0xA6},
+	{.name = "CPE Request  Error", .error_code = 0xA5},
+	{.name = "CPE Response  Error", .error_code = 0xA4},
+	{.name = "CPE Timeout  Error", .error_code = 0xA3},
+	{.name = "Uncorrectable Carveout  Error", .error_code = 0xA2},
+	{.name = "Correctable ECC Misc Client", .error_code = 0xA1},
+	{.name = "Correctable Carveout  Error", .error_code = 0xA0},
 	{}
 };
 
-/* Error Records per CCPLEX - CMU:CTU errors */
+/* Error Records per CCPLEX - SCF:CTU errors */
 static struct ras_error cmu_ctu_errors[] = {
-	{.name = "Timeout Error for TRC_DMA request timeout",
-	 .error_code = 0xB6},
-	{.name = "Timeout Error for CTU Snp", .error_code = 0xB5},
-	{.name = "Parity Error in CTU TAG RAM", .error_code = 0xB4},
-	{.name = "Parity Error in CTU DATA RAM", .error_code = 0xB3},
+	{.name = "Timeout error for TRC_DMA request", .error_code = 0xB7},
+	{.name = "Timeout error for CTU Snp", .error_code = 0xB6},
+	{.name = "Parity error in CTU TAG RAM", .error_code = 0xB5},
+	{.name = "Parity error in CTU DATA RAM", .error_code = 0xB3},
+	{.name = "Parity error for Cluster Rsp", .error_code = 0xB4},
 	{.name = "Parity error for TRL requests from 9 agents",
-	 .error_code = 0xB2},
-	{.name = "Parity error for MCF request", .error_code = 0xB1},
+		.error_code = 0xB2},
+	{.name = "Parity error for MCF request", .error_code =	0xB1},
 	{.name = "TRC DMA fillsnoop parity error", .error_code = 0xB0},
 	{}
 };
 
 /* Error Records per CCPLEX - SCF:L3_* errors */
 static struct ras_error scf_l3_errors[] = {
-	{.name = "L3 Timeout Error", .error_code = 0x91},
-	{.name = "L3 Protocol Error", .error_code = 0x92},
-	{.name = "Destination Error", .error_code = 0x90},
-	{.name = "Unrecognised Command Error", .error_code = 0x93},
-	{.name = "Multi-Hit Tage Error", .error_code = 0x94},
-	{.name = "Multi-Hit CAM Error", .error_code = 0x95},
-	{.name = "L3 Correctable ECC error", .error_code = 0x99},
-	{.name = "L3 Tag Parity Error", .error_code = 0x98},
-	{.name = "L3 Address Error", .error_code = 0x96},
+	{.name = "L3 Correctable ECC Error", .error_code = 0x7C},
+	{.name = "SNOC Interface Parity Error", .error_code = 0x7B},
+	{.name = "MCF Interface Parity Error", .error_code = 0x7A},
+	{.name = "L3 Tag Parity Error", .error_code = 0x79},
+	{.name = "L3 Dir Parity Error", .error_code = 0x78},
+	{.name = "L3 Uncorrectable ECC Error", .error_code = 0x77},
+	{.name = "Multi-Hit CAM Error", .error_code = 0x75},
+	{.name = "Multi-Hit Tag Error", .error_code = 0x74},
+	{.name = "Unrecognized Command Error", .error_code = 0x73},
+	{.name = "L3 Protocol Error", .error_code = 0x72},
 	{}
 };
 
-/* Error Records per CCPLEX - SCFCMU_Clocks errors */
+/* Error Records per CCPLEX - CMU_Clocks errors */
 static struct ras_error scfcmu_clocks_errors[] = {
-	{.name = "Voltage Error on ADC1 Monitored Logic", .error_code = 0xA3},
-	{.name = "Voltage Error on ADC0 Monitored Logic", .error_code = 0xA2},
-	{.name = "Lookup Table 1 Parity Error", .error_code = 0xA1},
-	{.name = "Lookup Table 0 Parity Error", .error_code = 0xA0},
+	{.name = "Cluster 3 frequency monitor error", .error_code = 0xC7},
+	{.name = "Cluster 2 frequency monitor error", .error_code = 0xC6},
+	{.name = "Cluster 1 frequency monitor error", .error_code = 0xC5},
+	{.name = "Cluster 0 frequency monitor error", .error_code = 0xC3},
+	{.name = "Voltage error on ADC1 Monitored Logic", .error_code = 0xC4},
+	{.name = "Voltage error on ADC0 Monitored Logic", .error_code = 0xC2},
+	{.name = "Lookup Table 1 Parity Error", .error_code = 0xC1},
+	{.name = "Lookup Table 0 Parity Error", .error_code = 0xC0},
 	{}
 };
 
@@ -316,6 +320,7 @@ static struct error_record ccplex_ers[] = {
 	{.name = "CMU:CCPMU", .errx = 1024,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE |
 		ERR_CTL_DPMU_DMCE_CRAB_ACC_ERR | ERR_CTL_DPMU_CRAB_ACC_ERR |
+		ERR_CTL_DPMU_DMCE_IL1_PAR_ERR | ERR_CTL_DPMU_DMCE_TIMEOUT_ERR |
 		ERR_CTL_DPMU_DMCE_UCODE_ERR,
 	 .errors = cmu_ccpmu_errors},
 	{.name = "SCF:IOB", .errx = 1025,
@@ -332,51 +337,54 @@ static struct error_record ccplex_ers[] = {
 		ERR_CTL_SCFSNOC_CPE_REQ_ERR | ERR_CTL_SCFSNOC_DVMU_TO_ERR |
 		ERR_CTL_SCFSNOC_DVMU_PAR_ERR | ERR_CTL_SCFSNOC_MISC_CECC_ERR |
 		ERR_CTL_SCFSNOC_MISC_UECC_ERR | ERR_CTL_SCFSNOC_MISC_PAR_ERR |
-		ERR_CTL_SCFSNOC_MISC_RSP_ERR | ERR_CTL_SCFSNOC_CARVEOUT_ERR,
+		ERR_CTL_SCFSNOC_MISC_RSP_ERR | ERR_CTL_SCFSNOC_CARVEOUT_ERR |
+		ERR_CTL_SCFSNOC_CARVEOUT_CECC_ERR,
 	 .errors = scf_snoc_errors},
 	{.name = "CMU:CTU", .errx = 1027,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE |
 		ERR_CTL_CMUCTU_TRCDMA_PAR_ERR | ERR_CTL_CMUCTU_MCF_PAR_ERR |
 		ERR_CTL_CMUCTU_TRL_PAR_ERR | ERR_CTL_CMUCTU_CTU_DATA_PAR_ERR |
 		ERR_CTL_CMUCTU_TAG_PAR_ERR | ERR_CTL_CMUCTU_CTU_SNP_ERR |
-		ERR_CTL_CMUCTU_TRCDMA_REQ_ERR,
+		ERR_CTL_CMUCTU_TRCDMA_REQ_ERR | ERR_CTL_CMUCTU_RSP_PAR_ERR,
 	.errors = cmu_ctu_errors},
 	{.name = "SCF:L3_0", .errx = 768,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
-		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
+		ERR_CTL_SCFL3_CECC_ERR | ERR_CTL_SCFL3_SNOC_INTFC_ERR |
+		ERR_CTL_SCFL3_MCF_INTFC_ERR | ERR_CTL_SCFL3_TAG_ERR |
+		ERR_CTL_SCFL3_L2DIR_ERR | ERR_CTL_SCFL3_UECC_ERR |
 		ERR_CTL_SCFL3_MH_CAM_ERR | ERR_CTL_SCFL3_MH_TAG_ERR |
-		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
-		ERR_CTL_SCFL3_TO_ERR,
+		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR,
 	 .errors = scf_l3_errors},
 	{.name = "SCF:L3_1", .errx = 769,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
-		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
+		ERR_CTL_SCFL3_CECC_ERR | ERR_CTL_SCFL3_SNOC_INTFC_ERR |
+		ERR_CTL_SCFL3_MCF_INTFC_ERR | ERR_CTL_SCFL3_TAG_ERR |
+		ERR_CTL_SCFL3_L2DIR_ERR | ERR_CTL_SCFL3_UECC_ERR |
 		ERR_CTL_SCFL3_MH_CAM_ERR | ERR_CTL_SCFL3_MH_TAG_ERR |
-		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
-		ERR_CTL_SCFL3_TO_ERR,
+		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR,
 	 .errors = scf_l3_errors},
 	{.name = "SCF:L3_2", .errx = 770,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
-		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
+		ERR_CTL_SCFL3_CECC_ERR | ERR_CTL_SCFL3_SNOC_INTFC_ERR |
+		ERR_CTL_SCFL3_MCF_INTFC_ERR | ERR_CTL_SCFL3_TAG_ERR |
+		ERR_CTL_SCFL3_L2DIR_ERR | ERR_CTL_SCFL3_UECC_ERR |
 		ERR_CTL_SCFL3_MH_CAM_ERR | ERR_CTL_SCFL3_MH_TAG_ERR |
-		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
-		ERR_CTL_SCFL3_TO_ERR,
+		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR,
 	 .errors = scf_l3_errors},
 	{.name = "SCF:L3_3", .errx = 771,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE | RAS_CTL_CFI |
-		ERR_CTL_SCFL3_ADR_ERR | ERR_CTL_SCFL3_PERR_ERR |
-		ERR_CTL_SCFL3_UECC_ERR | ERR_CTL_SCFL3_CECC_ERR |
+		ERR_CTL_SCFL3_CECC_ERR | ERR_CTL_SCFL3_SNOC_INTFC_ERR |
+		ERR_CTL_SCFL3_MCF_INTFC_ERR | ERR_CTL_SCFL3_TAG_ERR |
+		ERR_CTL_SCFL3_L2DIR_ERR | ERR_CTL_SCFL3_UECC_ERR |
 		ERR_CTL_SCFL3_MH_CAM_ERR | ERR_CTL_SCFL3_MH_TAG_ERR |
-		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR |
-		ERR_CTL_SCFL3_TO_ERR,
+		ERR_CTL_SCFL3_UNSUPP_REQ_ERR | ERR_CTL_SCFL3_PROT_ERR,
 	 .errors = scf_l3_errors},
 	{.name = "SCFCMU_CLOCKS", .errx = 1028,
 	 .err_ctrl = RAS_CTL_ED | RAS_CTL_UE |
 		ERR_CTL_SCFCMU_LUT0_PAR_ERR | ERR_CTL_SCFCMU_LUT1_PAR_ERR |
-		ERR_CTL_SCFCMU_ADC0_MON_ERR | ERR_CTL_SCFCMU_ADC1_MON_ERR,
+		ERR_CTL_SCFCMU_ADC0_MON_ERR | ERR_CTL_SCFCMU_ADC1_MON_ERR |
+		ERR_CTL_SCFCMU_FREQ0_MON_ERR | ERR_CTL_SCFCMU_FREQ1_MON_ERR |
+		ERR_CTL_SCFCMU_FREQ2_MON_ERR | ERR_CTL_SCFCMU_FREQ3_MON_ERR,
 	 .errors = scfcmu_clocks_errors},
 	{}
 };

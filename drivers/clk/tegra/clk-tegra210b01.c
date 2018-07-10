@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -155,7 +155,7 @@
 #define PLLD_SDM_EN_MASK BIT(16)
 
 #define PLLD2_SDM_EN_MASK BIT(31)
-#define PLLD2_SSC_EN_MASK 0
+#define PLLD2_SSC_EN_MASK BIT(30)
 
 #define PLLDP_SS_CFG	0x598
 #define PLLDP_SDM_EN_MASK BIT(31)
@@ -251,6 +251,7 @@ static unsigned long pll_ref_freq;
 static bool pll_re_use_utmipll;
 
 static DEFINE_SPINLOCK(pll_d_lock);
+static DEFINE_SPINLOCK(pll_d2_lock);
 static DEFINE_SPINLOCK(pll_e_lock);
 static DEFINE_SPINLOCK(pll_re_lock);
 static DEFINE_SPINLOCK(pll_u_lock);
@@ -315,8 +316,8 @@ static DEFINE_SPINLOCK(pll_p_uphy_lock);
 
 #define PLLD2_MISC0_DEFAULT_VALUE	0x40000000
 #define PLLD2_MISC1_CFG_DEFAULT_VALUE	0x10000000
-#define PLLD2_MISC2_CTRL1_DEFAULT_VALUE	0x00000000
-#define PLLD2_MISC3_CTRL2_DEFAULT_VALUE	0x00000000
+#define PLLD2_MISC2_CTRL1_DEFAULT_VALUE	0xF6E0F620
+#define PLLD2_MISC3_CTRL2_DEFAULT_VALUE	0x00010000
 #define PLLD2_MISC4_VREG_DEFAULT_VALUE	0x00000000
 
 #define PLLDP_MISC0_DEFAULT_VALUE	0x40000000
@@ -2484,7 +2485,7 @@ void __init tegra210b01_pll_init(void __iomem *car, void __iomem *pmc,
 
 	/* PLLD2 */
 	clk = tegra_clk_register_pllss_tegra210("pll_d2", "pll_ref", clk_base,
-					0, &pll_d2_params, NULL);
+					0, &pll_d2_params, &pll_d2_lock);
 	clk_register_clkdev(clk, "pll_d2", NULL);
 	clks[TEGRA210_CLK_PLL_D2] = clk;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,7 +174,7 @@
 
 #define PLLD2_SDM_EN_MASK BIT(31)
 #define PLLD2_SDM_RESET_MASK BIT(27)
-#define PLLD2_SSC_EN_MASK 0
+#define PLLD2_SSC_EN_MASK BIT(30)
 
 #define PLLDP_SS_CFG	0x598
 #define PLLDP_SDM_EN_MASK BIT(31)
@@ -308,6 +308,7 @@ static unsigned long pll_ref_freq;
 static bool t210b01;
 
 static DEFINE_SPINLOCK(pll_d_lock);
+static DEFINE_SPINLOCK(pll_d2_lock);
 static DEFINE_SPINLOCK(pll_e_lock);
 static DEFINE_SPINLOCK(pll_re_lock);
 static DEFINE_SPINLOCK(pll_u_lock);
@@ -391,8 +392,8 @@ static const char * const aclk_parents[] = {
 
 #define PLLD2_MISC0_DEFAULT_VALUE	0x40000020
 #define PLLD2_MISC1_CFG_DEFAULT_VALUE	0x10000000
-#define PLLD2_MISC2_CTRL1_DEFAULT_VALUE	0x0
-#define PLLD2_MISC3_CTRL2_DEFAULT_VALUE	0x0
+#define PLLD2_MISC2_CTRL1_DEFAULT_VALUE	0xF6E0F620
+#define PLLD2_MISC3_CTRL2_DEFAULT_VALUE	0x00010000
 
 #define PLLDP_MISC0_DEFAULT_VALUE	0x40000020
 #define PLLDP_MISC1_CFG_DEFAULT_VALUE	0xc0000000
@@ -662,6 +663,30 @@ void tegra210_set_sata_pll_seq_sw(bool state)
 	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_set_sata_pll_seq_sw);
+
+void tegra210_plld2_configure_ss(bool enable)
+{
+	u32 val;
+	unsigned long flags = 0;
+	struct clk *plld2 = clks[TEGRA210_CLK_PLL_D2];
+
+	if (!IS_ERR_OR_NULL(plld2))
+		spin_lock_irqsave(to_clk_pll(__clk_get_hw(plld2))->lock, flags);
+
+	val = readl_relaxed(clk_base + PLLD2_MISC1);
+	if (enable)
+		val |= PLLDSS_MISC1_CFG_EN_SSC;
+	else
+		val &= ~PLLDSS_MISC1_CFG_EN_SSC;
+
+	writel_relaxed(val, clk_base + PLLD2_MISC1);
+	fence_udelay(1, clk_base);
+
+	if (!IS_ERR_OR_NULL(plld2))
+		spin_unlock_irqrestore(to_clk_pll(__clk_get_hw(plld2))->lock,
+				       flags);
+}
+EXPORT_SYMBOL_GPL(tegra210_plld2_configure_ss);
 
 void tegra210_csi_source_from_brick(void)
 {
@@ -3415,7 +3440,7 @@ skip_pllms:
 
 	/* PLLD2 */
 	clk = tegra_clk_register_pllss_tegra210("pll_d2", "pll_ref", clk_base,
-					0, &pll_d2_params, NULL);
+					0, &pll_d2_params, &pll_d2_lock);
 	clk_register_clkdev(clk, "pll_d2", NULL);
 	clks[TEGRA210_CLK_PLL_D2] = clk;
 

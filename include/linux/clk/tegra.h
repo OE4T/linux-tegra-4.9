@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -147,5 +147,7 @@ int tegra_super_cdiv_use_therm_controls(bool);
 
 extern void tegra210_csi_source_from_brick(void);
 extern void tegra210_csi_source_from_plld(void);
+
+extern void tegra210_plld2_configure_ss(bool);
 
 #endif /* __LINUX_CLK_TEGRA_H_ */

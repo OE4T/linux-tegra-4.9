@@ -961,6 +961,7 @@ struct gpu_ops {
 				struct vm_gk20a *vm, u32 big_page_size);
 		bool (*mmu_fault_pending)(struct gk20a *g);
 		void (*fault_info_mem_destroy)(struct gk20a *g);
+		void (*mmu_fault_disable_hw)(struct gk20a *g);
 		u32 (*get_kind_invalid)(void);
 		u32 (*get_kind_pitch)(void);
 		u32 (*get_flush_retries)(struct gk20a *g,

@@ -67,14 +67,9 @@ bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 	return g->ops.fb.mmu_fault_pending(g);
 }
 
-void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
+void gv11b_mm_mmu_fault_disable_hw(struct gk20a *g)
 {
-	struct vm_gk20a *vm = g->mm.bar2.vm;
-
-	nvgpu_log_fn(g, " ");
-
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
-
 
 	if ((g->ops.fb.is_fault_buf_enabled(g,
 			NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX))) {
@@ -89,6 +84,17 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 				NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX,
 				NVGPU_FB_MMU_FAULT_BUF_DISABLED);
 	}
+
+	nvgpu_mutex_release(&g->mm.hub_isr_mutex);
+}
+
+void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
+{
+	struct vm_gk20a *vm = g->mm.bar2.vm;
+
+	nvgpu_log_fn(g, " ");
+
+	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
 	if (nvgpu_mem_is_valid(
 		    &g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY]))

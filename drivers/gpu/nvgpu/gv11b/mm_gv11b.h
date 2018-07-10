@@ -37,5 +37,6 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate);
 u64 gv11b_gpu_phys_addr(struct gk20a *g,
 			struct nvgpu_gmmu_attrs *attrs, u64 phys);
 void gv11b_mm_fault_info_mem_destroy(struct gk20a *g);
+void gv11b_mm_mmu_fault_disable_hw(struct gk20a *g);
 
 #endif

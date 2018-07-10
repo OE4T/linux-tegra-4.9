@@ -445,7 +445,6 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.reschedule_runlist = NULL,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 		.free_channel_ctx_header = vgpu_gv11b_free_subctx_header,
-		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout,
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,

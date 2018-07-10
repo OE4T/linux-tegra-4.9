@@ -624,7 +624,6 @@ static const struct gpu_ops gv100_ops = {
 		.resetup_ramfc = NULL,
 		.device_info_fault_id = top_device_info_data_fault_id_enum_v,
 		.free_channel_ctx_header = gv11b_free_subctx_header,
-		.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg,
 		.runlist_hw_submit = gk20a_fifo_runlist_hw_submit,
 		.runlist_wait_pending = gk20a_fifo_runlist_wait_pending,
 		.ring_channel_doorbell = gv11b_ring_channel_doorbell,

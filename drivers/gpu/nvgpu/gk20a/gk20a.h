@@ -665,8 +665,6 @@ struct gpu_ops {
 		u32 (*intr_0_error_mask)(struct gk20a *g);
 		int (*is_preempt_pending)(struct gk20a *g, u32 id,
 			unsigned int id_type);
-		int (*preempt_ch_tsg)(struct gk20a *g, u32 id,
-			unsigned int id_type);
 		void (*init_pbdma_intr_descs)(struct fifo_gk20a *f);
 		int (*reset_enable_hw)(struct gk20a *g);
 		int (*setup_userd)(struct channel_gk20a *c);

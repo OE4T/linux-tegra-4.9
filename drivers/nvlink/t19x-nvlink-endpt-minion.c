@@ -781,19 +781,6 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		 */
 		dump_minion = false;
 		goto fail;
-	}
-
-	if ((tdev->refclk == NVLINK_REFCLK_150) &&
-		 (ndev->speed == NVLINK_SPEED_25)) {
-		ret = minion_send_cmd(tdev,
-				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_3,
-				0);
-		if (ret < 0) {
-			nvlink_err("Error sending INITPLL_3 command to MINION");
-			goto fail;
-		}
-
-		ndev->link_bitrate = LINK_BITRATE_150MHZ_25GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_150) &&
 			(ndev->speed == NVLINK_SPEED_20)) {
 		ret = minion_send_cmd(tdev,
@@ -827,17 +814,6 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 		}
 
 		ndev->link_bitrate = LINK_BITRATE_156MHZ_20GBPS;
-	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
-			 (ndev->speed == NVLINK_SPEED_25)) {
-		ret = minion_send_cmd(tdev,
-				MINION_NVLINK_DL_CMD_COMMAND_INITPLL_2,
-				0);
-		if (ret < 0) {
-			nvlink_err("Error sending INITPLL_2 command to MINION");
-			goto fail;
-		}
-
-		ndev->link_bitrate = LINK_BITRATE_156MHZ_25GBPS;
 	} else if ((tdev->refclk == NVLINK_REFCLK_156) &&
 			 (ndev->speed == NVLINK_SPEED_16)) {
 		ret = minion_send_cmd(tdev,

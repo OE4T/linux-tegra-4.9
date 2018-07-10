@@ -113,9 +113,6 @@ static ssize_t nvlink_speedcontrol_file_read(struct file *file,
 	case NVLINK_SPEED_20:
 		strcpy(buf, "20");
 		break;
-	case NVLINK_SPEED_25:
-		strcpy(buf, "25");
-		break;
 	default:
 		nvlink_err("Unsupported ndev speed!");
 		strcpy(buf, "-1");
@@ -148,8 +145,6 @@ static ssize_t nvlink_speedcontrol_file_write(struct file *file,
 
 	if (!strncmp(tmp, "20", 2))
 		ndev->speed = NVLINK_SPEED_20;
-	else if (!strncmp(tmp, "25", 2))
-		ndev->speed = NVLINK_SPEED_25;
 	else if (!strncmp(tmp, "16", 2))
 		ndev->speed = NVLINK_SPEED_16;
 	else {

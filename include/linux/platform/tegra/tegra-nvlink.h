@@ -31,8 +31,6 @@
 #define LINK_BITRATE_156MHZ_16GBPS		16145830000ULL
 #define LINK_BITRATE_150MHZ_20GBPS		19200000000ULL
 #define LINK_BITRATE_156MHZ_20GBPS		20001280000ULL
-#define LINK_BITRATE_150MHZ_25GBPS		24750000000ULL
-#define LINK_BITRATE_156MHZ_25GBPS		25782900000ULL
 
 struct nvlink_link;
 struct nvlink_device;
@@ -70,8 +68,7 @@ extern u32 nvlink_log_mask;
 /* Enum to represent link speed. Nvlink 2.0 can support below 2 speeds */
 enum nvlink_speed {
 	NVLINK_SPEED_16,
-	NVLINK_SPEED_20,
-	NVLINK_SPEED_25
+	NVLINK_SPEED_20
 };
 
 /* Enum nvlink_endpt will be used to initialize device ID in device struct */

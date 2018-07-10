@@ -951,52 +951,6 @@ static void gv11b_fifo_locked_preempt_runlists(struct gk20a *g, u32 runlists_mas
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 }
 
-static int __locked_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type)
-{
-	int ret;
-	struct fifo_gk20a *f = &g->fifo;
-
-	nvgpu_log_fn(g, "id:%d id_type:%d", id, id_type);
-
-	/* Issue tsg preempt. Channel preempt is noop */
-	if (id_type == ID_TYPE_CHANNEL)
-		gk20a_fifo_issue_preempt(g, f->channel[id].tsgid, true);
-	else
-		gk20a_fifo_issue_preempt(g, id, true);
-
-	/* wait for preempt */
-	ret = g->ops.fifo.is_preempt_pending(g, id, id_type);
-
-	/* No recovery even if preempt timed out since
-	 * this is called from recovery path
-	 */
-
-	return ret;
-}
-
-
-int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
-			 unsigned int id_type)
-{
-	u32 ret = 0;
-	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
-	u32 mutex_ret = 0;
-
-	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-	/*
-	 * This is called from teardown path only. runlist_lock
-	 * is already acquired before calling this function.
-	 */
-	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type);
-
-	if (!mutex_ret)
-		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
-
-	return ret;
-
-}
-
 static void gv11b_fifo_locked_abort_runlist_active_tsgs(struct gk20a *g,
 			unsigned int rc_type,
 			u32 runlists_mask)
@@ -1174,15 +1128,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	 * that all PBDMAs serving the engine are not loaded when engine is
 	 * reset.
 	 */
-	if (tsg) {
-		int preempt_failed;
-
-		preempt_failed = g->ops.fifo.preempt_ch_tsg(g, id, id_type);
-		if (preempt_failed)
-			gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
-	} else {
-		gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
-	}
+	gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
 
 	/* check if engine reset should be deferred */
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {

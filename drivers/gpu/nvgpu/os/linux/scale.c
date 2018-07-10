@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,7 +38,7 @@
  * has changed. The function calls postscaling callback if it is defined.
  */
 
-#if defined(CONFIG_COMMON_CLK)
+#if defined(CONFIG_GK20A_PM_QOS) && defined(CONFIG_COMMON_CLK)
 int gk20a_scale_qos_notify(struct notifier_block *nb,
 			  unsigned long n, void *p)
 {
@@ -71,7 +71,7 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 	return NOTIFY_OK;
 }
-#else
+#elif defined(CONFIG_GK20A_PM_QOS)
 int gk20a_scale_qos_notify(struct notifier_block *nb,
 			  unsigned long n, void *p)
 {
@@ -99,6 +99,12 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 	platform->postscale(profile->dev, freq);
 
 	return NOTIFY_OK;
+}
+#else
+int gk20a_scale_qos_notify(struct notifier_block *nb,
+			  unsigned long n, void *p)
+{
+	return 0;
 }
 #endif
 
@@ -368,6 +374,7 @@ void gk20a_scale_init(struct device *dev)
 		l->devfreq = devfreq;
 	}
 
+#ifdef CONFIG_GK20A_PM_QOS
 	/* Should we register QoS callback for this device? */
 	if (platform->qos_notify) {
 		profile->qos_notify_block.notifier_call =
@@ -378,6 +385,7 @@ void gk20a_scale_init(struct device *dev)
 		pm_qos_add_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 					&profile->qos_notify_block);
 	}
+#endif
 
 	return;
 
@@ -392,12 +400,14 @@ void gk20a_scale_exit(struct device *dev)
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	int err;
 
+#ifdef CONFIG_GK20A_PM_QOS
 	if (platform->qos_notify) {
 		pm_qos_remove_min_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 				&g->scale_profile->qos_notify_block);
 		pm_qos_remove_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 				&g->scale_profile->qos_notify_block);
 	}
+#endif
 
 	if (platform->devfreq_governor) {
 		err = devfreq_remove_device(l->devfreq);

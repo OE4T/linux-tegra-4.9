@@ -32,6 +32,14 @@ config GK20A_DEVFREQ
 
 endchoice
 
+config GK20A_PM_QOS
+	depends on GK20A_DEVFREQ
+	bool "Use PM_QOS constraints for devfreq based scaling"
+	default y
+	help
+	  Enable support to pass PM_QOS constraints to devfreq based
+	  scaling.
+
 config NVGPU_TRACK_MEM_USAGE
         bool "Track the usage of system memory in nvgpu"
 	depends on GK20A

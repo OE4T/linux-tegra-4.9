@@ -73,6 +73,7 @@
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
+#include "gp10b/fuse_gp10b.h"
 
 #include "gv11b/css_gr_gv11b.h"
 #include "gv11b/dbg_gpu_gv11b.h"
@@ -871,6 +872,11 @@ static const struct gpu_ops gv100_ops = {
 		.decode_error_code = gp10b_priv_ring_decode_error_code,
 		.set_ppriv_timeout_settings =
 			gk20a_priv_set_timeout_settings,
+	},
+	.fuse = {
+		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
+		.is_opt_feature_override_disable =
+			gp10b_fuse_is_opt_feature_override_disable,
 	},
 #if defined(CONFIG_TEGRA_NVLINK)
 	.nvlink = {

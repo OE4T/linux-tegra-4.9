@@ -790,6 +790,9 @@ static const struct gpu_ops gv11b_ops = {
 	},
 	.fuse = {
 		.check_priv_security = gp10b_fuse_check_priv_security,
+		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
+		.is_opt_feature_override_disable =
+			gp10b_fuse_is_opt_feature_override_disable,
 	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,

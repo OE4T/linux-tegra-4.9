@@ -56,6 +56,7 @@
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
+#include "gp10b/fuse_gp10b.h"
 
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
@@ -559,6 +560,9 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 	},
 	.fuse = {
 		.check_priv_security = vgpu_gp10b_fuse_check_priv_security,
+		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
+		.is_opt_feature_override_disable =
+			gp10b_fuse_is_opt_feature_override_disable,
 	},
 	.chip_init_gpu_characteristics = vgpu_init_gpu_characteristics,
 	.get_litter_value = gp10b_get_litter_value,

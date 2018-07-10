@@ -1246,6 +1246,8 @@ struct gpu_ops {
 	} priv_ring;
 	struct {
 		int (*check_priv_security)(struct gk20a *g);
+		bool (*is_opt_ecc_enable)(struct gk20a *g);
+		bool (*is_opt_feature_override_disable)(struct gk20a *g);
 	} fuse;
 	struct {
 		int (*init)(struct gk20a *g);

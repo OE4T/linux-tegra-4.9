@@ -1,7 +1,7 @@
 /*
  * GP10B FUSE
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -90,4 +90,15 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 	}
 
 	return 0;
+}
+
+bool gp10b_fuse_is_opt_ecc_enable(struct gk20a *g)
+{
+	return gk20a_readl(g, fuse_opt_ecc_en_r()) != 0U;
+}
+
+bool gp10b_fuse_is_opt_feature_override_disable(struct gk20a *g)
+{
+	return gk20a_readl(g,
+			fuse_opt_feature_fuses_override_disable_r()) != 0U;
 }

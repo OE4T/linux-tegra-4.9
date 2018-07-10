@@ -56,6 +56,7 @@
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/priv_ring_gp10b.h"
+#include "gp10b/fuse_gp10b.h"
 
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
@@ -781,6 +782,9 @@ static const struct gpu_ops gp106_ops = {
 	},
 	.fuse = {
 		.check_priv_security = gp106_fuse_check_priv_security,
+		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
+		.is_opt_feature_override_disable =
+			gp10b_fuse_is_opt_feature_override_disable,
 	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,

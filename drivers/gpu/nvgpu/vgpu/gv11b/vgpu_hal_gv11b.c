@@ -64,6 +64,7 @@
 #include <gp10b/therm_gp10b.h>
 #include <gp10b/priv_ring_gp10b.h>
 #include <gp10b/ltc_gp10b.h>
+#include <gp10b/fuse_gp10b.h>
 
 #include <gp106/pmu_gp106.h>
 #include <gp106/acr_gp106.h>
@@ -627,6 +628,11 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.isr = gp10b_priv_ring_isr,
 		.set_ppriv_timeout_settings =
 			gk20a_priv_set_timeout_settings,
+	},
+	.fuse = {
+		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
+		.is_opt_feature_override_disable =
+			gp10b_fuse_is_opt_feature_override_disable,
 	},
 	.chip_init_gpu_characteristics = vgpu_gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,

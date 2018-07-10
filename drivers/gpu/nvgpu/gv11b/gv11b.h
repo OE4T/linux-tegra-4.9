@@ -27,7 +27,6 @@
 
 #include "gk20a/gk20a.h"
 
-void gv11b_detect_ecc_enabled_units(struct gk20a *g);
 int gv11b_init_gpu_characteristics(struct gk20a *g);
 
 #endif /* GV11B_H */

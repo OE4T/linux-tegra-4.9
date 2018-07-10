@@ -43,7 +43,6 @@
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_DEFAULT 100000
 
@@ -2022,11 +2021,14 @@ u32 gp10b_gr_get_sm_hww_warp_esr(struct gk20a *g,
 
 u32 get_ecc_override_val(struct gk20a *g)
 {
-	u32 val;
+	bool en = false;
 
-	val = gk20a_readl(g, fuse_opt_ecc_en_r());
-	if (val)
-		return gk20a_readl(g, gr_fecs_feature_override_ecc_r());
+	if (g->ops.fuse.is_opt_ecc_enable) {
+		en = g->ops.fuse.is_opt_ecc_enable(g);
+		if (en) {
+			return gk20a_readl(g, gr_fecs_feature_override_ecc_r());
+		}
+	}
 
 	return 0;
 }

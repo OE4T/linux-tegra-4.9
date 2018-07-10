@@ -717,47 +717,25 @@ static int tegra194_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	enum cluster cl;
-	uint32_t freq;
-	int ret = 0;
-	int idx;
 
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
-
-	freq = tegra194_fast_get_speed(policy->cpu); /* boot freq */
-	if (!freq) /* 0 is invalid */
-		return -EIO;
 
 	ftbl = get_freqtable(policy->cpu);
 
 	cpufreq_table_validate_and_show(policy, ftbl);
 
-	/* clip boot frequency to table entry */
-	idx = cpufreq_frequency_table_target(policy, freq,
-					     CPUFREQ_RELATION_L);
-	if (!ret && (freq != ftbl[idx].frequency)) {
-		freq = ftbl[idx].frequency;
-		if (tegra_hypervisor_mode)
-			t194_update_cpu_speed_hv(freq, policy->cpu);
-		else
-			tegra_update_cpu_speed(freq, policy->cpu);
-	}
-
 	policy->suspend_freq = policy->max;
-	policy->cur = tegra194_fast_get_speed(policy->cpu);
-	if (!policy->cur) /* '0' is invalid */
-		return -EIO;
+	policy->cur = tegra194_fast_get_speed(policy->cpu); /* boot freq */
 
 	cl = get_cpu_cluster(policy->cpu);
-	if (tfreq_data.pcluster[cl].bwmgr)
-		set_cpufreq_to_emcfreq(cl, policy->cur);
 
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
 
 	cpumask_copy(policy->cpus, &tfreq_data.pcluster[cl].cpu_mask);
 
-	return ret;
+	return 0;
 }
 
 static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
@@ -778,7 +756,8 @@ static int tegra194_cpufreq_exit(struct cpufreq_policy *policy)
 static struct cpufreq_driver tegra_cpufreq_driver = {
 	.name = "tegra_cpufreq",
 	.flags = CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
-				CPUFREQ_CONST_LOOPS,
+				CPUFREQ_CONST_LOOPS |
+				CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.verify = cpufreq_generic_frequency_table_verify,
 	.target_index = tegra194_set_speed,
 	.get = tegra194_get_speed,

@@ -866,9 +866,6 @@ static int tegra186_cpufreq_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct mutex *mlock;
-	uint32_t freq;
-	int ret = 0;
-	int idx;
 
 	if (policy->cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
@@ -876,30 +873,11 @@ static int tegra186_cpufreq_init(struct cpufreq_policy *policy)
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
-	freq = tegra186_get_speed(policy->cpu); /* boot freq */
-
 	ftbl = get_freqtable(policy->cpu);
 
 	cpufreq_table_validate_and_show(policy, ftbl);
 
-	/* clip boot frequency to table entry */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	ret = cpufreq_frequency_table_target(policy, ftbl, freq,
-		CPUFREQ_RELATION_L, &idx);
-#else
-	idx = cpufreq_frequency_table_target(policy, freq,
-					     CPUFREQ_RELATION_L);
-#endif
-	if (!ret && (freq != ftbl[idx].frequency)) {
-		freq = ftbl[idx].frequency;
-		if (tegra_cpufreq_hv_mode)
-			tegra_update_cpu_speed_hv(freq, policy->cpu);
-		else
-			tegra_update_cpu_speed(freq, policy->cpu);
-	}
-
 	policy->cur = tegra186_get_speed(policy->cpu);
-
 	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
 
 	set_cpufreq_to_emcfreq(policy);
@@ -911,7 +889,7 @@ static int tegra186_cpufreq_init(struct cpufreq_policy *policy)
 
 	mutex_unlock(mlock);
 
-	return ret;
+	return 0;
 }
 
 static int tegra186_cpufreq_exit(struct cpufreq_policy *policy)
@@ -936,7 +914,8 @@ static int tegra186_cpufreq_exit(struct cpufreq_policy *policy)
 static struct cpufreq_driver tegra_cpufreq_driver = {
 	.name		= "tegra_cpufreq",
 	.flags		= CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
-				CPUFREQ_CONST_LOOPS,
+				CPUFREQ_CONST_LOOPS |
+				CPUFREQ_NEED_INITIAL_FREQ_CHECK,
 	.verify		= cpufreq_generic_frequency_table_verify,
 	.target_index	= tegra186_cpufreq_set_target,
 	.get		= tegra186_get_speed,

@@ -75,7 +75,6 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
-	g->ops.fb.disable_hub_intr(g);
 
 	if ((g->ops.fb.is_fault_buf_enabled(g,
 			NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX))) {

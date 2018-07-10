@@ -50,7 +50,14 @@
 #include <linux/clk/tegra.h>
 #include <linux/tegra-powergate.h>
 #include <linux/platform_data/tegra-ahci-shield.h>
+
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <soc/tegra/chip-id.h>
+#else
 #include <linux/tegra-soc.h>
+#endif
+
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include "../../arch/arm/mach-tegra/iomap.h"

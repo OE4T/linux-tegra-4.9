@@ -105,6 +105,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->max_comptag_lines = max_comptag_lines;
 	gr->comptags_per_cacheline = comptags_per_cacheline;
+	gr->compbit_backing_size = compbit_backing_size;
 
 	return 0;
 }

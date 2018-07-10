@@ -262,8 +262,8 @@
 			cooling-maps {
 				map0 {
 					trip = <&die_temp_thresh>;
-					cooling-device = <&dummy_cool_dev THERMAL_NO_LIMIT
-								THERMAL_NO_LIMIT>;
+					cooling-device = <&{/bthrot_cdev/emergency_balanced}
+							THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 					contribution = <100>;
 					cdev-type = "emergency-balanced";
 				};

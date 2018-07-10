@@ -17,7 +17,7 @@
 #include <t19x-common-modules/tegra194-camera-imx185-a00.dtsi>
 #include "dt-bindings/clock/tegra194-clock.h"
 
-#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 4)
+#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 3)
 #define CAMERA_I2C_MUX_BUS(x) (0x1E + x)
 
 /* camera control gpio definitions */

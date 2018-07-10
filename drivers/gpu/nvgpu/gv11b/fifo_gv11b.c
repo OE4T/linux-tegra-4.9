@@ -913,8 +913,13 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 
-	if (ret)
-		gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+	if (ret) {
+		if (nvgpu_platform_is_silicon(g))
+			nvgpu_err(g, "preempt timed out for tsgid: %u, "
+			"ctxsw timeout will trigger recovery if needed", tsgid);
+		else
+			gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+	}
 
 	return ret;
 }

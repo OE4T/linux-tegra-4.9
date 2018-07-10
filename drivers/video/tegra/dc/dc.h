@@ -799,6 +799,7 @@ struct tegra_dc_platform_data {
 	struct device_node	*panel_np; /* dp-display, hdmi-display etc. */
 	struct device_node	*def_out_np; /* disp-default-out */
 	bool			frame_lock_enable;
+	bool			plld2_ss_enable;
 };
 
 struct tegra_dc_bw_data {

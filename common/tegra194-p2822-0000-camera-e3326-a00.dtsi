@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 #include <t19x-common-modules/tegra194-camera-e3326-a00.dtsi>
 #include "dt-bindings/clock/tegra194-clock.h"
 
-#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 4)
+#define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 3)
 #define CAM0_PWDN	TEGRA194_MAIN_GPIO(H, 6)
 
 /* camera control gpio definitions */

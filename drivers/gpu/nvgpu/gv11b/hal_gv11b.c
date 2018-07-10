@@ -465,6 +465,10 @@ static const struct gpu_ops gv11b_ops = {
 		.read_mmu_fault_info = fb_gv11b_read_mmu_fault_info,
 		.read_mmu_fault_status = fb_gv11b_read_mmu_fault_status,
 		.mmu_invalidate_replay = gv11b_fb_mmu_invalidate_replay,
+		.mmu_fault_pending = gv11b_fb_mmu_fault_pending,
+		.is_fault_buf_enabled = gv11b_fb_is_fault_buf_enabled,
+		.fault_buf_set_state_hw = gv11b_fb_fault_buf_set_state_hw,
+		.fault_buf_configure_hw = gv11b_fb_fault_buf_configure_hw,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =

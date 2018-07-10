@@ -38,6 +38,9 @@ struct vm_gk20a;
 struct nvgpu_mem;
 struct nvgpu_pd_cache;
 
+#define	NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY		0
+#define	NVGPU_MM_MMU_FAULT_TYPE_REPLAY				1
+
 #define FAULT_TYPE_NUM		2	/* replay and nonreplay faults */
 
 struct mmu_fault_info {

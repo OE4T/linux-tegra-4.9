@@ -162,6 +162,13 @@ struct nvgpu_gpfifo_userdata {
  * should go in struct gk20a or be implemented with the boolean flag API defined
  * in nvgpu/enabled.h
  */
+
+/* index for FB fault buffer functions */
+#define	NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX		0U
+#define	NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX		1U
+#define	NVGPU_FB_MMU_FAULT_BUF_DISABLED			0U
+#define	NVGPU_FB_MMU_FAULT_BUF_ENABLED			1U
+
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
@@ -564,6 +571,11 @@ struct gpu_ops {
 		u32 (*read_mmu_fault_status)(struct gk20a *g);
 		int (*mmu_invalidate_replay)(struct gk20a *g,
 			u32 invalidate_replay_val);
+		bool (*mmu_fault_pending)(struct gk20a *g);
+		bool (*is_fault_buf_enabled)(struct gk20a *g, u32 index);
+		void (*fault_buf_set_state_hw)(struct gk20a *g,
+				 u32 index, u32 state);
+		void (*fault_buf_configure_hw)(struct gk20a *g, u32 index);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);

@@ -28,15 +28,6 @@
 #define	NONREPLAY_REG_INDEX		0
 #define	REPLAY_REG_INDEX		1
 
-#define	FAULT_BUF_DISABLED		0
-#define	FAULT_BUF_ENABLED		1
-
-#define	FAULT_BUF_INVALID		0
-#define	FAULT_BUF_VALID			1
-
-#define	FAULT_TYPE_OTHER_AND_NONREPLAY		0
-#define	FAULT_TYPE_REPLAY			1
-
 struct gk20a;
 
 void gv11b_fb_init_hw(struct gk20a *g);
@@ -46,11 +37,10 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr);
 void gv11b_fb_reset(struct gk20a *g);
 void gv11b_fb_hub_isr(struct gk20a *g);
 
-u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
-				 unsigned int index);
+bool gv11b_fb_is_fault_buf_enabled(struct gk20a *g, u32 index	);
 void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
-		 unsigned int index, unsigned int state);
-void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index);
+		 u32 index, u32 state);
+void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, u32 index);
 void gv11b_fb_enable_hub_intr(struct gk20a *g);
 void gv11b_fb_disable_hub_intr(struct gk20a *g);
 bool gv11b_fb_mmu_fault_pending(struct gk20a *g);
@@ -58,7 +48,7 @@ void gv11b_fb_handle_dropped_mmu_fault(struct gk20a *g, u32 fault_status);
 void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
 			 u32 fault_status);
 void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
-		 u32 fault_status, unsigned int index);
+		 u32 fault_status, u32 index);
 void gv11b_fb_handle_nonreplay_fault_overflow(struct gk20a *g,
 			 u32 fault_status);
 void gv11b_fb_handle_replay_fault_overflow(struct gk20a *g,

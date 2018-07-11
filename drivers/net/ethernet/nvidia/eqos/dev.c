@@ -3661,19 +3661,15 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 		/* Assign priority for TX flow control */
 		switch (qinx) {
 		case 0:
-			MAC_TQPM0R_PSTQ0_WR(0);
 			MAC_RQC2R_PSRQ0_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 1:
-			MAC_TQPM0R_PSTQ1_WR(1);
 			MAC_RQC2R_PSRQ1_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 2:
-			MAC_TQPM0R_PSTQ2_WR(2);
 			MAC_RQC2R_PSRQ2_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		case 3:
-			MAC_TQPM0R_PSTQ3_WR(3);
 			MAC_RQC2R_PSRQ3_WR(0x1 << pdt_cfg->q_prio[qinx]);
 			break;
 		}
@@ -3801,7 +3797,6 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	}
 	/* Mapping MTL Rx queue and DMA Rx channel */
 	MTL_RQDCM0R_WR(0x3020100);
-	MTL_RQDCM1R_WR(0x7060504);
 
 	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < pdata->num_chans; j++) {

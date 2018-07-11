@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33344,16 +33344,6 @@ extern ULONG eqos_base_addr;
 
 #define MAC_MA32_127HR_AE_WR_MASK (ULONG)(0x7fffffff)
 
-#define MAC_MA32_127HR_AE_WR(i, data) do {\
-	ULONG v;\
-	MAC_MA32_127HR_RD(i, v);\
-	v = (v & (MAC_MA32_127HR_RES_WR_MASK_19))\
-	|(((0) & (MAC_MA32_127HR_MASK_19))<<19);\
-	v = ((v & MAC_MA32_127HR_AE_WR_MASK)\
-	|((data & MAC_MA32_127HR_AE_MASK)<<31));\
-	MAC_MA32_127HR_WR(i, v);\
-} while (0)
-
 #define MAC_MA32_127HR_AE_RD(i, data) do {\
 	MAC_MA32_127HR_RD(i, data);\
 	data = ((data >> 31) & MAC_MA32_127HR_AE_MASK);\
@@ -33386,13 +33376,15 @@ extern ULONG eqos_base_addr;
 
 #define MAC_MA32_127HR_ADDRHI_WR_MASK (ULONG)(0xffff0000)
 
-#define MAC_MA32_127HR_ADDRHI_WR(i, data) do {\
+#define MAC_MA32_127HR_ADDRHI_AE_WR(i, data, ae) do {\
 	ULONG v;\
 	MAC_MA32_127HR_RD(i, v);\
 	v = (v & (MAC_MA32_127HR_RES_WR_MASK_19))\
 	|(((0) & (MAC_MA32_127HR_MASK_19))<<19);\
 	v = ((v & MAC_MA32_127HR_ADDRHI_WR_MASK)\
 	|((data & MAC_MA32_127HR_ADDRHI_MASK)<<0));\
+	v = ((v & MAC_MA32_127HR_AE_WR_MASK)\
+	|((ae & MAC_MA32_127HR_AE_MASK)<<31));\
 	MAC_MA32_127HR_WR(i, v);\
 } while (0)
 
@@ -33444,16 +33436,6 @@ extern ULONG eqos_base_addr;
 
 
 #define MAC_MA1_31HR_AE_WR_MASK (ULONG)(0x7fffffff)
-
-#define MAC_MA1_31HR_AE_WR(i, data) do {\
-	ULONG v;\
-	MAC_MA1_31HR_RD(i, v);\
-	v = (v & (MAC_MA1_31HR_RES_WR_MASK_19))\
-	|(((0) & (MAC_MA1_31HR_MASK_19))<<19);\
-	v = ((v & MAC_MA1_31HR_AE_WR_MASK)\
-	|((data & MAC_MA1_31HR_AE_MASK)<<31));\
-	MAC_MA1_31HR_WR(i, v);\
-} while (0)
 
 #define MAC_MA1_31HR_AE_RD(i, data) do {\
 	MAC_MA1_31HR_RD(i, data);\
@@ -33529,13 +33511,15 @@ extern ULONG eqos_base_addr;
 
 #define MAC_MA1_31HR_ADDRHI_WR_MASK (ULONG)(0xffff0000)
 
-#define MAC_MA1_31HR_ADDRHI_WR(i, data) do {\
+#define MAC_MA1_31HR_ADDRHI_AE_WR(i, data, ae) do {\
 	ULONG v;\
 	MAC_MA1_31HR_RD(i, v);\
 	v = (v & (MAC_MA1_31HR_RES_WR_MASK_19))\
 	|(((0) & (MAC_MA1_31HR_MASK_19))<<19);\
 	v = ((v & MAC_MA1_31HR_ADDRHI_WR_MASK)\
 	|((data & MAC_MA1_31HR_ADDRHI_MASK)<<0));\
+	v = ((v & MAC_MA1_31HR_AE_WR_MASK)\
+	|((ae & MAC_MA1_31HR_AE_MASK)<<31));\
 	MAC_MA1_31HR_WR(i, v);\
 } while (0)
 

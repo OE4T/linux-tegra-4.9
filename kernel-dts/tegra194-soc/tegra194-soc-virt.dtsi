@@ -194,19 +194,19 @@
 		status = "disabled";
 	};
 
-	aon-noc@c600000 {
+	aon-noc@C600000 {
 		status = "disabled";
 	};
 
-	bpmp-noc@d600000 {
+	bpmp-noc@D600000 {
 		status = "disabled";
 	};
 
-	rce-noc@be00000 {
+	rce-noc@BE00000 {
 		status = "disabled";
 	};
 
-	sce-noc@b600000 {
+	sce-noc@B600000 {
 		status = "disabled";
 	};
 

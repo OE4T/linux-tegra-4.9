@@ -25,7 +25,9 @@
 #include <linux/fb.h>
 #include <linux/clk.h>
 #include <linux/completion.h>
+#ifdef CONFIG_SWITCH
 #include <linux/switch.h>
+#endif
 #include <linux/nvhost.h>
 #include <linux/types.h>
 #include <linux/clk/tegra.h>

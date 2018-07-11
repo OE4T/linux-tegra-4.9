@@ -29,7 +29,9 @@
 #include <linux/timer.h>
 #include <linux/spinlock.h>
 #include <linux/vmalloc.h>
+#ifdef CONFIG_SWITCH
 #include <linux/switch.h>
+#endif
 #include <sound/core.h>
 #include <sound/control.h>
 #include <sound/info.h>
@@ -210,9 +212,11 @@ module_param_array(pcm_substreams, int, NULL, 0444);
 MODULE_PARM_DESC(pcm_substreams,
 	"PCM substreams # (1-128) for SHIELD Remote driver?");
 
+#ifdef CONFIG_SWITCH
 static struct switch_dev shdr_mic_switch = {
 	.name = "shdr_mic",
 };
+#endif
 
 /* Debug feature to save captured raw and decoded audio into buffers
  * and make them available for reading from misc devices.
@@ -1871,7 +1875,9 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	atvr_snd->hdev = hdev;
 	snd_card_set_dev(shdr_card, &hdev->dev);
 
+#ifdef CONFIG_SWITCH
 	switch_set_state(&shdr_mic_switch, true);
+#endif
 
 	silence_counter = 0;
 	pr_info("%s: remotes count %d->%d\n", __func__,
@@ -1950,8 +1956,10 @@ static void atvr_remove(struct hid_device *hdev)
 		__func__, hdev->name, num_remotes, num_remotes - 1);
 	num_remotes--;
 
+#ifdef CONFIG_SWITCH
 	if (num_remotes == 0)
 		switch_set_state(&shdr_mic_switch, false);
+#endif
 
 	cards_in_use[atvr_snd->card_index] = false;
 	snd_atvr_dealloc_audio_buffs(atvr_snd);
@@ -2027,9 +2035,11 @@ static int atvr_init(void)
 	int ret;
 
 	mutex_init(&snd_cards_lock);
+#ifdef CONFIG_SWITCH
 	ret = switch_dev_register(&shdr_mic_switch);
 	if (ret)
 		pr_err("%s: failed to create shdr_mic_switch\n", __func__);
+#endif
 
 	ret = hid_register_driver(&atvr_driver);
 	if (ret) {
@@ -2087,7 +2097,9 @@ err_attr_hid_miss_stats:
 	hid_unregister_driver(&atvr_driver);
 	mutex_destroy(&hid_miss_stats_lock);
 err_hid_register:
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&shdr_mic_switch);
+#endif
 	mutex_destroy(&snd_cards_lock);
 	return ret;
 }
@@ -2102,7 +2114,9 @@ static void atvr_exit(void)
 
 	driver_remove_file(&atvr_driver.driver, &driver_attr_hid_miss_stats);
 	hid_unregister_driver(&atvr_driver);
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&shdr_mic_switch);
+#endif
 	mutex_destroy(&snd_cards_lock);
 	mutex_destroy(&hid_miss_stats_lock);
 }

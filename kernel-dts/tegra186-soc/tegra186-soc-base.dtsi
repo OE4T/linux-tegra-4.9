@@ -970,6 +970,7 @@
 			interrupts = <0 154 0x04>;
 			win-mask = <0x38>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
@@ -1028,6 +1029,7 @@
 			interrupts = <0 155 0x04>;
 			win-mask = <0x0>;
 			iommus = <&smmu TEGRA_SID_NVDISPLAY>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			nvidia,dc-ctrlnum = <2>;
 			nvidia,cmu-enable = <0x1>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,

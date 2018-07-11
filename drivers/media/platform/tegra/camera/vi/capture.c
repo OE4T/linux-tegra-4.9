@@ -104,7 +104,20 @@ static void vi_capture_ivc_status_callback(const void *ivc_resp,
 			capture->requests.iova,
 			buffer_index * capture->request_size,
 			capture->request_size, DMA_FROM_DEVICE);
-		complete(&capture->capture_resp);
+
+		if (capture->is_progress_status_notifier_set) {
+			capture_common_set_progress_status(
+					&capture->progress_status_notifier,
+					buffer_index,
+					capture->progress_status_buffer_depth,
+					PROGRESS_STATUS_DONE);
+		} else {
+			/*
+			 * Only fire completions if not using
+			 * the new progress status buffer mechanism
+			 */
+			complete(&capture->capture_resp);
+		}
 		dev_dbg(chan->dev, "%s: status chan_id %u msg_id %u\n",
 				__func__, status_msg->header.channel_id,
 				status_msg->header.msg_id);
@@ -730,6 +743,9 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 	vi_capture_release_syncpts(chan);
 
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
+	if (capture->is_progress_status_notifier_set)
+		capture_common_release_progress_status_notifier(
+			&capture->progress_status_notifier);
 
 	return 0;
 
@@ -1018,4 +1034,48 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 	}
 
 	return 0;
+}
+
+int vi_capture_set_progress_status_notifier(struct tegra_vi_channel *chan,
+		struct vi_capture_progress_status_req *req)
+{
+	int err = 0;
+	struct vi_capture *capture = chan->capture_data;
+
+	if (req->mem == 0 ||
+		req->buffer_depth == 0) {
+		dev_err(chan->dev,
+				"%s: request buffer is invalid\n", __func__);
+		return -EINVAL;
+	}
+
+	if (capture == NULL) {
+		dev_err(chan->dev,
+				"%s: vi capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	if (req->buffer_depth < capture->queue_depth) {
+		dev_err(chan->dev, "Progress status buffer is smaller than queue depth");
+		return -EINVAL;
+	}
+
+	/* Setup the progress status buffer */
+	err = capture_common_setup_progress_status_notifier(
+			&capture->progress_status_notifier,
+			req->mem,
+			sizeof(uint32_t) * req->buffer_depth,
+			req->mem_offset);
+
+	if (err < 0) {
+		dev_err(chan->dev, "%s: memory setup failed\n", __func__);
+		return -EFAULT;
+	}
+
+	dev_dbg(chan->dev, "mem offset %u\n", req->mem_offset);
+	dev_dbg(chan->dev, "buffer depth %u\n", req->buffer_depth);
+
+	capture->progress_status_buffer_depth = req->buffer_depth;
+	capture->is_progress_status_notifier_set = true;
+	return err;
 }

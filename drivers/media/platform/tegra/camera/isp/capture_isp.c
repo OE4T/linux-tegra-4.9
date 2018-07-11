@@ -40,6 +40,8 @@ struct isp_desc_rec {
 	uint32_t request_size;
 	uint32_t desc_mem;
 
+	uint32_t progress_status_buffer_depth;
+
 	struct mutex unpins_list_lock;
 	struct capture_common_unpins **unpins_list;
 };
@@ -55,6 +57,9 @@ struct isp_capture {
 
 	/* isp program desc and it's ring buffer related details */
 	struct isp_desc_rec program_desc_ctx;
+
+	struct capture_common_status_notifier progress_status_notifier;
+	bool is_progress_status_notifier_set;
 
 #ifdef HAVE_ISP_GOS_TABLES
 	uint32_t num_gos_tables;
@@ -141,10 +146,24 @@ static void isp_capture_ivc_status_callback(const void *ivc_resp,
 			buffer_index * capture->capture_desc_ctx.request_size,
 			capture->capture_desc_ctx.request_size,
 			DMA_FROM_DEVICE);
-		complete(&capture->capture_resp);
+
+		if (capture->is_progress_status_notifier_set) {
+			capture_common_set_progress_status(
+				&capture->progress_status_notifier,
+				buffer_index,
+				capture->capture_desc_ctx.progress_status_buffer_depth,
+				PROGRESS_STATUS_DONE);
+		} else {
+			/*
+			 * Only fire completions if not using
+			 * the new progress status buffer mechanism
+			 */
+			complete(&capture->capture_resp);
+		}
+
 		dev_dbg(chan->isp_dev, "%s: status chan_id %u msg_id %u\n",
-				__func__, status_msg->header.channel_id,
-				status_msg->header.msg_id);
+			__func__, status_msg->header.channel_id,
+			status_msg->header.msg_id);
 		break;
 	case CAPTURE_ISP_PROGRAM_STATUS_IND:
 		buffer_index =
@@ -155,7 +174,27 @@ static void isp_capture_ivc_status_callback(const void *ivc_resp,
 			buffer_index * capture->program_desc_ctx.request_size,
 			capture->program_desc_ctx.request_size,
 			DMA_FROM_DEVICE);
-		complete(&capture->capture_program_resp);
+
+		if (capture->is_progress_status_notifier_set) {
+			/*
+			 * Program status notifiers are after the process status notifiers;
+			 * add the process status buffer depth as an offset.
+			 */
+			capture_common_set_progress_status(
+				&capture->progress_status_notifier,
+				buffer_index +
+					capture->capture_desc_ctx.progress_status_buffer_depth,
+				capture->program_desc_ctx.progress_status_buffer_depth +
+					capture->capture_desc_ctx.progress_status_buffer_depth,
+				PROGRESS_STATUS_DONE);
+		} else {
+			/*
+			 * Only fire completions if not using
+			 * the new progress status buffer mechanism
+			 */
+			complete(&capture->capture_program_resp);
+		}
+
 		dev_dbg(chan->isp_dev,
 			"%s: isp_ program status chan_id %u msg_id %u\n",
 			__func__, status_msg->header.channel_id,
@@ -735,6 +774,10 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 	kfree(capture->program_desc_ctx.unpins_list);
 	kfree(capture->capture_desc_ctx.unpins_list);
 
+	if (capture->is_progress_status_notifier_set)
+		capture_common_release_progress_status_notifier(
+			&capture->progress_status_notifier);
+
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
 
 	return 0;
@@ -1295,4 +1338,77 @@ int isp_capture_request_ex(struct tegra_isp_channel *chan,
 	}
 
 	return ret;
+}
+
+int isp_capture_set_progress_status_notifier(struct tegra_isp_channel *chan,
+		struct isp_capture_progress_status_req *req)
+{
+	int err = 0;
+	struct isp_capture *capture = chan->capture_data;
+
+	if (req->mem == 0 ||
+		req->process_buffer_depth == 0) {
+		dev_err(chan->isp_dev,
+				"%s: process request buffer is invalid\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	if (req->mem == 0 ||
+		req->program_buffer_depth == 0) {
+		dev_err(chan->isp_dev,
+				"%s: program request buffer is invalid\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	if (capture == NULL) {
+		dev_err(chan->isp_dev,
+				"%s: isp capture uninitialized\n", __func__);
+		return -ENODEV;
+	}
+
+	if (req->process_buffer_depth < capture->capture_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev,
+				"%s: Process progress status buffer smaller than queue depth\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	if (req->program_buffer_depth < capture->program_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev,
+				"%s: Program progress status buffer smaller than queue depth\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	/* Setup the progress status buffer */
+	err = capture_common_setup_progress_status_notifier(
+			&capture->progress_status_notifier,
+			req->mem,
+			(req->process_buffer_depth + req->program_buffer_depth) *
+				sizeof(uint32_t),
+			req->mem_offset);
+
+	if (err < 0) {
+		dev_err(chan->isp_dev,
+				"%s: Process progress status setup failed\n",
+				__func__);
+		return -EFAULT;
+	}
+
+	dev_dbg(chan->isp_dev, "Progress status mem offset %u\n",
+			req->mem_offset);
+	dev_dbg(chan->isp_dev, "Process buffer depth %u\n",
+			req->process_buffer_depth);
+	dev_dbg(chan->isp_dev, "Program buffer depth %u\n",
+			req->program_buffer_depth);
+
+	capture->capture_desc_ctx.progress_status_buffer_depth =
+			req->process_buffer_depth;
+	capture->program_desc_ctx.progress_status_buffer_depth =
+			req->program_buffer_depth;
+
+	capture->is_progress_status_notifier_set = true;
+	return err;
 }

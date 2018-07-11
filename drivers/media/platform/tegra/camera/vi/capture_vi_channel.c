@@ -44,6 +44,8 @@
 #define VI_CAPTURE_REQUEST	_IOW('I', 6, struct vi_capture_req)
 #define VI_CAPTURE_STATUS	_IOW('I', 7, __u32)
 #define VI_CAPTURE_SET_COMPAND	_IOW('I', 8, struct vi_capture_compand)
+#define VI_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER \
+	_IOW('I', 9, struct vi_capture_progress_status_req)
 
 struct vi_channel_drv {
 	struct device *dev;
@@ -246,6 +248,17 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 
+	case _IOC_NR(VI_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER): {
+		struct vi_capture_progress_status_req req;
+
+		if (copy_from_user(&req, ptr, sizeof(req)))
+			break;
+		err = vi_capture_set_progress_status_notifier(chan, &req);
+		if (err < 0)
+			dev_err(chan->dev,
+					"setting progress status buffer failed\n");
+		break;
+	}
 	default: {
 		dev_err(chan->dev, "%s:Unknown ioctl\n", __func__);
 		return -ENOIOCTLCMD;
@@ -313,7 +326,7 @@ struct tegra_vi_channel *vi_channel_open_ex(unsigned channel, bool is_mem_pinned
 	chan->ndev = chan_drv->ndev;
 	chan->ops = chan_drv->ops;
 
- 	err = vi_channel_power_on_vi_device(chan);
+	err = vi_channel_power_on_vi_device(chan);
 	if (err < 0)
 		goto error;
 

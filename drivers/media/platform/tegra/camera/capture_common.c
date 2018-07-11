@@ -22,6 +22,89 @@ struct surface_t {
 	uint32_t offset_hi;
 };
 
+int capture_common_setup_progress_status_notifier(
+		struct capture_common_status_notifier *status_notifier,
+		uint32_t mem,
+		uint32_t buffer_size,
+		uint32_t mem_offset)
+{
+	struct dma_buf *dmabuf;
+	void *va;
+
+	/* take reference for the userctx */
+	dmabuf = dma_buf_get(mem);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+
+	if ((buffer_size + mem_offset) > dmabuf->size) {
+		dma_buf_put(dmabuf);
+		pr_err("%s: invalid offset\n", __func__);
+		return -EINVAL;
+	}
+
+	/* map handle and clear error notifier struct */
+	va = dma_buf_vmap(dmabuf);
+	if (!va) {
+		dma_buf_put(dmabuf);
+		pr_err("%s: Cannot map notifier handle\n", __func__);
+		return -ENOMEM;
+	}
+
+	memset(va, 0, buffer_size);
+
+	status_notifier->buf = dmabuf;
+	status_notifier->va = va;
+	status_notifier->offset = mem_offset;
+	return 0;
+}
+
+int capture_common_set_progress_status(
+		struct capture_common_status_notifier *progress_status_notifier,
+		uint32_t buffer_slot,
+		uint32_t buffer_depth,
+		uint8_t new_val)
+{
+	uint32_t *status_notifier = (uint32_t *) (progress_status_notifier->va +
+			progress_status_notifier->offset);
+
+	if (buffer_slot >= buffer_depth) {
+		pr_err("%s: Invalid offset!", __func__);
+		return -EINVAL;
+	}
+
+	/*
+	 * Since UMD and KMD can both write to the shared progress status
+	 * notifier buffer, insert memory barrier here to ensure that any
+	 * other store operations to the buffer would be done before the
+	 * write below.
+	 */
+	wmb();
+
+	status_notifier[buffer_slot] = new_val;
+
+	return 0;
+}
+
+int capture_common_release_progress_status_notifier(
+		struct capture_common_status_notifier *progress_status_notifier)
+{
+	struct dma_buf *dmabuf = progress_status_notifier->buf;
+	void *va = progress_status_notifier->va;
+
+	if (dmabuf != NULL) {
+		if (va != NULL)
+			dma_buf_vunmap(dmabuf, va);
+
+		dma_buf_put(dmabuf);
+	}
+
+	progress_status_notifier->buf = NULL;
+	progress_status_notifier->va = NULL;
+	progress_status_notifier->offset = 0;
+
+	return 0;
+}
+
 int capture_common_pin_memory(struct device *dev,
 		uint32_t mem, struct capture_common_buf *unpin_data)
 {
@@ -213,8 +296,8 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 				(reloc_offset & ~PAGE_MASK)));
 
 		dma_sync_single_range_for_device(req->rtcpu_dev,
-			    req->requests->iova, req->request_offset,
-			    req->request_size, DMA_TO_DEVICE);
+				req->requests->iova, req->request_offset,
+				req->request_size, DMA_TO_DEVICE);
 	}
 
 pin_fail:

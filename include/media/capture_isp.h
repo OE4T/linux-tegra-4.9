@@ -80,6 +80,16 @@ struct isp_capture_req_ex {
 	uint32_t __pad[4];
 } __ISP_CAPTURE_ALIGN;
 
+struct isp_capture_progress_status_req {
+	uint32_t mem;
+	uint32_t mem_offset;
+
+	uint32_t process_buffer_depth;
+	uint32_t program_buffer_depth;
+	uint32_t __pad[4];
+} __ISP_CAPTURE_ALIGN;
+
+
 int isp_capture_init(struct tegra_isp_channel *chan);
 void isp_capture_shutdown(struct tegra_isp_channel *chan);
 int isp_capture_setup(struct tegra_isp_channel *chan,
@@ -99,4 +109,6 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 int isp_capture_program_status(struct tegra_isp_channel *chan);
 int isp_capture_request_ex(struct tegra_isp_channel *chan,
 		struct isp_capture_req_ex *capture_req_ex);
+int isp_capture_set_progress_status_notifier(struct tegra_isp_channel *chan,
+		struct isp_capture_progress_status_req *req);
 #endif

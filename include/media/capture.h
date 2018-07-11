@@ -40,6 +40,10 @@ struct vi_capture {
 	uint32_t request_size;
 	bool is_mem_pinned;
 
+	struct capture_common_status_notifier progress_status_notifier;
+	uint32_t progress_status_buffer_depth;
+	bool is_progress_status_notifier_set;
+
 	uint32_t stream_id;
 	uint32_t csi_port;
 	uint32_t virtual_channel_id;
@@ -103,6 +107,13 @@ struct vi_capture_req {
 	uint64_t reloc_relatives;
 } __VI_CAPTURE_ALIGN;
 
+struct vi_capture_progress_status_req {
+	uint32_t mem;
+	uint32_t mem_offset;
+
+	uint32_t buffer_depth;
+	uint32_t __pad[3];
+} __VI_CAPTURE_ALIGN;
 /*
  * The compand configuration describes a piece-wise linear
  * tranformation function used by the VI companding module.
@@ -135,6 +146,8 @@ int vi_capture_set_compand(struct tegra_vi_channel *chan,
 		struct vi_capture_compand *compand);
 long vi_capture_ioctl(struct file *file, void *fh,
 		bool use_prio, unsigned int cmd, void *arg);
+int vi_capture_set_progress_status_notifier(struct tegra_vi_channel *chan,
+		struct vi_capture_progress_status_req *req);
 int csi_stream_release(struct tegra_vi_channel *chan);
 #endif
 

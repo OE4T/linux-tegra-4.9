@@ -1,7 +1,7 @@
 /*
  * Tegra capture common operations
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -11,6 +11,10 @@
  */
 
 #include <media/mc_common.h>
+
+/* Progress status */
+#define PROGRESS_STATUS_BUSY		(U32_C(0x1))
+#define PROGRESS_STATUS_DONE		(U32_C(0x2))
 
 /* buffer details including dma_buf and iova etc. */
 struct capture_common_buf {
@@ -38,6 +42,26 @@ struct capture_common_pin_req {
 	uint32_t num_relocs;
 	uint32_t __user *reloc_user;
 };
+
+struct capture_common_status_notifier {
+	struct dma_buf *buf;
+	void *va;
+	uint32_t offset;
+};
+
+int capture_common_setup_progress_status_notifier(
+		struct capture_common_status_notifier *status_notifier,
+		uint32_t mem,
+		uint32_t buffer_size,
+		uint32_t mem_offset);
+
+int capture_common_set_progress_status(
+		struct capture_common_status_notifier *progress_status_notifier,
+		uint32_t buffer_slot,
+		uint32_t buffer_depth, uint8_t new_val);
+
+int capture_common_release_progress_status_notifier(
+		struct capture_common_status_notifier *progress_status_notifier);
 
 int capture_common_pin_memory(struct device *dev,
 		uint32_t mem, struct capture_common_buf *unpin_data);

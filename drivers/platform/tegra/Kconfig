@@ -220,4 +220,11 @@ config TEGRA_BOOTLOADER_DEBUG_INIT
 	bool
 	depends on TEGRA_BOOTLOADER_DEBUG
 
+config TEGRA_BOOTLOADER_BOOT_CFG
+	tristate "Creates sysfs interface for BCP data"
+	depends on TEGRA_BOOTLOADER_DEBUG_INIT
+	default n
+	help
+	  When enabled, boot_cfg sys-fs is created.
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

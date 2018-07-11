@@ -35,6 +35,7 @@ static const char *gr_file_mb1 = "gr_mb1";
 static const char *gr_file_mb2 = "gr_mb2";
 static const char *gr_file_cpu_bl = "gr_cpu_bl";
 static const char *profiler = "profiler";
+static const char *boot_cfg = "boot_cfg";
 
 struct gr_address_value {
 	unsigned int gr_address;
@@ -56,6 +57,30 @@ enum gr_stage {
 	enum_gr_cpu_bl,
 };
 
+struct spi_header {
+	uint16_t crc;
+	uint16_t crc_ack;
+	uint16_t frame_len;
+	struct {
+		uint8_t id: 3;
+		uint8_t version: 3;
+		uint8_t reserved: 1;
+		uint8_t has_ts: 1;
+	} version;
+} __packed;
+
+struct spi_boot_header {
+	struct spi_header header;
+	bool rm_respond_evt: 1;
+	uint8_t rm_respond_data: 4;
+	uint8_t reserved1: 3;
+};
+
+struct spi_boot_rx_frame_full {
+	struct spi_boot_header header;
+	uint8_t data[8200 - sizeof(struct spi_boot_header)];
+};
+
 const uint32_t gr_mb1 = enum_gr_mb1;
 const uint32_t gr_mb2 = enum_gr_mb2;
 const uint32_t gr_cpu_bl = enum_gr_cpu_bl;
@@ -69,38 +94,50 @@ static int dbg_golden_register_open_cpu_bl(struct inode *inode, struct file *fil
 static struct dentry *bl_debug_node;
 static struct dentry *bl_debug_verify_reg_node;
 static struct dentry *bl_debug_profiler;
+static struct dentry *bl_debug_boot_cfg;
 static void *tegra_bl_mapped_prof_start;
 static void *tegra_bl_mapped_debug_data_start;
+static int boot_cfg_show(struct seq_file *s, void *unused);
+static int boot_cfg_open(struct inode *inode, struct file *file);
+static void *tegra_bl_mapped_boot_cfg_start;
 
 static const struct file_operations debug_gr_fops_mb1 = {
-	.open           = dbg_golden_register_open_mb1,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
+	.open		= dbg_golden_register_open_mb1,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 
 static const struct file_operations debug_gr_fops_mb2 = {
-	.open           = dbg_golden_register_open_mb2,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
+	.open		= dbg_golden_register_open_mb2,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 
 static const struct file_operations debug_gr_fops_cpu_bl = {
-	.open           = dbg_golden_register_open_cpu_bl,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
+	.open		= dbg_golden_register_open_cpu_bl,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 
 static const struct file_operations profiler_fops = {
-	.open           = profiler_open,
-	.read           = seq_read,
-	.llseek         = seq_lseek,
-	.release        = single_release,
+	.open		= profiler_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+
+static const struct file_operations boot_cfg_fops = {
+	.open		= boot_cfg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 #define MAX_PROFILE_STRLEN	55
@@ -108,7 +145,7 @@ static const struct file_operations profiler_fops = {
 struct profiler_record {
 	char str[MAX_PROFILE_STRLEN + 1];
 	uint64_t timestamp;
-} __attribute__((packed));
+} __packed;
 
 static int profiler_show(struct seq_file *s, void *unused)
 {
@@ -207,10 +244,12 @@ static int dbg_golden_register_open_cpu_bl( __attribute((unused))struct inode *i
 {
 	return single_open(file, dbg_golden_register_show, (void *)&gr_cpu_bl);
 }
+
 static int __init tegra_bootloader_debuginit(void)
 {
 	void __iomem *ptr_bl_prof_start = NULL;
 	void __iomem *ptr_bl_debug_data_start = NULL;
+	void __iomem *ptr_bl_boot_cfg_start = NULL;
 
 	bl_debug_node = debugfs_create_dir(dir_name, NULL);
 
@@ -263,7 +302,7 @@ static int __init tegra_bootloader_debuginit(void)
 		WARN_ON(!ptr_bl_prof_start);
 		if (!ptr_bl_prof_start) {
 			pr_err("%s: Failed to map tegra_bl_prof_start%08x\n",
-			       __func__, (unsigned int)tegra_bl_prof_start);
+				__func__, (unsigned int)tegra_bl_prof_start);
 			goto out_err;
 		}
 
@@ -279,20 +318,101 @@ static int __init tegra_bootloader_debuginit(void)
 		WARN_ON(!ptr_bl_debug_data_start);
 		if (!ptr_bl_debug_data_start) {
 			pr_err("%s: Failed to map tegra_bl_debug_data_start%08x\n",
-			       __func__, (unsigned int)tegra_bl_debug_data_start);
+			   __func__, (unsigned int)tegra_bl_debug_data_start);
 			goto out_err;
 		}
 
 		tegra_bl_mapped_debug_data_start = ptr_bl_debug_data_start;
 	}
 
+	/*
+	 * The BCP can be optional, so ignore creating if variables are not set
+	 */
+	if (tegra_bl_bcp_start && tegra_bl_bcp_size) {
+		bl_debug_boot_cfg = debugfs_create_file(boot_cfg, 0444,
+			bl_debug_node, NULL, &boot_cfg_fops);
+		if (IS_ERR_OR_NULL(bl_debug_boot_cfg)) {
+			pr_err("%s: failed to create debugfs entries: %ld\n",
+				__func__, PTR_ERR(bl_debug_boot_cfg));
+			goto out_err;
+		}
+
+		tegra_bl_mapped_boot_cfg_start =
+			phys_to_virt(tegra_bl_bcp_start);
+		if (!pfn_valid(__phys_to_pfn(tegra_bl_bcp_start))) {
+			ptr_bl_boot_cfg_start = ioremap(tegra_bl_bcp_start,
+							tegra_bl_bcp_size);
+
+			WARN_ON(!ptr_bl_boot_cfg_start);
+			if (!ptr_bl_boot_cfg_start) {
+				pr_err("%s: Failed to map tegra_bl_prof_start %08x\n",
+					__func__,
+					(unsigned int)tegra_bl_bcp_start);
+				goto out_err;
+			}
+			tegra_bl_mapped_boot_cfg_start = ptr_bl_boot_cfg_start;
+		}
+	}
 	return 0;
 
 out_err:
 	if (!IS_ERR_OR_NULL(bl_debug_node))
 		debugfs_remove_recursive(bl_debug_node);
 
+	if (ptr_bl_prof_start)
+		iounmap(ptr_bl_prof_start);
+	if (ptr_bl_debug_data_start)
+		iounmap(ptr_bl_debug_data_start);
+	if (ptr_bl_boot_cfg_start)
+		iounmap(ptr_bl_boot_cfg_start);
+
 	return -ENODEV;
+}
+
+
+static int boot_cfg_show(struct seq_file *s, void *unused)
+{
+	uint8_t *data = tegra_bl_mapped_boot_cfg_start;
+	struct spi_boot_rx_frame_full *spi_frame =
+			tegra_bl_mapped_boot_cfg_start;
+	uint32_t i;
+
+	seq_puts(s, "\n Dumping Boot Configuration Protocol ");
+	seq_printf(s, "0x%08x bytes @ 0x%08x\n",
+			(unsigned int)tegra_bl_bcp_size,
+			(unsigned int)tegra_bl_bcp_start);
+
+	seq_puts(s, "\n SPI frame header\n");
+	seq_printf(s, " CRC	  : 0x%02x\n",
+			spi_frame->header.header.crc);
+	seq_printf(s, " CRC ACK	  : 0x%02x\n",
+			spi_frame->header.header.crc_ack);
+	seq_printf(s, " Frame len	: 0x%02x (%d)\n",
+			spi_frame->header.header.frame_len,
+			spi_frame->header.header.frame_len);
+	seq_printf(s, " Protocol ID  : 0x%01x\n",
+			spi_frame->header.header.version.id);
+	seq_printf(s, " Version	  : 0x%01x\n",
+			spi_frame->header.header.version.version);
+	seq_printf(s, " Has ts	: 0x%01x\n",
+			spi_frame->header.header.version.has_ts);
+	seq_printf(s, " Run mode evt: 0x%01x\n",
+			spi_frame->header.rm_respond_evt);
+	seq_printf(s, " Run mode	 : 0x%01x\n",
+			spi_frame->header.rm_respond_data);
+
+	for (i = 0; i < tegra_bl_bcp_size; i++) {
+		if (i % 12 == 0)
+			seq_printf(s, "\n %05d | ", i);
+
+		seq_printf(s, "0x%02x ", data[i]);
+	}
+	return 0;
+}
+
+static int boot_cfg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, boot_cfg_show, &inode->i_private);
 }
 
 static int __init tegra_bl_debuginit_module_init(void)
@@ -310,6 +430,9 @@ static void __exit tegra_bl_debuginit_module_exit(void)
 
 	if (tegra_bl_mapped_debug_data_start)
 		iounmap(tegra_bl_mapped_debug_data_start);
+
+	if (tegra_bl_mapped_boot_cfg_start)
+		iounmap(tegra_bl_mapped_boot_cfg_start);
 }
 
 module_init(tegra_bl_debuginit_module_init);

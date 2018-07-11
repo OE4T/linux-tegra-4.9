@@ -34,6 +34,12 @@ EXPORT_SYMBOL(tegra_bl_prof_start);
 phys_addr_t tegra_bl_prof_size;
 EXPORT_SYMBOL(tegra_bl_prof_size);
 
+phys_addr_t tegra_bl_bcp_start;
+EXPORT_SYMBOL(tegra_bl_bcp_start);
+
+phys_addr_t tegra_bl_bcp_size;
+EXPORT_SYMBOL(tegra_bl_bcp_size);
+
 static int __init tegra_bl_prof_arg(char *option)
 {
 	char *p = option;
@@ -103,3 +109,42 @@ static int __init tegra_bl_debug_data_arg(char *options)
 	return 0;
 }
 early_param("bl_debug_data", tegra_bl_debug_data_arg);
+
+static int tegra_bl_bcp_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bl_bcp_size = memparse(p, &p);
+
+	if (!p)
+		return -EINVAL;
+	if (*p != '@')
+		return -EINVAL;
+
+	tegra_bl_bcp_start = memparse(p + 1, &p);
+
+	if (!tegra_bl_bcp_size || !tegra_bl_bcp_start) {
+		tegra_bl_bcp_size = 0;
+		tegra_bl_bcp_start = 0;
+		return -ENXIO;
+	}
+
+	if (pfn_valid(__phys_to_pfn(tegra_bl_bcp_start))) {
+		if (memblock_reserve(tegra_bl_bcp_start,
+					   tegra_bl_bcp_size)) {
+			pr_err("Failed to reserve boot_cfg_data %08llx@%08llx\n",
+				  (u64)tegra_bl_bcp_size,
+				  (u64)tegra_bl_bcp_start);
+			tegra_bl_bcp_size = 0;
+			tegra_bl_bcp_start = 0;
+			return -ENXIO;
+		}
+	}
+
+	pr_warn("Got boot_cfg_data %08llx@%08llx\n",
+				  (u64)tegra_bl_bcp_size,
+				  (u64)tegra_bl_bcp_start);
+
+	return 0;
+}
+early_param("boot_cfg_dataptr", tegra_bl_bcp_arg);

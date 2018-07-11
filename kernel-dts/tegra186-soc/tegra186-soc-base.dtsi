@@ -961,7 +961,8 @@
 			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb0_reserved>;
-			iommu-direct-regions = <&fb0_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved>;
 		};
 
 		head1: nvdisplay@15210000 {
@@ -1020,7 +1021,8 @@
 			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb1_reserved>;
-			iommu-direct-regions = <&fb1_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved>;
 		};
 
 		head2: nvdisplay@15220000 {
@@ -1077,7 +1079,8 @@
 			pinctrl-11 = <&hdmi_dp1_dpd_enable>;
 			status = "disabled";
 			fb_reserved = <&fb2_reserved>;
-			iommu-direct-regions = <&fb2_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved>;
 		};
 
 		dsi: dsi {	/* dsi@15300000 */

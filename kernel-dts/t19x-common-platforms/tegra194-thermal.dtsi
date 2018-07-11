@@ -86,13 +86,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <92000>;
+					temperature = <96500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <86500>;
+					temperature = <91000>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -109,16 +109,17 @@
 
 		AUX-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
 			trips {
 				trip_critical {
-					temperature = <91500>;
+					temperature = <90000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 
 				trip_bthrot {
-					temperature = <86000>;
+					temperature = <84500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -143,13 +144,13 @@
 
 			trips {
 				trip_critical {
-					temperature = <93500>;
+					temperature = <99000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
 				};
 				trip_bthrot {
-					temperature = <88000>;
+					temperature = <93500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;

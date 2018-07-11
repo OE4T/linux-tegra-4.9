@@ -315,8 +315,8 @@ static int spidev_message(struct spidev_data *spidev,
 				goto done;
 			}
 			u_tmp->len = k_tmp->len;
+			rx_buf += k_tmp->len;
 		}
-		rx_buf += k_tmp->len;
 		total += k_tmp->len;
 		u_tmp++;
 		k_tmp++;

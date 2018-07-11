@@ -1021,9 +1021,11 @@ static const char *fbcon_startup(void)
 static void fbcon_init(struct vc_data *vc, int init)
 {
 	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
+	struct fb_var_screeninfo var;
 	struct fbcon_ops *ops;
 	struct vc_data **default_mode = vc->vc_display_fg;
 	struct vc_data *svc = *default_mode;
+	struct vc_data *cur_vc = vc_cons[fg_console].d;
 	struct display *t, *p = &fb_display[vc->vc_num];
 	int logo = 1, new_rows, new_cols, rows, cols, charcnt = 256;
 	int cap, ret;
@@ -1037,8 +1039,20 @@ static void fbcon_init(struct vc_data *vc, int init)
 	    (info->fix.type == FB_TYPE_TEXT))
 		logo = 0;
 
-	if (var_to_display(p, &info->var, info))
-		return;
+	/*
+	 * If the new console is a text console and if any graphical client
+	 * is currently active on the foreground console, use console mode
+	 * instead of fb mode. This is because fb mode might have been updated
+	 * by the graphical client and might be different from fbconsole mode.
+	 */
+	if (cur_vc && cur_vc->vc_mode != KD_TEXT && vc->vc_mode == KD_TEXT) {
+		display_to_var(&var, &fb_display[fg_console]);
+		if (var_to_display(p, &var, info))
+			return;
+	} else {
+		if (var_to_display(p, &info->var, info))
+			return;
+	}
 
 	if (!info->fbcon_par)
 		con2fb_acquire_newinfo(vc, info, vc->vc_num, -1);

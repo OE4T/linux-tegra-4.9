@@ -80,7 +80,7 @@ struct adsp_event_nlmsg {
 #define ADSP_RESPONSE_TIMEOUT	1000 /* in ms */
 /* ADSP controls plugin index */
 #define PLUGIN_SET_PARAMS_IDX	1
-#define PLUGIN_SEND_BYTES_IDX	11
+#define PLUGIN_SEND_BYTES_IDX	21
 static const unsigned int tegra210_adsp_rates[] = {
 	8000, 11025, 12000, 16000, 22050,
 	24000, 32000, 44100, 48000

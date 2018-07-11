@@ -28,12 +28,15 @@
 
 static void gp106_falcon_engine_dependency_ops(struct nvgpu_falcon *flcn)
 {
+	struct gk20a *g = flcn->g;
 	struct nvgpu_falcon_engine_dependency_ops *flcn_eng_dep_ops =
 			&flcn->flcn_engine_dep_ops;
 
 	switch (flcn->flcn_id) {
 	case FALCON_ID_PMU:
 		flcn_eng_dep_ops->reset_eng = nvgpu_pmu_reset;
+		flcn_eng_dep_ops->queue_head = g->ops.pmu.pmu_queue_head;
+		flcn_eng_dep_ops->queue_tail = g->ops.pmu.pmu_queue_tail;
 		break;
 	case FALCON_ID_SEC2:
 		flcn_eng_dep_ops->reset_eng = gp106_sec2_reset;

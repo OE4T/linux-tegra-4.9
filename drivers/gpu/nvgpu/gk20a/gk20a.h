@@ -771,7 +771,7 @@ struct gpu_ops {
 		u32 (*pmu_allocation_get_fb_size)(
 				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr);
 		void (*get_pmu_init_msg_pmu_queue_params)(
-				struct pmu_queue *queue, u32 id,
+				struct nvgpu_falcon_queue *queue, u32 id,
 				void *pmu_init_msg);
 		void *(*get_pmu_msg_pmu_init_msg_ptr)(
 				struct pmu_init_msg *init);
@@ -1003,10 +1003,10 @@ struct gpu_ops {
 		u32 (*pmu_get_queue_head_size)(void);
 		u32 (*pmu_get_queue_tail_size)(void);
 		u32 (*pmu_get_queue_tail)(u32 i);
-		int (*pmu_queue_head)(struct nvgpu_pmu *pmu,
-			struct pmu_queue *queue, u32 *head, bool set);
-		int (*pmu_queue_tail)(struct nvgpu_pmu *pmu,
-			struct pmu_queue *queue, u32 *tail, bool set);
+		int (*pmu_queue_head)(struct gk20a *g,
+			struct nvgpu_falcon_queue *queue, u32 *head, bool set);
+		int (*pmu_queue_tail)(struct gk20a *g,
+			struct nvgpu_falcon_queue *queue, u32 *tail, bool set);
 		void (*pmu_msgq_tail)(struct nvgpu_pmu *pmu,
 			u32 *tail, bool set);
 		u32 (*pmu_mutex_size)(void);

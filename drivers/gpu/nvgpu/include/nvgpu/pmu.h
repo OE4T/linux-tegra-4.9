@@ -32,6 +32,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/flcnif_cmn.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/falcon.h>
 
 #define nvgpu_pmu_dbg(g, fmt, args...) \
 	nvgpu_log(g, gpu_dbg_pmu, fmt, ##args)
@@ -266,30 +267,6 @@ struct pmu_ucode_desc_v1 {
 	u32 compressed;
 };
 
-struct pmu_queue {
-
-	/* used by hw, for BIOS/SMI queue */
-	u32 mutex_id;
-	u32 mutex_lock;
-	/* used by sw, for LPQ/HPQ queue */
-	struct nvgpu_mutex mutex;
-
-	/* current write position */
-	u32 position;
-	/* physical dmem offset where this queue begins */
-	u32 offset;
-	/* logical queue identifier */
-	u32 id;
-	/* physical queue index */
-	u32 index;
-	/* in bytes */
-	u32 size;
-
-	/* open-flag */
-	u32 oflag;
-	bool opened; /* opened implies locked */
-};
-
 struct pmu_mutex {
 	u32 id;
 	u32 index;
@@ -345,7 +322,7 @@ struct nvgpu_pmu {
 
 	struct pmu_sha1_gid gid_info;
 
-	struct pmu_queue queue[PMU_QUEUE_COUNT];
+	struct nvgpu_falcon_queue queue[PMU_QUEUE_COUNT];
 
 	struct pmu_sequence *seq;
 	unsigned long pmu_seq_tbl[PMU_SEQ_TBL_SIZE];
@@ -450,7 +427,6 @@ int nvgpu_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token);
 
 int nvgpu_pmu_queue_init(struct nvgpu_pmu *pmu, u32 id,
 	union pmu_init_msg_pmu *init);
-bool nvgpu_pmu_queue_is_empty(struct nvgpu_pmu *pmu, struct pmu_queue *queue);
 
 /* send a cmd to pmu */
 int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,

@@ -170,6 +170,7 @@ nvgpu-y += \
 	common/rbtree.o \
 	common/vbios/bios.o \
 	common/falcon/falcon.o \
+	common/falcon/falcon_queue.o \
 	common/pmu/pmu.o \
 	common/pmu/pmu_ipc.o \
 	common/pmu/pmu_fw.o \

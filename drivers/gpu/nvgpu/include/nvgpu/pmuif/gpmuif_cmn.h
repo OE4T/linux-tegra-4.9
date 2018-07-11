@@ -27,15 +27,11 @@
  * commands to the PMU
  */
 /* write by sw, read by pmu, protected by sw mutex lock */
-#define PMU_COMMAND_QUEUE_HPQ		0
+#define PMU_COMMAND_QUEUE_HPQ		0U
 /* write by sw, read by pmu, protected by sw mutex lock */
-#define PMU_COMMAND_QUEUE_LPQ		1
-/* read/write by sw/hw, protected by hw pmu mutex, id = 2 */
-#define PMU_COMMAND_QUEUE_BIOS		2
-/* read/write by sw/hw, protected by hw pmu mutex, id = 3 */
-#define PMU_COMMAND_QUEUE_SMI		3
+#define PMU_COMMAND_QUEUE_LPQ		1U
 /* write by pmu, read by sw, accessed by interrupt handler, no lock */
-#define PMU_MESSAGE_QUEUE		4
+#define PMU_MESSAGE_QUEUE		4U
 #define PMU_QUEUE_COUNT			5
 
 #define PMU_IS_COMMAND_QUEUE(id)	\
@@ -48,15 +44,13 @@
 #define  PMU_IS_MESSAGE_QUEUE(id)	\
 		((id) == PMU_MESSAGE_QUEUE)
 
-enum {
-	OFLAG_READ = 0,
-	OFLAG_WRITE
-};
+#define OFLAG_READ 	0U
+#define OFLAG_WRITE	1U
 
 #define QUEUE_SET		(true)
 #define QUEUE_GET		(false)
 
-#define QUEUE_ALIGNMENT		(4)
+#define QUEUE_ALIGNMENT		(4U)
 
 /* An enumeration containing all valid logical mutex identifiers */
 enum {

@@ -377,10 +377,9 @@ int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 	return 0;
 }
 
-int gk20a_pmu_queue_head(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
+int gk20a_pmu_queue_head(struct gk20a *g, struct nvgpu_falcon_queue *queue,
 			u32 *head, bool set)
 {
-	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 queue_head_size = 0;
 
 	if (g->ops.pmu.pmu_get_queue_head_size)
@@ -414,10 +413,9 @@ int gk20a_pmu_queue_head(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 	return 0;
 }
 
-int gk20a_pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
+int gk20a_pmu_queue_tail(struct gk20a *g, struct nvgpu_falcon_queue *queue,
 			u32 *tail, bool set)
 {
-	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 queue_tail_size = 0;
 
 	if (g->ops.pmu.pmu_get_queue_tail_size)
@@ -692,7 +690,7 @@ bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu)
 void gk20a_pmu_isr(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
-	struct pmu_queue *queue;
+	struct nvgpu_falcon_queue *queue;
 	u32 intr, mask;
 	bool recheck = false;
 
@@ -749,9 +747,10 @@ void gk20a_pmu_isr(struct gk20a *g)
 
 	if (recheck) {
 		queue = &pmu->queue[PMU_MESSAGE_QUEUE];
-		if (!nvgpu_pmu_queue_is_empty(pmu, queue))
+		if (!nvgpu_flcn_queue_is_empty(pmu->flcn, queue)) {
 			gk20a_writel(g, pwr_falcon_irqsset_r(),
 				pwr_falcon_irqsset_swgen0_set_f());
+		}
 	}
 
 	nvgpu_mutex_release(&pmu->isr_mutex);

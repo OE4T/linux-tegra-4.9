@@ -517,8 +517,9 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	pmu->isr_enabled = false;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
-	for (i = 0; i < PMU_QUEUE_COUNT; i++)
-		nvgpu_mutex_destroy(&pmu->queue[i].mutex);
+	for (i = 0; i < PMU_QUEUE_COUNT; i++) {
+		nvgpu_flcn_queue_free(pmu->flcn, &pmu->queue[i]);
+	}
 
 	nvgpu_pmu_state_change(g, PMU_STATE_OFF, false);
 	pmu->pmu_ready = false;

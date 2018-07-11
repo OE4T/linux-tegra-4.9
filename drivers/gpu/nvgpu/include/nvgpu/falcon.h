@@ -167,6 +167,44 @@ struct gk20a;
 struct nvgpu_falcon;
 struct nvgpu_falcon_bl_info;
 
+struct nvgpu_falcon_queue {
+
+	/* Queue Type (queue_type) */
+	u8 queue_type;
+
+	/* used by nvgpu, for command LPQ/HPQ */
+	struct nvgpu_mutex mutex;
+
+	/* current write position */
+	u32 position;
+	/* physical dmem offset where this queue begins */
+	u32 offset;
+	/* logical queue identifier */
+	u32 id;
+	/* physical queue index */
+	u32 index;
+	/* in bytes */
+	u32 size;
+	/* open-flag */
+	u32 oflag;
+
+	/* queue type(DMEM-Q/FB-Q) specific ops */
+	int (*rewind)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue);
+	int (*pop)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue, void *data, u32 size,
+		u32 *bytes_read);
+	int (*push)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue, void *data, u32 size);
+	bool (*has_room)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue, u32 size,
+		bool *need_rewind);
+	int (*tail)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue, u32 *tail, bool set);
+	int (*head)(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue, u32 *head, bool set);
+};
+
 struct nvgpu_falcon_version_ops {
 	void (*start_cpu_secure)(struct nvgpu_falcon *flcn);
 	void (*write_dmatrfbase)(struct nvgpu_falcon *flcn, u32 addr);
@@ -175,6 +213,11 @@ struct nvgpu_falcon_version_ops {
 /* ops which are falcon engine specific */
 struct nvgpu_falcon_engine_dependency_ops {
 	int (*reset_eng)(struct gk20a *g);
+	int (*queue_head)(struct gk20a *g, struct nvgpu_falcon_queue *queue,
+		u32 *head, bool set);
+	int (*queue_tail)(struct gk20a *g, struct nvgpu_falcon_queue *queue,
+		u32 *tail, bool set);
+	void (*msgq_tail)(struct gk20a *g, u32 *tail, bool set);
 };
 
 struct nvgpu_falcon_ops {
@@ -258,6 +301,21 @@ void nvgpu_flcn_print_imem(struct nvgpu_falcon *flcn, u32 src, u32 size);
 void nvgpu_flcn_dump_stats(struct nvgpu_falcon *flcn);
 int nvgpu_flcn_bl_bootstrap(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_bl_info *bl_info);
+
+/* queue public functions */
+int nvgpu_flcn_queue_init(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue);
+bool nvgpu_flcn_queue_is_empty(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue);
+int nvgpu_flcn_queue_rewind(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue);
+int nvgpu_flcn_queue_pop(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue, void *data, u32 size,
+	u32 *bytes_read);
+int nvgpu_flcn_queue_push(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue, void *data, u32 size);
+void nvgpu_flcn_queue_free(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue);
 
 void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);
 

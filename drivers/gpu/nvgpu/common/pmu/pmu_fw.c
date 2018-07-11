@@ -848,7 +848,8 @@ static void perfmon_cmd_init_set_mov_avg_v1(struct pmu_perfmon_cmd *pc,
 	init->samples_in_moving_avg = value;
 }
 
-static void get_pmu_init_msg_pmu_queue_params_v1(struct pmu_queue *queue,
+static void get_pmu_init_msg_pmu_queue_params_v1(
+	struct nvgpu_falcon_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
 	struct pmu_init_msg_pmu_v1 *init =
@@ -859,7 +860,8 @@ static void get_pmu_init_msg_pmu_queue_params_v1(struct pmu_queue *queue,
 	queue->size = init->queue_info[id].size;
 }
 
-static void get_pmu_init_msg_pmu_queue_params_v4(struct pmu_queue *queue,
+static void get_pmu_init_msg_pmu_queue_params_v4(
+	struct nvgpu_falcon_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
 	struct pmu_init_msg_pmu_v4 *init = pmu_init_msg;
@@ -885,7 +887,8 @@ static void get_pmu_init_msg_pmu_queue_params_v4(struct pmu_queue *queue,
 	queue->offset   = init->queue_offset + current_ptr;
 }
 
-static void get_pmu_init_msg_pmu_queue_params_v5(struct pmu_queue *queue,
+static void get_pmu_init_msg_pmu_queue_params_v5(
+	struct nvgpu_falcon_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
 	struct pmu_init_msg_pmu_v5 *init = pmu_init_msg;
@@ -911,7 +914,8 @@ static void get_pmu_init_msg_pmu_queue_params_v5(struct pmu_queue *queue,
 	queue->offset   = init->queue_offset + current_ptr;
 }
 
-static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
+static void get_pmu_init_msg_pmu_queue_params_v3(
+	struct nvgpu_falcon_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
 	struct pmu_init_msg_pmu_v3 *init =

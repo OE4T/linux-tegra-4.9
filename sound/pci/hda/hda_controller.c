@@ -702,38 +702,24 @@ static int azx_pcm_mmap(struct snd_pcm_substream *substream,
 static int azx_pcm_silence(struct snd_pcm_substream *substream,
 		int channel, snd_pcm_uframes_t pos, snd_pcm_uframes_t count)
 {
-	static unsigned int silence_frame_cnt = 0;
-	const int inject_freq_ms = 200;
+	static int idle_sample_value = 1;
 	int16_t *buf16 = (int16_t *)((char *)substream->runtime->dma_area +
-		frames_to_bytes(substream->runtime, pos));
+		frames_to_bytes(substream->runtime, pos)), i, j;
 	int32_t *buf32 = (int32_t *)((char *)substream->runtime->dma_area +
 		frames_to_bytes(substream->runtime, pos));
-	int j;
 
-	memset(buf16, 0, frames_to_bytes(substream->runtime, count));
-	silence_frame_cnt += count;
-
-	if (silence_frame_cnt >= ((substream->runtime->rate / 1000) * inject_freq_ms)) {
-		if (substream->runtime->format == SNDRV_PCM_FORMAT_S32_LE) {
+	if (substream->runtime->format == SNDRV_PCM_FORMAT_S32_LE) {
+		for (i = 0; i < count; i++) {
 			for (j = 0; j < substream->runtime->channels; j++)
-				*buf32++ = 1;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf32++ = 0;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf32++ = -1;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf32++ = 0;
-		} else {
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf16++ = 1;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf16++ = 0;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf16++ = -1;
-			for (j = 0; j < substream->runtime->channels; j++)
-				*buf16++ = 0;
+				*buf32++ = idle_sample_value;
+			idle_sample_value = -idle_sample_value;
 		}
-		silence_frame_cnt = 0;
+	} else {
+		for (i = 0; i < count; i++) {
+			for (j = 0; j < substream->runtime->channels; j++)
+				*buf16++ = idle_sample_value;
+			idle_sample_value = -idle_sample_value;
+		}
 	}
 
 	return 0;

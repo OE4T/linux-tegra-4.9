@@ -1,7 +1,7 @@
 /*
  * dphdcp.c: dp hdcp driver.
  *
- * Copyright (c) 2015-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2076,6 +2076,7 @@ static int get_dphdcp_state(struct tegra_dphdcp *dphdcp,
 		pkt->hdcp22 = dphdcp->hdcp22;
 		pkt->port = TEGRA_NVHDCP_PORT_DP;
 	}
+	pkt->sor = dphdcp->dp->sor->ctrl_num;
 	mutex_unlock(&dphdcp->lock);
 	return 0;
 }

@@ -1,7 +1,7 @@
 /*
  * hdmihdcp.c: hdmi hdcp functions.
  *
- * Copyright (c) 2014-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -553,6 +553,7 @@ static int get_nvhdcp_state(struct tegra_nvhdcp *nvhdcp,
 		pkt->hdcp22 = nvhdcp->hdcp22;
 		pkt->port = TEGRA_NVHDCP_PORT_HDMI;
 	}
+	pkt->sor = nvhdcp->hdmi->sor->ctrl_num;
 	mutex_unlock(&nvhdcp->lock);
 	return 0;
 }

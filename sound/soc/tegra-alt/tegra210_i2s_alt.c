@@ -629,6 +629,9 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	bitcnt = (i2sclock / srate) - 1;
 
+	if (frame_format == TEGRA210_I2S_FRAME_FORMAT_LRCK)
+		bitcnt >>= 1;
+
 	if ((bitcnt < 0) ||
 		(bitcnt > TEGRA210_I2S_TIMING_CHANNEL_BIT_CNT_MASK)) {
 		dev_err(dev, "Can't set channel bit count\n");
@@ -641,11 +644,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if ((frame_format == TEGRA210_I2S_FRAME_FORMAT_LRCK) && (channels > 1)) {
-		val = (bitcnt >> 1) <<
-			TEGRA210_I2S_TIMING_CHANNEL_BIT_CNT_SHIFT;
-	} else
-		val = bitcnt << TEGRA210_I2S_TIMING_CHANNEL_BIT_CNT_SHIFT;
+	val = bitcnt << TEGRA210_I2S_TIMING_CHANNEL_BIT_CNT_SHIFT;
 
 	if (i2sclock % (2 * srate))
 		val |= TEGRA210_I2S_TIMING_NON_SYM_EN;

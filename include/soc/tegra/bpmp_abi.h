@@ -157,6 +157,7 @@ struct mrq_response {
 #define MRQ_CPU_AUTO_CC3	70
 #define MRQ_QUERY_FW_TAG	71
 #define MRQ_FMON		72
+#define MRQ_EC			73
 
 /** @} */
 
@@ -189,6 +190,7 @@ struct mrq_response {
  *   @defgroup UPHY UPHY
  *   @defgroup CC3 Auto-CC3
  *   @defgroup FMON FMON
+ *   @defgroup EC EC
  * @}
  */
 
@@ -2315,6 +2317,190 @@ struct mrq_fmon_response {
 		/** @private */
 		struct cmd_fmon_gear_free_response fmon_gear_free;
 		struct cmd_fmon_gear_get_response fmon_gear_get;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/** @} */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_EC
+ * @brief Provide status information on faults reported by Error
+ *        Collator (EC) to HSM.
+ *
+ * * Platforms: T194
+ * * Initiators: CCPLEX
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_ec_request
+ * * Response Payload: @ref mrq_ec_response
+ *
+ * @note This MRQ ABI is under construction, and subject to change
+ *
+ * @addtogroup EC
+ * @{
+ */
+enum {
+	/**
+	 * @brief Retrieve specified EC status.
+	 *
+	 * Query fails if specified EC is not owned by BPMP, or power
+	 * domain EC belongs to is turned off.
+	 */
+	CMD_EC_STATUS_GET = 1,
+	CMD_EC_NUM,
+};
+
+/** @brief EC error types. */
+enum {
+	/** @brief Parity error on internal data path */
+	EC_ERR_TYPE_PARITY_INTERNAL		= 1,
+	/** @brief ECC SEC error on internal data path */
+	EC_ERR_TYPE_ECC_SEC_INTERNAL		= 2,
+	/** @brief ECC DED error on internal data path */
+	EC_ERR_TYPE_ECC_DED_INTERNAL		= 3,
+	/** @brief Comparator error */
+	EC_ERR_TYPE_COMPARATOR			= 4,
+	/** @brief Register parity error */
+	EC_ERR_TYPE_REGISTER_PARITY		= 5,
+	/** @brief Parity error from on-chip SRAM/FIFO */
+	EC_ERR_TYPE_PARITY_SRAM			= 6,
+	/** @brief ECC SEC error from on-chip SRAM/FIFO */
+	EC_ERR_TYPE_ECC_SEC_SRAM		= 7,
+	/** @brief ECC DED error from on-chip SRAM/FIFO */
+	EC_ERR_TYPE_ECC_DED_SRAM		= 8,
+	/** @brief Clock Monitor error */
+	EC_ERR_TYPE_CLOCK_MONITOR		= 9,
+	/** @brief Voltage Monitor error */
+	EC_ERR_TYPE_VOLTAGE_MONITOR		= 10,
+	/** @brief Temperature error */
+	EC_ERR_TYPE_TEMPERATURE			= 11,
+
+	/** @brief SW Correctable error */
+	EC_ERR_TYPE_SW_CORRECTABLE		= 16,
+	/** @brief SW Uncorrectable error */
+	EC_ERR_TYPE_SW_UNCORRECTABLE		= 17,
+
+	/** @brief Other HW Correctable error */
+	EC_ERR_TYPE_OTHER_HW_CORRECTABLE	= 32,
+	/** @brief Other HW Uncorrectable error */
+	EC_ERR_TYPE_OTHER_HW_UNCORRECTABLE	= 33,
+};
+
+/** @brief Group of registers with parity error. */
+enum {
+	/** @brief Functional registers group */
+	EC_ERR_GROUP_FUNC_REG		= 0,
+	/** @brief SCR registers group */
+	EC_ERR_GROUP_SCR_REG		= 1,
+};
+
+/** @brief No EC error found flag */
+#define EC_STATUS_FLAG_NO_ERROR		0x0001
+/** @brief Last EC error found flag */
+#define EC_STATUS_FLAG_LAST_ERROR	0x0002
+/** @brief EC error resolved flag */
+#define EC_STATUS_FLAG_RESOLVED_ERROR	0x0004
+/** @brief EC latent error flag */
+#define EC_STATUS_FLAG_LATENT_ERROR	0x0008
+
+struct ec_err_fmon_desc {
+	/** @brief FMON monitored clock id. */
+	uint32_t fmon_clk_id;
+	/** @brief FMON faults bitmask */
+	uint32_t fmon_faults;
+	/** @brief FMON faults access error */
+	int32_t fmon_access_error;
+} __ABI_PACKED;
+
+struct ec_err_vmon_desc {
+	/** @brief VMON rail adc id. */
+	uint32_t vmon_adc_id;
+	/** @brief VMON faults bitmask */
+	uint32_t vmon_faults;
+	/** @brief VMON faults access error */
+	int32_t vmon_access_error;
+} __ABI_PACKED;
+
+struct ec_err_reg_parity_desc {
+	/** @brief Register id. */
+	uint32_t reg_id;
+	/** @brief Register group (SCR or functional).  */
+	uint32_t reg_group;
+} __ABI_PACKED;
+
+struct ec_err_simple_desc {
+	/** @brief Error source id. Id space depends on error type. */
+	uint32_t err_source_id;
+} __ABI_PACKED;
+
+/** @brief Union of EC error descriptors */
+union ec_err_desc {
+	struct ec_err_fmon_desc fmon_desc;
+	struct ec_err_vmon_desc vmon_desc;
+	struct ec_err_reg_parity_desc reg_parity_desc;
+	struct ec_err_simple_desc simple_desc;
+} __ABI_PACKED;
+
+struct cmd_ec_status_get_request {
+	/** @brief HSM error line number that identifies target EC. */
+	uint32_t ec_hsm_id;
+} __ABI_PACKED;
+
+struct cmd_ec_status_get_response {
+	/** @brief Target EC id (the same id received with request). */
+	uint32_t ec_hsm_id;
+	/**
+	 * @brief Bitmask of EC_STATUS_FLAG_ flags.
+	 *
+	 * If NO_ERROR flag is set, error_ fields should be ignored
+	 */
+	uint32_t status_flags;
+	/** @brief Found EC error index. */
+	uint32_t error_idx;
+	/** @brief  Found EC error type. */
+	uint32_t error_type;
+	/** @brief  Found EC error descriptor.  */
+	union ec_err_desc error_desc;
+} __ABI_PACKED;
+
+/**
+ * @ingroup EC
+ * @brief Request with #MRQ_EC
+ *
+ * Used by the sender of an #MRQ_EC message to access ECs owned
+ * by BPMP.
+ *
+ * |sub-command                 |payload                |
+ * |----------------------------|-----------------------|
+ * |CMD_EC_STATUS_GET           |-                      |
+ *
+ */
+
+struct mrq_ec_request {
+	/** @brief Sub-command id. */
+	uint32_t cmd_id;
+
+	union {
+		struct cmd_ec_status_get_request ec_status_get;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup EC
+ * @brief Response to MRQ_EC
+ *
+ * Each sub-command supported by @ref mrq_ec_request may return
+ * sub-command-specific data as indicated below.
+ *
+ * |sub-command                 |payload                 |
+ * |----------------------------|------------------------|
+ * |CMD_EC_STATUS_GET           |ec_status_get           |
+ *
+ */
+
+struct mrq_ec_response {
+	union {
+		struct cmd_ec_status_get_response ec_status_get;
 	} __UNION_ANON;
 } __ABI_PACKED;
 

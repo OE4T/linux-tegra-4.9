@@ -1303,7 +1303,7 @@ fail_to_poweron:
 
 static int nvdla_queue_abort(struct nvhost_queue *queue)
 {
-	int err;
+	int err = 0;
 	struct nvdla_task *t;
 	struct nvdla_cmd_data cmd_data;
 	struct platform_device *pdev = queue->pool->pdev;
@@ -1311,14 +1311,15 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 
 	nvdla_dbg_fn(pdev, "");
 
+	mutex_lock(&queue->list_lock);
 	if (list_empty(&queue->tasklist))
-		return 0;
+		goto list_empty;
 
 	/* get pm refcount */
 	err = nvhost_module_busy(pdev);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to poweron, err: %d", err);
-		return err;
+		goto fail_to_poweron;
 	}
 
 	/* prepare command */
@@ -1358,6 +1359,9 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 
 done:
 	nvhost_module_idle(pdev);
+fail_to_poweron:
+list_empty:
+	mutex_unlock(&queue->list_lock);
 	return err;
 }
 

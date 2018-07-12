@@ -64,6 +64,15 @@
 #define FUSE_CP_REV                    0x90
 #define TEGRA_FUSE_CP_REV_0_3          (3)
 
+#define FUSE_IP_DISABLE_0			0x4b0
+#define FUSE_IP_DISABLE_0_NVLINK_MASK		0x10
+
+#define FUSE_UCODE_MINION_REV_0			0x4d4
+#define FUSE_UCODE_MINION_REV_0_MASK		0x7
+
+#define FUSE_SECURE_MINION_DEBUG_DIS_0		0x4d8
+#define FUSE_SECURE_MINION_DEBUG_DIS_0_MASK	0x1
+
 #ifndef __ASSEMBLY__
 
 u32 tegra_read_chipid(void);

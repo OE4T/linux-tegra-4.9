@@ -43,6 +43,43 @@
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
 /* task management API's */
+static void nvdla_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
+{
+	struct nvdla_task *task = NULL;
+	int i = 0;
+
+	seq_printf(s, "Queue[%p] id[%u]\n", queue, queue->id);
+
+	mutex_lock(&queue->list_lock);
+	list_for_each_entry(task, &queue->tasklist, list) {
+		int j;
+
+		seq_printf(s, "#[%u]th task[%p]\n", i++, task);
+
+		seq_printf(s, "    num of prefences[%d] \n",
+				task->num_prefences);
+		for (j = 0; j < task->num_prefences; j++)
+			seq_printf(s, "    prefence[%d]\n\t"
+				"syncpoint_index=[%u], syncpoint_value=[%u]\n",
+				j,
+				task->prefences[j].syncpoint_index,
+				task->prefences[j].syncpoint_value);
+
+		seq_printf(s, "    num of postfences[%d] \n",
+				task->num_postfences);
+
+		for (j = 0; j < task->num_postfences; j++)
+			seq_printf(s, "    postfence[%d]\n\t"
+				"syncpoint_index=[%u], syncpoint_value=[%u]\n",
+				j,
+				task->postfences[j].syncpoint_index,
+				task->postfences[j].syncpoint_value);
+
+
+	}
+	mutex_unlock(&queue->list_lock);
+}
+
 int nvdla_get_task_mem(struct nvhost_queue *queue,
 			struct nvdla_task **ptask)
 {
@@ -1328,4 +1365,5 @@ struct nvhost_queue_ops nvdla_queue_ops = {
 	.abort = nvdla_queue_abort,
 	.submit = nvdla_queue_submit,
 	.get_task_size =  nvdla_get_task_desc_memsize,
+	.dump = nvdla_queue_dump,
 };

@@ -159,7 +159,7 @@ struct nvhost_device_data t21_vi_info = {
 		 * for kernel-4.4, we need vi clock
 		 */
 #ifdef CONFIG_COMMON_CLK
-		{"vi_v4l2", UINT_MAX},
+		{"vi", UINT_MAX},
 #else
 		{"vi_bypass", UINT_MAX},
 #endif

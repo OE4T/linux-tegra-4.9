@@ -78,6 +78,7 @@ static u32 type;
 static u32 mask;
 static int mode;
 static char *tvmem[TVMEMSIZE];
+static bool skip_partial_test;
 
 static char *check[] = {
 	"des", "md5", "des3_ede", "rot13", "sha1", "sha224", "sha256",
@@ -1589,6 +1590,19 @@ static inline int tcrypt_test(const char *alg)
 	int ret;
 
 	ret = alg_test(alg, alg, 0, 0);
+
+	/* non-fips algs return -EINVAL in fips mode */
+	if (fips_enabled && ret == -EINVAL)
+		ret = 0;
+	return ret;
+}
+
+static inline int tcrypt_hash_test(const char *alg, bool skip_partial_test)
+{
+	int ret;
+
+	ret = alg_hash_test(alg, alg, 0, 0, skip_partial_test);
+
 	/* non-fips algs return -EINVAL in fips mode */
 	if (fips_enabled && ret == -EINVAL)
 		ret = 0;
@@ -1618,7 +1632,7 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 2:
-		ret += tcrypt_test("sha1");
+		ret += tcrypt_hash_test("sha1", skip_partial_test);
 		break;
 
 	case 3:
@@ -1638,7 +1652,7 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 6:
-		ret += tcrypt_test("sha256");
+		ret += tcrypt_hash_test("sha256", skip_partial_test);
 		break;
 
 	case 7:
@@ -1671,11 +1685,11 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 11:
-		ret += tcrypt_test("sha384");
+		ret += tcrypt_hash_test("sha384", skip_partial_test);
 		break;
 
 	case 12:
-		ret += tcrypt_test("sha512");
+		ret += tcrypt_hash_test("sha512", skip_partial_test);
 		break;
 
 	case 13:
@@ -1770,7 +1784,7 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 33:
-		ret += tcrypt_test("sha224");
+		ret += tcrypt_hash_test("sha224", skip_partial_test);
 		break;
 
 	case 34:
@@ -2743,6 +2757,7 @@ module_param(bsize, uint, 0);
 module_param(bcnt, uint, 0);
 module_param(enc_target, uint, 0);
 module_param(dec_target, uint, 0);
+module_param(skip_partial_test, bool, 0);
 /* When this parameter (sec) is not supplied,
  * it calculates in CPU cycles instead
  */

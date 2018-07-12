@@ -5,7 +5,7 @@
  * Copyright (c) 2002 Jean-Francois Dive <jef@linuxbe.org>
  * Copyright (c) 2007 Nokia Siemens Networks
  * Copyright (c) 2008 Herbert Xu <herbert@gondor.apana.org.au>
- * Copyright (c) 2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation. All Rights Reserved.
  *
  * Updated RFC4106 AES-GCM testing.
  *    Authors: Aidan O'Mahony (aidan.o.mahony@intel.com)
@@ -121,6 +121,8 @@ struct alg_test_desc {
 	const char *alg;
 	int (*test)(const struct alg_test_desc *desc, const char *driver,
 		    u32 type, u32 mask);
+	int (*hash_test)(const struct alg_test_desc *desc, const char *driver,
+		    u32 type, u32 mask, bool skip_partial);
 	int fips_allowed;	/* set if alg is allowed in fips mode */
 
 	union {
@@ -252,7 +254,7 @@ out_nostate:
 
 static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 		       unsigned int tcount, bool use_digest,
-		       const int align_offset)
+		       const int align_offset, bool skip_partial)
 {
 	const char *algo = crypto_tfm_alg_driver_name(crypto_ahash_tfm(tfm));
 	unsigned int i, j, k, temp;
@@ -441,6 +443,12 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 		}
 	}
 
+	if (skip_partial) {
+		ret = 0;
+		printk("\n SKIP Testing partial update for %s \n", algo);
+		goto out;
+	}
+
 	/* partial update exercise */
 	j = 0;
 	for (i = 0; i < tcount; i++) {
@@ -532,17 +540,17 @@ out_nobuf:
 }
 
 static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
-		     unsigned int tcount, bool use_digest)
+		     unsigned int tcount, bool use_digest, bool skip_partial)
 {
 	unsigned int alignmask;
 	int ret;
 
-	ret = __test_hash(tfm, template, tcount, use_digest, 0);
+	ret = __test_hash(tfm, template, tcount, use_digest, 0, skip_partial);
 	if (ret)
 		return ret;
 
 	/* test unaligned buffers, check with one byte offset */
-	ret = __test_hash(tfm, template, tcount, use_digest, 1);
+	ret = __test_hash(tfm, template, tcount, use_digest, 1, skip_partial);
 	if (ret)
 		return ret;
 
@@ -550,7 +558,7 @@ static int test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 	if (alignmask) {
 		/* Check if alignment mask for tfm is correctly set. */
 		ret = __test_hash(tfm, template, tcount, use_digest,
-				  alignmask + 1);
+				  alignmask + 1, skip_partial);
 		if (ret)
 			return ret;
 	}
@@ -1625,10 +1633,33 @@ static int alg_test_hash(const struct alg_test_desc *desc, const char *driver,
 	}
 
 	err = test_hash(tfm, desc->suite.hash.vecs,
-			desc->suite.hash.count, true);
+			desc->suite.hash.count, true, 0);
 	if (!err)
 		err = test_hash(tfm, desc->suite.hash.vecs,
-				desc->suite.hash.count, false);
+				desc->suite.hash.count, false, 0);
+
+	crypto_free_ahash(tfm);
+	return err;
+}
+
+static int alg_test_hash_sha(const struct alg_test_desc *desc, const char *driver,
+			 u32 type, u32 mask, bool skip_partial)
+{
+	struct crypto_ahash *tfm;
+	int err;
+
+	tfm = crypto_alloc_ahash(driver, type | CRYPTO_ALG_INTERNAL, mask);
+	if (IS_ERR(tfm)) {
+		printk(KERN_ERR "alg: hash: Failed to load transform for %s: "
+		       "%ld\n", driver, PTR_ERR(tfm));
+		return PTR_ERR(tfm);
+	}
+
+	err = test_hash(tfm, desc->suite.hash.vecs,
+			desc->suite.hash.count, true, skip_partial);
+	if (!err)
+		err = test_hash(tfm, desc->suite.hash.vecs,
+				desc->suite.hash.count, false, skip_partial);
 
 	crypto_free_ahash(tfm);
 	return err;
@@ -4456,7 +4487,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		}
 	}, {
 		.alg = "sha1",
-		.test = alg_test_hash,
+		.hash_test = alg_test_hash_sha,
 		.fips_allowed = 1,
 		.suite = {
 			.hash = {
@@ -4466,7 +4497,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		}
 	}, {
 		.alg = "sha224",
-		.test = alg_test_hash,
+		.hash_test = alg_test_hash_sha,
 		.fips_allowed = 1,
 		.suite = {
 			.hash = {
@@ -4476,7 +4507,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		}
 	}, {
 		.alg = "sha256",
-		.test = alg_test_hash,
+		.hash_test = alg_test_hash_sha,
 		.fips_allowed = 1,
 		.suite = {
 			.hash = {
@@ -4526,7 +4557,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		}
 	}, {
 		.alg = "sha384",
-		.test = alg_test_hash,
+		.hash_test = alg_test_hash_sha,
 		.fips_allowed = 1,
 		.suite = {
 			.hash = {
@@ -4536,7 +4567,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		}
 	}, {
 		.alg = "sha512",
-		.test = alg_test_hash,
+		.hash_test = alg_test_hash_sha,
 		.fips_allowed = 1,
 		.suite = {
 			.hash = {
@@ -4788,14 +4819,19 @@ int alg_test(const char *driver, const char *alg, u32 type, u32 mask)
 	if (fips_enabled && ((i >= 0 && !alg_test_descs[i].fips_allowed) ||
 			     (j >= 0 && !alg_test_descs[j].fips_allowed)))
 		goto non_fips_alg;
-
 	rc = 0;
-	if (i >= 0)
+	if (i >= 0) {
+		if (!alg_test_descs[i].test)
+			goto non_fips_alg;
 		rc |= alg_test_descs[i].test(alg_test_descs + i, driver,
 					     type, mask);
-	if (j >= 0 && j != i)
+	}
+	if (j >= 0 && j != i) {
+		if (!alg_test_descs[j].test)
+			goto non_fips_alg;
 		rc |= alg_test_descs[j].test(alg_test_descs + j, driver,
 					     type, mask);
+	}
 
 test_done:
 	if (fips_enabled && rc)
@@ -4813,3 +4849,59 @@ non_fips_alg:
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(alg_test);
+
+int alg_hash_test(const char *driver, const char *alg, u32 type, u32 mask,
+	bool skip_partial_test)
+{
+	int i;
+	int j;
+	int rc;
+
+	if (!fips_enabled && notests) {
+		printk_once(KERN_INFO "alg: self-tests disabled\n");
+		return 0;
+	}
+
+	alg_test_descs_check_order();
+
+	i = alg_find_test(alg);
+	j = alg_find_test(driver);
+	if (i < 0 && j < 0)
+		goto notest;
+
+	if (fips_enabled && ((i >= 0 && !alg_test_descs[i].fips_allowed) ||
+			     (j >= 0 && !alg_test_descs[j].fips_allowed)))
+		goto non_fips_alg;
+
+	rc = 0;
+	if (i >= 0) {
+		if (!alg_test_descs[i].hash_test)
+			goto non_fips_alg;
+
+		rc |= alg_test_descs[i].hash_test(alg_test_descs + i, driver,
+					     type, mask, skip_partial_test);
+	}
+
+	if (j >= 0 && j != i) {
+		if (!alg_test_descs[j].hash_test)
+			goto non_fips_alg;
+
+		rc |= alg_test_descs[j].hash_test(alg_test_descs + j, driver,
+					     type, mask, skip_partial_test);
+	}
+
+	if (fips_enabled && rc)
+		panic("%s: %s alg self test failed in fips mode!\n", driver, alg);
+
+	if (fips_enabled && !rc)
+		pr_info("alg: self-tests for %s (%s) passed\n", driver, alg);
+
+	return rc;
+
+notest:
+	printk(KERN_INFO "alg: No test for %s (%s)\n", alg, driver);
+	return 0;
+non_fips_alg:
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(alg_hash_test);

@@ -4,13 +4,14 @@
  * Copyright (c) 2002 James Morris <jmorris@intercode.com.au>
  * Copyright (c) 2002 David S. Miller (davem@redhat.com)
  * Copyright (c) 2005 Herbert Xu <herbert@gondor.apana.org.au>
+ * Copyright (c) 2018 NVIDIA Corporation. All Rights Reserved.
  *
  * Portions derived from Cryptoapi, by Alexander Kjeldaas <astor@fast.no>
  * and Nettle, by Niels Möller.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option) 
+ * Software Foundation; either version 2 of the License, or (at your option)
  * any later version.
  *
  */
@@ -594,10 +595,10 @@ struct crypto_attr_u32 {
 	u32 num;
 };
 
-/* 
+/*
  * Transform user interface.
  */
- 
+
 struct crypto_tfm *crypto_alloc_base(const char *alg_name, u32 type, u32 mask);
 void crypto_destroy_tfm(void *mem, struct crypto_tfm *tfm);
 
@@ -607,6 +608,8 @@ static inline void crypto_free_tfm(struct crypto_tfm *tfm)
 }
 
 int alg_test(const char *driver, const char *alg, u32 type, u32 mask);
+
+int alg_hash_test(const char *driver, const char *alg, u32 type, u32 mask, bool skip_partial_test);
 
 /*
  * Transform helpers which query the underlying algorithm.

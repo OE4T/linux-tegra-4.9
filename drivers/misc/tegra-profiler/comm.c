@@ -246,10 +246,17 @@ find_mmap(unsigned long vm_start)
 
 static int device_open(struct inode *inode, struct file *file)
 {
+	int err;
+
 	mutex_lock(&comm_ctx.io_mutex);
-	comm_ctx.nr_users++;
+
+	err = quadd_late_init();
+	if (!err)
+		comm_ctx.nr_users++;
+
 	mutex_unlock(&comm_ctx.io_mutex);
-	return 0;
+
+	return err;
 }
 
 static int device_release(struct inode *inode, struct file *file)
@@ -933,8 +940,8 @@ static int comm_init(void)
 }
 
 struct quadd_comm_data_interface *
-quadd_comm_events_init(struct quadd_ctx *ctx,
-		       struct quadd_comm_control_interface *control)
+quadd_comm_init(struct quadd_ctx *ctx,
+		struct quadd_comm_control_interface *control)
 {
 	int err;
 
@@ -948,7 +955,7 @@ quadd_comm_events_init(struct quadd_ctx *ctx,
 	return &comm_data;
 }
 
-void quadd_comm_events_exit(void)
+void quadd_comm_exit(void)
 {
 	mutex_lock(&comm_ctx.io_mutex);
 	unregister();

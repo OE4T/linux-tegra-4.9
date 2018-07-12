@@ -86,8 +86,8 @@ struct quadd_comm_data_interface {
 };
 
 struct quadd_comm_data_interface *
-quadd_comm_events_init(struct quadd_ctx *ctx,
-		       struct quadd_comm_control_interface *control);
-void quadd_comm_events_exit(void);
+quadd_comm_init(struct quadd_ctx *ctx,
+		struct quadd_comm_control_interface *control);
+void quadd_comm_exit(void);
 
 #endif	/* __QUADD_COMM_H__ */

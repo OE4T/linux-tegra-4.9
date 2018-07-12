@@ -629,45 +629,43 @@ static struct quadd_comm_control_interface control = {
 	.is_cpu_present		= is_cpu_present,
 };
 
-static int __init quadd_module_init(void)
+static inline
+struct quadd_event_source_interface *pmu_init(void)
+{
+#ifdef CONFIG_ARM64
+	return quadd_armv8_pmu_init();
+#else
+	return quadd_armv7_pmu_init();
+#endif
+}
+
+static inline void pmu_deinit(void)
+{
+#ifdef CONFIG_ARM64
+	quadd_armv8_pmu_deinit();
+#else
+	quadd_armv7_pmu_deinit();
+#endif
+}
+
+int quadd_late_init(void)
 {
 	int i, nr_events, err;
 	unsigned int raw_event_mask;
 	struct quadd_event *events;
 	int cpuid;
 
-	pr_info("Branch: %s\n", QUADD_MODULE_BRANCH);
-	pr_info("Version: %s\n", QUADD_MODULE_VERSION);
-	pr_info("Samples version: %d\n", QUADD_SAMPLES_VERSION);
-	pr_info("IO version: %d\n", QUADD_IO_VERSION);
-
-#ifdef QM_DEBUG_SAMPLES_ENABLE
-	pr_info("############## DEBUG VERSION! ##############\n");
-#endif
-
-	atomic_set(&ctx.started, 0);
-	atomic_set(&ctx.tegra_profiler_lock, 0);
-
-	ctx.get_capabilities_for_cpu = get_capabilities_for_cpu_int;
-	ctx.get_pmu_info = get_pmu_info_for_current_cpu;
-
-	for_each_possible_cpu(cpuid) {
-		struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
-
-		pmu_info->active = 0;
-		pmu_info->is_present = 0;
-	}
-
-	ctx.pl310_info.active = 0;
-
-#ifdef CONFIG_ARM64
-	ctx.pmu = quadd_armv8_pmu_init();
-#else
-	ctx.pmu = quadd_armv7_pmu_init();
-#endif
-	if (!ctx.pmu) {
-		pr_err("PMU init failed\n");
+	if (unlikely(!ctx.early_initialized))
 		return -ENODEV;
+
+	if (likely(ctx.initialized))
+		return 0;
+
+	ctx.pmu = pmu_init();
+	if (IS_ERR(ctx.pmu)) {
+		pr_err("PMU init failed\n");
+		err = PTR_ERR(ctx.pmu);
+		goto out_err;
 	}
 
 	for_each_possible_cpu(cpuid) {
@@ -723,31 +721,20 @@ static int __init quadd_module_init(void)
 	ctx.hrt = quadd_hrt_init(&ctx);
 	if (IS_ERR(ctx.hrt)) {
 		pr_err("error: HRT init failed\n");
-		return PTR_ERR(ctx.hrt);
+		err = PTR_ERR(ctx.hrt);
+		goto out_err_pmu;
 	}
 
 	err = quadd_power_clk_init(&ctx);
 	if (err < 0) {
 		pr_err("error: POWER CLK init failed\n");
-		return err;
-	}
-
-	ctx.comm = quadd_comm_events_init(&ctx, &control);
-	if (IS_ERR(ctx.comm)) {
-		pr_err("error: COMM init failed\n");
-		return PTR_ERR(ctx.comm);
-	}
-
-	err = quadd_auth_init(&ctx);
-	if (err < 0) {
-		pr_err("error: auth failed\n");
-		return err;
+		goto out_err_hrt;
 	}
 
 	err = quadd_unwind_init();
 	if (err < 0) {
 		pr_err("error: EH unwinding init failed\n");
-		return err;
+		goto out_err_power_clk;
 	}
 
 	get_capabilities(&ctx.cap);
@@ -755,27 +742,101 @@ static int __init quadd_module_init(void)
 	for_each_possible_cpu(cpuid)
 		get_capabilities_for_cpu(cpuid, &per_cpu(per_cpu_caps, cpuid));
 
-	quadd_proc_init(&ctx);
+	ctx.initialized = 1;
 
 	return 0;
+
+out_err_power_clk:
+	quadd_power_clk_deinit();
+out_err_hrt:
+	quadd_hrt_deinit();
+out_err_pmu:
+	pmu_deinit();
+
+out_err:
+	return err;
+}
+
+static int __init quadd_early_init(void)
+{
+	int cpuid, err;
+
+	pr_info("version: %s, samples/io: %d/%d\n",
+		QUADD_MODULE_VERSION,
+		QUADD_SAMPLES_VERSION,
+		QUADD_IO_VERSION);
+
+	atomic_set(&ctx.started, 0);
+
+	ctx.early_initialized = 0;
+	ctx.initialized = 0;
+
+#ifndef MODULE
+	atomic_set(&ctx.tegra_profiler_lock, 0);
+#endif
+
+	ctx.get_capabilities_for_cpu = get_capabilities_for_cpu_int;
+	ctx.get_pmu_info = get_pmu_info_for_current_cpu;
+
+	for_each_possible_cpu(cpuid) {
+		struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
+
+		pmu_info->active = 0;
+		pmu_info->is_present = 0;
+	}
+
+	ctx.pl310_info.active = 0;
+
+	ctx.comm = quadd_comm_init(&ctx, &control);
+	if (IS_ERR(ctx.comm)) {
+		err = PTR_ERR(ctx.comm);
+		goto out_err;
+	}
+
+	err = quadd_auth_init(&ctx);
+	if (err < 0)
+		goto out_err_comm;
+
+	quadd_proc_init(&ctx);
+	ctx.early_initialized = 1;
+
+	return 0;
+
+out_err_comm:
+	quadd_comm_exit();
+
+out_err:
+	return err;
+}
+
+static void deinit(void)
+{
+	if (ctx.initialized) {
+		quadd_unwind_deinit();
+		quadd_power_clk_deinit();
+		quadd_hrt_deinit();
+		pmu_deinit();
+
+		ctx.initialized = 0;
+	}
+
+	if (ctx.early_initialized) {
+		quadd_proc_deinit();
+		quadd_auth_deinit();
+		quadd_comm_exit();
+
+		ctx.early_initialized = 0;
+	}
+}
+
+static int __init quadd_module_init(void)
+{
+	return quadd_early_init();
 }
 
 static void __exit quadd_module_exit(void)
 {
-	pr_info("QuadD module exit\n");
-
-	quadd_hrt_deinit();
-	quadd_power_clk_deinit();
-	quadd_comm_events_exit();
-	quadd_auth_deinit();
-	quadd_proc_deinit();
-	quadd_unwind_deinit();
-
-#ifdef CONFIG_ARM64
-	quadd_armv8_pmu_deinit();
-#else
-	quadd_armv7_pmu_deinit();
-#endif
+	deinit();
 }
 
 module_init(quadd_module_init);

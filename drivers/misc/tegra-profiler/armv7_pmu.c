@@ -872,11 +872,11 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 		default:
 			arch->type = QUADD_ARM_CPU_TYPE_UNKNOWN;
 			local_pmu_ctx->current_map = NULL;
-			err = 1;
+			err = -ENODEV;
 			break;
 		}
 	} else {
-		err = 1;
+		err = -ENODEV;
 	}
 
 	arch->name[sizeof(arch->name) - 1] = '\0';
@@ -887,23 +887,15 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 
 struct quadd_event_source_interface *quadd_armv7_pmu_init(void)
 {
-	struct quadd_event_source_interface *pmu = NULL;
-	int cpu, err, initialized = 1;
+	int cpuid, err;
 
-	for_each_possible_cpu(cpu) {
-		err = quadd_armv7_pmu_init_for_cpu(cpu);
-		if (err) {
-			initialized = 0;
-			break;
-		}
+	for_each_possible_cpu(cpuid) {
+		err = quadd_armv7_pmu_init_for_cpu(cpuid);
+		if (err < 0)
+			return ERR_PTR(err);
 	}
 
-	if (initialized == 1)
-		pmu = &pmu_armv7_int;
-	else
-		pr_err("error: incorrect PMUVer\n");
-
-	return pmu;
+	return &pmu_armv7_int;
 }
 
 void quadd_armv7_pmu_deinit(void)

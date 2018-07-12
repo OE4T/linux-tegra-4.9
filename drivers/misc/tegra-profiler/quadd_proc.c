@@ -133,6 +133,12 @@ static int show_capabilities(struct seq_file *f, void *offset)
 
 static int show_capabilities_proc_open(struct inode *inode, struct file *file)
 {
+	int err;
+
+	err = quadd_late_init();
+	if (err < 0)
+		return err;
+
 	return single_open(file, show_capabilities, NULL);
 }
 

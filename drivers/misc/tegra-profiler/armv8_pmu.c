@@ -938,7 +938,7 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 			" Unknown implementor code",
 			sizeof(arch->name) - strlen(arch->name));
 		arch->type = QUADD_AA64_CPU_TYPE_UNKNOWN_IMP;
-		err = 1;
+		err = -ENODEV;
 		break;
 	}
 
@@ -951,25 +951,15 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 
 struct quadd_event_source_interface *quadd_armv8_pmu_init(void)
 {
-	struct quadd_event_source_interface *pmu = NULL;
-	int cpuid;
-	int err;
-	int initialized = 1;
+	int cpuid, err;
 
 	for_each_possible_cpu(cpuid) {
 		err = quadd_armv8_pmu_init_for_cpu(cpuid);
-		if (err) {
-			initialized = 0;
-			break;
-		}
+		if (err < 0)
+			return ERR_PTR(err);
 	}
 
-	if (initialized == 1)
-		pmu = &pmu_armv8_int;
-	else
-		pr_err("error: incorrect PMUVer\n");
-
-	return pmu;
+	return &pmu_armv8_int;
 }
 
 void quadd_armv8_pmu_deinit(void)

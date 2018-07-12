@@ -77,6 +77,9 @@ struct quadd_ctx {
 	atomic_t started;
 	atomic_t tegra_profiler_lock;
 
+	unsigned int early_initialized:1;
+	unsigned int initialized:1;
+
 	unsigned int collect_kernel_ips:1;
 
 	unsigned int mode_is_sampling:1;
@@ -118,6 +121,7 @@ static inline int quadd_mode_is_trace_tree(struct quadd_ctx *ctx)
 }
 
 void quadd_get_state(struct quadd_module_state *state);
+int quadd_late_init(void);
 
 int tegra_profiler_try_lock(void);
 void tegra_profiler_unlock(void);

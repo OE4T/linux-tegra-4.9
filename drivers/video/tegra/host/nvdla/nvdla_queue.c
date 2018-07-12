@@ -1303,10 +1303,11 @@ fail_to_poweron:
 
 static int nvdla_queue_abort(struct nvhost_queue *queue)
 {
-	int err = 0;
+	int err = 0, fence;
 	struct nvdla_task *t;
 	struct nvdla_cmd_data cmd_data;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct platform_device *host1x = to_platform_device(pdev->dev.parent);
 	int retry = NVDLA_QUEUE_ABORT_TIMEOUT / NVDLA_QUEUE_ABORT_RETRY_PERIOD;
 
 	nvdla_dbg_fn(pdev, "");
@@ -1350,7 +1351,8 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 		t = list_last_entry(&queue->tasklist, struct nvdla_task, list);
 
 		/* reset syncpoint to release all tasks */
-		nvdla_task_syncpt_reset(t->sp, queue->syncpt_id, t->fence);
+		fence = nvhost_syncpt_read_maxval(host1x, queue->syncpt_id);
+		nvdla_task_syncpt_reset(t->sp, queue->syncpt_id, fence);
 
 		/* dump details */
 		nvdla_dbg_info(pdev, "Q id %d reset syncpt[%d] done",

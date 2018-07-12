@@ -689,13 +689,31 @@ EXPORT_SYMBOL(dw_pcie_host_init);
 
 void dw_pcie_host_deinit(struct pcie_port *pp)
 {
-	LIST_HEAD(res);
-	struct resource_entry *win, *tmp;
-	struct device_node *np = pp->dev->of_node;
+	struct resource_entry *win;
+	struct resource *res;
+	struct pci_host_bridge *host_bridge;
 	int i, irq;
 
 	pci_stop_root_bus(pp->bus);
+
+	host_bridge = to_pci_host_bridge(pp->bus->bridge);
+	resource_list_for_each_entry(win, &host_bridge->windows) {
+		res = win->res;
+		switch (resource_type(res)) {
+		case IORESOURCE_IO:
+			pci_unmap_iospace(res);
+			/* fallthrough */
+		case IORESOURCE_MEM:
+			devm_release_resource(pp->dev, res);
+			/* fallthrough */
+		default:
+			kfree(res);
+			continue;
+		}
+	}
+	pci_free_resource_list(&host_bridge->windows);
 	pci_remove_root_bus(pp->bus);
+
 	if (pp->ops->host_deinit)
 		pp->ops->host_deinit(pp);
 
@@ -710,18 +728,6 @@ void dw_pcie_host_deinit(struct pcie_port *pp)
 			pp->ops->msi_host_deinit(pp, &dw_pcie_msi_chip);
 		}
 	}
-
-	if (!of_pci_get_host_bridge_resources(np, 0, 0xff, &res,
-					      &pp->io_base)) {
-		resource_list_for_each_entry_safe(win, tmp, &res) {
-			switch (resource_type(win->res)) {
-			case IORESOURCE_IO:
-				pci_unmap_iospace(win->res);
-			}
-			kfree(win->res);
-		}
-	}
-	pci_free_resource_list(&res);
 }
 EXPORT_SYMBOL(dw_pcie_host_deinit);
 

@@ -25,12 +25,4 @@
 	chosen {
 		 bootargs ="console=ttyS0,115200 androidboot.presilicon=true firmware_class.path=/etc/firmware androidboot.selinux=permissive";
 	};
-
-	reserved-memory {
-		/delete-node/ vpr-carveout;
-	};
-
-	tegra-carveouts {
-		memory-region = <&generic_reserved>;
-	};
 };

@@ -1836,9 +1836,6 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 			if (err)
 				goto disable_phy;
 
-			if (!is_host_mode_phy(tegra, i, j))
-				continue;
-
 			err = phy_power_on(tegra->typed_phys[i][j]);
 			if (err) {
 				phy_exit(tegra->typed_phys[i][j]);
@@ -1852,8 +1849,7 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 disable_phy:
 	for (; i >= 0; i--) {
 		for (j = j - 1; j >= 0; j--) {
-			if (is_host_mode_phy(tegra, i, j))
-				phy_power_off(tegra->typed_phys[i][j]);
+			phy_power_off(tegra->typed_phys[i][j]);
 			phy_exit(tegra->typed_phys[i][j]);
 		}
 		if (i)
@@ -1869,8 +1865,7 @@ static void tegra_xusb_phy_disable(struct tegra_xusb *tegra)
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
-			if (is_host_mode_phy(tegra, i, j))
-				phy_power_off(tegra->typed_phys[i][j]);
+			phy_power_off(tegra->typed_phys[i][j]);
 			phy_exit(tegra->typed_phys[i][j]);
 		}
 	}
@@ -2111,7 +2106,6 @@ static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, int i, bool on)
 	int wait;
 
 	struct xusb_otg_port *port;
-	struct phy *usb2_phy = NULL, *usb3_phy = NULL;
 
 	port = &tegra->otg_ports[i];
 	dev_dbg(tegra->dev, "%s: vbus_id #%d, usb2 #%d\n", __func__,
@@ -2152,22 +2146,9 @@ role_update:
 	port->inited = true;
 	dev_dbg(tegra->dev, "host mode %s on #%d\n", on ? "on" : "off", i);
 
-	if (port->usb2_otg_port_base_1)
-		usb2_phy = tegra->typed_phys[USB2_PHY][
-			port->usb2_otg_port_base_1 - 1];
-	if (port->usb3_otg_port_base_1)
-		usb3_phy = tegra->typed_phys[USB3_PHY][
-			port->usb3_otg_port_base_1 - 1];
-
 	if (!pm_runtime_suspended(tegra->dev)) {
-		if (on) {
-			phy_power_on(usb2_phy);
-			phy_power_on(usb3_phy);
+		if (on)
 			tegra_xusb_padctl_set_id_override(tegra->padctl, i);
-		} else {
-			phy_power_off(usb2_phy);
-			phy_power_off(usb3_phy);
-		}
 	}
 
 	mutex_unlock(&tegra->lock);
@@ -3782,10 +3763,10 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			struct phy *phy = tegra->typed_phys[i][j];
 
-			if (!phy || !is_host_mode_phy(tegra, i, j))
+			if (!phy)
 				continue;
 
-			if (i == USB2_PHY)
+			if (i == USB2_PHY && is_host_mode_phy(tegra, i, j))
 				tegra_phy_xusb_utmi_pad_power_down(phy);
 
 			phy_power_off(phy);
@@ -3848,9 +3829,6 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
-
-			if (!is_host_mode_phy(tegra, i, j))
-				continue;
 
 			if (!do_wakeup) {
 				ret = phy_init(tegra->typed_phys[i][j]);

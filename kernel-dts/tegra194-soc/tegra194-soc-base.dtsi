@@ -1077,7 +1077,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD0>;
 			fb_reserved = <&fb0_reserved>;
-			iommu-direct-regions = <&fb0_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved &fb3_reserved>;
 
 			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
 					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
@@ -1136,7 +1137,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD1>;
 			fb_reserved = <&fb1_reserved>;
-			iommu-direct-regions = <&fb1_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved &fb3_reserved>;
 
 			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
 					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
@@ -1195,7 +1197,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD2>;
 			fb_reserved = <&fb2_reserved>;
-			iommu-direct-regions = <&fb2_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved &fb3_reserved>;
 
 			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
 					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",
@@ -1254,7 +1257,8 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD3>;
 			fb_reserved = <&fb3_reserved>;
-			iommu-direct-regions = <&fb3_reserved>;
+			iommu-direct-regions = <&fb0_reserved &fb1_reserved
+						&fb2_reserved &fb3_reserved>;
 
 			pinctrl-names = "hdmi-dp0-dpd-disable", "hdmi-dp0-dpd-enable",
 					"hdmi-dp1-dpd-disable", "hdmi-dp1-dpd-enable",

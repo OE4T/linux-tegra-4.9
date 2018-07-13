@@ -112,15 +112,40 @@ struct clk_domain_3x_prog {
 	u8 noise_aware_ordering_index;
 };
 
+struct clk_domain_35_prog {
+	struct clk_domain_3x_prog super;
+	u8 pre_volt_ordering_index;
+	u8 post_volt_ordering_index;
+	u8 clk_pos;
+	u8 clk_vf_curve_count;
+};
+
 struct clk_domain_3x_master {
 	struct clk_domain_3x_prog super;
 	u32 slave_idxs_mask;
+};
+
+struct clk_domain_35_master {
+	struct clk_domain_35_prog super;
+	struct clk_domain_3x_master master;
+	struct boardobjgrpmask_e32 master_slave_domains_grp_mask;
 };
 
 struct clk_domain_3x_slave {
 	struct clk_domain_3x_prog super;
 	u8 master_idx;
 	clkgetslaveclk *clkdomainclkgetslaveclk;
+};
+
+struct clk_domain_30_slave {
+	u8 rsvd;
+	u8 master_idx;
+	clkgetslaveclk *clkdomainclkgetslaveclk;
+};
+
+struct clk_domain_35_slave {
+	struct clk_domain_35_prog super;
+	struct clk_domain_30_slave slave;
 };
 
 int clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);

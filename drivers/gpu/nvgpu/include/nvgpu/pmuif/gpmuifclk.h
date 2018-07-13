@@ -118,48 +118,63 @@ struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set {
 	short freq_delta_min_mhz;
 	short freq_delta_max_mhz;
 	struct ctrl_clk_clk_delta deltas;
+};
+
+struct nv_pmu_clk_clk_domain_30_prog_boardobj_set {
+	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
 	u8 noise_unaware_ordering_index;
 	u8 noise_aware_ordering_index;
 };
 
 struct nv_pmu_clk_clk_domain_3x_master_boardobj_set {
-	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
 	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
 	u32 slave_idxs_mask;
 };
 
+struct nv_pmu_clk_clk_domain_30_master_boardobj_set {
+	struct nv_pmu_clk_clk_domain_30_prog_boardobj_set super;
+	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set master;
+};
+
+struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set {
+	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
+	u8 master_idx;
+};
+
+struct nv_pmu_clk_clk_domain_30_slave_boardobj_set {
+	struct nv_pmu_clk_clk_domain_30_prog_boardobj_set super;
+	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set slave;
+};
+
 struct nv_pmu_clk_clk_domain_35_prog_boardobj_set {
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
-	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
-	u8 dummy;
+	u8 pre_volt_ordering_index;
+	u8 post_volt_ordering_index;
+	u8 clk_pos;
+	u8 clk_vf_curve_count;
 };
 
 struct nv_pmu_clk_clk_domain_35_master_boardobj_set {
 	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set super;
-	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
+	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set master;
 	u32 master_slave_domains_grp_mask;
 };
 
 
-struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set {
-	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set super;
-	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
-	u8 master_idx;
-};
-
 struct nv_pmu_clk_clk_domain_35_slave_boardobj_set {
 	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set super;
-	u8 rsvd;	/* Stubbing for RM_PMU_BOARDOBJ_INTERFACE */
-	u8 master_idx;
+	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set slave;
 };
+
 union nv_pmu_clk_clk_domain_boardobj_set_union {
 	struct nv_pmu_boardobj board_obj;
 	struct nv_pmu_clk_clk_domain_boardobj_set super;
 	struct nv_pmu_clk_clk_domain_3x_boardobj_set v3x;
 	struct nv_pmu_clk_clk_domain_3x_fixed_boardobj_set v3x_fixed;
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set v3x_prog;
-	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set v3x_master;
-	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set v3x_slave;
+	struct nv_pmu_clk_clk_domain_30_prog_boardobj_set v30_prog;
+	struct nv_pmu_clk_clk_domain_30_master_boardobj_set v30_master;
+	struct nv_pmu_clk_clk_domain_30_slave_boardobj_set v30_slave;
 	struct nv_pmu_clk_clk_domain_35_prog_boardobj_set v35_prog;
 	struct nv_pmu_clk_clk_domain_35_master_boardobj_set v35_master;
 	struct nv_pmu_clk_clk_domain_35_slave_boardobj_set v35_slave;

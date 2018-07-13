@@ -52,6 +52,10 @@
 #define CTRL_CLK_CLK_DOMAIN_TYPE_3X_PROG                             0x03
 #define CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER                           0x04
 #define CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE                            0x05
+#define CTRL_CLK_CLK_DOMAIN_TYPE_30_PROG                             0x06
+#define CTRL_CLK_CLK_DOMAIN_TYPE_35_MASTER                           0x07
+#define CTRL_CLK_CLK_DOMAIN_TYPE_35_SLAVE                            0x08
+#define CTRL_CLK_CLK_DOMAIN_TYPE_35_PROG                             0x09
 
 #define CTRL_CLK_CLK_DOMAIN_3X_PROG_ORDERING_INDEX_INVALID 0xFF
 #define CTRL_CLK_CLK_DOMAIN_INDEX_INVALID                           0xFF

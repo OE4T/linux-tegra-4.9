@@ -171,12 +171,32 @@ struct vbios_clocks_table_1x_header {
 	u16 cntr_sampling_periodms;
 } __packed;
 
+#define VBIOS_CLOCKS_TABLE_35_HEADER_SIZE_09 0x09
+struct vbios_clocks_table_35_header {
+	u8 version;
+	u8 header_size;
+	u8 entry_size;
+	u8 entry_count;
+	u8 clocks_hal;
+	u16 cntr_sampling_periodms;
+	u16 reference_window;
+} __packed;
+
 #define VBIOS_CLOCKS_TABLE_1X_ENTRY_SIZE_09                                 0x09
 struct vbios_clocks_table_1x_entry {
 	u8 flags0;
 	u16 param0;
 	u32 param1;
 	u16 param2;
+} __packed;
+
+#define VBIOS_CLOCKS_TABLE_35_ENTRY_SIZE_11                                 0x0B
+struct vbios_clocks_table_35_entry {
+	u8 flags0;
+	u16 param0;
+	u32 param1;
+	u16 param2;
+	u16 param3;
 } __packed;
 
 #define NV_VBIOS_CLOCKS_TABLE_1X_ENTRY_FLAGS0_USAGE_MASK                    0x1F
@@ -211,6 +231,17 @@ struct vbios_clocks_table_1x_entry {
 #define NV_VBIOS_CLOCKS_TABLE_1X_ENTRY_PARAM2_PROG_FORCE_NOISE_UNAWARE_ORDERING_SHIFT 8
 #define NV_VBIOS_CLOCKS_TABLE_1X_ENTRY_PARAM2_PROG_FORCE_NOISE_UNAWARE_ORDERING_FALSE   0x00
 #define NV_VBIOS_CLOCKS_TABLE_1X_ENTRY_PARAM2_PROG_FORCE_NOISE_UNAWARE_ORDERING_TRUE    0x01
+
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM2_PROG_PRE_VOLT_ORDERING_IDX_MASK 0xF
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM2_PROG_PRE_VOLT_ORDERING_IDX_SHIFT 0
+
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM2_PROG_POST_VOLT_ORDERING_IDX_MASK     0xF0
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM2_PROG_POST_VOLT_ORDERING_IDX_SHIFT   4
+
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM3_CLK_MONITOR_THRESHOLD_MIN_MASK  0xFF
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM3_CLK_MONITOR_THRESHOLD_MIN_SHIFT  0
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM3_CLK_MONITOR_THRESHOLD_MAX_MASK  0xFF00
+#define NV_VBIOS_CLOCKS_TABLE_35_ENTRY_PARAM3_CLK_MONITOR_THRESHOLD_MAX_SHIFT 0x08
 
 #define VBIOS_CLOCK_PROGRAMMING_TABLE_1X_HEADER_SIZE_08                              0x08
 struct vbios_clock_programming_table_1x_header {

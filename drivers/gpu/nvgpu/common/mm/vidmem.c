@@ -39,13 +39,8 @@
 void nvgpu_vidmem_destroy(struct gk20a *g)
 {
 	struct nvgpu_timeout timeout;
-	size_t size;
 
-	size = g->ops.mm.get_vidmem_size ?
-			g->ops.mm.get_vidmem_size(g) : 0;
-
-	/* Nothing to destroy if no vidmem */
-	if (!size)
+	if (!g->ops.mm.get_vidmem_size)
 		return;
 
 	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);

@@ -19,6 +19,7 @@
 #include "common/tegra194-power-tree-p2888-0001-e3366-1199.dtsi"
 #include <t19x-common-platforms/tegra194-thermal.dtsi>
 #include "common/tegra194-audio-p2822-0000.dtsi"
+#include "common/tegra194-plugin-manager-e3366-1199.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

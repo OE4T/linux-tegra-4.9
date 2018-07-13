@@ -245,6 +245,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/dbg_vgpu.o \
 	vgpu/tsg_vgpu.o \
 	vgpu/css_vgpu.o \
+	vgpu/ecc_vgpu.o \
 	vgpu/gm20b/vgpu_gr_gm20b.o \
 	vgpu/gp10b/vgpu_hal_gp10b.o  \
 	vgpu/gp10b/vgpu_gr_gp10b.o  \

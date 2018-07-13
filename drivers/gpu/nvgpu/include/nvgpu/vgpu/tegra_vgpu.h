@@ -26,6 +26,7 @@
 #define __TEGRA_VGPU_H
 
 #include <nvgpu/types.h>
+#include <nvgpu/ecc.h>	/* For NVGPU_ECC_STAT_NAME_MAX_SIZE */
 
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
@@ -120,6 +121,8 @@ enum {
 	TEGRA_VGPU_CMD_UPDATE_PC_SAMPLING = 81,
 	TEGRA_VGPU_CMD_SUSPEND = 82,
 	TEGRA_VGPU_CMD_RESUME = 83,
+	TEGRA_VGPU_CMD_GET_ECC_INFO = 84,
+	TEGRA_VGPU_CMD_GET_ECC_COUNTER_VALUE = 85,
 };
 
 struct tegra_vgpu_connect_params {
@@ -376,6 +379,20 @@ struct tegra_vgpu_channel_update_pc_sampling {
 
 struct tegra_vgpu_channel_free_hwpm_ctx {
 	u64 handle;
+};
+
+struct tegra_vgpu_ecc_info_params {
+	u32 ecc_stats_count;
+};
+
+struct tegra_vgpu_ecc_info_entry {
+	u32 ecc_id;
+	char name[NVGPU_ECC_STAT_NAME_MAX_SIZE];
+};
+
+struct tegra_vgpu_ecc_counter_params {
+	u32 ecc_id;
+	u32 value;
 };
 
 struct tegra_vgpu_gr_ctx_params {
@@ -659,6 +676,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_map_syncpt_params map_syncpt;
 		struct tegra_vgpu_tsg_bind_channel_ex_params tsg_bind_channel_ex;
 		struct tegra_vgpu_channel_update_pc_sampling update_pc_sampling;
+		struct tegra_vgpu_ecc_info_params ecc_info;
+		struct tegra_vgpu_ecc_counter_params ecc_counter;
 		char padding[192];
 	} params;
 };

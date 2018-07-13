@@ -37,11 +37,14 @@ struct gk20a;
 struct vm_gk20a;
 struct nvgpu_gr_ctx;
 struct nvgpu_cpu_time_correlation_sample;
+struct vgpu_ecc_stat;
 
 struct vgpu_priv_data {
 	u64 virt_handle;
 	struct nvgpu_thread intr_handler;
 	struct tegra_vgpu_constants_params constants;
+	struct vgpu_ecc_stat *ecc_stats;
+	int ecc_stats_count;
 };
 
 struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g);

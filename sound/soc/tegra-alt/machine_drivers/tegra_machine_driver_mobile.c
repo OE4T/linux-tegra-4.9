@@ -32,6 +32,7 @@
 #include <sound/soc.h>
 #include <dt-bindings/sound/tas2552.h>
 #include "rt5659.h"
+#include "sgtl5000.h"
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra210_xbar_alt.h"
@@ -640,6 +641,16 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		}
 	}
 
+	rtd = snd_soc_get_pcm_runtime(card, "fe-pi-audio-z-v2");
+	if (rtd) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+
+		dai_params->rate_min = clk_rate;
+		dai_params->channels_min = channels;
+		dai_params->formats = formats;
+	}
+
 	return 0;
 }
 
@@ -782,6 +793,21 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 }
 #endif
 
+static int tegra_machine_fepi_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct device *dev = rtd->card->dev;
+	int err;
+
+	err = snd_soc_dai_set_sysclk(rtd->codec_dai, SGTL5000_SYSCLK, 12288000,
+				     SND_SOC_CLOCK_IN);
+	if (err) {
+		dev_err(dev, "failed to set sgtl5000 sysclk!\n");
+		return err;
+	}
+
+	return 0;
+}
+
 static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
@@ -885,13 +911,18 @@ static void dai_link_setup(struct platform_device *pdev)
 						tegra_machine_rt565x_init;
 				}
 			} else if (strstr(tegra_machine_codec_links[i].name,
-				"dspk-playback-r"))
+				"dspk-playback-r")) {
 				tegra_machine_codec_links[i].init =
 					tegra_machine_dspk_init;
-			else if (strstr(tegra_machine_codec_links[i].name,
-				"dspk-playback-l"))
+			} else if (strstr(tegra_machine_codec_links[i].name,
+				"dspk-playback-l")) {
 				tegra_machine_codec_links[i].init =
 					tegra_machine_dspk_init;
+			} else if (strstr(tegra_machine_codec_links[i].name,
+				"fe-pi-audio-z-v2")) {
+				tegra_machine_codec_links[i].init =
+					tegra_machine_fepi_init;
+			}
 		}
 	}
 

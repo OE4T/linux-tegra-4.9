@@ -102,8 +102,11 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
 free_ref:
-	if (err)
+	if (err) {
 		gk20a_put(g);
+		if (priv)
+			nvgpu_kfree(g, priv);
+	}
 	return err;
 }
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)

@@ -35,6 +35,7 @@
 #include <linux/sysfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/version.h>
 
 /* ina230 (/ ina226)register offsets */
 #define INA230_CONFIG	0
@@ -99,7 +100,9 @@ struct ina230_chip {
 	struct ina230_platform_data *pdata;
 	struct mutex mutex;
 	bool running;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	struct notifier_block nb;
+#endif
 };
 
 
@@ -582,6 +585,7 @@ static int ina230_show_alert_flag(struct ina230_chip *chip, char *buf)
 	return snprintf(buf, PAGE_SIZE, "%d\n", alert_flag);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 static int ina230_hotplug_notify(struct notifier_block *nb,
 		unsigned long event, void *hcpu)
 {
@@ -591,6 +595,7 @@ static int ina230_hotplug_notify(struct notifier_block *nb,
 		ina230_evaluate_state(chip);
 	return 0;
 }
+#endif
 
 static int ina230_read_raw(struct iio_dev *indio_dev,
 	struct iio_chan_spec const *chan, int *val, int *val2, long mask)
@@ -883,7 +888,9 @@ static int ina230_probe(struct i2c_client *client,
 	chip->dev = &client->dev;
 	chip->pdata = pdata;
 	chip->running = false;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	chip->nb.notifier_call = ina230_hotplug_notify;
+#endif
 	mutex_init(&chip->mutex);
 
 	indio_dev->info = &ina230_info;
@@ -906,7 +913,9 @@ static int ina230_probe(struct i2c_client *client,
 		return ret;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	register_hotcpu_notifier(&(chip->nb));
+#endif
 
 	ret = i2c_smbus_write_word_data(client, INA230_MASK, 0);
 	if (ret < 0) {
@@ -931,7 +940,9 @@ static int ina230_probe(struct i2c_client *client,
 	return 0;
 
 exit:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	unregister_hotcpu_notifier(&chip->nb);
+#endif
 	return ret;
 }
 
@@ -940,7 +951,9 @@ static int ina230_remove(struct i2c_client *client)
 	struct iio_dev *indio_dev = i2c_get_clientdata(client);
 	struct ina230_chip *chip = iio_priv(indio_dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	unregister_hotcpu_notifier(&chip->nb);
+#endif
 	ina230_power_down(chip);
 	return 0;
 }

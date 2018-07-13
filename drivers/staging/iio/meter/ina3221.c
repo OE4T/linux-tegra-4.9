@@ -34,6 +34,7 @@
 #include <linux/of.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ina3221.h>
@@ -160,7 +161,9 @@ struct ina3221_chip {
 	int is_suspended;
 	int mode;
 	int alert_enabled;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	struct notifier_block nb_hot;
+#endif
 	struct notifier_block nb_cpufreq;
 };
 
@@ -948,6 +951,7 @@ exit:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 static int ina3221_hotplug_notify(struct notifier_block *nb,
 		unsigned long event, void *hcpu)
 {
@@ -979,6 +983,7 @@ static int ina3221_hotplug_notify(struct notifier_block *nb,
 	}
 	return ret;
 }
+#endif
 
 static int ina3221_read_raw(struct iio_dev *indio_dev,
 	struct iio_chan_spec const *chan, int *val, int *val2, long mask)
@@ -1486,9 +1491,13 @@ static int ina3221_probe(struct i2c_client *client,
 		return ret;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	chip->nb_hot.notifier_call = ina3221_hotplug_notify;
+#endif
 	chip->nb_cpufreq.notifier_call = ina3221_cpufreq_notify;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	register_hotcpu_notifier(&(chip->nb_hot));
+#endif
 	cpufreq_register_notifier(&(chip->nb_cpufreq),
 			CPUFREQ_TRANSITION_NOTIFIER);
 
@@ -1571,7 +1580,9 @@ static int ina3221_probe(struct i2c_client *client,
 	}
 	return 0;
 exit_pd:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	unregister_hotcpu_notifier(&(chip->nb_hot));
+#endif
 	cpufreq_unregister_notifier(&(chip->nb_cpufreq),
 			CPUFREQ_TRANSITION_NOTIFIER);
 	return ret;
@@ -1585,7 +1596,9 @@ static int ina3221_remove(struct i2c_client *client)
 	mutex_lock(&chip->mutex);
 	__locked_power_down_ina3221(chip);
 	mutex_unlock(&chip->mutex);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 	unregister_hotcpu_notifier(&(chip->nb_hot));
+#endif
 	cpufreq_unregister_notifier(&(chip->nb_cpufreq),
 			CPUFREQ_TRANSITION_NOTIFIER);
 	return 0;

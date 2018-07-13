@@ -29,7 +29,7 @@
 			coeffs = <30 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0>;
 		};
 		dev3 {
-			dev_data = "AO-therm";
+			dev_data = "AUX-therm";
 			coeffs = <40 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0>;
 		};
 	};

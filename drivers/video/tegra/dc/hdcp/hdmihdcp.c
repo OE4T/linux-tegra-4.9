@@ -1923,39 +1923,50 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-		nvhdcp->ta_ctx = NULL;
-		/* Open a trusted sesion with HDCP TA */
-		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+/* If CONFIG_TUSTED_LITTLE_KERNEL flag is disabled, TSEC wil be sent a garbage SRM signature
+ * resulting in HDCP authentication failure
+ */
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+		/* differentiate between TLK and trusty */
+		if (te_is_secos_dev_enabled()) {
+			err = te_open_trusted_session_tlk(hdcp_uuid, sizeof(hdcp_uuid),
+					&session_id);
+		} else {
+			nvhdcp->ta_ctx = NULL;
+			/* Open a trusted sesion with HDCP TA */
+			err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+		}
 		if (err) {
 			nvhdcp_err("Error opening trusted session\n");
 			goto exit;
 		}
 		err = get_srm_signature(hdcp_context, nonce, pkt,
-					nvhdcp->ta_ctx);
+				nvhdcp->ta_ctx);
 		if (err) {
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
 		}
+#endif
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
-			(char *)(pkt + HDCP_CMAC_OFFSET),
-			*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
-			TEGRA_NVHDCP_PORT_HDMI);
+				(char *)(pkt + HDCP_CMAC_OFFSET),
+				*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
+				TEGRA_NVHDCP_PORT_HDMI);
 		if (err)
 			goto exit;
 		hdcp_context->msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;
 		err = nvhdcp_rptr_ack_send(nvhdcp,
-			&hdcp_context->msg.rptr_send_ack_msg_id);
+				&hdcp_context->msg.rptr_send_ack_msg_id);
 		if (err)
 			goto exit;
 	} else
 		err = (rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ);
 exit:
-		kfree(pkt);
-		if (nvhdcp->ta_ctx) {
-			te_close_trusted_session(nvhdcp->ta_ctx);
-			nvhdcp->ta_ctx = NULL;
-		}
-		return err;
+	kfree(pkt);
+	if (nvhdcp->ta_ctx) {
+		te_close_trusted_session(nvhdcp->ta_ctx);
+		nvhdcp->ta_ctx = NULL;
+	}
+	return err;
 }
 
 static void nvhdcp2_downstream_worker(struct work_struct *work)

@@ -808,17 +808,15 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
 	}
 
 	/* Extract the reset entry from the DT node. */
-	if (tegra_bpmp_running()) {
-		rst = of_reset_control_get(dpaux_np, dpaux_name);
-		if (IS_ERR_OR_NULL(rst)) {
-			dev_err(&dc->ndev->dev,
-				"%s: Unable to get %s reset control\n",
-				__func__, dpaux_name);
-			err = -ENOENT;
-			goto err_put_clk;
-		}
-		reset_control_deassert(rst);
+	rst = of_reset_control_get(dpaux_np, dpaux_name);
+	if (IS_ERR_OR_NULL(rst)) {
+		dev_err(&dc->ndev->dev,
+			"%s: Unable to get %s reset control\n",
+			__func__, dpaux_name);
+		err = -ENOENT;
+		goto err_put_clk;
 	}
+	reset_control_deassert(rst);
 
 	if (!tegra_platform_is_sim()) {
 		prod_list = devm_tegra_prod_get_from_node(

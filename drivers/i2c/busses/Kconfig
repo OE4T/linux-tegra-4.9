@@ -910,16 +910,6 @@ config I2C_TEGRA
 	  If you say yes to this option, support will be included for the
 	  I2C controller embedded in NVIDIA Tegra SOCs
 
-config I2C_TEGRA_HV
-        bool "Tegra I2C virtualization Support"
-        depends on TEGRA_HV_MANAGER
-        default y
-        help
-          Enables support for para-virtualized I2C client driver.
-          Client driver is written to communicate with I2C server
-          partition by using IVC (Inter VM Commuication) framework.
-          IVC support is a prerequisite for this driver.
-
 config I2C_TEGRA_SLAVE
 	tristate "NVIDIA Tegra internal I2C slave controller"
 	depends on ARCH_TEGRA

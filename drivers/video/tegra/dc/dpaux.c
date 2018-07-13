@@ -798,11 +798,7 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
 	}
 
 	/* Query the DPAUX clock. */
-	if (tegra_dc_is_nvdisplay())
-		clk = tegra_disp_of_clk_get_by_name(dpaux_np, dpaux_name);
-	else
-		clk = clk_get_sys(NULL, dpaux_name);
-
+	clk = tegra_disp_of_clk_get_by_name(dpaux_np, dpaux_name);
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "%s: %s clk unavailable\n", __func__,
 			dpaux_name);

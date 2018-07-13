@@ -16,16 +16,6 @@
 
 / {
 	plugin-manager {
-		fragement-ufs-en {
-			odm-data = "enable-ufs-uphy-l10";
-			override@0 {
-				target = <&{/ufshci@2450000}>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-		};
-
 		fragement-pmic-wdt-en {
 			odm-data = "enable-pmic-wdt";
 			override@0 {

@@ -40,9 +40,9 @@
 		num_resources = <0>;
 		shared_data = <&thermal_fan_est_shared_data>;
 		trip_length = <10>;
-		active_trip_temps = <0 35000 39000 42000 45000
-				50000 55000 60000 65000 70000>;
-		active_hysteresis = <0 1000 1000 1000 1000
+		active_trip_temps = <0 50000 63000 72000 81000
+				140000 150000 160000 170000 180000>;
+		active_hysteresis = <0 18000 8000 8000 8000
 				0 0 0 0 0>;
 	};
 };

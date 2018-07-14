@@ -1154,13 +1154,26 @@ static void tegra_nvdisp_init_imp_mc_caps(void)
 
 static void tegra_nvdisp_init_common_imp_data(void)
 {
+	struct mrq_emc_dvfs_latency_response *emc_dvfs_table =
+							&g_imp.emc_dvfs_table;
+	uint32_t cur_max_latency = 0;
+	int i;
+
 	INIT_LIST_HEAD(&g_imp.imp_settings_queue);
 
 	tegra_nvdisp_init_imp_wqs();
 
 	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
-			&g_imp.emc_dvfs_table,
-			sizeof(g_imp.emc_dvfs_table));
+			emc_dvfs_table,
+			sizeof(*emc_dvfs_table));
+
+
+	for (i = emc_dvfs_table->num_pairs - 1; i >= 0; i--) {
+		struct emc_dvfs_latency *dvfs_pair = &emc_dvfs_table->pairs[i];
+
+		cur_max_latency = max(dvfs_pair->latency, cur_max_latency);
+		dvfs_pair->latency = cur_max_latency;
+	}
 
 	tegra_nvdisp_init_imp_mc_caps();
 }

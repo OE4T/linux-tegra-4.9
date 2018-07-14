@@ -170,10 +170,13 @@ void vi_capture_shutdown(struct tegra_vi_channel *chan)
 		return;
 
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
-		vi_capture_release(chan, 0);
+		vi_capture_reset(chan, 0);
 
 	if (capture->stream_id != NVCSI_STREAM_INVALID_ID)
 		csi_stream_release(chan);
+
+	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
+		vi_capture_release(chan, 0);
 
 	kfree(capture);
 	chan->capture_data = NULL;

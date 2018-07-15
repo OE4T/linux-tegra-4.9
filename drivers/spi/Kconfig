@@ -9,4 +9,12 @@ config SPI_TEGRA186_AON
 	select TEGRA_HSP
 
 endif
+
+config SPI_AURIX_TEGRA
+	tristate "Nvidia Aurix-Tegra SPI Protocol Driver"
+	depends on SPI_TEGRA124_SLAVE && TEGRA_HV_PM_CTL
+	default y
+	help
+	 SPI protocol driver for communication between Aurix and Tegra
+
 endif

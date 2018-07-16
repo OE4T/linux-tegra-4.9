@@ -275,43 +275,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
-static const struct snd_soc_dapm_widget tegra_mystique_dapm_widgets[] = {
-	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
-	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
-
-	SND_SOC_DAPM_HP("w Headphone", NULL),
-	SND_SOC_DAPM_HP("x Headphone", NULL),
-	SND_SOC_DAPM_HP("y Headphone", NULL),
-	SND_SOC_DAPM_HP("z Headphone", NULL),
-	SND_SOC_DAPM_HP("l Headphone", NULL),
-	SND_SOC_DAPM_HP("m Headphone", NULL),
-	SND_SOC_DAPM_HP("n Headphone", NULL),
-	SND_SOC_DAPM_HP("o Headphone", NULL),
-	SND_SOC_DAPM_HP("s Headphone", NULL),
-
-	SND_SOC_DAPM_MIC("w Mic", NULL),
-	SND_SOC_DAPM_MIC("x Mic", NULL),
-	SND_SOC_DAPM_MIC("y Mic", NULL),
-	SND_SOC_DAPM_MIC("z Mic", NULL),
-	SND_SOC_DAPM_MIC("l Mic", NULL),
-	SND_SOC_DAPM_MIC("m Mic", NULL),
-	SND_SOC_DAPM_MIC("n Mic", NULL),
-	SND_SOC_DAPM_MIC("o Mic", NULL),
-	SND_SOC_DAPM_MIC("a Mic", NULL),
-	SND_SOC_DAPM_MIC("b Mic", NULL),
-	SND_SOC_DAPM_MIC("c Mic", NULL),
-	SND_SOC_DAPM_MIC("d Mic", NULL),
-	SND_SOC_DAPM_MIC("s Mic", NULL),
-};
-
-static const struct snd_soc_dapm_route tegra_machine_audio_map[] = {
-};
-
 static const struct snd_kcontrol_new tegra_machine_controls[] = {
-	SOC_DAPM_PIN_SWITCH("x Int Spk"),
-	SOC_DAPM_PIN_SWITCH("x Headphone Jack"),
-	SOC_DAPM_PIN_SWITCH("x Mic Jack"),
-	SOC_DAPM_PIN_SWITCH("x Int Mic"),
 	SOC_ENUM_EXT("codec-x rate", tegra_machine_codec_rate,
 		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
 	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
@@ -321,15 +285,12 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 		tegra_machine_codec_put_bclk_ratio),
 };
 
-static const struct snd_kcontrol_new tegra_mystique_controls[] = {
-	SOC_ENUM_EXT("codec-x rate", tegra_machine_codec_rate,
-		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
-	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
-		tegra_machine_codec_get_format, tegra_machine_codec_put_format),
-};
-
 static struct snd_soc_card snd_soc_tegra_card = {
 	.owner = THIS_MODULE,
+	.controls = tegra_machine_controls,
+	.num_controls = ARRAY_SIZE(tegra_machine_controls),
+	.dapm_widgets = tegra_machine_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(tegra_machine_dapm_widgets),
 	.suspend_pre = tegra_machine_suspend_pre,
 	.fully_routed = true,
 };
@@ -923,24 +884,6 @@ static void dai_link_setup(struct platform_device *pdev)
 					tegra_machine_codec_links[i].init =
 						tegra_machine_rt565x_init;
 				}
-				snd_soc_tegra_card.controls =
-					tegra_machine_controls;
-				snd_soc_tegra_card.num_controls =
-					ARRAY_SIZE(tegra_machine_controls);
-				snd_soc_tegra_card.dapm_widgets =
-					tegra_machine_dapm_widgets;
-				snd_soc_tegra_card.num_dapm_widgets =
-					ARRAY_SIZE(tegra_machine_dapm_widgets);
-			} else if (strstr(tegra_machine_codec_links[i].name,
-				"tas2557-playback")) {
-				snd_soc_tegra_card.controls =
-					tegra_mystique_controls;
-				snd_soc_tegra_card.num_controls =
-					ARRAY_SIZE(tegra_mystique_controls);
-				snd_soc_tegra_card.dapm_widgets =
-					tegra_mystique_dapm_widgets;
-				snd_soc_tegra_card.num_dapm_widgets =
-					ARRAY_SIZE(tegra_mystique_dapm_widgets);
 			} else if (strstr(tegra_machine_codec_links[i].name,
 				"dspk-playback-r"))
 				tegra_machine_codec_links[i].init =

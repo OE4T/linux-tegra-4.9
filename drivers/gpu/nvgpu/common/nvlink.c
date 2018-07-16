@@ -510,7 +510,12 @@ int nvgpu_nvlink_remove(struct gk20a *g)
 	struct nvlink_device *ndev;
 	int err;
 
+	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK))
+		return -ENODEV;
+
 	ndev = g->nvlink.priv;
+	if(!ndev)
+		return -ENODEV;
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, false);
 

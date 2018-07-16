@@ -222,8 +222,11 @@ void isp_capture_shutdown(struct tegra_isp_channel *chan)
 	if (capture == NULL)
 		return;
 
-	if (capture->channel_id != CAPTURE_CHANNEL_ISP_INVALID_ID)
+	if (capture->channel_id != CAPTURE_CHANNEL_ISP_INVALID_ID) {
+		/* No valid ISP reset flags defined now, use zero */
+		isp_capture_reset(chan, 0);
 		isp_capture_release(chan, 0);
+	}
 
 	kfree(capture);
 	chan->capture_data = NULL;

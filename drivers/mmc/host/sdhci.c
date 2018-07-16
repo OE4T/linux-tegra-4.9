@@ -1083,9 +1083,9 @@ static void sdhci_finish_data(struct sdhci_host *host)
 				sdhci_do_reset(host, SDHCI_RESET_CMD |
 					SDHCI_RESET_DATA);
 			} else {
+				sdhci_do_reset(host, SDHCI_RESET_DATA);
 				if (!host->cmd || host->cmd == data_cmd)
 					sdhci_do_reset(host, SDHCI_RESET_CMD);
-				sdhci_do_reset(host, SDHCI_RESET_DATA);
 			}
 		}
 

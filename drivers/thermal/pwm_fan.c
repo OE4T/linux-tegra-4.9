@@ -45,6 +45,11 @@
 #include <linux/time.h>
 #include <linux/atomic.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/clock.h>
+#endif
 
 #define USEC_PER_MIN	(60L * USEC_PER_SEC)
 
@@ -1188,6 +1193,7 @@ lookup_alloc_fail:
 rrd_alloc_fail:
 rru_alloc_fail:
 rpm_alloc_fail:
+	gpio_free(pwm_fan_gpio);
 gpio_request_fail:
 	if (err == -ENXIO)
 		pr_err("FAN: of_property_read failed\n");

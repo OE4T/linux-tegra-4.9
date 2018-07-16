@@ -1572,6 +1572,42 @@ static inline u32 gr_fe_tpc_fs_r(u32 i)
 {
 	return 0x0040a200U + i*4U;
 }
+static inline u32 gr_fe_tpc_pesmask_r(void)
+{
+	return 0x0040a260U;
+}
+static inline u32 gr_fe_tpc_pesmask_pesid_f(u32 v)
+{
+	return (v & 0x3fU) << 24U;
+}
+static inline u32 gr_fe_tpc_pesmask_gpcid_f(u32 v)
+{
+	return (v & 0xffU) << 16U;
+}
+static inline u32 gr_fe_tpc_pesmask_action_m(void)
+{
+	return 0x1U << 30U;
+}
+static inline u32 gr_fe_tpc_pesmask_action_write_f(void)
+{
+	return 0x40000000U;
+}
+static inline u32 gr_fe_tpc_pesmask_action_read_f(void)
+{
+	return 0x0U;
+}
+static inline u32 gr_fe_tpc_pesmask_req_m(void)
+{
+	return 0x1U << 31U;
+}
+static inline u32 gr_fe_tpc_pesmask_req_send_f(void)
+{
+	return 0x80000000U;
+}
+static inline u32 gr_fe_tpc_pesmask_mask_m(void)
+{
+	return 0xffffU << 0U;
+}
 static inline u32 gr_pri_mme_shadow_raw_index_r(void)
 {
 	return 0x00404488U;

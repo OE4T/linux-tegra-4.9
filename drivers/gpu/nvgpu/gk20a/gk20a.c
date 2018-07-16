@@ -274,11 +274,22 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
+	nvgpu_mutex_acquire(&g->tpc_pg_lock);
+
+	if (g->can_tpc_powergate) {
+		if (g->ops.gr.powergate_tpc != NULL) {
+			g->ops.gr.powergate_tpc(g);
+		}
+	}
+
 	err = gk20a_init_gr_support(g);
 	if (err) {
 		nvgpu_err(g, "failed to init gk20a gr");
+		nvgpu_mutex_release(&g->tpc_pg_lock);
 		goto done;
 	}
+
+	nvgpu_mutex_release(&g->tpc_pg_lock);
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		err = gk20a_init_pstate_pmu_support(g);

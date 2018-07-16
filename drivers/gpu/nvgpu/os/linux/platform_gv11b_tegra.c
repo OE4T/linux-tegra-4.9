@@ -215,6 +215,9 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.railgate_delay_init    = 500,
 	.can_railgate_init      = true,
 
+	.can_tpc_powergate      = true,
+	.valid_tpc_mask         = 0xc,
+
 	.can_slcg               = true,
 	.can_blcg               = true,
 	.can_elcg               = true,

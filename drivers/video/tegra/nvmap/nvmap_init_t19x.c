@@ -237,7 +237,11 @@ static int nvmap_gosmem_notifier(struct notifier_block *nb,
 
 	ret = _dma_declare_coherent_memory(&gos_owner->offset_dev, 0, 0, SZ_256,
 				ffs(sizeof(u32)) - ffs(sizeof(u8)), DMA_MEMORY_NOMAP);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	if (ret) {
+#else
 	if (!(ret & DMA_MEMORY_NOMAP)) {
+#endif
 		dev_err(dev, "declare coherent memory for gosmem chunk failed\n");
 		return NOTIFY_DONE;
 	}

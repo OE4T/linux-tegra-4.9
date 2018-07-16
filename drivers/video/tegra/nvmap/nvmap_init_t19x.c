@@ -72,10 +72,14 @@ static void nvmap_gosmem_device_release(struct reserved_mem *rmem,
 	int i;
 	struct reserved_mem_ops *rmem_ops =
 		(struct reserved_mem_ops *)rmem->ops;
+	void *cpu_addr = cvdev_info[0].cpu_addr;
 
 	for (i = 0; i < count; i++)
 		of_node_put(cvdev_info[i].np);
+
+	vfree(cpu_addr);
 	kfree(cvdev_info);
+
 	rmem_ops->device_release(rmem, dev);
 }
 
@@ -85,7 +89,6 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	struct of_phandle_args outargs;
 	struct device_node *np;
 	DEFINE_DMA_ATTRS(attrs);
-	dma_addr_t dma_addr;
 	void *cpu_addr;
 	int ret = 0, i, idx, bytes;
 	struct reserved_mem_ops *rmem_ops =
@@ -111,12 +114,13 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		return -EINVAL;
 	}
 
-	cpu_addr = dma_alloc_coherent(gosmem.dma_dev, count * SZ_4K,
-				&dma_addr, GFP_KERNEL);
+	cpu_addr = vmalloc(count * SZ_4K);
 	if (!cpu_addr) {
 		pr_err("Failed to allocate from Gos mem carveout\n");
 		return -ENOMEM;
 	}
+
+	memset(cpu_addr, 0x00, count * SZ_4K);
 
 	bytes = sizeof(*cvdev_info) * count;
 	bytes += sizeof(struct sg_table) * count * count;
@@ -124,7 +128,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	if (!cvdev_info) {
 		pr_err("kzalloc failed. No memory!!!\n");
 		ret = -ENOMEM;
-		goto unmap_dma;
+		goto free_gos_pages;
 	}
 
 	for (idx = 0; idx < count; idx++) {
@@ -174,8 +178,8 @@ free:
 		sg_free_table(sgt++);
 free_cvdev:
 	kfree(cvdev_info);
-unmap_dma:
-	dma_free_coherent(gosmem.dma_dev, count * SZ_4K, cpu_addr, dma_addr);
+free_gos_pages:
+	vfree(cpu_addr);
 	return ret;
 }
 
@@ -192,7 +196,6 @@ static int __init nvmap_gosmem_setup(struct reserved_mem *rmem)
 	ret = nvmap_co_setup(rmem);
 	if (ret)
 		return ret;
-
 	rmem->priv = (struct reserved_mem_ops *)rmem->ops;
 	rmem->ops = &gosmem_rmem_ops;
 	return 0;

@@ -64,6 +64,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 	nvgpu_mutex_init(&g->poweron_lock);
 	nvgpu_mutex_init(&g->poweroff_lock);
 	nvgpu_mutex_init(&g->ctxsw_disable_lock);
+	nvgpu_mutex_init(&g->tpc_pg_lock);
 
 	l->regs_saved = l->regs;
 	l->bar1_saved = l->bar1;
@@ -168,6 +169,8 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->ptimer_src_freq = platform->ptimer_src_freq;
 	g->support_pmu = support_gk20a_pmu(dev_from_gk20a(g));
 	__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, platform->can_railgate_init);
+	g->can_tpc_powergate = platform->can_tpc_powergate;
+	g->valid_tpc_mask = platform->valid_tpc_mask;
 	g->ldiv_slowdown_factor = platform->ldiv_slowdown_factor_init;
 	/* if default delay is not set, set default delay to 500msec */
 	if (platform->railgate_delay_init)

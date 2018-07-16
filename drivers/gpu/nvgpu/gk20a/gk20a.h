@@ -307,6 +307,7 @@ struct gpu_ops {
 			  u32 class, u32 padding);
 		void (*free_gr_ctx)(struct gk20a *g,
 				    struct vm_gk20a *vm, struct nvgpu_gr_ctx *gr_ctx);
+		void (*powergate_tpc)(struct gk20a *g);
 		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
 				struct channel_gk20a *c,
 				struct nvgpu_mem *mem);
@@ -1361,6 +1362,8 @@ struct gk20a {
 	u64 log_mask;
 	u32 log_trace;
 
+	struct nvgpu_mutex tpc_pg_lock;
+
 	struct nvgpu_gpu_params params;
 
 	/*
@@ -1531,6 +1534,11 @@ struct gk20a {
 	bool mmu_debug_ctrl;
 
 	u32 tpc_fs_mask_user;
+
+	u32 tpc_pg_mask;
+	bool can_tpc_powergate;
+
+	u32 valid_tpc_mask;
 
 	struct nvgpu_bios bios;
 	bool bios_is_init;

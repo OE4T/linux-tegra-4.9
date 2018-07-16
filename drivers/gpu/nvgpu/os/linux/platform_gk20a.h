@@ -44,6 +44,9 @@ struct gk20a_platform {
 	bool can_railgate_init;
 
 	/* Should be populated at probe. */
+	bool can_tpc_powergate;
+
+	/* Should be populated at probe. */
 	bool can_elpg_init;
 
 	/* Should be populated at probe. */
@@ -71,6 +74,8 @@ struct gk20a_platform {
 	/* Reset control for device */
 	struct reset_control *reset_control;
 #endif
+	/* valid TPC-MASK */
+	u32 valid_tpc_mask;
 
 	/* Delay before rail gated */
 	int railgate_delay_init;

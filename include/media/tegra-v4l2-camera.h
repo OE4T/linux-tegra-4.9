@@ -136,7 +136,10 @@ struct sensor_control_properties {
 	__u32 step_framerate;
 	__u32 exposure_factor;
 	union __u64val step_exp_time;
-	__u32 reserved[14];
+	__u32 default_gain;
+	__u32 default_framerate;
+	union __u64val default_exp_time;
+	__u32 reserved[10];
 };
 
 struct sensor_mode_properties {

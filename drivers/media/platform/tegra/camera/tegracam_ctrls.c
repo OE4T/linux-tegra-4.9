@@ -246,21 +246,21 @@ int tegracam_init_ctrl_ranges_by_mode(
 				ctrlprops->min_gain_val,
 				ctrlprops->max_gain_val,
 				ctrlprops->step_gain_val,
-				ctrlprops->min_gain_val);
+				ctrlprops->default_gain);
 			break;
 		case TEGRA_CAMERA_CID_FRAME_RATE:
 			err = v4l2_ctrl_modify_range(ctrl,
 				ctrlprops->min_framerate,
 				ctrlprops->max_framerate,
 				ctrlprops->step_framerate,
-				ctrlprops->max_framerate);
+				ctrlprops->default_framerate);
 			break;
 		case TEGRA_CAMERA_CID_EXPOSURE:
 			err = v4l2_ctrl_modify_range(ctrl,
 				ctrlprops->min_exp_time.val,
 				ctrlprops->max_exp_time.val,
 				ctrlprops->step_exp_time.val,
-				ctrlprops->max_exp_time.val);
+				ctrlprops->default_exp_time.val);
 			break;
 		default:
 			/* Not required to modify these control ranges */

@@ -470,6 +470,30 @@ static int sensor_common_parse_control_props(
 	} else
 		control->step_exp_time.val = val64;
 
+	err = read_property_u32(node, "default_gain", &value);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "default_gain");
+		control->default_gain = 0;
+	} else
+		control->default_gain = value;
+
+	err = read_property_u32(node, "default_framerate", &value);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "default_framerate");
+		control->default_framerate = 0;
+	} else
+		control->default_framerate = value;
+
+	err = read_property_u64(node, "default_exp_time", &val64);
+	if (err) {
+		dev_err(dev, "%s:%s:property missing\n",
+			__func__, "default_exp_time");
+		control->default_exp_time.val = 0;
+	} else
+		control->default_exp_time.val = val64;
+
 	return 0;
 }
 

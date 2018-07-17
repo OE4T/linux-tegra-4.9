@@ -1,7 +1,7 @@
 /*
  * tegra210b01-soc-common-platform.dtsi: Enabled node common for all platforms.
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,8 +37,8 @@
 		serial1 = &uartb;
 		serial2 = &uartc;
 		serial3 = &uartd;
-		rtc0 = "/rtc";
-		rtc1 = "/i2c@7000d000/max77620@3c";
+		rtc0 = "/i2c@7000d000/max77620@3c";
+		rtc1 = "/rtc";
 	};
 
 	cpus {

@@ -6711,7 +6711,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		hotplug_init_status = dc->out_ops->hotplug_init(dc);
 
 	if (dc->out->type == TEGRA_DC_OUT_DP) {
-		ret = tegra_dc_set_fbcon_boot_mode(dc);
+		ret = tegra_dc_set_fbcon_boot_mode(dc, dc->edid);
 		if (ret)
 			dev_err(&dc->ndev->dev,
 				"Failed to set fbcon mode for DC %d\n",

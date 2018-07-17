@@ -973,6 +973,8 @@ static inline void tegra_dc_set_edid(struct tegra_dc *dc,
 	dc->edid = edid;
 }
 
+int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc, struct tegra_edid *edid);
+
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 static inline u32 tegra_dc_reg_l32(dma_addr_t v)
 {

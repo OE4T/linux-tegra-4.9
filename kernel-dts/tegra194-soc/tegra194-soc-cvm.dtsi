@@ -276,7 +276,11 @@
 	};
 
 	cv-noc@14040000 {
+#if LINUX_VERSION < 414
 		status = "okay";
+#else
+		status = "disabled";
+#endif
 	};
 
 	axi2apb@2390000 {

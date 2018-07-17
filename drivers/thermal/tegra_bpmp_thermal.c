@@ -93,15 +93,15 @@ static int tegra_bpmp_thermal_get_trend(void *data, int trip,
 	last_temp = zone->tzd->last_temperature;
 	mutex_unlock(&zone->tzd->lock);
 
-	if (temp > trip_temp) {
-		if (temp >= last_temp)
-			*trend = THERMAL_TREND_RAISING;
-		else
-			*trend = THERMAL_TREND_STABLE;
-	} else if (temp < trip_temp)
+	if (temp > trip_temp)
+		*trend = (temp >= last_temp) ? THERMAL_TREND_RAISING :
+						THERMAL_TREND_STABLE;
+	else if (temp < trip_temp)
 		*trend = THERMAL_TREND_DROPPING;
 	else
-		*trend = THERMAL_TREND_STABLE;
+		/* start polling if temp > last_temp */
+		*trend = (temp > last_temp) ? THERMAL_TREND_RAISING :
+						THERMAL_TREND_STABLE;
 
 	return 0;
 }

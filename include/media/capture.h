@@ -56,6 +56,7 @@ struct vi_capture {
 	struct mutex control_msg_lock;
 	struct CAPTURE_CONTROL_MSG control_resp_msg;
 
+	struct mutex reset_lock;
 	struct mutex unpins_list_lock;
 	struct capture_common_unpins **unpins_list;
 };

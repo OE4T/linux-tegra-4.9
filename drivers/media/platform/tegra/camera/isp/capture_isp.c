@@ -581,6 +581,9 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 		uint32_t reset_flags)
 {
 	struct isp_capture *capture = chan->capture_data;
+#ifdef CAPTURE_ISP_RESET_BARRIER_IND
+	struct CAPTURE_MSG capture_msg;
+#endif
 	struct CAPTURE_CONTROL_MSG control_msg;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
 	int i;
@@ -601,7 +604,19 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 	mutex_lock(&capture->reset_lock);
 	capture->reset_capture_program_flag = true;
 	capture->reset_capture_flag = true;
-	mutex_unlock(&capture->reset_lock);
+
+#ifdef CAPTURE_ISP_RESET_BARRIER_IND
+	memset(&capture_msg, 0, sizeof(capture_msg));
+	capture_msg.header.msg_id = CAPTURE_ISP_RESET_BARRIER_IND;
+	capture_msg.header.channel_id = capture->channel_id;
+
+	err = tegra_capture_ivc_capture_submit(&capture_msg,
+			sizeof(capture_msg));
+	if (err < 0) {
+		dev_err(chan->isp_dev, "IVC capture submit failed\n");
+		goto error;
+	}
+#endif
 
 	memset(&control_msg, 0, sizeof(control_msg));
 	control_msg.header.msg_id = CAPTURE_CHANNEL_ISP_RESET_REQ;
@@ -612,6 +627,14 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 			sizeof(control_msg), CAPTURE_CHANNEL_ISP_RESET_RESP);
 	if (err < 0)
 		goto error;
+
+#ifdef CAPTURE_ISP_RESET_BARRIER_IND
+	if (resp_msg->channel_isp_reset_resp.result == CAPTURE_ERROR_TIMEOUT) {
+		dev_dbg(chan->isp_dev, "%s: isp reset timedout\n", __func__);
+		err = -EAGAIN;
+		goto error;
+	}
+#endif
 
 	if (resp_msg->channel_isp_reset_resp.result != CAPTURE_OK) {
 		dev_err(chan->isp_dev, "%s: control failed, errno %d", __func__,
@@ -630,9 +653,12 @@ int isp_capture_reset(struct tegra_isp_channel *chan,
 		complete(&capture->capture_resp);
 	}
 
+	mutex_unlock(&capture->reset_lock);
+
 	return 0;
 
 error:
+	mutex_unlock(&capture->reset_lock);
 	return err;
 }
 
@@ -999,7 +1025,6 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 			; /* do nothing */
 	}
 	capture->reset_capture_program_flag = false;
-	mutex_unlock(&capture->reset_lock);
 
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_PROGRAM_REQUEST_REQ;
@@ -1043,10 +1068,12 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 		dev_err(chan->isp_dev, "IVC program submit failed\n");
 		goto fail;
 	}
+	mutex_unlock(&capture->reset_lock);
 
 	return 0;
 
 fail:
+	mutex_unlock(&capture->reset_lock);
 	isp_capture_program_request_unpin(chan, req->buffer_index);
 	return err;
 }
@@ -1129,7 +1156,6 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 			; /* do nothing */
 	}
 	capture->reset_capture_flag = false;
-	mutex_unlock(&capture->reset_lock);
 
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_REQUEST_REQ;
@@ -1194,9 +1220,12 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 		goto fail;
 	}
 
+	mutex_unlock(&capture->reset_lock);
+
 	return 0;
 
 fail:
+	mutex_unlock(&capture->reset_lock);
 	isp_capture_request_unpin(chan, req->buffer_index);
 	return err;
 }

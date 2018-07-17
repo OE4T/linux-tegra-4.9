@@ -144,6 +144,7 @@ int vi_capture_init(struct tegra_vi_channel *chan, bool is_mem_pinned)
 	init_completion(&capture->control_resp);
 	init_completion(&capture->capture_resp);
 
+	mutex_init(&capture->reset_lock);
 	mutex_init(&capture->control_msg_lock);
 	mutex_init(&capture->unpins_list_lock);
 
@@ -477,6 +478,9 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 {
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
+#ifdef CAPTURE_RESET_BARRIER_IND
+	struct CAPTURE_MSG capture_desc;
+#endif
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
 	int err = 0;
 
@@ -492,6 +496,20 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 		return -ENODEV;
 	}
 
+	mutex_lock(&capture->reset_lock);
+
+#ifdef CAPTURE_RESET_BARRIER_IND
+	memset(&capture_desc, 0, sizeof(capture_desc));
+	capture_desc.header.msg_id = CAPTURE_RESET_BARRIER_IND;
+	capture_desc.header.channel_id = capture->channel_id;
+	err = tegra_capture_ivc_capture_submit(&capture_desc,
+			sizeof(capture_desc));
+	if (err < 0) {
+		dev_err(chan->dev, "%s:IVC capture submit failed\n", __func__);
+		goto submit_fail;
+	}
+#endif
+
 	memset(&control_desc, 0, sizeof(control_desc));
 	control_desc.header.msg_id = CAPTURE_CHANNEL_RESET_REQ;
 	control_desc.header.channel_id = capture->channel_id;
@@ -503,15 +521,26 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 		goto submit_fail;
 	}
 
+#ifdef CAPTURE_RESET_BARRIER_IND
+	if (resp_msg->channel_reset_resp.result == CAPTURE_ERROR_TIMEOUT) {
+		dev_dbg(chan->dev, "%s:reset timeout\n", __func__);
+		err = -EAGAIN;
+		goto submit_fail;
+	}
+#endif
+
 	if (resp_msg->channel_reset_resp.result != CAPTURE_OK) {
 		dev_err(chan->dev, "%s: control failed, errno %d", __func__,
 			resp_msg->channel_reset_resp.result);
 		err = -EINVAL;
 	}
 
-	return 0;
+	mutex_unlock(&capture->reset_lock);
+
+	return err;
 
 submit_fail:
+	mutex_unlock(&capture->reset_lock);
 	return err;
 }
 
@@ -914,6 +943,8 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 		return -EINVAL;
 	}
 
+	mutex_lock(&capture->reset_lock);
+
 	memset(&capture_desc, 0, sizeof(capture_desc));
 	capture_desc.header.msg_id = CAPTURE_REQUEST_REQ;
 	capture_desc.header.channel_id = capture->channel_id;
@@ -931,9 +962,12 @@ int vi_capture_request(struct tegra_vi_channel *chan,
 	err = tegra_capture_ivc_capture_submit(&capture_desc,
 			sizeof(capture_desc));
 	if (err < 0) {
+		mutex_unlock(&capture->reset_lock);
 		dev_err(chan->dev, "IVC capture submit failed\n");
 		return err;
 	}
+
+	mutex_unlock(&capture->reset_lock);
 
 	return 0;
 }

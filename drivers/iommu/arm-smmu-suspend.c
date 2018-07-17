@@ -123,11 +123,16 @@ static void context_save_gnsr0_group(void)
 	context_save_reg(ARM_SMMU_GR0_sACR);
 }
 
-#define SMRG_GROUP_REG_SIZE		4
+#define SMRG_GROUP_REG_SIZE		2
 static void context_save_smrg_group(int group_num)
 {
 	context_save_reg(ARM_SMMU_GR0_SMR(group_num));
 	context_save_reg(ARM_SMMU_GR0_S2CR(group_num));
+}
+
+#define CBAR_GROUP_REG_SIZE		2
+static void context_save_cbar_group(int group_num)
+{
 	context_save_reg(SMMU_GNSR1_CBAR_CFG(group_num,
 			arm_smmu_ctx.smmu_pgshift));
 	context_save_reg(SMMU_GNSR1_CBA2R_CFG(group_num,
@@ -157,24 +162,26 @@ static void context_save_cb_group(int group_num)
 			arm_smmu_ctx.smmu_size, arm_smmu_ctx.smmu_pgshift));
 }
 
-#define CB_GROUP_NUM			64
-#define SMRG_GROUP_NUM			64
-static void context_save_smrg(void)
+#define CB_GROUP_MAX			64
+#define SMRG_GROUP_MAX			128
+#define CBAR_GROUP_MAX			64
+static int arm_smmu_syscore_suspend(void)
 {
 	int i;
 
-	for (i = 0; i < SMRG_GROUP_NUM; i++)
+	context_save_start();
+
+	context_save_gnsr0_group();
+
+	for (i = 0; i < SMRG_GROUP_MAX; i++)
 		context_save_smrg_group(i);
 
-	for (i = 0; i < CB_GROUP_NUM; i++)
-		context_save_cb_group(i);
-}
+	for (i = 0; i < CBAR_GROUP_MAX; i++)
+		context_save_cbar_group(i);
 
-static int arm_smmu_syscore_suspend(void)
-{
-	context_save_start();
-	context_save_gnsr0_group();
-	context_save_smrg();
+	for (i = 0; i < CB_GROUP_MAX; i++)
+		context_save_cb_group(i);
+
 	context_save_end();
 
 	return 0;
@@ -193,8 +200,9 @@ int arm_smmu_suspend_init(void __iomem **smmu_base, u32 *smmu_base_pa,
 	arm_smmu_ctx.reg_list_table_size =
 		(SMMU_REG_TABLE_START_SIZE + SMMU_REG_TABLE_END_SIZE
 			+ (GNSR_GROUP_REG_SIZE
-				+ (CB_GROUP_REG_SIZE * CB_GROUP_NUM)
-				+ (SMRG_GROUP_REG_SIZE * SMRG_GROUP_NUM)
+				+ (CB_GROUP_REG_SIZE * CB_GROUP_MAX)
+				+ (SMRG_GROUP_REG_SIZE * SMRG_GROUP_MAX)
+				+ (CBAR_GROUP_REG_SIZE * CBAR_GROUP_MAX)
 			  ) * num_smmus);
 
 	arm_smmu_ctx.reg_list_mem_size =

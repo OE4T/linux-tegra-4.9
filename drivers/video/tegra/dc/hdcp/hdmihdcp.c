@@ -1167,8 +1167,10 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	err =  tsec_hdcp_init(hdcp_context);
 	if (err)
 		goto exit;
+	down_read(&nvhdcp->hdmi->sor->reset_lock);
 	err =  tsec_hdcp_create_session(hdcp_context, DISPLAY_TYPE_HDMI,
 				nvhdcp->hdmi->sor->ctrl_num);
+	up_read(&nvhdcp->hdmi->sor->reset_lock);
 	if (err)
 		goto exit;
 	err =  tsec_hdcp_exchange_info(hdcp_context,
@@ -2039,8 +2041,10 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	nvhdcp_info("link integrity check passed!\n");
 	mutex_unlock(&nvhdcp->lock);
 
+	down_read(&hdmi->sor->reset_lock);
 	e = tsec_hdcp_session_ctrl(hdcp_context,
 		HDCP_SESSION_CTRL_FLAG_ACTIVATE);
+	up_read(&hdmi->sor->reset_lock);
 	if (e) {
 		nvhdcp_info("tsec_hdcp_session_ctrl failed\n");
 		mutex_lock(&nvhdcp->lock);

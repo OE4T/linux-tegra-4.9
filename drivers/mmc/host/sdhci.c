@@ -483,7 +483,7 @@ static void sdhci_transfer_pio(struct sdhci_host *host)
 		(host->data->blocks == 1))
 		mask = ~0;
 
-	while (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
+	if (sdhci_readl(host, SDHCI_PRESENT_STATE) & mask) {
 		if (host->quirks & SDHCI_QUIRK_PIO_NEEDS_DELAY)
 			udelay(100);
 
@@ -493,8 +493,6 @@ static void sdhci_transfer_pio(struct sdhci_host *host)
 			sdhci_write_block_pio(host);
 
 		host->blocks--;
-		if (host->blocks == 0)
-			break;
 	}
 
 	DBG("PIO transfer complete.\n");

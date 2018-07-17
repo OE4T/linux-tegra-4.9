@@ -1687,57 +1687,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
-	 * protected accordingly. This section early enables DC with first mode
-	 * from the monitor specs.
-	 * In case there is no hotplug we are falling back
-	 * to default VGA mode.
+	 * protected accordingly. This section chooses a mode to early
+	 * enable DC.
 	 */
 	if ((IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) ||
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
 			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
-		struct fb_monspecs specs;
-
-		specs.modedb = NULL;
-
-		/* If dc is initialized by bootloader or if display-timings
-		 * are specified in DT, dc mode would already be set.
-		 */
-		if (!dc->initialized && !dc->out->n_modes) {
-			if (tegra_dc_hpd(dc)) {
-				if (!tegra_edid_get_monspecs(hdmi->edid,
-								&specs)) {
-					err = tegra_dc_set_fb_mode(dc,
-						specs.modedb, false);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: set DC mode from modedb,"
-						" err = %d\n", __func__, err);
-					}
-				} else {
-					/* Reading edid from monitor failed */
-					err = tegra_dc_set_fb_mode(dc,
-						&tegra_dc_vga_mode, false);
-					if (err) {
-						dev_err(&dc->ndev->dev,
-						"%s: no edid, set VGA mode,"
-						" err=%d\n", __func__, err);
-					}
-				}
-			} else {
-				/* No DT mode and HPD not detected */
-				err = tegra_dc_set_fb_mode(dc,
-					&tegra_dc_vga_mode, false);
-				if (err) {
-					dev_err(&dc->ndev->dev,
-					"%s: fallback to VGA mode, err=%d\n",
-					__func__, err);
-				}
-			}
-
-			if (specs.modedb != NULL)
-				kfree(specs.modedb);
-		}
+		/* In case of seamless display, dc mode would already be set */
+		if (!dc->initialized)
+			tegra_dc_set_fbcon_boot_mode(dc, hdmi->edid);
 	}
 
 #ifdef CONFIG_SWITCH

@@ -931,25 +931,38 @@ static int parse_modes(struct tegra_dc_out *default_out,
 		OF_DC_LOG("of v_front_porch %d\n", temp);
 		goto parse_modes_fail;
 	}
+	/* Optional property. Don't fail if not specified */
+	if (!of_property_read_u32(np, "vmode", &temp)) {
+		modes->vmode = temp;
+	}
 
-	for (i = 0; pins && (i < default_out->n_out_pins); i++) {
-		switch (pins[i].name) {
-		case TEGRA_DC_OUT_PIN_DATA_ENABLE:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_DE;
-			break;
-		case TEGRA_DC_OUT_PIN_H_SYNC:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
-			break;
-		case TEGRA_DC_OUT_PIN_V_SYNC:
-			if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
-				modes->flags |= TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
-			break;
-		default:
-			/* Ignore other pin setting */
-			break;
+	if (pins && default_out->n_out_pins) {
+		for (i = 0; i < default_out->n_out_pins; i++) {
+			switch (pins[i].name) {
+			case TEGRA_DC_OUT_PIN_DATA_ENABLE:
+				if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+					modes->flags |=
+						TEGRA_DC_MODE_FLAG_NEG_DE;
+				break;
+			case TEGRA_DC_OUT_PIN_H_SYNC:
+				if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+					modes->flags |=
+						TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
+				break;
+			case TEGRA_DC_OUT_PIN_V_SYNC:
+				if (pins[i].pol == TEGRA_DC_OUT_PIN_POL_LOW)
+					modes->flags |=
+						TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
+				break;
+			default:
+				/* Ignore other pin setting */
+				break;
+			}
 		}
+	} else {
+		/* Optional property. Don't fail if not specified */
+		if (!of_property_read_u32(np, "flags", &temp))
+			modes->flags = temp;
 	}
 
 	return 0;
@@ -957,6 +970,53 @@ parse_modes_fail:
 	pr_err("a mode parameter parse fail!\n");
 	return -EINVAL;
 }
+
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+int parse_fbcon_default_mode(struct device_node *np_target_disp,
+			struct platform_device *ndev,
+			struct tegra_dc_platform_data *pdata)
+{
+	struct device_node *fbcon_default_mode_np = NULL;
+	int err = 0;
+
+	fbcon_default_mode_np = of_get_child_by_name(np_target_disp,
+					"nvidia,fbcon-default-mode");
+
+	if (!fbcon_default_mode_np) {
+		pdata->default_out->fbcon_default_mode = NULL;
+	} else {
+		struct tegra_dc_mode fbcon_dc_mode;
+		memset(&fbcon_dc_mode, 0x0,
+				sizeof(struct tegra_dc_mode));
+		pdata->default_out->fbcon_default_mode =
+			devm_kzalloc(&ndev->dev,
+				sizeof(struct fb_videomode), GFP_KERNEL);
+		if (!pdata->default_out->fbcon_default_mode) {
+			pr_err("%s: not enough memory for fbcon mode\n",
+						__func__);
+			err = -ENOMEM;
+			goto fail_fbcon_parse;
+		}
+
+		err = parse_modes(pdata->default_out,
+				fbcon_default_mode_np, &fbcon_dc_mode);
+		if (err) {
+			pr_err("%s: failed to parse fbcon mode\n", __func__);
+			goto fail_fbcon_parse;
+		}
+
+		err = tegra_dc_to_fb_videomode(
+			pdata->default_out->fbcon_default_mode, &fbcon_dc_mode);
+		if (err) {
+			pr_err("%s: error converting fbcon mode\n", __func__);
+			goto fail_fbcon_parse;
+		}
+	}
+
+fail_fbcon_parse:
+	return err;
+}
+#endif
 
 static int parse_cmu_data(struct device_node *np,
 	struct tegra_dc_cmu *cmu)
@@ -3018,6 +3078,18 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			}
 		}
 	}
+
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+	/* Default mode for fbconsole */
+	if ((pdata->default_out->type == TEGRA_DC_OUT_HDMI) ||
+		(pdata->default_out->type == TEGRA_DC_OUT_DP)) {
+		err = parse_fbcon_default_mode(np_target_disp, ndev, pdata);
+		if (err) {
+			pr_err("%s: parsing fbcon mode failed\n", __func__);
+			goto fail_parse;
+		}
+	}
+#endif
 
 	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
 	if (!vrr_np || (def_out->n_modes < 2)) {

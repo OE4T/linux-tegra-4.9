@@ -906,35 +906,66 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 }
 EXPORT_SYMBOL(tegra_dc_set_fb_mode);
 
-int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc)
+int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc, struct tegra_edid *edid)
 {
-	struct tegra_edid *edid = NULL;
 	struct fb_monspecs specs;
-	int	ret = 0;
+	int ret = 0;
 
 	specs.modedb = NULL;
-	if (tegra_fb_is_console_enabled(dc->pdata) &&
-		(!dc->initialized) && tegra_dc_hpd(dc)) {
+	if (tegra_fb_is_console_enabled(dc->pdata)) {
 		switch (dc->out->type) {
 		case TEGRA_DC_OUT_HDMI:
 			break;
-
 		case TEGRA_DC_OUT_DP:
 			if (!tegra_dc_is_ext_dp_panel(dc))
 				return 0;
-
-			edid = dc->edid;
 			break;
 		default:
 			return -EINVAL;
 		}
 
-		if (edid && !tegra_edid_get_monspecs(edid, &specs))
-			ret = tegra_dc_set_fb_mode(dc, specs.modedb, false);
-		else
-			ret = tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode,
-									false);
+		/* In case of seamless display, dc mode would already be set */
+		if (!dc->initialized) {
+			if (dc->out->fbcon_default_mode) {
+				ret = tegra_dc_set_fb_mode(dc,
+					dc->out->fbcon_default_mode, false);
+				if (ret) {
+					dev_err(&dc->ndev->dev,
+					"%s: setting default fbcon mode failed,"
+					" err = %d\n", __func__, ret);
+					}
+			} else if (edid && tegra_dc_hpd(dc)) {
+				if (!tegra_edid_get_monspecs(edid, &specs)) {
+					ret = tegra_dc_set_fb_mode(dc,
+						specs.modedb, false);
+					if (ret) {
+						dev_err(&dc->ndev->dev,
+						"%s: set DC mode from modedb,"
+						" err = %d\n", __func__, ret);
+					}
+				} else {
+					/* Reading edid from monitor failed */
+					ret = tegra_dc_set_fb_mode(dc,
+						&tegra_dc_vga_mode, false);
+					if (ret) {
+						dev_err(&dc->ndev->dev,
+						"%s: no edid, set VGA mode,"
+						" err=%d\n", __func__, ret);
+					}
+				}
+			} else {
+				/* HPD not detected */
+				ret = tegra_dc_set_fb_mode(dc,
+					&tegra_dc_vga_mode, false);
+				if (ret) {
+					dev_err(&dc->ndev->dev,
+					"%s: fallback to VGA mode, err=%d\n",
+					__func__, ret);
+				}
+			}
+		}
 	}
+
 	if (specs.modedb != NULL)
 		kfree(specs.modedb);
 	return ret;

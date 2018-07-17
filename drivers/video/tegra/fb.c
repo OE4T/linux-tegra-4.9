@@ -927,7 +927,11 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		tegra_dc_to_fb_videomode(&fb_mode, &dc->cached_mode);
 		dc->use_cached_mode = false;
 	} else {
-		memcpy(&fb_mode, &specs->modedb[0],
+		if (!dc->out->fbcon_default_mode)
+			memcpy(&fb_mode, &specs->modedb[0],
+				sizeof(struct fb_videomode));
+		else
+			memcpy(&fb_mode, dc->out->fbcon_default_mode,
 				sizeof(struct fb_videomode));
 	}
 

@@ -134,30 +134,39 @@
 					* Gain factor used to convert fixed point integer to float
 					* Gain range [min_gain/gain_factor, max_gain/gain_factor]
 					* Gain step [step_gain/gain_factor is the smallest step that can be configured]
+					* Default gain [Default gain to be initialized for the control.
+					*     use min_gain_val as default for optimal results]
 					* Framerate factor used to convert fixed point integer to float
 					* Framerate range [min_framerate/framerate_factor, max_framerate/framerate_factor]
 					* Framerate step [step_framerate/framerate_factor is the smallest step that can befor configured]
+					* Default Framerate [Default framerate to be initialized for the control.
+					*     use max_framerate to get required performance]
 					* Exposure factor used to convert fixed point integer to float
 					* For convenience use 1 sec = 1000000us as conversion factor
 					* Exposure range [min_exp_time/exposure_factor, max_exp_time/exposure_factor]
 					* Exposure step [step_exp_time/exposure_factor is the smallest step that can befor configured]
+					* Default Exposure Time [Default exposure to be initialized for the control.
+					*     Set default exposure based on the default_framerate for optimal exposure settings]
 					*
 					* gain_factor = ""; (integer factor used for floating to fixed point conversion)
 					* min_gain_val = ""; (ceil to integer)
 					* max_gain_val = ""; (ceil to integer)
 					* step_gain_val = ""; (ceil to integer)
+					* default_gain = ""; (ceil to integer)
 					* Gain limits for mode
 					*
 					* exposure_factor = ""; (integer factor used for floating to fixed point conversion)
 					* min_exp_time = ""; (ceil to integer)
 					* max_exp_time = ""; (ceil to integer)
 					* step_exp_time = ""; (ceil to integer)
+					* default_exp_time = ""; (ceil to integer)
 					* Exposure Time limits for mode (sec)
 					*
 					* framerate_factor = ""; (integer factor used for floating to fixed point conversion)
 					* min_framerate = ""; (ceil to integer)
 					* max_framerate = ""; (ceil to integer)
 					* step_framerate = ""; (ceil to integer)
+					* default_framerate = ""; (ceil to integer)
 					* Framerate limits for mode (fps)
 					*
 					* embedded_metadata_height = "";
@@ -189,16 +198,19 @@
 						min_gain_val = "0"; /* 0dB */
 						max_gain_val = "480"; /* 48dB */
 						step_gain_val = "3"; /* 0.3 */
+						default_gain = "0";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						framerate_factor = "1000000";
 						min_framerate = "1500000"; /* 1.5 */
 						max_framerate = "30000000"; /* 30 */
 						step_framerate = "1";
+						default_framerate= "30000000";
 						exposure_factor = "1000000";
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
 						step_exp_time = "1";
+						default_exp_time = "33334";/* us */
 						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
@@ -227,16 +239,19 @@
 						min_gain_val = "0"; /* 0dB */
 						max_gain_val = "480"; /* 48dB */
 						step_gain_val = "3"; /* 0.3 */
+						default_gain = "0";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						framerate_factor = "1000000";
 						min_framerate = "1500000"; /* 1.5 */
 						max_framerate = "30000000"; /* 30 */
 						step_framerate = "1";
+						default_framerate= "30000000";
 						exposure_factor = "1000000";
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
 						step_exp_time = "1";
+						default_exp_time = "33334";/* us */
 						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
@@ -265,15 +280,18 @@
 						min_gain_val = "0"; /* 0dB */
 						max_gain_val = "480"; /* 48dB */
 						step_gain_val = "3"; /* 0.3 */
+						default_gain = "0";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						framerate_factor = "1000000";
 						min_framerate = "1500000"; /* 1.5 */
 						max_framerate = "60000000"; /* 60 */
 						step_framerate = "1";
+						default_framerate= "60000000";
 						exposure_factor = "1000000";
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
+						default_exp_time = "16667";/* us */
 						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
@@ -302,15 +320,18 @@
 						min_gain_val = "0"; /* 0dB */
 						max_gain_val = "480"; /* 48dB */
 						step_gain_val = "3"; /* 0.3 */
+						default_gain = "0";
 						min_hdr_ratio = "1";
 						max_hdr_ratio = "1";
 						framerate_factor = "1000000";
 						min_framerate = "1500000"; /* 1.5 */
 						max_framerate = "60000000"; /* 60 */
 						step_framerate = "1";
+						default_framerate= "60000000";
 						exposure_factor = "1000000";
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
+						default_exp_time = "16667";/* us */
 						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
@@ -339,15 +360,18 @@
 						min_gain_val = "0"; /* 0dB */
 						max_gain_val = "120"; /* 12dB */
 						step_gain_val = "3"; /* 0.3 */
+						default_gain = "0";
 						min_hdr_ratio = "16";
 						max_hdr_ratio = "16";
 						framerate_factor = "1000000";
 						min_framerate = "1500000"; /* 1.5 */
 						max_framerate = "30000000"; /* 30 */
 						step_framerate = "1";
+						default_framerate= "30000000";
 						exposure_factor = "1000000";
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
+						default_exp_time = "33334";/* us */
 						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 

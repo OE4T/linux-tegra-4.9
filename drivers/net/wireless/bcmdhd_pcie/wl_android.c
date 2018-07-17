@@ -4,7 +4,7 @@
  * Portions of this code are copyright (c) 2017 Cypress Semiconductor Corporation
  * 
  * Copyright (C) 1999-2017, Broadcom Corporation
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -434,6 +434,10 @@ static int wl_android_set_ap_isolate(struct net_device *dev, char *command, int 
 
 	if (*(command + strlen(CMD_AP_ISOLATE)) == '\0') {
 		val = dhd_android_ap_isolate_getval(dev);
+		if (val < 0) {
+			DHD_ERROR(("%s: received invalid val", __func__));
+			return val;
+		}
 		bytes_written = snprintf(command, total_len, "%s %d", CMD_AP_ISOLATE, val);
 		return bytes_written;
 	}

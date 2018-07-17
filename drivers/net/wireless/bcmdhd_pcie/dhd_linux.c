@@ -13347,6 +13347,10 @@ int dhd_android_ap_isolate_getval(struct net_device *dev)
 	int ifidx, val;
 
 	ifidx = dhd_net2idx(dhd, dev);
+	if (ifidx < 0) {
+		DHD_ERROR(("%s: DHD_BAD_IF return\n", __func__));
+		return ifidx;
+	}
 	val = dhd_get_ap_isolate(&dhd->pub, ifidx);
 	return val;
 }
@@ -13356,6 +13360,10 @@ void dhd_android_ap_isolate_setval(struct net_device *dev, int val)
 	int ifidx;
 
 	ifidx = dhd_net2idx(dhd, dev);
+	if (ifidx < 0) {
+		DHD_ERROR(("%s: DHD_BAD_IF return\n", __func__));
+		return;
+	}
 	dhd_set_ap_isolate(&dhd->pub, ifidx, val);
 }
 #ifdef DHD_FW_COREDUMP

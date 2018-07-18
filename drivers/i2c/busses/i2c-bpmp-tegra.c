@@ -231,14 +231,6 @@ static int tegra_bpmp_i2c_req(u32 adapter, struct mrq_i2c_request *in,
 struct tegra_bpmp_i2c_chipdata {
 };
 
-
-static int tegra_bpmp_i2c_init(struct tegra_bpmp_i2c_dev *i2c_dev)
-{
-	int err = 0;
-
-	return err;
-}
-
 static void dump_i2c_msgs(struct tegra_bpmp_i2c_dev *i2c_dev,
 			  struct i2c_msg msgs[], int num)
 {
@@ -410,12 +402,6 @@ static int tegra_bpmp_i2c_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, i2c_dev);
-
-	ret = tegra_bpmp_i2c_init(i2c_dev);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to initialize i2c controller");
-		goto err;
-	}
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
 	i2c_dev->adapter.owner = THIS_MODULE;

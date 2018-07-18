@@ -53,6 +53,8 @@
 #define PG_CLK_RATE	102000000
 /* width of interface between VI and CSI */
 #define CSI_BUS_WIDTH	64
+/* number of lanes per brick */
+#define NUM_LANES	4
 
 #define PHY_OFFSET			0x10000U
 #define CIL_A_SW_RESET			0x11024U
@@ -381,6 +383,7 @@ static int t194_nvcsi_probe(struct platform_device *pdev)
 	csi_info.hw_type = HWTYPE_CSI;
 	csi_info.use_max = true;
 	csi_info.bus_width = CSI_BUS_WIDTH;
+	csi_info.lane_num = NUM_LANES;
 	csi_info.pg_clk_rate = PG_CLK_RATE;
 	err = tegra_camera_device_register(&csi_info, nvcsi);
 	if (err)

@@ -65,12 +65,14 @@ struct tegra_camera_info {
 	/* set max bw by default */
 	bool en_max_bw;
 
-	u64 total_pixel_rate;
+	u64 phy_pixel_rate;
 	u64 active_pixel_rate;
 	u64 active_iso_bw;
 	u32 max_pixel_depth;
 	u32 ppc_divider;
 	u32 num_active_streams;
+	u32 num_device_lanes;
+	u32 total_sensor_lanes;
 	u32 sensor_type;
 	u32 memory_latency;
 	bool pg_mode;
@@ -613,12 +615,14 @@ static int tegra_camera_probe(struct platform_device *pdev)
 #endif
 	}
 
-	info->total_pixel_rate = 0;
+	info->phy_pixel_rate = 0;
 	info->active_pixel_rate = 0;
 	info->active_iso_bw = 0;
 	info->max_pixel_depth = 0;
 	info->ppc_divider = 1;
 	info->num_active_streams = 0;
+	info->num_device_lanes = 0;
+	info->total_sensor_lanes = 0;
 	info->sensor_type = 0;
 	info->memory_latency = 0;
 	info->pg_mode = false;
@@ -648,19 +652,29 @@ static void update_platform_data(struct tegra_camera_dev_info *cdev,
 	if (cdev->sensor_type != SENSORTYPE_NONE)
 		info->sensor_type = cdev->sensor_type;
 
+	if (cdev->hw_type != HWTYPE_NONE) {
+		if (info->num_device_lanes < cdev->lane_num)
+			info->num_device_lanes = cdev->lane_num;
+	}
+
 	if (dev_registered) {
 		/* if bytes per pixel is greater than 2, then num_ppc
 		 * is 4 for VI. Set divider for this case.
 		 */
 		if (cdev->bpp > 2)
 			info->ppc_divider = 2;
-		info->total_pixel_rate += cdev->pixel_rate;
+		if (cdev->sensor_type != SENSORTYPE_NONE)
+			info->total_sensor_lanes += cdev->lane_num;
+		if (info->total_sensor_lanes <= info->num_device_lanes)
+			info->phy_pixel_rate += cdev->pixel_rate;
 		if (info->max_pixel_depth < cdev->pixel_bit_depth)
 			info->max_pixel_depth = cdev->pixel_bit_depth;
 		if (info->memory_latency < cdev->memory_latency)
 			info->memory_latency = cdev->memory_latency;
 	} else {
-		info->total_pixel_rate -= cdev->pixel_rate;
+		if (info->total_sensor_lanes <= info->num_device_lanes)
+			info->phy_pixel_rate -= cdev->pixel_rate;
+		info->total_sensor_lanes -= cdev->lane_num;
 	}
 }
 
@@ -859,7 +873,7 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 {
 	int ret = 0;
 	u64 active_pr = info->active_pixel_rate;
-	u64 total_pr = info->total_pixel_rate;
+	u64 phy_pr = info->phy_pixel_rate;
 	u32 overhead = cdev->overhead + 100;
 	u32 max_depth = info->max_pixel_depth;
 	u32 bus_width = cdev->bus_width;
@@ -870,7 +884,7 @@ static int calculate_and_set_device_clock(struct tegra_camera_info *info,
 	u64 nr = 0;
 	u64 dr = 0;
 	u64 clk_rate = 0;
-	u64 final_pr = (cdev->use_max) ? total_pr : active_pr;
+	u64 final_pr = (cdev->use_max) ? phy_pr : active_pr;
 	bool set_clk = true;
 
 	if (cdev->hw_type == HWTYPE_NONE)

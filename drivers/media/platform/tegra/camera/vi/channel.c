@@ -1399,6 +1399,21 @@ static u64 tegra_channel_get_max_pixelclock(struct tegra_channel *chan)
 	return pixelclock;
 }
 
+static u32 tegra_channel_get_num_lanes(struct tegra_channel *chan)
+{
+	u32 num_lanes = 0;
+
+	struct v4l2_subdev *sd = chan->subdev_on_csi;
+	struct camera_common_data *s_data =
+		to_camera_common_data(sd->dev);
+	struct sensor_mode_properties *sensor_mode;
+
+	sensor_mode = &s_data->sensor_props.sensor_modes[0];
+	num_lanes = sensor_mode->signal_properties.num_lanes;
+
+	return num_lanes;
+}
+
 static u32 tegra_channel_get_sensor_type(struct tegra_channel *chan)
 {
 	u32 phy_mode = 0, sensor_type = 0;
@@ -1441,6 +1456,7 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 		/* Multiply by CPHY symbols to pixels factor. */
 		if (cdev->sensor_type == SENSORTYPE_CPHY)
 			pixelclock *= 16/7;
+		cdev->lane_num = tegra_channel_get_num_lanes(chan);
 	}
 
 	cdev->pixel_rate = pixelclock;

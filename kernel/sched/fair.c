@@ -6818,7 +6818,8 @@ static int start_cpu(bool boosted)
 	return boosted ? rd->max_cap_orig_cpu : rd->min_cap_orig_cpu;
 }
 
-static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
+static int capacity_aware_wake_cpu(struct task_struct *p, int target,
+					int idle_target, int sync)
 {
 	struct sched_domain *sd;
 	struct sched_group *sg, *sg_target, *prev_sg = NULL;
@@ -6827,6 +6828,18 @@ static int capacity_aware_wake_cpu(struct task_struct *p, int target, int sync)
 	int prev_cap = capacity_orig_of(target_cpu);
 	unsigned long task_util_boosted, new_util;
 	int i;
+	int cpu = smp_processor_id();
+
+	/*
+	 * All CPUs in the same cluster are of the same type. When we are
+	 * down to single cluster, the system becomes a homogeneous
+	 * architecture, it no longer makes sense to do capacity_aware
+	 * wake. In such case, simply select idle sibling. The SD_LOAD_BALANCE
+	 * flag check is done to determine if this condition is met.
+	 */
+	if (highest_flag_domain(cpu, SD_LOAD_BALANCE) ==
+			lowest_flag_domain(cpu, SD_LOAD_BALANCE))
+		return select_idle_sibling(p, target, idle_target);
 
 	if (sysctl_sched_sync_hint_enable && sync) {
 		int cpu = smp_processor_id();
@@ -7342,7 +7355,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		if (energy_aware() && !(cpu_rq(cpu)->rd->overutilized))
 			new_cpu = select_energy_cpu_brute(p, prev_cpu, sync);
 		else if (capacity_aware() && !(cpu_rq(cpu)->rd->overutilized))
-			new_cpu = capacity_aware_wake_cpu(p, prev_cpu, sync);
+			new_cpu = capacity_aware_wake_cpu(p, prev_cpu, new_cpu, sync);
 		else if (sd_flag & SD_BALANCE_WAKE) /* XXX always ? */
 			new_cpu = select_idle_sibling(p, prev_cpu, new_cpu);
 

@@ -31,7 +31,7 @@
 	nvidia,fastboot-usb-vid = <0x0955>;
 	nvidia,fastboot-usb-pid = <0xee1e>;
 
-	compatible = "nvidia,galen", "nvidia,tegra194";
+	compatible = "nvidia,jetson-xavier", "nvidia,tegra194";
 
 	chosen {
 		bootargs ="console=ttyTCU0,115200";
@@ -41,7 +41,7 @@
 	firmware {
 		android {
 			compatible = "android,firmware";
-			hardware = "galen";
+			hardware = "jetson-xavier";
 			vbmeta {
 				compatible = "android,vbmeta";
 				parts = "vbmeta,kernel,kernel-dtb,APP,vendor,SOS";

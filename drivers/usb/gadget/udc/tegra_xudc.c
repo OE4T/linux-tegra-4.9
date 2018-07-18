@@ -1838,9 +1838,7 @@ static int __tegra_xudc_ep_set_halt(struct tegra_xudc_ep *ep, bool halt)
 	if (!!(xudc_readl(xudc, EP_HALT) & BIT(ep->index)) == halt) {
 		dev_dbg(xudc->dev, "ep %u already %s\n", ep->index,
 			halt ? "halted" : "not halted");
-		/* Reset already-unhalted endpoints. */
-		if (halt)
-			return 0;
+		return 0;
 	}
 
 	if (halt) {

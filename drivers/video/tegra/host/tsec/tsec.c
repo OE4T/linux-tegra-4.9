@@ -605,9 +605,7 @@ static int tsec_setup_ucode_image(struct platform_device *dev,
 	u32 tsec_carveout_addr_off;
 	u32 tsec_carveout_size_off;
 
-	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
-
-	err = flcn_setup_ucode_image(dev, ucode_ptr, ucode_fw);
+	err = flcn_setup_ucode_image(dev, m, ucode_fw, &ucode);
 	if (err)
 		return err;
 
@@ -651,7 +649,6 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->dma_addr = 0;
 	m->mapped = NULL;
-
 	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get tsec firmware\n");
@@ -661,10 +658,8 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->size = ucode_fw->size + TSEC_RESERVE;
 	dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
-
-	m->mapped = dma_alloc_attrs(&dev->dev,
-				m->size, &m->dma_addr,
-				GFP_KERNEL, __DMA_ATTR(attrs));
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr,
+				    GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!m->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -678,16 +673,14 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->valid = true;
-
 	release_firmware(ucode_fw);
 
 	return 0;
 
 clean_up:
 	if (m->mapped) {
-		dma_free_attrs(&dev->dev,
-			m->size, m->mapped,
-			m->dma_addr, __DMA_ATTR(attrs));
+		dma_free_attrs(&dev->dev, m->size, m->mapped, m->dma_addr,
+			       __DMA_ATTR(attrs));
 		m->mapped = NULL;
 		m->dma_addr = 0;
 	}

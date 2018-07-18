@@ -63,8 +63,14 @@
 
 #define FW_NAME_SIZE			32
 
-#define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)
-#define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
+static inline struct flcn **get_nvdec(struct platform_device *dev)
+{
+	return (struct flcn **)nvhost_get_falcon_data(dev);
+}
+static inline void set_nvdec(struct platform_device *dev, struct flcn **flcn)
+{
+	nvhost_set_falcon_data(dev, flcn);
+}
 
 static int nvhost_nvdec_init_sw(struct platform_device *dev);
 static unsigned int tegra_nvdec_enabled_in_bootcmd = -1;
@@ -123,7 +129,7 @@ static void nvdec_get_fw_name(struct platform_device *pdev, char *name)
 static int nvhost_nvdec_bl_init(struct platform_device *dev)
 {
 	u32 fb_data_offset = 0;
-	struct nvdec **m = get_nvdec(dev);
+	struct flcn **m = get_nvdec(dev);
 	struct nvdec_bl_shared_data shared_data;
 	u32 debug = host1x_readl(dev,
 				nvdec_scp_ctl_stat_r()) &
@@ -169,7 +175,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
-	struct nvdec **m;
+	struct flcn **m;
 
 	dev_dbg(&dev->dev, "flcn_boot: start\n");
 	err = nvhost_nvdec_init_sw(dev);
@@ -223,81 +229,18 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	return 0;
 }
 
-static int nvdec_setup_ucode_image(struct platform_device *dev,
-		u32 *ucode_ptr,
-		const struct firmware *ucode_fw,
-		struct nvdec *m)
-{
-	/* image data is little endian. */
-	struct nvdec_ucode_v1 ucode;
-	int w;
-
-	/* copy the whole thing taking into account endianness */
-	for (w = 0; w < ucode_fw->size / sizeof(u32); w++)
-		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
-
-	ucode.bin_header = (struct nvdec_ucode_bin_header_v1 *)ucode_ptr;
-	/* endian problems would show up right here */
-	if (ucode.bin_header->bin_magic != 0x10de) {
-		dev_err(&dev->dev,
-			   "failed to get firmware magic");
-		return -EINVAL;
-	}
-	if (ucode.bin_header->bin_ver != 1) {
-		dev_err(&dev->dev,
-			   "unsupported firmware version");
-		return -ENOENT;
-	}
-	/* shouldn't be bigger than what firmware thinks */
-	if (ucode.bin_header->bin_size > ucode_fw->size) {
-		dev_err(&dev->dev,
-			   "ucode image size inconsistency");
-		return -EINVAL;
-	}
-
-	nvhost_dbg_info("ucode bin header: magic:0x%x ver:%d size:%d",
-		ucode.bin_header->bin_magic,
-		ucode.bin_header->bin_ver,
-		ucode.bin_header->bin_size);
-	nvhost_dbg_info("ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
-		ucode.bin_header->os_bin_header_offset,
-		ucode.bin_header->os_bin_data_offset,
-		ucode.bin_header->os_bin_size);
-	ucode.os_header = (struct nvdec_ucode_os_header_v1 *)
-		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
-
-	nvhost_dbg_info("os ucode header: os code (offset,size): 0x%x, 0x%x",
-		ucode.os_header->os_code_offset,
-		ucode.os_header->os_code_size);
-	nvhost_dbg_info("os ucode header: os data (offset,size): 0x%x, 0x%x",
-		ucode.os_header->os_data_offset,
-		ucode.os_header->os_data_size);
-	nvhost_dbg_info("os ucode header: num apps: %d",
-		ucode.os_header->num_apps);
-
-	m->os.size = ucode.bin_header->os_bin_size;
-	m->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
-	m->os.code_offset = ucode.os_header->os_code_offset;
-	m->os.data_offset = ucode.os_header->os_data_offset;
-	m->os.data_size   = ucode.os_header->os_data_size;
-	m->os.code_size   = ucode.os_header->os_code_size;
-
-	return 0;
-}
-
-static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
-			struct nvdec *m)
+static int nvdec_read_ucode(struct platform_device *dev,
+			    const char *fw_name,
+			    struct flcn *m)
 {
 	const struct firmware *ucode_fw;
+	struct ucode_v1_flcn ucode;
 	int err;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-#endif
 
+	dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
 	m->dma_addr = 0;
 	m->mapped = NULL;
-
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get nvdec firmware %s\n",
@@ -307,21 +250,15 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	}
 
 	m->size = ucode_fw->size;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr, GFP_KERNEL,
-				    &attrs);
-#else
-	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr, GFP_KERNEL,
-				    DMA_ATTR_READ_ONLY);
-#endif
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->dma_addr,
+				    GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!m->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = nvdec_setup_ucode_image(dev, m->mapped, ucode_fw, m);
+	err = flcn_setup_ucode_image(dev, m, ucode_fw, &ucode);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image %s\n",
 				fw_name);
@@ -329,30 +266,26 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	}
 
 	m->valid = true;
-
 	release_firmware(ucode_fw);
 
 	return 0;
 
 clean_up:
 	if (m->mapped) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		dma_free_attrs(&dev->dev, m->size, m->mapped, m->dma_addr,
-				&attrs);
-#else
-		dma_free_attrs(&dev->dev, m->size, m->mapped, m->dma_addr,
-			       DMA_ATTR_READ_ONLY);
-#endif
+			       __DMA_ATTR(attrs));
 		m->mapped = NULL;
+		m->dma_addr = 0;
 	}
 	release_firmware(ucode_fw);
 	return err;
 }
 
+
 static int nvhost_nvdec_init_sw(struct platform_device *dev)
 {
 	int err = 0;
-	struct nvdec **m = get_nvdec(dev);
+	struct flcn **m = get_nvdec(dev);
 	char fw_name[2][FW_NAME_SIZE];
 	int i;
 
@@ -368,7 +301,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 	if (tegra_nvdec_bootloader_enabled)
 		nvdec_get_fw_name(dev, fw_name[1]);
 
-	m = kzalloc(2 * sizeof(struct nvdec *), GFP_KERNEL);
+	m = kzalloc(2 * sizeof(struct flcn *), GFP_KERNEL);
 	if (!m) {
 		dev_err(&dev->dev, "couldn't allocate ucode ptr");
 		return -ENOMEM;
@@ -377,7 +310,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 	set_nvdec(dev, m);
 	nvhost_dbg_fn("primed dev:%p", dev);
 	for (i = 0; i < (1 + tegra_nvdec_bootloader_enabled); i++) {
-		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
+		m[i] = kzalloc(sizeof(struct flcn), GFP_KERNEL);
 		if (!m[i]) {
 			dev_err(&dev->dev, "couldn't alloc ucode");
 			err = -ENOMEM;

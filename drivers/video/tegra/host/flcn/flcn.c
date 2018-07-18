@@ -205,104 +205,116 @@ err:
 	return ret;
 }
 
-int flcn_setup_ucode_image(struct platform_device *dev,
-				   u32 *ucode_ptr,
-				   const struct firmware *ucode_fw)
+static int flcn_setup_ucode_fce(struct platform_device *dev,
+				struct flcn *v,
+				struct ucode_v1_flcn *ucode)
 {
+	u32 *ucode_ptr = v->mapped;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	struct flcn *v = get_flcn(dev);
-	/* image data is little endian. */
-	struct ucode_v1_flcn ucode;
+
+	if (ucode->bin_header->fce_bin_header_offset == 0xa5a5a5a5)
+		return 0;
+
+	ucode->fce_header = (struct ucode_fce_header_v1_flcn *)
+			(((void *)ucode_ptr) +
+		 ucode->bin_header->fce_bin_header_offset);
+
+	nvhost_dbg_info("fce ucode header: offset, buffer_size, size: 0x%x 0x%x 0x%x",
+			ucode->fce_header->fce_ucode_offset,
+			ucode->fce_header->fce_ucode_buffer_size,
+			ucode->fce_header->fce_ucode_size);
+
+	/* if isolation is enabled.. */
+	if (pdata->isolate_contexts) {
+		/* create and map fce shadow to all contexts */
+		v->fce_mapped = nvhost_vm_allocate_firmware_area(dev,
+					ucode->fce_header->fce_ucode_size,
+					&v->fce_dma_addr);
+		if (!v->fce_mapped)
+			return -ENOMEM;
+
+		memcpy(v->fce_mapped, (u8 *)v->mapped +
+			ucode->bin_header->fce_bin_data_offset,
+			ucode->fce_header->fce_ucode_size);
+	} else {
+		/* ..otherwise use the one in firmware image */
+		v->fce_dma_addr = v->dma_addr +
+					ucode->bin_header->fce_bin_data_offset;
+	}
+
+	v->fce.size = ucode->fce_header->fce_ucode_size;
+	v->fce.data_offset = ucode->bin_header->fce_bin_data_offset;
+
+	return 0;
+}
+
+
+int flcn_setup_ucode_image(struct platform_device *dev,
+			   struct flcn *v,
+			   const struct firmware *ucode_fw,
+			   struct ucode_v1_flcn *ucode)
+{
 	int w;
+	u32 *ucode_ptr = v->mapped;
 
 	nvhost_dbg_fn("");
 
+	/* image data is little endian. */
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
 		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
 
-	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
+	ucode->bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 	/* endian problems would show up right here */
-	if (ucode.bin_header->bin_magic != 0x10de &&
-		ucode.bin_header->bin_magic != 0x10fe) {
+	if (ucode->bin_header->bin_magic != 0x10de &&
+		ucode->bin_header->bin_magic != 0x10fe) {
 		dev_err(&dev->dev, "failed to get firmware magic");
 		return -EINVAL;
 	}
-	if (ucode.bin_header->bin_ver != 1) {
+
+	if (ucode->bin_header->bin_ver != 1) {
 		dev_err(&dev->dev, "unsupported firmware version");
 		return -ENOENT;
 	}
+
 	/* shouldn't be bigger than what firmware thinks */
-	if (ucode.bin_header->bin_size > ucode_fw->size) {
+	if (ucode->bin_header->bin_size > ucode_fw->size) {
 		dev_err(&dev->dev, "ucode image size inconsistency");
 		return -EINVAL;
 	}
 
 	nvhost_dbg_info("ucode bin header: magic:0x%x ver:%d size:%d",
-			ucode.bin_header->bin_magic,
-			ucode.bin_header->bin_ver,
-			ucode.bin_header->bin_size);
+			ucode->bin_header->bin_magic,
+			ucode->bin_header->bin_ver,
+			ucode->bin_header->bin_size);
 	nvhost_dbg_info("ucode bin header: os bin (header,data) offset size: 0x%x, 0x%x %d",
-			ucode.bin_header->os_bin_header_offset,
-			ucode.bin_header->os_bin_data_offset,
-			ucode.bin_header->os_bin_size);
+			ucode->bin_header->os_bin_header_offset,
+			ucode->bin_header->os_bin_data_offset,
+			ucode->bin_header->os_bin_size);
 	nvhost_dbg_info("ucode bin header: fce bin (header,data) offset size: 0x%x, 0x%x %d",
-			ucode.bin_header->fce_bin_header_offset,
-			ucode.bin_header->fce_bin_data_offset,
-			ucode.bin_header->fce_bin_size);
+			ucode->bin_header->fce_bin_header_offset,
+			ucode->bin_header->fce_bin_data_offset,
+			ucode->bin_header->fce_bin_size);
 
-	ucode.os_header = (struct ucode_os_header_v1_flcn *)
-		(((void *)ucode_ptr) + ucode.bin_header->os_bin_header_offset);
+	ucode->os_header = (struct ucode_os_header_v1_flcn *)
+		(((void *)ucode_ptr) + ucode->bin_header->os_bin_header_offset);
 
 	nvhost_dbg_info("os ucode header: os code (offset,size): 0x%x, 0x%x",
-			ucode.os_header->os_code_offset,
-			ucode.os_header->os_code_size);
+			ucode->os_header->os_code_offset,
+			ucode->os_header->os_code_size);
 	nvhost_dbg_info("os ucode header: os data (offset,size): 0x%x, 0x%x",
-			ucode.os_header->os_data_offset,
-			ucode.os_header->os_data_size);
-	nvhost_dbg_info("os ucode header: num apps: %d", ucode.os_header->num_apps);
+			ucode->os_header->os_data_offset,
+			ucode->os_header->os_data_size);
+	nvhost_dbg_info("os ucode header: num apps: %d", ucode->os_header->num_apps);
 
-	if (ucode.bin_header->fce_bin_header_offset != 0xa5a5a5a5) {
-		ucode.fce_header = (struct ucode_fce_header_v1_flcn *)
-			(((void *)ucode_ptr) +
-			 ucode.bin_header->fce_bin_header_offset);
-
-		nvhost_dbg_info("fce ucode header: offset, buffer_size, size: 0x%x 0x%x 0x%x",
-				ucode.fce_header->fce_ucode_offset,
-				ucode.fce_header->fce_ucode_buffer_size,
-				ucode.fce_header->fce_ucode_size);
-
-		/* if isolation is enabled.. */
-		if (pdata->isolate_contexts) {
-			/* create and map fce shadow to all contexts */
-			v->fce_mapped = nvhost_vm_allocate_firmware_area(dev,
-				ucode.fce_header->fce_ucode_size,
-				&v->fce_dma_addr);
-			if (!v->fce_mapped)
-				return -ENOMEM;
-
-			memcpy(v->fce_mapped, (u8 *)v->mapped +
-				ucode.bin_header->fce_bin_data_offset,
-				ucode.fce_header->fce_ucode_size);
-		} else {
-			/* ..otherwise use the one in firmware image */
-			v->fce_dma_addr = v->dma_addr +
-				ucode.bin_header->fce_bin_data_offset;
-		}
-
-		v->fce.size        = ucode.fce_header->fce_ucode_size;
-		v->fce.data_offset =
-			ucode.bin_header->fce_bin_data_offset;
-	}
-
-	v->os.size = ucode.bin_header->os_bin_size;
-	v->os.bin_data_offset = ucode.bin_header->os_bin_data_offset;
-	v->os.code_offset = ucode.os_header->os_code_offset;
-	v->os.data_offset = ucode.os_header->os_data_offset;
-	v->os.data_size   = ucode.os_header->os_data_size;
-	v->os.code_size = ucode.os_header->os_code_size;
-	v->os.bin_magic = ucode.bin_header->bin_magic;
-	v->os.bin_ver_tag = ucode.bin_header->bin_ver_tag;
+	v->os.size = ucode->bin_header->os_bin_size;
+	v->os.bin_data_offset = ucode->bin_header->os_bin_data_offset;
+	v->os.code_offset = ucode->os_header->os_code_offset;
+	v->os.data_offset = ucode->os_header->os_data_offset;
+	v->os.data_size   = ucode->os_header->os_data_size;
+	v->os.code_size = ucode->os_header->os_code_size;
+	v->os.bin_magic = ucode->bin_header->bin_magic;
+	v->os.bin_ver_tag = ucode->bin_header->bin_ver_tag;
 
 	return 0;
 }
@@ -325,18 +337,17 @@ int flcn_reload_fw(struct platform_device *pdev)
 	return 0;
 }
 
-static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
+static int flcn_read_ucode(struct platform_device *dev,
+		    const char *fw_name,
+		    struct flcn *v)
 {
-	struct flcn *v = get_flcn(dev);
 	const struct firmware *ucode_fw;
+	struct ucode_v1_flcn ucode;
 	int err;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
-#endif
 
 	nvhost_dbg_fn("");
-
+	dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
 	v->dma_addr = 0;
 	v->mapped = NULL;
 
@@ -349,41 +360,35 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	v->size = ucode_fw->size;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	v->mapped = dma_alloc_attrs(&dev->dev, v->size, &v->dma_addr,
-				    GFP_KERNEL, &attrs);
-#else
-	v->mapped = dma_alloc_attrs(&dev->dev, v->size, &v->dma_addr,
-				    GFP_KERNEL, DMA_ATTR_READ_ONLY);
-#endif
+				    GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!v->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	err = flcn_setup_ucode_image(dev, v->mapped, ucode_fw);
+	err = flcn_setup_ucode_image(dev, v, ucode_fw, &ucode);
 	if (err) {
 		dev_err(&dev->dev, "failed to parse firmware image\n");
 		goto clean_up;
 	}
 
-	v->valid = true;
+	err = flcn_setup_ucode_fce(dev, v, &ucode);
+	if (err) {
+		dev_err(&dev->dev, "failed to parse fce image\n");
+		goto clean_up;
+	}
 
+	v->valid = true;
 	release_firmware(ucode_fw);
 
 	return 0;
 
- clean_up:
+clean_up:
 	if (v->mapped) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
-			       &attrs);
-#else
-		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
-			       DMA_ATTR_READ_ONLY);
-#endif
+			       __DMA_ATTR(attrs));
 		v->mapped = NULL;
 		v->dma_addr = 0;
 	}
@@ -541,21 +546,20 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 
 	v = kzalloc(sizeof(*v), GFP_KERNEL);
 	if (!v) {
-		dev_err(&dev->dev, "couldn't alloc flcn support");
 		err = -ENOMEM;
 		goto clean_up;
 	}
+
 	set_flcn(dev, v);
 	nvhost_dbg_fn("primed dev:%p v:%p", dev, v);
-
-	err = flcn_read_ucode(dev, pdata->firmware_name);
+	err = flcn_read_ucode(dev, pdata->firmware_name, v);
 	if (err || !v->valid)
 		goto clean_up;
 
 	return 0;
 
  clean_up:
-	nvhost_err(&dev->dev, "failed");
+	nvhost_err(&dev->dev, "failed : 0x%x", err);
 	return err;
 }
 

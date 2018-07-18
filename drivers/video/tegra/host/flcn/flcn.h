@@ -36,21 +36,12 @@ struct ucode_bin_header_v1_flcn {
 	u32 bin_ver_tag;
 };
 
-struct ucode_os_code_header_v1_flcn {
-	u32 offset;
-	u32 size;
-};
-
 struct ucode_os_header_v1_flcn {
 	u32 os_code_offset;
 	u32 os_code_size;
 	u32 os_data_offset;
 	u32 os_data_size;
 	u32 num_apps;
-	struct ucode_os_code_header_v1_flcn *app_code;
-	struct ucode_os_code_header_v1_flcn *app_data;
-	u32 *os_ovl_offset;
-	u32 *of_ovl_size;
 };
 
 struct ucode_fce_header_v1_flcn {
@@ -101,7 +92,10 @@ static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 {
 	nvhost_set_falcon_data(dev, flcn);
 }
-
+int flcn_setup_ucode_image(struct platform_device *dev,
+			   struct flcn *v,
+			   const struct firmware *ucode_fw,
+			   struct ucode_v1_flcn *ucode);
 int nvhost_vic_prepare_poweroff(struct platform_device *);
 int nvhost_flcn_finalize_poweron(struct platform_device *);
 int nvhost_vic_finalize_poweron(struct platform_device *);
@@ -120,9 +114,6 @@ int nvhost_vic_aggregate_constraints(struct platform_device *dev,
 				     unsigned long bw_constraint);
 
 int nvhost_flcn_wait_mem_scrubbing(struct platform_device *dev);
-int flcn_setup_ucode_image(struct platform_device *dev,
-			   u32 *ucode_ptr,
-			   const struct firmware *ucode_fw);
 int flcn_intr_init(struct platform_device *pdev);
 int flcn_reload_fw(struct platform_device *pdev);
 int nvhost_flcn_load_image(struct platform_device *pdev,

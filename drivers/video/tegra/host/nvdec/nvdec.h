@@ -53,35 +53,9 @@ struct nvdec {
 	size_t size;
 
 	struct flcn_os_image os;
-	struct sg_table *pa;
 
 	dma_addr_t dma_addr;
 	u32 *mapped;
-};
-
-struct nvdec_ucode_bin_header_v1 {
-	u32 bin_magic;		/* 0x10de */
-	u32 bin_ver;		/* cya, versioning of bin format (1) */
-	u32 bin_size;		/* entire image size including this header */
-	u32 os_bin_header_offset;
-	u32 os_bin_data_offset;
-	u32 os_bin_size;
-};
-
-struct nvdec_ucode_os_header_v1 {
-	u32 os_code_offset;
-	u32 os_code_size;
-	u32 os_data_offset;
-	u32 os_data_size;
-	u32 num_apps;
-	u32 *os_ovl_offset;
-	u32 *of_ovl_size;
-};
-
-struct nvdec_ucode_v1 {
-	struct nvdec_ucode_bin_header_v1 *bin_header;
-	struct nvdec_ucode_os_header_v1  *os_header;
-	bool valid;
 };
 
 struct nvdec_bl_shared_data {

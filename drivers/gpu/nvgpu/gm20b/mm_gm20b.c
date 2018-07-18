@@ -58,7 +58,7 @@ u32 gm20b_mm_get_big_page_sizes(void)
 
 u32 gm20b_mm_get_default_big_page_size(void)
 {
-	return SZ_128K;
+	return SZ_64K;
 }
 
 bool gm20b_mm_support_sparse(struct gk20a *g)

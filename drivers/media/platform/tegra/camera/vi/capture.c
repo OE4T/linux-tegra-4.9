@@ -170,14 +170,24 @@ void vi_capture_shutdown(struct tegra_vi_channel *chan)
 		return;
 
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
-		vi_capture_reset(chan, 0);
+		vi_capture_reset(chan,
+			CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
 
 	if (capture->stream_id != NVCSI_STREAM_INVALID_ID)
 		csi_stream_release(chan);
 
 	if (capture->channel_id != CAPTURE_CHANNEL_INVALID_ID)
-		vi_capture_release(chan, 0);
+	{
+		int i;
+		vi_capture_release(chan,
+			CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
 
+		for (i = 0; i < capture->queue_depth; i++)
+			vi_capture_request_unpin(chan, i);
+
+		capture_common_unpin_memory(&capture->requests);
+		kfree(capture->unpins_list);
+	}
 	kfree(capture);
 	chan->capture_data = NULL;
 }
@@ -202,7 +212,7 @@ static int vi_capture_ivc_send_control(struct tegra_vi_channel *chan,
 		goto fail;
 	}
 
-	timeout = wait_for_completion_killable_timeout(
+	timeout = wait_for_completion_timeout(
 			&capture->control_resp, timeout);
 	if (timeout <= 0) {
 		dev_err(chan->dev,
@@ -365,8 +375,10 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	if (setup->vi_channel_mask == CAPTURE_CHANNEL_INVALID_MASK ||
 			setup->channel_flags == 0 ||
 			setup->queue_depth == 0 ||
-			setup->request_size == 0)
+			setup->request_size == 0) {
+		WARN(1, "setup->vi_channel_mask == CAPTURE_CHANNEL_INVALID_MASK");
 		return -EINVAL;
+	}
 
 	capture->queue_depth = setup->queue_depth;
 	capture->request_size = setup->request_size;
@@ -487,8 +499,9 @@ int vi_capture_reset(struct tegra_vi_channel *chan,
 
 	err = vi_capture_ivc_send_control(chan, &control_desc,
 			sizeof(control_desc), CAPTURE_CHANNEL_RESET_RESP);
-	if (err < 0)
+	if (err < 0) {
 		goto submit_fail;
+	}
 
 	if (resp_msg->channel_reset_resp.result != CAPTURE_OK) {
 		dev_err(chan->dev, "%s: control failed, errno %d", __func__,
@@ -657,8 +670,9 @@ int vi_capture_release(struct tegra_vi_channel *chan,
 
 	err = vi_capture_ivc_send_control(chan, &control_desc,
 			sizeof(control_desc), CAPTURE_CHANNEL_RELEASE_RESP);
-	if (err < 0)
+	if (err < 0) {
 		goto submit_fail;
+	}
 
 	if (resp_msg->channel_release_resp.result != CAPTURE_OK) {
 		dev_err(chan->dev, "%s: control failed, errno %d", __func__,
@@ -947,9 +961,9 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 
 	/* negative timeout means wait forever */
 	if (timeout_ms < 0) {
-		ret = wait_for_completion_killable(&capture->capture_resp);
+		wait_for_completion(&capture->capture_resp);
 	} else {
-		ret = wait_for_completion_killable_timeout(
+		ret = wait_for_completion_timeout(
 				&capture->capture_resp,
 				msecs_to_jiffies(timeout_ms));
 		if (ret == 0) {

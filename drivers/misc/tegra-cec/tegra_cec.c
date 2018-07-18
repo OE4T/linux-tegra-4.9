@@ -57,7 +57,7 @@
  */
 #define CEC_XFER_TIMEOUT_MS (5 * 400 + 100)
 
-static bool previous_reboot_reason_is_recovery, text_view_on_sent;
+static bool post_recovery, text_view_on_sent;
 static u8 text_view_on_command[] = {
 	LOGICAL_ADDRESS_RESERVED2 << 4 | LOGICAL_ADDRESS_TV,
 	TEXT_VIEW_ON
@@ -400,6 +400,13 @@ static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
 				return -EFAULT;
 		}
 		break;
+	case TEGRA_CEC_IOCTL_GET_POST_RECOVERY:
+		err = !access_ok(VERIFY_WRITE, arg, sizeof(u32));
+		if (err)
+			return -EFAULT;
+		if (copy_to_user((bool *) arg, &post_recovery, sizeof(bool)))
+				return -EFAULT;
+		break;
 	default:
 		dev_err(cec->dev, "unsupported ioctl\n");
 		return -EINVAL;
@@ -531,7 +538,7 @@ static void tegra_cec_init(struct tegra_cec *cec)
 	atomic_set(&cec->init_done, 1);
 	wake_up_interruptible(&cec->init_waitq);
 
-	if (!text_view_on_sent && !previous_reboot_reason_is_recovery)
+	if (!text_view_on_sent && !post_recovery)
 		tegra_cec_send_one_touch_play(cec);
 	dev_notice(cec->dev, "%s Done.\n", __func__);
 }
@@ -803,17 +810,16 @@ static int tegra_cec_resume(struct platform_device *pdev)
 }
 #endif
 
-static int __init check_previous_reboot_reason_is_recovery(char *options)
+static int __init check_post_recovery(char *options)
 {
-	previous_reboot_reason_is_recovery = true;
+	post_recovery = true;
 
-	pr_info("tegra_cec: the previous_reboot_reason is%s recovery.\n",
-		previous_reboot_reason_is_recovery ? "" : " not");
+	pr_info("tegra_cec: the post_recovery is %d .\n", post_recovery);
 
 	return 0;
 }
 
-early_param("post_recovery", check_previous_reboot_reason_is_recovery);
+early_param("post_recovery", check_post_recovery);
 
 static struct tegra_cec_soc tegra210_soc_data = {
 	.powergate_id = TEGRA210_POWER_DOMAIN_DISA,

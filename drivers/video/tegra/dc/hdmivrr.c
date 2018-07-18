@@ -772,7 +772,7 @@ int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
 		.addr = 0x37,
 	};
 
-	if (!hdmi || !hdmi->dc || !hdmi->dc->out || !hdmi->dc->out->vrr) {
+	if (!hdmi || !hdmi->dc || !hdmi->dc->out) {
 		err = -ENODEV;
 		goto fail;
 	}

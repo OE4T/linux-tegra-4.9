@@ -15,11 +15,6 @@
 
 / {
 
-	/* Make SELinux permissive mode */
-	chosen {
-		 bootargs ="androidboot.selinux=permissive";
-	};
-
 	psci {
 		status = "okay";
 	};

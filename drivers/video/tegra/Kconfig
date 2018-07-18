@@ -1,15 +1,3 @@
-if ARCH_TEGRA
-
-config TEGRA_GR_VIRTUALIZATION
-	bool "Tegra graphics virtualization support"
-	default n
-	depends on TEGRA_HV_MANAGER
-	help
-	  Adds Tegra graphics virtualization (host and gpu) support to client
-	  drivers.
-
-endif
-
 config TEGRA_DC
 	tristate "Tegra Display Contoller"
 	depends on (TEGRA_GRHOST || TEGRA_HOST1X) && I2C

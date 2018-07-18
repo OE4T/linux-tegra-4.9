@@ -99,6 +99,7 @@
 
 	pmc@7000e400 {
 		compatible = "nvidia,tegra210b01-pmc", "nvidia,tegra210-pmc";
+		/delete-property/ nvidia,secure-pmc;
 	};
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2

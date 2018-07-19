@@ -158,6 +158,7 @@ struct mrq_response {
 #define MRQ_QUERY_FW_TAG	71
 #define MRQ_FMON		72
 #define MRQ_EC			73
+#define MRQ_FBVOLT_STATUS	74
 
 /** @} */
 
@@ -166,7 +167,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		70
+#define MAX_CPU_MRQ_ID		74
 
 /**
  * @addtogroup MRQ_Payloads
@@ -191,6 +192,7 @@ struct mrq_response {
  *   @defgroup CC3 Auto-CC3
  *   @defgroup FMON FMON
  *   @defgroup EC EC
+ *   @defgroup Fbvolt_status Fuse Burn Voltage Status
  * @}
  */
 
@@ -2502,6 +2504,33 @@ struct mrq_ec_response {
 	union {
 		struct cmd_ec_status_get_response ec_status_get;
 	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_FBVOLT_STATUS
+ * @brief Provides status information about voltage state for fuse burning
+ *
+ * * Platforms: T194 onwards
+ * * Initiators: CCPLEX
+ * * Target: BPMP
+ * * Request Payload: None
+ * * Response Payload: @ref mrq_fbvolt_status_response
+ */
+
+/**
+ * @ingroup Fbvolt_status
+ * @brief Response to #MRQ_FBVOLT_STATUS
+ *
+ * Value of #ready reflects if core voltages are in a suitable state for buring
+ * fuses. A value of 0x1 indicates that core voltages are ready for burning
+ * fuses. A value of 0x0 indicates that core voltages are not ready.
+ */
+struct mrq_fbvolt_status_response {
+	/** @brief Bit [0:0] - ready status, bits [31:1] - reserved */
+	uint32_t ready;
+	/** @brief Reserved */
+	uint32_t unused;
 } __ABI_PACKED;
 
 /** @} */

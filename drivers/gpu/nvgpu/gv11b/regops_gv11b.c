@@ -1,7 +1,7 @@
 /*
  * Tegra GV11b GPU Driver Register Ops
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -577,6 +577,7 @@ static const struct regop_offset_range gv11b_global_whitelist_ranges[] = {
 	{ 0x0024a094,   3},
 	{ 0x0024a0a4,   1},
 	{ 0x0024a100,   6},
+	{ 0x0024a600,   3},
 	{ 0x00250040,  33},
 	{ 0x002500c8,   7},
 	{ 0x002500ec,   1},

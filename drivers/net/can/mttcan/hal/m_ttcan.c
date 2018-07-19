@@ -1028,7 +1028,11 @@ int ttcan_controller_init(struct ttcan_controller *ttcan, u32 irq_flag,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 cycle_t ttcan_read_ts_cntr(const struct cyclecounter *ccnt)
+#else
+u64 ttcan_read_ts_cntr(const struct cyclecounter *ccnt)
+#endif
 {
 	struct mttcan_priv *priv = container_of(ccnt, struct mttcan_priv, cc);
 

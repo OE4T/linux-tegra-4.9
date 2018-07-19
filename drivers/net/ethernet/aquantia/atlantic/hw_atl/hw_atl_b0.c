@@ -20,67 +20,69 @@
 #include "hw_atl_llh_internal.h"
 
 #define DEFAULT_B0_BOARD_BASIC_CAPABILITIES \
-	.is_64_dma = true,	\
-	.msix_irqs = 4U,	\
-	.irq_mask = ~0U,	\
-	.vecs = HW_ATL_B0_RSS_MAX,	\
-	.tcs = HW_ATL_B0_TC_MAX,	\
-	.rxd_alignment = 1U,		\
-	.rxd_size = HW_ATL_B0_RXD_SIZE, \
-	.rxds = 4U * 1024U,		\
-	.txd_alignment = 1U,		\
-	.txd_size = HW_ATL_B0_TXD_SIZE, \
-	.txds = 8U * 1024U,		\
-	.txhwb_alignment = 4096U,	\
-	.tx_rings = HW_ATL_B0_TX_RINGS, \
-	.rx_rings = HW_ATL_B0_RX_RINGS, \
-	.hw_features = NETIF_F_HW_CSUM | \
-			NETIF_F_RXCSUM | \
-			NETIF_F_RXHASH | \
-			NETIF_F_SG |  \
-			NETIF_F_TSO | \
-			NETIF_F_LRO,  \
-	.hw_priv_flags = IFF_UNICAST_FLT,   \
-	.flow_control = true,		\
-	.mtu = HW_ATL_B0_MTU_JUMBO,	\
-	.mac_regs_count = 88,		\
+	.is_64_dma = true,		  \
+	.msix_irqs = 4U,		  \
+	.irq_mask = ~0U,		  \
+	.vecs = HW_ATL_B0_RSS_MAX,	  \
+	.tcs = HW_ATL_B0_TC_MAX,	  \
+	.rxd_alignment = 1U,		  \
+	.rxd_size = HW_ATL_B0_RXD_SIZE,   \
+	.rxds_max = HW_ATL_B0_MAX_RXD,    \
+	.rxds_min = HW_ATL_B0_MIN_RXD,    \
+	.txd_alignment = 1U,		  \
+	.txd_size = HW_ATL_B0_TXD_SIZE,   \
+	.txds_max = HW_ATL_B0_MAX_TXD,    \
+	.txds_min = HW_ATL_B0_MIN_TXD,    \
+	.txhwb_alignment = 4096U,	  \
+	.tx_rings = HW_ATL_B0_TX_RINGS,   \
+	.rx_rings = HW_ATL_B0_RX_RINGS,   \
+	.hw_features = NETIF_F_HW_CSUM |  \
+			NETIF_F_RXCSUM |  \
+			NETIF_F_RXHASH |  \
+			NETIF_F_SG |      \
+			NETIF_F_TSO |     \
+			NETIF_F_LRO,      \
+	.hw_priv_flags = IFF_UNICAST_FLT, \
+	.flow_control = true,		  \
+	.mtu = HW_ATL_B0_MTU_JUMBO,	  \
+	.mac_regs_count = 88,		  \
 	.hw_alive_check_addr = 0x10U
 
 const struct aq_hw_caps_s hw_atl_b0_caps_aqc100 = {
 	DEFAULT_B0_BOARD_BASIC_CAPABILITIES,
 	.media_type = AQ_HW_MEDIA_TYPE_FIBRE,
-	.link_speed_msk = HW_ATL_B0_RATE_10G |
-			  HW_ATL_B0_RATE_5G  |
-			  HW_ATL_B0_RATE_2G5 |
-			  HW_ATL_B0_RATE_1G  |
-			  HW_ATL_B0_RATE_100M,
+	.link_speed_msk = AQ_NIC_RATE_10G|
+			  AQ_NIC_RATE_5G|
+			  AQ_NIC_RATE_2GS|
+			  AQ_NIC_RATE_1G|
+			  AQ_NIC_RATE_100M,
 };
 
 const struct aq_hw_caps_s hw_atl_b0_caps_aqc107 = {
 	DEFAULT_B0_BOARD_BASIC_CAPABILITIES,
 	.media_type = AQ_HW_MEDIA_TYPE_TP,
-	.link_speed_msk = HW_ATL_B0_RATE_10G |
-			  HW_ATL_B0_RATE_5G  |
-			  HW_ATL_B0_RATE_2G5 |
-			  HW_ATL_B0_RATE_1G  |
-			  HW_ATL_B0_RATE_100M,
+	.link_speed_msk = AQ_NIC_RATE_10G|
+			  AQ_NIC_RATE_5G|
+			  AQ_NIC_RATE_2GS|
+			  AQ_NIC_RATE_1G|
+			  AQ_NIC_RATE_100M,
 };
 
 const struct aq_hw_caps_s hw_atl_b0_caps_aqc108 = {
 	DEFAULT_B0_BOARD_BASIC_CAPABILITIES,
 	.media_type = AQ_HW_MEDIA_TYPE_TP,
-	.link_speed_msk = HW_ATL_B0_RATE_5G  |
-			  HW_ATL_B0_RATE_2G5 |
-			  HW_ATL_B0_RATE_1G  |
-			  HW_ATL_B0_RATE_100M,
+	.link_speed_msk = AQ_NIC_RATE_5G|
+			  AQ_NIC_RATE_2GS|
+			  AQ_NIC_RATE_1G|
+			  AQ_NIC_RATE_100M,
 };
 
 const struct aq_hw_caps_s hw_atl_b0_caps_aqc109 = {
 	DEFAULT_B0_BOARD_BASIC_CAPABILITIES,
 	.media_type = AQ_HW_MEDIA_TYPE_TP,
-	.link_speed_msk = HW_ATL_B0_RATE_2G5 |
-			  HW_ATL_B0_RATE_1G  |
-			  HW_ATL_B0_RATE_100M,
+	.link_speed_msk = AQ_NIC_RATE_2GS |
+			  AQ_NIC_RATE_1G  |
+			  AQ_NIC_RATE_100M,
 };
 
 static int hw_atl_b0_hw_reset(struct aq_hw_s *self)
@@ -116,18 +118,14 @@ static int hw_atl_b0_hw_qos_set(struct aq_hw_s *self)
 	hw_atl_tps_tx_pkt_shed_desc_tc_arb_mode_set(self, 0U);
 	hw_atl_tps_tx_pkt_shed_data_arb_mode_set(self, 0U);
 
-	/* TX Packet Scheduler Data TC0 */
-	tc = 0U;
-	
-	hw_atl_tps_tx_pkt_shed_tc_data_max_credit_set(self, 0xFFF, tc);
-	hw_atl_tps_tx_pkt_shed_tc_data_weight_set(self, 0x64, tc);
-	hw_atl_tps_tx_pkt_shed_desc_tc_max_credit_set(self, 0x50, tc);
-	hw_atl_tps_tx_pkt_shed_desc_tc_weight_set(self, 0x1E, tc);
+	hw_atl_tps_tx_pkt_shed_tc_data_max_credit_set(self, 0xFFF, 0U);
+	hw_atl_tps_tx_pkt_shed_tc_data_weight_set(self, 0x64, 0U);
+	hw_atl_tps_tx_pkt_shed_desc_tc_max_credit_set(self, 0x50, 0U);
+	hw_atl_tps_tx_pkt_shed_desc_tc_weight_set(self, 0x1E, 0U);
 
-	/* Tx buf size TC0 */
-	buff_size = HW_ATL_B0_TXBUF_MAX - HW_ATL_B0_PTP_TXBUF_SIZE;
+	/* Tx buf size */
+	buff_size = HW_ATL_B0_TXBUF_MAX;
 
-	hw_atl_tpb_tx_pkt_buff_size_per_tc_set(self, buff_size, tc);
 	hw_atl_tpb_tx_pkt_buff_size_per_tc_set(self, buff_size, tc);
 	hw_atl_tpb_tx_buff_hi_threshold_per_tc_set(self,
 						   (buff_size *
@@ -137,16 +135,11 @@ static int hw_atl_b0_hw_qos_set(struct aq_hw_s *self)
 						   (buff_size *
 						   (1024 / 32U) * 50U) /
 						   100U, tc);
-	
-	/* Init TC2 for PTP_TX */
-	tc = 2U;
-	
-	hw_atl_tpb_tx_pkt_buff_size_per_tc_set(self, HW_ATL_B0_PTP_TXBUF_SIZE, tc);
 
 	/* QoS Rx buf size per TC */
-	tc = 0U;
+	tc = 0;
 	is_rx_flow_control = (AQ_NIC_FC_RX & self->aq_nic_cfg->flow_control);
-	buff_size = HW_ATL_B0_RXBUF_MAX - HW_ATL_B0_PTP_RXBUF_SIZE;
+	buff_size = HW_ATL_B0_RXBUF_MAX;
 
 	hw_atl_rpb_rx_pkt_buff_size_per_tc_set(self, buff_size, tc);
 	hw_atl_rpb_rx_buff_hi_threshold_per_tc_set(self,
@@ -157,14 +150,7 @@ static int hw_atl_b0_hw_qos_set(struct aq_hw_s *self)
 						   (buff_size *
 						   (1024U / 32U) * 50U) /
 						   100U, tc);
-	pr_info("is_rx_flow_control: %d; %d; %d;\n",
-			is_rx_flow_control, AQ_NIC_FC_RX, self->aq_nic_cfg->flow_control);
 	hw_atl_rpb_rx_xoff_en_per_tc_set(self, is_rx_flow_control ? 1U : 0U, tc);
-	
-	/* Init TC2 for PTP_RX */
-	tc = 2;
-	
-	hw_atl_rpb_rx_pkt_buff_size_per_tc_set(self, HW_ATL_B0_PTP_RXBUF_SIZE, tc);
 
 	/* QoS 802.1p priority -> TC mapping */
 	for (i_priority = 8U; i_priority--;)
@@ -174,7 +160,7 @@ static int hw_atl_b0_hw_qos_set(struct aq_hw_s *self)
 }
 
 static int hw_atl_b0_hw_rss_hash_set(struct aq_hw_s *self,
-					 struct aq_rss_parameters *rss_params)
+				     struct aq_rss_parameters *rss_params)
 {
 	struct aq_nic_cfg_s *cfg = self->aq_nic_cfg;
 	int err = 0;
@@ -234,7 +220,7 @@ err_exit:
 }
 
 static int hw_atl_b0_hw_offload_set(struct aq_hw_s *self,
-					struct aq_nic_cfg_s *aq_nic_cfg)
+				    struct aq_nic_cfg_s *aq_nic_cfg)
 {
 	unsigned int i;
 
@@ -280,9 +266,6 @@ static int hw_atl_b0_hw_offload_set(struct aq_hw_s *self,
 
 static int hw_atl_b0_hw_init_tx_path(struct aq_hw_s *self)
 {
-	/* Rx TC/RSS number config */
-	hw_atl_rpb_tps_tx_tc_mode_set(self, 1U);
-	
 	hw_atl_thm_lso_tcp_flag_of_first_pkt_set(self, 0x0FF6U);
 	hw_atl_thm_lso_tcp_flag_of_middle_pkt_set(self, 0x0FF6U);
 	hw_atl_thm_lso_tcp_flag_of_last_pkt_set(self, 0x0F7FU);
@@ -445,8 +428,8 @@ static int hw_atl_b0_hw_init(struct aq_hw_s *self, u8 *mac_addr)
 
 	/* Interrupts */
 	hw_atl_reg_gen_irq_map_set(self,
-			    ((HW_ATL_B0_ERR_INT << 0x18) | (1U << 0x1F)) |
-				((HW_ATL_B0_ERR_INT << 0x10) | (1U << 0x17)), 0U);
+				   ((HW_ATL_B0_ERR_INT << 0x18) | (1U << 0x1F)) |
+			    ((HW_ATL_B0_ERR_INT << 0x10) | (1U << 0x17)), 0U);
 
 	hw_atl_b0_hw_offload_set(self, aq_nic_cfg);
 
@@ -483,8 +466,8 @@ static int hw_atl_b0_hw_tx_ring_tail_update(struct aq_hw_s *self,
 }
 
 static int hw_atl_b0_hw_ring_tx_xmit(struct aq_hw_s *self,
-					 struct aq_ring_s *ring,
-					 unsigned int frags)
+				     struct aq_ring_s *ring,
+				     unsigned int frags)
 {
 	struct aq_ring_buff_s *buff = NULL;
 	struct hw_atl_txd_s *txd = NULL;
@@ -515,8 +498,8 @@ static int hw_atl_b0_hw_ring_tx_xmit(struct aq_hw_s *self,
 				(buff->len_l3 >> 1);
 
 			pkt_len -= (buff->len_l4 +
-					buff->len_l3 +
-					buff->len_l2);
+				    buff->len_l3 +
+				    buff->len_l2);
 			is_gso = true;
 
 			if (buff->is_ipv6)
@@ -560,15 +543,15 @@ static int hw_atl_b0_hw_ring_tx_xmit(struct aq_hw_s *self,
 }
 
 static int hw_atl_b0_hw_ring_rx_init(struct aq_hw_s *self,
-					 struct aq_ring_s *aq_ring,
-					 struct aq_ring_param_s *aq_ring_param)
+				     struct aq_ring_s *aq_ring,
+				     struct aq_ring_param_s *aq_ring_param)
 {
 	u32 dma_desc_addr_lsw = (u32)aq_ring->dx_ring_pa;
 	u32 dma_desc_addr_msw = (u32)(((u64)aq_ring->dx_ring_pa) >> 32);
 
 	hw_atl_rdm_rx_desc_en_set(self, false, aq_ring->idx);
 
-	hw_atl_rdm_rx_desc_head_splitting_set(self, 0U, aq_ring->idx); //??? Sergey removed this line
+	hw_atl_rdm_rx_desc_head_splitting_set(self, 0U, aq_ring->idx);
 
 	hw_atl_reg_rx_dma_desc_base_addresslswset(self, dma_desc_addr_lsw,
 						  aq_ring->idx);
@@ -579,7 +562,7 @@ static int hw_atl_b0_hw_ring_rx_init(struct aq_hw_s *self,
 	hw_atl_rdm_rx_desc_len_set(self, aq_ring->size / 8U, aq_ring->idx);
 
 	hw_atl_rdm_rx_desc_data_buff_size_set(self,
-				       AQ_CFG_RX_FRAME_MAX / 1024U,
+					      AQ_CFG_RX_FRAME_MAX / 1024U,
 				       aq_ring->idx);
 
 	hw_atl_rdm_rx_desc_head_buff_size_set(self, 0U, aq_ring->idx);
@@ -601,8 +584,8 @@ static int hw_atl_b0_hw_ring_rx_init(struct aq_hw_s *self,
 }
 
 static int hw_atl_b0_hw_ring_tx_init(struct aq_hw_s *self,
-					 struct aq_ring_s *aq_ring,
-					 struct aq_ring_param_s *aq_ring_param)
+				     struct aq_ring_s *aq_ring,
+				     struct aq_ring_param_s *aq_ring_param)
 {
 	u32 dma_desc_lsw_addr = (u32)aq_ring->dx_ring_pa;
 	u32 dma_desc_msw_addr = (u32)(((u64)aq_ring->dx_ring_pa) >> 32);
@@ -631,8 +614,8 @@ static int hw_atl_b0_hw_ring_tx_init(struct aq_hw_s *self,
 }
 
 static int hw_atl_b0_hw_ring_rx_fill(struct aq_hw_s *self,
-					 struct aq_ring_s *ring,
-					 unsigned int sw_tail_old)
+				     struct aq_ring_s *ring,
+				     unsigned int sw_tail_old)
 {
 	for (; sw_tail_old != ring->sw_tail;
 		sw_tail_old = aq_ring_next_dx(ring, sw_tail_old)) {
@@ -653,48 +636,8 @@ static int hw_atl_b0_hw_ring_rx_fill(struct aq_hw_s *self,
 	return aq_hw_err_from_flags(self);
 }
 
-static int hw_atl_b0_hw_ring_hwts_rx_fill(struct aq_hw_s *self,
-					struct aq_ring_s *ring)
-{
-	int i = 0;
-	for (i = aq_ring_avail_dx(ring); i--;
-		ring->sw_tail = aq_ring_next_dx(ring, ring->sw_tail)) {
-		struct hw_atl_rxd_s *rxd =
-			(struct hw_atl_rxd_s *)&ring->dx_ring[ring->sw_tail *
-							HW_ATL_B0_RXD_SIZE];
-
-		rxd->buf_addr = ring->dx_ring_pa + ring->size * ring->dx_size;
-		rxd->hdr_addr = 0U;
-		//pr_info("aq hw_atl_b0_hw_ring_hwts_rx_fill: %d, %d, %p, %llx\n",
-		//	 i, ring->sw_tail, rxd, rxd->buf_addr);
-	}
-
-	wmb();
-
-	hw_atl_reg_rx_dma_desc_tail_ptr_set(self, ring->sw_tail, ring->idx);
-
-	return aq_hw_err_from_flags(self);
-}
-
-static int hw_atl_b0_hw_ring_hwts_rx_receive(struct aq_hw_s *self,
-					struct aq_ring_s *ring)
-{
-	while (ring->hw_head != ring->sw_tail) {
-		struct hw_atl_rxd_hwts_wb_s *hwts_wb =
-			(struct hw_atl_rxd_hwts_wb_s *)(ring->dx_ring + (ring->hw_head * HW_ATL_B0_RXD_SIZE));
-
-		/* RxD is not done */
-		if (!(hwts_wb->sec_lw0 & 0x1U))
-			break;
-		
-		ring->hw_head = aq_ring_next_dx(ring, ring->hw_head);
-	}
-	
-	return aq_hw_err_from_flags(self);
-}
-
 static int hw_atl_b0_hw_ring_tx_head_update(struct aq_hw_s *self,
-						struct aq_ring_s *ring)
+					    struct aq_ring_s *ring)
 {
 	int err = 0;
 	unsigned int hw_head_ = hw_atl_tdm_tx_desc_head_ptr_get(self, ring->idx);
@@ -840,44 +783,18 @@ static int hw_atl_b0_hw_packet_filter_set(struct aq_hw_s *self,
 
 	for (i = HW_ATL_B0_MAC_MIN; i < HW_ATL_B0_MAC_MAX; ++i)
 		hw_atl_rpfl2_uc_flr_en_set(self,
-				    (self->aq_nic_cfg->is_mc_list_enabled &&
-					(i <= self->aq_nic_cfg->mc_list_count)) ?
-					1U : 0U, i);
+					   (self->aq_nic_cfg->is_mc_list_enabled &&
+				    (i <= self->aq_nic_cfg->mc_list_count)) ?
+				    1U : 0U, i);
 
 	return aq_hw_err_from_flags(self);
-}
-
-static int hw_atl_b0_hw_rx_l3l4_udp_filter_set(struct aq_hw_s *self,
-						unsigned int num_filter, u16 udp_port)
-{
-	u32 filter_reg = 0x5380 + 4 * num_filter;
-	u32 filter_val = 0x86811001;
-	
-	u32 port_reg = 0x5420 + 4 * num_filter;
-	u32 port_val = udp_port;
-	
-	aq_hw_write_reg(self, filter_reg, filter_val);
-	aq_hw_write_reg(self, port_reg, port_val);
-	
-	return aq_hw_err_from_flags(self);
-}
-
-static int hw_atl_b0_hw_rx_ethtype_filter_set(struct aq_hw_s *self,
-            unsigned int num_filter, u16 ethtype)
-{
-  u32 filter_reg = 0x5300 + 4 * num_filter;
-  u32 filter_val = 0xa1010000 + ethtype;
-
-  aq_hw_write_reg(self, filter_reg, filter_val);
-
-  return aq_hw_err_from_flags(self);
 }
 
 #undef IS_FILTER_ENABLED
 
 static int hw_atl_b0_hw_multicast_list_set(struct aq_hw_s *self,
 					   u8 ar_mac
-					   [AQ_CFG_MULTICAST_ADDRESS_MAX]
+					   [AQ_HW_MULTICAST_ADDRESS_MAX]
 					   [ETH_ALEN],
 					   u32 count)
 {
@@ -905,7 +822,7 @@ static int hw_atl_b0_hw_multicast_list_set(struct aq_hw_s *self,
 
 		hw_atl_rpfl2_uc_flr_en_set(self,
 					   (self->aq_nic_cfg->is_mc_list_enabled),
-				    HW_ATL_B0_MAC_MIN + i);
+					   HW_ATL_B0_MAC_MIN + i);
 	}
 
 	err = aq_hw_err_from_flags(self);
@@ -1009,188 +926,71 @@ static int hw_atl_b0_hw_stop(struct aq_hw_s *self)
 	return aq_hw_err_from_flags(self);
 }
 
-static int hw_atl_b0_tx_tc_mode_get(struct aq_hw_s *self, u32 *tc_mode)
-{
-	*tc_mode = hw_atl_rpb_tps_tx_tc_mode_get(self);
-	return aq_hw_err_from_flags(self);
-}
-
-static int hw_atl_b0_rx_tc_mode_get(struct aq_hw_s *self, u32 *tc_mode)
-{
-	*tc_mode = hw_atl_rpb_rpf_rx_traf_class_mode_get(self);
-	return aq_hw_err_from_flags(self);
-}
-
 static int hw_atl_b0_hw_ring_tx_stop(struct aq_hw_s *self,
-					 struct aq_ring_s *ring)
+				     struct aq_ring_s *ring)
 {
 	hw_atl_tdm_tx_desc_en_set(self, 0U, ring->idx);
 	return aq_hw_err_from_flags(self);
 }
 
 static int hw_atl_b0_hw_ring_rx_stop(struct aq_hw_s *self,
-					 struct aq_ring_s *ring)
+				     struct aq_ring_s *ring)
 {
 	hw_atl_rdm_rx_desc_en_set(self, 0U, ring->idx);
 	return aq_hw_err_from_flags(self);
 }
 
-// PTP FW Request
-struct fwreq_ptp_block_enable {
-	uint32_t flags;
-} __attribute__((packed));
-
-struct fwreq_ptp_gpio_ctrl {
-	uint32_t index;
-	uint32_t period;
-} __attribute__((packed));
-
-struct fwreq_ptp_adj_freq {
-	uint32_t usec_mac;
-	uint32_t fusec_mac;
-	uint32_t usec_phy;
-	uint32_t fusec_phy;
-} __attribute__((packed));
-
-#define FWREQ_PTP_BLOCK_ENABLE	              0x10
-#define FWREQ_PTP_GPIO_CTRL	                 0x11
-#define FWREQ_PTP_ADJ_FREQ	                  0x12
-
-struct fwreq_iface {
-	uint32_t msg_id;
-	union {
-	    // PTP FW Request
-	    struct fwreq_ptp_block_enable   ptp_block_enable;
-	    struct fwreq_ptp_gpio_ctrl      ptp_gpio_ctrl;
-	    struct fwreq_ptp_adj_freq       ptp_adj_freq;
-	} __attribute__((packed));
-} __attribute__((packed));
-
-#define get_ptp_ts_val_u64(self, indx) ((u64)(hw_atl_ptp_ts_val(self, indx)))
-
-static int hw_atl_b0_get_ptp_ts(struct aq_hw_s *self, u64 *stamp)
+static int hw_atl_b0_set_loopback(struct aq_hw_s *self, u32 mode, bool enable)
 {
-	// The function call should be protected from multiple simultaneous access
-	// The protection should be applied on higher level.
-    int err = 0;
-    hw_atl_ptp_cntr_ctrl(self, ptp_read_counter);
-    *stamp = (get_ptp_ts_val_u64(self, 0) + (get_ptp_ts_val_u64(self, 1) << 16)) * 1000000000LL +
-			 (get_ptp_ts_val_u64(self, 3) + (get_ptp_ts_val_u64(self, 4) << 16));
-    return err;
-}
-
-static int hw_atl_b0_send_fwreq(struct aq_hw_s *self, const struct fwreq_iface *fwreq, size_t size)
-{
-	int err = 0;
-	u32 ctrl2, orig_ctrl2;
-
-	/* Write data to drvIface Mailbox */
-	err = hw_atl_utils_fw_upload_dwords(self,
-			aq_hw_read_reg(self, FW2X_MPI_DBG_BUFF_ADDR),
-			(void *)fwreq, size / sizeof(u32));
-	if (err < 0)
-		goto err_exit;
-	
-	/* Toggle statistics bit for FW to update */
-	ctrl2 = aq_hw_read_reg(self, FW2X_MPI_CONTROL2_ADDR);
-	orig_ctrl2 = ctrl2 & BIT(CAPS_HI_FW_REQUEST);
-	ctrl2 = ctrl2 ^ BIT(CAPS_HI_FW_REQUEST);
-	aq_hw_write_reg(self, FW2X_MPI_CONTROL2_ADDR, ctrl2);
-	
-	/* Wait FW to report back */
-	AQ_HW_WAIT_FOR(orig_ctrl2 !=
-			(aq_hw_read_reg(self, FW2X_MPI_STATE2_ADDR) &
-				BIT(CAPS_HI_FW_REQUEST)),
-				1U, 10000U);
-	
-err_exit:
-	return err;
-}
-
-static void hw_atl_b0_adj_params_get(long long int freq, long long int adj, uint32_t *usec, uint32_t *fusec)
-{
-  long long int base_ns = ((adj + 1000000000ll) * 1000000000ll) / freq;
-  unsigned int nsi = base_ns / 1000000000ll;
-  long long int divisor = 1000000000000000000ll / (base_ns - nsi * 1000000000ll);
-  unsigned int nsi_frac = 0x100000000ll * 1000000000ll / divisor;
-
-  *usec = nsi;
-  *fusec = nsi_frac;
-}
-
-#define ATL_MAC_HZ   312500000ll
-#define ATL_PHY_HZ   160000000ll
-
-static int hw_atl_b0_adj_sys_clock(struct aq_hw_s *self, s32 delta)
-{
-	struct fwreq_iface fwreq;
-	size_t size;
-	
-	fwreq.msg_id = FWREQ_PTP_ADJ_FREQ;
-  hw_atl_b0_adj_params_get(ATL_MAC_HZ, delta,
-      &fwreq.ptp_adj_freq.usec_mac, &fwreq.ptp_adj_freq.fusec_mac);
-  hw_atl_b0_adj_params_get(ATL_PHY_HZ, delta,
-      &fwreq.ptp_adj_freq.usec_phy, &fwreq.ptp_adj_freq.fusec_phy);
-
-	size = sizeof(fwreq.msg_id) + sizeof(fwreq.ptp_adj_freq);
-	return hw_atl_b0_send_fwreq(self, &fwreq, size);
-}
-
-static int hw_atl_b0_gpio_pulse(struct aq_hw_s *self, unsigned int index, u32 period)
-{
-	struct fwreq_iface fwreq;
-	size_t size;
-	
-	fwreq.msg_id = FWREQ_PTP_GPIO_CTRL;
-	fwreq.ptp_gpio_ctrl.index = index;
-	fwreq.ptp_gpio_ctrl.period = period;
-	
-	size = sizeof(fwreq.msg_id) + sizeof(fwreq.ptp_gpio_ctrl);
-	return hw_atl_b0_send_fwreq(self, &fwreq, size);
+	switch (mode) {
+	case AQ_HW_LOOPBACK_DMA_SYS:
+		hw_atl_tpb_tx_dma_sys_lbk_en_set(self, enable);
+		hw_atl_rpb_dma_sys_lbk_set(self, enable);
+		break;
+	case AQ_HW_LOOPBACK_PKT_SYS:
+		hw_atl_tpo_tx_pkt_sys_lbk_en_set(self, enable);
+		hw_atl_rpf_tpo_to_rpf_sys_lbk_set(self, enable);
+		break;
+	case AQ_HW_LOOPBACK_DMA_NET:
+		hw_atl_tpb_tx_dma_net_lbk_en_set(self, enable);
+		hw_atl_rpb_dma_net_lbk_set(self, enable);
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
 }
 
 const struct aq_hw_ops hw_atl_ops_b0 = {
 	.hw_set_mac_address   = hw_atl_b0_hw_mac_addr_set,
-	.hw_init	          = hw_atl_b0_hw_init,
-	.hw_reset	         = hw_atl_b0_hw_reset,
-	.hw_start	         = hw_atl_b0_hw_start,
-	.hw_ring_tx_start	 = hw_atl_b0_hw_ring_tx_start,
-	.hw_ring_tx_stop	  = hw_atl_b0_hw_ring_tx_stop,
-	.hw_ring_rx_start	 = hw_atl_b0_hw_ring_rx_start,
-	.hw_ring_rx_stop	  = hw_atl_b0_hw_ring_rx_stop,
-	.hw_stop	          = hw_atl_b0_hw_stop,
-	
-	.hw_tx_tc_mode_get       = hw_atl_b0_tx_tc_mode_get,
-	.hw_rx_tc_mode_get       = hw_atl_b0_rx_tc_mode_get,
+	.hw_init              = hw_atl_b0_hw_init,
+	.hw_reset             = hw_atl_b0_hw_reset,
+	.hw_start             = hw_atl_b0_hw_start,
+	.hw_ring_tx_start     = hw_atl_b0_hw_ring_tx_start,
+	.hw_ring_tx_stop      = hw_atl_b0_hw_ring_tx_stop,
+	.hw_ring_rx_start     = hw_atl_b0_hw_ring_rx_start,
+	.hw_ring_rx_stop      = hw_atl_b0_hw_ring_rx_stop,
+	.hw_stop              = hw_atl_b0_hw_stop,
 
-	.hw_ring_tx_xmit	     = hw_atl_b0_hw_ring_tx_xmit,
+	.hw_ring_tx_xmit         = hw_atl_b0_hw_ring_tx_xmit,
 	.hw_ring_tx_head_update  = hw_atl_b0_hw_ring_tx_head_update,
 
-	.hw_ring_rx_receive	  = hw_atl_b0_hw_ring_rx_receive,
-	.hw_ring_rx_fill	     = hw_atl_b0_hw_ring_rx_fill,
+	.hw_ring_rx_receive      = hw_atl_b0_hw_ring_rx_receive,
+	.hw_ring_rx_fill         = hw_atl_b0_hw_ring_rx_fill,
 
-	.hw_irq_enable	       = hw_atl_b0_hw_irq_enable,
-	.hw_irq_disable	      = hw_atl_b0_hw_irq_disable,
-	.hw_irq_read	         = hw_atl_b0_hw_irq_read,
+	.hw_irq_enable           = hw_atl_b0_hw_irq_enable,
+	.hw_irq_disable          = hw_atl_b0_hw_irq_disable,
+	.hw_irq_read             = hw_atl_b0_hw_irq_read,
 
-	.hw_ring_rx_init	         = hw_atl_b0_hw_ring_rx_init,
-	.hw_ring_tx_init	         = hw_atl_b0_hw_ring_tx_init,
-
-	.hw_ring_hwts_rx_fill        = hw_atl_b0_hw_ring_hwts_rx_fill,
-	.hw_ring_hwts_rx_receive     = hw_atl_b0_hw_ring_hwts_rx_receive,
-	
-	.hw_packet_filter_set	    = hw_atl_b0_hw_packet_filter_set,
-	.hw_multicast_list_set	   = hw_atl_b0_hw_multicast_list_set,
-	.hw_rx_l3l4_udp_filter_set    = hw_atl_b0_hw_rx_l3l4_udp_filter_set,
-	.hw_rx_ethtype_filter_set     = hw_atl_b0_hw_rx_ethtype_filter_set,
+	.hw_ring_rx_init             = hw_atl_b0_hw_ring_rx_init,
+	.hw_ring_tx_init             = hw_atl_b0_hw_ring_tx_init,
+	.hw_packet_filter_set        = hw_atl_b0_hw_packet_filter_set,
+	.hw_multicast_list_set       = hw_atl_b0_hw_multicast_list_set,
 	.hw_interrupt_moderation_set = hw_atl_b0_hw_interrupt_moderation_set,
-	.hw_rss_set	              = hw_atl_b0_hw_rss_set,
-	.hw_rss_hash_set	         = hw_atl_b0_hw_rss_hash_set,
-	.hw_get_regs	             = hw_atl_utils_hw_get_regs,
-	.hw_get_hw_stats	         = hw_atl_utils_get_hw_stats,
-	.hw_get_fw_version	       = hw_atl_utils_get_fw_version,
-	
-	.hw_get_ptp_ts           = hw_atl_b0_get_ptp_ts,
-	.hw_adj_sys_clock        = hw_atl_b0_adj_sys_clock,
-	.hw_gpio_pulse           = hw_atl_b0_gpio_pulse,
+	.hw_rss_set                  = hw_atl_b0_hw_rss_set,
+	.hw_rss_hash_set             = hw_atl_b0_hw_rss_hash_set,
+	.hw_get_regs                 = hw_atl_utils_hw_get_regs,
+	.hw_get_hw_stats             = hw_atl_utils_get_hw_stats,
+	.hw_get_fw_version           = hw_atl_utils_get_fw_version,
+	.hw_set_loopback             = hw_atl_b0_set_loopback,
 };

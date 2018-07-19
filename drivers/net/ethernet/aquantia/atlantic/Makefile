@@ -32,7 +32,6 @@ obj-$(CONFIG_AQTION) += atlantic.o
 atlantic-objs := aq_main.o \
 	aq_nic.o \
 	aq_pci_func.o \
-	aq_ptp.o \
 	aq_vec.o \
 	aq_ring.o \
 	aq_hw_utils.o \

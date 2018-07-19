@@ -12,11 +12,6 @@
 #ifndef AQ_NIC_H
 #define AQ_NIC_H
 
-#include <linux/timecounter.h>
-#include <linux/net_tstamp.h>
-#include <linux/ptp_clock_kernel.h>
-#include <linux/semaphore.h>
-#include <linux/workqueue.h>
 #include "aq_common.h"
 #include "aq_rss.h"
 #include "aq_hw.h"
@@ -25,7 +20,6 @@ struct aq_ring_s;
 struct aq_hw_ops;
 struct aq_fw_s;
 struct aq_vec_s;
-struct aq_ptp_s;
 
 struct aq_nic_cfg_s {
 	const struct aq_hw_caps_s *aq_hw_caps;
@@ -50,8 +44,10 @@ struct aq_nic_cfg_s {
 	bool is_polling;
 	bool is_rss;
 	bool is_lro;
+	u32 test_loopback;
 	u8  tcs;
 	struct aq_rss_parameters aq_rss;
+	u32 eee_enabled;
 };
 
 #define AQ_NIC_FLAG_STARTED     0x00000004U
@@ -88,21 +84,17 @@ struct aq_nic_s {
 	struct aq_hw_link_status_s link_status;
 	struct {
 		u32 count;
-		u8 ar[AQ_CFG_MULTICAST_ADDRESS_MAX][ETH_ALEN];
+		u8 ar[AQ_HW_MULTICAST_ADDRESS_MAX][ETH_ALEN];
 	} mc_list;
 
 	struct pci_dev *pdev;
 	unsigned int msix_entry_mask;
+	u32 irqvecs;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
 	unsigned int irq_type;
 	struct msix_entry msix_entry[AQ_CFG_PCI_FUNC_MSIX_IRQS];
 #endif
-
-	struct semaphore fwreq_sem;
-	struct work_struct service_task;
-
-	// PTP support
-	struct aq_ptp_s *aq_ptp;
+	spinlock_t aq_spinlock;
 };
 
 static inline struct device *aq_nic_get_dev(struct aq_nic_s *self)
@@ -110,7 +102,7 @@ static inline struct device *aq_nic_get_dev(struct aq_nic_s *self)
 	return self->ndev->dev.parent;
 }
 
-extern unsigned aq_tx_clean_budget;
+extern unsigned aq_rx_refill_thres;
 
 void aq_nic_ndev_init(struct aq_nic_s *self);
 struct aq_nic_s *aq_nic_alloc_hot(struct net_device *ndev);
@@ -136,10 +128,6 @@ int aq_nic_set_packet_filter(struct aq_nic_s *self, unsigned int flags);
 int aq_nic_set_multicast_list(struct aq_nic_s *self, struct net_device *ndev);
 unsigned int aq_nic_get_link_speed(struct aq_nic_s *self);
 
-unsigned int aq_nic_map_skb(struct aq_nic_s *self,
-				   struct sk_buff *skb,
-				   struct aq_ring_s *ring);
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 void aq_nic_get_link_ksettings(struct aq_nic_s *self,
 			       struct ethtool_link_ksettings *cmd);
@@ -151,8 +139,10 @@ int aq_nic_set_link_settings(struct aq_nic_s *self, struct ethtool_cmd *cmd);
 #endif
 struct aq_nic_cfg_s *aq_nic_get_cfg(struct aq_nic_s *self);
 u32 aq_nic_get_fw_version(struct aq_nic_s *self);
+u32 aq_nic_getloopback(struct aq_nic_s *self);
+int aq_nic_setloopback(struct aq_nic_s *self, u32 flags);
 int aq_nic_change_pm_state(struct aq_nic_s *self, pm_message_t *pm_msg);
 int aq_nic_update_interrupt_moderation_settings(struct aq_nic_s *self);
-
+void aq_nic_shutdown(struct aq_nic_s *self);
 
 #endif /* AQ_NIC_H */

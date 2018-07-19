@@ -578,6 +578,13 @@ void hw_atl_rpb_dma_sys_lbk_set(struct aq_hw_s *aq_hw, u32 dma_sys_lbk)
 			    HW_ATL_RPB_DMA_SYS_LBK_SHIFT, dma_sys_lbk);
 }
 
+void hw_atl_rpb_dma_net_lbk_set(struct aq_hw_s *aq_hw, u32 dma_net_lbk)
+{
+	aq_hw_write_reg_bit(aq_hw, HW_ATL_RPB_DMA_NET_LBK_ADR,
+			    HW_ATL_RPB_DMA_NET_LBK_MSK,
+			    HW_ATL_RPB_DMA_NET_LBK_SHIFT, dma_net_lbk);
+}
+
 void hw_atl_rpb_rpf_rx_traf_class_mode_set(struct aq_hw_s *aq_hw,
 					   u32 rx_traf_class_mode)
 {
@@ -585,13 +592,6 @@ void hw_atl_rpb_rpf_rx_traf_class_mode_set(struct aq_hw_s *aq_hw,
 			    HW_ATL_RPB_RPF_RX_TC_MODE_MSK,
 			    HW_ATL_RPB_RPF_RX_TC_MODE_SHIFT,
 			    rx_traf_class_mode);
-}
-
-u32 hw_atl_rpb_rpf_rx_traf_class_mode_get(struct aq_hw_s *aq_hw)
-{
-	return aq_hw_read_reg_bit(aq_hw, HW_ATL_RPB_RPF_RX_TC_MODE_ADR,
-			    HW_ATL_RPB_RPF_RX_TC_MODE_MSK,
-			    HW_ATL_RPB_RPF_RX_TC_MODE_SHIFT);
 }
 
 void hw_atl_rpb_rx_buff_en_set(struct aq_hw_s *aq_hw, u32 rx_buff_en)
@@ -1243,22 +1243,6 @@ void hw_atl_tpb_tx_buff_en_set(struct aq_hw_s *aq_hw, u32 tx_buff_en)
 			    HW_ATL_TPB_TX_BUF_EN_SHIFT, tx_buff_en);
 }
 
-u32 hw_atl_rpb_tps_tx_tc_mode_get(struct aq_hw_s *aq_hw)
-{
-	return aq_hw_read_reg_bit(aq_hw, tpb_tps_tx_tc_mode_addr,
-				tpb_tps_tx_tc_mode_msk,
-				tpb_tps_tx_tc_mode_shift);
-}
-
-void hw_atl_rpb_tps_tx_tc_mode_set(struct aq_hw_s *aq_hw,
-					u32 tx_traf_class_mode)
-{
-	aq_hw_write_reg_bit(aq_hw, tpb_tps_tx_tc_mode_addr,
-				tpb_tps_tx_tc_mode_msk,
-				tpb_tps_tx_tc_mode_shift,
-				tx_traf_class_mode);
-}
-
 void hw_atl_tpb_tx_buff_hi_threshold_per_tc_set(struct aq_hw_s *aq_hw,
 						u32 tx_buff_hi_threshold_per_tc,
 					 u32 buffer)
@@ -1285,6 +1269,14 @@ void hw_atl_tpb_tx_dma_sys_lbk_en_set(struct aq_hw_s *aq_hw, u32 tx_dma_sys_lbk_
 			    HW_ATL_TPB_DMA_SYS_LBK_MSK,
 			    HW_ATL_TPB_DMA_SYS_LBK_SHIFT,
 			    tx_dma_sys_lbk_en);
+}
+
+void hw_atl_tpb_tx_dma_net_lbk_en_set(struct aq_hw_s *aq_hw, u32 tx_dma_net_lbk_en)
+{
+	aq_hw_write_reg_bit(aq_hw, HW_ATL_TPB_DMA_NET_LBK_ADR,
+			    HW_ATL_TPB_DMA_NET_LBK_MSK,
+			    HW_ATL_TPB_DMA_NET_LBK_SHIFT,
+			    tx_dma_net_lbk_en);
 }
 
 void hw_atl_tpb_tx_pkt_buff_size_per_tc_set(struct aq_hw_s *aq_hw,
@@ -1493,15 +1485,3 @@ void mcp_up_force_intr_set(struct aq_hw_s *aq_hw, u32 up_force_intr)
 			mcp_up_force_interrupt_msk,
 			mcp_up_force_interrupt_shift, up_force_intr);
 }
-
-void hw_atl_ptp_cntr_ctrl(struct aq_hw_s *aq_hw, enum ptp_ctrl_cmd ptp_ctrl_cmd)
-{
-	aq_hw_write_reg(aq_hw, ptp_reg_cntr_ctrl_adr, (1 << ptp_ctrl_cmd));
-	aq_hw_write_reg(aq_hw, ptp_reg_cntr_ctrl_adr, 0);
-}
-
-u32 hw_atl_ptp_ts_val(struct aq_hw_s *aq_hw, u32 index)
-{
-	return aq_hw_read_reg(aq_hw, ptp_reg_ts_val_adr(index));
-}
-

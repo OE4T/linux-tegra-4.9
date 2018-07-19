@@ -1,3 +1,85 @@
+Release: 2.0.15
+Date: 29/06/2018
+tag: v2.0.15
+================================
+* RM3118: Add Phy Int/Ext loopbacks to ethtool.
+  NOTICE:
+  - All loopback modes should be enabled only when interface is UP.
+  - DMANetworkLoopback mode may not function as expected.
+
+Release: 2.0.14
+Date: 27/06/2018
+tag: v2.0.14
+================================
+* RM3132: KVM/macvlan bridge was not functional
+* RM3118: Add loopback to ethtool.
+  README with priv-flags sections.
+  Only System level loopback is functional for now.
+
+Release: 2.0.12
+Date: 29/05/2018
+tag: v2.0.12
+================================
+* RM2921 Configure WOL to enable magic by default
+* netdev 4.17 styling syncup
+
+Release: 2.0.11
+Date: 18/05/2018
+tag: v2.0.11
+================================
+* cable len and chip temperature are now implemented via hwmon (sensors API)
+* Performance: Reset page offset when found that full page reuse is possible
+
+Release: 2.0.10.0
+Date: 03/05/2018
+tag: v2.0.10
+================================
+* RM2691: Kernel 2.x support (experimental)
+* RM2692: Linux DKMS packaging
+* RM2698: ethtool negotiate restart should be implemented
+* RM2736: ethtool ring size dynamic change
+* RM2734: EEE settings are lost after link down/up
+* RM2765: Linux driver must support WOL from shutdown
+* RM2697: WoL works in wrong way with FW3.x DW
+* RM2693: Pause frame (flow control) configuration should be done via ethtool
+* RH-1542881 Declare vlan_features bits:
+  http://gitlab.rdc.aquantia.com/drv/Linux/merge_requests/62
+* Leftover bugfixes (msi isr)
+  http://gitlab.rdc.aquantia.com/drv/Linux/merge_requests/61
+
+Release: 2.0.9.0
+Date: 18/04/2018
+tag: v2.0.9
+================================
+* RM2738: Fix RHEL7.5 incompatibility
+
+Release: 2.0.8.0
+Date: 11/04/2018
+tag: v2.0.8
+================================
+* 199177: ASUS XG-C100C 10G Network Adapter no longer working since 4.16
+  FW 1.5.44 and reset sequence collision
+  https://bugzilla.kernel.org/show_bug.cgi?id=199177
+  http://gitlab.rdc.aquantia.com/drv/Linux/merge_requests/54
+
+Release: 2.0.7.0
+Date: 05/04/2018
+tag: v2.0.7
+================================
+* RM2544 Need to make EEE feature configurable with ethtool
+* RM2676 net: aquantia: take care when shutdown on already stopped device
+* RM2667 Disable Dirty Wake on shutdown and suspend
+* (misc) netdev comments 4.16 rc6
+* readme updates on installation
+
+Release: 2.0.6.0
+Date: 15/03/2018
+tag: v2.0.6
+================================
+* RM2574 Post fix (R.Volkov found)
+* Shutdown pci callback closes the link (Synology NAS issues)
+* Introduce rx refill threshold parameter: aq_rx_refill_thres
+
 Release: 2.0.5.0
 Date: 06/03/2018
 tag: v2.0.5
@@ -7,7 +89,6 @@ tag: v2.0.5
 * RM2543 Linux driver must set link_drop bit when interface is down
 * Buffer flip&reuse implementation
   http://gitlab.rdc.aquantia.com/drv/Linux/merge_requests/41
-
 
 Release: 2.0.4.0
 Date: 16/02/2018
@@ -31,7 +112,19 @@ tag: v2.0.3
 * Cable length and temp diagnostics data in sysfs
 * RM2370 Errors are appear during uninstalation linux driver
 
+Upstream Release: 2.0.2.1-kern
+kernel: 4.16
+================================
+d28e9d1 net: aquantia: driver version bump
+fd8221f net: aquantia: Implement pci shutdown callback
+a1c1d63 net: aquantia: Allow live mac address changes
+33a3d54 net: aquantia: Add aq_tx_clean_budget and valid budget handling logic
+002594f net: aquantia: Change inefficient wait loop on fw data reads
+b8d7ecb net: aquantia: Fix a regression with reset on old firmware
+c0a6a02 net: aquantia: Fix hardware reset when SPI may rarely hangup
+
 Release 2.0.2.0
+Upstream: 2.0.2-kern
 tag: v2.0.2
 25/01/2018 f/w 1.x, 2.9.x, 3.x or above
 ================================

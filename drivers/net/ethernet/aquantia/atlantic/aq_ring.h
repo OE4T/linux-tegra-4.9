@@ -153,8 +153,6 @@ static inline unsigned int aq_ring_avail_dx(struct aq_ring_s *self)
 		self->sw_head - self->sw_tail - 1);
 }
 
-typedef unsigned int (*aq_pdata_rx_hook)(struct aq_nic_s *, struct sk_buff *, u8 *, unsigned int);
-
 struct aq_ring_s *aq_ring_tx_alloc(struct aq_ring_s *self,
 				   struct aq_nic_s *aq_nic,
 				   unsigned int idx,
@@ -173,13 +171,7 @@ bool aq_ring_tx_clean(struct aq_ring_s *self);
 int aq_ring_rx_clean(struct aq_ring_s *self,
 		     struct napi_struct *napi,
 		     int *work_done,
-		     int budget,
-			 aq_pdata_rx_hook hook);
+		     int budget);
 int aq_ring_rx_fill(struct aq_ring_s *self);
-
-struct aq_ring_s *aq_ring_hwts_alloc(struct aq_ring_s *self,
-			struct aq_nic_s *aq_nic, unsigned int idx,
-			unsigned int size, unsigned int dx_size);
-void aq_ring_hwts_rx_clean(struct aq_ring_s *self, struct aq_nic_s *aq_nic);
 
 #endif /* AQ_RING_H */

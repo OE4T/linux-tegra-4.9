@@ -47,14 +47,6 @@ struct __packed hw_atl_rxd_wb_s {
 	u16 vlan;
 };
 
-/* Hardware rx HW TIMESTAMP writeback */
-struct __packed hw_atl_rxd_hwts_wb_s {
-	u32 sec_hw;
-	u32 ns;
-	u32 sec_lw0;
-	u32 sec_lw1;
-};
-
 struct __packed hw_atl_stats_s {
 	u32 uprc;
 	u32 mprc;
@@ -219,8 +211,10 @@ struct __packed hw_aq_atl_utils_mbox {
 /* fw2x */
 typedef u16	in_port_t;
 typedef u32	ip4_addr_t;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 typedef int	int32_t;
 typedef short	int16_t;
+#endif
 typedef u32	fw_offset_t;
 
 struct __packed ip6_addr {
@@ -328,18 +322,6 @@ enum hal_atl_utils_fw_state_e {
 #define HAL_ATLANTIC_RATE_100M       BIT(5)
 #define HAL_ATLANTIC_RATE_INVALID    BIT(6)
 
-#define FW2X_MPI_EFUSE_ADDR	0x364
-#define FW2X_MPI_MBOX_ADDR	0x360
-
-#define FW2X_MPI_CONTROL_ADDR	0x368
-#define FW2X_MPI_CONTROL2_ADDR	0x36C
-
-#define FW2X_MPI_STATE_ADDR	0x370
-#define FW2X_MPI_STATE2_ADDR	0x374
-
-#define FW2X_MPI_DBG_BUFF_ADDR    0x334
-#define FW2X_MPI_RPC_ADDR    0x334
-
 #define HAL_ATLANTIC_UTILS_FW_MSG_PING     1U
 #define HAL_ATLANTIC_UTILS_FW_MSG_ARP      2U
 #define HAL_ATLANTIC_UTILS_FW_MSG_INJECT   3U
@@ -388,7 +370,7 @@ enum hw_atl_fw2x_caps_hi {
 	CAPS_HI_2P5GBASET_FD_EEE,
 	CAPS_HI_5GBASET_FD_EEE,
 	CAPS_HI_10GBASET_FD_EEE,
-    CAPS_HI_FW_REQUEST,
+	CAPS_HI_RESERVED5,
 	CAPS_HI_RESERVED6,
 	CAPS_HI_RESERVED7,
 	CAPS_HI_RESERVED8,
@@ -397,7 +379,7 @@ enum hw_atl_fw2x_caps_hi {
 	CAPS_HI_TEMPERATURE,
 	CAPS_HI_DOWNSHIFT,
 	CAPS_HI_PTP_AVB_EN,
-    CAPS_HI_RESERVED10,
+	CAPS_HI_MEDIA_DETECT,
 	CAPS_HI_LINK_DROP,
 	CAPS_HI_SLEEP_PROXY,
 	CAPS_HI_WOL,
@@ -408,6 +390,41 @@ enum hw_atl_fw2x_caps_hi {
 	CAPS_HI_WOL_TIMER,
 	CAPS_HI_STATISTICS,
 	CAPS_HI_TRANSACTION_ID,
+};
+
+enum hw_atl_fw2x_ctrl {
+	CTRL_RESERVED1 = 0x00,
+	CTRL_RESERVED2,
+	CTRL_RESERVED3,
+	CTRL_PAUSE,
+	CTRL_ASYMMETRIC_PAUSE,
+	CTRL_RESERVED4,
+	CTRL_RESERVED5,
+	CTRL_RESERVED6,
+	CTRL_1GBASET_FD_EEE,
+	CTRL_2P5GBASET_FD_EEE,
+	CTRL_5GBASET_FD_EEE,
+	CTRL_10GBASET_FD_EEE,
+	CTRL_THERMAL_SHUTDOWN,
+	CTRL_PHY_LOGS,
+	CTRL_EEE_AUTO_DISABLE,
+	CTRL_PFC,
+	CTRL_WAKE_ON_LINK,
+	CTRL_CABLE_DIAG,
+	CTRL_TEMPERATURE,
+	CTRL_DOWNSHIFT,
+	CTRL_PTP_AVB,
+	CTRL_RESERVED7,
+	CTRL_LINK_DROP,
+	CTRL_SLEEP_PROXY,
+	CTRL_WOL,
+	CTRL_MAC_STOP,
+	CTRL_EXT_LOOPBACK,
+	CTRL_INT_LOOPBACK,
+	CTRL_RESERVED8,
+	CTRL_WOL_TIMER,
+	CTRL_STATISTICS,
+	CTRL_FORCE_RECONNECT,
 };
 
 struct aq_hw_s;
@@ -455,8 +472,6 @@ struct aq_stats_s *hw_atl_utils_get_hw_stats(struct aq_hw_s *self);
 
 int hw_atl_utils_fw_downld_dwords(struct aq_hw_s *self, u32 a,
 				  u32 *p, u32 cnt);
-int hw_atl_utils_fw_upload_dwords(struct aq_hw_s *self, u32 a,
-					 u32 *p, u32 cnt);
 
 int hw_atl_utils_fw_set_wol(struct aq_hw_s *self, bool wol_enabled, u8 *mac);
 

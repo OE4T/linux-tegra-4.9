@@ -9,13 +9,11 @@
 
 /* File aq_nic.c: Definition of common code for NIC. */
 
-#include "aq_main.h"
 #include "aq_nic.h"
 #include "aq_ring.h"
 #include "aq_vec.h"
 #include "aq_hw.h"
 #include "aq_pci_func.h"
-#include "aq_ptp.h"
 
 #include <linux/moduleparam.h>
 #include <linux/netdevice.h>
@@ -39,14 +37,16 @@ MODULE_PARM_DESC(aq_itr_tx, "TX interrupt throttle rate");
 static unsigned int aq_itr_rx;
 module_param_named(aq_itr_rx, aq_itr_rx, uint, 0644);
 MODULE_PARM_DESC(aq_itr_rx, "RX interrupt throttle rate");
+
 static unsigned int aq_rxpageorder = 0;
 module_param_named(aq_rxpageorder, aq_rxpageorder, uint, 0644);
 MODULE_PARM_DESC(aq_rxpageorder, "RX page order override");
 
-unsigned aq_tx_clean_budget = 256;
-module_param_named(aq_tx_clean_budget, aq_tx_clean_budget, uint, 0644);
-MODULE_PARM_DESC(aq_tx_clean_budget, "Maximum descriptors to cleanup on TX at once");
+unsigned aq_rx_refill_thres = 32;
+module_param_named(aq_rx_refill_thres, aq_rx_refill_thres, uint, 0644);
+MODULE_PARM_DESC(aq_rx_refill_thres, "RX refill threshold");
 
+static void aq_nic_update_ndev_stats(struct aq_nic_s *self);
 
 static void aq_nic_rss_init(struct aq_nic_s *self, unsigned int num_rss_queues)
 {
@@ -88,6 +88,7 @@ void aq_nic_cfg_start(struct aq_nic_s *self)
 	cfg->num_rss_queues = AQ_CFG_NUM_RSS_QUEUES_DEF;
 	cfg->aq_rss.base_cpu_number = AQ_CFG_RSS_BASE_CPU_NUM_DEF;
 	cfg->flow_control = AQ_CFG_FC_MODE;
+	cfg->wol = AQ_CFG_WOL_MODE;
 
 	cfg->mtu = AQ_CFG_MTU_DEF;
 	cfg->link_speed_msk = AQ_CFG_SPEED_MSK;
@@ -100,12 +101,13 @@ void aq_nic_cfg_start(struct aq_nic_s *self)
 	aq_nic_rss_init(self, cfg->num_rss_queues);
 
 	/*descriptors */
-	cfg->rxds = min(cfg->aq_hw_caps->rxds, AQ_CFG_RXDS_DEF);
-	cfg->txds = min(cfg->aq_hw_caps->txds, AQ_CFG_TXDS_DEF);
+	cfg->rxds = min(cfg->aq_hw_caps->rxds_max, AQ_CFG_RXDS_DEF);
+	cfg->txds = min(cfg->aq_hw_caps->txds_max, AQ_CFG_TXDS_DEF);
 
 	/*rss rings */
 	cfg->vecs = min(cfg->aq_hw_caps->vecs, AQ_CFG_VECS_DEF);
 	cfg->vecs = min(cfg->vecs, num_online_cpus());
+	cfg->vecs = min(cfg->vecs, self->irqvecs);
 	/* cfg->vecs should be power of 2 for RSS */
 	if (cfg->vecs >= 8U)
 		cfg->vecs = 8U;
@@ -140,10 +142,9 @@ static int aq_nic_update_link_status(struct aq_nic_s *self)
 
 	if (self->link_status.mbps != self->aq_hw->aq_link_status.mbps) {
 		pr_info("%s: link change old %d new %d\n",
-			aq_ndev_driver_name, self->link_status.mbps,
+			AQ_CFG_DRV_NAME, self->link_status.mbps,
 			self->aq_hw->aq_link_status.mbps);
 		aq_nic_update_interrupt_moderation_settings(self);
-    aq_ptp_tm_offset_set(self, self->aq_hw->aq_link_status.mbps);
 	}
 
 	self->link_status = self->aq_hw->aq_link_status;
@@ -163,52 +164,33 @@ static int aq_nic_update_link_status(struct aq_nic_s *self)
 	return 0;
 }
 
-static void aq_nic_update_ndev_stats(struct aq_nic_s *self)
-{
-	struct net_device *ndev = self->ndev;
-	struct aq_stats_s *stats = self->aq_hw_ops->hw_get_hw_stats(self->aq_hw);
-
-	ndev->stats.rx_packets = stats->uprc + stats->mprc + stats->bprc;
-	ndev->stats.rx_bytes = stats->ubrc + stats->mbrc + stats->bbrc;
-	ndev->stats.rx_errors = stats->erpr;
-	ndev->stats.tx_packets = stats->uptc + stats->mptc + stats->bptc;
-	ndev->stats.tx_bytes = stats->ubtc + stats->mbtc + stats->bbtc;
-	ndev->stats.tx_errors = stats->erpt;
-	ndev->stats.multicast = stats->mprc;
-}
-
-static void aq_nic_service_task(struct work_struct *work)
-{
-  struct aq_nic_s *self = container_of(work,
-          struct aq_nic_s, service_task);
-	int err;
-
-	if (aq_utils_obj_test(&self->flags, AQ_NIC_FLAGS_IS_NOT_READY))
-		return;
-
-	err = aq_nic_update_link_status(self);
-	if (err)
-		return;
-
-	down(&self->fwreq_sem);
-	if (self->aq_fw_ops->update_stats)
-		self->aq_fw_ops->update_stats(self->aq_hw);
-	up(&self->fwreq_sem);
-
-	aq_nic_update_ndev_stats(self);
-}
-
 static void aq_nic_service_timer_cb(struct timer_list *t)
 {
 	struct aq_nic_s *self = from_timer(self, t, service_timer);
 	int ctimer = AQ_CFG_SERVICE_TIMER_INTERVAL;
+	int err = 0;
+
+	spin_lock(&self->aq_spinlock);
+
+	if (aq_utils_obj_test(&self->flags, AQ_NIC_FLAGS_IS_NOT_READY))
+		goto err_exit;
+
+	err = aq_nic_update_link_status(self);
+	if (err)
+		goto err_exit;
+
+	if (self->aq_fw_ops->update_stats)
+		self->aq_fw_ops->update_stats(self->aq_hw);
+
+	aq_nic_update_ndev_stats(self);
 
 	/* If no link - use faster timer rate to detect link up asap */
 	if (!netif_carrier_ok(self->ndev))
 		ctimer = max(ctimer / 2, 1);
-	mod_timer(&self->service_timer, jiffies + ctimer);
 
-	aq_ndev_service_event_schedule(self);
+err_exit:
+	spin_unlock(&self->aq_spinlock);
+	mod_timer(&self->service_timer, jiffies + ctimer);
 }
 
 static void aq_nic_polling_timer_cb(struct timer_list *t)
@@ -278,14 +260,21 @@ void aq_nic_ndev_init(struct aq_nic_s *self)
 	const struct aq_hw_caps_s *aq_hw_caps = self->aq_nic_cfg.aq_hw_caps;
 	struct aq_nic_cfg_s *aq_nic_cfg = &self->aq_nic_cfg;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	self->ndev->hw_features |= aq_hw_caps->hw_features;
+#endif
 	self->ndev->features = aq_hw_caps->hw_features;
+	self->ndev->vlan_features |= NETIF_F_HW_CSUM | NETIF_F_RXCSUM |
+				     NETIF_F_RXHASH | NETIF_F_SG | NETIF_F_LRO;
 	self->ndev->priv_flags = aq_hw_caps->hw_priv_flags;
 	self->ndev->priv_flags |= IFF_LIVE_ADDR_CHANGE;
 
 	self->ndev->mtu = aq_nic_cfg->mtu - ETH_HLEN;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
 	self->ndev->max_mtu = aq_hw_caps->mtu - ETH_FCS_LEN - ETH_HLEN;
+#elif (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))
+	self->ndev->extended->min_mtu = ETH_MIN_MTU;
+	self->ndev->extended->max_mtu = aq_hw_caps->mtu - ETH_FCS_LEN - ETH_HLEN;
 #endif
 }
 
@@ -311,10 +300,8 @@ int aq_nic_init(struct aq_nic_s *self)
 	if (err < 0)
 		goto err_exit;
 
-	down(&self->fwreq_sem);
 	err = self->aq_hw_ops->hw_init(self->aq_hw,
 				       aq_nic_get_ndev(self)->dev_addr);
-	up(&self->fwreq_sem);
 	if (err < 0)
 		goto err_exit;
 
@@ -322,14 +309,8 @@ int aq_nic_init(struct aq_nic_s *self)
 		self->aq_vecs > i; ++i, aq_vec = self->aq_vec[i])
 		aq_vec_init(aq_vec, self->aq_hw_ops, self->aq_hw);
 
-	err = aq_ptp_ring_alloc(self);
-	if (err < 0)
-		goto err_exit;
+	spin_lock_init(&self->aq_spinlock);
 
-	err = aq_ptp_ring_init(self);
-	if (err < 0)
-		goto err_exit;
-	
 	netif_carrier_off(self->ndev);
 
 err_exit:
@@ -359,10 +340,6 @@ int aq_nic_start(struct aq_nic_s *self)
 		if (err < 0)
 			goto err_exit;
 	}
-	
-	err = aq_ptp_ring_start(self);
-	if (err < 0)
-		goto err_exit;
 
 	err = self->aq_hw_ops->hw_start(self->aq_hw);
 	if (err < 0)
@@ -371,19 +348,15 @@ int aq_nic_start(struct aq_nic_s *self)
 	err = aq_nic_update_interrupt_moderation_settings(self);
 	if (err)
 		goto err_exit;
-
-	INIT_WORK(&self->service_task, aq_nic_service_task);
 	timer_setup(&self->service_timer, aq_nic_service_timer_cb, 0);
 	mod_timer(&self->service_timer, jiffies +
 			AQ_CFG_SERVICE_TIMER_INTERVAL);
 
 	if (self->aq_nic_cfg.is_polling) {
-		pr_info("aq_nic_start: 1\n");
 		timer_setup(&self->polling_timer, aq_nic_polling_timer_cb, 0);
 		mod_timer(&self->polling_timer, jiffies +
 			  AQ_CFG_POLLING_TIMER_INTERVAL);
 	} else {
-		pr_info("aq_nic_start: 2\n");
 		for (i = 0U, aq_vec = self->aq_vec[0];
 			self->aq_vecs > i; ++i, aq_vec = self->aq_vec[i]) {
 			err = aq_pci_func_alloc_irq(self, i,
@@ -392,17 +365,13 @@ int aq_nic_start(struct aq_nic_s *self)
 			if (err < 0)
 				goto err_exit;
 		}
-		
-		err = aq_ptp_irq_alloc(self);
-		if (err < 0)
-			goto err_exit;
 
 		err = self->aq_hw_ops->hw_irq_enable(self->aq_hw,
 				    AQ_CFG_IRQ_MASK);
 		if (err < 0)
 			goto err_exit;
 	}
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	err = netif_set_real_num_tx_queues(self->ndev, self->aq_vecs);
 	if (err < 0)
 		goto err_exit;
@@ -410,14 +379,14 @@ int aq_nic_start(struct aq_nic_s *self)
 	err = netif_set_real_num_rx_queues(self->ndev, self->aq_vecs);
 	if (err < 0)
 		goto err_exit;
-
+#endif
 	netif_tx_start_all_queues(self->ndev);
 
 err_exit:
 	return err;
 }
 
-unsigned int aq_nic_map_skb(struct aq_nic_s *self,
+static unsigned int aq_nic_map_skb(struct aq_nic_s *self,
 				   struct sk_buff *skb,
 				   struct aq_ring_s *ring)
 {
@@ -564,20 +533,20 @@ int aq_nic_xmit(struct aq_nic_s *self, struct sk_buff *skb)
 
 	frags = skb_shinfo(skb)->nr_frags + 1;
 
+	ring = self->aq_ring_tx[AQ_NIC_TCVEC2RING(self, tc, vec)];
+
 	if (frags > AQ_CFG_SKB_FRAGS_MAX) {
 		dev_kfree_skb_any(skb);
 		goto err_exit;
 	}
 
-	ring = self->aq_ring_tx[AQ_NIC_TCVEC2RING(self, tc, vec)];
+	aq_ring_update_queue_state(ring);
 
 	/* Above status update may stop the queue. Check this. */
 	if (__netif_subqueue_stopped(self->ndev, ring->idx)) {
 		err = NETDEV_TX_BUSY;
 		goto err_exit;
 	}
-	
-	aq_ring_update_queue_state(ring);
 
 	frags = aq_nic_map_skb(self, skb, ring);
 
@@ -617,35 +586,50 @@ err_exit:
 
 int aq_nic_set_multicast_list(struct aq_nic_s *self, struct net_device *ndev)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
+#define netdev_hw_addr dev_addr_list
+#define addr da_addr
+#endif
 	struct netdev_hw_addr *ha = NULL;
+	unsigned int packet_filter = self->packet_filter;
 	unsigned int i = 0U;
+	int err = 0;
 
-	self->mc_list.count = 0U;
-
-	netdev_for_each_mc_addr(ha, ndev) {
-
-		ether_addr_copy(self->mc_list.ar[i++], ha->addr);
-		++self->mc_list.count;
-
-		if (i >= AQ_CFG_MULTICAST_ADDRESS_MAX)
-			break;
-	}
-
-	if (i >= AQ_CFG_MULTICAST_ADDRESS_MAX) {
-		/* Number of filters is too big: atlantic does not support this.
-		 * Force all multi filter to support this.
-		 * With this we disable all UC filters and setup "all pass"
-		 * multicast mask
-		 */
-		self->packet_filter |= IFF_ALLMULTI;
-		self->aq_nic_cfg.mc_list_count = 0;
-		return self->aq_hw_ops->hw_packet_filter_set(self->aq_hw,
-							     self->packet_filter);
+	self->mc_list.count = 0;
+	if (netdev_uc_count(ndev) > AQ_HW_MULTICAST_ADDRESS_MAX) {
+		packet_filter |= IFF_PROMISC;
 	} else {
-		return self->aq_hw_ops->hw_multicast_list_set(self->aq_hw,
-						    self->mc_list.ar,
-						    self->mc_list.count);
+		netdev_for_each_uc_addr(ha, ndev) {
+			ether_addr_copy(self->mc_list.ar[i++], ha->addr);
+
+			if (i >= AQ_HW_MULTICAST_ADDRESS_MAX)
+				break;
+		}
 	}
+
+	if (i + netdev_mc_count(ndev) > AQ_HW_MULTICAST_ADDRESS_MAX) {
+		packet_filter |= IFF_ALLMULTI;
+	} else {
+		netdev_for_each_mc_addr(ha, ndev) {
+			ether_addr_copy(self->mc_list.ar[i++], ha->addr);
+
+			if (i >= AQ_HW_MULTICAST_ADDRESS_MAX)
+				break;
+		}
+	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
+#undef netdev_hw_addr
+#undef addr
+#endif
+	if (i > 0 && i < AQ_HW_MULTICAST_ADDRESS_MAX)
+	{
+		packet_filter |= IFF_MULTICAST;
+		self->mc_list.count = i;
+		err = self->aq_hw_ops->hw_multicast_list_set(self->aq_hw,
+							     self->mc_list.ar,
+							     self->mc_list.count);
+	}
+	return aq_nic_set_packet_filter(self, packet_filter);
 }
 
 int aq_nic_set_mtu(struct aq_nic_s *self, int new_mtu)
@@ -738,6 +722,20 @@ void aq_nic_get_stats(struct aq_nic_s *self, u64 *data)
 err_exit:;
 }
 
+static void aq_nic_update_ndev_stats(struct aq_nic_s *self)
+{
+	struct net_device *ndev = self->ndev;
+	struct aq_stats_s *stats = self->aq_hw_ops->hw_get_hw_stats(self->aq_hw);
+
+	ndev->stats.rx_packets = stats->uprc + stats->mprc + stats->bprc;
+	ndev->stats.rx_bytes = stats->ubrc + stats->mbrc + stats->bbrc;
+	ndev->stats.rx_errors = stats->erpr;
+	ndev->stats.tx_packets = stats->uptc + stats->mptc + stats->bptc;
+	ndev->stats.tx_bytes = stats->ubtc + stats->mbtc + stats->bbtc;
+	ndev->stats.tx_errors = stats->erpt;
+	ndev->stats.multicast = stats->mprc;
+}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)
 void aq_nic_get_link_ksettings(struct aq_nic_s *self,
 			       struct ethtool_link_ksettings *cmd)
@@ -809,9 +807,13 @@ void aq_nic_get_link_ksettings(struct aq_nic_s *self,
 		ethtool_link_ksettings_add_link_mode(cmd, advertising,
 						     100baseT_Full);
 
-	if (self->aq_nic_cfg.flow_control)
+	if (self->aq_nic_cfg.flow_control & AQ_NIC_FC_RX)
 		ethtool_link_ksettings_add_link_mode(cmd, advertising,
 						     Pause);
+
+	if (self->aq_nic_cfg.flow_control & AQ_NIC_FC_TX)
+		ethtool_link_ksettings_add_link_mode(cmd, advertising,
+						     Asym_Pause);
 
 	if (self->aq_nic_cfg.aq_hw_caps->media_type == AQ_HW_MEDIA_TYPE_FIBRE)
 		ethtool_link_ksettings_add_link_mode(cmd, advertising, FIBRE);
@@ -998,6 +1000,41 @@ u32 aq_nic_get_fw_version(struct aq_nic_s *self)
 	return fw_version;
 }
 
+u32 aq_nic_getloopback(struct aq_nic_s *self)
+{
+	return self->aq_nic_cfg.test_loopback;
+}
+
+int aq_nic_setloopback(struct aq_nic_s *self, u32 flags)
+{
+	if (!self->aq_hw_ops->hw_set_loopback || !self->aq_fw_ops->set_phyloopback)
+		return -ENOTSUPP;
+
+	self->aq_hw_ops->hw_set_loopback(self->aq_hw,
+					 AQ_HW_LOOPBACK_DMA_SYS,
+					 !!(flags & BIT(AQ_HW_LOOPBACK_DMA_SYS)));
+
+	self->aq_hw_ops->hw_set_loopback(self->aq_hw,
+					 AQ_HW_LOOPBACK_PKT_SYS,
+					 !!(flags & BIT(AQ_HW_LOOPBACK_PKT_SYS)));
+
+	self->aq_hw_ops->hw_set_loopback(self->aq_hw,
+					 AQ_HW_LOOPBACK_DMA_NET,
+					 !!(flags & BIT(AQ_HW_LOOPBACK_DMA_NET)));
+
+	self->aq_fw_ops->set_phyloopback(self->aq_hw,
+					 AQ_HW_LOOPBACK_PHYINT_SYS,
+					 !!(flags & BIT(AQ_HW_LOOPBACK_PHYINT_SYS)));
+
+	self->aq_fw_ops->set_phyloopback(self->aq_hw,
+					 AQ_HW_LOOPBACK_PHYEXT_SYS,
+					 !!(flags & BIT(AQ_HW_LOOPBACK_PHYEXT_SYS)));
+
+	self->aq_nic_cfg.test_loopback = flags & AQ_HW_LOOPBACK_MASK;
+
+	return 0;
+}
+
 int aq_nic_stop(struct aq_nic_s *self)
 {
 	struct aq_vec_s *aq_vec = NULL;
@@ -1007,7 +1044,6 @@ int aq_nic_stop(struct aq_nic_s *self)
 	netif_carrier_off(self->ndev);
 
 	del_timer_sync(&self->service_timer);
-	cancel_work_sync(&self->service_task);
 
 	self->aq_hw_ops->hw_irq_disable(self->aq_hw, AQ_CFG_IRQ_MASK);
 
@@ -1015,14 +1051,10 @@ int aq_nic_stop(struct aq_nic_s *self)
 		del_timer_sync(&self->polling_timer);
 	else
 		aq_pci_func_free_irqs(self);
-	
-	aq_ptp_irq_free(self);
 
 	for (i = 0U, aq_vec = self->aq_vec[0];
 		self->aq_vecs > i; ++i, aq_vec = self->aq_vec[i])
 		aq_vec_stop(aq_vec);
-		
-	aq_ptp_ring_stop(self);
 
 	return self->aq_hw_ops->hw_stop(self->aq_hw);
 }
@@ -1039,11 +1071,10 @@ void aq_nic_deinit(struct aq_nic_s *self)
 		self->aq_vecs > i; ++i, aq_vec = self->aq_vec[i])
 		aq_vec_deinit(aq_vec);
 
-	aq_ptp_ring_deinit(self);
-	
-	if (self->power_state == AQ_HW_POWER_STATE_D0) {
-		(void)self->aq_fw_ops->deinit(self->aq_hw);
-	} else {
+	(void)self->aq_fw_ops->deinit(self->aq_hw);
+
+	if (self->power_state != AQ_HW_POWER_STATE_D0 ||
+	    self->aq_hw->aq_nic_cfg->wol) {
 		(void)self->aq_fw_ops->set_power(self->aq_hw,
 			self->power_state, self->ndev->dev_addr);
 	}
@@ -1082,7 +1113,6 @@ int aq_nic_change_pm_state(struct aq_nic_s *self, pm_message_t *pm_msg)
 		netif_device_detach(self->ndev);
 		netif_tx_stop_all_queues(self->ndev);
 
-
 		err = aq_nic_stop(self);
 		if (err < 0)
 			goto err_exit;
@@ -1107,3 +1137,24 @@ out:
 	return err;
 }
 
+void aq_nic_shutdown(struct aq_nic_s *self)
+{
+	int err = 0;
+
+	if (!self->ndev)
+		return;
+
+	rtnl_lock();
+
+	netif_device_detach(self->ndev);
+
+	if (netif_running(self->ndev)) {
+		err = aq_nic_stop(self);
+		if (err < 0)
+			goto err_exit;
+	}
+	aq_nic_deinit(self);
+
+err_exit:
+	rtnl_unlock();
+}

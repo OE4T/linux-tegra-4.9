@@ -67,18 +67,8 @@
 #define HW_ATL_B0_MPI_SPEED_MSK         0xFFFFU
 #define HW_ATL_B0_MPI_SPEED_SHIFT       16U
 
-#define HW_ATL_B0_RATE_10G              BIT(0)
-#define HW_ATL_B0_RATE_5G               BIT(1)
-#define HW_ATL_B0_RATE_2G5              BIT(3)
-#define HW_ATL_B0_RATE_1G               BIT(4)
-#define HW_ATL_B0_RATE_100M             BIT(5)
-
-#define HW_ATL_B0_TXBUF_MAX             160U
-#define HW_ATL_B0_PTP_TXBUF_SIZE          8U
-
-#define HW_ATL_B0_RXBUF_MAX             320U
-#define HW_ATL_B0_PTP_RXBUF_SIZE         16U
-#define HW_ATL_B0_PTP_HWTS_RXBUF_SIZE     8U
+#define HW_ATL_B0_TXBUF_MAX  160U
+#define HW_ATL_B0_RXBUF_MAX  320U
 
 #define HW_ATL_B0_RSS_REDIRECTION_MAX 64U
 #define HW_ATL_B0_RSS_REDIRECTION_BITS 3U
@@ -143,6 +133,14 @@
 
 #define HW_ATL_INTR_MODER_MAX  0x1FF
 #define HW_ATL_INTR_MODER_MIN  0xFF
+
+#define HW_ATL_B0_MIN_RXD \
+	(ALIGN(AQ_CFG_SKB_FRAGS_MAX + 1U, AQ_HW_RXD_MULTIPLE))
+#define HW_ATL_B0_MIN_TXD \
+	(ALIGN(AQ_CFG_SKB_FRAGS_MAX + 1U, AQ_HW_TXD_MULTIPLE))
+
+#define HW_ATL_B0_MAX_RXD 8184U
+#define HW_ATL_B0_MAX_TXD 8184U
 
 /* HW layer capabilities */
 

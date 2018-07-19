@@ -300,12 +300,12 @@ void hw_atl_reg_glb_cpu_scratch_scp_set(struct aq_hw_s *aq_hw,
 /* set dma system loopback */
 void hw_atl_rpb_dma_sys_lbk_set(struct aq_hw_s *aq_hw, u32 dma_sys_lbk);
 
+/* set dma network loopback */
+void hw_atl_rpb_dma_net_lbk_set(struct aq_hw_s *aq_hw, u32 dma_net_lbk);
+
 /* set rx traffic class mode */
 void hw_atl_rpb_rpf_rx_traf_class_mode_set(struct aq_hw_s *aq_hw,
 					   u32 rx_traf_class_mode);
-
-/* get rx traffic class mode */
-u32 hw_atl_rpb_rpf_rx_traf_class_mode_get(struct aq_hw_s *aq_hw);
 
 /* set rx buffer enable */
 void hw_atl_rpb_rx_buff_en_set(struct aq_hw_s *aq_hw, u32 rx_buff_en);
@@ -591,13 +591,6 @@ void hw_atl_thm_lso_tcp_flag_of_middle_pkt_set(struct aq_hw_s *aq_hw,
 
 /* tpb */
 
-/* set TX Traffic Class Mode */
-void hw_atl_rpb_tps_tx_tc_mode_set(struct aq_hw_s *aq_hw,
-					u32 tx_traf_class_mode);
-
-/* get TX Traffic Class Mode */
-u32 hw_atl_rpb_tps_tx_tc_mode_get(struct aq_hw_s *aq_hw);
-
 /* set tx buffer enable */
 void hw_atl_tpb_tx_buff_en_set(struct aq_hw_s *aq_hw, u32 tx_buff_en);
 
@@ -613,6 +606,9 @@ void hw_atl_tpb_tx_buff_lo_threshold_per_tc_set(struct aq_hw_s *aq_hw,
 
 /* set tx dma system loopback enable */
 void hw_atl_tpb_tx_dma_sys_lbk_en_set(struct aq_hw_s *aq_hw, u32 tx_dma_sys_lbk_en);
+
+/* set tx dma network loopback enable */
+void hw_atl_tpb_tx_dma_net_lbk_en_set(struct aq_hw_s *aq_hw, u32 tx_dma_net_lbk_en);
 
 /* set tx packet buffer size (per tc) */
 void hw_atl_tpb_tx_pkt_buff_size_per_tc_set(struct aq_hw_s *aq_hw,
@@ -711,20 +707,5 @@ void hw_atl_pci_pci_reg_res_dis_set(struct aq_hw_s *aq_hw, u32 pci_reg_res_dis);
 /* set uP Force Interrupt */
 void mcp_up_force_intr_set(struct aq_hw_s *aq_hw, u32 up_force_intr);
 
-
-/* ptp */
-
-/* mac-phy-interface */
-enum ptp_ctrl_cmd
-{
-	ptp_set_clock = 0,
-	ptp_inc_clock = 1,
-	ptp_dec_clock = 2,
-	ptp_set_inc_cfg = 3,
-	ptp_read_counter = 4,
-};
-
-void hw_atl_ptp_cntr_ctrl(struct aq_hw_s *aq_hw, enum ptp_ctrl_cmd);
-u32 hw_atl_ptp_ts_val(struct aq_hw_s *aq_hw, u32 index);
 
 #endif /* HW_ATL_LLH_H */

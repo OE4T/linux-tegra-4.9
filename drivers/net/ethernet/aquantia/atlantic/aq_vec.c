@@ -35,12 +35,12 @@ struct aq_vec_s {
 static int aq_vec_poll(struct napi_struct *napi, int budget)
 {
 	struct aq_vec_s *self = container_of(napi, struct aq_vec_s, napi);
+	unsigned int sw_tail_old = 0U;
 	struct aq_ring_s *ring = NULL;
+	bool was_tx_cleaned = true;
+	unsigned int i = 0U;
 	int work_done = 0;
 	int err = 0;
-	unsigned int i = 0U;
-	unsigned int sw_tail_old = 0U;
-	bool was_tx_cleaned = true;
 
 	if (!self) {
 		err = -EINVAL;
@@ -71,7 +71,7 @@ static int aq_vec_poll(struct napi_struct *napi, int budget)
 				err = aq_ring_rx_clean(&ring[AQ_VEC_RX_ID],
 						       napi,
 						       &work_done,
-						       budget - work_done, NULL);
+						       budget - work_done);
 				if (err < 0)
 					goto err_exit;
 
@@ -133,9 +133,6 @@ struct aq_vec_s *aq_vec_alloc(struct aq_nic_s *aq_nic, unsigned int idx,
 
 	netif_napi_add(aq_nic_get_ndev(aq_nic), &self->napi,
 		       aq_vec_poll, AQ_CFG_NAPI_WEIGHT);
-			   
-	pr_info("aq_vec_alloc 1: vec_idx: %d; cpu: %d; affinity_mask: %lu;\n",
-		self->aq_ring_param.vec_idx, self->aq_ring_param.cpu, sizeof self->aq_ring_param.affinity_mask);
 
 	for (i = 0; i < aq_nic_cfg->tcs; ++i) {
 		unsigned int idx_ring = AQ_NIC_TCVEC2RING(self->nic,
@@ -162,9 +159,6 @@ struct aq_vec_s *aq_vec_alloc(struct aq_nic_s *aq_nic, unsigned int idx,
 
 		++self->rx_rings;
 	}
-	
-	pr_info("aq_vec_alloc 2: vec_idx: %d; tx_rings: %d; rx_rings %d;\n",
-		self->aq_ring_param.vec_idx, self->tx_rings, self->rx_rings);
 
 err_exit:
 	if (err < 0) {

@@ -13,7 +13,6 @@
 #include "aq_nic.h"
 #include "aq_hw.h"
 #include "aq_hw_utils.h"
-#include "aq_ptp.h"
 
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -79,8 +78,10 @@ static int aq_get_rxpages(struct aq_ring_s *self, struct aq_ring_buff_s *rxbuf, 
 					       aq_nic_get_dev(self->aq_nic));
 				self->stats.rx.pg_losts++;
 			}
-		} else
+		} else {
+			rxbuf->rxdata.pg_off = 0;
 			self->stats.rx.pg_reuses++;
+		}
 	}
 
 	if (!rxbuf->rxdata.page) {
@@ -131,9 +132,6 @@ struct aq_ring_s *aq_ring_tx_alloc(struct aq_ring_s *self,
 	self->idx = idx;
 	self->size = aq_nic_cfg->txds;
 	self->dx_size = aq_nic_cfg->aq_hw_caps->txd_size;
-	
-	pr_info("aq_ring_tx_alloc: idx: %d; size: %d; dx_size: %d;\n",
-		self->idx, self->size, self->dx_size);
 
 	self = aq_ring_alloc(self, aq_nic);
 	if (!self) {
@@ -165,9 +163,6 @@ struct aq_ring_s *aq_ring_rx_alloc(struct aq_ring_s *self,
 	if (aq_nic_cfg->rxpageorder > self->page_order)
 		self->page_order = aq_nic_cfg->rxpageorder;
 
-	pr_info("aq_ring_rx_alloc: idx: %d; size: %d; dx_size: %d;\n",
-		self->idx, self->size, self->dx_size);
-
 	self = aq_ring_alloc(self, aq_nic);
 	if (!self) {
 		err = -ENOMEM;
@@ -179,40 +174,6 @@ err_exit:
 		aq_ring_free(self);
 		self = NULL;
 	}
-	return self;
-}
-
-struct aq_ring_s *aq_ring_hwts_alloc(struct aq_ring_s *self,
-			struct aq_nic_s *aq_nic, unsigned int idx,
-			unsigned int size, unsigned int dx_size)
-{
-	struct device *dev = aq_nic_get_dev(aq_nic);
-	int err = 0;
-	size_t sz = size * dx_size + AQ_CFG_RXDS_DEF;
-	
-	memset(self, 0, sizeof(*self));
-	//self->buff_ring = NULL;
-	self->aq_nic = aq_nic;
-	self->idx = idx;
-	self->size = size;
-	self->dx_size = dx_size;
-	
-	pr_info("aq_ring_hwts_alloc: idx: %d; size: %d; dx_size: %d;\n",
-		self->idx, self->size, self->dx_size);
-	
-	self->dx_ring = dma_alloc_coherent(dev, sz,
-			&self->dx_ring_pa, GFP_KERNEL);
-	if (!self->dx_ring) {
-		err = -ENOMEM;
-		goto err_exit;
-	}
-	
-err_exit:
-	if (err < 0) {
-		aq_ring_free(self);
-		return NULL;
-	}
-	
 	return self;
 }
 
@@ -259,7 +220,7 @@ void aq_ring_queue_stop(struct aq_ring_s *ring)
 bool aq_ring_tx_clean(struct aq_ring_s *self)
 {
 	struct device *dev = aq_nic_get_dev(self->aq_nic);
-	unsigned int budget = aq_tx_clean_budget;
+	unsigned int budget = AQ_CFG_TX_CLEAN_BUDGET;
 
 	for (; self->sw_head != self->hw_head && budget--;
 		self->sw_head = aq_ring_next_dx(self, self->sw_head)) {
@@ -296,8 +257,7 @@ bool aq_ring_tx_clean(struct aq_ring_s *self)
 int aq_ring_rx_clean(struct aq_ring_s *self,
 		     struct napi_struct *napi,
 		     int *work_done,
-		     int budget,
-			 aq_pdata_rx_hook hook)
+		     int budget)
 {
 	struct net_device *ndev = aq_nic_get_ndev(self->aq_nic);
 	bool is_rsc_completed = true;
@@ -312,7 +272,6 @@ int aq_ring_rx_clean(struct aq_ring_s *self,
 		unsigned int next_ = 0U;
 		unsigned int i = 0U;
 		u16 hdr_len;
-		void *paddr;
 
 		if (buff->is_error) {
 			continue;
@@ -358,17 +317,10 @@ int aq_ring_rx_clean(struct aq_ring_s *self,
 			err = -ENOMEM;
 			goto err_exit;
 		}
-		/* Good Receive */
+
 		hdr_len = min_t(u16, buff->len, AQ_CFG_RX_HDR_SIZE);
-		paddr = aq_buf_vaddr(&buff->rxdata); //page_address(buff->page);
-		
 		skb_put(skb, hdr_len);
-		memcpy(skb->data, paddr, hdr_len);
-		
-		if (hook) {
-			unsigned int cut_len = (*hook)(self->aq_nic, skb, paddr, buff->len);
-			buff->len -= cut_len;
-		}
+		memcpy(skb->data, aq_buf_vaddr(&buff->rxdata), hdr_len);
 
 		if (buff->len - hdr_len > 0) {
 			skb_add_rx_frag(skb, 0, buff->rxdata.page,
@@ -441,36 +393,15 @@ err_exit:
 	return err;
 }
 
-void aq_ring_hwts_rx_clean(struct aq_ring_s *self, struct aq_nic_s *aq_nic)
-{
-	while (self->sw_head != self->hw_head) {
-		u64 tmp, sec, ns;
-
-		struct hw_atl_rxd_hwts_wb_s *hwts_wb =
-			(struct hw_atl_rxd_hwts_wb_s *)(self->dx_ring + (self->sw_head * 16));
-
-		sec = 0;
-		tmp = (hwts_wb->sec_lw0 >> 2) & 0x3ff;
-		sec += tmp;
-		tmp = (u64)((hwts_wb->sec_lw1 >> 16) & 0xffff) << 10;
-		sec += tmp;
-		tmp = (u64)(hwts_wb->sec_hw & 0xfff) << 26;
-		sec += tmp;
-		tmp = (u64)((hwts_wb->sec_hw >> 22) & 0x3ff) << 38;
-		sec += tmp;
-		ns = sec * 1000000000llu + hwts_wb->ns;
-		aq_ptp_tx_hwtstamp(aq_nic, ns);
-
-		self->sw_head = aq_ring_next_dx(self, self->sw_head);
-	}
-}
-
 int aq_ring_rx_fill(struct aq_ring_s *self)
 {
 	unsigned int page_order = self->page_order;
 	struct aq_ring_buff_s *buff = NULL;
 	int err = 0;
 	int i = 0;
+
+	if (aq_ring_avail_dx(self) < min_t(unsigned, aq_rx_refill_thres, self->size/2))
+		return err;
 
 	for (i = aq_ring_avail_dx(self); i--;
 		self->sw_tail = aq_ring_next_dx(self, self->sw_tail)) {
@@ -512,8 +443,7 @@ void aq_ring_free(struct aq_ring_s *self)
 	if (!self)
 		goto err_exit;
 
-	if ( self->buff_ring )
-		kfree(self->buff_ring);
+	kfree(self->buff_ring);
 
 	if (self->dx_ring)
 		dma_free_coherent(aq_nic_get_dev(self->aq_nic),

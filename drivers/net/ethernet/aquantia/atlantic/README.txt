@@ -31,7 +31,7 @@ This file describes the aQuantia AQtion Driver for the aQuantia Multi-Gigabit PC
 Ethernet Adapters.  This driver supports the linux kernels >= 3.10, 
 and includes support for x86_64 and ARM Linux system.
 
-This release contains source tarball and src.rpm package.
+This release contains source tarball and (optional) src.rpm package.
 
 Identifying Your Adapter
 ========================
@@ -49,11 +49,16 @@ Building and Installation
 
 To manually build this driver:
 ------------------------------------------------------------
-1. Move the base driver tar file to the directory of your choice. For example,
+1. Make sure you have all the environment to build standalone kernel module.
+   On debian based systems you may do the following:
+
+	sudo apt install linux-headers build-essential
+
+2. Move the base driver tar file to the directory of your choice. For example,
    use /home/username/aquantia.
+   Untar/unzip archive:
 
-2. Untar/unzip archive:
-
+	cd ~/aquantia
 	tar zxf Aquantia-AQtion-x.y.z.tar.gz
 
 3. Change to the driver src directory:
@@ -72,7 +77,9 @@ To manually build this driver:
 7. Install the driver in the system
 	make && make install
 
-	/lib/modules/[KERNEL_VERSION]/aquantia/atlantic.ko
+driver will be in:
+
+	/lib/modules/`uname -r`/aquantia/atlantic.ko
 
 8. Uninstall the driver:
 	make uninstall
@@ -80,22 +87,78 @@ or run the following commands:
 	sudo rm -f /lib/modules/`uname -r`/aquantia/atlantic.ko
 	depmod -a `uname -r`
 
-
-Alternatively you can use Aquantia-AQtion-x.y.z.src.rpm
+Alternatively build and install driver with dkms
 ------------------------------------------------------------
-1. Move the Aquantia-AQtion-x.y.z.src.rpm file to the directory of your choice. For example,
-   use /home/username/aquantia.
+1. Make sure you have all the environment to build standalone kernel module.
+   On debian based systems you may do the following:
 
-2. Execute the commands:
-    rpmbuild --rebuild Aquantia-AQtion-x.y.z.src.rpm
-    sudo rpm -ivh ~/rpmbuild/RPMS/x86_64/Aquantia-AQtion-x.y.z.x86_64.rpm
+	sudo apt-get install linux-headers-`uname -r` build-essential gawk dkms
+
+   On redhat based systems you may do the following:
+
+	sudo yum install kernel-devel-`uname -r` gcc gcc-c++ make gawk dkms
+
+2. Move the base driver tar file to the directory of your choice. For example,
+   use /home/username/aquantia.
+   Untar/unzip archive:
+
+	cd ~/aquantia
+	tar zxf Aquantia-AQtion-x.y.z.tar.gz
+
+3. Change to the driver source directory:
+
+	cd Aquantia-AQtion-x.y.z/
+
+4. Build and install driver:
+
+	sudo ./dkms.sh install
+
+driver will be in:
+
+	/lib/modules/`uname -r`/updates/dkms/atlantic.ko
+
+5. Uninstall the driver:
+
+	sudo ./dkms.sh uninstall
+
+Install driver on Debian\Ubuntu using atlantic-x.y.z.deb
+------------------------------------------------------------
+1. Make sure you have all the environment to build standalone kernel module. Execute the commands:
+	sudo apt-get install linux-headers-`uname -r`
+
+2. Move the atlantic-x.y.z.deb file to the directory of your choice. For example,
+   use /home/username/aquantia. 
+ 
+3. Execute the commands:
+    cd /home/username/aquantia
+    sudo apt-get install ./atlantic-x.y.z.deb
 	
     After this driver will be installed.
-    (You can check this via "rpm -qa | grep Aquantia")
+    (You can check this via "dpkg -l | grep -i atlantic")
 
-3. Uninstall the driver:
+4. Uninstall the driver:
    Run the following commands:
-   sudo rpm -e Aquantia-AQtion-x.y.z.x86_64
+   sudo dpkg -P atlantic
+
+	
+Alternatively you can use  atlantic-x.y.z.noarch.rpm
+------------------------------------------------------------
+1. Make sure you have all the environment to build standalone kernel module. Execute the commands:
+	sudo yum install kernel-devel-`uname -r`
+
+2. Move the atlantic-x.y.z.noarch.rpm file to the directory of your choice. For example,
+   use /home/username/aquantia. 
+ 
+3. Execute the commands:
+    cd /home/username/aquantia
+    sudo yum install ./atlantic-x.y.z.noarch.rpm
+	
+    After this driver will be installed.
+    (You can check this via "rpm -qa | grep -i atlantic")
+
+4. Uninstall the driver:
+   Run the following commands:
+   sudo rpm -e atlantic-x.y.z.noarch
 
 Check that the driver is working
 ------------------------------------------------------------
@@ -105,7 +168,7 @@ Check that the driver is working
 	or
 	ip addr show
 	
-	If not new interface appears, check dmesg output.
+	If no new interface appears, check dmesg output.
 	If you see "Bad firmware detected" please update firmware on your ethernet card.
 
 2. Assign an IP address to the interface by entering the following, where
@@ -122,6 +185,22 @@ Check that the driver is working
 	ping  <IP_address>
 or (for IPv6)
 	ping6 <IPv6_address>
+
+4. Check the correct version of the driver is active (assume interface is eth1):
+
+        ethtool -i eth1
+
+Troubleshooting
+-----------------------
+
+Some distributions do not provide kernel sources ready for thirdparty module build.
+In general, the following could be used to prepare kernel source tree for build:
+
+	sudo su
+	cd /lib/modules/`uname -r`/build
+	make oldconfig
+	make prepare
+	make modules_prepare
 
 Command Line Parameters
 =======================
@@ -159,10 +238,12 @@ RX page order override. Thats a power of 2 number of RX pages allocated for
 each descriptor. Received descriptor size is still limited by AQ_CFG_RX_FRAME_MAX.
 Increasing pageorder makes page reuse better (actual on iommu enabled systems).
 
-aq_tx_clean_budget
+aq_rx_refill_thres
 ----------------------------------------
-Default value: 256
-Maximum descriptors to cleanup on TX at once.
+Default value: 32
+RX refill threshold. RX path will not refill freed descriptors until the
+specified number of free descriptors is observed. Larger values may help
+better page reuse but may lead to packet drops as well.
 
 
 Config file parametes
@@ -208,6 +289,11 @@ Valid values
 1 - enabled
 
 Default value: 1
+
+AQ_CFG_TX_CLEAN_BUDGET
+----------------------------------------
+Maximum descriptors to cleanup on TX at once.
+Default value: 256
 
 After the aq_cfg.h file changed the driver must be rebuilt to take effect.
 
@@ -278,7 +364,7 @@ Supported ethtool options
     But you can still use these speeds:
 	ethtool -s eth0 autoneg off speed 2500
 		
- Viewing adapter  information
+ Viewing adapter information
  ---------------------
  ethtool -i <ethX>
 
@@ -382,6 +468,31 @@ Supported ethtool options
  To disable WOL:
 
  ethtool -s <ethX> wol d
+
+Private flags (testing)
+ ---------------------------------
+
+ Atlantic driver supports private flags for hardware loopback testing:
+
+	$ ethtool --show-priv-flags ethX
+
+	Private flags for ethX:
+	DMASystemLoopback  : off
+	PKTSystemLoopback  : off
+	DMANetworkLoopback : off
+	PHYInternalLoopback: off
+	PHYExternalLoopback: off
+
+ Example:
+
+ 	$ ethtool --set-priv-flags ethX DMASystemLoopback on
+ 
+ DMASystemLoopback:   DMA Host loopback.
+ PKTSystemLoopback:   Packet buffer host loopback.
+ DMANetworkLoopback:  Network side loopback on DMA block.
+ PHYInternalLoopback: Internal loopback on Phy.
+ PHYExternalLoopback: External loopback on Phy (with loopback ethernet cable).
+
 
 Support
 =======

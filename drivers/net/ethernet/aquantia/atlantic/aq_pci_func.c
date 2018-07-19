@@ -16,7 +16,6 @@
 #include "aq_nic.h"
 #include "aq_vec.h"
 #include "aq_hw.h"
-#include "aq_ptp.h"
 #include "aq_pci_func.h"
 #include "hw_atl/hw_atl_a0.h"
 #include "hw_atl/hw_atl_b0.h"
@@ -106,7 +105,7 @@ static int aq_pci_probe_get_hw_by_id(struct pci_dev *pdev,
 	return 0;
 }
 
-static int aq_pci_func_init(struct pci_dev *pdev)
+int aq_pci_func_init(struct pci_dev *pdev)
 {
 	int err = 0;
 
@@ -126,7 +125,7 @@ static int aq_pci_func_init(struct pci_dev *pdev)
 		goto err_exit;
 	}
 
-	err = pci_request_regions(pdev, aq_ndev_driver_name);
+	err = pci_request_regions(pdev, AQ_CFG_DRV_NAME "_mmio");
 	if (err < 0)
 		goto err_exit;
 
@@ -164,15 +163,12 @@ int aq_pci_func_alloc_irq(struct aq_nic_s *self, unsigned int i,
 					      affinity_mask);
 	}
 #else
-	if (pdev->msix_enabled || pdev->msi_enabled) {
+	if (pdev->msix_enabled || pdev->msi_enabled)
 		err = request_irq(pci_irq_vector(pdev, i), aq_vec_isr, 0,
 				  name, aq_vec);
-		pr_info("msix enable: %d\n", err);
-	} else {
+	else
 		err = request_irq(pci_irq_vector(pdev, i), aq_vec_isr_legacy,
 				  IRQF_SHARED, name, aq_vec);
-		pr_info("msix disable: %d\n", err);
-	}
 
 	if (err >= 0) {
 		self->msix_entry_mask |= (1 << i);
@@ -290,19 +286,16 @@ static int aq_pci_probe(struct pci_dev *pdev,
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	pci_set_drvdata(pdev, self);
 
-	sema_init(&self->fwreq_sem, 1);
-
 	err = aq_pci_probe_get_hw_by_id(pdev, &self->aq_hw_ops,
 					&aq_nic_get_cfg(self)->aq_hw_caps);
 	if (err)
-		goto err_aqhw;
+		goto err_ioremap;
 
 	self->aq_hw = kzalloc(sizeof(*self->aq_hw), GFP_KERNEL);
 	if (!self->aq_hw) {
 		err = -ENOMEM;
-		goto err_aqhw;
+		goto err_ioremap;
 	}
-
 	self->aq_hw->aq_nic_cfg = aq_nic_get_cfg(self);
 
 	for (bar = 0; bar < 4; ++bar) {
@@ -312,19 +305,19 @@ static int aq_pci_probe(struct pci_dev *pdev,
 			mmio_pa = pci_resource_start(pdev, bar);
 			if (mmio_pa == 0U) {
 				err = -EIO;
-				goto err_ioremap;
+				goto err_free_aq_hw;
 			}
 
 			reg_sz = pci_resource_len(pdev, bar);
 			if ((reg_sz <= 24 /*ATL_REGS_SIZE*/)) {
 				err = -EIO;
-				goto err_ioremap;
+				goto err_free_aq_hw;
 			}
 
 			self->aq_hw->mmio = ioremap_nocache(mmio_pa, reg_sz);
 			if (!self->aq_hw->mmio) {
 				err = -EIO;
-				goto err_ioremap;
+				goto err_free_aq_hw;
 			}
 			break;
 		}
@@ -332,13 +325,12 @@ static int aq_pci_probe(struct pci_dev *pdev,
 
 	if (bar == 4) {
 		err = -EIO;
-		goto err_ioremap;
+		goto err_free_aq_hw;
 	}
 
 	numvecs = min((u8)AQ_CFG_VECS_DEF,
 		      aq_nic_get_cfg(self)->aq_hw_caps->msix_irqs);
 	numvecs = min(numvecs, num_online_cpus());
-	numvecs += 1; // Last IRQ is sued for PTP IRQ
 	/*enable interrupts */
 #if !AQ_CFG_FORCE_LEGACY_INT
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
@@ -354,33 +346,24 @@ static int aq_pci_probe(struct pci_dev *pdev,
 			goto err_hwinit;
 	}
 #else
-	pr_info("aq_pci_probe: numvecs: %d;\n", numvecs);
-	err = pci_alloc_irq_vectors(self->pdev, numvecs, numvecs,
-				    PCI_IRQ_MSIX);
+	numvecs = pci_alloc_irq_vectors(self->pdev, 1, numvecs,
+					PCI_IRQ_MSIX | PCI_IRQ_MSI |
+					PCI_IRQ_LEGACY);
 
-	if (err < 0) {
-		err = pci_alloc_irq_vectors(self->pdev, 1, 1,
-					    PCI_IRQ_MSI | PCI_IRQ_LEGACY);
-		if (err < 0)
-			goto err_hwinit;
+	if (numvecs < 0) {
+		err = numvecs;
+		goto err_hwinit;
 	}
 #endif
 #endif
+	self->irqvecs = numvecs;
 
 	/* net device init */
 	aq_nic_cfg_start(self);
 
 	aq_nic_ndev_init(self);
-	
+
 	err = aq_nic_ndev_register(self);
-	if (err < 0)
-		goto err_register;
-	
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
-	err = aq_ptp_init(self, numvecs - 1, self->msix_entry[numvecs - 1].vector);
-#else
-	err = aq_ptp_init(self, numvecs - 1);
-#endif
 	if (err < 0)
 		goto err_register;
 
@@ -391,9 +374,9 @@ err_register:
 	aq_pci_free_irq_vectors(self);
 err_hwinit:
 	iounmap(self->aq_hw->mmio);
-err_ioremap:
+err_free_aq_hw:
 	kfree(self->aq_hw);
-err_aqhw:
+err_ioremap:
 	free_netdev(ndev);
 err_ndev:
 	pci_release_regions(pdev);
@@ -407,14 +390,8 @@ static void aq_pci_remove(struct pci_dev *pdev)
 	struct aq_nic_s *self = pci_get_drvdata(pdev);
 
 	if (self->ndev) {
-		aq_ptp_unregister(self);
-
 		if (self->ndev->reg_state == NETREG_REGISTERED)
 			unregister_netdev(self->ndev);
-		
-		aq_ptp_ring_free(self);
-		aq_ptp_free(self);
-
 		aq_nic_free_vectors(self);
 		aq_pci_free_irq_vectors(self);
 		iounmap(self->aq_hw->mmio);
@@ -424,6 +401,20 @@ static void aq_pci_remove(struct pci_dev *pdev)
 	}
 
 	pci_disable_device(pdev);
+}
+
+static void aq_pci_shutdown(struct pci_dev *pdev)
+{
+	struct aq_nic_s *self = pci_get_drvdata(pdev);
+
+	aq_nic_shutdown(self);
+
+	pci_disable_device(pdev);
+
+	if (system_state == SYSTEM_POWER_OFF) {
+		pci_wake_from_d3(pdev, !!self->aq_nic_cfg.wol);
+		pci_set_power_state(pdev, PCI_D3hot);
+	}
 }
 
 static int aq_pci_suspend(struct pci_dev *pdev, pm_message_t pm_msg)
@@ -442,21 +433,13 @@ static int aq_pci_resume(struct pci_dev *pdev)
 }
 
 static struct pci_driver aq_pci_ops = {
-	.name = aq_ndev_driver_name,
+	.name = AQ_CFG_DRV_NAME,
 	.id_table = aq_pci_tbl,
 	.probe = aq_pci_probe,
 	.remove = aq_pci_remove,
 	.suspend = aq_pci_suspend,
 	.resume = aq_pci_resume,
+	.shutdown = aq_pci_shutdown,
 };
 
-int aq_pci_func_register_driver(void)
-{
-  return pci_register_driver(&aq_pci_ops);
-}
-
-void aq_pci_func_unregister_driver(void)
-{
-  pci_unregister_driver(&aq_pci_ops);
-}
-
+module_pci_driver(aq_pci_ops);

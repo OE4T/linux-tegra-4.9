@@ -14,32 +14,23 @@
 #include "aq_pci_func.h"
 #include "aq_ethtool.h"
 #include "aq_drvinfo.h"
-#include "aq_ptp.h"
 
 #include <linux/netdevice.h>
 #include <linux/module.h>
+#include <linux/init.h>
 #include <linux/kobject.h>
 #include <linux/stat.h>
 #include <linux/string.h>
-#include <linux/sysfs.h>
-#include <linux/ip.h>
-#include <linux/udp.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
+#include <uapi/linux/stat.h>
+#endif
 
 MODULE_LICENSE("GPL v2");
 MODULE_VERSION(AQ_CFG_DRV_VERSION);
 MODULE_AUTHOR(AQ_CFG_DRV_AUTHOR);
 MODULE_DESCRIPTION(AQ_CFG_DRV_DESC);
 
-char aq_ndev_driver_name[] = AQ_CFG_DRV_NAME;
-
 static const struct net_device_ops aq_ndev_ops;
-
-static struct workqueue_struct *aq_ndev_wq;
-
-void aq_ndev_service_event_schedule(struct aq_nic_s *aq_nic)
-{
-  queue_work(aq_ndev_wq, &aq_nic->service_task);
-}
 
 struct net_device *aq_ndev_alloc(void)
 {
@@ -63,7 +54,7 @@ static int aq_ndev_open(struct net_device *ndev)
 	int err = 0;
 	struct aq_nic_s *aq_nic = netdev_priv(ndev);
 
-	aq_sysfs_init(ndev);
+	aq_drvinfo_init(ndev);
 
 	err = aq_nic_init(aq_nic);
 	if (err < 0)
@@ -83,7 +74,7 @@ static int aq_ndev_close(struct net_device *ndev)
 	int err = 0;
 	struct aq_nic_s *aq_nic = netdev_priv(ndev);
 
-	aq_sysfs_exit(ndev);
+	aq_drvinfo_exit(ndev);
 
 
 	err = aq_nic_stop(aq_nic);
@@ -98,20 +89,7 @@ err_exit:
 static int aq_ndev_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct aq_nic_s *aq_nic = netdev_priv(ndev);
-	
-	//if (unlikely((skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) &&
-	if (unlikely(
-			(ip_hdr(skb)->version == 4) &&
-			(ip_hdr(skb)->protocol == IPPROTO_UDP) &&
-			((udp_hdr(skb)->dest == htons(319)) || (udp_hdr(skb)->dest == htons(320))))) {
-		return aq_ptp_xmit(aq_nic, skb);
-	}
 
-  if (eth_hdr(skb)->h_proto == htons(ETH_P_1588)) {
-		return aq_ptp_xmit(aq_nic, skb);
-  }
-
-	skb_tx_timestamp(skb);
 	return aq_nic_xmit(aq_nic, skb);
 }
 
@@ -128,7 +106,7 @@ err_exit:
 	return err;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 static int aq_ndev_set_features(struct net_device *ndev,
 				netdev_features_t features)
 {
@@ -178,97 +156,9 @@ static void aq_ndev_set_multicast_settings(struct net_device *ndev)
 	if (err < 0)
 		return;
 
-	if (netdev_mc_count(ndev)) {
-		err = aq_nic_set_multicast_list(aq_nic, ndev);
-		if (err < 0)
-			return;
-	}
-}
-
-static int aq_ndev_config_hwtstamp(struct aq_nic_s *aq_nic, struct hwtstamp_config *config)
-{
-	pr_info("cfg1: flasg: 0x%x; type: 0x%x; filter: 0x%x\n",
-		config->flags, config->tx_type, config->rx_filter);
-
-	if (config->flags)
-		return -EINVAL;
-	
-	aq_ptp_hwtstamp_config_set(aq_nic, config);
-	return 0;
-	
-	switch (config->tx_type) {
-		case HWTSTAMP_TX_OFF:
-		case HWTSTAMP_TX_ON:
-			break;
-		default:
-			return -ERANGE;
-	}
-	
-	switch (config->rx_filter) {
-		case HWTSTAMP_FILTER_NONE:
-			config->rx_filter = HWTSTAMP_FILTER_NONE;
-			break;
-		case HWTSTAMP_FILTER_PTP_V1_L4_SYNC:
-		case HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ:
-		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
-			config->rx_filter = HWTSTAMP_FILTER_PTP_V1_L4_EVENT;
-			break;
-		case HWTSTAMP_FILTER_PTP_V2_L4_SYNC:
-		case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
-		case HWTSTAMP_FILTER_PTP_V2_L4_EVENT:
-			config->rx_filter = HWTSTAMP_FILTER_PTP_V2_L4_EVENT;
-			break;
-		default:
-			return -ERANGE;
-	}
-	
-	pr_info("cfg2: flasg: 0x%x; type: 0x%x; filter: 0x%x\n",
-		config->flags, config->tx_type, config->rx_filter);
-	
-	aq_ptp_hwtstamp_config_set(aq_nic, config);
-	
-	return 0;
-}
-
-static int aq_ndev_hwtstamp_set(struct net_device *ndev, struct ifreq *ifr)
-{
-	struct aq_nic_s *aq_nic = netdev_priv(ndev);
-	struct hwtstamp_config config;
-	int ret_val;
-	
-	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
-		return -EFAULT;
-	
-	ret_val = aq_ndev_config_hwtstamp(aq_nic, &config);
-	if (ret_val)
-		return ret_val;
-	
-	pr_info("ret: flasg: 0x%x; type: 0x%x; filter: 0x%x\n",
-		config.flags, config.tx_type, config.rx_filter);
-
-
-	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
-}
-
-static int aq_ndev_hwtstamp_get(struct net_device *ndev, struct ifreq *ifr)
-{
-	struct aq_nic_s *aq_nic = netdev_priv(ndev);
-	struct hwtstamp_config config;
-	
-	aq_ptp_hwtstamp_config_get(aq_nic, &config);
-	return copy_to_user(ifr->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
-}
-
-static int aq_ndev_ioctl(struct net_device *netdev, struct ifreq *ifr, int cmd)
-{
-	switch (cmd) {
-	case SIOCSHWTSTAMP:
-		return aq_ndev_hwtstamp_set(netdev, ifr);
-	case SIOCGHWTSTAMP:
-		return aq_ndev_hwtstamp_get(netdev, ifr);
-	}
-	
-	return -EOPNOTSUPP;
+	err = aq_nic_set_multicast_list(aq_nic, ndev);
+	if (err < 0)
+		return;
 }
 
 static const struct net_device_ops aq_ndev_ops = {
@@ -280,42 +170,13 @@ static const struct net_device_ops aq_ndev_ops = {
 #else
 	.ndo_set_rx_mode = aq_ndev_set_multicast_settings,
 #endif
+#if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(7,5))
+	.extended.ndo_change_mtu = aq_ndev_change_mtu,
+#else
 	.ndo_change_mtu = aq_ndev_change_mtu,
+#endif
 	.ndo_set_mac_address = aq_ndev_set_mac_address,
-	.ndo_do_ioctl = aq_ndev_ioctl,
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33)
 	.ndo_set_features = aq_ndev_set_features
 #endif
 };
-
-static int __init aq_ndev_init_module(void)
-{
-  int ret;
-
-  aq_ndev_wq = create_singlethread_workqueue(aq_ndev_driver_name);
-  if (!aq_ndev_wq) {
-    pr_err("Failed to create workwueue\n");
-    return -ENOMEM;
-  }
-
-  ret = aq_pci_func_register_driver();
-  if (ret) {
-    destroy_workqueue(aq_ndev_wq);
-    return ret;
-  }
-
-  return 0;
-}
-
-static void __exit aq_ndev_exit_module(void)
-{
-  aq_pci_func_unregister_driver();
-
-  if (aq_ndev_wq) {
-    destroy_workqueue(aq_ndev_wq);
-    aq_ndev_wq = NULL;
-  }
-}
-
-module_init(aq_ndev_init_module);
-module_exit(aq_ndev_exit_module);

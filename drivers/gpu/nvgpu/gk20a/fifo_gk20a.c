@@ -40,6 +40,7 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/ptimer.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

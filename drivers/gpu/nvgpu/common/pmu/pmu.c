@@ -594,3 +594,8 @@ void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)
 	nvgpu_dma_free(g, mem);
 	memset(mem, 0, sizeof(struct nvgpu_mem));
 }
+
+struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu)
+{
+	return container_of(pmu, struct gk20a, pmu);
+}

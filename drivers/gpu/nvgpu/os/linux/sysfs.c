@@ -20,6 +20,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/ptimer.h>
 
 #include "sysfs.h"
 #include "platform_gk20a.h"

@@ -31,8 +31,24 @@ struct nvgpu_cpu_time_correlation_sample {
 	u64 gpu_timestamp;
 };
 
+/* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
+    32 ns is the resolution of ptimer. */
+#define PTIMER_REF_FREQ_HZ                      31250000
+
+static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
+{
+	return (u32)(((u64)(PTIMER_REF_FREQ_HZ * 10)) / ptimer_src_freq);
+}
+
+static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
+{
+	if (((timeout*10) % scale10x) >= (scale10x/2))
+		return ((timeout * 10) / scale10x) + 1;
+	else
+		return (timeout * 10) / scale10x;
+}
+
 int nvgpu_get_timestamps_zipper(struct gk20a *g,
 		u32 source_id, u32 count,
 		struct nvgpu_cpu_time_correlation_sample *samples);
-
 #endif

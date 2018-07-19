@@ -1,7 +1,5 @@
 /*
- * GV100 fifo
- *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,34 +20,33 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "fifo_gv100.h"
-#include <nvgpu/timers.h>
-#include <nvgpu/ptimer.h>
+#ifndef NVGPU_UTILS_H
+#define NVGPU_UTILS_H
 
-#include <nvgpu/hw/gv100/hw_ccsr_gv100.h>
-#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
+#include <nvgpu/types.h>
 
-#define DEFAULT_FIFO_PREEMPT_TIMEOUT 0x3FFFFFUL
-
-u32 gv100_fifo_get_num_fifos(struct gk20a *g)
+static inline u32 u64_hi32(u64 n)
 {
-	return ccsr_channel__size_1_v();
+	return (u32)((n >> 32) & ~(u32)0);
 }
 
-u32 gv100_fifo_get_preempt_timeout(struct gk20a *g)
+static inline u32 u64_lo32(u64 n)
 {
-	return g->fifo_eng_timeout_us / 1000 ;
+	return (u32)(n & ~(u32)0);
 }
 
-void gv100_apply_ctxsw_timeout_intr(struct gk20a *g)
+static inline u64 hi32_lo32_to_u64(u32 hi, u32 lo)
 {
-	u32 timeout;
-
-	timeout = g->ch_wdt_timeout_ms*1000;
-	timeout = scale_ptimer(timeout,
-		ptimer_scalingfactor10x(g->ptimer_src_freq));
-	timeout |= fifo_eng_timeout_detection_enabled_f();
-	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
+	return  (((u64)hi) << 32) | (u64)lo;
 }
 
+static inline u32 set_field(u32 val, u32 mask, u32 field)
+{
+	return ((val & ~mask) | field);
+}
+
+static inline u32 get_field(u32 reg, u32 mask)
+{
+	return (reg & mask);
+}
+#endif /* NVGPU_UTILS_H */

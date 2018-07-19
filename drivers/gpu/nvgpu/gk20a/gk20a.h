@@ -64,12 +64,12 @@ struct nvgpu_ctxsw_trace_filter;
 #include <nvgpu/nvlink.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/ecc.h>
+#include <nvgpu/utils.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
 #include "fifo_gk20a.h"
 #include "tsg_gk20a.h"
-#include "gr_gk20a.h"
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
@@ -77,10 +77,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
-
-/* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
-    32 ns is the resolution of ptimer. */
-#define PTIMER_REF_FREQ_HZ                      31250000
 
 #ifdef CONFIG_DEBUG_FS
 struct railgate_stats {
@@ -1652,50 +1648,8 @@ enum gk20a_nonstall_ops {
 void __nvgpu_check_gpu_state(struct gk20a *g);
 void __gk20a_warn_on_no_regs(void);
 
-/* convenience */
-static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
-{
-	return container_of(as, struct gk20a, as);
-}
-static inline struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu)
-{
-	return container_of(pmu, struct gk20a, pmu);
-}
-
-static inline u32 u64_hi32(u64 n)
-{
-	return (u32)((n >> 32) & ~(u32)0);
-}
-
-static inline u32 u64_lo32(u64 n)
-{
-	return (u32)(n & ~(u32)0);
-}
-
-static inline u64 hi32_lo32_to_u64(u32 hi, u32 lo)
-{
-	return  (((u64)hi) << 32) | (u64)lo;
-}
-
-static inline u32 set_field(u32 val, u32 mask, u32 field)
-{
-	return ((val & ~mask) | field);
-}
-
-static inline u32 get_field(u32 reg, u32 mask)
-{
-	return (reg & mask);
-}
-
-/* invalidate channel lookup tlb */
-static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
-{
-	nvgpu_spinlock_acquire(&gr->ch_tlb_lock);
-	memset(gr->chid_tlb, 0,
-		sizeof(struct gr_channel_map_tlb_entry) *
-		GR_CHANNEL_MAP_TLB_SIZE);
-	nvgpu_spinlock_release(&gr->ch_tlb_lock);
-}
+struct gk20a *gk20a_from_as(struct gk20a_as *as);
+struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu);
 
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */
@@ -1735,18 +1689,6 @@ int gk20a_wait_for_idle(struct gk20a *g);
 #define NVGPU_GPUID_GV100   0x00000140
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
-
-static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
-{
-	return (u32)(((u64)(PTIMER_REF_FREQ_HZ * 10)) / ptimer_src_freq);
-}
-static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
-{
-	if (((timeout*10) % scale10x) >= (scale10x/2))
-		return ((timeout * 10) / scale10x) + 1;
-	else
-		return (timeout * 10) / scale10x;
-}
 
 int gk20a_prepare_poweroff(struct gk20a *g);
 int gk20a_finalize_poweron(struct gk20a *g);

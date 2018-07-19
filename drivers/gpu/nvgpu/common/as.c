@@ -168,3 +168,8 @@ release_fail:
 
 	return err;
 }
+
+struct gk20a *gk20a_from_as(struct gk20a_as *as)
+{
+	return container_of(as, struct gk20a, as);
+}

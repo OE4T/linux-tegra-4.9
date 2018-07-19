@@ -36,6 +36,7 @@
 #include <nvgpu/log2.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/io_usermode.h>
+#include <nvgpu/ptimer.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"

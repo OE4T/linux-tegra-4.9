@@ -42,6 +42,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/os_sched.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/ptimer.h>
 
 #include "gk20a.h"
 #include "dbg_gpu_gk20a.h"

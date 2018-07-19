@@ -8777,3 +8777,13 @@ u32 gk20a_gr_get_sm_no_lock_down_hww_global_esr_mask(struct gk20a *g)
 
 	return global_esr_mask;
 }
+
+/* invalidate channel lookup tlb */
+void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
+{
+	nvgpu_spinlock_acquire(&gr->ch_tlb_lock);
+	memset(gr->chid_tlb, 0,
+		sizeof(struct gr_channel_map_tlb_entry) *
+		GR_CHANNEL_MAP_TLB_SIZE);
+	nvgpu_spinlock_release(&gr->ch_tlb_lock);
+}

@@ -30,6 +30,8 @@
 #include <linux/slab.h>
 #include <linux/file.h>
 #include <linux/workqueue.h>
+#include <linux/vt_kern.h>
+#include <linux/console_struct.h>
 #include <linux/console.h>
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
@@ -460,7 +462,8 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 
 		if (dc->enabled)
 			tegra_dc_disable(dc);
-		if (tegra_fb_is_console_enabled(dc->pdata))
+		if (tegra_fb_is_console_enabled(dc->pdata) &&
+					fbcon_is_fgconsole())
 			dc->blanked = true;
 
 		return 0;
@@ -818,6 +821,13 @@ void tegra_fb_pan_display_reset(struct tegra_fb_info *fb_info)
 {
 	fb_info->curr_xoffset = -1;
 }
+
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+bool fbcon_is_fgconsole()
+{
+	return (vc_cons[fg_console].d->vc_mode == KD_TEXT);
+}
+#endif
 
 /* Should be invoked by holding console lock */
 void tegra_fbcon_set_fb_mode(struct tegra_fb_info *fb_info,

@@ -853,6 +853,15 @@ bool tegra_dc_ext_is_userspace_active(void);
 int tegra_dc_ext_get_scanline(struct tegra_dc_ext *dc_ext);
 /* finish dc/ext */
 
+#if defined(CONFIG_FRAMEBUFFER_CONSOLE)
+bool fbcon_is_fgconsole(void);
+#else
+static inline bool fbcon_is_fgconsole(void)
+{
+	return false;
+}
+#endif
+
 /* needed for tegra_fb.h merge */
 struct tegra_fb_info;
 struct resource;

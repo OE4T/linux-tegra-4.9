@@ -189,7 +189,7 @@ out:
 
 static int debugfs_open(struct inode *inode, struct file *file)
 {
-	return single_open_size(file, debugfs_show, file, SZ_128K);
+	return single_open_size(file, debugfs_show, file, SZ_256K);
 }
 
 static int bpmp_debugfs_write(uint32_t name, size_t sz_name,

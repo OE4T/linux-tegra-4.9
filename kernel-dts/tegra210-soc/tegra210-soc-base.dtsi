@@ -1953,6 +1953,8 @@
 		pinctrl-5 = <&pex_io_dpd_enable_state>;
 
 		iommus = <&smmu TEGRA_SWGROUP_AFI>;
+		iommu-map = <0x0 &smmu TEGRA_SWGROUP_AFI 0x1000>;
+		iommu-map-mask = <0x0>;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

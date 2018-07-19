@@ -413,28 +413,28 @@ static int cpuidle_debugfs_init(void)
 	if (!dfs_file)
 		goto err_out;
 
-	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
+	dfs_file = debugfs_create_file("forced_idle_duration_us", 0200,
 		cpuidle_debugfs_node, NULL, &duration_us_fops);
 
 	if (!dfs_file)
 		goto err_out;
 
-	dfs_file = debugfs_create_file("testmode", 0644,
+	dfs_file = debugfs_create_file("testmode", 0200,
 		cpuidle_debugfs_node, NULL, &testmode_fops);
 	if (!dfs_file)
 		goto err_out;
 
-	dfs_file = debugfs_create_file("crossover_c1_c6", 0644,
+	dfs_file = debugfs_create_file("crossover_c1_c6", 0200,
 		cpuidle_debugfs_node, NULL, &xover_c6_fops);
 	if (!dfs_file)
 		goto err_out;
 
-	dfs_file = debugfs_create_file("crossover_cc1_cc6", 0644,
+	dfs_file = debugfs_create_file("crossover_cc1_cc6", 0200,
 		cpuidle_debugfs_node, NULL, &xover_cc6_fops);
 	if (!dfs_file)
 		goto err_out;
 
-	dfs_file = debugfs_create_file("crossover_cc1_cg7", 0644,
+	dfs_file = debugfs_create_file("crossover_cc1_cg7", 0200,
 		cpuidle_debugfs_node, NULL, &xover_cg7_fops);
 	if (!dfs_file)
 		goto err_out;

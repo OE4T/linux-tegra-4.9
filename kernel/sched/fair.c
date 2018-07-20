@@ -9363,7 +9363,8 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
 	if (energy_aware() && !env->dst_rq->rd->overutilized)
 		goto out_balanced;
 
-	if (capacity_aware() && !env->dst_rq->rd->overutilized)
+	/* do not skip load balancing for lowest level sched_domain */
+	if (capacity_aware() && env->sd->level && !env->dst_rq->rd->overutilized)
 		goto out_balanced;
 
 	local = &sds.local_stat;

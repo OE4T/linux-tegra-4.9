@@ -17,6 +17,7 @@
 #include <linux/debugfs.h>
 #include <linux/firmware.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <soc/tegra/bpmp_abi.h>
@@ -27,6 +28,8 @@
 #define BPMP_MODULE_MAGIC	0x646f6d
 
 static struct device *device;
+
+extern const struct of_device_id bpmp_of_matches[];
 
 struct seqbuf {
 	char *buf;
@@ -815,8 +818,15 @@ DEFINE_SIMPLE_ATTRIBUTE(bpmp_unmount_fops, bpmp_unmount_show, NULL, "%lld\n");
 #ifdef CONFIG_BPMP_DEBUGFS_MOUNT_ON_BOOT
 static __init int bpmp_init_mount(void)
 {
+	struct device_node *np = NULL;
+
 	/* mirroring takes a while */
 	if (!tegra_platform_is_silicon())
+		return 0;
+
+	/* continue with the init only if the bpmp node is active in the DTB */
+	np = of_find_matching_node(NULL, bpmp_of_matches);
+	if (!np || !of_device_is_available(np))
 		return 0;
 
 	return bpmp_fwdebug_init(bpmp_root);

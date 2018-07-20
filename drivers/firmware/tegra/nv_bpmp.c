@@ -423,7 +423,7 @@ static const struct pconfig t186_hv_cfg = {
 	.hv = 1
 };
 
-static const struct of_device_id bpmp_of_matches[] = {
+const struct of_device_id bpmp_of_matches[] = {
 	{ .compatible = "nvidia,tegra186-bpmp", .data = &t186_native_cfg },
 	{ .compatible = "nvidia,tegra186-bpmp-hv", .data = &t186_hv_cfg },
 	{ .compatible = "nvidia,tegra210-bpmp", .data = &t210_cfg },

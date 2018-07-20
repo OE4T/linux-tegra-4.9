@@ -125,6 +125,7 @@ struct pva_submit_task {
 
 struct pva_submit_tasks {
 	struct pva_submit_task *tasks[PVA_MAX_TASKS];
+	u32 task_thresh[PVA_MAX_TASKS];
 	u16 flags;
 	u16 num_tasks;
 };

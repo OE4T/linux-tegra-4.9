@@ -1297,12 +1297,12 @@ err_submit:
 	return err;
 }
 
-static int pva_task_submit(struct pva_submit_task *task)
+static int pva_task_submit(struct pva_submit_task *task,
+			   u32 *task_thresh)
 {
 	struct platform_device *host1x_pdev =
 			to_platform_device(task->pva->pdev->dev.parent);
 	struct nvhost_queue *queue = task->queue;
-	unsigned int i;
 	u32 thresh = 0;
 	u64 timestamp;
 	int err = 0;
@@ -1354,40 +1354,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 	nvhost_dbg_info("Postfence id=%u, value=%u",
 			queue->syncpt_id, thresh);
 
-	/* Return post-fences */
-	for (i = 0; i < task->num_postfences; i++) {
-		struct pva_fence *fence = task->postfences + i;
-
-		switch (fence->type) {
-		case PVA_FENCE_TYPE_SYNCPT: {
-			fence->syncpoint_index = queue->syncpt_id;
-			fence->syncpoint_value = thresh;
-			break;
-		}
-		case PVA_FENCE_TYPE_SYNC_FD: {
-			struct nvhost_ctrl_sync_fence_info pts;
-
-			/* Fail if any previous sync_create_fence_fd failed */
-			if (err < 0)
-				break;
-
-			pts.id = queue->syncpt_id;
-			pts.thresh = thresh;
-
-			err = nvhost_sync_create_fence_fd(host1x_pdev,
-					&pts, 1, "fence_pva", &fence->sync_fd);
-
-			break;
-		}
-		case PVA_FENCE_TYPE_SEMAPHORE:
-			break;
-		default:
-			err = -ENOSYS;
-			goto err_write_fences;
-		}
-	}
-
-err_write_fences:
+	*task_thresh = thresh;
 	/*
 	 * Tasks in the queue list can be modified by the interrupt handler.
 	 * Adding the task into the list must be the last step before
@@ -1423,6 +1390,7 @@ static int pva_queue_submit(struct nvhost_queue *queue, void *args)
 
 	for (i = 0; i < task_header->num_tasks; i++) {
 		struct pva_submit_task *task = task_header->tasks[i];
+		u32 *thresh = &task_header->task_thresh[i];
 
 		/* First, dump the task that we are submitting */
 		pva_task_dump(task);
@@ -1435,7 +1403,7 @@ static int pva_queue_submit(struct nvhost_queue *queue, void *args)
 		/* Write the task data */
 		pva_task_write(task, false);
 
-		err = pva_task_submit(task);
+		err = pva_task_submit(task, thresh);
 		if (err < 0)
 			break;
 	}

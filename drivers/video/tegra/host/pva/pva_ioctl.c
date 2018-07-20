@@ -145,6 +145,41 @@ err_out:
 	return err;
 }
 
+static int pva_create_postfence(struct nvhost_queue *queue,
+				struct pva_fence *dst,
+				u32 thresh)
+{
+	struct platform_device *host1x_pdev =
+			to_platform_device(queue->vm_pdev->dev.parent);
+	int err = 0;
+	/* Return post-fences */
+	switch (dst->type) {
+	case PVA_FENCE_TYPE_SYNCPT: {
+		dst->syncpoint_index = queue->syncpt_id;
+		dst->syncpoint_value = thresh;
+		break;
+	}
+	case PVA_FENCE_TYPE_SYNC_FD: {
+		struct nvhost_ctrl_sync_fence_info pts;
+
+		pts.id = queue->syncpt_id;
+		pts.thresh = thresh;
+
+		err = nvhost_sync_create_fence_fd(host1x_pdev,
+				&pts, 1, "fence_pva", &dst->sync_fd);
+
+		break;
+	}
+	case PVA_FENCE_TYPE_SEMAPHORE:
+		break;
+	default:
+		err = -ENOSYS;
+		break;
+	}
+
+	return err;
+}
+
 /**
  * @brief	Submit a task to PVA
  *
@@ -165,8 +200,10 @@ static int pva_submit(struct pva_private *priv, void *arg)
 	struct pva_ioctl_submit_task *ioctl_tasks = NULL;
 	struct pva_submit_tasks tasks_header;
 	struct pva_submit_task *task = NULL;
+	struct pva_fence fence;
 	int err = 0;
 	int i;
+	int j;
 
 	memset(&tasks_header, 0, sizeof(tasks_header));
 
@@ -246,13 +283,33 @@ static int pva_submit(struct pva_private *priv, void *arg)
 				(struct pva_fence __user *)
 				ioctl_tasks[i].postfences;
 
-		task = tasks_header.tasks[i];
-		err = copy_to_user(postfences,
-				task->postfences, sizeof(struct pva_fence) *
-				task->num_postfences);
-		if (err < 0) {
-			nvhost_warn(&priv->pva->pdev->dev,
+		for (j = 0; j < ioctl_tasks[i].num_postfences; j++) {
+			err = copy_from_user(&fence,
+					     postfences + j,
+					     sizeof(struct pva_fence));
+			if (err < 0) {
+				nvhost_warn(&priv->pva->pdev->dev,
 					"Failed to copy fences to userspace");
+				break;
+			}
+
+			err = pva_create_postfence(priv->queue,
+					     &fence,
+					     tasks_header.task_thresh[i]);
+			if (err < 0) {
+				nvhost_warn(&priv->pva->pdev->dev,
+						"Failed to create fence of type %d", fence.type);
+				break;
+			}
+
+			err = copy_to_user(postfences + j,
+					   &fence,
+					   sizeof(struct pva_fence));
+			if (err < 0) {
+				nvhost_warn(&priv->pva->pdev->dev,
+						"Failed to copy fences to userspace");
+				break;
+			}
 		}
 	}
 

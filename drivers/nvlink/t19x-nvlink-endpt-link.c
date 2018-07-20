@@ -18,6 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <soc/tegra/fuse.h>
+
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
 
@@ -548,9 +550,15 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 		status = t19x_nvlink_dev_car_disable(ndev);
 		if (status < 0) {
 			nvlink_err("set link mode to OFF failed");
-			break;
 		}
 
+		/* WAR for Bug 2301575 */
+		status = tegra_fuse_clock_disable();
+		if (status < 0) {
+			nvlink_err("failed to disable fuse clocks");
+		} else {
+			nvlink_dbg("fuse clocks are turned OFF");
+		}
 		break;
 
 	case NVLINK_LINK_SAFE:

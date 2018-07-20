@@ -33,6 +33,7 @@
 #include <linux/reset.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
+#include <soc/tegra/fuse.h>
 
 #include "t19x-nvlink-endpt.h"
 #include "nvlink-hw.h"
@@ -442,12 +443,27 @@ int t19x_nvlink_dev_early_init(struct nvlink_device *ndev)
 {
 	struct tnvlink_dev *tdev = NULL;
 	int ret = 0;
+	bool fuse_clk_enabled = false;
 
 	if (!ndev) {
 		nvlink_err("Invalid device struct pointer");
 		return -EINVAL;
 	}
 	tdev = (struct tnvlink_dev *)ndev->priv;
+	if (!tdev) {
+		nvlink_err("Invalid tnvlink_dev struct pointer");
+		return -EINVAL;
+	}
+
+	/* WAR for Bug 2301575: enable fuse clocks */
+	ret = tegra_fuse_clock_enable();
+	if (ret < 0) {
+		nvlink_err("failed to enable fuse clocks");
+		goto fail;
+	} else {
+		fuse_clk_enabled = true;
+		nvlink_dbg("fuse clocks are turned ON");
+	}
 
 	ret = tegra_nvlink_car_enable(tdev);
 	if (ret < 0)
@@ -476,6 +492,13 @@ int t19x_nvlink_dev_early_init(struct nvlink_device *ndev)
 	goto success;
 fail:
 	nvlink_err("Device early init failed for dev%u", ndev->device_id);
+	if (fuse_clk_enabled) {
+		if (tegra_fuse_clock_disable()) {
+			nvlink_err("failed to disable fuse clocks");
+		} else {
+			nvlink_dbg("fuse clocks are turned OFF");
+		}
+	}
 success:
 	return ret;
 }
@@ -1027,6 +1050,45 @@ static void tegra_nvlink_clk_rst_deinit(struct tnvlink_dev *tdev)
 
 }
 
+static int t19x_nvlink_check_fuse(void)
+{
+	u32 fuse_val;
+	int ret = 0;
+
+	/* fuse clock is enabled by fuse driver before reading fuse */
+	ret =  tegra_fuse_readl(FUSE_IP_DISABLE_0, &fuse_val);
+	if (ret) {
+		nvlink_err("nvlink ip fuse cannot be read");
+	} else {
+		nvlink_dbg("fuse_ip_disable_0: 0x%x", fuse_val);
+	}
+
+	if (!ret) {
+		/* fuse is  read. check if ip is enabled */
+		if (fuse_val & FUSE_IP_DISABLE_0_NVLINK_MASK) {
+			nvlink_err("nvlink ip is disabled");
+			ret = -EPERM;
+		}
+	}
+	if (!ret) {
+		if (tegra_fuse_readl(FUSE_UCODE_MINION_REV_0, &fuse_val)) {
+			nvlink_err("ucode minion rev fuse cannot be read");
+		} else {
+			nvlink_dbg("fuse_ucode_minion_rev_0: 0x%x", fuse_val &
+				FUSE_UCODE_MINION_REV_0_MASK);
+		}
+
+		if (tegra_fuse_readl(FUSE_SECURE_MINION_DEBUG_DIS_0,
+					&fuse_val)) {
+			nvlink_err("minion debug dis fuse cannot be read");
+		} else {
+			nvlink_dbg("fuse_secure_minion_debug_dis_0: 0x%x",
+				fuse_val & FUSE_SECURE_MINION_DEBUG_DIS_0_MASK);
+		}
+	}
+	return ret;
+}
+
 static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1042,6 +1104,13 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	if (!np) {
 		nvlink_err("Invalid device_node");
 		ret = -ENODEV;
+		goto fail;
+	}
+
+	ret = t19x_nvlink_check_fuse();
+	/* proceed only if fuse is read and nvlink ip is not disabled */
+	if (ret) {
+		ret =  -ENODEV;
 		goto fail;
 	}
 

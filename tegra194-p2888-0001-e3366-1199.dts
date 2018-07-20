@@ -156,4 +156,8 @@
 		status = "okay";
 	};
 
+	pcie@14100000 {
+		nvidia,max-speed = <4>;
+	};
+
 };

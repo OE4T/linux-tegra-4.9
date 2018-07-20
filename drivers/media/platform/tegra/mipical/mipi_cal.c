@@ -110,7 +110,8 @@ struct tegra_mipi {
 	struct tegra_prod *prod_list;
 	const struct tegra_mipi_soc *soc;
 	void __iomem *io;
-	atomic_t refcount;
+	atomic_t fd_refcount;
+	atomic_t pad_refcount;
 	struct miscdevice misc_dev;
 };
 
@@ -302,47 +303,31 @@ static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 
 static int _tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 {
-	if (atomic_read(&mipi->refcount) < 0) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_inc_return(&mipi->refcount) == 1) {
-		tegra_mipi_clk_enable(mipi);
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
-				PDVCLAMP, 0 << PDVCLAMP_SHIFT);
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
-				PDVREG, 0 << PDVREG_SHIFT);
-	}
+	tegra_mipi_clk_enable(mipi);
+	mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
+			PDVCLAMP, 0 << PDVCLAMP_SHIFT);
+	mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
+			PDVREG, 0 << PDVREG_SHIFT);
+
 	return 0;
 }
 
 static int _tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 {
-	if (atomic_read(&mipi->refcount) < 1) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_dec_return(&mipi->refcount) == 0) {
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
-				PDVCLAMP, 1 << PDVCLAMP_SHIFT);
-		mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
-				PDVREG, 1 << PDVREG_SHIFT);
-		tegra_mipi_clk_disable(mipi);
-	}
+	mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
+			PDVCLAMP, 1 << PDVCLAMP_SHIFT);
+	mipical_update_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
+			PDVREG, 1 << PDVREG_SHIFT);
+	tegra_mipi_clk_disable(mipi);
+
 	return 0;
 }
 
 static int _t21x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 {
-	if (atomic_read(&mipi->refcount) < 0) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_inc_return(&mipi->refcount) == 1) {
-		tegra_mipi_clk_enable(mipi);
-		return mipical_update_bits(mipi->regmap,
-				ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, 0);
-	}
+	tegra_mipi_clk_enable(mipi);
+	return mipical_update_bits(mipi->regmap,
+			ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, 0);
 	return 0;
 }
 
@@ -354,27 +339,27 @@ int tegra_mipi_bias_pad_enable(void)
 		return -EPROBE_DEFER;
 	dev_dbg(mipi->dev, "%s", __func__);
 
-	if (mipi->soc->pad_enable)
-		ret = mipi->soc->pad_enable(mipi);
-	else
+	if (mipi->soc->pad_enable) {
+		if (atomic_read(&mipi->pad_refcount) < 0) {
+			WARN_ON(1);
+			return -EINVAL;
+		}
+		if (atomic_inc_return(&mipi->pad_refcount) == 1)
+			ret = mipi->soc->pad_enable(mipi);
+	} else
 		ret = -EINVAL;
 
-	trace_pad_enable("ref", atomic_read(&mipi->refcount));
+	trace_pad_enable("ref", atomic_read(&mipi->pad_refcount));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_mipi_bias_pad_enable);
 
 static int _t21x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 {
-	if (atomic_read(&mipi->refcount) < 1) {
-		WARN_ON(1);
-		return -EINVAL;
-	}
-	if (atomic_dec_return(&mipi->refcount) == 0) {
-		mipical_update_bits(mipi->regmap,
-				ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, PDVREG);
-		tegra_mipi_clk_disable(mipi);
-	}
+	mipical_update_bits(mipi->regmap,
+			ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, PDVREG);
+	tegra_mipi_clk_disable(mipi);
+
 	return 0;
 }
 
@@ -386,12 +371,17 @@ int tegra_mipi_bias_pad_disable(void)
 		return -ENODEV;
 	dev_dbg(mipi->dev, "%s", __func__);
 
-	if (mipi->soc->pad_disable)
-		ret = mipi->soc->pad_disable(mipi);
-	else
+	if (mipi->soc->pad_disable) {
+		if (atomic_read(&mipi->pad_refcount) < 1) {
+			WARN_ON(1);
+			return -EINVAL;
+		}
+		if (atomic_dec_return(&mipi->pad_refcount) == 0)
+			ret = mipi->soc->pad_disable(mipi);
+	} else
 		ret = -EINVAL;
 
-	trace_pad_disable("ref", atomic_read(&mipi->refcount));
+	trace_pad_disable("ref", atomic_read(&mipi->pad_refcount));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_mipi_bias_pad_disable);
@@ -902,11 +892,25 @@ MODULE_DEVICE_TABLE(of, tegra_mipi_of_match);
 
 static int tegra_mipi_open(struct inode *inode, struct file *file)
 {
-	return 0;
+	if (mipi) {
+		atomic_inc(&mipi->fd_refcount);
+		return 0;
+	}
+	return -ENODEV;
 }
 static int tegra_mipi_release(struct inode *inode, struct file *file)
 {
-	return 0;
+	if (mipi) {
+		if (atomic_dec_return(&mipi->fd_refcount) == 0 &&
+			atomic_read(&mipi->pad_refcount) > 0) {
+			// This is the case where all the file descriptors are
+			// closed but pad_disable was not called
+			atomic_set(&mipi->pad_refcount, 1);
+			tegra_mipi_bias_pad_disable();
+		}
+		return 0;
+	}
+	return -ENODEV;
 }
 static long mipi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -1062,6 +1066,9 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 	mipi->soc = cdata;
 	platform_set_drvdata(pdev, mipi);
 
+	atomic_set(&mipi->pad_refcount, 0);
+	atomic_set(&mipi->fd_refcount, 0);
+
 	if (mipi->soc->virtual_dev)
 		return tegra_vmipi_probe(pdev);
 
@@ -1136,7 +1143,6 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 		return err;
 
 	mutex_init(&mipi->lock);
-	atomic_set(&mipi->refcount, 0);
 
 	err = tegra_mipi_misc_register(mipi);
 	if (err)

@@ -244,6 +244,8 @@ struct gk20a_platform {
 	bool honors_aperture;
 	/* unified or split memory with separate vidmem? */
 	bool unified_memory;
+	/* WAR for gm20b chips. */
+	bool force_128K_pmu_vm;
 
 	/*
 	 * DMA mask for Linux (both coh and non-coh). If not set defaults to

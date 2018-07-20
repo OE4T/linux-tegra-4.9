@@ -952,6 +952,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	.unified_memory = true,
 	.dma_mask = DMA_BIT_MASK(34),
+	.force_128K_pmu_vm = true,
 
 	.secure_buffer_size = 335872,
 };

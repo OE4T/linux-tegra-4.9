@@ -202,13 +202,21 @@ static int nvgpu_init_system_vm(struct mm_gk20a *mm)
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = g->ops.mm.get_default_big_page_size();
-	u32 low_hole, aperture_size;
+	u64 low_hole, aperture_size;
+
+	/*
+	 * For some reason the maxwell PMU code is dependent on the large page
+	 * size. No reason AFAICT for this. Probably a bug somewhere.
+	 */
+	if (nvgpu_is_enabled(g, NVGPU_MM_FORCE_128K_PMU_VM)) {
+		big_page_size = SZ_128K;
+	}
 
 	/*
 	 * No user region - so we will pass that as zero sized.
 	 */
-	low_hole = SZ_4K * 16;
-	aperture_size = GK20A_PMU_VA_SIZE * 2;
+	low_hole = SZ_4K * 16UL;
+	aperture_size = GK20A_PMU_VA_SIZE;
 
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
 	nvgpu_log_info(g, "pmu vm size = 0x%x", mm->pmu.aperture_size);

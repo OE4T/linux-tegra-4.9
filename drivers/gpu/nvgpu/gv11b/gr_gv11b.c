@@ -2746,13 +2746,14 @@ void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
 					GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 gpc_offset = gpc_stride * gpc;
-	u32 tpc_offset = tpc_in_gpc_stride * tpc;
 	u32 global_tpc_index = g->gr.sm_to_cluster[smid].global_tpc_index;
+	u32 tpc_offset;
 
 	tpc = g->ops.gr.get_nonpes_aware_tpc(g, gpc, tpc);
+	tpc_offset = tpc_in_gpc_stride * tpc;
 
 	gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
-		gr_gpc0_tpc0_sm_cfg_tpc_id_f(global_tpc_index));
+			gr_gpc0_tpc0_sm_cfg_tpc_id_f(global_tpc_index));
 	gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc) + gpc_offset,
 			gr_gpc0_gpm_pd_sm_id_id_f(global_tpc_index));
 	gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,

@@ -2821,8 +2821,10 @@ static int tegra_xhci_phy_init(struct platform_device *pdev)
 	}
 	tegra->otg_port_num = num;
 
-	/* not support multiple device mode for VF */
-	if (tegra->soc->is_xhci_vf) {
+	/* multiple device mode not yet tested for VF because it needs
+	 * changes in board to have VBUS extcon for second device mode.
+	 */
+	if (tegra->soc->is_xhci_vf && (tegra->otg_port_num > 1)) {
 		otg_port = &tegra->otg_ports[0];
 		otg_port->usb2_otg_port_base_1 = usb2_otg_port_base_1;
 		otg_port->usb3_otg_port_base_1 = usb3_otg_port_base_1;
@@ -3276,7 +3278,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (tegra->soc->disable_hsic_wake)
 		tegra_xusb_disable_hsic_wake(tegra);
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (tegra_platform_is_silicon() && tegra->otg_port_num) {
 		err = tegra_xusb_init_extcon(tegra);
 		if (err)
 			goto powergate_partitions;
@@ -3318,7 +3320,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	return 0;
 
 unregister_extcon:
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (tegra_platform_is_silicon() && tegra->otg_port_num) {
 		cancel_work_sync(&tegra->id_extcons_work);
 		tegra_xusb_deinit_extcon(tegra);
 	}
@@ -3378,7 +3380,7 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	if (tegra->cpu_boost_enabled)
 		tegra_xusb_boost_cpu_deinit(tegra);
 
-	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
+	if (tegra_platform_is_silicon() && tegra->otg_port_num) {
 		cancel_work_sync(&tegra->id_extcons_work);
 		tegra_xusb_deinit_extcon(tegra);
 	}

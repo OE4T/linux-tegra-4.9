@@ -147,10 +147,11 @@ static int imx318_write_table(struct imx318 *priv,
 						IMX318_TABLE_END);
 }
 
-static int imx318_set_group_hold(struct camera_common_data *s_data, bool val)
+static int imx318_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
-	struct imx318 *priv = s_data->priv;
-	struct device *dev = s_data->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx318 *priv = tc_dev->priv;
+	struct device *dev = tc_dev->dev;
 	int err;
 
 	priv->group_hold_prev = val;
@@ -165,10 +166,11 @@ static int imx318_set_group_hold(struct camera_common_data *s_data, bool val)
 	return 0;
 }
 
-static int imx318_set_gain(struct camera_common_data *s_data, s64 val)
+static int imx318_set_gain(struct tegracam_device *tc_dev, s64 val)
 {
-	struct imx318 *priv = (struct imx318 *)s_data->priv;
-	struct device *dev = s_data->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
 	imx318_reg reg_list[2];
@@ -177,7 +179,7 @@ static int imx318_set_gain(struct camera_common_data *s_data, s64 val)
 	int i;
 
 	if (!priv->group_hold_prev)
-		imx318_set_group_hold(s_data, 1);
+		imx318_set_group_hold(tc_dev, 1);
 
 	if (val < mode->control_properties.min_gain_val)
 		val = mode->control_properties.min_gain_val;
@@ -209,10 +211,11 @@ static int imx318_set_gain(struct camera_common_data *s_data, s64 val)
 	return 0;
 }
 
-static int imx318_set_frame_rate(struct camera_common_data *s_data, s64 val)
+static int imx318_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
 {
-	struct imx318 *priv = (struct imx318 *)s_data->priv;
-	struct device *dev = s_data->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
 	imx318_reg reg_list[2];
@@ -221,7 +224,7 @@ static int imx318_set_frame_rate(struct camera_common_data *s_data, s64 val)
 	int i;
 
 	if (!priv->group_hold_prev)
-		imx318_set_group_hold(s_data, 1);
+		imx318_set_group_hold(tc_dev, 1);
 
 	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
 		(u64)mode->control_properties.framerate_factor /
@@ -244,10 +247,11 @@ static int imx318_set_frame_rate(struct camera_common_data *s_data, s64 val)
 	return 0;
 }
 
-static int imx318_set_exposure(struct camera_common_data *s_data, s64 val)
+static int imx318_set_exposure(struct tegracam_device *tc_dev, s64 val)
 {
-	struct imx318 *priv = (struct imx318 *)s_data->priv;
-	struct device *dev = s_data->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
+	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
 	imx318_reg reg_list[3];
@@ -257,7 +261,7 @@ static int imx318_set_exposure(struct camera_common_data *s_data, s64 val)
 	int i;
 
 	if (!priv->group_hold_prev)
-		imx318_set_group_hold(s_data, 1);
+		imx318_set_group_hold(tc_dev, 1);
 
 	coarse_time = mode->signal_properties.pixel_clock.val *
 		val / mode->image_properties.line_length /
@@ -285,10 +289,10 @@ static int imx318_set_exposure(struct camera_common_data *s_data, s64 val)
 	return err;
 }
 
-static int imx318_fill_string_ctrl(struct camera_common_data *s_data,
+static int imx318_fill_string_ctrl(struct tegracam_device *tc_dev,
 				struct v4l2_ctrl *ctrl)
 {
-	struct imx318 *priv = s_data->priv;
+	struct imx318 *priv = tc_dev->priv;
 	int i;
 
 	switch (ctrl->id) {
@@ -414,8 +418,9 @@ static int imx318_power_off(struct camera_common_data *s_data)
 	return 0;
 }
 
-static int imx318_power_put(struct camera_common_data *s_data)
+static int imx318_power_put(struct tegracam_device *tc_dev)
 {
+	struct camera_common_data *s_data = tc_dev->s_data;
 	struct camera_common_power_rail *pw = s_data->power;
 	struct camera_common_pdata *pdata = s_data->pdata;
 
@@ -441,9 +446,10 @@ static int imx318_power_put(struct camera_common_data *s_data)
 	return 0;
 }
 
-static int imx318_power_get(struct camera_common_data *s_data)
+static int imx318_power_get(struct tegracam_device *tc_dev)
 {
-	struct device *dev = s_data->dev;
+	struct device *dev = tc_dev->dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
 	struct camera_common_power_rail *pw = s_data->power;
 	struct camera_common_pdata *pdata = s_data->pdata;
 	const char *mclk_name;
@@ -496,8 +502,9 @@ static int imx318_power_get(struct camera_common_data *s_data)
 	return err;
 }
 
-static struct camera_common_pdata *imx318_parse_dt(struct device *dev)
+static struct camera_common_pdata *imx318_parse_dt(struct tegracam_device *tc_dev)
 {
+	struct device *dev = tc_dev->dev;
 	struct device_node *np = dev->of_node;
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
@@ -629,19 +636,19 @@ static int imx318_s_stream(struct v4l2_subdev *sd, int enable)
 
 		err = v4l2_g_ext_ctrls(s_data->ctrl_handler, &ctrls);
 		if (err == 0) {
-			err |= imx318_set_gain(s_data, control[0].value64);
+			err |= imx318_set_gain(priv->tc_dev, control[0].value64);
 			if (err)
 				dev_err(&client->dev,
 					"%s: error gain override\n", __func__);
 
-			err |= imx318_set_frame_rate(s_data,
+			err |= imx318_set_frame_rate(priv->tc_dev,
 					control[1].value64);
 			if (err)
 				dev_err(&client->dev,
 					"%s: error frame length override\n",
 					__func__);
 
-			err |= imx318_set_exposure(s_data, control[2].value64);
+			err |= imx318_set_exposure(priv->tc_dev, control[2].value64);
 			if (err)
 				dev_err(&client->dev,
 					"%s: error exposure override\n",

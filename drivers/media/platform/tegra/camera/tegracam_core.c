@@ -20,15 +20,19 @@
 #include <media/tegracam_core.h>
 
 
-void tegracam_set_privdata(struct tegracam_device *tc_dev, void *priv)
+
+void tegracam_set_privdata(struct tegracam_device * tc_dev, void *priv)
 {
+	tc_dev->priv = priv;
+
+	/* TODO: cleanup needed for priv once all the sensors adapt new framework */
 	tc_dev->s_data->priv = priv;
 }
 EXPORT_SYMBOL_GPL(tegracam_set_privdata);
 
 void *tegracam_get_privdata(struct tegracam_device *tc_dev)
 {
-	return tc_dev->s_data->priv;
+	return tc_dev->priv;
 }
 EXPORT_SYMBOL_GPL(tegracam_get_privdata);
 
@@ -50,7 +54,7 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 
 	ctrl_hdl = devm_kzalloc(dev,
 		sizeof(struct tegracam_ctrl_handler), GFP_KERNEL);
-	ctrl_hdl->s_data = s_data;
+	ctrl_hdl->tc_dev = tc_dev;
 	s_data->tegracam_ctrl_hdl = ctrl_hdl;
 
 	pw_rail = devm_kzalloc(dev,
@@ -71,13 +75,13 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	}
 	s_data->ops = tc_dev->sensor_ops;
 
-	s_data->pdata = tc_dev->sensor_ops->parse_dt(dev);
+	s_data->pdata = tc_dev->sensor_ops->parse_dt(tc_dev);
 	if (!s_data->pdata) {
 		dev_err(dev, "unable to get platform data\n");
 		return -EFAULT;
 	}
-
-	err = tc_dev->sensor_ops->power_get(s_data);
+	tc_dev->s_data = s_data;
+	err = tc_dev->sensor_ops->power_get(tc_dev);
 	if (err) {
 		dev_err(dev, "unable to power get\n");
 		return -EFAULT;
@@ -107,8 +111,6 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	s_data->def_height = s_data->fmt_height =
 		s_data->frmfmt[mode_idx].size.height;
 	s_data->def_clk_freq = signal_props->mclk_freq * 1000;
-
-	tc_dev->s_data = s_data;
 
 	return 0;
 }
@@ -184,7 +186,7 @@ void tegracam_device_unregister(struct tegracam_device *tc_dev)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
 
-	tc_dev->sensor_ops->power_put(s_data);
+	tc_dev->sensor_ops->power_put(tc_dev);
 	camera_common_cleanup(s_data);
 }
 EXPORT_SYMBOL_GPL(tegracam_device_unregister);

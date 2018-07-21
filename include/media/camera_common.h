@@ -39,6 +39,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
+#include <media/tegracam_core.h>
 
 /*
  * Scaling factor for converting a Q10.22 fixed point value
@@ -155,6 +156,7 @@ struct camera_common_framesync {
 	u32 fps;		/* frames in 1000 second */
 };
 
+struct tegracam_device ;
 struct camera_common_data;
 
 struct camera_common_sensor_ops {
@@ -166,29 +168,30 @@ struct camera_common_sensor_ops {
 	  u16 addr, u8 val);
 	int (*read_reg)(struct camera_common_data *s_data,
 	  u16 addr, u8 *val);
-	struct camera_common_pdata *(*parse_dt)(struct device *dev);
-	int (*power_get)(struct camera_common_data *s_data);
-	int (*power_put)(struct camera_common_data *s_data);
+	struct camera_common_pdata *(*parse_dt)(struct tegracam_device *tc_dev);
+	int (*power_get)(struct tegracam_device *tc_dev);
+	int (*power_put)(struct tegracam_device *tc_dev);
 	int (*get_framesync)(struct camera_common_data *s_data,
 		struct camera_common_framesync *vshs);
 };
+
 
 struct tegracam_ctrl_ops {
 	u32 numctrls;
 	u32 string_ctrl_size[TEGRA_CAM_MAX_STRING_CONTROLS];
 	const u32 *ctrl_cid_list;
-	int (*set_gain)(struct camera_common_data *s_data, s64 val);
-	int (*set_exposure)(struct camera_common_data *s_data, s64 val);
-	int (*set_frame_rate)(struct camera_common_data *s_data, s64 val);
-	int (*set_group_hold)(struct camera_common_data *s_data, bool val);
-	int (*fill_string_ctrl)(struct camera_common_data *s_data,
+	int (*set_gain)(struct tegracam_device *tc_dev, s64 val);
+	int (*set_exposure)(struct tegracam_device *tc_dev, s64 val);
+	int (*set_frame_rate)(struct tegracam_device *tc_dev, s64 val);
+	int (*set_group_hold)(struct tegracam_device *tc_dev, bool val);
+	int (*fill_string_ctrl)(struct tegracam_device *tc_dev,
 		struct v4l2_ctrl *ctrl);
 };
 
 struct tegracam_ctrl_handler {
 	struct v4l2_ctrl_handler	ctrl_handler;
 	const struct tegracam_ctrl_ops	*ctrl_ops;
-	struct camera_common_data	*s_data;
+	struct tegracam_device          *tc_dev;
 
 	int				numctrls;
 	struct v4l2_ctrl		*ctrls[MAX_CID_CONTROLS];
@@ -211,7 +214,7 @@ struct camera_common_data {
 	struct tegracam_ctrl_handler		*tegracam_ctrl_hdl;
 	struct regmap				*regmap;
 	struct camera_common_pdata		*pdata;
-
+	/* TODO: cleanup needed for priv once all the sensors adapt new framework */
 	void	*priv;
 	int	numctrls;
 	int	csi_port;

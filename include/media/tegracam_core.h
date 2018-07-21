@@ -36,6 +36,7 @@ struct tegracam_device {
 	const struct v4l2_subdev_internal_ops	*v4l2sd_internal_ops;
 	const struct media_entity_operations	*media_ops;
 	const struct tegracam_ctrl_ops		*tcctrl_ops;
+	void	*priv;
 };
 
 void tegracam_set_privdata(struct tegracam_device *tc_dev, void *priv);

@@ -157,7 +157,7 @@ static int tegracam_get_string_ctrl_size(u32 cid,
 	return ops->string_ctrl_size[index];
 }
 
-static int tegracam_setup_string_ctrls(struct camera_common_data *s_data,
+static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 				struct tegracam_ctrl_handler *handler)
 {
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
@@ -169,7 +169,7 @@ static int tegracam_setup_string_ctrls(struct camera_common_data *s_data,
 		struct v4l2_ctrl *ctrl = handler->ctrls[i];
 
 		if (ctrl->type == V4L2_CTRL_TYPE_STRING) {
-			err = ops->fill_string_ctrl(s_data, ctrl);
+			err = ops->fill_string_ctrl(tc_dev, ctrl);
 			if (err)
 				return err;
 		}
@@ -184,7 +184,8 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 		container_of(ctrl->handler,
 			struct tegracam_ctrl_handler, ctrl_handler);
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
-	struct camera_common_data *s_data = handler->s_data;
+	struct tegracam_device *tc_dev = handler->tc_dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
 	int err = 0;
 	u32 status = 0;
 
@@ -199,16 +200,16 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case TEGRA_CAMERA_CID_GAIN:
-		err = ops->set_gain(s_data, *ctrl->p_new.p_s64);
+		err = ops->set_gain(tc_dev, *ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_FRAME_RATE:
-		err = ops->set_frame_rate(s_data, *ctrl->p_new.p_s64);
+		err = ops->set_frame_rate(tc_dev, *ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_EXPOSURE:
-		err = ops->set_exposure(s_data, *ctrl->p_new.p_s64);
+		err = ops->set_exposure(tc_dev, *ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
-		err = ops->set_group_hold(s_data, ctrl->val);
+		err = ops->set_group_hold(tc_dev, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
@@ -226,7 +227,8 @@ int tegracam_init_ctrl_ranges_by_mode(
 		struct tegracam_ctrl_handler *handler,
 		u32 modeidx)
 {
-	struct camera_common_data *s_data = handler->s_data;
+	struct tegracam_device *tc_dev = handler->tc_dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
 	struct sensor_control_properties *ctrlprops = NULL;
 	int i;
 
@@ -280,10 +282,11 @@ EXPORT_SYMBOL_GPL(tegracam_init_ctrl_ranges_by_mode);
 
 int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 {
-	struct camera_common_data *s_data = handler->s_data;
+	struct tegracam_device *tc_dev = handler->tc_dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
 	struct v4l2_ctrl *ctrl;
 	struct v4l2_ctrl_config *ctrl_cfg;
-	struct device *dev = s_data->dev;
+	struct device *dev = tc_dev->dev;
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	const u32 *cids = ops->ctrl_cid_list;
 	u32 numctrls = ops->numctrls;
@@ -321,7 +324,7 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 
 		if (ctrl_cfg->type == V4L2_CTRL_TYPE_STRING &&
 			ctrl_cfg->flags & V4L2_CTRL_FLAG_READ_ONLY) {
-			ctrl->p_new.p_char = devm_kzalloc(s_data->dev,
+			ctrl->p_new.p_char = devm_kzalloc(tc_dev->dev,
 				size + 1, GFP_KERNEL);
 		}
 		handler->ctrls[i] = ctrl;
@@ -340,7 +343,7 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 		goto error;
 	}
 
-	err = tegracam_setup_string_ctrls(s_data, handler);
+	err = tegracam_setup_string_ctrls(tc_dev, handler);
 	if (err) {
 		dev_err(dev, "setup string controls failed\n");
 		goto error;

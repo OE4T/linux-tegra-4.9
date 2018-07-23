@@ -1436,3 +1436,4 @@ MODULE_AUTHOR("Mohan Kumar <mkumard@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XBAR driver");
 MODULE_LICENSE("GPL v2");
 MODULE_ALIAS("platform:" DRV_NAME);
+MODULE_DEVICE_TABLE(of, tegra_xbar_of_match);

@@ -94,6 +94,14 @@ config TEGRA_GRHOST_VHOST
 	  Allows the nvhost driver to function as a client for a virtualized
 	  Host1x server.
 
+config TEGRA_GR_VIRTUALIZATION
+	bool "Tegra graphics virtualization support"
+	default n
+	depends on TEGRA_HV_MANAGER
+	help
+	  Adds Tegra graphics virtualization (host and gpu) support to client
+	  drivers.
+
 config NVDEC_BOOTLOADER
 	depends on TEGRA_GRHOST_NVDEC
 	bool "Enable use of nvdec bootloader"

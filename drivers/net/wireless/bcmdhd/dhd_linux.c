@@ -58,6 +58,9 @@
 #ifdef ENABLE_ADAPTIVE_SCHED
 #include <linux/cpufreq.h>
 #endif /* ENABLE_ADAPTIVE_SCHED */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
+#include <uapi/linux/sched/types.h>
+#endif
 
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
@@ -706,8 +709,10 @@ extern void dhd_dbg_remove(void);
 
 #endif /* BCMSDIO */
 
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 #define OZ_ETHERTYPE 0x892e
 extern atomic_t tegra_downgrade_ac;
+#endif
 
 #ifdef SDTEST
 /* Echo packet generator (pkts/s) */
@@ -2518,6 +2523,7 @@ dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 		pktsetprio(pktbuf, FALSE);
 #endif /* QOS_MAP_SET */
 
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 	/* Downgrade voice to video priority */
 	if (atomic_read(&tegra_downgrade_ac) &&
 		((struct sk_buff *) (pktbuf))->protocol != htons(OZ_ETHERTYPE)) {
@@ -2530,6 +2536,7 @@ dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 			break;
 		}
 	}
+#endif
 
 #if defined(PCIE_FULL_DONGLE) && !defined(PCIE_TX_DEFERRAL)
 	/*
@@ -3180,8 +3187,10 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
 		ifp = dhd->iflist[ifidx];
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 		if (ifp->net)
 			ifp->net->last_rx = jiffies;
+#endif
 
 		if (ntoh16(skb->protocol) != ETHER_TYPE_BRCM) {
 			dhdp->dstats.rx_bytes += skb->len;
@@ -4642,11 +4651,23 @@ dhd_allocate_if(dhd_pub_t *dhdpub, int ifidx, char *name,
 	}
 #ifdef WL_CFG80211
 	if (ifidx == 0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+		ifp->net->priv_destructor = free_netdev;
+#else
 		ifp->net->destructor = free_netdev;
+#endif
 	else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+		ifp->net->priv_destructor = dhd_netdev_free;
+#else
 		ifp->net->destructor = dhd_netdev_free;
+#endif
+#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+	ifp->net->priv_destructor = free_netdev;
 #else
 	ifp->net->destructor = free_netdev;
+#endif
 #endif /* WL_CFG80211 */
 	strncpy(ifp->name, ifp->net->name, IFNAMSIZ);
 	ifp->name[IFNAMSIZ - 1] = '\0';
@@ -7754,9 +7775,13 @@ dhd_os_get_image_block(char *buf, int len, void *image)
 	if (!image)
 		return 0;
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+	rdlen = kernel_read(fp, buf, len, &fp->f_pos);
+#else
 	rdlen = kernel_read(fp, fp->f_pos, buf, len);
 	if (rdlen > 0)
 		fp->f_pos += rdlen;
+#endif
 
 	return rdlen;
 }

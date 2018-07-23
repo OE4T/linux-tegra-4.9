@@ -237,6 +237,8 @@ endif
 EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG -include dhd_nv_dbg.h
 EXTRA_CFLAGS += -DSRCBASE=\"$(src)\"
 EXTRA_CFLAGS += -I$(src)/include/ -I$(src)/
+EXTRA_CFLAGS += -I$(srctree.nvidia)/drivers/net/wireless/bcmdhd/
+EXTRA_CFLAGS += -I$(srctree.nvidia)/drivers/net/wireless/bcmdhd/include
 KBUILD_CFLAGS += -I$(srctree)/drivers/mmc
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
 

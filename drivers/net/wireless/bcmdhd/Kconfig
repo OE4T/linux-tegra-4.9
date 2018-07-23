@@ -87,7 +87,6 @@ config BCMDHD_CUSTOM_SYSFS_TEGRA
 config BCMDHD_CUSTOM_NET_PERF_TEGRA
 	bool "Custom network performance boost for Tegra platform"
 	depends on BCMDHD
-	default y
 	---help---
 	  Enable custom network performance boost for Tegra platform.
 	  Dynamically boosts clock frequencies based on network traffic
@@ -108,13 +107,11 @@ config BCMDHD_QMONITOR
 config BCMDHD_CUSTOM_NET_BW_EST_TEGRA
 	bool "Custom network bandwidth estimator for Tegra platform"
 	depends on BCMDHD
-	default y
 	---help---
 	  Enable custom network bandwidth estimator for Tegra platform.
 
 config BCMDHD_CUSTOM_NET_DIAG_TEGRA
 	bool "Custom network diagnostics for Tegra platform"
 	depends on BCMDHD
-	default y
 	---help---
 	  Enable custom network diagnostics for Tegra platform.

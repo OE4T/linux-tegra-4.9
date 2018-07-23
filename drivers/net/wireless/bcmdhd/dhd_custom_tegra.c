@@ -18,6 +18,7 @@
 #include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/file.h>
+#include <linux/of.h>
 
 #include <bcmutils.h>
 #include <linux_osl.h>
@@ -45,9 +46,13 @@ static int wifi_get_mac_addr_file(unsigned char *buf)
 
 	/* read wifi mac address file */
 	memset(str, 0, sizeof(str));
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+	rdlen = kernel_read(fp, str, 17, &fp->f_pos);
+#else
 	rdlen = kernel_read(fp, fp->f_pos, str, 17);
 	if (rdlen > 0)
 		fp->f_pos += rdlen;
+#endif
 	if (rdlen != 17) {
 		DHD_ERROR(("%s: bad mac address file - len %d != 17",
 						__FUNCTION__, rdlen));

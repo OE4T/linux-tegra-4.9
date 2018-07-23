@@ -6380,6 +6380,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 	}
 
+	memset(&of_fb_res, 0, sizeof(struct resource));
 	tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
 	fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
 	if (fb_mem == NULL) {

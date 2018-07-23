@@ -158,6 +158,7 @@ static void do_smc(struct te_request *request, struct tlk_device *dev)
 {
 	uint32_t smc_args;
 	uint32_t smc_params = 0;
+	uint32_t retval = 0;
 
 	smc_args = (uintptr_t)request - (uintptr_t)dev->req_addr;
 	if (request->params) {
@@ -165,7 +166,23 @@ static void do_smc(struct te_request *request, struct tlk_device *dev)
 			(uintptr_t)request->params - (uintptr_t)dev->req_addr;
 	}
 
-	(void)tlk_send_smc(request->type, smc_args, smc_params);
+	retval = tlk_send_smc(request->type, smc_args, smc_params);
+
+	/**
+	 * Check for return code from TLK kernel and propagate to NS userspace
+	 *
+	 * Under certain situations, TLK kernel may return an error code
+	 * _without_ updating the shared request buffer.
+	 *
+	 * This could give a false impression to the user-app about status of
+	 * the request (if default value of request->result is OTE_SUCCESS).
+	 *
+	 * Propagate the error code to NS user-app in case of such scenario.
+	 */
+	if ((retval != OTE_SUCCESS) && (request->result == OTE_SUCCESS)) {
+		request->result = retval;
+		request->result_origin = OTE_RESULT_ORIGIN_KERNEL;
+	}
 }
 
 void tlk_restore_keyslots(void)

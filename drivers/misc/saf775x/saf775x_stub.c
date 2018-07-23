@@ -672,6 +672,16 @@ static int saf775x_probe(struct platform_device *pdev)
 
 static int saf775x_remove(struct platform_device *pdev)
 {
+	saf775x_hwdep_cleanup();
+#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
+	i2c_del_driver(&saf775x_i2c_driver);
+#endif
+#if defined(CONFIG_SPI_MASTER)
+	spi_unregister_driver(&saf775x_spi_driver);
+#endif
+#if defined(TEGRA_GPIO_D3_RESET)
+	gpio_free(tmpm32x_rst_gpio);
+#endif
 	return 0;
 }
 
@@ -698,16 +708,6 @@ module_init(saf775x_modinit);
 
 static void __exit saf775x_modexit(void)
 {
-	saf775x_hwdep_cleanup();
-#if defined(CONFIG_I2C) || defined(CONFIG_I2C_MODULE)
-	i2c_del_driver(&saf775x_i2c_driver);
-#endif
-#if defined(CONFIG_SPI_MASTER)
-	spi_unregister_driver(&saf775x_spi_driver);
-#endif
-#if defined(TEGRA_GPIO_D3_RESET)
-	gpio_free(tmpm32x_rst_gpio);
-#endif
 	platform_driver_unregister(&saf775x_driver);
 }
 module_exit(saf775x_modexit);

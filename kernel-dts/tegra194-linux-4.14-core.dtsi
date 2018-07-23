@@ -47,10 +47,4 @@
 		};
 	};
 
-	reserved-memory {
-		ramoops_carveout {
-			status = "disabled";
-		};
-	};
-
 };

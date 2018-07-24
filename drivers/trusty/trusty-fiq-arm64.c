@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/trusty/smcall.h>
 #include <linux/trusty/trusty.h>
+#include <linux/version.h>
 
 #include <asm/fiq_glue.h>
 
@@ -85,7 +86,11 @@ static int fiq_glue_set_handler(void)
 			goto err_alloc_fiq_stack;
 		}
 		per_cpu(fiq_stack, cpu) = stack;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+		stack += THREAD_SIZE;
+#else
 		stack += THREAD_START_SP;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) */
 
 		local_irq_save(irqflags);
 		ret = trusty_fast_call64(trusty_dev, SMC_FC64_SET_FIQ_HANDLER,

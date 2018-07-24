@@ -22,7 +22,12 @@
 #include <linux/poll.h>
 #include <linux/idr.h>
 #include <linux/completion.h>
-#include <linux/sched.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <linux/sched/signal.h>
+#else
+#include <linux/signal.h>
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) */
 #include <linux/compat.h>
 #include <linux/uio.h>
 
@@ -1540,6 +1545,9 @@ static int tipc_virtio_probe(struct virtio_device *vdev)
 	struct virtqueue *vqs[2];
 	vq_callback_t *vq_cbs[] = {_rxvq_cb, _txvq_cb};
 	const char *vq_names[] = { "rx", "tx" };
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	bool *ctx = NULL;
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) */
 
 	dev_dbg(&vdev->dev, "%s:\n", __func__);
 
@@ -1568,7 +1576,11 @@ static int tipc_virtio_probe(struct virtio_device *vdev)
 	vds->cdev_name[sizeof(vds->cdev_name)-1] = '\0';
 
 	/* find tx virtqueues (rx and tx and in this order) */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+	err = vdev->config->find_vqs(vdev, 2, vqs, vq_cbs, vq_names, ctx, NULL);
+#else
 	err = vdev->config->find_vqs(vdev, 2, vqs, vq_cbs, vq_names);
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) */
 	if (err)
 		goto err_find_vqs;
 

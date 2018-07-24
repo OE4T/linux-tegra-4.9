@@ -19,7 +19,12 @@
 #include <linux/trusty/sm_err.h>
 #include <linux/device.h>
 #include <linux/pagemap.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+#include <soc/tegra/chip-id.h>
+#else
 #include <linux/tegra-soc.h>
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0) */
 
 enum {
 	TRUSTY_DEV_UNINIT = -1,

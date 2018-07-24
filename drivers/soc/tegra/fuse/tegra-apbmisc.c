@@ -118,6 +118,17 @@ enum tegra_revision tegra_chip_get_revision(void)
 }
 EXPORT_SYMBOL(tegra_chip_get_revision);
 
+u32 tegra_get_sku_id(void)
+{
+	u32 value;
+	if (!tegra_sku_info.sku_id) {
+		tegra_fuse_readl(FUSE_SKU_INFO, &value);
+		tegra_sku_info.sku_id = value;
+	}
+
+	return tegra_sku_info.sku_id;
+}
+
 u32 tegra_read_straps(void)
 {
 	if (strapping_base)

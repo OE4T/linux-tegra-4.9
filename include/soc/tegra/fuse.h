@@ -80,13 +80,12 @@ void tegra_fuse_writel(u32 val, unsigned long offset);
 enum tegra_revision tegra_chip_get_revision(void);
 int tegra_fuse_clock_enable(void);
 int tegra_fuse_clock_disable(void);
+u32 tegra_get_sku_id(void);
 
 /* TODO: Dummy implementation till upstream fuse driver implements these*/
 static inline bool tegra_spare_fuse(int bit)
 { return 0; }
 static inline int tegra_get_sku_override(void)
-{ return 0; }
-static inline u32 tegra_get_sku_id(void)
 { return 0; }
 
 #endif /* __ASSEMBLY__ */

@@ -1561,7 +1561,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 	u64 access_limit_size = SZ_4K;
 	int err = 0;
 
-	if ((args->offset & 3) || (!args->size) || (args->size & 3))
+	if ((args->offset & 3) || (!args->size))
 		return -EINVAL;
 
 	dmabuf = dma_buf_get(args->dmabuf_fd);

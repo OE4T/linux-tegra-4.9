@@ -160,7 +160,6 @@ static int enable_cpu_clk(void)
 	if (ret)
 		goto set_rate_fail;
 
-	tegra_dvfs_set_dfll_range(cpu_g, DFLL_RANGE_ALL_RATES);
 	clk_put(cpu_g);
 
 	return 0;

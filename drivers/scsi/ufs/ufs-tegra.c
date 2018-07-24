@@ -1432,8 +1432,6 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 				dev_err(dev, "request irq failed ret: %d,"
 					"wakeup with UFS can't be supported\n",
 					err);
-			else
-				ufs_tegra->cd_irq = err;
 		}
 		INIT_DELAYED_WORK(&ufs_tegra->detect, ufs_rescan);
 	} else {

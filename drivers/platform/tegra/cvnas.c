@@ -36,6 +36,7 @@
 #include <linux/platform_device.h>
 #include <linux/nvmap_t19x.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/fuse.h>
 
 static int cvnas_debug;
 module_param(cvnas_debug, int, 0644);
@@ -427,6 +428,12 @@ static int nvcvnas_probe(struct platform_device *pdev)
 	u32 cvsram_slice_data[2];
 	u32 cvsram_reg_data[4];
 	const struct of_device_id *match;
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
+		tegra_get_sku_id() == 0x9E) {
+		dev_err(&pdev->dev, "CVNAS IP is disabled in SKU.\n");
+		return -ENODEV;
+	}
 
 	cvnas_plat_dev = pdev;
 

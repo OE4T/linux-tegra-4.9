@@ -34,6 +34,7 @@
 #include <linux/reset.h>
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/fuse.h>
 
 #include "nvhost_syncpt_unit_interface.h"
 #include "dev.h"
@@ -693,6 +694,13 @@ static int pva_probe(struct platform_device *pdev)
 		goto err_get_pdata;
 	}
 
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
+		tegra_get_sku_id() == 0x9E) {
+		dev_err(dev, "PVA IP is disabled in SKU\n");
+		err = -ENODEV;
+		goto err_no_ip;
+	}
+
 	pva = devm_kzalloc(dev, sizeof(*pva), GFP_KERNEL);
 	if (!pva) {
 		err = -ENOMEM;
@@ -783,6 +791,7 @@ err_module_init:
 err_get_resources:
 	devm_kfree(dev, pva);
 err_alloc_pva:
+err_no_ip:
 err_get_pdata:
 
 	return err;

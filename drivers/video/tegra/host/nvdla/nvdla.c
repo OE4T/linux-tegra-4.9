@@ -26,6 +26,7 @@
 #include <linux/dma-attrs.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
+#include <soc/tegra/fuse.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -722,6 +723,13 @@ static int nvdla_probe(struct platform_device *pdev)
 		goto err_get_pdata;
 	}
 
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
+		tegra_get_sku_id() == 0x9E) {
+		dev_err(dev, "NVDLA IP is disabled in SKU\n");
+		err = -ENODEV;
+		goto err_no_ip;
+	}
+
 	dma_set_mask(dev, DMA_BIT_MASK(40));
 
 	nvdla_dev = devm_kzalloc(dev, sizeof(*nvdla_dev), GFP_KERNEL);
@@ -789,6 +797,7 @@ err_module_init:
 err_get_resources:
 	devm_kfree(dev, nvdla_dev);
 err_alloc_nvdla:
+err_no_ip:
 err_get_pdata:
 
 	return err;

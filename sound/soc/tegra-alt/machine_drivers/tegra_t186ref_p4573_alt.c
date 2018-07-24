@@ -20,11 +20,6 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
-#include <linux/platform_data/tegra_asoc_pdata.h>
-#else
-#include <mach/tegra_asoc_pdata.h>
-#endif
 
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
@@ -45,7 +40,6 @@ static const char * const dai_link_names[] = {
 
 struct tegra_t186 {
 	struct tegra_asoc_audio_clock_info audio_clock;
-	struct tegra_asoc_platform_data *pdata;
 	struct snd_soc_dai_link *codec_link;
 	unsigned int num_codec_links;
 	struct snd_soc_card *pcard;
@@ -399,7 +393,6 @@ static int tegra186_driver_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_tegra_t186;
 	struct device_node *np = pdev->dev.of_node;
-	struct tegra_asoc_platform_data *pdata;
 	struct snd_soc_pcm_runtime *rtd;
 	struct device *dev = &pdev->dev;
 	struct tegra_t186 *machine;
@@ -451,14 +444,6 @@ static int tegra186_driver_probe(struct platform_device *pdev)
 
 	dai_link_setup(pdev);
 
-	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata) {
-		dev_err(dev,
-			"Can't allocate tegra_asoc_platform_data struct\n");
-		return -ENOMEM;
-	}
-
-	machine->pdata = pdata;
 	machine->pcard = card;
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock, dev, card);

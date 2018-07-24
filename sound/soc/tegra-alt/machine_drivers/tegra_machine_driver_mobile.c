@@ -25,7 +25,6 @@
 #include <linux/delay.h>
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
-#include <linux/platform_data/tegra_asoc_pdata.h>
 #include <sound/core.h>
 #include <sound/jack.h>
 #include <sound/pcm.h>
@@ -56,19 +55,13 @@
 
 /* machine structure which holds sound card */
 struct tegra_machine {
-	struct tegra_asoc_platform_data *pdata;
 	struct tegra_asoc_audio_clock_info audio_clock;
 	unsigned int num_codec_links;
-	int gpio_requested;
-	struct snd_soc_card *pcard;
 	int rate_via_kcontrol;
 	bool is_hs_supported;
 	int fmt_via_kcontrol;
 	unsigned int bclk_ratio_override;
 	struct tegra_machine_soc_data *soc_data;
-	struct regulator *digital_reg;
-	struct regulator *spk_reg;
-	struct regulator *dmic_reg;
 };
 
 /* used for soc specific data */
@@ -135,16 +128,6 @@ static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
-
-/* rt565x specific APIs */
-static int tegra_rt565x_event_int_spk(struct snd_soc_dapm_widget *,
-		struct snd_kcontrol *, int);
-static int tegra_rt565x_event_int_mic(struct snd_soc_dapm_widget *,
-		struct snd_kcontrol *, int);
-static int tegra_rt565x_event_ext_mic(struct snd_soc_dapm_widget *,
-		struct snd_kcontrol *, int);
-static int tegra_rt565x_event_hp(struct snd_soc_dapm_widget *,
-		struct snd_kcontrol *, int);
 
 /* t210 soc data */
 static const struct tegra_machine_soc_data soc_data_tegra210 = {
@@ -259,10 +242,10 @@ static struct snd_soc_compr_ops tegra_machine_compr_ops = {
 #endif
 
 static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
-	SND_SOC_DAPM_SPK("x Int Spk", tegra_rt565x_event_int_spk),
-	SND_SOC_DAPM_HP("x Headphone Jack", tegra_rt565x_event_hp),
-	SND_SOC_DAPM_MIC("x Int Mic", tegra_rt565x_event_int_mic),
-	SND_SOC_DAPM_MIC("x Mic Jack", tegra_rt565x_event_ext_mic),
+	SND_SOC_DAPM_SPK("x Int Spk", NULL),
+	SND_SOC_DAPM_HP("x Headphone Jack", NULL),
+	SND_SOC_DAPM_MIC("x Int Mic", NULL),
+	SND_SOC_DAPM_MIC("x Mic Jack", NULL),
 
 	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
 	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
@@ -361,90 +344,6 @@ static struct snd_soc_pcm_stream tegra_machine_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 };
-
-static int tegra_rt565x_event_int_spk(struct snd_soc_dapm_widget *w,
-					struct snd_kcontrol *k, int event)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct snd_soc_card *card = dapm->card;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
-	int err;
-
-	if (machine->spk_reg) {
-		if (SND_SOC_DAPM_EVENT_ON(event))
-			err = regulator_enable(machine->spk_reg);
-		else
-			regulator_disable(machine->spk_reg);
-	}
-
-	if (!(machine->gpio_requested & GPIO_SPKR_EN))
-		return 0;
-
-	gpio_set_value_cansleep(pdata->gpio_spkr_en,
-				!!SND_SOC_DAPM_EVENT_ON(event));
-
-	return 0;
-}
-
-static int tegra_rt565x_event_hp(struct snd_soc_dapm_widget *w,
-					struct snd_kcontrol *k, int event)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct snd_soc_card *card = dapm->card;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
-
-	if (!(machine->gpio_requested & GPIO_HP_MUTE))
-		return 0;
-
-	gpio_set_value_cansleep(pdata->gpio_hp_mute,
-				!SND_SOC_DAPM_EVENT_ON(event));
-	return 0;
-}
-
-static int tegra_rt565x_event_int_mic(struct snd_soc_dapm_widget *w,
-					struct snd_kcontrol *k, int event)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct snd_soc_card *card = dapm->card;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
-	int ret = 0;
-
-	if (machine->dmic_reg) {
-		if (SND_SOC_DAPM_EVENT_ON(event))
-			ret = regulator_enable(machine->dmic_reg);
-		else
-			regulator_disable(machine->dmic_reg);
-	}
-
-	if (!(machine->gpio_requested & GPIO_INT_MIC_EN))
-		return 0;
-
-	gpio_set_value_cansleep(pdata->gpio_int_mic_en,
-				!!SND_SOC_DAPM_EVENT_ON(event));
-
-	return 0;
-}
-
-static int tegra_rt565x_event_ext_mic(struct snd_soc_dapm_widget *w,
-					struct snd_kcontrol *k, int event)
-{
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct snd_soc_card *card = dapm->card;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
-
-	if (!(machine->gpio_requested & GPIO_EXT_MIC_EN))
-		return 0;
-
-	gpio_set_value_cansleep(pdata->gpio_ext_mic_en,
-				!SND_SOC_DAPM_EVENT_ON(event));
-
-	return 0;
-}
-
 
 static int tegra_machine_codec_get_rate(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
@@ -1176,7 +1075,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct snd_soc_card *card = &snd_soc_tegra_card;
 	struct tegra_machine *machine;
-	struct tegra_asoc_platform_data *pdata = NULL;
 	int ret = 0;
 	const struct of_device_id *match;
 
@@ -1254,23 +1152,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	tegra_machine_dma_set_mask(pdev);
 
 	dai_link_setup(pdev);
-
-	pdata = devm_kzalloc(&pdev->dev,
-				sizeof(struct tegra_asoc_platform_data),
-				GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&pdev->dev,
-			"Can't allocate tegra_asoc_platform_data struct\n");
-		ret = -ENOMEM;
-		goto err_alloc_dai_link;
-	}
-
-	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =
-	pdata->gpio_spkr_en = pdata->gpio_hp_mute =
-	pdata->gpio_int_mic_en = pdata->gpio_ext_mic_en = -1;
-
-	machine->pdata = pdata;
-	machine->pcard = card;
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,

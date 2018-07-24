@@ -55,6 +55,11 @@
 #define APPL_PINMUX_CLKREQ_OUT_OVRD		BIT(10)
 
 #define APPL_CTRL				(0X4)
+#define APPL_CTRL_HW_HOT_RST_MODE_MASK		(0X3)
+#define APPL_CTRL_HW_HOT_RST_MODE_SHIFT		22
+#define APPL_CTRL_HW_HOT_RST_MODE_DLY_RST	0x0
+#define APPL_CTRL_HW_HOT_RST_MODE_IMDT_RST	0x1
+#define APPL_CTRL_HW_HOT_RST_EN			BIT(20)
 #define APPL_CTRL_LTSSM_EN			BIT(7)
 #define APPL_CTRL_SYS_PRE_DET_STATE		BIT(6)
 
@@ -3164,6 +3169,24 @@ fail_reg_en:
 	return ret;
 }
 
+static int tegra_pcie_dw_suspend_late(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+	u32 val;
+
+	if (!pcie->link_state)
+		return 0;
+
+	/* Enable HW_HOT_RST mode */
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val &= ~(APPL_CTRL_HW_HOT_RST_MODE_MASK <<
+		  APPL_CTRL_HW_HOT_RST_MODE_SHIFT);
+	val |= APPL_CTRL_HW_HOT_RST_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+
+	return 0;
+}
+
 static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 {
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
@@ -3256,6 +3279,14 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 		dev_err(dev, "failed to enable phy\n");
 		goto fail_phy;
 	}
+
+	/* Enable HW_HOT_RST mode */
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val &= ~(APPL_CTRL_HW_HOT_RST_MODE_MASK <<
+		  APPL_CTRL_HW_HOT_RST_MODE_SHIFT);
+	val |= APPL_CTRL_HW_HOT_RST_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+
 	writel(pcie->dbi_res->start & APPL_CFG_BASE_ADDR_MASK,
 	       pcie->appl_base + APPL_CFG_BASE_ADDR);
 
@@ -3306,6 +3337,26 @@ fail_core_clk:
 	return ret;
 }
 
+static int tegra_pcie_dw_resume_early(struct device *dev)
+{
+	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
+	u32 val;
+
+	if (!pcie->link_state)
+		return 0;
+
+	/* Disable HW_HOT_RST mode */
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val &= ~(APPL_CTRL_HW_HOT_RST_MODE_MASK <<
+		  APPL_CTRL_HW_HOT_RST_MODE_SHIFT);
+	val |= APPL_CTRL_HW_HOT_RST_MODE_IMDT_RST <<
+		APPL_CTRL_HW_HOT_RST_MODE_SHIFT;
+	val &= ~APPL_CTRL_HW_HOT_RST_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+
+	return 0;
+}
+
 static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 {
 	struct tegra_pcie_dw *pcie = platform_get_drvdata(pdev);
@@ -3326,8 +3377,10 @@ static const struct of_device_id tegra_pcie_dw_of_match[] = {
 MODULE_DEVICE_TABLE(of, tegra_pcie_dw_of_match);
 
 static const struct dev_pm_ops tegra_pcie_dw_pm_ops = {
+	.suspend_late = tegra_pcie_dw_suspend_late,
 	.suspend_noirq = tegra_pcie_dw_suspend_noirq,
 	.resume_noirq = tegra_pcie_dw_resume_noirq,
+	.resume_early = tegra_pcie_dw_resume_early,
 	.runtime_suspend = tegra_pcie_dw_runtime_suspend,
 	.runtime_resume = tegra_pcie_dw_runtime_resume,
 };

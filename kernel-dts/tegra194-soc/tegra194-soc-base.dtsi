@@ -659,7 +659,7 @@
 			      0x0 0x17f0000 0x0 0x10000>; /* EMC15 */
 
 		interrupts = <0 223 0x4>, <0 224 0x4>;
-		int_mask   = <0x1f3140>;
+		int_mask   = <0x1b3140>;
 		ecc_int_mask   = <0x1c00>;
 
 		channels   = <16>;

@@ -91,7 +91,7 @@ static const struct file_operations nvmap_user_fops = {
 #endif
 };
 
-const struct file_operations debug_handles_by_pid_fops;
+static const struct file_operations debug_handles_by_pid_fops;
 
 struct nvmap_pid_data {
 	struct rb_node node;
@@ -473,6 +473,21 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		pr_warn("Unknown NVMAP_IOC = 0x%x\n", cmd);
 	}
 	return err;
+}
+
+#define DEBUGFS_OPEN_FOPS_STATIC(name) \
+static int nvmap_debug_##name##_open(struct inode *inode, \
+					    struct file *file) \
+{ \
+	return single_open(file, nvmap_debug_##name##_show, \
+			    inode->i_private); \
+} \
+\
+static const struct file_operations debug_##name##_fops = { \
+	.open = nvmap_debug_##name##_open, \
+	.read = seq_read, \
+	.llseek = seq_lseek, \
+	.release = single_release, \
 }
 
 #define DEBUGFS_OPEN_FOPS(name) \
@@ -979,7 +994,7 @@ static int nvmap_debug_handles_by_pid_show(struct seq_file *s, void *unused)
 	return ret;
 }
 
-DEBUGFS_OPEN_FOPS(handles_by_pid);
+DEBUGFS_OPEN_FOPS_STATIC(handles_by_pid);
 
 #define PRINT_MEM_STATS_NOTE(x) \
 do { \

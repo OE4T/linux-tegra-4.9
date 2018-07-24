@@ -387,7 +387,7 @@
 
 #define PME_ACK_TIMEOUT 10000
 
-#define LTSSM_TIMEOUT 10000
+#define LTSSM_TIMEOUT 50000	/* 50ms */
 
 #define NUM_TIMING_STEPS 0x14
 #define NUM_VOLTAGE_STEPS 0x14
@@ -3015,11 +3015,14 @@ static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 		ret = -1;
 		dev_info(pcie->dev, "Link didn't transit to L2 state\n");
 		/* TX lane clock freq will reset to Gen1 only if link is in L2
-		 * or detect state. So disable LTSMM to enter detect state.
+		 * or detect state.
+		 * So apply pex_rst to end point to force RP to go into detect
+		 * state
 		 */
-		data = readl(pcie->appl_base + APPL_CTRL);
-		data &= ~APPL_CTRL_LTSSM_EN;
-		writel(data, pcie->appl_base + APPL_CTRL);
+		data = readl(pcie->appl_base + APPL_PINMUX);
+		data &= ~APPL_PINMUX_PEX_RST;
+		writel(data, pcie->appl_base + APPL_PINMUX);
+
 		err = readl_poll_timeout_atomic(pcie->appl_base + APPL_DEBUG,
 						data,
 						((data &
@@ -3029,11 +3032,20 @@ static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 						1, LTSSM_TIMEOUT);
 		if (err)
 			dev_info(pcie->dev, "Link didn't go to detect state\n");
+		else {
+			/* Disable LTSSM after link is in detect state */
+			data = readl(pcie->appl_base + APPL_CTRL);
+			data &= ~APPL_CTRL_LTSSM_EN;
+			writel(data, pcie->appl_base + APPL_CTRL);
+		}
 	}
-
+	/* DBI registers may not be accessible after this as PLL-E would be
+	 * down depending on how CLKREQ is pulled by end point
+	 */
 	data = readl(pcie->appl_base + APPL_PINMUX);
 	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);
 	writel(data, pcie->appl_base + APPL_PINMUX);
+
 	return ret;
 }
 

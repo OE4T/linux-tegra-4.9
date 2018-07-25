@@ -6677,6 +6677,8 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	enum ufs_dev_pwr_mode req_dev_pwr_mode;
 	enum uic_link_state req_link_state;
 
+	if(!hba->card_present)
+		return 0;
 
 	hba->pm_op_in_progress = 1;
 	if (!ufshcd_is_shutdown_pm(pm_op)) {
@@ -6821,6 +6823,9 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 {
 	int ret;
 	enum uic_link_state old_link_state;
+
+	if (!hba->card_present)
+		return 0;
 
 	hba->pm_op_in_progress = 1;
 	old_link_state = hba->uic_link_state;

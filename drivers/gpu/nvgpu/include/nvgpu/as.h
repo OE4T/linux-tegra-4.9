@@ -1,7 +1,7 @@
 /*
  * GK20A Address Spaces
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,10 +21,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_AS_H__
-#define __NVGPU_AS_H__
+#ifndef NVGPU_AS_H
+#define NVGPU_AS_H
+
+#include <nvgpu/types.h>
 
 struct vm_gk20a;
+struct gk20a;
 
 struct gk20a_as {
 	int last_share_id; /* dummy allocator for now */
@@ -47,4 +50,5 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share);
 int gk20a_as_alloc_share(struct gk20a *g, u32 big_page_size,
 			 u32 flags, struct gk20a_as_share **out);
 
-#endif
+struct gk20a *gk20a_from_as(struct gk20a_as *as);
+#endif /* NVGPU_AS_H */

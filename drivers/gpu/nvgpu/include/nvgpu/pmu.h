@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_PMU_H__
-#define __NVGPU_PMU_H__
+#ifndef NVGPU_PMU_H
+#define NVGPU_PMU_H
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_mem.h>
@@ -512,4 +512,5 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	u16 size_rpc, u16 size_scratch, pmu_callback callback, void *cb_param,
 	bool is_copy_back);
 
-#endif /* __NVGPU_PMU_H__ */
+struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu);
+#endif /* NVGPU_PMU_H */

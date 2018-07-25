@@ -1650,9 +1650,6 @@ enum gk20a_nonstall_ops {
 void __nvgpu_check_gpu_state(struct gk20a *g);
 void __gk20a_warn_on_no_regs(void);
 
-struct gk20a *gk20a_from_as(struct gk20a_as *as);
-struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu);
-
 /* classes that the device supports */
 /* TBD: get these from an open-sourced SDK? */
 enum {

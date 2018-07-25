@@ -1050,15 +1050,15 @@ int tegra_csi_mipi_calibrate(struct tegra_csi_device *csi,
 {
 	struct tegra_csi_channel *chan;
 
+	if (list_empty(&csi->csi_chans))
+		return 0;
+
 	if (!on) {
 		tegra_mipi_bias_pad_disable();
 		return 0;
 	}
 
 	tegra_mipi_bias_pad_enable();
-
-	if (list_empty(&csi->csi_chans))
-		return 0;
 
 	list_for_each_entry(chan, &csi->csi_chans, list) {
 		int ret = 0;

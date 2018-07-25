@@ -809,12 +809,6 @@ config CPULOAD_MONITOR
 	  Publish cpu load measured in sysfs, to be used by user space cpu
 	  frequency controllers.
 
-config TEGRA_PROC_POWER_MODEL
-	bool
-	help
-	  A simple model of processor power relating voltage, frequency,
-	  cores, and chip specific data. Used by various drivers.
-
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

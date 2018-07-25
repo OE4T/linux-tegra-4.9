@@ -12,6 +12,7 @@
 #include <linux/netdevice.h>
 #include <linux/errno.h>
 #include <linux/ieee80211.h>
+#include <linux/version.h>
 #include "ozprotocol.h"
 #include "ozeltbuf.h"
 #include "ozpd.h"
@@ -455,7 +456,11 @@ done:
 static int oz_net_notifier(struct notifier_block *nb, unsigned long event,
 				void *ndev)
 {
-	struct net_device *dev = ndev;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
+        struct net_device *dev = ndev;
+#else
+        struct net_device *dev = netdev_notifier_info_to_dev(ndev);
+#endif
 	switch (event) {
 	case NETDEV_UNREGISTER:
 	case NETDEV_DOWN:

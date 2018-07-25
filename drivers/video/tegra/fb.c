@@ -871,14 +871,14 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 
 	console_lock();
 	b_locked_fb_info = lock_fb_info(fb_info->info);
-	fb_destroy_modedb(fb_info->info->monspecs.modedb);
-	fb_info->info->monspecs.modedb = NULL;
 	fb_destroy_modelist(&fb_info->info->modelist);
 	event.info = fb_info->info;
 	/* Notify layers above fb.c that the hardware is unavailable */
 	fb_set_suspend(fb_info->info, true);
 
 	if (specs == NULL) {
+		fb_destroy_modedb(fb_info->info->monspecs.modedb);
+		fb_info->info->monspecs.modedb = NULL;
 		memset(&fb_info->info->monspecs, 0x0,
 		       sizeof(fb_info->info->monspecs));
 

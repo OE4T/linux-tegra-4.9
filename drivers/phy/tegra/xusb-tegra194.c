@@ -1056,6 +1056,7 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 	unsigned int index = lane->index;
 	struct tegra_xusb_usb2_port *port;
 	int rc = 0;
+	u32 reg;
 
 	dev_dbg(padctl->dev, "phy init UTMI %d\n", index);
 
@@ -1066,6 +1067,13 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 	}
 
 	mutex_lock(&padctl->lock);
+
+	/* reset VBUS&ID OVERRIDE */
+	reg = padctl_readl(padctl, USB2_VBUS_ID(port->vbus_id));
+	reg &= ~VBUS_OVERRIDE;
+	reg &= ~ID_OVERRIDE(~0);
+	reg |= ID_OVERRIDE_FLOATING;
+	padctl_writel(padctl, reg, USB2_VBUS_ID(port->vbus_id));
 
 	if (!IS_ERR(port->supply) && port->port_cap == USB_HOST_CAP &&
 		!regulator_is_enabled(port->supply) &&

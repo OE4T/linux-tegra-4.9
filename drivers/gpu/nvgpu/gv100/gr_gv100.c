@@ -420,12 +420,12 @@ void gr_gv100_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	}
 }
 
-u32 gr_gv100_get_hw_accessor_stream_out_mode()
+u32 gr_gv100_get_hw_accessor_stream_out_mode(void)
 {
 	return ctxsw_prog_main_image_pm_mode_stream_out_ctxsw_f();
 }
 
-static void gr_gv100_set_pmm_register(struct gk20a *g, u32 offset, u32 val,
+void gr_gv100_set_pmm_register(struct gk20a *g, u32 offset, u32 val,
 				u32 num_chiplets, u32 num_perfmons)
 {
 	u32 perfmon_index = 0;
@@ -434,60 +434,63 @@ static void gr_gv100_set_pmm_register(struct gk20a *g, u32 offset, u32 val,
 	u32 chiplet_stride = g->ops.gr.get_pmm_per_chiplet_offset();
 
 	for (chiplet_index = 0; chiplet_index < num_chiplets; chiplet_index++) {
-	        for (perfmon_index = 0; perfmon_index < num_perfmons;
+		for (perfmon_index = 0; perfmon_index < num_perfmons;
 						perfmon_index++) {
-			reg_offset = offset + perfmon_index * perf_pmmgpc_perdomain_offset_v() +
-					chiplet_index * chiplet_stride;
+			reg_offset = offset + perfmon_index *
+				perf_pmmsys_perdomain_offset_v() +
+				chiplet_index * chiplet_stride;
 			nvgpu_writel(g, reg_offset, val);
 		}
 	}
-
 }
 
-static void gr_gv100_get_num_hwpm_perfmon(struct gk20a *g, int *num_sys_perfmon,
-					int *num_fbp_perfmon, int *num_gpc_perfmon)
+void gr_gv100_get_num_hwpm_perfmon(struct gk20a *g, u32 *num_sys_perfmon,
+				u32 *num_fbp_perfmon, u32 *num_gpc_perfmon)
 {
 	int err;
 	u32 buf_offset_lo, buf_offset_addr, num_offsets;
 	u32 perfmon_index = 0;
 
-	for (perfmon_index = 0; perfmon_index < perf_pmmsys_engine_sel__size_1_v();
-								perfmon_index++) {
+	for (perfmon_index = 0; perfmon_index <
+			perf_pmmsys_engine_sel__size_1_v();
+			perfmon_index++) {
 		err = gr_gk20a_get_pm_ctx_buffer_offsets(g,
-							perf_pmmsys_engine_sel_r(perfmon_index),
-							1,
-							&buf_offset_lo,
-							&buf_offset_addr,
-							&num_offsets);
-		if (err) {
+				perf_pmmsys_engine_sel_r(perfmon_index),
+				1,
+				&buf_offset_lo,
+				&buf_offset_addr,
+				&num_offsets);
+		if (err != 0) {
 			break;
 		}
 	}
 	*num_sys_perfmon = perfmon_index;
 
-	for (perfmon_index = 0; perfmon_index < perf_pmmfbp_engine_sel__size_1_v();
-								perfmon_index++) {
+	for (perfmon_index = 0; perfmon_index <
+			perf_pmmfbp_engine_sel__size_1_v();
+			perfmon_index++) {
 		err = gr_gk20a_get_pm_ctx_buffer_offsets(g,
-							perf_pmmfbp_engine_sel_r(perfmon_index),
-							1,
-							&buf_offset_lo,
-							&buf_offset_addr,
-							&num_offsets);
-		if (err) {
+				perf_pmmfbp_engine_sel_r(perfmon_index),
+				1,
+				&buf_offset_lo,
+				&buf_offset_addr,
+				&num_offsets);
+		if (err != 0) {
 			break;
 		}
 	}
 	*num_fbp_perfmon = perfmon_index;
 
-	for (perfmon_index = 0; perfmon_index < perf_pmmgpc_engine_sel__size_1_v();
-								perfmon_index++) {
+	for (perfmon_index = 0; perfmon_index <
+			perf_pmmgpc_engine_sel__size_1_v();
+			perfmon_index++) {
 		err = gr_gk20a_get_pm_ctx_buffer_offsets(g,
-							perf_pmmgpc_engine_sel_r(perfmon_index),
-							1,
-							&buf_offset_lo,
-							&buf_offset_addr,
-							&num_offsets);
-		if (err) {
+				perf_pmmgpc_engine_sel_r(perfmon_index),
+				1,
+				&buf_offset_lo,
+				&buf_offset_addr,
+				&num_offsets);
+		if (err != 0) {
 			break;
 		}
 	}
@@ -496,17 +499,17 @@ static void gr_gv100_get_num_hwpm_perfmon(struct gk20a *g, int *num_sys_perfmon,
 
 void gr_gv100_init_hwpm_pmm_register(struct gk20a *g)
 {
-	int num_sys_perfmon = 0;
-	int num_fbp_perfmon = 0;
-	int num_gpc_perfmon = 0;
+	u32 num_sys_perfmon = 0;
+	u32 num_fbp_perfmon = 0;
+	u32 num_gpc_perfmon = 0;
 
-	gr_gv100_get_num_hwpm_perfmon(g, &num_sys_perfmon,
+	g->ops.gr.get_num_hwpm_perfmon(g, &num_sys_perfmon,
 				&num_fbp_perfmon, &num_gpc_perfmon);
 
-	gr_gv100_set_pmm_register(g, perf_pmmsys_engine_sel_r(0),
-		1, 0xFFFFFFFF, num_sys_perfmon);
-	gr_gv100_set_pmm_register(g, perf_pmmsys_engine_sel_r(0),
-		nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPS), 0xFFFFFFFF, num_fbp_perfmon);
-	gr_gv100_set_pmm_register(g, perf_pmmsys_engine_sel_r(0),
-		nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS), 0xFFFFFFFF, num_gpc_perfmon);
+	g->ops.gr.set_pmm_register(g, perf_pmmsys_engine_sel_r(0),
+		0xFFFFFFFFU, 1U, num_sys_perfmon);
+	g->ops.gr.set_pmm_register(g, perf_pmmfbp_engine_sel_r(0),
+		0xFFFFFFFFU, g->gr.num_fbps, num_fbp_perfmon);
+	g->ops.gr.set_pmm_register(g, perf_pmmgpc_engine_sel_r(0),
+		0xFFFFFFFFU, g->gr.gpc_count, num_gpc_perfmon);
 }

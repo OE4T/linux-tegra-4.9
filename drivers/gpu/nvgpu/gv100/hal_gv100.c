@@ -376,6 +376,8 @@ static const struct gpu_ops gv100_ops = {
 		.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode,
 		.get_hw_accessor_stream_out_mode =
 			gr_gv100_get_hw_accessor_stream_out_mode,
+		.get_num_hwpm_perfmon = gr_gv100_get_num_hwpm_perfmon,
+		.set_pmm_register = gr_gv100_set_pmm_register,
 		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
 		.init_hwpm_pmm_register = gr_gv100_init_hwpm_pmm_register,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,

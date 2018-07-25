@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -14,14 +14,14 @@
 struct device;
 struct platform_device;
 
-struct camrtc_device_group {
-	int ndevices;
-	struct platform_device *devices[];
-};
-
 struct camrtc_device_group *camrtc_device_group_get(
 	struct device *dev,
-	const char *group_name);
+	const char *property_name,
+	const char *names_property_name);
+
+struct platform_device *camrtc_device_get_byname(
+	struct camrtc_device_group *grp,
+	const char *device_name);
 
 int camrtc_device_group_busy(const struct camrtc_device_group *grp);
 void camrtc_device_group_idle(const struct camrtc_device_group *grp);

@@ -51,8 +51,7 @@
 
 #define WORK_INTERVAL_DEFAULT		100
 #define EXCEPTION_STR_LENGTH		2048
-#define ISP_PLATFORM_DEVICE_INDEX	0
-#define VI_PLATFORM_DEVICE_INDEX	1
+
 /*
  * Private driver data structure
  */
@@ -739,7 +738,11 @@ static void rtcpu_trace_vi_event(struct tegra_rtcpu_trace *tracer,
 	struct nvhost_task_end task_end;
 	u64 ts = 0;
 
+	if (tracer->vi_platform_device == NULL)
+		return;
 	pdata = platform_get_drvdata(tracer->vi_platform_device);
+	if (pdata == NULL)
+		return;
 
 	if (!pdata->eventlib_id) {
 		pr_warn("%s kernel eventlib id %d cannot be found\n",
@@ -793,9 +796,12 @@ static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 		event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
 		event->data.data8);
 #else
-	struct nvhost_device_data *pdata;
+	struct nvhost_device_data *pdata = NULL;
 	struct nvhost_task_begin task_begin;
 	struct nvhost_task_end task_end;
+
+	if (tracer->isp_platform_device == NULL)
+		return;
 
 	pdata = platform_get_drvdata(tracer->isp_platform_device);
 
@@ -1190,13 +1196,17 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 
 #ifdef CONFIG_EVENTLIB
 	/* Eventlib */
-	if (camera_devices != NULL && camera_devices->ndevices >
-			max(ISP_PLATFORM_DEVICE_INDEX,
-			VI_PLATFORM_DEVICE_INDEX)) {
-		tracer->isp_platform_device = camera_devices
-				->devices[ISP_PLATFORM_DEVICE_INDEX];
-		tracer->vi_platform_device = camera_devices
-				->devices[VI_PLATFORM_DEVICE_INDEX];
+	tracer->isp_platform_device =
+		camrtc_device_get_byname(camera_devices, "isp");
+	if (IS_ERR(tracer->isp_platform_device)) {
+		dev_info(dev, "no camera-device \"%s\"\n", "isp");
+		tracer->isp_platform_device = NULL;
+	}
+	tracer->vi_platform_device =
+		camrtc_device_get_byname(camera_devices, "vi");
+	if (IS_ERR(tracer->vi_platform_device)) {
+		dev_info(dev, "no camera-device \"%s\"\n", "vi");
+		tracer->vi_platform_device = NULL;
 	}
 #endif
 
@@ -1239,7 +1249,8 @@ void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 {
 	if (IS_ERR_OR_NULL(tracer))
 		return;
-
+	platform_device_put(tracer->isp_platform_device);
+	platform_device_put(tracer->vi_platform_device);
 	of_node_put(tracer->of_node);
 	cancel_delayed_work_sync(&tracer->work);
 	flush_delayed_work(&tracer->work);

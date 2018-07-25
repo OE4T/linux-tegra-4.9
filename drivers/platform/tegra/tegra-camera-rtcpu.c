@@ -268,7 +268,8 @@ static int tegra_camrtc_get_resources(struct device *dev)
 		return err;
 	}
 
-	devgrp = camrtc_device_group_get(dev, "nvidia,camera-devices");
+	devgrp = camrtc_device_group_get(dev, "nvidia,camera-devices",
+		"nvidia,camera-device-names");
 	if (!IS_ERR(devgrp)) {
 		rtcpu->camera_devices = devgrp;
 	} else {

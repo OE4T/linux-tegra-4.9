@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,13 @@
 #include <linux/platform_device.h>
 #include <linux/types.h>
 #include "drivers/video/tegra/host/nvhost_acm.h"
+
+struct camrtc_device_group {
+	struct device *dev;
+	char const *names_name;
+	int ndevices;
+	struct platform_device *devices[];
+};
 
 static int get_grouped_device(struct camrtc_device_group *grp,
 			struct device *dev, char const *name, int index)
@@ -58,12 +65,16 @@ static void camrtc_device_group_release(struct device *dev, void *res)
 	const struct camrtc_device_group *grp = res;
 	int i;
 
+	put_device(grp->dev);
+
 	for (i = 0; i < grp->ndevices; i++)
 		platform_device_put(grp->devices[i]);
 }
 
 struct camrtc_device_group *camrtc_device_group_get(
-	struct device *dev, char const *name)
+	struct device *dev,
+	char const *property_name,
+	char const *names_property_name)
 {
 	int index, err;
 	struct camrtc_device_group *grp;
@@ -72,20 +83,23 @@ struct camrtc_device_group *camrtc_device_group_get(
 	if (!dev || !dev->of_node)
 		return ERR_PTR(-EINVAL);
 
-	ndevices = of_count_phandle_with_args(dev->of_node, name, NULL);
+	ndevices = of_count_phandle_with_args(dev->of_node,
+			property_name, NULL);
 	if (ndevices <= 0)
 		return ERR_PTR(-ENOENT);
 
 	grp = devres_alloc(camrtc_device_group_release,
 			offsetof(struct camrtc_device_group, devices[ndevices]),
-			GFP_KERNEL);
+			GFP_KERNEL | __GFP_ZERO);
 	if (!grp)
 		return ERR_PTR(-ENOMEM);
 
+	grp->dev = get_device(dev);
 	grp->ndevices = ndevices;
+	grp->names_name = names_property_name;
 
 	for (index = 0; index < grp->ndevices; index++) {
-		err = get_grouped_device(grp, dev, name, index);
+		err = get_grouped_device(grp, dev, property_name, index);
 		if (err) {
 			devres_free(grp);
 			return ERR_PTR(err);
@@ -96,6 +110,35 @@ struct camrtc_device_group *camrtc_device_group_get(
 	return grp;
 }
 EXPORT_SYMBOL(camrtc_device_group_get);
+
+static inline struct platform_device *platform_device_get(
+	struct platform_device *pdev)
+{
+	if (pdev != NULL)
+		get_device(&pdev->dev);
+	return pdev;
+}
+
+struct platform_device *camrtc_device_get_byname(
+	struct camrtc_device_group *grp,
+	const char *device_name)
+{
+	int index;
+
+	if (grp == NULL)
+		return ERR_PTR(-EINVAL);
+	if (grp->names_name == NULL)
+		return ERR_PTR(-ENOENT);
+
+	index = of_property_match_string(grp->dev->of_node, grp->names_name,
+			device_name);
+	if (index < 0)
+		return ERR_PTR(-ENODEV);
+	if (index >= grp->ndevices)
+		return ERR_PTR(-ENODEV);
+
+	return platform_device_get(grp->devices[index]);
+}
 
 int camrtc_device_group_busy(const struct camrtc_device_group *grp)
 {

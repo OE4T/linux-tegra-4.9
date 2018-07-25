@@ -19,6 +19,7 @@
 #include <linux/atomic.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
+#include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
@@ -50,6 +51,7 @@ struct tegra_bpmp_thermal {
 	unsigned int zone_count;
 	struct tegra_bpmp_thermal_zone *zones;
 	struct work_struct tz_device_update_work;
+	unsigned int profile_id;
 };
 
 static int tegra_bpmp_thermal_get_temp(void *data, int *out_temp)
@@ -234,6 +236,40 @@ static int tegra_bpmp_thermal_abi_probe(void)
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void tegra_bpmp_thermal_dbgfs_init(struct platform_device *pdev)
+{
+	struct dentry *root, *file;
+	struct tegra_bpmp_thermal *tegra = platform_get_drvdata(pdev);
+
+	root = debugfs_create_dir("tegra_bpmp_thermal", NULL);
+	if (!root)
+		goto err;
+
+	file = debugfs_create_u32("therm-profile", S_IRUGO, root,
+				  &tegra->profile_id);
+	if (!file)
+		goto err;
+
+	return;
+err:
+	dev_err(tegra->dev, "debugfs init failed\n");
+}
+#else
+static void tegra_bpmp_thermal_dbgfs_init(struct platform_device *pdev) {}
+#endif
+
+static void tegra_bpmp_thermal_dt_parse(struct platform_device *pdev)
+{
+	unsigned int v;
+	struct tegra_bpmp_thermal *tegra = platform_get_drvdata(pdev);
+
+	if (of_property_read_u32(pdev->dev.of_node, "nvidia,therm-profile", &v))
+		return;
+
+	tegra->profile_id = v;
+}
+
 static struct thermal_zone_of_device_ops tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
 	.get_trend = tegra_bpmp_thermal_get_trend,
@@ -326,6 +362,8 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 	* and no meaningful limits are ever set.
 	*/
 	schedule_work(&tegra->tz_device_update_work);
+	tegra_bpmp_thermal_dt_parse(pdev);
+	tegra_bpmp_thermal_dbgfs_init(pdev);
 
 	return 0;
 

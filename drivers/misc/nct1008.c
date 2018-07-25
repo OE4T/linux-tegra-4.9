@@ -1365,8 +1365,9 @@ static void nct1008_thermal_init(struct nct1008_data *data)
 	if (!IS_ERR_OR_NULL(tzd))
 		data->sensors[EXT].thz = tzd;
 
-	cdev = thermal_cooling_device_register("shutdown_warning", data,
-				&nct1008_shutdown_warning_ops);
+	cdev = thermal_of_cooling_device_register(dev->of_node,
+					"shutdown_warning", data,
+					&nct1008_shutdown_warning_ops);
 	if (IS_ERR_OR_NULL(cdev))
 		dev_err(dev, "cdev registration failed %ld\n", PTR_ERR(cdev));
 }

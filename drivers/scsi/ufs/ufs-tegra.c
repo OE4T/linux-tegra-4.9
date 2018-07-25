@@ -910,6 +910,9 @@ static int ufs_tegra_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	int timeout = 500;
 	bool is_ufs_lp_pwr_gated = false;
 
+	if(!hba->card_present)
+		return 0;
+
 	if (pm_op != UFS_SYSTEM_PM)
 		return 0;
 
@@ -980,6 +983,9 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	struct ufs_tegra_host *ufs_tegra = hba->priv;
 	struct device *dev = hba->dev;
 	int ret = 0;
+
+	if(!hba->card_present)
+		return 0;
 
 	if (pm_op != UFS_SYSTEM_PM)
 		return 0;

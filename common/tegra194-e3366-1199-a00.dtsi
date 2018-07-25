@@ -56,6 +56,14 @@
 			#gpio-cells = <2>;
 			vcc-supply = <&e3366_vdd_1v8_slt>;
 
+			/* DP_PWR_GD_EXP to DPIIM */
+			dp_pwr_gd_exp {
+				gpio-hog;
+				output-high;
+				gpios = <3 0>;
+				label = "dp_pwr_gd_exp";
+				status = "okay";
+			};
 		};
 
 		e3366_gpio_u1406: gpio@25 {

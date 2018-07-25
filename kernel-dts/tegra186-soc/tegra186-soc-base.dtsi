@@ -1859,6 +1859,10 @@
 
 		iommus = <&smmu TEGRA_SID_AFI>;
 		iommu_sodev_map;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_AFI 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

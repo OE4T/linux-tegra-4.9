@@ -3356,7 +3356,7 @@ static int __init tegra_pcie_rp_init(void)
 	return platform_driver_register(&tegra_pcie_dw_driver);
 }
 
-#if IS_MODULE(CONFIG_PCIE_TEGRA_DW)
+#if IS_MODULE(CONFIG_PCIE_TEGRA_DW_HOST)
 static void __exit tegra_pcie_rp_deinit(void)
 {
 	platform_driver_unregister(&tegra_pcie_dw_driver);

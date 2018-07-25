@@ -1,5 +1,5 @@
 config PCIE_TEGRA_DW_HOST
-	bool "Nvidia Tegra PCIe host controller (T19x)"
+	tristate "Nvidia Tegra PCIe host controller (T19x)"
 	depends on PCI
 	depends on ARCH_TEGRA
 	select PCIEPORTBUS

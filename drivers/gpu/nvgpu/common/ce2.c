@@ -22,6 +22,7 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 

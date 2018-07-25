@@ -63,7 +63,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include <nvgpu/nvlink.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/ecc.h>
-#include <nvgpu/utils.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"

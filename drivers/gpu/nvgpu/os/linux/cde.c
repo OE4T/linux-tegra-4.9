@@ -33,6 +33,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/os_sched.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/linux/vm.h>
 

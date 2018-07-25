@@ -25,12 +25,12 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/os_sched.h>
-
-#include "gk20a.h"
-
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
+
+#include "gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ce2_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

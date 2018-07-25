@@ -25,6 +25,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS

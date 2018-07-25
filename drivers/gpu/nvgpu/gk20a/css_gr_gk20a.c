@@ -32,6 +32,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a.h"
 #include "css_gr_gk20a.h"

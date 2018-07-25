@@ -26,6 +26,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/mm_gm20b.h"

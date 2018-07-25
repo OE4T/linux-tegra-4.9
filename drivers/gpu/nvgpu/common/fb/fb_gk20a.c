@@ -30,6 +30,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>

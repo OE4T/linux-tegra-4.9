@@ -42,6 +42,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/ptimer.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

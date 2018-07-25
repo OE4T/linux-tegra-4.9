@@ -24,6 +24,8 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
+
 #include "gk20a/gk20a.h"
 #include "gv11b/dbg_gpu_gv11b.h"
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>

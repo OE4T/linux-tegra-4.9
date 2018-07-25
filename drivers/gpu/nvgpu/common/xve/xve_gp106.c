@@ -26,6 +26,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/xve.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "xve_gp106.h"
 

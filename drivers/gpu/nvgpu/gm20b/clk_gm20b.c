@@ -31,6 +31,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/types.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>

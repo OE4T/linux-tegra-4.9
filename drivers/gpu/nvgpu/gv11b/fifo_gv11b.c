@@ -38,6 +38,7 @@
 #include <nvgpu/io_usermode.h>
 #include <nvgpu/ptimer.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"

@@ -34,6 +34,8 @@
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pri_ringmaster_gv11b.h>
 
+#include <nvgpu/utils.h>
+
 /*
  * Sets the ZBC stencil for the passed index.
  */

@@ -32,6 +32,7 @@
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a/gk20a.h"
 #include "acr_gv11b.h"

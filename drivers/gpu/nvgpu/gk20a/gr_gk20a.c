@@ -40,6 +40,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/ecc.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

@@ -25,6 +25,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/vidmem.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/linux/vm.h>
 #include <nvgpu/linux/nvgpu_mem.h>

@@ -27,6 +27,8 @@
 #include <nvgpu/io.h>
 #include <nvgpu/hw_sim.h>
 #include <nvgpu/sim.h>
+#include <nvgpu/utils.h>
+
 #include "gk20a/gk20a.h"
 
 int nvgpu_alloc_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem)

@@ -23,6 +23,7 @@
 #include <nvgpu/channel.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 

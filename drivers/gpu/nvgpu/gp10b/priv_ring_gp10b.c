@@ -28,6 +28,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringmaster_gp10b.h>

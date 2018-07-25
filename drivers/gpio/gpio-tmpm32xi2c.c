@@ -622,6 +622,8 @@ static int tmpm32xi2c_gpio_suspend(struct device *dev)
 	struct tmpm32xi2c_gpio_data *data = dev_get_drvdata(dev);
 	int ret = 0;
 
+	disable_irq(data->irq);
+
 	if (device_may_wakeup(dev)) {
 		ret = enable_irq_wake(data->irq);
 		if (ret < 0)
@@ -640,6 +642,8 @@ static int tmpm32xi2c_gpio_resume(struct device *dev)
 	if (device_may_wakeup(dev))
 		disable_irq_wake(data->irq);
 
+	enable_irq(data->irq);
+
 	/* If there is any pending irq, invoke the irq handler. */
 	if (tmpm32xi2c_gpio_irq_pending(data)) {
 		local_irq_disable();
@@ -652,8 +656,8 @@ static int tmpm32xi2c_gpio_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops tmpm32xi2c_gpio_pm = {
-	.suspend = tmpm32xi2c_gpio_suspend,
-	.resume = tmpm32xi2c_gpio_resume,
+	.suspend_late = tmpm32xi2c_gpio_suspend,
+	.resume_early = tmpm32xi2c_gpio_resume,
 };
 #endif
 

@@ -36,6 +36,7 @@
 				"ast-cpu", "ast-dma";
 
 		iommus = <&smmu TEGRA_SID_RCE>;
+		iommu-resv-regions = <0x0 0x0 0x0 0xA0000000 0x0 0xc0000000 0xffffffff 0xffffffff>;
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_SCE_APB>,

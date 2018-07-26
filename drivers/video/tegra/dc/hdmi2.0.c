@@ -2852,6 +2852,11 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 	tegra_hdmi_gcp(hdmi);
 
+	/* check SOR pad PLL lock status */
+	if (!(tegra_sor_readl(sor, nv_sor_pll4()) & NV_SOR_PLL4_LOCKDET_MASK))
+		dev_err(&hdmi->dc->ndev->dev,
+			"hdmi: pad PLL is not locked!\n");
+
 	tegra_dc_put(dc);
 	return 0;
 }

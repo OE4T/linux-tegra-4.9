@@ -30,7 +30,7 @@
 
 int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 {
-	int err = 0;
+	int err = -ENOMEM;
 	u32 i, temp;
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_info,
@@ -39,8 +39,9 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	g->gr.ctx_vars.dynamic = true;
 	g->gr.netlist = GR_NETLIST_DYNAMIC;
 
-	if(!g->sim->esc_readl) {
+	if (g->sim->esc_readl == NULL) {
 		nvgpu_err(g, "Invalid pointer to query function.");
+		err = -ENOENT;
 		goto fail;
 	}
 
@@ -89,28 +90,69 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	g->sim->esc_readl(g, "GRCTX_REG_LIST_PPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.ppc.count);
 
-	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.inst);
-	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.data);
-	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.inst);
-	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.data);
-	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_bundle_init);
-	err |= !alloc_av64_list_gk20a(g, &g->gr.ctx_vars.sw_bundle64_init);
-	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_method_init);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.sw_ctx_load);
-	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_non_ctx_load);
-	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_veid_bundle_init);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.sys);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.gpc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.tpc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.zcull_gpc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.ppc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_sys);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_gpc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_tpc);
-	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.etpc);
-
-	if (err)
+	if (alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.inst) == NULL) {
 		goto fail;
+	}
+	if (alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.data) == NULL) {
+		goto fail;
+	}
+	if (alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.inst) == NULL) {
+		goto fail;
+	}
+	if (alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.data) == NULL) {
+		goto fail;
+	}
+	if (alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_bundle_init) == NULL) {
+		goto fail;
+	}
+	if (alloc_av64_list_gk20a(g,
+			&g->gr.ctx_vars.sw_bundle64_init) == NULL) {
+		goto fail;
+	}
+	if (alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_method_init) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.sw_ctx_load) == NULL) {
+		goto fail;
+	}
+	if (alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_non_ctx_load) == NULL) {
+		goto fail;
+	}
+	if (alloc_av_list_gk20a(g,
+			&g->gr.ctx_vars.sw_veid_bundle_init) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.sys) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.gpc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.tpc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g,
+			&g->gr.ctx_vars.ctxsw_regs.zcull_gpc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.ppc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g,
+			&g->gr.ctx_vars.ctxsw_regs.pm_sys) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g,
+			&g->gr.ctx_vars.ctxsw_regs.pm_gpc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g,
+			&g->gr.ctx_vars.ctxsw_regs.pm_tpc) == NULL) {
+		goto fail;
+	}
+	if (alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.etpc) == NULL) {
+		goto fail;
+	}
 
 	for (i = 0; i < g->gr.ctx_vars.ucode.fecs.inst.count; i++)
 		g->sim->esc_readl(g, "GRCTX_UCODE_INST_FECS",
@@ -285,6 +327,26 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 fail:
 	nvgpu_err(g, "failed querying grctx info from chiplib");
-	return err;
 
+	nvgpu_kfree(g, g->gr.ctx_vars.ucode.fecs.inst.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ucode.fecs.data.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ucode.gpccs.inst.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ucode.gpccs.data.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_bundle_init.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_bundle64_init.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_method_init.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_ctx_load.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_non_ctx_load.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.sw_veid_bundle_init.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.sys.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.gpc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.tpc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.zcull_gpc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.ppc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_sys.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_gpc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_tpc.l);
+	nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.etpc.l);
+
+	return err;
 }

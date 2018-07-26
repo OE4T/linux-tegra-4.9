@@ -133,6 +133,9 @@ static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
 	int yuv_flag = dc->mode.vmode & FB_VMODE_YUV_MASK;
 	unsigned long rate = dc->mode.pclk;
 
+	if (tegra_dc_is_t21x())
+		return rate;
+
 	if (!(dc->mode.vmode & FB_VMODE_BYPASS)) {
 		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
 			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {

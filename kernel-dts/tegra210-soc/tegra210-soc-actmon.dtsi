@@ -46,6 +46,7 @@
 			nvidia,down_wmark_window = /bits/ 8 <3>;
 			nvidia,avg_window_log2 = /bits/ 8 <7>;
 			nvidia,count_weight = <0x400>;
+			nvidia,max_dram_channels = /bits/ 8 <2>;
 			nvidia,type = <1>;
 			status = "disabled";
 		};

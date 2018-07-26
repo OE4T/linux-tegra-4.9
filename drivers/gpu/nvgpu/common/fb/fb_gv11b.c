@@ -102,6 +102,8 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	else
 		compbit_store_iova = nvgpu_mem_get_addr(g,
 							&gr->compbit_store.mem);
+	/* must be aligned to 64 KB */
+	compbit_store_iova = roundup(compbit_store_iova, (u64)SZ_64K);
 
 	compbit_base_post_divide64 = compbit_store_iova >>
 		fb_mmu_cbc_base_address_alignment_shift_v();

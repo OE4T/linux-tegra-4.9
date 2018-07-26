@@ -26,6 +26,7 @@
  */
 
 #include <nvgpu/ecc.h>
+#include <nvgpu/ltc.h>
 
 #include "gk20a/dbg_gpu_gk20a.h"
 
@@ -40,4 +41,9 @@ int nvgpu_ecc_sysfs_init(struct gk20a *g)
 
 void nvgpu_ecc_sysfs_remove(struct gk20a *g)
 {
+}
+
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
+{
+	return 0;
 }

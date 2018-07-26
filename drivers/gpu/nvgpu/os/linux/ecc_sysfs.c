@@ -40,7 +40,7 @@ int nvgpu_ecc_sysfs_init(struct gk20a *g)
 					ecc->stats_count);
 			break;
 		}
-		sysfs_attr_init(&attr[i].attr);
+		sysfs_attr_init(&attr[i].attr.attr);
 		attr[i].attr.attr.name = stat->name;
 		attr[i].attr.attr.mode = VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
 		attr[i].var =  &stat->counter;

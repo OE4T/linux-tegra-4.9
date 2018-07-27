@@ -2727,7 +2727,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		ret = devm_gpio_request(pcie->dev, pcie->pex_wake, "pcie_wake");
 		if (ret < 0) {
 			if (ret == -EBUSY) {
-				dev_err(pcie->dev, "pex_wake already in use\n");
+				dev_info(pcie->dev, "pex_wake already in use\n");
 				pcie->pex_wake = -EINVAL;
 			} else {
 				dev_err(pcie->dev, "pcie_wake gpio_request failed %d\n",

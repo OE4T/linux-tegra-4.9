@@ -188,7 +188,7 @@
 
 		vpr: vpr-carveout {
 			compatible = "nvidia,vpr-carveout";
-			size = <0 0x2a000000>;
+			size = <0 0x19000000>;
 			alignment = <0 0x400000>;
 			alloc-ranges = <0x0 0x80000000 0x0 0x70000000>;
 			reusable;

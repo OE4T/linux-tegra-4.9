@@ -330,6 +330,15 @@ typedef struct wl_bss_config {
 
 #define DL_CRC_NOT_INUSE 			0x0001
 
+#ifndef LINUX_POSTMOGRIFY_REMOVAL
+#define DL_BEGIN		0x0002
+#define DL_END			0x0004
+
+/* Flags for Major/Minor/Date number shift and mask */
+#define EPI_VER_SHIFT	16
+#define EPI_VER_MASK	0xFFFF
+#endif /* LINUX_POSTMOGRIFY_REMOVAL */
+
 /* generic download types & flags */
 enum {
 	DL_TYPE_UCODE = 1,

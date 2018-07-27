@@ -531,9 +531,13 @@ char nv_bak_path[MOD_PARAM_PATHLEN];
 /* information string to keep firmware, chio, cheip version info visiable from log */
 char info_string[MOD_PARAM_INFOLEN];
 module_param_string(info_string, info_string, MOD_PARAM_INFOLEN, 0444);
+
 int op_mode = 0;
 int disable_proptx = 0;
 module_param(op_mode, int, 0644);
+
+char clm_path[MOD_PARAM_PATHLEN];
+module_param_string(clm_path, clm_path, MOD_PARAM_PATHLEN, 0660);
 
 unsigned long dpc_sleep_cnt;
 atomic_t dpc_bound = ATOMIC_INIT(8); /* ms */
@@ -6277,6 +6281,12 @@ if (bcmdhd_dhd_enable_lpc) {
 		}
 	}
 #endif /* defined(KEEP_ALIVE) */
+
+	ret = dhd_apply_default_clm(dhd, clm_path);
+	if (ret < 0) {
+		DHD_ERROR(("%s: CLM set failed. Abort initialization.\n", __FUNCTION__));
+		goto done;
+	}
 
 #ifdef USE_WL_TXBF
 if (bcmdhd_use_wl_txbf) {

@@ -82,6 +82,38 @@ enum dhd_bus_state {
 	DHD_BUS_SUSPEND,	/* Bus has been suspended */
 };
 
+/* Download Types */
+typedef enum download_type {
+	FW,
+	NVRAM,
+	CLM_BLOB
+} download_type_t;
+
+/*
+ * MAX_NVRAMBUF_SIZE determines the size of the Buffer in the DHD that holds
+ * the NVRAM data. That is the size of the buffer pointed by bus->vars
+ * This also needs to be increased to 16K to support NVRAM size higher than 8K
+ */
+#define MAX_NVRAMBUF_SIZE      (16 * 1024) /* max nvram buf size */
+#define MAX_CLM_BUF_SIZE       (48 * 1024) /* max clm blob size */
+
+#ifndef CONFIG_BCMDHD_CLM_PATH
+#ifdef OEM_ANDROID
+#if defined(CUSTOMER_HW4) && defined(PLATFORM_SLP)
+#define CONFIG_BCMDHD_CLM_PATH "/lib/firmware/bcmdhd_clm.blob"
+#else
+#define CONFIG_BCMDHD_CLM_PATH "/system/etc/wifi/bcmdhd_clm.blob"
+#endif /* CUSTOMER_HW4 && PLATFORM_SLP */
+#elif defined(LINUX) || defined (linux)
+#define CONFIG_BCMDHD_CLM_PATH "/var/run/bcmdhd_clm.blob"
+#elif defined(MACOSX_DHD)
+#define CONFIG_BCMDHD_CLM_PATH "/bcm-wifi/bcmdhd_clm.blob"
+#else
+/* clm download will fail on empty path */
+#define CONFIG_BCMDHD_CLM_PATH ""
+#endif /* OEM_ANDROID */
+#endif /* CONFIG_BCMDHD_CLM_PATH */
+#define WL_CCODE_NULL_COUNTRY  "#n"
 
 #define DHD_IF_ROLE_STA(role)	(role == WLC_E_IF_ROLE_STA ||\
 				role == WLC_E_IF_ROLE_P2P_CLIENT)
@@ -1070,6 +1102,15 @@ int dhd_process_cid_mac(dhd_pub_t *dhdp, bool prepost);
 #define DHD_OS_PREFREE(dhdpub, addr, size) MFREE(dhdpub->osh, addr, size)
 #endif /* defined(CONFIG_DHD_USE_STATIC_BUF) */
 
+/* blob support */
+int dhd_get_download_buffer(dhd_pub_t *dhd, char *file_path, download_type_t component,
+	char **buffer, int *length);
+
+void dhd_free_download_buffer(dhd_pub_t *dhd, void *buffer, int length);
+
+int dhd_download_clm_blob(dhd_pub_t *dhd, unsigned char *buf, uint32 len);
+
+int dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path);
 
 #define dhd_add_flowid(pub, ifidx, ac_prio, ea, flowid)  do {} while (0)
 #define dhd_del_flowid(pub, ifidx, flowid)               do {} while (0)

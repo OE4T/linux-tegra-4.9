@@ -124,7 +124,8 @@ const char dhd_version[] = "\nDongle Host Driver, version " EPI_VERSION_STR "\nC
 
 void dhd_set_timer(void *bus, uint wdtick);
 
-
+/* XXX Should ideally read this from target -- taken from wlu */
+#define MAX_CHUNK_LEN 1408 /* 8 * 8 * 22 */
 
 /* IOVar table */
 enum {
@@ -264,6 +265,269 @@ const bcm_iovar_t dhd_iovars[] = {
 };
 
 #define DHD_IOVAR_BUF_SIZE	128
+
+int dhd_get_download_buffer(dhd_pub_t	*dhd, char *file_path, download_type_t component,
+	char **buffer, int *length)
+
+{
+	int ret = BCME_ERROR;
+	int len = 0;
+	int file_len;
+	void *image = NULL;
+	uint8 *buf = NULL;
+
+	/* Point to cache if available. */
+#ifdef CACHE_FW_IMAGES
+	if (component == FW) {
+		if (dhd->cached_fw_length) {
+			len = dhd->cached_fw_length;
+			buf = dhd->cached_fw;
+		}
+	} else if (component == NVRAM) {
+		if (dhd->cached_nvram_length) {
+			len = dhd->cached_nvram_length;
+			buf = dhd->cached_nvram;
+		}
+	} else if (component == CLM_BLOB) {
+		if (dhd->cached_clm_length) {
+			len = dhd->cached_clm_length;
+			buf = dhd->cached_clm;
+		}
+	} else {
+		return ret;
+	}
+#endif /* CACHE_FW_IMAGES */
+	/* No Valid cache found on this call */
+	if (!len) {
+		file_len = *length;
+		*length = 0;
+
+		if (file_path) {
+			image = dhd_os_open_image(file_path);
+			if (image == NULL) {
+				goto err;
+			}
+		}
+
+		buf = MALLOCZ(dhd->osh, file_len);
+		if (buf == NULL) {
+			DHD_ERROR(("%s: Failed to allocate memory %d bytes\n",
+				__FUNCTION__, file_len));
+			goto err;
+		}
+
+		/* Download image */
+#if defined(BCMEMBEDIMAGE) && defined(DHD_EFI)
+		if (!image) {
+			memcpy(buf, nvram_arr, sizeof(nvram_arr));
+			len = sizeof(nvram_arr);
+		} else {
+			len = dhd_os_get_image_block((char *)buf, file_len, image);
+			if ((len <= 0 || len > file_len)) {
+				MFREE(dhd->osh, buf, file_len);
+				goto err;
+			}
+		}
+#else
+		len = dhd_os_get_image_block((char *)buf, file_len, image);
+		if ((len <= 0 || len > file_len)) {
+			MFREE(dhd->osh, buf, file_len);
+			goto err;
+		}
+#endif /* DHD_EFI */
+	}
+
+	ret = BCME_OK;
+	*length = len;
+	*buffer = buf;
+
+	/* Cache if first call. */
+#ifdef CACHE_FW_IMAGES
+	if (component == FW) {
+		if (!dhd->cached_fw_length) {
+			dhd->cached_fw = buf;
+			dhd->cached_fw_length = len;
+		}
+	} else if (component == NVRAM) {
+		if (!dhd->cached_nvram_length) {
+			dhd->cached_nvram = buf;
+			dhd->cached_nvram_length = len;
+		}
+	} else if (component == CLM_BLOB) {
+		if (!dhd->cached_clm_length) {
+			 dhd->cached_clm = buf;
+			 dhd->cached_clm_length = len;
+		}
+	}
+#endif /* CACHE_FW_IMAGES */
+
+err:
+	if (image)
+		dhd_os_close_image(image);
+
+	return ret;
+}
+
+int
+dhd_download_2_dongle(dhd_pub_t	*dhd, char *iovar, uint16 flag, uint16 dload_type,
+	unsigned char *dload_buf, int len)
+{
+	struct wl_dload_data *dload_ptr = (struct wl_dload_data *)dload_buf;
+	int err = 0;
+	int dload_data_offset;
+	static char iovar_buf[WLC_IOCTL_MEDLEN];
+	int iovar_len;
+
+	memset(iovar_buf, 0, sizeof(iovar_buf));
+
+	dload_data_offset = OFFSETOF(wl_dload_data_t, data);
+	dload_ptr->flag = (DLOAD_HANDLER_VER << DLOAD_FLAG_VER_SHIFT) | flag;
+	dload_ptr->dload_type = dload_type;
+	dload_ptr->len = htod32(len - dload_data_offset);
+	dload_ptr->crc = 0;
+	len = len + 8 - (len%8);
+
+	iovar_len = bcm_mkiovar(iovar, dload_buf,
+		(uint)len, iovar_buf, sizeof(iovar_buf));
+	if (iovar_len == 0) {
+		DHD_ERROR(("%s: insufficient buffer space passed to bcm_mkiovar for '%s' \n",
+					__FUNCTION__, iovar));
+		return BCME_BUFTOOSHORT;
+	}
+
+	err = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovar_buf,
+			iovar_len, IOV_SET, 0);
+
+	return err;
+}
+
+int
+dhd_download_clm_blob(dhd_pub_t	*dhd, unsigned char *buf, uint32 len)
+{
+	int chunk_len, cumulative_len = 0;
+	int size2alloc;
+	unsigned char *new_buf;
+	int err = 0, data_offset;
+	uint16 dl_flag = DL_BEGIN;
+
+	data_offset = OFFSETOF(wl_dload_data_t, data);
+	size2alloc = data_offset + MAX_CHUNK_LEN;
+
+	new_buf = (unsigned char *)MALLOCZ(dhd->osh, size2alloc);
+	if (new_buf != NULL) {
+		do {
+			if (len >= MAX_CHUNK_LEN)
+				chunk_len = MAX_CHUNK_LEN;
+			else
+				chunk_len = len;
+
+			memcpy(new_buf + data_offset, buf + cumulative_len, chunk_len);
+			cumulative_len += chunk_len;
+
+			if (len - chunk_len == 0)
+				dl_flag |= DL_END;
+
+			err = dhd_download_2_dongle(dhd, "clmload", dl_flag, DL_TYPE_CLM,
+				new_buf, data_offset + chunk_len);
+
+			dl_flag &= ~DL_BEGIN;
+
+			len = len - chunk_len;
+		} while ((len > 0) && (err == 0));
+
+		MFREE(dhd->osh, new_buf, size2alloc);
+	} else {
+		err = BCME_NOMEM;
+	}
+
+	return err;
+}
+
+int
+dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
+{
+	char *clm_blob_path;
+	int len;
+	char *memblock = NULL;
+	int err = BCME_OK;
+	char iovbuf[WLC_IOCTL_SMLEN];
+	wl_country_t *cspec;
+
+	if (clm_path[0] != '\0') {
+		if (strlen(clm_path) > MOD_PARAM_PATHLEN) {
+			DHD_ERROR(("clm path exceeds max len\n"));
+			return BCME_ERROR;
+		}
+		clm_blob_path = clm_path;
+		DHD_INFO(("clm path from module param:%s\n", clm_path));
+	} else {
+		clm_blob_path = CONFIG_BCMDHD_CLM_PATH;
+		DHD_INFO(("clm path from default:%s\n", clm_blob_path));
+	}
+
+
+	/* If CLM blob file is found on the filesystem, download the file.
+	 * After CLM file download or If the blob file is not present,
+	 * validate the country code before proceeding with the initialization.
+	 * If country code is not valid, fail the initialization.
+	 */
+	len = MAX_CLM_BUF_SIZE;
+	dhd_get_download_buffer(dhd, clm_blob_path, CLM_BLOB, &memblock, &len);
+	if ((len > 0) && (len < MAX_CLM_BUF_SIZE) && memblock) {
+		/* Found blob file. Download the file */
+		DHD_INFO(("clm file download from %s \n", clm_blob_path));
+		err = dhd_download_clm_blob(dhd, memblock, len);
+		if (err) {
+			DHD_ERROR(("%s: CLM download failed err=%d\n", __FUNCTION__, err));
+			/* Retrieve clmload_status and print */
+			bcm_mkiovar("clmload_status", NULL, 0, iovbuf, sizeof(iovbuf));
+			err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf), FALSE, 0);
+			if (err) {
+				DHD_ERROR(("%s: clmload_status get failed err=%d \n",
+					__FUNCTION__, err));
+			} else {
+				DHD_INFO(("%s: clmload_status: %d \n",
+					__FUNCTION__, *((int *)iovbuf)));
+			}
+			err = BCME_ERROR;
+			goto exit;
+		} else {
+			DHD_INFO(("%s: CLM download succeeded \n", __FUNCTION__));
+		}
+	} else {
+		DHD_INFO(("Skipping the clm download. len:%d memblk:%p \n", len, memblock));
+	}
+
+	/* Verify country code */
+	bcm_mkiovar("country", NULL, 0, iovbuf, sizeof(iovbuf));
+	err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf), FALSE, 0);
+	if (err) {
+		DHD_ERROR(("%s: country code get failed\n", __FUNCTION__));
+		goto exit;
+	}
+
+	cspec = (wl_country_t *)iovbuf;
+	if ((strncmp(cspec->ccode, WL_CCODE_NULL_COUNTRY, WLC_CNTRY_BUF_SZ)) == 0) {
+		/* Country code not initialized or CLM download not proper */
+		DHD_ERROR(("country code not initialized\n"));
+		err = BCME_ERROR;
+	}
+exit:
+
+	if (memblock) {
+		dhd_free_download_buffer(dhd, memblock, MAX_CLM_BUF_SIZE);
+	}
+
+	return err;
+}
+
+void dhd_free_download_buffer(dhd_pub_t	*dhd, void *buffer, int length)
+{
+#ifdef CACHE_FW_IMAGES
+	return;
+#endif
+	MFREE(dhd->osh, buffer, length);
+}
 
 void dhd_save_fwdump(dhd_pub_t *dhd_pub, void * buffer, uint32 length)
 {

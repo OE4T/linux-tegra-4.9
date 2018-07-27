@@ -15,3 +15,4 @@ obj-$(CONFIG_NVPMODEL_EMC)      += nvpmodel/
 obj-$(CONFIG_TEGRA_NVLINK)	+= nvlink/
 obj-$(CONFIG_NVPPS)		+= nvpps/
 obj-$(CONFIG_THERMAL)  += thermal/
+obj-$(CONFIG_TRUSTY)		+= trusty/

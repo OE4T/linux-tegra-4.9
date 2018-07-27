@@ -254,8 +254,7 @@ static int isp_capture_ivc_send_control(struct tegra_isp_channel *chan,
 		goto fail;
 	}
 
-	timeout = wait_for_completion_killable_timeout(
-			&capture->control_resp, timeout);
+	timeout = wait_for_completion_timeout(&capture->control_resp, timeout);
 	if (timeout <= 0) {
 		dev_err(chan->isp_dev,
 			"no reply from camera processor\n");

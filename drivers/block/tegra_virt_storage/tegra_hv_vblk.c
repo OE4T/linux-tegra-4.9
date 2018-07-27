@@ -657,10 +657,16 @@ static void setup_device(struct vblk_dev *vblkdev)
 	max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
 
 	if (max_requests < MAX_VSC_REQS) {
-		dev_warn(vblkdev->device,
-			"Setting Max requests to %d, consider "
-			"increasing mempool size !\n",
-			max_requests);
+		/* Warn if the virtual storage device supports
+		 * normal read write operations */
+		if (vblkdev->config.blk_config.req_ops_supported &
+				(VS_BLK_READ_OP_F |
+				 VS_BLK_WRITE_OP_F)) {
+			dev_warn(vblkdev->device,
+				"Setting Max requests to %d, consider "
+				"increasing mempool size !\n",
+				max_requests);
+		}
 	} else if (max_requests > MAX_VSC_REQS) {
 		max_requests = MAX_VSC_REQS;
 		dev_warn(vblkdev->device,
@@ -670,9 +676,15 @@ static void setup_device(struct vblk_dev *vblkdev)
 	}
 
 	if (vblkdev->ivck->nframes < max_requests) {
-		dev_warn(vblkdev->device,
-			"IVC frames %d less than possible max requests %d!\n",
-			vblkdev->ivck->nframes, max_requests);
+		/* Warn if the virtual storage device supports
+		 * normal read write operations */
+		if (vblkdev->config.blk_config.req_ops_supported &
+				(VS_BLK_READ_OP_F |
+				 VS_BLK_WRITE_OP_F)) {
+			dev_warn(vblkdev->device,
+				"IVC frames %d less than possible max requests %d!\n",
+				vblkdev->ivck->nframes, max_requests);
+		}
 	}
 
 	for (req_id = 0; req_id < max_requests; req_id++){

@@ -16,16 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/err.h>
 #include <linux/kthread.h>
 #include <linux/module.h>
-#include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/spi/spi.h>
-#include <linux/spi/spi-tegra.h>
-#include <linux/delay.h>
 #include <soc/tegra/virt/tegra_hv_pm_ctl.h>
-#include <linux/sched.h>
 
 #define AURIX			0x3
 #define TEGRA			0x2
@@ -64,6 +59,8 @@ struct aurix_tegra_spi_data {
 	struct task_struct *thread;
 	struct packet *transmit;
 	struct packet *receive;
+	spinlock_t lock;
+	bool exited;
 	u8 buf_len;
 	u8 command;
 };
@@ -157,14 +154,16 @@ static int aurix_tegra_receive(struct aurix_tegra_spi_data *data)
 	BUG_ON(ret > 0);
 
 	if (ret < 0) {
-		dev_err(&spi->dev, "%s: spi_sync() ret val is %d\n", __func__, ret);
+		dev_dbg(&spi->dev, "%s: spi_sync() ret val is %d\n",
+			__func__, ret);
 		return ret;
 	}
 	print_message(data);
 
 	ret = read_cmd_message_id(data);
 	if (ret < 0) {
-		dev_err(&spi->dev, "%s: Command received not valid\n", __func__);
+		dev_err(&spi->dev, "%s: Command received not valid\n",
+			__func__);
 		return -1;
 	}
 
@@ -177,27 +176,31 @@ static int trigger_command(struct aurix_tegra_spi_data *data)
 {
 	int err;
 	struct device *dev = &data->spi->dev;
-	dev_dbg(&data->spi->dev, "%s: Triggering Command %x\n", __func__, data->command);
+	dev_dbg(&data->spi->dev, "%s: Triggering Command %x\n",
+		__func__, data->command);
 
 	switch(data->command) {
 		case SHUTDOWN:
 			err = tegra_hv_pm_ctl_trigger_sys_shutdown();
 			if (err < 0) {
-				dev_err(dev, "%s: trigger_sys_shutdown failed\n", __func__);
+				dev_err(dev, "%s: trigger_sys_shutdown failed\n",
+					__func__);
 				return err;
 			}
 			break;
 		case RESET:
 			err = tegra_hv_pm_ctl_trigger_sys_reboot();
 			if (err < 0) {
-				dev_err(dev, "%s: trigger_sys_reboot failed\n", __func__);
+				dev_err(dev, "%s: trigger_sys_reboot failed\n",
+					__func__);
 				return err;
 			}
 			break;
 		case SUSPEND:
 			err = tegra_hv_pm_ctl_trigger_sys_suspend();
 			if (err < 0) {
-				dev_err(dev, "%s: trigger_sys_suspend failed\n", __func__);
+				dev_err(dev, "%s: trigger_sys_suspend failed\n",
+					__func__);
 				return err;
 			}
 			break;
@@ -212,27 +215,33 @@ static int aurix_tegra_read_thread(void *data)
 {
 	struct aurix_tegra_spi_data *aurix_data = (struct aurix_tegra_spi_data *) data;
 	struct device *dev = &aurix_data->spi->dev;
+	unsigned long flags;
 	int err = 0;
 
 	/*
-	 * Kthread exits with -1 on error. Error from aurix_tegra_receive()
-	 * is raised on one of the following cases:
+	 * Error from aurix_tegra_receive() is raised in one of
+	 * the following cases:
 	 * i) spi_sync() failed
 	 * ii) command received not valid.
-	 * On shutdown, SIGINT is sent to kthread and it unblocks from spi_sync()
-	 * returning with error value. On this case, kthread exits with -1
-	 * and checking if kthread_should_stop is not necessary.
+	 * On aurix_tegra_stop_kthread(), SIGINT is sent to kthread
+	 * ONLY if kthread is still running (exited = false). That way,
+	 * kthread unblocks from spi_sync() and exits with error value.
+	 * Thus, checking if kthread_should_stop is not necessary.
 	 */
 	err = aurix_tegra_receive(aurix_data);
 	if (err < 0) {
-		dev_err(dev, "%s: Error receiving\n", __func__);
-		return -1;
+		dev_dbg(dev, "%s: Error receiving\n", __func__);
+		goto ret;
 	}
 	err = trigger_command(aurix_data);
 	if (err < 0)
-		return -1;
+		goto ret;
 
-	return 0;
+ret:
+	spin_lock_irqsave(&aurix_data->lock, flags);
+	aurix_data->exited = true;
+	spin_unlock_irqrestore(&aurix_data->lock, flags);
+	do_exit(err);
 }
 
 static const struct of_device_id aurix_tegra_ids[] = {
@@ -251,6 +260,9 @@ static int aurix_tegra_spi_probe(struct spi_device *spi)
 	data = devm_kzalloc(&spi->dev, sizeof(*data), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(data))
 		return -ENOMEM;
+
+	spin_lock_init(&data->lock);
+	data->exited = false;
 
 	err = of_property_read_u32(np, "spi-max-frequency", &value);
 	if (err < 0) {
@@ -317,23 +329,26 @@ error:
 
 /*
  * Sending SIGINT to kthread unblocks it from spi_sync()
- * and causes exit with -1. Subsequent kthread_stop() blocks
- * until kthread exits. For this reason SIGINT should be
- * raised first.
+ * and forces it to exit. SIGINT should raised ONLY if
+ * exited status is false, meaning that kthread is still
+ * running. kthread_stop() is not needed since the kthread
+ * does not make call to kthread_should_stop()
  */
 static int aurix_tegra_stop_kthread(struct device *dev)
 {
 	struct aurix_tegra_spi_data *data = dev_get_drvdata(dev);
 	int ret = 0;
+	unsigned long flags;
 
 	if (data->thread) {
-		ret = send_sig(SIGINT, data->thread, 0);
+		spin_lock_irqsave(&data->lock, flags);
+		if (!data->exited)
+			ret = send_sig(SIGINT, data->thread, 0);
+		spin_unlock_irqrestore(&data->lock, flags);
 		if (ret < 0) {
 			dev_err(dev, "%s: Error sending SIGINT\n", __func__);
 			return ret;
 		}
-		kthread_stop(data->thread);
-		data->thread = NULL;
 	}
 	return ret;
 }
@@ -342,6 +357,7 @@ static int aurix_tegra_start_kthread(struct device *dev)
 {
 	struct aurix_tegra_spi_data *data = dev_get_drvdata(dev);
 	int ret = 0;
+	unsigned long flags;
 
 	data->thread = kthread_run(aurix_tegra_read_thread,
 		(void*) data, "aurix_tegra_kthread");
@@ -350,6 +366,10 @@ static int aurix_tegra_start_kthread(struct device *dev)
 		dev_err(dev, "%s: Error creating thread\n", __func__);
 		return ret;
 	}
+
+	spin_lock_irqsave(&data->lock, flags);
+	data->exited = false;
+	spin_unlock_irqrestore(&data->lock, flags);
 	return ret;
 }
 

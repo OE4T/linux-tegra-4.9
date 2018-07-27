@@ -27,6 +27,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/fuse.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"

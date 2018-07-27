@@ -24,6 +24,7 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 

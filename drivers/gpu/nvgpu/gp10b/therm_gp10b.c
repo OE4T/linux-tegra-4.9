@@ -26,6 +26,7 @@
 #include "therm_gp10b.h"
 
 #include <nvgpu/soc.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gp10b/hw_therm_gp10b.h>
 

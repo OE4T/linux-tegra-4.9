@@ -29,6 +29,8 @@
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
 
+#include <nvgpu/io.h>
+
 #include "gr_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_gr_gp106.h>

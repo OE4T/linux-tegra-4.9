@@ -22,6 +22,7 @@
 
 #include <nvgpu/bios.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 

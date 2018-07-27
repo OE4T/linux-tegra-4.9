@@ -47,7 +47,6 @@ struct nvgpu_ctxsw_trace_filter;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
-#include <nvgpu/io.h>
 
 #include <nvgpu/mm.h>
 #include <nvgpu/as.h>

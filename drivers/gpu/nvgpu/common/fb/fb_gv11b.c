@@ -30,6 +30,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/ptimer.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

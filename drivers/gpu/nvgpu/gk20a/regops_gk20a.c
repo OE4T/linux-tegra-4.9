@@ -30,6 +30,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bsearch.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/io.h>
 
 static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 {

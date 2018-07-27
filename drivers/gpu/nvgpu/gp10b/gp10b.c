@@ -25,6 +25,7 @@
 #include "gk20a/gk20a.h"
 
 #include <nvgpu/enabled.h>
+#include <nvgpu/io.h>
 
 #include "gp10b.h"
 

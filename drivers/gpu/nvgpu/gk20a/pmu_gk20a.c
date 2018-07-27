@@ -31,6 +31,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/io.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

@@ -26,6 +26,7 @@
 #include "therm_gv11b.h"
 
 #include <nvgpu/soc.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 

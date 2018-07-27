@@ -1,7 +1,7 @@
 /*
  * GP106 memory management
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -23,6 +23,7 @@
  */
 
 #include <nvgpu/sizes.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gp10b/mm_gp10b.h"

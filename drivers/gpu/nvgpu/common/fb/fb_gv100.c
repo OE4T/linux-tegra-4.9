@@ -35,6 +35,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/acr_gm20b.h"

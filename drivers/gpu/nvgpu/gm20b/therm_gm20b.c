@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/io.h>
 #include "gk20a/gk20a.h"
 
 #include "therm_gm20b.h"

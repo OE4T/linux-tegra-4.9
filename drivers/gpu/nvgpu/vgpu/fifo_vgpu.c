@@ -29,6 +29,7 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/io.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/vgpu/vgpu_ivc.h>
 #include <nvgpu/vgpu/vgpu.h>

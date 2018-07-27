@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,6 +21,7 @@
  */
 #include <nvgpu/falcon.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/flcn_gk20a.h"

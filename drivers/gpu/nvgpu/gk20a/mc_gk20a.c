@@ -28,6 +28,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/unit.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 

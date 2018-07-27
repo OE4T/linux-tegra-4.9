@@ -26,6 +26,7 @@
 #include "fifo_gv100.h"
 #include <nvgpu/timers.h>
 #include <nvgpu/ptimer.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gv100/hw_ccsr_gv100.h>
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>

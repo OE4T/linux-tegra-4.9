@@ -39,6 +39,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/ecc.h>
+#include <nvgpu/io.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

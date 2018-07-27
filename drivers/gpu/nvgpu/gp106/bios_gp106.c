@@ -26,6 +26,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"

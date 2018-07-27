@@ -28,6 +28,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/ltc.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>

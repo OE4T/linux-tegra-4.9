@@ -41,6 +41,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/ptimer.h>
+#include <nvgpu/io.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

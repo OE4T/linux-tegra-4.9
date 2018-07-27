@@ -22,6 +22,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/mm.h>
+#include <nvgpu/io.h>
 
 #include "bus_gv100.h"
 #include "gk20a/gk20a.h"

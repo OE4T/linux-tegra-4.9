@@ -40,6 +40,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/io.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

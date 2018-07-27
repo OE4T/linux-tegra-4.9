@@ -26,6 +26,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/io.h>
 
 #include "fifo_gp10b.h"
 

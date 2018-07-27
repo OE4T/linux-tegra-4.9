@@ -27,6 +27,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/io.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>

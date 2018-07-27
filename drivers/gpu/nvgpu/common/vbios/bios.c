@@ -21,6 +21,7 @@
  */
 
 #include <nvgpu/bios.h>
+#include <nvgpu/io.h>
 #include <nvgpu/hw/gp106/hw_gc6_gp106.h>
 
 #include "gk20a/gk20a.h"

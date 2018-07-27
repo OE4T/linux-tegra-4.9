@@ -23,6 +23,7 @@
  */
 
 #include <nvgpu/types.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 

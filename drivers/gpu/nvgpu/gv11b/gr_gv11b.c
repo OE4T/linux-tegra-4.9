@@ -32,6 +32,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"

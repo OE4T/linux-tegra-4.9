@@ -25,6 +25,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/io.h>
 
 #include "gk20a/gk20a.h"
 #include "bus_gm20b.h"

@@ -421,9 +421,9 @@ _iqk_reload_iqk_setting_8822b(
 				odm_write_4byte(p_dm_odm, 0x1bd8, ((0xc0000000 >> idx) + 0x1) + (i * 4) + (p_iqk_info->IQK_CFIR_imag[channel][path][idx][i] << 9));
 			}
 			if (idx == 0)
-				odm_set_bb_reg(p_dm_odm, iqk_apply[path], BIT(0), ~(p_iqk_info->IQK_fail_report[channel][path][idx]));
+				odm_set_bb_reg(p_dm_odm, iqk_apply[path], BIT(0), !(p_iqk_info->IQK_fail_report[channel][path][idx]));
 			else
-				odm_set_bb_reg(p_dm_odm, iqk_apply[path], BIT(10), ~(p_iqk_info->IQK_fail_report[channel][path][idx]));
+				odm_set_bb_reg(p_dm_odm, iqk_apply[path], BIT(10), !(p_iqk_info->IQK_fail_report[channel][path][idx]));
 		}
 		odm_set_bb_reg(p_dm_odm, 0x1bd8, MASKDWORD, 0x0);
 		odm_set_bb_reg(p_dm_odm, 0x1b0c, BIT(13) | BIT(12), 0x0);

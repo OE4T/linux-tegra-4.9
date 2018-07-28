@@ -577,11 +577,12 @@ void gr_gm20b_load_tpc_mask(struct gk20a *g)
 	u32 gpc, pes;
 	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
 
-	for (gpc = 0; gpc < g->gr.gpc_count; gpc++)
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		for (pes = 0; pes < g->gr.pe_count_per_gpc; pes++) {
 			pes_tpc_mask |= g->gr.pes_tpc_mask[pes][gpc] <<
 					num_tpc_per_gpc * gpc;
 		}
+	}
 
 	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
 	if (g->tpc_fs_mask_user && g->tpc_fs_mask_user != fuse_tpc_mask &&
@@ -647,8 +648,9 @@ int gr_gm20b_load_smid_config(struct gk20a *g)
 		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(i), reg);
 	}
 
-	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
+	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++) {
 		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
+	}
 
 	nvgpu_kfree(g, tpc_sm_id);
 
@@ -1467,11 +1469,12 @@ static void gr_gm20b_update_ltc_lts_addr(struct gk20a *g, u32 addr, u32 ltc_num,
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
-	for (lts_num = 0; lts_num < num_ltc_slices; lts_num++)
+	for (lts_num = 0; lts_num < num_ltc_slices; lts_num++) {
 		priv_addr_table[index++] = ltc_ltc0_lts0_v() +
 						ltc_num * ltc_stride +
 						lts_num * lts_stride +
 						(addr & (lts_stride - 1));
+	}
 
 	*priv_addr_table_index = index;
 }
@@ -1503,9 +1506,10 @@ void gr_gm20b_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 num_ltc = g->ltc_count;
 	u32 ltc_num;
 
-	for (ltc_num = 0; ltc_num < num_ltc; ltc_num++)
+	for (ltc_num = 0; ltc_num < num_ltc; ltc_num++) {
 		gr_gm20b_update_ltc_lts_addr(g, addr, ltc_num,
 					priv_addr_table, priv_addr_table_index);
+	}
 }
 
 void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,

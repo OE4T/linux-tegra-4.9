@@ -123,8 +123,9 @@ void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		nvgpu_err(g, "mmu fault timeout");
 
 	/* release mmu fault trigger */
-	for_each_set_bit(engine_id, &engine_ids, 32)
+	for_each_set_bit(engine_id, &engine_ids, 32) {
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id), 0);
+	}
 }
 
 u32 gm20b_fifo_get_num_fifos(struct gk20a *g)

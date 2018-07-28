@@ -190,8 +190,8 @@
 
 #define I2C_MAX_XFER_SIZE_4K			4096
 #define I2C_MAX_XFER_SIZE_64k			65535
-/* Allocate maximum of 64K bytes * 4 transfers size buffer*/
-#define I2C_TOTAL_BUFFER_LEN			(I2C_MAX_XFER_SIZE_64k * 4)
+/* Allocate maximum of hw->max_packet_transfer_len * 4 transfers size buffer */
+#define I2C_TOTAL_BUFFER_LEN(len)		((len) * 4)
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
 
 /* Define speed modes */
@@ -1959,8 +1959,8 @@ static int tegra_i2c_multi_pkt_xfer(struct tegra_i2c_dev *i2c_dev,
 			 * hdr1(12bytes) + data1(l1) + ... + hdrN + dataN(lN)
 			 * should be <= I2C_TOTAL_BUFFER_LEN
 			 */
-			if (tx_len > I2C_TOTAL_BUFFER_LEN ||
-					rx_len > I2C_TOTAL_BUFFER_LEN)
+			if (tx_len > I2C_TOTAL_BUFFER_LEN(max_xfer_len) ||
+			    rx_len > I2C_TOTAL_BUFFER_LEN(max_xfer_len))
 				return -EINVAL;
 		}
 	}
@@ -2424,6 +2424,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	struct clk *parent_clk;
 	void __iomem *base;
 	phys_addr_t phys_addr;
+	u32 max_xfer_len;
 	int irq;
 	int ret = 0;
 
@@ -2467,7 +2468,10 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->adapter.algo = &tegra_i2c_algo;
 	i2c_dev->irq = irq;
 	i2c_dev->dev = &pdev->dev;
-	i2c_dev->dma_buf_size = I2C_TOTAL_BUFFER_LEN;
+
+	i2c_dev->hw = of_device_get_match_data(&pdev->dev);
+	max_xfer_len = i2c_dev->hw->max_packet_transfer_len;
+	i2c_dev->dma_buf_size = I2C_TOTAL_BUFFER_LEN(max_xfer_len);
 
 	i2c_dev->rst = devm_reset_control_get(&pdev->dev, "i2c");
 	if (IS_ERR(i2c_dev->rst)) {
@@ -2482,7 +2486,6 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 					i2c_dev->print_rate[0],
 					i2c_dev->print_rate[1]);
 
-	i2c_dev->hw = of_device_get_match_data(&pdev->dev);
 	i2c_dev->is_dvc = of_device_is_compatible(pdev->dev.of_node,
 						  "nvidia,tegra20-i2c-dvc");
 	if ((i2c_dev->bus_clk_rate == I2C_HS_MODE) &&
@@ -2571,11 +2574,11 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	}
 
 	i2c_dev->tx_pio_buffer = devm_kzalloc(&pdev->dev,
-			I2C_TOTAL_BUFFER_LEN, GFP_KERNEL);
+			I2C_TOTAL_BUFFER_LEN(max_xfer_len), GFP_KERNEL);
 	if (!(i2c_dev->tx_pio_buffer))
 		return -ENOMEM;
 	i2c_dev->rx_pio_buffer = devm_kzalloc(&pdev->dev,
-			I2C_TOTAL_BUFFER_LEN, GFP_KERNEL);
+			I2C_TOTAL_BUFFER_LEN(max_xfer_len), GFP_KERNEL);
 	if (!(i2c_dev->rx_pio_buffer))
 		return -ENOMEM;
 

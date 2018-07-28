@@ -21,7 +21,6 @@
 #define _UFS_TEGRA_H
 
 #include <linux/io.h>
-#include <linux/padctrl/padctrl.h>
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE	0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE	0x02480000

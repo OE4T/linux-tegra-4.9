@@ -2646,10 +2646,8 @@ static void downgrade_usb3(struct device *dev, unsigned int downgrade_enabled)
 					udev, false);
 		}
 
-		pm_runtime_get(hcd->self.controller);
+		pm_runtime_get_sync(hcd->self.controller);
 		mutex_lock(&tegra->lock);
-		if (pm_runtime_suspended(dev))
-			tegra_xhci_exit_elpg(tegra, true);
 		spin_lock_irqsave(&xhci->lock, flags);
 		power_up_wait = 0;
 		for (port1 = 1; port1 <= hdev30->maxchild; port1++) {
@@ -4918,7 +4916,7 @@ static void tegra_xhci_downgrade_check_to_enable(struct usb_hcd *hcd,
 			}
 			INIT_LIST_HEAD(&port_ptr->downgraded_list);
 
-			pm_runtime_get(hcd->self.controller);
+			pm_runtime_get_sync(hcd->self.controller);
 			mutex_lock(&tegra->lock);
 
 			/* To disconnect gracefully */

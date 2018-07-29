@@ -2132,6 +2132,7 @@ static void tegra_firmware_retry_work(struct work_struct *work)
 	}
 }
 
+static void downgrade_usb3(struct device *dev, unsigned int downgrade_enabled);
 
 static void tegra_xhci_set_host_mode(struct tegra_xusb *tegra, int i, bool on)
 {
@@ -2253,6 +2254,8 @@ role_update:
 
 			if (!(status & USB_SS_PORT_STAT_POWER))
 				dev_info(tegra->dev, "failed to set SS PP\n");
+
+			downgrade_usb3(tegra->dev, tegra->downgrade_enabled);
 		}
 
 		xhci_hub_control(xhci->main_hcd, SetPortFeature,

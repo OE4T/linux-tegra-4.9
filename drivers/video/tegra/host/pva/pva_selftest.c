@@ -21,6 +21,7 @@
 #include <linux/nvhost.h>
 #include <linux/delay.h>
 #include <linux/iommu.h>
+#include <linux/dma-mapping.h>
 
 #include "dev.h"
 #include "pva.h"

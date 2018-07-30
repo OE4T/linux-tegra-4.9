@@ -350,6 +350,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE0 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 	};
 
 	pcie_ep@14100000 {
@@ -379,6 +383,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE1 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 	};
 	pcie_ep@14160000 {
 		compatible = "nvidia,tegra194-pcie-ep";
@@ -421,6 +429,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE4 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 	};
 
 	pcie_ep@141a0000 {
@@ -469,6 +481,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE5 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 	};
 
 	pcie@14180000 {
@@ -499,6 +515,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE0 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -557,6 +577,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE1 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -616,6 +640,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE2>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE2 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -674,6 +702,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE3>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE3 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -732,6 +764,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE4 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -794,6 +830,10 @@
 
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
+#if LINUX_VERSION >= 414
+		iommu-map = <0x0 &smmu TEGRA_SID_PCIE5 0x1000>;
+		iommu-map-mask = <0x0>;
+#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;

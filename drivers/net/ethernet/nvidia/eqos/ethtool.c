@@ -482,15 +482,11 @@ static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int ret = 0;
 
-	if (!pdata->phydev) {
-		netdev_err(dev, "PHY is not registered\n");
-		return -ENODEV;
-	}
+	if (!netif_running(dev))
+		return -EINVAL;
 
-	if (!netif_running(dev)) {
-		netdev_err(dev, "Interface is disabled: can't get speed/duplex settings\n");
-		return -EBUSY;
-	}
+	if (!pdata->phydev)
+		return -ENODEV;
 
 	cmd->transceiver = XCVR_EXTERNAL;
 

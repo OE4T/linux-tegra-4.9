@@ -1398,7 +1398,7 @@ static int m88e1512_config_init(struct phy_device *phydev)
 	return m88e1512_read_status(phydev);
 err:
 	/* set the fibre reg page default */
-	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
+	phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);
 
 	/* ensure controller link adjustment */
 	phydev->state = PHY_FORCING;

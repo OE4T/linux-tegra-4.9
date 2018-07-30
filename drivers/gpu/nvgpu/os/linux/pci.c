@@ -390,7 +390,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.hardcode_sw_threshold = false,
 	.unified_memory = false,
 	},
-	{ /* 0x1eba */
+	{ /* 0x1eba, 0x1efa */
 	/* ptimer src frequency in hz */
 	.ptimer_src_freq	= 31250000,
 
@@ -483,6 +483,12 @@ static struct pci_device_id nvgpu_pci_table[] = {
 	},
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1eba),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 9,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1efa),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
 		.driver_data = 9,

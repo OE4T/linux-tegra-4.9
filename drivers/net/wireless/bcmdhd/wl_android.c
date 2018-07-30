@@ -4,7 +4,7 @@
  * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  * Portions contributed by Nvidia
- * Copyright (C) 2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2019 NVIDIA Corporation. All rights reserved.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -2603,11 +2603,11 @@ wl_handle_private_cmd(struct net_device *net, char *command, u32 buf_size)
 	else if (brcm_strnicmp(command, CMD_HAPD_MAC_FILTER, strlen(CMD_HAPD_MAC_FILTER)) == 0) {
 		int skip = strlen(CMD_HAPD_MAC_FILTER) + 1;
 		wl_android_set_mac_address_filter(net, (const char*)command+skip);
-	}
-	else if (brcm_strnicmp(command, CMD_SETROAMMODE, strlen(CMD_SETROAMMODE)) == 0)
+	} else if (!builtin_roam_disabled && brcm_strnicmp(command, CMD_SETROAMMODE, strlen(CMD_SETROAMMODE)) == 0)
 		bytes_written = wl_android_set_roam_mode(net, command, priv_cmd.total_len);
 #if defined(BCMFW_ROAM_ENABLE)
-	else if (brcm_strnicmp(command, CMD_SET_ROAMPREF, strlen(CMD_SET_ROAMPREF)) == 0) {
+	else if (!builtin_roam_disabled && brcm_strnicmp(command, CMD_SET_ROAMPREF,
+			strlen(CMD_SET_ROAMPREF)) == 0) {
 		bytes_written = wl_android_set_roampref(net, command, priv_cmd.total_len);
 	}
 #endif /* BCMFW_ROAM_ENABLE */

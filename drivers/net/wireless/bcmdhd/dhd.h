@@ -5,7 +5,7 @@
  * DHD OS, bus, and protocol modules.
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -907,6 +907,9 @@ extern uint dhd_master_mode;
 
 /* Roaming mode control */
 extern uint dhd_roam_disable;
+
+/* Disable builtin roaming */
+extern bool builtin_roam_disabled;
 
 /* Roaming mode control */
 extern uint dhd_radio_up;

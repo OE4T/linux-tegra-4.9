@@ -5,7 +5,7 @@
  * Copyright (C) 1999-2015, Broadcom Corporation
  *
  * Portions contributed by Nvidia
- * Copyright (C) 2015-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2019, NVIDIA Corporation. All rights reserved.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -1696,8 +1696,10 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 					DHD_ERROR(("%s: set dtim failed\n", __FUNCTION__));
 #ifndef ENABLE_FW_ROAM_SUSPEND
 				/* Disable firmware roaming during suspend */
-				dhd_iovar(dhd, 0, "roam_off", (char *)&roamvar,
-						sizeof(roamvar), NULL, 0, TRUE);
+				if (!builtin_roam_disabled) {
+					dhd_iovar(dhd, 0, "roam_off", (char *)&roamvar,
+							sizeof(roamvar), NULL, 0, TRUE);
+				}
 #endif /* ENABLE_FW_ROAM_SUSPEND */
 				if (FW_SUPPORTED(dhd, ndoe)) {
 					/* enable IPv6 RA filter in  firmware during suspend */
@@ -1747,9 +1749,11 @@ if (bcmdhd_support_p2p_go_ps) {
 					  sizeof(bcn_li_dtim), NULL, 0, TRUE);
 #ifndef ENABLE_FW_ROAM_SUSPEND
 				roamvar = dhd_roam_disable;
-				dhd_iovar(dhd, 0, "roam_off",
-					  (char *)&roamvar, sizeof(roamvar),
-					  NULL, 0, TRUE);
+				if (!builtin_roam_disabled) {
+					dhd_iovar(dhd, 0, "roam_off",
+						  (char *)&roamvar, sizeof(roamvar),
+						  NULL, 0, TRUE);
+				}
 #endif /* ENABLE_FW_ROAM_SUSPEND */
 				if (FW_SUPPORTED(dhd, ndoe)) {
 					/* disable IPv6 RA filter in  firmware during suspend */
@@ -6288,33 +6292,37 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 #if defined(ROAM_ENABLE) || defined(DISABLE_BUILTIN_ROAM)
 	/* Disable built-in roaming to allowed ext supplicant to take care of roaming */
-	dhd_iovar(dhd, 0, "roam_off", (char *)&roamvar, sizeof(roamvar),
-		  NULL, 0, TRUE);
+	if (builtin_roam_disabled) {
+		dhd_iovar(dhd, 0, "roam_off", (char *)&roamvar, sizeof(roamvar),
+			  NULL, 0, TRUE);
+	}
 #endif /* ROAM_ENABLE || DISABLE_BUILTIN_ROAM */
 #if defined(ROAM_ENABLE)
-	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_TRIGGER, roam_trigger,
-		sizeof(roam_trigger), TRUE, 0)) < 0)
-		DHD_ERROR(("%s: roam trigger set failed %d\n", __FUNCTION__, ret));
-	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_SCAN_PERIOD, roam_scan_period,
-		sizeof(roam_scan_period), TRUE, 0)) < 0)
-		DHD_ERROR(("%s: roam scan period set failed %d\n", __FUNCTION__, ret));
-	if ((dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_DELTA, roam_delta,
-		sizeof(roam_delta), TRUE, 0)) < 0)
-		DHD_ERROR(("%s: roam delta set failed %d\n", __FUNCTION__, ret));
-	ret = dhd_iovar(dhd, 0, "fullroamperiod", (char *)&roam_fullscan_period,
-			sizeof(roam_fullscan_period), NULL, 0, TRUE);
-	if (ret < 0)
-		DHD_ERROR(("%s: roam fullscan period set failed %d\n", __FUNCTION__, ret));
+	if (!builtin_roam_disabled) {
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_TRIGGER, roam_trigger,
+			sizeof(roam_trigger), TRUE, 0)) < 0)
+			DHD_ERROR(("%s: roam trigger set failed %d\n", __FUNCTION__, ret));
+		if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_SCAN_PERIOD, roam_scan_period,
+			sizeof(roam_scan_period), TRUE, 0)) < 0)
+			DHD_ERROR(("%s: roam scan period set failed %d\n", __FUNCTION__, ret));
+		if ((dhd_wl_ioctl_cmd(dhd, WLC_SET_ROAM_DELTA, roam_delta,
+			sizeof(roam_delta), TRUE, 0)) < 0)
+			DHD_ERROR(("%s: roam delta set failed %d\n", __FUNCTION__, ret));
+		ret = dhd_iovar(dhd, 0, "fullroamperiod", (char *)&roam_fullscan_period,
+				sizeof(roam_fullscan_period), NULL, 0, TRUE);
+		if (ret < 0)
+			DHD_ERROR(("%s: roam fullscan period set failed %d\n", __FUNCTION__, ret));
 #ifdef ROAM_AP_ENV_DETECTION
-	if (roam_trigger[0] == WL_AUTO_ROAM_TRIGGER) {
-		if (dhd_iovar(dhd, 0, "roam_env_detection",
-			      (char *)&roam_env_mode, sizeof(roam_env_mode),
-			      NULL, 0, TRUE) == BCME_OK)
-			dhd->roam_env_detection = TRUE;
-		else
-			dhd->roam_env_detection = FALSE;
-	}
+		if (roam_trigger[0] == WL_AUTO_ROAM_TRIGGER) {
+			if (dhd_iovar(dhd, 0, "roam_env_detection",
+					(char *)&roam_env_mode, sizeof(roam_env_mode),
+					NULL, 0, TRUE) == BCME_OK)
+				dhd->roam_env_detection = TRUE;
+			else
+				dhd->roam_env_detection = FALSE;
+		}
 #endif /* ROAM_AP_ENV_DETECTION */
+	}
 #endif /* ROAM_ENABLE */
 
 #ifdef WLTDLS

@@ -347,10 +347,9 @@
 							204000000 204000000 408000000  666000000
 							204000000 408000000 666000000  1066000000
 							408000000 666000000 1066000000 2133000000 >;
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
-#endif
 	};
 
 	pcie_ep@14100000 {
@@ -377,10 +376,9 @@
 		interrupt-names = "intr";
 
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
-#endif
 	};
 	pcie_ep@14160000 {
 		compatible = "nvidia,tegra194-pcie-ep";
@@ -420,10 +418,9 @@
 							204000000 204000000 408000000  800000000
 							204000000 408000000 800000000  1600000000
 							0         0         0          0 >;
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
-#endif
 	};
 
 	pcie_ep@141a0000 {
@@ -469,10 +466,9 @@
 							204000000 204000000 408000000  666000000
 							204000000 408000000 666000000  1066000000
 							408000000 666000000 1066000000 2133000000 >;
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
-#endif
 	};
 
 	pcie@14180000 {
@@ -500,10 +496,10 @@
 		interrupts = <0 72 0x04>,	/* controller interrupt */
 					 <0 73 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE0>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;
@@ -558,10 +554,10 @@
 		interrupts = <0 45 0x04>,	/* controller interrupt */
 					 <0 46 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE1>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 45 0x04>;
@@ -617,10 +613,10 @@
 		interrupts = <0 47 0x04>,	/* controller interrupt */
 					 <0 48 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE2>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 47 0x04>;
@@ -675,10 +671,10 @@
 		interrupts = <0 49 0x04>,	/* controller interrupt */
 					 <0 50 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE3>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 49 0x04>;
@@ -733,10 +729,10 @@
 		interrupts = <0 51 0x04>,	/* controller interrupt */
 					 <0 52 0x04>;	/* MSI interrupt */
 		interrupt-names = "intr", "msi";
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE4>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 51 0x04>;
@@ -795,10 +791,10 @@
 		pinctrl-names = "pex_rst", "clkreq";
 		pinctrl-0 = <&pex_rst_c5_out_state>;
 		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
-#if LINUX_VERSION < 414
+
 		iommus = <&smmu TEGRA_SID_PCIE5>;
 		dma-coherent;
-#endif
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 53 0x04>;

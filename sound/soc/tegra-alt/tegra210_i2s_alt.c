@@ -39,19 +39,12 @@
 #include <linux/tegra-powergate.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/pm_domain.h>
-#include <linux/tegra_pm_domains.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_i2s_alt.h"
 
 #define DRV_NAME "tegra210-i2s"
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-static struct of_device_id tegra_ape_pd[] = {
-	{ .compatible = "nvidia,tegra210-ape-pd", },
-	{},
-};
-#endif
 
 static const struct reg_default tegra210_i2s_reg_defaults[] = {
 	{ TEGRA210_I2S_AXBAR_RX_INT_MASK, 0x00000003},
@@ -1105,16 +1098,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->loopback = 0;
 	i2s->is_shutdown = false;
 	i2s->prod_name = NULL;
-
-	if (i2s->soc_data->is_soc_t210) {
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-		partition_id = tegra_pd_get_powergate_id(tegra_ape_pd);
-		if (partition_id < 0)
-			return -EINVAL;
-#else
-		partition_id = TEGRA_POWERGATE_APE;
-#endif
-	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);

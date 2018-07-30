@@ -290,6 +290,7 @@ static int tegra_hv_xhci_debug_probe(struct platform_device *pdev)
 	 */
 	tegra_hv_ivc_channel_reset(tegra->ivck);
 
+	spin_lock_init(&tegra->lock);
 	ret = devm_request_irq(dev, tegra->ivck->irq,
 			tegra_hv_xhci_debug_irq, 0,
 			dev_name(dev), tegra);

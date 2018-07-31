@@ -53,6 +53,31 @@ static inline bool linear_search(u32 offset, const u32 *list, int size)
 	return false;
 }
 
+/*
+ * In order to perform a context relative op the context has
+ * to be created already... which would imply that the
+ * context switch mechanism has already been put in place.
+ * So by the time we perform such an opertation it should always
+ * be possible to query for the appropriate context offsets, etc.
+ *
+ * But note: while the dbg_gpu bind requires the a channel fd,
+ * it doesn't require an allocated gr/compute obj at that point...
+ */
+static bool gr_context_info_available(struct gr_gk20a *gr)
+{
+	int err;
+
+	nvgpu_mutex_acquire(&gr->ctx_mutex);
+	err = !gr->ctx_vars.golden_image_initialized;
+	nvgpu_mutex_release(&gr->ctx_mutex);
+	if (err) {
+		return false;
+	}
+
+	return true;
+
+}
+
 static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 			     u32 *ctx_rd_count, u32 *ctx_wr_count,
 			     struct nvgpu_dbg_reg_op *ops,
@@ -91,12 +116,19 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	ok = validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
 			      ops, num_ops);
-
 	if (!ok) {
 		nvgpu_err(g, "invalid op(s)");
 		err = -EINVAL;
 		/* each op has its own err/status */
 		goto clean_up;
+	}
+
+	/* be sure that ctx info is in place if there are ctx ops */
+	if (ctx_wr_count | ctx_rd_count) {
+		if (!gr_context_info_available(&g->gr)) {
+			nvgpu_err(g, "gr context data not available");
+			return -ENODEV;
+		}
 	}
 
 	for (i = 0; i < num_ops; i++) {

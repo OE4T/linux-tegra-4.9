@@ -100,9 +100,6 @@ static int alloc_session(struct gk20a *g, struct dbg_session_gk20a_linux **_dbg_
 	return 0;
 }
 
-static bool gr_context_info_available(struct dbg_session_gk20a *dbg_s,
-				      struct gr_gk20a *gr);
-
 static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset);
 
 static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
@@ -868,13 +865,6 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	if (!dbg_s->is_profiler && !ch) {
 		nvgpu_err(g, "bind a channel before regops for a debugging session");
 		return -EINVAL;
-	}
-
-	/* be sure that ctx info is in place */
-	if (!g->is_virtual &&
-		!gr_context_info_available(dbg_s, &g->gr)) {
-		nvgpu_err(g, "gr context data not available");
-		return -ENODEV;
 	}
 
 	/* since exec_reg_ops sends methods to the ucode, it must take the
@@ -1651,29 +1641,6 @@ static void nvgpu_dbg_gpu_ioctl_get_timeout(struct dbg_session_gk20a *dbg_s,
 		args->enable = NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE;
 	else
 		args->enable = NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE;
-}
-
-/* In order to perform a context relative op the context has
- * to be created already... which would imply that the
- * context switch mechanism has already been put in place.
- * So by the time we perform such an opertation it should always
- * be possible to query for the appropriate context offsets, etc.
- *
- * But note: while the dbg_gpu bind requires the a channel fd,
- * it doesn't require an allocated gr/compute obj at that point...
- */
-static bool gr_context_info_available(struct dbg_session_gk20a *dbg_s,
-				      struct gr_gk20a *gr)
-{
-	int err;
-
-	nvgpu_mutex_acquire(&gr->ctx_mutex);
-	err = !gr->ctx_vars.golden_image_initialized;
-	nvgpu_mutex_release(&gr->ctx_mutex);
-	if (err)
-		return false;
-	return true;
-
 }
 
 static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)

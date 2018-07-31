@@ -1,6 +1,6 @@
 obj-$(CONFIG_MODS) += mods/
-obj-y += nvs/
-obj-y += nvs-aonsh/
+obj-$(CONFIG_NVS) += nvs/
+obj-$(CONFIG_NVS_AON_SHUB) += nvs-aonsh/
 obj-$(CONFIG_TEGRA_PROFILER) += tegra-profiler/
 
 obj-$(CONFIG_NVS_DFSH) += nvs-dfsh/

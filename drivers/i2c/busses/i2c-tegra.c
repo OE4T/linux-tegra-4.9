@@ -353,6 +353,9 @@ struct tegra_i2c_dev {
 	bool restrict_clk_change;
 	bool transfer_in_progress;
 	bool do_polled_io;
+	u32 print_rate[2];
+	bool print_ratelimit_enabled;
+	struct ratelimit_state print_count_per_min;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -1571,6 +1574,10 @@ static int tegra_i2c_handle_xfer_error(struct tegra_i2c_dev *i2c_dev)
 {
 	int ret;
 
+	if (i2c_dev->print_ratelimit_enabled)
+		if (!__ratelimit(&i2c_dev->print_count_per_min))
+			goto skip_error_print;
+
 	/* Prints errors */
 	if (i2c_dev->msg_err & I2C_ERR_UNKNOWN_INTERRUPT)
 		dev_warn(i2c_dev->dev, "unknown interrupt Add 0x%02x\n",
@@ -1588,6 +1595,7 @@ static int tegra_i2c_handle_xfer_error(struct tegra_i2c_dev *i2c_dev)
 		dev_warn(i2c_dev->dev, "Rx fifo underflow to add 0x%x\n",
 				i2c_dev->msg_add);
 
+skip_error_print:
 	ret = tegra_i2c_init(i2c_dev, false);
 	if (ret) {
 		WARN_ON(1);
@@ -2167,6 +2175,11 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 
 	ret = of_property_read_u32(np, "clock-frequency",
 			&i2c_dev->bus_clk_rate);
+
+	if (!of_property_read_u32_array(np, "print-rate-limit",
+					i2c_dev->print_rate, 2))
+		i2c_dev->print_ratelimit_enabled = true;
+
 	if (ret)
 		i2c_dev->bus_clk_rate = 100000; /* default clock rate */
 
@@ -2463,6 +2476,11 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	}
 
 	tegra_i2c_parse_dt(i2c_dev);
+
+	if (i2c_dev->print_ratelimit_enabled)
+		ratelimit_state_init(&i2c_dev->print_count_per_min,
+					i2c_dev->print_rate[0],
+					i2c_dev->print_rate[1]);
 
 	i2c_dev->hw = of_device_get_match_data(&pdev->dev);
 	i2c_dev->is_dvc = of_device_is_compatible(pdev->dev.of_node,

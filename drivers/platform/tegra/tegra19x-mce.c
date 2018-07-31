@@ -295,6 +295,9 @@ int tegra19x_mce_read_pmu_reg(u32 reg_id, u32 *value)
 	case NV_PMCR_EL0:
 		asm volatile("mrs %0, S3_3_c15_c4_4" : "=r" (rd_val) : );
 		break;
+	case NV_PMCRN_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_7" : "=r" (rd_val) : );
+		break;
 	case NV_PMINTENCLR_EL1:
 		asm volatile("mrs %0, S3_0_c15_c2_1" : "=r" (rd_val) : );
 		break;

@@ -1160,7 +1160,11 @@ dhd_get_memcheck_info(void)
 		DHD_INFO(("[WIFI_SEC] %s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
 		goto done;
 	} else {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+		ret = kernel_read(fp, (char *)&mem_val, 4, 0);
+#else
 		ret = kernel_read(fp, 0, (char *)&mem_val, 4);
+#endif
 		if (ret < 0) {
 			DHD_ERROR(("[WIFI_SEC] %s: File read error, ret=%d\n", __FUNCTION__, ret));
 			filp_close(fp, NULL);

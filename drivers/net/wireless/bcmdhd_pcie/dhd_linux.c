@@ -60,6 +60,9 @@
 #ifdef ENABLE_ADAPTIVE_SCHED
 #include <linux/cpufreq.h>
 #endif /* ENABLE_ADAPTIVE_SCHED */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
+#include <uapi/linux/sched/types.h>
+#endif
 
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
@@ -997,6 +1000,7 @@ void dhd_select_cpu_candidacy(dhd_info_t *dhd)
 	return;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0))
 /*
  * Function to handle CPU Hotplug notifications.
  * One of the task it does is to trigger the CPU Candidacy algorithm
@@ -1029,6 +1033,7 @@ dhd_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
 
 	return NOTIFY_OK;
 }
+#endif
 
 #if defined(DHD_LB_STATS)
 void dhd_lb_stats_init(dhd_pub_t *dhdp)
@@ -4618,8 +4623,10 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
 		ifp = dhd->iflist[ifidx];
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 		if (ifp->net)
 			ifp->net->last_rx = jiffies;
+#endif
 
 		if (ntoh16(skb->protocol) != ETHER_TYPE_BRCM) {
 			dhdp->dstats.rx_bytes += skb->len;
@@ -6505,11 +6512,23 @@ dhd_allocate_if(dhd_pub_t *dhdpub, int ifidx, char *name,
 
 #ifdef WL_CFG80211
 	if (ifidx == 0)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+		ifp->net->priv_destructor = free_netdev;
+#else
 		ifp->net->destructor = free_netdev;
+#endif
 	else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+		ifp->net->priv_destructor = dhd_netdev_free;
+#else
 		ifp->net->destructor = dhd_netdev_free;
+#endif
+#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0))
+	ifp->net->priv_destructor = free_netdev;
 #else
 	ifp->net->destructor = free_netdev;
+#endif
 #endif /* WL_CFG80211 */
 	strncpy(ifp->name, ifp->net->name, IFNAMSIZ);
 	ifp->name[IFNAMSIZ - 1] = '\0';
@@ -7354,15 +7373,19 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		 * CPU Hotplug framework to change the CPU for each job dynamically
 		 * using candidacy algorithm.
 		 */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0))
 		dhd->cpu_notifier.notifier_call = dhd_cpu_callback;
 		register_cpu_notifier(&dhd->cpu_notifier); /* Register a callback */
+#endif
 	} else {
 		/*
 		 * We are unable to initialize CPU masks, so candidacy algorithm
 		 * won't run, but still Load Balancing will be honoured based
 		 * on the CPUs allocated for a given job statically during init
 		 */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0))
 		dhd->cpu_notifier.notifier_call = NULL;
+#endif
 		DHD_ERROR(("%s(): dhd_cpumasks_init failed CPUs for JOB would be static\n",
 			__FUNCTION__));
 	}
@@ -9793,8 +9816,10 @@ void dhd_detach(dhd_pub_t *dhdp)
 	tasklet_disable(&dhd->rx_compl_tasklet);
 	tasklet_kill(&dhd->rx_compl_tasklet);
 #endif /* DHD_LB_RXC */
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0))
 	if (dhd->cpu_notifier.notifier_call != NULL)
 		unregister_cpu_notifier(&dhd->cpu_notifier);
+#endif
 	dhd_cpumasks_deinit(dhd);
 #endif /* DHD_LB */
 
@@ -10387,14 +10412,18 @@ dhd_os_get_image_block(char *buf, int len, void *image)
 		return 0;
 
 	size = i_size_read(file_inode(fp));
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+	rdlen = kernel_read(fp, buf, len, &fp->f_pos);
+#else
 	rdlen = kernel_read(fp, fp->f_pos, buf, MIN(len, size));
+	if (rdlen > 0)
+		fp->f_pos += rdlen;
+#endif
 
 	if (len >= size && size != rdlen) {
 		return -EIO;
 	}
 
-	if (rdlen > 0)
-		fp->f_pos += rdlen;
 
 	return rdlen;
 }
@@ -13394,7 +13423,11 @@ void dhd_get_memdump_info(dhd_pub_t *dhd)
 		DHD_INFO(("%s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
 		goto done;
 	} else {
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+		ret = kernel_read(fp, (char *)&mem_val, 4, 0);
+#else
 		ret = kernel_read(fp, 0, (char *)&mem_val, 4);
+#endif
 		if (ret < 0) {
 			DHD_ERROR(("%s: File read error, ret=%d\n", __FUNCTION__, ret));
 			filp_close(fp, NULL);
@@ -13606,7 +13639,11 @@ void dhd_get_assert_info(dhd_pub_t *dhd)
 		DHD_ERROR(("%s: File [%s] doesn't exist\n", __FUNCTION__, filepath));
 	} else {
 		int mem_val = 0;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+		int ret = kernel_read(fp, (char *)&mem_val, 4, 0);
+#else
 		int ret = kernel_read(fp, 0, (char *)&mem_val, 4);
+#endif
 		if (ret < 0) {
 			DHD_ERROR(("%s: File read error, ret=%d\n", __FUNCTION__, ret));
 		} else {
@@ -14324,7 +14361,11 @@ dhd_read_file(const char *filepath, char *buf, int buf_len)
 		return BCME_ERROR;
 	}
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+	ret = kernel_read(fp, buf, buf_len, 0);
+#else
 	ret = kernel_read(fp, 0, buf, buf_len);
+#endif
 	filp_close(fp, NULL);
 
 	/* restore previous address limit */
@@ -14440,7 +14481,11 @@ int dhd_extract_crc(char *filename)
 		goto err;
 	}
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0))
+	ret = kernel_read(fp, crcchk, 8, &ret);
+#else
 	ret = kernel_read(fp, ret, crcchk, 8);
+#endif
 	if (ret < 0) {
 		DHD_ERROR(("read failed\n"));
 		crc = ret;

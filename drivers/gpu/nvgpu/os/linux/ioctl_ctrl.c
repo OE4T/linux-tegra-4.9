@@ -515,7 +515,7 @@ static int gk20a_ctrl_get_tpc_masks(struct gk20a *g,
 {
 	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
-	const u32 gpc_tpc_mask_size = sizeof(u32) * gr->gpc_count;
+	const u32 gpc_tpc_mask_size = sizeof(u32) * gr->max_gpc_count;
 
 	if (args->mask_buf_size > 0) {
 		size_t write_size = gpc_tpc_mask_size;

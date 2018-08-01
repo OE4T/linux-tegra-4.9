@@ -3196,10 +3196,10 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 					sizeof(u32));
 
 	if (gr->gpc_tpc_mask == NULL)
-		gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->gpc_count *
+		gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->max_gpc_count *
 					sizeof(u32));
 	else
-		memset(gr->gpc_tpc_mask, 0,  gr->gpc_count *
+		memset(gr->gpc_tpc_mask, 0,  gr->max_gpc_count *
 					sizeof(u32));
 
 	if (gr->gpc_zcb_count == NULL)
@@ -3228,6 +3228,13 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	    !gr->gpc_ppc_count || !gr->gpc_skip_mask)
 		goto clean_up;
 
+	for (gpc_index = 0; gpc_index < gr->max_gpc_count; gpc_index++) {
+		if (g->ops.gr.get_gpc_tpc_mask) {
+			gr->gpc_tpc_mask[gpc_index] =
+				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
+		}
+	}
+
 	gr->ppc_count = 0;
 	gr->tpc_count = 0;
 	gr->zcb_count = 0;
@@ -3242,10 +3249,6 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		gr->gpc_zcb_count[gpc_index] =
 			gr_gpc0_fs_gpc_num_available_zculls_v(tmp);
 		gr->zcb_count += gr->gpc_zcb_count[gpc_index];
-
-		if (g->ops.gr.get_gpc_tpc_mask)
-			gr->gpc_tpc_mask[gpc_index] =
-				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
 
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
 			if (!gr->pes_tpc_count[pes_index]) {

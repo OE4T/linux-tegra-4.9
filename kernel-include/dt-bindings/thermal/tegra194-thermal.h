@@ -14,9 +14,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ABI_MACH_T194_THERMAL_H
-#define __ABI_MACH_T194_THERMAL_H
+#ifndef BPMP_ABI_MACH_T194_THERMAL_H
+#define BPMP_ABI_MACH_T194_THERMAL_H
 
+/**
+ * @file
+ * @defgroup bpmp_thermal_ids Thermal Zone ID's
+ * @{
+ */
 #define THERMAL_ZONE_RESERVED0	0
 #define THERMAL_ZONE_RESERVED1  1
 #define THERMAL_ZONE_CPU	2
@@ -26,5 +31,6 @@
 #define THERMAL_ZONE_AO		6
 #define THERMAL_ZONE_TJ_MAX	7
 #define THERMAL_ZONE_COUNT	8
+/** @} */
 
 #endif

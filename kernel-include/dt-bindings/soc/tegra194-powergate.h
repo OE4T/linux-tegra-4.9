@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,9 +14,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ABI_MACH_T194_POWERGATE_T194_H_
-#define __ABI_MACH_T194_POWERGATE_T194_H_
+#ifndef BPMP_ABI_MACH_T194_POWERGATE_T194_H
+#define BPMP_ABI_MACH_T194_POWERGATE_T194_H
 
+/**
+ * @file
+ * @defgroup bpmp_pdomain_ids Power Domain ID's
+ * @{
+ */
 #define TEGRA194_POWER_DOMAIN_AUD	1
 #define TEGRA194_POWER_DOMAIN_DISP	2
 #define TEGRA194_POWER_DOMAIN_DISPB	3
@@ -45,5 +50,6 @@
 #define TEGRA194_POWER_DOMAIN_CV	26
 #define TEGRA194_POWER_DOMAIN_GPU	27
 #define TEGRA194_POWER_DOMAIN_MAX	27
+/** @} */
 
 #endif

@@ -14,9 +14,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ABI_MACH_T194_RESET_H
-#define __ABI_MACH_T194_RESET_H
+#ifndef BPMP_ABI_MACH_T194_RESET_H
+#define BPMP_ABI_MACH_T194_RESET_H
 
+/**
+ * @file
+ * @defgroup bpmp_reset_ids Reset ID's
+ * @brief Identifiers for Resets controllable by firmware
+ * @{
+ */
 #define TEGRA194_RESET_ACTMON			1
 #define TEGRA194_RESET_ADSP_ALL			2
 #define TEGRA194_RESET_AFI			3
@@ -175,5 +181,7 @@
 #define TEGRA194_RESET_PEX_USB_UPHY_PLL2	161
 #define TEGRA194_RESET_PEX_USB_UPHY_PLL3	162
 #define TEGRA194_RESET_MSSNVL			180
+
+/** @} */
 
 #endif

@@ -14,11 +14,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ABI_MACH_T194_CLOCK_H
-#define __ABI_MACH_T194_CLOCK_H
+#ifndef BPMP_ABI_MACH_T194_CLOCK_H
+#define BPMP_ABI_MACH_T194_CLOCK_H
 
-/** @file */
-
+/**
+ * @file
+ * @defgroup bpmp_clock_ids Clock ID's
+ * @{
+ */
 /** @brief output of mux controlled by TEGRA194_CLK_SOC_ACTMON */
 #define TEGRA194_CLK_ACTMON			1
 /** @brief output of gate CLK_ENB_ADSP */
@@ -694,5 +697,7 @@
 #define TEGRA194_CLK_TSENSOR			330
 /** @brief CLK_RST_CONTROLLER_CLK_OUT_ENB_XUSB_0.CLK_ENB_XUSB gate */
 #define TEGRA194_CLK_XUSB_PADCTL		331
+
+/** @} */
 
 #endif

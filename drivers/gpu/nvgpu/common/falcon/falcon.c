@@ -284,10 +284,11 @@ static void nvgpu_flcn_print_mem(struct nvgpu_falcon *flcn, u32 src,
 			break;
 		}
 
-		for (i = 0; i < (byte_read_count >> 2); i += 4)
+		for (i = 0; i < (byte_read_count >> 2); i += 4) {
 			nvgpu_info(flcn->g, "%#06x: %#010x %#010x %#010x %#010x",
-			src + (i << 2), buff[i], buff[i+1],
-			buff[i+2], buff[i+3]);
+				src + (i << 2), buff[i], buff[i+1],
+				buff[i+2], buff[i+3]);
+		}
 
 		src += byte_read_count;
 		size -= byte_read_count;

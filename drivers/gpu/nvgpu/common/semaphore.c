@@ -77,8 +77,9 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 	 * integer range. This way any buggy comparisons would start to fail
 	 * sooner rather than later.
 	 */
-	for (i = 0; i < PAGE_SIZE * SEMAPHORE_POOL_COUNT; i += 4)
+	for (i = 0; i < PAGE_SIZE * SEMAPHORE_POOL_COUNT; i += 4) {
 		nvgpu_mem_wr(gk20a, &sea->sea_mem, i, 0xfffffff0);
+	}
 
 out:
 	__unlock_sema_sea(sea);

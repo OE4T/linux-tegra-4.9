@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -358,8 +358,9 @@ int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
 		}
 	}
 
-	for (i = 0; i < PMU_QUEUE_COUNT; i++)
+	for (i = 0; i < PMU_QUEUE_COUNT; i++) {
 		nvgpu_pmu_queue_init(pmu, i, init);
+	}
 
 	if (!nvgpu_alloc_initialized(&pmu->dmem)) {
 		/* Align start and end addresses */
@@ -480,8 +481,9 @@ static int nvgpu_pg_init_task(void *arg)
 
 	}
 
-	while (!nvgpu_thread_should_stop(&pg_init->state_task))
+	while (!nvgpu_thread_should_stop(&pg_init->state_task)) {
 		nvgpu_usleep_range(5000, 5100);
+	}
 
 	nvgpu_log_fn(g, "thread exit");
 

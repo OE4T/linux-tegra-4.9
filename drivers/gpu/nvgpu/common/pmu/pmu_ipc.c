@@ -39,8 +39,9 @@ void nvgpu_pmu_seq_init(struct nvgpu_pmu *pmu)
 	memset(pmu->pmu_seq_tbl, 0,
 		sizeof(pmu->pmu_seq_tbl));
 
-	for (i = 0; i < PMU_MAX_NUM_SEQUENCES; i++)
+	for (i = 0; i < PMU_MAX_NUM_SEQUENCES; i++) {
 		pmu->seq[i].id = i;
+	}
 }
 
 static int pmu_seq_acquire(struct nvgpu_pmu *pmu,

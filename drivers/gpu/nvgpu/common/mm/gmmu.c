@@ -861,8 +861,9 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 	pte_size = (u32)(l->entry_size / sizeof(u32));
 
 	if (data) {
-		for (i = 0; i < pte_size; i++)
+		for (i = 0; i < pte_size; i++) {
 			data[i] = nvgpu_mem_rd32(g, pd->mem, pte_base + i);
+		}
 	}
 
 	if (pd_out)

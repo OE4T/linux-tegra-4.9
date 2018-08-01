@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -194,8 +194,9 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 
 	/* chain the elements together to form the initial free list  */
 	nr_nodes = (int)count;
-	for (i = 0; i < nr_nodes; i++)
+	for (i = 0; i < nr_nodes; i++) {
 		a->next[i] = i + 1;
+	}
 	a->next[nr_nodes - 1] = -1;
 
 	a->base = base;

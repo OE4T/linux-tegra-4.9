@@ -881,8 +881,9 @@ static void get_pmu_init_msg_pmu_queue_params_v4(
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
 	if (tmp_id != 0) {
-		for (i = 0 ; i < tmp_id; i++)
+		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
+		}
 	}
 	queue->offset   = init->queue_offset + current_ptr;
 }
@@ -908,8 +909,9 @@ static void get_pmu_init_msg_pmu_queue_params_v5(
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
 	if (tmp_id != 0) {
-		for (i = 0 ; i < tmp_id; i++)
+		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
+		}
 	}
 	queue->offset   = init->queue_offset + current_ptr;
 }
@@ -935,8 +937,9 @@ static void get_pmu_init_msg_pmu_queue_params_v3(
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
 	if (tmp_id != 0) {
-		for (i = 0 ; i < tmp_id; i++)
+		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
+		}
 	}
 	queue->offset   = init->queue_offset + current_ptr;
 }

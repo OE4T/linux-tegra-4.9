@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -214,8 +214,9 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 	bend = a->end;
 
 	/* First make sure the LLs are valid. */
-	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++)
+	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
 		nvgpu_init_list_node(balloc_get_order_list(a, i));
+	}
 
 	while (bstart < bend) {
 		order = __balloc_max_order_in(a, bstart, bend);
@@ -505,8 +506,9 @@ static u64 __balloc_do_alloc(struct nvgpu_buddy_allocator *a,
 
 	split_order = order;
 	while (split_order <= a->max_order &&
-	       !(bud = __balloc_find_buddy(a, split_order, pte_size)))
+	       !(bud = __balloc_find_buddy(a, split_order, pte_size))) {
 		split_order++;
+	}
 
 	/* Out of memory! */
 	if (!bud)
@@ -885,8 +887,9 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	balloc_alloc_fixed(a, falloc);
 
 	nvgpu_list_for_each_entry(bud, &falloc->buddies,
-				nvgpu_buddy, buddy_entry)
+				nvgpu_buddy, buddy_entry) {
 		real_bytes += (bud->end - bud->start);
+	}
 
 	a->bytes_alloced += len;
 	a->bytes_alloced_real += real_bytes;

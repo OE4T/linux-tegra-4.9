@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -273,8 +273,9 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 	} else {
 		/* find tree successor */
 		y = z->right;
-		while (y->left)
+		while (y->left) {
 			y = y->left;
+		}
 	}
 
 	/* x is y's only child */
@@ -420,8 +421,9 @@ void nvgpu_rbtree_enum_next(struct nvgpu_rbtree_node **node,
 		/* pick the leftmost node of the right subtree ? */
 		if (curr->right) {
 			curr = curr->right;
-			for (; curr->left;)
+			for (; curr->left;) {
 				curr = curr->left;
+			}
 		} else {
 			/* go up until we find the right inorder node */
 			for (curr = curr->parent; curr; curr = curr->parent) {

@@ -75,8 +75,9 @@ int nvgpu_vm_pde_coverage_bit_count(struct vm_gk20a *vm)
 	 * heirarchy: the last level is PTEs so we really want the level
 	 * before that which is the last level of PDEs.
 	 */
-	while (vm->mmu_levels[final_pde_level + 2].update_entry)
+	while (vm->mmu_levels[final_pde_level + 2].update_entry) {
 		final_pde_level++;
+	}
 
 	return vm->mmu_levels[final_pde_level].lo_bit[0];
 }
@@ -93,9 +94,10 @@ static void __nvgpu_vm_free_entries(struct vm_gk20a *vm,
 	}
 
 	if (pd->entries) {
-		for (i = 0; i < pd->num_entries; i++)
+		for (i = 0; i < pd->num_entries; i++) {
 			__nvgpu_vm_free_entries(vm, &pd->entries[i],
 					      level + 1);
+		}
 		nvgpu_vfree(vm->mm->g, pd->entries);
 		pd->entries = NULL;
 	}
@@ -112,8 +114,9 @@ static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
 	if (!pdb->entries)
 		return;
 
-	for (i = 0; i < pdb->num_entries; i++)
+	for (i = 0; i < pdb->num_entries; i++) {
 		__nvgpu_vm_free_entries(vm, &pdb->entries[i], 1);
+	}
 
 	nvgpu_vfree(g, pdb->entries);
 	pdb->entries = NULL;
@@ -750,8 +753,9 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 	nvgpu_vm_mapping_batch_start(&batch);
 	vm->kref_put_batch = &batch;
 
-	for (i = 0; i < num_buffers; ++i)
+	for (i = 0; i < num_buffers; ++i) {
 		nvgpu_ref_put(&mapped_buffers[i]->ref, __nvgpu_vm_unmap_ref);
+	}
 
 	vm->kref_put_batch = NULL;
 	nvgpu_vm_mapping_batch_finish_locked(vm, &batch);

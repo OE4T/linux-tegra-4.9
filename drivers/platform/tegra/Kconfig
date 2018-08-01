@@ -36,13 +36,6 @@ config NV_TEGRA_IVC
 	  Enable the Tegra IVC library, which implements a lockless, shared-
 	  memory queue.
 
-config TEGRA_NVDUMPER
-	bool "Enable nvdumper"
-	depends on ARCH_TEGRA
-	default n
-	help
-	  This is debug feature to dump whole memory when system crashes.
-
 config TEGRA_HV_XHCI_DEBUG
 	bool "Enable Tegra Hypervisor XHCI Server Debug"
 	depends on TEGRA_HV_MANAGER

@@ -21,7 +21,7 @@ choice
 	  Select this entry to enable gk20a scaling
 
 config GK20A_DEVFREQ
-	depends on COMMON_CLK
+	depends on COMMON_CLK && PM_DEVFREQ
 	bool "Use Devfreq"
 	help
 	  Select this to use devfreq based scaling.

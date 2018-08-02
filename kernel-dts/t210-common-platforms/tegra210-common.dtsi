@@ -144,6 +144,7 @@
 
 	i2c@7000c700 {
 		nvidia,restrict-clk-change;
+		print-rate-limit = <120 1>;
 	};
 
 	nvdumper {

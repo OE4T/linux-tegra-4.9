@@ -856,7 +856,7 @@ static int m88e1111_config_init(struct phy_device *phydev)
 
 static int m88e1121_config_init(struct phy_device *phydev)
 {
-	int err, oldpage, temp;
+	int err, oldpage;
 
 	oldpage = phy_read(phydev, MII_MARVELL_PHY_PAGE);
 
@@ -869,17 +869,6 @@ static int m88e1121_config_init(struct phy_device *phydev)
 			MII_88E1121_PHY_LED_DEF);
 	if (err < 0)
 		return err;
-
-	if (phy_interrupt_is_valid(phydev)) {
-		/* Setup LED[2] as interrupt pin (active low) */
-		temp = phy_read(phydev, MII_88E1318S_PHY_LED_TCR);
-		temp &= ~MII_88E1318S_PHY_LED_TCR_FORCE_INT;
-		temp |= MII_88E1318S_PHY_LED_TCR_INTn_ENABLE;
-		temp |= MII_88E1318S_PHY_LED_TCR_INT_ACTIVE_LOW;
-		err = phy_write(phydev, MII_88E1318S_PHY_LED_TCR, temp);
-		if (err < 0)
-			return err;
-	}
 
 	phy_write(phydev, MII_MARVELL_PHY_PAGE, oldpage);
 

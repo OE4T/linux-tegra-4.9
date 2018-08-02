@@ -135,7 +135,6 @@ void gr_gv11b_powergate_tpc(struct gk20a *g)
 	u32 tpc_pg_status = gk20a_readl(g, fuse_status_opt_tpc_gpc_r(0));
 
 	if (tpc_pg_status == g->tpc_pg_mask) {
-		nvgpu_info(g, "TPC-PG mask and TPC-PG status is same");
 		return;
 	}
 

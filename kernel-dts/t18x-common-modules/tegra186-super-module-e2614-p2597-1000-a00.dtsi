@@ -179,6 +179,9 @@
                         gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
 			vdd-supply = <&spmic_sd3>;
 			vlogic-supply = <&spmic_sd3>;
+			geomagnetic_rotation_vector_disable = <1>;
+			gyroscope_uncalibrated_disable = <1>;
+			quaternion_disable = <1>;
 			status = "disabled";
                 };
 

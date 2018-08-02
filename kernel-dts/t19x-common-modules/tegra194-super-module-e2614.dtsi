@@ -162,6 +162,9 @@
                         interrupts = <TEGRA194_AON_GPIO(AA, 2) 0x01>;
                         accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
                         gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
+			geomagnetic_rotation_vector_disable = <1>;
+			gyroscope_uncalibrated_disable = <1>;
+			quaternion_disable = <1>;
 			status = "disabled";
                 };
 

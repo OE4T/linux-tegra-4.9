@@ -907,8 +907,9 @@ int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 	memset(f->active_engines_list, 0xff, (f->max_engines * sizeof(u32)));
 
 	/* pbdma map needs to be in place before calling engine info init */
-	for (i = 0; i < f->num_pbdma; ++i)
+	for (i = 0; i < f->num_pbdma; ++i) {
 		f->pbdma_map[i] = gk20a_readl(g, fifo_pbdma_map_r(i));
+	}
 
 	g->ops.fifo.init_engine_info(f);
 
@@ -2496,9 +2497,10 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 	     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
 
 		pbdma_intr_err = (unsigned long)pbdma_intr_0;
-		for_each_set_bit(bit, &pbdma_intr_err, 32)
+		for_each_set_bit(bit, &pbdma_intr_err, 32) {
 			nvgpu_err(g, "PBDMA intr %s Error",
 				pbdma_intr_fault_type_desc[bit]);
+		}
 
 		nvgpu_err(g,
 			"pbdma_intr_0(%d):0x%08x PBH: %08x "
@@ -2851,8 +2853,9 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 		return 0;
 
 	/* we have no idea which runlist we are using. lock all */
-	for (i = 0; i < g->fifo.max_runlists; i++)
+	for (i = 0; i < g->fifo.max_runlists; i++) {
 		nvgpu_mutex_acquire(&f->runlist_info[i].runlist_lock);
+	}
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
@@ -2861,8 +2864,9 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	for (i = 0; i < g->fifo.max_runlists; i++)
+	for (i = 0; i < g->fifo.max_runlists; i++) {
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
+	}
 
 	if (ret) {
 		if (nvgpu_platform_is_silicon(g)) {
@@ -2891,8 +2895,9 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 		return 0;
 
 	/* we have no idea which runlist we are using. lock all */
-	for (i = 0; i < g->fifo.max_runlists; i++)
+	for (i = 0; i < g->fifo.max_runlists; i++) {
 		nvgpu_mutex_acquire(&f->runlist_info[i].runlist_lock);
+	}
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
@@ -2901,8 +2906,9 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	if (!mutex_ret)
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	for (i = 0; i < g->fifo.max_runlists; i++)
+	for (i = 0; i < g->fifo.max_runlists; i++) {
 		nvgpu_mutex_release(&f->runlist_info[i].runlist_lock);
+	}
 
 	if (ret) {
 		if (nvgpu_platform_is_silicon(g)) {

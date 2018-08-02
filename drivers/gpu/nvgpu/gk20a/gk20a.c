@@ -402,8 +402,9 @@ int gk20a_wait_for_idle(struct gk20a *g)
 		return -ENODEV;
 
 	while ((nvgpu_atomic_read(&g->usage_count) != target_usage_count)
-			&& (wait_length-- >= 0))
+			&& (wait_length-- >= 0)) {
 		nvgpu_msleep(20);
+	}
 
 	if (wait_length < 0) {
 		nvgpu_warn(g, "Timed out waiting for idle (%d)!\n",

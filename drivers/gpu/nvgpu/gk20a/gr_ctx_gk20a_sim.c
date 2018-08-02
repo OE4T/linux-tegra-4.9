@@ -154,21 +154,25 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 		goto fail;
 	}
 
-	for (i = 0; i < g->gr.ctx_vars.ucode.fecs.inst.count; i++)
+	for (i = 0; i < g->gr.ctx_vars.ucode.fecs.inst.count; i++) {
 		g->sim->esc_readl(g, "GRCTX_UCODE_INST_FECS",
 				    i, &g->gr.ctx_vars.ucode.fecs.inst.l[i]);
+	}
 
-	for (i = 0; i < g->gr.ctx_vars.ucode.fecs.data.count; i++)
+	for (i = 0; i < g->gr.ctx_vars.ucode.fecs.data.count; i++) {
 		g->sim->esc_readl(g, "GRCTX_UCODE_DATA_FECS",
 				    i, &g->gr.ctx_vars.ucode.fecs.data.l[i]);
+	}
 
-	for (i = 0; i < g->gr.ctx_vars.ucode.gpccs.inst.count; i++)
+	for (i = 0; i < g->gr.ctx_vars.ucode.gpccs.inst.count; i++) {
 		g->sim->esc_readl(g, "GRCTX_UCODE_INST_GPCCS",
 				    i, &g->gr.ctx_vars.ucode.gpccs.inst.l[i]);
+	}
 
-	for (i = 0; i < g->gr.ctx_vars.ucode.gpccs.data.count; i++)
+	for (i = 0; i < g->gr.ctx_vars.ucode.gpccs.data.count; i++) {
 		g->sim->esc_readl(g, "GRCTX_UCODE_DATA_GPCCS",
 				    i, &g->gr.ctx_vars.ucode.gpccs.data.l[i]);
+	}
 
 	for (i = 0; i < g->gr.ctx_vars.sw_bundle_init.count; i++) {
 		struct av_gk20a *l = g->gr.ctx_vars.sw_bundle_init.l;

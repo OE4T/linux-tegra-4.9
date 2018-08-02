@@ -213,14 +213,16 @@ static int gk20a_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
 	gk20a_writel(g, base_addr + falcon_falcon_dmemc_r(port),
 		src | falcon_falcon_dmemc_aincr_f(1));
 
-	for (i = 0; i < words; i++)
+	for (i = 0; i < words; i++) {
 		dst_u32[i] = gk20a_readl(g,
 			base_addr + falcon_falcon_dmemd_r(port));
+	}
 
 	if (bytes > 0) {
 		data = gk20a_readl(g, base_addr + falcon_falcon_dmemd_r(port));
-		for (i = 0; i < bytes; i++)
+		for (i = 0; i < bytes; i++) {
 			dst[(words << 2) + i] = ((u8 *)&data)[i];
+		}
 	}
 
 	nvgpu_mutex_release(&flcn->copy_lock);
@@ -256,14 +258,16 @@ static int gk20a_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,
 	gk20a_writel(g, base_addr + falcon_falcon_dmemc_r(port),
 		dst | falcon_falcon_dmemc_aincw_f(1));
 
-	for (i = 0; i < words; i++)
+	for (i = 0; i < words; i++) {
 		gk20a_writel(g,
 			base_addr + falcon_falcon_dmemd_r(port), src_u32[i]);
+	}
 
 	if (bytes > 0) {
 		data = 0;
-		for (i = 0; i < bytes; i++)
+		for (i = 0; i < bytes; i++) {
 			((u8 *)&data)[i] = src[(words << 2) + i];
+                }
 		gk20a_writel(g, base_addr + falcon_falcon_dmemd_r(port), data);
 	}
 
@@ -313,14 +317,16 @@ static int gk20a_flcn_copy_from_imem(struct nvgpu_falcon *flcn, u32 src,
 		falcon_falcon_imemc_blk_f(blk) |
 		falcon_falcon_dmemc_aincr_f(1));
 
-	for (i = 0; i < words; i++)
+	for (i = 0; i < words; i++) {
 		dst_u32[i] = gk20a_readl(g,
 			base_addr + falcon_falcon_imemd_r(port));
+	}
 
 	if (bytes > 0) {
 		data = gk20a_readl(g, base_addr + falcon_falcon_imemd_r(port));
-		for (i = 0; i < bytes; i++)
+		for (i = 0; i < bytes; i++) {
 			dst[(words << 2) + i] = ((u8 *)&data)[i];
+		}
 	}
 
 	nvgpu_mutex_release(&flcn->copy_lock);

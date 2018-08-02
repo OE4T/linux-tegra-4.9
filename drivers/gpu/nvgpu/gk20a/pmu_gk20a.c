@@ -81,9 +81,10 @@ static void print_pmu_trace(struct nvgpu_pmu *pmu)
 
 	nvgpu_err(g, "dump PMU trace buffer");
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
-		for (j = 0; j < 0x40; j++)
+		for (j = 0; j < 0x40; j++) {
 			if (trace1[(i / 4) + j])
 				break;
+		}
 		if (j == 0x40)
 			break;
 		count = scnprintf(buf, 0x40, "Index %x: ", trace1[(i / 4)]);
@@ -634,13 +635,15 @@ void gk20a_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned int i;
 
-	for (i = 0; i < pwr_pmu_mailbox__size_1_v(); i++)
+	for (i = 0; i < pwr_pmu_mailbox__size_1_v(); i++) {
 		nvgpu_err(g, "pwr_pmu_mailbox_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_mailbox_r(i)));
+	}
 
-	for (i = 0; i < pwr_pmu_debug__size_1_v(); i++)
+	for (i = 0; i < pwr_pmu_debug__size_1_v(); i++) {
 		nvgpu_err(g, "pwr_pmu_debug_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_debug_r(i)));
+	}
 
 	i = gk20a_readl(g, pwr_pmu_bar0_error_status_r());
 	nvgpu_err(g, "pwr_pmu_bar0_error_status_r : 0x%x", i);

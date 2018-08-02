@@ -149,9 +149,10 @@ void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 	nvgpu_err(g, "gr_fecs_ctxsw_status_1_r : 0x%x",
 		gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
 
-	for (i = 0; i < g->ops.gr.fecs_ctxsw_mailbox_size(); i++)
+	for (i = 0; i < g->ops.gr.fecs_ctxsw_mailbox_size(); i++) {
 		nvgpu_err(g, "gr_fecs_ctxsw_mailbox_r(%d) : 0x%x",
 			i, gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(i)));
+	}
 
 	nvgpu_err(g, "gr_fecs_engctl_r : 0x%x",
 		gk20a_readl(g, gr_fecs_engctl_r()));
@@ -1144,8 +1145,9 @@ static inline u32 count_bits(u32 mask)
 {
 	u32 temp = mask;
 	u32 count;
-	for (count = 0; temp != 0; count++)
+	for (count = 0; temp != 0; count++) {
 		temp &= temp - 1;
+	}
 
 	return count;
 }
@@ -1485,9 +1487,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 				 GR_IDLE_CHECK_DEFAULT);
 
 	/* load ctx init */
-	for (i = 0; i < sw_ctx_load->count; i++)
+	for (i = 0; i < sw_ctx_load->count; i++) {
 		gk20a_writel(g, sw_ctx_load->l[i].addr,
 			     sw_ctx_load->l[i].value);
+	}
 
 	if (g->ops.gr.init_preemption_state)
 		g->ops.gr.init_preemption_state(g);
@@ -2029,8 +2032,9 @@ static int gr_gk20a_copy_ctxsw_ucode_segments(
 
 	/* compute a "checksum" for the boot binary to detect its version */
 	segments->boot_signature = 0;
-	for (i = 0; i < segments->boot.size / sizeof(u32); i++)
+	for (i = 0; i < segments->boot.size / sizeof(u32); i++) {
 		segments->boot_signature += bootimage[i];
+	}
 
 	return 0;
 }
@@ -3335,33 +3339,41 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	nvgpu_log_info(g, "tpc_count: %d", gr->tpc_count);
 	nvgpu_log_info(g, "ppc_count: %d", gr->ppc_count);
 
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		nvgpu_log_info(g, "gpc_tpc_count[%d] : %d",
 			   gpc_index, gr->gpc_tpc_count[gpc_index]);
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	}
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		nvgpu_log_info(g, "gpc_zcb_count[%d] : %d",
 			   gpc_index, gr->gpc_zcb_count[gpc_index]);
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	}
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		nvgpu_log_info(g, "gpc_ppc_count[%d] : %d",
 			   gpc_index, gr->gpc_ppc_count[gpc_index]);
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	}
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		nvgpu_log_info(g, "gpc_skip_mask[%d] : %d",
 			   gpc_index, gr->gpc_skip_mask[gpc_index]);
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	}
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		for (pes_index = 0;
 		     pes_index < gr->pe_count_per_gpc;
-		     pes_index++)
+		     pes_index++) {
 			nvgpu_log_info(g, "pes_tpc_count[%d][%d] : %d",
 				   pes_index, gpc_index,
 				   gr->pes_tpc_count[pes_index][gpc_index]);
+		}
+	}
 
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
+	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		for (pes_index = 0;
 		     pes_index < gr->pe_count_per_gpc;
-		     pes_index++)
+		     pes_index++) {
 			nvgpu_log_info(g, "pes_tpc_mask[%d][%d] : %d",
 				   pes_index, gpc_index,
 				   gr->pes_tpc_mask[pes_index][gpc_index]);
+		}
+	}
 
 	g->ops.gr.bundle_cb_defaults(g);
 	g->ops.gr.cb_size_default(g);
@@ -3537,9 +3549,11 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 			}
 		}
 
-		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
-			if (gr->gpc_tpc_count[gpc_index] > max_tpc_count)
+		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+			if (gr->gpc_tpc_count[gpc_index] > max_tpc_count) {
 				max_tpc_count = gr->gpc_tpc_count[gpc_index];
+			}
+		}
 
 		mul_factor = gr->gpc_count * max_tpc_count;
 		if (mul_factor & 0x1)
@@ -4534,9 +4548,10 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		g->ops.gr.disable_rd_coalesce(g);
 
 	/* load ctx init */
-	for (i = 0; i < sw_ctx_load->count; i++)
+	for (i = 0; i < sw_ctx_load->count; i++) {
 		gk20a_writel(g, sw_ctx_load->l[i].addr,
 			     sw_ctx_load->l[i].value);
+	}
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
@@ -4764,9 +4779,10 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 	gk20a_writel(g, gr_intr_en_r(), ~0);
 
 	/* load non_ctx init */
-	for (i = 0; i < sw_non_ctx_load->count; i++)
+	for (i = 0; i < sw_non_ctx_load->count; i++) {
 		gk20a_writel(g, sw_non_ctx_load->l[i].addr,
 			sw_non_ctx_load->l[i].value);
+	}
 
 	err = gr_gk20a_wait_mem_scrubbing(g);
 	if (err)
@@ -6321,9 +6337,10 @@ void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 {
 	u32 fbpa_id;
 
-	for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++)
+	for (fbpa_id = 0; fbpa_id < num_fbpas; fbpa_id++) {
 		priv_addr_table[(*t)++] = pri_fbpa_addr(g,
 				pri_fbpa_addr_mask(g, addr), fbpa_id);
+	}
 }
 
 int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
@@ -6334,9 +6351,10 @@ int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
 
     nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
 
-    for (ppc_num = 0; ppc_num < g->gr.gpc_ppc_count[gpc_num]; ppc_num++)
+    for (ppc_num = 0; ppc_num < g->gr.gpc_ppc_count[gpc_num]; ppc_num++) {
 	    priv_addr_table[(*t)++] = pri_ppc_addr(g, pri_ppccs_addr_mask(addr),
 						   gpc_num, ppc_num);
+    }
 
     return 0;
 }
@@ -6396,10 +6414,11 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 			if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
 				for (tpc_num = 0;
 				     tpc_num < g->gr.gpc_tpc_count[gpc_num];
-				     tpc_num++)
+				     tpc_num++) {
 					priv_addr_table[t++] =
 						pri_tpc_addr(g, pri_tpccs_addr_mask(addr),
 							     gpc_num, tpc_num);
+				}
 
 			else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC) {
 				err = gr_gk20a_split_ppc_broadcast_addr(g, addr, gpc_num,
@@ -6439,10 +6458,11 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
 			for (tpc_num = 0;
 			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
-			     tpc_num++)
+			     tpc_num++) {
 				priv_addr_table[t++] =
 					pri_tpc_addr(g, pri_tpccs_addr_mask(addr),
 						     gpc_num, tpc_num);
+			}
 		else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC)
 			err = gr_gk20a_split_ppc_broadcast_addr(g,
 					addr, gpc_num, priv_addr_table, &t);
@@ -7793,8 +7813,9 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 
 	nvgpu_log_info(g, "Reg Addr => HWPM Ctxt switch buffer offset");
 
-	for (i = 0; i < count; i++)
+	for (i = 0; i < count; i++) {
 		nvgpu_log_info(g, "%08x => %08x", map[i].addr, map[i].offset);
+	}
 
 	return 0;
 cleanup:

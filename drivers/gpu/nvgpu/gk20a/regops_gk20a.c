@@ -47,9 +47,10 @@ static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 static inline bool linear_search(u32 offset, const u32 *list, int size)
 {
 	int i;
-	for (i = 0; i < size; i++)
+	for (i = 0; i < size; i++) {
 		if (list[i] == offset)
 			return true;
+	}
 	return false;
 }
 

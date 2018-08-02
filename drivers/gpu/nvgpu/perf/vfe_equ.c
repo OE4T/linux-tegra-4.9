@@ -517,8 +517,9 @@ static u32 _vfe_equ_pmudatainit_quadratic(struct gk20a *g,
 
 	pset = (struct nv_pmu_vfe_equ_quadratic *) ppmudata;
 
-	for (i = 0; i < CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT; i++)
+	for (i = 0; i < CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT; i++) {
 		pset->coeffs[i] = pvfe_equ_quadratic->coeffs[i];
+	}
 
 	return status;
 }
@@ -547,8 +548,9 @@ static u32 vfe_equ_construct_quadratic(struct gk20a *g,
 	pvfeequ->super.super.pmudatainit =
 			_vfe_equ_pmudatainit_quadratic;
 
-	for (i = 0; i < CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT; i++)
+	for (i = 0; i < CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT; i++) {
 		pvfeequ->coeffs[i] = ptmpequ->coeffs[i];
+	}
 
 	return status;
 }

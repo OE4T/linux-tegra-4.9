@@ -808,14 +808,16 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	runlist_served_pbdmas = f->runlist_info[runlist_id].pbdma_bitmask;
 	runlist_served_engines = f->runlist_info[runlist_id].eng_bitmask;
 
-	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma)
+	for_each_set_bit(pbdma_id, &runlist_served_pbdmas, f->num_pbdma) {
 		ret |= gv11b_fifo_poll_pbdma_chan_status(g, tsgid, pbdma_id);
+	}
 
 	f->runlist_info[runlist_id].reset_eng_bitmask = 0;
 
-	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines)
+	for_each_set_bit(act_eng_id, &runlist_served_engines, f->max_engines) {
 		ret |= gv11b_fifo_poll_eng_ctx_status(g, tsgid, act_eng_id,
 				&f->runlist_info[runlist_id].reset_eng_bitmask);
+	}
 	return ret;
 }
 
@@ -1028,9 +1030,10 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	u32 num_runlists = 0;
 
 	nvgpu_log_fn(g, "acquire runlist_lock for all runlists");
-	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++)
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 		nvgpu_mutex_acquire(&f->runlist_info[rlid].
 			runlist_lock);
+	}
 
 	/* get runlist id and tsg */
 	if (id_type == ID_TYPE_TSG) {
@@ -1206,9 +1209,10 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 	} else {
 		nvgpu_log_fn(g, "release runlist_lock for all runlists");
-		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++)
+		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 			nvgpu_mutex_release(&f->runlist_info[rlid].
 				runlist_lock);
+		}
 	}
 }
 
@@ -1756,9 +1760,10 @@ void gv11b_fifo_init_eng_method_buffers(struct gk20a *g,
 			break;
 	}
 	if (err) {
-		for (i = (runque - 1); i >= 0; i--)
+		for (i = (runque - 1); i >= 0; i--) {
 			nvgpu_dma_unmap_free(vm,
 				 &tsg->eng_method_buffers[i]);
+		}
 
 		nvgpu_kfree(g, tsg->eng_method_buffers);
 		tsg->eng_method_buffers = NULL;
@@ -1778,8 +1783,9 @@ void gv11b_fifo_deinit_eng_method_buffers(struct gk20a *g,
 	if (tsg->eng_method_buffers == NULL)
 		return;
 
-	for (runque = 0; runque < g->fifo.num_pbdma; runque++)
+	for (runque = 0; runque < g->fifo.num_pbdma; runque++) {
 		nvgpu_dma_unmap_free(vm, &tsg->eng_method_buffers[runque]);
+	}
 
 	nvgpu_kfree(g, tsg->eng_method_buffers);
 	tsg->eng_method_buffers = NULL;

@@ -144,9 +144,10 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 			goto err_release_acr_fw;
 		}
 
-		for (index = 0; index < 9; index++)
+		for (index = 0; index < 9; index++) {
 			gv11b_dbg_pmu(g, "acr_ucode_header_t210_load %u\n",
 					acr_ucode_header_t210_load[index]);
+		}
 
 		acr_dmem = (u64 *)
 			&(((u8 *)acr_ucode_data_t210_load)[

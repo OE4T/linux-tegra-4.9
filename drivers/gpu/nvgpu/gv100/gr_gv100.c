@@ -229,9 +229,11 @@ int gr_gv100_init_sm_id_table(struct gk20a *g)
 		goto exit_build_table;
 	}
 
-	for (gpc = 0; gpc < g->gr.gpc_count; gpc++)
-		for (pes = 0; pes < g->gr.gpc_ppc_count[gpc]; pes++)
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		for (pes = 0; pes < g->gr.gpc_ppc_count[gpc]; pes++) {
 			gpc_tpc_mask[gpc] |= g->gr.pes_tpc_mask[pes][gpc];
+		}
+	}
 
 	for (gtpc = 0; gtpc < g->gr.tpc_count; gtpc++) {
 		maxperf = -1;

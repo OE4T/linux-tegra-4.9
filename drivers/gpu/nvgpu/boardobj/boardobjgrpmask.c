@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -63,8 +63,9 @@ u32 boardobjgrpmask_import(struct boardobjgrpmask *mask, u8 bitsize,
 	if (mask->bitcount != bitsize)
 		return -EINVAL;
 
-	for (index = 0; index < mask->maskdatacount; index++)
+	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = extmask->data[index];
+	}
 
 	BOARDOBJGRPMASK_NORMALIZE(mask);
 
@@ -83,8 +84,9 @@ u32 boardobjgrpmask_export(struct boardobjgrpmask *mask, u8 bitsize,
 	if (mask->bitcount != bitsize)
 		return -EINVAL;
 
-	for (index = 0; index < mask->maskdatacount; index++)
+	for (index = 0; index < mask->maskdatacount; index++) {
 		extmask->data[index] = mask->data[index];
+	}
 
 	return 0;
 }
@@ -95,8 +97,9 @@ u32 boardobjgrpmask_clr(struct boardobjgrpmask *mask)
 
 	if (mask == NULL)
 		return -EINVAL;
-	for (index = 0; index < mask->maskdatacount; index++)
+	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = 0;
+	}
 
 	return 0;
 }
@@ -107,8 +110,9 @@ u32 boardobjgrpmask_set(struct boardobjgrpmask *mask)
 
 	if (mask == NULL)
 		return -EINVAL;
-	for (index = 0; index < mask->maskdatacount; index++)
+	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = 0xFFFFFFFF;
+	}
 	BOARDOBJGRPMASK_NORMALIZE(mask);
 	return 0;
 }
@@ -119,8 +123,9 @@ u32 boardobjgrpmask_inv(struct boardobjgrpmask *mask)
 
 	if (mask == NULL)
 		return -EINVAL;
-	for (index = 0; index < mask->maskdatacount; index++)
+	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = ~mask->data[index];
+	}
 	BOARDOBJGRPMASK_NORMALIZE(mask);
 	return 0;
 }
@@ -281,8 +286,9 @@ u32 boardobjgrpmask_and(struct boardobjgrpmask *dst,
 	if (!boardobjgrpmask_sizeeq(dst, op2))
 		return -EINVAL;
 
-	for (index = 0; index < dst->maskdatacount; index++)
+	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] & op2->data[index];
+	}
 
 	return 0;
 }
@@ -298,8 +304,9 @@ u32 boardobjgrpmask_or(struct boardobjgrpmask *dst,
 	if (!boardobjgrpmask_sizeeq(dst, op2))
 		return -EINVAL;
 
-	for (index = 0; index < dst->maskdatacount; index++)
+	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] | op2->data[index];
+	}
 
 	return 0;
 }
@@ -315,8 +322,9 @@ u32 boardobjgrpmask_xor(struct boardobjgrpmask *dst,
 	if (!boardobjgrpmask_sizeeq(dst, op2))
 		return -EINVAL;
 
-	for (index = 0; index < dst->maskdatacount; index++)
+	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] ^ op2->data[index];
+	}
 
 	return 0;
 }
@@ -329,8 +337,9 @@ u32 boardobjgrpmask_copy(struct boardobjgrpmask *dst,
 	if (!boardobjgrpmask_sizeeq(dst, src))
 		return -EINVAL;
 
-	for (index = 0; index < dst->maskdatacount; index++)
+	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = src->data[index];
+	}
 
 	return 0;
 }

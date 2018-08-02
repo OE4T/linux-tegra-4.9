@@ -1572,8 +1572,9 @@ int gr_gp10b_load_smid_config(struct gk20a *g)
 		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(i), reg);
 	}
 
-	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
+	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++) {
 		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
+	}
 
 	nvgpu_kfree(g, tpc_sm_id);
 

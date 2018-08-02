@@ -70,8 +70,9 @@ static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)
 		pwr_falcon_dmemc_blk_f(blk) |
 		pwr_falcon_dmemc_aincw_f(1));
 
-	for (i = 0; i < words; i++)
+	for (i = 0; i < words; i++) {
 		gk20a_writel(g, pwr_falcon_dmemd_r(port), src_u32[i]);
+	}
 }
 
 int gp106_bios_devinit(struct gk20a *g)

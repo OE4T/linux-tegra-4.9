@@ -146,13 +146,21 @@ static int t19x_cpu_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	ktime_t delta_next;
+#endif
 
 	if (tegra_platform_is_vdk()) {
 		asm volatile("wfi\n");
 		return index;
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
+#else
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+#endif
+
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (testmode) {
@@ -182,8 +190,13 @@ static u32 t19x_make_power_state(u32 state)
 {
 	u32 wake_time;
 	struct timespec t;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	ktime_t delta_next;
 
+	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
+#else
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+#endif
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (testmode || test_c6_exit_latency)

@@ -128,10 +128,15 @@ static int t18x_denver_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
+
 	/* Todo: Based on future need, we might need the var latency_req. */
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	ktime_t delta_next;
+	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
+#else
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+#endif
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	/* Todo: Based on the Latency number reprogram deepest */
@@ -174,10 +179,15 @@ static int t18x_a57_enter_state(
 {
 	u32 wake_time;
 	struct timespec t;
+
 	/* Todo: Based on future need, we might need the var latency_req. */
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	ktime_t delta_next;
+	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
+#else
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+#endif
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	/* Todo: Based on the Latency number reprogram deepest */
@@ -214,7 +224,12 @@ static u32 t18x_make_power_state(u32 state)
 	u32 wake_time;
 	struct timespec t;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
+	ktime_t delta_next;
+	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
+#else
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+#endif
 	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (denver_testmode || a57_testmode)

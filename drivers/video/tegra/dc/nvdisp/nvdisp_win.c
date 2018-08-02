@@ -166,6 +166,29 @@ static int tegra_nvdisp_blend(struct tegra_dc_win *win)
 			WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_ZERO,
 			win_blend_nomatch_select_r());
 
+		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_ADD) {
+
+			blend_ctrl |=
+			(win_blend_layer_control_k2_f(0xff) |
+			win_blend_layer_control_k1_f(0xff) |
+			win_blend_layer_control_blend_enable_enable_f());
+
+			nvdisp_win_write(win,
+			/* note: WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_ONE is not
+			 * supported. Use K1 set to one instead. */
+			WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 |
+			WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_ONE|
+			WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_ZERO |
+			WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+			win_blend_match_select_r());
+
+			nvdisp_win_write(win,
+			WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_ZERO |
+			WIN_BLEND_FACT_DST_COLOR_NOMATCH_SEL_ZERO |
+			WIN_BLEND_FACT_SRC_ALPHA_NOMATCH_SEL_ZERO |
+			WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_ZERO,
+			win_blend_nomatch_select_r());
+
 		} else {
 			blend_ctrl |=
 			win_blend_layer_control_blend_enable_bypass_f();

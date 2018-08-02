@@ -427,10 +427,14 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 		       const struct tegra_dc_ext_flip_windowattr_v2 *flip_win)
 {
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
+
 	if (flip_win->blend == TEGRA_DC_EXT_BLEND_PREMULT)
 		win->flags |= TEGRA_WIN_FLAG_BLEND_PREMULT;
 	else if (flip_win->blend == TEGRA_DC_EXT_BLEND_COVERAGE)
 		win->flags |= TEGRA_WIN_FLAG_BLEND_COVERAGE;
+	else if (flip_win->blend == TEGRA_DC_EXT_BLEND_ADD)
+		win->flags |= TEGRA_WIN_FLAG_BLEND_ADD;
+
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_TILED)
 		win->flags |= TEGRA_WIN_FLAG_TILED;
 	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_INVERT_H)

@@ -52,10 +52,13 @@ struct nvmap_handle_ref;
 #define TEGRA_WIN_FLAG_DEGAMMA_SRGB	(2 << 17)
 #define TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10	(4 << 17)
 #define TEGRA_WIN_FLAG_DEGAMMA_YUV_12	(8 << 17)
+#define TEGRA_WIN_FLAG_BLEND_ADD	(1 << 21)
 #define TEGRA_WIN_FLAG_INVALID		(1 << 31) /* window does not exist. */
 
 #define TEGRA_WIN_BLEND_FLAGS_MASK \
-	(TEGRA_WIN_FLAG_BLEND_PREMULT | TEGRA_WIN_FLAG_BLEND_COVERAGE)
+	(TEGRA_WIN_FLAG_BLEND_PREMULT | \
+	 TEGRA_WIN_FLAG_BLEND_COVERAGE | \
+	 TEGRA_WIN_FLAG_BLEND_ADD)
 
 /* CSC struct for nvdisplay */
 struct tegra_dc_nvdisp_win_csc {

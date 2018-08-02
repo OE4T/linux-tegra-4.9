@@ -232,6 +232,34 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 					WIN_ALPHA_1BIT_WEIGHT0(0) |
 					WIN_ALPHA_1BIT_WEIGHT1(0xff),
 					DC_WINBUF_BLEND_ALPHA_1BIT);
+		} else if (blend->flags[idx] & TEGRA_WIN_FLAG_BLEND_ADD) {
+			tegra_dc_writel(dc,
+					WIN_K1(0xff) |
+					WIN_K2(0xff) |
+					WIN_BLEND_ENABLE |
+					WIN_DEPTH(dc->blend.z[idx]),
+					DC_WINBUF_BLEND_LAYER_CONTROL);
+
+			tegra_dc_writel(dc,
+					/* note: WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_ONE is not
+					 * supported. Use K1 set to one instead. */
+					WIN_BLEND_FACT_SRC_COLOR_MATCH_SEL_K1 |
+					WIN_BLEND_FACT_DST_COLOR_MATCH_SEL_ONE|
+					WIN_BLEND_FACT_SRC_ALPHA_MATCH_SEL_ZERO |
+					WIN_BLEND_FACT_DST_ALPHA_MATCH_SEL_ZERO,
+					DC_WINBUF_BLEND_MATCH_SELECT);
+
+			tegra_dc_writel(dc,
+					WIN_BLEND_FACT_SRC_COLOR_NOMATCH_SEL_ZERO |
+					WIN_BLEND_FACT_DST_COLOR_NOMATCH_SEL_ZERO |
+					WIN_BLEND_FACT_SRC_ALPHA_NOMATCH_SEL_ZERO |
+					WIN_BLEND_FACT_DST_ALPHA_NOMATCH_SEL_ZERO,
+					DC_WINBUF_BLEND_NOMATCH_SELECT);
+
+			tegra_dc_writel(dc,
+					WIN_ALPHA_1BIT_WEIGHT0(0) |
+					WIN_ALPHA_1BIT_WEIGHT1(0xff),
+					DC_WINBUF_BLEND_ALPHA_1BIT);
 		} else {
 			tegra_dc_writel(dc,
 					WIN_BLEND_BYPASS |

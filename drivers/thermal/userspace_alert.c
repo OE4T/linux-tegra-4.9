@@ -237,7 +237,7 @@ static int userspace_alert_therm_probe(struct platform_device *pdev)
 	init_waitqueue_head(&alert_data->alert_wait_queue);
 	dev_set_drvdata(dev, alert_data);
 
-	alert_data->cdev = thermal_cooling_device_register(cdev_type,
+	alert_data->cdev = thermal_of_cooling_device_register(np, cdev_type,
 			alert_data, &userspace_alert_cdev_ops);
 
 	if (IS_ERR(alert_data->cdev))

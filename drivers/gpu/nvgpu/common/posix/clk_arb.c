@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/list.h>
 #include <nvgpu/clk_arb.h>
 
 /**

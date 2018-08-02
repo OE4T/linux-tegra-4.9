@@ -35,6 +35,7 @@
 #include <nvgpu/mm.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/clk_arb.h>
 
 #include <trace/events/gk20a.h>
 

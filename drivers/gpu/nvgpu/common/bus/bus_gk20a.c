@@ -24,6 +24,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/io.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 #include "bus_gk20a.h"

@@ -29,6 +29,8 @@
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/list.h>
+#include <nvgpu/clk_arb.h>
 
 #include "ioctl_ctrl.h"
 #include "ioctl_dbg.h"

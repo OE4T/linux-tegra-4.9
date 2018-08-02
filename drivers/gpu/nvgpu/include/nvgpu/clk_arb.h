@@ -23,6 +23,8 @@
 #ifndef __NVGPU_CLK_ARB_H__
 #define __NVGPU_CLK_ARB_H__
 
+struct gk20a;
+
 #include <nvgpu/types.h>
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>
@@ -34,7 +36,6 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/cond.h>
 
-#include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "pstate/pstate.h"
 #include "lpwr/lpwr.h"

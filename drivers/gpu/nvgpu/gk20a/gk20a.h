@@ -41,6 +41,7 @@ struct nvgpu_nvhost_dev;
 struct nvgpu_cpu_time_correlation_sample;
 struct nvgpu_mem_sgt;
 struct nvgpu_warpstate;
+struct nvgpu_clk_arb;
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 struct nvgpu_ctxsw_trace_filter;
 #endif
@@ -59,7 +60,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include <nvgpu/atomic.h>
 #include <nvgpu/barrier.h>
 #include <nvgpu/rwsem.h>
-#include <nvgpu/clk_arb.h>
 #include <nvgpu/nvlink.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/ecc.h>

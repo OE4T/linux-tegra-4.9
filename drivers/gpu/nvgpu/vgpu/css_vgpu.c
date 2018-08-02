@@ -25,6 +25,7 @@
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
 #include <nvgpu/dt.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/channel_gk20a.h"
@@ -43,13 +44,13 @@ static struct tegra_hv_ivm_cookie *vgpu_css_reserve_mempool(struct gk20a *g)
 	err = nvgpu_dt_read_u32_index(g, "mempool-css", 1, &mempool);
 	if (err) {
 		nvgpu_err(g, "dt missing mempool-css");
-		return ERR_PTR(err);
+		return (struct tegra_hv_ivm_cookie *)ERR_PTR(err);
 	}
 
 	cookie = vgpu_ivm_mempool_reserve(mempool);
 	if (IS_ERR_OR_NULL(cookie)) {
 		nvgpu_err(g, "mempool  %u reserve failed", mempool);
-		return ERR_PTR(-EINVAL);
+		return (struct tegra_hv_ivm_cookie *)ERR_PTR(-EINVAL);
 	}
 	return cookie;
 }

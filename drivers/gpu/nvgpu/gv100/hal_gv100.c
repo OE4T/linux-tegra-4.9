@@ -108,6 +108,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/clk_arb.h>
 
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
 #include <nvgpu/hw/gv100/hw_fifo_gv100.h>

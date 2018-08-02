@@ -42,6 +42,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/sim.h>
+#include <nvgpu/clk_arb.h>
 
 #include "platform_gk20a.h"
 #include "sysfs.h"

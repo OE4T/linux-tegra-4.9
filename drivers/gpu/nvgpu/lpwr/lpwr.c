@@ -22,6 +22,7 @@
 
 #include <nvgpu/bios.h>
 #include <nvgpu/pmu.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gk20a/gk20a.h"
 #include "gp106/bios_gp106.h"

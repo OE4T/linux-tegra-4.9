@@ -28,6 +28,8 @@
 #include <nvgpu/hw/gp106/hw_ccsr_gp106.h>
 #include <nvgpu/hw/gp106/hw_fifo_gp106.h>
 
+#include <nvgpu/bug.h>
+
 u32 gp106_fifo_get_num_fifos(struct gk20a *g)
 {
 	return ccsr_channel__size_1_v();

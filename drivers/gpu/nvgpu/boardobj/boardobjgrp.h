@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -30,6 +30,8 @@ struct gk20a;
 #include "ctrl/ctrlboardobj.h"
 #include "boardobj.h"
 #include "boardobjgrpmask.h"
+#include <nvgpu/list.h>
+#include <nvgpu/pmu.h>
 
 /*
 * Board Object Group destructor.

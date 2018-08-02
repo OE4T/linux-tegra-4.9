@@ -91,6 +91,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>

@@ -34,6 +34,7 @@
 #include <nvgpu/mm.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>

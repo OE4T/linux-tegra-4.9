@@ -14,10 +14,23 @@
 #ifndef __NVMAP2_HANDLE_REF_H
 #define __NVMAP2_HANDLE_REF_H
 
+/* handle_ref objects are client-local references to an nvmap_handle;
+ * they are distinct objects so that handles can be unpinned and
+ * unreferenced the correct number of times when a client abnormally
+ * terminates */
+struct nvmap_handle_ref {
+	struct nvmap_handle *handle;
+	struct rb_node	node;
+	atomic_t	dupes;	/* number of times to free on file close */
+};
+
 struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle);
 void NVMAP2_handle_ref_free(struct nvmap_handle_ref *ref);
 
 int NVMAP2_handle_ref_get(struct nvmap_handle_ref *ref);
 int NVMAP2_handle_ref_put(struct nvmap_handle_ref *ref);
+int NVMAP2_handle_ref_count(struct nvmap_handle_ref *ref);
+
+struct rb_node *NVMAP2_handle_ref_to_node(struct nvmap_handle_ref *ref);
 
 #endif /* __NVMAP2_HANDLE_REF_H */

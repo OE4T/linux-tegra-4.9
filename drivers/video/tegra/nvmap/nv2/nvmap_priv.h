@@ -108,14 +108,6 @@ extern void __clean_dcache_page(struct page *);
 extern void __flush_dcache_page(struct address_space *, struct page *);
 #endif
 
-struct nvmap_vma_list {
-	struct list_head list;
-	struct vm_area_struct *vma;
-	unsigned long save_vm_flags;
-	pid_t pid;
-	atomic_t ref;
-};
-
 struct nvmap_carveout_node {
 	unsigned int		heap_bit;
 	struct nvmap_heap	*carveout;
@@ -187,26 +179,10 @@ struct nvmap_handle {
 	int fd;
 };
 
-struct nvmap_handle_info {
-	struct nvmap_handle *handle;
-	struct list_head maps;
-	struct mutex maps_lock;
-};
-
 struct nvmap_tag_entry {
 	struct rb_node node;
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
 	u32 tag;
-};
-
-/* handle_ref objects are client-local references to an nvmap_handle;
- * they are distinct objects so that handles can be unpinned and
- * unreferenced the correct number of times when a client abnormally
- * terminates */
-struct nvmap_handle_ref {
-	struct nvmap_handle *handle;
-	struct rb_node	node;
-	atomic_t	dupes;	/* number of times to free on file close */
 };
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -278,12 +254,6 @@ struct cache_maint_op {
 	bool inner;
 	bool outer;
 	bool clean_only_dirty;
-};
-
-struct nvmap_vma_priv {
-	struct nvmap_handle *handle;
-	size_t		offs;
-	atomic_t	count;	/* number of processes cloning the VMA */
 };
 
 struct nvmap_device {
@@ -407,8 +377,6 @@ struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 
-void nvmap_handle_get_cacheability(struct nvmap_handle *h,
-		bool *inner, bool *outer);
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size);
 void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
 
@@ -609,6 +577,7 @@ void nvmap_vma_open(struct vm_area_struct *vma);
 int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets,
 			u64 *sizes, u32 nr, u32 op, bool is_32);
 
+// TODO: Is it even necessary to lock an atomic inc?
 static inline void nvmap_kmaps_inc(struct nvmap_handle *h)
 {
 	mutex_lock(&h->lock);
@@ -730,12 +699,7 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 #define CALL_CLEAN_CACHE_ON_INIT 1
 #define CALL_FLUSH_CACHE_ON_INIT 2
 
-struct nvmap_chip_cache_op {
-	void (*inner_clean_cache_all)(void);
-	void (*inner_flush_cache_all)(void);
-	const char *name;
-	int flags;
-};
+#include "nv2_cache.h"
 
 void nvmap_select_cache_ops(struct device *dev);
 

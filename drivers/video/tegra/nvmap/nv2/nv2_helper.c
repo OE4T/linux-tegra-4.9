@@ -11,12 +11,14 @@
  * more details.
  */
 
-#include <linux/moduleparam.h>
-#include <linux/random.h>
-#include <soc/tegra/chip-id.h>
+#include <linux/sched.h>
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
+#include <linux/version.h>
+
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include "nv2_misc.h"
 
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to
@@ -32,6 +34,22 @@ void *NVMAP2_altalloc(size_t len)
 		return kmalloc(len, GFP_KERNEL);
 }
 
+struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages)
+{
+	struct page **pages;
+	int i;
+
+	pages = NVMAP2_altalloc(sizeof(*pages) * nr_pages);
+	if (!pages)
+		return NULL;
+
+	for (i = 0; i < nr_pages; i++)
+		pages[i] = NVMAP2_to_page(pg_pages[i]);
+
+	return pages;
+}
+
+
 void NVMAP2_altfree(void *ptr, size_t len)
 {
 	if (!ptr)
@@ -41,4 +59,30 @@ void NVMAP2_altfree(void *ptr, size_t len)
 		vfree(ptr);
 	else
 		kfree(ptr);
+}
+
+int NVMAP2_get_user_pages(ulong vaddr, int nr_page, struct page **pages)
+{
+	int ret = 0;
+	int user_pages;
+	down_read(&current->mm->mmap_sem);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+        user_pages = get_user_pages(current, current->mm,
+			      vaddr & PAGE_MASK, nr_page,
+			      1/*write*/, 1, /* force */
+			      pages, NULL);
+#else
+	user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+			      FOLL_WRITE | FOLL_FORCE,
+			      pages, NULL);
+#endif
+	up_read(&current->mm->mmap_sem);
+	if (user_pages != nr_page) {
+		ret = user_pages < 0 ? user_pages : -ENOMEM;
+		pr_err("get_user_pages requested/got: %d/%d]\n", nr_page,
+				user_pages);
+		while (--user_pages >= 0)
+			put_page(pages[user_pages]);
+	}
+	return ret;
 }

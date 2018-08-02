@@ -19,11 +19,27 @@
 #include <linux/io.h>
 #include <linux/debugfs.h>
 #include <linux/of.h>
+#include <linux/version.h>
+#include <linux/slab.h>
+#include <linux/tegra-mce.h>
+
 #include <soc/tegra/chip-id.h>
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include "nv2_tag.h"
+#include "nv2_misc.h"
+#include "nv2_cache.h"
+#include "nv2_handle.h"
+#include "nvmap_stats.h"
+
+typedef void (*nvmap_setup_chip_cache_fn)(struct nvmap_chip_cache_op *);
+
+extern struct of_device_id __nvmapcache_of_table;
+
+#define NVMAP_CACHE_OF_DECLARE(compat, fn) \
+	_OF_DECLARE(nvmapcache, nvmapcache_of, compat, fn, \
+			nvmap_setup_chip_cache_fn)
 
 #ifndef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
 /* This is basically the L2 cache size but may be tuned as per requirement */
@@ -131,9 +147,11 @@ __weak void nvmap_override_cache_ops(void)
 __weak void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 		bool *inner, bool *outer)
 {
-	*inner = h->flags == NVMAP_HANDLE_CACHEABLE ||
-		 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
-	*outer = h->flags == NVMAP_HANDLE_CACHEABLE;
+	u32 flags = NVMAP2_handle_flags(h);
+
+	*inner = flags == NVMAP_HANDLE_CACHEABLE ||
+		 flags == NVMAP_HANDLE_INNER_CACHEABLE;
+	*outer = flags == NVMAP_HANDLE_CACHEABLE;
 }
 
 /*
@@ -258,7 +276,7 @@ void NVMAP2_cache_maint_heap_page_outer(struct page **pages,
 		size_t size;
 		int ret;
 
-		page = nvmap_to_page(pages[start >> PAGE_SHIFT]);
+		page = NVMAP2_to_page(pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;
 		size = next - start;

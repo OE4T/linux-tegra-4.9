@@ -21,6 +21,10 @@
 #include <linux/tegra-ivc.h>
 #include <linux/dma-contiguous.h>
 #include <linux/version.h>
+#include <linux/of_reserved_mem.h>
+#include <linux/platform_device.h>
+#include <linux/vmalloc.h>
+#include <linux/slab.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/clock.h>
@@ -32,7 +36,6 @@
 
 #include <asm/dma-contiguous.h>
 
-#include "nvmap_priv.h"
 #include "iomap.h"
 #include "board.h"
 #include <linux/platform/tegra/common.h>
@@ -44,6 +47,13 @@
 #include "../../../drivers/virt/tegra/syscalls.h"
 #endif
 #endif
+
+#include "nv2_carveout.h"
+#include "nvmap_heap.h"
+#include "nv2_dev.h"
+#include "nv2_init.h"
+
+extern ulong nvmap_init_time;
 
 phys_addr_t __weak tegra_carveout_start;
 phys_addr_t __weak tegra_carveout_size;

@@ -33,8 +33,13 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_ioctl.h"
-#include "nvmap_priv.h"
 #include "nvmap_heap.h"
+
+#include "nv2_dev.h"
+#include "nv2_handle.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
+
 
 /*
  * sizes[i] == 0  is a special case which causes handle wide operation,
@@ -47,7 +52,7 @@ static int cache_maint_sanitize_size_offset(struct nvmap_handle **handles,
 
 	for (i = 0; i < nr; i++) {
 		if (sizes[i] == 0)
-			sizes[i] = handles[i]->size;
+			sizes[i] = NVMAP2_handle_size(handles[i]);
 	}
 
 	return err;
@@ -68,6 +73,7 @@ static int cache_maint_get_handles(struct nvmap_handle **handles,
 	int i;
 	int sync_count = 0;
 	int pgalloc_count = 0;
+	int heap_type;
 
 	for (i = 0; i < nr; i++) {
 		handles[i] = NVMAP2_handle_from_fd(handle_ptrs[i]);
@@ -78,19 +84,22 @@ static int cache_maint_get_handles(struct nvmap_handle **handles,
 			cache_maint_put_handles(handles, i);
 			return -EINVAL;
 		}
-		if (!(handles[i]->heap_type & nvmap_dev->cpu_access_mask)) {
+
+		heap_type = NVMAP2_handle_heap_type(handles[i]);
+		if (!(heap_type & nvmap_dev->cpu_access_mask)) {
 			pr_err("heap %x can't be accessed from cpu\n",
-							handles[i]->heap_type);
+								heap_type);
 			cache_maint_put_handles(handles, i);
 			return -EPERM;
 		}
 	}
 
 	for (i = 0; i < nr; i++) {
-		if (handles[i]->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)
+		if (NVMAP2_handle_userflag(handles[i])
+					& NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)
 			sync_count++;
 
-		if (handles[i]->heap_pgalloc)
+		if (NVMAP2_handle_is_heap(handles[i]))
 			pgalloc_count++;
 	}
 
@@ -131,7 +140,7 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 
 	if (is_32) {
 		size_t tmp_size = sizeof(u32) * op->nr;
-		u32 *tmp = nvmap_altalloc(tmp_size);
+		u32 *tmp = NVMAP2_altalloc(tmp_size);
 		if (!tmp) {
 			pr_err("Failed allocating tmp buffer");
 			return -ENOMEM;
@@ -140,7 +149,7 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 		if (copy_from_user(tmp, (void *)op->offsets,
 					op->nr * sizeof(u32))) {
 			pr_err("Can't copy from user pointer op.offsets\n");
-			nvmap_altfree(tmp, tmp_size);
+			NVMAP2_altfree(tmp, tmp_size);
 			return -EFAULT;
 		}
 		for (i = 0; i < op->nr; i++) {
@@ -150,14 +159,14 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 		if (copy_from_user(tmp, (void *)op->sizes,
 					op->nr * sizeof(u32))) {
 			pr_err("Can't copy from user pointer op.sizes\n");
-			nvmap_altfree(tmp, tmp_size);
+			NVMAP2_altfree(tmp, tmp_size);
 			return -EFAULT;
 		}
 		for (i = 0; i < op->nr; i++) {
 			size_ptr[i] = tmp[i];
 		}
 
-		nvmap_altfree(tmp, tmp_size);
+		NVMAP2_altfree(tmp, tmp_size);
 	} else {
 		if (copy_from_user(offset_ptr, (void *)op->offsets,
 					op->nr * sizeof(u64))) {
@@ -202,20 +211,20 @@ int NVMAP2_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	if (!access_ok(VERIFY_READ, op.handles, op.nr * sizeof(u32)))
 		return -EFAULT;
 
-	handles		= nvmap_altalloc(sizeof(*handles) * op.nr);
-	offset_ptr 	= nvmap_altalloc(sizeof(u64) * op.nr);
-	size_ptr 	= nvmap_altalloc(sizeof(u64) * op.nr);
-	handle_ptr 	= nvmap_altalloc(sizeof(u32) * op.nr);
+	handles		= NVMAP2_altalloc(sizeof(*handles) * op.nr);
+	offset_ptr 	= NVMAP2_altalloc(sizeof(u64) * op.nr);
+	size_ptr 	= NVMAP2_altalloc(sizeof(u64) * op.nr);
+	handle_ptr 	= NVMAP2_altalloc(sizeof(u32) * op.nr);
 
 	if (!handles || !offset_ptr || !size_ptr || !handle_ptr) {
 		if (handles)
-			nvmap_altfree(handles, sizeof(*handles) * op.nr);
+			NVMAP2_altfree(handles, sizeof(*handles) * op.nr);
 		if (offset_ptr)
-			nvmap_altfree(offset_ptr, sizeof(u64) * op.nr);
+			NVMAP2_altfree(offset_ptr, sizeof(u64) * op.nr);
 		if (size_ptr)
-			nvmap_altfree(size_ptr, sizeof(u64) * op.nr);
+			NVMAP2_altfree(size_ptr, sizeof(u64) * op.nr);
 		if (handle_ptr)
-			nvmap_altfree(handle_ptr, sizeof(u32) * op.nr);
+			NVMAP2_altfree(handle_ptr, sizeof(u32) * op.nr);
 		return -ENOMEM;
 	}
 
@@ -245,10 +254,10 @@ int NVMAP2_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 free_handles:
 	cache_maint_put_handles(handles, op.nr);
 free_mem:
-	nvmap_altfree(handles, sizeof(*handles) * op.nr);
-	nvmap_altfree(offset_ptr, sizeof(u64) * op.nr);
-	nvmap_altfree(size_ptr, sizeof(u64) * op.nr);
-	nvmap_altfree(handle_ptr, sizeof(u32) * op.nr);
+	NVMAP2_altfree(handles, sizeof(*handles) * op.nr);
+	NVMAP2_altfree(offset_ptr, sizeof(u64) * op.nr);
+	NVMAP2_altfree(size_ptr, sizeof(u64) * op.nr);
+	NVMAP2_altfree(handle_ptr, sizeof(u32) * op.nr);
 
 	return err;
 }

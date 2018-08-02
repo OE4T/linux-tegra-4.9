@@ -20,7 +20,13 @@
 #include <linux/moduleparam.h>
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include <linux/version.h>
+
+#include "nv2_heap_alloc.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
+#include "nv2_pp.h"
+#include "nv2_dev.h"
 
 extern bool nvmap_convert_carveout_to_iovmm;
 extern bool nvmap_convert_iovmm_to_carveout;
@@ -311,7 +317,7 @@ struct page **NVMAP2_heap_alloc_from_va(size_t size, ulong vaddr)
 	if (IS_ERR_OR_NULL(pages))
 		return NULL;
 
-	ret = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
+	ret = NVMAP2_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
 	if (ret) {
 		NVMAP2_altfree(pages, nr_page * sizeof(*pages));
 		return NULL;

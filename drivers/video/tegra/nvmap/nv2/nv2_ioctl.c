@@ -28,6 +28,7 @@
 #include <linux/nvmap.h>
 #include <linux/vmalloc.h>
 #include <linux/highmem.h>
+#include <linux/syscalls.h>
 
 #include <asm/io.h>
 #include <asm/memory.h>
@@ -35,9 +36,23 @@
 #include <soc/tegra/common.h>
 #include <trace/events/nvmap.h>
 
-#include "nvmap_ioctl.h"
-#include "nvmap_priv.h"
 #include "nvmap_heap.h"
+#include "nvmap_stats.h"
+
+#include "nv2_structs.h"
+#include "nvmap_ioctl.h"
+#include "nv2_ioctl.h"
+
+#include "nv2_dmabuf.h"
+#include "nv2_client.h"
+#include "nv2_handle.h"
+#include "nv2_carveout.h"
+#include "nv2_dev.h"
+#include "nv2_tag.h"
+#include "nv2_misc.h"
+#include "nv2_vma.h"
+
+struct nvmap_carveout_node;
 
 /* TODO: Remove this */
 extern struct device tegra_vpr_dev;
@@ -311,10 +326,10 @@ int NVMAP2_ioctl_alloc(struct file *filp, unsigned int cmd, void __user *arg)
 	h = NVMAP2_handle_from_fd(handle);
 	if (!h)
 		return -EINVAL;
-	h = nvmap_handle_get(h);
+	h = NVMAP2_handle_get(h);
 	if (!h)
 		return -EINVAL;
-	if (h->alloc) {
+	if (NVMAP2_handle_is_allocated(h)) {
 		NVMAP2_handle_put(h);
 		return -EEXIST;
 	}
@@ -331,13 +346,14 @@ int NVMAP2_ioctl_alloc(struct file *filp, unsigned int cmd, void __user *arg)
 				  flags & (~NVMAP_HANDLE_KIND_SPECIFIED),
 				  peer);
 
-	if (h->alloc) {
-		nvmap_stats_inc(NS_TOTAL, h->size);
-		nvmap_stats_inc(NS_ALLOC, h->size);
-		if (client->kernel_client)
-			nvmap_stats_inc(NS_KALLOC, h->size);
-		else
-			nvmap_stats_inc(NS_UALLOC, h->size);
+	if (NVMAP2_handle_is_allocated(h)) {
+		size_t size = NVMAP2_handle_size(h);
+
+		nvmap_stats_inc(NS_TOTAL, size);
+		nvmap_stats_inc(NS_ALLOC, size);
+
+		NVMAP2_client_stats_alloc(client, size);
+
 		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
 			NVMAP_TP_ARGS_CHR(client, h, NULL));
 		err = 0;
@@ -469,13 +485,13 @@ int NVMAP2_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 	unsigned int heap_mask = 0;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
-		struct nvmap_carveout_node *co_heap = &dev->heaps[i];
+		struct nvmap_carveout_node *co_heap = NVMAP2_dev_to_carveout(dev, i);
 		int peer;
 
-		if (!(co_heap->heap_bit & NVMAP_HEAP_CARVEOUT_IVM))
+		if (!NVMAP2_carveout_is_ivm(co_heap))
 			continue;
 
-		peer = nvmap_query_heap_peer(co_heap->carveout);
+		peer = NVMAP2_carveout_query_peer(co_heap);
 		if (peer < 0)
 			return -EINVAL;
 
@@ -502,11 +518,11 @@ int NVMAP2_ioctl_get_ivcid(struct file *filp, void __user *arg)
 		return -EINVAL;
 	}
 
-	if (!h->alloc) {
+	if (!NVMAP2_handle_is_allocated(h)) {
 		return -EFAULT;
 	}
 
-	op.ivm_id = h->ivm_id;
+	op.ivm_id = NVMAP2_handle_ivm_id(h);
 
 	return copy_to_user(arg, &op, sizeof(op)) ? -EFAULT : 0;
 }
@@ -565,7 +581,7 @@ int NVMAP2_ioctl_cache_maint(struct file *filp, void __user *arg, int op_size)
 	down_read(&current->mm->mmap_sem);
 
 	vma = find_vma(current->mm, (unsigned long) op.addr);
-	if (!is_nvmap_vma(vma) ||
+	if (!NVMAP2_vma_is_nvmap(vma) ||
 			!vaddr_and_size_are_in_vma(op.addr, op.len, vma)) {
 		ret = -EADDRNOTAVAIL;
 		goto out;
@@ -729,7 +745,7 @@ int NVMAP2_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 		return -EINVAL;
 
 	if (is_read && soc_is_tegra186_n_later() &&
-		h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+		NVMAP2_handle_heap_type(h) == NVMAP_HEAP_CARVEOUT_VPR) {
 		int ret;
 
 		/* VPR memory is not readable from CPU.
@@ -743,7 +759,7 @@ int NVMAP2_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 		return ret;
 	}
 
-	nvmap_kmaps_inc(h);
+	NVMAP2_handle_kmap_inc(h);
 	trace_nvmap_ioctl_rw_handle(client, h, is_read, offset,
 				    addr, hmem_stride,
 				    user_stride, elem_size, count);
@@ -752,7 +768,7 @@ int NVMAP2_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 				addr, user_stride,
 				elem_size, count,
 				is_read);
-	nvmap_kmaps_dec(h);
+	NVMAP2_handle_kmap_dec(h);
 
 	if (copied < 0) {
 		err = copied;
@@ -765,4 +781,140 @@ int NVMAP2_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	NVMAP2_handle_put(h);
 
 	return err;
+}
+
+extern struct device tegra_vpr_dev;
+
+int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
+{
+	int err = -EINVAL;
+	struct nvmap_gup_test op;
+	struct vm_area_struct *vma;
+	struct nvmap_handle *handle;
+	int nr_page;
+	struct page **pages;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	op.result = 1;
+	vma = find_vma(current->mm, op.va);
+	if (unlikely(!vma) || (unlikely(op.va < vma->vm_start )) ||
+	    unlikely(op.va >= vma->vm_end))
+		goto exit;
+
+	handle = NVMAP2_handle_from_fd(op.handle);
+	NVMAP2_handle_get(handle);
+	if (!handle)
+		goto exit;
+
+	if (vma->vm_end - vma->vm_start != NVMAP2_handle_size(handle)) {
+		pr_err("handle size(0x%zx) and vma size(0x%lx) don't match\n",
+			 NVMAP2_handle_size(handle), vma->vm_end - vma->vm_start);
+		goto put_handle;
+	}
+
+	err = -ENOMEM;
+	nr_page = NVMAP2_handle_size(handle) >> PAGE_SHIFT;
+	pages = NVMAP2_altalloc(nr_page * sizeof(*pages));
+	if (IS_ERR_OR_NULL(pages)) {
+		err = PTR_ERR(pages);
+		goto put_handle;
+	}
+
+	err = NVMAP2_get_user_pages(op.va & PAGE_MASK, nr_page, pages);
+	if (err)
+		goto put_user_pages;
+
+	// TODO: Find an easy way to fix this
+	/*
+	for (i = 0; i < nr_page; i++) {
+		if (handle->pgalloc.pages[i] != pages[i]) {
+			pr_err("page pointers don't match, %p %p\n",
+			       handle->pgalloc.pages[i], pages[i]);
+			op.result = 0;
+		}
+	}
+	*/
+
+	if (op.result)
+		err = 0;
+
+	if (copy_to_user(arg, &op, sizeof(op)))
+		err = -EFAULT;
+
+put_user_pages:
+	NVMAP2_altfree(pages, nr_page * sizeof(*pages));
+put_handle:
+	NVMAP2_handle_put(handle);
+exit:
+	pr_info("GUP Test %s\n", err ? "failed" : "passed");
+	return err;
+}
+
+int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
+{
+	struct nvmap_set_tag_label op;
+	struct nvmap_device *dev = nvmap_dev;
+	int err;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (op.len > NVMAP_TAG_LABEL_MAXLEN)
+		op.len = NVMAP_TAG_LABEL_MAXLEN;
+
+	if (op.len)
+		err = nvmap_define_tag(dev, op.tag,
+			(const char __user *)op.addr, op.len);
+	else
+		err = nvmap_remove_tag(dev, op.tag);
+
+	return err;
+}
+
+int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg)
+{
+	struct nvmap_available_heaps op;
+	int i;
+
+	memset(&op, 0, sizeof(op));
+
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+		struct nvmap_carveout_node *carveout =
+					NVMAP2_dev_to_carveout(nvmap_dev, i);
+
+		op.heaps |= NVMAP2_carveout_heap_bit(carveout);
+	}
+
+	if (copy_to_user(arg, &op, sizeof(op))) {
+		pr_err("copy_to_user failed\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int nvmap_ioctl_get_heap_size(struct file *filp, void __user *arg)
+{
+	struct nvmap_heap_size op;
+	int i;
+	memset(&op, 0, sizeof(op));
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+		struct nvmap_carveout_node *carveout =
+					NVMAP2_dev_to_carveout(nvmap_dev, i);
+
+		if (op.heap & NVMAP2_carveout_heap_bit(carveout)) {
+			op.size = NVMAP2_carveout_query_heap_size(carveout);
+			if (copy_to_user(arg, &op, sizeof(op)))
+				return -EFAULT;
+			return 0;
+		}
+	}
+	return -ENODEV;
+
 }

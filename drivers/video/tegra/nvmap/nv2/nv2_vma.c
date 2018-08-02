@@ -15,15 +15,21 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
-#include <linux/highmem.h>
-#include <linux/io.h>
-#include <linux/debugfs.h>
-#include <linux/of.h>
-#include <soc/tegra/chip-id.h>
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/mm_types.h>
+#include <linux/list.h>
+#include <linux/version.h>
 
-#include <trace/events/nvmap.h>
+#include "nv2_vma.h"
+#include "nv2_handle.h"
 
-#include "nvmap_priv.h"
+extern struct vm_operations_struct nvmap_vma_ops;
+
+int NVMAP2_vma_is_nvmap(struct vm_area_struct *vma)
+{
+	return vma->vm_ops == &nvmap_vma_ops;
+}
 
 int NVMAP2_vma_belongs_to_handle(struct vm_area_struct *vma,
 					struct nvmap_handle *h)
@@ -71,4 +77,86 @@ void NVMAP2_vma_zap(struct list_head *vmas, u64 offset, u64 size)
 						vm_size);
 		}
 	}
+}
+
+static int NVMAP2_vma_list_prot_none(struct nvmap_vma_list *vma_list,
+				struct vm_area_struct *vma,
+				struct vm_area_struct *prev,
+				size_t vm_size,
+				int handle_is_dirty)
+{
+	int err = 0;
+
+	vma->vm_flags = vma_list->save_vm_flags;
+	(void)vma_set_page_prot(vma);
+
+	if (!handle_is_dirty)
+		return 0;
+
+	err = mprotect_fixup(vma, &prev, vma->vm_start,
+			vma->vm_start + vm_size, VM_NONE);
+	if (err)
+		return err;
+
+	vma->vm_flags = vma_list->save_vm_flags;
+	(void)vma_set_page_prot(vma);
+
+	return err;
+}
+
+static int NVMAP2_vma_list_prot_restore(struct nvmap_vma_list *vma_list,
+				struct vm_area_struct *vma,
+				struct vm_area_struct *prev,
+				size_t vm_size)
+{
+	int err = 0;
+
+	vma->vm_flags = VM_NONE;
+	(void)vma_set_page_prot(vma);
+
+	err = mprotect_fixup(vma, &prev, vma->vm_start,
+			vma->vm_start + vm_size,
+			vma_list->save_vm_flags);
+	return err;
+}
+
+int NVMAP2_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
+					u64 size, int handle_is_dirty, int op)
+{
+	struct vm_area_struct *vma = vma_list->vma;
+	struct nvmap_vma_priv *priv = vma->vm_private_data;
+	struct vm_area_struct *prev = vma->vm_prev;
+	size_t vm_size;
+	int err = 0;
+
+	vm_size = size;
+
+	if ((offset + size) > (vma->vm_end - vma->vm_start))
+		vm_size = vma->vm_end - vma->vm_start - offset;
+
+	if ((priv->offs || vma->vm_pgoff) ||
+			(size > (vma->vm_end - vma->vm_start)))
+		vm_size = vma->vm_end - vma->vm_start;
+
+	if (vma->vm_mm != current->mm)
+		down_write(&vma->vm_mm->mmap_sem);
+
+	switch (op) {
+		case NVMAP_HANDLE_PROT_NONE:
+			err = NVMAP2_vma_list_prot_none(vma_list, vma,
+							prev, vm_size,
+							handle_is_dirty);
+			break;
+		case NVMAP_HANDLE_PROT_RESTORE:
+			err = NVMAP2_vma_list_prot_restore(vma_list, vma,
+							prev, vm_size);
+			break;
+		default:
+			BUG();
+	};
+
+	if (vma->vm_mm != current->mm)
+		up_write(&vma->vm_mm->mmap_sem);
+
+	return err;
 }

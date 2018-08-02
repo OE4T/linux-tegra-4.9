@@ -17,8 +17,12 @@
 
 #include <linux/miscdevice.h>
 #include <linux/nvmap_t19x.h>
+#include <linux/tegra-mce.h>
+#include <linux/of.h>
 
-#include "nvmap_priv.h"
+#include "nv2_handle.h"
+#include "nv2_cache.h"
+#include "nv2_dev.h"
 
 struct static_key nvmap_updated_cache_config;
 
@@ -27,6 +31,7 @@ void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 {
 	struct nvmap_handle_t19x *handle_t19x;
 	struct device *dev = nvmap_dev->dev_user.parent;
+	u32 flags = NVMAP2_handle_flags(h);
 
 	if (static_key_true(&nvmap_updated_cache_config)) {
 		if (nvmap_version_t19x) {
@@ -37,15 +42,15 @@ void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 		static_key_slow_dec(&nvmap_updated_cache_config);
 	}
 
-	handle_t19x = dma_buf_get_drvdata(h->dmabuf, dev);
+	handle_t19x = dma_buf_get_drvdata(NVMAP2_handle_to_dmabuf(h), dev);
 	if (handle_t19x && atomic_read(&handle_t19x->nc_pin)) {
 		*inner = *outer = false;
 		return;
 	}
 
-	*inner = h->flags == NVMAP_HANDLE_CACHEABLE ||
-		 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
-	*outer = h->flags == NVMAP_HANDLE_CACHEABLE;
+	*inner = flags == NVMAP_HANDLE_CACHEABLE ||
+		 flags == NVMAP_HANDLE_INNER_CACHEABLE;
+	*outer = flags == NVMAP_HANDLE_CACHEABLE;
 }
 
 static void nvmap_t19x_flush_cache(void)

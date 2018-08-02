@@ -14,6 +14,15 @@
 #ifndef __NVMAP2_HANDLE_H
 #define __NVMAP2_HANDLE_H
 
+#include <linux/dma-buf.h>
+#include "nv2_structs.h"
+
+struct nvmap_handle;
+
+enum NVMAP_PROT_OP {
+	NVMAP_HANDLE_PROT_NONE = 1,
+	NVMAP_HANDLE_PROT_RESTORE = 2,
+};
 
 struct nvmap_handle *NVMAP2_handle_create(size_t size);
 struct nvmap_handle *NVMAP2_handle_create_from_dmabuf(
@@ -62,6 +71,79 @@ ssize_t NVMAP2_handle_rw(struct nvmap_handle *h,
 			 unsigned long sys_addr, unsigned long sys_stride,
 			 unsigned long elem_size, unsigned long count,
 			 int is_read);
+
 int NVMAP2_handle_owns_vma(struct nvmap_handle *h, struct vm_area_struct *vma);
+int NVMAP2_handle_add_vma(struct nvmap_handle *handle,
+					struct vm_area_struct *vma);
+int NVMAP2_handle_del_vma(struct nvmap_handle *handle,
+					struct vm_area_struct *vma);
+int NVMAP2_handle_open_vma(struct nvmap_handle *handle);
+int NVMAP2_handle_close_vma(struct nvmap_handle *handle);
+int NVMAP2_handle_fault_vma(struct nvmap_handle *handle,
+		unsigned long offs, struct page **page_ptr);
+bool NVMAP2_handle_fixup_prot_vma(struct nvmap_handle *handle,
+					unsigned long offs);
+
+struct dma_buf *NVMAP2_handle_to_dmabuf(struct nvmap_handle *handle);
+
+pgprot_t NVMAP2_handle_pgprot(struct nvmap_handle *handle, pgprot_t prot);
+
+void NVMAP2_handle_kmap_inc(struct nvmap_handle *h);
+void NVMAP2_handle_kmap_dec(struct nvmap_handle *h);
+void NVMAP2_handle_umap_inc(struct nvmap_handle *h);
+void NVMAP2_handle_umap_dec(struct nvmap_handle *h);
+
+void NVMAP2_handle_set_ivm(struct nvmap_handle *handle, u64 ivm_id);
+size_t NVMAP2_handle_size(struct nvmap_handle *handle);
+
+int NVMAP2_handle_is_allocated(struct nvmap_handle *h);
+size_t NVMAP2_handle_ivm_id(struct nvmap_handle *h);
+u32 NVMAP2_handle_heap_type(struct nvmap_handle *h);
+// TODO: What is difference between userflags and flags?
+u32 NVMAP2_handle_userflag(struct nvmap_handle *h);
+u32 NVMAP2_handle_flags(struct nvmap_handle *h);
+
+bool NVMAP2_handle_is_heap(struct nvmap_handle *h);
+bool NVMAP2_handle_track_dirty(struct nvmap_handle *h);
+pgprot_t NVMAP2_handle_pgprot(struct nvmap_handle *h, pgprot_t prot);
+
+// TODO Remove these, only needed by dmabuf_ops
+struct list_head *NVMAP2_handle_lru(struct nvmap_handle *h);
+atomic_t *NVMAP2_handle_pin(struct nvmap_handle *h);
+
+// TODO: Rename these
+void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum);
+void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
+		  void *addr);
+void *__nvmap_mmap(struct nvmap_handle *h);
+void __nvmap_munmap(struct nvmap_handle *h, void *addr);
+struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
+		struct nvmap_handle *h);
+void __nvmap_free_sg_table(struct nvmap_client *client,
+		struct nvmap_handle *h, struct sg_table *sgt);
+
+void NVMAP2_handle_stringify(struct nvmap_handle *handle,
+				  struct seq_file *s, u32 heap_type,
+				  int ref_dupes);
+void NVMAP2_handle_maps_stringify(struct nvmap_handle *handle,
+				  struct seq_file *s, u32 heap_type,
+				  pid_t client_pid);
+int NVMAP2_handle_pid_show(struct nvmap_handle *handle, struct seq_file *s,
+					pid_t client_pid);
+
+void NVMAP2_handle_all_allocations_show(struct nvmap_handle *handle,
+				  struct seq_file *s, u32 heap_type);
+void NVMAP2_handle_orphans_allocations_show(struct nvmap_handle *handle,
+				  struct seq_file *s, u32 heap_type);
+
+u64 NVMAP2_handle_share_size(struct nvmap_handle *handle, u32 heap_type);
+u64 NVMAP2_handle_total_mss(struct nvmap_handle *h, u32 heap_type);
+u64 NVMAP2_handle_total_pss(struct nvmap_handle *h, u32 heap_type);
+
+int NVMAP2_handle_is_migratable(struct nvmap_handle *h);
+void NVMAP2_handle_lru_show(struct nvmap_handle *h, struct seq_file *s);
+struct nvmap_handle *NVMAP2_handle_from_node(struct rb_node *n);
+
+struct nvmap_handle *NVMAP2_handle_from_lru(struct list_head *n);
 
 #endif /* __NVMAP2_HANDLE_H */

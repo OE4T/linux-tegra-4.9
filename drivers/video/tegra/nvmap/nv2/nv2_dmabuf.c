@@ -17,25 +17,13 @@
 
 #include <linux/list.h>
 #include <linux/slab.h>
-#include <linux/uaccess.h>
-#include <linux/export.h>
 #include <linux/nvmap.h>
 #include <linux/dma-buf.h>
-#include <linux/spinlock.h>
-#include <linux/mutex.h>
-#include <linux/atomic.h>
-#include <linux/debugfs.h>
-#include <linux/seq_file.h>
-#include <linux/stringify.h>
-#include <linux/of.h>
-#include <linux/platform/tegra/tegra_fd.h>
 #include <linux/version.h>
-#include <linux/iommu.h>
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
+#include "nv2_dmabuf.h"
 
 extern bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 extern struct dma_buf_ops nvmap_dma_buf_ops;

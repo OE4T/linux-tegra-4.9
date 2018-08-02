@@ -34,8 +34,28 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include "nv2_handle.h"
+// TODO: refactor dmabuf_ops and remove this
+#include "nv2_handle_priv.h"
+
+#include "nv2_dmabuf.h"
+#include "nv2_dev.h"
+#include "nv2_vma.h"
+#include "nv2_client.h"
+
 #include "nvmap_ioctl.h"
+
+struct nvmap_handle_dmabuf_priv {
+	void *priv;
+	struct device *dev;
+	void (*priv_release)(void *priv);
+	struct list_head list;
+};
+
+// TODO: Remove these references to nvmap_fault
+extern struct vm_operations_struct nvmap_vma_ops;
+extern void nvmap_vma_open(struct vm_area_struct *vma);
+
 
 /**
  * List node for maps of nvmap handles via the dma_buf API. These store the
@@ -75,6 +95,16 @@ static bool nvmap_attach_handle_same_asid(struct dma_buf_attachment *attach,
 
 }
 
+void NVMAP2_dmabufs_free(struct list_head *dmabuf_list)
+{
+	struct nvmap_handle_dmabuf_priv *curr, *next;
+
+	list_for_each_entry_safe(curr, next, dmabuf_list, list) {
+		curr->priv_release(curr->priv);
+		list_del(&curr->list);
+		kzfree(curr);
+	}
+}
 /*
  * Initialize a kmem cache for allocating nvmap_handle_sgt's.
  */
@@ -149,13 +179,16 @@ static inline bool access_vpr_phys(struct device *dev)
 static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 {
 	struct nvmap_handle_info *info = nvmap_sgt->owner;
+	u32 heap_type;
 	DEFINE_DMA_ATTRS(attrs);
 
 	list_del(&nvmap_sgt->maps_entry);
 
-	if (!(nvmap_dev->dynamic_dma_map_mask & info->handle->heap_type)) {
+	heap_type = NVMAP2_handle_heap_type(info->handle);
+
+	if (!(nvmap_dev->dynamic_dma_map_mask & heap_type)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
-	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
+	} else if (heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
 			access_vpr_phys(nvmap_sgt->dev)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
 	} else {
@@ -288,13 +321,15 @@ struct sg_table *_nvmap_dmabuf_map_dma_buf(
 	int ents = 0;
 	struct sg_table *sgt;
 	DEFINE_DMA_ATTRS(attrs);
+	u32 heap_type = NVMAP2_handle_heap_type(info->handle);
+	atomic_t *h_pin = NVMAP2_handle_pin(info->handle);
 
 	trace_nvmap_dmabuf_map_dma_buf(attach->dmabuf, attach->dev);
 
-	nvmap_lru_reset(info->handle);
+	NVMAP2_lru_reset(NVMAP2_handle_lru(info->handle));
 	mutex_lock(&info->maps_lock);
 
-	atomic_inc(&info->handle->pin);
+	atomic_inc(h_pin);
 
 	sgt = __nvmap_dmabuf_get_sgt_locked(attach, dir);
 	if (sgt)
@@ -302,17 +337,16 @@ struct sg_table *_nvmap_dmabuf_map_dma_buf(
 
 	sgt = __nvmap_sg_table(NULL, info->handle);
 	if (IS_ERR(sgt)) {
-		atomic_dec(&info->handle->pin);
+		atomic_dec(h_pin);
 		mutex_unlock(&info->maps_lock);
 		return sgt;
 	}
 
-	if (!info->handle->alloc) {
+	if (!NVMAP2_handle_is_allocated(info->handle)) {
 		goto err_map;
-	} else if (!(nvmap_dev->dynamic_dma_map_mask &
-			info->handle->heap_type)) {
+	} else if (!(nvmap_dev->dynamic_dma_map_mask & heap_type)) {
 		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
-	} else if (info->handle->heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
+	} else if (heap_type == NVMAP_HEAP_CARVEOUT_VPR &&
 			access_vpr_phys(attach->dev)) {
 		sg_dma_address(sgt->sgl) = 0;
 	} else {
@@ -338,7 +372,7 @@ err_prep:
 	dma_unmap_sg_attrs(attach->dev, sgt->sgl, sgt->nents, dir, __DMA_ATTR(attrs));
 err_map:
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
-	atomic_dec(&info->handle->pin);
+	atomic_dec(h_pin);
 	mutex_unlock(&info->maps_lock);
 	return ERR_PTR(-ENOMEM);
 }
@@ -358,7 +392,7 @@ void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	trace_nvmap_dmabuf_unmap_dma_buf(attach->dmabuf, attach->dev);
 
 	mutex_lock(&info->maps_lock);
-	if (!atomic_add_unless(&info->handle->pin, -1, 0)) {
+	if (!atomic_add_unless(NVMAP2_handle_pin(info->handle), -1, 0)) {
 		mutex_unlock(&info->maps_lock);
 		WARN(1, "Unpinning handle that has yet to be pinned!\n");
 		return;
@@ -380,9 +414,9 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	struct nvmap_handle_sgt *nvmap_sgt;
 
 	trace_nvmap_dmabuf_release(info->handle->owner ?
-				   info->handle->owner->name : "unknown",
-				   info->handle,
-				   dmabuf);
+			   NVMAP2_client_name(info->handle->owner) : "unknown",
+			   info->handle,
+			   dmabuf);
 
 	mutex_lock(&info->handle->lock);
 	BUG_ON(dmabuf != info->handle->dmabuf);
@@ -454,12 +488,14 @@ static void *nvmap_dmabuf_kmap_atomic(struct dma_buf *dmabuf,
 int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 {
 	struct nvmap_vma_priv *priv;
+	u32 heap_type;
 
-	h = nvmap_handle_get(h);
+	h = NVMAP2_handle_get(h);
 	if (!h)
 		return -EINVAL;
 
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
+	heap_type = NVMAP2_handle_heap_type(h);
+	if (!(heap_type & nvmap_dev->cpu_access_mask)) {
 		NVMAP2_handle_put(h);
 		return -EPERM;
 	}
@@ -469,7 +505,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	 * as device memory. User space shouldn't be accessing
 	 * device memory.
 	 */
-	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
+	if (heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
 		NVMAP2_handle_put(h);
 		return -EPERM;
 	}
@@ -487,7 +523,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	vma->vm_ops = &nvmap_vma_ops;
 	BUG_ON(vma->vm_private_data != NULL);
 	vma->vm_private_data = priv;
-	vma->vm_page_prot = nvmap_pgprot(h, vma->vm_page_prot);
+	vma->vm_page_prot = NVMAP2_handle_pgprot(h, vma->vm_page_prot);
 	nvmap_vma_open(vma);
 	return 0;
 }

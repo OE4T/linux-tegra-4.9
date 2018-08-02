@@ -15,9 +15,14 @@
  * more details.
  */
 
+#include <linux/device.h>
 #include <linux/debugfs.h>
+#include <linux/slab.h>
 
-#include "nvmap_priv.h"
+#include "nv2_handle.h"
+#include "nv2_dev.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
 
 extern struct nvmap_device *nvmap_dev;
 extern struct kmem_cache *heap_block_cache;
@@ -31,6 +36,14 @@ struct list_block {
 	size_t align;
 	struct nvmap_heap *heap;
 	struct list_head free_list;
+};
+
+struct nvmap_carveout_node {
+	unsigned int		heap_bit;
+	struct nvmap_heap	*carveout;
+	int			index;
+	phys_addr_t		base;
+	size_t			size;
 };
 
 struct nvmap_heap {
@@ -58,6 +71,26 @@ extern const struct file_operations debug_allocations_fops;
 extern const struct file_operations debug_all_allocations_fops;
 extern const struct file_operations debug_orphan_handles_fops;
 extern const struct file_operations debug_maps_fops;
+
+int NVMAP2_carveout_is_ivm(struct nvmap_carveout_node *carveout)
+{
+	return carveout->heap_bit & NVMAP_HEAP_CARVEOUT_IVM;
+}
+
+int NVMAP2_carveout_query_peer(struct nvmap_carveout_node *carveout)
+{
+	return nvmap_query_heap_peer(carveout->carveout);
+}
+
+int NVMAP2_carveout_heap_bit(struct nvmap_carveout_node *carveout)
+{
+	return carveout->heap_bit;
+}
+
+int NVMAP2_carveout_query_heap_size(struct nvmap_carveout_node *carveout)
+{
+	return nvmap_query_heap_size(carveout->carveout);
+}
 
 int NVMAP2_carveout_create(const struct nvmap_platform_carveout *co)
 {
@@ -414,7 +447,7 @@ static int heap_can_allocate(struct nvmap_heap *h, int peer, phys_addr_t *start)
 
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
-struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_heap *h,
+struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_carveout_node *co,
 					struct nvmap_handle *handle,
 					phys_addr_t *start,
 					size_t len,
@@ -422,6 +455,7 @@ struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_heap *h,
 					unsigned int prot,
 					int peer)
 {
+	struct nvmap_heap *h = co->carveout;
 	struct nvmap_heap_block *b;
 
 	mutex_lock(&h->lock);
@@ -443,9 +477,23 @@ struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_heap *h,
 	/* Generate IVM for partition that can alloc */
 	if (h->is_ivm && h->can_alloc) {
 		unsigned int offs = (b->base - h->base);
-		handle->ivm_id = NVMAP2_calculate_ivm_id(h->vm_id, len, offs);
+		NVMAP2_handle_set_ivm(handle,
+				NVMAP2_calculate_ivm_id(h->vm_id, len, offs));
 	}
 
 	mutex_unlock(&h->lock);
 	return b;
+}
+
+// This is only needed because dev doesn't have a double pointer
+// and carveout.c is the only file that knows the size of the struct
+struct nvmap_carveout_node *NVMAP2_carveout_index(
+				struct nvmap_carveout_node *node, int i)
+{
+	return node + i;
+}
+
+void NVMAP2_carveout_destroy(struct nvmap_carveout_node *node)
+{
+	nvmap_heap_destroy(node->carveout);
 }

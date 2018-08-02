@@ -20,8 +20,17 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/nvmap_t19x.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-direction.h>
+#include <linux/nvmap.h>
+#include <linux/vmalloc.h>
+#include <linux/slab.h>
 
-#include "nvmap_priv.h"
+#include <linux/version.h>
+
+#include "nv2_carveout.h"
+#include "nv2_dev.h"
+#include "nv2_init.h"
 
 bool nvmap_version_t19x;
 extern struct static_key nvmap_updated_cache_config;

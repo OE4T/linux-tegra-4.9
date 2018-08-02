@@ -35,10 +35,15 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include "nv2_cache.h"
+#include "nv2_pp.h"
+#include "nv2_dev.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
+
+u64 nvmap_big_page_allocs;
+u64 nvmap_total_page_allocs;
 
 static bool enable_pp = 1;
 static u32 pool_size;

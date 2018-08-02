@@ -28,6 +28,8 @@ struct nvmap_heap_block {
 	struct nvmap_handle *handle;
 };
 
+struct nvmap_platform_carveout;
+
 struct nvmap_heap *nvmap_heap_create(struct device *parent,
 				     const struct nvmap_platform_carveout *co,
 				     phys_addr_t base, size_t len, void *arg);

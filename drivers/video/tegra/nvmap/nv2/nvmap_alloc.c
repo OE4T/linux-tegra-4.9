@@ -18,18 +18,13 @@
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <linux/moduleparam.h>
-#include <linux/random.h>
-#include <soc/tegra/chip-id.h>
-#include <trace/events/nvmap.h>
-
-#include "nvmap_priv.h"
+#include <linux/vmalloc.h>
+#include <linux/slab.h>
 
 bool nvmap_convert_carveout_to_iovmm;
 bool nvmap_convert_iovmm_to_carveout;
 
 u32 nvmap_max_handle_count;
-u64 nvmap_big_page_allocs;
-u64 nvmap_total_page_allocs;
 
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to

@@ -14,6 +14,23 @@
 #ifndef __NVMAP2_MISC_H
 #define __NVMAP2_MISC_H
 
+#define NVMAP_IVM_INVALID_PEER		(-1)
+
+/* bit 31-29: IVM peer
+ * bit 28-16: offset (aligned to 32K)
+ * bit 15-00: len (aligned to page_size)
+ */
+#define NVMAP_IVM_LENGTH_SHIFT (0)
+#define NVMAP_IVM_LENGTH_WIDTH (16)
+#define NVMAP_IVM_LENGTH_MASK  ((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)
+#define NVMAP_IVM_OFFSET_SHIFT (NVMAP_IVM_LENGTH_SHIFT + NVMAP_IVM_LENGTH_WIDTH)
+#define NVMAP_IVM_OFFSET_WIDTH (13)
+#define NVMAP_IVM_OFFSET_MASK  ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)
+#define NVMAP_IVM_IVMID_SHIFT  (NVMAP_IVM_OFFSET_SHIFT + NVMAP_IVM_OFFSET_WIDTH)
+#define NVMAP_IVM_IVMID_WIDTH  (3)
+#define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
+#define NVMAP_IVM_ALIGNMENT    (SZ_32K)
+
 void *NVMAP2_altalloc(size_t len);
 void NVMAP2_altfree(void *ptr, size_t len);
 
@@ -55,6 +72,36 @@ static inline int NVMAP2_calculate_ivm_id(int vm_id, size_t len,
 	ivm_id |= (len >> PAGE_SHIFT);
 
 	return ivm_id;
+}
+
+static inline struct page *NVMAP2_to_page(struct page *page)
+{
+	return (struct page *)((unsigned long)page & ~3UL);
+}
+
+struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages);
+
+int NVMAP2_get_user_pages(ulong vaddr, int nr_page, struct page **pages);
+
+static inline bool NVMAP2_page_dirty(struct page *page)
+{
+	return (unsigned long)page & 1UL;
+}
+
+static inline bool NVMAP2_page_mkdirty(struct page **page)
+{
+	if (NVMAP2_page_dirty(*page))
+		return false;
+	*page = (struct page *)((unsigned long)*page | 1UL);
+	return true;
+}
+
+static inline bool NVMAP2_page_mkclean(struct page **page)
+{
+	if (!NVMAP2_page_dirty(*page))
+		return false;
+	*page = (struct page *)((unsigned long)*page & ~1UL);
+	return true;
 }
 
 #endif /* __NVMAP2_MISC_H */

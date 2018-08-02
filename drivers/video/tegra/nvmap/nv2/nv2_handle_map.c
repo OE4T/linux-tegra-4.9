@@ -18,35 +18,48 @@
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
 #include <linux/err.h>
-#include <linux/highmem.h>
 #include <linux/io.h>
-#include <linux/rbtree.h>
 #include <linux/vmalloc.h>
-#include <linux/wait.h>
-#include <linux/slab.h>
-#include <linux/export.h>
-
-#include <asm/pgtable.h>
-#include <asm/tlbflush.h>
-
 #include <linux/nvmap.h>
+
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include <asm/pgtable.h>
+
+#include "nv2_handle.h"
+#include "nv2_handle_priv.h"
+#include "nv2_client.h"
+#include "nv2_dev.h"
+#include "nv2_misc.h"
+#include "nv2_carveout.h"
+
+pgprot_t NVMAP2_handle_pgprot(struct nvmap_handle *h, pgprot_t prot)
+{
+	if (h->flags == NVMAP_HANDLE_UNCACHEABLE) {
+#ifdef CONFIG_ARM64
+		NVMAP2_client_warn_if_bad_heap(h->owner,
+						h->heap_type, h->userflags);
+#endif
+		return pgprot_noncached(prot);
+	}
+	else if (h->flags == NVMAP_HANDLE_WRITE_COMBINE)
+		return pgprot_writecombine(prot);
+	return prot;
+}
 
 static void *handle_pgalloc_mmap(struct nvmap_handle *h)
 {
 	struct page **pages;
 	void *vaddr;
 
-	pgprot_t prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+	pgprot_t prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
 
-	pages = nvmap_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
+	pages = NVMAP2_alloc_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
 	if (!pages)
 		return NULL;
 
 	vaddr = vm_map_ram(pages, h->size >> PAGE_SHIFT, -1, prot);
-	nvmap_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
+	NVMAP2_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
 	if (!vaddr && !h->vaddr)
 		return NULL;
 
@@ -58,13 +71,15 @@ static void *handle_pgalloc_mmap(struct nvmap_handle *h)
 
 static void *handle_carveout_mmap(struct nvmap_handle *h)
 {
-	pgprot_t prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+	pgprot_t prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
 	unsigned long adj_size;
 	struct vm_struct *v;
 	void *vaddr;
+	phys_addr_t co_base = h->carveout->base;
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
-	adj_size = h->carveout->base & ~PAGE_MASK;
+	// TODO: This could probably be pushed into carveout
+	adj_size = co_base & ~PAGE_MASK;
 	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
 
@@ -72,14 +87,14 @@ static void *handle_carveout_mmap(struct nvmap_handle *h)
 	if (!v)
 		return NULL;
 
-	vaddr = v->addr + (h->carveout->base & ~PAGE_MASK);
+	vaddr = v->addr + (co_base & ~PAGE_MASK);
 	ioremap_page_range((ulong)v->addr, (ulong)v->addr + adj_size,
-			h->carveout->base & PAGE_MASK, prot);
+			co_base & PAGE_MASK, prot);
 
 	if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
 		struct vm_struct *vm;
 
-		vaddr -= (h->carveout->base & ~PAGE_MASK);
+		vaddr -= (co_base & ~PAGE_MASK);
 		vm = find_vm_area(vaddr);
 		BUG_ON(!vm);
 		free_vm_area(vm);
@@ -95,7 +110,7 @@ void *NVMAP2_handle_mmap(struct nvmap_handle *h)
 	if (!virt_addr_valid(h))
 		return NULL;
 
-	h = nvmap_handle_get(h);
+	h = NVMAP2_handle_get(h);
 	if (!h)
 		return NULL;
 
@@ -108,7 +123,7 @@ void *NVMAP2_handle_mmap(struct nvmap_handle *h)
 	if (h->vaddr)
 		return h->vaddr;
 
-	nvmap_kmaps_inc(h);
+	NVMAP2_handle_kmap_inc(h);
 
 	if (h->heap_pgalloc) {
 		vaddr = handle_pgalloc_mmap(h);
@@ -123,7 +138,7 @@ void *NVMAP2_handle_mmap(struct nvmap_handle *h)
 		return vaddr;
 
 	/* If we fail to map then set kmaps back to original value */
-	nvmap_kmaps_dec(h);
+	NVMAP2_handle_kmap_dec(h);
 put_handle:
 	NVMAP2_handle_put(h);
 	return NULL;

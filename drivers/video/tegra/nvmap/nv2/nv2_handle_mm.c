@@ -18,105 +18,74 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/mm.h>
-#include <linux/rbtree.h>
 #include <linux/dma-buf.h>
 #include <linux/moduleparam.h>
 #include <linux/nvmap.h>
-#include <soc/tegra/chip-id.h>
 
 #include <asm/pgtable.h>
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
+#include "nv2_handle.h"
+#include "nv2_handle_priv.h"
+#include "nv2_misc.h"
+#include "nv2_vma.h"
 
-enum NVMAP_PROT_OP {
-	NVMAP_HANDLE_PROT_NONE = 1,
-	NVMAP_HANDLE_PROT_RESTORE = 2,
-};
-
-static int nvmap_list_prot_none(struct nvmap_vma_list *vma_list,
-				struct vm_area_struct *vma,
-				struct vm_area_struct *prev,
-				size_t vm_size,
-				int handle_is_dirty)
+/*
+ * FIXME: assume user space requests for reserve operations
+ * are page aligned
+ */
+static inline int nvmap_handle_mk(struct nvmap_handle *h,
+				  u32 offset, u32 size,
+				  bool (*fn)(struct page **),
+				  bool locked)
 {
-	int err = 0;
+	int i, nchanged = 0;
+	u32 start_page = offset >> PAGE_SHIFT;
+	u32 end_page = PAGE_ALIGN(offset + size) >> PAGE_SHIFT;
 
-	vma->vm_flags = vma_list->save_vm_flags;
-	(void)vma_set_page_prot(vma);
-
-	if (!handle_is_dirty)
-		return 0;
-
-	err = mprotect_fixup(vma, &prev, vma->vm_start,
-			vma->vm_start + vm_size, VM_NONE);
-	if (err)
-		return err;
-
-	vma->vm_flags = vma_list->save_vm_flags;
-	(void)vma_set_page_prot(vma);
-
-	return err;
+	if (!locked)
+		mutex_lock(&h->lock);
+	if (h->heap_pgalloc &&
+		(offset < h->size) &&
+		(size <= h->size) &&
+		(offset <= (h->size - size))) {
+		for (i = start_page; i < end_page; i++)
+			nchanged += fn(&h->pgalloc.pages[i]) ? 1 : 0;
+	}
+	if (!locked)
+		mutex_unlock(&h->lock);
+	return nchanged;
 }
 
-static int nvmap_list_prot_restore(struct nvmap_vma_list *vma_list,
-				struct vm_area_struct *vma,
-				struct vm_area_struct *prev,
-				size_t vm_size)
+void NVMAP2_handle_mkclean(struct nvmap_handle *h, u32 offset, u32 size)
 {
-	int err = 0;
+	int nchanged;
 
-	vma->vm_flags = VM_NONE;
-	(void)vma_set_page_prot(vma);
+	if (h->heap_pgalloc && !atomic_read(&h->pgalloc.ndirty))
+		return;
+	if (size == 0)
+		size = h->size;
 
-	err = mprotect_fixup(vma, &prev, vma->vm_start,
-			vma->vm_start + vm_size,
-			vma_list->save_vm_flags);
-	return err;
+	nchanged = nvmap_handle_mk(h, offset, size, NVMAP2_page_mkclean, false);
+	if (h->heap_pgalloc)
+		atomic_sub(nchanged, &h->pgalloc.ndirty);
 }
 
-static int nvmap_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
-					u64 size, int handle_is_dirty, int op)
+void NVMAP2_handle_mkdirty(struct nvmap_handle *h, u32 offset, u32 size)
 {
-	struct vm_area_struct *vma = vma_list->vma;
-	struct nvmap_vma_priv *priv = vma->vm_private_data;
-	struct vm_area_struct *prev = vma->vm_prev;
-	size_t vm_size;
-	int err = 0;
+	int nchanged;
 
-	vm_size = size;
+	if (h->heap_pgalloc &&
+		(atomic_read(&h->pgalloc.ndirty) == (h->size >> PAGE_SHIFT)))
+		return;
 
-	if ((offset + size) > (vma->vm_end - vma->vm_start))
-		vm_size = vma->vm_end - vma->vm_start - offset;
-
-	if ((priv->offs || vma->vm_pgoff) ||
-			(size > (vma->vm_end - vma->vm_start)))
-		vm_size = vma->vm_end - vma->vm_start;
-
-	if (vma->vm_mm != current->mm)
-		down_write(&vma->vm_mm->mmap_sem);
-
-	switch (op) {
-		case NVMAP_HANDLE_PROT_NONE:
-			err = nvmap_list_prot_none(vma_list, vma,
-							prev, vm_size,
-							handle_is_dirty);
-			break;
-		case NVMAP_HANDLE_PROT_RESTORE:
-			err = nvmap_list_prot_restore(vma_list, vma,
-							prev, vm_size);
-			break;
-		default:
-			BUG();
-	};
-
-	if (vma->vm_mm != current->mm)
-		up_write(&vma->vm_mm->mmap_sem);
-
-	return err;
+	nchanged = nvmap_handle_mk(h, offset, size, NVMAP2_page_mkdirty, true);
+	if (h->heap_pgalloc)
+		atomic_add(nchanged, &h->pgalloc.ndirty);
 }
+
+
 
 static int handle_prot(struct nvmap_handle *handle, u64 offset,
 							u64 size, int op)
@@ -142,16 +111,16 @@ static int handle_prot(struct nvmap_handle *handle, u64 offset,
 	mutex_lock(&handle->lock);
 
 	list_for_each_entry(vma_list, &handle->vmas, list) {
-		int handle_is_dirty = (nvmap_handle_track_dirty(handle) &&
+		int handle_is_dirty = (NVMAP2_handle_track_dirty(handle) &&
 				atomic_read(&handle->pgalloc.ndirty));
 
-		err = nvmap_list_prot(vma_list, offset, size,
+		err = NVMAP2_vma_list_prot(vma_list, offset, size,
 							handle_is_dirty, op);
 		if (err)
 			break;
 
 		if(op == NVMAP_HANDLE_PROT_RESTORE)
-			_nvmap_handle_mkdirty(handle, 0, size);
+			NVMAP2_handle_mkdirty(handle, 0, size);
 	}
 
 	mutex_unlock(&handle->lock);
@@ -218,7 +187,7 @@ int NVMAP2_handles_reserve(struct nvmap_handle **handles, u64 *offsets,
 			break;
 		case NVMAP_PAGES_UNRESERVE:
 			for (i = 0; i < nr; i++)
-				if (nvmap_handle_track_dirty(handles[i]))
+				if (NVMAP2_handle_track_dirty(handles[i]))
 					atomic_set(&handles[i]->pgalloc.ndirty, 0);
 			break;
 		default:
@@ -243,7 +212,7 @@ int NVMAP2_handles_reserve(struct nvmap_handle **handles, u64 *offsets,
 
 	if (op == NVMAP_PAGES_RESERVE) {
 		for (i = 0; i < nr; i++)
-			nvmap_handle_mkclean(handles[i], offsets[i], sizes[i]);
+			NVMAP2_handle_mkclean(handles[i], offsets[i], sizes[i]);
 	}
 
 	return 0;

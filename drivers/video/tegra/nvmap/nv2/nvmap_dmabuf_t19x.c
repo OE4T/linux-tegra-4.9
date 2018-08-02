@@ -15,11 +15,23 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <linux/of.h>
 #include <linux/miscdevice.h>
 #include <linux/nvmap_t19x.h>
 
-#include "nvmap_priv.h"
+#include "nv2_handle.h"
+#include "nv2_cache.h"
+#include "nv2_dmabuf.h"
+#include "nv2_dev.h"
+
+// TODO: Re-name this function so it can be in a header file
+struct sg_table *_nvmap_dmabuf_map_dma_buf(
+	struct dma_buf_attachment *attach, enum dma_data_direction dir);
+void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+				       struct sg_table *sgt,
+				       enum dma_data_direction dir);
 
 extern bool of_dma_is_coherent(struct device_node *np);
 
@@ -43,18 +55,19 @@ struct sg_table *nvmap_dmabuf_map_dma_buf(
 	struct nvmap_handle_t19x *handle_t19x = NULL;
 	struct device *dev = nvmap_dev->dev_user.parent;
 	struct sg_table *sg_table;
+	struct dma_buf *dmabuf = NVMAP2_handle_to_dmabuf(handle);
 
 	if (!nvmap_version_t19x)
 		goto dmabuf_map;
 
-	handle_t19x = dma_buf_get_drvdata(handle->dmabuf, dev);
+	handle_t19x = dma_buf_get_drvdata(dmabuf, dev);
 	if (!handle_t19x && !of_dma_is_coherent(attach->dev->of_node)) {
 		handle_t19x = kmalloc(sizeof(*handle_t19x), GFP_KERNEL);
 		if (WARN(!handle_t19x, "No memory!!"))
 			return ERR_PTR(-ENOMEM);
 
 		atomic_set(&handle_t19x->nc_pin, 0);
-		dma_buf_set_drvdata(handle->dmabuf, dev,
+		dma_buf_set_drvdata(dmabuf, dev,
 				handle_t19x, nvmap_handle_t19x_free);
 	}
 
@@ -78,10 +91,11 @@ void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	struct nvmap_handle *handle = info->handle;
 	struct device *dev = nvmap_dev->dev_user.parent;
 	struct nvmap_handle_t19x *handle_t19x;
+	struct dma_buf *dmabuf = NVMAP2_handle_to_dmabuf(handle);
 
 	_nvmap_dmabuf_unmap_dma_buf(attach, sgt, dir);
 
-	handle_t19x = dma_buf_get_drvdata(handle->dmabuf, dev);
+	handle_t19x = dma_buf_get_drvdata(dmabuf, dev);
 	if (handle_t19x && !of_dma_is_coherent(attach->dev->of_node))
 		atomic_dec(&handle_t19x->nc_pin);
 }

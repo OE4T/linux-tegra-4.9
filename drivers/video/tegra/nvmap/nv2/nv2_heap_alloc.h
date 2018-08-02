@@ -14,6 +14,8 @@
 #ifndef __NVMAP2_HEAP_ALLOC_H
 #define __NVMAP2_HEAP_ALLOC_H
 
+#define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
+
 struct device *NVMAP2_heap_type_to_dev(unsigned long type);
 unsigned int NVMAP2_heap_type_conversion(unsigned int orig_heap);
 

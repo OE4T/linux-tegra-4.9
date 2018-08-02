@@ -16,8 +16,9 @@
  */
 
 #include <linux/debugfs.h>
+#include <linux/atomic.h>
 
-#include "nvmap_priv.h"
+#include "nvmap_stats.h"
 
 struct nvmap_stats nvmap_stats;
 

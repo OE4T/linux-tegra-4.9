@@ -18,25 +18,18 @@
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
 #include <linux/err.h>
-#include <linux/io.h>
 #include <linux/kernel.h>
-#include <linux/list.h>
-#include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/rbtree.h>
 #include <linux/dma-buf.h>
 #include <linux/moduleparam.h>
 #include <linux/nvmap.h>
-#include <soc/tegra/chip-id.h>
-
-#include <asm/pgtable.h>
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
-
-void add_handle_ref(struct nvmap_client *client,
-			   struct nvmap_handle_ref *ref);
+#include "nv2_handle.h"
+#include "nv2_handle_priv.h"
+#include "nv2_handle_ref.h"
 
 int NVMAP2_handle_ref_get(struct nvmap_handle_ref *ref)
 {
@@ -46,6 +39,11 @@ int NVMAP2_handle_ref_get(struct nvmap_handle_ref *ref)
 	atomic_inc(&ref->dupes);
 	NVMAP2_handle_get(ref->handle);
 	return 0;
+}
+
+int NVMAP2_handle_ref_count(struct nvmap_handle_ref *ref)
+{
+	return atomic_read(&ref->dupes);
 }
 
 struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
@@ -66,6 +64,7 @@ struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
 	}
 
 	ref->handle = handle;
+	atomic_inc(&handle->share_count);
 
 	get_dma_buf(handle->dmabuf);
 	return ref;
@@ -73,6 +72,7 @@ struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
 
 void NVMAP2_handle_ref_free(struct nvmap_handle_ref *ref)
 {
+	atomic_dec(&ref->handle->share_count);
 	dma_buf_put(ref->handle->dmabuf);
 	kfree(ref);
 }

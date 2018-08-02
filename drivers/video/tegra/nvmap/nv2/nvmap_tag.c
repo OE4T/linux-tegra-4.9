@@ -17,11 +17,14 @@
 
 #define pr_fmt(fmt)	"%s: " fmt, __func__
 
+#include <linux/rtmutex.h>
+#include <linux/rbtree.h>
 #include <linux/moduleparam.h>
+#include <linux/slab.h>
+#include <linux/uaccess.h>
 
 #include <trace/events/nvmap.h>
-
-#include "nvmap_priv.h"
+#include "nv2_tag.h"
 
 struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag)
 {

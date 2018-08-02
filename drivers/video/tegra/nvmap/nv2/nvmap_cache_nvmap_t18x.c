@@ -15,9 +15,11 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
-#include "nvmap_priv.h"
+#include <linux/types.h>
 #include <linux/tegra-mce.h>
 #include <soc/tegra/chip-id.h>
+
+#include "nv2_cache.h"
 
 static void nvmap_roc_flush_cache(void)
 {

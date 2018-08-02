@@ -25,6 +25,7 @@
 #include <linux/wait.h>
 #include <linux/slab.h>
 #include <linux/export.h>
+#include <linux/version.h>
 
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
@@ -32,7 +33,12 @@
 #include <linux/nvmap.h>
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
+#include "nv2_handle.h"
+#include "nvmap_heap.h"
+#include "nv2_handle_priv.h"
+#include "nv2_dev.h"
+#include "nv2_misc.h"
+#include "nv2_cache.h"
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
@@ -58,24 +64,24 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	if (!h->alloc)
 		goto put_handle;
 
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+	if (!(h->heap_type & NVMAP2_cpu_access_mask()))
 		goto put_handle;
 
-	nvmap_kmaps_inc(h);
+	NVMAP2_handle_kmap_inc(h);
 	if (pagenum >= h->size >> PAGE_SHIFT)
 		goto out;
 
 	if (h->vaddr) {
 		kaddr = (unsigned long)h->vaddr + pagenum * PAGE_SIZE;
 	} else {
-		prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+		prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
 		area = alloc_vm_area(PAGE_SIZE, NULL);
 		if (!area)
 			goto out;
 		kaddr = (ulong)area->addr;
 
 		if (h->heap_pgalloc)
-			paddr = page_to_phys(nvmap_to_page(
+			paddr = page_to_phys(NVMAP2_to_page(
 						h->pgalloc.pages[pagenum]));
 		else
 			paddr = h->carveout->base + pagenum * PAGE_SIZE;
@@ -84,7 +90,7 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	}
 	return (void *)kaddr;
 out:
-	nvmap_kmaps_dec(h);
+	NVMAP2_handle_kmap_dec(h);
 put_handle:
 	NVMAP2_handle_put(h);
 	return NULL;
@@ -99,7 +105,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 	if (!h || !h->alloc ||
 	    WARN_ON(!virt_addr_valid(h)) ||
 	    WARN_ON(!addr) ||
-	    !(h->heap_type & nvmap_dev->cpu_access_mask))
+	    !(h->heap_type & NVMAP2_cpu_access_mask()))
 		return;
 
 	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
@@ -109,7 +115,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 		goto out;
 
 	if (h->heap_pgalloc)
-		paddr = page_to_phys(nvmap_to_page(h->pgalloc.pages[pagenum]));
+		paddr = page_to_phys(NVMAP2_to_page(h->pgalloc.pages[pagenum]));
 	else
 		paddr = h->carveout->base + pagenum * PAGE_SIZE;
 
@@ -129,7 +135,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 	else
 		WARN(1, "Invalid address passed");
 out:
-	nvmap_kmaps_dec(h);
+	NVMAP2_handle_kmap_dec(h);
 	NVMAP2_handle_put(h);
 }
 
@@ -151,27 +157,27 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (!h->alloc)
 		goto put_handle;
 
-	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+	if (!(h->heap_type & NVMAP2_cpu_access_mask()))
 		goto put_handle;
 
 	if (h->vaddr)
 		return h->vaddr;
 
-	nvmap_kmaps_inc(h);
-	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
+	NVMAP2_handle_kmap_inc(h);
+	prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
 
 	if (h->heap_pgalloc) {
-		pages = nvmap_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
+		pages = NVMAP2_alloc_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
 		if (!pages)
 			goto out;
 
 		vaddr = vm_map_ram(pages, h->size >> PAGE_SHIFT, -1, prot);
-		nvmap_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
+		NVMAP2_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
 		if (!vaddr && !h->vaddr)
 			goto out;
 
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
-			nvmap_kmaps_dec(h);
+			NVMAP2_handle_kmap_dec(h);
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		}
 		return h->vaddr;
@@ -197,7 +203,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 		vm = find_vm_area(vaddr);
 		BUG_ON(!vm);
 		free_vm_area(vm);
-		nvmap_kmaps_dec(h);
+		NVMAP2_handle_kmap_dec(h);
 	}
 
 	/* leave the handle ref count incremented by 1, so that
@@ -205,7 +211,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	 * nvmap_handle_put will be called by unmapping this address */
 	return h->vaddr;
 out:
-	nvmap_kmaps_dec(h);
+	NVMAP2_handle_kmap_dec(h);
 put_handle:
 	NVMAP2_handle_put(h);
 	return NULL;
@@ -216,7 +222,7 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	if (!h || !h->alloc ||
 	    WARN_ON(!virt_addr_valid(h)) ||
 	    WARN_ON(!addr) ||
-	    !(h->heap_type & nvmap_dev->cpu_access_mask))
+	    !(h->heap_type & NVMAP2_cpu_access_mask()))
 		return;
 
 	NVMAP2_handle_put(h);
@@ -258,14 +264,14 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 
 		sg_set_page(sgt->sgl, page, h->size, offset_in_page(paddr));
 	} else {
-		pages = nvmap_pages(h->pgalloc.pages, npages);
+		pages = NVMAP2_alloc_pages(h->pgalloc.pages, npages);
 		if (!pages) {
 			err = -ENOMEM;
 			goto err;
 		}
 		err = sg_alloc_table_from_pages(sgt, pages,
 				npages, 0, h->size, GFP_KERNEL);
-		nvmap_altfree(pages, npages * sizeof(*pages));
+		NVMAP2_altfree(pages, npages * sizeof(*pages));
 		if (err)
 			goto err;
 	}

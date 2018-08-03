@@ -11,3 +11,4 @@ obj-y += dma-override.o
 endif
 
 obj-$(CONFIG_ARM_SMMU_SUSPEND) += arm-smmu-suspend.o
+obj-$(CONFIG_OF_IOMMU) += of_tegra-smmu.o

@@ -20,9 +20,10 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-include ../drivers/gpu/nvgpu/Makefile.sources
+include $(NVGPU_SRC)/Makefile.sources
+-include $(NVGPU_NEXT_SRC)/Makefile.sources
 
-OBJS := $(srcs:%.c=$(NVGPU_OUT)/%.o)
+OBJS := $(srcs:%.c=$(NVGPU_OUT)/%.o) $(srcs_next:%.c=$(NVGPU_OUT)/%.o)
 
 HEADERS :=	\
 	$(NVGPU_SRC)/include/nvgpu/*.h		\

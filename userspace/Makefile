@@ -39,14 +39,18 @@ CORE_OUT=$(OUT)/nvgpu_unit_core
 # Nvgpu driver code.
 NVGPU_SRC=$(TWD)/../drivers/gpu/nvgpu
 NVGPU_OUT=$(OUT)/libnvgpu
+# Nvgpu_next driver code.
+NVGPU_NEXT_SRC=$(TWD)/../../nvgpu-next/drivers/gpu/nvgpu
 
 # Unit tests themselves.
 UNIT_SRC=$(TWD)/units
 UNIT_OUT=$(OUT)/units
 
-INCLUDES=	 			\
+INCLUDES= 				\
 	-I$(NVGPU_SRC)			\
 	-I$(NVGPU_SRC)/include		\
+	-I$(NVGPU_NEXT_SRC)		\
+	-I$(NVGPU_NEXT_SRC)/include	\
 	-I$(TWD)/../include		\
 	-I$(TWD)/../include/uapi	\
 	-I$(TWD)/include
@@ -102,6 +106,14 @@ $(OUT)/libnvgpu-drv.so: $(OBJS)
 # Default build target for all the nvgpu driver object files we want to build in
 # userspace. These get bundled into libnvgpu-drv.so.
 $(NVGPU_OUT)/%.o : $(NVGPU_SRC)/%.c $(HEADERS)
+	@if [ ! -d $(dir $@) ] ; then \
+		mkdir -p $(dir $@) ; \
+	fi
+	$(CC) --coverage $(CFLAGS) $(configs) -c -o $@ $<
+
+# Default build target for all the nvgpu-next driver object files we want to
+# build in userspace. These too get bundled into libnvgpu-drv.so.
+$(NVGPU_OUT)/%.o : $(NVGPU_NEXT_SRC)/%.c $(HEADERS) $(HEADERS_NEXT)
 	@if [ ! -d $(dir $@) ] ; then \
 		mkdir -p $(dir $@) ; \
 	fi

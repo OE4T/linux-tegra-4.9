@@ -422,6 +422,7 @@
 			iommus = <&smmu TEGRA_SWGROUP_APE>;
 			dma-mask = <0x0 0xfff00000>;
 			iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xfff00000 0xffffffff 0xffffffff>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 			nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
 					  <0x80B00000 0x00800000>, /* ADSP APP */
 					  <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
@@ -907,6 +908,7 @@
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		dma-mask = <0x0 0xfff00000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -914,6 +916,7 @@
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		dma-mask = <0x0 0xfff00000>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		status = "disabled";
 	};
 
@@ -1198,6 +1201,7 @@
 			power-domains = <&pd_vic>;
 			reg = <0x0 0x54340000 0x0 0x00040000>;
 			iommus = <&smmu TEGRA_SWGROUP_VIC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_VIC03_CBUS>,
 				 <&tegra_car TEGRA210_CLK_VIC_EMC>,
@@ -1216,6 +1220,7 @@
 			clock-names = "msenc";
 			resets = <&tegra_car TEGRA210_CLK_NVENC>;
 			iommus = <&smmu TEGRA_SWGROUP_MPE>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1229,6 +1234,7 @@
 			clock-names = "tsec";
 			resets = <&tegra_car TEGRA210_CLK_TSEC>;
 			iommus = <&smmu TEGRA_SWGROUP_TSEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1242,6 +1248,7 @@
 			clock-names = "tsecb";
 			resets = <&tegra_car TEGRA210_CLK_TSECB>;
 			iommus = <&smmu TEGRA_SWGROUP_TSECB>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1253,6 +1260,7 @@
 			clock-names = "nvdec";
 			resets = <&tegra_car TEGRA210_CLK_NVDEC>;
 			iommus = <&smmu TEGRA_SWGROUP_NVDEC>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1264,6 +1272,7 @@
 			clock-names = "nvjpg";
 			resets = <&tegra_car TEGRA210_CLK_NVJPG>;
 			iommus = <&smmu TEGRA_SWGROUP_NVJPG>;
+			iommu-group-id = <TEGRA_IOMMU_GROUP_HOST1X>;
 			status = "disabled";
 		};
 
@@ -1475,6 +1484,7 @@
 		reg = <0x0 0x70012000 0x0 0x2000>; /* SE base */
 		iommus = <&smmu TEGRA_SWGROUP_SE>,
 			 <&smmu TEGRA_SWGROUP_SE1>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_SE>;
 		interrupts = <0 58 0x04>;
 		clocks = <&tegra_car TEGRA210_CLK_SE_CBUS>,
 			<&tegra_car TEGRA210_CLK_ENTROPY>;
@@ -1823,6 +1833,7 @@
 		wakeup-disable;
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
+		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,

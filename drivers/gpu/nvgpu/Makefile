@@ -64,7 +64,6 @@ nvgpu-y += \
 	os/linux/dmabuf.o \
 	os/linux/sched.o \
 	os/linux/channel.o \
-	os/linux/ce2.o \
 	os/linux/sim.o \
 	os/linux/sim_pci.o \
 	os/linux/os_sched.o \
@@ -188,6 +187,7 @@ nvgpu-y += \
 	common/sim_pci.o \
 	common/fifo/submit.o \
 	common/ecc.o \
+	common/ce2.o \
 	gk20a/gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \

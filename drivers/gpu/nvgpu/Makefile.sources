@@ -50,6 +50,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/ltc.c \
 	common/io_common.c \
 	common/ecc.c \
+	common/ce2.c \
 	common/vbios/bios.c \
 	common/falcon/falcon.c \
 	common/falcon/falcon_queue.c \

@@ -105,14 +105,21 @@ struct nvhost_job *nvhost_job_alloc(struct nvhost_channel *ch,
 		job_size(num_cmdbufs, num_relocs, num_waitchks, num_syncpts);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(ch->dev);
 
-	if(!size) {
+	if (!size) {
 		nvhost_err(&pdata->pdev->dev, "empty job requested");
 		return NULL;
 	}
-	if(size <= PAGE_SIZE)
+	if (size <= PAGE_SIZE * 2) {
 		job = kzalloc(size, GFP_KERNEL);
-	else
+		if (!job) {
+			job = vzalloc(size);
+		}
+	} else {
+		nvhost_warn(&pdata->pdev->dev,
+			"job is very large (%lu), expect performance loss\n",
+			size);
 		job = vzalloc(size);
+	}
 	if (!job) {
 		nvhost_err(&pdata->pdev->dev, "failed to allocate job");
 		return NULL;
@@ -166,7 +173,7 @@ static void job_free(struct kref *ref)
 
 	if (job->error_notifier_ref)
 		dma_buf_put(job->error_notifier_ref);
-	if (job->size <= PAGE_SIZE)
+	if (!is_vmalloc_addr(job))
 		kfree(job);
 	else
 		vfree(job);

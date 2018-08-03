@@ -420,6 +420,8 @@
 			      <0x0 0x01000000 0x0 0x6f2c0000>, /* DRAM MAP1 */
 			      <0x0 0x70300000 0x0 0x8fd00000>; /* DRAM MAP2 */
 			iommus = <&smmu TEGRA_SWGROUP_APE>;
+			dma-mask = <0x0 0xfff00000>;
+			iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xfff00000 0xffffffff 0xffffffff>;
 			nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
 					  <0x80B00000 0x00800000>, /* ADSP APP */
 					  <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
@@ -483,6 +485,8 @@
                  <0x0 0x01000000 0x0 0x6f2c0000>, /* DRAM MAP1 */
                   <0x0 0x70300000 0x0 0x8fd00000>; /* DRAM MAP2 */
             iommus = <&smmu TEGRA_SWGROUP_APE>;
+            dma-mask = <0x0 0xfff00000>;
+            iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xfff00000 0xffffffff 0xffffffff>;
             power-domains = <&adsp_pd>;
             nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
                               <0x80B00000 0x00800000>, /* ADSP APP */
@@ -901,11 +905,15 @@
 
 	sound {
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		dma-mask = <0x0 0xfff00000>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
 		status = "disabled";
 	};
 
 	sound_ref {
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		dma-mask = <0x0 0xfff00000>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
 		status = "disabled";
 	};
 
@@ -1814,6 +1822,7 @@
 		compatible = "nvidia,tegra210-adsp-audio";
 		wakeup-disable;
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,

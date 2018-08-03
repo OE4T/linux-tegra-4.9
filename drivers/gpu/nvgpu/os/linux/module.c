@@ -1257,8 +1257,6 @@ static int gk20a_probe(struct platform_device *dev)
 		goto return_err;
 	}
 
-	gk20a->mm.has_physical_mode = !nvgpu_is_hypervisor_mode(gk20a);
-
 	return 0;
 
 return_err:

@@ -147,7 +147,6 @@ struct mm_gk20a {
 	bool ltc_enabled_current;
 	bool ltc_enabled_target;
 	bool disable_bigpage;
-	bool has_physical_mode;
 
 	struct nvgpu_mem sysmem_flush;
 

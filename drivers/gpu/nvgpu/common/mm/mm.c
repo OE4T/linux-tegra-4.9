@@ -128,10 +128,11 @@ int nvgpu_mm_suspend(struct gk20a *g)
 
 u64 nvgpu_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	if (g->mm.has_physical_mode)
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK)) {
 		return nvgpu_mem_get_phys_addr(g, inst_block);
-	else
+	} else {
 		return nvgpu_mem_get_addr(g, inst_block);
+	}
 }
 
 void nvgpu_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)

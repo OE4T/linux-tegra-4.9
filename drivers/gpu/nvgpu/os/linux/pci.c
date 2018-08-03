@@ -806,8 +806,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		}
 	}
 
-	g->mm.has_physical_mode = false;
-
 	return 0;
 
 err_free_irq:

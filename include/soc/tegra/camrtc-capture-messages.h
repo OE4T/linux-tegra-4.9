@@ -58,6 +58,7 @@ struct CAPTURE_MSG_HEADER {
  */
 #define	CAPTURE_REQUEST_REQ			U32_C(0x01)
 #define	CAPTURE_STATUS_IND			U32_C(0x02)
+#define	CAPTURE_RESET_BARRIER_IND		U32_C(0x03)
 
 /**
  * Invalid message type. This can be used to
@@ -78,6 +79,7 @@ typedef uint32_t capture_result;
 #define CAPTURE_ERROR_NOT_INITIALIZED		U32_C(5)
 #define CAPTURE_ERROR_OVERFLOW			U32_C(6)
 #define CAPTURE_ERROR_NO_RESOURCES		U32_C(7)
+#define CAPTURE_ERROR_TIMEOUT			U32_C(8)
 
 
 /** Set up RTCPU side resources for a capture pipe-line.
@@ -248,7 +250,7 @@ struct CAPTURE_PHY_STREAM_OPEN_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_OPEN_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -261,7 +263,7 @@ struct CAPTURE_PHY_STREAM_CLOSE_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_CLOSE_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -274,7 +276,7 @@ struct CAPTURE_PHY_STREAM_RESET_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_RESET_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -285,7 +287,7 @@ struct CAPTURE_PHY_STREAM_DUMPREGS_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -302,7 +304,7 @@ struct CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -320,7 +322,7 @@ struct CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -330,7 +332,7 @@ struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -342,7 +344,7 @@ struct CAPTURE_CSI_STREAM_TPG_START_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -355,7 +357,7 @@ struct CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -366,7 +368,7 @@ struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_TPG_STOP_RESP_MSG {
-	int32_t result;
+	uint32_t result;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -427,11 +429,13 @@ struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
 /**
  * Message types for isp capture channel messages.
  */
-#define CAPTURE_ISP_REQUEST_REQ			U32_C(0x03)
-#define CAPTURE_ISP_STATUS_IND			U32_C(0x04)
+#define CAPTURE_ISP_REQUEST_REQ			U32_C(0x04)
+#define CAPTURE_ISP_STATUS_IND			U32_C(0x05)
 
-#define CAPTURE_ISP_PROGRAM_REQUEST_REQ		U32_C(0x05)
-#define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x06)
+#define CAPTURE_ISP_PROGRAM_REQUEST_REQ		U32_C(0x06)
+#define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x07)
+
+#define CAPTURE_ISP_RESET_BARRIER_IND		U32_C(0x08)
 
 /* Message types for test pattern generator */
 /* DEPRECATED - to be removed */

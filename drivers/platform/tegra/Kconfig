@@ -234,4 +234,11 @@ config TEGRA_BOOTLOADER_BOOT_CFG
 	help
 	  When enabled, boot_cfg sys-fs is created.
 
+config NV_TEGRA_IVC
+	bool "Tegra IVC protocol support (Downstream version)"
+	default n
+	help
+	  Enable the Tegra IVC library, which implements a lockless, shared-
+	  memory queue.
+
 source "drivers/platform/tegra/nvadsp/Kconfig"

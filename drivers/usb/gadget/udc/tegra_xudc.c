@@ -172,6 +172,24 @@
 #define SSPX_CORE_CNT32 0x690
 #define  SSPX_CORE_CNT32_POLL_TBURST_MAX_SHIFT 0
 #define  SSPX_CORE_CNT32_POLL_TBURST_MAX_MASK 0xff
+#define SSPX_CORE_CNT56 0x6fc
+#define  SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_SHIFT 0
+#define  SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_MASK 0xfffff
+#define SSPX_CORE_CNT57 0x700
+#define  SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_SHIFT 0
+#define  SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_MASK 0xfffff
+#define SSPX_CORE_CNT65 0x720
+#define  SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_SHIFT 0
+#define  SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_MASK 0xfffff
+#define SSPX_CORE_CNT66 0x724
+#define  SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_SHIFT 0
+#define  SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_MASK 0xfffff
+#define SSPX_CORE_CNT67 0x728
+#define  SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_SHIFT 0
+#define  SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_MASK 0xfffff
+#define SSPX_CORE_CNT72 0x73c
+#define  SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_SHIFT 0
+#define  SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_MASK 0xfffff
 #define SSPX_CORE_PADCTL4 0x750
 #define  SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_SHIFT 0
 #define  SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_MASK 0xfffff
@@ -601,6 +619,7 @@ struct tegra_xudc_soc_data {
 	bool pls_quirk;
 	bool disable_elpg;
 	bool port_reset_quirk;
+	bool port_speed_quirk;
 };
 
 static bool u1_enable;
@@ -705,6 +724,91 @@ static void tegra_fpga_hack_init(struct tegra_xudc *xudc)
 	xudc_writel(xudc, 0x0, 0x19c);
 }
 
+static void tegra_xudc_limit_port_speed(struct tegra_xudc *xudc)
+{
+	u32 val;
+
+	/* limit port speed to gen 1 */
+	val = xudc_readl(xudc, SSPX_CORE_CNT56);
+	val &= ~(SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_MASK <<
+		 SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_SHIFT);
+	val |= 0x260 << SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT56);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT57);
+	val &= ~(SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_MASK <<
+		 SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_SHIFT);
+	val |= 0x6D6 << SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT57);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT65);
+	val &= ~(SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_SHIFT);
+	val |= 0x4B0 << SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT66);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT66);
+	val &= ~(SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_SHIFT);
+	val |= 0x4B0 << SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT66);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT67);
+	val &= ~(SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_SHIFT);
+	val |= 0x4B0 << SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT67);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT72);
+	val &= ~(SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_MASK <<
+		 SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_SHIFT);
+	val |= 0x10 << SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT72);
+}
+
+static void tegra_xudc_restore_port_speed(struct tegra_xudc *xudc)
+{
+	u32 val;
+
+	/* restore port speed to gen2 */
+	val = xudc_readl(xudc, SSPX_CORE_CNT56);
+	val &= ~(SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_MASK <<
+		 SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_SHIFT);
+	val |= 0x438 << SSPX_CORE_CNT56_SCD_BIT0_TRPT_MAX_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT56);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT57);
+	val &= ~(SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_MASK <<
+		 SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_SHIFT);
+	val |= 0x528 << SSPX_CORE_CNT57_SCD_BIT1_TRPT_MAX_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT57);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT65);
+	val &= ~(SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_SHIFT);
+	val |= 0xE10 << SSPX_CORE_CNT65_TX_SCD_END_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT66);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT66);
+	val &= ~(SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_SHIFT);
+	val |= 0x348 << SSPX_CORE_CNT66_TX_SCD_BIT0_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT66);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT67);
+	val &= ~(SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_MASK <<
+		 SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_SHIFT);
+	val |= 0x5a0 << SSPX_CORE_CNT67_TX_SCD_BIT1_TRPT_MID_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT67);
+
+	val = xudc_readl(xudc, SSPX_CORE_CNT72);
+	val &= ~(SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_MASK <<
+		 SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_SHIFT);
+	val |= 0x1c21 << SSPX_CORE_CNT72_SCD_LFPS_TIMEOUT_SHIFT;
+	xudc_writel(xudc, val, SSPX_CORE_CNT72);
+
+}
+
 static void vbus_hold_wl(struct vbus_lock *lock)
 {
 	if (!lock->held) {
@@ -785,9 +889,6 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc, int i)
 
 	pm_runtime_get_sync(xudc->dev);
 
-	if (xudc->usb3_phy[i])
-		tegra_xusb_padctl_usb3_port_gen1_only(xudc->usb3_phy[i], true);
-
 	tegra_xusb_padctl_set_vbus_override_early(xudc->padctl, i);
 
 	err = phy_power_on(xudc->utmi_phy[i]);
@@ -833,6 +934,9 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc, int i)
 	connected = !!(xudc_readl(xudc, PORTSC) & PORTSC_CCS);
 	reinit_completion(&xudc->disconnect_complete);
 
+	if (xudc->soc->port_speed_quirk)
+		tegra_xudc_restore_port_speed(xudc);
+
 	tegra_xusb_padctl_clear_vbus_override(xudc->padctl, i);
 
 	pls = (xudc_readl(xudc, PORTSC) >> PORTSC_PLS_SHIFT) &
@@ -873,9 +977,6 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc, int i)
 	if (err < 0)
 		dev_err(xudc->dev, "usb3_phy power off failed %d @ %d\n", err,
 			i);
-
-	if (xudc->usb3_phy[i])
-		tegra_xusb_padctl_usb3_port_gen1_only(xudc->usb3_phy[i], false);
 
 	if (xudc->ucd)
 		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);
@@ -3534,6 +3635,9 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 		xudc_writel(xudc, val, BLCG);
 	}
 
+	if (xudc->soc->port_speed_quirk)
+		tegra_xudc_limit_port_speed(xudc);
+
 	/* Set a reasonable U3 exit timer value. */
 	val = xudc_readl(xudc, SSPX_CORE_PADCTL4);
 	val &= ~(SSPX_CORE_PADCTL4_RXDAT_VLD_TIMEOUT_U3_MASK <<
@@ -3791,6 +3895,7 @@ static struct tegra_xudc_soc_data tegra210_xudc_soc_data = {
 	.invalid_seq_num = true,
 	.pls_quirk = true,
 	.port_reset_quirk = true,
+	.port_speed_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
@@ -3803,6 +3908,7 @@ static struct tegra_xudc_soc_data tegra210b01_xudc_soc_data = {
 	.invalid_seq_num = false,
 	.pls_quirk = false,
 	.port_reset_quirk = true,
+	.port_speed_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
@@ -3815,6 +3921,7 @@ static struct tegra_xudc_soc_data tegra186_xudc_soc_data = {
 	.invalid_seq_num = false,
 	.pls_quirk = false,
 	.port_reset_quirk = false,
+	.port_speed_quirk = false,
 };
 
 static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
@@ -3828,6 +3935,7 @@ static struct tegra_xudc_soc_data tegra194_xudc_soc_data = {
 	.pls_quirk = false,
 	.disable_elpg = false,
 	.port_reset_quirk = false,
+	.port_speed_quirk = true,
 };
 
 static struct of_device_id tegra_xudc_of_match[] = {

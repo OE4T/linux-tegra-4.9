@@ -838,14 +838,12 @@ int mmc_cmdq_initiate_halt(struct mmc_host *host, bool halt)
 		host->card->ext_csd.cmdq_mode_en = false;
 		if (host->ops->enable_host_int)
 			host->ops->enable_host_int(host, true);
-		mmc_card_clr_cmdq(host->card);
 	} else {
 		err = mmc_cmdq_halt(host, false);
 		if (err) {
 			mmc_release_host(host);
 			return err;
 		}
-		mmc_card_set_cmdq(host->card);
 		if (host->ops->enable_host_int)
 			host->ops->enable_host_int(host, false);
 		host->card->ext_csd.cmdq_mode_en = true;

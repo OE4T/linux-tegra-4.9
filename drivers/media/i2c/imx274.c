@@ -435,6 +435,7 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val);
 static int imx274_set_coarse_time_shr(struct imx274 *priv, s32 val);
 static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val);
 static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val);
+static bool imx274_has_dol_mode(const struct imx274 *priv);
 
 static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -500,7 +501,7 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 		}
 
 		hdr_en = switch_ctrl_qmenu[control.value];
-		if (hdr_en == SWITCH_ON) {
+		if (hdr_en == SWITCH_ON && imx274_has_dol_mode(priv)) {
 			control.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT;
 			err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 			err |= imx274_set_coarse_time_shr_dol_short(priv,
@@ -716,6 +717,19 @@ fail:
 	return err;
 }
 
+static bool imx274_has_dol_mode(const struct imx274 *priv)
+{
+	const struct camera_common_data *s_data = priv->s_data;
+
+	switch (s_data->mode) {
+	case IMX274_MODE_3840X2160_DOL_30FPS:
+	case IMX274_MODE_1920X1080_DOL_60FPS:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 {
 	struct camera_common_data *s_data = priv->s_data;
@@ -793,7 +807,8 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 	}
 
 	hdr_en = switch_ctrl_qmenu[control.value];
-	if ((hdr_en == SWITCH_ON) && (priv->last_coarse_long != 0)) {
+	if ((hdr_en == SWITCH_ON) && imx274_has_dol_mode(priv) &&
+		(priv->last_coarse_long != 0)) {
 		err = imx274_set_coarse_time_shr_dol_long(priv,
 					priv->last_coarse_long);
 		if (err)
@@ -879,7 +894,7 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 
 	hdr_en = switch_ctrl_qmenu[control.value];
 
-	if (hdr_en == SWITCH_ON) {
+	if ((hdr_en == SWITCH_ON) && imx274_has_dol_mode(priv)) {
 		err = imx274_set_coarse_time_shr_dol_long(priv, val);
 		if (err)
 			dev_dbg(dev,
@@ -964,7 +979,7 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
 		hmax = IMX274_DOL_1080P_MODE_HMAX;
 	} else {
-		dev_err(dev, "%s: error, invalid dol mode\n", __func__);
+		dev_dbg(dev, "%s: error, invalid dol mode\n", __func__);
 		err = -EINVAL;
 		goto fail;
 	}
@@ -1036,7 +1051,7 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
 		hmax = IMX274_DOL_1080P_MODE_HMAX;
 	} else {
-		dev_err(dev, "%s: error, invalid dol mode\n", __func__);
+		dev_dbg(dev, "%s: error, invalid dol mode\n", __func__);
 		err = -EINVAL;
 		goto fail;
 	}

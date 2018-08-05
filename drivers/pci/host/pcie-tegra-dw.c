@@ -2431,6 +2431,9 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	struct pci_bus *child;
 	unsigned long freq;
 
+	if (!tegra_pcie_dw_link_up(pp))
+		return;
+
 	/* Make EMC FLOOR freq request based on link width and speed */
 	data = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
 	width = ((data >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
@@ -2475,12 +2478,14 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 		/* L1SS programming only for immediate downstream devices */
 		if (child->parent == pp->bus) {
 			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
+			pci_dev_put(pdev);
 			/*
 			 * EP can send LTR message even if L1SS is not enabled,
 			 * so enable LTR to avoid treating LTR message as
 			 * "unsupported request"
 			 */
 			ppdev = pci_get_slot(pp->bus, PCI_DEVFN(0, 0));
+			pci_dev_put(ppdev);
 			enable_ltr(ppdev);	/* Enable LTR in parent (RP) */
 
 			if (!pdev)
@@ -2980,6 +2985,7 @@ static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie)
 		/* Bring downstream devices to D0 if they are not already in */
 		if (child->parent == pp->bus) {
 			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
+			pci_dev_put(pdev);
 			if (!pdev)
 				break;
 

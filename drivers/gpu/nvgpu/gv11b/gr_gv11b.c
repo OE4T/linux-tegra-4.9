@@ -1161,12 +1161,12 @@ int gr_gv11b_calc_global_ctx_buffer_size(struct gk20a *g)
 	return size;
 }
 
-static void gr_gv11b_set_go_idle_timeout(struct gk20a *g, u32 data)
+void gr_gv11b_set_go_idle_timeout(struct gk20a *g, u32 data)
 {
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(), data);
 }
 
-static void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
+void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 {
 	u32 val;
 
@@ -1180,7 +1180,7 @@ static void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 	nvgpu_log_fn(g, "done");
 }
 
-static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
+void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
 {
 	u32 val;
 	bool flag;
@@ -1205,7 +1205,7 @@ static void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data)
 	gk20a_writel(g, gr_gpcs_tpcs_sm_l1tag_ctrl_r(), val);
 }
 
-static void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
+void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
 {
 	u32 reg_val;
 
@@ -1229,7 +1229,7 @@ static void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
 
 }
 
-static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
+void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
 	nvgpu_log_fn(g, " ");
 
@@ -1243,7 +1243,7 @@ static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 	}
 }
 
-static void gr_gv11b_set_shader_cut_collector(struct gk20a *g, u32 data)
+void gr_gv11b_set_shader_cut_collector(struct gk20a *g, u32 data)
 {
 	u32 val;
 

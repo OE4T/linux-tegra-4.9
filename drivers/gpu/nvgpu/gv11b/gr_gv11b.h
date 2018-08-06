@@ -251,4 +251,11 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 	u32 *num_registers);
 u32 gr_gv11b_get_nonpes_aware_tpc(struct gk20a *g, u32 gpc, u32 tpc);
 void gr_gv11b_powergate_tpc(struct gk20a *g);
+
+void gr_gv11b_set_shader_cut_collector(struct gk20a *g, u32 data);
+void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data);
+void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data);
+void gr_gv11b_set_go_idle_timeout(struct gk20a *g, u32 data);
+void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data);
+void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data);
 #endif

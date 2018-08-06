@@ -798,6 +798,15 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 				"reply NV_PMU_RPC_ID_VOLT_LOAD");
 		}
 		break;
+	case PMU_UNIT_CLK:
+		nvgpu_pmu_dbg(g, "reply PMU_UNIT_CLK");
+		break;
+	case PMU_UNIT_PERF:
+		nvgpu_pmu_dbg(g, "reply PMU_UNIT_PERF");
+		break;
+	case PMU_UNIT_THERM:
+		nvgpu_pmu_dbg(g, "reply PMU_UNIT_THERM");
+		break;
 		/* TBD case will be added */
 	default:
 		nvgpu_err(g, " Invalid RPC response, stats 0x%x",

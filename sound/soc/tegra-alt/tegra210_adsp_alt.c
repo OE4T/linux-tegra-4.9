@@ -212,7 +212,8 @@ static const struct snd_pcm_hardware adsp_pcm_hardware = {
 				  SNDRV_PCM_INFO_MMAP_VALID |
 				  SNDRV_PCM_INFO_PAUSE |
 				  SNDRV_PCM_INFO_RESUME |
-				  SNDRV_PCM_INFO_INTERLEAVED,
+				  SNDRV_PCM_INFO_INTERLEAVED |
+				  SNDRV_PCM_INFO_DRAIN_TRIGGER,
 	.formats		= SNDRV_PCM_FMTBIT_S8 |
 				  SNDRV_PCM_FMTBIT_S16_LE |
 				  SNDRV_PCM_FMTBIT_S24_LE |
@@ -1268,6 +1269,10 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 			}
 		}
 		break;
+	case nvfx_apm_method_set_eos:
+		/* Nothing specific to be done here as DRAIN */
+		/* is implemented in native PCM driver       */
+		break;
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
 		break;
@@ -2175,6 +2180,16 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 			TEGRA210_ADSP_MSG_FLAG_SEND);
 		if (ret < 0) {
 			dev_err(prtd->dev, "Failed to reset");
+			return ret;
+		}
+		break;
+	case SNDRV_PCM_TRIGGER_DRAIN:
+		/* EOS message is sent so that ADSP sends */
+		/* notification for last consumed buffer  */
+		ret = tegra210_adsp_send_eos_msg(prtd->fe_apm,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
+		if (ret < 0) {
+			dev_err(prtd->dev, "Failed to set state drain");
 			return ret;
 		}
 		break;

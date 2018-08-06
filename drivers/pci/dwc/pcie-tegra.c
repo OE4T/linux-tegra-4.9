@@ -2475,6 +2475,14 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 		/* L1SS programming only for immediate downstream devices */
 		if (child->parent == pp->bus) {
 			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
+			/*
+			 * EP can send LTR message even if L1SS is not enabled,
+			 * so enable LTR to avoid treating LTR message as
+			 * "unsupported request"
+			 */
+			ppdev = pci_get_slot(pp->bus, PCI_DEVFN(0, 0));
+			enable_ltr(ppdev);	/* Enable LTR in parent (RP) */
+
 			if (!pdev)
 				break;
 			if (pcie->disable_l1_cpm)
@@ -2488,8 +2496,6 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 			if (!((data & PCI_L1SS_CAP_ASPM_L1_2) ||
 			      (data & PCI_L1SS_CAP_PCIPM_L1_2)))
 				continue;
-			ppdev = pci_get_slot(pp->bus, PCI_DEVFN(0, 0));
-			enable_ltr(ppdev);	/* Enable LTR in parent (RP) */
 			enable_ltr(pdev);	/* Enable LTR in child (EP) */
 		}
 	}

@@ -4138,8 +4138,9 @@ void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
 			"egpc_num = %d etpc_num = %d", *egpc_num, *etpc_num);
 }
 
-int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
-	u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags)
+int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr,
+	enum ctxsw_addr_type *addr_type, u32 *gpc_num, u32 *tpc_num,
+	u32 *broadcast_flags)
 {
 	u32 gpc_addr;
 	u32 tpc_addr;
@@ -4702,7 +4703,7 @@ int gr_gv11b_handle_ssync_hww(struct gk20a *g)
  * type and numbers
  */
 int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
-	int  *addr_type, /* enum ctxsw_addr_type */
+	enum ctxsw_addr_type *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 	u32 *broadcast_flags)
 {
@@ -4849,7 +4850,7 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 					   u32 *priv_addr_table,
 					   u32 *num_registers)
 {
-	int addr_type; /*enum ctxsw_addr_type */
+	enum ctxsw_addr_type addr_type;
 	u32 gpc_num, tpc_num, ppc_num, be_num;
 	u32 priv_addr, gpc_addr;
 	u32 broadcast_flags;

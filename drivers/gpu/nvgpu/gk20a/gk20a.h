@@ -250,7 +250,7 @@ struct gpu_ops {
 		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params);
 		int (*decode_egpc_addr)(struct gk20a *g,
-			u32 addr, int *addr_type,
+			u32 addr, enum ctxsw_addr_type *addr_type,
 			u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags);
 		void (*egpc_etpc_priv_addr_table)(struct gk20a *g, u32 addr,
 			u32 gpc, u32 tpc, u32 broadcast_flags,
@@ -473,7 +473,7 @@ struct gpu_ops {
 					u32 *count, u32 *offset,
 					u32 max_cnt, u32 base, u32 mask);
 		int (*decode_priv_addr)(struct gk20a *g, u32 addr,
-			      int *addr_type,
+			      enum ctxsw_addr_type *addr_type,
 			      u32 *gpc_num, u32 *tpc_num,
 			      u32 *ppc_num, u32 *be_num,
 			      u32 *broadcast_flags);
@@ -495,8 +495,9 @@ struct gpu_ops {
 			struct channel_gk20a *c, bool patch);
 		u32 (*get_nonpes_aware_tpc)(struct gk20a *g, u32 gpc, u32 tpc);
 		int (*get_offset_in_gpccs_segment)(struct gk20a *g,
-			int addr_type, u32 num_tpcs, u32 num_ppcs,
-			u32 reg_list_ppc_count, u32 *__offset_in_segment);
+			enum ctxsw_addr_type addr_type, u32 num_tpcs,
+			u32 num_ppcs, u32 reg_list_ppc_count,
+			u32 *__offset_in_segment);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

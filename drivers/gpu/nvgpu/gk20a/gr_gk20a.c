@@ -6274,7 +6274,7 @@ static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
 
 /* This function will decode a priv address and return the partition type and numbers. */
 int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
-			      int  *addr_type, /* enum ctxsw_addr_type */
+			      enum ctxsw_addr_type *addr_type,
 			      u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 			      u32 *broadcast_flags)
 {
@@ -6391,7 +6391,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 					   u32 *priv_addr_table,
 					   u32 *num_registers)
 {
-	int addr_type; /*enum ctxsw_addr_type */
+	enum ctxsw_addr_type addr_type;
 	u32 gpc_num, tpc_num, ppc_num, be_num;
 	u32 priv_addr, gpc_addr;
 	u32 broadcast_flags;
@@ -7036,7 +7036,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 static int
 gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
-					     int addr_type,/* enum ctxsw_addr_type */
+					     enum ctxsw_addr_type addr_type,
 					     u32 pri_addr,
 					     u32 gpc_num, u32 num_tpcs,
 					     u32 num_ppcs, u32 ppc_mask,
@@ -7214,7 +7214,7 @@ static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
 }
 
 int gr_gk20a_get_offset_in_gpccs_segment(struct gk20a *g,
-					int addr_type,
+					enum ctxsw_addr_type addr_type,
 					u32 num_tpcs,
 					u32 num_ppcs,
 					u32 reg_list_ppc_count,
@@ -7289,7 +7289,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 {
 	u32 i, data32;
 	int err;
-	int addr_type; /*enum ctxsw_addr_type */
+	enum ctxsw_addr_type addr_type;
 	u32 broadcast_flags;
 	u32 gpc_num, tpc_num, ppc_num, be_num;
 	u32 num_gpcs, num_tpcs, num_ppcs;

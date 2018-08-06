@@ -255,7 +255,7 @@ int nvgpu_flcn_copy_to_imem(struct nvgpu_falcon *flcn,
 }
 
 static void nvgpu_flcn_print_mem(struct nvgpu_falcon *flcn, u32 src,
-	u32 size, u32 mem_type)
+	u32 size, enum flcn_mem_type mem_type)
 {
 	u32 buff[64] = {0};
 	u32 total_block_read = 0;

@@ -139,7 +139,8 @@ static bool gk20a_is_falcon_scrubbing_done(struct nvgpu_falcon *flcn)
 	return status;
 }
 
-static u32 gk20a_falcon_get_mem_size(struct nvgpu_falcon *flcn, u32 mem_type)
+static u32 gk20a_falcon_get_mem_size(struct nvgpu_falcon *flcn,
+		enum flcn_mem_type mem_type)
 {
 	struct gk20a *g = flcn->g;
 	u32 mem_size = 0;
@@ -157,7 +158,7 @@ static u32 gk20a_falcon_get_mem_size(struct nvgpu_falcon *flcn, u32 mem_type)
 }
 
 static int flcn_mem_overflow_check(struct nvgpu_falcon *flcn,
-		u32 offset, u32 size, u32 mem_type)
+		u32 offset, u32 size, enum flcn_mem_type mem_type)
 {
 	struct gk20a *g = flcn->g;
 	u32 mem_size = 0;

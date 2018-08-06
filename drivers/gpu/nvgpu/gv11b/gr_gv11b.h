@@ -217,8 +217,9 @@ bool gv11b_gr_pri_is_egpc_addr(struct gk20a *g, u32 addr);
 bool gv11b_gr_pri_is_etpc_addr(struct gk20a *g, u32 addr);
 void gv11b_gr_get_egpc_etpc_num(struct gk20a *g, u32 addr,
 			u32 *egpc_num, u32 *etpc_num);
-int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr, int *addr_type,
-	u32 *gpc_num, u32 *tpc_num, u32 *broadcast_flags);
+int gv11b_gr_decode_egpc_addr(struct gk20a *g, u32 addr,
+	enum ctxsw_addr_type *addr_type, u32 *gpc_num, u32 *tpc_num,
+	u32 *broadcast_flags);
 void gv11b_gr_egpc_etpc_priv_addr_table(struct gk20a *g, u32 addr,
 	 u32 gpc, u32 tpc, u32 broadcast_flags, u32 *priv_addr_table, u32 *t);
 u32 gv11b_gr_get_egpc_base(struct gk20a *g);
@@ -242,7 +243,7 @@ u32 gv11b_gr_sm_offset(struct gk20a *g, u32 sm);
 
 u32 gr_gv11b_get_pmm_per_chiplet_offset(void);
 int gr_gv11b_decode_priv_addr(struct gk20a *g, u32 addr,
-	int *addr_type,
+	enum ctxsw_addr_type *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 	u32 *broadcast_flags);
 int gr_gv11b_create_priv_addr_table(struct gk20a *g,

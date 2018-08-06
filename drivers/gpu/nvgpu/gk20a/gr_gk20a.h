@@ -70,6 +70,8 @@ struct tsg_gk20a;
 struct channel_gk20a;
 struct nvgpu_warpstate;
 
+enum ctxsw_addr_type;
+
 enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,
 	PAGEPOOL		= 1,
@@ -842,7 +844,7 @@ int gr_gk20a_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
 	u32 *count, u32 *offset,
 	u32 max_cnt, u32 base, u32 mask);
 int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
-	int *addr_type,
+	enum ctxsw_addr_type *addr_type,
 	u32 *gpc_num, u32 *tpc_num, u32 *ppc_num, u32 *be_num,
 	u32 *broadcast_flags);
 int gr_gk20a_split_ppc_broadcast_addr(struct gk20a *g, u32 addr,
@@ -856,7 +858,7 @@ void gr_gk20a_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 num_fbpas,
 	u32 *priv_addr_table, u32 *t);
 int gr_gk20a_get_offset_in_gpccs_segment(struct gk20a *g,
-	int addr_type, u32 num_tpcs, u32 num_ppcs,
+	enum ctxsw_addr_type addr_type, u32 num_tpcs, u32 num_ppcs,
 	u32 reg_list_ppc_count, u32 *__offset_in_segment);
 
 void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,

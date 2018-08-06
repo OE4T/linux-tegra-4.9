@@ -5858,7 +5858,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	struct gr_gk20a_isr_data isr_data;
 	u32 grfifo_ctl;
 	u32 obj_table;
-	int need_reset = 0;
+	bool need_reset = false;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 	struct channel_gk20a *ch = NULL;
 	struct channel_gk20a *fault_ch = NULL;
@@ -5931,44 +5931,56 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (gr_intr & gr_intr_semaphore_timeout_pending_f()) {
-		need_reset |= gk20a_gr_handle_semaphore_timeout_pending(g,
-			&isr_data);
+		if (gk20a_gr_handle_semaphore_timeout_pending(g,
+				&isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_semaphore_reset_f());
 		gr_intr &= ~gr_intr_semaphore_pending_f();
 	}
 
 	if (gr_intr & gr_intr_illegal_notify_pending_f()) {
-		need_reset |= gk20a_gr_intr_illegal_notify_pending(g,
-			&isr_data);
+		if (gk20a_gr_intr_illegal_notify_pending(g,
+				&isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_notify_reset_f());
 		gr_intr &= ~gr_intr_illegal_notify_pending_f();
 	}
 
 	if (gr_intr & gr_intr_illegal_method_pending_f()) {
-		need_reset |= gk20a_gr_handle_illegal_method(g, &isr_data);
+		if (gk20a_gr_handle_illegal_method(g, &isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_method_reset_f());
 		gr_intr &= ~gr_intr_illegal_method_pending_f();
 	}
 
 	if (gr_intr & gr_intr_illegal_class_pending_f()) {
-		need_reset |= gk20a_gr_handle_illegal_class(g, &isr_data);
+		if (gk20a_gr_handle_illegal_class(g, &isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_illegal_class_reset_f());
 		gr_intr &= ~gr_intr_illegal_class_pending_f();
 	}
 
 	if (gr_intr & gr_intr_fecs_error_pending_f()) {
-		need_reset |= g->ops.gr.handle_fecs_error(g, ch, &isr_data);
+		if (g->ops.gr.handle_fecs_error(g, ch, &isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_fecs_error_reset_f());
 		gr_intr &= ~gr_intr_fecs_error_pending_f();
 	}
 
 	if (gr_intr & gr_intr_class_error_pending_f()) {
-		need_reset |= gk20a_gr_handle_class_error(g, &isr_data);
+		if (gk20a_gr_handle_class_error(g, &isr_data) != 0) {
+			need_reset = true;
+		}
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_class_error_reset_f());
 		gr_intr &= ~gr_intr_class_error_pending_f();
@@ -5977,7 +5989,9 @@ int gk20a_gr_isr(struct gk20a *g)
 	/* this one happens if someone tries to hit a non-whitelisted
 	 * register using set_falcon[4] */
 	if (gr_intr & gr_intr_firmware_method_pending_f()) {
-		need_reset |= gk20a_gr_handle_firmware_method(g, &isr_data);
+		if (gk20a_gr_handle_firmware_method(g, &isr_data) != 0) {
+			need_reset = true;
+		}
 		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "firmware method intr pending\n");
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_firmware_method_reset_f());
@@ -5997,7 +6011,7 @@ int gk20a_gr_isr(struct gk20a *g)
 					fe, info);
 			gk20a_writel(g, gr_fe_hww_esr_r(),
 				gr_fe_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_memfmt_m()) {
@@ -6006,7 +6020,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_err(g, "memfmt exception: esr %08x", memfmt);
 			gk20a_writel(g, gr_memfmt_hww_esr_r(),
 					gr_memfmt_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_pd_m()) {
@@ -6015,7 +6029,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_err(g, "pd exception: esr 0x%08x", pd);
 			gk20a_writel(g, gr_pd_hww_esr_r(),
 					gr_pd_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_scc_m()) {
@@ -6024,7 +6038,7 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_err(g, "scc exception: esr 0x%08x", scc);
 			gk20a_writel(g, gr_scc_hww_esr_r(),
 					gr_scc_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_ds_m()) {
@@ -6033,14 +6047,17 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_err(g, "ds exception: esr: 0x%08x", ds);
 			gk20a_writel(g, gr_ds_hww_esr_r(),
 					 gr_ds_hww_esr_reset_task_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_ssync_m()) {
-			if (g->ops.gr.handle_ssync_hww)
-				need_reset |= g->ops.gr.handle_ssync_hww(g);
-			else
+			if (g->ops.gr.handle_ssync_hww) {
+				if (g->ops.gr.handle_ssync_hww(g) != 0) {
+					need_reset = true;
+				}
+			} else {
 				nvgpu_err(g, "unhandled ssync exception");
+			}
 		}
 
 		if (exception & gr_exception_mme_m()) {
@@ -6051,7 +6068,7 @@ int gk20a_gr_isr(struct gk20a *g)
 					mme, info);
 			gk20a_writel(g, gr_mme_hww_esr_r(),
 				gr_mme_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		if (exception & gr_exception_sked_m()) {
@@ -6060,11 +6077,11 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_err(g, "sked exception: esr 0x%08x", sked);
 			gk20a_writel(g, gr_sked_hww_esr_r(),
 				gr_sked_hww_esr_reset_active_f());
-			need_reset |= -EFAULT;
+			need_reset = true;
 		}
 
 		/* check if a gpc exception has occurred */
-		if (exception & gr_exception_gpc_m() && need_reset == 0) {
+		if (exception & gr_exception_gpc_m() && !need_reset) {
 			bool post_event = false;
 
 			nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
@@ -6075,8 +6092,10 @@ int gk20a_gr_isr(struct gk20a *g)
 
 			/*isr_data.chid can be ~0 and fault_ch can be NULL */
 			/* check if any gpc has an exception */
-			need_reset |= gk20a_gr_handle_gpc_exception(g,
-					&post_event, fault_ch, &global_esr);
+			if (gk20a_gr_handle_gpc_exception(g, &post_event,
+					fault_ch, &global_esr) != 0) {
+				need_reset = true;
+			}
 
 			/* signal clients waiting on an event */
 			if (g->ops.gr.sm_debugger_attached(g) &&

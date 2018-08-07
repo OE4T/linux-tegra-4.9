@@ -558,7 +558,7 @@
 			};
 			pcie1_as: pcie1 {
 				iova-start = <0x0 0x80000000>;
-				iova-size = <0x4 0x7FFFFFFF>;
+				iova-size = <0x1F 0x7FFFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

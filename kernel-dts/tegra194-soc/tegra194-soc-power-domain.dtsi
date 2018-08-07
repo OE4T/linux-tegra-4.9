@@ -38,11 +38,5 @@
                        #power-domain-cells = <0>;
                        partition-id = <TEGRA194_POWER_DOMAIN_XUSBC>;
                };
-
-               nvl_pd: nvl-pd {
-                       compatible = "nvidia,tegra194-nvl-pd";
-                       #power-domain-cells = <0>;
-                       partition-id = <TEGRA194_POWER_DOMAIN_NVL>;
-               };
        };
 };

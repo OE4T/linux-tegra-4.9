@@ -2384,11 +2384,12 @@
 				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L4>,
 				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L5>,
 				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L6>,
-				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L7>;
+				<&bpmp_resets TEGRA194_RESET_NVHS_UPHY_L7>,
+				<&bpmp_resets TEGRA194_RESET_NVLINK>;
 		reset-names = "mssnvl", "nvhs_uphy_pm", "nvhs_uphy", "nvhs_uphy_pll0",
 				"nvhs_uphy_l0", "nvhs_uphy_l1", "nvhs_uphy_l2",
 				"nvhs_uphy_l3",	"nvhs_uphy_l4",	"nvhs_uphy_l5",
-				"nvhs_uphy_l6",	"nvhs_uphy_l7";
+				"nvhs_uphy_l6",	"nvhs_uphy_l7", "nvlink";
 		interrupts = <0 178 0x4>; /* NVLINK2HOST interrupt */
 		status = "disabled";
 	};

@@ -58,13 +58,11 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
 	TEGRA_CAMERA_CID_FRAME_RATE,
-	TEGRA_CAMERA_CID_GROUP_HOLD,
 };
 
 struct imx268 {
 	struct i2c_client *i2c_client;
 	struct v4l2_subdev *subdev;
-	s32 group_hold_prev;
 	u32 frame_length;
 	struct camera_common_data *s_data;
 	struct tegracam_device *tc_dev;
@@ -138,14 +136,12 @@ static inline int imx268_write_table(struct imx268 *priv,
 static int imx268_set_group_hold(struct tegracam_device *tc_dev, bool val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
-	struct imx268 *priv = (struct imx268 *)tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	int err = 0;
 
 	dev_dbg(dev, "%s: %s group_hold\n",
 		__func__, (val ? "enabling" : "disabling"));
 
-	priv->group_hold_prev = val;
 	err = imx268_write_reg(s_data, IMX268_GROUP_HOLD_ADDR, val);
 	if (err) {
 		dev_dbg(dev, "%s: group hold control error\n", __func__);
@@ -158,7 +154,6 @@ static int imx268_set_group_hold(struct tegracam_device *tc_dev, bool val)
 static int imx268_set_gain(struct tegracam_device *tc_dev, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
-	struct imx268 *priv = (struct imx268 *)tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&(s_data->sensor_props.sensor_modes[s_data->mode_prop_idx]);
@@ -166,9 +161,6 @@ static int imx268_set_gain(struct tegracam_device *tc_dev, s64 val)
 	int err = 0;
 	s16 gain;
 	int i;
-
-	if (!priv->group_hold_prev)
-		imx268_set_group_hold(tc_dev, 1);
 
 	if (val < mode->control_properties.min_gain_val)
 		val = mode->control_properties.min_gain_val;
@@ -212,9 +204,6 @@ static int imx268_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
 	u32 frame_length;
 	int i;
 
-	if (!priv->group_hold_prev)
-		imx268_set_group_hold(tc_dev, 1);
-
 	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
 		(u64)mode->control_properties.framerate_factor /
 		mode->image_properties.line_length / val);
@@ -252,9 +241,6 @@ static int imx268_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	u32 coarse_time;
 	s32 max_coarse_time = priv->frame_length - IMX268_MAX_COARSE_DIFF;
 	int i;
-
-	if (!priv->group_hold_prev)
-		imx268_set_group_hold(tc_dev, 1);
 
 	coarse_time = (mode->signal_properties.pixel_clock.val *
 		val / mode->image_properties.line_length /

@@ -240,7 +240,10 @@ dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain, size_t size,
 		 */
 		iova = alloc_iova(iovad, iova_len,
 				dma_limit >> shift, size_aligned);
-		return (dma_addr_t) iova->pfn_lo << shift;
+		if (iova)
+			return (dma_addr_t) iova->pfn_lo << shift;
+		else
+			return 0;
 	}
 }
 

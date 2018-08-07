@@ -29,9 +29,15 @@
 #define CTRL_S64_MAX 0x7FFFFFFFFFFFFFFFLL
 #define CTRL_MAX_STR_SIZE 4096
 
+#define TEGRACAM_DEF_CTRLS 1
+
 static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl);
 static const struct v4l2_ctrl_ops tegracam_ctrl_ops = {
 	.s_ctrl = tegracam_s_ctrl,
+};
+
+static const u32 tegracam_def_cids[] = {
+	TEGRA_CAMERA_CID_GROUP_HOLD,
 };
 
 static struct v4l2_ctrl_config ctrl_cfg_list[] = {
@@ -74,6 +80,7 @@ static struct v4l2_ctrl_config ctrl_cfg_list[] = {
 		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
 		.name = "Group Hold",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_EXECUTE_ON_WRITE,
 		.min = 0,
 		.max = 1,
 		.def = 0,
@@ -289,14 +296,15 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	struct device *dev = tc_dev->dev;
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	const u32 *cids = ops->ctrl_cid_list;
-	u32 numctrls = ops->numctrls;
-	int i;
+	u32 numctrls = ops->numctrls + TEGRACAM_DEF_CTRLS;
+	int i, j;
 	int err = 0;
 
 	v4l2_ctrl_handler_init(&handler->ctrl_handler, numctrls);
 
-	for (i = 0; i < numctrls; i++) {
-		int index = tegracam_get_ctrl_index(cids[i]);
+	for (i = 0, j = 0; i < numctrls; i++) {
+		u32 cid = i < ops->numctrls ? cids[i] : tegracam_def_cids[j++];
+		int index = tegracam_get_ctrl_index(cid);
 		int size = 0;
 
 		if (index >= ARRAY_SIZE(ctrl_cfg_list)) {

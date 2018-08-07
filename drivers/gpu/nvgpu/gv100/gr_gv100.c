@@ -34,7 +34,6 @@
 #include "gv11b/subctx_gv11b.h"
 
 #include <nvgpu/hw/gv100/hw_gr_gv100.h>
-#include <nvgpu/hw/gv100/hw_fb_gv100.h>
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
 #include <nvgpu/hw/gv100/hw_fuse_gv100.h>
 
@@ -279,43 +278,6 @@ exit_build_table:
 	nvgpu_kfree(g, tpc_table);
 	nvgpu_kfree(g, gpc_tpc_mask);
 	return err;
-}
-
-void gr_gv100_init_gpc_mmu(struct gk20a *g)
-{
-	u32 temp;
-
-	nvgpu_log_info(g, "initialize gpc mmu");
-
-	if (!nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
-		/* Bypass MMU check for non-secure boot. For
-		 * secure-boot,this register write has no-effect */
-		gk20a_writel(g, fb_priv_mmu_phy_secure_r(), 0xffffffff);
-	}
-	temp = gk20a_readl(g, fb_mmu_ctrl_r());
-	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
-		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
-		gr_gpcs_pri_mmu_ctrl_vol_fault_m() |
-		gr_gpcs_pri_mmu_ctrl_comp_fault_m() |
-		gr_gpcs_pri_mmu_ctrl_miss_gran_m() |
-		gr_gpcs_pri_mmu_ctrl_cache_mode_m() |
-		gr_gpcs_pri_mmu_ctrl_mmu_aperture_m() |
-		gr_gpcs_pri_mmu_ctrl_mmu_vol_m() |
-		gr_gpcs_pri_mmu_ctrl_mmu_disable_m()|
-		gr_gpcs_pri_mmu_ctrl_atomic_capability_mode_m();
-
-	gk20a_writel(g, gr_gpcs_pri_mmu_ctrl_r(), temp);
-	nvgpu_log_info(g, "mmu_ctrl_r = 0x%08x", temp);
-
-	gk20a_writel(g, gr_gpcs_pri_mmu_pm_unit_mask_r(), 0);
-	gk20a_writel(g, gr_gpcs_pri_mmu_pm_req_mask_r(), 0);
-
-	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(),
-			gk20a_readl(g, fb_mmu_debug_ctrl_r()));
-	gk20a_writel(g, gr_gpcs_pri_mmu_debug_wr_r(),
-			gk20a_readl(g, fb_mmu_debug_wr_r()));
-	gk20a_writel(g, gr_gpcs_pri_mmu_debug_rd_r(),
-			gk20a_readl(g, fb_mmu_debug_rd_r()));
 }
 
 u32 gr_gv100_get_patch_slots(struct gk20a *g)

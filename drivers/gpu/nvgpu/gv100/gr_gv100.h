@@ -46,5 +46,4 @@ int gr_gv100_add_ctxsw_reg_perf_pma(struct ctxsw_buf_offset_map_entry *map,
 void gr_gv100_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 num_fbpas,
 	u32 *priv_addr_table, u32 *t);
-void gr_gv100_init_gpc_mmu(struct gk20a *g);
 #endif

@@ -771,11 +771,8 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 			}
 			if (!chan->bypass && !chan->pg_mode &&
 					chan->deskew_ctx->deskew_lanes) {
-// temp WAR to get t21x to build on kernel 4.4
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 				err = nvcsi_deskew_apply_check(
 							chan->deskew_ctx);
-#endif
 				++deskew_attempts;
 				if (err && deskew_attempts <
 							max_deskew_attempts) {

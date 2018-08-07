@@ -42,19 +42,8 @@
 #include "mipi_cal.h"
 #include "vmipi/vmipi.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-int nvcsi_cil_sw_reset(int lanes, int enable)
-{
-	return 0;
-}
-int tegra194_nvcsi_cil_sw_reset(int lanes, int enable)
-{
-	return 0;
-}
-#else
 #include "nvcsi/nvcsi.h"
 #include "nvcsi/nvcsi-t194.h"
-#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/mipical.h>
@@ -851,12 +840,7 @@ static const struct tegra_mipi_soc tegra19x_mipi_soc = {
 #endif
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
-// temporary WAR to get 4.4 builds working
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
-#else
 	.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
-#endif
 };
 
 static const struct tegra_mipi_soc tegra_vmipi_soc = {

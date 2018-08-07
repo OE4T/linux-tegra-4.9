@@ -31,7 +31,14 @@ extern const struct file_operations tegra_nvcsi_ctrl_ops;
 int nvcsi_finalize_poweron(struct platform_device *pdev);
 int nvcsi_prepare_poweroff(struct platform_device *pdev);
 
+#if IS_ENABLED(CONFIG_TEGRA_GRHOST_NVCSI)
 int nvcsi_cil_sw_reset(int lanes, int enable);
+#else
+static int inline nvcsi_cil_sw_reset(int lanes, int enable)
+{
+	return 0;
+}
+#endif
 
 struct tegra_csi_device *tegra_get_mc_csi(void);
 #endif

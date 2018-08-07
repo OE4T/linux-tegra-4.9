@@ -830,12 +830,7 @@ static struct tegra_cec_soc tegra186_soc_data = {
 };
 
 static struct tegra_cec_soc tegra194_soc_data = {
-// temporary WAR to get 4.4 builds working
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
-#else
 	.powergate_id = TEGRA194_POWER_DOMAIN_DISP,
-#endif
 };
 
 static struct of_device_id tegra_cec_of_match[] = {

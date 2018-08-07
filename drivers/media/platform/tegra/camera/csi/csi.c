@@ -342,10 +342,7 @@ static void deskew_setup(struct tegra_csi_channel *chan,
 		deskew_ctx->deskew_lanes = 0;
 		for (i = 0; i < csi_lanes; ++i)
 			deskew_ctx->deskew_lanes |= csi_lane_start << i;
-// temp WAR to get t21x to build on kernel 4.4
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 		nvcsi_deskew_setup(deskew_ctx);
-#endif
 	}
 
 }

@@ -21,9 +21,7 @@
 #include <linux/tegra-powergate.h>
 #include <dt-bindings/soc/tegra210-powergate.h>
 #include <dt-bindings/soc/tegra186-powergate.h>
-#if defined(CONFIG_ARCH_TEGRA_19x_SOC)
 #include <dt-bindings/soc/tegra194-powergate.h>
-#endif
 
 struct platform_device;
 

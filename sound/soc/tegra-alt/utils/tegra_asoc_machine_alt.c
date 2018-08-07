@@ -183,6 +183,7 @@ static struct snd_soc_dai_link
 		.platform_name = "tegra210-admaif",
 		.ignore_pmdown_time = 1,
 	},
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_AMX_ALT)
 	[TEGRA210_DAI_LINK_AMX1_1] = {
 		.name = "AMX1 IN1",
 		.stream_name = "AMX1 IN",
@@ -273,6 +274,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &tdm_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_AMX_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADX_ALT)
 	[TEGRA210_DAI_LINK_ADX1] = {
 		.name = "ADX1 CIF",
 		.stream_name = "ADX1 IN",
@@ -363,6 +366,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADX_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_MIXER_ALT)
 	[TEGRA210_DAI_LINK_MIXER1_RX1] = {
 		.name = "MIXER1 RX1",
 		.stream_name = "MIXER1 RX",
@@ -498,6 +503,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_MIXER_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_SFC_ALT)
 	[TEGRA210_DAI_LINK_SFC1_RX] = {
 		.name = "SFC1 RX",
 		.stream_name = "SFC1 RX",
@@ -570,6 +577,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_SFC_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_AFC_ALT)
 	[TEGRA210_DAI_LINK_AFC1_RX] = {
 		.name = "AFC1 RX",
 		.stream_name = "AFC1 RX",
@@ -678,6 +687,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_AFC_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_MVC_ALT)
 	[TEGRA210_DAI_LINK_MVC1_RX] = {
 		.name = "MVC1 RX",
 		.stream_name = "MVC1 RX",
@@ -714,6 +725,8 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_MVC_ALT) */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_OPE_ALT)
 	[TEGRA210_DAI_LINK_OPE1_RX] = {
 		.name = "OPE1 RX",
 		.stream_name = "OPE1 RX",
@@ -750,6 +763,7 @@ static struct snd_soc_dai_link
 		.codec_name = "tegra210-axbar",
 		.params = &default_link_params,
 	},
+#endif /* IS_ENABLED(CONFIG_SND_SOC_TEGRA210_OPE_ALT) */
 	[TEGRA210_DAI_LINK_ADMAIF1_CODEC] = {
 		.name = "ADMAIF1 CODEC",
 		.stream_name = "ADMAIF1 CODEC",

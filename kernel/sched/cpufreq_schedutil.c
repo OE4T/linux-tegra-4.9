@@ -197,8 +197,20 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 
-	freq = (((freq * capacity_margin) >> CAPACITY_MARGIN_FLOOR_FACTOR) +
-		freq) * util / max;
+	/*
+	 * Cast freq to 64-bit so that we do not have to check for overflow in
+	 * the calculations later on
+	 */
+	uint64_t tfreq = (uint64_t) freq;
+
+	tfreq = (((tfreq * capacity_margin) >> CAPACITY_MARGIN_FLOOR_FACTOR) +
+			tfreq) * util / max;
+
+	/*
+	 * tfreq will always be less than UINT_MAX as long as freq is less than
+	 * UINT_MAX / 2
+	 */
+	freq = (unsigned int) tfreq;
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
 		return sg_policy->next_freq;

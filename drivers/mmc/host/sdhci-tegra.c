@@ -544,8 +544,6 @@ static void tegra_sdhci_post_tuning(struct sdhci_host *host)
 	tegra_host->tuning_status = TUNING_STATUS_DONE;
 
 	pr_info("%s: hw tuning done ...\n", mmc_hostname(host->mmc));
-	/* dump tap, trim, tuning windows and other vendor registers */
-	tegra_sdhci_dump_vendor_regs(host);
 }
 
 static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,

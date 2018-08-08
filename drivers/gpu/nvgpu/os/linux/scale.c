@@ -25,6 +25,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
@@ -154,6 +155,8 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	unsigned long rounded_rate;
 	unsigned long min_freq = 0, max_freq = 0;
 
+	if (nvgpu_clk_arb_has_active_req(g))
+		return 0;
 	/*
 	 * Calculate floor and cap frequency values
 	 *

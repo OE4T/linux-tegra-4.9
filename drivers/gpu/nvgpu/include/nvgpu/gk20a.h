@@ -1596,6 +1596,8 @@ struct gk20a {
 
 	struct nvgpu_mutex clk_arb_enable_lock;
 
+	nvgpu_atomic_t clk_arb_global_nr;
+
 	struct gk20a_ce_app ce_app;
 
 	bool ltc_intr_en_illegal_compstat;

@@ -17,6 +17,7 @@
 #include <linux/seq_file.h>
 
 #include <nvgpu/io.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gm20b/clk_gm20b.h"
 #include "os_linux.h"
@@ -33,6 +34,8 @@ static int rate_get(void *data, u64 *val)
 static int rate_set(void *data, u64 val)
 {
 	struct gk20a *g = (struct gk20a *)data;
+	if (nvgpu_clk_arb_has_active_req(g))
+		return 0;
 	return g->ops.clk.set_rate(g, CTRL_CLK_DOMAIN_GPCCLK, (u32)val);
 }
 DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");

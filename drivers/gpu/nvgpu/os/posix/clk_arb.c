@@ -52,6 +52,11 @@ int nvgpu_clk_arb_worker_init(struct gk20a *g)
 	return -ENOSYS;
 }
 
+bool nvgpu_clk_arb_has_active_req(struct gk20a *g)
+{
+	return false;
+}
+
 int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 					 u32 api_domain, u16 *actual_mhz)
 {

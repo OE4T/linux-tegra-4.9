@@ -215,6 +215,9 @@ int gp10b_init_clk_arbiter(struct gk20a *g)
 		goto init_fail;
 	}
 
+	/* This is set for the duration of the default req */
+	nvgpu_atomic_inc(&g->clk_arb_global_nr);
+
 	nvgpu_clk_arb_worker_enqueue(g, &arb->update_arb_work_item);
 
 	do {
@@ -224,6 +227,8 @@ int gp10b_init_clk_arbiter(struct gk20a *g)
 			nvgpu_atomic_read(&arb->req_nr) != 0, 0);
 	} while (nvgpu_atomic_read(&arb->req_nr) == 0);
 
+	/* Once the default request is completed, reduce the usage count */
+	nvgpu_atomic_dec(&g->clk_arb_global_nr);
 
 	return arb->status;
 

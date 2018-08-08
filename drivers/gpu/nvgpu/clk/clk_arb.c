@@ -772,6 +772,11 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	return err;
 }
 
+bool nvgpu_clk_arb_has_active_req(struct gk20a *g)
+{
+	return (nvgpu_atomic_read(&g->clk_arb_global_nr) > 0);
+}
+
 void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
 {
 	nvgpu_clk_arb_schedule_alarm(g,
@@ -854,10 +859,12 @@ void nvgpu_clk_arb_free_fd(struct nvgpu_ref *refcount)
 	struct nvgpu_clk_dev *dev = container_of(refcount,
 			struct nvgpu_clk_dev, refcount);
 	struct nvgpu_clk_session *session = dev->session;
+	struct gk20a *g = session->g;
 
-	nvgpu_clk_notification_queue_free(session->g, &dev->queue);
+	nvgpu_clk_notification_queue_free(g, &dev->queue);
 
-	nvgpu_kfree(session->g, dev);
+	nvgpu_atomic_dec(&g->clk_arb_global_nr);
+	nvgpu_kfree(g, dev);
 }
 
 void nvgpu_clk_arb_free_session(struct nvgpu_ref *refcount)

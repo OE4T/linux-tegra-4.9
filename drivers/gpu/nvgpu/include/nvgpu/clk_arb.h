@@ -295,6 +295,8 @@ int nvgpu_clk_arb_worker_init(struct gk20a *g);
 
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g);
 
+bool nvgpu_clk_arb_has_active_req(struct gk20a *g);
+
 int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 		u16 *min_mhz, u16 *max_mhz);
 

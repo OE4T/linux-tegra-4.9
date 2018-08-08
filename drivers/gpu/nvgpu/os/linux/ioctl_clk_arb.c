@@ -436,6 +436,7 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 	clk_arb_dbg(g, "requested target = %u\n",
 		(u32)dev->gpc2clk_target_mhz);
 
+	nvgpu_atomic_inc(&g->clk_arb_global_nr);
 	nvgpu_ref_get(&dev->refcount);
 	nvgpu_spinlock_acquire(&session->session_lock);
 	nvgpu_list_add(&dev->node, &session->targets);

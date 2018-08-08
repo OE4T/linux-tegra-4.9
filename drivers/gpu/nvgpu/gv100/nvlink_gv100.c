@@ -34,7 +34,6 @@
 #include "gk20a/gk20a.h"
 #include "nvlink_gv100.h"
 
-#include <nvgpu/hw/gv100/hw_falcon_gv100.h>
 #include <nvgpu/hw/gv100/hw_top_gv100.h>
 #include <nvgpu/hw/gv100/hw_nvlinkip_discovery_gv100.h>
 #include <nvgpu/hw/gv100/hw_nvlipt_gv100.h>
@@ -329,7 +328,7 @@ static bool gv100_nvlink_minion_falcon_isr(struct gk20a *g)
 	if (!intr)
 		return true;
 
-	if (intr & falcon_falcon_irqstat_exterr_true_f()) {
+	if (intr & minion_falcon_irqstat_exterr_true_f()) {
 		nvgpu_err(g, "FALCON EXT ADDR: 0x%x 0x%x 0x%x",
 			MINION_REG_RD32(g, 0x244),
 			MINION_REG_RD32(g, 0x248),

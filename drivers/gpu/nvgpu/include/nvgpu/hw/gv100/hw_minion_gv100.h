@@ -104,6 +104,22 @@ static inline u32 minion_falcon_irqstat_halt_v(u32 r)
 {
 	return (r >> 4U) & 0x1U;
 }
+static inline u32 minion_falcon_irqstat_exterr_f(u32 v)
+{
+	return (v & 0x1U) << 5U;
+}
+static inline u32 minion_falcon_irqstat_exterr_v(u32 r)
+{
+	return (r >> 5U) & 0x1U;
+}
+static inline u32 minion_falcon_irqstat_exterr_true_v(void)
+{
+	return 0x00000001U;
+}
+static inline u32 minion_falcon_irqstat_exterr_true_f(void)
+{
+	return 0x20U;
+}
 static inline u32 minion_falcon_irqmask_r(void)
 {
 	return 0x00000018U;

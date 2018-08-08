@@ -45,7 +45,6 @@
 #include <nvgpu/hw/gv100/hw_trim_gv100.h>
 #include <nvgpu/hw/gv100/hw_nvtlc_gv100.h>
 
-#include <nvgpu/hw/gv100/hw_fb_gv100.h>
 #include <nvgpu/hw/gv100/hw_mc_gv100.h>
 
 #define NVLINK_PLL_ON_TIMEOUT_MS	30
@@ -1366,12 +1365,6 @@ static void gv100_nvlink_common_intr_enable(struct gk20a *g,
 							unsigned long mask)
 {
 	u32 reg, i;
-
-	/* Init HS HUB SW state */
-	g->nvlink.hshub_config0 = gk20a_readl(g, fb_hshub_config0_r());
-	g->nvlink.hshub_config1 = gk20a_readl(g, fb_hshub_config1_r());
-	g->nvlink.hshub_config2 = gk20a_readl(g, fb_hshub_config2_r());
-	g->nvlink.hshub_config6 = gk20a_readl(g, fb_hshub_config6_r());
 
 	/* Init IOCTRL */
 	for_each_set_bit(i, &mask, 32) {

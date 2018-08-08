@@ -216,12 +216,6 @@ struct nvgpu_nvlink_dev {
 
 	enum nvgpu_nvlink_speed speed;
 
-	/* hshub settings */
-	u32 hshub_config0;
-	u32 hshub_config1;
-	u32 hshub_config2;
-	u32 hshub_config6;
-
 	/* tlc cached errors */
 	u32 tlc_rx_err_status_0[NVLINK_MAX_LINKS_SW];
 	u32 tlc_rx_err_status_1[NVLINK_MAX_LINKS_SW];

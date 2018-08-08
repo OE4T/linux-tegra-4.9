@@ -212,8 +212,8 @@
 
 #define XUSB_AO_UHSIC_SAVED_STATE(x)		(0x90 + (x) * 4)
 #define   MODE(x)				((x) & 0x1)
-#define   MODE_HS				MODE(1)
-#define   MODE_RST				MODE(0)
+#define   MODE_HS				MODE(0)
+#define   MODE_RST				MODE(1)
 
 #define XUSB_AO_UTMIP_SLEEPWALK_CFG(x)		(0xd0 + (x) * 4)
 #define XUSB_AO_UHSIC_SLEEPWALK_CFG(x)		(0xf0 + (x) * 4)
@@ -1449,7 +1449,8 @@ static int tegra186_hsic_phy_enable_sleepwalk(struct phy *phy)
 
 	/* enable the trigger of the sleepwalk logic */
 	reg = ao_readl(priv, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
-	reg |= (WAKE_WALK_EN | LINEVAL_WALK_EN);
+	reg |= LINEVAL_WALK_EN;
+	reg &= ~WAKE_WALK_EN;
 	ao_writel(priv, reg, XUSB_AO_UHSIC_SLEEPWALK_CFG(index));
 
 	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
@@ -2627,6 +2628,19 @@ static int tegra186_utmi_phy_remote_wake_detected(
 		return false;
 }
 
+static int tegra186_hsic_phy_remote_wake_detected(
+			struct tegra_xusb_padctl *padctl, int port)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	if ((reg & USB2_HSIC_PORT_WAKE_INTERRUPT_ENABLE(port)) &&
+			(reg & USB2_HSIC_PORT_WAKEUP_EVENT(port)))
+		return true;
+	else
+		return false;
+}
+
 int tegra186_xusb_padctl_remote_wake_detected(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane;
@@ -2644,6 +2658,8 @@ int tegra186_xusb_padctl_remote_wake_detected(struct phy *phy)
 		return tegra186_utmi_phy_remote_wake_detected(padctl, index);
 	else if (is_usb3_phy(phy))
 		return tegra186_usb3_phy_remote_wake_detected(padctl, index);
+	else if (is_hsic_phy(phy))
+		return tegra186_hsic_phy_remote_wake_detected(padctl, index);
 
 	return -EINVAL;
 }

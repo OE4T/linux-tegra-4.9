@@ -935,7 +935,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 			if (err)
 				break;
 
-			err = g->ops.dbg_session_ops.exec_reg_ops(
+			err = g->ops.regops.exec_regops(
 				dbg_s, g->dbg_regops_tmp_buf, num_ops);
 
 			if (err) {

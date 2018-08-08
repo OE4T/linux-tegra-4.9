@@ -466,6 +466,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
 	},
 	.regops = {
+		.exec_regops = vgpu_exec_regops,
 		.get_global_whitelist_ranges =
 			gp10b_get_global_whitelist_ranges,
 		.get_global_whitelist_ranges_count =
@@ -514,7 +515,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.post_events = gk20a_dbg_gpu_post_events,
 	},
 	.dbg_session_ops = {
-		.exec_reg_ops = vgpu_exec_regops,
 		.dbg_set_powergate = vgpu_dbg_set_powergate,
 		.check_and_set_global_reservation =
 			vgpu_check_and_set_global_reservation,

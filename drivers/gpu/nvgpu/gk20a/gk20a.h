@@ -1100,6 +1100,9 @@ struct gpu_ops {
 		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);
 	} perf;
 	struct {
+		int (*exec_regops)(struct dbg_session_gk20a *dbg_s,
+			    struct nvgpu_dbg_reg_op *ops,
+			    u64 num_ops);
 		const struct regop_offset_range* (
 				*get_global_whitelist_ranges)(void);
 		int (*get_global_whitelist_ranges_count)(void);
@@ -1147,9 +1150,6 @@ struct gpu_ops {
 				struct gk20a_debug_output *o);
 	} debug;
 	struct {
-		int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
-			    struct nvgpu_dbg_reg_op *ops,
-			    u64 num_ops);
 		int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s,
 					bool disable_powergate);
 		bool (*check_and_set_global_reservation)(

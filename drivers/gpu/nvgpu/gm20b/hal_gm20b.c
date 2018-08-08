@@ -555,6 +555,7 @@ static const struct gpu_ops gm20b_ops = {
 		.get_pll_debug_data = gm20b_clk_get_pll_debug_data,
 	},
 	.regops = {
+		.exec_regops = exec_regops_gk20a,
 		.get_global_whitelist_ranges =
 			gm20b_get_global_whitelist_ranges,
 		.get_global_whitelist_ranges_count =
@@ -603,7 +604,6 @@ static const struct gpu_ops gm20b_ops = {
 		.post_events = gk20a_dbg_gpu_post_events,
 	},
 	.dbg_session_ops = {
-		.exec_reg_ops = exec_regops_gk20a,
 		.dbg_set_powergate = dbg_set_powergate,
 		.check_and_set_global_reservation =
 			nvgpu_check_and_set_global_reservation,

@@ -37,6 +37,7 @@
 #include <linux/nvmap_t19x.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/fuse.h>
+#include <linux/clk-provider.h>
 
 static int cvnas_debug;
 module_param(cvnas_debug, int, 0644);
@@ -414,6 +415,17 @@ int is_nvcvnas_probed(void)
 	else
 		return 0;
 }
+
+int is_nvcvnas_clk_enabled(void)
+{
+	struct cvnas_device *cvnas_dev = dev_get_drvdata(&cvnas_plat_dev->dev);
+
+	if (cvnas_plat_dev && cvnas_dev)
+		return  __clk_is_enabled(cvnas_dev->clk);
+	else
+		return 0;
+}
+EXPORT_SYMBOL(is_nvcvnas_clk_enabled);
 
 static const struct of_device_id nvcvnas_of_ids[] = {
 	{ .compatible = "nvidia,tegra-cvnas", .data = (void *)false, },

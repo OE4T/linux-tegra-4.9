@@ -543,13 +543,15 @@ static int cbb_serr_callback(struct pt_regs *regs, int reason,
 	struct tegra_cbb_errlog_record *errlog = priv;
 	int retval = 1;
 
-	errvld_status = errlog->errvld(errlog->vaddr);
+	if ((!errlog->is_clk_rst) ||
+		(errlog->is_clk_rst && errlog->is_clk_enabled())) {
+			errvld_status = errlog->errvld(errlog->vaddr);
 
-	if (errvld_status) {
-		print_errlog(NULL, errlog, errvld_status);
-		retval = 0;
+		if (errvld_status) {
+			print_errlog(NULL, errlog, errvld_status);
+			retval = 0;
+		}
 	}
-
 	return retval;
 }
 
@@ -645,6 +647,7 @@ static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
 	.is_ax2apb_bridge_connected = 1,
 	.is_clk_rst = true,
 	.is_cluster_probed = is_nvcvnas_probed,
+	.is_clk_enabled = is_nvcvnas_clk_enabled,
 	.tegra_noc_en_clk_rpm = nvcvnas_busy,
 	.tegra_noc_dis_clk_rpm = nvcvnas_idle,
 	.tegra_noc_en_clk_no_rpm = nvcvnas_busy_no_rpm,
@@ -689,11 +692,14 @@ static int cbb_err_show(struct seq_file *file, void *data)
 	mutex_lock(&cbb_err_mutex);
 
 	list_for_each_entry(errlog, &cbb_noc_list, node) {
+		if ((!errlog->is_clk_rst) ||
+			(errlog->is_clk_rst && errlog->is_clk_enabled())) {
 
-		errvld_status = errlog->errvld(errlog->vaddr);
-
-		if (errvld_status) {
-			print_errlog(file, errlog, errvld_status);
+				errvld_status = errlog->errvld(errlog->vaddr);
+				if (errvld_status) {
+					print_errlog(file, errlog,
+							errvld_status);
+				}
 		}
 	}
 
@@ -748,14 +754,19 @@ static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 	raw_spin_lock_irqsave(&cbb_noc_lock, flags);
 
 	list_for_each_entry(errlog, &cbb_noc_list, node) {
-		errvld_status = errlog->errvld(errlog->vaddr);
+		if ((!errlog->is_clk_rst) ||
+			(errlog->is_clk_rst && errlog->is_clk_enabled())) {
+			errvld_status = errlog->errvld(errlog->vaddr);
 
-		if (errvld_status && ((irq == errlog->noc_secure_irq)
+			if (errvld_status
+				&& ((irq == errlog->noc_secure_irq)
 				|| (irq == errlog->noc_nonsecure_irq))) {
-			print_cbb_err(NULL, "CPU:%d, Error:%s@0x%llx, irq=%d\n",
-			smp_processor_id(), errlog->name, errlog->start, irq);
+				print_cbb_err(NULL, "CPU:%d, Error:%s@0x%llx,"
+				"irq=%d\n", smp_processor_id(), errlog->name,
+				errlog->start, irq);
 
-			print_errlog(NULL, errlog, errvld_status);
+				print_errlog(NULL, errlog, errvld_status);
+			}
 		}
 	}
 	raw_spin_unlock_irqrestore(&cbb_noc_lock, flags);
@@ -846,8 +857,9 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 	if (bdata->is_clk_rst) {
-		if (bdata->is_cluster_probed())
+		if (bdata->is_cluster_probed() && !bdata->is_clk_enabled()) {
 			bdata->tegra_noc_en_clk_rpm();
+		}
 		else {
 			dev_info(&pdev->dev, "defer probe as %s not probed yet",
 								bdata->name);
@@ -913,6 +925,7 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	errlog->is_ax2apb_bridge_connected = bdata->is_ax2apb_bridge_connected;
 	errlog->is_clk_rst = bdata->is_clk_rst;
 	errlog->is_cluster_probed = bdata->is_cluster_probed;
+	errlog->is_clk_enabled = bdata->is_clk_enabled;
 	errlog->tegra_noc_en_clk_rpm = bdata->tegra_noc_en_clk_rpm;
 	errlog->tegra_noc_dis_clk_rpm = bdata->tegra_noc_dis_clk_rpm;
 	errlog->tegra_noc_en_clk_no_rpm = bdata->tegra_noc_en_clk_no_rpm;
@@ -941,8 +954,9 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 
 	tegra_cbb_error_enable(errlog);
 
-	if ((bdata->is_clk_rst) && (bdata->is_cluster_probed()))
-		bdata->tegra_noc_dis_clk_rpm();
+	if ((errlog->is_clk_rst) && (errlog->is_cluster_probed())
+						&& errlog->is_clk_enabled())
+		errlog->tegra_noc_dis_clk_rpm();
 
 	return 0;
 }
@@ -983,7 +997,7 @@ static int tegra_cbb_resume_noirq(struct device *dev)
 	int ret = 0;
 
 	if (errlog->is_clk_rst) {
-		if (errlog->is_cluster_probed())
+		if (errlog->is_cluster_probed() && !errlog->is_clk_enabled())
 			errlog->tegra_noc_en_clk_no_rpm();
 		else {
 			dev_info(dev, "%s not resumed", errlog->name);
@@ -994,7 +1008,8 @@ static int tegra_cbb_resume_noirq(struct device *dev)
 	tegra_cbb_error_enable(errlog);
 	dsb(sy);
 
-	if ((errlog->is_clk_rst) && (errlog->is_cluster_probed()))
+	if ((errlog->is_clk_rst) && (errlog->is_cluster_probed())
+						&& errlog->is_clk_enabled())
 		errlog->tegra_noc_dis_clk_no_rpm();
 
 	dev_info(dev, "%s resumed\n", errlog->name);

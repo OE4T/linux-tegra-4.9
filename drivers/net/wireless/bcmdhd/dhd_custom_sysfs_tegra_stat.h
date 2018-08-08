@@ -3,7 +3,7 @@
  *
  * NVIDIA Tegra Sysfs for BCMDHD driver
  *
- * Copyright (C) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2019 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -70,6 +70,34 @@
 		),\
 		(bcmdhd_stat.gen_stat).var = value\
 	)\
+
+#define TEGRA_SYSFS_HISTOGRAM_STAT_UPDATE_4WHS()\
+	do {\
+		if (wifi_stat_debug) \
+			pr_info("wifi stat: 4WHS counter update \n"); \
+		if (eapol_message_3_retry != -1) { \
+			if (eapol_message_1_retry > 0) \
+				bcmdhd_stat.gen_stat.eapol_message_1_retry += eapol_message_1_retry;\
+			if (eapol_message_2_retry > 0) \
+				bcmdhd_stat.gen_stat.eapol_message_2_retry += eapol_message_2_retry;\
+			if (eapol_message_3_retry > 0) \
+				bcmdhd_stat.gen_stat.eapol_message_3_retry += eapol_message_3_retry;\
+			if (eapol_message_4_retry > 0) \
+				bcmdhd_stat.gen_stat.eapol_message_4_retry += eapol_message_4_retry;\
+		} \
+		TEGRA_SYSFS_HISTOGRAM_STAT_RESET_4WHS(); \
+	} while (0)
+
+#define TEGRA_SYSFS_HISTOGRAM_STAT_RESET_4WHS()\
+	do {\
+		if (wifi_stat_debug) \
+			pr_info("wifi stat:4WHS counter reset \n"); \
+		eapol_message_1_retry = -1;\
+		eapol_message_2_retry = -1;\
+		eapol_message_3_retry = -1;\
+		eapol_message_4_retry = -1;\
+	} while (0)
+
 
 #define TEGRA_SYSFS_HISTOGRAM_SCAN_CNT_INC(cfg)\
 	do {\
@@ -219,6 +247,7 @@ typedef struct tegra_sysfs_stat_generic {
 	unsigned long connect_success;
 	unsigned long connect_fail;
 	unsigned long connect_fail_reason_15;
+	unsigned long connect_fail_set_ssid;
 	unsigned long disconnect_rssi_low;
 	unsigned long disconnect_rssi_high;
 	/* firmware statistics */
@@ -244,6 +273,18 @@ typedef struct tegra_sysfs_stat_generic {
 	int rssi;
 	unsigned long rssi_low;
 	unsigned long rssi_high;
+	/* signal level bucket */
+	unsigned long rssi_level_0;
+	unsigned long rssi_level_1;
+	unsigned long rssi_level_2;
+	unsigned long rssi_level_3;
+	unsigned long rssi_level_4;
+	/* 4WHS retry count */
+	unsigned long eapol_message_1_retry;
+	unsigned long eapol_message_2_retry;
+	unsigned long eapol_message_3_retry;
+	unsigned long eapol_message_4_retry;
+
 	int ccode_sig_fail[SIG_FAIL_REASONS];
 } tegra_sysfs_stat_generic_t;
 
@@ -274,6 +315,11 @@ typedef struct tegra_sysfs_stat_driver {
      */
 #ifdef CONFIG_BCMDHD_CUSTOM_NET_BW_EST_TEGRA
 	unsigned long cur_bw_est; /* bps bw estimator*/
+	unsigned long bw_est_level_0;
+	unsigned long bw_est_level_1;
+	unsigned long bw_est_level_2;
+	unsigned long bw_est_level_3;
+	unsigned long bw_est_level_4;
 #endif /* CONFIG_BCMDHD_CUSTOM_NET_BW_EST_TEGRA */
 	unsigned long aggr_not_assoc_err;
 } tegra_sysfs_stat_driver_t;
@@ -296,6 +342,11 @@ extern struct tegra_sysfs_histogram_stat bcmdhd_stat_saved;
 extern struct timespec dhdstats_ts;
 /* Flags */
 extern int aggr_not_assoc_err_set;
+
+extern int eapol_message_1_retry;
+extern int eapol_message_2_retry;
+extern int eapol_message_3_retry;
+extern int eapol_message_4_retry;
 
 #ifdef CONFIG_BCMDHD_CUSTOM_NET_BW_EST_TEGRA
 extern unsigned long tegra_net_bw_est_get_value(void);

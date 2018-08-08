@@ -3,7 +3,7 @@
  *
  * NVIDIA Tegra Sysfs for BCMDHD driver
  *
- * Copyright (C) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2019 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,6 +38,11 @@ rssi_work_func(struct work_struct *work)
 	scb_val_t scb_val;
 	int err;
 	int i;
+	int max_rssi = -55;
+	int min_rssi = -100;
+	int input_range = max_rssi - min_rssi;
+	int output_range = 3; //number of level - 1
+	int level;
 
 	UNUSED_PARAMETER(dwork);
 
@@ -80,6 +85,18 @@ rssi_work_func(struct work_struct *work)
 					(channel_stat->rssi_high);
 			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_high);
 		}
+
+		level = (bcmdhd_stat.gen_stat.rssi - min_rssi) * output_range / input_range;
+		if (level == 0)
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_level_0);
+		if (level == 1)
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_level_1);
+		if (level == 2)
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_level_2);
+		if (level == 3)
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_level_3);
+		if (level == 4)
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_level_4);
 	}
 
 	/* schedule next rssi */

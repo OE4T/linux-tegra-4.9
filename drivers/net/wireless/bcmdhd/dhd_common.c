@@ -2875,19 +2875,32 @@ void dhd_dump_eapol_4way_message(int ifidx, char *dump_data, bool direction)
 		sec = 0 != (us_tmp & 0x200);
 		install = 0 != (us_tmp & 0x40);
 
-		if (!sec && !mic && ack && !install && pair && !kerr && !req)
+		if (!sec && !mic && ack && !install && pair && !kerr && !req) {
 			DHD_NV_INFO(("ifidx: %d ETHER_TYPE_802_1X [%s] : M1 of 4way\n", ifidx,
 				    direction ? "TX" : "RX"));
-		else if (pair && !install && !ack && mic &&
-				!sec && !kerr && !req)
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			eapol_message_1_retry++;
+#endif
+		} else if (pair && !install && !ack && mic &&
+				!sec && !kerr && !req) {
 			DHD_NV_INFO(("ifidx: %d ETHER_TYPE_802_1X [%s] : M2 of 4way\n", ifidx,
 				    direction ? "TX" : "RX"));
-		else if (pair && ack && mic && sec && !kerr && !req)
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			eapol_message_2_retry++;
+#endif
+		} else if (pair && ack && mic && sec && !kerr && !req) {
 			DHD_NV_INFO(("ifidx: %d ETHER_TYPE_802_1X [%s] : M3 of 4way\n", ifidx,
 				    direction ? "TX" : "RX"));
-		else if (pair && !install && !ack && mic &&
-				sec && !req && !kerr)
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			eapol_message_3_retry++;
+#endif
+		} else if (pair && !install && !ack && mic &&
+				sec && !req && !kerr) {
 			DHD_NV_INFO(("ifidx: %d ETHER_TYPE_802_1X [%s] : M4 of 4way\n", ifidx,
 				    direction ? "TX" : "RX"));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			eapol_message_4_retry++;
+#endif
+		}
 	}
 }

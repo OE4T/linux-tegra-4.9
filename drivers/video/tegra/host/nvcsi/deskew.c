@@ -45,7 +45,7 @@
 #include "camera/csi/csi4_fops.h"
 
 static struct tegra_csi_device *mc_csi;
-struct mutex deskew_lock;
+static struct mutex deskew_lock;
 
 static int debugfs_deskew_clk_stats_low[NVCSI_PHY_CIL_NUM_LANE];
 static int debugfs_deskew_clk_stats_high[NVCSI_PHY_CIL_NUM_LANE];

@@ -1533,9 +1533,6 @@ static void gv100_nvlink_prog_alt_clk(struct gk20a *g)
 	tmp &= ~trim_sys_nvl_common_clk_alt_switch_slowclk_m();
 	tmp |= trim_sys_nvl_common_clk_alt_switch_slowclk_xtal4x_f();
 	gk20a_writel(g, trim_sys_nvl_common_clk_alt_switch_r(), tmp);
-
-	tmp &= ~trim_sys_nvl_common_clk_alt_switch_finalsel_m();
-	tmp |= trim_sys_nvl_common_clk_alt_switch_finalsel_slowclk_f();
 }
 
 static int gv100_nvlink_enable_links_pre_top(struct gk20a *g, u32 links)

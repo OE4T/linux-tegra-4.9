@@ -83,6 +83,12 @@
 		clocks = <&bpmp_car 0>;
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 414
+	bwmgr {
+		clocks = <&bpmp_car 0>;
+	};
+#endif
+
 	clock {
 		compatible = "nvidia,tegra210b01-car", "nvidia,tegra210-car";
 	};
@@ -91,10 +97,15 @@
 		compatible = "nvidia,tegra210b01-dfll", "nvidia,tegra210-dfll";
 	};
 
-	external-memory-controller {
+	external-memory-controller@7001b000 {
 		compatible = "nvidia,tegra210b01-emc";
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 414
+		clocks = <&bpmp_car 0>;
+		clock-names = "emc";
+#else
 		clocks = <&tegra_car TEGRA210_CLK_OVERRIDE_EMC>;
 		clock-names = "emc_override";
+#endif
 	};
 
 	pmc@7000e400 {

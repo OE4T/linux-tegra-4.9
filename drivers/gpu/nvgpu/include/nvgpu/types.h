@@ -30,4 +30,32 @@
 #include <nvgpu_rmos/include/types.h>
 #endif
 
+/*
+ * These macros exist to make integer literals used in certain arithmetic
+ * operations explicitly large enough to hold the results of that operation.
+ * The following is an example of this.
+ *
+ * In MISRA the destination for a bitwise shift must be able to hold the number
+ * of bits shifted. Otherwise the results are undefined. For example:
+ *
+ *   256U << 20U
+ *
+ * This is valid C code but the results of this _may_ be undefined if the size
+ * of an unsigned by default is less than 24 bits (i.e 16 bits). The MISRA
+ * checker sees the 256U and determines that the 256U fits in a 16 bit data type
+ * (i.e a u16). Since a u16 has 16 bits, which is less than 20, this is an
+ * issue.
+ *
+ * Of course most compilers these days use 32 bits for the default unsigned type
+ * this is not a requirement. Moreover this same problem could exist like so:
+ *
+ *   0xfffffU << 40U
+ *
+ * The 0xfffffU is a 32 bit unsigned type; but we are shifting 40 bits which
+ * overflows the 32 bit data type. So in this case we need an explicit cast to
+ * 64 bits in order to prevent undefined behavior.
+ */
+#define U32(x)	((u32)(x))
+#define U64(x)	((u64)(x))
+
 #endif

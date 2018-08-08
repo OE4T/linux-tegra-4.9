@@ -882,9 +882,6 @@ static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 
 	gk20a_comptag_allocator_destroy(gr->g, &gr->comp_tags);
 
-	nvgpu_kfree(gr->g, gr->sm_error_states);
-	gr->sm_error_states = NULL;
-
 	nvgpu_kfree(gr->g, gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
 
@@ -934,14 +931,6 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 
 	nvgpu_mutex_init(&gr->ctx_mutex);
 	nvgpu_spinlock_init(&gr->ch_tlb_lock);
-
-	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_gr_sm_error_state) *
-			gr->no_of_sm);
-	if (!gr->sm_error_states) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
 
 	gr->remove_support = vgpu_remove_gr_support;
 	gr->sw_ready = true;
@@ -1152,11 +1141,16 @@ int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id)
 {
-	struct gr_gk20a *gr = &g->gr;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_clear_sm_error_state *p =
 			&msg.params.clear_sm_error_state;
+	struct tsg_gk20a *tsg;
 	int err;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (!tsg) {
+		return -EINVAL;
+	}
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	msg.cmd = TEGRA_VGPU_CMD_CLEAR_SM_ERROR_STATE;
@@ -1167,7 +1161,7 @@ int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
+	memset(&tsg->sm_error_states[sm_id], 0, sizeof(*tsg->sm_error_states));
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return err ? err : msg.ret;
@@ -1264,7 +1258,8 @@ int vgpu_gr_resume_contexts(struct gk20a *g,
 void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 			struct tegra_vgpu_sm_esr_info *info)
 {
-	struct nvgpu_gr_sm_error_state *sm_error_states;
+	struct nvgpu_tsg_sm_error_state *sm_error_states;
+	struct tsg_gk20a *tsg;
 
 	if (info->sm_id >= g->gr.no_of_sm) {
 		nvgpu_err(g, "invalid smd_id %d / %d",
@@ -1272,9 +1267,20 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 		return;
 	}
 
+	if (info->tsg_id >= g->fifo.num_channels) {
+		nvgpu_err(g, "invalid tsg_id in sm esr event");
+		return;
+	}
+
+	tsg = &g->fifo.tsg[info->tsg_id];
+	if (tsg == NULL) {
+		nvgpu_err(g, "invalid tsg");
+		return;
+	}
+
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
-	sm_error_states = &g->gr.sm_error_states[info->sm_id];
+	sm_error_states = &tsg->sm_error_states[info->sm_id];
 
 	sm_error_states->hww_global_esr = info->hww_global_esr;
 	sm_error_states->hww_warp_esr = info->hww_warp_esr;

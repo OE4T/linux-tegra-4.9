@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __TEGRA_VGPU_H
-#define __TEGRA_VGPU_H
+#ifndef TEGRA_VGPU_H
+#define TEGRA_VGPU_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/ecc.h>	/* For NVGPU_ECC_STAT_NAME_MAX_SIZE */
@@ -737,6 +737,7 @@ struct tegra_vgpu_channel_event_info {
 };
 
 struct tegra_vgpu_sm_esr_info {
+	u32 tsg_id;
 	u32 sm_id;
 	u32 hww_global_esr;
 	u32 hww_warp_esr;

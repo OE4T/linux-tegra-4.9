@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __TSG_GK20A_H_
-#define __TSG_GK20A_H_
+#ifndef TSG_GK20A_H
+#define TSG_GK20A_H
 
 #include <nvgpu/lock.h>
 #include <nvgpu/kref.h>
@@ -38,6 +38,14 @@ void gk20a_tsg_release(struct nvgpu_ref *ref);
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
 struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch);
+
+struct nvgpu_tsg_sm_error_state {
+	u32 hww_global_esr;
+	u32 hww_warp_esr;
+	u64 hww_warp_esr_pc;
+	u32 hww_global_esr_report_mask;
+	u32 hww_warp_esr_report_mask;
+};
 
 struct tsg_gk20a {
 	struct gk20a *g;
@@ -69,6 +77,7 @@ struct tsg_gk20a {
 	bool tpc_num_initialized;
 	bool in_use;
 
+	struct nvgpu_tsg_sm_error_state *sm_error_states;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);
@@ -84,6 +93,12 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
 u32 gk20a_tsg_get_timeslice(struct tsg_gk20a *tsg);
 int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 				u32 priority);
+int gk20a_tsg_alloc_sm_error_states_mem(struct gk20a *g,
+					struct tsg_gk20a *tsg,
+					u32 num_sm);
+void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
+			u32 sm_id,
+			struct nvgpu_tsg_sm_error_state *sm_error_state);
 
 struct gk20a_event_id_data {
 	struct gk20a *g;
@@ -106,4 +121,4 @@ gk20a_event_id_data_from_event_id_node(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct gk20a_event_id_data, event_id_node));
 };
 
-#endif /* __TSG_GK20A_H_ */
+#endif /* TSG_GK20A_H */

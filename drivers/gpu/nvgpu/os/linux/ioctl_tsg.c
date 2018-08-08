@@ -536,6 +536,57 @@ static int gk20a_tsg_ioctl_get_timeslice(struct gk20a *g,
 	return 0;
 }
 
+static int gk20a_tsg_ioctl_read_single_sm_error_state(struct gk20a *g,
+		struct tsg_gk20a *tsg,
+		struct nvgpu_tsg_read_single_sm_error_state_args *args)
+{
+	struct gr_gk20a *gr = &g->gr;
+	struct nvgpu_tsg_sm_error_state *sm_error_state;
+	struct nvgpu_tsg_sm_error_state_record sm_error_state_record;
+	u32 sm_id;
+	int err = 0;
+
+	sm_id = args->sm_id;
+	if (sm_id >= gr->no_of_sm)
+		return -EINVAL;
+
+	nvgpu_speculation_barrier();
+
+	sm_error_state = tsg->sm_error_states + sm_id;
+	sm_error_state_record.global_esr =
+		sm_error_state->hww_global_esr;
+	sm_error_state_record.warp_esr =
+		sm_error_state->hww_warp_esr;
+	sm_error_state_record.warp_esr_pc =
+		sm_error_state->hww_warp_esr_pc;
+	sm_error_state_record.global_esr_report_mask =
+		sm_error_state->hww_global_esr_report_mask;
+	sm_error_state_record.warp_esr_report_mask =
+		sm_error_state->hww_warp_esr_report_mask;
+
+	if (args->record_size > 0) {
+		size_t write_size = sizeof(*sm_error_state);
+
+		if (write_size > args->record_size)
+			write_size = args->record_size;
+
+		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+		err = copy_to_user((void __user *)(uintptr_t)
+						args->record_mem,
+				   &sm_error_state_record,
+				   write_size);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+		if (err) {
+			nvgpu_err(g, "copy_to_user failed!");
+			return err;
+		}
+
+		args->record_size = write_size;
+	}
+
+	return 0;
+}
+
 long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -667,6 +718,13 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_tsg_ioctl_get_timeslice(g, tsg,
 			(struct nvgpu_timeslice_args *)buf);
+		break;
+		}
+
+	case NVGPU_TSG_IOCTL_READ_SINGLE_SM_ERROR_STATE:
+		{
+		err = gk20a_tsg_ioctl_read_single_sm_error_state(g, tsg,
+			(struct nvgpu_tsg_read_single_sm_error_state_args *)buf);
 		break;
 		}
 

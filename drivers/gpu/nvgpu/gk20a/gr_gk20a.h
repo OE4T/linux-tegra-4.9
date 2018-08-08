@@ -254,14 +254,6 @@ struct nvgpu_preemption_modes_rec {
 	u32 default_compute_preempt_mode; /* default mode */
 };
 
-struct nvgpu_gr_sm_error_state {
-	u32 hww_global_esr;
-	u32 hww_warp_esr;
-	u64 hww_warp_esr_pc;
-	u32 hww_global_esr_report_mask;
-	u32 hww_warp_esr_report_mask;
-};
-
 struct gr_gk20a {
 	struct gk20a *g;
 	struct {
@@ -427,7 +419,6 @@ struct gr_gk20a {
 	u32 *fbp_rop_l2_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
-	struct nvgpu_gr_sm_error_state *sm_error_states;
 
 #define NVGPU_SM_EXCEPTION_TYPE_MASK_NONE		(0x0U)
 #define NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL		(0x1U << 0)

@@ -396,7 +396,7 @@ struct gpu_ops {
 				u32 sm, struct channel_gk20a *fault_ch);
 		int (*update_sm_error_state)(struct gk20a *g,
 				struct channel_gk20a *ch, u32 sm_id,
-				struct nvgpu_gr_sm_error_state *sm_error_state);
+				struct nvgpu_tsg_sm_error_state *sm_error_state);
 		int (*clear_sm_error_state)(struct gk20a *g,
 				struct channel_gk20a *ch, u32 sm_id);
 		int (*suspend_contexts)(struct gk20a *g,

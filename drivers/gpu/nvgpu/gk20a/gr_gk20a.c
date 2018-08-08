@@ -1561,19 +1561,6 @@ restore_fe_go_idle:
 	if (err)
 		goto clean_up;
 
-	nvgpu_kfree(g, gr->sm_error_states);
-
-	/* we need to allocate this after g->ops.gr.init_fs_state() since
-	 * we initialize gr->no_of_sm in this function
-	 */
-	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_gr_sm_error_state)
-			* gr->no_of_sm);
-	if (!gr->sm_error_states) {
-		err = -ENOMEM;
-		goto restore_fe_go_idle;
-	}
-
 	ctx_header_words =  roundup(ctx_header_bytes, sizeof(u32));
 	ctx_header_words >>= 2;
 
@@ -3072,7 +3059,6 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 
-	nvgpu_kfree(g, gr->sm_error_states);
 	nvgpu_kfree(g, gr->gpc_tpc_count);
 	nvgpu_kfree(g, gr->gpc_zcb_count);
 	nvgpu_kfree(g, gr->gpc_ppc_count);
@@ -4545,22 +4531,6 @@ restore_fe_go_idle:
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err)
-		goto out;
-
-	nvgpu_kfree(g, gr->sm_error_states);
-
-	/* we need to allocate this after g->ops.gr.init_fs_state() since
-	 * we initialize gr->no_of_sm in this function
-	 */
-	gr->sm_error_states = nvgpu_kzalloc(g,
-			sizeof(struct nvgpu_gr_sm_error_state) *
-			gr->no_of_sm);
-	if (!gr->sm_error_states) {
-		err = -ENOMEM;
-		goto restore_fe_go_idle;
-	}
-
 out:
 	nvgpu_log_fn(g, "done");
 	return err;

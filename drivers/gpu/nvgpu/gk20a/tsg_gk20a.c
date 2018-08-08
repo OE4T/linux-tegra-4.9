@@ -275,8 +275,23 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 	int err;
 
 	tsg = gk20a_tsg_acquire_unused_tsg(&g->fifo);
-	if (!tsg)
+	if (tsg == NULL) {
 		return NULL;
+	}
+
+	/* we need to allocate this after g->ops.gr.init_fs_state() since
+	 * we initialize gr->no_of_sm in this function
+	 */
+	if (g->gr.no_of_sm == 0U) {
+		nvgpu_err(g, "no_of_sm %d not set, failed allocation",
+				  g->gr.no_of_sm);
+		return NULL;
+	}
+
+	err = gk20a_tsg_alloc_sm_error_states_mem(g, tsg, g->gr.no_of_sm);
+	if (err != 0) {
+		return NULL;
+	}
 
 	tsg->g = g;
 	tsg->num_active_channels = 0;
@@ -295,7 +310,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g, "tsg %d fifo open failed %d",
 				  tsg->tsgid, err);
 			goto clean_up;
@@ -307,6 +322,12 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 	return tsg;
 
 clean_up:
+
+	if(tsg->sm_error_states != NULL) {
+		nvgpu_kfree(g, tsg->sm_error_states);
+		tsg->sm_error_states = NULL;
+	}
+
 	nvgpu_ref_put(&tsg->refcount, gk20a_tsg_release);
 	return NULL;
 }
@@ -317,18 +338,26 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	struct gk20a *g = tsg->g;
 	struct gk20a_event_id_data *event_id_data, *event_id_data_temp;
 
-	if (g->ops.fifo.tsg_release)
+	if (g->ops.fifo.tsg_release != NULL) {
 		g->ops.fifo.tsg_release(tsg);
+	}
 
-	if (nvgpu_mem_is_valid(&tsg->gr_ctx.mem))
+	if (nvgpu_mem_is_valid(&tsg->gr_ctx.mem)) {
 		gr_gk20a_free_tsg_gr_ctx(tsg);
+	}
 
-	if (g->ops.fifo.deinit_eng_method_buffers)
+	if (g->ops.fifo.deinit_eng_method_buffers != NULL) {
 		g->ops.fifo.deinit_eng_method_buffers(g, tsg);
+	}
 
-	if (tsg->vm) {
+	if (tsg->vm != NULL) {
 		nvgpu_vm_put(tsg->vm);
 		tsg->vm = NULL;
+	}
+
+	if(tsg->sm_error_states != NULL) {
+		nvgpu_kfree(g, tsg->sm_error_states);
+		tsg->sm_error_states = NULL;
 	}
 
 	/* unhook all events created on this TSG */
@@ -359,4 +388,45 @@ struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
 	}
 
 	return tsg;
+}
+
+int gk20a_tsg_alloc_sm_error_states_mem(struct gk20a *g,
+					struct tsg_gk20a *tsg,
+					u32 num_sm)
+{
+	int err = 0;
+
+	if (tsg->sm_error_states != NULL) {
+		return err;
+	}
+
+	tsg->sm_error_states = nvgpu_kzalloc(g,
+			sizeof(struct nvgpu_tsg_sm_error_state)
+			* num_sm);
+	if (tsg->sm_error_states == NULL) {
+		nvgpu_err(g, "sm_error_states mem allocation failed");
+		err = -ENOMEM;
+	}
+
+	return err;
+}
+
+void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
+				u32 sm_id,
+				struct nvgpu_tsg_sm_error_state *sm_error_state)
+{
+	struct nvgpu_tsg_sm_error_state *tsg_sm_error_states;
+
+	tsg_sm_error_states = tsg->sm_error_states + sm_id;
+
+	tsg_sm_error_states->hww_global_esr =
+			sm_error_state->hww_global_esr;
+	tsg_sm_error_states->hww_warp_esr =
+			sm_error_state->hww_warp_esr;
+	tsg_sm_error_states->hww_warp_esr_pc =
+			sm_error_state->hww_warp_esr_pc;
+	tsg_sm_error_states->hww_global_esr_report_mask =
+			sm_error_state->hww_global_esr_report_mask;
+	tsg_sm_error_states->hww_warp_esr_report_mask =
+			sm_error_state->hww_warp_esr_report_mask;
 }

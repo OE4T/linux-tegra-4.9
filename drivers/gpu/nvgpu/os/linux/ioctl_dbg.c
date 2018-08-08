@@ -35,6 +35,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/tsg_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "os_linux.h"
@@ -271,20 +272,23 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	u32 sm_id;
 	struct channel_gk20a *ch;
 	struct nvgpu_dbg_gpu_sm_error_state_record sm_error_state_record;
-	struct nvgpu_gr_sm_error_state sm_error_state;
+	struct nvgpu_tsg_sm_error_state sm_error_state;
 	int err = 0;
 
 	/* Not currently supported in the virtual case */
-	if (g->is_virtual)
+	if (g->is_virtual) {
 		return -ENOSYS;
+	}
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
-	if (!ch)
+	if (ch == NULL) {
 		return -EINVAL;
+	}
 
 	sm_id = args->sm_id;
-	if (sm_id >= gr->no_of_sm)
+	if (sm_id >= gr->no_of_sm) {
 		return -EINVAL;
+	}
 
 	nvgpu_speculation_barrier();
 
@@ -300,13 +304,15 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 				args->sm_error_state_record_mem,
 			  read_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
-		if (err)
+		if (err != 0) {
 			return -ENOMEM;
+		}
 	}
 
 	err = gk20a_busy(g);
-	if (err)
+	if (err != 0) {
 		return err;
+	}
 
 	sm_error_state.hww_global_esr =
 		sm_error_state_record.hww_global_esr;
@@ -335,18 +341,36 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 {
 	struct gk20a *g = dbg_s->g;
 	struct gr_gk20a *gr = &g->gr;
-	struct nvgpu_gr_sm_error_state *sm_error_state;
+	struct nvgpu_tsg_sm_error_state *sm_error_state;
 	struct nvgpu_dbg_gpu_sm_error_state_record sm_error_state_record;
+	struct channel_gk20a *ch;
+	struct tsg_gk20a *tsg;
 	u32 sm_id;
 	int err = 0;
 
-	sm_id = args->sm_id;
-	if (sm_id >= gr->no_of_sm)
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (ch == NULL) {
 		return -EINVAL;
+	}
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg == NULL) {
+		nvgpu_err(g, "no valid tsg from ch");
+		return -EINVAL;
+	}
+
+	sm_id = args->sm_id;
+	if (sm_id >= gr->no_of_sm) {
+		return -EINVAL;
+	}
+
+	if (tsg->sm_error_states == NULL) {
+		return -EINVAL;
+	}
 
 	nvgpu_speculation_barrier();
 
-	sm_error_state = gr->sm_error_states + sm_id;
+	sm_error_state = tsg->sm_error_states + sm_id;
 	sm_error_state_record.hww_global_esr =
 		sm_error_state->hww_global_esr;
 	sm_error_state_record.hww_warp_esr =
@@ -370,7 +394,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 				   &sm_error_state_record,
 				   write_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g, "copy_to_user failed!");
 			return err;
 		}
@@ -1500,8 +1524,9 @@ static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
 	int err = 0;
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
-	if (!ch)
+	if (ch == NULL) {
 		return -EINVAL;
+	}
 
 	sm_id = args->sm_id;
 	if (sm_id >= gr->no_of_sm)
@@ -1510,8 +1535,9 @@ static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
 	nvgpu_speculation_barrier();
 
 	err = gk20a_busy(g);
-	if (err)
+	if (err != 0) {
 		return err;
+	}
 
 	err = gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.clear_sm_error_state(g, ch, sm_id));

@@ -43,7 +43,7 @@ struct zbc_entry;
 struct zbc_query_params;
 struct nvgpu_gr_ctx;
 struct nvgpu_warpstate;
-struct nvgpu_gr_sm_error_state;
+struct nvgpu_tsg_sm_error_state;
 struct gr_ctx_desc;
 struct gr_gk20a_isr_data;
 struct gk20a_debug_output;
@@ -168,7 +168,7 @@ int gv11b_gr_sm_trigger_suspend(struct gk20a *g);
 void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state);
 int gv11b_gr_update_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id,
-		struct nvgpu_gr_sm_error_state *sm_error_state);
+		struct nvgpu_tsg_sm_error_state *sm_error_state);
 int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable);
 int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,

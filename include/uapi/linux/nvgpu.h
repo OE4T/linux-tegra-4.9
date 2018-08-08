@@ -861,38 +861,6 @@ struct nvgpu_gpu_set_deterministic_opts_args {
 	__u64 channels; /* in */
 };
 
-/*
- * This struct helps to report the SM error state of a single SM.
- * This acts upon the currently resident GR context.
- * Global Error status register
- * Warp Error status register
- * Warp Error status register PC
- * Global Error status register Report Mask
- * Warp Error status register Report Mask
- */
-struct nvgpu_gpu_sm_error_state_record {
-	__u32 global_esr;
-	__u32 warp_esr;
-	__u64 warp_esr_pc;
-	__u32 global_esr_report_mask;
-	__u32 warp_esr_report_mask;
-};
-
-/*
- * This struct helps to read the SM error state.
- */
-struct nvgpu_gpu_read_single_sm_error_state_args {
-	/* Valid SM ID */
-	__u32 sm_id;
-	__u32 reserved;
-	/*
-	 * This is pointer to the struct nvgpu_gpu_sm_error_state_record
-	 */
-	__u64 record_mem;
-	/* size of the record size to read */
-	__u64 record_size;
-};
-
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -976,11 +944,8 @@ struct nvgpu_gpu_read_single_sm_error_state_args {
 #define NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 40, \
 			struct nvgpu_gpu_set_deterministic_opts_args)
-#define NVGPU_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 41, \
-			struct nvgpu_gpu_read_single_sm_error_state_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE)
+	_IOC_NR(NVGPU_GPU_IOCTL_SET_DETERMINISTIC_OPTS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 
@@ -1063,6 +1028,38 @@ struct nvgpu_tsg_bind_channel_ex_args {
 	__u8 reserved[11];
 };
 
+/*
+ * This struct helps to report the SM error state of a single SM.
+ * This acts upon the currently resident TSG context.
+ * Global Error status register
+ * Warp Error status register
+ * Warp Error status register PC
+ * Global Error status register Report Mask
+ * Warp Error status register Report Mask
+ */
+struct nvgpu_tsg_sm_error_state_record {
+	__u32 global_esr;
+	__u32 warp_esr;
+	__u64 warp_esr_pc;
+	__u32 global_esr_report_mask;
+	__u32 warp_esr_report_mask;
+};
+
+/*
+ * This struct helps to read the SM error state.
+ */
+struct nvgpu_tsg_read_single_sm_error_state_args {
+	/* Valid SM ID */
+	__u32 sm_id;
+	__u32 reserved;
+	/*
+	 * This is pointer to the struct nvgpu_gpu_sm_error_state_record
+	 */
+	__u64 record_mem;
+	/* size of the record size to read */
+	__u64 record_size;
+};
+
 #define NVGPU_TSG_IOCTL_BIND_CHANNEL \
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 1, int)
 #define NVGPU_TSG_IOCTL_UNBIND_CHANNEL \
@@ -1083,10 +1080,13 @@ struct nvgpu_tsg_bind_channel_ex_args {
 	_IOR(NVGPU_TSG_IOCTL_MAGIC, 10, struct nvgpu_timeslice_args)
 #define NVGPU_TSG_IOCTL_BIND_CHANNEL_EX \
 	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 11, struct nvgpu_tsg_bind_channel_ex_args)
+#define NVGPU_TSG_IOCTL_READ_SINGLE_SM_ERROR_STATE \
+	_IOR(NVGPU_TSG_IOCTL_MAGIC, 12, \
+			struct nvgpu_tsg_read_single_sm_error_state_args)
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
 		sizeof(struct nvgpu_tsg_bind_channel_ex_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_TSG_IOCTL_BIND_CHANNEL_EX)
+	_IOC_NR(NVGPU_TSG_IOCTL_READ_SINGLE_SM_ERROR_STATE)
 
 /*
  * /dev/nvhost-dbg-gpu device

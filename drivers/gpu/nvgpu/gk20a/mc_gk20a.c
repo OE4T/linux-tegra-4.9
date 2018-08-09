@@ -319,9 +319,10 @@ void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops)
 {
 	bool semaphore_wakeup, post_events;
 
-	semaphore_wakeup = (((ops & (u32)gk20a_nonstall_ops_wakeup_semaphore) != 0U) ?
+	semaphore_wakeup =
+		(((ops & GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE) != 0U) ?
 					true : false);
-	post_events = (((ops & (u32)gk20a_nonstall_ops_post_events) != 0U) ?
+	post_events = (((ops & GK20A_NONSTALL_OPS_POST_EVENTS) != 0U) ?
 					true: false);
 
 	if (semaphore_wakeup) {

@@ -61,9 +61,9 @@ void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	return;
 }
 
-int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+u32 gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
-	int ops = 0;
+	u32 ops = 0;
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
 
 	nvgpu_log(g, gpu_dbg_intr, "ce nonstall isr %08x %08x\n", ce_intr, inst_id);
@@ -71,8 +71,8 @@ int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	if (ce_intr & ce_intr_status_nonblockpipe_pending_f()) {
 		gk20a_writel(g, ce_intr_status_r(inst_id),
 			ce_intr_status_nonblockpipe_pending_f());
-		ops |= (gk20a_nonstall_ops_wakeup_semaphore |
-			gk20a_nonstall_ops_post_events);
+		ops |= (GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE |
+			GK20A_NONSTALL_OPS_POST_EVENTS);
 	}
 
 	return ops;

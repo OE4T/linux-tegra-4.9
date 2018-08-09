@@ -6101,8 +6101,8 @@ u32 gk20a_gr_nonstall_isr(struct gk20a *g)
 		/* Clear the interrupt */
 		gk20a_writel(g, gr_intr_nonstall_r(),
 			gr_intr_nonstall_trap_pending_f());
-		ops |= (u32)(gk20a_nonstall_ops_wakeup_semaphore |
-			gk20a_nonstall_ops_post_events);
+		ops |= (GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE |
+			GK20A_NONSTALL_OPS_POST_EVENTS);
 	}
 	return ops;
 }

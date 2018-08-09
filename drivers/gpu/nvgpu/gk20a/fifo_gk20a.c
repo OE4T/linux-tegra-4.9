@@ -2720,7 +2720,7 @@ void gk20a_fifo_isr(struct gk20a *g)
 	return;
 }
 
-enum gk20a_nonstall_ops gk20a_fifo_nonstall_isr(struct gk20a *g)
+u32 gk20a_fifo_nonstall_isr(struct gk20a *g)
 {
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
 	u32 clear_intr = 0;
@@ -2732,7 +2732,7 @@ enum gk20a_nonstall_ops gk20a_fifo_nonstall_isr(struct gk20a *g)
 
 	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
 
-	return gk20a_nonstall_ops_wakeup_semaphore;
+	return GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE;
 }
 
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)

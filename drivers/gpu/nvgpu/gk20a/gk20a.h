@@ -207,7 +207,7 @@ struct gpu_ops {
 	} ltc;
 	struct {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
-		int (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
+		u32 (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 		u32 (*get_num_pce)(struct gk20a *g);
 	} ce2;
 	struct {
@@ -1668,10 +1668,8 @@ struct gk20a_cyclestate_buffer_elem {
 };
 
 /* operations that will need to be executed on non stall workqueue */
-enum gk20a_nonstall_ops {
-	gk20a_nonstall_ops_wakeup_semaphore = BIT(0), /* wake up semaphore */
-	gk20a_nonstall_ops_post_events = BIT(1),
-};
+#define GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE	BIT32(0)
+#define GK20A_NONSTALL_OPS_POST_EVENTS		BIT32(1)
 
 /* register accessors */
 void __nvgpu_check_gpu_state(struct gk20a *g);

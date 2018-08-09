@@ -31,7 +31,6 @@
 
 struct gk20a_debug_output;
 struct mmu_fault_info;
-enum gk20a_nonstall_ops;
 
 enum {
 	NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW = 0,
@@ -229,7 +228,7 @@ int gk20a_init_fifo_support(struct gk20a *g);
 int gk20a_init_fifo_setup_hw(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
-enum gk20a_nonstall_ops gk20a_fifo_nonstall_isr(struct gk20a *g);
+u32 gk20a_fifo_nonstall_isr(struct gk20a *g);
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid);
 int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);

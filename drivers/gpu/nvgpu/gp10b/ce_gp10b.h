@@ -1,7 +1,7 @@
 /*
  * Pascal GPU series Copy Engine.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,6 @@
 #include "gk20a/tsg_gk20a.h"
 
 void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
-int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
+u32 gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 
 #endif /*__CE2_GP10B_H__*/

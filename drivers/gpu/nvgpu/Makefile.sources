@@ -42,6 +42,7 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/fb/fb_gp106.c \
 	common/fb/fb_gv100.c \
 	common/fb/fb_gv11b.c \
+	common/xve/xve_gp106.c \
 	common/enabled.c \
 	common/pramin.c \
 	common/semaphore.c \
@@ -201,7 +202,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp106/fuse_gp106.c \
 	gp106/clk_gp106.c \
 	gp106/clk_arb_gp106.c \
-	gp106/xve_gp106.c \
 	gp106/therm_gp106.c \
 	gv100/mm_gv100.c \
 	gv100/gr_ctx_gv100.c \

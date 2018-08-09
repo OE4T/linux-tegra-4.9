@@ -22,11 +22,12 @@
 
 #include "gk20a/gk20a.h"
 #include "gp106/bios_gp106.h"
-#include "gp106/xve_gp106.h"
 
 #include <nvgpu/bug.h>
 #include <nvgpu/xve.h>
 #include <nvgpu/io.h>
+
+#include "xve_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_xp_gp106.h>
 #include <nvgpu/hw/gp106/hw_xve_gp106.h>

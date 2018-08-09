@@ -34,7 +34,8 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/fb/fb_gp10b.o \
 	common/fb/fb_gp106.o \
 	common/fb/fb_gv11b.o \
-	common/fb/fb_gv100.o
+	common/fb/fb_gv100.o \
+	common/xve/xve_gp106.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
@@ -327,9 +328,7 @@ nvgpu-y += \
 	clk/clk.o \
 	gp106/clk_gp106.o \
 	gp106/clk_arb_gp106.o \
-	gp106/xve_gp106.o \
 	gp106/therm_gp106.o \
-	gp106/xve_gp106.o \
 	pmgr/pwrdev.o \
 	pmgr/pmgr.o \
 	pmgr/pmgrpmu.o \

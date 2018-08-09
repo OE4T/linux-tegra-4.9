@@ -31,6 +31,7 @@
 #include "common/fb/fb_gp10b.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp106.h"
+#include "common/xve/xve_gp106.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -76,7 +77,6 @@
 #include "gp106/mclk_gp106.h"
 #include "gp106/bios_gp106.h"
 #include "gp106/therm_gp106.h"
-#include "gp106/xve_gp106.h"
 #include "gp106/fifo_gp106.h"
 #include "gp106/clk_gp106.h"
 #include "gp106/mm_gp106.h"

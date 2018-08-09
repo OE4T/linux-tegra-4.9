@@ -29,4 +29,8 @@
 	aconnect@2a41000 {
 		status = "disabled";
 	};
+
+	sdhci@700b0200 {
+		status = "disabled";
+	};
 };

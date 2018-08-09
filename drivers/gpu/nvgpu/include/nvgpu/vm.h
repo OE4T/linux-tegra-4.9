@@ -172,7 +172,7 @@ struct vm_gk20a {
 	 * not. vma[] allows the code to be agnostic to this by always using
 	 * address spaces through this pointer array.
 	 */
-	struct nvgpu_allocator *vma[gmmu_nr_page_sizes];
+	struct nvgpu_allocator *vma[GMMU_NR_PAGE_SIZES];
 	struct nvgpu_allocator kernel;
 	struct nvgpu_allocator user;
 	struct nvgpu_allocator user_lp;
@@ -184,7 +184,7 @@ struct vm_gk20a {
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 handle;
 #endif
-	u32 gmmu_page_sizes[gmmu_nr_page_sizes];
+	u32 gmmu_page_sizes[GMMU_NR_PAGE_SIZES];
 
 	/* if non-NULL, kref_put will use this batch when
 	   unmapping. Must hold vm->update_gmmu_lock. */
@@ -322,8 +322,8 @@ struct vm_gk20a *nvgpu_vm_init(struct gk20a *g,
  * will be used by the vgpu code.
  */
 u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
-			enum gmmu_pgsz_gk20a pgsz_idx);
+				u32 pgsz_idx);
 int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
-		       enum gmmu_pgsz_gk20a pgsz_idx);
+				u32 pgsz_idx);
 
 #endif

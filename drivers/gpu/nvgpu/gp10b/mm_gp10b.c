@@ -126,8 +126,8 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pde_v[4] = {0, 0, 0, 0};
 
-	small_valid = attrs->pgsz == gmmu_page_size_small;
-	big_valid   = attrs->pgsz == gmmu_page_size_big;
+	small_valid = attrs->pgsz == GMMU_PAGE_SIZE_SMALL;
+	big_valid   = attrs->pgsz == GMMU_PAGE_SIZE_BIG;
 
 	if (small_valid)
 		small_addr = phys_addr >> gmmu_new_dual_pde_address_shift_v();
@@ -274,15 +274,14 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
  * level having a different number of entries depending on whether it holds
  * big pages or small pages.
  */
-static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
-					const struct gk20a_mmu_level *l,
-					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+static u32 gp10b_get_pde0_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	u32 pde_base = pd->mem_offs / sizeof(u32);
 	u32 pde_offset = pde_base + pd_offset_from_index(l, pd_idx);
 	u32 pde_v[GP10B_PDE0_ENTRY_SIZE >> 2];
 	u32 i;
-	enum gmmu_pgsz_gk20a pgsz = gmmu_nr_page_sizes;
+	u32 pgsz = GMMU_NR_PAGE_SIZES;
 
 	if (!pd->mem)
 		return pgsz;
@@ -302,7 +301,7 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 			gmmu_new_dual_pde_address_shift_v();
 
 		if (addr)
-			pgsz = gmmu_page_size_small;
+			pgsz = GMMU_PAGE_SIZE_SMALL;
 	}
 
 	if (pde_v[0] & (gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() |
@@ -318,12 +317,12 @@ static enum gmmu_pgsz_gk20a gp10b_get_pde0_pgsz(struct gk20a *g,
 			 * both small and big to be set, the PDE is not valid
 			 * and may be corrupted
 			 */
-			if (pgsz == gmmu_page_size_small) {
+			if (pgsz == GMMU_PAGE_SIZE_SMALL) {
 				nvgpu_err(g,
 					"both small and big apertures enabled");
-				return gmmu_nr_page_sizes;
+				return GMMU_NR_PAGE_SIZES;
 			}
-			pgsz = gmmu_page_size_big;
+			pgsz = GMMU_PAGE_SIZE_BIG;
 		}
 	}
 

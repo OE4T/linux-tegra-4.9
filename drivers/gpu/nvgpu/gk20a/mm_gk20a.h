@@ -139,7 +139,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  struct nvgpu_sgt *sgt,
 			  u64 buffer_offset,
 			  u64 size,
-			  int pgsz_idx,
+			  u32 pgsz_idx,
 			  u8 kind_v,
 			  u32 ctag_offset,
 			  u32 flags,
@@ -153,7 +153,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			     u64 vaddr,
 			     u64 size,
-			     int pgsz_idx,
+			     u32 pgsz_idx,
 			     bool va_allocated,
 			     enum gk20a_mem_rw_flag rw_flag,
 			     bool sparse,
@@ -178,10 +178,8 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
-enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
-					const struct gk20a_mmu_level *l,
-					struct nvgpu_gmmu_pd *pd, u32 pd_idx);
-enum gmmu_pgsz_gk20a gk20a_get_pte_pgsz(struct gk20a *g,
-					const struct gk20a_mmu_level *l,
-					struct nvgpu_gmmu_pd *pd, u32 pd_idx);
+u32 gk20a_get_pde_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx);
+u32 gk20a_get_pte_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 #endif /* MM_GK20A_H */

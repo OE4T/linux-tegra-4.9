@@ -41,7 +41,7 @@
 
 struct nvgpu_ctag_buffer_info {
 	u64			size;
-	enum gmmu_pgsz_gk20a	pgsz_idx;
+	u32			pgsz_idx;
 	u32			flags;
 
 	s16			compr_kind;
@@ -123,8 +123,7 @@ static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
 	pdb->entries = NULL;
 }
 
-u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
-			enum gmmu_pgsz_gk20a pgsz_idx)
+u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size, u32 pgsz_idx)
 
 {
 	struct gk20a *g = vm->mm->g;
@@ -139,12 +138,12 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 		return 0;
 	}
 
-	if (pgsz_idx >= gmmu_nr_page_sizes) {
+	if (pgsz_idx >= GMMU_NR_PAGE_SIZES) {
 		nvgpu_err(g, "(%s) invalid page size requested", vma->name);
 		return 0;
 	}
 
-	if ((pgsz_idx == gmmu_page_size_big) && !vm->big_pages) {
+	if ((pgsz_idx == GMMU_PAGE_SIZE_BIG) && !vm->big_pages) {
 		nvgpu_err(g, "(%s) unsupportd page size requested", vma->name);
 		return 0;
 	}
@@ -161,8 +160,7 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 	return addr;
 }
 
-int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
-		       enum gmmu_pgsz_gk20a pgsz_idx)
+int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr, u32 pgsz_idx)
 {
 	struct nvgpu_allocator *vma = vm->vma[pgsz_idx];
 
@@ -264,7 +262,7 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	err = nvgpu_semaphore_pool_map(vm->sema_pool, vm);
 	if (err) {
 		nvgpu_semaphore_pool_unmap(vm->sema_pool, vm);
-		nvgpu_free(vm->vma[gmmu_page_size_small],
+		nvgpu_free(vm->vma[GMMU_PAGE_SIZE_SMALL],
 			   vm->sema_pool->gpu_va);
 		return err;
 	}
@@ -308,22 +306,22 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 
 	vm->mm = mm;
 
-	vm->gmmu_page_sizes[gmmu_page_size_small]  = SZ_4K;
-	vm->gmmu_page_sizes[gmmu_page_size_big]    = big_page_size;
-	vm->gmmu_page_sizes[gmmu_page_size_kernel] = SZ_4K;
+	vm->gmmu_page_sizes[GMMU_PAGE_SIZE_SMALL]  = SZ_4K;
+	vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]    = big_page_size;
+	vm->gmmu_page_sizes[GMMU_PAGE_SIZE_KERNEL] = SZ_4K;
 
 	/* Set up vma pointers. */
-	vm->vma[gmmu_page_size_small]  = &vm->user;
-	vm->vma[gmmu_page_size_big]    = &vm->user;
-	vm->vma[gmmu_page_size_kernel] = &vm->kernel;
+	vm->vma[GMMU_PAGE_SIZE_SMALL]  = &vm->user;
+	vm->vma[GMMU_PAGE_SIZE_BIG]    = &vm->user;
+	vm->vma[GMMU_PAGE_SIZE_KERNEL] = &vm->kernel;
 	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
-		vm->vma[gmmu_page_size_big] = &vm->user_lp;
+		vm->vma[GMMU_PAGE_SIZE_BIG] = &vm->user_lp;
 	}
 
 	vm->va_start  = low_hole;
 	vm->va_limit  = aperture_size;
 
-	vm->big_page_size     = vm->gmmu_page_sizes[gmmu_page_size_big];
+	vm->big_page_size     = vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG];
 	vm->userspace_managed = userspace_managed;
 	vm->mmu_levels        = g->ops.mm.get_mmu_levels(g, vm->big_page_size);
 
@@ -876,7 +874,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 
 	align = nvgpu_sgt_alignment(g, sgt);
 	if (g->mm.disable_bigpage) {
-		binfo.pgsz_idx = gmmu_page_size_small;
+		binfo.pgsz_idx = GMMU_PAGE_SIZE_SMALL;
 	} else {
 		binfo.pgsz_idx = __get_pte_size(vm, map_addr,
 						min_t(u64, binfo.size, align));

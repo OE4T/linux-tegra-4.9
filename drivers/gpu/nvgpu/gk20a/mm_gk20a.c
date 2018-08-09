@@ -158,8 +158,8 @@ static void update_gmmu_pde_locked(struct vm_gk20a *vm,
 	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pde_v[2] = {0, 0};
 
-	small_valid = attrs->pgsz == gmmu_page_size_small;
-	big_valid   = attrs->pgsz == gmmu_page_size_big;
+	small_valid = attrs->pgsz == GMMU_PAGE_SIZE_SMALL;
+	big_valid   = attrs->pgsz == GMMU_PAGE_SIZE_BIG;
 
 	pde_v[0] = gmmu_pde_size_full_f();
 	pde_v[0] |= big_valid ?
@@ -283,24 +283,22 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	pd_write(g, pd, pd_offset + 1, pte_w[1]);
 }
 
-enum gmmu_pgsz_gk20a gk20a_get_pde_pgsz(struct gk20a *g,
-					const struct gk20a_mmu_level *l,
-					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+u32 gk20a_get_pde_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	/*
 	 * big and small page sizes are the same
 	 */
-	return gmmu_page_size_small;
+	return GMMU_PAGE_SIZE_SMALL;
 }
 
-enum gmmu_pgsz_gk20a gk20a_get_pte_pgsz(struct gk20a *g,
-					const struct gk20a_mmu_level *l,
-					struct nvgpu_gmmu_pd *pd, u32 pd_idx)
+u32 gk20a_get_pte_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx)
 {
 	/*
 	 * return invalid
 	 */
-	return gmmu_nr_page_sizes;
+	return GMMU_NR_PAGE_SIZES;
 }
 
 const struct gk20a_mmu_level gk20a_mm_levels_64k[] = {

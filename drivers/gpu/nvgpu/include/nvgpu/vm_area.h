@@ -69,7 +69,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr);
 
 struct nvgpu_vm_area *nvgpu_vm_area_find(struct vm_gk20a *vm, u64 addr);
 int nvgpu_vm_area_validate_buffer(struct vm_gk20a *vm,
-				  u64 map_offset, u64 map_size, int pgsz_idx,
+				  u64 map_offset, u64 map_size, u32 pgsz_idx,
 				  struct nvgpu_vm_area **pvm_area);
 
 #endif

@@ -34,14 +34,14 @@
  * Attempt to find a reserved memory area to determine PTE size for the passed
  * mapping. If no reserved area can be found use small pages.
  */
-enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
+u32 __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size)
 {
 	struct nvgpu_vm_area *vm_area;
 
 	vm_area = nvgpu_vm_area_find(vm, base);
 	if (!vm_area) {
-		return gmmu_page_size_small;
+		return GMMU_PAGE_SIZE_SMALL;
 	}
 
 	return vm_area->pgsz_idx;
@@ -50,19 +50,19 @@ enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 /*
  * This is for when the address space does not support unified address spaces.
  */
-static enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
+static u32 __get_pte_size_split_addr(struct vm_gk20a *vm,
 					       u64 base, u64 size)
 {
 	if (!base) {
-		if (size >= vm->gmmu_page_sizes[gmmu_page_size_big]) {
-			return gmmu_page_size_big;
+		if (size >= vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]) {
+			return GMMU_PAGE_SIZE_BIG;
 		}
-		return gmmu_page_size_small;
+		return GMMU_PAGE_SIZE_SMALL;
 	} else {
 		if (base < __nv_gmmu_va_small_page_limit()) {
-			return gmmu_page_size_small;
+			return GMMU_PAGE_SIZE_SMALL;
 		} else {
-			return gmmu_page_size_big;
+			return GMMU_PAGE_SIZE_BIG;
 		}
 	}
 }
@@ -88,12 +88,12 @@ static enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
  *      - Regardless of buffer size use small pages since we have no
  *      - guarantee of contiguity.
  */
-enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
+u32 __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	if (!vm->big_pages) {
-		return gmmu_page_size_small;
+		return GMMU_PAGE_SIZE_SMALL;
 	}
 
 	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
@@ -104,11 +104,11 @@ enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 		return __get_pte_size_fixed_map(vm, base, size);
 	}
 
-	if (size >= vm->gmmu_page_sizes[gmmu_page_size_big] &&
+	if (size >= vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG] &&
 	    nvgpu_iommuable(g)) {
-		return gmmu_page_size_big;
+		return GMMU_PAGE_SIZE_BIG;
 	}
-	return gmmu_page_size_small;
+	return GMMU_PAGE_SIZE_SMALL;
 }
 
 int nvgpu_mm_suspend(struct gk20a *g)

@@ -53,7 +53,7 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				struct nvgpu_sgt *sgt,
 				u64 buffer_offset,
 				u64 size,
-				int pgsz_idx,
+				u32 pgsz_idx,
 				u8 kind_v,
 				u32 ctag_offset,
 				u32 flags,
@@ -147,12 +147,12 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	else
 		prot = TEGRA_VGPU_MAP_PROT_NONE;
 
-	if (pgsz_idx == gmmu_page_size_kernel) {
-		if (page_size == vm->gmmu_page_sizes[gmmu_page_size_small]) {
-			pgsz_idx = gmmu_page_size_small;
+	if (pgsz_idx == GMMU_PAGE_SIZE_KERNEL) {
+		if (page_size == vm->gmmu_page_sizes[GMMU_PAGE_SIZE_SMALL]) {
+			pgsz_idx = GMMU_PAGE_SIZE_SMALL;
 		} else if (page_size ==
-				vm->gmmu_page_sizes[gmmu_page_size_big]) {
-			pgsz_idx = gmmu_page_size_big;
+				vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]) {
+			pgsz_idx = GMMU_PAGE_SIZE_BIG;
 		} else {
 			nvgpu_err(g, "invalid kernel page size %d",
 				page_size);

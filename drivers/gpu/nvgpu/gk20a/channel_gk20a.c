@@ -120,7 +120,7 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	nvgpu_log_fn(g, " ");
 
 	g->ops.mm.init_inst_block(&c->inst_block, c->vm,
-			c->vm->gmmu_page_sizes[gmmu_page_size_big]);
+			c->vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]);
 
 	return 0;
 }

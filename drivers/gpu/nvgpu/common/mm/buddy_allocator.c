@@ -142,7 +142,7 @@ static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
 	 * without cycling through the entire list.
 	 */
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    b->pte_size == gmmu_page_size_big) {
+	    b->pte_size == GMMU_PAGE_SIZE_BIG) {
 		nvgpu_list_add_tail(&b->buddy_entry, list);
 	} else {
 		nvgpu_list_add(&b->buddy_entry, list);
@@ -487,7 +487,7 @@ static struct nvgpu_buddy *__balloc_find_buddy(struct nvgpu_buddy_allocator *a,
 	}
 
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    pte_size == gmmu_page_size_big) {
+	    pte_size == GMMU_PAGE_SIZE_BIG) {
 		bud = nvgpu_list_last_entry(balloc_get_order_list(a, order),
 				      nvgpu_buddy, buddy_entry);
 	} else {
@@ -844,8 +844,8 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 		alloc_dbg(balloc_owner(a),
 			  "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s",
 			  addr, order, len,
-			  pte_size == gmmu_page_size_big   ? "big" :
-			  pte_size == gmmu_page_size_small ? "small" :
+			  pte_size == GMMU_PAGE_SIZE_BIG   ? "big" :
+			  pte_size == GMMU_PAGE_SIZE_SMALL ? "small" :
 			  "NA/any");
 	} else {
 		alloc_dbg(balloc_owner(a), "Alloc failed: no mem!");
@@ -882,9 +882,9 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	/* Check that the page size is valid. */
 	if (a->flags & GPU_ALLOC_GVA_SPACE && a->vm->big_pages) {
 		if (page_size == a->vm->big_page_size) {
-			pte_size = gmmu_page_size_big;
+			pte_size = GMMU_PAGE_SIZE_BIG;
 		} else if (page_size == SZ_4K) {
-			pte_size = gmmu_page_size_small;
+			pte_size = GMMU_PAGE_SIZE_SMALL;
 		} else {
 			goto fail;
 		}

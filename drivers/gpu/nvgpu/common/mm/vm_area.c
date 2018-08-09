@@ -43,7 +43,7 @@ struct nvgpu_vm_area *nvgpu_vm_area_find(struct vm_gk20a *vm, u64 addr)
 }
 
 int nvgpu_vm_area_validate_buffer(struct vm_gk20a *vm,
-				  u64 map_addr, u64 map_size, int pgsz_idx,
+				  u64 map_addr, u64 map_size, u32 pgsz_idx,
 				  struct nvgpu_vm_area **pvm_area)
 {
 	struct gk20a *g = vm->mm->g;
@@ -99,19 +99,19 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	struct nvgpu_allocator *vma;
 	struct nvgpu_vm_area *vm_area;
 	u64 vaddr_start = 0;
-	int pgsz_idx = gmmu_page_size_small;
+	u32 pgsz_idx = GMMU_PAGE_SIZE_SMALL;
 
 	nvgpu_log(g, gpu_dbg_map,
 		  "ADD vm_area: pgsz=%#-8x pages=%-9u addr=%#-14llx flags=0x%x",
 		  page_size, pages, *addr, flags);
 
-	for (; pgsz_idx < gmmu_nr_page_sizes; pgsz_idx++) {
+	for (; pgsz_idx < GMMU_NR_PAGE_SIZES; pgsz_idx++) {
 		if (vm->gmmu_page_sizes[pgsz_idx] == page_size) {
 			break;
 		}
 	}
 
-	if (pgsz_idx > gmmu_page_size_big) {
+	if (pgsz_idx > GMMU_PAGE_SIZE_BIG) {
 		return -EINVAL;
 	}
 
@@ -122,7 +122,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	 */
 	nvgpu_speculation_barrier();
 
-	if (!vm->big_pages && pgsz_idx == gmmu_page_size_big) {
+	if (!vm->big_pages && pgsz_idx == GMMU_PAGE_SIZE_BIG) {
 		return -EINVAL;
 	}
 

@@ -38,12 +38,10 @@
 struct vm_gk20a;
 struct nvgpu_mem;
 
-enum gmmu_pgsz_gk20a {
-	gmmu_page_size_small  = 0,
-	gmmu_page_size_big    = 1,
-	gmmu_page_size_kernel = 2,
-	gmmu_nr_page_sizes    = 3,
-};
+#define GMMU_PAGE_SIZE_SMALL	0U
+#define GMMU_PAGE_SIZE_BIG	1U
+#define GMMU_PAGE_SIZE_KERNEL	2U
+#define GMMU_NR_PAGE_SIZES	3U
 
 enum gk20a_mem_rw_flag {
 	gk20a_mem_flag_none = 0,	/* RW */
@@ -197,9 +195,8 @@ struct gk20a_mmu_level {
 	/*
 	 * Get pde page size
 	 */
-	enum gmmu_pgsz_gk20a (*get_pgsz)(struct gk20a *g,
-					 const struct gk20a_mmu_level *l,
-					 struct nvgpu_gmmu_pd *pd, u32 pd_idx);
+	u32 (*get_pgsz)(struct gk20a *g, const struct gk20a_mmu_level *l,
+				struct nvgpu_gmmu_pd *pd, u32 pd_idx);
 };
 
 static inline const char *nvgpu_gmmu_perm_str(enum gk20a_mem_rw_flag p)

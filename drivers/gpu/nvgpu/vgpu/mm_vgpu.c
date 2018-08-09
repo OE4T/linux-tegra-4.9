@@ -84,7 +84,7 @@ int vgpu_init_mm_support(struct gk20a *g)
 void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,
-				int pgsz_idx,
+				u32 pgsz_idx,
 				bool va_allocated,
 				enum gk20a_mem_rw_flag rw_flag,
 				bool sparse,

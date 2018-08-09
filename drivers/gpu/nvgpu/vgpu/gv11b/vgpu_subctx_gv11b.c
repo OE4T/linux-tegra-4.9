@@ -40,7 +40,7 @@ int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	p->ch_handle = c->virt_ctx;
 	p->ctx_header_va = __nvgpu_vm_alloc_va(c->vm,
 				ctxsw_prog_fecs_header_v(),
-				gmmu_page_size_kernel);
+				GMMU_PAGE_SIZE_KERNEL);
 	if (!p->ctx_header_va) {
 		nvgpu_err(c->g, "alloc va failed for ctx_header");
 		return -ENOMEM;
@@ -50,7 +50,7 @@ int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	if (unlikely(err)) {
 		nvgpu_err(c->g, "alloc ctx_header failed err %d", err);
 		__nvgpu_vm_free_va(c->vm, p->ctx_header_va,
-			gmmu_page_size_kernel);
+			GMMU_PAGE_SIZE_KERNEL);
 		return err;
 	}
 	ctx->mem.gpu_va = p->ctx_header_va;
@@ -75,7 +75,7 @@ void vgpu_gv11b_free_subctx_header(struct channel_gk20a *c)
 		if (unlikely(err))
 			nvgpu_err(c->g, "free ctx_header failed err %d", err);
 		__nvgpu_vm_free_va(c->vm, ctx->mem.gpu_va,
-				gmmu_page_size_kernel);
+				GMMU_PAGE_SIZE_KERNEL);
 		ctx->mem.gpu_va = 0;
 	}
 }

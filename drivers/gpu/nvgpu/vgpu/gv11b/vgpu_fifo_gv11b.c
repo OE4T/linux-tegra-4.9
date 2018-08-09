@@ -43,7 +43,7 @@ static int set_syncpt_ro_map_gpu_va_locked(struct vm_gk20a *vm)
 
 	vm->syncpt_ro_map_gpu_va = __nvgpu_vm_alloc_va(vm,
 			g->syncpt_unit_size,
-			gmmu_page_size_kernel);
+			GMMU_PAGE_SIZE_KERNEL);
 	if (!vm->syncpt_ro_map_gpu_va) {
 		nvgpu_err(g, "allocating read-only va space failed");
 		return -ENOMEM;
@@ -63,7 +63,7 @@ static int set_syncpt_ro_map_gpu_va_locked(struct vm_gk20a *vm)
 			"mapping read-only va space failed err %d",
 			err);
 		__nvgpu_vm_free_va(vm, vm->syncpt_ro_map_gpu_va,
-				gmmu_page_size_kernel);
+				GMMU_PAGE_SIZE_KERNEL);
 		vm->syncpt_ro_map_gpu_va = 0;
 		return err;
 	}
@@ -91,7 +91,7 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 		return err;
 
 	syncpt_buf->gpu_va = __nvgpu_vm_alloc_va(c->vm, g->syncpt_size,
-			gmmu_page_size_kernel);
+			GMMU_PAGE_SIZE_KERNEL);
 	if (!syncpt_buf->gpu_va) {
 		nvgpu_err(g, "allocating syncpt va space failed");
 		return -ENOMEM;
@@ -110,7 +110,7 @@ int vgpu_gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
 	if (err) {
 		nvgpu_err(g, "mapping syncpt va space failed err %d", err);
 		__nvgpu_vm_free_va(c->vm, syncpt_buf->gpu_va,
-				gmmu_page_size_kernel);
+				GMMU_PAGE_SIZE_KERNEL);
 		return err;
 	}
 
@@ -121,7 +121,7 @@ void vgpu_gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
 					struct nvgpu_mem *syncpt_buf)
 {
 	nvgpu_gmmu_unmap(c->vm, syncpt_buf, syncpt_buf->gpu_va);
-	__nvgpu_vm_free_va(c->vm, syncpt_buf->gpu_va, gmmu_page_size_kernel);
+	__nvgpu_vm_free_va(c->vm, syncpt_buf->gpu_va, GMMU_PAGE_SIZE_KERNEL);
 	nvgpu_dma_free(c->g, syncpt_buf);
 }
 

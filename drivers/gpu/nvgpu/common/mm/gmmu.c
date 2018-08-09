@@ -109,7 +109,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 				   sgt,    /* sg list */
 				   0,      /* sg offset */
 				   size,
-				   gmmu_page_size_kernel,
+				   GMMU_PAGE_SIZE_KERNEL,
 				   0,      /* kind */
 				   0,      /* ctag_offset */
 				   flags, rw_flag,
@@ -169,7 +169,7 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm, struct nvgpu_mem *mem, u64 gpu_va)
 	g->ops.mm.gmmu_unmap(vm,
 			     gpu_va,
 			     mem->size,
-			     gmmu_page_size_kernel,
+			     GMMU_PAGE_SIZE_KERNEL,
 			     mem->free_gpu_va,
 			     gk20a_mem_flag_none,
 			     false,
@@ -609,8 +609,8 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 
 	/* note: here we need to map kernel to small, since the
 	 * low-level mmu code assumes 0 is small and 1 is big pages */
-	if (attrs->pgsz == gmmu_page_size_kernel) {
-		attrs->pgsz = gmmu_page_size_small;
+	if (attrs->pgsz == GMMU_PAGE_SIZE_KERNEL) {
+		attrs->pgsz = GMMU_PAGE_SIZE_SMALL;
 	}
 
 	page_size = vm->gmmu_page_sizes[attrs->pgsz];
@@ -676,7 +676,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  struct nvgpu_sgt *sgt,
 			  u64 buffer_offset,
 			  u64 size,
-			  int pgsz_idx,
+			  u32 pgsz_idx,
 			  u8 kind_v,
 			  u32 ctag_offset,
 			  u32 flags,
@@ -764,7 +764,7 @@ fail_alloc:
 void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			     u64 vaddr,
 			     u64 size,
-			     int pgsz_idx,
+			     u32 pgsz_idx,
 			     bool va_allocated,
 			     enum gk20a_mem_rw_flag rw_flag,
 			     bool sparse,
@@ -865,7 +865,7 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 
 		attrs->pgsz = l->get_pgsz(g, l, pd, pd_idx);
 
-		if (attrs->pgsz >= gmmu_nr_page_sizes) {
+		if (attrs->pgsz >= GMMU_NR_PAGE_SIZES) {
 			return -EINVAL;
 		}
 

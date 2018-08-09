@@ -229,8 +229,9 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 		ptr[w] = data;
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_wr_n(g, mem, w * sizeof(u32), sizeof(u32), &data);
-		if (!mem->skip_wmb)
+		if (!mem->skip_wmb) {
 			nvgpu_wmb();
+		}
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
@@ -255,8 +256,9 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		memcpy(dest, src, size);
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_wr_n(g, mem, offset, size, src);
-		if (!mem->skip_wmb)
+		if (!mem->skip_wmb) {
 			nvgpu_wmb();
+		}
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
@@ -280,8 +282,9 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 repeat_value = c | (c << 8) | (c << 16) | (c << 24);
 
 		nvgpu_pramin_memset(g, mem, offset, size, repeat_value);
-		if (!mem->skip_wmb)
+		if (!mem->skip_wmb) {
 			nvgpu_wmb();
+		}
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
 	}

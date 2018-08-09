@@ -340,9 +340,6 @@ static void eqos_get_pauseparam(struct net_device *dev,
 
 	pr_debug("-->eqos_get_pauseparam\n");
 
-	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
-		return;
-
 	pause->rx_pause = 0;
 	pause->tx_pause = 0;
 

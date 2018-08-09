@@ -331,7 +331,7 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 }
 
 int tegra_nvdisp_verify_win_properties(struct tegra_dc *dc,
-			struct tegra_dc_ext_flip_windowattr_v2 *win)
+			struct tegra_dc_ext_flip_windowattr *win)
 {
 	fixed20_12 win_in_width, win_in_height;
 	fixed20_12 win_out_width, win_out_height;

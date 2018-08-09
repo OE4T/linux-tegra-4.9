@@ -100,7 +100,7 @@ static int head_count;
 static atomic_t dc_open_count;
 
 struct tegra_dc_ext_flip_win {
-	struct tegra_dc_ext_flip_windowattr_v2	attr;
+	struct tegra_dc_ext_flip_windowattr	attr;
 	struct tegra_dc_dmabuf			*handle[TEGRA_DC_NUM_PLANES];
 	dma_addr_t				phys_addr;
 	dma_addr_t				phys_addr_u;
@@ -424,7 +424,7 @@ fail:
 }
 
 static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
-		       const struct tegra_dc_ext_flip_windowattr_v2 *flip_win)
+		       const struct tegra_dc_ext_flip_windowattr *flip_win)
 {
 	win->flags = TEGRA_WIN_FLAG_ENABLED;
 
@@ -902,7 +902,7 @@ static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
 {
 	struct tegra_dc *dc = data->ext->dc;
 	struct tegra_dc_ext_flip_win *win;
-	struct tegra_dc_ext_flip_windowattr_v2 *attr;
+	struct tegra_dc_ext_flip_windowattr *attr;
 	int win_num;
 	u64 timestamp;
 	int i;
@@ -997,7 +997,7 @@ static void tegra_dc_ext_store_latency_msrmnt_info(struct tegra_dc *dc,
 	}
 
 	for (i = 0; i < nr_wins; i++) {
-		struct tegra_dc_ext_flip_windowattr_v2 *attr =
+		struct tegra_dc_ext_flip_windowattr *attr =
 						&flip_win[i].attr;
 		struct tegra_dc_ext_win *ext_win =
 						&dc->ext->win[attr->index];
@@ -1140,36 +1140,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 				win->csc_dirty = true;
 			}
 		} else if (tegra_dc_is_nvdisplay()) {
-			if ((data->win[i].attr.flags &
-				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC)
-				&& !ext->dc->yuv_bypass
-				&& !win->force_user_csc) {
-				win->nvdisp_win_csc.r2r =
-						data->win[i].attr.csc2.r2r;
-				win->nvdisp_win_csc.g2r =
-						data->win[i].attr.csc2.g2r;
-				win->nvdisp_win_csc.b2r =
-						data->win[i].attr.csc2.b2r;
-				win->nvdisp_win_csc.const2r =
-						data->win[i].attr.csc2.const2r;
-				win->nvdisp_win_csc.r2g =
-						data->win[i].attr.csc2.r2g;
-				win->nvdisp_win_csc.g2g =
-						data->win[i].attr.csc2.g2g;
-				win->nvdisp_win_csc.b2g =
-						data->win[i].attr.csc2.b2g;
-				win->nvdisp_win_csc.const2g =
-						data->win[i].attr.csc2.const2g;
-				win->nvdisp_win_csc.r2b =
-						data->win[i].attr.csc2.r2b;
-				win->nvdisp_win_csc.g2b =
-						data->win[i].attr.csc2.g2b;
-				win->nvdisp_win_csc.b2b =
-						data->win[i].attr.csc2.b2b;
-				win->nvdisp_win_csc.const2b =
-						data->win[i].attr.csc2.const2b;
-				win->csc_dirty = true;
-			} else if (data->win[i].user_nvdisp_win_csc &&
+			if (data->win[i].user_nvdisp_win_csc &&
 					!ext->dc->yuv_bypass &&
 					!win->force_user_csc) {
 				win->nvdisp_win_csc.csc_enable =
@@ -1335,7 +1306,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 }
 
 static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
-			struct tegra_dc_ext_flip_windowattr_v2 *win_attr,
+			struct tegra_dc_ext_flip_windowattr *win_attr,
 			int win_num)
 {
 	struct tegra_dc_ext *ext = user->ext;
@@ -1380,7 +1351,7 @@ fail_unlock:
 }
 
 static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_flip_windowattr_v2 *win,
+				struct tegra_dc_ext_flip_windowattr *win,
 				int win_num)
 {
 	struct tegra_dc_ext *ext = user->ext;
@@ -1405,7 +1376,7 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 }
 
 static int sanitize_flip_args(struct tegra_dc_ext_user *user,
-			      struct tegra_dc_ext_flip_windowattr_v2 *win_list,
+			      struct tegra_dc_ext_flip_windowattr *win_list,
 			      int win_num, __u16 **dirty_rect)
 {
 	int i, used_windows = 0;
@@ -1415,7 +1386,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 		return -EINVAL;
 
 	for (i = 0; i < win_num; i++) {
-		struct tegra_dc_ext_flip_windowattr_v2 *win = &win_list[i];
+		struct tegra_dc_ext_flip_windowattr *win = &win_list[i];
 		int index = win->index;
 		fixed20_12 input_w, input_h;
 		u32 w, h;
@@ -1518,7 +1489,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 }
 
 static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
-				struct tegra_dc_ext_flip_windowattr_v2 *wins,
+				struct tegra_dc_ext_flip_windowattr *wins,
 				int win_num,
 				struct tegra_dc_ext_flip_win *flip_wins,
 				bool *has_timestamp,
@@ -1757,15 +1728,6 @@ static int tegra_dc_ext_read_nvdisp_win_csc_user_data(
 			goto end;
 		}
 
-		if (flip_kdata->win[j].attr.flags &
-				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_NVDISP_WIN_CSC) {
-			dev_err(&flip_kdata->ext->dc->ndev->dev,
-				"only one nvdisp_win_csc/win%d allowed\n",
-					entry[i].win_index);
-			ret = -EINVAL;
-			goto end;
-		}
-
 		/* copy into local tegra_dc_ext_flip_win */
 		flip_kdata->win[j].nvdisp_win_csc = entry[i];
 		flip_kdata->win[j].user_nvdisp_win_csc = true;
@@ -1893,7 +1855,7 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 }
 
 static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
-			     struct tegra_dc_ext_flip_windowattr_v2 *win,
+			     struct tegra_dc_ext_flip_windowattr *win,
 			     int win_num,
 			     __u32 *syncpt_id, __u32 *syncpt_val,
 			     int *syncpt_fd, __u16 *dirty_rect, u8 flip_flags,
@@ -2506,7 +2468,7 @@ static int tegra_dc_ext_get_cmu_adbRGB(struct tegra_dc_ext_user *user,
 
 #ifdef CONFIG_TEGRA_ISOMGR
 static int tegra_dc_ext_negotiate_bw(struct tegra_dc_ext_user *user,
-			struct tegra_dc_ext_flip_windowattr_v2 *wins,
+			struct tegra_dc_ext_flip_windowattr *wins,
 			int win_num)
 {
 	int i;
@@ -2565,7 +2527,7 @@ static int tegra_dc_ext_get_status(struct tegra_dc_ext_user *user,
 
 #ifdef CONFIG_COMPAT
 static int dev_cpy_from_usr_compat(
-			struct tegra_dc_ext_flip_windowattr_v2 *outptr,
+			struct tegra_dc_ext_flip_windowattr *outptr,
 			void *inptr, u32 usr_win_size, u32 win_num)
 {
 	int i = 0;
@@ -2582,7 +2544,7 @@ static int dev_cpy_from_usr_compat(
 }
 #endif
 
-static int dev_cpy_from_usr(struct tegra_dc_ext_flip_windowattr_v2 *outptr,
+static int dev_cpy_from_usr(struct tegra_dc_ext_flip_windowattr *outptr,
 				void *inptr, u32 usr_win_size, u32 win_num)
 {
 	int i = 0;
@@ -2599,7 +2561,7 @@ static int dev_cpy_from_usr(struct tegra_dc_ext_flip_windowattr_v2 *outptr,
 }
 
 static int dev_cpy_to_usr(void *outptr, u32 usr_win_size,
-		struct tegra_dc_ext_flip_windowattr_v2 *inptr, u32 win_num)
+		struct tegra_dc_ext_flip_windowattr *inptr, u32 win_num)
 {
 	int i = 0;
 	u8 *dstptr;
@@ -2832,7 +2794,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int win_num;
 		int nr_user_data;
 		struct tegra_dc_ext_flip_4 args;
-		struct tegra_dc_ext_flip_windowattr_v2 *win;
+		struct tegra_dc_ext_flip_windowattr *win;
 		struct tegra_dc_ext_flip_user_data *flip_user_data;
 		bool bypass;
 		u32 *syncpt_id = NULL, *syncpt_val = NULL;
@@ -2858,11 +2820,6 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		user->ext->dc->yuv_bypass = bypass;
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
-
-		if (args.flags &
-				TEGRA_DC_EXT_FLIP_HEAD_FLAG_V2_ATTR)
-			usr_win_size =
-				sizeof(struct tegra_dc_ext_flip_windowattr_v2);
 
 		if (dev_cpy_from_usr(win, (void *)args.win,
 					usr_win_size, win_num)) {
@@ -2980,7 +2937,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int ret;
 		int win_num;
 		struct tegra_dc_ext_flip_2_32 args;
-		struct tegra_dc_ext_flip_windowattr_v2 *win;
+		struct tegra_dc_ext_flip_windowattr *win;
 
 		/* Keeping window attribute size as version1 for old
 		 *  legacy applications
@@ -3011,7 +2968,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int ret;
 		int win_num;
 		struct tegra_dc_ext_flip_2 args;
-		struct tegra_dc_ext_flip_windowattr_v2 *win;
+		struct tegra_dc_ext_flip_windowattr *win;
 		/* Keeping window attribute size as version1 for old
 		 *  legacy applications
 		 */
@@ -3041,7 +2998,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int win_num;
 		int nr_user_data;
 		struct tegra_dc_ext_flip_4 args;
-		struct tegra_dc_ext_flip_windowattr_v2 *win = NULL;
+		struct tegra_dc_ext_flip_windowattr *win = NULL;
 		struct tegra_dc_ext_flip_user_data *flip_user_data = NULL;
 		bool imp_proposed = false;
 

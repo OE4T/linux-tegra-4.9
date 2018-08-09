@@ -174,7 +174,7 @@ static int  scrncapt_get_info_head(struct tegra_dc *dc,
 
 
 static int  scrncapt_get_info_win(struct tegra_dc *dc, int winidx,
-		struct tegra_dc_ext_flip_windowattr_v2 *winattr)
+		struct tegra_dc_ext_flip_windowattr *winattr)
 {
 	int  err = 0;
 	struct tegra_dc_ext     *ext = dc->ext;
@@ -255,7 +255,7 @@ static int  scrncapt_get_info_wins(struct tegra_dc *dc, void __user *ptr)
 	int                  err = 0;
 	int                  i;
 	struct tegra_dc_ext_scrncapt_get_info_win  info;
-	struct tegra_dc_ext_flip_windowattr_v2 __user  *pwinattr;
+	struct tegra_dc_ext_flip_windowattr __user  *pwinattr;
 	int  num_wins;
 
 	if (copy_from_user(&info, ptr, sizeof(info)))
@@ -263,10 +263,10 @@ static int  scrncapt_get_info_wins(struct tegra_dc *dc, void __user *ptr)
 	if (!info.flag_wins || !info.wins)
 		return -EINVAL;
 
-	pwinattr = (struct tegra_dc_ext_flip_windowattr_v2 __user *)info.wins;
+	pwinattr = (struct tegra_dc_ext_flip_windowattr __user *)info.wins;
 	num_wins = 0;
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
-		struct tegra_dc_ext_flip_windowattr_v2  winattr;
+		struct tegra_dc_ext_flip_windowattr  winattr;
 
 		if (!(info.flag_wins & dc->valid_windows & (1 << i)))
 			continue;

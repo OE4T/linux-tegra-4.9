@@ -126,17 +126,6 @@ enum {
 };
 
 enum {
-	ELCG_RUN,	/* clk always run, i.e. disable elcg */
-	ELCG_STOP,	/* clk is stopped */
-	ELCG_AUTO	/* clk will run when non-idle, standard elcg mode */
-};
-
-enum {
-	BLCG_RUN,	/* clk always run, i.e. disable blcg */
-	BLCG_AUTO	/* clk will run when non-idle, standard blcg mode */
-};
-
-enum {
 	NVGPU_EVENT_ID_BPT_INT = 0,
 	NVGPU_EVENT_ID_BPT_PAUSE,
 	NVGPU_EVENT_ID_BLOCKING_SYNC,
@@ -608,9 +597,6 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size);
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g,
 		struct nvgpu_mem *inst_block);
 int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va);
-
-void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
-void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config);
 

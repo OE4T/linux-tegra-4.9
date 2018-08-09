@@ -29,12 +29,13 @@
 #include "common/ptimer/ptimer_gk20a.h"
 #include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
+#include "common/therm/therm_gm20b.h"
+#include "common/therm/therm_gm20b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
-#include "gk20a/therm_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/mc_gk20a.h"
@@ -53,7 +54,6 @@
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
 #include "regops_gm20b.h"
-#include "therm_gm20b.h"
 #include "hal_gm20b.h"
 #include "acr_gm20b.h"
 #include "fuse_gm20b.h"
@@ -291,7 +291,6 @@ static const struct gpu_ops gm20b_ops = {
 		.commit_inst = gr_gk20a_commit_inst,
 		.write_zcull_ptr = gr_gk20a_write_zcull_ptr,
 		.write_pm_ptr = gr_gk20a_write_pm_ptr,
-		.init_elcg_mode = gr_gk20a_init_elcg_mode,
 		.load_tpc_mask = gr_gm20b_load_tpc_mask,
 		.inval_icache = gr_gk20a_inval_icache,
 		.trigger_suspend = gr_gk20a_trigger_suspend,
@@ -512,7 +511,9 @@ static const struct gpu_ops gm20b_ops = {
 	},
 	.therm = {
 		.init_therm_setup_hw = gm20b_init_therm_setup_hw,
-		.elcg_init_idle_filters = gk20a_elcg_init_idle_filters,
+		.init_elcg_mode = gm20b_therm_init_elcg_mode,
+		.init_blcg_mode = gm20b_therm_init_blcg_mode,
+		.elcg_init_idle_filters = gm20b_elcg_init_idle_filters,
 	},
 	.pmu = {
 		.pmu_setup_elpg = gm20b_pmu_setup_elpg,

@@ -158,7 +158,6 @@ void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va);
 void gr_gv11b_write_pm_ptr(struct gk20a *g,
 				struct nvgpu_mem *mem, u64 gpu_va);
-void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
 void gr_gv11b_load_tpc_mask(struct gk20a *g);
 void gr_gv11b_set_preemption_buffer_va(struct gk20a *g,
 			struct nvgpu_mem *mem, u64 gpu_va);

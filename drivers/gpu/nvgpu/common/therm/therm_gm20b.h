@@ -26,5 +26,8 @@
 
 struct gk20a;
 int gm20b_init_therm_setup_hw(struct gk20a *g);
+int gm20b_elcg_init_idle_filters(struct gk20a *g);
+void gm20b_therm_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
+void gm20b_therm_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 #endif /* THERM_GM20B_H */

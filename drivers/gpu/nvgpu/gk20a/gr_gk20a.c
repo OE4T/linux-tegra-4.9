@@ -61,7 +61,6 @@
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #define BLK_SIZE (256)
@@ -4116,72 +4115,6 @@ int gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 		gr_gk20a_add_zbc(g, gr, zbc_val));
 }
 
-void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine)
-{
-	u32 gate_ctrl;
-
-	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG))
-		return;
-
-	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
-
-	switch (mode) {
-	case BLCG_RUN:
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_blk_clk_m(),
-				therm_gate_ctrl_blk_clk_run_f());
-		break;
-	case BLCG_AUTO:
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_blk_clk_m(),
-				therm_gate_ctrl_blk_clk_auto_f());
-		break;
-	default:
-		nvgpu_err(g,
-			"invalid blcg mode %d", mode);
-		return;
-	}
-
-	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
-}
-
-void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
-{
-	u32 gate_ctrl;
-
-	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
-
-	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG))
-		return;
-
-	switch (mode) {
-	case ELCG_RUN:
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_eng_clk_m(),
-				therm_gate_ctrl_eng_clk_run_f());
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_eng_pwr_m(),
-				/* set elpg to auto to meet hw expectation */
-				therm_gate_ctrl_eng_pwr_auto_f());
-		break;
-	case ELCG_STOP:
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_eng_clk_m(),
-				therm_gate_ctrl_eng_clk_stop_f());
-		break;
-	case ELCG_AUTO:
-		gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_eng_clk_m(),
-				therm_gate_ctrl_eng_clk_auto_f());
-		break;
-	default:
-		nvgpu_err(g,
-			"invalid elcg mode %d", mode);
-	}
-
-	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
-}
-
 void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
 {
 	u32 engine_idx;
@@ -4196,10 +4129,10 @@ void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
 		/* gr_engine supports both BLCG and ELCG */
 		if ((cgmode == BLCG_MODE) &&
 			(engine_info->engine_enum == ENGINE_GR_GK20A)) {
-				gr_gk20a_init_blcg_mode(g, mode_config, active_engine_id);
+				g->ops.therm.init_blcg_mode(g, mode_config, active_engine_id);
 				break;
 		} else if (cgmode == ELCG_MODE)
-			g->ops.gr.init_elcg_mode(g, mode_config,
+			g->ops.therm.init_elcg_mode(g, mode_config,
 						active_engine_id);
 		else
 			nvgpu_err(g, "invalid cg mode %d, config %d for "

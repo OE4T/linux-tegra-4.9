@@ -69,7 +69,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include "fifo_gk20a.h"
 #include "tsg_gk20a.h"
 #include "pmu_gk20a.h"
-#include "therm_gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
@@ -160,6 +159,18 @@ struct nvgpu_gpfifo_userdata {
 #define	NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX		1U
 #define	NVGPU_FB_MMU_FAULT_BUF_DISABLED			0U
 #define	NVGPU_FB_MMU_FAULT_BUF_ENABLED			1U
+
+/* Parameters for init_elcg_mode/init_blcg_mode */
+enum {
+	ELCG_RUN,	/* clk always run, i.e. disable elcg */
+	ELCG_STOP,	/* clk is stopped */
+	ELCG_AUTO	/* clk will run when non-idle, standard elcg mode */
+};
+
+enum {
+	BLCG_RUN,	/* clk always run, i.e. disable blcg */
+	BLCG_AUTO	/* clk will run when non-idle, standard blcg mode */
+};
 
 struct gpu_ops {
 	struct {
@@ -425,7 +436,6 @@ struct gpu_ops {
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*set_preemption_buffer_va)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
-		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);
 		int (*inval_icache)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*trigger_suspend)(struct gk20a *g);
@@ -979,6 +989,8 @@ struct gpu_ops {
 	} pramin;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);
+		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
+		void (*init_blcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		int (*elcg_init_idle_filters)(struct gk20a *g);
 #ifdef CONFIG_DEBUG_FS
 		void (*therm_debugfs_init)(struct gk20a *g);

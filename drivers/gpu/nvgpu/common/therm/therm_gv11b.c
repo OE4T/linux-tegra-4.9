@@ -101,6 +101,41 @@ int gv11b_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
+void gv11b_therm_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
+{
+	u32 gate_ctrl;
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG))
+		return;
+
+	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
+
+	switch (mode) {
+	case ELCG_RUN:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_run_f());
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_idle_holdoff_m(),
+				therm_gate_ctrl_idle_holdoff_on_f());
+		break;
+	case ELCG_STOP:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_stop_f());
+		break;
+	case ELCG_AUTO:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_auto_f());
+		break;
+	default:
+		nvgpu_err(g, "invalid elcg mode %d", mode);
+	}
+
+	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
+}
+
 int gv11b_elcg_init_idle_filters(struct gk20a *g)
 {
 	u32 gate_ctrl, idle_filter;

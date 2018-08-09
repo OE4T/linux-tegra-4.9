@@ -19,13 +19,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef THERM_GK20A_H
-#define THERM_GK20A_H
+#ifndef NVGPU_THERM_H
+#define NVGPU_THERM_H
 
-struct gpu_ops;
 struct gk20a;
 
-int gk20a_elcg_init_idle_filters(struct gk20a *g);
+int nvgpu_init_therm_support(struct gk20a *g);
 
-int gk20a_init_therm_support(struct gk20a *g);
-#endif /* THERM_GK20A_H */
+#endif

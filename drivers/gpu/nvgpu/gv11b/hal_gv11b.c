@@ -33,6 +33,9 @@
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
 #include "common/fb/fb_gv11b.h"
+#include "common/therm/therm_gm20b.h"
+#include "common/therm/therm_gp10b.h"
+#include "common/therm/therm_gv11b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -54,7 +57,6 @@
 #include "gm20b/pmu_gm20b.h"
 
 #include "gp10b/ltc_gp10b.h"
-#include "gp10b/therm_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
@@ -84,7 +86,6 @@
 #include "fifo_gv11b.h"
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
-#include "therm_gv11b.h"
 #include "ecc_gv11b.h"
 
 #include <nvgpu/ptimer.h>
@@ -341,7 +342,6 @@ static const struct gpu_ops gv11b_ops = {
 		.commit_inst = gr_gv11b_commit_inst,
 		.write_zcull_ptr = gr_gv11b_write_zcull_ptr,
 		.write_pm_ptr = gr_gv11b_write_pm_ptr,
-		.init_elcg_mode = gr_gv11b_init_elcg_mode,
 		.load_tpc_mask = gr_gv11b_load_tpc_mask,
 		.inval_icache = gr_gk20a_inval_icache,
 		.trigger_suspend = gv11b_gr_sm_trigger_suspend,
@@ -664,6 +664,8 @@ static const struct gpu_ops gv11b_ops = {
 	},
 	.therm = {
 		.init_therm_setup_hw = gv11b_init_therm_setup_hw,
+		.init_elcg_mode = gv11b_therm_init_elcg_mode,
+		.init_blcg_mode = gm20b_therm_init_blcg_mode,
 		.elcg_init_idle_filters = gv11b_elcg_init_idle_filters,
 	},
 	.pmu = {

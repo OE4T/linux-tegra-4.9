@@ -45,6 +45,11 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/fb/fb_gv100.c \
 	common/fb/fb_gv11b.c \
 	common/xve/xve_gp106.c \
+	common/therm/therm.c \
+	common/therm/therm_gm20b.c \
+	common/therm/therm_gp10b.c \
+	common/therm/therm_gv11b.c \
+	common/therm/therm_gp106.c \
 	common/enabled.c \
 	common/pramin.c \
 	common/semaphore.c \
@@ -138,7 +143,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gk20a/pmu_gk20a.c \
 	gk20a/flcn_gk20a.c \
 	gk20a/fence_gk20a.c \
-	gk20a/therm_gk20a.c \
 	gk20a/gr_ctx_gk20a_sim.c \
 	gk20a/gr_ctx_gk20a.c \
 	gk20a/hal.c \
@@ -154,7 +158,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gm20b/pmu_gm20b.c \
 	gm20b/mm_gm20b.c \
 	gm20b/regops_gm20b.c \
-	gm20b/therm_gm20b.c \
 	gm20b/fuse_gm20b.c \
 	gp10b/gr_gp10b.c  \
 	gp10b/gr_ctx_gp10b.c  \
@@ -166,7 +169,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/pmu_gp10b.c \
 	gp10b/hal_gp10b.c \
 	gp10b/regops_gp10b.c \
-	gp10b/therm_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \
 	gp10b/gp10b.c \
 	gp10b/fuse_gp10b.c \
@@ -185,7 +187,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gv11b/acr_gv11b.c \
 	gv11b/subctx_gv11b.c \
 	gv11b/regops_gv11b.c \
-	gv11b/therm_gv11b.c \
 	gv11b/ecc_gv11b.c \
 	gp106/hal_gp106.c \
 	gp106/mm_gp106.c \
@@ -202,7 +203,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp106/fuse_gp106.c \
 	gp106/clk_gp106.c \
 	gp106/clk_arb_gp106.c \
-	gp106/therm_gp106.c \
 	gv100/mm_gv100.c \
 	gv100/gr_ctx_gv100.c \
 	gv100/bios_gv100.c \

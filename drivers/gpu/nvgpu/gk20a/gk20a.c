@@ -36,6 +36,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/therm.h>
 
 #include <trace/events/gk20a.h>
 
@@ -323,7 +324,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-	err = gk20a_init_therm_support(g);
+	err = nvgpu_init_therm_support(g);
 	if (err) {
 		nvgpu_err(g, "failed to init gk20a therm");
 		goto done;

@@ -28,6 +28,8 @@
 #include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
+#include "common/therm/therm_gm20b.h"
+#include "common/therm/therm_gp10b.h"
 
 #include "vgpu/fifo_vgpu.h"
 #include "vgpu/gr_vgpu.h"
@@ -56,7 +58,6 @@
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/regops_gp10b.h"
-#include "gp10b/therm_gp10b.h"
 #include "gp10b/fuse_gp10b.h"
 
 #include "gm20b/ltc_gm20b.h"
@@ -182,7 +183,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.commit_inst = vgpu_gr_commit_inst,
 		.write_zcull_ptr = gr_gk20a_write_zcull_ptr,
 		.write_pm_ptr = gr_gk20a_write_pm_ptr,
-		.init_elcg_mode = gr_gk20a_init_elcg_mode,
 		.load_tpc_mask = gr_gm20b_load_tpc_mask,
 		.inval_icache = gr_gk20a_inval_icache,
 		.trigger_suspend = gr_gk20a_trigger_suspend,
@@ -440,6 +440,8 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 	},
 	.therm = {
 		.init_therm_setup_hw = gp10b_init_therm_setup_hw,
+		.init_elcg_mode = gm20b_therm_init_elcg_mode,
+		.init_blcg_mode = gm20b_therm_init_blcg_mode,
 		.elcg_init_idle_filters = gp10b_elcg_init_idle_filters,
 	},
 	.pmu = {

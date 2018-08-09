@@ -113,7 +113,7 @@ void sync_timeline_signal(struct sync_timeline *obj, u64 timestamp)
 
 	list_for_each_entry_safe(pt, next, &obj->active_list_head,
 				 active_list) {
-		if (fence_is_signaled_locked(&pt->base))
+		if (fence_is_signaled_locked_ts(&pt->base, timestamp))
 			list_del_init(&pt->active_list);
 	}
 

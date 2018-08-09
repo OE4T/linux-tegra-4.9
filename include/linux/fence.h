@@ -300,6 +300,22 @@ fence_is_signaled_locked(struct fence *fence)
 	return false;
 }
 
+static inline bool
+fence_is_signaled_locked_ts(struct fence *fence, u64 timestamp)
+{
+	if (test_bit(FENCE_FLAG_SIGNALED_BIT, &fence->flags))
+		return true;
+
+	if (fence->ops->signaled && fence->ops->signaled(fence)) {
+		if (timestamp)
+			fence->timestamp = ns_to_ktime(timestamp);
+		fence_signal_locked(fence);
+		return true;
+	}
+
+	return false;
+}
+
 /**
  * fence_is_signaled - Return an indication if the fence is signaled yet.
  * @fence:	[in]	the fence to check

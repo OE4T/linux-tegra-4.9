@@ -58,6 +58,13 @@ CONFIGS=-D__NVGPU_POSIX__
 # CC      = clang
 CC        = gcc
 CFLAGS    = -Wall -ggdb  -Werror -fPIC $(INCLUDES) $(CONFIGS)
+CFLAGS    = -Wall -Wextra -ggdb  -Werror -Wno-unused-parameter               \
+	    -Wno-missing-field-initializers -Wformat -Wchar-subscripts       \
+	    -Wparentheses -Wtrigraphs -Wpointer-arith -Wmissing-declarations \
+	    -Wmissing-prototypes -Wredundant-decls -Wmain -Wreturn-type      \
+	    -Wmultichar -Wunused -Wmissing-braces -Wstrict-aliasing          \
+	    -Wsign-compare -Waddress -Wno-unused-local-typedefs -fPIC        \
+	    $(INCLUDES) $(CONFIGS)
 LIB_PATHS = -L$(OUT)
 LIBS      = -lpthread -pthread -lgcov -ldl
 

@@ -32,6 +32,7 @@
 #include <unit/io.h>
 #include <unit/args.h>
 #include <unit/unit.h>
+#include <unit/module.h>
 
 static int check_module(struct unit_fw *fw, struct unit_module *mod)
 {

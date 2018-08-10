@@ -40,7 +40,6 @@
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ctxsw_prog_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_perf_gm20b.h>
 
 void gr_gm20b_init_gpc_mmu(struct gk20a *g)
@@ -549,7 +548,7 @@ u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	struct gr_gk20a *gr = &g->gr;
 
 	/* Toggle the bits of NV_FUSE_STATUS_OPT_TPC_GPC */
-	val = gk20a_readl(g, fuse_status_opt_tpc_gpc_r(gpc_index));
+	val = g->ops.fuse.fuse_status_opt_tpc_gpc(g, gpc_index);
 
 	return (~val) & ((0x1 << gr->max_tpc_per_gpc_count) - 1);
 }
@@ -1076,7 +1075,7 @@ u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
 	 * flip the bits.
 	 * Also set unused bits to zero
 	 */
-	fbp_en_mask = gk20a_readl(g, fuse_status_opt_fbp_r());
+	fbp_en_mask = g->ops.fuse.fuse_status_opt_fbp(g);
 	fbp_en_mask = ~fbp_en_mask;
 	fbp_en_mask = fbp_en_mask & ((1 << max_fbps_count) - 1);
 
@@ -1114,7 +1113,7 @@ u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 
 	/* mask of Rop_L2 for each FBP */
 	for_each_set_bit(i, &fbp_en_mask, max_fbps_count) {
-		tmp = gk20a_readl(g, fuse_status_opt_rop_l2_fbp_r(i));
+		tmp = g->ops.fuse.fuse_status_opt_rop_l2_fbp(g, i);
 		gr->fbp_rop_l2_en_mask[i] = rop_l2_all_en ^ tmp;
 	}
 

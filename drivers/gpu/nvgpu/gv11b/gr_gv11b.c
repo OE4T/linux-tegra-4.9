@@ -59,7 +59,6 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_fuse_gv11b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_IN_USEC_DEFAULT 100
 
@@ -131,16 +130,16 @@ bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
 
 void gr_gv11b_powergate_tpc(struct gk20a *g)
 {
-	u32 tpc_pg_status = gk20a_readl(g, fuse_status_opt_tpc_gpc_r(0));
+	u32 tpc_pg_status = g->ops.fuse.fuse_status_opt_tpc_gpc(g, 0);
 
 	if (tpc_pg_status == g->tpc_pg_mask) {
 		return;
 	}
 
-	gk20a_writel(g, fuse_ctrl_opt_tpc_gpc_r(0), (g->tpc_pg_mask));
+	g->ops.fuse.fuse_ctrl_opt_tpc_gpc(g, 0, g->tpc_pg_mask);
 
 	do {
-		tpc_pg_status = gk20a_readl(g, fuse_status_opt_tpc_gpc_r(0));
+		tpc_pg_status = g->ops.fuse.fuse_status_opt_tpc_gpc(g, 0);
 	} while (tpc_pg_status != g->tpc_pg_mask);
 
 	gk20a_writel(g, gr_fe_tpc_pesmask_r(), gr_fe_tpc_pesmask_req_send_f() |

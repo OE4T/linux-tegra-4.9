@@ -37,7 +37,6 @@
 #include <nvgpu/hw/gv100/hw_gr_gv100.h>
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>
-#include <nvgpu/hw/gv100/hw_fuse_gv100.h>
 #include <nvgpu/hw/gv100/hw_top_gv100.h>
 #include <nvgpu/hw/gv100/hw_ctxsw_prog_gv100.h>
 #include <nvgpu/hw/gv100/hw_perf_gv100.h>
@@ -391,7 +390,7 @@ static u32 gr_gv100_get_active_fpba_mask(struct gk20a *g)
 	 * flip the bits.
 	 * Also set unused bits to zero
 	 */
-	active_fbpa_mask = nvgpu_readl(g, fuse_status_opt_fbio_r());
+	active_fbpa_mask = g->ops.fuse.fuse_status_opt_fbio(g);
 	active_fbpa_mask = ~active_fbpa_mask;
 	active_fbpa_mask = active_fbpa_mask & ((1 << num_fbpas) - 1);
 

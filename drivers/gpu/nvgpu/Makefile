@@ -42,7 +42,10 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/therm/therm_gm20b.o \
 	common/therm/therm_gp10b.o \
 	common/therm/therm_gp106.o \
-	common/therm/therm_gv11b.o
+	common/therm/therm_gv11b.o \
+	common/fuse/fuse_gm20b.o \
+	common/fuse/fuse_gp10b.o \
+	common/fuse/fuse_gp106.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
@@ -227,7 +230,6 @@ nvgpu-y += \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
-	gm20b/fuse_gm20b.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
@@ -275,7 +277,6 @@ nvgpu-y += \
 	gp10b/regops_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
 	gp10b/gp10b.o \
-	gp10b/fuse_gp10b.o \
 	gp10b/ecc_gp10b.o \
 	gp106/hal_gp106.o \
 	gp106/mm_gp106.o \
@@ -289,7 +290,6 @@ nvgpu-y += \
 	gp106/fifo_gp106.o \
 	gp106/regops_gp106.o \
 	gp106/bios_gp106.o \
-	gp106/fuse_gp106.o \
 	gv11b/gv11b.o  \
 	gv11b/css_gr_gv11b.o  \
 	gv11b/dbg_gpu_gv11b.o  \

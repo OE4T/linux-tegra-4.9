@@ -36,6 +36,8 @@
 #include "common/therm/therm_gp10b.h"
 #include "common/ltc/ltc_gm20b.h"
 #include "common/ltc/ltc_gp10b.h"
+#include "common/fuse/fuse_gm20b.h"
+#include "common/fuse/fuse_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -70,7 +72,6 @@
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
-#include "fuse_gp10b.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
@@ -80,7 +81,6 @@
 #include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_top_gp10b.h>
@@ -597,7 +597,7 @@ static const struct gpu_ops gp10b_ops = {
 		.pmu_pg_init_param = gp10b_pg_gr_init,
 		.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list,
 		.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list,
-		.dump_secure_fuses = pmu_dump_security_fuses_gp10b,
+		.dump_secure_fuses = pmu_dump_security_fuses_gm20b,
 		.reset_engine = gk20a_pmu_engine_reset,
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
 		.get_irqdest = gk20a_pmu_get_irqdest,
@@ -702,6 +702,16 @@ static const struct gpu_ops gp10b_ops = {
 		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
 		.is_opt_feature_override_disable =
 			gp10b_fuse_is_opt_feature_override_disable,
+		.fuse_status_opt_fbio = gm20b_fuse_status_opt_fbio,
+		.fuse_status_opt_fbp = gm20b_fuse_status_opt_fbp,
+		.fuse_status_opt_rop_l2_fbp = gm20b_fuse_status_opt_rop_l2_fbp,
+		.fuse_status_opt_tpc_gpc = gm20b_fuse_status_opt_tpc_gpc,
+		.fuse_ctrl_opt_tpc_gpc = gm20b_fuse_ctrl_opt_tpc_gpc,
+		.fuse_opt_sec_debug_en = gm20b_fuse_opt_sec_debug_en,
+		.fuse_opt_priv_sec_en = gm20b_fuse_opt_priv_sec_en,
+		.read_vin_cal_fuse_rev = NULL,
+		.read_vin_cal_slope_intercept_fuse = NULL,
+		.read_vin_cal_gain_offset_fuse = NULL,
 	},
 	.chip_init_gpu_characteristics = gp10b_init_gpu_characteristics,
 	.get_litter_value = gp10b_get_litter_value,

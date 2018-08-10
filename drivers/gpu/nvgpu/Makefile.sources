@@ -74,6 +74,9 @@ srcs :=	os/posix/nvgpu.c \
 	common/therm/therm_gp10b.c \
 	common/therm/therm_gv11b.c \
 	common/therm/therm_gp106.c \
+	common/fuse/fuse_gm20b.c \
+	common/fuse/fuse_gp10b.c \
+	common/fuse/fuse_gp106.c \
 	common/enabled.c \
 	common/pramin.c \
 	common/semaphore.c \
@@ -160,7 +163,6 @@ srcs :=	os/posix/nvgpu.c \
 	gm20b/pmu_gm20b.c \
 	gm20b/mm_gm20b.c \
 	gm20b/regops_gm20b.c \
-	gm20b/fuse_gm20b.c \
 	gp10b/gr_gp10b.c  \
 	gp10b/gr_ctx_gp10b.c  \
 	gp10b/ce_gp10b.c \
@@ -172,7 +174,6 @@ srcs :=	os/posix/nvgpu.c \
 	gp10b/regops_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \
 	gp10b/gp10b.c \
-	gp10b/fuse_gp10b.c \
 	gp10b/ecc_gp10b.c \
 	gv11b/gv11b.c  \
 	gv11b/dbg_gpu_gv11b.c  \
@@ -200,7 +201,6 @@ srcs :=	os/posix/nvgpu.c \
 	gp106/fifo_gp106.c \
 	gp106/regops_gp106.c \
 	gp106/bios_gp106.c \
-	gp106/fuse_gp106.c \
 	gp106/clk_gp106.c \
 	gp106/clk_arb_gp106.c \
 	gv100/mm_gv100.c \

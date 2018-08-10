@@ -1,5 +1,5 @@
 /*
- * GP10B FUSE
+ * GM20B FUSE
  *
  * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -29,20 +29,18 @@
 
 #include "gk20a/gk20a.h"
 
-#include "gm20b/fuse_gm20b.h"
+#include "fuse_gm20b.h"
 
-#include "fuse_gp10b.h"
+#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
-#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
-
-int gp10b_fuse_check_priv_security(struct gk20a *g)
+int gm20b_fuse_check_priv_security(struct gk20a *g)
 {
 	u32 gcplex_config;
 
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
+		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
 		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-		nvgpu_log(g, gpu_dbg_info, "priv sec is disabled in fmodel");
+		nvgpu_log(g, gpu_dbg_info, "priv sec is enabled in fmodel");
 		return 0;
 	}
 
@@ -50,6 +48,8 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 		nvgpu_err(g, "err reading gcplex config fuse, check fuse clk");
 		return -EINVAL;
 	}
+
+	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	if (gk20a_readl(g, fuse_opt_priv_sec_en_r())) {
 		/*
@@ -59,7 +59,6 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 		 * and vpr settings from tegra mc
 		 */
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 		if ((gcplex_config &
 			 GCPLEX_CONFIG_WPR_ENABLED_MASK) &&
 			!(gcplex_config &
@@ -74,7 +73,6 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 						"gcplex_config = 0x%08x, "
 						"secure mode: ACR non debug",
 						gcplex_config);
-
 		} else {
 			nvgpu_err(g, "gcplex_config = 0x%08x "
 				"invalid wpr_enabled/vpr_auto_fetch_disable "
@@ -84,7 +82,6 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 		}
 	} else {
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
-		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 		nvgpu_log(g, gpu_dbg_info,
 				"gcplex_config = 0x%08x, non secure mode",
 				gcplex_config);
@@ -93,13 +90,37 @@ int gp10b_fuse_check_priv_security(struct gk20a *g)
 	return 0;
 }
 
-bool gp10b_fuse_is_opt_ecc_enable(struct gk20a *g)
+u32 gm20b_fuse_status_opt_fbio(struct gk20a *g)
 {
-	return gk20a_readl(g, fuse_opt_ecc_en_r()) != 0U;
+	return nvgpu_readl(g, fuse_status_opt_fbio_r());
 }
 
-bool gp10b_fuse_is_opt_feature_override_disable(struct gk20a *g)
+u32 gm20b_fuse_status_opt_fbp(struct gk20a *g)
 {
-	return gk20a_readl(g,
-			fuse_opt_feature_fuses_override_disable_r()) != 0U;
+	return nvgpu_readl(g, fuse_status_opt_fbp_r());
+}
+
+u32 gm20b_fuse_status_opt_rop_l2_fbp(struct gk20a *g, u32 fbp)
+{
+	return nvgpu_readl(g, fuse_status_opt_rop_l2_fbp_r(fbp));
+}
+
+u32 gm20b_fuse_status_opt_tpc_gpc(struct gk20a *g, u32 gpc)
+{
+	return nvgpu_readl(g, fuse_status_opt_tpc_gpc_r(gpc));
+}
+
+void gm20b_fuse_ctrl_opt_tpc_gpc(struct gk20a *g, u32 gpc, u32 val)
+{
+	nvgpu_writel(g, fuse_ctrl_opt_tpc_gpc_r(gpc), val);
+}
+
+u32 gm20b_fuse_opt_sec_debug_en(struct gk20a *g)
+{
+	return nvgpu_readl(g, fuse_opt_sec_debug_en_r());
+}
+
+u32 gm20b_fuse_opt_priv_sec_en(struct gk20a *g)
+{
+	return gk20a_readl(g, fuse_opt_priv_sec_en_r());
 }

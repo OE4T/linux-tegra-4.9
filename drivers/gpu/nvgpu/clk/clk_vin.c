@@ -36,8 +36,6 @@
 #include "clk.h"
 #include "clk_vin.h"
 
-#include <nvgpu/hw/gp106/hw_fuse_gp106.h>
-
 static u32 devinit_get_vin_device_table(struct gk20a *g,
 		struct avfsvinobjs *pvinobjs);
 
@@ -62,196 +60,6 @@ static u32 vin_device_init_pmudata_super(struct gk20a *g,
 				  struct boardobj *board_obj_ptr,
 				  struct nv_pmu_boardobj *ppmudata);
 
-static u32 read_vin_cal_fuse_rev(struct gk20a *g)
-{
-	return fuse_vin_cal_fuse_rev_data_v(
-		gk20a_readl(g, fuse_vin_cal_fuse_rev_r()));
-}
-
-static u32 read_vin_cal_slope_intercept_fuse(struct gk20a *g,
-					     u32 vin_id, u32 *slope,
-					     u32 *intercept)
-{
-	u32 data = 0;
-	u32 interceptdata = 0;
-	u32 slopedata = 0;
-	u32 gpc0data;
-	u32 gpc0slopedata;
-	u32 gpc0interceptdata;
-
-	/* read gpc0 irrespective of vin id */
-	gpc0data = gk20a_readl(g, fuse_vin_cal_gpc0_r());
-	if (gpc0data == 0xFFFFFFFF)
-		return -EINVAL;
-
-	switch (vin_id) {
-	case CTRL_CLK_VIN_ID_GPC0:
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC1:
-		data = gk20a_readl(g, fuse_vin_cal_gpc1_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC2:
-		data = gk20a_readl(g, fuse_vin_cal_gpc2_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC3:
-		data = gk20a_readl(g, fuse_vin_cal_gpc3_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC4:
-		data = gk20a_readl(g, fuse_vin_cal_gpc4_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC5:
-		data = gk20a_readl(g, fuse_vin_cal_gpc5_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_SYS:
-	case CTRL_CLK_VIN_ID_XBAR:
-	case CTRL_CLK_VIN_ID_LTC:
-		data = gk20a_readl(g, fuse_vin_cal_shared_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_SRAM:
-		data = gk20a_readl(g, fuse_vin_cal_sram_delta_r());
-		break;
-
-	default:
-		return -EINVAL;
-	}
-	if (data == 0xFFFFFFFF)
-		return -EINVAL;
-
-	gpc0interceptdata = (fuse_vin_cal_gpc0_icpt_int_data_v(gpc0data) <<
-			     fuse_vin_cal_gpc0_icpt_frac_data_s()) +
-			    fuse_vin_cal_gpc0_icpt_frac_data_v(gpc0data);
-	gpc0interceptdata = (gpc0interceptdata * 1000U) >>
-			    fuse_vin_cal_gpc0_icpt_frac_data_s();
-
-	switch (vin_id) {
-	case CTRL_CLK_VIN_ID_GPC0:
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC1:
-	case CTRL_CLK_VIN_ID_GPC2:
-	case CTRL_CLK_VIN_ID_GPC3:
-	case CTRL_CLK_VIN_ID_GPC4:
-	case CTRL_CLK_VIN_ID_GPC5:
-	case CTRL_CLK_VIN_ID_SYS:
-	case CTRL_CLK_VIN_ID_XBAR:
-	case CTRL_CLK_VIN_ID_LTC:
-		interceptdata = (fuse_vin_cal_gpc1_delta_icpt_int_data_v(data) <<
-				 fuse_vin_cal_gpc1_delta_icpt_frac_data_s()) +
-				fuse_vin_cal_gpc1_delta_icpt_frac_data_v(data);
-		interceptdata = (interceptdata * 1000U) >>
-				fuse_vin_cal_gpc1_delta_icpt_frac_data_s();
-		break;
-
-	case CTRL_CLK_VIN_ID_SRAM:
-		interceptdata = (fuse_vin_cal_sram_delta_icpt_int_data_v(data) <<
-				 fuse_vin_cal_sram_delta_icpt_frac_data_s()) +
-				fuse_vin_cal_sram_delta_icpt_frac_data_v(data);
-		interceptdata = (interceptdata * 1000U) >>
-				fuse_vin_cal_sram_delta_icpt_frac_data_s();
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	if (fuse_vin_cal_gpc1_delta_icpt_sign_data_v(data))
-		*intercept = gpc0interceptdata - interceptdata;
-	else
-		*intercept = gpc0interceptdata + interceptdata;
-
-	/* slope */
-	gpc0slopedata = (fuse_vin_cal_gpc0_slope_int_data_v(gpc0data) <<
-			     fuse_vin_cal_gpc0_slope_frac_data_s()) +
-			    fuse_vin_cal_gpc0_slope_frac_data_v(gpc0data);
-	gpc0slopedata = (gpc0slopedata * 1000U) >>
-			    fuse_vin_cal_gpc0_slope_frac_data_s();
-	switch (vin_id) {
-	case CTRL_CLK_VIN_ID_GPC0:
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC1:
-	case CTRL_CLK_VIN_ID_GPC2:
-	case CTRL_CLK_VIN_ID_GPC3:
-	case CTRL_CLK_VIN_ID_GPC4:
-	case CTRL_CLK_VIN_ID_GPC5:
-	case CTRL_CLK_VIN_ID_SYS:
-	case CTRL_CLK_VIN_ID_XBAR:
-	case CTRL_CLK_VIN_ID_LTC:
-	case CTRL_CLK_VIN_ID_SRAM:
-		slopedata =
-			(fuse_vin_cal_gpc1_delta_slope_int_data_v(data)) * 1000;
-		break;
-
-	default:
-		return -EINVAL;
-	}
-
-	if (fuse_vin_cal_gpc1_delta_slope_sign_data_v(data))
-		*slope = gpc0slopedata - slopedata;
-	else
-		*slope = gpc0slopedata + slopedata;
-	return 0;
-}
-
-static u32 read_vin_cal_gain_offset_fuse(struct gk20a *g,
-					     u32 vin_id, s8 *gain,
-					     s8 *offset)
-{
-	u32 data = 0;
-
-	switch (vin_id) {
-	case CTRL_CLK_VIN_ID_GPC0:
-		data = gk20a_readl(g, fuse_vin_cal_gpc0_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC1:
-		data = gk20a_readl(g, fuse_vin_cal_gpc1_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC2:
-		data = gk20a_readl(g, fuse_vin_cal_gpc2_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC3:
-		data = gk20a_readl(g, fuse_vin_cal_gpc3_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC4:
-		data = gk20a_readl(g, fuse_vin_cal_gpc4_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_GPC5:
-		data = gk20a_readl(g, fuse_vin_cal_gpc5_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_SYS:
-	case CTRL_CLK_VIN_ID_XBAR:
-	case CTRL_CLK_VIN_ID_LTC:
-		data = gk20a_readl(g, fuse_vin_cal_shared_delta_r());
-		break;
-
-	case CTRL_CLK_VIN_ID_SRAM:
-		data = gk20a_readl(g, fuse_vin_cal_sram_delta_r());
-		break;
-
-	default:
-		return -EINVAL;
-	}
-	if (data == 0xFFFFFFFF)
-		return -EINVAL;
-	*gain = (s8) (data >> 16) & 0x1f;
-	*offset = (s8) data & 0x7f;
-
-	return 0;
-}
-
 u32 clk_avfs_get_vin_cal_fuse_v10(struct gk20a *g,
 					struct avfsvinobjs *pvinobjs,
 					struct vin_device_v20 *pvindev)
@@ -260,13 +68,13 @@ u32 clk_avfs_get_vin_cal_fuse_v10(struct gk20a *g,
 	u32 slope, intercept;
 	u8 i;
 
-	if (pvinobjs->calibration_rev_vbios == read_vin_cal_fuse_rev(g)) {
+	if (pvinobjs->calibration_rev_vbios == g->ops.fuse.read_vin_cal_fuse_rev(g)) {
 		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
 				     struct vin_device_v20 *, pvindev, i) {
 			slope = 0;
 			intercept = 0;
 			pvindev = (struct vin_device_v20 *)CLK_GET_VIN_DEVICE(pvinobjs, i);
-			status = read_vin_cal_slope_intercept_fuse(g,
+			status = g->ops.fuse.read_vin_cal_slope_intercept_fuse(g,
 					pvindev->super.id, &slope, &intercept);
 			if (status) {
 				nvgpu_err(g,
@@ -291,13 +99,13 @@ u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
 	s8 gain, offset;
 	u8 i;
 
-	if (pvinobjs->calibration_rev_vbios == read_vin_cal_fuse_rev(g)) {
+	if (pvinobjs->calibration_rev_vbios == g->ops.fuse.read_vin_cal_fuse_rev(g)) {
 		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
 				     struct vin_device_v20 *, pvindev, i) {
 			gain = 0;
 			offset = 0;
 			pvindev = (struct vin_device_v20 *)CLK_GET_VIN_DEVICE(pvinobjs, i);
-			status = read_vin_cal_gain_offset_fuse(g,
+			status = g->ops.fuse.read_vin_cal_gain_offset_fuse(g,
 					pvindev->super.id, &gain, &offset);
 			if (status) {
 				nvgpu_err(g,

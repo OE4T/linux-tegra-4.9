@@ -42,6 +42,9 @@
 #include "common/ltc/ltc_gm20b.h"
 #include "common/ltc/ltc_gp10b.h"
 #include "common/ltc/ltc_gv11b.h"
+#include "common/fuse/fuse_gm20b.h"
+#include "common/fuse/fuse_gp10b.h"
+#include "common/fuse/fuse_gp106.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -77,7 +80,6 @@
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
-#include "gp10b/fuse_gp10b.h"
 
 #include "gv11b/css_gr_gv11b.h"
 #include "gv11b/dbg_gpu_gv11b.h"
@@ -883,6 +885,18 @@ static const struct gpu_ops gv100_ops = {
 		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
 		.is_opt_feature_override_disable =
 			gp10b_fuse_is_opt_feature_override_disable,
+		.fuse_status_opt_fbio = gm20b_fuse_status_opt_fbio,
+		.fuse_status_opt_fbp = gm20b_fuse_status_opt_fbp,
+		.fuse_status_opt_rop_l2_fbp = gm20b_fuse_status_opt_rop_l2_fbp,
+		.fuse_status_opt_tpc_gpc = gm20b_fuse_status_opt_tpc_gpc,
+		.fuse_ctrl_opt_tpc_gpc = gm20b_fuse_ctrl_opt_tpc_gpc,
+		.fuse_opt_sec_debug_en = gm20b_fuse_opt_sec_debug_en,
+		.fuse_opt_priv_sec_en = gm20b_fuse_opt_priv_sec_en,
+		.read_vin_cal_fuse_rev = gp106_fuse_read_vin_cal_fuse_rev,
+		.read_vin_cal_slope_intercept_fuse =
+			gp106_fuse_read_vin_cal_slope_intercept_fuse,
+		.read_vin_cal_gain_offset_fuse =
+			gp106_fuse_read_vin_cal_gain_offset_fuse,
 	},
 #if defined(CONFIG_TEGRA_NVLINK)
 	.nvlink = {
@@ -947,6 +961,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->xve = gv100_ops.xve;
 	gops->falcon = gv100_ops.falcon;
 	gops->priv_ring = gv100_ops.priv_ring;
+	gops->fuse = gv100_ops.fuse;
 	gops->nvlink = gv100_ops.nvlink;
 
 	/* clocks */

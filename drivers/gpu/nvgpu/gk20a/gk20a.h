@@ -1256,6 +1256,20 @@ struct gpu_ops {
 		int (*check_priv_security)(struct gk20a *g);
 		bool (*is_opt_ecc_enable)(struct gk20a *g);
 		bool (*is_opt_feature_override_disable)(struct gk20a *g);
+		u32 (*fuse_status_opt_fbio)(struct gk20a *g);
+		u32 (*fuse_status_opt_fbp)(struct gk20a *g);
+		u32 (*fuse_status_opt_rop_l2_fbp)(struct gk20a *g, u32 fbp);
+		u32 (*fuse_status_opt_tpc_gpc)(struct gk20a *g, u32 gpc);
+		void (*fuse_ctrl_opt_tpc_gpc)(struct gk20a *g, u32 gpc, u32 val);
+		u32 (*fuse_opt_sec_debug_en)(struct gk20a *g);
+		u32 (*fuse_opt_priv_sec_en)(struct gk20a *g);
+		u32 (*read_vin_cal_fuse_rev)(struct gk20a *g);
+		u32 (*read_vin_cal_slope_intercept_fuse)(struct gk20a *g,
+							     u32 vin_id, u32 *slope,
+							     u32 *intercept);
+		u32 (*read_vin_cal_gain_offset_fuse)(struct gk20a *g,
+							     u32 vin_id, s8 *gain,
+							     s8 *offset);
 	} fuse;
 	struct {
 		int (*init)(struct gk20a *g);

@@ -1,7 +1,7 @@
 /*
  * GP106 FUSE
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,16 +22,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/enabled.h>
-#include <nvgpu/io.h>
+#ifndef _NVGPU_GP106_FUSE
+#define _NVGPU_GP106_FUSE
 
-#include "gk20a/gk20a.h"
-#include "gp106/fuse_gp106.h"
+struct gk20a;
 
-int gp106_fuse_check_priv_security(struct gk20a *g)
-{
-	__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
+int gp106_fuse_check_priv_security(struct gk20a *g);
+u32 gp106_fuse_read_vin_cal_fuse_rev(struct gk20a *g);
+u32 gp106_fuse_read_vin_cal_slope_intercept_fuse(struct gk20a *g,
+					     u32 vin_id, u32 *slope,
+					     u32 *intercept);
+u32 gp106_fuse_read_vin_cal_gain_offset_fuse(struct gk20a *g,
+					     u32 vin_id, s8 *gain,
+					     s8 *offset);
 
-	return 0;
-}
+#endif

@@ -39,6 +39,8 @@
 #include "common/ltc/ltc_gm20b.h"
 #include "common/ltc/ltc_gp10b.h"
 #include "common/ltc/ltc_gv11b.h"
+#include "common/fuse/fuse_gm20b.h"
+#include "common/fuse/fuse_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -65,7 +67,6 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
-#include "gp10b/fuse_gp10b.h"
 
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
@@ -100,7 +101,6 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_fuse_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 int gv11b_get_litter_value(struct gk20a *g, int value)
@@ -689,7 +689,7 @@ static const struct gpu_ops gv11b_ops = {
 		.pmu_pg_init_param = gv11b_pg_gr_init,
 		.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list,
 		.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list,
-		.dump_secure_fuses = pmu_dump_security_fuses_gp10b,
+		.dump_secure_fuses = pmu_dump_security_fuses_gm20b,
 		.reset_engine = gp106_pmu_engine_reset,
 		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,
 		.pmu_nsbootstrap = gv11b_pmu_bootstrap,
@@ -801,6 +801,16 @@ static const struct gpu_ops gv11b_ops = {
 		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
 		.is_opt_feature_override_disable =
 			gp10b_fuse_is_opt_feature_override_disable,
+		.fuse_status_opt_fbio = gm20b_fuse_status_opt_fbio,
+		.fuse_status_opt_fbp = gm20b_fuse_status_opt_fbp,
+		.fuse_status_opt_rop_l2_fbp = gm20b_fuse_status_opt_rop_l2_fbp,
+		.fuse_status_opt_tpc_gpc = gm20b_fuse_status_opt_tpc_gpc,
+		.fuse_ctrl_opt_tpc_gpc = gm20b_fuse_ctrl_opt_tpc_gpc,
+		.fuse_opt_sec_debug_en = gm20b_fuse_opt_sec_debug_en,
+		.fuse_opt_priv_sec_en = gm20b_fuse_opt_priv_sec_en,
+		.read_vin_cal_fuse_rev = NULL,
+		.read_vin_cal_slope_intercept_fuse = NULL,
+		.read_vin_cal_gain_offset_fuse = NULL,
 	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,

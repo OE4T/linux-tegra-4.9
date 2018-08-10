@@ -38,6 +38,9 @@
 #include "common/therm/therm_gp106.h"
 #include "common/ltc/ltc_gm20b.h"
 #include "common/ltc/ltc_gp10b.h"
+#include "common/fuse/fuse_gm20b.h"
+#include "common/fuse/fuse_gp10b.h"
+#include "common/fuse/fuse_gp106.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -60,7 +63,6 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
-#include "gp10b/fuse_gp10b.h"
 
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
@@ -85,7 +87,6 @@
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
 #include "gp106/flcn_gp106.h"
-#include "gp106/fuse_gp106.h"
 
 #include "hal_gp106.h"
 
@@ -788,6 +789,18 @@ static const struct gpu_ops gp106_ops = {
 		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,
 		.is_opt_feature_override_disable =
 			gp10b_fuse_is_opt_feature_override_disable,
+		.fuse_status_opt_fbio = gm20b_fuse_status_opt_fbio,
+		.fuse_status_opt_fbp = gm20b_fuse_status_opt_fbp,
+		.fuse_status_opt_rop_l2_fbp = gm20b_fuse_status_opt_rop_l2_fbp,
+		.fuse_status_opt_tpc_gpc = gm20b_fuse_status_opt_tpc_gpc,
+		.fuse_ctrl_opt_tpc_gpc = gm20b_fuse_ctrl_opt_tpc_gpc,
+		.fuse_opt_sec_debug_en = gm20b_fuse_opt_sec_debug_en,
+		.fuse_opt_priv_sec_en = gm20b_fuse_opt_priv_sec_en,
+		.read_vin_cal_fuse_rev = gp106_fuse_read_vin_cal_fuse_rev,
+		.read_vin_cal_slope_intercept_fuse =
+			gp106_fuse_read_vin_cal_slope_intercept_fuse,
+		.read_vin_cal_gain_offset_fuse =
+			gp106_fuse_read_vin_cal_gain_offset_fuse,
 	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,

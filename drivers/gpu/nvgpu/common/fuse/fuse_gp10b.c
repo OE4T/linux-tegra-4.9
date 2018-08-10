@@ -1,5 +1,5 @@
 /*
- * GM20B FUSE
+ * GP10B FUSE
  *
  * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -30,17 +30,18 @@
 #include "gk20a/gk20a.h"
 
 #include "fuse_gm20b.h"
+#include "fuse_gp10b.h"
 
-#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
+#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
-int gm20b_fuse_check_priv_security(struct gk20a *g)
+int gp10b_fuse_check_priv_security(struct gk20a *g)
 {
 	u32 gcplex_config;
 
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
-		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
+		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
 		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
-		nvgpu_log(g, gpu_dbg_info, "priv sec is enabled in fmodel");
+		nvgpu_log(g, gpu_dbg_info, "priv sec is disabled in fmodel");
 		return 0;
 	}
 
@@ -48,8 +49,6 @@ int gm20b_fuse_check_priv_security(struct gk20a *g)
 		nvgpu_err(g, "err reading gcplex config fuse, check fuse clk");
 		return -EINVAL;
 	}
-
-	__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 
 	if (gk20a_readl(g, fuse_opt_priv_sec_en_r())) {
 		/*
@@ -59,6 +58,7 @@ int gm20b_fuse_check_priv_security(struct gk20a *g)
 		 * and vpr settings from tegra mc
 		 */
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, true);
+		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, true);
 		if ((gcplex_config &
 			 GCPLEX_CONFIG_WPR_ENABLED_MASK) &&
 			!(gcplex_config &
@@ -73,6 +73,7 @@ int gm20b_fuse_check_priv_security(struct gk20a *g)
 						"gcplex_config = 0x%08x, "
 						"secure mode: ACR non debug",
 						gcplex_config);
+
 		} else {
 			nvgpu_err(g, "gcplex_config = 0x%08x "
 				"invalid wpr_enabled/vpr_auto_fetch_disable "
@@ -82,10 +83,22 @@ int gm20b_fuse_check_priv_security(struct gk20a *g)
 		}
 	} else {
 		__nvgpu_set_enabled(g, NVGPU_SEC_PRIVSECURITY, false);
+		__nvgpu_set_enabled(g, NVGPU_SEC_SECUREGPCCS, false);
 		nvgpu_log(g, gpu_dbg_info,
 				"gcplex_config = 0x%08x, non secure mode",
 				gcplex_config);
 	}
 
 	return 0;
+}
+
+bool gp10b_fuse_is_opt_ecc_enable(struct gk20a *g)
+{
+	return gk20a_readl(g, fuse_opt_ecc_en_r()) != 0U;
+}
+
+bool gp10b_fuse_is_opt_feature_override_disable(struct gk20a *g)
+{
+	return gk20a_readl(g,
+			fuse_opt_feature_fuses_override_disable_r()) != 0U;
 }

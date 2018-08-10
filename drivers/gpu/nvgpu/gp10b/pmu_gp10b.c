@@ -36,7 +36,6 @@
 #include "pmu_gp10b.h"
 
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
 #define gp10b_dbg_pmu(g, fmt, arg...) \
 	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
@@ -373,19 +372,6 @@ bool gp10b_is_priv_load(u32 falcon_id)
 	}
 
 	return enable_status;
-}
-
-/*Dump Security related fuses*/
-void pmu_dump_security_fuses_gp10b(struct gk20a *g)
-{
-	u32 val;
-
-	nvgpu_err(g, "FUSE_OPT_SEC_DEBUG_EN_0: 0x%x",
-			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
-	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0: 0x%x",
-			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
-	nvgpu_tegra_fuse_read_gcplex_config_fuse(g, &val);
-	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0: 0x%x", val);
 }
 
 bool gp10b_is_pmu_supported(struct gk20a *g)

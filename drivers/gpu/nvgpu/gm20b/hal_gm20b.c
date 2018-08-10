@@ -32,6 +32,7 @@
 #include "common/therm/therm_gm20b.h"
 #include "common/therm/therm_gm20b.h"
 #include "common/ltc/ltc_gm20b.h"
+#include "common/fuse/fuse_gm20b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -55,7 +56,6 @@
 #include "regops_gm20b.h"
 #include "hal_gm20b.h"
 #include "acr_gm20b.h"
-#include "fuse_gm20b.h"
 
 #include <nvgpu/debug.h>
 #include <nvgpu/bug.h>
@@ -64,7 +64,6 @@
 #include <nvgpu/error_notifier.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
@@ -649,6 +648,16 @@ static const struct gpu_ops gm20b_ops = {
 	},
 	.fuse = {
 		.check_priv_security = gm20b_fuse_check_priv_security,
+		.fuse_status_opt_fbio = gm20b_fuse_status_opt_fbio,
+		.fuse_status_opt_fbp = gm20b_fuse_status_opt_fbp,
+		.fuse_status_opt_rop_l2_fbp = gm20b_fuse_status_opt_rop_l2_fbp,
+		.fuse_status_opt_tpc_gpc = gm20b_fuse_status_opt_tpc_gpc,
+		.fuse_ctrl_opt_tpc_gpc = gm20b_fuse_ctrl_opt_tpc_gpc,
+		.fuse_opt_sec_debug_en = gm20b_fuse_opt_sec_debug_en,
+		.fuse_opt_priv_sec_en = gm20b_fuse_opt_priv_sec_en,
+		.read_vin_cal_fuse_rev = NULL,
+		.read_vin_cal_slope_intercept_fuse = NULL,
+		.read_vin_cal_gain_offset_fuse = NULL,
 	},
 	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,

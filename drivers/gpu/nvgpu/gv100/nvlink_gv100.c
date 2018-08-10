@@ -2115,9 +2115,10 @@ int gv100_nvlink_discover_ioctrl(struct gk20a *g)
 	struct nvgpu_nvlink_ioctrl_list *ioctrl_table;
 	u32 table_entry;
 	u32 devinfo_type;
-	bool is_ioctrl = false;
-	bool is_chain = false;
 	u32 io_num_entries = 0;
+	u32 entry_engine = 0;
+	u32 entry_enum = 0;
+	u32 entry_data = 0;
 
 	ioctrl_table = nvgpu_kzalloc(g, top_device_info__size_1_v() *
 		sizeof(struct nvgpu_nvlink_ioctrl_list));
@@ -2126,64 +2127,44 @@ int gv100_nvlink_discover_ioctrl(struct gk20a *g)
 		nvgpu_err(g, "failed to allocate memory for nvlink io table");
 		return -ENOMEM;
 	}
-
 	for (i = 0; i < top_device_info__size_1_v(); i++) {
 		table_entry = gk20a_readl(g, top_device_info_r(i));
+		nvgpu_log(g, gpu_dbg_nvlink, "Table entry: 0x%x", table_entry);
 
 		devinfo_type = top_device_info_entry_v(table_entry);
-
-		if (devinfo_type == top_device_info_entry_not_valid_v())
+		if (devinfo_type == top_device_info_entry_not_valid_v()) {
+			nvgpu_log(g, gpu_dbg_nvlink, "Invalid entry");
 			continue;
+		}
 
 		if (devinfo_type == top_device_info_entry_engine_type_v()) {
-			if (top_device_info_type_enum_v(table_entry) ==
-					top_device_info_type_enum_ioctrl_v())
-				is_ioctrl = true;
-			else {
-				is_ioctrl = false;
-				continue;
-			}
+			entry_engine = table_entry;
+		} else if (devinfo_type == top_device_info_entry_data_v()) {
+			entry_data = table_entry;
+		} else if (devinfo_type == top_device_info_entry_enum_v()) {
+			entry_enum = table_entry;
+		}
 
-			if (top_device_info_chain_v(table_entry) !=
-					top_device_info_chain_enable_v())
-				break;
+		if (top_device_info_chain_v(table_entry) ==
+					top_device_info_chain_enable_v()) {
+			continue;
+		}
 
-			is_chain = true;
+		if (top_device_info_type_enum_v(entry_engine) ==
+					top_device_info_type_enum_ioctrl_v()) {
+			nvgpu_log(g, gpu_dbg_nvlink, "IOCTRL entries");
+			nvgpu_log(g, gpu_dbg_nvlink,
+				" enum: 0x%x, engine = 0x%x, data = 0x%x",
+				entry_enum, entry_engine, entry_data);
 			ioctrl_table[io_num_entries].valid = true;
-			continue;
-		}
-
-		if (devinfo_type == top_device_info_entry_data_v()) {
-			if (is_ioctrl && is_chain) {
-
-				ioctrl_table[io_num_entries].pri_base_addr =
-					top_device_info_data_pri_base_v(table_entry) <<
-						top_device_info_data_pri_base_align_v();
-
-				if (top_device_info_chain_v(table_entry) !=
-						top_device_info_chain_enable_v()) {
-					is_chain = false;
-					io_num_entries++;
-				}
-			}
-			continue;
-		}
-
-		if (devinfo_type == top_device_info_entry_enum_v()) {
-			if (is_ioctrl && is_chain) {
-
-				ioctrl_table[io_num_entries].intr_enum =
-					top_device_info_intr_v(table_entry);
-				ioctrl_table[io_num_entries].reset_enum =
-					top_device_info_reset_v(table_entry);
-
-				if (top_device_info_chain_v(table_entry) !=
-						top_device_info_chain_enable_v()) {
-					is_chain = false;
-					io_num_entries++;
-				}
-			}
-			continue;
+			ioctrl_table[io_num_entries].intr_enum =
+				top_device_info_intr_enum_v(entry_enum);
+			ioctrl_table[io_num_entries].reset_enum =
+				top_device_info_reset_enum_v(entry_enum);
+			ioctrl_table[io_num_entries].pri_base_addr =
+				top_device_info_data_pri_base_v(entry_data) <<
+					top_device_info_data_pri_base_align_v();
+			io_num_entries++;
 		}
 	}
 
@@ -2195,7 +2176,6 @@ int gv100_nvlink_discover_ioctrl(struct gk20a *g)
 
 	g->nvlink.ioctrl_table = ioctrl_table;
 	g->nvlink.io_num_entries = io_num_entries;
-
 
 	for (i =0; i < io_num_entries; i++)
 		nvgpu_log(g, gpu_dbg_nvlink,

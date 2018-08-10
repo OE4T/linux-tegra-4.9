@@ -98,7 +98,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug_sched.o \
 	os/linux/debug_allocator.o \
 	os/linux/debug_hal.o \
-	os/linux/debug_clk.o \
+	os/linux/debug_clk_gm20b.o \
 	os/linux/debug_bios.o \
 	os/linux/debug_ltc.o \
 	os/linux/debug_xve.o

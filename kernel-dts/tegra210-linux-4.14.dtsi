@@ -14,22 +14,6 @@
  */
 
 / {
-	xudc@700d0000 {
-		/delete-property/ iommus;
-	};
-
-	sound {
-		status = "disabled";
-	};
-
-	sound_ref {
-		status = "disabled";
-	};
-
-	aconnect@2a41000 {
-		status = "disabled";
-	};
-
 	sdhci@700b0200 {
 		status = "disabled";
 	};

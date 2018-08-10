@@ -730,7 +730,7 @@ static int nvdla_probe(struct platform_device *pdev)
 		goto err_no_ip;
 	}
 
-	dma_set_mask(dev, DMA_BIT_MASK(40));
+	dma_set_mask(dev, DMA_BIT_MASK(37));
 
 	nvdla_dev = devm_kzalloc(dev, sizeof(*nvdla_dev), GFP_KERNEL);
 	if (!nvdla_dev) {

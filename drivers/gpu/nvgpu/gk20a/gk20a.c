@@ -187,7 +187,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (g->ops.clk.disable_slowboot)
 		g->ops.clk.disable_slowboot(g);
 
-	gk20a_enable_priv_ring(g);
+	g->ops.priv_ring.enable_priv_ring(g);
 
 	/* TBD: move this after graphics init in which blcg/slcg is enabled.
 	   This function removes SlowdownOnBoot which applies 32x divider

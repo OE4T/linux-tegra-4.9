@@ -36,6 +36,8 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/bus/bus_gm20b.c \
 	common/bus/bus_gp10b.c \
 	common/bus/bus_gv100.c \
+	common/priv_ring/priv_ring_gm20b.c \
+	common/priv_ring/priv_ring_gp10b.c \
 	common/fb/fb_gk20a.c \
 	common/fb/fb_gm20b.c \
 	common/fb/fb_gp10b.c \
@@ -135,7 +137,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gk20a/mm_gk20a.c \
 	gk20a/pmu_gk20a.c \
 	gk20a/flcn_gk20a.c \
-	gk20a/priv_ring_gk20a.c \
 	gk20a/fence_gk20a.c \
 	gk20a/therm_gk20a.c \
 	gk20a/gr_ctx_gk20a_sim.c \
@@ -167,7 +168,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/regops_gp10b.c \
 	gp10b/therm_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \
-	gp10b/priv_ring_gp10b.c \
 	gp10b/gp10b.c \
 	gp10b/fuse_gp10b.c \
 	gp10b/ecc_gp10b.c \

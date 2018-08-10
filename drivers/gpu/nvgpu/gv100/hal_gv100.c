@@ -25,6 +25,8 @@
 #include "common/bus/bus_gk20a.h"
 #include "common/bus/bus_gp10b.h"
 #include "common/bus/bus_gv100.h"
+#include "common/priv_ring/priv_ring_gm20b.h"
+#include "common/priv_ring/priv_ring_gp10b.h"
 #include "common/clock_gating/gv100_gating_reglist.h"
 #include "common/ptimer/ptimer_gk20a.h"
 #include "common/fb/fb_gk20a.h"
@@ -68,7 +70,6 @@
 #include "gp10b/therm_gp10b.h"
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ce_gp10b.h"
-#include "gp10b/priv_ring_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
@@ -868,10 +869,12 @@ static const struct gpu_ops gv100_ops = {
 		.falcon_hal_sw_init = gv100_falcon_hal_sw_init,
 	},
 	.priv_ring = {
+		.enable_priv_ring = gm20b_priv_ring_enable,
 		.isr = gp10b_priv_ring_isr,
 		.decode_error_code = gp10b_priv_ring_decode_error_code,
 		.set_ppriv_timeout_settings =
-			gk20a_priv_set_timeout_settings,
+			gm20b_priv_set_timeout_settings,
+		.enum_ltc = gm20b_priv_ring_enum_ltc,
 	},
 	.fuse = {
 		.is_opt_ecc_enable = gp10b_fuse_is_opt_ecc_enable,

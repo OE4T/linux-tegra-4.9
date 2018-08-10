@@ -27,6 +27,8 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/bus/bus_gm20b.o \
 	common/bus/bus_gp10b.o \
 	common/bus/bus_gv100.o \
+	common/priv_ring/priv_ring_gm20b.o \
+	common/priv_ring/priv_ring_gp10b.o \
 	common/ptimer/ptimer.o \
 	common/ptimer/ptimer_gk20a.o \
 	common/fb/fb_gk20a.o \
@@ -201,7 +203,6 @@ nvgpu-y += \
 	gk20a/mm_gk20a.o \
 	gk20a/pmu_gk20a.o \
 	gk20a/flcn_gk20a.o \
-	gk20a/priv_ring_gk20a.o \
 	gk20a/fence_gk20a.o \
 	gk20a/therm_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \
@@ -269,7 +270,6 @@ nvgpu-y += \
 	gp10b/regops_gp10b.o \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
-	gp10b/priv_ring_gp10b.o \
 	gp10b/gp10b.o \
 	gp10b/fuse_gp10b.o \
 	gp10b/ecc_gp10b.o \

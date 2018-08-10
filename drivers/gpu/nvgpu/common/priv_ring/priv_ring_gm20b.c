@@ -1,6 +1,4 @@
 /*
- * GK20A priv ring
- *
  * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -22,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a.h"
+#include "gk20a/gk20a.h"
 
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
@@ -30,13 +28,13 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_fbp_gk20a.h>
+#include "priv_ring_gm20b.h"
 
-void gk20a_enable_priv_ring(struct gk20a *g)
+#include <nvgpu/hw/gm20b/hw_pri_ringmaster_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_pri_ringstation_sys_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_pri_ringstation_gpc_gm20b.h>
+
+void gm20b_priv_ring_enable(struct gk20a *g)
 {
 	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
 		return;
@@ -55,7 +53,7 @@ void gk20a_enable_priv_ring(struct gk20a *g)
 	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 }
 
-void gk20a_priv_ring_isr(struct gk20a *g)
+void gm20b_priv_ring_isr(struct gk20a *g)
 {
 	u32 status0, status1;
 	u32 cmd;
@@ -107,7 +105,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 		nvgpu_warn(g, "priv ringmaster intr ack too many retries");
 }
 
-void gk20a_priv_set_timeout_settings(struct gk20a *g)
+void gm20b_priv_set_timeout_settings(struct gk20a *g)
 {
 	/*
 	 * Bug 1340570: increase the clock timeout to avoid potential
@@ -115,5 +113,9 @@ void gk20a_priv_set_timeout_settings(struct gk20a *g)
 	 */
 	nvgpu_writel(g, pri_ringstation_sys_master_config_r(0x15), 0x800);
 	nvgpu_writel(g, pri_ringstation_gpc_master_config_r(0xa), 0x800);
-	nvgpu_writel(g, pri_ringstation_fbp_master_config_r(0x8), 0x800);
+}
+
+u32 gm20b_priv_ring_enum_ltc(struct gk20a *g)
+{
+	return gk20a_readl(g, pri_ringmaster_enum_ltc_r());
 }

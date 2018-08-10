@@ -1,7 +1,5 @@
 /*
- * GK20A PRIV ringmaster
- *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,13 +19,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PRIV_RING_GK20A_H__
-#define __PRIV_RING_GK20A_H__
+#ifndef __PRIV_RING_GM20B_H__
+#define __PRIV_RING_GM20B_H__
 
-struct gpu_ops;
+struct gk20a;
 
-void gk20a_priv_ring_isr(struct gk20a *g);
-void gk20a_enable_priv_ring(struct gk20a *g);
-void gk20a_priv_set_timeout_settings(struct gk20a *g);
+void gm20b_priv_ring_isr(struct gk20a *g);
+void gm20b_priv_ring_enable(struct gk20a *g);
+void gm20b_priv_set_timeout_settings(struct gk20a *g);
+u32 gm20b_priv_ring_enum_ltc(struct gk20a *g);
 
-#endif /*__PRIV_RING_GK20A_H__*/
+#endif /*__PRIV_RING_GM20B_H__*/

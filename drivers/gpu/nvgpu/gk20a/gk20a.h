@@ -69,7 +69,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include "fifo_gk20a.h"
 #include "tsg_gk20a.h"
 #include "pmu_gk20a.h"
-#include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
@@ -1235,9 +1234,11 @@ struct gpu_ops {
 		void (*falcon_hal_sw_init)(struct nvgpu_falcon *flcn);
 	} falcon;
 	struct {
+		void (*enable_priv_ring)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		void (*decode_error_code)(struct gk20a *g, u32 error_code);
 		void (*set_ppriv_timeout_settings)(struct gk20a *g);
+		u32 (*enum_ltc)(struct gk20a *g);
 	} priv_ring;
 	struct {
 		int (*check_priv_security)(struct gk20a *g);

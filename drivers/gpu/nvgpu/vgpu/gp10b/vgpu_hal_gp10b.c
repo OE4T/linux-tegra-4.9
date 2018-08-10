@@ -22,6 +22,8 @@
 
 #include "common/bus/bus_gk20a.h"
 #include "common/bus/bus_gm20b.h"
+#include "common/priv_ring/priv_ring_gm20b.h"
+#include "common/priv_ring/priv_ring_gp10b.h"
 #include "common/clock_gating/gp10b_gating_reglist.h"
 #include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
@@ -55,7 +57,6 @@
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/therm_gp10b.h"
-#include "gp10b/priv_ring_gp10b.h"
 #include "gp10b/fuse_gp10b.h"
 
 #include "gm20b/ltc_gm20b.h"
@@ -552,9 +553,11 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.falcon_hal_sw_init = gk20a_falcon_hal_sw_init,
 	},
 	.priv_ring = {
+		.enable_priv_ring = gm20b_priv_ring_enable,
 		.isr = gp10b_priv_ring_isr,
 		.set_ppriv_timeout_settings =
-			gk20a_priv_set_timeout_settings,
+			gm20b_priv_set_timeout_settings,
+		.enum_ltc = gm20b_priv_ring_enum_ltc,
 	},
 	.fuse = {
 		.check_priv_security = vgpu_gp10b_fuse_check_priv_security,

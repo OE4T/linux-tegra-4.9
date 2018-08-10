@@ -444,7 +444,7 @@ static int tegra210_pex_uphy_enable(struct tegra_xusb_padctl *padctl)
 {
 	unsigned long timeout;
 	u32 value;
-	int err, i;
+	int err = 0, i;
 
 	if (t210b01_compatible(padctl) == 1) {
 		for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {

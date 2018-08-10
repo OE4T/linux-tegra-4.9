@@ -200,7 +200,7 @@ static pgprot_t __get_dma_pgprot(unsigned long attrs, pgprot_t prot,
 static struct gen_pool *atomic_pool;
 static struct page **atomic_pool_pages;
 
-static size_t atomic_pool_size = SZ_2M;
+static size_t atomic_pool_size = SZ_1M;
 
 static int __init early_coherent_pool(char *p)
 {

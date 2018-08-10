@@ -1587,6 +1587,8 @@ static int snd_pcm_pre_drain_init(struct snd_pcm_substream *substream, int state
 static int snd_pcm_do_drain_init(struct snd_pcm_substream *substream, int state)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_pcm_substream *trigger_master = runtime->trigger_master;
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		switch (runtime->status->state) {
 		case SNDRV_PCM_STATE_PREPARED:
@@ -1616,6 +1618,11 @@ static int snd_pcm_do_drain_init(struct snd_pcm_substream *substream, int state)
 			snd_pcm_post_stop(substream, new_state);
 		}
 	}
+
+	/* trigger_master would be cleared if the control   */
+	/* entered snd_pcm_post_start or snd_pcm_post_stop, */
+	/* hence it has to be restored                      */
+	runtime->trigger_master = trigger_master;
 
 	if (runtime->status->state == SNDRV_PCM_STATE_DRAINING &&
 	    runtime->trigger_master == substream &&

@@ -33,7 +33,10 @@
 #define BITS_TO_LONGS(bits)			\
 	(bits + (BITS_PER_LONG - 1) / BITS_PER_LONG)
 
-#define BIT(i)		(1ULL << (i))
+/*
+ * Deprecated; use the explicit BITxx() macros instead.
+ */
+#define BIT(i)		BIT64(i)
 
 #define GENMASK(h, l) \
 	(((~0UL) - (1UL << (l)) + 1) & (~0UL >> (BITS_PER_LONG - 1 - (h))))

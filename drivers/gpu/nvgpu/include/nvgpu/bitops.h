@@ -22,6 +22,14 @@
 #ifndef __NVGPU_BITOPS_H__
 #define __NVGPU_BITOPS_H__
 
+#include <nvgpu/types.h>
+
+/*
+ * Explicit sizes for bit definitions. Please use these instead of BIT().
+ */
+#define BIT32(i)	(U32(1) << (i))
+#define BIT64(i)	(U64(1) << (i))
+
 #ifdef __KERNEL__
 #include <linux/bitops.h>
 #include <linux/bitmap.h>

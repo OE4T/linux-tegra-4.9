@@ -2688,6 +2688,7 @@ void gv100_nvlink_get_connected_link_mask(u32 *link_mask)
 int gv100_nvlink_early_init(struct gk20a *g)
 {
 	int err = 0;
+	u32 mc_reset_nvlink_mask;
 
 	if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_NVLINK))
 		return -EINVAL;
@@ -2703,7 +2704,10 @@ int gv100_nvlink_early_init(struct gk20a *g)
 		goto nvlink_init_exit;
 
 	/* Enable NVLINK in MC */
-	g->ops.mc.reset(g, mc_enable_nvlink_enabled_f());
+	mc_reset_nvlink_mask = BIT32(g->nvlink.ioctrl_table[0].reset_enum);
+	nvgpu_log(g, gpu_dbg_nvlink, "mc_reset_nvlink_mask: 0x%x",
+							mc_reset_nvlink_mask);
+	g->ops.mc.reset(g, mc_reset_nvlink_mask);
 
 	err = g->ops.nvlink.discover_link(g);
 	if (err || g->nvlink.discovered_links == 0) {

@@ -151,11 +151,3 @@ int gp10b_populate_scatter_buffer(struct gk20a *g,
 
 	return 0;
 }
-
-struct nvgpu_os_linux_ops gp10b_cde_ops = {
-	.cde = {
-		.get_program_numbers = gp10b_cde_get_program_numbers,
-		.need_scatter_buffer = gp10b_need_scatter_buffer,
-		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
-	},
-};

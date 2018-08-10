@@ -1,7 +1,7 @@
 /*
  * GM20B CDE
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,8 +25,9 @@
 #ifndef _NVHOST_GM20B_CDE
 #define _NVHOST_GM20B_CDE
 
-#include "os_linux.h"
-
-extern struct nvgpu_os_linux_ops gm20b_cde_ops;
+void gm20b_cde_get_program_numbers(struct gk20a *g,
+				   u32 block_height_log2,
+				   u32 shader_parameter,
+				   int *hprog_out, int *vprog_out);
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * GM20B CDE
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,10 +35,10 @@ enum programs {
 	PROG_PASSTHROUGH        = 6,
 };
 
-static void gm20b_cde_get_program_numbers(struct gk20a *g,
-					  u32 block_height_log2,
-					  u32 shader_parameter,
-					  int *hprog_out, int *vprog_out)
+void gm20b_cde_get_program_numbers(struct gk20a *g,
+				   u32 block_height_log2,
+				   u32 shader_parameter,
+				   int *hprog_out, int *vprog_out)
 {
 	int hprog = PROG_HPASS;
 	int vprog = (block_height_log2 >= 2) ?
@@ -56,9 +56,3 @@ static void gm20b_cde_get_program_numbers(struct gk20a *g,
 	*hprog_out = hprog;
 	*vprog_out = vprog;
 }
-
-struct nvgpu_os_linux_ops gm20b_cde_ops = {
-	.cde = {
-		.get_program_numbers = gm20b_cde_get_program_numbers,
-	},
-};

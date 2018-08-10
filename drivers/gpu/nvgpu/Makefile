@@ -49,6 +49,9 @@ nvgpu-y += common/bus/bus_gk20a.o \
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
+	os/linux/os_ops.o \
+	os/linux/os_ops_gm20b.o \
+	os/linux/os_ops_gp10b.o \
 	os/linux/kmem.o \
 	os/linux/timers.o \
 	os/linux/ioctl.o \

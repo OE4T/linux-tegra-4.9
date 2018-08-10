@@ -56,6 +56,7 @@
 #include "ioctl.h"
 
 #include "os_linux.h"
+#include "os_ops.h"
 #include "ctxsw_trace.h"
 #include "driver_common.h"
 #include "channel.h"
@@ -181,17 +182,6 @@ static int gk20a_restore_registers(struct gk20a *g)
 	nvgpu_restore_usermode_registers(g);
 
 	return 0;
-}
-
-static int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
-{
-	int err = 0;
-
-#ifdef CONFIG_NVGPU_SUPPORT_CDE
-	err = nvgpu_cde_init_ops(l);
-#endif
-
-	return err;
 }
 
 int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)

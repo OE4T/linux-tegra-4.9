@@ -130,6 +130,7 @@ int css_hw_enable_snapshot(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client)
 {
 	struct gk20a *g = ch->g;
+	struct mm_gk20a *mm = &g->mm;
 	struct gr_gk20a *gr = &g->gr;
 	struct gk20a_cs_snapshot *data = gr->cs_data;
 	u32 snapshot_size = cs_client->snapshot_size;
@@ -185,8 +186,11 @@ int css_hw_enable_snapshot(struct channel_gk20a *ch,
 	 * should be written last */
 	gk20a_writel(g, perf_pmasys_mem_block_r(),
 			perf_pmasys_mem_block_base_f(inst_pa_page) |
-			perf_pmasys_mem_block_valid_true_f() |
-			perf_pmasys_mem_block_target_lfb_f());
+		        nvgpu_aperture_mask(g, &mm->hwpm.inst_block,
+				perf_pmasys_mem_block_target_sys_ncoh_f(),
+				perf_pmasys_mem_block_target_sys_coh_f(),
+				perf_pmasys_mem_block_target_lfb_f()) |
+			perf_pmasys_mem_block_valid_true_f());
 
 	nvgpu_log_info(g, "cyclestats: buffer for hardware snapshots enabled\n");
 

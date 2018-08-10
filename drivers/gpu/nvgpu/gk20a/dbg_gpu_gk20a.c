@@ -385,8 +385,11 @@ int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 	 * should be written last */
 	gk20a_writel(g, perf_pmasys_mem_block_r(),
 			perf_pmasys_mem_block_base_f(inst_pa_page) |
-			perf_pmasys_mem_block_valid_true_f() |
-			perf_pmasys_mem_block_target_lfb_f());
+		        nvgpu_aperture_mask(g, &mm->perfbuf.inst_block,
+				perf_pmasys_mem_block_target_sys_ncoh_f(),
+				perf_pmasys_mem_block_target_sys_coh_f(),
+				perf_pmasys_mem_block_target_lfb_f()) |
+		        perf_pmasys_mem_block_valid_true_f());
 
 	gk20a_idle(g);
 	return 0;

@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), common DHD core.
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -598,8 +598,8 @@ dhd_wl_ioctl(dhd_pub_t *dhd_pub, int ifidx, wl_ioctl_t *ioc, void *buf, int len)
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 	int i;
 	/* Changing PM is not allowed while RF test is enabled */
-	if (ioc->cmd == WLC_SET_PM && ioc->buf) {
-		uint pm_mode = *(uint *)ioc->buf;
+	if (ioc->cmd == WLC_SET_PM && buf) {
+		uint pm_mode = *(uint *)buf;
 		if (ioc->set) {
 			if (atomic_read(&rf_test)) {
 				atomic_set(&cur_power_mode, pm_mode);
@@ -610,15 +610,14 @@ dhd_wl_ioctl(dhd_pub_t *dhd_pub, int ifidx, wl_ioctl_t *ioc, void *buf, int len)
 		}
 	}
 
-	if (atomic_read(&rf_test)) {
+	if (atomic_read(&rf_test) && buf) {
 		if (ioc->cmd == WLC_SET_VAR) {
 			uint value;
 			for (i = 0; i < NUM_RF_TEST_PARAMS; i++) {
 				const char * param = rf_test_params[i].var;
-				char *buf = (char *)ioc->buf;
-
-				value = (uint)buf[strlen(param)+1];
-				if (strncmp(ioc->buf, param, strlen(param)) == 0) {
+				char *buff = (char *)buf;
+				value = (uint)buff[strlen(param)+1];
+				if (strncmp(buf, param, strlen(param)) == 0) {
 					atomic_set(&rf_test_params[i].cur_val, value);
 					DHD_ERROR(("%s: WLC_SET_VAR %s:%d not allowed\n", __FUNCTION__, param, value));
 					return BCME_OK;

@@ -558,7 +558,7 @@ static inline struct ahash_request *ahash_request_alloc(
 {
 	struct ahash_request *req;
 
-	req = kmalloc(sizeof(struct ahash_request) +
+	req = kzalloc(sizeof(struct ahash_request) +
 		      crypto_ahash_reqsize(tfm), gfp);
 
 	if (likely(req))

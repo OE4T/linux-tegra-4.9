@@ -38,6 +38,10 @@ struct nvgpu_os_linux_ops {
 					       void *scatter_buffer_ptr,
 					       size_t scatter_buffer_size);
 	} cde;
+
+	struct {
+		int (*init_debugfs)(struct gk20a *g);
+	} clk;
 };
 
 struct nvgpu_os_linux {

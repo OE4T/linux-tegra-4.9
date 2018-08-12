@@ -769,6 +769,7 @@ static const struct gpu_ops gv100_ops = {
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,
 		.get_crystal_clk_hz = gp106_crystal_clk_hz,
+		.get_rate_cntr = gp106_get_rate_cntr,
 		.measure_freq = gp106_clk_measure_freq,
 		.suspend_clk_support = gp106_suspend_clk_support,
 	},
@@ -976,6 +977,7 @@ int gv100_init_hal(struct gk20a *g)
 
 	/* clocks */
 	gops->clk.init_clk_support = gv100_ops.clk.init_clk_support;
+	gops->clk.get_rate_cntr = gv100_ops.clk.get_rate_cntr;
 	gops->clk.get_crystal_clk_hz = gv100_ops.clk.get_crystal_clk_hz;
 	gops->clk.measure_freq = gv100_ops.clk.measure_freq;
 	gops->clk.suspend_clk_support = gv100_ops.clk.suspend_clk_support;

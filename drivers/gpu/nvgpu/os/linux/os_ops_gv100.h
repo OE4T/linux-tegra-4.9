@@ -14,35 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "os_linux.h"
+#ifndef __LINUX_OS_OPS_GV100_H
+#define __LINUX_OS_OPS_GV100_H
 
-#include "os_ops_gm20b.h"
-#include "os_ops_gp10b.h"
-#include "os_ops_gp106.h"
-#include "os_ops_gv100.h"
+void nvgpu_gv100_init_os_ops(struct nvgpu_os_linux *l);
 
-int nvgpu_init_os_linux_ops(struct nvgpu_os_linux *l)
-{
-	struct gk20a *g = &l->g;
-	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
-
-	switch (ver) {
-	case GK20A_GPUID_GM20B:
-	case GK20A_GPUID_GM20B_B:
-		nvgpu_gm20b_init_os_ops(l);
-		break;
-	case NVGPU_GPUID_GP10B:
-		nvgpu_gp10b_init_os_ops(l);
-		break;
-	case NVGPU_GPUID_GP106:
-		nvgpu_gp106_init_os_ops(l);
-		break;
-	case NVGPU_GPUID_GV100:
-		nvgpu_gv100_init_os_ops(l);
-		break;
-	default:
-		break;
-	}
-
-	return 0;
-}
+#endif

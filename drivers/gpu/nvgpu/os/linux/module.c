@@ -198,6 +198,14 @@ int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
 		return err;
 	}
 
+	if (l->ops.clk.init_debugfs) {
+		err = l->ops.clk.init_debugfs(g);
+		if (err) {
+			nvgpu_err(g, "failed to init linux clk debugfs");
+			return err;
+		}
+	}
+
 	l->init_done = true;
 
 	return 0;
@@ -250,6 +258,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
+	err = nvgpu_init_os_linux_ops(l);
+	if (err)
+		goto done;
+
 	err = nvgpu_finalize_poweron_linux(l);
 	if (err)
 		goto done;
@@ -267,10 +279,6 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	}
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
-
-	err = nvgpu_init_os_linux_ops(l);
-	if (err)
-		goto done;
 
 	enable_irq(g->irq_stall);
 	if (g->irq_stall != g->irq_nonstall)

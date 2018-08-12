@@ -51,6 +51,8 @@ nvgpu-y += \
 	os/linux/os_ops.o \
 	os/linux/os_ops_gm20b.o \
 	os/linux/os_ops_gp10b.o \
+	os/linux/os_ops_gp106.o \
+	os/linux/os_ops_gv100.o \
 	os/linux/kmem.o \
 	os/linux/timers.o \
 	os/linux/ioctl.o \
@@ -98,6 +100,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug_allocator.o \
 	os/linux/debug_hal.o \
 	os/linux/debug_clk_gm20b.o \
+	os/linux/debug_clk_gp106.o \
 	os/linux/debug_bios.o \
 	os/linux/debug_ltc.o \
 	os/linux/debug_xve.o

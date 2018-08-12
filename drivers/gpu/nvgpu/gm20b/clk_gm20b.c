@@ -1490,17 +1490,6 @@ int gm20b_init_clk_support(struct gk20a *g)
 		err = set_pll_freq(g, 1);
 	}
 	nvgpu_mutex_release(&clk->clk_mutex);
-	if (err) {
-		return err;
-	}
-
-	if (!clk->debugfs_set && g->ops.clk.init_debugfs) {
-		err = g->ops.clk.init_debugfs(g);
-		if (err) {
-			return err;
-		}
-		clk->debugfs_set = true;
-	}
 
 	return err;
 }

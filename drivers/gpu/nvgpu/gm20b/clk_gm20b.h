@@ -70,9 +70,6 @@ int gm20b_gpcclk_set_rate(struct clk_gk20a *clk, unsigned long rate,
 long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
 		unsigned long *parent_rate);
 struct pll_parms *gm20b_get_gpc_pll_parms(void);
-#ifdef CONFIG_DEBUG_FS
-int gm20b_clk_init_debugfs(struct gk20a *g);
-#endif
 
 int gm20b_clk_pll_reg_write(struct gk20a *g, u32 reg, u32 val);
 int gm20b_init_clk_support(struct gk20a *g);

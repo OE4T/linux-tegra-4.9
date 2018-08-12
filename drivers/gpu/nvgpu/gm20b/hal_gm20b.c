@@ -555,9 +555,6 @@ static const struct gpu_ops gm20b_ops = {
 	.clk = {
 		.init_clk_support = gm20b_init_clk_support,
 		.suspend_clk_support = gm20b_suspend_clk_support,
-#ifdef CONFIG_DEBUG_FS
-		.init_debugfs = gm20b_clk_init_debugfs,
-#endif
 		.get_voltage = gm20b_clk_get_voltage,
 		.get_gpcclk_clock_counter = gm20b_clk_get_gpcclk_clock_counter,
 		.pll_reg_write = gm20b_clk_pll_reg_write,

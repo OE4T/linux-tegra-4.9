@@ -5,6 +5,8 @@
  * Created:		Aug 11th 2005
  * Copyright:	Wolfson Microelectronics. PLC.
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -606,6 +608,12 @@ struct snd_soc_dapm_widget {
 	struct list_head power_list;
 	struct list_head dirty;
 	int endpoints[2];
+
+#ifdef CONFIG_NON_RECURSIVE_DAPM
+	struct snd_soc_dapm_widget *parent;
+	struct list_head stack;
+	int visited;
+#endif
 
 	struct clk *clk;
 };

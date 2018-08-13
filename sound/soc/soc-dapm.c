@@ -4,6 +4,8 @@
  * Copyright 2005 Wolfson Microelectronics PLC.
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+ *
  *  This program is free software; you can redistribute  it and/or modify it
  *  under  the terms of  the GNU General  Public License as published by the
  *  Free Software Foundation;  either version 2 of the  License, or (at your
@@ -1075,6 +1077,109 @@ static int dapm_widget_list_create(struct snd_soc_dapm_widget_list **list,
 	return 0;
 }
 
+#ifdef CONFIG_NON_RECURSIVE_DAPM
+#define DECL_STACK LIST_HEAD
+#define push(w, s) list_add(&w->stack, s)
+#define pop(w, s) \
+do {    \
+	w = list_first_entry(s, struct snd_soc_dapm_widget, stack);     \
+	list_del(&w->stack);    \
+} while (0)
+
+#define stack_empty(s) list_empty(s)
+
+static int is_connected_ep_nr(struct snd_soc_dapm_widget *widget,
+		struct list_head *list, enum snd_soc_dapm_direction dir,
+		bool (*custom_stop_condition)(struct snd_soc_dapm_widget *,
+						enum snd_soc_dapm_direction))
+{
+	enum snd_soc_dapm_direction rdir = SND_SOC_DAPM_DIR_REVERSE(dir);
+	struct snd_soc_dapm_widget *w = widget, *p;
+	struct snd_soc_dapm_path *path;
+
+	DECL_STACK(stack1);
+	DECL_STACK(stack2);
+
+       /* Basic Algorithm -
+	* We perform a post-order traversal of the widget graph using 2
+	* auxiliary stacks. The steps of the algorithm are divided into two
+	* phases.
+	* In Phase 1:
+	* 1. Push the starting widget on STACK1.
+	* 2. Pop the widget from STACK1, enumerate all the child nodes in the
+	*    given direction and push the child nodes on STACK 1, maintaining
+	*    pointer to the parent node.
+	* 3. Push the current widget on STACK2.
+	* 4. Continue to (2) and repeat till there is no new widget to explore,
+	*    i.e, until STACK1 is empty.
+	*
+	* In Phase 2:
+	* 1. Pop element from STACK2.
+	* 2. Check if it is an endpoint or has already been scanned for number
+	*    of endpoints
+	* 3. If number of endpoints change, update the parent's endpoints
+	*    through the parent pointer.
+	* 4. Continue to (1) until STACK2 is empty.
+	*/
+
+	push(w, &stack1);
+
+	while (!stack_empty(&stack1)) {
+		pop(w, &stack1);
+		push(w, &stack2);
+
+		w->visited = 1;
+
+		if (w->endpoints[dir] >= 0)
+			continue;
+		else
+			w->endpoints[dir] = 0;
+
+		DAPM_UPDATE_STAT(widget, path_checks);
+
+		if (list)
+			list_add_tail(&w->work_list, list);
+
+		if (custom_stop_condition && custom_stop_condition(w, dir)) {
+			w->endpoints[dir] = 1;
+			continue;
+		}
+
+		if ((w->is_ep & SND_SOC_DAPM_DIR_TO_EP(dir)) && w->connected) {
+			w->endpoints[dir] = snd_soc_dapm_suspend_check(w);
+			continue;
+		}
+
+		snd_soc_dapm_widget_for_each_path(w, rdir, path) {
+			DAPM_UPDATE_STAT(widget, neighbour_checks);
+
+			if (path->weak || path->is_supply)
+				continue;
+
+			if (path->connect && !path->node[dir]->visited) {
+				path->node[dir]->parent = w;
+				push(path->node[dir], &stack1);
+			} else if (path->connect && path->node[dir]->visited)
+				w->endpoints[dir] = 1;
+		}
+	}
+
+	while (!stack_empty(&stack2)) {
+		pop(w, &stack2);
+
+		w->visited = 0;
+		p = w->parent;
+		w->parent = NULL;
+
+		if (p && w->endpoints[dir] > 0)
+			p->endpoints[dir] += w->endpoints[dir];
+	}
+
+	return w->endpoints[dir];
+}
+
+#endif /* CONFIG_NON_RECURSIVE_DAPM */
+
 /*
  * Common implementation for is_connected_output_ep() and
  * is_connected_input_ep(). The function is inlined since the combined size of
@@ -1150,8 +1255,13 @@ static int is_connected_output_ep(struct snd_soc_dapm_widget *widget,
 	bool (*custom_stop_condition)(struct snd_soc_dapm_widget *i,
 				      enum snd_soc_dapm_direction))
 {
+#ifdef CONFIG_NON_RECURSIVE_DAPM
+	return is_connected_ep_nr(widget, list, SND_SOC_DAPM_DIR_OUT,
+						custom_stop_condition);
+#else
 	return is_connected_ep(widget, list, SND_SOC_DAPM_DIR_OUT,
 			is_connected_output_ep, custom_stop_condition);
+#endif
 }
 
 /*
@@ -1168,8 +1278,13 @@ static int is_connected_input_ep(struct snd_soc_dapm_widget *widget,
 	bool (*custom_stop_condition)(struct snd_soc_dapm_widget *i,
 				      enum snd_soc_dapm_direction))
 {
+#ifdef CONFIG_NON_RECURSIVE_DAPM
+	return is_connected_ep_nr(widget, list, SND_SOC_DAPM_DIR_IN,
+						custom_stop_condition);
+#else
 	return is_connected_ep(widget, list, SND_SOC_DAPM_DIR_IN,
 			is_connected_input_ep, custom_stop_condition);
+#endif
 }
 
 /**

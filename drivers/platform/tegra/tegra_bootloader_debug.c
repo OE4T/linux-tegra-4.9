@@ -305,6 +305,11 @@ static int __init tegra_bootloader_debuginit(void)
 				__func__, (unsigned int)tegra_bl_prof_start);
 			goto out_err;
 		}
+		pr_info("Remapped tegra_bl_prof_start(0x%llx)"
+			" to address 0x%llx, size(0x%llx)\n",
+			(u64)tegra_bl_prof_start,
+			(u64)ptr_bl_prof_start,
+			(u64)tegra_bl_prof_size);
 
 		tegra_bl_mapped_prof_start = ptr_bl_prof_start;
 	}
@@ -313,7 +318,7 @@ static int __init tegra_bootloader_debuginit(void)
 		phys_to_virt(tegra_bl_debug_data_start);
 	if (!pfn_valid(__phys_to_pfn(tegra_bl_debug_data_start))) {
 		ptr_bl_debug_data_start = ioremap(tegra_bl_debug_data_start,
-				tegra_bl_prof_size);
+				tegra_bl_debug_data_size);
 
 		WARN_ON(!ptr_bl_debug_data_start);
 		if (!ptr_bl_debug_data_start) {
@@ -322,6 +327,11 @@ static int __init tegra_bootloader_debuginit(void)
 			goto out_err;
 		}
 
+		pr_info("Remapped tegra_bl_debug_data_start(0x%llx)"
+			" to address(0x%llx), size(0x%llx)\n",
+			(u64)tegra_bl_debug_data_start,
+			(u64)ptr_bl_debug_data_start,
+			(u64)tegra_bl_debug_data_size);
 		tegra_bl_mapped_debug_data_start = ptr_bl_debug_data_start;
 	}
 

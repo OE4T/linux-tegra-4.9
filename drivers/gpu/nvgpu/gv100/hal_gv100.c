@@ -702,9 +702,6 @@ static const struct gpu_ops gv100_ops = {
 		.data032_r = pram_data032_r,
 	},
 	.therm = {
-#ifdef CONFIG_DEBUG_FS
-		.therm_debugfs_init = gp106_therm_debugfs_init,
-#endif /* CONFIG_DEBUG_FS */
 		/* PROD values match with H/W INIT values */
 		.init_elcg_mode = gv11b_therm_init_elcg_mode,
 		.init_blcg_mode = gm20b_therm_init_blcg_mode,

@@ -206,6 +206,14 @@ int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
 		}
 	}
 
+	if (l->ops.therm.init_debugfs) {
+		err = l->ops.therm.init_debugfs(g);
+		if (err) {
+			nvgpu_err(g, "failed to init linux therm debugfs");
+			return err;
+		}
+	}
+
 	l->init_done = true;
 
 	return 0;

@@ -14,22 +14,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "os_linux.h"
+#ifndef __DEBUG_THERM_GP106_H
+#define __DEBUG_THERM_GP106_H
 
-#include "debug_clk_gp106.h"
-#include "debug_therm_gp106.h"
-
-static struct nvgpu_os_linux_ops gp106_os_linux_ops = {
-	.clk = {
-		.init_debugfs = gp106_clk_init_debugfs,
-	},
-	.therm = {
-		.init_debugfs = gp106_therm_init_debugfs,
-	},
-};
-
-void nvgpu_gp106_init_os_ops(struct nvgpu_os_linux *l)
+#ifdef CONFIG_DEBUG_FS
+int gp106_therm_init_debugfs(struct gk20a *g);
+#else
+inline int gp106_therm_init_debugfs(struct gk20a *g)
 {
-	l->ops.clk = gp106_os_linux_ops.clk;
-	l->ops.therm = gp106_os_linux_ops.therm;
+	return 0;
 }
+#endif
+
+#endif

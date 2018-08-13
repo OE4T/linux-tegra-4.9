@@ -21,15 +21,11 @@
  */
 
 #include <nvgpu/io.h>
+
 #include "gk20a/gk20a.h"
 
 #include "therm_gp106.h"
 #include "therm/thrmpmu.h"
-
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#include "os/linux/os_linux.h"
-#endif
 
 #include <nvgpu/hw/gp106/hw_therm_gp106.h>
 
@@ -65,33 +61,6 @@ int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 
 	return err;
 }
-
-#ifdef CONFIG_DEBUG_FS
-static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
-{
-	struct gk20a *g = (struct gk20a *)data;
-	u32 readval;
-	int err;
-
-	err = gp106_get_internal_sensor_curr_temp(g, &readval);
-	if (!err)
-		*val = readval;
-
-	return err;
-}
-DEFINE_SIMPLE_ATTRIBUTE(therm_ctrl_fops, therm_get_internal_sensor_curr_temp, NULL, "%llu\n");
-
-void gp106_therm_debugfs_init(struct gk20a *g)
-{
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct dentry *dbgentry;
-
-	dbgentry = debugfs_create_file(
-		"temp", S_IRUGO, l->debugfs, g, &therm_ctrl_fops);
-	if (!dbgentry)
-		nvgpu_err(g, "debugfs entry create failed for therm_curr_temp");
-}
-#endif
 
 int gp106_elcg_init_idle_filters(struct gk20a *g)
 {

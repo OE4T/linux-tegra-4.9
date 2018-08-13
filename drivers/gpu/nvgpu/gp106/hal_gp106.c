@@ -605,9 +605,6 @@ static const struct gpu_ops gp106_ops = {
 		.data032_r = pram_data032_r,
 	},
 	.therm = {
-#ifdef CONFIG_DEBUG_FS
-		.therm_debugfs_init = gp106_therm_debugfs_init,
-#endif /* CONFIG_DEBUG_FS */
 		.init_elcg_mode = gm20b_therm_init_elcg_mode,
 		.init_blcg_mode = gm20b_therm_init_blcg_mode,
 		.elcg_init_idle_filters = gp106_elcg_init_idle_filters,

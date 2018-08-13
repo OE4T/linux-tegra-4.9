@@ -101,6 +101,7 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug_hal.o \
 	os/linux/debug_clk_gm20b.o \
 	os/linux/debug_clk_gp106.o \
+	os/linux/debug_therm_gp106.o \
 	os/linux/debug_bios.o \
 	os/linux/debug_ltc.o \
 	os/linux/debug_xve.o

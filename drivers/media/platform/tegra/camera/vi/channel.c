@@ -677,7 +677,7 @@ static void tegra_channel_buffer_queue(struct vb2_buffer *vb)
 }
 
 
-void tegra_channel_queued_buf_done_single_thread(
+static void tegra_channel_queued_buf_done_single_thread(
 		struct tegra_channel *chan,
 		enum vb2_buffer_state state)
 {
@@ -700,7 +700,7 @@ void tegra_channel_queued_buf_done_single_thread(
 	spin_unlock(&chan->dequeue_lock);
 }
 
-void tegra_channel_queued_buf_done_multi_thread(
+static void tegra_channel_queued_buf_done_multi_thread(
 		struct tegra_channel *chan,
 		enum vb2_buffer_state state)
 {

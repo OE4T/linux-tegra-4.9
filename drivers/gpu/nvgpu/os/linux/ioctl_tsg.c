@@ -399,7 +399,14 @@ int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp)
 		goto free_ref;
 	}
 
+	err = gk20a_busy(g);
+	if (err) {
+		nvgpu_err(g, "failed to power on, %d", err);
+		goto free_ref;
+	}
+
 	tsg = gk20a_tsg_open(g, nvgpu_current_pid(g));
+	gk20a_idle(g);
 	if (!tsg) {
 		nvgpu_kfree(g, priv);
 		err = -ENOMEM;

@@ -185,7 +185,10 @@ nvgpu-y += \
 	common/pmu/pmu_pg.o \
 	common/pmu/pmu_perfmon.o \
 	common/pmu/pmu_debug.o \
-	common/ltc.o \
+	common/ltc/ltc.o \
+	common/ltc/ltc_gm20b.o \
+	common/ltc/ltc_gp10b.o \
+	common/ltc/ltc_gv11b.o  \
 	common/io_common.o \
 	common/clock_gating/gm20b_gating_reglist.o \
 	common/clock_gating/gp106_gating_reglist.o \
@@ -216,7 +219,6 @@ nvgpu-y += \
 	gk20a/fecs_trace_gk20a.o \
 	gk20a/mc_gk20a.o \
 	gm20b/hal_gm20b.o \
-	gm20b/ltc_gm20b.o \
 	gm20b/gr_gm20b.o \
 	gm20b/clk_gm20b.o \
 	gm20b/fifo_gm20b.o \
@@ -267,7 +269,6 @@ nvgpu-y += \
 	gp10b/ce_gp10b.o \
 	gp10b/mc_gp10b.o  \
 	gp10b/fifo_gp10b.o  \
-	gp10b/ltc_gp10b.o \
 	gp10b/mm_gp10b.o \
 	gp10b/pmu_gp10b.o \
 	gp10b/hal_gp10b.o \
@@ -293,7 +294,6 @@ nvgpu-y += \
 	gv11b/css_gr_gv11b.o  \
 	gv11b/dbg_gpu_gv11b.o  \
 	gv11b/mc_gv11b.o  \
-	gv11b/ltc_gv11b.o  \
 	gv11b/hal_gv11b.o \
 	gv11b/gr_gv11b.o \
 	gv11b/fifo_gv11b.o \

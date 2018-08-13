@@ -59,7 +59,6 @@
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
@@ -6256,11 +6255,11 @@ int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 		}
 		*be_num = pri_get_be_num(g, addr);
 		return 0;
-	} else if (pri_is_ltc_addr(addr)) {
+	} else if (g->ops.ltc.pri_is_ltc_addr(g, addr)) {
 		*addr_type = CTXSW_ADDR_TYPE_LTCS;
-		if (g->ops.gr.is_ltcs_ltss_addr(g, addr))
+		if (g->ops.ltc.is_ltcs_ltss_addr(g, addr))
 			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTCS;
-		else if (g->ops.gr.is_ltcn_ltss_addr(g, addr))
+		else if (g->ops.ltc.is_ltcn_ltss_addr(g, addr))
 			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTSS;
 		return 0;
 	} else if (pri_is_fbpa_addr(g, addr)) {
@@ -6398,10 +6397,10 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num, tpc_num,
 				broadcast_flags, priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
-		g->ops.gr.split_lts_broadcast_addr(g, addr,
+		g->ops.ltc.split_lts_broadcast_addr(g, addr,
 							priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTCS) {
-		g->ops.gr.split_ltc_broadcast_addr(g, addr,
+		g->ops.ltc.split_ltc_broadcast_addr(g, addr,
 							priv_addr_table, &t);
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_FBPA) {
 		g->ops.gr.split_fbpa_broadcast_addr(g, addr,

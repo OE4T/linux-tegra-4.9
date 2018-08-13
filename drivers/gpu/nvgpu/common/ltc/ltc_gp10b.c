@@ -33,8 +33,8 @@
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
 #include "gk20a/gk20a.h"
-#include "gm20b/ltc_gm20b.h"
 
+#include "ltc_gm20b.h"
 #include "ltc_gp10b.h"
 
 int gp10b_determine_L2_size_bytes(struct gk20a *g)

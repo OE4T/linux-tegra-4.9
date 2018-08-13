@@ -32,6 +32,9 @@
 #include "common/therm/therm_gm20b.h"
 #include "common/therm/therm_gp10b.h"
 #include "common/therm/therm_gv11b.h"
+#include "common/ltc/ltc_gm20b.h"
+#include "common/ltc/ltc_gp10b.h"
+#include "common/ltc/ltc_gv11b.h"
 
 #include <gk20a/gk20a.h>
 #include <gv11b/hal_gv11b.h>
@@ -58,7 +61,6 @@
 #include <gm20b/pmu_gm20b.h>
 #include <gm20b/mm_gm20b.h>
 #include <gm20b/acr_gm20b.h>
-#include <gm20b/ltc_gm20b.h>
 
 #include <gp10b/pmu_gp10b.h>
 #include <gp10b/mm_gp10b.h>
@@ -66,7 +68,6 @@
 #include <gp10b/ce_gp10b.h>
 #include "gp10b/gr_gp10b.h"
 #include <gp10b/fifo_gp10b.h>
-#include <gp10b/ltc_gp10b.h>
 #include <gp10b/fuse_gp10b.h>
 
 #include <gp106/pmu_gp106.h>
@@ -80,7 +81,6 @@
 #include <gv11b/fifo_gv11b.h>
 #include <gv11b/regops_gv11b.h>
 #include <gv11b/gr_ctx_gv11b.h>
-#include <gv11b/ltc_gv11b.h>
 #include <gv11b/gr_gv11b.h>
 
 #include <nvgpu/enabled.h>
@@ -110,6 +110,11 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.isr = gv11b_ltc_isr,
 		.flush = gm20b_flush_ltc,
 		.set_enabled = NULL,
+		.pri_is_ltc_addr = gm20b_ltc_pri_is_ltc_addr,
+		.is_ltcs_ltss_addr = gm20b_ltc_is_ltcs_ltss_addr,
+		.is_ltcn_ltss_addr = gm20b_ltc_is_ltcn_ltss_addr,
+		.split_lts_broadcast_addr = gm20b_ltc_split_lts_broadcast_addr,
+		.split_ltc_broadcast_addr = gm20b_ltc_split_ltc_broadcast_addr,
 	},
 	.ce2 = {
 		.isr_stall = gv11b_ce_isr,
@@ -191,10 +196,6 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.init_sm_id_table = vgpu_gr_init_sm_id_table,
 		.load_smid_config = gr_gv11b_load_smid_config,
 		.program_sm_id_numbering = gr_gv11b_program_sm_id_numbering,
-		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,
-		.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr,
-		.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr,
-		.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr,
 		.setup_rop_mapping = gr_gv11b_setup_rop_mapping,
 		.program_zcull_mapping = gr_gv11b_program_zcull_mapping,
 		.commit_global_timeslice = gr_gv11b_commit_global_timeslice,

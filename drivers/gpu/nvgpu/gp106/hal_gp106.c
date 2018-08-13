@@ -36,6 +36,8 @@
 #include "common/xve/xve_gp106.h"
 #include "common/therm/therm_gm20b.h"
 #include "common/therm/therm_gp106.h"
+#include "common/ltc/ltc_gm20b.h"
+#include "common/ltc/ltc_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -49,7 +51,6 @@
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
-#include "gp10b/ltc_gp10b.h"
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mc_gp10b.h"
@@ -64,7 +65,6 @@
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
 
-#include "gm20b/ltc_gm20b.h"
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/mm_gm20b.h"
@@ -256,6 +256,11 @@ static const struct gpu_ops gp106_ops = {
 		.cbc_fix_config = NULL,
 		.flush = gm20b_flush_ltc,
 		.set_enabled = gp10b_ltc_set_enabled,
+		.pri_is_ltc_addr = gm20b_ltc_pri_is_ltc_addr,
+		.is_ltcs_ltss_addr = gm20b_ltc_is_ltcs_ltss_addr,
+		.is_ltcn_ltss_addr = gm20b_ltc_is_ltcn_ltss_addr,
+		.split_lts_broadcast_addr = gm20b_ltc_split_lts_broadcast_addr,
+		.split_ltc_broadcast_addr = gm20b_ltc_split_ltc_broadcast_addr,
 	},
 	.ce2 = {
 		.isr_stall = gp10b_ce_isr,
@@ -340,10 +345,6 @@ static const struct gpu_ops gp106_ops = {
 		.init_sm_id_table = gr_gk20a_init_sm_id_table,
 		.load_smid_config = gr_gp10b_load_smid_config,
 		.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering,
-		.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr,
-		.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr,
-		.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr,
-		.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr,
 		.setup_rop_mapping = gr_gk20a_setup_rop_mapping,
 		.program_zcull_mapping = gr_gk20a_program_zcull_mapping,
 		.commit_global_timeslice = gr_gk20a_commit_global_timeslice,

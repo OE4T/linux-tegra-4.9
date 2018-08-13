@@ -29,8 +29,6 @@
  * of the context state store for gr/compute contexts.
  */
 
-#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
-
 /*
  * GPC pri addressing
  */
@@ -225,14 +223,6 @@ static inline u32 pri_ppc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 ppc)
 	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 	return gpc_base + (gpc * gpc_stride) +
 		ppc_in_gpc_base + (ppc * ppc_in_gpc_stride) + addr;
-}
-
-/*
- * LTC pri addressing
- */
-static inline bool pri_is_ltc_addr(u32 addr)
-{
-	return ((addr >= ltc_pltcg_base_v()) && (addr < ltc_pltcg_extent_v()));
 }
 
 enum ctxsw_addr_type {

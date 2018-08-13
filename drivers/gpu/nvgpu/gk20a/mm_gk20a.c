@@ -52,7 +52,6 @@
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
 /*
  * GPU mapping life cycle

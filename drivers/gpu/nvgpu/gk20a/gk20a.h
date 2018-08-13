@@ -194,6 +194,15 @@ struct gpu_ops {
 		u32 (*cbc_fix_config)(struct gk20a *g, int base);
 		void (*flush)(struct gk20a *g);
 		void (*intr_en_illegal_compstat)(struct gk20a *g, bool enable);
+		bool (*pri_is_ltc_addr)(struct gk20a *g, u32 addr);
+		bool (*is_ltcs_ltss_addr)(struct gk20a *g, u32 addr);
+		bool (*is_ltcn_ltss_addr)(struct gk20a *g, u32 addr);
+		void (*split_lts_broadcast_addr)(struct gk20a *g, u32 addr,
+							u32 *priv_addr_table,
+							u32 *priv_addr_table_index);
+		void (*split_ltc_broadcast_addr)(struct gk20a *g, u32 addr,
+							u32 *priv_addr_table,
+							u32 *priv_addr_table_index);
 	} ltc;
 	struct {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
@@ -274,15 +283,6 @@ struct gpu_ops {
 				u32 *gpc_num, u32 *tpc_num);
 		u32 (*get_tpc_num)(struct gk20a *g, u32 addr);
 		u32 (*get_egpc_base)(struct gk20a *g);
-		bool (*is_ltcs_ltss_addr)(struct gk20a *g, u32 addr);
-		bool (*is_ltcn_ltss_addr)(struct gk20a *g, u32 addr);
-		bool (*get_lts_in_ltc_shared_base)(void);
-		void (*split_lts_broadcast_addr)(struct gk20a *g, u32 addr,
-					u32 *priv_addr_table,
-					u32 *priv_addr_table_index);
-		void (*split_ltc_broadcast_addr)(struct gk20a *g, u32 addr,
-					u32 *priv_addr_table,
-					u32 *priv_addr_table_index);
 		void (*detect_sm_arch)(struct gk20a *g);
 		int (*add_zbc_color)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index);

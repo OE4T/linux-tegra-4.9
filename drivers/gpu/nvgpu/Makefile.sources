@@ -55,7 +55,10 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/semaphore.c \
 	common/as.c \
 	common/rbtree.c \
-	common/ltc.c \
+	common/ltc/ltc.c \
+	common/ltc/ltc_gm20b.c \
+	common/ltc/ltc_gp10b.c \
+	common/ltc/ltc_gv11b.c  \
 	common/io_common.c \
 	common/ecc.c \
 	common/ce2.c \
@@ -149,7 +152,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gk20a/tsg_gk20a.c \
 	gk20a/mc_gk20a.c \
 	gm20b/hal_gm20b.c \
-	gm20b/ltc_gm20b.c \
 	gm20b/gr_gm20b.c \
 	gm20b/clk_gm20b.c \
 	gm20b/fifo_gm20b.c \
@@ -164,7 +166,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gp10b/ce_gp10b.c \
 	gp10b/mc_gp10b.c  \
 	gp10b/fifo_gp10b.c  \
-	gp10b/ltc_gp10b.c \
 	gp10b/mm_gp10b.c \
 	gp10b/pmu_gp10b.c \
 	gp10b/hal_gp10b.c \
@@ -176,7 +177,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	gv11b/gv11b.c  \
 	gv11b/dbg_gpu_gv11b.c  \
 	gv11b/mc_gv11b.c  \
-	gv11b/ltc_gv11b.c  \
 	gv11b/hal_gv11b.c \
 	gv11b/gr_gv11b.c \
 	gv11b/fifo_gv11b.c \

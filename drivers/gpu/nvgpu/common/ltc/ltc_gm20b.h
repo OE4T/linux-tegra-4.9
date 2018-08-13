@@ -22,9 +22,16 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GM20B_LTC
-#define _NVHOST_GM20B_LTC
+#ifndef NVGPU_LTC_GM20B
+#define NVGPU_LTC_GM20B
+
+#include <nvgpu/types.h>
+
+struct gk20a;
+struct gr_gk20a;
 struct gpu_ops;
+struct zbc_entry;
+enum gk20a_cbc_op;
 
 int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr);
 int gm20b_determine_L2_size_bytes(struct gk20a *g);
@@ -46,4 +53,14 @@ int gm20b_ltc_alloc_phys_cbc(struct gk20a *g,
 			     size_t compbit_backing_size);
 int gm20b_ltc_alloc_virt_cbc(struct gk20a *g,
 			     size_t compbit_backing_size);
+bool gm20b_ltc_pri_is_ltc_addr(struct gk20a *g, u32 addr);
+bool gm20b_ltc_is_ltcs_ltss_addr(struct gk20a *g, u32 addr);
+bool gm20b_ltc_is_ltcn_ltss_addr(struct gk20a *g, u32 addr);
+void gm20b_ltc_split_lts_broadcast_addr(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index);
+void gm20b_ltc_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index);
+
 #endif

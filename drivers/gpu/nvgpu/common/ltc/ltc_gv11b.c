@@ -24,8 +24,8 @@
 
 #include <nvgpu/io.h>
 #include "gk20a/gk20a.h"
-#include "gp10b/ltc_gp10b.h"
 
+#include "ltc_gp10b.h"
 #include "ltc_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_ltc_gv11b.h>

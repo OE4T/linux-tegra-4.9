@@ -977,8 +977,9 @@ void xhci_free_virt_device(struct xhci_hcd *xhci, int slot_id)
 	if (dev->out_ctx)
 		xhci_free_container_ctx(xhci, dev->out_ctx);
 
-	if (dev->udev && dev->udev->slot_id)
-		dev->udev->slot_id = 0;
+	/* udev already removed, so clear it's reference */
+	if (dev->udev)
+		dev->udev = NULL;
 	kfree(xhci->devs[slot_id]);
 	xhci->devs[slot_id] = NULL;
 }

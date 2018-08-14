@@ -40,8 +40,9 @@ u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 	 * Some iGPUs treat sysmem (i.e SoC DRAM) as vidmem. In these cases the
 	 * "sysmem" aperture should really be translated to VIDMEM.
 	 */
-	if (!nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE))
+	if (!nvgpu_is_enabled(g, NVGPU_MM_HONORS_APERTURE)) {
 		aperture = APERTURE_VIDMEM;
+	}
 
 	switch (aperture) {
 	case __APERTURE_SYSMEM_COH:
@@ -67,8 +68,9 @@ u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 	 * we add this translation step here.
 	 */
 	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) &&
-	    ap == APERTURE_SYSMEM)
+	    ap == APERTURE_SYSMEM) {
 		ap = __APERTURE_SYSMEM_COH;
+	}
 
 	return __nvgpu_aperture_mask(g, ap,
 				     sysmem_mask, sysmem_coh_mask, vidmem_mask);
@@ -115,15 +117,17 @@ u64 nvgpu_sgt_get_gpu_addr(struct gk20a *g, struct nvgpu_sgt *sgt,
 
 bool nvgpu_sgt_iommuable(struct gk20a *g, struct nvgpu_sgt *sgt)
 {
-	if (sgt->ops->sgt_iommuable)
+	if (sgt->ops->sgt_iommuable) {
 		return sgt->ops->sgt_iommuable(g, sgt);
+	}
 	return false;
 }
 
 void nvgpu_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt)
 {
-	if (sgt && sgt->ops->sgt_free)
+	if (sgt && sgt->ops->sgt_free) {
 		sgt->ops->sgt_free(g, sgt);
+	}
 }
 
 u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys)
@@ -131,8 +135,9 @@ u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys)
 	/* ensure it is not vidmem allocation */
 	WARN_ON(nvgpu_addr_is_vidmem_page_alloc(phys));
 
-	if (nvgpu_iommuable(g) && g->ops.mm.get_iommu_bit)
+	if (nvgpu_iommuable(g) && g->ops.mm.get_iommu_bit) {
 		return phys | 1ULL << g->ops.mm.get_iommu_bit(g);
+	}
 
 	return phys;
 }
@@ -157,8 +162,9 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 	 */
 	if (nvgpu_iommuable(g) &&
 	    nvgpu_sgt_iommuable(g, sgt) &&
-	    nvgpu_sgt_get_dma(sgt, sgt->sgl))
+	    nvgpu_sgt_get_dma(sgt, sgt->sgl)) {
 		return 1ULL << __ffs(nvgpu_sgt_get_dma(sgt, sgt->sgl));
+	}
 
 	/*
 	 * Otherwise the buffer is not iommuable (VIDMEM, for example) or we are
@@ -169,10 +175,11 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 		chunk_align = 1ULL << __ffs(nvgpu_sgt_get_phys(g, sgt, sgl) |
 					    nvgpu_sgt_get_length(sgt, sgl));
 
-		if (align)
+		if (align) {
 			align = min(align, chunk_align);
-		else
+		} else {
 			align = chunk_align;
+		}
 	}
 
 	return align;

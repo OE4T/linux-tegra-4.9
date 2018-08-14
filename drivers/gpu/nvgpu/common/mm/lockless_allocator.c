@@ -63,8 +63,9 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 	int head, new_head, ret;
 	u64 addr = 0;
 
-	if (len != pa->blk_size)
+	if (len != pa->blk_size) {
 		return 0;
+	}
 
 	head = NV_ACCESS_ONCE(pa->head);
 	while (head >= 0) {
@@ -80,10 +81,11 @@ static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 		head = NV_ACCESS_ONCE(pa->head);
 	}
 
-	if (addr)
+	if (addr) {
 		alloc_dbg(a, "Alloc node # %d @ addr 0x%llx", head, addr);
-	else
+	} else {
 		alloc_dbg(a, "Alloc failed!");
+	}
 
 	return addr;
 }
@@ -167,24 +169,28 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	u64 count;
 	struct nvgpu_lockless_allocator *a;
 
-	if (!blk_size)
+	if (!blk_size) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Ensure we have space for at least one node & there's no overflow.
 	 * In order to control memory footprint, we require count < INT_MAX
 	 */
 	count = length / blk_size;
-	if (!base || !count || count > INT_MAX)
+	if (!base || !count || count > INT_MAX) {
 		return -EINVAL;
+	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_lockless_allocator));
-	if (!a)
+	if (!a) {
 		return -ENOMEM;
+	}
 
 	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &pool_ops);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	a->next = nvgpu_vzalloc(g, sizeof(*a->next) * count);
 	if (!a->next) {

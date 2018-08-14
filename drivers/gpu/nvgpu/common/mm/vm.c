@@ -111,8 +111,9 @@ static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
 
 	__nvgpu_pd_cache_free_direct(g, pdb);
 
-	if (!pdb->entries)
+	if (!pdb->entries) {
 		return;
+	}
 
 	for (i = 0; i < pdb->num_entries; i++) {
 		__nvgpu_vm_free_entries(vm, &pdb->entries[i], 1);
@@ -204,8 +205,9 @@ int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size)
 {
 	u64 mask = ((u64)vm->big_page_size << 10) - 1;
 
-	if (base & mask || size & mask)
+	if (base & mask || size & mask) {
 		return 0;
+	}
 	return 1;
 }
 
@@ -223,19 +225,23 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	/*
 	 * Don't waste the memory on semaphores if we don't need them.
 	 */
-	if (nvgpu_is_enabled(g, NVGPU_HAS_SYNCPOINTS))
+	if (nvgpu_is_enabled(g, NVGPU_HAS_SYNCPOINTS)) {
 		return 0;
+	}
 
-	if (vm->sema_pool)
+	if (vm->sema_pool) {
 		return 0;
+	}
 
 	sema_sea = nvgpu_semaphore_sea_create(g);
-	if (!sema_sea)
+	if (!sema_sea) {
 		return -ENOMEM;
+	}
 
 	err = nvgpu_semaphore_pool_alloc(sema_sea, &vm->sema_pool);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	/*
 	 * Allocate a chunk of GPU VA space for mapping the semaphores. We will
@@ -287,11 +293,13 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	u64 kernel_vma_start, kernel_vma_limit;
 	struct gk20a *g = gk20a_from_mm(mm);
 
-	if (WARN_ON(kernel_reserved + low_hole > aperture_size))
+	if (WARN_ON(kernel_reserved + low_hole > aperture_size)) {
 		return -ENOMEM;
+	}
 
-	if (WARN_ON(vm->guest_managed && kernel_reserved != 0))
+	if (WARN_ON(vm->guest_managed && kernel_reserved != 0)) {
 		return -EINVAL;
+	}
 
 	nvgpu_log_info(g, "Init space for %s: valimit=0x%llx, "
 		       "LP size=0x%x lowhole=0x%llx",
@@ -308,8 +316,9 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	vm->vma[gmmu_page_size_small]  = &vm->user;
 	vm->vma[gmmu_page_size_big]    = &vm->user;
 	vm->vma[gmmu_page_size_kernel] = &vm->kernel;
-	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
+	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
 		vm->vma[gmmu_page_size_big] = &vm->user_lp;
+	}
 
 	vm->va_start  = low_hole;
 	vm->va_limit  = aperture_size;
@@ -332,8 +341,9 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	/* Initialize the page table data structures. */
 	strncpy(vm->name, name, min(strlen(name), sizeof(vm->name)));
 	err = nvgpu_gmmu_init_page_table(vm);
-	if (err)
+	if (err) {
 		goto clean_up_vgpu_vm;
+	}
 
 	/* Setup vma limits. */
 	if (kernel_reserved + low_hole < aperture_size) {
@@ -396,14 +406,15 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 * Determine if big pages are possible in this VM. If a split address
 	 * space is used then check the user_lp vma instead of the user vma.
 	 */
-	if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES))
+	if (nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
 		vm->big_pages = big_pages &&
 			nvgpu_big_pages_possible(vm, user_vma_start,
 					user_vma_limit - user_vma_start);
-	else
+	} else {
 		vm->big_pages = big_pages &&
 			nvgpu_big_pages_possible(vm, user_lp_vma_start,
 					user_lp_vma_limit - user_lp_vma_start);
+	}
 
 	/*
 	 * User VMA.
@@ -418,8 +429,9 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 						   SZ_4K,
 						   GPU_BALLOC_MAX_ORDER,
 						   GPU_ALLOC_GVA_SPACE);
-		if (err)
+		if (err) {
 			goto clean_up_page_tables;
+		}
 	} else {
 		/*
 		 * Make these allocator pointers point to the kernel allocator
@@ -443,8 +455,9 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 						   vm->big_page_size,
 						   GPU_BALLOC_MAX_ORDER,
 						   GPU_ALLOC_GVA_SPACE);
-		if (err)
+		if (err) {
 			goto clean_up_allocators;
+		}
 	}
 
 	/*
@@ -458,8 +471,9 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 					   SZ_4K,
 					   GPU_BALLOC_MAX_ORDER,
 					   kernel_vma_flags);
-	if (err)
+	if (err) {
 		goto clean_up_allocators;
+	}
 
 	vm->mapped_buffers = NULL;
 
@@ -475,19 +489,23 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 */
 	if (vm->va_limit > 4ULL * SZ_1G) {
 		err = nvgpu_init_sema_pool(vm);
-		if (err)
+		if (err) {
 			goto clean_up_allocators;
+		}
 	}
 
 	return 0;
 
 clean_up_allocators:
-	if (nvgpu_alloc_initialized(&vm->kernel))
+	if (nvgpu_alloc_initialized(&vm->kernel)) {
 		nvgpu_alloc_destroy(&vm->kernel);
-	if (nvgpu_alloc_initialized(&vm->user))
+	}
+	if (nvgpu_alloc_initialized(&vm->user)) {
 		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->user_lp))
+	}
+	if (nvgpu_alloc_initialized(&vm->user_lp)) {
 		nvgpu_alloc_destroy(&vm->user_lp);
+	}
 clean_up_page_tables:
 	/* Cleans up nvgpu_gmmu_init_page_table() */
 	__nvgpu_pd_cache_free_direct(g, &vm->pdb);
@@ -547,8 +565,9 @@ struct vm_gk20a *nvgpu_vm_init(struct gk20a *g,
 {
 	struct vm_gk20a *vm = nvgpu_kzalloc(g, sizeof(*vm));
 
-	if (!vm)
+	if (!vm) {
 		return NULL;
+	}
 
 	if (__nvgpu_vm_init(&g->mm, vm, big_page_size, low_hole,
 			    kernel_reserved, aperture_size, big_pages,
@@ -582,9 +601,10 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 		}
 	}
 
-	if (nvgpu_mem_is_valid(&g->syncpt_mem) && vm->syncpt_ro_map_gpu_va)
+	if (nvgpu_mem_is_valid(&g->syncpt_mem) && vm->syncpt_ro_map_gpu_va) {
 		nvgpu_gmmu_unmap(vm, &g->syncpt_mem,
 				vm->syncpt_ro_map_gpu_va);
+	}
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
@@ -603,12 +623,15 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 		nvgpu_kfree(vm->mm->g, vm_area);
 	}
 
-	if (nvgpu_alloc_initialized(&vm->kernel))
+	if (nvgpu_alloc_initialized(&vm->kernel)) {
 		nvgpu_alloc_destroy(&vm->kernel);
-	if (nvgpu_alloc_initialized(&vm->user))
+	}
+	if (nvgpu_alloc_initialized(&vm->user)) {
 		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->user_lp))
+	}
+	if (nvgpu_alloc_initialized(&vm->user_lp)) {
 		nvgpu_alloc_destroy(&vm->user_lp);
+	}
 
 	nvgpu_vm_free_entries(vm, &vm->pdb);
 
@@ -664,8 +687,9 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf(
 	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
 
 	nvgpu_rbtree_search(addr, &node, root);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	return mapped_buffer_from_rbtree_node(node);
 }
@@ -677,8 +701,9 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_range(
 	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
 
 	nvgpu_rbtree_range_search(addr, &node, root);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	return mapped_buffer_from_rbtree_node(node);
 }
@@ -690,8 +715,9 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
 	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
 
 	nvgpu_rbtree_less_than_search(addr, &node, root);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	return mapped_buffer_from_rbtree_node(node);
 }
@@ -746,8 +772,9 @@ void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 	int i;
 	struct vm_gk20a_mapping_batch batch;
 
-	if (num_buffers == 0)
+	if (num_buffers == 0) {
 		return;
+	}
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	nvgpu_vm_mapping_batch_start(&batch);
@@ -814,10 +841,11 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		 compr_kind : NVGPU_KIND_INVALID);
 	binfo.incompr_kind = incompr_kind;
 
-	if (compr_kind != NVGPU_KIND_INVALID)
+	if (compr_kind != NVGPU_KIND_INVALID) {
 		map_key_kind = compr_kind;
-	else
+	} else {
 		map_key_kind = incompr_kind;
+	}
 
 	/*
 	 * Check if this buffer is already mapped.
@@ -847,11 +875,12 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	}
 
 	align = nvgpu_sgt_alignment(g, sgt);
-	if (g->mm.disable_bigpage)
+	if (g->mm.disable_bigpage) {
 		binfo.pgsz_idx = gmmu_page_size_small;
-	else
+	} else {
 		binfo.pgsz_idx = __get_pte_size(vm, map_addr,
 						min_t(u64, binfo.size, align));
+	}
 	map_size = map_size ? map_size : binfo.size;
 	map_size = ALIGN(map_size, SZ_4K);
 
@@ -872,8 +901,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 						    map_size,
 						    binfo.pgsz_idx,
 						    &vm_area);
-		if (err)
+		if (err) {
 			goto clean_up;
+		}
 
 		va_allocated = false;
 	}
@@ -941,8 +971,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 						 comptags.lines - 1));
 					gk20a_comptags_finish_clear(
 						os_buf, err == 0);
-					if (err)
+					if (err) {
 						goto clean_up;
+					}
 				}
 			} else {
 				/*
@@ -955,8 +986,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		/*
 		 * Store the ctag offset for later use if we got the comptags
 		 */
-		if (comptags.lines)
+		if (comptags.lines) {
 			ctag_offset = comptags.offset;
+		}
 	}
 
 	/*
@@ -984,8 +1016,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	if (clear_ctags)
+	if (clear_ctags) {
 		clear_ctags = gk20a_comptags_start_clear(os_buf);
+	}
 
 	map_addr = g->ops.mm.gmmu_map(vm,
 				      map_addr,
@@ -1003,8 +1036,9 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 				      batch,
 				      aperture);
 
-	if (clear_ctags)
+	if (clear_ctags) {
 		gk20a_comptags_finish_clear(os_buf, map_addr != 0);
+	}
 
 	if (!map_addr) {
 		err = -ENOMEM;
@@ -1041,7 +1075,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	return mapped_buffer;
 
 clean_up:
-	if (mapped_buffer->addr)
+	if (mapped_buffer->addr) {
 		g->ops.mm.gmmu_unmap(vm,
 				     mapped_buffer->addr,
 				     mapped_buffer->size,
@@ -1051,6 +1085,7 @@ clean_up:
 				     mapped_buffer->vm_area ?
 				     mapped_buffer->vm_area->sparse : false,
 				     NULL);
+	}
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 clean_up_nolock:
 	nvgpu_kfree(g, mapped_buffer);
@@ -1132,14 +1167,16 @@ static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
 	nvgpu_timeout_init(vm->mm->g, &timeout, 50, NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) == 1)
+		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) == 1) {
 			break;
+		}
 		nvgpu_msleep(10);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					    "sync-unmap failed on 0x%llx"));
 
-	if (nvgpu_timeout_expired(&timeout))
+	if (nvgpu_timeout_expired(&timeout)) {
 		ret = -ETIMEDOUT;
+	}
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
@@ -1154,16 +1191,18 @@ void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer = __nvgpu_vm_find_mapped_buf(vm, offset);
-	if (!mapped_buffer)
+	if (!mapped_buffer) {
 		goto done;
+	}
 
 	if (mapped_buffer->flags & NVGPU_VM_MAP_FIXED_OFFSET) {
-		if (nvgpu_vm_unmap_sync_buffer(vm, mapped_buffer))
+		if (nvgpu_vm_unmap_sync_buffer(vm, mapped_buffer)) {
 			/*
 			 * Looks like we have failed... Better not continue in
 			 * case the buffer is in use.
 			 */
 			goto done;
+		}
 	}
 
 	/*

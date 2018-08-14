@@ -38,18 +38,20 @@
 
 #define __gmmu_dbg(g, attrs, fmt, args...)				\
 	do {								\
-		if (attrs->debug)					\
+		if (attrs->debug) {					\
 			nvgpu_info(g, fmt, ##args);			\
-		else							\
+		} else {						\
 			nvgpu_log(g, gpu_dbg_map, fmt, ##args);		\
+		}							\
 	} while (0)
 
 #define __gmmu_dbg_v(g, attrs, fmt, args...)				\
 	do {								\
-		if (attrs->debug)					\
+		if (attrs->debug) {					\
 			nvgpu_info(g, fmt, ##args);			\
-		else							\
+		} else {						\
 			nvgpu_log(g, gpu_dbg_map_v, fmt, ##args);	\
+		}							\
 	} while (0)
 
 static int pd_allocate(struct vm_gk20a *vm,
@@ -77,15 +79,17 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 
 	struct nvgpu_sgt *sgt = nvgpu_sgt_create_from_mem(g, mem);
 
-	if (!sgt)
+	if (!sgt) {
 		return -ENOMEM;
+	}
 
 	/*
 	 * If the GPU is IO coherent and the DMA API is giving us IO coherent
 	 * CPU mappings then we gotta make sure we use the IO coherent aperture.
 	 */
-	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM))
+	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM)) {
 		flags |= NVGPU_VM_MAP_IO_COHERENT;
+	}
 
 	/*
 	 * Later on, when we free this nvgpu_mem's GPU mapping, we are going to
@@ -94,10 +98,11 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	 * therefor we should not try and free it. But otherwise, if we do
 	 * manage the VA alloc, we obviously must free it.
 	 */
-	if (addr != 0)
+	if (addr != 0) {
 		mem->free_gpu_va = false;
-	else
+	} else {
 		mem->free_gpu_va = true;
+	}
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vaddr = g->ops.mm.gmmu_map(vm, addr,
@@ -196,8 +201,9 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 	pdb_size = ALIGN(pd_size(&vm->mmu_levels[0], &attrs), PAGE_SIZE);
 
 	err = __nvgpu_pd_cache_alloc_direct(vm->mm->g, &vm->pdb, pdb_size);
-	if (WARN_ON(err))
+	if (WARN_ON(err)) {
 		return err;
+	}
 
 	/*
 	 * One nvgpu_mb() is done after all mapping operations. Don't need
@@ -267,8 +273,9 @@ static int pd_allocate(struct vm_gk20a *vm,
 {
 	int err;
 
-	if (pd->mem)
+	if (pd->mem) {
 		return 0;
+	}
 
 	err = __nvgpu_pd_alloc(vm, pd, pd_size(l, attrs));
 	if (err) {
@@ -310,14 +317,16 @@ static int pd_allocate_children(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	if (pd->entries)
+	if (pd->entries) {
 		return 0;
+	}
 
 	pd->num_entries = pd_entries(l, attrs);
 	pd->entries = nvgpu_vzalloc(g, sizeof(struct nvgpu_gmmu_pd) *
 				    pd->num_entries);
-	if (!pd->entries)
+	if (!pd->entries) {
 		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -398,8 +407,9 @@ static int __set_pd_level(struct vm_gk20a *vm,
 		 * have a bunch of children PDs.
 		 */
 		if (next_l->update_entry) {
-			if (pd_allocate_children(vm, l, pd, attrs))
+			if (pd_allocate_children(vm, l, pd, attrs)) {
 				return -ENOMEM;
+			}
 
 			/*
 			 * Get the next PD so that we know what to put in this
@@ -412,8 +422,9 @@ static int __set_pd_level(struct vm_gk20a *vm,
 			/*
 			 * Allocate the backing memory for next_pd.
 			 */
-			if (pd_allocate(vm, next_pd, next_l, attrs))
+			if (pd_allocate(vm, next_pd, next_l, attrs)) {
 				return -ENOMEM;
+			}
 		}
 
 		/*
@@ -440,8 +451,9 @@ static int __set_pd_level(struct vm_gk20a *vm,
 					     chunk_size,
 					     attrs);
 
-			if (err)
+			if (err) {
 				return err;
+			}
 		}
 
 		virt_addr += chunk_size;
@@ -452,8 +464,9 @@ static int __set_pd_level(struct vm_gk20a *vm,
 		 * non-zero phys addresses in the PTEs. A non-zero phys-addr
 		 * would also confuse the lower level PTE programming code.
 		 */
-		if (phys_addr)
+		if (phys_addr) {
 			phys_addr += chunk_size;
+		}
 		length -= chunk_size;
 	}
 
@@ -547,8 +560,9 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 				     virt_addr,
 				     chunk_length,
 				     attrs);
-		if (err)
+		if (err) {
 			break;
+		}
 
 		/* Space has been skipped so zero this for future chunks. */
 		space_to_skip = 0;
@@ -559,8 +573,9 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 		virt_addr += chunk_length;
 		length    -= chunk_length;
 
-		if (length == 0)
+		if (length == 0) {
 			break;
+		}
 	}
 
 	return err;
@@ -594,13 +609,15 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 
 	/* note: here we need to map kernel to small, since the
 	 * low-level mmu code assumes 0 is small and 1 is big pages */
-	if (attrs->pgsz == gmmu_page_size_kernel)
+	if (attrs->pgsz == gmmu_page_size_kernel) {
 		attrs->pgsz = gmmu_page_size_small;
+	}
 
 	page_size = vm->gmmu_page_sizes[attrs->pgsz];
 
-	if (space_to_skip & (page_size - 1))
+	if (space_to_skip & (page_size - 1)) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Update length to be aligned to the passed page size.
@@ -692,8 +709,9 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	 * the programmed ctagline gets increased at compression_page_size
 	 * boundaries.
 	 */
-	if (attrs.ctag)
+	if (attrs.ctag) {
 		attrs.ctag += buffer_offset & (ctag_granularity - 1U);
+	}
 
 	attrs.l3_alloc = (bool)(flags & NVGPU_VM_MAP_L3_ALLOC);
 
@@ -701,8 +719,9 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	 * Handle the IO coherency aperture: make sure the .aperture field is
 	 * correct based on the IO coherency flag.
 	 */
-	if (attrs.coherent && attrs.aperture == APERTURE_SYSMEM)
+	if (attrs.coherent && attrs.aperture == APERTURE_SYSMEM) {
 		attrs.aperture = __APERTURE_SYSMEM_COH;
+	}
 
 	/*
 	 * Only allocate a new GPU VA range if we haven't already been passed a
@@ -725,16 +744,18 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		goto fail_validate;
 	}
 
-	if (!batch)
+	if (!batch) {
 		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
-	else
+	} else {
 		batch->need_tlb_invalidate = true;
+	}
 
 	return vaddr;
 
 fail_validate:
-	if (allocated)
+	if (allocated) {
 		__nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
+	}
 fail_alloc:
 	nvgpu_err(g, "%s: failed with err=%d", __func__, err);
 	return 0;
@@ -775,8 +796,9 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	/* unmap here needs to know the page size we assigned at mapping */
 	err = __nvgpu_gmmu_update_page_table(vm, NULL, 0,
 					     vaddr, size, &attrs);
-	if (err)
+	if (err) {
 		nvgpu_err(g, "failed to update gmmu ptes on unmap");
+	}
 
 	if (!batch) {
 		gk20a_mm_l2_flush(g, true);
@@ -801,8 +823,9 @@ u32 __nvgpu_pte_words(struct gk20a *g)
 	 */
 	do {
 		next_l = l + 1;
-		if (!next_l->update_entry)
+		if (!next_l->update_entry) {
 			break;
+		}
 
 		l++;
 	} while (true);
@@ -836,13 +859,15 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 		struct nvgpu_gmmu_pd *pd_next = pd->entries + pd_idx;
 
 		/* Invalid entry! */
-		if (!pd_next->mem)
+		if (!pd_next->mem) {
 			return -EINVAL;
+		}
 
 		attrs->pgsz = l->get_pgsz(g, l, pd, pd_idx);
 
-		if (attrs->pgsz >= gmmu_nr_page_sizes)
+		if (attrs->pgsz >= gmmu_nr_page_sizes) {
 			return -EINVAL;
+		}
 
 		return __nvgpu_locate_pte(g, vm, pd_next,
 					  vaddr, lvl + 1, attrs,
@@ -850,8 +875,9 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 					  pd_offs_out);
 	}
 
-	if (!pd->mem)
+	if (!pd->mem) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Take into account the real offset into the nvgpu_mem since the PD
@@ -867,14 +893,17 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 		}
 	}
 
-	if (pd_out)
+	if (pd_out) {
 		*pd_out = pd;
+	}
 
-	if (pd_idx_out)
+	if (pd_idx_out) {
 		*pd_idx_out = pd_idx;
+	}
 
-	if (pd_offs_out)
+	if (pd_offs_out) {
 		*pd_offs_out = pd_offset_from_index(l, pd_idx);
+	}
 
 	return 0;
 }
@@ -903,8 +932,9 @@ int __nvgpu_set_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte)
 	err = __nvgpu_locate_pte(g, vm, &vm->pdb,
 				 vaddr, 0, &attrs,
 				 NULL, &pd, &pd_idx, &pd_offs);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	pte_size = __nvgpu_pte_words(g);
 

@@ -79,10 +79,12 @@ static void balloc_compute_max_order(struct nvgpu_buddy_allocator *a)
 		return;
 	}
 
-	if (a->max_order > true_max_order)
+	if (a->max_order > true_max_order) {
 		a->max_order = true_max_order;
-	if (a->max_order > GPU_BALLOC_MAX_ORDER)
+	}
+	if (a->max_order > GPU_BALLOC_MAX_ORDER) {
 		a->max_order = GPU_BALLOC_MAX_ORDER;
+	}
 }
 
 /*
@@ -108,8 +110,9 @@ static struct nvgpu_buddy *balloc_new_buddy(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *new_buddy;
 
 	new_buddy = nvgpu_kmem_cache_alloc(a->buddy_cache);
-	if (!new_buddy)
+	if (!new_buddy) {
 		return NULL;
+	}
 
 	memset(new_buddy, 0, sizeof(struct nvgpu_buddy));
 
@@ -139,10 +142,11 @@ static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
 	 * without cycling through the entire list.
 	 */
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    b->pte_size == gmmu_page_size_big)
+	    b->pte_size == gmmu_page_size_big) {
 		nvgpu_list_add_tail(&b->buddy_entry, list);
-	else
+	} else {
 		nvgpu_list_add(&b->buddy_entry, list);
+	}
 
 	buddy_set_in_list(b);
 }
@@ -181,8 +185,9 @@ static void balloc_blist_rem(struct nvgpu_buddy_allocator *a,
 
 static u64 balloc_get_order(struct nvgpu_buddy_allocator *a, u64 len)
 {
-	if (len == 0)
+	if (len == 0) {
 		return 0;
+	}
 
 	len--;
 	len >>= a->blk_shift;
@@ -195,10 +200,11 @@ static u64 __balloc_max_order_in(struct nvgpu_buddy_allocator *a,
 {
 	u64 size = (end - start) >> a->blk_shift;
 
-	if (size > 0)
+	if (size > 0) {
 		return min_t(u64, ilog2(size), a->max_order);
-	else
+	} else {
 		return GPU_BALLOC_MAX_ORDER;
+	}
 }
 
 /*
@@ -222,8 +228,9 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 		order = __balloc_max_order_in(a, bstart, bend);
 
 		buddy = balloc_new_buddy(a, NULL, bstart, order);
-		if (!buddy)
+		if (!buddy) {
 			goto cleanup;
+		}
 
 		balloc_blist_add(a, buddy);
 		bstart += balloc_order_to_len(a, order);
@@ -340,17 +347,20 @@ static void balloc_coalesce(struct nvgpu_buddy_allocator *a,
 {
 	struct nvgpu_buddy *parent;
 
-	if (buddy_is_alloced(b) || buddy_is_split(b))
+	if (buddy_is_alloced(b) || buddy_is_split(b)) {
 		return;
+	}
 
 	/*
 	 * If both our buddy and I are both not allocated and not split then
 	 * we can coalesce ourselves.
 	 */
-	if (!b->buddy)
+	if (!b->buddy) {
 		return;
-	if (buddy_is_alloced(b->buddy) || buddy_is_split(b->buddy))
+	}
+	if (buddy_is_alloced(b->buddy) || buddy_is_split(b->buddy)) {
 		return;
+	}
 
 	parent = b->parent;
 
@@ -383,8 +393,9 @@ static int balloc_split_buddy(struct nvgpu_buddy_allocator *a,
 	u64 half;
 
 	left = balloc_new_buddy(a, b, b->start, b->order - 1);
-	if (!left)
+	if (!left) {
 		return -ENOMEM;
+	}
 
 	half = (b->end - b->start) / 2;
 
@@ -449,8 +460,9 @@ static struct nvgpu_buddy *balloc_free_buddy(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *bud;
 
 	nvgpu_rbtree_search(addr, &node, a->alloced_buddies);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	bud = nvgpu_buddy_from_rbtree_node(node);
 
@@ -470,21 +482,24 @@ static struct nvgpu_buddy *__balloc_find_buddy(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *bud;
 
 	if (order > a->max_order ||
-	    nvgpu_list_empty(balloc_get_order_list(a, order)))
+	    nvgpu_list_empty(balloc_get_order_list(a, order))) {
 		return NULL;
+	}
 
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    pte_size == gmmu_page_size_big)
+	    pte_size == gmmu_page_size_big) {
 		bud = nvgpu_list_last_entry(balloc_get_order_list(a, order),
 				      nvgpu_buddy, buddy_entry);
-	else
+	} else {
 		bud = nvgpu_list_first_entry(balloc_get_order_list(a, order),
 				       nvgpu_buddy, buddy_entry);
+	}
 
 	if (pte_size != BALLOC_PTE_SIZE_ANY &&
 	    pte_size != bud->pte_size &&
-	    bud->pte_size != BALLOC_PTE_SIZE_ANY)
+	    bud->pte_size != BALLOC_PTE_SIZE_ANY) {
 		return NULL;
+	}
 
 	return bud;
 }
@@ -511,12 +526,14 @@ static u64 __balloc_do_alloc(struct nvgpu_buddy_allocator *a,
 	}
 
 	/* Out of memory! */
-	if (!bud)
+	if (!bud) {
 		return 0;
+	}
 
 	while (bud->order != order) {
-		if (balloc_split_buddy(a, bud, pte_size))
+		if (balloc_split_buddy(a, bud, pte_size)) {
 			return 0; /* No mem... */
+		}
 		bud = bud->left;
 	}
 
@@ -540,19 +557,22 @@ static int balloc_is_range_free(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *bud;
 
 	nvgpu_rbtree_enum_start(0, &node, a->alloced_buddies);
-	if (!node)
+	if (!node) {
 		return 1; /* No allocs yet. */
+	}
 
 	bud = nvgpu_buddy_from_rbtree_node(node);
 
 	while (bud->start < end) {
 		if ((bud->start > base && bud->start < end) ||
-		    (bud->end   > base && bud->end   < end))
+		    (bud->end   > base && bud->end   < end)) {
 			return 0;
+		}
 
 		nvgpu_rbtree_enum_next(&node, node);
-		if (!node)
+		if (!node) {
 			break;
+		}
 		bud = nvgpu_buddy_from_rbtree_node(node);
 	}
 
@@ -581,8 +601,9 @@ static struct nvgpu_fixed_alloc *balloc_free_fixed(
 	struct nvgpu_rbtree_node *node = NULL;
 
 	nvgpu_rbtree_search(addr, &node, a->fixed_allocs);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	falloc = nvgpu_fixed_alloc_from_rbtree_node(node);
 
@@ -657,8 +678,9 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 			}
 		}
 
-		if (found)
+		if (found) {
 			break;
+		}
 
 		__balloc_get_parent_range(a, cur_base, cur_order,
 					  &cur_base, &cur_order);
@@ -679,10 +701,11 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 			return NULL;
 		}
 
-		if (base < bud->right->start)
+		if (base < bud->right->start) {
 			bud = bud->left;
-		else
+		} else {
 			bud = bud->right;
+		}
 
 	}
 
@@ -697,12 +720,13 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 	u64 align_order;
 
 	shifted_base = balloc_base_shift(a, base);
-	if (shifted_base == 0)
+	if (shifted_base == 0) {
 		align_order = __fls(len >> a->blk_shift);
-	else
+	} else {
 		align_order = min_t(u64,
 				    __ffs(shifted_base >> a->blk_shift),
 				    __fls(len >> a->blk_shift));
+	}
 
 	if (align_order > a->max_order) {
 		alloc_dbg(balloc_owner(a),
@@ -741,9 +765,10 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 		align_order = __ffs(inc_base >> a->blk_shift);
 
 		/* If we don't have much left - trim down align_order. */
-		if (balloc_order_to_len(a, align_order) > remaining)
+		if (balloc_order_to_len(a, align_order) > remaining) {
 			align_order = __balloc_max_order_in(a, inc_base,
 							inc_base + remaining);
+		}
 	}
 
 	return base;
@@ -805,10 +830,11 @@ static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 		return 0;
 	}
 
-	if (a->flags & GPU_ALLOC_GVA_SPACE)
+	if (a->flags & GPU_ALLOC_GVA_SPACE) {
 		pte_size = __get_pte_size(a->vm, 0, len);
-	else
+	} else {
 		pte_size = BALLOC_PTE_SIZE_ANY;
+	}
 
 	addr = __balloc_do_alloc(a, order, pte_size);
 
@@ -845,25 +871,29 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
 	/* If base isn't aligned to an order 0 block, fail. */
-	if (base & (a->blk_size - 1))
+	if (base & (a->blk_size - 1)) {
 		goto fail;
+	}
 
-	if (len == 0)
+	if (len == 0) {
 		goto fail;
+	}
 
 	/* Check that the page size is valid. */
 	if (a->flags & GPU_ALLOC_GVA_SPACE && a->vm->big_pages) {
-		if (page_size == a->vm->big_page_size)
+		if (page_size == a->vm->big_page_size) {
 			pte_size = gmmu_page_size_big;
-		else if (page_size == SZ_4K)
+		} else if (page_size == SZ_4K) {
 			pte_size = gmmu_page_size_small;
-		else
+		} else {
 			goto fail;
+		}
 	}
 
 	falloc = nvgpu_kmalloc(nvgpu_alloc_to_gpu(__a), sizeof(*falloc));
-	if (!falloc)
+	if (!falloc) {
 		goto fail;
+	}
 
 	nvgpu_init_list_node(&falloc->buddies);
 	falloc->start = base;
@@ -936,8 +966,9 @@ static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 	struct nvgpu_fixed_alloc *falloc;
 	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	if (!addr)
+	if (!addr) {
 		return;
+	}
 
 	alloc_lock(__a);
 
@@ -952,8 +983,9 @@ static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 	}
 
 	bud = balloc_free_buddy(a, addr);
-	if (!bud)
+	if (!bud) {
 		goto done;
+	}
 
 	balloc_blist_add(a, bud);
 	a->bytes_freed += balloc_order_to_len(a, bud->order);
@@ -987,8 +1019,9 @@ static bool nvgpu_buddy_reserve_is_possible(struct nvgpu_buddy_allocator *a,
 		if ((co_base >= tmp->base &&
 		     co_base < (tmp->base + tmp->length)) ||
 		    (co_end >= tmp->base &&
-		     co_end < (tmp->base + tmp->length)))
+		     co_end < (tmp->base + tmp->length))) {
 			return false;
+		}
 	}
 
 	return true;
@@ -1006,8 +1039,9 @@ static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
 	int err = 0;
 
 	if (co->base < a->start || (co->base + co->length) > a->end ||
-	    a->alloc_made)
+	    a->alloc_made) {
 		return -EINVAL;
+	}
 
 	alloc_lock(__a);
 
@@ -1221,25 +1255,31 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	struct nvgpu_buddy_allocator *a;
 
 	/* blk_size must be greater than 0 and a power of 2. */
-	if (blk_size == 0)
+	if (blk_size == 0) {
 		return -EINVAL;
-	if (blk_size & (blk_size - 1))
+	}
+	if (blk_size & (blk_size - 1)) {
 		return -EINVAL;
+	}
 
-	if (max_order > GPU_BALLOC_MAX_ORDER)
+	if (max_order > GPU_BALLOC_MAX_ORDER) {
 		return -EINVAL;
+	}
 
 	/* If this is to manage a GVA space we need a VM. */
-	if (flags & GPU_ALLOC_GVA_SPACE && !vm)
+	if (flags & GPU_ALLOC_GVA_SPACE && !vm) {
 		return -EINVAL;
+	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_buddy_allocator));
-	if (!a)
+	if (!a) {
 		return -ENOMEM;
+	}
 
 	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &buddy_ops);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	a->base = base;
 	a->length = size;
@@ -1269,8 +1309,9 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	 */
 	if (flags & GPU_ALLOC_GVA_SPACE && vm->big_pages &&
 	    (base & ((vm->big_page_size << 10) - 1) ||
-	     size & ((vm->big_page_size << 10) - 1)))
+	     size & ((vm->big_page_size << 10) - 1))) {
 		return -EINVAL;
+	}
 
 	a->flags = flags;
 	a->max_order = max_order;
@@ -1288,8 +1329,9 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->fixed_allocs = NULL;
 	nvgpu_init_list_node(&a->co_list);
 	err = balloc_init_lists(a);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	nvgpu_smp_wmb();
 	a->initialized = 1;
@@ -1301,18 +1343,20 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	alloc_dbg(__a, "               base      0x%llx", a->base);
 	alloc_dbg(__a, "               size      0x%llx", a->length);
 	alloc_dbg(__a, "               blk_size  0x%llx", a->blk_size);
-	if (flags & GPU_ALLOC_GVA_SPACE)
+	if (flags & GPU_ALLOC_GVA_SPACE) {
 		alloc_dbg(balloc_owner(a),
 		       "               pde_size  0x%llx",
 			  balloc_order_to_len(a, a->pte_blk_order));
+	}
 	alloc_dbg(__a, "               max_order %llu", a->max_order);
 	alloc_dbg(__a, "               flags     0x%llx", a->flags);
 
 	return 0;
 
 fail:
-	if (a->buddy_cache)
+	if (a->buddy_cache) {
 		nvgpu_kmem_cache_destroy(a->buddy_cache);
+	}
 	nvgpu_kfree(g, a);
 	return err;
 }

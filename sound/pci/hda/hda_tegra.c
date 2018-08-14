@@ -89,6 +89,7 @@ static const struct of_device_id tegra_disb_pd[] = {
 /* GSC_ID register */
 #define HDA_GSC_REG		0x1e0
 
+#define HDA_MAX_CODECS		8
 #define CHAR_BUF_SIZE_MAX	50
 
 struct hda_pcm_devices {
@@ -714,7 +715,7 @@ static int hda_tegra_create_sysfs(struct hda_tegra *hda)
 	/* maintains list of all hda codecs */
 	hda->hda_pcm_dev =
 		(struct hda_pcm_devices *) devm_kzalloc(hda->dev,
-		sizeof(struct hda_pcm_devices) * hda->num_codecs,
+		sizeof(struct hda_pcm_devices) * azx_bus(chip)->num_codecs,
 		GFP_KERNEL);
 	if (!hda->hda_pcm_dev)
 		return -ENOMEM;
@@ -782,7 +783,7 @@ static void hda_tegra_remove_sysfs(struct device *dev)
 	if (!hda || !hda->hda_pcm_dev || !hda->kobj)
 		return;
 
-	for (i = 0; i < hda->num_codecs; i++) {
+	for (i = 0; i < azx_bus(chip)->num_codecs; i++) {
 		struct hda_pcm_devices *pcm_dev = &hda->hda_pcm_dev[i];
 
 		if (pcm_dev->kobj) {
@@ -812,7 +813,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 
 	if (of_property_read_u32(np, "nvidia,max-codec-slot",
 			&hda->num_codecs) < 0)
-		hda->num_codecs = 0;
+		hda->num_codecs = HDA_MAX_CODECS;
 
 	bus->avoid_compact_sdo_bw = of_property_read_bool(np,
 		"nvidia,avoid-compact-sdo-bw");

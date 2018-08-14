@@ -129,10 +129,21 @@ static inline int current_has_network(void)
 {
 	return in_egroup_p(AID_INET) || capable(CAP_NET_RAW);
 }
+
+static inline int net_bind_service_capable(struct user_namespace *ns)
+{
+	return in_egroup_p(AID_NET_BIND_SERVICE) ||
+		ns_capable(ns, CAP_NET_BIND_SERVICE);
+}
 #else
 static inline int current_has_network(void)
 {
 	return 1;
+}
+
+static inline int net_bind_service_capable(struct user_namespace *ns)
+{
+	return ns_capable(ns, CAP_NET_BIND_SERVICE);
 }
 #endif
 
@@ -489,7 +500,7 @@ int inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	snum = ntohs(addr->sin_port);
 	err = -EACCES;
 	if (snum && snum < PROT_SOCK &&
-	    !ns_capable(net->user_ns, CAP_NET_BIND_SERVICE))
+	    !net_bind_service_capable(net->user_ns))
 		goto out;
 
 	/*      We keep a pair of addresses. rcv_saddr is the one

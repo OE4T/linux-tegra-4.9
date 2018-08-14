@@ -197,7 +197,6 @@ struct channel_gk20a {
 	struct nvgpu_list_node free_chs;
 
 	struct nvgpu_spinlock ref_obtain_lock;
-	bool referenceable;
 	nvgpu_atomic_t ref_count;
 	struct nvgpu_cond ref_count_dec_wq;
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
@@ -214,19 +213,14 @@ struct channel_gk20a {
 
 	struct nvgpu_semaphore_int *hw_sema;
 
-	int chid;
 	nvgpu_atomic_t bound;
-	bool vpr;
-	bool deterministic;
-	/* deterministic, but explicitly idle and submits disallowed */
-	bool deterministic_railgate_allowed;
-	bool cde;
-	bool usermode_submit_enabled;
+
+	int chid;
+	int tsgid;
 	pid_t pid;
 	pid_t tgid;
 	struct nvgpu_mutex ioctl_lock;
 
-	int tsgid;
 	struct nvgpu_list_node ch_entry; /* channel's entry in TSG */
 
 	struct channel_gk20a_joblist joblist;
@@ -242,15 +236,10 @@ struct channel_gk20a {
 	u64 userd_iova;
 	u64 userd_gpu_va;
 
-	u32 obj_class;	/* we support only one obj per channel */
-
 	struct priv_cmd_queue priv_cmd_q;
 
 	struct nvgpu_cond notifier_wq;
 	struct nvgpu_cond semaphore_wq;
-
-	u32 timeout_accumulated_ms;
-	u32 timeout_gpfifo_get;
 
 	/* kernel watchdog to kill stuck jobs */
 	struct channel_gk20a_timeout timeout;
@@ -271,32 +260,43 @@ struct channel_gk20a {
 	struct nvgpu_mutex dbg_s_lock;
 	struct nvgpu_list_node dbg_s_list;
 
-	bool has_timedout;
-	u32 timeout_ms_max;
-	bool timeout_debug_dump;
-
 	struct nvgpu_mutex sync_lock;
 	struct gk20a_channel_sync *sync;
 	struct gk20a_channel_sync *user_sync;
 
-	bool has_os_fence_framework_support;
-
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
-
-	u32 runlist_id;
-
-	bool is_privileged_channel;
-	u32 subctx_id;
-	u32 runqueue_sel;
 
 	struct ctx_header_desc ctx_header;
 
 	/* Any operating system specific data. */
 	void *os_priv;
 
+	u32 obj_class;	/* we support only one obj per channel */
+
+	u32 timeout_accumulated_ms;
+	u32 timeout_gpfifo_get;
+
+	u32 subctx_id;
+	u32 runqueue_sel;
+
+	u32 timeout_ms_max;
+	u32 runlist_id;
+
 	bool mmu_nack_handled;
+	bool has_timedout;
+	bool referenceable;
+	bool vpr;
+	bool deterministic;
+	/* deterministic, but explicitly idle and submits disallowed */
+	bool deterministic_railgate_allowed;
+	bool cde;
+	bool usermode_submit_enabled;
+	bool timeout_debug_dump;
+	bool has_os_fence_framework_support;
+
+	bool is_privileged_channel;
 };
 
 static inline struct channel_gk20a *

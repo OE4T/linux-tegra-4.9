@@ -42,34 +42,33 @@ struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch);
 struct tsg_gk20a {
 	struct gk20a *g;
 
-	bool in_use;
-	int tsgid;
+	struct vm_gk20a *vm;
+	struct nvgpu_mem *eng_method_buffers;
 
+
+	struct nvgpu_gr_ctx gr_ctx;
 	struct nvgpu_ref refcount;
 
 	struct nvgpu_list_node ch_list;
-	int num_active_channels;
+	struct nvgpu_list_node event_id_list;
 	struct nvgpu_rwsem ch_list_lock;
+	struct nvgpu_mutex event_id_list_lock;
+	int num_active_channels;
 
 	unsigned int timeslice_us;
 	unsigned int timeslice_timeout;
 	unsigned int timeslice_scale;
 
-	struct vm_gk20a *vm;
-
 	u32 interleave_level;
-
-	struct nvgpu_list_node event_id_list;
-	struct nvgpu_mutex event_id_list_lock;
+	int tsgid;
 
 	u32 runlist_id;
 	pid_t tgid;
-	struct nvgpu_mem *eng_method_buffers;
 	u32  num_active_tpcs;
 	u8   tpc_pg_enabled;
 	bool tpc_num_initialized;
+	bool in_use;
 
-	struct nvgpu_gr_ctx gr_ctx;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

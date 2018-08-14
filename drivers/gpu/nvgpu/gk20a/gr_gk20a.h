@@ -453,7 +453,6 @@ struct nvgpu_gr_ctx {
 
 	u32 graphics_preempt_mode;
 	u32 compute_preempt_mode;
-	bool boosted_ctx;
 
 	struct nvgpu_mem preempt_ctxsw_buffer;
 	struct nvgpu_mem spill_ctxsw_buffer;
@@ -462,11 +461,12 @@ struct nvgpu_gr_ctx {
 	u32 ctx_id;
 	bool ctx_id_valid;
 	bool cilp_preempt_pending;
+	bool boosted_ctx;
+	bool golden_img_loaded;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
-	bool golden_img_loaded;
 
 	struct patch_desc	patch_ctx;
 	struct zcull_ctx_desc	zcull_ctx;

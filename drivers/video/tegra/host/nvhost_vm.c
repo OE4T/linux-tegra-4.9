@@ -35,6 +35,11 @@ void nvhost_vm_release_firmware_area(struct platform_device *pdev,
 	int region = (dma_addr - firmware_area->dma_addr) / SZ_4K;
 	int order = get_order(size);
 
+	if (!host->info.firmware_area_size) {
+		nvhost_err(&pdev->dev, "no firmware area allocated");
+		return;
+	}
+
 	/* release the allocated area */
 	mutex_lock(&firmware_area->mutex);
 	bitmap_release_region(firmware_area->bitmap, region, order);
@@ -48,6 +53,11 @@ void *nvhost_vm_allocate_firmware_area(struct platform_device *pdev,
 	struct nvhost_vm_firmware_area *firmware_area = &host->firmware_area;
 	int order = get_order(size);
 	int region;
+
+	if (!host->info.firmware_area_size) {
+		nvhost_err(&pdev->dev, "no firmware area allocated");
+		return ERR_PTR(-ENODEV);
+	}
 
 	/* find free area */
 	mutex_lock(&firmware_area->mutex);
@@ -72,8 +82,16 @@ int nvhost_vm_init(struct platform_device *pdev)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
 	struct nvhost_vm_firmware_area *firmware_area = &host->firmware_area;
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
+#endif
+
+	/* No need to allocate firmware area */
+	if (!host->info.firmware_area_size)
+		return 0;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 #endif
 

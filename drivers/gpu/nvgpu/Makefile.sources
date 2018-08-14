@@ -27,7 +27,7 @@ srcs :=	os/posix/nvgpu.c \
 	os/posix/kmem.c \
 	os/posix/io.c \
 	os/posix/posix-nvgpu_mem.c \
-	os/posix/dma.c \
+	os/posix/posix-dma.c \
 	os/posix/posix-vm.c \
 	os/posix/timers.c \
 	os/posix/posix-comptags.c \
@@ -56,6 +56,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/mm/nvgpu_mem.c \
 	common/mm/comptags.c \
 	common/mm/mm.c \
+	common/mm/dma.c \
 	common/bus/bus_gk20a.c \
 	common/bus/bus_gm20b.c \
 	common/bus/bus_gp10b.c \

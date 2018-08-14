@@ -20,45 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdlib.h>
-
 #include <nvgpu/mm.h>
 #include <nvgpu/vm.h>
-#include <nvgpu/bug.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/gmmu.h>
-#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/enabled.h>
-
-/*
- * In userspace vidmem vs sysmem is just a difference in what is placed in the
- * aperture field.
- */
-static int __nvgpu_do_dma_alloc(struct gk20a *g, unsigned long flags,
-				size_t size, struct nvgpu_mem *mem,
-				enum nvgpu_aperture ap)
-{
-	void *memory = malloc(mem->aligned_size);
-
-	if (memory == NULL)
-		return -ENOMEM;
-
-	mem->cpu_va       = memory;
-	mem->aperture     = ap;
-	mem->size         = size;
-	mem->aligned_size = PAGE_ALIGN(size);
-	mem->gpu_va       = 0ULL;
-	mem->skip_wmb     = true;
-	mem->vidmem_alloc = NULL;
-	mem->allocator    = NULL;
-
-	return 0;
-}
-
-bool nvgpu_iommuable(struct gk20a *g)
-{
-	return false;
-}
+#include <nvgpu/nvgpu_mem.h>
 
 int nvgpu_dma_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
@@ -66,15 +33,22 @@ int nvgpu_dma_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 }
 
 int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
-			  struct nvgpu_mem *mem)
+		struct nvgpu_mem *mem)
 {
 	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
 		/*
-		 * First try vidmem. Obviously in userspace there's no such
-		 * thing as vidmem per se but we will mark the aperture as
-		 * vidmem.
+		 * Force the no-kernel-mapping flag on because we don't support
+		 * the lack of it for vidmem - the user should not care when
+		 * using nvgpu_gmmu_alloc_map and it's vidmem, or if there's a
+		 * difference, the user should use the flag explicitly anyway.
+		 *
+		 * Incoming flags are ignored here, since bits other than the
+		 * no-kernel-mapping flag are ignored by the vidmem mapping
+		 * functions anyway.
 		 */
-		int err = nvgpu_dma_alloc_flags_vid(g, 0, size, mem);
+		int err = nvgpu_dma_alloc_flags_vid(g,
+				NVGPU_DMA_NO_KERNEL_MAPPING,
+				size, mem);
 
 		if (!err)
 			return 0;
@@ -85,7 +59,6 @@ int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 	}
 
 	return nvgpu_dma_alloc_flags_sys(g, flags, size, mem);
-
 }
 
 int nvgpu_dma_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
@@ -93,45 +66,23 @@ int nvgpu_dma_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 	return nvgpu_dma_alloc_flags_sys(g, 0, size, mem);
 }
 
-int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
-			      size_t size, struct nvgpu_mem *mem)
-{
-	return __nvgpu_do_dma_alloc(g, flags, size, mem, APERTURE_SYSMEM);
-}
-
 int nvgpu_dma_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
-	return nvgpu_dma_alloc_flags_vid(g, 0, size, mem);
+	return nvgpu_dma_alloc_flags_vid(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
 int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
-			      size_t size, struct nvgpu_mem *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
-	return __nvgpu_do_dma_alloc(g, flags, size, mem, APERTURE_VIDMEM);
+	return nvgpu_dma_alloc_flags_vid_at(g, flags, size, mem, 0);
 }
 
 int nvgpu_dma_alloc_vid_at(struct gk20a *g,
-				 size_t size, struct nvgpu_mem *mem, u64 at)
+		size_t size, struct nvgpu_mem *mem, u64 at)
 {
-	BUG();
-
-	return 0;
-}
-
-int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-				 size_t size, struct nvgpu_mem *mem, u64 at)
-{
-	BUG();
-
-	return 0;
-}
-
-void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
-{
-	if (!(mem->mem_flags & NVGPU_MEM_FLAG_SHADOW_COPY))
-		free(mem->cpu_va);
-
-	memset(mem, 0, sizeof(*mem));
+	return nvgpu_dma_alloc_flags_vid_at(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem, at);
 }
 
 int nvgpu_dma_alloc_map(struct vm_gk20a *vm, size_t size,
@@ -144,6 +95,12 @@ int nvgpu_dma_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
 	if (!nvgpu_is_enabled(gk20a_from_vm(vm), NVGPU_MM_UNIFIED_MEMORY)) {
+		/*
+		 * Force the no-kernel-mapping flag on because we don't support
+		 * the lack of it for vidmem - the user should not care when
+		 * using nvgpu_dma_alloc_map and it's vidmem, or if there's a
+		 * difference, the user should use the flag explicitly anyway.
+		 */
 		int err = nvgpu_dma_alloc_map_flags_vid(vm,
 				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
@@ -216,6 +173,18 @@ int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 fail_free:
 	nvgpu_dma_free(vm->mm->g, mem);
 	return err;
+}
+
+void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	switch (mem->aperture) {
+	case APERTURE_SYSMEM:
+		return nvgpu_dma_free_sys(g, mem);
+	case APERTURE_VIDMEM:
+		return nvgpu_dma_free_vid(g, mem);
+	default:
+		break; /* like free() on "null" memory */
+	}
 }
 
 void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)

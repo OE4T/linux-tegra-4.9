@@ -352,4 +352,10 @@ int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
  */
 void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem);
 
+/*
+ * Don't use these directly. Instead use nvgpu_dma_free().
+ */
+void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem);
+void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem);
+
 #endif

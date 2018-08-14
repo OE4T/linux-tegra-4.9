@@ -65,7 +65,7 @@ nvgpu-y += \
 	os/linux/log.o \
 	os/linux/cond.o \
 	os/linux/nvgpu_mem.o \
-	os/linux/dma.o \
+	os/linux/linux-dma.o \
 	os/linux/driver_common.o \
 	os/linux/firmware.o \
 	os/linux/thread.o \
@@ -180,6 +180,7 @@ nvgpu-y += \
 	common/mm/nvgpu_mem.o \
 	common/mm/comptags.o \
 	common/mm/mm.o \
+	common/mm/dma.o \
 	common/enabled.o \
 	common/nvlink.o \
 	common/pramin.o \

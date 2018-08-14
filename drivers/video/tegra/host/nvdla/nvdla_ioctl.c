@@ -34,6 +34,7 @@
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
+#include <uapi/linux/nvdev_fence.h>
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
@@ -126,11 +127,11 @@ static int nvdla_get_q_status(struct nvdla_private *priv, void *args)
 {
 	struct nvdla_get_q_status_args *queue_arg =
 			(struct nvdla_get_q_status_args *)args;
-	struct nvdla_fence __user *usr_fence =
-		(struct nvdla_fence __user *)(uintptr_t)queue_arg->fence;
+	struct nvdev_fence __user *usr_fence =
+		(struct nvdev_fence __user *)(uintptr_t)queue_arg->fence;
 	struct platform_device *pdev = priv->pdev;
 	struct nvhost_queue *queue = priv->queue;
-	struct nvdla_fence fence = {0};
+	struct nvdev_fence fence = {0};
 	int err = 0;
 
 	nvdla_dbg_fn(pdev, "");
@@ -146,7 +147,7 @@ static int nvdla_get_q_status(struct nvdla_private *priv, void *args)
 						queue->syncpt_id);
 	nvdla_dbg_info(pdev, "syncpt_id[%u] val[%u]\n", fence.syncpoint_index, fence.syncpoint_value);
 
-        if (copy_to_user(usr_fence, &fence, sizeof(struct nvdla_fence))) {
+	if (copy_to_user(usr_fence, &fence, sizeof(struct nvdev_fence))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to send fence");
 		goto fail_to_send_fence;
@@ -347,7 +348,7 @@ static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 	/* get pre fences */
 	if (copy_from_user(task->prefences,
 		(void __user *)user_task->prefences,
-		(task->num_prefences * sizeof(struct nvdla_fence)))) {
+		(task->num_prefences * sizeof(struct nvdev_fence)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to copy prefences");
 		goto fail;
@@ -366,7 +367,7 @@ static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 	/* get post fences */
 	if (copy_from_user(task->postfences,
 		(void __user *)user_task->postfences,
-		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		(task->num_postfences * sizeof(struct nvdev_fence)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to copy postfences");
 		goto fail;
@@ -395,14 +396,14 @@ static int nvdla_send_emu_postfences(struct nvdla_emu_task *task,
 	struct platform_device *dla_pdev = task->queue->pool->pdev;
 	struct platform_device *host_pdev =
 				to_platform_device(dla_pdev->dev.parent);
-	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
+	struct nvdev_fence __user *postfences =
+		(struct nvdev_fence __user *)(uintptr_t)user_task->postfences;
 	char fence_name[32];
 
 	nvdla_dbg_fn(dla_pdev, "sending post fences");
 
 	for (i = 0; i < task->num_postfences; i++) {
-		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD) {
+		if (task->postfences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
 			struct nvhost_ctrl_sync_fence_info info;
 
 			info.id = task->postfences[i].syncpoint_index;
@@ -432,7 +433,7 @@ static int nvdla_send_emu_postfences(struct nvdla_emu_task *task,
 	nvdla_dbg_fn(dla_pdev, "copy postfences to user");
 	/* send post fences */
 	if (copy_to_user(postfences, task->postfences,
-		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		(task->num_postfences * sizeof(struct nvdev_fence)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(dla_pdev, "failed to send postfences");
 		goto fail;
@@ -450,14 +451,14 @@ static int nvdla_update_postfences(struct nvdla_task *task,
 	struct platform_device *dla_pdev = task->queue->pool->pdev;
 	struct platform_device *host_pdev =
 				to_platform_device(dla_pdev->dev.parent);
-	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
+	struct nvdev_fence __user *postfences =
+		(struct nvdev_fence __user *)(uintptr_t)user_task->postfences;
 	char fence_name[32];
 
 	nvdla_dbg_fn(dla_pdev, "copy post fences for user");
 
 	for (i = 0; i < task->num_postfences; i++) {
-		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD) {
+		if (task->postfences[i].type == NVDEV_FENCE_TYPE_SYNC_FD) {
 			struct nvhost_ctrl_sync_fence_info info;
 
 			info.id = task->postfences[i].syncpoint_index;
@@ -487,7 +488,7 @@ static int nvdla_update_postfences(struct nvdla_task *task,
 	nvdla_dbg_fn(dla_pdev, "copy postfences to user");
 	/* copy post fences */
 	if (copy_to_user(postfences, task->postfences,
-		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		(task->num_postfences * sizeof(struct nvdev_fence)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(dla_pdev, "failed to copy postfences");
 		goto fail;
@@ -618,28 +619,28 @@ static void nvdla_dump_task(struct nvdla_task *task)
 
 	for (i = 0; i < task->num_prefences; i++) {
 		nvdla_dbg_info(pdev, "prefence[%d]: type[%u] syncpt_index[%u]"
-				" syncpt_val[%u] sync_fd[%u] sem_handle[%u]"
-				" sem_offset[%u] sem_val[%u]",
+				" syncpt_val[%u] sync_fd[%u] semaphore_handle[%u]"
+				" semaphore_offset[%u] semaphore_value[%u]",
 				i, task->prefences[i].type,
 				task->prefences[i].syncpoint_index,
 				task->prefences[i].syncpoint_value,
 				task->prefences[i].sync_fd,
-				task->prefences[i].sem_handle,
-				task->prefences[i].sem_offset,
-				task->prefences[i].sem_val);
+				task->prefences[i].semaphore_handle,
+				task->prefences[i].semaphore_offset,
+				task->prefences[i].semaphore_value);
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
 		nvdla_dbg_info(pdev, "postfence[%d]: type[%u] syncpt_index[%u]"
-				" syncpt_val[%u] sync_fd[%u] sem_handle[%u]"
-				" sem_offset[%u] sem_val[%u]",
+				" syncpt_val[%u] sync_fd[%u] semaphore_handle[%u]"
+				" semaphore_offset[%u] semaphore_value[%u]",
 				i, task->postfences[i].type,
 				task->postfences[i].syncpoint_index,
 				task->postfences[i].syncpoint_value,
 				task->postfences[i].sync_fd,
-				task->postfences[i].sem_handle,
-				task->postfences[i].sem_offset,
-				task->postfences[i].sem_val);
+				task->postfences[i].semaphore_handle,
+				task->postfences[i].semaphore_offset,
+				task->postfences[i].semaphore_value);
 	}
 
 	for (i = 0; i < task->num_in_task_status; i++) {
@@ -719,7 +720,7 @@ static int nvdla_emu_task_submit(struct nvdla_private *priv, void *arg)
 		/* get post fences */
 		if (copy_from_user(task.postfences,
 			(void __user *)local_tasks[i].postfences,
-			(task.num_postfences * sizeof(struct nvdla_fence)))) {
+			(task.num_postfences * sizeof(struct nvdev_fence)))) {
 			err = -EFAULT;
 			nvdla_dbg_err(pdev, "failed to copy postfences");
 			goto exit;

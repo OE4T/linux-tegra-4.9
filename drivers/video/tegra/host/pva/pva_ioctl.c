@@ -25,6 +25,7 @@
 #include <asm/ioctls.h>
 #include <asm/barrier.h>
 
+#include <uapi/linux/nvdev_fence.h>
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
 #include "pva.h"
@@ -128,9 +129,9 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			task->num_output_surfaces,
 			struct pva_surface);
 	COPY_FIELD(task->prefences, ioctl_task->prefences, task->num_prefences,
-			struct pva_fence);
+			struct nvdev_fence);
 	COPY_FIELD(task->postfences, ioctl_task->postfences,
-			task->num_postfences, struct pva_fence);
+			task->num_postfences, struct nvdev_fence);
 	COPY_FIELD(task->input_task_status, ioctl_task->input_task_status,
 			task->num_input_task_status,
 			struct pva_status_handle);
@@ -146,7 +147,7 @@ err_out:
 }
 
 static int pva_create_postfence(struct nvhost_queue *queue,
-				struct pva_fence *dst,
+				struct nvdev_fence *dst,
 				u32 thresh)
 {
 	struct platform_device *host1x_pdev =
@@ -154,12 +155,12 @@ static int pva_create_postfence(struct nvhost_queue *queue,
 	int err = 0;
 	/* Return post-fences */
 	switch (dst->type) {
-	case PVA_FENCE_TYPE_SYNCPT: {
+	case NVDEV_FENCE_TYPE_SYNCPT: {
 		dst->syncpoint_index = queue->syncpt_id;
 		dst->syncpoint_value = thresh;
 		break;
 	}
-	case PVA_FENCE_TYPE_SYNC_FD: {
+	case NVDEV_FENCE_TYPE_SYNC_FD: {
 		struct nvhost_ctrl_sync_fence_info pts;
 
 		pts.id = queue->syncpt_id;
@@ -170,7 +171,7 @@ static int pva_create_postfence(struct nvhost_queue *queue,
 
 		break;
 	}
-	case PVA_FENCE_TYPE_SEMAPHORE:
+	case NVDEV_FENCE_TYPE_SEMAPHORE:
 		break;
 	default:
 		err = -ENOSYS;
@@ -200,7 +201,7 @@ static int pva_submit(struct pva_private *priv, void *arg)
 	struct pva_ioctl_submit_task *ioctl_tasks = NULL;
 	struct pva_submit_tasks tasks_header;
 	struct pva_submit_task *task = NULL;
-	struct pva_fence fence;
+	struct nvdev_fence fence;
 	int err = 0;
 	int i;
 	int j;
@@ -279,14 +280,15 @@ static int pva_submit(struct pva_private *priv, void *arg)
 
 	/* Copy post-fences back to userspace */
 	for (i = 0; i < ioctl_tasks_header->num_tasks; i++) {
-		struct pva_fence __user *postfences =
-				(struct pva_fence __user *)
+		struct nvdev_fence __user *postfences =
+				(struct nvdev_fence __user *)
 				ioctl_tasks[i].postfences;
+		u64 timestamp = arch_counter_get_cntvct();
 
 		for (j = 0; j < ioctl_tasks[i].num_postfences; j++) {
 			err = copy_from_user(&fence,
 					     postfences + j,
-					     sizeof(struct pva_fence));
+					     sizeof(struct nvdev_fence));
 			if (err < 0) {
 				nvhost_warn(&priv->pva->pdev->dev,
 					"Failed to copy fences to userspace");
@@ -304,12 +306,15 @@ static int pva_submit(struct pva_private *priv, void *arg)
 
 			err = copy_to_user(postfences + j,
 					   &fence,
-					   sizeof(struct pva_fence));
+					   sizeof(struct nvdev_fence));
 			if (err < 0) {
 				nvhost_warn(&priv->pva->pdev->dev,
 						"Failed to copy fences to userspace");
 				break;
 			}
+
+			nvhost_eventlib_log_fence(priv->pva->pdev, NVDEV_FENCE_KIND_POST,
+						  &fence, timestamp);
 		}
 	}
 

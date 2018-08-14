@@ -49,6 +49,7 @@ struct nvhost_as_moduleops;
 struct nvhost_ctrl_sync_fence_info;
 struct nvhost_sync_timeline;
 struct nvhost_sync_pt;
+struct nvdev_fence;
 struct sync_pt;
 
 #define NVHOST_MODULE_MAX_CLOCKS		8
@@ -653,6 +654,12 @@ static inline void nvhost_eventlib_log_submit(struct platform_device *pdev,
 					      u64 timestamp)
 {
 }
+static inline void nvhost_eventlib_log_fence(struct platform_device *pdev,
+					     u32 kind,
+					     struct nvdev_fence *fence,
+					     u64 timestamp)
+{
+}
 #else
 
 #ifdef CONFIG_DEBUG_FS
@@ -764,6 +771,11 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 				u32 syncpt_id,
 				u32 syncpt_thresh,
 				u64 timestamp);
+
+void nvhost_eventlib_log_fence(struct platform_device *pdev,
+			       u32 kind,
+			       struct nvdev_fence *fence,
+			       u64 timestamp);
 
 /* public host1x interrupt management APIs */
 int nvhost_intr_register_notifier(struct platform_device *pdev,

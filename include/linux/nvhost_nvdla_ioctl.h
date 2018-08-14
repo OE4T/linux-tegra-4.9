@@ -175,10 +175,8 @@ struct nvdla_ioctl_emu_submit_task {
 /**
  * struct nvdla_fence structure for passing fence information
  *
- * @type			type of fence: syncpoint, Linux Sync Fd
- * @syncpoint_index		syncpoint id
- * @syncpoint_value		value of syncpoint id
- * @sync_fd			Linux sync FD handle
+ * NOTE: this will be removed soon, please use generic fence type
+ * from nvdev_fence.h
  */
 struct nvdla_fence {
 	__u32 type;

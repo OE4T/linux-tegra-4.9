@@ -23,6 +23,7 @@
 
 #include <linux/completion.h>
 #include <linux/mutex.h>
+#include <uapi/linux/nvdev_fence.h>
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "nvhost_buffer.h"
 
@@ -226,7 +227,7 @@ struct nvdla_device {
 struct nvdla_emu_task {
 	struct nvhost_queue *queue;
 	struct nvhost_syncpt *sp;
-	struct nvdla_fence postfences[MAX_NUM_NVDLA_POSTFENCES];
+	struct nvdev_fence postfences[MAX_NUM_NVDLA_POSTFENCES];
 	u32 num_postfences;
 	u32 fence;
 	u32 fence_counter;
@@ -254,8 +255,8 @@ struct nvdla_task {
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
 	struct nvhost_syncpt *sp;
-	struct nvdla_fence prefences[MAX_NUM_NVDLA_PREFENCES];
-	struct nvdla_fence postfences[MAX_NUM_NVDLA_POSTFENCES];
+	struct nvdev_fence prefences[MAX_NUM_NVDLA_PREFENCES];
+	struct nvdev_fence postfences[MAX_NUM_NVDLA_POSTFENCES];
 	struct nvdla_status_notify in_task_status[MAX_NUM_NVDLA_IN_TASK_STATUS];
 	struct nvdla_status_notify out_task_status[MAX_NUM_NVDLA_OUT_TASK_STATUS];
 	struct nvdla_mem_handle memory_handles[NVDLA_MAX_BUFFERS_PER_TASK];

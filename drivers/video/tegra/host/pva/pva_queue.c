@@ -29,6 +29,7 @@
 
 #ifdef CONFIG_EVENTLIB
 #include <linux/keventlib.h>
+#include <uapi/linux/nvdev_fence.h>
 #include <uapi/linux/nvhost_events.h>
 #endif
 
@@ -228,13 +229,13 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 	}
 
 	for (i = 0; i < task->num_prefences; i++) {
-		if ((task->prefences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+		if ((task->prefences[i].type == NVDEV_FENCE_TYPE_SEMAPHORE)
 			&& task->prefences[i].semaphore_handle)
 			UNPIN_MEMORY(task->prefences_sema_ext[i]);
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
-		if ((task->postfences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+		if ((task->postfences[i].type == NVDEV_FENCE_TYPE_SEMAPHORE)
 			&& task->postfences[i].semaphore_handle)
 			UNPIN_MEMORY(task->postfences_sema_ext[i]);
 	}
@@ -348,7 +349,7 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 	/* check fence semaphore_type before memory pin */
 	for (i = 0; i < task->num_prefences; i++) {
-		if ((task->prefences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+		if ((task->prefences[i].type == NVDEV_FENCE_TYPE_SEMAPHORE)
 			&& task->prefences[i].semaphore_handle) {
 			PIN_MEMORY(task->prefences_sema_ext[i],
 				task->prefences[i].semaphore_handle);
@@ -356,7 +357,7 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
-		if ((task->postfences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+		if ((task->postfences[i].type == NVDEV_FENCE_TYPE_SEMAPHORE)
 			&& task->postfences[i].semaphore_handle) {
 			PIN_MEMORY(task->postfences_sema_ext[i],
 				task->postfences[i].semaphore_handle);
@@ -510,14 +511,18 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				     struct pva_hw_task *hw_task)
 {
 	u8 *hw_preactions = hw_task->preactions;
+	u64 timestamp = arch_counter_get_cntvct();
 	int i = 0, j = 0, ptr = 0;
 
 	/* Add waits to preactions list */
 	for (i = 0; i < task->num_prefences; i++) {
-		struct pva_fence *fence = task->prefences + i;
+		struct nvdev_fence *fence = task->prefences + i;
+
+		nvhost_eventlib_log_fence(task->pva->pdev,
+			NVDEV_FENCE_KIND_PRE, fence, timestamp);
 
 		switch (fence->type) {
-		case PVA_FENCE_TYPE_SYNCPT: {
+		case NVDEV_FENCE_TYPE_SYNCPT: {
 			dma_addr_t syncpt_addr = nvhost_syncpt_gos_address(
 							task->pva->pdev,
 							fence->syncpoint_index);
@@ -531,8 +536,8 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				fence->syncpoint_value);
 			break;
 		}
-		case PVA_FENCE_TYPE_SEMAPHORE:
-		case PVA_FENCE_TYPE_SEMAPHORE_TS:{
+		case NVDEV_FENCE_TYPE_SEMAPHORE:
+		case NVDEV_FENCE_TYPE_SEMAPHORE_TS:{
 			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
 				TASK_ACT_PTR_BLK_GTREQL,
 				task->prefences_sema_ext[i].dma_addr  +
@@ -540,7 +545,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				fence->semaphore_value);
 			break;
 		}
-		case PVA_FENCE_TYPE_SYNC_FD: {
+		case NVDEV_FENCE_TYPE_SYNC_FD: {
 			int thresh, id;
 			dma_addr_t syncpt_addr;
 			struct sync_fence *syncfd_fence;
@@ -650,15 +655,15 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 
 	/* Add postactions list for semaphore */
 	for (i = 0; i < task->num_postfences; i++) {
-		struct pva_fence *fence = task->postfences + i;
+		struct nvdev_fence *fence = task->postfences + i;
 
-		if (fence->type == PVA_FENCE_TYPE_SEMAPHORE) {
+		if (fence->type == NVDEV_FENCE_TYPE_SEMAPHORE) {
 			ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 				TASK_ACT_PTR_WRITE_VAL,
 				task->postfences_sema_ext[i].dma_addr  +
 					fence->semaphore_offset,
 				fence->semaphore_value);
-		} else if (fence->type == PVA_FENCE_TYPE_SEMAPHORE_TS) {
+		} else if (fence->type == NVDEV_FENCE_TYPE_SEMAPHORE_TS) {
 			/*
 			 * Timestamp will be filled by ucode hence making the
 			 * place holder for timestamp size, sizeof(u64).
@@ -1185,7 +1190,7 @@ static int pva_task_submit_channel_ccq(struct pva_submit_task *task,
 	/* Pick up fences... */
 	for (i = 0; i < task->num_prefences; i++) {
 		/* ..and ensure that we have only syncpoints present */
-		if (task->prefences[i].type != PVA_FENCE_TYPE_SYNCPT)
+		if (task->prefences[i].type != NVDEV_FENCE_TYPE_SYNCPT)
 			return -EINVAL;
 
 		/* Put fences into a separate array */
@@ -1455,14 +1460,14 @@ static int pva_queue_set_attribute(struct nvhost_queue *queue, void *args)
 	return err;
 }
 
-static void pva_queue_cleanup_fence(struct pva_fence *fence,
+static void pva_queue_cleanup_fence(struct nvdev_fence *fence,
 				    struct pva_parameter_ext *fence_ext)
 {
 	struct dma_buf *dmabuf;
 	u8 *dmabuf_cpuva;
 	u32 *fence_cpuva;
 
-	if (fence->type != PVA_FENCE_TYPE_SEMAPHORE)
+	if (fence->type != NVDEV_FENCE_TYPE_SEMAPHORE)
 		return;
 
 	dmabuf = fence_ext->dmabuf;

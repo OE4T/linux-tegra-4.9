@@ -122,11 +122,6 @@ struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
 
-struct nvhost_fence {
-	__u32 syncpt_id; /* syncpoint id or sync fence fd */
-	__u32 value;     /* syncpoint value (discarded when using sync fence) */
-};
-
 enum nvhost_clk_attr {
 	NVHOST_CLOCK = 0,
 	NVHOST_BW,

@@ -1,4 +1,6 @@
 {
+    "Copyright": "Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.",
+
     "Type"   : "EventProvider",
     "Version": "1",
 
@@ -71,9 +73,32 @@
                 { "Name": "maximum",         "Comment": "Worst case (maximum VPU cycles)",
                   "Type": "uint32_t",        "Format": "%u" }
             ]
+        },
+
+        {
+            "Name"   : "task_fence",
+            "Comment": "Marks that the task waits for prefence or emits postfence",
+            "Fields" : [
+                { "Name": "class_id",        "Comment": "Engine class ID",
+                  "Type": "uint32_t",        "Format": "%x" },
+                { "Name": "kind",            "Comment": "Fence kind",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "type",            "Comment": "Fence type",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "syncpoint_index", "Comment":  "Syncpoint index",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "syncpoint_value", "Comment": "Syncpoint value",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "sync_fd",         "Comment": "Syncpoint file descriptor",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "semaphore_handle", "Comment": "Syncpoint semaphore handle",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "semaphore_offset", "Comment": "Syncpoint semaphore offset",
+                  "Type": "uint32_t",        "Format": "%u" },
+                { "Name": "semaphore_value", "Comment": "Syncpoint semaphore value",
+                  "Type": "uint32_t",        "Format": "%u" }
+            ]
         }
-
-
     ],
 
     "Filtering": {

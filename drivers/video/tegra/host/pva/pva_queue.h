@@ -1,7 +1,7 @@
 /*
  * PVA Task Management
  *
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,7 @@
 #define PVA_QUEUE_H
 
 #include <uapi/linux/nvhost_pva_ioctl.h>
+#include <uapi/linux/nvdev_fence.h>
 
 #include "nvhost_queue.h"
 #include "nvhost_buffer.h"
@@ -94,8 +95,8 @@ struct pva_submit_task {
 	u32 syncpt_thresh;
 
 	/* Data provided by userspace "as is" */
-	struct pva_fence prefences[PVA_MAX_PREFENCES];
-	struct pva_fence postfences[PVA_MAX_POSTFENCES];
+	struct nvdev_fence prefences[PVA_MAX_PREFENCES];
+	struct nvdev_fence postfences[PVA_MAX_POSTFENCES];
 	struct pva_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter input_scalars;
 	struct pva_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];

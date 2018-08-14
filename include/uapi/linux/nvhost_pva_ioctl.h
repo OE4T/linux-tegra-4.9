@@ -164,13 +164,8 @@ struct pva_task_parameter {
 /**
  * struct pva_ioctl_fence structure for passing fence information
  *
- * @type: Type of the fence (syncpoint, sync fd or semaphore)
- * @syncpoint_index: Syncpoint id
- * @syncpoint_value: Value of syncpoint id
- * @sync_fd: Linux sync FD handle
- * @semaphore_handle: File handle to the semaphore memory buffer
- * @semaphore_offset: Offset to the semaphore within the buffer
- * @semaphore_value: Value of the semaphore
+ * NOTE: this will be removed soon, please use generic fence type
+ * from nvdev_fence.h
  */
 struct pva_fence {
 	__u32 type;

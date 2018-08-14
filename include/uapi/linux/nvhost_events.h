@@ -77,6 +77,31 @@ struct nvhost_vpu_perf_counter {
 	u32 maximum;
 } __packed;
 
+/* Marks the pre/postfence associated with the task */
+struct nvhost_task_fence {
+	/* Engine class ID */
+	u32 class_id;
+
+	/* Kind (prefence or postfence) */
+	u32 kind;
+
+	/* Type (see nvdev_fence.h) */
+	u32 type;
+
+	/* Valid for NVDEV_FENCE_TYPE_SYNCPT only */
+	u32 syncpoint_index;
+	u32 syncpoint_value;
+
+	/* Valid for NVDEV_FENCE_TYPE_SYNC_FD only */
+	u32 sync_fd;
+
+	/* Valid for NVDEV_FENCE_TYPE_SEMAPHORE
+	   and NVDEV_FENCE_TYPE_SEMAPHORE_TS */
+	u32 semaphore_handle;
+	u32 semaphore_offset;
+	u32 semaphore_value;
+} __packed;
+
 enum {
 	/* struct nvhost_task_submit */
 	NVHOST_TASK_SUBMIT = 0,
@@ -90,7 +115,10 @@ enum {
 	/* struct nvhost_vpu_perf_counter */
 	NVHOST_VPU_PERF_COUNTER = 3,
 
-	NVHOST_NUM_EVENT_TYPES = 4
+	/* struct nvhost_task_fence */
+	NVHOST_TASK_FENCE = 4,
+
+	NVHOST_NUM_EVENT_TYPES = 5
 };
 
 enum {

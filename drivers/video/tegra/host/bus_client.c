@@ -34,6 +34,7 @@
 
 #include <trace/events/nvhost.h>
 #include <uapi/linux/nvhost_events.h>
+#include <uapi/linux/nvdev_fence.h>
 
 #include <linux/io.h>
 #include <linux/string.h>
@@ -2003,6 +2004,52 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 			NVHOST_TASK_SUBMIT,
 			timestamp);
 }
+
+void nvhost_eventlib_log_fence(struct platform_device *pdev,
+			       u32 kind, /* NVDEV_FENCE_KIND_xxx */
+			       struct nvdev_fence *fence,
+			       u64 timestamp)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_task_fence task_fence;
+
+	if (!pdata->eventlib_id)
+		return;
+
+	memset(&task_fence, 0, sizeof(task_fence));
+
+	/*
+	 * Write pre/postfence event
+	 */
+	task_fence.class_id = pdata->class;
+	task_fence.kind = kind;
+	task_fence.type = fence->type;
+
+	switch (fence->type) {
+	case NVDEV_FENCE_TYPE_SYNCPT:
+		task_fence.syncpoint_index = fence->syncpoint_index;
+		task_fence.syncpoint_value = fence->syncpoint_value;
+		break;
+	case NVDEV_FENCE_TYPE_SYNC_FD:
+		task_fence.sync_fd = fence->sync_fd;
+		break;
+	case NVDEV_FENCE_TYPE_SEMAPHORE:
+	case NVDEV_FENCE_TYPE_SEMAPHORE_TS:
+		task_fence.semaphore_handle = fence->semaphore_handle;
+		task_fence.semaphore_offset = fence->semaphore_offset;
+		task_fence.semaphore_value = fence->semaphore_value;
+		break;
+	default:
+		break;
+	}
+
+	keventlib_write(pdata->eventlib_id,
+			&task_fence,
+			sizeof(task_fence),
+			NVHOST_TASK_FENCE,
+			timestamp);
+}
+
 #else
 void nvhost_eventlib_log_task(struct platform_device *pdev,
 			      u32 syncpt_id,
@@ -2018,6 +2065,15 @@ void nvhost_eventlib_log_submit(struct platform_device *pdev,
 				u64 timestamp)
 {
 }
+
+void nvhost_eventlib_log_fence(struct platform_device *pdev,
+			       u32 kind, /* NVDEV_FENCE_KIND_xxx */
+			       struct nvdev_fence *fence,
+			       u64 timestamp)
+{
+}
+
 #endif
 EXPORT_SYMBOL(nvhost_eventlib_log_submit);
 EXPORT_SYMBOL(nvhost_eventlib_log_task);
+EXPORT_SYMBOL(nvhost_eventlib_log_fence);

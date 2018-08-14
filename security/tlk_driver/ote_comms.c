@@ -58,7 +58,7 @@ static long switch_cpumask_to_cpu0(void)
 	cpumask_t local_cpu_mask = CPU_MASK_NONE;
 
 	cpumask_set_cpu(0, &local_cpu_mask);
-	cpumask_copy(&saved_cpu_mask, tsk_cpus_allowed(current));
+	cpumask_copy(&saved_cpu_mask, &current->cpus_allowed);
 	ret = sched_setaffinity(0, &local_cpu_mask);
 	if (ret)
 		pr_err("%s: sched_setaffinity #1 -> 0x%lX", __func__, ret);

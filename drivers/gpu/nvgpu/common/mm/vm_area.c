@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +34,9 @@ struct nvgpu_vm_area *nvgpu_vm_area_find(struct vm_gk20a *vm, u64 addr)
 	nvgpu_list_for_each_entry(vm_area, &vm->vm_area_list,
 				  nvgpu_vm_area, vm_area_list) {
 		if (addr >= vm_area->addr &&
-		    addr < (u64)vm_area->addr + (u64)vm_area->size)
+		    addr < (u64)vm_area->addr + (u64)vm_area->size) {
 			return vm_area;
+		}
 	}
 
 	return NULL;
@@ -105,12 +106,14 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 		  page_size, pages, *addr, flags);
 
 	for (; pgsz_idx < gmmu_nr_page_sizes; pgsz_idx++) {
-		if (vm->gmmu_page_sizes[pgsz_idx] == page_size)
+		if (vm->gmmu_page_sizes[pgsz_idx] == page_size) {
 			break;
+		}
 	}
 
-	if (pgsz_idx > gmmu_page_size_big)
+	if (pgsz_idx > gmmu_page_size_big) {
 		return -EINVAL;
+	}
 
 	/*
 	 * pgsz_idx isn't likely to get too crazy, since it starts at 0 and
@@ -119,26 +122,30 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	 */
 	nvgpu_speculation_barrier();
 
-	if (!vm->big_pages && pgsz_idx == gmmu_page_size_big)
+	if (!vm->big_pages && pgsz_idx == gmmu_page_size_big) {
 		return -EINVAL;
+	}
 
 	vm_area = nvgpu_kzalloc(g, sizeof(*vm_area));
-	if (!vm_area)
+	if (!vm_area) {
 		goto clean_up_err;
+	}
 
 	vma = vm->vma[pgsz_idx];
-	if (flags & NVGPU_VM_AREA_ALLOC_FIXED_OFFSET)
+	if (flags & NVGPU_VM_AREA_ALLOC_FIXED_OFFSET) {
 		vaddr_start = nvgpu_alloc_fixed(vma, *addr,
 						(u64)pages *
 						(u64)page_size,
 						page_size);
-	else
+	} else {
 		vaddr_start = nvgpu_alloc(vma,
 					  (u64)pages *
 					  (u64)page_size);
+	}
 
-	if (!vaddr_start)
+	if (!vaddr_start) {
 		goto clean_up_err;
+	}
 
 	vm_area->flags = flags;
 	vm_area->addr = vaddr_start;
@@ -179,10 +186,12 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	return 0;
 
 clean_up_err:
-	if (vaddr_start)
+	if (vaddr_start) {
 		nvgpu_free(vma, vaddr_start);
-	if (vm_area)
+	}
+	if (vm_area) {
 		nvgpu_kfree(g, vm_area);
+	}
 	return -ENOMEM;
 }
 
@@ -219,7 +228,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 	}
 
 	/* if this was a sparse mapping, free the va */
-	if (vm_area->sparse)
+	if (vm_area->sparse) {
 		g->ops.mm.gmmu_unmap(vm,
 				     vm_area->addr,
 				     vm_area->size,
@@ -228,6 +237,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 				     gk20a_mem_flag_none,
 				     true,
 				     NULL);
+	}
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 

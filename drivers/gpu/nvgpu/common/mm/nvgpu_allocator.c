@@ -1,7 +1,7 @@
 /*
  * gk20a allocator
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,40 +29,45 @@
 
 u64 nvgpu_alloc_length(struct nvgpu_allocator *a)
 {
-	if (a->ops->length)
+	if (a->ops->length) {
 		return a->ops->length(a);
+	}
 
 	return 0;
 }
 
 u64 nvgpu_alloc_base(struct nvgpu_allocator *a)
 {
-	if (a->ops->base)
+	if (a->ops->base) {
 		return a->ops->base(a);
+	}
 
 	return 0;
 }
 
 u64 nvgpu_alloc_initialized(struct nvgpu_allocator *a)
 {
-	if (!a->ops || !a->ops->inited)
+	if (!a->ops || !a->ops->inited) {
 		return 0;
+	}
 
 	return a->ops->inited(a);
 }
 
 u64 nvgpu_alloc_end(struct nvgpu_allocator *a)
 {
-	if (a->ops->end)
+	if (a->ops->end) {
 		return a->ops->end(a);
+	}
 
 	return 0;
 }
 
 u64 nvgpu_alloc_space(struct nvgpu_allocator *a)
 {
-	if (a->ops->space)
+	if (a->ops->space) {
 		return a->ops->space(a);
+	}
 
 	return 0;
 }
@@ -80,8 +85,9 @@ void nvgpu_free(struct nvgpu_allocator *a, u64 addr)
 u64 nvgpu_alloc_fixed(struct nvgpu_allocator *a, u64 base, u64 len,
 		      u32 page_size)
 {
-	if (a->ops->alloc_fixed)
+	if (a->ops->alloc_fixed) {
 		return a->ops->alloc_fixed(a, base, len, page_size);
+	}
 
 	return 0;
 }
@@ -93,15 +99,17 @@ void nvgpu_free_fixed(struct nvgpu_allocator *a, u64 base, u64 len)
 	 * nothing. The alternative would be to fall back on the regular
 	 * free but that may be harmful in unexpected ways.
 	 */
-	if (a->ops->free_fixed)
+	if (a->ops->free_fixed) {
 		a->ops->free_fixed(a, base, len);
+	}
 }
 
 int nvgpu_alloc_reserve_carveout(struct nvgpu_allocator *a,
 				 struct nvgpu_alloc_carveout *co)
 {
-	if (a->ops->reserve_carveout)
+	if (a->ops->reserve_carveout) {
 		return a->ops->reserve_carveout(a, co);
+	}
 
 	return -ENODEV;
 }
@@ -109,8 +117,9 @@ int nvgpu_alloc_reserve_carveout(struct nvgpu_allocator *a,
 void nvgpu_alloc_release_carveout(struct nvgpu_allocator *a,
 				  struct nvgpu_alloc_carveout *co)
 {
-	if (a->ops->release_carveout)
+	if (a->ops->release_carveout) {
 		a->ops->release_carveout(a, co);
+	}
 }
 
 void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
@@ -137,19 +146,22 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 {
 	int err;
 
-	if (!ops)
+	if (!ops) {
 		return -EINVAL;
+	}
 
 	/*
 	 * This is the bare minimum operations required for a sensible
 	 * allocator.
 	 */
-	if (!ops->alloc || !ops->free || !ops->fini)
+	if (!ops->alloc || !ops->free || !ops->fini) {
 		return -EINVAL;
+	}
 
 	err = nvgpu_mutex_init(&a->lock);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	a->g = g;
 	a->ops = ops;

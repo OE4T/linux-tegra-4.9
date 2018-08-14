@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -69,21 +69,24 @@ static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
 
 	/* Compute the bit offset and make sure it's aligned to a block.  */
 	offs = base >> a->blk_shift;
-	if (offs * a->blk_size != base)
+	if (offs * a->blk_size != base) {
 		return 0;
+	}
 
 	offs -= a->bit_offs;
 
 	blks = len >> a->blk_shift;
-	if (blks * a->blk_size != len)
+	if (blks * a->blk_size != len) {
 		blks++;
+	}
 
 	alloc_lock(__a);
 
 	/* Check if the space requested is already occupied. */
 	ret = bitmap_find_next_zero_area(a->bitmap, a->num_bits, offs, blks, 0);
-	if (ret != offs)
+	if (ret != offs) {
 		goto fail;
+	}
 
 	bitmap_set(a->bitmap, offs, blks);
 
@@ -115,14 +118,16 @@ static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
 	u64 blks, offs;
 
 	offs = base >> a->blk_shift;
-	if (WARN_ON(offs * a->blk_size != base))
+	if (WARN_ON(offs * a->blk_size != base)) {
 		return;
+	}
 
 	offs -= a->bit_offs;
 
 	blks = len >> a->blk_shift;
-	if (blks * a->blk_size != len)
+	if (blks * a->blk_size != len) {
 		blks++;
+	}
 
 	alloc_lock(__a);
 	bitmap_clear(a->bitmap, offs, blks);
@@ -155,8 +160,9 @@ static struct nvgpu_bitmap_alloc *find_alloc_metadata(
 	struct nvgpu_rbtree_node *node = NULL;
 
 	nvgpu_rbtree_search(addr, &node, a->allocs);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	alloc = nvgpu_bitmap_alloc_from_rbtree_node(node);
 
@@ -174,8 +180,9 @@ static int __nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
 	struct nvgpu_bitmap_alloc *alloc =
 		nvgpu_kmem_cache_alloc(a->meta_data_cache);
 
-	if (!alloc)
+	if (!alloc) {
 		return -ENOMEM;
+	}
 
 	alloc->base = addr;
 	alloc->length = len;
@@ -197,8 +204,9 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 
 	blks = len >> a->blk_shift;
 
-	if (blks * a->blk_size != len)
+	if (blks * a->blk_size != len) {
 		blks++;
+	}
 
 	alloc_lock(__a);
 
@@ -216,8 +224,9 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 		limit = find_next_bit(a->bitmap, a->num_bits, a->next_blk);
 		offs = bitmap_find_next_zero_area(a->bitmap, limit,
 						  0, blks, 0);
-		if (offs >= a->next_blk)
+		if (offs >= a->next_blk) {
 			goto fail;
+		}
 	}
 
 	bitmap_set(a->bitmap, offs, blks);
@@ -235,8 +244,9 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 	 * data it needs around to successfully free this allocation.
 	 */
 	if (!(a->flags & GPU_ALLOC_NO_ALLOC_PAGE) &&
-	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size))
+	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size)) {
 		goto fail_reset_bitmap;
+	}
 
 	alloc_dbg(__a, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  addr, len, blks, blks);
@@ -270,8 +280,9 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 	}
 
 	alloc = find_alloc_metadata(a, addr);
-	if (!alloc)
+	if (!alloc) {
 		goto done;
+	}
 
 	/*
 	 * Address comes from adjusted offset (i.e the bit offset with
@@ -288,8 +299,9 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 	a->bytes_freed += alloc->length;
 
 done:
-	if (a->meta_data_cache && alloc)
+	if (a->meta_data_cache && alloc) {
 		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
+	}
 	alloc_unlock(__a);
 }
 
@@ -366,16 +378,18 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	int err;
 	struct nvgpu_bitmap_allocator *a;
 
-	if (WARN_ON(blk_size & (blk_size - 1)))
+	if (WARN_ON(blk_size & (blk_size - 1))) {
 		return -EINVAL;
+	}
 
 	/*
 	 * blk_size must be a power-of-2; base length also need to be aligned
 	 * to blk_size.
 	 */
 	if (blk_size & (blk_size - 1) ||
-	    base & (blk_size - 1) || length & (blk_size - 1))
+	    base & (blk_size - 1) || length & (blk_size - 1)) {
 		return -EINVAL;
+	}
 
 	if (base == 0) {
 		base = blk_size;
@@ -383,12 +397,14 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_bitmap_allocator));
-	if (!a)
+	if (!a) {
 		return -ENOMEM;
+	}
 
 	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &bitmap_ops);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	if (!(flags & GPU_ALLOC_NO_ALLOC_PAGE)) {
 		a->meta_data_cache = nvgpu_kmem_cache_create(g,
@@ -431,8 +447,9 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
-	if (a->meta_data_cache)
+	if (a->meta_data_cache) {
 		nvgpu_kmem_cache_destroy(a->meta_data_cache);
+	}
 	nvgpu_kfree(g, a);
 	return err;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -95,8 +95,9 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 	 * This gets called from finalize_poweron() so we need to make sure we
 	 * don't reinit the pd_cache over and over.
 	 */
-	if (g->mm.pd_cache)
+	if (g->mm.pd_cache) {
 		return 0;
+	}
 
 	cache = nvgpu_kzalloc(g, sizeof(*cache));
 	if (!cache) {
@@ -123,8 +124,9 @@ void nvgpu_pd_cache_fini(struct gk20a *g)
 	int i;
 	struct nvgpu_pd_cache *cache = g->mm.pd_cache;
 
-	if (!cache)
+	if (!cache) {
 		return;
+	}
 
 	for (i = 0; i < NVGPU_PD_CACHE_COUNT; i++) {
 		WARN_ON(!nvgpu_list_empty(&cache->full[i]));
@@ -164,8 +166,9 @@ int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 	 * going to be virtually contiguous and we don't have to force the
 	 * underlying allocations to be physically contiguous as well.
 	 */
-	if (!nvgpu_iommuable(g) && bytes > PAGE_SIZE)
+	if (!nvgpu_iommuable(g) && bytes > PAGE_SIZE) {
 		flags = NVGPU_DMA_FORCE_CONTIGUOUS;
+	}
 
 	err = nvgpu_dma_alloc_flags(g, flags, bytes, pd->mem);
 	if (err) {
@@ -244,8 +247,9 @@ static int nvgpu_pd_cache_alloc_from_partial(struct gk20a *g,
 	mem_offs = bit_offs * pentry->pd_size;
 
 	/* Bit map full. Somethings wrong. */
-	if (WARN_ON(bit_offs >= ffz(pentry_mask)))
+	if (WARN_ON(bit_offs >= ffz(pentry_mask))) {
 		return -ENOMEM;
+	}
 
 	pentry->alloc_map |= 1 << bit_offs;
 
@@ -281,8 +285,9 @@ static struct nvgpu_pd_mem_entry *nvgpu_pd_cache_get_partial(
 	struct nvgpu_list_node *list =
 		&cache->partial[nvgpu_pd_cache_nr(bytes)];
 
-	if (nvgpu_list_empty(list))
+	if (nvgpu_list_empty(list)) {
 		return NULL;
+	}
 
 	return nvgpu_list_first_entry(list,
 				      nvgpu_pd_mem_entry,
@@ -308,13 +313,15 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
 	}
 
 	pentry = nvgpu_pd_cache_get_partial(cache, bytes);
-	if (!pentry)
+	if (!pentry) {
 		err = nvgpu_pd_cache_alloc_new(g, cache, pd, bytes);
-	else
+	} else {
 		err = nvgpu_pd_cache_alloc_from_partial(g, cache, pentry, pd);
+	}
 
-	if (err)
+	if (err) {
 		nvgpu_err(g, "PD-Alloc [C] Failed!");
+	}
 
 	return err;
 }
@@ -335,14 +342,16 @@ int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
 	 */
 	if (bytes >= PAGE_SIZE) {
 		err = __nvgpu_pd_cache_alloc_direct(g, pd, bytes);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		return 0;
 	}
 
-	if (WARN_ON(!g->mm.pd_cache))
+	if (WARN_ON(!g->mm.pd_cache)) {
 		return -ENOMEM;
+	}
 
 	nvgpu_mutex_acquire(&g->mm.pd_cache->lock);
 	err = nvgpu_pd_cache_alloc(g, g->mm.pd_cache, pd, bytes);
@@ -355,8 +364,9 @@ void __nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
 	pd_dbg(g, "PD-Free  [D] 0x%p", pd->mem);
 
-	if (!pd->mem)
+	if (!pd->mem) {
 		return;
+	}
 
 	nvgpu_dma_free(g, pd->mem);
 	nvgpu_kfree(g, pd->mem);
@@ -407,8 +417,9 @@ static struct nvgpu_pd_mem_entry *nvgpu_pd_cache_look_up(
 
 	nvgpu_rbtree_search((u64)(uintptr_t)pd->mem, &node,
 			    cache->mem_tree);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	return nvgpu_pd_mem_entry_from_tree_entry(node);
 }
@@ -436,8 +447,9 @@ void __nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd)
 	/*
 	 * Simple case: just DMA free.
 	 */
-	if (!pd->cached)
+	if (!pd->cached) {
 		return __nvgpu_pd_cache_free_direct(g, pd);
+	}
 
 	nvgpu_mutex_acquire(&g->mm.pd_cache->lock);
 	nvgpu_pd_cache_free(g, g->mm.pd_cache, pd);

@@ -264,8 +264,9 @@ static struct nvgpu_page_alloc *__find_page_alloc(
 	struct nvgpu_rbtree_node *node = NULL;
 
 	nvgpu_rbtree_search(addr, &node, a->allocs);
-	if (!node)
+	if (!node) {
 		return NULL;
+	}
 
 	alloc = nvgpu_page_alloc_from_rbtree_node(node);
 
@@ -355,8 +356,9 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 
 	if (!slab_page) {
 		slab_page = alloc_slab_page(a, slab);
-		if (!slab_page)
+		if (!slab_page) {
 			return -ENOMEM;
+		}
 	}
 
 	/*
@@ -376,12 +378,13 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 	bitmap_set(&slab_page->bitmap, offs, 1);
 	slab_page->nr_objects_alloced++;
 
-	if (slab_page->nr_objects_alloced < slab_page->nr_objects)
+	if (slab_page->nr_objects_alloced < slab_page->nr_objects) {
 		add_slab_page_to_partial(slab, slab_page);
-	else if (slab_page->nr_objects_alloced == slab_page->nr_objects)
+	} else if (slab_page->nr_objects_alloced == slab_page->nr_objects) {
 		add_slab_page_to_full(slab, slab_page);
-	else
+	} else {
 		BUG(); /* Should be impossible to hit this. */
+	}
 
 	/*
 	 * Handle building the nvgpu_page_alloc struct. We expect one sgl
@@ -435,8 +438,9 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 
 	alloc->sgt.sgl = (struct nvgpu_sgl *)sgl;
 	err = __do_slab_alloc(a, slab, alloc);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	palloc_dbg(a, "Alloc 0x%04llx sr=%d id=0x%010llx [slab]",
 		   len, slab_nr, alloc->base);
@@ -445,10 +449,12 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 	return alloc;
 
 fail:
-	if (alloc)
+	if (alloc) {
 		nvgpu_kmem_cache_free(a->alloc_cache, alloc);
-	if (sgl)
+	}
+	if (sgl) {
 		nvgpu_kfree(a->owner->g, sgl);
+	}
 	return NULL;
 }
 
@@ -465,27 +471,30 @@ static void __nvgpu_free_slab(struct nvgpu_page_allocator *a,
 
 	slab_page->nr_objects_alloced--;
 
-	if (slab_page->nr_objects_alloced == 0)
+	if (slab_page->nr_objects_alloced == 0) {
 		new_state = SP_EMPTY;
-	else
+	} else {
 		new_state = SP_PARTIAL;
+	}
 
 	/*
 	 * Need to migrate the page to a different list.
 	 */
 	if (new_state != slab_page->state) {
 		/* Delete - can't be in empty. */
-		if (slab_page->state == SP_PARTIAL)
+		if (slab_page->state == SP_PARTIAL) {
 			del_slab_page_from_partial(slab, slab_page);
-		else
+		} else {
 			del_slab_page_from_full(slab, slab_page);
+		}
 
 		/* And add. */
 		if (new_state == SP_EMPTY) {
-			if (nvgpu_list_empty(&slab->empty))
+			if (nvgpu_list_empty(&slab->empty)) {
 				add_slab_page_to_empty(slab, slab_page);
-			else
+			} else {
 				free_slab_page(a, slab_page);
+			}
 		} else {
 			add_slab_page_to_partial(slab, slab_page);
 		}
@@ -515,8 +524,9 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 	int i = 0;
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
-	if (!alloc)
+	if (!alloc) {
 		goto fail;
+	}
 
 	memset(alloc, 0, sizeof(*alloc));
 
@@ -535,11 +545,13 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 		 * requested size. The buddy allocator guarantees any given
 		 * single alloc is contiguous.
 		 */
-		if (a->flags & GPU_ALLOC_FORCE_CONTIG && i != 0)
+		if (a->flags & GPU_ALLOC_FORCE_CONTIG && i != 0) {
 			goto fail_cleanup;
+		}
 
-		if (chunk_len > max_chunk_len)
+		if (chunk_len > max_chunk_len) {
 			chunk_len = max_chunk_len;
+		}
 
 		/*
 		 * Keep attempting to allocate in smaller chunks until the alloc
@@ -582,10 +594,11 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 		 * Build the singly linked list with a head node that is part of
 		 * the list.
 		 */
-		if (prev_sgl)
+		if (prev_sgl) {
 			prev_sgl->next = sgl;
-		else
+		} else {
 			alloc->sgt.sgl = (struct nvgpu_sgl *)sgl;
+		}
 
 		prev_sgl = sgl;
 
@@ -671,10 +684,11 @@ static u64 nvgpu_page_alloc(struct nvgpu_allocator *__a, u64 len)
 
 	alloc_lock(__a);
 	if (a->flags & GPU_ALLOC_4K_VIDMEM_PAGES &&
-	    real_len <= (a->page_size / 2))
+	    real_len <= (a->page_size / 2)) {
 		alloc = __nvgpu_alloc_slab(a, real_len);
-	else
+	} else {
 		alloc = __nvgpu_alloc_pages(a, real_len);
+	}
 
 	if (!alloc) {
 		alloc_unlock(__a);
@@ -684,14 +698,16 @@ static u64 nvgpu_page_alloc(struct nvgpu_allocator *__a, u64 len)
 	__insert_page_alloc(a, alloc);
 
 	a->nr_allocs++;
-	if (real_len > a->page_size / 2)
+	if (real_len > a->page_size / 2) {
 		a->pages_alloced += alloc->length >> a->page_shift;
+	}
 	alloc_unlock(__a);
 
-	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER)
+	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER) {
 		return alloc->base;
-	else
+	} else {
 		return (u64) (uintptr_t) alloc;
+	}
 }
 
 /*
@@ -705,11 +721,12 @@ static void nvgpu_page_free(struct nvgpu_allocator *__a, u64 base)
 
 	alloc_lock(__a);
 
-	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER)
+	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER) {
 		alloc = __find_page_alloc(a, base);
-	else
+	} else {
 		alloc = __find_page_alloc(a,
 			((struct nvgpu_page_alloc *)(uintptr_t)base)->base);
+	}
 
 	if (!alloc) {
 		palloc_dbg(a, "Hrm, found no alloc?");
@@ -743,8 +760,9 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
 	sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
-	if (!alloc || !sgl)
+	if (!alloc || !sgl) {
 		goto fail;
+	}
 
 	alloc->sgt.ops = &page_alloc_sgl_ops;
 	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length, 0);
@@ -765,10 +783,12 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 	return alloc;
 
 fail:
-	if (sgl)
+	if (sgl) {
 		nvgpu_kfree(a->owner->g, sgl);
-	if (alloc)
+	}
+	if (alloc) {
 		nvgpu_kmem_cache_free(a->alloc_cache, alloc);
+	}
 	return NULL;
 }
 
@@ -813,10 +833,11 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 	a->nr_fixed_allocs++;
 	a->pages_alloced += pages;
 
-	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER)
+	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER) {
 		return alloc->base;
-	else
+	} else {
 		return (u64) (uintptr_t) alloc;
+	}
 }
 
 static void nvgpu_page_free_fixed(struct nvgpu_allocator *__a,
@@ -829,8 +850,9 @@ static void nvgpu_page_free_fixed(struct nvgpu_allocator *__a,
 
 	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER) {
 		alloc = __find_page_alloc(a, base);
-		if (!alloc)
+		if (!alloc) {
 			goto done;
+		}
 	} else {
 		alloc = (struct nvgpu_page_alloc *) (uintptr_t) base;
 	}
@@ -963,8 +985,9 @@ static int nvgpu_page_alloc_init_slabs(struct nvgpu_page_allocator *a)
 	a->slabs = nvgpu_kcalloc(nvgpu_alloc_to_gpu(a->owner),
 				 nr_slabs,
 				 sizeof(struct page_alloc_slab));
-	if (!a->slabs)
+	if (!a->slabs) {
 		return -ENOMEM;
+	}
 	a->nr_slabs = nr_slabs;
 
 	for (i = 0; i < nr_slabs; i++) {
@@ -990,16 +1013,19 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	char buddy_name[sizeof(__a->name)];
 	int err;
 
-	if (blk_size < SZ_4K)
+	if (blk_size < SZ_4K) {
 		return -EINVAL;
+	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_page_allocator));
-	if (!a)
+	if (!a) {
 		return -ENOMEM;
+	}
 
 	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &page_ops);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 	a->alloc_cache = nvgpu_kmem_cache_create(g,
 					sizeof(struct nvgpu_page_alloc));
@@ -1020,16 +1046,18 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 
 	if (flags & GPU_ALLOC_4K_VIDMEM_PAGES && blk_size > SZ_4K) {
 		err = nvgpu_page_alloc_init_slabs(a);
-		if (err)
+		if (err) {
 			goto fail;
+		}
 	}
 
 	snprintf(buddy_name, sizeof(buddy_name), "%s-src", name);
 
 	err = nvgpu_buddy_allocator_init(g, &a->source_allocator, buddy_name,
 					 base, length, blk_size, 0);
-	if (err)
+	if (err) {
 		goto fail;
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_init_alloc_debug(g, __a);
@@ -1044,10 +1072,12 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
-	if (a->alloc_cache)
+	if (a->alloc_cache) {
 		nvgpu_kmem_cache_destroy(a->alloc_cache);
-	if (a->slab_page_cache)
+	}
+	if (a->slab_page_cache) {
 		nvgpu_kmem_cache_destroy(a->slab_page_cache);
+	}
 	nvgpu_kfree(g, a);
 	return err;
 }

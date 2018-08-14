@@ -361,11 +361,11 @@ static int gk20a_flcn_copy_to_imem(struct nvgpu_falcon *flcn, u32 dst,
 			words, dst, blk, tag);
 
 	gk20a_writel(g, base_addr + falcon_falcon_imemc_r(port),
-		falcon_falcon_imemc_offs_f(dst >> 2) |
-		falcon_falcon_imemc_blk_f(blk) |
-		/* Set Auto-Increment on write */
-		falcon_falcon_imemc_aincw_f(1) |
-		sec << 28);
+			falcon_falcon_imemc_offs_f(dst >> 2) |
+			falcon_falcon_imemc_blk_f(blk) |
+			/* Set Auto-Increment on write */
+			falcon_falcon_imemc_aincw_f(1) |
+			falcon_falcon_imemc_secure_f(sec ? 1U : 0U));
 
 	for (i = 0; i < words; i++) {
 		if (i % 64 == 0) {

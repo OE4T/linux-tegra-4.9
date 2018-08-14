@@ -34,6 +34,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/bitops.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -235,9 +236,10 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			l1_tag_ecc_corrected_err_status, is_l1_tag_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		l1_tag_corrected_err_count_delta +=
-			(is_l1_tag_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_s());
+		if (is_l1_tag_ecc_corrected_total_err_overflow) {
+			l1_tag_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_l1_tag_ecc_corrected_err_count[gpc][tpc].counter +=
 							l1_tag_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -250,9 +252,10 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			l1_tag_ecc_uncorrected_err_status, is_l1_tag_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		l1_tag_uncorrected_err_count_delta +=
-			(is_l1_tag_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_s());
+		if (is_l1_tag_ecc_uncorrected_total_err_overflow) {
+			l1_tag_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_l1_tag_ecc_uncorrected_err_count[gpc][tpc].counter +=
 							l1_tag_uncorrected_err_count_delta;
 		gk20a_writel(g,
@@ -328,9 +331,10 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			lrf_ecc_corrected_err_status, is_lrf_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		lrf_corrected_err_count_delta +=
-			(is_lrf_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_s());
+		if (is_lrf_ecc_corrected_total_err_overflow) {
+			lrf_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_lrf_ecc_single_err_count[gpc][tpc].counter +=
 							lrf_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -343,9 +347,10 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			lrf_ecc_uncorrected_err_status, is_lrf_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		lrf_uncorrected_err_count_delta +=
-			(is_lrf_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_s());
+		if (is_lrf_ecc_uncorrected_total_err_overflow) {
+			lrf_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_lrf_ecc_double_err_count[gpc][tpc].counter +=
 							lrf_uncorrected_err_count_delta;
 		gk20a_writel(g,
@@ -488,9 +493,10 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			cbu_ecc_corrected_err_status, is_cbu_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		cbu_corrected_err_count_delta +=
-			(is_cbu_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_total_s());
+		if (is_cbu_ecc_corrected_total_err_overflow) {
+			cbu_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_cbu_ecc_corrected_err_count[gpc][tpc].counter +=
 							cbu_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -503,9 +509,10 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			cbu_ecc_uncorrected_err_status, is_cbu_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		cbu_uncorrected_err_count_delta +=
-			(is_cbu_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_s());
+		if (is_cbu_ecc_uncorrected_total_err_overflow) {
+			cbu_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_cbu_ecc_uncorrected_err_count[gpc][tpc].counter +=
 							cbu_uncorrected_err_count_delta;
 		gk20a_writel(g,
@@ -569,9 +576,10 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			l1_data_ecc_corrected_err_status, is_l1_data_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		l1_data_corrected_err_count_delta +=
-			(is_l1_data_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_s());
+		if (is_l1_data_ecc_corrected_total_err_overflow) {
+			l1_data_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_l1_data_ecc_corrected_err_count[gpc][tpc].counter +=
 							l1_data_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -584,9 +592,10 @@ static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			l1_data_ecc_uncorrected_err_status, is_l1_data_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		l1_data_uncorrected_err_count_delta +=
-			(is_l1_data_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_s());
+		if (is_l1_data_ecc_uncorrected_total_err_overflow) {
+			l1_data_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_l1_data_ecc_uncorrected_err_count[gpc][tpc].counter +=
 							l1_data_uncorrected_err_count_delta;
 		gk20a_writel(g,
@@ -654,9 +663,10 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			icache_ecc_corrected_err_status, is_icache_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		icache_corrected_err_count_delta +=
-			(is_icache_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_s());
+		if (is_icache_ecc_corrected_total_err_overflow) {
+			icache_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_icache_ecc_corrected_err_count[gpc][tpc].counter +=
 							icache_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -669,9 +679,10 @@ static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			icache_ecc_uncorrected_err_status, is_icache_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		icache_uncorrected_err_count_delta +=
-			(is_icache_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_s());
+		if (is_icache_ecc_uncorrected_total_err_overflow) {
+			icache_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.sm_icache_ecc_uncorrected_err_count[gpc][tpc].counter +=
 							icache_uncorrected_err_count_delta;
 		gk20a_writel(g,
@@ -759,9 +770,10 @@ int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gcc_l15_ecc_corrected_err_status, is_gcc_l15_ecc_corrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		gcc_l15_corrected_err_count_delta +=
-			(is_gcc_l15_ecc_corrected_total_err_overflow <<
-			 gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_s());
+		if (is_gcc_l15_ecc_corrected_total_err_overflow) {
+			gcc_l15_corrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_gcc_l15_ecc_corrected_err_count_total_s());
+		}
 		g->ecc.gr.gcc_l15_ecc_corrected_err_count[gpc].counter +=
 							gcc_l15_corrected_err_count_delta;
 		gk20a_writel(g,
@@ -774,9 +786,10 @@ int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gcc_l15_ecc_uncorrected_err_status, is_gcc_l15_ecc_uncorrected_total_err_overflow);
 
 		/* HW uses 16-bits counter */
-		gcc_l15_uncorrected_err_count_delta +=
-			(is_gcc_l15_ecc_uncorrected_total_err_overflow <<
-			 gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s());
+		if (is_gcc_l15_ecc_uncorrected_total_err_overflow) {
+			gcc_l15_uncorrected_err_count_delta +=
+				BIT32(gr_pri_gpc0_gcc_l15_ecc_uncorrected_err_count_total_s());
+		}
 		g->ecc.gr.gcc_l15_ecc_uncorrected_err_count[gpc].counter +=
 							gcc_l15_uncorrected_err_count_delta;
 		gk20a_writel(g,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -355,6 +355,10 @@ static inline u32 falcon_falcon_imemc_blk_f(u32 v)
 static inline u32 falcon_falcon_imemc_aincw_f(u32 v)
 {
 	return (v & 0x1U) << 24U;
+}
+static inline u32 falcon_falcon_imemc_secure_f(u32 v)
+{
+	return (v & 0x1U) << 28U;
 }
 static inline u32 falcon_falcon_imemd_r(u32 i)
 {

@@ -870,14 +870,15 @@ static void get_pmu_init_msg_pmu_queue_params_v4(
 	u8 i;
 	u8 tmp_id = id;
 
-	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ) {
 		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+	} else if (tmp_id == PMU_COMMAND_QUEUE_LPQ) {
 		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_MESSAGE_QUEUE)
+	} else if (tmp_id == PMU_MESSAGE_QUEUE) {
 		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V3;
-	else
+	} else {
 		return;
+	}
 
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
@@ -898,14 +899,15 @@ static void get_pmu_init_msg_pmu_queue_params_v5(
 	u8 i;
 	u8 tmp_id = id;
 
-	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ) {
 		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+	} else if (tmp_id == PMU_COMMAND_QUEUE_LPQ) {
 		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_MESSAGE_QUEUE)
+	} else if (tmp_id == PMU_MESSAGE_QUEUE) {
 		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V5;
-	else
+	} else {
 		return;
+	}
 
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
@@ -927,14 +929,15 @@ static void get_pmu_init_msg_pmu_queue_params_v3(
 	u8 i;
 	u8 tmp_id = id;
 
-	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ) {
 		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+	} else if (tmp_id == PMU_COMMAND_QUEUE_LPQ) {
 		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
-	else if (tmp_id == PMU_MESSAGE_QUEUE)
+	} else if (tmp_id == PMU_MESSAGE_QUEUE) {
 		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V3;
-	else
+	} else {
 		return;
+	}
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
 	if (tmp_id != 0) {
@@ -1623,8 +1626,9 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 
 	nvgpu_log_fn(g, " ");
 
-	if (nvgpu_alloc_initialized(&pmu->dmem))
+	if (nvgpu_alloc_initialized(&pmu->dmem)) {
 		nvgpu_alloc_destroy(&pmu->dmem);
+	}
 
 	nvgpu_list_for_each_entry_safe(pboardobjgrp, pboardobjgrp_tmp,
 		&g->boardobjgrp_head, boardobjgrp, node) {
@@ -1636,20 +1640,25 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 		pboardobj->destruct(pboardobj);
 	}
 
-	if (pmu->fw)
+	if (pmu->fw) {
 		nvgpu_release_firmware(g, pmu->fw);
+	}
 
-	if (g->acr.pmu_fw)
+	if (g->acr.pmu_fw) {
 		nvgpu_release_firmware(g, g->acr.pmu_fw);
+	}
 
-	if (g->acr.pmu_desc)
+	if (g->acr.pmu_desc) {
 		nvgpu_release_firmware(g, g->acr.pmu_desc);
+	}
 
-	if (g->acr.acr_fw)
+	if (g->acr.acr_fw) {
 		nvgpu_release_firmware(g, g->acr.acr_fw);
+	}
 
-	if (g->acr.hsbl_fw)
+	if (g->acr.hsbl_fw) {
 		nvgpu_release_firmware(g, g->acr.hsbl_fw);
+	}
 
 	nvgpu_dma_unmap_free(vm, &g->acr.acr_ucode);
 	nvgpu_dma_unmap_free(vm, &g->acr.hsbl_ucode);
@@ -1673,30 +1682,36 @@ int nvgpu_init_pmu_fw_support(struct nvgpu_pmu *pmu)
 	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_mutex_init(&pmu->elpg_mutex);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = nvgpu_mutex_init(&pmu->pg_mutex);
-	if (err)
+	if (err) {
 		goto fail_elpg;
+	}
 
 	err = nvgpu_mutex_init(&pmu->isr_mutex);
-	if (err)
+	if (err) {
 		goto fail_pg;
+	}
 
 	err = nvgpu_mutex_init(&pmu->pmu_copy_lock);
-	if (err)
+	if (err) {
 		goto fail_isr;
+	}
 
 	err = nvgpu_mutex_init(&pmu->pmu_seq_lock);
-	if (err)
+	if (err) {
 		goto fail_pmu_copy;
+	}
 
 	pmu->remove_support = nvgpu_remove_pmu_support;
 
 	err = nvgpu_init_pmu_fw_ver_ops(pmu);
-	if (err)
+	if (err) {
 		goto fail_pmu_seq;
+	}
 
 	goto exit;
 
@@ -1723,8 +1738,9 @@ int nvgpu_pmu_prepare_ns_ucode_blob(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pmu->fw)
+	if (pmu->fw) {
 		return nvgpu_init_pmu_fw_support(pmu);
+	}
 
 	pmu->fw = nvgpu_request_firmware(g, NVGPU_PMU_NS_UCODE_IMAGE, 0);
 	if (!pmu->fw) {
@@ -1740,8 +1756,9 @@ int nvgpu_pmu_prepare_ns_ucode_blob(struct gk20a *g)
 
 	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_UCODE_SIZE_MAX,
 			&pmu->ucode);
-	if (err)
+	if (err) {
 		goto err_release_fw;
+	}
 
 	nvgpu_mem_wr_n(g, &pmu->ucode, 0, pmu->ucode_image,
 			pmu->desc->app_start_offset + pmu->desc->app_size);

@@ -154,33 +154,41 @@ static bool pmu_validate_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 	struct nvgpu_falcon_queue *queue;
 	u32 in_size, out_size;
 
-	if (!PMU_IS_SW_COMMAND_QUEUE(queue_id))
+	if (!PMU_IS_SW_COMMAND_QUEUE(queue_id)) {
 		goto invalid_cmd;
+	}
 
 	queue = &pmu->queue[queue_id];
-	if (cmd->hdr.size < PMU_CMD_HDR_SIZE)
+	if (cmd->hdr.size < PMU_CMD_HDR_SIZE) {
 		goto invalid_cmd;
+	}
 
-	if (cmd->hdr.size > (queue->size >> 1))
+	if (cmd->hdr.size > (queue->size >> 1)) {
 		goto invalid_cmd;
+	}
 
-	if (msg != NULL && msg->hdr.size < PMU_MSG_HDR_SIZE)
+	if (msg != NULL && msg->hdr.size < PMU_MSG_HDR_SIZE) {
 		goto invalid_cmd;
+	}
 
-	if (!PMU_UNIT_ID_IS_VALID(cmd->hdr.unit_id))
+	if (!PMU_UNIT_ID_IS_VALID(cmd->hdr.unit_id)) {
 		goto invalid_cmd;
+	}
 
-	if (payload == NULL)
+	if (payload == NULL) {
 		return true;
+	}
 
 	if (payload->in.buf == NULL && payload->out.buf == NULL &&
-		payload->rpc.prpc == NULL)
+		payload->rpc.prpc == NULL) {
 		goto invalid_cmd;
+	}
 
 	if ((payload->in.buf != NULL && payload->in.size == 0) ||
 	    (payload->out.buf != NULL && payload->out.size == 0) ||
-		(payload->rpc.prpc != NULL && payload->rpc.size_rpc == 0))
+		(payload->rpc.prpc != NULL && payload->rpc.size_rpc == 0)) {
 		goto invalid_cmd;
+	}
 
 	in_size = PMU_CMD_HDR_SIZE;
 	if (payload->in.buf) {
@@ -194,13 +202,15 @@ static bool pmu_validate_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 		out_size += g->ops.pmu_ver.get_pmu_allocation_struct_size(pmu);
 	}
 
-	if (in_size > cmd->hdr.size || out_size > cmd->hdr.size)
+	if (in_size > cmd->hdr.size || out_size > cmd->hdr.size) {
 		goto invalid_cmd;
+	}
 
 
 	if ((payload->in.offset != 0 && payload->in.buf == NULL) ||
-	    (payload->out.offset != 0 && payload->out.buf == NULL))
+	    (payload->out.offset != 0 && payload->out.buf == NULL)) {
 		goto invalid_cmd;
+	}
 
 	return true;
 
@@ -233,16 +243,18 @@ static int pmu_write_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 
 	do {
 		err = nvgpu_flcn_queue_push(pmu->flcn, queue, cmd, cmd->hdr.size);
-		if (err == -EAGAIN && !nvgpu_timeout_expired(&timeout))
+		if (err == -EAGAIN && !nvgpu_timeout_expired(&timeout)) {
 			nvgpu_usleep_range(1000, 2000);
-		else
+		} else {
 			break;
+		}
 	} while (1);
 
-	if (err)
+	if (err) {
 		nvgpu_err(g, "fail to write cmd to queue %d", queue_id);
-	else
+	} else {
 		nvgpu_log_fn(g, "done");
+	}
 
 	return err;
 }
@@ -281,10 +293,11 @@ static int pmu_cmd_payload_extract_rpc(struct gk20a *g, struct pmu_cmd *cmd,
 		dmem_alloc_offset);
 
 clean_up:
-	if (err)
+	if (err) {
 		nvgpu_log_fn(g, "fail");
-	else
+	} else {
 		nvgpu_log_fn(g, "done");
+	}
 
 	return err;
 }
@@ -299,25 +312,28 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 
 	nvgpu_log_fn(g, " ");
 
-	if (payload)
+	if (payload) {
 		seq->out_payload = payload->out.buf;
+	}
 
 	if (payload && payload->in.offset != 0) {
 		pv->set_pmu_allocation_ptr(pmu, &in,
 		((u8 *)&cmd->cmd + payload->in.offset));
 
-		if (payload->in.buf != payload->out.buf)
+		if (payload->in.buf != payload->out.buf) {
 			pv->pmu_allocation_set_dmem_size(pmu, in,
 			(u16)payload->in.size);
-		else
+		} else {
 			pv->pmu_allocation_set_dmem_size(pmu, in,
 			(u16)max(payload->in.size, payload->out.size));
+		}
 
 		*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)) =
 			nvgpu_alloc(&pmu->dmem,
 				pv->pmu_allocation_get_dmem_size(pmu, in));
-		if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)))
+		if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in))) {
 			goto clean_up;
+		}
 
 		if (payload->in.fb_size != 0x0) {
 			seq->in_mem = nvgpu_kzalloc(g,
@@ -361,8 +377,9 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 					pv->pmu_allocation_get_dmem_size(pmu,
 					out));
 			if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu,
-					out)))
+					out))) {
 				goto clean_up;
+			}
 
 			if (payload->out.fb_size != 0x0) {
 				seq->out_mem = nvgpu_kzalloc(g,
@@ -396,14 +413,17 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 clean_up:
 	if (err) {
 		nvgpu_log_fn(g, "fail");
-		if (in)
+		if (in) {
 			nvgpu_free(&pmu->dmem,
 				pv->pmu_allocation_get_dmem_offset(pmu, in));
-		if (out)
+		}
+		if (out) {
 			nvgpu_free(&pmu->dmem,
 				pv->pmu_allocation_get_dmem_offset(pmu, out));
-	} else
+		}
+	} else {
 		nvgpu_log_fn(g, "done");
+	}
 
 	return err;
 }
@@ -420,23 +440,26 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 	nvgpu_log_fn(g, " ");
 
 	if ((!cmd) || (!seq_desc) || (!pmu->pmu_ready)) {
-		if (!cmd)
+		if (!cmd) {
 			nvgpu_warn(g, "%s(): PMU cmd buffer is NULL", __func__);
-		else if (!seq_desc)
+		} else if (!seq_desc) {
 			nvgpu_warn(g, "%s(): Seq descriptor is NULL", __func__);
-		else
+		} else {
 			nvgpu_warn(g, "%s(): PMU is not ready", __func__);
+		}
 
 		WARN_ON(1);
 		return -EINVAL;
 	}
 
-	if (!pmu_validate_cmd(pmu, cmd, msg, payload, queue_id))
+	if (!pmu_validate_cmd(pmu, cmd, msg, payload, queue_id)) {
 		return -EINVAL;
+	}
 
 	err = pmu_seq_acquire(pmu, &seq);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	cmd->hdr.seq_id = seq->id;
 
@@ -452,19 +475,22 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	*seq_desc = seq->desc;
 
-	if (cmd->cmd.rpc.cmd_type == NV_PMU_RPC_CMD_ID)
+	if (cmd->cmd.rpc.cmd_type == NV_PMU_RPC_CMD_ID) {
 		err = pmu_cmd_payload_extract_rpc(g, cmd, payload, seq);
-	else
+	} else {
 		err = pmu_cmd_payload_extract(g, cmd, payload, seq);
+	}
 
-	if (err)
+	if (err) {
 		goto clean_up;
+	}
 
 	seq->state = PMU_SEQ_STATE_USED;
 
 	err = pmu_write_cmd(pmu, cmd, queue_id, timeout);
-	if (err)
+	if (err) {
 		seq->state = PMU_SEQ_STATE_PENDING;
+	}
 
 	nvgpu_log_fn(g, "done");
 
@@ -516,18 +542,21 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 			pv->pmu_allocation_get_dmem_size(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)), 0);
 		}
-	} else
+	} else {
 		seq->callback = NULL;
+	}
 	if (pv->pmu_allocation_get_dmem_size(pmu,
-			pv->get_pmu_seq_in_a_ptr(seq)) != 0)
+			pv->get_pmu_seq_in_a_ptr(seq)) != 0) {
 		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)));
+	}
 	if (pv->pmu_allocation_get_dmem_size(pmu,
-			pv->get_pmu_seq_out_a_ptr(seq)) != 0)
+			pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
 		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)));
+	}
 
 	if (seq->out_mem != NULL) {
 		memset(pv->pmu_allocation_get_fb_addr(pmu,
@@ -536,10 +565,11 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 				pv->get_pmu_seq_out_a_ptr(seq)));
 
 		nvgpu_pmu_surface_free(g, seq->out_mem);
-		if (seq->out_mem != seq->in_mem)
+		if (seq->out_mem != seq->in_mem) {
 			nvgpu_kfree(g, seq->out_mem);
-		else
+		} else {
 			seq->out_mem = NULL;
+		}
 	}
 
 	if (seq->in_mem != NULL) {
@@ -553,8 +583,9 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 		seq->in_mem = NULL;
 	}
 
-	if (seq->callback)
+	if (seq->callback) {
 		seq->callback(g, msg, seq->cb_params, seq->desc, ret);
+	}
 
 	pmu_seq_release(pmu, seq);
 
@@ -667,11 +698,13 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu)
 
 	if (unlikely(!pmu->pmu_ready)) {
 		nvgpu_pmu_process_init_msg(pmu, &msg);
-		if (g->ops.pmu.init_wpr_region != NULL)
+		if (g->ops.pmu.init_wpr_region != NULL) {
 			g->ops.pmu.init_wpr_region(g);
+		}
 
-		if (nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+		if (nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 			g->ops.pmu.pmu_init_perfmon(pmu);
+		}
 
 		return 0;
 	}
@@ -687,10 +720,11 @@ int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu)
 
 		msg.hdr.ctrl_flags &= ~PMU_CMD_FLAGS_PMU_MASK;
 
-		if (msg.hdr.ctrl_flags == PMU_CMD_FLAGS_EVENT)
+		if (msg.hdr.ctrl_flags == PMU_CMD_FLAGS_EVENT) {
 			pmu_handle_event(pmu, &msg);
-		else
+		} else {
 			pmu_response_handle(pmu, &msg);
+		}
 	}
 
 	return 0;
@@ -706,11 +740,13 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		if (*(u8 *)var == val)
+		if (*(u8 *)var == val) {
 			return 0;
+		}
 
-		if (gk20a_pmu_is_interrupted(pmu))
+		if (gk20a_pmu_is_interrupted(pmu)) {
 			gk20a_pmu_isr(g);
+		}
 
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
@@ -816,8 +852,9 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 
 exit:
 	/* free allocated memory */
-	if (rpc_payload->is_mem_free_set)
+	if (rpc_payload->is_mem_free_set) {
 		nvgpu_kfree(g, rpc_payload);
+	}
 }
 
 int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
@@ -914,8 +951,9 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 
 exit:
 	if (status) {
-		if (rpc_payload)
+		if (rpc_payload) {
 			nvgpu_kfree(g, rpc_payload);
+		}
 	}
 
 	return status;

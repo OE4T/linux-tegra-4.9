@@ -45,13 +45,15 @@ static int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 		/* bring PMU falcon/engine out of reset */
 		g->ops.pmu.reset_engine(g, true);
 
-		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
+		if (g->ops.clock_gating.slcg_pmu_load_gating_prod) {
 			g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
 				g->slcg_enabled);
+		}
 
-		if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
+		if (g->ops.clock_gating.blcg_pmu_load_gating_prod) {
 			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
 				g->blcg_enabled);
+		}
 
 		if (nvgpu_flcn_mem_scrub_wait(pmu->flcn)) {
 			/* keep PMU falcon/engine in reset
@@ -84,12 +86,14 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 		}
 	} else {
 		err = pmu_enable_hw(pmu, true);
-		if (err)
+		if (err) {
 			goto exit;
+		}
 
 		err = nvgpu_flcn_wait_idle(pmu->flcn);
-		if (err)
+		if (err) {
 			goto exit;
+		}
 
 		pmu_enable_irq(pmu, true);
 	}
@@ -107,12 +111,14 @@ int nvgpu_pmu_reset(struct gk20a *g)
 	nvgpu_log_fn(g, " %s ", g->name);
 
 	err = nvgpu_flcn_wait_idle(pmu->flcn);
-	if (err)
+	if (err) {
 		goto exit;
+	}
 
 	err = pmu_enable(pmu, false);
-	if (err)
+	if (err) {
 		goto exit;
+	}
 
 	err = pmu_enable(pmu, true);
 
@@ -136,8 +142,9 @@ static int nvgpu_init_task_pg_init(struct gk20a *g)
 
 	err = nvgpu_thread_create(&pmu->pg_init.state_task, g,
 			nvgpu_pg_init_task, thread_name);
-	if (err)
+	if (err) {
 		nvgpu_err(g, "failed to start nvgpu_pg_init thread");
+	}
 
 	return err;
 }
@@ -159,8 +166,9 @@ void nvgpu_kill_task_pg_init(struct gk20a *g)
 		/* wait to confirm thread stopped */
 		nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
 		do {
-			if (!nvgpu_thread_is_running(&pmu->pg_init.state_task))
+			if (!nvgpu_thread_is_running(&pmu->pg_init.state_task)) {
 				break;
+			}
 			nvgpu_udelay(2);
 		} while (!nvgpu_timeout_expired_msg(&timeout,
 			"timeout - waiting PMU state machine thread stop"));
@@ -199,8 +207,9 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 
 	/* TBD: sysmon subtask */
 
-	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON))
+	if (IS_ENABLED(CONFIG_TEGRA_GK20A_PERFMON)) {
 		pmu->perfmon_sampling_enabled = true;
+	}
 
 	pmu->mutex_cnt = g->ops.pmu.pmu_mutex_size();
 	pmu->mutex = nvgpu_kzalloc(g, pmu->mutex_cnt *
@@ -246,8 +255,9 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 		err = g->ops.pmu.alloc_super_surface(g,
 				&pmu->super_surface_buf,
 				sizeof(struct nv_pmu_super_surface));
-		if (err)
+		if (err) {
 			goto err_free_seq_buf;
+		}
 	}
 
 	err = nvgpu_dma_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
@@ -263,8 +273,9 @@ skip_init:
 	nvgpu_log_fn(g, "done");
 	return 0;
  err_free_super_surface:
- 	 if (g->ops.pmu.alloc_super_surface)
+	if (g->ops.pmu.alloc_super_surface) {
  		 nvgpu_dma_unmap_free(vm, &pmu->super_surface_buf);
+	}
  err_free_seq_buf:
 	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
  err_free_seq:
@@ -283,20 +294,24 @@ int nvgpu_init_pmu_support(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pmu->initialized)
+	if (pmu->initialized) {
 		return 0;
+	}
 
 	err = pmu_enable_hw(pmu, true);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	if (g->support_pmu) {
 		err = nvgpu_init_pmu_setup_sw(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 		err = g->ops.pmu.pmu_setup_hw_and_bootstrap(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		nvgpu_pmu_state_change(g, PMU_STATE_STARTING, false);
 	}
@@ -402,8 +417,9 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 
 	if (g->elpg_enabled) {
 		/* Init reg with prod values*/
-		if (g->ops.pmu.pmu_setup_elpg)
+		if (g->ops.pmu.pmu_setup_elpg) {
 			g->ops.pmu.pmu_setup_elpg(g);
+		}
 		nvgpu_pmu_enable_elpg(g);
 	}
 
@@ -459,8 +475,9 @@ static int nvgpu_pg_init_task(void *arg)
 		switch (pmu_state) {
 		case PMU_STATE_INIT_RECEIVED:
 			nvgpu_pmu_dbg(g, "pmu starting");
-			if (g->can_elpg)
+			if (g->can_elpg) {
 				nvgpu_pmu_init_powergating(g);
+			}
 			break;
 		case PMU_STATE_ELPG_BOOTED:
 			nvgpu_pmu_dbg(g, "elpg booted");
@@ -499,16 +516,18 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (!g->support_pmu)
+	if (!g->support_pmu) {
 		return 0;
+	}
 
 	nvgpu_kill_task_pg_init(g);
 
 	nvgpu_pmu_get_pg_stats(g,
 		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&pg_stat_data);
 
-	if (nvgpu_pmu_disable_elpg(g))
+	if (nvgpu_pmu_disable_elpg(g)) {
 		nvgpu_err(g, "failed to set disable elpg");
+	}
 	pmu->initialized = false;
 
 	/* update the s/w ELPG residency counters */

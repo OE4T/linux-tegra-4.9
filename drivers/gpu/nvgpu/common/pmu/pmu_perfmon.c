@@ -65,8 +65,9 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 	struct pmu_payload payload;
 	u32 seq;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	nvgpu_log_fn(g, " ");
 
@@ -74,9 +75,10 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 
 	gk20a_pmu_init_perfmon_counter(g);
 
-	if (!pmu->sample_buffer)
+	if (!pmu->sample_buffer) {
 		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
 						  2 * sizeof(u16));
+	}
 	if (!pmu->sample_buffer) {
 		nvgpu_err(g, "failed to allocate perfmon sample buffer");
 		return -ENOMEM;
@@ -134,8 +136,9 @@ int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu)
 	struct pmu_payload payload;
 	u32 seq;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	/* PERFMON Start */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -183,8 +186,9 @@ int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu)
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	/* PERFMON Stop */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
@@ -250,8 +254,9 @@ void nvgpu_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 
 void nvgpu_pmu_reset_load_counters(struct gk20a *g)
 {
-	if (!g->power_on || gk20a_busy(g))
+	if (!g->power_on || gk20a_busy(g)) {
 		return;
+	}
 
 	gk20a_pmu_reset_idle_counter(g, 2);
 	gk20a_pmu_reset_idle_counter(g, 1);
@@ -288,8 +293,9 @@ int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
 	}
 
 	/* restart sampling */
-	if (pmu->perfmon_sampling_enabled)
+	if (pmu->perfmon_sampling_enabled) {
 		return g->ops.pmu.pmu_perfmon_start_sampling(&(g->pmu));
+	}
 
 	return 0;
 }
@@ -301,8 +307,9 @@ int nvgpu_pmu_init_perfmon_rpc(struct nvgpu_pmu *pmu)
 	struct nv_pmu_rpc_struct_perfmon_init rpc;
 	int status = 0;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	nvgpu_log_fn(g, " ");
 
@@ -348,8 +355,9 @@ int nvgpu_pmu_perfmon_start_sampling_rpc(struct nvgpu_pmu *pmu)
 	struct nv_pmu_rpc_struct_perfmon_start rpc;
 	int status = 0;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	nvgpu_log_fn(g, " ");
 
@@ -365,8 +373,9 @@ int nvgpu_pmu_perfmon_start_sampling_rpc(struct nvgpu_pmu *pmu)
 
 	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_START\n");
 	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, START, &rpc, 0);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+	}
 
 	return status;
 }
@@ -377,8 +386,9 @@ int nvgpu_pmu_perfmon_stop_sampling_rpc(struct nvgpu_pmu *pmu)
 	struct nv_pmu_rpc_struct_perfmon_stop rpc;
 	int status = 0;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	nvgpu_log_fn(g, " ");
 
@@ -386,8 +396,9 @@ int nvgpu_pmu_perfmon_stop_sampling_rpc(struct nvgpu_pmu *pmu)
 	/* PERFMON Stop */
 	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_STOP\n");
 	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, STOP, &rpc, 0);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+	}
 
 	return status;
 }
@@ -398,8 +409,9 @@ int nvgpu_pmu_perfmon_get_samples_rpc(struct nvgpu_pmu *pmu)
 	struct nv_pmu_rpc_struct_perfmon_query rpc;
 	int status = 0;
 
-	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON))
+	if (!nvgpu_is_enabled(g, NVGPU_PMU_PERFMON)) {
 		return 0;
+	}
 
 	nvgpu_log_fn(g, " ");
 	pmu->perfmon_query = 0;
@@ -407,8 +419,9 @@ int nvgpu_pmu_perfmon_get_samples_rpc(struct nvgpu_pmu *pmu)
 	/* PERFMON QUERY */
 	nvgpu_pmu_dbg(g, "RPC post NV_PMU_RPC_ID_PERFMON_QUERY\n");
 	PMU_RPC_EXECUTE(status, pmu, PERFMON_T18X, QUERY, &rpc, 0);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "Failed to execute RPC, status=0x%x", status);
+	}
 
 	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
 				      &pmu->perfmon_query, 1);

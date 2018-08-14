@@ -4953,6 +4953,11 @@ static void tegra_xhci_downgrade_check_to_enable(struct usb_hcd *hcd,
 			writel(portsc, xhci->usb3_ports[udev_portnum - 1]);
 
 			spin_unlock_irqrestore(&xhci->lock, flags);
+			/*
+			 * 10+360 ms, USB3.0 power off and dev polling timeout
+			 * for USB2.0 pull-up to be applied
+			 */
+			msleep(370);
 			mutex_unlock(&tegra->lock);
 			pm_runtime_put(hcd->self.controller);
 		}

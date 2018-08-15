@@ -24,6 +24,7 @@
 #include <linux/interrupt.h>
 #include <linux/err.h>
 #include <linux/version.h>
+#include <linux/rculist.h>
 #include <clocksource/arm_arch_timer.h>
 
 #include <asm/cputype.h>
@@ -50,6 +51,81 @@ struct hrt_event_value {
 	struct quadd_event event;
 	u32 value;
 };
+
+struct hrt_pid_node {
+	struct list_head list;
+	struct rcu_head rcu;
+	pid_t pid;
+};
+
+static void pid_free_rcu(struct rcu_head *head)
+{
+	struct hrt_pid_node *entry =
+		container_of(head, struct hrt_pid_node, rcu);
+	kfree(entry);
+}
+
+static int pid_list_add(pid_t pid)
+{
+	struct hrt_pid_node *entry;
+
+	entry = kzalloc(sizeof(*entry), GFP_ATOMIC);
+	if (!entry)
+		return -ENOMEM;
+
+	entry->pid = pid;
+	INIT_LIST_HEAD(&entry->list);
+
+	raw_spin_lock(&hrt.pid_list_lock);
+	list_add_tail_rcu(&entry->list, &hrt.pid_list);
+	raw_spin_unlock(&hrt.pid_list_lock);
+
+	return 0;
+}
+
+static void pid_list_del(pid_t pid)
+{
+	struct hrt_pid_node *entry;
+
+	raw_spin_lock(&hrt.pid_list_lock);
+	list_for_each_entry(entry, &hrt.pid_list, list) {
+		if (entry->pid == pid) {
+			list_del_rcu(&entry->list);
+			call_rcu(&entry->rcu, pid_free_rcu);
+			break;
+		}
+	}
+	raw_spin_unlock(&hrt.pid_list_lock);
+}
+
+static void pid_list_clear(void)
+{
+	struct hrt_pid_node *entry, *next;
+
+	raw_spin_lock(&hrt.pid_list_lock);
+	list_for_each_entry_safe(entry, next, &hrt.pid_list, list) {
+		list_del_rcu(&entry->list);
+		call_rcu(&entry->rcu, pid_free_rcu);
+	}
+	raw_spin_unlock(&hrt.pid_list_lock);
+}
+
+static int pid_list_search(pid_t pid)
+{
+	struct hrt_pid_node *entry;
+
+	/* The possible PID wrapping around: should we somehow handle this? */
+	rcu_read_lock();
+	list_for_each_entry_rcu(entry, &hrt.pid_list, list) {
+		if (entry->pid == pid) {
+			rcu_read_unlock();
+			return 1;
+		}
+	}
+	rcu_read_unlock();
+
+	return 0;
+}
 
 static inline u32 get_task_state(struct task_struct *task)
 {
@@ -308,13 +384,6 @@ static int read_source(struct quadd_event_source_interface *source,
 		else
 			res_val = QUADD_U32_MAX - prev_val + val;
 
-		if (s->event_source == QUADD_EVENT_SOURCE_PL310) {
-			int nr_active = atomic_read(&hrt.nr_active_all_core);
-
-			if (nr_active > 1)
-				res_val /= nr_active;
-		}
-
 		events_vals[i].event = s->event;
 		events_vals[i].value = res_val;
 	}
@@ -345,10 +414,9 @@ get_stack_offset(struct task_struct *task,
 }
 
 static inline void
-validate_um_for_task(struct task_struct *task,
-		     pid_t param_pid, struct quadd_unw_methods *um)
+validate_um_for_task(struct task_struct *task, struct quadd_unw_methods *um)
 {
-	if (task_tgid_nr(task) != param_pid)
+	if (task_tgid_nr(task) != hrt.root_pid)
 		um->ut = um->dwarf = 0;
 }
 
@@ -373,7 +441,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_callchain *cc = &cpu_ctx->cc;
 
-	if (atomic_read(&cpu_ctx->nr_active) == 0)
+	if (!hrt_is_active(cpu_ctx))
 		return;
 
 	if (task->flags & PF_EXITING)
@@ -415,7 +483,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;
-		validate_um_for_task(task, ctx->param.pids[0], &cc->um);
+		validate_um_for_task(task, &cc->um);
 
 		bt_size = quadd_get_user_callchain(&event_ctx, cc, ctx);
 		if (bt_size > 0) {
@@ -561,31 +629,15 @@ static void init_hrtimer(struct quadd_cpu_context *cpu_ctx)
 static inline int
 is_profile_process(struct task_struct *task, int is_trace)
 {
-	pid_t pid;
+	pid_t root_pid = hrt.root_pid;
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 
-	pid = ctx->param.pids[0];
-
-	if (task_tgid_nr(task) == pid)
+	if (root_pid > 0 && task_tgid_nr(task) == root_pid)
 		return 1;
 
 	if ((is_trace && quadd_mode_is_trace_tree(ctx)) ||
-	    (!is_trace && quadd_mode_is_sample_tree(ctx))) {
-		struct task_struct *p;
-
-		read_lock(&tasklist_lock);
-		for (p = task; p != &init_task;) {
-			if (task_pid_nr(p) == pid) {
-				read_unlock(&tasklist_lock);
-				return 1;
-			}
-
-			rcu_read_lock();
-			p = rcu_dereference(p->real_parent);
-			rcu_read_unlock();
-		}
-		read_unlock(&tasklist_lock);
-	}
+	    (!is_trace && quadd_mode_is_sample_tree(ctx)))
+		return pid_list_search(task_tgid_nr(task));
 
 	return 0;
 }
@@ -618,65 +670,65 @@ is_trace_process(struct task_struct *task)
 	return (quadd_mode_is_trace_all(ctx) || is_profile_process(task, 1));
 }
 
-static int
+static void
 add_active_thread(struct quadd_cpu_context *cpu_ctx, pid_t pid, pid_t tgid)
 {
 	struct quadd_thread_data *t_data = &cpu_ctx->active_thread;
 
-	if (t_data->pid > 0 ||
-		atomic_read(&cpu_ctx->nr_active) > 0) {
-		pr_warn_once("Warning for thread: %d\n", (int)pid);
-		return 0;
-	}
+	if (unlikely(hrt_is_active(cpu_ctx)))
+		pr_warn_once("%s: warning: active thread: %d\n",
+			     __func__, (int)pid);
 
 	t_data->pid = pid;
 	t_data->tgid = tgid;
-	return 1;
 }
 
-static int remove_active_thread(struct quadd_cpu_context *cpu_ctx, pid_t pid)
+static void
+remove_active_thread(struct quadd_cpu_context *cpu_ctx, pid_t pid)
 {
 	struct quadd_thread_data *t_data = &cpu_ctx->active_thread;
 
-	if (t_data->pid < 0)
-		return 0;
+	t_data->pid = -1;
+	t_data->tgid = -1;
+}
 
-	if (t_data->pid == pid) {
-		t_data->pid = -1;
-		t_data->tgid = -1;
-		return 1;
-	}
+static inline pid_t get_active_thread(struct quadd_cpu_context *cpu_ctx)
+{
+	struct quadd_thread_data *t_data = &cpu_ctx->active_thread;
 
-	pr_warn_once("Warning for thread: %d\n", (int)pid);
-	return 0;
+	return t_data->pid;
+}
+
+static inline int
+is_task_active(struct quadd_cpu_context *cpu_ctx, struct task_struct *task)
+{
+	return task_pid_nr(task) == get_active_thread(cpu_ctx);
 }
 
 void __quadd_task_sched_in(struct task_struct *prev,
 			   struct task_struct *task)
 {
+	int trace_flag, sample_flag;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	struct event_data events[QUADD_MAX_COUNTERS];
-	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
 	if (likely(!atomic_read(&hrt.active)))
 		return;
-/*
- *	if (__ratelimit(&ratelimit_state))
- *		pr_info("sch_in, cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
- *			smp_processor_id(), (unsigned int)prev->pid,
- *			(unsigned int)prev->tgid, (unsigned int)task->pid,
- *			(unsigned int)task->tgid);
- */
 
-	if (is_trace_process(task))
-		put_sched_sample(task, 1);
+	sample_flag = is_sample_process(task);
+	trace_flag = is_trace_process(task);
 
-	if (is_sample_process(task)) {
+	if (sample_flag || trace_flag)
 		add_active_thread(cpu_ctx, task->pid, task->tgid);
-		atomic_inc(&cpu_ctx->nr_active);
 
-		if (atomic_read(&cpu_ctx->nr_active) == 1) {
+	if (trace_flag) {
+		put_sched_sample(task, 1);
+		cpu_ctx->is_tracing_enabled = 1;
+	}
+
+	if (sample_flag) {
+		if (likely(!cpu_ctx->is_sampling_enabled)) {
 			if (ctx->pmu)
 				ctx->pmu->start();
 
@@ -684,49 +736,44 @@ void __quadd_task_sched_in(struct task_struct *prev,
 				ctx->pl310->read(events, 1);
 
 			start_hrtimer(cpu_ctx);
-			atomic_inc(&hrt.nr_active_all_core);
-		}
+			cpu_ctx->is_sampling_enabled = 1;
+		} else
+			pr_warn_once("warning: sampling is already enabled\n");
 	}
 }
 
 void __quadd_task_sched_out(struct task_struct *prev,
 			    struct task_struct *next)
 {
-	int n;
 	struct pt_regs *user_regs;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
-	/* static DEFINE_RATELIMIT_STATE(ratelimit_state, 5 * HZ, 2); */
 
 	if (likely(!atomic_read(&hrt.active)))
 		return;
-/*
- *	if (__ratelimit(&ratelimit_state))
- *		pr_info("sch_out: cpu: %d, prev: %u (%u) \t--> next: %u (%u)\n",
- *			smp_processor_id(), (unsigned int)prev->pid,
- *			(unsigned int)prev->tgid, (unsigned int)next->pid,
- *			(unsigned int)next->tgid);
- */
 
-	if (is_sample_process(prev)) {
-		user_regs = task_pt_regs(prev);
-		if (user_regs)
-			read_all_sources(user_regs, prev, 1);
-
-		n = remove_active_thread(cpu_ctx, prev->pid);
-		atomic_sub(n, &cpu_ctx->nr_active);
-
-		if (n && atomic_read(&cpu_ctx->nr_active) == 0) {
-			cancel_hrtimer(cpu_ctx);
-			atomic_dec(&hrt.nr_active_all_core);
-
-			if (ctx->pmu)
-				ctx->pmu->stop();
+	if (quadd_mode_is_sampling(ctx) && cpu_ctx->is_sampling_enabled) {
+		if (is_task_active(cpu_ctx, prev)) {
+			user_regs = task_pt_regs(prev);
+			if (user_regs)
+				read_all_sources(user_regs, prev, 1);
 		}
+
+		cancel_hrtimer(cpu_ctx);
+
+		if (ctx->pmu)
+			ctx->pmu->stop();
+
+		cpu_ctx->is_sampling_enabled = 0;
 	}
 
-	if (is_trace_process(prev))
-		put_sched_sample(prev, 0);
+	if (quadd_mode_is_tracing(ctx) && cpu_ctx->is_tracing_enabled) {
+		if (is_task_active(cpu_ctx, prev))
+			put_sched_sample(prev, 0);
+		cpu_ctx->is_tracing_enabled = 0;
+	}
+
+	remove_active_thread(cpu_ctx, prev->pid);
 }
 
 void __quadd_event_mmap(struct vm_area_struct *vma)
@@ -740,6 +787,53 @@ void __quadd_event_mmap(struct vm_area_struct *vma)
 	quadd_process_mmap(vma, current);
 }
 
+int quadd_is_inherited(struct task_struct *task)
+{
+	struct task_struct *p;
+
+	if (unlikely(hrt.root_pid == 0))
+		return 0;
+
+	for (p = task; p != &init_task;) {
+		if (task_pid_nr(p) == hrt.root_pid)
+			return 1;
+
+		rcu_read_lock();
+		p = rcu_dereference(p->real_parent);
+		rcu_read_unlock();
+	}
+
+	return 0;
+}
+
+void __quadd_event_fork(struct task_struct *task)
+{
+	if (likely(!atomic_read(&hrt.mmap_active)))
+		return;
+
+	if (!quadd_mode_is_process_tree(hrt.quadd_ctx))
+		return;
+
+	read_lock(&tasklist_lock);
+	if (quadd_is_inherited(task))
+		pid_list_add(task_tgid_nr(task));
+	read_unlock(&tasklist_lock);
+}
+
+void __quadd_event_exit(struct task_struct *task)
+{
+	if (likely(!atomic_read(&hrt.mmap_active)))
+		return;
+
+	if (!quadd_mode_is_process_tree(hrt.quadd_ctx))
+		return;
+
+	read_lock(&tasklist_lock);
+	if (quadd_is_inherited(task))
+		pid_list_del(task_tgid_nr(task));
+	read_unlock(&tasklist_lock);
+}
+
 static void reset_cpu_ctx(void)
 {
 	int cpu_id;
@@ -750,7 +844,8 @@ static void reset_cpu_ctx(void)
 		cpu_ctx = per_cpu_ptr(hrt.cpu_ctx, cpu_id);
 		t_data = &cpu_ctx->active_thread;
 
-		atomic_set(&cpu_ctx->nr_active, 0);
+		cpu_ctx->is_sampling_enabled = 0;
+		cpu_ctx->is_tracing_enabled = 0;
 
 		t_data->pid = -1;
 		t_data->tgid = -1;
@@ -770,6 +865,7 @@ int quadd_hrt_start(void)
 	freq = max_t(long, QUADD_HRT_MIN_FREQ, freq);
 	period = NSEC_PER_SEC / freq;
 	hrt.sample_period = period;
+	hrt.root_pid = param->nr_pids > 0 ? param->pids[0] : 0;
 
 	if (ctx->param.ma_freq > 0)
 		hrt.ma_period = MSEC_PER_SEC / ctx->param.ma_freq;
@@ -827,6 +923,17 @@ int quadd_hrt_start(void)
 			ctx->pl310->start();
 	}
 
+	if (quadd_mode_is_process_tree(ctx)) {
+		struct task_struct *p;
+
+		read_lock(&tasklist_lock);
+		for_each_process(p) {
+			if (quadd_is_inherited(p))
+				pid_list_add(task_pid_nr(p));
+		}
+		read_unlock(&tasklist_lock);
+	}
+
 	quadd_ma_start(&hrt);
 
 	/* Enable the sampling only after quadd_get_mmaps() */
@@ -856,6 +963,8 @@ void quadd_hrt_stop(void)
 
 	atomic64_set(&hrt.counter_samples, 0);
 	atomic64_set(&hrt.skipped_samples, 0);
+
+	pid_list_clear();
 
 	/* reset_cpu_ctx(); */
 }
@@ -909,6 +1018,10 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 	freq = max_t(long, QUADD_HRT_MIN_FREQ, freq);
 	period = NSEC_PER_SEC / freq;
 	hrt.sample_period = period;
+	hrt.root_pid = 0;
+
+	INIT_LIST_HEAD(&hrt.pid_list);
+	raw_spin_lock_init(&hrt.pid_list_lock);
 
 	if (ctx->param.ma_freq > 0)
 		hrt.ma_period = MSEC_PER_SEC / ctx->param.ma_freq;
@@ -925,7 +1038,8 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 	for_each_possible_cpu(cpu_id) {
 		cpu_ctx = per_cpu_ptr(hrt.cpu_ctx, cpu_id);
 
-		atomic_set(&cpu_ctx->nr_active, 0);
+		cpu_ctx->is_sampling_enabled = 0;
+		cpu_ctx->is_tracing_enabled = 0;
 
 		cpu_ctx->active_thread.pid = -1;
 		cpu_ctx->active_thread.tgid = -1;

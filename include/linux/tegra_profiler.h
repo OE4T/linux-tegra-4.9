@@ -643,6 +643,8 @@ extern void __quadd_task_sched_out(struct task_struct *prev,
 				   struct task_struct *next);
 
 extern void __quadd_event_mmap(struct vm_area_struct *vma);
+extern void __quadd_event_fork(struct task_struct *task);
+extern void __quadd_event_exit(struct task_struct *task);
 
 static inline void quadd_task_sched_in(struct task_struct *prev,
 				       struct task_struct *task)
@@ -661,6 +663,16 @@ static inline void quadd_event_mmap(struct vm_area_struct *vma)
 	__quadd_event_mmap(vma);
 }
 
+static inline void quadd_event_fork(struct task_struct *task)
+{
+	__quadd_event_fork(task);
+}
+
+static inline void quadd_event_exit(struct task_struct *task)
+{
+	__quadd_event_exit(task);
+}
+
 #else	/* CONFIG_TEGRA_PROFILER */
 
 static inline void quadd_task_sched_in(struct task_struct *prev,
@@ -674,6 +686,14 @@ static inline void quadd_task_sched_out(struct task_struct *prev,
 }
 
 static inline void quadd_event_mmap(struct vm_area_struct *vma)
+{
+}
+
+static inline void quadd_event_fork(struct task_struct *task)
+{
+}
+
+static inline void quadd_event_exit(struct task_struct *task)
 {
 }
 

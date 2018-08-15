@@ -36,8 +36,14 @@ struct quadd_cpu_context {
 	char mmap_filename[PATH_MAX];
 
 	struct quadd_thread_data active_thread;
-	atomic_t nr_active;
+	unsigned int is_sampling_enabled:1;
+	unsigned int is_tracing_enabled:1;
 };
+
+static inline int hrt_is_active(struct quadd_cpu_context *cpu_ctx)
+{
+	return cpu_ctx->is_sampling_enabled || cpu_ctx->is_tracing_enabled;
+}
 
 struct timecounter;
 
@@ -51,7 +57,6 @@ struct quadd_hrt_ctx {
 
 	atomic_t active;
 	atomic_t mmap_active;
-	atomic_t nr_active_all_core;
 
 	atomic64_t counter_samples;
 	atomic64_t skipped_samples;
@@ -61,6 +66,10 @@ struct quadd_hrt_ctx {
 
 	unsigned long vm_size_prev;
 	unsigned long rss_size_prev;
+
+	pid_t root_pid;
+	struct list_head pid_list;
+	raw_spinlock_t pid_list_lock;
 
 	struct timecounter *tc;
 	unsigned int use_arch_timer:1;
@@ -104,6 +113,7 @@ quadd_put_sample(struct quadd_record_data *data,
 
 void quadd_hrt_get_state(struct quadd_module_state *state);
 u64 quadd_get_time(void);
+int quadd_is_inherited(struct task_struct *task);
 
 #endif	/* __KERNEL__ */
 

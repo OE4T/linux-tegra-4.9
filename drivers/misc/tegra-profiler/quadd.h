@@ -120,6 +120,11 @@ static inline int quadd_mode_is_trace_tree(struct quadd_ctx *ctx)
 	return ctx->mode_is_trace_tree;
 }
 
+static inline int quadd_mode_is_process_tree(struct quadd_ctx *ctx)
+{
+	return (ctx->mode_is_sample_tree || ctx->mode_is_trace_tree);
+}
+
 void quadd_get_state(struct quadd_module_state *state);
 int quadd_late_init(void);
 

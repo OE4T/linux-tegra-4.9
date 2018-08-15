@@ -200,24 +200,7 @@ __get_process_vmas(struct task_struct *task,
 		process_mmap(vma, task, buf, buf_size);
 }
 
-static int
-is_sample_process(struct task_struct *from, struct pid *root_pid)
-{
-	struct task_struct *p;
-
-	for (p = from; p != &init_task;) {
-		if (task_pid_nr(p) == pid_nr(root_pid))
-			return 1;
-
-		rcu_read_lock();
-		p = rcu_dereference(p->real_parent);
-		rcu_read_unlock();
-	}
-
-	return 0;
-}
-
-static void get_all_processes(struct pid *root_pid)
+static void get_all_processes(int is_root_pid)
 {
 	char *buf;
 	struct task_struct *p;
@@ -233,7 +216,7 @@ static void get_all_processes(struct pid *root_pid)
 		if (p->flags & PF_KTHREAD)
 			continue;
 
-		if (root_pid && !is_sample_process(p, root_pid))
+		if (is_root_pid && !quadd_is_inherited(p))
 			continue;
 
 		task_lock(p);
@@ -266,7 +249,7 @@ void quadd_get_mmaps(struct quadd_ctx *ctx)
 		return;
 
 	if (quadd_mode_is_sample_all(ctx)) {
-		get_all_processes(NULL);
+		get_all_processes(0);
 		return;
 	}
 
@@ -277,7 +260,7 @@ void quadd_get_mmaps(struct quadd_ctx *ctx)
 		return;
 
 	if (quadd_mode_is_sample_tree(ctx))
-		get_all_processes(pid);
+		get_all_processes(1);
 	else
 		get_process_vmas(task);
 

@@ -19,15 +19,15 @@ diff --git a/kernel/fork.c b/kernel/fork.c
 index 1a76739..620b30a 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -78,6 +78,7 @@
- #include <linux/compiler.h>
+@@ -79,6 +79,7 @@
  #include <linux/sysctl.h>
  #include <linux/kcov.h>
+ #include <linux/tegra_profiler.h>
 +#include <linux/kprobes.h>
  
  #include <asm/pgtable.h>
  #include <asm/pgalloc.h>
-@@ -391,6 +392,15 @@ void __put_task_struct(struct task_struct *tsk)
+@@ -392,6 +393,15 @@ void __put_task_struct(struct task_struct *tsk)
  	WARN_ON(atomic_read(&tsk->usage));
  	WARN_ON(tsk == current);
  

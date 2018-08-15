@@ -78,6 +78,7 @@
 #include <linux/compiler.h>
 #include <linux/sysctl.h>
 #include <linux/kcov.h>
+#include <linux/tegra_profiler.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -1844,6 +1845,7 @@ static __latent_entropy struct task_struct *copy_process(
 	cgroup_post_fork(p);
 	threadgroup_change_end(current);
 	perf_event_fork(p);
+	quadd_event_fork(p);
 
 	trace_task_newtask(p, clone_flags);
 	uprobe_copy_process(p, clone_flags);

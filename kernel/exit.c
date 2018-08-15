@@ -54,6 +54,7 @@
 #include <linux/writeback.h>
 #include <linux/shm.h>
 #include <linux/kcov.h>
+#include <linux/tegra_profiler.h>
 
 #include "sched/tune.h"
 
@@ -841,6 +842,7 @@ void __noreturn do_exit(long code)
 	 */
 	perf_event_exit_task(tsk);
 
+	quadd_event_exit(tsk);
 	sched_autogroup_exit_task(tsk);
 	cgroup_exit(tsk);
 

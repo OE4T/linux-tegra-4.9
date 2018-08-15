@@ -20,7 +20,31 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-srcs :=	common/mm/nvgpu_allocator.c \
+srcs :=	os/posix/nvgpu.c \
+	os/posix/bitmap.c \
+	os/posix/bug.c \
+	os/posix/log.c \
+	os/posix/kmem.c \
+	os/posix/io.c \
+	os/posix/posix-nvgpu_mem.c \
+	os/posix/dma.c \
+	os/posix/posix-vm.c \
+	os/posix/timers.c \
+	os/posix/posix-comptags.c \
+	os/posix/firmware.c \
+	os/posix/soc.c \
+	os/posix/rwsem.c \
+	os/posix/cond.c \
+	os/posix/thread.c \
+	os/posix/error_notifier.c \
+	os/posix/fuse.c \
+	os/posix/clk_arb.c \
+	os/posix/channel.c \
+	os/posix/tsg.c \
+	os/posix/nvlink.c \
+	os/posix/lock.c \
+	os/posix/stubs.c \
+	common/mm/nvgpu_allocator.c \
 	common/mm/bitmap_allocator.c \
 	common/mm/buddy_allocator.c \
 	common/mm/page_allocator.c \
@@ -71,30 +95,6 @@ srcs :=	common/mm/nvgpu_allocator.c \
 	common/pmu/pmu_pg.c \
 	common/pmu/pmu_perfmon.c \
 	common/pmu/pmu_debug.c \
-	common/posix/nvgpu.c \
-	common/posix/bitmap.c \
-	common/posix/bug.c \
-	common/posix/log.c \
-	common/posix/kmem.c \
-	common/posix/io.c \
-	common/posix/posix-nvgpu_mem.c \
-	common/posix/dma.c \
-	common/posix/posix-vm.c \
-	common/posix/timers.c \
-	common/posix/posix-comptags.c \
-	common/posix/firmware.c \
-	common/posix/soc.c \
-	common/posix/rwsem.c \
-	common/posix/cond.c \
-	common/posix/thread.c \
-	common/posix/error_notifier.c \
-	common/posix/fuse.c \
-	common/posix/clk_arb.c \
-	common/posix/channel.c \
-	common/posix/tsg.c \
-	common/posix/nvlink.c \
-	common/posix/lock.c \
-	common/posix/stubs.c \
 	common/ptimer/ptimer.c \
 	common/clock_gating/gm20b_gating_reglist.c \
 	common/clock_gating/gp10b_gating_reglist.c \

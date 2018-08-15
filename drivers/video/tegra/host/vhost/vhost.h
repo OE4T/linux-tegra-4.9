@@ -65,6 +65,9 @@ void nvhost_virt_deinit(struct platform_device *dev);
 void vhost_cdma_timeout(struct nvhost_master *dev,
 			struct tegra_vhost_chan_timeout_intr_info *info);
 
+int vhost_prod_apply(struct platform_device *pdev, u32 phy_mode);
+int vhost_cil_sw_reset(struct platform_device *pdev, u32 lanes, u32 enable);
+
 #else
 
 static inline void vhost_init_host1x_intr_ops(struct nvhost_intr_ops *ops)
@@ -114,6 +117,17 @@ static inline int nvhost_virt_init(struct platform_device *dev, int moduleid)
 }
 static inline void nvhost_virt_deinit(struct platform_device *dev)
 {
+}
+
+static inline int vhost_prod_apply(struct platform_device *pdev, u32 phy_mode)
+{
+	return -ENOTSUPP;
+}
+
+static inline int vhost_cil_sw_reset(struct platform_device *pdev, u32 lanes,
+				     u32 enable)
+{
+	return -ENOTSUPP;
 }
 
 #endif

@@ -245,6 +245,36 @@ int vhost_resume(struct platform_device *pdev)
 	return vhost_sendrecv(&msg);
 }
 
+int vhost_prod_apply(struct platform_device *pdev,
+		     unsigned int phy_mode)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(pdev);
+	struct tegra_vhost_prod_apply_params *p =
+		&msg.params.prod_apply;
+
+	msg.cmd = TEGRA_VHOST_CMD_PROD_APPLY;
+	msg.handle = ctx->handle;
+	p->phy_mode = phy_mode;
+
+	return vhost_sendrecv(&msg);
+}
+
+int vhost_cil_sw_reset(struct platform_device *pdev, u32 lanes, u32 enable)
+{
+	struct tegra_vhost_cmd_msg msg;
+	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(pdev);
+	struct tegra_vhost_cil_sw_reset_params *p =
+		&msg.params.cil_sw_reset;
+
+	msg.cmd = TEGRA_VHOST_CMD_CIL_SW_RESET;
+	msg.handle = ctx->handle;
+	p->lanes = lanes;
+	p->enable = enable;
+
+	return vhost_sendrecv(&msg);
+}
+
 static int vhost_host1x_regrdwr(u64 handle, u32 moduleid, u32 num_offsets,
 			u32 block_size, u32 *offs, u32 *vals, u32 write)
 {

@@ -62,6 +62,8 @@ enum {
 	TEGRA_VHOST_CMD_HOST1X_REGRDWR,
 	TEGRA_VHOST_CMD_SUSPEND,
 	TEGRA_VHOST_CMD_RESUME,
+	TEGRA_VHOST_CMD_PROD_APPLY, /* WAR */
+	TEGRA_VHOST_CMD_CIL_SW_RESET, /* WAR */
 };
 
 struct tegra_vhost_connect_params {
@@ -116,6 +118,15 @@ struct tegra_vhost_channel_regrdwr_params {
 	u32 regs[REGRDWR_ARRAY_SIZE];
 };
 
+struct tegra_vhost_prod_apply_params {
+	u32 phy_mode;
+};
+
+struct tegra_vhost_cil_sw_reset_params {
+	u32 lanes;
+	u32 enable;
+};
+
 struct tegra_vhost_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -130,6 +141,8 @@ struct tegra_vhost_cmd_msg {
 		struct tegra_vhost_channel_clientid_params clientid;
 		struct tegra_vhost_channel_submit_params cdma_submit;
 		struct tegra_vhost_channel_regrdwr_params regrdwr;
+		struct tegra_vhost_prod_apply_params prod_apply;
+		struct tegra_vhost_cil_sw_reset_params cil_sw_reset;
 	} params;
 };
 

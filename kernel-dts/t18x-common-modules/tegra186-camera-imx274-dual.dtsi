@@ -309,11 +309,11 @@
 					min_gain_val = "1.0";
 					max_gain_val = "30";
 					gain_step_pitch = "0.1";
-					min_hdr_ratio = "1";
-					max_hdr_ratio = "256";
+					min_hdr_ratio = "32";
+					max_hdr_ratio = "32";
 					min_framerate = "1.5";
 					max_framerate = "30";
-					min_exp_time = "57";
+					min_exp_time = "864";
 					max_exp_time = "20480";
 					exp_time_1h = "8";
 					embedded_metadata_height = "1";
@@ -349,12 +349,12 @@
 					min_gain_val = "1.0";
 					max_gain_val = "177";
 					gain_step_pitch = "0.1";
-					min_hdr_ratio = "1";
-					max_hdr_ratio = "256";
+					min_hdr_ratio = "32";
+					max_hdr_ratio = "32";
 					min_framerate = "1.5";
 					max_framerate = "60";
-					min_exp_time = "56";
-					max_exp_time = "666479";
+					min_exp_time = "859";
+					max_exp_time = "15649";
 					exp_time_1h = "8";
 					embedded_metadata_height = "1";
 
@@ -597,11 +597,11 @@
 					min_gain_val = "1.0";
 					max_gain_val = "30";
 					gain_step_pitch = "0.1";
-					min_hdr_ratio = "1";
-					max_hdr_ratio = "256";
+					min_hdr_ratio = "32";
+					max_hdr_ratio = "32";
 					min_framerate = "1.5";
 					max_framerate = "30";
-					min_exp_time = "57";
+					min_exp_time = "864";
 					max_exp_time = "20480";
 					exp_time_1h = "8";
 					embedded_metadata_height = "1";
@@ -637,12 +637,12 @@
 					min_gain_val = "1.0";
 					max_gain_val = "177";
 					gain_step_pitch = "0.1";
-					min_hdr_ratio = "1";
-					max_hdr_ratio = "256";
+					min_hdr_ratio = "32";
+					max_hdr_ratio = "32";
 					min_framerate = "1.5";
 					max_framerate = "60";
-					min_exp_time = "56";
-					max_exp_time = "666479";
+					min_exp_time = "859";
+					max_exp_time = "15649";
 					exp_time_1h = "8";
 					embedded_metadata_height = "1";
 

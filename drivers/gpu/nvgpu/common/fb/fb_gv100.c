@@ -40,7 +40,6 @@
 #include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
-#include "gm20b/acr_gm20b.h"
 
 #include "fb_gv100.h"
 
@@ -101,6 +100,23 @@ void gv100_fb_disable_hub_intr(struct gk20a *g)
 			mask);
 }
 
+/*
+ * @brief Patch signatures into ucode image
+ */
+static int gv100_fb_acr_ucode_patch_sig(struct gk20a *g,
+		unsigned int *p_img,
+		unsigned int *p_sig,
+		unsigned int *p_patch_loc,
+		unsigned int *p_patch_ind)
+{
+	/* Patching logic. We have just one location to patch. */
+	p_img[(*p_patch_loc>>2)] = p_sig[(*p_patch_ind<<2)];
+	p_img[(*p_patch_loc>>2)+1U] = p_sig[(*p_patch_ind<<2)+1U];
+	p_img[(*p_patch_loc>>2)+2U] = p_sig[(*p_patch_ind<<2)+2U];
+	p_img[(*p_patch_loc>>2)+3U] = p_sig[(*p_patch_ind<<2)+3U];
+	return 0;
+}
+
 int gv100_fb_memory_unlock(struct gk20a *g)
 {
 	struct nvgpu_firmware *mem_unlock_fw = NULL;
@@ -143,9 +159,8 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 		hsbin_hdr->data_offset);
 
 	/* Patch Ucode singnatures */
-	if (acr_ucode_patch_sig(g, mem_unlock_ucode,
+	if (gv100_fb_acr_ucode_patch_sig(g, mem_unlock_ucode,
 		(u32 *)(mem_unlock_fw->data + fw_hdr->sig_prod_offset),
-		(u32 *)(mem_unlock_fw->data + fw_hdr->sig_dbg_offset),
 		(u32 *)(mem_unlock_fw->data + fw_hdr->patch_loc),
 		(u32 *)(mem_unlock_fw->data + fw_hdr->patch_sig)) < 0) {
 		nvgpu_err(g, "mem unlock patch signatures fail");

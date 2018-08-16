@@ -31,7 +31,6 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/priv_ring/priv_ring_gp10b.o \
 	common/ptimer/ptimer.o \
 	common/ptimer/ptimer_gk20a.o \
-	common/fb/fb_gk20a.o \
 	common/fb/fb_gm20b.o \
 	common/fb/fb_gp10b.o \
 	common/fb/fb_gp106.o \

@@ -29,7 +29,6 @@
 #include "common/priv_ring/priv_ring_gp10b.h"
 #include "common/clock_gating/gv100_gating_reglist.h"
 #include "common/ptimer/ptimer_gk20a.h"
-#include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
 #include "common/fb/fb_gv11b.h"
@@ -480,7 +479,7 @@ static const struct gpu_ops gv100_ops = {
 		.read_wpr_info = gm20b_fb_read_wpr_info,
 		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
 		.set_debug_mode = gm20b_fb_set_debug_mode,
-		.tlb_invalidate = gk20a_fb_tlb_invalidate,
+		.tlb_invalidate = gm20b_fb_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.mem_unlock = gv100_fb_memory_unlock,
 		.init_nvlink = gv100_fb_init_nvlink,

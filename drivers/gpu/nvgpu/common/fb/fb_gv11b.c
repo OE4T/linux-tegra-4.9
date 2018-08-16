@@ -40,7 +40,7 @@
 #include "gv11b/fifo_gv11b.h"
 #include "gv11b/ce_gv11b.h"
 
-#include "fb_gk20a.h"
+#include "fb_gm20b.h"
 #include "fb_gp10b.h"
 #include "fb_gv11b.h"
 
@@ -64,7 +64,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 
 void gv11b_fb_init_hw(struct gk20a *g)
 {
-	gk20a_fb_init_hw(g);
+	gm20b_fb_init_hw(g);
 
 	g->ops.fb.enable_hub_intr(g);
 }

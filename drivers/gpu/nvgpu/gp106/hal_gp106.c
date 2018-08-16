@@ -29,7 +29,6 @@
 #include "common/bus/bus_gp10b.h"
 #include "common/priv_ring/priv_ring_gm20b.h"
 #include "common/priv_ring/priv_ring_gp10b.h"
-#include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gp10b.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp106.h"
@@ -407,7 +406,7 @@ static const struct gpu_ops gp106_ops = {
 	},
 	.fb = {
 		.reset = gp106_fb_reset,
-		.init_hw = gk20a_fb_init_hw,
+		.init_hw = gm20b_fb_init_hw,
 		.init_fs_state = NULL,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
@@ -424,7 +423,7 @@ static const struct gpu_ops gp106_ops = {
 		.read_wpr_info = gm20b_fb_read_wpr_info,
 		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
 		.set_debug_mode = gm20b_fb_set_debug_mode,
-		.tlb_invalidate = gk20a_fb_tlb_invalidate,
+		.tlb_invalidate = gm20b_fb_tlb_invalidate,
 		.mem_unlock = NULL,
 	},
 	.clock_gating = {

@@ -29,7 +29,6 @@
 #include "common/bus/bus_gp10b.h"
 #include "common/priv_ring/priv_ring_gm20b.h"
 #include "common/priv_ring/priv_ring_gp10b.h"
-#include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
 #include "common/therm/therm_gm20b.h"
@@ -368,8 +367,8 @@ static const struct gpu_ops gp10b_ops = {
 		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
-		.reset = fb_gk20a_reset,
-		.init_hw = gk20a_fb_init_hw,
+		.reset = gm20b_fb_reset,
+		.init_hw = gm20b_fb_init_hw,
 		.init_fs_state = fb_gm20b_init_fs_state,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
@@ -386,7 +385,7 @@ static const struct gpu_ops gp10b_ops = {
 		.read_wpr_info = gm20b_fb_read_wpr_info,
 		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
 		.set_debug_mode = gm20b_fb_set_debug_mode,
-		.tlb_invalidate = gk20a_fb_tlb_invalidate,
+		.tlb_invalidate = gm20b_fb_tlb_invalidate,
 		.mem_unlock = NULL,
 	},
 	.clock_gating = {

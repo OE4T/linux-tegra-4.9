@@ -1,7 +1,7 @@
 /*
  * GM20B FB
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,12 +22,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GM20B_FB
-#define _NVHOST_GM20B_FB
+#ifndef NVGPU_FB_GM20B
+#define NVGPU_FB_GM20B
+
+#include <nvgpu/types.h>
 
 struct gk20a;
 struct wpr_carveout_info;
+struct nvgpu_mem;
 
+void gm20b_fb_reset(struct gk20a *g);
+void gm20b_fb_init_hw(struct gk20a *g);
+void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);
 void fb_gm20b_init_fs_state(struct gk20a *g);
 void gm20b_fb_set_mmu_page_size(struct gk20a *g);
 bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g);

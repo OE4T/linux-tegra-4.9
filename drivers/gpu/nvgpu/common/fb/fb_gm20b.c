@@ -22,21 +22,111 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <trace/events/gk20a.h>
+
 #include <nvgpu/sizes.h>
 #include <nvgpu/utils.h>
 
 #include "gk20a/gk20a.h"
 
-#include "fb_gk20a.h"
 #include "fb_gm20b.h"
 
 #include <nvgpu/io.h>
 #include <nvgpu/timers.h>
 
+#include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 
 #define VPR_INFO_FETCH_WAIT	(5)
 #define WPR_INFO_ADDR_ALIGNMENT 0x0000000c
+
+void gm20b_fb_reset(struct gk20a *g)
+{
+	u32 val;
+
+	nvgpu_log_info(g, "reset gk20a fb");
+
+	val = gk20a_readl(g, mc_elpg_enable_r());
+	val |= mc_elpg_enable_xbar_enabled_f()
+		| mc_elpg_enable_pfb_enabled_f()
+		| mc_elpg_enable_hub_enabled_f();
+	gk20a_writel(g, mc_elpg_enable_r(), val);
+}
+
+void gm20b_fb_init_hw(struct gk20a *g)
+{
+	u32 addr = nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8;
+
+	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
+}
+
+void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
+{
+	struct nvgpu_timeout timeout;
+	u32 addr_lo;
+	u32 data;
+
+	nvgpu_log_fn(g, " ");
+
+	/* pagetables are considered sw states which are preserved after
+	   prepare_poweroff. When gk20a deinit releases those pagetables,
+	   common code in vm unmap path calls tlb invalidate that touches
+	   hw. Use the power_on flag to skip tlb invalidation when gpu
+	   power is turned off */
+
+	if (!g->power_on) {
+		return;
+	}
+
+	addr_lo = u64_lo32(nvgpu_mem_get_addr(g, pdb) >> 12);
+
+	nvgpu_mutex_acquire(&g->mm.tlb_lock);
+
+	trace_gk20a_mm_tlb_invalidate(g->name);
+
+	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
+
+	do {
+		data = gk20a_readl(g, fb_mmu_ctrl_r());
+		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0) {
+			break;
+		}
+		nvgpu_udelay(2);
+	} while (!nvgpu_timeout_expired_msg(&timeout,
+					 "wait mmu fifo space"));
+
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		goto out;
+	}
+
+	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
+
+	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
+		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
+		nvgpu_aperture_mask(g, pdb,
+				fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
+				fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
+				fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
+
+	gk20a_writel(g, fb_mmu_invalidate_r(),
+		fb_mmu_invalidate_all_va_true_f() |
+		fb_mmu_invalidate_trigger_true_f());
+
+	do {
+		data = gk20a_readl(g, fb_mmu_ctrl_r());
+		if (fb_mmu_ctrl_pri_fifo_empty_v(data) !=
+			fb_mmu_ctrl_pri_fifo_empty_false_f()) {
+			break;
+		}
+		nvgpu_udelay(2);
+	} while (!nvgpu_timeout_expired_msg(&timeout,
+					 "wait mmu invalidate"));
+
+	trace_gk20a_mm_tlb_invalidate_done(g->name);
+
+out:
+	nvgpu_mutex_release(&g->mm.tlb_lock);
+}
 
 void fb_gm20b_init_fs_state(struct gk20a *g)
 {

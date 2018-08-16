@@ -62,7 +62,6 @@ srcs :=	os/posix/nvgpu.c \
 	common/bus/bus_gv100.c \
 	common/priv_ring/priv_ring_gm20b.c \
 	common/priv_ring/priv_ring_gp10b.c \
-	common/fb/fb_gk20a.c \
 	common/fb/fb_gm20b.c \
 	common/fb/fb_gp10b.c \
 	common/fb/fb_gp106.c \

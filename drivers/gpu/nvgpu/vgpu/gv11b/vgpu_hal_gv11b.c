@@ -25,7 +25,6 @@
 #include "common/priv_ring/priv_ring_gm20b.h"
 #include "common/priv_ring/priv_ring_gp10b.h"
 #include "common/clock_gating/gv11b_gating_reglist.h"
-#include "common/fb/fb_gk20a.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
 #include "common/fb/fb_gv11b.h"

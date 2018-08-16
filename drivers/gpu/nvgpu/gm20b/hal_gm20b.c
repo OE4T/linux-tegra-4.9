@@ -292,7 +292,6 @@ static const struct gpu_ops gm20b_ops = {
 		.write_zcull_ptr = gr_gk20a_write_zcull_ptr,
 		.write_pm_ptr = gr_gk20a_write_pm_ptr,
 		.load_tpc_mask = gr_gm20b_load_tpc_mask,
-		.inval_icache = gr_gk20a_inval_icache,
 		.trigger_suspend = gr_gk20a_trigger_suspend,
 		.wait_for_pause = gr_gk20a_wait_for_pause,
 		.resume_from_pause = gr_gk20a_resume_from_pause,

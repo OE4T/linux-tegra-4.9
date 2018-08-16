@@ -437,7 +437,6 @@ struct gpu_ops {
 		void (*set_preemption_buffer_va)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*load_tpc_mask)(struct gk20a *g);
-		int (*inval_icache)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*trigger_suspend)(struct gk20a *g);
 		int (*wait_for_pause)(struct gk20a *g, struct nvgpu_warpstate *w_state);
 		int (*resume_from_pause)(struct gk20a *g);

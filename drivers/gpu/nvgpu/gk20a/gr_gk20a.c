@@ -8549,51 +8549,6 @@ clean_up:
 	return err;
 }
 
-int gr_gk20a_inval_icache(struct gk20a *g, struct channel_gk20a *ch)
-{
-	int err = 0;
-	u32	cache_ctrl, regval;
-	struct nvgpu_dbg_reg_op ops;
-
-	ops.op	   = REGOP(READ_32);
-	ops.type   = REGOP(TYPE_GR_CTX);
-	ops.status = REGOP(STATUS_SUCCESS);
-	ops.value_hi	  = 0;
-	ops.and_n_mask_lo = 0;
-	ops.and_n_mask_hi = 0;
-	ops.offset	 = gr_pri_gpc0_gcc_dbg_r();
-
-	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
-	if (err) {
-		nvgpu_err(g, "Failed to read register");
-		return err;
-	}
-
-	regval = ops.value_lo;
-
-	ops.op = REGOP(WRITE_32);
-	ops.value_lo = set_field(regval, gr_pri_gpcs_gcc_dbg_invalidate_m(), 1);
-	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
-	if (err) {
-		nvgpu_err(g, "Failed to write register");
-		return err;
-	}
-
-	ops.op	   = REGOP(READ_32);
-	ops.offset = gr_pri_gpc0_tpc0_sm_cache_control_r();
-	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
-	if (err) {
-		nvgpu_err(g, "Failed to read register");
-		return err;
-	}
-
-	cache_ctrl = gk20a_readl(g, gr_pri_gpc0_tpc0_sm_cache_control_r());
-	cache_ctrl = set_field(cache_ctrl, gr_pri_gpcs_tpcs_sm_cache_control_invalidate_cache_m(), 1);
-	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cache_control_r(), cache_ctrl);
-
-	return 0;
-}
-
 int gr_gk20a_trigger_suspend(struct gk20a *g)
 {
 	int err = 0;

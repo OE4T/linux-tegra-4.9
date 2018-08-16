@@ -389,7 +389,6 @@ static const struct gpu_ops gv100_ops = {
 		.write_zcull_ptr = gr_gv11b_write_zcull_ptr,
 		.write_pm_ptr = gr_gv11b_write_pm_ptr,
 		.load_tpc_mask = gr_gv11b_load_tpc_mask,
-		.inval_icache = gr_gk20a_inval_icache,
 		.trigger_suspend = gv11b_gr_sm_trigger_suspend,
 		.wait_for_pause = gr_gk20a_wait_for_pause,
 		.resume_from_pause = gv11b_gr_resume_from_pause,

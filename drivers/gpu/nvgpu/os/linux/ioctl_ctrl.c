@@ -578,27 +578,6 @@ static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
 	return err;
 }
 
-/* Invalidate i-cache for kepler & maxwell */
-static int nvgpu_gpu_ioctl_inval_icache(
-		struct gk20a *g,
-		struct nvgpu_gpu_inval_icache_args *args)
-{
-	struct channel_gk20a *ch;
-	int err;
-
-	ch = gk20a_get_channel_from_file(args->channel_fd);
-	if (!ch)
-		return -EINVAL;
-
-	/* Take the global lock, since we'll be doing global regops */
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = g->ops.gr.inval_icache(g, ch);
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
-
-	gk20a_channel_put(ch);
-	return err;
-}
-
 static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct gk20a *g,
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
@@ -1823,10 +1802,6 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_FLUSH_L2:
 		err = nvgpu_gpu_ioctl_l2_fb_ops(g,
 			   (struct nvgpu_gpu_l2_fb_args *)buf);
-		break;
-	case NVGPU_GPU_IOCTL_INVAL_ICACHE:
-		err = gr_gk20a_elpg_protected_call(g,
-				nvgpu_gpu_ioctl_inval_icache(g, (struct nvgpu_gpu_inval_icache_args *)buf));
 		break;
 
 	case NVGPU_GPU_IOCTL_SET_MMUDEBUG_MODE:

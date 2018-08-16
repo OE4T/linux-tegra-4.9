@@ -2149,7 +2149,7 @@ static bool tegra_ahci_power_gate(struct ata_host *host)
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 	partition_id = tegra_pd_get_powergate_id(tegra_sata_pd);
 	if (partition_id < 0)
-		return -EINVAL;
+		return false;
 #else
 	partition_id = TEGRA_POWERGATE_SATA;
 #endif
@@ -2178,7 +2178,7 @@ static bool tegra_ahci_power_un_gate(struct ata_host *host)
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 	powergate_id = tegra_pd_get_powergate_id(tegra_sata_pd);
 	if (powergate_id < 0)
-		return -EINVAL;
+		return false;
 #else
 	powergate_id = TEGRA_POWERGATE_SATA;
 #endif

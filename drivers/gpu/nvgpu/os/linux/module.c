@@ -60,6 +60,7 @@
 #include "ctxsw_trace.h"
 #include "driver_common.h"
 #include "channel.h"
+#include "debug_pmgr.h"
 
 #ifdef CONFIG_NVGPU_SUPPORT_CDE
 #include "cde.h"
@@ -212,6 +213,12 @@ int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
 			nvgpu_err(g, "failed to init linux therm debugfs");
 			return err;
 		}
+	}
+
+	err = nvgpu_pmgr_init_debugfs_linux(l);
+	if (err) {
+		nvgpu_err(g, "failed to init linux pmgr debugfs");
+		return err;
 	}
 
 	l->init_done = true;

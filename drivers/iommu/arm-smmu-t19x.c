@@ -1881,11 +1881,8 @@ static void *arm_smmu_alloc_pgtable_page(struct arm_smmu_domain *domain, int lvl
 {
 	struct arm_smmu_device *smmu = domain->smmu;
 	void * ret = NULL;
-	unsigned long flags;
 
 	pr_debug("Alloc for address %lx level: %d\n", addr, lvl);
-
-	spin_lock_irqsave(&domain->lock, flags);
 
 	if (lvl == 0) {
 #ifndef __PAGETABLE_PUD_FOLDED
@@ -1956,7 +1953,6 @@ static void *arm_smmu_alloc_pgtable_page(struct arm_smmu_domain *domain, int lvl
 	}
 
 unlock_ret:
-	spin_unlock_irqrestore(&domain->lock, flags);
 	return ret;
 }
 
@@ -2131,6 +2127,7 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	pgd_t *pgd = cfg->pgd;
+	unsigned long flags;
 
 	u64 time_before = 0;
 
@@ -2171,6 +2168,7 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 		time_before = local_clock();
 #endif
 
+	spin_lock_irqsave(&smmu_domain->lock, flags);
 	pgd += pgd_index(iova);
 	end = iova + size;
 	do {
@@ -2194,6 +2192,7 @@ out_unlock:
 		else
 			arm_smmu_tlb_inv_context(smmu_domain);
 	}
+	spin_unlock_irqrestore(&smmu_domain->lock, flags);
 
 	if (time_before)
 		trace_arm_smmu_handle_mapping(time_before, cfg->cbndx,

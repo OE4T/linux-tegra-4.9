@@ -388,7 +388,7 @@ static void tegra_throt_dbgfs_init(struct platform_device *pdev,
 static void tegra_throt_dbgfs_remove(struct dentry *root)
 {}
 
-static int tegra_throt_dbgfs_create(struct dentry *root)
+static int tegra_throt_dbgfs_create(struct dentry **root)
 {
 	return 0;
 }

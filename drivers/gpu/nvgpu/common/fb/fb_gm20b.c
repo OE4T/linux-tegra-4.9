@@ -202,9 +202,9 @@ void gm20b_fb_read_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 
 bool gm20b_fb_debug_mode_enabled(struct gk20a *g)
 {
-	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
-	return gr_gpcs_pri_mmu_debug_ctrl_debug_v(debug_ctrl) ==
-		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
+	u32 debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	return fb_mmu_debug_ctrl_debug_v(debug_ctrl) ==
+			fb_mmu_debug_ctrl_debug_enabled_v();
 }
 
 void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)

@@ -235,6 +235,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.commit_global_ctx_buffers = gr_gk20a_commit_global_ctx_buffers,
 		.get_offset_in_gpccs_segment =
 			gr_gk20a_get_offset_in_gpccs_segment,
+		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
 		.reset = NULL,

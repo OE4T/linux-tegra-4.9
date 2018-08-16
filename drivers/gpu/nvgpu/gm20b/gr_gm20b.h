@@ -127,4 +127,5 @@ int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 void gm20b_gr_clear_sm_hww(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 			u32 global_esr);
 u32 gr_gm20b_get_pmm_per_chiplet_offset(void);
+void gm20b_gr_set_debug_mode(struct gk20a *g, bool enable);
 #endif

@@ -1516,3 +1516,19 @@ u32 gr_gm20b_get_pmm_per_chiplet_offset(void)
 {
 	return (perf_pmmsys_extent_v() - perf_pmmsys_base_v() + 1);
 }
+
+void gm20b_gr_set_debug_mode(struct gk20a *g, bool enable)
+{
+	u32 reg_val, gpc_debug_ctrl;
+
+	if (enable) {
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_f();
+	} else {
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f();
+	}
+
+	reg_val = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+			gr_gpcs_pri_mmu_debug_ctrl_debug_m(), gpc_debug_ctrl);
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(), reg_val);
+}

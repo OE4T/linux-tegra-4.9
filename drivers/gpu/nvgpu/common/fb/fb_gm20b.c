@@ -35,7 +35,6 @@
 
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 
 #define VPR_INFO_FETCH_WAIT	(5)
 #define WPR_INFO_ADDR_ALIGNMENT 0x0000000c
@@ -209,15 +208,13 @@ bool gm20b_fb_debug_mode_enabled(struct gk20a *g)
 
 void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
 {
-	u32 reg_val, fb_debug_ctrl, gpc_debug_ctrl;
+	u32 reg_val, fb_debug_ctrl;
 
 	if (enable) {
 		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
-		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_f();
 		g->mmu_debug_ctrl = true;
 	} else {
 		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
-		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f();
 		g->mmu_debug_ctrl = false;
 	}
 
@@ -226,8 +223,5 @@ void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
 			fb_mmu_debug_ctrl_debug_m(), fb_debug_ctrl);
 	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
 
-	reg_val = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
-	reg_val = set_field(reg_val,
-			gr_gpcs_pri_mmu_debug_ctrl_debug_m(), gpc_debug_ctrl);
-	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(), reg_val);
+	g->ops.gr.set_debug_mode(g, enable);
 }

@@ -591,6 +591,20 @@ static ssize_t force_dma_mode_show(struct device *dev,
 
 static DEVICE_ATTR(qspi_force_dma_mode, 0644, force_dma_mode_show,
 						force_dma_mode_set);
+
+static struct attribute *tegra_qspi_attrs[] = {
+	&dev_attr_qspi_force_unpacked_mode.attr,
+	&dev_attr_qspi_enable_cmbseq_mode.attr,
+	&dev_attr_qspi_enable_prod_override.attr,
+	&dev_attr_qspi_enable_clk_always_on.attr,
+	&dev_attr_qspi_bus_speed.attr,
+	&dev_attr_qspi_force_pio_mode.attr,
+	&dev_attr_qspi_force_dma_mode.attr,
+	NULL,
+};
+
+ATTRIBUTE_GROUPS(tegra_qspi);
+
 #endif
 
 #ifdef QSPI_DUMP_REGISTERS
@@ -2248,34 +2262,9 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 #ifdef QSPI_BRINGUP_BUILD
-	ret = device_create_file(dev, &dev_attr_qspi_force_unpacked_mode);
-	if (ret  < 0)
+	ret = sysfs_create_group(&dev->kobj, tegra_qspi_groups[0]);
+	if (ret)
 		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_enable_cmbseq_mode);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_enable_prod_override);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_enable_clk_always_on);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_bus_speed);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_force_pio_mode);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
-	ret = device_create_file(dev, &dev_attr_qspi_force_dma_mode);
-	if (ret  < 0)
-		goto exit_pm_disable;
-
 	tqspi->qspi_force_bus_speed = false;
 #endif
 	return ret;
@@ -2302,8 +2291,7 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 	struct tegra_qspi_data	*tqspi = spi_master_get_devdata(master);
 
 #ifdef QSPI_BRINGUP_BUILD
-	device_remove_file(&pdev->dev, &dev_attr_qspi_force_unpacked_mode);
-	device_remove_file(&pdev->dev, &dev_attr_qspi_enable_cmbseq_mode);
+	sysfs_remove_group(&pdev->dev.kobj, tegra_qspi_groups[0]);
 #endif
 
 	if (tqspi->tx_dma_chan)

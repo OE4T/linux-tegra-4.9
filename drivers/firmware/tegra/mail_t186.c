@@ -202,7 +202,7 @@ static int virt_connect(const struct channel_cfg *cfg,
 	return 0;
 }
 
-void tegra_hv_ivc_disconnect(void)
+static void tegra_hv_ivc_disconnect(void)
 {
 	int index;
 	struct tegra_hv_ivc_cookie *cookie;

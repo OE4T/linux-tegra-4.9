@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1112,6 +1112,10 @@ static inline u32 fb_mmu_fault_buffer_lo_addr_v(u32 r)
 {
 	return (r >> 12U) & 0xfffffU;
 }
+static inline u32 fb_mmu_fault_buffer_lo_addr_b(void)
+{
+	return 12U;
+}
 static inline u32 fb_mmu_fault_buffer_hi_r(u32 i)
 {
 	return 0x00100e28U + i*20U;
@@ -1340,6 +1344,10 @@ static inline u32 fb_mmu_fault_addr_lo_addr_v(u32 r)
 {
 	return (r >> 12U) & 0xfffffU;
 }
+static inline u32 fb_mmu_fault_addr_lo_addr_b(void)
+{
+	return 12U;
+}
 static inline u32 fb_mmu_fault_addr_hi_r(void)
 {
 	return 0x00100e50U;
@@ -1379,6 +1387,10 @@ static inline u32 fb_mmu_fault_inst_lo_addr_f(u32 v)
 static inline u32 fb_mmu_fault_inst_lo_addr_v(u32 r)
 {
 	return (r >> 12U) & 0xfffffU;
+}
+static inline u32 fb_mmu_fault_inst_lo_addr_b(void)
+{
+	return 12U;
 }
 static inline u32 fb_mmu_fault_inst_hi_r(void)
 {

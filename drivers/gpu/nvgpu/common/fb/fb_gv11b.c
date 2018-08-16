@@ -46,7 +46,6 @@
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 
 static int gv11b_fb_fix_page_fault(struct gk20a *g,
@@ -375,7 +374,7 @@ void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, u32 index)
 	gv11b_fb_fault_buf_set_state_hw(g, index,
 					 NVGPU_FB_MMU_FAULT_BUF_DISABLED);
 	addr_lo = u64_lo32(g->mm.hw_fault_buf[index].gpu_va >>
-					ram_in_base_shift_v());
+					fb_mmu_fault_buffer_lo_addr_b());
 	addr_hi = u64_hi32(g->mm.hw_fault_buf[index].gpu_va);
 
 	g->ops.fb.write_mmu_fault_buffer_lo_hi(g, index,
@@ -749,7 +748,7 @@ static void gv11b_fb_copy_from_hw_fault_buf(struct gk20a *g,
 	rd32_val = nvgpu_mem_rd32(g, mem, offset +
 			 gmmu_fault_buf_entry_inst_lo_w());
 	addr_lo = gmmu_fault_buf_entry_inst_lo_v(rd32_val);
-	addr_lo = addr_lo << ram_in_base_shift_v();
+	addr_lo = addr_lo << gmmu_fault_buf_entry_inst_lo_b();
 
 	addr_hi = nvgpu_mem_rd32(g, mem, offset +
 				 gmmu_fault_buf_entry_inst_hi_w());
@@ -775,7 +774,7 @@ static void gv11b_fb_copy_from_hw_fault_buf(struct gk20a *g,
 	mmfault->fault_addr_aperture =
 		gmmu_fault_buf_entry_addr_phys_aperture_v(rd32_val);
 	addr_lo = gmmu_fault_buf_entry_addr_lo_v(rd32_val);
-	addr_lo = addr_lo << ram_in_base_shift_v();
+	addr_lo = addr_lo << gmmu_fault_buf_entry_addr_lo_b();
 
 	rd32_val = nvgpu_mem_rd32(g, mem, offset +
 			 gmmu_fault_buf_entry_addr_hi_w());
@@ -1096,7 +1095,7 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 	g->ops.fb.read_mmu_fault_inst_lo_hi(g, &reg_val, &addr_hi);
 
 	addr_lo = fb_mmu_fault_inst_lo_addr_v(reg_val);
-	addr_lo = addr_lo << ram_in_base_shift_v();
+	addr_lo = addr_lo << fb_mmu_fault_inst_lo_addr_b();
 
 	addr_hi = fb_mmu_fault_inst_hi_addr_v(addr_hi);
 	inst_ptr = hi32_lo32_to_u64(addr_hi, addr_lo);
@@ -1121,7 +1120,7 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 	g->ops.fb.read_mmu_fault_addr_lo_hi(g, &reg_val, &addr_hi);
 
 	addr_lo = fb_mmu_fault_addr_lo_addr_v(reg_val);
-	addr_lo = addr_lo << ram_in_base_shift_v();
+	addr_lo = addr_lo << fb_mmu_fault_addr_lo_addr_b();
 
 	mmfault->fault_addr_aperture =
 			 fb_mmu_fault_addr_lo_phys_aperture_v(reg_val);

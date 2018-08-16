@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1320,6 +1320,10 @@ static inline u32 gmmu_fault_buf_entry_inst_lo_v(u32 r)
 {
 	return (r >> 12U) & 0xfffffU;
 }
+static inline u32 gmmu_fault_buf_entry_inst_lo_b(void)
+{
+	return 12U;
+}
 static inline u32 gmmu_fault_buf_entry_inst_lo_w(void)
 {
 	return 0U;
@@ -1347,6 +1351,10 @@ static inline u32 gmmu_fault_buf_entry_addr_lo_f(u32 v)
 static inline u32 gmmu_fault_buf_entry_addr_lo_v(u32 r)
 {
 	return (r >> 12U) & 0xfffffU;
+}
+static inline u32 gmmu_fault_buf_entry_addr_lo_b(void)
+{
+	return 12U;
 }
 static inline u32 gmmu_fault_buf_entry_addr_lo_w(void)
 {

@@ -44,7 +44,6 @@
 #include "fb_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
-#include <nvgpu/hw/gv100/hw_falcon_gv100.h>
 #include <nvgpu/hw/gv100/hw_mc_gv100.h>
 
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
@@ -177,10 +176,6 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 		mem_unlock_ucode_header[OS_DATA_OFFSET] >> 2],
 		mem_unlock_ucode_header[OS_DATA_SIZE], 0);
 
-	nvgpu_log_info(g, "nvdec sctl reg %x\n",
-		gk20a_readl(g, g->nvdec_flcn.flcn_base +
-		falcon_falcon_sctl_r()));
-
 	/* set BOOTVEC to start of non-secure code */
 	nvgpu_flcn_bootstrap(&g->nvdec_flcn, 0);
 
@@ -194,10 +189,6 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 		err = -1;
 		goto exit;
 	}
-
-	nvgpu_log_info(g, "nvdec sctl reg %x\n",
-		gk20a_readl(g, g->nvdec_flcn.flcn_base +
-		falcon_falcon_sctl_r()));
 
 exit:
 	if (mem_unlock_fw) {

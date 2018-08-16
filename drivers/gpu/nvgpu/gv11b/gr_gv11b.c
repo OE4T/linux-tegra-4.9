@@ -362,8 +362,9 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 {
-	/* enable exceptions */
+	u32 reg_val;
 
+	/* enable exceptions */
 	gk20a_writel(g, gr_fe_hww_esr_r(),
 		     gr_fe_hww_esr_en_enable_f() |
 		     gr_fe_hww_esr_reset_active_f());
@@ -386,9 +387,27 @@ void gr_gv11b_enable_hww_exceptions(struct gk20a *g)
 		     gr_mme_hww_esr_en_enable_f() |
 		     gr_mme_hww_esr_reset_active_f());
 
-	/* For now leave POR values */
+	if (g->gr.sked_hww_esr_skedcheck18_disabled) {
+		/*
+		 * gr_sked_hww_esr_en_r() is not context switched right now,
+		 * so it looses it's value after railgate
+		 *
+		 * skedcheck18 exception is enabled by default and if User has
+		 * disabled it through s/w method (see gr_gv11b_set_skedcheck())
+		 * it will be re-enabled after a railgate
+		 *
+		 * So disable it again if User had asked to disable it already
+		 */
+		reg_val = nvgpu_readl(g, gr_sked_hww_esr_en_r());
+		reg_val = set_field(reg_val,
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
+			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f()
+			);
+		nvgpu_writel(g, gr_sked_hww_esr_en_r(), reg_val);
+	}
+
 	nvgpu_log(g, gpu_dbg_info, "gr_sked_hww_esr_en_r 0x%08x",
-			gk20a_readl(g, gr_sked_hww_esr_en_r()));
+			nvgpu_readl(g, gr_sked_hww_esr_en_r()));
 }
 
 void gr_gv11b_fecs_host_int_enable(struct gk20a *g)
@@ -1217,12 +1236,16 @@ static void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data)
 			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
 			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_disabled_f()
 			);
+
+		g->gr.sked_hww_esr_skedcheck18_disabled = true;
 	} else if ((data & NVC397_SET_SKEDCHECK_18_MASK) ==
 			NVC397_SET_SKEDCHECK_18_ENABLE) {
 		reg_val = set_field(reg_val,
 			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_m(),
 			gr_sked_hww_esr_en_skedcheck18_l1_config_too_small_enabled_f()
 			);
+
+		g->gr.sked_hww_esr_skedcheck18_disabled = false;
 	}
 	nvgpu_log_info(g, "sked_hww_esr_en = 0x%x", reg_val);
 	gk20a_writel(g, gr_sked_hww_esr_en_r(), reg_val);

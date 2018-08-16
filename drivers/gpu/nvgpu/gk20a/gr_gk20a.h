@@ -442,6 +442,7 @@ struct gr_gk20a {
 	struct gk20a_cs_snapshot	*cs_data;
 #endif
 	u32 max_css_buffer_size;
+	bool sked_hww_esr_skedcheck18_disabled;
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);

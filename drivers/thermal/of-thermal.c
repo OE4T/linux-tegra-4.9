@@ -1032,12 +1032,12 @@ int __init of_parse_thermal_zones(void)
 			goto exit_free;
 		}
 
+		/* No hwmon because there might be hwmon drivers registering */
+		tzp->no_hwmon = true;
+
 		/* Thermal zone params */
 		param_child = of_get_child_by_name(child, "thermal-zone-params");
-		if(!param_child)
-			/* No hwmon because there might be hwmon drivers registering */
-			tzp->no_hwmon = true;
-		else
+		if (param_child)
 			of_parse_thermal_zone_params(param_child, tzp);
 
 		if (!of_property_read_u32(child, "sustainable-power", &prop))

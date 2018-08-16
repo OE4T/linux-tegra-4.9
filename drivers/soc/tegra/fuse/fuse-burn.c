@@ -550,7 +550,7 @@ static ssize_t tegra_fuse_calc_h2_code(struct device *dev,
 
 static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 	.power_down_mode = true,
-	.mirroring_support = false,
+	.mirroring_support = true,
 	.pgm_time = 5,
 	.burn_data = {
 		FUSE_BURN_DATA(reserved_odm0, 0x2e, 17, 32, 0xc8, true, false),

@@ -34,7 +34,6 @@
 #include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
-#include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
 
 #define VPR_INFO_FETCH_WAIT	(5)
 #define WPR_INFO_ADDR_ALIGNMENT 0x0000000c

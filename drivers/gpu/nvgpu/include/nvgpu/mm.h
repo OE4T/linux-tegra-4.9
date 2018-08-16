@@ -176,6 +176,9 @@ struct mm_gk20a {
 
 		nvgpu_atomic64_t bytes_pending;
 	} vidmem;
+
+	struct nvgpu_mem mmu_wr_mem;
+	struct nvgpu_mem mmu_rd_mem;
 };
 
 #define gk20a_from_mm(mm) ((mm)->g)

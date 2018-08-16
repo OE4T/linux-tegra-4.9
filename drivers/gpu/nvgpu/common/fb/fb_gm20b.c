@@ -55,9 +55,32 @@ void gm20b_fb_reset(struct gk20a *g)
 
 void gm20b_fb_init_hw(struct gk20a *g)
 {
-	u32 addr = nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8;
+	u64 addr = nvgpu_mem_get_addr(g, &g->mm.sysmem_flush) >> 8;
 
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
+
+	/* init mmu debug buffer */
+	addr = nvgpu_mem_get_addr(g, &g->mm.mmu_wr_mem);
+	addr >>= fb_mmu_debug_wr_addr_alignment_v();
+
+	gk20a_writel(g, fb_mmu_debug_wr_r(),
+		     nvgpu_aperture_mask(g, &g->mm.mmu_wr_mem,
+				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
+				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
+				fb_mmu_debug_wr_aperture_vid_mem_f()) |
+		     fb_mmu_debug_wr_vol_false_f() |
+		     fb_mmu_debug_wr_addr_f(addr));
+
+	addr = nvgpu_mem_get_addr(g, &g->mm.mmu_rd_mem);
+	addr >>= fb_mmu_debug_rd_addr_alignment_v();
+
+	gk20a_writel(g, fb_mmu_debug_rd_r(),
+		     nvgpu_aperture_mask(g, &g->mm.mmu_rd_mem,
+				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
+				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
+				fb_mmu_debug_rd_aperture_vid_mem_f()) |
+		     fb_mmu_debug_rd_vol_false_f() |
+		     fb_mmu_debug_rd_addr_f(addr));
 }
 
 int gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)

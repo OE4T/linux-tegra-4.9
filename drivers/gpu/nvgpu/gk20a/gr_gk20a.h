@@ -382,9 +382,6 @@ struct gr_gk20a {
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
-	struct nvgpu_mem mmu_wr_mem;
-	struct nvgpu_mem mmu_rd_mem;
-
 	u8 *map_tiles;
 	u32 map_tile_count;
 	u32 map_row_offset;

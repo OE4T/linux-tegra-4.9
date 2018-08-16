@@ -60,7 +60,6 @@
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #define BLK_SIZE (256)
@@ -3153,9 +3152,6 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	gr_gk20a_free_global_ctx_buffers(g);
 
-	nvgpu_dma_free(g, &gr->mmu_wr_mem);
-	nvgpu_dma_free(g, &gr->mmu_rd_mem);
-
 	nvgpu_dma_free(g, &gr->compbit_store.mem);
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
@@ -3492,31 +3488,6 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 
 clean_up:
-	return -ENOMEM;
-}
-
-static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
-{
-	int err;
-
-	if (!nvgpu_mem_is_valid(&gr->mmu_wr_mem)) {
-		err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_wr_mem);
-		if (err) {
-			goto err;
-		}
-	}
-
-	if (!nvgpu_mem_is_valid(&gr->mmu_rd_mem)) {
-		err = nvgpu_dma_alloc_sys(g, 0x1000, &gr->mmu_rd_mem);
-		if (err) {
-			goto err_free_wr_mem;
-		}
-	}
-	return 0;
-
- err_free_wr_mem:
-	nvgpu_dma_free(g, &gr->mmu_wr_mem);
- err:
 	return -ENOMEM;
 }
 
@@ -4529,34 +4500,10 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 data;
-	u64 addr;
 	u32 last_method_data = 0;
 	u32 i, err;
 
 	nvgpu_log_fn(g, " ");
-
-	/* init mmu debug buffer */
-	addr = nvgpu_mem_get_addr(g, &gr->mmu_wr_mem);
-	addr >>= fb_mmu_debug_wr_addr_alignment_v();
-
-	gk20a_writel(g, fb_mmu_debug_wr_r(),
-		     nvgpu_aperture_mask(g, &gr->mmu_wr_mem,
-				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
-				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
-				fb_mmu_debug_wr_aperture_vid_mem_f()) |
-		     fb_mmu_debug_wr_vol_false_f() |
-		     fb_mmu_debug_wr_addr_f(addr));
-
-	addr = nvgpu_mem_get_addr(g, &gr->mmu_rd_mem);
-	addr >>= fb_mmu_debug_rd_addr_alignment_v();
-
-	gk20a_writel(g, fb_mmu_debug_rd_r(),
-		     nvgpu_aperture_mask(g, &gr->mmu_rd_mem,
-				fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
-				fb_mmu_debug_wr_aperture_sys_mem_coh_f(),
-				fb_mmu_debug_rd_aperture_vid_mem_f()) |
-		     fb_mmu_debug_rd_vol_false_f() |
-		     fb_mmu_debug_rd_addr_f(addr));
 
 	if (g->ops.gr.init_gpc_mmu) {
 		g->ops.gr.init_gpc_mmu(g);
@@ -4936,11 +4883,6 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 #endif
 
 	err = gr_gk20a_init_gr_config(g, gr);
-	if (err) {
-		goto clean_up;
-	}
-
-	err = gr_gk20a_init_mmu_sw(g, gr);
 	if (err) {
 		goto clean_up;
 	}

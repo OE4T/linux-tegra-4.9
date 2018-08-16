@@ -173,6 +173,9 @@ static void nvgpu_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
 
+	nvgpu_dma_free(g, &mm->mmu_wr_mem);
+	nvgpu_dma_free(g, &mm->mmu_rd_mem);
+
 	if (g->ops.mm.fault_info_mem_destroy) {
 		g->ops.mm.fault_info_mem_destroy(g);
 	}
@@ -292,6 +295,32 @@ static int nvgpu_init_ce_vm(struct mm_gk20a *mm)
 		return -ENOMEM;
 	}
 	return 0;
+}
+
+static int nvgpu_init_mmu_debug(struct mm_gk20a *mm)
+{
+	struct gk20a *g = gk20a_from_mm(mm);
+	int err;
+
+	if (!nvgpu_mem_is_valid(&mm->mmu_wr_mem)) {
+		err = nvgpu_dma_alloc_sys(g, SZ_4K, &mm->mmu_wr_mem);
+		if (err) {
+			goto err;
+		}
+	}
+
+	if (!nvgpu_mem_is_valid(&mm->mmu_rd_mem)) {
+		err = nvgpu_dma_alloc_sys(g, SZ_4K, &mm->mmu_rd_mem);
+		if (err) {
+			goto err_free_wr_mem;
+		}
+	}
+	return 0;
+
+ err_free_wr_mem:
+	nvgpu_dma_free(g, &mm->mmu_wr_mem);
+ err:
+	return -ENOMEM;
 }
 
 void nvgpu_init_mm_ce_context(struct gk20a *g)
@@ -458,6 +487,10 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	if (err) {
 		return err;
 	}
+
+	err = nvgpu_init_mmu_debug(mm);
+	if (err)
+		return err;
 
 	mm->remove_support = nvgpu_remove_mm_support;
 	mm->remove_ce_support = nvgpu_remove_mm_ce_support;

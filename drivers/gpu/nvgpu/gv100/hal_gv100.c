@@ -510,6 +510,7 @@ static const struct gpu_ops gv100_ops = {
 		.is_fault_buf_enabled = gv11b_fb_is_fault_buf_enabled,
 		.fault_buf_set_state_hw = gv11b_fb_fault_buf_set_state_hw,
 		.fault_buf_configure_hw = gv11b_fb_fault_buf_configure_hw,
+		.get_vidmem_size = gv100_fb_get_vidmem_size,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -685,7 +686,6 @@ static const struct gpu_ops gv100_ops = {
 		.get_default_big_page_size = gp10b_mm_get_default_big_page_size,
 		.gpu_phys_addr = gv11b_gpu_phys_addr,
 		.get_mmu_levels = gp10b_mm_get_mmu_levels,
-		.get_vidmem_size = gv100_mm_get_vidmem_size,
 		.init_pdb = gp10b_mm_init_pdb,
 		.init_mm_setup_hw = gv11b_init_mm_setup_hw,
 		.is_bar1_supported = gv11b_mm_is_bar1_supported,

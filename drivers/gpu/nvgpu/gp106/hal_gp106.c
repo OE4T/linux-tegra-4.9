@@ -81,7 +81,6 @@
 #include "gp106/bios_gp106.h"
 #include "gp106/fifo_gp106.h"
 #include "gp106/clk_gp106.h"
-#include "gp106/mm_gp106.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
@@ -426,6 +425,7 @@ static const struct gpu_ops gp106_ops = {
 		.set_debug_mode = gm20b_fb_set_debug_mode,
 		.tlb_invalidate = gm20b_fb_tlb_invalidate,
 		.mem_unlock = NULL,
+		.get_vidmem_size = gp106_fb_get_vidmem_size,
 	},
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
@@ -598,7 +598,6 @@ static const struct gpu_ops gp106_ops = {
 		.mmu_fault_pending = gk20a_fifo_mmu_fault_pending,
 		.init_bar2_vm = gp10b_init_bar2_vm,
 		.remove_bar2_vm = gp10b_remove_bar2_vm,
-		.get_vidmem_size = gp106_mm_get_vidmem_size,
 		.get_kind_invalid = gm20b_get_kind_invalid,
 		.get_kind_pitch = gm20b_get_kind_pitch,
 	},

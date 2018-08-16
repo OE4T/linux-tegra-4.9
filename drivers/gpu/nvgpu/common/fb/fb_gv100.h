@@ -33,4 +33,6 @@ void gv100_fb_disable_hub_intr(struct gk20a *g);
 int gv100_fb_memory_unlock(struct gk20a *g);
 int gv100_fb_init_nvlink(struct gk20a *g);
 int gv100_fb_enable_nvlink(struct gk20a *g);
+size_t gv100_fb_get_vidmem_size(struct gk20a *g);
+
 #endif

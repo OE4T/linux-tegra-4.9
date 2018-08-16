@@ -41,7 +41,7 @@ void nvgpu_vidmem_destroy(struct gk20a *g)
 {
 	struct nvgpu_timeout timeout;
 
-	if (!g->ops.mm.get_vidmem_size)
+	if (!g->ops.fb.get_vidmem_size)
 		return;
 
 	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);
@@ -293,8 +293,8 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	static struct nvgpu_alloc_carveout bootstrap_co =
 		NVGPU_CARVEOUT("bootstrap-region", 0, 0);
 
-	size = g->ops.mm.get_vidmem_size ?
-			g->ops.mm.get_vidmem_size(g) : 0;
+	size = g->ops.fb.get_vidmem_size ?
+			g->ops.fb.get_vidmem_size(g) : 0;
 	if (!size)
 		return 0;
 

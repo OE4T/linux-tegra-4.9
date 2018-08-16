@@ -25,4 +25,6 @@
 struct gpu_ops;
 
 void gp106_fb_reset(struct gk20a *g);
+size_t gp106_fb_get_vidmem_size(struct gk20a *g);
+
 #endif

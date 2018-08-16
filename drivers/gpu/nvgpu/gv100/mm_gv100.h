@@ -27,7 +27,6 @@
 
 struct gk20a;
 
-size_t gv100_mm_get_vidmem_size(struct gk20a *g);
 u32 gv100_mm_get_flush_retries(struct gk20a *g, enum nvgpu_flush_op op);
 
 #endif

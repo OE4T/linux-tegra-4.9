@@ -584,6 +584,7 @@ struct gpu_ops {
 		void (*fault_buf_set_state_hw)(struct gk20a *g,
 				 u32 index, u32 state);
 		void (*fault_buf_configure_hw)(struct gk20a *g, u32 index);
+		size_t (*get_vidmem_size)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
@@ -963,7 +964,6 @@ struct gpu_ops {
 				struct vm_gk20a *vm);
 		u64 (*gpu_phys_addr)(struct gk20a *g,
 				     struct nvgpu_gmmu_attrs *attrs, u64 phys);
-		size_t (*get_vidmem_size)(struct gk20a *g);
 		int (*alloc_inst_block)(struct gk20a *g,
 					struct nvgpu_mem *inst_block);
 		void (*init_inst_block)(struct nvgpu_mem *inst_block,

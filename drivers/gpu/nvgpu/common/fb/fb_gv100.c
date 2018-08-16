@@ -281,3 +281,18 @@ int gv100_fb_enable_nvlink(struct gk20a *g)
 
 	return 0;
 }
+
+size_t gv100_fb_get_vidmem_size(struct gk20a *g)
+{
+	u32 range = gk20a_readl(g, fb_mmu_local_memory_range_r());
+	u32 mag = fb_mmu_local_memory_range_lower_mag_v(range);
+	u32 scale = fb_mmu_local_memory_range_lower_scale_v(range);
+	u32 ecc = fb_mmu_local_memory_range_ecc_mode_v(range);
+	size_t bytes = ((size_t)mag << scale) * SZ_1M;
+
+	if (ecc) {
+		bytes = bytes / 16U * 15U;
+	}
+
+	return bytes;
+}

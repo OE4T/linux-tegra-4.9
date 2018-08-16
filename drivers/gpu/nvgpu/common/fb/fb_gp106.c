@@ -52,3 +52,18 @@ void gp106_fb_reset(struct gk20a *g)
 	val &= ~fb_mmu_priv_level_mask_write_violation_m();
 	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
 }
+
+size_t gp106_fb_get_vidmem_size(struct gk20a *g)
+{
+	u32 range = gk20a_readl(g, fb_mmu_local_memory_range_r());
+	u32 mag = fb_mmu_local_memory_range_lower_mag_v(range);
+	u32 scale = fb_mmu_local_memory_range_lower_scale_v(range);
+	u32 ecc = fb_mmu_local_memory_range_ecc_mode_v(range);
+	size_t bytes = ((size_t)mag << scale) * SZ_1M;
+
+	if (ecc) {
+		bytes = bytes / 16U * 15U;
+	}
+
+	return bytes;
+}

@@ -295,7 +295,6 @@ nvgpu-y += \
 	gp10b/gp10b.o \
 	gp10b/ecc_gp10b.o \
 	gp106/hal_gp106.o \
-	gp106/mm_gp106.o \
 	gp106/flcn_gp106.o \
 	gp106/pmu_gp106.o \
 	gp106/mclk_gp106.o \

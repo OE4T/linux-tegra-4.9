@@ -29,7 +29,9 @@
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/iopoll.h>
+#include <linux/workqueue.h>
 
+#define I2C_SLV_TIMEOUT (msecs_to_jiffies(10000))
 #define I2C_SL_CNFG				0x20
 #define I2C_SL_CNFG_RESP			BIT(0)
 #define I2C_SL_CNFG_NACK			BIT(1)
@@ -144,6 +146,7 @@ struct tegra_i2cslv_dev {
 	bool rx_in_progress;
 	bool tx_in_progress;
 	u32 buffer_size;
+	struct delayed_work work;
 };
 
 static inline u32 tegra_i2cslv_readl(struct tegra_i2cslv_dev *i2cslv_dev,
@@ -442,7 +445,6 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 	i2cslv_dev->buffer_size = i2cslv_dev->slave->buffer_size;
 	i2cslv_dev->rx_count = 0;
 
-
 	if (i2cslv_dev->slave->flags & I2C_CLIENT_TEN) {
 		/* Program the 10-bit slave address */
 		tegra_i2cslv_writel(i2cslv_dev, i2cslv_dev->slave->addr &
@@ -488,6 +490,22 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 	return tegra_i2cslv_load_config(i2cslv_dev);
 }
 
+static void tegra_i2cslv_handle_timeout(struct work_struct *work)
+{
+	struct tegra_i2cslv_dev *i2cslv_dev = container_of(work,
+							struct tegra_i2cslv_dev, work.work);
+	unsigned long flags;
+
+	dev_err(i2cslv_dev->dev, "Slave Xfer timeout\n");
+
+	raw_spin_lock_irqsave(&i2cslv_dev->xfer_lock, flags);
+	tegra_i2cslv_dump_reg(i2cslv_dev);
+	raw_spin_unlock_irqrestore(&i2cslv_dev->xfer_lock, flags);
+
+	reset_control_reset(i2cslv_dev->rstc);
+	tegra_i2cslv_init(i2cslv_dev);
+}
+
 static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 {
 	struct tegra_i2cslv_dev *i2cslv_dev = dev_id;
@@ -512,6 +530,7 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 	}
 
 	if (i2c_int_src & I2C_INTERRUPT_SLV_TX_BUFFER_REQ) {
+		schedule_delayed_work(&i2cslv_dev->work, I2C_SLV_TIMEOUT);
 		tegra_i2cslv_handle_tx(i2cslv_dev, i2c_int_src, i2c_slv_sts);
 		goto done;
 	}
@@ -529,6 +548,7 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 	/* STOP: End of transfer */
 	if (i2c_slv_sts & I2C_SL_STATUS_END_TRANS) {
 		tegra_i2cslv_handle_stop(i2cslv_dev, i2c_int_src, i2c_slv_sts);
+		cancel_delayed_work(&i2cslv_dev->work);
 		goto done;
 	}
 
@@ -692,6 +712,8 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to add I2C adapter\n");
 		return ret;
 	}
+
+	INIT_DELAYED_WORK(&i2cslv_dev->work, tegra_i2cslv_handle_timeout);
 
 	return 0;
 }

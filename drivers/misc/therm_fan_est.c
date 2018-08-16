@@ -34,6 +34,7 @@
 #include <linux/version.h>
 
 #define DEFERRED_RESUME_TIME 3000
+#define THERMAL_GOV_PID "pid_thermal_gov"
 #define DEBUG 0
 struct therm_fan_estimator {
 	long cur_temp;
@@ -57,6 +58,7 @@ struct therm_fan_estimator {
 	int num_resources;
 	int trip_length;
 	const char *name;
+	bool is_pid_gov;
 };
 
 
@@ -199,13 +201,21 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 		goto out;
 	}
 
-	if (est->current_trip_index == 0)
-		*temp = 0;
+	/*
+	 * PID governor will support hysteresis,
+	 * just return the trip temp without hysteresis, if using PID.
+	 */
+	if (est->is_pid_gov) {
+		*temp = est->active_trip_temps[trip];
+	} else {
+		if (est->current_trip_index == 0)
+			*temp = 0;
 
-	if (trip * 2 <= est->current_trip_index) /* tripped then lower */
-		*temp = est->active_trip_temps_hyst[trip * 2 - 1];
-	else /* not tripped, then upper */
-		*temp = est->active_trip_temps_hyst[trip * 2];
+		if (trip * 2 <= est->current_trip_index) /* tripped then lower */
+			*temp = est->active_trip_temps_hyst[trip * 2 - 1];
+		else /* not tripped, then upper */
+			*temp = est->active_trip_temps_hyst[trip * 2];
+	}
 out:
 	return ret;
 }
@@ -619,6 +629,12 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 	strcpy(tzp->governor_name, gov_name);
 	pr_debug("THERMAL EST governor name: %s\n", tzp->governor_name);
+	if (!strncmp(tzp->governor_name,
+			THERMAL_GOV_PID, strlen(THERMAL_GOV_PID)))
+		est_data->is_pid_gov = true;
+	else
+		est_data->is_pid_gov = false;
+
 	est_data->tzp = tzp;
 	est_data->thz = thermal_zone_device_register(
 					(char *)dev_name(&pdev->dev),

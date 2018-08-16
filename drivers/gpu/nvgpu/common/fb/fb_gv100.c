@@ -200,8 +200,9 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 		falcon_falcon_sctl_r()));
 
 exit:
-	if (mem_unlock_fw)
+	if (mem_unlock_fw) {
 		nvgpu_release_firmware(g, mem_unlock_fw);
+	}
 
 	nvgpu_log_fn(g, "done, status - %d", err);
 

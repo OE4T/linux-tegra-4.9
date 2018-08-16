@@ -97,12 +97,13 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		compbit_store_iova = nvgpu_mem_get_phys_addr(g,
 							&gr->compbit_store.mem);
-	else
+	} else {
 		compbit_store_iova = nvgpu_mem_get_addr(g,
 							&gr->compbit_store.mem);
+	}
 	/* must be aligned to 64 KB */
 	compbit_store_iova = roundup(compbit_store_iova, (u64)SZ_64K);
 
@@ -115,12 +116,14 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
 		g->ltc_count) << fb_mmu_cbc_base_address_alignment_shift_v();
 
-	if (compbit_base_post_multiply64 < compbit_store_iova)
+	if (compbit_base_post_multiply64 < compbit_store_iova) {
 		compbit_base_post_divide++;
+	}
 
-	if (g->ops.ltc.cbc_fix_config)
+	if (g->ops.ltc.cbc_fix_config) {
 		compbit_base_post_divide =
 			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
+	}
 
 	gk20a_writel(g, fb_mmu_cbc_base_r(),
 		fb_mmu_cbc_base_address_f(compbit_base_post_divide));
@@ -250,8 +253,9 @@ static void gv11b_fb_fault_buffer_get_ptr_update(struct gk20a *g,
 	/* while the fault is being handled it is possible for overflow
 	 * to happen,
 	 */
-	if (reg_val & fb_mmu_fault_buffer_get_overflow_m())
+	if (reg_val & fb_mmu_fault_buffer_get_overflow_m()) {
 		reg_val |= fb_mmu_fault_buffer_get_overflow_clear_f();
+	}
 
 	g->ops.fb.write_mmu_fault_buffer_get(g, index, reg_val);
 
@@ -341,8 +345,10 @@ void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
 		fault_status = g->ops.fb.read_mmu_fault_status(g);
 
 		do {
-			if (!(fault_status & fb_mmu_fault_status_busy_true_f()))
+			if (!(fault_status &
+                              fb_mmu_fault_status_busy_true_f())) {
 				break;
+			}
 			/*
 			 * Make sure fault buffer is disabled.
 			 * This is to avoid accessing fault buffer by hw
@@ -435,19 +441,23 @@ void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		fb_mmu_l2tlb_ecc_status_uncorrected_err_total_counter_overflow_m();
 
 	/* clear the interrupt */
-	if ((corrected_delta > 0) || corrected_overflow)
+	if ((corrected_delta > 0) || corrected_overflow) {
 		gk20a_writel(g, fb_mmu_l2tlb_ecc_corrected_err_count_r(), 0);
-	if ((uncorrected_delta > 0) || uncorrected_overflow)
+	}
+	if ((uncorrected_delta > 0) || uncorrected_overflow) {
 		gk20a_writel(g, fb_mmu_l2tlb_ecc_uncorrected_err_count_r(), 0);
+	}
 
 	gk20a_writel(g, fb_mmu_l2tlb_ecc_status_r(),
 				fb_mmu_l2tlb_ecc_status_reset_clear_f());
 
 	/* Handle overflow */
-	if (corrected_overflow)
+	if (corrected_overflow) {
 		corrected_delta += (0x1UL << fb_mmu_l2tlb_ecc_corrected_err_count_total_s());
-	if (uncorrected_overflow)
+	}
+	if (uncorrected_overflow) {
 		uncorrected_delta += (0x1UL << fb_mmu_l2tlb_ecc_uncorrected_err_count_total_s());
+	}
 
 
 	g->ecc.fb.mmu_l2tlb_ecc_corrected_err_count[0].counter +=
@@ -455,12 +465,17 @@ void gv11b_handle_l2tlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 	g->ecc.fb.mmu_l2tlb_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
-	if (ecc_status & fb_mmu_l2tlb_ecc_status_corrected_err_l2tlb_sa_data_m())
+	if (ecc_status &
+            fb_mmu_l2tlb_ecc_status_corrected_err_l2tlb_sa_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "corrected ecc sa data error");
-	if (ecc_status & fb_mmu_l2tlb_ecc_status_uncorrected_err_l2tlb_sa_data_m())
+	}
+	if (ecc_status &
+            fb_mmu_l2tlb_ecc_status_uncorrected_err_l2tlb_sa_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "uncorrected ecc sa data error");
-	if (corrected_overflow || uncorrected_overflow)
+	}
+	if (corrected_overflow || uncorrected_overflow) {
 		nvgpu_info(g, "mmu l2tlb ecc counter overflow!");
+	}
 
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error address: 0x%x", ecc_addr);
@@ -493,19 +508,23 @@ void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 		fb_mmu_hubtlb_ecc_status_uncorrected_err_total_counter_overflow_m();
 
 	/* clear the interrupt */
-	if ((corrected_delta > 0) || corrected_overflow)
+	if ((corrected_delta > 0) || corrected_overflow) {
 		gk20a_writel(g, fb_mmu_hubtlb_ecc_corrected_err_count_r(), 0);
-	if ((uncorrected_delta > 0) || uncorrected_overflow)
+	}
+	if ((uncorrected_delta > 0) || uncorrected_overflow) {
 		gk20a_writel(g, fb_mmu_hubtlb_ecc_uncorrected_err_count_r(), 0);
+	}
 
 	gk20a_writel(g, fb_mmu_hubtlb_ecc_status_r(),
 				fb_mmu_hubtlb_ecc_status_reset_clear_f());
 
 	/* Handle overflow */
-	if (corrected_overflow)
+	if (corrected_overflow) {
 		corrected_delta += (0x1UL << fb_mmu_hubtlb_ecc_corrected_err_count_total_s());
-	if (uncorrected_overflow)
+	}
+	if (uncorrected_overflow) {
 		uncorrected_delta += (0x1UL << fb_mmu_hubtlb_ecc_uncorrected_err_count_total_s());
+	}
 
 
 	g->ecc.fb.mmu_hubtlb_ecc_corrected_err_count[0].counter +=
@@ -513,12 +532,15 @@ void gv11b_handle_hubtlb_ecc_isr(struct gk20a *g, u32 ecc_status)
 	g->ecc.fb.mmu_hubtlb_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
-	if (ecc_status & fb_mmu_hubtlb_ecc_status_corrected_err_sa_data_m())
+	if (ecc_status & fb_mmu_hubtlb_ecc_status_corrected_err_sa_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "corrected ecc sa data error");
-	if (ecc_status & fb_mmu_hubtlb_ecc_status_uncorrected_err_sa_data_m())
+	}
+	if (ecc_status & fb_mmu_hubtlb_ecc_status_uncorrected_err_sa_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "uncorrected ecc sa data error");
-	if (corrected_overflow || uncorrected_overflow)
+	}
+	if (corrected_overflow || uncorrected_overflow) {
 		nvgpu_info(g, "mmu hubtlb ecc counter overflow!");
+	}
 
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error address: 0x%x", ecc_addr);
@@ -551,19 +573,23 @@ void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 		fb_mmu_fillunit_ecc_status_uncorrected_err_total_counter_overflow_m();
 
 	/* clear the interrupt */
-	if ((corrected_delta > 0) || corrected_overflow)
+	if ((corrected_delta > 0) || corrected_overflow) {
 		gk20a_writel(g, fb_mmu_fillunit_ecc_corrected_err_count_r(), 0);
-	if ((uncorrected_delta > 0) || uncorrected_overflow)
+	}
+	if ((uncorrected_delta > 0) || uncorrected_overflow) {
 		gk20a_writel(g, fb_mmu_fillunit_ecc_uncorrected_err_count_r(), 0);
+	}
 
 	gk20a_writel(g, fb_mmu_fillunit_ecc_status_r(),
 				fb_mmu_fillunit_ecc_status_reset_clear_f());
 
 	/* Handle overflow */
-	if (corrected_overflow)
+	if (corrected_overflow) {
 		corrected_delta += (0x1UL << fb_mmu_fillunit_ecc_corrected_err_count_total_s());
-	if (uncorrected_overflow)
+	}
+	if (uncorrected_overflow) {
 		uncorrected_delta += (0x1UL << fb_mmu_fillunit_ecc_uncorrected_err_count_total_s());
+	}
 
 
 	g->ecc.fb.mmu_fillunit_ecc_corrected_err_count[0].counter +=
@@ -571,17 +597,26 @@ void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 	g->ecc.fb.mmu_fillunit_ecc_uncorrected_err_count[0].counter +=
 							uncorrected_delta;
 
-	if (ecc_status & fb_mmu_fillunit_ecc_status_corrected_err_pte_data_m())
+	if (ecc_status &
+            fb_mmu_fillunit_ecc_status_corrected_err_pte_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "corrected ecc pte data error");
-	if (ecc_status & fb_mmu_fillunit_ecc_status_uncorrected_err_pte_data_m())
+	}
+	if (ecc_status &
+            fb_mmu_fillunit_ecc_status_uncorrected_err_pte_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "uncorrected ecc pte data error");
-	if (ecc_status & fb_mmu_fillunit_ecc_status_corrected_err_pde0_data_m())
+	}
+	if (ecc_status &
+            fb_mmu_fillunit_ecc_status_corrected_err_pde0_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "corrected ecc pde0 data error");
-	if (ecc_status & fb_mmu_fillunit_ecc_status_uncorrected_err_pde0_data_m())
+	}
+	if (ecc_status &
+            fb_mmu_fillunit_ecc_status_uncorrected_err_pde0_data_m()) {
 		nvgpu_log(g, gpu_dbg_intr, "uncorrected ecc pde0 data error");
+	}
 
-	if (corrected_overflow || uncorrected_overflow)
+	if (corrected_overflow || uncorrected_overflow) {
 		nvgpu_info(g, "mmu fillunit ecc counter overflow!");
+	}
 
 	nvgpu_log(g, gpu_dbg_intr,
 		"ecc error address: 0x%x", ecc_addr);
@@ -594,33 +629,37 @@ void gv11b_handle_fillunit_ecc_isr(struct gk20a *g, u32 ecc_status)
 static void gv11b_fb_parse_mmfault(struct mmu_fault_info *mmfault)
 {
 	if (WARN_ON(mmfault->fault_type >=
-				ARRAY_SIZE(fault_type_descs_gv11b)))
+				ARRAY_SIZE(fault_type_descs_gv11b))) {
 		mmfault->fault_type_desc =  invalid_str;
-	else
+	} else {
 		mmfault->fault_type_desc =
 			 fault_type_descs_gv11b[mmfault->fault_type];
+	}
 
 	if (WARN_ON(mmfault->client_type >=
-			ARRAY_SIZE(fault_client_type_descs_gv11b)))
+			ARRAY_SIZE(fault_client_type_descs_gv11b))) {
 		mmfault->client_type_desc = invalid_str;
-	else
+	} else {
 		mmfault->client_type_desc =
 			 fault_client_type_descs_gv11b[mmfault->client_type];
+	}
 
 	mmfault->client_id_desc = invalid_str;
 	if (mmfault->client_type ==
 			gmmu_fault_client_type_hub_v()) {
 
 		if (!(WARN_ON(mmfault->client_id >=
-				 ARRAY_SIZE(hub_client_descs_gv11b))))
+				 ARRAY_SIZE(hub_client_descs_gv11b)))) {
 			mmfault->client_id_desc =
 				 hub_client_descs_gv11b[mmfault->client_id];
+		}
 	} else if (mmfault->client_type ==
 			gmmu_fault_client_type_gpc_v()) {
 		if (!(WARN_ON(mmfault->client_id >=
-				 ARRAY_SIZE(gpc_client_descs_gv11b))))
+				 ARRAY_SIZE(gpc_client_descs_gv11b)))) {
 			mmfault->client_id_desc =
 				 gpc_client_descs_gv11b[mmfault->client_id];
+		}
 	}
 
 }
@@ -719,8 +758,9 @@ static void gv11b_fb_copy_from_hw_fault_buf(struct gk20a *g,
 
 	/* refch will be put back after fault is handled */
 	refch = gk20a_refch_from_inst_ptr(g, inst_ptr);
-	if (refch)
+	if (refch) {
 		chid = refch->chid;
+	}
 
 	/* it is ok to continue even if refch is NULL */
 	mmfault->refch = refch;
@@ -803,8 +843,9 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 	u32 id = FIFO_INVAL_TSG_ID;
 	unsigned int rc_type = RC_TYPE_NO_RC;
 
-	if (!mmfault->valid)
+	if (!mmfault->valid) {
 		return;
+	}
 
 	gv11b_fb_print_fault_info(g, mmfault);
 
@@ -877,8 +918,9 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 			rc_type = RC_TYPE_MMU_FAULT;
 			if (gk20a_is_channel_marked_as_tsg(mmfault->refch)) {
 				id = mmfault->refch->tsgid;
-				if (id != FIFO_INVAL_TSG_ID)
+				if (id != FIFO_INVAL_TSG_ID) {
 					id_type = ID_TYPE_TSG;
+				}
 			} else {
 				nvgpu_err(g, "bare channels not supported");
 			}
@@ -898,19 +940,21 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 			mmfault->refch = NULL;
 		}
 
-		if (rc_type != RC_TYPE_NO_RC)
+		if (rc_type != RC_TYPE_NO_RC) {
 			g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask,
 				id, id_type, rc_type, mmfault);
+		}
 	} else {
 		if (mmfault->fault_type == gmmu_fault_type_pte_v()) {
 			nvgpu_log(g, gpu_dbg_intr, "invalid pte! try to fix");
 			err = gv11b_fb_fix_page_fault(g, mmfault);
-			if (err)
+			if (err) {
 				*invalidate_replay_val |=
 					fb_mmu_invalidate_replay_cancel_global_f();
-			else
+			} else {
 				*invalidate_replay_val |=
 					fb_mmu_invalidate_replay_start_ack_all_f();
+			}
 		} else {
 			/* cancel faults other than invalid pte */
 			*invalidate_replay_val |=
@@ -1026,8 +1070,9 @@ void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,
 
 	}
 	if (index == NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX &&
-	    invalidate_replay_val != 0U)
+	    invalidate_replay_val != 0U) {
 		gv11b_fb_replay_or_cancel_faults(g, invalidate_replay_val);
+	}
 }
 
 static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
@@ -1057,8 +1102,9 @@ static void gv11b_mm_copy_from_fault_snap_reg(struct gk20a *g,
 
 	/* refch will be put back after fault is handled */
 	refch = gk20a_refch_from_inst_ptr(g, inst_ptr);
-	if (refch)
+	if (refch) {
 		chid = refch->chid;
+	}
 
 	/* It is still ok to continue if refch is NULL */
 	mmfault->refch = refch;
@@ -1180,15 +1226,17 @@ static void gv11b_fb_handle_bar2_fault(struct gk20a *g,
 {
 	if (fault_status & fb_mmu_fault_status_non_replayable_error_m()) {
 		if (gv11b_fb_is_fault_buf_enabled(g,
-				NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX))
+				NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX)) {
 			gv11b_fb_fault_buf_configure_hw(g, NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX);
+		}
 	}
 
 	if (fault_status & fb_mmu_fault_status_replayable_error_m()) {
 		if (gv11b_fb_is_fault_buf_enabled(g,
-				NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX))
+				NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX)) {
 			gv11b_fb_fault_buf_configure_hw(g,
 				NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX);
+		}
 	}
 	gv11b_ce_mthd_buffer_fault_in_bar2_fault(g);
 
@@ -1224,9 +1272,10 @@ void gv11b_fb_handle_other_fault_notify(struct gk20a *g,
 		gv11b_fb_handle_mmu_fault_common(g, mmfault,
 				 &invalidate_replay_val);
 
-		if (invalidate_replay_val)
+		if (invalidate_replay_val) {
 			gv11b_fb_replay_or_cancel_faults(g,
 					invalidate_replay_val);
+		}
 	}
 }
 
@@ -1254,8 +1303,9 @@ void gv11b_fb_handle_replayable_mmu_fault(struct gk20a *g)
 {
 	u32 fault_status = gk20a_readl(g, fb_mmu_fault_status_r());
 
-	if (!(fault_status & fb_mmu_fault_status_replayable_m()))
+	if (!(fault_status & fb_mmu_fault_status_replayable_m())) {
 		return;
+	}
 
 	if (gv11b_fb_is_fault_buf_enabled(g,
 			NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX)) {
@@ -1349,16 +1399,19 @@ void gv11b_fb_hub_isr(struct gk20a *g)
 		nvgpu_info(g, "ecc uncorrected error notify");
 
 		status = gk20a_readl(g, fb_mmu_l2tlb_ecc_status_r());
-		if (status)
+		if (status) {
 			gv11b_handle_l2tlb_ecc_isr(g, status);
+		}
 
 		status = gk20a_readl(g, fb_mmu_hubtlb_ecc_status_r());
-		if (status)
+		if (status) {
 			gv11b_handle_hubtlb_ecc_isr(g, status);
+		}
 
 		status = gk20a_readl(g, fb_mmu_fillunit_ecc_status_r());
-		if (status)
+		if (status) {
 			gv11b_handle_fillunit_ecc_isr(g, status);
+		}
 	}
 	if (niso_intr &
 		(fb_niso_intr_mmu_other_fault_notify_m() |
@@ -1382,8 +1435,9 @@ bool gv11b_fb_mmu_fault_pending(struct gk20a *g)
 		 fb_niso_intr_mmu_replayable_fault_notify_m() |
 		 fb_niso_intr_mmu_replayable_fault_overflow_m() |
 		 fb_niso_intr_mmu_nonreplayable_fault_notify_m() |
-		 fb_niso_intr_mmu_nonreplayable_fault_overflow_m()))
+		 fb_niso_intr_mmu_nonreplayable_fault_overflow_m())) {
 		return true;
+	}
 
 	return false;
 }
@@ -1420,8 +1474,9 @@ int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 		nvgpu_udelay(5);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 			    "invalidate replay failed on 0x%llx"));
-	if (err)
+	if (err) {
 		nvgpu_err(g, "invalidate replay timedout");
+	}
 
 	nvgpu_mutex_release(&g->mm.tlb_lock);
 
@@ -1460,8 +1515,9 @@ static int gv11b_fb_fix_page_fault(struct gk20a *g,
 	}
 
 	pte[0] |= gmmu_new_pte_valid_true_f();
-	if (pte[0] & gmmu_new_pte_read_only_true_f())
+	if (pte[0] & gmmu_new_pte_read_only_true_f()) {
 		pte[0] &= ~(gmmu_new_pte_read_only_true_f());
+	}
 	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_pte,
 			"new pte: %#08x %#08x", pte[1], pte[0]);
 

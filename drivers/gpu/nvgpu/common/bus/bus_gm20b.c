@@ -53,14 +53,16 @@ int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 		u32 val = gk20a_readl(g, bus_bind_status_r());
 		u32 pending = bus_bind_status_bar1_pending_v(val);
 		u32 outstanding = bus_bind_status_bar1_outstanding_v(val);
-		if (!pending && !outstanding)
+		if (!pending && !outstanding) {
 			break;
+		}
 
 		nvgpu_udelay(5);
 	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek_expired(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout)) {
 		err = -EINVAL;
+	}
 
 	return err;
 }

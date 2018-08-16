@@ -64,11 +64,14 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	if (big_page_size == 0) {
 		big_page_size = g->ops.mm.get_default_big_page_size();
 	} else {
-		if (!is_power_of_2(big_page_size))
+		if (!is_power_of_2(big_page_size)) {
 			return -EINVAL;
+		}
 
-		if (!(big_page_size & nvgpu_mm_get_available_big_page_sizes(g)))
+		if (!(big_page_size &
+                      nvgpu_mm_get_available_big_page_sizes(g))) {
 			return -EINVAL;
+		}
 	}
 
 	snprintf(name, sizeof(name), "as_%d", as_share->id);
@@ -78,8 +81,9 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 			   mm->channel.kernel_size,
 			   mm->channel.user_size + mm->channel.kernel_size,
 			   !mm->disable_bigpage, userspace_managed, name);
-	if (!vm)
+	if (!vm) {
 		return -ENOMEM;
+	}
 
 	as_share->vm = vm;
 	vm->as_share = as_share;
@@ -97,26 +101,30 @@ int gk20a_as_alloc_share(struct gk20a *g,
 
 	nvgpu_log_fn(g, " ");
 	g = gk20a_get(g);
-	if (!g)
+	if (!g) {
 		return -ENODEV;
+	}
 
 	*out = NULL;
 	as_share = nvgpu_kzalloc(g, sizeof(*as_share));
-	if (!as_share)
+	if (!as_share) {
 		return -ENOMEM;
+	}
 
 	as_share->as = &g->as;
 	as_share->id = generate_as_share_id(as_share->as);
 
 	/* this will set as_share->vm. */
 	err = gk20a_busy(g);
-	if (err)
+	if (err) {
 		goto failed;
+	}
 	err = gk20a_vm_alloc_share(as_share, big_page_size, flags);
 	gk20a_idle(g);
 
-	if (err)
+	if (err) {
 		goto failed;
+	}
 
 	*out = as_share;
 	return 0;
@@ -154,8 +162,9 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 
 	err = gk20a_busy(g);
 
-	if (err)
+	if (err) {
 		goto release_fail;
+	}
 
 	err = gk20a_vm_release_share(as_share);
 

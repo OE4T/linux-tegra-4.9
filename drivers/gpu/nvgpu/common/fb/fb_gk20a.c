@@ -74,8 +74,9 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	   hw. Use the power_on flag to skip tlb invalidation when gpu
 	   power is turned off */
 
-	if (!g->power_on)
+	if (!g->power_on) {
 		return;
+	}
 
 	addr_lo = u64_lo32(nvgpu_mem_get_addr(g, pdb) >> 12);
 
@@ -87,14 +88,16 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
-		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
+		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0) {
 			break;
+		}
 		nvgpu_udelay(2);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu fifo space"));
 
-	if (nvgpu_timeout_peek_expired(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout)) {
 		goto out;
+	}
 
 	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
 
@@ -112,8 +115,9 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_empty_v(data) !=
-			fb_mmu_ctrl_pri_fifo_empty_false_f())
+			fb_mmu_ctrl_pri_fifo_empty_false_f()) {
 			break;
+		}
 		nvgpu_udelay(2);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu invalidate"));

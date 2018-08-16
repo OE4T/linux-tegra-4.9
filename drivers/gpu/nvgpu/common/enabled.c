@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-18, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -34,8 +34,9 @@ int nvgpu_init_enabled_flags(struct gk20a *g)
 	g->enabled_flags = nvgpu_kzalloc(g,
 					 BITS_TO_LONGS(NVGPU_MAX_ENABLED_BITS) *
 					 sizeof(unsigned long));
-	if (!g->enabled_flags)
+	if (!g->enabled_flags) {
 		return -ENOMEM;
+	}
 
 	return 0;
 }
@@ -55,8 +56,9 @@ bool nvgpu_is_enabled(struct gk20a *g, int flag)
 
 bool __nvgpu_set_enabled(struct gk20a *g, int flag, bool state)
 {
-	if (state)
+	if (state) {
 		return test_and_set_bit(flag, g->enabled_flags);
-	else
+	} else {
 		return test_and_clear_bit(flag, g->enabled_flags);
+	}
 }

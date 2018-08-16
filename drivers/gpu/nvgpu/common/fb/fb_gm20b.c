@@ -148,8 +148,9 @@ static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,
 
 		val = gk20a_readl(g, fb_mmu_vpr_info_r());
 		if (fb_mmu_vpr_info_fetch_v(val) ==
-		    fb_mmu_vpr_info_fetch_false_v())
+		    fb_mmu_vpr_info_fetch_false_v()) {
 			return 0;
+		}
 
 	} while (!nvgpu_timeout_expired(&timeout));
 

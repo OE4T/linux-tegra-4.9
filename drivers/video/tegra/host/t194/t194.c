@@ -491,7 +491,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSEC},
 	.class			= NV_TSEC_CLASS_ID,
 	.clocks			= {
-		{"tsec", 115200000},
+		{"tsec", UINT_MAX},
 		{"efuse", 0, 0},
 		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
@@ -510,6 +510,7 @@ struct nvhost_device_data t19_tsec_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
 	.engine_cg_regs		= t19x_tsec_gating_registers,
 	.engine_can_cg		= true,
+	.can_powergate		= true,
 };
 
 struct nvhost_device_data t19_tsecb_info = {
@@ -538,6 +539,7 @@ struct nvhost_device_data t19_tsecb_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 	.engine_cg_regs		= t19x_tsec_gating_registers,
 	.engine_can_cg		= true,
+	.can_powergate		= true,
 };
 #endif
 

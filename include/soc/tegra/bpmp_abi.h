@@ -1232,6 +1232,11 @@ struct mrq_pg_update_state_request {
  * MRQ_PG_UPDATE_STATE, operations that change the power partition
  * state are NOT reference counted
  *
+ * @note BPMP-FW forcefully turns off some partitions as part of SC7 entry
+ * because their state cannot be adequately restored on exit. Therefore,
+ * it is recommended to power off all domains via MRQ_PG prior to SC7 entry.
+ * See @ref bpmp_pdomain_ids for further detail.
+ *
  * * Platforms: T186, T194
  * * Initiators: Any
  * * Targets: BPMP
@@ -2366,8 +2371,9 @@ enum {
 	/**
 	 * @brief Retrieve specified EC status.
 	 *
-	 * Query fails if specified EC is not owned by BPMP, or power
-	 * domain EC belongs to is turned off.
+	 * mrq_response::err is 0 if the operation was successful, or @n
+	 * -#BPMP_ENODEV if target EC is not owned by BPMP @n
+	 * -#BPMP_EACCES if target EC power domain is turned off
 	 */
 	CMD_EC_STATUS_GET = 1,
 	CMD_EC_NUM,
@@ -2465,10 +2471,19 @@ enum ec_registers_group {
 #define EC_STATUS_FLAG_NO_ERROR		0x0001
 /** @brief Last EC error found flag */
 #define EC_STATUS_FLAG_LAST_ERROR	0x0002
-/** @brief EC error resolved flag */
-#define EC_STATUS_FLAG_RESOLVED_ERROR	0x0004
 /** @brief EC latent error flag */
-#define EC_STATUS_FLAG_LATENT_ERROR	0x0008
+#define EC_STATUS_FLAG_LATENT_ERROR	0x0004
+/** @} */
+
+/**
+ * @defgroup bpmp_ec_desc_flags EC Descriptor Flags
+ * @addtogroup bpmp_ec_desc_flags
+ * @{
+ */
+/** @brief EC descriptor error resolved flag */
+#define EC_DESC_FLAG_RESOLVED		0x0001
+/** @brief EC descriptor failed to retrieve id flag */
+#define EC_DESC_FLAG_NO_ID		0x0002
 /** @} */
 
 /**
@@ -2477,8 +2492,10 @@ enum ec_registers_group {
  * |@ref EC_ERR_TYPE_CLOCK_MONITOR   |@ref bpmp_clock_ids        |
  */
 struct ec_err_fmon_desc {
+	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
+	uint16_t desc_flags;
 	/** @brief FMON monitored clock id */
-	uint32_t fmon_clk_id;
+	uint16_t fmon_clk_id;
 	/** @brief FMON faults bitmask */
 	uint32_t fmon_faults;
 	/** @brief FMON faults access error */
@@ -2491,8 +2508,10 @@ struct ec_err_fmon_desc {
  * |@ref EC_ERR_TYPE_VOLTAGE_MONITOR |@ref bpmp_adc_ids          |
  */
 struct ec_err_vmon_desc {
+	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
+	uint16_t desc_flags;
 	/** @brief VMON rail adc id */
-	uint32_t vmon_adc_id;
+	uint16_t vmon_adc_id;
 	/** @brief VMON faults bitmask */
 	uint32_t vmon_faults;
 	/** @brief VMON faults access error */
@@ -2505,10 +2524,12 @@ struct ec_err_vmon_desc {
  * |@ref EC_ERR_TYPE_REGISTER_PARITY |@ref bpmp_ec_registers_ids |
  */
 struct ec_err_reg_parity_desc {
+	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
+	uint16_t desc_flags;
 	/** @brief Register id */
-	uint32_t reg_id;
+	uint16_t reg_id;
 	/** @brief Register group @ref ec_registers_group */
-	uint32_t reg_group;
+	uint16_t reg_group;
 } __ABI_PACKED;
 
 /**
@@ -2525,8 +2546,10 @@ struct ec_err_reg_parity_desc {
  * |@ref EC_ERR_TYPE_OTHER_HW_UNCORRECTABLE |@ref bpmp_ec_misc_ids      |
  */
 struct ec_err_simple_desc {
+	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
+	uint16_t desc_flags;
 	/** @brief Error source id. Id space depends on error type. */
-	uint32_t err_source_id;
+	uint16_t err_source_id;
 } __ABI_PACKED;
 
 /** @brief Union of EC error descriptors */
@@ -2542,6 +2565,9 @@ struct cmd_ec_status_get_request {
 	uint32_t ec_hsm_id;
 } __ABI_PACKED;
 
+/** EC status maximum number of descriptors */
+#define EC_ERR_STATUS_DESC_MAX_NUM	4
+
 struct cmd_ec_status_get_response {
 	/** @brief Target EC id (the same id received with request). */
 	uint32_t ec_hsm_id;
@@ -2550,13 +2576,15 @@ struct cmd_ec_status_get_response {
 	 *
 	 * If NO_ERROR flag is set, error_ fields should be ignored
 	 */
-	uint32_t status_flags;
+	uint32_t ec_status_flags;
 	/** @brief Found EC error index. */
 	uint32_t error_idx;
 	/** @brief  Found EC error type @ref bpmp_ec_err_type. */
 	uint32_t error_type;
-	/** @brief  Found EC error descriptor.  */
-	union ec_err_desc error_desc;
+	/** @brief  Number of returned EC error descriptors */
+	uint32_t error_desc_num;
+	/** @brief  EC error descriptors */
+	union ec_err_desc error_descs[EC_ERR_STATUS_DESC_MAX_NUM];
 } __ABI_PACKED;
 
 /**
@@ -2568,7 +2596,7 @@ struct cmd_ec_status_get_response {
  *
  * |sub-command                 |payload                |
  * |----------------------------|-----------------------|
- * |CMD_EC_STATUS_GET           |-                      |
+ * |@ref CMD_EC_STATUS_GET      |ec_status_get          |
  *
  */
 
@@ -2590,7 +2618,7 @@ struct mrq_ec_request {
  *
  * |sub-command                 |payload                 |
  * |----------------------------|------------------------|
- * |CMD_EC_STATUS_GET           |ec_status_get           |
+ * |@ref CMD_EC_STATUS_GET      |ec_status_get           |
  *
  */
 

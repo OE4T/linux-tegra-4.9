@@ -457,6 +457,7 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 	}
 
 	capture->channel_id = resp_msg->channel_setup_resp.channel_id;
+	capture->vi_channel_mask = resp_msg->channel_setup_resp.vi_channel_mask;
 
 	err = tegra_capture_ivc_notify_chan_id(capture->channel_id,
 			transaction);
@@ -811,6 +812,7 @@ int vi_capture_get_info(struct tegra_vi_channel *chan,
 		return err;
 
 	info->hw_channel_id = capture->channel_id;
+	info->vi_channel_mask = capture->vi_channel_mask;
 
 	return 0;
 }

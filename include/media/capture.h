@@ -63,6 +63,8 @@ struct vi_capture {
 	struct mutex reset_lock;
 	struct mutex unpins_list_lock;
 	struct capture_common_unpins **unpins_list;
+
+	uint64_t vi_channel_mask;
 };
 
 struct vi_capture_setup {
@@ -92,6 +94,7 @@ struct vi_capture_info {
 	} syncpts;
 	uint32_t hw_channel_id;
 	uint32_t __pad;
+	uint64_t vi_channel_mask;
 } __VI_CAPTURE_ALIGN;
 
 struct vi_capture_control_msg {

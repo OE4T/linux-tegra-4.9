@@ -74,7 +74,7 @@ static void balloc_compute_max_order(struct nvgpu_buddy_allocator *a)
 {
 	u64 true_max_order = ilog2(a->blks);
 
-	if (a->max_order == 0) {
+	if (a->max_order == 0U) {
 		a->max_order = true_max_order;
 		return;
 	}
@@ -95,7 +95,7 @@ static void balloc_allocator_align(struct nvgpu_buddy_allocator *a)
 {
 	a->start = ALIGN(a->base, a->blk_size);
 	WARN_ON(a->start != a->base);
-	a->end   = (a->base + a->length) & ~(a->blk_size - 1);
+	a->end   = (a->base + a->length) & ~(a->blk_size - 1U);
 	a->count = a->end - a->start;
 	a->blks  = a->count >> a->blk_shift;
 }
@@ -119,7 +119,7 @@ static struct nvgpu_buddy *balloc_new_buddy(struct nvgpu_buddy_allocator *a,
 	new_buddy->parent = parent;
 	new_buddy->start = start;
 	new_buddy->order = order;
-	new_buddy->end = start + (1 << order) * a->blk_size;
+	new_buddy->end = start + (U64(1) << order) * a->blk_size;
 	new_buddy->pte_size = BALLOC_PTE_SIZE_ANY;
 
 	return new_buddy;
@@ -185,7 +185,7 @@ static void balloc_blist_rem(struct nvgpu_buddy_allocator *a,
 
 static u64 balloc_get_order(struct nvgpu_buddy_allocator *a, u64 len)
 {
-	if (len == 0) {
+	if (len == 0U) {
 		return 0;
 	}
 
@@ -200,7 +200,7 @@ static u64 __balloc_max_order_in(struct nvgpu_buddy_allocator *a,
 {
 	u64 size = (end - start) >> a->blk_shift;
 
-	if (size > 0) {
+	if (size > 0U) {
 		return min_t(u64, ilog2(size), a->max_order);
 	} else {
 		return GPU_BALLOC_MAX_ORDER;
@@ -212,7 +212,7 @@ static u64 __balloc_max_order_in(struct nvgpu_buddy_allocator *a,
  */
 static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 {
-	int i;
+	u32 i;
 	u64 bstart, bend, order;
 	struct nvgpu_buddy *buddy;
 
@@ -220,7 +220,7 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 	bend = a->end;
 
 	/* First make sure the LLs are valid. */
-	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
+	for (i = 0U; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
 		nvgpu_init_list_node(balloc_get_order_list(a, i));
 	}
 
@@ -239,7 +239,7 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 	return 0;
 
 cleanup:
-	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
+	for (i = 0U; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
 		if (!nvgpu_list_empty(balloc_get_order_list(a, i))) {
 			buddy = nvgpu_list_first_entry(
 					balloc_get_order_list(a, i),
@@ -257,7 +257,7 @@ cleanup:
  */
 static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *na)
 {
-	int i;
+	u32 i;
 	struct nvgpu_rbtree_node *node = NULL;
 	struct nvgpu_buddy *bud;
 	struct nvgpu_fixed_alloc *falloc;
@@ -299,8 +299,8 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *na)
 	/*
 	 * Now clean up the unallocated buddies.
 	 */
-	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
-		BUG_ON(a->buddy_list_alloced[i] != 0);
+	for (i = 0U; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
+		BUG_ON(a->buddy_list_alloced[i] != 0U);
 
 		while (!nvgpu_list_empty(balloc_get_order_list(a, i))) {
 			bud = nvgpu_list_first_entry(
@@ -310,19 +310,19 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *na)
 			nvgpu_kmem_cache_free(a->buddy_cache, bud);
 		}
 
-		if (a->buddy_list_len[i] != 0) {
+		if (a->buddy_list_len[i] != 0U) {
 			nvgpu_info(na->g,
 					"Excess buddies!!! (%d: %llu)",
 				i, a->buddy_list_len[i]);
 			BUG();
 		}
-		if (a->buddy_list_split[i] != 0) {
+		if (a->buddy_list_split[i] != 0U) {
 			nvgpu_info(na->g,
 					"Excess split nodes!!! (%d: %llu)",
 				i, a->buddy_list_split[i]);
 			BUG();
 		}
-		if (a->buddy_list_alloced[i] != 0) {
+		if (a->buddy_list_alloced[i] != 0U) {
 			nvgpu_info(na->g,
 					"Excess alloced nodes!!! (%d: %llu)",
 				i, a->buddy_list_alloced[i]);
@@ -392,14 +392,14 @@ static int balloc_split_buddy(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *left, *right;
 	u64 half;
 
-	left = balloc_new_buddy(a, b, b->start, b->order - 1);
+	left = balloc_new_buddy(a, b, b->start, b->order - 1U);
 	if (!left) {
 		return -ENOMEM;
 	}
 
-	half = (b->end - b->start) / 2;
+	half = (b->end - b->start) / 2U;
 
-	right = balloc_new_buddy(a, b, b->start + half, b->order - 1);
+	right = balloc_new_buddy(a, b, b->start + half, b->order - 1U);
 	if (!right) {
 		nvgpu_kmem_cache_free(a->buddy_cache, left);
 		return -ENOMEM;
@@ -624,7 +624,7 @@ static void __balloc_get_parent_range(struct nvgpu_buddy_allocator *a,
 	u64 shifted_base = balloc_base_shift(a, base);
 
 	order++;
-	base_mask = ~((a->blk_size << order) - 1);
+	base_mask = ~((a->blk_size << order) - 1U);
 
 	shifted_base &= base_mask;
 
@@ -720,7 +720,7 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 	u64 align_order;
 
 	shifted_base = balloc_base_shift(a, base);
-	if (shifted_base == 0) {
+	if (shifted_base == 0U) {
 		align_order = __fls(len >> a->blk_shift);
 	} else {
 		align_order = min_t(u64,
@@ -871,11 +871,11 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *na,
 	struct nvgpu_buddy_allocator *a = na->priv;
 
 	/* If base isn't aligned to an order 0 block, fail. */
-	if (base & (a->blk_size - 1)) {
+	if (base & (a->blk_size - 1U)) {
 		goto fail;
 	}
 
-	if (len == 0) {
+	if (len == 0U) {
 		goto fail;
 	}
 
@@ -1255,10 +1255,10 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	struct nvgpu_buddy_allocator *a;
 
 	/* blk_size must be greater than 0 and a power of 2. */
-	if (blk_size == 0) {
+	if (blk_size == 0U) {
 		return -EINVAL;
 	}
-	if (blk_size & (blk_size - 1)) {
+	if (blk_size & (blk_size - 1U)) {
 		return -EINVAL;
 	}
 
@@ -1291,7 +1291,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	 * If base is 0 then modfy base to be the size of one block so that we
 	 * can return errors by returning addr == 0.
 	 */
-	if (a->base == 0) {
+	if (a->base == 0U) {
 		a->base = a->blk_size;
 		a->length -= a->blk_size;
 	}
@@ -1308,8 +1308,8 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	 * requirement is not necessary.
 	 */
 	if (flags & GPU_ALLOC_GVA_SPACE && vm->big_pages &&
-	    (base & ((vm->big_page_size << 10) - 1) ||
-	     size & ((vm->big_page_size << 10) - 1))) {
+	    (base & ((vm->big_page_size << 10) - 1U) ||
+	     size & ((vm->big_page_size << 10) - 1U))) {
 		return -EINVAL;
 	}
 

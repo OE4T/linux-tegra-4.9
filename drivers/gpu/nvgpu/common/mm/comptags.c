@@ -37,7 +37,7 @@ int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
 			0, len, 0);
 	if (addr < allocator->size) {
 		/* number zero is reserved; bitmap base is 1 */
-		*offset = 1 + addr;
+		*offset = 1U + addr;
 		bitmap_set(allocator->bitmap, addr, len);
 	} else {
 		err = -ENOMEM;
@@ -51,9 +51,9 @@ void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
 			     u32 offset, u32 len)
 {
 	/* number zero is reserved; bitmap base is 1 */
-	u32 addr = offset - 1;
+	u32 addr = offset - 1U;
 
-	WARN_ON(offset == 0);
+	WARN_ON(offset == 0U);
 	WARN_ON(addr > allocator->size);
 	WARN_ON(addr + len > allocator->size);
 

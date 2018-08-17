@@ -159,7 +159,7 @@ struct nvgpu_buddy_allocator {
 	/*
 	 * Impose an upper bound on the maximum order.
 	 */
-#define GPU_BALLOC_ORDER_LIST_LEN	(GPU_BALLOC_MAX_ORDER + 1)
+#define GPU_BALLOC_ORDER_LIST_LEN	(GPU_BALLOC_MAX_ORDER + 1U)
 
 	struct nvgpu_list_node buddy_list[GPU_BALLOC_ORDER_LIST_LEN];
 	u64 buddy_list_len[GPU_BALLOC_ORDER_LIST_LEN];
@@ -190,7 +190,7 @@ static inline struct nvgpu_buddy_allocator *buddy_allocator(
 }
 
 static inline struct nvgpu_list_node *balloc_get_order_list(
-	struct nvgpu_buddy_allocator *a, int order)
+	struct nvgpu_buddy_allocator *a, u64 order)
 {
 	return &a->buddy_list[order];
 }

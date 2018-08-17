@@ -76,20 +76,20 @@
 
 static u32 nvgpu_pd_cache_nr(u32 bytes)
 {
-	return ilog2(bytes >> (NVGPU_PD_CACHE_MIN_SHIFT - 1));
+	return ilog2(bytes >> (NVGPU_PD_CACHE_MIN_SHIFT - 1U));
 }
 
 static u32 nvgpu_pd_cache_get_mask(struct nvgpu_pd_mem_entry *pentry)
 {
 	u32 mask_offset = 1 << (PAGE_SIZE / pentry->pd_size);
 
-	return mask_offset - 1;
+	return mask_offset - 1U;
 }
 
 int nvgpu_pd_cache_init(struct gk20a *g)
 {
 	struct nvgpu_pd_cache *cache;
-	int i;
+	u32 i;
 
 	/*
 	 * This gets called from finalize_poweron() so we need to make sure we
@@ -105,7 +105,7 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < NVGPU_PD_CACHE_COUNT; i++) {
+	for (i = 0U; i < NVGPU_PD_CACHE_COUNT; i++) {
 		nvgpu_init_list_node(&cache->full[i]);
 		nvgpu_init_list_node(&cache->partial[i]);
 	}
@@ -121,14 +121,14 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 
 void nvgpu_pd_cache_fini(struct gk20a *g)
 {
-	int i;
+	u32 i;
 	struct nvgpu_pd_cache *cache = g->mm.pd_cache;
 
 	if (!cache) {
 		return;
 	}
 
-	for (i = 0; i < NVGPU_PD_CACHE_COUNT; i++) {
+	for (i = 0U; i < NVGPU_PD_CACHE_COUNT; i++) {
 		WARN_ON(!nvgpu_list_empty(&cache->full[i]));
 		WARN_ON(!nvgpu_list_empty(&cache->partial[i]));
 	}
@@ -305,7 +305,7 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
 
 	pd_dbg(g, "PD-Alloc [C] %u bytes", bytes);
 
-	if (bytes & (bytes - 1) ||
+	if (bytes & (bytes - 1U) ||
 	    (bytes >= PAGE_SIZE ||
 	     bytes < NVGPU_PD_CACHE_MIN)) {
 		pd_dbg(g, "PD-Alloc [C]   Invalid (bytes=%u)!", bytes);

@@ -72,7 +72,7 @@ typedef long long		s64;
 	})
 #define min3(a, b, c)			min(min(a, b), c)
 
-#define PAGE_SIZE	4096
+#define PAGE_SIZE	4096U
 
 #define ARRAY_SIZE(array)			\
 	(sizeof(array) / sizeof((array)[0]))

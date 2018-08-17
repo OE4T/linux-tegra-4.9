@@ -150,7 +150,7 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size, u32 pgsz_idx)
 	}
 
 	/* Be certain we round up to page_size if needed */
-	size = (size + ((u64)page_size - 1)) & ~((u64)page_size - 1);
+	size = (size + ((u64)page_size - 1U)) & ~((u64)page_size - 1U);
 
 	addr = nvgpu_alloc(vma, size);
 	if (!addr) {
@@ -202,7 +202,7 @@ void nvgpu_vm_mapping_batch_finish(struct vm_gk20a *vm,
  */
 int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size)
 {
-	u64 mask = ((u64)vm->big_page_size << 10) - 1;
+	u64 mask = ((u64)vm->big_page_size << 10) - 1U;
 
 	if (base & mask || size & mask) {
 		return 0;
@@ -252,7 +252,7 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	sema_sea->gpu_va = nvgpu_alloc_fixed(&vm->kernel,
 					     vm->va_limit -
 					     mm->channel.kernel_size,
-					     512 * PAGE_SIZE,
+					     512U * PAGE_SIZE,
 					     SZ_4K);
 	if (!sema_sea->gpu_va) {
 		nvgpu_free(&vm->kernel, sema_sea->gpu_va);
@@ -296,7 +296,7 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 		return -ENOMEM;
 	}
 
-	if (WARN_ON(vm->guest_managed && kernel_reserved != 0)) {
+	if (WARN_ON(vm->guest_managed && kernel_reserved != 0U)) {
 		return -EINVAL;
 	}
 
@@ -387,7 +387,7 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	}
 
 	kernel_vma_flags = (kernel_reserved + low_hole) == aperture_size ?
-		0 : GPU_ALLOC_GVA_SPACE;
+		0U : GPU_ALLOC_GVA_SPACE;
 
 	/*
 	 * A "user" area only makes sense for the GVA spaces. For VMs where
@@ -967,7 +967,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 						g, gk20a_cbc_op_clear,
 						comptags.offset,
 						(comptags.offset +
-						 comptags.lines - 1));
+						 comptags.lines - 1U));
 					gk20a_comptags_finish_clear(
 						os_buf, err == 0);
 					if (err) {
@@ -1036,7 +1036,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 				      aperture);
 
 	if (clear_ctags) {
-		gk20a_comptags_finish_clear(os_buf, map_addr != 0);
+		gk20a_comptags_finish_clear(os_buf, map_addr != 0U);
 	}
 
 	if (!map_addr) {

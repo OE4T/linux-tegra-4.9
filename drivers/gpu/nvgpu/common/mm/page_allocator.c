@@ -317,8 +317,8 @@ static void free_slab_page(struct nvgpu_page_allocator *a,
 	palloc_dbg(a, "Freeing slab page @ 0x%012llx", slab_page->page_addr);
 
 	BUG_ON((slab_page->state != SP_NONE && slab_page->state != SP_EMPTY) ||
-	       slab_page->nr_objects_alloced != 0 ||
-	       slab_page->bitmap != 0);
+	       slab_page->nr_objects_alloced != 0U ||
+	       slab_page->bitmap != 0U);
 
 	nvgpu_free(&a->source_allocator, slab_page->page_addr);
 	a->pages_freed++;
@@ -471,7 +471,7 @@ static void __nvgpu_free_slab(struct nvgpu_page_allocator *a,
 
 	slab_page->nr_objects_alloced--;
 
-	if (slab_page->nr_objects_alloced == 0) {
+	if (slab_page->nr_objects_alloced == 0U) {
 		new_state = SP_EMPTY;
 	} else {
 		new_state = SP_PARTIAL;
@@ -684,7 +684,7 @@ static u64 nvgpu_page_alloc(struct nvgpu_allocator *na, u64 len)
 
 	alloc_lock(na);
 	if (a->flags & GPU_ALLOC_4K_VIDMEM_PAGES &&
-	    real_len <= (a->page_size / 2)) {
+	    real_len <= (a->page_size / 2U)) {
 		alloc = __nvgpu_alloc_slab(a, real_len);
 	} else {
 		alloc = __nvgpu_alloc_pages(a, real_len);
@@ -698,7 +698,7 @@ static u64 nvgpu_page_alloc(struct nvgpu_allocator *na, u64 len)
 	__insert_page_alloc(a, alloc);
 
 	a->nr_allocs++;
-	if (real_len > a->page_size / 2) {
+	if (real_len > a->page_size / 2U) {
 		a->pages_alloced += alloc->length >> a->page_shift;
 	}
 	alloc_unlock(na);

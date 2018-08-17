@@ -98,7 +98,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	 * therefor we should not try and free it. But otherwise, if we do
 	 * manage the VA alloc, we obviously must free it.
 	 */
-	if (addr != 0) {
+	if (addr != 0U) {
 		mem->free_gpu_va = false;
 	} else {
 		mem->free_gpu_va = true;
@@ -300,7 +300,7 @@ static int pd_allocate(struct vm_gk20a *vm,
 static u32 pd_index(const struct gk20a_mmu_level *l, u64 virt,
 		    struct nvgpu_gmmu_attrs *attrs)
 {
-	u64 pd_mask = (1ULL << ((u64)l->hi_bit[attrs->pgsz] + 1)) - 1ULL;
+	u64 pd_mask = (1ULL << ((u64)l->hi_bit[attrs->pgsz] + 1U)) - 1ULL;
 	u32 pd_shift = (u64)l->lo_bit[attrs->pgsz];
 
 	/*
@@ -399,7 +399,7 @@ static int __set_pd_level(struct vm_gk20a *vm,
 		 * start at a PDE boundary.
 		 */
 		chunk_size = min(length,
-				 pde_range - (virt_addr & (pde_range - 1)));
+				 pde_range - (virt_addr & (pde_range - 1U)));
 
 		/*
 		 * If the next level has an update_entry function then we know
@@ -573,7 +573,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 		virt_addr += chunk_length;
 		length    -= chunk_length;
 
-		if (length == 0) {
+		if (length == 0U) {
 			break;
 		}
 	}
@@ -615,7 +615,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 
 	page_size = vm->gmmu_page_sizes[attrs->pgsz];
 
-	if (space_to_skip & (page_size - 1)) {
+	if (space_to_skip & (page_size - 1U)) {
 		return -EINVAL;
 	}
 

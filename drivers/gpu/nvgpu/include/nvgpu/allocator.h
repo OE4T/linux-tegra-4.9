@@ -186,11 +186,11 @@ nvgpu_alloc_carveout_from_co_entry(struct nvgpu_list_node *node)
  *     pointing to the allocation base (requires GPU_ALLOC_FORCE_CONTIG to be
  *     set as well).
  */
-#define GPU_ALLOC_GVA_SPACE		0x1
-#define GPU_ALLOC_NO_ALLOC_PAGE		0x2
-#define GPU_ALLOC_4K_VIDMEM_PAGES	0x4
-#define GPU_ALLOC_FORCE_CONTIG		0x8
-#define GPU_ALLOC_NO_SCATTER_GATHER	0x10
+#define GPU_ALLOC_GVA_SPACE		BIT(0)
+#define GPU_ALLOC_NO_ALLOC_PAGE		BIT(1)
+#define GPU_ALLOC_4K_VIDMEM_PAGES	BIT(2)
+#define GPU_ALLOC_FORCE_CONTIG		BIT(3)
+#define GPU_ALLOC_NO_SCATTER_GATHER	BIT(4)
 
 static inline void alloc_lock(struct nvgpu_allocator *a)
 {
@@ -236,7 +236,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 				  const char *name, u64 base, u64 length,
 				  u64 struct_size, u64 flags);
 
-#define GPU_BALLOC_MAX_ORDER		31
+#define GPU_BALLOC_MAX_ORDER		31U
 
 /*
  * Allocator APIs.

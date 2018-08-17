@@ -378,7 +378,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	int err;
 	struct nvgpu_bitmap_allocator *a;
 
-	if (WARN_ON(blk_size & (blk_size - 1))) {
+	if (WARN_ON(blk_size & (blk_size - 1U))) {
 		return -EINVAL;
 	}
 
@@ -386,12 +386,12 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	 * blk_size must be a power-of-2; base length also need to be aligned
 	 * to blk_size.
 	 */
-	if (blk_size & (blk_size - 1) ||
-	    base & (blk_size - 1) || length & (blk_size - 1)) {
+	if (blk_size & (blk_size - 1U) ||
+	    base & (blk_size - 1U) || length & (blk_size - 1U)) {
 		return -EINVAL;
 	}
 
-	if (base == 0) {
+	if (base == 0U) {
 		base = blk_size;
 		length -= blk_size;
 	}

@@ -205,15 +205,15 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 
 u32 nvgpu_mem_rd(struct gk20a *g, struct nvgpu_mem *mem, u32 offset)
 {
-	WARN_ON(offset & 3);
+	WARN_ON(offset & 3U);
 	return nvgpu_mem_rd32(g, mem, offset / sizeof(u32));
 }
 
 void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, void *dest, u32 size)
 {
-	WARN_ON(offset & 3);
-	WARN_ON(size & 3);
+	WARN_ON(offset & 3U);
+	WARN_ON(size & 3U);
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *src = (u8 *)mem->cpu_va + offset;
@@ -246,15 +246,15 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 
 void nvgpu_mem_wr(struct gk20a *g, struct nvgpu_mem *mem, u32 offset, u32 data)
 {
-	WARN_ON(offset & 3);
+	WARN_ON(offset & 3U);
 	nvgpu_mem_wr32(g, mem, offset / sizeof(u32), data);
 }
 
 void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		void *src, u32 size)
 {
-	WARN_ON(offset & 3);
-	WARN_ON(size & 3);
+	WARN_ON(offset & 3U);
+	WARN_ON(size & 3U);
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;
@@ -274,11 +274,11 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 c, u32 size)
 {
-	WARN_ON(offset & 3);
-	WARN_ON(size & 3);
-	WARN_ON(c & ~0xff);
+	WARN_ON(offset & 3U);
+	WARN_ON(size & 3U);
+	WARN_ON(c & ~0xffU);
 
-	c &= 0xff;
+	c &= 0xffU;
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;

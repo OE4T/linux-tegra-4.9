@@ -207,12 +207,12 @@ struct vm_gk20a {
 /*
  * Mapping flags.
  */
-#define NVGPU_VM_MAP_FIXED_OFFSET			(1 << 0)
-#define NVGPU_VM_MAP_CACHEABLE				(1 << 1)
-#define NVGPU_VM_MAP_IO_COHERENT			(1 << 2)
-#define NVGPU_VM_MAP_UNMAPPED_PTE			(1 << 3)
-#define NVGPU_VM_MAP_DIRECT_KIND_CTRL			(1 << 4)
-#define NVGPU_VM_MAP_L3_ALLOC				(1 << 5)
+#define NVGPU_VM_MAP_FIXED_OFFSET			BIT32(0)
+#define NVGPU_VM_MAP_CACHEABLE				BIT32(1)
+#define NVGPU_VM_MAP_IO_COHERENT			BIT32(2)
+#define NVGPU_VM_MAP_UNMAPPED_PTE			BIT32(3)
+#define NVGPU_VM_MAP_DIRECT_KIND_CTRL			BIT32(4)
+#define NVGPU_VM_MAP_L3_ALLOC				BIT32(5)
 
 #define NVGPU_KIND_INVALID				-1
 

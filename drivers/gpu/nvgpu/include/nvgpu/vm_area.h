@@ -60,8 +60,8 @@ nvgpu_vm_area_from_vm_area_list(struct nvgpu_list_node *node)
 /*
  * Alloc space flags.
  */
-#define NVGPU_VM_AREA_ALLOC_FIXED_OFFSET		(1 << 0)
-#define NVGPU_VM_AREA_ALLOC_SPARSE			(1 << 1)
+#define NVGPU_VM_AREA_ALLOC_FIXED_OFFSET		BIT(0)
+#define NVGPU_VM_AREA_ALLOC_SPARSE			BIT(1)
 
 int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 			u64 *addr, u32 flags);

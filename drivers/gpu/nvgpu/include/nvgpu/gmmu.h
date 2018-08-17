@@ -54,9 +54,9 @@ enum gk20a_mem_rw_flag {
  * structure is of course depending on this. The MIN_SHIFT define is the right
  * number of bits to shift to determine which list to use in the array of lists.
  */
-#define NVGPU_PD_CACHE_MIN		256
-#define NVGPU_PD_CACHE_MIN_SHIFT	9
-#define NVGPU_PD_CACHE_COUNT		4
+#define NVGPU_PD_CACHE_MIN		256U
+#define NVGPU_PD_CACHE_MIN_SHIFT	9U
+#define NVGPU_PD_CACHE_COUNT		4U
 
 struct nvgpu_pd_mem_entry {
 	struct nvgpu_mem		mem;

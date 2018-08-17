@@ -614,12 +614,16 @@ static void log_mcerr_fault(unsigned int irq)
 	LOG_FAULT(hubc, U32_MAX, _HUBC_);
 	LOG_FAULT(sbs, U32_MAX, _MSS_SBS_);
 
-	if (!faults_handled)
+	if (faults_handled) {
+		mc_writel(g_intstatus, MC_GLOBAL_INTSTATUS);
+		mc_writel(g_intstatus_1, MC_GLOBAL_INTSTATUS_1);
+	} else {
 		pr_err("unknown mcerr fault, int_status=0x%08x, "
 			"ch_int_status=0x%08x, hubc_int_status=0x%08x "
 			"sbs_int_status=0x%08x, hub_int_status=0x%08x\n",
 			slice_int_status, ch_int_status, hubc_int_status,
 			sbs_int_status, hub_int_status);
+	}
 }
 
 static struct mcerr_ops mcerr_ops = {

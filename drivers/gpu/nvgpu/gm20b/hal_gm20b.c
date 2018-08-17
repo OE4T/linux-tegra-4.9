@@ -674,6 +674,7 @@ int gm20b_init_hal(struct gk20a *g)
 	 */
 	gops->clk.init_clk_support = gm20b_ops.clk.init_clk_support;
 	gops->clk.suspend_clk_support = gm20b_ops.clk.suspend_clk_support;
+	gops->clk.init_debugfs = gm20b_ops.clk.init_debugfs;
 	gops->clk.get_voltage = gm20b_ops.clk.get_voltage;
 	gops->clk.get_gpcclk_clock_counter =
 		gm20b_ops.clk.get_gpcclk_clock_counter;

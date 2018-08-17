@@ -28,13 +28,14 @@ struct channel_gk20a;
 struct vm_gk20a_mapping_batch;
 struct gk20a_as_share;
 struct vm_gk20a;
+enum gk20a_mem_rw_flag;
 
 void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,
 				int pgsz_idx,
 				bool va_allocated,
-				int rw_flag,
+				enum gk20a_mem_rw_flag rw_flag,
 				bool sparse,
 				struct vm_gk20a_mapping_batch *batch);
 int vgpu_vm_bind_channel(struct vm_gk20a *vm,

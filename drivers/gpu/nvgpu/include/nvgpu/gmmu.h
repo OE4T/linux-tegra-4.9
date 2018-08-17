@@ -168,7 +168,7 @@ struct nvgpu_gmmu_attrs {
 	u32			 kind_v;
 	u64			 ctag;
 	bool			 cacheable;
-	int			 rw_flag;
+	enum gk20a_mem_rw_flag	 rw_flag;
 	bool			 sparse;
 	bool			 priv;
 	bool			 coherent;
@@ -227,7 +227,7 @@ u64 nvgpu_gmmu_map(struct vm_gk20a *vm,
 		   struct nvgpu_mem *mem,
 		   u64 size,
 		   u32 flags,
-		   int rw_flag,
+		   enum gk20a_mem_rw_flag rw_flag,
 		   bool priv,
 		   enum nvgpu_aperture aperture);
 
@@ -241,7 +241,7 @@ u64 nvgpu_gmmu_map_fixed(struct vm_gk20a *vm,
 			 u64 addr,
 			 u64 size,
 			 u32 flags,
-			 int rw_flag,
+			 enum gk20a_mem_rw_flag rw_flag,
 			 bool priv,
 			 enum nvgpu_aperture aperture);
 

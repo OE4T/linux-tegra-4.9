@@ -35,6 +35,7 @@
 
 struct clk_domains;
 struct clk_domain;
+enum nv_pmu_clk_clkwhich;
 
 /*data and function definition to talk to driver*/
 u32 clk_domain_sw_setup(struct gk20a *g);
@@ -78,7 +79,7 @@ struct clk_domain {
 	struct boardobj super;
 	u32 api_domain;
 	u32 part_mask;
-	u8 domain;
+	enum nv_pmu_clk_clkwhich domain;
 	u8 perf_domain_index;
 	u8 perf_domain_grp_idx;
 	u8 ratio_domain;

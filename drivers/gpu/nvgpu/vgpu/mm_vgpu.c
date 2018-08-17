@@ -86,7 +86,7 @@ void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				u64 size,
 				int pgsz_idx,
 				bool va_allocated,
-				int rw_flag,
+				enum gk20a_mem_rw_flag rw_flag,
 				bool sparse,
 				struct vm_gk20a_mapping_batch *batch)
 {

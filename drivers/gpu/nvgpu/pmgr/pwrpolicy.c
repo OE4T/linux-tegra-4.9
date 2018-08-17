@@ -643,7 +643,8 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 		pwr_policy_data.pwrpolicy.limit_unit = (u8)
 				BIOS_GET_FIELD(entry.flags0,
 					NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_LIMIT_UNIT);
-		pwr_policy_data.pwrpolicy.filter_type = (u8)
+		pwr_policy_data.pwrpolicy.filter_type =
+			(enum ctrl_pmgr_pwr_policy_filter_type)
 				BIOS_GET_FIELD(entry.flags1,
 					NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS1_FILTER_TYPE);
 

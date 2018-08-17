@@ -30,6 +30,8 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/kref.h>
 
+enum gk20a_mem_rw_flag;
+
 struct gpfifo_desc {
 	struct nvgpu_mem mem;
 	u32 entry_num;
@@ -141,7 +143,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			  u8 kind_v,
 			  u32 ctag_offset,
 			  u32 flags,
-			  int rw_flag,
+			  enum gk20a_mem_rw_flag rw_flag,
 			  bool clear_ctags,
 			  bool sparse,
 			  bool priv,
@@ -153,7 +155,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			     u64 size,
 			     int pgsz_idx,
 			     bool va_allocated,
-			     int rw_flag,
+			     enum gk20a_mem_rw_flag rw_flag,
 			     bool sparse,
 			     struct vm_gk20a_mapping_batch *batch);
 

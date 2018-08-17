@@ -139,6 +139,7 @@ enum gk20a_cbc_op {
 enum nvgpu_unit;
 
 enum nvgpu_flush_op;
+enum gk20a_mem_rw_flag;
 
 struct _resmgr_context;
 struct nvgpu_gpfifo_entry;
@@ -924,7 +925,7 @@ struct gpu_ops {
 				u8 kind_v,
 				u32 ctag_offset,
 				u32 flags,
-				int rw_flag,
+				enum gk20a_mem_rw_flag rw_flag,
 				bool clear_ctags,
 				bool sparse,
 				bool priv,
@@ -935,7 +936,7 @@ struct gpu_ops {
 				u64 size,
 				int pgsz_idx,
 				bool va_allocated,
-				int rw_flag,
+				enum gk20a_mem_rw_flag rw_flag,
 				bool sparse,
 				struct vm_gk20a_mapping_batch *batch);
 		int (*vm_bind_channel)(struct vm_gk20a *vm,

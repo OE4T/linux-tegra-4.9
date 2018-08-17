@@ -6304,28 +6304,6 @@ void tegra_disp_clk_put(struct device *dev, struct clk *clk)
 	}
 }
 
-bool tegra_is_bl_display_initialized(int instance)
-{
-	struct tegra_dc *dc = find_dc_by_ctrl_num(instance);
-
-	if (!dc) {
-		pr_err("could not find dc with ctrl number %d\n", instance);
-		return false;
-	}
-	if (!dc->fb_mem) {
-		pr_debug("dc->fb_mem not initialized\n");
-		return false;
-	}
-	return (dc->fb_mem->start != 0);
-}
-EXPORT_SYMBOL(tegra_is_bl_display_initialized);
-
-#if KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
-void tegra_get_fb_resource(struct resource *fb_res, int instance)
-{
-}
-#endif
-
 static int tegra_dc_probe(struct platform_device *ndev)
 {
 	struct tegra_dc *dc;
@@ -6349,7 +6327,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	int partition_id_disa, partition_id_disb;
 #endif
 	struct resource of_fb_res;
-	struct resource of_lut_res;
 	int hotplug_init_status = -1;
 
 	if (tegra_dc_is_nvdisplay() && !tegra_dc_common_probe_status())
@@ -6462,25 +6439,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	memset(&of_fb_res, 0, sizeof(struct resource));
-	if (tegra_dc_is_nvdisplay()) {
-		/* on T186+ k4.4, k4.9, k4.14, fb is passed through the DT */
-		ret = of_tegra_get_fb_resource(np, &of_fb_res, "surface");
-		if (!ret)
-			ret = of_tegra_get_fb_resource(np, &of_lut_res, "lut");
-	} else {
-#if KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
-		/* on T210 k4.14, use the DT -FIXME: debug T210 lut passing */
-		(void) of_lut_res;
-		ret = of_tegra_get_fb_resource(np, &of_fb_res, "surface");
-#else
-		/* FIXME: still use the command line for T210 k4.9 */
-		tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
-#endif
-	}
-
-	if (ret < 0)
-		goto err_iounmap_reg;
-
+	tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
 	fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
 	if (fb_mem == NULL) {
 		ret = -ENOMEM;

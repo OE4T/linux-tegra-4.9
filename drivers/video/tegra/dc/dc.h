@@ -1045,8 +1045,12 @@ int tegra_dc_get_head(const struct tegra_dc *dc);
 int tegra_dc_get_out(const struct tegra_dc *dc);
 int tegra_dc_get_source_physical_address(u8 *phy_address);
 
+#if KERNEL_VERSION(4, 14, 0) <= LINUX_VERSION_CODE
+static inline bool tegra_is_bl_display_initialized(int instance)
+{ return false; }
+#else
 bool tegra_is_bl_display_initialized(int instance);
-
+#endif
 static inline void find_dc_node(struct device_node **dc1_node,
 	struct device_node **dc2_node)
 {
@@ -1061,8 +1065,11 @@ static inline struct tegra_dc *tegra_get_dc_from_dev(struct device *dev)
 
 void tegra_dc_shutdown(struct platform_device *ndev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
 void tegra_get_fb_resource(struct resource *fb_res, int instance);
-
+#else
+static inline void tegra_get_fb_resource(struct resource *fb_res, int instance) {}
+#endif
 unsigned tegra_dc_out_flags_from_dev(struct device *dev);
 bool tegra_dc_initialized(struct device *dev);
 bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc);

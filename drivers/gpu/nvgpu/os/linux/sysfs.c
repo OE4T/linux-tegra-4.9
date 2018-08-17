@@ -301,6 +301,17 @@ static DEVICE_ATTR(ptimer_src_freq,
 			NULL);
 
 
+static ssize_t gpu_powered_on_show(struct device *dev,
+				   struct device_attribute *attr,
+				   char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", g->power_on);
+}
+
+static DEVICE_ATTR(gpu_powered_on, S_IRUGO, gpu_powered_on_show, NULL);
+
 #if defined(CONFIG_PM)
 static ssize_t railgate_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -1234,6 +1245,7 @@ void nvgpu_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_pd_max_batches);
 	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
+	device_remove_file(dev, &dev_attr_gpu_powered_on);
 
 	device_remove_file(dev, &dev_attr_comptag_mem_deduct);
 
@@ -1288,6 +1300,7 @@ int nvgpu_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_pd_max_batches);
 	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
+	error |= device_create_file(dev, &dev_attr_gpu_powered_on);
 
 	error |= device_create_file(dev, &dev_attr_comptag_mem_deduct);
 

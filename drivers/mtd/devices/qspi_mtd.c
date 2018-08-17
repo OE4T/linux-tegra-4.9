@@ -390,6 +390,18 @@ static ssize_t bits_per_word_show(struct device *dev,
 
 static DEVICE_ATTR(qspi_bits_per_word, 0644, bits_per_word_show,
 		bits_per_word_set);
+
+static struct attribute *qspi_mtd_attrs[] = {
+	&dev_attr_qspi_force_sdr.attr,
+	&dev_attr_qspi_mode.attr,
+	&dev_attr_qspi_enable_qpi_mode.attr,
+	&dev_attr_qspi_force_bus_width.attr,
+	&dev_attr_qspi_bits_per_word.attr,
+	NULL,
+};
+
+ATTRIBUTE_GROUPS(qspi_mtd);
+
 #endif
 /*
  * Set Mode for transfer request
@@ -1775,7 +1787,7 @@ static int qspi_probe(struct spi_device *spi)
 		}
 	}
 
-	flash = kzalloc(sizeof(*flash), GFP_KERNEL);
+	flash = devm_kzalloc(&spi->dev, sizeof(*flash), GFP_KERNEL);
 	if (!flash)
 		return -ENOMEM;
 
@@ -1785,7 +1797,6 @@ static int qspi_probe(struct spi_device *spi)
 		flash->cmd_info_table = spansion_cmd_info_table;
 	else {
 		dev_err(&spi->dev, "error: %s: unsupported flash\n", __func__);
-		kfree(flash);
 		return -EINVAL;
 	}
 
@@ -1901,21 +1912,9 @@ static int qspi_probe(struct spi_device *spi)
 	}
 
 #ifdef QSPI_BRINGUP_BUILD
-	ret = device_create_file(&spi->dev, &dev_attr_qspi_force_sdr);
-	if (ret < 0)
+	ret = sysfs_create_group(&spi->dev.kobj, qspi_mtd_groups[0]);
+	if (ret)
 		goto err_free_flash;
-	ret = device_create_file(&spi->dev, &dev_attr_qspi_mode);
-	if (ret < 0)
-		goto err_remove_qspi_force_sdr;
-	ret = device_create_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
-	if (ret < 0)
-		goto err_remove_attr_qspi_mode;
-	ret = device_create_file(&spi->dev, &dev_attr_qspi_force_bus_width);
-	if (ret < 0)
-		goto err_remove_attr_qspi_enable_qpi_mode;
-	ret = device_create_file(&spi->dev, &dev_attr_qspi_bits_per_word);
-	if (ret < 0)
-		goto err_remove_attr_qspi_force_bus_width;
 #endif
 
 	/* partitions should match sector boundaries; and it may be good to
@@ -1925,36 +1924,23 @@ static int qspi_probe(struct spi_device *spi)
 			data ? data->parts : NULL,
 			data ? data->nr_parts : 0);
 	if (ret < 0)
-		goto err_remove_attr_qspi_bits_per_word;
+		goto err_remove_qspi_attrs;
 	return ret;
 
-err_remove_attr_qspi_bits_per_word:
-	device_remove_file(&spi->dev, &dev_attr_qspi_bits_per_word);
-err_remove_attr_qspi_force_bus_width:
-	device_remove_file(&spi->dev, &dev_attr_qspi_force_bus_width);
-err_remove_attr_qspi_enable_qpi_mode:
-	device_remove_file(&spi->dev, &dev_attr_qspi_enable_qpi_mode);
-err_remove_attr_qspi_mode:
-	device_remove_file(&spi->dev, &dev_attr_qspi_mode);
-err_remove_qspi_force_sdr:
-	device_remove_file(&spi->dev, &dev_attr_qspi_force_sdr);
+err_remove_qspi_attrs:
+	sysfs_remove_group(&spi->dev.kobj, qspi_mtd_groups[0]);
 err_free_flash:
-	kfree(flash);
 	return ret;
 }
 
 static int qspi_remove(struct spi_device *spi)
 {
 	struct qspi	*flash = dev_get_drvdata(&spi->dev);
-	int		status;
 
 #ifdef QSPI_BRINGUP_BUILD
-	device_remove_file(&spi->dev, &dev_attr_qspi_bits_per_word);
+	sysfs_remove_group(&spi->dev.kobj, qspi_mtd_groups[0]);
 #endif
-	/* Clean up MTD stuff. */
-	status = mtd_device_unregister(&flash->mtd);
-	if (status == 0)
-		kfree(flash);
+	mtd_device_unregister(&flash->mtd);
 	return 0;
 }
 

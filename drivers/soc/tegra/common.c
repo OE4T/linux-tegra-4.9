@@ -326,9 +326,36 @@ static int __init tegra_bootloader_lut4_arg(char *options)
 }
 early_param("lut_mem4", tegra_bootloader_lut4_arg);
 
+
+/* returns true if bl initialized the display */
+bool tegra_is_bl_display_initialized(int instance)
+{
+	/* display initialized implies non-zero
+	 * fb size is passed from bl to kernel
+	 */
+	switch (instance) {
+	case 0:
+		return tegra_bootloader_fb_start && tegra_bootloader_fb_size;
+	case 1:
+		return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
+	case 2:
+		return tegra_bootloader_fb3_start && tegra_bootloader_fb3_size;
+	case 3:
+		return tegra_bootloader_fb4_start && tegra_bootloader_fb4_size;
+	default:
+		pr_err("Could not find DC instance %d\n", instance);
+		return false;
+	}
+}
+EXPORT_SYMBOL(tegra_is_bl_display_initialized);
+
 void tegra_get_fb_resource(struct resource *fb_res, int instance)
 {
-	switch (instance) {
+	if (!tegra_is_bl_display_initialized(instance)) {
+		fb_res->start = 0;
+		fb_res->end = 0;
+	} else {
+		switch (instance) {
 		case 0:
 			fb_res->start =
 				(resource_size_t) tegra_bootloader_fb_start;
@@ -356,7 +383,9 @@ void tegra_get_fb_resource(struct resource *fb_res, int instance)
 		default:
 			pr_err("Could not find DC instance %d\n", instance);
 			break;
+		}
 	}
+
 }
 
 static int __init tegra_usb_port_owner_info(char *id)

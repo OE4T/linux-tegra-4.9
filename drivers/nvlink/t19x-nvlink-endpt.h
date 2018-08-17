@@ -216,8 +216,7 @@ struct tnvlink_dev {
 	struct reset_control *rst_nvhs_uphy_l5;
 	struct reset_control *rst_nvhs_uphy_l6;
 	struct reset_control *rst_nvhs_uphy_l7;
-	/* Powergate id */
-	int pgid_nvl;
+	struct reset_control *rst_nvlink;
 	struct tegra_prod *prod_list;
 	bool is_nea;
 	/* Nvlink refclk*/

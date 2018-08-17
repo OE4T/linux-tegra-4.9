@@ -31,8 +31,6 @@
 #include <linux/platform/tegra/mc-regs-t19x.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
-#include <linux/tegra_pm_domains.h>
-#include <linux/tegra-powergate.h>
 #include <soc/tegra/fuse.h>
 
 #include "t19x-nvlink-endpt.h"
@@ -52,13 +50,6 @@ static struct of_device_id t19x_nvlink_controller_of_match[] = {
 	}, {
 	},
 };
-
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-static struct of_device_id tegra_nvl_pd[] = {
-	{ .compatible = "nvidia,tegra194-nvl-pd", },
-	{},
-};
-#endif
 
 MODULE_DEVICE_TABLE(of, t19x_nvlink_controller_of_match);
 
@@ -214,13 +205,8 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 		goto nvlink_sys_set_parent_fail;
 	}
 
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	ret = tegra_unpowergate_partition(tdev->pgid_nvl);
-	if (ret < 0) {
-		nvlink_err("Couldn't unpowergate : %d", ret);
-		goto unpowergate_partition_fail;
-	}
-#endif
+	reset_control_reset(tdev->rst_nvlink);
+
 	/* Take link out of reset */
 	reg_val = nvlw_tioctrl_readl(tdev, NVLW_RESET) |
 			BIT(NVLW_RESET_LINKRESET);
@@ -276,10 +262,6 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 	return ret;
 
 pllnvhs_fail:
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	tegra_powergate_partition(tdev->pgid_nvl);
-#endif
-unpowergate_partition_fail:
 nvlink_sys_set_parent_fail:
 	clk_disable_unprepare(tdev->clk_nvlink_sys);
 nvlink_sys_enable_fail:
@@ -829,14 +811,6 @@ int t19x_nvlink_dev_car_disable(struct nvlink_device *ndev)
 		goto fail;
 	}
 
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	ret = tegra_powergate_partition(tdev->pgid_nvl);
-	if (ret < 0) {
-		nvlink_err("Powergate nvlink partition failed");
-		goto fail;
-	}
-#endif
-
 	clk_disable_unprepare(tdev->clk_nvlink_sys);
 
 	ret = reset_control_assert(tdev->rst_nvhs_uphy_pm);
@@ -973,10 +947,12 @@ static int tegra_nvlink_clk_rst_init(struct tnvlink_dev *tdev)
 		nvlink_err("missing rst_nvhs_uphy_l7 reset");
 		return PTR_ERR(tdev->rst_nvhs_uphy_l7);
 	}
-
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	tdev->pgid_nvl = tegra_pd_get_powergate_id(tegra_nvl_pd);
-#endif
+	tdev->rst_nvlink = devm_reset_control_get(tdev->dev,
+			"nvlink");
+	if (IS_ERR(tdev->rst_nvlink)) {
+		nvlink_err("missing rst_nvlink reset");
+		return PTR_ERR(tdev->rst_nvlink);
+	}
 
 	return 0;
 }

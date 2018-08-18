@@ -105,7 +105,7 @@ void clear_cpu_counter(void)
 }
 EXPORT_SYMBOL(clear_cpu_counter);
 
-static void t19x_cpu_enter_c6(u32 wake_time)
+static void t19x_cpu_enter_c6(void)
 {
 	arm_cpuidle_suspend(T19x_CPUIDLE_C6_STATE);
 }
@@ -125,14 +125,14 @@ static void test_t19x_cpu_enter_c6(u32 wake_time)
 
 	atomic_inc(&entered_c6_cpu_count);
 
-	t19x_cpu_enter_c6(0);
+	t19x_cpu_enter_c6();
 
 	trace_printk("Exiting C6\n");
 	tegra_mce_read_cstate_stats(mce_index, &val);
 	trace_printk("cpu = %d C6_COUNT_AFTER = %llu\n", cpu, val);
 }
 
-static void t19x_cpu_enter_c7(u32 wake_time)
+static void t19x_cpu_enter_c7(void)
 {
 	cpu_pm_enter(); /* power down notifier */
 	arm_cpuidle_suspend(T19x_CPUIDLE_C7_STATE);
@@ -144,24 +144,10 @@ static int t19x_cpu_enter_state(
 		struct cpuidle_driver *drv,
 		int index)
 {
-	u32 wake_time;
-	struct timespec t;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	ktime_t delta_next;
-#endif
-
 	if (tegra_platform_is_vdk()) {
 		asm volatile("wfi\n");
 		return index;
 	}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
-#else
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-#endif
-
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	if (testmode) {
 		tegra_mce_update_cstate_info(forced_cluster_idle_state,
@@ -172,14 +158,12 @@ static int t19x_cpu_enter_state(
 			index = t19x_cpu_idle_driver.state_count;
 		} else
 			index = forced_idle_state;
-
-		wake_time = 0xFFFFEEEE;
 	}
 
 	if (index == T19x_CPUIDLE_C7_STATE)
-		t19x_cpu_enter_c7(wake_time);
+		t19x_cpu_enter_c7();
 	else if (index == T19x_CPUIDLE_C6_STATE)
-		t19x_cpu_enter_c6(wake_time);
+		t19x_cpu_enter_c6();
 	else
 		asm volatile("wfi\n");
 
@@ -318,12 +302,12 @@ static int forced_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(forced_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == T19x_CPUIDLE_C7_STATE)
-		t19x_cpu_enter_c7(wake_time);
+		t19x_cpu_enter_c7();
 	else if (pmstate == T19x_CPUIDLE_C6_STATE) {
 		if (test_c6_exit_latency)
 			test_t19x_cpu_enter_c6(wake_time);
 		else
-			t19x_cpu_enter_c6(wake_time);
+			t19x_cpu_enter_c6();
 	}
 	else
 		asm volatile("wfi\n");

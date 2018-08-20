@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,9 @@ int nvgpu_get_timestamps_zipper(struct gk20a *g,
 
 	for (i = 0; i < count; i++) {
 		err = g->ops.ptimer.read_ptimer(g, &samples[i].gpu_timestamp);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		samples[i].cpu_timestamp = nvgpu_hr_timestamp();
 	}

@@ -32,16 +32,18 @@ static void rotate_left(struct nvgpu_rbtree_node **root,
 
 	/* establish x->right link */
 	x->right = y->left;
-	if (y->left)
+	if (y->left) {
 		y->left->parent = x;
+	}
 
 	/* establish y->parent link */
 	y->parent = x->parent;
 	if (x->parent) {
-		if (x == x->parent->left)
+		if (x == x->parent->left) {
 			x->parent->left = y;
-		else
+		} else {
 			x->parent->right = y;
+		}
 	} else {
 		*root = y;
 	}
@@ -61,16 +63,18 @@ static void rotate_right(struct nvgpu_rbtree_node **root,
 
 	/* establish x->left link */
 	x->left = y->right;
-	if (y->right)
+	if (y->right) {
 		y->right->parent = x;
+	}
 
 	/* establish y->parent link */
 	y->parent = x->parent;
 	if (x->parent) {
-		if (x == x->parent->right)
+		if (x == x->parent->right) {
 			x->parent->right = y;
-		else
+		} else {
 			x->parent->left = y;
+		}
 	} else {
 		*root = y;
 	}
@@ -149,12 +153,13 @@ void nvgpu_rbtree_insert(struct nvgpu_rbtree_node *new_node,
 
 	while (curr) {
 		parent = curr;
-		if (new_node->key_start < curr->key_start)
+		if (new_node->key_start < curr->key_start) {
 			curr = curr->left;
-		else if (new_node->key_start > curr->key_start)
+		} else if (new_node->key_start > curr->key_start) {
 			curr = curr->right;
-		else
+		} else {
 			return; /* duplicate entry */
+		}
 	}
 
 	/* the caller allocated the node already, just fix the links */
@@ -165,10 +170,11 @@ void nvgpu_rbtree_insert(struct nvgpu_rbtree_node *new_node,
 
 	/* insert node in tree */
 	if (parent) {
-		if (new_node->key_start < parent->key_start)
+		if (new_node->key_start < parent->key_start) {
 			parent->left = new_node;
-		else
+		} else {
 			parent->right = new_node;
+		}
 	} else {
 		*root = new_node;
 	}
@@ -203,8 +209,9 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 
 			if (!w || ((!w->left || !w->left->is_red)
 					&& (!w->right || !w->right->is_red))) {
-				if (w)
+				if (w) {
 					w->is_red = true;
+				}
 				x = parent_of_x;
 			} else {
 				if (!w->right || !w->right->is_red) {
@@ -231,8 +238,9 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 
 			if (!w || ((!w->right || !w->right->is_red)
 					&& (!w->left || !w->left->is_red))) {
-				if (w)
+				if (w) {
 					w->is_red = true;
+				}
 				x = parent_of_x;
 			} else {
 				if (!w->left || !w->left->is_red) {
@@ -251,8 +259,9 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 		parent_of_x = x->parent;
 	}
 
-	if (x)
+	if (x) {
 		x->is_red = false;
+	}
 }
 
 void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
@@ -279,21 +288,24 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 	}
 
 	/* x is y's only child */
-	if (y->left)
+	if (y->left) {
 		x = y->left;
-	else
+	} else {
 		x = y->right;
+	}
 
 	/* remove y from the parent chain */
 	parent_of_x = y->parent;
-	if (x)
+	if (x) {
 		x->parent = parent_of_x;
+	}
 
 	if (y->parent) {
-		if (y == y->parent->left)
+		if (y == y->parent->left) {
 			y->parent->left = x;
-		else
+		} else {
 			y->parent->right = x;
+		}
 	} else {
 		*root = x;
 	}
@@ -305,10 +317,11 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 		 */
 		y->parent = z->parent;
 		if (z->parent) {
-			if (z == z->parent->left)
+			if (z == z->parent->left) {
 				z->parent->left = y;
-			else
+			} else {
 				z->parent->right = y;
+			}
 		} else {
 			*root = y;
 		}
@@ -316,19 +329,23 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 		y->is_red = z->is_red;
 
 		y->left = z->left;
-		if (z->left)
+		if (z->left) {
 			z->left->parent = y;
+		}
 
 		y->right = z->right;
-		if (z->right)
+		if (z->right) {
 			z->right->parent = y;
+		}
 
-		if (parent_of_x == z)
+		if (parent_of_x == z) {
 			parent_of_x = y;
+		}
 	}
 
-	if (y_was_black)
+	if (y_was_black) {
 		_delete_fixup(root, parent_of_x, x);
+	}
 }
 
 void nvgpu_rbtree_search(u64 key_start, struct nvgpu_rbtree_node **node,
@@ -427,8 +444,9 @@ void nvgpu_rbtree_enum_next(struct nvgpu_rbtree_node **node,
 		} else {
 			/* go up until we find the right inorder node */
 			for (curr = curr->parent; curr; curr = curr->parent) {
-				if (curr->key_start > (*node)->key_start)
+				if (curr->key_start > (*node)->key_start) {
 					break;
+				}
 			}
 		}
 	}

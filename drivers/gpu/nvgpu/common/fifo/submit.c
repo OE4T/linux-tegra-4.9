@@ -69,8 +69,9 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 
 	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
 		err = g->ops.fifo.resetup_ramfc(c);
-		if (err)
+		if (err) {
 			goto fail;
+		}
 	}
 
 	/*
@@ -80,9 +81,10 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 	if (flags & NVGPU_SUBMIT_FLAGS_FENCE_WAIT) {
 		int max_wait_cmds = c->deterministic ? 1 : 0;
 
-		if (!pre_alloc_enabled)
+		if (!pre_alloc_enabled) {
 			job->wait_cmd = nvgpu_kzalloc(g,
 				sizeof(struct priv_cmd_entry));
+		}
 
 		if (!job->wait_cmd) {
 			err = -ENOMEM;
@@ -99,16 +101,19 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 						   job->wait_cmd);
 		}
 
-		if (err)
+		if (err) {
 			goto clean_up_wait_cmd;
+		}
 
-		if (job->wait_cmd->valid)
+		if (job->wait_cmd->valid) {
 			*wait_cmd = job->wait_cmd;
+		}
 	}
 
 	if ((flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) &&
-	    (flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE))
+	    (flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE)) {
 		need_sync_fence = true;
+	}
 
 	/*
 	 * Always generate an increment at the end of a GPFIFO submission. This
@@ -120,42 +125,48 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 		err = -ENOMEM;
 		goto clean_up_wait_cmd;
 	}
-	if (!pre_alloc_enabled)
+	if (!pre_alloc_enabled) {
 		job->incr_cmd = nvgpu_kzalloc(g, sizeof(struct priv_cmd_entry));
+	}
 
 	if (!job->incr_cmd) {
 		err = -ENOMEM;
 		goto clean_up_post_fence;
 	}
 
-	if (flags & NVGPU_SUBMIT_FLAGS_FENCE_GET)
+	if (flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) {
 		err = c->sync->incr_user(c->sync, wait_fence_fd, job->incr_cmd,
 				 job->post_fence, need_wfi, need_sync_fence,
 				 register_irq);
-	else
+	} else {
 		err = c->sync->incr(c->sync, job->incr_cmd,
 				    job->post_fence, need_sync_fence,
 				    register_irq);
+	}
 	if (!err) {
 		*incr_cmd = job->incr_cmd;
 		*post_fence = job->post_fence;
-	} else
+	} else {
 		goto clean_up_incr_cmd;
+	}
 
 	return 0;
 
 clean_up_incr_cmd:
 	free_priv_cmdbuf(c, job->incr_cmd);
-	if (!pre_alloc_enabled)
+	if (!pre_alloc_enabled) {
 		job->incr_cmd = NULL;
+	}
 clean_up_post_fence:
 	gk20a_fence_put(job->post_fence);
 	job->post_fence = NULL;
 clean_up_wait_cmd:
-	if (job->wait_cmd)
+	if (job->wait_cmd) {
 		free_priv_cmdbuf(c, job->wait_cmd);
-	if (!pre_alloc_enabled)
+	}
+	if (!pre_alloc_enabled) {
 		job->wait_cmd = NULL;
+	}
 fail:
 	*wait_cmd = NULL;
 	return err;
@@ -175,9 +186,10 @@ static void nvgpu_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 	nvgpu_mem_wr_n(g, gpfifo_mem, c->gpfifo.put * sizeof(x),
 			&x, sizeof(x));
 
-	if (cmd->mem->aperture == APERTURE_SYSMEM)
+	if (cmd->mem->aperture == APERTURE_SYSMEM) {
 		trace_gk20a_push_cmdbuf(g->name, 0, cmd->size, 0,
 				(u32 *)cmd->mem->cpu_va + cmd->off);
+	}
 
 	c->gpfifo.put = (c->gpfifo.put + 1U) & (c->gpfifo.entry_num - 1U);
 }
@@ -202,20 +214,23 @@ static int nvgpu_submit_append_gpfifo_user_direct(struct channel_gk20a *c,
 		err = g->os_channel.copy_user_gpfifo(
 				gpfifo_cpu + start, userdata,
 				0, length0);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		err = g->os_channel.copy_user_gpfifo(
 				gpfifo_cpu, userdata,
 				length0, length1);
-		if (err)
+		if (err) {
 			return err;
+		}
 	} else {
 		err = g->os_channel.copy_user_gpfifo(
 				gpfifo_cpu + start, userdata,
 				0, len);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 
 	return 0;
@@ -266,14 +281,16 @@ static int nvgpu_submit_append_gpfifo(struct channel_gk20a *c,
 		 */
 		err = nvgpu_submit_append_gpfifo_user_direct(c, userdata,
 				num_entries);
-		if (err)
+		if (err) {
 			return err;
+		}
 	} else if (!kern_gpfifo) {
 		/* from userspace to vidmem, use the common path */
 		err = g->os_channel.copy_user_gpfifo(c->gpfifo.pipe, userdata,
 				0, num_entries);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		nvgpu_submit_append_gpfifo_common(c, c->gpfifo.pipe,
 				num_entries);
@@ -314,17 +331,21 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool need_job_tracking;
 	bool need_deferred_cleanup = false;
 
-	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
 		return -ENODEV;
+	}
 
-	if (c->has_timedout)
+	if (c->has_timedout) {
 		return -ETIMEDOUT;
+	}
 
-	if (!nvgpu_mem_is_valid(&c->gpfifo.mem))
+	if (!nvgpu_mem_is_valid(&c->gpfifo.mem)) {
 		return -ENOMEM;
+	}
 
-	if (c->usermode_submit_enabled)
+	if (c->usermode_submit_enabled) {
 		return -EINVAL;
+	}
 
 	/* fifo not large enough for request. Return error immediately.
 	 * Kernel can insert gpfifo entries before and after user gpfifos.
@@ -337,8 +358,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	if ((flags & (NVGPU_SUBMIT_FLAGS_FENCE_WAIT |
 		      NVGPU_SUBMIT_FLAGS_FENCE_GET)) &&
-	    !fence)
+	    !fence) {
 		return -EINVAL;
+	}
 
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
@@ -381,8 +403,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		 * job tracking is required, the channel must have
 		 * pre-allocated resources. Otherwise, we fail the submit here
 		 */
-		if (c->deterministic && !channel_gk20a_is_prealloc_enabled(c))
+		if (c->deterministic && !channel_gk20a_is_prealloc_enabled(c)) {
 			return -EINVAL;
+		}
 
 		need_sync_framework =
 			gk20a_channel_sync_needs_sync_framework(g) ||
@@ -415,8 +438,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		 * For deterministic channels, we don't allow deferred clean_up
 		 * processing to occur. In cases we hit this, we fail the submit
 		 */
-		if (c->deterministic && need_deferred_cleanup)
+		if (c->deterministic && need_deferred_cleanup) {
 			return -EINVAL;
+		}
 
 		if (!c->deterministic) {
 			/*
@@ -442,8 +466,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 
 
 	/* Grab access to HW to deal with do_idle */
-	if (c->deterministic)
+	if (c->deterministic) {
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
+	}
 
 	if (c->deterministic && c->deterministic_railgate_allowed) {
 		/*
@@ -485,48 +510,56 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	if (need_job_tracking) {
 		err = channel_gk20a_alloc_job(c, &job);
-		if (err)
+		if (err) {
 			goto clean_up;
+		}
 
 		err = nvgpu_submit_prepare_syncs(c, fence, job,
 						 &wait_cmd, &incr_cmd,
 						 &post_fence,
 						 need_deferred_cleanup,
 						 flags);
-		if (err)
+		if (err) {
 			goto clean_up_job;
+		}
 	}
 
 	gk20a_fifo_profile_snapshot(profile, PROFILE_JOB_TRACKING);
 
-	if (wait_cmd)
+	if (wait_cmd) {
 		nvgpu_submit_append_priv_cmdbuf(c, wait_cmd);
+	}
 
 	err = nvgpu_submit_append_gpfifo(c, gpfifo, userdata,
 			num_entries);
-	if (err)
+	if (err) {
 		goto clean_up_job;
+	}
 
 	/*
 	 * And here's where we add the incr_cmd we generated earlier. It should
 	 * always run!
 	 */
-	if (incr_cmd)
+	if (incr_cmd) {
 		nvgpu_submit_append_priv_cmdbuf(c, incr_cmd);
+	}
 
-	if (fence_out)
+	if (fence_out) {
 		*fence_out = gk20a_fence_get(post_fence);
+	}
 
-	if (need_job_tracking)
+	if (need_job_tracking) {
 		/* TODO! Check for errors... */
 		gk20a_channel_add_job(c, job, skip_buffer_refcounting);
+	}
 	gk20a_fifo_profile_snapshot(profile, PROFILE_APPEND);
 
 	g->ops.fifo.userd_gp_put(g, c);
 
 	/* No hw access beyond this point */
-	if (c->deterministic)
+	if (c->deterministic) {
 		nvgpu_rwsem_up_read(&g->deterministic_busy);
+	}
 
 	trace_gk20a_channel_submitted_gpfifo(g->name,
 				c->chid,
@@ -548,10 +581,11 @@ clean_up_job:
 clean_up:
 	nvgpu_log_fn(g, "fail");
 	gk20a_fence_put(post_fence);
-	if (c->deterministic)
+	if (c->deterministic) {
 		nvgpu_rwsem_up_read(&g->deterministic_busy);
-	else if (need_deferred_cleanup)
+	} else if (need_deferred_cleanup) {
 		gk20a_idle(g);
+	}
 
 	return err;
 }

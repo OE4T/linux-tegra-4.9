@@ -143,8 +143,9 @@ int gv11b_elcg_init_idle_filters(struct gk20a *g)
 	u32 active_engine_id = 0;
 	struct fifo_gk20a *f = &g->fifo;
 
-	if (nvgpu_platform_is_simulation(g))
+	if (nvgpu_platform_is_simulation(g)) {
 		return 0;
+	}
 
 	nvgpu_log_info(g, "init clock/power gate reg");
 

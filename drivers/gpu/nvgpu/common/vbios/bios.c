@@ -352,10 +352,11 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 		}
 	}
 
-	if (!found)
+	if (!found) {
 		return -EINVAL;
-	else
+	} else {
 		return 0;
+	}
 }
 
 static void nvgpu_bios_parse_biosdata(struct gk20a *g, int offset)
@@ -393,8 +394,9 @@ u32 nvgpu_bios_get_nvlink_config_data(struct gk20a *g)
 {
 	struct nvlink_config_data_hdr_v1 config;
 
-	if (g->bios.nvlink_config_data_offset == 0)
+	if (g->bios.nvlink_config_data_offset == 0) {
 		return -EINVAL;
+	}
 
 	memcpy(&config, &g->bios.data[g->bios.nvlink_config_data_offset],
 		sizeof(config));
@@ -458,8 +460,9 @@ static void nvgpu_bios_parse_devinit_appinfo(struct gk20a *g, int dmem_offset)
 			interface.script_phys_base,
 			interface.script_size);
 
-	if (interface.version != 1)
+	if (interface.version != 1) {
 		return;
+	}
 	g->bios.devinit_tables_phys_base = interface.tables_phys_base;
 	g->bios.devinit_script_phys_base = interface.script_phys_base;
 }
@@ -475,8 +478,9 @@ static int nvgpu_bios_parse_appinfo_table(struct gk20a *g, int offset)
 			hdr.version, hdr.header_size,
 			hdr.entry_size, hdr.entry_count);
 
-	if (hdr.version != 1)
+	if (hdr.version != 1) {
 		return 0;
+	}
 
 	offset += sizeof(hdr);
 	for (i = 0; i < hdr.entry_count; i++) {
@@ -487,8 +491,9 @@ static int nvgpu_bios_parse_appinfo_table(struct gk20a *g, int offset)
 		nvgpu_log_fn(g, "appInfo id %d dmem_offset %d",
 				entry.id, entry.dmem_offset);
 
-		if (entry.id == APPINFO_ID_DEVINIT)
+		if (entry.id == APPINFO_ID_DEVINIT) {
 			nvgpu_bios_parse_devinit_appinfo(g, entry.dmem_offset);
+		}
 
 		offset += hdr.entry_size;
 	}
@@ -583,8 +588,9 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 			hdr.entry_size, hdr.entry_count,
 			hdr.desc_version, hdr.desc_size);
 
-	if (hdr.version != 1)
+	if (hdr.version != 1) {
 		return -EINVAL;
+	}
 
 	offset += hdr.header_size;
 
@@ -603,30 +609,34 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 
 			err = nvgpu_bios_parse_falcon_ucode_desc(g,
 					&g->bios.devinit, entry.desc_ptr);
-			if (err)
+			if (err) {
 				err = nvgpu_bios_parse_falcon_ucode_desc(g,
 					&g->bios.devinit,
 					entry.desc_ptr +
 					 g->bios.expansion_rom_offset);
+			}
 
-			if (err)
+			if (err) {
 				nvgpu_err(g,
 					  "could not parse devinit ucode desc");
+			}
 		} else if (entry.target_id == TARGET_ID_PMU &&
 		    entry.application_id == APPLICATION_ID_PRE_OS) {
 			int err;
 
 			err = nvgpu_bios_parse_falcon_ucode_desc(g,
 					&g->bios.preos, entry.desc_ptr);
-			if (err)
+			if (err) {
 				err = nvgpu_bios_parse_falcon_ucode_desc(g,
 					&g->bios.preos,
 					entry.desc_ptr +
 					 g->bios.expansion_rom_offset);
+			}
 
-			if (err)
+			if (err) {
 				nvgpu_err(g,
 					  "could not parse preos ucode desc");
+			}
 		}
 
 		offset += hdr.entry_size;
@@ -645,13 +655,15 @@ static void nvgpu_bios_parse_falcon_data_v2(struct gk20a *g, int offset)
 			falcon_data.falcon_ucode_table_ptr);
 	err = nvgpu_bios_parse_falcon_ucode_table(g,
 			falcon_data.falcon_ucode_table_ptr);
-	if (err)
+	if (err) {
 		err = nvgpu_bios_parse_falcon_ucode_table(g,
 				falcon_data.falcon_ucode_table_ptr +
 			g->bios.expansion_rom_offset);
+	}
 
-	if (err)
+	if (err) {
 		nvgpu_err(g, "could not parse falcon ucode table");
+	}
 }
 
 void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
@@ -674,8 +686,9 @@ void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
 				(table_id * PERF_PTRS_WIDTH)]);
 			data_size = PERF_PTRS_WIDTH;
 		}
-	} else
+	} else {
 		return (void *)perf_table_ptr;
+	}
 
 	if (table_id < (ptoken->data_size/data_size)) {
 
@@ -686,18 +699,21 @@ void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
 
 		if (perf_table_id_offset != 0) {
 			/* check is perf_table_id_offset is > 64k */
-			if (perf_table_id_offset & ~0xFFFF)
+			if (perf_table_id_offset & ~0xFFFF) {
 				perf_table_ptr =
 					&g->bios.data[g->bios.expansion_rom_offset +
 						perf_table_id_offset];
-			else
+			} else {
 				perf_table_ptr =
 					&g->bios.data[perf_table_id_offset];
-		} else
+			}
+		} else {
 			nvgpu_warn(g, "PERF TABLE ID %d is NULL",
 					table_id);
-	} else
+		}
+	} else {
 		nvgpu_warn(g, "INVALID PERF TABLE ID - %d ", table_id);
+	}
 
 	return (void *)perf_table_ptr;
 }
@@ -731,9 +747,10 @@ static void nvgpu_bios_parse_bit(struct gk20a *g, int offset)
 			nvgpu_bios_parse_nvinit_ptrs(g, bit_token.data_ptr);
 			break;
 		case TOKEN_ID_FALCON_DATA:
-			if (bit_token.data_version == 2)
+			if (bit_token.data_version == 2) {
 				nvgpu_bios_parse_falcon_data_v2(g,
 						bit_token.data_ptr);
+			}
 			break;
 		case TOKEN_ID_PERF_PTRS:
 			g->bios.perf_token =

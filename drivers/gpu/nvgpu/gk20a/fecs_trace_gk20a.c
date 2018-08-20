@@ -23,7 +23,6 @@
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
-#include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
@@ -738,14 +737,14 @@ int gk20a_fecs_trace_deinit(struct gk20a *g)
 }
 
 int gk20a_gr_max_entries(struct gk20a *g,
-		struct nvgpu_ctxsw_trace_filter *filter)
+		struct nvgpu_gpu_ctxsw_trace_filter *filter)
 {
 	int n;
 	int tag;
 
 	/* Compute number of entries per record, with given filter */
 	for (n = 0, tag = 0; tag < gk20a_fecs_trace_num_ts(); tag++)
-		n += (NVGPU_CTXSW_FILTER_ISSET(tag, filter) != 0);
+		n += (NVGPU_GPU_CTXSW_FILTER_ISSET(tag, filter) != 0);
 
 	/* Return max number of entries generated for the whole ring */
 	return n * GK20A_FECS_TRACE_NUM_RECORDS;

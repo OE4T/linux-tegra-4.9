@@ -46,7 +46,7 @@ struct gk20a_ctxsw_dev {
 
 	struct nvgpu_ctxsw_ring_header *hdr;
 	struct nvgpu_gpu_ctxsw_trace_entry *ents;
-	struct nvgpu_ctxsw_trace_filter filter;
+	struct nvgpu_gpu_ctxsw_trace_filter filter;
 	bool write_enabled;
 	struct nvgpu_cond readout_wq;
 	size_t size;
@@ -244,13 +244,25 @@ static int gk20a_ctxsw_dev_ioctl_ring_setup(struct gk20a_ctxsw_dev *dev,
 	return ret;
 }
 
+static void nvgpu_set_ctxsw_trace_filter_args(struct nvgpu_gpu_ctxsw_trace_filter *filter_dst,
+        struct nvgpu_ctxsw_trace_filter *filter_src)
+{
+	memcpy(filter_dst->tag_bits, filter_src->tag_bits, (NVGPU_CTXSW_FILTER_SIZE + 63) / 64);
+}
+
+static void nvgpu_get_ctxsw_trace_filter_args(struct nvgpu_ctxsw_trace_filter *filter_dst,
+	struct nvgpu_gpu_ctxsw_trace_filter *filter_src)
+{
+	memcpy(filter_dst->tag_bits, filter_src->tag_bits, (NVGPU_CTXSW_FILTER_SIZE + 63) / 64);
+}
+
 static int gk20a_ctxsw_dev_ioctl_set_filter(struct gk20a_ctxsw_dev *dev,
 	struct nvgpu_ctxsw_trace_filter_args *args)
 {
 	struct gk20a *g = dev->g;
 
 	nvgpu_mutex_acquire(&dev->write_lock);
-	dev->filter = args->filter;
+	nvgpu_set_ctxsw_trace_filter_args(&dev->filter, &args->filter);
 	nvgpu_mutex_release(&dev->write_lock);
 
 	if (g->ops.fecs_trace.set_filter)
@@ -262,7 +274,7 @@ static int gk20a_ctxsw_dev_ioctl_get_filter(struct gk20a_ctxsw_dev *dev,
 	struct nvgpu_ctxsw_trace_filter_args *args)
 {
 	nvgpu_mutex_acquire(&dev->write_lock);
-	args->filter = dev->filter;
+	nvgpu_get_ctxsw_trace_filter_args(&args->filter, &dev->filter);
 	nvgpu_mutex_release(&dev->write_lock);
 
 	return 0;
@@ -650,7 +662,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 		goto drop;
 	}
 
-	if (!NVGPU_CTXSW_FILTER_ISSET(entry->tag, &dev->filter)) {
+	if (!NVGPU_GPU_CTXSW_FILTER_ISSET(entry->tag, &dev->filter)) {
 		reason = "filtered out";
 		goto filter;
 	}

@@ -190,7 +190,7 @@ int vgpu_mmap_user_buffer(struct gk20a *g, struct vm_area_struct *vma)
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 int vgpu_fecs_trace_max_entries(struct gk20a *g,
-			struct nvgpu_ctxsw_trace_filter *filter)
+			struct nvgpu_gpu_ctxsw_trace_filter *filter)
 {
 	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 
@@ -202,7 +202,7 @@ int vgpu_fecs_trace_max_entries(struct gk20a *g,
 #endif
 
 int vgpu_fecs_trace_set_filter(struct gk20a *g,
-			struct nvgpu_ctxsw_trace_filter *filter)
+			struct nvgpu_gpu_ctxsw_trace_filter *filter)
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_SET_FILTER,

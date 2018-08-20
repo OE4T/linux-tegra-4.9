@@ -25,7 +25,7 @@
 
 struct gk20a;
 struct channel_gk20a;
-struct nvgpu_ctxsw_trace_filter;
+struct nvgpu_gpu_ctxsw_trace_filter;
 
 int gk20a_fecs_trace_poll(struct gk20a *g);
 int gk20a_fecs_trace_init(struct gk20a *g);
@@ -35,7 +35,7 @@ int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a *ch);
 int gk20a_fecs_trace_reset(struct gk20a *g);
 int gk20a_fecs_trace_deinit(struct gk20a *g);
 int gk20a_gr_max_entries(struct gk20a *g,
-		struct nvgpu_ctxsw_trace_filter *filter);
+		struct nvgpu_gpu_ctxsw_trace_filter *filter);
 int gk20a_fecs_trace_enable(struct gk20a *g);
 int gk20a_fecs_trace_disable(struct gk20a *g);
 bool gk20a_fecs_trace_is_enabled(struct gk20a *g);

@@ -44,6 +44,15 @@ struct channel_gk20a;
 #define NVGPU_GPU_CTXSW_TAG_LAST                    \
 	NVGPU_GPU_CTXSW_TAG_INVALID_TIMESTAMP
 
+#define NVGPU_GPU_CTXSW_FILTER_ISSET(n, p) \
+	((p)->tag_bits[(n) / 64] &   (1 << ((n) & 63)))
+
+#define NVGPU_GPU_CTXSW_FILTER_SIZE (NVGPU_GPU_CTXSW_TAG_LAST + 1)
+
+struct nvgpu_gpu_ctxsw_trace_filter {
+	u64 tag_bits[(NVGPU_GPU_CTXSW_FILTER_SIZE + 63) / 64];
+};
+
 /*
  * The binary format of 'struct nvgpu_gpu_ctxsw_trace_entry' introduced here
  * should match that of 'struct nvgpu_ctxsw_trace_entry' defined in uapi

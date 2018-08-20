@@ -43,7 +43,7 @@ struct nvgpu_mem_sgt;
 struct nvgpu_warpstate;
 struct nvgpu_clk_arb;
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-struct nvgpu_ctxsw_trace_filter;
+struct nvgpu_gpu_ctxsw_trace_filter;
 #endif
 struct priv_cmd_entry;
 
@@ -894,7 +894,7 @@ struct gpu_ops {
 	struct {
 		int (*init)(struct gk20a *g);
 		int (*max_entries)(struct gk20a *,
-			struct nvgpu_ctxsw_trace_filter *filter);
+			struct nvgpu_gpu_ctxsw_trace_filter *filter);
 		int (*flush)(struct gk20a *g);
 		int (*poll)(struct gk20a *g);
 		int (*enable)(struct gk20a *g);
@@ -911,7 +911,7 @@ struct gpu_ops {
 		int (*mmap_user_buffer)(struct gk20a *g,
 					struct vm_area_struct *vma);
 		int (*set_filter)(struct gk20a *g,
-			struct nvgpu_ctxsw_trace_filter *filter);
+			struct nvgpu_gpu_ctxsw_trace_filter *filter);
 	} fecs_trace;
 #endif
 	struct {

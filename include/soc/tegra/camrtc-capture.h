@@ -514,6 +514,14 @@ struct capture_descriptor {
 	uint32_t __pad[12];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
+/* Event data used for event injection */
+struct event_inject_msg {
+	uint32_t tag; /* UMD populates with capture status events. RCE converts to reg offset */
+	uint32_t stamp; /* Timestamp of event */
+	uint32_t data; /* Bits [0:31] of event data */
+	uint32_t data_ext; /* Bits [32:63] of event data */
+};
+
 /**
  * NvPhy attributes
  */

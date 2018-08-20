@@ -1,11 +1,17 @@
 /*
  * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
- * NVIDIA CORPORATION and its licensors retain all intellectual property
- * and proprietary rights in and to this software, related documentation
- * and any modifications thereto.  Any use, reproduction, disclosure or
- * distribution of this software and related documentation without an express
- * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef INCLUDE_CAMRTC_TRACE_H
@@ -173,7 +179,7 @@ struct camrtc_trace_armv7_exception {
 
 #define CAMRTC_EVENT_MAKE_ID(type, module, subid) \
 	(((type) << CAMRTC_EVENT_TYPE_OFFSET) | \
-	((module) << CAMRTC_EVENT_MODULE_OFFSET) | (subid))
+	((module) << CAMRTC_EVENT_MODULE_OFFSET) | (uint32_t)(subid))
 
 struct camrtc_event_header {
 	uint32_t len;		/* Size in bytes including this field */
@@ -190,220 +196,220 @@ struct camrtc_event_struct {
 } __packed;
 
 // camrtc_event_type
-#define	CAMRTC_EVENT_TYPE_ARRAY		U32_C(0)
-#define	CAMRTC_EVENT_TYPE_ARMV7_EXCEPTION	U32_C(1)
-#define	CAMRTC_EVENT_TYPE_PAD		U32_C(2)
-#define	CAMRTC_EVENT_TYPE_START		U32_C(3)
-#define	CAMRTC_EVENT_TYPE_STRING	U32_C(4)
-#define	CAMRTC_EVENT_TYPE_BULK		U32_C(5)
+#define CAMRTC_EVENT_TYPE_ARRAY			U32_C(0)
+#define CAMRTC_EVENT_TYPE_ARMV7_EXCEPTION	U32_C(1)
+#define CAMRTC_EVENT_TYPE_PAD			U32_C(2)
+#define CAMRTC_EVENT_TYPE_START			U32_C(3)
+#define CAMRTC_EVENT_TYPE_STRING		U32_C(4)
+#define CAMRTC_EVENT_TYPE_BULK			U32_C(5)
 
 // camrtc_event_module
-#define	CAMRTC_EVENT_MODULE_UNKNOWN	U32_C(0)
-#define	CAMRTC_EVENT_MODULE_BASE	U32_C(1)
-#define	CAMRTC_EVENT_MODULE_RTOS	U32_C(2)
-#define	CAMRTC_EVENT_MODULE_HEARTBEAT	U32_C(3)
-#define	CAMRTC_EVENT_MODULE_DBG		U32_C(4)
-#define	CAMRTC_EVENT_MODULE_MODS	U32_C(5)
-#define	CAMRTC_EVENT_MODULE_VINOTIFY	U32_C(6)
-#define	CAMRTC_EVENT_MODULE_I2C		U32_C(7)
-#define	CAMRTC_EVENT_MODULE_VI		U32_C(8)
-#define	CAMRTC_EVENT_MODULE_ISP		U32_C(9)
+#define CAMRTC_EVENT_MODULE_UNKNOWN	U32_C(0)
+#define CAMRTC_EVENT_MODULE_BASE	U32_C(1)
+#define CAMRTC_EVENT_MODULE_RTOS	U32_C(2)
+#define CAMRTC_EVENT_MODULE_HEARTBEAT	U32_C(3)
+#define CAMRTC_EVENT_MODULE_DBG		U32_C(4)
+#define CAMRTC_EVENT_MODULE_MODS	U32_C(5)
+#define CAMRTC_EVENT_MODULE_VINOTIFY	U32_C(6)
+#define CAMRTC_EVENT_MODULE_I2C		U32_C(7)
+#define CAMRTC_EVENT_MODULE_VI		U32_C(8)
+#define CAMRTC_EVENT_MODULE_ISP		U32_C(9)
 
 // camrtc_trace_event_type_ids
-#define	camrtc_trace_type_exception \
+#define camrtc_trace_type_exception \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARMV7_EXCEPTION, \
 		CAMRTC_EVENT_MODULE_BASE, U32_C(0))
-#define	camrtc_trace_type_pad \
+#define camrtc_trace_type_pad \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_PAD, \
 		CAMRTC_EVENT_MODULE_BASE, U32_C(0))
-#define	camrtc_trace_type_start \
+#define camrtc_trace_type_start \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_START, \
 		CAMRTC_EVENT_MODULE_BASE, U32_C(0))
-#define	camrtc_trace_type_string \
+#define camrtc_trace_type_string \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_STRING, \
 		CAMRTC_EVENT_MODULE_BASE, U32_C(0))
 
 // camrtc_trace_base_ids
-#define	camrtc_trace_base_ids_begin \
-		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-			CAMRTC_EVENT_MODULE_BASE, U32_C(0))
-#define	camrtc_trace_base_target_init \
-		camrtc_trace_base_ids_begin + U32_C(1)
-#define	camrtc_trace_base_start_scheduler \
-		camrtc_trace_base_ids_begin + U32_C(2)
+#define camrtc_trace_base_id(_subid) \
+	CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
+		CAMRTC_EVENT_MODULE_BASE, (_subid))
+#define camrtc_trace_base_target_init \
+	camrtc_trace_base_id(1)
+#define camrtc_trace_base_start_scheduler \
+	camrtc_trace_base_id(2)
 
 // camrtc_trace_event_rtos_ids
-#define camrtc_trace_rtos_ids_begin \
+#define camrtc_trace_rtos_id(_subid) \
         CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-            CAMRTC_EVENT_MODULE_RTOS, U32_C(0))
+		CAMRTC_EVENT_MODULE_RTOS, (_subid))
 #define camrtc_trace_rtos_task_switched_in \
-        camrtc_trace_rtos_ids_begin + U32_C(1)
+	camrtc_trace_rtos_id(1)
 #define camrtc_trace_rtos_increase_tick_count \
-        camrtc_trace_rtos_ids_begin + U32_C(2)
+	camrtc_trace_rtos_id(2)
 #define camrtc_trace_rtos_low_power_idle_begin \
-        camrtc_trace_rtos_ids_begin + U32_C(3)
+	camrtc_trace_rtos_id(3)
 #define camrtc_trace_rtos_low_power_idle_end \
-        camrtc_trace_rtos_ids_begin + U32_C(4)
+	camrtc_trace_rtos_id(4)
 #define camrtc_trace_rtos_task_switched_out \
-        camrtc_trace_rtos_ids_begin + U32_C(5)
+	camrtc_trace_rtos_id(5)
 #define camrtc_trace_rtos_task_priority_inherit \
-        camrtc_trace_rtos_ids_begin + U32_C(6)
+	camrtc_trace_rtos_id(6)
 #define camrtc_trace_rtos_task_priority_disinherit \
-        camrtc_trace_rtos_ids_begin + U32_C(7)
+	camrtc_trace_rtos_id(7)
 #define camrtc_trace_rtos_blocking_on_queue_receive \
-        camrtc_trace_rtos_ids_begin + U32_C(8)
+	camrtc_trace_rtos_id(8)
 #define camrtc_trace_rtos_blocking_on_queue_send \
-        camrtc_trace_rtos_ids_begin + U32_C(9)
+	camrtc_trace_rtos_id(9)
 #define camrtc_trace_rtos_moved_task_to_ready_state \
-        camrtc_trace_rtos_ids_begin + U32_C(10)
+	camrtc_trace_rtos_id(10)
 #define camrtc_trace_rtos_queue_create \
-        camrtc_trace_rtos_ids_begin + U32_C(11)
+	camrtc_trace_rtos_id(11)
 #define camrtc_trace_rtos_queue_create_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(12)
+	camrtc_trace_rtos_id(12)
 #define camrtc_trace_rtos_create_mutex \
-        camrtc_trace_rtos_ids_begin + U32_C(13)
+	camrtc_trace_rtos_id(13)
 #define camrtc_trace_rtos_create_mutex_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(14)
+	camrtc_trace_rtos_id(14)
 #define camrtc_trace_rtos_give_mutex_recursive \
-        camrtc_trace_rtos_ids_begin + U32_C(15)
+	camrtc_trace_rtos_id(15)
 #define camrtc_trace_rtos_give_mutex_recursive_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(16)
+	camrtc_trace_rtos_id(16)
 #define camrtc_trace_rtos_take_mutex_recursive \
-        camrtc_trace_rtos_ids_begin + U32_C(17)
+	camrtc_trace_rtos_id(17)
 #define camrtc_trace_rtos_take_mutex_recursive_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(18)
+	camrtc_trace_rtos_id(18)
 #define camrtc_trace_rtos_create_counting_semaphore \
-        camrtc_trace_rtos_ids_begin + U32_C(19)
+	camrtc_trace_rtos_id(19)
 #define camrtc_trace_rtos_create_counting_semaphore_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(20)
+	camrtc_trace_rtos_id(20)
 #define camrtc_trace_rtos_queue_send \
-        camrtc_trace_rtos_ids_begin + U32_C(21)
+	camrtc_trace_rtos_id(21)
 #define camrtc_trace_rtos_queue_send_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(22)
+	camrtc_trace_rtos_id(22)
 #define camrtc_trace_rtos_queue_receive \
-        camrtc_trace_rtos_ids_begin + U32_C(23)
+	camrtc_trace_rtos_id(23)
 #define camrtc_trace_rtos_queue_peek \
-        camrtc_trace_rtos_ids_begin + U32_C(24)
+	camrtc_trace_rtos_id(24)
 #define camrtc_trace_rtos_queue_peek_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(25)
+	camrtc_trace_rtos_id(25)
 #define camrtc_trace_rtos_queue_receive_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(26)
+	camrtc_trace_rtos_id(26)
 #define camrtc_trace_rtos_queue_send_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(27)
+	camrtc_trace_rtos_id(27)
 #define camrtc_trace_rtos_queue_send_from_isr_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(28)
+	camrtc_trace_rtos_id(28)
 #define camrtc_trace_rtos_queue_receive_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(29)
+	camrtc_trace_rtos_id(29)
 #define camrtc_trace_rtos_queue_receive_from_isr_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(30)
+	camrtc_trace_rtos_id(30)
 #define camrtc_trace_rtos_queue_peek_from_isr_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(31)
+	camrtc_trace_rtos_id(31)
 #define camrtc_trace_rtos_queue_delete \
-        camrtc_trace_rtos_ids_begin + U32_C(32)
+	camrtc_trace_rtos_id(32)
 #define camrtc_trace_rtos_task_create \
-        camrtc_trace_rtos_ids_begin + U32_C(33)
+	camrtc_trace_rtos_id(33)
 #define camrtc_trace_rtos_task_create_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(34)
+	camrtc_trace_rtos_id(34)
 #define camrtc_trace_rtos_task_delete \
-        camrtc_trace_rtos_ids_begin + U32_C(35)
+	camrtc_trace_rtos_id(35)
 #define camrtc_trace_rtos_task_delay_until \
-        camrtc_trace_rtos_ids_begin + U32_C(36)
+	camrtc_trace_rtos_id(36)
 #define camrtc_trace_rtos_task_delay \
-        camrtc_trace_rtos_ids_begin + U32_C(37)
+	camrtc_trace_rtos_id(37)
 #define camrtc_trace_rtos_task_priority_set \
-        camrtc_trace_rtos_ids_begin + U32_C(38)
+	camrtc_trace_rtos_id(38)
 #define camrtc_trace_rtos_task_suspend \
-        camrtc_trace_rtos_ids_begin + U32_C(39)
+	camrtc_trace_rtos_id(39)
 #define camrtc_trace_rtos_task_resume \
-        camrtc_trace_rtos_ids_begin + U32_C(40)
+	camrtc_trace_rtos_id(40)
 #define camrtc_trace_rtos_task_resume_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(41)
+	camrtc_trace_rtos_id(41)
 #define camrtc_trace_rtos_task_increment_tick \
-        camrtc_trace_rtos_ids_begin + U32_C(42)
+	camrtc_trace_rtos_id(42)
 #define camrtc_trace_rtos_timer_create \
-        camrtc_trace_rtos_ids_begin + U32_C(43)
+	camrtc_trace_rtos_id(43)
 #define camrtc_trace_rtos_timer_create_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(44)
+	camrtc_trace_rtos_id(44)
 #define camrtc_trace_rtos_timer_command_send \
-        camrtc_trace_rtos_ids_begin + U32_C(45)
+	camrtc_trace_rtos_id(45)
 #define camrtc_trace_rtos_timer_expired \
-        camrtc_trace_rtos_ids_begin + U32_C(46)
+	camrtc_trace_rtos_id(46)
 #define camrtc_trace_rtos_timer_command_received \
-        camrtc_trace_rtos_ids_begin + U32_C(47)
+	camrtc_trace_rtos_id(47)
 #define camrtc_trace_rtos_malloc \
-        camrtc_trace_rtos_ids_begin + U32_C(48)
+	camrtc_trace_rtos_id(48)
 #define camrtc_trace_rtos_free \
-        camrtc_trace_rtos_ids_begin + U32_C(49)
+	camrtc_trace_rtos_id(49)
 #define camrtc_trace_rtos_event_group_create \
-        camrtc_trace_rtos_ids_begin + U32_C(50)
+	camrtc_trace_rtos_id(50)
 #define camrtc_trace_rtos_event_group_create_failed \
-        camrtc_trace_rtos_ids_begin + U32_C(51)
+	camrtc_trace_rtos_id(51)
 #define camrtc_trace_rtos_event_group_sync_block \
-        camrtc_trace_rtos_ids_begin + U32_C(52)
+	camrtc_trace_rtos_id(52)
 #define camrtc_trace_rtos_event_group_sync_end \
-        camrtc_trace_rtos_ids_begin + U32_C(53)
+	camrtc_trace_rtos_id(53)
 #define camrtc_trace_rtos_event_group_wait_bits_block \
-        camrtc_trace_rtos_ids_begin + U32_C(54)
+	camrtc_trace_rtos_id(54)
 #define camrtc_trace_rtos_event_group_wait_bits_end \
-        camrtc_trace_rtos_ids_begin + U32_C(55)
+	camrtc_trace_rtos_id(55)
 #define camrtc_trace_rtos_event_group_clear_bits \
-        camrtc_trace_rtos_ids_begin + U32_C(56)
+	camrtc_trace_rtos_id(56)
 #define camrtc_trace_rtos_event_group_clear_bits_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(57)
+	camrtc_trace_rtos_id(57)
 #define camrtc_trace_rtos_event_group_set_bits \
-        camrtc_trace_rtos_ids_begin + U32_C(58)
+	camrtc_trace_rtos_id(58)
 #define camrtc_trace_rtos_event_group_set_bits_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(59)
+	camrtc_trace_rtos_id(59)
 #define camrtc_trace_rtos_event_group_delete \
-        camrtc_trace_rtos_ids_begin + U32_C(60)
+	camrtc_trace_rtos_id(60)
 #define camrtc_trace_rtos_pend_func_call \
-        camrtc_trace_rtos_ids_begin + U32_C(61)
+	camrtc_trace_rtos_id(61)
 #define camrtc_trace_rtos_pend_func_call_from_isr \
-        camrtc_trace_rtos_ids_begin + U32_C(62)
+	camrtc_trace_rtos_id(62)
 #define camrtc_trace_rtos_queue_registry_add \
-        camrtc_trace_rtos_ids_begin + U32_C(63)
+	camrtc_trace_rtos_id(63)
 
 // camrtc_trace_dbg_ids
-#define	camrtc_trace_dbg_ids_begin \
+#define camrtc_trace_dbg_id(_subid) \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-			CAMRTC_EVENT_MODULE_DBG, U32_C(0))
-#define	camrtc_trace_dbg_unknown \
-		camrtc_trace_dbg_ids_begin + U32_C(1)
-#define	camrtc_trace_dbg_enter \
-		camrtc_trace_dbg_ids_begin + U32_C(2)
-#define	camrtc_trace_dbg_exit \
-		camrtc_trace_dbg_ids_begin + U32_C(3)
-#define	camrtc_trace_dbg_set_loglevel \
-		camrtc_trace_dbg_ids_begin + U32_C(4)
+			CAMRTC_EVENT_MODULE_DBG, (_subid))
+#define camrtc_trace_dbg_unknown \
+	camrtc_trace_dbg_id(1)
+#define camrtc_trace_dbg_enter \
+	camrtc_trace_dbg_id(2)
+#define camrtc_trace_dbg_exit \
+	camrtc_trace_dbg_id(3)
+#define camrtc_trace_dbg_set_loglevel \
+	camrtc_trace_dbg_id(4)
 
 // camrtc_trace_vinotify_ids
-#define	camrtc_trace_vinotify_ids_begin \
+#define camrtc_trace_vinotify_id(_subid) \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-			CAMRTC_EVENT_MODULE_VINOTIFY, U32_C(0))
-#define	camrtc_trace_vinotify_handle_msg \
-		camrtc_trace_vinotify_ids_begin + U32_C(1)
-#define	camrtc_trace_vinotify_event_ts64 \
-		camrtc_trace_vinotify_ids_begin + U32_C(2)
-#define	camrtc_trace_vinotify_error_ts64 \
-		camrtc_trace_vinotify_ids_begin + U32_C(3)
+			CAMRTC_EVENT_MODULE_VINOTIFY, (_subid))
+#define camrtc_trace_vinotify_handle_msg \
+	camrtc_trace_vinotify_id(1)
+#define camrtc_trace_vinotify_event_ts64 \
+	camrtc_trace_vinotify_id(2)
+#define camrtc_trace_vinotify_error_ts64 \
+	camrtc_trace_vinotify_id(3)
 
 // camrtc_trace_vi_ids
-#define camrtc_trace_vi_ids_begin \
+#define camrtc_trace_vi_id(_subid) \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-			CAMRTC_EVENT_MODULE_VI, U32_C(0))
-#define	camrtc_trace_vi_frame_begin \
-		(camrtc_trace_vi_ids_begin + U32_C(1))
-#define	camrtc_trace_vi_frame_end \
-		(camrtc_trace_vi_ids_begin + U32_C(2))
+			CAMRTC_EVENT_MODULE_VI, (_subid))
+#define camrtc_trace_vi_frame_begin \
+	camrtc_trace_vi_id(1)
+#define camrtc_trace_vi_frame_end \
+	camrtc_trace_vi_id(2)
 
 // camrtc_trace_isp_ids
-#define camrtc_trace_isp_ids_begin \
+#define camrtc_trace_isp_id(_subid) \
 		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
-			CAMRTC_EVENT_MODULE_ISP, U32_C(0))
-#define	camrtc_trace_isp_task_begin \
-		camrtc_trace_isp_ids_begin + U32_C(1)
-#define	camrtc_trace_isp_task_end \
-		camrtc_trace_isp_ids_begin + U32_C(2)
+			CAMRTC_EVENT_MODULE_ISP, (_subid))
+#define camrtc_trace_isp_task_begin \
+	camrtc_trace_isp_id(1)
+#define camrtc_trace_isp_task_end \
+	camrtc_trace_isp_id(2)
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

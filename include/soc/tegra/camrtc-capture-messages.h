@@ -412,6 +412,21 @@ struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
 	uint32_t __pad;
 } __CAPTURE_IVC_ALIGN;
 
+#define VI_NUM_INJECT_EVENTS 10U /* Max number of events */
+
+/* Event injection configuration. */
+/* A capture request must be sent before this message */
+struct CAPTURE_CHANNEL_EI_REQ_MSG {
+	struct event_inject_msg events[VI_NUM_INJECT_EVENTS];
+	uint8_t num_events;
+	uint8_t __pad[7];
+} __CAPTURE_IVC_ALIGN;
+
+struct CAPTURE_CHANNEL_EI_RESP_MSG {
+	capture_result result;
+	uint32_t __pad;
+} __CAPTURE_IVC_ALIGN;
+
 /**
  * Capture ISP channel messages
  */
@@ -473,6 +488,9 @@ struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG {
 #define CAPTURE_CSI_STREAM_TPG_STOP_RESP	U32_C(0x49)
 #define CAPTURE_CSI_STREAM_TPG_START_RATE_REQ	U32_C(0x4A)
 #define CAPTURE_CSI_STREAM_TPG_START_RATE_RESP	U32_C(0x4B)
+
+#define CAPTURE_CHANNEL_EI_REQ		U32_C(0x50)
+#define CAPTURE_CHANNEL_EI_RESP		U32_C(0x51)
 
 /** Set up RTCPU side resources for ISP capture pipe-line.
  *
@@ -577,6 +595,9 @@ struct CAPTURE_CONTROL_MSG {
 		/* DEPRECATED - to be removed */
 		struct CAPTURE_CHANNEL_TPG_STOP_REQ_MSG tpg_stop_req;
 		struct CAPTURE_CHANNEL_TPG_STOP_RESP_MSG tpg_stop_resp;
+
+		struct CAPTURE_CHANNEL_EI_REQ_MSG ei_req;
+		struct CAPTURE_CHANNEL_EI_RESP_MSG ei_resp;
 
 		struct CAPTURE_CHANNEL_ISP_SETUP_REQ_MSG channel_isp_setup_req;
 		struct CAPTURE_CHANNEL_ISP_SETUP_RESP_MSG channel_isp_setup_resp;

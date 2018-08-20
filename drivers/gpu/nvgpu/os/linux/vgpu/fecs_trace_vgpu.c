@@ -26,12 +26,13 @@
 
 #include "gk20a/gk20a.h"
 #include "os/linux/os_linux.h"
+#include "gk20a/fecs_trace_gk20a.h"
 #include "vgpu/fecs_trace_vgpu.h"
 
 struct vgpu_fecs_trace {
 	struct tegra_hv_ivm_cookie *cookie;
 	struct nvgpu_ctxsw_ring_header *header;
-	struct nvgpu_ctxsw_trace_entry *entries;
+	struct nvgpu_gpu_ctxsw_trace_entry *entries;
 	int num_entries;
 	bool enabled;
 	void *buf;

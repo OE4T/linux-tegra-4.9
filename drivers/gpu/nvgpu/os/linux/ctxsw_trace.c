@@ -20,9 +20,11 @@
 #include <linux/poll.h>
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/fecs_trace_gk20a.h"
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
@@ -43,7 +45,7 @@ struct gk20a_ctxsw_dev {
 	struct gk20a *g;
 
 	struct nvgpu_ctxsw_ring_header *hdr;
-	struct nvgpu_ctxsw_trace_entry *ents;
+	struct nvgpu_gpu_ctxsw_trace_entry *ents;
 	struct nvgpu_ctxsw_trace_filter filter;
 	bool write_enabled;
 	struct nvgpu_cond readout_wq;
@@ -75,6 +77,17 @@ static inline int ring_len(struct nvgpu_ctxsw_ring_header *hdr)
 	return (hdr->write_idx - hdr->read_idx) % hdr->num_ents;
 }
 
+static void nvgpu_set_ctxsw_trace_entry(struct nvgpu_ctxsw_trace_entry *entry_dst,
+        struct nvgpu_gpu_ctxsw_trace_entry *entry_src)
+{
+	entry_dst->tag = entry_src->tag;
+	entry_dst->vmid = entry_src->vmid;
+	entry_dst->seqno = entry_src->seqno;
+	entry_dst->context_id = entry_src->context_id;
+	entry_dst->pid = entry_src->pid;
+	entry_dst->timestamp = entry_src->timestamp;
+}
+
 ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 	loff_t *off)
 {
@@ -83,6 +96,7 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 	struct nvgpu_ctxsw_ring_header *hdr = dev->hdr;
 	struct nvgpu_ctxsw_trace_entry __user *entry =
 		(struct nvgpu_ctxsw_trace_entry *) buf;
+	struct nvgpu_ctxsw_trace_entry user_entry;
 	size_t copied = 0;
 	int err;
 
@@ -101,11 +115,12 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 		nvgpu_mutex_acquire(&dev->write_lock);
 	}
 
-	while (size >= sizeof(struct nvgpu_ctxsw_trace_entry)) {
+	while (size >= sizeof(struct nvgpu_gpu_ctxsw_trace_entry)) {
 		if (ring_is_empty(hdr))
 			break;
 
-		if (copy_to_user(entry, &dev->ents[hdr->read_idx],
+		nvgpu_set_ctxsw_trace_entry(&user_entry, &dev->ents[hdr->read_idx]);
+		if (copy_to_user(entry, &user_entry,
 			sizeof(*entry))) {
 			nvgpu_mutex_release(&dev->write_lock);
 			return -EFAULT;
@@ -169,7 +184,7 @@ static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
 
 
 	dev->hdr = buf;
-	dev->ents = (struct nvgpu_ctxsw_trace_entry *) (dev->hdr + 1);
+	dev->ents = (struct nvgpu_gpu_ctxsw_trace_entry *) (dev->hdr + 1);
 	dev->size = size;
 	dev->num_ents = dev->hdr->num_ents;
 
@@ -191,8 +206,8 @@ int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g,
 	hdr->magic = NVGPU_CTXSW_RING_HEADER_MAGIC;
 	hdr->version = NVGPU_CTXSW_RING_HEADER_VERSION;
 	hdr->num_ents = (*size - sizeof(struct nvgpu_ctxsw_ring_header))
-		/ sizeof(struct nvgpu_ctxsw_trace_entry);
-	hdr->ent_size = sizeof(struct nvgpu_ctxsw_trace_entry);
+		/ sizeof(struct nvgpu_gpu_ctxsw_trace_entry);
+	hdr->ent_size = sizeof(struct nvgpu_gpu_ctxsw_trace_entry);
 	hdr->drop_count = 0;
 	hdr->read_idx = 0;
 	hdr->write_idx = 0;
@@ -327,9 +342,9 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	n = g->ops.fecs_trace.max_entries(g, &dev->filter);
 
 	size = sizeof(struct nvgpu_ctxsw_ring_header) +
-			n * sizeof(struct nvgpu_ctxsw_trace_entry);
+			n * sizeof(struct nvgpu_gpu_ctxsw_trace_entry);
 	nvgpu_log(g, gpu_dbg_ctxsw, "size=%zu entries=%d ent_size=%zu",
-		size, n, sizeof(struct nvgpu_ctxsw_trace_entry));
+		size, n, sizeof(struct nvgpu_gpu_ctxsw_trace_entry));
 
 	err = gk20a_ctxsw_dev_alloc_buffer(dev, size);
 	if (!err) {
@@ -583,7 +598,7 @@ void gk20a_ctxsw_trace_cleanup(struct gk20a *g)
 }
 
 int gk20a_ctxsw_trace_write(struct gk20a *g,
-		struct nvgpu_ctxsw_trace_entry *entry)
+		struct nvgpu_gpu_ctxsw_trace_entry *entry)
 {
 	struct nvgpu_ctxsw_ring_header *hdr;
 	struct gk20a_ctxsw_dev *dev;
@@ -692,7 +707,7 @@ void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid)
 void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 {
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-	struct nvgpu_ctxsw_trace_entry entry = {
+	struct nvgpu_gpu_ctxsw_trace_entry entry = {
 		.vmid = 0,
 		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.context_id = 0,
@@ -712,7 +727,7 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-	struct nvgpu_ctxsw_trace_entry entry = {
+	struct nvgpu_gpu_ctxsw_trace_entry entry = {
 		.vmid = 0,
 		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.context_id = 0,

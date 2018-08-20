@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,21 @@
 struct gk20a;
 struct tsg_gk20a;
 struct channel_gk20a;
-struct nvgpu_ctxsw_trace_entry;
+
+/*
+ * The binary format of 'struct nvgpu_gpu_ctxsw_trace_entry' introduced here
+ * should match that of 'struct nvgpu_ctxsw_trace_entry' defined in uapi
+ * header, since this struct is intended to be a mirror copy of the uapi
+ * struct.
+ */
+struct nvgpu_gpu_ctxsw_trace_entry {
+	u8 tag;
+	u8 vmid;
+	u16 seqno;            /* sequence number to detect drops */
+	u32 context_id;       /* context_id as allocated by FECS */
+	u64 pid;              /* 64-bit is max bits of different OS pid */
+	u64 timestamp;        /* 64-bit time */
+};
 
 int gk20a_ctxsw_trace_init(struct gk20a *g);
 
@@ -37,7 +51,7 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg);
 
 void gk20a_ctxsw_trace_cleanup(struct gk20a *g);
 int gk20a_ctxsw_trace_write(struct gk20a *g,
-			    struct nvgpu_ctxsw_trace_entry *entry);
+			    struct nvgpu_gpu_ctxsw_trace_entry *entry);
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid);
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE

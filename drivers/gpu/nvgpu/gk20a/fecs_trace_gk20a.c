@@ -20,7 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <asm/barrier.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
@@ -259,7 +258,7 @@ static pid_t gk20a_fecs_trace_find_pid(struct gk20a *g, u32 context_ptr)
 static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 {
 	int i;
-	struct nvgpu_ctxsw_trace_entry entry = { };
+	struct nvgpu_gpu_ctxsw_trace_entry entry = { };
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	pid_t cur_pid;
 	pid_t new_pid;

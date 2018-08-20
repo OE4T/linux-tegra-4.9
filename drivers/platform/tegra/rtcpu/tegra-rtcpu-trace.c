@@ -1195,18 +1195,20 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	rtcpu_trace_debugfs_init(tracer);
 
 #ifdef CONFIG_EVENTLIB
-	/* Eventlib */
-	tracer->isp_platform_device =
-		camrtc_device_get_byname(camera_devices, "isp");
-	if (IS_ERR(tracer->isp_platform_device)) {
-		dev_info(dev, "no camera-device \"%s\"\n", "isp");
-		tracer->isp_platform_device = NULL;
-	}
-	tracer->vi_platform_device =
-		camrtc_device_get_byname(camera_devices, "vi");
-	if (IS_ERR(tracer->vi_platform_device)) {
-		dev_info(dev, "no camera-device \"%s\"\n", "vi");
-		tracer->vi_platform_device = NULL;
+	if (camera_devices != NULL) {
+		/* Eventlib */
+		tracer->isp_platform_device =
+			camrtc_device_get_byname(camera_devices, "isp");
+		if (IS_ERR(tracer->isp_platform_device)) {
+			dev_info(dev, "no camera-device \"%s\"\n", "isp");
+			tracer->isp_platform_device = NULL;
+		}
+		tracer->vi_platform_device =
+			camrtc_device_get_byname(camera_devices, "vi");
+		if (IS_ERR(tracer->vi_platform_device)) {
+			dev_info(dev, "no camera-device \"%s\"\n", "vi");
+			tracer->vi_platform_device = NULL;
+		}
 	}
 #endif
 
@@ -1238,10 +1240,12 @@ int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer)
 {
 	int ret = tegra_camrtc_iovm_setup(tracer->dev, tracer->dma_handle);
 
-	if (ret < 0)
-		dev_err(tracer->dev,
-		"RTCPU trace: IOVM setup error: %u\n", ret);
-	return ret;
+	if (ret == 0)
+		return 0;
+
+	dev_err(tracer->dev, "RTCPU trace: IOVM setup error: %d\n", ret);
+
+	return -EIO;
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_boot_sync);
 

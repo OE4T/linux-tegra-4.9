@@ -340,7 +340,7 @@ static int tegra_camchar_probe(struct tegra_ivc_channel *ch)
 			return ret;
 	}
 
-	dev_info(&ch->dev, "probing /dev/%s", devname);
+	dev_dbg(&ch->dev, "probing /dev/%s", devname);
 
 	data = devm_kzalloc(&ch->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)

@@ -948,8 +948,7 @@ static int tegra_camrtc_boot_sync(struct device *dev)
 	if (rtcpu->coverage != NULL) {
 		ret = tegra_rtcpu_coverage_boot_sync(rtcpu->coverage);
 		if (ret < 0) {
-			dev_info(dev, "coverage boot sync status: %d\n", ret);
-
+			dev_dbg(dev, "coverage boot sync status: %d\n", ret);
 			/*
 			 * Not a fatal error, don't stop the sync.
 			 * But go ahead and remove the coverage debug FS
@@ -1004,13 +1003,16 @@ int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova)
 {
 	u32 command = RTCPU_COMMAND(CH_SETUP, iova >> 8);
 	int ret = tegra_camrtc_command(dev, command, 0);
+
 	if (ret < 0)
-		return ret;
+		return -ret;
 
 	if (RTCPU_GET_COMMAND_ID(ret) == RTCPU_CMD_ERROR) {
 		u32 error = RTCPU_GET_COMMAND_VALUE(ret);
-		dev_info(dev, "IOVM setup error: %u\n", error);
-		return -EIO;
+
+		dev_dbg(dev, "IOVM setup error: %u\n", error);
+
+		return (int)error;
 	}
 
 	return 0;

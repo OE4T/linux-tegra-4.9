@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _BullseyeCoverage 1
+
 #include <soc/tegra/camrtc-channels.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
@@ -24,24 +26,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-camera-rtcpu.h>
 
-#ifdef CAMRTC_TAG_NV_COVERAGE
 #define COV_MEM_SZ (24U*1024U) /* 24K */
-
-/*
- * The start of this header should match up on the RTCPU side with the
- * camrtc_tlv structure. This starts with 2 uint64_t fields.
- * TODO: determine if we can use the definition already in the RTCPU include
- * files.
- */
-struct camrtc_coverage_memory_header {
-	uint64_t signature;
-	uint64_t length;
-	uint32_t revision;
-	uint32_t coverage_buffer_size;
-	uint32_t coverage_total_bytes;
-	uint32_t reserved; /* alignment */
-} __packed;
-#endif
 
 /*
  * Private driver data structure
@@ -218,7 +203,7 @@ struct tegra_rtcpu_coverage *tegra_rtcpu_coverage_create(struct device *dev)
 		tegra_rtcpu_coverage_destroy(coverage);
 		return NULL;
 	}
-	dev_info(dev, "Coverage buffer configured at IOVA=0x%08x\n",
+	dev_dbg(dev, "Coverage buffer configured at IOVA=0x%08x\n",
 		(u32)coverage->dma_handle);
 
 	return coverage;
@@ -227,15 +212,16 @@ EXPORT_SYMBOL(tegra_rtcpu_coverage_create);
 
 int tegra_rtcpu_coverage_boot_sync(struct tegra_rtcpu_coverage *coverage)
 {
-	int ret = tegra_camrtc_iovm_setup(coverage->dev, coverage->dma_handle);
+	int ret = tegra_camrtc_iovm_setup(coverage->dev,
+			coverage->dma_handle);
 
-	if (ret < 0) {
-		dev_info(coverage->dev,
-			"RTCPU coverage: IOVM setup error : %u\n", ret);
-		dev_info(coverage->dev,
-			"(expected if RTCPU was not built with coverage enabled)\n");
-	}
-	return ret;
+	if (ret == 0)
+		return 0;
+
+	dev_dbg(coverage->dev, "RTCPU coverage: IOVM setup error: %d\n", ret);
+	dev_dbg(coverage->dev,
+		"(expected if RTCPU was not built with coverage enabled)\n");
+	return -EIO;
 }
 EXPORT_SYMBOL(tegra_rtcpu_coverage_boot_sync);
 

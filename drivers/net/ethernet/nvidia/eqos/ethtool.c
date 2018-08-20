@@ -303,8 +303,6 @@ static const struct ethtool_ops eqos_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 	.get_pauseparam = eqos_get_pauseparam,
 	.set_pauseparam = eqos_set_pauseparam,
-	.get_settings = eqos_getsettings,
-	.set_settings = eqos_setsettings,
 	.get_wol = eqos_get_wol,
 	.set_wol = eqos_set_wol,
 	.get_coalesce = eqos_get_coalesce,
@@ -313,6 +311,13 @@ static const struct ethtool_ops eqos_ethtool_ops = {
 	.get_strings = eqos_get_strings,
 	.get_sset_count = eqos_get_sset_count,
 	.get_ts_info = eqos_get_ts_info,
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+	.get_link_ksettings = eqos_get_link_ksettings,
+	.set_link_ksettings = eqos_set_link_ksettings,
+#else
+	.get_settings = eqos_getsettings,
+	.set_settings = eqos_setsettings,
+#endif
 };
 
 struct ethtool_ops *eqos_get_ethtool_ops(void)
@@ -461,6 +466,33 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
 	pr_debug("<--eqos_configure_flow_ctrl\n");
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int eqos_get_link_ksettings(struct net_device *dev,
+                                   struct ethtool_link_ksettings *cmd)
+{
+        struct eqos_prv_data *pdata = netdev_priv(dev);
+
+        if (!netif_running(dev))
+                return -EINVAL;
+
+        if (!pdata->phydev)
+                return -ENODEV;
+
+        phy_ethtool_ksettings_get(pdata->phydev, cmd);
+
+        return 0;
+}
+
+static int eqos_set_link_ksettings(struct net_device *dev,
+                                   const struct ethtool_link_ksettings *cmd)
+{
+        struct eqos_prv_data *pdata = netdev_priv(dev);
+
+        return phy_ethtool_ksettings_set(pdata->phydev, cmd);
+}
+
+#else
+
 /*!
  * \details This function is invoked by kernel when user request to get the
  * various device settings through standard ethtool command. This function
@@ -525,6 +557,7 @@ static int eqos_setsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 
 	return ret;
 }
+#endif
 
 /*!
  * \details This function is invoked by kernel when user request to get report

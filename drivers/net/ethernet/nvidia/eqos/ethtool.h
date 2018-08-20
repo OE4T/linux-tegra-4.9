@@ -50,10 +50,17 @@ static void eqos_get_pauseparam(struct net_device *dev,
 static int eqos_set_pauseparam(struct net_device *dev,
 				      struct ethtool_pauseparam *pause);
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int eqos_get_link_ksettings(struct net_device *dev,
+                                   struct ethtool_link_ksettings *cmd);
+static int eqos_set_link_ksettings(struct net_device *dev,
+                                   const struct ethtool_link_ksettings *cmd);
+#else
 static int eqos_getsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd);
 static int eqos_setsettings(struct net_device *dev,
 				   struct ethtool_cmd *cmd);
+#endif
 static void eqos_get_wol(struct net_device *dev,
 				struct ethtool_wolinfo *wol);
 static int eqos_set_wol(struct net_device *dev,

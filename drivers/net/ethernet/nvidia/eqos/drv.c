@@ -2108,7 +2108,9 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 	skb->dev = dev;
 	skb->protocol = eth_type_trans(skb, dev);
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4, 9, 0)
 	dev->last_rx = jiffies;
+#endif
 	dev->stats.rx_packets++;
 	dev->stats.rx_bytes += skb->len;
 

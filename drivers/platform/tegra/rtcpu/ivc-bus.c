@@ -366,7 +366,6 @@ int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
 				bus->regions[i].iova);
 		if (ret != 0) {
 			dev_err(&bus->dev, "IOVM setup error: %d\n", ret);
-			tegra_ivc_bus_stop(&bus->dev);
 			return -EIO;
 		}
 	}

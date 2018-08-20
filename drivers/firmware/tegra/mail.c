@@ -285,6 +285,15 @@ static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
 	printk(KERN_CONT "]\n");
 }
 
+static void bpmp_dump_req(int ch)
+{
+	struct mb_data d;
+	struct mb_data *p = channel_area[ch].ob;
+
+	memcpy_fromio(&d, p, sizeof(d));
+	bpmp_show_req(d.code, d.data, sizeof(d.data));
+}
+
 static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz)
 {
@@ -422,8 +431,14 @@ void tegra_bpmp_resume(void)
 int tegra_bpmp_suspend(void)
 {
 	if (to_complete) {
+		unsigned int i;
 		pr_err("%s() channels waiting (to_complete 0x%x)\n",
 				__func__, to_complete);
+		for (i = 0; i < 32; ++i) {
+			if (to_complete & (1 << i)) {
+				bpmp_dump_req(i);
+			}
+		}
 		return -EBUSY;
 	}
 

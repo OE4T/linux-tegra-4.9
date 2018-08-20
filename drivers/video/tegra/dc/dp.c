@@ -1245,8 +1245,9 @@ int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data)
 	/*
 	 * The max lane count supported is a product of everything below:
 	 * 1) The max lane count supported by the DPRX.
-	 * 2) The max lane count supported by the DPTX.
-	 * 3) If test configuration parameters are set on the DPTX side, these
+	 * 2) The # of connected lanes reported by the extcon provider (Type-C).
+	 * 3) The max lane count supported by the DPTX.
+	 * 4) If test configuration parameters are set on the DPTX side, these
 	 *    parameters need to be accounted for as well.
 	 */
 
@@ -1263,10 +1264,13 @@ int tegra_dc_dp_get_max_lane_count(struct tegra_dc_dp_data *dp, u8 *dpcd_data)
 	max_lane_count = max_lane_count & NV_DPCD_MAX_LANE_COUNT_MASK;
 
 	/* Constraint #2 */
+	max_lane_count = min(max_lane_count, dp->typec_lane_count);
+
+	/* Constraint #3 */
 	if (dp->pdata && dp->pdata->lanes > 0)
 		max_lane_count = min(max_lane_count, (u8)dp->pdata->lanes);
 
-	/* Constraint #3 */
+	/* Constraint #4 */
 	if (dp->test_max_lanes > 0)
 		max_lane_count = min(max_lane_count, (u8)dp->test_max_lanes);
 
@@ -1691,6 +1695,198 @@ done:
 
 }
 
+static inline struct tegra_dc_extcon_cable
+	*tegra_dp_get_typec_ecable(struct tegra_dc *dc)
+{
+	if (!dc || !dc->out || !dc->out->dp_out)
+		return NULL;
+
+	return &dc->out->dp_out->typec_ecable;
+}
+
+static void tegra_dp_wait_for_typec_connect(struct tegra_dc_dp_data *dp)
+{
+#if KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE
+	struct tegra_dc_extcon_cable *typec_ecable;
+	struct tegra_dc *dc;
+	union extcon_property_value lane_count = {0};
+	int ret;
+	bool ecable_connected;
+
+	if (!dp || !dp->dc) {
+		pr_err("%s: all arguments must be non-NULL!\n", __func__);
+		return;
+	}
+	dc = dp->dc;
+
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return;
+
+	typec_ecable = tegra_dp_get_typec_ecable(dc);
+	if (!typec_ecable || !typec_ecable->edev)
+		return;
+
+	mutex_lock(&typec_ecable->lock);
+
+	ecable_connected = typec_ecable->connected;
+	if (!ecable_connected)
+		reinit_completion(&typec_ecable->comp);
+
+	mutex_unlock(&typec_ecable->lock);
+
+	if (!ecable_connected) {
+		/*
+		 * See the comment above these fields in dp.h for why this is
+		 * required.
+		 */
+		if (unlikely(!dp->typec_notified_once &&
+			dp->typec_timed_out_once))
+			return;
+
+		if (!wait_for_completion_timeout(&typec_ecable->comp,
+						msecs_to_jiffies(1000))) {
+			dev_info(&dc->ndev->dev,
+				"dp: typec extcon wait timeout\n");
+			dp->typec_timed_out_once = true;
+
+			goto typec_lane_count_err;
+		}
+	}
+
+	ret = extcon_get_property(typec_ecable->edev, EXTCON_DISP_DP,
+				EXTCON_PROP_DISP_DP_LANE, &lane_count);
+	if (ret) {
+		dev_err(&dc->ndev->dev,
+			"dp: extcon get lane prop error - ret=%d\n", ret);
+
+		goto typec_lane_count_err;
+	}
+
+	if (lane_count.intval > 0)
+		dp->typec_lane_count = lane_count.intval;
+
+	return;
+typec_lane_count_err:
+	dp->typec_lane_count = 4;
+#endif
+}
+
+static int tegra_dp_typec_ecable_notifier(struct notifier_block *nb,
+					unsigned long event, void *data)
+{
+	struct tegra_dc_extcon_cable *typec_ecable =
+			container_of(nb, struct tegra_dc_extcon_cable, nb);
+	struct tegra_dc_dp_data *dp =
+			(struct tegra_dc_dp_data *)typec_ecable->drv_data;
+
+	/* See the comment above this field in dp.h for why this is required. */
+	dp->typec_notified_once = true;
+
+	mutex_lock(&typec_ecable->lock);
+
+	typec_ecable->connected = !!event;
+	if (event) /* connected */
+		complete(&typec_ecable->comp);
+
+	mutex_unlock(&typec_ecable->lock);
+
+	return NOTIFY_DONE;
+}
+
+static int tegra_dp_register_typec_ecable(struct tegra_dc_dp_data *dp)
+{
+	struct tegra_dc_extcon_cable *typec_ecable;
+	int ret;
+
+#if KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE
+	union extcon_property_value lane_count = {0};
+	int init_cable_state;
+#endif
+
+	if (!dp || !dp->dc) {
+		pr_err("%s: all arguments must be non-NULL!\n", __func__);
+		return -EINVAL;
+	}
+
+	/* Assume that all TX lanes are dedicated for DP by default. */
+	dp->typec_lane_count = 4;
+
+	dp->typec_notified_once = false;
+	dp->typec_timed_out_once = false;
+
+	typec_ecable = tegra_dp_get_typec_ecable(dp->dc);
+	if (!typec_ecable || !typec_ecable->edev)
+		return 0;
+
+	mutex_init(&typec_ecable->lock);
+	init_completion(&typec_ecable->comp);
+
+	typec_ecable->drv_data = dp;
+	typec_ecable->connected = false;
+
+	typec_ecable->nb.notifier_call = tegra_dp_typec_ecable_notifier;
+	ret = extcon_register_notifier(typec_ecable->edev, EXTCON_DISP_DP,
+					&typec_ecable->nb);
+	if (ret < 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: typec extcon notifier registration failed\n");
+		return ret;
+	}
+
+#if KERNEL_VERSION(4, 9, 0) <= LINUX_VERSION_CODE
+	/*
+	 * Query the initial Type-C cable state here in case ucsi_ccg updated it
+	 * before we were able to register the extcon notifier.
+	 */
+
+	mutex_lock(&typec_ecable->lock);
+
+	init_cable_state = extcon_get_state(typec_ecable->edev, EXTCON_DISP_DP);
+	if (init_cable_state < 0) {
+		dev_err(&dp->dc->ndev->dev,
+			"dp: failed to get initial cable state\n");
+	} else if (init_cable_state) { /* connected */
+		ret = extcon_get_property(typec_ecable->edev, EXTCON_DISP_DP,
+					EXTCON_PROP_DISP_DP_LANE, &lane_count);
+		if (ret) {
+			dev_err(&dp->dc->ndev->dev,
+				"dp: failed to get initial lane count\n");
+		} else if (lane_count.intval > 0) {
+			typec_ecable->connected = true;
+			dp->typec_lane_count = lane_count.intval;
+		}
+	}
+
+	mutex_unlock(&typec_ecable->lock);
+#endif
+
+	return 0;
+}
+
+static void tegra_dp_unregister_typec_ecable(struct tegra_dc *dc)
+{
+	struct tegra_dc_extcon_cable *typec_ecable;
+	int ret;
+
+	if (!dc) {
+		pr_err("%s: all arguments must be non-NULL!\n", __func__);
+		return;
+	}
+
+	typec_ecable = tegra_dp_get_typec_ecable(dc);
+	if (!typec_ecable || !typec_ecable->edev)
+		return;
+
+	ret = extcon_unregister_notifier(typec_ecable->edev, EXTCON_DISP_DP,
+					&typec_ecable->nb);
+	if (ret < 0)
+		dev_err(&dc->ndev->dev,
+			"dp: typec extcon notifier unregistration failed\n");
+
+	typec_ecable->drv_data = NULL;
+	typec_ecable->connected = false;
+}
+
 static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 {
 	struct tegra_dc_dp_data *dp = ptr;
@@ -1902,6 +2098,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->dc = dc;
 	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
+
+	err = tegra_dp_register_typec_ecable(dp);
+	if (err) {
+		dev_err(&dc->ndev->dev, "dp: typec ecable register failed\n");
+		goto err_audio_switch;
+	}
 
 	if (dp_instance) {
 		snprintf(dp->hpd_switch_name, CHAR_BUF_SIZE_MAX,
@@ -2214,6 +2416,14 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 		if (test_rq == TEST_EDID_READ)
 			tegra_dp_auto_set_edid_checksum(dp);
 	}
+
+	/*
+	 * For Type-C, wait until ucsi_ccg notifies us that an extcon CONNECT
+	 * event has occurred. This ensures that we're in DP configuration, and
+	 * that the EXTCON_PROP_DISP_DP_LANE property has been populated by
+	 * ucsi_ccg before we proceed with our subsequent mode filtering.
+	 */
+	tegra_dp_wait_for_typec_connect(dp);
 
 	/* Early enables DC with first mode from the monitor specs */
 	if (dp->early_enable) {
@@ -2796,6 +3006,8 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	clk_put(dp->parent_clk);
 
 	dp->prod_list = NULL;
+
+	tegra_dp_unregister_typec_ecable(dc);
 
 	tegra_dc_out_destroy(dc);
 

@@ -53,6 +53,7 @@
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
 #include <soc/tegra/common.h>
+#include <linux/version.h>
 
 #include "dc.h"
 #include "dc_reg.h"
@@ -2751,6 +2752,35 @@ fail:
 	return -EINVAL;
 }
 
+static int tegra_dc_register_typec_edev(struct platform_device *ndev,
+					struct device_node *sor_np,
+					struct extcon_dev **typec_edev_ptr)
+{
+	struct extcon_dev *typec_edev;
+	char port_name[CHAR_BUF_SIZE_MAX] = {0};
+	u8 typec_port;
+
+	if (of_property_read_u8(sor_np, "nvidia,typec-port", &typec_port))
+		return 0;
+
+	snprintf(port_name, sizeof(port_name), "typec%u", typec_port);
+	typec_edev = extcon_get_extcon_dev_by_cable(&ndev->dev, port_name);
+	if (!typec_edev) {
+		dev_err(&ndev->dev, "typec extcon dev is NULL\n");
+		return -ENODEV;
+	} else if (IS_ERR(typec_edev)) {
+		if (PTR_ERR(typec_edev) != -EPROBE_DEFER)
+			dev_err(&ndev->dev,
+				"Couldn't find typec extcon dev: %ld\n",
+				PTR_ERR(typec_edev));
+
+		return PTR_ERR(typec_edev);
+	}
+
+	*typec_edev_ptr = typec_edev;
+	return 0;
+}
+
 struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct platform_device *ndev, struct tegra_dc_platform_data *boot_pdata)
 {
@@ -2774,6 +2804,7 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	char dc_or_conn_node[CHAR_BUF_SIZE_MAX];
 	struct device_node *cmu_np = NULL;
 	struct device_node *cmu_adbRGB_np = NULL;
+	struct extcon_dev *typec_edev = NULL;
 
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
@@ -2853,6 +2884,10 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		err = PTR_ERR(pdata->conn_np);
 		goto fail_parse;
 	}
+
+	err = tegra_dc_register_typec_edev(ndev, pdata->conn_np, &typec_edev);
+	if (err)
+		goto fail_parse;
 
 	if (!of_property_read_u32(np, "nvidia,dc-ctrlnum", &temp)) {
 		pdata->ctrl_num = (unsigned long)temp;
@@ -2979,6 +3014,9 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 					def_out->dp_out->
 					edp2lvds_i2c_bus_no);
 		}
+
+		def_out->dp_out->typec_ecable.edev = typec_edev;
+
 		/* enable/disable ops for DP monitors */
 		if (!def_out->enable && !def_out->disable) {
 			def_out->enable		= dc_dp_out_enable;
@@ -3308,6 +3346,15 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 fail_parse:
 	of_node_put(cmu_np);
 	of_node_put(cmu_adbRGB_np);
+
+	if (!boot_pdata && !IS_ERR_OR_NULL(pdata)) {
+		if (!IS_ERR_OR_NULL(pdata->fb))
+			devm_kfree(&ndev->dev, pdata->fb);
+		if (!IS_ERR_OR_NULL(pdata->default_out))
+			devm_kfree(&ndev->dev, pdata->default_out);
+		devm_kfree(&ndev->dev, pdata);
+	}
+
 	return ERR_PTR(err);
 }
 

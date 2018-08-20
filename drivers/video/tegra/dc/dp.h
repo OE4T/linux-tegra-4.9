@@ -87,6 +87,38 @@ struct tegra_dc_dp_data {
 	struct tegra_dc_dp_link_config link_cfg;
 	struct tegra_dc_dp_link_config max_link_cfg;
 
+	u8 typec_lane_count; /* # of lanes reported by extcon (Type-C) */
+
+	/*
+	 * In certain cases, the CCG4 USB-C controller might have already
+	 * negotiated Alt Mode before the ucsi_ccg kernel driver is initialized.
+	 * These cases can typically occur when the downstream USB-C partner is
+	 * connected before ucsi_ccg init (e.g., seamless display). If Alt Mode
+	 * has been established before ucsi_ccg init, ucsi_ccg has no way to
+	 * determine what the current lane configuration is since the relevant
+	 * VDMs (Vendor Defined Messages) have already been sent and received,
+	 * and ucsi_ccg will not trigger any extcon notifications until the next
+	 * USB-C configuration change is requested.
+	 *
+	 * In order to alleviate the above cases, we'll introduce two flags:
+	 * - "typec_notified_once" indicates whether the DP driver has received
+	 *   at least one extcon notification from ucsi_ccg so far. Once this
+	 *   flag is set, it will remain set from that point on.
+	 * - "typec_timed_out_once" indicates whether the DP driver has timed
+	 *   out at least once while waiting for an extcon notification during
+	 *   HPD_PLUG processing. Once this flag is set, it will remain set from
+	 *   that point on.
+	 *
+	 * If "typec_notified_once" is FALSE and "typec_timed_out_once" is TRUE,
+	 * the DP driver will skip all extcon waits during subsequent HPD_PLUG
+	 * events until it receives at least one extcon notification. This logic
+	 * is hacky, but is specifically meant to prevent the DP driver from
+	 * continually timing out during each subsequent HPD_PLUG event before
+	 * the next configuration change.
+	 */
+	bool typec_notified_once;
+	bool typec_timed_out_once;
+
 	struct tegra_dp_lt_data lt_data;
 
 	bool enabled; /* Controller ready. LT not yet initiated. */

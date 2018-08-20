@@ -30,6 +30,7 @@
 #include <linux/platform/tegra/isomgr.h>
 #include <drm/drm_fixed.h>
 #include <linux/nvhost.h>
+#include <linux/extcon.h>
 #include <video/tegra_dc_ext_kernel.h>
 #include <video/tegra_dc_ext.h>
 #include "dc_extras.h"
@@ -1122,6 +1123,15 @@ struct tegra_dc_lt_data {
 	const char *name;
 };
 
+struct tegra_dc_extcon_cable {
+	struct mutex lock;
+	struct completion comp;
+	struct notifier_block nb;
+	struct extcon_dev *edev;
+	void *drv_data;
+	bool connected;
+};
+
 struct tegra_dp_out {
 	struct tegra_dc_dp_lt_settings *lt_settings;
 	int n_lt_settings;
@@ -1135,6 +1145,7 @@ struct tegra_dp_out {
 	bool edp2lvds_bridge_enable;
 	struct tegra_dc_lt_data *lt_data;
 	int n_lt_data;
+	struct tegra_dc_extcon_cable typec_ecable;
 };
 
 /*

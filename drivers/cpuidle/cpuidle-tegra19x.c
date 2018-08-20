@@ -53,6 +53,16 @@
 #define T19x_CPUIDLE_C6_STATE		1
 #define MCE_STAT_ID_SHIFT		16UL
 
+/*
+ * BG_TIME is margin added to target_residency so that actual HW
+ * has better chance entering deep idle state instead of getting
+ * back to shallower one.
+ */
+#define BG_TIME				2000 /* in unit of us */
+
+/* per CPU sleep_time holds target_residency for next expected idle state */
+static DEFINE_PER_CPU(u32, sleep_time);
+
 static u32 read_cluster_info(struct device_node *of_states);
 static u32 deepest_cc_state;
 static u32 deepest_cg_state;
@@ -70,12 +80,6 @@ static u32 tsc_per_usec;
 
 /* saved hotplug state */
 static enum cpuhp_state hp_state;
-
-#ifdef CPUIDLE_FLAG_TIME_VALID
-#define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
-#else
-#define DRIVER_FLAGS		0
-#endif
 
 #define T19x_NVG_CROSSOVER_C6	TEGRA_NVG_CHANNEL_CROSSOVER_C6_LOWER_BOUND
 #define T19x_NVG_CROSSOVER_CC6	TEGRA_NVG_CHANNEL_CROSSOVER_CC6_LOWER_BOUND
@@ -105,8 +109,12 @@ void clear_cpu_counter(void)
 }
 EXPORT_SYMBOL(clear_cpu_counter);
 
-static void t19x_cpu_enter_c6(void)
+static void t19x_cpu_enter_c6(int index)
 {
+	int cpu = smp_processor_id();
+	struct cpuidle_driver *drv = &t19x_cpu_idle_driver;
+
+	per_cpu(sleep_time, cpu) = drv->states[index].target_residency;
 	arm_cpuidle_suspend(T19x_CPUIDLE_C6_STATE);
 }
 
@@ -125,16 +133,20 @@ static void test_t19x_cpu_enter_c6(u32 wake_time)
 
 	atomic_inc(&entered_c6_cpu_count);
 
-	t19x_cpu_enter_c6();
+	t19x_cpu_enter_c6(T19x_CPUIDLE_C6_STATE);
 
 	trace_printk("Exiting C6\n");
 	tegra_mce_read_cstate_stats(mce_index, &val);
 	trace_printk("cpu = %d C6_COUNT_AFTER = %llu\n", cpu, val);
 }
 
-static void t19x_cpu_enter_c7(void)
+static void t19x_cpu_enter_c7(int index)
 {
+	int cpu = smp_processor_id();
+	struct cpuidle_driver *drv = &t19x_cpu_idle_driver;
+
 	cpu_pm_enter(); /* power down notifier */
+	per_cpu(sleep_time, cpu) = drv->states[index].target_residency;
 	arm_cpuidle_suspend(T19x_CPUIDLE_C7_STATE);
 	cpu_pm_exit();
 }
@@ -161,9 +173,9 @@ static int t19x_cpu_enter_state(
 	}
 
 	if (index == T19x_CPUIDLE_C7_STATE)
-		t19x_cpu_enter_c7();
+		t19x_cpu_enter_c7(index);
 	else if (index == T19x_CPUIDLE_C6_STATE)
-		t19x_cpu_enter_c6();
+		t19x_cpu_enter_c6(index);
 	else
 		asm volatile("wfi\n");
 
@@ -172,16 +184,9 @@ static int t19x_cpu_enter_state(
 
 static u32 t19x_make_power_state(u32 state)
 {
-	u32 wake_time;
-	struct timespec t;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	ktime_t delta_next;
+	int cpu = smp_processor_id();
 
-	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
-#else
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-#endif
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
+	u32 wake_time = (per_cpu(sleep_time, cpu) + BG_TIME) * tsc_per_usec;
 
 	if (testmode || test_c6_exit_latency)
 		wake_time = 0xFFFFEEEE;
@@ -209,7 +214,7 @@ static struct cpuidle_driver t19x_cpu_idle_driver = {
 		.exit_latency		= 1,
 		.target_residency	= 1,
 		.power_usage		= UINT_MAX,
-		.flags			= DRIVER_FLAGS,
+		.flags			= 0,
 		.name			= "C1",
 		.desc			= "c1-cpu-clockgated",
 	}
@@ -302,12 +307,12 @@ static int forced_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(forced_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == T19x_CPUIDLE_C7_STATE)
-		t19x_cpu_enter_c7();
+		t19x_cpu_enter_c7(pmstate);
 	else if (pmstate == T19x_CPUIDLE_C6_STATE) {
 		if (test_c6_exit_latency)
 			test_t19x_cpu_enter_c6(wake_time);
 		else
-			t19x_cpu_enter_c6();
+			t19x_cpu_enter_c6(pmstate);
 	}
 	else
 		asm volatile("wfi\n");
@@ -317,11 +322,8 @@ static int forced_idle_write(void *data, u64 val)
 	if (dbg_gpio)
 		gpio_set_value(dbg_gpio, 0);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
-	pr_info("idle: %lld, exit latency: %lld\n", sleep, time);
-#else
-	pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
-#endif
+	pr_info("idle: %lld, exit latency: %lld\n",
+				ktime_to_ns(sleep), ktime_to_ns(time));
 
 	local_irq_enable();
 	local_fiq_enable();

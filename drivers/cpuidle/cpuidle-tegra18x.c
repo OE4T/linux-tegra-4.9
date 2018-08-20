@@ -48,6 +48,7 @@
 #include <asm/arch_timer.h>
 #include "../../drivers/cpuidle/dt_idle_states.h"
 #include "../../kernel/time/tick-internal.h"
+#include "../../kernel/time/tick-sched.h"
 
 #define PSCI_STATE_ID_STATE_MASK        (0xf)
 #define PSCI_STATE_ID_WKTIM_MASK        (~0xf000000f)
@@ -58,6 +59,16 @@
 #define TEGRA186_A57_CPUIDLE_C7		1
 #define DENVER_CLUSTER			0
 #define A57_CLUSTER			1
+
+/*
+ * BG_TIME is margin added to target_residency so that actual HW
+ * has better chance entering deep idle state instead of getting
+ * back to shallower one.
+ */
+#define BG_TIME				2000 /* in unit of us */
+
+/* per CPU sleep_time holds target_residency for next expected idle state */
+static DEFINE_PER_CPU(u32, sleep_time);
 
 static struct cpumask denver_cpumask;
 static struct cpumask a57_cpumask;
@@ -76,12 +87,6 @@ static int crossover_init(void);
 static void program_cluster_state(void *data);
 static u32 tsc_per_sec, nsec_per_tsc_tick;
 static u32 tsc_per_usec;
-
-#ifdef CPUIDLE_FLAG_TIME_VALID
-#define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
-#else
-#define DRIVER_FLAGS		0
-#endif
 
 static bool check_mce_version(void)
 {
@@ -102,21 +107,29 @@ static void tegra186_denver_enter_c6(u32 wake_time)
 	cpu_pm_exit();
 }
 
-static void tegra186_denver_enter_c7(void)
+static void tegra186_denver_enter_c7(int index)
 {
+	int cpu = smp_processor_id();
+	struct cpuidle_driver *drv = &t18x_denver_idle_driver;
+
 	/* Block all interrupts in the cpu core */
 	local_irq_disable();
 	local_fiq_disable();
 	cpu_pm_enter();  /* power down notifier */
+	per_cpu(sleep_time, cpu) = drv->states[index].target_residency;
 	arm_cpuidle_suspend(TEGRA186_DENVER_CPUIDLE_C7);
 	cpu_pm_exit();
 	local_fiq_enable();
 	local_irq_enable();
 }
 
-static void tegra186_a57_enter_c7(void)
+static void tegra186_a57_enter_c7(int index)
 {
+	int cpu = smp_processor_id();
+	struct cpuidle_driver *drv = &t18x_a57_idle_driver;
+
 	cpu_pm_enter();  /* power down notifier */
+	per_cpu(sleep_time, cpu) = drv->states[index].target_residency;
 	arm_cpuidle_suspend(TEGRA186_A57_CPUIDLE_C7);
 	cpu_pm_exit();
 }
@@ -126,18 +139,12 @@ static int t18x_denver_enter_state(
 		struct cpuidle_driver *drv,
 		int index)
 {
-	u32 wake_time;
-	struct timespec t;
+	u32 wake_time = drv->states[index].target_residency + BG_TIME;
 
 	/* Todo: Based on future need, we might need the var latency_req. */
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	ktime_t delta_next;
-	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
-#else
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-#endif
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
+
+	wake_time *= tsc_per_usec; /* convert to tsc */
 
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
@@ -161,7 +168,7 @@ static int t18x_denver_enter_state(
 	}
 
 	if (index == TEGRA186_DENVER_CPUIDLE_C7)
-		tegra186_denver_enter_c7();
+		tegra186_denver_enter_c7(index);
 	else if (index == TEGRA186_DENVER_CPUIDLE_C6)
 		tegra186_denver_enter_c6(wake_time);
 	else
@@ -200,7 +207,7 @@ static int t18x_a57_enter_state(
 	}
 
 	if (index == TEGRA186_A57_CPUIDLE_C7) {
-		tegra186_a57_enter_c7();
+		tegra186_a57_enter_c7(index);
 	} else
 		asm volatile("wfi\n");
 
@@ -209,16 +216,9 @@ static int t18x_a57_enter_state(
 
 static u32 t18x_make_power_state(u32 state)
 {
-	u32 wake_time;
-	struct timespec t;
+	int cpu = smp_processor_id();
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	ktime_t delta_next;
-	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
-#else
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-#endif
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
+	u32 wake_time = (per_cpu(sleep_time, cpu) + BG_TIME) * tsc_per_usec;
 
 	if (denver_testmode || a57_testmode)
 		wake_time = 0xFFFFEEEE;
@@ -242,7 +242,7 @@ static struct cpuidle_driver t18x_denver_idle_driver = {
 		.exit_latency		= 1,
 		.target_residency	= 1,
 		.power_usage		= UINT_MAX,
-		.flags			= DRIVER_FLAGS,
+		.flags			= 0,
 		.name			= "C1",
 		.desc			= "c1-cpu-clockgated",
 	}
@@ -256,7 +256,7 @@ static struct cpuidle_driver t18x_a57_idle_driver = {
                 .exit_latency           = 1,
                 .target_residency       = 1,
                 .power_usage            = UINT_MAX,
-		.flags			= DRIVER_FLAGS,
+		.flags			= 0,
                 .name                   = "C1",
                 .desc                   = "c1-cpu-clockgated",
         }
@@ -346,7 +346,7 @@ static int denver_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(denver_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == TEGRA186_DENVER_CPUIDLE_C7)
-		tegra186_denver_enter_c7();
+		tegra186_denver_enter_c7(pmstate);
 	else if (pmstate == TEGRA186_DENVER_CPUIDLE_C6)
 		tegra186_denver_enter_c6(wake_time);
 	else
@@ -396,7 +396,7 @@ static int a57_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(a57_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == TEGRA186_A57_CPUIDLE_C7)
-		tegra186_a57_enter_c7();
+		tegra186_a57_enter_c7(pmstate);
 	else
 		asm volatile("wfi\n");
 

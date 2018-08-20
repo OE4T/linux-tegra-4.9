@@ -3,7 +3,7 @@
  *
  *			Copyright (C) 2011 Texas Instruments
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -158,8 +158,7 @@ static int lp855x_configure(struct lp855x *lp)
 		return -EINVAL;
 	}
 
-	if (lp->cfg->pre_init_device &&
-			!tegra_is_bl_display_initialized(DC_INSTANCE_0)) {
+	if (lp->cfg->pre_init_device) {
 		ret = lp->cfg->pre_init_device(lp);
 		if (ret) {
 			dev_err(lp->dev, "pre init device err: %d\n", ret);

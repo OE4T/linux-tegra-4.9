@@ -59,7 +59,7 @@ static u32 deepest_cg_state;
 static u64 forced_idle_state;
 static u64 forced_cluster_idle_state;
 static u64 test_c6_exit_latency;
-atomic_t entered_c6_cpu_count = ATOMIC_INIT(0);
+static atomic_t entered_c6_cpu_count = ATOMIC_INIT(0);
 static u32 testmode;
 static struct cpuidle_driver t19x_cpu_idle_driver;
 static int crossover_init(void);

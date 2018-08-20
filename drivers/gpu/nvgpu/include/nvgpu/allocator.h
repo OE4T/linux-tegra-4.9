@@ -205,11 +205,11 @@ static inline void alloc_unlock(struct nvgpu_allocator *a)
 /*
  * Buddy allocator specific initializers.
  */
-int  __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *a,
+int  __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 				  struct vm_gk20a *vm, const char *name,
 				  u64 base, u64 size, u64 blk_size,
 				  u64 max_order, u64 flags);
-int  nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *a,
+int  nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 				const char *name, u64 base, u64 size,
 				u64 blk_size, u64 flags);
 

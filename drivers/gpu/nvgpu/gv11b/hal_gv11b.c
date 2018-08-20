@@ -856,8 +856,10 @@ int gv11b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_GR_USE_DMA_FOR_FW_BOOTSTRAP, false);
 
 	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
-	if (gops->fuse.check_priv_security(g))
-		return -EINVAL; /* Do not boot gpu */
+	if (gops->fuse.check_priv_security(g)) {
+		/* Do not boot gpu */
+		return -EINVAL;
+	}
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

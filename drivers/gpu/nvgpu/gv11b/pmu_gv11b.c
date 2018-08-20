@@ -340,10 +340,12 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 				pwr_pmu_falcon_ecc_status_reset_task_f());
 
 			/* update counters per slice */
-			if (corrected_overflow)
+			if (corrected_overflow) {
 				corrected_delta += (0x1UL << pwr_pmu_falcon_ecc_corrected_err_count_total_s());
-			if (uncorrected_overflow)
+			}
+			if (uncorrected_overflow) {
 				uncorrected_delta += (0x1UL << pwr_pmu_falcon_ecc_uncorrected_err_count_total_s());
+			}
 
 			g->ecc.pmu.pmu_ecc_corrected_err_count[0].counter += corrected_delta;
 			g->ecc.pmu.pmu_ecc_uncorrected_err_count[0].counter += uncorrected_delta;
@@ -351,21 +353,26 @@ void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0)
 			nvgpu_log(g, gpu_dbg_intr,
 				"pmu ecc interrupt intr1: 0x%x", intr1);
 
-			if (ecc_status & pwr_pmu_falcon_ecc_status_corrected_err_imem_m())
+			if (ecc_status & pwr_pmu_falcon_ecc_status_corrected_err_imem_m()) {
 				nvgpu_log(g, gpu_dbg_intr,
 					"imem ecc error corrected");
-			if (ecc_status & pwr_pmu_falcon_ecc_status_uncorrected_err_imem_m())
+			}
+			if (ecc_status & pwr_pmu_falcon_ecc_status_uncorrected_err_imem_m()) {
 				nvgpu_log(g, gpu_dbg_intr,
 					"imem ecc error uncorrected");
-			if (ecc_status & pwr_pmu_falcon_ecc_status_corrected_err_dmem_m())
+			}
+			if (ecc_status & pwr_pmu_falcon_ecc_status_corrected_err_dmem_m()) {
 				nvgpu_log(g, gpu_dbg_intr,
 					"dmem ecc error corrected");
-			if (ecc_status & pwr_pmu_falcon_ecc_status_uncorrected_err_dmem_m())
+			}
+			if (ecc_status & pwr_pmu_falcon_ecc_status_uncorrected_err_dmem_m()) {
 				nvgpu_log(g, gpu_dbg_intr,
 					"dmem ecc error uncorrected");
+			}
 
-			if (corrected_overflow || uncorrected_overflow)
+			if (corrected_overflow || uncorrected_overflow) {
 				nvgpu_info(g, "ecc counter overflow!");
+			}
 
 			nvgpu_log(g, gpu_dbg_intr,
 				"ecc error row address: 0x%x",
@@ -456,8 +463,9 @@ int gv11b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 					pmu_handle_pg_param_msg, pmu, &seq, ~0);
 
-	} else
+	} else {
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -493,8 +501,9 @@ int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 		gv11b_dbg_pmu(g, "cmd post PMU_PG_CMD_SUB_FEATURE_MASK_UPDATE\n");
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_pg_sub_feature_msg, pmu, &seq, ~0);
-	} else
+	} else {
 		return -EINVAL;
+	}
 
 	return 0;
 }

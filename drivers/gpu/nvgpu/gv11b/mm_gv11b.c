@@ -56,8 +56,9 @@ void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 
 	g->ops.mm.init_pdb(g, inst_block, vm);
 
-	if (big_page_size && g->ops.mm.set_big_page_size)
+	if (big_page_size && g->ops.mm.set_big_page_size) {
 		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
+	}
 
 	gv11b_init_subcontext_pdb(vm, inst_block, false);
 }
@@ -97,12 +98,14 @@ void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
 	if (nvgpu_mem_is_valid(
-		    &g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY]))
+		    &g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY])) {
 		nvgpu_dma_unmap_free(vm,
 			 &g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY]);
-	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_REPLAY]))
+	}
+	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_REPLAY])) {
 		nvgpu_dma_unmap_free(vm,
 			 &g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_REPLAY]);
+	}
 
 	nvgpu_mutex_release(&g->mm.hub_isr_mutex);
 	nvgpu_mutex_destroy(&g->mm.hub_isr_mutex);
@@ -152,12 +155,14 @@ static void gv11b_mm_mmu_hw_fault_buf_init(struct gk20a *g)
 static void gv11b_mm_mmu_fault_setup_hw(struct gk20a *g)
 {
 	if (nvgpu_mem_is_valid(
-			&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY]))
+			&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_OTHER_AND_NONREPLAY])) {
 		g->ops.fb.fault_buf_configure_hw(g,
 				NVGPU_FB_MMU_FAULT_NONREPLAY_REG_INDEX);
-	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_REPLAY]))
+	}
+	if (nvgpu_mem_is_valid(&g->mm.hw_fault_buf[NVGPU_MM_MMU_FAULT_TYPE_REPLAY])) {
 		g->ops.fb.fault_buf_configure_hw(g,
 				NVGPU_FB_MMU_FAULT_REPLAY_REG_INDEX);
+	}
 }
 
 static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
@@ -170,8 +175,9 @@ static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 
 	err = gv11b_mm_mmu_fault_info_buf_init(g);
 
-	if (!err)
+	if (!err) {
 		gv11b_mm_mmu_hw_fault_buf_init(g);
+	}
 
 	return err;
 }
@@ -185,8 +191,9 @@ int gv11b_init_mm_setup_hw(struct gk20a *g)
 	err = gk20a_init_mm_setup_hw(g);
 
 	err = gv11b_mm_mmu_fault_setup_sw(g);
-	if (!err)
+	if (!err) {
 		gv11b_mm_mmu_fault_setup_hw(g);
+	}
 
 	nvgpu_log_fn(g, "end");
 
@@ -199,11 +206,12 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	g->ops.mm.fb_flush(g);
 	gk20a_mm_l2_flush(g, invalidate);
-	if (g->ops.bus.bar1_bind)
+	if (g->ops.bus.bar1_bind) {
 		g->ops.fb.tlb_invalidate(g,
 				g->mm.bar1.vm->pdb.mem);
-	else
+	} else {
 		g->ops.mm.fb_flush(g);
+	}
 }
 
 /*
@@ -214,8 +222,9 @@ void gv11b_mm_l2_flush(struct gk20a *g, bool invalidate)
 u64 gv11b_gpu_phys_addr(struct gk20a *g,
 			       struct nvgpu_gmmu_attrs *attrs, u64 phys)
 {
-	if (attrs && attrs->l3_alloc)
+	if (attrs && attrs->l3_alloc) {
 		return phys | NVGPU_L3_ALLOC_BIT;
+	}
 
 	return phys;
 }

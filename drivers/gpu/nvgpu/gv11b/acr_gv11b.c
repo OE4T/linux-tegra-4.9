@@ -187,8 +187,9 @@ int gv11b_bootstrap_hs_flcn(struct gk20a *g)
 				acr->acr_ucode.gpu_va +
 				acr_ucode_header_t210_load[2]);
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
-	} else
+	} else {
 		acr->acr_dmem_desc_v1->nonwpr_ucode_blob_size = 0;
+	}
 	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {
 		err = status;
@@ -277,10 +278,12 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
-	if (g->ops.pmu.setup_apertures)
+	if (g->ops.pmu.setup_apertures) {
 		g->ops.pmu.setup_apertures(g);
-	if (g->ops.pmu.update_lspmu_cmdline_args)
+	}
+	if (g->ops.pmu.update_lspmu_cmdline_args) {
 		g->ops.pmu.update_lspmu_cmdline_args(g);
+	}
 
 	/*disable irqs for hs falcon booting as we will poll for halt*/
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
@@ -290,7 +293,8 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 	/*Clearing mailbox register used to reflect capabilities*/
 	gk20a_writel(g, pwr_falcon_mailbox1_r(), 0);
 	err = bl_bootstrap(pmu, desc, bl_sz);
-	if (err)
+	if (err) {
 		return err;
+	}
 	return 0;
 }

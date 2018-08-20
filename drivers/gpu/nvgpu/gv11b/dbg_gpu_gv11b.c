@@ -68,8 +68,9 @@ int gv11b_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 	}
 
 	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
 

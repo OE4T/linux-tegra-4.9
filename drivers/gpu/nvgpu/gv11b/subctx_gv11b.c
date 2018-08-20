@@ -105,8 +105,9 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 	struct nvgpu_gr_ctx *gr_ctx;
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg)
+	if (!tsg) {
 		return -EINVAL;
+	}
 
 	gr_ctx = &tsg->gr_ctx;
 

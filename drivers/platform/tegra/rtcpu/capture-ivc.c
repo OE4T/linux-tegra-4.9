@@ -471,6 +471,8 @@ static void tegra_capture_ivc_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_capture_ivc *civc = tegra_ivc_channel_get_drvdata(chan);
 
+	cancel_work_sync(&civc->work);
+
 	if (__scivc_control == civc)
 		__scivc_control = NULL;
 	else if (__scivc_capture == civc)

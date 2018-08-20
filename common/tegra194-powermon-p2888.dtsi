@@ -12,6 +12,15 @@
  */
 
 / {
+	p2888_shuntv_offset: shuntv-offset {
+		offset = <0>;
+		conditional_offset@0 {
+			shunt_volt_start = <0xFFFFFFD8>;
+			shunt_volt_end = <0xFFFFFFD8>;
+			offset = <40>;
+		};
+	};
+
 	i2c@c240000 {
 		ina3221x_40: ina3221x@40 {
 			compatible = "ti,ina3221x";
@@ -26,16 +35,19 @@
 				reg = <0x0>;
 				ti,rail-name = "GPU";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 			channel@1 {
 				reg = <0x1>;
 				ti,rail-name = "CPU";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 			channel@2 {
 				reg = <0x2>;
 				ti,rail-name = "SOC";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 		};
 		ina3221x_41: ina3221x@41 {
@@ -51,16 +63,19 @@
 				reg = <0x0>;
 				ti,rail-name = "CV";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 			channel@1 {
 				reg = <0x1>;
 				ti,rail-name = "VDDRQ";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 			channel@2 {
 				reg = <0x2>;
 				ti,rail-name = "SYS5V";
 				ti,shunt-resistor-mohm = <5>;
+				shunt-volt-offset-uv = <&p2888_shuntv_offset>;
 			};
 		};
 	};

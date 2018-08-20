@@ -223,7 +223,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 /*
  * Page allocator initializers.
  */
-int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *a,
+int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags);
 

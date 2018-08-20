@@ -2569,9 +2569,6 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	if (err < 0)
 		return err;
 
-	if (tegra_dc_is_nvdisplay())
-		tegra_dsi_pad_calibration(dsi);
-
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
 	 * from bootloader to kernel driver
@@ -2619,6 +2616,9 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
+
+	if (tegra_dc_is_nvdisplay())
+		tegra_dsi_pad_calibration(dsi);
 
 	dsi->status.init = DSI_MODULE_INIT;
 	dsi->status.lphs = DSI_LPHS_NOT_INIT;

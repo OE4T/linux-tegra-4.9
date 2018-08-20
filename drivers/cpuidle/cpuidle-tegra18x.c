@@ -102,7 +102,7 @@ static void tegra186_denver_enter_c6(u32 wake_time)
 	cpu_pm_exit();
 }
 
-static void tegra186_denver_enter_c7(u32 wake_time)
+static void tegra186_denver_enter_c7(void)
 {
 	/* Block all interrupts in the cpu core */
 	local_irq_disable();
@@ -114,7 +114,7 @@ static void tegra186_denver_enter_c7(u32 wake_time)
 	local_irq_enable();
 }
 
-static void tegra186_a57_enter_c7(u32 wake_time)
+static void tegra186_a57_enter_c7(void)
 {
 	cpu_pm_enter();  /* power down notifier */
 	arm_cpuidle_suspend(TEGRA186_A57_CPUIDLE_C7);
@@ -161,7 +161,7 @@ static int t18x_denver_enter_state(
 	}
 
 	if (index == TEGRA186_DENVER_CPUIDLE_C7)
-		tegra186_denver_enter_c7(wake_time);
+		tegra186_denver_enter_c7();
 	else if (index == TEGRA186_DENVER_CPUIDLE_C6)
 		tegra186_denver_enter_c6(wake_time);
 	else
@@ -177,18 +177,8 @@ static int t18x_a57_enter_state(
 		struct cpuidle_driver *drv,
 		int index)
 {
-	u32 wake_time;
-	struct timespec t;
-
 	/* Todo: Based on future need, we might need the var latency_req. */
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 57)
-	ktime_t delta_next;
-	t = ktime_to_timespec(tick_nohz_get_sleep_length(&delta_next));
-#else
-	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-#endif
-	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
@@ -207,12 +197,10 @@ static int t18x_a57_enter_state(
 			index = t18x_a57_idle_driver.state_count;
 		} else
 			index = a57_idle_state;
-
-		wake_time = 0xFFFFEEEE;
 	}
 
 	if (index == TEGRA186_A57_CPUIDLE_C7) {
-		tegra186_a57_enter_c7(wake_time);
+		tegra186_a57_enter_c7();
 	} else
 		asm volatile("wfi\n");
 
@@ -358,7 +346,7 @@ static int denver_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(denver_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == TEGRA186_DENVER_CPUIDLE_C7)
-		tegra186_denver_enter_c7(wake_time);
+		tegra186_denver_enter_c7();
 	else if (pmstate == TEGRA186_DENVER_CPUIDLE_C6)
 		tegra186_denver_enter_c6(wake_time);
 	else
@@ -366,11 +354,8 @@ static int denver_idle_write(void *data, u64 val)
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
-        pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
-#else
-        pr_info("idle: %lld, exit latency: %lld\n", sleep, time);
-#endif
+        pr_info("idle: %lld, exit latency: %lld\n",
+			ktime_to_ns(sleep), ktime_to_ns(time));
 
         local_irq_enable();
         local_fiq_enable();
@@ -387,12 +372,6 @@ static int a57_idle_write(void *data, u64 val)
         unsigned long timer_interval_us = (ulong)val;
         ktime_t time, interval, sleep;
 	u32 pmstate;
-	u32 wake_time;
-
-	val = (val * 1000) / nsec_per_tsc_tick;
-	if (val > 0xffffffff)
-		val = 0xffffffff;
-	wake_time = val;
 
         if (a57_idle_state >= t18x_a57_idle_driver.state_count) {
                 pr_err("%s: Requested invalid forced idle state\n", __func__);
@@ -417,17 +396,14 @@ static int a57_idle_write(void *data, u64 val)
 	tegra_mce_update_cstate_info(a57_cluster_idle_state, 0, 0, 0, 0, 0);
 
 	if (pmstate == TEGRA186_A57_CPUIDLE_C7)
-		tegra186_a57_enter_c7(wake_time);
+		tegra186_a57_enter_c7();
 	else
 		asm volatile("wfi\n");
 
         sleep = ktime_sub(ktime_get(), time);
         time = ktime_sub(sleep, interval);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
-        pr_info("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
-#else
-        pr_info("idle: %lld, exit latency: %lld\n", sleep, time);
-#endif
+        pr_info("idle: %lld, exit latency: %lld\n",
+			ktime_to_ns(sleep), ktime_to_ns(time));
         local_irq_enable();
         local_fiq_enable();
         start_critical_timings();

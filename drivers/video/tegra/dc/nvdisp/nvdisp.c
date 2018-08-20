@@ -3715,7 +3715,7 @@ int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
 }
 EXPORT_SYMBOL(tegra_dc_validate_imp_queue);
 
-static struct tegra_dc *find_dc_by_ctrl_num(u32 ctrl_num)
+struct tegra_dc *find_dc_by_ctrl_num(u32 ctrl_num)
 {
 	int i;
 

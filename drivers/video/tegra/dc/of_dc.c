@@ -2712,6 +2712,41 @@ fail_parse_imp_table:
 	return ret;
 }
 
+int of_tegra_get_fb_resource(struct device_node *np,
+	 struct resource *res, const char *reg_name)
+{
+	int index;
+	unsigned int flags;
+	u64 size;
+	u64 *addrp;
+
+	struct device_node *fb_node = of_parse_phandle(np, "fb_reserved", 0);
+
+	if (fb_node == NULL)
+		goto fail;
+
+	index = of_property_match_string(fb_node, "reg-names", reg_name);
+	if (index < 0)
+		goto fail;
+
+	addrp = (u64 *)of_get_address(fb_node, index, &size, &flags);
+	if (addrp == NULL)
+		goto fail;
+
+	res->start = *addrp;
+	if (res->start)
+		res->end = res->start + size - 1;
+	else
+		res->end = 0;
+
+	return 0;
+
+fail:
+	res->start = 0;
+	res->end = 0;
+	return -EINVAL;
+}
+
 struct tegra_dc_platform_data *of_dc_parse_platform_data(
 	struct platform_device *ndev, struct tegra_dc_platform_data *boot_pdata)
 {

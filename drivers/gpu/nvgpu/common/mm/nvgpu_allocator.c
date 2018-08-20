@@ -130,10 +130,10 @@ void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
 }
 
 #ifdef __KERNEL__
-void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
+void nvgpu_alloc_print_stats(struct nvgpu_allocator *na,
 			     struct seq_file *s, int lock)
 {
-	__a->ops->print_stats(__a, s, lock);
+	na->ops->print_stats(na, s, lock);
 }
 #endif
 

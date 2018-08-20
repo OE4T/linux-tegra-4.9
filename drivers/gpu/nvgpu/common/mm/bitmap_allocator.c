@@ -61,10 +61,10 @@ static u64 nvgpu_bitmap_alloc_end(struct nvgpu_allocator *a)
 /*
  * @page_size is ignored.
  */
-static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
+static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *na,
 				    u64 base, u64 len, u32 page_size)
 {
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 	u64 blks, offs, ret;
 
 	/* Compute the bit offset and make sure it's aligned to a block.  */
@@ -80,7 +80,7 @@ static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
 		blks++;
 	}
 
-	alloc_lock(__a);
+	alloc_lock(na);
 
 	/* Check if the space requested is already occupied. */
 	ret = bitmap_find_next_zero_area(a->bitmap, a->num_bits, offs, blks, 0);
@@ -92,15 +92,15 @@ static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
 
 	a->bytes_alloced += blks * a->blk_size;
 	a->nr_fixed_allocs++;
-	alloc_unlock(__a);
+	alloc_unlock(na);
 
-	alloc_dbg(__a, "Alloc-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
+	alloc_dbg(na, "Alloc-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  base, len, blks, blks);
 	return base;
 
 fail:
-	alloc_unlock(__a);
-	alloc_dbg(__a, "Alloc-fixed failed! (0x%llx)", base);
+	alloc_unlock(na);
+	alloc_dbg(na, "Alloc-fixed failed! (0x%llx)", base);
 	return 0;
 }
 
@@ -111,10 +111,10 @@ fail:
  * Note: this function won't do much error checking. Thus you could really
  * confuse the allocator if you misuse this function.
  */
-static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
+static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *na,
 				    u64 base, u64 len)
 {
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 	u64 blks, offs;
 
 	offs = base >> a->blk_shift;
@@ -129,12 +129,12 @@ static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
 		blks++;
 	}
 
-	alloc_lock(__a);
+	alloc_lock(na);
 	bitmap_clear(a->bitmap, offs, blks);
 	a->bytes_freed += blks * a->blk_size;
-	alloc_unlock(__a);
+	alloc_unlock(na);
 
-	alloc_dbg(__a, "Free-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
+	alloc_dbg(na, "Free-fixed 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  base, len, blks, blks);
 }
 
@@ -196,11 +196,11 @@ static int __nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
  * @len is in bytes. This routine will figure out the right number of bits to
  * actually allocate. The return is the address in bytes as well.
  */
-static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
+static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *na, u64 len)
 {
 	u64 blks, addr;
 	unsigned long offs, adjusted_offs, limit;
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 
 	blks = len >> a->blk_shift;
 
@@ -208,7 +208,7 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 		blks++;
 	}
 
-	alloc_lock(__a);
+	alloc_lock(na);
 
 	/*
 	 * First look from next_blk and onwards...
@@ -248,12 +248,12 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 		goto fail_reset_bitmap;
 	}
 
-	alloc_dbg(__a, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
+	alloc_dbg(na, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]",
 		  addr, len, blks, blks);
 
 	a->nr_allocs++;
 	a->bytes_alloced += (blks * a->blk_size);
-	alloc_unlock(__a);
+	alloc_unlock(na);
 
 	return addr;
 
@@ -261,18 +261,18 @@ fail_reset_bitmap:
 	bitmap_clear(a->bitmap, offs, blks);
 fail:
 	a->next_blk = 0;
-	alloc_unlock(__a);
-	alloc_dbg(__a, "Alloc failed!");
+	alloc_unlock(na);
+	alloc_dbg(na, "Alloc failed!");
 	return 0;
 }
 
-static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
+static void nvgpu_bitmap_free(struct nvgpu_allocator *na, u64 addr)
 {
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 	struct nvgpu_bitmap_alloc *alloc = NULL;
 	u64 offs, adjusted_offs, blks;
 
-	alloc_lock(__a);
+	alloc_lock(na);
 
 	if (a->flags & GPU_ALLOC_NO_ALLOC_PAGE) {
 		WARN(1, "Using wrong free for NO_ALLOC_PAGE bitmap allocator");
@@ -294,7 +294,7 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 	blks = alloc->length >> a->blk_shift;
 
 	bitmap_clear(a->bitmap, offs, blks);
-	alloc_dbg(__a, "Free  0x%-10llx", addr);
+	alloc_dbg(na, "Free  0x%-10llx", addr);
 
 	a->bytes_freed += alloc->length;
 
@@ -302,12 +302,12 @@ done:
 	if (a->meta_data_cache && alloc) {
 		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
 	}
-	alloc_unlock(__a);
+	alloc_unlock(na);
 }
 
-static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
+static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *na)
 {
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 	struct nvgpu_bitmap_alloc *alloc;
 	struct nvgpu_rbtree_node *node;
 
@@ -325,28 +325,28 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 	}
 
 	nvgpu_kmem_cache_destroy(a->meta_data_cache);
-	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a->bitmap);
-	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(na), a->bitmap);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(na), a);
 }
 
 #ifdef __KERNEL__
-static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
+static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *na,
 				     struct seq_file *s, int lock)
 {
-	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(na);
 
-	__alloc_pstat(s, __a, "Bitmap allocator params:");
-	__alloc_pstat(s, __a, "  start = 0x%llx", a->base);
-	__alloc_pstat(s, __a, "  end   = 0x%llx", a->base + a->length);
-	__alloc_pstat(s, __a, "  blks  = 0x%llx", a->num_bits);
+	__alloc_pstat(s, na, "Bitmap allocator params:");
+	__alloc_pstat(s, na, "  start = 0x%llx", a->base);
+	__alloc_pstat(s, na, "  end   = 0x%llx", a->base + a->length);
+	__alloc_pstat(s, na, "  blks  = 0x%llx", a->num_bits);
 
 	/* Actual stats. */
-	__alloc_pstat(s, __a, "Stats:");
-	__alloc_pstat(s, __a, "  Number allocs = 0x%llx", a->nr_allocs);
-	__alloc_pstat(s, __a, "  Number fixed  = 0x%llx", a->nr_fixed_allocs);
-	__alloc_pstat(s, __a, "  Bytes alloced = 0x%llx", a->bytes_alloced);
-	__alloc_pstat(s, __a, "  Bytes freed   = 0x%llx", a->bytes_freed);
-	__alloc_pstat(s, __a, "  Outstanding   = 0x%llx",
+	__alloc_pstat(s, na, "Stats:");
+	__alloc_pstat(s, na, "  Number allocs = 0x%llx", a->nr_allocs);
+	__alloc_pstat(s, na, "  Number fixed  = 0x%llx", a->nr_fixed_allocs);
+	__alloc_pstat(s, na, "  Bytes alloced = 0x%llx", a->bytes_alloced);
+	__alloc_pstat(s, na, "  Bytes freed   = 0x%llx", a->bytes_freed);
+	__alloc_pstat(s, na, "  Outstanding   = 0x%llx",
 		      a->bytes_alloced - a->bytes_freed);
 }
 #endif
@@ -371,7 +371,7 @@ static const struct nvgpu_allocator_ops bitmap_ops = {
 };
 
 
-int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
+int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags)
 {
@@ -401,7 +401,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &bitmap_ops);
+	err = __nvgpu_alloc_common_init(na, g, name, a, false, &bitmap_ops);
 	if (err) {
 		goto fail;
 	}
@@ -435,14 +435,14 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->inited = true;
 
 #ifdef CONFIG_DEBUG_FS
-	nvgpu_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, na);
 #endif
-	alloc_dbg(__a, "New allocator: type      bitmap");
-	alloc_dbg(__a, "               base      0x%llx", a->base);
-	alloc_dbg(__a, "               bit_offs  0x%llx", a->bit_offs);
-	alloc_dbg(__a, "               size      0x%llx", a->length);
-	alloc_dbg(__a, "               blk_size  0x%llx", a->blk_size);
-	alloc_dbg(__a, "               flags     0x%llx", a->flags);
+	alloc_dbg(na, "New allocator: type      bitmap");
+	alloc_dbg(na, "               base      0x%llx", a->base);
+	alloc_dbg(na, "               bit_offs  0x%llx", a->bit_offs);
+	alloc_dbg(na, "               size      0x%llx", a->length);
+	alloc_dbg(na, "               blk_size  0x%llx", a->blk_size);
+	alloc_dbg(na, "               flags     0x%llx", a->flags);
 
 	return 0;
 

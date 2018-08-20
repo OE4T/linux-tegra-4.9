@@ -159,7 +159,7 @@ static const struct nvgpu_allocator_ops pool_ops = {
 #endif
 };
 
-int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
+int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags)
 {
@@ -187,7 +187,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &pool_ops);
+	err = __nvgpu_alloc_common_init(na, g, name, a, false, &pool_ops);
 	if (err) {
 		goto fail;
 	}
@@ -216,13 +216,13 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->inited = true;
 
 #ifdef CONFIG_DEBUG_FS
-	nvgpu_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, na);
 #endif
-	alloc_dbg(__a, "New allocator: type          lockless");
-	alloc_dbg(__a, "               base          0x%llx", a->base);
-	alloc_dbg(__a, "               nodes         %d", a->nr_nodes);
-	alloc_dbg(__a, "               blk_size      0x%llx", a->blk_size);
-	alloc_dbg(__a, "               flags         0x%llx", a->flags);
+	alloc_dbg(na, "New allocator: type          lockless");
+	alloc_dbg(na, "               base          0x%llx", a->base);
+	alloc_dbg(na, "               nodes         %d", a->nr_nodes);
+	alloc_dbg(na, "               blk_size      0x%llx", a->blk_size);
+	alloc_dbg(na, "               flags         0x%llx", a->flags);
 
 	return 0;
 

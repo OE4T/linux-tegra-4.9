@@ -330,6 +330,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 	TEGRA_DC_EXT_FLIP_USER_DATA_GET_FLIP_INFO,
 	TEGRA_DC_EXT_FLIP_USER_DATA_BACKGROUND_COLOR,
+	TEGRA_DC_EXT_FLIP_USER_DATA_CHANGE_AVI, /* avi colorimetry data */
 };
 
 /*
@@ -341,6 +342,20 @@ struct tegra_dc_ext_hdr {
 	__u8 eotf;
 	__u8 static_metadata_id;
 	__u8 static_metadata[24];
+} __attribute__((__packed__));
+
+/*
+ * Client data used by tegra_dc to force colorimetry
+ */
+enum tegra_dc_ext_avi_colorimetry {
+	TEGRA_DC_EXT_AVI_COLORIMETRY_DEFAULT,
+	TEGRA_DC_EXT_AVI_COLORIMETRY_xvYCC709,
+	TEGRA_DC_EXT_AVI_COLORIMETRY_BT2020_YCC_RGB,
+} __attribute__((__packed__));
+
+struct tegra_dc_ext_avi_info {
+	__u8 avi_colorimetry_change;
+	__u8 reserved[25];
 } __attribute__((__packed__));
 
 /*
@@ -587,6 +602,7 @@ struct tegra_dc_ext_flip_user_data {
 		__u8 data8[26];
 		__u16 data16[13];
 		struct tegra_dc_ext_hdr hdr_info;
+		struct tegra_dc_ext_avi_info avi_info;
 		struct tegra_dc_ext_imp_ptr imp_ptr;
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */

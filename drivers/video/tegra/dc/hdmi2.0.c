@@ -2160,6 +2160,21 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	avi->scaling = HDMI_AVI_SCALING_UNKNOWN;
 	avi->rgb_quant = tegra_hdmi_get_rgb_quant(hdmi);
 	avi->ext_colorimetry = tegra_hdmi_get_ex_colorimetry(hdmi);
+
+	switch (hdmi->avi_colorimetry_change) {
+	case TEGRA_DC_EXT_AVI_COLORIMETRY_BT2020_YCC_RGB:
+		avi->colorimetry = HDMI_AVI_COLORIMETRY_EXTENDED_VALID;
+		avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_BT2020_YCC_RGB;
+		break;
+	case TEGRA_DC_EXT_AVI_COLORIMETRY_xvYCC709:
+		avi->colorimetry = HDMI_AVI_COLORIMETRY_DEFAULT;
+		avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_xvYCC709;
+		break;
+	default:
+		/* Use values from earlier to switch case */
+		break;
+	}
+
 	avi->it_content = HDMI_AVI_IT_CONTENT_FALSE;
 
 	/* set correct vic if video format is cea defined else set 0 */
@@ -2217,6 +2232,18 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_OTHER_DISABLE |
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_SINGLE_DISABLE |
 		NV_SOR_HDMI_AVI_INFOFRAME_CTRL_CHECKSUM_ENABLE);
+}
+
+static int tegra_dc_hdmi_set_avi(struct tegra_dc *dc,
+	int avi_colorimetry_change)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	hdmi->avi_colorimetry_change = avi_colorimetry_change;
+	/* Setting AVI infoframe externally */
+	tegra_hdmi_avi_infoframe(hdmi);
+
+	return 0;
 }
 
 static int tegra_hdmi_get_extended_vic(const struct tegra_dc_mode *mode)
@@ -3862,6 +3889,7 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.vrr_enable = tegra_dc_hdmi_vrr_enable,
 	.vrr_update_monspecs = tegra_hdmivrr_update_monspecs,
 	.set_hdr = tegra_dc_hdmi_set_hdr,
+	.set_avi = tegra_dc_hdmi_set_avi,
 	.postpoweron = tegra_dc_hdmi_postpoweron,
 	.shutdown_interface = tegra_dc_hdmi_sor_sleep,
 	.get_crc = tegra_dc_hdmi_sor_crc_check,

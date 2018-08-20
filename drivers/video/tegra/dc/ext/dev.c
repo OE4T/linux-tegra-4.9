@@ -1786,6 +1786,17 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			}
 			break;
 		}
+		case TEGRA_DC_EXT_FLIP_USER_DATA_CHANGE_AVI:
+		{
+			struct tegra_dc *dc = data->ext->dc;
+			int avi_colorimetry_change =
+				flip_user_data[i].avi_info.avi_colorimetry_change;
+
+			if (dc->out_ops->set_avi)
+				dc->out_ops->set_avi(dc, avi_colorimetry_change);
+
+			break;
+		}
 		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG:
 			if (!tegra_dc_is_nvdisplay())
 				return -EINVAL;

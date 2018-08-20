@@ -121,6 +121,9 @@ struct tegra_dc_out_ops {
 	bool (*hpd_state)(struct tegra_dc *dc);
 	/* Configure controller to receive hotplug events */
 	int (*hotplug_init)(struct tegra_dc *dc);
+	/* Configure controller for avi infoframe update */
+	int (*set_avi)(struct tegra_dc *dc, int colorimetry_change);
+	/* Configure controller for hdr infoframe update */
 	int (*set_hdr)(struct tegra_dc *dc);
 	/* shutdown the serial interface */
 	void (*shutdown_interface)(struct tegra_dc *dc);

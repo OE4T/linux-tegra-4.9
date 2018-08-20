@@ -29,6 +29,21 @@ struct gk20a;
 struct tsg_gk20a;
 struct channel_gk20a;
 
+#define NVGPU_GPU_CTXSW_TAG_SOF                     0x00
+#define NVGPU_GPU_CTXSW_TAG_CTXSW_REQ_BY_HOST       0x01
+#define NVGPU_GPU_CTXSW_TAG_FE_ACK                  0x02
+#define NVGPU_GPU_CTXSW_TAG_FE_ACK_WFI              0x0a
+#define NVGPU_GPU_CTXSW_TAG_FE_ACK_GFXP             0x0b
+#define NVGPU_GPU_CTXSW_TAG_FE_ACK_CTAP             0x0c
+#define NVGPU_GPU_CTXSW_TAG_FE_ACK_CILP             0x0d
+#define NVGPU_GPU_CTXSW_TAG_SAVE_END                0x03
+#define NVGPU_GPU_CTXSW_TAG_RESTORE_START           0x04
+#define NVGPU_GPU_CTXSW_TAG_CONTEXT_START           0x05
+#define NVGPU_GPU_CTXSW_TAG_ENGINE_RESET            0xfe
+#define NVGPU_GPU_CTXSW_TAG_INVALID_TIMESTAMP       0xff
+#define NVGPU_GPU_CTXSW_TAG_LAST                    \
+	NVGPU_GPU_CTXSW_TAG_INVALID_TIMESTAMP
+
 /*
  * The binary format of 'struct nvgpu_gpu_ctxsw_trace_entry' introduced here
  * should match that of 'struct nvgpu_ctxsw_trace_entry' defined in uapi
@@ -63,5 +78,7 @@ int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g, void **buf, size_t *size);
 int gk20a_ctxsw_dev_ring_free(struct gk20a *g);
 int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g, struct vm_area_struct *vma);
 #endif
+
+u8 nvgpu_gpu_ctxsw_tags_to_common_tags(u8 tags);
 
 #endif

@@ -308,27 +308,27 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 			entry.tag, entry.timestamp, r->context_id,
 			r->new_context_id);
 
-		switch (entry.tag) {
-		case NVGPU_CTXSW_TAG_RESTORE_START:
-		case NVGPU_CTXSW_TAG_CONTEXT_START:
+		switch (nvgpu_gpu_ctxsw_tags_to_common_tags(entry.tag)) {
+		case NVGPU_GPU_CTXSW_TAG_RESTORE_START:
+		case NVGPU_GPU_CTXSW_TAG_CONTEXT_START:
 			entry.context_id = r->new_context_id;
 			entry.pid = new_pid;
 			break;
 
-		case NVGPU_CTXSW_TAG_CTXSW_REQ_BY_HOST:
-		case NVGPU_CTXSW_TAG_FE_ACK:
-		case NVGPU_CTXSW_TAG_FE_ACK_WFI:
-		case NVGPU_CTXSW_TAG_FE_ACK_GFXP:
-		case NVGPU_CTXSW_TAG_FE_ACK_CTAP:
-		case NVGPU_CTXSW_TAG_FE_ACK_CILP:
-		case NVGPU_CTXSW_TAG_SAVE_END:
+		case NVGPU_GPU_CTXSW_TAG_CTXSW_REQ_BY_HOST:
+		case NVGPU_GPU_CTXSW_TAG_FE_ACK:
+		case NVGPU_GPU_CTXSW_TAG_FE_ACK_WFI:
+		case NVGPU_GPU_CTXSW_TAG_FE_ACK_GFXP:
+		case NVGPU_GPU_CTXSW_TAG_FE_ACK_CTAP:
+		case NVGPU_GPU_CTXSW_TAG_FE_ACK_CILP:
+		case NVGPU_GPU_CTXSW_TAG_SAVE_END:
 			entry.context_id = r->context_id;
 			entry.pid = cur_pid;
 			break;
 
 		default:
 			/* tags are not guaranteed to start at the beginning */
-			WARN_ON(entry.tag && (entry.tag != NVGPU_CTXSW_TAG_INVALID_TIMESTAMP));
+			WARN_ON(entry.tag && (entry.tag != NVGPU_GPU_CTXSW_TAG_INVALID_TIMESTAMP));
 			continue;
 		}
 

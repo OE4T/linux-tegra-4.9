@@ -743,3 +743,41 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 #endif
 	trace_gk20a_channel_reset(~0, tsg->tsgid);
 }
+
+/*
+ * Convert linux nvgpu ctxsw tags type of the form of NVGPU_CTXSW_TAG_*
+ * into common nvgpu ctxsw tags type of the form of NVGPU_GPU_CTXSW_TAG_*
+ */
+
+u8 nvgpu_gpu_ctxsw_tags_to_common_tags(u8 tags)
+{
+	switch (tags){
+	case NVGPU_CTXSW_TAG_SOF:
+		return NVGPU_GPU_CTXSW_TAG_SOF;
+	case NVGPU_CTXSW_TAG_CTXSW_REQ_BY_HOST:
+		return NVGPU_GPU_CTXSW_TAG_CTXSW_REQ_BY_HOST;
+	case NVGPU_CTXSW_TAG_FE_ACK:
+		return NVGPU_GPU_CTXSW_TAG_FE_ACK;
+	case NVGPU_CTXSW_TAG_FE_ACK_WFI:
+		return NVGPU_GPU_CTXSW_TAG_FE_ACK_WFI;
+	case NVGPU_CTXSW_TAG_FE_ACK_GFXP:
+		return NVGPU_GPU_CTXSW_TAG_FE_ACK_GFXP;
+	case NVGPU_CTXSW_TAG_FE_ACK_CTAP:
+		return NVGPU_GPU_CTXSW_TAG_FE_ACK_CTAP;
+	case NVGPU_CTXSW_TAG_FE_ACK_CILP:
+		return NVGPU_GPU_CTXSW_TAG_FE_ACK_CILP;
+	case NVGPU_CTXSW_TAG_SAVE_END:
+		return NVGPU_GPU_CTXSW_TAG_SAVE_END;
+	case NVGPU_CTXSW_TAG_RESTORE_START:
+		return NVGPU_GPU_CTXSW_TAG_RESTORE_START;
+	case NVGPU_CTXSW_TAG_CONTEXT_START:
+		return NVGPU_GPU_CTXSW_TAG_CONTEXT_START;
+	case NVGPU_CTXSW_TAG_ENGINE_RESET:
+		return NVGPU_GPU_CTXSW_TAG_ENGINE_RESET;
+	case NVGPU_CTXSW_TAG_INVALID_TIMESTAMP:
+		return NVGPU_GPU_CTXSW_TAG_INVALID_TIMESTAMP;
+	}
+
+	WARN_ON(1);
+	return tags;
+}

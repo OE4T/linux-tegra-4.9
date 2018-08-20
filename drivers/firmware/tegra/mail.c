@@ -280,9 +280,9 @@ static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
 	printk(KERN_INFO "mrq %u data [", mrq);
 
 	for (i = 0; i < ob_sz; i++)
-		printk("0x%x ", ob_data[i]);
+		printk(KERN_CONT "0x%x ", ob_data[i]);
 
-	printk("]\n");
+	printk(KERN_CONT "]\n");
 }
 
 static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,

@@ -93,11 +93,20 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 static void nvgpu_init_gr_vars(struct gk20a *g)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(dev_from_gk20a(g));
 	gk20a_init_gr(g);
 
 	nvgpu_log_info(g, "total ram pages : %lu", totalram_pages);
 	g->gr.max_comptag_mem = totalram_pages
 				 >> (10 - (PAGE_SHIFT - 10));
+
+	/* Deduct the part taken by the running system */
+	if (platform->comptag_mem_deduct &&
+	    g->gr.max_comptag_mem > platform->comptag_mem_deduct) {
+		g->gr.max_comptag_mem -= platform->comptag_mem_deduct;
+		nvgpu_log_info(g, "deducted max memory for comptag: %u",
+			       g->gr.max_comptag_mem);
+	}
 }
 
 static void nvgpu_init_timeout(struct gk20a *g)

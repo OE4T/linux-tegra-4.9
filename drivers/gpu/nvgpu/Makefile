@@ -74,7 +74,7 @@ nvgpu-y += \
 	os/linux/comptags.o \
 	os/linux/dmabuf.o \
 	os/linux/sched.o \
-	os/linux/channel.o \
+	os/linux/linux-channel.o \
 	os/linux/sim.o \
 	os/linux/sim_pci.o \
 	os/linux/os_sched.o \
@@ -200,13 +200,13 @@ nvgpu-y += \
 	common/clock_gating/gv11b_gating_reglist.o \
 	common/sim.o \
 	common/sim_pci.o \
+	common/fifo/channel.o \
 	common/fifo/submit.o \
 	common/ecc.o \
 	common/ce2.o \
 	gk20a/gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
-	gk20a/channel_gk20a.o \
 	gk20a/channel_sync_gk20a.o \
 	gk20a/dbg_gpu_gk20a.o \
 	gk20a/regops_gk20a.o \

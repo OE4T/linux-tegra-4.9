@@ -39,7 +39,7 @@ srcs :=	os/posix/nvgpu.c \
 	os/posix/error_notifier.c \
 	os/posix/fuse.c \
 	os/posix/clk_arb.c \
-	os/posix/channel.c \
+	os/posix/posix-channel.c \
 	os/posix/tsg.c \
 	os/posix/nvlink.c \
 	os/posix/lock.c \
@@ -104,6 +104,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/clock_gating/gv11b_gating_reglist.c \
 	common/clock_gating/gp106_gating_reglist.c \
 	common/clock_gating/gv100_gating_reglist.c \
+	common/fifo/channel.c \
 	common/fifo/submit.c \
 	boardobj/boardobj.c \
 	boardobj/boardobjgrp.c \
@@ -140,7 +141,6 @@ srcs :=	os/posix/nvgpu.c \
 	common/ptimer/ptimer_gk20a.c \
 	gk20a/ce2_gk20a.c \
 	gk20a/fifo_gk20a.c \
-	gk20a/channel_gk20a.c \
 	gk20a/channel_sync_gk20a.c \
 	gk20a/dbg_gpu_gk20a.c \
 	gk20a/regops_gk20a.c \

@@ -1485,12 +1485,8 @@ int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask)
 
 	reg = set_field(reg, top_nvhsclk_ctrl_e_clk_nvl_m(),
 			top_nvhsclk_ctrl_e_clk_nvl_f(pad_ctrl));
-	reg = set_field(reg, top_nvhsclk_ctrl_e_clk_core_m(),
-			top_nvhsclk_ctrl_e_clk_core_f(0x1));
 	reg = set_field(reg, top_nvhsclk_ctrl_swap_clk_nvl_m(),
 		top_nvhsclk_ctrl_swap_clk_nvl_f(swap_ctrl));
-	reg = set_field(reg, top_nvhsclk_ctrl_swap_clk_core_m(),
-			top_nvhsclk_ctrl_swap_clk_core_f(0x0));
 
 	gk20a_writel(g, top_nvhsclk_ctrl_r(), reg);
 

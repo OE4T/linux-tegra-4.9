@@ -35,7 +35,7 @@ obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += rtcpu/hsp-doorbell.o
 obj-$(CONFIG_TEGRA_ARI_MCA) += ari_mca.o
 obj-$(CONFIG_TEGRA_18X_SERROR) += tegra18_serr.o
 obj-$(CONFIG_TEGRA_BRIDGE_MCA) += bridge_mca.o
-obj-$(CONFIG_TEGRA_A57_SERR) += tegra18_a57_serr.o
+obj-$(CONFIG_TEGRA_18X_SERROR) += tegra18_a57_serr.o
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t18x.o
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t21x.o
 ifeq ($(CONFIG_HW_PERF_EVENTS), y)

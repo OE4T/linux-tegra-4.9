@@ -146,9 +146,6 @@ static irqreturn_t ufs_cd_gpio_isr(int irq, void *dev_id)
 {
 	struct ufs_tegra_host *ufs_tegra = dev_id;
 
-	ufs_tegra->hba->card_present =
-			ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc);
-
 	ufs_schedule_delayed_work(&ufs_tegra->detect, msecs_to_jiffies(200));
 
 	return IRQ_HANDLED;
@@ -160,7 +157,11 @@ void ufs_rescan(struct work_struct *work)
 	struct ufs_tegra_host *ufs_tegra =
 		container_of(work, struct ufs_tegra_host, detect.work);
 
-	ufshcd_rescan(ufs_tegra->hba);
+	if(ufs_tegra->hba->card_present != ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc)) {
+		ufs_tegra->hba->card_present =
+		                ufs_tegra_get_cd(ufs_tegra->cd_gpio_desc);
+		ufshcd_rescan(ufs_tegra->hba);
+	}
 }
 
 /**

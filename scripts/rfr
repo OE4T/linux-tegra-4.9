@@ -5,7 +5,6 @@
 
 import os
 import re
-import sys
 import json
 import argparse
 import tempfile
@@ -63,6 +62,9 @@ Otherwise it's treated as a git commit ID.
                         help='Specify the email\'s subject.')
     parser.add_argument('-R', '--sender', action='store', default=None,
                         help='Specify a special from: email address.')
+    parser.add_argument('-t', '--to', action='append', default=[],
+                        help='Specify an additional To: email address. '
+                        'Can be repeated (-t a -t b).')
 
     # Positionals: the gerrit URLs.
     parser.add_argument('commits', metavar='Commit-IDs',
@@ -277,13 +279,15 @@ def email_commits(commits_info, sender, subject, args):
     else:
         msg = MIMEText(body)
 
-    msg['To'] = to_addr
+    to_addrs = [to_addr] + args.to
+
+    msg['To'] = ", ".join(to_addrs)
     msg['From'] = sender
     msg['Subject'] = subject
 
     s = smtplib.SMTP('mail.nvidia.com')
     s.sendmail(sender,
-               [to_addr],
+               to_addrs,
                msg.as_string())
     s.quit()
 

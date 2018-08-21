@@ -1,7 +1,7 @@
-From d11644ac82f1e244d17709eedc61c7cfdde566a9 Mon Sep 17 00:00:00 2001
+From bc87a1328f1fbd71309ee1c5e554425b1687f862 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 123/356] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 123/353] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -328,7 +328,7 @@ index 7ab5110..5493ae4 100644
  
  /**
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index e1da5e8..79f10fc 100644
+index 065f663..6a1b656 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -1225,6 +1225,7 @@ void tick_setup_sched_timer(void)

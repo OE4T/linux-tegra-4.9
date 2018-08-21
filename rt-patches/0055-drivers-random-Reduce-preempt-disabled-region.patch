@@ -1,7 +1,7 @@
-From d037326086f926b24eba7330c132cf667d75988a Mon Sep 17 00:00:00 2001
+From a9bc261767aac9f1012f5d902470a51659603aa2 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:30 -0500
-Subject: [PATCH 055/356] drivers: random: Reduce preempt disabled region
+Subject: [PATCH 055/353] drivers: random: Reduce preempt disabled region
 
 No need to keep preemption disabled across the whole function.
 
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 deletions(-)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index ddeac4ee..6879566 100644
+index 81b65d0..74300e8 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
 @@ -1087,8 +1087,6 @@ static void add_timer_randomness(struct timer_rand_state *state, unsigned num)

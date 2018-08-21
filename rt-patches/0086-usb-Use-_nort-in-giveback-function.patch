@@ -1,7 +1,7 @@
-From 92c40264d62d69e97f1eec7171ed92207def34fa Mon Sep 17 00:00:00 2001
+From 40abe6002d93526a2d27b73b457acf29f1820403 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 8 Nov 2013 17:34:54 +0100
-Subject: [PATCH 086/356] usb: Use _nort in giveback function
+Subject: [PATCH 086/353] usb: Use _nort in giveback function
 
 Since commit 94dfd7ed ("USB: HCD: support giveback of URB in tasklet
 context") I see

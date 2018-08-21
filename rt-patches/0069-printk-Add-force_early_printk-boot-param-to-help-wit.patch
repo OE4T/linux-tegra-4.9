@@ -1,7 +1,7 @@
-From 2a705a1ad386c59b4268ff33066822b07e4cc50b Mon Sep 17 00:00:00 2001
+From 1de84e68efb86fd427fac3d915ac3566e6fcfd77 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
-Subject: [PATCH 069/356] printk: Add "force_early_printk" boot param to help
+Subject: [PATCH 069/353] printk: Add "force_early_printk" boot param to help
  with debugging
 
 Gives me an option to screw printk and actually see what the machine
@@ -16,10 +16,10 @@ Link: http://lkml.kernel.org/n/tip-ykb97nsfmobq44xketrxs977@git.kernel.org
  1 file changed, 7 insertions(+)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index dfde6df..a31216e 100644
+index e4a74bd..2e26fbf 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -385,6 +385,13 @@ asmlinkage void early_printk(const char *fmt, ...)
+@@ -386,6 +386,13 @@ asmlinkage void early_printk(const char *fmt, ...)
   */
  static bool __read_mostly printk_killswitch;
  

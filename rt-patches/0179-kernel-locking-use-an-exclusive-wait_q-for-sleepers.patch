@@ -1,7 +1,7 @@
-From 8629c089ff6f13cb38837cf280b3c0fd915f53fd Mon Sep 17 00:00:00 2001
+From ce584bb6f57658a572ffbdcc0b5cd0a9069ccd4c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 179/356] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 179/353] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 0c9a433..bb3a8ff 100644
+index 0454d9f..ef2d486 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1046,8 +1046,20 @@ struct wake_q_head {
@@ -78,10 +78,10 @@ index 0c9a433..bb3a8ff 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 3ff13d4..90e7d9c 100644
+index 620b30a..25e378e 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -565,6 +565,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
+@@ -568,6 +568,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  	tsk->splice_pipe = NULL;
  	tsk->task_frag.page = NULL;
  	tsk->wake_q.next = NULL;

@@ -1,7 +1,7 @@
-From 8cbfad38dd5f98140044fa233302874187cc3892 Mon Sep 17 00:00:00 2001
+From 540d5f045a0737c5c200b39a94860d0ce2125a70 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Jul 2009 23:06:05 +0200
-Subject: [PATCH 085/356] core: Do not disable interrupts on RT in
+Subject: [PATCH 085/353] core: Do not disable interrupts on RT in
  kernel/users.c
 
 Use the local_irq_*_nort variants to reduce latencies in RT. The code

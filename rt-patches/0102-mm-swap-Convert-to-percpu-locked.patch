@@ -1,7 +1,7 @@
-From 7bd6ffbb42f37f14e811c6094220549390bc7873 Mon Sep 17 00:00:00 2001
+From db83dfd8a6348723dfc9d2b10707dc825e62008e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
-Subject: [PATCH 102/356] mm/swap: Convert to percpu locked
+Subject: [PATCH 102/353] mm/swap: Convert to percpu locked
 
 Replace global locks (get_cpu + local_irq_save) with "local_locks()".
 Currently there is one of for "rotate" and one for "swap".
@@ -47,10 +47,10 @@ index af19210..8627c9c 100644
  				cc->last_migrated_pfn = 0;
  			}
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 73e54d5..a85edf0 100644
+index e251ca9..dc76100 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -6627,7 +6627,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6626,7 +6626,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {

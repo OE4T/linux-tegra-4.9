@@ -1,7 +1,7 @@
-From f817e700638dc0e42ba599180bad8bdd24912da0 Mon Sep 17 00:00:00 2001
+From 3d4bdb4c364435f4f4b3608470b1bfa391bf299b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 7 Jun 2017 10:12:45 +0200
-Subject: [PATCH 135/356] sched: Remove TASK_ALL
+Subject: [PATCH 135/353] sched: Remove TASK_ALL
 
 It's unused:
 
@@ -19,7 +19,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 0a93cbc..d23cab2 100644
+index add99de..7073b8a 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -239,7 +239,6 @@ extern char ___assert_task_state[1 - 2*!!(

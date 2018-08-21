@@ -1,7 +1,7 @@
-From bbb5453d88c85d6c4b0ca563d14a013458a6989f Mon Sep 17 00:00:00 2001
+From 4a1a26d66323c025852551bb0acf6740677cb7c4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
-Subject: [PATCH 048/356] timekeeping: Split jiffies seqlock
+Subject: [PATCH 048/353] timekeeping: Split jiffies seqlock
 
 Replace jiffies_lock seqlock with a simple seqcounter and a rawlock so
 it can be taken in atomic context on RT.
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 28 insertions(+), 17 deletions(-)
 
 diff --git a/kernel/time/jiffies.c b/kernel/time/jiffies.c
-index 555e21f..a5d6435 100644
+index 2a6e41e..faea04a 100644
 --- a/kernel/time/jiffies.c
 +++ b/kernel/time/jiffies.c
 @@ -74,7 +74,8 @@ static struct clocksource clocksource_jiffies = {
@@ -76,7 +76,7 @@ index 4fcd99e..5a47f2e 100644
  		clockevents_switch_state(dev, CLOCK_EVT_STATE_ONESHOT);
  
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 6a93da8..e1da5e8 100644
+index 65aafad..065f663 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -62,7 +62,8 @@ static void tick_do_update_jiffies64(ktime_t now)
@@ -135,10 +135,10 @@ index 6a93da8..e1da5e8 100644
  
  	/*
 diff --git a/kernel/time/timekeeping.c b/kernel/time/timekeeping.c
-index d806280..01cf46a 100644
+index 462b23b..988eedb9 100644
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2379,8 +2379,10 @@ EXPORT_SYMBOL(hardpps);
+@@ -2388,8 +2388,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {

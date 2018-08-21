@@ -1,7 +1,7 @@
-From 8ca551b8b44fa37c0e65b3dbdac8bdf2539db313 Mon Sep 17 00:00:00 2001
+From f069da0a7ef68a8519f225bd005e2159c363e55d Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:13 -0500
-Subject: [PATCH 104/356] mm/vmstat: Protect per cpu variables with preempt
+Subject: [PATCH 104/353] mm/vmstat: Protect per cpu variables with preempt
  disable on RT
 
 Disable preemption on -RT for the vmstat code. On vanila the code runs in

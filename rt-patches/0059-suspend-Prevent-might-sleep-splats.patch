@@ -1,7 +1,7 @@
-From 799afe507c0fe0ca3c51aae9c158fcd3dd28feb3 Mon Sep 17 00:00:00 2001
+From e78d12f2fa5cf722c0edd243be4213513ae89337 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 15 Jul 2010 10:29:00 +0200
-Subject: [PATCH 059/356] suspend: Prevent might sleep splats
+Subject: [PATCH 059/353] suspend: Prevent might sleep splats
 
 timekeeping suspend/resume calls read_persistant_clock() which takes
 rtc_lock. That results in might sleep warnings because at that point

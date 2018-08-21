@@ -1,7 +1,7 @@
-From 4b493a5b8d9320b801411e83fc4a0f4bc86450cf Mon Sep 17 00:00:00 2001
+From a21f8f4980815d7aa3b6928fa9123b047316c16e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Tue, 29 Nov 2011 20:18:22 -0500
-Subject: [PATCH 152/356] tasklet: Prevent tasklets from going into infinite
+Subject: [PATCH 152/353] tasklet: Prevent tasklets from going into infinite
  spin in RT
 
 When CONFIG_PREEMPT_RT_FULL is enabled, tasklets run as threads,
@@ -116,7 +116,7 @@ index 59acc26..5819d55 100644
  extern void tasklet_kill_immediate(struct tasklet_struct *t, unsigned int cpu);
  extern void tasklet_init(struct tasklet_struct *t,
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index 744fa61..8669000 100644
+index d257e62..02d1106 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
 @@ -21,6 +21,7 @@
@@ -127,7 +127,7 @@ index 744fa61..8669000 100644
  #include <linux/ftrace.h>
  #include <linux/smp.h>
  #include <linux/smpboot.h>
-@@ -460,15 +461,45 @@ struct tasklet_head {
+@@ -464,15 +465,45 @@ struct tasklet_head {
  static DEFINE_PER_CPU(struct tasklet_head, tasklet_vec);
  static DEFINE_PER_CPU(struct tasklet_head, tasklet_hi_vec);
  
@@ -177,7 +177,7 @@ index 744fa61..8669000 100644
  	local_irq_restore(flags);
  }
  EXPORT_SYMBOL(__tasklet_schedule);
-@@ -478,10 +509,7 @@ void __tasklet_hi_schedule(struct tasklet_struct *t)
+@@ -482,10 +513,7 @@ void __tasklet_hi_schedule(struct tasklet_struct *t)
  	unsigned long flags;
  
  	local_irq_save(flags);
@@ -189,7 +189,7 @@ index 744fa61..8669000 100644
  	local_irq_restore(flags);
  }
  EXPORT_SYMBOL(__tasklet_hi_schedule);
-@@ -490,82 +518,122 @@ void __tasklet_hi_schedule_first(struct tasklet_struct *t)
+@@ -494,82 +522,122 @@ void __tasklet_hi_schedule_first(struct tasklet_struct *t)
  {
  	BUG_ON(!irqs_disabled());
  
@@ -361,7 +361,7 @@ index 744fa61..8669000 100644
  }
  
  void tasklet_init(struct tasklet_struct *t,
-@@ -586,7 +654,7 @@ void tasklet_kill(struct tasklet_struct *t)
+@@ -590,7 +658,7 @@ void tasklet_kill(struct tasklet_struct *t)
  
  	while (test_and_set_bit(TASKLET_STATE_SCHED, &t->state)) {
  		do {
@@ -370,7 +370,7 @@ index 744fa61..8669000 100644
  		} while (test_bit(TASKLET_STATE_SCHED, &t->state));
  	}
  	tasklet_unlock_wait(t);
-@@ -660,6 +728,23 @@ void __init softirq_init(void)
+@@ -664,6 +732,23 @@ void __init softirq_init(void)
  	open_softirq(HI_SOFTIRQ, tasklet_hi_action);
  }
  

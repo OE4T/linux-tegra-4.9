@@ -1,7 +1,7 @@
-From 1ab56e65f31c3c2862a65fee41b709f4c83b7d43 Mon Sep 17 00:00:00 2001
+From 75addf7ee78f30ac7b8c93c42c2fd792627e7035 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/356] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/353] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index d8e814e..4d87727 100644
+index 5bf1fb9..f621007 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1858,6 +1858,7 @@ struct task_struct {
@@ -53,10 +53,10 @@ index 61921bc..d472298 100644
  	spin_unlock(&sighand->siglock);
  
 diff --git a/kernel/fork.c b/kernel/fork.c
-index c9f28b1..41f1929 100644
+index b8d7a22..f575766 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1571,6 +1571,7 @@ static __latent_entropy struct task_struct *copy_process(
+@@ -1574,6 +1574,7 @@ static __latent_entropy struct task_struct *copy_process(
  	spin_lock_init(&p->alloc_lock);
  
  	init_sigpending(&p->pending);

@@ -1,7 +1,7 @@
-From e40744fd5d80ad3e263640f6831c2fa7ddb29747 Mon Sep 17 00:00:00 2001
+From 0882b5344c33b07bf4fed81c4d5c505bff5943ae Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
-Subject: [PATCH 131/356] sched: Move mmdrop to RCU on RT
+Subject: [PATCH 131/353] sched: Move mmdrop to RCU on RT
 
 Takes sleeping locks and calls into the memory allocator, so nothing
 we want to do in task switch and oder atomic contexts.
@@ -37,7 +37,7 @@ index 167f575..788781c 100644
  	/* address of the bounds directory */
  	void __user *bd_addr;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 8df8608..74f9e36 100644
+index 12df734..ca002f9 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -3094,6 +3094,17 @@ static inline void mmdrop(struct mm_struct *mm)
@@ -59,10 +59,10 @@ index 8df8608..74f9e36 100644
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 96e9670..b1fb10e 100644
+index a90719e..1a76739 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -883,6 +883,19 @@ void __mmdrop(struct mm_struct *mm)
+@@ -886,6 +886,19 @@ void __mmdrop(struct mm_struct *mm)
  }
  EXPORT_SYMBOL_GPL(__mmdrop);
  

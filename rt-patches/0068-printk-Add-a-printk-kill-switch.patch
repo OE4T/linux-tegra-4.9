@@ -1,7 +1,7 @@
-From 3a2f0811da8a00e1b956f492d656adc3d5119f8a Mon Sep 17 00:00:00 2001
+From b678aca47591d182a83a53c2603eb6ab0694d212 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 068/356] printk: Add a printk kill switch
+Subject: [PATCH 068/353] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
@@ -14,10 +14,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 70 insertions(+), 20 deletions(-)
 
 diff --git a/include/linux/printk.h b/include/linux/printk.h
-index eac1af8..37e647a 100644
+index 6519474..334e278 100644
 --- a/include/linux/printk.h
 +++ b/include/linux/printk.h
-@@ -126,9 +126,11 @@ struct va_format {
+@@ -127,9 +127,11 @@ struct va_format {
  #ifdef CONFIG_EARLY_PRINTK
  extern asmlinkage __printf(1, 2)
  void early_printk(const char *fmt, ...);
@@ -30,10 +30,10 @@ index eac1af8..37e647a 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 84bd8b0..dfde6df 100644
+index 4691546..e4a74bd 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -355,6 +355,58 @@ __packed __aligned(4)
+@@ -356,6 +356,58 @@ __packed __aligned(4)
   */
  DEFINE_RAW_SPINLOCK(logbuf_lock);
  
@@ -92,7 +92,7 @@ index 84bd8b0..dfde6df 100644
  #ifdef CONFIG_PRINTK
  DECLARE_WAIT_QUEUE_HEAD(log_wait);
  /* the next printk record to read by syslog(READ) or /proc/kmsg */
-@@ -1818,6 +1870,13 @@ asmlinkage int vprintk_emit(int facility, int level,
+@@ -1819,6 +1871,13 @@ asmlinkage int vprintk_emit(int facility, int level,
  	/* cpu currently holding logbuf_lock in this function */
  	static unsigned int logbuf_cpu = UINT_MAX;
  
@@ -106,7 +106,7 @@ index 84bd8b0..dfde6df 100644
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -2058,26 +2117,6 @@ DEFINE_PER_CPU(printk_func_t, printk_func);
+@@ -2059,26 +2118,6 @@ DEFINE_PER_CPU(printk_func_t, printk_func);
  
  #endif /* CONFIG_PRINTK */
  

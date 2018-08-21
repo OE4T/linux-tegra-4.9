@@ -1,7 +1,7 @@
-From c0542c9daf4fd1c8c32ab129974dab7b1a9870c2 Mon Sep 17 00:00:00 2001
+From 3fef3b57505e11f1c3d59fa293526154f7bc2c56 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 10:33:09 +0100
-Subject: [PATCH 106/356] mm: bounce: Use local_irq_save_nort
+Subject: [PATCH 106/353] mm: bounce: Use local_irq_save_nort
 
 kmap_atomic() is preemptible on RT.
 

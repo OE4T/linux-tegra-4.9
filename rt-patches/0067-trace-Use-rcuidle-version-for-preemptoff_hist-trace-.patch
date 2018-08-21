@@ -1,7 +1,7 @@
-From 32fd24810df60c751a014711981bacef18c57e83 Mon Sep 17 00:00:00 2001
+From 9755c627f6a5f3c8f97c2b90943cfb8887b03bb4 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Tue, 23 Feb 2016 13:23:23 -0800
-Subject: [PATCH 067/356] trace: Use rcuidle version for preemptoff_hist trace
+Subject: [PATCH 067/353] trace: Use rcuidle version for preemptoff_hist trace
  point
 
 When running -rt kernel with both PREEMPT_OFF_HIST and LOCKDEP enabled,

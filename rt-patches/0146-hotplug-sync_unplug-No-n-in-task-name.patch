@@ -1,7 +1,7 @@
-From bd16fe81868e9938b81e99b1b31010350d937d51 Mon Sep 17 00:00:00 2001
+From 13c5b801cbf90fcec5e0780b3d6256f0aba65f6d Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Sun, 16 Oct 2011 18:56:43 +0800
-Subject: [PATCH 146/356] hotplug: sync_unplug: No "\n" in task name
+Subject: [PATCH 146/353] hotplug: sync_unplug: No "\n" in task name
 
 Otherwise the output will look a little odd.
 
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 94891f8..e707bb8 100644
+index b09a1ba..de4d685 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -324,7 +324,7 @@ static int cpu_unplug_begin(unsigned int cpu)
+@@ -325,7 +325,7 @@ static int cpu_unplug_begin(unsigned int cpu)
  	struct task_struct *tsk;
  
  	init_completion(&hp->synced);

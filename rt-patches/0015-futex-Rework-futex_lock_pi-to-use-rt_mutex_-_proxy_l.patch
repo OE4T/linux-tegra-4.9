@@ -1,7 +1,7 @@
-From 931814798f9ead9c452dd764bdbb0c097adf74a9 Mon Sep 17 00:00:00 2001
+From 614b5045d4746ea2bcf0fffc79b09275fbfd53a9 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
-Subject: [PATCH 015/356] futex: Rework futex_lock_pi() to use
+Subject: [PATCH 015/353] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb

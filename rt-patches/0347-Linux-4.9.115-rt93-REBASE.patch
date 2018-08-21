@@ -1,0 +1,19 @@
+From 697e0c51733feb784ddbcdc17685b326d876f553 Mon Sep 17 00:00:00 2001
+From: Julia Cartwright <julia@ni.com>
+Date: Sun, 5 Aug 2018 23:38:08 -0500
+Subject: [PATCH 347/353] Linux 4.9.115-rt93 REBASE
+
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..e98a1fe 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt93
+-- 
+2.1.4
+

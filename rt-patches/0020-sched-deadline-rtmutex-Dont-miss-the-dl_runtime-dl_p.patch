@@ -1,7 +1,7 @@
-From 6a2e8c12ad890af5fb0a99efae62a41cbe4d2ae4 Mon Sep 17 00:00:00 2001
+From eaec4b800926a998148e6e37b6cc4d489049e5f7 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
-Subject: [PATCH 020/356] sched/deadline/rtmutex: Dont miss the
+Subject: [PATCH 020/353] sched/deadline/rtmutex: Dont miss the
  dl_runtime/dl_period update
 
 Upstream commit 85e2d4f992868ad78dc8bb2c077b652fcfb3661a

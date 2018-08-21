@@ -1,7 +1,7 @@
-From eb93a6348178c9d32bf4f91c78dd8664f64ff23f Mon Sep 17 00:00:00 2001
+From a394885945d9e7b18fd1a6b18e112b22857ef3b1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 13 Sep 2011 16:42:35 +0200
-Subject: [PATCH 139/356] sched: Disable TTWU_QUEUE on RT
+Subject: [PATCH 139/353] sched: Disable TTWU_QUEUE on RT
 
 The queued remote wakeup mechanism can introduce rather large
 latencies if the number of migrated tasks is high. Disable it for RT.

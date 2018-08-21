@@ -1,7 +1,7 @@
-From c58e574af92d5a59c8dd2947b12a1c8d10f50e11 Mon Sep 17 00:00:00 2001
+From 66c60005a90d4eb9c7de0c24c57c55118e7ea14c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 7 Jun 2011 09:19:06 +0200
-Subject: [PATCH 136/356] sched: Do not account rcu_preempt_depth on RT in
+Subject: [PATCH 136/353] sched: Do not account rcu_preempt_depth on RT in
  might_sleep()
 
 RT changes the rcu_preempt_depth semantics, so we cannot check for it

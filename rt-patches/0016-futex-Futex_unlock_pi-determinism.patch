@@ -1,7 +1,7 @@
-From 77d848ca936ae6c2974944cc447c0575009d4b47 Mon Sep 17 00:00:00 2001
+From 5e925647b9ada4c86ddf966dd6658a8b39e2140b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:59 +0100
-Subject: [PATCH 016/356] futex: Futex_unlock_pi() determinism
+Subject: [PATCH 016/353] futex: Futex_unlock_pi() determinism
 
 Upstream commit bebe5b514345f09be2c15e414d076b02ecb9cce8
 

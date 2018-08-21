@@ -1,7 +1,7 @@
-From 6b9b1425f2f41f87c5c71f9276f957060f7780ec Mon Sep 17 00:00:00 2001
+From e55e120fcf42cd310b8384c322067cd824f0d976 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
-Subject: [PATCH 014/356] futex,rt_mutex: Restructure
+Subject: [PATCH 014/353] futex,rt_mutex: Restructure
  rt_mutex_finish_proxy_lock()
 
 Upstream commit 38d589f2fd08f1296aea3ce62bebd185125c6d81

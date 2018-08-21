@@ -1,7 +1,7 @@
-From c12defcbf1c7f4c2332b268b698481f28141afeb Mon Sep 17 00:00:00 2001
+From 5535f95da4870a969ed9ccbd1263c2c0f6b047d0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 28 Jul 2011 13:32:57 +0200
-Subject: [PATCH 190/356] tty/serial/omap: Make the locking RT aware
+Subject: [PATCH 190/353] tty/serial/omap: Make the locking RT aware
 
 The lock is a sleeping lock and local_irq_save() is not the
 optimsation we are looking for. Redo it to make it work on -RT and

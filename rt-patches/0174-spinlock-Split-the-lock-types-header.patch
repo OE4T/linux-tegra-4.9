@@ -1,7 +1,7 @@
-From f8f8f43daa692600cb08791f294329cba69557e3 Mon Sep 17 00:00:00 2001
+From bfa505ffd78a61d02875d809bcacb381b3300511 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 19:34:01 +0200
-Subject: [PATCH 174/356] spinlock: Split the lock types header
+Subject: [PATCH 174/353] spinlock: Split the lock types header
 
 Split raw_spinlock into its own file and the remaining spinlock_t into
 its own non-RT header. The non-RT header will be replaced later by sleeping

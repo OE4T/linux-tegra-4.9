@@ -1,7 +1,7 @@
-From 1bda0281c4c0ce71cb4e49421c0d97e4a0a3694e Mon Sep 17 00:00:00 2001
+From f0294d6d0e62813722ee580998a58ece44d2703b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:52 +0100
-Subject: [PATCH 009/356] futex: Change locking rules
+Subject: [PATCH 009/353] futex: Change locking rules
 
 Upstream commit 734009e96d1983ad739e5b656e03430b3660c913
 

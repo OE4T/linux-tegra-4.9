@@ -1,7 +1,7 @@
-From 40862ad38437566e9f23e56a7ca91b3a7000e85d Mon Sep 17 00:00:00 2001
+From 0ee1e0b14c739aeb63e027b44512486c02f15018 Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <joshc@ni.com>
 Date: Thu, 31 Mar 2016 00:04:25 -0500
-Subject: [PATCH 096/356] list_bl: fixup bogus lockdep warning
+Subject: [PATCH 096/353] list_bl: fixup bogus lockdep warning
 
 At first glance, the use of 'static inline' seems appropriate for
 INIT_HLIST_BL_HEAD().

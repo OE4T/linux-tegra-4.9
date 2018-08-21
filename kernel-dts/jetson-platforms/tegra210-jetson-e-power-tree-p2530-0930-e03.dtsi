@@ -229,6 +229,9 @@
 			usb2-0 {
 				vbus-supply = <&battery_reg>;
 			};
+			usb2-1 {
+				vbus-supply = <&en_vdd_eth_5v0>;
+			};
 			usb2-2 {
 				vbus-supply = <&usb_vbus1>;
 			};
@@ -241,6 +244,7 @@
 
 	 pinctrl@7009f000 {
 		vbus-0-supply = <&battery_reg>;
+		vbus-1-supply = <&en_vdd_eth_5v0>;
 		vbus-2-supply = <&usb_vbus1>;
 		vbus-3-supply = <&vdd_3v3>;
 		vddio-hsic-supply = <&max77620_ldo0>;

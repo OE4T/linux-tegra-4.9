@@ -192,5 +192,15 @@
 			gpio-open-drain;
 			vin-supply = <&vdd_3v3>;
 		};
+
+		en_vdd_eth_5v0: regulator@207 {
+			compatible = "regulator-fixed-sync";
+			reg = <207>;
+			regulator-name = "rtl-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio TEGRA_GPIO(H, 1) 0>;
+			enable-active-high;
+		};
 	};
 };

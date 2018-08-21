@@ -38,6 +38,7 @@
 		uhs-mask = <0x0>;
 		built-in;
 		power-off-rail;
+		only-1-8-v;
 		pll_source = "pll_p", "pll_c4_out2";
 		status = "okay";
 	};
@@ -57,6 +58,7 @@
 		uhs-mask = <0x8>;
 		power-off-rail;
 		force-non-removable-rescan;
+		only-1-8-v;
 		status = "okay";
 	};
 

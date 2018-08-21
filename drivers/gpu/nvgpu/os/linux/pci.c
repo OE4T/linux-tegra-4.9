@@ -795,7 +795,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		}
 		/* Enable Semaphore SHIM on nvlink only for now. */
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_NVLINK, false);
-		g->has_syncpoints = false;
+		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, false);
 	} else {
 		err = nvgpu_nvhost_syncpt_init(g);
 		if (err) {

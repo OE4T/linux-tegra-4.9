@@ -1485,7 +1485,6 @@ struct gk20a {
 	unsigned int aggressive_sync_destroy_thresh;
 	bool aggressive_sync_destroy;
 
-	bool has_syncpoints;
 	/* Debugfs knob for forcing syncpt support off in runtime. */
 	u32 disable_syncpoints;
 
@@ -1758,13 +1757,6 @@ void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
 struct gk20a * __must_check gk20a_get(struct gk20a *g);
 void gk20a_put(struct gk20a *g);
 
-static inline bool gk20a_platform_has_syncpoints(struct gk20a *g)
-{
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-	return g->has_syncpoints && !g->disable_syncpoints;
-#else
-	return false;
-#endif
-}
+bool nvgpu_has_syncpoints(struct gk20a *g);
 
 #endif /* GK20A_H */

@@ -1014,7 +1014,7 @@ static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
 		return -EINVAL;
 	}
 
-	if (!gk20a_platform_has_syncpoints(g)) {
+	if (!nvgpu_has_syncpoints(g)) {
 		nvgpu_err(g, "syncpoints not supported");
 		return -EINVAL;
 	}

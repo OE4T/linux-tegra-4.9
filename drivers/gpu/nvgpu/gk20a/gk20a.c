@@ -391,7 +391,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 
 #if defined(CONFIG_TEGRA_GK20A_NVHOST)
-	if (gk20a_platform_has_syncpoints(g) && g->syncpt_unit_size) {
+	if (nvgpu_has_syncpoints(g) && g->syncpt_unit_size) {
 		if (!nvgpu_mem_is_valid(&g->syncpt_mem)) {
 			nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
 			__nvgpu_mem_create_from_phys(g, &g->syncpt_mem,
@@ -459,10 +459,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g)) {
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SPARSE_ALLOCS, true);
-	}
-
-	if (gk20a_platform_has_syncpoints(g)) {
-		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, true);
 	}
 
 	/*

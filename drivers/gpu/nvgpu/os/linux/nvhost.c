@@ -21,6 +21,7 @@
 
 #include <nvgpu/gk20a.h>
 #include <nvgpu/nvhost.h>
+#include <nvgpu/enabled.h>
 
 #include "nvhost_priv.h"
 
@@ -45,9 +46,9 @@ int nvgpu_get_nvhost_dev(struct gk20a *g)
 		}
 
 	} else {
-		if (g->has_syncpoints) {
+		if (nvgpu_has_syncpoints(g)) {
 			nvgpu_warn(g, "host1x reference not found. assuming no syncpoints support");
-			g->has_syncpoints = false;
+			__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, false);
 		}
 		return 0;
 	}
@@ -263,13 +264,13 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
 {
 	int err = 0;
 
-	if (!g->has_syncpoints)
+	if (!nvgpu_has_syncpoints(g))
 		return -ENOSYS;
 
 	err = nvgpu_get_nvhost_dev(g);
 	if (err) {
 		nvgpu_err(g, "host1x device not available");
-		g->has_syncpoints = false;
+		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, false);
 		return -ENOSYS;
 	}
 
@@ -279,7 +280,7 @@ int nvgpu_nvhost_syncpt_init(struct gk20a *g)
 			&g->syncpt_unit_size);
 	if (err) {
 		nvgpu_err(g, "Failed to get syncpt interface");
-		g->has_syncpoints = false;
+		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, false);
 		return -ENOSYS;
 	}
 

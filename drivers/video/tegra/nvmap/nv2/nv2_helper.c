@@ -49,6 +49,24 @@ struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages)
 	return pages;
 }
 
+struct page *NVMAP2_alloc_pages_exact(gfp_t gfp, size_t size)
+{
+	struct page *page, *p, *e;
+	unsigned int order;
+
+	order = get_order(size);
+	page = alloc_pages(gfp, order);
+
+	if (!page)
+		return NULL;
+
+	split_page(page, order);
+	e = nth_page(page, (1 << order));
+	for (p = nth_page(page, (size >> PAGE_SHIFT)); p < e; p++)
+		__free_page(p);
+
+	return page;
+}
 
 void NVMAP2_altfree(void *ptr, size_t len)
 {

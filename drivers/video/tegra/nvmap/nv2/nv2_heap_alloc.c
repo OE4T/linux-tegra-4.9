@@ -27,6 +27,7 @@
 #include "nv2_misc.h"
 #include "nv2_pp.h"
 #include "nv2_dev.h"
+#include "nv2_page_color.h"
 
 extern bool nvmap_convert_carveout_to_iovmm;
 extern bool nvmap_convert_iovmm_to_carveout;
@@ -126,32 +127,13 @@ static struct device *heap_pgalloc_dev(unsigned long type)
 	return dma_dev;
 }
 
-static struct page *heap_alloc_pages_exact(gfp_t gfp, size_t size)
-{
-	struct page *page, *p, *e;
-	unsigned int order;
-
-	order = get_order(size);
-	page = alloc_pages(gfp, order);
-
-	if (!page)
-		return NULL;
-
-	split_page(page, order);
-	e = nth_page(page, (1 << order));
-	for (p = nth_page(page, (size >> PAGE_SHIFT)); p < e; p++)
-		__free_page(p);
-
-	return page;
-}
-
 static int heap_big_pages_alloc_exact(struct page **pages, int starting_idx,
 					gfp_t gfp, int num_pages)
 {
 	struct page *page;
 	int idx;
 
-	page = heap_alloc_pages_exact(gfp,
+	page = NVMAP2_alloc_pages_exact(gfp,
 			num_pages << PAGE_SHIFT);
 	if (!page)
 		return -ENOMEM;
@@ -193,6 +175,21 @@ static int heap_big_pages_alloc(struct page **pages, int nr_page, gfp_t gfp)
 
 	nvmap_big_page_allocs += page_index;
 
+	/* If we have page coloring then alloc the rest of pages colored */
+	if (NVMAP2_color_is_enabled() && page_index < nr_page) {
+		int err = NVMAP2_color_alloc(&nvmap_dev->pool,
+					nr_page - page_index,
+					&pages[page_index]);
+
+		if (err) {
+			while (page_index--)
+				__free_page(pages[page_index]);
+			return -1;
+		}
+
+		return nr_page;
+	}
+
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	/* Get as many 4K pages from the pool as possible. */
 	page_index += nvmap_page_pool_alloc_lots(&nvmap_dev->pool, &pages[page_index],
@@ -215,7 +212,7 @@ struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous)
 
 	if (contiguous) {
 		struct page *page;
-		page = heap_alloc_pages_exact(gfp, size);
+		page = NVMAP2_alloc_pages_exact(gfp, size);
 		if (!page)
 			goto fail;
 
@@ -224,9 +221,13 @@ struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous)
 
 	} else {
 		page_index = heap_big_pages_alloc(pages, nr_page, gfp);
+		if (page_index < 0) {
+			i = 0;
+			goto fail;
+		}
 
 		for (i = page_index; i < nr_page; i++) {
-			pages[i] = heap_alloc_pages_exact(gfp, PAGE_SIZE);
+			pages[i] = NVMAP2_alloc_pages_exact(gfp, PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
 		}

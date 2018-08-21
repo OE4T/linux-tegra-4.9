@@ -35,6 +35,7 @@ obj-y += nv2_cache.o
 obj-y += nv2_carveout.o
 obj-y += nv2_handle_map.o
 obj-y += nv2_helper.o
+obj-y += nv2_page_color.o
 
 obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
 

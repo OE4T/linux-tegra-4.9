@@ -80,6 +80,7 @@ static inline struct page *NVMAP2_to_page(struct page *page)
 }
 
 struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages);
+struct page *NVMAP2_alloc_pages_exact(gfp_t gfp, size_t size);
 
 int NVMAP2_get_user_pages(ulong vaddr, int nr_page, struct page **pages);
 

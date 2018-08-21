@@ -31,6 +31,7 @@
 
 struct gk20a_debug_output;
 struct mmu_fault_info;
+struct nvgpu_semaphore;
 
 enum {
 	NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW = 0,

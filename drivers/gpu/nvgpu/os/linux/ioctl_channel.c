@@ -39,6 +39,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
+#include "gk20a/channel_sync_gk20a.h"
 
 #include "platform_gk20a.h"
 #include "ioctl_channel.h"

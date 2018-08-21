@@ -33,6 +33,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
+#include "gk20a/channel_sync_gk20a.h"
 
 #include <nvgpu/hw/gp10b/hw_pbdma_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ccsr_gp10b.h>

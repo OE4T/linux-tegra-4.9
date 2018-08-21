@@ -31,6 +31,7 @@
 #include <nvgpu/utils.h>
 
 #include "gk20a.h"
+#include "gk20a/fence_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ce2_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

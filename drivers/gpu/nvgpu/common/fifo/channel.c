@@ -47,6 +47,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
+#include "gk20a/channel_sync_gk20a.h"
 
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 static void gk20a_channel_dump_ref_actions(struct channel_gk20a *c);

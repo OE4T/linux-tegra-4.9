@@ -26,8 +26,9 @@
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
-#include "gk20a/ce2_gk20a.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/ce2_gk20a.h"
+#include "gk20a/fence_gk20a.h"
 
 static inline int gk20a_get_valid_launch_flags(struct gk20a *g, int launch_flags)
 {

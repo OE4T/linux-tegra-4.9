@@ -30,16 +30,13 @@
 #include <nvgpu/cond.h>
 #include <nvgpu/atomic.h>
 
+#include "gr_gk20a.h"
+
 struct gk20a;
 struct dbg_session_gk20a;
 struct gk20a_fence;
 struct fifo_profile_gk20a;
-
-#include "channel_sync_gk20a.h"
-
-#include "mm_gk20a.h"
-#include "gr_gk20a.h"
-#include "fence_gk20a.h"
+struct gk20a_channel_sync;
 
 /* Flags to be passed to gk20a_channel_alloc_gpfifo() */
 #define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1U << 0U)

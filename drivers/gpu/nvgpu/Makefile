@@ -44,7 +44,8 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/therm/therm_gv11b.o \
 	common/fuse/fuse_gm20b.o \
 	common/fuse/fuse_gp10b.o \
-	common/fuse/fuse_gp106.o
+	common/fuse/fuse_gp106.o \
+	common/top/top_gv100.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \

@@ -44,6 +44,7 @@
 #include "common/fuse/fuse_gm20b.h"
 #include "common/fuse/fuse_gp10b.h"
 #include "common/fuse/fuse_gp106.h"
+#include "common/top/top_gv100.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -926,6 +927,16 @@ static const struct gpu_ops gv100_ops = {
 		.early_init = gv100_nvlink_early_init,
 	},
 #endif
+	.top = {
+		.get_nvhsclk_ctrl_e_clk_nvl =
+					gv100_top_get_nvhsclk_ctrl_e_clk_nvl,
+		.set_nvhsclk_ctrl_e_clk_nvl =
+					gv100_top_set_nvhsclk_ctrl_e_clk_nvl,
+		.get_nvhsclk_ctrl_swap_clk_nvl =
+					gv100_top_get_nvhsclk_ctrl_swap_clk_nvl,
+		.set_nvhsclk_ctrl_swap_clk_nvl =
+					gv100_top_set_nvhsclk_ctrl_swap_clk_nvl,
+	},
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
 };
@@ -964,6 +975,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->priv_ring = gv100_ops.priv_ring;
 	gops->fuse = gv100_ops.fuse;
 	gops->nvlink = gv100_ops.nvlink;
+	gops->top = gv100_ops.top;
 
 	/* clocks */
 	gops->clk.init_clk_support = gv100_ops.clk.init_clk_support;

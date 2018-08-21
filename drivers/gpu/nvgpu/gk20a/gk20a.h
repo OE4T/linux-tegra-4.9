@@ -1314,7 +1314,12 @@ struct gpu_ops {
 		int (*shutdown)(struct gk20a *g);
 		int (*early_init)(struct gk20a *g);
 	} nvlink;
-
+	struct {
+		u32 (*get_nvhsclk_ctrl_e_clk_nvl)(struct gk20a *g);
+		void (*set_nvhsclk_ctrl_e_clk_nvl)(struct gk20a *g, u32 val);
+		u32 (*get_nvhsclk_ctrl_swap_clk_nvl)(struct gk20a *g);
+		void (*set_nvhsclk_ctrl_swap_clk_nvl)(struct gk20a *g, u32 val);
+	} top;
 	void (*semaphore_wakeup)(struct gk20a *g, bool post_events);
 };
 

@@ -1461,7 +1461,8 @@ int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask)
 	u32 i;
 	u32 links_off;
 	struct nvgpu_timeout timeout;
-	u32 pad_ctrl, swap_ctrl;
+	u32 pad_ctrl = 0;
+	u32 swap_ctrl = 0;
 	u32 pll_id;
 
 	reg = gk20a_readl(g, trim_sys_nvlink_uphy_cfg_r());
@@ -1469,10 +1470,12 @@ int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask)
 			trim_sys_nvlink_uphy_cfg_phy2clks_use_lockdet_f(1));
 	gk20a_writel(g, trim_sys_nvlink_uphy_cfg_r(), reg);
 
-	reg = gk20a_readl(g, top_nvhsclk_ctrl_r());
-
-	pad_ctrl = top_nvhsclk_ctrl_e_clk_nvl_v(reg);
-	swap_ctrl = top_nvhsclk_ctrl_swap_clk_nvl_v(reg);
+	if (g->ops.top.get_nvhsclk_ctrl_e_clk_nvl) {
+		pad_ctrl = g->ops.top.get_nvhsclk_ctrl_e_clk_nvl(g);
+	}
+	if (g->ops.top.get_nvhsclk_ctrl_swap_clk_nvl) {
+		swap_ctrl = g->ops.top.get_nvhsclk_ctrl_swap_clk_nvl(g);
+	}
 
 	for_each_set_bit(i, &link_mask, 32) {
 		/* There are 3 PLLs for 6 links. We have 3 bits for each PLL.
@@ -1483,12 +1486,12 @@ int gv100_nvlink_setup_pll(struct gk20a *g, unsigned long link_mask)
 		swap_ctrl |= BIT(pll_id);
 	}
 
-	reg = set_field(reg, top_nvhsclk_ctrl_e_clk_nvl_m(),
-			top_nvhsclk_ctrl_e_clk_nvl_f(pad_ctrl));
-	reg = set_field(reg, top_nvhsclk_ctrl_swap_clk_nvl_m(),
-		top_nvhsclk_ctrl_swap_clk_nvl_f(swap_ctrl));
-
-	gk20a_writel(g, top_nvhsclk_ctrl_r(), reg);
+	if (g->ops.top.set_nvhsclk_ctrl_e_clk_nvl) {
+		g->ops.top.set_nvhsclk_ctrl_e_clk_nvl(g, pad_ctrl);
+	}
+	if (g->ops.top.set_nvhsclk_ctrl_swap_clk_nvl) {
+		g->ops.top.set_nvhsclk_ctrl_swap_clk_nvl(g, swap_ctrl);
+	}
 
 	for_each_set_bit(i, &link_mask, 32) {
 		reg = gk20a_readl(g, TRIM_SYS_NVLINK_CTRL(i));

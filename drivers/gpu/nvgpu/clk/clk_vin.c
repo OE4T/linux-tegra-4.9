@@ -102,8 +102,8 @@ u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
 	if (pvinobjs->calibration_rev_vbios == g->ops.fuse.read_vin_cal_fuse_rev(g)) {
 		BOARDOBJGRP_FOR_EACH(&(pvinobjs->super.super),
 				     struct vin_device_v20 *, pvindev, i) {
-			gain = 0;
-			offset = 0;
+			gain = '\0';
+			offset = '\0';
 			pvindev = (struct vin_device_v20 *)CLK_GET_VIN_DEVICE(pvinobjs, i);
 			status = g->ops.fuse.read_vin_cal_gain_offset_fuse(g,
 					pvindev->super.id, &gain, &offset);
@@ -268,7 +268,7 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 	u8 *vin_tbl_entry_ptr = NULL;
 	u32 index = 0;
 	u32 slope=0, intercept=0;
-	s8 offset=0, gain=0;
+	s8 offset='\0', gain='\0';
 	struct vin_device *pvin_dev;
 	u32 cal_type;
 

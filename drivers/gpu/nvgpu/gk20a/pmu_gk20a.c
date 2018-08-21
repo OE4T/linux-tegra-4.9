@@ -96,7 +96,7 @@ static void print_pmu_trace(struct nvgpu_pmu *pmu)
 			if (k >= 40)
 				break;
 			strncpy(part_str, (trace+i+20+m), k);
-			part_str[k] = 0;
+			part_str[k] = '\0';
 			count += scnprintf((buf + count), 0x40, "%s0x%x",
 					part_str, trace1[(i / 4) + 1 + l]);
 			l++;

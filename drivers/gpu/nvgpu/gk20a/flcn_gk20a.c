@@ -740,8 +740,6 @@ int gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		break;
 	default:
 		flcn->is_falcon_supported = false;
-		nvgpu_err(g, "Invalid flcn request");
-		err = -ENODEV;
 		break;
 	}
 

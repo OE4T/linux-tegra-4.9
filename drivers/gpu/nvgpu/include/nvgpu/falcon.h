@@ -30,6 +30,7 @@
  * Falcon Id Defines
  */
 #define FALCON_ID_PMU       (0U)
+#define FALCON_ID_GSPLITE   (1U)
 #define FALCON_ID_FECS      (2U)
 #define FALCON_ID_GPCCS     (3U)
 #define FALCON_ID_NVDEC     (4U)

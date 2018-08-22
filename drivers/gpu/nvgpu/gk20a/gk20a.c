@@ -164,6 +164,11 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		nvgpu_err(g, "failed to sw init FALCON_ID_NVDEC");
 		goto done;
 	}
+	err = nvgpu_flcn_sw_init(g, FALCON_ID_GSPLITE);
+	if (err != 0) {
+		nvgpu_err(g, "failed to sw init FALCON_ID_GSPLITE");
+		goto done;
+	}
 
 	if (g->ops.acr.acr_sw_init != NULL &&
 		nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

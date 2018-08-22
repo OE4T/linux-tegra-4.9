@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/err.h>
 #include <nvgpu/errno.h>
 
 #include <nvgpu/types.h>
@@ -97,9 +98,9 @@ int nvgpu_os_fence_syncpt_create(
 	struct sync_fence *fence = nvgpu_nvhost_sync_create_fence(
 		nvhost_dev, id, thresh, "fence");
 
-	if (!fence) {
+	if (IS_ERR(fence)) {
 		nvgpu_err(c->g, "error constructing fence %s", "fence");
-		return -ENOMEM;
+		return PTR_ERR(fence);
 	}
 
 	nvgpu_os_fence_init(fence_out, c->g, &syncpt_ops, fence);
@@ -112,8 +113,9 @@ int nvgpu_os_fence_syncpt_fdget(struct nvgpu_os_fence *fence_out,
 {
 	struct sync_fence *fence = nvgpu_nvhost_sync_fdget(fd);
 
-	if (!fence)
+	if (fence == NULL) {
 		return -ENOMEM;
+	}
 
 	nvgpu_os_fence_init(fence_out, c->g, &syncpt_ops, fence);
 

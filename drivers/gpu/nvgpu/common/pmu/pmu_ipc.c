@@ -184,9 +184,9 @@ static bool pmu_validate_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 		goto invalid_cmd;
 	}
 
-	if ((payload->in.buf != NULL && payload->in.size == 0) ||
-	    (payload->out.buf != NULL && payload->out.size == 0) ||
-		(payload->rpc.prpc != NULL && payload->rpc.size_rpc == 0)) {
+	if ((payload->in.buf != NULL && payload->in.size == 0U) ||
+	    (payload->out.buf != NULL && payload->out.size == 0U) ||
+		(payload->rpc.prpc != NULL && payload->rpc.size_rpc == 0U)) {
 		goto invalid_cmd;
 	}
 
@@ -207,8 +207,8 @@ static bool pmu_validate_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 	}
 
 
-	if ((payload->in.offset != 0 && payload->in.buf == NULL) ||
-	    (payload->out.offset != 0 && payload->out.buf == NULL)) {
+	if ((payload->in.offset != 0U && payload->in.buf == NULL) ||
+	    (payload->out.offset != 0U && payload->out.buf == NULL)) {
 		goto invalid_cmd;
 	}
 
@@ -316,7 +316,7 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 		seq->out_payload = payload->out.buf;
 	}
 
-	if (payload && payload->in.offset != 0) {
+	if (payload && payload->in.offset != 0U) {
 		pv->set_pmu_allocation_ptr(pmu, &in,
 		((u8 *)&cmd->cmd + payload->in.offset));
 
@@ -335,7 +335,7 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 			goto clean_up;
 		}
 
-		if (payload->in.fb_size != 0x0) {
+		if (payload->in.fb_size != 0x0U) {
 			seq->in_mem = nvgpu_kzalloc(g,
 					sizeof(struct nvgpu_mem));
 			if (!seq->in_mem) {
@@ -365,7 +365,7 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 		pv->pmu_allocation_get_dmem_offset(pmu, in));
 	}
 
-	if (payload && payload->out.offset != 0) {
+	if (payload && payload->out.offset != 0U) {
 		pv->set_pmu_allocation_ptr(pmu, &out,
 		((u8 *)&cmd->cmd + payload->out.offset));
 		pv->pmu_allocation_set_dmem_size(pmu, out,
@@ -381,7 +381,7 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 				goto clean_up;
 			}
 
-			if (payload->out.fb_size != 0x0) {
+			if (payload->out.fb_size != 0x0U) {
 				seq->out_mem = nvgpu_kzalloc(g,
 					sizeof(struct nvgpu_mem));
 				if (!seq->out_mem) {
@@ -534,7 +534,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 			}
 		}
 		if (pv->pmu_allocation_get_dmem_size(pmu,
-		pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
+		pv->get_pmu_seq_out_a_ptr(seq)) != 0U) {
 			nvgpu_flcn_copy_from_dmem(pmu->flcn,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)),
@@ -546,13 +546,13 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 		seq->callback = NULL;
 	}
 	if (pv->pmu_allocation_get_dmem_size(pmu,
-			pv->get_pmu_seq_in_a_ptr(seq)) != 0) {
+			pv->get_pmu_seq_in_a_ptr(seq)) != 0U) {
 		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)));
 	}
 	if (pv->pmu_allocation_get_dmem_size(pmu,
-			pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
+			pv->get_pmu_seq_out_a_ptr(seq)) != 0U) {
 		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)));
@@ -748,7 +748,7 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 			gk20a_pmu_isr(g);
 		}
 
-		nvgpu_usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2U);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 

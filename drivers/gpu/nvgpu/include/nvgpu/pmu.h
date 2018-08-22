@@ -84,21 +84,21 @@
 #define PMU_FALCON_REG_SIZE		(32)
 
 /* Choices for pmu_state */
-#define PMU_STATE_OFF			0 /* PMU is off */
-#define PMU_STATE_STARTING		1 /* PMU is on, but not booted */
-#define PMU_STATE_INIT_RECEIVED		2 /* PMU init message received */
-#define PMU_STATE_ELPG_BOOTING		3 /* PMU is booting */
-#define PMU_STATE_ELPG_BOOTED		4 /* ELPG is initialized */
-#define PMU_STATE_LOADING_PG_BUF	5 /* Loading PG buf */
-#define PMU_STATE_LOADING_ZBC		6 /* Loading ZBC buf */
-#define PMU_STATE_STARTED		7 /* Fully unitialized */
-#define PMU_STATE_EXIT			8 /* Exit PMU state machine */
+#define PMU_STATE_OFF			0U /* PMU is off */
+#define PMU_STATE_STARTING		1U /* PMU is on, but not booted */
+#define PMU_STATE_INIT_RECEIVED		2U /* PMU init message received */
+#define PMU_STATE_ELPG_BOOTING		3U /* PMU is booting */
+#define PMU_STATE_ELPG_BOOTED		4U /* ELPG is initialized */
+#define PMU_STATE_LOADING_PG_BUF	5U /* Loading PG buf */
+#define PMU_STATE_LOADING_ZBC		6U /* Loading ZBC buf */
+#define PMU_STATE_STARTED		7U /* Fully unitialized */
+#define PMU_STATE_EXIT			8U /* Exit PMU state machine */
 
-#define GK20A_PMU_UCODE_NB_MAX_OVERLAY	    32
-#define GK20A_PMU_UCODE_NB_MAX_DATE_LENGTH  64
+#define GK20A_PMU_UCODE_NB_MAX_OVERLAY	    32U
+#define GK20A_PMU_UCODE_NB_MAX_DATE_LENGTH  64U
 
-#define PMU_MAX_NUM_SEQUENCES		(256)
-#define PMU_SEQ_BIT_SHIFT		(5)
+#define PMU_MAX_NUM_SEQUENCES		(256U)
+#define PMU_SEQ_BIT_SHIFT		(5U)
 #define PMU_SEQ_TBL_SIZE	\
 		(PMU_MAX_NUM_SEQUENCES >> PMU_SEQ_BIT_SHIFT)
 
@@ -132,8 +132,8 @@ enum {
 #define PMU_PG_LPWR_FEATURE_RPPG 0x0
 #define PMU_PG_LPWR_FEATURE_MSCG 0x1
 
-#define PMU_MSCG_DISABLED 0
-#define PMU_MSCG_ENABLED 1
+#define PMU_MSCG_DISABLED 0U
+#define PMU_MSCG_ENABLED 1U
 
 /* Default Sampling Period of AELPG */
 #define APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US                    (1000000)
@@ -350,7 +350,7 @@ struct nvgpu_pmu {
 	u32 mscg_stat;
 	u32 mscg_transition_state;
 
-	int pmu_state;
+	u32 pmu_state;
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
 	struct nvgpu_pg_init pg_init;

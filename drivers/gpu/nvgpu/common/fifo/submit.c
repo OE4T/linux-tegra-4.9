@@ -179,7 +179,7 @@ static void nvgpu_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 		trace_gk20a_push_cmdbuf(g->name, 0, cmd->size, 0,
 				(u32 *)cmd->mem->cpu_va + cmd->off);
 
-	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
+	c->gpfifo.put = (c->gpfifo.put + 1U) & (c->gpfifo.entry_num - 1U);
 }
 
 static int nvgpu_submit_append_gpfifo_user_direct(struct channel_gk20a *c,
@@ -286,7 +286,7 @@ static int nvgpu_submit_append_gpfifo(struct channel_gk20a *c,
 	trace_write_pushbuffers(c, num_entries);
 
 	c->gpfifo.put = (c->gpfifo.put + num_entries) &
-		(c->gpfifo.entry_num - 1);
+		(c->gpfifo.entry_num - 1U);
 
 	return 0;
 }
@@ -307,7 +307,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct channel_gk20a_job *job = NULL;
 	/* we might need two extra gpfifo entries - one for pre fence
 	 * and one for post fence. */
-	const int extra_entries = 2;
+	const u32 extra_entries = 2U;
 	bool skip_buffer_refcounting = (flags &
 			NVGPU_SUBMIT_FLAGS_SKIP_BUFFER_REFCOUNTING);
 	int err = 0;
@@ -330,7 +330,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * Kernel can insert gpfifo entries before and after user gpfifos.
 	 * So, add extra_entries in user request. Also, HW with fifo size N
 	 * can accept only N-1 entreis and so the below condition */
-	if (c->gpfifo.entry_num - 1 < num_entries + extra_entries) {
+	if (c->gpfifo.entry_num - 1U < num_entries + extra_entries) {
 		nvgpu_err(g, "not enough gpfifo space allocated");
 		return -ENOMEM;
 	}

@@ -37,12 +37,12 @@
 #define NVGPU_PMU_NS_UCODE_IMAGE	"gpmu_ucode.bin"
 
 /* PMU F/W version */
-#define APP_VERSION_GPU_NEXT	24313845
-#define APP_VERSION_GV11B	24379482
-#define APP_VERSION_GV10X	23647491
-#define APP_VERSION_GP10X	24076634
-#define APP_VERSION_GP10B	23782727
-#define APP_VERSION_GM20B	20490253
+#define APP_VERSION_GPU_NEXT	24313845U
+#define APP_VERSION_GV11B	24379482U
+#define APP_VERSION_GV10X	23647491U
+#define APP_VERSION_GP10X	24076634U
+#define APP_VERSION_GP10B	23782727U
+#define APP_VERSION_GM20B	20490253U
 
 /* PMU version specific functions */
 static u32 pmu_perfmon_cntr_sz_v2(struct nvgpu_pmu *pmu)
@@ -82,7 +82,7 @@ static void set_perfmon_cntr_group_id_v2(struct nvgpu_pmu *pmu, u8 gid)
 
 static void set_pmu_cmdline_args_falctracedmabase_v4(struct nvgpu_pmu *pmu)
 {
-	pmu->args_v4.dma_addr.dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
+	pmu->args_v4.dma_addr.dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100U;
 	pmu->args_v4.dma_addr.dma_base1 = 0;
 	pmu->args_v4.dma_addr.dma_offset = 0;
 }
@@ -182,7 +182,7 @@ static void set_pmu_cmdline_args_falctracesize_v3(
 
 static void set_pmu_cmdline_args_falctracedmabase_v3(struct nvgpu_pmu *pmu)
 {
-	pmu->args_v3.falc_trace_dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
+	pmu->args_v3.falc_trace_dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100U;
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v3(
@@ -882,7 +882,7 @@ static void get_pmu_init_msg_pmu_queue_params_v4(
 
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
-	if (tmp_id != 0) {
+	if (tmp_id != 0U) {
 		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
 		}
@@ -911,7 +911,7 @@ static void get_pmu_init_msg_pmu_queue_params_v5(
 
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
-	if (tmp_id != 0) {
+	if (tmp_id != 0U) {
 		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
 		}
@@ -940,7 +940,7 @@ static void get_pmu_init_msg_pmu_queue_params_v3(
 	}
 	queue->index    = init->queue_index[tmp_id];
 	queue->size = init->queue_size[tmp_id];
-	if (tmp_id != 0) {
+	if (tmp_id != 0U) {
 		for (i = 0 ; i < tmp_id; i++) {
 			current_ptr += init->queue_size[i];
 		}

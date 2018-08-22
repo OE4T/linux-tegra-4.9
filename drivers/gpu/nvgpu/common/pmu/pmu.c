@@ -512,7 +512,7 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_data pg_stat_data = { 0 };
-	int i;
+	u32 i;
 
 	nvgpu_log_fn(g, " ");
 
@@ -539,7 +539,7 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	pmu->isr_enabled = false;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
-	for (i = 0; i < PMU_QUEUE_COUNT; i++) {
+	for (i = 0U; i < PMU_QUEUE_COUNT; i++) {
 		nvgpu_flcn_queue_free(pmu->flcn, &pmu->queue[i]);
 	}
 
@@ -559,7 +559,7 @@ void nvgpu_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
 {
 	fb->address.lo = u64_lo32(mem->gpu_va);
 	fb->address.hi = u64_hi32(mem->gpu_va);
-	fb->params = ((u32)mem->size & 0xFFFFFF);
+	fb->params = ((u32)mem->size & 0xFFFFFFU);
 	fb->params |= (GK20A_PMU_DMAIDX_VIRT << 24);
 }
 

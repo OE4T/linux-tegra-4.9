@@ -34,17 +34,17 @@
  * ON => OFF is always synchronized
  */
 /* elpg is off */
-#define PMU_ELPG_STAT_OFF	0
+#define PMU_ELPG_STAT_OFF	0U
 /* elpg is on */
-#define PMU_ELPG_STAT_ON	1
+#define PMU_ELPG_STAT_ON	1U
 /* elpg is off, ALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_ON_PENDING	2
+#define PMU_ELPG_STAT_ON_PENDING	2U
 /* elpg is on, DISALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_OFF_PENDING	3
+#define PMU_ELPG_STAT_OFF_PENDING	3U
 /* elpg is off, caller has requested on, but ALLOW
  * cmd hasn't been sent due to ENABLE_ALLOW delay
  */
-#define PMU_ELPG_STAT_OFF_ON_PENDING	4
+#define PMU_ELPG_STAT_OFF_ON_PENDING	4U
 
 #define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC		(1)
@@ -58,7 +58,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	nvgpu_log_fn(g, " ");
 
-	if (status != 0) {
+	if (status != 0U) {
 		nvgpu_err(g, "ELPG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
@@ -174,7 +174,7 @@ static int pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 	status = nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL,
 		PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
 		pmu, &seq, ~0);
-	WARN_ON(status != 0);
+	WARN_ON(status != 0U);
 
 	nvgpu_log_fn(g, "done");
 	return 0;
@@ -368,7 +368,7 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	nvgpu_log_fn(g, " ");
 
-	if (status != 0) {
+	if (status != 0U) {
 		nvgpu_err(g, "ELPG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
@@ -507,7 +507,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	nvgpu_pmu_dbg(g,
 		"reply PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
-	if (status != 0) {
+	if (status != 0U) {
 		nvgpu_err(g, "PGENG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
@@ -549,7 +549,7 @@ int nvgpu_pmu_init_bind_fecs(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_base(&cmd.cmd.pg,
 			u64_lo32(pmu->pg_buf.gpu_va));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_offset(&cmd.cmd.pg,
-			(u8)(pmu->pg_buf.gpu_va & 0xFF));
+			(u8)(pmu->pg_buf.gpu_va & 0xFFU));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx(&cmd.cmd.pg,
 			PMU_DMAIDX_VIRT);
 
@@ -590,7 +590,7 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_base(&cmd.cmd.pg,
 			u64_lo32(pmu->seq_buf.gpu_va));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_offset(&cmd.cmd.pg,
-			(u8)(pmu->seq_buf.gpu_va & 0xFF));
+			(u8)(pmu->seq_buf.gpu_va & 0xFFU));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx(&cmd.cmd.pg,
 			PMU_DMAIDX_VIRT);
 

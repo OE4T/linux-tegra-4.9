@@ -77,7 +77,7 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 
 	if (!pmu->sample_buffer) {
 		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
-						  2 * sizeof(u16));
+						  2U * sizeof(u16));
 	}
 	if (!pmu->sample_buffer) {
 		nvgpu_err(g, "failed to allocate perfmon sample buffer");
@@ -215,7 +215,7 @@ int nvgpu_pmu_load_norm(struct gk20a *g, u32 *load)
 int nvgpu_pmu_load_update(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
-	u16 load = 0;
+	u32 load = 0;
 
 	if (!pmu->perfmon_ready) {
 		pmu->load_shadow = 0;
@@ -231,8 +231,8 @@ int nvgpu_pmu_load_update(struct gk20a *g)
 		(u8 *)&load, 2 * 1, 0);
 	}
 
-	pmu->load_shadow = load / 10;
-	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
+	pmu->load_shadow = load / 10U;
+	pmu->load_avg = (((9U*pmu->load_avg) + pmu->load_shadow) / 10U);
 
 	return 0;
 }

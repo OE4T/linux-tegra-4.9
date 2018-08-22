@@ -59,7 +59,7 @@ struct nv_pmu_rpc_cmd {
 	u32 rpc_dmem_ptr;
 };
 
-#define NV_PMU_RPC_CMD_ID 0x80
+#define NV_PMU_RPC_CMD_ID 0x80U
 
 /* Message carrying the result of the RPC execution */
 struct nv_pmu_rpc_msg {
@@ -79,7 +79,7 @@ struct nv_pmu_rpc_msg {
 	u32 rpc_dmem_ptr;
 };
 
-#define NV_PMU_RPC_MSG_ID 0x80
+#define NV_PMU_RPC_MSG_ID 0x80U
 
 struct pmu_cmd {
 	struct pmu_hdr hdr;
@@ -116,26 +116,26 @@ struct pmu_msg {
 	} msg;
 };
 
-#define PMU_UNIT_REWIND		(0x00)
-#define PMU_UNIT_PG			(0x03)
-#define PMU_UNIT_INIT		(0x07)
-#define PMU_UNIT_ACR		(0x0A)
-#define PMU_UNIT_PERFMON_T18X	(0x11)
-#define PMU_UNIT_PERFMON	(0x12)
-#define PMU_UNIT_PERF		(0x13)
-#define PMU_UNIT_RC			(0x1F)
-#define PMU_UNIT_FECS_MEM_OVERRIDE	(0x1E)
-#define PMU_UNIT_CLK	(0x0D)
-#define PMU_UNIT_THERM	(0x14)
-#define PMU_UNIT_PMGR	(0x18)
-#define PMU_UNIT_VOLT	(0x0E)
+#define PMU_UNIT_REWIND			(0x00U)
+#define PMU_UNIT_PG			(0x03U)
+#define PMU_UNIT_INIT			(0x07U)
+#define PMU_UNIT_ACR			(0x0AU)
+#define PMU_UNIT_PERFMON_T18X		(0x11U)
+#define PMU_UNIT_PERFMON		(0x12U)
+#define PMU_UNIT_PERF			(0x13U)
+#define PMU_UNIT_RC			(0x1FU)
+#define PMU_UNIT_FECS_MEM_OVERRIDE	(0x1EU)
+#define PMU_UNIT_CLK			(0x0DU)
+#define PMU_UNIT_THERM			(0x14U)
+#define PMU_UNIT_PMGR			(0x18U)
+#define PMU_UNIT_VOLT			(0x0EU)
 
-#define PMU_UNIT_END		(0x23)
-#define PMU_UNIT_INVALID	(0xFF)
+#define PMU_UNIT_END			(0x23U)
+#define PMU_UNIT_INVALID		(0xFFU)
 
-#define PMU_UNIT_TEST_START	(0xFE)
-#define PMU_UNIT_END_SIM	(0xFF)
-#define PMU_UNIT_TEST_END	(0xFF)
+#define PMU_UNIT_TEST_START		(0xFEU)
+#define PMU_UNIT_END_SIM		(0xFFU)
+#define PMU_UNIT_TEST_END		(0xFFU)
 
 #define PMU_UNIT_ID_IS_VALID(id)		\
 		(((id) < PMU_UNIT_END) || ((id) >= PMU_UNIT_TEST_START))

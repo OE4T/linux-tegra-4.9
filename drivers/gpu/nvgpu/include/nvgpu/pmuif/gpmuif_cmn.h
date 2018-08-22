@@ -32,7 +32,7 @@
 #define PMU_COMMAND_QUEUE_LPQ		1U
 /* write by pmu, read by sw, accessed by interrupt handler, no lock */
 #define PMU_MESSAGE_QUEUE		4U
-#define PMU_QUEUE_COUNT			5
+#define PMU_QUEUE_COUNT			5U
 
 #define PMU_IS_COMMAND_QUEUE(id)	\
 		((id)  < PMU_MESSAGE_QUEUE)

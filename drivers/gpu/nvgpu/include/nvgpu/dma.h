@@ -37,18 +37,18 @@ struct nvgpu_mem;
  * Don't create a virtual kernel mapping for the buffer but only allocate it;
  * this may save some resources. The buffer can be mapped later explicitly.
  */
-#define NVGPU_DMA_NO_KERNEL_MAPPING	(1 << 0)
+#define NVGPU_DMA_NO_KERNEL_MAPPING	BIT32(0)
 
 /*
  * Don't allow building the buffer from individual pages but require a
  * physically contiguous block.
  */
-#define NVGPU_DMA_FORCE_CONTIGUOUS	(1 << 1)
+#define NVGPU_DMA_FORCE_CONTIGUOUS	BIT32(1)
 
 /*
  * Make the mapping read-only.
  */
-#define NVGPU_DMA_READ_ONLY		(1 << 2)
+#define NVGPU_DMA_READ_ONLY		BIT32(2)
 
 /**
  * nvgpu_iommuable - Check if GPU is behind IOMMU

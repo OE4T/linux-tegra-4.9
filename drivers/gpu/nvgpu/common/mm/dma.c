@@ -50,8 +50,10 @@ int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 				NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
 
-		if (!err)
+		if (!err) {
 			return 0;
+		}
+
 		/*
 		 * Fall back to sysmem (which may then also fail) in case
 		 * vidmem is exhausted.
@@ -105,8 +107,10 @@ int nvgpu_dma_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
 
-		if (!err)
+		if (!err) {
 			return 0;
+		}
+
 		/*
 		 * Fall back to sysmem (which may then also fail) in case
 		 * vidmem is exhausted.
@@ -127,8 +131,9 @@ int nvgpu_dma_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 {
 	int err = nvgpu_dma_alloc_flags_sys(vm->mm->g, flags, size, mem);
 
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	mem->gpu_va = nvgpu_gmmu_map(vm, mem, size, 0,
 				     gk20a_mem_flag_none, false,
@@ -157,8 +162,9 @@ int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 {
 	int err = nvgpu_dma_alloc_flags_vid(vm->mm->g, flags, size, mem);
 
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	mem->gpu_va = nvgpu_gmmu_map(vm, mem, size, 0,
 				     gk20a_mem_flag_none, false,
@@ -179,9 +185,11 @@ void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	switch (mem->aperture) {
 	case APERTURE_SYSMEM:
-		return nvgpu_dma_free_sys(g, mem);
+		nvgpu_dma_free_sys(g, mem);
+		break;
 	case APERTURE_VIDMEM:
-		return nvgpu_dma_free_vid(g, mem);
+		nvgpu_dma_free_vid(g, mem);
+		break;
 	default:
 		break; /* like free() on "null" memory */
 	}
@@ -189,8 +197,9 @@ void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
 
 void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 {
-	if (mem->gpu_va)
+	if (mem->gpu_va) {
 		nvgpu_gmmu_unmap(vm, mem, mem->gpu_va);
+	}
 	mem->gpu_va = 0;
 
 	nvgpu_dma_free(vm->mm->g, mem);

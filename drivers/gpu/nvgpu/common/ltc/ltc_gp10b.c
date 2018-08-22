@@ -28,6 +28,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>

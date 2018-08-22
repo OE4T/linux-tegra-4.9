@@ -26,6 +26,7 @@
 #include "fb_gp106.h"
 
 #include <nvgpu/io.h>
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>
 

@@ -37,6 +37,7 @@
 #include <nvgpu/falcon.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/acr_gm20b.h"

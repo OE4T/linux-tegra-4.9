@@ -31,6 +31,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/list.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #include "gp106/mclk_gp106.h"

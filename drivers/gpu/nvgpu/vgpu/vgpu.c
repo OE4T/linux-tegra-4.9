@@ -24,6 +24,7 @@
 #include <nvgpu/ptimer.h>
 #include <nvgpu/vgpu/vgpu_ivc.h>
 #include <nvgpu/vgpu/vgpu.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #include "fecs_trace_vgpu.h"

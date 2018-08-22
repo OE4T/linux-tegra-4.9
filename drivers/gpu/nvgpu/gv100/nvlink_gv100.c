@@ -30,6 +30,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #include "nvlink_gv100.h"

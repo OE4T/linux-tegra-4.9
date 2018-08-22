@@ -33,6 +33,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/timers.h>
 
 #include <nvgpu/vgpu/vm.h>
 

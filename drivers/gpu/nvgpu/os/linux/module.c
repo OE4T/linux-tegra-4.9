@@ -43,6 +43,7 @@
 #include <nvgpu/vidmem.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/timers.h>
 
 #include "platform_gk20a.h"
 #include "sysfs.h"

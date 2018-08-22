@@ -14,6 +14,7 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/xve.h>
+#include <nvgpu/timers.h>
 
 #include "debug_xve.h"
 #include "os_linux.h"

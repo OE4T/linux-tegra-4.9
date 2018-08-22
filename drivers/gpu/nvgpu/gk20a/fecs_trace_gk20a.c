@@ -39,6 +39,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/timers.h>
 
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"

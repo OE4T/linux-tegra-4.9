@@ -31,6 +31,7 @@
 #include "fb_gm20b.h"
 
 #include <nvgpu/io.h>
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>

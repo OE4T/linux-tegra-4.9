@@ -14,6 +14,7 @@
  */
 
 #include "dt-bindings/extcon-ids.h"
+#include "dt-bindings/gpio/tegra194-gpio.h"
 #include "tegra194-p2888-0000-a00.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-p2822-0000-a00.dtsi"
@@ -272,6 +273,13 @@
 	i2c@31e0000 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&dpaux_default>;
+		bmi160@69 {
+			compatible = "bmi,bmi160";
+			reg = <0x69>;
+			accelerometer_matrix    = [01 00 00 00 01 00 00 00 01];
+			gyroscope_matrix        = [01 00 00 00 01 00 00 00 01];
+			status = "okay";
+		};
 	};
 
 	host1x {

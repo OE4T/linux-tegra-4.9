@@ -155,47 +155,6 @@
 			status = "disabled";
 		};
 
-                e2614_icm20628: icm20628@68 {
-                        compatible = "invensense,mpu6xxx";
-                        reg = <0x68>;
-                        interrupt-parent = <&tegra_aon_gpio>;
-                        interrupts = <TEGRA194_AON_GPIO(AA, 2) 0x01>;
-                        accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
-                        gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
-			geomagnetic_rotation_vector_disable = <1>;
-			gyroscope_uncalibrated_disable = <1>;
-			quaternion_disable = <1>;
-			status = "disabled";
-                };
-
-                e2614_ak8963: ak8963@0d {
-                        compatible = "ak,ak89xx";
-                        reg = <0x0d>;
-                        magnetic_field_matrix	= [01 00 00 00 01 00 00 00 01];
-			status = "disabled";
-                };
-
-                e2614_bmp280: bmp280@77 {
-                        compatible = "bmp,bmpX80";
-                        reg = <0x77>;
-			status = "disabled";
-                };
-
-                e2614_cm32180: cm32180@48 {
-                        compatible = "capella,cm32180";
-                        reg = <0x48>;
-                        gpio_irq = <&tegra_aon_gpio TEGRA194_AON_GPIO(AA, 1) GPIO_ACTIVE_LOW>;
-                        light_uncalibrated_lo = <1>;
-                        light_calibrated_lo = <150>;
-                        light_uncalibrated_hi = <95000>;
-                        light_calibrated_hi = <1750000>;
-			status = "disabled";
-                };
-
-                e2614_iqs263: iqs263@44 {
-			status = "disabled";
-                };
-
 		e2614_rt5658: rt5659.1-001a@1a {
 			compatible = "realtek,rt5658";
 			reg = <0x1a>;
@@ -250,36 +209,6 @@
 					status = "okay";
 				};
 			};
-			overrides@2 {
-				target = <&e2614_icm20628>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			overrides@3 {
-				target = <&e2614_ak8963>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			overrides@4 {
-				target = <&e2614_ak8963>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			overrides@5 {
-				target = <&e2614_bmp280>;
-				_overlay_ {
-					status = "disabled";
-				};
-			};
-			overrides@6 {
-				target = <&e2614_cm32180>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
 			overrides@8 {
 				target = <&vdd_1v8_aud2>;
 				_overlay_ {
@@ -313,30 +242,6 @@
 					codec-dai-name = "tas2552-amplifier";
 				};
 			};
-			overrides@14 {
-                                target = <&e2614_icm20628>;
-                                _overlay_ {
-                                        status = "okay";
-                                };
-                        };
-			overrides@15 {
-                                target = <&e2614_ak8963>;
-                                _overlay_ {
-                                        status = "okay";
-                                };
-                        };
-			overrides@16 {
-                                target = <&e2614_bmp280>;
-                                _overlay_ {
-                                        status = "disabled";
-                                };
-                        };
-			overrides@17 {
-                                target = <&e2614_cm32180>;
-                                _overlay_ {
-                                        status = "okay";
-                                };
-                        };
 		};
 
 		fragment-e2614-a00@1 {

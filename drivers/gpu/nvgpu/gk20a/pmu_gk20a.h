@@ -67,9 +67,7 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu);
 void gk20a_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu);
 void gk20a_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 
-void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable);
-int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
-				 void *var, u8 val);
+void gk20a_pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable);
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,

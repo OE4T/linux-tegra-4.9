@@ -81,7 +81,7 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 
 	if (!enable) {
 		if (!g->ops.pmu.is_engine_in_reset(g)) {
-			pmu_enable_irq(pmu, false);
+			g->ops.pmu.pmu_enable_irq(pmu, false);
 			pmu_enable_hw(pmu, false);
 		}
 	} else {
@@ -95,7 +95,7 @@ static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 			goto exit;
 		}
 
-		pmu_enable_irq(pmu, true);
+		g->ops.pmu.pmu_enable_irq(pmu, true);
 	}
 
 exit:
@@ -412,7 +412,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	if (nvgpu_is_enabled(g, NVGPU_PMU_ZBC_SAVE)) {
 		/* Save zbc table after PMU is initialized. */
 		pmu->zbc_ready = true;
-		gk20a_pmu_save_zbc(g, 0xf);
+		g->ops.gr.pmu_save_zbc(g, 0xf);
 	}
 
 	if (g->elpg_enabled) {

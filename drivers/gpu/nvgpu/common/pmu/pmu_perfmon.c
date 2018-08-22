@@ -73,7 +73,7 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 
 	pmu->perfmon_ready = 0;
 
-	gk20a_pmu_init_perfmon_counter(g);
+	g->ops.pmu.pmu_init_perfmon_counter(g);
 
 	if (!pmu->sample_buffer) {
 		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
@@ -246,8 +246,8 @@ void nvgpu_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 		return;
 	}
 
-	*busy_cycles = gk20a_pmu_read_idle_counter(g, 1);
-	*total_cycles = gk20a_pmu_read_idle_counter(g, 2);
+	*busy_cycles = g->ops.pmu.pmu_read_idle_counter(g, 1);
+	*total_cycles = g->ops.pmu.pmu_read_idle_counter(g, 2);
 
 	gk20a_idle(g);
 }
@@ -258,8 +258,8 @@ void nvgpu_pmu_reset_load_counters(struct gk20a *g)
 		return;
 	}
 
-	gk20a_pmu_reset_idle_counter(g, 2);
-	gk20a_pmu_reset_idle_counter(g, 1);
+	g->ops.pmu.pmu_reset_idle_counter(g, 2);
+	g->ops.pmu.pmu_reset_idle_counter(g, 1);
 
 	gk20a_idle(g);
 }
@@ -316,7 +316,7 @@ int nvgpu_pmu_init_perfmon_rpc(struct nvgpu_pmu *pmu)
 	memset(&rpc, 0, sizeof(struct nv_pmu_rpc_struct_perfmon_init));
 	pmu->perfmon_ready = 0;
 
-	gk20a_pmu_init_perfmon_counter(g);
+	g->ops.pmu.pmu_init_perfmon_counter(g);
 
 	/* microseconds interval between pmu polls perf counters */
 	rpc.sample_periodus = 16700;

@@ -394,7 +394,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 
 	nvgpu_log_fn(g, " ");
 
-	gk20a_pmu_pg_idle_counter_config(g, pg_engine_id);
+	g->ops.pmu.pmu_pg_idle_counter_config(g, pg_engine_id);
 
 	if (g->ops.pmu.pmu_pg_init_param) {
 		g->ops.pmu.pmu_pg_init_param(g, pg_engine_id);

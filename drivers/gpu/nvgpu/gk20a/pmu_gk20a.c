@@ -37,6 +37,7 @@
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
+#include "pmu_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
@@ -137,7 +138,7 @@ u32 gk20a_pmu_get_irqdest(struct gk20a *g)
 	return intr_dest;
 }
 
-void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
+void gk20a_pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 intr_mask;

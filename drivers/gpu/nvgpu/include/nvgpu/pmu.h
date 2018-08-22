@@ -512,5 +512,9 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	u16 size_rpc, u16 size_scratch, pmu_callback callback, void *cb_param,
 	bool is_copy_back);
 
+/* PMU wait*/
+int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
+				 void *var, u8 val);
+
 struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu);
 #endif /* NVGPU_PMU_H */

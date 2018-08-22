@@ -128,7 +128,7 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 		gk20a_fifo_isr(g);
 	}
 	if ((mc_intr_0 & mc_intr_pmu_pending_f()) != 0U) {
-		gk20a_pmu_isr(g);
+		g->ops.pmu.pmu_isr(g);
 	}
 	if ((mc_intr_0 & mc_intr_priv_ring_pending_f()) != 0U) {
 		g->ops.priv_ring.isr(g);

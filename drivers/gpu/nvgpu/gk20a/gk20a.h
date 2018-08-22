@@ -68,7 +68,6 @@ struct nvgpu_ctxsw_trace_filter;
 #include "ce2_gk20a.h"
 #include "fifo_gk20a.h"
 #include "tsg_gk20a.h"
-#include "pmu_gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
@@ -1025,6 +1024,15 @@ struct gpu_ops {
 			u32 id, u32 *token);
 		int (*pmu_mutex_release)(struct nvgpu_pmu *pmu,
 			u32 id, u32 *token);
+		bool (*pmu_is_interrupted)(struct nvgpu_pmu *pmu);
+		void (*pmu_isr)(struct gk20a *g);
+		void (*pmu_init_perfmon_counter)(struct gk20a *g);
+		void (*pmu_pg_idle_counter_config)(struct gk20a *g, u32 pg_engine_id);
+		u32  (*pmu_read_idle_counter)(struct gk20a *g, u32 counter_id);
+		void (*pmu_reset_idle_counter)(struct gk20a *g, u32 counter_id);
+		void (*pmu_dump_elpg_stats)(struct nvgpu_pmu *pmu);
+		void (*pmu_dump_falcon_stats)(struct nvgpu_pmu *pmu);
+		void (*pmu_enable_irq)(struct nvgpu_pmu *pmu, bool enable);
 		int (*init_wpr_region)(struct gk20a *g);
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);

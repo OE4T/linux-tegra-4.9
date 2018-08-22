@@ -3763,7 +3763,7 @@ void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 	}
 
 	/* update zbc */
-	gk20a_pmu_save_zbc(g, entries);
+	g->ops.gr.pmu_save_zbc(g, entries);
 
 clean_up:
 	ret = gk20a_fifo_enable_engine_activity(g, gr_info);

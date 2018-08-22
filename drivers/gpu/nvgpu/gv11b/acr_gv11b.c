@@ -37,7 +37,6 @@
 #include "gk20a/gk20a.h"
 #include "acr_gv11b.h"
 #include "pmu_gv11b.h"
-#include "gk20a/pmu_gk20a.h"
 #include "gm20b/mm_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 #include "gp106/acr_gp106.h"
@@ -287,7 +286,7 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 
 	/*disable irqs for hs falcon booting as we will poll for halt*/
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	pmu_enable_irq(pmu, false);
+	g->ops.pmu.pmu_enable_irq(pmu, false);
 	pmu->isr_enabled = false;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 	/*Clearing mailbox register used to reflect capabilities*/

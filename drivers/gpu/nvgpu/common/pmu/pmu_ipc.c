@@ -744,8 +744,8 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 			return 0;
 		}
 
-		if (gk20a_pmu_is_interrupted(pmu)) {
-			gk20a_pmu_isr(g);
+		if (g->ops.pmu.pmu_is_interrupted(pmu)) {
+			g->ops.pmu.pmu_isr(g);
 		}
 
 		nvgpu_usleep_range(delay, delay * 2U);

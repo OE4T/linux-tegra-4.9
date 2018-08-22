@@ -24,7 +24,6 @@
 
 #include "sysfs.h"
 #include "platform_gk20a.h"
-#include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gv11b/gr_gv11b.h"
 

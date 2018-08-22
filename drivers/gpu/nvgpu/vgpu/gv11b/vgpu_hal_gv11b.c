@@ -57,6 +57,7 @@
 #include <gk20a/flcn_gk20a.h>
 #include <gk20a/mc_gk20a.h>
 #include "gk20a/dbg_gpu_gk20a.h"
+#include <gk20a/pmu_gk20a.h>
 
 #include <gm20b/gr_gm20b.h>
 #include <gm20b/fifo_gm20b.h>
@@ -495,6 +496,15 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.pmu_mutex_size = NULL,
 		.pmu_mutex_acquire = NULL,
 		.pmu_mutex_release = NULL,
+		.pmu_is_interrupted = NULL,
+		.pmu_isr = NULL,
+		.pmu_init_perfmon_counter = NULL,
+		.pmu_pg_idle_counter_config = NULL,
+		.pmu_read_idle_counter = NULL,
+		.pmu_reset_idle_counter = NULL,
+		.pmu_dump_elpg_stats = NULL,
+		.pmu_dump_falcon_stats = NULL,
+		.pmu_enable_irq = NULL,
 		.write_dmatrfbase = NULL,
 		.pmu_elpg_statistics = NULL,
 		.pmu_init_perfmon = NULL,

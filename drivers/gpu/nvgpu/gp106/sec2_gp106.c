@@ -32,10 +32,6 @@
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 
-/*Defines*/
-#define gm20b_dbg_pmu(g, fmt, arg...) \
-	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
-
 int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
 	unsigned int timeout)
 {
@@ -61,7 +57,7 @@ int gp106_sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 
 	g->acr.capabilities = nvgpu_flcn_mailbox_read(&g->sec2_flcn,
 		FALCON_MAILBOX_1);
-	gm20b_dbg_pmu(g, "ACR capabilities %x\n", g->acr.capabilities);
+	nvgpu_pmu_dbg(g, "ACR capabilities %x\n", g->acr.capabilities);
 	data = nvgpu_flcn_mailbox_read(&g->sec2_flcn, FALCON_MAILBOX_0);
 	if (data) {
 		nvgpu_err(g, "ACR boot failed, err %x", data);

@@ -39,7 +39,7 @@ void nvgpu_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 		pmu->stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_GRAPHICS],
 		sizeof(struct pmu_pg_stats_v2));
 
-	gk20a_pmu_dump_elpg_stats(pmu);
+	g->ops.pmu.pmu_dump_elpg_stats(pmu);
 }
 
 void nvgpu_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu)
@@ -47,7 +47,7 @@ void nvgpu_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu)
 	struct gk20a *g = pmu->g;
 
 	nvgpu_flcn_dump_stats(pmu->flcn);
-	gk20a_pmu_dump_falcon_stats(pmu);
+	g->ops.pmu.pmu_dump_falcon_stats(pmu);
 
 	nvgpu_err(g, "pmu state: %d", pmu->pmu_state);
 	nvgpu_err(g, "elpg state: %d", pmu->elpg_stat);

@@ -233,12 +233,7 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 			return err;
 
 		/*do elpg disable before clock gating */
-
-		/* we should not disabled it again, if it's already so */
-		if (g->elpg_enabled) {
-			g->elpg_enabled = false;
-			nvgpu_pmu_pg_global_enable(g, false);
-		}
+		nvgpu_pmu_pg_global_enable(g, false);
 
 		if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
@@ -282,12 +277,7 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 				slcg_gr_load_gating_prod(g,
 				g->slcg_enabled);
 		}
-
-		/* we should not enable it again, if it's already so */
-		if (!g->elpg_enabled) {
-			g->elpg_enabled = true;
-			nvgpu_pmu_pg_global_enable(g, true);
-		}
+		nvgpu_pmu_pg_global_enable(g, true);
 
 		nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn,
 					"module idle");

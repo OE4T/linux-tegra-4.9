@@ -117,7 +117,7 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	nvgpu_log_info(g, "gobs_per_comptagline_per_slice: %d",
 		gobs_per_comptagline_per_slice);
 
-	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
+	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size, false);
 	if (err) {
 		return err;
 	}

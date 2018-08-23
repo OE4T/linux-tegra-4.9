@@ -43,7 +43,8 @@ void nvgpu_ecc_sysfs_remove(struct gk20a *g)
 {
 }
 
-int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size,
+			bool vidmem_alloc)
 {
 	return 0;
 }

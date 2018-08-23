@@ -29,6 +29,7 @@ struct gk20a;
 
 int nvgpu_init_ltc_support(struct gk20a *g);
 void nvgpu_ltc_sync_enabled(struct gk20a *g);
-int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size);
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size,
+			bool vidmem_alloc);
 
 #endif

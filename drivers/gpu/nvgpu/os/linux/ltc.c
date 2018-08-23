@@ -27,7 +27,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
-int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
+int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size,
+			bool vidmem_alloc)
 {
 	struct gr_gk20a *gr = &g->gr;
 	unsigned long flags = 0;
@@ -35,11 +36,25 @@ int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size)
 	if (nvgpu_mem_is_valid(&gr->compbit_store.mem))
 		return 0;
 
-	if (!nvgpu_iommuable(g))
-		flags = NVGPU_DMA_FORCE_CONTIGUOUS;
+	if (vidmem_alloc) {
+		/*
+		 * Backing store MUST be physically contiguous and allocated in
+		 * one chunk
+		 * Vidmem allocation API does not support FORCE_CONTIGUOUS like
+		 * flag to allocate contiguous memory
+		 * But this allocation will happen in vidmem bootstrap allocator
+		 * which always allocates contiguous memory
+		 */
+		return nvgpu_dma_alloc_vid(g,
+					 compbit_backing_size,
+					 &gr->compbit_store.mem);
+	} else {
+		if (!nvgpu_iommuable(g))
+			flags = NVGPU_DMA_FORCE_CONTIGUOUS;
 
-	return nvgpu_dma_alloc_flags_sys(g,
+		return nvgpu_dma_alloc_flags_sys(g,
 					 flags,
 					 compbit_backing_size,
 					 &gr->compbit_store.mem);
+	}
 }

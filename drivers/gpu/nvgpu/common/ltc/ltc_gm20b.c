@@ -93,7 +93,7 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	nvgpu_log_info(g, "max comptag lines : %d",
 		max_comptag_lines);
 
-	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
+	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size, false);
 	if (err) {
 		return err;
 	}

@@ -314,7 +314,7 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	err = nvgpu_page_allocator_init(g, &g->mm.vidmem.bootstrap_allocator,
 					"vidmem-bootstrap",
 					bootstrap_base, bootstrap_size,
-					SZ_4K, 0);
+					SZ_4K, GPU_ALLOC_FORCE_CONTIG);
 
 	err = nvgpu_page_allocator_init(g, &g->mm.vidmem.allocator,
 					"vidmem",

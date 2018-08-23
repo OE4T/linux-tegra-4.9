@@ -56,13 +56,13 @@ void gv100_fb_reset(struct gk20a *g)
 	u32 val;
 	int retries = HW_SCRUB_TIMEOUT_MAX / HW_SCRUB_TIMEOUT_DEFAULT;
 
-	nvgpu_info(g, "reset gv100 fb");
+	nvgpu_log_info(g, "reset gv100 fb");
 
 	/* wait for memory to be accessible */
 	do {
 		u32 w = gk20a_readl(g, fb_niso_scrub_status_r());
 		if (fb_niso_scrub_status_flag_v(w)) {
-			nvgpu_info(g, "done");
+			nvgpu_log_info(g, "done");
 			break;
 		}
 		nvgpu_udelay(HW_SCRUB_TIMEOUT_DEFAULT);

@@ -27,7 +27,6 @@
 #define R4TX_TIMEOUT_US		1000 /* usec */
 
 const struct single_lane_params entry_100us_sl_params = {
-	.enabled = true,
 	.fb_ic_inc = 1,
 	.lp_ic_inc = 1,
 	.fb_ic_dec = 1,
@@ -409,15 +408,6 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_TX_ENABLE_PM:
-			if (!(tdev->tlink.sl_params.enabled)) {
-				nvlink_err("Single-Lane (SL / 1/8th) mode is"
-					" disabled due to the selected SL"
-					" policy. Can't enable SL mode for the"
-					" TX sublink.");
-				status = -EPERM;
-				break;
-			}
-
 			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
 				" TX sublink");
 			reg_val = nvlw_nvltlc_readl(tdev,
@@ -470,15 +460,6 @@ int t19x_nvlink_set_sublink_mode(struct nvlink_device *ndev, bool is_rx_sublink,
 			break;
 
 		case NVLINK_RX_ENABLE_PM:
-			if (!(tdev->tlink.sl_params.enabled)) {
-				nvlink_err("Single-Lane (SL / 1/8th) mode is"
-					" disabled due to the selected SL"
-					" policy. Can't enable SL mode for the"
-					" RX sublink.");
-				status = -EPERM;
-				break;
-			}
-
 			nvlink_dbg("Enabling Single-Lane (1/8th) mode for the"
 				" RX sublink");
 			reg_val = nvlw_nvltlc_readl(tdev,
@@ -653,14 +634,6 @@ int t19x_nvlink_set_link_mode(struct nvlink_device *ndev, u32 mode)
 		break;
 
 	case NVLINK_LINK_ENABLE_PM:
-		if (!(tdev->tlink.sl_params.enabled)) {
-			nvlink_err("Single-Lane (SL / 1/8th) mode is disabled"
-				" due to the selected SL policy. Can't enable"
-				" SL mode.");
-			status = -EPERM;
-			break;
-		}
-
 		if (link_state == NVL_LINK_STATE_STATE_ACTIVE) {
 			nvlink_dbg("Link is in Active state."
 				" Enabling Single-Lane (1/8th) mode.");
@@ -802,12 +775,6 @@ void init_single_lane_params(struct tnvlink_dev *tdev)
 {
 	u32 reg_val = 0;
 	struct single_lane_params *sl_params = &tdev->tlink.sl_params;
-
-	if (!(sl_params->enabled)) {
-		nvlink_dbg("Single-Lane (1/8th) mode is disabled."
-			" Skipping single-lane related TLC initialization.");
-		return;
-	}
 
 	nvlink_dbg("Initializing Single-Lane parameters");
 

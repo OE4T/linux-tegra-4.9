@@ -78,10 +78,15 @@ EXPORT_SYMBOL(nvlink_debugfs_tests);
 
 static struct nvlink_core nvlink_core;
 
-static bool nvlink_is_tegra_loopback(struct nvlink_intranode_conn *conn)
+static bool nvlink_is_single_lane_mode_supported(
+				struct nvlink_intranode_conn *conn)
 {
-	return ((conn->ndev0->device_id == NVLINK_ENDPT_T19X) &&
-			(conn->ndev1->device_id == NVLINK_ENDPT_T19X));
+	/*
+	 * Single-lane mode is supported on the connection
+	 * only when both of the nvlink devices support this feature.
+	 */
+	return (conn->ndev0->link.is_sl_supported &&
+			conn->ndev1->link.is_sl_supported);
 }
 
 int nvlink_get_init_state(struct nvlink_device *ndev, enum init_state *state)
@@ -761,7 +766,7 @@ int nvlink_transition_intranode_conn_hs_to_safe(struct nvlink_device *ndev)
 		return ret;
 	}
 
-	if(nvlink_is_tegra_loopback(&conn)) {
+	if (nvlink_is_single_lane_mode_supported(&conn)) {
 		/* Disable Single-Lane mode for device 0 */
 		ret = link0->link_ops.set_link_mode(ndev0,
 							NVLINK_LINK_DISABLE_PM);
@@ -1100,7 +1105,7 @@ int nvlink_train_intranode_conn_safe_to_hs(struct nvlink_device *ndev)
 		return ret;
 	}
 
-	if(nvlink_is_tegra_loopback(&conn)) {
+	if (nvlink_is_single_lane_mode_supported(&conn)) {
 		/* Enable Single-Lane policy for device 0 */
 		ret = link0->link_ops.set_link_mode(ndev0,
 							NVLINK_LINK_ENABLE_PM);

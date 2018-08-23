@@ -125,9 +125,6 @@ enum inforom_nvlink_fatal_err {
  *           sub-link
  */
 struct single_lane_params {
-	/* Is Single-Lane (SL) mode enabled? */
-	bool enabled;
-
 	/* Idle counter increment in FB */
 	u16 fb_ic_inc;
 

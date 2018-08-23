@@ -218,14 +218,6 @@ static int nvlink_single_lane_debugfs_init(struct tnvlink_dev *tdev)
 		goto fail;
 	}
 
-	if (!debugfs_create_bool("enabled", (S_IWUSR | S_IRUGO),
-					tegra_sl_debugfs,
-					&tdev->tlink.sl_params.enabled)) {
-		nvlink_err("Unable to create debugfs node for sl_enabled");
-		ret = -1;
-		goto fail;
-	}
-
 	if (!debugfs_create_u16("fb_ic_inc", (S_IWUSR | S_IRUGO),
 					tegra_sl_debugfs,
 					&tdev->tlink.sl_params.fb_ic_inc)) {

@@ -327,8 +327,12 @@ static void init_tlc_buffers(struct tnvlink_dev *tdev)
 
 static void init_tlc(struct tnvlink_dev *tdev)
 {
+	struct nvlink_device *ndev = tdev->ndev;
+
 	init_tlc_buffers(tdev);
-	init_single_lane_params(tdev);
+
+	if (ndev->link.is_sl_supported)
+		init_single_lane_params(tdev);
 }
 
 /*
@@ -1341,6 +1345,7 @@ static int t19x_nvlink_endpt_probe(struct platform_device *pdev)
 	ndev->link.ndev = ndev;
 	/* Point priv of ndev->link to the tegra nvlink endpoint link struct */
 	ndev->link.priv = (void *)&(tdev->tlink);
+	ndev->link.is_sl_supported = false;
 
 	platform_set_drvdata(pdev, tdev);
 

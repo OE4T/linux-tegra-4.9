@@ -248,6 +248,8 @@ struct nvlink_link {
 	 * TODO: Set this before registering the link
 	 */
 	bool is_connected;
+	/* Is single-lane mode supported for this link ? */
+	bool is_sl_supported;
 	/* Pointer to device info of connected end point */
 	struct remote_device_info remote_dev_info;
 	/*

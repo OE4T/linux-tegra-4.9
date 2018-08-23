@@ -86,7 +86,6 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct gk20a_fence *gk20a_fence_out = NULL;
-	u64 region2_base = 0;
 	int err = 0;
 
 	if (mm->vidmem.ce_ctx_id == (u32)~0)
@@ -103,28 +102,10 @@ static int __nvgpu_vidmem_do_clear_all(struct gk20a *g)
 			NVGPU_CE_DST_LOCATION_LOCAL_FB,
 			NVGPU_CE_MEMSET,
 			0,
-			NULL);
-	if (err) {
-		nvgpu_err(g,
-			"Failed to clear vidmem region 1 : %d", err);
-		return err;
-	}
-
-	region2_base = mm->vidmem.bootstrap_base + mm->vidmem.bootstrap_size;
-
-	err = gk20a_ce_execute_ops(g,
-			mm->vidmem.ce_ctx_id,
-			0,
-			region2_base,
-			mm->vidmem.size - region2_base,
-			0x00000000,
-			NVGPU_CE_DST_LOCATION_LOCAL_FB,
-			NVGPU_CE_MEMSET,
-			0,
 			&gk20a_fence_out);
 	if (err) {
 		nvgpu_err(g,
-			"Failed to clear vidmem region 2 : %d", err);
+			"Failed to clear vidmem : %d", err);
 		return err;
 	}
 
@@ -304,13 +285,13 @@ static int nvgpu_vidmem_clear_pending_allocs_thr(void *mm_ptr)
 int nvgpu_vidmem_init(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
-	u64 bootstrap_base, bootstrap_size, base;
+	u64 bootstrap_base, base;
+	u64 bootstrap_size = SZ_256M;
 	u64 default_page_size = SZ_64K;
 	size_t size;
 	int err;
-
-	static struct nvgpu_alloc_carveout wpr_co =
-		NVGPU_CARVEOUT("wpr-region", 0, SZ_16M);
+	static struct nvgpu_alloc_carveout bootstrap_co =
+		NVGPU_CARVEOUT("bootstrap-region", 0, 0);
 
 	size = g->ops.mm.get_vidmem_size ?
 			g->ops.mm.get_vidmem_size(g) : 0;
@@ -319,9 +300,10 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 
 	vidmem_dbg(g, "init begin");
 
-	wpr_co.base = size - SZ_256M;
-	bootstrap_base = wpr_co.base;
-	bootstrap_size = SZ_16M;
+	bootstrap_co.base = size - bootstrap_size;
+	bootstrap_co.length = bootstrap_size;
+
+	bootstrap_base = bootstrap_co.base;
 	base = default_page_size;
 
 	/*
@@ -346,7 +328,7 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 	}
 
 	/* Reserve bootstrap region in vidmem allocator */
-	nvgpu_alloc_reserve_carveout(&g->mm.vidmem.allocator, &wpr_co);
+	nvgpu_alloc_reserve_carveout(&g->mm.vidmem.allocator, &bootstrap_co);
 
 	mm->vidmem.base = base;
 	mm->vidmem.size = size - base;
@@ -388,7 +370,8 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 		   mm->vidmem.bootstrap_base + mm->vidmem.bootstrap_size);
 	vidmem_dbg(g, "VIDMEM carveouts:");
 	vidmem_dbg(g, "  0x%-10llx -> 0x%-10llx %s",
-		   wpr_co.base, wpr_co.base + wpr_co.length, wpr_co.name);
+		   bootstrap_co.base, bootstrap_co.base + bootstrap_co.length,
+		   bootstrap_co.name);
 
 	return 0;
 

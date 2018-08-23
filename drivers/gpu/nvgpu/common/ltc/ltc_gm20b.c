@@ -61,11 +61,13 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvgpu_log_fn(g, " ");
 
-	if (max_comptag_lines == 0U)
+	if (max_comptag_lines == 0U) {
 		return 0;
+	}
 
-	if (max_comptag_lines > hw_max_comptag_lines)
+	if (max_comptag_lines > hw_max_comptag_lines) {
 		max_comptag_lines = hw_max_comptag_lines;
+	}
 
 	compbit_backing_size =
 		DIV_ROUND_UP(max_comptag_lines, comptags_per_cacheline) *
@@ -82,8 +84,9 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		(compbit_backing_size * comptags_per_cacheline) /
 		(gr->cacheline_size * gr->slices_per_ltc * g->ltc_count);
 
-	if (max_comptag_lines > hw_max_comptag_lines)
+	if (max_comptag_lines > hw_max_comptag_lines) {
 		max_comptag_lines = hw_max_comptag_lines;
+	}
 
 	nvgpu_log_info(g, "compbit backing store size : %d",
 		compbit_backing_size);
@@ -91,12 +94,14 @@ int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		max_comptag_lines);
 
 	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = gk20a_comptag_allocator_init(g, &gr->comp_tags, max_comptag_lines);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	gr->max_comptag_lines = max_comptag_lines;
 	gr->comptags_per_cacheline = comptags_per_cacheline;
@@ -121,8 +126,9 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
 
-	if (gr->compbit_store.mem.size == 0)
+	if (gr->compbit_store.mem.size == 0) {
 		return 0;
+	}
 
 	while (1) {
 		const u32 iter_max = min(min + max_lines - 1, max);
@@ -168,8 +174,9 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 						   NVGPU_TIMER_RETRY_TIMER);
 				do {
 					val = gk20a_readl(g, ctrl1);
-					if (!(val & hw_op))
+					if (!(val & hw_op)) {
 						break;
+					}
 					nvgpu_udelay(5);
 				} while (!nvgpu_timeout_expired(&timeout));
 
@@ -182,8 +189,9 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		}
 
 		/* are we done? */
-		if (full_cache_op || iter_max == max)
+		if (full_cache_op || iter_max == max) {
 			break;
+		}
 
 		/* note: iter_max is inclusive upper bound */
 		min = iter_max + 1;
@@ -240,8 +248,9 @@ void gm20b_ltc_isr(struct gk20a *g)
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
-		if ((mc_intr & 1U << ltc) == 0)
+		if ((mc_intr & 1U << ltc) == 0) {
 			continue;
+		}
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
 					   ltc_stride * ltc +
@@ -433,12 +442,13 @@ void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		compbit_store_iova = nvgpu_mem_get_phys_addr(g,
 							&gr->compbit_store.mem);
-	else
+	} else {
 		compbit_store_iova = nvgpu_mem_get_addr(g,
 							&gr->compbit_store.mem);
+	}
 
 	compbit_base_post_divide64 = compbit_store_iova >>
 		ltc_ltcs_ltss_cbc_base_alignment_shift_v();
@@ -449,13 +459,15 @@ void gm20b_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
 		g->ltc_count) << ltc_ltcs_ltss_cbc_base_alignment_shift_v();
 
-	if (compbit_base_post_multiply64 < compbit_store_iova)
+	if (compbit_base_post_multiply64 < compbit_store_iova) {
 		compbit_base_post_divide++;
+	}
 
 	/* Bug 1477079 indicates sw adjustment on the posted divided base. */
-	if (g->ops.ltc.cbc_fix_config)
+	if (g->ops.ltc.cbc_fix_config) {
 		compbit_base_post_divide =
 			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
+	}
 
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
@@ -478,12 +490,13 @@ void gm20b_ltc_set_enabled(struct gk20a *g, bool enabled)
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 	u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
 
-	if (enabled)
-		/* bypass disabled (normal caching ops)*/
+	if (enabled) {
+		/* bypass disabled (normal caching ops) */
 		reg &= ~reg_f;
-	else
+	} else {
 		/* bypass enabled (no caching) */
 		reg |= reg_f;
+	}
 
 	gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
 }

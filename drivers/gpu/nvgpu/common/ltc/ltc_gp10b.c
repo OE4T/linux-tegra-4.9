@@ -83,15 +83,18 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 	nvgpu_log_fn(g, " ");
 
-	if (max_comptag_lines == 0U)
+	if (max_comptag_lines == 0U) {
 		return 0;
+	}
 
 	/* Already initialized */
-	if (gr->max_comptag_lines)
+	if (gr->max_comptag_lines) {
 		return 0;
+	}
 
-	if (max_comptag_lines > hw_max_comptag_lines)
+	if (max_comptag_lines > hw_max_comptag_lines) {
 		max_comptag_lines = hw_max_comptag_lines;
+	}
 
 	compbit_backing_size =
 		roundup(max_comptag_lines * gobs_per_comptagline_per_slice,
@@ -115,12 +118,14 @@ int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 		gobs_per_comptagline_per_slice);
 
 	err = nvgpu_ltc_alloc_cbc(g, compbit_backing_size);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = gk20a_comptag_allocator_init(g, &gr->comp_tags, max_comptag_lines);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	gr->max_comptag_lines = max_comptag_lines;
 	gr->comptags_per_cacheline = comptags_per_cacheline;
@@ -146,8 +151,9 @@ int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
 
-	if (gr->compbit_store.mem.size == 0U)
+	if (gr->compbit_store.mem.size == 0U) {
 		return 0;
+	}
 
 	while (1) {
 		const u32 iter_max = min(min + max_lines - 1, max);
@@ -195,8 +201,9 @@ int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 						   NVGPU_TIMER_RETRY_TIMER);
 				do {
 					val = gk20a_readl(g, ctrl1);
-					if (!(val & hw_op))
+					if (!(val & hw_op)) {
 						break;
+					}
 					nvgpu_udelay(5);
 				} while (!nvgpu_timeout_expired(&timeout));
 
@@ -209,8 +216,9 @@ int gp10b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		}
 
 		/* are we done? */
-		if (full_cache_op || iter_max == max)
+		if (full_cache_op || iter_max == max) {
 			break;
+		}
 
 		/* note: iter_max is inclusive upper bound */
 		min = iter_max + 1;
@@ -234,8 +242,9 @@ void gp10b_ltc_isr(struct gk20a *g)
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
-		if ((mc_intr & 1U << ltc) == 0)
+		if ((mc_intr & 1U << ltc) == 0) {
 			continue;
+		}
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			u32 offset = ltc_stride * ltc + lts_stride * slice;
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() + offset);
@@ -310,12 +319,13 @@ void gp10b_ltc_set_enabled(struct gk20a *g, bool enabled)
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 	u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
 
-	if (enabled)
-		/* bypass disabled (normal caching ops)*/
+	if (enabled) {
+		/* bypass disabled (normal caching ops) */
 		reg &= ~reg_f;
-	else
+	} else {
 		/* bypass enabled (no caching) */
 		reg |= reg_f;
+	}
 
 	nvgpu_writel_check(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
 }

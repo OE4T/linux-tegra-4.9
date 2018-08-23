@@ -63,16 +63,17 @@ int gm20b_fuse_check_priv_security(struct gk20a *g)
 			 GCPLEX_CONFIG_WPR_ENABLED_MASK) &&
 			!(gcplex_config &
 				GCPLEX_CONFIG_VPR_AUTO_FETCH_DISABLE_MASK)) {
-			if (gk20a_readl(g, fuse_opt_sec_debug_en_r()))
+			if (gk20a_readl(g, fuse_opt_sec_debug_en_r())) {
 				nvgpu_log(g, gpu_dbg_info,
 						"gcplex_config = 0x%08x, "
 						"secure mode: ACR debug",
 						gcplex_config);
-			else
+			} else {
 				nvgpu_log(g, gpu_dbg_info,
 						"gcplex_config = 0x%08x, "
 						"secure mode: ACR non debug",
 						gcplex_config);
+			}
 		} else {
 			nvgpu_err(g, "gcplex_config = 0x%08x "
 				"invalid wpr_enabled/vpr_auto_fetch_disable "

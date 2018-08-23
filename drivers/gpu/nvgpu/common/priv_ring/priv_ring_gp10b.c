@@ -75,24 +75,28 @@ void gp10b_priv_ring_decode_error_code(struct gk20a *g,
 
 	if (error_code == 0xBADF1000) {
 		if (error_type_index <
-				ARRAY_SIZE(error_type_badf1xyy))
+				ARRAY_SIZE(error_type_badf1xyy)) {
 			nvgpu_err(g, "%s",
 				error_type_badf1xyy[error_type_index]);
+		}
 	} else if (error_code == 0xBADF2000) {
 		if (error_type_index <
-				ARRAY_SIZE(error_type_badf2xyy))
+				ARRAY_SIZE(error_type_badf2xyy)) {
 			nvgpu_err(g, "%s",
 				error_type_badf2xyy[error_type_index]);
+		}
 	} else if (error_code == 0xBADF3000) {
 		if (error_type_index <
-				ARRAY_SIZE(error_type_badf3xyy))
+				ARRAY_SIZE(error_type_badf3xyy)) {
 			nvgpu_err(g, "%s",
 				error_type_badf3xyy[error_type_index]);
+		}
 	} else if (error_code == 0xBADF5000) {
 		if (error_type_index <
-				ARRAY_SIZE(error_type_badf5xyy))
+				ARRAY_SIZE(error_type_badf5xyy)) {
 			nvgpu_err(g, "%s",
 				error_type_badf5xyy[error_type_index]);
+		}
 	}
 }
 
@@ -117,15 +121,18 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 	nvgpu_err(g, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
-	if (pri_ringmaster_intr_status0_ring_start_conn_fault_v(status0) != 0)
+	if (pri_ringmaster_intr_status0_ring_start_conn_fault_v(status0) != 0) {
 		nvgpu_err(g,
 			"BUG: connectivity problem on the startup sequence");
+	}
 
-	if (pri_ringmaster_intr_status0_disconnect_fault_v(status0) != 0)
+	if (pri_ringmaster_intr_status0_disconnect_fault_v(status0) != 0) {
 		nvgpu_err(g, "ring disconnected");
+	}
 
-	if (pri_ringmaster_intr_status0_overflow_fault_v(status0) != 0)
+	if (pri_ringmaster_intr_status0_overflow_fault_v(status0) != 0) {
 		nvgpu_err(g, "ring overflowed");
+	}
 
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
 		error_info =
@@ -141,8 +148,9 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 			pri_ringstation_sys_priv_error_info_subid_v(error_info),
 			pri_ringstation_sys_priv_error_info_priv_level_v(error_info),
 			error_code);
-		if (g->ops.priv_ring.decode_error_code)
+		if (g->ops.priv_ring.decode_error_code) {
 			g->ops.priv_ring.decode_error_code(g, error_code);
+		}
 	}
 
 	if (status1) {
@@ -167,13 +175,15 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 					pri_ringstation_gpc_gpc0_priv_error_info_priv_level_v(error_info),
 					error_code);
 
-				if (g->ops.priv_ring.decode_error_code)
+				if (g->ops.priv_ring.decode_error_code) {
 					g->ops.priv_ring.decode_error_code(g,
 								error_code);
+				}
 
 				status1 = status1 & (~(BIT(gpc)));
-				if (!status1)
+				if (!status1) {
 					break;
+				}
 			}
 		}
 	}
@@ -193,6 +203,7 @@ void gp10b_priv_ring_isr(struct gk20a *g)
 		retry--;
 	}
 
-	if (retry == 0)
+	if (retry == 0) {
 		nvgpu_err(g, "priv ringmaster intr ack failed");
+	}
 }

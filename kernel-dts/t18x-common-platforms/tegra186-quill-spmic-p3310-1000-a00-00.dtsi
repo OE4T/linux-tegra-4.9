@@ -223,9 +223,9 @@
 				};
 
 				spmic_ldo7: ldo7 {
-					regulator-name = "vdd-pex-1v05";
-					regulator-min-microvolt = <1050000>;
-					regulator-max-microvolt = <1050000>;
+					regulator-name = "vdd-pex-1v00";
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 					regulator-always-on;
 					regulator-boot-on;

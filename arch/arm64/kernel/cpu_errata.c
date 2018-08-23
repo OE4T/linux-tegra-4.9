@@ -60,6 +60,8 @@ extern char __smccc_workaround_1_smc_start[];
 extern char __smccc_workaround_1_smc_end[];
 extern char __smccc_workaround_1_hvc_start[];
 extern char __smccc_workaround_1_hvc_end[];
+extern char __smccc_workaround_1_tegra_start[];
+extern char __smccc_workaround_1_tegra_end[];
 
 static void __copy_hyp_vect_bpi(int slot, const char *hyp_vecs_start,
 				const char *hyp_vecs_end)
@@ -106,6 +108,8 @@ static void __install_bp_hardening_cb(bp_hardening_cb_t fn,
 #define __smccc_workaround_1_smc_end		NULL
 #define __smccc_workaround_1_hvc_start		NULL
 #define __smccc_workaround_1_hvc_end		NULL
+#define __smccc_workaround_1_tegra_start	NULL
+#define __smccc_workaround_1_tegra_end		NULL
 
 static void __install_bp_hardening_cb(bp_hardening_cb_t fn,
 				      const char *hyp_vecs_start,
@@ -142,6 +146,18 @@ static void call_smc_arch_workaround_1(void)
 static void call_hvc_arch_workaround_1(void)
 {
 	arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_WORKAROUND_1, NULL);
+}
+
+/* A write of '1' to bit 0 of MSR [3, 0, 15, 0, 6]
+ *  * will cause the indirect branch predictor and RSB to be flushed.
+ *   */
+#define	NV_INDIRECT_BRANCH_PREDICTOR_AND_RSB_FLUSH 0x00000001UL
+
+static void call_tegra_arch_workaround_1(void)
+{
+	asm volatile("msr s3_0_c15_c0_6, %0\n":
+			:"r"(NV_INDIRECT_BRANCH_PREDICTOR_AND_RSB_FLUSH));
+	isb();
 }
 
 static int enable_smccc_arch_workaround_1(void *data)
@@ -186,6 +202,30 @@ static int enable_smccc_arch_workaround_1(void *data)
 
 	return 0;
 }
+
+static int enable_tegra_smccc_arch_workaround_1(void *data)
+{
+	const struct arm64_cpu_capabilities *entry = data;
+	u64 afr0_reg;
+	bool workaround_supported;
+
+	if (!entry->matches(entry, SCOPE_LOCAL_CPU))
+		return 0;
+
+	asm volatile("mrs %0, s3_0_c0_c5_4" : "=r" (afr0_reg));
+	workaround_supported = (((afr0_reg >> 16) & 0x0f) != 0);
+
+	if (workaround_supported) {
+		install_bp_hardening_cb(entry, call_tegra_arch_workaround_1,
+				__smccc_workaround_1_tegra_start,
+				__smccc_workaround_1_tegra_end);
+	} else {
+		return enable_smccc_arch_workaround_1(data);
+	}
+
+	return 0;
+}
+
 #endif	/* CONFIG_HARDEN_BRANCH_PREDICTOR */
 
 #ifdef CONFIG_ARM64_SSBD
@@ -489,6 +529,16 @@ const struct arm64_cpu_capabilities arm64_errata[] = {
 		.capability = ARM64_HARDEN_BRANCH_PREDICTOR,
 		MIDR_ALL_VERSIONS(MIDR_CAVIUM_THUNDERX2),
 		.enable = enable_smccc_arch_workaround_1,
+	},
+	{
+		.capability = ARM64_HARDEN_BRANCH_PREDICTOR,
+		MIDR_ALL_VERSIONS(MIDR_NVIDIA_DENVER),
+		.enable = enable_tegra_smccc_arch_workaround_1,
+	},
+	{
+		.capability = ARM64_HARDEN_BRANCH_PREDICTOR,
+		MIDR_ALL_VERSIONS(MIDR_NVIDIA_CARMEL),
+		.enable = enable_tegra_smccc_arch_workaround_1,
 	},
 #endif
 #ifdef CONFIG_ARM64_SSBD

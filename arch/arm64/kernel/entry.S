@@ -709,12 +709,15 @@ el0_da:
 	 */
 	mrs	x26, far_el1
 	// enable interrupts before calling the main handler
-	enable_dbg_and_irq
+	msr     daifclr, #(8 | 4 | 1)
+#ifdef CONFIG_TRACE_IRQFLAGS
+	bl	trace_hardirqs_off
+#endif
 	ct_user_exit
 	clear_address_tag x0, x26
 	mov	x1, x25
 	mov	x2, sp
-	bl	do_mem_abort
+	bl	do_el0_ia_bp_hardening
 	b	ret_to_user
 el0_ia:
 	/*
@@ -815,6 +818,11 @@ el0_irq_naked:
 	bl	trace_hardirqs_off
 #endif
 
+#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
+       tbz     x22, #55, 1f
+       bl      do_el0_irq_bp_hardening
+1:
+#endif
 	ct_user_exit
 	irq_handler
 

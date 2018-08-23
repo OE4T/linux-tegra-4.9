@@ -2,7 +2,7 @@
  *
  * Tegra GP10B GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,17 +28,17 @@
 struct dbg_session_gk20a;
 
 const struct regop_offset_range *gp10b_get_global_whitelist_ranges(void);
-int gp10b_get_global_whitelist_ranges_count(void);
+u64 gp10b_get_global_whitelist_ranges_count(void);
 const struct regop_offset_range *gp10b_get_context_whitelist_ranges(void);
-int gp10b_get_context_whitelist_ranges_count(void);
+u64 gp10b_get_context_whitelist_ranges_count(void);
 const u32 *gp10b_get_runcontrol_whitelist(void);
-int gp10b_get_runcontrol_whitelist_count(void);
+u64 gp10b_get_runcontrol_whitelist_count(void);
 const struct regop_offset_range *gp10b_get_runcontrol_whitelist_ranges(void);
-int gp10b_get_runcontrol_whitelist_ranges_count(void);
+u64 gp10b_get_runcontrol_whitelist_ranges_count(void);
 const u32 *gp10b_get_qctl_whitelist(void);
-int gp10b_get_qctl_whitelist_count(void);
+u64 gp10b_get_qctl_whitelist_count(void);
 const struct regop_offset_range *gp10b_get_qctl_whitelist_ranges(void);
-int gp10b_get_qctl_whitelist_ranges_count(void);
+u64 gp10b_get_qctl_whitelist_ranges_count(void);
 int gp10b_apply_smpc_war(struct dbg_session_gk20a *dbg_s);
 
 #endif /* __REGOPS_GP10B_H_ */

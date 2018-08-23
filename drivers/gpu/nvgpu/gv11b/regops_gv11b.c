@@ -1441,7 +1441,7 @@ static const struct regop_offset_range gv11b_global_whitelist_ranges[] = {
 };
 
 
-static const u32 gv11b_global_whitelist_ranges_count =
+static const u64 gv11b_global_whitelist_ranges_count =
 	ARRAY_SIZE(gv11b_global_whitelist_ranges);
 
 /* context */
@@ -1449,24 +1449,24 @@ static const u32 gv11b_global_whitelist_ranges_count =
 /* runcontrol */
 static const u32 gv11b_runcontrol_whitelist[] = {
 };
-static const u32 gv11b_runcontrol_whitelist_count =
+static const u64 gv11b_runcontrol_whitelist_count =
 	ARRAY_SIZE(gv11b_runcontrol_whitelist);
 
 static const struct regop_offset_range gv11b_runcontrol_whitelist_ranges[] = {
 };
-static const u32 gv11b_runcontrol_whitelist_ranges_count =
+static const u64 gv11b_runcontrol_whitelist_ranges_count =
 	ARRAY_SIZE(gv11b_runcontrol_whitelist_ranges);
 
 
 /* quad ctl */
 static const u32 gv11b_qctl_whitelist[] = {
 };
-static const u32 gv11b_qctl_whitelist_count =
+static const u64 gv11b_qctl_whitelist_count =
 	ARRAY_SIZE(gv11b_qctl_whitelist);
 
 static const struct regop_offset_range gv11b_qctl_whitelist_ranges[] = {
 };
-static const u32 gv11b_qctl_whitelist_ranges_count =
+static const u64 gv11b_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gv11b_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gv11b_get_global_whitelist_ranges(void)
@@ -1474,7 +1474,7 @@ const struct regop_offset_range *gv11b_get_global_whitelist_ranges(void)
 	return gv11b_global_whitelist_ranges;
 }
 
-int gv11b_get_global_whitelist_ranges_count(void)
+u64 gv11b_get_global_whitelist_ranges_count(void)
 {
 	return gv11b_global_whitelist_ranges_count;
 }
@@ -1484,7 +1484,7 @@ const struct regop_offset_range *gv11b_get_context_whitelist_ranges(void)
 	return gv11b_global_whitelist_ranges;
 }
 
-int gv11b_get_context_whitelist_ranges_count(void)
+u64 gv11b_get_context_whitelist_ranges_count(void)
 {
 	return gv11b_global_whitelist_ranges_count;
 }
@@ -1494,7 +1494,7 @@ const u32 *gv11b_get_runcontrol_whitelist(void)
 	return gv11b_runcontrol_whitelist;
 }
 
-int gv11b_get_runcontrol_whitelist_count(void)
+u64 gv11b_get_runcontrol_whitelist_count(void)
 {
 	return gv11b_runcontrol_whitelist_count;
 }
@@ -1504,7 +1504,7 @@ const struct regop_offset_range *gv11b_get_runcontrol_whitelist_ranges(void)
 	return gv11b_runcontrol_whitelist_ranges;
 }
 
-int gv11b_get_runcontrol_whitelist_ranges_count(void)
+u64 gv11b_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gv11b_runcontrol_whitelist_ranges_count;
 }
@@ -1514,7 +1514,7 @@ const u32 *gv11b_get_qctl_whitelist(void)
 	return gv11b_qctl_whitelist;
 }
 
-int gv11b_get_qctl_whitelist_count(void)
+u64 gv11b_get_qctl_whitelist_count(void)
 {
 	return gv11b_qctl_whitelist_count;
 }
@@ -1524,7 +1524,7 @@ const struct regop_offset_range *gv11b_get_qctl_whitelist_ranges(void)
 	return gv11b_qctl_whitelist_ranges;
 }
 
-int gv11b_get_qctl_whitelist_ranges_count(void)
+u64 gv11b_get_qctl_whitelist_ranges_count(void)
 {
 	return gv11b_qctl_whitelist_ranges_count;
 }

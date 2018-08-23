@@ -1,7 +1,7 @@
 /*
  * Tegra GV100 GPU Driver Register Ops
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -5623,7 +5623,7 @@ static const struct regop_offset_range gv100_global_whitelist_ranges[] = {
 	{ 0x00a3eed4,   7},
 	{ 0x00a3eef4,   2}};
 
-static const u32 gv100_global_whitelist_ranges_count =
+static const u64 gv100_global_whitelist_ranges_count =
 	ARRAY_SIZE(gv100_global_whitelist_ranges);
 
 /* context */
@@ -5631,24 +5631,24 @@ static const u32 gv100_global_whitelist_ranges_count =
 /* runcontrol */
 static const u32 gv100_runcontrol_whitelist[] = {
 };
-static const u32 gv100_runcontrol_whitelist_count =
+static const u64 gv100_runcontrol_whitelist_count =
 	ARRAY_SIZE(gv100_runcontrol_whitelist);
 
 static const struct regop_offset_range gv100_runcontrol_whitelist_ranges[] = {
 };
-static const u32 gv100_runcontrol_whitelist_ranges_count =
+static const u64 gv100_runcontrol_whitelist_ranges_count =
 	ARRAY_SIZE(gv100_runcontrol_whitelist_ranges);
 
 
 /* quad ctl */
 static const u32 gv100_qctl_whitelist[] = {
 };
-static const u32 gv100_qctl_whitelist_count =
+static const u64 gv100_qctl_whitelist_count =
 	ARRAY_SIZE(gv100_qctl_whitelist);
 
 static const struct regop_offset_range gv100_qctl_whitelist_ranges[] = {
 };
-static const u32 gv100_qctl_whitelist_ranges_count =
+static const u64 gv100_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gv100_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gv100_get_global_whitelist_ranges(void)
@@ -5656,7 +5656,7 @@ const struct regop_offset_range *gv100_get_global_whitelist_ranges(void)
 	return gv100_global_whitelist_ranges;
 }
 
-int gv100_get_global_whitelist_ranges_count(void)
+u64 gv100_get_global_whitelist_ranges_count(void)
 {
 	return gv100_global_whitelist_ranges_count;
 }
@@ -5666,7 +5666,7 @@ const struct regop_offset_range *gv100_get_context_whitelist_ranges(void)
 	return gv100_global_whitelist_ranges;
 }
 
-int gv100_get_context_whitelist_ranges_count(void)
+u64 gv100_get_context_whitelist_ranges_count(void)
 {
 	return gv100_global_whitelist_ranges_count;
 }
@@ -5676,7 +5676,7 @@ const u32 *gv100_get_runcontrol_whitelist(void)
 	return gv100_runcontrol_whitelist;
 }
 
-int gv100_get_runcontrol_whitelist_count(void)
+u64 gv100_get_runcontrol_whitelist_count(void)
 {
 	return gv100_runcontrol_whitelist_count;
 }
@@ -5686,7 +5686,7 @@ const struct regop_offset_range *gv100_get_runcontrol_whitelist_ranges(void)
 	return gv100_runcontrol_whitelist_ranges;
 }
 
-int gv100_get_runcontrol_whitelist_ranges_count(void)
+u64 gv100_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gv100_runcontrol_whitelist_ranges_count;
 }
@@ -5696,7 +5696,7 @@ const u32 *gv100_get_qctl_whitelist(void)
 	return gv100_qctl_whitelist;
 }
 
-int gv100_get_qctl_whitelist_count(void)
+u64 gv100_get_qctl_whitelist_count(void)
 {
 	return gv100_qctl_whitelist_count;
 }
@@ -5706,7 +5706,7 @@ const struct regop_offset_range *gv100_get_qctl_whitelist_ranges(void)
 	return gv100_qctl_whitelist_ranges;
 }
 
-int gv100_get_qctl_whitelist_ranges_count(void)
+u64 gv100_get_qctl_whitelist_ranges_count(void)
 {
 	return gv100_qctl_whitelist_ranges_count;
 }

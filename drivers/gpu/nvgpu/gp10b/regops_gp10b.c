@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -382,7 +382,7 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x009a0100,   1},
 };
 
-static const u32 gp10b_global_whitelist_ranges_count =
+static const u64 gp10b_global_whitelist_ranges_count =
 	ARRAY_SIZE(gp10b_global_whitelist_ranges);
 
 /* context */
@@ -390,24 +390,24 @@ static const u32 gp10b_global_whitelist_ranges_count =
 /* runcontrol */
 static const u32 gp10b_runcontrol_whitelist[] = {
 };
-static const u32 gp10b_runcontrol_whitelist_count =
+static const u64 gp10b_runcontrol_whitelist_count =
 	ARRAY_SIZE(gp10b_runcontrol_whitelist);
 
 static const struct regop_offset_range gp10b_runcontrol_whitelist_ranges[] = {
 };
-static const u32 gp10b_runcontrol_whitelist_ranges_count =
+static const u64 gp10b_runcontrol_whitelist_ranges_count =
 	ARRAY_SIZE(gp10b_runcontrol_whitelist_ranges);
 
 
 /* quad ctl */
 static const u32 gp10b_qctl_whitelist[] = {
 };
-static const u32 gp10b_qctl_whitelist_count =
+static const u64 gp10b_qctl_whitelist_count =
 	ARRAY_SIZE(gp10b_qctl_whitelist);
 
 static const struct regop_offset_range gp10b_qctl_whitelist_ranges[] = {
 };
-static const u32 gp10b_qctl_whitelist_ranges_count =
+static const u64 gp10b_qctl_whitelist_ranges_count =
 	ARRAY_SIZE(gp10b_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gp10b_get_global_whitelist_ranges(void)
@@ -415,7 +415,7 @@ const struct regop_offset_range *gp10b_get_global_whitelist_ranges(void)
 	return gp10b_global_whitelist_ranges;
 }
 
-int gp10b_get_global_whitelist_ranges_count(void)
+u64 gp10b_get_global_whitelist_ranges_count(void)
 {
 	return gp10b_global_whitelist_ranges_count;
 }
@@ -425,7 +425,7 @@ const struct regop_offset_range *gp10b_get_context_whitelist_ranges(void)
 	return gp10b_global_whitelist_ranges;
 }
 
-int gp10b_get_context_whitelist_ranges_count(void)
+u64 gp10b_get_context_whitelist_ranges_count(void)
 {
 	return gp10b_global_whitelist_ranges_count;
 }
@@ -435,7 +435,7 @@ const u32 *gp10b_get_runcontrol_whitelist(void)
 	return gp10b_runcontrol_whitelist;
 }
 
-int gp10b_get_runcontrol_whitelist_count(void)
+u64 gp10b_get_runcontrol_whitelist_count(void)
 {
 	return gp10b_runcontrol_whitelist_count;
 }
@@ -445,7 +445,7 @@ const struct regop_offset_range *gp10b_get_runcontrol_whitelist_ranges(void)
 	return gp10b_runcontrol_whitelist_ranges;
 }
 
-int gp10b_get_runcontrol_whitelist_ranges_count(void)
+u64 gp10b_get_runcontrol_whitelist_ranges_count(void)
 {
 	return gp10b_runcontrol_whitelist_ranges_count;
 }
@@ -455,7 +455,7 @@ const u32 *gp10b_get_qctl_whitelist(void)
 	return gp10b_qctl_whitelist;
 }
 
-int gp10b_get_qctl_whitelist_count(void)
+u64 gp10b_get_qctl_whitelist_count(void)
 {
 	return gp10b_qctl_whitelist_count;
 }
@@ -465,7 +465,7 @@ const struct regop_offset_range *gp10b_get_qctl_whitelist_ranges(void)
 	return gp10b_qctl_whitelist_ranges;
 }
 
-int gp10b_get_qctl_whitelist_ranges_count(void)
+u64 gp10b_get_qctl_whitelist_ranges_count(void)
 {
 	return gp10b_qctl_whitelist_ranges_count;
 }

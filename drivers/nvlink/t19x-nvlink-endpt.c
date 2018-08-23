@@ -232,8 +232,8 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 	reset_control_deassert(tdev->rst_nvhs_uphy_l5);
 	reset_control_deassert(tdev->rst_nvhs_uphy_l6);
 	reset_control_deassert(tdev->rst_nvhs_uphy_l7);
-	reset_control_deassert(tdev->rst_nvhs_uphy);
 	reset_control_deassert(tdev->rst_nvhs_uphy_pll0);
+	reset_control_deassert(tdev->rst_nvhs_uphy);
 
 	if (tdev->refclk == NVLINK_REFCLK_150) {
 		ret = clk_set_rate(tdev->clk_pllnvhs,
@@ -758,15 +758,15 @@ int t19x_nvlink_dev_car_disable(struct nvlink_device *ndev)
 	if (tdev->refclk == NVLINK_REFCLK_150)
 		clk_disable_unprepare(tdev->clk_pllnvhs);
 
-	ret = reset_control_assert(tdev->rst_nvhs_uphy_pll0);
-	if (ret < 0) {
-		nvlink_err("Reset assert failed for nvhs_uphy_pll0");
-		goto fail;
-	}
-
 	ret = reset_control_assert(tdev->rst_nvhs_uphy);
 	if (ret < 0) {
 		nvlink_err("Reset assert failed nvhs_uphy");
+		goto fail;
+	}
+
+	ret = reset_control_assert(tdev->rst_nvhs_uphy_pll0);
+	if (ret < 0) {
+		nvlink_err("Reset assert failed for nvhs_uphy_pll0");
 		goto fail;
 	}
 

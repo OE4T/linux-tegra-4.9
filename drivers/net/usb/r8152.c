@@ -6106,7 +6106,8 @@ static int rtl8152_close(struct net_device *netdev)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23) && defined(CONFIG_PM_SLEEP)
 	unregister_pm_notifier(&tp->pm_notifier);
 #endif
-	napi_disable(&tp->napi);
+	if (!test_bit(RTL8152_UNPLUG, &tp->flags))
+		napi_disable(&tp->napi);
 	smp_mb__before_atomic();
 	clear_bit(WORK_ENABLE, &tp->flags);
 	smp_mb__after_atomic();

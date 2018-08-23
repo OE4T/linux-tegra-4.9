@@ -125,7 +125,8 @@ static inline struct thread_info *current_thread_info(void)
 #define TIF_RESTORE_SIGMASK	20
 #define TIF_SINGLESTEP		21
 #define TIF_32BIT		22	/* 32bit process */
-#define TIF_DEPRECATED_WARN	23
+#define TIF_SSBD		23	/* Wants SSB mitigation */
+#define TIF_DEPRECATED_WARN	31
 
 #define _TIF_SIGPENDING		(1 << TIF_SIGPENDING)
 #define _TIF_NEED_RESCHED	(1 << TIF_NEED_RESCHED)

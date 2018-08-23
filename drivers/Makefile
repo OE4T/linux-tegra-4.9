@@ -16,3 +16,5 @@ obj-$(CONFIG_TEGRA_NVLINK)	+= nvlink/
 obj-$(CONFIG_NVPPS)		+= nvpps/
 obj-$(CONFIG_THERMAL)  += thermal/
 obj-$(CONFIG_TRUSTY)		+= trusty/
+obj-$(CONFIG_TEGRA_HV_MANAGER)	+= virt/tegra/
+

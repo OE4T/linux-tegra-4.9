@@ -391,8 +391,8 @@
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
 			isp_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID(ISP)>;
+				address-space = <&pixel_as>;
+				sid-list = <TEGRA_SID_ISP>;
 			};
 			nvdisplay_domain {
 				address-space = <&nvdisplay_as>;
@@ -436,7 +436,7 @@
 			};
 			rce_domain {
 				address-space = <&camera_vm1_as>;
-				sid-list = <TEGRA_SID(RCE)>;
+				sid-list = <TEGRA_SID_RCE>;
 			};
 			sata2_domain {
 				address-space = <&common_as>;
@@ -470,8 +470,8 @@
 				sid-list = <TEGRA_SID_UFSHC>;
 			};
 			vi_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID(VI)>;
+				address-space = <&pixel_as>;
+				sid-list = <TEGRA_SID_VI>;
 			};
 			xusb_dev_domain {
 				address-space = <&common_as>;
@@ -587,6 +587,13 @@
 			pcie5_as: pcie5 {
 				iova-start = <0x0 0x80000000>;
 				iova-size = <0x4 0x7FFFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			pixel_as: pixel {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x4 0x3FFFFFFF>; /* 8 Gigs is enough for everyone */
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

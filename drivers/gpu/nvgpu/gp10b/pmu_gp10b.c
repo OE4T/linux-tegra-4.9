@@ -179,11 +179,13 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 
 	/* GM20B PMU supports loading FECS and GPCCS only */
-	if (falconidmask == 0)
+	if (falconidmask == 0) {
 		return -EINVAL;
+	}
 	if (falconidmask & ~((1 << LSF_FALCON_ID_FECS) |
-				(1 << LSF_FALCON_ID_GPCCS)))
-				return -EINVAL;
+				(1 << LSF_FALCON_ID_GPCCS))) {
+		return -EINVAL;
+	}
 	g->pmu_lsf_loaded_falcon_id = 0;
 	/* check whether pmu is ready to bootstrap lsf if not wait for it */
 	if (!g->pmu_lsf_pmu_wpr_init_done) {
@@ -201,8 +203,9 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	pmu_wait_message_cond(&g->pmu,
 			gk20a_get_gr_idle_timeout(g),
 			&g->pmu_lsf_loaded_falcon_id, falconidmask);
-	if (g->pmu_lsf_loaded_falcon_id != falconidmask)
+	if (g->pmu_lsf_loaded_falcon_id != falconidmask) {
 		return -ETIMEDOUT;
+	}
 	return 0;
 }
 
@@ -247,8 +250,9 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 		nvgpu_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_gr_param_msg, pmu, &seq, ~0);
 
-	} else
+	} else {
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -330,8 +334,9 @@ int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
 	err = g->ops.pmu.pmu_nsbootstrap(pmu);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	nvgpu_log_fn(g, "done");
 	return 0;

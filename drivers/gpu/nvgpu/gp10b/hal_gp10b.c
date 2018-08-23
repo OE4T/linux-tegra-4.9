@@ -762,8 +762,9 @@ int gp10b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, false);
 
 	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
-	if (gops->fuse.check_priv_security(g))
+	if (gops->fuse.check_priv_security(g)) {
 		return -EINVAL; /* Do not boot gpu */
+	}
 
 	/* priv security dependent ops */
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {

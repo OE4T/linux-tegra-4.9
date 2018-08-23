@@ -143,8 +143,9 @@ void mc_gp10b_isr_stall(struct gk20a *g)
 			g->ops.mc.is_intr_nvlink_pending(g, mc_intr_0)) {
 		g->ops.nvlink.isr(g);
 	}
-	if (mc_intr_0 & mc_intr_pfb_pending_f() && g->ops.fb.fbpa_isr)
+	if (mc_intr_0 & mc_intr_pfb_pending_f() && g->ops.fb.fbpa_isr) {
 		g->ops.fb.fbpa_isr(g);
+	}
 
 	nvgpu_log(g, gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 

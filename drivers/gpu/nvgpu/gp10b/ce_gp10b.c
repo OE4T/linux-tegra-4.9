@@ -51,11 +51,13 @@ void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	nvgpu_log(g, gpu_dbg_intr, "ce isr %08x %08x\n", ce_intr, inst_id);
 
 	/* clear blocking interrupts: they exibit broken behavior */
-	if (ce_intr & ce_intr_status_blockpipe_pending_f())
+	if (ce_intr & ce_intr_status_blockpipe_pending_f()) {
 		clear_intr |= ce_blockpipe_isr(g, ce_intr);
+	}
 
-	if (ce_intr & ce_intr_status_launcherr_pending_f())
+	if (ce_intr & ce_intr_status_launcherr_pending_f()) {
 		clear_intr |= ce_launcherr_isr(g, ce_intr);
+	}
 
 	gk20a_writel(g, ce_intr_status_r(inst_id), clear_intr);
 	return;

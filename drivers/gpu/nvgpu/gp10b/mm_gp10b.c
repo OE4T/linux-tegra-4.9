@@ -59,13 +59,15 @@ int gp10b_init_bar2_vm(struct gk20a *g)
 	mm->bar2.vm = nvgpu_vm_init(g, big_page_size, SZ_4K,
 		mm->bar2.aperture_size - SZ_4K,
 		mm->bar2.aperture_size, false, false, "bar2");
-	if (!mm->bar2.vm)
+	if (!mm->bar2.vm) {
 		return -ENOMEM;
+	}
 
 	/* allocate instance mem for bar2 */
 	err = g->ops.mm.alloc_inst_block(g, inst_block);
-	if (err)
+	if (err) {
 		goto clean_up_va;
+	}
 
 	g->ops.mm.init_inst_block(inst_block, mm->bar2.vm, big_page_size);
 
@@ -129,11 +131,13 @@ static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	small_valid = attrs->pgsz == GMMU_PAGE_SIZE_SMALL;
 	big_valid   = attrs->pgsz == GMMU_PAGE_SIZE_BIG;
 
-	if (small_valid)
+	if (small_valid) {
 		small_addr = phys_addr >> gmmu_new_dual_pde_address_shift_v();
+	}
 
-	if (big_valid)
+	if (big_valid) {
 		big_addr = phys_addr >> gmmu_new_dual_pde_address_big_shift_v();
+	}
 
 	if (small_valid) {
 		pde_v[2] |=
@@ -195,24 +199,28 @@ static void __update_pte(struct vm_gk20a *vm,
 
 	pte_w[0] = pte_valid | pte_addr | pte_tgt;
 
-	if (attrs->priv)
+	if (attrs->priv) {
 		pte_w[0] |= gmmu_new_pte_privilege_true_f();
+	}
 
 	pte_w[1] = phys_addr >> (24 + gmmu_new_pte_address_shift_v()) |
 		gmmu_new_pte_kind_f(attrs->kind_v) |
 		gmmu_new_pte_comptagline_f((u32)(attrs->ctag /
 						 ctag_granularity));
 
-	if (attrs->rw_flag == gk20a_mem_flag_read_only)
+	if (attrs->rw_flag == gk20a_mem_flag_read_only) {
 		pte_w[0] |= gmmu_new_pte_read_only_true_f();
+	}
 
-	if (!attrs->valid && !attrs->cacheable)
+	if (!attrs->valid && !attrs->cacheable) {
 		pte_w[0] |= gmmu_new_pte_read_only_true_f();
-	else if (!attrs->cacheable)
+	} else if (!attrs->cacheable) {
 		pte_w[0] |= gmmu_new_pte_vol_true_f();
+	}
 
-	if (attrs->ctag)
+	if (attrs->ctag) {
 		attrs->ctag += page_size;
+	}
 
 }
 
@@ -235,10 +243,11 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pte_w[2] = {0, 0};
 
-	if (phys_addr)
+	if (phys_addr) {
 		__update_pte(vm, pte_w, phys_addr, attrs);
-	else if (attrs->sparse)
+	} else if (attrs->sparse) {
 		__update_pte_sparse(pte_w);
+	}
 
 	pte_dbg(g, attrs,
 		"vm=%s "
@@ -283,8 +292,9 @@ static u32 gp10b_get_pde0_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
 	u32 i;
 	u32 pgsz = GMMU_NR_PAGE_SIZES;
 
-	if (!pd->mem)
+	if (!pd->mem) {
 		return pgsz;
+	}
 
 	for (i = 0; i < GP10B_PDE0_ENTRY_SIZE >> 2; i++) {
 		pde_v[i] = nvgpu_mem_rd32(g, pd->mem, pde_offset + i);
@@ -300,8 +310,9 @@ static u32 gp10b_get_pde0_pgsz(struct gk20a *g, const struct gk20a_mmu_level *l,
 			gmmu_new_dual_pde_address_small_sys_f(~0))) <<
 			gmmu_new_dual_pde_address_shift_v();
 
-		if (addr)
+		if (addr) {
 			pgsz = GMMU_PAGE_SIZE_SMALL;
+		}
 	}
 
 	if (pde_v[0] & (gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() |

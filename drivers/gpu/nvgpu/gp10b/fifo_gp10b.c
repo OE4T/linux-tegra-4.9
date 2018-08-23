@@ -150,8 +150,9 @@ int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	v = nvgpu_mem_rd32(c->g, &c->inst_block,
 			ram_fc_allowed_syncpoints_w());
 	old_syncpt = pbdma_allowed_syncpoints_0_index_v(v);
-	if (c->sync)
+	if (c->sync) {
 		new_syncpt = c->sync->syncpt_id(c->sync);
+	}
 
 	if (new_syncpt && new_syncpt != old_syncpt) {
 		/* disable channel */
@@ -185,9 +186,9 @@ int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 	int ret = ENGINE_INVAL_GK20A;
 
 	nvgpu_log_info(g, "engine type %d", engine_type);
-	if (engine_type == top_device_info_type_enum_graphics_v())
+	if (engine_type == top_device_info_type_enum_graphics_v()) {
 		ret = ENGINE_GR_GK20A;
-	else if (engine_type == top_device_info_type_enum_lce_v()) {
+	} else if (engine_type == top_device_info_type_enum_lce_v()) {
 		/* Default assumptions - all the CE engine have separate runlist */
 		ret = ENGINE_ASYNC_CE_GK20A;
 	}
@@ -200,8 +201,9 @@ void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 {
 	if (top_device_info_data_type_v(table_entry) ==
 	    top_device_info_data_type_enum2_v()) {
-		if (inst_id)
+		if (inst_id) {
 			*inst_id = top_device_info_data_inst_id_v(table_entry);
+		}
 		if (pri_base) {
 			*pri_base =
 			    (top_device_info_data_pri_base_v(table_entry)
@@ -214,9 +216,10 @@ void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 				 g->ops.fifo.device_info_fault_id(table_entry);
 			nvgpu_log_info(g, "device info: fault_id: %d", *fault_id);
 		}
-	} else
+	} else {
 		nvgpu_err(g, "unknown device_info_data %d",
 			top_device_info_data_type_v(table_entry));
+	}
 }
 
 void gp10b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
@@ -330,21 +333,23 @@ static const char * const gp10b_hub_client_descs[] = {
 /* fill in mmu fault desc */
 void gp10b_fifo_get_mmu_fault_desc(struct mmu_fault_info *mmfault)
 {
-	if (mmfault->fault_type >= ARRAY_SIZE(gp10b_fault_type_descs))
+	if (mmfault->fault_type >= ARRAY_SIZE(gp10b_fault_type_descs)) {
 		WARN_ON(mmfault->fault_type >=
 				ARRAY_SIZE(gp10b_fault_type_descs));
-	else
+	} else {
 		mmfault->fault_type_desc =
 			 gp10b_fault_type_descs[mmfault->fault_type];
+	}
 }
 
 /* fill in mmu fault client description */
 void gp10b_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault)
 {
-	if (mmfault->client_id >= ARRAY_SIZE(gp10b_hub_client_descs))
+	if (mmfault->client_id >= ARRAY_SIZE(gp10b_hub_client_descs)) {
 		WARN_ON(mmfault->client_id >=
 				ARRAY_SIZE(gp10b_hub_client_descs));
-	else
+	} else {
 		mmfault->client_id_desc =
 			 gp10b_hub_client_descs[mmfault->client_id];
+	}
 }

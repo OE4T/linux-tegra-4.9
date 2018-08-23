@@ -1121,7 +1121,7 @@ int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
 		 struct gr_gk20a *gr)
 {
 	struct zbc_entry zbc_val;
-	u32 err;
+	int err;
 
 	/* load default stencil table */
 	zbc_val.type = GV11B_ZBC_TYPE_STENCIL;
@@ -1129,23 +1129,30 @@ int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
 	zbc_val.depth = 0x0;
 	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
 	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
-
+	if (err != 0) {
+		goto fail;
+	}
 	zbc_val.depth = 0x1;
 	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto fail;
+	}
 
 	zbc_val.depth = 0xff;
 	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	if (!err) {
-		gr->max_default_s_index = 3;
-	} else {
-		nvgpu_err(g, "fail to load default zbc stencil table");
-		return err;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto fail;
 	}
 
+	gr->max_default_s_index = 3;
+
 	return 0;
+
+fail:
+	nvgpu_err(g, "fail to load default zbc stencil table");
+	return err;
 }
 
 int gr_gv11b_load_stencil_tbl(struct gk20a *g, struct gr_gk20a *gr)

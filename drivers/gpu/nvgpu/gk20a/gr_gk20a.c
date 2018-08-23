@@ -3985,7 +3985,8 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct zbc_entry zbc_val;
-	u32 i, err;
+	u32 i;
+	int err;
 
 	nvgpu_mutex_init(&gr->zbc_lock);
 
@@ -4001,6 +4002,9 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	zbc_val.color_l2[0] = 0xff000000;
 	zbc_val.color_ds[3] = 0x3f800000;
 	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto color_fail;
+	}
 
 	/* Transparent black = (fmt 1 = zero) */
 	zbc_val.format = gr_ds_zbc_color_fmt_val_zero_v();
@@ -4008,7 +4012,10 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		zbc_val.color_ds[i] = 0;
 		zbc_val.color_l2[i] = 0;
 	}
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto color_fail;
+	}
 
 	/* Opaque white (i.e. solid white) = (fmt 2 = uniform 1) */
 	zbc_val.format = gr_ds_zbc_color_fmt_val_unorm_one_v();
@@ -4016,15 +4023,12 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		zbc_val.color_ds[i] = 0x3f800000;
 		zbc_val.color_l2[i] = 0xffffffff;
 	}
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	if (!err)
-		gr->max_default_color_index = 3;
-	else {
-		nvgpu_err(g,
-			   "fail to load default zbc color table");
-		return err;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto color_fail;
 	}
+
+	gr->max_default_color_index = 3;
 
 	/* load default depth table */
 	zbc_val.type = GK20A_ZBC_TYPE_DEPTH;
@@ -4032,26 +4036,34 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
 	zbc_val.depth = 0x3f800000;
 	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto depth_fail;
+	}
 
 	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
 	zbc_val.depth = 0;
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
-
-	if (!err)
-		gr->max_default_depth_index = 2;
-	else {
-		nvgpu_err(g,
-			   "fail to load default zbc depth table");
-		return err;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	if (err != 0) {
+		goto depth_fail;
 	}
+
+	gr->max_default_depth_index = 2;
 
 	if (g->ops.gr.load_zbc_s_default_tbl) {
 		err = g->ops.gr.load_zbc_s_default_tbl(g, gr);
-		if (err)
+		if (err != 0) {
 			return err;
+		}
 	}
 
 	return 0;
+
+color_fail:
+	nvgpu_err(g, "fail to load default zbc color table");
+	return err;
+depth_fail:
+	nvgpu_err(g, "fail to load default zbc depth table");
+	return err;
 }
 
 int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,

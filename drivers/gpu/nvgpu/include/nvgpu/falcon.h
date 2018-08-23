@@ -29,12 +29,12 @@
 /*
  * Falcon Id Defines
  */
-#define FALCON_ID_PMU       (0)
-#define FALCON_ID_FECS      (2)
-#define FALCON_ID_GPCCS     (3)
-#define FALCON_ID_NVDEC     (4)
-#define FALCON_ID_SEC2      (7)
-#define FALCON_ID_MINION    (10)
+#define FALCON_ID_PMU       (0U)
+#define FALCON_ID_FECS      (2U)
+#define FALCON_ID_GPCCS     (3U)
+#define FALCON_ID_NVDEC     (4U)
+#define FALCON_ID_SEC2      (7U)
+#define FALCON_ID_MINION    (10U)
 
 /*
  * Falcon Base address Defines
@@ -317,6 +317,6 @@ int nvgpu_flcn_queue_push(struct nvgpu_falcon *flcn,
 void nvgpu_flcn_queue_free(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_queue *queue);
 
-void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);
+int nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);
 
 #endif /* __FALCON_H__ */

@@ -1263,7 +1263,7 @@ struct gpu_ops {
 		u32 (*get_link_control_status)(struct gk20a *g);
 	} xve;
 	struct {
-		void (*falcon_hal_sw_init)(struct nvgpu_falcon *flcn);
+		int (*falcon_hal_sw_init)(struct nvgpu_falcon *flcn);
 	} falcon;
 	struct {
 		void (*enable_priv_ring)(struct gk20a *g);

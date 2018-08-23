@@ -167,11 +167,15 @@ static void gv11b_mm_mmu_fault_setup_hw(struct gk20a *g)
 
 static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 {
-	int err;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
-	nvgpu_mutex_init(&g->mm.hub_isr_mutex);
+	err = nvgpu_mutex_init(&g->mm.hub_isr_mutex);
+	if (err != 0) {
+		nvgpu_err(g, "Error in hub_isr_mutex initialization");
+		return err;
+	}
 
 	err = gv11b_mm_mmu_fault_info_buf_init(g);
 

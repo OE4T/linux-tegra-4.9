@@ -696,6 +696,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	u32 active_engine_id, pbdma_id, engine_id;
 	int flags = nvgpu_is_enabled(g, NVGPU_MM_USE_PHYSICAL_SG) ?
 		NVGPU_DMA_FORCE_CONTIGUOUS : 0;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -733,7 +734,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			int err = nvgpu_dma_alloc_flags_sys(g, flags,
+			err = nvgpu_dma_alloc_flags_sys(g, flags,
 							    runlist_size,
 							    &runlist->mem[i]);
 			if (err) {
@@ -741,7 +742,13 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 				goto clean_up_runlist;
 			}
 		}
-		nvgpu_mutex_init(&runlist->runlist_lock);
+
+		err = nvgpu_mutex_init(&runlist->runlist_lock);
+		if (err != 0) {
+			nvgpu_err(g,
+				"Error in runlist_lock mutex initialization");
+			goto clean_up_runlist;
+		}
 
 		/* None of buffers is pinned if this value doesn't change.
 		    Otherwise, one of them (cur_buffer) must have been pinned. */
@@ -773,7 +780,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 clean_up_runlist:
 	gk20a_fifo_delete_runlist(f);
 	nvgpu_log_fn(g, "fail");
-	return -ENOMEM;
+	return err;
 }
 
 u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g)

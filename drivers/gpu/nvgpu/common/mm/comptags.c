@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -66,7 +66,12 @@ int gk20a_comptag_allocator_init(struct gk20a *g,
 				 struct gk20a_comptag_allocator *allocator,
 				 unsigned long size)
 {
-	nvgpu_mutex_init(&allocator->lock);
+	int err = nvgpu_mutex_init(&allocator->lock);
+
+	if (err != 0) {
+		nvgpu_err(g, "Error in allocator.lock mutex initialization");
+		return err;
+	}
 
 	/*
 	 * 0th comptag is special and is never used. The base for this bitmap

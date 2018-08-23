@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,6 @@
 #ifndef __FLCN_GP106_H__
 #define __FLCN_GP106_H__
 
-void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
+int gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 
 #endif /* __FLCN_GP106_H__ */

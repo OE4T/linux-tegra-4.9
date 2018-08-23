@@ -22,6 +22,6 @@
 #ifndef __FLCN_GV100_H__
 #define __FLCN_GV100_H__
 
-void gv100_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
+int gv100_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 
 #endif /* __FLCN_GV100_H__ */

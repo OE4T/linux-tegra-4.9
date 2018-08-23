@@ -2715,7 +2715,11 @@ int gv100_nvlink_early_init(struct gk20a *g)
 		goto nvlink_init_exit;
 	}
 
-	nvgpu_flcn_sw_init(g, FALCON_ID_MINION);
+	err = nvgpu_flcn_sw_init(g, FALCON_ID_MINION);
+	if (err != 0) {
+		nvgpu_err(g, "failed to sw init FALCON_ID_MINION");
+		goto nvlink_init_exit;
+	}
 
 	g->nvlink.discovered_links &= ~g->nvlink.link_disable_mask;
 	nvgpu_log(g, gpu_dbg_nvlink, "link_disable_mask = 0x%08x (from VBIOS)",

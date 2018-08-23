@@ -53,9 +53,10 @@ static void gp106_falcon_ops(struct nvgpu_falcon *flcn)
 	gp106_falcon_engine_dependency_ops(flcn);
 }
 
-void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
+int gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
+	int err = 0;
 
 	switch (flcn->flcn_id) {
 	case FALCON_ID_PMU:
@@ -72,28 +73,35 @@ void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 		flcn->flcn_base = FALCON_FECS_BASE;
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = false;
-	break;
+		break;
 	case FALCON_ID_GPCCS:
 		flcn->flcn_base = FALCON_GPCCS_BASE;
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = false;
-	break;
+		break;
 	case FALCON_ID_NVDEC:
 		flcn->flcn_base = FALCON_NVDEC_BASE;
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = true;
-	break;
+		break;
 	default:
 		flcn->is_falcon_supported = false;
 		nvgpu_err(g, "Invalid flcn request");
+		err = -ENODEV;
 		break;
 	}
 
 	if (flcn->is_falcon_supported) {
-		nvgpu_mutex_init(&flcn->copy_lock);
-		gp106_falcon_ops(flcn);
+		err = nvgpu_mutex_init(&flcn->copy_lock);
+		if (err != 0) {
+			nvgpu_err(g, "Error in copy_lock mutex initialization");
+		} else {
+			gp106_falcon_ops(flcn);
+		}
 	} else {
 		nvgpu_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
 	}
+
+	return err;
 }

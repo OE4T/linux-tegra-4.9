@@ -29,27 +29,29 @@
 
 #include <nvgpu/hw/gv100/hw_falcon_gv100.h>
 
-void gv100_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
+int gv100_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
+	int err = 0;
 
-	switch (flcn->flcn_id) {
-	case FALCON_ID_MINION:
+	if (flcn->flcn_id == FALCON_ID_MINION) {
 		flcn->flcn_base = g->nvlink.minion_base;
 		flcn->is_falcon_supported = true;
 		flcn->is_interrupt_enabled = true;
-		break;
-	default:
-		break;
-	}
 
-	if (flcn->is_falcon_supported) {
-		nvgpu_mutex_init(&flcn->copy_lock);
+		err = nvgpu_mutex_init(&flcn->copy_lock);
+		if (err != 0) {
+			nvgpu_err(g, "Error in flcn.copy_lock mutex initialization");
+			return err;
+		}
+
 		gk20a_falcon_ops(flcn);
 	} else {
 		/*
 		 * Fall back
 		 */
-		gp106_falcon_hal_sw_init(flcn);
+		err = gp106_falcon_hal_sw_init(flcn);
 	}
+
+	return err;
 }

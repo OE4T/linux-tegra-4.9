@@ -3983,10 +3983,14 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct zbc_entry zbc_val;
-	u32 i;
-	int err;
+	u32 i = 0;
+	int err = 0;
 
-	nvgpu_mutex_init(&gr->zbc_lock);
+	err = nvgpu_mutex_init(&gr->zbc_lock);
+	if (err != 0) {
+		nvgpu_err(g, "Error in zbc_lock mutex initialization");
+		return err;
+	}
 
 	/* load default color table */
 	zbc_val.type = GK20A_ZBC_TYPE_COLOR;
@@ -4749,7 +4753,7 @@ static int gr_gk20a_init_access_map(struct gk20a *g)
 static int gk20a_init_gr_setup_sw(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
-	int err;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -4761,7 +4765,11 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->g = g;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	nvgpu_mutex_init(&g->gr.cs_lock);
+	err = nvgpu_mutex_init(&g->gr.cs_lock);
+	if (err != 0) {
+		nvgpu_err(g, "Error in gr.cs_lock mutex initialization");
+		return err;
+	}
 #endif
 
 	err = gr_gk20a_init_gr_config(g, gr);
@@ -4802,7 +4810,12 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	if (g->ops.gr.init_gfxp_wfi_timeout_count)
 		g->ops.gr.init_gfxp_wfi_timeout_count(g);
 
-	nvgpu_mutex_init(&gr->ctx_mutex);
+	err = nvgpu_mutex_init(&gr->ctx_mutex);
+	if (err != 0) {
+		nvgpu_err(g, "Error in gr.ctx_mutex initialization");
+		goto clean_up;
+	}
+
 	nvgpu_spinlock_init(&gr->ch_tlb_lock);
 
 	gr->remove_support = gk20a_remove_gr_support;
@@ -4869,12 +4882,16 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 
 int gk20a_init_gr_support(struct gk20a *g)
 {
-	u32 err;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
 	/* this is required before gr_gk20a_init_ctx_state */
-	nvgpu_mutex_init(&g->gr.fecs_mutex);
+	err = nvgpu_mutex_init(&g->gr.fecs_mutex);
+	if (err != 0) {
+		nvgpu_err(g, "Error in gr.fecs_mutex initialization");
+		return err;
+	}
 
 	err = gr_gk20a_init_ctxsw(g);
 	if (err)

@@ -284,7 +284,7 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 			   bool userspace_managed,
 			   char *name)
 {
-	int err;
+	int err = 0;
 	char alloc_name[32];
 	u64 kernel_vma_flags;
 	u64 user_vma_start, user_vma_limit;
@@ -476,8 +476,19 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 
 	vm->mapped_buffers = NULL;
 
-	nvgpu_mutex_init(&vm->syncpt_ro_map_lock);
-	nvgpu_mutex_init(&vm->update_gmmu_lock);
+	err = nvgpu_mutex_init(&vm->syncpt_ro_map_lock);
+	if (err != 0) {
+		nvgpu_err(g,
+			   "Error in syncpt_ro_map_lock mutex initialization");
+		goto clean_up_allocators;
+	}
+
+	err = nvgpu_mutex_init(&vm->update_gmmu_lock);
+	if (err != 0) {
+		nvgpu_err(g, "Error in update_gmmu_lock mutex initialization");
+		goto clean_up_ro_map_lock;
+	}
+
 	nvgpu_ref_init(&vm->ref);
 	nvgpu_init_list_node(&vm->vm_area_list);
 
@@ -489,12 +500,16 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	if (vm->va_limit > 4ULL * SZ_1G) {
 		err = nvgpu_init_sema_pool(vm);
 		if (err) {
-			goto clean_up_allocators;
+			goto clean_up_gmmu_lock;
 		}
 	}
 
 	return 0;
 
+clean_up_gmmu_lock:
+	nvgpu_mutex_destroy(&vm->update_gmmu_lock);
+clean_up_ro_map_lock:
+	nvgpu_mutex_destroy(&vm->syncpt_ro_map_lock);
 clean_up_allocators:
 	if (nvgpu_alloc_initialized(&vm->kernel)) {
 		nvgpu_alloc_destroy(&vm->kernel);

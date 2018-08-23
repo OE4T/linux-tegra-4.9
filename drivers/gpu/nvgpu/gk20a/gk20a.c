@@ -150,7 +150,7 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 int gk20a_finalize_poweron(struct gk20a *g)
 {
-	int err;
+	int err = 0;
 #if defined(CONFIG_TEGRA_GK20A_NVHOST)
 	u32 nr_pages;
 #endif
@@ -182,9 +182,21 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 
 	/* init interface layer support for PMU falcon */
-	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
-	nvgpu_flcn_sw_init(g, FALCON_ID_SEC2);
-	nvgpu_flcn_sw_init(g, FALCON_ID_NVDEC);
+	err = nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
+	if (err != 0) {
+		nvgpu_err(g, "failed to sw init FALCON_ID_PMU");
+		goto done;
+	}
+	err = nvgpu_flcn_sw_init(g, FALCON_ID_SEC2);
+	if (err != 0) {
+		nvgpu_err(g, "failed to sw init FALCON_ID_SEC2");
+		goto done;
+	}
+	err = nvgpu_flcn_sw_init(g, FALCON_ID_NVDEC);
+	if (err != 0) {
+		nvgpu_err(g, "failed to sw init FALCON_ID_NVDEC");
+		goto done;
+	}
 
 	if (g->ops.bios.init) {
 		err = g->ops.bios.init(g);

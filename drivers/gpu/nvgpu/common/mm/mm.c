@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -375,7 +377,7 @@ clean_up_vm:
 static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	int err;
+	int err = 0;
 
 	if (mm->sw_ready) {
 		nvgpu_log_info(g, "skip init");
@@ -383,7 +385,11 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	mm->g = g;
-	nvgpu_mutex_init(&mm->l2_op_lock);
+	err = nvgpu_mutex_init(&mm->l2_op_lock);
+	if (err != 0) {
+		nvgpu_err(g, "Error in l2_op_lock mutex initialization");
+		return err;
+	}
 
 	/*TBD: make channel vm size configurable */
 	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE -

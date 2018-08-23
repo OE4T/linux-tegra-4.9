@@ -90,6 +90,8 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 {
 	struct nvgpu_pd_cache *cache;
 	u32 i;
+	int err = 0;
+
 
 	/*
 	 * This gets called from finalize_poweron() so we need to make sure we
@@ -111,9 +113,15 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 	}
 
 	cache->mem_tree = NULL;
-	g->mm.pd_cache = cache;
-	nvgpu_mutex_init(&cache->lock);
 
+	err = nvgpu_mutex_init(&cache->lock);
+	if (err != 0) {
+		nvgpu_err(g, "Error in cache.lock initialization");
+		nvgpu_kfree(g, cache);
+		return err;
+	}
+
+	g->mm.pd_cache = cache;
 	pd_dbg(g, "PD cache initialized!");
 
 	return 0;

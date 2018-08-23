@@ -397,10 +397,11 @@ int nvgpu_flcn_bl_bootstrap(struct nvgpu_falcon *flcn,
 	return status;
 }
 
-void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
+int nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 {
 	struct nvgpu_falcon *flcn = NULL;
 	struct gpu_ops *gops = &g->ops;
+	int err = 0;
 
 	switch (flcn_id) {
 	case FALCON_ID_PMU:
@@ -431,12 +432,15 @@ void nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 		break;
 	default:
 		nvgpu_err(g, "Invalid/Unsupported falcon ID %x", flcn_id);
+		err = -ENODEV;
 		break;
 	};
 
-	/* call to HAL method to assign flcn base & ops to selected falcon */
-	if (flcn) {
-		flcn->g = g;
-		gops->falcon.falcon_hal_sw_init(flcn);
+	if (err != 0) {
+		return err;
 	}
+
+	/* call to HAL method to assign flcn base & ops to selected falcon */
+	flcn->g = g;
+	return gops->falcon.falcon_hal_sw_init(flcn);
 }

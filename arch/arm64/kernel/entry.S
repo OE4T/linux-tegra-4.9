@@ -722,16 +722,12 @@ el0_ia:
 	 */
 	mrs	x26, far_el1
 	// enable interrupts before calling the main handler
-	enable_dbg
-	msr     daifclr, #(8 | 4 | 1)
-#ifdef CONFIG_TRACE_IRQFLAGS
-	bl	trace_hardirqs_off
-#endif
+	enable_dbg_and_irq
 	ct_user_exit
 	mov	x0, x26
 	mov	x1, x25
 	mov	x2, sp
-	bl	do_el0_ia_bp_hardening
+	bl	do_mem_abort
 	b	ret_to_user
 el0_fpsimd_acc:
 	/*
@@ -766,7 +762,7 @@ el0_sp_pc:
 	mov	x0, x26
 	mov	x1, x25
 	mov	x2, sp
-	bl	do_el0_sp_pc_abort_bp_hardening
+	bl	do_sp_pc_abort
 	b	ret_to_user
 el0_undef:
 	/*
@@ -793,8 +789,6 @@ el0_dbg:
 	 * Debug exception handling
 	 */
 	tbnz	x24, #0, el0_inv		// EL0 only
-	mrs	x0, elr_el1
-	bl	do_el0_bp_hardening
 	mrs	x0, far_el1
 	mov	x1, x25
 	mov	x2, sp
@@ -822,11 +816,6 @@ el0_irq_naked:
 #endif
 
 	ct_user_exit
-#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
-	tbz	x22, #55, 1f
-	bl	do_el0_irq_bp_hardening
-1:
-#endif
 	irq_handler
 
 #ifdef CONFIG_TRACE_IRQFLAGS

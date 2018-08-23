@@ -316,10 +316,6 @@ static void show_map(struct task_struct *tsk, u64 addr)
 	pr_alert("Library at 0x%llx: 0x%lx %s\n", addr, vma->vm_start, p);
 }
 
-#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
-void invalidate_btb(void);
-#endif
-
 /*
  * Something tried to access memory that isn't in our memory map. User mode
  * accesses just cause a SIGSEGV
@@ -352,10 +348,6 @@ static void __do_user_fault(struct task_struct *tsk, unsigned long addr,
 	si.si_errno = 0;
 	si.si_code = code;
 	si.si_addr = (void __user *)addr;
-#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
-	asm(ALTERNATIVE("nop; nop", "bl invalidate_btb; dsb nsh",
-			ARM64_IC_IALLU_ON_CTX_CHANGE));
-#endif
 
 	force_sig_info(sig, &si, tsk);
 }
@@ -716,38 +708,6 @@ asmlinkage void __exception do_mem_abort(unsigned long addr, unsigned int esr,
 	arm64_notify_die("", regs, &info, esr);
 }
 
-asmlinkage void __exception do_el0_irq_bp_hardening(void)
-{
-	/* PC has already been checked in entry.S */
-	arm64_apply_bp_hardening();
-}
-
-asmlinkage void __exception do_el0_ia_bp_hardening(unsigned long addr,
-						   unsigned int esr,
-						   struct pt_regs *regs)
-{
-	/*
-	 * We've taken an instruction abort from userspace and not yet
-	 * re-enabled IRQs. If the address is a kernel address, apply
-	 * BP hardening prior to enabling IRQs and pre-emption.
-	 */
-	if (addr > TASK_SIZE)
-		arm64_apply_bp_hardening();
-
-	local_irq_enable();
-	do_mem_abort(addr, esr, regs);
-}
-
-asmlinkage void __exception do_el0_bp_hardening(unsigned long addr)
-{
-#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
-	if (addr > TASK_SIZE) {
-		invalidate_btb();
-		asm("dsb nsh");
-	}
-#endif
-}
-
 /*
  * Handle stack alignment exceptions.
  */
@@ -775,26 +735,6 @@ asmlinkage void __exception do_sp_pc_abort(unsigned long addr,
 	info.si_code  = BUS_ADRALN;
 	info.si_addr  = (void __user *)addr;
 	arm64_notify_die("Oops - SP/PC alignment exception", regs, &info, esr);
-}
-
-asmlinkage void __exception do_el0_sp_pc_abort_bp_hardening(unsigned long addr,
-						   unsigned int esr,
-						   struct pt_regs *regs)
-{
-#ifdef CONFIG_HARDEN_BRANCH_PREDICTOR
-	/*
-	 * We've taken an instruction abort from userspace and not yet
-	 * re-enabled IRQs. If the address is a kernel address, apply
-	 * BP hardening prior to enabling IRQs and pre-emption.
-	 */
-	if (addr > TASK_SIZE) {
-		invalidate_btb();
-		asm("dsb nsh");
-	}
-#endif
-
-	local_irq_enable();
-	do_sp_pc_abort(addr, esr, regs);
 }
 
 int __init early_brk64(unsigned long addr, unsigned int esr,

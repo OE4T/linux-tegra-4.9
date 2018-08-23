@@ -43,7 +43,7 @@
 #endif
 
 #ifndef TCPDUMP_MAXSIZ
-#define TCPDUMP_MAXSIZ		(6 * 1024 * 1024)
+#define TCPDUMP_MAXSIZ		(3 * 1024 * 1024)
 #endif
 
 /* delay between rx packet and running statistics work function

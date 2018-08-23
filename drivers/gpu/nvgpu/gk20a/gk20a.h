@@ -178,6 +178,7 @@ enum {
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
+		u64 (*get_cbc_base_divisor)(struct gk20a *g);
 		int (*init_comptags)(struct gk20a *g, struct gr_gk20a *gr);
 		int (*cbc_ctrl)(struct gk20a *g, enum gk20a_cbc_op op,
 				u32 min, u32 max);

@@ -99,9 +99,10 @@ void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		} else {
 			u32 mmu_id = gm20b_engine_id_to_mmu_id(g,
 								engine_id);
-			if (mmu_id != (u32)~0)
+			if (mmu_id != (u32)~0) {
 				gk20a_writel(g, fifo_trigger_mmu_fault_r(mmu_id),
 					     fifo_trigger_mmu_fault_enable_f(1));
+			}
 		}
 	}
 
@@ -120,8 +121,9 @@ void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (ret)
+	if (ret) {
 		nvgpu_err(g, "mmu fault timeout");
+	}
 
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
@@ -150,9 +152,10 @@ void gm20b_device_info_data_parse(struct gk20a *g,
 			*fault_id =
 			    top_device_info_data_fault_id_enum_v(table_entry);
 		}
-	} else
+	} else {
 		nvgpu_err(g, "unknown device_info_data %d",
 				top_device_info_data_type_v(table_entry));
+	}
 }
 
 void gm20b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
@@ -250,10 +253,11 @@ static const char * const gm20b_gpc_client_descs[] = {
 
 void gm20b_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault)
 {
-	if (mmfault->client_id >= ARRAY_SIZE(gm20b_gpc_client_descs))
+	if (mmfault->client_id >= ARRAY_SIZE(gm20b_gpc_client_descs)) {
 		WARN_ON(mmfault->client_id >=
 				ARRAY_SIZE(gm20b_gpc_client_descs));
-	else
+	} else {
 		mmfault->client_id_desc =
 			 gm20b_gpc_client_descs[mmfault->client_id];
+	}
 }

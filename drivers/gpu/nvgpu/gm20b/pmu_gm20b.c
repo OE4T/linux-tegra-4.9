@@ -131,8 +131,9 @@ static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	gm20b_dbg_pmu(g, "reply PMU_ACR_CMD_ID_INIT_WPR_REGION");
 
-	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS)
+	if (msg->msg.acr.acrmsg.errorcode == PMU_ACR_SUCCESS) {
 		g->pmu_lsf_pmu_wpr_init_done = 1;
+	}
 	nvgpu_log_fn(g, "done");
 }
 
@@ -189,8 +190,9 @@ static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
 
 	do {
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
-		if (reg == val)
+		if (reg == val) {
 			return 0;
+		}
 		nvgpu_udelay(delay);
 	} while (!nvgpu_timeout_expired(&timeout));
 
@@ -233,8 +235,9 @@ int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
 
 	/* GM20B PMU supports loading FECS only */
-	if (!(falconidmask == (1 << LSF_FALCON_ID_FECS)))
+	if (!(falconidmask == (1 << LSF_FALCON_ID_FECS))) {
 		return -EINVAL;
+	}
 	/* check whether pmu is ready to bootstrap lsf if not wait for it */
 	if (!g->pmu_lsf_pmu_wpr_init_done) {
 		pmu_wait_message_cond(&g->pmu,

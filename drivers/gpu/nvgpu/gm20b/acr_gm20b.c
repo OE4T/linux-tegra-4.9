@@ -238,8 +238,9 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	struct nvgpu_firmware *gpccs_sig;
 	int err;
 
-	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS))
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 		return -ENOENT;
+	}
 
 	gpccs_sig = nvgpu_request_firmware(g, T18x_GPCCS_UCODE_SIG, 0);
 	if (!gpccs_sig) {
@@ -381,20 +382,23 @@ int prepare_ucode_blob(struct gk20a *g)
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
 	gm20b_dbg_pmu(g, " Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
-	if (err)
+	if (err) {
 		goto free_sgt;
+	}
 
 	if (plsfm->managed_flcn_cnt && !g->acr.ucode_blob.cpu_va) {
 		/* Generate WPR requirements*/
 		err = lsf_gen_wpr_requirements(g, plsfm);
-		if (err)
+		if (err) {
 			goto free_sgt;
+		}
 
 		/*Alloc memory to hold ucode blob contents*/
 		err = g->ops.pmu.alloc_blob_space(g, plsfm->wpr_size
 				, &g->acr.ucode_blob);
-		if (err)
+		if (err) {
 			goto free_sgt;
+		}
 
 		gm20b_dbg_pmu(g, "managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
@@ -428,8 +432,9 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	/* Obtain the PMU ucode image and add it to the list if required*/
 	memset(&ucode_img, 0, sizeof(ucode_img));
 	status = pmu_ucode_details(g, &ucode_img);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	/* The falon_id is formed by grabbing the static base
 	 * falon_id from the image and adding the
@@ -441,8 +446,9 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	if (!lsfm_falcon_disabled(g, plsfm, falcon_id)) {
 		pmu->falcon_id = falcon_id;
 		if (lsfm_add_ucode_img(g, plsfm, &ucode_img,
-			pmu->falcon_id) == 0)
+				pmu->falcon_id) == 0) {
 			pmu->pmu_mode |= PMU_LSFM_MANAGED;
+		}
 
 		plsfm->managed_flcn_cnt++;
 	} else {
@@ -480,8 +486,9 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 					/* Do not manage non-FB ucode*/
 					if (lsfm_add_ucode_img(g,
 						plsfm, &ucode_img, falcon_id)
-						== 0)
+						== 0) {
 						plsfm->managed_flcn_cnt++;
+					}
 				} else {
 					gm20b_dbg_pmu(g, "not managed %d\n",
 						ucode_img.lsf_desc->falcon_id);
@@ -513,18 +520,22 @@ int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	u64 addr_code, addr_data;
 	u32 addr_args;
 
-	if (p_img->desc == NULL) /*This means its a header based ucode,
-				  and so we do not fill BL gen desc structure*/
+	if (p_img->desc == NULL) {
+		/*
+		 * This means its a header based ucode,
+		 * and so we do not fill BL gen desc structure
+		 */
 		return -EINVAL;
+	}
 	desc = p_img->desc;
 	/*
-	 Calculate physical and virtual addresses for various portions of
-	 the PMU ucode image
-	 Calculate the 32-bit addresses for the application code, application
-	 data, and bootloader code. These values are all based on IM_BASE.
-	 The 32-bit addresses will be the upper 32-bits of the virtual or
-	 physical addresses of each respective segment.
-	*/
+	 * Calculate physical and virtual addresses for various portions of
+	 * the PMU ucode image
+	 * Calculate the 32-bit addresses for the application code, application
+	 * data, and bootloader code. These values are all based on IM_BASE.
+	 * The 32-bit addresses will be the upper 32-bits of the virtual or
+	 * physical addresses of each respective segment.
+	 */
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
@@ -584,19 +595,23 @@ int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct pmu_ucode_desc *desc;
 	u64 addr_code, addr_data;
 
-	if (p_img->desc == NULL) /*This means its a header based ucode,
-				  and so we do not fill BL gen desc structure*/
+	if (p_img->desc == NULL) {
+		/*
+		 * This means its a header based ucode,
+		 * and so we do not fill BL gen desc structure
+		 */
 		return -EINVAL;
+	}
 	desc = p_img->desc;
 
 	/*
-	 Calculate physical and virtual addresses for various portions of
-	 the PMU ucode image
-	 Calculate the 32-bit addresses for the application code, application
-	 data, and bootloader code. These values are all based on IM_BASE.
-	 The 32-bit addresses will be the upper 32-bits of the virtual or
-	 physical addresses of each respective segment.
-	*/
+	 * Calculate physical and virtual addresses for various portions of
+	 * the PMU ucode image
+	 * Calculate the 32-bit addresses for the application code, application
+	 * data, and bootloader code. These values are all based on IM_BASE.
+	 * The 32-bit addresses will be the upper 32-bits of the virtual or
+	 * physical addresses of each respective segment.
+	 */
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
@@ -642,9 +657,10 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 	if (pmu->pmu_mode & PMU_LSFM_MANAGED) {
 		gm20b_dbg_pmu(g, "pmu write flcn bl gen desc\n");
-		if (pnode->wpr_header.falcon_id == pmu->falcon_id)
+		if (pnode->wpr_header.falcon_id == pmu->falcon_id) {
 			return g->ops.pmu.pmu_populate_loader_cfg(g, pnode,
 				&pnode->bl_gen_desc_size);
+		}
 	}
 
 	/* Failed to find the falcon requested. */
@@ -795,9 +811,10 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 	u32 full_app_size = 0;
 	u32 data = 0;
 
-	if (pnode->ucode_img.lsf_desc)
+	if (pnode->ucode_img.lsf_desc) {
 		memcpy(&pnode->lsb_header.signature, pnode->ucode_img.lsf_desc,
 			sizeof(struct lsf_ucode_desc));
+	}
 	pnode->lsb_header.ucode_size = pnode->ucode_img.data_size;
 
 	/* The remainder of the LSB depends on the loader usage */
@@ -865,8 +882,9 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 
 	struct lsfm_managed_ucode_img *pnode;
 	pnode = nvgpu_kzalloc(g, sizeof(struct lsfm_managed_ucode_img));
-	if (pnode == NULL)
+	if (pnode == NULL) {
 		return -ENOMEM;
+	}
 
 	/* Keep a copy of the ucode image info locally */
 	memcpy(&pnode->ucode_img, ucode_image, sizeof(struct flcn_ucode_img));
@@ -919,11 +937,12 @@ static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm)
 	while (cnt) {
 		mg_ucode_img = plsfm->ucode_img_list;
 		if (mg_ucode_img->ucode_img.lsf_desc->falcon_id ==
-				LSF_FALCON_ID_PMU)
+				LSF_FALCON_ID_PMU) {
 			lsfm_free_ucode_img_res(g, &mg_ucode_img->ucode_img);
-		else
+		} else {
 			lsfm_free_nonpmu_ucode_img_res(g,
 				&mg_ucode_img->ucode_img);
+		}
 		plsfm->ucode_img_list = mg_ucode_img->next;
 		nvgpu_kfree(g, mg_ucode_img);
 		cnt--;
@@ -1110,8 +1129,9 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 			((acr_ucode_header_t210_load[2]) >> 8);
 		bl_dmem_desc->data_dma_base1 = 0x0;
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
-	} else
+	} else {
 		acr->acr_dmem_desc->nonwpr_ucode_blob_size = 0;
+	}
 	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {
 		err = status;
@@ -1274,10 +1294,12 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 
-	if (g->ops.pmu.setup_apertures)
+	if (g->ops.pmu.setup_apertures) {
 		g->ops.pmu.setup_apertures(g);
-	if (g->ops.pmu.update_lspmu_cmdline_args)
+	}
+	if (g->ops.pmu.update_lspmu_cmdline_args) {
 		g->ops.pmu.update_lspmu_cmdline_args(g);
+	}
 
 	/*disable irqs for hs falcon booting as we will poll for halt*/
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
@@ -1287,8 +1309,9 @@ int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	/*Clearing mailbox register used to reflect capabilities*/
 	gk20a_writel(g, pwr_falcon_mailbox1_r(), 0);
 	err = bl_bootstrap(pmu, desc, bl_sz);
-	if (err)
+	if (err) {
 		return err;
+	}
 	return 0;
 }
 
@@ -1362,8 +1385,9 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	 */
 
 	if (g->ops.pmu.falcon_clear_halt_interrupt_status(g,
-			gk20a_get_gr_idle_timeout(g)))
+			gk20a_get_gr_idle_timeout(g))) {
 		goto err_unmap_bl;
+	}
 
 	gm20b_dbg_pmu(g, "phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
@@ -1377,12 +1401,13 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 				ACR_COMPLETION_TIMEOUT_MS);
 		if (err == 0) {
 			/* Clear the HALT interrupt */
-		  if (g->ops.pmu.falcon_clear_halt_interrupt_status(g,
-				  gk20a_get_gr_idle_timeout(g)))
+			if (g->ops.pmu.falcon_clear_halt_interrupt_status(g,
+					gk20a_get_gr_idle_timeout(g))) {
+				goto err_unmap_bl;
+			}
+		} else {
 			goto err_unmap_bl;
 		}
-		else
-			goto err_unmap_bl;
 	}
 	gm20b_dbg_pmu(g, "after waiting for halt, err %x\n", err);
 	gm20b_dbg_pmu(g, "phys sec reg %x\n", gk20a_readl(g,
@@ -1447,8 +1472,9 @@ int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int status = 0;
 
-	if (nvgpu_flcn_clear_halt_intr_status(pmu->flcn, timeout_ms))
+	if (nvgpu_flcn_clear_halt_intr_status(pmu->flcn, timeout_ms)) {
 		status = -EBUSY;
+	}
 
 	return status;
 }

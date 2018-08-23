@@ -42,10 +42,11 @@ void gm20b_mm_set_big_page_size(struct gk20a *g,
 	val = nvgpu_mem_rd32(g, mem, ram_in_big_page_size_w());
 	val &= ~ram_in_big_page_size_m();
 
-	if (size == SZ_64K)
+	if (size == SZ_64K) {
 		val |= ram_in_big_page_size_64kb_f();
-	else
+	} else {
 		val |= ram_in_big_page_size_128kb_f();
+	}
 
 	nvgpu_mem_wr32(g, mem, ram_in_big_page_size_w(), val);
 	nvgpu_log_fn(g, "done");

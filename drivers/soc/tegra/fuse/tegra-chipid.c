@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,6 +102,14 @@ static int get_revision(char *val, const struct kernel_param *kp)
 	return param_get_uint(val, kp);
 }
 
+static int get_major_rev(char *val, const struct kernel_param *kp)
+{
+	if (tegra_id.revision == TEGRA_REVISION_UNKNOWN)
+		tegra_set_tegraid_from_hw();
+
+	return param_get_uint(val, kp);
+}
+
 static struct kernel_param_ops tegra_chip_id_ops = {
 	.get = get_chip_id,
 };
@@ -110,8 +118,14 @@ static struct kernel_param_ops tegra_revision_ops = {
 	.get = get_revision,
 };
 
+static struct kernel_param_ops tegra_major_rev_ops = {
+	.get = get_major_rev,
+};
+
 module_param_cb(tegra_chip_id, &tegra_chip_id_ops, &tegra_id.chipid, 0444);
 module_param_cb(tegra_chip_rev, &tegra_revision_ops, &tegra_id.revision, 0444);
+module_param_cb(tegra_chip_major_rev,
+		&tegra_major_rev_ops, &tegra_id.major, 0444);
 
 static int get_prod_mode(char *val, const struct kernel_param *kp)
 {

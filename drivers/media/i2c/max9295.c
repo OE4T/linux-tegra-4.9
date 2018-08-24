@@ -32,12 +32,15 @@
 #define MAX9295_PIPE_U_DT_ADDR 0x31A
 
 #define MAX9295_CTRL0_ADDR 0x10
-#define MAX9295_SRC_CTRL_ADDR 0x2B0
+#define MAX9295_SRC_CTRL_ADDR 0x2BF
 #define MAX9295_SRC_PWDN_ADDR 0x02BE
 #define MAX9295_SRC_OUT_RCLK_ADDR 0x3F1
 #define MAX9295_START_PIPE_ADDR 0x311
 #define MAX9295_PIPE_EN_ADDR 0x2
 #define MAX9295_CSI_PORT_SEL_ADDR 0x308
+
+#define MAX9295_I2C4_ADDR 0x44
+#define MAX9295_I2C5_ADDR 0x45
 
 #define MAX9295_STREAM_PIPE_UNUSED 0x22
 #define MAX9295_CSI_MODE_1X4 0x00
@@ -56,15 +59,10 @@
 #define MAX9295_CSI_2X2_MODE_LANE_MAP1 MAX9295_CSI_2X4_MODE_LANE_MAP1
 #define MAX9295_CSI_2X2_MODE_LANE_MAP2 MAX9295_CSI_2X4_MODE_LANE_MAP2
 
-#define MAX9295_PIPE_X_ST_ID 0x0
-#define MAX9295_PIPE_Y_ST_ID 0x1
-#define MAX9295_PIPE_Z_ST_ID 0x2
-#define MAX9295_PIPE_U_ST_ID 0x3
-
-#define MAX9295_PIPE_X_DT_ROUTE_EN 0xC0
-#define MAX9295_PIPE_Y_DT_ROUTE_EN 0x40
-#define MAX9295_PIPE_Z_DT_ROUTE_EN 0x40
-#define MAX9295_PIPE_U_DT_ROUTE_EN 0x40
+#define MAX9295_ST_ID_0 0x0
+#define MAX9295_ST_ID_1 0x1
+#define MAX9295_ST_ID_2 0x2
+#define MAX9295_ST_ID_3 0x3
 
 #define MAX9295_PIPE_X_START_B 0x80
 #define MAX9295_PIPE_Y_START_B 0x40
@@ -75,11 +73,6 @@
 #define MAX9295_PIPE_Y_START_A 0x2
 #define MAX9295_PIPE_Z_START_A 0x4
 #define MAX9295_PIPE_U_START_A 0x8
-
-#define MAX9295_CLK_SELX 0x1
-#define MAX9295_CLK_SELY 0x2
-#define MAX9295_CLK_SELZ 0x4
-#define MAX9295_CLK_SELU 0x8
 
 #define MAX9295_START_PORT_A 0x10
 #define MAX9295_START_PORT_B 0x20
@@ -95,22 +88,33 @@
 #define MAX9295_VID_TX_EN_U 0x80
 
 #define MAX9295_VID_INIT 0x3
-
 #define MAX9295_SRC_RCLK 0x89
 
 #define MAX9295_RESET_ALL 0x80
-#define MAX9295_RESET_LINK 0x40
-#define MAX9295_RESET_ONESHOT 0x20
-#define MAX9295_REG_EN 0x4
-#define MAX9295_AUTO_LINK 0x1
-#define MAX9295_RESET_SRC 0x12
+#define MAX9295_RESET_SRC 0x60
 #define MAX9295_PWDN_GPIO 0x90
+
+#define MAX9295_MAX_PIPES 0x4
+
+struct max9295_client_ctx {
+	struct gmsl_link_ctx *g_ctx;
+	bool st_done;
+};
 
 struct max9295 {
 	struct i2c_client *i2c_client;
 	struct regmap *regmap;
-	struct gmsl_link_data *gmsl_data;
+	struct max9295_client_ctx g_client;
 	struct mutex lock;
+};
+
+static struct max9295 *prim_priv__;
+
+struct map_ctx {
+	u8 dt;
+	u16 addr;
+	u8 val;
+	u8 st_id;
 };
 
 static int max9295_write_reg(struct device *dev, u16 addr, u8 val)
@@ -123,27 +127,13 @@ static int max9295_write_reg(struct device *dev, u16 addr, u8 val)
 		dev_err(dev, "%s:i2c write failed, 0x%x = %x\n",
 			__func__, addr, val);
 
-	return err;
-}
-
-static int max9295_read_reg(struct max9295 *priv,
-	u16 addr, u8* val)
-{
-	struct i2c_client *i2c_client = priv->i2c_client;
-	int err;
-	u32 reg_val = 0;
-
-	err = regmap_read(priv->regmap, addr, &reg_val);
-	if (err)
-		dev_err(&i2c_client->dev, "%s:i2c read failed, 0x%x = %x\n",
-			__func__, addr, *val);
-
-	*val = reg_val & 0xFF;
+	/* delay before next i2c command as required for SERDES link */
+	usleep_range(100, 110);
 
 	return err;
 }
 
-int max9295_stream_setup(struct device *dev)
+int max9295_setup_streaming(struct device *dev)
 {
 	struct max9295 *priv = dev_get_drvdata(dev);
 	int err = 0;
@@ -152,10 +142,39 @@ int max9295_stream_setup(struct device *dev)
 	u32 lane_map2;
 	u32 port;
 	u32 rx1_lanes;
+	u32 st_pipe;
+	u32 pipe_en;
+	u32 port_sel = 0;
+	struct gmsl_link_ctx *g_ctx;
+	u32 i;
+	u32 j;
+	u32 st_en;
+
+	struct map_ctx map_pipe_dtype[] = {
+		{GMSL_CSI_DT_RAW_12, MAX9295_PIPE_Z_DT_ADDR, 0x2C,
+			MAX9295_ST_ID_2},
+		{GMSL_CSI_DT_UED_U1, MAX9295_PIPE_X_DT_ADDR, 0x30,
+			MAX9295_ST_ID_0},
+		{GMSL_CSI_DT_EMBED, MAX9295_PIPE_Y_DT_ADDR, 0x12,
+			MAX9295_ST_ID_1},
+	};
 
 	mutex_lock(&priv->lock);
 
-	switch (priv->gmsl_data->csi_mode) {
+	if(!priv->g_client.g_ctx) {
+		dev_err(dev, "%s: no sdev client found\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	if (priv->g_client.st_done) {
+		dev_dbg(dev, "%s: stream setup is already done\n", __func__);
+		goto error;
+	}
+
+	g_ctx = priv->g_client.g_ctx;
+
+	switch (g_ctx->csi_mode) {
 	case GMSL_CSI_1X4_MODE:
 		csi_mode = MAX9295_CSI_MODE_1X4;
 		lane_map1 = MAX9295_CSI_1X4_MODE_LANE_MAP1;
@@ -180,7 +199,7 @@ int max9295_stream_setup(struct device *dev)
 		goto error;
 	}
 
-	port = (priv->gmsl_data->src_csi_port == GMSL_CSI_PORT_B) ?
+	port = (g_ctx->src_csi_port == GMSL_CSI_PORT_B) ?
 			MAX9295_CSI_PORT_B(rx1_lanes) :
 			MAX9295_CSI_PORT_A(rx1_lanes);
 
@@ -189,164 +208,41 @@ int max9295_stream_setup(struct device *dev)
 	max9295_write_reg(dev, MAX9295_MIPI_RX2_ADDR, lane_map1);
 	max9295_write_reg(dev, MAX9295_MIPI_RX3_ADDR, lane_map2);
 
-	switch (priv->gmsl_data->num_streams) {
-	case 2:
-		max9295_write_reg(dev, MAX9295_PIPE_X_DT_ADDR,
-			(MAX9295_PIPE_X_DT_ROUTE_EN |
-				priv->gmsl_data->streams[0].st_data_type));
-		priv->gmsl_data->streams[0].st_id_sel = MAX9295_PIPE_X_ST_ID;
+	for (i = 0; i < g_ctx->num_streams; i++) {
+		struct gmsl_stream *g_stream = &g_ctx->streams[i];
+		g_stream->st_id_sel = GMSL_ST_ID_UNUSED;
+		for (j = 0; j < ARRAY_SIZE(map_pipe_dtype); j++) {
+			if (map_pipe_dtype[j].dt == g_stream->st_data_type) {
+				/*
+				 * TODO:
+				 * 1) Remove link specific overrides, depends
+				 * on #2.
+				 * 2) Add support for vc id based stream sel
+				 * overrides TX_SRC_SEL. would be useful in
+				 * using same mappings in all ser devs.
+				 */
+				if (g_ctx->serdes_csi_link ==
+					GMSL_SERDES_CSI_LINK_B) {
+					map_pipe_dtype[j].addr += 2;
+					map_pipe_dtype[j].st_id += 1;
+				}
 
-		max9295_write_reg(dev, MAX9295_PIPE_Z_DT_ADDR,
-			(MAX9295_PIPE_Z_DT_ROUTE_EN |
-				priv->gmsl_data->streams[1].st_data_type));
-		priv->gmsl_data->streams[1].st_id_sel = MAX9295_PIPE_Z_ST_ID;
+				g_stream->st_id_sel = map_pipe_dtype[j].st_id;
+				st_en = (map_pipe_dtype[j].addr ==
+						MAX9295_PIPE_X_DT_ADDR) ?
+							0xC0: 0x40;
 
-		max9295_write_reg(dev,
-			MAX9295_PIPE_Y_DT_ADDR, MAX9295_STREAM_PIPE_UNUSED);
-		max9295_write_reg(dev,
-			MAX9295_PIPE_U_DT_ADDR, MAX9295_STREAM_PIPE_UNUSED);
-		priv->gmsl_data->streams[2].st_id_sel = GMSL_ST_ID_UNUSED;
-		priv->gmsl_data->streams[3].st_id_sel = GMSL_ST_ID_UNUSED;
-		break;
-	case 4:
-		max9295_write_reg(dev, MAX9295_PIPE_X_DT_ADDR,
-			(MAX9295_PIPE_X_DT_ROUTE_EN |
-				priv->gmsl_data->streams[0].st_data_type));
-		priv->gmsl_data->streams[0].st_id_sel = MAX9295_PIPE_X_ST_ID;
-
-		max9295_write_reg(dev, MAX9295_PIPE_Y_DT_ADDR,
-			(MAX9295_PIPE_Y_DT_ROUTE_EN |
-				priv->gmsl_data->streams[1].st_data_type));
-		priv->gmsl_data->streams[1].st_id_sel = MAX9295_PIPE_Y_ST_ID;
-
-		max9295_write_reg(dev, MAX9295_PIPE_Z_DT_ADDR,
-			(MAX9295_PIPE_Z_DT_ROUTE_EN |
-				priv->gmsl_data->streams[2].st_data_type));
-		priv->gmsl_data->streams[2].st_id_sel = MAX9295_PIPE_Z_ST_ID;
-
-		max9295_write_reg(dev, MAX9295_PIPE_U_DT_ADDR,
-			(MAX9295_PIPE_U_DT_ROUTE_EN |
-				priv->gmsl_data->streams[3].st_data_type));
-		priv->gmsl_data->streams[3].st_id_sel = MAX9295_PIPE_U_ST_ID;
-		break;
-	default:
-		dev_err(dev, "%s: stream count not supported\n", __func__);
-		err = -EINVAL;
-		goto error;
+				max9295_write_reg(dev, map_pipe_dtype[j].addr,
+					(st_en | map_pipe_dtype[j].val));
+			}
+		}
 	}
 
-error:
-	mutex_unlock(&priv->lock);
-	return err;
-}
-EXPORT_SYMBOL(max9295_stream_setup);
+	for (i = 0; i < g_ctx->num_streams; i++)
+		if (g_ctx->streams[i].st_id_sel != GMSL_ST_ID_UNUSED)
+			port_sel |= (1 << g_ctx->streams[i].st_id_sel);
 
-int max9295_poweron(struct device *dev)
-{
-	max9295_write_reg(dev, MAX9295_CTRL0_ADDR,
-		(MAX9295_RESET_ONESHOT |
-			MAX9295_REG_EN | MAX9295_AUTO_LINK));
-	msleep(20);
-	max9295_write_reg(dev, MAX9295_SRC_PWDN_ADDR, MAX9295_PWDN_GPIO);
-	max9295_write_reg(dev, MAX9295_SRC_OUT_RCLK_ADDR, MAX9295_SRC_RCLK);
-	max9295_write_reg(dev, MAX9295_SRC_CTRL_ADDR, MAX9295_RESET_SRC);
-
-	return 0;
-}
-EXPORT_SYMBOL(max9295_poweron);
-
-int max9295_poweroff(struct device *dev)
-{
-	max9295_write_reg(dev, MAX9295_CTRL0_ADDR, MAX9295_RESET_ALL);
-
-	return 0;
-}
-EXPORT_SYMBOL(max9295_poweroff);
-
-int max9295_dev_pair(struct device *dev, struct gmsl_link_data *pdata)
-{
-	struct max9295 *priv;
-	int err = 0;
-
-	if (!dev || !pdata || !pdata->s_dev) {
-		dev_err(dev, "%s: invalid input params\n", __func__);
-		return -EINVAL;
-	}
-
-	priv = dev_get_drvdata(dev);
-	mutex_lock(&priv->lock);
-	if (priv->gmsl_data) {
-		dev_err(dev, "%s: device already paired\n", __func__);
-		err = -EINVAL;
-		goto error;
-	}
-	priv->gmsl_data = pdata;
-
-error:
-	mutex_unlock(&priv->lock);
-	return 0;
-}
-EXPORT_SYMBOL(max9295_dev_pair);
-
-int max9295_dev_unpair(struct device *dev, struct device *s_dev)
-{
-	struct max9295 *priv = NULL;
-	int err = 0;
-
-	if (!dev || !s_dev) {
-		dev_err(dev, "%s: invalid input params\n", __func__);
-		return -EINVAL;
-	}
-
-	priv = dev_get_drvdata(dev);
-
-	mutex_lock(&priv->lock);
-
-	if (!priv->gmsl_data) {
-		dev_err(dev, "%s: device is not paired\n", __func__);
-		err = -ENOMEM;
-		goto error;
-	}
-
-	if (priv->gmsl_data->s_dev != s_dev) {
-		dev_err(dev, "%s: invalid device\n", __func__);
-		err = -EINVAL;
-		goto error;
-	}
-
-	priv->gmsl_data = NULL;
-
-error:
-	mutex_unlock(&priv->lock);
-	return err;
-}
-EXPORT_SYMBOL(max9295_dev_unpair);
-
-int max9295_streamon(struct device *dev)
-{
-	struct max9295 *priv = dev_get_drvdata(dev);
-	u32 st_pipe = 0;
-	u32 port_sel = 0;
-	u32 pipe_en = 0;
-	int i = 0;
-
-	mutex_lock(&priv->lock);
-	for (i = 0; i < priv->gmsl_data->num_streams; i++) {
-		if (priv->gmsl_data->streams[i].st_id_sel ==
-				MAX9295_PIPE_X_ST_ID)
-			port_sel = MAX9295_CLK_SELX;
-		else if (priv->gmsl_data->streams[i].st_id_sel ==
-				MAX9295_PIPE_Y_ST_ID)
-			port_sel |= MAX9295_CLK_SELY;
-		else if (priv->gmsl_data->streams[i].st_id_sel ==
-				MAX9295_PIPE_Z_ST_ID)
-			port_sel |= MAX9295_CLK_SELZ;
-		else if (priv->gmsl_data->streams[i].st_id_sel ==
-				MAX9295_PIPE_U_ST_ID)
-			port_sel = MAX9295_CLK_SELU;
-	}
-
-	if (priv->gmsl_data->src_csi_port == GMSL_CSI_PORT_B) {
+	if (g_ctx->src_csi_port == GMSL_CSI_PORT_B) {
 		st_pipe = (MAX9295_PIPE_X_START_B | MAX9295_PIPE_Y_START_B |
 			MAX9295_PIPE_Z_START_B | MAX9295_PIPE_U_START_B);
 		port_sel |= (MAX9295_EN_LINE_INFO | MAX9295_START_PORT_B);
@@ -363,20 +259,187 @@ int max9295_streamon(struct device *dev)
 	max9295_write_reg(dev, MAX9295_CSI_PORT_SEL_ADDR, port_sel);
 	max9295_write_reg(dev, MAX9295_PIPE_EN_ADDR, pipe_en);
 
+	priv->g_client.st_done = true;
+
+error:
 	mutex_unlock(&priv->lock);
-
-	return 0;
+	return err;
 }
-EXPORT_SYMBOL(max9295_streamon);
+EXPORT_SYMBOL(max9295_setup_streaming);
 
-int max9295_streamoff(struct device *dev)
+int max9295_setup_control(struct device *dev)
 {
-	max9295_write_reg(dev, MAX9295_START_PIPE_ADDR, 0x0);
-	max9295_write_reg(dev, MAX9295_PIPE_EN_ADDR, 0x0);
+	struct max9295 *priv = dev_get_drvdata(dev);
+	int err = 0;
+	struct gmsl_link_ctx *g_ctx;
+	u32 offset1 = 0;
+	u32 offset2 = 0;
+	u32 i;
 
+	u8 i2c_ovrd[] = {
+		0x6B, 0x10, 0,
+		0x73, 0x11, 0,
+		0x7B, 0x30, 0,
+		0x83, 0x30, 0,
+		0x93, 0x30, 0,
+		0x9B, 0x30, 0,
+		0xA3, 0x30, 0,
+		0xAB, 0x30, 0,
+		0x8B, 0x30, GMSL_SERDES_CSI_LINK_A,
+	};
+
+	u8 addr_offset[] = {
+		0x80, 0x00, 0x00,
+		0x84, 0x00, 0x01,
+		0xC0, 0x02, 0x02,
+		0xC4, 0x02, 0x03,
+	};
+
+	mutex_lock(&priv->lock);
+
+	if(!priv->g_client.g_ctx) {
+		dev_err(dev, "%s: no sdev client found\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	g_ctx = priv->g_client.g_ctx;
+
+	/* update address reassingment */
+	max9295_write_reg(&prim_priv__->i2c_client->dev,
+			0x00, (g_ctx->ser_reg << 1));
+	msleep(140);
+
+	max9295_write_reg(dev, MAX9295_CTRL0_ADDR, 0x31);
+	/* delay to settle link */
+	msleep(100);
+
+	for (i = 0; i < ARRAY_SIZE(addr_offset); i+=3) {
+		if ((g_ctx->ser_reg << 1) == addr_offset[i]) {
+			offset1 = addr_offset[i+1];
+			offset2 = addr_offset[i+2];
+			break;
+		}
+	}
+
+	if (i == ARRAY_SIZE(addr_offset)) {
+		dev_err(dev, "%s: invalid ser slave\n", __func__);
+		return -EINVAL;
+	}
+
+	/* delay before accessing sdev */
+	msleep(40);
+	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i+=3) {
+		/* update address overrides */
+		i2c_ovrd[i+1] += (i < 4) ? offset1 : offset2;
+		if ((i2c_ovrd[i+2]) && (i2c_ovrd[i+2] !=
+					g_ctx->serdes_csi_link))
+				continue;
+		max9295_write_reg(dev, i2c_ovrd[i], i2c_ovrd[i+1]);
+	}
+	/* delay to settle address overrides */
+	msleep(100);
+
+	max9295_write_reg(dev, MAX9295_I2C4_ADDR, (g_ctx->sdev_reg << 1));
+	max9295_write_reg(dev, MAX9295_I2C5_ADDR, (g_ctx->sdev_def << 1));
+
+	max9295_write_reg(dev, MAX9295_SRC_PWDN_ADDR, MAX9295_PWDN_GPIO);
+	max9295_write_reg(dev, MAX9295_SRC_CTRL_ADDR, MAX9295_RESET_SRC);
+	max9295_write_reg(dev, MAX9295_SRC_OUT_RCLK_ADDR, MAX9295_SRC_RCLK);
+
+	msleep(200);
+
+error:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9295_setup_control);
+
+int max9295_reset_control(struct device *dev)
+{
+	struct max9295 *priv = dev_get_drvdata(dev);
+	int err = 0;
+
+	mutex_lock(&priv->lock);
+	if(!priv->g_client.g_ctx) {
+		dev_err(dev, "%s: no sdev client found\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	priv->g_client.st_done = false;
+
+	max9295_write_reg(dev, MAX9295_CTRL0_ADDR, MAX9295_RESET_ALL);
+	msleep(100);
+
+error:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9295_reset_control);
+
+int max9295_sdev_pair(struct device *dev, struct gmsl_link_ctx *g_ctx)
+{
+	struct max9295 *priv;
+	int err = 0;
+
+	if (!dev || !g_ctx || !g_ctx->s_dev) {
+		dev_err(dev, "%s: invalid input params\n", __func__);
+		return -EINVAL;
+	}
+
+	priv = dev_get_drvdata(dev);
+	mutex_lock(&priv->lock);
+	if (priv->g_client.g_ctx) {
+		dev_err(dev, "%s: device already paired\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	priv->g_client.st_done = false;
+
+	priv->g_client.g_ctx = g_ctx;
+
+error:
+	mutex_unlock(&priv->lock);
 	return 0;
 }
-EXPORT_SYMBOL(max9295_streamoff);
+EXPORT_SYMBOL(max9295_sdev_pair);
+
+int max9295_sdev_unpair(struct device *dev, struct device *s_dev)
+{
+	struct max9295 *priv = NULL;
+	int err = 0;
+
+	if (!dev || !s_dev) {
+		dev_err(dev, "%s: invalid input params\n", __func__);
+		return -EINVAL;
+	}
+
+	priv = dev_get_drvdata(dev);
+
+	mutex_lock(&priv->lock);
+
+	if (!priv->g_client.g_ctx) {
+		dev_err(dev, "%s: device is not paired\n", __func__);
+		err = -ENOMEM;
+		goto error;
+	}
+
+	if (priv->g_client.g_ctx->s_dev != s_dev) {
+		dev_err(dev, "%s: invalid device\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	priv->g_client.g_ctx = NULL;
+	priv->g_client.st_done = false;
+
+error:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9295_sdev_unpair);
 
 static  struct regmap_config max9295_regmap_config = {
 	.reg_bits = 16,
@@ -389,7 +452,7 @@ static int max9295_probe(struct i2c_client *client,
 {
 	struct max9295 *priv;
 	int err = 0;
-	u8 val = 0;
+	struct device_node *node = client->dev.of_node;
 
 	dev_info(&client->dev, "[MAX9295]: probing GMSL IO Expander\n");
 
@@ -405,8 +468,16 @@ static int max9295_probe(struct i2c_client *client,
 
 	mutex_init(&priv->lock);
 
-	max9295_read_reg(priv, 0x0010, &val);
-	dev_info(&client->dev, "max9295 id = 0x%x\n", val);
+	if (of_get_property(node, "is-prim-ser", NULL)) {
+		dev_info(&client->dev, "ser master device\n");
+		if (prim_priv__) {
+			dev_err(&client->dev,
+				"prim-ser already exists\n");
+				return -EEXIST;
+		}
+		dev_info(&client->dev, "prim-ser max9295 set\n");
+		prim_priv__ = priv;
+	}
 
 	dev_set_drvdata(&client->dev, priv);
 

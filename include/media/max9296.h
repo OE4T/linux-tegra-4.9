@@ -19,18 +19,16 @@
 
 #include <media/gmsl-link.h>
 
-int max9296_poweron(struct device *dev);
+int max9296_setup_control(struct device *dev);
 
-int max9296_poweroff(struct device *dev);
+int max9296_reset_control(struct device *dev);
 
-int max9296_dev_add(struct device *dev, struct gmsl_link_data *pinfo);
+int max9296_sdev_register(struct device *dev, struct gmsl_link_ctx *g_ctx);
 
-int max9296_dev_remove(struct device *dev, struct device *s_dev);
+int max9296_sdev_unregister(struct device *dev, struct device *s_dev);
 
-int max9296_stream_setup(struct device *dev);
+int max9296_setup_streaming(struct device *dev, struct device *s_dev);
 
-int max9296_streamon(struct device *dev);
-
-int max9296_streamoff(struct device *dev);
+int max9296_link_ex(struct device *dev, struct device *s_dev);
 
 #endif  /* __MAX9296_H__ */

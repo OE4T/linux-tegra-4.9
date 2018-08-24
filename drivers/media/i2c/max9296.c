@@ -16,6 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 #include <media/camera_common.h>
 #include <linux/module.h>
 #include <media/max9296.h>
@@ -30,49 +33,24 @@
 #define MAX9296_LANE_CTRL2_ADDR 0x48A
 #define MAX9296_LANE_CTRL3_ADDR 0x4CA
 
-#define MAX9296_TX11_PIPE_Y_EN_ADDR 0x44B
-#define MAX9296_TX45_PIPE_Y_DST_CTRL_ADDR 0x46D
-#define MAX9296_PIPE_X_ST_SEL_ADDR 0x50
-#define MAX9296_PIPE_Y_ST_SEL_ADDR 0x51
-#define MAX9296_PIPE_Z_ST_SEL_ADDR 0x52
-#define MAX9296_PIPE_U_ST_SEL_ADDR 0x53
+#define MAX9296_TX11_PIPE_X_EN_ADDR 0x40B
+#define MAX9296_TX45_PIPE_X_DST_CTRL_ADDR 0x42D
 
-#define MAX9296_PIPE_Y_SRC_0_MAP_ADDR 0x44D
-#define MAX9296_PIPE_Y_DST_0_MAP_ADDR 0x44E
-#define MAX9296_PIPE_Y_SRC_1_MAP_ADDR 0x44F
-#define MAX9296_PIPE_Y_DST_1_MAP_ADDR 0x450
-#define MAX9296_PIPE_Y_SRC_2_MAP_ADDR 0x451
-#define MAX9296_PIPE_Y_DST_2_MAP_ADDR 0x452
+#define MAX9296_PIPE_X_SRC_0_MAP_ADDR 0x40D
+#define MAX9296_PIPE_X_DST_0_MAP_ADDR 0x40E
+#define MAX9296_PIPE_X_SRC_1_MAP_ADDR 0x40F
+#define MAX9296_PIPE_X_DST_1_MAP_ADDR 0x410
+#define MAX9296_PIPE_X_SRC_2_MAP_ADDR 0x411
+#define MAX9296_PIPE_X_DST_2_MAP_ADDR 0x412
+
+#define MAX9296_PIPE_X_ST_SEL_ADDR 0x50
 
 #define MAX9296_PWDN_PHYS_ADDR 0x332
 #define MAX9296_PHY1_CLK_ADDR 0x320
 #define MAX9296_CTRL0_ADDR 0x10
 
-#define MAX9296_MAP_SRC_0 0x1
-#define MAX9296_MAP_SRC_1 0x2
-#define MAX9296_MAP_SRC_2 0x4
-#define MAX9296_MAP_SRC_3 0x8
-#define MAX9296_MAP_SRC_4 0x10
-#define MAX9296_MAP_SRC_5 0x20
-#define MAX9296_MAP_SRC_6 0x40
-#define MAX9296_MAP_SRC_7 0x80
-
-#define MAX9296_MAP_DST_0 0x1
-#define MAX9296_MAP_DST_1 0x4
-#define MAX9296_MAP_DST_2 0x10
-#define MAX9296_MAP_DST_3 0x40
-
-#define MAX9296_DT_FS 0x0
-#define MAX9296_DT_FE 0x1
-
-#define MAX9295_PIPE_MAX_STREAMS 16
-
-#define MAX9296_DT_MAP(vc, dt) \
-	((vc << 6) | (dt & 0x3F))
-
 #define MAX9296_CSI_MODE_4X2 0x1
 #define MAX9296_CSI_MODE_2X4 0x4
-
 #define MAX9296_LANE_MAP1_4X2 0x44
 #define MAX9296_LANE_MAP2_4X2 0x44
 #define MAX9296_LANE_MAP1_2X4 0x4E
@@ -81,54 +59,56 @@
 #define MAX9296_LANE_CTRL_MAP(num_lanes) \
 	(((num_lanes) << 6) & 0xF0)
 
-#define MAX9296_PHY0_STDBY 0x00
-#define MAX9296_PHY1_STDBY 0x10
-#define MAX9296_PHY2_STDBY 0x20
-#define MAX9296_PHY3_STDBY 0x30
-#define MAX9296_ALLPHYS_STDBY \
-	(MAX9296_PHY0_STDBY | MAX9296_PHY1_STDBY | \
-		MAX9296_PHY2_STDBY | MAX9296_PHY3_STDBY)
-
 #define MAX9296_ALLPHYS_NOSTDBY 0xF0
 #define MAX9296_ST_ID_SEL_INVALID 0xF
 
 #define MAX9296_PHY1_CLK 0x2C
 
 #define MAX9296_RESET_ALL 0x80
-#define MAX9296_RESET_LINK 0x40
-#define MAX9296_RESET_ONESHOT 0x20
-#define MAX9296_REG_EN 0x4
-#define MAX9296_AUTO_LINK 0x10
-#define MAX9296_LINK_CFG 0x1
 
 #define MAX9296_MAX_SOURCES 2
+#define MAX9296_MAX_PIPES 0x4
 
-struct map_dt_grp {
-	u32 st_vc;
-	u32 dst_vc;
-	u32 dt;
+#define MAX9296_PIPE_X 0
+#define MAX9296_PIPE_Y 1
+#define MAX9296_PIPE_Z 2
+#define MAX9296_PIPE_U 3
+
+#define MAX9296_CSI_CTRL_0 0
+#define MAX9296_CSI_CTRL_1 1
+#define MAX9296_CSI_CTRL_2 2
+#define MAX9296_CSI_CTRL_3 3
+
+#define MAX9296_INVAL_ST_ID 0xFF
+
+struct max9296_source_ctx {
+	struct gmsl_link_ctx *g_ctx;
+	bool st_enabled;
 };
 
-struct max9296_source_data {
-	struct device *src_dev;
-	struct gmsl_link_data *gmsl_data;
-};
-
-struct max9296_pipe_id {
-	u32 x_id;
-	u32 y_id;
-	u32 z_id;
-	u32 u_id;
+struct pipe_ctx {
+	u32 id;
+	u32 dt_type;
+	u32 dst_csi_ctrl;
+	u32 st_count;
+	u32 st_id_sel;
 };
 
 struct max9296 {
 	struct i2c_client *i2c_client;
 	struct regmap *regmap;
-	struct max9296_pipe_id pipes;
-	u32 num_sources;
-	struct max9296_source_data
-		sources[MAX9296_MAX_SOURCES];
+	u32 num_src;
+	u32 max_src;
+	struct max9296_source_ctx sources[MAX9296_MAX_SOURCES];
 	struct mutex lock;
+	u32 sdev_ref;
+	bool power_on;
+	bool lane_setup;
+	bool link_ex;
+	struct pipe_ctx pipe[MAX9296_MAX_PIPES];
+	u8 csi_mode;
+	u8 lane_mp1;
+	u8 lane_mp2;
 };
 
 static int max9296_write_reg(struct device *dev,
@@ -144,6 +124,9 @@ static int max9296_write_reg(struct device *dev,
 		dev_err(dev,
 		"%s:i2c write failed, 0x%x = %x\n",
 		__func__, addr, val);
+
+	/* delay before next i2c command as required for SERDES link */
+	usleep_range(100, 110);
 
 	return err;
 }
@@ -166,60 +149,197 @@ static int max9296_read_reg(struct max9296 *priv,
 	return err;
 }
 
-int max9296_poweron(struct device *dev)
+static void max9296_reset_ctx(struct max9296 *priv)
 {
-	max9296_write_reg(dev, MAX9296_CTRL0_ADDR,
-		(MAX9296_RESET_ONESHOT |
-			MAX9296_REG_EN | MAX9296_AUTO_LINK | MAX9296_LINK_CFG));
-	msleep(10);
-	max9296_write_reg(dev,
-		MAX9296_PWDN_PHYS_ADDR, MAX9296_ALLPHYS_NOSTDBY);
+	int i;
 
-	return 0;
+	priv->power_on = false;
+	priv->link_ex = false;
+	priv->lane_setup = false;
+	for (i = 0; i < priv->num_src; i++)
+		priv->sources[i].st_enabled = false;
 }
-EXPORT_SYMBOL(max9296_poweron);
 
-int max9296_poweroff(struct device *dev)
+int max9296_link_ex(struct device *dev, struct device *s_dev)
 {
-	max9296_write_reg(dev, MAX9296_CTRL0_ADDR, MAX9296_RESET_ALL);
+	struct max9296 *priv = dev_get_drvdata(dev);
+	u32 link;
+	int err = 0;
+	int i;
 
-	return 0;
-}
-EXPORT_SYMBOL(max9296_poweroff);
-
-int max9296_dev_add(struct device *dev, struct gmsl_link_data *pdata)
-{
-	struct max9296 *priv = NULL;
-	int err;
-
-	if (!dev || !pdata || !pdata->s_dev) {
-		dev_err(dev, "%s: invalid input params\n", __func__);
-		return -EINVAL;
+	mutex_lock(&priv->lock);
+	for (i = 0; i < priv->num_src; i++) {
+		if (priv->sources[i].g_ctx->s_dev == s_dev) {
+			if (priv->sources[i].st_enabled)
+				goto ret;
+			break;
+		}
 	}
 
-	priv = dev_get_drvdata(dev);
-	mutex_lock(&priv->lock);
-	if (priv->num_sources >= MAX9296_MAX_SOURCES) {
-		dev_err(dev,
-		"%s: MAX9296 inputs size exhausted\n", __func__);
-		err = -ENOMEM;
+	if (i == priv->num_src) {
+		dev_err(dev, "sdev not registered\n");
+		err = -EINVAL;
+		goto ret;
+	}
+
+	link = priv->sources[i].g_ctx->serdes_csi_link;
+
+	if (!priv->power_on) {
+		if (link == GMSL_SERDES_CSI_LINK_A) {
+			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x01);
+			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x21);
+			/* delay to settle link */
+			msleep(100);
+		} else if (link == GMSL_SERDES_CSI_LINK_B) {
+			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x02);
+			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x22);
+			/* delay to settle link */
+			msleep(100);
+		} else { /* Extend for DES having more than two GMSL links */
+			dev_err(dev, "%s: invalid gmsl link\n", __func__);
+			err = -EINVAL;
+			goto ret;
+		}
+		priv->link_ex = true;
+	}
+
+ret:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9296_link_ex);
+
+int max9296_setup_control(struct device *dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	int err = 0;
+
+	if (!priv->link_ex) {
+		dev_err(dev, "%s: invalid state\n", __func__);
+		err = -EINVAL;
 		goto error;
 	}
 
-	priv->sources[priv->num_sources++].gmsl_data = pdata;
+	if (!priv->power_on) {
+		/* Enable splitter mode */
+		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x03);
+		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x23);
+		/* delay to settle link */
+		msleep(100);
+		max9296_write_reg(dev,
+			MAX9296_PWDN_PHYS_ADDR, MAX9296_ALLPHYS_NOSTDBY);
+
+		priv->power_on = true;
+	}
+
+	priv->sdev_ref++;
 
 error:
 	mutex_unlock(&priv->lock);
 	return err;
 }
-EXPORT_SYMBOL(max9296_dev_add);
+EXPORT_SYMBOL(max9296_setup_control);
 
-int max9296_dev_remove(struct device *dev, struct device *s_dev)
+int max9296_reset_control(struct device *dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	int err = 0;
+
+	if (!priv->sdev_ref) {
+		dev_err(dev, "%s: invalid state\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	priv->sdev_ref--;
+
+	if (priv->sdev_ref == 0) {
+		max9296_reset_ctx(priv);
+		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, MAX9296_RESET_ALL);
+		/* delay to settle reset */
+		msleep(100);
+	}
+
+error:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9296_reset_control);
+
+int max9296_sdev_register(struct device *dev, struct gmsl_link_ctx *g_ctx)
+{
+	struct max9296 *priv = NULL;
+	int i;
+	int err = 0;
+
+	if (!dev || !g_ctx || !g_ctx->s_dev) {
+		dev_err(dev, "%s: invalid input params\n", __func__);
+		return -EINVAL;
+	}
+
+	priv = dev_get_drvdata(dev);
+
+	mutex_lock(&priv->lock);
+
+	if (priv->num_src > priv->max_src) {
+		dev_err(dev,
+			"%s: MAX9296 inputs size exhausted\n", __func__);
+		err = -ENOMEM;
+		goto error;
+	}
+
+	/* Check csi mode compatibility */
+	if (!((priv->csi_mode == MAX9296_CSI_MODE_2X4) ?
+			((g_ctx->csi_mode == GMSL_CSI_1X4_MODE) ||
+				(g_ctx->csi_mode == GMSL_CSI_2X4_MODE)) :
+			((g_ctx->csi_mode == GMSL_CSI_2X2_MODE) ||
+				(g_ctx->csi_mode == GMSL_CSI_4X2_MODE)))) {
+		dev_err(dev,
+			"%s: csi mode not supported\n", __func__);
+		err = -EINVAL;
+		goto error;
+	}
+
+	for (i = 0; i < priv->num_src; i++) {
+		if(g_ctx->serdes_csi_link ==
+			priv->sources[i].g_ctx->serdes_csi_link) {
+			dev_err(dev,
+				"%s: serdes csi link is in use\n", __func__);
+			err = -EINVAL;
+			goto error;
+		}
+		/*
+		 * All sdevs should have same num-csi-lanes regardless of
+		 * dst csi port selected.
+		 * Later if there is any usecase which requires each port
+		 * to be configured with different num-csi-lanes, then this
+		 * check should be performed per port.
+		 */
+		if (g_ctx->num_csi_lanes !=
+				priv->sources[i].g_ctx->num_csi_lanes) {
+			dev_err(dev,
+				"%s: csi num lanes mismatch\n", __func__);
+			err = -EINVAL;
+			goto error;
+		}
+	}
+
+	priv->sources[priv->num_src].g_ctx = g_ctx;
+	priv->sources[priv->num_src].st_enabled = false;
+
+	priv->num_src++;
+
+error:
+	mutex_unlock(&priv->lock);
+	return err;
+}
+EXPORT_SYMBOL(max9296_sdev_register);
+
+int max9296_sdev_unregister(struct device *dev, struct device *s_dev)
 {
 	struct max9296 *priv = NULL;
 	int err = 0;
 	int i = 0;
-	bool src_rm = false;
 
 	if (!dev || !s_dev) {
 		dev_err(dev, "%s: invalid input params\n", __func__);
@@ -229,22 +349,21 @@ int max9296_dev_remove(struct device *dev, struct device *s_dev)
 	priv = dev_get_drvdata(dev);
 	mutex_lock(&priv->lock);
 
-	if (priv->num_sources == 0) {
+	if (priv->num_src == 0) {
 		dev_err(dev, "%s: no source found\n", __func__);
 		err = -ENODATA;
 		goto error;
 	}
 
-	for (i = 0; i < priv->num_sources; i++) {
-		if (s_dev == priv->sources[i].gmsl_data->s_dev) {
-			priv->sources[i].gmsl_data = NULL;
-			src_rm = true;
+	for (i = 0; i < priv->num_src; i++) {
+		if (s_dev == priv->sources[i].g_ctx->s_dev) {
+			priv->sources[i].g_ctx = NULL;
+			priv->num_src--;
+			break;
 		}
 	}
 
-	if (src_rm) {
-		priv->num_sources--;
-	} else {
+	if (i == priv->num_src) {
 		dev_err(dev,
 			"%s: requested device not found\n", __func__);
 		err = -EINVAL;
@@ -255,234 +374,292 @@ error:
 	mutex_unlock(&priv->lock);
 	return err;
 }
-EXPORT_SYMBOL(max9296_dev_remove);
+EXPORT_SYMBOL(max9296_sdev_unregister);
 
-int max9296_stream_setup(struct device *dev)
+static int max9296_get_available_pipe(struct device *dev,
+				u32 st_data_type, u32 dst_csi_port)
 {
 	struct max9296 *priv = dev_get_drvdata(dev);
-	struct gmsl_link_data *gmsl_data;
-	int err;
+	int i;
+
+	for (i = 0; i < MAX9296_MAX_PIPES; i++) {
+		/*
+		 * TODO: Enable a pipe for multi stream configuration having
+		 * similar stream data type. For now use st_count as a flag
+		 * for 1 to 1 mapping in pipe and stream data type, same can
+		 * be extended as count for many to 1 mapping. Would also need
+		 * few more checks such as input stream id select, dst port etc.
+		 */
+		if ((priv->pipe[i].dt_type == st_data_type) &&
+			((dst_csi_port == GMSL_CSI_PORT_A) ?
+				(priv->pipe[i].dst_csi_ctrl ==
+					MAX9296_CSI_CTRL_0) ||
+				(priv->pipe[i].dst_csi_ctrl ==
+					MAX9296_CSI_CTRL_1) :
+				(priv->pipe[i].dst_csi_ctrl ==
+					MAX9296_CSI_CTRL_2) ||
+				(priv->pipe[i].dst_csi_ctrl ==
+					MAX9296_CSI_CTRL_3)) &&
+			(!priv->pipe[i].st_count))
+				break;
+	}
+
+	if (i == MAX9296_MAX_PIPES) {
+		dev_err(dev, "%s: all pipes are busy\n", __func__);
+		return -ENOMEM;
+	}
+
+	return i;
+}
+
+struct reg_pair {
+	u16 addr;
+	u8 val;
+};
+
+static int max9296_setup_pipeline(struct device *dev,
+		struct gmsl_link_ctx *g_ctx)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	struct gmsl_stream *g_stream;
+	struct reg_pair *map_list;
+	u32 arr_sz = 0;
+	int pipe_id = 0;
+	u32 i = 0;
+	u32 j = 0;
+	u32 vc_idx = 0;
+
+	for (i = 0; i < g_ctx->num_streams; i++) {
+		/* Base data type mapping: pipeX/RAW12/CSICNTR1 */
+		struct reg_pair map_pipe_raw12[] = {
+			/* addr, val */
+			{MAX9296_TX11_PIPE_X_EN_ADDR, 0x7},
+			{MAX9296_TX45_PIPE_X_DST_CTRL_ADDR, 0x15},
+			{MAX9296_PIPE_X_SRC_0_MAP_ADDR, 0x2C},
+			{MAX9296_PIPE_X_DST_0_MAP_ADDR, 0x2C},
+			{MAX9296_PIPE_X_SRC_1_MAP_ADDR, 0x00},
+			{MAX9296_PIPE_X_DST_1_MAP_ADDR, 0x00},
+			{MAX9296_PIPE_X_SRC_2_MAP_ADDR, 0x01},
+			{MAX9296_PIPE_X_DST_2_MAP_ADDR, 0x01},
+		};
+
+		/* Base data type mapping: pipeX/EMBED/CSICNTR1 */
+		struct reg_pair map_pipe_embed[] = {
+			/* addr, val */
+			{MAX9296_TX11_PIPE_X_EN_ADDR, 0x7},
+			{MAX9296_TX45_PIPE_X_DST_CTRL_ADDR, 0x15},
+			{MAX9296_PIPE_X_SRC_0_MAP_ADDR, 0x12},
+			{MAX9296_PIPE_X_DST_0_MAP_ADDR, 0x12},
+			{MAX9296_PIPE_X_SRC_1_MAP_ADDR, 0x00},
+			{MAX9296_PIPE_X_DST_1_MAP_ADDR, 0x00},
+			{MAX9296_PIPE_X_SRC_2_MAP_ADDR, 0x01},
+			{MAX9296_PIPE_X_DST_2_MAP_ADDR, 0x01},
+		};
+
+		g_stream = &g_ctx->streams[i];
+
+		if (g_stream->st_data_type == GMSL_CSI_DT_RAW_12) {
+			map_list = map_pipe_raw12;
+			arr_sz = ARRAY_SIZE(map_pipe_raw12);
+		} else if (g_stream->st_data_type == GMSL_CSI_DT_EMBED) {
+			map_list = map_pipe_embed;
+			arr_sz = ARRAY_SIZE(map_pipe_embed);
+		} else if (g_stream->st_data_type == GMSL_CSI_DT_UED_U1) {
+			dev_dbg(dev,
+				"%s: No mapping for GMSL_CSI_DT_UED_U1\n",
+				__func__);
+			continue;
+		} else {
+			dev_err(dev, "%s: Invalid data type\n", __func__);
+			return -EINVAL;
+		}
+
+		pipe_id = max9296_get_available_pipe(dev,
+				g_stream->st_data_type, g_ctx->dst_csi_port);
+		if (pipe_id < 0)
+			return pipe_id;
+
+		for (j = 0, vc_idx = 3; j < arr_sz; j++, vc_idx+=2) {
+			/* update pipe configuration */
+			map_list[j].addr += (0x40 * pipe_id);
+			/* update vc id configuration */
+			if (vc_idx < arr_sz)
+				map_list[vc_idx].val |=
+					(g_ctx->dst_vc << 6);
+
+			max9296_write_reg(dev, map_list[j].addr,
+						map_list[j].val);
+		}
+
+		/* Enable stream id select input */
+		if (g_stream->st_id_sel == GMSL_ST_ID_UNUSED) {
+			dev_err(dev, "%s: Invalid stream st_id_sel\n",
+				__func__);
+			return -EINVAL;
+		}
+		max9296_write_reg(dev,
+			(MAX9296_PIPE_X_ST_SEL_ADDR + pipe_id),
+			g_stream->st_id_sel);
+
+		/* Update pipe internals */
+		priv->pipe[pipe_id].st_count++;
+		priv->pipe[pipe_id].st_id_sel = g_stream->st_id_sel;
+	}
+
+	return 0;
+}
+
+int max9296_setup_streaming(struct device *dev, struct device *s_dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	struct gmsl_link_ctx *g_ctx;
+	int err = 0;
 	int i = 0;
-	u32 map_y_en = 0;
-	u32 map_y_dst_en = 0;
-	struct map_dt_grp map_dt[MAX9295_PIPE_MAX_STREAMS];
-	u32 csi_mode = 0;
-	u32 num_maps = 0;
-	u32 lane_mp1 = 0;
-	u32 lane_mp2 = 0;
-	u32 lane_a = 0;
-	u32 lane_b = 0;
-	u32 lane_4x2 = 0;
-	u32 src_mp = 0;
-	u32 dst_mp = 0;
+	u16 lane_ctrl_addr;
 
 	mutex_lock(&priv->lock);
-
-	switch (priv->num_sources) {
-	/* TODO: Program 2nd source */
-	case 1:
-		gmsl_data = priv->sources[0].gmsl_data;
-
-		if ((gmsl_data->csi_mode == GMSL_CSI_1X4_MODE ||
-				gmsl_data->csi_mode == GMSL_CSI_2X4_MODE)) {
-			csi_mode = MAX9296_CSI_MODE_2X4;
-			lane_mp1 = MAX9296_LANE_MAP1_2X4;
-			lane_mp2 = MAX9296_LANE_MAP2_2X4;
-			if (gmsl_data->dst_csi_port == GMSL_CSI_PORT_A)
-				lane_a = MAX9296_LANE_CTRL_MAP(
-					gmsl_data->num_csi_lanes-1);
-			else
-				lane_b = MAX9296_LANE_CTRL_MAP(
-					gmsl_data->num_csi_lanes-1);
+	for (i = 0; i < priv->num_src; i++) {
+		if (priv->sources[i].g_ctx->s_dev == s_dev) {
+			if (priv->sources[i].st_enabled)
+				goto error;
+			break;
 		}
-		else if ((gmsl_data->csi_mode == GMSL_CSI_2X2_MODE ||
-				gmsl_data->csi_mode == GMSL_CSI_4X2_MODE)) {
-			csi_mode = MAX9296_CSI_MODE_4X2;
-			lane_mp1 = MAX9296_LANE_MAP1_4X2;
-			lane_mp2 = MAX9296_LANE_MAP2_4X2;
-		}
+	}
 
-		for (i = 0; i < gmsl_data->num_streams; i++) {
-			/* TODO: add support for other formats as well */
-			if (gmsl_data->streams[i].st_data_type ==
-				GMSL_CSI_DT_RAW_12) {
-				map_y_en |=
-					(MAX9296_MAP_SRC_0 |
-					MAX9296_MAP_SRC_1 | MAX9296_MAP_SRC_2);
-				map_y_dst_en |=
-					(MAX9296_MAP_DST_0 |
-					MAX9296_MAP_DST_1 | MAX9296_MAP_DST_2);
-				map_dt[0].st_vc = map_dt[1].st_vc =
-					map_dt[2].st_vc = gmsl_data->st_vc;
-				map_dt[0].dst_vc = map_dt[1].dst_vc =
-					map_dt[2].dst_vc = gmsl_data->dst_vc;
-				map_dt[0].dt =
-					gmsl_data->streams[i].st_data_type;
-				map_dt[1].dt = MAX9296_DT_FS;
-				map_dt[2].dt = MAX9296_DT_FE;
-				num_maps = 3;
-				gmsl_data->streams[i].pipe_id = GMSL_PIPE_Y_ID;
-				break;
-			}
-		}
-
-		if (map_y_en == 0) {
-			dev_err(dev, "%s: no mapping found\n", __func__);
-			err = -EINVAL;
-			goto error;
-		}
-
-		max9296_write_reg(dev,
-			MAX9296_TX11_PIPE_Y_EN_ADDR, map_y_en);
-		max9296_write_reg(dev,
-				MAX9296_TX45_PIPE_Y_DST_CTRL_ADDR,
-				map_y_dst_en);
-
-		for (i = 0; i < num_maps; i++) {
-			switch (i) {
-			case 0:
-				src_mp = MAX9296_PIPE_Y_SRC_0_MAP_ADDR;
-				dst_mp = MAX9296_PIPE_Y_DST_0_MAP_ADDR;
-				break;
-			case 1:
-				src_mp = MAX9296_PIPE_Y_SRC_1_MAP_ADDR;
-				dst_mp = MAX9296_PIPE_Y_DST_1_MAP_ADDR;
-				break;
-			case 2:
-				src_mp = MAX9296_PIPE_Y_SRC_2_MAP_ADDR;
-				dst_mp = MAX9296_PIPE_Y_DST_2_MAP_ADDR;
-				break;
-			}
-			max9296_write_reg(dev, src_mp,
-				MAX9296_DT_MAP(map_dt[i].st_vc, map_dt[i].dt));
-			max9296_write_reg(dev, dst_mp,
-				MAX9296_DT_MAP(map_dt[i].dst_vc, map_dt[i].dt));
-		}
-		break;
-	default:
-		dev_err(dev, "%s: invalid num sources\n", __func__);
+	if (i == priv->num_src) {
+		dev_err(dev, "sdev not registered\n");
 		err = -EINVAL;
 		goto error;
 	}
 
-	max9296_write_reg(dev,
-		MAX9296_DST_CSI_MODE_ADDR, csi_mode);
-	max9296_write_reg(dev,
-		MAX9296_LANE_MAP1_ADDR, lane_mp1);
-	max9296_write_reg(dev,
-		MAX9296_LANE_MAP2_ADDR, lane_mp2);
+	g_ctx = priv->sources[i].g_ctx;
 
-	if (csi_mode == MAX9296_CSI_MODE_2X4) {
-		if (lane_a) {
-			max9296_write_reg(dev,
-				MAX9296_LANE_CTRL1_ADDR, lane_a);
-			max9296_write_reg(dev,
-				MAX9296_PHY1_CLK_ADDR, MAX9296_PHY1_CLK);
-		}
-		if (lane_b)
-			max9296_write_reg(dev,
-				MAX9296_LANE_CTRL2_ADDR, lane_b);
-	} else {
+	err = max9296_setup_pipeline(dev, g_ctx);
+	if (err)
+		goto error;
+
+	/* Derive CSI lane map register */
+	switch(g_ctx->dst_csi_port) {
+	case GMSL_CSI_PORT_A:
+	case GMSL_CSI_PORT_D:
+		lane_ctrl_addr = MAX9296_LANE_CTRL1_ADDR;
+	case GMSL_CSI_PORT_B:
+	case GMSL_CSI_PORT_E:
+		lane_ctrl_addr = MAX9296_LANE_CTRL2_ADDR;
+	case GMSL_CSI_PORT_C:
+		lane_ctrl_addr = MAX9296_LANE_CTRL0_ADDR;
+	case GMSL_CSI_PORT_F:
+		lane_ctrl_addr = MAX9296_LANE_CTRL3_ADDR;
+	};
+
+	/*
+	 * rewrite num_lanes to same dst port should not be an issue,
+	 * as the device compatibility is already
+	 * checked during sdev registration against the des properties.
+	 */
+	max9296_write_reg(dev, lane_ctrl_addr,
+		MAX9296_LANE_CTRL_MAP(g_ctx->num_csi_lanes-1));
+
+	if (!priv->lane_setup) {
 		max9296_write_reg(dev,
-			MAX9296_LANE_CTRL0_ADDR, lane_4x2);
+			MAX9296_DST_CSI_MODE_ADDR, priv->csi_mode);
 		max9296_write_reg(dev,
-			MAX9296_LANE_CTRL1_ADDR, lane_4x2);
+			MAX9296_LANE_MAP1_ADDR, priv->lane_mp1);
 		max9296_write_reg(dev,
-			MAX9296_LANE_CTRL2_ADDR, lane_4x2);
+			MAX9296_LANE_MAP2_ADDR, priv->lane_mp2);
 		max9296_write_reg(dev,
-			MAX9296_LANE_CTRL3_ADDR, lane_4x2);
+			MAX9296_PHY1_CLK_ADDR, MAX9296_PHY1_CLK);
+
+		priv->lane_setup = true;
 	}
+
+	priv->sources[i].st_enabled = true;
 
 error:
 	mutex_unlock(&priv->lock);
 	return err;
 }
-EXPORT_SYMBOL(max9296_stream_setup);
+EXPORT_SYMBOL(max9296_setup_streaming);
 
-int max9296_streamon(struct device *dev)
+const struct of_device_id max9296_of_match[] = {
+	{ .compatible = "nvidia,max9296", },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, max9296_of_match);
+
+static int max9296_parse_dt(struct max9296 *priv,
+				struct i2c_client *client)
 {
-        struct max9296 *priv = dev_get_drvdata(dev);
-	struct gmsl_link_data *gmsl_data;
-	int i = 0;
-	int j = 0;
+	struct device_node *node = client->dev.of_node;
+	int err = 0;
+	const char *str_value;
+	int value;
+	const struct of_device_id *match;
 
-	mutex_lock(&priv->lock);
-	for (i = 0; i < priv->num_sources; i++) {
-		gmsl_data = priv->sources[i].gmsl_data;
-		for (j = 0; j < gmsl_data->num_streams; j++) {
-			switch (gmsl_data->streams[j].pipe_id) {
-			case GMSL_PIPE_X_ID:
-				if (priv->pipes.x_id ==
-					MAX9296_ST_ID_SEL_INVALID) {
-					priv->pipes.x_id =
-						gmsl_data->streams[j].st_id_sel;
-					max9296_write_reg(dev,
-						MAX9296_PIPE_X_ST_SEL_ADDR,
-						priv->pipes.x_id);
-				}
-				break;
-			case GMSL_PIPE_Y_ID:
-				if (priv->pipes.y_id ==
-					MAX9296_ST_ID_SEL_INVALID) {
-					priv->pipes.y_id =
-						gmsl_data->streams[j].st_id_sel;
-					max9296_write_reg(dev,
-						MAX9296_PIPE_Y_ST_SEL_ADDR,
-						priv->pipes.y_id);
-				}
-				break;
-			case GMSL_PIPE_Z_ID:
-				if (priv->pipes.z_id ==
-					MAX9296_ST_ID_SEL_INVALID) {
-					priv->pipes.z_id =
-						gmsl_data->streams[j].st_id_sel;
-					max9296_write_reg(dev,
-						MAX9296_PIPE_Z_ST_SEL_ADDR,
-						priv->pipes.z_id);
-				}
-				break;
-			case GMSL_PIPE_U_ID:
-				if (priv->pipes.u_id ==
-					MAX9296_ST_ID_SEL_INVALID) {
-					priv->pipes.u_id =
-						gmsl_data->streams[j].st_id_sel;
-					max9296_write_reg(dev,
-						MAX9296_PIPE_U_ST_SEL_ADDR,
-						priv->pipes.u_id);
-				}
-				break;
-			}
-		}
+	if (!node)
+		return -EINVAL;
+
+	match = of_match_device(max9296_of_match, &client->dev);
+	if (!match) {
+		dev_err(&client->dev, "Failed to find matching dt id\n");
+		return -EFAULT;
 	}
 
-	mutex_unlock(&priv->lock);
+	err = of_property_read_string(node, "csi-mode", &str_value);
+	if (err < 0) {
+		dev_err(&client->dev, "csi-mode property not found\n");
+		return err;
+	}
+
+	if (!strcmp(str_value, "2x4")) {
+		priv->csi_mode = MAX9296_CSI_MODE_2X4;
+		priv->lane_mp1 = MAX9296_LANE_MAP1_2X4;
+		priv->lane_mp2 = MAX9296_LANE_MAP2_2X4;
+	} else if (!strcmp(str_value, "4x2")) {
+		priv->csi_mode = MAX9296_CSI_MODE_4X2;
+		priv->lane_mp1 = MAX9296_LANE_MAP1_4X2;
+		priv->lane_mp2 = MAX9296_LANE_MAP2_4X2;
+	} else {
+		dev_err(&client->dev, "invalid csi mode\n");
+		return -EINVAL;
+	}
+
+	err = of_property_read_u32(node, "max-src", &value);
+	if (err < 0) {
+		dev_err(&client->dev, "No max-src info\n");
+		return err;
+	}
+	priv->max_src = value;
 
 	return 0;
 }
-EXPORT_SYMBOL(max9296_streamon);
 
-int max9296_streamoff(struct device *dev)
+static void max9296_pipes_init(struct max9296 *priv)
 {
-	struct max9296 *priv = dev_get_drvdata(dev);
+	/*
+	 * This is default pipes combination. add more mappings
+	 * for other combinations and requirements.
+	 */
+	struct pipe_ctx pipe_defaults[] = {
+		{MAX9296_PIPE_X, GMSL_CSI_DT_RAW_12,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_Y, GMSL_CSI_DT_RAW_12,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_Z, GMSL_CSI_DT_EMBED,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_U, GMSL_CSI_DT_EMBED,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID}
+	};
 
-	if (priv->pipes.x_id != MAX9296_ST_ID_SEL_INVALID)
-		max9296_write_reg(dev,
-			MAX9296_PIPE_X_ST_SEL_ADDR, 0x0);
-	if (priv->pipes.y_id != MAX9296_ST_ID_SEL_INVALID)
-		max9296_write_reg(dev,
-			MAX9296_PIPE_Y_ST_SEL_ADDR, 0x0);
-	if (priv->pipes.z_id != MAX9296_ST_ID_SEL_INVALID)
-		max9296_write_reg(dev,
-			MAX9296_PIPE_Z_ST_SEL_ADDR, 0x0);
-	if (priv->pipes.u_id != MAX9296_ST_ID_SEL_INVALID)
-		max9296_write_reg(dev,
-			MAX9296_PIPE_U_ST_SEL_ADDR, 0x0);
-
-	return 0;
+	/*
+	 * Add DT props for num-streams and stream sequence, and based on that
+	 * set the appropriate pipes defaults.
+	 * For now default it supports "2 RAW12 and 2 EMBED" 1:1 mappings.
+	 */
+	memcpy(priv->pipe, pipe_defaults, sizeof(pipe_defaults));
 }
-EXPORT_SYMBOL(max9296_streamoff);
 
-static  struct regmap_config max9296_regmap_config = {
+static struct regmap_config max9296_regmap_config = {
 	.reg_bits = 16,
 	.val_bits = 8,
 	.cache_type = REGCACHE_RBTREE,
@@ -507,8 +684,23 @@ static int max9296_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	priv->pipes.x_id = priv->pipes.y_id =
-		priv->pipes.z_id = priv->pipes.u_id = MAX9296_ST_ID_SEL_INVALID;
+	priv->power_on = false;
+	priv->lane_setup = false;
+	priv->link_ex = false;
+
+	err = max9296_parse_dt(priv, client);
+	if (err) {
+		dev_err(&client->dev, "unable to parse dt\n");
+		return -EFAULT;
+	}
+
+	max9296_pipes_init(priv);
+
+	if (priv->max_src > MAX9296_MAX_SOURCES) {
+		dev_err(&client->dev,
+			"max sources more than currently supported\n");
+		return -EINVAL;
+	}
 
 	mutex_init(&priv->lock);
 
@@ -538,17 +730,13 @@ static const struct i2c_device_id max9296_id[] = {
 	{ },
 };
 
-const struct of_device_id max9296_of_match[] = {
-	{ .compatible = "nvidia,max9296", },
-	{ },
-};
-MODULE_DEVICE_TABLE(of, max9296_of_match);
 MODULE_DEVICE_TABLE(i2c, max9296_id);
 
 static struct i2c_driver max9296_i2c_driver = {
 	.driver = {
 		.name = "max9296",
 		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(max9296_of_match),
 	},
 	.probe = max9296_probe,
 	.remove = max9296_remove,

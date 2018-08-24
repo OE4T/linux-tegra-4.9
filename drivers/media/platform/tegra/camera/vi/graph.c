@@ -476,11 +476,28 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			if (!ep->name || of_node_cmp(ep->name, "endpoint"))
 				continue;
 
+			/* Get virtual channel id */
+			ret = of_property_read_u32(ep, "vc-id", &value);
+
+			/* vc-id is optional, default is 0 */
+			chan->virtual_channel = (ret < 0) ? 0 : value;
+
+			/* Consider max simultaneous sensor streams to be 16 */
+			if (value > 16) {
+				dev_err(&chan->video.dev, "vc id >16!\n");
+				return -EINVAL;
+			}
+
 			/* Get CSI port */
 			ret = of_property_read_u32(ep, "port-index", &value);
 			if (ret < 0)
 				dev_err(&chan->video.dev, "port index error\n");
 			chan->port[0] = value;
+
+			if (value > 6) {
+				dev_err(&chan->video.dev, "port index >6!\n");
+				return -EINVAL;
+			}
 
 			/* Get number of data lanes for the endpoint */
 			ret = of_property_read_u32(ep, "bus-width", &value);

@@ -417,6 +417,7 @@ static int nvgpu_nvlink_init_ops(struct gk20a *g)
 	/* Fill in the link struct */
 	ndev->link.device_id = ndev->device_id;
 	ndev->link.mode = NVLINK_LINK_OFF;
+	ndev->link.is_sl_supported = false;
 	ndev->link.link_ops.get_link_mode = nvgpu_nvlink_get_link_mode;
 	ndev->link.link_ops.set_link_mode = nvgpu_nvlink_set_link_mode;
 	ndev->link.link_ops.get_sublink_mode = nvgpu_nvlink_get_sublink_mode;

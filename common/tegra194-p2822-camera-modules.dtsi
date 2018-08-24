@@ -19,6 +19,7 @@
 #include "tegra194-p2822-0000-camera-imx274-dual.dtsi"
 #include "tegra194-p2822-0000-camera-imx274-a00.dtsi"
 #include "tegra194-p2822-0000-camera-imx185-a00.dtsi"
+#include "tegra194-p2822-0000-camera-imx390-a00.dtsi"
 #include "tegra194-p2822-0000-camera-vivid.dtsi"
 
 #define CAM0_RST_L	TEGRA194_MAIN_GPIO(H, 3)
@@ -60,36 +61,42 @@
 				vi_port0: port@0 {
 					status = "disabled";
 					vi_in0: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port1: port@1 {
 					status = "disabled";
 					vi_in1: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port2: port@2 {
 					status = "disabled";
 					vi_in2: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port3: port@3 {
 					status = "disabled";
 					vi_in3: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port4: port@4 {
 					status = "disabled";
 					vi_in4: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port5: port@5 {
 					status = "disabled";
 					vi_in5: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
@@ -278,6 +285,24 @@
 				};
 				e3331_cam0: imx318_a@10 {
 					status = "disable";
+				};
+				max9296_dser: max9296@6a {
+					status = "disabled";
+				};
+				max9295_prim: max9295_prim@62 {
+					status = "disabled";
+				};
+				max9295_ser0: max9295_a@40 {
+					status = "disabled";
+				};
+				max9295_ser1: max9295_b@60 {
+					status = "disabled";
+				};
+				imx390_cam0: imx390_a@1b {
+					status = "disabled";
+				};
+				imx390_cam1: imx390_b@1c {
+					status = "disabled";
 				};
 			};
 			i2c@1 {

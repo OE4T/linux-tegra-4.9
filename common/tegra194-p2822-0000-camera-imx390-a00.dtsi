@@ -40,16 +40,29 @@
 				i2c-mux,deselect-on-exit;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				ser_a: max9295_a@62 {
-					compatible = "nvidia,max9295";
-					reg = <0x62>;
-				};
 				dser: max9296@6a {
 					compatible = "nvidia,max9296";
 					reg = <0x6a>;
+					csi-mode = "2x4";
+					max-src = <2>;
 				};
-
-				imx390_a@1a {
+				ser_prim: max9295_prim@62 {
+					compatible = "nvidia,max9295";
+					reg = <0x62>;
+					is-prim-ser;
+				};
+				ser_a: max9295_a@40 {
+					compatible = "nvidia,max9295";
+					reg = <0x40>;
+					nvidia,gmsl-dser-device = <&dser>;
+				};
+				ser_b: max9295_b@60 {
+					compatible = "nvidia,max9295";
+					reg = <0x60>;
+					nvidia,gmsl-dser-device = <&dser>;
+				};
+				imx390_a@1b {
+					def-addr = <0x1a>;
 					/* Define any required hw resources needed by driver */
 					/* ie. clocks, io pins, power sources */
 					clocks = <&bpmp_clks TEGRA194_CLK_EXTPERIPH1>,
@@ -58,6 +71,18 @@
 					mclk = "extperiph1";
 					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 					nvidia,gmsl-ser-device = <&ser_a>;
+					nvidia,gmsl-dser-device = <&dser>;
+				};
+				imx390_b@1c {
+					def-addr = <0x1a>;
+					/* Define any required hw resources needed by driver */
+					/* ie. clocks, io pins, power sources */
+					clocks = <&bpmp_clks TEGRA194_CLK_EXTPERIPH1>,
+							<&bpmp_clks TEGRA194_CLK_EXTPERIPH1>;
+					clock-names = "extperiph1", "pllp_grtba";
+					mclk = "extperiph1";
+					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+					nvidia,gmsl-ser-device = <&ser_b>;
 					nvidia,gmsl-dser-device = <&dser>;
 				};
 			};

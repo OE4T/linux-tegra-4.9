@@ -763,44 +763,6 @@ static void gv11b_fifo_issue_runlist_preempt(struct gk20a *g,
 	gk20a_writel(g, fifo_runlist_preempt_r(), reg_val);
 }
 
-static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
-					 u32 runlists_mask)
-{
-	struct nvgpu_timeout timeout;
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	int ret = -EBUSY;
-	unsigned int loop_count = 0;
-
-	nvgpu_timeout_init(g, &timeout, g->ops.fifo.get_preempt_timeout(g),
-			   NVGPU_TIMER_CPU_TIMER);
-	do {
-		if (!nvgpu_platform_is_silicon(g)) {
-			if (loop_count >= MAX_PRE_SI_RETRIES) {
-				nvgpu_err(g, "preempt runlist retries: %u",
-					loop_count);
-				break;
-			}
-			loop_count++;
-		}
-
-		if (!((gk20a_readl(g, fifo_runlist_preempt_r())) &
-				 runlists_mask)) {
-			ret = 0;
-			break;
-		}
-
-		nvgpu_usleep_range(delay, delay * 2);
-		delay = min_t(unsigned long,
-				delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout));
-
-	if (ret) {
-		nvgpu_err(g, "preempt runlist timeout, runlists_mask:0x%08x",
-				runlists_mask);
-	}
-	return ret;
-}
-
 int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		 unsigned int id_type)
 {
@@ -853,33 +815,6 @@ int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
 
 	/* Preempt tsg. Channel preempt is NOOP */
 	return g->ops.fifo.preempt_tsg(g, tsgid);
-}
-
-static int __locked_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
-{
-	int ret;
-
-	/* issue runlist preempt */
-	gv11b_fifo_issue_runlist_preempt(g, runlists_mask);
-
-	/* poll for runlist preempt done */
-	ret = gv11b_fifo_poll_runlist_preempt_pending(g, runlists_mask);
-
-	/*
-	 * Even if runlist_event intr is not enabled in fifo_intr_en_0 , it gets
-	 * set in fifo_intr_0 status reg. Current fifo stall interrupt handler
-	 * is checking all set bits in fifo_intr_0 and handling runlist_event
-	 * too while handling other fifo interrupts e.g. pbdma fifo intr or
-	 * ctxsw timeout interrupt. It is better to clear this after runlist
-	 * preempt is done. Clearing runlist_event interrupt makes no
-	 * difference to pending runlist_preempt.
-	 */
-
-	if (!ret) {
-		gk20a_fifo_handle_runlist_event(g);
-	}
-
-	return ret;
 }
 
 /* TSG enable sequence applicable for Volta and onwards */
@@ -952,9 +887,9 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	return ret;
 }
 
-static void gv11b_fifo_locked_preempt_runlists(struct gk20a *g, u32 runlists_mask)
+static void gv11b_fifo_locked_preempt_runlists_rc(struct gk20a *g,
+						u32 runlists_mask)
 {
-	int ret = 0;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret = 0;
 	u32 rlid;
@@ -964,20 +899,23 @@ static void gv11b_fifo_locked_preempt_runlists(struct gk20a *g, u32 runlists_mas
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	ret = __locked_fifo_preempt_runlists(g, runlists_mask);
+	/* issue runlist preempt */
+	gv11b_fifo_issue_runlist_preempt(g, runlists_mask);
 
-	if (ret) {
-		/* if preempt timed out, reset engs served by runlists */
-		for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
-			if (runlists_mask &
-					fifo_runlist_preempt_runlist_m(rlid)) {
-				g->fifo.runlist_info[rlid].reset_eng_bitmask =
-				g->fifo.runlist_info[rlid].eng_bitmask;
-			}
+	/*
+	 * Preemption will never complete in RC due to some fatal condition.
+	 * Do not poll for preemption to complete. Reset engines served by
+	 * runlists.
+	 */
+	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
+		if ((runlists_mask &
+			fifo_runlist_preempt_runlist_m(rlid)) != 0U) {
+			g->fifo.runlist_info[rlid].reset_eng_bitmask =
+			g->fifo.runlist_info[rlid].eng_bitmask;
 		}
 	}
 
-	if (!mutex_ret) {
+	if (mutex_ret == 0U) {
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 	}
 }
@@ -1052,12 +990,13 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			 struct mmu_fault_info *mmfault)
 {
 	struct tsg_gk20a *tsg = NULL;
-	u32 runlists_mask, rlid;
+	u32 runlists_mask, rlid, pbdma_id;
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 engine_id, client_type = ~0;
 	struct fifo_gk20a *f = &g->fifo;
 	u32 runlist_id = FIFO_INVAL_RUNLIST_ID;
 	u32 num_runlists = 0;
+	unsigned long runlist_served_pbdmas;
 
 	nvgpu_log_fn(g, "acquire runlist_lock for all runlists");
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
@@ -1171,7 +1110,24 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	 * that all PBDMAs serving the engine are not loaded when engine is
 	 * reset.
 	 */
-	gv11b_fifo_locked_preempt_runlists(g, runlists_mask);
+	gv11b_fifo_locked_preempt_runlists_rc(g, runlists_mask);
+	/*
+	 * For each PBDMA which serves the runlist, poll to verify the TSG is no
+	 * longer on the PBDMA and the engine phase of the preempt has started.
+	 */
+	if (tsg != NULL) {
+		rlid = f->tsg[id].runlist_id;
+		runlist_served_pbdmas = f->runlist_info[rlid].pbdma_bitmask;
+		for_each_set_bit(pbdma_id, &runlist_served_pbdmas,
+			f->num_pbdma) {
+			/*
+			 * If pbdma preempt fails the only option is to reset
+			 * GPU. Any sort of hang indicates the entire GPU’s
+			 * memory system would be blocked.
+			 */
+			gv11b_fifo_poll_pbdma_chan_status(g, id, pbdma_id);
+		}
+	}
 
 	/* check if engine reset should be deferred */
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {

@@ -1520,21 +1520,24 @@ static int smmu_ptdump_show(struct seq_file *s, void *unused)
 
 	pgd = cfg->pgd;
 	for (i = 0; i < PTRS_PER_PGD;
-		++i, pgd++, addr += PGDIR_SIZE) {
-		if (pgd_none(*pgd))
+		++i, pgd++) {
+		if (pgd_none(*pgd)) {
+			addr += PGDIR_SIZE;
 			continue;
+		}
 		pud = pud_offset(pgd, addr);
 		for (j = 0; j < PTRS_PER_PUD; ++j, pud++) {
 			if (pud_none(*pud)) {
-				if ((ulong)pgd != (ulong)pud)
-					addr += PUD_SIZE;
+				addr += PUD_SIZE;
 				continue;
 			}
 			pmd = pmd_offset(pud, addr);
 			for (k = 0; k < PTRS_PER_PMD;
-				++k, pmd++, addr += PMD_SIZE) {
-				if (pmd_none(*pmd))
+				++k, pmd++) {
+				if (pmd_none(*pmd)) {
+					addr += PMD_SIZE;
 					continue;
+				}
 				pte = pmd_page_vaddr(*pmd) + pte_index(addr);
 				for (l = 0; l < PTRS_PER_PTE;
 					++l, pte++, addr += PAGE_SIZE) {
@@ -1549,8 +1552,6 @@ static int smmu_ptdump_show(struct seq_file *s, void *unused)
 					mapped += PAGE_SIZE;
 				}
 			}
-			if ((ulong)pgd != (ulong)pud)
-				addr += PUD_SIZE;
 		}
 	}
 	seq_printf(s, "total mapped iova=%luKB\n", mapped / SZ_1K);

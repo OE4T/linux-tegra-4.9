@@ -74,7 +74,7 @@ struct imx390 {
 	struct v4l2_subdev	*subdev;
 	struct device		*ser_dev;
 	struct device		*dser_dev;
-	struct gmsl_link_data	gmsl_data;
+	struct gmsl_link_ctx	g_ctx;
 	struct media_pad	pad;
 	u32	frame_length;
 	s32	group_hold_prev;
@@ -275,13 +275,8 @@ static int imx390_power_on(struct camera_common_data *s_data)
 
 	msleep(20);
 
-	max9296_poweron(priv->dser_dev);
-	msleep(20);
-	max9295_poweron(priv->ser_dev);
-
 	pw->state = SWITCH_ON;
 	return 0;
-
 }
 
 static int imx390_power_off(struct camera_common_data *s_data)
@@ -290,7 +285,7 @@ static int imx390_power_off(struct camera_common_data *s_data)
 	struct imx390 *priv = (struct imx390 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
 
-	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
+	dev_dbg(&priv->i2c_client->dev, "%s:\n", __func__);
 
 	if (priv->pdata && priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
@@ -308,10 +303,6 @@ static int imx390_power_off(struct camera_common_data *s_data)
 
 	if (pw->dvdd)
 		regulator_disable(pw->dvdd);
-
-	max9295_poweroff(priv->ser_dev);
-	msleep(20);
-	max9296_poweroff(priv->dser_dev);
 
 power_off_done:
 	pw->state = SWITCH_OFF;
@@ -386,14 +377,8 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 		return 0;
 	}
 
-	max9295_stream_setup(priv->ser_dev);
-	msleep(20);
-	max9296_stream_setup(priv->dser_dev);
-	msleep(20);
-	max9295_streamon(priv->ser_dev);
-	msleep(20);
-	max9296_streamon(priv->dser_dev);
-	msleep(20);
+	max9295_setup_streaming(priv->ser_dev);
+	max9296_setup_streaming(priv->dser_dev, &client->dev);
 
 	err = imx390_write_table(priv, mode_table[s_data->mode]);
 	if (err)
@@ -891,11 +876,30 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 	of_property_read_string(node, "dvdd-reg",
 			&board_priv_pdata->regulators.dvdd);
 
+	err = of_property_read_u32(node, "reg", &priv->g_ctx.sdev_reg);
+	if (err < 0) {
+		dev_err(&client->dev, "reg not found\n");
+		goto error;
+	}
+
+	err = of_property_read_u32(node, "def-addr",
+					&priv->g_ctx.sdev_def);
+	if (err < 0) {
+		dev_err(&client->dev, "def-addr not found\n");
+		goto error;
+	}
+
 	ser_node = of_parse_phandle(node, "nvidia,gmsl-ser-device", 0);
 	if (ser_node == NULL) {
 		dev_err(&client->dev,
 			"missing %s handle\n",
 				"nvidia,gmsl-ser-device");
+		goto error;
+	}
+
+	err = of_property_read_u32(ser_node, "reg", &priv->g_ctx.ser_reg);
+	if (err < 0) {
+		dev_err(&client->dev, "serializer reg not found\n");
 		goto error;
 	}
 
@@ -935,7 +939,7 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 
 	priv->dser_dev = &dser_i2c->dev;
 
-	/* populate gmsl_data from DT */
+	/* populate g_ctx from DT */
 	gmsl = of_get_child_by_name(node, "gmsl-link");
 	if (gmsl == NULL) {
 		dev_err(&client->dev, "missing gmsl-link device node\n");
@@ -948,7 +952,7 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 		dev_err(&client->dev, "No dst-csi-port found\n");
 		goto error;
 	}
-	priv->gmsl_data.dst_csi_port =
+	priv->g_ctx.dst_csi_port =
 		(!strcmp(str_value, "a")) ? GMSL_CSI_PORT_A : GMSL_CSI_PORT_B;
 
 	err = of_property_read_string(gmsl, "src-csi-port", &str_value);
@@ -956,7 +960,7 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 		dev_err(&client->dev, "No src-csi-port found\n");
 		goto error;
 	}
-	priv->gmsl_data.src_csi_port =
+	priv->g_ctx.src_csi_port =
 		(!strcmp(str_value, "a")) ? GMSL_CSI_PORT_A : GMSL_CSI_PORT_B;
 
 	err = of_property_read_string(gmsl, "csi-mode", &str_value);
@@ -966,60 +970,71 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 	}
 
 	if (!strcmp(str_value, "1x4")) {
-		priv->gmsl_data.csi_mode = GMSL_CSI_1X4_MODE;
+		priv->g_ctx.csi_mode = GMSL_CSI_1X4_MODE;
 	} else if (!strcmp(str_value, "2x4")) {
-		priv->gmsl_data.csi_mode = GMSL_CSI_2X4_MODE;
+		priv->g_ctx.csi_mode = GMSL_CSI_2X4_MODE;
 	} else if (!strcmp(str_value, "4x2")) {
-		priv->gmsl_data.csi_mode = GMSL_CSI_4X2_MODE;
+		priv->g_ctx.csi_mode = GMSL_CSI_4X2_MODE;
 	} else if (!strcmp(str_value, "2x2")) {
-		priv->gmsl_data.csi_mode = GMSL_CSI_2X2_MODE;
+		priv->g_ctx.csi_mode = GMSL_CSI_2X2_MODE;
 	} else {
 		dev_err(&client->dev, "invalid csi mode\n");
 		goto error;
 	}
+
+	err = of_property_read_string(gmsl, "serdes-csi-link", &str_value);
+	if (err < 0) {
+		dev_err(&client->dev, "No serdes-csi-link found\n");
+		goto error;
+	}
+	priv->g_ctx.serdes_csi_link =
+		(!strcmp(str_value, "a")) ?
+			GMSL_SERDES_CSI_LINK_A : GMSL_SERDES_CSI_LINK_B;
 
 	err = of_property_read_u32(gmsl, "st-vc", &value);
 	if (err < 0) {
 		dev_err(&client->dev, "No st-vc info\n");
 		goto error;
 	}
-	priv->gmsl_data.st_vc = value;
+	priv->g_ctx.st_vc = value;
 
 	err = of_property_read_u32(gmsl, "vc-id", &value);
 	if (err < 0) {
 		dev_err(&client->dev, "No vc-id info\n");
 		goto error;
 	}
-	priv->gmsl_data.dst_vc = value;
+	priv->g_ctx.dst_vc = value;
 
 	err = of_property_read_u32(gmsl, "num-lanes", &value);
 	if (err < 0) {
 		dev_err(&client->dev, "No num-lanes info\n");
 		goto error;
 	}
-	priv->gmsl_data.num_csi_lanes = value;
+	priv->g_ctx.num_csi_lanes = value;
 
-	priv->gmsl_data.num_streams =
+	priv->g_ctx.num_streams =
 			of_property_count_strings(gmsl, "streams");
-	if (priv->gmsl_data.num_streams <= 0) {
+	if (priv->g_ctx.num_streams <= 0) {
 		dev_err(&client->dev, "No streams found\n");
 		err = -EINVAL;
 		goto error;
 	}
 
-	for (i = 0; i < priv->gmsl_data.num_streams; i++) {
+	for (i = 0; i < priv->g_ctx.num_streams; i++) {
 		of_property_read_string_index(gmsl, "streams", i,
 						&str_value1[i]);
 		if (!str_value1[i]) {
 			dev_err(&client->dev, "invalid stream info\n");
 			goto error;
 		}
-		if (strcmp(str_value1[i], "raw12")) {
-			priv->gmsl_data.streams[i].st_data_type =
+		if (!strcmp(str_value1[i], "raw12")) {
+			priv->g_ctx.streams[i].st_data_type =
 							GMSL_CSI_DT_RAW_12;
-		}
-		else if (strcmp(str_value1[i], "ued-u1")) {
-			priv->gmsl_data.streams[i].st_data_type =
+		} else if (!strcmp(str_value1[i], "embed")) {
+			priv->g_ctx.streams[i].st_data_type =
+							GMSL_CSI_DT_EMBED;
+		} else if (!strcmp(str_value1[i], "ued-u1")) {
+			priv->g_ctx.streams[i].st_data_type =
 							GMSL_CSI_DT_UED_U1;
 		} else {
 			dev_err(&client->dev, "invalid stream data type\n");
@@ -1027,7 +1042,7 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 		}
 	}
 
-	priv->gmsl_data.s_dev = &client->dev;
+	priv->g_ctx.s_dev = &client->dev;
 
 	return board_priv_pdata;
 
@@ -1121,11 +1136,16 @@ static int imx390_probe(struct i2c_client *client,
 	priv->s_data->dev = &client->dev;
 	priv->last_wdr_et_val = 0;
 
-	/* Pair sensor dev to serializer dev */
-	max9295_dev_pair(priv->ser_dev, &priv->gmsl_data);
+	/* Pair sensor to serializer dev */
+	max9295_sdev_pair(priv->ser_dev, &priv->g_ctx);
 
-	/* Add sensor dev to deserializer */
-	max9296_dev_add(priv->dser_dev, &priv->gmsl_data);
+	/* Register sensor to deserializer dev */
+	max9296_sdev_register(priv->dser_dev, &priv->g_ctx);
+
+	/* setup serdes control pipeline */
+	max9296_link_ex(priv->dser_dev, &client->dev);
+	max9295_setup_control(priv->ser_dev);
+	max9296_setup_control(priv->dser_dev);
 
 	err = imx390_power_get(priv);
 	if (err)
@@ -1179,6 +1199,9 @@ static int imx390_remove(struct i2c_client *client)
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	camera_common_remove_debugfs(s_data);
+
+	max9295_reset_control(priv->ser_dev);
+	max9296_reset_control(priv->dser_dev);
 
 	return 0;
 }

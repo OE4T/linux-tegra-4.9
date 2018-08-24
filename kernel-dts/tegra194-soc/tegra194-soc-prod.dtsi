@@ -1291,6 +1291,7 @@
 			};
 			prod_c_ddr52 {
 				prod = <
+					0 0x00000100 0x1fff0000 0x05090000              //SDMMCA_VENDOR_CLOCK_CNTRL_0
 					0 0x0000003c 0x00070000 0x00040000              //SDMMCA_AUTO_CMD12_ERR_STATUS_0
 					0 0x00000120 0x0000fffe 0x00000298>;            //SDMMCA_VENDOR_MISC_CNTRL_0
 			};

@@ -2293,6 +2293,8 @@ int cx231xx_set_power_mode(struct cx231xx *dev, enum AV_MODE mode)
 	case POLARIS_AVMODE_ANALOGT_TV:
 
 		tmp |= PWR_DEMOD_EN;
+		if (is_model_avermedia_h837_series(dev->model))
+			tmp |= I2C_DEMOD_EN;
 		if (dev->model == CX231XX_BOARD_AVERMEDIA_H837B)
 			tmp &= ~PWR_DEMOD_EN;
 		value[0] = (u8) tmp;
@@ -2391,6 +2393,8 @@ int cx231xx_set_power_mode(struct cx231xx *dev, enum AV_MODE mode)
 
 		tmp &= (~PWR_AV_MODE);
 		tmp |= POLARIS_AVMODE_DIGITAL;
+		if (is_model_avermedia_h837_series(dev->model))
+			tmp |= I2C_DEMOD_EN;
 		value[0] = (u8) tmp;
 		value[1] = (u8) (tmp >> 8);
 		value[2] = (u8) (tmp >> 16);

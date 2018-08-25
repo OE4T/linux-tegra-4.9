@@ -3333,7 +3333,11 @@ static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 
 	destroy_dma_test_debugfs(pcie);
 	debugfs_remove_recursive(pcie->debugfs);
+	/* FIXME:
+	 * Enable to allow iommu_bus_notifier call in shutdown
+	 * bug 200443538
 	tegra_pcie_dw_runtime_suspend(pcie->dev);
+	 */
 	tegra_bwmgr_unregister(pcie->emc_bw);
 }
 

@@ -316,6 +316,7 @@ static void clear_irq_range(struct pcie_port *pp, unsigned int irq_base,
 			    unsigned int nvec, unsigned int pos)
 {
 	unsigned int i;
+	unsigned long flags;
 
 	for (i = 0; i < nvec; i++) {
 		irq_set_msi_desc_off(irq_base, i, NULL);
@@ -326,7 +327,9 @@ static void clear_irq_range(struct pcie_port *pp, unsigned int irq_base,
 			dw_pcie_msi_clear_irq(pp, pos + i);
 	}
 
+	raw_spin_lock_irqsave(&pp->lock, flags);
 	bitmap_release_region(pp->msi_irq_in_use, pos, order_base_2(nvec));
+	raw_spin_unlock_irqrestore(&pp->lock, flags);
 }
 
 static void dw_pcie_msi_set_irq(struct pcie_port *pp, int irq)
@@ -343,10 +346,13 @@ static void dw_pcie_msi_set_irq(struct pcie_port *pp, int irq)
 static int assign_irq(int no_irqs, struct msi_desc *desc, int *pos)
 {
 	int irq, pos0, i;
+	unsigned long flags;
 	struct pcie_port *pp = (struct pcie_port *) msi_desc_to_pci_sysdata(desc);
 
+	raw_spin_lock_irqsave(&pp->lock, flags);
 	pos0 = bitmap_find_free_region(pp->msi_irq_in_use, MAX_MSI_IRQS,
 				       order_base_2(no_irqs));
+	raw_spin_unlock_irqrestore(&pp->lock, flags);
 	if (pos0 < 0)
 		goto no_valid_irq;
 
@@ -639,6 +645,8 @@ int dw_pcie_host_init(struct pcie_port *pp)
 
 			for (i = 0; i < MAX_MSI_IRQS; i++)
 				irq_create_mapping(pp->irq_domain, i);
+
+			raw_spin_lock_init(&pp->lock);
 		} else {
 			ret = pp->ops->msi_host_init(pp, &dw_pcie_msi_chip);
 			if (ret < 0)

@@ -52,6 +52,7 @@ struct pcie_port {
 	unsigned long		msi_data;
 	u8			iatu_unroll_enabled;
 	DECLARE_BITMAP(msi_irq_in_use, MAX_MSI_IRQS);
+	raw_spinlock_t		lock;
 };
 
 struct pcie_host_ops {

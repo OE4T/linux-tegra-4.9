@@ -39,8 +39,9 @@ size_t gp106_mm_get_vidmem_size(struct gk20a *g)
 	u32 ecc = fb_mmu_local_memory_range_ecc_mode_v(range);
 	size_t bytes = ((size_t)mag << scale) * SZ_1M;
 
-	if (ecc)
+	if (ecc) {
 		bytes = bytes / 16 * 15;
+	}
 
 	return bytes;
 }

@@ -92,7 +92,8 @@ void gp106_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 	if (flcn->is_falcon_supported) {
 		nvgpu_mutex_init(&flcn->copy_lock);
 		gp106_falcon_ops(flcn);
-	} else
+	} else {
 		nvgpu_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
+	}
 }

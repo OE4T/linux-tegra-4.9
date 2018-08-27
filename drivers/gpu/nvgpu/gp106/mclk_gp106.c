@@ -3079,8 +3079,9 @@ static int mclk_get_memclk_table(struct gk20a *g)
 
 		memcpy(&memclock_base_entry, mem_entry_ptr,
 			memclock_table_header.base_entry_size);
-		if (memclock_base_entry.maximum == 0)
+		if (memclock_base_entry.maximum == 0) {
 			continue;
+		}
 
 		script_index = BIOS_GET_FIELD(memclock_base_entry.flags1,
 			VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX);
@@ -3089,8 +3090,9 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			memclock_table_header.script_list_ptr +
 				script_index * sizeof(u32));
 
-		if (!script_ptr)
+		if (!script_ptr) {
 			continue;
+		}
 
 		/* Link and execute shadow scripts */
 
@@ -3107,8 +3109,9 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			for (shadow_idx = 0; shadow_idx <
 					fb_fbpa_fbio_delay_priv_max_v();
 					++shadow_idx) {
-				if (idx_to_ptr_tbl[shadow_idx] == 0)
+				if (idx_to_ptr_tbl[shadow_idx] == 0) {
 					break;
+				}
 			}
 
 			if (shadow_idx > fb_fbpa_fbio_delay_priv_max_v()) {
@@ -3142,14 +3145,16 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			memclock_table_header.cmd_script_list_ptr +
 				cmd_script_index * sizeof(u32));
 
-		if (!cmd_script_ptr)
+		if (!cmd_script_ptr) {
 			continue;
+		}
 
 		/* Link and execute cmd shadow scripts */
 		for (cmd_idx = 0; cmd_idx <= fb_fbpa_fbio_cmd_delay_cmd_priv_max_v();
 				++cmd_idx) {
-			if (cmd_script_ptr == idx_to_cmd_ptr_tbl[cmd_idx])
+			if (cmd_script_ptr == idx_to_cmd_ptr_tbl[cmd_idx]) {
 				break;
+			}
 		}
 
 		/* script has not been executed before */
@@ -3158,8 +3163,9 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			for (cmd_idx = 0; cmd_idx <
 					fb_fbpa_fbio_cmd_delay_cmd_priv_max_v();
 					++cmd_idx) {
-				if (idx_to_cmd_ptr_tbl[cmd_idx] == 0)
+				if (idx_to_cmd_ptr_tbl[cmd_idx] == 0) {
 					break;
+				}
 			}
 
 			if (cmd_idx > fb_fbpa_fbio_cmd_delay_cmd_priv_max_v()) {
@@ -3220,12 +3226,14 @@ int gp106_mclk_init(struct gk20a *g)
 	mclk = &g->clk_pmu.clk_mclk;
 
 	err = nvgpu_mutex_init(&mclk->mclk_lock);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = nvgpu_mutex_init(&mclk->data_lock);
-	if (err)
+	if (err) {
 		goto fail_mclk_mutex;
+	}
 
 	/* FBPA gain WAR */
 	gk20a_writel(g, fb_fbpa_fbio_iref_byte_rx_ctrl_r(), 0x22222222);
@@ -3326,15 +3334,17 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 
 	nvgpu_mutex_acquire(&mclk->mclk_lock);
 
-	if (!mclk->init)
+	if (!mclk->init) {
 		goto exit_status;
+	}
 
 	speed = (val < mclk->p5_min) ? GP106_MCLK_LOW_SPEED :
 		(val < mclk->p0_min) ? GP106_MCLK_MID_SPEED :
 						GP106_MCLK_HIGH_SPEED;
 
-	if (speed == mclk->speed)
+	if (speed == mclk->speed) {
 		goto exit_status;
+	}
 
 	seq_script_ptr = m->scripts[mclk->speed][speed].addr;
 	seq_script_size = m->scripts[mclk->speed][speed].size;

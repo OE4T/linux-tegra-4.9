@@ -85,21 +85,23 @@ static const char * const gp106_gpc_client_descs[] = {
 
 void gp106_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault)
 {
-	if (mmfault->client_id >= ARRAY_SIZE(gp106_gpc_client_descs))
+	if (mmfault->client_id >= ARRAY_SIZE(gp106_gpc_client_descs)) {
 		WARN_ON(mmfault->client_id >=
 				ARRAY_SIZE(gp106_gpc_client_descs));
-	else
+	} else {
 		mmfault->client_id_desc =
 			 gp106_gpc_client_descs[mmfault->client_id];
+	}
 }
 
 /* fill in mmu fault client description */
 void gp106_fifo_get_mmu_fault_client_desc(struct mmu_fault_info *mmfault)
 {
-	if (mmfault->client_id >= ARRAY_SIZE(gp106_hub_client_descs))
+	if (mmfault->client_id >= ARRAY_SIZE(gp106_hub_client_descs)) {
 		WARN_ON(mmfault->client_id >=
 				ARRAY_SIZE(gp106_hub_client_descs));
-	else
+	} else {
 		mmfault->client_id_desc =
 			 gp106_hub_client_descs[mmfault->client_id];
+	}
 }

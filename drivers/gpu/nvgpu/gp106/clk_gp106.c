@@ -68,8 +68,9 @@ unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain)
 		}
 	}
 
-	if (!c)
+	if (!c) {
 		return 0;
+	}
 
 	freq_khz = c->is_counter ? c->scale * gp106_get_rate_cntr(g, c) :
 		0; /* TODO: PLL read */
@@ -86,8 +87,9 @@ int gp106_init_clk_support(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	err = nvgpu_mutex_init(&clk->clk_mutex);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	clk->clk_namemap = (struct namemap_cfg *)
 		nvgpu_kzalloc(g, sizeof(struct namemap_cfg) * NUM_NAMEMAPS);
@@ -185,8 +187,9 @@ static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 
 	struct clk_gk20a *clk = &g->clk;
 
-	if (!c || !c->cntr.reg_ctrl_addr || !c->cntr.reg_cntr_addr)
+	if (!c || !c->cntr.reg_ctrl_addr || !c->cntr.reg_cntr_addr) {
 		return 0;
+	}
 
 	nvgpu_mutex_acquire(&clk->clk_mutex);
 

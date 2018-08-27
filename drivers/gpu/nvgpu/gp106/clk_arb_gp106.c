@@ -55,20 +55,24 @@ int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 
 	p5_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P5, clkwhich);
-	if (!p5_info)
+	if (!p5_info) {
 		return -EINVAL;
+	}
 
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich);
-	if (!p0_info)
+	if (!p0_info) {
 		return -EINVAL;
+	}
 
 	limit_min_mhz = p5_info->min_mhz;
 	/* WAR for DVCO min */
-	if (api_domain == CTRL_CLK_DOMAIN_GPC2CLK)
+	if (api_domain == CTRL_CLK_DOMAIN_GPC2CLK) {
 		if ((pfllobjs->max_min_freq_mhz) &&
-		(pfllobjs->max_min_freq_mhz >= limit_min_mhz))
+			(pfllobjs->max_min_freq_mhz >= limit_min_mhz)) {
 			limit_min_mhz = pfllobjs->max_min_freq_mhz + 1;
+		}
+	}
 
 	*min_mhz = limit_min_mhz;
 	*max_mhz = p0_info->max_mhz;
@@ -97,8 +101,9 @@ int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich);
-	if (!p0_info)
+	if (!p0_info) {
 		return -EINVAL;
+	}
 
 	*default_mhz = p0_info->max_mhz;
 

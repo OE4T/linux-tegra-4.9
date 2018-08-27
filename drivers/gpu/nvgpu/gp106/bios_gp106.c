@@ -123,8 +123,9 @@ int gp106_bios_devinit(struct gk20a *g)
 		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (!devinit_completed && !nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek_expired(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout)) {
 		err = -ETIMEDOUT;
+	}
 
 	nvgpu_flcn_clear_halt_intr_status(g->pmu.flcn,
 		gk20a_get_gr_idle_timeout(g));
@@ -138,8 +139,9 @@ int gp106_bios_preos_wait_for_halt(struct gk20a *g)
 {
 	int err = 0;
 
-	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn, PMU_BOOT_TIMEOUT_MAX / 1000))
+	if (nvgpu_flcn_wait_for_halt(g->pmu.flcn, PMU_BOOT_TIMEOUT_MAX / 1000)) {
 		err = -ETIMEDOUT;
+	}
 
 	return err;
 }
@@ -155,8 +157,9 @@ int gp106_bios_preos(struct gk20a *g)
 		goto out;
 	}
 
-	if (g->ops.bios.preos_reload_check)
+	if (g->ops.bios.preos_reload_check) {
 		g->ops.bios.preos_reload_check(g);
+	}
 
 	upload_code(g, g->bios.preos.bootloader_phys_base,
 			g->bios.preos.bootloader,
@@ -190,17 +193,20 @@ int gp106_bios_init(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (g->bios_is_init)
+	if (g->bios_is_init) {
 		return 0;
+	}
 
 	nvgpu_log_info(g, "reading bios from EEPROM");
 	g->bios.size = BIOS_SIZE;
 	g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
-	if (!g->bios.data)
+	if (!g->bios.data) {
 		return -ENOMEM;
+	}
 
-	if (g->ops.xve.disable_shadow_rom)
+	if (g->ops.xve.disable_shadow_rom) {
 		g->ops.xve.disable_shadow_rom(g);
+	}
 	for (i = 0; i < g->bios.size/4; i++) {
 		u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
 
@@ -209,12 +215,14 @@ int gp106_bios_init(struct gk20a *g)
 		g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
 		g->bios.data[(i*4)+3] = val & 0xff;
 	}
-	if (g->ops.xve.enable_shadow_rom)
+	if (g->ops.xve.enable_shadow_rom) {
 		g->ops.xve.enable_shadow_rom(g);
+	}
 
 	err = nvgpu_bios_parse_rom(g);
-	if (err)
+	if (err) {
 		goto free_firmware;
+	}
 
 	if (g->bios.vbios_version < g->vbios_min_version) {
 		nvgpu_err(g, "unsupported VBIOS version %08x",
@@ -254,7 +262,8 @@ int gp106_bios_init(struct gk20a *g)
 
 	return 0;
 free_firmware:
-	if (g->bios.data)
+	if (g->bios.data) {
 		nvgpu_vfree(g, g->bios.data);
+	}
 	return err;
 }

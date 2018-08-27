@@ -54,8 +54,9 @@ bool gp106_pmu_is_engine_in_reset(struct gk20a *g)
 	bool status = false;
 
 	reg_reset = gk20a_readl(g, pwr_falcon_engine_r());
-	if (reg_reset == pwr_falcon_engine_reset_true_f())
+	if (reg_reset == pwr_falcon_engine_reset_true_f()) {
 		status = true;
+	}
 
 	return status;
 }
@@ -82,11 +83,13 @@ int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset)
 
 u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 {
-	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
 		return NVGPU_PMU_GR_FEATURE_MASK_RPPG;
+	}
 
-	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
 		return NVGPU_PMU_MS_FEATURE_MASK_ALL;
+	}
 
 	return 0;
 }
@@ -274,11 +277,13 @@ int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 
 	/* GM20B PMU supports loading FECS and GPCCS only */
-	if (falconidmask == 0)
+	if (falconidmask == 0) {
 		return -EINVAL;
+	}
 	if (falconidmask & ~((1 << LSF_FALCON_ID_FECS) |
-			(1 << LSF_FALCON_ID_GPCCS)))
+			(1 << LSF_FALCON_ID_GPCCS))) {
 		return -EINVAL;
+	}
 	g->pmu_lsf_loaded_falcon_id = 0;
 	/* check whether pmu is ready to bootstrap lsf if not wait for it */
 	if (!g->pmu_lsf_pmu_wpr_init_done) {
@@ -296,7 +301,8 @@ int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	pmu_wait_message_cond(&g->pmu,
 			gk20a_get_gr_idle_timeout(g),
 			&g->pmu_lsf_loaded_falcon_id, falconidmask);
-	if (g->pmu_lsf_loaded_falcon_id != falconidmask)
+	if (g->pmu_lsf_loaded_falcon_id != falconidmask) {
 		return -ETIMEDOUT;
+	}
 	return 0;
 }

@@ -129,8 +129,9 @@ void gr_gp106_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	if (!gr->attrib_cb_default_size)
+	if (!gr->attrib_cb_default_size) {
 		gr->attrib_cb_default_size = 0x800;
+	}
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 	gr->attrib_cb_gfxp_default_size =
@@ -147,20 +148,24 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 {
 	int err = 0;
 
-	if (class == PASCAL_B && g->gr.ctx_vars.force_preemption_gfxp)
+	if (class == PASCAL_B && g->gr.ctx_vars.force_preemption_gfxp) {
 		graphics_preempt_mode = NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP;
+	}
 
 	if (class == PASCAL_COMPUTE_B &&
-			g->gr.ctx_vars.force_preemption_cilp)
+			g->gr.ctx_vars.force_preemption_cilp) {
 		compute_preempt_mode = NVGPU_PREEMPTION_MODE_COMPUTE_CILP;
+	}
 
 	/* check for invalid combinations */
-	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
+	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0)) {
 		return -EINVAL;
+	}
 
 	if ((graphics_preempt_mode == NVGPU_PREEMPTION_MODE_GRAPHICS_GFXP) &&
-		   (compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP))
+		   (compute_preempt_mode == NVGPU_PREEMPTION_MODE_COMPUTE_CILP)) {
 		return -EINVAL;
+	}
 
 	/* set preemption modes */
 	switch (graphics_preempt_mode) {

@@ -224,8 +224,9 @@ static int gp106_init_gpu_characteristics(struct gk20a *g)
 	int err;
 
 	err = gk20a_init_gpu_characteristics(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_VOLTAGE, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_GET_CURRENT, true);
@@ -868,8 +869,10 @@ int gp106_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, false);
 
 	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
-	if (gops->fuse.check_priv_security(g))
-		return -EINVAL; /* Do not boot gpu */
+	if (gops->fuse.check_priv_security(g)) {
+		/* Do not boot gpu */
+		return -EINVAL;
+	}
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
 	g->bootstrap_owner = LSF_FALCON_ID_SEC2;

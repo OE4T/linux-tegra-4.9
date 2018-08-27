@@ -90,8 +90,9 @@ int gp106_alloc_blob_space(struct gk20a *g,
 	struct wpr_carveout_info wpr_inf;
 	int err;
 
-	if (mem->size)
+	if (mem->size) {
 		return 0;
+	}
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 
@@ -102,8 +103,9 @@ int gp106_alloc_blob_space(struct gk20a *g,
 	err = nvgpu_dma_alloc_vid_at(g,
 			wpr_inf.size,
 			&g->acr.wpr_dummy, wpr_inf.wpr_base);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	return nvgpu_dma_alloc_vid_at(g,
 			wpr_inf.size, mem,
@@ -291,8 +293,9 @@ int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	struct nvgpu_firmware *gpccs_sig = NULL;
 	int err;
 
-	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS))
+	if (!nvgpu_is_enabled(g, NVGPU_SEC_SECUREGPCCS)) {
 		return -ENOENT;
+	}
 
 	switch (ver) {
 		case NVGPU_GPUID_GP104:
@@ -415,8 +418,9 @@ static u32 lsfm_discover_and_add_sub_wprs(struct gk20a *g,
 
 		if (size_4K) {
 			pnode = nvgpu_kzalloc(g, sizeof(struct lsfm_sub_wpr));
-			if (pnode == NULL)
+			if (pnode == NULL) {
 				return -ENOMEM;
+			}
 
 			pnode->sub_wpr_header.use_case_id = sub_wpr_index;
 			pnode->sub_wpr_header.size_4K = size_4K;
@@ -460,23 +464,27 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 	/* Discover all managed falcons*/
 	err = lsfm_discover_ucode_images(g, plsfm);
 	gp106_dbg_pmu(g, " Managed Falcon cnt %d\n", plsfm->managed_flcn_cnt);
-	if (err)
+	if (err) {
 		goto exit_err;
+	}
 
-	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR))
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR)) {
 		lsfm_discover_and_add_sub_wprs(g, plsfm);
+	}
 
 	if (plsfm->managed_flcn_cnt && !g->acr.ucode_blob.cpu_va) {
 		/* Generate WPR requirements*/
 		err = lsf_gen_wpr_requirements(g, plsfm);
-		if (err)
+		if (err) {
 			goto exit_err;
+		}
 
 		/*Alloc memory to hold ucode blob contents*/
 		err = g->ops.pmu.alloc_blob_space(g, plsfm->wpr_size
 							,&g->acr.ucode_blob);
-		if (err)
+		if (err) {
 			goto exit_err;
+		}
 
 		gp106_dbg_pmu(g, "managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
@@ -512,13 +520,15 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 	/* Obtain the PMU ucode image and add it to the list if required*/
 	memset(&ucode_img, 0, sizeof(ucode_img));
 	status = pmu_ucode_details(g, &ucode_img);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	if (ucode_img.lsf_desc != NULL) {
 		/* The falon_id is formed by grabbing the static base
 		 * falon_id from the image and adding the
-		 * engine-designated falcon instance.*/
+		 * engine-designated falcon instance.
+                 */
 		pmu->pmu_mode |= PMU_SECURE_MODE;
 		falcon_id = ucode_img.lsf_desc->falcon_id +
 			ucode_img.flcn_inst;
@@ -526,8 +536,9 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 		if (!lsfm_falcon_disabled(g, plsfm, falcon_id)) {
 			pmu->falcon_id = falcon_id;
 			if (lsfm_add_ucode_img(g, plsfm, &ucode_img,
-				pmu->falcon_id) == 0)
+				pmu->falcon_id) == 0) {
 				pmu->pmu_mode |= PMU_LSFM_MANAGED;
+			}
 
 			plsfm->managed_flcn_cnt++;
 		} else {
@@ -566,8 +577,9 @@ int lsfm_discover_ucode_images(struct gk20a *g,
 					/* Do not manage non-FB ucode*/
 					if (lsfm_add_ucode_img(g,
 						plsfm, &ucode_img, falcon_id)
-						== 0)
+						== 0) {
 						plsfm->managed_flcn_cnt++;
+					}
 				} else {
 					gp106_dbg_pmu(g, "not managed %d\n",
 						ucode_img.lsf_desc->falcon_id);
@@ -599,18 +611,21 @@ int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	u64 addr_code, addr_data;
 	u32 addr_args;
 
-	if (p_img->desc == NULL) /*This means its a header based ucode,
-				  and so we do not fill BL gen desc structure*/
+	if (p_img->desc == NULL) {
+		/* This means its a header based ucode,
+		 * and so we do not fill BL gen desc structure
+		 */
 		return -EINVAL;
+	}
 	desc = p_img->desc;
 	/*
-	 Calculate physical and virtual addresses for various portions of
-	 the PMU ucode image
-	 Calculate the 32-bit addresses for the application code, application
-	 data, and bootloader code. These values are all based on IM_BASE.
-	 The 32-bit addresses will be the upper 32-bits of the virtual or
-	 physical addresses of each respective segment.
-	*/
+	 * Calculate physical and virtual addresses for various portions of
+	 * the PMU ucode image
+	 * Calculate the 32-bit addresses for the application code, application
+	 * data, and bootloader code. These values are all based on IM_BASE.
+	 * The 32-bit addresses will be the upper 32-bits of the virtual or
+	 * physical addresses of each respective segment.
+	 */
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += (wpr_inf.wpr_base);
@@ -670,19 +685,22 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct pmu_ucode_desc_v1 *desc;
 	u64 addr_code, addr_data;
 
-	if (p_img->desc == NULL) /*This means its a header based ucode,
-				  and so we do not fill BL gen desc structure*/
+	if (p_img->desc == NULL) {
+		/* This means its a header based ucode,
+		 * and so we do not fill BL gen desc structure
+		 */
 		return -EINVAL;
+	}
 	desc = p_img->desc;
 
 	/*
-	 Calculate physical and virtual addresses for various portions of
-	 the PMU ucode image
-	 Calculate the 32-bit addresses for the application code, application
-	 data, and bootloader code. These values are all based on IM_BASE.
-	 The 32-bit addresses will be the upper 32-bits of the virtual or
-	 physical addresses of each respective segment.
-	*/
+	 * Calculate physical and virtual addresses for various portions of
+	 * the PMU ucode image
+	 * Calculate the 32-bit addresses for the application code, application
+	 * data, and bootloader code. These values are all based on IM_BASE.
+	 * The 32-bit addresses will be the upper 32-bits of the virtual or
+	 * physical addresses of each respective segment.
+	 */
 	addr_base = p_lsfm->lsb_header.ucode_off;
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	addr_base += wpr_inf.wpr_base;
@@ -728,9 +746,10 @@ int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 	if (pmu->pmu_mode & PMU_LSFM_MANAGED) {
 		gp106_dbg_pmu(g, "pmu write flcn bl gen desc\n");
-		if (pnode->wpr_header.falcon_id == pmu->falcon_id)
+		if (pnode->wpr_header.falcon_id == pmu->falcon_id) {
 			return g->ops.pmu.pmu_populate_loader_cfg(g, pnode,
 				&pnode->bl_gen_desc_size);
+		}
 	}
 
 	/* Failed to find the falcon requested. */
@@ -784,8 +803,9 @@ void lsfm_init_wpr_contents(struct gk20a *g,
 	memset(&last_wpr_hdr, 0, sizeof(struct lsf_wpr_header_v1));
 	i = 0;
 
-	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR))
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR)) {
 		lsfm_init_sub_wpr_contents(g, plsfm, ucode);
+	}
 
 	/*
 	 * Walk the managed falcons, flush WPR and LSB headers to FB.
@@ -918,9 +938,10 @@ void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 	u32 full_app_size = 0;
 	u32 data = 0;
 
-	if (pnode->ucode_img.lsf_desc)
+	if (pnode->ucode_img.lsf_desc) {
 		memcpy(&pnode->lsb_header.signature, pnode->ucode_img.lsf_desc,
 			sizeof(struct lsf_ucode_desc_v1));
+	}
 	pnode->lsb_header.ucode_size = pnode->ucode_img.data_size;
 
 	/* The remainder of the LSB depends on the loader usage */
@@ -974,9 +995,10 @@ void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 			pnode->lsb_header.flags = data;
 		}
 
-		if(g->ops.pmu.is_priv_load(falcon_id))
+		if (g->ops.pmu.is_priv_load(falcon_id)) {
 			pnode->lsb_header.flags |=
 				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE;
+		}
 	}
 }
 
@@ -987,8 +1009,9 @@ int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 	struct lsfm_managed_ucode_img_v2 *pnode;
 
 	pnode = nvgpu_kzalloc(g, sizeof(struct lsfm_managed_ucode_img_v2));
-	if (pnode == NULL)
+	if (pnode == NULL) {
 		return -ENOMEM;
+	}
 
 	/* Keep a copy of the ucode image info locally */
 	memcpy(&pnode->ucode_img, ucode_image, sizeof(struct flcn_ucode_img_v1));
@@ -1043,11 +1066,12 @@ void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm)
 	while (cnt) {
 		mg_ucode_img = plsfm->ucode_img_list;
 		if (mg_ucode_img->ucode_img.lsf_desc->falcon_id ==
-				LSF_FALCON_ID_PMU)
+				LSF_FALCON_ID_PMU) {
 			lsfm_free_ucode_img_res(g, &mg_ucode_img->ucode_img);
-		else
+		} else {
 			lsfm_free_nonpmu_ucode_img_res(g,
 				&mg_ucode_img->ucode_img);
+		}
 		plsfm->ucode_img_list = mg_ucode_img->next;
 		nvgpu_kfree(g, mg_ucode_img);
 		cnt--;
@@ -1279,8 +1303,9 @@ int gp106_bootstrap_hs_flcn(struct gk20a *g)
 					acr->acr_ucode.gpu_va +
 					(acr_ucode_header_t210_load[2]));
 		bl_dmem_desc->data_size = acr_ucode_header_t210_load[3];
-	} else
+	} else {
 		acr->acr_dmem_desc->nonwpr_ucode_blob_size = 0;
+	}
 
 	status = pmu_exec_gen_bl(g, bl_dmem_desc, 1);
 	if (status != 0) {

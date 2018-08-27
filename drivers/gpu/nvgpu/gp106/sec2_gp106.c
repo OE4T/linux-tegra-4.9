@@ -41,8 +41,9 @@ int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
 {
 	int status = 0;
 
-	if (nvgpu_flcn_clear_halt_intr_status(&g->sec2_flcn, timeout))
+	if (nvgpu_flcn_clear_halt_intr_status(&g->sec2_flcn, timeout)) {
 		status = -EBUSY;
+	}
 
 	return status;
 }
@@ -166,8 +167,9 @@ void init_pmu_setup_hw1(struct gk20a *g)
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
 		pmu, GK20A_PMU_DMAIDX_VIRT);
-	if (g->ops.pmu_ver.config_pmu_cmdline_args_super_surface)
+	if (g->ops.pmu_ver.config_pmu_cmdline_args_super_surface) {
 		g->ops.pmu_ver.config_pmu_cmdline_args_super_surface(pmu);
+	}
 
 	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
@@ -222,8 +224,9 @@ int init_sec2_setup_hw1(struct gk20a *g,
 			psec_fbif_transcfg_target_noncoherent_sysmem_f());
 
 	err = bl_bootstrap_sec2(pmu, desc, bl_sz);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	return 0;
 }

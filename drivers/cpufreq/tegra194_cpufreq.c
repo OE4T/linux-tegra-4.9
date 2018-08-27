@@ -964,7 +964,7 @@ static int __init get_ndiv_limits_tbl_from_bpmp(void)
 {
 	struct mrq_cpu_ndiv_limits_request md;
 	struct mrq_cpu_ndiv_limits_response *nltbl;
-	int cl;
+	uint32_t cl;
 	int ret = 0;
 	bool ok = false;
 
@@ -972,7 +972,7 @@ static int __init get_ndiv_limits_tbl_from_bpmp(void)
 		if (!tfreq_data.pcluster[cl].configured)
 			continue;
 		nltbl = &tfreq_data.pcluster[cl].ndiv_limits_tbl;
-		md.cluster_id = cpu_to_le32(cl);
+		md.cluster_id = cl;
 
 		ret = tegra_bpmp_send_receive(MRQ_CPU_NDIV_LIMITS, &md,
 				sizeof(struct mrq_cpu_ndiv_limits_request),
@@ -981,7 +981,7 @@ static int __init get_ndiv_limits_tbl_from_bpmp(void)
 
 		if (ret) {
 			pr_warn("%s: cpufreq: ", __func__);
-			pr_warn("cluster %d: ndiv_limits query failed!\n", cl);
+			pr_warn("cluster %u: ndiv_limits query failed!\n", cl);
 			goto err_out;
 		} else {
 			ok = true;

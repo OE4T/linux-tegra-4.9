@@ -1217,7 +1217,7 @@ static int __init get_lut_from_bpmp(void)
 	struct cpu_vhint_table *vhtbl;
 	struct cpu_vhint_data *virt;
 	dma_addr_t phys;
-	int cl;
+	uint32_t cl;
 	int ret = 0;
 	bool ok = false;
 
@@ -1241,8 +1241,8 @@ static int __init get_lut_from_bpmp(void)
 			}
 			vhtbl->lut = virt;
 			vhtbl->phys = phys;
-			md.addr = cpu_to_le32(phys);
-			md.cluster_id = cpu_to_le32(cl);
+			md.addr = (uint32_t)phys;
+			md.cluster_id = cl;
 			ret = tegra_bpmp_send_receive(MRQ_CPU_VHINT, &md,
 					sizeof(struct mrq_cpu_vhint_request),
 							 NULL, 0);

@@ -16,7 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/arm-smccc.h>
 #include <linux/moduleparam.h>
+#include <linux/psci.h>
 #include <linux/types.h>
 #include <asm/cpu.h>
 #include <asm/cputype.h>
@@ -160,8 +162,6 @@ static void  install_bp_hardening_cb(const struct arm64_cpu_capabilities *entry,
 }
 
 #include <uapi/linux/psci.h>
-#include <linux/arm-smccc.h>
-#include <linux/psci.h>
 
 static void call_smc_arch_workaround_1(void)
 {

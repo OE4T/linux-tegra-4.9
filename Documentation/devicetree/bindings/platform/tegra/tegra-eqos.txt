@@ -43,4 +43,6 @@ Optional properties:
 	when napi handler is called.  Default is "64".
 - nvidia,pause_frames: Used to disable/enable PAUSE frames support.
 	Default is enabled.
+- nvidia,rx_riwt: Specifies the RX watchdog interrupt timeout in usec
+        for an Rx descriptor for which IOC bit is not set.
 

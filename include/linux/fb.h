@@ -810,6 +810,9 @@ struct fb_videomode {
 	u32 sync;
 	u32 vmode;
 	u32 flag;
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+	u32 pixclock_hz;
+#endif
 };
 
 struct dmt_videomode {

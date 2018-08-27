@@ -52,6 +52,11 @@
 #define FBMON_FIX_INPUT   2
 #define FBMON_FIX_TIMINGS 3
 
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+static u32 pclk_hz;
+DEFINE_MUTEX(pclk_hz_lock);
+#endif
+
 #ifdef CONFIG_FB_MODE_HELPERS
 struct broken_edid {
 	u8  manufacturer[4];
@@ -383,28 +388,42 @@ static void calc_mode_timings(int xres, int yres, int refresh,
 			      struct fb_videomode *mode)
 {
 	struct fb_var_screeninfo *var;
+	int ret = 0;
 
 	var = kzalloc(sizeof(struct fb_var_screeninfo), GFP_KERNEL);
 
 	if (var) {
 		var->xres = xres;
 		var->yres = yres;
-		fb_get_mode(FB_VSYNCTIMINGS | FB_IGNOREMON,
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+		mutex_lock(&pclk_hz_lock);
+#endif
+		ret = fb_get_mode(FB_VSYNCTIMINGS | FB_IGNOREMON,
 			    refresh, var, NULL);
-		mode->xres = xres;
-		mode->yres = yres;
-		mode->pixclock = var->pixclock;
-		mode->refresh = refresh;
-		mode->left_margin = var->left_margin;
-		mode->right_margin = var->right_margin;
-		mode->upper_margin = var->upper_margin;
-		mode->lower_margin = var->lower_margin;
-		mode->hsync_len = var->hsync_len;
-		mode->vsync_len = var->vsync_len;
-		mode->vmode = 0;
-		mode->sync = 0;
-		kfree(var);
+		if (ret == 0) {
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+			mode->pixclock_hz = pclk_hz;
+			mutex_unlock(&pclk_hz_lock);
+#endif
+			mode->xres = xres;
+			mode->yres = yres;
+			mode->pixclock = var->pixclock;
+			mode->refresh = refresh;
+			mode->left_margin = var->left_margin;
+			mode->right_margin = var->right_margin;
+			mode->upper_margin = var->upper_margin;
+			mode->lower_margin = var->lower_margin;
+			mode->hsync_len = var->hsync_len;
+			mode->vsync_len = var->vsync_len;
+			mode->vmode = 0;
+			mode->sync = 0;
+		} else {
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+			mutex_unlock(&pclk_hz_lock);
+#endif
+		}
 	}
+	kfree(var);
 }
 
 static int get_est_timing(unsigned char *block, struct fb_videomode *mode)
@@ -567,6 +586,9 @@ static void get_detailed_timing(unsigned char *block,
 	mode->pixclock = PIXEL_CLOCK;
 	mode->pixclock /= 1000;
 	mode->pixclock = KHZ2PICOS(mode->pixclock);
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+	mode->pixclock_hz = PIXEL_CLOCK;
+#endif
 	mode->right_margin = H_SYNC_OFFSET;
 	mode->left_margin = (H_ACTIVE + H_BLANKING) -
 		(H_ACTIVE + H_SYNC_OFFSET + H_SYNC_WIDTH);
@@ -1578,6 +1600,9 @@ int fb_get_mode(int flags, u32 val, struct fb_var_screeninfo *var, struct fb_inf
 	     timings->dclk < dclkmin || timings->dclk > dclkmax))) {
 		err = -EINVAL;
 	} else {
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+		pclk_hz = timings->dclk;
+#endif
 		var->pixclock = KHZ2PICOS(timings->dclk/1000);
 		var->hsync_len = (timings->htotal * 8)/100;
 		var->right_margin = (timings->hblank/2) - var->hsync_len;

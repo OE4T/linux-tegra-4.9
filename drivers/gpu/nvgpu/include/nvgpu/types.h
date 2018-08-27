@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -59,5 +59,12 @@
 #define U16(x)  ((u16)(x))
 #define U32(x)	((u32)(x))
 #define U64(x)	((u64)(x))
+
+/* Linux uses U8_MAX instead of UCHAR_MAX. We define it here for non-Linux
+ * OSes
+ */
+#if !defined(__KERNEL__) && !defined(U8_MAX)
+#define U8_MAX ((u8)255)
+#endif
 
 #endif

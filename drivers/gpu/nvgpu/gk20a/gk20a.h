@@ -1653,10 +1653,10 @@ static inline bool nvgpu_is_timeouts_enabled(struct gk20a *g)
 	return nvgpu_atomic_read(&g->timeouts_disabled_refcount) == 0;
 }
 
-static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
+static inline u32 gk20a_get_gr_idle_timeout(struct gk20a *g)
 {
 	return nvgpu_is_timeouts_enabled(g) ?
-		g->gr_idle_timeout_default : ULONG_MAX;
+		g->gr_idle_timeout_default : UINT_MAX;
 }
 
 #define MULTICHAR_TAG(a, b, c, d) (((a) << 24) | ((b) << 16) | ((c) << 8) | (d))

@@ -39,14 +39,9 @@
 
 #define VREG_COUNT 24
 
-#define GP106_MCLK_LOW_SPEED	0
-#define GP106_MCLK_MID_SPEED	1
-#define GP106_MCLK_HIGH_SPEED	2
-#define GP106_MCLK_NUM_SPEED	3
-
-#define GP106_MEM_CONFIG_GDDR5_PG418		0
-#define GP106_MEM_CONFIG_GDDR5_PG419		1
-#define GP106_MEM_CONFIG_GDDR5_PG419_8606580012	2
+#define GP106_MEM_CONFIG_GDDR5_PG418		0U
+#define GP106_MEM_CONFIG_GDDR5_PG419		1U
+#define GP106_MEM_CONFIG_GDDR5_PG419_8606580012	2U
 
 struct memory_link_training_pattern {
 	u32 regaddr;
@@ -2939,7 +2934,7 @@ static int mclk_debugfs_init(struct gk20a *g);
 
 struct memory_config {
 	struct memory_link_training_pattern *pattern_ptr;
-	u32 pattern_size;
+	size_t pattern_size;
 	struct {
 		u8 *addr;
 		u32 size;
@@ -2949,7 +2944,7 @@ struct memory_config {
 #undef S
 #define S(from, to, script) \
 	[GP106_MCLK_##from##_SPEED][GP106_MCLK_##to##_SPEED] = \
-		{ script, sizeof(script) }
+		{ script, (u32)sizeof(script) }
 
 static struct memory_config mem_config[] = {
 	[GP106_MEM_CONFIG_GDDR5_PG418] = {
@@ -2998,7 +2993,8 @@ static void mclk_seq_pmucmdhandler(struct gk20a *g, struct pmu_msg *_msg,
 {
 	struct nv_pmu_seq_msg *msg = (struct nv_pmu_seq_msg *)_msg;
 	struct nv_pmu_seq_msg_run_script *seq_msg;
-	u32 msg_status = 0;
+	int msg_status = 0;
+	bool *seq_running = (bool *)param; /* to report back completion */
 
 	nvgpu_log_info(g, " ");
 
@@ -3021,7 +3017,7 @@ static void mclk_seq_pmucmdhandler(struct gk20a *g, struct pmu_msg *_msg,
 	}
 
 status_update:
-	*((u32 *)param) = msg_status;
+	*seq_running = (msg_status != 0);
 }
 
 static int mclk_get_memclk_table(struct gk20a *g)
@@ -3087,8 +3083,8 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX);
 
 		script_ptr = nvgpu_bios_read_u32(g,
-			memclock_table_header.script_list_ptr +
-				script_index * sizeof(u32));
+			(u32)(memclock_table_header.script_list_ptr +
+				script_index * sizeof(u32)));
 
 		if (!script_ptr) {
 			continue;
@@ -3142,8 +3138,8 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX);
 
 		cmd_script_ptr = nvgpu_bios_read_u32(g,
-			memclock_table_header.cmd_script_list_ptr +
-				cmd_script_index * sizeof(u32));
+			(u32)(memclock_table_header.cmd_script_list_ptr +
+				cmd_script_index * sizeof(u32)));
 
 		if (!cmd_script_ptr) {
 			continue;
@@ -3268,14 +3264,14 @@ int gp106_mclk_init(struct gk20a *g)
 
 	p5_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P5, clkwhich_mclk);
-	if (!p5_info) {
+	if (p5_info == NULL) {
 		err = -EINVAL;
 		goto fail_data_mutex;
 	}
 
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich_mclk);
-	if (!p0_info) {
+	if (p0_info == NULL) {
 		err = -EINVAL;
 		goto fail_data_mutex;
 	}
@@ -3284,7 +3280,7 @@ int gp106_mclk_init(struct gk20a *g)
 	mclk->p0_min = p0_info->min_mhz;
 
 	mclk->vreg_buf = nvgpu_kcalloc(g, VREG_COUNT, sizeof(u32));
-	if (!mclk->vreg_buf) {
+	if (mclk->vreg_buf == NULL) {
 		nvgpu_err(g, "unable to allocate memory for VREG");
 		err = -ENOMEM;
 		goto fail_data_mutex;
@@ -3318,13 +3314,14 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	int status = 0;
 	struct memory_config *m = &mem_config[g->mem_config_idx];
 
-	u32 seq_completion_status = ~0x0;
+	bool seq_running = true;
 	u8 *seq_script_ptr = NULL;
-	size_t seq_script_size = 0;
+	u32 seq_script_size = 0;
 #ifdef CONFIG_DEBUG_FS
 	u64 t0, t1;
 #endif
 	u32 speed;
+	u64 cmd_hdr_size;
 
 	nvgpu_log_info(g, " ");
 
@@ -3357,8 +3354,14 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	/* Fill command header with SEQ ID & size */
 	memset(&cmd, 0, sizeof(cmd));
 	cmd.hdr.unit_id	= PMU_UNIT_SEQ;
-	cmd.hdr.size = sizeof(struct nv_pmu_seq_cmd_run_script) +
+	cmd_hdr_size = sizeof(struct nv_pmu_seq_cmd_run_script) +
 		sizeof(struct pmu_hdr);
+	if (cmd_hdr_size > U8_MAX) {
+		nvgpu_err(g, "Invalid command header size");
+		status = -EINVAL;
+		goto exit_status;
+	}
+	cmd.hdr.size = (u8)cmd_hdr_size;
 
 	/* Fill RM_PMU_SEQ_CMD_RUN_SCRIPT struct */
 	pseq_cmd = &cmd.run_script;
@@ -3379,24 +3382,24 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 
 	/* Read sequencer binary*/
 	payload.in.buf = seq_script_ptr;
-	payload.in.size = seq_script_size;
+	payload.in.size = (u32)seq_script_size;
 	payload.in.fb_size = PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED;
-	payload.in.offset = offsetof(struct nv_pmu_seq_cmd_run_script,
+	payload.in.offset = (u32)offsetof(struct nv_pmu_seq_cmd_run_script,
 			script_alloc);
 
 	memset(mclk->vreg_buf, 0, (sizeof(u32) * VREG_COUNT));
 
 	payload.out.buf = mclk->vreg_buf;
-	payload.out.size = (VREG_COUNT * sizeof(u32));
+	payload.out.size = (VREG_COUNT * (u32)sizeof(u32));
 	payload.out.fb_size = PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED;
-	payload.out.offset = offsetof(struct nv_pmu_seq_cmd_run_script,
+	payload.out.offset = (u32)offsetof(struct nv_pmu_seq_cmd_run_script,
 			reg_alloc);
 
 	/* Send command to PMU to execute sequencer script */
 	status = nvgpu_pmu_cmd_post(g, (struct pmu_cmd *)&cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			mclk_seq_pmucmdhandler,
-			&seq_completion_status, &seqdesc, ~0);
+			&seq_running, &seqdesc, ~0UL);
 	if (status) {
 		nvgpu_err(g, "unable to post seq script exec cmd for unit %x",
 			cmd.hdr.unit_id);
@@ -3404,8 +3407,8 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	}
 	/* wait till sequencer script complete */
 	pmu_wait_message_cond(&g->pmu, (gk20a_get_gr_idle_timeout(g)),
-			&seq_completion_status, 0);
-	if (seq_completion_status != 0) {
+			&seq_running, (u8)false);
+	if (seq_running) {
 		nvgpu_err(g, "seq_script update failed");
 		status = -EBUSY;
 		goto exit_status;

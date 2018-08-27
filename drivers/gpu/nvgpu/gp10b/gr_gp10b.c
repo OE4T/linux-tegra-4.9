@@ -2169,7 +2169,7 @@ int gr_gp10b_suspend_contexts(struct gk20a *g,
 		struct nvgpu_timeout timeout;
 
 		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP preempt pending, waiting %lu msecs for preemption",
+			"CILP preempt pending, waiting %u msecs for preemption",
 			gk20a_get_gr_idle_timeout(g));
 
 		tsg = tsg_gk20a_from_ch(cilp_preempt_pending_ch);

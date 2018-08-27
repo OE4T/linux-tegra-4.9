@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,10 +25,10 @@
 
 #include <nvgpu/lock.h>
 
-#define GP106_MCLK_LOW_SPEED	0
-#define GP106_MCLK_MID_SPEED	1
-#define GP106_MCLK_HIGH_SPEED	2
-#define GP106_MCLK_NUM_SPEED	3
+#define GP106_MCLK_LOW_SPEED	0U
+#define GP106_MCLK_MID_SPEED	1U
+#define GP106_MCLK_HIGH_SPEED	2U
+#define GP106_MCLK_NUM_SPEED	3U
 
 enum gk20a_mclk_speed {
 	gk20a_mclk_low_speed,

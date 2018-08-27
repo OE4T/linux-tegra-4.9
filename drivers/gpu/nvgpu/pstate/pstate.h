@@ -1,7 +1,7 @@
 /*
  * general p state infrastructure
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,8 @@ struct gk20a;
 struct clk_set_info {
 	enum nv_pmu_clk_clkwhich clkwhich;
 	u32 nominal_mhz;
-	u32 min_mhz;
-	u32 max_mhz;
+	u16 min_mhz;
+	u16 max_mhz;
 };
 
 struct clk_set_info_list {

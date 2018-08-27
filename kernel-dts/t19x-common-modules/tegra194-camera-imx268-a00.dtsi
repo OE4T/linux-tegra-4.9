@@ -189,7 +189,7 @@
 				step_gain_val = "1"; /* 0.125 */
 				default_gain = "16";
 				min_hdr_ratio = "1";
-				max_hdr_ratio = "64";
+				max_hdr_ratio = "1";
 				min_framerate = "1500000"; /* 1.5 */
 				max_framerate = "30000000"; /* 30.0 */
 				step_framerate = "1";

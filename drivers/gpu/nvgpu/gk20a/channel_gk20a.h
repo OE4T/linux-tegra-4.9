@@ -77,6 +77,20 @@ struct nvgpu_gpfifo_entry {
 	u32 entry1;
 };
 
+struct gpfifo_desc {
+	struct nvgpu_mem mem;
+	u32 entry_num;
+
+	u32 get;
+	u32 put;
+
+	bool wrap;
+
+	/* if gpfifo lives in vidmem or is forced to go via PRAMIN, first copy
+	 * from userspace to pipe and then from pipe to gpu buffer */
+	void *pipe;
+};
+
 struct nvgpu_gpfifo_args {
 	u32 num_entries;
 	u32 num_inflight_jobs;

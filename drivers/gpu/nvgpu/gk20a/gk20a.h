@@ -45,6 +45,7 @@ struct nvgpu_clk_arb;
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 struct nvgpu_ctxsw_trace_filter;
 #endif
+struct priv_cmd_entry;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>

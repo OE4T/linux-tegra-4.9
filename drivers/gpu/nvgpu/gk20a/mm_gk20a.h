@@ -85,22 +85,6 @@ gk20a_buffer_state_from_list(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct gk20a_buffer_state, list));
 };
 
-struct priv_cmd_queue {
-	struct nvgpu_mem mem;
-	u32 size;	/* num of entries in words */
-	u32 put;	/* put for priv cmd queue */
-	u32 get;	/* get for priv cmd queue */
-};
-
-struct priv_cmd_entry {
-	bool valid;
-	struct nvgpu_mem *mem;
-	u32 off;	/* offset in mem, in u32 entries */
-	u64 gva;
-	u32 get;	/* start of entry in queue */
-	u32 size;	/* in words */
-};
-
 struct gk20a;
 struct channel_gk20a;
 

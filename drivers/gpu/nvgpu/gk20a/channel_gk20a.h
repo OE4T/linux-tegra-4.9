@@ -30,7 +30,7 @@
 #include <nvgpu/cond.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/nvgpu_mem.h>
-
+#include <nvgpu/allocator.h>
 
 struct gk20a;
 struct dbg_session_gk20a;
@@ -107,6 +107,22 @@ struct notification {
 	u32 info32;
 	u16 info16;
 	u16 status;
+};
+
+struct priv_cmd_queue {
+	struct nvgpu_mem mem;
+	u32 size;	/* num of entries in words */
+	u32 put;	/* put for priv cmd queue */
+	u32 get;	/* get for priv cmd queue */
+};
+
+struct priv_cmd_entry {
+	bool valid;
+	struct nvgpu_mem *mem;
+	u32 off;	/* offset in mem, in u32 entries */
+	u64 gva;
+	u32 get;	/* start of entry in queue */
+	u32 size;	/* in words */
 };
 
 struct channel_gk20a_job {

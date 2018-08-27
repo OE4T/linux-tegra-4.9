@@ -36,7 +36,7 @@ static struct tegra_iommu_group *tegra_create_iommu_group(struct device *dev,
 {
 	struct tegra_iommu_group *group = NULL;
 
-	group = devm_kcalloc(dev, 1, sizeof(struct tegra_iommu_group),
+	group = kcalloc(1, sizeof(struct tegra_iommu_group),
 				GFP_KERNEL);
 	if (!group)
 		return NULL;
@@ -51,6 +51,16 @@ static struct tegra_iommu_group *tegra_create_iommu_group(struct device *dev,
 
 	return group;
 
+}
+
+void tegra_smmu_remove_iommu_groups(void)
+{
+	struct tegra_iommu_group *group;
+	struct tegra_iommu_group *tmp;
+	list_for_each_entry_safe(group, tmp, &tegra_iommu_groups, list) {
+		list_del(&group->list);
+		kfree(group);
+	}
 }
 
 struct iommu_group *tegra_smmu_of_get_group(struct device *dev)

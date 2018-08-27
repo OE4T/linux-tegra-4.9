@@ -228,6 +228,7 @@ struct channel_gk20a {
 	struct gpfifo_desc gpfifo;
 
 	struct nvgpu_mem usermode_userd; /* Used for Usermode Submission */
+	struct nvgpu_mem usermode_gpfifo;
 	struct nvgpu_mem inst_block;
 
 	u64 userd_iova;

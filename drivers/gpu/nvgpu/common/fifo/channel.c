@@ -1057,6 +1057,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm;
 	u32 gpfifo_size, gpfifo_entry_size;
+	u64 gpfifo_gpu_va;
 	int err = 0;
 	unsigned long acquire_timeout;
 
@@ -1097,7 +1098,8 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	}
 	ch_vm = c->vm;
 
-	if (c->gpfifo.mem.size) {
+	if (nvgpu_mem_is_valid(&c->gpfifo.mem) ||
+			c->usermode_submit_enabled) {
 		nvgpu_err(g, "channel %d :"
 			   "gpfifo already allocated", c->chid);
 		err = -EEXIST;
@@ -1120,30 +1122,32 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 			err = -EINVAL;
 			goto clean_up;
 		}
-	}
-
-	err = nvgpu_dma_alloc_map_sys(ch_vm,
-			gpfifo_size * gpfifo_entry_size,
-			&c->gpfifo.mem);
-	if (err) {
-		nvgpu_err(g, "%s: memory allocation failed", __func__);
-		goto clean_up_usermode;
-	}
-
-	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM) {
-		c->gpfifo.pipe = nvgpu_big_malloc(g,
-				gpfifo_size * gpfifo_entry_size);
-		if (!c->gpfifo.pipe) {
-			err = -ENOMEM;
-			goto clean_up_unmap;
+		gpfifo_gpu_va = c->usermode_gpfifo.gpu_va;
+	} else {
+		err = nvgpu_dma_alloc_map_sys(ch_vm,
+				gpfifo_size * gpfifo_entry_size,
+				&c->gpfifo.mem);
+		if (err) {
+			nvgpu_err(g, "memory allocation failed");
+			goto clean_up;
 		}
+
+		if (c->gpfifo.mem.aperture == APERTURE_VIDMEM) {
+			c->gpfifo.pipe = nvgpu_big_malloc(g,
+					gpfifo_size * gpfifo_entry_size);
+			if (!c->gpfifo.pipe) {
+				err = -ENOMEM;
+				goto clean_up_unmap;
+			}
+		}
+		gpfifo_gpu_va = c->gpfifo.mem.gpu_va;
 	}
 
 	c->gpfifo.entry_num = gpfifo_size;
 	c->gpfifo.get = c->gpfifo.put = 0;
 
 	nvgpu_log_info(g, "channel %d : gpfifo_base 0x%016llx, size %d",
-		c->chid, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
+		c->chid, gpfifo_gpu_va, c->gpfifo.entry_num);
 
 	g->ops.fifo.setup_userd(c);
 
@@ -1169,7 +1173,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	else
 		acquire_timeout = c->timeout.limit_ms;
 
-	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
+	err = g->ops.fifo.setup_ramfc(c, gpfifo_gpu_va,
 					c->gpfifo.entry_num,
 					acquire_timeout, gpfifo_args->flags);
 	if (err)
@@ -1210,7 +1214,6 @@ clean_up_sync:
 clean_up_unmap:
 	nvgpu_big_free(g, c->gpfifo.pipe);
 	nvgpu_dma_unmap_free(ch_vm, &c->gpfifo.mem);
-clean_up_usermode:
 	if (c->usermode_submit_enabled) {
 		gk20a_channel_free_usermode_buffers(c);
 		c->userd_iova = nvgpu_mem_get_addr(g, &g->fifo.userd) +
@@ -1234,6 +1237,8 @@ void gk20a_channel_free_usermode_buffers(struct channel_gk20a *c)
 {
 	if (nvgpu_mem_is_valid(&c->usermode_userd))
 		nvgpu_dma_free(c->g, &c->usermode_userd);
+	if (nvgpu_mem_is_valid(&c->usermode_gpfifo))
+		nvgpu_dma_free(c->g, &c->usermode_gpfifo);
 }
 
 /* Update with this periodically to determine how the gpfifo is draining. */

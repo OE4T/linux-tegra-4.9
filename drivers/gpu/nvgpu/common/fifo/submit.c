@@ -341,12 +341,12 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		return -ETIMEDOUT;
 	}
 
-	if (!nvgpu_mem_is_valid(&c->gpfifo.mem)) {
-		return -ENOMEM;
-	}
-
 	if (c->usermode_submit_enabled) {
 		return -EINVAL;
+	}
+
+	if (!nvgpu_mem_is_valid(&c->gpfifo.mem)) {
+		return -ENOMEM;
 	}
 
 	/* fifo not large enough for request. Return error immediately.

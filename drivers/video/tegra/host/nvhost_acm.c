@@ -66,8 +66,10 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 
 static int nvhost_module_prepare_suspend(struct device *dev);
 static void nvhost_module_complete_resume(struct device *dev);
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 static int nvhost_module_suspend(struct device *dev);
 static int nvhost_module_resume(struct device *dev);
+#endif
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -871,12 +873,9 @@ EXPORT_SYMBOL(nvhost_module_deinit);
 const struct dev_pm_ops nvhost_module_pm_ops = {
 	SET_RUNTIME_PM_OPS(nvhost_module_runtime_suspend,
 			   nvhost_module_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(nvhost_module_suspend, nvhost_module_resume)
 	.prepare = nvhost_module_prepare_suspend,
 	.complete = nvhost_module_complete_resume,
-	.suspend = nvhost_module_suspend,
-	.resume = nvhost_module_resume,
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
@@ -1026,6 +1025,7 @@ static int nvhost_module_prepare_suspend(struct device *dev)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_PM_SLEEP)
 static int nvhost_module_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1035,7 +1035,7 @@ static int nvhost_module_suspend(struct device *dev)
 	if (err)
 		nvhost_err(dev, "vhost suspend has failed %d", err);
 
-	return err;
+	return pm_runtime_force_suspend(dev);
 }
 
 static int nvhost_module_resume(struct device *dev)
@@ -1047,8 +1047,9 @@ static int nvhost_module_resume(struct device *dev)
 	if (err)
 		nvhost_err(dev, "vhost resume has failed %d", err);
 
-	return err;
+	return pm_runtime_force_resume(dev);
 }
+#endif
 
 static void nvhost_module_complete_resume(struct device *dev)
 {

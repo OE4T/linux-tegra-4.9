@@ -170,8 +170,6 @@ static inline int nvhost_syncpt_wait(struct nvhost_syncpt *sp, u32 id, u32 thres
 					  NULL, NULL, true);
 }
 
-int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr);
-
 int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx);
 
 void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx);

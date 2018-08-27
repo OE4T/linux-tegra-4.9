@@ -612,12 +612,6 @@ void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx)
 	atomic_dec(&sp->lock_counts[idx]);
 }
 
-/* remove a wait pointed to by patch_addr */
-int nvhost_syncpt_patch_wait(struct nvhost_syncpt *sp, void *patch_addr)
-{
-	return syncpt_op().patch_wait(sp, patch_addr);
-}
-
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 struct nvhost_sync_timeline *nvhost_syncpt_timeline(struct nvhost_syncpt *sp,
 		int idx)

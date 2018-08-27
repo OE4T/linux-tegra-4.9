@@ -75,30 +75,6 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 		host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4, bit_mask(id));
 }
 
-/* remove a wait pointed to by patch_addr */
-static int host1x_syncpt_patch_wait(struct nvhost_syncpt *sp,
-		void __iomem *patch_addr)
-{
-	u32 current_value = __raw_readl(patch_addr);
-	bool obsolete = !!((current_value >> 24) & 0xff);
-
-	/* Is wait 16bit or 32bit? */
-	if (obsolete) {
-		/* 16bit. Replace a single word */
-		u32 override = nvhost_class_host_wait_syncpt(
-					nvhost_syncpt_graphics_host_sp(sp), 0);
-
-		__raw_writel(override, patch_addr);
-	} else {
-		/* 32bit. Replace two words */
-		__raw_writel(0, patch_addr - 4);
-		__raw_writel(nvhost_syncpt_graphics_host_sp(sp), patch_addr);
-	}
-
-	return 0;
-}
-
-
 static const char *t20_syncpt_name(struct nvhost_syncpt *sp, u32 id)
 {
 	const char *name = sp->syncpt_names[id];
@@ -141,7 +117,6 @@ static const struct nvhost_syncpt_ops host1x_syncpt_ops = {
 	.reset = t20_syncpt_reset,
 	.update_min = t20_syncpt_update_min,
 	.cpu_incr = t20_syncpt_cpu_incr,
-	.patch_wait = host1x_syncpt_patch_wait,
 	.name = t20_syncpt_name,
 	.mutex_try_lock = syncpt_mutex_try_lock,
 	.mutex_unlock_nvh = syncpt_mutex_unlock,

@@ -98,8 +98,6 @@ struct nvhost_syncpt_ops {
 	void (*reset)(struct nvhost_syncpt *, u32 id);
 	u32 (*update_min)(struct nvhost_syncpt *, u32 id);
 	void (*cpu_incr)(struct nvhost_syncpt *, u32 id);
-	int (*patch_wait)(struct nvhost_syncpt *sp,
-			void __iomem *patch_addr);
 	const char * (*name)(struct nvhost_syncpt *, u32 id);
 	int (*mutex_try_lock)(struct nvhost_syncpt *,
 			      unsigned int idx);

@@ -248,90 +248,6 @@ void nvhost_job_set_notifier(struct nvhost_job *job, u32 error)
 	dma_buf_vunmap(job->error_notifier_ref, va);
 }
 
-/*
- * Check driver supplied waitchk structs for syncpt thresholds
- * that have already been satisfied and NULL the comparison (to
- * avoid a wrap condition in the HW).
- */
-static int do_waitchks(struct nvhost_job *job, struct nvhost_syncpt *sp,
-		u32 patch_mem, struct dma_buf *buf)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
-	int i;
-	int err;
-
-	/* compare syncpt vs wait threshold */
-	for (i = 0; i < job->num_waitchk; i++) {
-		struct nvhost_waitchk *wait = &job->waitchk[i];
-
-		/* validate syncpt id */
-		if (!nvhost_syncpt_is_valid_hw_pt(sp, wait->syncpt_id))
-			continue;
-
-		if (!wait->mem)
-			continue;
-
-		/* skip all other gathers */
-		if (patch_mem != wait->mem)
-			continue;
-
-		trace_nvhost_syncpt_wait_check(wait->mem, wait->offset,
-				wait->syncpt_id, wait->thresh,
-				nvhost_syncpt_read(sp, wait->syncpt_id));
-		if (nvhost_syncpt_is_expired(sp,
-		    wait->syncpt_id, wait->thresh) ||
-		     pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
-			void *patch_addr = NULL;
-
-			/*
-			 * NULL an already satisfied WAIT_SYNCPT host method,
-			 * by patching its args in the command stream. The
-			 * method data is changed to reference a reserved
-			 * (never given out or incr) graphics host syncpt
-			 * with a matching threshold value of 0, so is
-			 * guaranteed to be popped by the host HW.
-			 */
-			dev_dbg(&syncpt_to_dev(sp)->dev->dev,
-			    "drop WAIT id %d (%s) thresh 0x%x, min 0x%x\n",
-			    wait->syncpt_id,
-			    syncpt_op().name(sp, wait->syncpt_id),
-			    wait->thresh,
-			    nvhost_syncpt_read_min(sp, wait->syncpt_id));
-
-			/* patch the wait */
-			patch_addr = dma_buf_kmap(buf,
-					wait->offset >> PAGE_SHIFT);
-			if (patch_addr) {
-				err = dma_buf_begin_cpu_access(buf,
-						wait->offset & PAGE_MASK,
-						PAGE_SIZE, DMA_TO_DEVICE);
-				if (err) {
-					nvhost_err(&pdata->pdev->dev,
-						"begin_cpu_access() failed for patching wait %d",
-						err);
-					return err;
-				}
-
-				nvhost_syncpt_patch_wait(sp,
-					(patch_addr +
-					 (wait->offset & ~PAGE_MASK)));
-
-				dma_buf_kunmap(buf,
-						wait->offset >> PAGE_SHIFT,
-						patch_addr);
-				dma_buf_end_cpu_access(buf,
-						wait->offset & PAGE_MASK,
-						PAGE_SIZE, DMA_TO_DEVICE);
-			} else {
-				pr_err("Couldn't map cmdbuf for wait check\n");
-			}
-		}
-
-		wait->mem = 0;
-	}
-	return 0;
-}
-
 static int id_cmp(const void *_id1, const void *_id2)
 {
 	u32 id1 = ((struct nvhost_pinid *)_id1)->id;
@@ -591,19 +507,6 @@ static int do_relocs(struct nvhost_job *job,
 int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 {
 	int err = 0, i = 0, j = 0;
-	int nb_hw_pts = nvhost_syncpt_nb_hw_pts(sp);
-	DECLARE_BITMAP(waitchk_mask, nb_hw_pts);
-
-	bitmap_zero(waitchk_mask, nb_hw_pts);
-	for (i = 0; i < job->num_waitchk; i++) {
-		u32 syncpt_id = job->waitchk[i].syncpt_id;
-		if (nvhost_syncpt_is_valid_hw_pt(sp, syncpt_id))
-			set_bit(syncpt_id, waitchk_mask);
-	}
-
-	/* get current syncpt values for waitchk */
-	for_each_set_bit(i, waitchk_mask, nb_hw_pts)
-		nvhost_syncpt_update_min(sp, i);
 
 	/* pin memory */
 	err = pin_job_mem(job);
@@ -644,9 +547,6 @@ int nvhost_job_pin(struct nvhost_job *job, struct nvhost_syncpt *sp)
 				}
 			}
 			err = do_relocs(job, g->mem_id,  g->buf);
-			if (!err)
-				err = do_waitchks(job, sp,
-						g->mem_id, g->buf);
 			dma_buf_put(g->buf);
 			if (err)
 				break;

@@ -285,7 +285,7 @@ static int pva_read_ucode(struct platform_device *pdev,
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
-		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
+		ucode_ptr[w] = le32_to_cpu(((__le32 *)ucode_fw->data)[w]);
 
 	/* set the header location accordingly */
 	fw_info->hdr = (struct pva_ucode_hdr *)ucode_ptr;

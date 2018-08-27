@@ -262,7 +262,7 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 	/* image data is little endian. */
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
-		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
+		ucode_ptr[w] = le32_to_cpu(((__le32 *)ucode_fw->data)[w]);
 
 	ucode->bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 	/* endian problems would show up right here */

@@ -172,7 +172,7 @@ void mc_gk20a_intr_stall_pause(struct gk20a *g)
 		mc_intr_en_0_inta_disabled_f());
 
 	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_0_r());
+	(void) gk20a_readl(g, mc_intr_en_0_r());
 }
 
 void mc_gk20a_intr_stall_resume(struct gk20a *g)
@@ -181,7 +181,7 @@ void mc_gk20a_intr_stall_resume(struct gk20a *g)
 		mc_intr_en_0_inta_hardware_f());
 
 	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_0_r());
+	(void) gk20a_readl(g, mc_intr_en_0_r());
 }
 
 void mc_gk20a_intr_nonstall_pause(struct gk20a *g)
@@ -190,7 +190,7 @@ void mc_gk20a_intr_nonstall_pause(struct gk20a *g)
 		mc_intr_en_0_inta_disabled_f());
 
 	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_1_r());
+	(void) gk20a_readl(g, mc_intr_en_1_r());
 }
 
 void mc_gk20a_intr_nonstall_resume(struct gk20a *g)
@@ -199,7 +199,7 @@ void mc_gk20a_intr_nonstall_resume(struct gk20a *g)
 		mc_intr_en_0_inta_hardware_f());
 
 	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_1_r());
+	(void) gk20a_readl(g, mc_intr_en_1_r());
 }
 
 u32 mc_gk20a_intr_stall(struct gk20a *g)

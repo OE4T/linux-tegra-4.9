@@ -522,7 +522,7 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 	data = set_field(data, trim_sys_gpcpll_cfg_iddq_m(),
 			 trim_sys_gpcpll_cfg_iddq_power_on_v());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), data);
-	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	nvgpu_udelay(delay);
 
 	/*
@@ -710,7 +710,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
-	gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
+	(void) gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 
 	if (ramp_timeout <= 0) {
 		nvgpu_err(g, "gpcpll dynamic ramp timeout");
@@ -782,20 +782,20 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_iddq_m(),
 				trim_sys_gpcpll_cfg_iddq_power_on_v());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		nvgpu_udelay(gpc_pll_params.iddq_exit_delay);
 	} else {
 		/* clear SYNC_MODE before disabling PLL */
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
 				trim_sys_gpcpll_cfg_sync_mode_disable_f());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 		/* disable running PLL before changing coefficients */
 		cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 				trim_sys_gpcpll_cfg_enable_no_f());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	}
 
 	/* change coefficients */
@@ -826,7 +826,7 @@ static int clk_lock_gpc_pll_under_bypass(struct gk20a *g, struct pll *gpll)
 
 	/* just delay in DVFS mode (lock cannot be used) */
 	if (gpll->mode == GPC_PLL_MODE_DVFS) {
-		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+		(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		nvgpu_udelay(gpc_pll_params.na_lock_delay);
 		gk20a_dbg_clk(g, "NA config_pll under bypass: %u (%u) kHz %d mV",
 			      gpll->freq, gpll->freq / 2,
@@ -869,7 +869,7 @@ pll_locked:
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_sync_mode_m(),
 			trim_sys_gpcpll_cfg_sync_mode_enable_f());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	/* put PLL back on vco */
 	throt = throttle_disable(g);
@@ -950,7 +950,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 		/* Intentional 2nd write to assure linear divider operation */
 		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-		gk20a_readl(g, trim_sys_gpc2clk_out_r());
+		(void) gk20a_readl(g, trim_sys_gpc2clk_out_r());
 		nvgpu_udelay(2);
 	}
 
@@ -1013,7 +1013,7 @@ set_pldiv:
 		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 		/* Intentional 2nd write to assure linear divider operation */
 		gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
-		gk20a_readl(g, trim_sys_gpc2clk_out_r());
+		(void) gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	}
 
 	/* slide up to target NDIV */
@@ -1178,7 +1178,7 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 	cfg = set_field(cfg, trim_sys_gpcpll_cfg_enable_m(),
 			trim_sys_gpcpll_cfg_enable_no_f());
 	gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
-	gk20a_readl(g, trim_sys_gpcpll_cfg_r());
+	(void) gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 
 	clk->gpc_pll.enabled = false;
 	clk->gpc_pll_last.enabled = false;
@@ -1397,7 +1397,7 @@ static int gm20b_init_clk_setup_hw(struct gk20a *g)
 	data = set_field(data, therm_clk_slowdown_idle_factor_m(),
 			 therm_clk_slowdown_idle_factor_disabled_f());
 	gk20a_writel(g, therm_clk_slowdown_r(0), data);
-	gk20a_readl(g, therm_clk_slowdown_r(0));
+	(void) gk20a_readl(g, therm_clk_slowdown_r(0));
 
 	if (g->clk.gpc_pll.mode == GPC_PLL_MODE_DVFS) {
 		return clk_enbale_pll_dvfs(g);
@@ -1565,7 +1565,7 @@ int gm20b_clk_get_gpcclk_clock_counter(struct clk_gk20a *clk, u64 *val)
 				 therm_clk_slowdown_idle_factor_m(),
 				 therm_clk_slowdown_idle_factor_disabled_f());
 	gk20a_writel(g, therm_clk_slowdown_r(0), clk_slowdown);
-	gk20a_readl(g, therm_clk_slowdown_r(0));
+	(void) gk20a_readl(g, therm_clk_slowdown_r(0));
 
 	gk20a_writel(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0),
 		     trim_gpc_clk_cntr_ncgpcclk_cfg_reset_asserted_f());
@@ -1578,7 +1578,7 @@ int gm20b_clk_get_gpcclk_clock_counter(struct clk_gk20a *clk, u64 *val)
 	/* It should take less than 25us to finish 800 cycle of 38.4MHz.
 	 *  But longer than 100us delay is required here.
 	 */
-	gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
+	(void) gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
 	nvgpu_udelay(200);
 
 	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));

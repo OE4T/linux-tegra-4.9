@@ -85,7 +85,7 @@ u32 gk20a_bus_set_bar0_window(struct gk20a *g, struct nvgpu_mem *mem,
 
 	if (g->mm.pramin_window != win) {
 		gk20a_writel(g, bus_bar0_window_r(), win);
-		gk20a_readl(g, bus_bar0_window_r());
+		(void) gk20a_readl(g, bus_bar0_window_r());
 		g->mm.pramin_window = win;
 	}
 

@@ -188,7 +188,7 @@ u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c)
 				 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_enable_deasserted_f());
 
 	/* Force wb() */
-	gk20a_readl(g, c->cntr.reg_ctrl_addr);
+	(void) gk20a_readl(g, c->cntr.reg_ctrl_addr);
 
 	/* Wait for reset to happen */
 	retries = CLK_DEFAULT_CNTRL_SETTLE_RETRIES;
@@ -209,7 +209,7 @@ u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c)
 				 	trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_write_en_asserted_f()         |
 				 	trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_noofipclks_f(XTAL_CNTR_CLKS)  |
 					c->cntr.reg_ctrl_idx);
-	gk20a_readl(g, c->cntr.reg_ctrl_addr);
+	(void) gk20a_readl(g, c->cntr.reg_ctrl_addr);
 
 	nvgpu_udelay(XTAL_CNTR_DELAY);
 
@@ -220,9 +220,9 @@ read_err:
 	gk20a_writel(g, c->cntr.reg_ctrl_addr,
 				 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_reset_asserted_f() |
 				 trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_enable_deasserted_f());
-	gk20a_readl(g, c->cntr.reg_ctrl_addr);
+	(void) gk20a_readl(g, c->cntr.reg_ctrl_addr);
 	gk20a_writel(g, c->cntr.reg_ctrl_addr, save_reg);
-	gk20a_readl(g, c->cntr.reg_ctrl_addr);
+	(void) gk20a_readl(g, c->cntr.reg_ctrl_addr);
 	nvgpu_mutex_release(&clk->clk_mutex);
 
 	return cntr;

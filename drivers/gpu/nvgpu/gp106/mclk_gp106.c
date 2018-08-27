@@ -3371,8 +3371,8 @@ int gp106_mclk_change(struct gk20a *g, u16 val)
 	if (speed == GP106_MCLK_HIGH_SPEED) {
 		gk20a_writel(g, 0x132000, 0x98010000);
 		/* Introduce delay */
-		gk20a_readl(g, 0x132000);
-		gk20a_readl(g, 0x132000);
+		(void) gk20a_readl(g, 0x132000);
+		(void) gk20a_readl(g, 0x132000);
 	}
 
 	gk20a_writel(g, 0x137300, 0x20000103);

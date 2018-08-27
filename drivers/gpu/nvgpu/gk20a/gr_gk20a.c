@@ -345,7 +345,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 	do {
 		/* fmodel: host gets fifo_engine_status(gr) from gr
 		   only when gr_status is read */
-		gk20a_readl(g, gr_status_r());
+		(void) gk20a_readl(g, gr_status_r());
 
 		gr_enabled = gk20a_readl(g, mc_enable_r()) &
 			mc_enable_pgraph_enabled_f();
@@ -1482,7 +1482,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			gr_fecs_ctxsw_reset_ctl_sys_context_reset_enabled_f() |
 			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_enabled_f() |
 			gr_fecs_ctxsw_reset_ctl_be_context_reset_enabled_f());
-	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
+	(void) gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	nvgpu_udelay(10);
 
 	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
@@ -1495,7 +1495,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			gr_fecs_ctxsw_reset_ctl_sys_context_reset_disabled_f() |
 			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_disabled_f() |
 			gr_fecs_ctxsw_reset_ctl_be_context_reset_disabled_f());
-	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
+	(void) gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	nvgpu_udelay(10);
 
 	if (!nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {

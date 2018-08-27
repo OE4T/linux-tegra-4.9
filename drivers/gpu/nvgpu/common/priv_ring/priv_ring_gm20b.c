@@ -52,7 +52,7 @@ void gm20b_priv_ring_enable(struct gk20a *g)
 
 	gk20a_writel(g, pri_ringstation_sys_decode_config_r(),
 			0x2);
-	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
+	(void) gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 }
 
 void gm20b_priv_ring_isr(struct gk20a *g)

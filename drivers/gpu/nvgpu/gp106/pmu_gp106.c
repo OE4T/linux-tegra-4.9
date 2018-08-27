@@ -71,11 +71,11 @@ int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset)
 	if (do_reset) {
 		gk20a_writel(g, pwr_falcon_engine_r(),
 			pwr_falcon_engine_reset_false_f());
-		gk20a_readl(g, pwr_falcon_engine_r());
+		(void) gk20a_readl(g, pwr_falcon_engine_r());
 	} else {
 		gk20a_writel(g, pwr_falcon_engine_r(),
 			pwr_falcon_engine_reset_true_f());
-		gk20a_readl(g, pwr_falcon_engine_r());
+		(void) gk20a_readl(g, pwr_falcon_engine_r());
 	}
 
 	return 0;

@@ -82,7 +82,7 @@ static void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 		loop(g, start_reg, n / sizeof(u32), arg);
 
 		/* read back to synchronize accesses */
-		gk20a_readl(g, start_reg);
+		(void) gk20a_readl(g, start_reg);
 
 		nvgpu_spinlock_release(&g->mm.pramin_window_lock);
 

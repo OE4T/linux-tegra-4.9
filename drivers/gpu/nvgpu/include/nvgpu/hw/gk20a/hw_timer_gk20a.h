@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -98,15 +98,15 @@ static inline u32 timer_pri_timeout_save_0_r(void)
 }
 static inline u32 timer_pri_timeout_save_0_fecs_tgt_v(u32 r)
 {
-	return (r >> 31) & 0x1;
+	return (r >> 31U) & 0x1U;
 }
 static inline u32 timer_pri_timeout_save_0_addr_v(u32 r)
 {
-	return (r >> 2) & 0x3fffff;
+	return (r >> 2U) & 0x3fffffU;
 }
 static inline u32 timer_pri_timeout_save_0_write_v(u32 r)
 {
-	return (r >> 1) & 0x1;
+	return (r >> 1U) & 0x1U;
 }
 static inline u32 timer_pri_timeout_save_1_r(void)
 {

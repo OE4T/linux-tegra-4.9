@@ -2,7 +2,7 @@
  * edid_display_id_ext.c: Functions to parse E-EDID extension blocks encoded
  *                        in display ID format
  *
- * Copyright (c) 2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -63,6 +63,9 @@ static void disp_id_timing1_fill_fb_mode(const struct disp_id_timing1_desc *t,
 	mode->pixclock = 1 + combine_hi_mid_lo(t->pclk_hi, t->pclk_mid,
 					       t->pclk_lo);
 	mode->pixclock *= 10000; /* convert to Hz */
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+	mode->pixclock_hz = mode->pixclock;
+#endif
 
 	/*
 	 * All resolutions are manually offset by 1 as per the format

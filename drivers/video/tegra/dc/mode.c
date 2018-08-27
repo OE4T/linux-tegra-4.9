@@ -808,8 +808,12 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	else if (mode->avi_m == TEGRA_DC_MODE_AVI_M_4_3)
 		fbmode->flag |= FB_FLAG_RATIO_4_3;
 
-	if (mode_pclk >= 1000) /* else 0 */
+	if (mode_pclk >= 1000) { /* else 0 */
 		fbmode->pixclock = KHZ2PICOS(mode_pclk / 1000);
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+		fbmode->pixclock_hz = mode_pclk;
+#endif
+	}
 	fbmode->refresh = tegra_dc_calc_refresh(mode) / 1000;
 
 	return 0;
@@ -856,7 +860,14 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		return -EINVAL;
 
 	memset(&mode, 0, sizeof(mode));
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+	if (fbmode->pixclock_hz)
+		mode.pclk = fbmode->pixclock_hz;
+	else
+		mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
+#else
 	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
+#endif
 
 	mode.h_sync_width = fbmode->hsync_len;
 	mode.v_sync_width = fbmode->vsync_len;

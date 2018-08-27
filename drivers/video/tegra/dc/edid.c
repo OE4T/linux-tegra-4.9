@@ -856,6 +856,10 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		if (frac_modes) {
 			for (j = 0; j < specs->modedb_len; ++j) {
 				int rate = tegra_dc_calc_fb_refresh(&specs->modedb[j]);
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+				u64 pixclock_hz = 0;
+				u64 frac_pixclock_hz = 0;
+#endif
 				/*
 				 * 1000/1001 modes are only supported on CEA
 				 * SVDs or on HDMI EXT
@@ -873,6 +877,15 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 					memcpy(&frac_modes[frac_n], &specs->modedb[j], sizeof(struct fb_videomode));
 					frac_modes[frac_n].pixclock = frac_modes[frac_n].pixclock * 1001 / 1000;
 					frac_modes[frac_n].vmode |= FB_VMODE_1000DIV1001;
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+					/* u64 to avoid overflow in pclk hz */
+					pixclock_hz =
+					    frac_modes[frac_n].pixclock_hz;
+					frac_pixclock_hz =
+					    pixclock_hz * 1000 / 1001;
+					frac_modes[frac_n].pixclock_hz =
+					    (u32)frac_pixclock_hz;
+#endif
 					frac_n++;
 				}
 			}

@@ -248,12 +248,30 @@ static int tegra_fb_set_par(struct fb_info *info)
 		bool stereo;
 		unsigned old_len = 0;
 		struct fb_videomode m;
+		const struct fb_videomode __maybe_unused *match_mode = NULL;
 		struct fb_videomode *old_mode = NULL;
 		struct tegra_fb_info *tegra_fb = info->par;
 
-
 		fb_var_to_videomode(&m, var);
 
+#if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
+		match_mode = fb_match_mode(var, &info->modelist);
+		if (match_mode && match_mode->pixclock_hz) {
+			m.pixclock_hz = match_mode->pixclock_hz;
+			/* Update pixel clock if fractional mode is requested */
+			if ((var->vmode & FB_VMODE_1000DIV1001) &&
+				!(match_mode->vmode & FB_VMODE_1000DIV1001)) {
+				u64 pixclock_hz = 0;
+				u64 frac_pixclock_hz = 0;
+
+				/* u64 needed to avoid overflow */
+				pixclock_hz = m.pixclock_hz;
+				frac_pixclock_hz =
+					pixclock_hz * 1000 / 1001;
+				m.pixclock_hz = (u32)frac_pixclock_hz;
+			}
+		}
+#endif
 		/* Load framebuffer info with new mode details*/
 		old_mode = info->mode;
 		old_len  = info->fix.line_length;

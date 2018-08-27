@@ -3005,7 +3005,7 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 }
 
 /* returns exact pixel clock in Hz */
-static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
+static long __maybe_unused tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 {
 	long h_total, v_total;
 	long refresh, pclk;
@@ -3054,7 +3054,9 @@ static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
 		return -EINVAL;
 	}
 
+#if !defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
+#endif
 
 	/* Set rate on PARENT */
 	if (!dc->initialized) {
@@ -3099,7 +3101,9 @@ static long tegra_dc_hdmi_setup_clk_t21x(struct tegra_dc *dc, struct clk *clk)
 
 	parent_clk = clk_get(NULL, "pll_d2_out0");
 
+#if !defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
+#endif
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "hdmi: parent clk get failed\n");

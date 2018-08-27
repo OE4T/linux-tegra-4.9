@@ -29,7 +29,7 @@
 
 int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ctx_header;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_alloc_ctx_header_params *p =
 				&msg.params.alloc_ctx_header;
@@ -53,20 +53,20 @@ int vgpu_gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			GMMU_PAGE_SIZE_KERNEL);
 		return err;
 	}
-	ctx->mem.gpu_va = p->ctx_header_va;
+	ctxheader->gpu_va = p->ctx_header_va;
 
 	return err;
 }
 
 void vgpu_gv11b_free_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ctx_header;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_free_ctx_header_params *p =
 				&msg.params.free_ctx_header;
 	int err;
 
-	if (ctx->mem.gpu_va) {
+	if (ctxheader->gpu_va) {
 		msg.cmd = TEGRA_VGPU_CMD_FREE_CTX_HEADER;
 		msg.handle = vgpu_get_handle(c->g);
 		p->ch_handle = c->virt_ctx;
@@ -74,8 +74,8 @@ void vgpu_gv11b_free_subctx_header(struct channel_gk20a *c)
 		err = err ? err : msg.ret;
 		if (unlikely(err))
 			nvgpu_err(c->g, "free ctx_header failed err %d", err);
-		__nvgpu_vm_free_va(c->vm, ctx->mem.gpu_va,
+		__nvgpu_vm_free_va(c->vm, ctxheader->gpu_va,
 				GMMU_PAGE_SIZE_KERNEL);
-		ctx->mem.gpu_va = 0;
+		ctxheader->gpu_va = 0;
 	}
 }

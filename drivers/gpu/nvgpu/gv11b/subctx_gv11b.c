@@ -43,42 +43,42 @@ static void gv11b_subctx_commit_pdb(struct vm_gk20a *vm,
 
 void gv11b_free_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ctx_header;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	struct gk20a *g = c->g;
 
 	nvgpu_log(g, gpu_dbg_fn, "gv11b_free_subctx_header");
 
-	if (ctx->mem.gpu_va) {
-		nvgpu_gmmu_unmap(c->vm, &ctx->mem, ctx->mem.gpu_va);
+	if (ctxheader->gpu_va) {
+		nvgpu_gmmu_unmap(c->vm, ctxheader, ctxheader->gpu_va);
 
-		nvgpu_dma_free(g, &ctx->mem);
+		nvgpu_dma_free(g, ctxheader);
 	}
 }
 
 int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
-	struct ctx_header_desc *ctx = &c->ctx_header;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	struct gk20a *g = c->g;
 	int ret = 0;
 
 	nvgpu_log(g, gpu_dbg_fn, "gv11b_alloc_subctx_header");
 
-	if (!nvgpu_mem_is_valid(&ctx->mem)) {
+	if (!nvgpu_mem_is_valid(ctxheader)) {
 		ret = nvgpu_dma_alloc_sys(g, ctxsw_prog_fecs_header_v(),
-				&ctx->mem);
+				ctxheader);
 		if (ret) {
 			nvgpu_err(g, "failed to allocate sub ctx header");
 			return ret;
 		}
-		ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
-					&ctx->mem,
-					ctx->mem.size,
+		ctxheader->gpu_va = nvgpu_gmmu_map(c->vm,
+					ctxheader,
+					ctxheader->size,
 					0, /* not GPU-cacheable */
 					gk20a_mem_flag_none, true,
-					ctx->mem.aperture);
-		if (!ctx->mem.gpu_va) {
+					ctxheader->aperture);
+		if (!ctxheader->gpu_va) {
 			nvgpu_err(g, "failed to map ctx header");
-			nvgpu_dma_free(g, &ctx->mem);
+			nvgpu_dma_free(g, ctxheader);
 			return -ENOMEM;
 		}
 	}
@@ -96,8 +96,7 @@ void gv11b_init_subcontext_pdb(struct vm_gk20a *vm,
 
 int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 {
-	struct ctx_header_desc *ctx = &c->ctx_header;
-	struct nvgpu_mem *gr_mem;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	struct gk20a *g = c->g;
 	int ret = 0;
 	u32 addr_lo, addr_hi;
@@ -111,40 +110,39 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 
 	gr_ctx = &tsg->gr_ctx;
 
-	gr_mem = &ctx->mem;
 	g->ops.mm.l2_flush(g, true);
 
 	/* set priv access map */
 	addr_lo = u64_lo32(gr_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
 	addr_hi = u64_hi32(gr_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_priv_access_map_addr_lo_o(),
 		addr_lo);
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_priv_access_map_addr_hi_o(),
 		addr_hi);
 
 	addr_lo = u64_lo32(gr_ctx->patch_ctx.mem.gpu_va);
 	addr_hi = u64_hi32(gr_ctx->patch_ctx.mem.gpu_va);
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_patch_adr_lo_o(),
 		addr_lo);
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_patch_adr_hi_o(),
 		addr_hi);
 
-	g->ops.gr.write_pm_ptr(g, gr_mem, gr_ctx->pm_ctx.mem.gpu_va);
-	g->ops.gr.write_zcull_ptr(g, gr_mem, gr_ctx->zcull_ctx.gpu_va);
+	g->ops.gr.write_pm_ptr(g, ctxheader, gr_ctx->pm_ctx.mem.gpu_va);
+	g->ops.gr.write_zcull_ptr(g, ctxheader, gr_ctx->zcull_ctx.gpu_va);
 
 	addr_lo = u64_lo32(gpu_va);
 	addr_hi = u64_hi32(gpu_va);
 
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_context_buffer_ptr_hi_o(), addr_hi);
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
 		ctxsw_prog_main_image_context_buffer_ptr_o(), addr_lo);
 
-	nvgpu_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, ctxheader,
                 ctxsw_prog_main_image_ctl_o(),
                 ctxsw_prog_main_image_ctl_type_per_veid_header_v());
 

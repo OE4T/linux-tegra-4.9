@@ -29,8 +29,8 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/cond.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/nvgpu_mem.h>
 
-#include "gr_gk20a.h"
 
 struct gk20a;
 struct dbg_session_gk20a;
@@ -266,7 +266,7 @@ struct channel_gk20a {
 	u64 virt_ctx;
 #endif
 
-	struct ctx_header_desc ctx_header;
+	struct nvgpu_mem ctx_header;
 
 	/* Any operating system specific data. */
 	void *os_priv;

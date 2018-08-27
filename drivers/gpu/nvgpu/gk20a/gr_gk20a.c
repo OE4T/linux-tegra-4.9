@@ -808,8 +808,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx = NULL;
 	struct nvgpu_mem *mem = NULL;
-	struct ctx_header_desc *ctx = &c->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	int ret = 0;
 
 	nvgpu_log_fn(g, " ");
@@ -1683,8 +1682,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct pm_ctx_desc *pm_ctx;
 	u32 data;
 	u64 virt_addr = 0;
-	struct ctx_header_desc *ctx = &c->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	int ret;
 
 	nvgpu_log_fn(g, " ");
@@ -6620,8 +6618,7 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx;
-	struct ctx_header_desc *ctx = &ch->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &ch->ctx_header;
 
 	tsg = tsg_gk20a_from_ch(ch);
 	if (!tsg)

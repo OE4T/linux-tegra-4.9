@@ -669,7 +669,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
 	if (nvgpu_is_enabled(g, NVGPU_FECS_TRACE_VA))
-		mem = &ch->ctx_header.mem;
+		mem = &ch->ctx_header;
 
 	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),

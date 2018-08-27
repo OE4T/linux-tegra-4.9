@@ -1682,8 +1682,7 @@ void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 {
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx;
-	struct ctx_header_desc *ctx = &c->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	u32 gfxp_preempt_option =
 		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
 	u32 cilp_preempt_option =
@@ -2897,7 +2896,7 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	u32 addr_lo;
 	u32 addr_hi;
-	struct ctx_header_desc *ctx;
+	struct nvgpu_mem *ctxheader;
 	int err;
 	struct gk20a *g = c->g;
 
@@ -2913,9 +2912,9 @@ int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 		return err;
 	}
 
-	ctx = &c->ctx_header;
-	addr_lo = u64_lo32(ctx->mem.gpu_va) >> ram_in_base_shift_v();
-	addr_hi = u64_hi32(ctx->mem.gpu_va);
+	ctxheader = &c->ctx_header;
+	addr_lo = u64_lo32(ctxheader->gpu_va) >> ram_in_base_shift_v();
+	addr_hi = u64_hi32(ctxheader->gpu_va);
 
 	/* point this address to engine_wfi_ptr */
 	nvgpu_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_target_w(),

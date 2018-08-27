@@ -1183,8 +1183,7 @@ void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 {
 	struct tsg_gk20a *tsg;
 	struct nvgpu_gr_ctx *gr_ctx;
-	struct ctx_header_desc *ctx = &c->ctx_header;
-	struct nvgpu_mem *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &c->ctx_header;
 	u32 gfxp_preempt_option =
 		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
 	u32 cilp_preempt_option =

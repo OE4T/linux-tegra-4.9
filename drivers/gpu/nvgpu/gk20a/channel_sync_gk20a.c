@@ -366,13 +366,13 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	g->ops.fifo.add_sema_cmd(g, s, va, cmd, off, acquire, wfi);
 
 	if (acquire) {
-		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u pool=%-3d"
+		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u pool=%-3llu"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
 				     s->location.pool->page_idx, va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
 	} else {
-		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) pool=%-3d"
+		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) pool=%-3llu"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
 				     nvgpu_semaphore_read(s),

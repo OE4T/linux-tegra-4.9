@@ -301,7 +301,7 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt);
  */
 int nvgpu_mem_create_from_mem(struct gk20a *g,
 			      struct nvgpu_mem *dest, struct nvgpu_mem *src,
-			      int start_page, int nr_pages);
+			      u64 start_page, int nr_pages);
 
 /*
  * Really free a vidmem buffer. There's a fair amount of work involved in

@@ -41,9 +41,9 @@
  * Max number of channels that can be used is 512. This of course needs to be
  * fixed to be dynamic but still fast.
  */
-#define SEMAPHORE_POOL_COUNT		512
-#define SEMAPHORE_SIZE			16
-#define SEMAPHORE_SEA_GROWTH_RATE	32
+#define SEMAPHORE_POOL_COUNT		512U
+#define SEMAPHORE_SIZE			16U
+#define SEMAPHORE_SEA_GROWTH_RATE	32U
 
 struct nvgpu_semaphore_sea;
 
@@ -84,7 +84,7 @@ struct nvgpu_semaphore_pool {
 	struct nvgpu_list_node pool_list_entry;	/* Node for list of pools. */
 	u64 gpu_va;				/* GPU access to the pool. */
 	u64 gpu_va_ro;				/* GPU access to the pool. */
-	int page_idx;				/* Index into sea bitmap. */
+	u64 page_idx;				/* Index into sea bitmap. */
 
 	DECLARE_BITMAP(semas_alloced, PAGE_SIZE / SEMAPHORE_SIZE);
 

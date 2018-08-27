@@ -79,7 +79,7 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 	 * integer range. This way any buggy comparisons would start to fail
 	 * sooner rather than later.
 	 */
-	for (i = 0; i < PAGE_SIZE * SEMAPHORE_POOL_COUNT; i += 4) {
+	for (i = 0U; i < PAGE_SIZE * SEMAPHORE_POOL_COUNT; i += 4U) {
 		nvgpu_mem_wr(gk20a, &sea->sea_mem, i, 0xfffffff0);
 	}
 
@@ -192,7 +192,7 @@ int nvgpu_semaphore_pool_alloc(struct nvgpu_semaphore_sea *sea,
 	__unlock_sema_sea(sea);
 
 	gpu_sema_dbg(sea->gk20a,
-		     "Allocated semaphore pool: page-idx=%d", p->page_idx);
+		     "Allocated semaphore pool: page-idx=%llu", p->page_idx);
 
 	*pool = p;
 	return 0;
@@ -221,7 +221,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	}
 
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "Mapping semaphore pool! (idx=%d)", p->page_idx);
+		     "Mapping semaphore pool! (idx=%llu)", p->page_idx);
 
 	/*
 	 * Take the sea lock so that we don't race with a possible change to the
@@ -243,7 +243,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	p->mapped = true;
 
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "  %d: GPU read-only  VA = 0x%llx",
+		     "  %llu: GPU read-only  VA = 0x%llx",
 		     p->page_idx, p->gpu_va_ro);
 
 	/*
@@ -272,10 +272,10 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	__unlock_sema_sea(p->sema_sea);
 
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "  %d: GPU read-write VA = 0x%llx",
+		     "  %llu: GPU read-write VA = 0x%llx",
 		     p->page_idx, p->gpu_va);
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "  %d: CPU VA            = 0x%p",
+		     "  %llu: CPU VA            = 0x%p",
 		     p->page_idx, p->rw_mem.cpu_va);
 
 	return 0;
@@ -285,7 +285,7 @@ fail_free_submem:
 fail_unmap:
 	nvgpu_gmmu_unmap(vm, &p->sema_sea->sea_mem, p->gpu_va_ro);
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "  %d: Failed to map semaphore pool!", p->page_idx);
+		     "  %llu: Failed to map semaphore pool!", p->page_idx);
 fail_unlock:
 	__unlock_sema_sea(p->sema_sea);
 	return err;
@@ -310,7 +310,7 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 	__unlock_sema_sea(p->sema_sea);
 
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "Unmapped semaphore pool! (idx=%d)", p->page_idx);
+		     "Unmapped semaphore pool! (idx=%llu)", p->page_idx);
 }
 
 /*
@@ -330,14 +330,14 @@ static void nvgpu_semaphore_pool_free(struct nvgpu_ref *ref)
 
 	__lock_sema_sea(s);
 	nvgpu_list_del(&p->pool_list_entry);
-	clear_bit(p->page_idx, s->pools_alloced);
+	clear_bit((int)p->page_idx, s->pools_alloced);
 	s->page_count--;
 	__unlock_sema_sea(s);
 
 	nvgpu_mutex_destroy(&p->pool_lock);
 
 	gpu_sema_dbg(pool_to_gk20a(p),
-		     "Freed semaphore pool! (idx=%d)", p->page_idx);
+		     "Freed semaphore pool! (idx=%llu)", p->page_idx);
 	nvgpu_kfree(p->sema_sea->gk20a, p);
 }
 
@@ -393,7 +393,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	ch->hw_sema = hw_sema;
 	hw_sema->ch = ch;
 	hw_sema->location.pool = p;
-	hw_sema->location.offset = SEMAPHORE_SIZE * hw_sema_idx;
+	hw_sema->location.offset = SEMAPHORE_SIZE * (u32)hw_sema_idx;
 	current_value = nvgpu_mem_rd(ch->g, &p->rw_mem,
 			hw_sema->location.offset);
 	nvgpu_atomic_set(&hw_sema->next_value, current_value);
@@ -590,7 +590,7 @@ bool nvgpu_semaphore_reset(struct nvgpu_semaphore_int *hw_sema)
 	 * more than what we expect to be the max.
 	 */
 
-	if (WARN_ON(__nvgpu_semaphore_value_released(threshold + 1,
+	if (WARN_ON(__nvgpu_semaphore_value_released(threshold + 1U,
 						     current_val)))
 		return false;
 

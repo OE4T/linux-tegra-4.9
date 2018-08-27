@@ -1328,7 +1328,7 @@ static int tegra_pcie_get_clocks(struct tegra_pcie *pcie)
 		dev_err(dev, "missing afi clock");
 		return error;
 	}
-	error = pm_clk_add(dev, "pcie");
+	error = pm_clk_add(dev, "pex");
 	if (error) {
 		dev_err(dev, "missing pcie clock");
 		return error;
@@ -1920,13 +1920,13 @@ static int tegra_pcie_get_resets(struct tegra_pcie *pcie)
 		return PTR_ERR(pcie->afi_rst);
 	}
 
-	pcie->pcie_rst = devm_reset_control_get(pcie->dev, "pcie");
+	pcie->pcie_rst = devm_reset_control_get(pcie->dev, "pex");
 	if (IS_ERR(pcie->pcie_rst)) {
 		dev_err(pcie->dev, "PCIE : pcie reset is missing\n");
 		return PTR_ERR(pcie->pcie_rst);
 	}
 
-	pcie->pciex_rst = devm_reset_control_get(pcie->dev, "pciex");
+	pcie->pciex_rst = devm_reset_control_get(pcie->dev, "pcie_x");
 	if (IS_ERR(pcie->pciex_rst)) {
 		dev_err(pcie->dev, "PCIE : pcie-xclk reset is missing\n");
 		return PTR_ERR(pcie->pciex_rst);
@@ -3297,15 +3297,9 @@ static void tegra_pcie_read_plat_data(struct tegra_pcie *pcie)
 static char *t124_rail_names[] = {"hvdd-pex", "hvdd-pex-pll-e", "dvddio-pex",
 				"avddio-pex", "avdd-pex-pll", "vddio-pex-ctl"};
 
-static char *t210_rail_names[] = {"dvdd-pex-pll", "hvdd-pex-pll-e",
-					"l0-hvddio-pex", "l0-dvddio-pex",
-					"l1-hvddio-pex", "l1-dvddio-pex",
-					"l2-hvddio-pex", "l2-dvddio-pex",
-					"l3-hvddio-pex", "l3-dvddio-pex",
-					"l4-hvddio-pex", "l4-dvddio-pex",
-					"l5-hvddio-pex", "l5-dvddio-pex",
-					"l6-hvddio-pex", "l6-dvddio-pex",
-					"vddio-pex-ctl"};
+static char *t210_rail_names[] = { "avdd-pll-uerefe", "hvddio-pex",
+				"dvddio-pex", "dvdd-pex-pll",
+				"hvdd-pex-pll-e", "vddio-pex-ctl" };
 
 static char *t186_rail_names[] = {"vddio-pexctl-aud"};
 

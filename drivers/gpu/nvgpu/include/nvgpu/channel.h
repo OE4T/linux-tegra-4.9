@@ -20,6 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#ifndef NVGPU_CHANNEL_H
+#define NVGPU_CHANNEL_H
+
 #include <nvgpu/types.h>
 
 #include "gk20a/gk20a.h"
@@ -49,4 +52,6 @@ void trace_write_pushbuffers(struct channel_gk20a *c, int count);
 static inline void trace_write_pushbuffers(struct channel_gk20a *c, int count)
 {
 }
+#endif
+
 #endif

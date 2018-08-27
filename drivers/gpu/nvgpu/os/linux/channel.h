@@ -13,8 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __NVGPU_CHANNEL_H__
-#define __NVGPU_CHANNEL_H__
+#ifndef NVGPU_LINUX_CHANNEL_H
+#define NVGPU_LINUX_CHANNEL_H
 
 #include <linux/workqueue.h>
 #include <linux/dma-buf.h>
@@ -84,4 +84,4 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		int runlist_id,
 		bool is_privileged_channel);
 
-#endif /* __NVGPU_CHANNEL_H__ */
+#endif

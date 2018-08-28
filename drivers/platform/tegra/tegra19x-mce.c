@@ -21,6 +21,8 @@
 #include <soc/tegra/chip-id.h>
 #include "tegra19x-mce.h"
 
+#include "dmce_perfmon.h"
+
 /* Issue a NVG request with data */
 static noinline notrace void nvg_send_req_data(uint64_t req, uint64_t data)
 {
@@ -227,6 +229,106 @@ int tegra19x_mce_read_dda_ctrl(u32 index, u64* value)
 	preempt_enable();
 
 	return 0;
+}
+
+int tegra19x_mce_write_pmu_reg(u32 reg_id, u32 value)
+{
+	int status = -1;
+	switch (reg_id) {
+	case NV_PMCNTENCLR_EL0:
+		asm volatile("msr S3_3_c15_c4_1, %0" : :"r" (value) : );
+		break;
+	case NV_PMCNTENSET_EL0:
+		asm volatile("msr S3_3_c15_c4_0, %0" : :"r" (value) : );
+		break;
+	case NV_PMCR_EL0:
+		asm volatile("msr S3_3_c15_c4_4, %0" : :"r" (value) : );
+		break;
+	case NV_PMINTENCLR_EL1:
+		asm volatile("msr S3_0_c15_c2_1, %0" : :"r" (value) : );
+		break;
+	case NV_PMINTENSET_EL1:
+		asm volatile("msr S3_0_c15_c2_0, %0" : :"r" (value) : );
+		break;
+	case NV_PMOVSCLR_EL0:
+		asm volatile("msr S3_3_c15_c4_3, %0" : :"r" (value) : );
+		break;
+	case NV_PMOVSSET_EL0:
+		asm volatile("msr S3_3_c15_c4_2, %0" : :"r" (value) : );
+		break;
+	case NV_PMSELR_EL0:
+		asm volatile("msr S3_3_c15_c5_1, %0" : :"r" (value) : );
+		break;
+	case NV_PMEVCNTR0_EL0:
+		asm volatile("msr S3_3_c15_c0_0, %0" : :"r" (value) : );
+		break;
+	case NV_PMEVCNTR1_EL0:
+		asm volatile("msr S3_3_c15_c0_1, %0" : :"r" (value) : );
+		break;
+	case NV_PMEVTYPER0_EL0:
+		asm volatile("msr S3_3_c15_c2_0, %0" : :"r" (value) : );
+		break;
+	case NV_PMEVTYPER1_EL0:
+		asm volatile("msr S3_3_c15_c2_1, %0" : :"r" (value) : );
+		break;
+	default:
+		return status;
+	}
+	status = DMCE_PERFMON_STATUS_SUCCESS;
+	return status;
+}
+
+int tegra19x_mce_read_pmu_reg(u32 reg_id, u32 *value)
+{
+	int status = -1;
+	u64 rd_val = -1;
+
+	switch (reg_id) {
+	case NV_PMCCFILTR_EL0:
+		break;
+	case NV_PMCNTENCLR_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_1" : "=r" (rd_val) : );
+		break;
+	case NV_PMCNTENSET_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_0" : "=r" (rd_val) : );
+		break;
+	case NV_PMCR_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_4" : "=r" (rd_val) : );
+		break;
+	case NV_PMINTENCLR_EL1:
+		asm volatile("mrs %0, S3_0_c15_c2_1" : "=r" (rd_val) : );
+		break;
+	case NV_PMINTENSET_EL1:
+		asm volatile("mrs %0, S3_0_c15_c2_0" : "=r" (rd_val) : );
+		break;
+	case NV_PMOVSCLR_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_3" : "=r" (rd_val) : );
+		break;
+	case NV_PMOVSSET_EL0:
+		asm volatile("mrs %0, S3_3_c15_c4_2" : "=r" (rd_val) : );
+		break;
+	case NV_PMSELR_EL0:
+		asm volatile("mrs %0, S3_3_c15_c5_1" : "=r" (rd_val) : );
+		break;
+	case NV_PMEVCNTR0_EL0:
+		asm volatile("mrs %0, S3_3_c15_c0_0" : "=r" (rd_val) : );
+		break;
+	case NV_PMEVCNTR1_EL0:
+		asm volatile("mrs %0, S3_3_c15_c0_1" : "=r" (rd_val) : );
+		break;
+	case NV_PMEVTYPER0_EL0:
+		asm volatile("mrs %0, S3_3_c15_c2_0" : "=r" (rd_val) : );
+		break;
+	case NV_PMEVTYPER1_EL0:
+		asm volatile("mrs %0, S3_3_c15_c2_1" : "=r" (rd_val) : );
+		break;
+	default:
+		return status;
+	}
+
+	*value = rd_val;
+	status = DMCE_PERFMON_STATUS_SUCCESS;
+	return status;
 }
 
 int tegra19x_mce_read_l3_cache_ways(u64 *value)

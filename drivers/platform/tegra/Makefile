@@ -69,6 +69,9 @@ obj-y += cvnas.o
 obj-$(CONFIG_ARCH_TEGRA_210_SOC) += mselect.o
 obj-$(CONFIG_TEGRA_19X_RAS) += carmel_ras.o
 obj-$(CONFIG_TEGRA_CBB_NOC) += tegra_cbb.o
+ifeq ($(CONFIG_HW_PERF_EVENTS), y)
+obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += tegra19_perf_uncore.o
+endif
 
 endif
 

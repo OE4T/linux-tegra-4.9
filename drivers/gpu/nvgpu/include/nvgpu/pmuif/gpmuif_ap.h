@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFAP_H_
-#define _GPMUIFAP_H_
+#ifndef NVGPU_PMUIF_GPMUIF_AP_H
+#define NVGPU_PMUIF_GPMUIF_AP_H
 
 /* PMU Command/Message Interfaces for Adaptive Power */
 /* Macro to get Histogram index */
@@ -253,4 +253,4 @@ struct pmu_ap {
 	struct ap_ctrl		ap_ctrl[PMU_AP_CTRL_ID_MAX];
 };
 
-#endif /* _GPMUIFAP_H_*/
+#endif /* NVGPU_PMUIF_GPMUIF_AP_H*/

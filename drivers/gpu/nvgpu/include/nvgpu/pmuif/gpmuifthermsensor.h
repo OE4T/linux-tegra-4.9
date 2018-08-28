@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _GPMUIFTHERMSENSOR_H_
-#define _GPMUIFTHERMSENSOR_H_
+#ifndef NVGPU_PMUIF_GPMUIFTHERMSENSOR_H
+#define NVGPU_PMUIF_GPMUIFTHERMSENSOR_H
 
 #include "ctrl/ctrltherm.h"
 #include "gpmuifboardobj.h"
@@ -102,4 +102,4 @@ union nv_pmu_therm_therm_channel_boardobj_set_union {
 
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(therm, therm_channel);
 
-#endif
+#endif /* NVGPU_PMUIF_GPMUIFTHERMSENSOR_H */

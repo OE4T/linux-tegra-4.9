@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _NVGPUGPMUCMDIF_H_
-#define _NVGPUGPMUCMDIF_H_
+#ifndef NVGPU_PMUIF_NVGPU_GPMU_CMDIF_H
+#define NVGPU_PMUIF_NVGPU_GPMU_CMDIF_H
 
 #include <nvgpu/flcnif_cmn.h>
 #include "gpmuif_cmn.h"
@@ -140,4 +140,4 @@ struct pmu_msg {
 #define PMU_UNIT_ID_IS_VALID(id)		\
 		(((id) < PMU_UNIT_END) || ((id) >= PMU_UNIT_TEST_START))
 
-#endif /* _NVGPUGPMUCMDIF_H_*/
+#endif /* NVGPU_PMUIF_NVGPU_GPMU_CMDIF_H*/

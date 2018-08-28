@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFPMU_H_
-#define _GPMUIFPMU_H_
+#ifndef NVGPU_PMUIF_GPMUIF_PMU_H
+#define NVGPU_PMUIF_GPMUIF_PMU_H
 
 #include <nvgpu/flcnif_cmn.h>
 #include "gpmuif_cmn.h"
@@ -190,4 +190,4 @@ struct pmu_rc_msg {
 	struct pmu_rc_msg_unhandled_cmd unhandled_cmd;
 };
 
-#endif /* _GPMUIFPMU_H_*/
+#endif /* NVGPU_PMUIF_GPMUIF_PMU_H*/

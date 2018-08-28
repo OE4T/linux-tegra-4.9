@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFRPPG_H_
-#define _GPMUIFRPPG_H_
+#ifndef NVGPU_PMUIF_GPMUIF_PG_RPPG_H
+#define NVGPU_PMUIF_GPMUIF_PG_RPPG_H
 
 #define NV_PMU_RPPG_CTRL_ID_GR    (0x0000)
 #define NV_PMU_RPPG_CTRL_ID_MS    (0x0001)
@@ -107,4 +107,4 @@ enum {
 	NV_PMU_RPPG_MSG_ID_INIT_CTRL_ACK = 0x0,
 };
 
-#endif
+#endif /* NVGPU_PMUIF_GPMUIF_PG_RPPG_H */

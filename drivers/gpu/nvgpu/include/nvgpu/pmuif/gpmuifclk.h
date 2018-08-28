@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _GPMUIFCLK_H_
-#define _GPMUIFCLK_H_
+#ifndef NVGPU_PMUIF_GPMUIFCLK_H
+#define NVGPU_PMUIF_GPMUIFCLK_H
 
 #include "ctrl/ctrlboardobj.h"
 #include "ctrl/ctrlvolt.h"
@@ -555,4 +555,4 @@ union nv_pmu_clk_clk_fll_device_boardobj_get_status_union {
 
 NV_PMU_BOARDOBJ_GRP_GET_STATUS_MAKE_E32(clk, clk_fll_device);
 
-#endif /*_GPMUIFCLK_H_*/
+#endif /*NVGPU_PMUIF_GPMUIFCLK_H*/

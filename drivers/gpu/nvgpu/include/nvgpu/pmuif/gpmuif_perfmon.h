@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFPERFMON_H_
-#define _GPMUIFPERFMON_H_
+#ifndef NVGPU_PMUIF_GPMUIF_PERFMON_H
+#define NVGPU_PMUIF_GPMUIF_PERFMON_H
 
 /*perfmon task defines*/
 
@@ -238,4 +238,4 @@ struct nv_pmu_rpc_struct_perfmon_query {
 	u32 scratch[1];
 };
 
-#endif /* _GPMUIFPERFMON_H_ */
+#endif /* NVGPU_PMUIF_GPMUIF_PERFMON_H */

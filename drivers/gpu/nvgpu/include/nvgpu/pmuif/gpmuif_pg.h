@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFPG_H_
-#define _GPMUIFPG_H_
+#ifndef NVGPU_PMUIF_GPMUIF_PG_H
+#define NVGPU_PMUIF_GPMUIF_PG_H
 
 #include "gpmuif_ap.h"
 #include "gpmuif_pg_rppg.h"
@@ -409,4 +409,4 @@ struct pmu_pg_stats {
 	u32 pg_gating_deny_cnt;
 };
 
-#endif /* _GPMUIFPG_H_*/
+#endif /* NVGPU_PMUIF_GPMUIF_PG_H*/

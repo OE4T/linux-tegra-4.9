@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFBIOS_H_
-#define _GPMUIFBIOS_H_
+#ifndef NVGPU_PMUIF_GPMUIFBIOS_H
+#define NVGPU_PMUIF_GPMUIFBIOS_H
 
 struct nv_pmu_bios_vfield_register_segment_super {
 	u8 type;
@@ -47,4 +47,4 @@ union nv_pmu_bios_vfield_register_segment {
 };
 
 
-#endif /* _GPMUIFBIOS_H_*/
+#endif /* NVGPU_PMUIF_GPMUIFBIOS_H*/

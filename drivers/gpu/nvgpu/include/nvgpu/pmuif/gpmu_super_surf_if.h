@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __GPMU_SUPER_SURF_IF_H__
-#define __GPMU_SUPER_SURF_IF_H__
+#ifndef NVGPU_PMUIF_GPMU_SUPER_SURF_IF_H
+#define NVGPU_PMUIF_GPMU_SUPER_SURF_IF_H
 
 struct nv_pmu_super_surface_hdr {
     u32 memberMask;
@@ -75,4 +75,4 @@ struct nv_pmu_super_surface {
 	} therm;
 };
 
-#endif /* __GPMU_SUPER_SURF_IF_H__ */
+#endif /* NVGPU_PMUIF_GPMU_SUPER_SURF_IF_H */

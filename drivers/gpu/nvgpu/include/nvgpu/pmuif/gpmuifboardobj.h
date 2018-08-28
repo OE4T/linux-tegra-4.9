@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
 */
-#ifndef _GPMUIFBOARDOBJ_H_
-#define _GPMUIFBOARDOBJ_H_
+#ifndef NVGPU_PMUIF_GPMUIFBOARDOBJ_H
+#define NVGPU_PMUIF_GPMUIFBOARDOBJ_H
 
 #include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlboardobj.h"
@@ -231,4 +231,4 @@ struct nv_pmu_rpc_struct_board_obj_grp_cmd
     u32  scratch[1];
 };
 
-#endif /*  _GPMUIFBOARDOBJ_H_ */
+#endif /*  NVGPU_PMUIF_GPMUIFBOARDOBJ_H */

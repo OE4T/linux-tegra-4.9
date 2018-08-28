@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFACR_H_
-#define _GPMUIFACR_H_
+#ifndef NVGPU_PMUIF_GPMUIF_ACR_H
+#define NVGPU_PMUIF_GPMUIF_ACR_H
 
 /* ACR Commands/Message structures */
 
@@ -156,4 +156,4 @@ struct nv_pmu_rpc_struct_acr_bootstrap_gr_falcons {
 	u32  scratch[1];
 };
 
-#endif /* _GPMUIFACR_H_ */
+#endif /* NVGPU_PMUIF_GPMUIF_ACR_H */

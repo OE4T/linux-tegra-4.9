@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _GPMUIFTHERM_H_
-#define _GPMUIFTHERM_H_
+#ifndef NVGPU_PMUIF_GPMUIFTHERM_H
+#define NVGPU_PMUIF_GPMUIFTHERM_H
 
 #include <nvgpu/flcnif_cmn.h>
 
@@ -98,5 +98,5 @@ struct nv_pmu_therm_msg {
 	};
 };
 
-#endif
+#endif /* NVGPU_PMUIF_GPMUIFTHERM_H */
 

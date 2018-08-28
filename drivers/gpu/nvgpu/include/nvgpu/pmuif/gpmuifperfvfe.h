@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFPERFVFE_H_
-#define _GPMUIFPERFVFE_H_
+#ifndef NVGPU_PMUIF_GPMUIFPERFVFE_H
+#define NVGPU_PMUIF_GPMUIFPERFVFE_H
 
 #include "gpmuifbios.h"
 #include "gpmuifboardobj.h"
@@ -203,4 +203,4 @@ union nv_pmu_perf_vfe_equ_boardobj_set_union {
 
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E255(perf, vfe_equ);
 
-#endif  /* _GPMUIFPERFVFE_H_*/
+#endif  /* NVGPU_PMUIF_GPMUIFPERFVFE_H*/

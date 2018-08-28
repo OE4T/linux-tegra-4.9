@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GPMUIFCMN_H_
-#define _GPMUIFCMN_H_
+#ifndef NVGPU_PMUIF_GPMUIF_CMN_H
+#define NVGPU_PMUIF_GPMUIF_CMN_H
 
 /*
  * Defines the logical queue IDs that must be used when submitting
@@ -139,4 +139,4 @@ struct nv_pmu_rpc_header {
 	u32  exec_time_pmu_ns;
 };
 
-#endif /* _GPMUIFCMN_H_*/
+#endif /* NVGPU_PMUIF_GPMUIF_CMN_H*/

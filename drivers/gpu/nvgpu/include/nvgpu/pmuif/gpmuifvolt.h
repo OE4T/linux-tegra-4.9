@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
 */
-#ifndef _GPMUIFVOLT_H_
-#define _GPMUIFVOLT_H_
+#ifndef NVGPU_PMUIF_GPMUIFVOLT_H
+#define NVGPU_PMUIF_GPMUIFVOLT_H
 
 #include "gpmuifboardobj.h"
 #include <nvgpu/flcnif_cmn.h>
@@ -399,4 +399,4 @@ struct nv_pmu_rpc_struct_volt_volt_rail_get_voltage {
 	u32  scratch[1];
 };
 
-#endif  /* _GPMUIFVOLT_H_*/
+#endif  /* NVGPU_PMUIF_GPMUIFVOLT_H*/

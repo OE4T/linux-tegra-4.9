@@ -592,7 +592,7 @@
 #define TEGRA194_CLK_XUSB_SS_SUPERSPEED		277
 /** @brief HPLL for display hub clock */
 #define TEGRA194_CLK_PLLDISPHUB			278
-/** @brief Output of divider controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_DISP */
+/** @brief Invalid (do not use) */
 #define TEGRA194_CLK_PLLDISPHUB_DIV		279
 /** @brief NAFLL clock source for CPU cluster 0 */
 #define TEGRA194_CLK_NAFLL_CLUSTER0		280

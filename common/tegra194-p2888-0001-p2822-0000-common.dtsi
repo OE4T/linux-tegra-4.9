@@ -306,6 +306,32 @@
 	};
 };
 
+&head0 {
+	extcon-cables = <&typec_port0 2 &typec_port1 2>;
+	extcon-cable-names = "typec0", "typec1";
+	#extcon-cells = <1>;
+};
+
+&head1 {
+	extcon-cables = <&typec_port0 2 &typec_port1 2>;
+	extcon-cable-names = "typec0", "typec1";
+	#extcon-cells = <1>;
+};
+
+&head2 {
+	extcon-cables = <&typec_port0 2 &typec_port1 2>;
+	extcon-cable-names = "typec0", "typec1";
+	#extcon-cells = <1>;
+};
+
+&sor0 {
+	nvidia,typec-port = /bits/ 8 <0>;
+};
+
+&sor1 {
+	nvidia,typec-port = /bits/ 8 <1>;
+};
+
 #if LINUX_VERSION >= 414
 #include <tegra194-linux-4.14.dtsi>
 #endif

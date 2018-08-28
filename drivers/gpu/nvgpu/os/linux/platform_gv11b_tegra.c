@@ -44,6 +44,21 @@
 #include "platform_gk20a_tegra.h"
 #include "gv11b/gr_gv11b.h"
 
+#define EMC3D_GV11B_RATIO 500
+
+void gv11b_tegra_scale_init(struct device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+
+	if (!profile)
+		return;
+
+	platform->g->emc3d_ratio = EMC3D_GV11B_RATIO;
+
+	gp10b_tegra_scale_init(dev);
+}
+
 static void gv11b_tegra_scale_exit(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -238,7 +253,7 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.get_clk_freqs = gp10b_clk_get_freqs,
 
 	/* frequency scaling configuration */
-	.initscale = gp10b_tegra_scale_init,
+	.initscale = gv11b_tegra_scale_init,
 	.prescale = gp10b_tegra_prescale,
 	.postscale = gp10b_tegra_postscale,
 	.devfreq_governor = "nvhost_podgov",

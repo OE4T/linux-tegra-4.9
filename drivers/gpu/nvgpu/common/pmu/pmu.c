@@ -170,8 +170,8 @@ void nvgpu_kill_task_pg_init(struct gk20a *g)
 				break;
 			}
 			nvgpu_udelay(2);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-			"timeout - waiting PMU state machine thread stop"));
+		} while (nvgpu_timeout_expired_msg(&timeout,
+			"timeout - waiting PMU state machine thread stop") == 0);
 	}
 }
 
@@ -214,7 +214,7 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 	pmu->mutex_cnt = g->ops.pmu.pmu_mutex_size();
 	pmu->mutex = nvgpu_kzalloc(g, pmu->mutex_cnt *
 		sizeof(struct pmu_mutex));
-	if (!pmu->mutex) {
+	if (pmu->mutex == NULL) {
 		err = -ENOMEM;
 		goto err;
 	}
@@ -226,7 +226,7 @@ static int nvgpu_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq = nvgpu_kzalloc(g, PMU_MAX_NUM_SEQUENCES *
 		sizeof(struct pmu_sequence));
-	if (!pmu->seq) {
+	if (pmu->seq == NULL) {
 		err = -ENOMEM;
 		goto err_free_mutex;
 	}

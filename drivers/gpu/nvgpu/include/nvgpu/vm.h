@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -220,7 +220,7 @@ void nvgpu_vm_get(struct vm_gk20a *vm);
 void nvgpu_vm_put(struct vm_gk20a *vm);
 
 int vm_aspace_id(struct vm_gk20a *vm);
-int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
+bool nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 
 int nvgpu_vm_pde_coverage_bit_count(struct vm_gk20a *vm);
 

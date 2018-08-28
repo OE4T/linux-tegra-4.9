@@ -88,7 +88,7 @@ int gk20a_comptag_allocator_init(struct gk20a *g,
 	size--;
 	allocator->bitmap = nvgpu_vzalloc(g,
 					  BITS_TO_LONGS(size) * sizeof(long));
-	if (!allocator->bitmap)
+	if (allocator->bitmap == NULL)
 		return -ENOMEM;
 
 	allocator->size = size;

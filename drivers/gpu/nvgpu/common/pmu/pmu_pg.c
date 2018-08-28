@@ -89,9 +89,9 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 		}
 
 		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
-			if (g->ops.pmu.pmu_pg_engines_feature_list &&
+			if (g->ops.pmu.pmu_pg_engines_feature_list != NULL &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
-				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+					PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
 				NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 				pmu->initialized = true;
 				nvgpu_pmu_state_change(g, PMU_STATE_STARTED,
@@ -117,9 +117,9 @@ int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 	u32 status = 0;
 
 	if (enable_pg == true) {
-		if (g->ops.pmu.pmu_pg_engines_feature_list &&
+		if (g->ops.pmu.pmu_pg_engines_feature_list != NULL &&
 			g->ops.pmu.pmu_pg_engines_feature_list(g,
-			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
 			NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 			if (g->ops.pmu.pmu_lpwr_enable_pg) {
 				status = g->ops.pmu.pmu_lpwr_enable_pg(g,
@@ -129,9 +129,9 @@ int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 			status = nvgpu_pmu_enable_elpg(g);
 		}
 	} else if (enable_pg == false) {
-		if (g->ops.pmu.pmu_pg_engines_feature_list &&
+		if (g->ops.pmu.pmu_pg_engines_feature_list != NULL &&
 			g->ops.pmu.pmu_pg_engines_feature_list(g,
-			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
 			NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING) {
 			if (g->ops.pmu.pmu_lpwr_disable_pg) {
 				status = g->ops.pmu.pmu_lpwr_disable_pg(g,
@@ -207,7 +207,7 @@ int nvgpu_pmu_enable_elpg(struct gk20a *g)
 		nvgpu_warn(g,
 			"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
 			__func__, pmu->elpg_refcnt);
-		WARN_ON(1);
+		WARN_ON(true);
 	}
 
 	/* do NOT enable elpg until golden ctx is created,
@@ -273,7 +273,7 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 		nvgpu_warn(g,
 			"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
 			__func__, pmu->elpg_refcnt);
-		WARN_ON(1);
+		WARN_ON(true);
 		ret = 0;
 		goto exit_unlock;
 	}
@@ -481,7 +481,8 @@ int nvgpu_pmu_init_powergating(struct gk20a *g)
 			pg_engine_id++) {
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {
-			if (pmu && pmu->pmu_state == PMU_STATE_INIT_RECEIVED) {
+			if (pmu != NULL &&
+			    pmu->pmu_state == PMU_STATE_INIT_RECEIVED) {
 				nvgpu_pmu_state_change(g,
 					PMU_STATE_ELPG_BOOTING, false);
 			}
@@ -636,9 +637,9 @@ static void ap_callback_init_and_enable_ctrl(
 		void *param, u32 seq_desc, u32 status)
 {
 	/* Define p_ap (i.e pointer to pmu_ap structure) */
-	WARN_ON(!msg);
+	WARN_ON(msg == NULL);
 
-	if (!status) {
+	if (status == 0U) {
 		switch (msg->msg.pg.ap_msg.cmn.msg_id) {
 		case PMU_AP_MSG_ID_INIT_ACK:
 			nvgpu_pmu_dbg(g, "reply PMU_AP_CMD_ID_INIT");

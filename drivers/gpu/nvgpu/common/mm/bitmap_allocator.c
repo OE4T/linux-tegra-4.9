@@ -42,10 +42,10 @@ static u64 nvgpu_bitmap_alloc_base(struct nvgpu_allocator *a)
 	return ba->base;
 }
 
-static int nvgpu_bitmap_alloc_inited(struct nvgpu_allocator *a)
+static bool nvgpu_bitmap_alloc_inited(struct nvgpu_allocator *a)
 {
 	struct nvgpu_bitmap_allocator *ba = a->priv;
-	int inited = ba->inited;
+	bool inited = ba->inited;
 
 	nvgpu_smp_rmb();
 	return inited;
@@ -160,7 +160,7 @@ static struct nvgpu_bitmap_alloc *find_alloc_metadata(
 	struct nvgpu_rbtree_node *node = NULL;
 
 	nvgpu_rbtree_search(addr, &node, a->allocs);
-	if (!node) {
+	if (node == NULL) {
 		return NULL;
 	}
 
@@ -180,7 +180,7 @@ static int nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
 	struct nvgpu_bitmap_alloc *alloc =
 		nvgpu_kmem_cache_alloc(a->meta_data_cache);
 
-	if (!alloc) {
+	if (alloc == NULL) {
 		return -ENOMEM;
 	}
 
@@ -243,8 +243,8 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *na, u64 len)
 	 * either of these possibilities assume that the caller will keep what
 	 * data it needs around to successfully free this allocation.
 	 */
-	if (!(a->flags & GPU_ALLOC_NO_ALLOC_PAGE) &&
-	    nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size)) {
+	if ((a->flags & GPU_ALLOC_NO_ALLOC_PAGE) == 0ULL &&
+	    nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size) != 0) {
 		goto fail_reset_bitmap;
 	}
 
@@ -280,7 +280,7 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *na, u64 addr)
 	}
 
 	alloc = find_alloc_metadata(a, addr);
-	if (!alloc) {
+	if (alloc == NULL) {
 		goto done;
 	}
 
@@ -299,7 +299,7 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *na, u64 addr)
 	a->bytes_freed += alloc->length;
 
 done:
-	if (a->meta_data_cache && alloc) {
+	if (a->meta_data_cache != NULL && alloc != NULL) {
 		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
 	}
 	alloc_unlock(na);
@@ -377,27 +377,29 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 {
 	int err;
 	struct nvgpu_bitmap_allocator *a;
+	bool is_blk_size_pwr_2 = (blk_size & (blk_size - 1ULL)) == 0ULL;
+	bool is_base_aligned =  (base & (blk_size - 1ULL)) == 0ULL;
+	bool is_length_aligned = (length & (blk_size - 1ULL)) == 0ULL;
 
-	if (WARN_ON(blk_size & (blk_size - 1U))) {
+	if (WARN_ON(!is_blk_size_pwr_2)) {
 		return -EINVAL;
 	}
 
 	/*
-	 * blk_size must be a power-of-2; base length also need to be aligned
-	 * to blk_size.
+	 * blk_size must be a power-of-2; base and length also need to be
+	 * aligned to blk_size.
 	 */
-	if (blk_size & (blk_size - 1U) ||
-	    base & (blk_size - 1U) || length & (blk_size - 1U)) {
+	if (!is_blk_size_pwr_2 || !is_base_aligned || !is_length_aligned) {
 		return -EINVAL;
 	}
 
-	if (base == 0U) {
+	if (base == 0ULL) {
 		base = blk_size;
 		length -= blk_size;
 	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_bitmap_allocator));
-	if (!a) {
+	if (a == NULL) {
 		return -ENOMEM;
 	}
 
@@ -406,10 +408,10 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 		goto fail;
 	}
 
-	if (!(flags & GPU_ALLOC_NO_ALLOC_PAGE)) {
+	if ((flags & GPU_ALLOC_NO_ALLOC_PAGE) == 0ULL) {
 		a->meta_data_cache = nvgpu_kmem_cache_create(g,
 					sizeof(struct nvgpu_bitmap_alloc));
-		if (!a->meta_data_cache) {
+		if (a->meta_data_cache == NULL) {
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -426,7 +428,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 
 	a->bitmap = nvgpu_kcalloc(g, BITS_TO_LONGS(a->num_bits),
 				  sizeof(*a->bitmap));
-	if (!a->bitmap) {
+	if (a->bitmap == NULL) {
 		err = -ENOMEM;
 		goto fail;
 	}

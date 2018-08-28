@@ -79,7 +79,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 
 	struct nvgpu_sgt *sgt = nvgpu_sgt_create_from_mem(g, mem);
 
-	if (!sgt) {
+	if (sgt == NULL) {
 		return 0;
 	}
 
@@ -122,7 +122,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 
 	nvgpu_sgt_free(g, sgt);
 
-	if (!vaddr) {
+	if (vaddr == 0ULL) {
 		nvgpu_err(g, "failed to map buffer!");
 		return 0;
 	}
@@ -201,7 +201,7 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 	pdb_size = ALIGN(pd_size(&vm->mmu_levels[0], &attrs), PAGE_SIZE);
 
 	err = nvgpu_pd_cache_alloc_direct(vm->mm->g, &vm->pdb, pdb_size);
-	if (WARN_ON(err)) {
+	if (WARN_ON(err != 0)) {
 		return err;
 	}
 
@@ -324,7 +324,7 @@ static int pd_allocate_children(struct vm_gk20a *vm,
 	pd->num_entries = pd_entries(l, attrs);
 	pd->entries = nvgpu_vzalloc(g, sizeof(struct nvgpu_gmmu_pd) *
 				    pd->num_entries);
-	if (!pd->entries) {
+	if (pd->entries == NULL) {
 		return -ENOMEM;
 	}
 
@@ -433,7 +433,7 @@ static int __set_pd_level(struct vm_gk20a *vm,
 		 * to be the table of PDEs. When the next level is PTEs the
 		 * target addr is the real physical address we are aiming for.
 		 */
-		target_addr = next_pd ?
+		target_addr = (next_pd != NULL) ?
 			nvgpu_pde_phys_addr(g, next_pd) :
 			phys_addr;
 
@@ -486,7 +486,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 	struct nvgpu_sgl *sgl;
 	int err = 0;
 
-	if (!sgt) {
+	if (sgt == NULL) {
 		/*
 		 * This is considered an unmap. Just pass in 0 as the physical
 		 * address for the entire GPU range.
@@ -543,7 +543,7 @@ static int __nvgpu_gmmu_do_update_page_table(struct vm_gk20a *vm,
 		/*
 		 * Cut out sgl ents for space_to_skip.
 		 */
-		if (space_to_skip &&
+		if (space_to_skip != 0ULL &&
 		    space_to_skip >= nvgpu_sgt_get_length(sgt, sgl)) {
 			space_to_skip -= nvgpu_sgt_get_length(sgt, sgl);
 			continue;
@@ -630,10 +630,10 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
 		   "kind=%#02x APT=%-6s %c%c%c%c%c",
 		   vm->name,
-		   sgt ? "MAP" : "UNMAP",
+		   (sgt != NULL) ? "MAP" : "UNMAP",
 		   virt_addr,
 		   length,
-		   sgt ? nvgpu_sgt_get_phys(g, sgt, sgt->sgl) : 0,
+		   (sgt != NULL) ? nvgpu_sgt_get_phys(g, sgt, sgt->sgl) : 0,
 		   space_to_skip,
 		   page_size >> 10,
 		   nvgpu_gmmu_perm_str(attrs->rw_flag),
@@ -654,7 +654,8 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 
 	nvgpu_mb();
 
-	__gmmu_dbg(g, attrs, "%-5s Done!", sgt ? "MAP" : "UNMAP");
+	__gmmu_dbg(g, attrs, "%-5s Done!",
+				(sgt != NULL) ? "MAP" : "UNMAP");
 
 	return err;
 }
@@ -700,7 +701,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.sparse    = sparse,
 		.priv      = priv,
 		.coherent  = flags & NVGPU_VM_MAP_IO_COHERENT,
-		.valid     = !(flags & NVGPU_VM_MAP_UNMAPPED_PTE),
+		.valid     = (flags & NVGPU_VM_MAP_UNMAPPED_PTE) == 0U,
 		.aperture  = aperture
 	};
 
@@ -727,9 +728,9 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	 * Only allocate a new GPU VA range if we haven't already been passed a
 	 * GPU VA range. This facilitates fixed mappings.
 	 */
-	if (!vaddr) {
+	if (vaddr == 0ULL) {
 		vaddr = __nvgpu_vm_alloc_va(vm, size, pgsz_idx);
-		if (!vaddr) {
+		if (vaddr == 0ULL) {
 			nvgpu_err(g, "failed to allocate va space");
 			err = -ENOMEM;
 			goto fail_alloc;
@@ -744,7 +745,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		goto fail_validate;
 	}
 
-	if (!batch) {
+	if (batch == NULL) {
 		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
 	} else {
 		batch->need_tlb_invalidate = true;
@@ -800,7 +801,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 		nvgpu_err(g, "failed to update gmmu ptes on unmap");
 	}
 
-	if (!batch) {
+	if (batch == NULL) {
 		gk20a_mm_l2_flush(g, true);
 		g->ops.fb.tlb_invalidate(g, vm->pdb.mem);
 	} else {
@@ -823,7 +824,7 @@ u32 __nvgpu_pte_words(struct gk20a *g)
 	 */
 	do {
 		next_l = l + 1;
-		if (!next_l->update_entry) {
+		if (next_l->update_entry == NULL) {
 			break;
 		}
 
@@ -859,7 +860,7 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 		struct nvgpu_gmmu_pd *pd_next = pd->entries + pd_idx;
 
 		/* Invalid entry! */
-		if (!pd_next->mem) {
+		if (pd_next->mem == NULL) {
 			return -EINVAL;
 		}
 
@@ -875,7 +876,7 @@ static int __nvgpu_locate_pte(struct gk20a *g, struct vm_gk20a *vm,
 					  pd_offs_out);
 	}
 
-	if (!pd->mem) {
+	if (pd->mem == NULL) {
 		return -EINVAL;
 	}
 

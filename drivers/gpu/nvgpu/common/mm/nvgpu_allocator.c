@@ -45,10 +45,10 @@ u64 nvgpu_alloc_base(struct nvgpu_allocator *a)
 	return 0;
 }
 
-u64 nvgpu_alloc_initialized(struct nvgpu_allocator *a)
+bool nvgpu_alloc_initialized(struct nvgpu_allocator *a)
 {
-	if (!a->ops || !a->ops->inited) {
-		return 0;
+	if (a->ops == NULL || a->ops->inited == NULL) {
+		return false;
 	}
 
 	return a->ops->inited(a);
@@ -151,7 +151,7 @@ int nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 {
 	int err;
 
-	if (!ops) {
+	if (ops == NULL) {
 		return -EINVAL;
 	}
 
@@ -159,7 +159,7 @@ int nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 	 * This is the bare minimum operations required for a sensible
 	 * allocator.
 	 */
-	if (!ops->alloc || !ops->free || !ops->fini) {
+	if (ops->alloc == NULL || ops->free == NULL || ops->fini == NULL) {
 		return -EINVAL;
 	}
 

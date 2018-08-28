@@ -116,7 +116,7 @@ static u64 nvgpu_page_alloc_base(struct nvgpu_allocator *a)
 	return nvgpu_alloc_base(&va->source_allocator);
 }
 
-static int nvgpu_page_alloc_inited(struct nvgpu_allocator *a)
+static bool nvgpu_page_alloc_inited(struct nvgpu_allocator *a)
 {
 	struct nvgpu_page_allocator *va = a->priv;
 
@@ -264,7 +264,7 @@ static struct nvgpu_page_alloc *find_page_alloc(
 	struct nvgpu_rbtree_node *node = NULL;
 
 	nvgpu_rbtree_search(addr, &node, a->allocs);
-	if (!node) {
+	if (node == NULL) {
 		return NULL;
 	}
 
@@ -282,7 +282,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	struct page_alloc_slab_page *slab_page;
 
 	slab_page = nvgpu_kmem_cache_alloc(a->slab_page_cache);
-	if (!slab_page) {
+	if (slab_page == NULL) {
 		palloc_dbg(a, "OOM: unable to alloc slab_page struct!");
 		return NULL;
 	}
@@ -290,7 +290,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	memset(slab_page, 0, sizeof(*slab_page));
 
 	slab_page->page_addr = nvgpu_alloc(&a->source_allocator, a->page_size);
-	if (!slab_page->page_addr) {
+	if (slab_page->page_addr == 0ULL) {
 		nvgpu_kmem_cache_free(a->slab_page_cache, slab_page);
 		palloc_dbg(a, "OOM: vidmem is full!");
 		return NULL;
@@ -354,9 +354,9 @@ static int do_slab_alloc(struct nvgpu_page_allocator *a,
 		del_slab_page_from_empty(slab, slab_page);
 	}
 
-	if (!slab_page) {
+	if (slab_page == NULL) {
 		slab_page = alloc_slab_page(a, slab);
-		if (!slab_page) {
+		if (slab_page == NULL) {
 			return -ENOMEM;
 		}
 	}
@@ -423,7 +423,7 @@ static struct nvgpu_page_alloc *nvgpu_alloc_slab(
 	slab = &a->slabs[slab_nr];
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
-	if (!alloc) {
+	if (alloc == NULL) {
 		palloc_dbg(a, "OOM: could not alloc page_alloc struct!");
 		goto fail;
 	}
@@ -431,7 +431,7 @@ static struct nvgpu_page_alloc *nvgpu_alloc_slab(
 	alloc->sgt.ops = &page_alloc_sgl_ops;
 
 	sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
-	if (!sgl) {
+	if (sgl == NULL) {
 		palloc_dbg(a, "OOM: could not alloc sgl struct!");
 		goto fail;
 	}
@@ -524,7 +524,7 @@ static struct nvgpu_page_alloc *do_nvgpu_alloc_pages(
 	int i = 0;
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
-	if (!alloc) {
+	if (alloc == NULL) {
 		goto fail;
 	}
 
@@ -545,7 +545,7 @@ static struct nvgpu_page_alloc *do_nvgpu_alloc_pages(
 		 * requested size. The buddy allocator guarantees any given
 		 * single alloc is contiguous.
 		 */
-		if (a->flags & GPU_ALLOC_FORCE_CONTIG && i != 0) {
+		if ((a->flags & GPU_ALLOC_FORCE_CONTIG) != 0ULL && i != 0) {
 			goto fail_cleanup;
 		}
 
@@ -563,23 +563,23 @@ static struct nvgpu_page_alloc *do_nvgpu_alloc_pages(
 						 chunk_len);
 
 			/* Divide by 2 and try again */
-			if (!chunk_addr) {
+			if (chunk_addr == 0ULL) {
 				palloc_dbg(a, "balloc failed: 0x%llx",
 					   chunk_len);
 				chunk_len >>= 1;
 				max_chunk_len = chunk_len;
 			}
-		} while (!chunk_addr && chunk_len >= a->page_size);
+		} while (chunk_addr == 0ULL && chunk_len >= a->page_size);
 
 		chunk_pages = chunk_len >> a->page_shift;
 
-		if (!chunk_addr) {
+		if (chunk_addr == 0ULL) {
 			palloc_dbg(a, "bailing @ 0x%llx", chunk_len);
 			goto fail_cleanup;
 		}
 
 		sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
-		if (!sgl) {
+		if (sgl == NULL) {
 			nvgpu_free(&a->source_allocator, chunk_addr);
 			goto fail_cleanup;
 		}
@@ -638,7 +638,7 @@ static struct nvgpu_page_alloc *nvgpu_alloc_pages(
 	pages = ALIGN(len, a->page_size) >> a->page_shift;
 
 	alloc = do_nvgpu_alloc_pages(a, pages);
-	if (!alloc) {
+	if (alloc == NULL) {
 		palloc_dbg(a, "Alloc 0x%llx (%llu) (failed)",
 			   pages << a->page_shift, pages);
 		return NULL;
@@ -679,18 +679,18 @@ static u64 nvgpu_page_alloc(struct nvgpu_allocator *na, u64 len)
 	 * If we want contig pages we have to round up to a power of two. It's
 	 * easier to do that here than in the buddy allocator.
 	 */
-	real_len = a->flags & GPU_ALLOC_FORCE_CONTIG ?
+	real_len = ((a->flags & GPU_ALLOC_FORCE_CONTIG) != 0ULL) ?
 		roundup_pow_of_two(len) : len;
 
 	alloc_lock(na);
-	if (a->flags & GPU_ALLOC_4K_VIDMEM_PAGES &&
+	if ((a->flags & GPU_ALLOC_4K_VIDMEM_PAGES) != 0ULL &&
 	    real_len <= (a->page_size / 2U)) {
 		alloc = nvgpu_alloc_slab(a, real_len);
 	} else {
 		alloc = nvgpu_alloc_pages(a, real_len);
 	}
 
-	if (!alloc) {
+	if (alloc == NULL) {
 		alloc_unlock(na);
 		return 0;
 	}
@@ -728,7 +728,7 @@ static void nvgpu_page_free(struct nvgpu_allocator *na, u64 base)
 			((struct nvgpu_page_alloc *)(uintptr_t)base)->base);
 	}
 
-	if (!alloc) {
+	if (alloc == NULL) {
 		palloc_dbg(a, "Hrm, found no alloc?");
 		goto done;
 	}
@@ -760,13 +760,13 @@ static struct nvgpu_page_alloc *nvgpu_alloc_pages_fixed(
 
 	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
 	sgl = nvgpu_kzalloc(a->owner->g, sizeof(*sgl));
-	if (!alloc || !sgl) {
+	if (alloc == NULL || sgl == NULL) {
 		goto fail;
 	}
 
 	alloc->sgt.ops = &page_alloc_sgl_ops;
 	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length, 0);
-	if (!alloc->base) {
+	if (alloc->base == 0ULL) {
 		WARN(1, "nvgpu: failed to fixed alloc pages @ 0x%010llx", base);
 		goto fail;
 	}
@@ -811,7 +811,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *na,
 	alloc_lock(na);
 
 	alloc = nvgpu_alloc_pages_fixed(a, base, aligned_len, 0);
-	if (!alloc) {
+	if (alloc == NULL) {
 		alloc_unlock(na);
 		return 0;
 	}
@@ -850,7 +850,7 @@ static void nvgpu_page_free_fixed(struct nvgpu_allocator *na,
 
 	if (a->flags & GPU_ALLOC_NO_SCATTER_GATHER) {
 		alloc = find_page_alloc(a, base);
-		if (!alloc) {
+		if (alloc == NULL) {
 			goto done;
 		}
 	} else {
@@ -985,7 +985,7 @@ static int nvgpu_page_alloc_init_slabs(struct nvgpu_page_allocator *a)
 	a->slabs = nvgpu_kcalloc(nvgpu_alloc_to_gpu(a->owner),
 				 nr_slabs,
 				 sizeof(struct page_alloc_slab));
-	if (!a->slabs) {
+	if (a->slabs == NULL) {
 		return -ENOMEM;
 	}
 	a->nr_slabs = nr_slabs;
@@ -1018,7 +1018,7 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_page_allocator));
-	if (!a) {
+	if (a == NULL) {
 		return -ENOMEM;
 	}
 
@@ -1031,7 +1031,7 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 					sizeof(struct nvgpu_page_alloc));
 	a->slab_page_cache = nvgpu_kmem_cache_create(g,
 					sizeof(struct page_alloc_slab_page));
-	if (!a->alloc_cache || !a->slab_page_cache) {
+	if (a->alloc_cache == NULL || a->slab_page_cache == NULL) {
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -1044,7 +1044,8 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	a->owner = na;
 	a->flags = flags;
 
-	if (flags & GPU_ALLOC_4K_VIDMEM_PAGES && blk_size > SZ_4K) {
+	if ((flags & GPU_ALLOC_4K_VIDMEM_PAGES) != 0ULL &&
+	    blk_size > SZ_4K) {
 		err = nvgpu_page_alloc_init_slabs(a);
 		if (err) {
 			goto fail;

@@ -1738,12 +1738,12 @@ int nvgpu_pmu_prepare_ns_ucode_blob(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pmu->fw) {
+	if (pmu->fw != NULL) {
 		return nvgpu_init_pmu_fw_support(pmu);
 	}
 
 	pmu->fw = nvgpu_request_firmware(g, NVGPU_PMU_NS_UCODE_IMAGE, 0);
-	if (!pmu->fw) {
+	if (pmu->fw == NULL) {
 		nvgpu_err(g, "failed to load pmu ucode!!");
 		return err;
 	}

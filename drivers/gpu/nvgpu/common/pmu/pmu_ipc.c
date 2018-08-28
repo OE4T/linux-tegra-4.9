@@ -221,7 +221,7 @@ invalid_cmd:
 		"payload in=%p, in_size=%d, in_offset=%d,\n"
 		"payload out=%p, out_size=%d, out_offset=%d",
 		queue_id, cmd->hdr.size, cmd->hdr.unit_id,
-		msg, msg ? msg->hdr.unit_id : ~0,
+		msg, (msg != NULL) ? msg->hdr.unit_id : ~0,
 		&payload->in, payload->in.size, payload->in.offset,
 		&payload->out, payload->out.size, payload->out.offset);
 
@@ -243,7 +243,7 @@ static int pmu_write_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 
 	do {
 		err = nvgpu_flcn_queue_push(pmu->flcn, queue, cmd, cmd->hdr.size);
-		if (err == -EAGAIN && !nvgpu_timeout_expired(&timeout)) {
+		if (err == -EAGAIN && nvgpu_timeout_expired(&timeout) == 0) {
 			nvgpu_usleep_range(1000, 2000);
 		} else {
 			break;
@@ -273,7 +273,7 @@ static int pmu_cmd_payload_extract_rpc(struct gk20a *g, struct pmu_cmd *cmd,
 	dmem_alloc_size = payload->rpc.size_rpc +
 		payload->rpc.size_scratch;
 	dmem_alloc_offset = nvgpu_alloc(&pmu->dmem, dmem_alloc_size);
-	if (!dmem_alloc_offset) {
+	if (dmem_alloc_offset == 0U) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
@@ -312,11 +312,11 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 
 	nvgpu_log_fn(g, " ");
 
-	if (payload) {
+	if (payload != NULL) {
 		seq->out_payload = payload->out.buf;
 	}
 
-	if (payload && payload->in.offset != 0U) {
+	if (payload != NULL && payload->in.offset != 0U) {
 		pv->set_pmu_allocation_ptr(pmu, &in,
 		((u8 *)&cmd->cmd + payload->in.offset));
 
@@ -331,14 +331,14 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 		*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)) =
 			nvgpu_alloc(&pmu->dmem,
 				pv->pmu_allocation_get_dmem_size(pmu, in));
-		if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in))) {
+		if (*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)) == 0U) {
 			goto clean_up;
 		}
 
 		if (payload->in.fb_size != 0x0U) {
 			seq->in_mem = nvgpu_kzalloc(g,
 					sizeof(struct nvgpu_mem));
-			if (!seq->in_mem) {
+			if (seq->in_mem == NULL) {
 				err = -ENOMEM;
 				goto clean_up;
 			}
@@ -365,7 +365,7 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 		pv->pmu_allocation_get_dmem_offset(pmu, in));
 	}
 
-	if (payload && payload->out.offset != 0U) {
+	if (payload != NULL && payload->out.offset != 0U) {
 		pv->set_pmu_allocation_ptr(pmu, &out,
 		((u8 *)&cmd->cmd + payload->out.offset));
 		pv->pmu_allocation_set_dmem_size(pmu, out,
@@ -376,15 +376,15 @@ static int pmu_cmd_payload_extract(struct gk20a *g, struct pmu_cmd *cmd,
 				nvgpu_alloc(&pmu->dmem,
 					pv->pmu_allocation_get_dmem_size(pmu,
 					out));
-			if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu,
-					out))) {
+			if (*(pv->pmu_allocation_get_dmem_offset_addr(pmu,
+					out)) == 0U) {
 				goto clean_up;
 			}
 
 			if (payload->out.fb_size != 0x0U) {
 				seq->out_mem = nvgpu_kzalloc(g,
 					sizeof(struct nvgpu_mem));
-				if (!seq->out_mem) {
+				if (seq->out_mem == NULL) {
 					err = -ENOMEM;
 					goto clean_up;
 				}
@@ -439,16 +439,16 @@ int nvgpu_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	nvgpu_log_fn(g, " ");
 
-	if ((!cmd) || (!seq_desc) || (!pmu->pmu_ready)) {
-		if (!cmd) {
+	if (cmd == NULL || seq_desc == NULL || !pmu->pmu_ready) {
+		if (cmd == NULL) {
 			nvgpu_warn(g, "%s(): PMU cmd buffer is NULL", __func__);
-		} else if (!seq_desc) {
+		} else if (seq_desc == NULL) {
 			nvgpu_warn(g, "%s(): Seq descriptor is NULL", __func__);
 		} else {
 			nvgpu_warn(g, "%s(): PMU is not ready", __func__);
 		}
 
-		WARN_ON(1);
+		WARN_ON(true);
 		return -EINVAL;
 	}
 
@@ -612,7 +612,7 @@ static int pmu_handle_event(struct nvgpu_pmu *pmu, struct pmu_msg *msg)
 			err = g->ops.perf.handle_pmu_perf_event(g,
 				(void *)&msg->msg.perf);
 		} else {
-			WARN_ON(1);
+			WARN_ON(true);
 		}
 		break;
 	case PMU_UNIT_THERM:
@@ -641,7 +641,7 @@ static bool pmu_read_message(struct nvgpu_pmu *pmu,
 
 	err = nvgpu_flcn_queue_pop(pmu->flcn, queue, &msg->hdr,
 			PMU_MSG_HDR_SIZE, &bytes_read);
-	if (err || bytes_read != PMU_MSG_HDR_SIZE) {
+	if (err != 0 || bytes_read != PMU_MSG_HDR_SIZE) {
 		nvgpu_err(g, "fail to read msg from queue %d", queue->id);
 		*status = err | -EINVAL;
 		goto clean_up;
@@ -657,7 +657,7 @@ static bool pmu_read_message(struct nvgpu_pmu *pmu,
 		/* read again after rewind */
 		err = nvgpu_flcn_queue_pop(pmu->flcn, queue, &msg->hdr,
 				PMU_MSG_HDR_SIZE, &bytes_read);
-		if (err || bytes_read != PMU_MSG_HDR_SIZE) {
+		if (err != 0 || bytes_read != PMU_MSG_HDR_SIZE) {
 			nvgpu_err(g,
 				"fail to read msg from queue %d", queue->id);
 			*status = err | -EINVAL;
@@ -676,7 +676,7 @@ static bool pmu_read_message(struct nvgpu_pmu *pmu,
 		read_size = msg->hdr.size - PMU_MSG_HDR_SIZE;
 		err = nvgpu_flcn_queue_pop(pmu->flcn, queue, &msg->msg,
 			read_size, &bytes_read);
-		if (err || bytes_read != read_size) {
+		if (err != 0 || bytes_read != read_size) {
 			nvgpu_err(g,
 				"fail to read msg from queue %d", queue->id);
 			*status = err;
@@ -750,7 +750,7 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 
 		nvgpu_usleep_range(delay, delay * 2U);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	return -ETIMEDOUT;
 }
@@ -887,7 +887,7 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	if (caller_cb == NULL) {
 		rpc_payload = nvgpu_kzalloc(g,
 			sizeof(struct rpc_handler_payload) + size_rpc);
-		if (!rpc_payload) {
+		if (rpc_payload == NULL) {
 			status = ENOMEM;
 			goto exit;
 		}
@@ -907,7 +907,7 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 		}
 		rpc_payload = nvgpu_kzalloc(g,
 			sizeof(struct rpc_handler_payload));
-		if (!rpc_payload) {
+		if (rpc_payload == NULL) {
 			status = ENOMEM;
 			goto exit;
 		}

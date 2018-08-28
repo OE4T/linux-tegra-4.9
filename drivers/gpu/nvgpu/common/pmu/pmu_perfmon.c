@@ -51,7 +51,7 @@ static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 	default:
 		unit_id = PMU_UNIT_INVALID;
 		nvgpu_err(g, "no support for %x", ver);
-		WARN_ON(1);
+		WARN_ON(true);
 	}
 
 	return unit_id;
@@ -75,11 +75,11 @@ int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu)
 
 	g->ops.pmu.pmu_init_perfmon_counter(g);
 
-	if (!pmu->sample_buffer) {
+	if (pmu->sample_buffer == 0U) {
 		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
 						  2U * sizeof(u16));
 	}
-	if (!pmu->sample_buffer) {
+	if (pmu->sample_buffer == 0U) {
 		nvgpu_err(g, "failed to allocate perfmon sample buffer");
 		return -ENOMEM;
 	}
@@ -240,7 +240,7 @@ int nvgpu_pmu_load_update(struct gk20a *g)
 void nvgpu_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 				 u32 *total_cycles)
 {
-	if (!g->power_on || gk20a_busy(g)) {
+	if (!g->power_on || gk20a_busy(g) != 0) {
 		*busy_cycles = 0;
 		*total_cycles = 0;
 		return;
@@ -254,7 +254,7 @@ void nvgpu_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 
 void nvgpu_pmu_reset_load_counters(struct gk20a *g)
 {
-	if (!g->power_on || gk20a_busy(g)) {
+	if (!g->power_on || gk20a_busy(g) != 0) {
 		return;
 	}
 

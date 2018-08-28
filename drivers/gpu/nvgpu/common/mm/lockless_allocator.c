@@ -41,10 +41,10 @@ static u64 nvgpu_lockless_alloc_base(struct nvgpu_allocator *a)
 	return pa->base;
 }
 
-static int nvgpu_lockless_alloc_inited(struct nvgpu_allocator *a)
+static bool nvgpu_lockless_alloc_inited(struct nvgpu_allocator *a)
 {
 	struct nvgpu_lockless_allocator *pa = a->priv;
-	int inited = pa->inited;
+	bool inited = pa->inited;
 
 	nvgpu_smp_rmb();
 	return inited;
@@ -169,7 +169,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	u64 count;
 	struct nvgpu_lockless_allocator *a;
 
-	if (!blk_size) {
+	if (blk_size == 0ULL) {
 		return -EINVAL;
 	}
 
@@ -178,12 +178,12 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	 * In order to control memory footprint, we require count < INT_MAX
 	 */
 	count = length / blk_size;
-	if (!base || !count || count > INT_MAX) {
+	if (base == 0ULL || count == 0ULL || count > INT_MAX) {
 		return -EINVAL;
 	}
 
 	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_lockless_allocator));
-	if (!a) {
+	if (a == NULL) {
 		return -ENOMEM;
 	}
 
@@ -193,7 +193,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	}
 
 	a->next = nvgpu_vzalloc(g, sizeof(*a->next) * count);
-	if (!a->next) {
+	if (a->next == NULL) {
 		err = -ENOMEM;
 		goto fail;
 	}

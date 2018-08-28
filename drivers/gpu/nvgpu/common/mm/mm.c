@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,7 +42,7 @@ static u32 nvgpu_vm_get_pte_size_fixed_map(struct vm_gk20a *vm,
 	struct nvgpu_vm_area *vm_area;
 
 	vm_area = nvgpu_vm_area_find(vm, base);
-	if (!vm_area) {
+	if (vm_area == NULL) {
 		return GMMU_PAGE_SIZE_SMALL;
 	}
 
@@ -55,7 +55,7 @@ static u32 nvgpu_vm_get_pte_size_fixed_map(struct vm_gk20a *vm,
 static u32 nvgpu_vm_get_pte_size_split_addr(struct vm_gk20a *vm,
 					    u64 base, u64 size)
 {
-	if (!base) {
+	if (base == 0ULL) {
 		if (size >= vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]) {
 			return GMMU_PAGE_SIZE_BIG;
 		}
@@ -233,7 +233,7 @@ static int nvgpu_init_system_vm(struct mm_gk20a *mm)
 				   true,
 				   false,
 				   "system");
-	if (!mm->pmu.vm) {
+	if (mm->pmu.vm == NULL) {
 		return -ENOMEM;
 	}
 
@@ -275,7 +275,7 @@ static int nvgpu_init_cde_vm(struct mm_gk20a *mm)
 				   NV_MM_DEFAULT_KERNEL_SIZE,
 				   NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
 				   false, false, "cde");
-	if (!mm->cde.vm) {
+	if (mm->cde.vm == NULL) {
 		return -ENOMEM;
 	}
 	return 0;
@@ -291,7 +291,7 @@ static int nvgpu_init_ce_vm(struct mm_gk20a *mm)
 				  NV_MM_DEFAULT_KERNEL_SIZE,
 				  NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
 				  false, false, "ce");
-	if (!mm->ce.vm) {
+	if (mm->ce.vm == NULL) {
 		return -ENOMEM;
 	}
 	return 0;
@@ -386,7 +386,7 @@ static int nvgpu_init_bar1_vm(struct mm_gk20a *mm)
 				    mm->bar1.aperture_size,
 				    true, false,
 				    "bar1");
-	if (!mm->bar1.vm) {
+	if (mm->bar1.vm == NULL) {
 		return -ENOMEM;
 	}
 
@@ -442,8 +442,8 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	 * this requires fixed allocations in vidmem which must be
 	 * allocated before all other buffers
 	 */
-	if (g->ops.pmu.alloc_blob_space
-			&& !nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
+	if (g->ops.pmu.alloc_blob_space != NULL &&
+			!nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
 		err = g->ops.pmu.alloc_blob_space(g, 0, &g->acr.ucode_blob);
 		if (err) {
 			return err;

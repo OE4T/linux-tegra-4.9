@@ -66,13 +66,13 @@ int nvgpu_vm_area_validate_buffer(struct vm_gk20a *vm,
 	/* Find the space reservation, but it's ok to have none for
 	 * userspace-managed address spaces */
 	vm_area = nvgpu_vm_area_find(vm, map_addr);
-	if (!vm_area && !vm->userspace_managed) {
+	if (vm_area == NULL && !vm->userspace_managed) {
 		nvgpu_warn(g, "fixed offset mapping without space allocation");
 		return -EINVAL;
 	}
 
 	/* Mapped area should fit inside va, if there's one */
-	if (vm_area && map_end > vm_area->addr + vm_area->size) {
+	if (vm_area != NULL && map_end > vm_area->addr + vm_area->size) {
 		nvgpu_warn(g, "fixed offset mapping size overflows va node");
 		return -EINVAL;
 	}
@@ -82,7 +82,7 @@ int nvgpu_vm_area_validate_buffer(struct vm_gk20a *vm,
 	 * that is less than our buffer end */
 	buffer = __nvgpu_vm_find_mapped_buf_less_than(
 		vm, map_addr + map_size);
-	if (buffer && buffer->addr + buffer->size > map_addr) {
+	if (buffer != NULL && buffer->addr + buffer->size > map_addr) {
 		nvgpu_warn(g, "overlapping buffer map requested");
 		return -EINVAL;
 	}
@@ -138,7 +138,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 	}
 
 	vm_area = nvgpu_kzalloc(g, sizeof(*vm_area));
-	if (!vm_area) {
+	if (vm_area == NULL) {
 		goto clean_up_err;
 	}
 
@@ -155,7 +155,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 					      page_size);
 	}
 
-	if (!vaddr_start) {
+	if (vaddr_start == 0ULL) {
 		goto clean_up_err;
 	}
 
@@ -183,7 +183,7 @@ int nvgpu_vm_area_alloc(struct vm_gk20a *vm, u32 pages, u32 page_size,
 					 false,
 					 NULL,
 					 APERTURE_INVALID);
-		if (!map_addr) {
+		if (map_addr == 0ULL) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			goto clean_up_err;
 		}
@@ -215,7 +215,7 @@ int nvgpu_vm_area_free(struct vm_gk20a *vm, u64 addr)
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vm_area = nvgpu_vm_area_find(vm, addr);
-	if (!vm_area) {
+	if (vm_area == NULL) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		return 0;
 	}

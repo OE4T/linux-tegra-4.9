@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -83,7 +83,7 @@ struct nvgpu_allocator_ops {
 	u64  (*base)(struct nvgpu_allocator *allocator);
 	u64  (*length)(struct nvgpu_allocator *allocator);
 	u64  (*end)(struct nvgpu_allocator *allocator);
-	int  (*inited)(struct nvgpu_allocator *allocator);
+	bool (*inited)(struct nvgpu_allocator *allocator);
 	u64  (*space)(struct nvgpu_allocator *allocator);
 
 	/* Destructor. */
@@ -188,11 +188,11 @@ nvgpu_alloc_carveout_from_co_entry(struct nvgpu_list_node *node)
  *     pointing to the allocation base (requires GPU_ALLOC_FORCE_CONTIG to be
  *     set as well).
  */
-#define GPU_ALLOC_GVA_SPACE		BIT(0)
-#define GPU_ALLOC_NO_ALLOC_PAGE		BIT(1)
-#define GPU_ALLOC_4K_VIDMEM_PAGES	BIT(2)
-#define GPU_ALLOC_FORCE_CONTIG		BIT(3)
-#define GPU_ALLOC_NO_SCATTER_GATHER	BIT(4)
+#define GPU_ALLOC_GVA_SPACE		BIT64(0)
+#define GPU_ALLOC_NO_ALLOC_PAGE		BIT64(1)
+#define GPU_ALLOC_4K_VIDMEM_PAGES	BIT64(2)
+#define GPU_ALLOC_FORCE_CONTIG		BIT64(3)
+#define GPU_ALLOC_NO_SCATTER_GATHER	BIT64(4)
 
 static inline void alloc_lock(struct nvgpu_allocator *a)
 {
@@ -256,7 +256,7 @@ void nvgpu_alloc_release_carveout(struct nvgpu_allocator *a,
 u64  nvgpu_alloc_base(struct nvgpu_allocator *a);
 u64  nvgpu_alloc_length(struct nvgpu_allocator *a);
 u64  nvgpu_alloc_end(struct nvgpu_allocator *a);
-u64  nvgpu_alloc_initialized(struct nvgpu_allocator *a);
+bool nvgpu_alloc_initialized(struct nvgpu_allocator *a);
 u64  nvgpu_alloc_space(struct nvgpu_allocator *a);
 
 void nvgpu_alloc_destroy(struct nvgpu_allocator *allocator);

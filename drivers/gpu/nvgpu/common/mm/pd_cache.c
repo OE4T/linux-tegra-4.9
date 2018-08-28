@@ -102,7 +102,7 @@ int nvgpu_pd_cache_init(struct gk20a *g)
 	}
 
 	cache = nvgpu_kzalloc(g, sizeof(*cache));
-	if (!cache) {
+	if (cache == NULL) {
 		nvgpu_err(g, "Failed to alloc pd_cache!");
 		return -ENOMEM;
 	}
@@ -132,7 +132,7 @@ void nvgpu_pd_cache_fini(struct gk20a *g)
 	u32 i;
 	struct nvgpu_pd_cache *cache = g->mm.pd_cache;
 
-	if (!cache) {
+	if (cache == NULL) {
 		return;
 	}
 
@@ -159,7 +159,7 @@ int nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 	pd_dbg(g, "PD-Alloc [D] %u bytes", bytes);
 
 	pd->mem = nvgpu_kzalloc(g, sizeof(*pd->mem));
-	if (!pd->mem) {
+	if (pd->mem == NULL) {
 		nvgpu_err(g, "OOM allocating nvgpu_mem struct!");
 		return -ENOMEM;
 	}
@@ -205,7 +205,7 @@ static int nvgpu_pd_cache_alloc_new(struct gk20a *g,
 	pd_dbg(g, "PD-Alloc [C]   New: offs=0");
 
 	pentry = nvgpu_kzalloc(g, sizeof(*pentry));
-	if (!pentry) {
+	if (pentry == NULL) {
 		nvgpu_err(g, "OOM allocating pentry!");
 		return -ENOMEM;
 	}
@@ -313,7 +313,7 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
 
 	pd_dbg(g, "PD-Alloc [C] %u bytes", bytes);
 
-	if (bytes & (bytes - 1U) ||
+	if ((bytes & (bytes - 1U)) != 0U ||
 	    (bytes >= PAGE_SIZE ||
 	     bytes < NVGPU_PD_CACHE_MIN)) {
 		pd_dbg(g, "PD-Alloc [C]   Invalid (bytes=%u)!", bytes);
@@ -321,7 +321,7 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
 	}
 
 	pentry = nvgpu_pd_cache_get_partial(cache, bytes);
-	if (!pentry) {
+	if (pentry == NULL) {
 		err = nvgpu_pd_cache_alloc_new(g, cache, pd, bytes);
 	} else {
 		err = nvgpu_pd_cache_alloc_from_partial(g, cache, pentry, pd);
@@ -357,7 +357,7 @@ int nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
 		return 0;
 	}
 
-	if (WARN_ON(!g->mm.pd_cache)) {
+	if (WARN_ON(g->mm.pd_cache == NULL)) {
 		return -ENOMEM;
 	}
 
@@ -372,7 +372,7 @@ void nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
 	pd_dbg(g, "PD-Free  [D] 0x%p", pd->mem);
 
-	if (!pd->mem) {
+	if (pd->mem == NULL) {
 		return;
 	}
 
@@ -425,7 +425,7 @@ static struct nvgpu_pd_mem_entry *nvgpu_pd_cache_look_up(
 
 	nvgpu_rbtree_search((u64)(uintptr_t)pd->mem, &node,
 			    cache->mem_tree);
-	if (!node) {
+	if (node == NULL) {
 		return NULL;
 	}
 
@@ -440,7 +440,7 @@ static void nvgpu_pd_cache_free(struct gk20a *g, struct nvgpu_pd_cache *cache,
 	pd_dbg(g, "PD-Free  [C] 0x%p", pd->mem);
 
 	pentry = nvgpu_pd_cache_look_up(g, cache, pd);
-	if (!pentry) {
+	if (pentry == NULL) {
 		WARN(1, "Attempting to free non-existent pd");
 		return;
 	}

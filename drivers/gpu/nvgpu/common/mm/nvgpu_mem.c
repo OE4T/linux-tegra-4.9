@@ -128,7 +128,7 @@ bool nvgpu_sgt_iommuable(struct gk20a *g, struct nvgpu_sgt *sgt)
 
 void nvgpu_sgt_free(struct gk20a *g, struct nvgpu_sgt *sgt)
 {
-	if (sgt && sgt->ops->sgt_free) {
+	if (sgt != NULL && sgt->ops->sgt_free != NULL) {
 		sgt->ops->sgt_free(g, sgt);
 	}
 }
@@ -138,7 +138,7 @@ u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys)
 	/* ensure it is not vidmem allocation */
 	WARN_ON(nvgpu_addr_is_vidmem_page_alloc(phys));
 
-	if (nvgpu_iommuable(g) && g->ops.mm.get_iommu_bit) {
+	if (nvgpu_iommuable(g) && g->ops.mm.get_iommu_bit != NULL) {
 		return phys | 1ULL << g->ops.mm.get_iommu_bit(g);
 	}
 
@@ -165,7 +165,7 @@ u64 nvgpu_sgt_alignment(struct gk20a *g, struct nvgpu_sgt *sgt)
 	 */
 	if (nvgpu_iommuable(g) &&
 	    nvgpu_sgt_iommuable(g, sgt) &&
-	    nvgpu_sgt_get_dma(sgt, sgt->sgl)) {
+	    nvgpu_sgt_get_dma(sgt, sgt->sgl) != 0ULL) {
 		return 1ULL << __ffs(nvgpu_sgt_get_dma(sgt, sgt->sgl));
 	}
 
@@ -195,7 +195,7 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u32 *ptr = mem->cpu_va;
 
-		WARN_ON(!ptr);
+		WARN_ON(ptr == NULL);
 		data = ptr[w];
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_rd_n(g, mem, w * sizeof(u32), sizeof(u32), &data);
@@ -208,20 +208,20 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 
 u32 nvgpu_mem_rd(struct gk20a *g, struct nvgpu_mem *mem, u32 offset)
 {
-	WARN_ON(offset & 3U);
+	WARN_ON((offset & 3U) != 0U);
 	return nvgpu_mem_rd32(g, mem, offset / sizeof(u32));
 }
 
 void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, void *dest, u32 size)
 {
-	WARN_ON(offset & 3U);
-	WARN_ON(size & 3U);
+	WARN_ON((offset & 3U) != 0U);
+	WARN_ON((size & 3U) != 0U);
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *src = (u8 *)mem->cpu_va + offset;
 
-		WARN_ON(!mem->cpu_va);
+		WARN_ON(mem->cpu_va == NULL);
 		memcpy(dest, src, size);
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_rd_n(g, mem, offset, size, dest);
@@ -235,7 +235,7 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u32 *ptr = mem->cpu_va;
 
-		WARN_ON(!ptr);
+		WARN_ON(ptr == NULL);
 		ptr[w] = data;
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_wr_n(g, mem, w * sizeof(u32), sizeof(u32), &data);
@@ -249,20 +249,20 @@ void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 
 void nvgpu_mem_wr(struct gk20a *g, struct nvgpu_mem *mem, u32 offset, u32 data)
 {
-	WARN_ON(offset & 3U);
+	WARN_ON((offset & 3U) != 0U);
 	nvgpu_mem_wr32(g, mem, offset / sizeof(u32), data);
 }
 
 void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		void *src, u32 size)
 {
-	WARN_ON(offset & 3U);
-	WARN_ON(size & 3U);
+	WARN_ON((offset & 3U) != 0U);
+	WARN_ON((size & 3U) != 0U);
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;
 
-		WARN_ON(!mem->cpu_va);
+		WARN_ON(mem->cpu_va == NULL);
 		memcpy(dest, src, size);
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		nvgpu_pramin_wr_n(g, mem, offset, size, src);
@@ -277,16 +277,16 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 c, u32 size)
 {
-	WARN_ON(offset & 3U);
-	WARN_ON(size & 3U);
-	WARN_ON(c & ~0xffU);
+	WARN_ON((offset & 3U) != 0U);
+	WARN_ON((size & 3U) != 0U);
+	WARN_ON((c & ~0xffU) != 0U);
 
 	c &= 0xffU;
 
 	if (mem->aperture == APERTURE_SYSMEM) {
 		u8 *dest = (u8 *)mem->cpu_va + offset;
 
-		WARN_ON(!mem->cpu_va);
+		WARN_ON(mem->cpu_va == NULL);
 		memset(dest, c, size);
 	} else if (mem->aperture == APERTURE_VIDMEM) {
 		u32 repeat_value = c | (c << 8) | (c << 16) | (c << 24);

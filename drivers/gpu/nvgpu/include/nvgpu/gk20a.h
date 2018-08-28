@@ -878,7 +878,6 @@ struct gpu_ops {
 			u32 (*clk_vf_change_inject_data_fill)(struct gk20a *g,
 				struct nv_pmu_clk_rpc *rpccall,
 				struct set_fll_clk *setfllclk);
-			u32 (*perf_pmu_vfe_load)(struct gk20a *g);
 			u32 (*clk_set_boot_clk)(struct gk20a *g);
 		}clk;
 	} pmu_ver;
@@ -1113,6 +1112,7 @@ struct gpu_ops {
 		bool support_clk_freq_controller;
 		bool support_pmgr_domain;
 		bool support_lpwr_pg;
+		u32 (*perf_pmu_vfe_load)(struct gk20a *g);
 	} clk;
 	struct {
 		int (*arbiter_clk_init)(struct gk20a *g);

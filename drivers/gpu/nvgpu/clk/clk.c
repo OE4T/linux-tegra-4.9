@@ -866,6 +866,43 @@ u32 nvgpu_clk_set_boot_fll_clk_gv10x(struct gk20a *g)
 	return status;
 }
 
+int nvgpu_clk_set_fll_clk_gv10x(struct gk20a *g)
+{
+	int status;
+	struct change_fll_clk bootfllclk;
+	u16 gpcclk_clkmhz = BOOT_GPCCLK_MHZ;
+	u32 gpcclk_voltuv = 0U;
+	u32 voltuv = 0U;
+
+	status = clk_vf_point_cache(g);
+	if (status != 0) {
+		nvgpu_err(g, "caching failed");
+		return status;
+	}
+
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPCCLK,
+		&gpcclk_clkmhz, &gpcclk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
+	if (status != 0) {
+		return status;
+	}
+
+	voltuv = gpcclk_voltuv;
+
+	status = volt_set_voltage(g, voltuv, 0U);
+	if (status != 0) {
+		nvgpu_err(g, "attempt to set max voltage failed %d", voltuv);
+	}
+
+	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPCCLK;
+	bootfllclk.clkmhz = gpcclk_clkmhz;
+	bootfllclk.voltuv = voltuv;
+	status = clk_program_fllclks(g, &bootfllclk);
+	if (status != 0) {
+		nvgpu_err(g, "attempt to set max gpcclk failed");
+	}
+	return status;
+}
+
 u32 clk_domain_get_f_or_v(
 	struct gk20a *g,
 	u32 clkapidomain,

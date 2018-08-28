@@ -65,15 +65,21 @@
 
 struct gk20a;
 
+struct nvgpu_vfe_invalidate {
+	bool state_change;
+	struct nvgpu_cond wq;
+	struct nvgpu_thread state_task;
+};
+
 struct perf_pmupstate {
 	struct vfe_vars vfe_varobjs;
 	struct vfe_equs vfe_equobjs;
 	struct pstates pstatesobjs;
 	struct obj_volt volt;
 	struct obj_lwpr lpwr;
+	struct nvgpu_vfe_invalidate vfe_init;
 };
 
 u32 perf_pmu_vfe_load(struct gk20a *g);
-u32 perf_pmu_vfe_load_gv10x(struct gk20a *g);
 
 #endif

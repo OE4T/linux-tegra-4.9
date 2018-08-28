@@ -676,6 +676,7 @@ static const struct gpu_ops gp106_ops = {
 		.mclk_init = gp106_mclk_init,
 		.mclk_change = gp106_mclk_change,
 		.mclk_deinit = gp106_mclk_deinit,
+		.perf_pmu_vfe_load = perf_pmu_vfe_load,
 	},
 	.clk_arb = {
 		.get_arbiter_clk_domains = gp106_get_arbiter_clk_domains,
@@ -844,6 +845,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->clk.mclk_change = gp106_ops.clk.mclk_change;
 	gops->clk.mclk_deinit = gp106_ops.clk.mclk_deinit;
 	gops->clk.clk_domain_get_f_points = gp106_ops.clk.clk_domain_get_f_points;
+	gops->clk.perf_pmu_vfe_load = gp106_ops.clk.perf_pmu_vfe_load;
 
 	gops->clk_arb = gp106_ops.clk_arb;
 	gops->regops = gp106_ops.regops;

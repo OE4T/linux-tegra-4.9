@@ -107,6 +107,7 @@
 #include "gv100/pmu_gv100.h"
 #include "gv100/nvlink_gv100.h"
 #include "gv100/regops_gv100.h"
+#include "gv100/perf_gv100.h"
 
 #include <nvgpu/ptimer.h>
 #include <nvgpu/debug.h>
@@ -770,6 +771,7 @@ static const struct gpu_ops gv100_ops = {
 		.get_rate_cntr = gp106_get_rate_cntr,
 		.measure_freq = gp106_clk_measure_freq,
 		.suspend_clk_support = gp106_suspend_clk_support,
+		.perf_pmu_vfe_load = gv100_perf_pmu_vfe_load,
 	},
 	.clk_arb = {
 		.get_arbiter_clk_domains = gp106_get_arbiter_clk_domains,
@@ -981,6 +983,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->clk.get_crystal_clk_hz = gv100_ops.clk.get_crystal_clk_hz;
 	gops->clk.measure_freq = gv100_ops.clk.measure_freq;
 	gops->clk.suspend_clk_support = gv100_ops.clk.suspend_clk_support;
+	gops->clk.perf_pmu_vfe_load = gv100_ops.clk.perf_pmu_vfe_load;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =

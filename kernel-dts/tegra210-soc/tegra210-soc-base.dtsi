@@ -1935,28 +1935,17 @@
 			     <0 99 0x04>; /* MSI interrupt */
 		interrupt-names = "intr", "msi";
 
-#if LINUX_VERSION >= 414
 		clocks = <&tegra_car TEGRA210_CLK_PCIE>,
 			<&tegra_car TEGRA210_CLK_AFI>,
 			<&tegra_car TEGRA210_CLK_PLL_E>,
-			<&tegra_car TEGRA210_CLK_CML0>;
-		clock-names = "pex", "afi", "pll_e", "cml";
+			<&tegra_car TEGRA210_CLK_CML0>,
+			<&tegra_car TEGRA210_CLK_MSELECT>;
+		clock-names = "pex", "afi", "pll_e", "cml", "mselect";
 
 		resets = <&tegra_car 70>,
 			<&tegra_car 72>,
 			<&tegra_car 74>;
 		reset-names = "pex", "afi", "pcie_x";
-#else
-		clocks = <&tegra_car 72>,
-			<&tegra_car 70>,
-			<&tegra_car 99>;
-		clock-names = "afi", "pcie", "mselect";
-
-		resets = <&tegra_car 72>,
-			<&tegra_car 70>,
-			<&tegra_car 74>;
-		reset-names = "afi", "pcie", "pciex";
-#endif
 
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
@@ -2000,9 +1989,7 @@
 
 			nvidia,num-lanes = <4>;
 			nvidia,afi-ctl-offset = <0x110>;
-#if LINUX_VERSION >= 414
 			nvidia,disable-aspm-states = <0xf>;
-#endif
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 			phys = <&{/xusb_padctl@7009f000/pads/pcie/lanes/pcie-1}>;
@@ -2024,9 +2011,7 @@
 
 			nvidia,num-lanes = <1>;
 			nvidia,afi-ctl-offset = <0x118>;
-#if LINUX_VERSION >= 414
 			nvidia,disable-aspm-states = <0xf>;
-#endif
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 			phys = <&{/xusb_padctl@7009f000/pads/pcie/lanes/pcie-0}>;

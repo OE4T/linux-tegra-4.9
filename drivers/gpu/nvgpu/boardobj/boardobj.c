@@ -34,13 +34,15 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 
 	nvgpu_log_info(g, " ");
 
-	if (devtmp == NULL)
+	if (devtmp == NULL) {
 		return -EINVAL;
+	}
 
 	if (*ppboardobj == NULL) {
 		*ppboardobj = nvgpu_kzalloc(g, size);
-		if (*ppboardobj == NULL)
+		if (*ppboardobj == NULL) {
 			return -ENOMEM;
+		}
 		(*ppboardobj)->allocated = true;
 	}
 
@@ -64,12 +66,14 @@ u32 boardobj_destruct_super(struct boardobj *pboardobj)
 	struct gk20a *g = pboardobj->g;
 
 	nvgpu_log_info(g, " ");
-	if (pboardobj == NULL)
+	if (pboardobj == NULL) {
 		return -EINVAL;
+	}
 
 	nvgpu_list_del(&pboardobj->node);
-	if (pboardobj->allocated)
+	if (pboardobj->allocated) {
 		nvgpu_kfree(pboardobj->g, pboardobj);
+	}
 
 	return 0;
 }
@@ -86,10 +90,12 @@ u32 boardobj_pmudatainit_super(struct gk20a *g, struct boardobj *pboardobj,
 				struct nv_pmu_boardobj *pmudata)
 {
 	nvgpu_log_info(g, " ");
-	if (pboardobj == NULL)
+	if (pboardobj == NULL) {
 		return -EINVAL;
-	if (pmudata == NULL)
+	}
+	if (pmudata == NULL) {
 		return -EINVAL;
+	}
 	pmudata->type = pboardobj->type;
 	nvgpu_log_info(g, " Done");
 	return 0;

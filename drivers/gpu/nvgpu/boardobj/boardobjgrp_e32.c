@@ -38,8 +38,9 @@ u32  boardobjgrpconstruct_e32(struct gk20a *g,
 	objslots = 32;
 
 	status = boardobjgrpmask_e32_init(&pboardobjgrp_e32->mask, NULL);
-	if (status)
+	if (status) {
 		goto boardobjgrpconstruct_e32_exit;
+	}
 
 	pboardobjgrp_e32->super.type      = CTRL_BOARDOBJGRP_TYPE_E32;
 	pboardobjgrp_e32->super.ppobjects = pboardobjgrp_e32->objects;
@@ -47,8 +48,9 @@ u32  boardobjgrpconstruct_e32(struct gk20a *g,
 	pboardobjgrp_e32->super.mask     = &(pboardobjgrp_e32->mask.super);
 
 	status = boardobjgrp_construct_super(g, &pboardobjgrp_e32->super);
-	if (status)
+	if (status) {
 		goto boardobjgrpconstruct_e32_exit;
+	}
 
 	pboardobjgrp_e32->super.pmuhdrdatainit = boardobjgrp_pmuhdrdatainit_e32;
 
@@ -67,11 +69,13 @@ u32 boardobjgrp_pmuhdrdatainit_e32(struct gk20a *g,
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrppmu == NULL)
+	if (pboardobjgrppmu == NULL) {
 		return -EINVAL;
+	}
 	status = boardobjgrpmask_export(mask,
 				mask->bitcount,
 				&pgrpe32->obj_mask.super);

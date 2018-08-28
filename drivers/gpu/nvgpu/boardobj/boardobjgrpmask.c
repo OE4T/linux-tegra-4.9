@@ -32,11 +32,13 @@
 u32 boardobjgrpmask_init(struct boardobjgrpmask *mask, u8 bitsize,
 		struct ctrl_boardobjgrp_mask *extmask)
 {
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
+	}
 	if ((bitsize != CTRL_BOARDOBJGRP_E32_MAX_OBJECTS) &&
-		(bitsize != CTRL_BOARDOBJGRP_E255_MAX_OBJECTS))
+		(bitsize != CTRL_BOARDOBJGRP_E255_MAX_OBJECTS)) {
 		return -EINVAL;
+	}
 
 	mask->bitcount = bitsize;
 	mask->maskdatacount = CTRL_BOARDOBJGRP_MASK_DATA_SIZE(bitsize);
@@ -56,12 +58,15 @@ u32 boardobjgrpmask_import(struct boardobjgrpmask *mask, u8 bitsize,
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
-	if (extmask == NULL)
+	}
+	if (extmask == NULL) {
 		return -EINVAL;
-	if (mask->bitcount != bitsize)
+	}
+	if (mask->bitcount != bitsize) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = extmask->data[index];
@@ -77,12 +82,15 @@ u32 boardobjgrpmask_export(struct boardobjgrpmask *mask, u8 bitsize,
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
-	if (extmask == NULL)
+	}
+	if (extmask == NULL) {
 		return -EINVAL;
-	if (mask->bitcount != bitsize)
+	}
+	if (mask->bitcount != bitsize) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < mask->maskdatacount; index++) {
 		extmask->data[index] = mask->data[index];
@@ -95,8 +103,9 @@ u32 boardobjgrpmask_clr(struct boardobjgrpmask *mask)
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
+	}
 	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = 0;
 	}
@@ -108,8 +117,9 @@ u32 boardobjgrpmask_set(struct boardobjgrpmask *mask)
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
+	}
 	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = 0xFFFFFFFF;
 	}
@@ -121,8 +131,9 @@ u32 boardobjgrpmask_inv(struct boardobjgrpmask *mask)
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
+	}
 	for (index = 0; index < mask->maskdatacount; index++) {
 		mask->data[index] = ~mask->data[index];
 	}
@@ -134,11 +145,13 @@ bool boardobjgrpmask_iszero(struct boardobjgrpmask *mask)
 {
 	u8 index;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return true;
+	}
 	for (index = 0; index < mask->maskdatacount; index++) {
-		if (mask->data[index] != 0)
+		if (mask->data[index] != 0) {
 			return false;
+		}
 	}
 	return true;
 }
@@ -148,8 +161,9 @@ u8 boardobjgrpmask_bitsetcount(struct boardobjgrpmask *mask)
 	u8 index;
 	u8 result = 0;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return result;
+	}
 
 	for (index = 0; index < mask->maskdatacount; index++) {
 		u32 m = mask->data[index];
@@ -166,8 +180,9 @@ u8 boardobjgrpmask_bitidxlowest(struct boardobjgrpmask *mask)
 	u8 index;
 	u8 result = CTRL_BOARDOBJ_IDX_INVALID;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return result;
+	}
 
 	for (index = 0; index < mask->maskdatacount; index++) {
 		u32 m = mask->data[index];
@@ -188,8 +203,9 @@ u8 boardobjgrpmask_bitidxhighest(struct boardobjgrpmask *mask)
 	u8 index;
 	u8 result = CTRL_BOARDOBJ_IDX_INVALID;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return result;
+	}
 
 	for (index = 0; index < mask->maskdatacount; index++) {
 		u32 m = mask->data[index];
@@ -210,10 +226,12 @@ u32 boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx)
 	u8 index;
 	u8 offset;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
-	if (bitidx >= mask->bitcount)
+	}
+	if (bitidx >= mask->bitcount) {
 		return -EINVAL;
+	}
 
 	index = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_INDEX(bitidx);
 	offset = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_OFFSET(bitidx);
@@ -228,10 +246,12 @@ u32 boardobjgrpmask_bitset(struct boardobjgrpmask *mask, u8 bitidx)
 	u8 index;
 	u8 offset;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
-	if (bitidx >= mask->bitcount)
+	}
+	if (bitidx >= mask->bitcount) {
 		return -EINVAL;
+	}
 
 	index = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_INDEX(bitidx);
 	offset = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_OFFSET(bitidx);
@@ -246,10 +266,12 @@ u32 boardobjgrpmask_bitinv(struct boardobjgrpmask *mask, u8 bitidx)
 	u8 index;
 	u8 offset;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return -EINVAL;
-	if (bitidx >= mask->bitcount)
+	}
+	if (bitidx >= mask->bitcount) {
 		return -EINVAL;
+	}
 
 	index = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_INDEX(bitidx);
 	offset = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_OFFSET(bitidx);
@@ -264,10 +286,12 @@ bool boardobjgrpmask_bitget(struct boardobjgrpmask *mask, u8 bitidx)
 	u8 index;
 	u8 offset;
 
-	if (mask == NULL)
+	if (mask == NULL) {
 		return false;
-	if (bitidx >= mask->bitcount)
+	}
+	if (bitidx >= mask->bitcount) {
 		return false;
+	}
 
 	index = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_INDEX(bitidx);
 	offset = CTRL_BOARDOBJGRP_MASK_MASK_ELEMENT_OFFSET(bitidx);
@@ -281,10 +305,12 @@ u32 boardobjgrpmask_and(struct boardobjgrpmask *dst,
 {
 	u8 index;
 
-	if (!boardobjgrpmask_sizeeq(dst, op1))
+	if (!boardobjgrpmask_sizeeq(dst, op1)) {
 		return -EINVAL;
-	if (!boardobjgrpmask_sizeeq(dst, op2))
+	}
+	if (!boardobjgrpmask_sizeeq(dst, op2)) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] & op2->data[index];
@@ -299,10 +325,12 @@ u32 boardobjgrpmask_or(struct boardobjgrpmask *dst,
 {
 	u8 index;
 
-	if (!boardobjgrpmask_sizeeq(dst, op1))
+	if (!boardobjgrpmask_sizeeq(dst, op1)) {
 		return -EINVAL;
-	if (!boardobjgrpmask_sizeeq(dst, op2))
+	}
+	if (!boardobjgrpmask_sizeeq(dst, op2)) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] | op2->data[index];
@@ -317,10 +345,12 @@ u32 boardobjgrpmask_xor(struct boardobjgrpmask *dst,
 {
 	u8 index;
 
-	if (!boardobjgrpmask_sizeeq(dst, op1))
+	if (!boardobjgrpmask_sizeeq(dst, op1)) {
 		return -EINVAL;
-	if (!boardobjgrpmask_sizeeq(dst, op2))
+	}
+	if (!boardobjgrpmask_sizeeq(dst, op2)) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = op1->data[index] ^ op2->data[index];
@@ -334,8 +364,9 @@ u32 boardobjgrpmask_copy(struct boardobjgrpmask *dst,
 {
 	u8 index;
 
-	if (!boardobjgrpmask_sizeeq(dst, src))
+	if (!boardobjgrpmask_sizeeq(dst, src)) {
 		return -EINVAL;
+	}
 
 	for (index = 0; index < dst->maskdatacount; index++) {
 		dst->data[index] = src->data[index];
@@ -347,10 +378,12 @@ u32 boardobjgrpmask_copy(struct boardobjgrpmask *dst,
 bool boardobjgrpmask_sizeeq(struct boardobjgrpmask *op1,
 		struct boardobjgrpmask *op2)
 {
-	if (op1 == NULL)
+	if (op1 == NULL) {
 		return false;
-	if (op2 == NULL)
+	}
+	if (op2 == NULL) {
 		return false;
+	}
 
 	return op1->bitcount == op2->bitcount;
 }
@@ -360,15 +393,17 @@ bool boardobjgrpmask_issubset(struct boardobjgrpmask *op1,
 {
 	u8 index;
 
-	if (!boardobjgrpmask_sizeeq(op2, op1))
+	if (!boardobjgrpmask_sizeeq(op2, op1)) {
 		return false;
+	}
 
 	for (index = 0; index < op1->maskdatacount; index++) {
 		u32 op_1 = op1->data[index];
 		u32 op_2 = op2->data[index];
 
-		if ((op_1 & op_2) != op_1)
+		if ((op_1 & op_2) != op_1) {
 			return false;
+		}
 	}
 
 	return true;

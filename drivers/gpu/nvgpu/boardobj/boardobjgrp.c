@@ -52,14 +52,17 @@ u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgr
 {
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->ppobjects == NULL)
+	if (pboardobjgrp->ppobjects == NULL) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->mask == NULL)
+	if (pboardobjgrp->mask == NULL) {
 		return -EINVAL;
+	}
 
 	pboardobjgrp->g = g;
 	pboardobjgrp->objmask = 0;
@@ -105,11 +108,13 @@ u32 boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
+	}
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return 0;
+	}
 
 	return pboardobjgrp->destruct(pboardobjgrp);
 }
@@ -124,15 +129,18 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp->mask == NULL)
+	if (pboardobjgrp->mask == NULL) {
 		return -EINVAL;
-	if (pboardobjgrp->ppobjects == NULL)
+	}
+	if (pboardobjgrp->ppobjects == NULL) {
 		return -EINVAL;
+	}
 
 	BOARDOBJGRP_FOR_EACH(pboardobjgrp, struct boardobj*, pboardobj, index) {
 		stat = pboardobjgrp->objremoveanddestroy(pboardobjgrp, index);
-		if (status == 0)
+		if (status == 0) {
 			status = stat;
+		}
 
 		pboardobjgrp->ppobjects[index] = NULL;
 		pboardobjgrp->objmask &= ~BIT(index);
@@ -141,20 +149,23 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 	pboardobjgrp->objmask = 0;
 
 	if (pboardobjgrp->objmaxidx != CTRL_BOARDOBJ_IDX_INVALID) {
-		if (status == 0)
+		if (status == 0) {
 			status = -EINVAL;
+		}
 
 		WARN_ON(true);
 	}
 
 	/* Destroy the PMU CMD data */
 	stat = boardobjgrp_pmucmd_destroy_impl(g, &pboardobjgrp->pmu.set);
-	if (status == 0)
+	if (status == 0) {
 		status = stat;
+	}
 
 	stat = boardobjgrp_pmucmd_destroy_impl(g, &pboardobjgrp->pmu.getstatus);
-	if (status == 0)
+	if (status == 0) {
 		status = stat;
+	}
 
 	nvgpu_list_del(&pboardobjgrp->node);
 
@@ -210,8 +221,9 @@ int is_boardobjgrp_pmucmd_id_valid_v0(struct gk20a *g,
 {
 	int err = 0;
 
-	if (pcmd->id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
+	if (pcmd->id == BOARDOBJGRP_GRP_CMD_ID_INVALID) {
 		err = -EINVAL;
+	}
 
 	return err;
 }
@@ -223,8 +235,9 @@ int is_boardobjgrp_pmucmd_id_valid_v1(struct gk20a *g,
 	int err = 0;
 
 	if (pboardobjgrp->pmu.rpc_func_id ==
-		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID)
+		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID) {
 		err = -EINVAL;
+	}
 
 	return err;
 }
@@ -239,11 +252,13 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	if (g->ops.pmu_ver.boardobj.is_boardobjgrp_pmucmd_id_valid(g,
-			pboardobjgrp, pcmd))
+			pboardobjgrp, pcmd)) {
 		goto boardobjgrp_pmucmd_pmuinithandle_exit;
+	}
 
-	if (!pcmd->fbsize)
+	if (!pcmd->fbsize) {
 		goto boardobjgrp_pmucmd_pmuinithandle_exit;
+	}
 
 	nvgpu_pmu_sysmem_surface_alloc(g, sysmem_desc, pcmd->fbsize);
 	/* we only have got sysmem later this will get copied to vidmem
@@ -280,13 +295,15 @@ u32 boardobjgrp_pmuinithandle_impl(struct gk20a *g,
 	/* If the GRP_SET CMD has not been allocated, nothing left to do. */
 	if ((g->ops.pmu_ver.boardobj.is_boardobjgrp_pmucmd_id_valid(g,
 			pboardobjgrp, &pboardobjgrp->pmu.set))||
-		(BOARDOBJGRP_IS_EMPTY(pboardobjgrp)))
+		(BOARDOBJGRP_IS_EMPTY(pboardobjgrp))) {
 		goto boardobjgrp_pmuinithandle_exit;
+	}
 
 	/* Send the BOARDOBJGRP to the pmu via RM_PMU_BOARDOBJ_CMD_GRP. */
 	status = pboardobjgrp->pmuset(g, pboardobjgrp);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "failed to send boardobg grp to PMU");
+	}
 
 boardobjgrp_pmuinithandle_exit:
 	return status;
@@ -299,10 +316,12 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 {
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
-	if (pboardobjgrppmu == NULL)
+	}
+	if (pboardobjgrppmu == NULL) {
 		return -EINVAL;
+	}
 	pboardobjgrppmu->type = pboardobjgrp->type;
 	pboardobjgrppmu->class_id = pboardobjgrp->classid;
 	pboardobjgrppmu->obj_slots = BOARDOBJGRP_PMU_SLOTS_GET(pboardobjgrp);
@@ -340,10 +359,12 @@ u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
-	if (pboardobjgrppmu == NULL)
+	}
+	if (pboardobjgrppmu == NULL) {
 		return -EINVAL;
+	}
 
 	boardobjgrpe32hdrset((struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
 							pboardobjgrp->objmask);
@@ -390,10 +411,12 @@ u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
-	if (pboardobjgrppmu == NULL)
+	}
+	if (pboardobjgrppmu == NULL) {
 		return -EINVAL;
+	}
 
 	/* Initialize the PMU HDR data.*/
 	status = pboardobjgrp->pmuhdrdatainit(g, pboardobjgrp, pboardobjgrppmu,
@@ -429,21 +452,26 @@ boardobjgrppmudatainit_super_done:
 static int check_boardobjgrp_param(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp)
 {
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
+	}
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->pmu.unitid == BOARDOBJGRP_UNIT_ID_INVALID)
+	if (pboardobjgrp->pmu.unitid == BOARDOBJGRP_UNIT_ID_INVALID) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->pmu.classid == BOARDOBJGRP_GRP_CLASS_ID_INVALID)
+	if (pboardobjgrp->pmu.classid == BOARDOBJGRP_GRP_CLASS_ID_INVALID) {
 		return -EINVAL;
+	}
 
 	/* If no objects in the group, return early */
-	if (BOARDOBJGRP_IS_EMPTY(pboardobjgrp))
+	if (BOARDOBJGRP_IS_EMPTY(pboardobjgrp)) {
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -456,16 +484,19 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 
 	nvgpu_log_info(g, " ");
 
-	if (check_boardobjgrp_param(g, pboardobjgrp))
+	if (check_boardobjgrp_param(g, pboardobjgrp)) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->pmu.set.id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
+	if (pboardobjgrp->pmu.set.id == BOARDOBJGRP_GRP_CMD_ID_INVALID) {
 		return -EINVAL;
+	}
 
 	if ((pcmd->hdrsize == 0) ||
 		(pcmd->entrysize == 0) ||
-		(pcmd->buf == NULL))
+		(pcmd->buf == NULL)) {
 		return -EINVAL;
+	}
 
 	/* Initialize PMU buffer with BOARDOBJGRP data. */
 	memset(pcmd->buf, 0x0, pcmd->fbsize);
@@ -515,13 +546,15 @@ u32 boardobjgrp_pmuset_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjgrp
 
 	nvgpu_log_info(g, " ");
 
-	if (check_boardobjgrp_param(g, pboardobjgrp))
+	if (check_boardobjgrp_param(g, pboardobjgrp)) {
 		return -EINVAL;
+	}
 
 	if ((pcmd->buf == NULL) &&
 		(pboardobjgrp->pmu.rpc_func_id ==
-		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID))
+		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID)) {
 		return -EINVAL;
+	}
 
 	/* Initialize PMU buffer with BOARDOBJGRP data. */
 	memset(pcmd->buf, 0x0, pcmd->fbsize);
@@ -572,23 +605,27 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 
 	nvgpu_log_info(g, " ");
 
-	if (check_boardobjgrp_param(g, pboardobjgrp))
+	if (check_boardobjgrp_param(g, pboardobjgrp)) {
 		return -EINVAL;
+	}
 
-	if (pset->id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
+	if (pset->id == BOARDOBJGRP_GRP_CMD_ID_INVALID) {
 		return -EINVAL;
+	}
 
 	if ((pcmd->hdrsize == 0) ||
 		(pcmd->entrysize == 0) ||
-		(pcmd->buf == NULL))
+		(pcmd->buf == NULL)) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Can only GET_STATUS if the BOARDOBJGRP has been previously SET to the
 	 * PMU
 	 */
-	if (!pboardobjgrp->pmu.bset)
+	if (!pboardobjgrp->pmu.bset) {
 		return -EINVAL;
+	}
 
 	/*
 	 * alloc mem in vidmem & copy constructed pmu boardobjgrp data from
@@ -639,20 +676,23 @@ boardobjgrp_pmugetstatus_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjg
 
 	nvgpu_log_info(g, " ");
 
-	if (check_boardobjgrp_param(g, pboardobjgrp))
+	if (check_boardobjgrp_param(g, pboardobjgrp)) {
 		return -EINVAL;
+	}
 
 	if ((pcmd->buf == NULL) &&
 		(pboardobjgrp->pmu.rpc_func_id ==
-		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID))
+		BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID)) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Can only GET_STATUS if the BOARDOBJGRP has been
 	 * previously SET to the PMU
 	 */
-	if (!pboardobjgrp->pmu.bset)
+	if (!pboardobjgrp->pmu.bset) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Initialize PMU buffer with the mask of
@@ -696,24 +736,29 @@ boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 
 	nvgpu_log_info(g, " ");
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return -EINVAL;
+	}
 
-	if (pboardobj == NULL)
+	if (pboardobj == NULL) {
 		return -EINVAL;
+	}
 
-	if (index > pboardobjgrp->objslots)
+	if (index > pboardobjgrp->objslots) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->ppobjects[index] != NULL)
+	if (pboardobjgrp->ppobjects[index] != NULL) {
 		return -EINVAL;
+	}
 
 	/*
 	 * Check that this BOARDOBJ has not already been added to a
 	 * BOARDOBJGRP
 	 */
-	if (pboardobj->idx != CTRL_BOARDOBJ_IDX_INVALID)
+	if (pboardobj->idx != CTRL_BOARDOBJ_IDX_INVALID) {
 		return -EINVAL;
+	}
 
 	pboardobjgrp->ppobjects[index] = pboardobj;
 	pboardobjgrp->objmaxidx = BOARDOBJGRP_IS_EMPTY(pboardobjgrp) ?
@@ -730,8 +775,9 @@ boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 static struct boardobj *boardobjgrp_objgetbyidx_final(
 		struct boardobjgrp *pboardobjgrp, u8 index)
 {
-	if (!boardobjgrp_idxisvalid(pboardobjgrp, index))
+	if (!boardobjgrp_idxisvalid(pboardobjgrp, index)) {
 		return NULL;
+	}
 	return pboardobjgrp->ppobjects[index];
 }
 
@@ -743,11 +789,13 @@ static struct boardobj *boardobjgrp_objgetnext_final(
 	u8 objmaxidx;
 	u8 index;
 
-	if (currentindex == NULL)
+	if (currentindex == NULL) {
 		return NULL;
+	}
 
-	if (pboardobjgrp == NULL)
+	if (pboardobjgrp == NULL) {
 		return NULL;
+	}
 
 	/* Search from next element unless first object was requested */
 	index = (*currentindex != CTRL_BOARDOBJ_IDX_INVALID) ?
@@ -759,8 +807,9 @@ static struct boardobj *boardobjgrp_objgetnext_final(
 
 	/* Validate provided mask */
 	if (mask != NULL) {
-		if (!(boardobjgrpmask_sizeeq(pboardobjgrp->mask, mask)))
+		if (!(boardobjgrpmask_sizeeq(pboardobjgrp->mask, mask))) {
 			return NULL;
+		}
 	}
 
 	objmaxidx = pboardobjgrp->objmaxidx;
@@ -796,11 +845,13 @@ static u32 boardobjgrp_objremoveanddestroy_final(
 
 	nvgpu_log_info(g, " ");
 
-	if (!boardobjgrp_idxisvalid(pboardobjgrp, index))
+	if (!boardobjgrp_idxisvalid(pboardobjgrp, index)) {
 		return -EINVAL;
+	}
 
-	if (pboardobjgrp->objmaxidx == CTRL_BOARDOBJ_IDX_INVALID)
+	if (pboardobjgrp->objmaxidx == CTRL_BOARDOBJ_IDX_INVALID) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->ppobjects[index]->destruct(
 			pboardobjgrp->ppobjects[index]);
@@ -811,8 +862,9 @@ static u32 boardobjgrp_objremoveanddestroy_final(
 
 	stat = boardobjgrpmask_bitclr(pboardobjgrp->mask, index);
 	if (stat) {
-		if (status == 0)
+		if (status == 0) {
 			status = stat;
+		}
 	}
 
 	/* objmaxidx requires update only if that very object was removed */

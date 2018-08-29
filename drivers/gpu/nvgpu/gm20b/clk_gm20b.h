@@ -41,6 +41,7 @@ struct nvgpu_clk_pll_debug_data {
 
 	u32 trim_sys_gpcpll_cfg_reg;
 	u32 trim_sys_gpcpll_dvfs2_reg;
+	u32 trim_bcast_gpcpll_dvfs2_reg;
 
 	u32 trim_sys_gpcpll_cfg_val;
 	bool trim_sys_gpcpll_cfg_enabled;

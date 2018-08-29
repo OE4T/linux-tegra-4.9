@@ -108,8 +108,12 @@ static int pll_reg_raw_show(struct seq_file *s, void *data)
 
 	seq_puts(s, "GPCPLL REGISTERS:\n");
 	for (reg = d.trim_sys_gpcpll_cfg_reg;
-	     reg <= d.trim_sys_gpcpll_dvfs2_reg;
+	     reg < d.trim_sys_gpcpll_dvfs2_reg;
 	     reg += sizeof(u32))
+		seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
+
+	reg = d.trim_bcast_gpcpll_dvfs2_reg;
+	if (reg)
 		seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
 
 	seq_puts(s, "\nGPC CLK OUT REGISTERS:\n");

@@ -1655,7 +1655,8 @@ int gm20b_clk_get_pll_debug_data(struct gk20a *g,
 	d->trim_sys_gpc2clk_out_reg = trim_sys_gpc2clk_out_r();
 	d->trim_sys_gpc2clk_out_val = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	d->trim_sys_gpcpll_cfg_reg = trim_sys_gpcpll_cfg_r();
-	d->trim_sys_gpcpll_dvfs2_reg = trim_gpc_bcast_gpcpll_dvfs2_r();
+	d->trim_sys_gpcpll_dvfs2_reg = trim_sys_gpcpll_dvfs2_r();
+	d->trim_bcast_gpcpll_dvfs2_reg = trim_gpc_bcast_gpcpll_dvfs2_r();
 
 	reg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 	d->trim_sys_gpcpll_cfg_val = reg;

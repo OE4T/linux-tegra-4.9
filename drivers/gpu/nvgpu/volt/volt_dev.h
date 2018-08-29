@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -73,6 +73,6 @@ struct voltage_device_pwm_entry {
 /* PWM end */
 
 u32 volt_dev_sw_setup(struct gk20a *g);
-u32 volt_dev_pmu_setup(struct gk20a *g);
+int volt_dev_pmu_setup(struct gk20a *g);
 
 #endif /* _VOLTDEV_H_ */

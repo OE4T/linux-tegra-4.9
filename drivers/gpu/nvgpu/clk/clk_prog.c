@@ -34,14 +34,14 @@
 #include "ctrl/ctrlvolt.h"
 
 static struct clk_prog *construct_clk_prog(struct gk20a *g, void *pargs);
-static u32 devinit_get_clk_prog_table(struct gk20a *g,
+static int devinit_get_clk_prog_table(struct gk20a *g,
 	struct clk_progs *pprogobjs);
 static vf_flatten vfflatten_prog_1x_master;
 static vf_lookup vflookup_prog_1x_master;
 static get_fpoints getfpoints_prog_1x_master;
 static get_slaveclk getslaveclk_prog_1x_master;
 
-static u32 _clk_progs_pmudatainit(struct gk20a *g,
+static int _clk_progs_pmudatainit(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
 				  struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
@@ -64,7 +64,7 @@ done:
 	return status;
 }
 
-static u32 _clk_progs_pmudata_instget(struct gk20a *g,
+static int _clk_progs_pmudata_instget(struct gk20a *g,
 				      struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 				      struct nv_pmu_boardobj **ppboardobjpmudata,
 				      u8 idx)
@@ -86,9 +86,9 @@ static u32 _clk_progs_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-u32 clk_prog_sw_setup(struct gk20a *g)
+int clk_prog_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct clk_progs *pclkprogobjs;
 
@@ -136,9 +136,9 @@ done:
 	return status;
 }
 
-u32 clk_prog_pmu_setup(struct gk20a *g)
+int clk_prog_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -155,10 +155,10 @@ u32 clk_prog_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-static u32 devinit_get_clk_prog_table(struct gk20a *g,
+static int devinit_get_clk_prog_table(struct gk20a *g,
 				      struct clk_progs *pclkprogobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *clkprogs_tbl_ptr = NULL;
 	struct vbios_clock_programming_table_1x_header header = { 0 };
 	struct vbios_clock_programming_table_1x_entry prog = { 0 };
@@ -379,11 +379,11 @@ done:
 	return status;
 }
 
-static u32 _clk_prog_pmudatainit_super(struct gk20a *g,
+static int _clk_prog_pmudatainit_super(struct gk20a *g,
 				       struct boardobj *board_obj_ptr,
 				       struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 
 	nvgpu_log_info(g, " ");
 
@@ -391,11 +391,11 @@ static u32 _clk_prog_pmudatainit_super(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_prog_pmudatainit_1x(struct gk20a *g,
+static int _clk_prog_pmudatainit_1x(struct gk20a *g,
 				    struct boardobj *board_obj_ptr,
 				    struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_prog_1x *pclk_prog_1x;
 	struct nv_pmu_clk_clk_prog_1x_boardobj_set *pset;
 
@@ -418,11 +418,11 @@ static u32 _clk_prog_pmudatainit_1x(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_prog_pmudatainit_1x_master(struct gk20a *g,
+static int _clk_prog_pmudatainit_1x_master(struct gk20a *g,
 					   struct boardobj *board_obj_ptr,
 					   struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_prog_1x_master *pclk_prog_1x_master;
 	struct nv_pmu_clk_clk_prog_1x_master_boardobj_set *pset;
 	u32 vfsize = sizeof(struct ctrl_clk_clk_prog_1x_master_vf_entry) *
@@ -449,11 +449,11 @@ static u32 _clk_prog_pmudatainit_1x_master(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_prog_pmudatainit_1x_master_ratio(struct gk20a *g,
+static int _clk_prog_pmudatainit_1x_master_ratio(struct gk20a *g,
 						 struct boardobj *board_obj_ptr,
 						 struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_prog_1x_master_ratio *pclk_prog_1x_master_ratio;
 	struct nv_pmu_clk_clk_prog_1x_master_ratio_boardobj_set *pset;
 	u32 slavesize = sizeof(struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry) *
@@ -478,11 +478,11 @@ static u32 _clk_prog_pmudatainit_1x_master_ratio(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_prog_pmudatainit_1x_master_table(struct gk20a *g,
+static int _clk_prog_pmudatainit_1x_master_table(struct gk20a *g,
 						 struct boardobj *board_obj_ptr,
 						 struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_prog_1x_master_table *pclk_prog_1x_master_table;
 	struct nv_pmu_clk_clk_prog_1x_master_table_boardobj_set *pset;
 	u32 slavesize = sizeof(struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry) *
@@ -538,12 +538,12 @@ done:
 	return status;
 }
 
-static u32 clk_prog_construct_super(struct gk20a *g,
+static int clk_prog_construct_super(struct gk20a *g,
 				    struct boardobj **ppboardobj,
 				    u16 size, void *pargs)
 {
 	struct clk_prog *pclkprog;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj,
 		size, pargs);
@@ -559,7 +559,7 @@ static u32 clk_prog_construct_super(struct gk20a *g,
 }
 
 
-static u32 clk_prog_construct_1x(struct gk20a *g,
+static int clk_prog_construct_1x(struct gk20a *g,
 				 struct boardobj **ppboardobj,
 				 u16 size, void *pargs)
 {
@@ -567,7 +567,7 @@ static u32 clk_prog_construct_1x(struct gk20a *g,
 	struct clk_prog_1x *pclkprog;
 	struct clk_prog_1x *ptmpprog =
 			(struct clk_prog_1x *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	nvgpu_log_info(g, " ");
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_PROG_TYPE_1X);
@@ -588,7 +588,7 @@ static u32 clk_prog_construct_1x(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_prog_construct_1x_master(struct gk20a *g,
+static int clk_prog_construct_1x_master(struct gk20a *g,
 					struct boardobj **ppboardobj,
 					u16 size, void *pargs)
 {
@@ -596,7 +596,7 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 	struct clk_prog_1x_master *pclkprog;
 	struct clk_prog_1x_master *ptmpprog =
 			(struct clk_prog_1x_master *)pargs;
-	u32 status = 0;
+	int status = 0;
 	u32 vfsize = sizeof(struct ctrl_clk_clk_prog_1x_master_vf_entry) *
 		g->clk_pmu.clk_progobjs.vf_entry_count;
 	u8 railidx;
@@ -645,7 +645,7 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_prog_construct_1x_master_ratio(struct gk20a *g,
+static int clk_prog_construct_1x_master_ratio(struct gk20a *g,
 					      struct boardobj **ppboardobj,
 					      u16 size, void *pargs)
 {
@@ -653,7 +653,7 @@ static u32 clk_prog_construct_1x_master_ratio(struct gk20a *g,
 	struct clk_prog_1x_master_ratio *pclkprog;
 	struct clk_prog_1x_master_ratio *ptmpprog =
 			(struct clk_prog_1x_master_ratio *)pargs;
-	u32 status = 0;
+	int status = 0;
 	u32 slavesize = sizeof(struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry) *
 		g->clk_pmu.clk_progobjs.slave_entry_count;
 
@@ -687,7 +687,7 @@ static u32 clk_prog_construct_1x_master_ratio(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_prog_construct_1x_master_table(struct gk20a *g,
+static int clk_prog_construct_1x_master_table(struct gk20a *g,
 					      struct boardobj **ppboardobj,
 					      u16 size, void *pargs)
 {
@@ -695,7 +695,7 @@ static u32 clk_prog_construct_1x_master_table(struct gk20a *g,
 	struct clk_prog_1x_master_table *pclkprog;
 	struct clk_prog_1x_master_table *ptmpprog =
 			(struct clk_prog_1x_master_table *)pargs;
-	u32 status = 0;
+	int status = 0;
 	u32 slavesize = sizeof(struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry) *
 		g->clk_pmu.clk_progobjs.slave_entry_count;
 
@@ -741,7 +741,7 @@ exit:
 static struct clk_prog *construct_clk_prog(struct gk20a *g, void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
+	int status;
 
 	nvgpu_log_info(g, " type - %x", BOARDOBJ_GET_TYPE(pargs));
 	switch (BOARDOBJ_GET_TYPE(pargs)) {

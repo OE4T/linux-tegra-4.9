@@ -30,7 +30,7 @@
 #include "gp106/bios_gp106.h"
 #include "ctrl/ctrltherm.h"
 
-static u32 _therm_device_pmudata_instget(struct gk20a *g,
+static int _therm_device_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
 			u8 idx)
@@ -54,29 +54,29 @@ static u32 _therm_device_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 construct_therm_device(struct gk20a *g,
+static int construct_therm_device(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	return boardobj_construct_super(g, ppboardobj, size, pargs);
 }
 
-static u32 construct_therm_device_gpu(struct gk20a *g,
+static int construct_therm_device_gpu(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	return construct_therm_device(g, ppboardobj, size, pargs);
 }
 
-static u32 construct_therm_device_gpu_sci(struct gk20a *g,
+static int construct_therm_device_gpu_sci(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	return construct_therm_device(g, ppboardobj, size, pargs);
 }
 
 
-static u32 therm_device_pmu_data_init_gpu_gpc_tsosc(struct gk20a *g,
+static int therm_device_pmu_data_init_gpu_gpc_tsosc(struct gk20a *g,
 	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct therm_device_gpu_gpc_tsosc *pdev = NULL;
 	struct nv_pmu_therm_therm_device_gpu_gpc_tsosc_boardobj_set *pset;
 
@@ -95,13 +95,13 @@ exit:
 	return status;
 }
 
-static u32 construct_therm_device_gpu_tsosc(struct gk20a *g,
+static int construct_therm_device_gpu_tsosc(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct therm_device_gpu_gpc_tsosc *pdev = NULL;
 	struct therm_device_gpu_gpc_tsosc *ptmp_dev =
 		(struct therm_device_gpu_gpc_tsosc *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_therm_device(g, ppboardobj, size, pargs);
 	if (status != 0) {
@@ -118,10 +118,10 @@ static u32 construct_therm_device_gpu_tsosc(struct gk20a *g,
 	return status;
 }
 
-static u32 therm_device_pmu_data_init_hbm2_site(struct gk20a *g,
+static int therm_device_pmu_data_init_hbm2_site(struct gk20a *g,
 	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct therm_device_hbm2_site *pdev = NULL;
 	struct nv_pmu_therm_therm_device_hbm2_site_boardobj_set *pset;
 
@@ -140,13 +140,13 @@ exit:
 	return status;
 }
 
-static u32 construct_therm_device_hbm2_site(struct gk20a *g,
+static int construct_therm_device_hbm2_site(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct therm_device_hbm2_site *pdev = NULL;
 	struct therm_device_hbm2_site *ptmp_dev =
 		(struct therm_device_hbm2_site *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_therm_device(g, ppboardobj, size, pargs);
 	if (status != 0) {
@@ -163,7 +163,7 @@ static u32 construct_therm_device_hbm2_site(struct gk20a *g,
 	return status;
 }
 
-static u32 construct_therm_device_hbm2_combined(struct gk20a *g,
+static int construct_therm_device_hbm2_combined(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	return construct_therm_device(g, ppboardobj, size, pargs);
@@ -174,7 +174,7 @@ static struct boardobj *therm_device_construct(struct gk20a *g,
 	void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU:
@@ -216,10 +216,10 @@ static struct boardobj *therm_device_construct(struct gk20a *g,
 	return board_obj_ptr;
 }
 
-static u32 devinit_get_therm_device_table(struct gk20a *g,
+static int devinit_get_therm_device_table(struct gk20a *g,
 				struct therm_devices *pthermdeviceobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *therm_device_table_ptr = NULL;
 	u8 *curr_therm_device_table_ptr = NULL;
 	struct boardobj *boardobj;
@@ -324,9 +324,9 @@ done:
 	return status;
 }
 
-u32 therm_device_sw_setup(struct gk20a *g)
+int therm_device_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct therm_devices *pthermdeviceobjs;
 

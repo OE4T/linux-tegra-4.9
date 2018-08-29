@@ -38,10 +38,10 @@ struct clk_domain;
 enum nv_pmu_clk_clkwhich;
 
 /*data and function definition to talk to driver*/
-u32 clk_domain_sw_setup(struct gk20a *g);
-u32 clk_domain_pmu_setup(struct gk20a *g);
+int clk_domain_sw_setup(struct gk20a *g);
+int clk_domain_pmu_setup(struct gk20a *g);
 
-typedef u32 clkproglink(struct gk20a *g, struct clk_pmupstate *pclk,
+typedef int clkproglink(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain);
 
 typedef int clkvfsearch(struct gk20a *g, struct clk_pmupstate *pclk,
@@ -123,7 +123,7 @@ struct clk_domain_3x_slave {
 	clkgetslaveclk *clkdomainclkgetslaveclk;
 };
 
-u32 clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);
+int clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);
 
 #define CLK_CLK_DOMAIN_GET(pclk, idx)                                   \
 	((struct clk_domain *)BOARDOBJGRP_OBJ_GET_BY_IDX(		\

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -58,7 +58,8 @@ struct boardobjgrp_e32 {
 		boardobjgrp_pmudatainit_super(g, pboardpbjgrp, pboardobjgrppmu)
 
 /* Constructor and destructor */
-u32 boardobjgrpconstruct_e32(struct gk20a *g, struct boardobjgrp_e32 *pboardobjgrp);
+int boardobjgrpconstruct_e32(struct gk20a *g,
+	struct boardobjgrp_e32 *pboardobjgrp);
 boardobjgrp_destruct boardobjgrpdestruct_e32;
 boardobjgrp_pmuhdrdatainit  boardobjgrp_pmuhdrdatainit_e32;
 

@@ -1,7 +1,7 @@
 /*
  * general thermal device structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -53,6 +53,6 @@ struct therm_device_hbm2_combined {
 	struct therm_device super;
 };
 
-u32 therm_device_sw_setup(struct gk20a *g);
+int therm_device_sw_setup(struct gk20a *g);
 
 #endif

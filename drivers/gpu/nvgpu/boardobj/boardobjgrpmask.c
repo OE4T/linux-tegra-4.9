@@ -221,7 +221,7 @@ u8 boardobjgrpmask_bitidxhighest(struct boardobjgrpmask *mask)
 	return result;
 }
 
-u32 boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx)
+int boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx)
 {
 	u8 index;
 	u8 offset;
@@ -241,7 +241,7 @@ u32 boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx)
 	return 0;
 }
 
-u32 boardobjgrpmask_bitset(struct boardobjgrpmask *mask, u8 bitidx)
+int boardobjgrpmask_bitset(struct boardobjgrpmask *mask, u8 bitidx)
 {
 	u8 index;
 	u8 offset;

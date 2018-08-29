@@ -1,7 +1,7 @@
 /*
  * general power device structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,7 +35,7 @@ struct pmgr_pmupstate {
 };
 
 u32 pmgr_domain_sw_setup(struct gk20a *g);
-u32 pmgr_domain_pmu_setup(struct gk20a *g);
+int pmgr_domain_pmu_setup(struct gk20a *g);
 int pmgr_pwr_devices_get_current(struct gk20a *g, u32 *val);
 int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val);
 int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val);

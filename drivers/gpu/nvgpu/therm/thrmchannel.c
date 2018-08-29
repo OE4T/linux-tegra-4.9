@@ -29,11 +29,11 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "gp106/bios_gp106.h"
 
-static u32 _therm_channel_pmudatainit_device(struct gk20a *g,
+static int _therm_channel_pmudatainit_device(struct gk20a *g,
 			struct boardobj *board_obj_ptr,
 			struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct therm_channel *pchannel;
 	struct therm_channel_device *ptherm_channel;
 	struct nv_pmu_therm_therm_channel_device_boardobj_set *pset;
@@ -68,7 +68,7 @@ static struct boardobj *construct_channel_device(struct gk20a *g,
 	struct boardobj *board_obj_ptr = NULL;
 	struct therm_channel *pchannel;
 	struct therm_channel_device *pchannel_device;
-	u32 status;
+	int status;
 	struct therm_channel_device *therm_device = (struct therm_channel_device*)pargs;
 
 	status = boardobj_construct_super(g, &board_obj_ptr,
@@ -95,7 +95,7 @@ static struct boardobj *construct_channel_device(struct gk20a *g,
 	return board_obj_ptr;
 }
 
-static u32 _therm_channel_pmudata_instget(struct gk20a *g,
+static int _therm_channel_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
 			u8 idx)
@@ -119,10 +119,10 @@ static u32 _therm_channel_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 devinit_get_therm_channel_table(struct gk20a *g,
+static int devinit_get_therm_channel_table(struct gk20a *g,
 				struct therm_channels *pthermchannelobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *therm_channel_table_ptr = NULL;
 	u8 *curr_therm_channel_table_ptr = NULL;
 	struct boardobj *boardobj;
@@ -210,9 +210,9 @@ done:
 	return status;
 }
 
-u32 therm_channel_sw_setup(struct gk20a *g)
+int therm_channel_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct therm_channels *pthermchannelobjs;
 

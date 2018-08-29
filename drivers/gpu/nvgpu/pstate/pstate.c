@@ -44,7 +44,7 @@ void gk20a_deinit_pstate_support(struct gk20a *g)
 /*sw setup for pstate components*/
 int gk20a_init_pstate_support(struct gk20a *g)
 {
-	u32 err;
+	int err;
 
 	nvgpu_log_fn(g, " ");
 

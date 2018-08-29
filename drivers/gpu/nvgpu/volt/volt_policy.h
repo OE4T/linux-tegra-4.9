@@ -75,6 +75,6 @@ struct voltage_policy_single_rail_multi_step {
 	u32 ramp_down_step_size_uv;
 };
 
-u32 volt_policy_sw_setup(struct gk20a *g);
-u32 volt_policy_pmu_setup(struct gk20a *g);
+int volt_policy_sw_setup(struct gk20a *g);
+int volt_policy_pmu_setup(struct gk20a *g);
 #endif

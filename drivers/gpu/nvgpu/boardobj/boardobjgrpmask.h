@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -83,8 +83,8 @@ u8 boardobjgrpmask_bitidxlowest(struct boardobjgrpmask *mask);
 u8 boardobjgrpmask_bitidxhighest(struct boardobjgrpmask *mask);
 
 /* Operations on a single bit of a single mask */
-u32 boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx);
-u32 boardobjgrpmask_bitset(struct boardobjgrpmask *mask, u8 bitidx);
+int boardobjgrpmask_bitclr(struct boardobjgrpmask *mask, u8 bitidx);
+int boardobjgrpmask_bitset(struct boardobjgrpmask *mask, u8 bitidx);
 u32 boardobjgrpmask_bitinv(struct boardobjgrpmask *mask, u8 bitidx);
 bool boardobjgrpmask_bitget(struct boardobjgrpmask *mask, u8 bitidx);
 

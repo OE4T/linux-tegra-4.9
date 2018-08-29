@@ -28,8 +28,8 @@
 #include "boardobj/boardobjgrpmask.h"
 
 /*data and function definition to talk to driver*/
-u32 clk_fll_sw_setup(struct gk20a *g);
-u32 clk_fll_pmu_setup(struct gk20a *g);
+int clk_fll_sw_setup(struct gk20a *g);
+int clk_fll_pmu_setup(struct gk20a *g);
 
 struct avfsfllobjs {
 	struct boardobjgrp_e32 super;
@@ -79,4 +79,3 @@ u32 nvgpu_clk_get_vbios_clk_domain_gp10x( u32 vbios_domain);
 	(pclk->avfs_fllobjs.lut_step_size_uv)
 
 #endif
-

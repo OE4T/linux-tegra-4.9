@@ -1,7 +1,7 @@
 /*
  * general power channel structures & definitions
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -131,6 +131,6 @@ union pwr_policy_data_union {
 #define PMGR_PWR_POLICY_INCREMENT_LIMIT_INPUT_COUNT(ppolicy)                 \
 	((ppolicy)->num_limit_inputs++)
 
-u32 pmgr_policy_sw_setup(struct gk20a *g);
+int pmgr_policy_sw_setup(struct gk20a *g);
 
 #endif

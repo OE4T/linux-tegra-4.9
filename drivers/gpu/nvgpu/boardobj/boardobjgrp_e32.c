@@ -28,10 +28,10 @@
 #include "boardobjgrpmask.h"
 
 
-u32  boardobjgrpconstruct_e32(struct gk20a *g,
+int  boardobjgrpconstruct_e32(struct gk20a *g,
 			      struct boardobjgrp_e32 *pboardobjgrp_e32)
 {
-	u32 status;
+	int status;
 	u8  objslots;
 
 	nvgpu_log_info(g, " ");
@@ -58,14 +58,14 @@ boardobjgrpconstruct_e32_exit:
 	return status;
 }
 
-u32 boardobjgrp_pmuhdrdatainit_e32(struct gk20a *g,
+int boardobjgrp_pmuhdrdatainit_e32(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp,
 		struct nv_pmu_boardobjgrp_super *pboardobjgrppmu,
 		struct boardobjgrpmask *mask)
 {
 	struct nv_pmu_boardobjgrp_e32 *pgrpe32 =
 		(struct nv_pmu_boardobjgrp_e32 *)pboardobjgrppmu;
-	u32 status;
+	int status;
 
 	nvgpu_log_info(g, " ");
 

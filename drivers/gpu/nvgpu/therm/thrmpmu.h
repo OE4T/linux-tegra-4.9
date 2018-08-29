@@ -1,7 +1,7 @@
 /*
  * general thermal pmu control structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,7 +24,7 @@
 #ifndef _THRMPMU_H_
 #define _THRMPMU_H_
 
-u32 therm_send_pmgr_tables_to_pmu(struct gk20a *g);
+int therm_send_pmgr_tables_to_pmu(struct gk20a *g);
 
 u32 therm_configure_therm_alert(struct gk20a *g);
 

@@ -30,17 +30,17 @@
 
 #include "volt.h"
 
-static u32 volt_policy_pmu_data_init_super(struct gk20a *g,
+static int volt_policy_pmu_data_init_super(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
 	return boardobj_pmudatainit_super(g, pboardobj, ppmudata);
 }
 
-static u32 construct_volt_policy(struct gk20a *g,
+static int construct_volt_policy(struct gk20a *g,
 	struct boardobj  **ppboardobj, u16 size, void *pArgs)
 {
 	struct voltage_policy *pvolt_policy = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj, size, pArgs);
 	if (status) {
@@ -54,13 +54,13 @@ static u32 construct_volt_policy(struct gk20a *g,
 	return status;
 }
 
-static u32 construct_volt_policy_split_rail(struct gk20a *g,
+static int construct_volt_policy_split_rail(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pArgs)
 {
 	struct voltage_policy_split_rail *ptmp_policy  =
 			(struct voltage_policy_split_rail *)pArgs;
 	struct voltage_policy_split_rail *pvolt_policy = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_volt_policy(g, ppboardobj, size, pArgs);
 	if (status) {
@@ -79,13 +79,13 @@ static u32 construct_volt_policy_split_rail(struct gk20a *g,
 	return status;
 }
 
-static u32 construct_volt_policy_single_rail(struct gk20a *g,
+static int construct_volt_policy_single_rail(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pArgs)
 {
 	struct voltage_policy_single_rail *ptmp_policy  =
 			(struct voltage_policy_single_rail *)pArgs;
 	struct voltage_policy_single_rail *pvolt_policy = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_volt_policy(g, ppboardobj, size, pArgs);
 	if (status) {
@@ -99,10 +99,10 @@ static u32 construct_volt_policy_single_rail(struct gk20a *g,
 	return status;
 }
 
-static u32 volt_policy_pmu_data_init_single_rail(struct gk20a *g,
+static int volt_policy_pmu_data_init_single_rail(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct voltage_policy_single_rail *ppolicy;
 	struct nv_pmu_volt_volt_policy_sr_boardobj_set *pset;
 
@@ -120,10 +120,10 @@ done:
 	return status;
 }
 
-static u32 volt_policy_pmu_data_init_sr_multi_step(struct gk20a *g,
+static int volt_policy_pmu_data_init_sr_multi_step(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct voltage_policy_single_rail_multi_step *ppolicy;
 	struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set *pset;
 
@@ -144,14 +144,14 @@ done:
 	return status;
 }
 
-static u32 volt_construct_volt_policy_single_rail_multi_step(struct gk20a *g,
+static int volt_construct_volt_policy_single_rail_multi_step(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct boardobj *pboardobj   = NULL;
 	struct voltage_policy_single_rail_multi_step *p_volt_policy = NULL;
 	struct voltage_policy_single_rail_multi_step *tmp_policy =
 		(struct voltage_policy_single_rail_multi_step *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_volt_policy_single_rail(g, ppboardobj, size, pargs);
 	if (status) {
@@ -174,10 +174,10 @@ static u32 volt_construct_volt_policy_single_rail_multi_step(struct gk20a *g,
 	return status;
 }
 
-static u32 volt_policy_pmu_data_init_split_rail(struct gk20a *g,
+static int volt_policy_pmu_data_init_split_rail(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct voltage_policy_split_rail *ppolicy;
 	struct nv_pmu_volt_volt_policy_splt_r_boardobj_set *pset;
 
@@ -201,11 +201,11 @@ done:
 	return status;
 }
 
-static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
+static int volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct boardobj *pboardobj   = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = construct_volt_policy_split_rail(g, ppboardobj, size, pargs);
 	if (status) {
@@ -221,7 +221,7 @@ static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 static struct voltage_policy *volt_volt_policy_construct(struct gk20a *g, void *pargs)
 {
 	struct boardobj *pboard_obj = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	switch (BOARDOBJ_GET_TYPE(pargs)) {
 	case CTRL_VOLT_POLICY_TYPE_SR_SINGLE_STEP:
@@ -269,10 +269,10 @@ static u8 volt_policy_type_convert(u8 vbios_type)
 	return CTRL_VOLT_POLICY_TYPE_INVALID;
 }
 
-static u32 volt_get_volt_policy_table(struct gk20a *g,
+static int volt_get_volt_policy_table(struct gk20a *g,
 		struct voltage_policy_metadata *pvolt_policy_metadata)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *voltage_policy_table_ptr = NULL;
 	struct voltage_policy *ppolicy = NULL;
 	struct vbios_voltage_policy_table_1x_header header = { 0 };
@@ -370,7 +370,7 @@ static u32 volt_get_volt_policy_table(struct gk20a *g,
 done:
 	return status;
 }
-static u32 _volt_policy_devgrp_pmudata_instget(struct gk20a *g,
+static int _volt_policy_devgrp_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 	struct nv_pmu_boardobj **ppboardobjpmudata, u8 idx)
 {
@@ -392,7 +392,7 @@ static u32 _volt_policy_devgrp_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _volt_policy_devgrp_pmustatus_instget(struct gk20a *g,
+static int _volt_policy_devgrp_pmustatus_instget(struct gk20a *g,
 	void *pboardobjgrppmu,
 	struct nv_pmu_boardobj_query **ppboardobjpmustatus, u8 idx)
 {
@@ -411,7 +411,7 @@ static u32 _volt_policy_devgrp_pmustatus_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _volt_policy_grp_pmudatainit_super(struct gk20a *g,
+static int _volt_policy_grp_pmudatainit_super(struct gk20a *g,
 	struct boardobjgrp *pboardobjgrp,
 	struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
@@ -419,7 +419,7 @@ static u32 _volt_policy_grp_pmudatainit_super(struct gk20a *g,
 		(struct nv_pmu_volt_volt_policy_boardobjgrp_set_header *)
 		pboardobjgrppmu;
 	struct obj_volt *volt  = (struct obj_volt *)pboardobjgrp;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
@@ -435,9 +435,9 @@ done:
 	return status;
 }
 
-u32 volt_policy_pmu_setup(struct gk20a *g)
+int volt_policy_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -455,9 +455,9 @@ u32 volt_policy_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-u32 volt_policy_sw_setup(struct gk20a *g)
+int volt_policy_sw_setup(struct gk20a *g)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");

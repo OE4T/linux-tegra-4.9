@@ -32,10 +32,10 @@ static boardobjgrp_objgetnext   boardobjgrp_objgetnext_final;
 static boardobjgrp_objremoveanddestroy  boardobjgrp_objremoveanddestroy_final;
 static boardobjgrp_pmudatainstget boardobjgrp_pmudatainstget_stub;
 static boardobjgrp_pmustatusinstget boardobjgrp_pmustatusinstget_stub;
-static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
+static int boardobjgrp_pmucmdsend(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp,
 		struct boardobjgrp_pmu_cmd *pcmd);
-static u32 boardobjgrp_pmucmdsend_rpc(struct gk20a *g,
+static int boardobjgrp_pmucmdsend_rpc(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp,
 		struct boardobjgrp_pmu_cmd *pcmd,
 		bool copy_out);
@@ -48,7 +48,8 @@ struct boardobjgrp_pmucmdhandler_params {
 	u32 success;
 };
 
-u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
+int boardobjgrp_construct_super(struct gk20a *g,
+	struct boardobjgrp *pboardobjgrp)
 {
 	nvgpu_log_info(g, " ");
 
@@ -102,7 +103,7 @@ u32 boardobjgrp_construct_super(struct gk20a *g, struct boardobjgrp *pboardobjgr
 	return 0;
 }
 
-u32 boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
+int boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
 {
 	struct gk20a *g = pboardobjgrp->g;
 
@@ -119,12 +120,12 @@ u32 boardobjgrp_destruct_impl(struct boardobjgrp *pboardobjgrp)
 	return pboardobjgrp->destruct(pboardobjgrp);
 }
 
-u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
+int boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 {
 	struct boardobj *pboardobj;
 	struct gk20a *g = pboardobjgrp->g;
-	u32 status = 0;
-	u32 stat;
+	int status = 0;
+	int stat;
 	u8  index;
 
 	nvgpu_log_info(g, " ");
@@ -174,7 +175,7 @@ u32 boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 	return status;
 }
 
-u32 boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
+int boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
 	u8 hdrsize, u8 entrysize, u16 fbsize,  u32 ss_offset, u8 rpc_func_id)
 {
@@ -190,7 +191,7 @@ u32 boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 	return 0;
 }
 
-u32 boardobjgrp_pmucmd_construct_impl_v1(struct gk20a *g, struct boardobjgrp
+int boardobjgrp_pmucmd_construct_impl_v1(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
 	u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id)
 {
@@ -206,7 +207,7 @@ u32 boardobjgrp_pmucmd_construct_impl_v1(struct gk20a *g, struct boardobjgrp
 	return 0;
 }
 
-u32 boardobjgrp_pmucmd_destroy_impl(struct gk20a *g,
+int boardobjgrp_pmucmd_destroy_impl(struct gk20a *g,
 	struct boardobjgrp_pmu_cmd *cmd)
 {
 	struct nvgpu_mem *mem = &cmd->surf.sysmem_desc;
@@ -242,11 +243,11 @@ int is_boardobjgrp_pmucmd_id_valid_v1(struct gk20a *g,
 	return err;
 }
 
-u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
+int boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 	struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrp_pmu_cmd *pcmd)
 {
-	u32 status = 0;
+	int status = 0;
 	struct nvgpu_mem *sysmem_desc = &pcmd->surf.sysmem_desc;
 
 	nvgpu_log_info(g, " ");
@@ -271,10 +272,10 @@ boardobjgrp_pmucmd_pmuinithandle_exit:
 	return status;
 }
 
-u32 boardobjgrp_pmuinithandle_impl(struct gk20a *g,
+int boardobjgrp_pmuinithandle_impl(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp)
 {
-	u32 status = 0;
+	int status = 0;
 
 	nvgpu_log_info(g, " ");
 
@@ -310,7 +311,7 @@ boardobjgrp_pmuinithandle_exit:
 }
 
 
-u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
+int boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct nv_pmu_boardobjgrp_super *pboardobjgrppmu,
 	struct boardobjgrpmask *mask)
 {
@@ -331,7 +332,7 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	return 0;
 }
 
-static u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
+static int boardobjgrp_pmudatainstget_stub(struct gk20a *g,
 	struct nv_pmu_boardobjgrp *boardobjgrppmu,
 	struct nv_pmu_boardobj **ppboardobjpmudata, u8 idx)
 {
@@ -340,7 +341,7 @@ static u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
 }
 
 
-static u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
+static int boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
 	void *pboardobjgrppmu,
 	struct nv_pmu_boardobj_query **ppBoardobjpmustatus, u8 idx)
 {
@@ -348,11 +349,11 @@ static u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
 	return -EINVAL;
 }
 
-u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
+int boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 	struct boardobjgrp 	*pboardobjgrp,
 	struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobj *pboardobj = NULL;
 	struct nv_pmu_boardobj *ppmudata = NULL;
 	u8 index;
@@ -401,10 +402,10 @@ boardobjgrppmudatainit_legacy_done:
 	return status;
 }
 
-u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
+int boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobj *pboardobj = NULL;
 	struct nv_pmu_boardobj	*ppmudata = NULL;
 	u8 index;
@@ -476,9 +477,9 @@ static int check_boardobjgrp_param(struct gk20a *g,
 	return 0;
 }
 
-u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
+int boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.set);
 
@@ -537,10 +538,11 @@ boardobjgrp_pmuset_exit:
 	return status;
 }
 
-u32 boardobjgrp_pmuset_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
+int boardobjgrp_pmuset_impl_v1(struct gk20a *g,
+	struct boardobjgrp *pboardobjgrp)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.set);
 
@@ -593,11 +595,11 @@ boardobjgrp_pmuset_exit:
 	return status;
 }
 
-u32
+int
 boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrpmask *mask)
 {
-	u32 status  = 0;
+	int status  = 0;
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.getstatus);
 	struct boardobjgrp_pmu_cmd *pset =
@@ -665,12 +667,12 @@ boardobjgrp_pmugetstatus_exit:
 	return status;
 }
 
-u32
+int
 boardobjgrp_pmugetstatus_impl_v1(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrpmask *mask)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
-	u32 status  = 0;
+	int status  = 0;
 	struct boardobjgrp_pmu_cmd *pcmd =
 		(struct boardobjgrp_pmu_cmd *)(&pboardobjgrp->pmu.getstatus);
 
@@ -728,7 +730,7 @@ boardobjgrp_pmugetstatus_exit:
 	return status;
 }
 
-static u32
+static int
 boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 	struct boardobj *pboardobj, u8 index)
 {
@@ -761,8 +763,8 @@ boardobjgrp_objinsert_final(struct boardobjgrp *pboardobjgrp,
 	}
 
 	pboardobjgrp->ppobjects[index] = pboardobj;
-	pboardobjgrp->objmaxidx = BOARDOBJGRP_IS_EMPTY(pboardobjgrp) ?
-			index : max(pboardobjgrp->objmaxidx, index);
+	pboardobjgrp->objmaxidx = (u8)(BOARDOBJGRP_IS_EMPTY(pboardobjgrp) ?
+			index : max(pboardobjgrp->objmaxidx, index));
 	pboardobj->idx = index;
 
 	pboardobjgrp->objmask |= BIT(index);
@@ -835,12 +837,12 @@ static struct boardobj *boardobjgrp_objgetnext_final(
 	return pboardobjnext;
 }
 
-static u32 boardobjgrp_objremoveanddestroy_final(
+static int boardobjgrp_objremoveanddestroy_final(
 		struct boardobjgrp *pboardobjgrp,
 		u8 index)
 {
-	u32 status = 0;
-	u32 stat;
+	int status = 0;
+	int stat;
 	struct gk20a *g = pboardobjgrp->g;
 
 	nvgpu_log_info(g, " ");
@@ -938,7 +940,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	}
 }
 
-static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
+static int boardobjgrp_pmucmdsend(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
 				  struct boardobjgrp_pmu_cmd *pcmd)
 {
@@ -947,7 +949,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 	struct nv_pmu_boardobj_cmd_grp *pgrpcmd;
 	struct pmu_cmd cmd;
 	u32 seqdesc;
-	u32 status = 0;
+	int status = 0;
 
 	nvgpu_log_info(g, " ");
 
@@ -1009,7 +1011,7 @@ boardobjgrp_pmucmdsend_exit:
 	return status;
 }
 
-static u32 boardobjgrp_pmucmdsend_rpc(struct gk20a *g,
+static int boardobjgrp_pmucmdsend_rpc(struct gk20a *g,
 	struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrp_pmu_cmd *pcmd,
 	bool copy_out)

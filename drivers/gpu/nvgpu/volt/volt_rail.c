@@ -128,10 +128,10 @@ static u32 volt_rail_state_init(struct gk20a *g,
 	return status;
 }
 
-static u32 volt_rail_init_pmudata_super(struct gk20a *g,
+static int volt_rail_init_pmudata_super(struct gk20a *g,
 	struct boardobj *board_obj_ptr, struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct voltage_rail *prail;
 	struct nv_pmu_volt_volt_rail_boardobj_set *rail_pmu_data;
 	u32 i;
@@ -183,7 +183,7 @@ static struct voltage_rail *construct_volt_rail(struct gk20a *g, void *pargs)
 	struct boardobj *board_obj_ptr = NULL;
 	struct voltage_rail *ptemp_rail = (struct voltage_rail *)pargs;
 	struct voltage_rail  *board_obj_volt_rail_ptr = NULL;
-	u32 status;
+	int status;
 
 	nvgpu_log_info(g, " ");
 	status = boardobj_construct_super(g, &board_obj_ptr,
@@ -242,9 +242,9 @@ u8 volt_rail_vbios_volt_domain_convert_to_internal(struct gk20a *g,
 	return CTRL_VOLT_DOMAIN_INVALID;
 }
 
-u32 volt_rail_pmu_setup(struct gk20a *g)
+int volt_rail_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -261,10 +261,10 @@ u32 volt_rail_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-static u32 volt_get_volt_rail_table(struct gk20a *g,
+static int volt_get_volt_rail_table(struct gk20a *g,
 		struct voltage_rail_metadata *pvolt_rail_metadata)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *volt_rail_table_ptr = NULL;
 	struct voltage_rail *prail = NULL;
 	struct vbios_voltage_rail_table_1x_header header = { 0 };
@@ -370,7 +370,7 @@ done:
 	return status;
 }
 
-static u32 _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
+static int _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 	struct nv_pmu_boardobjgrp *pmuboardobjgrp, struct nv_pmu_boardobj
 	**ppboardobjpmudata, u8 idx)
 {
@@ -392,7 +392,7 @@ static u32 _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _volt_rail_devgrp_pmustatus_instget(struct gk20a *g,
+static int _volt_rail_devgrp_pmustatus_instget(struct gk20a *g,
 	void *pboardobjgrppmu, struct nv_pmu_boardobj_query
 	**ppboardobjpmustatus, u8 idx)
 {
@@ -411,9 +411,9 @@ static u32 _volt_rail_devgrp_pmustatus_instget(struct gk20a *g,
 	return 0;
 }
 
-u32 volt_rail_sw_setup(struct gk20a *g)
+int volt_rail_sw_setup(struct gk20a *g)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct voltage_rail *pvolt_rail;
 	u8 i;

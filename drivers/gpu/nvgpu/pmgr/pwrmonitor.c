@@ -28,7 +28,7 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "gp106/bios_gp106.h"
 
-static u32 _pwr_channel_pmudata_instget(struct gk20a *g,
+static int _pwr_channel_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
 			u8 idx)
@@ -54,7 +54,7 @@ static u32 _pwr_channel_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _pwr_channel_rels_pmudata_instget(struct gk20a *g,
+static int _pwr_channel_rels_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
 			u8 idx)
@@ -105,13 +105,13 @@ static bool _pwr_channel_implements(struct pwr_channel *pchannel,
 	return (type == BOARDOBJ_GET_TYPE(pchannel));
 }
 
-static u32 _pwr_domains_pmudatainit_sensor(struct gk20a *g,
+static int _pwr_domains_pmudatainit_sensor(struct gk20a *g,
 					struct boardobj *board_obj_ptr,
 					struct nv_pmu_boardobj *ppmudata)
 {
 	struct nv_pmu_pmgr_pwr_channel_sensor *pmu_sensor_data;
 	struct pwr_channel_sensor *sensor;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status) {
@@ -144,7 +144,7 @@ static struct boardobj *construct_pwr_topology(struct gk20a *g,
 				void *pargs, u16 pargs_size, u8 type)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
+	int status;
 	struct pwr_channel_sensor *pwrchannel;
 	struct pwr_channel_sensor *sensor = (struct pwr_channel_sensor*)pargs;
 
@@ -174,10 +174,10 @@ static struct boardobj *construct_pwr_topology(struct gk20a *g,
 	return board_obj_ptr;
 }
 
-static u32 devinit_get_pwr_topology_table(struct gk20a *g,
+static int devinit_get_pwr_topology_table(struct gk20a *g,
 				struct pmgr_pwr_monitor *ppwrmonitorobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *pwr_topology_table_ptr = NULL;
 	u8 *curr_pwr_topology_table_ptr = NULL;
 	struct boardobj *boardobj;
@@ -296,9 +296,9 @@ done:
 	return status;
 }
 
-u32 pmgr_monitor_sw_setup(struct gk20a *g)
+int pmgr_monitor_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct pwr_channel *pchannel;
 	struct pmgr_pwr_monitor *ppwrmonitorobjs;

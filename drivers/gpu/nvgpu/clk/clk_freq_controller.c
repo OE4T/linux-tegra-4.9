@@ -32,13 +32,13 @@
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
 
-static u32 clk_freq_controller_pmudatainit_super(struct gk20a *g,
+static int clk_freq_controller_pmudatainit_super(struct gk20a *g,
 	struct boardobj *board_obj_ptr,
 	struct nv_pmu_boardobj *ppmudata)
 {
 	struct nv_pmu_clk_clk_freq_controller_boardobj_set *pfreq_cntlr_set;
 	struct clk_freq_controller *pfreq_cntlr;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status) {
@@ -63,14 +63,14 @@ static u32 clk_freq_controller_pmudatainit_super(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_freq_controller_pmudatainit_pi(struct gk20a *g,
+static int clk_freq_controller_pmudatainit_pi(struct gk20a *g,
 	struct boardobj *board_obj_ptr,
 	struct nv_pmu_boardobj *ppmudata)
 {
 	struct nv_pmu_clk_clk_freq_controller_pi_boardobj_set
 		*pfreq_cntlr_pi_set;
 	struct clk_freq_controller_pi *pfreq_cntlr_pi;
-	u32 status = 0;
+	int status = 0;
 
 	status = clk_freq_controller_pmudatainit_super(g,
 		board_obj_ptr, ppmudata);
@@ -94,13 +94,13 @@ static u32 clk_freq_controller_pmudatainit_pi(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_freq_controller_construct_super(struct gk20a *g,
+static int clk_freq_controller_construct_super(struct gk20a *g,
 	struct boardobj **ppboardobj,
 	u16 size, void *pargs)
 {
 	struct clk_freq_controller *pfreq_cntlr = NULL;
 	struct clk_freq_controller *pfreq_cntlr_tmp = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj, size, pargs);
 	if (status) {
@@ -125,13 +125,13 @@ static u32 clk_freq_controller_construct_super(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_freq_controller_construct_pi(struct gk20a *g,
+static int clk_freq_controller_construct_pi(struct gk20a *g,
 	struct boardobj **ppboardobj,
 	u16 size, void *pargs)
 {
 	struct clk_freq_controller_pi *pfreq_cntlr_pi = NULL;
 	struct clk_freq_controller_pi *pfreq_cntlr_pi_tmp = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	status = clk_freq_controller_construct_super(g, ppboardobj,
 			size, pargs);
@@ -161,7 +161,7 @@ static struct clk_freq_controller *clk_clk_freq_controller_construct(
 	void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_FREQ_CONTROLLER_TYPE_PI) {
 		return NULL;
@@ -177,10 +177,10 @@ static struct clk_freq_controller *clk_clk_freq_controller_construct(
 }
 
 
-static u32 clk_get_freq_controller_table(struct gk20a *g,
+static int clk_get_freq_controller_table(struct gk20a *g,
 		struct clk_freq_controllers *pclk_freq_controllers)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *pfreq_controller_table_ptr = NULL;
 	struct vbios_fct_1x_header header = { 0 };
 	struct vbios_fct_1x_entry entry  = { 0 };
@@ -324,9 +324,9 @@ done:
 	return status;
 }
 
-u32 clk_freq_controller_pmu_setup(struct gk20a *g)
+int clk_freq_controller_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -343,7 +343,7 @@ u32 clk_freq_controller_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-static u32 _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
+static int _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
 				   struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 				   struct nv_pmu_boardobj **ppboardobjpmudata,
 					   u8 idx)
@@ -366,7 +366,7 @@ static u32 _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _clk_freq_controllers_pmudatainit(struct gk20a *g,
+static int _clk_freq_controllers_pmudatainit(struct gk20a *g,
 			 struct boardobjgrp *pboardobjgrp,
 			 struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
@@ -375,7 +375,7 @@ static u32 _clk_freq_controllers_pmudatainit(struct gk20a *g,
 		pboardobjgrppmu;
 	struct clk_freq_controllers *pcntrs =
 		(struct clk_freq_controllers *)pboardobjgrp;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
@@ -391,9 +391,9 @@ done:
 	return status;
 }
 
-u32 clk_freq_controller_sw_setup(struct gk20a *g)
+int clk_freq_controller_sw_setup(struct gk20a *g)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct clk_freq_controllers *pclk_freq_controllers;
 	struct avfsfllobjs *pfllobjs = &(g->clk_pmu.avfs_fllobjs);

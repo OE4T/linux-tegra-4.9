@@ -31,14 +31,14 @@
 #include "ctrl/ctrlvolt.h"
 
 static struct vfe_equ *construct_vfe_equ(struct gk20a *g, void *pargs);
-static u32 devinit_get_vfe_equ_table(struct gk20a *g,
+static int devinit_get_vfe_equ_table(struct gk20a *g,
 	struct vfe_equs *pequobjs);
 
-static u32 _vfe_equs_pmudatainit(struct gk20a *g,
+static int _vfe_equs_pmudatainit(struct gk20a *g,
 				 struct boardobjgrp *pboardobjgrp,
 				 struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobjgrp_pmudatainit_e255(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
@@ -51,7 +51,7 @@ done:
 	return status;
 }
 
-static u32 _vfe_equs_pmudata_instget(struct gk20a *g,
+static int _vfe_equs_pmudata_instget(struct gk20a *g,
 				     struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 				     struct nv_pmu_boardobj **ppboardobjpmudata,
 				     u8 idx)
@@ -71,9 +71,9 @@ static u32 _vfe_equs_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-u32 vfe_equ_sw_setup(struct gk20a *g)
+int vfe_equ_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct vfe_equs *pvfeequobjs;
 
@@ -113,9 +113,9 @@ done:
 	return status;
 }
 
-u32 vfe_equ_pmu_setup(struct gk20a *g)
+int vfe_equ_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -131,10 +131,10 @@ u32 vfe_equ_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-static u32 devinit_get_vfe_equ_table(struct gk20a *g,
+static int devinit_get_vfe_equ_table(struct gk20a *g,
 				     struct vfe_equs *pvfeequobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *vfeequs_tbl_ptr = NULL;
 	struct vbios_vfe_3x_header_struct vfeequs_tbl_header = { 0 };
 	struct vbios_vfe_3x_equ_entry_struct equ = { 0 };
@@ -329,7 +329,7 @@ done:
 	return status;
 }
 
-static u32 _vfe_equ_pmudatainit_super(struct gk20a *g,
+static int _vfe_equ_pmudatainit_super(struct gk20a *g,
 				      struct boardobj *board_obj_ptr,
 				      struct nv_pmu_boardobj *ppmudata)
 {
@@ -357,13 +357,13 @@ static u32 _vfe_equ_pmudatainit_super(struct gk20a *g,
 	return status;
 }
 
-static u32 vfe_equ_construct_super(struct gk20a *g,
+static int vfe_equ_construct_super(struct gk20a *g,
 				   struct boardobj **ppboardobj,
 				   u16 size, void *pargs)
 {
 	struct vfe_equ *pvfeequ;
 	struct vfe_equ *ptmpequ = (struct vfe_equ *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj,
 		size, pargs);
@@ -384,11 +384,11 @@ static u32 vfe_equ_construct_super(struct gk20a *g,
 	return status;
 }
 
-static u32 _vfe_equ_pmudatainit_compare(struct gk20a *g,
+static int _vfe_equ_pmudatainit_compare(struct gk20a *g,
 					struct boardobj *board_obj_ptr,
 					struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct vfe_equ_compare *pvfe_equ_compare;
 	struct nv_pmu_vfe_equ_compare *pset;
 
@@ -411,7 +411,7 @@ static u32 _vfe_equ_pmudatainit_compare(struct gk20a *g,
 }
 
 
-static u32 vfe_equ_construct_compare(struct gk20a *g,
+static int vfe_equ_construct_compare(struct gk20a *g,
 				     struct boardobj **ppboardobj,
 				     u16 size, void *pargs)
 {
@@ -419,7 +419,7 @@ static u32 vfe_equ_construct_compare(struct gk20a *g,
 	struct vfe_equ_compare *pvfeequ;
 	struct vfe_equ_compare *ptmpequ =
 			(struct vfe_equ_compare *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_PERF_VFE_EQU_TYPE_COMPARE)
 		return -EINVAL;
@@ -443,11 +443,11 @@ static u32 vfe_equ_construct_compare(struct gk20a *g,
 	return status;
 }
 
-static u32 _vfe_equ_pmudatainit_minmax(struct gk20a *g,
+static int _vfe_equ_pmudatainit_minmax(struct gk20a *g,
 				       struct boardobj *board_obj_ptr,
 				       struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct vfe_equ_minmax *pvfe_equ_minmax;
 	struct nv_pmu_vfe_equ_minmax *pset;
 
@@ -469,7 +469,7 @@ static u32 _vfe_equ_pmudatainit_minmax(struct gk20a *g,
 	return status;
 }
 
-static u32 vfe_equ_construct_minmax(struct gk20a *g,
+static int vfe_equ_construct_minmax(struct gk20a *g,
 				    struct boardobj **ppboardobj,
 				    u16 size, void *pargs)
 {
@@ -477,7 +477,7 @@ static u32 vfe_equ_construct_minmax(struct gk20a *g,
 	struct vfe_equ_minmax *pvfeequ;
 	struct vfe_equ_minmax *ptmpequ =
 			(struct vfe_equ_minmax *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_PERF_VFE_EQU_TYPE_MINMAX)
 		return -EINVAL;
@@ -498,11 +498,11 @@ static u32 vfe_equ_construct_minmax(struct gk20a *g,
 	return status;
 }
 
-static u32 _vfe_equ_pmudatainit_quadratic(struct gk20a *g,
+static int _vfe_equ_pmudatainit_quadratic(struct gk20a *g,
 					  struct boardobj *board_obj_ptr,
 					  struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct vfe_equ_quadratic *pvfe_equ_quadratic;
 	struct nv_pmu_vfe_equ_quadratic *pset;
 	u32 i;
@@ -524,7 +524,7 @@ static u32 _vfe_equ_pmudatainit_quadratic(struct gk20a *g,
 	return status;
 }
 
-static u32 vfe_equ_construct_quadratic(struct gk20a *g,
+static int vfe_equ_construct_quadratic(struct gk20a *g,
 				       struct boardobj **ppboardobj,
 				       u16 size, void *pargs)
 {
@@ -532,7 +532,7 @@ static u32 vfe_equ_construct_quadratic(struct gk20a *g,
 	struct vfe_equ_quadratic *pvfeequ;
 	struct vfe_equ_quadratic *ptmpequ =
 			(struct vfe_equ_quadratic *)pargs;
-	u32 status = 0;
+	int status = 0;
 	u32 i;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_PERF_VFE_EQU_TYPE_QUADRATIC)
@@ -558,7 +558,7 @@ static u32 vfe_equ_construct_quadratic(struct gk20a *g,
 static struct vfe_equ *construct_vfe_equ(struct gk20a *g, void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
+	int status;
 
 	nvgpu_log_info(g, " ");
 

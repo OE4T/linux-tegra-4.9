@@ -33,10 +33,10 @@
 
 static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs);
 
-static u32 devinit_get_clocks_table(struct gk20a *g,
+static int devinit_get_clocks_table(struct gk20a *g,
 	struct clk_domains *pdomainobjs);
 
-static u32 clk_domain_pmudatainit_super(struct gk20a *g, struct boardobj
+static int clk_domain_pmudatainit_super(struct gk20a *g, struct boardobj
 	*board_obj_ptr,	struct nv_pmu_boardobj *ppmudata);
 
 static struct vbios_clocks_table_1x_hal_clock_entry
@@ -120,7 +120,7 @@ static u32 clktranslatehalmumsettoapinumset(u32 clkhaldomains)
 	return clkapidomains;
 }
 
-static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
+static int _clk_domains_pmudatainit_3x(struct gk20a *g,
 				       struct boardobjgrp *pboardobjgrp,
 				       struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
 {
@@ -128,7 +128,7 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 		(struct nv_pmu_clk_clk_domain_boardobjgrp_set_header *)
 		pboardobjgrppmu;
 	struct clk_domains *pdomains = (struct clk_domains *)pboardobjgrp;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
@@ -162,7 +162,7 @@ done:
 	return status;
 }
 
-static u32 _clk_domains_pmudata_instget(struct gk20a *g,
+static int _clk_domains_pmudata_instget(struct gk20a *g,
 					struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 					struct nv_pmu_boardobj **ppboardobjpmudata,
 					u8 idx)
@@ -185,9 +185,9 @@ static u32 _clk_domains_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-u32 clk_domain_sw_setup(struct gk20a *g)
+int clk_domain_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct clk_domains *pclkdomainobjs;
 	struct clk_domain *pdomain;
@@ -281,9 +281,9 @@ done:
 	return status;
 }
 
-u32 clk_domain_pmu_setup(struct gk20a *g)
+int clk_domain_pmu_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	nvgpu_log_info(g, " ");
@@ -300,10 +300,10 @@ u32 clk_domain_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-static u32 devinit_get_clocks_table(struct gk20a *g,
+static int devinit_get_clocks_table(struct gk20a *g,
 				    struct clk_domains *pclkdomainobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *clocks_table_ptr = NULL;
 	struct vbios_clocks_table_1x_header clocks_table_header = { 0 };
 	struct vbios_clocks_table_1x_entry clocks_table_entry = { 0 };
@@ -486,7 +486,7 @@ done:
 	return status;
 }
 
-static u32 clkdomainclkproglink_not_supported(struct gk20a *g,
+static int clkdomainclkproglink_not_supported(struct gk20a *g,
 					      struct clk_pmupstate *pclk,
 					      struct clk_domain *pdomain)
 {
@@ -520,13 +520,13 @@ static u32 clkdomaingetfpoints_stub(
 }
 
 
-static u32 clk_domain_construct_super(struct gk20a *g,
+static int clk_domain_construct_super(struct gk20a *g,
 				      struct boardobj **ppboardobj,
 				      u16 size, void *pargs)
 {
 	struct clk_domain *pdomain;
 	struct clk_domain *ptmpdomain = (struct clk_domain *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj,
 		size, pargs);
@@ -557,11 +557,11 @@ static u32 clk_domain_construct_super(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_domain_pmudatainit_3x(struct gk20a *g,
+static int _clk_domain_pmudatainit_3x(struct gk20a *g,
 				      struct boardobj *board_obj_ptr,
 				      struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x *pclk_domain_3x;
 	struct nv_pmu_clk_clk_domain_3x_boardobj_set *pset;
 
@@ -581,7 +581,7 @@ static u32 _clk_domain_pmudatainit_3x(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_domain_construct_3x(struct gk20a *g,
+static int clk_domain_construct_3x(struct gk20a *g,
 				   struct boardobj **ppboardobj,
 				   u16 size, void *pargs)
 {
@@ -589,7 +589,7 @@ static u32 clk_domain_construct_3x(struct gk20a *g,
 	struct clk_domain_3x *pdomain;
 	struct clk_domain_3x *ptmpdomain =
 			(struct clk_domain_3x *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	ptmpobj->type_mask = BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X);
 	status = clk_domain_construct_super(g, ppboardobj,
@@ -608,11 +608,11 @@ static u32 clk_domain_construct_3x(struct gk20a *g,
 	return status;
 }
 
-static u32 clkdomainclkproglink_3x_prog(struct gk20a *g,
+static int clkdomainclkproglink_3x_prog(struct gk20a *g,
 					struct clk_pmupstate *pclk,
 					struct clk_domain *pdomain)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_prog *p3xprog =
 		(struct clk_domain_3x_prog *)pdomain;
 	struct clk_prog *pprog = NULL;
@@ -822,11 +822,11 @@ done:
 	return status;
 }
 
-static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
+static int _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 					   struct boardobj *board_obj_ptr,
 					   struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_prog *pclk_domain_3x_prog;
 	struct nv_pmu_clk_clk_domain_3x_prog_boardobj_set *pset;
 	struct clk_domains *pdomains = &(g->clk_pmu.clk_domainobjs);
@@ -860,7 +860,7 @@ static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_domain_construct_3x_prog(struct gk20a *g,
+static int clk_domain_construct_3x_prog(struct gk20a *g,
 					struct boardobj **ppboardobj,
 					u16 size, void *pargs)
 {
@@ -868,7 +868,7 @@ static u32 clk_domain_construct_3x_prog(struct gk20a *g,
 	struct clk_domain_3x_prog *pdomain;
 	struct clk_domain_3x_prog *ptmpdomain =
 			(struct clk_domain_3x_prog *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X_PROG);
 	status = clk_domain_construct_3x(g, ppboardobj, size, pargs);
@@ -905,11 +905,11 @@ static u32 clk_domain_construct_3x_prog(struct gk20a *g,
 	return status;
 }
 
-static u32 _clk_domain_pmudatainit_3x_slave(struct gk20a *g,
+static int _clk_domain_pmudatainit_3x_slave(struct gk20a *g,
 					    struct boardobj *board_obj_ptr,
 					    struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_slave *pclk_domain_3x_slave;
 	struct nv_pmu_clk_clk_domain_3x_slave_boardobj_set *pset;
 
@@ -930,7 +930,7 @@ static u32 _clk_domain_pmudatainit_3x_slave(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_domain_construct_3x_slave(struct gk20a *g,
+static int clk_domain_construct_3x_slave(struct gk20a *g,
 					 struct boardobj **ppboardobj,
 					 u16 size, void *pargs)
 {
@@ -938,7 +938,7 @@ static u32 clk_domain_construct_3x_slave(struct gk20a *g,
 	struct clk_domain_3x_slave *pdomain;
 	struct clk_domain_3x_slave *ptmpdomain =
 			(struct clk_domain_3x_slave *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE) {
 		return -EINVAL;
@@ -963,11 +963,11 @@ static u32 clk_domain_construct_3x_slave(struct gk20a *g,
 	return status;
 }
 
-static u32 clkdomainclkproglink_3x_master(struct gk20a *g,
+static int clkdomainclkproglink_3x_master(struct gk20a *g,
 					  struct clk_pmupstate *pclk,
 					  struct clk_domain *pdomain)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_master *p3xmaster  =
 		(struct clk_domain_3x_master *)pdomain;
 	struct clk_prog *pprog = NULL;
@@ -1007,11 +1007,11 @@ done:
 	return status;
 }
 
-static u32 _clk_domain_pmudatainit_3x_master(struct gk20a *g,
+static int _clk_domain_pmudatainit_3x_master(struct gk20a *g,
 					     struct boardobj *board_obj_ptr,
 					     struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_master *pclk_domain_3x_master;
 	struct nv_pmu_clk_clk_domain_3x_master_boardobj_set *pset;
 
@@ -1032,13 +1032,13 @@ static u32 _clk_domain_pmudatainit_3x_master(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_domain_construct_3x_master(struct gk20a *g,
+static int clk_domain_construct_3x_master(struct gk20a *g,
 					  struct boardobj **ppboardobj,
 					  u16 size, void *pargs)
 {
 	struct boardobj *ptmpobj = (struct boardobj *)pargs;
 	struct clk_domain_3x_master *pdomain;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER) {
 		return -EINVAL;
@@ -1062,7 +1062,7 @@ static u32 clk_domain_construct_3x_master(struct gk20a *g,
 	return status;
 }
 
-static u32 clkdomainclkproglink_fixed(struct gk20a *g,
+static int clkdomainclkproglink_fixed(struct gk20a *g,
 				      struct clk_pmupstate *pclk,
 				      struct clk_domain *pdomain)
 {
@@ -1070,11 +1070,11 @@ static u32 clkdomainclkproglink_fixed(struct gk20a *g,
 	return 0;
 }
 
-static u32 _clk_domain_pmudatainit_3x_fixed(struct gk20a *g,
+static int _clk_domain_pmudatainit_3x_fixed(struct gk20a *g,
 					    struct boardobj *board_obj_ptr,
 					    struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain_3x_fixed *pclk_domain_3x_fixed;
 	struct nv_pmu_clk_clk_domain_3x_fixed_boardobj_set *pset;
 
@@ -1095,7 +1095,7 @@ static u32 _clk_domain_pmudatainit_3x_fixed(struct gk20a *g,
 	return status;
 }
 
-static u32 clk_domain_construct_3x_fixed(struct gk20a *g,
+static int clk_domain_construct_3x_fixed(struct gk20a *g,
 					 struct boardobj **ppboardobj,
 					 u16 size, void *pargs)
 {
@@ -1103,7 +1103,7 @@ static u32 clk_domain_construct_3x_fixed(struct gk20a *g,
 	struct clk_domain_3x_fixed *pdomain;
 	struct clk_domain_3x_fixed *ptmpdomain =
 			(struct clk_domain_3x_fixed *)pargs;
-	u32 status = 0;
+	int status = 0;
 
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED) {
 		return -EINVAL;
@@ -1163,11 +1163,11 @@ static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs)
 	return (struct clk_domain *)board_obj_ptr;
 }
 
-static u32 clk_domain_pmudatainit_super(struct gk20a *g,
+static int clk_domain_pmudatainit_super(struct gk20a *g,
 					struct boardobj *board_obj_ptr,
 					struct nv_pmu_boardobj *ppmudata)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain *pclk_domain;
 	struct nv_pmu_clk_clk_domain_boardobj_set *pset;
 
@@ -1189,9 +1189,9 @@ static u32 clk_domain_pmudatainit_super(struct gk20a *g,
 	return status;
 }
 
-u32 clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk)
+int clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk)
 {
-	u32 status = 0;
+	int status = 0;
 	struct clk_domain *pdomain;
 	u8 i;
 

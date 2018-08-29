@@ -1,7 +1,7 @@
 /*
  * general perf structures & definitions
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 #include "perf/vfe_var.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
-u32 vfe_equ_sw_setup(struct gk20a *g);
-u32 vfe_equ_pmu_setup(struct gk20a *g);
+int vfe_equ_sw_setup(struct gk20a *g);
+int vfe_equ_pmu_setup(struct gk20a *g);
 
 #define VFE_EQU_GET(_pperf, _idx)                                              \
 	((struct vfe_equ *)BOARDOBJGRP_OBJ_GET_BY_IDX(                         \

@@ -182,7 +182,7 @@ static u32 _pwr_policy_limitarboutputget(struct gk20a *g,
 	return _pwr_policy_limitarboutputget_helper(p_limit_arb);
 }
 
-static u32 _pwr_domains_pmudatainit_hw_threshold(struct gk20a *g,
+static int _pwr_domains_pmudatainit_hw_threshold(struct gk20a *g,
 				struct boardobj *board_obj_ptr,
 				struct nv_pmu_boardobj *ppmudata)
 {
@@ -190,7 +190,7 @@ static u32 _pwr_domains_pmudatainit_hw_threshold(struct gk20a *g,
 	struct pwr_policy_hw_threshold *p_hw_threshold;
 	struct pwr_policy *p_pwr_policy;
 	struct nv_pmu_pmgr_pwr_policy *pmu_pwr_policy;
-	u32 status = 0;
+	int status = 0;
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status) {
@@ -256,7 +256,7 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 			void *pargs, u16 pargs_size, u8 type)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
+	int status;
 	struct pwr_policy_hw_threshold *pwrpolicyhwthreshold;
 	struct pwr_policy *pwrpolicy;
 	struct pwr_policy *pwrpolicyparams = (struct pwr_policy*)pargs;
@@ -363,13 +363,13 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 	return board_obj_ptr;
 }
 
-static u32 _pwr_policy_construct_WAR_SW_Threshold_policy(struct gk20a *g,
+static int _pwr_policy_construct_WAR_SW_Threshold_policy(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs,
 			union pwr_policy_data_union *ppwrpolicydata,
 			u16 pwr_policy_size,
 			u32 obj_index)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobj *boardobj;
 
 	/* WARN policy */
@@ -512,10 +512,10 @@ static inline void devinit_unpack_pwr_policy_entry(
 	__UNPACK_FIELD(unpacked, packed, filter_param);
 }
 
-static u32 devinit_get_pwr_policy_table(struct gk20a *g,
+static int devinit_get_pwr_policy_table(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *ptr = NULL;
 	struct boardobj *boardobj;
 	struct pwr_policy_3x_header_struct *packed_hdr;
@@ -707,9 +707,9 @@ done:
 	return status;
 }
 
-u32 pmgr_policy_sw_setup(struct gk20a *g)
+int pmgr_policy_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct pwr_policy *ppolicy;
 	struct pmgr_pwr_policy *ppwrpolicyobjs;

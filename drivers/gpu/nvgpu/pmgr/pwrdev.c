@@ -28,7 +28,7 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "gp106/bios_gp106.h"
 
-static u32 _pwr_device_pmudata_instget(struct gk20a *g,
+static int _pwr_device_pmudata_instget(struct gk20a *g,
 			struct nv_pmu_boardobjgrp *pmuboardobjgrp,
 			struct nv_pmu_boardobj **ppboardobjpmudata,
 			u8 idx)
@@ -51,13 +51,13 @@ static u32 _pwr_device_pmudata_instget(struct gk20a *g,
 	return 0;
 }
 
-static u32 _pwr_domains_pmudatainit_ina3221(struct gk20a *g,
+static int _pwr_domains_pmudatainit_ina3221(struct gk20a *g,
 			struct boardobj *board_obj_ptr,
 			struct nv_pmu_boardobj *ppmudata)
 {
 	struct nv_pmu_pmgr_pwr_device_desc_ina3221 *ina3221_desc;
 	struct pwr_device_ina3221 *ina3221;
-	u32 status = 0;
+	int status = 0;
 	u32 indx;
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
@@ -92,7 +92,7 @@ static struct boardobj *construct_pwr_device(struct gk20a *g,
 			void *pargs, u16 pargs_size, u8 type)
 {
 	struct boardobj *board_obj_ptr = NULL;
-	u32 status;
+	int status;
 	u32 indx;
 	struct pwr_device_ina3221 *pwrdev;
 	struct pwr_device_ina3221 *ina3221 = (struct pwr_device_ina3221*)pargs;
@@ -127,10 +127,10 @@ static struct boardobj *construct_pwr_device(struct gk20a *g,
 	return board_obj_ptr;
 }
 
-static u32 devinit_get_pwr_device_table(struct gk20a *g,
+static int devinit_get_pwr_device_table(struct gk20a *g,
 			struct pwr_devices *ppwrdeviceobjs)
 {
-	u32 status = 0;
+	int status = 0;
 	u8 *pwr_device_table_ptr = NULL;
 	u8 *curr_pwr_device_table_ptr = NULL;
 	struct boardobj *boardobj;
@@ -284,9 +284,9 @@ done:
 	return status;
 }
 
-u32 pmgr_device_sw_setup(struct gk20a *g)
+int pmgr_device_sw_setup(struct gk20a *g)
 {
-	u32 status;
+	int status;
 	struct boardobjgrp *pboardobjgrp = NULL;
 	struct pwr_devices *ppwrdeviceobjs;
 

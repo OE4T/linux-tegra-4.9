@@ -85,6 +85,6 @@ u32 volt_rail_volt_dev_register(struct gk20a *g, struct voltage_rail
 
 u8 volt_rail_volt_domain_convert_to_idx(struct gk20a *g, u8 volt_domain);
 
-u32 volt_rail_sw_setup(struct gk20a *g);
-u32 volt_rail_pmu_setup(struct gk20a *g);
+int volt_rail_sw_setup(struct gk20a *g);
+int volt_rail_pmu_setup(struct gk20a *g);
 #endif

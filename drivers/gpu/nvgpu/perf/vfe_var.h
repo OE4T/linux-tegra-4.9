@@ -26,8 +26,8 @@
 #include "boardobj/boardobjgrp.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
-u32 vfe_var_sw_setup(struct gk20a *g);
-u32 vfe_var_pmu_setup(struct gk20a *g);
+int vfe_var_sw_setup(struct gk20a *g);
+int vfe_var_pmu_setup(struct gk20a *g);
 
 #define VFE_VAR_GET(_pperf, _idx)                                              \
 	((struct vfe_var)BOARDOBJGRP_OBJ_GET_BY_IDX(                           \

@@ -26,7 +26,7 @@
 #include "boardobj.h"
 #include "ctrl/ctrlboardobj.h"
 
-u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
+int boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 				u16 size, void *args)
 {
 	struct boardobj  *pboardobj = NULL;
@@ -61,7 +61,7 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 	return 0;
 }
 
-u32 boardobj_destruct_super(struct boardobj *pboardobj)
+int boardobj_destruct_super(struct boardobj *pboardobj)
 {
 	struct gk20a *g = pboardobj->g;
 
@@ -86,7 +86,7 @@ bool boardobj_implements_super(struct gk20a *g, struct boardobj *pboardobj,
 	return (0 != (pboardobj->type_mask & BIT(type)));
 }
 
-u32 boardobj_pmudatainit_super(struct gk20a *g, struct boardobj *pboardobj,
+int boardobj_pmudatainit_super(struct gk20a *g, struct boardobj *pboardobj,
 				struct nv_pmu_boardobj *pmudata)
 {
 	nvgpu_log_info(g, " ");

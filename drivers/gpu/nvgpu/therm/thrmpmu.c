@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -50,9 +50,9 @@ static void therm_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		phandlerparams->success = 1;
 }
 
-u32 therm_send_pmgr_tables_to_pmu(struct gk20a *g)
+int therm_send_pmgr_tables_to_pmu(struct gk20a *g)
 {
-	u32 status = 0;
+	int status = 0;
 	struct boardobjgrp *pboardobjgrp = NULL;
 
 	if (!BOARDOBJGRP_IS_EMPTY(&g->therm_pmu.therm_deviceobjs.super.super)) {

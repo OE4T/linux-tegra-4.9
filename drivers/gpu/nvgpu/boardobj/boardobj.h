@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -42,14 +42,14 @@ typedef bool boardobj_implements(struct gk20a *g, struct boardobj *pboardobj,
 * description structure, describing this BOARDOBJ board device to the PMU.
 *
 */
-typedef u32 boardobj_pmudatainit(struct gk20a *g, struct boardobj *pboardobj,
+typedef int boardobj_pmudatainit(struct gk20a *g, struct boardobj *pboardobj,
 				struct nv_pmu_boardobj *pmudata);
 
 /*
 * Constructor for the base Board Object. Called by each device-specific
 * implementation of the BOARDOBJ interface to initialize the board object.
 */
-typedef u32 boardobj_construct(struct gk20a *g, struct boardobj **pboardobj,
+typedef int boardobj_construct(struct gk20a *g, struct boardobj **pboardobj,
 				u16 size, void *args);
 
 /*
@@ -58,7 +58,7 @@ typedef u32 boardobj_construct(struct gk20a *g, struct boardobj **pboardobj,
 * This has to be explicitly set by each device that extends from the
 * board object.
 */
-typedef u32 boardobj_destruct(struct boardobj *pboardobj);
+typedef int boardobj_destruct(struct boardobj *pboardobj);
 
 /*
 * Base Class for all physical or logical device on the PCB.

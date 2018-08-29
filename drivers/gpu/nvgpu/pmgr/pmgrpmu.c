@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -175,11 +175,11 @@ static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 	return status;
 }
 
-static u32 pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
+static int pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_pwr_device_desc_table *pwr_desc_table;
 	struct nv_pmu_pmgr_pwr_device_desc_table_header *ppwr_desc_header;
-	u32 status = 0;
+	int status = 0;
 
 	/* Set the BA-device-independent HW information */
 	pwr_desc_table = nvgpu_kzalloc(g, sizeof(*pwr_desc_table));
@@ -221,13 +221,13 @@ exit:
 	return status;
 }
 
-static u32 pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
+static int pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_pwr_monitor_pack *pwr_monitor_pack = NULL;
 	struct nv_pmu_pmgr_pwr_channel_header *pwr_channel_hdr;
 	struct nv_pmu_pmgr_pwr_chrelationship_header *pwr_chrelationship_header;
 	u32 max_dmem_size;
-	u32 status = 0;
+	int status = 0;
 
 	pwr_monitor_pack = nvgpu_kzalloc(g, sizeof(*pwr_monitor_pack));
 	if (!pwr_monitor_pack)
@@ -290,11 +290,11 @@ exit:
 	return status;
 }
 
-static u32 pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
+static int pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_pwr_policy_pack *ppwrpack = NULL;
 	struct pwr_policy *ppolicy = NULL;
-	u32 status = 0;
+	int status = 0;
 	u8 indx;
 	u32 max_dmem_size;
 
@@ -479,9 +479,9 @@ exit:
 	return status;
 }
 
-u32 pmgr_send_pmgr_tables_to_pmu(struct gk20a *g)
+int pmgr_send_pmgr_tables_to_pmu(struct gk20a *g)
 {
-	u32 status = 0;
+	int status = 0;
 
 	status = pmgr_send_i2c_device_topology_to_pmu(g);
 

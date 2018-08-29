@@ -36,14 +36,16 @@
 
 void gm20b_priv_ring_enable(struct gk20a *g)
 {
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		return;
+	}
 
 	nvgpu_log(g, gpu_dbg_info, "enabling priv ring");
 
-	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
+	if (g->ops.clock_gating.slcg_priring_load_gating_prod) {
 		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
 				g->slcg_enabled);
+	}
 
 	gk20a_writel(g,pri_ringmaster_command_r(),
 			0x4);
@@ -61,8 +63,9 @@ void gm20b_priv_ring_isr(struct gk20a *g)
 	u32 gpc;
 	u32 gpc_priv_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_PRIV_STRIDE);
 
-	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL)) {
 		return;
+	}
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
@@ -101,8 +104,9 @@ void gm20b_priv_ring_isr(struct gk20a *g)
 		cmd = pri_ringmaster_command_cmd_v(
 			gk20a_readl(g, pri_ringmaster_command_r()));
 	}
-	if (retry == 0 && cmd != pri_ringmaster_command_cmd_no_cmd_v())
+	if (retry == 0 && cmd != pri_ringmaster_command_cmd_no_cmd_v()) {
 		nvgpu_warn(g, "priv ringmaster intr ack too many retries");
+	}
 }
 
 void gm20b_priv_set_timeout_settings(struct gk20a *g)

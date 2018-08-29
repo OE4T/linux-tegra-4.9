@@ -63,6 +63,7 @@
 		nvidia,local-mac-address = <0x00 0x00 0x00 0x00 0x00 0x00>;
 		iommus = <&smmu TEGRA_SID_EQOS>;
 		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
+		dma-coherent;
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
 		nvidia,iso_bw = <81920>; /* sum of read and write bw, 80Mb/s */
 		nvidia,rx_riwt = <124>; /* usec value for Rx watchdog interrupt */

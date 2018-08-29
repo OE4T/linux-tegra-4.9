@@ -1171,7 +1171,7 @@ struct tegra_dsi_cmd *dsi_parse_cmd_dt(struct device *dev,
 				u32 n_cmd)
 {
 	struct tegra_dsi_cmd *dsi_cmd = NULL, *temp;
-	u32 *prop_val_ptr;
+	__be32 *prop_val_ptr;
 	u32 cnt = 0, i = 0;
 	u8 arg1 = 0, arg2 = 0, arg3 = 0;
 	bool long_pkt = false;
@@ -1262,7 +1262,7 @@ static const u32 *tegra_dsi_parse_pkt_seq_dt(struct platform_device *ndev,
 						struct device_node *node,
 						struct property *prop)
 {
-	u32 *prop_val_ptr;
+	__be32 *prop_val_ptr;
 	u32 *pkt_seq;
 	int line, i;
 

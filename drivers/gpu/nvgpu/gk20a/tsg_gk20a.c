@@ -304,6 +304,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 	tsg->timeslice_scale = 0;
 	tsg->runlist_id = ~0;
 	tsg->tgid = pid;
+	tsg->sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
 
 	if (g->ops.fifo.init_eng_method_buffers)
 		g->ops.fifo.init_eng_method_buffers(g, tsg);
@@ -373,6 +374,7 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	release_used_tsg(&g->fifo, tsg);
 
 	tsg->runlist_id = ~0;
+	tsg->sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
 
 	nvgpu_log(g, gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
 }

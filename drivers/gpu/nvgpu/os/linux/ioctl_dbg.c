@@ -223,10 +223,6 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 			nvgpu_kfree(g, prof_obj);
 		}
 	}
-
-	nvgpu_set_sm_exception_type_mask_locked(dbg_s,
-					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE);
-
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	nvgpu_mutex_destroy(&dbg_s->ch_list_lock);
@@ -499,7 +495,6 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_s->is_profiler = is_profiler;
 	dbg_s->is_pg_disabled = false;
 	dbg_s->is_timeout_disabled = false;
-	dbg_s->is_sm_exception_type_mask_set = false;
 
 	nvgpu_cond_init(&dbg_s->dbg_events.wait_queue);
 	nvgpu_init_list_node(&dbg_s->ch_list);
@@ -511,9 +506,6 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 		goto err_destroy_lock;
 	dbg_s->dbg_events.events_enabled = false;
 	dbg_s->dbg_events.num_pending_events = 0;
-
-	nvgpu_set_sm_exception_type_mask_locked(dbg_s,
-					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE);
 
 	return 0;
 
@@ -1887,34 +1879,29 @@ static int nvgpu_set_sm_exception_type_mask_locked(
 					u32 exception_mask)
 {
 	struct gk20a *g = dbg_s->g;
-	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
+	struct channel_gk20a *ch = NULL;
 
-	switch (exception_mask) {
-	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL:
-		gr->sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL;
-		if (dbg_s->is_sm_exception_type_mask_set == false) {
-			gr->sm_exception_mask_refcount++;
-			dbg_s->is_sm_exception_type_mask_set = true;
+	/*
+	 * Obtain the fisrt channel from the channel list in
+	 * dbg_session, find the context associated with channel
+	 * and set the sm_mask_type to that context
+	 */
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (ch != NULL) {
+		struct tsg_gk20a *tsg;
+
+		tsg = tsg_gk20a_from_ch(ch);
+		if (tsg != NULL) {
+			tsg->sm_exception_mask_type = exception_mask;
+			goto type_mask_end;
 		}
-		break;
-	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_NONE:
-		if (dbg_s->is_sm_exception_type_mask_set) {
-			gr->sm_exception_mask_refcount--;
-			dbg_s->is_sm_exception_type_mask_set = false;
-		}
-		if (gr->sm_exception_mask_refcount == 0)
-			gr->sm_exception_mask_type =
-					NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
-		break;
-	default:
-		nvgpu_err(g,
-			   "unrecognized dbg sm exception type mask: 0x%x",
-			   exception_mask);
-		err = -EINVAL;
-		break;
 	}
 
+	nvgpu_log_fn(g, "unable to find the TSG\n");
+	err = -EINVAL;
+
+type_mask_end:
 	return err;
 }
 
@@ -1924,10 +1911,30 @@ static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
 {
 	int err = 0;
 	struct gk20a *g = dbg_s->g;
+	u32 sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
+
+	switch (args->exception_type_mask) {
+	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL:
+		sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL;
+		break;
+	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_NONE:
+		sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
+		break;
+	default:
+		nvgpu_err(g,
+			   "unrecognized dbg sm exception type mask: 0x%x",
+			   args->exception_type_mask);
+		err = -EINVAL;
+		break;
+	}
+
+	if (err != 0) {
+		return err;
+	}
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = nvgpu_set_sm_exception_type_mask_locked(dbg_s,
-					args->exception_type_mask);
+					sm_exception_mask_type);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return err;

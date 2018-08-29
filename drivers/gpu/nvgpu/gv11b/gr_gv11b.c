@@ -2239,7 +2239,7 @@ static int gr_gv11b_handle_warp_esr_error_mmu_nack(struct gk20a *g,
 static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
 {
 	u32 index = 0U;
-	u32 esr_err = gr_gpc0_tpc0_sm0_hww_warp_esr_error_none_f();
+	bool esr_err = false;
 
 	struct warp_esr_error_table_s {
 		u32 error_value;
@@ -2285,7 +2285,7 @@ static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
 
 	for (index = 0; index < ARRAY_SIZE(warp_esr_error_table); index++) {
 		if (warp_esr_error_table[index].error_value == warp_esr_error) {
-			esr_err = warp_esr_error_table[index].error_value;
+			esr_err = true;
 			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"WARP_ESR %s(0x%x)",
 				warp_esr_error_table[index].error_name,
@@ -2294,8 +2294,9 @@ static bool gr_gv11b_check_warp_esr_error(struct gk20a *g, u32 warp_esr_error)
 		}
 	}
 
-	return (esr_err == 0U) ? false : true;
+	return esr_err;
 }
+
 static int gr_gv11b_handle_all_warp_esr_errors(struct gk20a *g,
 						u32 gpc, u32 tpc, u32 sm,
 						u32 warp_esr_error,
@@ -2316,23 +2317,23 @@ static int gr_gv11b_handle_all_warp_esr_errors(struct gk20a *g,
 		return 0;
 	}
 
-	/*
-	 * Check SET_EXCEPTION_TYPE_MASK is being set.
-	 * If set, skip the recovery and trigger CILP
-	 * If not set, trigger the recovery.
-	 */
-	if ((g->gr.sm_exception_mask_type &
-					NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) ==
-					NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) {
-		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
-			"SM Exception Type Mask set %d,"
-			"skip recovery",
-			g->gr.sm_exception_mask_type);
-		return 0;
-	}
-
 	if (fault_ch) {
 		tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+		/*
+		 * Check SET_EXCEPTION_TYPE_MASK is being set.
+		 * If set, skip the recovery and trigger CILP
+		 * If not set, trigger the recovery.
+		 */
+		if ((tsg->sm_exception_mask_type &
+			NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) ==
+				NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL) {
+			nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
+				"SM Exception Type Mask set %d,"
+				"skip recovery",
+				tsg->sm_exception_mask_type);
+			return 0;
+		}
 
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,

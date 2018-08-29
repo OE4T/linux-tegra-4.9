@@ -78,6 +78,10 @@ struct tsg_gk20a {
 	bool in_use;
 
 	struct nvgpu_tsg_sm_error_state *sm_error_states;
+
+#define NVGPU_SM_EXCEPTION_TYPE_MASK_NONE		(0x0U)
+#define NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL		(0x1U << 0)
+	u32 sm_exception_mask_type;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

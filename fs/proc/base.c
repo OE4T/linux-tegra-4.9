@@ -2934,6 +2934,45 @@ static const struct file_operations proc_task_weight_operations = {
 	.llseek		= generic_file_llseek,
 };
 
+#endif /*CONFIG_TASK_WEIGHT*/
+
+#ifdef CONFIG_CGROUP_SCHEDTUNE
+static ssize_t proc_load_read(struct file *file,
+	char __user *buf, size_t count, loff_t *ppos)
+{
+	struct task_struct *task = get_proc_task(file_inode(file));
+	char buffer[PROC_NUMBUF*3];
+	size_t len;
+	struct sched_avg avg;
+	unsigned int curr_cpu;
+
+	if (!task)
+		return -ESRCH;
+
+	task_decayed_load(task, &avg);
+
+	put_task_struct(task);
+
+	curr_cpu = task_cpu(task);
+
+	len = snprintf(buffer, sizeof(buffer), "%d %lu %lu %i\n",
+					task->pid,
+					avg.load_avg,
+					avg.util_avg,
+					curr_cpu);
+
+	return simple_read_from_buffer(buf, count, ppos, buffer, len);
+}
+
+static const struct file_operations proc_load_operations = {
+	.read		= proc_load_read,
+	.llseek		= generic_file_llseek,
+};
+
+#endif /*CONFIG_CGROUP_SCHEDTUNE*/
+
+
+#if defined(CONFIG_TASK_WEIGHT) || defined(CONFIG_CGROUP_SCHEDTUNE)
 static ssize_t proc_largest_task_read(struct file *file,
 	char __user *buf, size_t count, loff_t *ppos)
 {
@@ -2987,7 +3026,9 @@ static ssize_t proc_largest_task_read(struct file *file,
 		/* if load_avg is greater than current largest,
 		 * set this task as the largest task */
 		if (avg.load_avg > largest_task.load_avg) {
+#ifdef CONFIG_TASK_WEIGHT
 			largest_task.weight = avg.weight;
+#endif
 			largest_task.load_avg = avg.load_avg;
 			largest_task.util_avg = avg.util_avg;
 			largest_task.curr_cpu = task_cpu(ctask);
@@ -3013,7 +3054,7 @@ static const struct file_operations proc_largest_task_operations = {
 	.llseek		= generic_file_llseek,
 };
 
-#endif /* CONFIG_TASK_WEIGHT */
+#endif /*CONFIG_TASK_WEIGHT || CONFIG_CGROUP_SCHEDTUNE*/
 
 static int proc_pid_personality(struct seq_file *m, struct pid_namespace *ns,
 				struct pid *pid, struct task_struct *task)
@@ -3127,6 +3168,11 @@ static const struct pid_entry tgid_base_stuff[] = {
 	REG("timerslack_ns", S_IRUGO|S_IWUGO, proc_pid_set_timerslack_ns_operations),
 #ifdef CONFIG_TASK_WEIGHT
 	REG("weight",	  S_IRUGO|S_IWUSR, proc_task_weight_operations),
+#endif
+#ifdef CONFIG_CGROUP_SCHEDTUNE
+	REG("load",	  S_IRUGO, proc_load_operations),
+#endif
+#if defined(CONFIG_TASK_WEIGHT) || defined(CONFIG_CGROUP_SCHEDTUNE)
 	REG("largest_task", S_IRUGO, proc_largest_task_operations),
 #endif
 };
@@ -3514,7 +3560,12 @@ static const struct pid_entry tid_base_stuff[] = {
 	REG("setgroups",  S_IRUGO|S_IWUSR, proc_setgroups_operations),
 #endif
 #ifdef CONFIG_TASK_WEIGHT
-	REG("weight", S_IRUGO|S_IWUSR, proc_task_weight_operations),
+	REG("weight",	  S_IRUGO|S_IWUSR, proc_task_weight_operations),
+#endif
+#ifdef CONFIG_CGROUP_SCHEDTUNE
+	REG("load",	  S_IRUGO, proc_load_operations),
+#endif
+#if defined(CONFIG_TASK_WEIGHT) || defined(CONFIG_CGROUP_SCHEDTUNE)
 	REG("largest_task", S_IRUGO, proc_largest_task_operations),
 #endif
 };

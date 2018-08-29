@@ -173,6 +173,9 @@ struct camera_common_sensor_ops {
 	int (*power_put)(struct tegracam_device *tc_dev);
 	int (*get_framesync)(struct camera_common_data *s_data,
 		struct camera_common_framesync *vshs);
+	int (*set_mode)(struct tegracam_device *tc_dev);
+	int (*start_streaming)(struct tegracam_device *tc_dev);
+	int (*stop_streaming)(struct tegracam_device *tc_dev);
 };
 
 
@@ -336,6 +339,7 @@ const struct camera_common_colorfmt *camera_common_find_pixelfmt(
 	unsigned int pix_fmt);
 
 /* common control layer init */
+int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *handler);
 int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler);
 int tegracam_init_ctrl_ranges_by_mode(
 		struct tegracam_ctrl_handler *handler,

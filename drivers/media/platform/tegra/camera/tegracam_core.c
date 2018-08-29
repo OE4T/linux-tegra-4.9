@@ -19,13 +19,18 @@
 #include <media/tegra-v4l2-camera.h>
 #include <media/tegracam_core.h>
 
-
+struct tegracam_device *to_tegracam_device(struct camera_common_data *data)
+{
+	/* fix this by moving subdev to base struct */
+	return (struct tegracam_device *)data->tegracam_ctrl_hdl->tc_dev;
+}
+EXPORT_SYMBOL_GPL(to_tegracam_device);
 
 void tegracam_set_privdata(struct tegracam_device * tc_dev, void *priv)
 {
 	tc_dev->priv = priv;
 
-	/* TODO: cleanup needed for priv once all the sensors adapt new framework */
+	/* TODO: cleanup needed for priv once sensors adapt this driver */
 	tc_dev->s_data->priv = priv;
 }
 EXPORT_SYMBOL_GPL(tegracam_set_privdata);
@@ -116,72 +121,6 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 }
 EXPORT_SYMBOL_GPL(tegracam_device_register);
 
-int tegracam_v4l2subdev_register(struct tegracam_device *tc_dev,
-				bool is_sensor)
-{
-	struct camera_common_data *s_data = tc_dev->s_data;
-	struct tegracam_ctrl_handler *ctrl_hdl = s_data->tegracam_ctrl_hdl;
-	struct v4l2_subdev *sd = NULL;
-	struct device *dev = tc_dev->dev;
-	int err = 0;
-
-	/* init v4l2 subdevice for registration */
-	sd = &s_data->subdev;
-	if (!sd || !tc_dev->client) {
-		dev_err(dev, "Invalid subdev context\n");
-		return -ENODEV;
-	}
-
-	if (!tc_dev->v4l2sd_ops || !tc_dev->v4l2sd_internal_ops) {
-		dev_err(dev, "uninitialized v4l2 subdev ops\n");
-		return -EINVAL;
-	}
-
-	if (!tc_dev->media_ops) {
-		dev_err(dev, "uninitialized media entiry ops\n");
-		return -EINVAL;
-	}
-
-	if (!tc_dev->tcctrl_ops) {
-		dev_err(dev, "uninitialized control ops\n");
-		return -EINVAL;
-	}
-
-	v4l2_i2c_subdev_init(sd, tc_dev->client, tc_dev->v4l2sd_ops);
-
-	ctrl_hdl->ctrl_ops = tc_dev->tcctrl_ops;
-	err = tegracam_ctrl_handler_init(ctrl_hdl);
-	if (err) {
-		dev_err(dev, "Failed to init ctrls %s\n", tc_dev->name);
-		return err;
-	}
-	tc_dev->numctrls = ctrl_hdl->ctrl_ops->numctrls;
-	s_data->numctrls = tc_dev->numctrls;
-	sd->ctrl_handler = s_data->ctrl_handler = &ctrl_hdl->ctrl_handler;
-	s_data->ctrls = ctrl_hdl->ctrls;
-	sd->internal_ops = tc_dev->v4l2sd_internal_ops;
-	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |
-			V4L2_SUBDEV_FL_HAS_EVENTS;
-
-#if defined(CONFIG_MEDIA_CONTROLLER)
-	tc_dev->pad.flags = MEDIA_PAD_FL_SOURCE;
-	sd->entity.ops = tc_dev->media_ops;
-	err = tegra_media_entity_init(&sd->entity,
-			1, &tc_dev->pad, true, is_sensor);
-	if (err < 0) {
-		dev_err(dev, "unable to init media entity\n");
-		return err;
-	}
-#endif
-
-	err = v4l2_async_register_subdev(sd);
-	if (err)
-		return err;
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegracam_v4l2subdev_register);
-
 void tegracam_device_unregister(struct tegracam_device *tc_dev)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
@@ -190,16 +129,3 @@ void tegracam_device_unregister(struct tegracam_device *tc_dev)
 	camera_common_cleanup(s_data);
 }
 EXPORT_SYMBOL_GPL(tegracam_device_unregister);
-
-void tegracam_v4l2subdev_unregister(struct tegracam_device *tc_dev)
-{
-	struct camera_common_data *s_data = tc_dev->s_data;
-	struct v4l2_subdev *sd = &s_data->subdev;
-
-	v4l2_ctrl_handler_free(s_data->ctrl_handler);
-	v4l2_async_unregister_subdev(sd);
-#if defined(CONFIG_MEDIA_CONTROLLER)
-	media_entity_cleanup(&sd->entity);
-#endif
-}
-EXPORT_SYMBOL_GPL(tegracam_v4l2subdev_unregister);

@@ -40,6 +40,18 @@ static const u32 tegracam_def_cids[] = {
 	TEGRA_CAMERA_CID_GROUP_HOLD,
 };
 
+/*
+ * For auto control, the states of the previous controls must
+ * be applied to get optimal quality faster. List all the controls
+ * which must be overriden
+ */
+static const u32 tegracam_override_cids[] = {
+	TEGRA_CAMERA_CID_GAIN,
+	TEGRA_CAMERA_CID_EXPOSURE,
+	TEGRA_CAMERA_CID_FRAME_RATE,
+};
+#define NUM_OVERRIDE_CTRLS ARRAY_SIZE(tegracam_override_cids)
+
 static struct v4l2_ctrl_config ctrl_cfg_list[] = {
 /* Do not change the name field for the controls! */
 	{
@@ -228,6 +240,63 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	return err;
+}
+
+int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *hdl)
+{
+	struct v4l2_ext_controls ctrls;
+	struct v4l2_ext_control control;
+	struct tegracam_device *tc_dev = hdl->tc_dev;
+	struct device *dev = tc_dev->dev;
+	const struct tegracam_ctrl_ops *ops = hdl->ctrl_ops;
+	int err, result = 0;
+	int i;
+
+	/*
+	 * write list of override regs for the asking frame length,
+	 * coarse integration time, and gain. Failures to write
+	 * overrides are non-fatal
+	 */
+	memset(&ctrls, 0, sizeof(ctrls));
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+	ctrls.which = V4L2_CTRL_ID2WHICH(TEGRA_CAMERA_CID_BASE);
+#else
+	ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(TEGRA_CAMERA_CID_BASE);
+#endif
+	ctrls.count = 1;
+	ctrls.controls = &control;
+
+	for (i = 0; i < NUM_OVERRIDE_CTRLS; i++) {
+		control.id = tegracam_override_cids[i];
+		result = v4l2_g_ext_ctrls(&hdl->ctrl_handler, &ctrls);
+		if (result == 0) {
+			switch (control.id) {
+			case TEGRA_CAMERA_CID_GAIN:
+				err = ops->set_gain(tc_dev, control.value64);
+				break;
+			case TEGRA_CAMERA_CID_EXPOSURE:
+				err = ops->set_exposure(tc_dev,
+						control.value64);
+				break;
+			case TEGRA_CAMERA_CID_FRAME_RATE:
+				err = ops->set_frame_rate(tc_dev,
+					control.value64);
+				break;
+			default:
+				dev_err(dev, "%s: unsupported override %x\n",
+						__func__, control.id);
+				return -EINVAL;
+			}
+
+			if (err) {
+				dev_err(dev, "%s: error to set %d override\n",
+						__func__, control.id);
+				return err;
+			}
+		}
+	}
+
+	return 0;
 }
 
 int tegracam_init_ctrl_ranges_by_mode(

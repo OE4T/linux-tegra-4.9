@@ -591,6 +591,64 @@ error:
 	return ret;
 }
 
+static int imx185_set_mode(struct tegracam_device *tc_dev)
+{
+	struct imx185 *priv = (struct imx185 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	int err;
+
+	err = imx185_write_table(priv, mode_table[s_data->mode_prop_idx]);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static int imx185_start_streaming(struct tegracam_device *tc_dev)
+{
+	struct imx185 *priv = (struct imx185 *)tegracam_get_privdata(tc_dev);
+	int err;
+
+	if (test_mode) {
+		err = imx185_write_table(priv,
+			mode_table[IMX185_MODE_TEST_PATTERN]);
+		if (err)
+			return err;
+	}
+
+	err = imx185_write_table(priv,
+		mode_table[IMX185_MODE_START_STREAM]);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static int imx185_stop_streaming(struct tegracam_device *tc_dev)
+{
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct imx185 *priv = (struct imx185 *)tegracam_get_privdata(tc_dev);
+	int err;
+
+	err = imx185_write_table(priv, mode_table[IMX185_MODE_STOP_STREAM]);
+	if (err)
+		return err;
+
+	/* SW_RESET will have no ACK */
+	imx185_write_reg(s_data, IMX185_SW_RESET_ADDR, 0x01);
+
+	/*
+	 * Wait for one frame to make sure sensor is set to
+	 * software standby in V-blank
+	 *
+	 * delay = frame length rows * Tline (10 us)
+	 */
+	usleep_range(priv->frame_length * 10, priv->frame_length * 10 + 1000);
+
+	return 0;
+}
+
+
 static struct camera_common_sensor_ops imx185_common_ops = {
 	.numfrmfmts = ARRAY_SIZE(imx185_frmfmt),
 	.frmfmt_table = imx185_frmfmt,
@@ -601,155 +659,9 @@ static struct camera_common_sensor_ops imx185_common_ops = {
 	.parse_dt = imx185_parse_dt,
 	.power_get = imx185_power_get,
 	.power_put = imx185_power_put,
-};
-
-static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct device *dev = &client->dev;
-	struct camera_common_data *s_data = to_camera_common_data(dev);
-	struct imx185 *priv = (struct imx185 *)s_data->priv;
-	struct v4l2_ext_controls ctrls;
-	struct v4l2_ext_control control[3];
-	int err;
-
-	dev_dbg(dev, "%s++ enable %d\n", __func__, enable);
-
-	trace_imx185_s_stream(sd->name, enable, s_data->mode);
-	if (!enable) {
-		err =  imx185_write_table(priv,
-			mode_table[IMX185_MODE_STOP_STREAM]);
-
-		if (err)
-			return err;
-
-		/* SW_RESET will have no ACK */
-		regmap_write(s_data->regmap, IMX185_SW_RESET_ADDR, 0x01);
-
-		/* Wait for one frame to make sure sensor is set to
-		 * software standby in V-blank
-		 *
-		 * delay = frame length rows * Tline (10 us)
-		 */
-		usleep_range(priv->frame_length * 10,
-			priv->frame_length * 10 + 1000);
-		return 0;
-	}
-	err = imx185_write_table(priv, mode_table[s_data->mode_prop_idx]);
-	if (err)
-		goto exit;
-
-	if (s_data->override_enable) {
-		/* write list of override regs for the asking gain, */
-		/* frame rate and exposure time    */
-		memset(&ctrls, 0, sizeof(ctrls));
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
-		ctrls.which = V4L2_CTRL_ID2WHICH(TEGRA_CAMERA_CID_GAIN);
-#else
-		ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(TEGRA_CAMERA_CID_GAIN);
-#endif
-		ctrls.count = 3;
-		ctrls.controls = control;
-
-		control[0].id = TEGRA_CAMERA_CID_GAIN;
-		control[1].id = TEGRA_CAMERA_CID_FRAME_RATE;
-		control[2].id = TEGRA_CAMERA_CID_EXPOSURE;
-
-		err = v4l2_g_ext_ctrls(s_data->ctrl_handler, &ctrls);
-		if (err == 0) {
-			err |= imx185_set_gain(priv->tc_dev, control[0].value64);
-			if (err)
-				dev_err(dev, "%s: error gain override\n",
-					__func__);
-
-			err |= imx185_set_frame_rate(priv->tc_dev,
-					control[1].value64);
-			if (err)
-				dev_err(dev,
-					"%s: error frame length override\n",
-					__func__);
-
-			err |= imx185_set_exposure(priv->tc_dev, control[2].value64);
-			if (err)
-				dev_err(dev, "%s: error exposure override\n",
-					__func__);
-
-		} else {
-			dev_err(dev, "%s: faile to get overrides\n", __func__);
-		}
-	}
-
-	if (test_mode) {
-		err = imx185_write_table(priv,
-			mode_table[IMX185_MODE_TEST_PATTERN]);
-		if (err)
-			goto exit;
-	}
-
-	err = imx185_write_table(priv, mode_table[IMX185_MODE_START_STREAM]);
-	if (err)
-		goto exit;
-
-	return 0;
-exit:
-	dev_err(dev, "%s: error setting stream\n", __func__);
-	return err;
-}
-
-static int imx185_g_input_status(struct v4l2_subdev *sd, u32 *status)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
-	struct camera_common_power_rail *pw = s_data->power;
-
-	*status = pw->state == SWITCH_ON;
-	return 0;
-}
-
-static struct v4l2_subdev_video_ops imx185_subdev_video_ops = {
-	.s_stream	= imx185_s_stream,
-	.g_mbus_config	= camera_common_g_mbus_config,
-	.g_input_status = imx185_g_input_status,
-};
-
-static struct v4l2_subdev_core_ops imx185_subdev_core_ops = {
-	.s_power	= camera_common_s_power,
-};
-
-static int imx185_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
-		struct v4l2_subdev_format *format)
-{
-	return camera_common_g_fmt(sd, &format->format);
-}
-
-static int imx185_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
-	struct v4l2_subdev_format *format)
-{
-	int ret;
-
-	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
-		ret = camera_common_try_fmt(sd, &format->format);
-	else
-		ret = camera_common_s_fmt(sd, &format->format);
-
-	return ret;
-}
-
-
-static struct v4l2_subdev_pad_ops imx185_subdev_pad_ops = {
-	.set_fmt = imx185_set_fmt,
-	.get_fmt = imx185_get_fmt,
-	.enum_mbus_code = camera_common_enum_mbus_code,
-	.enum_frame_size	= camera_common_enum_framesizes,
-	.enum_frame_interval	= camera_common_enum_frameintervals,
-};
-
-static struct v4l2_subdev_ops imx185_subdev_ops = {
-	.core	= &imx185_subdev_core_ops,
-	.video	= &imx185_subdev_video_ops,
-	.pad = &imx185_subdev_pad_ops,
+	.set_mode = imx185_set_mode,
+	.start_streaming = imx185_start_streaming,
+	.stop_streaming = imx185_stop_streaming,
 };
 
 static int imx185_fuse_id_setup(struct imx185 *priv)
@@ -822,10 +734,6 @@ static const struct v4l2_subdev_internal_ops imx185_subdev_internal_ops = {
 	.open = imx185_open,
 };
 
-static const struct media_entity_operations imx185_media_ops = {
-	.link_validate = v4l2_subdev_link_validate,
-};
-
 static int imx185_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -854,9 +762,7 @@ static int imx185_probe(struct i2c_client *client,
 	strncpy(tc_dev->name, "imx185", sizeof(tc_dev->name));
 	tc_dev->dev_regmap_config = &sensor_regmap_config;
 	tc_dev->sensor_ops = &imx185_common_ops;
-	tc_dev->v4l2sd_ops = &imx185_subdev_ops;
 	tc_dev->v4l2sd_internal_ops = &imx185_subdev_internal_ops;
-	tc_dev->media_ops = &imx185_media_ops;
 	tc_dev->tcctrl_ops = &imx185_ctrl_ops;
 
 	err = tegracam_device_register(tc_dev);

@@ -37,7 +37,6 @@ config NVMAP_PAGE_POOL_SIZE
 
 config NVMAP_COLOR_PAGES
 	bool "Color pages allocated"
-	default y
 	help
 	  Say Y here to enable page coloring.
 	  Page coloring rearranges the pages allocated based on the color

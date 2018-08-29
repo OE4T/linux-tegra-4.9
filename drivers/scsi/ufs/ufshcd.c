@@ -4333,6 +4333,8 @@ static void ufshcd_err_handler(struct work_struct *work)
 	hba = container_of(work, struct ufs_hba, eh_work);
 
 	pm_runtime_get_sync(hba->dev);
+	if (!hba->card_present)
+		goto ret;
 	ufshcd_hold(hba, false);
 
 	spin_lock_irqsave(hba->host->host_lock, flags);
@@ -4444,6 +4446,7 @@ out:
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 	scsi_unblock_requests(hba->host);
 	ufshcd_release(hba);
+ret:
 	pm_runtime_put_sync(hba->dev);
 }
 
@@ -4885,9 +4888,11 @@ out:
  */
 static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 {
-	int err;
+	int err = 0;
 	unsigned long flags;
 
+	if (!hba->card_present)
+		goto out;
 	/* Reset the host controller */
 	spin_lock_irqsave(hba->host->host_lock, flags);
 	ufshcd_hba_stop(hba, false);
@@ -4948,12 +4953,13 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
  */
 static int ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 {
-	int err;
+	int err = 0;
 	unsigned long flags;
 	struct ufs_hba *hba;
 
 	hba = shost_priv(cmd->device->host);
-
+	if (!hba->card_present)
+		goto ret;
 	ufshcd_hold(hba, false);
 	/*
 	 * Check if there is any race with fatal error handling.
@@ -4989,6 +4995,7 @@ static int ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	ufshcd_release(hba);
+ret:
 	return err;
 }
 
@@ -5895,6 +5902,7 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		}
 		ufshcd_enable_intr(hba, UFSHCD_ENABLE_INTRS);
 	} else {
+
 		/* disable interrupts */
 		ufshcd_disable_intr(hba, hba->intr_mask);
 

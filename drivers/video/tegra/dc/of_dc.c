@@ -2365,14 +2365,18 @@ static int parse_imp_win_values(struct device_node *settings_np,
 			struct tegra_nvdisp_imp_settings *imp_settings,
 			int num_entries)
 {
-	u32 max_wins = tegra_dc_get_numof_dispwindows();
-	u8 win_ids_arr[max_wins];
-	s8 thread_group_arr[max_wins];
-	u16 fetch_slots_arr[max_wins];
-	u32 pipe_meter_arr[max_wins];
-	u64 dvfs_watermark_arr[max_wins];
-	u64 mempool_entries_arr[max_wins];
+	u8 win_ids_arr[DC_N_WINDOWS];
+	s8 thread_group_arr[DC_N_WINDOWS];
+	u16 fetch_slots_arr[DC_N_WINDOWS];
+	u32 pipe_meter_arr[DC_N_WINDOWS];
+	u64 dvfs_watermark_arr[DC_N_WINDOWS];
+	u64 mempool_entries_arr[DC_N_WINDOWS];
 	int i, ret = 0;
+
+	if (WARN_ON(DC_N_WINDOWS < num_entries)) {
+		dev_err(&pdev->dev, "invalid num_entries\n");
+		return -EINVAL;
+	}
 
 	ret = of_property_read_u8_array(settings_np,
 		"nvidia,imp_win_mapping",

@@ -192,6 +192,11 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 		mem_unlock_ucode_header[OS_DATA_OFFSET] >> 2],
 		mem_unlock_ucode_header[OS_DATA_SIZE], 0);
 
+	/* Write non-zero value to mailbox register which is updated by
+	 * mem_unlock bin to denote its return status.
+	 */
+	nvgpu_flcn_mailbox_write(&g->nvdec_flcn, 0, 0xdeadbeef);
+
 	/* set BOOTVEC to start of non-secure code */
 	nvgpu_flcn_bootstrap(&g->nvdec_flcn, 0);
 
@@ -202,6 +207,7 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 	val = nvgpu_flcn_mailbox_read(&g->nvdec_flcn, 0);
 	if (val) {
 		nvgpu_err(g, "memory unlock failed, err %x", val);
+		nvgpu_flcn_dump_stats(&g->nvdec_flcn);
 		err = -1;
 		goto exit;
 	}

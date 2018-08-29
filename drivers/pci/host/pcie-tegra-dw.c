@@ -564,6 +564,9 @@ static unsigned int pcie_gen_freq[] = {
 
 static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie);
 static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie);
+static int tegra_pcie_dw_runtime_suspend(struct device *dev);
+static int tegra_pcie_dw_runtime_resume(struct device *dev);
+static int tegra_pcie_dw_link_up(struct pcie_port *pp);
 
 static inline void dma_common_wr16(void __iomem *p, u32 val, u32 offset)
 {
@@ -1771,6 +1774,79 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int __attach_controller(struct tegra_pcie_dw *pcie)
+{
+	int ret;
+
+	if (!pcie->link_state && !pcie->power_down_en) {
+		ret = pm_runtime_put_sync(pcie->dev);
+		if (ret)
+			return ret;
+	}
+
+	ret = pm_runtime_get_sync(pcie->dev);
+	if (ret)
+		return ret;
+	pcie->link_state = tegra_pcie_dw_link_up(&pcie->pp);
+
+	return 0;
+}
+
+static int __detach_controller(struct tegra_pcie_dw *pcie)
+{
+	if (!pcie->link_state && pcie->power_down_en)
+		return 0;
+
+	return pm_runtime_put_sync(pcie->dev);
+}
+
+/* Enables root port controller and attempts PCIe link up with the device
+ * connected downstream. If link is up, registers host controller with
+ * PCIe sub-system.
+ * @cookie : opaque pointer returned by tegra_pcie_detach_controller() API
+ */
+int tegra_pcie_attach_controller(void *cookie)
+{
+	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)cookie;
+
+	return __attach_controller(pcie);
+}
+EXPORT_SYMBOL(tegra_pcie_attach_controller);
+
+/* Removes PCIe hierarchy of the respective host controller and brings PCIe
+ * link down in a safe way
+ * @pdev: pointer to end point's pci_dev structure
+ * returns a cookie which needs to be passed to
+ * tegra_pcie_attach_controller() API
+ */
+void *tegra_pcie_detach_controller(struct pci_dev *pdev)
+{
+	struct pcie_port *pp = pdev->sysdata;
+	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
+	int ret;
+
+	ret = __detach_controller(pcie);
+	if (ret)
+		return ERR_PTR(ret);
+
+	return (void *)pcie;
+}
+EXPORT_SYMBOL(tegra_pcie_detach_controller);
+
+static int hot_plug(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
+
+	return __attach_controller(pcie);
+}
+
+static int hot_unplug(struct seq_file *s, void *data)
+{
+	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
+
+	return __detach_controller(pcie);
+}
+
 #define DEFINE_ENTRY(__name)	\
 static int __name ## _open(struct inode *inode, struct file *file)	\
 {									\
@@ -1796,6 +1872,8 @@ DEFINE_ENTRY(apply_sbr);
 DEFINE_ENTRY(aspm_state_cnt);
 DEFINE_ENTRY(verify_timing_margin);
 DEFINE_ENTRY(verify_voltage_margin);
+DEFINE_ENTRY(hot_plug);
+DEFINE_ENTRY(hot_unplug);
 
 #ifdef CONFIG_PCIE_TEGRA_DW_DMA_TEST
 static void init_dma_test_debugfs(struct tegra_pcie_dw *pcie)
@@ -1922,6 +2000,16 @@ static int init_debugfs(struct tegra_pcie_dw *pcie)
 				(void *)pcie, &verify_voltage_margin_fops);
 	if (!d)
 		dev_err(pcie->dev, "debugfs for verify_voltage_margin failed\n");
+
+	d = debugfs_create_file("hot_plug", 0444, pcie->debugfs,
+				(void *)pcie, &hot_plug_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for hot_plug failed\n");
+
+	d = debugfs_create_file("hot_unplug", 0444, pcie->debugfs,
+				(void *)pcie, &hot_unplug_fops);
+	if (!d)
+		dev_err(pcie->dev, "debugfs for hot_unplug failed\n");
 
 	init_dma_test_debugfs(pcie);
 

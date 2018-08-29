@@ -400,6 +400,7 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 
 	{ },
 };
+MODULE_DEVICE_TABLE(of, tegra_gk20a_of_match);
 
 #ifdef CONFIG_PM
 /**

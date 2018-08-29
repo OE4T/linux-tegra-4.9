@@ -3699,7 +3699,7 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 
 #endif /* CONFIG_SMP */
 
-#ifdef CONFIG_TASK_WEIGHT
+#if defined(CONFIG_TASK_WEIGHT) || defined(CONFIG_CGROUP_SCHEDTUNE)
 extern void task_decayed_load(struct task_struct *p, struct sched_avg *avg);
 #endif
 

@@ -33,5 +33,6 @@ void pmu_dump_security_fuses_gm20b(struct gk20a *g);
 void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags);
 int gm20b_pmu_init_acr(struct gk20a *g);
 void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr);
+bool gm20b_pmu_is_debug_mode_en(struct gk20a *g);
 
 #endif /*__PMU_GM20B_H_*/

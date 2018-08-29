@@ -1075,6 +1075,7 @@ struct gpu_ops {
 		u32 (*get_irqdest)(struct gk20a *g);
 		int (*alloc_super_surface)(struct gk20a *g,
 			struct nvgpu_mem *super_surface, u32 size);
+		bool (*is_debug_mode_enabled)(struct gk20a *g);
 	} pmu;
 	struct {
 		int (*init_debugfs)(struct gk20a *g);

@@ -1141,12 +1141,6 @@ err_release_acr_fw:
 	return err;
 }
 
-static u8 pmu_is_debug_mode_en(struct gk20a *g)
-{
-	u32 ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
-	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat);
-}
-
 /*
  * @brief Patch signatures into ucode image
  */
@@ -1160,7 +1154,7 @@ int acr_ucode_patch_sig(struct gk20a *g,
 	unsigned int i, *p_sig;
 	nvgpu_pmu_dbg(g, " ");
 
-	if (!pmu_is_debug_mode_en(g)) {
+	if (!g->ops.pmu.is_debug_mode_enabled(g)) {
 		p_sig = p_prod_sig;
 		nvgpu_pmu_dbg(g, "PRODUCTION MODE\n");
 	} else {

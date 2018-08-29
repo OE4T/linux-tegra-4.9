@@ -668,6 +668,7 @@ static const struct gpu_ops gp106_ops = {
 		.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg,
 		.get_irqdest = gk20a_pmu_get_irqdest,
 		.alloc_super_surface = NULL,
+		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,

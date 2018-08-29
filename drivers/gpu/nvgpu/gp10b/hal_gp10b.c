@@ -610,6 +610,7 @@ static const struct gpu_ops gp10b_ops = {
 		.reset_engine = gk20a_pmu_engine_reset,
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
 		.get_irqdest = gk20a_pmu_get_irqdest,
+		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
 	.regops = {
 		.exec_regops = exec_regops_gk20a,

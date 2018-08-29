@@ -271,3 +271,9 @@ void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 	nvgpu_tegra_fuse_read_gcplex_config_fuse(g, &val);
 	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0: 0x%x", val);
 }
+
+bool gm20b_pmu_is_debug_mode_en(struct gk20a *g)
+{
+	u32 ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
+	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat) != 0U;
+}

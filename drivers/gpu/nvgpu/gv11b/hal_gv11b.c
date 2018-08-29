@@ -706,6 +706,7 @@ static const struct gpu_ops gv11b_ops = {
 		.is_pmu_supported = gv11b_is_pmu_supported,
 		.get_irqdest = gv11b_pmu_get_irqdest,
 		.handle_ext_irq = gv11b_pmu_handle_ext_irq,
+		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
 	.regops = {
 		.exec_regops = exec_regops_gk20a,

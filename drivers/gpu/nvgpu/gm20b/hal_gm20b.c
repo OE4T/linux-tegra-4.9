@@ -550,6 +550,7 @@ static const struct gpu_ops gm20b_ops = {
 		.reset_engine = gk20a_pmu_engine_reset,
 		.is_engine_in_reset = gk20a_pmu_is_engine_in_reset,
 		.get_irqdest = gk20a_pmu_get_irqdest,
+		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
 	.clk = {
 		.init_clk_support = gm20b_init_clk_support,

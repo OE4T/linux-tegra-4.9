@@ -764,6 +764,7 @@ static const struct gpu_ops gv100_ops = {
 		.pmu_get_queue_tail = pwr_pmu_queue_tail_r,
 		.get_irqdest = gk20a_pmu_get_irqdest,
 		.alloc_super_surface = nvgpu_pmu_super_surface_alloc,
+		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
 	.clk = {
 		.init_clk_support = gp106_init_clk_support,

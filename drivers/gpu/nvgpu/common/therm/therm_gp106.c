@@ -44,8 +44,8 @@ int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 
 	readval = gk20a_readl(g, therm_temp_sensor_tsense_r());
 
-	if (!(therm_temp_sensor_tsense_state_v(readval) &
-		therm_temp_sensor_tsense_state_valid_v())) {
+	if ((therm_temp_sensor_tsense_state_v(readval) &
+		therm_temp_sensor_tsense_state_valid_v()) == 0U) {
 		nvgpu_err(g,
 			"Attempt to read temperature while sensor is OFF!");
 		err = -EINVAL;

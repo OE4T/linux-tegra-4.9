@@ -291,7 +291,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 	bool found = false;
 	unsigned int i;
 
-	while (!last) {
+	while (last == 0) {
 		struct pci_exp_rom *pci_rom;
 		struct pci_data_struct *pci_data;
 		struct pci_ext_data_struct *pci_ext_data;
@@ -790,7 +790,7 @@ s8 nvgpu_bios_read_s8(struct gk20a *g, u32 offset)
 {
 	u32 val;
 	val = __nvgpu_bios_readbyte(g, offset);
-	val = val & 0x80U ? (val | ~0xffU) : val;
+	val = ((val & 0x80U) != 0U) ? (val | ~0xffU) : val;
 
 	return (s8) val;
 }
@@ -827,7 +827,7 @@ static void nvgpu_bios_init_xmemsel_zm_nv_reg_array(struct gk20a *g, bool *condi
 
 		strap = gk20a_readl(g, gc6_sci_strap_r()) & 0xfU;
 
-		index = g->bios.mem_strap_xlat_tbl_ptr ?
+		index = (g->bios.mem_strap_xlat_tbl_ptr != 0U) ?
 			nvgpu_bios_read_u8(g, g->bios.mem_strap_xlat_tbl_ptr +
 				strap) : strap;
 

@@ -111,7 +111,7 @@ int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed)
 	if (link_speed == xve_link_control_status_link_speed_link_speed_8p0_v())
 		real_link_speed = GPU_XVE_SPEED_8P0;
 
-	if (!real_link_speed)
+	if (real_link_speed == 0U)
 		return -ENODEV;
 
 	*xve_link_speed = real_link_speed;
@@ -147,7 +147,7 @@ static void set_xve_l0s_mask(struct gk20a *g, bool status)
 static void set_xve_l1_mask(struct gk20a *g, int status)
 {
 	u32 xve_priv;
-	u32 status_bit = status ? 1 : 0;
+	u32 status_bit = (status != 0) ? 1 : 0;
 
 	xve_priv = g->ops.xve.xve_readl(g, xve_priv_xv_r());
 
@@ -242,7 +242,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
 		     xp_pl_link_config_ltssm_directive_normal_operations_v()))
 			break;
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
 		err_status = -ETIMEDOUT;
@@ -313,7 +313,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		if (pl_link_config ==
 		    gk20a_readl(g, xp_pl_link_config_r(0)))
 			break;
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
 		err_status = -ETIMEDOUT;
@@ -348,7 +348,7 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
 			     xp_pl_link_config_ltssm_directive_normal_operations_v()))
 				break;
-		} while (!nvgpu_timeout_expired(&timeout));
+		} while (nvgpu_timeout_expired(&timeout) == 0);
 
 		if (nvgpu_timeout_peek_expired(&timeout)) {
 			err_status = -ETIMEDOUT;

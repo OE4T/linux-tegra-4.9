@@ -98,7 +98,7 @@ void gm20b_priv_ring_isr(struct gk20a *g)
 	/* poll for clear interrupt done */
 	cmd = pri_ringmaster_command_cmd_v(
 		gk20a_readl(g, pri_ringmaster_command_r()));
-	while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && retry) {
+	while ((cmd != pri_ringmaster_command_cmd_no_cmd_v()) && (retry != 0)) {
 		nvgpu_udelay(20);
 		retry--;
 		cmd = pri_ringmaster_command_cmd_v(

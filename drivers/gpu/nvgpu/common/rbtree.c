@@ -96,7 +96,7 @@ static void insert_fixup(struct nvgpu_rbtree_node **root,
 		if (x->parent == x->parent->parent->left) {
 			struct nvgpu_rbtree_node *y = x->parent->parent->right;
 
-			if (y && y->is_red) {
+			if ((y != NULL) && (y->is_red)) {
 				/* uncle is RED */
 				x->parent->is_red = false;
 				y->is_red = false;
@@ -119,7 +119,7 @@ static void insert_fixup(struct nvgpu_rbtree_node **root,
 			/* mirror image of above code */
 			struct nvgpu_rbtree_node *y = x->parent->parent->left;
 
-			if (y && y->is_red) {
+			if ((y != NULL) && (y->is_red)) {
 				/* uncle is RED */
 				x->parent->is_red = false;
 				y->is_red = false;
@@ -189,7 +189,7 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 			  struct nvgpu_rbtree_node *parent_of_x,
 			  struct nvgpu_rbtree_node *x)
 {
-	while ((x != *root) && (!x || !x->is_red)) {
+	while ((x != *root) && ((x == NULL) || (!x->is_red))) {
 		/*
 		 * NULL nodes are sentinel nodes. If we delete a sentinel
 		 * node (x==NULL) it must have a parent node (or be the root).
@@ -200,21 +200,21 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 		if ((parent_of_x != NULL) && (x == parent_of_x->left)) {
 			struct nvgpu_rbtree_node *w = parent_of_x->right;
 
-			if (w && w->is_red) {
+			if ((w != NULL) && (w->is_red)) {
 				w->is_red = false;
 				parent_of_x->is_red = true;
 				rotate_left(root, parent_of_x);
 				w = parent_of_x->right;
 			}
 
-			if (!w || ((!w->left || !w->left->is_red)
-					&& (!w->right || !w->right->is_red))) {
-				if (w) {
+			if ((w == NULL) || (((w->left == NULL) || (!w->left->is_red)) &&
+					    ((w->right == NULL) || (!w->right->is_red)))) {
+				if (w != NULL) {
 					w->is_red = true;
 				}
 				x = parent_of_x;
 			} else {
-				if (!w->right || !w->right->is_red) {
+				if ((w->right == NULL) || (!w->right->is_red)) {
 					w->left->is_red = false;
 					w->is_red = true;
 					rotate_right(root, w);
@@ -229,21 +229,21 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 		} else if (parent_of_x != NULL) {
 			struct nvgpu_rbtree_node *w = parent_of_x->left;
 
-			if (w && w->is_red) {
+			if ((w != NULL) && (w->is_red)) {
 				w->is_red = false;
 				parent_of_x->is_red = true;
 				rotate_right(root, parent_of_x);
 				w = parent_of_x->left;
 			}
 
-			if (!w || ((!w->right || !w->right->is_red)
-					&& (!w->left || !w->left->is_red))) {
-				if (w) {
+			if ((w == NULL) || (((w->right == NULL) || (!w->right->is_red)) &&
+					    ((w->left == NULL) || (!w->left->is_red)))) {
+				if (w != NULL) {
 					w->is_red = true;
 				}
 				x = parent_of_x;
 			} else {
-				if (!w->left || !w->left->is_red) {
+				if ((w->left == NULL) || (!w->left->is_red)) {
 					w->right->is_red = false;
 					w->is_red = true;
 					rotate_left(root, w);
@@ -259,7 +259,7 @@ static void _delete_fixup(struct nvgpu_rbtree_node **root,
 		parent_of_x = x->parent;
 	}
 
-	if (x) {
+	if (x != NULL) {
 		x->is_red = false;
 	}
 }
@@ -276,7 +276,7 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 	z = node;
 
 	/* unlink */
-	if (!z->left || !z->right) {
+	if ((z->left == NULL) || (z->right == NULL)) {
 		/* y has a SENTINEL node as a child */
 		y = z;
 	} else {
@@ -296,7 +296,7 @@ void nvgpu_rbtree_unlink(struct nvgpu_rbtree_node *node,
 
 	/* remove y from the parent chain */
 	parent_of_x = y->parent;
-	if (x) {
+	if (x != NULL) {
 		x->parent = parent_of_x;
 	}
 
@@ -431,7 +431,7 @@ void nvgpu_rbtree_enum_next(struct nvgpu_rbtree_node **node,
 {
 	struct nvgpu_rbtree_node *curr = NULL;
 
-	if (root && *node) {
+	if ((root != NULL) && (*node != NULL)) {
 		/* if we don't have a right subtree return the parent */
 		curr = *node;
 

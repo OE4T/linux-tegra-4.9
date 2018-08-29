@@ -75,13 +75,13 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 		ch = nvgpu_list_first_entry(&f->free_chs, channel_gk20a,
 							  free_chs);
 		nvgpu_list_del(&ch->free_chs);
-		WARN_ON(nvgpu_atomic_read(&ch->ref_count));
+		WARN_ON(nvgpu_atomic_read(&ch->ref_count) != 0);
 		WARN_ON(ch->referenceable);
 		f->used_channels++;
 	}
 	nvgpu_mutex_release(&f->free_chs_mutex);
 
-	if (g->aggressive_sync_destroy_thresh &&
+	if ((g->aggressive_sync_destroy_thresh != 0U) &&
 			(f->used_channels >
 			 g->aggressive_sync_destroy_thresh)) {
 		g->aggressive_sync_destroy = true;
@@ -108,7 +108,7 @@ static void free_channel(struct fifo_gk20a *f,
 	 * this is fine then because no new channels would be created.
 	 */
 	if (!nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
-		if (g->aggressive_sync_destroy_thresh &&
+		if ((g->aggressive_sync_destroy_thresh != 0U) &&
 			(f->used_channels <
 			 g->aggressive_sync_destroy_thresh)) {
 			g->aggressive_sync_destroy = false;
@@ -251,7 +251,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 		}
 
 		nvgpu_usleep_range(1000, 3000);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	if (!channel_idle) {
 		nvgpu_err(ch->g, "jobs not freed for channel %d",
@@ -469,7 +469,7 @@ unbind:
 	ch->vpr = false;
 	ch->vm = NULL;
 
-	WARN_ON(ch->sync);
+	WARN_ON(ch->sync != NULL);
 
 	/* unlink all debug sessions */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
@@ -799,7 +799,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 
 	nvgpu_log_fn(c->g, "size %d", orig_size);
 
-	if (!e) {
+	if (e == NULL) {
 		nvgpu_err(c->g,
 			"ch %d: priv cmd entry is null",
 			c->chid);
@@ -889,7 +889,7 @@ int channel_gk20a_alloc_job(struct channel_gk20a *c,
 	} else {
 		*job_out = nvgpu_kzalloc(c->g,
 					 sizeof(struct channel_gk20a_job));
-		if (!*job_out) {
+		if (*job_out == NULL) {
 			err = -ENOMEM;
 		}
 	}
@@ -1004,7 +1004,7 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	size_t size;
 	struct priv_cmd_entry *entries = NULL;
 
-	if (channel_gk20a_is_prealloc_enabled(c) || !num_jobs) {
+	if ((channel_gk20a_is_prealloc_enabled(c)) || (num_jobs == 0U)) {
 		return -EINVAL;
 	}
 
@@ -1018,7 +1018,7 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 		c->joblist.pre_alloc.jobs = nvgpu_vzalloc(c->g,
 							  num_jobs * size);
 	}
-	if (!c->joblist.pre_alloc.jobs) {
+	if (c->joblist.pre_alloc.jobs == NULL) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
@@ -1032,7 +1032,7 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	if (num_jobs <= ULONG_MAX / (size << 1)) {
 		entries = nvgpu_vzalloc(c->g, (num_jobs << 1) * size);
 	}
-	if (!entries) {
+	if (entries == NULL) {
 		err = -ENOMEM;
 		goto clean_up_joblist;
 	}
@@ -1172,7 +1172,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		if (c->gpfifo.mem.aperture == APERTURE_VIDMEM) {
 			c->gpfifo.pipe = nvgpu_big_malloc(g,
 					gpfifo_size * gpfifo_entry_size);
-			if (!c->gpfifo.pipe) {
+			if (c->gpfifo.pipe == NULL) {
 				err = -ENOMEM;
 				goto clean_up_unmap;
 			}
@@ -1188,10 +1188,10 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.setup_userd(c);
 
-	if (!g->aggressive_sync_destroy_thresh) {
+	if (g->aggressive_sync_destroy_thresh == 0U) {
 		nvgpu_mutex_acquire(&c->sync_lock);
 		c->sync = gk20a_channel_sync_create(c, false);
-		if (!c->sync) {
+		if (c->sync == NULL) {
 			err = -ENOMEM;
 			nvgpu_mutex_release(&c->sync_lock);
 			goto clean_up_unmap;
@@ -1433,7 +1433,7 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
 
-		if (!gk20a_channel_get(ch)) {
+		if (gk20a_channel_get(ch) == NULL) {
 			continue;
 		}
 
@@ -1483,7 +1483,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 		return;
 	}
 
-	if (!nvgpu_timeout_peek_expired(&ch->timeout.timer)) {
+	if (nvgpu_timeout_peek_expired(&ch->timeout.timer) == 0) {
 		/* Seems stuck but waiting to time out */
 		return;
 	}
@@ -1637,7 +1637,7 @@ static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 		}
 		nvgpu_spinlock_release(&g->channel_worker.items_lock);
 
-		if (!ch) {
+		if (ch == NULL) {
 			/*
 			 * Woke up for some other reason, but there are no
 			 * other reasons than a channel added in the items list
@@ -1776,7 +1776,7 @@ static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 	/*
 	 * Warn if worker thread cannot run
 	 */
-	if (WARN_ON(__nvgpu_channel_worker_start(g))) {
+	if (WARN_ON(__nvgpu_channel_worker_start(g) != 0)) {
 		nvgpu_warn(g, "channel worker cannot run!");
 		return;
 	}
@@ -1788,7 +1788,7 @@ static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 	 * the time we end up here (e.g., if the client got killed); if so, just
 	 * return.
 	 */
-	if (!gk20a_channel_get(ch)) {
+	if (gk20a_channel_get(ch) == NULL) {
 		nvgpu_info(g, "cannot get ch ref for worker!");
 		return;
 	}
@@ -1814,7 +1814,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	struct gk20a *g = c->g;
 
-	if (!e) {
+	if (e == NULL) {
 		return 0;
 	}
 
@@ -1906,11 +1906,11 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 	struct vm_gk20a *vm;
 	struct channel_gk20a_job *job;
 	struct gk20a *g;
-	int job_finished = 0;
+	bool job_finished = false;
 	bool watchdog_on = false;
 
 	c = gk20a_channel_get(c);
-	if (!c) {
+	if (c == NULL) {
 		return;
 	}
 
@@ -1970,9 +1970,9 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 			break;
 		}
 
-		WARN_ON(!c->sync);
+		WARN_ON(c->sync == NULL);
 
-		if (c->sync) {
+		if (c->sync != NULL) {
 			if (c->has_os_fence_framework_support &&
 				g->os_channel.os_fence_framework_inst_exists(c)) {
 					g->os_channel.signal_os_fence_framework(c);
@@ -2024,7 +2024,7 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		nvgpu_smp_wmb();
 
 		channel_gk20a_free_job(c, job);
-		job_finished = 1;
+		job_finished = true;
 
 		/*
 		 * Deterministic channels have a channel-wide power reference;
@@ -2042,7 +2042,8 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 	nvgpu_mutex_release(&c->joblist.cleanup_lock);
 
-	if (job_finished && g->os_channel.work_completion_signal) {
+	if ((job_finished) &&
+			(g->os_channel.work_completion_signal != NULL)) {
 		g->os_channel.work_completion_signal(c);
 	}
 
@@ -2089,7 +2090,7 @@ void gk20a_channel_deterministic_idle(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
 
-		if (!gk20a_channel_get(ch)) {
+		if (gk20a_channel_get(ch) == NULL) {
 			continue;
 		}
 
@@ -2127,7 +2128,7 @@ void gk20a_channel_deterministic_unidle(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
 
-		if (!gk20a_channel_get(ch)) {
+		if (gk20a_channel_get(ch) == NULL) {
 			continue;
 		}
 
@@ -2237,7 +2238,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
-		if (gk20a_channel_get(ch)) {
+		if (gk20a_channel_get(ch) != NULL) {
 			nvgpu_log_info(g, "suspend channel %d", chid);
 			/* disable channel */
 			gk20a_disable_channel_tsg(g, ch);

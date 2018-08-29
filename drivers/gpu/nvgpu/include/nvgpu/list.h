@@ -22,6 +22,7 @@
 
 #ifndef NVGPU_LIST_H
 #define NVGPU_LIST_H
+#include <nvgpu/types.h>
 
 struct nvgpu_list_node {
 	struct nvgpu_list_node *prev;
@@ -57,7 +58,7 @@ static inline void nvgpu_list_del(struct nvgpu_list_node *node)
 	nvgpu_init_list_node(node);
 }
 
-static inline int nvgpu_list_empty(struct nvgpu_list_node *head)
+static inline bool nvgpu_list_empty(struct nvgpu_list_node *head)
 {
 	return head->next == head;
 }

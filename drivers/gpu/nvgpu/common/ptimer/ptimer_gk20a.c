@@ -46,7 +46,7 @@ void gk20a_ptimer_isr(struct gk20a *g)
 	nvgpu_err(g, "PRI timeout: ADR 0x%08x "
 		"%s  DATA 0x%08x",
 		timer_pri_timeout_save_0_addr_v(save0) << 2,
-		timer_pri_timeout_save_0_write_v(save0) ?
+		(timer_pri_timeout_save_0_write_v(save0) != 0U) ?
 		"WRITE" : "READ", save1);
 
 	gk20a_writel(g, timer_pri_timeout_save_0_r(), 0);
@@ -67,7 +67,7 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	unsigned int i = 0;
 	u32 gpu_timestamp_hi_prev = 0;
 
-	if (!value) {
+	if (value == NULL) {
 		return -EINVAL;
 	}
 

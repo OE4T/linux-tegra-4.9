@@ -90,7 +90,7 @@ out:
 
 void nvgpu_semaphore_sea_destroy(struct gk20a *g)
 {
-	if (!g->sema_sea) {
+	if (g->sema_sea == NULL) {
 		return;
 	}
 
@@ -111,7 +111,7 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 	}
 
 	g->sema_sea = nvgpu_kzalloc(g, sizeof(*g->sema_sea));
-	if (!g->sema_sea) {
+	if (g->sema_sea == NULL) {
 		return NULL;
 	}
 
@@ -163,7 +163,7 @@ int nvgpu_semaphore_pool_alloc(struct nvgpu_semaphore_sea *sea,
 	int ret;
 
 	p = nvgpu_kzalloc(sea->gk20a, sizeof(*p));
-	if (!p) {
+	if (p == NULL) {
 		return -ENOMEM;
 	}
 
@@ -234,13 +234,13 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 				    p->sema_sea->map_size,
 				    0, gk20a_mem_flag_read_only, 0,
 				    p->sema_sea->sea_mem.aperture);
-	if (!addr) {
+	if (addr == 0ULL) {
 		err = -ENOMEM;
 		goto fail_unlock;
 	}
 
 	p->gpu_va_ro = addr;
-	p->mapped = 1;
+	p->mapped = true;
 
 	gpu_sema_dbg(pool_to_gk20a(p),
 		     "  %d: GPU read-only  VA = 0x%llx",
@@ -262,7 +262,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 			      gk20a_mem_flag_none, 0,
 			      p->rw_mem.aperture);
 
-	if (!addr) {
+	if (addr == 0ULL) {
 		err = -ENOMEM;
 		goto fail_free_submem;
 	}
@@ -305,7 +305,7 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 
 	p->gpu_va = 0;
 	p->gpu_va_ro = 0;
-	p->mapped = 0;
+	p->mapped = false;
 
 	__unlock_sema_sea(p->sema_sea);
 
@@ -324,7 +324,9 @@ static void nvgpu_semaphore_pool_free(struct nvgpu_ref *ref)
 	struct nvgpu_semaphore_sea *s = p->sema_sea;
 
 	/* Freeing a mapped pool is a bad idea. */
-	WARN_ON(p->mapped || p->gpu_va || p->gpu_va_ro);
+	WARN_ON((p->mapped) ||
+		(p->gpu_va != 0ULL) ||
+		(p->gpu_va_ro != 0ULL));
 
 	__lock_sema_sea(s);
 	nvgpu_list_del(&p->pool_list_entry);
@@ -370,7 +372,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	struct nvgpu_semaphore_pool *p = ch->vm->sema_pool;
 	int current_value;
 
-	BUG_ON(!p);
+	BUG_ON(p == NULL);
 
 	nvgpu_mutex_acquire(&p->pool_lock);
 
@@ -383,7 +385,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	}
 
 	hw_sema = nvgpu_kzalloc(ch->g, sizeof(struct nvgpu_semaphore_int));
-	if (!hw_sema) {
+	if (hw_sema == NULL) {
 		ret = -ENOMEM;
 		goto fail_free_idx;
 	}
@@ -416,7 +418,7 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 	struct nvgpu_semaphore_int *hw_sema = ch->hw_sema;
 	int idx = hw_sema->location.offset / SEMAPHORE_SIZE;
 
-	BUG_ON(!p);
+	BUG_ON(p == NULL);
 
 	nvgpu_mutex_acquire(&p->pool_lock);
 
@@ -439,7 +441,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 	struct nvgpu_semaphore *s;
 	int ret;
 
-	if (!ch->hw_sema) {
+	if (ch->hw_sema == NULL) {
 		ret = __nvgpu_init_hw_sema(ch);
 		if (ret) {
 			return NULL;
@@ -447,7 +449,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 	}
 
 	s = nvgpu_kzalloc(ch->g, sizeof(*s));
-	if (!s) {
+	if (s == NULL) {
 		return NULL;
 	}
 
@@ -619,7 +621,7 @@ void nvgpu_semaphore_prepare(struct nvgpu_semaphore *s,
 	WARN_ON(s->incremented);
 
 	nvgpu_atomic_set(&s->value, next);
-	s->incremented = 1;
+	s->incremented = true;
 
 	gpu_sema_verbose_dbg(s->g, "INCR sema for c=%d (%u)",
 			     hw_sema->ch->chid, next);

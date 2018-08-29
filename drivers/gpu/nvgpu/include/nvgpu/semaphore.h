@@ -72,7 +72,7 @@ struct nvgpu_semaphore {
 	struct nvgpu_semaphore_loc location;
 
 	nvgpu_atomic_t value;
-	int incremented;
+	bool incremented;
 
 	struct nvgpu_ref ref;
 };
@@ -99,7 +99,7 @@ struct nvgpu_semaphore_pool {
 	 */
 	struct nvgpu_mem rw_mem;
 
-	int mapped;
+	bool mapped;
 
 	/*
 	 * Sometimes a channel can be released before other channels are

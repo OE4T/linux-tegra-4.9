@@ -108,7 +108,7 @@ static u32 volt_pmu_rpc_execute(struct gk20a *g,
 			gk20a_get_gr_idle_timeout(g),
 			&handler.success, 1);
 
-	if (handler.success == 0) {
+	if (handler.success == 0U) {
 		status = -EINVAL;
 		nvgpu_err(g, "rpc call to volt failed");
 	}

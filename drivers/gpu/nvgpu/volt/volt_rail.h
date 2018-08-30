@@ -27,8 +27,8 @@
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
 
-#define CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES	0x04
-#define CTRL_PMGR_PWR_EQUATION_INDEX_INVALID	0xFF
+#define CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES	0x04U
+#define CTRL_PMGR_PWR_EQUATION_INDEX_INVALID	0xFFU
 
 #define VOLT_GET_VOLT_RAIL(pvolt, rail_idx)	\
 	((struct voltage_rail *)BOARDOBJGRP_OBJ_GET_BY_IDX( \

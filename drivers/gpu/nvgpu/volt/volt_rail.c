@@ -105,7 +105,7 @@ static u32 volt_rail_state_init(struct gk20a *g,
 	pvolt_rail->volt_dev_idx_default = CTRL_BOARDOBJ_IDX_INVALID;
 
 	for (i = 0; i < CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES; i++) {
-		pvolt_rail->volt_delta_uv[i] = NV_PMU_VOLT_VALUE_0V_IN_UV;
+		pvolt_rail->volt_delta_uv[i] = (int)NV_PMU_VOLT_VALUE_0V_IN_UV;
 		g->perf_pmu.volt.volt_rail_metadata.ext_rel_delta_uv[i] =
 			NV_PMU_VOLT_VALUE_0V_IN_UV;
 	}
@@ -162,7 +162,7 @@ static int volt_rail_init_pmudata_super(struct gk20a *g,
 
 	for (i = 0; i < CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES; i++) {
 		rail_pmu_data->volt_delta_uv[i] = prail->volt_delta_uv[i] +
-			g->perf_pmu.volt.volt_rail_metadata.ext_rel_delta_uv[i];
+			(int)g->perf_pmu.volt.volt_rail_metadata.ext_rel_delta_uv[i];
 	}
 
 	status = boardobjgrpmask_export(&prail->volt_dev_mask.super,
@@ -225,7 +225,7 @@ u8 volt_rail_vbios_volt_domain_convert_to_internal(struct gk20a *g,
 {
 	switch (g->perf_pmu.volt.volt_rail_metadata.volt_domain_hal) {
 	case CTRL_VOLT_DOMAIN_HAL_GP10X_SINGLE_RAIL:
-		if (vbios_volt_domain == 0) {
+		if (vbios_volt_domain == 0U) {
 			return CTRL_VOLT_DOMAIN_LOGIC;
 		}
 		break;
@@ -382,7 +382,7 @@ static int _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 
@@ -402,7 +402,7 @@ static int _volt_rail_devgrp_pmustatus_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 

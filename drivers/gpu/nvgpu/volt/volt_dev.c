@@ -35,8 +35,8 @@
 
 #include "volt.h"
 
-#define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0
-#define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1
+#define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0U
+#define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1U
 
 static int volt_device_pmu_data_init_super(struct gk20a *g,
 	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
@@ -425,7 +425,7 @@ static int _volt_device_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 
@@ -445,7 +445,7 @@ static int _volt_device_devgrp_pmustatus_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 

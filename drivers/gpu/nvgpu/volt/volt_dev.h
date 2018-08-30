@@ -27,8 +27,8 @@
 #include "boardobj/boardobjgrp.h"
 #include "ctrl/ctrlvolt.h"
 
-#define VOLTAGE_TABLE_MAX_ENTRIES_ONE	1
-#define VOLTAGE_TABLE_MAX_ENTRIES	256
+#define VOLTAGE_TABLE_MAX_ENTRIES_ONE	1U
+#define VOLTAGE_TABLE_MAX_ENTRIES	256U
 
 struct voltage_device {
 	struct boardobj super;

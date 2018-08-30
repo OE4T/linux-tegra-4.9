@@ -99,7 +99,7 @@ int nvgpu_os_fence_syncpt_create(
 		nvhost_dev, id, thresh, "fence");
 
 	if (IS_ERR(fence)) {
-		nvgpu_err(c->g, "error constructing fence %s", "fence");
+		nvgpu_err(c->g, "error %d during construction of fence.", (int)PTR_ERR(fence));
 		return PTR_ERR(fence);
 	}
 

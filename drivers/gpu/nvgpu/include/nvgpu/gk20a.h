@@ -560,7 +560,7 @@ struct gpu_ops {
 		void (*enable_hub_intr)(struct gk20a *g);
 		void (*disable_hub_intr)(struct gk20a *g);
 		int (*init_fbpa)(struct gk20a *g);
-		void (*fbpa_isr)(struct gk20a *g);
+		void (*handle_fbpa_intr)(struct gk20a *g, u32 fbpa_id);
 		void (*write_mmu_fault_buffer_lo_hi)(struct gk20a *g, u32 index,
 			u32 addr_lo, u32 addr_hi);
 		void (*write_mmu_fault_buffer_get)(struct gk20a *g, u32 index,
@@ -1168,6 +1168,7 @@ struct gpu_ops {
 		void (*reset)(struct gk20a *g, u32 units);
 		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
 		void (*log_pending_intrs)(struct gk20a *g);
+		void (*fbpa_isr)(struct gk20a *g);
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,

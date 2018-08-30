@@ -24,6 +24,7 @@
 
 #include "gk20a/gk20a.h"
 #include <nvgpu/io.h>
+#include <nvgpu/mc.h>
 
 #include "mc_gp10b.h"
 

@@ -1166,7 +1166,6 @@ struct gpu_ops {
 		void (*enable)(struct gk20a *g, u32 units);
 		void (*disable)(struct gk20a *g, u32 units);
 		void (*reset)(struct gk20a *g, u32 units);
-		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 		bool (*is_intr1_pending)(struct gk20a *g, enum nvgpu_unit unit, u32 mc_intr_1);
 		void (*log_pending_intrs)(struct gk20a *g);
 	} mc;

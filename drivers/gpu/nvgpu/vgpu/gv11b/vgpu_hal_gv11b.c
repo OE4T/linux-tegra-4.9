@@ -54,7 +54,6 @@
 #include "vgpu/gp10b/vgpu_gr_gp10b.h"
 
 #include <gk20a/flcn_gk20a.h>
-#include <gk20a/mc_gk20a.h>
 #include "gk20a/dbg_gpu_gk20a.h"
 #include <gk20a/pmu_gk20a.h>
 
@@ -66,7 +65,6 @@
 
 #include <gp10b/pmu_gp10b.h>
 #include <gp10b/mm_gp10b.h>
-#include <gp10b/mc_gp10b.h>
 #include <gp10b/ce_gp10b.h>
 #include "gp10b/gr_gp10b.h"
 #include <gp10b/fifo_gp10b.h>
@@ -77,7 +75,6 @@
 #include <gv11b/pmu_gv11b.h>
 #include <gv11b/acr_gv11b.h>
 #include <gv11b/mm_gv11b.h>
-#include <gv11b/mc_gv11b.h>
 #include <gv11b/ce_gv11b.h>
 #include <gv11b/fifo_gv11b.h>
 #include <gv11b/regops_gv11b.h>
@@ -553,7 +550,6 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.enable = NULL,
 		.disable = NULL,
 		.reset = NULL,
-		.boot_0 = NULL,
 		.is_intr1_pending = NULL,
 		.is_intr_hub_pending = NULL,
 		.log_pending_intrs = NULL	,

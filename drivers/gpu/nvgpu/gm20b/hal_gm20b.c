@@ -32,6 +32,7 @@
 #include "common/therm/therm_gm20b.h"
 #include "common/ltc/ltc_gm20b.h"
 #include "common/fuse/fuse_gm20b.h"
+#include "common/mc/mc_gm20b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -39,7 +40,6 @@
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
-#include "gk20a/mc_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -578,23 +578,22 @@ static const struct gpu_ops gm20b_ops = {
 		.get_qctl_whitelist_count = gm20b_get_qctl_whitelist_count,
 	},
 	.mc = {
-		.intr_mask = mc_gk20a_intr_mask,
-		.intr_enable = mc_gk20a_intr_enable,
-		.intr_unit_config = mc_gk20a_intr_unit_config,
-		.isr_stall = mc_gk20a_isr_stall,
-		.intr_stall = mc_gk20a_intr_stall,
-		.intr_stall_pause = mc_gk20a_intr_stall_pause,
-		.intr_stall_resume = mc_gk20a_intr_stall_resume,
-		.intr_nonstall = mc_gk20a_intr_nonstall,
-		.intr_nonstall_pause = mc_gk20a_intr_nonstall_pause,
-		.intr_nonstall_resume = mc_gk20a_intr_nonstall_resume,
-		.isr_nonstall = mc_gk20a_isr_nonstall,
-		.enable = gk20a_mc_enable,
-		.disable = gk20a_mc_disable,
-		.reset = gk20a_mc_reset,
-		.boot_0 = gk20a_mc_boot_0,
-		.is_intr1_pending = mc_gk20a_is_intr1_pending,
-		.log_pending_intrs = mc_gk20a_log_pending_intrs,
+		.intr_mask = gm20b_mc_intr_mask,
+		.intr_enable = gm20b_mc_intr_enable,
+		.intr_unit_config = gm20b_mc_intr_unit_config,
+		.isr_stall = gm20b_mc_isr_stall,
+		.intr_stall = gm20b_mc_intr_stall,
+		.intr_stall_pause = gm20b_mc_intr_stall_pause,
+		.intr_stall_resume = gm20b_mc_intr_stall_resume,
+		.intr_nonstall = gm20b_mc_intr_nonstall,
+		.intr_nonstall_pause = gm20b_mc_intr_nonstall_pause,
+		.intr_nonstall_resume = gm20b_mc_intr_nonstall_resume,
+		.isr_nonstall = gm20b_mc_isr_nonstall,
+		.enable = gm20b_mc_enable,
+		.disable = gm20b_mc_disable,
+		.reset = gm20b_mc_reset,
+		.is_intr1_pending = gm20b_mc_is_intr1_pending,
+		.log_pending_intrs = gm20b_mc_log_pending_intrs,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

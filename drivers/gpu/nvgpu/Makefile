@@ -45,7 +45,12 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/fuse/fuse_gm20b.o \
 	common/fuse/fuse_gp10b.o \
 	common/fuse/fuse_gp106.o \
-	common/top/top_gv100.o
+	common/top/top_gv100.o \
+	common/mc/mc.o \
+	common/mc/mc_gm20b.o \
+	common/mc/mc_gp10b.o  \
+	common/mc/mc_gv11b.o  \
+	common/mc/mc_gv100.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
@@ -236,7 +241,6 @@ nvgpu-y += \
 	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
-	gk20a/mc_gk20a.o \
 	gm20b/hal_gm20b.o \
 	gm20b/gr_gm20b.o \
 	gm20b/clk_gm20b.o \
@@ -285,7 +289,6 @@ nvgpu-y += \
 	gp10b/gr_gp10b.o  \
 	gp10b/gr_ctx_gp10b.o  \
 	gp10b/ce_gp10b.o \
-	gp10b/mc_gp10b.o  \
 	gp10b/fifo_gp10b.o  \
 	gp10b/mm_gp10b.o \
 	gp10b/pmu_gp10b.o \
@@ -308,7 +311,6 @@ nvgpu-y += \
 	gv11b/gv11b.o  \
 	gv11b/css_gr_gv11b.o  \
 	gv11b/dbg_gpu_gv11b.o  \
-	gv11b/mc_gv11b.o  \
 	gv11b/hal_gv11b.o \
 	gv11b/gr_gv11b.o \
 	gv11b/fifo_gv11b.o \
@@ -327,7 +329,6 @@ nvgpu-y += \
 	gv100/gr_gv100.o \
 	gv100/regops_gv100.o \
 	gv100/flcn_gv100.o \
-	gv100/mc_gv100.o \
 	gv100/nvlink_gv100.o \
 	gv100/hal_gv100.o \
 	gv100/pmu_gv100.o \

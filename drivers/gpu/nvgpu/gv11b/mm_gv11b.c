@@ -32,7 +32,6 @@
 #include "gk20a/mm_gk20a.h"
 
 #include "gp10b/mm_gp10b.h"
-#include "gp10b/mc_gp10b.h"
 
 #include "mm_gv11b.h"
 #include "subctx_gv11b.h"

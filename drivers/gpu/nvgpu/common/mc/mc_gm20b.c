@@ -22,17 +22,18 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a.h"
-#include "mc_gk20a.h"
-
 #include <nvgpu/timers.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/unit.h>
 #include <nvgpu/io.h>
+#include <nvgpu/mc.h>
 
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include "gk20a/gk20a.h"
+#include "mc_gm20b.h"
 
-void mc_gk20a_isr_stall(struct gk20a *g)
+#include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
+
+void gm20b_mc_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
 	u32 engine_id_idx;
@@ -63,24 +64,24 @@ void mc_gk20a_isr_stall(struct gk20a *g)
 			}
 		}
 	}
-	if ((mc_intr_0 & mc_intr_0_pfifo_pending_f()) != 0U) {
+	if ((mc_intr_0 & mc_intr_pfifo_pending_f()) != 0U) {
 		gk20a_fifo_isr(g);
 	}
-	if ((mc_intr_0 & mc_intr_0_pmu_pending_f()) != 0U) {
+	if ((mc_intr_0 & mc_intr_pmu_pending_f()) != 0U) {
 		g->ops.pmu.pmu_isr(g);
 	}
-	if ((mc_intr_0 & mc_intr_0_priv_ring_pending_f()) != 0U) {
+	if ((mc_intr_0 & mc_intr_priv_ring_pending_f()) != 0U) {
 		g->ops.priv_ring.isr(g);
 	}
-	if ((mc_intr_0 & mc_intr_0_ltc_pending_f()) != 0U) {
+	if ((mc_intr_0 & mc_intr_ltc_pending_f()) != 0U) {
 		g->ops.ltc.isr(g);
 	}
-	if ((mc_intr_0 & mc_intr_0_pbus_pending_f()) != 0U) {
+	if ((mc_intr_0 & mc_intr_pbus_pending_f()) != 0U) {
 		g->ops.bus.isr(g);
 	}
 }
 
-u32 mc_gk20a_isr_nonstall(struct gk20a *g)
+u32 gm20b_mc_isr_nonstall(struct gk20a *g)
 {
 	u32 ops = 0;
 	u32 mc_intr_1;
@@ -121,7 +122,7 @@ u32 mc_gk20a_isr_nonstall(struct gk20a *g)
 	return ops;
 }
 
-void mc_gk20a_intr_mask(struct gk20a *g)
+void gm20b_mc_intr_mask(struct gk20a *g)
 {
 	nvgpu_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_disabled_f());
@@ -129,27 +130,27 @@ void mc_gk20a_intr_mask(struct gk20a *g)
 		mc_intr_en_1_inta_disabled_f());
 }
 
-void mc_gk20a_intr_enable(struct gk20a *g)
+void gm20b_mc_intr_enable(struct gk20a *g)
 {
 	u32 eng_intr_mask = gk20a_fifo_engine_interrupt_mask(g);
 
 	gk20a_writel(g, mc_intr_mask_1_r(),
-		     mc_intr_0_pfifo_pending_f()
+		     mc_intr_pfifo_pending_f()
 		     | eng_intr_mask);
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_1_inta_hardware_f());
 
 	gk20a_writel(g, mc_intr_mask_0_r(),
-		     mc_intr_0_pfifo_pending_f()
-		     | mc_intr_0_priv_ring_pending_f()
-		     | mc_intr_0_ltc_pending_f()
-		     | mc_intr_0_pbus_pending_f()
+		     mc_intr_pfifo_pending_f()
+		     | mc_intr_priv_ring_pending_f()
+		     | mc_intr_ltc_pending_f()
+		     | mc_intr_pbus_pending_f()
 		     | eng_intr_mask);
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
 }
 
-void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
+void gm20b_mc_intr_unit_config(struct gk20a *g, bool enable,
 		bool is_stalling, u32 mask)
 {
 	u32 mask_reg = (is_stalling ? mc_intr_mask_0_r() :
@@ -166,7 +167,7 @@ void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
 	}
 }
 
-void mc_gk20a_intr_stall_pause(struct gk20a *g)
+void gm20b_mc_intr_stall_pause(struct gk20a *g)
 {
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_disabled_f());
@@ -175,7 +176,7 @@ void mc_gk20a_intr_stall_pause(struct gk20a *g)
 	(void) gk20a_readl(g, mc_intr_en_0_r());
 }
 
-void mc_gk20a_intr_stall_resume(struct gk20a *g)
+void gm20b_mc_intr_stall_resume(struct gk20a *g)
 {
 	gk20a_writel(g, mc_intr_en_0_r(),
 		mc_intr_en_0_inta_hardware_f());
@@ -184,7 +185,7 @@ void mc_gk20a_intr_stall_resume(struct gk20a *g)
 	(void) gk20a_readl(g, mc_intr_en_0_r());
 }
 
-void mc_gk20a_intr_nonstall_pause(struct gk20a *g)
+void gm20b_mc_intr_nonstall_pause(struct gk20a *g)
 {
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_0_inta_disabled_f());
@@ -193,7 +194,7 @@ void mc_gk20a_intr_nonstall_pause(struct gk20a *g)
 	(void) gk20a_readl(g, mc_intr_en_1_r());
 }
 
-void mc_gk20a_intr_nonstall_resume(struct gk20a *g)
+void gm20b_mc_intr_nonstall_resume(struct gk20a *g)
 {
 	gk20a_writel(g, mc_intr_en_1_r(),
 		mc_intr_en_0_inta_hardware_f());
@@ -202,17 +203,17 @@ void mc_gk20a_intr_nonstall_resume(struct gk20a *g)
 	(void) gk20a_readl(g, mc_intr_en_1_r());
 }
 
-u32 mc_gk20a_intr_stall(struct gk20a *g)
+u32 gm20b_mc_intr_stall(struct gk20a *g)
 {
-	return gk20a_readl(g, mc_intr_0_r());
+	return gk20a_readl(g, mc_intr_r(NVGPU_MC_INTR_STALLING));
 }
 
-u32 mc_gk20a_intr_nonstall(struct gk20a *g)
+u32 gm20b_mc_intr_nonstall(struct gk20a *g)
 {
-	return gk20a_readl(g, mc_intr_1_r());
+	return gk20a_readl(g, mc_intr_r(NVGPU_MC_INTR_NONSTALLING));
 }
 
-void gk20a_mc_disable(struct gk20a *g, u32 units)
+void gm20b_mc_disable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
@@ -225,7 +226,7 @@ void gk20a_mc_disable(struct gk20a *g, u32 units)
 	nvgpu_spinlock_release(&g->mc_enable_lock);
 }
 
-void gk20a_mc_enable(struct gk20a *g, u32 units)
+void gm20b_mc_enable(struct gk20a *g, u32 units)
 {
 	u32 pmc;
 
@@ -241,7 +242,7 @@ void gk20a_mc_enable(struct gk20a *g, u32 units)
 	nvgpu_udelay(20);
 }
 
-void gk20a_mc_reset(struct gk20a *g, u32 units)
+void gm20b_mc_reset(struct gk20a *g, u32 units)
 {
 	g->ops.mc.disable(g, units);
 	if ((units & gk20a_fifo_get_all_ce_engine_reset_mask(g)) != 0U) {
@@ -252,31 +253,7 @@ void gk20a_mc_reset(struct gk20a *g, u32 units)
 	g->ops.mc.enable(g, units);
 }
 
-u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
-{
-	u32 val = __nvgpu_readl(g, mc_boot_0_r());
-
-	if (val != 0xffffffffU) {
-
-		if (arch != NULL) {
-			*arch = mc_boot_0_architecture_v(val) <<
-				NVGPU_GPU_ARCHITECTURE_SHIFT;
-		}
-
-		if (impl != NULL) {
-			*impl = mc_boot_0_implementation_v(val);
-		}
-
-		if (rev != NULL) {
-			*rev = (mc_boot_0_major_revision_v(val) << 4) |
-				mc_boot_0_minor_revision_v(val);
-		}
-	}
-
-	return val;
-}
-
-bool mc_gk20a_is_intr1_pending(struct gk20a *g,
+bool gm20b_mc_is_intr1_pending(struct gk20a *g,
 			       enum nvgpu_unit unit, u32 mc_intr_1)
 {
 	u32 mask = 0U;
@@ -284,7 +261,7 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 
 	switch (unit) {
 	case NVGPU_UNIT_FIFO:
-		mask = mc_intr_0_pfifo_pending_f();
+		mask = mc_intr_pfifo_pending_f();
 		break;
 	default:
 		break;
@@ -300,7 +277,7 @@ bool mc_gk20a_is_intr1_pending(struct gk20a *g,
 	return is_pending;
 }
 
-void mc_gk20a_log_pending_intrs(struct gk20a *g)
+void gm20b_mc_log_pending_intrs(struct gk20a *g)
 {
 	u32 intr;
 
@@ -315,17 +292,3 @@ void mc_gk20a_log_pending_intrs(struct gk20a *g)
 	}
 }
 
-void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops)
-{
-	bool semaphore_wakeup, post_events;
-
-	semaphore_wakeup =
-		(((ops & GK20A_NONSTALL_OPS_WAKEUP_SEMAPHORE) != 0U) ?
-					true : false);
-	post_events = (((ops & GK20A_NONSTALL_OPS_POST_EVENTS) != 0U) ?
-					true: false);
-
-	if (semaphore_wakeup) {
-		g->ops.semaphore_wakeup(g, post_events);
-	}
-}

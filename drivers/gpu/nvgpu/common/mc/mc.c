@@ -1,5 +1,7 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * GK20A Master Control
+ *
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,12 +22,33 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MC_GV11B_H
-#define MC_GV11B_H
-struct gk20a;
+#include <nvgpu/io.h>
+#include <nvgpu/mc.h>
 
-void mc_gv11b_intr_enable(struct gk20a *g);
-bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0);
-bool gv11b_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
-			u32 *eng_intr_pending);
-#endif
+#include "gk20a/gk20a.h"
+
+#include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
+
+u32 nvgpu_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
+{
+	u32 val = __nvgpu_readl(g, mc_boot_0_r());
+
+	if (val != 0xffffffffU) {
+
+		if (arch != NULL) {
+			*arch = mc_boot_0_architecture_v(val) <<
+				NVGPU_GPU_ARCHITECTURE_SHIFT;
+		}
+
+		if (impl != NULL) {
+			*impl = mc_boot_0_implementation_v(val);
+		}
+
+		if (rev != NULL) {
+			*rev = (mc_boot_0_major_revision_v(val) << 4) |
+				mc_boot_0_minor_revision_v(val);
+		}
+	}
+
+	return val;
+}

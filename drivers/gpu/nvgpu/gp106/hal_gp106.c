@@ -40,6 +40,8 @@
 #include "common/fuse/fuse_gm20b.h"
 #include "common/fuse/fuse_gp10b.h"
 #include "common/fuse/fuse_gp106.h"
+#include "common/mc/mc_gm20b.h"
+#include "common/mc/mc_gp10b.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -49,13 +51,11 @@
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
-#include "gk20a/mc_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
-#include "gp10b/mc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/regops_gp10b.h"
@@ -714,11 +714,10 @@ static const struct gpu_ops gp106_ops = {
 		.intr_nonstall = mc_gp10b_intr_nonstall,
 		.intr_nonstall_pause = mc_gp10b_intr_nonstall_pause,
 		.intr_nonstall_resume = mc_gp10b_intr_nonstall_resume,
-		.isr_nonstall = mc_gk20a_isr_nonstall,
-		.enable = gk20a_mc_enable,
-		.disable = gk20a_mc_disable,
-		.reset = gk20a_mc_reset,
-		.boot_0 = gk20a_mc_boot_0,
+		.isr_nonstall = gm20b_mc_isr_nonstall,
+		.enable = gm20b_mc_enable,
+		.disable = gm20b_mc_disable,
+		.reset = gm20b_mc_reset,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
 		.log_pending_intrs = mc_gp10b_log_pending_intrs,
 	},

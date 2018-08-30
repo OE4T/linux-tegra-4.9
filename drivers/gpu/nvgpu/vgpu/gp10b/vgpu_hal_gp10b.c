@@ -49,11 +49,9 @@
 #include "vgpu_fuse_gp10b.h"
 
 #include "gk20a/flcn_gk20a.h"
-#include "gk20a/mc_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include "gp10b/mc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
@@ -484,7 +482,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.enable = NULL,
 		.disable = NULL,
 		.reset = NULL,
-		.boot_0 = NULL,
 		.is_intr1_pending = NULL,
 		.log_pending_intrs = NULL,
 	},

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,12 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MC_GV100_H
-#define MC_GV100_H
+#ifndef MC_GV11B_H
+#define MC_GV11B_H
+
+#include <nvgpu/types.h>
+
 struct gk20a;
 
-void mc_gv100_intr_enable(struct gk20a *g);
-bool gv100_mc_is_intr_nvlink_pending(struct gk20a *g, u32 mc_intr_0);
-bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
+void mc_gv11b_intr_enable(struct gk20a *g);
+bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0);
+bool gv11b_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
 			u32 *eng_intr_pending);
 #endif

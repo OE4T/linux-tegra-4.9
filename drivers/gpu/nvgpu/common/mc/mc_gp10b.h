@@ -1,9 +1,5 @@
 /*
- * This file is used as a temporary redirection header for <nvgpu/gk20a.h>
- *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
- *
- * GK20A Graphics
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,10 +20,28 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef GK20A_GK20A_H
-#define GK20A_GK20A_H
+#ifndef MC_GP10B_H
+#define MC_GP10B_H
 
-/* no new headers should be added here */
-#include <nvgpu/gk20a.h>
+#include <nvgpu/types.h>
+
+struct gk20a;
+enum nvgpu_unit;
+
+void mc_gp10b_intr_mask(struct gk20a *g);
+void mc_gp10b_intr_enable(struct gk20a *g);
+void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
+		bool is_stalling, u32 mask);
+void mc_gp10b_isr_stall(struct gk20a *g);
+bool mc_gp10b_is_intr1_pending(struct gk20a *g,
+				      enum nvgpu_unit unit, u32 mc_intr_1);
+
+void mc_gp10b_log_pending_intrs(struct gk20a *g);
+u32 mc_gp10b_intr_stall(struct gk20a *g);
+void mc_gp10b_intr_stall_pause(struct gk20a *g);
+void mc_gp10b_intr_stall_resume(struct gk20a *g);
+u32 mc_gp10b_intr_nonstall(struct gk20a *g);
+void mc_gp10b_intr_nonstall_pause(struct gk20a *g);
+void mc_gp10b_intr_nonstall_resume(struct gk20a *g);
 
 #endif

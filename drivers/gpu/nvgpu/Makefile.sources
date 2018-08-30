@@ -107,6 +107,11 @@ srcs :=	os/posix/nvgpu.c \
 	common/clock_gating/gv100_gating_reglist.c \
 	common/fifo/channel.c \
 	common/fifo/submit.c \
+	common/mc/mc.c \
+	common/mc/mc_gm20b.c \
+	common/mc/mc_gp10b.c  \
+	common/mc/mc_gv11b.c  \
+	common/mc/mc_gv100.c \
 	boardobj/boardobj.c \
 	boardobj/boardobjgrp.c \
 	boardobj/boardobjgrpmask.c \
@@ -154,7 +159,6 @@ srcs :=	os/posix/nvgpu.c \
 	gk20a/gr_ctx_gk20a.c \
 	gk20a/hal.c \
 	gk20a/tsg_gk20a.c \
-	gk20a/mc_gk20a.c \
 	gm20b/hal_gm20b.c \
 	gm20b/gr_gm20b.c \
 	gm20b/clk_gm20b.c \
@@ -167,7 +171,6 @@ srcs :=	os/posix/nvgpu.c \
 	gp10b/gr_gp10b.c  \
 	gp10b/gr_ctx_gp10b.c  \
 	gp10b/ce_gp10b.c \
-	gp10b/mc_gp10b.c  \
 	gp10b/fifo_gp10b.c  \
 	gp10b/mm_gp10b.c \
 	gp10b/pmu_gp10b.c \
@@ -178,7 +181,6 @@ srcs :=	os/posix/nvgpu.c \
 	gp10b/ecc_gp10b.c \
 	gv11b/gv11b.c  \
 	gv11b/dbg_gpu_gv11b.c  \
-	gv11b/mc_gv11b.c  \
 	gv11b/hal_gv11b.c \
 	gv11b/gr_gv11b.c \
 	gv11b/fifo_gv11b.c \
@@ -210,7 +212,6 @@ srcs :=	os/posix/nvgpu.c \
 	gv100/gr_gv100.c \
 	gv100/regops_gv100.c \
 	gv100/flcn_gv100.c \
-	gv100/mc_gv100.c \
 	gv100/nvlink_gv100.c \
 	gv100/hal_gv100.c \
 	gv100/pmu_gv100.c

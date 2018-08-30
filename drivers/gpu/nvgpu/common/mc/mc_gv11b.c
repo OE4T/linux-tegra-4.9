@@ -24,11 +24,11 @@
 
 #include <nvgpu/types.h>
 #include <nvgpu/io.h>
+#include <nvgpu/mc.h>
 
 #include "gk20a/gk20a.h"
 
-#include "gp10b/mc_gp10b.h"
-
+#include "mc_gp10b.h"
 #include "mc_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>

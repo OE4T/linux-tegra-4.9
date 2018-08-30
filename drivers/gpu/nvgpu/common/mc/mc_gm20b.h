@@ -20,29 +20,32 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef MC_GK20A_H
-#define MC_GK20A_H
+#ifndef NVGPU_MC_GM20B_H
+#define NVGPU_MC_GM20B_H
+
+#include <nvgpu/types.h>
+
 struct gk20a;
+enum nvgpu_unit;
 
-void mc_gk20a_intr_mask(struct gk20a *g);
-void mc_gk20a_intr_enable(struct gk20a *g);
-void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
+void gm20b_mc_intr_mask(struct gk20a *g);
+void gm20b_mc_intr_enable(struct gk20a *g);
+void gm20b_mc_intr_unit_config(struct gk20a *g, bool enable,
 		bool is_stalling, u32 mask);
-void mc_gk20a_isr_stall(struct gk20a *g);
-u32 mc_gk20a_intr_stall(struct gk20a *g);
-void mc_gk20a_intr_stall_pause(struct gk20a *g);
-void mc_gk20a_intr_stall_resume(struct gk20a *g);
-u32 mc_gk20a_intr_nonstall(struct gk20a *g);
-u32 mc_gk20a_isr_nonstall(struct gk20a *g);
-void mc_gk20a_intr_nonstall_pause(struct gk20a *g);
-void mc_gk20a_intr_nonstall_resume(struct gk20a *g);
-void gk20a_mc_enable(struct gk20a *g, u32 units);
-void gk20a_mc_disable(struct gk20a *g, u32 units);
-void gk20a_mc_reset(struct gk20a *g, u32 units);
-u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
-bool mc_gk20a_is_intr1_pending(struct gk20a *g,
+void gm20b_mc_isr_stall(struct gk20a *g);
+u32 gm20b_mc_intr_stall(struct gk20a *g);
+void gm20b_mc_intr_stall_pause(struct gk20a *g);
+void gm20b_mc_intr_stall_resume(struct gk20a *g);
+u32 gm20b_mc_intr_nonstall(struct gk20a *g);
+u32 gm20b_mc_isr_nonstall(struct gk20a *g);
+void gm20b_mc_intr_nonstall_pause(struct gk20a *g);
+void gm20b_mc_intr_nonstall_resume(struct gk20a *g);
+void gm20b_mc_enable(struct gk20a *g, u32 units);
+void gm20b_mc_disable(struct gk20a *g, u32 units);
+void gm20b_mc_reset(struct gk20a *g, u32 units);
+bool gm20b_mc_is_intr1_pending(struct gk20a *g,
 		enum nvgpu_unit unit, u32 mc_intr_1);
-void mc_gk20a_log_pending_intrs(struct gk20a *g);
-void mc_gk20a_handle_intr_nonstall(struct gk20a *g, u32 ops);
+void gm20b_mc_log_pending_intrs(struct gk20a *g);
+void gm20b_mc_handle_intr_nonstall(struct gk20a *g, u32 ops);
 
-#endif /* MC_GK20A_H */
+#endif /* NVGPU_MC_GM20B_H */

@@ -1,9 +1,5 @@
 /*
- * This file is used as a temporary redirection header for <nvgpu/gk20a.h>
- *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
- *
- * GK20A Graphics
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,10 +20,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef GK20A_GK20A_H
-#define GK20A_GK20A_H
+#ifndef MC_GV100_H
+#define MC_GV100_H
 
-/* no new headers should be added here */
-#include <nvgpu/gk20a.h>
+#include <nvgpu/types.h>
 
+struct gk20a;
+
+void mc_gv100_intr_enable(struct gk20a *g);
+bool gv100_mc_is_intr_nvlink_pending(struct gk20a *g, u32 mc_intr_0);
+bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
+			u32 *eng_intr_pending);
 #endif

@@ -59,7 +59,6 @@
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
 #include "gr_gv11b.h"
-#include "mc_gv11b.h"
 
 void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {

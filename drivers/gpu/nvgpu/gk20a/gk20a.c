@@ -37,6 +37,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/therm.h>
+#include <nvgpu/mc.h>
 
 #include <trace/events/gk20a.h>
 
@@ -44,7 +45,6 @@
 #include "channel_sync_gk20a.h"
 
 #include "dbg_gpu_gk20a.h"
-#include "mc_gk20a.h"
 #include "hal.h"
 #include "pstate/pstate.h"
 
@@ -52,12 +52,7 @@ void __nvgpu_check_gpu_state(struct gk20a *g)
 {
 	u32 boot_0 = 0xffffffff;
 
-	if (!g->ops.mc.boot_0) {
-		nvgpu_err(g, "Can't determine GPU state, mc.boot_0 unset");
-		return;
-	}
-
-	boot_0 = g->ops.mc.boot_0(g, NULL, NULL, NULL);
+	boot_0 = nvgpu_mc_boot_0(g, NULL, NULL, NULL);
 	if (boot_0 == 0xffffffff) {
 		nvgpu_err(g, "GPU has disappeared from bus!!");
 		nvgpu_err(g, "Rebooting system!!");
@@ -78,7 +73,7 @@ int gk20a_detect_chip(struct gk20a *g)
 		return 0;
 	}
 
-	gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
+	nvgpu_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
 
 	if ((p->gpu_arch + p->gpu_impl) == NVGPU_GPUID_GV11B) {
 

@@ -45,12 +45,15 @@
 #include "common/fuse/fuse_gp10b.h"
 #include "common/fuse/fuse_gp106.h"
 #include "common/top/top_gv100.h"
+#include "common/mc/mc_gm20b.h"
+#include "common/mc/mc_gp10b.h"
+#include "common/mc/mc_gv11b.h"
+#include "common/mc/mc_gv100.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
-#include "gk20a/mc_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
 #include "gk20a/regops_gk20a.h"
@@ -74,7 +77,6 @@
 #include "gp106/flcn_gp106.h"
 
 #include "gp10b/gr_gp10b.h"
-#include "gp10b/mc_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -85,7 +87,6 @@
 #include "gv11b/dbg_gpu_gv11b.h"
 #include "gv11b/hal_gv11b.h"
 #include "gv11b/gr_gv11b.h"
-#include "gv11b/mc_gv11b.h"
 #include "gv11b/gv11b.h"
 #include "gv11b/ce_gv11b.h"
 #include "gv11b/mm_gv11b.h"
@@ -102,7 +103,6 @@
 #include "gv100/flcn_gv100.h"
 #include "gv100/gr_ctx_gv100.h"
 #include "gv100/gr_gv100.h"
-#include "gv100/mc_gv100.h"
 #include "gv100/mm_gv100.h"
 #include "gv100/pmu_gv100.h"
 #include "gv100/nvlink_gv100.h"
@@ -805,11 +805,10 @@ static const struct gpu_ops gv100_ops = {
 		.intr_nonstall = mc_gp10b_intr_nonstall,
 		.intr_nonstall_pause = mc_gp10b_intr_nonstall_pause,
 		.intr_nonstall_resume = mc_gp10b_intr_nonstall_resume,
-		.isr_nonstall = mc_gk20a_isr_nonstall,
-		.enable = gk20a_mc_enable,
-		.disable = gk20a_mc_disable,
-		.reset = gk20a_mc_reset,
-		.boot_0 = gk20a_mc_boot_0,
+		.isr_nonstall = gm20b_mc_isr_nonstall,
+		.enable = gm20b_mc_enable,
+		.disable = gm20b_mc_disable,
+		.reset = gm20b_mc_reset,
 		.log_pending_intrs = mc_gp10b_log_pending_intrs,
 		.is_intr1_pending = mc_gp10b_is_intr1_pending,
 		.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending,

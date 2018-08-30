@@ -551,7 +551,7 @@ struct gpu_ops {
 				struct wpr_carveout_info *inf);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
-		void (*tlb_invalidate)(struct gk20a *g, struct nvgpu_mem *pdb);
+		int (*tlb_invalidate)(struct gk20a *g, struct nvgpu_mem *pdb);
 		void (*hub_isr)(struct gk20a *g);
 		void (*handle_replayable_fault)(struct gk20a *g);
 		int (*mem_unlock)(struct gk20a *g);

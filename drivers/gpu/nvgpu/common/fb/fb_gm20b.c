@@ -60,11 +60,12 @@ void gm20b_fb_init_hw(struct gk20a *g)
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
 }
 
-void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
+int gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	struct nvgpu_timeout timeout;
 	u32 addr_lo;
 	u32 data;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -75,7 +76,7 @@ void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	   power is turned off */
 
 	if (!g->power_on) {
-		return;
+		return err;
 	}
 
 	addr_lo = u64_lo32(nvgpu_mem_get_addr(g, pdb) >> 12);
@@ -96,6 +97,7 @@ void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 					 "wait mmu fifo space"));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err = -ETIMEDOUT;
 		goto out;
 	}
 
@@ -126,6 +128,7 @@ void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 
 out:
 	nvgpu_mutex_release(&g->mm.tlb_lock);
+	return err;
 }
 
 void fb_gm20b_init_fs_state(struct gk20a *g)

@@ -250,11 +250,12 @@ void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 	vgpu_cache_maint(vgpu_get_handle(g), op);
 }
 
-void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
+int vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	nvgpu_log_fn(g, " ");
 
 	nvgpu_err(g, "call to RM server not supported");
+	return 0;
 }
 
 void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)

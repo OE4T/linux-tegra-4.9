@@ -33,7 +33,7 @@ struct nvgpu_mem;
 
 void gm20b_fb_reset(struct gk20a *g);
 void gm20b_fb_init_hw(struct gk20a *g);
-void gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);
+int gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);
 void fb_gm20b_init_fs_state(struct gk20a *g);
 void gm20b_fb_set_mmu_page_size(struct gk20a *g);
 bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g);

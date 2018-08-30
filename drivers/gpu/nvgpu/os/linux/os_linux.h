@@ -165,4 +165,6 @@ static inline struct device *dev_from_gk20a(struct gk20a *g)
 
 #define INTERFACE_NAME "nvhost%s-gpu"
 
+#define totalram_size_in_mb (totalram_pages >> (10 - (PAGE_SHIFT - 10)))
+
 #endif

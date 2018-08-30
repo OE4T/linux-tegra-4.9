@@ -98,8 +98,7 @@ static void nvgpu_init_gr_vars(struct gk20a *g)
 	gk20a_init_gr(g);
 
 	nvgpu_log_info(g, "total ram pages : %lu", totalram_pages);
-	g->gr.max_comptag_mem = totalram_pages
-				 >> (10 - (PAGE_SHIFT - 10));
+	g->gr.max_comptag_mem = totalram_size_in_mb;
 
 	/* Deduct the part taken by the running system */
 	if (platform->comptag_mem_deduct &&

@@ -47,8 +47,6 @@
 #include "os/linux/driver_common.h"
 #include "os/linux/platform_gk20a.h"
 
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
-
 struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
 {
 	struct gk20a_platform *plat = gk20a_get_platform(dev_from_gk20a(g));

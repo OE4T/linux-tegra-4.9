@@ -32,6 +32,10 @@ int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
 	unsigned long addr;
 	int err = 0;
 
+	if (allocator->size == 0UL) {
+		return -EINVAL;
+	}
+
 	nvgpu_mutex_acquire(&allocator->lock);
 	addr = bitmap_find_next_zero_area(allocator->bitmap, allocator->size,
 			0, len, 0);
@@ -52,6 +56,10 @@ void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
 {
 	/* number zero is reserved; bitmap base is 1 */
 	u32 addr = offset - 1U;
+
+	if (allocator->size == 0UL) {
+		return;
+	}
 
 	WARN_ON(offset == 0U);
 	WARN_ON(addr > allocator->size);

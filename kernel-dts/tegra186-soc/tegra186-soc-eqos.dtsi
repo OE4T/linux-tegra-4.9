@@ -85,6 +85,7 @@
 		reset-names = "eqos_rst";
 		iommus = <&smmu TEGRA_SID_EQOS>;
 		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
+		iommu-resv-regions = <0x0 0x0 0x0 0x40000000 0x0 0x60000000 0xffffffff 0xffffffff>;
 		iommu_sodev_map;
 		phy-mode = "rgmii";
 		status = "disabled";

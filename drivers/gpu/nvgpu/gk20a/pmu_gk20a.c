@@ -51,11 +51,12 @@ bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos)
 	u32 i = 0, j = strlen(strings);
 
 	for (; i < j; i++) {
-		if (strings[i] == '%')
+		if (strings[i] == '%') {
 			if (strings[i + 1] == 'x' || strings[i + 1] == 'X') {
 				*hex_pos = i;
 				return true;
 			}
+		}
 	}
 	*hex_pos = -1;
 	return false;
@@ -72,8 +73,9 @@ static void print_pmu_trace(struct nvgpu_pmu *pmu)
 
 	/* allocate system memory to copy pmu trace buffer */
 	tracebuffer = nvgpu_kzalloc(g, GK20A_PMU_TRACE_BUFSIZE);
-	if (tracebuffer == NULL)
+	if (tracebuffer == NULL) {
 		return;
+	}
 
 	/* read pmu traces into system memory buffer */
 	nvgpu_mem_rd_n(g, &pmu->trace_buf, 0, tracebuffer,
@@ -85,17 +87,20 @@ static void print_pmu_trace(struct nvgpu_pmu *pmu)
 	nvgpu_err(g, "dump PMU trace buffer");
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
 		for (j = 0; j < 0x40; j++) {
-			if (trace1[(i / 4) + j])
+			if (trace1[(i / 4) + j]) {
 				break;
+			}
 		}
-		if (j == 0x40)
+		if (j == 0x40) {
 			break;
+		}
 		count = scnprintf(buf, 0x40, "Index %x: ", trace1[(i / 4)]);
 		l = 0;
 		m = 0;
 		while (nvgpu_find_hex_in_string((trace+i+20+m), g, &k)) {
-			if (k >= 40)
+			if (k >= 40) {
 				break;
+			}
 			strncpy(part_str, (trace+i+20+m), k);
 			part_str[k] = '\0';
 			count += scnprintf((buf + count), 0x40, "%s0x%x",
@@ -277,8 +282,9 @@ int gk20a_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 	struct pmu_mutex *mutex;
 	u32 data, owner, max_retry;
 
-	if (!pmu->initialized)
+	if (!pmu->initialized) {
 		return -EINVAL;
+	}
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));
@@ -346,8 +352,9 @@ int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 	struct pmu_mutex *mutex;
 	u32 owner, data;
 
-	if (!pmu->initialized)
+	if (!pmu->initialized) {
 		return -EINVAL;
+	}
 
 	BUG_ON(!token);
 	BUG_ON(!PMU_MUTEX_ID_IS_VALID(id));
@@ -364,8 +371,9 @@ int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 		return -EINVAL;
 	}
 
-	if (--mutex->ref_cnt > 0)
+	if (--mutex->ref_cnt > 0) {
 		return -EBUSY;
+	}
 
 	gk20a_writel(g, pwr_pmu_mutex_r(mutex->index),
 		pwr_pmu_mutex_value_initial_lock_f());
@@ -386,32 +394,36 @@ int gk20a_pmu_queue_head(struct gk20a *g, struct nvgpu_falcon_queue *queue,
 {
 	u32 queue_head_size = 0;
 
-	if (g->ops.pmu.pmu_get_queue_head_size)
+	if (g->ops.pmu.pmu_get_queue_head_size) {
 		queue_head_size = g->ops.pmu.pmu_get_queue_head_size();
+	}
 
 	BUG_ON(!head || !queue_head_size);
 
 	if (PMU_IS_COMMAND_QUEUE(queue->id)) {
 
-		if (queue->index >= queue_head_size)
+		if (queue->index >= queue_head_size) {
 			return -EINVAL;
+		}
 
-		if (!set)
+		if (!set) {
 			*head = pwr_pmu_queue_head_address_v(
 				gk20a_readl(g,
 				g->ops.pmu.pmu_get_queue_head(queue->index)));
-		else
+		} else {
 			gk20a_writel(g,
 				g->ops.pmu.pmu_get_queue_head(queue->index),
 				pwr_pmu_queue_head_address_f(*head));
+		}
 	} else {
-		if (!set)
+		if (!set) {
 			*head = pwr_pmu_msgq_head_val_v(
 				gk20a_readl(g, pwr_pmu_msgq_head_r()));
-		else
+		} else {
 			gk20a_writel(g,
 				pwr_pmu_msgq_head_r(),
 				pwr_pmu_msgq_head_val_f(*head));
+		}
 	}
 
 	return 0;
@@ -422,33 +434,36 @@ int gk20a_pmu_queue_tail(struct gk20a *g, struct nvgpu_falcon_queue *queue,
 {
 	u32 queue_tail_size = 0;
 
-	if (g->ops.pmu.pmu_get_queue_tail_size)
+	if (g->ops.pmu.pmu_get_queue_tail_size) {
 		queue_tail_size = g->ops.pmu.pmu_get_queue_tail_size();
+	}
 
 	BUG_ON(!tail || !queue_tail_size);
 
 	if (PMU_IS_COMMAND_QUEUE(queue->id)) {
 
-		if (queue->index >= queue_tail_size)
+		if (queue->index >= queue_tail_size) {
 			return -EINVAL;
+		}
 
-		if (!set)
-			*tail = pwr_pmu_queue_tail_address_v(
-			gk20a_readl(g,
-				g->ops.pmu.pmu_get_queue_tail(queue->index)));
-		else
+		if (!set) {
+			*tail = pwr_pmu_queue_tail_address_v(gk20a_readl(g,
+					g->ops.pmu.pmu_get_queue_tail(queue->index)));
+		} else {
 			gk20a_writel(g,
 				g->ops.pmu.pmu_get_queue_tail(queue->index),
 				pwr_pmu_queue_tail_address_f(*tail));
+		}
 
 	} else {
-		if (!set)
+		if (!set) {
 			*tail = pwr_pmu_msgq_tail_val_v(
 				gk20a_readl(g, pwr_pmu_msgq_tail_r()));
-		else
+		} else {
 			gk20a_writel(g,
 				pwr_pmu_msgq_tail_r(),
 				pwr_pmu_msgq_tail_val_f(*tail));
+		}
 	}
 
 	return 0;
@@ -459,18 +474,20 @@ void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 queue_tail_size = 0;
 
-	if (g->ops.pmu.pmu_get_queue_tail_size)
+	if (g->ops.pmu.pmu_get_queue_tail_size) {
 		queue_tail_size = g->ops.pmu.pmu_get_queue_tail_size();
+	}
 
 	BUG_ON(!tail || !queue_tail_size);
 
-	if (!set)
+	if (!set) {
 		*tail = pwr_pmu_msgq_tail_val_v(
 			gk20a_readl(g, pwr_pmu_msgq_tail_r()));
-	else
+	} else {
 		gk20a_writel(g,
 			pwr_pmu_msgq_tail_r(),
 			pwr_pmu_msgq_tail_val_f(*tail));
+	}
 }
 
 int gk20a_init_pmu_setup_hw1(struct gk20a *g)
@@ -519,18 +536,20 @@ bool gk20a_pmu_is_engine_in_reset(struct gk20a *g)
 
 	pmc_enable = gk20a_readl(g, mc_enable_r());
 	if (mc_enable_pwr_v(pmc_enable) ==
-			mc_enable_pwr_disabled_v())
+			mc_enable_pwr_disabled_v()) {
 		status = true;
+	}
 
 	return status;
 }
 
 int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset)
 {
-	if (do_reset)
+	if (do_reset) {
 		g->ops.mc.enable(g, mc_enable_pwr_enabled_f());
-	else
+	} else {
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
+	}
 
 	return 0;
 }
@@ -547,8 +566,9 @@ u32 gk20a_pmu_pg_engines_list(struct gk20a *g)
 
 u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 {
-	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
 		return NVGPU_PMU_GR_FEATURE_MASK_POWER_GATING;
+	}
 
 	return 0;
 }
@@ -567,8 +587,9 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	if (!pmu->pmu_ready || !entries || !pmu->zbc_ready)
+	if (!pmu->pmu_ready || !entries || !pmu->zbc_ready) {
 		return;
+	}
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -583,8 +604,9 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 			   pmu_handle_zbc_msg, pmu, &seq, ~0);
 	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
 			      &pmu->zbc_save_done, 1);
-	if (!pmu->zbc_save_done)
+	if (!pmu->zbc_save_done) {
 		nvgpu_err(g, "ZBC save timeout");
+	}
 }
 
 int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
@@ -596,11 +618,12 @@ int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 
 	switch (msg->msg_type) {
 	case NV_PMU_THERM_MSG_ID_EVENT_HW_SLOWDOWN_NOTIFICATION:
-		if (msg->hw_slct_msg.mask == BIT(NV_PMU_THERM_EVENT_THERMAL_1))
+		if (msg->hw_slct_msg.mask == BIT(NV_PMU_THERM_EVENT_THERMAL_1)) {
 			nvgpu_clk_arb_send_thermal_alarm(pmu->g);
-		else
+		} else {
 			gk20a_dbg_pmu(g, "Unwanted/Unregistered thermal event received %d",
 				msg->hw_slct_msg.mask);
+		}
 		break;
 	default:
 		gk20a_dbg_pmu(g, "unkown therm event received %d", msg->msg_type);
@@ -687,8 +710,9 @@ bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu)
 			pwr_falcon_irqstat_exterr_true_f() |
 			pwr_falcon_irqstat_swgen0_true_f();
 
-	if (gk20a_readl(g, pwr_falcon_irqstat_r()) & servicedpmuint)
+	if (gk20a_readl(g, pwr_falcon_irqstat_r()) & servicedpmuint) {
 		return true;
+	}
 
 	return false;
 }
@@ -727,9 +751,11 @@ void gk20a_pmu_isr(struct gk20a *g)
 		nvgpu_pmu_dump_falcon_stats(pmu);
 		if (gk20a_readl(g, pwr_pmu_mailbox_r
 				(PMU_MODE_MISMATCH_STATUS_MAILBOX_R)) ==
-				PMU_MODE_MISMATCH_STATUS_VAL)
-			if (g->ops.pmu.dump_secure_fuses)
+				PMU_MODE_MISMATCH_STATUS_VAL) {
+			if (g->ops.pmu.dump_secure_fuses) {
 				g->ops.pmu.dump_secure_fuses(g);
+			}
+		}
 	}
 	if (intr & pwr_falcon_irqstat_exterr_true_f()) {
 		nvgpu_err(g,
@@ -741,8 +767,9 @@ void gk20a_pmu_isr(struct gk20a *g)
 				~pwr_falcon_exterrstat_valid_m());
 	}
 
-	if (g->ops.pmu.handle_ext_irq)
+	if (g->ops.pmu.handle_ext_irq) {
 		g->ops.pmu.handle_ext_irq(g, intr);
+	}
 
 	if (intr & pwr_falcon_irqstat_swgen0_true_f()) {
 		nvgpu_pmu_process_message(pmu);

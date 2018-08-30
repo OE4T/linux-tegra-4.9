@@ -93,23 +93,27 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	g->ops.fb.set_mmu_page_size(g);
-	if (g->ops.fb.set_use_full_comp_tag_line)
+	if (g->ops.fb.set_use_full_comp_tag_line) {
 		mm->use_full_comp_tag_line =
 			g->ops.fb.set_use_full_comp_tag_line(g);
+	}
 
 	g->ops.fb.init_hw(g);
 
-	if (g->ops.bus.bar1_bind)
+	if (g->ops.bus.bar1_bind) {
 		g->ops.bus.bar1_bind(g, &mm->bar1.inst_block);
+	}
 
 	if (g->ops.bus.bar2_bind) {
 		err = g->ops.bus.bar2_bind(g, &mm->bar2.inst_block);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 
-	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g))
+	if (gk20a_mm_fb_flush(g) || gk20a_mm_fb_flush(g)) {
 		return -EBUSY;
+	}
 
 	nvgpu_log_fn(g, "done");
 	return 0;
@@ -211,8 +215,9 @@ static void __update_pte(struct vm_gk20a *vm,
 
 	pte_w[0] = pte_valid | addr;
 
-	if (attrs->priv)
+	if (attrs->priv) {
 		pte_w[0] |= gmmu_pte_privilege_true_f();
+	}
 
 	pte_w[1] = __nvgpu_aperture_mask(g, attrs->aperture,
 					 gmmu_pte_aperture_sys_mem_ncoh_f(),
@@ -222,9 +227,10 @@ static void __update_pte(struct vm_gk20a *vm,
 		gmmu_pte_comptagline_f((u32)(attrs->ctag >> ctag_shift));
 
 	if (attrs->ctag && vm->mm->use_full_comp_tag_line &&
-	    phys_addr & 0x10000)
+	    phys_addr & 0x10000) {
 		pte_w[1] |= gmmu_pte_comptagline_f(
 			1 << (gmmu_pte_comptagline_s() - 1));
+	}
 
 	if (attrs->rw_flag == gk20a_mem_flag_read_only) {
 		pte_w[0] |= gmmu_pte_read_only_true_f();
@@ -233,11 +239,13 @@ static void __update_pte(struct vm_gk20a *vm,
 		pte_w[1] |= gmmu_pte_read_disable_true_f();
 	}
 
-	if (!attrs->cacheable)
+	if (!attrs->cacheable) {
 		pte_w[1] |= gmmu_pte_vol_true_f();
+	}
 
-	if (attrs->ctag)
+	if (attrs->ctag) {
 		attrs->ctag += page_size;
+	}
 }
 
 static void update_gmmu_pte_locked(struct vm_gk20a *vm,
@@ -254,10 +262,11 @@ static void update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u32 pte_w[2] = {0, 0};
 	int ctag_shift = ilog2(g->ops.fb.compression_page_size(g));
 
-	if (phys_addr)
+	if (phys_addr) {
 		__update_pte(vm, pte_w, phys_addr, attrs);
-	else if (attrs->sparse)
+	} else if (attrs->sparse) {
 		__update_pte_sparse(pte_w);
+	}
 
 	pte_dbg(g, attrs,
 		"PTE: i=%-4u size=%-2u offs=%-4u | "
@@ -338,8 +347,9 @@ int gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 	nvgpu_vm_get(vm);
 	ch->vm = vm;
 	err = channel_gk20a_commit_va(ch);
-	if (err)
+	if (err) {
 		ch->vm = NULL;
+	}
 
 	nvgpu_log(gk20a_from_vm(vm), gpu_dbg_map, "Binding ch=%d -> VM:%s",
 		  ch->chid, vm->name);
@@ -384,8 +394,9 @@ void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
 	nvgpu_mem_wr32(g, inst_block, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit - 1)));
 
-	if (big_page_size && g->ops.mm.set_big_page_size)
+	if (big_page_size && g->ops.mm.set_big_page_size) {
 		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
+	}
 }
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
@@ -422,8 +433,9 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	retries = 100;
 
-	if (g->ops.mm.get_flush_retries)
+	if (g->ops.mm.get_flush_retries) {
 		retries = g->ops.mm.get_flush_retries(g, NVGPU_FLUSH_FB);
+	}
 
 	nvgpu_timeout_init(g, &timeout, retries, NVGPU_TIMER_RETRY_TIMER);
 
@@ -447,13 +459,15 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 			flush_fb_flush_pending_busy_v()) {
 				nvgpu_log_info(g, "fb_flush 0x%x", data);
 				nvgpu_udelay(5);
-		} else
+		} else {
 			break;
+		}
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
-		if (g->ops.fb.dump_vpr_wpr_info)
+		if (g->ops.fb.dump_vpr_wpr_info) {
 			g->ops.fb.dump_vpr_wpr_info(g);
+		}
 		ret = -EBUSY;
 	}
 
@@ -474,8 +488,9 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 
 	trace_gk20a_mm_l2_invalidate(g->name);
 
-	if (g->ops.mm.get_flush_retries)
+	if (g->ops.mm.get_flush_retries) {
 		retries = g->ops.mm.get_flush_retries(g, NVGPU_FLUSH_L2_INV);
+	}
 
 	nvgpu_timeout_init(g, &timeout, retries, NVGPU_TIMER_RETRY_TIMER);
 
@@ -494,12 +509,14 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 				nvgpu_log_info(g, "l2_system_invalidate 0x%x",
 						data);
 				nvgpu_udelay(5);
-		} else
+		} else {
 			break;
+		}
 	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek_expired(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout)) {
 		nvgpu_warn(g, "l2_system_invalidate too many retries");
+	}
 
 	trace_gk20a_mm_l2_invalidate_done(g->name);
 }
@@ -526,11 +543,13 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	nvgpu_log_fn(g, " ");
 
 	gk20a_busy_noresume(g);
-	if (!g->power_on)
+	if (!g->power_on) {
 		goto hw_was_off;
+	}
 
-	if (g->ops.mm.get_flush_retries)
+	if (g->ops.mm.get_flush_retries) {
 		retries = g->ops.mm.get_flush_retries(g, NVGPU_FLUSH_L2_FLUSH);
+	}
 
 	nvgpu_timeout_init(g, &timeout, retries, NVGPU_TIMER_RETRY_TIMER);
 
@@ -552,15 +571,17 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 			flush_l2_flush_dirty_pending_busy_v()) {
 				nvgpu_log_info(g, "l2_flush_dirty 0x%x", data);
 				nvgpu_udelay(5);
-		} else
+		} else {
 			break;
+		}
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_flush_dirty too many retries"));
 
 	trace_gk20a_mm_l2_flush_done(g->name);
 
-	if (invalidate)
+	if (invalidate) {
 		gk20a_mm_l2_invalidate_locked(g);
+	}
 
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
@@ -578,11 +599,13 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	gk20a_busy_noresume(g);
-	if (!g->power_on)
+	if (!g->power_on) {
 		goto hw_was_off;
+	}
 
-	if (g->ops.mm.get_flush_retries)
+	if (g->ops.mm.get_flush_retries) {
 		retries = g->ops.mm.get_flush_retries(g, NVGPU_FLUSH_CBC_CLEAN);
+	}
 
 	nvgpu_timeout_init(g, &timeout, retries, NVGPU_TIMER_RETRY_TIMER);
 
@@ -601,8 +624,9 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 			flush_l2_clean_comptags_pending_busy_v()) {
 				nvgpu_log_info(g, "l2_clean_comptags 0x%x", data);
 				nvgpu_udelay(5);
-		} else
+		} else {
 			break;
+		}
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_clean_comptags too many retries"));
 

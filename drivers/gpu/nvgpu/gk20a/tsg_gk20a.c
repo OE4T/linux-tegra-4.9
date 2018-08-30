@@ -50,16 +50,18 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 		is_next = gk20a_fifo_channel_status_is_next(g, ch->chid);
 		is_ctx_reload = gk20a_fifo_channel_status_is_ctx_reload(g, ch->chid);
 
-		if (is_next || is_ctx_reload)
+		if (is_next || is_ctx_reload) {
 			g->ops.fifo.enable_channel(ch);
+		}
 	}
 
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		is_next = gk20a_fifo_channel_status_is_next(g, ch->chid);
 		is_ctx_reload = gk20a_fifo_channel_status_is_ctx_reload(g, ch->chid);
 
-		if (is_next || is_ctx_reload)
+		if (is_next || is_ctx_reload) {
 			continue;
+		}
 
 		g->ops.fifo.enable_channel(ch);
 	}
@@ -92,8 +94,9 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 
 	for (i = 0; i < f->max_runlists; ++i) {
 		runlist = &f->runlist_info[i];
-		if (test_bit(ch->chid, runlist->active_channels))
+		if (test_bit(ch->chid, runlist->active_channels)) {
 			return true;
+		}
 	}
 
 	return false;
@@ -124,9 +127,9 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	ch->tsgid = tsg->tsgid;
 
 	/* all the channel part of TSG should need to be same runlist_id */
-	if (tsg->runlist_id == FIFO_INVAL_TSG_ID)
+	if (tsg->runlist_id == FIFO_INVAL_TSG_ID) {
 		tsg->runlist_id = ch->runlist_id;
-	else if (tsg->runlist_id != ch->runlist_id) {
+	} else if (tsg->runlist_id != ch->runlist_id) {
 		nvgpu_err(tsg->g,
 			"Error: TSG channel should be share same runlist ch[%d] tsg[%d]",
 			ch->runlist_id, tsg->runlist_id);
@@ -180,8 +183,9 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	struct tsg_gk20a *tsg = NULL;
 	int err;
 
-	if (tsgid >= g->fifo.num_channels)
+	if (tsgid >= g->fifo.num_channels) {
 		return -EINVAL;
+	}
 
 	tsg = &g->fifo.tsg[tsgid];
 
@@ -214,8 +218,9 @@ int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	case NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		ret = g->ops.fifo.set_runlist_interleave(g, tsg->tsgid,
 							0, level);
-		if (!ret)
+		if (!ret) {
 			tsg->interleave_level = level;
+		}
 		break;
 	default:
 		ret = -EINVAL;
@@ -238,8 +243,9 @@ u32 gk20a_tsg_get_timeslice(struct tsg_gk20a *tsg)
 {
 	struct gk20a *g = tsg->g;
 
-	if (!tsg->timeslice_us)
+	if (!tsg->timeslice_us) {
 		return g->ops.fifo.default_timeslice_us(g);
+	}
 
 	return tsg->timeslice_us;
 }
@@ -306,8 +312,9 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g, pid_t pid)
 	tsg->tgid = pid;
 	tsg->sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
 
-	if (g->ops.fifo.init_eng_method_buffers)
+	if (g->ops.fifo.init_eng_method_buffers) {
 		g->ops.fifo.init_eng_method_buffers(g, tsg);
+	}
 
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);

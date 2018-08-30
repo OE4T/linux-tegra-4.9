@@ -36,11 +36,12 @@ static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 {
 	u32 key = *(u32 *)pkey;
 	struct regop_offset_range *prange = (struct regop_offset_range *)pelem;
-	if (key < prange->base)
+	if (key < prange->base) {
 		return -1;
-	else if (prange->base <= key && key < (prange->base +
-					       (prange->count * 4U)))
+	} else if (prange->base <= key && key < (prange->base +
+					       (prange->count * 4U))) {
 		return 0;
+	}
 	return 1;
 }
 
@@ -48,8 +49,9 @@ static inline bool linear_search(u32 offset, const u32 *list, int size)
 {
 	int i;
 	for (i = 0; i < size; i++) {
-		if (list[i] == offset)
+		if (list[i] == offset) {
 			return true;
+		}
 	}
 	return false;
 }
@@ -111,8 +113,9 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	 * regops implementation, so we return -ENOSYS. This will allow
 	 * compute apps to run with vgpu. Tools will not work in this
 	 * configuration and are not required to work at this time. */
-	if (g->is_virtual)
+	if (g->is_virtual) {
 		return -ENOSYS;
+	}
 
 	ok = validate_reg_ops(dbg_s,
 			      &ctx_rd_count, &ctx_wr_count,
@@ -134,8 +137,9 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	for (i = 0; i < num_ops; i++) {
 		/* if it isn't global then it is done in the ctx ops... */
-		if (ops[i].type != REGOP(TYPE_GLOBAL))
+		if (ops[i].type != REGOP(TYPE_GLOBAL)) {
 			continue;
+		}
 
 		switch (ops[i].op) {
 
@@ -358,8 +362,9 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 	}
 
 	valid = check_whitelists(dbg_s, op, offset);
-	if ((op->op == REGOP(READ_64) || op->op == REGOP(WRITE_64)) && valid)
+	if ((op->op == REGOP(READ_64) || op->op == REGOP(WRITE_64)) && valid) {
 		valid = check_whitelists(dbg_s, op, offset + 4);
+	}
 
 	if (valid && (op->type != REGOP(TYPE_GLOBAL))) {
 		err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->g,
@@ -416,10 +421,11 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 		}
 
 		if (reg_op_is_gr_ctx(ops[i].type)) {
-			if (reg_op_is_read(ops[i].op))
+			if (reg_op_is_read(ops[i].op)) {
 				(*ctx_rd_count)++;
-			else
+			} else {
 				(*ctx_wr_count)++;
+			}
 		}
 
 		/* if "allow_all" flag enabled, dont validate offset */

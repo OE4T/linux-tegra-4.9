@@ -42,30 +42,36 @@ int gpu_init_hal(struct gk20a *g)
 	case GK20A_GPUID_GM20B:
 	case GK20A_GPUID_GM20B_B:
 		nvgpu_log_info(g, "gm20b detected");
-		if (gm20b_init_hal(g))
+		if (gm20b_init_hal(g)) {
 			return -ENODEV;
+		}
 		break;
 	case NVGPU_GPUID_GP10B:
-		if (gp10b_init_hal(g))
+		if (gp10b_init_hal(g)) {
 			return -ENODEV;
+		}
 		break;
 	case NVGPU_GPUID_GP104:
 	case NVGPU_GPUID_GP106:
-		if (gp106_init_hal(g))
+		if (gp106_init_hal(g)) {
 			return -ENODEV;
+		}
 		break;
 	case NVGPU_GPUID_GV11B:
-		if (gv11b_init_hal(g))
+		if (gv11b_init_hal(g)) {
 			return -ENODEV;
+		}
 		break;
 	case NVGPU_GPUID_GV100:
-		if (gv100_init_hal(g))
+		if (gv100_init_hal(g)) {
 			return -ENODEV;
+		}
 		break;
 #if defined(CONFIG_TEGRA_GPU_NEXT)
 	case NVGPU_GPUID_NEXT:
-		if (NVGPU_NEXT_INIT_HAL(g))
+		if (NVGPU_NEXT_INIT_HAL(g)) {
 			return -ENODEV;
+		}
 		break;
 #endif
 

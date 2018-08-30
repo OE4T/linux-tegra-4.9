@@ -22,6 +22,7 @@
 #include <nvgpu/nvhost.h>
 #include <nvgpu/ptimer.h>
 
+#include "os_linux.h"
 #include "sysfs.h"
 #include "platform_gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -1159,6 +1160,40 @@ static DEVICE_ATTR(gfxp_wfi_timeout_count, (S_IRWXU|S_IRGRP|S_IROTH),
 static DEVICE_ATTR(gfxp_wfi_timeout_unit, (S_IRWXU|S_IRGRP|S_IROTH),
 		gfxp_wfi_timeout_unit_read, gfxp_wfi_timeout_unit_store);
 
+static ssize_t comptag_mem_deduct_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val >= totalram_size_in_mb) {
+		dev_err(dev, "comptag_mem_deduct can not be set above %lu",
+			totalram_size_in_mb);
+		return -EINVAL;
+	}
+
+	g->gr.comptag_mem_deduct = val;
+	/* Deduct the part taken by the running system */
+	g->gr.max_comptag_mem -= val;
+
+	return count;
+}
+
+static ssize_t comptag_mem_deduct_show(struct device *dev,
+				       struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return sprintf(buf, "%d\n", g->gr.comptag_mem_deduct);
+}
+
+static DEVICE_ATTR(comptag_mem_deduct, ROOTRW,
+		   comptag_mem_deduct_show, comptag_mem_deduct_store);
+
 void nvgpu_remove_sysfs(struct device *dev)
 {
 	device_remove_file(dev, &dev_attr_elcg_enable);
@@ -1199,6 +1234,8 @@ void nvgpu_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_pd_max_batches);
 	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 	device_remove_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
+
+	device_remove_file(dev, &dev_attr_comptag_mem_deduct);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
@@ -1251,6 +1288,8 @@ int nvgpu_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_pd_max_batches);
 	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_count);
 	error |= device_create_file(dev, &dev_attr_gfxp_wfi_timeout_unit);
+
+	error |= device_create_file(dev, &dev_attr_comptag_mem_deduct);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;

@@ -272,12 +272,6 @@ struct gk20a_platform {
 	/* stream id to use */
 	u32 ltc_streamid;
 
-	/*
-	 * The deductible memory size for max_comptag_mem (in MBytes)
-	 * Usually close to memory size that running system is taking
-	 */
-	u32 comptag_mem_deduct;
-
 	/* scaling rate */
 	unsigned long cached_rate;
 };

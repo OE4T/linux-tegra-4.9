@@ -373,6 +373,12 @@ struct gr_gk20a {
 	u32 gfxp_wfi_timeout_count;
 	u32 gfxp_wfi_timeout_unit;
 
+	/*
+	 * The deductible memory size for max_comptag_mem (in MBytes)
+	 * Usually close to memory size that running system is taking
+	 */
+	u32 comptag_mem_deduct;
+
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
 	struct nvgpu_mem mmu_wr_mem;

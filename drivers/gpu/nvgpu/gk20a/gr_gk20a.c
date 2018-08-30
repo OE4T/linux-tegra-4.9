@@ -327,7 +327,6 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay)
 {
 	u32 delay = expect_delay;
-	bool gr_enabled;
 	bool ctxsw_active;
 	bool gr_busy;
 	u32 gr_engine_id;
@@ -346,9 +345,6 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		   only when gr_status is read */
 		(void) gk20a_readl(g, gr_status_r());
 
-		gr_enabled = gk20a_readl(g, mc_enable_r()) &
-			mc_enable_pgraph_enabled_f();
-
 		engine_status = gk20a_readl(g,
 					fifo_engine_status_r(gr_engine_id));
 
@@ -362,8 +358,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		gr_busy = gk20a_readl(g, gr_engine_status_r()) &
 			gr_engine_status_value_busy_f();
 
-		if (!gr_enabled || ctx_status_invalid
-				|| (!gr_busy && !ctxsw_active)) {
+		if (ctx_status_invalid || (!gr_busy && !ctxsw_active)) {
 			nvgpu_log_fn(g, "done");
 			return 0;
 		}

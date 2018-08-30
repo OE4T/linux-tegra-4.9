@@ -45,7 +45,6 @@
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
 #define GFXP_WFI_TIMEOUT_COUNT_DEFAULT 100000
 
@@ -1452,7 +1451,6 @@ int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			       u32 expect_delay)
 {
 	u32 delay = expect_delay;
-	bool gr_enabled;
 	bool ctxsw_active;
 	bool gr_busy;
 	u32 gr_status;
@@ -1468,9 +1466,6 @@ int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		   only when gr_status is read */
 		gr_status = gk20a_readl(g, gr_status_r());
 
-		gr_enabled = gk20a_readl(g, mc_enable_r()) &
-			mc_enable_pgraph_enabled_f();
-
 		ctxsw_active = gr_status & 1<<7;
 
 		activity0 = gk20a_readl(g, gr_activity_0_r());
@@ -1483,7 +1478,7 @@ int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			    activity2 == 0 &&
 			    gr_activity_empty_or_preempted(activity4));
 
-		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
+		if (!gr_busy && !ctxsw_active) {
 			nvgpu_log_fn(g, "done");
 			return 0;
 		}

@@ -57,7 +57,6 @@
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
@@ -2050,7 +2049,6 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay)
 {
 	u32 delay = expect_delay;
-	bool gr_enabled;
 	bool ctxsw_active;
 	bool gr_busy;
 	u32 gr_status;
@@ -2066,9 +2064,6 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		   only when gr_status is read */
 		gr_status = gk20a_readl(g, gr_status_r());
 
-		gr_enabled = gk20a_readl(g, mc_enable_r()) &
-			mc_enable_pgraph_enabled_f();
-
 		ctxsw_active = gr_status & 1<<7;
 
 		activity0 = gk20a_readl(g, gr_activity_0_r());
@@ -2081,7 +2076,7 @@ int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			    activity2 == 0 &&
 			    gr_activity_empty_or_preempted(activity4));
 
-		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
+		if (!gr_busy && !ctxsw_active) {
 			nvgpu_log_fn(g, "done");
 			return 0;
 		}

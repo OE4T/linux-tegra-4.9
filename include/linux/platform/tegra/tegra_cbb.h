@@ -136,7 +136,7 @@ struct tegra_cbb_errlog_record {
 	char		**tegra_noc_routeid_targflow;
 	char		**tegra_cbb_master_id;
 	bool		is_ax2apb_bridge_connected;
-	u64		*axi2abp_bases;
+	void __iomem 	**axi2abp_bases;
 	int		apb_bridge_cnt;
 	bool		is_clk_rst;
 	int		(*is_cluster_probed)(void);

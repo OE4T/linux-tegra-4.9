@@ -438,7 +438,7 @@ static void print_errlog0(struct seq_file *file,
 
 		for (i = 0; i < errlog->apb_bridge_cnt; i++) {
 			bus_status = tegra_axi2apb_errstatus(
-				(void __iomem *)errlog->axi2abp_bases[i]);
+				errlog->axi2abp_bases[i]);
 
 			if (bus_status) {
 				for(j = 0; j < max_axi2apb_err; j++) {
@@ -908,7 +908,7 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 						"failed to map axi2apb range\n");
 				return -ENOENT;
 			}
-			errlog->axi2abp_bases[i] = (u64)base;
+			errlog->axi2abp_bases[i] = base;
 		}
 	}
 	errlog->name      = bdata->name;

@@ -151,7 +151,7 @@ int clk_fll_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmudatainstget  = _clk_fll_devgrp_pmudata_instget;
 	pboardobjgrp->pmustatusinstget  = _clk_fll_devgrp_pmustatus_instget;
 	pfllobjs = (struct avfsfllobjs *)pboardobjgrp;
-	pfllobjs->lut_num_entries = CTRL_CLK_LUT_NUM_ENTRIES;
+	pfllobjs->lut_num_entries = g->ops.clk.lut_num_entries;
 	pfllobjs->lut_step_size_uv = CTRL_CLK_VIN_STEP_SIZE_UV;
 	pfllobjs->lut_min_voltage_uv = CTRL_CLK_LUT_MIN_VOLTAGE_UV;
 

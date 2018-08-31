@@ -1007,6 +1007,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->clk.support_clk_freq_controller = false;
 	gops->clk.support_pmgr_domain = false;
 	gops->clk.support_lpwr_pg = false;
+	gops->clk.lut_num_entries = CTRL_CLK_LUT_NUM_ENTRIES_GV10x;
 
 	g->name = "gv10x";
 

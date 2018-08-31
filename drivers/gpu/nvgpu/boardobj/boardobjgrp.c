@@ -177,15 +177,15 @@ int boardobjgrp_destruct_super(struct boardobjgrp *pboardobjgrp)
 
 int boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
-	u8 hdrsize, u8 entrysize, u16 fbsize,  u32 ss_offset, u8 rpc_func_id)
+	u16 hdrsize, u16 entrysize, u16 fbsize,  u32 ss_offset, u8 rpc_func_id)
 {
 	nvgpu_log_info(g, " ");
 
 	/* Copy the parameters into the CMD*/
 	cmd->id   = id;
 	cmd->msgid = msgid;
-	cmd->hdrsize   = hdrsize;
-	cmd->entrysize = entrysize;
+	cmd->hdrsize   = (u8) hdrsize;
+	cmd->entrysize = (u8) entrysize;
 	cmd->fbsize    = fbsize;
 
 	return 0;
@@ -193,7 +193,7 @@ int boardobjgrp_pmucmd_construct_impl(struct gk20a *g, struct boardobjgrp
 
 int boardobjgrp_pmucmd_construct_impl_v1(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
-	u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id)
+	u16 hdrsize, u16 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id)
 {
 	nvgpu_log_fn(g, " ");
 

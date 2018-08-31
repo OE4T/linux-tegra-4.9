@@ -156,7 +156,7 @@ struct boardobjgrp_pmu {
 typedef int boardobjgrp_pmucmd_construct(struct gk20a *g,
 		struct boardobjgrp *pboardobjgrp,
 		struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
-		u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id);
+		u16 hdrsize, u16 entrysize, u16 fbsize, u32 ss_offset, u8 rpc_func_id);
 
 /*
 * Destroys BOARDOBJGRP PMU SW state.  CMD.

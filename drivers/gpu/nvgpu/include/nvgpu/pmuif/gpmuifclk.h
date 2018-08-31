@@ -560,7 +560,7 @@ struct nv_pmu_clk_clk_fll_device_boardobj_get_status {
 	u8 current_regime_id;
 	bool b_dvco_min_reached;
 	u16 min_freq_mhz;
-	struct nv_pmu_clk_lut_vf_entry lut_vf_curve[NV_UNSIGNED_ROUNDED_DIV(CTRL_CLK_LUT_NUM_ENTRIES, 2)];
+	struct nv_pmu_clk_lut_vf_entry lut_vf_curve[NV_UNSIGNED_ROUNDED_DIV(CTRL_CLK_LUT_NUM_ENTRIES_MAX, 2)];
 };
 
 union nv_pmu_clk_clk_fll_device_boardobj_get_status_union {

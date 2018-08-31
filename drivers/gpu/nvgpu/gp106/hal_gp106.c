@@ -887,6 +887,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->clk.support_clk_freq_controller = true;
 	gops->clk.support_pmgr_domain = true;
 	gops->clk.support_lpwr_pg = true;
+	gops->clk.lut_num_entries = CTRL_CLK_LUT_NUM_ENTRIES_GP10x;
 
 	g->name = "gp10x";
 

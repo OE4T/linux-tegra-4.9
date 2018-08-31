@@ -852,7 +852,7 @@ struct gpu_ops {
 				(struct gk20a *g,
 				struct boardobjgrp *pboardobjgrp,
 				struct boardobjgrp_pmu_cmd *cmd, u8 id, u8 msgid,
-				u8 hdrsize, u8 entrysize, u16 fbsize, u32 ss_offset,
+				u16 hdrsize, u16 entrysize, u16 fbsize, u32 ss_offset,
 				u8 rpc_func_id);
 			int (*boardobjgrp_pmuset_impl)(struct gk20a *g,
 				struct boardobjgrp *pboardobjgrp);
@@ -1113,6 +1113,7 @@ struct gpu_ops {
 		bool support_pmgr_domain;
 		bool support_lpwr_pg;
 		u32 (*perf_pmu_vfe_load)(struct gk20a *g);
+		u32 lut_num_entries;
 	} clk;
 	struct {
 		int (*arbiter_clk_init)(struct gk20a *g);

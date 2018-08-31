@@ -133,7 +133,7 @@ struct bwmgr_ops *bwmgr_eff_init_t21x(void)
 {
 	int i;
 	u32 dram;
-	void *emc_base;
+	void __iomem *emc_base;
 
 	emc_base = ioremap(TEGRA_EMC0_BASE, TEGRA_EMC0_SIZE);
 

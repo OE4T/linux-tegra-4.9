@@ -192,10 +192,9 @@ bool nvgpu_is_enabled(struct gk20a *g, int flag);
  * @flag  - Which flag to modify.
  * @state - The state to set the flag to.
  *
- * Set the state of the passed @flag to @state. This will return the previous
- * state of the passed @flag.
+ * Set the state of the passed @flag to @state.
  */
-bool __nvgpu_set_enabled(struct gk20a *g, int flag, bool state);
+void __nvgpu_set_enabled(struct gk20a *g, int flag, bool state);
 
 int nvgpu_init_enabled_flags(struct gk20a *g);
 void nvgpu_free_enabled_flags(struct gk20a *g);

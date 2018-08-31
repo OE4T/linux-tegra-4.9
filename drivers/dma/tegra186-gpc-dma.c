@@ -1,7 +1,7 @@
 /*
  * DMA driver for Nvidia's Tegra186 GPC DMA controller.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -221,6 +221,8 @@ struct tegra_dma_desc {
 	int				bytes_requested;
 	int				bytes_transferred;
 	u64				total_bytes_transferred;
+	u32				prev_wcount;
+	u32				wcount_overflow;
 	enum dma_status			dma_status;
 	struct list_head		node;
 	struct list_head		tx_list;
@@ -957,6 +959,22 @@ empty_cblist:
 	return 0;
 }
 
+static u64 calc_bytes_transferred(struct tegra_dma_channel *tdc,
+	struct tegra_dma_desc *dma_desc)
+{
+	u64 bytes_transfer;
+	u32 wcount;
+
+	wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_DMA_BYTE_STATUS);
+	if (wcount < dma_desc->prev_wcount)
+		dma_desc->wcount_overflow++;
+
+	dma_desc->prev_wcount = wcount;
+	bytes_transfer = ((dma_desc->wcount_overflow * U32_MAX) + wcount) * 4;
+
+	return bytes_transfer;
+}
+
 static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	dma_cookie_t cookie, struct dma_tx_state *txstate)
 {
@@ -995,14 +1013,9 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	list_for_each_entry(sg_req, &tdc->pending_sg_req, node) {
 		dma_desc = sg_req->dma_desc;
 		if (dma_desc->txd.cookie == cookie) {
-			u32 wcount, curr_bytes;
 			u64 total_bytes;
 
-			wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
-			curr_bytes = sg_req->req_len - (wcount * 4);
-
-			total_bytes = dma_desc->total_bytes_transferred +
-					curr_bytes;
+			total_bytes = calc_bytes_transferred(tdc, dma_desc);
 			dma_set_bytes_transferred(txstate, total_bytes);
 
 			residual =  dma_desc->bytes_requested -
@@ -1160,6 +1173,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
 	dma_desc->total_bytes_transferred = 0;
+	dma_desc->prev_wcount = 0;
+	dma_desc->wcount_overflow = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	if ((len & 3) || (dest & 3) ||
@@ -1259,6 +1274,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
 	dma_desc->total_bytes_transferred = 0;
+	dma_desc->prev_wcount = 0;
+	dma_desc->wcount_overflow = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	if ((len & 3) || (src & 3) || (dest & 3) ||
@@ -1384,6 +1401,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
 	dma_desc->total_bytes_transferred = 0;
+	dma_desc->prev_wcount = 0;
+	dma_desc->wcount_overflow = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	/* Make transfer requests */
@@ -1566,6 +1585,8 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 
 	dma_desc->bytes_transferred = 0;
 	dma_desc->total_bytes_transferred = 0;
+	dma_desc->prev_wcount = 0;
+	dma_desc->wcount_overflow = 0;
 	dma_desc->bytes_requested = buf_len;
 	remain_len = buf_len;
 

@@ -79,11 +79,13 @@ void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	nvgpu_log(g, gpu_dbg_intr, "ce2 isr %08x\n", ce2_intr);
 
 	/* clear blocking interrupts: they exibit broken behavior */
-	if (ce2_intr & ce2_intr_status_blockpipe_pending_f())
+	if (ce2_intr & ce2_intr_status_blockpipe_pending_f()) {
 		clear_intr |= ce2_blockpipe_isr(g, ce2_intr);
+	}
 
-	if (ce2_intr & ce2_intr_status_launcherr_pending_f())
+	if (ce2_intr & ce2_intr_status_launcherr_pending_f()) {
 		clear_intr |= ce2_launcherr_isr(g, ce2_intr);
+	}
 
 	gk20a_writel(g, ce2_intr_status_r(), clear_intr);
 	return;
@@ -112,8 +114,9 @@ static void gk20a_ce_put_fences(struct gk20a_gpu_ctx *ce_ctx)
 
 	for (i = 0; i < NVGPU_CE_MAX_INFLIGHT_JOBS; i++) {
 		struct gk20a_fence **fence = &ce_ctx->postfences[i];
-		if (*fence)
+		if (*fence) {
 			gk20a_fence_put(*fence);
+		}
 		*fence = NULL;
 	}
 }
@@ -140,8 +143,9 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 	nvgpu_ref_put(&ce_ctx->tsg->refcount, gk20a_tsg_release);
 
 	/* housekeeping on app */
-	if (list->prev && list->next)
+	if (list->prev && list->next) {
 		nvgpu_list_del(list);
+	}
 
 	nvgpu_mutex_release(&ce_ctx->gpu_ctx_mutex);
 	nvgpu_mutex_destroy(&ce_ctx->gpu_ctx_mutex);
@@ -171,10 +175,11 @@ static inline unsigned int gk20a_ce_get_method_size(int request_operation,
 		chunk -= (u64) height * width;
 	}
 
-	if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER)
+	if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER) {
 		methodsize = (2 + (16 * iterations)) * sizeof(u32);
-	else if (request_operation & NVGPU_CE_MEMSET)
+	} else if (request_operation & NVGPU_CE_MEMSET) {
 		methodsize = (2 + (15 * iterations)) * sizeof(u32);
+	}
 
 	return methodsize;
 }
@@ -198,8 +203,9 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 	/* failure case handling */
 	if ((gk20a_ce_get_method_size(request_operation, size) >
 		max_cmd_buf_size) || (!size) ||
-		(request_operation > NVGPU_CE_MEMSET))
+		(request_operation > NVGPU_CE_MEMSET)) {
 		return 0;
+	}
 
 	/* set the channel object */
 	cmd_buf_cpu_va[methodSize++] = 0x20018000;
@@ -252,13 +258,14 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 				offset) & NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK);
 
 			cmd_buf_cpu_va[methodSize++] = 0x20018098;
-			if (launch_flags & NVGPU_CE_SRC_LOCATION_LOCAL_FB)
+			if (launch_flags & NVGPU_CE_SRC_LOCATION_LOCAL_FB) {
 				cmd_buf_cpu_va[methodSize++] = 0x00000000;
-			else if (launch_flags &
-				NVGPU_CE_SRC_LOCATION_NONCOHERENT_SYSMEM)
+			} else if (launch_flags &
+				NVGPU_CE_SRC_LOCATION_NONCOHERENT_SYSMEM) {
 				cmd_buf_cpu_va[methodSize++] = 0x00000002;
-			else
+			} else {
 				cmd_buf_cpu_va[methodSize++] = 0x00000001;
+			}
 
 			launch |= 0x00001000;
 		} else if (request_operation & NVGPU_CE_MEMSET) {
@@ -289,25 +296,28 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 		cmd_buf_cpu_va[methodSize++] = height;
 
 		cmd_buf_cpu_va[methodSize++] = 0x20018099;
-		if (launch_flags & NVGPU_CE_DST_LOCATION_LOCAL_FB)
+		if (launch_flags & NVGPU_CE_DST_LOCATION_LOCAL_FB) {
 			cmd_buf_cpu_va[methodSize++] = 0x00000000;
-		else if (launch_flags &
-				NVGPU_CE_DST_LOCATION_NONCOHERENT_SYSMEM)
+		} else if (launch_flags &
+				NVGPU_CE_DST_LOCATION_NONCOHERENT_SYSMEM) {
 			cmd_buf_cpu_va[methodSize++] = 0x00000002;
-		else
+		} else {
 			cmd_buf_cpu_va[methodSize++] = 0x00000001;
+		}
 
 		launch |= 0x00002005;
 
-		if (launch_flags & NVGPU_CE_SRC_MEMORY_LAYOUT_BLOCKLINEAR)
+		if (launch_flags & NVGPU_CE_SRC_MEMORY_LAYOUT_BLOCKLINEAR) {
 			launch |= 0x00000000;
-		else
+		} else {
 			launch |= 0x00000080;
+		}
 
-		if (launch_flags & NVGPU_CE_DST_MEMORY_LAYOUT_BLOCKLINEAR)
+		if (launch_flags & NVGPU_CE_DST_MEMORY_LAYOUT_BLOCKLINEAR) {
 			launch |= 0x00000000;
-		else
+		} else {
 			launch |= 0x00000100;
+		}
 
 		cmd_buf_cpu_va[methodSize++] = 0x200180c0;
 		cmd_buf_cpu_va[methodSize++] = launch;
@@ -329,12 +339,14 @@ int gk20a_init_ce_support(struct gk20a *g)
 
 	g->ops.mc.reset(g, ce_reset_mask);
 
-	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
+	if (g->ops.clock_gating.slcg_ce2_load_gating_prod) {
 		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
 				g->slcg_enabled);
-	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
+	}
+	if (g->ops.clock_gating.blcg_ce_load_gating_prod) {
 		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
 				g->blcg_enabled);
+	}
 
 	if (ce_app->initialised) {
 		/* assume this happen during poweron/poweroff GPU sequence */
@@ -345,8 +357,9 @@ int gk20a_init_ce_support(struct gk20a *g)
 	nvgpu_log(g, gpu_dbg_fn, "ce: init");
 
 	err = nvgpu_mutex_init(&ce_app->app_mutex);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
@@ -367,8 +380,9 @@ void gk20a_ce_destroy(struct gk20a *g)
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	struct gk20a_gpu_ctx *ce_ctx, *ce_ctx_save;
 
-	if (!ce_app->initialised)
+	if (!ce_app->initialised) {
 		return;
+	}
 
 	ce_app->app_state = NVGPU_CE_SUSPEND;
 	ce_app->initialised = false;
@@ -393,8 +407,9 @@ void gk20a_ce_suspend(struct gk20a *g)
 {
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 
-	if (!ce_app->initialised)
+	if (!ce_app->initialised) {
 		return;
+	}
 
 	ce_app->app_state = NVGPU_CE_SUSPEND;
 
@@ -413,12 +428,14 @@ u32 gk20a_ce_create_context(struct gk20a *g,
 	u32 ctx_id = ~0;
 	int err = 0;
 
-	if (!ce_app->initialised || ce_app->app_state != NVGPU_CE_ACTIVE)
+	if (!ce_app->initialised || ce_app->app_state != NVGPU_CE_ACTIVE) {
 		return ctx_id;
+	}
 
 	ce_ctx = nvgpu_kzalloc(g, sizeof(*ce_ctx));
-	if (!ce_ctx)
+	if (!ce_ctx) {
 		return ctx_id;
+	}
 
 	err = nvgpu_mutex_init(&ce_ctx->gpu_ctx_mutex);
 	if (err) {
@@ -538,8 +555,9 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	struct gk20a_gpu_ctx *ce_ctx, *ce_ctx_save;
 
-	if (!ce_app->initialised ||ce_app->app_state != NVGPU_CE_ACTIVE)
+	if (!ce_app->initialised || ce_app->app_state != NVGPU_CE_ACTIVE) {
 		return;
+	}
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 

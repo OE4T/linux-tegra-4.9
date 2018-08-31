@@ -229,21 +229,25 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 		nvgpu_log(g, gpu_dbg_gpu_dbg | gpu_dbg_fn,
 						"module busy");
 		err = gk20a_busy(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 
 		/*do elpg disable before clock gating */
 		nvgpu_pmu_pg_global_enable(g, false);
 
-		if (g->ops.clock_gating.slcg_gr_load_gating_prod)
+		if (g->ops.clock_gating.slcg_gr_load_gating_prod) {
 			g->ops.clock_gating.slcg_gr_load_gating_prod(g,
 				false);
-		if (g->ops.clock_gating.slcg_perf_load_gating_prod)
+		}
+		if (g->ops.clock_gating.slcg_perf_load_gating_prod) {
 			g->ops.clock_gating.slcg_perf_load_gating_prod(g,
 				false);
-		if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
+		}
+		if (g->ops.clock_gating.slcg_ltc_load_gating_prod) {
 			g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
 				false);
+		}
 
 		gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_RUN);
 		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
@@ -254,28 +258,27 @@ int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, bool disable_powergate)
 		/* release pending exceptions to fault/be handled as usual */
 		/*TBD: ordering of these? */
 
-		if (g->elcg_enabled)
+		if (g->elcg_enabled) {
 			gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
+		}
 
-		if (g->blcg_enabled)
+		if (g->blcg_enabled) {
 			gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_AUTO);
+		}
 
 		if (g->slcg_enabled) {
-			if (g->ops.clock_gating.
-				slcg_ltc_load_gating_prod)
-				g->ops.clock_gating.
-				slcg_ltc_load_gating_prod(g,
-				g->slcg_enabled);
-			if (g->ops.clock_gating.
-				slcg_perf_load_gating_prod)
-				g->ops.clock_gating.
-				slcg_perf_load_gating_prod(g,
-				g->slcg_enabled);
-			if (g->ops.clock_gating.
-				slcg_gr_load_gating_prod)
-				g->ops.clock_gating.
-				slcg_gr_load_gating_prod(g,
-				g->slcg_enabled);
+			if (g->ops.clock_gating.slcg_ltc_load_gating_prod) {
+				g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+					g->slcg_enabled);
+			}
+			if (g->ops.clock_gating.slcg_perf_load_gating_prod) {
+				g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+					g->slcg_enabled);
+			}
+			if (g->ops.clock_gating.slcg_gr_load_gating_prod) {
+				g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+					g->slcg_enabled);
+			}
 		}
 		nvgpu_pmu_pg_global_enable(g, true);
 
@@ -328,12 +331,14 @@ void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
 	struct gk20a *g = dbg_s->g;
 
 	g->profiler_reservation_count--;
-	if (g->profiler_reservation_count < 0)
+	if (g->profiler_reservation_count < 0) {
 		nvgpu_err(g, "Negative reservation count!");
+	}
 	dbg_s->has_profiler_reservation = false;
 	prof_obj->has_reservation = false;
-	if (prof_obj->ch == NULL)
+	if (prof_obj->ch == NULL) {
 		g->global_profiler_reservation_held = false;
+	}
 }
 
 int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
@@ -351,8 +356,9 @@ int gk20a_perfbuf_enable_locked(struct gk20a *g, u64 offset, u32 size)
 	}
 
 	err = g->ops.mm.alloc_inst_block(g, &mm->perfbuf.inst_block);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
 

@@ -74,16 +74,18 @@ int gk20a_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_params *p = &g->params;
 
-	if (p->gpu_arch)
+	if (p->gpu_arch) {
 		return 0;
+	}
 
 	gk20a_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
 
 	if ((p->gpu_arch + p->gpu_impl) == NVGPU_GPUID_GV11B) {
 
 		/* overwrite gpu revison for A02  */
-		if (!nvgpu_is_soc_t194_a01(g))
+		if (!nvgpu_is_soc_t194_a01(g)) {
 			p->gpu_rev = 0xa2;
+		}
 
 	}
 
@@ -114,13 +116,15 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 
 	if (g->ops.fifo.channel_suspend) {
 		ret = g->ops.fifo.channel_suspend(g);
-		if (ret)
+		if (ret) {
 			return ret;
+		}
 	}
 
 	/* disable elpg before gr or fifo suspend */
-	if (g->ops.pmu.is_pmu_supported(g))
+	if (g->ops.pmu.is_pmu_supported(g)) {
 		ret |= nvgpu_pmu_destroy(g);
+	}
 
 	ret |= gk20a_gr_suspend(g);
 	ret |= nvgpu_mm_suspend(g);
@@ -129,11 +133,13 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 	gk20a_ce_suspend(g);
 
 	/* Disable GPCPLL */
-	if (g->ops.clk.suspend_clk_support)
+	if (g->ops.clk.suspend_clk_support) {
 		ret |= g->ops.clk.suspend_clk_support(g);
+	}
 
-	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
+	if (nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		gk20a_deinit_pstate_support(g);
+	}
 
 	gk20a_mask_interrupts(g);
 
@@ -151,8 +157,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	if (g->power_on)
+	if (g->power_on) {
 		return 0;
+	}
 
 	g->power_on = true;
 
@@ -170,23 +177,27 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	 * buffers.
 	 */
 	err = nvgpu_pd_cache_init(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	/* init interface layer support for PMU falcon */
 	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
 	nvgpu_flcn_sw_init(g, FALCON_ID_SEC2);
 	nvgpu_flcn_sw_init(g, FALCON_ID_NVDEC);
 
-	if (g->ops.bios.init)
+	if (g->ops.bios.init) {
 		err = g->ops.bios.init(g);
-	if (err)
+	}
+	if (err) {
 		goto done;
+	}
 
 	g->ops.bus.init_hw(g);
 
-	if (g->ops.clk.disable_slowboot)
+	if (g->ops.clk.disable_slowboot) {
 		g->ops.clk.disable_slowboot(g);
+	}
 
 	g->ops.priv_ring.enable_priv_ring(g);
 
@@ -253,8 +264,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
-	if (g->ops.therm.elcg_init_idle_filters)
+	if (g->ops.therm.elcg_init_idle_filters) {
 		g->ops.therm.elcg_init_idle_filters(g);
+	}
 
 	g->ops.mc.intr_enable(g);
 
@@ -265,8 +277,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 
 	if (g->ops.pmu.is_pmu_supported(g)) {
-		if (g->ops.pmu.prepare_ucode)
+		if (g->ops.pmu.prepare_ucode) {
 			err = g->ops.pmu.prepare_ucode(g);
+		}
 		if (err) {
 			nvgpu_err(g, "failed to init pmu ucode");
 			goto done;
@@ -314,9 +327,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 	}
 
-	if (g->ops.pmu_ver.clk.clk_set_boot_clk && nvgpu_is_enabled(g, NVGPU_PMU_PSTATE))
+	if (g->ops.pmu_ver.clk.clk_set_boot_clk && nvgpu_is_enabled(g, NVGPU_PMU_PSTATE)) {
 		g->ops.pmu_ver.clk.clk_set_boot_clk(g);
-	else {
+	} else {
 		err = nvgpu_clk_arb_init_arbiter(g);
 		if (err) {
 			nvgpu_err(g, "failed to init clk arb");
@@ -350,8 +363,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	if (g->ops.xve.available_speeds) {
 		u32 speed;
 
-		if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_ASPM) && g->ops.xve.disable_aspm)
+		if (!nvgpu_is_enabled(g, NVGPU_SUPPORT_ASPM) && g->ops.xve.disable_aspm) {
 			g->ops.xve.disable_aspm(g);
+		}
 
 		g->ops.xve.available_speeds(g, &speed);
 
@@ -374,12 +388,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 	}
 #endif
 
-	if (g->ops.fifo.channel_resume)
+	if (g->ops.fifo.channel_resume) {
 		g->ops.fifo.channel_resume(g);
+	}
 
 done:
-	if (err)
+	if (err) {
 		g->power_on = false;
+	}
 
 	return err;
 }
@@ -390,8 +406,9 @@ done:
  */
 int gk20a_can_busy(struct gk20a *g)
 {
-	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
 		return 0;
+	}
 	return 1;
 }
 
@@ -400,8 +417,9 @@ int gk20a_wait_for_idle(struct gk20a *g)
 	int wait_length = 150; /* 3 second overall max wait. */
 	int target_usage_count = 0;
 
-	if (!g)
+	if (!g) {
 		return -ENODEV;
+	}
 
 	while ((nvgpu_atomic_read(&g->usage_count) != target_usage_count)
 			&& (wait_length-- >= 0)) {
@@ -423,14 +441,17 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_DIRECT_KIND_CTRL, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MAP_BUFFER_BATCH, true);
 
-	if (IS_ENABLED(CONFIG_SYNC))
+	if (IS_ENABLED(CONFIG_SYNC)) {
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNC_FENCE_FDS, true);
+	}
 
-	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g))
+	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g)) {
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_SPARSE_ALLOCS, true);
+	}
 
-	if (gk20a_platform_has_syncpoints(g))
+	if (gk20a_platform_has_syncpoints(g)) {
 		__nvgpu_set_enabled(g, NVGPU_HAS_SYNCPOINTS, true);
+	}
 
 	/*
 	 * Fast submits are supported as long as the user doesn't request
@@ -447,23 +468,26 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	 * supported otherwise, provided that the user doesn't request anything
 	 * that depends on deferred cleanup.
 	 */
-	if (!gk20a_channel_sync_needs_sync_framework(g))
+	if (!gk20a_channel_sync_needs_sync_framework(g)) {
 		__nvgpu_set_enabled(g,
 				NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
 				true);
+	}
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_DETERMINISTIC_OPTS, true);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USERSPACE_MANAGED_AS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG, true);
 
-	if (g->ops.clk_arb.get_arbiter_clk_domains)
+	if (g->ops.clk_arb.get_arbiter_clk_domains) {
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_CLOCK_CONTROLS, true);
+	}
 
 	g->ops.gr.detect_sm_arch(g);
 
-	if (g->ops.gr.init_cyclestats)
+	if (g->ops.gr.init_cyclestats) {
 		g->ops.gr.init_cyclestats(g);
+	}
 
 	g->ops.gr.get_rop_l2_en_mask(g);
 
@@ -482,11 +506,13 @@ static void gk20a_free_cb(struct nvgpu_ref *refcount)
 
 	gk20a_ce_destroy(g);
 
-	if (g->remove_support)
+	if (g->remove_support) {
 		g->remove_support(g);
+	}
 
-	if (g->free)
+	if (g->free) {
 		g->free(g);
+	}
 }
 
 /**

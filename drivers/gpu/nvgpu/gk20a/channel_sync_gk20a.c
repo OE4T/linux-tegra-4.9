@@ -358,24 +358,26 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	 * If the op is not an acquire (so therefor a release) we should
 	 * incr the underlying sema next_value.
 	 */
-	if (!acquire)
+	if (!acquire) {
 		nvgpu_semaphore_prepare(s, c->hw_sema);
+	}
 
 	g->ops.fifo.add_sema_cmd(g, s, va, cmd, off, acquire, wfi);
 
-	if (acquire)
+	if (acquire) {
 		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u pool=%-3d"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
 				     s->location.pool->page_idx, va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
-	else
+	} else {
 		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) pool=%-3d"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
 				     nvgpu_semaphore_read(s),
 				     s->location.pool->page_idx,
 				     va, cmd->gva, cmd->mem->gpu_va, ob);
+	}
 }
 
 void gk20a_channel_gen_sema_wait_cmd(struct channel_gk20a *c,
@@ -418,8 +420,9 @@ static int gk20a_channel_semaphore_wait_fd(
 	int err;
 
 	err = nvgpu_os_fence_fdget(&os_fence, c, fd);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = os_fence.ops->program_waits(&os_fence,
 		entry, c, max_wait_cmds);
@@ -465,8 +468,9 @@ static int __gk20a_channel_semaphore_incr(
 		err = nvgpu_os_fence_sema_create(&os_fence, c,
 			semaphore);
 
-		if (err)
+		if (err) {
 			goto clean_up_sema;
+		}
 	}
 
 	err = gk20a_fence_from_semaphore(fence,
@@ -475,8 +479,9 @@ static int __gk20a_channel_semaphore_incr(
 		os_fence);
 
 	if (err) {
-		if (nvgpu_os_fence_is_initialized(&os_fence))
+		if (nvgpu_os_fence_is_initialized(&os_fence)) {
 			os_fence.ops->drop_ref(&os_fence);
+		}
 		goto clean_up_sema;
 	}
 
@@ -535,13 +540,15 @@ static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
 	struct channel_gk20a *c = sp->c;
 	bool updated;
 
-	if (!c->hw_sema)
+	if (!c->hw_sema) {
 		return;
+	}
 
 	updated = nvgpu_semaphore_reset(c->hw_sema);
 
-	if (updated)
+	if (updated) {
 		nvgpu_cond_broadcast_interruptible(&c->semaphore_wq);
+	}
 }
 
 static void gk20a_channel_semaphore_set_safe_state(struct gk20a_channel_sync *s)
@@ -568,8 +575,9 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 	struct gk20a *g = c->g;
 
 	if (c->has_os_fence_framework_support &&
-		g->os_channel.os_fence_framework_inst_exists(c))
+		g->os_channel.os_fence_framework_inst_exists(c)) {
 			g->os_channel.destroy_os_fence_framework(c);
+	}
 
 	/* The sema pool is cleaned up by the VM destroy. */
 	sema->pool = NULL;
@@ -586,19 +594,22 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	int asid = -1;
 	int err;
 
-	if (WARN_ON(!c->vm))
+	if (WARN_ON(!c->vm)) {
 		return NULL;
+	}
 
 	sema = nvgpu_kzalloc(c->g, sizeof(*sema));
-	if (!sema)
+	if (!sema) {
 		return NULL;
+	}
 	sema->c = c;
 
 	sprintf(pool_name, "semaphore_pool-%d", c->chid);
 	sema->pool = c->vm->sema_pool;
 
-	if (c->vm->as_share)
+	if (c->vm->as_share) {
 		asid = c->vm->as_share->id;
+	}
 
 	if (c->has_os_fence_framework_support) {
 		/*Init the sync_timeline for this channel */
@@ -628,8 +639,9 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
 	bool set_safe_state)
 {
-	if (set_safe_state)
+	if (set_safe_state) {
 		sync->set_safe_state(sync);
+	}
 	sync->destroy(sync);
 }
 

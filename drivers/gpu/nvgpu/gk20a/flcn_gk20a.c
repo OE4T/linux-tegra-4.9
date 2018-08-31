@@ -35,10 +35,10 @@ static int gk20a_flcn_reset(struct nvgpu_falcon *flcn)
 	u32 unit_status = 0;
 	int status = 0;
 
-	if (flcn->flcn_engine_dep_ops.reset_eng)
+	if (flcn->flcn_engine_dep_ops.reset_eng) {
 		/* falcon & engine reset */
 		status = flcn->flcn_engine_dep_ops.reset_eng(g);
-	else {
+	} else {
 		/* do falcon CPU hard reset */
 		unit_status = gk20a_readl(g, base_addr +
 				falcon_falcon_cpuctl_r());
@@ -62,9 +62,10 @@ static bool gk20a_flcn_clear_halt_interrupt_status(struct nvgpu_falcon *flcn)
 	data = gk20a_readl(g, (base_addr + falcon_falcon_irqstat_r()));
 
 	if ((data & falcon_falcon_irqstat_halt_true_f()) !=
-		falcon_falcon_irqstat_halt_true_f())
+		falcon_falcon_irqstat_halt_true_f()) {
 		/*halt irq is clear*/
 		status = true;
+	}
 
 	return status;
 }
@@ -86,9 +87,10 @@ static void gk20a_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable)
 			flcn->intr_mask);
 		gk20a_writel(g, base_addr + falcon_falcon_irqdest_r(),
 			flcn->intr_dest);
-	} else
+	} else {
 		gk20a_writel(g, base_addr + falcon_falcon_irqmclr_r(),
 			0xffffffff);
+	}
 }
 
 static bool gk20a_is_falcon_cpu_halted(struct nvgpu_falcon *flcn)
@@ -112,10 +114,11 @@ static bool gk20a_is_falcon_idle(struct nvgpu_falcon *flcn)
 		base_addr + falcon_falcon_idlestate_r());
 
 	if (falcon_falcon_idlestate_falcon_busy_v(unit_status) == 0 &&
-		falcon_falcon_idlestate_ext_busy_v(unit_status) == 0)
+		falcon_falcon_idlestate_ext_busy_v(unit_status) == 0) {
 		status = true;
-	else
+	} else {
 		status = false;
+	}
 
 	return status;
 }
@@ -131,10 +134,11 @@ static bool gk20a_is_falcon_scrubbing_done(struct nvgpu_falcon *flcn)
 		base_addr + falcon_falcon_dmactl_r());
 
 	if (unit_status & (falcon_falcon_dmactl_dmem_scrubbing_m() |
-		 falcon_falcon_dmactl_imem_scrubbing_m()))
+		 falcon_falcon_dmactl_imem_scrubbing_m())) {
 		status = false;
-	else
+	} else {
 		status = true;
+	}
 
 	return status;
 }
@@ -147,12 +151,13 @@ static u32 gk20a_falcon_get_mem_size(struct nvgpu_falcon *flcn,
 	u32 hw_cfg_reg = gk20a_readl(g,
 		flcn->flcn_base + falcon_falcon_hwcfg_r());
 
-	if (mem_type == MEM_DMEM)
+	if (mem_type == MEM_DMEM) {
 		mem_size = falcon_falcon_hwcfg_dmem_size_v(hw_cfg_reg)
 			<< GK20A_PMU_DMEM_BLKSIZE2;
-	else
+	} else {
 		mem_size = falcon_falcon_hwcfg_imem_size_v(hw_cfg_reg)
 			<< GK20A_PMU_DMEM_BLKSIZE2;
+	}
 
 	return mem_size;
 }
@@ -416,12 +421,13 @@ static u32 gk20a_falcon_mailbox_read(struct nvgpu_falcon *flcn,
 	struct gk20a *g = flcn->g;
 	u32 data = 0;
 
-	if (mailbox_index < FALCON_MAILBOX_COUNT)
+	if (mailbox_index < FALCON_MAILBOX_COUNT) {
 		data =  gk20a_readl(g, flcn->flcn_base + (mailbox_index ?
 			falcon_falcon_mailbox1_r() :
 			falcon_falcon_mailbox0_r()));
-	else
+	} else {
 		nvgpu_err(g, "incorrect mailbox id %d", mailbox_index);
+	}
 
 	return data;
 }
@@ -431,13 +437,14 @@ static void gk20a_falcon_mailbox_write(struct nvgpu_falcon *flcn,
 {
 	struct gk20a *g = flcn->g;
 
-	if (mailbox_index < FALCON_MAILBOX_COUNT)
+	if (mailbox_index < FALCON_MAILBOX_COUNT) {
 		gk20a_writel(g, flcn->flcn_base + (mailbox_index ?
 			falcon_falcon_mailbox1_r() :
 			falcon_falcon_mailbox0_r()),
 			data);
-	else
+	} else {
 		nvgpu_err(g, "incorrect mailbox id %d", mailbox_index);
+	}
 }
 
 static int gk20a_falcon_bl_bootstrap(struct nvgpu_falcon *flcn,
@@ -739,7 +746,8 @@ void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 	if (flcn->is_falcon_supported) {
 		nvgpu_mutex_init(&flcn->copy_lock);
 		gk20a_falcon_ops(flcn);
-	} else
+	} else {
 		nvgpu_log_info(g, "falcon 0x%x not supported on %s",
 			flcn->flcn_id, g->name);
+	}
 }

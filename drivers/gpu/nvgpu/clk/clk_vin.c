@@ -80,10 +80,8 @@ u32 clk_avfs_get_vin_cal_fuse_v10(struct gk20a *g,
 				"err reading vin cal for id %x", pvindev->super.id);
 				return status;
 			}
-			if (slope != 0 && intercept != 0) {
-				pvindev->data.vin_cal.cal_v10.slope = slope;
-				pvindev->data.vin_cal.cal_v10.intercept = intercept;
-			}
+			pvindev->data.vin_cal.cal_v10.slope = slope;
+			pvindev->data.vin_cal.cal_v10.intercept = intercept;
 		}
 	}
 	return status;
@@ -111,10 +109,8 @@ u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
 				"err reading vin cal for id %x", pvindev->super.id);
 				return status;
 			}
-			if (gain != 0 && offset != 0) {
-				pvindev->data.vin_cal.cal_v20.gain = gain;
-				pvindev->data.vin_cal.cal_v20.offset = offset;
-			}
+			pvindev->data.vin_cal.cal_v20.gain = gain;
+			pvindev->data.vin_cal.cal_v20.offset = offset;
 		}
 	}
 	return status;

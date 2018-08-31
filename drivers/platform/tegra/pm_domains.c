@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/pm_domains.c
  *
- * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
  *
  *
  * This software is licensed under the terms of the GNU General Public
@@ -21,11 +21,7 @@
 #include <linux/pm_domain.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
-#ifdef CONFIG_TEGRA_APE_AGIC
-#include <linux/irqchip/tegra-agic.h>
-#endif
 #include <linux/slab.h>
-#include <linux/wakelock.h>
 
 typedef int (*of_tegra_pd_init_cb_t)(struct generic_pm_domain *);
 

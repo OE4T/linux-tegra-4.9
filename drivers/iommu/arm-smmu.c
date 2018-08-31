@@ -74,6 +74,8 @@
 #define ENABLE_IOMMU_DMA_OPS 0
 #endif
 
+#define MAX_SMMUS			1
+
 /* Maximum number of stream IDs assigned to a single device */
 #define MAX_MASTER_STREAMIDS		MAX_PHANDLE_ARGS
 
@@ -118,6 +120,9 @@ struct arm_smmu_device {
 	struct device			*dev;
 
 	void __iomem			*base;
+#ifdef CONFIG_ARM_SMMU_SUSPEND
+	void __iomem			*bases[MAX_SMMUS];
+#endif
 	u32				base_pa;
 	unsigned long			size;
 	unsigned long			pgshift;
@@ -2831,8 +2836,8 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 #ifdef CONFIG_ARM_SMMU_SUSPEND
 	if (!of_property_read_u32(dev->of_node, "suspend-save-reg",
 			&suspend_save_reg)) {
-
-		err = arm_smmu_suspend_init(smmu->base, &smmu->base_pa, 1,
+		smmu->bases[0] = smmu->base;
+		err = arm_smmu_suspend_init(smmu->bases, &smmu->base_pa, 1,
 					smmu->size, smmu->pgshift,
 					suspend_save_reg);
 		if (err) {

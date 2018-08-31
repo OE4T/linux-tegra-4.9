@@ -5583,11 +5583,12 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 		}
 	}
 
-	if (ignore_debugger)
+	if (ignore_debugger) {
 		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 			"ignore_debugger set, skipping event posting");
-	else
-		*post_event |= true;
+	} else {
+		*post_event = true;
+	}
 
 	return ret;
 }

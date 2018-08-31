@@ -1450,7 +1450,9 @@ bool gk20a_fifo_error_tsg(struct gk20a *g,
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
-			verbose |= gk20a_fifo_error_ch(g, ch);
+			if (gk20a_fifo_error_ch(g, ch)) {
+				verbose = true;
+			}
 			gk20a_channel_put(ch);
 		}
 	}
@@ -2291,7 +2293,9 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 			if (gk20a_channel_get(ch)) {
 				ch->g->ops.fifo.set_error_notifier(ch,
 					NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
-				*verbose |= ch->timeout_debug_dump;
+				if (ch->timeout_debug_dump) {
+					*verbose = true;
+				}
 				gk20a_channel_put(ch);
 			}
 		}
@@ -2400,9 +2404,9 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {
-		print_channel_reset_log |=
-			gk20a_fifo_handle_mmu_fault(g, 0,
-					 ~(u32)0, false);
+		if (gk20a_fifo_handle_mmu_fault(g, 0, ~(u32)0, false)) {
+			print_channel_reset_log = true;
+		}
 		handled |= fifo_intr_0_mmu_fault_pending_f();
 	}
 
@@ -3241,8 +3245,9 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				skip_next = true;
 		}
 
-		if (!(*entries_left))
+		if (*entries_left == 0U) {
 			return NULL;
+		}
 
 		/* add TSG entry */
 		nvgpu_log_info(g, "add TSG %d to runlist", tsg->tsgid);
@@ -3261,7 +3266,7 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				      runlist->active_channels))
 				continue;
 
-			if (!(*entries_left)) {
+			if (*entries_left == 0U) {
 				nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 				return NULL;
 			}

@@ -404,7 +404,6 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 			    u32 op_count)
 {
 	u32 i;
-	int err;
 	bool ok = true;
 	struct gk20a *g = dbg_s->g;
 
@@ -412,8 +411,9 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 	 * a separate error code if needed */
 	for (i = 0; i < op_count; i++) {
 
-		err = validate_reg_op_info(dbg_s, &ops[i]);
-		ok &= !err;
+		if (validate_reg_op_info(dbg_s, &ops[i]) != 0) {
+			ok = false;
+		}
 
 		if (reg_op_is_gr_ctx(ops[i].type)) {
 			if (reg_op_is_read(ops[i].op))
@@ -424,8 +424,9 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 		/* if "allow_all" flag enabled, dont validate offset */
 		if (!g->allow_all) {
-			err = validate_reg_op_offset(dbg_s, &ops[i]);
-			ok &= !err;
+			if (validate_reg_op_offset(dbg_s, &ops[i]) != 0) {
+				ok = false;
+			}
 		}
 	}
 

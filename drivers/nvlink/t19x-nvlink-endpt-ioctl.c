@@ -1484,6 +1484,14 @@ static int t19x_nvlink_endpt_open(struct inode *in, struct file *filp)
 	return ret;
 }
 
+static ssize_t t19x_nvlink_endpt_read(struct file *file,
+				char __user *ubuf,
+				size_t count,
+				loff_t *offp)
+{
+	return 0;
+}
+
 static int t19x_nvlink_endpt_release(struct inode *inode, struct file *filp)
 {
 	return 0;
@@ -1493,6 +1501,7 @@ static int t19x_nvlink_endpt_release(struct inode *inode, struct file *filp)
 const struct file_operations t19x_nvlink_endpt_ops = {
 	.owner = THIS_MODULE,
 	.open = t19x_nvlink_endpt_open,
+	.read = t19x_nvlink_endpt_read,
 	.release = t19x_nvlink_endpt_release,
 	.unlocked_ioctl = t19x_nvlink_endpt_ioctl,
 #ifdef CONFIG_COMPAT

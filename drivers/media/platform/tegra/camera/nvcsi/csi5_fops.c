@@ -34,6 +34,15 @@
 #define TPG_HBLANK 0
 #define TPG_VBLANK 40800
 
+/*
+ * T19x TPG is generating 64 bits per cycle
+ * it will insert (TPG_LANE_NUM-8) * nvcsi_clock cycles between
+ * two 64bit pixel_packages to reduce framerate
+ * TPG_LANE_NUM=8 means no blank insertion.
+ * 7 means insert 1 clock between two 64bit pixel packages,
+ * 6 means 2 clocks blank, …, 1 means 7 blank clocks.
+ */
+#define TPG_BLANK 6
 
 static void csi5_phy_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
@@ -217,16 +226,8 @@ static int csi5_stream_tpg_start(struct tegra_csi_channel *chan,
 	tpg_config->t194.virtual_channel_id = chan->virtual_channel;
 	tpg_config->t194.datatype = port->core_format->img_dt;
 
-	/*
-	 * T19x TPG is generating 64 bits per cycle
-	 * it will insert (TPG_LANE_NUM-8) * nvcsi_clock cycles between
-	 * two 64bit pixel_packages to reduce framerate
-	 * TPG_LANE_NUM=8 means no blank insertion.
-	 * 7 means insert 1 clock between two 64bit pixel packages,
-	 * 6 means 2 clocks blank, …, 1 means 7 blank clocks.
-	 */
-	tpg_config->t194.lane_count = 8;
-	tpg_config->t194.flags	= NVCSI_TPG_FLAG_PATCH_MODE;
+	tpg_config->t194.lane_count = TPG_BLANK;
+	tpg_config->t194.flags = NVCSI_TPG_FLAG_PATCH_MODE;
 
 	tpg_config->t194.initial_frame_number = 1;
 	tpg_config->t194.maximum_frame_number = 32768;

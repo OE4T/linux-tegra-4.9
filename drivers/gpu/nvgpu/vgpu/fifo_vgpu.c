@@ -33,6 +33,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/vgpu/vgpu_ivc.h>
 #include <nvgpu/vgpu/vgpu.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
 #include "fifo_vgpu.h"

@@ -24,6 +24,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/vgpu/vgpu.h>
+#include <nvgpu/channel.h>
 
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"
 

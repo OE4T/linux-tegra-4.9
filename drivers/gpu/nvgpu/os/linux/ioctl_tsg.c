@@ -25,6 +25,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/tsg_gk20a.h"

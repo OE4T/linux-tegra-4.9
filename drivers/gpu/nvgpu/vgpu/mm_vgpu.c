@@ -27,6 +27,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/vgpu/vm.h>
 #include <nvgpu/vgpu/vgpu.h>

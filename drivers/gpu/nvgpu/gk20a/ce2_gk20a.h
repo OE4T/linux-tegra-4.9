@@ -26,8 +26,8 @@
 #ifndef __CE2_GK20A_H__
 #define __CE2_GK20A_H__
 
-#include "channel_gk20a.h"
-#include "tsg_gk20a.h"
+struct channel_gk20a;
+struct tsg_gk20a;
 
 void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 u32 gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);

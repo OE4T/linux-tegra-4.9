@@ -25,6 +25,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/channel.h>
 #include "../linux/channel.h"
 
 #include "../drivers/staging/android/sync.h"

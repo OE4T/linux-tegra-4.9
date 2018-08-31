@@ -85,6 +85,7 @@
 #include <gv11b/gr_gv11b.h>
 
 #include <nvgpu/enabled.h>
+#include <nvgpu/channel.h>
 
 #include "vgpu_gv11b.h"
 #include "vgpu_gr_gv11b.h"

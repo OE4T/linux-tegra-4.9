@@ -24,14 +24,13 @@
 #ifndef FIFO_GK20A_H
 #define FIFO_GK20A_H
 
-#include "channel_gk20a.h"
-#include "tsg_gk20a.h"
-
 #include <nvgpu/kref.h>
 
 struct gk20a_debug_output;
 struct mmu_fault_info;
 struct nvgpu_semaphore;
+struct channel_gk20a;
+struct tsg_gk20a;
 
 enum {
 	NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW = 0,

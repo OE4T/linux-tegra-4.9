@@ -42,6 +42,7 @@
 #include <nvgpu/sizes.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

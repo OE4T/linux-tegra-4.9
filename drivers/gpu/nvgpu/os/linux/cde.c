@@ -38,7 +38,6 @@
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/channel_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 #include "gk20a/gr_gk20a.h"

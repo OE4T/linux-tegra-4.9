@@ -21,6 +21,7 @@
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 #include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"

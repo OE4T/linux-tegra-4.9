@@ -30,6 +30,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

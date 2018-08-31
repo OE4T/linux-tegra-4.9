@@ -78,6 +78,7 @@
 #include <nvgpu/ptimer.h>
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>

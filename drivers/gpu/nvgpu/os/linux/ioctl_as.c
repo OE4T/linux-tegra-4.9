@@ -24,6 +24,7 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/vm_area.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/linux/vm.h>
 

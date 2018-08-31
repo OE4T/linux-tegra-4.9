@@ -26,9 +26,9 @@
 #include <nvgpu/vgpu/tegra_vgpu.h>
 #include <nvgpu/dt.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/channel_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 
 #include "vgpu/css_vgpu.h"

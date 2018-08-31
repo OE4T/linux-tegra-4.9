@@ -61,6 +61,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/ptimer.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>

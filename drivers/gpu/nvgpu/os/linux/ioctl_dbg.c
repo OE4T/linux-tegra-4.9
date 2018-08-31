@@ -30,6 +30,7 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/cond.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/linux/vm.h>
 

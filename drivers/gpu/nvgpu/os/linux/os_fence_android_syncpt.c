@@ -22,9 +22,9 @@
 #include <nvgpu/linux/os_fence_android.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/channel_gk20a.h"
 #include "gk20a/channel_sync_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 

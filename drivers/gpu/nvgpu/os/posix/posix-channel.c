@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/channel_gk20a.h"
+#include <nvgpu/channel.h>
 
 u32 nvgpu_get_gpfifo_entry_size(void)
 {

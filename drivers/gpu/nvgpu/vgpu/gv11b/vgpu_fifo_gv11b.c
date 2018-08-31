@@ -25,6 +25,7 @@
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
+#include <nvgpu/channel.h>
 
 #include "gv11b/fifo_gv11b.h"
 #include "vgpu_fifo_gv11b.h"

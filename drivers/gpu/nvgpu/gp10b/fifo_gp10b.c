@@ -28,6 +28,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/channel.h>
 
 #include "fifo_gp10b.h"
 

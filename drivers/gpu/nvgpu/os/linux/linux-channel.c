@@ -18,6 +18,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/channel.h>
 
 /*
  * This is required for nvgpu_vm_find_buf() which is used in the tracing

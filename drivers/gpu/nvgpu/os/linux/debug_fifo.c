@@ -20,6 +20,7 @@
 
 #include <nvgpu/sort.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/channel.h>
 
 void __gk20a_fifo_profile_free(struct nvgpu_ref *ref);
 

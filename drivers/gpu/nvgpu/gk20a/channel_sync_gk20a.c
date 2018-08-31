@@ -30,6 +30,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/nvhost.h>
 #include <nvgpu/os_fence.h>
+#include <nvgpu/channel.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"

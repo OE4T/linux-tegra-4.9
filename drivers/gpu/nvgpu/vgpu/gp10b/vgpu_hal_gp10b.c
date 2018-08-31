@@ -71,6 +71,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/error_notifier.h>
+#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ram_gp10b.h>

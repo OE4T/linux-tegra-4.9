@@ -24,8 +24,9 @@
 #ifndef __CE_GP10B_H__
 #define __CE_GP10B_H__
 
-#include "gk20a/channel_gk20a.h"
-#include "gk20a/tsg_gk20a.h"
+#include <nvgpu/types.h>
+
+struct gk20a;
 
 void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 u32 gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);

@@ -47,6 +47,7 @@ struct nvgpu_clk_arb;
 struct nvgpu_gpu_ctxsw_trace_filter;
 #endif
 struct priv_cmd_entry;
+struct nvgpu_gpfifo_args;
 
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>

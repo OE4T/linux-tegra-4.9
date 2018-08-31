@@ -43,6 +43,7 @@
 #include <nvgpu/os_sched.h>
 #include <nvgpu/log2.h>
 #include <nvgpu/ptimer.h>
+#include <nvgpu/channel.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"

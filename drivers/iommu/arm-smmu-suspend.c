@@ -86,18 +86,10 @@ static void context_save_reg(u32 reg)
 	u32 reg_paddr, i;
 	void __iomem *reg_addr;
 
-	if (arm_smmu_ctx.num_smmus == 1) {
-		reg_addr = arm_smmu_ctx.smmu_base;
-		reg_paddr = *arm_smmu_ctx.smmu_base_pa + reg;
-
-		reg_table_set(reg_paddr, readl_relaxed(reg_addr + reg));
-	} else {
-		for (i = 0; i < arm_smmu_ctx.num_smmus; i++) {
-			reg_addr = arm_smmu_ctx.smmu_base[i] + reg;
-			reg_paddr = arm_smmu_ctx.smmu_base_pa[i] + reg;
-
-			reg_table_set(reg_paddr, readl_relaxed(reg_addr));
-		}
+	for (i = 0; i < arm_smmu_ctx.num_smmus; i++) {
+		reg_addr = arm_smmu_ctx.smmu_base[i] + reg;
+		reg_paddr = arm_smmu_ctx.smmu_base_pa[i] + reg;
+		reg_table_set(reg_paddr, readl_relaxed(reg_addr));
 	}
 }
 

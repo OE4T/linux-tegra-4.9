@@ -407,7 +407,7 @@ static int mmc_speed_opt_set(void *data, u64 val)
 	}
 
 	if (val == current_mode) {
-		pr_warn("%s: usage info: Current eMMC mode is same as Requested Mode\n",
+		pr_info("%s: usage info: Current eMMC mode is same as Requested Mode\n",
 			mmc_hostname(host));
 		return 0;
 	}

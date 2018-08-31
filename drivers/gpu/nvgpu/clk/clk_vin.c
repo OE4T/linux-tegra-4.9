@@ -354,6 +354,7 @@ static int devinit_get_vin_device_table(struct gk20a *g,
 			vin_device_data.vin_device_v10.data.vin_cal.intercept = intercept;
 			break;
 		case CTRL_CLK_VIN_TYPE_V20:
+			vin_device_data.vin_device_v20.data.cal_type = (u8) cal_type;
 			vin_device_data.vin_device_v20.data.vin_cal.cal_v20.offset = offset;
 			vin_device_data.vin_device_v20.data.vin_cal.cal_v20.gain = gain;
 			break;
@@ -429,6 +430,7 @@ static int vin_device_construct_v20(struct gk20a *g,
 	pvin_device_v20->super.super.pmudatainit =
 			vin_device_init_pmudata_v20;
 
+	pvin_device_v20->data.cal_type = ptmpvin_device_v20->data.cal_type;
 	pvin_device_v20->data.vin_cal.cal_v20.offset = ptmpvin_device_v20->data.vin_cal.cal_v20.offset;
 	pvin_device_v20->data.vin_cal.cal_v20.gain = ptmpvin_device_v20->data.vin_cal.cal_v20.gain;
 
@@ -537,6 +539,7 @@ static int vin_device_init_pmudata_v20(struct gk20a *g,
 	perf_pmu_data = (struct nv_pmu_clk_clk_vin_device_v20_boardobj_set *)
 		ppmudata;
 
+	perf_pmu_data->data.cal_type = pvin_dev_v20->data.cal_type;
 	perf_pmu_data->data.vin_cal.cal_v20.offset = pvin_dev_v20->data.vin_cal.cal_v20.offset;
 	perf_pmu_data->data.vin_cal.cal_v20.gain = pvin_dev_v20->data.vin_cal.cal_v20.gain;
 

@@ -180,6 +180,7 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	u8 cmd_buf[] = {(block % 0x2) * EDID_BYTES_PER_BLOCK};
 	u8 i;
 	u8 last_checksum = 0;
+	u8 checksum = 0;
 	size_t attempt_cnt = 0;
 	struct i2c_msg msg[] = {
 		{
@@ -211,8 +212,9 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 	}
 
 	do {
-		u8 checksum = 0;
 		int status = edid->i2c_ops.i2c_transfer(edid->dc, m, msg_len);
+
+		checksum = 0;
 
 		if (status < 0)
 			return status;
@@ -262,14 +264,14 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 			}
 			usleep_range(TEGRA_EDID_MIN_RETRY_DELAY_US, TEGRA_EDID_MAX_RETRY_DELAY_US);
 		}
-	} while (last_checksum != 0 && ++attempt_cnt < TEGRA_EDID_MAX_RETRY);
+	} while (checksum != 0 && ++attempt_cnt < TEGRA_EDID_MAX_RETRY);
 
 	/*
 	 * Re-calculate the checksum since the standard EDID parser doesn't
 	 * like the bad checksum
 	 */
-	if (last_checksum != 0) {
-		u8 checksum = 0;
+	if (checksum != 0) {
+		checksum = 0;
 
 		edid->errors |= EDID_ERRORS_CHECKSUM_CORRUPTED;
 

@@ -436,6 +436,7 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 	memset(&payload, 0, sizeof(struct pmu_payload));
 	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
 	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
 
 	if ((setfllclk->gpc2clkmhz == 0) || (setfllclk->xbar2clkmhz == 0) ||
 		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0)) {

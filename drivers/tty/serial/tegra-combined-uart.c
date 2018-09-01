@@ -250,19 +250,19 @@ static int tegra_combined_uart_probe(struct platform_device *pdev)
 	if (!np)
 		return -ENODEV;
 
-	top0_mbox01_base = (u8 *)(of_io_request_and_map(np, 0,
+	top0_mbox01_base = (u8 __iomem *)(of_io_request_and_map(np, 0,
 		    "Tegra Combined UART TOP0_HSP Linux mailbox"));
 	if (IS_ERR(top0_mbox01_base))
 		return PTR_ERR(top0_mbox01_base);
 
-	spe_mbox_reg = (u8 *)(of_io_request_and_map(np, 1,
+	spe_mbox_reg = (u8 __iomem *)(of_io_request_and_map(np, 1,
 		    "Tegra Combined UART SPE mailbox"));
 	if (IS_ERR(spe_mbox_reg)) {
 		ret = PTR_ERR(spe_mbox_reg);
 		goto err_mapping;
 	}
 
-	top0_cmn_base = (u8 *)(of_io_request_and_map(np, 2,
+	top0_cmn_base = (u8 __iomem *)(of_io_request_and_map(np, 2,
 		    "Tegra Combined UART TOP0_HSP Linux mailbox interrrupt"));
 	if (IS_ERR(top0_cmn_base)) {
 		ret = PTR_ERR(top0_cmn_base);

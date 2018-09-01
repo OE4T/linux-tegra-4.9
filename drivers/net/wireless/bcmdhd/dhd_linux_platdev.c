@@ -427,6 +427,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		adapter->wlan_rst = of_get_named_gpio(node, "wlan-rst-gpio", 0);
 		adapter->fw_path = of_get_property(node, "fw_path", NULL);
 		adapter->nv_path = of_get_property(node, "nv_path", NULL);
+		adapter->clm_blob_path = of_get_property(node, "clm_blob_path", NULL);
 		adapter->sdhci_host = of_parse_phandle(node, "sdhci-host", 0);
 		of_property_read_u32(node, "pwr-retry-cnt", &adapter->pwr_retry_cnt);
 

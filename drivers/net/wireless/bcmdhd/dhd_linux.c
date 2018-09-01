@@ -5856,7 +5856,111 @@ int dhd_set_ap_powersave(dhd_pub_t *dhdp, int ifidx, int enable)
 }
 #endif /* SUPPORT_AP_POWERSAVE */
 
+int
+dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
+{
+	char *clm_blob_path = NULL;
+	int len;
+	char *memblock = NULL;
+	int err = BCME_OK;
+	char iovbuf[WLC_IOCTL_SMLEN];
+	wl_country_t *cspec;
+	dhd_info_t *dhdinfo;
+	wifi_adapter_info_t *adapter;
 
+	/* Initialize clm path per below precedence
+	 * 1. From DT
+	 * 2. From module param
+	 * 3. From defconfig
+	*/
+
+	dhdinfo = (dhd_info_t *) dhd->info;
+	if (dhdinfo) {
+		adapter = (wifi_adapter_info_t *)dhdinfo->adapter;
+
+		if (adapter && adapter->clm_blob_path &&
+			adapter->clm_blob_path[0] != '\0') {
+			if (is_file_valid(adapter->clm_blob_path)) {
+				clm_blob_path = (char *) adapter->clm_blob_path;
+				DHD_ERROR(("clm path from dt:%s\n",
+					clm_blob_path));
+				goto load_clm_blob;
+			}
+		}
+	}
+
+	if (clm_path[0] != '\0') {
+		if (strlen(clm_path) > MOD_PARAM_PATHLEN) {
+			DHD_ERROR(("clm path exceeds max len\n"));
+			return BCME_ERROR;
+		}
+		clm_blob_path = clm_path;
+		DHD_ERROR(("clm path from module param:%s\n", clm_path));
+	} else {
+		clm_blob_path = CONFIG_BCMDHD_CLM_PATH;
+		DHD_ERROR(("clm path from default:%s\n", clm_blob_path));
+	}
+
+	/* If CLM blob file is found on the filesystem, download the file.
+	 * After CLM file download or If the blob file is not present,
+	 * validate the country code before proceeding with the initialization.
+	 * If country code is not valid, fail the initialization.
+	*/
+load_clm_blob:
+	len = MAX_CLM_BUF_SIZE;
+	dhd_get_download_buffer(dhd, clm_blob_path, CLM_BLOB, &memblock, &len);
+	if ((len > 0) && (len < MAX_CLM_BUF_SIZE) && memblock) {
+		/* Found blob file. Download the file */
+		DHD_ERROR(("clm file download from %s\n", clm_blob_path));
+		err = dhd_download_clm_blob(dhd, memblock, len);
+		if (err) {
+			DHD_ERROR(("%s: CLM download failed err=%d\n",
+				__func__, err));
+			/* Retrieve clmload_status and print */
+			bcm_mkiovar("clmload_status", NULL, 0, iovbuf,
+				sizeof(iovbuf));
+			err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf,
+				sizeof(iovbuf), FALSE, 0);
+			if (err) {
+				DHD_ERROR(("%s: clmload_status get failed err = %d\n",
+					__func__, err));
+			} else {
+				DHD_INFO(("%s: clmload_status: %d\n",
+					__func__, *((int *)iovbuf)));
+			}
+			err = BCME_ERROR;
+			goto exit;
+		} else {
+			DHD_ERROR(("%s: CLM download succeeded\n", __func__));
+		}
+	} else {
+		DHD_ERROR(("Skipping the clm download. len:%d memblk:%p\n", len,
+			memblock));
+	}
+
+	/* Verify country code */
+	bcm_mkiovar("country", NULL, 0, iovbuf, sizeof(iovbuf));
+	err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf),
+		 FALSE, 0);
+	if (err) {
+		DHD_ERROR(("%s: country code get failed\n", __func__));
+		goto exit;
+	}
+
+	cspec = (wl_country_t *)iovbuf;
+	if (!strncmp(cspec->ccode, WL_CCODE_NULL_COUNTRY, WLC_CNTRY_BUF_SZ)) {
+		/* Country code not initialized or CLM download not proper */
+		DHD_ERROR(("country code not initialized\n"));
+		err = BCME_ERROR;
+	}
+exit:
+
+	if (memblock) {
+		dhd_free_download_buffer(dhd, memblock, MAX_CLM_BUF_SIZE);
+	}
+
+	return err;
+}
 
 int
 dhd_preinit_ioctls(dhd_pub_t *dhd)

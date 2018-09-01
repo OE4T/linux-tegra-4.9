@@ -266,8 +266,8 @@ const bcm_iovar_t dhd_iovars[] = {
 
 #define DHD_IOVAR_BUF_SIZE	128
 
-int dhd_get_download_buffer(dhd_pub_t	*dhd, char *file_path, download_type_t component,
-	char **buffer, int *length)
+int dhd_get_download_buffer(dhd_pub_t *dhd, char *file_path,
+	download_type_t component, char **buffer, int *length)
 
 {
 	int ret = BCME_ERROR;
@@ -312,7 +312,7 @@ int dhd_get_download_buffer(dhd_pub_t	*dhd, char *file_path, download_type_t com
 		buf = MALLOCZ(dhd->osh, file_len);
 		if (buf == NULL) {
 			DHD_ERROR(("%s: Failed to allocate memory %d bytes\n",
-				__FUNCTION__, file_len));
+				__func__, file_len));
 			goto err;
 		}
 
@@ -322,7 +322,8 @@ int dhd_get_download_buffer(dhd_pub_t	*dhd, char *file_path, download_type_t com
 			memcpy(buf, nvram_arr, sizeof(nvram_arr));
 			len = sizeof(nvram_arr);
 		} else {
-			len = dhd_os_get_image_block((char *)buf, file_len, image);
+			len = dhd_os_get_image_block((char *)buf, file_len,
+				image);
 			if ((len <= 0 || len > file_len)) {
 				MFREE(dhd->osh, buf, file_len);
 				goto err;
@@ -355,8 +356,8 @@ int dhd_get_download_buffer(dhd_pub_t	*dhd, char *file_path, download_type_t com
 		}
 	} else if (component == CLM_BLOB) {
 		if (!dhd->cached_clm_length) {
-			 dhd->cached_clm = buf;
-			 dhd->cached_clm_length = len;
+			dhd->cached_clm = buf;
+			dhd->cached_clm_length = len;
 		}
 	}
 #endif /* CACHE_FW_IMAGES */
@@ -438,84 +439,6 @@ dhd_download_clm_blob(dhd_pub_t	*dhd, unsigned char *buf, uint32 len)
 		MFREE(dhd->osh, new_buf, size2alloc);
 	} else {
 		err = BCME_NOMEM;
-	}
-
-	return err;
-}
-
-int
-dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
-{
-	char *clm_blob_path;
-	int len;
-	char *memblock = NULL;
-	int err = BCME_OK;
-	char iovbuf[WLC_IOCTL_SMLEN];
-	wl_country_t *cspec;
-
-	if (clm_path[0] != '\0') {
-		if (strlen(clm_path) > MOD_PARAM_PATHLEN) {
-			DHD_ERROR(("clm path exceeds max len\n"));
-			return BCME_ERROR;
-		}
-		clm_blob_path = clm_path;
-		DHD_INFO(("clm path from module param:%s\n", clm_path));
-	} else {
-		clm_blob_path = CONFIG_BCMDHD_CLM_PATH;
-		DHD_INFO(("clm path from default:%s\n", clm_blob_path));
-	}
-
-
-	/* If CLM blob file is found on the filesystem, download the file.
-	 * After CLM file download or If the blob file is not present,
-	 * validate the country code before proceeding with the initialization.
-	 * If country code is not valid, fail the initialization.
-	 */
-	len = MAX_CLM_BUF_SIZE;
-	dhd_get_download_buffer(dhd, clm_blob_path, CLM_BLOB, &memblock, &len);
-	if ((len > 0) && (len < MAX_CLM_BUF_SIZE) && memblock) {
-		/* Found blob file. Download the file */
-		DHD_INFO(("clm file download from %s \n", clm_blob_path));
-		err = dhd_download_clm_blob(dhd, memblock, len);
-		if (err) {
-			DHD_ERROR(("%s: CLM download failed err=%d\n", __FUNCTION__, err));
-			/* Retrieve clmload_status and print */
-			bcm_mkiovar("clmload_status", NULL, 0, iovbuf, sizeof(iovbuf));
-			err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf), FALSE, 0);
-			if (err) {
-				DHD_ERROR(("%s: clmload_status get failed err=%d \n",
-					__FUNCTION__, err));
-			} else {
-				DHD_INFO(("%s: clmload_status: %d \n",
-					__FUNCTION__, *((int *)iovbuf)));
-			}
-			err = BCME_ERROR;
-			goto exit;
-		} else {
-			DHD_INFO(("%s: CLM download succeeded \n", __FUNCTION__));
-		}
-	} else {
-		DHD_INFO(("Skipping the clm download. len:%d memblk:%p \n", len, memblock));
-	}
-
-	/* Verify country code */
-	bcm_mkiovar("country", NULL, 0, iovbuf, sizeof(iovbuf));
-	err = dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, iovbuf, sizeof(iovbuf), FALSE, 0);
-	if (err) {
-		DHD_ERROR(("%s: country code get failed\n", __FUNCTION__));
-		goto exit;
-	}
-
-	cspec = (wl_country_t *)iovbuf;
-	if ((strncmp(cspec->ccode, WL_CCODE_NULL_COUNTRY, WLC_CNTRY_BUF_SZ)) == 0) {
-		/* Country code not initialized or CLM download not proper */
-		DHD_ERROR(("country code not initialized\n"));
-		err = BCME_ERROR;
-	}
-exit:
-
-	if (memblock) {
-		dhd_free_download_buffer(dhd, memblock, MAX_CLM_BUF_SIZE);
 	}
 
 	return err;

@@ -89,12 +89,6 @@ typedef enum download_type {
 	CLM_BLOB
 } download_type_t;
 
-/*
- * MAX_NVRAMBUF_SIZE determines the size of the Buffer in the DHD that holds
- * the NVRAM data. That is the size of the buffer pointed by bus->vars
- * This also needs to be increased to 16K to support NVRAM size higher than 8K
- */
-#define MAX_NVRAMBUF_SIZE      (16 * 1024) /* max nvram buf size */
 #define MAX_CLM_BUF_SIZE       (48 * 1024) /* max clm blob size */
 
 #ifndef CONFIG_BCMDHD_CLM_PATH
@@ -104,7 +98,7 @@ typedef enum download_type {
 #else
 #define CONFIG_BCMDHD_CLM_PATH "/system/etc/wifi/bcmdhd_clm.blob"
 #endif /* CUSTOMER_HW4 && PLATFORM_SLP */
-#elif defined(LINUX) || defined (linux)
+#elif defined(LINUX) || defined(linux)
 #define CONFIG_BCMDHD_CLM_PATH "/var/run/bcmdhd_clm.blob"
 #elif defined(MACOSX_DHD)
 #define CONFIG_BCMDHD_CLM_PATH "/bcm-wifi/bcmdhd_clm.blob"

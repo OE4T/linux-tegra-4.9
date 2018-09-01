@@ -740,7 +740,9 @@ int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		if (*(u8 *)var == val) {
+		nvgpu_rmb();
+
+		if (*(volatile u8 *)var == val) {
 			return 0;
 		}
 
@@ -859,6 +861,8 @@ static void pmu_rpc_handler(struct gk20a *g, struct pmu_msg *msg,
 	}
 
 exit:
+	rpc_payload->complete = true;
+
 	/* free allocated memory */
 	if (rpc_payload->is_mem_free_set) {
 		nvgpu_kfree(g, rpc_payload);
@@ -914,6 +918,7 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 		rpc_payload->rpc_buff = caller_cb_param;
 		rpc_payload->is_mem_free_set = true;
 		callback = caller_cb;
+		WARN_ON(is_copy_back);
 	}
 
 	rpc_buff = rpc_payload->rpc_buff;
@@ -945,12 +950,9 @@ int nvgpu_pmu_rpc_execute(struct nvgpu_pmu *pmu, struct nv_pmu_rpc_header *rpc,
 	 * to read data back in nvgpu
 	 */
 	if (is_copy_back) {
-		/* clear buff */
-		memset(rpc_buff, 0xFF, size_rpc);
 		/* wait till RPC execute in PMU & ACK */
 		pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
-			&((struct nv_pmu_rpc_header *)rpc_buff)->function,
-			rpc->function);
+			&rpc_payload->complete, true);
 		/* copy back data to caller */
 		memcpy(rpc, rpc_buff, size_rpc);
 		/* free allocated memory */

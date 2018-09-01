@@ -192,6 +192,7 @@ typedef void (*pmu_callback)(struct gk20a *, struct pmu_msg *, void *, u32,
 struct rpc_handler_payload {
 	void *rpc_buff;
 	bool is_mem_free_set;
+	bool complete;
 };
 
 struct pmu_rpc_desc {

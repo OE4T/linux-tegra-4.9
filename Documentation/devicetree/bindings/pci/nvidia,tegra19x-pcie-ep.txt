@@ -9,8 +9,12 @@ Required properties:
   registers. Must contain an entry for each entry in the reg-names property.
 - reg-names: Must include the following entries:
   "appl": Controller's application logic registers
-  "config": configuration space region
-  "atu_dma": iATU and DMA register
+  "window1": First address space aperture window available for PCIe controller
+  "config": configuration space region (either window1 or window2 can be used
+            for mapping. But in this case, window1 is used)
+  "atu_dma": iATU and DMA register (either window1 or window2 can be used
+             for mapping. But in this case, window1 is used)
+  "window2": Second address space aperture window available for PCIe controller
 - interrupts: A list of interrupt outputs of the controller. Must contain an
   entry for each entry in the interrupt-names property.
 - interrupt-names: Must include the following entries:

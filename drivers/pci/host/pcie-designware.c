@@ -700,6 +700,7 @@ void dw_pcie_host_deinit(struct pcie_port *pp)
 	struct resource_entry *win;
 	struct resource *res;
 	struct pci_host_bridge *host_bridge;
+	LIST_HEAD(resources);
 	int i, irq;
 
 	pci_stop_root_bus(pp->bus);
@@ -715,12 +716,15 @@ void dw_pcie_host_deinit(struct pcie_port *pp)
 			devm_release_resource(pp->dev, res);
 			/* fallthrough */
 		default:
-			kfree(res);
+			pci_add_resource(&resources, res);
 			continue;
 		}
 	}
-	pci_free_resource_list(&host_bridge->windows);
 	pci_remove_root_bus(pp->bus);
+	resource_list_for_each_entry(win, &resources) {
+		kfree(win->res);
+	}
+	pci_free_resource_list(&resources);
 
 	if (pp->ops->host_deinit)
 		pp->ops->host_deinit(pp);

@@ -9,6 +9,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+
 #include <linux/freezer.h>
 #include <linux/kthread.h>
 #include <linux/nvhost.h>
@@ -134,7 +135,7 @@ static void tegra_channel_surface_setup(
 	struct tegra_channel *chan, struct tegra_channel_buffer *buf, int index,
 	unsigned int descr_index)
 {
-	unsigned int offset = chan->buffer_offset[index];
+	dma_addr_t offset = buf->addr + chan->buffer_offset[index];
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
 	u32 format = chan->fmtinfo->img_fmt;
@@ -154,8 +155,8 @@ static void tegra_channel_surface_setup(
 	desc->ch_cfg.pixfmt_enable = 1;
 	desc->ch_cfg.pixfmt.format = format;
 
-	desc->ch_cfg.atomp.surface[0].offset = buf->addr + offset;
-	desc->ch_cfg.atomp.surface[0].offset_hi = 0;
+	desc->ch_cfg.atomp.surface[0].offset = (u32)offset;
+	desc->ch_cfg.atomp.surface[0].offset_hi = (u32)(offset >> 32U);
 	desc->ch_cfg.atomp.surface_stride[0] = chan->format.bytesperline;
 
 	if (chan->embedded_data_height > 0) {
@@ -163,9 +164,9 @@ static void tegra_channel_surface_setup(
 		desc->ch_cfg.frame.embed_x = chan->embedded_data_width * BPP_MEM;
 		desc->ch_cfg.frame.embed_y = chan->embedded_data_height;
 		desc->ch_cfg.atomp.surface[VI_ATOMP_SURFACE_EMBEDDED].offset
-			= chan->vi->emb_buf;
+			= (u32)chan->vi->emb_buf;
 		desc->ch_cfg.atomp.surface[VI_ATOMP_SURFACE_EMBEDDED].offset_hi
-			= 0;
+			= (u32)(chan->vi->emb_buf >> 32U);
 		desc->ch_cfg.atomp.surface_stride[VI_ATOMP_SURFACE_EMBEDDED]
 			= chan->embedded_data_width * BPP_MEM;
 	}

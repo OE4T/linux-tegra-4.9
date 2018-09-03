@@ -933,11 +933,6 @@ fail:
 	return err;
 }
 
-struct surface_t {
-	uint32_t offset;
-	uint32_t offset_hi;
-};
-
 int vi_capture_request(struct tegra_vi_channel *chan,
 		struct vi_capture_req *req)
 {

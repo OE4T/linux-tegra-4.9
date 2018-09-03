@@ -1145,8 +1145,8 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT) {
-		if (g->ops.fifo.alloc_usermode_buffers) {
-			err = g->ops.fifo.alloc_usermode_buffers(c,
+		if (g->os_channel.alloc_usermode_buffers) {
+			err = g->os_channel.alloc_usermode_buffers(c,
 					gpfifo_args);
 			if (err) {
 				nvgpu_err(g, "Usermode buffer alloc failed");

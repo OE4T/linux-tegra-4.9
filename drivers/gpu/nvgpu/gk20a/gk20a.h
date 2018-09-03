@@ -722,8 +722,6 @@ struct gpu_ops {
 		int (*channel_suspend)(struct gk20a *g);
 		int (*channel_resume)(struct gk20a *g);
 		void (*set_error_notifier)(struct channel_gk20a *ch, u32 error);
-		int (*alloc_usermode_buffers)(struct channel_gk20a *c,
-			struct nvgpu_gpfifo_args *gpfifo_args);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
@@ -1569,6 +1567,8 @@ struct gk20a {
 		int (*copy_user_gpfifo)(struct nvgpu_gpfifo_entry *dest,
 				struct nvgpu_gpfifo_userdata userdata,
 				u32 start, u32 length);
+		int (*alloc_usermode_buffers)(struct channel_gk20a *c,
+			struct nvgpu_gpfifo_args *gpfifo_args);
 	} os_channel;
 
 	struct gk20a_scale_profile *scale_profile;

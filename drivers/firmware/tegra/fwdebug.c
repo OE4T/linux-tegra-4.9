@@ -126,11 +126,11 @@ static int bpmp_debugfs_read(uint32_t name, uint32_t sz_name,
 	struct mrq_debugfs_response re;
 	int r;
 
-	rq.cmd = cpu_to_le32(CMD_DEBUGFS_READ);
-	rq.fop.fnameaddr = cpu_to_le32(name);
-	rq.fop.fnamelen = cpu_to_le32(sz_name);
-	rq.fop.dataaddr = cpu_to_le32(data);
-	rq.fop.datalen = cpu_to_le32(sz_data);
+	rq.cmd = (uint32_t)cpu_to_le32(CMD_DEBUGFS_READ);
+	rq.fop.fnameaddr = (uint32_t)cpu_to_le32(name);
+	rq.fop.fnamelen = (uint32_t)cpu_to_le32(sz_name);
+	rq.fop.dataaddr = (uint32_t)cpu_to_le32(data);
+	rq.fop.datalen = (uint32_t)cpu_to_le32(sz_data);
 
 	r = tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
 			&re, sizeof(re));
@@ -200,11 +200,11 @@ static int bpmp_debugfs_write(uint32_t name, size_t sz_name,
 {
 	struct mrq_debugfs_request rq;
 
-	rq.cmd = cpu_to_le32(CMD_DEBUGFS_WRITE);
-	rq.fop.fnameaddr = cpu_to_le32(name);
-	rq.fop.fnamelen = cpu_to_le32(sz_name);
-	rq.fop.dataaddr = cpu_to_le32(data);
-	rq.fop.datalen = cpu_to_le32(sz_data);
+	rq.cmd = (uint32_t)cpu_to_le32(CMD_DEBUGFS_WRITE);
+	rq.fop.fnameaddr = (uint32_t)cpu_to_le32(name);
+	rq.fop.fnamelen = (uint32_t)cpu_to_le32(sz_name);
+	rq.fop.dataaddr = (uint32_t)cpu_to_le32(data);
+	rq.fop.datalen = (uint32_t)cpu_to_le32(sz_data);
 
 	return tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
 			NULL, 0);
@@ -354,9 +354,9 @@ static int bpmp_debugfs_dumpdir(uint32_t addr, size_t size, uint32_t *nbytes)
 	struct mrq_debugfs_response re;
 	int r;
 
-	rq.cmd = cpu_to_le32(CMD_DEBUGFS_DUMPDIR);
-	rq.dumpdir.dataaddr = cpu_to_le32(addr);
-	rq.dumpdir.datalen = cpu_to_le32(size);
+	rq.cmd = (uint32_t)cpu_to_le32(CMD_DEBUGFS_DUMPDIR);
+	rq.dumpdir.dataaddr = (uint32_t)cpu_to_le32(addr);
+	rq.dumpdir.datalen = (uint32_t)cpu_to_le32(size);
 
 	r = tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
 			&re, sizeof(re));

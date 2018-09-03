@@ -121,6 +121,10 @@ int gp106_init_clk_arbiter(struct gk20a *g)
 
 	clk_arb_dbg(g, " ");
 
+	if (g->clk_arb != NULL) {
+		return 0;
+	}
+
 	arb = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_arb));
 	if (!arb)
 		return -ENOMEM;

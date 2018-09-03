@@ -750,12 +750,20 @@ error_check:
 
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 {
+	int err = 0;
+
 	if (!g->ops.clk.support_clk_freq_controller ||
 		!g->ops.clk_arb.get_arbiter_clk_domains) {
 		return 0;
 	}
 
-	return g->ops.clk_arb.arbiter_clk_init(g);
+	nvgpu_mutex_acquire(&g->clk_arb_enable_lock);
+
+	err = g->ops.clk_arb.arbiter_clk_init(g);
+
+	nvgpu_mutex_release(&g->clk_arb_enable_lock);
+
+	return err;
 }
 
 void nvgpu_clk_arb_send_thermal_alarm(struct gk20a *g)
@@ -783,10 +791,14 @@ void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 {
 	struct nvgpu_clk_arb *arb = g->clk_arb;
 
+	nvgpu_mutex_acquire(&g->clk_arb_enable_lock);
+
 	if (arb) {
 		nvgpu_clk_arb_worker_deinit(g);
 		g->ops.clk_arb.clk_arb_cleanup(g->clk_arb);
 	}
+
+	nvgpu_mutex_release(&g->clk_arb_enable_lock);
 }
 
 int nvgpu_clk_arb_init_session(struct gk20a *g,

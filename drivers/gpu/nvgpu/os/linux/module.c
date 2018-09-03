@@ -1310,6 +1310,8 @@ int nvgpu_remove(struct device *dev, struct class *class)
 	if (platform->remove)
 		platform->remove(dev);
 
+	nvgpu_mutex_destroy(&g->clk_arb_enable_lock);
+
 	nvgpu_log_fn(g, "removed");
 
 	return err;

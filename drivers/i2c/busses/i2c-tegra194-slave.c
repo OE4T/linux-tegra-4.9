@@ -147,6 +147,7 @@ struct tegra_i2cslv_dev {
 	bool tx_in_progress;
 	u32 buffer_size;
 	struct delayed_work work;
+	bool failed_xfer;
 };
 
 static inline u32 tegra_i2cslv_readl(struct tegra_i2cslv_dev *i2cslv_dev,
@@ -487,20 +488,27 @@ static int tegra_i2cslv_init(struct tegra_i2cslv_dev *i2cslv_dev)
 		I2C_SL_CNFG_ACK_WITHHOLD_EN | I2C_SL_CNFG_ACK_LAST_BYTE);
 	tegra_i2cslv_writel(i2cslv_dev, reg, I2C_SL_CNFG);
 
+	i2cslv_dev->tx_in_progress = false;
+	i2cslv_dev->rx_in_progress = false;
+	i2cslv_dev->failed_xfer = false;
+
 	return tegra_i2cslv_load_config(i2cslv_dev);
 }
 
-static void tegra_i2cslv_handle_timeout(struct work_struct *work)
+static void tegra_i2cslv_reset_init(struct work_struct *work)
 {
 	struct tegra_i2cslv_dev *i2cslv_dev = container_of(work,
 							struct tegra_i2cslv_dev, work.work);
 	unsigned long flags;
 
-	dev_err(i2cslv_dev->dev, "Slave Xfer timeout\n");
+	if (!i2cslv_dev->failed_xfer)
+		dev_err(i2cslv_dev->dev, "Slave Xfer Timeout\n");
 
 	raw_spin_lock_irqsave(&i2cslv_dev->xfer_lock, flags);
 	tegra_i2cslv_dump_reg(i2cslv_dev);
 	raw_spin_unlock_irqrestore(&i2cslv_dev->xfer_lock, flags);
+
+	dev_err(i2cslv_dev->dev, "Slave controller reset\n");
 
 	reset_control_reset(i2cslv_dev->rstc);
 	tegra_i2cslv_init(i2cslv_dev);
@@ -519,6 +527,13 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 	i2c_slv_sts = tegra_i2cslv_readl(i2cslv_dev, I2C_SL_STATUS);
 
 	if (i2c_slv_sts & I2C_SL_STATUS_RCVD) {
+		if (unlikely(i2cslv_dev->tx_in_progress)) {
+			dev_err(i2cslv_dev->dev, "Previous transaction was unsuccessful\n");
+			i2cslv_dev->failed_xfer = true;
+			schedule_delayed_work(&i2cslv_dev->work, 0);
+			goto done;
+		}
+		schedule_delayed_work(&i2cslv_dev->work, I2C_SLV_TIMEOUT);
 		tegra_i2cslv_writel(i2cslv_dev, I2C_SL_STATUS_RCVD,
 				I2C_SL_STATUS);
 		goto done;
@@ -530,7 +545,6 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *dev_id)
 	}
 
 	if (i2c_int_src & I2C_INTERRUPT_SLV_TX_BUFFER_REQ) {
-		schedule_delayed_work(&i2cslv_dev->work, I2C_SLV_TIMEOUT);
 		tegra_i2cslv_handle_tx(i2cslv_dev, i2c_int_src, i2c_slv_sts);
 		goto done;
 	}
@@ -713,7 +727,7 @@ static int tegra_i2cslv_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	INIT_DELAYED_WORK(&i2cslv_dev->work, tegra_i2cslv_handle_timeout);
+	INIT_DELAYED_WORK(&i2cslv_dev->work, tegra_i2cslv_reset_init);
 
 	return 0;
 }

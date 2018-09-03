@@ -102,7 +102,7 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 	struct nvgpu_mem *mem = NULL;
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -268,7 +268,7 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.gpccs.inst.l;
 
 	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		if (i && ((i % (256/sizeof(u32))) == 0)) {
+		if ((i != 0U) && ((i % (256U/sizeof(u32))) == 0U)) {
 			tag++;
 			gk20a_writel(g, gr_gpccs_imemt_r(0),
 				      gr_gpccs_imemt_tag_f(tag));
@@ -277,12 +277,12 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 		checksum += ucode_u32_data[i];
 	}
 
-	pad_start = i*4;
-	pad_end = pad_start+(256-pad_start%256)+256;
+	pad_start = i * 4U;
+	pad_end = pad_start + (256U - pad_start % 256U) + 256U;
 	for (i = pad_start;
-	     (i < gpccs_imem_size * 256) && (i < pad_end);
-	     i += 4) {
-		if (i && ((i % 256) == 0)) {
+	     (i < gpccs_imem_size * 256U) && (i < pad_end);
+	     i += 4U) {
+		if ((i != 0U) && ((i % 256U) == 0U)) {
 			tag++;
 			gk20a_writel(g, gr_gpccs_imemt_r(0),
 				      gr_gpccs_imemt_tag_f(tag));
@@ -302,7 +302,7 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.fecs.inst.l;
 
 	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		if (i && ((i % (256/sizeof(u32))) == 0)) {
+		if ((i != 0U) && ((i % (256U/sizeof(u32))) == 0U)) {
 			tag++;
 			gk20a_writel(g, gr_fecs_imemt_r(0),
 				      gr_fecs_imemt_tag_f(tag));
@@ -311,10 +311,12 @@ static void gr_gk20a_load_falcon_imem(struct gk20a *g)
 		checksum += ucode_u32_data[i];
 	}
 
-	pad_start = i*4;
-	pad_end = pad_start+(256-pad_start%256)+256;
-	for (i = pad_start; (i < fecs_imem_size * 256) && i < pad_end; i += 4) {
-		if (i && ((i % 256) == 0)) {
+	pad_start = i * 4U;
+	pad_end = pad_start + (256U - pad_start % 256U) + 256U;
+	for (i = pad_start;
+	     (i < fecs_imem_size * 256U) && i < pad_end;
+	     i += 4U) {
+		if ((i != 0U) && ((i % 256U) == 0U)) {
 			tag++;
 			gk20a_writel(g, gr_fecs_imemt_r(0),
 				      gr_fecs_imemt_tag_f(tag));
@@ -366,7 +368,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	nvgpu_err(g,
 		"timeout, ctxsw busy : %d, gr busy : %d",
@@ -393,14 +395,14 @@ int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 	do {
 		val = gk20a_readl(g, gr_status_r());
 
-		if (!gr_status_fe_method_lower_v(val)) {
+		if (gr_status_fe_method_lower_v(val) == 0U) {
 			nvgpu_log_fn(g, "done");
 			return 0;
 		}
 
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	nvgpu_err(g,
 		"timeout, fe busy : %x", val);
@@ -832,7 +834,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -902,7 +904,7 @@ int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -910,7 +912,7 @@ int gr_gk20a_commit_global_ctx_buffers(struct gk20a *g,
 	if (patch) {
 		int err;
 		err = gr_gk20a_ctx_patch_write_begin(g, gr_ctx, false);
-		if (err) {
+		if (err != 0) {
 			return err;
 		}
 	}
@@ -1032,7 +1034,7 @@ int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 	u32 coeff5_mod, coeff6_mod, coeff7_mod, coeff8_mod, coeff9_mod, coeff10_mod, coeff11_mod;
 	u32 map0, map1, map2, map3, map4, map5;
 
-	if (!gr->map_tiles) {
+	if (gr->map_tiles == NULL) {
 		return -1;
 	}
 
@@ -1225,7 +1227,7 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 
 	if (g->ops.gr.init_sm_id_table) {
 		err = g->ops.gr.init_sm_id_table(g);
-		if (err) {
+		if (err != 0) {
 			return err;
 		}
 
@@ -1275,15 +1277,15 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 	     gpc_index += 4) {
 
 		gk20a_writel(g, gr_pd_dist_skip_table_r(gpc_index/4),
-			     gr_pd_dist_skip_table_gpc_4n0_mask_f(gr->gpc_skip_mask[gpc_index]) ||
-			     gr_pd_dist_skip_table_gpc_4n1_mask_f(gr->gpc_skip_mask[gpc_index + 1]) ||
-			     gr_pd_dist_skip_table_gpc_4n2_mask_f(gr->gpc_skip_mask[gpc_index + 2]) ||
-			     gr_pd_dist_skip_table_gpc_4n3_mask_f(gr->gpc_skip_mask[gpc_index + 3]));
+			     (gr_pd_dist_skip_table_gpc_4n0_mask_f(gr->gpc_skip_mask[gpc_index]) != 0U) ||
+			     (gr_pd_dist_skip_table_gpc_4n1_mask_f(gr->gpc_skip_mask[gpc_index + 1]) != 0U) ||
+			     (gr_pd_dist_skip_table_gpc_4n2_mask_f(gr->gpc_skip_mask[gpc_index + 2]) != 0U) ||
+			     (gr_pd_dist_skip_table_gpc_4n3_mask_f(gr->gpc_skip_mask[gpc_index + 3]) != 0U));
 	}
 
 	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
-	if (g->tpc_fs_mask_user &&
-		fuse_tpc_mask == (0x1U << gr->max_tpc_count) - 1U) {
+	if ((g->tpc_fs_mask_user != 0U) &&
+		(fuse_tpc_mask == BIT32(gr->max_tpc_count) - 1U)) {
 		u32 val = g->tpc_fs_mask_user;
 		val &= (0x1U << gr->max_tpc_count) - 1U;
 		gk20a_writel(g, gr_cwd_fs_r(),
@@ -1358,28 +1360,28 @@ u32 gk20a_init_sw_bundle(struct gk20a *g)
 			err = gr_gk20a_wait_idle(g,
 						  gk20a_get_gr_idle_timeout(g),
 						  GR_IDLE_CHECK_DEFAULT);
-			if (err) {
+			if (err != 0U) {
 				goto error;
 			}
 		}
 
 		err = gr_gk20a_wait_fe_idle(g, gk20a_get_gr_idle_timeout(g),
 					    GR_IDLE_CHECK_DEFAULT);
-		if (err) {
+		if (err != 0U) {
 			goto error;
 		}
 	}
 
-	if (!err && g->ops.gr.init_sw_veid_bundle) {
+	if ((err == 0U) && (g->ops.gr.init_sw_veid_bundle != NULL)) {
 		err = g->ops.gr.init_sw_veid_bundle(g);
-		if (err) {
+		if (err != 0U) {
 			goto error;
 		}
 	}
 
 	if (g->ops.gr.init_sw_bundle64) {
 		err = g->ops.gr.init_sw_bundle64(g);
-		if (err) {
+		if (err != 0U) {
 			goto error;
 		}
 	}
@@ -1431,7 +1433,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -1461,8 +1463,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 				break;
 			}
 			nvgpu_udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-						    "timeout forcing FE on"));
+		} while (nvgpu_timeout_expired_msg(&timeout,
+					"timeout forcing FE on") == 0);
 	}
 
 
@@ -1508,8 +1510,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 				break;
 			}
 			nvgpu_udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
-		} while (!nvgpu_timeout_expired_msg(&timeout,
-						    "timeout setting FE power to auto"));
+		} while (nvgpu_timeout_expired_msg(&timeout,
+				"timeout setting FE power to auto") == 0);
 	}
 
 	/* clear scc ram */
@@ -1517,7 +1519,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		gr_scc_init_ram_trigger_f());
 
 	err = gr_gk20a_fecs_ctx_bind_channel(g, c);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1540,7 +1542,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1549,7 +1551,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	err = g->ops.gr.commit_global_ctx_buffers(g, c, false);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1558,18 +1560,18 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 
 	/* floorsweep anything left */
 	err = g->ops.gr.init_fs_state(g);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto restore_fe_go_idle;
 	}
 
 	err = gk20a_init_sw_bundle(g);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1578,8 +1580,8 @@ restore_fe_go_idle:
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
 		     gr_fe_go_idle_timeout_count_prod_f());
 
-	if (err || gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
-				      GR_IDLE_CHECK_DEFAULT)) {
+	if ((err != 0U) || (gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
+				      GR_IDLE_CHECK_DEFAULT) != 0)) {
 		goto clean_up;
 	}
 
@@ -1605,7 +1607,7 @@ restore_fe_go_idle:
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1624,7 +1626,7 @@ restore_fe_go_idle:
 	g->ops.gr.write_zcull_ptr(g, gold_mem, 0);
 
 	err = g->ops.gr.commit_inst(c, gr_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1648,7 +1650,7 @@ restore_fe_go_idle:
 	}
 
 	err = g->ops.gr.commit_inst(c, gr_mem->gpu_va);
-	if (err) {
+	if (err != 0U) {
 		goto clean_up;
 	}
 
@@ -1658,7 +1660,7 @@ restore_fe_go_idle:
 		gr_fecs_current_ctx_valid_false_f());
 
 clean_up:
-	if (err) {
+	if (err != 0U) {
 		nvgpu_err(g, "fail");
 	} else {
 		nvgpu_log_fn(g, "done");
@@ -1681,7 +1683,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -1741,7 +1743,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -1754,7 +1756,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	}
 
 	if ((mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW) &&
-			(!g->ops.gr.get_hw_accessor_stream_out_mode)) {
+		(g->ops.gr.get_hw_accessor_stream_out_mode == NULL)) {
 		nvgpu_err(g, "Mode-E hwpm context switch mode is not supported");
 		return -EINVAL;
 	}
@@ -1817,7 +1819,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 							NVGPU_VM_MAP_CACHEABLE,
 							gk20a_mem_flag_none, true,
 							pm_ctx->mem.aperture);
-			if (!pm_ctx->mem.gpu_va) {
+			if (pm_ctx->mem.gpu_va == 0ULL) {
 				nvgpu_err(g,
 					"failed to map pm ctxt buffer");
 				nvgpu_dma_free(g, &pm_ctx->mem);
@@ -1826,8 +1828,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 			}
 		}
 
-		if (mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW &&
-				g->ops.gr.init_hwpm_pmm_register) {
+		if ((mode == NVGPU_DBG_HWPM_CTXSW_MODE_STREAM_OUT_CTXSW) &&
+			(g->ops.gr.init_hwpm_pmm_register != NULL)) {
 			g->ops.gr.init_hwpm_pmm_register(g);
 		}
 	}
@@ -1891,7 +1893,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -1913,7 +1915,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		g->ops.gr.init_ctxsw_hdr_data(g, mem);
 	}
 
-	if (g->ops.gr.enable_cde_in_fecs && c->cde) {
+	if ((g->ops.gr.enable_cde_in_fecs != NULL) && c->cde) {
 		g->ops.gr.enable_cde_in_fecs(g, mem);
 	}
 
@@ -2019,7 +2021,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	int err;
 
 	err = g->ops.mm.alloc_inst_block(g, &ucode_info->inst_blk_desc);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -2033,7 +2035,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 					gk20a_mem_flag_read_only,
 					false,
 					ucode_info->surface_desc.aperture);
-	if (!ucode_info->surface_desc.gpu_va) {
+	if (ucode_info->surface_desc.gpu_va == 0ULL) {
 		nvgpu_err(g, "failed to update gmmu ptes");
 		return -ENOMEM;
 	}
@@ -2102,7 +2104,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	int err = 0;
 
 	fecs_fw = nvgpu_request_firmware(g, GK20A_FECS_UCODE_IMAGE, 0);
-	if (!fecs_fw) {
+	if (fecs_fw == NULL) {
 		nvgpu_err(g, "failed to load fecs ucode!!");
 		return -ENOENT;
 	}
@@ -2112,7 +2114,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 				sizeof(struct gk20a_ctxsw_bootloader_desc));
 
 	gpccs_fw = nvgpu_request_firmware(g, GK20A_GPCCS_UCODE_IMAGE, 0);
-	if (!gpccs_fw) {
+	if (gpccs_fw == NULL) {
 		nvgpu_release_firmware(g, fecs_fw);
 		nvgpu_err(g, "failed to load gpccs ucode!!");
 		return -ENOENT;
@@ -2133,7 +2135,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.gpccs.data.count * sizeof(u32));
 
 	err = nvgpu_dma_alloc_sys(g, ucode_size, &ucode_info->surface_desc);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2156,7 +2158,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	gpccs_fw = NULL;
 
 	err = gr_gk20a_init_ctxsw_ucode_vaspace(g);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2183,24 +2185,25 @@ static void gr_gk20a_wait_for_fecs_arb_idle(struct gk20a *g)
 	u32 val;
 
 	val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
-	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
+	while ((gr_fecs_arb_ctx_cmd_cmd_v(val) != 0U) && (retries != 0)) {
 		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	}
 
-	if (!retries) {
+	if (retries == 0) {
 		nvgpu_err(g, "arbiter cmd timeout, fecs arb ctx cmd: 0x%08x",
 				gk20a_readl(g, gr_fecs_arb_ctx_cmd_r()));
 	}
 
 	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
-	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
-			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
+	while (((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
+			gr_fecs_ctxsw_status_1_arb_busy_m()) != 0U) &&
+	       (retries != 0)) {
 		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 	}
-	if (!retries) {
+	if (retries == 0) {
 		nvgpu_err(g,
 			  "arbiter idle timeout, fecs ctxsw status: 0x%08x",
 			  gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
@@ -2213,12 +2216,13 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	int retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	u64 inst_ptr;
 
-	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
-			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
+	while (((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
+			gr_fecs_ctxsw_status_1_arb_busy_m()) != 0U) &&
+	       (retries != 0)) {
 		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 	}
-	if (!retries) {
+	if (retries == 0) {
 		nvgpu_err(g,
 			  "arbiter idle timeout, status: %08x",
 			  gk20a_readl(g, gr_fecs_ctxsw_status_1_r()));
@@ -2425,7 +2429,7 @@ int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 		if (!g->gr.skip_ucode_init) {
 			err = gr_gk20a_init_ctxsw_ucode(g);
 
-			if (err) {
+			if (err != 0) {
 				return err;
 			}
 		}
@@ -2521,7 +2525,7 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,
 					struct gr_ctx_buffer_desc *desc)
 {
-	if (!desc) {
+	if (desc == NULL) {
 		return;
 	}
 	nvgpu_dma_free(g, &desc->mem);
@@ -2541,7 +2545,7 @@ int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 	}
 
 	err = nvgpu_dma_alloc_sys(g, size, &desc->mem);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -2585,7 +2589,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	err = gk20a_gr_alloc_ctx_buffer(g, &gr->global_ctx_buffer[CIRCULAR],
 					cb_buffer_size);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2593,7 +2597,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[CIRCULAR_VPR],
 				       cb_buffer_size);
-		if (err) {
+		if (err != 0) {
 			goto clean_up;
 		}
 	}
@@ -2602,7 +2606,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	err = gk20a_gr_alloc_ctx_buffer(g, &gr->global_ctx_buffer[PAGEPOOL],
 					pagepool_buffer_size);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2610,7 +2614,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[PAGEPOOL_VPR],
 				       pagepool_buffer_size);
-		if (err) {
+		if (err != 0) {
 			goto clean_up;
 		}
 	}
@@ -2619,7 +2623,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
 	err = gk20a_gr_alloc_ctx_buffer(g, &gr->global_ctx_buffer[ATTRIBUTE],
 					attr_buffer_size);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2627,7 +2631,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		err = g->ops.secure_alloc(g,
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
-		if (err) {
+		if (err != 0) {
 			goto clean_up;
 		}
 	}
@@ -2638,7 +2642,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	err = gk20a_gr_alloc_ctx_buffer(g,
 					&gr->global_ctx_buffer[GOLDEN_CTX],
 					gr->ctx_vars.golden_image_size);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2649,7 +2653,7 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 					&gr->global_ctx_buffer[PRIV_ACCESS_MAP],
 					gr->ctx_vars.priv_access_map_size);
 
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -2660,8 +2664,9 @@ int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	err = nvgpu_dma_alloc_sys(g,
 			gr->ctx_vars.fecs_trace_buffer_size,
 			&gr->global_ctx_buffer[FECS_TRACE_BUFFER].mem);
-	if (err)
+	if (err != 0) {
 		goto clean_up;
+	}
 
 	gr->global_ctx_buffer[FECS_TRACE_BUFFER].destroy =
 			 gk20a_gr_destroy_ctx_buffer;
@@ -2724,7 +2729,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -2745,7 +2750,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, true, mem->aperture);
-	if (!gpu_va) {
+	if (gpu_va == 0ULL) {
 		goto clean_up;
 	}
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
@@ -2764,7 +2769,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, false, mem->aperture);
-	if (!gpu_va) {
+	if (gpu_va == 0ULL) {
 		goto clean_up;
 	}
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
@@ -2783,7 +2788,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_VM_MAP_CACHEABLE,
 				gk20a_mem_flag_none, true, mem->aperture);
-	if (!gpu_va) {
+	if (gpu_va == 0ULL) {
 		goto clean_up;
 	}
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
@@ -2793,7 +2798,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
-	if (!gpu_va) {
+	if (gpu_va == 0ULL) {
 		goto clean_up;
 	}
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
@@ -2804,7 +2809,7 @@ int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
 	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
-	if (!gpu_va) {
+	if (gpu_va == 0ULL) {
 		goto clean_up;
 	}
 	g_bfr_va[PRIV_ACCESS_MAP_VA] = gpu_va;
@@ -2854,7 +2859,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
 	err = nvgpu_dma_alloc(g, gr->ctx_vars.buffer_total_size, &gr_ctx->mem);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -2864,7 +2869,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 					0, /* not GPU-cacheable */
 					gk20a_mem_flag_none, true,
 					gr_ctx->mem.aperture);
-	if (!gr_ctx->mem.gpu_va) {
+	if (gr_ctx->mem.gpu_va == 0ULL) {
 		goto err_free_mem;
 	}
 
@@ -2882,13 +2887,13 @@ static int gr_gk20a_alloc_tsg_gr_ctx(struct gk20a *g,
 	struct nvgpu_gr_ctx *gr_ctx = &tsg->gr_ctx;
 	int err;
 
-	if (!tsg->vm) {
+	if (tsg->vm == NULL) {
 		nvgpu_err(tsg->g, "No address space bound");
 		return -ENOMEM;
 	}
 
 	err = g->ops.gr.alloc_gr_ctx(g, gr_ctx, tsg->vm, class, padding);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -2907,8 +2912,8 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 		gr_gk20a_free_channel_patch_ctx(g, vm, gr_ctx);
 		gr_gk20a_free_channel_pm_ctx(g, vm, gr_ctx);
 
-		if (g->ops.gr.dump_ctxsw_stats &&
-		    g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close) {
+		if ((g->ops.gr.dump_ctxsw_stats != NULL) &&
+		     g->gr.ctx_vars.dump_ctxsw_stats_on_channel_close) {
 			g->ops.gr.dump_ctxsw_stats(g, vm, gr_ctx);
 		}
 
@@ -2926,7 +2931,7 @@ void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)
 {
 	struct gk20a *g = tsg->g;
 
-	if (!tsg->vm) {
+	if (tsg->vm == NULL) {
 		nvgpu_err(g, "No address space bound");
 		return;
 	}
@@ -2950,7 +2955,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 	nvgpu_log_fn(g, " ");
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -2963,7 +2968,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm,
 			alloc_size * sizeof(u32), &patch_ctx->mem);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -3014,7 +3019,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	nvgpu_log_fn(g, " ");
 
 	/* an address space needs to have been bound at this point.*/
-	if (!gk20a_channel_as_bound(c) && !c->vm) {
+	if (!gk20a_channel_as_bound(c) && (c->vm == NULL)) {
 		nvgpu_err(g,
 			   "not bound to address space at time"
 			   " of grctx allocation");
@@ -3042,7 +3047,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg,
 						class_num,
 						flags);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to allocate TSG gr ctx buffer");
 			nvgpu_vm_put(tsg->vm);
@@ -3054,7 +3059,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 		if (!nvgpu_mem_is_valid(&gr_ctx->patch_ctx.mem)) {
 			gr_ctx->patch_ctx.data_count = 0;
 			err = gr_gk20a_alloc_channel_patch_ctx(g, c);
-			if (err) {
+			if (err != 0) {
 				nvgpu_err(g,
 					"fail to allocate patch buffer");
 				goto out;
@@ -3063,7 +3068,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 
 		/* map global buffer to channel gpu_va and commit */
 		err = g->ops.gr.map_global_ctx_buffers(g, c);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to map global ctx buffer");
 			goto out;
@@ -3072,7 +3077,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 
 		/* commit gr ctx buffer */
 		err = g->ops.gr.commit_inst(c, gr_ctx->mem.gpu_va);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to commit gr ctx buffer");
 			goto out;
@@ -3080,7 +3085,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 
 		/* init golden image, ELPG enabled after this is done */
 		err = gr_gk20a_init_golden_ctx_image(g, c);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to init golden ctx image");
 			goto out;
@@ -3088,7 +3093,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 
 		/* load golden image */
 		gr_gk20a_load_golden_ctx_image(g, c);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to load golden ctx image");
 			goto out;
@@ -3096,9 +3101,10 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 		if (g->ops.fecs_trace.bind_channel && !c->vpr) {
 			err = g->ops.fecs_trace.bind_channel(g, c);
-			if (err)
+			if (err != 0) {
 				nvgpu_warn(g,
 					"fail to bind channel for ctxsw trace");
+			}
 		}
 #endif
 
@@ -3111,7 +3117,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	} else {
 		/* commit gr ctx buffer */
 		err = g->ops.gr.commit_inst(c, gr_ctx->mem.gpu_va);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g,
 				"fail to commit gr ctx buffer");
 			goto out;
@@ -3119,9 +3125,10 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 		if (g->ops.fecs_trace.bind_channel && !c->vpr) {
 			err = g->ops.fecs_trace.bind_channel(g, c);
-			if (err)
+			if (err != 0) {
 				nvgpu_warn(g,
 					"fail to bind channel for ctxsw trace");
+			}
 		}
 #endif
 	}
@@ -3240,7 +3247,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	if (gr->fbp_rop_l2_en_mask == NULL) {
 		gr->fbp_rop_l2_en_mask =
 			nvgpu_kzalloc(g, gr->max_fbps_count * sizeof(u32));
-		if (!gr->fbp_rop_l2_en_mask) {
+		if (gr->fbp_rop_l2_en_mask == NULL) {
 			goto clean_up;
 		}
 	} else {
@@ -3267,7 +3274,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->max_zcull_per_gpc_count = nvgpu_get_litter_value(g, GPU_LIT_NUM_ZCULL_BANKS);
 
-	if (!gr->gpc_count) {
+	if (gr->gpc_count == 0U) {
 		nvgpu_err(g, "gpc_count==0!");
 		goto clean_up;
 	}
@@ -3313,8 +3320,9 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			      4 * sizeof(u32));
 	}
 
-	if (!gr->gpc_tpc_count || !gr->gpc_tpc_mask || !gr->gpc_zcb_count ||
-	    !gr->gpc_ppc_count || !gr->gpc_skip_mask) {
+	if ((gr->gpc_tpc_count == NULL) || (gr->gpc_tpc_mask == NULL) ||
+	    (gr->gpc_zcb_count == NULL) || (gr->gpc_ppc_count == NULL) ||
+	    (gr->gpc_skip_mask == NULL)) {
 		goto clean_up;
 	}
 
@@ -3341,15 +3349,15 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		gr->zcb_count += gr->gpc_zcb_count[gpc_index];
 
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
-			if (!gr->pes_tpc_count[pes_index]) {
+			if (gr->pes_tpc_count[pes_index] == NULL) {
 				gr->pes_tpc_count[pes_index] =
 					nvgpu_kzalloc(g, gr->gpc_count *
 						      sizeof(u32));
 				gr->pes_tpc_mask[pes_index] =
 					nvgpu_kzalloc(g, gr->gpc_count *
 						      sizeof(u32));
-				if (!gr->pes_tpc_count[pes_index] ||
-				    !gr->pes_tpc_mask[pes_index]) {
+				if ((gr->pes_tpc_count[pes_index] == NULL) ||
+				    (gr->pes_tpc_mask[pes_index] == NULL)) {
 					goto clean_up;
 				}
 			}
@@ -3520,8 +3528,11 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	sorted_to_unsorted_gpc_map =
 		nvgpu_kzalloc(g, num_gpcs * sizeof(s32));
 
-	if (!(init_frac && init_err && run_err && sorted_num_tpcs &&
-	      sorted_to_unsorted_gpc_map)) {
+	if (!((init_frac != NULL) &&
+	      (init_err != NULL) &&
+	      (run_err != NULL) &&
+	      (sorted_num_tpcs != NULL) &&
+	      (sorted_to_unsorted_gpc_map != NULL))) {
 		ret = -ENOMEM;
 		goto clean_up;
 	}
@@ -3712,7 +3723,7 @@ int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	struct zcull_ctx_desc *zcull_ctx;
 
 	tsg = tsg_gk20a_from_ch(c);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -3881,11 +3892,12 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 			c_tbl = &gr->zbc_col_tbl[i];
 
-			if (c_tbl->ref_cnt && c_tbl->format == zbc_val->format &&
-			    memcmp(c_tbl->color_ds, zbc_val->color_ds,
-				sizeof(zbc_val->color_ds)) == 0 &&
-			    memcmp(c_tbl->color_l2, zbc_val->color_l2,
-				    sizeof(zbc_val->color_l2)) == 0) {
+			if ((c_tbl->ref_cnt != 0U) &&
+			    (c_tbl->format == zbc_val->format) &&
+			    (memcmp(c_tbl->color_ds, zbc_val->color_ds,
+				sizeof(zbc_val->color_ds)) == 0) &&
+			    (memcmp(c_tbl->color_l2, zbc_val->color_l2,
+				sizeof(zbc_val->color_l2)) == 0)) {
 
 				added = true;
 				c_tbl->ref_cnt++;
@@ -3904,7 +3916,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			ret = g->ops.gr.add_zbc_color(g, gr,
 				zbc_val, gr->max_used_color_index);
 
-			if (!ret) {
+			if (ret == 0) {
 				gr->max_used_color_index++;
 			}
 		}
@@ -3915,9 +3927,9 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 			d_tbl = &gr->zbc_dep_tbl[i];
 
-			if (d_tbl->ref_cnt &&
-			    d_tbl->depth == zbc_val->depth &&
-			    d_tbl->format == zbc_val->format) {
+			if ((d_tbl->ref_cnt != 0U) &&
+			    (d_tbl->depth == zbc_val->depth) &&
+			    (d_tbl->format == zbc_val->format)) {
 				added = true;
 				d_tbl->ref_cnt++;
 				ret = 0;
@@ -3935,7 +3947,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			ret = g->ops.gr.add_zbc_depth(g, gr,
 				zbc_val, gr->max_used_depth_index);
 
-			if (!ret) {
+			if (ret == 0) {
 				gr->max_used_depth_index++;
 			}
 		}
@@ -4352,7 +4364,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	u32 zcull_alloc_num = num_gpcs * num_tpc_per_gpc;
 	u32 map_tile_count;
 
-	if (!gr->map_tiles) {
+	if (gr->map_tiles == NULL) {
 		return -1;
 	}
 
@@ -4362,7 +4374,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	zcull_map_tiles = nvgpu_kzalloc(g, zcull_alloc_num * sizeof(u32));
 
-	if (!zcull_map_tiles) {
+	if (zcull_map_tiles == NULL) {
 		nvgpu_err(g,
 			"failed to allocate zcull map titles");
 		return -ENOMEM;
@@ -4370,7 +4382,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 
 	zcull_bank_counters = nvgpu_kzalloc(g, zcull_alloc_num * sizeof(u32));
 
-	if (!zcull_bank_counters) {
+	if (zcull_bank_counters == NULL) {
 		nvgpu_err(g,
 			"failed to allocate zcull bank counters");
 		nvgpu_kfree(g, zcull_map_tiles);
@@ -4384,7 +4396,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 		zcull_bank_counters[map_tile_count]++;
 	}
 
-	if (g->ops.gr.program_zcull_mapping) {
+	if (g->ops.gr.program_zcull_mapping != NULL) {
 		g->ops.gr.program_zcull_mapping(g, zcull_alloc_num,
 					 zcull_map_tiles);
 	}
@@ -4512,7 +4524,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_zcull_init_hw(g, gr);
 
-	if (g->ops.priv_ring.set_ppriv_timeout_settings) {
+	if (g->ops.priv_ring.set_ppriv_timeout_settings != NULL) {
 		g->ops.priv_ring.set_ppriv_timeout_settings(g);
 	}
 
@@ -4570,13 +4582,13 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 	if (g->ops.gr.init_preemption_state) {
 		err = g->ops.gr.init_preemption_state(g);
-		if (err) {
+		if (err != 0U) {
 			goto out;
 		}
 	}
@@ -4590,13 +4602,13 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	/* floorsweep anything left */
 	err = g->ops.gr.init_fs_state(g);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto restore_fe_go_idle;
 	}
 
@@ -4605,8 +4617,8 @@ restore_fe_go_idle:
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
 		     gr_fe_go_idle_timeout_count_prod_f());
 
-	if (err || gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
-				      GR_IDLE_CHECK_DEFAULT)) {
+	if ((err != 0U) || (gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
+				      GR_IDLE_CHECK_DEFAULT) != 0)) {
 		goto out;
 	}
 
@@ -4721,7 +4733,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 
 	if (!g->gr.ctx_vars.valid) {
 		err = gr_gk20a_init_ctx_vars(g, &g->gr);
-		if (err) {
+		if (err != 0U) {
 			nvgpu_err(g,
 				"fail to load gr init ctx");
 		}
@@ -4756,7 +4768,7 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 		}
 
 		nvgpu_udelay(CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	nvgpu_err(g, "Falcon mem scrubbing timeout");
 	return -ETIMEDOUT;
@@ -4767,17 +4779,17 @@ static int gr_gk20a_init_ctxsw(struct gk20a *g)
 	u32 err = 0;
 
 	err = g->ops.gr.load_ctxsw_ucode(g);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 	err = gr_gk20a_wait_ctxsw_ready(g);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 out:
-	if (err) {
+	if (err != 0U) {
 		nvgpu_err(g, "fail");
 	} else {
 		nvgpu_log_fn(g, "done");
@@ -4804,18 +4816,18 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 	}
 
 	err = gr_gk20a_wait_mem_scrubbing(g);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err) {
+	if (err != 0U) {
 		goto out;
 	}
 
 out:
-	if (err) {
+	if (err != 0U) {
 		nvgpu_err(g, "fail");
 	} else {
 		nvgpu_log_fn(g, "done");
@@ -4878,34 +4890,34 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 #endif
 
 	err = gr_gk20a_init_gr_config(g, gr);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
 	err = gr_gk20a_init_map_tiles(g, gr);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
 	if (g->ops.ltc.init_comptags) {
 		err = g->ops.ltc.init_comptags(g, gr);
-		if (err) {
+		if (err != 0) {
 			goto clean_up;
 		}
 	}
 
 	err = gr_gk20a_init_zcull(g, gr);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
 	err = g->ops.gr.alloc_global_ctx_buffers(g);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
 	err = gr_gk20a_init_access_map(g);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -4931,7 +4943,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->sw_ready = true;
 
 	err = nvgpu_ecc_init_support(g);
-	if (err) {
+	if (err != 0) {
 		goto clean_up;
 	}
 
@@ -4958,15 +4970,15 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 	size = 0;
 
 	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to query fecs pg buffer size");
 		return err;
 	}
 
-	if (!pmu->pg_buf.cpu_va) {
+	if (pmu->pg_buf.cpu_va == NULL) {
 		err = nvgpu_dma_alloc_map_sys(vm, size, &pmu->pg_buf);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g, "failed to allocate memory");
 			return -ENOMEM;
 		}
@@ -4974,14 +4986,14 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g, &mm->pmu.inst_block);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to bind pmu inst to gr");
 		return err;
 	}
 
 	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, pmu->pg_buf.gpu_va);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to set pg buffer pmu va");
 		return err;
@@ -5004,30 +5016,30 @@ int gk20a_init_gr_support(struct gk20a *g)
 	}
 
 	err = gr_gk20a_init_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	/* this appears query for sw states but fecs actually init
 	   ramchain, etc so this is hw init */
 	err = g->ops.gr.init_ctx_state(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	err = gk20a_init_gr_setup_sw(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	err = gk20a_init_gr_setup_hw(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	if (g->can_elpg) {
 		err = gk20a_init_gr_bind_fecs_elpg(g);
-		if (err) {
+		if (err != 0) {
 			return err;
 		}
 	}
@@ -5105,12 +5117,12 @@ int gk20a_enable_gr_hw(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	err = gk20a_init_gr_prepare(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	err = gk20a_init_gr_reset_enable_hw(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -5136,19 +5148,19 @@ int gk20a_gr_reset(struct gk20a *g)
 	nvgpu_mutex_acquire(&g->gr.fecs_mutex);
 
 	err = gk20a_enable_gr_hw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
 	}
 
 	err = gk20a_init_gr_setup_hw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
 	}
 
 	err = gr_gk20a_init_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_mutex_release(&g->gr.fecs_mutex);
 		return err;
 	}
@@ -5158,27 +5170,27 @@ int gk20a_gr_reset(struct gk20a *g)
 	/* this appears query for sw states but fecs actually init
 	   ramchain, etc so this is hw init */
 	err = g->ops.gr.init_ctx_state(g);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
 	size = 0;
 	err = gr_gk20a_fecs_get_reglist_img_size(g, &size);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to query fecs pg buffer size");
 		return err;
 	}
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g, &g->mm.pmu.inst_block);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to bind pmu inst to gr");
 		return err;
 	}
 
 	err = gr_gk20a_fecs_set_reglist_virtual_addr(g, g->pmu.pg_buf.gpu_va);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"fail to set pg buffer pmu va");
 		return err;
@@ -5276,7 +5288,7 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 	int ret = 0;
 
-	if (!gr_fecs_intr) {
+	if (gr_fecs_intr == 0U) {
 		return 0;
 	}
 
@@ -5560,7 +5572,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
-		if (!gk20a_channel_get(ch)) {
+		if (gk20a_channel_get(ch) == NULL) {
 			continue;
 		}
 
@@ -5575,7 +5587,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 		gk20a_channel_put(ch);
 	}
 
-	if (!ret) {
+	if (ret == NULL) {
 		goto unlock;
 	}
 
@@ -5800,7 +5812,7 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 		for (sm = 0; sm < sm_per_tpc; sm++) {
 
-			if (!(esr_sm_sel & (1 << sm))) {
+			if ((esr_sm_sel & BIT32(sm)) == 0U) {
 				continue;
 			}
 
@@ -5878,12 +5890,12 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 		}
 
 		/* Handle GCC exception */
-		if (gr_gpc0_gpccs_gpc_exception_gcc_v(gpc_exception) &&
-				g->ops.gr.handle_gcc_exception) {
+		if ((gr_gpc0_gpccs_gpc_exception_gcc_v(gpc_exception) != 0U) &&
+				(g->ops.gr.handle_gcc_exception != NULL)) {
 			int gcc_ret = 0;
 			gcc_ret = g->ops.gr.handle_gcc_exception(g, gpc, tpc,
 				post_event, fault_ch, hww_global_esr);
-			ret |= ret ? ret : gcc_ret;
+			ret |= (ret != 0) ? ret : gcc_ret;
 		}
 
 		/* Handle GPCCS exceptions */
@@ -5891,7 +5903,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 			int ret_ecc = 0;
 			ret_ecc = g->ops.gr.handle_gpc_gpccs_exception(g, gpc,
 								gpc_exception);
-			ret |= ret ? ret : ret_ecc;
+			ret |= (ret != 0) ? ret : ret_ecc;
 		}
 
 		/* Handle GPCMMU exceptions */
@@ -5900,7 +5912,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 
 			ret_mmu = g->ops.gr.handle_gpc_gpcmmu_exception(g, gpc,
 								gpc_exception);
-			ret |= ret ? ret : ret_mmu;
+			ret |= (ret != 0) ? ret : ret_mmu;
 		}
 
 	}
@@ -5939,7 +5951,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 	nvgpu_log(g, gpu_dbg_intr, "pgraph intr %08x", gr_intr);
 
-	if (!gr_intr) {
+	if (gr_intr == 0U) {
 		return 0;
 	}
 
@@ -5974,7 +5986,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		nvgpu_err(g, "ch id is INVALID 0xffffffff");
 	}
 
-	if (ch && gk20a_is_channel_marked_as_tsg(ch)) {
+	if ((ch != NULL) && gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];
 	}
 
@@ -6153,7 +6165,8 @@ int gk20a_gr_isr(struct gk20a *g)
 		}
 
 		/* check if a gpc exception has occurred */
-		if (exception & gr_exception_gpc_m() && !need_reset) {
+		if (((exception & gr_exception_gpc_m()) != 0U) &&
+						!need_reset) {
 			bool post_event = false;
 
 			nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
@@ -6171,7 +6184,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 			/* signal clients waiting on an event */
 			if (g->ops.gr.sm_debugger_attached(g) &&
-					 post_event && fault_ch) {
+				post_event && (fault_ch != NULL)) {
 				g->ops.debugger.post_events(fault_ch);
 			}
 		}
@@ -6202,7 +6215,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		}
 	}
 
-	if (gr_intr && !ch) {
+	if ((gr_intr != 0U) && (ch == NULL)) {
 		/* Clear interrupts for unused channel. This is
 		   probably an interrupt during gk20a_free_channel() */
 		nvgpu_err(g,
@@ -6222,7 +6235,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	/* Posting of BPT events should be the last thing in this function */
-	if (global_esr && tsg) {
+	if ((global_esr != 0U) && (tsg != NULL)) {
 		gk20a_gr_post_bpt_events(g, tsg, global_esr);
 	}
 
@@ -6415,7 +6428,8 @@ int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			return 0;
 		}
 		return 0;
-	} else if (g->ops.gr.is_egpc_addr && g->ops.gr.is_egpc_addr(g, addr)) {
+	} else if ((g->ops.gr.is_egpc_addr != NULL) &&
+		   g->ops.gr.is_egpc_addr(g, addr)) {
 			return g->ops.gr.decode_egpc_addr(g,
 					addr, addr_type, gpc_num,
 					tpc_num, broadcast_flags);
@@ -6485,7 +6499,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 					&gpc_num, &tpc_num, &ppc_num, &be_num,
 					&broadcast_flags);
 	nvgpu_log(g, gpu_dbg_gpu_dbg, "addr_type = %d", addr_type);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -6495,7 +6509,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		 * table. Convert a BE unicast address to a broadcast address
 		 * so that we can look up the offset. */
 		if ((addr_type == CTXSW_ADDR_TYPE_BE) &&
-		    !(broadcast_flags & PRI_BROADCAST_FLAGS_BE)) {
+		    ((broadcast_flags & PRI_BROADCAST_FLAGS_BE) == 0U)) {
 			priv_addr_table[t++] = pri_be_shared_addr(g, addr);
 		} else {
 			priv_addr_table[t++] = addr;
@@ -6523,7 +6537,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 			} else if (broadcast_flags & PRI_BROADCAST_FLAGS_PPC) {
 				err = gr_gk20a_split_ppc_broadcast_addr(g, addr, gpc_num,
 							       priv_addr_table, &t);
-				if (err) {
+				if (err != 0) {
 					return err;
 				}
 			} else {
@@ -6542,7 +6556,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		}
 	} else if (((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
 			(addr_type == CTXSW_ADDR_TYPE_ETPC)) &&
-				g->ops.gr.egpc_etpc_priv_addr_table) {
+			(g->ops.gr.egpc_etpc_priv_addr_table != NULL)) {
 		nvgpu_log(g, gpu_dbg_gpu_dbg, "addr_type : EGPC/ETPC");
 		g->ops.gr.egpc_etpc_priv_addr_table(g, addr, gpc_num, tpc_num,
 				broadcast_flags, priv_addr_table, &t);
@@ -6556,7 +6570,7 @@ int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 		g->ops.gr.split_fbpa_broadcast_addr(g, addr,
 				nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS),
 				priv_addr_table, &t);
-	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_GPC)) {
+	} else if ((broadcast_flags & PRI_BROADCAST_FLAGS_GPC) == 0U) {
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC) {
 			for (tpc_num = 0;
 			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
@@ -6607,7 +6621,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	}
 
 	priv_registers = nvgpu_kzalloc(g, sizeof(u32) * potential_offsets);
-	if (!priv_registers) {
+	if (priv_registers == NULL) {
 		nvgpu_log_fn(g, "failed alloc for potential_offsets=%d", potential_offsets);
 		err = PTR_ERR(priv_registers);
 		goto cleanup;
@@ -6630,7 +6644,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 		num_registers = 1;
 	}
 
-	if (!g->gr.ctx_vars.local_golden_image) {
+	if (g->gr.ctx_vars.local_golden_image == NULL) {
 		nvgpu_log_fn(g, "no context switch header info to work with");
 		err = -EINVAL;
 		goto cleanup;
@@ -6643,7 +6657,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 						  g->gr.ctx_vars.local_golden_image,
 						  g->gr.ctx_vars.golden_image_size,
 						  &priv_offset);
-		if (err) {
+		if (err != 0) {
 			nvgpu_log_fn(g, "Could not determine priv_offset for addr:0x%x",
 				      addr); /*, grPriRegStr(addr)));*/
 			goto cleanup;
@@ -6690,7 +6704,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 	}
 
 	priv_registers = nvgpu_kzalloc(g, sizeof(u32) * potential_offsets);
-	if (!priv_registers) {
+	if (priv_registers == NULL) {
 		nvgpu_log_fn(g, "failed alloc for potential_offsets=%d", potential_offsets);
 		return -ENOMEM;
 	}
@@ -6710,7 +6724,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 		num_registers = 1;
 	}
 
-	if (!g->gr.ctx_vars.local_golden_image) {
+	if (g->gr.ctx_vars.local_golden_image == NULL) {
 		nvgpu_log_fn(g, "no context switch header info to work with");
 		err = -EINVAL;
 		goto cleanup;
@@ -6720,7 +6734,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 		err = gr_gk20a_find_priv_offset_in_pm_buffer(g,
 						  priv_registers[i],
 						  &priv_offset);
-		if (err) {
+		if (err != 0) {
 			nvgpu_log_fn(g, "Could not determine priv_offset for addr:0x%x",
 				      addr); /*, grPriRegStr(addr)));*/
 			goto cleanup;
@@ -6799,7 +6813,7 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 	struct nvgpu_mem *ctxheader = &ch->ctx_header;
 
 	tsg = tsg_gk20a_from_ch(ch);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -6826,7 +6840,7 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 				tmp = nvgpu_mem_rd(g, mem,
 				       ctxsw_prog_main_image_patch_count_o());
 
-				if (!tmp) {
+				if (tmp == 0U) {
 					gr_ctx->patch_ctx.data_count = 0;
 				}
 
@@ -6940,7 +6954,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 
 		nvgpu_log_info(g, " gpc = %d tpc = %d",
 				gpc_num, tpc_num);
-	} else if ((g->ops.gr.is_etpc_addr) &&
+	} else if ((g->ops.gr.is_etpc_addr != NULL) &&
 				g->ops.gr.is_etpc_addr(g, addr)) {
 			g->ops.gr.get_egpc_etpc_num(g, addr, &gpc_num, &tpc_num);
 			gpc_base = g->ops.gr.get_egpc_base(g);
@@ -7197,7 +7211,7 @@ gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
 		}
 	} else if ((addr_type == CTXSW_ADDR_TYPE_EGPC) ||
 		(addr_type == CTXSW_ADDR_TYPE_ETPC)) {
-		if (!(g->ops.gr.get_egpc_base)) {
+		if (g->ops.gr.get_egpc_base == NULL) {
 			return -EINVAL;
 		}
 
@@ -7404,7 +7418,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 			"addr_type = %d, broadcast_flags: %08x",
 			addr_type, broadcast_flags);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -7434,10 +7448,10 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	err = gr_gk20a_find_priv_offset_in_ext_buffer(g,
 				      addr, is_quad, quad, context_buffer,
 				      context_buffer_size, priv_offset);
-	if (!err || (err && is_quad)) {
+	if ((err == 0) || ((err != 0) && is_quad)) {
 		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 				"err = %d, is_quad = %s",
-				err, is_quad ? "true" : false);
+				err, is_quad ? "true" : "false");
 		return err;
 	}
 
@@ -7451,7 +7465,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					   addr_type, addr,
 					   0, 0, 0, 0,
 					   &offset);
-		if (err) {
+		if (err != 0) {
 			return err;
 		}
 
@@ -7481,7 +7495,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 		err = gr_gk20a_determine_ppc_configuration(g, context,
 							   &num_ppcs, &ppc_mask,
 							   &reg_list_ppc_count);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g, "determine ppc configuration failed");
 			return err;
 		}
@@ -7508,7 +7522,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					addr_type,
 					num_tpcs, num_ppcs, reg_list_ppc_count,
 					&offset_in_segment);
-			if (err) {
+			if (err != 0) {
 				return -EINVAL;
 			}
 
@@ -7522,8 +7536,8 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 							   i, num_tpcs,
 							   num_ppcs, ppc_mask,
 							   &offset);
-			if (err) {
-			    return -EINVAL;
+			if (err != 0) {
+				return -EINVAL;
 			}
 
 			*priv_offset = offset_to_segment + offset;
@@ -7864,7 +7878,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 	map_size = hwpm_ctxsw_reg_count_max * sizeof(*map);
 
 	map = nvgpu_big_zalloc(g, map_size);
-	if (!map) {
+	if (map == NULL) {
 		return -ENOMEM;
 	}
 
@@ -7989,7 +8003,7 @@ static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
 	/* Create map of pri address and pm offset if necessary */
 	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map == NULL) {
 		err = gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(g);
-		if (err) {
+		if (err != 0) {
 			return err;
 		}
 	}
@@ -8025,7 +8039,7 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 	 * valid bit must be checked to be absolutely certain that a
 	 * valid context is currently resident.
 	 */
-	if (!gr_fecs_current_ctx_valid_v(curr_gr_ctx)) {
+	if (gr_fecs_current_ctx_valid_v(curr_gr_ctx) == 0U) {
 		return NULL;
 	}
 
@@ -8035,12 +8049,12 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 		  "curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
 		  " ch->chid=%d",
-		  curr_ch ? curr_ch->chid : -1,
+		  (curr_ch != NULL) ? curr_ch->chid : -1,
 		  curr_gr_tsgid,
 		  ch->tsgid,
 		  ch->chid);
 
-	if (!curr_ch) {
+	if (curr_ch == NULL) {
 		return false;
 	}
 
@@ -8081,7 +8095,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 		   num_ctx_wr_ops, num_ctx_rd_ops);
 
 	tsg = tsg_gk20a_from_ch(ch);
-	if (!tsg) {
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
@@ -8099,8 +8113,8 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 				}
 
 				/* if this is a quad access, setup for special access*/
-				if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD)
-						&& g->ops.gr.access_smpc_reg) {
+				if ((ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD))
+					&& (g->ops.gr.access_smpc_reg != NULL)) {
 					g->ops.gr.access_smpc_reg(g,
 							ctx_ops[i].quad,
 							ctx_ops[i].offset);
@@ -8155,14 +8169,14 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	/* they're the same size, so just use one alloc for both */
 	offsets = nvgpu_kzalloc(g, 2 * sizeof(u32) * max_offsets);
-	if (!offsets) {
+	if (offsets == NULL) {
 		err = -ENOMEM;
 		goto cleanup;
 	}
 	offset_addrs = offsets + max_offsets;
 
 	err = gr_gk20a_ctx_patch_write_begin(g, gr_ctx, false);
-	if (err) {
+	if (err != 0) {
 		goto cleanup;
 	}
 
@@ -8191,7 +8205,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						&num_offsets,
 						ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
 						ctx_ops[i].quad);
-			if (!err) {
+			if (err == 0) {
 				if (!gr_ctx_ready) {
 					gr_ctx_ready = true;
 				}
@@ -8202,7 +8216,7 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 							max_offsets,
 							offsets, offset_addrs,
 							&num_offsets);
-				if (err) {
+				if (err != 0) {
 					nvgpu_log(g, gpu_dbg_gpu_dbg,
 					   "ctx op invalid offset: offset=0x%x",
 					   ctx_ops[i].offset);
@@ -8224,8 +8238,8 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			}
 
 			/* if this is a quad access, setup for special access*/
-			if (ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD) &&
-					g->ops.gr.access_smpc_reg) {
+			if ((ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD)) &&
+				(g->ops.gr.access_smpc_reg != NULL)) {
 				g->ops.gr.access_smpc_reg(g, ctx_ops[i].quad,
 							 ctx_ops[i].offset);
 			}
@@ -8313,7 +8327,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	 * determine if the context we're interested in is current.
 	 */
 	err = gr_gk20a_disable_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "unable to stop gr ctxsw");
 		/* this should probably be ctx-fatal... */
 		return err;
@@ -8421,7 +8435,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 
 		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	dbgr_control0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
@@ -8475,7 +8489,7 @@ void gk20a_gr_suspend_single_sm(struct gk20a *g,
 
 	err = g->ops.gr.wait_for_sm_lock_down(g, gpc, tpc, sm,
 			global_esr_mask, check_errors);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g,
 			"SuspendSm failed");
 		return;
@@ -8516,7 +8530,7 @@ void gk20a_gr_suspend_all_sms(struct gk20a *g,
 				err = g->ops.gr.wait_for_sm_lock_down(g,
 					gpc, tpc, sm,
 					global_esr_mask, check_errors);
-				if (err) {
+				if (err != 0) {
 					nvgpu_err(g, "SuspendAllSms failed");
 					return;
 				}
@@ -8599,14 +8613,14 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	ops = nvgpu_kcalloc(g, g->gr.no_of_sm, sizeof(*ops));
-	if (!ops) {
+	if (ops == NULL) {
 		return -ENOMEM;
 	}
 	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
 		int gpc, tpc;
 		u32 tpc_offset, gpc_offset, reg_offset, reg_mask, reg_val;
 
-		if (!(sms & (1 << sm_id))) {
+		if ((sms & BIT64(sm_id)) == 0ULL) {
 			continue;
 		}
 
@@ -8641,7 +8655,7 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	}
 
 	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0, NULL);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "Failed to access register");
 	}
 	nvgpu_kfree(g, ops);
@@ -8698,7 +8712,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_disable_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto clean_up;
 	}
@@ -8718,7 +8732,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 
 	err = gr_gk20a_enable_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "unable to restart ctxsw!");
 	}
 
@@ -8743,7 +8757,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_disable_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto clean_up;
 	}
@@ -8759,7 +8773,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 	}
 
 	err = gr_gk20a_enable_ctxsw(g);
-	if (err) {
+	if (err != 0) {
 		nvgpu_err(g, "unable to restart ctxsw!");
 	}
 
@@ -8812,7 +8826,7 @@ int gr_gk20a_wait_for_pause(struct gk20a *g, struct nvgpu_warpstate *w_state)
 
 		err = g->ops.gr.lock_down_sm(g, gpc, tpc, sm,
 				global_mask, false);
-		if (err) {
+		if (err != 0) {
 			nvgpu_err(g, "sm did not lock down!");
 			return err;
 		}

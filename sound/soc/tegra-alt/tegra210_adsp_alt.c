@@ -2090,6 +2090,9 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 			return ret;
 		}
 		break;
+	 case SNDRV_PCM_TRIGGER_DRAIN:
+		/* do nothing */
+		break;
 	default:
 		pr_err("Unsupported state.");
 		return -EINVAL;

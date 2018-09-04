@@ -38,11 +38,11 @@
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/therm.h>
 #include <nvgpu/mc.h>
+#include <nvgpu/channel_sync.h>
 
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
-#include "channel_sync_gk20a.h"
 
 #include "dbg_gpu_gk20a.h"
 #include "hal.h"
@@ -475,7 +475,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	 * supported otherwise, provided that the user doesn't request anything
 	 * that depends on deferred cleanup.
 	 */
-	if (!gk20a_channel_sync_needs_sync_framework(g)) {
+	if (!nvgpu_channel_sync_needs_os_fence_framework(g)) {
 		__nvgpu_set_enabled(g,
 				NVGPU_SUPPORT_DETERMINISTIC_SUBMIT_FULL,
 				true);

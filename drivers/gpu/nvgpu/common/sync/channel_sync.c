@@ -31,23 +31,23 @@
 #include <nvgpu/nvhost.h>
 #include <nvgpu/os_fence.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
-#include "channel_sync_gk20a.h"
-#include "gk20a.h"
-#include "fence_gk20a.h"
-#include "mm_gk20a.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/fence_gk20a.h"
+#include "gk20a/mm_gk20a.h"
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 
-struct gk20a_channel_syncpt {
-	struct gk20a_channel_sync ops;
+struct nvgpu_channel_sync_syncpt {
+	struct nvgpu_channel_sync ops;
 	struct channel_gk20a *c;
 	struct nvgpu_nvhost_dev *nvhost_dev;
 	u32 id;
 	struct nvgpu_mem syncpt_buf;
 };
 
-int gk20a_channel_gen_syncpt_wait_cmd(struct channel_gk20a *c,
+int channel_sync_syncpt_gen_wait_cmd(struct channel_gk20a *c,
 	u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
 	u32 wait_cmd_size, int pos, bool preallocated)
 {
@@ -58,14 +58,14 @@ int gk20a_channel_gen_syncpt_wait_cmd(struct channel_gk20a *c,
 	if (is_expired) {
 		if (preallocated) {
 			nvgpu_memset(c->g, wait_cmd->mem,
-			(wait_cmd->off + pos * wait_cmd_size) * sizeof(u32),
-				0, wait_cmd_size * sizeof(u32));
+			(wait_cmd->off + (u32)pos * wait_cmd_size) * (u32)sizeof(u32),
+				0, wait_cmd_size * (u32)sizeof(u32));
 		}
 	} else {
 		if (!preallocated) {
 			err = gk20a_channel_alloc_priv_cmdbuf(c,
 				c->g->ops.fifo.get_syncpt_wait_cmd_size(), wait_cmd);
-			if (err) {
+			if (err != 0) {
 				nvgpu_err(c->g, "not enough priv cmd buffer space");
 				return err;
 			}
@@ -73,43 +73,45 @@ int gk20a_channel_gen_syncpt_wait_cmd(struct channel_gk20a *c,
 		nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
 				id, c->vm->syncpt_ro_map_gpu_va);
 		c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd,
-			pos * wait_cmd_size, id, thresh,
+			(u32)pos * wait_cmd_size, id, thresh,
 			c->vm->syncpt_ro_map_gpu_va);
 	}
 
 	return 0;
 }
 
-static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
+static int channel_sync_syncpt_wait_raw(struct nvgpu_channel_sync *s,
 		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 	int err = 0;
 	u32 wait_cmd_size = c->g->ops.fifo.get_syncpt_wait_cmd_size();
 
-	if (!nvgpu_nvhost_syncpt_is_valid_pt_ext(sp->nvhost_dev, id))
+	if (!nvgpu_nvhost_syncpt_is_valid_pt_ext(sp->nvhost_dev, id)) {
 		return -EINVAL;
+	}
 
-	err = gk20a_channel_gen_syncpt_wait_cmd(c, id, thresh,
+	err = channel_sync_syncpt_gen_wait_cmd(c, id, thresh,
 			wait_cmd, wait_cmd_size, 0, false);
 
 	return err;
 }
 
-static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
+static int channel_sync_syncpt_wait_fd(struct nvgpu_channel_sync *s, int fd,
 	struct priv_cmd_entry *wait_cmd, int max_wait_cmds)
 {
 	struct nvgpu_os_fence os_fence = {0};
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 	int err = 0;
 
 	err = nvgpu_os_fence_fdget(&os_fence, c, fd);
-	if (err)
+	if (err != 0) {
 		return -EINVAL;
+	}
 
 	err = os_fence.ops->program_waits(&os_fence,
 		wait_cmd, c, max_wait_cmds);
@@ -119,17 +121,17 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	return err;
 }
 
-static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
+static void channel_sync_syncpt_update(void *priv, int nr_completed)
 {
 	struct channel_gk20a *ch = priv;
 
 	gk20a_channel_update(ch);
 
-	/* note: channel_get() is in __gk20a_channel_syncpt_incr() */
+	/* note: channel_get() is in channel_sync_syncpt_incr_common() */
 	gk20a_channel_put(ch);
 }
 
-static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
+static int channel_sync_syncpt_incr_common(struct nvgpu_channel_sync *s,
 				       bool wfi_cmd,
 				       bool register_irq,
 				       struct priv_cmd_entry *incr_cmd,
@@ -138,16 +140,17 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 {
 	u32 thresh;
 	int err;
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 	struct nvgpu_os_fence os_fence = {0};
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c,
 			c->g->ops.fifo.get_syncpt_incr_cmd_size(wfi_cmd),
 			incr_cmd);
-	if (err)
+	if (err != 0) {
 		return err;
+	}
 
 	nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
 				sp->id, sp->syncpt_buf.gpu_va);
@@ -164,14 +167,15 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 		if (referenced) {
 			/* note: channel_put() is in
-			 * gk20a_channel_syncpt_update() */
+			 * channel_sync_syncpt_update() */
 
 			err = nvgpu_nvhost_intr_register_notifier(
 				sp->nvhost_dev,
 				sp->id, thresh,
-				gk20a_channel_syncpt_update, c);
-			if (err)
+				channel_sync_syncpt_update, c);
+			if (err != 0) {
 				gk20a_channel_put(referenced);
+			}
 
 			/* Adding interrupt action should
 			 * never fail. A proper error handling
@@ -187,16 +191,18 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		err = nvgpu_os_fence_syncpt_create(&os_fence, c, sp->nvhost_dev,
 			sp->id, thresh);
 
-		if (err)
+		if (err != 0) {
 			goto clean_up_priv_cmd;
+		}
 	}
 
 	err = gk20a_fence_from_syncpt(fence, sp->nvhost_dev,
 	 sp->id, thresh, os_fence);
 
-	if (err) {
-		if (nvgpu_os_fence_is_initialized(&os_fence))
+	if (err != 0) {
+		if (nvgpu_os_fence_is_initialized(&os_fence) != 0) {
 			os_fence.ops->drop_ref(&os_fence);
+		}
 		goto clean_up_priv_cmd;
 	}
 
@@ -207,7 +213,7 @@ clean_up_priv_cmd:
 	return err;
 }
 
-static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
+static int channel_sync_syncpt_incr(struct nvgpu_channel_sync *s,
 			      struct priv_cmd_entry *entry,
 			      struct gk20a_fence *fence,
 			      bool need_sync_fence,
@@ -215,13 +221,13 @@ static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
-	return __gk20a_channel_syncpt_incr(s,
+	return channel_sync_syncpt_incr_common(s,
 			false /* no wfi */,
 			register_irq /* register irq */,
 			entry, fence, need_sync_fence);
 }
 
-static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
+static int channel_sync_syncpt_incr_user(struct nvgpu_channel_sync *s,
 				   int wait_fence_fd,
 				   struct priv_cmd_entry *entry,
 				   struct gk20a_fence *fence,
@@ -231,44 +237,44 @@ static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 {
 	/* Need to do 'wfi + host incr' since we return the fence
 	 * to user space. */
-	return __gk20a_channel_syncpt_incr(s,
+	return channel_sync_syncpt_incr_common(s,
 			wfi,
 			register_irq /* register irq */,
 			entry, fence, need_sync_fence);
 }
 
-static void gk20a_channel_syncpt_set_min_eq_max(struct gk20a_channel_sync *s)
+static void channel_sync_syncpt_set_min_eq_max(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 }
 
-static void gk20a_channel_syncpt_set_safe_state(struct gk20a_channel_sync *s)
+static void channel_sync_syncpt_set_safe_state(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	nvgpu_nvhost_syncpt_set_safe_state(sp->nvhost_dev, sp->id);
 }
 
-static int gk20a_channel_syncpt_id(struct gk20a_channel_sync *s)
+static int syncpt_get_id(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	return sp->id;
 }
 
-static u64 gk20a_channel_syncpt_address(struct gk20a_channel_sync *s)
+static u64 channel_sync_syncpt_get_address(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 	return sp->syncpt_buf.gpu_va;
 }
 
-static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
+static void channel_sync_syncpt_destroy(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_syncpt *sp =
-		container_of(s, struct gk20a_channel_syncpt, ops);
+	struct nvgpu_channel_sync_syncpt *sp =
+		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
 
 
 	sp->c->g->ops.fifo.free_syncpt_buf(sp->c, &sp->syncpt_buf);
@@ -278,15 +284,16 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 	nvgpu_kfree(sp->c->g, sp);
 }
 
-static struct gk20a_channel_sync *
-gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
+static struct nvgpu_channel_sync *
+channel_sync_syncpt_create(struct channel_gk20a *c, bool user_managed)
 {
-	struct gk20a_channel_syncpt *sp;
+	struct nvgpu_channel_sync_syncpt *sp;
 	char syncpt_name[32];
 
 	sp = nvgpu_kzalloc(c->g, sizeof(*sp));
-	if (!sp)
+	if (sp == NULL) {
 		return NULL;
+	}
 
 	sp->c = c;
 	sp->nvhost_dev = c->g->nvhost_dev;
@@ -304,7 +311,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 		sp->id = nvgpu_nvhost_get_syncpt_host_managed(sp->nvhost_dev,
 						c->chid, syncpt_name);
 	}
-	if (!sp->id) {
+	if (sp->id == 0) {
 		nvgpu_kfree(c->g, sp);
 		nvgpu_err(c->g, "failed to get free syncpt");
 		return NULL;
@@ -316,22 +323,22 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c, bool user_managed)
 	nvgpu_nvhost_syncpt_set_min_eq_max_ext(sp->nvhost_dev, sp->id);
 
 	nvgpu_atomic_set(&sp->ops.refcount, 0);
-	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;
-	sp->ops.wait_fd			= gk20a_channel_syncpt_wait_fd;
-	sp->ops.incr			= gk20a_channel_syncpt_incr;
-	sp->ops.incr_user		= gk20a_channel_syncpt_incr_user;
-	sp->ops.set_min_eq_max		= gk20a_channel_syncpt_set_min_eq_max;
-	sp->ops.set_safe_state		= gk20a_channel_syncpt_set_safe_state;
-	sp->ops.syncpt_id		= gk20a_channel_syncpt_id;
-	sp->ops.syncpt_address		= gk20a_channel_syncpt_address;
-	sp->ops.destroy			= gk20a_channel_syncpt_destroy;
+	sp->ops.wait_syncpt		= channel_sync_syncpt_wait_raw;
+	sp->ops.wait_fd			= channel_sync_syncpt_wait_fd;
+	sp->ops.incr			= channel_sync_syncpt_incr;
+	sp->ops.incr_user		= channel_sync_syncpt_incr_user;
+	sp->ops.set_min_eq_max		= channel_sync_syncpt_set_min_eq_max;
+	sp->ops.set_safe_state		= channel_sync_syncpt_set_safe_state;
+	sp->ops.syncpt_id		= syncpt_get_id;
+	sp->ops.syncpt_address		= channel_sync_syncpt_get_address;
+	sp->ops.destroy			= channel_sync_syncpt_destroy;
 
 	return &sp->ops;
 }
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
 
-struct gk20a_channel_semaphore {
-	struct gk20a_channel_sync ops;
+struct nvgpu_channel_sync_semaphore {
+	struct nvgpu_channel_sync ops;
 	struct channel_gk20a *c;
 
 	/* A semaphore pool owned by this channel. */
@@ -381,47 +388,47 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	}
 }
 
-void gk20a_channel_gen_sema_wait_cmd(struct channel_gk20a *c,
+void channel_sync_semaphore_gen_wait_cmd(struct channel_gk20a *c,
 	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
 	u32 wait_cmd_size, int pos)
 {
-	if (!sema) {
+	if (sema == NULL) {
 		/* expired */
 		nvgpu_memset(c->g, wait_cmd->mem,
-			(wait_cmd->off + pos * wait_cmd_size) * sizeof(u32),
-			0, wait_cmd_size * sizeof(u32));
+			(wait_cmd->off + (u32)pos * wait_cmd_size) * (u32)sizeof(u32),
+			0, wait_cmd_size * (u32)sizeof(u32));
 	} else {
 		WARN_ON(!sema->incremented);
 		add_sema_cmd(c->g, c, sema, wait_cmd,
-			pos * wait_cmd_size, true, false);
+			(u32)pos * wait_cmd_size, true, false);
 		nvgpu_semaphore_put(sema);
 	}
 }
 
-static int gk20a_channel_semaphore_wait_syncpt(
-		struct gk20a_channel_sync *s, u32 id,
+static int channel_sync_semaphore_wait_raw_syncpt(
+		struct nvgpu_channel_sync *s, u32 id,
 		u32 thresh, struct priv_cmd_entry *entry)
 {
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct nvgpu_channel_sync_semaphore *sema =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 	struct gk20a *g = sema->c->g;
 	nvgpu_err(g, "trying to use syncpoint synchronization");
 	return -ENODEV;
 }
 
-static int gk20a_channel_semaphore_wait_fd(
-		struct gk20a_channel_sync *s, int fd,
+static int channel_sync_semaphore_wait_fd(
+		struct nvgpu_channel_sync *s, int fd,
 		struct priv_cmd_entry *entry, int max_wait_cmds)
 {
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct nvgpu_channel_sync_semaphore *sema =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 	struct channel_gk20a *c = sema->c;
 
 	struct nvgpu_os_fence os_fence = {0};
 	int err;
 
 	err = nvgpu_os_fence_fdget(&os_fence, c, fd);
-	if (err) {
+	if (err != 0) {
 		return err;
 	}
 
@@ -433,22 +440,22 @@ static int gk20a_channel_semaphore_wait_fd(
 	return err;
 }
 
-static int __gk20a_channel_semaphore_incr(
-		struct gk20a_channel_sync *s, bool wfi_cmd,
+static int channel_sync_semaphore_incr_common(
+		struct nvgpu_channel_sync *s, bool wfi_cmd,
 		struct priv_cmd_entry *incr_cmd,
 		struct gk20a_fence *fence,
 		bool need_sync_fence)
 {
-	int incr_cmd_size;
-	struct gk20a_channel_semaphore *sp =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	u32 incr_cmd_size;
+	struct nvgpu_channel_sync_semaphore *sp =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 	struct channel_gk20a *c = sp->c;
 	struct nvgpu_semaphore *semaphore;
 	int err = 0;
 	struct nvgpu_os_fence os_fence = {0};
 
 	semaphore = nvgpu_semaphore_alloc(c);
-	if (!semaphore) {
+	if (semaphore == NULL) {
 		nvgpu_err(c->g,
 				"ran out of semaphores");
 		return -ENOMEM;
@@ -479,8 +486,8 @@ static int __gk20a_channel_semaphore_incr(
 		&c->semaphore_wq,
 		os_fence);
 
-	if (err) {
-		if (nvgpu_os_fence_is_initialized(&os_fence)) {
+	if (err != 0) {
+		if (nvgpu_os_fence_is_initialized(&os_fence) != 0) {
 			os_fence.ops->drop_ref(&os_fence);
 		}
 		goto clean_up_sema;
@@ -493,8 +500,8 @@ clean_up_sema:
 	return err;
 }
 
-static int gk20a_channel_semaphore_incr(
-		struct gk20a_channel_sync *s,
+static int channel_sync_semaphore_incr(
+		struct nvgpu_channel_sync *s,
 		struct priv_cmd_entry *entry,
 		struct gk20a_fence *fence,
 		bool need_sync_fence,
@@ -502,13 +509,13 @@ static int gk20a_channel_semaphore_incr(
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
-	return __gk20a_channel_semaphore_incr(s,
+	return channel_sync_semaphore_incr_common(s,
 			false /* no wfi */,
 			entry, fence, need_sync_fence);
 }
 
-static int gk20a_channel_semaphore_incr_user(
-		struct gk20a_channel_sync *s,
+static int channel_sync_semaphore_incr_user(
+		struct nvgpu_channel_sync *s,
 		int wait_fence_fd,
 		struct priv_cmd_entry *entry,
 		struct gk20a_fence *fence,
@@ -519,29 +526,30 @@ static int gk20a_channel_semaphore_incr_user(
 #ifdef CONFIG_SYNC
 	int err;
 
-	err = __gk20a_channel_semaphore_incr(s, wfi, entry, fence,
+	err = channel_sync_semaphore_incr_common(s, wfi, entry, fence,
 			need_sync_fence);
-	if (err)
+	if (err != 0) {
 		return err;
+	}
 
 	return 0;
 #else
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct nvgpu_channel_sync_semaphore *sema =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 	nvgpu_err(sema->c->g,
 		  "trying to use sync fds with CONFIG_SYNC disabled");
 	return -ENODEV;
 #endif
 }
 
-static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
+static void channel_sync_semaphore_set_min_eq_max(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_semaphore *sp =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct nvgpu_channel_sync_semaphore *sp =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 	struct channel_gk20a *c = sp->c;
 	bool updated;
 
-	if (!c->hw_sema) {
+	if (c->hw_sema == NULL) {
 		return;
 	}
 
@@ -552,25 +560,25 @@ static void gk20a_channel_semaphore_set_min_eq_max(struct gk20a_channel_sync *s)
 	}
 }
 
-static void gk20a_channel_semaphore_set_safe_state(struct gk20a_channel_sync *s)
+static void channel_sync_semaphore_set_safe_state(struct nvgpu_channel_sync *s)
 {
 	/* Nothing to do. */
 }
 
-static int gk20a_channel_semaphore_syncpt_id(struct gk20a_channel_sync *s)
+static int channel_sync_semaphore_get_id(struct nvgpu_channel_sync *s)
 {
 	return -EINVAL;
 }
 
-static u64 gk20a_channel_semaphore_syncpt_address(struct gk20a_channel_sync *s)
+static u64 channel_sync_semaphore_get_address(struct nvgpu_channel_sync *s)
 {
 	return 0;
 }
 
-static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
+static void channel_sync_semaphore_destroy(struct nvgpu_channel_sync *s)
 {
-	struct gk20a_channel_semaphore *sema =
-		container_of(s, struct gk20a_channel_semaphore, ops);
+	struct nvgpu_channel_sync_semaphore *sema =
+		container_of(s, struct nvgpu_channel_sync_semaphore, ops);
 
 	struct channel_gk20a *c = sema->c;
 	struct gk20a *g = c->g;
@@ -586,21 +594,21 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 	nvgpu_kfree(sema->c->g, sema);
 }
 
-static struct gk20a_channel_sync *
-gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
+static struct nvgpu_channel_sync *
+channel_sync_semaphore_create(struct channel_gk20a *c, bool user_managed)
 {
-	struct gk20a_channel_semaphore *sema;
+	struct nvgpu_channel_sync_semaphore *sema;
 	struct gk20a *g = c->g;
 	char pool_name[20];
 	int asid = -1;
 	int err;
 
-	if (WARN_ON(!c->vm)) {
+	if (WARN_ON(c->vm == NULL)) {
 		return NULL;
 	}
 
 	sema = nvgpu_kzalloc(c->g, sizeof(*sema));
-	if (!sema) {
+	if (sema == NULL) {
 		return NULL;
 	}
 	sema->c = c;
@@ -608,7 +616,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 	sprintf(pool_name, "semaphore_pool-%d", c->chid);
 	sema->pool = c->vm->sema_pool;
 
-	if (c->vm->as_share) {
+	if (c->vm->as_share != NULL) {
 		asid = c->vm->as_share->id;
 	}
 
@@ -617,27 +625,27 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c, bool user_managed)
 		err = g->os_channel.init_os_fence_framework(c,
 			"gk20a_ch%d_as%d", c->chid, asid);
 
-		if (err) {
+		if (err != 0) {
 			nvgpu_kfree(g, sema);
 			return NULL;
 		}
 	}
 
 	nvgpu_atomic_set(&sema->ops.refcount, 0);
-	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
-	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
-	sema->ops.incr		= gk20a_channel_semaphore_incr;
-	sema->ops.incr_user	= gk20a_channel_semaphore_incr_user;
-	sema->ops.set_min_eq_max = gk20a_channel_semaphore_set_min_eq_max;
-	sema->ops.set_safe_state = gk20a_channel_semaphore_set_safe_state;
-	sema->ops.syncpt_id	= gk20a_channel_semaphore_syncpt_id;
-	sema->ops.syncpt_address = gk20a_channel_semaphore_syncpt_address;
-	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
+	sema->ops.wait_syncpt	= channel_sync_semaphore_wait_raw_syncpt;
+	sema->ops.wait_fd	= channel_sync_semaphore_wait_fd;
+	sema->ops.incr		= channel_sync_semaphore_incr;
+	sema->ops.incr_user	= channel_sync_semaphore_incr_user;
+	sema->ops.set_min_eq_max = channel_sync_semaphore_set_min_eq_max;
+	sema->ops.set_safe_state = channel_sync_semaphore_set_safe_state;
+	sema->ops.syncpt_id	= channel_sync_semaphore_get_id;
+	sema->ops.syncpt_address = channel_sync_semaphore_get_address;
+	sema->ops.destroy	= channel_sync_semaphore_destroy;
 
 	return &sema->ops;
 }
 
-void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
+void nvgpu_channel_sync_destroy(struct nvgpu_channel_sync *sync,
 	bool set_safe_state)
 {
 	if (set_safe_state) {
@@ -646,17 +654,17 @@ void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync,
 	sync->destroy(sync);
 }
 
-struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
+struct nvgpu_channel_sync *nvgpu_channel_sync_create(struct channel_gk20a *c,
 	bool user_managed)
 {
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	if (gk20a_platform_has_syncpoints(c->g))
-		return gk20a_channel_syncpt_create(c, user_managed);
+		return channel_sync_syncpt_create(c, user_managed);
 #endif
-	return gk20a_channel_semaphore_create(c, user_managed);
+	return channel_sync_semaphore_create(c, user_managed);
 }
 
-bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g)
+bool nvgpu_channel_sync_needs_os_fence_framework(struct gk20a *g)
 {
 	return !gk20a_platform_has_syncpoints(g);
 }

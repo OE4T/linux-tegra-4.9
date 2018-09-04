@@ -50,7 +50,8 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/mc/mc_gm20b.o \
 	common/mc/mc_gp10b.o  \
 	common/mc/mc_gv11b.o  \
-	common/mc/mc_gv100.o
+	common/mc/mc_gv100.o \
+	common/sync/channel_sync.o
 
 # Linux specific parts of nvgpu.
 nvgpu-y += \
@@ -228,7 +229,6 @@ nvgpu-y += \
 	gk20a/gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
-	gk20a/channel_sync_gk20a.o \
 	gk20a/dbg_gpu_gk20a.o \
 	gk20a/regops_gk20a.o \
 	gk20a/gr_gk20a.o \

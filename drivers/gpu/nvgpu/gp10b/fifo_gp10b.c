@@ -30,11 +30,11 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
 #include "fifo_gp10b.h"
 
 #include "gm20b/fifo_gm20b.h"
-#include "gk20a/channel_sync_gk20a.h"
 
 #include <nvgpu/hw/gp10b/hw_pbdma_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ccsr_gp10b.h>

@@ -23,9 +23,9 @@
 #include <nvgpu/nvhost.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/channel_sync_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 #include "../drivers/staging/android/sync.h"
@@ -76,7 +76,7 @@ int nvgpu_os_fence_syncpt_wait_gen_cmd(struct nvgpu_os_fence *s,
 		u32 wait_id = nvgpu_nvhost_sync_pt_id(pt);
 		u32 wait_value = nvgpu_nvhost_sync_pt_thresh(pt);
 
-		err = gk20a_channel_gen_syncpt_wait_cmd(c, wait_id, wait_value,
+		err = channel_sync_syncpt_gen_wait_cmd(c, wait_id, wait_value,
 			wait_cmd, wait_cmd_size, i, true);
 	}
 

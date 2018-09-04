@@ -100,6 +100,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/pmu/pmu_perfmon.c \
 	common/pmu/pmu_debug.c \
 	common/ptimer/ptimer.c \
+	common/sync/channel_sync.c \
 	common/clock_gating/gm20b_gating_reglist.c \
 	common/clock_gating/gp10b_gating_reglist.c \
 	common/clock_gating/gv11b_gating_reglist.c \
@@ -147,7 +148,6 @@ srcs :=	os/posix/nvgpu.c \
 	common/ptimer/ptimer_gk20a.c \
 	gk20a/ce2_gk20a.c \
 	gk20a/fifo_gk20a.c \
-	gk20a/channel_sync_gk20a.c \
 	gk20a/dbg_gpu_gk20a.c \
 	gk20a/regops_gk20a.c \
 	gk20a/gr_gk20a.c \

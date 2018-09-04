@@ -24,12 +24,12 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/os_sched.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/channel_sync.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
-#include "gk20a/channel_sync_gk20a.h"
 
 #include <trace/events/gk20a.h>
 
@@ -56,7 +56,7 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 	if (g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
 		if (!c->sync) {
-			c->sync = gk20a_channel_sync_create(c, false);
+			c->sync = nvgpu_channel_sync_create(c, false);
 			if (!c->sync) {
 				err = -ENOMEM;
 				nvgpu_mutex_release(&c->sync_lock);
@@ -409,7 +409,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		}
 
 		need_sync_framework =
-			gk20a_channel_sync_needs_sync_framework(g) ||
+			nvgpu_channel_sync_needs_os_fence_framework(g) ||
 			(flags & NVGPU_SUBMIT_FLAGS_SYNC_FENCE &&
 			 flags & NVGPU_SUBMIT_FLAGS_FENCE_GET);
 

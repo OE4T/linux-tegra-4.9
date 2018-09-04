@@ -44,11 +44,11 @@
 #include <nvgpu/log2.h>
 #include <nvgpu/ptimer.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
-#include "gk20a/channel_sync_gk20a.h"
 
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 static void gk20a_channel_dump_ref_actions(struct channel_gk20a *c);
@@ -416,7 +416,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	/* sync must be destroyed before releasing channel vm */
 	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->sync) {
-		gk20a_channel_sync_destroy(ch->sync, false);
+		nvgpu_channel_sync_destroy(ch->sync, false);
 		ch->sync = NULL;
 	}
 	if (ch->user_sync) {
@@ -425,9 +425,9 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		 * But it's already done if channel has timedout
 		 */
 		if (ch->has_timedout) {
-			gk20a_channel_sync_destroy(ch->user_sync, false);
+			nvgpu_channel_sync_destroy(ch->user_sync, false);
 		} else {
-			gk20a_channel_sync_destroy(ch->user_sync, true);
+			nvgpu_channel_sync_destroy(ch->user_sync, true);
 		}
 		ch->user_sync = NULL;
 	}
@@ -1191,7 +1191,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	if (g->aggressive_sync_destroy_thresh == 0U) {
 		nvgpu_mutex_acquire(&c->sync_lock);
-		c->sync = gk20a_channel_sync_create(c, false);
+		c->sync = nvgpu_channel_sync_create(c, false);
 		if (c->sync == NULL) {
 			err = -ENOMEM;
 			nvgpu_mutex_release(&c->sync_lock);
@@ -1253,7 +1253,7 @@ clean_up_prealloc:
 	}
 clean_up_sync:
 	if (c->sync) {
-		gk20a_channel_sync_destroy(c->sync, false);
+		nvgpu_channel_sync_destroy(c->sync, false);
 		c->sync = NULL;
 	}
 clean_up_unmap:
@@ -1984,7 +1984,7 @@ void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 				if (nvgpu_atomic_dec_and_test(
 					&c->sync->refcount) &&
 						g->aggressive_sync_destroy) {
-					gk20a_channel_sync_destroy(c->sync,
+					nvgpu_channel_sync_destroy(c->sync,
 						false);
 					c->sync = NULL;
 				}

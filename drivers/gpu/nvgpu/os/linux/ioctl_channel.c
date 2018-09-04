@@ -35,11 +35,11 @@
 #include <nvgpu/nvhost.h>
 #include <nvgpu/os_sched.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
-#include "gk20a/channel_sync_gk20a.h"
 
 #include "platform_gk20a.h"
 #include "ioctl_channel.h"
@@ -1028,7 +1028,7 @@ static int nvgpu_ioctl_channel_get_user_syncpoint(struct channel_gk20a *ch,
 	if (ch->user_sync) {
 		nvgpu_mutex_release(&ch->sync_lock);
 	} else {
-		ch->user_sync = gk20a_channel_sync_create(ch, true);
+		ch->user_sync = nvgpu_channel_sync_create(ch, true);
 		if (!ch->user_sync) {
 			nvgpu_mutex_release(&ch->sync_lock);
 			return -ENOMEM;

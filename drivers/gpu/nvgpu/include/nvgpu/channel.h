@@ -35,7 +35,7 @@ struct gk20a;
 struct dbg_session_gk20a;
 struct gk20a_fence;
 struct fifo_profile_gk20a;
-struct gk20a_channel_sync;
+struct nvgpu_channel_sync;
 struct nvgpu_gpfifo_userdata;
 
 /* Flags to be passed to gk20a_channel_alloc_gpfifo() */
@@ -289,8 +289,8 @@ struct channel_gk20a {
 	struct nvgpu_list_node dbg_s_list;
 
 	struct nvgpu_mutex sync_lock;
-	struct gk20a_channel_sync *sync;
-	struct gk20a_channel_sync *user_sync;
+	struct nvgpu_channel_sync *sync;
+	struct nvgpu_channel_sync *user_sync;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;

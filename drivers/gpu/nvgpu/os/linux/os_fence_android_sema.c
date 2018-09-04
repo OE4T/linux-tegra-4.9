@@ -21,8 +21,8 @@
 #include <nvgpu/linux/os_fence_android.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/channel_sync.h>
 
-#include "gk20a/channel_sync_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 #include "sync_sema_android.h"
@@ -63,7 +63,7 @@ int nvgpu_os_fence_sema_wait_gen_cmd(struct nvgpu_os_fence *s,
 			sync_fence->cbs[i].sync_pt);
 
 		sema = gk20a_sync_pt_sema(pt);
-		gk20a_channel_gen_sema_wait_cmd(c, sema, wait_cmd,
+		channel_sync_semaphore_gen_wait_cmd(c, sema, wait_cmd,
 			wait_cmd_size, i);
 	}
 

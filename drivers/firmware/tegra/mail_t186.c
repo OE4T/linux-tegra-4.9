@@ -483,6 +483,7 @@ static void bpmp_return_data(const struct mail_ops *ops,
 		int ch, int code, void *data, int sz)
 {
 	const int flags = channel_area[ch].ib->flags;
+	void __iomem *addr;
 	struct ivc *ivc;
 	struct mb_data *frame;
 	int r;
@@ -506,7 +507,8 @@ static void bpmp_return_data(const struct mail_ops *ops,
 	}
 
 	frame->code = code;
-	memcpy_toio(frame->data, data, sz);
+	addr = (void __iomem*) frame->data;
+	memcpy_toio(addr, data, sz);
 	r = tegra_ivc_write_advance(ivc);
 	WARN_ON(r);
 

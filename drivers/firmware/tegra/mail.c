@@ -43,6 +43,7 @@ EXPORT_SYMBOL(tegra_bpmp_mail_readl);
 
 int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 {
+	void __iomem *addr;
 	unsigned int m;
 
 	if (!data || sz > MSG_DATA_MIN_SZ)
@@ -52,7 +53,9 @@ int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 	if (!m)
 		return -EINVAL;
 
-	memcpy_fromio(data, channel_area[ch].ib->data, sz);
+	addr = (void __iomem*)channel_area[ch].ib->data;
+
+	memcpy_fromio(data, addr, sz);
 
 	return 0;
 }
@@ -167,11 +170,15 @@ static int bpmp_wait_master_free(int ch)
 static void __bpmp_write_ch(int ch, int mrq, int flags, void *data, int sz)
 {
 	struct mb_data *p = channel_area[ch].ob;
+	void __iomem *addr;
 
 	p->code = mrq;
 	p->flags = flags;
-	if (data)
-		memcpy_toio(p->data, data, sz);
+
+	if (data) {
+		addr = (void __iomem *)p->data;
+		memcpy_toio(addr, data, sz);
+	}
 
 	mail_ops->signal_slave(mail_ops, ch);
 }
@@ -220,8 +227,12 @@ static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 static int __bpmp_read_ch(int ch, void *data, int sz)
 {
 	struct mb_data *p = channel_area[ch].ib;
-	if (data)
-		memcpy_fromio(data, p->data, sz);
+	void __iomem *addr;
+
+	if (data) {
+		addr = (void __iomem*) p->data;
+		memcpy_fromio(data, addr, sz);
+	}
 
 	mail_ops->free_master(mail_ops, ch);
 

@@ -501,6 +501,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <8>;
+		linux,pci-domain = <0>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_0>;
 		clock-names = "core_clk";
@@ -563,6 +564,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <1>;
+		linux,pci-domain = <1>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_1>;
 		clock-names = "core_clk";
@@ -626,6 +628,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <1>;
+		linux,pci-domain = <2>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_2>;
 		clock-names = "core_clk";
@@ -688,6 +691,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <1>;
+		linux,pci-domain = <3>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_3>;
 		clock-names = "core_clk";
@@ -750,6 +754,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <4>;
+		linux,pci-domain = <4>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_4>;
 		clock-names = "core_clk";
@@ -812,6 +817,7 @@
 		#size-cells = <2>;
 		device_type = "pci";
 		num-lanes = <8>;
+		linux,pci-domain = <5>;
 
 		clocks = <&bpmp_clks TEGRA194_CLK_PEX1_CORE_5>;
 		clock-names = "core_clk";

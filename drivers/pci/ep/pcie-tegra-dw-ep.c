@@ -234,7 +234,7 @@
 #define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_SHIFT (15)
 #define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 (2)
 
-#define LTR_MSG_TIMEOUT (100*1000)
+#define LTR_MSG_TIMEOUT (100 * 1000)
 
 #define EVENT_QUEUE_LEN	(256)
 
@@ -293,6 +293,7 @@ struct margin_cmd {
 	int rxm_payload_check;
 	int rxm_cmd_check;
 };
+
 struct tegra_pcie_dw_ep {
 	struct device *dev;
 	struct resource *appl_res;
@@ -1059,7 +1060,7 @@ static int verify_timing_margin(struct seq_file *s, void *data)
 
 	val = readl(pcie->dbi_base + pcie->margin_port_cap);
 	if (!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_SW_READY) &&
-		!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_READY)) {
+	    !(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_READY)) {
 		seq_puts(s, "Lane margining is not ready\n");
 		return 0;
 	}
@@ -1132,7 +1133,7 @@ static int verify_voltage_margin(struct seq_file *s, void *data)
 
 	val = readl(pcie->dbi_base + pcie->margin_port_cap);
 	if (!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_SW_READY) &&
-		!(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_READY)) {
+	    !(val & MARGIN_PORT_CAP_STATUS_REG_MARGINING_READY)) {
 		seq_puts(s, "Lane margining is not ready\n");
 		return 0;
 	}

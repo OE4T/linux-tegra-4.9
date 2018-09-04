@@ -176,6 +176,7 @@ srcs :=	os/posix/nvgpu.c \
 	gp10b/pmu_gp10b.c \
 	gp10b/hal_gp10b.c \
 	gp10b/regops_gp10b.c \
+	gp10b/clk_arb_gp10b.c \
 	gp10b/fecs_trace_gp10b.c \
 	gp10b/gp10b.c \
 	gp10b/ecc_gp10b.c \

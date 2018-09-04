@@ -171,6 +171,8 @@ static int gp10b_tegra_probe(struct device *dev)
 
 	nvgpu_mutex_init(&platform->clk_get_freq_lock);
 
+	platform->g->ops.clk.support_clk_freq_controller = true;
+
 	return 0;
 }
 

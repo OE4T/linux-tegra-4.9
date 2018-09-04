@@ -1117,6 +1117,8 @@ struct gpu_ops {
 	struct {
 		int (*arbiter_clk_init)(struct gk20a *g);
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);
+		int (*get_arbiter_f_points)(struct gk20a *g,u32 api_domain,
+				u32 *num_points, u16 *freqs_in_mhz);
 		int (*get_arbiter_clk_range)(struct gk20a *g, u32 api_domain,
 				u16 *min_mhz, u16 *max_mhz);
 		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,

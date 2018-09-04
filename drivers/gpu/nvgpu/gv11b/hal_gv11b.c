@@ -67,6 +67,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_gp10b.h"
+#include "gp10b/clk_arb_gp10b.h"
 
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
@@ -708,6 +709,15 @@ static const struct gpu_ops gv11b_ops = {
 		.handle_ext_irq = gv11b_pmu_handle_ext_irq,
 		.is_debug_mode_enabled = gm20b_pmu_is_debug_mode_en,
 	},
+	.clk_arb = {
+		.get_arbiter_clk_domains = gp10b_get_arbiter_clk_domains,
+		.get_arbiter_f_points = gp10b_get_arbiter_f_points,
+		.get_arbiter_clk_range = gp10b_get_arbiter_clk_range,
+		.get_arbiter_clk_default = gp10b_get_arbiter_clk_default,
+		.arbiter_clk_init = gp10b_init_clk_arbiter,
+		.clk_arb_run_arbiter_cb = gp10b_clk_arb_run_arbiter_cb,
+		.clk_arb_cleanup = gp10b_clk_arb_cleanup,
+	},
 	.regops = {
 		.exec_regops = exec_regops_gk20a,
 		.get_global_whitelist_ranges =
@@ -847,6 +857,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->falcon = gv11b_ops.falcon;
 	gops->priv_ring = gv11b_ops.priv_ring;
 	gops->fuse = gv11b_ops.fuse;
+	gops->clk_arb = gv11b_ops.clk_arb;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =

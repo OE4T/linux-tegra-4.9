@@ -217,6 +217,8 @@ struct nvgpu_clk_arb {
 	u16 *gpc2clk_f_points;
 	u32 gpc2clk_f_numpoints;
 
+	bool clk_arb_events_supported;
+
 	nvgpu_atomic64_t alarm_mask;
 	struct nvgpu_clk_notification_queue notification_queue;
 

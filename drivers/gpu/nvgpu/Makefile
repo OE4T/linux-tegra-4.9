@@ -287,6 +287,7 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 
 nvgpu-y += \
 	gp10b/gr_gp10b.o  \
+	gp10b/clk_arb_gp10b.o \
 	gp10b/gr_ctx_gp10b.o  \
 	gp10b/ce_gp10b.o \
 	gp10b/fifo_gp10b.o  \

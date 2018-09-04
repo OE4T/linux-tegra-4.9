@@ -55,6 +55,13 @@ static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 
 	clk_arb_dbg(session->g, " ");
 
+	/* This is done to account for the extra refcount taken in
+	 * nvgpu_clk_arb_commit_request_fd without events support in iGPU
+	 */
+	if (!session->g->clk_arb->clk_arb_events_supported) {
+		nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
+	}
+
 	nvgpu_ref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	nvgpu_ref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	return 0;
@@ -425,6 +432,10 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 		err = -EINVAL;
 		goto fdput_fd;
 	}
+
+	clk_arb_dbg(g, "requested target = %u\n",
+		(u32)dev->gpc2clk_target_mhz);
+
 	nvgpu_ref_get(&dev->refcount);
 	nvgpu_spinlock_acquire(&session->session_lock);
 	nvgpu_list_add(&dev->node, &session->targets);

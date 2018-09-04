@@ -31,6 +31,13 @@ u32 gp106_get_arbiter_clk_domains(struct gk20a *g)
 	return (CTRL_CLK_DOMAIN_MCLK|CTRL_CLK_DOMAIN_GPC2CLK);
 }
 
+int gp106_get_arbiter_f_points(struct gk20a *g,u32 api_domain,
+				u32 *num_points, u16 *freqs_in_mhz)
+{
+	return g->ops.clk.clk_domain_get_f_points(g,
+		api_domain, num_points, freqs_in_mhz);
+}
+
 int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 		u16 *min_mhz, u16 *max_mhz)
 {
@@ -128,6 +135,8 @@ int gp106_init_clk_arbiter(struct gk20a *g)
 	arb = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_arb));
 	if (!arb)
 		return -ENOMEM;
+
+	arb->clk_arb_events_supported = true;
 
 	err = nvgpu_mutex_init(&arb->pstate_lock);
 	if (err)

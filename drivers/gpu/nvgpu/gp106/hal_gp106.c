@@ -679,6 +679,7 @@ static const struct gpu_ops gp106_ops = {
 	},
 	.clk_arb = {
 		.get_arbiter_clk_domains = gp106_get_arbiter_clk_domains,
+		.get_arbiter_f_points = gp106_get_arbiter_f_points,
 		.get_arbiter_clk_range = gp106_get_arbiter_clk_range,
 		.get_arbiter_clk_default = gp106_get_arbiter_clk_default,
 		.get_current_pstate = nvgpu_clk_arb_get_current_pstate,

@@ -23,6 +23,7 @@
 #ifndef _BOARDOBJ_H_
 #define _BOARDOBJ_H_
 
+#include <nvgpu/list.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 #include "ctrl/ctrlboardobj.h"

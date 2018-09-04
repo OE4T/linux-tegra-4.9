@@ -486,7 +486,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USERSPACE_MANAGED_AS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG, true);
 
-	if (g->ops.clk_arb.get_arbiter_clk_domains) {
+	if (g->ops.clk_arb.get_arbiter_clk_domains != NULL &&
+		g->ops.clk.support_clk_freq_controller) {
 		__nvgpu_set_enabled(g, NVGPU_SUPPORT_CLOCK_CONTROLS, true);
 	}
 

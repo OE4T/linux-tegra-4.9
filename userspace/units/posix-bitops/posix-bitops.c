@@ -25,7 +25,7 @@
 #include <unit/io.h>
 #include <unit/unit.h>
 
-#include <nvgpu/posix/bitops.h>
+#include <nvgpu/bitops.h>
 
 #define NUM_WORDS 4
 

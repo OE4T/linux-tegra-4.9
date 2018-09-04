@@ -2743,7 +2743,8 @@ static void __exit ahci_exit(void)
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
-static void dbg_ahci_dump_regs(struct seq_file *s, u32 *ptr, u32 base, u32 regs)
+static void dbg_ahci_dump_regs(struct seq_file *s, void __iomem *ptr, u32 base,
+		u32 regs)
 {
 #define REGS_PER_LINE	4
 
@@ -2764,7 +2765,7 @@ static void dbg_ahci_dump_regs(struct seq_file *s, u32 *ptr, u32 base, u32 regs)
 static int dbg_ahci_dump_show(struct seq_file *s, void *unused)
 {
 	u32 base;
-	u32 *ptr;
+	void __iomem *ptr;
 	u32 i;
 #ifndef CONFIG_TEGRA_AHCI_CONTEXT_RESTORE
 #ifdef CONFIG_TEGRA_SATA_IDLE_POWERGATE

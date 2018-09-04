@@ -74,34 +74,48 @@ static u32 clktranslatehalmumsettoapinumset(u32 clkhaldomains)
 {
 	u32   clkapidomains = 0;
 
-	if (clkhaldomains & BIT(clkwhich_gpcclk))
+	if (clkhaldomains & BIT(clkwhich_gpcclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_GPCCLK;
-	if (clkhaldomains & BIT(clkwhich_xbarclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_xbarclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_XBARCLK;
-	if (clkhaldomains & BIT(clkwhich_sysclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_sysclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_SYSCLK;
-	if (clkhaldomains & BIT(clkwhich_hubclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_hubclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_HUBCLK;
-	if (clkhaldomains & BIT(clkwhich_hostclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_hostclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_HOSTCLK;
-	if (clkhaldomains & BIT(clkwhich_gpc2clk))
+	}
+	if (clkhaldomains & BIT(clkwhich_gpc2clk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_GPC2CLK;
-	if (clkhaldomains & BIT(clkwhich_xbar2clk))
+	}
+	if (clkhaldomains & BIT(clkwhich_xbar2clk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_XBAR2CLK;
-	if (clkhaldomains & BIT(clkwhich_sys2clk))
+	}
+	if (clkhaldomains & BIT(clkwhich_sys2clk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_SYS2CLK;
-	if (clkhaldomains & BIT(clkwhich_hub2clk))
+	}
+	if (clkhaldomains & BIT(clkwhich_hub2clk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_HUB2CLK;
-	if (clkhaldomains & BIT(clkwhich_pwrclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_pwrclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_PWRCLK;
-	if (clkhaldomains & BIT(clkwhich_pciegenclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_pciegenclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_PCIEGENCLK;
-	if (clkhaldomains & BIT(clkwhich_mclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_mclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_MCLK;
-	if (clkhaldomains & BIT(clkwhich_nvdclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_nvdclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_NVDCLK;
-	if (clkhaldomains & BIT(clkwhich_dispclk))
+	}
+	if (clkhaldomains & BIT(clkwhich_dispclk)) {
 		clkapidomains |= CTRL_CLK_DOMAIN_DISPCLK;
+	}
 
 	return clkapidomains;
 }
@@ -131,10 +145,11 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 	pset->b_debug_mode = false;
 	pset->b_enforce_vf_monotonicity = pdomains->b_enforce_vf_monotonicity;
 	pset->b_enforce_vf_smoothening = pdomains->b_enforce_vf_smoothening;
-	if (g->ops.clk.split_rail_support)
+	if (g->ops.clk.split_rail_support) {
 		pset->volt_rails_max = 2;
-	else
+	} else {
 		pset->volt_rails_max = 1;
+	}
 	status = boardobjgrpmask_export(
 				&pdomains->master_domains_mask.super,
 				pdomains->master_domains_mask.super.bitcount,
@@ -160,8 +175,9 @@ static u32 _clk_domains_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
@@ -222,8 +238,9 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 		sizeof(struct ctrl_clk_clk_delta));
 
 	status = devinit_get_clocks_table(g, pclkdomainobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	BOARDOBJGRP_FOR_EACH(&(pclkdomainobjs->super.super),
 			     struct clk_domain *, pdomain, i) {
@@ -232,16 +249,18 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 				CTRL_CLK_CLK_DOMAIN_TYPE_3X_PROG)) {
 			status = boardobjgrpmask_bitset(
 				&pclkdomainobjs->prog_domains_mask.super, i);
-			if (status)
+			if (status) {
 				goto done;
+			}
 		}
 
 		if (pdomain->super.implements(g, &pdomain->super,
 				CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER)) {
 			status = boardobjgrpmask_bitset(
 				&pclkdomainobjs->master_domains_mask.super, i);
-			if (status)
+			if (status) {
 				goto done;
+			}
 		}
 
 		if (pdomain->super.implements(g, &pdomain->super,
@@ -271,8 +290,9 @@ u32 clk_domain_pmu_setup(struct gk20a *g)
 
 	pboardobjgrp = &g->clk_pmu.clk_domainobjs.super.super;
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
@@ -511,8 +531,9 @@ static u32 clk_domain_construct_super(struct gk20a *g,
 	status = boardobj_construct_super(g, ppboardobj,
 		size, pargs);
 
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain *)*ppboardobj;
 
@@ -547,8 +568,9 @@ static u32 _clk_domain_pmudatainit_3x(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = clk_domain_pmudatainit_super(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain_3x = (struct clk_domain_3x *)board_obj_ptr;
 
@@ -572,8 +594,9 @@ static u32 clk_domain_construct_3x(struct gk20a *g,
 	ptmpobj->type_mask = BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X);
 	status = clk_domain_construct_super(g, ppboardobj,
 					size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain_3x *)*ppboardobj;
 
@@ -601,8 +624,9 @@ static u32 clkdomainclkproglink_3x_prog(struct gk20a *g,
 	     i <= p3xprog->clk_prog_idx_last;
 	     i++) {
 		pprog = CLK_CLK_PROG_GET(pclk, i);
-		if (pprog == NULL)
+		if (pprog == NULL) {
 			status = -EINVAL;
+		}
 	}
 	return status;
 }
@@ -621,11 +645,13 @@ static int clkdomaingetslaveclk(struct gk20a *g,
 
 	nvgpu_log_info(g, " ");
 
-	if (pclkmhz == NULL)
+	if (pclkmhz == NULL) {
 		return -EINVAL;
+	}
 
-	if (masterclkmhz == 0)
+	if (masterclkmhz == 0) {
 		return -EINVAL;
+	}
 
 	slaveidx = BOARDOBJ_GET_IDX(pdomain);
 	p3xmaster = (struct clk_domain_3x_master *)
@@ -662,11 +688,13 @@ static int clkdomainvfsearch(struct gk20a *g,
 
 	nvgpu_log_info(g, " ");
 
-	if ((pclkmhz == NULL) || (pvoltuv == NULL))
+	if ((pclkmhz == NULL) || (pvoltuv == NULL)) {
 		return -EINVAL;
+	}
 
-	if ((*pclkmhz != 0) && (*pvoltuv != 0))
+	if ((*pclkmhz != 0) && (*pvoltuv != 0)) {
 		return -EINVAL;
+	}
 
 	bestclkmhz = *pclkmhz;
 	bestvoltuv = *pvoltuv;
@@ -749,15 +777,18 @@ static u32 clkdomaingetfpoints
 
 	nvgpu_log_info(g, " ");
 
-	if (pfpointscount == NULL)
+	if (pfpointscount == NULL) {
 		return -EINVAL;
+	}
 
-	if ((pfreqpointsinmhz == NULL) && (*pfpointscount != 0))
+	if ((pfreqpointsinmhz == NULL) && (*pfpointscount != 0)) {
 		return -EINVAL;
+	}
 
 	if (pdomain->super.implements(g, &pdomain->super,
-			CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE))
+			CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE)) {
 		return -EINVAL;
+	}
 
 	freqpointsdata = pfreqpointsinmhz;
 	totalcount = 0;
@@ -779,8 +810,9 @@ static u32 clkdomaingetfpoints
 		if (*pfpointscount) {
 			remainingcount -= fpointscount;
 			fpointscount = remainingcount;
-		} else
+		} else {
 			fpointscount = 0;
+		}
 
 	}
 
@@ -802,8 +834,9 @@ static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain_3x_prog = (struct clk_domain_3x_prog *)board_obj_ptr;
 
@@ -839,8 +872,9 @@ static u32 clk_domain_construct_3x_prog(struct gk20a *g,
 
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X_PROG);
 	status = clk_domain_construct_3x(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain_3x_prog *)*ppboardobj;
 
@@ -882,8 +916,9 @@ static u32 _clk_domain_pmudatainit_3x_slave(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x_prog(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain_3x_slave = (struct clk_domain_3x_slave *)board_obj_ptr;
 
@@ -905,13 +940,15 @@ static u32 clk_domain_construct_3x_slave(struct gk20a *g,
 			(struct clk_domain_3x_slave *)pargs;
 	u32 status = 0;
 
-	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE)
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE) {
 		return -EINVAL;
+	}
 
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE);
 	status = clk_domain_construct_3x_prog(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain_3x_slave *)*ppboardobj;
 
@@ -941,8 +978,9 @@ static u32 clkdomainclkproglink_3x_master(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = clkdomainclkproglink_3x_prog(g, pclk, pdomain);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	/* Iterate over the set of CLK_PROGs pointed at by this domain.*/
 	for (i = p3xmaster->super.clk_prog_idx_first;
@@ -960,8 +998,9 @@ static u32 clkdomainclkproglink_3x_master(struct gk20a *g,
 		pprog1xmaster = (struct clk_prog_1x_master *)pprog;
 		status = pprog1xmaster->vfflatten(g, pclk, pprog1xmaster,
 			BOARDOBJ_GET_IDX(p3xmaster), &freq_max_last_mhz);
-		if (status)
+		if (status) {
 			goto done;
+		}
 	}
 done:
 	nvgpu_log_info(g, "done status %x", status);
@@ -979,8 +1018,9 @@ static u32 _clk_domain_pmudatainit_3x_master(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x_prog(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain_3x_master = (struct clk_domain_3x_master *)board_obj_ptr;
 
@@ -1000,13 +1040,15 @@ static u32 clk_domain_construct_3x_master(struct gk20a *g,
 	struct clk_domain_3x_master *pdomain;
 	u32 status = 0;
 
-	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER)
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER) {
 		return -EINVAL;
+	}
 
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER);
 	status = clk_domain_construct_3x_prog(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain_3x_master *)*ppboardobj;
 
@@ -1039,8 +1081,9 @@ static u32 _clk_domain_pmudatainit_3x_fixed(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = _clk_domain_pmudatainit_3x(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain_3x_fixed = (struct clk_domain_3x_fixed *)board_obj_ptr;
 
@@ -1062,13 +1105,15 @@ static u32 clk_domain_construct_3x_fixed(struct gk20a *g,
 			(struct clk_domain_3x_fixed *)pargs;
 	u32 status = 0;
 
-	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED)
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED) {
 		return -EINVAL;
+	}
 
 	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_DOMAIN_TYPE_3X_FIXED);
 	status = clk_domain_construct_3x(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pdomain = (struct clk_domain_3x_fixed *)*ppboardobj;
 
@@ -1109,8 +1154,9 @@ static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs)
 		return NULL;
 	}
 
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	nvgpu_log_info(g, " Done");
 
@@ -1128,8 +1174,9 @@ static u32 clk_domain_pmudatainit_super(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pclk_domain = (struct clk_domain *)board_obj_ptr;
 

@@ -84,8 +84,9 @@ static u32 _clk_fll_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
@@ -104,8 +105,9 @@ static u32 _clk_fll_devgrp_pmustatus_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmustatus = (struct nv_pmu_boardobj_query *)
 			&pgrp_get_status->objects[idx].data.board_obj;
@@ -157,8 +159,9 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 	boardobjgrpmask_e32_init(&pfllobjs->lut_prog_master_mask, NULL);
 
 	status = devinit_get_fll_device_table(g, pfllobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = BOARDOBJGRP_PMU_CMD_GRP_GET_STATUS_CONSTRUCT(g,
 				&g->clk_pmu.avfs_fllobjs.super.super,
@@ -215,8 +218,9 @@ u32 clk_fll_pmu_setup(struct gk20a *g)
 
 	pboardobjgrp = &g->clk_pmu.avfs_fllobjs.super.super;
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
@@ -252,18 +256,20 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 
 	memcpy(&fll_desc_table_header_sz, fll_table_ptr,
 			sizeof(struct fll_descriptor_header));
-	if (fll_desc_table_header_sz.size >= FLL_DESCRIPTOR_HEADER_10_SIZE_6)
+	if (fll_desc_table_header_sz.size >= FLL_DESCRIPTOR_HEADER_10_SIZE_6) {
 		desctablesize = FLL_DESCRIPTOR_HEADER_10_SIZE_6;
-	else
+	} else {
 		desctablesize = FLL_DESCRIPTOR_HEADER_10_SIZE_4;
+	}
 
 	memcpy(&fll_desc_table_header, fll_table_ptr, desctablesize);
 
-	if (desctablesize == FLL_DESCRIPTOR_HEADER_10_SIZE_6)
+	if (desctablesize == FLL_DESCRIPTOR_HEADER_10_SIZE_6) {
 		pfllobjs->max_min_freq_mhz =
 			fll_desc_table_header.max_min_freq_mhz;
-	else
+	} else {
 		pfllobjs->max_min_freq_mhz = 0;
+	}
 
 	/* Read table entries*/
 	fll_tbl_entry_ptr = fll_table_ptr + desctablesize;
@@ -273,18 +279,20 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 		memcpy(&fll_desc_table_entry, fll_tbl_entry_ptr,
 				sizeof(struct fll_descriptor_entry_10));
 
-		if (fll_desc_table_entry.fll_device_type == CTRL_CLK_FLL_TYPE_DISABLED)
+		if (fll_desc_table_entry.fll_device_type == CTRL_CLK_FLL_TYPE_DISABLED) {
 			continue;
+		}
 
 		fll_id = fll_desc_table_entry.fll_device_id;
 
 		if ( (u8)fll_desc_table_entry.vin_idx_logic != CTRL_CLK_VIN_ID_UNDEFINED) {
 			pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
 					(u8)fll_desc_table_entry.vin_idx_logic);
-			if (pvin_dev == NULL)
+			if (pvin_dev == NULL) {
 				return -EINVAL;
-			else
+			} else {
 				pvin_dev->flls_shared_mask |= BIT(fll_id);
+			}
 		} else {
 			/* Return if Logic ADC device index is invalid*/
 			nvgpu_err(g, "Invalid Logic ADC specified for Nafll ID");
@@ -298,14 +306,16 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 		if ( (u8)fll_desc_table_entry.vin_idx_sram != CTRL_CLK_VIN_ID_UNDEFINED) {
 			pvin_dev = CLK_GET_VIN_DEVICE(pvinobjs,
 					(u8)fll_desc_table_entry.vin_idx_sram);
-			if (pvin_dev == NULL)
+			if (pvin_dev == NULL) {
 				return -EINVAL;
-			else
+			} else {
 				pvin_dev->flls_shared_mask |= BIT(fll_id);
+			}
 		} else {
 			/* Make sure VSELECT mode is set correctly to _LOGIC*/
-			if (fll_dev_data.lut_device.vselect_mode != CTRL_CLK_FLL_LUT_VSELECT_LOGIC)
+			if (fll_dev_data.lut_device.vselect_mode != CTRL_CLK_FLL_LUT_VSELECT_LOGIC) {
 				return -EINVAL;
+			}
 		}
 
 		fll_dev_data.super.type =
@@ -357,25 +367,27 @@ done:
 
 u32 nvgpu_clk_get_vbios_clk_domain_gv10x( u32 vbios_domain)
 {
-	if (vbios_domain == 0)
+	if (vbios_domain == 0) {
 		return CTRL_CLK_DOMAIN_GPCCLK;
-	else if (vbios_domain == 1)
+	} else if (vbios_domain == 1) {
 		return CTRL_CLK_DOMAIN_XBARCLK;
-	else if (vbios_domain == 3)
+	} else if (vbios_domain == 3) {
 		return CTRL_CLK_DOMAIN_SYSCLK;
-	else if (vbios_domain == 5)
+	} else if (vbios_domain == 5) {
 		return CTRL_CLK_DOMAIN_NVDCLK;
+	}
 	return 0;
 }
 
 u32 nvgpu_clk_get_vbios_clk_domain_gp10x( u32 vbios_domain)
 {
-	if (vbios_domain == 0)
+	if (vbios_domain == 0) {
 		return CTRL_CLK_DOMAIN_GPC2CLK;
-	else if (vbios_domain == 1)
+	} else if (vbios_domain == 1) {
 		return CTRL_CLK_DOMAIN_XBAR2CLK;
-	else if (vbios_domain == 3)
+	} else if (vbios_domain == 3) {
 		return CTRL_CLK_DOMAIN_SYS2CLK;
+	}
 	return 0;
 }
 
@@ -384,8 +396,9 @@ static u32 lutbroadcastslaveregister(struct gk20a *g,
 				     struct fll_device *pfll,
 				     struct fll_device *pfll_slave)
 {
-	if (pfll->clk_domain != pfll_slave->clk_domain)
+	if (pfll->clk_domain != pfll_slave->clk_domain) {
 		return -EINVAL;
+	}
 
 	return boardobjgrpmask_bitset(&pfll->
 		lut_prog_broadcast_slave_mask.super,
@@ -403,8 +416,9 @@ static struct fll_device *construct_fll_device(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		sizeof(struct fll_device), pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	pfll_dev = (struct fll_device *)pargs;
 	board_obj_fll_ptr = (struct fll_device *)board_obj_ptr;
@@ -446,8 +460,9 @@ static u32 fll_device_init_pmudata_super(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
-	if (status != 0)
+	if (status != 0) {
 		return status;
+	}
 
 	pfll_dev = (struct fll_device *)board_obj_ptr;
 	perf_pmu_data = (struct nv_pmu_clk_clk_fll_device_boardobj_set *)

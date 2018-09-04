@@ -51,8 +51,9 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	if (phandlerparams->prpccall->b_supported)
+	if (phandlerparams->prpccall->b_supported) {
 		phandlerparams->success = 1;
+	}
 }
 
 
@@ -226,16 +227,17 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload, u8 bit_idx)
 		status = boardobjgrpmask_export(&isolate_cfc_mask.super,
 					isolate_cfc_mask.super.bitcount,
 					&load_mask->super);
-		if (bload)
+		if (bload) {
 			status = boardobjgrpmask_bitset(
 					&pclk_freq_controllers->
 						freq_ctrl_load_mask.super,
 					bit_idx);
-		else
+		} else {
 			status = boardobjgrpmask_bitclr(
 					&pclk_freq_controllers->
 						freq_ctrl_load_mask.super,
 					bit_idx);
+		}
 	}
 
 	if (status) {
@@ -436,13 +438,15 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
 
 	if ((setfllclk->gpc2clkmhz == 0) || (setfllclk->xbar2clkmhz == 0) ||
-		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0))
+		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0)) {
 		return -EINVAL;
+	}
 
 	if ((setfllclk->target_regime_id_gpc > CTRL_CLK_FLL_REGIME_ID_FR) ||
 		(setfllclk->target_regime_id_sys > CTRL_CLK_FLL_REGIME_ID_FR) ||
-		(setfllclk->target_regime_id_xbar > CTRL_CLK_FLL_REGIME_ID_FR))
+		(setfllclk->target_regime_id_xbar > CTRL_CLK_FLL_REGIME_ID_FR)) {
 		return -EINVAL;
+	}
 
 	rpccall.function = NV_PMU_CLK_RPC_ID_CLK_VF_CHANGE_INJECT;
 
@@ -501,10 +505,11 @@ static u32 find_regime_id(struct gk20a *g, u32 domain, u16 clkmhz)
 		struct fll_device *, pflldev, j) {
 		if (pflldev->clk_domain == domain) {
 			if (pflldev->regime_desc.fixed_freq_regime_limit_mhz >=
-							clkmhz)
+							clkmhz) {
 				return CTRL_CLK_FLL_REGIME_ID_FFR;
-			else
+			} else {
 				return CTRL_CLK_FLL_REGIME_ID_FR;
+			}
 		}
 	}
 	return CTRL_CLK_FLL_REGIME_ID_INVALID;
@@ -549,48 +554,55 @@ int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 	/*set regime ids */
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
 			&setfllclk->current_regime_id_gpc);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk->target_regime_id_gpc = find_regime_id(g,
 			CTRL_CLK_DOMAIN_GPC2CLK, setfllclk->gpc2clkmhz);
 
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
 			&setfllclk->current_regime_id_sys);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk->target_regime_id_sys = find_regime_id(g,
 			CTRL_CLK_DOMAIN_SYS2CLK, setfllclk->sys2clkmhz);
 
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
 			&setfllclk->current_regime_id_xbar);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk->target_regime_id_xbar = find_regime_id(g,
 			CTRL_CLK_DOMAIN_XBAR2CLK, setfllclk->xbar2clkmhz);
 
 	status = clk_pmu_vf_inject(g, setfllclk);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g, "vf inject to change clk failed");
+	}
 
 	/* save regime ids */
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
 			setfllclk->target_regime_id_xbar);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
 			setfllclk->target_regime_id_gpc);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
 			setfllclk->target_regime_id_sys);
-	if (status)
+	if (status) {
 		goto done;
+	}
 done:
 	return status;
 }
@@ -606,8 +618,9 @@ int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 	struct clk_domain_3x_slave *p3xslave;
 	unsigned long slaveidxmask;
 
-	if (setfllclk->gpc2clkmhz == 0)
+	if (setfllclk->gpc2clkmhz == 0) {
 		return -EINVAL;
+	}
 
 	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
 			struct clk_domain *, pdomain, i) {
@@ -627,8 +640,9 @@ int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 				if ((p3xslave->super.super.super.api_domain !=
 				     CTRL_CLK_DOMAIN_XBAR2CLK) &&
 				    (p3xslave->super.super.super.api_domain !=
-				     CTRL_CLK_DOMAIN_SYS2CLK))
+				     CTRL_CLK_DOMAIN_SYS2CLK)) {
 					continue;
+				}
 				clkmhz = 0;
 				status = p3xslave->clkdomainclkgetslaveclk(g,
 						pclk,
@@ -640,11 +654,13 @@ int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 					goto done;
 				}
 				if (p3xslave->super.super.super.api_domain ==
-				     CTRL_CLK_DOMAIN_XBAR2CLK)
+				     CTRL_CLK_DOMAIN_XBAR2CLK) {
 					setfllclk->xbar2clkmhz = clkmhz;
+				}
 				if (p3xslave->super.super.super.api_domain ==
-				     CTRL_CLK_DOMAIN_SYS2CLK)
+				     CTRL_CLK_DOMAIN_SYS2CLK) {
 					setfllclk->sys2clkmhz = clkmhz;
+				}
 			}
 		}
 	}
@@ -687,12 +703,15 @@ static int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
 	unsigned long slaveidxmask;
 	struct set_fll_clk setfllclk;
 
-	if (fllclk->api_clk_domain != CTRL_CLK_DOMAIN_GPCCLK)
+	if (fllclk->api_clk_domain != CTRL_CLK_DOMAIN_GPCCLK) {
 		return -EINVAL;
-	if (fllclk->voltuv == 0)
+	}
+	if (fllclk->voltuv == 0) {
 		return -EINVAL;
-	if (fllclk->clkmhz == 0)
+	}
+	if (fllclk->clkmhz == 0) {
 		return -EINVAL;
+	}
 
 	setfllclk.voltuv = fllclk->voltuv;
 	setfllclk.gpc2clkmhz = fllclk->clkmhz;
@@ -715,8 +734,9 @@ static int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
 				if ((p3xslave->super.super.super.api_domain !=
 				     CTRL_CLK_DOMAIN_XBARCLK) &&
 				    (p3xslave->super.super.super.api_domain !=
-				     CTRL_CLK_DOMAIN_SYSCLK))
+				     CTRL_CLK_DOMAIN_SYSCLK)) {
 					continue;
+				}
 				clkmhz = 0;
 				status = p3xslave->clkdomainclkgetslaveclk(g,
 						pclk,
@@ -728,60 +748,69 @@ static int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
 					goto done;
 				}
 				if (p3xslave->super.super.super.api_domain ==
-				     CTRL_CLK_DOMAIN_XBARCLK)
+				     CTRL_CLK_DOMAIN_XBARCLK) {
 					setfllclk.xbar2clkmhz = clkmhz;
+				}
 				if (p3xslave->super.super.super.api_domain ==
-				     CTRL_CLK_DOMAIN_SYSCLK)
+				     CTRL_CLK_DOMAIN_SYSCLK) {
 					setfllclk.sys2clkmhz = clkmhz;
+				}
 			}
 		}
 	}
 	/*set regime ids */
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_GPCCLK,
 			&setfllclk.current_regime_id_gpc);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk.target_regime_id_gpc = find_regime_id(g,
 			CTRL_CLK_DOMAIN_GPCCLK, setfllclk.gpc2clkmhz);
 
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_SYSCLK,
 			&setfllclk.current_regime_id_sys);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk.target_regime_id_sys = find_regime_id(g,
 			CTRL_CLK_DOMAIN_SYSCLK, setfllclk.sys2clkmhz);
 
 	status = get_regime_id(g, CTRL_CLK_DOMAIN_XBARCLK,
 			&setfllclk.current_regime_id_xbar);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	setfllclk.target_regime_id_xbar = find_regime_id(g,
 			CTRL_CLK_DOMAIN_XBARCLK, setfllclk.xbar2clkmhz);
 
 	status = clk_pmu_vf_inject(g, &setfllclk);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g,
 			"vf inject to change clk failed");
+	}
 
 	/* save regime ids */
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBARCLK,
 			setfllclk.target_regime_id_xbar);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_GPCCLK,
 			setfllclk.target_regime_id_gpc);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_SYSCLK,
 			setfllclk.target_regime_id_sys);
-	if (status)
+	if (status) {
 		goto done;
+	}
 done:
 	return status;
 }
@@ -809,17 +838,19 @@ u32 nvgpu_clk_set_boot_fll_clk_gv10x(struct gk20a *g)
 	voltuv = gpcclk_voltuv;
 
 	status = volt_set_voltage(g, voltuv, 0);
-	if (status)
+	if (status) {
 		nvgpu_err(g,
 			"attempt to set boot voltage failed %d",
 			voltuv);
+	}
 
 	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPCCLK;
 	bootfllclk.clkmhz = gpcclk_clkmhz;
 	bootfllclk.voltuv = voltuv;
 	status = clk_program_fllclks(g, &bootfllclk);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "attempt to set boot gpcclk failed");
+	}
 
 	status = clk_pmu_freq_effective_avg_load(g, true);
 
@@ -849,15 +880,17 @@ u32 clk_domain_get_f_or_v(
 	struct clk_pmupstate *pclk = &g->clk_pmu;
 	u8 rail;
 
-	if ((pclkmhz == NULL) || (pvoltuv == NULL))
+	if ((pclkmhz == NULL) || (pvoltuv == NULL)) {
 		return -EINVAL;
+	}
 
-	if (railidx == CTRL_VOLT_DOMAIN_LOGIC)
+	if (railidx == CTRL_VOLT_DOMAIN_LOGIC) {
 		rail = CLK_PROG_VFE_ENTRY_LOGIC;
-	else if (railidx == CTRL_VOLT_DOMAIN_SRAM)
+	} else if (railidx == CTRL_VOLT_DOMAIN_SRAM) {
 		rail = CLK_PROG_VFE_ENTRY_SRAM;
-	else
+	} else {
 		return -EINVAL;
+	}
 
 	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
 			struct clk_domain *, pdomain, i) {

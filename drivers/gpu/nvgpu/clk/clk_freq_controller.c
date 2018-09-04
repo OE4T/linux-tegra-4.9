@@ -41,8 +41,9 @@ static u32 clk_freq_controller_pmudatainit_super(struct gk20a *g,
 	u32 status = 0;
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pfreq_cntlr_set =
 		(struct nv_pmu_clk_clk_freq_controller_boardobj_set *)ppmudata;
@@ -73,8 +74,9 @@ static u32 clk_freq_controller_pmudatainit_pi(struct gk20a *g,
 
 	status = clk_freq_controller_pmudatainit_super(g,
 		board_obj_ptr, ppmudata);
-	if (status)
+	if (status) {
 		return -1;
+	}
 
 	pfreq_cntlr_pi_set =
 		(struct nv_pmu_clk_clk_freq_controller_pi_boardobj_set *)
@@ -101,8 +103,9 @@ static u32 clk_freq_controller_construct_super(struct gk20a *g,
 	u32 status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pfreq_cntlr_tmp = (struct clk_freq_controller *)pargs;
 	pfreq_cntlr = (struct clk_freq_controller *)*ppboardobj;
@@ -132,8 +135,9 @@ static u32 clk_freq_controller_construct_pi(struct gk20a *g,
 
 	status = clk_freq_controller_construct_super(g, ppboardobj,
 			size, pargs);
-	if (status)
+	if (status) {
 		return -EINVAL;
+	}
 
 	pfreq_cntlr_pi = (struct clk_freq_controller_pi *)*ppboardobj;
 	pfreq_cntlr_pi_tmp = (struct clk_freq_controller_pi *)pargs;
@@ -159,13 +163,15 @@ static struct clk_freq_controller *clk_clk_freq_controller_construct(
 	struct boardobj *board_obj_ptr = NULL;
 	u32 status = 0;
 
-	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_FREQ_CONTROLLER_TYPE_PI)
+	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_FREQ_CONTROLLER_TYPE_PI) {
 		return NULL;
+	}
 
 	status = clk_freq_controller_construct_pi(g, &board_obj_ptr,
 				sizeof(struct clk_freq_controller_pi), pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	return (struct clk_freq_controller *)board_obj_ptr;
 }
@@ -222,8 +228,9 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 			sizeof(struct vbios_fct_1x_entry));
 
 		if (!BIOS_GET_FIELD(entry.flags0,
-				NV_VBIOS_FCT_1X_ENTRY_FLAGS0_TYPE))
+				NV_VBIOS_FCT_1X_ENTRY_FLAGS0_TYPE)) {
 			continue;
+		}
 
 		freq_controller_data.board_obj.type = (u8)BIOS_GET_FIELD(
 			entry.flags0, NV_VBIOS_FCT_1X_ENTRY_FLAGS0_TYPE);
@@ -286,8 +293,9 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 				NV_VBIOS_FCT_1X_ENTRY_PARAM8_FREQ_HYST_NEG);
 
 		if (ptmp_freq_cntr_pi->volt_delta_max <
-			ptmp_freq_cntr_pi->volt_delta_min)
+			ptmp_freq_cntr_pi->volt_delta_min) {
 			goto done;
+		}
 
 		pclk_freq_cntr = clk_clk_freq_controller_construct(g,
 						(void *)&freq_controller_data);
@@ -325,8 +333,9 @@ u32 clk_freq_controller_pmu_setup(struct gk20a *g)
 
 	pboardobjgrp = &g->clk_pmu.clk_freq_controllers.super.super;
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
@@ -347,8 +356,9 @@ static u32 _clk_freq_controller_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;

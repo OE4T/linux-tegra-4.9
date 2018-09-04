@@ -21,6 +21,8 @@
 #include <linux/iommu.h>
 #include <linux/pci.h>
 
+#include "of-tegra-smmu.h"
+
 #include <dt-bindings/memory/tegra-swgroup.h>
 
 struct tegra_iommu_group {

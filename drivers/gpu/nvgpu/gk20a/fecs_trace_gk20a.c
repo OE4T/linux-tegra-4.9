@@ -20,10 +20,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
-
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/enabled.h>
@@ -43,31 +39,12 @@
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "os/linux/os_linux.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/fecs_trace.h>
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
-
-/*
- * If HW circular buffer is getting too many "buffer full" conditions,
- * increasing this constant should help (it drives Linux' internal buffer size).
- */
-#define GK20A_FECS_TRACE_NUM_RECORDS		(1 << 10)
-#define GK20A_FECS_TRACE_HASH_BITS		8 /* 2^8 */
-#define GK20A_FECS_TRACE_FRAME_PERIOD_US	(1000000ULL/60ULL)
-#define GK20A_FECS_TRACE_PTIMER_SHIFT		5
-
-struct gk20a_fecs_trace_record {
-	u32 magic_lo;
-	u32 magic_hi;
-	u32 context_id;
-	u32 context_ptr;
-	u32 new_context_id;
-	u32 new_context_ptr;
-	u64 ts[];
-};
 
 struct gk20a_fecs_trace_hash_ent {
 	u32 context_ptr;
@@ -85,29 +62,33 @@ struct gk20a_fecs_trace {
 };
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-static inline u32 gk20a_fecs_trace_record_ts_tag_v(u64 ts)
+u32 gk20a_fecs_trace_record_ts_tag_invalid_ts_v(void)
+{
+	return ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_v();
+}
+
+u32 gk20a_fecs_trace_record_ts_tag_v(u64 ts)
 {
 	return ctxsw_prog_record_timestamp_timestamp_hi_tag_v((u32) (ts >> 32));
 }
 
-static inline u64 gk20a_fecs_trace_record_ts_timestamp_v(u64 ts)
+u64 gk20a_fecs_trace_record_ts_timestamp_v(u64 ts)
 {
 	return ts & ~(((u64)ctxsw_prog_record_timestamp_timestamp_hi_tag_m()) << 32);
 }
-
 
 static u32 gk20a_fecs_trace_fecs_context_ptr(struct gk20a *g, struct channel_gk20a *ch)
 {
 	return (u32) (nvgpu_inst_block_addr(g, &ch->inst_block) >> 12LL);
 }
 
-static inline int gk20a_fecs_trace_num_ts(void)
+int gk20a_fecs_trace_num_ts(void)
 {
 	return (ctxsw_prog_record_timestamp_record_size_in_bytes_v()
 		- sizeof(struct gk20a_fecs_trace_record)) / sizeof(u64);
 }
 
-static struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
+struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
 	struct gk20a *g, int idx)
 {
 	struct nvgpu_mem *mem = &g->gr.global_ctx_buffer[FECS_TRACE_BUFFER].mem;
@@ -117,7 +98,7 @@ static struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
 		+ (idx * ctxsw_prog_record_timestamp_record_size_in_bytes_v()));
 }
 
-static bool gk20a_fecs_trace_is_valid_record(struct gk20a_fecs_trace_record *r)
+bool gk20a_fecs_trace_is_valid_record(struct gk20a_fecs_trace_record *r)
 {
 	/*
 	 * testing magic_hi should suffice. magic_lo is sometimes used
@@ -127,13 +108,13 @@ static bool gk20a_fecs_trace_is_valid_record(struct gk20a_fecs_trace_record *r)
 		== ctxsw_prog_record_timestamp_magic_value_hi_v_value_v());
 }
 
-static int gk20a_fecs_trace_get_read_index(struct gk20a *g)
+int gk20a_fecs_trace_get_read_index(struct gk20a *g)
 {
 	return gr_gk20a_elpg_protected_call(g,
 			gk20a_readl(g, gr_fecs_mailbox1_r()));
 }
 
-static int gk20a_fecs_trace_get_write_index(struct gk20a *g)
+int gk20a_fecs_trace_get_write_index(struct gk20a *g)
 {
 	return gr_gk20a_elpg_protected_call(g,
 			gk20a_readl(g, gr_fecs_mailbox0_r()));
@@ -424,147 +405,6 @@ size_t gk20a_fecs_trace_buffer_size(struct gk20a *g)
 			* ctxsw_prog_record_timestamp_record_size_in_bytes_v();
 }
 
-#ifdef CONFIG_DEBUG_FS
-/*
- * The sequence iterator functions.  We simply use the count of the
- * next line as our internal position.
- */
-static void *gk20a_fecs_trace_debugfs_ring_seq_start(
-		struct seq_file *s, loff_t *pos)
-{
-	if (*pos >= GK20A_FECS_TRACE_NUM_RECORDS)
-		return NULL;
-
-	return pos;
-}
-
-static void *gk20a_fecs_trace_debugfs_ring_seq_next(
-		struct seq_file *s, void *v, loff_t *pos)
-{
-	++(*pos);
-	if (*pos >= GK20A_FECS_TRACE_NUM_RECORDS)
-		return NULL;
-	return pos;
-}
-
-static void gk20a_fecs_trace_debugfs_ring_seq_stop(
-		struct seq_file *s, void *v)
-{
-}
-
-static int gk20a_fecs_trace_debugfs_ring_seq_show(
-		struct seq_file *s, void *v)
-{
-	loff_t *pos = (loff_t *) v;
-	struct gk20a *g = *(struct gk20a **)s->private;
-	struct gk20a_fecs_trace_record *r =
-		gk20a_fecs_trace_get_record(g, *pos);
-	int i;
-	const u32 invalid_tag =
-	    ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_v();
-	u32 tag;
-	u64 timestamp;
-
-	seq_printf(s, "record #%lld (%p)\n", *pos, r);
-	seq_printf(s, "\tmagic_lo=%08x\n", r->magic_lo);
-	seq_printf(s, "\tmagic_hi=%08x\n", r->magic_hi);
-	if (gk20a_fecs_trace_is_valid_record(r)) {
-		seq_printf(s, "\tcontext_ptr=%08x\n", r->context_ptr);
-		seq_printf(s, "\tcontext_id=%08x\n", r->context_id);
-		seq_printf(s, "\tnew_context_ptr=%08x\n", r->new_context_ptr);
-		seq_printf(s, "\tnew_context_id=%08x\n", r->new_context_id);
-		for (i = 0; i < gk20a_fecs_trace_num_ts(); i++) {
-			tag = gk20a_fecs_trace_record_ts_tag_v(r->ts[i]);
-			if (tag == invalid_tag)
-				continue;
-			timestamp = gk20a_fecs_trace_record_ts_timestamp_v(r->ts[i]);
-			timestamp <<= GK20A_FECS_TRACE_PTIMER_SHIFT;
-			seq_printf(s, "\ttag=%02x timestamp=%012llx\n", tag, timestamp);
-		}
-	}
-	return 0;
-}
-
-/*
- * Tie them all together into a set of seq_operations.
- */
-static const struct seq_operations gk20a_fecs_trace_debugfs_ring_seq_ops = {
-	.start = gk20a_fecs_trace_debugfs_ring_seq_start,
-	.next = gk20a_fecs_trace_debugfs_ring_seq_next,
-	.stop = gk20a_fecs_trace_debugfs_ring_seq_stop,
-	.show = gk20a_fecs_trace_debugfs_ring_seq_show
-};
-
-/*
- * Time to set up the file operations for our /proc file.  In this case,
- * all we need is an open function which sets up the sequence ops.
- */
-
-static int gk20a_ctxsw_debugfs_ring_open(struct inode *inode,
-	struct file *file)
-{
-	struct gk20a **p;
-
-	if (!capable(CAP_SYS_ADMIN))
-		return -EPERM;
-
-	p = __seq_open_private(file, &gk20a_fecs_trace_debugfs_ring_seq_ops,
-		sizeof(struct gk20a *));
-	if (!p)
-		return -ENOMEM;
-
-	*p = (struct gk20a *)inode->i_private;
-	return 0;
-};
-
-/*
- * The file operations structure contains our open function along with
- * set of the canned seq_ ops.
- */
-static const struct file_operations gk20a_fecs_trace_debugfs_ring_fops = {
-	.owner = THIS_MODULE,
-	.open = gk20a_ctxsw_debugfs_ring_open,
-	.read = seq_read,
-	.llseek = seq_lseek,
-	.release = seq_release_private
-};
-
-static int gk20a_fecs_trace_debugfs_read(void *arg, u64 *val)
-{
-	*val = gk20a_fecs_trace_get_read_index((struct gk20a *)arg);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(gk20a_fecs_trace_debugfs_read_fops,
-	gk20a_fecs_trace_debugfs_read, NULL, "%llu\n");
-
-static int gk20a_fecs_trace_debugfs_write(void *arg, u64 *val)
-{
-	*val = gk20a_fecs_trace_get_write_index((struct gk20a *)arg);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(gk20a_fecs_trace_debugfs_write_fops,
-	gk20a_fecs_trace_debugfs_write, NULL, "%llu\n");
-
-static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
-{
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-
-	debugfs_create_file("ctxsw_trace_read", 0600, l->debugfs, g,
-		&gk20a_fecs_trace_debugfs_read_fops);
-	debugfs_create_file("ctxsw_trace_write", 0600, l->debugfs, g,
-		&gk20a_fecs_trace_debugfs_write_fops);
-	debugfs_create_file("ctxsw_trace_ring", 0600, l->debugfs, g,
-		&gk20a_fecs_trace_debugfs_ring_fops);
-}
-
-#else
-
-static void gk20a_fecs_trace_debugfs_init(struct gk20a *g)
-{
-}
-
-#endif /* CONFIG_DEBUG_FS */
-
 int gk20a_fecs_trace_init(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace;
@@ -588,8 +428,6 @@ int gk20a_fecs_trace_init(struct gk20a *g)
 	hash_init(trace->pid_hash_table);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
-
-	gk20a_fecs_trace_debugfs_init(g);
 
 	trace->init = true;
 

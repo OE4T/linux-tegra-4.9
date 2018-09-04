@@ -53,6 +53,7 @@ nvgpu-y += \
 	os/linux/os_ops_gp10b.o \
 	os/linux/os_ops_gp106.o \
 	os/linux/os_ops_gv100.o \
+	os/linux/os_ops_gv11b.o \
 	os/linux/kmem.o \
 	os/linux/timers.o \
 	os/linux/ioctl.o \
@@ -114,6 +115,12 @@ endif
 
 nvgpu-$(CONFIG_GK20A_CTXSW_TRACE) += \
 	os/linux/ctxsw_trace.o
+
+ifeq ($(CONFIG_GK20A_CTXSW_TRACE),y)
+nvgpu-$(CONFIG_DEBUG_FS) += \
+	os/linux/debug_fecs_trace.o
+endif
+
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += \
 	os/linux/module.o \

@@ -14,28 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "os_linux.h"
+#ifndef LINUX_OS_OPS_GV11B_H
+#define LINUX_OS_OPS_GV11B_H
 
-#include "cde_gp10b.h"
-#include "debug_fecs_trace.h"
+struct nvgpu_os_linux;
 
-static struct nvgpu_os_linux_ops gp10b_os_linux_ops = {
-#ifdef CONFIG_NVGPU_SUPPORT_CDE
-	.cde = {
-		.get_program_numbers = gp10b_cde_get_program_numbers,
-		.need_scatter_buffer = gp10b_need_scatter_buffer,
-		.populate_scatter_buffer = gp10b_populate_scatter_buffer,
-	},
+void nvgpu_gv11b_init_os_ops(struct nvgpu_os_linux *l);
+
 #endif
-	.fecs_trace = {
-		.init_debugfs = nvgpu_fecs_trace_init_debugfs,
-	},
-};
-
-void nvgpu_gp10b_init_os_ops(struct nvgpu_os_linux *l)
-{
-#ifdef CONFIG_NVGPU_SUPPORT_CDE
-	l->ops.cde = gp10b_os_linux_ops.cde;
-#endif
-	l->ops.fecs_trace = gp10b_os_linux_ops.fecs_trace;
-}

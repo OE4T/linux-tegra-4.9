@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,27 +14,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "os_linux.h"
+#ifndef LINUX_DEBUG_FECS_TRACE_H
+#define LINUX_DEBUG_FECS_TRACE_H
 
-#include "debug_clk_gp106.h"
-#include "debug_therm_gp106.h"
-#include "debug_fecs_trace.h"
+struct gk20a;
 
-static struct nvgpu_os_linux_ops gp106_os_linux_ops = {
-	.clk = {
-		.init_debugfs = gp106_clk_init_debugfs,
-	},
-	.therm = {
-		.init_debugfs = gp106_therm_init_debugfs,
-	},
-	.fecs_trace = {
-		.init_debugfs = nvgpu_fecs_trace_init_debugfs,
-	},
-};
-
-void nvgpu_gp106_init_os_ops(struct nvgpu_os_linux *l)
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_GK20A_CTXSW_TRACE)
+int nvgpu_fecs_trace_init_debugfs(struct gk20a *g);
+#else
+int nvgpu_fecs_trace_init_debugfs(struct gk20a *g)
 {
-	l->ops.clk = gp106_os_linux_ops.clk;
-	l->ops.therm = gp106_os_linux_ops.therm;
-	l->ops.fecs_trace = gp106_os_linux_ops.fecs_trace;
+	return 0;
 }
+#endif
+#endif

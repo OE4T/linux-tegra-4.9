@@ -16,25 +16,15 @@
 
 #include "os_linux.h"
 
-#include "debug_clk_gp106.h"
-#include "debug_therm_gp106.h"
 #include "debug_fecs_trace.h"
 
-static struct nvgpu_os_linux_ops gp106_os_linux_ops = {
-	.clk = {
-		.init_debugfs = gp106_clk_init_debugfs,
-	},
-	.therm = {
-		.init_debugfs = gp106_therm_init_debugfs,
-	},
+static struct nvgpu_os_linux_ops gv11b_os_linux_ops = {
 	.fecs_trace = {
 		.init_debugfs = nvgpu_fecs_trace_init_debugfs,
 	},
 };
 
-void nvgpu_gp106_init_os_ops(struct nvgpu_os_linux *l)
+void nvgpu_gv11b_init_os_ops(struct nvgpu_os_linux *l)
 {
-	l->ops.clk = gp106_os_linux_ops.clk;
-	l->ops.therm = gp106_os_linux_ops.therm;
-	l->ops.fecs_trace = gp106_os_linux_ops.fecs_trace;
+	l->ops.fecs_trace = gv11b_os_linux_ops.fecs_trace;
 }

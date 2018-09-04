@@ -574,16 +574,8 @@ static const struct gpu_ops gm20b_ops = {
 		.get_runcontrol_whitelist = gm20b_get_runcontrol_whitelist,
 		.get_runcontrol_whitelist_count =
 			gm20b_get_runcontrol_whitelist_count,
-		.get_runcontrol_whitelist_ranges =
-			gm20b_get_runcontrol_whitelist_ranges,
-		.get_runcontrol_whitelist_ranges_count =
-			gm20b_get_runcontrol_whitelist_ranges_count,
 		.get_qctl_whitelist = gm20b_get_qctl_whitelist,
 		.get_qctl_whitelist_count = gm20b_get_qctl_whitelist_count,
-		.get_qctl_whitelist_ranges = gm20b_get_qctl_whitelist_ranges,
-		.get_qctl_whitelist_ranges_count =
-			gm20b_get_qctl_whitelist_ranges_count,
-		.apply_smpc_war = gm20b_apply_smpc_war,
 	},
 	.mc = {
 		.intr_mask = mc_gk20a_intr_mask,

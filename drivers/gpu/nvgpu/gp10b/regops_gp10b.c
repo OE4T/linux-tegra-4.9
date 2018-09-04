@@ -23,11 +23,8 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "regops_gp10b.h"
-
-#include <nvgpu/bsearch.h>
 
 static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x000004f0,   1},
@@ -393,22 +390,11 @@ static const u32 gp10b_runcontrol_whitelist[] = {
 static const u64 gp10b_runcontrol_whitelist_count =
 	ARRAY_SIZE(gp10b_runcontrol_whitelist);
 
-static const struct regop_offset_range gp10b_runcontrol_whitelist_ranges[] = {
-};
-static const u64 gp10b_runcontrol_whitelist_ranges_count =
-	ARRAY_SIZE(gp10b_runcontrol_whitelist_ranges);
-
-
 /* quad ctl */
 static const u32 gp10b_qctl_whitelist[] = {
 };
 static const u64 gp10b_qctl_whitelist_count =
 	ARRAY_SIZE(gp10b_qctl_whitelist);
-
-static const struct regop_offset_range gp10b_qctl_whitelist_ranges[] = {
-};
-static const u64 gp10b_qctl_whitelist_ranges_count =
-	ARRAY_SIZE(gp10b_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gp10b_get_global_whitelist_ranges(void)
 {
@@ -440,16 +426,6 @@ u64 gp10b_get_runcontrol_whitelist_count(void)
 	return gp10b_runcontrol_whitelist_count;
 }
 
-const struct regop_offset_range *gp10b_get_runcontrol_whitelist_ranges(void)
-{
-	return gp10b_runcontrol_whitelist_ranges;
-}
-
-u64 gp10b_get_runcontrol_whitelist_ranges_count(void)
-{
-	return gp10b_runcontrol_whitelist_ranges_count;
-}
-
 const u32 *gp10b_get_qctl_whitelist(void)
 {
 	return gp10b_qctl_whitelist;
@@ -458,20 +434,4 @@ const u32 *gp10b_get_qctl_whitelist(void)
 u64 gp10b_get_qctl_whitelist_count(void)
 {
 	return gp10b_qctl_whitelist_count;
-}
-
-const struct regop_offset_range *gp10b_get_qctl_whitelist_ranges(void)
-{
-	return gp10b_qctl_whitelist_ranges;
-}
-
-u64 gp10b_get_qctl_whitelist_ranges_count(void)
-{
-	return gp10b_qctl_whitelist_ranges_count;
-}
-
-int gp10b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
-{
-	/* Not needed on gp10b */
-	return 0;
 }

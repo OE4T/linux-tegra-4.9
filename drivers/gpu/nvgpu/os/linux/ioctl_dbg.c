@@ -1053,10 +1053,8 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	if (err) {
 		nvgpu_err(g,
 			  "error (%d) during smpc ctxsw mode update", err);
-		goto clean_up;
 	}
 
-	err = g->ops.regops.apply_smpc_war(dbg_s);
  clean_up:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	gk20a_idle(g);

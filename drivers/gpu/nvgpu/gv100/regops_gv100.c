@@ -23,7 +23,6 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "regops_gv100.h"
 
@@ -5626,18 +5625,11 @@ static const struct regop_offset_range gv100_global_whitelist_ranges[] = {
 static const u64 gv100_global_whitelist_ranges_count =
 	ARRAY_SIZE(gv100_global_whitelist_ranges);
 
-/* context */
-
 /* runcontrol */
 static const u32 gv100_runcontrol_whitelist[] = {
 };
 static const u64 gv100_runcontrol_whitelist_count =
 	ARRAY_SIZE(gv100_runcontrol_whitelist);
-
-static const struct regop_offset_range gv100_runcontrol_whitelist_ranges[] = {
-};
-static const u64 gv100_runcontrol_whitelist_ranges_count =
-	ARRAY_SIZE(gv100_runcontrol_whitelist_ranges);
 
 
 /* quad ctl */
@@ -5645,11 +5637,6 @@ static const u32 gv100_qctl_whitelist[] = {
 };
 static const u64 gv100_qctl_whitelist_count =
 	ARRAY_SIZE(gv100_qctl_whitelist);
-
-static const struct regop_offset_range gv100_qctl_whitelist_ranges[] = {
-};
-static const u64 gv100_qctl_whitelist_ranges_count =
-	ARRAY_SIZE(gv100_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gv100_get_global_whitelist_ranges(void)
 {
@@ -5681,16 +5668,6 @@ u64 gv100_get_runcontrol_whitelist_count(void)
 	return gv100_runcontrol_whitelist_count;
 }
 
-const struct regop_offset_range *gv100_get_runcontrol_whitelist_ranges(void)
-{
-	return gv100_runcontrol_whitelist_ranges;
-}
-
-u64 gv100_get_runcontrol_whitelist_ranges_count(void)
-{
-	return gv100_runcontrol_whitelist_ranges_count;
-}
-
 const u32 *gv100_get_qctl_whitelist(void)
 {
 	return gv100_qctl_whitelist;
@@ -5699,20 +5676,4 @@ const u32 *gv100_get_qctl_whitelist(void)
 u64 gv100_get_qctl_whitelist_count(void)
 {
 	return gv100_qctl_whitelist_count;
-}
-
-const struct regop_offset_range *gv100_get_qctl_whitelist_ranges(void)
-{
-	return gv100_qctl_whitelist_ranges;
-}
-
-u64 gv100_get_qctl_whitelist_ranges_count(void)
-{
-	return gv100_qctl_whitelist_ranges_count;
-}
-
-int gv100_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
-{
-	/* Not needed on gv100 */
-	return 0;
 }

@@ -701,16 +701,8 @@ static const struct gpu_ops gp106_ops = {
 		.get_runcontrol_whitelist = gp106_get_runcontrol_whitelist,
 		.get_runcontrol_whitelist_count =
 			gp106_get_runcontrol_whitelist_count,
-		.get_runcontrol_whitelist_ranges =
-			gp106_get_runcontrol_whitelist_ranges,
-		.get_runcontrol_whitelist_ranges_count =
-			gp106_get_runcontrol_whitelist_ranges_count,
 		.get_qctl_whitelist = gp106_get_qctl_whitelist,
 		.get_qctl_whitelist_count = gp106_get_qctl_whitelist_count,
-		.get_qctl_whitelist_ranges = gp106_get_qctl_whitelist_ranges,
-		.get_qctl_whitelist_ranges_count =
-			gp106_get_qctl_whitelist_ranges_count,
-		.apply_smpc_war = gp106_apply_smpc_war,
 	},
 	.mc = {
 		.intr_mask = mc_gp10b_intr_mask,

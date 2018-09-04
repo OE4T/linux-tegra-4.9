@@ -23,11 +23,8 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "regops_gm20b.h"
-
-#include <nvgpu/bsearch.h>
 
 static const struct regop_offset_range gm20b_global_whitelist_ranges[] = {
 	{ 0x00001a00,   3 },
@@ -366,28 +363,11 @@ static const u32 gm20b_runcontrol_whitelist[] = {
 static const u64 gm20b_runcontrol_whitelist_count =
 	ARRAY_SIZE(gm20b_runcontrol_whitelist);
 
-static const struct regop_offset_range gm20b_runcontrol_whitelist_ranges[] = {
-	{ 0x00419e10,   1 },
-	{ 0x0041c610,   1 },
-	{ 0x0041ce10,   1 },
-	{ 0x00501e10,   1 },
-	{ 0x00504610,   1 },
-	{ 0x00504e10,   1 },
-};
-static const u64 gm20b_runcontrol_whitelist_ranges_count =
-	ARRAY_SIZE(gm20b_runcontrol_whitelist_ranges);
-
-
 /* quad ctl */
 static const u32 gm20b_qctl_whitelist[] = {
 };
 static const u64 gm20b_qctl_whitelist_count =
 	ARRAY_SIZE(gm20b_qctl_whitelist);
-
-static const struct regop_offset_range gm20b_qctl_whitelist_ranges[] = {
-};
-static const u64 gm20b_qctl_whitelist_ranges_count =
-	ARRAY_SIZE(gm20b_qctl_whitelist_ranges);
 
 const struct regop_offset_range *gm20b_get_global_whitelist_ranges(void)
 {
@@ -419,16 +399,6 @@ u64 gm20b_get_runcontrol_whitelist_count(void)
 	return gm20b_runcontrol_whitelist_count;
 }
 
-const struct regop_offset_range *gm20b_get_runcontrol_whitelist_ranges(void)
-{
-	return gm20b_runcontrol_whitelist_ranges;
-}
-
-u64 gm20b_get_runcontrol_whitelist_ranges_count(void)
-{
-	return gm20b_runcontrol_whitelist_ranges_count;
-}
-
 const u32 *gm20b_get_qctl_whitelist(void)
 {
 	return gm20b_qctl_whitelist;
@@ -437,20 +407,4 @@ const u32 *gm20b_get_qctl_whitelist(void)
 u64 gm20b_get_qctl_whitelist_count(void)
 {
 	return gm20b_qctl_whitelist_count;
-}
-
-const struct regop_offset_range *gm20b_get_qctl_whitelist_ranges(void)
-{
-	return gm20b_qctl_whitelist_ranges;
-}
-
-u64 gm20b_get_qctl_whitelist_ranges_count(void)
-{
-	return gm20b_qctl_whitelist_ranges_count;
-}
-
-int gm20b_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
-{
-	/* Not needed on gm20b */
-	return 0;
 }

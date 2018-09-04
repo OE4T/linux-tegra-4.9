@@ -89,8 +89,9 @@ u32 volt_rail_volt_dev_register(struct gk20a *g, struct voltage_rail
 			volt_dev_idx);
 
 exit:
-	if (status)
+	if (status) {
 		nvgpu_err(g, "Failed to register VOLTAGE_DEVICE");
+	}
 
 	return status;
 }
@@ -138,8 +139,9 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 	nvgpu_log_info(g, " ");
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	prail = (struct voltage_rail *)board_obj_ptr;
 	rail_pmu_data = (struct nv_pmu_volt_volt_rail_boardobj_set *)
@@ -166,9 +168,10 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 	status = boardobjgrpmask_export(&prail->volt_dev_mask.super,
 				prail->volt_dev_mask.super.bitcount,
 				&rail_pmu_data->volt_dev_mask.super);
-	if (status)
+	if (status) {
 		nvgpu_err(g,
 			"Failed to export BOARDOBJGRPMASK of VOLTAGE_DEVICEs");
+	}
 
 	nvgpu_log_info(g, "Done");
 
@@ -185,8 +188,9 @@ static struct voltage_rail *construct_volt_rail(struct gk20a *g, void *pargs)
 	nvgpu_log_info(g, " ");
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		sizeof(struct voltage_rail), pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	board_obj_volt_rail_ptr = (struct voltage_rail *)board_obj_ptr;
 	/* override super class interface */
@@ -221,8 +225,9 @@ u8 volt_rail_vbios_volt_domain_convert_to_internal(struct gk20a *g,
 {
 	switch (g->perf_pmu.volt.volt_rail_metadata.volt_domain_hal) {
 	case CTRL_VOLT_DOMAIN_HAL_GP10X_SINGLE_RAIL:
-		if (vbios_volt_domain == 0)
+		if (vbios_volt_domain == 0) {
 			return CTRL_VOLT_DOMAIN_LOGIC;
+		}
 		break;
 	case CTRL_VOLT_DOMAIN_HAL_GP10X_SPLIT_RAIL:
 		switch (vbios_volt_domain) {
@@ -246,8 +251,9 @@ u32 volt_rail_pmu_setup(struct gk20a *g)
 
 	pboardobjgrp = &g->perf_pmu.volt.volt_rail_metadata.volt_rails.super;
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
@@ -294,8 +300,9 @@ static u32 volt_get_volt_rail_table(struct gk20a *g,
 
 		volt_domain = volt_rail_vbios_volt_domain_convert_to_internal(g,
 			i);
-		if (volt_domain == CTRL_VOLT_DOMAIN_INVALID)
+		if (volt_domain == CTRL_VOLT_DOMAIN_INVALID) {
 			continue;
+		}
 
 		rail_type_data.board_obj.type = volt_domain;
 		rail_type_data.volt_rail.boot_voltage_uv =
@@ -308,44 +315,49 @@ static u32 volt_get_volt_rail_table(struct gk20a *g,
 			(u8)entry.ov_limit_vfe_equ_idx;
 
 		if (header.table_entry_size >=
-			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0C)
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0C) {
 			rail_type_data.volt_rail.volt_scale_exp_pwr_equ_idx =
 				(u8)entry.volt_scale_exp_pwr_equ_idx;
-		else
+		} else {
 			rail_type_data.volt_rail.volt_scale_exp_pwr_equ_idx =
 				CTRL_BOARDOBJ_IDX_INVALID;
+		}
 
 		if (header.table_entry_size >=
-			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0B)
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0B) {
 			rail_type_data.volt_rail.volt_margin_limit_vfe_equ_idx =
 				(u8)entry.volt_margin_limit_vfe_equ_idx;
-		else
+		} else {
 			rail_type_data.volt_rail.volt_margin_limit_vfe_equ_idx =
 				CTRL_BOARDOBJ_IDX_INVALID;
+		}
 
 		if (header.table_entry_size >=
-			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0A)
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_0A) {
 			rail_type_data.volt_rail.vmin_limit_vfe_equ_idx =
 				(u8)entry.vmin_limit_vfe_equ_idx;
-		else
+		} else {
 			rail_type_data.volt_rail.vmin_limit_vfe_equ_idx =
 				CTRL_BOARDOBJ_IDX_INVALID;
+		}
 
 		if (header.table_entry_size >=
-			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_09)
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_09) {
 			rail_type_data.volt_rail.boot_volt_vfe_equ_idx =
 				(u8)entry.boot_volt_vfe_equ_idx;
-		else
+		} else {
 			rail_type_data.volt_rail.boot_volt_vfe_equ_idx =
 				CTRL_BOARDOBJ_IDX_INVALID;
+		}
 
 		if (header.table_entry_size >=
-			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_08)
+			NV_VBIOS_VOLTAGE_RAIL_1X_ENTRY_SIZE_08) {
 			rail_type_data.volt_rail.pwr_equ_idx =
 				(u8)entry.pwr_equ_idx;
-		else
+		} else {
 			rail_type_data.volt_rail.pwr_equ_idx =
 				CTRL_PMGR_PWR_EQUATION_INDEX_INVALID;
+		}
 
 		prail = construct_volt_rail(g, &rail_type_data);
 
@@ -370,8 +382,9 @@ static u32 _volt_rail_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
@@ -389,8 +402,9 @@ static u32 _volt_rail_devgrp_pmustatus_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_get_status->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmustatus = (struct nv_pmu_boardobj_query *)
 			&pgrp_get_status->objects[idx].data.board_obj;
@@ -426,8 +440,9 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 	/* Obtain Voltage Rail Table from VBIOS */
 	status = volt_get_volt_rail_table(g, &g->perf_pmu.volt.
 			volt_rail_metadata);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	/* Populate data for the VOLT_RAIL PMU interface */
 	BOARDOBJGRP_PMU_CONSTRUCT(pboardobjgrp, VOLT, VOLT_RAIL);

@@ -43,8 +43,9 @@ static u32 construct_volt_policy(struct gk20a *g,
 	u32 status = 0;
 
 	status = boardobj_construct_super(g, ppboardobj, size, pArgs);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pvolt_policy = (struct voltage_policy *)*ppboardobj;
 
@@ -62,8 +63,9 @@ static u32 construct_volt_policy_split_rail(struct gk20a *g,
 	u32 status = 0;
 
 	status = construct_volt_policy(g, ppboardobj, size, pArgs);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pvolt_policy = (struct voltage_policy_split_rail *)*ppboardobj;
 
@@ -86,8 +88,9 @@ static u32 construct_volt_policy_single_rail(struct gk20a *g,
 	u32 status = 0;
 
 	status = construct_volt_policy(g, ppboardobj, size, pArgs);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pvolt_policy = (struct voltage_policy_single_rail *)*ppboardobj;
 
@@ -104,8 +107,9 @@ static u32 volt_policy_pmu_data_init_single_rail(struct gk20a *g,
 	struct nv_pmu_volt_volt_policy_sr_boardobj_set *pset;
 
 	status = volt_policy_pmu_data_init_super(g, pboardobj, ppmudata);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	ppolicy = (struct voltage_policy_single_rail *)pboardobj;
 	pset = (struct nv_pmu_volt_volt_policy_sr_boardobj_set *)
@@ -124,8 +128,9 @@ static u32 volt_policy_pmu_data_init_sr_multi_step(struct gk20a *g,
 	struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set *pset;
 
 	status = volt_policy_pmu_data_init_single_rail(g, pboardobj, ppmudata);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	ppolicy = (struct voltage_policy_single_rail_multi_step *)pboardobj;
 	pset = (struct nv_pmu_volt_volt_policy_sr_multi_step_boardobj_set *)
@@ -149,8 +154,9 @@ static u32 volt_construct_volt_policy_single_rail_multi_step(struct gk20a *g,
 	u32 status = 0;
 
 	status = construct_volt_policy_single_rail(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pboardobj = (*ppboardobj);
 	p_volt_policy = (struct voltage_policy_single_rail_multi_step *)
@@ -176,8 +182,9 @@ static u32 volt_policy_pmu_data_init_split_rail(struct gk20a *g,
 	struct nv_pmu_volt_volt_policy_splt_r_boardobj_set *pset;
 
 	status = volt_policy_pmu_data_init_super(g, pboardobj, ppmudata);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	ppolicy = (struct voltage_policy_split_rail *)pboardobj;
 	pset = (struct nv_pmu_volt_volt_policy_splt_r_boardobj_set *)
@@ -201,8 +208,9 @@ static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 	u32 status = 0;
 
 	status = construct_volt_policy_split_rail(g, ppboardobj, size, pargs);
-	if (status)
+	if (status) {
 		return status;
+	}
 
 	pboardobj = (*ppboardobj);
 	pboardobj->pmudatainit = volt_policy_pmu_data_init_split_rail;
@@ -374,8 +382,9 @@ static u32 _volt_policy_devgrp_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+		pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
@@ -393,8 +402,9 @@ static u32 _volt_policy_devgrp_pmustatus_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		p_get_status->hdr.data.super.obj_mask.super.data[0]) == 0)
+		p_get_status->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmustatus = (struct nv_pmu_boardobj_query *)
 			&p_get_status->objects[idx].data.board_obj;
@@ -435,8 +445,9 @@ u32 volt_policy_pmu_setup(struct gk20a *g)
 	pboardobjgrp =
 		&g->perf_pmu.volt.volt_policy_metadata.volt_policies.super;
 
-	if (!pboardobjgrp->bconstructed)
+	if (!pboardobjgrp->bconstructed) {
 		return -EINVAL;
+	}
 
 	status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 
@@ -470,8 +481,9 @@ u32 volt_policy_sw_setup(struct gk20a *g)
 	/* Obtain Voltage Rail Table from VBIOS */
 	status = volt_get_volt_policy_table(g, &g->perf_pmu.volt.
 			volt_policy_metadata);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	/* Populate data for the VOLT_RAIL PMU interface */
 	BOARDOBJGRP_PMU_CONSTRUCT(pboardobjgrp, VOLT, VOLT_POLICY);

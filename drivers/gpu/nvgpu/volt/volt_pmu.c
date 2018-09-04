@@ -54,8 +54,9 @@ static void volt_rpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	if (phandlerparams->prpc_call->b_supported)
+	if (phandlerparams->prpc_call->b_supported) {
 		phandlerparams->success = 1;
+	}
 }
 
 
@@ -124,10 +125,11 @@ u32 nvgpu_volt_send_load_cmd_to_pmu_gp10x(struct gk20a *g)
 	rpc_call.function = NV_PMU_VOLT_RPC_ID_LOAD;
 
 	status =  volt_pmu_rpc_execute(g, &rpc_call);
-	if (status)
+	if (status) {
 		nvgpu_err(g,
 			"Error while executing LOAD RPC: status = 0x%08x.",
 			status);
+	}
 
 	return status;
 }
@@ -241,9 +243,10 @@ static u32 volt_policy_set_voltage(struct gk20a *g, u8 client_id,
 	}
 
 	/* Convert the client ID to index. */
-	if (client_id == CTRL_VOLT_POLICY_CLIENT_PERF_CORE_VF_SEQ)
+	if (client_id == CTRL_VOLT_POLICY_CLIENT_PERF_CORE_VF_SEQ) {
 		policy_idx =
 			pvolt->volt_policy_metadata.perf_core_vf_seq_policy_idx;
+	}
 	else {
 		status = -EINVAL;
 		goto exit;
@@ -257,9 +260,10 @@ static u32 volt_policy_set_voltage(struct gk20a *g, u8 client_id,
 
 	/* Execute the voltage change request via PMU RPC. */
 	status = volt_pmu_rpc_execute(g, &rpc_call);
-	if (status)
+	if (status) {
 		nvgpu_err(g,
 			"Error while executing VOLT_POLICY_SET_VOLTAGE RPC");
+	}
 
 exit:
 	return status;

@@ -1012,6 +1012,10 @@ static inline u32 gr_fecs_host_int_status_umimp_illegal_method_f(u32 v)
 {
 	return (v & 0x1U) << 18U;
 }
+static inline u32 gr_fecs_host_int_status_watchdog_active_f(void)
+{
+	return 0x80000U;
+}
 static inline u32 gr_fecs_host_int_status_ctxsw_intr_f(u32 v)
 {
 	return (v & 0xffffU) << 0U;

@@ -5288,10 +5288,16 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
 			  isr_data->data_lo);
 		ret = -1;
+	} else if ((gr_fecs_intr &
+			gr_fecs_host_int_status_watchdog_active_f()) != 0U) {
+		/* currently, recovery is not initiated */
+		nvgpu_err(g, "fecs watchdog triggered for channel %u, "
+				"cannot ctxsw anymore !!", isr_data->chid);
+		gk20a_fecs_dump_falcon_stats(g);
 	} else {
 		nvgpu_err(g,
-		   "fecs error interrupt 0x%08x for channel %u",
-		   gr_fecs_intr, isr_data->chid);
+			"fecs error interrupt 0x%08x for channel %u",
+			gr_fecs_intr, isr_data->chid);
 	}
 
 	gk20a_writel(g, gr_fecs_host_int_clear_r(), gr_fecs_intr);

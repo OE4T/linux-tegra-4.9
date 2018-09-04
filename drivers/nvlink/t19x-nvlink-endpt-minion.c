@@ -887,8 +887,7 @@ int init_nvhs_phy(struct tnvlink_dev *tdev)
 
 	/* RX calibration */
 	reg_val = BIT(NVL_BR0_CFG_CTL_CAL_RXCAL) |
-			BIT(NVL_BR0_CFG_CTL_CAL_INIT_TRAIN_DONE) |
-			BIT(NVL_BR0_CFG_CTL_CAL_EOM_DIS);
+			BIT(NVL_BR0_CFG_CTL_CAL_INIT_TRAIN_DONE);
 	nvlw_nvl_writel(tdev, NVL_BR0_CFG_CTL_CAL, reg_val);
 
 	/* Wait for RXCAL_DONE bit to be set */

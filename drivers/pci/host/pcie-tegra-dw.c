@@ -51,6 +51,8 @@
 #define APPL_PINMUX_PEX_RST			BIT(0)
 #define APPL_PINMUX_CLKREQ_OVERRIDE_EN		BIT(2)
 #define APPL_PINMUX_CLKREQ_OVERRIDE		BIT(3)
+#define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN	BIT(4)
+#define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE	BIT(5)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD_EN		BIT(9)
 #define APPL_PINMUX_CLKREQ_OUT_OVRD		BIT(10)
 
@@ -3044,6 +3046,9 @@ static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 	 */
 	data = readl(pcie->appl_base + APPL_PINMUX);
 	data |= (APPL_PINMUX_CLKREQ_OVERRIDE_EN | APPL_PINMUX_CLKREQ_OVERRIDE);
+	/* Cut REFCLK to slot */
+	data |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
+	data &= ~APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
 	writel(data, pcie->appl_base + APPL_PINMUX);
 
 	return ret;

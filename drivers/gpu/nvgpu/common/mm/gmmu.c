@@ -80,7 +80,7 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	struct nvgpu_sgt *sgt = nvgpu_sgt_create_from_mem(g, mem);
 
 	if (!sgt) {
-		return -ENOMEM;
+		return 0;
 	}
 
 	/*

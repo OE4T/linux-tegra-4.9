@@ -313,9 +313,11 @@
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8B>;
 		reg = <0x00 0x14180000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x38000000 0x0 0x02000000   /* window1 (32M)              */
 		       0x00 0x38000000 0x0 0x00040000   /* configuration space (256K) */
-		       0x00 0x38040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
-		reg-names = "appl", "config", "atu_dma";
+		       0x00 0x38040000 0x0 0x00040000   /* iATU_DMA reg space (256K)  */
+		       0x18 0x00000000 0x4 0x00000000>; /* window2 (16G)              */
+		reg-names = "appl", "window1", "config", "atu_dma", "window2";
 
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -341,6 +343,9 @@
 		nvidia,aspm-pwr-on-t = <0x14>;
 		nvidia,aspm-l0s-entrance-latency = <0x3>;
 		nvidia,aspm-l1-entrance-latency = <0x5>;
+
+		num-ib-windows = <2>;
+		num-ob-windows = <8>;
 
 		nvidia,margin-port-cap = <0x194>;
 		nvidia,margin-lane-cntrl = <0x198>;
@@ -397,9 +402,11 @@
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX4A>;
 		reg = <0x00 0x14160000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x36000000 0x0 0x02000000   /* window1 (32M)              */
 		       0x00 0x36000000 0x0 0x00040000   /* configuration space (256K) */
-		       0x00 0x36040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
-		reg-names = "appl", "config", "atu_dma";
+		       0x00 0x36040000 0x0 0x00040000   /* iATU_DMA reg space (256K)  */
+		       0x14 0x00000000 0x4 0x00000000>; /* window2 (16G)              */
+		reg-names = "appl", "window1", "config", "atu_dma", "window2";
 
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -426,6 +433,9 @@
 		nvidia,aspm-l0s-entrance-latency = <0x3>;
 		nvidia,aspm-l1-entrance-latency = <0x5>;
 
+		num-ib-windows = <2>;
+		num-ob-windows = <8>;
+
 		nvidia,margin-port-cap = <0x190>;
 		nvidia,margin-lane-cntrl = <0x194>;
 		nvidia,cfg-link-cap-l1sub = <0x1b0>;
@@ -449,9 +459,11 @@
 		compatible = "nvidia,tegra194-pcie-ep";
 		power-domains = <&bpmp TEGRA194_POWER_DOMAIN_PCIEX8A>;
 		reg = <0x00 0x141a0000 0x0 0x00020000   /* appl registers (128K)      */
+		       0x00 0x3a000000 0x0 0x02000000   /* window1 (32M)              */
 		       0x00 0x3a000000 0x0 0x00040000   /* configuration space (256K) */
-		       0x00 0x3a040000 0x0 0x00040000>; /* iATU_DMA reg space (256K)  */
-		reg-names = "appl", "config", "atu_dma";
+		       0x00 0x3a040000 0x0 0x00040000   /* iATU_DMA reg space (256K)  */
+		       0x1c 0x00000000 0x4 0x00000000>; /* window2 (16G)              */
+		reg-names = "appl", "window1", "config", "atu_dma", "window2";
 
 		#address-cells = <3>;
 		#size-cells = <2>;
@@ -482,6 +494,9 @@
 		nvidia,aspm-pwr-on-t = <0x14>;
 		nvidia,aspm-l0s-entrance-latency = <0x3>;
 		nvidia,aspm-l1-entrance-latency = <0x5>;
+
+		num-ib-windows = <2>;
+		num-ob-windows = <8>;
 
 		nvidia,margin-port-cap = <0x194>;
 		nvidia,margin-lane-cntrl = <0x198>;

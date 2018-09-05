@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,7 @@
 #include <linux/export.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra-roc.h>
+#include <asm/cputype.h>
 
 #define MCE_FLUSH_CTRL			0x0
 #define MCE_FLUSH_ADDR_MATCH	0x4
@@ -109,11 +110,14 @@ static const struct of_device_id tegra_roc_flush_of_match[] = {
 static __init int tegra_roc_flush_init(void)
 {
 	struct device_node *np;
+	u32 cpuid;
 
 	np = of_find_compatible_node(NULL, NULL,
 		tegra_roc_flush_of_match[0].compatible);
 	if (!np) {
-		pr_err("tegra-roc-flush: DT required.\n");
+		cpuid = read_cpuid_id() & MIDR_CPU_MODEL_MASK;
+		if (cpuid == MIDR_NVIDIA_DENVER)
+			pr_err("tegra-roc-flush: DT required.\n");
 		return -EINVAL;
 	}
 

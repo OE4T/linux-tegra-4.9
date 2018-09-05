@@ -251,11 +251,11 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm,
 		      struct nvgpu_mem *mem,
 		      u64 gpu_va);
 
-int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes);
-void __nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd);
-int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
+int nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes);
+void nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd);
+int nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 				  struct nvgpu_gmmu_pd *pd, u32 bytes);
-void __nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd);
+void nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd);
 int nvgpu_pd_cache_init(struct gk20a *g);
 void nvgpu_pd_cache_fini(struct gk20a *g);
 

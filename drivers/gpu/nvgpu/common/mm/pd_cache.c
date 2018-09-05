@@ -64,10 +64,10 @@
  * lists. For a 4Kb page NVGPU_PD_CACHE_COUNT is 4. This is enough space for
  * 256, 512, 1024, and 2048 byte PDs.
  *
- * __nvgpu_pd_alloc() will allocate a PD for the GMMU. It will check if the PD
+ * nvgpu_pd_alloc() will allocate a PD for the GMMU. It will check if the PD
  * size is page size or larger and choose the correct allocation scheme - either
- * from the PD cache or directly. Similarly __nvgpu_pd_free() will free a PD
- * allocated by __nvgpu_pd_alloc().
+ * from the PD cache or directly. Similarly nvgpu_pd_free() will free a PD
+ * allocated by nvgpu_pd_alloc().
  *
  * Since the top level PD (the PDB) is a page aligned pointer but less than a
  * page size the direct functions must be used for allocating PDBs. Otherwise
@@ -150,8 +150,8 @@ void nvgpu_pd_cache_fini(struct gk20a *g)
  * Note: this does not need the cache lock since it does not modify any of the
  * PD cache data structures.
  */
-int __nvgpu_pd_cache_alloc_direct(struct gk20a *g,
-				  struct nvgpu_gmmu_pd *pd, u32 bytes)
+int nvgpu_pd_cache_alloc_direct(struct gk20a *g,
+				struct nvgpu_gmmu_pd *pd, u32 bytes)
 {
 	int err;
 	unsigned long flags = 0;
@@ -339,7 +339,7 @@ static int nvgpu_pd_cache_alloc(struct gk20a *g, struct nvgpu_pd_cache *cache,
  * cache logistics. Since on Parker and later GPUs some of the page  directories
  * are smaller than a page packing these PDs together saves a lot of memory.
  */
-int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
+int nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int err;
@@ -349,7 +349,7 @@ int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
 	 * alloc.
 	 */
 	if (bytes >= PAGE_SIZE) {
-		err = __nvgpu_pd_cache_alloc_direct(g, pd, bytes);
+		err = nvgpu_pd_cache_alloc_direct(g, pd, bytes);
 		if (err) {
 			return err;
 		}
@@ -368,7 +368,7 @@ int __nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes)
 	return err;
 }
 
-void __nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
+void nvgpu_pd_cache_free_direct(struct gk20a *g, struct nvgpu_gmmu_pd *pd)
 {
 	pd_dbg(g, "PD-Free  [D] 0x%p", pd->mem);
 
@@ -448,7 +448,7 @@ static void nvgpu_pd_cache_free(struct gk20a *g, struct nvgpu_pd_cache *cache,
 	nvgpu_pd_cache_do_free(g, cache, pentry, pd);
 }
 
-void __nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd)
+void nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
@@ -456,7 +456,7 @@ void __nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd)
 	 * Simple case: just DMA free.
 	 */
 	if (!pd->cached) {
-		return __nvgpu_pd_cache_free_direct(g, pd);
+		return nvgpu_pd_cache_free_direct(g, pd);
 	}
 
 	nvgpu_mutex_acquire(&g->mm.pd_cache->lock);

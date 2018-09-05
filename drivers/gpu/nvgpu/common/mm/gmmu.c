@@ -200,7 +200,7 @@ int nvgpu_gmmu_init_page_table(struct vm_gk20a *vm)
 	 */
 	pdb_size = ALIGN(pd_size(&vm->mmu_levels[0], &attrs), PAGE_SIZE);
 
-	err = __nvgpu_pd_cache_alloc_direct(vm->mm->g, &vm->pdb, pdb_size);
+	err = nvgpu_pd_cache_alloc_direct(vm->mm->g, &vm->pdb, pdb_size);
 	if (WARN_ON(err)) {
 		return err;
 	}
@@ -277,7 +277,7 @@ static int pd_allocate(struct vm_gk20a *vm,
 		return 0;
 	}
 
-	err = __nvgpu_pd_alloc(vm, pd, pd_size(l, attrs));
+	err = nvgpu_pd_alloc(vm, pd, pd_size(l, attrs));
 	if (err) {
 		nvgpu_info(vm->mm->g, "error allocating page directory!");
 		return err;

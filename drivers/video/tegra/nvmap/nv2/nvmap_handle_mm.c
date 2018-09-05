@@ -26,10 +26,10 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nv2_handle.h"
-#include "nv2_handle_priv.h"
-#include "nv2_misc.h"
-#include "nv2_vma.h"
+#include "nvmap_handle.h"
+#include "nvmap_handle_priv.h"
+#include "nvmap_misc.h"
+#include "nvmap_vma.h"
 
 /*
  * FIXME: assume user space requests for reserve operations

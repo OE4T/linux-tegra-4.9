@@ -15,7 +15,7 @@
 #define __NVMAP2_HANDLE_H
 
 #include <linux/dma-buf.h>
-#include "nv2_structs.h"
+#include "nvmap_structs.h"
 
 struct nvmap_handle;
 

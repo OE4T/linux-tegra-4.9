@@ -21,10 +21,10 @@
 #include <linux/miscdevice.h>
 #include <linux/nvmap_t19x.h>
 
-#include "nv2_handle.h"
-#include "nv2_cache.h"
-#include "nv2_dmabuf.h"
-#include "nv2_dev.h"
+#include "nvmap_handle.h"
+#include "nvmap_cache.h"
+#include "nvmap_dmabuf.h"
+#include "nvmap_dev.h"
 
 // TODO: Re-name this function so it can be in a header file
 struct sg_table *_nvmap_dmabuf_map_dma_buf(

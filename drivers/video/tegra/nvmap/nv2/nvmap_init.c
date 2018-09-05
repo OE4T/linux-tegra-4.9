@@ -48,10 +48,10 @@
 #endif
 #endif
 
-#include "nv2_carveout.h"
+#include "nvmap_carveout.h"
 #include "nvmap_heap.h"
-#include "nv2_dev.h"
-#include "nv2_init.h"
+#include "nvmap_dev.h"
+#include "nvmap_init.h"
 
 extern ulong nvmap_init_time;
 

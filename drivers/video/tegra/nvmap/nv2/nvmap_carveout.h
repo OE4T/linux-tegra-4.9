@@ -14,7 +14,7 @@
 #ifndef __NVMAP2_CARVEOUT_H
 #define __NVMAP2_CARVEOUT_H
 
-#include "nv2_structs.h"
+#include "nvmap_structs.h"
 
 int NVMAP2_carveout_create(const struct nvmap_platform_carveout *co);
 void NVMAP2_carveout_destroy(struct nvmap_carveout_node *node);

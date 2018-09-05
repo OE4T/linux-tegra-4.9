@@ -35,18 +35,18 @@
 
 #include "nvmap_stats.h"
 
-#include "nv2_misc.h"
-#include "nv2_cache.h"
-#include "nv2_heap_alloc.h"
-#include "nv2_carveout.h"
-#include "nv2_carveout.h"
-#include "nv2_dev.h"
-#include "nv2_dmabuf.h"
-#include "nv2_vma.h"
-#include "nv2_tag.h"
+#include "nvmap_misc.h"
+#include "nvmap_cache.h"
+#include "nvmap_heap_alloc.h"
+#include "nvmap_carveout.h"
+#include "nvmap_carveout.h"
+#include "nvmap_dev.h"
+#include "nvmap_dmabuf.h"
+#include "nvmap_vma.h"
+#include "nvmap_tag.h"
 
-#include "nv2_handle.h"
-#include "nv2_handle_priv.h"
+#include "nvmap_handle.h"
+#include "nvmap_handle_priv.h"
 
 #define K(x) (x >> 10)
 

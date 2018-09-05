@@ -28,6 +28,7 @@
 #include <nvgpu/hw_sim.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 
@@ -215,7 +216,7 @@ static int issue_rpc_and_wait(struct gk20a *g)
 	return 0;
 }
 
-static int nvgpu_sim_esc_readl(struct gk20a *g,
+static void nvgpu_sim_esc_readl(struct gk20a *g,
 		char *path, u32 index, u32 *data)
 {
 	int err;
@@ -232,9 +233,12 @@ static int nvgpu_sim_esc_readl(struct gk20a *g,
 
 	err = issue_rpc_and_wait(g);
 
-	if (!err)
+	if (err == 0) {
 		memcpy(data, sim_msg_param(g, data_offset), sizeof(u32));
-	return err;
+	} else {
+		*data = 0xffffffff;
+		WARN(1, "issue_rpc_and_wait failed err=%d", err);
+	}
 }
 
 static void nvgpu_sim_init_late(struct gk20a *g)

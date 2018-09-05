@@ -36,7 +36,7 @@ struct sim_nvgpu {
 	struct nvgpu_mem msg_bfr;
 	void (*sim_init_late)(struct gk20a *);
 	void (*remove_support)(struct gk20a *);
-	int (*esc_readl)(
+	void (*esc_readl)(
 		struct gk20a *g, char *path, u32 index, u32 *data);
 };
 #ifdef __KERNEL__

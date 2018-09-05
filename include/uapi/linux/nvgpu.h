@@ -1169,7 +1169,7 @@ struct nvgpu_dbg_gpu_reg_op {
 struct nvgpu_dbg_gpu_exec_reg_ops_args {
 	__u64 ops; /* pointer to nvgpu_reg_op operations */
 	__u32 num_ops;
-	__u32 _pad0[1];
+	__u32 gr_ctx_resident;
 };
 
 #define NVGPU_DBG_GPU_IOCTL_REG_OPS					\

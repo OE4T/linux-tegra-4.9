@@ -33,7 +33,8 @@
 
 int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 		      struct nvgpu_dbg_reg_op *ops,
-		      u64 num_ops)
+		      u64 num_ops,
+		      bool *is_current_ctx)
 {
 	struct channel_gk20a *ch;
 	struct tegra_vgpu_cmd_msg msg;

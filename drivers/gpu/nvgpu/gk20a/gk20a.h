@@ -1133,7 +1133,8 @@ struct gpu_ops {
 	struct {
 		int (*exec_regops)(struct dbg_session_gk20a *dbg_s,
 			    struct nvgpu_dbg_reg_op *ops,
-			    u64 num_ops);
+			    u64 num_ops,
+			    bool *is_current_ctx);
 		const struct regop_offset_range* (
 				*get_global_whitelist_ranges)(void);
 		u64 (*get_global_whitelist_ranges_count)(void);

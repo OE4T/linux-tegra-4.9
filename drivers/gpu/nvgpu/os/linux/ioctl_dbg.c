@@ -869,6 +869,9 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
 
+	bool is_current_ctx;
+
+
 	nvgpu_log_fn(g, "%d ops, max fragment %d", args->num_ops, g->dbg_regops_tmp_buf_ops);
 
 	if (args->num_ops > NVGPU_IOCTL_DBG_REG_OPS_LIMIT) {
@@ -954,11 +957,15 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 				break;
 
 			err = g->ops.regops.exec_regops(
-				dbg_s, g->dbg_regops_tmp_buf, num_ops);
+				dbg_s, g->dbg_regops_tmp_buf, num_ops, &is_current_ctx);
 
 			if (err) {
 				break;
-                        }
+			}
+
+			if (ops_offset == 0) {
+				args->gr_ctx_resident = is_current_ctx;
+			}
 
 			err = nvgpu_get_regops_data_linux(g->dbg_regops_tmp_buf,
 					linux_fragment, num_ops);

@@ -89,7 +89,8 @@ static bool validate_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		      struct nvgpu_dbg_reg_op *ops,
-		      u64 num_ops)
+		      u64 num_ops,
+		      bool *is_current_ctx)
 {
 	int err = 0;
 	unsigned int i;
@@ -219,7 +220,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	if (ctx_wr_count | ctx_rd_count) {
 		err = gr_gk20a_exec_ctx_ops(ch, ops, num_ops,
-					    ctx_wr_count, ctx_rd_count);
+					    ctx_wr_count, ctx_rd_count,
+					    is_current_ctx);
 		if (err) {
 			nvgpu_warn(g, "failed to perform ctx ops\n");
 			goto clean_up;

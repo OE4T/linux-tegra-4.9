@@ -616,7 +616,8 @@ int gk20a_gr_suspend(struct gk20a *g);
 struct nvgpu_dbg_reg_op;
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			  struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
-			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops);
+			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
+			  bool *is_curr_ctx);
 int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			    struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
 			    u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,

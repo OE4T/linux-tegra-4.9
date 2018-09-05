@@ -8358,7 +8358,8 @@ int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			  struct nvgpu_dbg_reg_op *ctx_ops, u32 num_ops,
-			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
+			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
+			  bool *is_curr_ctx)
 {
 	struct gk20a *g = ch->g;
 	int err, tmp_err;
@@ -8376,7 +8377,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	}
 
 	ch_is_curr_ctx = gk20a_is_channel_ctx_resident(ch);
-
+	if (is_curr_ctx != NULL) {
+		*is_curr_ctx = ch_is_curr_ctx;
+	}
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg, "is curr ctx=%d",
 		  ch_is_curr_ctx);
 
@@ -8694,7 +8697,7 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 		i++;
 	}
 
-	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
+	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0, NULL);
 	if (err) {
 		nvgpu_err(g, "Failed to access register");
 	}

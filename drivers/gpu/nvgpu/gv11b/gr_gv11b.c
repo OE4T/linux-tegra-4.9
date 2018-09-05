@@ -3377,7 +3377,7 @@ int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 		i++;
 	}
 
-	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
+	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0, NULL);
 	if (err) {
 		nvgpu_err(g, "Failed to access register\n");
 	}

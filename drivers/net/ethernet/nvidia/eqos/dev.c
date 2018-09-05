@@ -3541,14 +3541,35 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 
 static void configure_dma(struct eqos_prv_data *pdata)
 {
+	u32 value = 0;
 	/* Setting INCRx */
 	DMA_SBUS_WR(0x0);
 
-	/* To get Best Performance */
-	DMA_SBUS_BLEN16_WR(1);
-	DMA_SBUS_BLEN8_WR(1);
-	DMA_SBUS_RD_OSR_LMT_WR(2);
-	DMA_SBUS_EAME_WR(1);
+	/* Program WR_OSR_LMT to 31 for MAC_VER above 4.10 */
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10) {
+		value &= ~DMA_AXI_WR_OSR_LMT;
+		value |= (31 << DMA_AXI_WR_OSR_LMT_SHIFT);
+	} else {
+		value &= ~DMA_AXI_WR_OSR_LMT_V4;
+		value |= (15 << DMA_AXI_WR_OSR_LMT_SHIFT);
+	}
+
+	/* Program RD_OSR_LMT to 31 for MAC_VER above 4.10 */
+	if (pdata->mac_ver > EQOS_MAC_CORE_4_10) {
+		value &= ~DMA_AXI_RD_OSR_LMT;
+		value |= (31 << DMA_AXI_RD_OSR_LMT_SHIFT);
+	} else {
+		value &= ~DMA_AXI_RD_OSR_LMT_V4;
+		value |= (15 << DMA_AXI_RD_OSR_LMT_SHIFT);
+	}
+
+	/* Enable different DMA BURST Lengths */
+	value |= DMA_AXI_BLEN8 | DMA_AXI_BLEN16;
+
+	/* Enable Enhanced Address Mode */
+	value |= DMA_AXI_EAME;
+
+	DMA_SBUS_WR(value);
 
 	if (pdata->mac_ver > EQOS_MAC_CORE_4_10)
 		DMA_BMR_DSPW_WR(0x1);

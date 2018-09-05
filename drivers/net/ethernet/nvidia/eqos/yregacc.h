@@ -23555,6 +23555,20 @@ extern ULONG eqos_base_addr;
 	data = ((data >> 30) & DMA_SBUS_LPI_XIT_PKT_MASK);\
 } while (0)
 
+/* DMA AXI bitmap */
+#define DMA_AXI_WR_OSR_LMT_V4              GENMASK(27, 24)
+#define DMA_AXI_RD_OSR_LMT_V4              GENMASK(19, 16)
+#define DMA_AXI_WR_OSR_LMT              GENMASK(28, 24)
+#define DMA_AXI_WR_OSR_LMT_SHIFT        24
+#define DMA_AXI_RD_OSR_LMT              GENMASK(20, 16)
+#define DMA_AXI_RD_OSR_LMT_SHIFT        16
+#define DMA_AXI_EAME            BIT(11)
+#define DMA_AXI_BLEN256         BIT(7)
+#define DMA_AXI_BLEN128         BIT(6)
+#define DMA_AXI_BLEN64          BIT(5)
+#define DMA_AXI_BLEN32          BIT(4)
+#define DMA_AXI_BLEN16          BIT(3)
+#define DMA_AXI_BLEN8           BIT(2)
 
 #define DMA_SBUS_WR_OSR_LMT_MASK (ULONG)(0xf)
 

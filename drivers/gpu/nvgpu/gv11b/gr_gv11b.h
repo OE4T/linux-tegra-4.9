@@ -166,9 +166,6 @@ void gv11b_gr_get_esr_sm_sel(struct gk20a *g, u32 gpc, u32 tpc,
 				u32 *esr_sm_sel);
 int gv11b_gr_sm_trigger_suspend(struct gk20a *g);
 void gv11b_gr_bpt_reg_info(struct gk20a *g, struct nvgpu_warpstate *w_state);
-int gv11b_gr_update_sm_error_state(struct gk20a *g,
-		struct channel_gk20a *ch, u32 sm_id,
-		struct nvgpu_tsg_sm_error_state *sm_error_state);
 int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable);
 int gv11b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,

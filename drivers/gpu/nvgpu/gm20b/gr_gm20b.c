@@ -1306,22 +1306,6 @@ static void gm20b_gr_read_sm_error_state(struct gk20a *g,
 
 }
 
-static void gm20b_gr_write_sm_error_state(struct gk20a *g,
-			u32 offset,
-			struct nvgpu_tsg_sm_error_state *sm_error_states)
-{
-	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
-				sm_error_states->hww_global_esr);
-	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset,
-				sm_error_states->hww_warp_esr);
-	gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_pc_r() + offset,
-				u64_lo32(sm_error_states->hww_warp_esr_pc));
-	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset,
-				sm_error_states->hww_global_esr_report_mask);
-	gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset,
-				sm_error_states->hww_warp_esr_report_mask);
-}
-
 int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc, u32 sm,
 				struct channel_gk20a *fault_ch)
 {
@@ -1354,70 +1338,6 @@ record_fail:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return sm_id;
-}
-
-int gm20b_gr_update_sm_error_state(struct gk20a *g,
-		struct channel_gk20a *ch, u32 sm_id,
-		struct nvgpu_tsg_sm_error_state *sm_error_state)
-{
-	u32 gpc, tpc, offset;
-	struct tsg_gk20a *tsg;
-	struct nvgpu_gr_ctx *ch_ctx;
-	struct nvgpu_tsg_sm_error_state *tsg_sm_error_states;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
-					       GPU_LIT_TPC_IN_GPC_STRIDE);
-	int err = 0;
-
-	tsg = tsg_gk20a_from_ch(ch);
-	if (!tsg) {
-		return -EINVAL;
-	}
-
-	ch_ctx = &tsg->gr_ctx;
-
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-
-	tsg_sm_error_states = tsg->sm_error_states + sm_id;
-	gk20a_tsg_update_sm_error_state_locked(tsg, sm_id, sm_error_state);
-
-	err = gr_gk20a_disable_ctxsw(g);
-	if (err) {
-		nvgpu_err(g, "unable to stop gr ctxsw");
-		goto fail;
-	}
-
-	gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
-	tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
-
-	offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
-
-	if (gk20a_is_channel_ctx_resident(ch)) {
-		gm20b_gr_write_sm_error_state(g, offset, tsg_sm_error_states);
-	} else {
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx, false);
-		if (err) {
-			goto enable_ctxsw;
-		}
-
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-			gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset,
-			tsg_sm_error_states->hww_global_esr_report_mask,
-			true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset,
-			tsg_sm_error_states->hww_warp_esr_report_mask,
-			true);
-
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx, false);
-	}
-
-enable_ctxsw:
-	err = gr_gk20a_enable_ctxsw(g);
-
-fail:
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
-	return err;
 }
 
 int gm20b_gr_clear_sm_error_state(struct gk20a *g,

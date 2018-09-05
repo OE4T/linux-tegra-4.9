@@ -117,9 +117,6 @@ void gr_gm20b_get_access_map(struct gk20a *g,
 				   u32 **whitelist, int *num_entries);
 int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc,
 		u32 tpc, u32 sm, struct channel_gk20a *fault_ch);
-int gm20b_gr_update_sm_error_state(struct gk20a *g,
-		struct channel_gk20a *ch, u32 sm_id,
-		struct nvgpu_tsg_sm_error_state *sm_error_state);
 int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id);
 int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,

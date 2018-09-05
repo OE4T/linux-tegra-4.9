@@ -168,7 +168,6 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode,
 		.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode,
 		.record_sm_error_state = gm20b_gr_record_sm_error_state,
-		.update_sm_error_state = NULL,
 		.clear_sm_error_state = vgpu_gr_clear_sm_error_state,
 		.suspend_contexts = vgpu_gr_suspend_contexts,
 		.resume_contexts = vgpu_gr_resume_contexts,

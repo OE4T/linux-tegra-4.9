@@ -1329,17 +1329,6 @@ struct nvgpu_dbg_gpu_clear_single_sm_error_state_args {
 #define NVGPU_DBG_GPU_IOCTL_CLEAR_SINGLE_SM_ERROR_STATE			\
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 15, struct nvgpu_dbg_gpu_clear_single_sm_error_state_args)
 
-
-struct nvgpu_dbg_gpu_write_single_sm_error_state_args {
-	__u32 sm_id;
-	__u32 padding;
-	__u64 sm_error_state_record_mem;
-	__u64 sm_error_state_record_size;
-};
-
-#define NVGPU_DBG_GPU_IOCTL_WRITE_SINGLE_SM_ERROR_STATE			\
-	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 16, struct nvgpu_dbg_gpu_write_single_sm_error_state_args)
-
 /*
  * Unbinding/detaching a debugger session from a nvgpu channel
  *

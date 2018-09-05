@@ -338,7 +338,6 @@ static const struct gpu_ops gp106_ops = {
 		.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode,
 		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
 		.record_sm_error_state = gm20b_gr_record_sm_error_state,
-		.update_sm_error_state = gm20b_gr_update_sm_error_state,
 		.clear_sm_error_state = gm20b_gr_clear_sm_error_state,
 		.suspend_contexts = gr_gp10b_suspend_contexts,
 		.resume_contexts = gr_gk20a_resume_contexts,

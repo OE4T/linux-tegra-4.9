@@ -447,7 +447,7 @@ static int write(struct seq_file *s, void *data)
 		ret = -ENOMEM;
 		goto err_remap;
 	}
-	get_random_bytes(bar_mem, ep->size);
+	get_random_bytes(__io_virt(bar_mem), ep->size);
 
 	ret = dma_write(ep, &tx);
 	if (ret < 0) {
@@ -457,7 +457,7 @@ static int write(struct seq_file *s, void *data)
 	}
 
 	/* compare copied data */
-	if (!memcmp(bar_mem, phys_to_virt(ep->dst), ep->size))
+	if (!memcmp(__io_virt(bar_mem), phys_to_virt(ep->dst), ep->size))
 		dev_info(&ep->pdev->dev, "DMA-Write test PASSED\n");
 	else
 		dev_info(&ep->pdev->dev, "DMA-Write test FAILED\n");
@@ -491,13 +491,13 @@ static int write_ll(struct seq_file *s, void *data)
 	(ll + 0)->size = (64 * 1024);
 	(ll + 0)->sar_low = ep->src + (64 * 1024 * 1);
 	(ll + 0)->dar_low = ep->dst + (64 * 1024 * 1);
-	get_random_bytes((u8 *)bar_mem + (64 * 1024 * 1), 64 * 1024);
+	get_random_bytes(__io_virt(bar_mem) + (64 * 1024 * 1), 64 * 1024);
 
 	memset((ll + 1), 0x0, sizeof(struct dma_ll));
 	(ll + 1)->size = (64 * 1024);
 	(ll + 1)->sar_low = ep->src + (64 * 1024 * 2);
 	(ll + 1)->dar_low = ep->dst + (64 * 1024 * 2);
-	get_random_bytes((u8 *)bar_mem + (64 * 1024 * 2), 64 * 1024);
+	get_random_bytes(__io_virt(bar_mem) + (64 * 1024 * 2), 64 * 1024);
 
 	memset((ll + 2), 0x0, sizeof(struct dma_ll));
 	(ll + 2)->ele_1.llp = 1;
@@ -509,7 +509,7 @@ static int write_ll(struct seq_file *s, void *data)
 	(ll + 4)->size = (64 * 1024);
 	(ll + 4)->sar_low = ep->src + (64 * 1024 * 4);
 	(ll + 4)->dar_low = ep->dst + (64 * 1024 * 4);
-	get_random_bytes((u8 *)bar_mem + (64 * 1024 * 4), 64 * 1024);
+	get_random_bytes(__io_virt(bar_mem) + (64 * 1024 * 4), 64 * 1024);
 
 	memset((ll + 5), 0x0, sizeof(struct dma_ll));
 	(ll + 5)->ele_1.llp = 1;
@@ -540,19 +540,19 @@ static int write_ll(struct seq_file *s, void *data)
 	}
 
 	/* compare copied data */
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 1)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 1)),
 		   phys_to_virt(ep->dst + (64 * 1024 * 1)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Write-LL Chunk-1 FAILED\n");
 		goto err_out;
 	}
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 2)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 2)),
 		   phys_to_virt(ep->dst + (64 * 1024 * 2)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Write-LL Chunk-2 FAILED\n");
 		goto err_out;
 	}
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 4)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 4)),
 		   phys_to_virt(ep->dst + (64 * 1024 * 4)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Write-LL Chunk-3 FAILED\n");
@@ -596,7 +596,7 @@ static int read(struct seq_file *s, void *data)
 	}
 
 	/* compare copied data */
-	if (!memcmp(bar_mem, phys_to_virt(ep->src), ep->size))
+	if (!memcmp(__io_virt(bar_mem), phys_to_virt(ep->src), ep->size))
 		dev_info(&ep->pdev->dev, "DMA-Read test PASSED\n");
 	else
 		dev_info(&ep->pdev->dev, "DMA-Read test FAILED\n");
@@ -680,19 +680,19 @@ static int read_ll(struct seq_file *s, void *data)
 	}
 
 	/* compare copied data */
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 1)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 1)),
 		   phys_to_virt(ep->src + (64 * 1024 * 1)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Read-LL Chunk-1 FAILED\n");
 		goto err_out;
 	}
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 2)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 2)),
 		   phys_to_virt(ep->src + (64 * 1024 * 2)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Read-LL Chunk-2 FAILED\n");
 		goto err_out;
 	}
-	if (memcmp((void *)((u8 *)bar_mem + (64 * 1024 * 4)),
+	if (memcmp((void *)(__io_virt(bar_mem) + (64 * 1024 * 4)),
 		   phys_to_virt(ep->src + (64 * 1024 * 4)),
 		   64 * 1024)) {
 		dev_err(&ep->pdev->dev, "DMA-Read-LL Chunk-3 FAILED\n");

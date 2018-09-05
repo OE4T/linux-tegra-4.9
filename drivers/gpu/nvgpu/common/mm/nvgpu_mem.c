@@ -33,8 +33,9 @@
  * will not add any checks. If you want to simply use the default coherency then
  * use nvgpu_aperture_mask().
  */
-u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
-			  u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask)
+u32 nvgpu_aperture_mask_coh(struct gk20a *g, enum nvgpu_aperture aperture,
+			    u32 sysmem_mask, u32 sysmem_coh_mask,
+			    u32 vidmem_mask)
 {
 	/*
 	 * Some iGPUs treat sysmem (i.e SoC DRAM) as vidmem. In these cases the
@@ -45,7 +46,7 @@ u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 	}
 
 	switch (aperture) {
-	case __APERTURE_SYSMEM_COH:
+	case APERTURE_SYSMEM_COH:
 		return sysmem_coh_mask;
 	case APERTURE_SYSMEM:
 		return sysmem_mask;
@@ -69,16 +70,18 @@ u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 	 */
 	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) &&
 	    ap == APERTURE_SYSMEM) {
-		ap = __APERTURE_SYSMEM_COH;
+		ap = APERTURE_SYSMEM_COH;
 	}
 
-	return __nvgpu_aperture_mask(g, ap,
-				     sysmem_mask, sysmem_coh_mask, vidmem_mask);
+	return nvgpu_aperture_mask_coh(g, ap,
+				       sysmem_mask,
+				       sysmem_coh_mask,
+				       vidmem_mask);
 }
 
 bool nvgpu_aperture_is_sysmem(enum nvgpu_aperture ap)
 {
-	return ap == __APERTURE_SYSMEM_COH || ap == APERTURE_SYSMEM;
+	return ap == APERTURE_SYSMEM_COH || ap == APERTURE_SYSMEM;
 }
 
 bool nvgpu_mem_is_sysmem(struct nvgpu_mem *mem)

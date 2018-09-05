@@ -191,7 +191,7 @@ static void __update_pte(struct vm_gk20a *vm,
 	u32 pte_addr = attrs->aperture == APERTURE_SYSMEM ?
 		gmmu_new_pte_address_sys_f(phys_shifted) :
 		gmmu_new_pte_address_vid_f(phys_shifted);
-	u32 pte_tgt = __nvgpu_aperture_mask(g,
+	u32 pte_tgt = nvgpu_aperture_mask_coh(g,
 					attrs->aperture,
 					gmmu_new_pte_aperture_sys_mem_ncoh_f(),
 					gmmu_new_pte_aperture_sys_mem_coh_f(),

@@ -720,7 +720,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	 * correct based on the IO coherency flag.
 	 */
 	if (attrs.coherent && attrs.aperture == APERTURE_SYSMEM) {
-		attrs.aperture = __APERTURE_SYSMEM_COH;
+		attrs.aperture = APERTURE_SYSMEM_COH;
 	}
 
 	/*

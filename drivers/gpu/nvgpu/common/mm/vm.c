@@ -359,8 +359,8 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 			user_lp_vma_limit = user_vma_limit;
 		} else {
 			user_vma_start = low_hole;
-			user_vma_limit = __nv_gmmu_va_small_page_limit();
-			user_lp_vma_start = __nv_gmmu_va_small_page_limit();
+			user_vma_limit = nvgpu_gmmu_va_small_page_limit();
+			user_lp_vma_start = nvgpu_gmmu_va_small_page_limit();
 			user_lp_vma_limit = vm->va_limit - kernel_reserved;
 		}
 	} else {
@@ -892,7 +892,7 @@ struct nvgpu_mapped_buf *nvgpu_vm_map(struct vm_gk20a *vm,
 	if (g->mm.disable_bigpage) {
 		binfo.pgsz_idx = GMMU_PAGE_SIZE_SMALL;
 	} else {
-		binfo.pgsz_idx = __get_pte_size(vm, map_addr,
+		binfo.pgsz_idx = nvgpu_vm_get_pte_size(vm, map_addr,
 						min_t(u64, binfo.size, align));
 	}
 	map_size = map_size ? map_size : binfo.size;

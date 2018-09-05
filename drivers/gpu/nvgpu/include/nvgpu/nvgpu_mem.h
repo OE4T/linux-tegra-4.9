@@ -56,7 +56,7 @@ enum nvgpu_aperture {
 	APERTURE_SYSMEM,
 
 	 /* Don't use directly. Use APERTURE_SYSMEM, this is used internally. */
-	__APERTURE_SYSMEM_COH,
+	APERTURE_SYSMEM_COH,
 
 	APERTURE_VIDMEM
 };
@@ -211,7 +211,7 @@ static inline const char *nvgpu_aperture_str(struct gk20a *g,
 		return "INVAL";
 	case APERTURE_SYSMEM:
 		return "SYSMEM";
-	case __APERTURE_SYSMEM_COH:
+	case APERTURE_SYSMEM_COH:
 		return "SYSCOH";
 	case APERTURE_VIDMEM:
 		return "VIDMEM";
@@ -340,7 +340,7 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 u64 nvgpu_mem_get_addr(struct gk20a *g, struct nvgpu_mem *mem);
 u64 nvgpu_mem_get_phys_addr(struct gk20a *g, struct nvgpu_mem *mem);
 
-u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
+u32 nvgpu_aperture_mask_coh(struct gk20a *g, enum nvgpu_aperture aperture,
 		u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask);
 u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 sysmem_mask, u32 sysmem_coh_mask, u32 vidmem_mask);

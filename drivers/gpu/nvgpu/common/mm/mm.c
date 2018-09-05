@@ -36,8 +36,8 @@
  * Attempt to find a reserved memory area to determine PTE size for the passed
  * mapping. If no reserved area can be found use small pages.
  */
-u32 __get_pte_size_fixed_map(struct vm_gk20a *vm,
-					      u64 base, u64 size)
+static u32 nvgpu_vm_get_pte_size_fixed_map(struct vm_gk20a *vm,
+					   u64 base, u64 size)
 {
 	struct nvgpu_vm_area *vm_area;
 
@@ -52,8 +52,8 @@ u32 __get_pte_size_fixed_map(struct vm_gk20a *vm,
 /*
  * This is for when the address space does not support unified address spaces.
  */
-static u32 __get_pte_size_split_addr(struct vm_gk20a *vm,
-					       u64 base, u64 size)
+static u32 nvgpu_vm_get_pte_size_split_addr(struct vm_gk20a *vm,
+					    u64 base, u64 size)
 {
 	if (!base) {
 		if (size >= vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG]) {
@@ -61,7 +61,7 @@ static u32 __get_pte_size_split_addr(struct vm_gk20a *vm,
 		}
 		return GMMU_PAGE_SIZE_SMALL;
 	} else {
-		if (base < __nv_gmmu_va_small_page_limit()) {
+		if (base < nvgpu_gmmu_va_small_page_limit()) {
 			return GMMU_PAGE_SIZE_SMALL;
 		} else {
 			return GMMU_PAGE_SIZE_BIG;
@@ -90,7 +90,7 @@ static u32 __get_pte_size_split_addr(struct vm_gk20a *vm,
  *      - Regardless of buffer size use small pages since we have no
  *      - guarantee of contiguity.
  */
-u32 __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
+u32 nvgpu_vm_get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
@@ -99,11 +99,11 @@ u32 __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 	}
 
 	if (!nvgpu_is_enabled(g, NVGPU_MM_UNIFY_ADDRESS_SPACES)) {
-		return __get_pte_size_split_addr(vm, base, size);
+		return nvgpu_vm_get_pte_size_split_addr(vm, base, size);
 	}
 
 	if (base) {
-		return __get_pte_size_fixed_map(vm, base, size);
+		return nvgpu_vm_get_pte_size_fixed_map(vm, base, size);
 	}
 
 	if (size >= vm->gmmu_page_sizes[GMMU_PAGE_SIZE_BIG] &&

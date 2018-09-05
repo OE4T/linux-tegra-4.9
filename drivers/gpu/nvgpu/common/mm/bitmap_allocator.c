@@ -174,7 +174,7 @@ static struct nvgpu_bitmap_alloc *find_alloc_metadata(
 /*
  * Tree of alloc meta data stores the address of the alloc not the bit offset.
  */
-static int __nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
+static int nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
 				      u64 addr, u64 len)
 {
 	struct nvgpu_bitmap_alloc *alloc =
@@ -244,7 +244,7 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *na, u64 len)
 	 * data it needs around to successfully free this allocation.
 	 */
 	if (!(a->flags & GPU_ALLOC_NO_ALLOC_PAGE) &&
-	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size)) {
+	    nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size)) {
 		goto fail_reset_bitmap;
 	}
 
@@ -401,7 +401,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(na, g, name, a, false, &bitmap_ops);
+	err = nvgpu_alloc_common_init(na, g, name, a, false, &bitmap_ops);
 	if (err) {
 		goto fail;
 	}

@@ -1281,10 +1281,10 @@ static const struct nvgpu_allocator_ops buddy_ops = {
  *             will try and pick a reasonable max order.
  * @flags: Extra flags necessary. See GPU_BALLOC_*.
  */
-int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
-				 struct vm_gk20a *vm, const char *name,
-				 u64 base, u64 size, u64 blk_size,
-				 u64 max_order, u64 flags)
+int nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
+			       struct vm_gk20a *vm, const char *name,
+			       u64 base, u64 size, u64 blk_size,
+			       u64 max_order, u64 flags)
 {
 	int err;
 	u64 pde_size;
@@ -1312,7 +1312,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(na, g, name, a, false, &buddy_ops);
+	err = nvgpu_alloc_common_init(na, g, name, a, false, &buddy_ops);
 	if (err) {
 		goto fail;
 	}
@@ -1395,12 +1395,4 @@ fail:
 	}
 	nvgpu_kfree(g, a);
 	return err;
-}
-
-int nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
-			       const char *name, u64 base, u64 size,
-			       u64 blk_size, u64 flags)
-{
-	return __nvgpu_buddy_allocator_init(g, na, NULL, name,
-					    base, size, blk_size, 0, 0);
 }

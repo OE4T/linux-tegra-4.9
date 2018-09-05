@@ -129,11 +129,11 @@ nvgpu_alloc_carveout_from_co_entry(struct nvgpu_list_node *node)
 	((uintptr_t)node - offsetof(struct nvgpu_alloc_carveout, co_entry));
 };
 
-#define NVGPU_CARVEOUT(__name, __base, __length)	\
-	{						\
-		.name = (__name),			\
-		.base = (__base),			\
-		.length = (__length)			\
+#define NVGPU_CARVEOUT(local_name, local_base, local_length)	\
+	{							\
+		.name = (local_name),				\
+		.base = (local_base),				\
+		.length = (local_length)			\
 	}
 
 /*
@@ -207,13 +207,10 @@ static inline void alloc_unlock(struct nvgpu_allocator *a)
 /*
  * Buddy allocator specific initializers.
  */
-int  __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
-				  struct vm_gk20a *vm, const char *name,
-				  u64 base, u64 size, u64 blk_size,
-				  u64 max_order, u64 flags);
-int  nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
-				const char *name, u64 base, u64 size,
-				u64 blk_size, u64 flags);
+int nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
+			       struct vm_gk20a *vm, const char *name,
+			       u64 base, u64 size, u64 blk_size,
+			       u64 max_order, u64 flags);
 
 /*
  * Bitmap initializers.
@@ -282,9 +279,9 @@ void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a);
 void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a);
 #endif
 
-int  __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
-			       const char *name, void *priv, bool dbg,
-			       const struct nvgpu_allocator_ops *ops);
+int  nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
+			     const char *name, void *priv, bool dbg,
+			     const struct nvgpu_allocator_ops *ops);
 
 static inline void nvgpu_alloc_enable_dbg(struct nvgpu_allocator *a)
 {
@@ -309,7 +306,7 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 	} while (0)
 #endif
 
-#define __alloc_dbg(a, fmt, arg...)				\
+#define do_alloc_dbg(a, fmt, arg...)				\
 	nvgpu_log((a)->g, gpu_dbg_alloc, "%25s " fmt, (a)->name, ##arg)
 
 /*
@@ -325,10 +322,10 @@ static inline void nvgpu_alloc_disable_dbg(struct nvgpu_allocator *a)
 #define alloc_dbg(a, fmt, arg...)				\
 	do {							\
 		if ((a)->debug)					\
-			__alloc_dbg((a), fmt, ##arg);		\
+			do_alloc_dbg((a), fmt, ##arg);		\
 	} while (0)
 #else
-#define alloc_dbg(a, fmt, arg...) __alloc_dbg(a, fmt, ##arg)
+#define alloc_dbg(a, fmt, arg...) do_alloc_dbg(a, fmt, ##arg)
 #endif
 
 #endif /* NVGPU_ALLOCATOR_H */

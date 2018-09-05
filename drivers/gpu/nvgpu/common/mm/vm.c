@@ -420,14 +420,14 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 */
 	if (user_vma_start < user_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s", name);
-		err = __nvgpu_buddy_allocator_init(g, &vm->user,
-						   vm, alloc_name,
-						   user_vma_start,
-						   user_vma_limit -
-						   user_vma_start,
-						   SZ_4K,
-						   GPU_BALLOC_MAX_ORDER,
-						   GPU_ALLOC_GVA_SPACE);
+		err = nvgpu_buddy_allocator_init(g, &vm->user,
+						 vm, alloc_name,
+						 user_vma_start,
+						 user_vma_limit -
+						 user_vma_start,
+						 SZ_4K,
+						 GPU_BALLOC_MAX_ORDER,
+						 GPU_ALLOC_GVA_SPACE);
 		if (err) {
 			goto clean_up_page_tables;
 		}
@@ -446,14 +446,14 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 */
 	if (user_lp_vma_start < user_lp_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s_lp", name);
-		err = __nvgpu_buddy_allocator_init(g, &vm->user_lp,
-						   vm, alloc_name,
-						   user_lp_vma_start,
-						   user_lp_vma_limit -
-						   user_lp_vma_start,
-						   vm->big_page_size,
-						   GPU_BALLOC_MAX_ORDER,
-						   GPU_ALLOC_GVA_SPACE);
+		err = nvgpu_buddy_allocator_init(g, &vm->user_lp,
+						 vm, alloc_name,
+						 user_lp_vma_start,
+						 user_lp_vma_limit -
+						 user_lp_vma_start,
+						 vm->big_page_size,
+						 GPU_BALLOC_MAX_ORDER,
+						 GPU_ALLOC_GVA_SPACE);
 		if (err) {
 			goto clean_up_allocators;
 		}
@@ -463,13 +463,13 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 	 * Kernel VMA. Must always exist for an address space.
 	 */
 	snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-sys", name);
-	err = __nvgpu_buddy_allocator_init(g, &vm->kernel,
-					   vm, alloc_name,
-					   kernel_vma_start,
-					   kernel_vma_limit - kernel_vma_start,
-					   SZ_4K,
-					   GPU_BALLOC_MAX_ORDER,
-					   kernel_vma_flags);
+	err = nvgpu_buddy_allocator_init(g, &vm->kernel,
+					 vm, alloc_name,
+					 kernel_vma_start,
+					 kernel_vma_limit - kernel_vma_start,
+					 SZ_4K,
+					 GPU_BALLOC_MAX_ORDER,
+					 kernel_vma_flags);
 	if (err) {
 		goto clean_up_allocators;
 	}

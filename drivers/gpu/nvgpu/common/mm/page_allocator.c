@@ -1022,7 +1022,7 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(na, g, name, a, false, &page_ops);
+	err = nvgpu_alloc_common_init(na, g, name, a, false, &page_ops);
 	if (err) {
 		goto fail;
 	}
@@ -1053,8 +1053,9 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 
 	snprintf(buddy_name, sizeof(buddy_name), "%s-src", name);
 
-	err = nvgpu_buddy_allocator_init(g, &a->source_allocator, buddy_name,
-					 base, length, blk_size, 0);
+	err = nvgpu_buddy_allocator_init(g, &a->source_allocator, NULL,
+					 buddy_name, base, length, blk_size,
+					 0ULL, 0ULL);
 	if (err) {
 		goto fail;
 	}

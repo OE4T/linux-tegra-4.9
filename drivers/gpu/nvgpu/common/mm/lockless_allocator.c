@@ -187,7 +187,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 		return -ENOMEM;
 	}
 
-	err = __nvgpu_alloc_common_init(na, g, name, a, false, &pool_ops);
+	err = nvgpu_alloc_common_init(na, g, name, a, false, &pool_ops);
 	if (err) {
 		goto fail;
 	}

@@ -23,8 +23,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __CE2_GK20A_H__
-#define __CE2_GK20A_H__
+#ifndef NVGPU_GK20A_CE2_GK20A_H
+#define NVGPU_GK20A_CE2_GK20A_H
 
 struct channel_gk20a;
 struct tsg_gk20a;
@@ -153,4 +153,4 @@ int gk20a_ce_prepare_submit(u64 src_buf,
 		int request_operation,
 		u32 dma_copy_class);
 
-#endif /*__CE2_GK20A_H__*/
+#endif /*NVGPU_GK20A_CE2_GK20A_H*/

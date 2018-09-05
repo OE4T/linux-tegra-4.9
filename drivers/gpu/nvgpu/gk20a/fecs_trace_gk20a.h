@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __FECS_TRACE_GK20A_H
-#define __FECS_TRACE_GK20A_H
+#ifndef NVGPU_GK20A_FECS_TRACE_GK20A_H
+#define NVGPU_GK20A_FECS_TRACE_GK20A_H
 
 struct gk20a;
 struct channel_gk20a;
@@ -41,4 +41,4 @@ int gk20a_fecs_trace_disable(struct gk20a *g);
 bool gk20a_fecs_trace_is_enabled(struct gk20a *g);
 size_t gk20a_fecs_trace_buffer_size(struct gk20a *g);
 
-#endif /* __FECS_TRACE_GK20A_H */
+#endif /* NVGPU_GK20A_FECS_TRACE_GK20A_H */

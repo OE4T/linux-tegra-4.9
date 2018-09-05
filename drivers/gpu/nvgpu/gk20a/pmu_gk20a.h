@@ -23,8 +23,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PMU_GK20A_H__
-#define __PMU_GK20A_H__
+#ifndef NVGPU_GK20A_PMU_GK20A_H
+#define NVGPU_GK20A_PMU_GK20A_H
 
 #include <nvgpu/flcnif_cmn.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -75,4 +75,4 @@ void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 bool gk20a_pmu_is_engine_in_reset(struct gk20a *g);
 int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset);
 u32 gk20a_pmu_get_irqdest(struct gk20a *g);
-#endif /*__PMU_GK20A_H__*/
+#endif /*NVGPU_GK20A_PMU_GK20A_H*/

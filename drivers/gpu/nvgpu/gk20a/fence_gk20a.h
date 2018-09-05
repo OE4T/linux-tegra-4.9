@@ -23,8 +23,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _GK20A_FENCE_H_
-#define _GK20A_FENCE_H_
+#ifndef NVGPU_GK20A_FENCE_GK20A_H
+#define NVGPU_GK20A_FENCE_GK20A_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/kref.h>
@@ -97,4 +97,4 @@ bool gk20a_fence_is_expired(struct gk20a_fence *f);
 bool gk20a_fence_is_valid(struct gk20a_fence *f);
 int gk20a_fence_install_fd(struct gk20a_fence *f, int fd);
 
-#endif
+#endif /* NVGPU_GK20A_FENCE_GK20A_H */

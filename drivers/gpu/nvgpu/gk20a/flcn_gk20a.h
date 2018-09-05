@@ -19,11 +19,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __FLCN_GK20A_H__
-#define __FLCN_GK20A_H__
+#ifndef NVGPU_GK20A_FLCN_GK20A_H
+#define NVGPU_GK20A_FLCN_GK20A_H
 
 void gk20a_falcon_ops(struct nvgpu_falcon *flcn);
 int gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 void gk20a_falcon_dump_stats(struct nvgpu_falcon *flcn);
 
-#endif /* __FLCN_GK20A_H__ */
+#endif /* NVGPU_GK20A_FLCN_GK20A_H */

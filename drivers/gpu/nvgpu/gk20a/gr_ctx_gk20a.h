@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Context
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __GR_CTX_GK20A_H__
-#define __GR_CTX_GK20A_H__
+#ifndef NVGPU_GK20A_GR_CTX_GK20A_H
+#define NVGPU_GK20A_GR_CTX_GK20A_H
 
 #include <nvgpu/kmem.h>
 
@@ -203,4 +203,4 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr);
 struct gpu_ops;
 void gk20a_init_gr_ctx(struct gpu_ops *gops);
 
-#endif /*__GR_CTX_GK20A_H__*/
+#endif /*NVGPU_GK20A_GR_CTX_GK20A_H*/

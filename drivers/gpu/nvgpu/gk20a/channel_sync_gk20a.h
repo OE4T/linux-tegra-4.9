@@ -24,8 +24,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _GK20A_CHANNEL_SYNC_H_
-#define _GK20A_CHANNEL_SYNC_H_
+#ifndef NVGPU_GK20A_CHANNEL_SYNC_GK20A_H
+#define NVGPU_GK20A_CHANNEL_SYNC_GK20A_H
 
 struct gk20a_channel_sync;
 struct priv_cmd_entry;
@@ -109,4 +109,4 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c,
 	bool user_managed);
 bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_GK20A_CHANNEL_SYNC_GK20A_H */

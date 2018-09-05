@@ -1,7 +1,7 @@
 /*
  * NVIDIA GPU Hardware Abstraction Layer functions definitions.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,11 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __HAL_GPU__
-#define __HAL_GPU__
+#ifndef NVGPU_GK20A_HAL_H
+#define NVGPU_GK20A_HAL_H
 
 struct gk20a;
 
 int gpu_init_hal(struct gk20a *g);
 
-#endif /* __HAL_GPU__ */
+#endif /* NVGPU_GK20A_HAL_H */

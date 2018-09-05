@@ -19,11 +19,11 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nv2_heap_alloc.h"
-#include "nv2_cache.h"
-#include "nv2_misc.h"
-#include "nv2_pp.h"
-#include "nv2_dev.h"
+#include "nvmap_heap_alloc.h"
+#include "nvmap_cache.h"
+#include "nvmap_misc.h"
+#include "nvmap_pp.h"
+#include "nvmap_dev.h"
 
 static uint s_nr_colors = 1;
 module_param_named(nr_colors, s_nr_colors, uint, 0644);

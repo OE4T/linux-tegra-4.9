@@ -19,8 +19,8 @@
 #include <linux/nvmap.h>
 
 #include "nvmap_heap.h"
-#include "nv2_pp.h"
-#include "nv2_structs.h"
+#include "nvmap_pp.h"
+#include "nvmap_structs.h"
 
 
 struct nvmap_device {

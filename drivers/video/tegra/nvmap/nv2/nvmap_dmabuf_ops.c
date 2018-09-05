@@ -34,14 +34,14 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nv2_handle.h"
+#include "nvmap_handle.h"
 // TODO: refactor dmabuf_ops and remove this
-#include "nv2_handle_priv.h"
+#include "nvmap_handle_priv.h"
 
-#include "nv2_dmabuf.h"
-#include "nv2_dev.h"
-#include "nv2_vma.h"
-#include "nv2_client.h"
+#include "nvmap_dmabuf.h"
+#include "nvmap_dev.h"
+#include "nvmap_vma.h"
+#include "nvmap_client.h"
 
 #include "nvmap_ioctl.h"
 

@@ -24,7 +24,7 @@
 #include <linux/uaccess.h>
 
 #include <trace/events/nvmap.h>
-#include "nv2_tag.h"
+#include "nvmap_tag.h"
 
 struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag)
 {

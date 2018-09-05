@@ -33,12 +33,12 @@
 #include <linux/nvmap.h>
 #include <trace/events/nvmap.h>
 
-#include "nv2_handle.h"
+#include "nvmap_handle.h"
 #include "nvmap_heap.h"
-#include "nv2_handle_priv.h"
-#include "nv2_dev.h"
-#include "nv2_misc.h"
-#include "nv2_cache.h"
+#include "nvmap_handle_priv.h"
+#include "nvmap_dev.h"
+#include "nvmap_misc.h"
+#include "nvmap_cache.h"
 
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {

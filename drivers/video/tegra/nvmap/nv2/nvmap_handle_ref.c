@@ -27,9 +27,9 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nv2_handle.h"
-#include "nv2_handle_priv.h"
-#include "nv2_handle_ref.h"
+#include "nvmap_handle.h"
+#include "nvmap_handle_priv.h"
+#include "nvmap_handle_ref.h"
 
 int NVMAP2_handle_ref_get(struct nvmap_handle_ref *ref)
 {

@@ -18,7 +18,7 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nv2_misc.h"
+#include "nvmap_misc.h"
 
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to

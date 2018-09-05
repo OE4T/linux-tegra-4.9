@@ -14,7 +14,7 @@
 #ifndef __NVMAP2_VMA_H
 #define __NVMAP2_VMA_H
 
-#include "nv2_structs.h"
+#include "nvmap_structs.h"
 
 // TODO pretty sure list and priv can be merged into one structure
 struct nvmap_vma_list {

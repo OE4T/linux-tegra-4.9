@@ -21,8 +21,8 @@
 #include <linux/list.h>
 #include <linux/version.h>
 
-#include "nv2_vma.h"
-#include "nv2_handle.h"
+#include "nvmap_vma.h"
+#include "nvmap_handle.h"
 
 extern struct vm_operations_struct nvmap_vma_ops;
 

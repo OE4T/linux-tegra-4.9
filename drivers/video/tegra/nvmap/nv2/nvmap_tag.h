@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_TAG_H
-#define __NVMAP2_TAG_H
+#ifndef __NVMAP_TAG_H
+#define __NVMAP_TAG_H
 
 #include "nvmap_dev.h"
 #include "nvmap_client.h"
@@ -44,8 +44,8 @@
 
 #define NVMAP_TP_ARGS_CHR(client, handle, ref)			      	      \
 	client,                                                               \
-	client ? NVMAP2_client_pid((struct nvmap_client *)client) : 0,         \
-	(ref) ? NVMAP2_handle_ref_count(ref) : 1,    \
+	client ? nvmap_client_pid((struct nvmap_client *)client) : 0,         \
+	(ref) ? nvmap_handle_ref_count(ref) : 1,    \
 	NVMAP_TP_ARGS_H(handle)
 
 #define NVMAP_TAG_TRACE(x, ...) 			\
@@ -78,5 +78,5 @@ static inline char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag)
 	entry = nvmap_search_tag_entry(&dev->tags, tag);
 	return entry ? (char *)(entry + 1) : "";
 }
-#endif /* __NVMAP2_TAG_H */
+#endif /* __NVMAP_TAG_H */
 

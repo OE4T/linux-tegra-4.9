@@ -184,13 +184,13 @@ static struct color_list *init_color_list(struct nvmap_page_pool *pool,
 #endif
 	/* Fall back to general page allocator */
 	for (i = page_index; i < nr_pages; i++) {
-		list->pages[i] = NVMAP2_alloc_pages_exact(gfp, PAGE_SIZE);
+		list->pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE);
 		if (!list->pages[i])
 			goto fail;
 	}
 	/* Clean the cache for any page that didn't come from the page pool */
 	if (page_index < nr_pages)
-		NVMAP2_cache_clean_pages(&list->pages[page_index],
+		nvmap_cache_clean_pages(&list->pages[page_index],
 				  nr_pages - page_index);
 
 	/* Create linked list of colors and compute the histogram */
@@ -314,12 +314,12 @@ static void add_imperfect(struct nvmap_alloc_state *state, u32 nr_pages,
 	}
 }
 
-int NVMAP2_color_is_enabled(void)
+int nvmap_color_is_enabled(void)
 {
 	return s_nr_colors > 1;
 }
 
-int NVMAP2_color_init(void)
+int nvmap_color_init(void)
 {
 	u32 chipid = tegra_hidrev_get_chipid(tegra_read_chipid());
 
@@ -328,7 +328,7 @@ int NVMAP2_color_init(void)
 	return 0;
 }
 
-int NVMAP2_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
+int nvmap_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
 			 struct page **out_pages)
 {
 	struct nvmap_alloc_state state;

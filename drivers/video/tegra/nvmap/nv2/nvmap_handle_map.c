@@ -33,11 +33,11 @@
 #include "nvmap_misc.h"
 #include "nvmap_carveout.h"
 
-pgprot_t NVMAP2_handle_pgprot(struct nvmap_handle *h, pgprot_t prot)
+pgprot_t nvmap_handle_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE) {
 #ifdef CONFIG_ARM64
-		NVMAP2_client_warn_if_bad_heap(h->owner,
+		nvmap_client_warn_if_bad_heap(h->owner,
 						h->heap_type, h->userflags);
 #endif
 		return pgprot_noncached(prot);
@@ -52,14 +52,14 @@ static void *handle_pgalloc_mmap(struct nvmap_handle *h)
 	struct page **pages;
 	void *vaddr;
 
-	pgprot_t prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
+	pgprot_t prot = nvmap_handle_pgprot(h, PG_PROT_KERNEL);
 
-	pages = NVMAP2_alloc_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
+	pages = nvmap_alloc_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
 	if (!pages)
 		return NULL;
 
 	vaddr = vm_map_ram(pages, h->size >> PAGE_SHIFT, -1, prot);
-	NVMAP2_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
+	nvmap_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
 	if (!vaddr && !h->vaddr)
 		return NULL;
 
@@ -71,7 +71,7 @@ static void *handle_pgalloc_mmap(struct nvmap_handle *h)
 
 static void *handle_carveout_mmap(struct nvmap_handle *h)
 {
-	pgprot_t prot = NVMAP2_handle_pgprot(h, PG_PROT_KERNEL);
+	pgprot_t prot = nvmap_handle_pgprot(h, PG_PROT_KERNEL);
 	unsigned long adj_size;
 	struct vm_struct *v;
 	void *vaddr;
@@ -103,14 +103,14 @@ static void *handle_carveout_mmap(struct nvmap_handle *h)
 	return h->vaddr;
 }
 
-void *NVMAP2_handle_mmap(struct nvmap_handle *h)
+void *nvmap_handle_mmap(struct nvmap_handle *h)
 {
 	void *vaddr;
 
 	if (!virt_addr_valid(h))
 		return NULL;
 
-	h = NVMAP2_handle_get(h);
+	h = nvmap_handle_get(h);
 	if (!h)
 		return NULL;
 
@@ -123,7 +123,7 @@ void *NVMAP2_handle_mmap(struct nvmap_handle *h)
 	if (h->vaddr)
 		return h->vaddr;
 
-	NVMAP2_handle_kmap_inc(h);
+	nvmap_handle_kmap_inc(h);
 
 	if (h->heap_pgalloc) {
 		vaddr = handle_pgalloc_mmap(h);
@@ -138,13 +138,13 @@ void *NVMAP2_handle_mmap(struct nvmap_handle *h)
 		return vaddr;
 
 	/* If we fail to map then set kmaps back to original value */
-	NVMAP2_handle_kmap_dec(h);
+	nvmap_handle_kmap_dec(h);
 put_handle:
-	NVMAP2_handle_put(h);
+	nvmap_handle_put(h);
 	return NULL;
 }
 
-void NVMAP2_handle_munmap(struct nvmap_handle *h, void *addr)
+void nvmap_handle_munmap(struct nvmap_handle *h, void *addr)
 {
 	if (!h || !h->alloc ||
 	    WARN_ON(!virt_addr_valid(h)) ||
@@ -152,5 +152,5 @@ void NVMAP2_handle_munmap(struct nvmap_handle *h, void *addr)
 	    !(h->heap_type & nvmap_dev->cpu_access_mask))
 		return;
 
-	NVMAP2_handle_put(h);
+	nvmap_handle_put(h);
 }

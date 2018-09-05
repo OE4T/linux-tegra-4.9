@@ -72,27 +72,27 @@ extern const struct file_operations debug_all_allocations_fops;
 extern const struct file_operations debug_orphan_handles_fops;
 extern const struct file_operations debug_maps_fops;
 
-int NVMAP2_carveout_is_ivm(struct nvmap_carveout_node *carveout)
+int nvmap_carveout_is_ivm(struct nvmap_carveout_node *carveout)
 {
 	return carveout->heap_bit & NVMAP_HEAP_CARVEOUT_IVM;
 }
 
-int NVMAP2_carveout_query_peer(struct nvmap_carveout_node *carveout)
+int nvmap_carveout_query_peer(struct nvmap_carveout_node *carveout)
 {
 	return nvmap_query_heap_peer(carveout->carveout);
 }
 
-int NVMAP2_carveout_heap_bit(struct nvmap_carveout_node *carveout)
+int nvmap_carveout_heap_bit(struct nvmap_carveout_node *carveout)
 {
 	return carveout->heap_bit;
 }
 
-int NVMAP2_carveout_query_heap_size(struct nvmap_carveout_node *carveout)
+int nvmap_carveout_query_heap_size(struct nvmap_carveout_node *carveout)
 {
 	return nvmap_query_heap_size(carveout->carveout);
 }
 
-int NVMAP2_carveout_create(const struct nvmap_platform_carveout *co)
+int nvmap_carveout_create(const struct nvmap_platform_carveout *co)
 {
 	int i, err = 0;
 	struct nvmap_carveout_node *node;
@@ -180,7 +180,7 @@ out:
 	return err;
 }
 
-struct device *NVMAP2_heap_type_to_dev(unsigned long type)
+struct device *nvmap_heap_type_to_dev(unsigned long type)
 {
 	int i;
 	struct nvmap_carveout_node *co_heap;
@@ -264,7 +264,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 
 	if (!dma_is_coherent_dev(dev) && h->cma_dev) {
 		int ret;
-		ret = NVMAP2_cache_maint_phys_range(NVMAP_CACHE_OP_WB,
+		ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB,
 							pa, pa + len);
 		if (ret) {
 			dev_err(dev, "cache WB on (%pa, %zu) failed\n",
@@ -308,7 +308,7 @@ static int heap_block_flush(struct nvmap_heap_block *block, size_t len,
 				|| prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	ret = NVMAP2_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end);
+	ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end);
 	if (ret)
 		goto out;
 out:
@@ -316,7 +316,7 @@ out:
 	return ret;
 }
 
-void NVMAP2_heap_block_free(struct nvmap_heap_block *b)
+void nvmap_heap_block_free(struct nvmap_heap_block *b)
 {
 	struct nvmap_heap *h;
 	struct list_block *lb;
@@ -447,7 +447,7 @@ static int heap_can_allocate(struct nvmap_heap *h, int peer, phys_addr_t *start)
 
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
-struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_carveout_node *co,
+struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_carveout_node *co,
 					struct nvmap_handle *handle,
 					phys_addr_t *start,
 					size_t len,
@@ -477,8 +477,8 @@ struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_carveout_node *co,
 	/* Generate IVM for partition that can alloc */
 	if (h->is_ivm && h->can_alloc) {
 		unsigned int offs = (b->base - h->base);
-		NVMAP2_handle_set_ivm(handle,
-				NVMAP2_calculate_ivm_id(h->vm_id, len, offs));
+		nvmap_handle_set_ivm(handle,
+				nvmap_calculate_ivm_id(h->vm_id, len, offs));
 	}
 
 	mutex_unlock(&h->lock);
@@ -487,13 +487,13 @@ struct nvmap_heap_block *NVMAP2_carveout_alloc(struct nvmap_carveout_node *co,
 
 // This is only needed because dev doesn't have a double pointer
 // and carveout.c is the only file that knows the size of the struct
-struct nvmap_carveout_node *NVMAP2_carveout_index(
+struct nvmap_carveout_node *nvmap_carveout_index(
 				struct nvmap_carveout_node *node, int i)
 {
 	return node + i;
 }
 
-void NVMAP2_carveout_destroy(struct nvmap_carveout_node *node)
+void nvmap_carveout_destroy(struct nvmap_carveout_node *node)
 {
 	nvmap_heap_destroy(node->carveout);
 }

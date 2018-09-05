@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_VMA_H
-#define __NVMAP2_VMA_H
+#ifndef __NVMAP_VMA_H
+#define __NVMAP_VMA_H
 
 #include "nvmap_structs.h"
 
@@ -31,13 +31,13 @@ struct nvmap_vma_priv {
 	atomic_t	count;	/* number of processes cloning the VMA */
 };
 
-int NVMAP2_vma_is_nvmap(struct vm_area_struct *vma);
+int nvmap_vma_is_nvmap(struct vm_area_struct *vma);
 
-int NVMAP2_vma_belongs_to_handle(struct vm_area_struct *vma,
+int nvmap_vma_belongs_to_handle(struct vm_area_struct *vma,
 					struct nvmap_handle *h);
-void NVMAP2_vma_zap(struct list_head *vmas, u64 offset, u64 size);
+void nvmap_vma_zap(struct list_head *vmas, u64 offset, u64 size);
 
-int NVMAP2_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
+int nvmap_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
 					u64 size, int handle_is_dirty, int op);
 
-#endif /* __NVMAP2_VMA_H */
+#endif /* __NVMAP_VMA_H */

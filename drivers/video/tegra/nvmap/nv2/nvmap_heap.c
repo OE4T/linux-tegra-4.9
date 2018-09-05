@@ -257,7 +257,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
 	if (!co->no_cpu_access &&
-		NVMAP2_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
+		nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
 						base, base + len)) {
 		dev_err(parent, "cache flush failed\n");
 		goto fail;
@@ -346,7 +346,7 @@ int nvmap_flush_heap_block(struct nvmap_client *client,
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-	ret = NVMAP2_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end);
+	ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end);
 	if (ret)
 		goto out;
 out:

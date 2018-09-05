@@ -190,7 +190,7 @@ int nvmap_register_vidmem_carveout(struct device *dma_dev,
 	vidmem_co->size = size;
 	if (dma_dev)
 		vidmem_co->dma_dev = dma_dev;
-	return NVMAP2_carveout_create(vidmem_co);
+	return nvmap_carveout_create(vidmem_co);
 }
 EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
 

@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_MISC_H
-#define __NVMAP2_MISC_H
+#ifndef __NVMAP_MISC_H
+#define __NVMAP_MISC_H
 
 #define NVMAP_IVM_INVALID_PEER		(-1)
 
@@ -31,29 +31,29 @@
 #define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
 #define NVMAP_IVM_ALIGNMENT    (SZ_32K)
 
-void *NVMAP2_altalloc(size_t len);
-void NVMAP2_altfree(void *ptr, size_t len);
+void *nvmap_altalloc(size_t len);
+void nvmap_altfree(void *ptr, size_t len);
 
-static inline size_t NVMAP2_ivmid_to_size(u64 ivm_id)
+static inline size_t nvmap_ivmid_to_size(u64 ivm_id)
 {
 	return (ivm_id &
 			((1ULL << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
 }
 
-static inline phys_addr_t NVMAP2_ivmid_to_offset(u64 ivm_id)
+static inline phys_addr_t nvmap_ivmid_to_offset(u64 ivm_id)
 {
 	return ((ivm_id &
 			~((u64)NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
 			NVMAP_IVM_LENGTH_WIDTH) << (ffs(NVMAP_IVM_ALIGNMENT) - 1);
 }
 
-static inline int NVMAP2_ivmid_to_peer(u64 ivm_id)
+static inline int nvmap_ivmid_to_peer(u64 ivm_id)
 {
 	return (ivm_id >> NVMAP_IVM_IVMID_SHIFT);
 
 }
 
-static inline int NVMAP2_calculate_ivm_id(int vm_id, size_t len,
+static inline int nvmap_calculate_ivm_id(int vm_id, size_t len,
 						unsigned int offs)
 {
 	int ivm_id = 0;
@@ -74,35 +74,35 @@ static inline int NVMAP2_calculate_ivm_id(int vm_id, size_t len,
 	return ivm_id;
 }
 
-static inline struct page *NVMAP2_to_page(struct page *page)
+static inline struct page *nvmap_to_page(struct page *page)
 {
 	return (struct page *)((unsigned long)page & ~3UL);
 }
 
-struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages);
-struct page *NVMAP2_alloc_pages_exact(gfp_t gfp, size_t size);
+struct page **nvmap_alloc_pages(struct page **pg_pages, u32 nr_pages);
+struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size);
 
-int NVMAP2_get_user_pages(ulong vaddr, int nr_page, struct page **pages);
+int nvmap_get_user_pages(ulong vaddr, int nr_page, struct page **pages);
 
-static inline bool NVMAP2_page_dirty(struct page *page)
+static inline bool nvmap_page_dirty(struct page *page)
 {
 	return (unsigned long)page & 1UL;
 }
 
-static inline bool NVMAP2_page_mkdirty(struct page **page)
+static inline bool nvmap_page_mkdirty(struct page **page)
 {
-	if (NVMAP2_page_dirty(*page))
+	if (nvmap_page_dirty(*page))
 		return false;
 	*page = (struct page *)((unsigned long)*page | 1UL);
 	return true;
 }
 
-static inline bool NVMAP2_page_mkclean(struct page **page)
+static inline bool nvmap_page_mkclean(struct page **page)
 {
-	if (!NVMAP2_page_dirty(*page))
+	if (!nvmap_page_dirty(*page))
 		return false;
 	*page = (struct page *)((unsigned long)*page & ~1UL);
 	return true;
 }
 
-#endif /* __NVMAP2_MISC_H */
+#endif /* __NVMAP_MISC_H */

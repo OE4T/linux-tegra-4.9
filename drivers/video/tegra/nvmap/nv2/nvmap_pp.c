@@ -130,7 +130,7 @@ static void nvmap_pp_zero_pages(struct page **pages, int nr)
 	for (i = 0; i < nr; i++) {
 		clear_highpage(pages[i]);
 	}
-	NVMAP2_cache_clean_pages(pages, nr);
+	nvmap_cache_clean_pages(pages, nr);
 
 	trace_nvmap_pp_zero_pages(nr);
 }

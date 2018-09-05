@@ -52,7 +52,7 @@ static int cache_maint_sanitize_size_offset(struct nvmap_handle **handles,
 
 	for (i = 0; i < nr; i++) {
 		if (sizes[i] == 0)
-			sizes[i] = NVMAP2_handle_size(handles[i]);
+			sizes[i] = nvmap_handle_size(handles[i]);
 	}
 
 	return err;
@@ -63,7 +63,7 @@ static void cache_maint_put_handles(struct nvmap_handle **handles, int nr)
 	int i;
 
 	for (i = 0; i < nr; i++)
-		NVMAP2_handle_put(handles[i]);
+		nvmap_handle_put(handles[i]);
 }
 
 
@@ -76,8 +76,8 @@ static int cache_maint_get_handles(struct nvmap_handle **handles,
 	int heap_type;
 
 	for (i = 0; i < nr; i++) {
-		handles[i] = NVMAP2_handle_from_fd(handle_ptrs[i]);
-		handles[i] = NVMAP2_handle_get(handles[i]);
+		handles[i] = nvmap_handle_from_fd(handle_ptrs[i]);
+		handles[i] = nvmap_handle_get(handles[i]);
 		if (!handles[i]) {
 			pr_err("invalid handle_ptr[%d] = %u\n",
 							i, handle_ptrs[i]);
@@ -85,7 +85,7 @@ static int cache_maint_get_handles(struct nvmap_handle **handles,
 			return -EINVAL;
 		}
 
-		heap_type = NVMAP2_handle_heap_type(handles[i]);
+		heap_type = nvmap_handle_heap_type(handles[i]);
 		if (!(heap_type & nvmap_dev->cpu_access_mask)) {
 			pr_err("heap %x can't be accessed from cpu\n",
 								heap_type);
@@ -95,11 +95,11 @@ static int cache_maint_get_handles(struct nvmap_handle **handles,
 	}
 
 	for (i = 0; i < nr; i++) {
-		if (NVMAP2_handle_userflag(handles[i])
+		if (nvmap_handle_userflag(handles[i])
 					& NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)
 			sync_count++;
 
-		if (NVMAP2_handle_is_heap(handles[i]))
+		if (nvmap_handle_is_heap(handles[i]))
 			pgalloc_count++;
 	}
 
@@ -140,7 +140,7 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 
 	if (is_32) {
 		size_t tmp_size = sizeof(u32) * op->nr;
-		u32 *tmp = NVMAP2_altalloc(tmp_size);
+		u32 *tmp = nvmap_altalloc(tmp_size);
 		if (!tmp) {
 			pr_err("Failed allocating tmp buffer");
 			return -ENOMEM;
@@ -149,7 +149,7 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 		if (copy_from_user(tmp, (void *)op->offsets,
 					op->nr * sizeof(u32))) {
 			pr_err("Can't copy from user pointer op.offsets\n");
-			NVMAP2_altfree(tmp, tmp_size);
+			nvmap_altfree(tmp, tmp_size);
 			return -EFAULT;
 		}
 		for (i = 0; i < op->nr; i++) {
@@ -159,14 +159,14 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 		if (copy_from_user(tmp, (void *)op->sizes,
 					op->nr * sizeof(u32))) {
 			pr_err("Can't copy from user pointer op.sizes\n");
-			NVMAP2_altfree(tmp, tmp_size);
+			nvmap_altfree(tmp, tmp_size);
 			return -EFAULT;
 		}
 		for (i = 0; i < op->nr; i++) {
 			size_ptr[i] = tmp[i];
 		}
 
-		NVMAP2_altfree(tmp, tmp_size);
+		nvmap_altfree(tmp, tmp_size);
 	} else {
 		if (copy_from_user(offset_ptr, (void *)op->offsets,
 					op->nr * sizeof(u64))) {
@@ -211,20 +211,20 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	if (!access_ok(VERIFY_READ, op.handles, op.nr * sizeof(u32)))
 		return -EFAULT;
 
-	handles		= NVMAP2_altalloc(sizeof(*handles) * op.nr);
-	offset_ptr 	= NVMAP2_altalloc(sizeof(u64) * op.nr);
-	size_ptr 	= NVMAP2_altalloc(sizeof(u64) * op.nr);
-	handle_ptr 	= NVMAP2_altalloc(sizeof(u32) * op.nr);
+	handles		= nvmap_altalloc(sizeof(*handles) * op.nr);
+	offset_ptr 	= nvmap_altalloc(sizeof(u64) * op.nr);
+	size_ptr 	= nvmap_altalloc(sizeof(u64) * op.nr);
+	handle_ptr 	= nvmap_altalloc(sizeof(u32) * op.nr);
 
 	if (!handles || !offset_ptr || !size_ptr || !handle_ptr) {
 		if (handles)
-			NVMAP2_altfree(handles, sizeof(*handles) * op.nr);
+			nvmap_altfree(handles, sizeof(*handles) * op.nr);
 		if (offset_ptr)
-			NVMAP2_altfree(offset_ptr, sizeof(u64) * op.nr);
+			nvmap_altfree(offset_ptr, sizeof(u64) * op.nr);
 		if (size_ptr)
-			NVMAP2_altfree(size_ptr, sizeof(u64) * op.nr);
+			nvmap_altfree(size_ptr, sizeof(u64) * op.nr);
 		if (handle_ptr)
-			NVMAP2_altfree(handle_ptr, sizeof(u32) * op.nr);
+			nvmap_altfree(handle_ptr, sizeof(u32) * op.nr);
 		return -ENOMEM;
 	}
 
@@ -244,20 +244,20 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 		goto free_handles;
 
 	if (is_reserve_ioctl) {
-		err = NVMAP2_handles_reserve(handles, offset_ptr, size_ptr,
+		err = nvmap_handles_reserve(handles, offset_ptr, size_ptr,
 							op.op, op.nr);
 	} else {
-		err = NVMAP2_handles_cache_maint(handles, offset_ptr, size_ptr,
+		err = nvmap_handles_cache_maint(handles, offset_ptr, size_ptr,
 							op.op, op.nr);
 	}
 
 free_handles:
 	cache_maint_put_handles(handles, op.nr);
 free_mem:
-	NVMAP2_altfree(handles, sizeof(*handles) * op.nr);
-	NVMAP2_altfree(offset_ptr, sizeof(u64) * op.nr);
-	NVMAP2_altfree(size_ptr, sizeof(u64) * op.nr);
-	NVMAP2_altfree(handle_ptr, sizeof(u32) * op.nr);
+	nvmap_altfree(handles, sizeof(*handles) * op.nr);
+	nvmap_altfree(offset_ptr, sizeof(u64) * op.nr);
+	nvmap_altfree(size_ptr, sizeof(u64) * op.nr);
+	nvmap_altfree(handle_ptr, sizeof(u32) * op.nr);
 
 	return err;
 }

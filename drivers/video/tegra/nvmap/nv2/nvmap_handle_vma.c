@@ -33,12 +33,12 @@
 #include "nvmap_vma.h"
 #include "nvmap_cache.h"
 
-int NVMAP2_handle_owns_vma(struct nvmap_handle *h, struct vm_area_struct *vma)
+int nvmap_handle_owns_vma(struct nvmap_handle *h, struct vm_area_struct *vma)
 {
-	return NVMAP2_vma_belongs_to_handle(vma, h);
+	return nvmap_vma_belongs_to_handle(vma, h);
 }
 
-int NVMAP2_handle_add_vma(struct nvmap_handle *handle,
+int nvmap_handle_add_vma(struct nvmap_handle *handle,
 					struct vm_area_struct *vma)
 {
 	struct nvmap_vma_list *vma_list;
@@ -87,7 +87,7 @@ unlock:
 	return 0;
 }
 
-int NVMAP2_handle_del_vma(struct nvmap_handle *handle,
+int nvmap_handle_del_vma(struct nvmap_handle *handle,
 					struct vm_area_struct *vma)
 {
 	struct nvmap_vma_list *vma_list;
@@ -113,7 +113,7 @@ int NVMAP2_handle_del_vma(struct nvmap_handle *handle,
 	return 0;
 }
 
-int NVMAP2_handle_open_vma(struct nvmap_handle *handle)
+int nvmap_handle_open_vma(struct nvmap_handle *handle)
 {
 	int nr_page, i;
 	mutex_lock(&handle->lock);
@@ -123,7 +123,7 @@ int NVMAP2_handle_open_vma(struct nvmap_handle *handle)
 
 	nr_page = handle->size >> PAGE_SHIFT;
 	for (i = 0; i < nr_page; i++) {
-		struct page *page = NVMAP2_to_page(handle->pgalloc.pages[i]);
+		struct page *page = nvmap_to_page(handle->pgalloc.pages[i]);
 		/* This is necessry to avoid page being accounted
 		 * under NR_FILE_MAPPED. This way NR_FILE_MAPPED would
 		 * be fully accounted under NR_FILE_PAGES. This allows
@@ -144,7 +144,7 @@ finish:
 	return 0;
 }
 
-int NVMAP2_handle_close_vma(struct nvmap_handle *handle)
+int nvmap_handle_close_vma(struct nvmap_handle *handle)
 {
 	int nr_page, i;
 
@@ -157,7 +157,7 @@ int NVMAP2_handle_close_vma(struct nvmap_handle *handle)
 
 	for (i = 0; i < nr_page; i++) {
 		struct page *page;
-		page = NVMAP2_to_page(handle->pgalloc.pages[i]);
+		page = nvmap_to_page(handle->pgalloc.pages[i]);
 		atomic_dec(&page->_mapcount);
 	}
 
@@ -173,12 +173,12 @@ static void page_inner_cache_maint(struct page *page)
 	/* inner cache maint */
 	kaddr  = kmap(page);
 	BUG_ON(!kaddr);
-	NVMAP2_cache_maint_inner(NVMAP_CACHE_OP_WB_INV, kaddr, PAGE_SIZE);
+	nvmap_cache_maint_inner(NVMAP_CACHE_OP_WB_INV, kaddr, PAGE_SIZE);
 	kunmap(page);
 
 }
 
-int NVMAP2_handle_fault_vma(struct nvmap_handle *handle,
+int nvmap_handle_fault_vma(struct nvmap_handle *handle,
 		unsigned long offs, struct page **page_ptr)
 {
 	struct page *page;
@@ -201,20 +201,20 @@ int NVMAP2_handle_fault_vma(struct nvmap_handle *handle,
 		offs >>= PAGE_SHIFT;
 		if (atomic_read(&handle->pgalloc.reserved))
 			return VM_FAULT_SIGBUS;
-		page = NVMAP2_to_page(handle->pgalloc.pages[offs]);
+		page = nvmap_to_page(handle->pgalloc.pages[offs]);
 
-		if (!NVMAP2_handle_track_dirty(handle))
+		if (!nvmap_handle_track_dirty(handle))
 			goto finish;
 
 		mutex_lock(&handle->lock);
-		if (NVMAP2_page_dirty(handle->pgalloc.pages[offs])) {
+		if (nvmap_page_dirty(handle->pgalloc.pages[offs])) {
 			mutex_unlock(&handle->lock);
 			goto finish;
 		}
 
 		page_inner_cache_maint(page);
 
-		NVMAP2_page_mkdirty(&handle->pgalloc.pages[offs]);
+		nvmap_page_mkdirty(&handle->pgalloc.pages[offs]);
 		atomic_inc(&handle->pgalloc.ndirty);
 		mutex_unlock(&handle->lock);
 	}
@@ -223,7 +223,7 @@ finish:
 	return 0;
 }
 
-bool NVMAP2_handle_fixup_prot_vma(struct nvmap_handle *handle,
+bool nvmap_handle_fixup_prot_vma(struct nvmap_handle *handle,
 					unsigned long offs)
 {
 	struct page *page;
@@ -237,20 +237,20 @@ bool NVMAP2_handle_fixup_prot_vma(struct nvmap_handle *handle,
 	if (atomic_read(&handle->pgalloc.reserved))
 		return false;
 
-	if (!NVMAP2_handle_track_dirty(handle))
+	if (!nvmap_handle_track_dirty(handle))
 		return true;
 
 	mutex_lock(&handle->lock);
 
 	offs >>= PAGE_SHIFT;
-	if (NVMAP2_page_dirty(handle->pgalloc.pages[offs]))
+	if (nvmap_page_dirty(handle->pgalloc.pages[offs]))
 		goto unlock;
 
-	page = NVMAP2_to_page(handle->pgalloc.pages[offs]);
+	page = nvmap_to_page(handle->pgalloc.pages[offs]);
 
 	page_inner_cache_maint(page);
 
-	NVMAP2_page_mkdirty(&handle->pgalloc.pages[offs]);
+	nvmap_page_mkdirty(&handle->pgalloc.pages[offs]);
 	atomic_inc(&handle->pgalloc.ndirty);
 
 unlock:

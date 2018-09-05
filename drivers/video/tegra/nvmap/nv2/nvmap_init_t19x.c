@@ -63,7 +63,7 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 	cvsram.size = size;
 
 	cvsram.dma_dev = &cvsram.dev;
-	return NVMAP2_carveout_create(&cvsram);
+	return nvmap_carveout_create(&cvsram);
 }
 EXPORT_SYMBOL(nvmap_register_cvsram_carveout);
 

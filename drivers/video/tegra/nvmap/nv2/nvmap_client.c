@@ -58,7 +58,7 @@ struct nvmap_client {
 extern bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 extern u32 nvmap_max_handle_count;
 
-struct nvmap_client *NVMAP2_client_create(struct list_head *dev_client_list,
+struct nvmap_client *nvmap_client_create(struct list_head *dev_client_list,
 		const char *name)
 {
 	struct nvmap_client *client;
@@ -97,7 +97,7 @@ struct nvmap_client *NVMAP2_client_create(struct list_head *dev_client_list,
 	return client;
 }
 
-void NVMAP2_client_destroy(struct nvmap_client *client)
+void nvmap_client_destroy(struct nvmap_client *client)
 {
 	struct rb_node *n;
 
@@ -111,10 +111,10 @@ void NVMAP2_client_destroy(struct nvmap_client *client)
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		smp_rmb();
 
-		count = NVMAP2_handle_ref_count(ref);
+		count = nvmap_handle_ref_count(ref);
 
 		while (count--)
-			NVMAP2_client_remove_handle(client, ref->handle);
+			nvmap_client_remove_handle(client, ref->handle);
 	}
 
 	if (client->task)
@@ -124,7 +124,7 @@ void NVMAP2_client_destroy(struct nvmap_client *client)
 	kfree(client);
 }
 
-const char *NVMAP2_client_name(struct nvmap_client *client)
+const char *nvmap_client_name(struct nvmap_client *client)
 {
 	return client->name;
 }
@@ -139,12 +139,12 @@ static void client_unlock(struct nvmap_client *c)
 	mutex_unlock(&c->ref_lock);
 }
 
-pid_t NVMAP2_client_pid(struct nvmap_client *client)
+pid_t nvmap_client_pid(struct nvmap_client *client)
 {
 	return client->task ? client->task->pid : 0;
 }
 
-void NVMAP2_client_stats_alloc(struct nvmap_client *client, size_t size)
+void nvmap_client_stats_alloc(struct nvmap_client *client, size_t size)
 {
 	if (client->kernel_client)
 		nvmap_stats_inc(NS_KALLOC, size);
@@ -152,80 +152,80 @@ void NVMAP2_client_stats_alloc(struct nvmap_client *client, size_t size)
 		nvmap_stats_inc(NS_UALLOC, size);
 }
 
-int NVMAP2_client_add_handle(struct nvmap_client *client,
+int nvmap_client_add_handle(struct nvmap_client *client,
 			   struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref;
 
-	ref = NVMAP2_client_to_handle_ref(client, handle);
+	ref = nvmap_client_to_handle_ref(client, handle);
 	if (ref) {
-		NVMAP2_handle_ref_get(ref);
+		nvmap_handle_ref_get(ref);
 		return 0;
 	}
 
-	ref = NVMAP2_handle_ref_create(handle);
+	ref = nvmap_handle_ref_create(handle);
 	if (!ref) {
 		return -ENOMEM;
 	}
 
-	NVMAP2_client_add_ref(client, ref);
-	NVMAP2_handle_add_owner(handle, client);
+	nvmap_client_add_ref(client, ref);
+	nvmap_handle_add_owner(handle, client);
 
 	return 0;
 }
 
-void NVMAP2_client_remove_handle(struct nvmap_client *client,
+void nvmap_client_remove_handle(struct nvmap_client *client,
 			   struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref;
 	int ref_count;
 
-	ref = NVMAP2_client_to_handle_ref(client, handle);
+	ref = nvmap_client_to_handle_ref(client, handle);
 	if (!ref)
 		return;
 
-	ref_count = NVMAP2_handle_ref_put(ref);
+	ref_count = nvmap_handle_ref_put(ref);
 	if (ref_count == 0) {
-		NVMAP2_client_remove_ref(client, ref);
-		NVMAP2_handle_ref_free(ref);
+		nvmap_client_remove_ref(client, ref);
+		nvmap_handle_ref_free(ref);
 		// TODO set ref->handle->owner to NULL
 	}
 }
 
-int NVMAP2_client_create_handle(struct nvmap_client *client, size_t size)
+int nvmap_client_create_handle(struct nvmap_client *client, size_t size)
 {
 	struct nvmap_handle *handle = NULL;
 	int err;
 	int fd;
 
-	handle = NVMAP2_handle_create(size);
+	handle = nvmap_handle_create(size);
 	if (IS_ERR_OR_NULL(handle)) {
 		return -1;
 	}
 
-	err = NVMAP2_client_add_handle(client, handle);
+	err = nvmap_client_add_handle(client, handle);
 	if (err) {
-		NVMAP2_handle_put(handle);
+		nvmap_handle_put(handle);
 		return -1;
 	}
 	/* This is the first handle ref we are creating and we want the dmabuf
 	 * to have a ref of 1.
 	 * client_add_handle increases the dmabuf ref so decrease it again
 	 */
-	dma_buf_put(NVMAP2_handle_to_dmabuf(handle));
+	dma_buf_put(nvmap_handle_to_dmabuf(handle));
 
-	fd = NVMAP2_client_create_fd(client);
+	fd = nvmap_client_create_fd(client);
 	if (fd < 0) {
-		NVMAP2_client_remove_handle(client, handle);
-		NVMAP2_handle_put(handle);
+		nvmap_client_remove_handle(client, handle);
+		nvmap_handle_put(handle);
 		return -1;
 	}
-	NVMAP2_handle_install_fd(handle, fd);
+	nvmap_handle_install_fd(handle, fd);
 
 	return fd;
 }
 
-void NVMAP2_client_add_ref(struct nvmap_client *client,
+void nvmap_client_add_ref(struct nvmap_client *client,
 			   struct nvmap_handle_ref *ref)
 {
 	struct rb_node **p, *parent = NULL;
@@ -255,7 +255,7 @@ void NVMAP2_client_add_ref(struct nvmap_client *client,
 	client_unlock(client);
 }
 
-void NVMAP2_client_remove_ref(struct nvmap_client *client,
+void nvmap_client_remove_ref(struct nvmap_client *client,
 					struct nvmap_handle_ref *ref)
 {
 	client_lock(client);
@@ -267,7 +267,7 @@ void NVMAP2_client_remove_ref(struct nvmap_client *client,
 	client_unlock(client);
 }
 
-struct nvmap_handle_ref *NVMAP2_client_to_handle_ref(struct nvmap_client *client,
+struct nvmap_handle_ref *nvmap_client_to_handle_ref(struct nvmap_client *client,
 					struct nvmap_handle *handle)
 {
 	struct rb_node *n = client->handle_refs.rb_node;
@@ -299,7 +299,7 @@ struct nvmap_handle_ref *NVMAP2_client_to_handle_ref(struct nvmap_client *client
 
 }
 
-int NVMAP2_client_create_fd(struct nvmap_client *client)
+int nvmap_client_create_fd(struct nvmap_client *client)
 {
 	int flags = O_CLOEXEC;
 	int start_fd = CONFIG_NVMAP_FD_START;
@@ -319,18 +319,18 @@ int NVMAP2_client_create_fd(struct nvmap_client *client)
 	return tegra_alloc_fd(current->files, start_fd, flags);
 }
 
-int NVMAP2_client_give_dmabuf_new_fd(struct nvmap_client *client,
+int nvmap_client_give_dmabuf_new_fd(struct nvmap_client *client,
 				struct dma_buf *dmabuf)
 {
 	int fd;
 
-	fd = NVMAP2_client_create_fd(client);
+	fd = nvmap_client_create_fd(client);
 	if (fd > 0)
-		NVMAP2_dmabuf_install_fd(dmabuf, fd);
+		nvmap_dmabuf_install_fd(dmabuf, fd);
 	return fd;
 }
 
-void NVMAP2_client_warn_if_bad_heap(struct nvmap_client *client,
+void nvmap_client_warn_if_bad_heap(struct nvmap_client *client,
 				u32 heap_type, u32 userflags)
 {
 	if (heap_type != NVMAP_HEAP_CARVEOUT_VPR && client && !client->warned) {
@@ -346,7 +346,7 @@ void NVMAP2_client_warn_if_bad_heap(struct nvmap_client *client,
 	}
 }
 
-void NVMAP2_client_warn_if_no_tag(struct nvmap_client *client,
+void nvmap_client_warn_if_no_tag(struct nvmap_client *client,
 					unsigned int flags)
 {
 	int tag = flags >> 16;
@@ -368,7 +368,7 @@ void NVMAP2_client_warn_if_no_tag(struct nvmap_client *client,
  * Client Print methods
  * ************************************************************************/
 
-void NVMAP2_client_stringify(struct nvmap_client *client, struct seq_file *s)
+void nvmap_client_stringify(struct nvmap_client *client, struct seq_file *s)
 {
 	char task_comm[TASK_COMM_LEN];
 	if (!client->task) {
@@ -380,7 +380,7 @@ void NVMAP2_client_stringify(struct nvmap_client *client, struct seq_file *s)
 		   client->task->pid);
 }
 
-void NVMAP2_client_allocations_stringify(struct nvmap_client *client,
+void nvmap_client_allocations_stringify(struct nvmap_client *client,
 				  struct seq_file *s, u32 heap_type)
 {
 	struct nvmap_device *dev = nvmap_dev;
@@ -396,7 +396,7 @@ void NVMAP2_client_allocations_stringify(struct nvmap_client *client,
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		handle = ref->handle;
 
-		NVMAP2_handle_stringify(handle, s, heap_type,
+		nvmap_handle_stringify(handle, s, heap_type,
 						atomic_read(&ref->dupes));
 	}
 
@@ -404,7 +404,7 @@ void NVMAP2_client_allocations_stringify(struct nvmap_client *client,
 	client_unlock(client);
 }
 
-void NVMAP2_client_maps_stringify(struct nvmap_client *client,
+void nvmap_client_maps_stringify(struct nvmap_client *client,
 				struct seq_file *s, u32 heap_type)
 {
 	struct nvmap_device *dev = nvmap_dev;
@@ -420,7 +420,7 @@ void NVMAP2_client_maps_stringify(struct nvmap_client *client,
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		handle = ref->handle;
 
-		NVMAP2_handle_maps_stringify(handle, s, heap_type,
+		nvmap_handle_maps_stringify(handle, s, heap_type,
 							client->task->pid);
 	}
 
@@ -429,7 +429,7 @@ void NVMAP2_client_maps_stringify(struct nvmap_client *client,
 
 }
 
-int NVMAP2_client_show_by_pid(struct nvmap_client *client, struct seq_file *s,
+int nvmap_client_show_by_pid(struct nvmap_client *client, struct seq_file *s,
 				pid_t pid)
 {
 	struct rb_node *n;
@@ -446,7 +446,7 @@ int NVMAP2_client_show_by_pid(struct nvmap_client *client, struct seq_file *s,
 	for (; n != NULL; n = rb_next(n)) {
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		handle = ref->handle;
-		ret = NVMAP2_handle_pid_show(handle, s, client->task->pid);
+		ret = nvmap_handle_pid_show(handle, s, client->task->pid);
 		if (ret)
 			break;
 	}
@@ -456,7 +456,7 @@ int NVMAP2_client_show_by_pid(struct nvmap_client *client, struct seq_file *s,
 	return 0;
 }
 
-u64 NVMAP2_client_calc_mss(struct nvmap_client *client, u32 heap_type)
+u64 nvmap_client_calc_mss(struct nvmap_client *client, u32 heap_type)
 {
 	struct nvmap_handle_ref *ref;
 	struct nvmap_handle *handle;
@@ -470,7 +470,7 @@ u64 NVMAP2_client_calc_mss(struct nvmap_client *client, u32 heap_type)
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		handle = ref->handle;
 
-		total += NVMAP2_handle_share_size(handle, heap_type);
+		total += nvmap_handle_share_size(handle, heap_type);
 	}
 
 	client_unlock(client);
@@ -524,7 +524,7 @@ static int procrank_pte_entry(pte_t *pte, unsigned long addr, unsigned long end,
 }
 
 
-void NVMAP2_client_calc_iovmm_mss(struct nvmap_client *client, u64 *pss,
+void nvmap_client_calc_iovmm_mss(struct nvmap_client *client, u64 *pss,
 				   u64 *total)
 {
 	struct rb_node *n;
@@ -558,7 +558,7 @@ void NVMAP2_client_calc_iovmm_mss(struct nvmap_client *client, u64 *pss,
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 		h = ref->handle;
 
-		*total += NVMAP2_handle_procrank_walk(h, &procrank_walk,
+		*total += nvmap_handle_procrank_walk(h, &procrank_walk,
 				client->task->pid);
 	}
 
@@ -569,12 +569,12 @@ void NVMAP2_client_calc_iovmm_mss(struct nvmap_client *client, u64 *pss,
 	client_unlock(client);
 }
 
-struct nvmap_client *NVMAP2_client_from_list(struct list_head *n)
+struct nvmap_client *nvmap_client_from_list(struct list_head *n)
 {
 	return list_entry(n, struct nvmap_client, list);
 }
 
-void NVMAP2_client_del_list(struct nvmap_client *client)
+void nvmap_client_del_list(struct nvmap_client *client)
 {
 	list_del(&client->list);
 }

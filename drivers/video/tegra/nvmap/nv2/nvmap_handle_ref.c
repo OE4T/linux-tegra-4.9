@@ -31,22 +31,22 @@
 #include "nvmap_handle_priv.h"
 #include "nvmap_handle_ref.h"
 
-int NVMAP2_handle_ref_get(struct nvmap_handle_ref *ref)
+int nvmap_handle_ref_get(struct nvmap_handle_ref *ref)
 {
 	if (!ref)
 		return -1;
 
 	atomic_inc(&ref->dupes);
-	NVMAP2_handle_get(ref->handle);
+	nvmap_handle_get(ref->handle);
 	return 0;
 }
 
-int NVMAP2_handle_ref_count(struct nvmap_handle_ref *ref)
+int nvmap_handle_ref_count(struct nvmap_handle_ref *ref)
 {
 	return atomic_read(&ref->dupes);
 }
 
-struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
+struct nvmap_handle_ref *nvmap_handle_ref_create(struct nvmap_handle *handle)
 {
 	struct nvmap_handle_ref *ref = NULL;
 
@@ -57,7 +57,7 @@ struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
 
 	atomic_set(&ref->dupes, 1);
 
-	handle = NVMAP2_handle_get(handle);
+	handle = nvmap_handle_get(handle);
 	if (!handle) {
 		kfree(ref);
 		return NULL;
@@ -70,16 +70,16 @@ struct nvmap_handle_ref *NVMAP2_handle_ref_create(struct nvmap_handle *handle)
 	return ref;
 }
 
-void NVMAP2_handle_ref_free(struct nvmap_handle_ref *ref)
+void nvmap_handle_ref_free(struct nvmap_handle_ref *ref)
 {
 	atomic_dec(&ref->handle->share_count);
 	dma_buf_put(ref->handle->dmabuf);
 	kfree(ref);
 }
 
-int NVMAP2_handle_ref_put(struct nvmap_handle_ref *ref)
+int nvmap_handle_ref_put(struct nvmap_handle_ref *ref)
 {
 	// TODO: Do the same error that handle does on ref dec
-	NVMAP2_handle_put(ref->handle);
+	nvmap_handle_put(ref->handle);
 	return atomic_dec_return(&ref->dupes);
 }

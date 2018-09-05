@@ -28,12 +28,12 @@
 extern bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 extern struct dma_buf_ops nvmap_dma_buf_ops;
 
-int NVMAP2_dmabuf_is_nvmap(struct dma_buf *dmabuf)
+int nvmap_dmabuf_is_nvmap(struct dma_buf *dmabuf)
 {
 	return dmabuf_is_nvmap(dmabuf);
 }
 
-struct dma_buf *NVMAP2_dmabuf_from_fd(int fd)
+struct dma_buf *nvmap_dmabuf_from_fd(int fd)
 {
 	struct dma_buf *dmabuf;
 
@@ -44,7 +44,7 @@ struct dma_buf *NVMAP2_dmabuf_from_fd(int fd)
 	return dmabuf;
 }
 
-struct nvmap_handle * NVMAP2_dmabuf_to_handle(struct dma_buf *dmabuf)
+struct nvmap_handle * nvmap_dmabuf_to_handle(struct dma_buf *dmabuf)
 {
 	struct nvmap_handle_info *info;
 	if (!dmabuf_is_nvmap(dmabuf)) {
@@ -55,7 +55,7 @@ struct nvmap_handle * NVMAP2_dmabuf_to_handle(struct dma_buf *dmabuf)
 	return info->handle;
 }
 
-void NVMAP2_dmabuf_install_fd(struct dma_buf *dmabuf, int fd)
+void nvmap_dmabuf_install_fd(struct dma_buf *dmabuf, int fd)
 {
 	fd_install(fd, dmabuf->file);
 }
@@ -82,7 +82,7 @@ static struct dma_buf *__dma_buf_export(void * priv,
 /*
  * Make a dmabuf object for an nvmap handle.
  */
-struct dma_buf *NVMAP2_dmabuf_create(void * priv, size_t size)
+struct dma_buf *nvmap_dmabuf_create(void * priv, size_t size)
 {
 	return __dma_buf_export(priv, size);
 }

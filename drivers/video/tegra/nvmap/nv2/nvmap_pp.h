@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_PP_H
-#define __NVMAP2_PP_H
+#ifndef __NVMAP_PP_H
+#define __NVMAP_PP_H
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 
@@ -61,4 +61,4 @@ int nvmap_page_pool_clear(void);
 int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root);
 #endif
 
-#endif /* __NVMAP2_PP_H */
+#endif /* __NVMAP_PP_H */

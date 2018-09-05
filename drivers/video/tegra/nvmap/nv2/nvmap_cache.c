@@ -73,12 +73,12 @@ static void nvmap_flush_dcache_all(void *dummy)
 	tegra_flush_dcache_all(NULL);
 }
 
-void NVMAP2_cache_inner_flush_all(void) {
+void nvmap_cache_inner_flush_all(void) {
 	nvmap_flush_dcache_all(NULL);
 }
 
 // TODO: Clean up these global function pointers
-void (*inner_flush_cache_all)(void) = NVMAP2_cache_inner_flush_all;
+void (*inner_flush_cache_all)(void) = nvmap_cache_inner_flush_all;
 
 extern void __clean_dcache_louis(void *);
 static void nvmap_inner_clean_cache_all(void)
@@ -93,7 +93,7 @@ void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
 static void nvmap_cache_of_setup(struct nvmap_chip_cache_op *op)
 {
 	op->inner_clean_cache_all = nvmap_inner_clean_cache_all;
-	op->inner_flush_cache_all = NVMAP2_cache_inner_flush_all;
+	op->inner_flush_cache_all = nvmap_cache_inner_flush_all;
 	op->name = kstrdup("set/ways", GFP_KERNEL);
 	BUG_ON(!op->name);
 }
@@ -147,7 +147,7 @@ __weak void nvmap_override_cache_ops(void)
 __weak void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 		bool *inner, bool *outer)
 {
-	u32 flags = NVMAP2_handle_flags(h);
+	u32 flags = nvmap_handle_flags(h);
 
 	*inner = flags == NVMAP_HANDLE_CACHEABLE ||
 		 flags == NVMAP_HANDLE_INNER_CACHEABLE;
@@ -165,7 +165,7 @@ static void cache_clean_page(struct page *page)
 	__clean_dcache_page(page);
 }
 
-void NVMAP2_cache_clean_pages(struct page **pages, int numpages)
+void nvmap_cache_clean_pages(struct page **pages, int numpages)
 {
 	int i;
 
@@ -180,7 +180,7 @@ void NVMAP2_cache_clean_pages(struct page **pages, int numpages)
 		cache_clean_page(pages[i]);
 }
 
-void NVMAP2_cache_inner_clean_all(void)
+void nvmap_cache_inner_clean_all(void)
 {
 #ifdef CONFIG_ARCH_TEGRA_210_SOC
 	on_each_cpu(__clean_dcache_louis, NULL, 1);
@@ -189,7 +189,7 @@ void NVMAP2_cache_inner_clean_all(void)
 
 }
 
-void NVMAP2_cache_inner_maint(unsigned int op, void *vaddr, size_t size)
+void nvmap_cache_inner_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
@@ -203,7 +203,7 @@ void NVMAP2_cache_inner_maint(unsigned int op, void *vaddr, size_t size)
 		__dma_map_area(vaddr, size, DMA_TO_DEVICE);
 }
 
-bool NVMAP2_cache_can_fast_maint(unsigned long start,
+bool nvmap_cache_can_fast_maint(unsigned long start,
 			unsigned long end, unsigned int op)
 {
 	if (!nvmap_cache_maint_by_set_ways)
@@ -215,20 +215,20 @@ bool NVMAP2_cache_can_fast_maint(unsigned long start,
 	return true;
 }
 
-void NVMAP2_cache_fast_maint(unsigned int op)
+void nvmap_cache_fast_maint(unsigned int op)
 {
 
 	if (op == NVMAP_CACHE_OP_WB_INV)
-		NVMAP2_cache_inner_flush_all();
+		nvmap_cache_inner_flush_all();
 	else if (op == NVMAP_CACHE_OP_WB)
-		NVMAP2_cache_inner_clean_all();
+		nvmap_cache_inner_clean_all();
 }
 
 /*
  * If you want to call this function with inner = false,
  * then don't call this function at all
  */
-int NVMAP2_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
+int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 		phys_addr_t pend)
 {
 	unsigned long kaddr;
@@ -236,9 +236,9 @@ int NVMAP2_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 	phys_addr_t cur_addr;
 
 	/* TODO: Move this outside of everywhere this is called */
-	if (NVMAP2_cache_can_fast_maint((unsigned long)pstart,
+	if (nvmap_cache_can_fast_maint((unsigned long)pstart,
 				 (unsigned long)pend, op)) {
-		NVMAP2_cache_fast_maint(op);
+		nvmap_cache_fast_maint(op);
 		return 0;
 	}
 
@@ -255,7 +255,7 @@ int NVMAP2_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 		next = min(next, pend);
 		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
 			cur_addr, PG_PROT_KERNEL);
-		NVMAP2_cache_inner_maint(op, base, next - cur_addr);
+		nvmap_cache_inner_maint(op, base, next - cur_addr);
 		cur_addr = next;
 		unmap_kernel_range(kaddr, PAGE_SIZE);
 	}
@@ -264,7 +264,7 @@ int NVMAP2_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 	return 0;
 }
 
-void NVMAP2_cache_maint_heap_page_outer(struct page **pages,
+void nvmap_cache_maint_heap_page_outer(struct page **pages,
 				unsigned int op,
 				unsigned long start, unsigned long end)
 {
@@ -276,19 +276,19 @@ void NVMAP2_cache_maint_heap_page_outer(struct page **pages,
 		size_t size;
 		int ret;
 
-		page = NVMAP2_to_page(pages[start >> PAGE_SHIFT]);
+		page = nvmap_to_page(pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
 		off = start & ~PAGE_MASK;
 		size = next - start;
 		paddr = page_to_phys(page) + off;
 
-		ret = NVMAP2_cache_maint_phys_range(op, paddr, paddr + size);
+		ret = nvmap_cache_maint_phys_range(op, paddr, paddr + size);
 		BUG_ON(ret != 0);
 		start = next;
 	}
 }
 
-void NVMAP2_cache_maint_inner(unsigned int op, void *vaddr, size_t size)
+void nvmap_cache_maint_inner(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)

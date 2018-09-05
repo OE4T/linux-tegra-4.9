@@ -102,14 +102,14 @@ static const struct file_operations nvmap_user_fops = {
 #endif
 };
 
-u32 NVMAP2_cpu_access_mask(void)
+u32 nvmap_cpu_access_mask(void)
 {
 	return nvmap_dev->cpu_access_mask;
 }
 
-struct nvmap_carveout_node *NVMAP2_dev_to_carveout(struct nvmap_device *dev, int i)
+struct nvmap_carveout_node *nvmap_dev_to_carveout(struct nvmap_device *dev, int i)
 {
-	return NVMAP2_carveout_index(dev->heaps, i);
+	return nvmap_carveout_index(dev->heaps, i);
 }
 
 const struct file_operations debug_handles_by_pid_fops;
@@ -212,12 +212,12 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 
 	mutex_lock(&dev->clients_lock);
 
-	client = NVMAP2_client_create(&dev->clients, "user");
+	client = nvmap_client_create(&dev->clients, "user");
 	if (!client)
 		return -ENOMEM;
 
 	if (!IS_ERR_OR_NULL(dev->handles_by_pid)) {
-		pid_t pid = NVMAP2_client_pid(client);
+		pid_t pid = nvmap_client_pid(client);
 		nvmap_pid_get_locked(dev, pid);
 	}
 	mutex_unlock(&dev->clients_lock);
@@ -235,16 +235,16 @@ static int nvmap_release(struct inode *inode, struct file *filp)
 
 	mutex_lock(&nvmap_dev->clients_lock);
 	if (!IS_ERR_OR_NULL(nvmap_dev->handles_by_pid)) {
-		pid_t pid = NVMAP2_client_pid(client);
+		pid_t pid = nvmap_client_pid(client);
 		nvmap_pid_put_locked(nvmap_dev, pid);
 	}
-	NVMAP2_client_del_list(client);
+	nvmap_client_del_list(client);
 	mutex_unlock(&nvmap_dev->clients_lock);
 
 	// TODO: client->count is always 1 so we dont need below line
 	// Remove client count and this comment
 	//if (!atomic_dec_return(&client->count))
-	NVMAP2_client_destroy(client);
+	nvmap_client_destroy(client);
 
 	return 0;
 }
@@ -456,11 +456,11 @@ static void nvmap_get_total_mss(u64 *pss, u64 *total, u32 heap_type)
 
 	n = rb_first(&dev->handles);
 	for (; n != NULL; n = rb_next(n)) {
-		struct nvmap_handle *h = NVMAP2_handle_from_node(n);
+		struct nvmap_handle *h = nvmap_handle_from_node(n);
 
-		*total += NVMAP2_handle_total_mss(h, heap_type);
+		*total += nvmap_handle_total_mss(h, heap_type);
 		if (pss)
-			*pss += NVMAP2_handle_total_pss(h, heap_type);
+			*pss += nvmap_handle_total_pss(h, heap_type);
 
 	}
 
@@ -483,11 +483,11 @@ static int nvmap_debug_allocations_show(struct seq_file *s, void *unused)
 	list_for_each(n, &nvmap_dev->clients) {
 		u64 client_total;
 
-		client = NVMAP2_client_from_list(n);
-		NVMAP2_client_stringify(client, s);
-		client_total = NVMAP2_client_calc_mss(client, heap_type);
+		client = nvmap_client_from_list(n);
+		nvmap_client_stringify(client, s);
+		client_total = nvmap_client_calc_mss(client, heap_type);
 		seq_printf(s, " %10lluK\n", K(client_total));
-		NVMAP2_client_allocations_stringify(client, s, heap_type);
+		nvmap_client_allocations_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
@@ -514,8 +514,8 @@ static int nvmap_debug_all_allocations_show(struct seq_file *s, void *unused)
 	/* for each handle */
 	n = rb_first(&nvmap_dev->handles);
 	for (; n != NULL; n = rb_next(n)) {
-		handle = NVMAP2_handle_from_node(n);
-		NVMAP2_handle_all_allocations_show(handle, s, heap_type);
+		handle = nvmap_handle_from_node(n);
+		nvmap_handle_all_allocations_show(handle, s, heap_type);
 	}
 
 	spin_unlock(&nvmap_dev->handle_lock);
@@ -539,8 +539,8 @@ static int nvmap_debug_orphan_handles_show(struct seq_file *s, void *unused)
 	/* for each handle */
 	n = rb_first(&nvmap_dev->handles);
 	for (; n != NULL; n = rb_next(n)) {
-		struct nvmap_handle *handle = NVMAP2_handle_from_node(n);
-		NVMAP2_handle_orphans_allocations_show(handle, s, heap_type);
+		struct nvmap_handle *handle = nvmap_handle_from_node(n);
+		nvmap_handle_orphans_allocations_show(handle, s, heap_type);
 	}
 
 	spin_unlock(&nvmap_dev->handle_lock);
@@ -567,11 +567,11 @@ static int nvmap_debug_maps_show(struct seq_file *s, void *unused)
 	list_for_each(n, &nvmap_dev->clients) {
 		u64 client_total;
 
-		client = NVMAP2_client_from_list(n);
-		NVMAP2_client_stringify(client, s);
-		client_total = NVMAP2_client_calc_mss(client, heap_type);
+		client = nvmap_client_from_list(n);
+		nvmap_client_stringify(client, s);
+		client_total = nvmap_client_calc_mss(client, heap_type);
 		seq_printf(s, " %10lluK\n", K(client_total));
-		NVMAP2_client_maps_stringify(client, s, heap_type);
+		nvmap_client_maps_stringify(client, s, heap_type);
 		seq_printf(s, "\n");
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
@@ -596,9 +596,9 @@ static int nvmap_debug_clients_show(struct seq_file *s, void *unused)
 	list_for_each(n, &nvmap_dev->clients) {
 		u64 client_total;
 
-		client = NVMAP2_client_from_list(n);
-		NVMAP2_client_stringify(client, s);
-		client_total = NVMAP2_client_calc_mss(client, heap_type);
+		client = nvmap_client_from_list(n);
+		nvmap_client_stringify(client, s);
+		client_total = nvmap_client_calc_mss(client, heap_type);
 		seq_printf(s, " %10lluK\n", K(client_total));
 	}
 	mutex_unlock(&nvmap_dev->clients_lock);
@@ -625,8 +625,8 @@ static int nvmap_debug_handles_by_pid_show(struct seq_file *s, void *unused)
 	mutex_lock(&nvmap_dev->clients_lock);
 
 	list_for_each(n, &nvmap_dev->clients) {
-		client = NVMAP2_client_from_list(n);
-		ret = NVMAP2_client_show_by_pid(client, s, p->pid);
+		client = nvmap_client_from_list(n);
+		ret = nvmap_client_show_by_pid(client, s, p->pid);
 		if (ret)
 			break;
 	}
@@ -658,16 +658,16 @@ static int nvmap_debug_lru_allocations_show(struct seq_file *s, void *unused)
 
 	spin_lock(&nvmap_dev->lru_lock);
 	list_for_each(n, &nvmap_dev->lru_handles) {
-		struct nvmap_handle *h = NVMAP2_handle_from_lru(n);
-		u64 size = NVMAP2_handle_size(h);
+		struct nvmap_handle *h = nvmap_handle_from_lru(n);
+		u64 size = nvmap_handle_size(h);
 
 		total_handles++;
 		total_size += size;
-		if (NVMAP2_handle_is_migratable(h)) {
+		if (nvmap_handle_is_migratable(h)) {
 			migratable_handles++;
 			migratable_size += size;
 		}
-		NVMAP2_handle_lru_show(h, s);
+		nvmap_handle_lru_show(h, s);
 	}
 	seq_printf(s, "total_handles = %d, migratable_handles = %d,"
 		"total_size=%zuK, migratable_size=%zuK\n",
@@ -692,9 +692,9 @@ static int nvmap_debug_iovmm_procrank_show(struct seq_file *s, void *unused)
 	seq_printf(s, "%-18s %18s %8s %11s %11s\n",
 		"CLIENT", "PROCESS", "PID", "PSS", "SIZE");
 	list_for_each(n, &dev->clients) {
-		client = NVMAP2_client_from_list(n);
-		NVMAP2_client_stringify(client, s);
-		NVMAP2_client_calc_iovmm_mss(client, &pss, &total);
+		client = nvmap_client_from_list(n);
+		nvmap_client_stringify(client, s);
+		nvmap_client_calc_iovmm_mss(client, &pss, &total);
 		seq_printf(s, " %10lluK %10lluK\n", K(pss), K(total));
 	}
 	mutex_unlock(&dev->clients_lock);
@@ -824,7 +824,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 	nvmap_dev->dynamic_dma_map_mask = ~0;
 	nvmap_dev->cpu_access_mask = ~0;
 	for (i = 0; i < plat->nr_carveouts; i++)
-		(void)NVMAP2_carveout_create(&plat->carveouts[i]);
+		(void)nvmap_carveout_create(&plat->carveouts[i]);
 
 	nvmap_iovmm_debugfs_init();
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -845,8 +845,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 		goto fail_heaps;
 
 	for (i = 0; i < dev->nr_carveouts; i++)
-		if (NVMAP2_carveout_heap_bit(
-					NVMAP2_dev_to_carveout(dev, i)) &
+		if (nvmap_carveout_heap_bit(
+					nvmap_dev_to_carveout(dev, i)) &
 					NVMAP_HEAP_CARVEOUT_GENERIC)
 			generic_carveout_present = 1;
 
@@ -870,8 +870,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node =
-						NVMAP2_dev_to_carveout(dev, i);
-		NVMAP2_carveout_destroy(node);
+						nvmap_dev_to_carveout(dev, i);
+		nvmap_carveout_destroy(node);
 	}
 fail:
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -898,14 +898,14 @@ int nvmap_remove(struct platform_device *pdev)
 	misc_deregister(&dev->dev_user);
 
 	while ((n = rb_first(&dev->handles))) {
-		h = NVMAP2_handle_from_node(n);
-		NVMAP2_handle_destroy(h);
+		h = nvmap_handle_from_node(n);
+		nvmap_handle_destroy(h);
 	}
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node =
-				NVMAP2_dev_to_carveout(dev, i);
-		NVMAP2_carveout_destroy(node);
+				nvmap_dev_to_carveout(dev, i);
+		nvmap_carveout_destroy(node);
 	}
 	kfree(dev->heaps);
 

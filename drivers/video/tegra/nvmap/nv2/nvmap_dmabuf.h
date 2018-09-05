@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_DMABUF_H
-#define __NVMAP2_DMABUF_H
+#ifndef __NVMAP_DMABUF_H
+#define __NVMAP_DMABUF_H
 
 #include "nvmap_structs.h"
 
@@ -22,12 +22,12 @@ struct nvmap_handle_info {
 	struct mutex maps_lock;
 };
 
-struct dma_buf *NVMAP2_dmabuf_create(void * priv, size_t size);
-void NVMAP2_dmabuf_install_fd(struct dma_buf *dmabuf, int fd);
-struct nvmap_handle * NVMAP2_dmabuf_to_handle(struct dma_buf *dmabuf);
-struct dma_buf *NVMAP2_dmabuf_from_fd(int fd);
-int NVMAP2_dmabuf_is_nvmap(struct dma_buf *dmabuf);
+struct dma_buf *nvmap_dmabuf_create(void * priv, size_t size);
+void nvmap_dmabuf_install_fd(struct dma_buf *dmabuf, int fd);
+struct nvmap_handle * nvmap_dmabuf_to_handle(struct dma_buf *dmabuf);
+struct dma_buf *nvmap_dmabuf_from_fd(int fd);
+int nvmap_dmabuf_is_nvmap(struct dma_buf *dmabuf);
 
-void NVMAP2_dmabufs_free(struct list_head *dmabuf_list);
+void nvmap_dmabufs_free(struct list_head *dmabuf_list);
 
-#endif /* __NVMAP2_DMABUF_H */
+#endif /* __NVMAP_DMABUF_H */

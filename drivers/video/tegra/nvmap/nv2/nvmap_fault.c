@@ -51,18 +51,18 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 	}
 
 	// TODO: Pretty sure no one uses this ref count
-	NVMAP2_handle_umap_inc(handle);
+	nvmap_handle_umap_inc(handle);
 
 	vma_open_count = atomic_inc_return(&priv->count);
 	if (vma_open_count == 1) {
-		err = NVMAP2_handle_open_vma(handle);
+		err = nvmap_handle_open_vma(handle);
 		if (err) {
 			WARN(1, "handle_open_vma failed");
 		}
 	}
 
 
-	err = NVMAP2_handle_add_vma(handle, vma);
+	err = nvmap_handle_add_vma(handle, vma);
 	if (err) {
 		WARN(1, "vma not tracked");
 	}
@@ -81,24 +81,24 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	h = priv->handle;
 	BUG_ON(!h);
 
-	err = NVMAP2_handle_del_vma(h, vma);
+	err = nvmap_handle_del_vma(h, vma);
 	if (err) {
 		WARN(1, "Handle del vma failed");
 		return;
 	}
 
-	NVMAP2_handle_umap_dec(h);
+	nvmap_handle_umap_dec(h);
 
 	vma_open_count = __atomic_add_unless(&priv->count, -1, 0);
 	if (vma_open_count == 1) {
-		err = NVMAP2_handle_close_vma(h);
+		err = nvmap_handle_close_vma(h);
 		if (err)
 			WARN(1, "Handle close vma failed");
 
 		// TODO: There is NO handle_get in vma_open
 		//  This is PROBABLY a bug
 		if (priv->handle)
-			NVMAP2_handle_put(priv->handle);
+			nvmap_handle_put(priv->handle);
 		vma->vm_private_data = NULL;
 		kfree(priv);
 	}
@@ -123,7 +123,7 @@ static int nvmap_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf,
 	offs += (vma->vm_pgoff << PAGE_SHIFT);
 
 
-	err = NVMAP2_handle_fault_vma(priv->handle, offs, &page);
+	err = nvmap_handle_fault_vma(priv->handle, offs, &page);
 	if (err){
 		if (page != NULL) {
 			vm_insert_pfn(vma, (unsigned long)vmf_address,
@@ -169,7 +169,7 @@ static bool nvmap_fixup_prot(struct vm_area_struct *vma,
 	offs = pgoff << PAGE_SHIFT;
 	offs += priv->offs;
 
-	return NVMAP2_handle_fixup_prot_vma(priv->handle, offs);
+	return nvmap_handle_fixup_prot_vma(priv->handle, offs);
 }
 
 struct vm_operations_struct nvmap_vma_ops = {

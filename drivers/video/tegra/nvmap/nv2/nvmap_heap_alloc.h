@@ -11,27 +11,27 @@
  * more details.
  */
 
-#ifndef __NVMAP2_HEAP_ALLOC_H
-#define __NVMAP2_HEAP_ALLOC_H
+#ifndef __NVMAP_HEAP_ALLOC_H
+#define __NVMAP_HEAP_ALLOC_H
 
 #define GFP_NVMAP       (GFP_KERNEL | __GFP_HIGHMEM | __GFP_NOWARN)
 
-struct device *NVMAP2_heap_type_to_dev(unsigned long type);
-unsigned int NVMAP2_heap_type_conversion(unsigned int orig_heap);
+struct device *nvmap_heap_type_to_dev(unsigned long type);
+unsigned int nvmap_heap_type_conversion(unsigned int orig_heap);
 
-int NVMAP2_heap_type_is_carveout(unsigned int heap_type);
-int NVMAP2_heap_type_is_iovmm(unsigned int heap_type);
-int NVMAP2_heap_type_is_dma(unsigned long type);
+int nvmap_heap_type_is_carveout(unsigned int heap_type);
+int nvmap_heap_type_is_iovmm(unsigned int heap_type);
+int nvmap_heap_type_is_dma(unsigned long type);
 
-const unsigned int *NVMAP2_heap_mask_to_policy(unsigned int heap_mask, int nr_page);
+const unsigned int *nvmap_heap_mask_to_policy(unsigned int heap_mask, int nr_page);
 
-struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous);
+struct page **nvmap_heap_alloc_iovmm_pages(size_t size, bool contiguous);
 
-struct page **NVMAP2_heap_alloc_from_va(size_t size, ulong vaddr);
+struct page **nvmap_heap_alloc_from_va(size_t size, ulong vaddr);
 
-struct page **NVMAP2_heap_alloc_dma_pages(size_t size, unsigned long type);
-void NVMAP2_heap_dealloc_dma_pages(size_t size, unsigned long type,
+struct page **nvmap_heap_alloc_dma_pages(size_t size, unsigned long type);
+void nvmap_heap_dealloc_dma_pages(size_t size, unsigned long type,
 				struct page **pages);
 
 
-#endif /* __NVMAP2_HEAP_ALLOC_H */
+#endif /* __NVMAP_HEAP_ALLOC_H */

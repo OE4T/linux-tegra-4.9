@@ -11,9 +11,9 @@
  * more details.
  */
 
-#ifndef __NVMAP2_INIT_H
-#define __NVMAP2_INIT_H
+#ifndef __NVMAP_INIT_H
+#define __NVMAP_INIT_H
 
 int __init nvmap_co_setup(struct reserved_mem *rmem);
 
-#endif /* __NVMAP2_INIT_H */
+#endif /* __NVMAP_INIT_H */

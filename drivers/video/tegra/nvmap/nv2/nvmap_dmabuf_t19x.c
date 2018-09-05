@@ -55,7 +55,7 @@ struct sg_table *nvmap_dmabuf_map_dma_buf(
 	struct nvmap_handle_t19x *handle_t19x = NULL;
 	struct device *dev = nvmap_dev->dev_user.parent;
 	struct sg_table *sg_table;
-	struct dma_buf *dmabuf = NVMAP2_handle_to_dmabuf(handle);
+	struct dma_buf *dmabuf = nvmap_handle_to_dmabuf(handle);
 
 	if (!nvmap_version_t19x)
 		goto dmabuf_map;
@@ -91,7 +91,7 @@ void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	struct nvmap_handle *handle = info->handle;
 	struct device *dev = nvmap_dev->dev_user.parent;
 	struct nvmap_handle_t19x *handle_t19x;
-	struct dma_buf *dmabuf = NVMAP2_handle_to_dmabuf(handle);
+	struct dma_buf *dmabuf = nvmap_handle_to_dmabuf(handle);
 
 	_nvmap_dmabuf_unmap_dma_buf(attach, sgt, dir);
 

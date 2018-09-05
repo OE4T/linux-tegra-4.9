@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_DEV_H
-#define __NVMAP2_DEV_H
+#ifndef __NVMAP_DEV_H
+#define __NVMAP_DEV_H
 
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
@@ -54,11 +54,11 @@ int nvmap_init(struct platform_device *pdev);
 
 extern struct nvmap_device *nvmap_dev;
 
-u32 NVMAP2_cpu_access_mask(void);
+u32 nvmap_cpu_access_mask(void);
 
-struct nvmap_carveout_node *NVMAP2_dev_to_carveout(struct nvmap_device *dev, int i);
+struct nvmap_carveout_node *nvmap_dev_to_carveout(struct nvmap_device *dev, int i);
 
-static inline void NVMAP2_lru_add(struct list_head *handle_lru)
+static inline void nvmap_lru_add(struct list_head *handle_lru)
 {
 	spin_lock(&nvmap_dev->lru_lock);
 	BUG_ON(!list_empty(handle_lru));
@@ -66,7 +66,7 @@ static inline void NVMAP2_lru_add(struct list_head *handle_lru)
 	spin_unlock(&nvmap_dev->lru_lock);
 }
 
-static inline void NVMAP2_lru_del(struct list_head *handle_lru)
+static inline void nvmap_lru_del(struct list_head *handle_lru)
 {
 	spin_lock(&nvmap_dev->lru_lock);
 	list_del(handle_lru);
@@ -74,7 +74,7 @@ static inline void NVMAP2_lru_del(struct list_head *handle_lru)
 	spin_unlock(&nvmap_dev->lru_lock);
 }
 
-static inline void NVMAP2_lru_reset(struct list_head *handle_lru)
+static inline void nvmap_lru_reset(struct list_head *handle_lru)
 {
 	spin_lock(&nvmap_dev->lru_lock);
 	BUG_ON(list_empty(handle_lru));
@@ -85,4 +85,4 @@ static inline void NVMAP2_lru_reset(struct list_head *handle_lru)
 
 int nvmap_dmabuf_stash_init(void);
 
-#endif /* __NVMAP2_DEV_H */
+#endif /* __NVMAP_DEV_H */

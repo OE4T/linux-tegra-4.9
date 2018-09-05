@@ -31,7 +31,7 @@ void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 {
 	struct nvmap_handle_t19x *handle_t19x;
 	struct device *dev = nvmap_dev->dev_user.parent;
-	u32 flags = NVMAP2_handle_flags(h);
+	u32 flags = nvmap_handle_flags(h);
 
 	if (static_key_true(&nvmap_updated_cache_config)) {
 		if (nvmap_version_t19x) {
@@ -42,7 +42,7 @@ void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 		static_key_slow_dec(&nvmap_updated_cache_config);
 	}
 
-	handle_t19x = dma_buf_get_drvdata(NVMAP2_handle_to_dmabuf(h), dev);
+	handle_t19x = dma_buf_get_drvdata(nvmap_handle_to_dmabuf(h), dev);
 	if (handle_t19x && atomic_read(&handle_t19x->nc_pin)) {
 		*inner = *outer = false;
 		return;

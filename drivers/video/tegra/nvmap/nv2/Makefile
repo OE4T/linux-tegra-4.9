@@ -10,14 +10,12 @@ ccflags-y += -Iarch/arm/mach-tegra
 ccflags-y += -I$(srctree.nvidia)/drivers/video/tegra/nvmap/
 ccflags-y += -I$(srctree.nvidia)/include/
 
-obj-y += nvmap_alloc.o
 obj-y += nvmap_dev.o
 obj-y += nvmap_fault.o
 obj-y += nvmap_heap.o
 obj-y += nvmap_init.o
 obj-y += nvmap_tag.o
 obj-y += nvmap_stats.o
-
 obj-y += nvmap_client.o
 obj-y += nvmap_dmabuf.o
 obj-y += nvmap_dmabuf_ops.o

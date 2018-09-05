@@ -20,13 +20,18 @@
 
 #include "nvmap_misc.h"
 
+bool nvmap_convert_carveout_to_iovmm;
+bool nvmap_convert_iovmm_to_carveout;
+
+u32 nvmap_max_handle_count;
+
 /* handles may be arbitrarily large (16+MiB), and any handle allocated from
  * the kernel (i.e., not a carveout handle) includes its array of pages. to
  * preserve kmalloc space, if the array of pages exceeds PAGELIST_VMALLOC_MIN,
  * the array is allocated using vmalloc. */
 #define PAGELIST_VMALLOC_MIN	(PAGE_SIZE)
 
-void *NVMAP2_altalloc(size_t len)
+void *nvmap_altalloc(size_t len)
 {
 	if (len > PAGELIST_VMALLOC_MIN)
 		return vmalloc(len);
@@ -34,22 +39,22 @@ void *NVMAP2_altalloc(size_t len)
 		return kmalloc(len, GFP_KERNEL);
 }
 
-struct page **NVMAP2_alloc_pages(struct page **pg_pages, u32 nr_pages)
+struct page **nvmap_alloc_pages(struct page **pg_pages, u32 nr_pages)
 {
 	struct page **pages;
 	int i;
 
-	pages = NVMAP2_altalloc(sizeof(*pages) * nr_pages);
+	pages = nvmap_altalloc(sizeof(*pages) * nr_pages);
 	if (!pages)
 		return NULL;
 
 	for (i = 0; i < nr_pages; i++)
-		pages[i] = NVMAP2_to_page(pg_pages[i]);
+		pages[i] = nvmap_to_page(pg_pages[i]);
 
 	return pages;
 }
 
-struct page *NVMAP2_alloc_pages_exact(gfp_t gfp, size_t size)
+struct page *nvmap_alloc_pages_exact(gfp_t gfp, size_t size)
 {
 	struct page *page, *p, *e;
 	unsigned int order;
@@ -68,7 +73,7 @@ struct page *NVMAP2_alloc_pages_exact(gfp_t gfp, size_t size)
 	return page;
 }
 
-void NVMAP2_altfree(void *ptr, size_t len)
+void nvmap_altfree(void *ptr, size_t len)
 {
 	if (!ptr)
 		return;
@@ -79,7 +84,7 @@ void NVMAP2_altfree(void *ptr, size_t len)
 		kfree(ptr);
 }
 
-int NVMAP2_get_user_pages(ulong vaddr, int nr_page, struct page **pages)
+int nvmap_get_user_pages(ulong vaddr, int nr_page, struct page **pages)
 {
 	int ret = 0;
 	int user_pages;

@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_STRUCTS_H
-#define __NVMAP2_STRUCTS_H
+#ifndef __NVMAP_STRUCTS_H
+#define __NVMAP_STRUCTS_H
 
 struct nvmap_handle;
 struct nvmap_handle_info;
@@ -23,4 +23,4 @@ struct nvmap_client;
 struct nvmap_carveout_node;
 struct nvmap_heap;
 
-#endif /* __NVMAP2_STRUCTS_H */
+#endif /* __NVMAP_STRUCTS_H */

@@ -26,12 +26,12 @@
 
 extern struct vm_operations_struct nvmap_vma_ops;
 
-int NVMAP2_vma_is_nvmap(struct vm_area_struct *vma)
+int nvmap_vma_is_nvmap(struct vm_area_struct *vma)
 {
 	return vma->vm_ops == &nvmap_vma_ops;
 }
 
-int NVMAP2_vma_belongs_to_handle(struct vm_area_struct *vma,
+int nvmap_vma_belongs_to_handle(struct vm_area_struct *vma,
 					struct nvmap_handle *h)
 {
 	struct nvmap_vma_priv *priv;
@@ -41,7 +41,7 @@ int NVMAP2_vma_belongs_to_handle(struct vm_area_struct *vma,
 	return (priv->handle == h);
 }
 
-static void NVMAP2_zap_page_range(struct vm_area_struct *vma,
+static void nvmap_zap_page_range(struct vm_area_struct *vma,
 		unsigned long start, unsigned long size)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
@@ -51,7 +51,7 @@ static void NVMAP2_zap_page_range(struct vm_area_struct *vma,
 #endif
 }
 
-void NVMAP2_vma_zap(struct list_head *vmas, u64 offset, u64 size)
+void nvmap_vma_zap(struct list_head *vmas, u64 offset, u64 size)
 {
 	struct nvmap_vma_list *vma_list;
 	struct vm_area_struct *vma;
@@ -70,16 +70,16 @@ void NVMAP2_vma_zap(struct list_head *vmas, u64 offset, u64 size)
 			 * zapping needs special care. zap entire range for now.
 			 * FIXME: optimze zapping.
 			 */
-			NVMAP2_zap_page_range(vma, vma->vm_start,
+			nvmap_zap_page_range(vma, vma->vm_start,
 					vma->vm_end - vma->vm_start);
 		} else {
-			NVMAP2_zap_page_range(vma, vma->vm_start + offset,
+			nvmap_zap_page_range(vma, vma->vm_start + offset,
 						vm_size);
 		}
 	}
 }
 
-static int NVMAP2_vma_list_prot_none(struct nvmap_vma_list *vma_list,
+static int nvmap_vma_list_prot_none(struct nvmap_vma_list *vma_list,
 				struct vm_area_struct *vma,
 				struct vm_area_struct *prev,
 				size_t vm_size,
@@ -104,7 +104,7 @@ static int NVMAP2_vma_list_prot_none(struct nvmap_vma_list *vma_list,
 	return err;
 }
 
-static int NVMAP2_vma_list_prot_restore(struct nvmap_vma_list *vma_list,
+static int nvmap_vma_list_prot_restore(struct nvmap_vma_list *vma_list,
 				struct vm_area_struct *vma,
 				struct vm_area_struct *prev,
 				size_t vm_size)
@@ -120,7 +120,7 @@ static int NVMAP2_vma_list_prot_restore(struct nvmap_vma_list *vma_list,
 	return err;
 }
 
-int NVMAP2_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
+int nvmap_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
 					u64 size, int handle_is_dirty, int op)
 {
 	struct vm_area_struct *vma = vma_list->vma;
@@ -143,12 +143,12 @@ int NVMAP2_vma_list_prot(struct nvmap_vma_list *vma_list, u64 offset,
 
 	switch (op) {
 		case NVMAP_HANDLE_PROT_NONE:
-			err = NVMAP2_vma_list_prot_none(vma_list, vma,
+			err = nvmap_vma_list_prot_none(vma_list, vma,
 							prev, vm_size,
 							handle_is_dirty);
 			break;
 		case NVMAP_HANDLE_PROT_RESTORE:
-			err = NVMAP2_vma_list_prot_restore(vma_list, vma,
+			err = nvmap_vma_list_prot_restore(vma_list, vma,
 							prev, vm_size);
 			break;
 		default:

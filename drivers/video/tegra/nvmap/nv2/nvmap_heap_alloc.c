@@ -66,12 +66,12 @@ static const unsigned int heap_policy_excl[] = {
  * set the gfp not to trigger direct/kswapd reclaims and
  * not to use emergency reserves.
  */
-static gfp_t NVMAP2_heap_big_pages_gfp(gfp_t gfp)
+static gfp_t nvmap_heap_big_pages_gfp(gfp_t gfp)
 {
 	return (gfp | __GFP_NOMEMALLOC) & ~__GFP_RECLAIM;
 }
 
-unsigned int NVMAP2_heap_type_conversion(unsigned int orig_heap)
+unsigned int nvmap_heap_type_conversion(unsigned int orig_heap)
 {
 	unsigned int type = orig_heap;
 	if (!nvmap_convert_carveout_to_iovmm
@@ -84,7 +84,7 @@ unsigned int NVMAP2_heap_type_conversion(unsigned int orig_heap)
 	return type;
 }
 
-int NVMAP2_heap_type_is_carveout(unsigned int heap_type)
+int nvmap_heap_type_is_carveout(unsigned int heap_type)
 {
 	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
 
@@ -94,7 +94,7 @@ int NVMAP2_heap_type_is_carveout(unsigned int heap_type)
 	return (heap_type & carveout_mask) ? 1 : 0;
 }
 
-int NVMAP2_heap_type_is_iovmm(unsigned int heap_type)
+int nvmap_heap_type_is_iovmm(unsigned int heap_type)
 {
 	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
 
@@ -116,7 +116,7 @@ static struct device *heap_pgalloc_dev(unsigned long type)
 	if (ret || (type != NVMAP_HEAP_CARVEOUT_VPR))
 		return ERR_PTR(-EINVAL);
 
-	dma_dev = NVMAP2_heap_type_to_dev(type);
+	dma_dev = nvmap_heap_type_to_dev(type);
 	if (IS_ERR(dma_dev))
 		return dma_dev;
 
@@ -133,14 +133,14 @@ static int heap_big_pages_alloc_exact(struct page **pages, int starting_idx,
 	struct page *page;
 	int idx;
 
-	page = NVMAP2_alloc_pages_exact(gfp,
+	page = nvmap_alloc_pages_exact(gfp,
 			num_pages << PAGE_SHIFT);
 	if (!page)
 		return -ENOMEM;
 
 	for (idx = 0; idx < num_pages; idx++)
 		pages[starting_idx + idx] = nth_page(page, idx);
-	NVMAP2_cache_clean_pages(&pages[starting_idx], num_pages);
+	nvmap_cache_clean_pages(&pages[starting_idx], num_pages);
 
 	return 0;
 }
@@ -149,7 +149,7 @@ static int heap_big_pages_alloc(struct page **pages, int nr_page, gfp_t gfp)
 {
 	int page_index = 0;
 	int pages_per_big_pg = NVMAP_PP_BIG_PAGE_SIZE >> PAGE_SHIFT;
-	gfp_t gfp_no_reclaim = NVMAP2_heap_big_pages_gfp(gfp);
+	gfp_t gfp_no_reclaim = nvmap_heap_big_pages_gfp(gfp);
 	int err;
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -176,8 +176,8 @@ static int heap_big_pages_alloc(struct page **pages, int nr_page, gfp_t gfp)
 	nvmap_big_page_allocs += page_index;
 
 	/* If we have page coloring then alloc the rest of pages colored */
-	if (NVMAP2_color_is_enabled() && page_index < nr_page) {
-		int err = NVMAP2_color_alloc(&nvmap_dev->pool,
+	if (nvmap_color_is_enabled() && page_index < nr_page) {
+		int err = nvmap_color_alloc(&nvmap_dev->pool,
 					nr_page - page_index,
 					&pages[page_index]);
 
@@ -199,20 +199,20 @@ static int heap_big_pages_alloc(struct page **pages, int nr_page, gfp_t gfp)
 	return page_index;
 }
 
-struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous)
+struct page **nvmap_heap_alloc_iovmm_pages(size_t size, bool contiguous)
 {
 	int nr_page = size >> PAGE_SHIFT;
 	int i = 0, page_index = 0;
 	struct page **pages;
 	gfp_t gfp = GFP_NVMAP | __GFP_ZERO;
 
-	pages = NVMAP2_altalloc(nr_page * sizeof(*pages));
+	pages = nvmap_altalloc(nr_page * sizeof(*pages));
 	if (!pages)
 		return ERR_PTR(-ENOMEM);
 
 	if (contiguous) {
 		struct page *page;
-		page = NVMAP2_alloc_pages_exact(gfp, size);
+		page = nvmap_alloc_pages_exact(gfp, size);
 		if (!page)
 			goto fail;
 
@@ -227,7 +227,7 @@ struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous)
 		}
 
 		for (i = page_index; i < nr_page; i++) {
-			pages[i] = NVMAP2_alloc_pages_exact(gfp, PAGE_SIZE);
+			pages[i] = nvmap_alloc_pages_exact(gfp, PAGE_SIZE);
 			if (!pages[i])
 				goto fail;
 		}
@@ -242,19 +242,19 @@ struct page **NVMAP2_heap_alloc_iovmm_pages(size_t size, bool contiguous)
 	 * explicit cache maintenance.
 	 */
 	if (page_index < nr_page)
-		NVMAP2_cache_clean_pages(&pages[page_index], nr_page - page_index);
+		nvmap_cache_clean_pages(&pages[page_index], nr_page - page_index);
 
 	return pages;
 
 fail:
 	while (i--)
 		__free_page(pages[i]);
-	NVMAP2_altfree(pages, nr_page * sizeof(*pages));
+	nvmap_altfree(pages, nr_page * sizeof(*pages));
 	wmb();
 	return ERR_PTR(-ENOMEM);
 }
 
-struct page **NVMAP2_heap_alloc_dma_pages(size_t size, unsigned long type)
+struct page **nvmap_heap_alloc_dma_pages(size_t size, unsigned long type)
 {
 	struct page **pages;
 	struct device *dma_dev;
@@ -278,7 +278,7 @@ struct page **NVMAP2_heap_alloc_dma_pages(size_t size, unsigned long type)
 	return pages;
 }
 
-int NVMAP2_heap_type_is_dma(unsigned long type)
+int nvmap_heap_type_is_dma(unsigned long type)
 {
 	struct device *dma_dev;
 
@@ -288,7 +288,7 @@ int NVMAP2_heap_type_is_dma(unsigned long type)
 	return 1;
 }
 
-void NVMAP2_heap_dealloc_dma_pages(size_t size, unsigned long type,
+void nvmap_heap_dealloc_dma_pages(size_t size, unsigned long type,
 				struct page **pages)
 {
 	struct device *dma_dev;
@@ -308,27 +308,27 @@ void NVMAP2_heap_dealloc_dma_pages(size_t size, unsigned long type,
 		       __DMA_ATTR(attrs));
 }
 
-struct page **NVMAP2_heap_alloc_from_va(size_t size, ulong vaddr)
+struct page **nvmap_heap_alloc_from_va(size_t size, ulong vaddr)
 {
 	int nr_page = size >> PAGE_SHIFT;
 	struct page **pages;
 	int ret = 0;
 
-	pages = NVMAP2_altalloc(nr_page * sizeof(*pages));
+	pages = nvmap_altalloc(nr_page * sizeof(*pages));
 	if (IS_ERR_OR_NULL(pages))
 		return NULL;
 
-	ret = NVMAP2_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
+	ret = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
 	if (ret) {
-		NVMAP2_altfree(pages, nr_page * sizeof(*pages));
+		nvmap_altfree(pages, nr_page * sizeof(*pages));
 		return NULL;
 	}
 
-	NVMAP2_cache_clean_pages(&pages[0], nr_page);
+	nvmap_cache_clean_pages(&pages[0], nr_page);
 	return pages;
 }
 
-const unsigned int *NVMAP2_heap_mask_to_policy(unsigned int heap_mask, int nr_page)
+const unsigned int *nvmap_heap_mask_to_policy(unsigned int heap_mask, int nr_page)
 {
 	const unsigned int *alloc_policy;
 	int i;

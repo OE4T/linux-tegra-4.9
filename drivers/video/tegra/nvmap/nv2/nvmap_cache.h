@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_CACHE_H
-#define __NVMAP2_CACHE_H
+#ifndef __NVMAP_CACHE_H
+#define __NVMAP_CACHE_H
 
 #include "nvmap_structs.h"
 
@@ -42,24 +42,24 @@ extern void __flush_dcache_page(struct address_space *, struct page *);
 
 struct cache_maint_op;
 
-int NVMAP2_cache_maint(struct cache_maint_op *cache_work);
-void NVMAP2_cache_maint_inner(unsigned int op, void *vaddr, size_t size);
+int nvmap_cache_maint(struct cache_maint_op *cache_work);
+void nvmap_cache_maint_inner(unsigned int op, void *vaddr, size_t size);
 
-bool NVMAP2_cache_can_fast_maint(unsigned long start,
+bool nvmap_cache_can_fast_maint(unsigned long start,
 			unsigned long end, unsigned int op);
-void NVMAP2_cache_fast_maint(unsigned int op);
+void nvmap_cache_fast_maint(unsigned int op);
 
-void NVMAP2_cache_maint_heap_page_outer(struct page **pages,
+void nvmap_cache_maint_heap_page_outer(struct page **pages,
 				unsigned int op,
 				unsigned long start, unsigned long end);
 
-void NVMAP2_cache_clean_pages(struct page **pages, int numpages);
+void nvmap_cache_clean_pages(struct page **pages, int numpages);
 
-int NVMAP2_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
+int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
 					phys_addr_t pend);
 
-void NVMAP2_cache_inner_clean_all(void);
-void NVMAP2_cache_inner_flush_all(void);
+void nvmap_cache_inner_clean_all(void);
+void nvmap_cache_inner_flush_all(void);
 
 struct nvmap_chip_cache_op {
 	void (*inner_clean_cache_all)(void);
@@ -86,4 +86,4 @@ extern int nvmap_cache_maint_by_set_ways;
 int nvmap_cache_debugfs_init(struct dentry *nvmap_root);
 void nvmap_override_cache_ops(void);
 
-#endif /* __NVMAP2_CACHE_H */
+#endif /* __NVMAP_CACHE_H */

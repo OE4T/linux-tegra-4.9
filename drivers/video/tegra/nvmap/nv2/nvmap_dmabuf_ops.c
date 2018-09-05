@@ -95,7 +95,7 @@ static bool nvmap_attach_handle_same_asid(struct dma_buf_attachment *attach,
 
 }
 
-void NVMAP2_dmabufs_free(struct list_head *dmabuf_list)
+void nvmap_dmabufs_free(struct list_head *dmabuf_list)
 {
 	struct nvmap_handle_dmabuf_priv *curr, *next;
 
@@ -184,7 +184,7 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 
 	list_del(&nvmap_sgt->maps_entry);
 
-	heap_type = NVMAP2_handle_heap_type(info->handle);
+	heap_type = nvmap_handle_heap_type(info->handle);
 
 	if (!(nvmap_dev->dynamic_dma_map_mask & heap_type)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
@@ -321,12 +321,12 @@ struct sg_table *_nvmap_dmabuf_map_dma_buf(
 	int ents = 0;
 	struct sg_table *sgt;
 	DEFINE_DMA_ATTRS(attrs);
-	u32 heap_type = NVMAP2_handle_heap_type(info->handle);
-	atomic_t *h_pin = NVMAP2_handle_pin(info->handle);
+	u32 heap_type = nvmap_handle_heap_type(info->handle);
+	atomic_t *h_pin = nvmap_handle_pin(info->handle);
 
 	trace_nvmap_dmabuf_map_dma_buf(attach->dmabuf, attach->dev);
 
-	NVMAP2_lru_reset(NVMAP2_handle_lru(info->handle));
+	nvmap_lru_reset(nvmap_handle_lru(info->handle));
 	mutex_lock(&info->maps_lock);
 
 	atomic_inc(h_pin);
@@ -342,7 +342,7 @@ struct sg_table *_nvmap_dmabuf_map_dma_buf(
 		return sgt;
 	}
 
-	if (!NVMAP2_handle_is_allocated(info->handle)) {
+	if (!nvmap_handle_is_allocated(info->handle)) {
 		goto err_map;
 	} else if (!(nvmap_dev->dynamic_dma_map_mask & heap_type)) {
 		sg_dma_address(sgt->sgl) = info->handle->carveout->base;
@@ -392,7 +392,7 @@ void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	trace_nvmap_dmabuf_unmap_dma_buf(attach->dmabuf, attach->dev);
 
 	mutex_lock(&info->maps_lock);
-	if (!atomic_add_unless(NVMAP2_handle_pin(info->handle), -1, 0)) {
+	if (!atomic_add_unless(nvmap_handle_pin(info->handle), -1, 0)) {
 		mutex_unlock(&info->maps_lock);
 		WARN(1, "Unpinning handle that has yet to be pinned!\n");
 		return;
@@ -414,7 +414,7 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	struct nvmap_handle_sgt *nvmap_sgt;
 
 	trace_nvmap_dmabuf_release(info->handle->owner ?
-			   NVMAP2_client_name(info->handle->owner) : "unknown",
+			   nvmap_client_name(info->handle->owner) : "unknown",
 			   info->handle,
 			   dmabuf);
 
@@ -433,7 +433,7 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	}
 	mutex_unlock(&info->maps_lock);
 
-	NVMAP2_handle_put(info->handle);
+	nvmap_handle_put(info->handle);
 	kfree(info);
 }
 
@@ -444,7 +444,7 @@ static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_begin_cpu_access(dmabuf, start, len);
-	return NVMAP2_handle_cache_maint(info->handle,
+	return nvmap_handle_cache_maint(info->handle,
 						start, start + len,
 						NVMAP_CACHE_OP_WB_INV);
 }
@@ -456,7 +456,7 @@ static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
-	NVMAP2_handle_cache_maint(info->handle,
+	nvmap_handle_cache_maint(info->handle,
 				   start, start + len,
 				   NVMAP_CACHE_OP_WB);
 }
@@ -490,13 +490,13 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	struct nvmap_vma_priv *priv;
 	u32 heap_type;
 
-	h = NVMAP2_handle_get(h);
+	h = nvmap_handle_get(h);
 	if (!h)
 		return -EINVAL;
 
-	heap_type = NVMAP2_handle_heap_type(h);
+	heap_type = nvmap_handle_heap_type(h);
 	if (!(heap_type & nvmap_dev->cpu_access_mask)) {
-		NVMAP2_handle_put(h);
+		nvmap_handle_put(h);
 		return -EPERM;
 	}
 
@@ -506,13 +506,13 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	 * device memory.
 	 */
 	if (heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
-		NVMAP2_handle_put(h);
+		nvmap_handle_put(h);
 		return -EPERM;
 	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
-		NVMAP2_handle_put(h);
+		nvmap_handle_put(h);
 		return -ENOMEM;
 	}
 	priv->handle = h;
@@ -523,7 +523,7 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	vma->vm_ops = &nvmap_vma_ops;
 	BUG_ON(vma->vm_private_data != NULL);
 	vma->vm_private_data = priv;
-	vma->vm_page_prot = NVMAP2_handle_pgprot(h, vma->vm_page_prot);
+	vma->vm_page_prot = nvmap_handle_pgprot(h, vma->vm_page_prot);
 	nvmap_vma_open(vma);
 	return 0;
 }

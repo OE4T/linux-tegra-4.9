@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __NVMAP2_HANDLE_PRIV_H
-#define __NVMAP2_HANDLE_PRIV_H
+#ifndef __NVMAP_HANDLE_PRIV_H
+#define __NVMAP_HANDLE_PRIV_H
 
 // TODO: Remove this definition from here
 /* handles allocated using shared system memory (either IOVMM- or high-order
@@ -56,7 +56,7 @@ struct nvmap_handle {
 	int fd;
 };
 
-void NVMAP2_handle_mkclean(struct nvmap_handle *h, u32 offset, u32 size);
-void NVMAP2_handle_mkdirty(struct nvmap_handle *h, u32 offset, u32 size);
+void nvmap_handle_mkclean(struct nvmap_handle *h, u32 offset, u32 size);
+void nvmap_handle_mkdirty(struct nvmap_handle *h, u32 offset, u32 size);
 
-#endif /* __NVMAP2_HANDLE_PRIV_H */
+#endif /* __NVMAP_HANDLE_PRIV_H */

@@ -50,7 +50,7 @@
 
 #define K(x) (x >> 10)
 
-void NVMAP2_handle_stringify(struct nvmap_handle *handle,
+void nvmap_handle_stringify(struct nvmap_handle *handle,
 				  struct seq_file *s, u32 heap_type,
 				  int ref_dupes)
 {
@@ -126,7 +126,7 @@ static u64 vma_calc_mss(pid_t client_pid, struct list_head *vmas)
 }
 
 // TODO: Find a way to unify this with the above function
-void NVMAP2_handle_maps_stringify(struct nvmap_handle *handle,
+void nvmap_handle_maps_stringify(struct nvmap_handle *handle,
 				  struct seq_file *s, u32 heap_type,
 				  pid_t client_pid)
 {
@@ -185,7 +185,7 @@ next_page:
 }
 
 // TODO: Unify all the functions that print
-void NVMAP2_handle_all_allocations_show(struct nvmap_handle *handle,
+void nvmap_handle_all_allocations_show(struct nvmap_handle *handle,
 				  struct seq_file *s, u32 heap_type)
 {
 	int i = 0;
@@ -220,16 +220,16 @@ next_page:
 	}
 
 }
-void NVMAP2_handle_orphans_allocations_show(struct nvmap_handle *handle,
+void nvmap_handle_orphans_allocations_show(struct nvmap_handle *handle,
 				  struct seq_file *s, u32 heap_type)
 {
 	if(atomic_read(&handle->share_count))
 		return;
 
-	NVMAP2_handle_all_allocations_show(handle, s, heap_type);
+	nvmap_handle_all_allocations_show(handle, s, heap_type);
 }
 
-u64 NVMAP2_handle_share_size(struct nvmap_handle *handle, u32 heap_type)
+u64 nvmap_handle_share_size(struct nvmap_handle *handle, u32 heap_type)
 {
 	if (handle->alloc && handle->heap_type == heap_type) {
 		return handle->size / atomic_read(&handle->share_count);
@@ -244,7 +244,7 @@ struct procrank_stats {
 	u64 pss;
 };
 
-u64 NVMAP2_handle_procrank_walk(struct nvmap_handle *h, struct mm_walk *walk,
+u64 nvmap_handle_procrank_walk(struct nvmap_handle *h, struct mm_walk *walk,
 		pid_t client_pid)
 {
 	struct nvmap_vma_list *tmp;
@@ -268,7 +268,7 @@ u64 NVMAP2_handle_procrank_walk(struct nvmap_handle *h, struct mm_walk *walk,
 
 }
 
-u64 NVMAP2_handle_total_pss(struct nvmap_handle *h, u32 heap_type)
+u64 nvmap_handle_total_pss(struct nvmap_handle *h, u32 heap_type)
 {
 	int i;
 	u64 pss = 0;
@@ -277,7 +277,7 @@ u64 NVMAP2_handle_total_pss(struct nvmap_handle *h, u32 heap_type)
 		return 0;
 
 	for (i = 0; i < h->size >> PAGE_SHIFT; i++) {
-		struct page *page = NVMAP2_to_page(h->pgalloc.pages[i]);
+		struct page *page = nvmap_to_page(h->pgalloc.pages[i]);
 
 		if (page_mapcount(page) > 0)
 			pss += PAGE_SIZE;
@@ -286,7 +286,7 @@ u64 NVMAP2_handle_total_pss(struct nvmap_handle *h, u32 heap_type)
 	return pss;
 }
 
-u64 NVMAP2_handle_total_mss(struct nvmap_handle *h, u32 heap_type)
+u64 nvmap_handle_total_mss(struct nvmap_handle *h, u32 heap_type)
 {
 	if (!h || !h->alloc || h->heap_type != heap_type)
 		return 0;
@@ -294,7 +294,7 @@ u64 NVMAP2_handle_total_mss(struct nvmap_handle *h, u32 heap_type)
 	return h->size;
 }
 
-int NVMAP2_handle_pid_show(struct nvmap_handle *handle, struct seq_file *s,
+int nvmap_handle_pid_show(struct nvmap_handle *handle, struct seq_file *s,
 					pid_t client_pid)
 {
 		struct nvmap_debugfs_handles_entry entry;
@@ -337,12 +337,12 @@ next_page:
 		return 0;
 }
 
-int NVMAP2_handle_is_migratable(struct nvmap_handle *h)
+int nvmap_handle_is_migratable(struct nvmap_handle *h)
 {
 	return (!atomic_read(&h->pin) && !atomic_read(&h->kmap_count));
 }
 
-void NVMAP2_handle_lru_show(struct nvmap_handle *h, struct seq_file *s)
+void nvmap_handle_lru_show(struct nvmap_handle *h, struct seq_file *s)
 {
 		seq_printf(s, "%-18s %18s %8s %10zuK %8s %6s %6s %6u %6u "
 			"%6u %8p\n", "", "", "", K(h->size), "", "",

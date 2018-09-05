@@ -11,32 +11,32 @@
  * more details.
  */
 
-#ifndef __NVMAP2_PAGE_COLOR_H
-#define __NVMAP2_PAGE_COLOR_H
+#ifndef __NVMAP_PAGE_COLOR_H
+#define __NVMAP_PAGE_COLOR_H
 
 #include "nvmap_structs.h"
 
 #ifdef CONFIG_NVMAP_COLOR_PAGES
 
-int NVMAP2_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
+int nvmap_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
 			 struct page **out_pages);
-int NVMAP2_color_init(void);
-int NVMAP2_color_is_enabled(void);
+int nvmap_color_init(void);
+int nvmap_color_is_enabled(void);
 
 #else
 
-static inline int NVMAP2_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
+static inline int nvmap_color_alloc(struct nvmap_page_pool *pool, u32 nr_pages,
 			 struct page **out_pages)
 {
 	return -1;
 }
 
-static inline int NVMAP2_color_init(void);
+static inline int nvmap_color_init(void)
 {
 	return 0;
 }
 
-static inline int NVMAP2_color_is_enabled(void);
+static inline int nvmap_color_is_enabled(void)
 {
 	return 0;
 }

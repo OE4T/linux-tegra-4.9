@@ -78,80 +78,80 @@ static struct nvmap_handle_info *handle_create_info(struct nvmap_handle *handle)
 	return info;
 }
 
-struct dma_buf *NVMAP2_handle_to_dmabuf(struct nvmap_handle *handle)
+struct dma_buf *nvmap_handle_to_dmabuf(struct nvmap_handle *handle)
 {
 	return handle->dmabuf;
 }
 
-void NVMAP2_handle_install_fd(struct nvmap_handle *handle, int fd)
+void nvmap_handle_install_fd(struct nvmap_handle *handle, int fd)
 {
-	NVMAP2_dmabuf_install_fd(handle->dmabuf, fd);
+	nvmap_dmabuf_install_fd(handle->dmabuf, fd);
 	// TODO: why is this get_dma_buf here?
 	get_dma_buf(handle->dmabuf);
 }
 
-void NVMAP2_handle_set_ivm(struct nvmap_handle *handle, u64 ivm_id)
+void nvmap_handle_set_ivm(struct nvmap_handle *handle, u64 ivm_id)
 {
 	handle->ivm_id = ivm_id;
 }
 
-void NVMAP2_handle_kmap_inc(struct nvmap_handle *h)
+void nvmap_handle_kmap_inc(struct nvmap_handle *h)
 {
 	atomic_inc(&h->kmap_count);
 }
 
-void NVMAP2_handle_kmap_dec(struct nvmap_handle *h)
+void nvmap_handle_kmap_dec(struct nvmap_handle *h)
 {
 	atomic_dec(&h->kmap_count);
 }
 
-void NVMAP2_handle_umap_inc(struct nvmap_handle *h)
+void nvmap_handle_umap_inc(struct nvmap_handle *h)
 {
 	atomic_inc(&h->umap_count);
 }
 
-void NVMAP2_handle_umap_dec(struct nvmap_handle *h)
+void nvmap_handle_umap_dec(struct nvmap_handle *h)
 {
 	atomic_dec(&h->umap_count);
 }
 
-size_t NVMAP2_handle_size(struct nvmap_handle *h)
+size_t nvmap_handle_size(struct nvmap_handle *h)
 {
 	return h->size;
 }
 
-int NVMAP2_handle_is_allocated(struct nvmap_handle *h)
+int nvmap_handle_is_allocated(struct nvmap_handle *h)
 {
 	return h->alloc;
 }
 
-size_t NVMAP2_handle_ivm_id(struct nvmap_handle *h)
+size_t nvmap_handle_ivm_id(struct nvmap_handle *h)
 {
 	return h->ivm_id;
 }
 
-u32 NVMAP2_handle_heap_type(struct nvmap_handle *h)
+u32 nvmap_handle_heap_type(struct nvmap_handle *h)
 {
 	return h->heap_type;
 }
 
-u32 NVMAP2_handle_userflag(struct nvmap_handle *h)
+u32 nvmap_handle_userflag(struct nvmap_handle *h)
 {
 	return h->userflags;
 }
 
-u32 NVMAP2_handle_flags(struct nvmap_handle *h)
+u32 nvmap_handle_flags(struct nvmap_handle *h)
 {
 	return h->flags;
 }
 
 
-bool NVMAP2_handle_is_heap(struct nvmap_handle *h)
+bool nvmap_handle_is_heap(struct nvmap_handle *h)
 {
 	return h->heap_pgalloc;
 }
 
-bool NVMAP2_handle_track_dirty(struct nvmap_handle *h)
+bool nvmap_handle_track_dirty(struct nvmap_handle *h)
 {
 	if (!h->heap_pgalloc)
 		return false;
@@ -160,28 +160,28 @@ bool NVMAP2_handle_track_dirty(struct nvmap_handle *h)
 			       NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE);
 }
 
-struct nvmap_handle *NVMAP2_handle_from_fd(int fd)
+struct nvmap_handle *nvmap_handle_from_fd(int fd)
 {
 	struct nvmap_handle *handle = ERR_PTR(-EINVAL);
 	struct dma_buf *dmabuf;
 
-	dmabuf = NVMAP2_dmabuf_from_fd(fd);
+	dmabuf = nvmap_dmabuf_from_fd(fd);
 	if (IS_ERR(dmabuf))
 		return ERR_CAST(dmabuf);
 
-	handle = NVMAP2_dmabuf_to_handle(dmabuf);
+	handle = nvmap_dmabuf_to_handle(dmabuf);
 	if (IS_ERR(handle))
 		return ERR_CAST(handle);
 
 	return handle;
 }
 
-struct list_head *NVMAP2_handle_lru(struct nvmap_handle *h)
+struct list_head *nvmap_handle_lru(struct nvmap_handle *h)
 {
 	return &h->lru;
 }
 
-atomic_t *NVMAP2_handle_pin(struct nvmap_handle *h)
+atomic_t *nvmap_handle_pin(struct nvmap_handle *h)
 {
 	return &h->pin;
 }
@@ -191,7 +191,7 @@ atomic_t *NVMAP2_handle_pin(struct nvmap_handle *h)
  * dma_buf. If you want ensure the existence of the dma_buf you must get an
  * nvmap_handle_ref as that is what tracks the dma_buf refs.
  */
-struct nvmap_handle *NVMAP2_handle_get(struct nvmap_handle *h)
+struct nvmap_handle *nvmap_handle_get(struct nvmap_handle *h)
 {
 	if (WARN_ON(!virt_addr_valid(h))) {
 		pr_err("%s: invalid handle\n", current->group_leader->comm);
@@ -207,7 +207,7 @@ struct nvmap_handle *NVMAP2_handle_get(struct nvmap_handle *h)
 	return h;
 }
 
-void NVMAP2_handle_put(struct nvmap_handle *h)
+void nvmap_handle_put(struct nvmap_handle *h)
 {
 	int cnt;
 
@@ -219,11 +219,11 @@ void NVMAP2_handle_put(struct nvmap_handle *h)
 		pr_err("%s: %s put to negative references\n",
 			__func__, current->comm);
 	} else if (cnt == 0) {
-		NVMAP2_handle_destroy(h);
+		nvmap_handle_destroy(h);
 	}
 }
 
-struct nvmap_handle *NVMAP2_handle_create(size_t size)
+struct nvmap_handle *nvmap_handle_create(size_t size)
 {
 	void *err = ERR_PTR(-ENOMEM);
 	struct nvmap_handle *h;
@@ -259,7 +259,7 @@ struct nvmap_handle *NVMAP2_handle_create(size_t size)
 		goto  make_info_fail;
 	}
 
-	h->dmabuf = NVMAP2_dmabuf_create(info, h->size);
+	h->dmabuf = nvmap_dmabuf_create(info, h->size);
 	if (IS_ERR_OR_NULL(h->dmabuf)) {
 		err = ERR_PTR(-ENOMEM);
 		goto make_dmabuf_fail;
@@ -289,7 +289,7 @@ static void handle_pgalloc_free(struct nvmap_pgalloc *pgalloc, size_t size,
 	BUG_ON(!pgalloc->pages);
 
 	for (i = 0; i < nr_page; i++)
-		pgalloc->pages[i] = NVMAP2_to_page(pgalloc->pages[i]);
+		pgalloc->pages[i] = nvmap_to_page(pgalloc->pages[i]);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	if (!from_va)
@@ -304,7 +304,7 @@ static void handle_pgalloc_free(struct nvmap_pgalloc *pgalloc, size_t size,
 			__free_page(pgalloc->pages[i]);
 	}
 
-	NVMAP2_altfree(pgalloc->pages, nr_page * sizeof(struct page *));
+	nvmap_altfree(pgalloc->pages, nr_page * sizeof(struct page *));
 }
 
 static void handle_dealloc(struct nvmap_handle *h)
@@ -326,15 +326,15 @@ static void handle_dealloc(struct nvmap_handle *h)
 		}
 
 		nvmap_heap_free(h->carveout);
-		NVMAP2_handle_kmap_dec(h);
+		nvmap_handle_kmap_dec(h);
 		h->vaddr = NULL;
 		return;
-	} else if (NVMAP2_heap_type_is_dma(h->heap_type)){
-		NVMAP2_heap_dealloc_dma_pages(h->size, h->heap_type,
+	} else if (nvmap_heap_type_is_dma(h->heap_type)){
+		nvmap_heap_dealloc_dma_pages(h->size, h->heap_type,
 						h->pgalloc.pages);
 	} else {
 		if (h->vaddr) {
-			NVMAP2_handle_kmap_dec(h);
+			nvmap_handle_kmap_dec(h);
 
 			vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
 			h->vaddr = NULL;
@@ -364,7 +364,7 @@ static void handle_add_to_dev(struct nvmap_handle *h, struct nvmap_device *dev)
 	}
 	rb_link_node(&h->node, parent, p);
 	rb_insert_color(&h->node, &dev->handles);
-	NVMAP2_lru_add(&h->lru);
+	nvmap_lru_add(&h->lru);
 	spin_unlock(&dev->handle_lock);
 }
 
@@ -385,23 +385,23 @@ static int handle_remove_from_dev(struct nvmap_handle *h,
 	BUG_ON(atomic_read(&h->ref) < 0);
 	BUG_ON(atomic_read(&h->pin) != 0);
 
-	NVMAP2_lru_del(&h->lru);
+	nvmap_lru_del(&h->lru);
 	rb_erase(&h->node, &dev->handles);
 
 	spin_unlock(&dev->handle_lock);
 	return 0;
 }
 
-void NVMAP2_handle_add_owner(struct nvmap_handle *handle,
+void nvmap_handle_add_owner(struct nvmap_handle *handle,
 					struct nvmap_client *client)
 {
 	if (!handle->owner)
 		handle->owner = client;
 }
 
-void NVMAP2_handle_destroy(struct nvmap_handle *h)
+void nvmap_handle_destroy(struct nvmap_handle *h)
 {
-	NVMAP2_dmabufs_free(&h->dmabuf_priv);
+	nvmap_dmabufs_free(&h->dmabuf_priv);
 
 	if (handle_remove_from_dev(h, nvmap_dev) != 0)
 		return;
@@ -421,19 +421,19 @@ static void heap_alloc_and_set_handle(
 
 	BUG_ON(orig_heap & (orig_heap - 1));
 
-	heap_type = NVMAP2_heap_type_conversion(orig_heap);
+	heap_type = nvmap_heap_type_conversion(orig_heap);
 
-	if (NVMAP2_heap_type_is_carveout(heap_type)) {
+	if (nvmap_heap_type_is_carveout(heap_type)) {
 		int err;
 
-		err = NVMAP2_handle_alloc_carveout(h, heap_type, NULL);
+		err = nvmap_handle_alloc_carveout(h, heap_type, NULL);
 		if (!err) {
 			h->heap_type = heap_type;
 			h->heap_pgalloc = false;
 			goto success;
 		}
 
-		pages = NVMAP2_heap_alloc_dma_pages(h->size, heap_type);
+		pages = nvmap_heap_alloc_dma_pages(h->size, heap_type);
 		if (IS_ERR_OR_NULL(pages))
 			return;
 		h->pgalloc.pages = pages;
@@ -442,8 +442,8 @@ static void heap_alloc_and_set_handle(
 		atomic_set(&h->pgalloc.ndirty, 0);
 		h->heap_type = NVMAP_HEAP_CARVEOUT_VPR;
 		h->heap_pgalloc = true;
-	} else if (NVMAP2_heap_type_is_iovmm(heap_type)) {
-		pages = NVMAP2_heap_alloc_iovmm_pages(h->size,
+	} else if (nvmap_heap_type_is_iovmm(heap_type)) {
+		pages = nvmap_heap_alloc_iovmm_pages(h->size,
 			h->userflags & NVMAP_HANDLE_PHYS_CONTIG);
 		if (IS_ERR_OR_NULL(pages))
 			return;
@@ -499,7 +499,7 @@ static void heap_alloc_handle_from_heaps(
 
 }
 
-int NVMAP2_handle_alloc(
+int nvmap_handle_alloc(
 		       struct nvmap_handle *h, unsigned int heap_mask,
 		       size_t align,
 		       u8 kind,
@@ -528,7 +528,7 @@ int NVMAP2_handle_alloc(
 		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 
-	alloc_policy = NVMAP2_heap_mask_to_policy(heap_mask, nr_page);
+	alloc_policy = nvmap_heap_mask_to_policy(heap_mask, nr_page);
 	if (!alloc_policy) {
 		err = -EINVAL;
 		goto out;
@@ -540,7 +540,7 @@ out:
 	return err;
 }
 
-struct nvmap_handle *NVMAP2_handle_from_ivmid(u64 ivm_id)
+struct nvmap_handle *nvmap_handle_from_ivmid(u64 ivm_id)
 {
 	struct nvmap_handle *handle = NULL;
 	struct rb_node *n;
@@ -562,16 +562,16 @@ struct nvmap_handle *NVMAP2_handle_from_ivmid(u64 ivm_id)
 	return NULL;
 }
 
-int NVMAP2_handle_alloc_from_va(struct nvmap_handle *h,
+int nvmap_handle_alloc_from_va(struct nvmap_handle *h,
 			       ulong addr,
 			       unsigned int flags)
 {
-	h = NVMAP2_handle_get(h);
+	h = nvmap_handle_get(h);
 	if (!h)
 		return -EINVAL;
 
 	if (h->alloc) {
-		NVMAP2_handle_put(h);
+		nvmap_handle_put(h);
 		return -EEXIST;
 	}
 
@@ -579,9 +579,9 @@ int NVMAP2_handle_alloc_from_va(struct nvmap_handle *h,
 	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = PAGE_SIZE;
 
-	h->pgalloc.pages = NVMAP2_heap_alloc_from_va(h->size, addr);
+	h->pgalloc.pages = nvmap_heap_alloc_from_va(h->size, addr);
 	if (!h->pgalloc.pages) {
-		NVMAP2_handle_put(h);
+		nvmap_handle_put(h);
 		return -ENOMEM;
 	}
 
@@ -593,11 +593,11 @@ int NVMAP2_handle_alloc_from_va(struct nvmap_handle *h,
 	mb();
 	h->alloc = true;
 
-	NVMAP2_handle_put(h);
+	nvmap_handle_put(h);
 	return 0;
 }
 
-int NVMAP2_handle_alloc_carveout(struct nvmap_handle *handle,
+int nvmap_handle_alloc_carveout(struct nvmap_handle *handle,
 					      unsigned long type,
 					      phys_addr_t *start)
 {
@@ -607,15 +607,15 @@ int NVMAP2_handle_alloc_carveout(struct nvmap_handle *handle,
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_heap_block *block;
-		co_heap = NVMAP2_dev_to_carveout(dev, i);
+		co_heap = nvmap_dev_to_carveout(dev, i);
 
-		if (!(NVMAP2_carveout_heap_bit(co_heap) & type))
+		if (!(nvmap_carveout_heap_bit(co_heap) & type))
 			continue;
 
 		if (type & NVMAP_HEAP_CARVEOUT_IVM)
 			handle->size = ALIGN(handle->size, NVMAP_IVM_ALIGNMENT);
 
-		block = NVMAP2_carveout_alloc(co_heap, handle, start,
+		block = nvmap_carveout_alloc(co_heap, handle, start,
 						handle->size,
 						handle->align,
 						handle->flags,
@@ -629,15 +629,15 @@ int NVMAP2_handle_alloc_carveout(struct nvmap_handle *handle,
 
 }
 
-int NVMAP2_handle_alloc_from_ivmid(struct nvmap_handle *handle, u64 ivm_id)
+int nvmap_handle_alloc_from_ivmid(struct nvmap_handle *handle, u64 ivm_id)
 {
-	phys_addr_t offs = NVMAP2_ivmid_to_offset(ivm_id);
-	int peer = NVMAP2_ivmid_to_peer(ivm_id);
+	phys_addr_t offs = nvmap_ivmid_to_offset(ivm_id);
+	int peer = nvmap_ivmid_to_peer(ivm_id);
 	int err;
 
 	handle->peer = peer;
 
-	err = NVMAP2_handle_alloc_carveout(handle, NVMAP_HEAP_CARVEOUT_IVM,
+	err = nvmap_handle_alloc_carveout(handle, NVMAP_HEAP_CARVEOUT_IVM,
 								&offs);
 	if (err) {
 		return -1;
@@ -653,13 +653,13 @@ int NVMAP2_handle_alloc_from_ivmid(struct nvmap_handle *handle, u64 ivm_id)
 	return 0;
 }
 
-void NVMAP2_handle_zap(struct nvmap_handle *handle, u64 offset, u64 size)
+void nvmap_handle_zap(struct nvmap_handle *handle, u64 offset, u64 size)
 {
 	if (!handle->heap_pgalloc)
 		return;
 
 	/* if no dirty page is present, no need to zap */
-	if (NVMAP2_handle_track_dirty(handle)
+	if (nvmap_handle_track_dirty(handle)
 			&& !atomic_read(&handle->pgalloc.ndirty))
 		return;
 
@@ -671,7 +671,7 @@ void NVMAP2_handle_zap(struct nvmap_handle *handle, u64 offset, u64 size)
 	size = PAGE_ALIGN((offset & ~PAGE_MASK) + size);
 
 	mutex_lock(&handle->lock);
-	NVMAP2_vma_zap(&handle->vmas, offset, size);
+	nvmap_vma_zap(&handle->vmas, offset, size);
 	mutex_unlock(&handle->lock);
 }
 
@@ -684,17 +684,17 @@ static int handle_cache_maint_heap_page_inner(struct nvmap_handle *handle,
 
 	if (!handle->vaddr) {
 		/* TODO: We need better naming than mapping and then unmapping */
-		if (NVMAP2_handle_mmap(handle))
-			NVMAP2_handle_munmap(handle, handle->vaddr);
+		if (nvmap_handle_mmap(handle))
+			nvmap_handle_munmap(handle, handle->vaddr);
 		else
 			return 1;
 	}
 	/* Fast inner cache maintenance using single mapping */
-	NVMAP2_cache_maint_inner(op, handle->vaddr + start, end - start);
+	nvmap_cache_maint_inner(op, handle->vaddr + start, end - start);
 	return 0;
 }
 
-void NVMAP2_handle_cache_maint_heap_page(struct nvmap_handle *handle,
+void nvmap_handle_cache_maint_heap_page(struct nvmap_handle *handle,
 				unsigned long op,
 				unsigned long start, unsigned long end,
 				int outer)
@@ -706,13 +706,13 @@ void NVMAP2_handle_cache_maint_heap_page(struct nvmap_handle *handle,
 		 * zap user VA->PA mappings so that any access to the pages
 		 * will result in a fault and can be marked dirty
 		 */
-		NVMAP2_handle_mkclean(handle, start, end-start);
-		NVMAP2_handle_zap(handle, start, end - start);
+		nvmap_handle_mkclean(handle, start, end-start);
+		nvmap_handle_zap(handle, start, end - start);
 	}
 
 	err = handle_cache_maint_heap_page_inner(handle, op, start, end);
 	if (err && outer) {
-		NVMAP2_cache_maint_heap_page_outer(handle->pgalloc.pages, op,
+		nvmap_cache_maint_heap_page_outer(handle->pgalloc.pages, op,
 							start, end);
 	}
 }
@@ -722,7 +722,7 @@ void NVMAP2_handle_cache_maint_heap_page(struct nvmap_handle *handle,
  * The clean_only_dirty flag has been removed because it is always passed as
  * false
  */
-int NVMAP2_handle_cache_maint(struct nvmap_handle *handle, unsigned long start,
+int nvmap_handle_cache_maint(struct nvmap_handle *handle, unsigned long start,
 		unsigned long end, unsigned int op)
 {
 	int ret = 0;
@@ -738,7 +738,7 @@ int NVMAP2_handle_cache_maint(struct nvmap_handle *handle, unsigned long start,
 	if (!handle || !handle->alloc)
 		return -EFAULT;
 
-	NVMAP2_handle_kmap_inc(handle);
+	nvmap_handle_kmap_inc(handle);
 
 	if (op == NVMAP_CACHE_OP_INV)
 		op = NVMAP_CACHE_OP_WB_INV;
@@ -757,17 +757,17 @@ int NVMAP2_handle_cache_maint(struct nvmap_handle *handle, unsigned long start,
 		goto out;
 	}
 
-	if (NVMAP2_cache_can_fast_maint(start, end, op)) {
+	if (nvmap_cache_can_fast_maint(start, end, op)) {
 		if (handle->userflags & NVMAP_HANDLE_CACHE_SYNC) {
-			NVMAP2_handle_mkclean(handle, 0, handle->size);
-			NVMAP2_handle_zap(handle, 0, handle->size);
+			nvmap_handle_mkclean(handle, 0, handle->size);
+			nvmap_handle_zap(handle, 0, handle->size);
 		}
-		NVMAP2_cache_fast_maint(op);
+		nvmap_cache_fast_maint(op);
 	} else if (handle->heap_pgalloc) {
-		NVMAP2_handle_cache_maint_heap_page(handle, op, start, end,
+		nvmap_handle_cache_maint_heap_page(handle, op, start, end,
 			(handle->flags != NVMAP_HANDLE_INNER_CACHEABLE));
 	} else {
-		ret = NVMAP2_cache_maint_phys_range(op,
+		ret = nvmap_cache_maint_phys_range(op,
 				start + handle->carveout->base,
 				end   + handle->carveout->base);
 	}
@@ -775,7 +775,7 @@ int NVMAP2_handle_cache_maint(struct nvmap_handle *handle, unsigned long start,
 out:
 	/* TODO: Add more stats counting here */
 	nvmap_stats_inc(NS_CFLUSH_RQ, end - start);
-	NVMAP2_handle_kmap_dec(handle);
+	nvmap_handle_kmap_dec(handle);
 	return ret;
 
 }
@@ -787,15 +787,15 @@ static void cache_maint_large(struct nvmap_handle **handles, u64 total,
 
 	for (i = 0; i < nr; i++) {
 		if (handles[i]->userflags & NVMAP_HANDLE_CACHE_SYNC) {
-			NVMAP2_handle_mkclean(handles[i], 0, handles[i]->size);
-			NVMAP2_handle_zap(handles[i], 0, handles[i]->size);
+			nvmap_handle_mkclean(handles[i], 0, handles[i]->size);
+			nvmap_handle_zap(handles[i], 0, handles[i]->size);
 		}
 	}
 
 	if (op == NVMAP_CACHE_OP_WB)
-		NVMAP2_cache_inner_clean_all();
+		nvmap_cache_inner_clean_all();
 	else
-		NVMAP2_cache_inner_flush_all();
+		nvmap_cache_inner_flush_all();
 
 	nvmap_stats_inc(NS_CFLUSH_RQ, total);
 	nvmap_stats_inc(NS_CFLUSH_DONE, thresh);
@@ -820,7 +820,7 @@ static int handles_get_total_cache_size(struct nvmap_handle **handles,
 			continue;
 
 		if ((op == NVMAP_CACHE_OP_WB)
-				&& NVMAP2_handle_track_dirty(handles[i])) {
+				&& nvmap_handle_track_dirty(handles[i])) {
 			/* TODO: shouldn't this be shifted by page size? */
 			total += atomic_read(&handles[i]->pgalloc.ndirty);
 		} else {
@@ -841,7 +841,7 @@ static int handles_get_total_cache_size(struct nvmap_handle **handles,
  *
  * NOTE: this omits outer cache operations which is fine for ARM64
  */
-int NVMAP2_handles_cache_maint(struct nvmap_handle **handles,
+int nvmap_handles_cache_maint(struct nvmap_handle **handles,
 				u64 *offsets, u64 *sizes, int op, int nr)
 {
 	int i;
@@ -872,7 +872,7 @@ int NVMAP2_handles_cache_maint(struct nvmap_handle **handles,
 		cache_maint_large(handles, total, thresh, op, nr);
 	} else {
 		for (i = 0; i < nr; i++) {
-			err = NVMAP2_handle_cache_maint(handles[i],
+			err = nvmap_handle_cache_maint(handles[i],
 							offsets[i],
 							offsets[i] + sizes[i],
 							op);
@@ -892,7 +892,7 @@ static int handle_read(struct nvmap_handle *h, unsigned long h_offs,
 			 unsigned long elem_size)
 {
 	if (!(h->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE)) {
-		NVMAP2_handle_cache_maint(h, h_offs, h_offs + elem_size,
+		nvmap_handle_cache_maint(h, h_offs, h_offs + elem_size,
 							NVMAP_CACHE_OP_INV);
 	}
 
@@ -922,13 +922,13 @@ static int handle_write(struct nvmap_handle *h, unsigned long h_offs,
 		return ret;
 
 	if (!(h->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE))
-		NVMAP2_handle_cache_maint(h, h_offs, h_offs + elem_size,
+		nvmap_handle_cache_maint(h, h_offs, h_offs + elem_size,
 						NVMAP_CACHE_OP_WB_INV);
 
 	return ret;
 }
 
-ssize_t NVMAP2_handle_rw(struct nvmap_handle *h,
+ssize_t nvmap_handle_rw(struct nvmap_handle *h,
 			 unsigned long h_offs, unsigned long h_stride,
 			 unsigned long sys_addr, unsigned long sys_stride,
 			 unsigned long elem_size, unsigned long count,
@@ -970,9 +970,9 @@ ssize_t NVMAP2_handle_rw(struct nvmap_handle *h,
 		return -EINVAL;
 
 	if (!h->vaddr) {
-		if (NVMAP2_handle_mmap(h) == NULL)
+		if (nvmap_handle_mmap(h) == NULL)
 			return -ENOMEM;
-		NVMAP2_handle_munmap(h, h->vaddr);
+		nvmap_handle_munmap(h, h->vaddr);
 	}
 
 	addr = h->vaddr + h_offs;
@@ -1007,12 +1007,12 @@ ssize_t NVMAP2_handle_rw(struct nvmap_handle *h,
 	return copied;
 }
 
-struct nvmap_handle *NVMAP2_handle_from_node(struct rb_node *n)
+struct nvmap_handle *nvmap_handle_from_node(struct rb_node *n)
 {
 	return rb_entry(n, struct nvmap_handle, node);
 }
 
-struct nvmap_handle *NVMAP2_handle_from_lru(struct list_head *n)
+struct nvmap_handle *nvmap_handle_from_lru(struct list_head *n)
 {
 	return list_entry(n, struct nvmap_handle, lru);
 }

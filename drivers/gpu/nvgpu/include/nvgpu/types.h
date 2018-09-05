@@ -55,6 +55,8 @@
  * overflows the 32 bit data type. So in this case we need an explicit cast to
  * 64 bits in order to prevent undefined behavior.
  */
+#define U8(x)	((u8)(x))
+#define U16(x)  ((u16)(x))
 #define U32(x)	((u32)(x))
 #define U64(x)	((u64)(x))
 

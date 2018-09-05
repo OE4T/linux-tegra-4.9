@@ -27,6 +27,8 @@
 /*
  * Explicit sizes for bit definitions. Please use these instead of BIT().
  */
+#define BIT8(i)		(U8(1)  << (i))
+#define BIT16(i)	(U16(1) << (i))
 #define BIT32(i)	(U32(1) << (i))
 #define BIT64(i)	(U64(1) << (i))
 

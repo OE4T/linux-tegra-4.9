@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -190,7 +190,7 @@ static inline u32 top_device_info_entry_enum_v(void)
 }
 static inline u32 top_device_info_entry_engine_type_v(void)
 {
-	return 0x00000002U;
+	return 0x00000003U;
 }
 static inline u32 top_device_info_entry_data_v(void)
 {

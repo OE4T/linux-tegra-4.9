@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,10 +22,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_HAL_GM20B_H
-#define _NVHOST_HAL_GM20B_H
+#ifndef NVGPU_GM20B_HAL_GM20B_H
+#define NVGPU_GM20B_HAL_GM20B_H
 struct gk20a;
 
 int gm20b_init_hal(struct gk20a *g);
 int gm20b_get_litter_value(struct gk20a *g, int value);
-#endif
+#endif /* NVGPU_GM20B_HAL_GM20B_H */

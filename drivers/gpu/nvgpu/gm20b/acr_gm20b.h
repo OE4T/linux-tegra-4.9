@@ -1,7 +1,7 @@
 /*
  * GM20B ACR
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ACR_GM20B_H_
-#define __ACR_GM20B_H_
+#ifndef NVGPU_GM20B_ACR_GM20B_H
+#define NVGPU_GM20B_ACR_GM20B_H
 
 #define GM20B_PMU_UCODE_IMAGE "gpmu_ucode_image.bin"
 #define GM20B_PMU_UCODE_DESC "gpmu_ucode_desc.bin"
@@ -59,4 +59,4 @@ int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_dbg_sig,
 		unsigned int *p_patch_loc,
 		unsigned int *p_patch_ind);
-#endif /*__ACR_GM20B_H_*/
+#endif /*NVGPU_GM20B_ACR_GM20B_H*/

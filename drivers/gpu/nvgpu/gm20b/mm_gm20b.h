@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GM20B_MM
-#define _NVHOST_GM20B_MM
+#ifndef NVGPU_GM20B_MM_GM20B_H
+#define NVGPU_GM20B_MM_GM20B_H
 struct gk20a;
 
 #define PDE_ADDR_START(x, y)	((x) &  ~((0x1UL << (y)) - 1))
@@ -37,4 +37,4 @@ u64 gm20b_gpu_phys_addr(struct gk20a *g,
 			struct nvgpu_gmmu_attrs *attrs, u64 phys);
 u32 gm20b_get_kind_invalid(void);
 u32 gm20b_get_kind_pitch(void);
-#endif
+#endif /* NVGPU_GM20B_MM_GM20B_H */

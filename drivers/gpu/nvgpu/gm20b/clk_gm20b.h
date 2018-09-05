@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _NVHOST_CLK_GM20B_H_
-#define _NVHOST_CLK_GM20B_H_
+#ifndef NVGPU_GM20B_CLK_GM20B_H
+#define NVGPU_GM20B_CLK_GM20B_H
 
 #include <nvgpu/lock.h>
 
@@ -90,4 +90,4 @@ static inline u32 nvgpu_div_to_pl(u32 div)
 	return div;
 }
 
-#endif /* _NVHOST_CLK_GM20B_H_ */
+#endif /* NVGPU_GM20B_CLK_GM20B_H */

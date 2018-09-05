@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVHOST_GM20B_FIFO
-#define _NVHOST_GM20B_FIFO
+#ifndef NVGPU_GM20B_FIFO_GM20B_H
+#define NVGPU_GM20B_FIFO_GM20B_H
 struct gk20a;
 struct mmu_fault_info;
 
@@ -38,4 +38,4 @@ void gm20b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f);
 void gm20b_fifo_tsg_verify_status_ctx_reload(struct channel_gk20a *ch);
 void gm20b_fifo_get_mmu_fault_gpc_desc(struct mmu_fault_info *mmfault);
 
-#endif
+#endif /* NVGPU_GM20B_FIFO_GM20B_H */

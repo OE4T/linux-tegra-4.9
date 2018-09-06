@@ -580,6 +580,9 @@ static bool is_host_mode_phy(struct tegra_xusb *tegra,
 	if (!tegra->typed_phys[type][index])
 		return false;
 
+	if ((type == HSIC_PHY))
+		return true;
+
 	otg_port = find_otg_port(tegra, type, index);
 	if (otg_port)
 		return otg_port->host_mode;
@@ -3867,6 +3870,9 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 
 	if (do_wakeup)
 		tegra_xhci_disable_phy_wake(tegra);
+
+	if (tegra->hsic_power_on)
+		tegra_xusb_padctl_hsic_set_idle(tegra->padctl, 0, true);
 
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {

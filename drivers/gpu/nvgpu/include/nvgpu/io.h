@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_IO_H__
-#define __NVGPU_IO_H__
+#ifndef NVGPU_IO_H
+#define NVGPU_IO_H
 
 #include <nvgpu/types.h>
 
@@ -46,4 +46,4 @@ u32 nvgpu_bar1_readl(struct gk20a *g, u32 b);
 bool nvgpu_io_exists(struct gk20a *g);
 bool nvgpu_io_valid_reg(struct gk20a *g, u32 r);
 
-#endif
+#endif /* NVGPU_IO_H */

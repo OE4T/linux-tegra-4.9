@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_UNITS_H__
-#define __NVGPU_UNITS_H__
+#ifndef NVGPU_UNIT_H
+#define NVGPU_UNIT_H
 
 /*
  * Enumeration of all units intended to be used by any HAL that requires
@@ -33,4 +33,4 @@ enum nvgpu_unit {
 	NVGPU_UNIT_FIFO,
 };
 
-#endif
+#endif /* NVGPU_UNIT_H */

@@ -19,9 +19,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_IO_USERMODE_H__
-#define __NVGPU_IO_USERMODE_H__
+#ifndef NVGPU_IO_USERMODE_H
+#define NVGPU_IO_USERMODE_H
 
 void nvgpu_usermode_writel(struct gk20a *g, u32 r, u32 v);
 
-#endif
+#endif /* NVGPU_IO_USERMODE_H */

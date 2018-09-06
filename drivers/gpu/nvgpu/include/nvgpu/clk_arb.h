@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_CLK_ARB_H__
-#define __NVGPU_CLK_ARB_H__
+#ifndef NVGPU_CLK_ARB_H
+#define NVGPU_CLK_ARB_H
 
 struct gk20a;
 
@@ -368,5 +368,5 @@ void nvgpu_clk_arb_event_post_event(struct nvgpu_clk_dev *dev);
 #ifdef CONFIG_DEBUG_FS
 int nvgpu_clk_arb_debugfs_init(struct gk20a *g);
 #endif
-#endif /* __NVGPU_CLK_ARB_H__ */
+#endif /* NVGPU_CLK_ARB_H */
 

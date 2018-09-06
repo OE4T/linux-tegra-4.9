@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_LTC_H__
-#define __NVGPU_LTC_H__
+#ifndef NVGPU_LTC_H
+#define NVGPU_LTC_H
 
 #include <nvgpu/types.h>
 
@@ -32,4 +32,4 @@ void nvgpu_ltc_sync_enabled(struct gk20a *g);
 int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size,
 			bool vidmem_alloc);
 
-#endif
+#endif /* NVGPU_LTC_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_VM_AREA_H__
-#define __NVGPU_VM_AREA_H__
+#ifndef NVGPU_VM_AREA_H
+#define NVGPU_VM_AREA_H
 
 #include <nvgpu/list.h>
 #include <nvgpu/types.h>
@@ -72,4 +72,4 @@ int nvgpu_vm_area_validate_buffer(struct vm_gk20a *vm,
 				  u64 map_offset, u64 map_size, u32 pgsz_idx,
 				  struct nvgpu_vm_area **pvm_area);
 
-#endif
+#endif /* NVGPU_VM_AREA_H */

@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_CTXSW_TRACE_H__
-#define __NVGPU_CTXSW_TRACE_H__
+#ifndef NVGPU_CTXSW_TRACE_H
+#define NVGPU_CTXSW_TRACE_H
 
 #include <nvgpu/types.h>
 
@@ -90,4 +90,4 @@ int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g, struct vm_area_struct *vma);
 
 u8 nvgpu_gpu_ctxsw_tags_to_common_tags(u8 tags);
 
-#endif
+#endif /*NVGPU_CTXSW_TRACE_H */

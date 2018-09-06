@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_OS_FENCE__
-#define __NVGPU_OS_FENCE__
+#ifndef NVGPU_OS_FENCE_H
+#define NVGPU_OS_FENCE_H
 
 #include <nvgpu/errno.h>
 
@@ -135,4 +135,4 @@ static inline int nvgpu_os_fence_syncpt_create(
 
 #endif /* CONFIG_TEGRA_GK20A_NVHOST && CONFIG_SYNC */
 
-#endif /* __NVGPU_OS_FENCE__ */
+#endif /* NVGPU_OS_FENCE_H */

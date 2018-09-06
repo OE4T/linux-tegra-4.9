@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_NVHOST_H__
-#define __NVGPU_NVHOST_H__
+#ifndef NVGPU_NVHOST_H
+#define NVGPU_NVHOST_H
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 
@@ -109,4 +109,4 @@ static inline int nvgpu_nvhost_syncpt_init(struct gk20a *g)
 }
 #endif
 #endif /* CONFIG_TEGRA_GK20A_NVHOST */
-#endif /* __NVGPU_NVHOST_H__ */
+#endif /* NVGPU_NVHOST_H */

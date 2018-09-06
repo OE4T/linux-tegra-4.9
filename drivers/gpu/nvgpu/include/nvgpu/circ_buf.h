@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_CIRC_BUF_H__
-#define __NVGPU_CIRC_BUF_H__
+#ifndef NVGPU_CIRC_BUF_H
+#define NVGPU_CIRC_BUF_H
 
 #ifdef __KERNEL__
 #include <linux/circ_buf.h>
@@ -28,4 +28,4 @@
 #include <nvgpu/posix/circ_buf.h>
 #endif
 
-#endif
+#endif /* NVGPU_CIRC_BUF_H */

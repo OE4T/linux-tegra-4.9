@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_FUSE_H__
-#define __NVGPU_FUSE_H__
+#ifndef NVGPU_FUSE_H
+#define NVGPU_FUSE_H
 
 struct gk20a;
 
@@ -35,4 +35,4 @@ void nvgpu_tegra_fuse_write_opt_gpu_tpc1_disable(struct gk20a *g, u32 val);
 int nvgpu_tegra_fuse_read_gcplex_config_fuse(struct gk20a *g, u32 *val);
 int nvgpu_tegra_fuse_read_reserved_calib(struct gk20a *g, u32 *val);
 
-#endif
+#endif /* NVGPU_FUSE_H */

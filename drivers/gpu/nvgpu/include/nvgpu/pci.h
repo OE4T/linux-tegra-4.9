@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_PCI_H__
-#define __NVGPU_PCI_H__
+#ifndef NVGPU_PCI_H
+#define NVGPU_PCI_H
 
 #ifdef __KERNEL__
 #include <linux/pci_ids.h>
@@ -36,4 +36,4 @@
 #error "Build bug: need PCI headers!"
 #endif
 
-#endif
+#endif /* NVGPU_PCI_H */

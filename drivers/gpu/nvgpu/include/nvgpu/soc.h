@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_SOC_H__
-#define __NVGPU_SOC_H__
+#ifndef NVGPU_SOC_H
+#define NVGPU_SOC_H
 
 #include <nvgpu/types.h>
 
@@ -34,4 +34,4 @@ bool nvgpu_is_bpmp_running(struct gk20a *g);
 bool nvgpu_is_soc_t194_a01(struct gk20a *g);
 int nvgpu_init_soc_vars(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_SOC_H */

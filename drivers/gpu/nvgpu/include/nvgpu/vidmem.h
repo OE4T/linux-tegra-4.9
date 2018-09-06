@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_VIDMEM_H__
-#define __NVGPU_VIDMEM_H__
+#ifndef NVGPU_VIDMEM_H
+#define NVGPU_VIDMEM_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/errno.h>
@@ -145,4 +145,4 @@ static inline void nvgpu_vidmem_thread_unpause(struct mm_gk20a *mm)
 #define vidmem_dbg(g, fmt, args...)			\
 	nvgpu_log(g, gpu_dbg_vidmem, fmt, ##args);	\
 
-#endif /* __NVGPU_VIDMEM_H__ */
+#endif /* NVGPU_VIDMEM_H */

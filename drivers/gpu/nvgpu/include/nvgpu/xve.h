@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_XVE_H__
-#define __NVGPU_XVE_H__
+#ifndef NVGPU_XVE_H
+#define NVGPU_XVE_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/log2.h>
@@ -64,4 +64,4 @@ static inline const char *xve_speed_to_str(u32 speed)
 	       "Unknown ???";
 }
 
-#endif
+#endif /* NVGPU_XVE_H */

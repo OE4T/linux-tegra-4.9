@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_FIRMWARE_H_
-#define _NVGPU_FIRMWARE_H_
+#ifndef NVGPU_FIRMWARE_H
+#define NVGPU_FIRMWARE_H
 
 #include <nvgpu/types.h>
 
@@ -71,4 +71,4 @@ struct nvgpu_firmware *nvgpu_request_firmware(struct gk20a *g,
  */
 void nvgpu_release_firmware(struct gk20a *g, struct nvgpu_firmware *fw);
 
-#endif
+#endif /* NVGPU_FIRMWARE_H */

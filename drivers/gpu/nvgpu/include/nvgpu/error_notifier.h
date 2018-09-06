@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_ERROR_NOTIFIER_H__
-#define __NVGPU_ERROR_NOTIFIER_H__
+#ifndef NVGPU_ERROR_NOTIFIER_H
+#define NVGPU_ERROR_NOTIFIER_H
 
 #include <nvgpu/types.h>
 
@@ -46,4 +46,4 @@ void nvgpu_set_error_notifier(struct channel_gk20a *ch, u32 error);
 void nvgpu_set_error_notifier_if_empty(struct channel_gk20a *ch, u32 error);
 bool nvgpu_is_error_notifier_set(struct channel_gk20a *ch, u32 error_notifier);
 
-#endif /* __NVGPU_ERROR_NOTIFIER_H__ */
+#endif /* NVGPU_ERROR_NOTIFIER_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,12 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_VM_VGPU_H__
-#define __NVGPU_VM_VGPU_H__
+#ifndef NVGPU_VGPU_VM_H
+#define NVGPU_VGPU_VM_H
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 int  vgpu_vm_init(struct gk20a *g, struct vm_gk20a *vm);
 void vgpu_vm_remove(struct vm_gk20a *vm);
 #endif
 
-#endif
+#endif /* NVGPU_VGPU_VM_H */

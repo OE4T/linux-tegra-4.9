@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_OS_SCHED_H__
-#define __NVGPU_OS_SCHED_H__
+#ifndef NVGPU_OS_SCHED_H
+#define NVGPU_OS_SCHED_H
 
 #include <nvgpu/log.h>
 
@@ -48,4 +48,4 @@ void __nvgpu_print_current(struct gk20a *g, const char *func_name, int line,
 #define nvgpu_print_current(g, ctx, type) \
 	__nvgpu_print_current(g, __func__, __LINE__, ctx, type)
 
-#endif /* __NVGPU_OS_SCHED_H__ */
+#endif /* NVGPU_OS_SCHED_H */

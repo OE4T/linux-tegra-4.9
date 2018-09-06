@@ -823,6 +823,9 @@ static const struct gpu_ops gv11b_ops = {
 		.read_vin_cal_slope_intercept_fuse = NULL,
 		.read_vin_cal_gain_offset_fuse = NULL,
 	},
+	.acr = {
+		.acr_sw_init = nvgpu_gv11b_acr_sw_init,
+	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
@@ -858,6 +861,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->priv_ring = gv11b_ops.priv_ring;
 	gops->fuse = gv11b_ops.fuse;
 	gops->clk_arb = gv11b_ops.clk_arb;
+	gops->acr = gv11b_ops.acr;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -903,7 +907,6 @@ int gv11b_init_hal(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
-	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
 

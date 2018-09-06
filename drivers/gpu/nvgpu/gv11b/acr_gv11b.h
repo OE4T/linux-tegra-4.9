@@ -30,4 +30,9 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 void gv11b_setup_apertures(struct gk20a *g);
 int gv11b_alloc_blob_space(struct gk20a *g, size_t size,
 				struct nvgpu_mem *mem);
+
+void nvgpu_gv11b_acr_sw_init(struct gk20a *g, struct nvgpu_acr *acr);
+int gv11b_acr_patch_wpr_info_to_ucode(struct gk20a *g, struct nvgpu_acr *acr,
+	struct hs_acr *acr_desc, bool is_recovery);
 #endif /* NVGPU_ACR_GV11B_H */
+

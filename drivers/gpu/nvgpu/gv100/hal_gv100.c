@@ -930,6 +930,9 @@ static const struct gpu_ops gv100_ops = {
 		.set_nvhsclk_ctrl_swap_clk_nvl =
 					gv100_top_set_nvhsclk_ctrl_swap_clk_nvl,
 	},
+	.acr = {
+		.acr_sw_init = nvgpu_gp106_acr_sw_init,
+	},
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
 };
@@ -969,6 +972,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->fuse = gv100_ops.fuse;
 	gops->nvlink = gv100_ops.nvlink;
 	gops->top = gv100_ops.top;
+	gops->acr = gv100_ops.acr;
 
 	/* clocks */
 	gops->clk.init_clk_support = gv100_ops.clk.init_clk_support;
@@ -995,7 +999,6 @@ int gv100_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
-	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 	gops->clk.split_rail_support = false;
 	gops->clk.support_clk_freq_controller = false;
 	gops->clk.support_pmgr_domain = false;

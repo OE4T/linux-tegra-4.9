@@ -800,6 +800,9 @@ static const struct gpu_ops gp106_ops = {
 		.read_vin_cal_gain_offset_fuse =
 			gp106_fuse_read_vin_cal_gain_offset_fuse,
 	},
+	.acr = {
+		.acr_sw_init = nvgpu_gp106_acr_sw_init,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 };
@@ -855,6 +858,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->falcon = gp106_ops.falcon;
 	gops->priv_ring = gp106_ops.priv_ring;
 	gops->fuse = gp106_ops.fuse;
+	gops->acr = gp106_ops.acr;
 
 	/* Lone functions */
 	gops->get_litter_value = gp106_ops.get_litter_value;
@@ -875,7 +879,6 @@ int gp106_init_hal(struct gk20a *g)
 	}
 
 	g->pmu_lsf_pmu_wpr_init_done = 0;
-	g->bootstrap_owner = LSF_FALCON_ID_SEC2;
 	gops->clk.split_rail_support = true;
 	gops->clk.support_clk_freq_controller = true;
 	gops->clk.support_pmgr_domain = true;

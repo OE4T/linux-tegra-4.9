@@ -656,6 +656,9 @@ static const struct gpu_ops gm20b_ops = {
 		.read_vin_cal_slope_intercept_fuse = NULL,
 		.read_vin_cal_gain_offset_fuse = NULL,
 	},
+	.acr = {
+		.acr_sw_init = nvgpu_gm20b_acr_sw_init,
+	},
 	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,
 };
@@ -702,6 +705,8 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->priv_ring = gm20b_ops.priv_ring;
 
 	gops->fuse = gm20b_ops.fuse;
+
+	gops->acr = gm20b_ops.acr;
 
 	/* Lone functions */
 	gops->chip_init_gpu_characteristics =
@@ -750,7 +755,6 @@ int gm20b_init_hal(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	g->pmu_lsf_pmu_wpr_init_done = 0;
-	g->bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 
 	g->name = "gm20b";
 

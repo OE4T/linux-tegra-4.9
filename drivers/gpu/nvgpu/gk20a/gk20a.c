@@ -165,6 +165,11 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
+	if (g->ops.acr.acr_sw_init != NULL &&
+		nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		g->ops.acr.acr_sw_init(g, &g->acr);
+	}
+
 	if (g->ops.bios.init) {
 		err = g->ops.bios.init(g);
 	}
@@ -269,6 +274,15 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		err = gk20a_init_pstate_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init pstates");
+			goto done;
+		}
+	}
+
+	if (g->acr.bootstrap_hs_acr != NULL &&
+		nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
+		err = g->acr.bootstrap_hs_acr(g, &g->acr, &g->acr.acr);
+		if (err != 0) {
+			nvgpu_err(g, "ACR bootstrap failed");
 			goto done;
 		}
 	}

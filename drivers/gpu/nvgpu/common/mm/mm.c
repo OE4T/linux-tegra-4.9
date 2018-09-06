@@ -442,9 +442,10 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	 * this requires fixed allocations in vidmem which must be
 	 * allocated before all other buffers
 	 */
-	if (g->ops.pmu.alloc_blob_space != NULL &&
+
+	if (g->acr.alloc_blob_space != NULL &&
 			!nvgpu_is_enabled(g, NVGPU_MM_UNIFIED_MEMORY)) {
-		err = g->ops.pmu.alloc_blob_space(g, 0, &g->acr.ucode_blob);
+		err = g->acr.alloc_blob_space(g, 0, &g->acr.ucode_blob);
 		if (err) {
 			return err;
 		}

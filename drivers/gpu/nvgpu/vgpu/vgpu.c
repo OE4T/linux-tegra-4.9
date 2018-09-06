@@ -217,6 +217,10 @@ void vgpu_remove_support_common(struct gk20a *g)
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
 
+	if (g->acr.remove_support != NULL) {
+		g->acr.remove_support(&g->acr);
+	}
+
 	if (g->gr.remove_support)
 		g->gr.remove_support(&g->gr);
 

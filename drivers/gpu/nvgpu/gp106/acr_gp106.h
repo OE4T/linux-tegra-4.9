@@ -63,4 +63,12 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
 int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 		struct lsfm_managed_ucode_img_v2 *pnode);
+int gp106_acr_fill_bl_dmem_desc(struct gk20a *g,
+	struct nvgpu_acr *acr, struct hs_acr *acr_desc,
+	u32 *acr_ucode_header);
+int gp106_acr_patch_wpr_info_to_ucode(struct gk20a *g, struct nvgpu_acr *acr,
+	struct hs_acr *acr_desc, bool is_recovery);
+void nvgpu_gp106_acr_sw_init(struct gk20a *g, struct nvgpu_acr *acr);
+
 #endif /* NVGPU_ACR_GP106_H */
+

@@ -277,3 +277,63 @@ bool gm20b_pmu_is_debug_mode_en(struct gk20a *g)
 	u32 ctl_stat =  gk20a_readl(g, pwr_pmu_scpctl_stat_r());
 	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat) != 0U;
 }
+
+
+static int gm20b_bl_bootstrap(struct gk20a *g,
+	struct nvgpu_falcon_bl_info *bl_info)
+{
+	struct mm_gk20a *mm = &g->mm;
+
+	nvgpu_log_fn(g, " ");
+
+	gk20a_writel(g, pwr_falcon_itfen_r(),
+			gk20a_readl(g, pwr_falcon_itfen_r()) |
+			pwr_falcon_itfen_ctxen_enable_f());
+	gk20a_writel(g, pwr_pmu_new_instblk_r(),
+		pwr_pmu_new_instblk_ptr_f(
+		nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12U) |
+		pwr_pmu_new_instblk_valid_f(1U) |
+		 (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM) ?
+		  pwr_pmu_new_instblk_target_sys_coh_f() :
+		  pwr_pmu_new_instblk_target_sys_ncoh_f())) ;
+
+	nvgpu_flcn_bl_bootstrap(&g->pmu_flcn, bl_info);
+
+	return 0;
+}
+
+int gm20b_pmu_setup_hw_and_bl_bootstrap(struct gk20a *g,
+	struct hs_acr *acr_desc,
+	struct nvgpu_falcon_bl_info *bl_info)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	int err;
+
+	nvgpu_log_fn(g, " ");
+
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
+	/*
+	 * disable irqs for hs falcon booting
+	 * as we will poll for halt
+	 */
+	g->ops.pmu.pmu_enable_irq(pmu, false);
+	pmu->isr_enabled = false;
+	err = nvgpu_flcn_reset(acr_desc->acr_flcn);
+	if (err != 0) {
+		nvgpu_mutex_release(&pmu->isr_mutex);
+		goto exit;
+	}
+	nvgpu_mutex_release(&pmu->isr_mutex);
+
+	if (g->ops.pmu.setup_apertures) {
+		g->ops.pmu.setup_apertures(g);
+	}
+
+	/*Clearing mailbox register used to reflect capabilities*/
+	gk20a_writel(g, pwr_falcon_mailbox1_r(), 0);
+
+	err = gm20b_bl_bootstrap(g, bl_info);
+
+exit:
+	return err;
+}

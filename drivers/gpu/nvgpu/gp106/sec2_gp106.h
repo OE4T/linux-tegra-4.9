@@ -23,14 +23,10 @@
 #ifndef NVGPU_SEC2_GP106_H
 #define NVGPU_SEC2_GP106_H
 
-int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
-	unsigned int timeout);
-int gp106_sec2_wait_for_halt(struct gk20a *g, unsigned int timeout);
-int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
-	void *desc, u32 bl_sz);
-void init_pmu_setup_hw1(struct gk20a *g);
-int init_sec2_setup_hw1(struct gk20a *g,
-		void *desc, u32 bl_sz);
 int gp106_sec2_reset(struct gk20a *g);
+
+int gp106_sec2_setup_hw_and_bl_bootstrap(struct gk20a *g,
+	struct hs_acr *acr_desc,
+	struct nvgpu_falcon_bl_info *bl_info);
 
 #endif /* NVGPU_SEC2_GP106_H */

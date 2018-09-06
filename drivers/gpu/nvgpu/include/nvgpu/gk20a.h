@@ -1054,9 +1054,6 @@ struct gpu_ops {
 		bool (*is_engine_in_reset)(struct gk20a *g);
 		bool (*is_lazy_bootstrap)(u32 falcon_id);
 		bool (*is_priv_load)(u32 falcon_id);
-		void (*get_wpr)(struct gk20a *g, struct wpr_carveout_info *inf);
-		int (*alloc_blob_space)(struct gk20a *g,
-				size_t size, struct nvgpu_mem *mem);
 		int (*pmu_populate_loader_cfg)(struct gk20a *g,
 			void *lsfm,	u32 *p_bl_gen_desc_size);
 		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
@@ -1318,6 +1315,9 @@ struct gpu_ops {
 		u32 (*get_nvhsclk_ctrl_swap_clk_nvl)(struct gk20a *g);
 		void (*set_nvhsclk_ctrl_swap_clk_nvl)(struct gk20a *g, u32 val);
 	} top;
+	struct {
+		void (*acr_sw_init)(struct gk20a *g, struct nvgpu_acr *acr);
+	} acr;
 	void (*semaphore_wakeup)(struct gk20a *g, bool post_events);
 };
 
@@ -1429,7 +1429,7 @@ struct gk20a {
 	struct sim_nvgpu *sim;
 	struct mm_gk20a mm;
 	struct nvgpu_pmu pmu;
-	struct acr_desc acr;
+	struct nvgpu_acr acr;
 	struct nvgpu_ecc ecc;
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;
@@ -1477,7 +1477,6 @@ struct gk20a {
 	u32 disable_syncpoints;
 
 	bool support_pmu;
-	u32 bootstrap_owner;
 
 	bool is_virtual;
 

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/dwarf_unwind.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1894,7 +1894,8 @@ unwind_frame(struct ex_region_info *ri,
 		case DW_WHERE_CFAREL:
 			addr = sf->cfa + rs->reg[i].loc.offset;
 
-			if (!validate_stack_addr(addr, vma_sp, user_reg_size))
+			if (!validate_stack_addr(addr, vma_sp, user_reg_size,
+						 mode != DW_MODE_ARM32))
 				return -QUADD_URC_SP_INCORRECT;
 
 			if (mode == DW_MODE_ARM32) {
@@ -1965,7 +1966,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 		sp = sf->vregs[regnum_sp(mode)];
 
-		if (!validate_stack_addr(sp, vma_sp, user_reg_size)) {
+		if (!validate_stack_addr(sp, vma_sp, user_reg_size,
+					 cc->cs_64)) {
 			cc->urc_dwarf = QUADD_URC_SP_INCORRECT;
 			break;
 		}

@@ -1075,7 +1075,7 @@ unwind_frame(struct quadd_unw_methods um,
 	long err = 0;
 	u32 val;
 
-	if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32)))
+	if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32), 0))
 		return -QUADD_URC_SP_INCORRECT;
 
 	/* only go to a higher address on the stack */
@@ -1215,7 +1215,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!mm)
 			break;
 
-		if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32))) {
+		if (!validate_stack_addr(frame->sp, vma_sp, sizeof(u32), 0)) {
 			cc->urc_ut = QUADD_URC_SP_INCORRECT;
 			break;
 		}

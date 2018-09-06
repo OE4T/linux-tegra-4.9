@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.c
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -126,29 +126,32 @@ user_backtrace(struct quadd_event_context *event_ctx,
 	       struct quadd_callchain *cc,
 	       struct vm_area_struct *stack_vma)
 {
+	long err;
 	int nr_added;
 	unsigned long value, value_lr = 0, value_fp = 0;
 	unsigned long __user *fp_prev = NULL;
 
-	if (!is_vma_addr((unsigned long)tail, stack_vma, sizeof(*tail)))
+	if (!validate_stack_addr((unsigned long)tail, stack_vma,
+				 sizeof(*tail), cc->cs_64))
 		return NULL;
 
-	if (__copy_from_user_inatomic(&value, tail, sizeof(unsigned long))) {
-		cc->urc_fp = QUADD_URC_EACCESS;
+	err = read_user_data(&value, tail, sizeof(unsigned long));
+	if (err < 0) {
+		cc->urc_fp = -err;
 		return NULL;
 	}
 
-	if (is_vma_addr(value, stack_vma, sizeof(value))) {
+	if (validate_stack_addr(value, stack_vma, sizeof(value), cc->cs_64)) {
 		/* gcc thumb/clang frame */
 		value_fp = value;
 
-		if (!is_vma_addr((unsigned long)(tail + 1), stack_vma,
-		    sizeof(*tail)))
+		if (!validate_stack_addr((unsigned long)(tail + 1), stack_vma,
+					 sizeof(*tail), cc->cs_64))
 			return NULL;
 
-		if (__copy_from_user_inatomic(&value_lr, tail + 1,
-					      sizeof(value_lr))) {
-			cc->urc_fp = QUADD_URC_EACCESS;
+		err = read_user_data(&value_lr, tail + 1, sizeof(value_lr));
+		if (err < 0) {
+			cc->urc_fp = -err;
 			return NULL;
 		}
 
@@ -157,13 +160,14 @@ user_backtrace(struct quadd_event_context *event_ctx,
 		cc->curr_pc = cc->curr_lr = value_lr;
 	} else {
 		/* gcc arm frame */
-		if (__copy_from_user_inatomic(&value_fp, tail - 1,
-					      sizeof(value_fp))) {
-			cc->urc_fp = QUADD_URC_EACCESS;
+		err = read_user_data(&value_fp, tail - 1, sizeof(value_fp));
+		if (err < 0) {
+			cc->urc_fp = -err;
 			return NULL;
 		}
 
-		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
+		if (!validate_stack_addr(value_fp, stack_vma,
+					 sizeof(value_fp), cc->cs_64))
 			return NULL;
 
 		cc->curr_fp = value_fp;
@@ -190,6 +194,7 @@ static unsigned int
 get_user_callchain_fp(struct quadd_event_context *event_ctx,
 		      struct quadd_callchain *cc)
 {
+	long err = 0;
 	unsigned long fp, sp, pc, reg;
 	struct vm_area_struct *vma, *vma_pc = NULL;
 	unsigned long __user *tail = NULL;
@@ -207,7 +212,7 @@ get_user_callchain_fp(struct quadd_event_context *event_ctx,
 	pc = instruction_pointer(regs);
 	fp = quadd_get_user_frame_pointer(regs);
 
-	if (fp == 0 || fp < sp || fp & 0x3)
+	if (fp == 0 || fp < sp)
 		return 0;
 
 	vma = find_vma(mm, sp);
@@ -216,12 +221,12 @@ get_user_callchain_fp(struct quadd_event_context *event_ctx,
 		return 0;
 	}
 
-	if (!is_vma_addr(fp, vma, sizeof(fp)))
+	if (!validate_stack_addr(fp, vma, sizeof(fp), cc->cs_64))
 		return 0;
 
-	if (probe_kernel_address((void *)fp, reg)) {
-		pr_warn_once("%s: failed for address: %#lx\n", __func__, fp);
-		cc->urc_fp = QUADD_URC_EACCESS;
+	err = read_user_data(&reg, (void __user *)fp, sizeof(reg));
+	if (err < 0) {
+		cc->urc_fp = -err;
 		return 0;
 	}
 
@@ -237,12 +242,13 @@ get_user_callchain_fp(struct quadd_event_context *event_ctx,
 		unsigned long value;
 		int read_lr = 0;
 
-		if (is_vma_addr(fp + sizeof(unsigned long), vma, sizeof(fp))) {
-			if (__copy_from_user_inatomic(
-					&value,
-					(unsigned long __user *)fp + 1,
-					sizeof(unsigned long))) {
-				cc->urc_fp = QUADD_URC_EACCESS;
+		if (validate_stack_addr(fp + sizeof(unsigned long),
+					vma, sizeof(fp), cc->cs_64)) {
+			err = read_user_data(&value,
+					     (unsigned long __user *)fp + 1,
+					     sizeof(unsigned long));
+			if (err < 0) {
+				cc->urc_fp = -err;
 				return 0;
 			}
 
@@ -309,29 +315,32 @@ user_backtrace_compat(struct quadd_event_context *event_ctx,
 		      struct quadd_callchain *cc,
 		      struct vm_area_struct *stack_vma)
 {
+	long err;
 	int nr_added;
 	u32 value, value_lr = 0, value_fp = 0;
 	u32 __user *fp_prev = NULL;
 
-	if (!is_vma_addr((unsigned long)tail, stack_vma, sizeof(*tail)))
+	if (!validate_stack_addr((unsigned long)tail, stack_vma,
+				 sizeof(*tail), cc->cs_64))
 		return NULL;
 
-	if (__copy_from_user_inatomic(&value, tail, sizeof(value))) {
-		cc->urc_fp = QUADD_URC_EACCESS;
+	err = read_user_data(&value, tail, sizeof(value));
+	if (err < 0) {
+		cc->urc_fp = -err;
 		return NULL;
 	}
 
-	if (is_vma_addr(value, stack_vma, sizeof(value))) {
+	if (validate_stack_addr(value, stack_vma, sizeof(value), cc->cs_64)) {
 		/* gcc thumb/clang frame */
 		value_fp = value;
 
-		if (!is_vma_addr((unsigned long)(tail + 1), stack_vma,
-		    sizeof(*tail)))
+		if (!validate_stack_addr((unsigned long)(tail + 1), stack_vma,
+					 sizeof(*tail), cc->cs_64))
 			return NULL;
 
-		if (__copy_from_user_inatomic(&value_lr, tail + 1,
-					      sizeof(value_lr))) {
-			cc->urc_fp = QUADD_URC_EACCESS;
+		err = read_user_data(&value_lr, tail + 1, sizeof(value_lr));
+		if (err < 0) {
+			cc->urc_fp = -err;
 			return NULL;
 		}
 
@@ -340,13 +349,14 @@ user_backtrace_compat(struct quadd_event_context *event_ctx,
 		cc->curr_pc = cc->curr_lr = value_lr;
 	} else {
 		/* gcc arm frame */
-		if (__copy_from_user_inatomic(&value_fp, tail - 1,
-					      sizeof(value_fp))) {
-			cc->urc_fp = QUADD_URC_EACCESS;
+		err = read_user_data(&value_fp, tail - 1, sizeof(value_fp));
+		if (err < 0) {
+			cc->urc_fp = -err;
 			return NULL;
 		}
 
-		if (!is_vma_addr(value_fp, stack_vma, sizeof(value_fp)))
+		if (!validate_stack_addr(value_fp, stack_vma,
+					 sizeof(value_fp), cc->cs_64))
 			return NULL;
 
 		cc->curr_fp = value_fp;
@@ -373,6 +383,7 @@ static unsigned int
 get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
 			     struct quadd_callchain *cc)
 {
+	long err;
 	u32 fp, sp, pc, reg;
 	struct vm_area_struct *vma, *vma_pc = NULL;
 	u32 __user *tail = NULL;
@@ -390,7 +401,7 @@ get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
 	pc = instruction_pointer(regs);
 	fp = quadd_get_user_frame_pointer(regs);
 
-	if (fp == 0 || fp < sp || fp & 0x3)
+	if (fp == 0 || fp < sp)
 		return 0;
 
 	vma = find_vma(mm, sp);
@@ -399,12 +410,13 @@ get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
 		return 0;
 	}
 
-	if (!is_vma_addr(fp, vma, sizeof(fp)))
+	if (!validate_stack_addr(fp, vma, sizeof(fp), cc->cs_64))
 		return 0;
 
-	if (probe_kernel_address((void *)(unsigned long)fp, reg)) {
-		pr_warn_once("%s: failed for address: %#x\n", __func__, fp);
-		cc->urc_fp = QUADD_URC_EACCESS;
+	err = read_user_data(&reg, (void __user *)(unsigned long)fp,
+			     sizeof(reg));
+	if (err < 0) {
+		cc->urc_fp = -err;
 		return 0;
 	}
 
@@ -420,12 +432,13 @@ get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
 		u32 value;
 		int read_lr = 0;
 
-		if (is_vma_addr(fp + sizeof(u32), vma, sizeof(fp))) {
-			if (__copy_from_user_inatomic(
-					&value,
-					(u32 __user *)(fp + sizeof(u32)),
-					sizeof(value))) {
-				cc->urc_fp = QUADD_URC_EACCESS;
+		if (validate_stack_addr(fp + sizeof(u32), vma,
+					sizeof(fp), cc->cs_64)) {
+			err = read_user_data(&value,
+					     (u32 __user *)(fp + sizeof(u32)),
+					     sizeof(value));
+			if (err < 0) {
+				cc->urc_fp = -err;
 				return 0;
 			}
 

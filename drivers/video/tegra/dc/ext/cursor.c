@@ -1,7 +1,7 @@
 /*
  * cursor.c: Cursor functions for tegradc ext interface.
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -175,13 +175,21 @@ unlock:
 int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 			    struct tegra_dc_ext_cursor *args)
 {
-	struct tegra_dc_ext *ext = user->ext;
-	struct tegra_dc *dc = ext->dc;
+	struct tegra_dc_ext *ext = NULL;
+	struct tegra_dc *dc = NULL;
 	bool enable;
 	int ret;
 
-	mutex_lock(&ext->cursor.lock);
+	if (!args)
+		return -EINVAL;
 
+	if (!user || !user->ext || !user->ext->dc)
+		return -ENODEV;
+
+	ext = user->ext;
+	dc = ext->dc;
+
+	mutex_lock(&ext->cursor.lock);
 	if (ext->cursor.user != user) {
 		ret = -EACCES;
 		goto unlock;
@@ -193,6 +201,10 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 	}
 
 	enable = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
+	if (enable && !ext->cursor.cur_handle) {
+		ret = -EFAULT;
+		goto unlock;
+	}
 
 	tegra_dc_scrncapt_disp_pause_lock(dc);
 

@@ -133,6 +133,9 @@
 				* tegra_sinterface = "";
 				* The base tegra serial interface lanes are connected to
 				*
+				* vc_id = "";
+				* The virtual channel id of the sensor.
+				*
 				* discontinuous_clk = "";
 				* The sensor is programmed to use a discontinuous clock on MIPI lanes
 				*
@@ -210,6 +213,7 @@
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";
+					vc_id = "0";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";
@@ -300,6 +304,9 @@
 				* tegra_sinterface = "";
 				* The base tegra serial interface lanes are connected to
 				*
+				* vc_id = "";
+				* The virtual channel id of the sensor.
+				*
 				* discontinuous_clk = "";
 				* The sensor is programmed to use a discontinuous clock on MIPI lanes
 				*
@@ -377,6 +384,7 @@
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";
+					vc_id = "1";
 					discontinuous_clk = "no";
 					dpcm_enable = "false";
 					cil_settletime = "0";

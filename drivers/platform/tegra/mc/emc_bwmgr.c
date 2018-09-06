@@ -139,6 +139,8 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"pmqos",
 	"nvpmodel",
 	"debug",
+	"nvdla0",
+	"nvdla1",
 	"null",
 };
 

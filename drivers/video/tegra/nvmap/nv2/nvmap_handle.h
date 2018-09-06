@@ -93,7 +93,6 @@ void nvmap_handle_kmap_dec(struct nvmap_handle *h);
 void nvmap_handle_umap_inc(struct nvmap_handle *h);
 void nvmap_handle_umap_dec(struct nvmap_handle *h);
 
-void nvmap_handle_set_ivm(struct nvmap_handle *handle, u64 ivm_id);
 size_t nvmap_handle_size(struct nvmap_handle *handle);
 
 int nvmap_handle_is_allocated(struct nvmap_handle *h);
@@ -145,5 +144,32 @@ void nvmap_handle_lru_show(struct nvmap_handle *h, struct seq_file *s);
 struct nvmap_handle *nvmap_handle_from_node(struct rb_node *n);
 
 struct nvmap_handle *nvmap_handle_from_lru(struct list_head *n);
+
+#include "nvmap_dev.h"
+
+static inline void nvmap_lru_add(struct list_head *handle_lru)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	BUG_ON(!list_empty(handle_lru));
+	list_add_tail(handle_lru, &nvmap_dev->lru_handles);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline void nvmap_lru_del(struct list_head *handle_lru)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	list_del(handle_lru);
+	INIT_LIST_HEAD(handle_lru);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
+
+static inline void nvmap_lru_reset(struct list_head *handle_lru)
+{
+	spin_lock(&nvmap_dev->lru_lock);
+	BUG_ON(list_empty(handle_lru));
+	list_del(handle_lru);
+	list_add_tail(handle_lru, &nvmap_dev->lru_handles);
+	spin_unlock(&nvmap_dev->lru_lock);
+}
 
 #endif /* __NVMAP_HANDLE_H */

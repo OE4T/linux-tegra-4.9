@@ -58,31 +58,6 @@ u32 nvmap_cpu_access_mask(void);
 
 struct nvmap_carveout_node *nvmap_dev_to_carveout(struct nvmap_device *dev, int i);
 
-static inline void nvmap_lru_add(struct list_head *handle_lru)
-{
-	spin_lock(&nvmap_dev->lru_lock);
-	BUG_ON(!list_empty(handle_lru));
-	list_add_tail(handle_lru, &nvmap_dev->lru_handles);
-	spin_unlock(&nvmap_dev->lru_lock);
-}
-
-static inline void nvmap_lru_del(struct list_head *handle_lru)
-{
-	spin_lock(&nvmap_dev->lru_lock);
-	list_del(handle_lru);
-	INIT_LIST_HEAD(handle_lru);
-	spin_unlock(&nvmap_dev->lru_lock);
-}
-
-static inline void nvmap_lru_reset(struct list_head *handle_lru)
-{
-	spin_lock(&nvmap_dev->lru_lock);
-	BUG_ON(list_empty(handle_lru));
-	list_del(handle_lru);
-	list_add_tail(handle_lru, &nvmap_dev->lru_handles);
-	spin_unlock(&nvmap_dev->lru_lock);
-}
-
 int nvmap_dmabuf_stash_init(void);
 
 #endif /* __NVMAP_DEV_H */

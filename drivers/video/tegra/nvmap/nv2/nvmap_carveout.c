@@ -448,7 +448,6 @@ static int heap_can_allocate(struct nvmap_heap *h, int peer, phys_addr_t *start)
 /* nvmap_heap_alloc: allocates a block of memory of len bytes, aligned to
  * align bytes. */
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_carveout_node *co,
-					struct nvmap_handle *handle,
 					phys_addr_t *start,
 					size_t len,
 					size_t align,
@@ -471,18 +470,23 @@ struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_carveout_node *co,
 		return NULL;
 	}
 
-	/* TODO: Remove all of this handle code and fix the circular dependency
-	 */
-	b->handle = handle;
-	/* Generate IVM for partition that can alloc */
-	if (h->is_ivm && h->can_alloc) {
-		unsigned int offs = (b->base - h->base);
-		nvmap_handle_set_ivm(handle,
-				nvmap_calculate_ivm_id(h->vm_id, len, offs));
-	}
-
 	mutex_unlock(&h->lock);
 	return b;
+}
+
+u64 nvmap_carveout_ivm(struct nvmap_carveout_node *co,
+				struct nvmap_heap_block *b, size_t len)
+{
+	struct nvmap_heap *h = co->carveout;
+	unsigned int offs;
+
+	/* Generate IVM for partition that can alloc */
+	if (h->is_ivm && h->can_alloc) {
+		offs = (b->base - h->base);
+		return nvmap_calculate_ivm_id(h->vm_id, len, offs);
+	} else {
+		return 0;
+	}
 }
 
 // This is only needed because dev doesn't have a double pointer

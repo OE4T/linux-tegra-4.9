@@ -90,11 +90,6 @@ void nvmap_handle_install_fd(struct nvmap_handle *handle, int fd)
 	get_dma_buf(handle->dmabuf);
 }
 
-void nvmap_handle_set_ivm(struct nvmap_handle *handle, u64 ivm_id)
-{
-	handle->ivm_id = ivm_id;
-}
-
 void nvmap_handle_kmap_inc(struct nvmap_handle *h)
 {
 	atomic_inc(&h->kmap_count);
@@ -615,13 +610,15 @@ int nvmap_handle_alloc_carveout(struct nvmap_handle *handle,
 		if (type & NVMAP_HEAP_CARVEOUT_IVM)
 			handle->size = ALIGN(handle->size, NVMAP_IVM_ALIGNMENT);
 
-		block = nvmap_carveout_alloc(co_heap, handle, start,
+		block = nvmap_carveout_alloc(co_heap, start,
 						handle->size,
 						handle->align,
 						handle->flags,
 						handle->peer);
 		if (block) {
 			handle->carveout = block;
+			handle->ivm_id = nvmap_carveout_ivm(co_heap, block,
+								handle->size);
 			return 0;
 		}
 	}

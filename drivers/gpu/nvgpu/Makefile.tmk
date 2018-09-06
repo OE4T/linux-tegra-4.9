@@ -17,10 +17,35 @@ include $(NV_BUILD_START_COMPONENT)
 
 include $(NV_COMPONENT_DIR)/Makefile.sources
 
+#
+# Include the nvgpu-next repo, if it's present. It's expected to be
+# located in the same directory as nvgpu, like so:
+#
+#   kernel/nvgpu
+#   kernel/nvgpu-next
+#
+# If it exists, this defines two variables: srcs_next which contains the
+# necessary sources to build and HEADERS_NEXT which has any headers in
+# nvgpu-next.
+#
+# NVGPU_NEXT_SOURCE needs to be set for the Makefile.sources file to
+# properly handle include paths.
+NVGPU_NEXT_SOURCE := \
+		$(NV_COMPONENT_DIR)/../../../../nvgpu-next/drivers/gpu/nvgpu
+-include $(NVGPU_NEXT_SOURCE)/Makefile.sources
+
 NV_COMPONENT_NAME		:= nvgpu-drv
 NV_COMPONENT_OWN_INTERFACE_DIR	:= .
-NV_COMPONENT_SOURCES		:= $(srcs)
-NV_COMPONENT_INCLUDES		:= . include ../../../include
+NV_COMPONENT_SOURCES		:=				\
+		$(srcs)			   			\
+		$(addprefix $(NVGPU_NEXT_SOURCE)/,$(srcs_next))
+NV_COMPONENT_INCLUDES		:=				\
+		.						\
+		include						\
+		../../../include				\
+		$(NVGPU_NEXT_SOURCE)				\
+		$(NVGPU_NEXT_SOURCE)/include			\
+		$(NVGPU_NEXT_SOURCE)/../../../include
 ifneq ($(NV_BUILD_CONFIGURATION_OS_IS_QNX),1)
 NV_COMPONENT_SYSTEM_SHARED_LIBRARIES += pthread
 endif

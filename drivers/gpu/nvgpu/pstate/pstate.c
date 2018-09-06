@@ -35,8 +35,9 @@ static int pstate_sw_setup(struct gk20a *g);
 
 void gk20a_deinit_pstate_support(struct gk20a *g)
 {
-	if (g->ops.clk.mclk_deinit)
+	if (g->ops.clk.mclk_deinit) {
 		g->ops.clk.mclk_deinit(g);
+	}
 
 	nvgpu_mutex_destroy(&g->perf_pmu.pstatesobjs.pstate_mutex);
 }
@@ -49,69 +50,84 @@ int gk20a_init_pstate_support(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	err = volt_rail_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = volt_dev_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = volt_policy_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_vin_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_fll_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = therm_domain_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = vfe_var_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = vfe_equ_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_domain_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_vf_point_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_prog_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = pstate_sw_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	if(g->ops.clk.support_pmgr_domain) {
 		err = pmgr_domain_sw_setup(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 
 	if (g->ops.clk.support_clk_freq_controller) {
 		err = clk_freq_controller_sw_setup(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 
 	if(g->ops.clk.support_lpwr_pg) {
 		err = nvgpu_lpwr_pg_setup(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 
 	return err;
@@ -133,16 +149,19 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	}
 
 	err = volt_rail_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = volt_dev_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = volt_policy_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = g->ops.pmu_ver.volt.volt_send_load_cmd_to_pmu(g);
 	if (err) {
@@ -153,52 +172,64 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	}
 
 	err = therm_domain_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = vfe_var_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = vfe_equ_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_domain_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_prog_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_vin_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_fll_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = clk_vf_point_pmu_setup(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	if (g->ops.clk.support_clk_freq_controller) {
 		err = clk_freq_controller_pmu_setup(g);
-		if (err)
+		if (err) {
 			return err;
+		}
 	}
 	err = clk_pmu_vin_load(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = g->ops.pmu_ver.clk.perf_pmu_vfe_load(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
-	if (g->ops.clk.support_pmgr_domain)
+	if (g->ops.clk.support_pmgr_domain) {
 		err = pmgr_domain_pmu_setup(g);
+	}
 
 	return err;
 }
@@ -211,8 +242,9 @@ static int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 	int err;
 
 	err = boardobj_construct_super(g, ppboardobj, size, args);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	pstate = (struct pstate *)*ppboardobj;
 
@@ -239,9 +271,10 @@ static struct pstate *pstate_construct(struct gk20a *g, void *args)
 
 	if ((tmp->super.type != CTRL_PERF_PSTATE_TYPE_3X) ||
 	    (pstate_construct_3x(g, (struct boardobj **)&pstate,
-			    sizeof(struct pstate), args)))
+			    sizeof(struct pstate), args))) {
 		nvgpu_err(g,
 			"error constructing pstate num=%u", tmp->num);
+	}
 
 	return pstate;
 }
@@ -330,8 +363,9 @@ static int parse_pstate_table_5x(struct gk20a *g,
 		((hdr->base_entry_size != VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_2) &&
 		 (hdr->base_entry_size != VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_3)) ||
 		(hdr->clock_entry_size != VBIOS_PSTATE_CLOCK_ENTRY_5X_SIZE_6) ||
-		(hdr->clock_entry_count > CLK_SET_INFO_MAX_SIZE))
+		(hdr->clock_entry_count > CLK_SET_INFO_MAX_SIZE)) {
 		return -EINVAL;
+	}
 
 	p += hdr->header_size;
 
@@ -341,20 +375,24 @@ static int parse_pstate_table_5x(struct gk20a *g,
 	for (i = 0; i < hdr->base_entry_count; i++, p += entry_size) {
 		entry = (struct vbios_pstate_entry_5x *)p;
 
-		if (entry->pstate_level == VBIOS_PERFLEVEL_SKIP_ENTRY)
+		if (entry->pstate_level == VBIOS_PERFLEVEL_SKIP_ENTRY) {
 			continue;
+		}
 
 		err = parse_pstate_entry_5x(g, hdr, entry, &_pstate);
-		if (err)
+		if (err) {
 			goto done;
+		}
 
 		pstate = pstate_construct(g, &_pstate);
-		if (!pstate)
+		if (!pstate) {
 			goto done;
+		}
 
 		err = pstate_insert(g, pstate, i);
-		if (err)
+		if (err) {
 			goto done;
+		}
 	}
 
 done:
@@ -371,8 +409,9 @@ static int pstate_sw_setup(struct gk20a *g)
 	nvgpu_cond_init(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
 
 	err = nvgpu_mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = boardobjgrpconstruct_e32(g, &g->perf_pmu.pstatesobjs.super);
 	if (err) {
@@ -401,8 +440,9 @@ static int pstate_sw_setup(struct gk20a *g)
 
 	err = parse_pstate_table_5x(g, hdr);
 done:
-	if (err)
+	if (err) {
 		nvgpu_mutex_destroy(&g->perf_pmu.pstatesobjs.pstate_mutex);
+	}
 	return err;
 }
 
@@ -418,8 +458,9 @@ struct pstate *pstate_find(struct gk20a *g, u32 num)
 			struct pstate *, pstate, i) {
 		nvgpu_log_info(g, "pstate=%p num=%u (looking for num=%u)",
 				pstate, pstate->num, num);
-		if (pstate->num == num)
+		if (pstate->num == num) {
 			return pstate;
+		}
 	}
 	return NULL;
 }
@@ -433,13 +474,15 @@ struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g,
 
 	nvgpu_log_info(g, "pstate = %p", pstate);
 
-	if (!pstate)
+	if (!pstate) {
 		return NULL;
+	}
 
 	for (clkidx = 0; clkidx < pstate->clklist.num_info; clkidx++) {
 		info = &pstate->clklist.clksetinfo[clkidx];
-		if (info->clkwhich == clkwhich)
+		if (info->clkwhich == clkwhich) {
 			return info;
+		}
 	}
 	return NULL;
 }

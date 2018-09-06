@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -66,8 +66,9 @@ static inline int nvgpu_ref_put(struct nvgpu_ref *ref,
 		void (*release)(struct nvgpu_ref *r))
 {
 	if (nvgpu_atomic_sub_and_test(1, &ref->refcount)) {
-		if (release != NULL)
+		if (release != NULL) {
 			release(ref);
+		}
 		return 1;
 	}
 	return 0;

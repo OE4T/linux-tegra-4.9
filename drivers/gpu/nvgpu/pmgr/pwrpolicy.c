@@ -264,8 +264,9 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		pargs_size, pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	pwrpolicyhwthreshold = (struct pwr_policy_hw_threshold*)board_obj_ptr;
 	pwrpolicy = (struct pwr_policy *)board_obj_ptr;
@@ -575,8 +576,9 @@ static int devinit_get_pwr_policy_table(struct gk20a *g,
 			packed_entry->flags0,
 			NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_CLASS);
 
-		if (class_type != NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_CLASS_HW_THRESHOLD)
+		if (class_type != NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_CLASS_HW_THRESHOLD) {
 			continue;
+		}
 
 		/* unpack power policy table entry */
 		devinit_unpack_pwr_policy_entry(&entry, packed_entry);
@@ -759,8 +761,9 @@ int pmgr_policy_sw_setup(struct gk20a *g)
 	pboardobjgrp = &(g->pmgr_pmu.pmgr_policyobjs.pwr_policies.super);
 
 	status = devinit_get_pwr_policy_table(g, ppwrpolicyobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	g->pmgr_pmu.pmgr_policyobjs.b_enabled = true;
 

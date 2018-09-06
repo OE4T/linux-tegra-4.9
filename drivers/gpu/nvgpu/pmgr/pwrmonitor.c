@@ -40,8 +40,9 @@ static int _pwr_channel_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrchannel->hdr.data.super.obj_mask.super.data[0]) == 0)
+		ppmgrchannel->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&ppmgrchannel->channels[idx].data.board_obj;
@@ -66,8 +67,9 @@ static int _pwr_channel_rels_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrchrels->hdr.data.super.obj_mask.super.data[0]) == 0)
+		ppmgrchrels->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&ppmgrchrels->ch_rels[idx].data.board_obj;
@@ -150,8 +152,9 @@ static struct boardobj *construct_pwr_topology(struct gk20a *g,
 
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		pargs_size, pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	pwrchannel = (struct pwr_channel_sensor*)board_obj_ptr;
 
@@ -253,8 +256,9 @@ static int devinit_get_pwr_topology_table(struct gk20a *g,
 				NV_VBIOS_POWER_TOPOLOGY_2X_ENTRY_PARAM1_SENSOR_PROVIDER_INDEX);
 
 			pwr_topology_size = sizeof(struct pwr_channel_sensor);
-		} else
+		} else {
 			continue;
+		}
 
 		/* Initialize data for the parent class */
 		pwr_topology_data.boardobj.type = CTRL_PMGR_PWR_CHANNEL_TYPE_SENSOR;
@@ -345,12 +349,14 @@ int pmgr_monitor_sw_setup(struct gk20a *g)
 	ppwrmonitorobjs = &(g->pmgr_pmu.pmgr_monitorobjs);
 
 	status = devinit_get_pwr_topology_table(g, ppwrmonitorobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	status = _pwr_channel_state_init(g);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	/* Initialise physicalChannelMask */
 	g->pmgr_pmu.pmgr_monitorobjs.physical_channel_mask = 0;

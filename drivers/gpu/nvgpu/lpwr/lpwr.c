@@ -42,14 +42,16 @@ static int get_lpwr_idx_table(struct gk20a *g)
 
 	lpwr_idx_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
 		g->bios.perf_token, LOWPOWER_TABLE);
-	if (lpwr_idx_table_ptr == NULL)
+	if (lpwr_idx_table_ptr == NULL) {
 		return -EINVAL;
+	}
 
 	memcpy(&header, lpwr_idx_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_idx_table_1x_header));
 
-	if (header.entry_count >= LPWR_VBIOS_IDX_ENTRY_COUNT_MAX)
+	if (header.entry_count >= LPWR_VBIOS_IDX_ENTRY_COUNT_MAX) {
 		return -EINVAL;
+	}
 
 	pidx_data->base_sampling_period = (u16)header.base_sampling_period;
 
@@ -84,8 +86,9 @@ static int get_lpwr_gr_table(struct gk20a *g)
 
 	lpwr_gr_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
 		g->bios.perf_token, LOWPOWER_GR_TABLE);
-	if (lpwr_gr_table_ptr == NULL)
+	if (lpwr_gr_table_ptr == NULL) {
 		return -EINVAL;
+	}
 
 	memcpy(&header, lpwr_gr_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_gr_table_1x_header));
@@ -106,9 +109,10 @@ static int get_lpwr_gr_table(struct gk20a *g)
 				NVGPU_PMU_GR_FEATURE_MASK_ALL;
 
 			if (!BIOS_GET_FIELD(entry.feautre_mask,
-				NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_RPPG))
+				NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_RPPG)) {
 				pgr_data->entry[idx].feature_mask &=
 					~NVGPU_PMU_GR_FEATURE_MASK_RPPG;
+			}
 		}
 
 	}
@@ -128,14 +132,16 @@ static int get_lpwr_ms_table(struct gk20a *g)
 
 	lpwr_ms_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
 		g->bios.perf_token, LOWPOWER_MS_TABLE);
-	if (lpwr_ms_table_ptr == NULL)
+	if (lpwr_ms_table_ptr == NULL) {
 		return -EINVAL;
+	}
 
 	memcpy(&header, lpwr_ms_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_ms_table_1x_header));
 
-	if (header.entry_count >= LPWR_VBIOS_MS_ENTRY_COUNT_MAX)
+	if (header.entry_count >= LPWR_VBIOS_MS_ENTRY_COUNT_MAX) {
 		return -EINVAL;
+	}
 
 	pms_data->default_entry_idx = (u8)header.default_entry_idx;
 
@@ -157,19 +163,22 @@ static int get_lpwr_ms_table(struct gk20a *g)
 				NVGPU_PMU_MS_FEATURE_MASK_ALL;
 
 			if (!BIOS_GET_FIELD(entry.feautre_mask,
-				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_CLOCK_GATING))
+				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_CLOCK_GATING)) {
 				pms_data->entry[idx].feature_mask &=
 					~NVGPU_PMU_MS_FEATURE_MASK_CLOCK_GATING;
+			}
 
 			if (!BIOS_GET_FIELD(entry.feautre_mask,
-				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_SWASR))
+				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_SWASR)) {
 				pms_data->entry[idx].feature_mask &=
 					~NVGPU_PMU_MS_FEATURE_MASK_SW_ASR;
+			}
 
 			if (!BIOS_GET_FIELD(entry.feautre_mask,
-				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_RPPG))
+				NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_RPPG)) {
 				pms_data->entry[idx].feature_mask &=
 					~NVGPU_PMU_MS_FEATURE_MASK_RPPG;
+			}
 		}
 
 		pms_data->entry[idx].dynamic_current_logic =
@@ -189,12 +198,14 @@ u32 nvgpu_lpwr_pg_setup(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	err = get_lpwr_gr_table(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = get_lpwr_ms_table(g);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	err = get_lpwr_idx_table(g);
 
@@ -232,13 +243,15 @@ int nvgpu_lwpr_mclk_change(struct gk20a *g, u32 pstate)
 
 	pstate_info = pstate_get_clk_set_info(g, pstate,
 			clkwhich_mclk);
-	if (!pstate_info)
+	if (!pstate_info) {
 		return -EINVAL;
+	}
 
 	if (pstate_info->max_mhz >
-			MAX_SWASR_MCLK_FREQ_WITHOUT_WR_TRAINING_MAXWELL_MHZ)
+			MAX_SWASR_MCLK_FREQ_WITHOUT_WR_TRAINING_MAXWELL_MHZ) {
 		payload |=
 			NV_PMU_PG_PARAM_MCLK_CHANGE_GDDR5_WR_TRAINING_ENABLED;
+	}
 
 	if (payload != g->perf_pmu.lpwr.mclk_change_cache) {
 		g->perf_pmu.lpwr.mclk_change_cache = payload;
@@ -311,14 +324,16 @@ u32 nvgpu_lpwr_is_mscg_supported(struct gk20a *g, u32 pstate_num)
 
 	nvgpu_log_fn(g, " ");
 
-	if (!pstate)
+	if (!pstate) {
 		return 0;
+	}
 
 	ms_idx = pidx_data->entry[pstate->lpwr_entry_idx].ms_idx;
-	if (pms_data->entry[ms_idx].ms_enabled)
+	if (pms_data->entry[ms_idx].ms_enabled) {
 		return 1;
-	else
+	} else {
 		return 0;
+	}
 }
 
 u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num)
@@ -332,14 +347,16 @@ u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num)
 
 	nvgpu_log_fn(g, " ");
 
-	if (!pstate)
+	if (!pstate) {
 		return 0;
+	}
 
 	idx = pidx_data->entry[pstate->lpwr_entry_idx].gr_idx;
-	if (pgr_data->entry[idx].gr_enabled)
+	if (pgr_data->entry[idx].gr_enabled) {
 		return 1;
-	else
+	} else {
 		return 0;
+	}
 }
 
 
@@ -353,8 +370,9 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pstate_lock)
+	if (pstate_lock) {
 		nvgpu_clk_arb_pstate_change_lock(g, true);
+	}
 	nvgpu_mutex_acquire(&pmu->pg_mutex);
 
 	present_pstate = nvgpu_clk_arb_get_current_pstate(g);
@@ -362,20 +380,23 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 	is_mscg_supported = nvgpu_lpwr_is_mscg_supported(g,
 			present_pstate);
 	if (is_mscg_supported && g->mscg_enabled) {
-		if (!pmu->mscg_stat)
+		if (!pmu->mscg_stat) {
 			pmu->mscg_stat = PMU_MSCG_ENABLED;
+		}
 	}
 
 	is_rppg_supported = nvgpu_lpwr_is_rppg_supported(g,
 			present_pstate);
 	if (is_rppg_supported) {
-		if (g->support_pmu && g->can_elpg)
+		if (g->support_pmu && g->can_elpg) {
 			status = nvgpu_pmu_enable_elpg(g);
+		}
 	}
 
 	nvgpu_mutex_release(&pmu->pg_mutex);
-	if (pstate_lock)
+	if (pstate_lock) {
 		nvgpu_clk_arb_pstate_change_lock(g, false);
+	}
 
 	return status;
 }
@@ -390,8 +411,9 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 
 	nvgpu_log_fn(g, " ");
 
-	if (pstate_lock)
+	if (pstate_lock) {
 		nvgpu_clk_arb_pstate_change_lock(g, true);
+	}
 	nvgpu_mutex_acquire(&pmu->pg_mutex);
 
 	present_pstate = nvgpu_clk_arb_get_current_pstate(g);
@@ -401,22 +423,25 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 	if (is_rppg_supported) {
 		if (g->support_pmu && g->elpg_enabled) {
 			status = nvgpu_pmu_disable_elpg(g);
-			if (status)
+			if (status) {
 				goto exit_unlock;
+			}
 		}
 	}
 
 	is_mscg_supported = nvgpu_lpwr_is_mscg_supported(g,
 			present_pstate);
 	if (is_mscg_supported && g->mscg_enabled) {
-		if (pmu->mscg_stat)
+		if (pmu->mscg_stat) {
 			pmu->mscg_stat = PMU_MSCG_DISABLED;
+		}
 	}
 
 exit_unlock:
 	nvgpu_mutex_release(&pmu->pg_mutex);
-	if (pstate_lock)
+	if (pstate_lock) {
 		nvgpu_clk_arb_pstate_change_lock(g, false);
+	}
 
 	nvgpu_log_fn(g, "done");
 	return status;

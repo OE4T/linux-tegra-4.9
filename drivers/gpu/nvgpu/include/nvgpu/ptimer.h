@@ -42,10 +42,11 @@ static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
 
 static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 {
-	if (((timeout*10) % scale10x) >= (scale10x/2))
+	if (((timeout*10) % scale10x) >= (scale10x/2)) {
 		return ((timeout * 10) / scale10x) + 1;
-	else
+	} else {
 		return (timeout * 10) / scale10x;
+	}
 }
 
 int nvgpu_get_timestamps_zipper(struct gk20a *g,

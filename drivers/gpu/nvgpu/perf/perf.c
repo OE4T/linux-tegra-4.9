@@ -46,8 +46,9 @@ static void perfrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	if (phandlerparams->prpccall->b_supported)
+	if (phandlerparams->prpccall->b_supported) {
 		phandlerparams->success = 1;
+	}
 }
 
 static int pmu_handle_perf_event(struct gk20a *g, void *pmu_msg)

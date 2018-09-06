@@ -30,9 +30,10 @@ int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val)
 	int status;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pwr_devices_get_current_power failed %x",
 			status);
+	}
 
 	*val = payload.devices[0].powerm_w;
 
@@ -45,9 +46,10 @@ int pmgr_pwr_devices_get_current(struct gk20a *g, u32 *val)
 	int status;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pwr_devices_get_current failed %x",
 			status);
+	}
 
 	*val = payload.devices[0].currentm_a;
 
@@ -60,9 +62,10 @@ int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val)
 	int status;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pwr_devices_get_current_voltage failed %x",
 			status);
+	}
 
 	*val = payload.devices[0].voltageu_v;
 

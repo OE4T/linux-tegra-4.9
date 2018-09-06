@@ -43,11 +43,12 @@ static void therm_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		return;
 	}
 
-	if (!phandlerparams->prpccall->b_supported)
+	if (!phandlerparams->prpccall->b_supported) {
 		nvgpu_err(g, "RPC msg %x failed",
 			msg->msg.pmgr.msg_type);
-	else
+	} else {
 		phandlerparams->success = 1;
+	}
 }
 
 int therm_send_pmgr_tables_to_pmu(struct gk20a *g)

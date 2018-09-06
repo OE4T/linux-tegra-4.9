@@ -55,8 +55,9 @@
 static inline const char *xve_speed_to_str(u32 speed)
 {
 	if (!speed || !is_power_of_2(speed) ||
-	    !(speed & GPU_XVE_SPEED_MASK))
+	    !(speed & GPU_XVE_SPEED_MASK)) {
 		return "Unknown ???";
+	}
 
 	return speed & GPU_XVE_SPEED_2P5 ? "Gen1" :
 	       speed & GPU_XVE_SPEED_5P0 ? "Gen2" :

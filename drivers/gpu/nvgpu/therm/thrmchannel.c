@@ -73,8 +73,9 @@ static struct boardobj *construct_channel_device(struct gk20a *g,
 
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		pargs_size, pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	/* Set Super class interfaces */
 	board_obj_ptr->pmudatainit = _therm_channel_pmudatainit_device;
@@ -108,8 +109,9 @@ static int _therm_channel_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-			pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+			pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data.board_obj;
@@ -233,8 +235,9 @@ int therm_channel_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmudatainstget = _therm_channel_pmudata_instget;
 
 	status = devinit_get_therm_channel_table(g, pthermchannelobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	BOARDOBJGRP_PMU_CONSTRUCT(pboardobjgrp, THERM, THERM_CHANNEL);
 

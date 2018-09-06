@@ -104,15 +104,19 @@ int xve_get_speed_gp106(struct gk20a *g, u32 *xve_link_speed)
 	 * Can't use a switch statement becuase switch statements dont work with
 	 * function calls.
 	 */
-	if (link_speed == xve_link_control_status_link_speed_link_speed_2p5_v())
+	if (link_speed == xve_link_control_status_link_speed_link_speed_2p5_v()) {
 		real_link_speed = GPU_XVE_SPEED_2P5;
-	if (link_speed == xve_link_control_status_link_speed_link_speed_5p0_v())
+	}
+	if (link_speed == xve_link_control_status_link_speed_link_speed_5p0_v()) {
 		real_link_speed = GPU_XVE_SPEED_5P0;
-	if (link_speed == xve_link_control_status_link_speed_link_speed_8p0_v())
+	}
+	if (link_speed == xve_link_control_status_link_speed_link_speed_8p0_v()) {
 		real_link_speed = GPU_XVE_SPEED_8P0;
+	}
 
-	if (real_link_speed == 0U)
+	if (real_link_speed == 0U) {
 		return -ENODEV;
+	}
 
 	*xve_link_speed = real_link_speed;
 	return 0;
@@ -240,8 +244,9 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 		if ((xp_pl_link_config_ltssm_status_f(pl_link_config) ==
 		     xp_pl_link_config_ltssm_status_idle_v()) &&
 		    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
-		     xp_pl_link_config_ltssm_directive_normal_operations_v()))
+		     xp_pl_link_config_ltssm_directive_normal_operations_v())) {
 			break;
+		}
 	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
@@ -283,23 +288,24 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	pl_link_config &= ~xp_pl_link_config_target_tx_width_m();
 
 	/* Can't use a switch due to oddities in register definitions. */
-	if (link_width == xve_link_control_status_link_width_x1_v())
+	if (link_width == xve_link_control_status_link_width_x1_v()) {
 		pl_link_config |= xp_pl_link_config_target_tx_width_f(
 			xp_pl_link_config_target_tx_width_x1_v());
-	else if (link_width == xve_link_control_status_link_width_x2_v())
+	} else if (link_width == xve_link_control_status_link_width_x2_v()) {
 		pl_link_config |= xp_pl_link_config_target_tx_width_f(
 			xp_pl_link_config_target_tx_width_x2_v());
-	else if (link_width == xve_link_control_status_link_width_x4_v())
+	} else if (link_width == xve_link_control_status_link_width_x4_v()) {
 		pl_link_config |= xp_pl_link_config_target_tx_width_f(
 			xp_pl_link_config_target_tx_width_x4_v());
-	else if (link_width == xve_link_control_status_link_width_x8_v())
+	} else if (link_width == xve_link_control_status_link_width_x8_v()) {
 		pl_link_config |= xp_pl_link_config_target_tx_width_f(
 			xp_pl_link_config_target_tx_width_x8_v());
-	else if (link_width == xve_link_control_status_link_width_x16_v())
+	} else if (link_width == xve_link_control_status_link_width_x16_v()) {
 		pl_link_config |= xp_pl_link_config_target_tx_width_f(
 			xp_pl_link_config_target_tx_width_x16_v());
-	else
+	} else {
 		BUG();
+	}
 
 	xv_sc_dbg(g, LINK_SETTINGS, "  pl_link_config = 0x%08x", pl_link_config);
 	xv_sc_dbg(g, LINK_SETTINGS, "  Done");
@@ -311,8 +317,9 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	do {
 		gk20a_writel(g, xp_pl_link_config_r(0), pl_link_config);
 		if (pl_link_config ==
-		    gk20a_readl(g, xp_pl_link_config_r(0)))
+		    gk20a_readl(g, xp_pl_link_config_r(0))) {
 			break;
+		}
 	} while (nvgpu_timeout_expired(&timeout) == 0);
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
@@ -346,8 +353,9 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 			    (xp_pl_link_config_ltssm_status_f(pl_link_config) ==
 			     xp_pl_link_config_ltssm_status_idle_v()) &&
 			    (xp_pl_link_config_ltssm_directive_f(pl_link_config) ==
-			     xp_pl_link_config_ltssm_directive_normal_operations_v()))
+			     xp_pl_link_config_ltssm_directive_normal_operations_v())) {
 				break;
+			}
 		} while (nvgpu_timeout_expired(&timeout) == 0);
 
 		if (nvgpu_timeout_peek_expired(&timeout)) {
@@ -403,20 +411,21 @@ static int __do_xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 
 		link_config &= ~xp_pl_link_config_max_link_rate_m();
 		if (new_link_speed ==
-		    xve_link_control_status_link_speed_link_speed_2p5_v())
+		    xve_link_control_status_link_speed_link_speed_2p5_v()) {
 			link_config |= xp_pl_link_config_max_link_rate_f(
 				xp_pl_link_config_max_link_rate_2500_mtps_v());
-		else if (new_link_speed ==
-			 xve_link_control_status_link_speed_link_speed_5p0_v())
+		} else if (new_link_speed ==
+			 xve_link_control_status_link_speed_link_speed_5p0_v()) {
 			link_config |= xp_pl_link_config_max_link_rate_f(
 				xp_pl_link_config_max_link_rate_5000_mtps_v());
-		else if (new_link_speed ==
-			 xve_link_control_status_link_speed_link_speed_8p0_v())
+		} else if (new_link_speed ==
+			 xve_link_control_status_link_speed_link_speed_8p0_v()) {
 			link_config |= xp_pl_link_config_max_link_rate_f(
 				xp_pl_link_config_max_link_rate_8000_mtps_v());
-		else
+		} else {
 			link_config |= xp_pl_link_config_max_link_rate_f(
 				xp_pl_link_config_max_link_rate_2500_mtps_v());
+		}
 
 		gk20a_writel(g, xp_pl_link_config_r(0), link_config);
 		err_status = -ENODEV;
@@ -452,16 +461,19 @@ int xve_set_speed_gp106(struct gk20a *g, u32 next_link_speed)
 	u32 current_link_speed;
 	int err;
 
-	if ((next_link_speed & GPU_XVE_SPEED_MASK) == 0)
+	if ((next_link_speed & GPU_XVE_SPEED_MASK) == 0) {
 		return -EINVAL;
+	}
 
 	err = g->ops.xve.get_speed(g, &current_link_speed);
-	if (err)
+	if (err) {
 		return err;
+	}
 
 	/* No-op. */
-	if (current_link_speed == next_link_speed)
+	if (current_link_speed == next_link_speed) {
 		return 0;
+	}
 
 	return __do_xve_set_speed_gp106(g, next_link_speed);
 }

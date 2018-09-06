@@ -43,8 +43,9 @@ static int _therm_device_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-			pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0)
+			pgrp_set->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&pgrp_set->objects[idx].data;
@@ -208,8 +209,9 @@ static struct boardobj *therm_device_construct(struct gk20a *g,
 		board_obj_ptr = NULL;
 		nvgpu_err(g,
 			"could not allocate memory for therm_device");
-		if (board_obj_ptr != NULL)
+		if (board_obj_ptr != NULL) {
 			nvgpu_kfree(g, board_obj_ptr);
+		}
 	}
 
 
@@ -347,8 +349,9 @@ int therm_device_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmudatainstget = _therm_device_pmudata_instget;
 
 	status = devinit_get_therm_device_table(g, pthermdeviceobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 	BOARDOBJGRP_PMU_CONSTRUCT(pboardobjgrp, THERM, THERM_DEVICE);
 

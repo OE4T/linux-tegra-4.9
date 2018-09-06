@@ -168,9 +168,10 @@ static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 				PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED,
 				&i2c_desc_table);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
+	}
 
 	return status;
 }
@@ -183,8 +184,9 @@ static int pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 
 	/* Set the BA-device-independent HW information */
 	pwr_desc_table = nvgpu_kzalloc(g, sizeof(*pwr_desc_table));
-	if (!pwr_desc_table)
+	if (!pwr_desc_table) {
 		return -ENOMEM;
+	}
 
 	ppwr_desc_header = &(pwr_desc_table->hdr.data);
 	ppwr_desc_header->ba_info.b_initialized_and_used = false;
@@ -212,9 +214,10 @@ static int pmgr_send_pwr_device_topology_to_pmu(struct gk20a *g)
 				(u16)sizeof(struct nv_pmu_pmgr_pwr_device_desc_table),
 				pwr_desc_table);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
+	}
 
 exit:
 	nvgpu_kfree(g, pwr_desc_table);
@@ -230,8 +233,9 @@ static int pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 	int status = 0;
 
 	pwr_monitor_pack = nvgpu_kzalloc(g, sizeof(*pwr_monitor_pack));
-	if (!pwr_monitor_pack)
+	if (!pwr_monitor_pack) {
 		return -ENOMEM;
+	}
 
 	/* Copy all the global settings from the RM copy */
 	pwr_channel_hdr = &(pwr_monitor_pack->channels.hdr.data);
@@ -281,9 +285,10 @@ static int pmgr_send_pwr_mointer_to_pmu(struct gk20a *g)
 				(u16)sizeof(struct nv_pmu_pmgr_pwr_monitor_pack),
 				pwr_monitor_pack);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
+	}
 
 exit:
 	nvgpu_kfree(g, pwr_monitor_pack);
@@ -365,9 +370,10 @@ static int pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
 				(u16)sizeof(struct nv_pmu_pmgr_pwr_policy_pack),
 				ppwrpack);
 
-	if (status)
+	if (status) {
 		nvgpu_err(g, "pmgr_pmu_set_object failed %x",
 			status);
+	}
 
 exit:
 	if (ppwrpack) {

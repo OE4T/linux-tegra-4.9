@@ -40,8 +40,9 @@ static int _pwr_device_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrdevice->hdr.data.super.obj_mask.super.data[0]) == 0)
+		ppmgrdevice->hdr.data.super.obj_mask.super.data[0]) == 0) {
 		return -EINVAL;
+	}
 
 	*ppboardobjpmudata = (struct nv_pmu_boardobj *)
 		&ppmgrdevice->devices[idx].data.board_obj;
@@ -99,8 +100,9 @@ static struct boardobj *construct_pwr_device(struct gk20a *g,
 
 	status = boardobj_construct_super(g, &board_obj_ptr,
 		pargs_size, pargs);
-	if (status)
+	if (status) {
 		return NULL;
+	}
 
 	pwrdev = (struct pwr_device_ina3221*)board_obj_ptr;
 
@@ -250,8 +252,9 @@ static int devinit_get_pwr_device_table(struct gk20a *g,
 				pwr_device_data.ina3221.curr_correct_m = (1 << 12);
 			}
 			pwr_device_size = sizeof(struct pwr_device_ina3221);
-		} else
+		} else {
 			continue;
+		}
 
 		pwr_device_data.boardobj.type = CTRL_PMGR_PWR_DEVICE_TYPE_INA3221;
 		pwr_device_data.pwrdev.power_rail = (u8)0;
@@ -306,8 +309,9 @@ int pmgr_device_sw_setup(struct gk20a *g)
 	pboardobjgrp->pmudatainstget = _pwr_device_pmudata_instget;
 
 	status = devinit_get_pwr_device_table(g, ppwrdeviceobjs);
-	if (status)
+	if (status) {
 		goto done;
+	}
 
 done:
 	nvgpu_log_info(g, " done status %x", status);

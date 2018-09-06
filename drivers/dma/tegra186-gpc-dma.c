@@ -891,8 +891,10 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 
 	if (tdc->tdma->chip_data->hw_support_pause) {
 		err = tegra_dma_pause(tdc);
-		if (err)
+		if (err) {
+			raw_spin_unlock_irqrestore(&tdc->lock, flags);
 			return err;
+		}
 	} else {
 		/* Before Reading DMA status to figure out number
 		 * of bytes transferred by DMA channel:

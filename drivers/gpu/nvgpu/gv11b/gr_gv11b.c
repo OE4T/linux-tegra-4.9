@@ -3343,7 +3343,13 @@ int gv11b_gr_set_sm_debug_mode(struct gk20a *g,
 		}
 
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
-		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+		if (g->ops.gr.get_nonpes_aware_tpc != NULL) {
+			tpc = g->ops.gr.get_nonpes_aware_tpc(g,
+					g->gr.sm_to_cluster[sm_id].gpc_index,
+					g->gr.sm_to_cluster[sm_id].tpc_index);
+		} else {
+			tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+		}
 		sm = g->gr.sm_to_cluster[sm_id].sm_index;
 
 		reg_offset = gk20a_gr_gpc_offset(g, gpc) +

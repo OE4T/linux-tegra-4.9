@@ -503,8 +503,9 @@
 		num-lanes = <8>;
 		linux,pci-domain = <0>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_0>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_0>,
+			<&bpmp_clks TEGRA194_CLK_PEX0_CORE_0M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_0>;
@@ -529,7 +530,6 @@
 							204000000 204000000 408000000  666000000
 							204000000 408000000 666000000  1066000000
 							408000000 666000000 1066000000 2133000000 >;
-
 		nvidia,max-speed = <4>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,controller-id = <&bpmp 0x0>;
@@ -566,8 +566,9 @@
 		num-lanes = <1>;
 		linux,pci-domain = <1>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_1>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_1>,
+			<&bpmp_clks TEGRA194_CLK_PEX0_CORE_1M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_1_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_1>;
@@ -630,8 +631,9 @@
 		num-lanes = <1>;
 		linux,pci-domain = <2>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_2>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_2>,
+			<&bpmp_clks TEGRA194_CLK_PEX0_CORE_2M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_2_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_2>;
@@ -693,8 +695,9 @@
 		num-lanes = <1>;
 		linux,pci-domain = <3>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_3>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_3>,
+			<&bpmp_clks TEGRA194_CLK_PEX0_CORE_3M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_3_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_3>;
@@ -756,8 +759,9 @@
 		num-lanes = <4>;
 		linux,pci-domain = <4>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_4>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX0_CORE_4>,
+			<&bpmp_clks TEGRA194_CLK_PEX0_CORE_4M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX0_CORE_4>;
@@ -819,8 +823,9 @@
 		num-lanes = <8>;
 		linux,pci-domain = <5>;
 
-		clocks = <&bpmp_clks TEGRA194_CLK_PEX1_CORE_5>;
-		clock-names = "core_clk";
+		clocks = <&bpmp_clks TEGRA194_CLK_PEX1_CORE_5>,
+			<&bpmp_clks TEGRA194_CLK_PEX1_CORE_5M>;
+		clock-names = "core_clk", "core_clk_m";
 
 		resets = <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5_APB>,
 			 <&bpmp_resets TEGRA194_RESET_PEX1_CORE_5>;

@@ -1106,6 +1106,8 @@ __releases(&l->cde_app->mutex)
 				 NULL,
 				 &map_vaddr);
 	if (err) {
+		nvgpu_warn(g, "cde: failed to map compbits scatter buf at %lld size %lld",
+				map_offset, map_size);
 		dma_buf_put(compbits_scatter_buf);
 		err = -EINVAL;
 		goto exit_idle;

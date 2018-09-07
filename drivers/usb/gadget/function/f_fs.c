@@ -7,7 +7,7 @@
  * Based on inode.c (GadgetFS) which was:
  * Copyright (C) 2003-2004 David Brownell
  * Copyright (C) 2003 Agilent Technologies
- * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1001,7 +1001,13 @@ static ssize_t ffs_epfile_io(struct file *file, struct ffs_io_data *io_data)
 
 		spin_unlock_irq(&epfile->ffs->eps_lock);
 
-		if (unlikely(wait_for_completion_interruptible(&done))) {
+		ret = wait_for_completion_interruptible(&done);
+		/* check if endpoint got disabled or changed. */
+		if (epfile->ep != ep) {
+			ret = -ESHUTDOWN;
+			goto error_mutex;
+		}
+		if (unlikely(ret)) {
 			/*
 			 * To avoid race condition with ffs_epfile_io_complete,
 			 * dequeue the request first then check
@@ -3465,9 +3471,9 @@ static void ffs_func_unbind(struct usb_configuration *c,
 		ep->req = NULL;
 		++ep;
 	} while (--count);
-	spin_unlock_irqrestore(&func->ffs->eps_lock, flags);
 	kfree(func->eps);
 	func->eps = NULL;
+	spin_unlock_irqrestore(&func->ffs->eps_lock, flags);
 	/*
 	 * eps, descriptors and interfaces_nums are allocated in the
 	 * same chunk so only one free is required.

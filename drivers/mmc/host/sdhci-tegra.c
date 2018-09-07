@@ -1210,8 +1210,7 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 
 	if (type & (SET_DDR_TAP | SET_DEFAULT_TAP)) {
 		err = tegra_prod_set_by_name_partially(&host->ioaddr,
-				prod_device_states[host->mmc->ios.timing],
-				tegra_host->prods, 0,
+				"prod",	tegra_host->prods, 0,
 				SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
 				SDHCI_CLOCK_CTRL_TAP_MASK <<
 				SDHCI_CLOCK_CTRL_TAP_SHIFT);

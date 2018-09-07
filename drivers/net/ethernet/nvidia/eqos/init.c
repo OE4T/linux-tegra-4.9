@@ -1140,13 +1140,6 @@ int eqos_probe(struct platform_device *pdev)
 		}
 	}
 
-	/* enabling and registration of irq with magic wakeup */
-	if (1 == pdata->hw_feat.mgk_sel) {
-		device_set_wakeup_capable(&pdev->dev, 1);
-		pdata->wolopts = WAKE_MAGIC;
-		enable_irq_wake(ndev->irq);
-	}
-
 	for (i = 0; i < pdata->num_chans; i++) {
 		pdata->rx_queue[i].pdata = pdata;
 		pdata->rx_queue[i].chan_num = i;

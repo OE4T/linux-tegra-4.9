@@ -3,7 +3,7 @@
  *
  * CPU complex suspend & resume functions for Tegra SoCs
  *
- * Copyright (c) 2009-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2009-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,8 @@ static u64 resume_time;
 static u64 resume_entry_time;
 static u64 suspend_time;
 static u64 suspend_entry_time;
+
+static int debug_uart_disabled;
 
 void tegra_log_suspend_entry_time(void)
 {
@@ -104,23 +106,25 @@ static int tegra_debug_uart_suspend(void)
 
 	pr_info("Entered SC7\n");
 
-	lcr = tegra_uart_read(UART_LCR);
+	if (!debug_uart_disabled) {
+		lcr = tegra_uart_read(UART_LCR);
 
-	suspend_ctx.uart[0] = lcr;
-	suspend_ctx.uart[1] = tegra_uart_read(UART_MCR);
+		suspend_ctx.uart[0] = lcr;
+		suspend_ctx.uart[1] = tegra_uart_read(UART_MCR);
 
-	/* DLAB = 0 */
-	tegra_uart_write(lcr & ~UART_LCR_DLAB, UART_LCR);
+		/* DLAB = 0 */
+		tegra_uart_write(lcr & ~UART_LCR_DLAB, UART_LCR);
 
-	suspend_ctx.uart[2] = tegra_uart_read(UART_IER);
+		suspend_ctx.uart[2] = tegra_uart_read(UART_IER);
 
-	/* DLAB = 1 */
-	tegra_uart_write(lcr | UART_LCR_DLAB, UART_LCR);
+		/* DLAB = 1 */
+		tegra_uart_write(lcr | UART_LCR_DLAB, UART_LCR);
 
-	suspend_ctx.uart[3] = tegra_uart_read(UART_DLL);
-	suspend_ctx.uart[4] = tegra_uart_read(UART_DLM);
+		suspend_ctx.uart[3] = tegra_uart_read(UART_DLL);
+		suspend_ctx.uart[4] = tegra_uart_read(UART_DLM);
 
-	tegra_uart_write(lcr, UART_LCR);
+		tegra_uart_write(lcr, UART_LCR);
+	}
 
 	return 0;
 }
@@ -132,23 +136,25 @@ static void tegra_debug_uart_resume(void)
 	resume_entry_time = arch_timer_read_counter();
 	lcr = suspend_ctx.uart[0];
 
-	tegra_uart_write(suspend_ctx.uart[1], UART_MCR);
+	if (!debug_uart_disabled) {
+		tegra_uart_write(suspend_ctx.uart[1], UART_MCR);
 
-	/* DLAB = 0 */
-	tegra_uart_write(lcr & ~UART_LCR_DLAB, UART_LCR);
+		/* DLAB = 0 */
+		tegra_uart_write(lcr & ~UART_LCR_DLAB, UART_LCR);
 
-	tegra_uart_write(UART_FCR_ENABLE_FIFO | UART_FCR_T_TRIG_01 |
-			UART_FCR_R_TRIG_01, UART_FCR);
+		tegra_uart_write(UART_FCR_ENABLE_FIFO | UART_FCR_T_TRIG_01 |
+				UART_FCR_R_TRIG_01, UART_FCR);
 
-	tegra_uart_write(suspend_ctx.uart[2], UART_IER);
+		tegra_uart_write(suspend_ctx.uart[2], UART_IER);
 
-	/* DLAB = 1 */
-	tegra_uart_write(lcr | UART_LCR_DLAB, UART_LCR);
+		/* DLAB = 1 */
+		tegra_uart_write(lcr | UART_LCR_DLAB, UART_LCR);
 
-	tegra_uart_write(suspend_ctx.uart[3], UART_DLL);
-	tegra_uart_write(suspend_ctx.uart[4], UART_DLM);
+		tegra_uart_write(suspend_ctx.uart[3], UART_DLL);
+		tegra_uart_write(suspend_ctx.uart[4], UART_DLM);
 
-	tegra_uart_write(lcr, UART_LCR);
+		tegra_uart_write(lcr, UART_LCR);
+	}
 
 	pr_info("Exited SC7\n");
 }
@@ -165,6 +171,12 @@ static int tegra_debug_uart_syscore_init(void)
 	const char *property;
 	struct device_node *node;
 	struct resource r;
+
+	node = of_find_node_by_name(NULL, "combined-uart");
+	if (node && of_device_is_available(node)) {
+		debug_uart_disabled = 1;
+		goto register_ops;
+	}
 
 	property = of_get_property(of_chosen, "stdout-path", NULL);
 	if (!property) {
@@ -189,7 +201,9 @@ static int tegra_debug_uart_syscore_init(void)
 		goto out;
 	}
 
+register_ops:
 	register_syscore_ops(&tegra_debug_uart_syscore_ops);
+
 out:
 	return 0;
 }

@@ -4728,8 +4728,10 @@ dhd_remove_if(dhd_pub_t *dhdpub, int ifidx, bool need_rtnl_lock)
 				custom_rps_map_clear(ifp->net->_rx);
 #endif /* SET_RPS_CPUS */
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-				if (ifidx == 0)
+				if (ifidx == 0) {
 					tegra_sysfs_unregister(&ifp->net->dev);
+					dhdlog_sysfs_deinit(&ifp->net->dev);
+				}
 #endif
 				if (need_rtnl_lock)
 					unregister_netdev(ifp->net);
@@ -7151,6 +7153,7 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 	if (ifidx == 0) {
 		dhd_custom_sysfs_tegra_histogram_stat_netdev = net;
 		tegra_sysfs_register(&net->dev);
+		dhdlog_sysfs_init(&net->dev);
 	}
 }
 #endif

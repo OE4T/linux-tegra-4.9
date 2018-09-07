@@ -42,6 +42,8 @@ struct log_node {
 };
 
 struct work_struct enqueue_work;
+static void dhd_log_netlink_deinit(void);
+static int dhd_log_netlink_init(void);
 
 void write_log_init()
 {
@@ -55,10 +57,7 @@ void write_log_init()
 	INIT_LIST_HEAD(&list2);
 
 	if (dhd_log_netlink_init())
-		goto queue_fail;
-
-	if (dhdlog_sysfs_init())
-		goto netlink_fail;
+		goto init_fail;
 
 	mutex_init(&sysfs_dump_mtx);
 	mutex_init(&suspend_lock);
@@ -68,9 +67,7 @@ void write_log_init()
 
 	return;
 
-netlink_fail:
-	dhd_log_netlink_deinit();
-queue_fail:
+init_fail:
 	destroy_workqueue(logger_wqueue);
 	enable_file_logging = false;
 }
@@ -82,7 +79,6 @@ void write_log_uninit()
 	flush_workqueue(logger_wqueue);
 	destroy_workqueue(logger_wqueue);
 	dhd_log_netlink_deinit();
-	dhdlog_sysfs_deinit();
 }
 
 int write_log(int event, const char *buf, const char *info)
@@ -90,7 +86,6 @@ int write_log(int event, const char *buf, const char *info)
 	struct log_node *temp;
 	int buf_len = 0;
 	int info_len = 0;
-	struct timespec ts;
 	static int list1_size;
 	static int list2_size;
 	struct timeval now;
@@ -191,7 +186,6 @@ void write_queue_work(struct work_struct *work)
 {
 	struct log_node *temp = NULL;
 	struct list_head *pos = NULL, *n = NULL;
-	char *log = NULL;
 
 	/* queuing in list1 is blocked, so can dequeue list1*/
 	if (atomic_read(&list1_val) == 0) {
@@ -243,7 +237,7 @@ void write_queue_work(struct work_struct *work)
 void write_log_file(const char *log)
 {
 	static int seq;
-	dhd_log_netlink_send_msg(0, 0, seq++, log, strlen(log) + 1);
+	dhd_log_netlink_send_msg(0, 0, seq++, (void*) log, strlen(log) + 1);
 	if (seq % 1024)
 		seq = 0;
 }
@@ -348,7 +342,7 @@ nlmsg_failure:
 	return ret;
 }
 
-void dumplogs()
+void dumplogs(void)
 {
 	/* try sleeping blocking two queues to avoid blocking both queues */
 	pr_info("dumplogs from nv_logger\n");
@@ -360,13 +354,10 @@ void dumplogs()
 	mutex_unlock(&sysfs_dump_mtx);
 }
 
-struct kobject *dhdlog_sysfs_kobj;
-
-static ssize_t dhdlog_sysfs_enablelog_store(struct kobject *kobj,
-			struct kobj_attribute *attr,
-				const char *buf, ssize_t count)
+static ssize_t dhdlog_sysfs_enablelog_store(struct device *dev,
+			struct device_attribute *attr,
+				const char *buf, size_t count)
 {
-	int val;
 	pr_info("dhdlog_sysfs_enablelog_store = %s", buf);
 	if (strncmp(buf, "0", 1) == 0 || strncmp(buf, "false", 5) == 0
 		|| strncmp(buf, "no", 2) == 0) {
@@ -385,52 +376,43 @@ static ssize_t dhdlog_sysfs_enablelog_store(struct kobject *kobj,
 	return count;
 }
 
-static ssize_t dhdlog_sysfs_enablelog_show(struct kobject *kobj,
-			struct kobj_attribute *attr,
+static ssize_t dhdlog_sysfs_enablelog_show(struct device *dev,
+			struct device_attribute *attr,
 				char *buf) {
 
 	pr_info("dhdlog_sysfs_enablelog_show");
 	return sprintf(buf, "%d\n", enable_file_logging);
 }
 
-static struct kobj_attribute dhdlog_sysfs_enablelog_attribute =
-	__ATTR(enablelog, 0644, dhdlog_sysfs_enablelog_show,
-					dhdlog_sysfs_enablelog_store);
+static DEVICE_ATTR(enablelog, S_IRUGO | S_IWUSR,
+		dhdlog_sysfs_enablelog_show,
+		dhdlog_sysfs_enablelog_store);
 
 static struct attribute *dhdlog_sysfs_attrs[] = {
-	&dhdlog_sysfs_enablelog_attribute,
+	&dev_attr_enablelog.attr,
 	NULL,
 };
 
 static struct attribute_group dhdlog_sysfs_attr_group = {
+	.name = "enablelog",
 	.attrs = dhdlog_sysfs_attrs,
 };
-int dhdlog_sysfs_deinit(void)
-{
-	if (dhdlog_sysfs_kobj) {
-		kobject_put(dhdlog_sysfs_kobj);
-		dhdlog_sysfs_kobj = NULL;
-	}
 
+int dhdlog_sysfs_deinit(struct device *dev)
+{
+	sysfs_remove_group(&dev->kobj, &dhdlog_sysfs_attr_group);
 	return 0;
 }
 
-int dhdlog_sysfs_init()
+int dhdlog_sysfs_init(struct device *dev)
 {
 
 	int ret = 0;
 
-	dhdlog_sysfs_kobj = kobject_create_and_add(KBUILD_MODNAME, kernel_kobj);
-	if (!dhdlog_sysfs_kobj) {
-		pr_err("%s: kobject creation_add failed\n", __func__);
-		return -ENOMEM;
-	}
-	ret = sysfs_create_group(dhdlog_sysfs_kobj, &dhdlog_sysfs_attr_group);
+	ret = sysfs_create_group(&dev->kobj, &dhdlog_sysfs_attr_group);
 	if (ret) {
 		pr_err("%s: create_group failed\n", __func__);
-		dhdlog_sysfs_deinit();
-		return ret;
 	}
 
-	return 0;
+	return ret;
 }

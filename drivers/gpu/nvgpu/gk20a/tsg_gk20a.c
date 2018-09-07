@@ -367,6 +367,7 @@ void gk20a_tsg_release(struct nvgpu_ref *ref)
 	if(tsg->sm_error_states != NULL) {
 		nvgpu_kfree(g, tsg->sm_error_states);
 		tsg->sm_error_states = NULL;
+		nvgpu_mutex_destroy(&tsg->sm_exception_mask_lock);
 	}
 
 	/* unhook all events created on this TSG */
@@ -407,6 +408,11 @@ int gk20a_tsg_alloc_sm_error_states_mem(struct gk20a *g,
 	int err = 0;
 
 	if (tsg->sm_error_states != NULL) {
+		return -EINVAL;
+	}
+
+	err = nvgpu_mutex_init(&tsg->sm_exception_mask_lock);
+	if (err) {
 		return err;
 	}
 
@@ -415,6 +421,7 @@ int gk20a_tsg_alloc_sm_error_states_mem(struct gk20a *g,
 			* num_sm);
 	if (tsg->sm_error_states == NULL) {
 		nvgpu_err(g, "sm_error_states mem allocation failed");
+		nvgpu_mutex_destroy(&tsg->sm_exception_mask_lock);
 		err = -ENOMEM;
 	}
 
@@ -439,4 +446,21 @@ void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
 			sm_error_state->hww_global_esr_report_mask;
 	tsg_sm_error_states->hww_warp_esr_report_mask =
 			sm_error_state->hww_warp_esr_report_mask;
+}
+
+int gk20a_tsg_set_sm_exception_type_mask(struct channel_gk20a *ch,
+		u32 exception_mask)
+{
+	struct tsg_gk20a *tsg;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (!tsg) {
+		return -EINVAL;
+	}
+
+	nvgpu_mutex_acquire(&tsg->sm_exception_mask_lock);
+	tsg->sm_exception_mask_type = exception_mask;
+	nvgpu_mutex_release(&tsg->sm_exception_mask_lock);
+
+	return 0;
 }

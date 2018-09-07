@@ -154,10 +154,6 @@ static int dbg_unbind_all_channels_gk20a(struct dbg_session_gk20a *dbg_s);
 static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 		struct file *filp, bool is_profiler);
 
-static int nvgpu_set_sm_exception_type_mask_locked(
-					struct dbg_session_gk20a *dbg_s,
-					u32 exception_mask);
-
 unsigned int gk20a_dbg_gpu_dev_poll(struct file *filep, poll_table *wait)
 {
 	unsigned int mask = 0;
@@ -1808,44 +1804,13 @@ out:
 	return err;
 }
 
-static int nvgpu_set_sm_exception_type_mask_locked(
-					struct dbg_session_gk20a *dbg_s,
-					u32 exception_mask)
-{
-	struct gk20a *g = dbg_s->g;
-	int err = 0;
-	struct channel_gk20a *ch = NULL;
-
-	/*
-	 * Obtain the fisrt channel from the channel list in
-	 * dbg_session, find the context associated with channel
-	 * and set the sm_mask_type to that context
-	 */
-	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
-	if (ch != NULL) {
-		struct tsg_gk20a *tsg;
-
-		tsg = tsg_gk20a_from_ch(ch);
-		if (tsg != NULL) {
-			tsg->sm_exception_mask_type = exception_mask;
-			goto type_mask_end;
-		}
-	}
-
-	nvgpu_log_fn(g, "unable to find the TSG\n");
-	err = -EINVAL;
-
-type_mask_end:
-	return err;
-}
-
-static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
-		struct dbg_session_gk20a *dbg_s,
+static int nvgpu_dbg_gpu_set_sm_exception_type_mask(struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args *args)
 {
 	int err = 0;
 	struct gk20a *g = dbg_s->g;
 	u32 sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
+	struct channel_gk20a *ch = NULL;
 
 	switch (args->exception_type_mask) {
 	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL:
@@ -1866,10 +1831,13 @@ static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
 		return err;
 	}
 
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = nvgpu_set_sm_exception_type_mask_locked(dbg_s,
-					sm_exception_mask_type);
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (ch != NULL) {
+		err = g->ops.fifo.set_sm_exception_type_mask(ch,
+				sm_exception_mask_type);
+	} else {
+		err = -EINVAL;
+	}
 
 	return err;
 }

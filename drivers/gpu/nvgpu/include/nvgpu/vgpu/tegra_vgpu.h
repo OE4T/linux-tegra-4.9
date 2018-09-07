@@ -123,6 +123,7 @@ enum {
 	TEGRA_VGPU_CMD_RESUME = 83,
 	TEGRA_VGPU_CMD_GET_ECC_INFO = 84,
 	TEGRA_VGPU_CMD_GET_ECC_COUNTER_VALUE = 85,
+	TEGRA_VGPU_CMD_SET_SM_EXCEPTION_TYPE_MASK = 86,
 };
 
 struct tegra_vgpu_connect_params {
@@ -467,6 +468,11 @@ struct tegra_vgpu_gpu_clk_rate_params {
 	u32 rate; /* in kHz */
 };
 
+struct tegra_vgpu_set_sm_exception_type_mask_params {
+	u64 handle;
+	u32 mask;
+};
+
 /* TEGRA_VGPU_MAX_ENGINES must be equal or greater than num_engines */
 #define TEGRA_VGPU_MAX_ENGINES			4
 struct tegra_vgpu_engines_info {
@@ -678,6 +684,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_channel_update_pc_sampling update_pc_sampling;
 		struct tegra_vgpu_ecc_info_params ecc_info;
 		struct tegra_vgpu_ecc_counter_params ecc_counter;
+		struct tegra_vgpu_set_sm_exception_type_mask_params set_sm_exception_mask;
 		char padding[192];
 	} params;
 };

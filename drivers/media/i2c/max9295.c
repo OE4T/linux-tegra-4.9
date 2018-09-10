@@ -161,7 +161,7 @@ int max9295_setup_streaming(struct device *dev)
 
 	mutex_lock(&priv->lock);
 
-	if(!priv->g_client.g_ctx) {
+	if (!priv->g_client.g_ctx) {
 		dev_err(dev, "%s: no sdev client found\n", __func__);
 		err = -EINVAL;
 		goto error;
@@ -210,6 +210,7 @@ int max9295_setup_streaming(struct device *dev)
 
 	for (i = 0; i < g_ctx->num_streams; i++) {
 		struct gmsl_stream *g_stream = &g_ctx->streams[i];
+
 		g_stream->st_id_sel = GMSL_ST_ID_UNUSED;
 		for (j = 0; j < ARRAY_SIZE(map_pipe_dtype); j++) {
 			if (map_pipe_dtype[j].dt == g_stream->st_data_type) {
@@ -230,7 +231,7 @@ int max9295_setup_streaming(struct device *dev)
 				g_stream->st_id_sel = map_pipe_dtype[j].st_id;
 				st_en = (map_pipe_dtype[j].addr ==
 						MAX9295_PIPE_X_DT_ADDR) ?
-							0xC0: 0x40;
+							0xC0 : 0x40;
 
 				max9295_write_reg(dev, map_pipe_dtype[j].addr,
 					(st_en | map_pipe_dtype[j].val));
@@ -297,7 +298,7 @@ int max9295_setup_control(struct device *dev)
 
 	mutex_lock(&priv->lock);
 
-	if(!priv->g_client.g_ctx) {
+	if (!priv->g_client.g_ctx) {
 		dev_err(dev, "%s: no sdev client found\n", __func__);
 		err = -EINVAL;
 		goto error;
@@ -314,7 +315,7 @@ int max9295_setup_control(struct device *dev)
 	/* delay to settle link */
 	msleep(100);
 
-	for (i = 0; i < ARRAY_SIZE(addr_offset); i+=3) {
+	for (i = 0; i < ARRAY_SIZE(addr_offset); i += 3) {
 		if ((g_ctx->ser_reg << 1) == addr_offset[i]) {
 			offset1 = addr_offset[i+1];
 			offset2 = addr_offset[i+2];
@@ -329,12 +330,12 @@ int max9295_setup_control(struct device *dev)
 
 	/* delay before accessing sdev */
 	msleep(40);
-	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i+=3) {
+	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i += 3) {
 		/* update address overrides */
 		i2c_ovrd[i+1] += (i < 4) ? offset1 : offset2;
 		if ((i2c_ovrd[i+2]) && (i2c_ovrd[i+2] !=
 					g_ctx->serdes_csi_link))
-				continue;
+			continue;
 		max9295_write_reg(dev, i2c_ovrd[i], i2c_ovrd[i+1]);
 	}
 	/* delay to settle address overrides */
@@ -361,7 +362,7 @@ int max9295_reset_control(struct device *dev)
 	int err = 0;
 
 	mutex_lock(&priv->lock);
-	if(!priv->g_client.g_ctx) {
+	if (!priv->g_client.g_ctx) {
 		dev_err(dev, "%s: no sdev client found\n", __func__);
 		err = -EINVAL;
 		goto error;

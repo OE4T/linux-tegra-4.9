@@ -301,7 +301,7 @@ int max9296_sdev_register(struct device *dev, struct gmsl_link_ctx *g_ctx)
 	}
 
 	for (i = 0; i < priv->num_src; i++) {
-		if(g_ctx->serdes_csi_link ==
+		if (g_ctx->serdes_csi_link ==
 			priv->sources[i].g_ctx->serdes_csi_link) {
 			dev_err(dev,
 				"%s: serdes csi link is in use\n", __func__);
@@ -401,7 +401,7 @@ static int max9296_get_available_pipe(struct device *dev,
 				(priv->pipe[i].dst_csi_ctrl ==
 					MAX9296_CSI_CTRL_3)) &&
 			(!priv->pipe[i].st_count))
-				break;
+			break;
 	}
 
 	if (i == MAX9296_MAX_PIPES) {
@@ -479,7 +479,7 @@ static int max9296_setup_pipeline(struct device *dev,
 		if (pipe_id < 0)
 			return pipe_id;
 
-		for (j = 0, vc_idx = 3; j < arr_sz; j++, vc_idx+=2) {
+		for (j = 0, vc_idx = 3; j < arr_sz; j++, vc_idx += 2) {
 			/* update pipe configuration */
 			map_list[j].addr += (0x40 * pipe_id);
 			/* update vc id configuration */
@@ -543,13 +543,21 @@ int max9296_setup_streaming(struct device *dev, struct device *s_dev)
 	case GMSL_CSI_PORT_A:
 	case GMSL_CSI_PORT_D:
 		lane_ctrl_addr = MAX9296_LANE_CTRL1_ADDR;
+		break;
 	case GMSL_CSI_PORT_B:
 	case GMSL_CSI_PORT_E:
 		lane_ctrl_addr = MAX9296_LANE_CTRL2_ADDR;
+		break;
 	case GMSL_CSI_PORT_C:
 		lane_ctrl_addr = MAX9296_LANE_CTRL0_ADDR;
+		break;
 	case GMSL_CSI_PORT_F:
 		lane_ctrl_addr = MAX9296_LANE_CTRL3_ADDR;
+		break;
+	default:
+		dev_err(dev, "%s: invalid gmsl csi port!\n", __func__);
+		err = -EINVAL;
+		goto error;
 	};
 
 	/*

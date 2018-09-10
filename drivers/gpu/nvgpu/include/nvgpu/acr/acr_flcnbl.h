@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,12 +19,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __ACR_FLCNBL_H__
-#define __ACR_FLCNBL_H__
+#ifndef NVGPU_ACR_FLCNBL_H
+#define NVGPU_ACR_FLCNBL_H
 
 #include <nvgpu/flcnif_cmn.h>
 
-#ifndef __NVGPU_ACR_H__
+#ifndef NVGPU_ACR_H
 #warning "acr_flcnbl.h not included from nvgpu_acr.h!" \
 	"Include nvgpu_acr.h instead of acr_xxx.h to get access to ACR interfaces"
 #endif
@@ -141,4 +141,4 @@ union flcn_bl_generic_desc_v1 {
 	struct loader_config_v1 loader_cfg_v1;
 };
 
-#endif /* __ACR_FLCNBL_H__ */
+#endif /* NVGPU_ACR_FLCNBL_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,10 +19,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __ACR_OBJFLCN_H__
-#define __ACR_OBJFLCN_H__
+#ifndef NVGPU_ACR_OBJFLCN_H
+#define NVGPU_ACR_OBJFLCN_H
 
-#ifndef __NVGPU_ACR_H__
+#ifndef NVGPU_ACR_H
 #warning "acr_objflcn.h not included from nvgpu_acr.h!" \
 	"Include nvgpu_acr.h instead of acr_xxx.h to get access to ACR interfaces"
 #endif
@@ -88,4 +88,4 @@ struct flcn_ucode_img_v1 {
 #define FLCN_NL_UCODE_HDR_OS_OVL_SIZE_IND(N) \
 	(FLCN_NL_UCODE_HDR_APP_DATA_END_IND(N) + 2)
 
-#endif /* __ACR_OBJFLCN_H__ */
+#endif /* NVGPU_ACR_OBJFLCN_H */

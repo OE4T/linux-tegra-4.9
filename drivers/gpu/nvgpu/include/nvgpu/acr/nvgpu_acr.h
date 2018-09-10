@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_ACR_H__
-#define __NVGPU_ACR_H__
+#ifndef NVGPU_ACR_H
+#define NVGPU_ACR_H
 
 #include <nvgpu/falcon.h>
 
@@ -184,4 +184,5 @@ struct nvgpu_acr {
 
 	void (*remove_support)(struct nvgpu_acr *acr);
 };
-#endif /*__NVGPU_ACR_H__*/
+#endif /* NVGPU_ACR_H */
+

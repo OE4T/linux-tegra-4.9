@@ -19,10 +19,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __ACR_OBJLSFM_H__
-#define __ACR_OBJLSFM_H__
+#ifndef NVGPU_ACR_OBJLSFM_H
+#define NVGPU_ACR_OBJLSFM_H
 
-#ifndef __NVGPU_ACR_H__
+#ifndef NVGPU_ACR_H
 #warning "acr_objlsfm.h not included from nvgpu_acr.h!" \
 	"Include nvgpu_acr.h instead of acr_xxx.h to get access to ACR interfaces"
 #endif
@@ -94,4 +94,4 @@ struct ls_flcn_mgr_v1 {
 };
 
 
-#endif /* __ACR_OBJLSFM_H__ */
+#endif /* NVGPU_ACR_OBJLSFM_H */

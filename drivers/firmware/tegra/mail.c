@@ -26,7 +26,7 @@
 #define CHANNEL_TIMEOUT		(timeout_mul * USEC_PER_SEC)
 #define THREAD_CH_TIMEOUT	(timeout_mul * USEC_PER_SEC)
 
-static unsigned int timeout_mul = 1;
+static unsigned int timeout_mul = 4;
 struct channel_data channel_area[NR_MAX_CHANNELS];
 static struct completion *completion;
 static DEFINE_SPINLOCK(lock);
@@ -357,11 +357,19 @@ static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 	char fmt[MSG_DATA_MIN_SZ * 5] = "";
 	struct completion *w;
 	unsigned long timeout;
+	unsigned long rt;
+	unsigned long et;
 
 	w = bpmp_completion_obj(ch);
 	timeout = usecs_to_jiffies(THREAD_CH_TIMEOUT);
-	if (wait_for_completion_timeout(w, timeout))
+	rt = wait_for_completion_timeout(w, timeout);
+	if (rt) {
+		et = timeout - rt;
+		if (et > timeout / 4)
+			pr_warn("bpmp: mrq %d took %u us\n",
+					mrq, jiffies_to_usecs(et));
 		return 0;
+	}
 
 	if (mail_ops->master_acked(mail_ops, ch))
 		return 0;

@@ -16,9 +16,12 @@
 #include <linux/io.h>
 #include <linux/device.h>
 #include <linux/iommu.h>
+#include <linux/version.h>
 
 #include "arm-smmu-regs.h"
 #include "arm-smmu-debug.h"
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 
 /* TODO: Restructure code to remove handle global variable */
 static struct smmu_debugfs_info *smmu_handle;
@@ -82,11 +85,6 @@ static const struct debugfs_reg32 arm_smmu_cb_regs[] = {
 	defreg_cb(FSYNR0),
 };
 
-struct smmu_debugfs_master {
-	struct device 		*dev;
-	s16			*smendx;
-};
-
 static int smmu_master_show(struct seq_file *s, void *unused)
 {
 	int i;
@@ -132,6 +130,7 @@ void arm_smmu_debugfs_add_master(struct device *dev, u8 *cbndx, u16 smendx[])
 	master = kmalloc(sizeof(*master), GFP_KERNEL);
 	master->dev = dev;
 	master->smendx = smendx;
+	master->dent = dent;
 
 	// TODO create the streamids file
 	debugfs_create_file("streamids", 0444, dent, master,
@@ -140,6 +139,24 @@ void arm_smmu_debugfs_add_master(struct device *dev, u8 *cbndx, u16 smendx[])
 	sprintf(name, "cb%03d", *cbndx);
 	sprintf(target, "../../cb%03d", *cbndx);
 	debugfs_create_symlink(name, dent, target);
+
+	list_add_tail(&master->node, &smmu_handle->masters_list);
+}
+
+void arm_smmu_debugfs_remove_master(struct device *dev)
+{
+	struct smmu_debugfs_master *master = NULL;
+
+	list_for_each_entry(master, &smmu_handle->masters_list, node) {
+		if (master->dev == dev)
+			break;
+	}
+
+	if (master != NULL) {
+		debugfs_remove_recursive(master->dent);
+		list_del(&master->node);
+		kfree(master);
+	}
 }
 
 /*
@@ -389,9 +406,13 @@ int arm_smmu_regs_debugfs_create(struct smmu_debugfs_info *smmu)
 	for (i = 0; i < smmu->num_context_banks; i++)
 		debugfs_create_smmu_cb(smmu, i);
 
+	INIT_LIST_HEAD(&smmu_handle->masters_list);
+
 	return 0;
 
 err_out:
 	arm_smmu_regs_debugfs_delete(smmu);
 	return -1;
 }
+
+#endif

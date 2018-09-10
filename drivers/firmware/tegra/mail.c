@@ -264,30 +264,37 @@ static int bpmp_valid_txfer(void *ob_data, int ob_sz, void *ib_data, int ib_sz)
 			(!ib_sz || ib_data);
 }
 
-static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
+static void bpmp_format_req(char *fmt, size_t len, uint8_t *data, size_t sz)
 {
-	int i;
+	size_t ne;
+	size_t i;
+	int n;
 
-	printk(KERN_INFO "mrq %u data [", mrq);
-
-	for (i = 0; i < ob_sz; i++)
-		printk(KERN_CONT "0x%x ", ob_data[i]);
-
-	printk(KERN_CONT "]\n");
+	for (i = 0; i < sz; i++) {
+		ne = sz - i - 1;
+		n = snprintf(fmt, len, ne ? "0x%02x " : "0x%02x", data[i]);
+		if (n >= len)
+			break;
+		fmt += n;
+		len -= n;
+	}
 }
 
 static void bpmp_dump_req(int ch)
 {
+	char fmt[MSG_DATA_MIN_SZ * 5] = "";
 	struct mb_data d;
 	struct mb_data *p = channel_area[ch].ob;
 
 	memcpy_fromio(&d, p, sizeof(d));
-	bpmp_show_req(d.code, d.data, sizeof(d.data));
+	bpmp_format_req(fmt, sizeof(fmt), d.data, sizeof(d.data));
+	pr_err("ch %d mrq %d data <%s>\n", ch, d.code, fmt);
 }
 
 static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz)
 {
+	char fmt[MSG_DATA_MIN_SZ * 5] = "";
 	int r;
 
 	r = bpmp_write_ch(ch, mrq, DO_ACK, ob_data, ob_sz);
@@ -299,8 +306,9 @@ static int bpmp_send_receive_atomic(int ch, int mrq, void *ob_data, int ob_sz,
 
 	r = bpmp_wait_ack(ch);
 	if (r) {
-		pr_err("bpmp_wait_ack() returned %d on ch %d\n", r, ch);
-		bpmp_show_req(mrq, ob_data, ob_sz);
+		bpmp_format_req(fmt, sizeof(fmt), ob_data, ob_sz);
+		pr_err("bpmp_wait_ack() returned %d (ch %d mrq %d data <%s>)\n",
+				r, mrq, ch, fmt);
 		WARN_ON(1);
 		return r;
 	}
@@ -346,6 +354,7 @@ EXPORT_SYMBOL(tegra_bpmp_send_receive_atomic);
 
 static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 {
+	char fmt[MSG_DATA_MIN_SZ * 5] = "";
 	struct completion *w;
 	unsigned long timeout;
 
@@ -357,8 +366,9 @@ static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 	if (mail_ops->master_acked(mail_ops, ch))
 		return 0;
 
-	pr_err("%s() timed out on ch %d\n", __func__, ch);
-	bpmp_show_req(mrq, ob_data, ob_sz);
+	bpmp_format_req(fmt, sizeof(fmt), ob_data, ob_sz);
+	pr_err("%s() timed out (ch %d mrq %d data <%s>)\n",
+			__func__, ch, mrq, fmt);
 	WARN_ON(1);
 
 	return -ETIMEDOUT;

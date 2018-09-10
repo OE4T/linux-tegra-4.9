@@ -23,7 +23,7 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_dmabuf.h"
+#include "nv2_dmabuf.h"
 
 extern bool dmabuf_is_nvmap(struct dma_buf *dmabuf);
 extern struct dma_buf_ops nvmap_dma_buf_ops;

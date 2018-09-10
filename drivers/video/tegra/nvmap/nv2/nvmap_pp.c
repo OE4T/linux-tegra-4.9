@@ -35,9 +35,9 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_cache.h"
-#include "nvmap_pp.h"
-#include "nvmap_dev.h"
+#include "nv2_cache.h"
+#include "nv2_pp.h"
+#include "nv2_dev.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)

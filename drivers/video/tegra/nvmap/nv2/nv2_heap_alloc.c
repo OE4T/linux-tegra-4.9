@@ -22,12 +22,12 @@
 
 #include <linux/version.h>
 
-#include "nvmap_heap_alloc.h"
-#include "nvmap_cache.h"
-#include "nvmap_misc.h"
-#include "nvmap_pp.h"
-#include "nvmap_dev.h"
-#include "nvmap_page_color.h"
+#include "nv2_heap_alloc.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
+#include "nv2_pp.h"
+#include "nv2_dev.h"
+#include "nv2_page_color.h"
 
 extern bool nvmap_convert_carveout_to_iovmm;
 extern bool nvmap_convert_iovmm_to_carveout;

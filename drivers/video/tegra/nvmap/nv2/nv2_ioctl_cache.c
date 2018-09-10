@@ -35,10 +35,10 @@
 #include "nvmap_ioctl.h"
 #include "nvmap_heap.h"
 
-#include "nvmap_dev.h"
-#include "nvmap_handle.h"
-#include "nvmap_cache.h"
-#include "nvmap_misc.h"
+#include "nv2_dev.h"
+#include "nv2_handle.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
 
 
 /*
@@ -192,7 +192,7 @@ static int cache_maint_copy_args(struct nvmap_cache_op_list *op,
 }
 
 
-int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
+int NVMAP2_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 				 bool is_reserve_ioctl)
 {
 	struct nvmap_cache_op_list op;

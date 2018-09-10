@@ -14,7 +14,7 @@
 #ifndef __NVMAP2_PAGE_COLOR_H
 #define __NVMAP2_PAGE_COLOR_H
 
-#include "nvmap_structs.h"
+#include "nv2_structs.h"
 
 #ifdef CONFIG_NVMAP_COLOR_PAGES
 

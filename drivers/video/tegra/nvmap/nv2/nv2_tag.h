@@ -14,9 +14,9 @@
 #ifndef __NVMAP2_TAG_H
 #define __NVMAP2_TAG_H
 
-#include "nvmap_dev.h"
-#include "nvmap_client.h"
-#include "nvmap_handle_ref.h"
+#include "nv2_dev.h"
+#include "nv2_client.h"
+#include "nv2_handle_ref.h"
 
 // TODO We need to fix these args
 /*

@@ -26,12 +26,12 @@
 
 #include <asm/pgtable.h>
 
-#include "nvmap_handle.h"
-#include "nvmap_handle_priv.h"
-#include "nvmap_client.h"
-#include "nvmap_dev.h"
-#include "nvmap_misc.h"
-#include "nvmap_carveout.h"
+#include "nv2_handle.h"
+#include "nv2_handle_priv.h"
+#include "nv2_client.h"
+#include "nv2_dev.h"
+#include "nv2_misc.h"
+#include "nv2_carveout.h"
 
 pgprot_t NVMAP2_handle_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {

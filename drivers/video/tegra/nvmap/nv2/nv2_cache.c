@@ -27,10 +27,10 @@
 
 #include <trace/events/nvmap.h>
 
-#include "nvmap_tag.h"
-#include "nvmap_misc.h"
-#include "nvmap_cache.h"
-#include "nvmap_handle.h"
+#include "nv2_tag.h"
+#include "nv2_misc.h"
+#include "nv2_cache.h"
+#include "nv2_handle.h"
 #include "nvmap_stats.h"
 
 typedef void (*nvmap_setup_chip_cache_fn)(struct nvmap_chip_cache_op *);

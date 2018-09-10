@@ -28,9 +28,9 @@
 
 #include <linux/version.h>
 
-#include "nvmap_carveout.h"
-#include "nvmap_dev.h"
-#include "nvmap_init.h"
+#include "nv2_carveout.h"
+#include "nv2_dev.h"
+#include "nv2_init.h"
 
 bool nvmap_version_t19x;
 extern struct static_key nvmap_updated_cache_config;

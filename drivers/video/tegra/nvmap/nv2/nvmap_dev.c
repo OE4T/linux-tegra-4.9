@@ -57,12 +57,12 @@
 #include <trace/events/nvmap.h>
 
 #include "nvmap_ioctl.h"
-#include "nvmap_ioctl.h"
-#include "nvmap_client.h"
-#include "nvmap_handle.h"
-#include "nvmap_dev.h"
-#include "nvmap_carveout.h"
-#include "nvmap_cache.h"
+#include "nv2_ioctl.h"
+#include "nv2_client.h"
+#include "nv2_handle.h"
+#include "nv2_dev.h"
+#include "nv2_carveout.h"
+#include "nv2_cache.h"
 #include "nvmap_stats.h"
 
 // TODO remove global variables
@@ -284,82 +284,82 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVMAP_IOC_CREATE:
 	case NVMAP_IOC_CREATE_64:
 	case NVMAP_IOC_FROM_FD:
-		err = nvmap_ioctl_create(filp, cmd, uarg);
+		err = NVMAP2_ioctl_create(filp, cmd, uarg);
 		break;
 
 	case NVMAP_IOC_FROM_VA:
-		err = nvmap_ioctl_create_from_va(filp, uarg);
+		err = NVMAP2_ioctl_create_from_va(filp, uarg);
 		break;
 
 	case NVMAP_IOC_GET_FD:
-		err = nvmap_ioctl_getfd(filp, uarg);
+		err = NVMAP2_ioctl_getfd(filp, uarg);
 		break;
 
 	case NVMAP_IOC_GET_IVM_HEAPS:
-		err = nvmap_ioctl_get_ivc_heap(filp, uarg);
+		err = NVMAP2_ioctl_get_ivc_heap(filp, uarg);
 		break;
 
 	case NVMAP_IOC_FROM_IVC_ID:
-		err = nvmap_ioctl_create_from_ivc(filp, uarg);
+		err = NVMAP2_ioctl_create_from_ivc(filp, uarg);
 		break;
 
 	case NVMAP_IOC_GET_IVC_ID:
-		err = nvmap_ioctl_get_ivcid(filp, uarg);
+		err = NVMAP2_ioctl_get_ivcid(filp, uarg);
 		break;
 
 	case NVMAP_IOC_ALLOC:
 	case NVMAP_IOC_ALLOC_IVM:
-		err = nvmap_ioctl_alloc(filp, cmd, uarg);
+		err = NVMAP2_ioctl_alloc(filp, cmd, uarg);
 		break;
 
 	case NVMAP_IOC_VPR_FLOOR_SIZE:
-		err = nvmap_ioctl_vpr_floor_size(filp, uarg);
+		err = NVMAP2_ioctl_vpr_floor_size(filp, uarg);
 		break;
 
 	case NVMAP_IOC_FREE:
-		err = nvmap_ioctl_free(filp, arg);
+		err = NVMAP2_ioctl_free(filp, arg);
 		break;
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_WRITE_32:
 	case NVMAP_IOC_READ_32:
-		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
+		err = NVMAP2_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
 			uarg, sizeof(struct nvmap_rw_handle_32));
 		break;
 #endif
 
 	case NVMAP_IOC_WRITE:
 	case NVMAP_IOC_READ:
-		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ, uarg,
+		err = NVMAP2_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ, uarg,
 			sizeof(struct nvmap_rw_handle));
 		break;
 
 	case NVMAP_IOC_WRITE_64:
 	case NVMAP_IOC_READ_64:
-		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_64,
+		err = NVMAP2_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_64,
 			uarg, sizeof(struct nvmap_rw_handle_64));
 		break;
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_CACHE_32:
-		err = nvmap_ioctl_cache_maint(filp, uarg,
+		err = NVMAP2_ioctl_cache_maint(filp, uarg,
 			sizeof(struct nvmap_cache_op_32));
 		break;
 #endif
 
 	case NVMAP_IOC_CACHE:
-		err = nvmap_ioctl_cache_maint(filp, uarg,
+		err = NVMAP2_ioctl_cache_maint(filp, uarg,
 			sizeof(struct nvmap_cache_op));
 		break;
 
 	case NVMAP_IOC_CACHE_64:
-		err = nvmap_ioctl_cache_maint(filp, uarg,
+		err = NVMAP2_ioctl_cache_maint(filp, uarg,
 			sizeof(struct nvmap_cache_op_64));
 		break;
 
 	case NVMAP_IOC_CACHE_LIST:
 	case NVMAP_IOC_RESERVE:
-		err = nvmap_ioctl_cache_maint_list(filp, uarg,
+		err = NVMAP2_ioctl_cache_maint_list(filp, uarg,
 						   cmd == NVMAP_IOC_RESERVE);
 		break;
 

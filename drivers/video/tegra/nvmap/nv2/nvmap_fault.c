@@ -23,8 +23,8 @@
 #include <linux/slab.h>
 #include <linux/nvmap.h>
 
-#include "nvmap_vma.h"
-#include "nvmap_handle.h"
+#include "nv2_vma.h"
+#include "nv2_handle.h"
 
 #include <trace/events/nvmap.h>
 

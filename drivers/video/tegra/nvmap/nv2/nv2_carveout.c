@@ -19,10 +19,10 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 
-#include "nvmap_handle.h"
-#include "nvmap_dev.h"
-#include "nvmap_cache.h"
-#include "nvmap_misc.h"
+#include "nv2_handle.h"
+#include "nv2_dev.h"
+#include "nv2_cache.h"
+#include "nv2_misc.h"
 
 extern struct nvmap_device *nvmap_dev;
 extern struct kmem_cache *heap_block_cache;

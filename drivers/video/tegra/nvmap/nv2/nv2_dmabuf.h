@@ -14,7 +14,7 @@
 #ifndef __NVMAP2_DMABUF_H
 #define __NVMAP2_DMABUF_H
 
-#include "nvmap_structs.h"
+#include "nv2_structs.h"
 
 struct nvmap_handle_info {
 	struct nvmap_handle *handle;

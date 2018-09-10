@@ -20,9 +20,9 @@
 #include <linux/tegra-mce.h>
 #include <linux/of.h>
 
-#include "nvmap_handle.h"
-#include "nvmap_cache.h"
-#include "nvmap_dev.h"
+#include "nv2_handle.h"
+#include "nv2_cache.h"
+#include "nv2_dev.h"
 
 struct static_key nvmap_updated_cache_config;
 

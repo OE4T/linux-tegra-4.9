@@ -40,8 +40,8 @@
 #include <linux/dma-contiguous.h>
 
 #include "nvmap_heap.h"
-#include "nvmap_dev.h"
-#include "nvmap_cache.h"
+#include "nv2_dev.h"
+#include "nv2_cache.h"
 
 /*
  * "carveouts" are platform-defined regions of physically contiguous memory

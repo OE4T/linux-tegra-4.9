@@ -39,18 +39,18 @@
 #include "nvmap_heap.h"
 #include "nvmap_stats.h"
 
-#include "nvmap_structs.h"
+#include "nv2_structs.h"
 #include "nvmap_ioctl.h"
-#include "nvmap_ioctl.h"
+#include "nv2_ioctl.h"
 
-#include "nvmap_dmabuf.h"
-#include "nvmap_client.h"
-#include "nvmap_handle.h"
-#include "nvmap_carveout.h"
-#include "nvmap_dev.h"
-#include "nvmap_tag.h"
-#include "nvmap_misc.h"
-#include "nvmap_vma.h"
+#include "nv2_dmabuf.h"
+#include "nv2_client.h"
+#include "nv2_handle.h"
+#include "nv2_carveout.h"
+#include "nv2_dev.h"
+#include "nv2_tag.h"
+#include "nv2_misc.h"
+#include "nv2_vma.h"
 
 struct nvmap_carveout_node;
 
@@ -101,7 +101,7 @@ int ioctl_create_handle_from_fd(struct nvmap_client *client,
 	return fd;
 }
 
-int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
+int NVMAP2_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 {
 	struct nvmap_create_handle op;
 	struct nvmap_client *client = filp->private_data;
@@ -151,7 +151,7 @@ failed:
 	return err;
 }
 
-int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_getfd(struct file *filp, void __user *arg)
 {
 	struct nvmap_create_handle op;
 	struct nvmap_handle *handle;
@@ -207,7 +207,7 @@ static int vaddr_and_size_are_in_vma(ulong vaddr, size_t size,
 	}
 }
 
-int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_create_from_va(struct file *filp, void __user *arg)
 {
 	int fd;
 	int err;
@@ -254,20 +254,20 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
 			NVMAP_TP_ARGS_CHR(client, handle, NULL));
 	if (err) {
-		nvmap_ioctl_free(filp, fd);
+		NVMAP2_ioctl_free(filp, fd);
 		return err;
 	}
 
 	op.handle = fd;
 	if (copy_to_user(arg, &op, sizeof(op))) {
-		nvmap_ioctl_free(filp, fd);
+		NVMAP2_ioctl_free(filp, fd);
 		return err;
 	}
 
 	return 0;
 }
 
-int nvmap_ioctl_free(struct file *filp, unsigned long fd)
+int NVMAP2_ioctl_free(struct file *filp, unsigned long fd)
 {
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_handle *handle;
@@ -283,7 +283,7 @@ int nvmap_ioctl_free(struct file *filp, unsigned long fd)
 	return sys_close(fd);
 }
 
-int nvmap_ioctl_alloc(struct file *filp, unsigned int cmd, void __user *arg)
+int NVMAP2_ioctl_alloc(struct file *filp, unsigned int cmd, void __user *arg)
 {
 	struct nvmap_client *client = filp->private_data;
 	struct nvmap_handle *h;
@@ -425,7 +425,7 @@ static int ioctl_handle_from_ivmid(struct nvmap_client *client, int ivm_id)
 	return fd;
 }
 
-int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 {
 	struct nvmap_create_handle op;
 	struct nvmap_client *client = filp->private_data;
@@ -466,7 +466,7 @@ fail:
 	return err;
 }
 
-int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
 {
 	int err=0;
 	u32 floor_size;
@@ -478,7 +478,7 @@ int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
 	return err;
 }
 
-int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 {
 	struct nvmap_device *dev = nvmap_dev;
 	int i;
@@ -504,7 +504,7 @@ int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 	return 0;
 }
 
-int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
+int NVMAP2_ioctl_get_ivcid(struct file *filp, void __user *arg)
 {
 	struct nvmap_create_handle op;
 	struct nvmap_handle *h = NULL;
@@ -560,7 +560,7 @@ static int ioctl_cache_maint_copy_op_from_user(void __user *arg,
 		return -EFAULT;
 	return 0;
 }
-int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, int op_size)
+int NVMAP2_ioctl_cache_maint(struct file *filp, void __user *arg, int op_size)
 {
 	struct vm_area_struct *vma;
 	struct nvmap_handle *handle;
@@ -711,7 +711,7 @@ static int set_vpr_fail_data(void *user_addr, ulong user_stride,
 	return ret;
 }
 
-int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
+int NVMAP2_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 			  size_t op_size)
 {
 	struct nvmap_client *client = filp->private_data;

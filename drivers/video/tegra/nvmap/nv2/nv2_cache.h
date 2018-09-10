@@ -14,7 +14,7 @@
 #ifndef __NVMAP2_CACHE_H
 #define __NVMAP2_CACHE_H
 
-#include "nvmap_structs.h"
+#include "nv2_structs.h"
 
 #define CALL_CLEAN_CACHE_ON_INIT 1
 #define CALL_FLUSH_CACHE_ON_INIT 2

@@ -1227,6 +1227,11 @@ long gk20a_channel_ioctl(struct file *filp,
 			(u32)((struct nvgpu_set_timeout_args *)buf)->timeout;
 		nvgpu_log(g, gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->chid);
+		if (timeout < g->fifo_eng_timeout_us / 1000) {
+			dump_stack();
+			err = -EINVAL;
+			break;
+		}
 		ch->timeout_ms_max = timeout;
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_timeout, ch);
@@ -1241,6 +1246,11 @@ long gk20a_channel_ioctl(struct file *filp,
 			(1 << NVGPU_TIMEOUT_FLAG_DISABLE_DUMP));
 		nvgpu_log(g, gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->chid);
+		if (timeout < g->fifo_eng_timeout_us / 1000) {
+			dump_stack();
+			err = -EINVAL;
+			break;
+		}
 		ch->timeout_ms_max = timeout;
 		ch->timeout_debug_dump = timeout_debug_dump;
 		gk20a_channel_trace_sched_param(

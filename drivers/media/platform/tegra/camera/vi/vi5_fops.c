@@ -132,15 +132,15 @@ static int vi5_add_ctrls(struct tegra_channel *chan)
 }
 
 static void tegra_channel_surface_setup(
-	struct tegra_channel *chan, struct tegra_channel_buffer *buf,
+	struct tegra_channel *chan, struct tegra_channel_buffer *buf, int index,
 	unsigned int descr_index)
 {
-	dma_addr_t offset = buf->addr + chan->buffer_offset[0];
+	dma_addr_t offset = buf->addr + chan->buffer_offset[index];
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
 	u32 format = chan->fmtinfo->img_fmt;
 	u32 data_type = chan->fmtinfo->img_dt;
-	u32 csi_port = chan->port[0];
+	u32 csi_port = chan->port[index];
 	struct capture_descriptor *desc = &chan->request[descr_index];
 
 	memcpy(desc, &capture_template, sizeof(capture_template));
@@ -174,12 +174,13 @@ static void tegra_channel_surface_setup(
 	chan->capture_descr_sequence += 1;
 }
 
-static int tegra_channel_capture_setup(struct tegra_channel *chan)
+static int tegra_channel_capture_setup(struct tegra_channel *chan,
+		unsigned int index)
 {
 	struct vi_capture_setup setup = default_setup;
 	long err;
 
-	trace_tegra_channel_capture_setup(chan, 0);
+	trace_tegra_channel_capture_setup(chan, index);
 	chan->request = dma_alloc_coherent(chan->tegra_vi_channel->rtcpu_dev,
 					setup.queue_depth * setup.request_size,
 					&setup.iova, GFP_KERNEL);
@@ -206,6 +207,7 @@ static int tegra_channel_capture_enqueue(struct tegra_channel *chan,
 {
 	int err = 0;
 	unsigned long flags;
+	int i;
 	struct vi_capture_req request = {
 		.buffer_index = 0,
 	};
@@ -219,12 +221,21 @@ static int tegra_channel_capture_enqueue(struct tegra_channel *chan,
 	}
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
+	if (!chan->bfirst_fstart) {
+		err = tegra_channel_set_stream(chan, true);
+		if (err < 0)
+			return err;
+		chan->bfirst_fstart = true;
+	}
+
 	err = down_interruptible(&chan->capture_slots);
 	if (err)
 		return err;
 
 	/* Set up buffer and enqueue capture request for a frame */
-	tegra_channel_surface_setup(chan, buf, chan->capture_descr_index);
+	for (i = 0; i < chan->valid_ports; i++)
+		tegra_channel_surface_setup(chan, buf, i,
+			chan->capture_descr_index);
 
 	request.buffer_index = chan->capture_descr_index;
 
@@ -401,7 +412,7 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 #endif
-	int ret = 0;
+	int ret = 0, i;
 	unsigned long flags;
 	struct v4l2_subdev *sd;
 	struct device_node *node;
@@ -415,8 +426,12 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		goto error_pipeline_start;
 #endif
 
-	if (chan->bypass)
-		goto set_stream_on;
+	if (chan->bypass) {
+		ret = tegra_channel_set_stream(chan, true);
+		if (ret < 0)
+			goto error_set_stream;
+		return ret;
+	}
 
 	chan->tegra_vi_channel = vi_channel_open_ex(chan->id, false);
 	if (IS_ERR(chan->tegra_vi_channel))
@@ -481,9 +496,11 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		}
 	}
 
-	ret = tegra_channel_capture_setup(chan);
-	if (ret < 0)
-		goto error_capture_setup;
+	for (i = 0; i < chan->valid_ports; i++) {
+		ret = tegra_channel_capture_setup(chan, i);
+		if (ret < 0)
+			goto error_capture_setup;
+	}
 
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
@@ -508,15 +525,6 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		goto error_capture_setup;
 	}
 
-set_stream_on:
-	ret = tegra_channel_set_stream(chan, true);
-	if (ret < 0) {
-		if (chan->bypass)
-			goto error_set_stream;
-		else
-			goto error_capture_setup;
-	}
-
 	return 0;
 
 error_capture_setup:
@@ -536,10 +544,13 @@ error_pipeline_start:
 static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+	int i;
 	long err;
 
-	if (chan->vnc_id[0] == -1)
-		return 0;
+	for (i = 0; i < chan->valid_ports; i++) {
+		if (chan->vnc_id[i] == -1)
+			return 0;
+	}
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);

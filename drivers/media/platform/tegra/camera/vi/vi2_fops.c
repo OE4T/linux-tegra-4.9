@@ -139,6 +139,16 @@ static int vi2_add_ctrls(struct tegra_channel *chan)
 	return 0;
 }
 
+static int vi2_channel_setup_queue(struct tegra_channel *chan,
+	unsigned int *nbuffers)
+{
+	/* Make sure minimum number of buffers are passed */
+	if (*nbuffers < (QUEUED_BUFFERS - 1))
+		*nbuffers = QUEUED_BUFFERS - 1;
+
+	return tegra_channel_alloc_buffer_queue(chan, QUEUED_BUFFERS);
+}
+
 static struct tegra_csi_channel *find_linked_csi_channel(
 	struct tegra_channel *chan, struct tegra_csi_device *csi)
 {
@@ -1100,6 +1110,7 @@ struct tegra_vi_fops vi2_fops = {
 	.vi_power_off = vi2_power_off,
 	.vi_start_streaming = vi2_channel_start_streaming,
 	.vi_stop_streaming = vi2_channel_stop_streaming,
+	.vi_setup_queue = vi2_channel_setup_queue,
 	.vi_add_ctrls = vi2_add_ctrls,
 	.vi_init_video_formats = vi2_init_video_formats,
 	.vi_mfi_work = vi2_mfi_work,

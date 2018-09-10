@@ -451,7 +451,7 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 		vb2_buffer_done(&vbuf->vb2_buf,
 			chan->buffer_state[chan->free_index++]);
 
-		if (chan->free_index >= QUEUED_BUFFERS)
+		if (chan->free_index >= chan->capture_queue_depth)
 			chan->free_index = 0;
 		chan->num_buffers--;
 		chan->released_bufs++;
@@ -468,7 +468,7 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 	spin_lock(&chan->buffer_lock);
 	chan->buffer_state[chan->save_index] = VB2_BUF_STATE_ERROR;
 	chan->buffers[chan->save_index++] = vb;
-	if (chan->save_index >= QUEUED_BUFFERS)
+	if (chan->save_index >= chan->capture_queue_depth)
 		chan->save_index = 0;
 	chan->num_buffers++;
 	spin_unlock(&chan->buffer_lock);
@@ -480,7 +480,7 @@ static void update_state_to_buffer(struct tegra_channel *chan, int state)
 
 	/* save index decrements by 2 as 3 bufs are added in ring buffer */
 	if (save_index < 0)
-		save_index += QUEUED_BUFFERS;
+		save_index += chan->capture_queue_depth;
 	/* update state for the previous buffer */
 	chan->buffer_state[save_index] = state;
 
@@ -516,7 +516,7 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 	}
 
 	/* release buffer N at N+2 frame start event */
-	if (chan->num_buffers >= (QUEUED_BUFFERS - 1))
+	if (chan->num_buffers >= (chan->capture_queue_depth - 1))
 		free_ring_buffers(chan, 1);
 }
 
@@ -582,17 +582,17 @@ tegra_channel_queue_setup(struct vb2_queue *vq,
 		     unsigned int sizes[], struct device *alloc_devs[])
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+	struct tegra_mc_vi *vi = chan->vi;
 
 	*nplanes = 1;
 
 	sizes[0] = chan->format.sizeimage;
 	alloc_devs[0] = chan->vi->dev;
 
-	/* Make sure minimum number of buffers are passed */
-	if (*nbuffers < (QUEUED_BUFFERS - 1))
-		*nbuffers = QUEUED_BUFFERS - 1;
-
-	return 0;
+	if (vi->fops && vi->fops->vi_setup_queue)
+		return vi->fops->vi_setup_queue(chan, nbuffers);
+	else
+		return -EINVAL;
 }
 #else
 static int
@@ -602,6 +602,8 @@ tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 {
 	const struct v4l2_format *fmt = parg;
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+	struct tegra_mc_vi *vi = chan->vi;
+
 	/* Make sure the image size is large enough. */
 	if (fmt && fmt->fmt.pix.sizeimage < chan->format.sizeimage)
 		return -EINVAL;
@@ -611,13 +613,47 @@ tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 	sizes[0] = fmt ? fmt->fmt.pix.sizeimage : chan->format.sizeimage;
 	alloc_ctxs[0] = chan->alloc_ctx;
 
-	/* Make sure minimum number of buffers are passed */
-	if (*nbuffers < (QUEUED_BUFFERS - 1))
-		*nbuffers = QUEUED_BUFFERS - 1;
-
-	return 0;
+	if (vi->fops && vi->fops->vi_setup_queue)
+		return vi->fops->vi_setup_queue(chan, nbuffers);
+	else
+		return -EINVAL;
 }
 #endif
+
+int tegra_channel_alloc_buffer_queue(struct tegra_channel *chan,
+	unsigned int num_buffers)
+{
+	chan->buffer_state = devm_kzalloc(chan->vi->dev,
+		(num_buffers * sizeof(*chan->buffer_state)), GFP_KERNEL);
+	if (!chan->buffer_state)
+		goto alloc_error;
+
+	chan->buffers = devm_kzalloc(chan->vi->dev,
+		(num_buffers * sizeof(*chan->buffers)), GFP_KERNEL);
+	if (!chan->buffers)
+		goto alloc_error;
+
+	chan->capture_queue_depth = num_buffers;
+
+	return 0;
+
+alloc_error:
+	dev_err(chan->vi->dev,
+		"error: could not allocate memory for %u size buffer queue\n",
+		num_buffers);
+
+	tegra_channel_dealloc_buffer_queue(chan);
+
+	return -ENOMEM;
+}
+
+void tegra_channel_dealloc_buffer_queue(struct tegra_channel *chan)
+{
+	if (chan->buffer_state)
+		devm_kfree(chan->vi->dev, chan->buffer_state);
+	if (chan->buffers)
+		devm_kfree(chan->vi->dev, chan->buffers);
+}
 
 static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 {
@@ -2085,7 +2121,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 	INIT_LIST_HEAD(&chan->dequeue);
 	init_waitqueue_head(&chan->dequeue_wait);
 	spin_lock_init(&chan->dequeue_lock);
-	sema_init(&chan->capture_slots, CAPTURE_QUEUE_DEPTH);
 	mutex_init(&chan->stop_kthread_lock);
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);
@@ -2193,6 +2228,8 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 			chan->vi->emb_buf_addr, chan->vi->emb_buf);
 		chan->vi->emb_buf_size = 0;
 	}
+
+	tegra_channel_dealloc_buffer_queue(chan);
 
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	mutex_lock(&chan->video_lock);

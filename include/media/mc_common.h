@@ -40,7 +40,9 @@
 #define	ENABLE		1
 #define	DISABLE		0
 #define MAX_SYNCPT_PER_CHANNEL	3
-#define CAPTURE_QUEUE_DEPTH	4
+
+#define CAPTURE_MIN_BUFFERS	1U
+#define CAPTURE_MAX_BUFFERS	240U
 
 #define TEGRA_MEM_FORMAT 0
 #define TEGRA_ISP_FORMAT 1
@@ -166,8 +168,8 @@ struct tegra_channel {
 	unsigned int syncpt[TEGRA_CSI_BLOCKS][MAX_SYNCPT_PER_CHANNEL];
 	unsigned int syncpoint_fifo[TEGRA_CSI_BLOCKS][MAX_SYNCPT_PER_CHANNEL];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
-	unsigned int buffer_state[QUEUED_BUFFERS];
-	struct vb2_v4l2_buffer *buffers[QUEUED_BUFFERS];
+	unsigned int *buffer_state;
+	struct vb2_v4l2_buffer **buffers;
 	unsigned int timeout;
 	atomic_t restart_version;
 	int capture_version;
@@ -177,6 +179,7 @@ struct tegra_channel {
 	spinlock_t buffer_lock;
 	unsigned int released_bufs;
 
+	unsigned int capture_queue_depth;
 	unsigned int capture_descr_index;
 	unsigned int capture_descr_sequence;
 	struct task_struct *kthread_capture_start;
@@ -362,6 +365,9 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 			       struct timespec *ts, int state);
 struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
 struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan);
+int tegra_channel_alloc_buffer_queue(struct tegra_channel *chan,
+					unsigned int num_buffers);
+void tegra_channel_dealloc_buffer_queue(struct tegra_channel *chan);
 void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
 void free_ring_buffers(struct tegra_channel *chan, int frames);
 void release_buffer(struct tegra_channel *chan,
@@ -378,6 +384,8 @@ struct tegra_vi_fops {
 	void (*vi_power_off)(struct tegra_channel *chan);
 	int (*vi_start_streaming)(struct vb2_queue *vq, u32 count);
 	int (*vi_stop_streaming)(struct vb2_queue *vq);
+	int (*vi_setup_queue)(struct tegra_channel *chan,
+			unsigned int *nbuffers);
 	int (*vi_add_ctrls)(struct tegra_channel *chan);
 	void (*vi_init_video_formats)(struct tegra_channel *chan);
 	long (*vi_default_ioctl)(struct file *file, void *fh,

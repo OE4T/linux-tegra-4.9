@@ -129,6 +129,16 @@ static int vi4_add_ctrls(struct tegra_channel *chan)
 	return 0;
 }
 
+static int vi4_channel_setup_queue(struct tegra_channel *chan,
+	unsigned int *nbuffers)
+{
+	/* Make sure minimum number of buffers are passed */
+	if (*nbuffers < (QUEUED_BUFFERS - 1))
+		*nbuffers = QUEUED_BUFFERS - 1;
+
+	return tegra_channel_alloc_buffer_queue(chan, QUEUED_BUFFERS);
+}
+
 static bool vi4_init(struct tegra_channel *chan)
 {
 	vi4_write(chan, NOTIFY_ERROR, 0x1);
@@ -1217,6 +1227,7 @@ struct tegra_vi_fops vi4_fops = {
 	.vi_power_off = vi4_power_off,
 	.vi_start_streaming = vi4_channel_start_streaming,
 	.vi_stop_streaming = vi4_channel_stop_streaming,
+	.vi_setup_queue = vi4_channel_setup_queue,
 	.vi_add_ctrls = vi4_add_ctrls,
 	.vi_init_video_formats = vi4_init_video_formats,
 	.vi_mfi_work = vi4_mfi_work,

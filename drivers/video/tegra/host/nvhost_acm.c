@@ -1000,18 +1000,27 @@ static int nvhost_module_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static bool nvhost_module_has_open_channels(struct platform_device *pdev)
+{
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_channel *ch = NULL;
+	int idx = 0;
+
+	for (idx = 0; idx < nvhost_channel_nb_channels(host); idx++) {
+		ch = host->chlist[idx];
+		if (ch->dev == pdev)
+			return true;
+	}
+
+	return false;
+}
+
 static int nvhost_module_prepare_suspend(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
-	u32 max_num_references;
+	struct platform_device *pdev = to_platform_device(dev);
 
-	/*
-	 * If powergating is disabled, we take a single pm runtime
-	 * reference during boot-up
-	 */
-	max_num_references = pdata->can_powergate ? 1 : 2;
-
-	if (atomic_read(&dev->power.usage_count) > max_num_references)
+	if (nvhost_module_has_open_channels(pdev))
 		return -EBUSY;
 
 	if (!pdata->can_powergate) {

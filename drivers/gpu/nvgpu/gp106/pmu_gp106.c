@@ -306,3 +306,61 @@ int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	}
 	return 0;
 }
+
+void gp106_update_lspmu_cmdline_args(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+
+	/*Copying pmu cmdline args*/
+	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu, 0);
+	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
+		pmu, GK20A_PMU_TRACE_BUFSIZE);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
+		pmu, GK20A_PMU_DMAIDX_VIRT);
+	if (g->ops.pmu_ver.config_pmu_cmdline_args_super_surface) {
+		g->ops.pmu_ver.config_pmu_cmdline_args_super_surface(pmu);
+	}
+
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
+		(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
+		g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
+
+}
+
+void gp106_pmu_setup_apertures(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+
+	/* PMU TRANSCFG */
+	/* setup apertures - virtual */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
+			pwr_fbif_transcfg_mem_type_virtual_f());
+	/* setup apertures - physical */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_coherent_sysmem_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+
+	/* PMU Config */
+	gk20a_writel(g, pwr_falcon_itfen_r(),
+				gk20a_readl(g, pwr_falcon_itfen_r()) |
+				pwr_falcon_itfen_ctxen_enable_f());
+	gk20a_writel(g, pwr_pmu_new_instblk_r(),
+		pwr_pmu_new_instblk_ptr_f(
+			nvgpu_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
+		pwr_pmu_new_instblk_valid_f(1) |
+		nvgpu_aperture_mask(g, &mm->pmu.inst_block,
+			pwr_pmu_new_instblk_target_sys_ncoh_f(),
+			pwr_pmu_new_instblk_target_sys_coh_f(),
+			pwr_pmu_new_instblk_target_fb_f()));
+}

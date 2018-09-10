@@ -490,40 +490,6 @@ void gk20a_pmu_msgq_tail(struct nvgpu_pmu *pmu, u32 *tail, bool set)
 	}
 }
 
-int gk20a_init_pmu_setup_hw1(struct gk20a *g)
-{
-	struct nvgpu_pmu *pmu = &g->pmu;
-	int err = 0;
-
-	nvgpu_log_fn(g, " ");
-
-	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	nvgpu_flcn_reset(pmu->flcn);
-	pmu->isr_enabled = true;
-	nvgpu_mutex_release(&pmu->isr_mutex);
-
-	/* setup apertures - virtual */
-	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
-		pwr_fbif_transcfg_mem_type_virtual_f());
-	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
-		pwr_fbif_transcfg_mem_type_virtual_f());
-	/* setup apertures - physical */
-	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
-		pwr_fbif_transcfg_mem_type_physical_f() |
-		pwr_fbif_transcfg_target_local_fb_f());
-	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
-		pwr_fbif_transcfg_mem_type_physical_f() |
-		pwr_fbif_transcfg_target_coherent_sysmem_f());
-	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
-		pwr_fbif_transcfg_mem_type_physical_f() |
-		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
-
-	err = g->ops.pmu.pmu_nsbootstrap(pmu);
-
-	return err;
-
-}
-
 void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 {
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);

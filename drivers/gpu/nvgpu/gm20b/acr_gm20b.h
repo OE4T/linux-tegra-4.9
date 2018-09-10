@@ -41,10 +41,6 @@ int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size);
 int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
-void gm20b_update_lspmu_cmdline_args(struct gk20a *g);
-void gm20b_setup_apertures(struct gk20a *g);
-int gm20b_pmu_setup_sw(struct gk20a *g);
-int gm20b_init_nspmu_setup_hw1(struct gk20a *g);
 
 int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_img,

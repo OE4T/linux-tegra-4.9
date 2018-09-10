@@ -888,6 +888,7 @@ int gv11b_init_hal(struct gk20a *g)
 		gops->pmu.update_lspmu_cmdline_args =
 			gm20b_update_lspmu_cmdline_args;
 		gops->pmu.setup_apertures = gv11b_setup_apertures;
+		gops->pmu.secured_pmu_start = gm20b_secured_pmu_start;
 
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gp10b_load_falcon_ucode;
@@ -898,6 +899,8 @@ int gv11b_init_hal(struct gk20a *g)
 	} else {
 		/* Inherit from gk20a */
 		gops->pmu.prepare_ucode = nvgpu_pmu_prepare_ns_ucode_blob,
+		gops->pmu.pmu_setup_hw_and_bootstrap =
+			gm20b_ns_pmu_setup_hw_and_bootstrap;
 
 		gops->pmu.load_lsfalcon_ucode = NULL;
 		gops->pmu.init_wpr_region = NULL;

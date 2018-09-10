@@ -278,6 +278,72 @@ bool gm20b_pmu_is_debug_mode_en(struct gk20a *g)
 	return pwr_pmu_scpctl_stat_debug_mode_v(ctl_stat) != 0U;
 }
 
+int gm20b_ns_pmu_setup_hw_and_bootstrap(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+
+	nvgpu_log_fn(g, " ");
+
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
+	nvgpu_flcn_reset(pmu->flcn);
+	pmu->isr_enabled = true;
+	nvgpu_mutex_release(&pmu->isr_mutex);
+
+	/* setup apertures - virtual */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
+		pwr_fbif_transcfg_mem_type_virtual_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
+		pwr_fbif_transcfg_mem_type_virtual_f());
+	/* setup apertures - physical */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_coherent_sysmem_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
+		pwr_fbif_transcfg_mem_type_physical_f() |
+		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+
+	return g->ops.pmu.pmu_nsbootstrap(pmu);
+}
+
+void gm20b_pmu_setup_apertures(struct gk20a *g)
+{
+	/* setup apertures - virtual */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_VIRT),
+			pwr_fbif_transcfg_mem_type_virtual_f());
+	/* setup apertures - physical */
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_VID),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_local_fb_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_COH),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_coherent_sysmem_f());
+	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_PHYS_SYS_NCOH),
+			pwr_fbif_transcfg_mem_type_physical_f() |
+			pwr_fbif_transcfg_target_noncoherent_sysmem_f());
+}
+
+void gm20b_update_lspmu_cmdline_args(struct gk20a *g)
+{
+	struct nvgpu_pmu *pmu = &g->pmu;
+	/*Copying pmu cmdline args*/
+	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
+		g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_PWRCLK));
+	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
+		pmu, GK20A_PMU_TRACE_BUFSIZE);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base(pmu);
+	g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx(
+		pmu, GK20A_PMU_DMAIDX_VIRT);
+	nvgpu_flcn_copy_to_dmem(pmu->flcn, g->acr.pmu_args,
+		(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
+		g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
+}
 
 static int gm20b_bl_bootstrap(struct gk20a *g,
 	struct nvgpu_falcon_bl_info *bl_info)
@@ -336,4 +402,10 @@ int gm20b_pmu_setup_hw_and_bl_bootstrap(struct gk20a *g,
 
 exit:
 	return err;
+}
+
+void gm20b_secured_pmu_start(struct gk20a *g)
+{
+	gk20a_writel(g, pwr_falcon_cpuctl_alias_r(),
+		pwr_falcon_cpuctl_startcpu_f(1));
 }

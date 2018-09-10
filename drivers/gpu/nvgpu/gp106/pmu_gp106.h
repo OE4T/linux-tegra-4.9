@@ -41,5 +41,7 @@ void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
 bool gp106_pmu_is_engine_in_reset(struct gk20a *g);
 int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset);
+void gp106_update_lspmu_cmdline_args(struct gk20a *g);
+void gp106_pmu_setup_apertures(struct gk20a *g);
 
 #endif /* NVGPU_PMU_GP106_H */

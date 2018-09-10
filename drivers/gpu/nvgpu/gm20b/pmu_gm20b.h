@@ -34,7 +34,11 @@ void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags);
 int gm20b_pmu_init_acr(struct gk20a *g);
 void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr);
 bool gm20b_pmu_is_debug_mode_en(struct gk20a *g);
+int gm20b_ns_pmu_setup_hw_and_bootstrap(struct gk20a *g);
+void gm20b_pmu_setup_apertures(struct gk20a *g);
+void gm20b_update_lspmu_cmdline_args(struct gk20a *g);
 int gm20b_pmu_setup_hw_and_bl_bootstrap(struct gk20a *g,
 	struct hs_acr *acr_desc,
 	struct nvgpu_falcon_bl_info *bl_info);
+void gm20b_secured_pmu_start(struct gk20a *g);
 #endif /*NVGPU_GM20B_PMU_GM20B_H*/

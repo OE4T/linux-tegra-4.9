@@ -1,7 +1,7 @@
 /*
  * GP10B PMU
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,6 @@ struct gk20a;
 bool gp10b_is_lazy_bootstrap(u32 falcon_id);
 bool gp10b_is_priv_load(u32 falcon_id);
 bool gp10b_is_pmu_supported(struct gk20a *g);
-int gp10b_init_pmu_setup_hw1(struct gk20a *g);
 void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data);
 int gp10b_pmu_setup_elpg(struct gk20a *g);

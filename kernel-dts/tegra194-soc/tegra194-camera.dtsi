@@ -54,8 +54,6 @@
 		nvidia,camera-devices = <&isp &vi &nvcsi>;
 		nvidia,camera-device-names = "isp", "vi", "nvcsi";
 
-		/* Max EMC bandwidth, used during initializing RCE */
-		nvidia,memory-bw = <0xffffffff>;
 		iommus = <&smmu TEGRA_SID_RCE>;
 		iommu-resv-regions = <0x0 0x0 0x0 0xA0000000 0x0 0xc0000000 0xffffffff 0xffffffff>;
 		dma-coherent;

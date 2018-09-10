@@ -26,7 +26,7 @@
 #include <nvgpu/gk20a.h>
 
 #include "clk/clk.h"
-#include "perf/perf.h"
+#include "pmu_perf/pmu_perf.h"
 #include "pmgr/pmgr.h"
 #include "pstate/pstate.h"
 #include "therm/thrm.h"

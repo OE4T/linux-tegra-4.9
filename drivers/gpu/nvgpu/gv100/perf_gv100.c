@@ -114,7 +114,7 @@ u32 gv100_perf_pmu_vfe_load(struct gk20a *g)
 	perf_pmu_init_vfe_perf_event(g);
 
 	/*register call back for future VFE updates*/
-	g->ops.perf.handle_pmu_perf_event = gv100_pmu_handle_perf_event;
+	g->ops.pmu_perf.handle_pmu_perf_event = gv100_pmu_handle_perf_event;
 
 	return status;
 }

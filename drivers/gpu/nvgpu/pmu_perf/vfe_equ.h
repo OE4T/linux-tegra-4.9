@@ -25,7 +25,7 @@
 #define NVGPU_PERF_VFE_EQU_H
 
 #include "boardobj/boardobjgrp.h"
-#include "perf/vfe_var.h"
+#include "vfe_var.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 int vfe_equ_sw_setup(struct gk20a *g);

@@ -23,7 +23,7 @@
 #include <nvgpu/bios.h>
 #include <nvgpu/gk20a.h>
 
-#include "perf.h"
+#include "pmu_perf.h"
 #include "vfe_var.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"

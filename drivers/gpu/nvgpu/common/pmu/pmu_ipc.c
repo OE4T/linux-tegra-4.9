@@ -607,8 +607,8 @@ static int pmu_handle_event(struct nvgpu_pmu *pmu, struct pmu_msg *msg)
 		err = nvgpu_pmu_handle_perfmon_event(pmu, &msg->msg.perfmon);
 		break;
 	case PMU_UNIT_PERF:
-		if (g->ops.perf.handle_pmu_perf_event != NULL) {
-			err = g->ops.perf.handle_pmu_perf_event(g,
+		if (g->ops.pmu_perf.handle_pmu_perf_event != NULL) {
+			err = g->ops.pmu_perf.handle_pmu_perf_event(g,
 				(void *)&msg->msg.perf);
 		} else {
 			WARN_ON(true);

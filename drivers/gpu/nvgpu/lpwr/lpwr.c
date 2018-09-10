@@ -27,7 +27,7 @@
 
 #include "gp106/bios_gp106.h"
 #include "pstate/pstate.h"
-#include "perf/perf.h"
+#include "pmu_perf/pmu_perf.h"
 #include "lpwr.h"
 
 static int get_lpwr_idx_table(struct gk20a *g)

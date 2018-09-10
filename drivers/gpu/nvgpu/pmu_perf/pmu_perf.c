@@ -25,7 +25,7 @@
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/gk20a.h>
 
-#include "perf.h"
+#include "pmu_perf.h"
 
 struct perfrpc_pmucmdhandler_params {
 	struct nv_pmu_perf_rpc *prpccall;
@@ -81,7 +81,7 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 	memset(&handler, 0, sizeof(struct perfrpc_pmucmdhandler_params));
 
 	/*register call back for future VFE updates*/
-	g->ops.perf.handle_pmu_perf_event = pmu_handle_perf_event;
+	g->ops.pmu_perf.handle_pmu_perf_event = pmu_handle_perf_event;
 
 	rpccall.function = NV_PMU_PERF_RPC_ID_VFE_LOAD;
 	rpccall.params.vfe_load.b_load = true;

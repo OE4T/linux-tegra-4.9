@@ -136,9 +136,9 @@ srcs :=	os/posix/nvgpu.c \
 	therm/thrmchannel.c \
 	therm/thrmdev.c \
 	therm/thrmpmu.c \
-	perf/perf.c \
-	perf/vfe_equ.c \
-	perf/vfe_var.c \
+	pmu_perf/pmu_perf.c \
+	pmu_perf/vfe_equ.c \
+	pmu_perf/vfe_var.c \
 	pmgr/pmgr.c \
 	pmgr/pmgrpmu.c \
 	pmgr/pwrdev.c \

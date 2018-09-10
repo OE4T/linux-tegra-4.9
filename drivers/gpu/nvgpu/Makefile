@@ -343,9 +343,9 @@ nvgpu-y += \
 	clk/clk_vf_point.o \
 	clk/clk_arb.o \
 	clk/clk_freq_controller.o \
-	perf/vfe_var.o \
-	perf/vfe_equ.o \
-	perf/perf.o \
+	pmu_perf/vfe_var.o \
+	pmu_perf/vfe_equ.o \
+	pmu_perf/pmu_perf.o \
 	clk/clk.o \
 	gp106/clk_gp106.o \
 	gp106/clk_arb_gp106.o \

@@ -72,7 +72,7 @@ struct nvgpu_gpfifo_args;
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "clk/clk.h"
-#include "perf/perf.h"
+#include "pmu_perf/pmu_perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
 
@@ -1129,7 +1129,7 @@ struct gpu_ops {
 	} clk_arb;
 	struct {
 		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);
-	} perf;
+	} pmu_perf;
 	struct {
 		int (*exec_regops)(struct dbg_session_gk20a *dbg_s,
 			    struct nvgpu_dbg_reg_op *ops,

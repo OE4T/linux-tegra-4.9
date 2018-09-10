@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_COMPTAGS__
-#define __NVGPU_COMPTAGS__
+#ifndef NVGPU_COMPTAGS_H
+#define NVGPU_COMPTAGS_H
 
 #include <nvgpu/lock.h>
 #include <nvgpu/types.h>
@@ -101,4 +101,4 @@ bool gk20a_comptags_start_clear(struct nvgpu_os_buffer *buf);
 void gk20a_comptags_finish_clear(struct nvgpu_os_buffer *buf,
 				 bool clear_successful);
 
-#endif
+#endif /* NVGPU_COMPTAGS_H */

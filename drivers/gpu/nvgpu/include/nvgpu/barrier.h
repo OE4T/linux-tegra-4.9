@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,8 +25,8 @@
  * should provide their own OS specific calls under this common API
  */
 
-#ifndef __NVGPU_BARRIER_H__
-#define __NVGPU_BARRIER_H__
+#ifndef NVGPU_BARRIER_H
+#define NVGPU_BARRIER_H
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/barrier.h>
@@ -58,4 +58,4 @@
 #define nvgpu_speculation_barrier()
 #endif
 
-#endif /* __NVGPU_BARRIER_H__ */
+#endif /* NVGPU_BARRIER_H */

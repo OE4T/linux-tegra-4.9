@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_COND_H__
-#define __NVGPU_COND_H__
+#ifndef NVGPU_COND_H
+#define NVGPU_COND_H
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/cond.h>
@@ -103,4 +103,4 @@ int nvgpu_cond_broadcast_interruptible(struct nvgpu_cond *cond);
  */
 void nvgpu_cond_destroy(struct nvgpu_cond *cond);
 
-#endif /* __NVGPU_COND_H__ */
+#endif /* NVGPU_COND_H */

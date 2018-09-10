@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_MM_H__
-#define __NVGPU_MM_H__
+#ifndef NVGPU_MM_H
+#define NVGPU_MM_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/cond.h>
@@ -220,4 +220,4 @@ int nvgpu_mm_suspend(struct gk20a *g);
 u32 nvgpu_mm_get_default_big_page_size(struct gk20a *g);
 u32 nvgpu_mm_get_available_big_page_sizes(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_MM_H */

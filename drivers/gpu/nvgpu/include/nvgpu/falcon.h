@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __FALCON_H__
-#define __FALCON_H__
+#ifndef NVGPU_FALCON_H
+#define NVGPU_FALCON_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/lock.h>
@@ -320,4 +320,4 @@ void nvgpu_flcn_queue_free(struct nvgpu_falcon *flcn,
 
 int nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id);
 
-#endif /* __FALCON_H__ */
+#endif /* NVGPU_FALCON_H */

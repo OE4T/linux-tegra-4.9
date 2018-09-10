@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_ALLOCATOR_H__
-#define __NVGPU_ALLOCATOR_H__
+#ifndef NVGPU_ALLOCATOR_H
+#define NVGPU_ALLOCATOR_H
 
 #ifdef __KERNEL__
 /*

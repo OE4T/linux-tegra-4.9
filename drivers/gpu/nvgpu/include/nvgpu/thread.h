@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_THREAD_H__
-#define __NVGPU_THREAD_H__
+#ifndef NVGPU_THREAD_H
+#define NVGPU_THREAD_H
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/thread.h>
@@ -80,4 +80,4 @@ bool nvgpu_thread_should_stop(struct nvgpu_thread *thread);
  */
 bool nvgpu_thread_is_running(struct nvgpu_thread *thread);
 
-#endif /* __NVGPU_THREAD_H__ */
+#endif /* NVGPU_THREAD_H */

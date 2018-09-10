@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_NVGPU_MEM_H__
-#define __NVGPU_NVGPU_MEM_H__
+#ifndef NVGPU_MEM_H
+#define NVGPU_MEM_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/list.h>
@@ -347,4 +347,4 @@ u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 
 u64 nvgpu_mem_iommu_translate(struct gk20a *g, u64 phys);
 
-#endif
+#endif /* NVGPU_MEM_H */

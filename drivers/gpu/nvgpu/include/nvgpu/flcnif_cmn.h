@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __FLCNIFCMN_H__
-#define __FLCNIFCMN_H__
+#ifndef NVGPU_FLCNIF_CMN_H
+#define NVGPU_FLCNIF_CMN_H
 
 #define PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED 0
 
@@ -116,4 +116,4 @@ typedef u8 flcn_status;
 
 #define NV_UNSIGNED_ROUNDED_DIV(a, b)    (((a) + ((b) / 2)) / (b))
 
-#endif /* _FLCNIFCMN_H_*/
+#endif /* NVGPU_FLCNIF_CMN_H */

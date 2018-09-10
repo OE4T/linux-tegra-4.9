@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_KMEM_H__
-#define __NVGPU_KMEM_H__
+#ifndef NVGPU_KMEM_H
+#define NVGPU_KMEM_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/utils.h>
@@ -282,4 +282,4 @@ static inline void *nvgpu_big_zalloc(struct gk20a *g, size_t size)
  */
 void nvgpu_big_free(struct gk20a *g, void *p);
 
-#endif /* __NVGPU_KMEM_H__ */
+#endif /* NVGPU_KMEM_H */

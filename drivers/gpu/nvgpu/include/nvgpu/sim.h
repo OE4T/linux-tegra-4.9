@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_SIM_H__
-#define __NVGPU_SIM_H__
+#ifndef NVGPU_SIM_H
+#define NVGPU_SIM_H
 
 #include <nvgpu/nvgpu_mem.h>
 
@@ -55,4 +55,4 @@ void nvgpu_free_sim_buffer(struct gk20a *g, struct nvgpu_mem *mem);
 void nvgpu_free_sim_support(struct gk20a *g);
 void nvgpu_remove_sim_support(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_SIM_H */

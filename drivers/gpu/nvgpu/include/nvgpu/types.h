@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_TYPES_H__
-#define __NVGPU_TYPES_H__
+#ifndef NVGPU_TYPES_H
+#define NVGPU_TYPES_H
 
 #ifdef __KERNEL__
 #include <linux/types.h>
@@ -67,4 +67,4 @@
 #define U8_MAX ((u8)255)
 #endif
 
-#endif
+#endif /* NVGPU_TYPES_H */

@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_ENABLED_H__
-#define __NVGPU_ENABLED_H__
+#ifndef NVGPU_ENABLED_H
+#define NVGPU_ENABLED_H
 
 struct gk20a;
 
@@ -199,4 +199,4 @@ void __nvgpu_set_enabled(struct gk20a *g, int flag, bool state);
 int nvgpu_init_enabled_flags(struct gk20a *g);
 void nvgpu_free_enabled_flags(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_ENABLED_H */

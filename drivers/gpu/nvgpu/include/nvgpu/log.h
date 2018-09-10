@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_DEBUGGING_H__
-#define __NVGPU_DEBUGGING_H__
+#ifndef NVGPU_LOG_H
+#define NVGPU_LOG_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/bitops.h>
@@ -180,4 +180,4 @@ extern u64 nvgpu_dbg_mask;
 #define gk20a_dbg_fn(fmt, arg...)	gk20a_dbg(gpu_dbg_fn, fmt, ##arg)
 #define gk20a_dbg_info(fmt, arg...)	gk20a_dbg(gpu_dbg_info, fmt, ##arg)
 
-#endif
+#endif /* NVGPU_LOG_H */

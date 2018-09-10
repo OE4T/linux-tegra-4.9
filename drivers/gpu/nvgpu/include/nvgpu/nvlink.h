@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_NVLINK_H__
-#define __NVGPU_NVLINK_H__
+#ifndef NVGPU_NVLINK_H
+#define NVGPU_NVLINK_H
 
 #include <nvgpu/types.h>
 
@@ -234,4 +234,4 @@ int nvgpu_nvlink_remove(struct gk20a *g);
 
 void nvgpu_mss_nvlink_init_credits(struct gk20a *g);
 
-#endif /* __NVGPU_NVLINK_H__ */
+#endif /* NVGPU_NVLINK_H */

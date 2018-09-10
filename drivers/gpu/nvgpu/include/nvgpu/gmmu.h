@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_GMMU_H__
-#define __NVGPU_GMMU_H__
+#ifndef NVGPU_GMMU_H
+#define NVGPU_GMMU_H
 
 #include <nvgpu/types.h>
 #include <nvgpu/nvgpu_mem.h>
@@ -336,4 +336,4 @@ int __nvgpu_set_pte(struct gk20a *g, struct vm_gk20a *vm, u64 vaddr, u32 *pte);
 			nvgpu_log(g, gpu_dbg_pte, fmt, ##args);		\
 	} while (0)
 
-#endif
+#endif /* NVGPU_GMMU_H */

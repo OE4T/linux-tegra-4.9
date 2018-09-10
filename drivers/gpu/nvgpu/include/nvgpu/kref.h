@@ -23,8 +23,8 @@
 /*
  * The following structure is used for reference counting of objects in nvgpu.
  */
-#ifndef __NVGPU_KREF_H__
-#define __NVGPU_KREF_H__
+#ifndef NVGPU_KREF_H
+#define NVGPU_KREF_H
 
 #include <nvgpu/atomic.h>
 
@@ -84,4 +84,4 @@ static inline int __must_check nvgpu_ref_get_unless_zero(struct nvgpu_ref *ref)
 	return nvgpu_atomic_add_unless(&ref->refcount, 1, 0);
 }
 
-#endif /* __NVGPU_KREF_H__ */
+#endif /* NVGPU_KREF_H */

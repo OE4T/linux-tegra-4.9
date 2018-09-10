@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __NVGPU_VM_H__
-#define __NVGPU_VM_H__
+#ifndef NVGPU_VM_H
+#define NVGPU_VM_H
 
 #include <nvgpu/kref.h>
 #include <nvgpu/list.h>
@@ -326,4 +326,4 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
 				u32 pgsz_idx);
 
-#endif
+#endif /* NVGPU_VM_H */

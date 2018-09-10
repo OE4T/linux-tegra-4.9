@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __NVGPU_RWSEM_H__
-#define __NVGPU_RWSEM_H__
+#ifndef NVGPU_RWSEM_H
+#define NVGPU_RWSEM_H
 
 #ifdef __KERNEL__
 #include <nvgpu/linux/rwsem.h>
@@ -45,4 +45,4 @@ void nvgpu_rwsem_down_read(struct nvgpu_rwsem *rwsem);
 void nvgpu_rwsem_up_write(struct nvgpu_rwsem *rwsem);
 void nvgpu_rwsem_down_write(struct nvgpu_rwsem *rwsem);
 
-#endif
+#endif /* NVGPU_RWSEM_H */

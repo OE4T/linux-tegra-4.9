@@ -74,6 +74,7 @@ void tegra_bpmp_mail_return(int ch, int code, int v)
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return);
 
+static unsigned int to_reclaim;
 static unsigned int to_complete;
 static unsigned int tch_free;
 static struct semaphore tch_sem;
@@ -94,9 +95,19 @@ static void bpmp_signal_thread(int ch)
 {
 	struct mb_data *p = channel_area[ch].ob;
 	struct completion *w;
+	unsigned int m = 1u << ch;
 
 	if (!(p->flags & RING_DOORBELL))
 		return;
+
+	if (to_reclaim && m) {
+		mail_ops->free_master(mail_ops, ch);
+		to_reclaim &= ~m;
+		tch_free |= m;
+		WARN_ON(tch_sem.count >= channel_cfg->thread_ch_cnt);
+		up(&tch_sem);
+		return;
+	}
 
 	w = bpmp_completion_obj(ch);
 	if (!w) {
@@ -359,6 +370,7 @@ static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 	unsigned long timeout;
 	unsigned long rt;
 	unsigned long et;
+	unsigned long flags;
 
 	w = bpmp_completion_obj(ch);
 	timeout = usecs_to_jiffies(THREAD_CH_TIMEOUT);
@@ -371,8 +383,16 @@ static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 		return 0;
 	}
 
-	if (mail_ops->master_acked(mail_ops, ch))
+	spin_lock_irqsave(&lock, flags);
+
+	if (mail_ops->master_acked(mail_ops, ch)) {
+		spin_unlock_irqrestore(&lock, flags);
 		return 0;
+	}
+
+	to_reclaim |= 1u << ch;
+
+	spin_unlock_irqrestore(&lock, flags);
 
 	bpmp_format_req(fmt, sizeof(fmt), ob_data, ob_sz);
 	pr_err("%s() timed out (ch %d mrq %d data <%s>)\n",

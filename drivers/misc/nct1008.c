@@ -1127,19 +1127,28 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 
 	/* Configure sensor to trigger alerts clear THERM2_BIT and ALERT_BIT*/
 	data->config = 0;
-	if (pdata->extended_range)
-		data->config |= EXTENDED_RANGE_BIT;
 
 	/* Initially place in Standby */
-	ret = nct1008_write_reg(data, CONFIG_WR, data->config | STANDBY_BIT);
+	ret = nct1008_write_reg(data, CONFIG_WR, STANDBY_BIT);
 	if (ret)
 		goto err;
+
+	/* Add a delay to make sure it enters into standby mode */
+	usleep_range(data->oneshot_conv_period_ns, data->oneshot_conv_period_ns
+			+ 1000);
 
 	ret = nct1008_loc_sensor_init(data);
 	if (ret < 0)
 		goto err;
 
 	ext_err = nct1008_ext_sensor_init(data);
+
+	if (pdata->extended_range)
+		data->config |= EXTENDED_RANGE_BIT;
+
+	ret = nct1008_write_reg(data, CONFIG_WR, data->config | STANDBY_BIT);
+	if (ret)
+		goto err;
 
 	/* Temperature conversion rate */
 	if (pdata->conv_rate >= 0) {

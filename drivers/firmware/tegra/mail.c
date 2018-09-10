@@ -74,30 +74,20 @@ void tegra_bpmp_mail_return(int ch, int code, int v)
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return);
 
-static int bpmp_thread_ch_index(unsigned int ch)
-{
-	unsigned int n;
-
-	n = ch - channel_cfg->thread_ch_0;
-
-	if (n >= channel_cfg->thread_ch_cnt)
-		return -EINVAL;
-
-	return n;
-}
-
-static int bpmp_thread_ch(int idx)
-{
-	return channel_cfg->thread_ch_0 + idx;
-}
+static unsigned int to_complete;
+static unsigned int tch_free;
+static struct semaphore tch_sem;
 
 static struct completion *bpmp_completion_obj(int ch)
 {
-	int i;
+	unsigned int i;
 
-	i = bpmp_thread_ch_index(ch);
+	i = ch - channel_cfg->thread_ch_0;
 
-	return i < 0 ? NULL : completion + i;
+	if (i >= channel_cfg->thread_ch_cnt)
+		return NULL;
+
+	return completion + i;
 }
 
 static void bpmp_signal_thread(int ch)
@@ -117,11 +107,9 @@ static void bpmp_signal_thread(int ch)
 	complete(w);
 }
 
-/* bit mask of thread channels waiting for completion */
-static unsigned int to_complete;
-
 void bpmp_handle_irq(unsigned int chidx)
 {
+	unsigned int m;
 	int ch;
 	int i;
 
@@ -139,10 +127,10 @@ void bpmp_handle_irq(unsigned int chidx)
 	spin_lock(&lock);
 
 	for (i = 0; i < channel_cfg->thread_ch_cnt && to_complete; i++) {
-		ch = bpmp_thread_ch(i);
-		if (mail_ops->master_acked(mail_ops, ch) &&
-				(to_complete & 1 << ch)) {
-			to_complete &= ~(1 << ch);
+		ch = channel_cfg->thread_ch_0 + i;
+		m = 1u << ch;
+		if (mail_ops->master_acked(mail_ops, ch) && (to_complete & m)) {
+			to_complete &= ~m;
 			bpmp_signal_thread(ch);
 		}
 	}
@@ -195,28 +183,25 @@ static int bpmp_write_ch(int ch, int mrq, int flags, void *data, int sz)
 	return 0;
 }
 
-static int tch_free;
-static struct semaphore tch_sem;
-
 static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 {
 	unsigned long flags;
+	unsigned int m;
 	int ret;
-	int i;
 
 	spin_lock_irqsave(&lock, flags);
 
-	i = __ffs(tch_free);
-	*ch = bpmp_thread_ch(i);
+	*ch = __ffs(tch_free);
 
 	ret = mail_ops->master_free(mail_ops, *ch) ? 0 : -EFAULT;
 
 	if (ret) {
 		pr_err("bpmp: channel %d is not free to write\n", *ch);
 	} else {
-		tch_free &= ~(1 << i);
+		m = 1u << *ch;
+		tch_free &= ~m;
 		__bpmp_write_ch(*ch, mrq, DO_ACK | RING_DOORBELL, data, sz);
-		to_complete |= 1 << *ch;
+		to_complete |= m;
 	}
 
 	spin_unlock_irqrestore(&lock, flags);
@@ -242,16 +227,11 @@ static int __bpmp_read_ch(int ch, void *data, int sz)
 static int bpmp_read_ch(int ch, void *data, int sz)
 {
 	unsigned long flags;
-	int tchi;
 	int r;
-
-	tchi = bpmp_thread_ch_index(ch);
-	if (tchi < 0)
-		return -EINVAL;
 
 	spin_lock_irqsave(&lock, flags);
 	r = __bpmp_read_ch(ch, data, sz);
-	tch_free |= (1 << tchi);
+	tch_free |= (1u << ch);
 	spin_unlock_irqrestore(&lock, flags);
 
 	return r;
@@ -485,6 +465,7 @@ int bpmp_mail_init(const struct channel_cfg *cfg, const struct mail_ops *ops,
 	}
 
 	tch_free = (1 << cfg->thread_ch_cnt) - 1;
+	tch_free <<= cfg->thread_ch_0;
 
 	sema_init(&tch_sem, cfg->thread_ch_cnt);
 

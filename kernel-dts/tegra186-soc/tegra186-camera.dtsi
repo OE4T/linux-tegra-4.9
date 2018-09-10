@@ -88,9 +88,6 @@
 			"sce-nreset",
 			"sce-nsysporeset";
 
-		/* Max EMC bandwidth used during initializing SCE */
-		nvidia,memory-bw = <0xffffffff>;
-
 		interrupts = <0 16 0x4>;
 		interrupt-names = "wdt-remote";
 

@@ -264,40 +264,56 @@ static void mttcan_handle_lost_frame(struct net_device *dev, int fifo_num)
 	netif_receive_skb(skb);
 }
 
-static int mttcan_do_receive(struct net_device *dev,
-			     struct ttcanfd_frame *canfd)
-{
-	struct net_device_stats *stats = &dev->stats;
-	struct sk_buff *skb;
-	struct canfd_frame *frame;
-
-	skb = alloc_canfd_skb(dev, &frame);
-	if (!skb) {
-		stats->rx_dropped++;
-		return 0;
-	}
-
-	memcpy(frame, canfd, sizeof(struct canfd_frame));
-
-	netif_receive_skb(skb);
-	stats->rx_packets++;
-	stats->rx_bytes += frame->len;
-
-	return 1;
-}
-
 static void mttcan_rx_hwtstamp(struct mttcan_priv *priv,
-			       struct sk_buff *skb, struct ttcanfd_frame msg)
+			       struct sk_buff *skb, struct ttcanfd_frame *msg)
 {
 	u64 ns;
 	unsigned long flags;
 	struct skb_shared_hwtstamps *hwtstamps = skb_hwtstamps(skb);
 
 	raw_spin_lock_irqsave(&priv->tc_lock, flags);
-	ns = timecounter_cyc2time(&priv->tc, msg.tstamp);
+	ns = timecounter_cyc2time(&priv->tc, msg->tstamp);
 	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 	memset(hwtstamps, 0, sizeof(struct skb_shared_hwtstamps));
 	hwtstamps->hwtstamp = ns_to_ktime(ns);
+}
+
+static int mttcan_hpm_do_receive(struct net_device *dev,
+				 struct ttcanfd_frame *msg)
+{
+	struct mttcan_priv *priv = netdev_priv(dev);
+	struct net_device_stats *stats = &dev->stats;
+	struct sk_buff *skb;
+	struct canfd_frame *fd_frame;
+	struct can_frame *frame;
+
+	if (msg->flags & CAN_FD_FLAG) {
+		skb = alloc_canfd_skb(dev, &fd_frame);
+		if (!skb) {
+			stats->rx_dropped++;
+			return 0;
+		}
+		memcpy(fd_frame, msg, sizeof(struct canfd_frame));
+		stats->rx_bytes += fd_frame->len;
+	} else {
+		skb = alloc_can_skb(dev, &frame);
+		if (!skb) {
+			stats->rx_dropped++;
+			return 0;
+		}
+		frame->can_id =  msg->can_id;
+		frame->can_dlc = msg->d_len;
+		memcpy(frame->data, &msg->data, frame->can_dlc);
+		stats->rx_bytes += frame->can_dlc;
+	}
+
+	if (priv->hwts_rx_en)
+		mttcan_rx_hwtstamp(priv, skb, msg);
+
+	netif_receive_skb(skb);
+	stats->rx_packets++;
+
+	return 1;
 }
 
 static int mttcan_read_rcv_list(struct net_device *dev,
@@ -367,7 +383,7 @@ static int mttcan_read_rcv_list(struct net_device *dev,
 		}
 
 		if (priv->hwts_rx_en)
-			mttcan_rx_hwtstamp(priv, skb, rx->msg);
+			mttcan_rx_hwtstamp(priv, skb, &rx->msg);
 		kfree(rx);
 		netif_receive_skb(skb);
 		stats->rx_packets++;
@@ -705,7 +721,8 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			ack = MTT_IR_HPM_MASK;
 			ttcan_ir_write(priv->ttcan, ack);
 			if (ttcan_read_hp_mesgs(priv->ttcan, &ttcanfd))
-				work_done += mttcan_do_receive(dev, &ttcanfd);
+				work_done += mttcan_hpm_do_receive(dev,
+								   &ttcanfd);
 			pr_debug("%s: hp mesg received\n", __func__);
 		}
 

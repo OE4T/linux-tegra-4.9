@@ -1,7 +1,8 @@
-From b7ea70d986405a424e21b104ac9a81e2c0f3e11f Mon Sep 17 00:00:00 2001
+From 4cf6908166ecafc2566d3c4268bc426669ad0969 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 25 Oct 2012 10:32:35 +0100
 Subject: [PATCH 108/353] mm: Enable SLUB for RT
+X-NVConfidentiality: public
 
 Make SLUB RT aware by converting locks to raw and using free lists to
 move the freeing out of the lock held region.
@@ -468,5 +469,5 @@ index e0ce5de..3b85af5 100644
  
  	for (i = 0; i < t.count; i++) {
 -- 
-2.1.4
+2.7.4
 

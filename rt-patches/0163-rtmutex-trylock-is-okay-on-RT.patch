@@ -1,7 +1,8 @@
-From 7131433334b37945334cf0f6e9f8d8fa0a8f28cd Mon Sep 17 00:00:00 2001
+From 9be3610cce7802d68ba18568000a4e0f9af382ab Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Dec 2015 11:34:07 +0100
 Subject: [PATCH 163/353] rtmutex: trylock is okay on -RT
+X-NVConfidentiality: public
 
 non-RT kernel could deadlock on rt_mutex_trylock() in softirq context. On
 -RT we don't run softirqs in IRQ context but in thread context so it is
@@ -29,5 +30,5 @@ index 5138805..4b6fdcd8 100644
  
  	return rt_mutex_fasttrylock(lock, rt_mutex_slowtrylock);
 -- 
-2.1.4
+2.7.4
 

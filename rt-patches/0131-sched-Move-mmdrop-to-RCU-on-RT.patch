@@ -1,7 +1,8 @@
-From 0882b5344c33b07bf4fed81c4d5c505bff5943ae Mon Sep 17 00:00:00 2001
+From e94423788fd5d331008fc2b233f01bf38ef7e3a1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
 Subject: [PATCH 131/353] sched: Move mmdrop to RCU on RT
+X-NVConfidentiality: public
 
 Takes sleeping locks and calls into the memory allocator, so nothing
 we want to do in task switch and oder atomic contexts.
@@ -37,7 +38,7 @@ index 167f575..788781c 100644
  	/* address of the bounds directory */
  	void __user *bd_addr;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 12df734..ca002f9 100644
+index 86b61f9..34cee14 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -3094,6 +3094,17 @@ static inline void mmdrop(struct mm_struct *mm)
@@ -59,10 +60,10 @@ index 12df734..ca002f9 100644
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index a90719e..1a76739 100644
+index 8d100a9..a748118 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -886,6 +886,19 @@ void __mmdrop(struct mm_struct *mm)
+@@ -887,6 +887,19 @@ void __mmdrop(struct mm_struct *mm)
  }
  EXPORT_SYMBOL_GPL(__mmdrop);
  
@@ -135,5 +136,5 @@ index 6e26574..dc5b545 100644
  }
  #endif
 -- 
-2.1.4
+2.7.4
 

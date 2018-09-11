@@ -1,7 +1,8 @@
-From 5ea7c10c80b0261ca1f22f8314e768c352b4158b Mon Sep 17 00:00:00 2001
+From 26a5254cdb5451fabef2e2f6b860c70a043efeec Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 13 Nov 2011 17:17:09 +0100
 Subject: [PATCH 153/353] softirq: Check preemption after reenabling interrupts
+X-NVConfidentiality: public
 
 raise_softirq_irqoff() disables interrupts and wakes the softirq
 daemon, but after reenabling interrupts there is no preemption check,
@@ -116,7 +117,7 @@ index 1d6565e8..b23a797 100644
  	return 0;
  }
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 5407d5f..00ff1f2 100644
+index b85e789..9f8d01c 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -2294,6 +2294,7 @@ static void __netif_reschedule(struct Qdisc *q)
@@ -176,5 +177,5 @@ index 5407d5f..00ff1f2 100644
  	/* Process offline CPU's input_pkt_queue */
  	while ((skb = __skb_dequeue(&oldsd->process_queue))) {
 -- 
-2.1.4
+2.7.4
 

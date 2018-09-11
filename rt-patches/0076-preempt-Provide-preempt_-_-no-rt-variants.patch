@@ -1,7 +1,8 @@
-From 50a7e4cf5639b064b88194d134b61a9a49001892 Mon Sep 17 00:00:00 2001
+From 8165e84af4c912e6cf34ce07f6bb858d0f23c45b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 24 Jul 2009 12:38:56 +0200
 Subject: [PATCH 076/353] preempt: Provide preempt_*_(no)rt variants
+X-NVConfidentiality: public
 
 RT needs a few preempt_disable/enable points which are not necessary
 otherwise. Implement variants to avoid #ifdeffery.
@@ -48,5 +49,5 @@ index 7eeceac..26e0eaa 100644
  
  struct preempt_notifier;
 -- 
-2.1.4
+2.7.4
 

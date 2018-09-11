@@ -1,8 +1,9 @@
-From 614b5045d4746ea2bcf0fffc79b09275fbfd53a9 Mon Sep 17 00:00:00 2001
+From 1624a41b319819a999cc6dc26866610b289e0c65 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
 Subject: [PATCH 015/353] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
+X-NVConfidentiality: public
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb
 
@@ -271,5 +272,5 @@ index 8e81b17..b620aaf 100644
  
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
 -- 
-2.1.4
+2.7.4
 

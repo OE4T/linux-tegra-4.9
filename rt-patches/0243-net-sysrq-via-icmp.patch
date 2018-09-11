@@ -1,7 +1,8 @@
-From cdebdb83a429be451066e530c1ad4973f8a5440b Mon Sep 17 00:00:00 2001
+From 11e6e7ae33dc935c793dbf00ae1d66bdba06c9e0 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 13:51:17 +0100
 Subject: [PATCH 243/353] net: sysrq via icmp
+X-NVConfidentiality: public
 
 There are (probably rare) situations when a system crashed and the system
 console becomes unresponsive but the network icmp layer still is alive.
@@ -128,5 +129,5 @@ index ce43dc7..ce68538 100644
  		.data		= &init_net.ipv4.sysctl_icmp_ignore_bogus_error_responses,
  		.maxlen		= sizeof(int),
 -- 
-2.1.4
+2.7.4
 

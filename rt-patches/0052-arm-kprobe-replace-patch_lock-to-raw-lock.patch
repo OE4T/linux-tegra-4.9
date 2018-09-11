@@ -1,7 +1,8 @@
-From 3e3c263cad1250831d2e9b415259f083cd7dd60d Mon Sep 17 00:00:00 2001
+From 243513f9ac9970ee83f26dd8a5620701cebaeda6 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@linaro.org>
 Date: Thu, 10 Nov 2016 16:17:55 -0800
 Subject: [PATCH 052/353] arm: kprobe: replace patch_lock to raw lock
+X-NVConfidentiality: public
 
 When running kprobe on -rt kernel, the below bug is caught:
 
@@ -71,5 +72,5 @@ index 69bda1a..1f665ac 100644
  		__release(&patch_lock);
  }
 -- 
-2.1.4
+2.7.4
 

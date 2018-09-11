@@ -1,8 +1,9 @@
-From 4d33d37d7533c906c01eb0418727baf5b1d809aa Mon Sep 17 00:00:00 2001
+From 52e5bf0a85ee873e9bd2cc1d62e305a792b68863 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
 Subject: [PATCH 341/353] kernel/hrtimer/hotplug: don't wake ktimersoftd while
  holding the hrtimer base lock
+X-NVConfidentiality: public
 
 kernel/hrtimer: don't wakeup a process while holding the hrtimer base lock
 missed a path, namely hrtimers_dead_cpu() -> migrate_hrtimer_list().  Defer
@@ -70,5 +71,5 @@ index 2158fc5..5efa37d 100644
  	__hrtimer_peek_ahead_timers();
  	local_irq_enable();
 -- 
-2.1.4
+2.7.4
 

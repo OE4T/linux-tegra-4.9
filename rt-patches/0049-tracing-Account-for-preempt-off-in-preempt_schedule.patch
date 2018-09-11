@@ -1,8 +1,9 @@
-From 6f362276a8333e36472955f9494450a978a5db38 Mon Sep 17 00:00:00 2001
+From 14c3fc4c8f40d34917f8c3a1c7faf59e5d50c8be Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Thu, 29 Sep 2011 12:24:30 -0500
 Subject: [PATCH 049/353] tracing: Account for preempt off in
  preempt_schedule()
+X-NVConfidentiality: public
 
 The preempt_schedule() uses the preempt_disable_notrace() version
 because it can cause infinite recursion by the function tracer as
@@ -49,5 +50,5 @@ index 91f414b..c1952f9 100644
  
  		preempt_latency_stop(1);
 -- 
-2.1.4
+2.7.4
 

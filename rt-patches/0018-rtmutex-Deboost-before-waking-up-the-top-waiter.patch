@@ -1,7 +1,8 @@
-From 2ffd008f7d83b38b90db82ae02a32161e47f18e2 Mon Sep 17 00:00:00 2001
+From da6c2fb0472b608713d767098d9628c3bd800802 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
 Subject: [PATCH 018/353] rtmutex: Deboost before waking up the top waiter
+X-NVConfidentiality: public
 
 Upstream commit 2a1c6029940675abb2217b590512dbf691867ec4
 
@@ -185,5 +186,5 @@ index f4c34c4..dad9229 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.1.4
+2.7.4
 

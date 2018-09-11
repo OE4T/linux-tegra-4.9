@@ -1,8 +1,9 @@
-From c9f2ebb107a3377dffe4dad3ad4eb1bfd9e60d27 Mon Sep 17 00:00:00 2001
+From a1348eea616bde9c7413f3e0bfde6d4989865b7f Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 21 Jun 2014 10:09:48 +0200
 Subject: [PATCH 321/353] memcontrol: Prevent scheduling while atomic in cgroup
  code
+X-NVConfidentiality: public
 
 mm, memcg: make refill_stock() use get_cpu_light()
 
@@ -107,5 +108,5 @@ index 4909ab7..73faf6f 100644
  
  /*
 -- 
-2.1.4
+2.7.4
 

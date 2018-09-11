@@ -1,8 +1,9 @@
-From aba3a3c85bd270596fd930e97edd591d82d334a1 Mon Sep 17 00:00:00 2001
+From 77818c4189e67c142ed5cbcd6cc27714fbf6ec3a Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 27 Feb 2016 09:01:42 +0100
 Subject: [PATCH 319/353] drm,i915: Use local_lock/unlock_irq() in
  intel_pipe_update_start/end()
+X-NVConfidentiality: public
 
 [    8.014039] BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:918
 [    8.014041] in_atomic(): 0, irqs_disabled(): 1, pid: 78, name: kworker/u4:4
@@ -114,5 +115,5 @@ index 64f4e2e..aebf1e9 100644
  	if (crtc->debug.start_vbl_count &&
  	    crtc->debug.start_vbl_count != end_vbl_count) {
 -- 
-2.1.4
+2.7.4
 

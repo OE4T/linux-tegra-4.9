@@ -1,7 +1,8 @@
-From 3fef3b57505e11f1c3d59fa293526154f7bc2c56 Mon Sep 17 00:00:00 2001
+From 06aa42aeaa7c85ebd385f11d4077098792ba8eb3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 10:33:09 +0100
 Subject: [PATCH 106/353] mm: bounce: Use local_irq_save_nort
+X-NVConfidentiality: public
 
 kmap_atomic() is preemptible on RT.
 
@@ -29,5 +30,5 @@ index 1cb5dd3..2f1ec8a 100644
  
  #else /* CONFIG_HIGHMEM */
 -- 
-2.1.4
+2.7.4
 

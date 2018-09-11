@@ -1,7 +1,8 @@
-From 050bebd3109ce285034b6ba5acc5aa635e314576 Mon Sep 17 00:00:00 2001
+From a1f60f2b2a136ab19cda31a04a956a02f35bf5e9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 17 Nov 2017 16:21:00 +0100
 Subject: [PATCH 332/353] md/raid5: do not disable interrupts
+X-NVConfidentiality: public
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:974
 |in_atomic(): 0, irqs_disabled(): 1, pid: 2992, name: lvm
@@ -57,5 +58,5 @@ index 08b0480..cfd153e 100644
  
  static inline void remove_hash(struct stripe_head *sh)
 -- 
-2.1.4
+2.7.4
 

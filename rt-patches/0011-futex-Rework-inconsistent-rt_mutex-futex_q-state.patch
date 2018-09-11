@@ -1,7 +1,8 @@
-From a1286438afa71506fe150a5feb4f47474767a166 Mon Sep 17 00:00:00 2001
+From 0a54cf0c521b2c566fe8897834a879a0dc0ed142 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
 Subject: [PATCH 011/353] futex: Rework inconsistent rt_mutex/futex_q state
+X-NVConfidentiality: public
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 
@@ -141,5 +142,5 @@ index 768eb16..13570c6 100644
  out:
  	return ret ? ret : locked;
 -- 
-2.1.4
+2.7.4
 

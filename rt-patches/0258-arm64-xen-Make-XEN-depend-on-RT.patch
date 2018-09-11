@@ -1,7 +1,8 @@
-From 275fd7642aec4a56fe312853a83834d48cc18f27 Mon Sep 17 00:00:00 2001
+From 74b5893d2ce83d9b08b98ed6f64e3c410786906d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 12 Oct 2015 11:18:40 +0200
 Subject: [PATCH 258/353] arm64/xen: Make XEN depend on !RT
+X-NVConfidentiality: public
 
 It's not ready and probably never will be, unless xen folks have a
 look at it.
@@ -25,5 +26,5 @@ index 707d757..f4f4516 100644
  	select PARAVIRT
  	help
 -- 
-2.1.4
+2.7.4
 

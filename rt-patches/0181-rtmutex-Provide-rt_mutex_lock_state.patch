@@ -1,7 +1,8 @@
-From 05588a104df9080789f1063770b024d5d778a0d7 Mon Sep 17 00:00:00 2001
+From 5d7b96b36960398adf782246f082521b8ea9a251 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:00 +0200
 Subject: [PATCH 181/353] rtmutex: Provide rt_mutex_lock_state()
+X-NVConfidentiality: public
 
 Allow rtmutex to be locked with arbitrary states. Preparatory patch for the
 rt rwsem rework.
@@ -115,5 +116,5 @@ index c3756e5..9076a74 100644
   * rt_mutex_timed_lock - lock a rt_mutex interruptible
   *			the timeout structure is provided
 -- 
-2.1.4
+2.7.4
 

@@ -1,7 +1,8 @@
-From 62003994850d4ba4fa82f1520fa36aabcb625f1a Mon Sep 17 00:00:00 2001
+From a3aa65a601d12fd2aa6a2eda27a0d438aa4aff1f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 12 Nov 2011 14:00:48 +0100
 Subject: [PATCH 271/353] scsi/fcoe: Make RT aware.
+X-NVConfidentiality: public
 
 Do not disable preemption while taking sleeping locks. All user look safe
 for migrate_diable() only.
@@ -111,5 +112,5 @@ index 16ca31a..c398734 100644
  	/* peek cache of free slot */
  	if (pool->left != FC_XID_UNKNOWN) {
 -- 
-2.1.4
+2.7.4
 

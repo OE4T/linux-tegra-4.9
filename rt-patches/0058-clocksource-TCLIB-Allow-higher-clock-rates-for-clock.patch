@@ -1,4 +1,4 @@
-From 0b6798a749b7347cffc1865b7240df2db0e6a9b6 Mon Sep 17 00:00:00 2001
+From 8f962654b3282cf64615639ee873e57ec8e4f314 Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Mon, 8 Mar 2010 18:57:04 +0100
 Subject: [PATCH 058/353] clocksource: TCLIB: Allow higher clock rates for
@@ -6,6 +6,7 @@ Subject: [PATCH 058/353] clocksource: TCLIB: Allow higher clock rates for
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 As default the TCLIB uses the 32KiHz base clock rate for clock events.
 Add a compile time selection to allow higher clock resulution.
@@ -165,5 +166,5 @@ index e403ad6..8236b8c 100644
  	tristate "Dummy IRQ handler"
  	default n
 -- 
-2.1.4
+2.7.4
 

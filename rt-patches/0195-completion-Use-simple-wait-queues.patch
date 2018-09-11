@@ -1,7 +1,8 @@
-From ba2241cf004daf158f3e9de8f46aa076992d93cf Mon Sep 17 00:00:00 2001
+From 91308bbde9892fdf960e73144cf6953200ea4d69 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
 Subject: [PATCH 195/353] completion: Use simple wait queues
+X-NVConfidentiality: public
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -37,10 +38,10 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index ba2fd9c..be4cac4 100644
+index d283a2a..66d1894 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1597,7 +1597,7 @@ static void ffs_data_put(struct ffs_data *ffs)
+@@ -1603,7 +1603,7 @@ static void ffs_data_put(struct ffs_data *ffs)
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -371,5 +372,5 @@ index 9c2da06..a26906f 100644
  {
  	unsigned long flags;
 -- 
-2.1.4
+2.7.4
 

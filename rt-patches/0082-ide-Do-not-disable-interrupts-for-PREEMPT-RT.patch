@@ -1,7 +1,8 @@
-From 8797605efcdf64efa2bcb052dfcff40358c5a440 Mon Sep 17 00:00:00 2001
+From cdac952b9aab47598d6d3ad7b73fac858536e0c5 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
 Subject: [PATCH 082/353] ide: Do not disable interrupts for PREEMPT-RT
+X-NVConfidentiality: public
 
 Use the local_irq_*_nort variants.
 
@@ -182,5 +183,5 @@ index a716693..be0568c 100644
  	ide_set_handler(drive, &task_pio_intr, WAIT_WORSTCASE);
  
 -- 
-2.1.4
+2.7.4
 

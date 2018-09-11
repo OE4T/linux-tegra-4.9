@@ -1,8 +1,9 @@
-From 112e50dc555f4be5a2948462bb1fb8782af577ea Mon Sep 17 00:00:00 2001
+From 1bfb2e96b01756204e31d16846f9ccd6985ae312 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang@windriver.com>
 Date: Wed, 11 Jul 2012 22:05:21 +0000
 Subject: [PATCH 297/353] perf: Make swevent hrtimer run in irq instead of
  softirq
+X-NVConfidentiality: public
 
 Otherwise we get a deadlock like below:
 
@@ -70,5 +71,5 @@ index 8330332..212e408 100644
  	/*
  	 * Since hrtimers have a fixed rate, we can do a static freq->period
 -- 
-2.1.4
+2.7.4
 

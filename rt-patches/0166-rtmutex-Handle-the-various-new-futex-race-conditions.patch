@@ -1,7 +1,8 @@
-From 3ff4882510d1fd29c806a26b9979861262429b66 Mon Sep 17 00:00:00 2001
+From b44c997e3db913379757ac4f667acfee601ad508 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 10 Jun 2011 11:04:15 +0200
 Subject: [PATCH 166/353] rtmutex: Handle the various new futex race conditions
+X-NVConfidentiality: public
 
 RT opens a few new interesting race conditions in the rtmutex/futex
 combo due to futex hash bucket lock being a 'sleeping' spinlock and
@@ -251,5 +252,5 @@ index 722e3cf..be1c017 100644
  extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  				       struct task_struct *proxy_owner);
 -- 
-2.1.4
+2.7.4
 

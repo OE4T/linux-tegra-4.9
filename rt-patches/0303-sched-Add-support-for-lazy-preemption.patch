@@ -1,7 +1,8 @@
-From 3f9abe41136eaf4cef8137f2bdfc809831a78a2b Mon Sep 17 00:00:00 2001
+From eb363eed8910475d08e0dbf17fd5b43b0c80f677 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
 Subject: [PATCH 303/353] sched: Add support for lazy preemption
+X-NVConfidentiality: public
 
 It has become an obsession to mitigate the determinism vs. throughput
 loss of RT. Looking at the mainline semantics of preemption points
@@ -129,7 +130,7 @@ index 0c734628..f97c542 100644
  } while (0)
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index fee7210..4e09d00 100644
+index 26a2ebf..1f04762 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -3547,6 +3547,43 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
@@ -368,7 +369,7 @@ index bf36fbf..a6ffa9d 100644
  	 * The idle tasks have their own, simple scheduling class:
  	 */
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index f5256e0..95454b5 100644
+index 17a91c8..fe8df82 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -3948,7 +3948,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
@@ -478,7 +479,7 @@ index 5c2ab33..ff0b36b 100644
  extern void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime);
  
 diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
-index 2fbb2e2..3bdceee 100644
+index e9b704f..f7585c6 100644
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
 @@ -1924,6 +1924,7 @@ tracing_generic_entry_update(struct trace_entry *entry, unsigned long flags,
@@ -499,7 +500,7 @@ index 2fbb2e2..3bdceee 100644
  		(test_preempt_need_resched() ? TRACE_FLAG_PREEMPT_RESCHED : 0);
  
  	entry->migrate_disable = (tsk) ? __migrate_disabled(tsk) & 0xFF : 0;
-@@ -2926,15 +2928,17 @@ get_total_entries(struct trace_buffer *buf,
+@@ -2931,15 +2933,17 @@ get_total_entries(struct trace_buffer *buf,
  
  static void print_lat_help_header(struct seq_file *m)
  {
@@ -526,7 +527,7 @@ index 2fbb2e2..3bdceee 100644
  }
  
  static void print_event_info(struct trace_buffer *buf, struct seq_file *m)
-@@ -2967,11 +2971,14 @@ static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file
+@@ -2972,11 +2976,14 @@ static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file
  	print_event_info(buf, m);
  	seq_puts(m, "#                              _-----=> irqs-off\n"
  		    "#                             / _----=> need-resched\n"
@@ -612,5 +613,5 @@ index a37003d..8da8d50 100644
  		trace_seq_printf(s, "%x", entry->migrate_disable);
  	else
 -- 
-2.1.4
+2.7.4
 

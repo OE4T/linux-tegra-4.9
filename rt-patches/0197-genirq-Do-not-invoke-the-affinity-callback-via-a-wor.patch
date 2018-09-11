@@ -1,8 +1,9 @@
-From d563ba20336adea176730f61b47b8f90dda98305 Mon Sep 17 00:00:00 2001
+From db7d8b7786bdccfbbb4e518da191b32f44e4eeaf Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
 Subject: [PATCH 197/353] genirq: Do not invoke the affinity callback via a
  workqueue on RT
+X-NVConfidentiality: public
 
 Joe Korty reported, that __irq_set_affinity_locked() schedules a
 workqueue while holding a rawlock which results in a might_sleep()
@@ -143,5 +144,5 @@ index c4f3e6c..0c4d417 100644
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
 -- 
-2.1.4
+2.7.4
 

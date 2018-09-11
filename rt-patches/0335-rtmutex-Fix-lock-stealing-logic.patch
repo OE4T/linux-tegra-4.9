@@ -1,7 +1,8 @@
-From 95d2e9e9da79137734ddb3dcf75e26dedcf56ad5 Mon Sep 17 00:00:00 2001
+From 269f423920d396122bff5876ed0ab31e1d5f9254 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 23 Jun 2017 09:37:14 +0200
 Subject: [PATCH 335/353] rtmutex: Fix lock stealing logic
+X-NVConfidentiality: public
 
 1. When trying to acquire an rtmutex, we first try to grab it without
 queueing the waiter, and explicitly check for that initial attempt
@@ -161,5 +162,5 @@ index b73cd7c..5dbf678 100644
  			/*
  			 * The current top waiter stays enqueued. We
 -- 
-2.1.4
+2.7.4
 

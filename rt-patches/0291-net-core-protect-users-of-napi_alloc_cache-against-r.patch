@@ -1,8 +1,9 @@
-From db7a3d1425df2e0b6ce64e0642e56165ac468d9b Mon Sep 17 00:00:00 2001
+From 63dcc2048c77369d5c4921f3fbc7a15b811fba88 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 15 Jan 2016 16:33:34 +0100
 Subject: [PATCH 291/353] net/core: protect users of napi_alloc_cache against
  reentrance
+X-NVConfidentiality: public
 
 On -RT the code running in BH can not be moved to another CPU so CPU
 local variable remain local. However the code can be preempted
@@ -114,5 +115,5 @@ index 9603105..d875f696 100644
  void __kfree_skb_defer(struct sk_buff *skb)
  {
 -- 
-2.1.4
+2.7.4
 

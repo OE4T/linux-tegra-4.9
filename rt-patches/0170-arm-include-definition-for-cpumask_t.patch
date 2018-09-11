@@ -1,7 +1,8 @@
-From fa7196c9996f30b82be66548c6f8cf69bcbde51c Mon Sep 17 00:00:00 2001
+From f6f7f3e56dd88a0ab33a1a31de9237d8d0fdc10d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Dec 2016 17:28:33 +0100
 Subject: [PATCH 170/353] arm: include definition for cpumask_t
+X-NVConfidentiality: public
 
 This definition gets pulled in by other files. With the (later) split of
 RCU and spinlock.h it won't compile anymore.
@@ -26,5 +27,5 @@ index e53638c..6095a16 100644
  struct pt_regs;
  extern void migrate_irqs(void);
 -- 
-2.1.4
+2.7.4
 

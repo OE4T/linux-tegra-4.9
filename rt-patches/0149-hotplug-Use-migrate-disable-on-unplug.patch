@@ -1,7 +1,8 @@
-From 546fff56b9d283b4dae5cf05700b2fd20e978e13 Mon Sep 17 00:00:00 2001
+From 5ee4f59fd999350f580d997764b9d9f01c2a011e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
 Subject: [PATCH 149/353] hotplug: Use migrate disable on unplug
+X-NVConfidentiality: public
 
 Migration needs to be disabled accross the unplug handling to make
 sure that the unplug thread is off the unplugged cpu.
@@ -41,5 +42,5 @@ index ee08823..3b026a1 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-2.1.4
+2.7.4
 

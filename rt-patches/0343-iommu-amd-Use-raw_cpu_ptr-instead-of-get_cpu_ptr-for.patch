@@ -1,8 +1,9 @@
-From f9b800d54b8672133c9ab0fb46a76125d63adcb8 Mon Sep 17 00:00:00 2001
+From b752ceee48235707622ccb44243d70249e907c10 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 5 Sep 2017 14:11:41 +0200
 Subject: [PATCH 343/353] iommu/amd: Use raw_cpu_ptr() instead of get_cpu_ptr()
  for ->flush_queue
+X-NVConfidentiality: public
 
 get_cpu_ptr() disabled preemption and returns the ->flush_queue object
 of the current CPU. raw_cpu_ptr() does the same except that it not
@@ -45,5 +46,5 @@ index 75ee953..3408e5d 100644
  
  
 -- 
-2.1.4
+2.7.4
 

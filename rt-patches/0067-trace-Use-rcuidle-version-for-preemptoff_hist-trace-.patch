@@ -1,8 +1,9 @@
-From 9755c627f6a5f3c8f97c2b90943cfb8887b03bb4 Mon Sep 17 00:00:00 2001
+From 79dfacab9ebd029cd20dbdc5aa897a985d6cc94f Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Tue, 23 Feb 2016 13:23:23 -0800
 Subject: [PATCH 067/353] trace: Use rcuidle version for preemptoff_hist trace
  point
+X-NVConfidentiality: public
 
 When running -rt kernel with both PREEMPT_OFF_HIST and LOCKDEP enabled,
 the below error is reported:
@@ -90,5 +91,5 @@ index 0b5947e..940bd10 100644
  
  #else /* !CONFIG_PROVE_LOCKING */
 -- 
-2.1.4
+2.7.4
 

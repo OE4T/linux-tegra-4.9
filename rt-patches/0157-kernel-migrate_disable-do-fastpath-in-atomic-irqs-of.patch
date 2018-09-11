@@ -1,8 +1,9 @@
-From c913c9f692f719a9aca310c2354f507adfc560e6 Mon Sep 17 00:00:00 2001
+From f4808679dfa582df3e401009fe80843302a859c5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:18:01 +0100
 Subject: [PATCH 157/353] kernel: migrate_disable() do fastpath in atomic &
  irqs-off
+X-NVConfidentiality: public
 
 With interrupts off it makes no sense to do the long path since we can't
 leave the CPU anyway. Also we might end up in a recursion with lockdep.
@@ -35,5 +36,5 @@ index d6d3afb..e0963e7 100644
  		p->migrate_disable_atomic--;
  #endif
 -- 
-2.1.4
+2.7.4
 

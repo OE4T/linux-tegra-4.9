@@ -1,7 +1,8 @@
-From 6422c8881e380de59881fe9cbdad049b9edbc9af Mon Sep 17 00:00:00 2001
+From 8e893127d032450c752a2d383636ab3f893c32ff Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:36:35 +0200
 Subject: [PATCH 239/353] net/Qdisc: use a seqlock instead seqcount
+X-NVConfidentiality: public
 
 The seqcount disables preemption on -RT while it is held which can't
 remove. Also we don't want the reader to spin for ages if the writer is
@@ -290,5 +291,5 @@ index 2cff9e4..77d50f2 100644
  	sch->ops = ops;
  	sch->enqueue = ops->enqueue;
 -- 
-2.1.4
+2.7.4
 

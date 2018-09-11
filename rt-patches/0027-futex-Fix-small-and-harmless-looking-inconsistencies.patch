@@ -1,8 +1,9 @@
-From 2d97e01ee190fe8d0531f64b2f00a42ce4f2cd09 Mon Sep 17 00:00:00 2001
+From ba98c3fb9fb5dbb4b8452de6930db0ebc054d5a1 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 7 Apr 2017 09:04:07 +0200
 Subject: [PATCH 027/353] futex: Fix small (and harmless looking)
  inconsistencies
+X-NVConfidentiality: public
 
 Upstream commit 94ffac5d847cfd790bb37b7cef1cad803743985e
 
@@ -59,5 +60,5 @@ index 1a18fab..4c6e487 100644
  
  out_unlock:
 -- 
-2.1.4
+2.7.4
 

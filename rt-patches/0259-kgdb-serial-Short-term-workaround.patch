@@ -1,7 +1,8 @@
-From 288f3283af50e4e7f9d8f8e13fcee9b8471d5ec3 Mon Sep 17 00:00:00 2001
+From 3f832dee984c7d417b477f6e0562fede21c7d33a Mon Sep 17 00:00:00 2001
 From: Jason Wessel <jason.wessel@windriver.com>
 Date: Thu, 28 Jul 2011 12:42:23 -0500
 Subject: [PATCH 259/353] kgdb/serial: Short term workaround
+X-NVConfidentiality: public
 
 On 07/27/2011 04:37 PM, Thomas Gleixner wrote:
 >  - KGDB (not yet disabled) is reportedly unusable on -rt right now due
@@ -24,7 +25,7 @@ Jason.
  3 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index 560023b..4e1cd9c 100644
+index 8205240..b8b8b15 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
 @@ -35,6 +35,7 @@
@@ -35,7 +36,7 @@ index 560023b..4e1cd9c 100644
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/timer.h>
-@@ -3146,6 +3147,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+@@ -3145,6 +3146,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
  
  	if (port->sysrq || oops_in_progress)
  		locked = 0;
@@ -106,5 +107,5 @@ index 3990c1f..72c3201 100644
  	return r;
  }
 -- 
-2.1.4
+2.7.4
 

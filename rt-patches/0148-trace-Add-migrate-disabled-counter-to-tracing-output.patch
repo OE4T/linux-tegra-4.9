@@ -1,7 +1,8 @@
-From 50e3c604eb03eaaee4e1914fd2731c86104d0f97 Mon Sep 17 00:00:00 2001
+From 192cf2dcf9818d486a445d6d95e8d6d0f0af1999 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:56:42 +0200
 Subject: [PATCH 148/353] trace: Add migrate-disabled counter to tracing output
+X-NVConfidentiality: public
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
@@ -25,7 +26,7 @@ index ba57266..4f8bb9c 100644
  
  #define TRACE_EVENT_TYPE_MAX						\
 diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
-index 26b7f1e..2fbb2e2 100644
+index 490cbcd..e9b704f 100644
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
 @@ -1936,6 +1936,8 @@ tracing_generic_entry_update(struct trace_entry *entry, unsigned long flags,
@@ -37,7 +38,7 @@ index 26b7f1e..2fbb2e2 100644
  }
  EXPORT_SYMBOL_GPL(tracing_generic_entry_update);
  
-@@ -2929,9 +2931,10 @@ static void print_lat_help_header(struct seq_file *m)
+@@ -2934,9 +2936,10 @@ static void print_lat_help_header(struct seq_file *m)
  		    "#                | / _----=> need-resched    \n"
  		    "#                || / _---=> hardirq/softirq \n"
  		    "#                ||| / _--=> preempt-depth   \n"
@@ -81,5 +82,5 @@ index 0346759..a37003d 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

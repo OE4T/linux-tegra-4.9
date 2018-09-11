@@ -1,7 +1,8 @@
-From 75addf7ee78f30ac7b8c93c42c2fd792627e7035 Mon Sep 17 00:00:00 2001
+From 04511bbdbb27ee477e1e3b81d235eda6278c3f7d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
 Subject: [PATCH 054/353] signals: Allow rt tasks to cache one sigqueue struct
+X-NVConfidentiality: public
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,7 +17,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 5bf1fb9..f621007 100644
+index 494700f..96537e2 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1858,6 +1858,7 @@ struct task_struct {
@@ -40,10 +41,10 @@ index 5308304..aa9c1a6 100644
  /* Test if 'sig' is valid signal. Use this instead of testing _NSIG directly */
  static inline int valid_signal(unsigned long sig)
 diff --git a/kernel/exit.c b/kernel/exit.c
-index 61921bc..d472298 100644
+index dde0e5d..60eea1f 100644
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
-@@ -145,7 +145,7 @@ static void __exit_signal(struct task_struct *tsk)
+@@ -146,7 +146,7 @@ static void __exit_signal(struct task_struct *tsk)
  	 * Do this under ->siglock, we can race with another thread
  	 * doing sigqueue_free() if we have SIGQUEUE_PREALLOC signals.
  	 */
@@ -53,10 +54,10 @@ index 61921bc..d472298 100644
  	spin_unlock(&sighand->siglock);
  
 diff --git a/kernel/fork.c b/kernel/fork.c
-index b8d7a22..f575766 100644
+index 5e42222..3382720 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1574,6 +1574,7 @@ static __latent_entropy struct task_struct *copy_process(
+@@ -1575,6 +1575,7 @@ static __latent_entropy struct task_struct *copy_process(
  	spin_lock_init(&p->alloc_lock);
  
  	init_sigpending(&p->pending);
@@ -207,5 +208,5 @@ index 145b39c..5fac80c 100644
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
 -- 
-2.1.4
+2.7.4
 

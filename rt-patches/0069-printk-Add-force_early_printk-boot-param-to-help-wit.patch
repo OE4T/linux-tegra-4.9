@@ -1,8 +1,9 @@
-From 1de84e68efb86fd427fac3d915ac3566e6fcfd77 Mon Sep 17 00:00:00 2001
+From df1e2c5f169e38422fb4b9f75ca189d717f8a196 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
 Subject: [PATCH 069/353] printk: Add "force_early_printk" boot param to help
  with debugging
+X-NVConfidentiality: public
 
 Gives me an option to screw printk and actually see what the machine
 says.
@@ -34,5 +35,5 @@ index e4a74bd..2e26fbf 100644
  {
  	printk_killswitch = true;
 -- 
-2.1.4
+2.7.4
 

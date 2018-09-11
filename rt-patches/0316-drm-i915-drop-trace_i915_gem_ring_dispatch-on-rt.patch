@@ -1,7 +1,8 @@
-From 32e9fa21e004b4f344ef0010c539c01c45b57a84 Mon Sep 17 00:00:00 2001
+From dce1378f66a602172dfdaf347d4c213ea3c99e39 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 25 Apr 2013 18:12:52 +0200
 Subject: [PATCH 316/353] drm/i915: drop trace_i915_gem_ring_dispatch on rt
+X-NVConfidentiality: public
 
 This tracepoint is responsible for:
 
@@ -59,5 +60,5 @@ index 2117f17..96c1550 100644
  	i915_gem_execbuffer_move_to_active(vmas, params->request);
  
 -- 
-2.1.4
+2.7.4
 

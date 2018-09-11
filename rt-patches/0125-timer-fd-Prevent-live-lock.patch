@@ -1,7 +1,8 @@
-From 683adc49a2690f9564ac1f106615545decad2683 Mon Sep 17 00:00:00 2001
+From 02098aa0c892a76e31560d090a2c5472a710cfec Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 25 Jan 2012 11:08:40 +0100
 Subject: [PATCH 125/353] timer-fd: Prevent live lock
+X-NVConfidentiality: public
 
 If hrtimer_try_to_cancel() requires a retry, then depending on the
 priority setting te retry loop might prevent timer callback completion
@@ -31,5 +32,5 @@ index ab8dd15..5580853 100644
  
  	/*
 -- 
-2.1.4
+2.7.4
 

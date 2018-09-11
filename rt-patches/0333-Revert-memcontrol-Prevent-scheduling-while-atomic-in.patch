@@ -1,8 +1,9 @@
-From fad74f01ccfd75b8d1b597d453e4f52b841cc10c Mon Sep 17 00:00:00 2001
+From ee7b8da767cd9fd921bf196ddbb46a86eacc5e3b Mon Sep 17 00:00:00 2001
 From: "Steven Rostedt (VMware)" <rostedt@goodmis.org>
 Date: Wed, 22 Nov 2017 07:31:19 -0500
 Subject: [PATCH 333/353] Revert "memcontrol: Prevent scheduling while atomic
  in cgroup code"
+X-NVConfidentiality: public
 
 The commit "memcontrol: Prevent scheduling while atomic in cgroup code"
 fixed this issue:
@@ -102,5 +103,5 @@ index 73faf6f..4909ab7 100644
  
  /*
 -- 
-2.1.4
+2.7.4
 

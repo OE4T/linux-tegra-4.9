@@ -1,7 +1,8 @@
-From b2c67bb3bfa30d82291b36befd1a409ffc81d0b0 Mon Sep 17 00:00:00 2001
+From 07d385a75cd27d5cb29798407956a7a24c7fd68d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 18:21:04 +0200
 Subject: [PATCH 185/353] ptrace: fix ptrace vs tasklist_lock race
+X-NVConfidentiality: public
 
 As explained by Alexander Fyodorov <halcy@yandex.ru>:
 
@@ -30,7 +31,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 68 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index ef2d486..532e2cb 100644
+index 3421a21..efb6fe2 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -245,10 +245,7 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -159,5 +160,5 @@ index 7833a93..f542ef7 100644
  		task_rq_unlock(rq, p, &rf);
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,7 +1,8 @@
-From 06ce53e2236537f0191ff83719605d384a6be5f2 Mon Sep 17 00:00:00 2001
+From 97ed7aeca89dcc9b282868d5c430ae3d80dda646 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 20 Jan 2017 18:10:20 +0100
 Subject: [PATCH 160/353] softirq: wake the timer softirq if needed
+X-NVConfidentiality: public
 
 The irq-exit path only checks the "normal"-softirq thread if it is
 running and ignores the state of the "timer"-softirq thread. It is possible
@@ -73,5 +74,5 @@ index be66205..b5f185b 100644
  	local_irq_save(flags);
  	if (__this_cpu_read(ksoftirqd) &&
 -- 
-2.1.4
+2.7.4
 

@@ -1,8 +1,9 @@
-From 7ef5849c5f1cb0022ee243e07a168a224389eef1 Mon Sep 17 00:00:00 2001
+From 206a33f927819421a3cd54b698794452d77f13cb Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 6 Dec 2016 17:50:30 -0500
 Subject: [PATCH 242/353] net: Have __napi_schedule_irqoff() disable interrupts
  on RT
+X-NVConfidentiality: public
 
 A customer hit a crash where the napi sd->poll_list became corrupted.
 The customer had the bnx2x driver, which does a
@@ -52,7 +53,7 @@ index dcad41b..85fc72b 100644
  static inline bool napi_disable_pending(struct napi_struct *n)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 0745794..94bb5dc 100644
+index 8a76a74..567c050 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -4986,6 +4986,7 @@ void __napi_schedule(struct napi_struct *n)
@@ -72,5 +73,5 @@ index 0745794..94bb5dc 100644
  void __napi_complete(struct napi_struct *n)
  {
 -- 
-2.1.4
+2.7.4
 

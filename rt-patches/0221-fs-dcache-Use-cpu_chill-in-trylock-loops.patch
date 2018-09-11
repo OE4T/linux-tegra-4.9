@@ -1,7 +1,8 @@
-From 9ce0f067894ba61f6405aff4107434915cb393e8 Mon Sep 17 00:00:00 2001
+From ae66c1f74b700ea2364428c13bee1d1a0e77c409 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
 Subject: [PATCH 221/353] fs: dcache: Use cpu_chill() in trylock loops
+X-NVConfidentiality: public
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -114,5 +115,5 @@ index c4ca100..86c9fc8 100644
  	}
  	/*
 -- 
-2.1.4
+2.7.4
 

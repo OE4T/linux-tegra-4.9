@@ -1,8 +1,9 @@
-From a2d4b8b8d38989bcbdc9b2e5a04735d2f6996252 Mon Sep 17 00:00:00 2001
+From 04b9fd97b46da12201acc4d81065203b88af9eb5 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
 Subject: [PATCH 019/353] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
+X-NVConfidentiality: public
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
 
@@ -73,7 +74,7 @@ index 325f649..d359b1a 100644
  #else
  # define INIT_RT_MUTEXES(tsk)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 915007a..5bf1fb9 100644
+index 2576825..494700f 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1892,6 +1892,8 @@ struct task_struct {
@@ -98,10 +99,10 @@ index a30b172..60d0c47 100644
  extern void rt_mutex_adjust_pi(struct task_struct *p);
  static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 40b55c0..b8d7a22 100644
+index da9fd38..5e42222 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1438,6 +1438,7 @@ static void rt_mutex_init_task(struct task_struct *p)
+@@ -1439,6 +1439,7 @@ static void rt_mutex_init_task(struct task_struct *p)
  #ifdef CONFIG_RT_MUTEXES
  	p->pi_waiters = RB_ROOT;
  	p->pi_waiters_leftmost = NULL;
@@ -181,5 +182,5 @@ index 21c4ea6..345a93e 100644
  	oldprio = p->prio;
  
 -- 
-2.1.4
+2.7.4
 

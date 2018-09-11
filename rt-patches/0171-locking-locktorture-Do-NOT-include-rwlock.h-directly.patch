@@ -1,8 +1,9 @@
-From f9bd53b15341ef900b8ceb18244b54067ac479cc Mon Sep 17 00:00:00 2001
+From b80201379c9bd8d823b02747ab6f77db3e036d9b Mon Sep 17 00:00:00 2001
 From: "Wolfgang M. Reimer" <linuxball@gmail.com>
 Date: Tue, 21 Jul 2015 16:20:07 +0200
 Subject: [PATCH 171/353] locking: locktorture: Do NOT include rwlock.h
  directly
+X-NVConfidentiality: public
 
 Including rwlock.h directly will cause kernel builds to fail
 if CONFIG_PREEMPT_RT_FULL is defined. The correct header file
@@ -29,5 +30,5 @@ index babc67c..e385a6e 100644
  #include <linux/rwsem.h>
  #include <linux/smp.h>
 -- 
-2.1.4
+2.7.4
 

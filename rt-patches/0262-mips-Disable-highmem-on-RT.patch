@@ -1,7 +1,8 @@
-From 38633968877afc05e88213bfe22d782230e8f0a7 Mon Sep 17 00:00:00 2001
+From 6ba38faffd25da39bb4fb71b96cbf57c90e8005b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 17:10:12 +0200
 Subject: [PATCH 262/353] mips: Disable highmem on RT
+X-NVConfidentiality: public
 
 The current highmem handling on -RT is not compatible and needs fixups.
 
@@ -24,5 +25,5 @@ index 34fbbf8..faae20d 100644
  config CPU_SUPPORTS_HIGHMEM
  	bool
 -- 
-2.1.4
+2.7.4
 

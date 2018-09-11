@@ -1,7 +1,8 @@
-From dcbb482131929c8b6ccd19d5d1194457fe09407d Mon Sep 17 00:00:00 2001
+From 8d00a010a1b827d80d4fc022b6933d7cd5247870 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 21 Sep 2011 19:57:12 +0200
 Subject: [PATCH 050/353] signal: Revert ptrace preempt magic
+X-NVConfidentiality: public
 
 Upstream commit '53da1d9456fe7f8 fix ptrace slowness' is nothing more
 than a bandaid around the ptrace design trainwreck. It's not a
@@ -33,5 +34,5 @@ index 4364e57..145b39c 100644
  	} else {
  		/*
 -- 
-2.1.4
+2.7.4
 

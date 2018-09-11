@@ -1,7 +1,8 @@
-From 5e7769155a442d6c5e46152f0a8b5a1321b54bf3 Mon Sep 17 00:00:00 2001
+From 18dba1710acbb67849710f4e6ac29f517a485a00 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 11 Mar 2013 17:09:55 +0100
 Subject: [PATCH 265/353] x86/highmem: Add a "already used pte" check
+X-NVConfidentiality: public
 
 This is a copy from kmap_atomic_prot().
 
@@ -24,5 +25,5 @@ index 2620fb5..585f682 100644
  	current->kmap_pte[type] = pte;
  #endif
 -- 
-2.1.4
+2.7.4
 

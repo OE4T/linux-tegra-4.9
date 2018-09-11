@@ -1,4 +1,4 @@
-From 59381377e24a5f4213aa678aec248c02e3d54dae Mon Sep 17 00:00:00 2001
+From c338dd210c0fe1a1271e0ecc91b963ccfa2419dd Mon Sep 17 00:00:00 2001
 From: "Yadi.hu" <yadi.hu@windriver.com>
 Date: Wed, 10 Dec 2014 10:32:09 +0800
 Subject: [PATCH 255/353] ARM: enable irq in translation/section permission
@@ -6,6 +6,7 @@ Subject: [PATCH 255/353] ARM: enable irq in translation/section permission
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 Probably happens on all ARM, with
 CONFIG_PREEMPT_RT_FULL
@@ -90,5 +91,5 @@ index a9ef54d..50cb5ed 100644
  	return 0;
  }
 -- 
-2.1.4
+2.7.4
 

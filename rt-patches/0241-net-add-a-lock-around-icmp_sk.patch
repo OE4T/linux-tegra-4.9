@@ -1,7 +1,8 @@
-From 6047e3e9aaa7e571e464e50f56f93c3b6c56e79b Mon Sep 17 00:00:00 2001
+From 4dd35e2663906e0933b471b13f56acf77d07c2af Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:54:09 +0200
 Subject: [PATCH 241/353] net: add a lock around icmp_sk()
+X-NVConfidentiality: public
 
 It looks like the this_cpu_ptr() access in icmp_sk() is protected with
 local_bh_disable(). To avoid missing serialization in -RT I am adding
@@ -74,5 +75,5 @@ index 42a19fb..0fd1e72 100644
  
  /*
 -- 
-2.1.4
+2.7.4
 

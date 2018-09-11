@@ -1,8 +1,9 @@
-From cb6d30ab991549b2dd0c89550da4788e47972739 Mon Sep 17 00:00:00 2001
+From 4a7168f292a1ee6c390c1baf240be4ce848d028e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 15:35:57 +0200
 Subject: [PATCH 342/353] Bluetooth: avoid recursive locking in
  hci_send_to_channel()
+X-NVConfidentiality: public
 
 Mart reported a deadlock in -RT in the call path:
   hci_send_monitor_ctrl_event() -> hci_send_to_channel()
@@ -72,5 +73,5 @@ index c88a600..5de85b5 100644
  	}
  
 -- 
-2.1.4
+2.7.4
 

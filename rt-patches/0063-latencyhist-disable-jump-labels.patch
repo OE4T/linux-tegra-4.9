@@ -1,7 +1,8 @@
-From f27fa7449e990d93a0ef50946432d1f6381036fd Mon Sep 17 00:00:00 2001
+From 741a8ed4f0a10c8ffb98261d5848d940214cfdce Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 4 Feb 2016 14:08:06 +0100
 Subject: [PATCH 063/353] latencyhist: disable jump-labels
+X-NVConfidentiality: public
 
 Atleast on X86 we die a recursive death
 
@@ -63,5 +64,5 @@ index b39d0f9..e84c312 100644
           This option enables a transparent branch optimization that
  	 makes certain almost-always-true or almost-always-false branch
 -- 
-2.1.4
+2.7.4
 

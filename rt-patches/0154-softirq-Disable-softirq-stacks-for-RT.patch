@@ -1,7 +1,8 @@
-From bb243462655c37300f17622a7699029b855906f5 Mon Sep 17 00:00:00 2001
+From 55d8432b13c30e765450c424eca10ad6d0636296 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 13:59:17 +0200
 Subject: [PATCH 154/353] softirq: Disable softirq stacks for RT
+X-NVConfidentiality: public
 
 Disable extra stacks for softirqs. We want to preempt softirqs and
 having them on special IRQ-stack does not make this easier.
@@ -119,7 +120,7 @@ index 5cbf03c..6067d93 100644
  #ifdef CONFIG_HOTPLUG_CPU
  void fixup_irqs(void)
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index d58d8dc..a2d9d29 100644
+index 76c1d85e..a29a8da 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -838,6 +838,7 @@ bad_gs:
@@ -172,5 +173,5 @@ index 5819d55..c2bcbd4 100644
  #else
  static inline void do_softirq_own_stack(void)
 -- 
-2.1.4
+2.7.4
 

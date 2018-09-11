@@ -1,7 +1,8 @@
-From 9c9bb78f3a09c70cc9346ec4656c3063f38715bb Mon Sep 17 00:00:00 2001
+From 2bab3ddfa9481365a2759aba7c9d2f9c22e6cd70 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
 Subject: [PATCH 074/353] iommu/amd: Use WARN_ON_NORT in __attach_device()
+X-NVConfidentiality: public
 
 RT does not disable interrupts here, but the protection is still
 correct. Fixup the WARN_ON so it won't yell on RT.
@@ -48,5 +49,5 @@ index 0c910a8..75ee953 100644
  	if (WARN_ON(!dev_data->domain))
  		return;
 -- 
-2.1.4
+2.7.4
 

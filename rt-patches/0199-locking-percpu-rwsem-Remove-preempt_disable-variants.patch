@@ -1,7 +1,8 @@
-From bb2f1c3cd9e50f8f6c142180c0c931666100614c Mon Sep 17 00:00:00 2001
+From 97fb27c978cdad6c3eeea32ab0d34c64a66da1ac Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 23 Nov 2016 16:29:32 +0100
 Subject: [PATCH 199/353] locking/percpu-rwsem: Remove preempt_disable variants
+X-NVConfidentiality: public
 
 Effective revert commit:
 
@@ -221,5 +222,5 @@ index 82d54a4..ea940f4 100644
  extern void percpu_up_write(struct percpu_rw_semaphore *);
  
 -- 
-2.1.4
+2.7.4
 

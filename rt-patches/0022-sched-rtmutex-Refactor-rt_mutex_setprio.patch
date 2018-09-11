@@ -1,7 +1,8 @@
-From 6fe7ba245415492b96112409df58fc97d373f3b6 Mon Sep 17 00:00:00 2001
+From 434b3fcaf98f40ad13fa8d27e8bf7e984299daf0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
 Subject: [PATCH 022/353] sched/rtmutex: Refactor rt_mutex_setprio()
+X-NVConfidentiality: public
 
 Upstream commit acd58620e415aee4a43a808d7d2fd87259ee0001
 
@@ -398,5 +399,5 @@ index 345a93e..1f4862d 100644
  			queue_flags &= ~DEQUEUE_MOVE;
  	}
 -- 
-2.1.4
+2.7.4
 

@@ -1,7 +1,8 @@
-From 1a2d0bb8dbb08af296f8f4d074f6ace2618f7c6f Mon Sep 17 00:00:00 2001
+From 4cd90a0395a8b613961f1bea000ef3781e2d830c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 20:06:39 +0200
 Subject: [PATCH 175/353] rtmutex: Avoid include hell
+X-NVConfidentiality: public
 
 Include only the required raw types. This avoids pulling in the
 complete spinlock header which in turn requires rtmutex.h at some point.
@@ -25,5 +26,5 @@ index 51dc12e..2ed41c4 100644
  extern int max_lock_depth; /* for sysctl */
  
 -- 
-2.1.4
+2.7.4
 

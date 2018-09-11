@@ -1,7 +1,8 @@
-From 9d2a12cbc41771799a6834a760e56a5e9db5cb10 Mon Sep 17 00:00:00 2001
+From c4b7f4d6afb42d14295e8c5af7b46df27b34fc1f Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Wed, 14 Feb 2018 23:05:10 +0200
 Subject: [PATCH 351/353] printk: make rt aware (again)
+X-NVConfidentiality: public
 
 Similar to patch "printk: Make rt aware", make changes to downstream
 added code as well:
@@ -63,5 +64,5 @@ index e92b3de..5458b40 100644
  		raw_spin_unlock(&logbuf_lock);
  
 -- 
-2.1.4
+2.7.4
 

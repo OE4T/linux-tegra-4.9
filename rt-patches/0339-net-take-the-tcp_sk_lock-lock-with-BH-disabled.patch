@@ -1,7 +1,8 @@
-From de708bbac2042467261f48757e3467897a7582a7 Mon Sep 17 00:00:00 2001
+From 105967ffb84bf70bf4b319189d11cfc2e97cfd37 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
 Subject: [PATCH 339/353] net: take the tcp_sk_lock lock with BH disabled
+X-NVConfidentiality: public
 
 Lockdep may complain about an unsafe locking scenario:
 |      CPU0                    CPU1
@@ -69,5 +70,5 @@ index ca5319a..f007c84 100644
  
  static void tcp_v4_timewait_ack(struct sock *sk, struct sk_buff *skb)
 -- 
-2.1.4
+2.7.4
 

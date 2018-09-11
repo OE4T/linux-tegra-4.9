@@ -1,7 +1,8 @@
-From d40d43ff1c67a9e94e0a69e71b41b68ec394eb9e Mon Sep 17 00:00:00 2001
+From 9691d3ae7c062e764a6b958d5bfe82549b085122 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 12:11:12 +0100
 Subject: [PATCH 311/353] mmci: Remove bogus local_irq_save()
+X-NVConfidentiality: public
 
 On !RT interrupt runs with interrupts disabled. On RT it's in a
 thread, so no need to disable interrupts at all.
@@ -41,5 +42,5 @@ index df990bb..1a16270 100644
  	 * If we have less than the fifo 'half-full' threshold to transfer,
  	 * trigger a PIO interrupt as soon as any data is available.
 -- 
-2.1.4
+2.7.4
 

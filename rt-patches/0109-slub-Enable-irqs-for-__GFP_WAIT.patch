@@ -1,7 +1,8 @@
-From 8bb9e1ff7bd7d2eac04ed9c141b0bb46202c829c Mon Sep 17 00:00:00 2001
+From 07dd865cf79a4b1cb61304503941c30b466afa10 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 12:08:15 +0100
 Subject: [PATCH 109/353] slub: Enable irqs for __GFP_WAIT
+X-NVConfidentiality: public
 
 SYSTEM_RUNNING might be too late for enabling interrupts. Allocations
 with GFP_WAIT can happen before that. So use this as an indicator.
@@ -49,5 +50,5 @@ index 3b85af5..4c22f10 100644
  	if (!page)
  		return NULL;
 -- 
-2.1.4
+2.7.4
 

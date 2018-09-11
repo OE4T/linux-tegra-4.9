@@ -1,7 +1,8 @@
-From 476d456f8cdfd0bc825dddac16c7beb10e81cd6e Mon Sep 17 00:00:00 2001
+From 0cb4dcf158c6e8f370b3c8a9c942d7e4af0e15dd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
 Subject: [PATCH 223/353] fs/dcache: use swait_queue instead of waitqueue
+X-NVConfidentiality: public
 
 __d_lookup_done() invokes wake_up_all() while holding a hlist_bl_lock()
 which disables preemption. As a workaround convert it to swait.
@@ -163,7 +164,7 @@ index 0165a95..58990c8 100644
  	status = -EBUSY;
  	spin_lock(&dentry->d_lock);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 98e1554..0ea3c6f 100644
+index 0dbac3a..9dec90f 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
 @@ -1849,7 +1849,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
@@ -237,5 +238,5 @@ index a26906f..6b7e6d3 100644
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-2.1.4
+2.7.4
 

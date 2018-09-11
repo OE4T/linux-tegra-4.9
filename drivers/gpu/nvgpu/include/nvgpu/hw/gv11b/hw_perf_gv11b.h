@@ -60,6 +60,10 @@ static inline u32 perf_pmmgpc_perdomain_offset_v(void)
 {
 	return 0x00000200U;
 }
+static inline u32 perf_pmmsys_perdomain_offset_v(void)
+{
+	return 0x00000200U;
+}
 static inline u32 perf_pmmgpc_base_v(void)
 {
 	return 0x00180000U;
@@ -231,5 +235,29 @@ static inline u32 perf_pmasys_enginestatus_rbufempty_empty_v(void)
 static inline u32 perf_pmasys_enginestatus_rbufempty_empty_f(void)
 {
 	return 0x10U;
+}
+static inline u32 perf_pmmsys_engine_sel_r(u32 i)
+{
+	return 0x0024006cU + i*512U;
+}
+static inline u32 perf_pmmsys_engine_sel__size_1_v(void)
+{
+	return 0x00000020U;
+}
+static inline u32 perf_pmmfbp_engine_sel_r(u32 i)
+{
+	return 0x0020006cU + i*512U;
+}
+static inline u32 perf_pmmfbp_engine_sel__size_1_v(void)
+{
+	return 0x00000020U;
+}
+static inline u32 perf_pmmgpc_engine_sel_r(u32 i)
+{
+	return 0x0018006cU + i*512U;
+}
+static inline u32 perf_pmmgpc_engine_sel__size_1_v(void)
+{
+	return 0x00000020U;
 }
 #endif

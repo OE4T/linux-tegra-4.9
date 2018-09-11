@@ -81,6 +81,8 @@
 #include <gv11b/gr_ctx_gv11b.h>
 #include <gv11b/gr_gv11b.h>
 
+#include <gv100/gr_gv100.h>
+
 #include <nvgpu/enabled.h>
 #include <nvgpu/channel.h>
 
@@ -183,6 +185,8 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.enable_exceptions = NULL,
 		.get_lrf_tex_ltc_dram_override = NULL,
 		.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode,
+		.get_hw_accessor_stream_out_mode =
+			gr_gv100_get_hw_accessor_stream_out_mode,
 		.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,
 		.clear_sm_error_state = vgpu_gr_clear_sm_error_state,

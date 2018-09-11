@@ -158,7 +158,6 @@ nvgpu-$(CONFIG_TEGRA_GK20A_NVHOST) += \
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	os/linux/vgpu/platform_vgpu_tegra.o \
 	os/linux/vgpu/fecs_trace_vgpu.o \
-	os/linux/vgpu/clk_vgpu.o \
 	os/linux/vgpu/sysfs_vgpu.o \
 	os/linux/vgpu/vgpu_ivc.o \
 	os/linux/vgpu/vgpu_ivm.o \
@@ -270,6 +269,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/tsg_vgpu.o \
 	vgpu/css_vgpu.o \
 	vgpu/ecc_vgpu.o \
+	vgpu/clk_vgpu.o \
 	vgpu/gm20b/vgpu_gr_gm20b.o \
 	vgpu/gp10b/vgpu_hal_gp10b.o  \
 	vgpu/gp10b/vgpu_gr_gp10b.o  \

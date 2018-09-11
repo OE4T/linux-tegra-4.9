@@ -19,10 +19,11 @@
 #include <nvgpu/nvhost.h>
 
 #include "gk20a/gk20a.h"
-#include "os/linux/vgpu/clk_vgpu.h"
+#include "vgpu/clk_vgpu.h"
 #include "os/linux/platform_gk20a.h"
 #include "os/linux/os_linux.h"
 #include "os/linux/vgpu/vgpu_linux.h"
+#include "os/linux/vgpu/platform_vgpu_tegra.h"
 
 static int gv11b_vgpu_probe(struct device *dev)
 {
@@ -88,8 +89,8 @@ struct gk20a_platform gv11b_vgpu_tegra_platform = {
 
 	.probe = gv11b_vgpu_probe,
 
-	.clk_round_rate = vgpu_clk_round_rate,
-	.get_clk_freqs = vgpu_clk_get_freqs,
+	.clk_round_rate = vgpu_plat_clk_round_rate,
+	.get_clk_freqs = vgpu_plat_clk_get_freqs,
 
 	/* frequency scaling configuration */
 	.devfreq_governor = "userspace",

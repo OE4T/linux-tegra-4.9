@@ -35,7 +35,7 @@
 
 #include "vgpu_linux.h"
 #include "vgpu/fecs_trace_vgpu.h"
-#include "clk_vgpu.h"
+#include "vgpu/clk_vgpu.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gm20b/hal_gm20b.h"
@@ -46,6 +46,7 @@
 #include "os/linux/scale.h"
 #include "os/linux/driver_common.h"
 #include "os/linux/platform_gk20a.h"
+#include "os/linux/vgpu/platform_vgpu_tegra.h"
 
 struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
 {
@@ -244,7 +245,7 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	nvgpu_log_fn(g, " ");
 
 	max_freq = (u32)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS);
-	err = vgpu_clk_cap_rate(profile->dev, max_freq);
+	err = vgpu_plat_clk_cap_rate(profile->dev, max_freq);
 	if (err)
 		nvgpu_err(g, "%s failed, err=%d", __func__, err);
 
@@ -286,6 +287,7 @@ static void vgpu_pm_qos_remove(struct device *dev)
 static int vgpu_pm_init(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	unsigned long *freqs;
 	int num_freqs;
@@ -303,7 +305,7 @@ static int vgpu_pm_init(struct device *dev)
 
 	if (l->devfreq) {
 		/* set min/max frequency based on frequency table */
-		err = vgpu_clk_get_freqs(dev, &freqs, &num_freqs);
+		err = platform->get_clk_freqs(dev, &freqs, &num_freqs);
 		if (err)
 			return err;
 

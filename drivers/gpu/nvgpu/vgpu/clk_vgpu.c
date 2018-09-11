@@ -1,19 +1,23 @@
 /*
- * Virtualized GPU Clock Interface
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms and conditions of the GNU General Public License,
- * version 2, as published by the Free Software Foundation.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
- * This program is distributed in the hope it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include <nvgpu/vgpu/vgpu.h>
@@ -21,7 +25,6 @@
 #include "gk20a/gk20a.h"
 #include "clk_vgpu.h"
 #include "ctrl/ctrlclk.h"
-#include "os/linux/platform_gk20a.h"
 
 static unsigned long
 vgpu_freq_table[TEGRA_VGPU_GPU_FREQ_TABLE_SIZE];
@@ -104,17 +107,8 @@ void vgpu_init_clk_support(struct gk20a *g)
 	g->ops.clk.get_maxrate = vgpu_clk_get_maxrate;
 }
 
-long vgpu_clk_round_rate(struct device *dev, unsigned long rate)
+int vgpu_clk_get_freqs(struct gk20a *g, unsigned long **freqs, int *num_freqs)
 {
-	/* server will handle frequency rounding */
-	return rate;
-}
-
-int vgpu_clk_get_freqs(struct device *dev,
-		unsigned long **freqs, int *num_freqs)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct gk20a *g = platform->g;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_get_gpu_freq_table_params *p =
 					&msg.params.get_gpu_freq_table;
@@ -144,10 +138,8 @@ int vgpu_clk_get_freqs(struct device *dev,
 	return 0;
 }
 
-int vgpu_clk_cap_rate(struct device *dev, unsigned long rate)
+int vgpu_clk_cap_rate(struct gk20a *g, unsigned long rate)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct gk20a *g = platform->g;
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	int err = 0;

@@ -52,7 +52,7 @@ static void pmgr_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 
 	if (msg->msg.pmgr.msg_type == NV_PMU_PMGR_MSG_ID_SET_OBJECT) {
 		if ((msg->msg.pmgr.set_object.b_success != 1) ||
-			(msg->msg.pmgr.set_object.flcnstatus != 0) ) {
+			(msg->msg.pmgr.set_object.flcnstatus != 0U)) {
 			nvgpu_err(g, "pmgr msg failed %x %x %x %x",
 				msg->msg.pmgr.set_object.msg_type,
 				msg->msg.pmgr.set_object.b_success,
@@ -62,7 +62,7 @@ static void pmgr_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		}
 	} else if (msg->msg.pmgr.msg_type == NV_PMU_PMGR_MSG_ID_QUERY) {
 		if ((msg->msg.pmgr.query.b_success != 1) ||
-			(msg->msg.pmgr.query.flcnstatus != 0) ) {
+			(msg->msg.pmgr.query.flcnstatus != 0U)) {
 			nvgpu_err(g, "pmgr msg failed %x %x %x %x",
 				msg->msg.pmgr.query.msg_type,
 				msg->msg.pmgr.query.b_success,
@@ -72,7 +72,7 @@ static void pmgr_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		}
 	} else if (msg->msg.pmgr.msg_type == NV_PMU_PMGR_MSG_ID_LOAD) {
 		if ((msg->msg.pmgr.query.b_success != 1) ||
-			(msg->msg.pmgr.query.flcnstatus != 0) ) {
+			(msg->msg.pmgr.query.flcnstatus != 0U)) {
 			nvgpu_err(g, "pmgr msg failed %x %x %x",
 				msg->msg.pmgr.load.msg_type,
 				msg->msg.pmgr.load.b_success,
@@ -133,7 +133,7 @@ static u32 pmgr_pmu_set_object(struct gk20a *g,
 			gk20a_get_gr_idle_timeout(g),
 			&handlerparams.success, 1);
 
-	if (handlerparams.success == 0) {
+	if (handlerparams.success == 0U) {
 		nvgpu_err(g, "could not process cmd");
 		status = -ETIMEDOUT;
 		goto exit;
@@ -431,7 +431,7 @@ u32 pmgr_pmu_pwr_devices_query_blocking(
 			gk20a_get_gr_idle_timeout(g),
 			&handlerparams.success, 1);
 
-	if (handlerparams.success == 0) {
+	if (handlerparams.success == 0U) {
 		nvgpu_err(g, "could not process cmd");
 		status = -ETIMEDOUT;
 		goto exit;
@@ -475,7 +475,7 @@ static u32 pmgr_pmu_load_blocking(struct gk20a *g)
 			gk20a_get_gr_idle_timeout(g),
 			&handlerparams.success, 1);
 
-	if (handlerparams.success == 0) {
+	if (handlerparams.success == 0U) {
 		nvgpu_err(g, "could not process cmd");
 		status = -ETIMEDOUT;
 		goto exit;

@@ -234,17 +234,17 @@ struct boardobjgrp {
 * be inserted contiguously (i.e. w/o fear of colliding with existing objects).
 */
 #define BOARDOBJGRP_NEXT_EMPTY_IDX(_pboardobjgrp)                              \
-	((CTRL_BOARDOBJ_IDX_INVALID == (_pboardobjgrp)->objmaxidx) ? 0 :       \
-	((((_pboardobjgrp)->objmaxidx + 1) >= (_pboardobjgrp)->objslots) ?     \
-	(u8)CTRL_BOARDOBJ_IDX_INVALID : (u8)((_pboardobjgrp)->objmaxidx + 1)))
+	((CTRL_BOARDOBJ_IDX_INVALID == (_pboardobjgrp)->objmaxidx) ? 0U :      \
+	((((_pboardobjgrp)->objmaxidx + 1U) >= (_pboardobjgrp)->objslots) ?    \
+	(u8)CTRL_BOARDOBJ_IDX_INVALID : (u8)((_pboardobjgrp)->objmaxidx + 1U)))
 
 /*
 * Helper macro to determine the number of @ref BOARDOBJ pointers
 * that are required to be allocated in PMU @ref ppObjects.
 */
 #define BOARDOBJGRP_PMU_SLOTS_GET(_pboardobjgrp)                            \
-	((CTRL_BOARDOBJ_IDX_INVALID == (_pboardobjgrp)->objmaxidx) ? 0 :    \
-	(u8)((_pboardobjgrp)->objmaxidx + 1))
+	((CTRL_BOARDOBJ_IDX_INVALID == (_pboardobjgrp)->objmaxidx) ? 0U :    \
+	(u8)((_pboardobjgrp)->objmaxidx + 1U))
 
 #define BOARDOBJGRP_OBJ_GET_BY_IDX(_pboardobjgrp, _idx)                     \
 	((_pboardobjgrp)->objgetbyidx((_pboardobjgrp), (_idx)))
@@ -274,8 +274,8 @@ struct boardobjgrp {
 #define BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK(mask_width, index, mask)        \
 {                                                           \
 	u##mask_width lcl_msk = (u##mask_width)(mask);         \
-	for (index = 0; lcl_msk != 0; index++, lcl_msk >>= 1) {     \
-		if (((u##mask_width)((u64)1) & lcl_msk) == 0) {     \
+	for (index = 0; lcl_msk != 0U; index++, lcl_msk >>= 1U) {     \
+		if (((u##mask_width)((u64)1) & lcl_msk) == 0U) {     \
 			continue;                                       \
 		}
 
@@ -289,22 +289,22 @@ struct boardobjgrp {
 * @ref BOARDOBJGRP::unitId and, thus, certain BOARDOBJGRP PMU interfaces are
 * not supported.
 */
-#define BOARDOBJGRP_UNIT_ID_INVALID                                   255
+#define BOARDOBJGRP_UNIT_ID_INVALID                                   255U
 
 /*!
 * Invalid UNIT_ID.  Used to indicate that the implementing class has not set
 * @ref BOARDOBJGRP::grpType and, thus, certain BOARDOBJGRP PMU interfaces are
 * not supported.
 */
-#define BOARDOBJGRP_GRP_CLASS_ID_INVALID                              255
+#define BOARDOBJGRP_GRP_CLASS_ID_INVALID                              255U
 
 /*!
 * Invalid UNIT_ID.  Used to indicate that the implementing class has not set
 * @ref BOARDOBJGRP::grpSetCmdId and, thus, certain BOARDOBJGRP PMU interfaces
 * are not supported.
 */
-#define BOARDOBJGRP_GRP_CMD_ID_INVALID                                255
-#define BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID                           255
+#define BOARDOBJGRP_GRP_CMD_ID_INVALID                                255U
+#define BOARDOBJGRP_GRP_RPC_FUNC_ID_INVALID                           255U
 
 /*!
 * Helper macro to construct a BOARDOBJGRP's PMU SW state.
@@ -379,14 +379,14 @@ void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 
 #define HIGHESTBITIDX_32(n32)   \
 {                               \
-	u32 count = 0;        \
-	while (n32 >>= 1) {       \
+	u32 count = 0U;        \
+	while (n32 >>= 1U) {       \
 		count++;       \
 	}                      \
 	n32 = count;            \
 }
 
-#define LOWESTBIT(x)            ((x) &  (((x)-1) ^ (x)))
+#define LOWESTBIT(x)            ((x) &  (((x)-1U) ^ (x)))
 
 #define HIGHESTBIT(n32)     \
 {                           \
@@ -394,7 +394,7 @@ void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 	n32 = NVBIT(n32);       \
 }
 
-#define ONEBITSET(x)            ((x) && (((x) & ((x)-1)) == 0))
+#define ONEBITSET(x)            ((x) && (((x) & ((x)-1U)) == 0U))
 
 #define LOWESTBITIDX_32(n32)  \
 {                             \
@@ -404,24 +404,24 @@ void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 
 #define NUMSETBITS_32(n32)                                         \
 {                                                                  \
-	n32 = n32 - ((n32 >> 1) & 0x55555555);                         \
-	n32 = (n32 & 0x33333333) + ((n32 >> 2) & 0x33333333);          \
-	n32 = (((n32 + (n32 >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;  \
+	n32 = n32 - ((n32 >> 1U) & 0x55555555U);                         \
+	n32 = (n32 & 0x33333333U) + ((n32 >> 2U) & 0x33333333U);          \
+	n32 = (((n32 + (n32 >> 4U)) & 0x0F0F0F0FU) * 0x01010101U) >> 24U;  \
 }
 
 #define IDX_32(n32)                     \
 {                                       \
-	u32 idx = 0;                      \
-	if ((n32) & 0xFFFF0000)             \
-		idx += 16;                  \
-	if ((n32) & 0xFF00FF00)             \
-		idx += 8;                   \
-	if ((n32) & 0xF0F0F0F0)             \
-		idx += 4;                   \
-	if ((n32) & 0xCCCCCCCC)             \
-		idx += 2;                   \
-	if ((n32) & 0xAAAAAAAA)             \
-		idx += 1;                   \
+	u32 idx = 0U;                      \
+	if ((n32) & 0xFFFF0000U)             \
+		idx += 16U;                  \
+	if ((n32) & 0xFF00FF00U)             \
+		idx += 8U;                   \
+	if ((n32) & 0xF0F0F0F0U)             \
+		idx += 4U;                   \
+	if ((n32) & 0xCCCCCCCCU)             \
+		idx += 2U;                   \
+	if ((n32) & 0xAAAAAAAAU)             \
+		idx += 1U;                   \
 	(n32) = idx;                        \
 }
 

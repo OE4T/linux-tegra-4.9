@@ -338,7 +338,7 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 			pwrpolicy,
 			PWR_POLICY_LIMIT_ID_BATT,
 			CTRL_PMGR_PWR_POLICY_LIMIT_INPUT_CLIENT_IDX_RM,
-			((pwrpolicyparams->limit_batt != 0) ?
+			((pwrpolicyparams->limit_batt != 0U) ?
 				pwrpolicyparams->limit_batt:
 				CTRL_PMGR_PWR_POLICY_LIMIT_MAX));
 

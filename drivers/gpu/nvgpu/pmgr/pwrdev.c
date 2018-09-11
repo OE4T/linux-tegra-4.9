@@ -40,7 +40,7 @@ static int _pwr_device_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrdevice->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		ppmgrdevice->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 
@@ -191,7 +191,7 @@ static int devinit_get_pwr_device_table(struct gk20a *g,
 
 		memcpy(&pwr_sensor_table_entry.class_param0,
 			(curr_pwr_device_table_ptr + 1),
-			(VBIOS_POWER_SENSORS_2X_ENTRY_SIZE_15 - 1));
+			(VBIOS_POWER_SENSORS_2X_ENTRY_SIZE_15 - 1U));
 
 		device_type = (u8)BIOS_GET_FIELD(
 			pwr_sensor_table_entry.flags0,

@@ -40,7 +40,7 @@ static int _pwr_channel_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrchannel->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		ppmgrchannel->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 
@@ -67,7 +67,7 @@ static int _pwr_channel_rels_pmudata_instget(struct gk20a *g,
 
 	/*check whether pmuboardobjgrp has a valid boardobj in index*/
 	if (((u32)BIT(idx) &
-		ppmgrchrels->hdr.data.super.obj_mask.super.data[0]) == 0) {
+		ppmgrchrels->hdr.data.super.obj_mask.super.data[0]) == 0U) {
 		return -EINVAL;
 	}
 
@@ -241,7 +241,7 @@ static int devinit_get_pwr_topology_table(struct gk20a *g,
 
 		memcpy(&pwr_topology_table_entry.param0,
 			(curr_pwr_topology_table_ptr + 2),
-			(VBIOS_POWER_TOPOLOGY_2X_ENTRY_SIZE_16 - 2));
+			(VBIOS_POWER_TOPOLOGY_2X_ENTRY_SIZE_16 - 2U));
 
 		class_type = (u8)BIOS_GET_FIELD(
 			pwr_topology_table_entry.flags0,

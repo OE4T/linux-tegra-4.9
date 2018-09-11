@@ -29,7 +29,7 @@
 #include "boardobj/boardobj.h"
 #include "ctrl/ctrlpmgr.h"
 
-#define PWR_POLICY_EXT_POWER_STATE_ID_COUNT 0x4
+#define PWR_POLICY_EXT_POWER_STATE_ID_COUNT 0x4U
 
 enum pwr_policy_limit_id {
 	PWR_POLICY_LIMIT_ID_MIN    = 0x00000000,

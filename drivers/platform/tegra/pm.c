@@ -180,7 +180,7 @@ static int tegra_debug_uart_syscore_init(void)
 
 	property = of_get_property(of_chosen, "stdout-path", NULL);
 	if (!property) {
-		pr_err("%s: stdout-path property missing\n", __func__);
+		pr_info("%s: stdout-path property missing\n", __func__);
 		goto out;
 	}
 

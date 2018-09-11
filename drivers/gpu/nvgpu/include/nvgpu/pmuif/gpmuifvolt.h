@@ -26,13 +26,13 @@
 #include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlvolt.h"
 
-#define NV_PMU_VOLT_VALUE_0V_IN_UV	(0)
+#define NV_PMU_VOLT_VALUE_0V_IN_UV	(0U)
 
 /* ------------- VOLT_RAIL's GRP_SET defines and structures ------------- */
 
-#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_RAIL		0x00
-#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_DEVICE	0x01
-#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_POLICY	0x02
+#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_RAIL		0x00U
+#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_DEVICE		0x01U
+#define NV_PMU_VOLT_BOARDOBJGRP_CLASS_ID_VOLT_POLICY		0x02U
 
 
 struct nv_pmu_volt_volt_rail_boardobjgrp_set_header {
@@ -264,17 +264,17 @@ struct nv_pmu_volt_volt_rail_set_noise_unaware_vmin {
 	rail_list;
 };
 
-#define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_SET	(0x00000000)
-#define NV_PMU_VOLT_CMD_ID_RPC				(0x00000001)
-#define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_GET_STATUS	(0x00000002)
-#define NV_PMU_VOLT_RPC_ID_VOLT_RAIL_SET_NOISE_UNAWARE_VMIN (0x00000004)
+#define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_SET			(0x00000000U)
+#define NV_PMU_VOLT_CMD_ID_RPC					(0x00000001U)
+#define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_GET_STATUS		(0x00000002U)
+#define NV_PMU_VOLT_RPC_ID_VOLT_RAIL_SET_NOISE_UNAWARE_VMIN	(0x00000004U)
 
 /*!
 * PMU VOLT RPC calls.
 */
-#define NV_PMU_VOLT_RPC_ID_LOAD	(0x00000000)
-#define NV_PMU_VOLT_RPC_ID_VOLT_POLICY_SET_VOLTAGE	(0x00000002)
-#define NV_PMU_VOLT_RPC_ID_VOLT_RAIL_GET_VOLTAGE	(0x00000003)
+#define NV_PMU_VOLT_RPC_ID_LOAD					(0x00000000U)
+#define NV_PMU_VOLT_RPC_ID_VOLT_POLICY_SET_VOLTAGE		(0x00000002U)
+#define NV_PMU_VOLT_RPC_ID_VOLT_RAIL_GET_VOLTAGE		(0x00000003U)
 
 struct nv_pmu_volt_cmd_rpc {
 	u8 cmd_type;
@@ -310,9 +310,9 @@ struct nv_pmu_volt_rpc {
 /*!
 * VOLT MSG ID definitions
 */
-#define NV_PMU_VOLT_MSG_ID_BOARDOBJ_GRP_SET	(0x00000000)
-#define NV_PMU_VOLT_MSG_ID_RPC				(0x00000001)
-#define NV_PMU_VOLT_MSG_ID_BOARDOBJ_GRP_GET_STATUS	(0x00000002)
+#define NV_PMU_VOLT_MSG_ID_BOARDOBJ_GRP_SET			(0x00000000U)
+#define NV_PMU_VOLT_MSG_ID_RPC					(0x00000001U)
+#define NV_PMU_VOLT_MSG_ID_BOARDOBJ_GRP_GET_STATUS		(0x00000002U)
 
 /*!
 * Message carrying the result of the VOLT RPC execution.
@@ -335,7 +335,7 @@ struct nv_pmu_volt_msg {
 	};
 };
 
-#define NV_PMU_VF_INJECT_MAX_VOLT_RAILS		(2)
+#define NV_PMU_VF_INJECT_MAX_VOLT_RAILS		(2U)
 
 struct nv_pmu_volt_volt_rail_list {
 	u8 num_rails;
@@ -350,13 +350,13 @@ struct nv_pmu_volt_volt_rail_list_v1 {
 };
 
 /* VOLT RPC */
-#define NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD	0x00
-#define NV_PMU_RPC_ID_VOLT_VOLT_SET_VOLTAGE		0x01
-#define NV_PMU_RPC_ID_VOLT_LOAD					0x02
-#define NV_PMU_RPC_ID_VOLT_VOLT_RAIL_GET_VOLTAGE	0x03
-#define NV_PMU_RPC_ID_VOLT_VOLT_POLICY_SANITY_CHECK	0x04
-#define NV_PMU_RPC_ID_VOLT_TEST_EXECUTE		0x05
-#define NV_PMU_RPC_ID_VOLT__COUNT			0x06
+#define NV_PMU_RPC_ID_VOLT_BOARD_OBJ_GRP_CMD			0x00U
+#define NV_PMU_RPC_ID_VOLT_VOLT_SET_VOLTAGE			0x01U
+#define NV_PMU_RPC_ID_VOLT_LOAD					0x02U
+#define NV_PMU_RPC_ID_VOLT_VOLT_RAIL_GET_VOLTAGE		0x03U
+#define NV_PMU_RPC_ID_VOLT_VOLT_POLICY_SANITY_CHECK		0x04U
+#define NV_PMU_RPC_ID_VOLT_TEST_EXECUTE				0x05U
+#define NV_PMU_RPC_ID_VOLT__COUNT				0x06U
 
 /*
  * Defines the structure that holds data

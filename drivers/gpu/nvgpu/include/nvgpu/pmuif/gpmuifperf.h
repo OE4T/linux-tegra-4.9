@@ -30,31 +30,31 @@
 * argument for communications between Kernel and PMU via the various generic
 * BOARDOBJGRP interfaces.
 */
-#define NV_PMU_PERF_BOARDOBJGRP_CLASS_ID_VFE_VAR                            0x00
-#define NV_PMU_PERF_BOARDOBJGRP_CLASS_ID_VFE_EQU                            0x01
+#define NV_PMU_PERF_BOARDOBJGRP_CLASS_ID_VFE_VAR                 0x00U
+#define NV_PMU_PERF_BOARDOBJGRP_CLASS_ID_VFE_EQU                 0x01U
 
-#define NV_PMU_PERF_CMD_ID_RPC                                   (0x00000002)
-#define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_SET                      (0x00000003)
-#define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_GET_STATUS               (0x00000004)
+#define NV_PMU_PERF_CMD_ID_RPC                                   (0x00000002U)
+#define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_SET                      (0x00000003U)
+#define NV_PMU_PERF_CMD_ID_BOARDOBJ_GRP_GET_STATUS               (0x00000004U)
 
 /*!
  * RPC calls serviced by PERF unit.
  */
-#define NV_PMU_RPC_ID_PERF_BOARD_OBJ_GRP_CMD                                0x00
-#define NV_PMU_RPC_ID_PERF_LOAD                                             0x01
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_GET                              0x02
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_SET                              0x03
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_SET_CONTROL                           0x04
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUEUE_CHANGE                          0x05
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOCK                                  0x06
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOAD                                  0x07
-#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUERY                                 0x08
-#define NV_PMU_RPC_ID_PERF_PERF_LIMITS_INVALIDATE                           0x09
-#define NV_PMU_RPC_ID_PERF_VFE_EQU_EVAL                                     0x0A
-#define NV_PMU_RPC_ID_PERF_VFE_INVALIDATE                                   0x0B
-#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_SET                              0x0C
-#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_GET                              0x0D
-#define NV_PMU_RPC_ID_PERF__COUNT                                           0x0E
+#define NV_PMU_RPC_ID_PERF_BOARD_OBJ_GRP_CMD                     0x00U
+#define NV_PMU_RPC_ID_PERF_LOAD                                  0x01U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_GET                   0x02U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_INFO_SET                   0x03U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_SET_CONTROL                0x04U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUEUE_CHANGE               0x05U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOCK                       0x06U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_LOAD                       0x07U
+#define NV_PMU_RPC_ID_PERF_CHANGE_SEQ_QUERY                      0x08U
+#define NV_PMU_RPC_ID_PERF_PERF_LIMITS_INVALIDATE                0x09U
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_EVAL                          0x0AU
+#define NV_PMU_RPC_ID_PERF_VFE_INVALIDATE                        0x0BU
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_SET                   0x0CU
+#define NV_PMU_RPC_ID_PERF_VFE_EQU_MONITOR_GET                   0x0DU
+#define NV_PMU_RPC_ID_PERF__COUNT                                0x0EU
 /*
  * Defines the structure that holds data
  * used to execute LOAD RPC.
@@ -76,7 +76,7 @@ struct nv_pmu_perf_cmd_set_object {
 	(offsetof(struct nv_pmu_perf_cmd_set_object, object))
 
 /* RPC IDs */
-#define NV_PMU_PERF_RPC_ID_VFE_LOAD                                 (0x00000001)
+#define NV_PMU_PERF_RPC_ID_VFE_LOAD                              (0x00000001U)
 
 /*!
 * Command requesting execution of the perf RPC.
@@ -121,10 +121,10 @@ struct nv_pmu_perf_rpc {
 
 
 /* PERF Message-type Definitions */
-#define NV_PMU_PERF_MSG_ID_RPC                                      (0x00000003)
-#define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_SET                         (0x00000004)
-#define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_GET_STATUS                  (0x00000006)
-#define NV_PMU_PERF_MSG_ID_VFE_CALLBACK                             (0x00000005)
+#define NV_PMU_PERF_MSG_ID_RPC                                   (0x00000003U)
+#define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_SET                      (0x00000004U)
+#define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_GET_STATUS               (0x00000006U)
+#define NV_PMU_PERF_MSG_ID_VFE_CALLBACK                          (0x00000005U)
 
 /*!
 * Message carrying the result of the perf RPC execution.

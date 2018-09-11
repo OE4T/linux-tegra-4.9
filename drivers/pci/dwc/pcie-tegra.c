@@ -3490,7 +3490,23 @@ static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 
 	destroy_dma_test_debugfs(pcie);
 	debugfs_remove_recursive(pcie->debugfs);
-	tegra_pcie_dw_runtime_suspend(pcie->dev);
+	tegra_pcie_downstream_dev_to_D0(pcie);
+
+	if (pcie->is_safety_platform)
+		clk_disable_unprepare(pcie->core_clk_m);
+
+	tegra_pcie_dw_pme_turnoff(pcie);
+
+	reset_control_assert(pcie->core_rst);
+	tegra_pcie_disable_phy(pcie);
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+	regulator_disable(pcie->pex_ctl_reg);
+	config_plat_gpio(pcie, 0);
+
+	if (pcie->cid != CTRL_5)
+		uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+
 	tegra_bwmgr_unregister(pcie->emc_bw);
 }
 

@@ -65,6 +65,10 @@
 		};
 	};
 
+	spi@c260000 {
+		status = "disabled";
+	};
+
 	spi@3270000 {
 		status = "disabled";
 	};

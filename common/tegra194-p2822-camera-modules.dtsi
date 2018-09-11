@@ -313,7 +313,7 @@
 		};
 	};
 
-	spi@c260000 {
+	spi_cam0: spi@c260000 {
 		e3377_cam0: imx204@0 {
 			status = "disabled";
 		};

@@ -1514,8 +1514,24 @@ struct nvgpu_channel_setup_bind_args {
 #define NVGPU_CHANNEL_SETUP_BIND_FLAGS_DETERMINISTIC	(1 << 1)
 /* enable replayable gmmu faults for this channel */
 #define NVGPU_CHANNEL_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
+/*
+ * Enable usermode submits on this channel.
+ *
+ * Submits in usermode are supported in some environments. If supported and
+ * this flag is set + USERD and GPFIFO buffers are provided here, a submit
+ * token is passed back to be written in the doorbell register in the usermode
+ * region to notify the GPU for new work on this channel. Usermode and
+ * kernelmode submit modes are mutually exclusive; by passing this flag, the
+ * SUBMIT_GPFIFO IOCTL cannot be used.
+ */
+#define NVGPU_CHANNEL_SETUP_BIND_FLAGS_USERMODE_SUPPORT	(1 << 3)
 	__u32 flags;
-	__u32 reserved[16];
+	__s32 userd_dmabuf_fd;	/* in */
+	__s32 gpfifo_dmabuf_fd;	/* in */
+	__u32 work_submit_token; /* out */
+	__u64 userd_dmabuf_offset; /* in */
+	__u64 gpfifo_dmabuf_offset; /* in */
+	__u32 reserved[9];
 };
 struct nvgpu_fence {
 	__u32 id;        /* syncpoint id or sync fence fd */

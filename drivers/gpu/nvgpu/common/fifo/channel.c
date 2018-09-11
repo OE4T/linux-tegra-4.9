@@ -1228,7 +1228,9 @@ int nvgpu_channel_setup_bind(struct channel_gk20a *c,
 	nvgpu_log_info(g, "channel %d : gpfifo_base 0x%016llx, size %d",
 		c->chid, gpfifo_gpu_va, c->gpfifo.entry_num);
 
-	g->ops.fifo.setup_userd(c);
+	if (!c->usermode_submit_enabled) {
+		g->ops.fifo.setup_userd(c);
+	}
 
 	if (g->aggressive_sync_destroy_thresh == 0U) {
 		nvgpu_mutex_acquire(&c->sync_lock);
@@ -1326,7 +1328,10 @@ void gk20a_channel_free_usermode_buffers(struct channel_gk20a *c)
 		nvgpu_dma_free(c->g, &c->usermode_userd);
 	}
 	if (nvgpu_mem_is_valid(&c->usermode_gpfifo)) {
-		nvgpu_dma_free(c->g, &c->usermode_gpfifo);
+		nvgpu_dma_unmap_free(c->vm, &c->usermode_gpfifo);
+	}
+	if (c->g->os_channel.free_usermode_buffers != NULL) {
+		c->g->os_channel.free_usermode_buffers(c);
 	}
 }
 

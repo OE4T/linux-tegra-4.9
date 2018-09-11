@@ -590,6 +590,9 @@ static u32 nvgpu_setup_bind_user_flags_to_common_flags(u32 user_flags)
 	if (user_flags & NVGPU_CHANNEL_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE)
 		flags |= NVGPU_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE;
 
+	if (user_flags & NVGPU_CHANNEL_SETUP_BIND_FLAGS_USERMODE_SUPPORT)
+		flags |= NVGPU_SETUP_BIND_FLAGS_USERMODE_SUPPORT;
+
 	return flags;
 }
 
@@ -601,6 +604,14 @@ static void nvgpu_get_setup_bind_args(
 		channel_setup_bind_args->num_gpfifo_entries;
 	setup_bind_args->num_inflight_jobs =
 		channel_setup_bind_args->num_inflight_jobs;
+	setup_bind_args->userd_dmabuf_fd =
+		channel_setup_bind_args->userd_dmabuf_fd;
+	setup_bind_args->userd_dmabuf_offset =
+		channel_setup_bind_args->userd_dmabuf_offset;
+	setup_bind_args->gpfifo_dmabuf_fd =
+		channel_setup_bind_args->gpfifo_dmabuf_fd;
+	setup_bind_args->gpfifo_dmabuf_offset =
+		channel_setup_bind_args->gpfifo_dmabuf_offset;
 	setup_bind_args->flags = nvgpu_setup_bind_user_flags_to_common_flags(
 			channel_setup_bind_args->flags);
 }
@@ -1156,6 +1167,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = nvgpu_channel_setup_bind(ch, &setup_bind_args);
+		channel_setup_bind_args->work_submit_token =
+			setup_bind_args.work_submit_token;
 		gk20a_idle(ch->g);
 		break;
 	}

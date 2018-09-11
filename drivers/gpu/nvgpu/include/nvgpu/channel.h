@@ -95,7 +95,9 @@ struct nvgpu_setup_bind_args {
 	u32 num_gpfifo_entries;
 	u32 num_inflight_jobs;
 	u32 userd_dmabuf_fd;
+	u64 userd_dmabuf_offset;
 	u32 gpfifo_dmabuf_fd;
+	u64 gpfifo_dmabuf_offset;
 	u32 work_submit_token;
 	u32 flags;
 };

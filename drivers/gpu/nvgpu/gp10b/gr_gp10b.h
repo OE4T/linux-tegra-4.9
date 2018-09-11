@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GR_GP10B_H_
-#define _NVGPU_GR_GP10B_H_
+#ifndef NVGPU_GR_GP10B_H
+#define NVGPU_GR_GP10B_H
 
 #include "gk20a/mm_gk20a.h"
 
@@ -156,4 +156,4 @@ unsigned long gr_gp10b_get_max_gfxp_wfi_timeout_count(struct gk20a *g);
 bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 				bool *cilp_preempt_pending);
 
-#endif
+#endif /* NVGPU_GR_GP10B_H */

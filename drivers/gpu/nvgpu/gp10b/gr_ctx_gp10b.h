@@ -1,7 +1,7 @@
 /*
  * GP10B Graphics Context
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __GR_CTX_GM10B_H__
-#define __GR_CTX_GM10B_H__
+#ifndef NVGPU_GR_CTX_GP10B_H
+#define NVGPU_GR_CTX_GP10B_H
 
 #include "gk20a/gr_ctx_gk20a.h"
 
@@ -32,4 +32,4 @@
 int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name);
 bool gr_gp10b_is_firmware_defined(void);
 
-#endif /*__GR_CTX_GP10B_H__*/
+#endif /* NVGPU_GR_CTX_GP10B_H */

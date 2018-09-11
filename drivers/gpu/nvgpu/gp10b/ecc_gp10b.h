@@ -20,9 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ECC_GP10B_H__
-#define __ECC_GP10B_H__
+#ifndef NVGPU_ECC_GP10B_H
+#define NVGPU_ECC_GP10B_H
 
 int gp10b_ecc_init(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_ECC_GP10B_H */

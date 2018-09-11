@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __CE_GP10B_H__
-#define __CE_GP10B_H__
+#ifndef NVGPU_CE_GP10B_H
+#define NVGPU_CE_GP10B_H
 
 #include <nvgpu/types.h>
 
@@ -31,4 +31,4 @@ struct gk20a;
 void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 u32 gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 
-#endif /*__CE2_GP10B_H__*/
+#endif /* NVGPU_CE_GP10B_H */

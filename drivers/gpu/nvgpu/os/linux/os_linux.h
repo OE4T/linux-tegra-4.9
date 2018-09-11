@@ -65,6 +65,10 @@ struct nvgpu_os_linux {
 	struct {
 		struct cdev cdev;
 		struct device *node;
+		/* see gk20a_ctrl_priv */
+		struct nvgpu_list_node privs;
+		/* guards modifications to the list and its contents */
+		struct nvgpu_mutex privs_lock;
 	} ctrl;
 
 	struct {

@@ -55,7 +55,16 @@ struct gk20a_ctrl_priv {
 	struct device *dev;
 	struct gk20a *g;
 	struct nvgpu_clk_session *clk_session;
+
+	struct nvgpu_list_node list;
 };
+
+static inline struct gk20a_ctrl_priv *
+gk20a_ctrl_priv_from_list(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_ctrl_priv *)
+		((uintptr_t)node - offsetof(struct gk20a_ctrl_priv, list));
+}
 
 static u32 gk20a_as_translate_as_alloc_flags(struct gk20a *g, u32 flags)
 {
@@ -105,19 +114,29 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
 free_ref:
-	if (err) {
+	if (err != 0) {
 		gk20a_put(g);
 		if (priv)
 			nvgpu_kfree(g, priv);
+	} else {
+		nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+		nvgpu_list_add(&priv->list, &l->ctrl.privs);
+		nvgpu_mutex_release(&l->ctrl.privs_lock);
 	}
+
 	return err;
 }
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
 	struct gk20a *g = priv->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 
 	nvgpu_log_fn(g, " ");
+
+	nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+	nvgpu_list_del(&priv->list);
+	nvgpu_mutex_release(&l->ctrl.privs_lock);
 
 	if (priv->clk_session)
 		nvgpu_clk_arb_release_session(g, priv->clk_session);

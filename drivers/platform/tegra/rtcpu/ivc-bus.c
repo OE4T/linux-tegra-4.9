@@ -98,9 +98,10 @@ static void tegra_ivc_channel_release(struct device *dev)
 }
 
 static struct tegra_ivc_channel *tegra_ivc_channel_create(
-		struct device *dev, struct device_node *ch_node,
+		struct tegra_ivc_bus *bus, struct device_node *ch_node,
 		struct tegra_ivc_region *region)
 {
+	struct device *peer_device = bus->dev.parent;
 	struct camrtc_tlv_ivc_setup *tlv;
 	struct {
 		u32 rx;
@@ -114,12 +115,12 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	if (unlikely(chan == NULL))
 		return ERR_PTR(-ENOMEM);
 
-	chan->dev.parent = dev;
+	chan->dev.parent = &bus->dev;
 	chan->dev.type = &tegra_ivc_channel_type;
 	chan->dev.bus = &tegra_ivc_bus_type;
 	chan->dev.of_node = of_node_get(ch_node);
 	chan->dev.release = tegra_ivc_channel_release;
-	dev_set_name(&chan->dev, "%s:%s", dev_name(dev),
+	dev_set_name(&chan->dev, "%s:%s", dev_name(&bus->dev),
 			kbasename(ch_node->full_name));
 	device_initialize(&chan->dev);
 	pm_runtime_no_callbacks(&chan->dev);
@@ -181,12 +182,16 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
 			region->base + start.rx, region->iova + start.rx,
 			region->base + start.tx, region->iova + start.tx,
-			nframes, frame_size, dev->parent,
+			nframes, frame_size,
+			/* Device used to allocate the shared memory for IVC */
+			peer_device,
 			tegra_ivc_channel_ring);
 	if (ret) {
 		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
 		goto error;
 	}
+
+	tegra_ivc_channel_reset(&chan->ivc);
 
 	/* Fill channel descriptor */
 	tlv = (struct camrtc_tlv_ivc_setup *)
@@ -331,7 +336,7 @@ static int tegra_ivc_bus_start(struct device *dev)
 					continue;
 			}
 
-			chan = tegra_ivc_channel_create(dev, ch_node,
+			chan = tegra_ivc_channel_create(bus, ch_node,
 							&bus->regions[i]);
 			if (IS_ERR(chan)) {
 				ret = PTR_ERR(chan);

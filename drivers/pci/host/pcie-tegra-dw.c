@@ -2751,6 +2751,8 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 	pcie->disable_clock_request = of_property_read_bool(pcie->dev->of_node,
 		"nvidia,disable-clock-request");
 	pcie->cdm_check = of_property_read_bool(np, "nvidia,cdm_check");
+	pcie->is_safety_platform = of_property_read_bool(pcie->dev->of_node,
+		"nvidia,enable-fmon");
 
 	if (!tegra_platform_is_sim()) {
 		pcie->phy_count = of_property_count_strings(np, "phy-names");
@@ -2900,11 +2902,13 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 	        return PTR_ERR(pcie->core_clk);
 	}
 
-	pcie->core_clk_m = devm_clk_get(&pdev->dev, "core_clk_m");
-	if (IS_ERR(pcie->core_clk_m))
-		pcie->is_safety_platform = 0;
-	else
-		pcie->is_safety_platform = 1;
+	if (pcie->is_safety_platform) {
+		pcie->core_clk_m = devm_clk_get(&pdev->dev, "core_clk_m");
+		if (IS_ERR(pcie->core_clk_m)) {
+			dev_err(&pdev->dev, "Failed to get monitor clock\n");
+			return PTR_ERR(pcie->core_clk_m);
+		}
+	}
 
 	appl_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "appl");
 	if (!appl_res) {

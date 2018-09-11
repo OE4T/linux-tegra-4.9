@@ -125,6 +125,8 @@ Optional properties:
     bit-3 to '1' : disables advertisement of ASPM-L1.2
 - nvidia,disable-clock-request : gives a hint to driver that there is no
     CLKREQ signal routing on board
+- nvidia,enable-fmon : gives a hint to driver that this a safety enabled
+    platform
 - nvidia,update_fc_fixup : needs it to improve perf when a platform is designed
     in such a way that it satisfies at least one of the following conditions
     1. If C0/C4/C5 run at x1/x2 link widths (irrespective of speed and MPS)

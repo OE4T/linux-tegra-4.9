@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PMGR_H_
-#define _PMGR_H_
+#ifndef NVGPU_PMGR_H
+#define NVGPU_PMGR_H
 
 #include "pwrdev.h"
 #include "pwrmonitor.h"
@@ -40,4 +40,4 @@ int pmgr_pwr_devices_get_current(struct gk20a *g, u32 *val);
 int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val);
 int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val);
 
-#endif
+#endif /* NVGPU_PMGR_H */

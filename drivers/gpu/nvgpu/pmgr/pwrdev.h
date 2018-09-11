@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PWRDEV_H_
-#define _PWRDEV_H_
+#ifndef NVGPU_PMGR_PWRDEV_H
+#define NVGPU_PMGR_PWRDEV_H
 
 #include "boardobj/boardobj.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -57,4 +57,4 @@ struct pwr_device_ina3221 {
 
 int pmgr_device_sw_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_PMGR_PWRDEV_H */

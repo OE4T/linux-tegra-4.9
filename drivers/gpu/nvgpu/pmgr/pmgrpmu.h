@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PMGRPMU_H_
-#define _PMGRPMU_H_
+#ifndef NVGPU_PMGRPMU_H
+#define NVGPU_PMGRPMU_H
 
 #include <nvgpu/gk20a.h>
 
@@ -36,4 +36,4 @@ u32 pmgr_pmu_pwr_devices_query_blocking(
 		u32 pwr_dev_mask,
 		struct nv_pmu_pmgr_pwr_devices_query_payload *ppayload);
 
-#endif
+#endif /* NVGPU_PMGRPMU_H */

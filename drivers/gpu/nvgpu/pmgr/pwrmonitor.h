@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PWRMONITOR_H_
-#define _PWRMONITOR_H_
+#ifndef NVGPU_PMGR_PWRMONITOR_H
+#define NVGPU_PMGR_PWRMONITOR_H
 
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "boardobj/boardobjgrp.h"
@@ -66,4 +66,4 @@ struct pmgr_pwr_monitor {
 
 int pmgr_monitor_sw_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_PMGR_PWRMONITOR_H */

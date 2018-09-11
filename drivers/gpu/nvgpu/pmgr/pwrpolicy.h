@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PWRPOLICY_H_
-#define _PWRPOLICY_H_
+#ifndef NVGPU_PMGR_PWRPOLICY_H
+#define NVGPU_PMGR_PWRPOLICY_H
 
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "boardobj/boardobjgrp.h"
@@ -133,4 +133,4 @@ union pwr_policy_data_union {
 
 int pmgr_policy_sw_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_PMGR_PWRPOLICY_H */

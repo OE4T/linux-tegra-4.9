@@ -164,6 +164,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_USER_SYNCPOINT		(1ULL << 28)
 /* Railgating (powering the GPU off completely) is supported and enabled */
 #define NVGPU_GPU_FLAGS_CAN_RAILGATE			(1ULL << 29)
+/* Usermode submit is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_USERMODE_SUBMIT		(1ULL << 30)
 /* SM LRF ECC is enabled */
 #define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
 /* SM SHM ECC is enabled */

@@ -128,6 +128,8 @@ struct nvgpu_os_linux {
 	void __iomem *usermode_regs;
 	void __iomem *usermode_regs_saved;
 
+	u64 regs_bus_addr;
+
 	struct nvgpu_os_linux_ops ops;
 
 #ifdef CONFIG_DEBUG_FS

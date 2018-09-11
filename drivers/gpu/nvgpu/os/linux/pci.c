@@ -536,6 +536,13 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		goto fail;
 	}
 
+	l->regs_bus_addr = pci_resource_start(pdev, 0);
+	if (!l->regs_bus_addr) {
+		nvgpu_err(g, "failed to read register bus offset");
+		err = -ENODEV;
+		goto fail;
+	}
+
 	l->bar1 = nvgpu_devm_ioremap(dev, pci_resource_start(pdev, 1),
 				     pci_resource_len(pdev, 1));
 	if (IS_ERR(l->bar1)) {

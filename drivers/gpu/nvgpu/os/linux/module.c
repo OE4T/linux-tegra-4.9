@@ -680,6 +680,16 @@ void __iomem *nvgpu_devm_ioremap(struct device *dev, resource_size_t offset,
 	return devm_ioremap(dev, offset, size);
 }
 
+u64 nvgpu_resource_addr(struct platform_device *dev, int i)
+{
+	struct resource *r = platform_get_resource(dev, IORESOURCE_MEM, i);
+
+	if (!r)
+		return 0;
+
+	return r->start;
+}
+
 static irqreturn_t gk20a_intr_isr_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -761,6 +771,14 @@ static int gk20a_init_support(struct platform_device *pdev)
 	if (IS_ERR(l->regs)) {
 		nvgpu_err(g, "failed to remap gk20a registers");
 		err = PTR_ERR(l->regs);
+		goto fail;
+	}
+
+	l->regs_bus_addr = nvgpu_resource_addr(pdev,
+			GK20A_BAR0_IORESOURCE_MEM);
+	if (!l->regs_bus_addr) {
+		nvgpu_err(g, "failed to read register bus offset");
+		err = -ENODEV;
 		goto fail;
 	}
 

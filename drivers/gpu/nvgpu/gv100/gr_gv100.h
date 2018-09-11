@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GR_GV100_H_
-#define _NVGPU_GR_GV100_H_
+#ifndef NVGPU_GR_GV100_H
+#define NVGPU_GR_GV100_H
 
 void gr_gv100_bundle_cb_defaults(struct gk20a *g);
 void gr_gv100_cb_size_default(struct gk20a *g);
@@ -48,4 +48,4 @@ void gr_gv100_split_fbpa_broadcast_addr(struct gk20a *g, u32 addr,
 	u32 *priv_addr_table, u32 *t);
 u32 gr_gv100_get_hw_accessor_stream_out_mode(void);
 void gr_gv100_init_hwpm_pmm_register(struct gk20a *g);
-#endif
+#endif /* NVGPU_GR_GV100_H */

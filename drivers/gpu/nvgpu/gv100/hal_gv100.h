@@ -22,11 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_HAL_GV100_H
-#define _NVGPU_HAL_GV100_H
+#ifndef NVGPU_HAL_GV100_H
+#define NVGPU_HAL_GV100_H
 
 struct gk20a;
 
 int gv100_init_hal(struct gk20a *gops);
 
-#endif
+#endif /* NVGPU_HAL_GV100_H */

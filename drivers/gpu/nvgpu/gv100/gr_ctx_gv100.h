@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __GR_CTX_GV100_H__
-#define __GR_CTX_GV100_H__
+#ifndef NVGPU_GR_CTX_GV100_H
+#define NVGPU_GR_CTX_GV100_H
 
 #include "gk20a/gr_ctx_gk20a.h"
 
@@ -30,4 +30,4 @@
 int gr_gv100_get_netlist_name(struct gk20a *g, int index, char *name);
 bool gr_gv100_is_firmware_defined(void);
 
-#endif /*__GR_CTX_GV100_H__*/
+#endif /* NVGPU_GR_CTX_GV100_H */

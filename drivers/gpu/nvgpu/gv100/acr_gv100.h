@@ -20,10 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_ACR_GV100_H_
-#define _NVGPU_ACR_GV100_H_
+#ifndef NVGPU_ACR_GV100_H
+#define NVGPU_ACR_GV100_H
 
 #define GV100_FECS_UCODE_SIG "gv100/fecs_sig.bin"
 #define GV100_GPCCS_UCODE_SIG "gv100/gpccs_sig.bin"
 
-#endif
+#endif /* NVGPU_ACR_GV100_H */

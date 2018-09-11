@@ -19,9 +19,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __FLCN_GV100_H__
-#define __FLCN_GV100_H__
+#ifndef NVGPU_FLCN_GV100_H
+#define NVGPU_FLCN_GV100_H
 
 int gv100_falcon_hal_sw_init(struct nvgpu_falcon *flcn);
 
-#endif /* __FLCN_GV100_H__ */
+#endif /* NVGPU_FLCN_GV100_H */

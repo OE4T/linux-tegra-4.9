@@ -641,6 +641,7 @@ static const struct gpu_ops gv11b_ops = {
 		.get_sema_wait_cmd_size = gv11b_fifo_get_sema_wait_cmd_size,
 		.get_sema_incr_cmd_size = gv11b_fifo_get_sema_incr_cmd_size,
 		.add_sema_cmd = gv11b_fifo_add_sema_cmd,
+		.usermode_base = gv11b_fifo_usermode_base,
 	},
 	.gr_ctx = {
 		.get_netlist_name = gr_gv11b_get_netlist_name,

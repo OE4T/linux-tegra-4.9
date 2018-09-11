@@ -220,6 +220,10 @@ int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 	return channel_gp10b_commit_userd(c);
 }
 
+u64 gv11b_fifo_usermode_base(struct gk20a *g)
+{
+	return usermode_cfg0_r();
+}
 
 void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {

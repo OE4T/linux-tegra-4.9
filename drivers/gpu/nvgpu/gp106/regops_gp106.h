@@ -22,8 +22,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __REGOPS_GP106_H_
-#define __REGOPS_GP106_H_
+#ifndef NVGPU_REGOPS_GP106_H
+#define NVGPU_REGOPS_GP106_H
 
 const struct regop_offset_range *gp106_get_global_whitelist_ranges(void);
 u64 gp106_get_global_whitelist_ranges_count(void);
@@ -39,4 +39,4 @@ const struct regop_offset_range *gp106_get_qctl_whitelist_ranges(void);
 u64 gp106_get_qctl_whitelist_ranges_count(void);
 int gp106_apply_smpc_war(struct dbg_session_gk20a *dbg_s);
 
-#endif /* __REGOPS_GP106_H_ */
+#endif /* NVGPU_REGOPS_GP106_H */

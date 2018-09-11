@@ -1,7 +1,7 @@
 /*
  * GP106 Tegra HAL interface
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,9 +22,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_HAL_GP106_H
-#define _NVGPU_HAL_GP106_H
+#ifndef NVGPU_HAL_GP106_H
+#define NVGPU_HAL_GP106_H
 struct gk20a;
 
 int gp106_init_hal(struct gk20a *gops);
-#endif
+#endif /* NVGPU_HAL_GP106_H */

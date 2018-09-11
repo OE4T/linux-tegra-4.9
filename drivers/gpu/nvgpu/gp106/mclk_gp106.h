@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,11 +20,11 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _MCLK_GP106_H_
-#define _MCLK_GP106_H_
+#ifndef NVGPU_MCLK_GP106_H
+#define NVGPU_MCLK_GP106_H
 
 extern int gp106_mclk_init(struct gk20a *g);
 extern void gp106_mclk_deinit(struct gk20a *g);
 extern int gp106_mclk_change(struct gk20a *g, u16 val);
 
-#endif
+#endif /* NVGPU_MCLK_GP106_H */

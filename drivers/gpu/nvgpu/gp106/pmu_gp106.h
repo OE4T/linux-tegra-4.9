@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __PMU_GP106_H_
-#define __PMU_GP106_H_
+#ifndef NVGPU_PMU_GP106_H
+#define NVGPU_PMU_GP106_H
 
 #define gp106_dbg_pmu(g, fmt, arg...) \
 	nvgpu_log(g, gpu_dbg_pmu, fmt, ##arg)
@@ -42,4 +42,4 @@ void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 bool gp106_pmu_is_engine_in_reset(struct gk20a *g);
 int gp106_pmu_engine_reset(struct gk20a *g, bool do_reset);
 
-#endif /*__PMU_GP106_H_*/
+#endif /* NVGPU_PMU_GP106_H */

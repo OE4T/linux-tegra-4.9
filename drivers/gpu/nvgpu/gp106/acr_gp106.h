@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ACR_GP106_H_
-#define __ACR_GP106_H_
+#ifndef NVGPU_ACR_GP106_H
+#define NVGPU_ACR_GP106_H
 
 #define GP106_FECS_UCODE_SIG "gp106/fecs_sig.bin"
 #define GP106_GPCCS_UCODE_SIG "gp106/gpccs_sig.bin"
@@ -63,4 +63,4 @@ int gp106_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
 int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 		struct lsfm_managed_ucode_img_v2 *pnode);
-#endif /*__PMU_GP106_H_*/
+#endif /* NVGPU_ACR_GP106_H */

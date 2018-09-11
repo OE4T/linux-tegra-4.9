@@ -1,7 +1,7 @@
 /*
  * GP106 GPU GR
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GR_GP106_H_
-#define _NVGPU_GR_GP106_H_
+#ifndef NVGPU_GR_GP106_H
+#define NVGPU_GR_GP106_H
 
 struct gk20a;
 
@@ -43,4 +43,4 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode);
 
-#endif
+#endif /* NVGPU_GR_GP106_H */

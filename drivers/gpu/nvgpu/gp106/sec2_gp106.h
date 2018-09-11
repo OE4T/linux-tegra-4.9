@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __SEC2_H_
-#define __SEC2_H_
+#ifndef NVGPU_SEC2_GP106_H
+#define NVGPU_SEC2_GP106_H
 
 int gp106_sec2_clear_halt_interrupt_status(struct gk20a *g,
 	unsigned int timeout);
@@ -33,4 +33,4 @@ int init_sec2_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz);
 int gp106_sec2_reset(struct gk20a *g);
 
-#endif /*__SEC2_H_*/
+#endif /* NVGPU_SEC2_GP106_H */

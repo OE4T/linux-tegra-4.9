@@ -1629,6 +1629,12 @@
 					};
 				};
 			};
+			override@15 {
+				target = <&spi_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 
 		/* IMX185 module */

@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKDOMAIN_H_
-#define _CLKDOMAIN_H_
+#ifndef NVGPU_CLK_DOMAIN_H
+#define NVGPU_CLK_DOMAIN_H
 
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlboardobj.h"
@@ -154,4 +154,4 @@ int clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);
 	((struct clk_domain *)BOARDOBJGRP_OBJ_GET_BY_IDX(		\
 		&pclk->clk_domainobjs.super.super, (u8)(idx)))
 
-#endif
+#endif /* NVGPU_CLK_DOMAIN_H */

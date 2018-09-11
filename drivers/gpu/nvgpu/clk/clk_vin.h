@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKVIN_H_
-#define _CLKVIN_H_
+#ifndef NVGPU_CLK_VIN_H
+#define NVGPU_CLK_VIN_H
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
@@ -76,4 +76,4 @@ u32 clk_avfs_get_vin_cal_fuse_v20(struct gk20a *g,
 					struct avfsvinobjs *pvinobjs,
 					struct vin_device_v20 *pvindev);
 
-#endif
+#endif /* NVGPU_CLK_VIN_H */

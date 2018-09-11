@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKFLL_H_
-#define _CLKFLL_H_
+#ifndef NVGPU_CLK_FLL_H
+#define NVGPU_CLK_FLL_H
 
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "boardobj/boardobjgrp_e32.h"
@@ -78,4 +78,4 @@ u32 nvgpu_clk_get_vbios_clk_domain_gp10x( u32 vbios_domain);
 #define CLK_FLL_LUT_STEP_SIZE_UV(pclk) \
 	(pclk->avfs_fllobjs.lut_step_size_uv)
 
-#endif
+#endif /* NVGPU_CLK_FLL_H */

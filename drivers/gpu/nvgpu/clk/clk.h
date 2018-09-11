@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _CLK_H_
-#define _CLK_H_
+#ifndef NVGPU_CLK_H
+#define NVGPU_CLK_H
 
 #include "clk_vin.h"
 #include "clk_fll.h"
@@ -140,4 +140,4 @@ u32 nvgpu_clk_vf_change_inject_data_fill_gp10x(struct gk20a *g,
 u32 nvgpu_clk_set_boot_fll_clk_gv10x(struct gk20a *g);
 int clk_pmu_freq_effective_avg_load(struct gk20a *g, bool bload);
 u32 clk_freq_effective_avg(struct gk20a *g, u32  clkDomainMask);
-#endif
+#endif /* NVGPU_CLK_H */

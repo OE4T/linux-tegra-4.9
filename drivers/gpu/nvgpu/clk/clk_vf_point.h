@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKVFPOINT_H_
-#define _CLKVFPOINT_H_
+#ifndef NVGPU_CLK_VF_POINT_H
+#define NVGPU_CLK_VF_POINT_H
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlboardobj.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -80,4 +80,4 @@ struct clk_vf_point_freq {
 
 struct clk_vf_point *construct_clk_vf_point(struct gk20a *g, void *pargs);
 
-#endif
+#endif /* NVGPU_CLK_VF_POINT_H */

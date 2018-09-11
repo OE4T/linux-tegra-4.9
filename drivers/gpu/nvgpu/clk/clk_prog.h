@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKPROG_H_
-#define _CLKPROG_H_
+#ifndef NVGPU_CLK_PROG_H
+#define NVGPU_CLK_PROG_H
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlboardobj.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -97,4 +97,4 @@ struct clk_prog_1x_master_table {
 	((struct clk_prog *)BOARDOBJGRP_OBJ_GET_BY_IDX(			\
 		&pclk->clk_progobjs.super.super, (u8)(idx)))
 
-#endif
+#endif /* NVGPU_CLK_PROG_H */

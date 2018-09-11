@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLK_FREQ_CONTROLLER_H_
-#define _CLK_FREQ_CONTROLLER_H_
+#ifndef NVGPU_CLK_FREQ_CONTROLLER_H
+#define NVGPU_CLK_FREQ_CONTROLLER_H
 
 #define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_ALL  0xFF
 #define CTRL_CLK_CLK_FREQ_CONTROLLER_ID_SYS  0x00
@@ -81,4 +81,4 @@ struct clk_freq_controllers {
 int clk_freq_controller_sw_setup(struct gk20a *g);
 int clk_freq_controller_pmu_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_CLK_FREQ_CONTROLLER_H */

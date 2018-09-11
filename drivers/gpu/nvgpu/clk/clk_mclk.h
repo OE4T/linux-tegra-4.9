@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _CLKMCLK_H_
-#define _CLKMCLK_H_
+#ifndef NVGPU_CLK_MCLK_H
+#define NVGPU_CLK_MCLK_H
 
 #include <nvgpu/lock.h>
 
@@ -57,4 +57,4 @@ struct clk_mclk_state {
 #endif
 };
 
-#endif
+#endif /* NVGPU_CLK_MCLK_H */

@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GR_GV11B_H_
-#define _NVGPU_GR_GV11B_H_
+#ifndef NVGPU_GR_GV11B_H
+#define NVGPU_GR_GV11B_H
 
 #define EGPC_PRI_BASE        0x580000
 #define EGPC_PRI_SHARED_BASE 0x480000
@@ -258,4 +258,4 @@ void gr_gv11b_set_skedcheck(struct gk20a *g, u32 data);
 void gr_gv11b_set_go_idle_timeout(struct gk20a *g, u32 data);
 void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data);
 void gr_gv11b_set_tex_in_dbg(struct gk20a *g, u32 data);
-#endif
+#endif /* NVGPU_GR_GV11B_H */

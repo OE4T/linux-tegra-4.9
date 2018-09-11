@@ -20,9 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ECC_GV11B_H__
-#define __ECC_GV11B_H__
+#ifndef NVGPU_ECC_GV11B_H
+#define NVGPU_ECC_GV11B_H
 
 int gv11b_ecc_init(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_ECC_GV11B_H */

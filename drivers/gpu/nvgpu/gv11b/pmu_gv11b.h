@@ -1,7 +1,7 @@
 /*
  * GV11B PMU
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __PMU_GV11B_H_
-#define __PMU_GV11B_H_
+#ifndef NVGPU_PMU_GV11B_H
+#define NVGPU_PMU_GV11B_H
 
 struct gk20a;
 
@@ -37,4 +37,4 @@ int gv11b_pmu_setup_elpg(struct gk20a *g);
 
 u32 gv11b_pmu_get_irqdest(struct gk20a *g);
 void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0);
-#endif /*__PMU_GV11B_H_*/
+#endif /* NVGPU_PMU_GV11B_H */

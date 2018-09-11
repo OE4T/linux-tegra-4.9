@@ -22,8 +22,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __SUBCONTEXT_GV11B_H__
-#define __SUBCONTEXT_GV11B_H__
+#ifndef NVGPU_SUBCTX_GV11B_H
+#define NVGPU_SUBCTX_GV11B_H
 
 int gv11b_alloc_subctx_header(struct channel_gk20a *c);
 
@@ -35,4 +35,4 @@ void gv11b_init_subcontext_pdb(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block,
 				bool replayable);
 
-#endif /* __SUBCONTEXT_GV11B_H__ */
+#endif /* NVGPU_SUBCTX_GV11B_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ACR_GV11B_H_
-#define __ACR_GV11B_H_
+#ifndef NVGPU_ACR_GV11B_H
+#define NVGPU_ACR_GV11B_H
 
 
 int gv11b_bootstrap_hs_flcn(struct gk20a *g);
@@ -30,4 +30,4 @@ int gv11b_init_pmu_setup_hw1(struct gk20a *g,
 void gv11b_setup_apertures(struct gk20a *g);
 int gv11b_alloc_blob_space(struct gk20a *g, size_t size,
 				struct nvgpu_mem *mem);
-#endif /*__PMU_GP106_H_*/
+#endif /* NVGPU_ACR_GV11B_H */

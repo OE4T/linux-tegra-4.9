@@ -2,7 +2,7 @@
  *
  * Volta GPU series copy engine
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __CE_GV11B_H__
-#define __CE_GV11B_H__
+#ifndef NVGPU_CE_GV11B_H
+#define NVGPU_CE_GV11B_H
 
 struct gk20a;
 
@@ -32,4 +32,4 @@ u32 gv11b_ce_get_num_lce(struct gk20a *g);
 u32 gv11b_ce_get_num_pce(struct gk20a *g);
 void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 
-#endif /*__CE2_GV11B_H__*/
+#endif /* NVGPU_CE_GV11B_H */

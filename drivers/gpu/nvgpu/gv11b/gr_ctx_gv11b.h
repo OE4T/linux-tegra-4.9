@@ -1,7 +1,7 @@
 /*
  * GV11B Graphics Context
  *
- * Copyright (c) 2016 - 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016 - 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __GR_CTX_GV11B_H__
-#define __GR_CTX_GV11B_H__
+#ifndef NVGPU_GR_CTX_GV11B_H
+#define NVGPU_GR_CTX_GV11B_H
 
 #include "gk20a/gr_ctx_gk20a.h"
 
@@ -33,4 +33,4 @@
 int gr_gv11b_get_netlist_name(struct gk20a *g, int index, char *name);
 bool gr_gv11b_is_firmware_defined(void);
 
-#endif /*__GR_CTX_GV11B_H__*/
+#endif /* NVGPU_GR_CTX_GV11B_H */

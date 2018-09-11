@@ -57,6 +57,10 @@ struct gk20a_ctrl_priv {
 	struct nvgpu_clk_session *clk_session;
 
 	struct nvgpu_list_node list;
+	struct {
+		struct vm_area_struct *vma;
+		unsigned long flags;
+	} usermode_vma;
 };
 
 static inline struct gk20a_ctrl_priv *
@@ -1918,4 +1922,131 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
 
 	return err;
+}
+
+static void usermode_vma_close(struct vm_area_struct *vma)
+{
+	struct gk20a_ctrl_priv *priv = vma->vm_private_data;
+	struct gk20a *g = priv->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+	priv->usermode_vma.vma = NULL;
+	nvgpu_mutex_release(&l->ctrl.privs_lock);
+}
+
+struct vm_operations_struct usermode_vma_ops = {
+	/* no .open - we use VM_DONTCOPY and don't support fork */
+	.close = usermode_vma_close,
+};
+
+int gk20a_ctrl_dev_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+	struct gk20a_ctrl_priv *priv = filp->private_data;
+	struct gk20a *g = priv->g;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	u64 addr;
+	int err;
+
+	if (g->ops.fifo.usermode_base == NULL)
+		return -ENOSYS;
+
+	if (priv->usermode_vma.vma != NULL)
+		return -EBUSY;
+
+	if (vma->vm_end - vma->vm_start != SZ_4K)
+		return -EINVAL;
+
+	if (vma->vm_pgoff != 0UL)
+		return -EINVAL;
+
+	addr = l->regs_bus_addr + g->ops.fifo.usermode_base(g);
+
+	/* Sync with poweron/poweroff, and require valid regs */
+	err = gk20a_busy(g);
+	if (err) {
+		return err;
+	}
+
+	nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+
+	vma->vm_flags |= VM_IO | VM_DONTCOPY | VM_DONTEXPAND | VM_NORESERVE |
+		VM_DONTDUMP | VM_PFNMAP;
+	vma->vm_ops = &usermode_vma_ops;
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	err = io_remap_pfn_range(vma, vma->vm_start, addr >> PAGE_SHIFT,
+			vma->vm_end - vma->vm_start, vma->vm_page_prot);
+	if (!err) {
+		priv->usermode_vma.vma = vma;
+		priv->usermode_vma.flags = vma->vm_flags;
+		vma->vm_private_data = priv;
+	}
+	nvgpu_mutex_release(&l->ctrl.privs_lock);
+
+	gk20a_idle(g);
+
+	return err;
+}
+
+static void alter_usermode_mapping(struct gk20a *g,
+		struct gk20a_ctrl_priv *priv,
+		bool poweroff)
+{
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct vm_area_struct *vma = priv->usermode_vma.vma;
+	u64 addr;
+	int err;
+
+	if (!vma) {
+		/* Nothing to do - no mmap called */
+		return;
+	}
+
+	addr = l->regs_bus_addr + g->ops.fifo.usermode_base(g);
+
+	down_write(&vma->vm_mm->mmap_sem);
+
+	if (poweroff) {
+		err = zap_vma_ptes(vma, vma->vm_start, SZ_4K);
+		if (err == 0) {
+			vma->vm_flags = VM_NONE;
+		} else {
+			nvgpu_err(g, "can't remove usermode mapping");
+		}
+	} else {
+		vma->vm_flags = priv->usermode_vma.flags;
+		err = io_remap_pfn_range(vma, vma->vm_start,
+				addr >> PAGE_SHIFT,
+				SZ_4K, vma->vm_page_prot);
+		if (err != 0) {
+			nvgpu_err(g, "can't restore usermode mapping");
+			vma->vm_flags = VM_NONE;
+		}
+	}
+
+	up_write(&vma->vm_mm->mmap_sem);
+}
+
+static void alter_usermode_mappings(struct gk20a *g, bool poweroff)
+{
+	struct gk20a_ctrl_priv *priv;
+	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+
+	nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+	nvgpu_list_for_each_entry(priv, &l->ctrl.privs,
+			gk20a_ctrl_priv, list) {
+		alter_usermode_mapping(g, priv, poweroff);
+	}
+	nvgpu_mutex_release(&l->ctrl.privs_lock);
+}
+
+void nvgpu_hide_usermode_for_poweroff(struct gk20a *g)
+{
+	alter_usermode_mappings(g, true);
+}
+
+void nvgpu_restore_usermode_for_poweron(struct gk20a *g)
+{
+	alter_usermode_mappings(g, false);
 }

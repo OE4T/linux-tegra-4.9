@@ -174,6 +174,15 @@ struct nvgpu_mem {
 	 * nvgpu_mem in a system specific way.
 	 */
 #define __NVGPU_MEM_FLAG_NO_DMA			 (1 << 3)
+	/*
+	 * Some nvgpu_mem objects act as facades to memory buffers owned by
+	 * someone else. This internal flag specifies that the sgt field is
+	 * "borrowed", and it must not be freed by us.
+	 *
+	 * Of course the caller will have to make sure that the sgt owner
+	 * outlives the nvgpu_mem.
+	 */
+#define NVGPU_MEM_FLAG_FOREIGN_SGT		 (1 << 4)
 	unsigned long				 mem_flags;
 
 	/*

@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _ctrlclk_h_
-#define _ctrlclk_h_
+#ifndef NVGPU_CTRLCLK_H
+#define NVGPU_CTRLCLK_H
 
 #include "ctrlboardobj.h"
 #include "ctrlclkavfs.h"
@@ -209,4 +209,4 @@ struct ctrl_clk_clk_domain_list {
 #define CTRL_CLK_VF_PAIR_VOLTAGE_UV_SET(pvfpair, _voltageuv)	        \
 	(((pvfpair)->voltage_uv) = (_voltageuv))
 
-#endif
+#endif /* NVGPU_CTRLCLK_H */

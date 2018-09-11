@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _ctrlclkavfs_h_
-#define _ctrlclkavfs_h_
+#ifndef NVGPU_CTRLCLKAVFS_H
+#define NVGPU_CTRLCLKAVFS_H
 
 #include "ctrlboardobj.h"
 /*!
@@ -107,4 +107,4 @@
 #define CTRL_CLK_FLL_LUT_VSELECT_LOGIC  		   (0x00000000)
 #define CTRL_CLK_FLL_LUT_VSELECT_MIN  	  		   (0x00000001)
 #define CTRL_CLK_FLL_LUT_VSELECT_SRAM   		   (0x00000002)
-#endif
+#endif /* NVGPU_CTRLCLKAVFS_H */

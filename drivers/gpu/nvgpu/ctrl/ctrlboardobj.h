@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _ctrlboardobj_h_
-#define _ctrlboardobj_h_
+#ifndef NVGPU_CTRLBOARDOBJ_H
+#define NVGPU_CTRLBOARDOBJ_H
 
 struct ctrl_boardobj {
 	u8    type;
@@ -86,5 +86,4 @@ struct ctrl_boardobjgrp {
 	u32    obj_mask;
 };
 
-#endif
-
+#endif /* NVGPU_CTRLBOARDOBJ_H */

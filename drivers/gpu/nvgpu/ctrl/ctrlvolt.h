@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _ctrlvolt_h_
-#define _ctrlvolt_h_
+#ifndef NVGPU_CTRLVOLT_H
+#define NVGPU_CTRLVOLT_H
 
 #define CTRL_VOLT_VOLT_RAIL_MAX_RAILS	\
 	CTRL_BOARDOBJGRP_E32_MAX_OBJECTS
@@ -140,4 +140,4 @@ struct ctrl_volt_volt_rail_list_v1 {
 		rails[CTRL_VOLT_VOLT_RAIL_MAX_RAILS];
 };
 
-#endif
+#endif /* NVGPU_CTRLVOLT_H */

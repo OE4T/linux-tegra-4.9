@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _ctrlperf_h_
-#define _ctrlperf_h_
+#ifndef NVGPU_CTRLPERF_H
+#define NVGPU_CTRLPERF_H
 
 struct ctrl_perf_volt_rail_list_item {
 	u8 volt_domain;
@@ -100,4 +100,4 @@ struct ctrl_perf_vfe_var_single_sensed_fuse_ver_vfield_info {
 	bool b_use_default_on_ver_check_fail;
 	u8 v_field_id_ver;
 };
-#endif
+#endif /* NVGPU_CTRLPERF_H */

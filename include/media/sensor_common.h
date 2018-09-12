@@ -1,7 +1,7 @@
 /**
  * sensor_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,8 +36,10 @@
 #include <media/v4l2-ctrls.h>
 #include <linux/v4l2-mediabus.h>
 #include <media/tegra-v4l2-camera.h>
+#include <media/camera_device.h>
 
 struct sensor_properties {
+	struct sensor_cfg cfg;
 	/* sensor_modes points to an array of mode properties */
 	struct sensor_mode_properties *sensor_modes;
 	u32 num_modes;

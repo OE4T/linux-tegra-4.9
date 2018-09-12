@@ -32,7 +32,7 @@
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
 
-void gp106_fb_reset(struct gk20a *g)
+void gp106_fb_init_fs_state(struct gk20a *g)
 {
 	u32 val;
 

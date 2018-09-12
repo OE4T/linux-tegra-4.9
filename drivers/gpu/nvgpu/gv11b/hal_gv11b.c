@@ -430,7 +430,6 @@ static const struct gpu_ops gv11b_ops = {
 		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
-		.reset = gv11b_fb_reset,
 		.init_hw = gv11b_fb_init_hw,
 		.init_fs_state = gv11b_fb_init_fs_state,
 		.init_cbc = gv11b_fb_init_cbc,
@@ -761,6 +760,7 @@ static const struct gpu_ops gv11b_ops = {
 					gv11b_mc_is_stall_and_eng_intr_pending,
 		.reset_mask = gm20b_mc_reset_mask,
 		.is_enabled = gm20b_mc_is_enabled,
+		.fb_reset = NULL,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

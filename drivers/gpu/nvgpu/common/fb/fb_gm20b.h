@@ -31,7 +31,6 @@ struct gk20a;
 struct wpr_carveout_info;
 struct nvgpu_mem;
 
-void gm20b_fb_reset(struct gk20a *g);
 void gm20b_fb_init_hw(struct gk20a *g);
 int gm20b_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb);
 void fb_gm20b_init_fs_state(struct gk20a *g);

@@ -33,24 +33,10 @@
 #include <nvgpu/io.h>
 #include <nvgpu/timers.h>
 
-#include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 
 #define VPR_INFO_FETCH_WAIT	(5)
 #define WPR_INFO_ADDR_ALIGNMENT 0x0000000c
-
-void gm20b_fb_reset(struct gk20a *g)
-{
-	u32 val;
-
-	nvgpu_log_info(g, "reset gk20a fb");
-
-	val = gk20a_readl(g, mc_elpg_enable_r());
-	val |= mc_elpg_enable_xbar_enabled_f()
-		| mc_elpg_enable_pfb_enabled_f()
-		| mc_elpg_enable_hub_enabled_f();
-	gk20a_writel(g, mc_elpg_enable_r(), val);
-}
 
 void gm20b_fb_init_hw(struct gk20a *g)
 {

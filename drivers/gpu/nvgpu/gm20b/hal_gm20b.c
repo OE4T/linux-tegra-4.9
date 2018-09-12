@@ -330,7 +330,6 @@ static const struct gpu_ops gm20b_ops = {
 		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
-		.reset = gm20b_fb_reset,
 		.init_hw = gm20b_fb_init_hw,
 		.init_fs_state = fb_gm20b_init_fs_state,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
@@ -594,6 +593,7 @@ static const struct gpu_ops gm20b_ops = {
 		.log_pending_intrs = gm20b_mc_log_pending_intrs,
 		.reset_mask = gm20b_mc_reset_mask,
 		.is_enabled = gm20b_mc_is_enabled,
+		.fb_reset = gm20b_mc_fb_reset,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

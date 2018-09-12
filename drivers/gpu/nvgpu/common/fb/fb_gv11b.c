@@ -73,6 +73,8 @@ void gv11b_fb_init_fs_state(struct gk20a *g)
 {
 	nvgpu_log(g, gpu_dbg_fn, "initialize gv11b fb");
 
+	gv11b_init_nvlink_soc_credits(g);
+
 	nvgpu_log(g, gpu_dbg_info, "fbhub active ltcs %x",
 			gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
 
@@ -141,11 +143,6 @@ void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
 			0, max_comptag_lines - 1);
 
-}
-
-void gv11b_fb_reset(struct gk20a *g)
-{
-	gv11b_init_nvlink_soc_credits(g);
 }
 
 static const char * const invalid_str = "invalid";

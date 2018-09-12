@@ -521,7 +521,6 @@ struct gpu_ops {
 		void (*init_hw)(struct gk20a *g);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*init_fs_state)(struct gk20a *g);
-		void (*reset)(struct gk20a *g);
 		void (*init_uncompressed_kind_map)(struct gk20a *g);
 		void (*init_kind_attr)(struct gk20a *g);
 		void (*set_mmu_page_size)(struct gk20a *g);
@@ -1177,6 +1176,7 @@ struct gpu_ops {
 		void (*log_pending_intrs)(struct gk20a *g);
 		void (*fbpa_isr)(struct gk20a *g);
 		u32 (*reset_mask)(struct gk20a *g, enum nvgpu_unit unit);
+		void (*fb_reset)(struct gk20a *g);
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,

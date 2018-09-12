@@ -31,6 +31,7 @@
 #include "common/ptimer/ptimer_gk20a.h"
 #include "common/fb/fb_gm20b.h"
 #include "common/fb/fb_gp10b.h"
+#include "common/fb/fb_gp106.h"
 #include "common/fb/fb_gv11b.h"
 #include "common/fb/fb_gv100.h"
 #include "common/xve/xve_gp106.h"
@@ -467,9 +468,8 @@ static const struct gpu_ops gv100_ops = {
 		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
-		.reset = gv100_fb_reset,
 		.init_hw = gv11b_fb_init_hw,
-		.init_fs_state = NULL,
+		.init_fs_state = gp106_fb_init_fs_state,
 		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
 		.set_use_full_comp_tag_line =
 			gm20b_fb_set_use_full_comp_tag_line,
@@ -819,6 +819,7 @@ static const struct gpu_ops gv100_ops = {
 					gv100_mc_is_stall_and_eng_intr_pending,
 		.reset_mask = gv100_mc_reset_mask,
 		.is_enabled = gm20b_mc_is_enabled,
+		.fb_reset = NULL,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

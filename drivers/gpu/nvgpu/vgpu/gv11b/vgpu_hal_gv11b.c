@@ -276,7 +276,6 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.set_debug_mode = gm20b_gr_set_debug_mode,
 	},
 	.fb = {
-		.reset = NULL,
 		.init_hw = NULL,
 		.init_fs_state = NULL,
 		.init_cbc = NULL,

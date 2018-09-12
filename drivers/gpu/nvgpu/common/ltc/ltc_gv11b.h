@@ -30,5 +30,7 @@ void gv11b_ltc_set_zbc_stencil_entry(struct gk20a *g,
 void gv11b_ltc_init_fs_state(struct gk20a *g);
 void gv11b_ltc_intr_en_illegal_compstat(struct gk20a *g, bool enable);
 void gv11b_ltc_isr(struct gk20a *g);
+void gv11b_ltc_lts_isr(struct gk20a *g,
+		unsigned int ltc, unsigned int slice);
 
 #endif

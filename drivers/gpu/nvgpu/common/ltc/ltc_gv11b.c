@@ -106,16 +106,108 @@ void gv11b_ltc_intr_en_illegal_compstat(struct gk20a *g, bool enable)
 	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), val);
 }
 
-
-void gv11b_ltc_isr(struct gk20a *g)
+void gv11b_ltc_lts_isr(struct gk20a *g,
+		unsigned int ltc, unsigned int slice)
 {
-	u32 mc_intr, ltc_intr3;
-	unsigned int ltc, slice;
-	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
-	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+	u32 offset;
+	u32 ltc_intr3;
 	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
 	u32 corrected_delta, uncorrected_delta;
 	u32 corrected_overflow, uncorrected_overflow;
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+
+	offset = ltc_stride * ltc + lts_stride * slice;
+	ltc_intr3 = gk20a_readl(g, ltc_ltc0_lts0_intr3_r() +
+				offset);
+
+	/* Detect and handle ECC PARITY errors */
+	if (ltc_intr3 &
+		(ltc_ltcs_ltss_intr3_ecc_uncorrected_m() |
+		 ltc_ltcs_ltss_intr3_ecc_corrected_m())) {
+
+		ecc_status = gk20a_readl(g,
+			ltc_ltc0_lts0_l2_cache_ecc_status_r() +
+			offset);
+		ecc_addr = gk20a_readl(g,
+			ltc_ltc0_lts0_l2_cache_ecc_address_r() +
+			offset);
+		corrected_cnt = gk20a_readl(g,
+			ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset);
+		uncorrected_cnt = gk20a_readl(g,
+			ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset);
+
+		corrected_delta =
+			ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_v(corrected_cnt);
+		uncorrected_delta =
+			ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_v(uncorrected_cnt);
+		corrected_overflow = ecc_status &
+			ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_total_counter_overflow_m();
+
+		uncorrected_overflow = ecc_status &
+			ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_total_counter_overflow_m();
+
+		/* clear the interrupt */
+		if ((corrected_delta > 0U) || corrected_overflow) {
+			nvgpu_writel_check(g,
+				ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset, 0);
+		}
+		if ((uncorrected_delta > 0U) || uncorrected_overflow) {
+			nvgpu_writel_check(g,
+				ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset, 0);
+		}
+
+		nvgpu_writel_check(g,
+			ltc_ltc0_lts0_l2_cache_ecc_status_r() + offset,
+			ltc_ltc0_lts0_l2_cache_ecc_status_reset_task_f());
+
+		/* update counters per slice */
+		if (corrected_overflow) {
+			corrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_s());
+		}
+		if (uncorrected_overflow) {
+			uncorrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s());
+		}
+
+		g->ecc.ltc.ecc_sec_count[ltc][slice].counter += corrected_delta;
+		g->ecc.ltc.ecc_ded_count[ltc][slice].counter += uncorrected_delta;
+		nvgpu_log(g, gpu_dbg_intr,
+			"ltc:%d lts: %d cache ecc interrupt intr: 0x%x", ltc, slice, ltc_intr3);
+
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_rstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "rstg ecc error corrected");
+		}
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_rstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "rstg ecc error uncorrected");
+		}
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_tstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "tstg ecc error corrected");
+		}
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_tstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "tstg ecc error uncorrected");
+		}
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_dstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "dstg ecc error corrected");
+		}
+		if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_dstg_m()) {
+			nvgpu_log(g, gpu_dbg_intr, "dstg ecc error uncorrected");
+		}
+
+		if (corrected_overflow || uncorrected_overflow) {
+			nvgpu_info(g, "ecc counter overflow!");
+		}
+
+		nvgpu_log(g, gpu_dbg_intr,
+			"ecc error address: 0x%x", ecc_addr);
+	}
+
+	gp10b_ltc_lts_isr(g, ltc, slice);
+}
+
+void gv11b_ltc_isr(struct gk20a *g)
+{
+	u32 mc_intr;
+	unsigned int ltc, slice;
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
@@ -124,96 +216,7 @@ void gv11b_ltc_isr(struct gk20a *g)
 		}
 
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
-			u32 offset = ltc_stride * ltc + lts_stride * slice;
-			ltc_intr3 = gk20a_readl(g, ltc_ltc0_lts0_intr3_r() +
-						offset);
-
-			/* Detect and handle ECC PARITY errors */
-
-			if (ltc_intr3 &
-				(ltc_ltcs_ltss_intr3_ecc_uncorrected_m() |
-				 ltc_ltcs_ltss_intr3_ecc_corrected_m())) {
-
-				ecc_status = gk20a_readl(g,
-					ltc_ltc0_lts0_l2_cache_ecc_status_r() +
-					offset);
-				ecc_addr = gk20a_readl(g,
-					ltc_ltc0_lts0_l2_cache_ecc_address_r() +
-					offset);
-				corrected_cnt = gk20a_readl(g,
-					ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset);
-				uncorrected_cnt = gk20a_readl(g,
-					ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset);
-
-				corrected_delta =
-					ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_v(corrected_cnt);
-				uncorrected_delta =
-					ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_v(uncorrected_cnt);
-				corrected_overflow = ecc_status &
-					ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_total_counter_overflow_m();
-
-				uncorrected_overflow = ecc_status &
-					ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_total_counter_overflow_m();
-
-				/* clear the interrupt */
-				if ((corrected_delta > 0U) || corrected_overflow) {
-					nvgpu_writel_check(g,
-						ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_r() + offset, 0);
-				}
-				if ((uncorrected_delta > 0U) || uncorrected_overflow) {
-					nvgpu_writel_check(g,
-						ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_r() + offset, 0);
-				}
-
-				nvgpu_writel_check(g,
-					ltc_ltc0_lts0_l2_cache_ecc_status_r() + offset,
-					ltc_ltc0_lts0_l2_cache_ecc_status_reset_task_f());
-
-				/* update counters per slice */
-				if (corrected_overflow) {
-					corrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_corrected_err_count_total_s());
-				}
-				if (uncorrected_overflow) {
-					uncorrected_delta += (0x1U << ltc_ltc0_lts0_l2_cache_ecc_uncorrected_err_count_total_s());
-				}
-
-				g->ecc.ltc.ecc_sec_count[ltc][slice].counter += corrected_delta;
-				g->ecc.ltc.ecc_ded_count[ltc][slice].counter += uncorrected_delta;
-				nvgpu_log(g, gpu_dbg_intr,
-					"ltc:%d lts: %d cache ecc interrupt intr: 0x%x", ltc, slice, ltc_intr3);
-
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_rstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "rstg ecc error corrected");
-				}
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_rstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "rstg ecc error uncorrected");
-				}
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_tstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "tstg ecc error corrected");
-				}
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_tstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "tstg ecc error uncorrected");
-				}
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_corrected_err_dstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "dstg ecc error corrected");
-				}
-				if (ecc_status & ltc_ltc0_lts0_l2_cache_ecc_status_uncorrected_err_dstg_m()) {
-					nvgpu_log(g, gpu_dbg_intr, "dstg ecc error uncorrected");
-				}
-
-				if (corrected_overflow || uncorrected_overflow) {
-					nvgpu_info(g, "ecc counter overflow!");
-				}
-
-				nvgpu_log(g, gpu_dbg_intr,
-					"ecc error address: 0x%x", ecc_addr);
-
-			}
-
+			gv11b_ltc_lts_isr(g, ltc, slice);
 		}
-
 	}
-
-	/* fallback to other interrupts  */
-	gp10b_ltc_isr(g);
 }

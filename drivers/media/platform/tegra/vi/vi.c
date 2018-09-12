@@ -210,6 +210,7 @@ EXPORT_SYMBOL(tegra_vi_init_mfi);
 void tegra_vi_deinit_mfi(struct tegra_vi_mfi_ctx **pmfi_ctx)
 {
 	struct tegra_vi_mfi_ctx *mfi_ctx;
+	struct tegra_mfi_chan *chan;
 
 	if (!pmfi_ctx || !*pmfi_ctx)
 		return;
@@ -219,7 +220,11 @@ void tegra_vi_deinit_mfi(struct tegra_vi_mfi_ctx **pmfi_ctx)
 	flush_workqueue(mfi_ctx->mfi_workqueue);
 	destroy_workqueue(mfi_ctx->mfi_workqueue);
 
-	kfree_rcu(mfi_ctx->mfi_chans, rcu);
+	rcu_read_lock();
+	chan = rcu_dereference(mfi_ctx->mfi_chans);
+	rcu_read_unlock();
+	RCU_INIT_POINTER(mfi_ctx->mfi_chans, NULL);
+	kfree_rcu(chan, rcu);
 
 	kfree(mfi_ctx);
 	mfi_ctx = NULL;

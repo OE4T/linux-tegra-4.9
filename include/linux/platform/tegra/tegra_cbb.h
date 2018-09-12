@@ -59,28 +59,8 @@
 #define CBB_EXTRACT(_x_, _msb_, _lsb_)  \
 	((_x_ & CBB_MASK(_msb_, _lsb_)) >> _lsb_)
 
-
-#define get_cbb_errlog0_trans_opc(_x_)		CBB_EXTRACT(_x_, 4, 1)
-#define get_cbb_errlog0_code(_x_)		CBB_EXTRACT(_x_, 10, 8)
-#define get_cbb_errlog0_src(_x_)		CBB_EXTRACT(_x_, 27, 16)
-
-#define get_cbb_errlog5_axi_id(_x_)		CBB_EXTRACT(_x_, 30, 23)
-#define get_cbb_errlog5_mstr_id(_x_)		CBB_EXTRACT(_x_, 22, 19)
-#define get_cbb_errlog5_vqc(_x_)		CBB_EXTRACT(_x_, 18, 17)
-#define get_cbb_errlog5_grpsec(_x_)		CBB_EXTRACT(_x_, 16, 10)
-#define get_cbb_errlog5_falconsec(_x_)		CBB_EXTRACT(_x_, 9, 8)
-#define get_cbb_errlog5_axprot(_x_)		CBB_EXTRACT(_x_, 7, 5)
-#define get_cbb_errlog5_non_modify(_x_)		CBB_EXTRACT(_x_, 4, 4)
-#define get_cbb_errlog5_axcache(_x_)		CBB_EXTRACT(_x_, 3, 0)
-
-#define get_cbb_routeid_initflow(_x_, _msb_, _lsb_) \
-				CBB_EXTRACT(_x_, _msb_, _lsb_)
-#define get_cbb_routeid_targflow(_x_, _msb_, _lsb_) \
-				CBB_EXTRACT(_x_, _msb_, _lsb_)
-#define get_cbb_routeid_targsubrange(_x_, _msb_, _lsb_) \
-				CBB_EXTRACT(_x_, _msb_, _lsb_)
-#define get_cbb_routeid_seqid(_x_, _msb_, _lsb_) \
-				CBB_EXTRACT(_x_, _msb_, _lsb_)
+#define get_noc_errlog_subfield(_x_, _msb_, _lsb_) \
+			CBB_EXTRACT(_x_, _msb_, _lsb_)
 
 struct tegra_noc_errors {
 	char *errcode;
@@ -107,6 +87,17 @@ struct tegra_lookup_noc_aperture {
 	u16	seqid;
 };
 
+struct tegra_noc_userbits {
+	u8	axcache;
+	u8	non_mod;
+	u8	axprot;
+	u8	falconsec;
+	u8	grpsec;
+	u8	vqc;
+	u8	mstr_id;
+	u8	axi_id;
+};
+
 struct tegra_cbb_errlog_record {
 	struct list_head node;
 	struct serr_hook *callback;
@@ -130,6 +121,8 @@ struct tegra_cbb_errlog_record {
 	void            (*stallen)(void __iomem *addr);
 	void		(*tegra_noc_parse_routeid)
 				(struct tegra_lookup_noc_aperture *, u64);
+	void		(*tegra_noc_parse_userbits)
+				(struct tegra_noc_userbits *, u64);
 	struct		tegra_lookup_noc_aperture *noc_aperture;
 	int             max_noc_aperture;
 	char		**tegra_noc_routeid_initflow;
@@ -155,6 +148,8 @@ struct tegra_cbb_noc_data {
 	void            (*stallen)(void __iomem *addr);
 	void		(*tegra_noc_parse_routeid)
 				(struct tegra_lookup_noc_aperture *, u64);
+	void		(*tegra_noc_parse_userbits)
+				(struct tegra_noc_userbits *, u64);
 	struct		tegra_lookup_noc_aperture *noc_aperture;
 	int             max_error;
 	int             max_noc_aperture;

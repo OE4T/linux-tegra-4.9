@@ -128,53 +128,71 @@ static void print_cbb_err(struct seq_file *file, const char *fmt, ...)
 static void cbbcentralnoc_parse_routeid
 		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
 {
-	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 23, 20);
-	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 19, 16);
-	noc_trans_info->targ_subrange =	get_cbb_routeid_targsubrange
-							(routeid, 15, 9);
-	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 8, 0);
+	noc_trans_info->initflow = get_noc_errlog_subfield(routeid, 23, 20);
+	noc_trans_info->targflow = get_noc_errlog_subfield(routeid, 19, 16);
+	noc_trans_info->targ_subrange =	get_noc_errlog_subfield(routeid, 15, 9);
+	noc_trans_info->seqid = get_noc_errlog_subfield(routeid, 8, 0);
 }
 
 static void bpmpnoc_parse_routeid
 		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
 {
-	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 20, 18);
-	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 17, 13);
-	noc_trans_info->targ_subrange =	get_cbb_routeid_targsubrange
-							(routeid, 12, 9);
-	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 8, 0);
+	noc_trans_info->initflow = get_noc_errlog_subfield(routeid, 20, 18);
+	noc_trans_info->targflow = get_noc_errlog_subfield(routeid, 17, 13);
+	noc_trans_info->targ_subrange =	get_noc_errlog_subfield(routeid, 12, 9);
+	noc_trans_info->seqid = get_noc_errlog_subfield(routeid, 8, 0);
 }
 
 static void aonnoc_parse_routeid
 		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
 {
-	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 22, 21);
-	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 20, 15);
-	noc_trans_info->targ_subrange = get_cbb_routeid_targsubrange
-							(routeid, 14, 9);
-	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 8, 0);
+	noc_trans_info->initflow = get_noc_errlog_subfield(routeid, 22, 21);
+	noc_trans_info->targflow = get_noc_errlog_subfield(routeid, 20, 15);
+	noc_trans_info->targ_subrange = get_noc_errlog_subfield(routeid, 14, 9);
+	noc_trans_info->seqid = get_noc_errlog_subfield(routeid, 8, 0);
 }
 
 static void scenoc_parse_routeid
 		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
 {
-	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 21, 19);
-	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 18, 14);
-	noc_trans_info->targ_subrange = get_cbb_routeid_targsubrange
-							(routeid, 13, 9);
-	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 8, 0);
+	noc_trans_info->initflow = get_noc_errlog_subfield(routeid, 21, 19);
+	noc_trans_info->targflow = get_noc_errlog_subfield(routeid, 18, 14);
+	noc_trans_info->targ_subrange = get_noc_errlog_subfield(routeid, 13, 9);
+	noc_trans_info->seqid = get_noc_errlog_subfield(routeid, 8, 0);
 }
 
 static void cvnoc_parse_routeid
 		(struct tegra_lookup_noc_aperture *noc_trans_info, u64 routeid)
 {
-	noc_trans_info->initflow = get_cbb_routeid_initflow(routeid, 18, 16);
-	noc_trans_info->targflow = get_cbb_routeid_targflow(routeid, 15, 12);
-	noc_trans_info->targ_subrange = get_cbb_routeid_targsubrange
-							(routeid, 11, 7);
-	noc_trans_info->seqid = get_cbb_routeid_seqid(routeid, 6, 0);
+	noc_trans_info->initflow = get_noc_errlog_subfield(routeid, 18, 16);
+	noc_trans_info->targflow = get_noc_errlog_subfield(routeid, 15, 12);
+	noc_trans_info->targ_subrange = get_noc_errlog_subfield(routeid, 11, 7);
+	noc_trans_info->seqid = get_noc_errlog_subfield(routeid, 6, 0);
 }
 
+static void cbbcentralnoc_parse_userbits
+		(struct tegra_noc_userbits *noc_trans_usrbits, u64 usrbits)
+{
+	noc_trans_usrbits->axcache = get_noc_errlog_subfield(usrbits, 3, 0);
+	noc_trans_usrbits->non_mod = get_noc_errlog_subfield(usrbits, 4, 4);
+	noc_trans_usrbits->axprot = get_noc_errlog_subfield(usrbits, 7, 5);
+	noc_trans_usrbits->vqc = get_noc_errlog_subfield(usrbits, 9, 8);
+	noc_trans_usrbits->grpsec = get_noc_errlog_subfield(usrbits, 16, 10);
+	noc_trans_usrbits->falconsec = get_noc_errlog_subfield(usrbits, 18, 17);
+	noc_trans_usrbits->mstr_id = get_noc_errlog_subfield(usrbits, 22, 19)-1;
+	noc_trans_usrbits->axi_id = get_noc_errlog_subfield(usrbits, 30, 23);
+}
+
+static void clusternoc_parse_userbits
+		(struct tegra_noc_userbits *noc_trans_usrbits, u64 usrbits)
+{
+	noc_trans_usrbits->mstr_id = get_noc_errlog_subfield(usrbits, 21, 18)-1;
+	noc_trans_usrbits->vqc = get_noc_errlog_subfield(usrbits, 17, 16);
+	noc_trans_usrbits->grpsec = get_noc_errlog_subfield(usrbits, 15, 9);
+	noc_trans_usrbits->falconsec = get_noc_errlog_subfield(usrbits, 8, 7);
+	noc_trans_usrbits->axprot = get_noc_errlog_subfield(usrbits, 6, 4);
+	noc_trans_usrbits->axcache = get_noc_errlog_subfield(usrbits, 3, 0);
+}
 
 static void cbb_errlogger_faulten(void __iomem *addr)
 {
@@ -302,28 +320,26 @@ static unsigned int tegra_axi2apb_errstatus(void __iomem *addr)
 static void print_errlog5(struct seq_file *file,
 				struct tegra_cbb_errlog_record *errlog)
 {
-	u8 mstr_id = 0, vqc = 0, grpsec = 0, falconsec = 0;
-	u8 axi_id = 0, axcache = 0, axprot = 0, non_mod = 0;
+	struct tegra_noc_userbits userbits;
 	u32 errlog5 = errlog->errlog5;
 
-	axcache     =   get_cbb_errlog5_axcache(errlog5);
-	non_mod     =   get_cbb_errlog5_non_modify(errlog5);
-	axprot      =   get_cbb_errlog5_axprot(errlog5);
-	vqc         =   get_cbb_errlog5_vqc(errlog5);
-	grpsec      =   get_cbb_errlog5_grpsec(errlog5);
-	falconsec   =   get_cbb_errlog5_falconsec(errlog5);
-	mstr_id     =   get_cbb_errlog5_mstr_id(errlog5)-1;
-	axi_id      =   get_cbb_errlog5_axi_id(errlog5);
+	errlog->tegra_noc_parse_userbits(&userbits, errlog5);
+	if (!strcmp(errlog->name, "CBB-NOC")) {
+		print_cbb_err(file, "\t  Non-Modify\t\t: 0x%x\n",
+						userbits.non_mod);
+		print_cbb_err(file, "\t  AXI ID\t\t: 0x%x\n",
+						userbits.axi_id);
+	}
 
 	print_cbb_err(file, "\t  Master ID\t\t: %s\n",
-					errlog->tegra_cbb_master_id[mstr_id]);
-	print_cbb_err(file, "\t  Non-Modify\t\t: 0x%x\n", non_mod);
-	print_cbb_err(file, "\t  AXI ID\t\t: 0x%x\n", axi_id);
-	print_cbb_err(file, "\t  Security Group(GRPSEC): 0x%x\n", grpsec);
-	print_cache(file, axcache);
-	print_prot(file, axprot);
-	print_cbb_err(file, "\t  FALCONSEC\t\t: 0x%x\n", falconsec);
-	print_cbb_err(file, "\t  Virtual Queuing Channel(VQC): 0x%x\n", vqc);
+			errlog->tegra_cbb_master_id[userbits.mstr_id]);
+	print_cbb_err(file, "\t  Security Group(GRPSEC): 0x%x\n",
+						userbits.grpsec);
+	print_cache(file, userbits.axcache);
+	print_prot(file, userbits.axprot);
+	print_cbb_err(file, "\t  FALCONSEC\t\t: 0x%x\n", userbits.falconsec);
+	print_cbb_err(file, "\t  Virtual Queuing Channel(VQC): 0x%x\n",
+							userbits.vqc);
 }
 
 
@@ -409,9 +425,9 @@ static void print_errlog0(struct seq_file *file,
 	struct tegra_noc_packet_header hdr;
 
 	hdr.lock    = errlog->errlog0 & 0x1;
-	hdr.opc     = get_cbb_errlog0_trans_opc(errlog->errlog0);
-	hdr.errcode = get_cbb_errlog0_code(errlog->errlog0);
-	hdr.len1    = get_cbb_errlog0_src(errlog->errlog0);
+	hdr.opc     = get_noc_errlog_subfield(errlog->errlog0, 4, 1);
+	hdr.errcode = get_noc_errlog_subfield(errlog->errlog0, 10, 8);
+	hdr.len1    = get_noc_errlog_subfield(errlog->errlog0, 27, 16);
 	hdr.format  = (errlog->errlog0>>31);
 
 	print_cbb_err(file, "\t  Transaction Type\t: %s\n",
@@ -568,6 +584,7 @@ static struct tegra_cbb_noc_data tegra194_cbb_central_noc_data = {
 	.tegra_noc_routeid_initflow = t194_cbbcentralnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_cbbcentralnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = cbbcentralnoc_parse_routeid,
+	.tegra_noc_parse_userbits = cbbcentralnoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1
 };
 
@@ -583,6 +600,7 @@ static struct tegra_cbb_noc_data tegra194_aon_noc_data = {
 	.tegra_noc_routeid_initflow = t194_aonnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_aonnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = aonnoc_parse_routeid,
+	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 0
 };
 
@@ -598,6 +616,7 @@ static struct tegra_cbb_noc_data tegra194_bpmp_noc_data = {
 	.tegra_noc_routeid_initflow = t194_bpmpnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_bpmpnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = bpmpnoc_parse_routeid,
+	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1
 };
 
@@ -613,6 +632,7 @@ static struct tegra_cbb_noc_data tegra194_rce_noc_data = {
 	.tegra_noc_routeid_initflow = t194_scenoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
 	.tegra_noc_parse_routeid = scenoc_parse_routeid,
+	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1
 };
 
@@ -628,6 +648,7 @@ static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
 	.tegra_noc_routeid_initflow = t194_scenoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
 	.tegra_noc_parse_routeid = scenoc_parse_routeid,
+	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1
 };
 
@@ -644,6 +665,7 @@ static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
 	.tegra_noc_routeid_initflow = t194_cvnoc_routeid_initflow,
 	.tegra_noc_routeid_targflow = t194_cvnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = cvnoc_parse_routeid,
+	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1,
 	.is_clk_rst = true,
 	.is_cluster_probed = is_nvcvnas_probed,
@@ -921,6 +943,7 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	errlog->tegra_noc_routeid_initflow = bdata->tegra_noc_routeid_initflow;
 	errlog->tegra_noc_routeid_targflow = bdata->tegra_noc_routeid_targflow;
 	errlog->tegra_noc_parse_routeid = bdata->tegra_noc_parse_routeid;
+	errlog->tegra_noc_parse_userbits = bdata->tegra_noc_parse_userbits;
 	errlog->tegra_cbb_master_id = bdata->tegra_cbb_master_id;
 	errlog->is_ax2apb_bridge_connected = bdata->is_ax2apb_bridge_connected;
 	errlog->is_clk_rst = bdata->is_clk_rst;

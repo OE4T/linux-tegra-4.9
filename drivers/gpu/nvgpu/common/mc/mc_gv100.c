@@ -26,6 +26,8 @@
 #include <nvgpu/io.h>
 #include <nvgpu/mc.h>
 #include <nvgpu/gk20a.h>
+#include <nvgpu/unit.h>
+#include <nvgpu/bug.h>
 
 #include "mc_gp10b.h"
 #include "mc_gv100.h"
@@ -87,4 +89,36 @@ bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
 		mc_intr_0 & stall_intr, *eng_intr_pending);
 
 	return (mc_intr_0 & (eng_intr_mask | stall_intr)) != 0U;
+}
+
+u32 gv100_mc_reset_mask(struct gk20a *g, enum nvgpu_unit unit)
+{
+	u32 mask = 0;
+
+	switch(unit) {
+	case NVGPU_UNIT_FIFO:
+		mask = mc_enable_pfifo_enabled_f();
+		break;
+	case NVGPU_UNIT_PERFMON:
+		mask = mc_enable_perfmon_enabled_f();
+		break;
+	case NVGPU_UNIT_GRAPH:
+		mask = mc_enable_pgraph_enabled_f();
+		break;
+	case NVGPU_UNIT_BLG:
+		mask = mc_enable_blg_enabled_f();
+		break;
+	case NVGPU_UNIT_PWR:
+		mask = mc_enable_pwr_enabled_f();
+		break;
+	case NVGPU_UNIT_NVDEC:
+		mask = mc_enable_nvdec_enabled_f();
+		break;
+	default:
+		nvgpu_err(g, "unknown reset unit %d", unit);
+		BUG();
+		break;
+	}
+
+	return mask;
 }

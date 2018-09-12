@@ -28,6 +28,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/mc.h>
 #include <nvgpu/gk20a.h>
+#include <nvgpu/bug.h>
 
 #include "mc_gm20b.h"
 
@@ -292,3 +293,51 @@ void gm20b_mc_log_pending_intrs(struct gk20a *g)
 	}
 }
 
+u32 gm20b_mc_reset_mask(struct gk20a *g, enum nvgpu_unit unit)
+{
+	u32 mask = 0;
+
+	switch(unit) {
+	case NVGPU_UNIT_FIFO:
+		mask = mc_enable_pfifo_enabled_f();
+		break;
+	case NVGPU_UNIT_PERFMON:
+		mask = mc_enable_perfmon_enabled_f();
+		break;
+	case NVGPU_UNIT_GRAPH:
+		mask = mc_enable_pgraph_enabled_f();
+		break;
+	case NVGPU_UNIT_BLG:
+		mask = mc_enable_blg_enabled_f();
+		break;
+	case NVGPU_UNIT_PWR:
+		mask = mc_enable_pwr_enabled_f();
+		break;
+	default:
+		nvgpu_err(g, "unknown reset unit %d", unit);
+		BUG();
+		break;
+	}
+
+	return mask;
+}
+
+bool gm20b_mc_is_enabled(struct gk20a *g, enum nvgpu_unit unit)
+{
+	u32 mask = g->ops.mc.reset_mask(g, unit);
+
+	return (nvgpu_readl(g, mc_enable_r()) & mask) != 0U;
+}
+
+void gm20b_mc_fb_reset(struct gk20a *g)
+{
+	u32 val;
+
+	nvgpu_log_info(g, "reset gk20a fb");
+
+	val = gk20a_readl(g, mc_elpg_enable_r());
+	val |= mc_elpg_enable_xbar_enabled_f()
+		| mc_elpg_enable_pfb_enabled_f()
+		| mc_elpg_enable_hub_enabled_f();
+	gk20a_writel(g, mc_elpg_enable_r(), val);
+}

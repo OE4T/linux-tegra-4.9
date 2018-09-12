@@ -39,11 +39,11 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/gk20a.h>
+#include <nvgpu/unit.h>
 
 #include "fb_gv100.h"
 
 #include <nvgpu/hw/gv100/hw_fb_gv100.h>
-#include <nvgpu/hw/gv100/hw_mc_gv100.h>
 
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
@@ -160,7 +160,7 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 	}
 
 	/* Enable nvdec */
-	g->ops.mc.enable(g, mc_enable_nvdec_enabled_f());
+	g->ops.mc.enable(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_NVDEC));
 
 	/* nvdec falcon reset */
 	nvgpu_flcn_reset(&g->nvdec_flcn);

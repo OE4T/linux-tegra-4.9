@@ -592,6 +592,8 @@ static const struct gpu_ops gm20b_ops = {
 		.reset = gm20b_mc_reset,
 		.is_intr1_pending = gm20b_mc_is_intr1_pending,
 		.log_pending_intrs = gm20b_mc_log_pending_intrs,
+		.reset_mask = gm20b_mc_reset_mask,
+		.is_enabled = gm20b_mc_is_enabled,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

@@ -40,7 +40,6 @@
 #include "lpwr/rppg.h"
 
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
-#include <nvgpu/hw/gp106/hw_mc_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
 bool gp106_is_pmu_supported(struct gk20a *g)

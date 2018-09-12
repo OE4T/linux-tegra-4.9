@@ -817,6 +817,8 @@ static const struct gpu_ops gv100_ops = {
 		.is_intr_nvlink_pending = gv100_mc_is_intr_nvlink_pending,
 		.is_stall_and_eng_intr_pending =
 					gv100_mc_is_stall_and_eng_intr_pending,
+		.reset_mask = gv100_mc_reset_mask,
+		.is_enabled = gm20b_mc_is_enabled,
 	},
 	.debug = {
 		.show_dump = gk20a_debug_show_dump,

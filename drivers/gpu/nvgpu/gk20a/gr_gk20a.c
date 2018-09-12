@@ -42,6 +42,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -4708,9 +4709,9 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	u32 err = 0;
 
 	/* reset gr engine */
-	g->ops.mc.reset(g, mc_enable_pgraph_enabled_f() |
-			mc_enable_blg_enabled_f() |
-			mc_enable_perfmon_enabled_f());
+	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_GRAPH) |
+			g->ops.mc.reset_mask(g, NVGPU_UNIT_BLG) |
+			g->ops.mc.reset_mask(g, NVGPU_UNIT_PERFMON));
 
 	gr_gk20a_load_gating_prod(g);
 

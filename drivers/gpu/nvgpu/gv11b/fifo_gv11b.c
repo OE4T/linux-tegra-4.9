@@ -41,6 +41,7 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a/fifo_gk20a.h"
 
@@ -53,7 +54,6 @@
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 #include "fifo_gv11b.h"
@@ -1281,7 +1281,7 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	/* enable pmc pfifo */
-	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
+	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_FIFO));
 
 	if (g->ops.clock_gating.slcg_ce2_load_gating_prod) {
 		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,

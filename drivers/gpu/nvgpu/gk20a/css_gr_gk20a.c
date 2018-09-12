@@ -34,12 +34,12 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a.h"
 #include "css_gr_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 /* check client for pointed perfmon ownership */
 #define CONTAINS_PERFMON(cl, pm)				\
@@ -89,7 +89,7 @@ static void css_hw_reset_streaming(struct gk20a *g)
 	u32 engine_status;
 
 	/* reset the perfmon */
-	g->ops.mc.reset(g, mc_enable_perfmon_enabled_f());
+	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_PERFMON));
 
 	/* RBUFEMPTY must be set -- otherwise we'll pick up */
 	/* snapshot that have been queued up from earlier   */

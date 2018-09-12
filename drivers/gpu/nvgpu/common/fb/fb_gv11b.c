@@ -46,7 +46,6 @@
 #include "fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 
 static int gv11b_fb_fix_page_fault(struct gk20a *g,

@@ -37,12 +37,12 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a/css_gr_gk20a.h"
 #include "css_gr_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_perf_gv11b.h>
-#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 
 
 /* reports whether the hw queue overflowed */
@@ -65,7 +65,7 @@ static void gv11b_css_hw_reset_streaming(struct gk20a *g)
 	u32 engine_status;
 
 	/* reset the perfmon */
-	g->ops.mc.reset(g, mc_enable_perfmon_enabled_f());
+	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_PERFMON));
 
 	/* RBUFEMPTY must be set -- otherwise we'll pick up */
 	/* snapshot that have been queued up from earlier   */

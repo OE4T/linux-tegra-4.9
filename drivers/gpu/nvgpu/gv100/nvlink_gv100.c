@@ -45,8 +45,6 @@
 #include <nvgpu/hw/gv100/hw_trim_gv100.h>
 #include <nvgpu/hw/gv100/hw_nvtlc_gv100.h>
 
-#include <nvgpu/hw/gv100/hw_mc_gv100.h>
-
 #define NVLINK_PLL_ON_TIMEOUT_MS	30
 #define NVLINK_SUBLINK_TIMEOUT_MS	200
 /*

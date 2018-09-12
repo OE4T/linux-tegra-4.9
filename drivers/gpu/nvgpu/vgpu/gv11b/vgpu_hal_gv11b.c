@@ -566,6 +566,9 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.is_intr1_pending = NULL,
 		.is_intr_hub_pending = NULL,
 		.log_pending_intrs = NULL	,
+		.reset_mask = NULL,
+		.is_enabled = NULL,
+		.fb_reset = NULL,
 	},
 	.debug = {
 		.show_dump = NULL,

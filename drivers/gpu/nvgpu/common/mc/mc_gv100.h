@@ -31,4 +31,6 @@ void mc_gv100_intr_enable(struct gk20a *g);
 bool gv100_mc_is_intr_nvlink_pending(struct gk20a *g, u32 mc_intr_0);
 bool gv100_mc_is_stall_and_eng_intr_pending(struct gk20a *g, u32 act_eng_id,
 			u32 *eng_intr_pending);
+u32 gv100_mc_reset_mask(struct gk20a *g, enum nvgpu_unit unit);
+
 #endif

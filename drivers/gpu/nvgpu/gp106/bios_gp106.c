@@ -34,7 +34,6 @@
 #include "gp106/mclk_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>
-#include <nvgpu/hw/gp106/hw_mc_gp106.h>
 #include <nvgpu/hw/gp106/hw_top_gp106.h>
 
 #define PMU_BOOT_TIMEOUT_DEFAULT	100 /* usec */

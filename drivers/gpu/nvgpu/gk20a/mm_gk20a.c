@@ -51,7 +51,6 @@
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
 
 /*

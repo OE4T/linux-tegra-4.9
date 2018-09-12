@@ -34,6 +34,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -497,24 +498,21 @@ void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 
 bool gk20a_pmu_is_engine_in_reset(struct gk20a *g)
 {
-	u32 pmc_enable;
 	bool status = false;
 
-	pmc_enable = gk20a_readl(g, mc_enable_r());
-	if (mc_enable_pwr_v(pmc_enable) ==
-			mc_enable_pwr_disabled_v()) {
-		status = true;
-	}
+	status = g->ops.mc.is_enabled(g, NVGPU_UNIT_PWR);
 
 	return status;
 }
 
 int gk20a_pmu_engine_reset(struct gk20a *g, bool do_reset)
 {
+	u32 reset_mask = g->ops.mc.reset_mask(g, NVGPU_UNIT_PWR);
+
 	if (do_reset) {
-		g->ops.mc.enable(g, mc_enable_pwr_enabled_f());
+		g->ops.mc.enable(g, reset_mask);
 	} else {
-		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
+		g->ops.mc.disable(g, reset_mask);
 	}
 
 	return 0;
@@ -659,8 +657,6 @@ void gk20a_pmu_dump_falcon_stats(struct nvgpu_pmu *pmu)
 			pwr_falcon_exterrstat_valid_true_v()) {
 		nvgpu_err(g, "pwr_falcon_exterraddr_r : 0x%x",
 			gk20a_readl(g, pwr_falcon_exterraddr_r()));
-		nvgpu_err(g, "pmc_enable : 0x%x",
-			gk20a_readl(g, mc_enable_r()));
 	}
 
 	/* Print PMU F/W debug prints */

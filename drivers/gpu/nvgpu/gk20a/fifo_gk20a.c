@@ -44,6 +44,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/unit.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -53,7 +54,6 @@
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
 #define FECS_METHOD_WFI_RESTORE 0x80000
@@ -822,7 +822,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	/* enable pmc pfifo */
-	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
+	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_FIFO));
 
 	if (g->ops.clock_gating.slcg_fifo_load_gating_prod) {
 		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,

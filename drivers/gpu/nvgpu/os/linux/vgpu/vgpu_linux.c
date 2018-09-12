@@ -33,6 +33,7 @@
 #include <nvgpu/defaults.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/clk_arb.h>
 
 #include "vgpu_linux.h"
 #include "vgpu/fecs_trace_vgpu.h"
@@ -72,11 +73,18 @@ static void vgpu_remove_support(struct gk20a *g)
 static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	nvgpu_mutex_init(&g->power_lock);
 	nvgpu_mutex_init(&g->ctxsw_disable_lock);
+	nvgpu_mutex_init(&g->clk_arb_enable_lock);
+
+	nvgpu_mutex_init(&priv->vgpu_clk_get_freq_lock);
+
 	l->regs_saved = l->regs;
 	l->bar1_saved = l->bar1;
+
+	nvgpu_atomic_set(&g->clk_arb_global_nr, 0);
 
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
@@ -203,6 +211,12 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	err = vgpu_init_gr_support(g);
 	if (err) {
 		nvgpu_err(g, "failed to init gk20a gr");
+		goto done;
+	}
+
+	err = nvgpu_clk_arb_init_arbiter(g);
+	if (err) {
+		nvgpu_err(g, "failed to init clk arb");
 		goto done;
 	}
 

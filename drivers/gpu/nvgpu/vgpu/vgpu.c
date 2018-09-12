@@ -26,6 +26,7 @@
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gk20a/gk20a.h"
 #include "fecs_trace_vgpu.h"
@@ -235,6 +236,13 @@ void vgpu_remove_support_common(struct gk20a *g)
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	nvgpu_thread_stop(&priv->intr_handler);
+
+	nvgpu_clk_arb_cleanup_arbiter(g);
+
+	nvgpu_mutex_destroy(&g->clk_arb_enable_lock);
+	nvgpu_mutex_destroy(&priv->vgpu_clk_get_freq_lock);
+
+	nvgpu_kfree(g, priv->freqs);
 }
 
 void vgpu_detect_chip(struct gk20a *g)

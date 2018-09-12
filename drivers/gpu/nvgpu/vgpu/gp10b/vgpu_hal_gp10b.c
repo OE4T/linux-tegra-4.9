@@ -59,6 +59,7 @@
 #include "gp10b/gr_ctx_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
 #include "gp10b/regops_gp10b.h"
+#include "gp10b/clk_arb_gp10b.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
@@ -450,6 +451,15 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.reset_engine = NULL,
 		.is_engine_in_reset = NULL,
 	},
+	.clk_arb = {
+		.get_arbiter_clk_domains = gp10b_get_arbiter_clk_domains,
+		.get_arbiter_f_points = gp10b_get_arbiter_f_points,
+		.get_arbiter_clk_range = gp10b_get_arbiter_clk_range,
+		.get_arbiter_clk_default = gp10b_get_arbiter_clk_default,
+		.arbiter_clk_init = gp10b_init_clk_arbiter,
+		.clk_arb_run_arbiter_cb = gp10b_clk_arb_run_arbiter_cb,
+		.clk_arb_cleanup = gp10b_clk_arb_cleanup,
+	},
 	.regops = {
 		.exec_regops = vgpu_exec_regops,
 		.get_global_whitelist_ranges =
@@ -558,6 +568,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 int vgpu_gp10b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gops->ltc = vgpu_gp10b_ops.ltc;
 	gops->ce2 = vgpu_gp10b_ops.ce2;
@@ -573,6 +584,7 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 	gops->pramin = vgpu_gp10b_ops.pramin;
 	gops->therm = vgpu_gp10b_ops.therm;
 	gops->pmu = vgpu_gp10b_ops.pmu;
+	gops->clk_arb = vgpu_gp10b_ops.clk_arb;
 	gops->regops = vgpu_gp10b_ops.regops;
 	gops->mc = vgpu_gp10b_ops.mc;
 	gops->debug = vgpu_gp10b_ops.debug;
@@ -641,6 +653,10 @@ int vgpu_gp10b_init_hal(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	g->pmu_lsf_pmu_wpr_init_done = 0;
+
+	if (priv->constants.can_set_clkrate) {
+		gops->clk.support_clk_freq_controller = true;
+	}
 
 	g->name = "gp10b";
 

@@ -519,6 +519,7 @@ struct tegra_vgpu_constants_params {
 	u16 gpc_tpc_mask[TEGRA_VGPU_MAX_GPC_COUNT];
 	u32 hwpm_ctx_size;
 	u8 force_preempt_mode;
+	u8 can_set_clkrate;
 	u32 default_timeslice_us;
 	u32 preempt_ctx_size;
 	u32 channel_base;
@@ -578,7 +579,6 @@ struct tegra_vgpu_perfbuf_mgt_params {
 
 struct tegra_vgpu_get_gpu_freq_table_params {
 	u32 num_freqs;
-	u32 freqs[TEGRA_VGPU_GPU_FREQ_TABLE_SIZE]; /* in kHz */
 };
 
 struct tegra_vgpu_vsms_mapping_params {

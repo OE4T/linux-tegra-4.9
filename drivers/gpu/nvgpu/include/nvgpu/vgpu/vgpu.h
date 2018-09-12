@@ -26,6 +26,7 @@
 #include <nvgpu/types.h>
 #include <nvgpu/thread.h>
 #include <nvgpu/log.h>
+#include <nvgpu/lock.h>
 #include <nvgpu/vgpu/tegra_vgpu.h>
 
 struct device;
@@ -45,6 +46,9 @@ struct vgpu_priv_data {
 	struct tegra_vgpu_constants_params constants;
 	struct vgpu_ecc_stat *ecc_stats;
 	int ecc_stats_count;
+	u32 num_freqs;
+	unsigned long *freqs;
+	struct nvgpu_mutex vgpu_clk_get_freq_lock;
 };
 
 struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g);

@@ -860,16 +860,20 @@ static inline bool tegra_dc_is_yuv420_8bpc(const struct tegra_dc_mode *mode)
 {
 	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
 
-	return ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y24)) ||
-		(yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y24)));
+	if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY))
+		return (yuv_flag & FB_VMODE_Y24);
+
+	return false;
 }
 
 static inline bool tegra_dc_is_yuv420_10bpc(const struct tegra_dc_mode *mode)
 {
 	int yuv_flag = mode->vmode & FB_VMODE_YUV_MASK;
 
-	return ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
-		(yuv_flag == (FB_VMODE_Y420_ONLY | FB_VMODE_Y30)));
+	if (yuv_flag & (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY))
+		return (yuv_flag & FB_VMODE_Y30);
+
+	return false;
 }
 
 static inline bool tegra_dc_is_yuv422_12bpc(const struct tegra_dc_mode *mode)

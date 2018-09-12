@@ -766,6 +766,10 @@ static int gk20a_pm_railgate(struct device *dev)
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
 
+	/* return early if platform didn't implement railgate */
+	if (!platform->railgate)
+		return 0;
+
 	/* if platform is already railgated, then just return */
 	if (platform->is_railgated && platform->is_railgated(dev))
 		return ret;
@@ -780,8 +784,7 @@ static int gk20a_pm_railgate(struct device *dev)
 					g->pstats.last_rail_ungate_complete);
 #endif
 
-	if (platform->railgate)
-		ret = platform->railgate(dev);
+	ret = platform->railgate(dev);
 	if (ret) {
 		nvgpu_err(g, "failed to railgate platform, err=%d", ret);
 		return ret;
@@ -803,6 +806,10 @@ static int gk20a_pm_unrailgate(struct device *dev)
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
 
+	/* return early if platform didn't implement unrailgate */
+	if (!platform->unrailgate)
+		return 0;
+
 	ret = tegra_fuse_clock_enable();
 	if (ret) {
 		nvgpu_err(g, "failed to enable tegra fuse clock, err=%d", ret);
@@ -821,11 +828,9 @@ static int gk20a_pm_unrailgate(struct device *dev)
 
 	trace_gk20a_pm_unrailgate(dev_name(dev));
 
-	if (platform->unrailgate) {
-		nvgpu_mutex_acquire(&platform->railgate_lock);
-		ret = platform->unrailgate(dev);
-		nvgpu_mutex_release(&platform->railgate_lock);
-	}
+	nvgpu_mutex_acquire(&platform->railgate_lock);
+	ret = platform->unrailgate(dev);
+	nvgpu_mutex_release(&platform->railgate_lock);
 
 #ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_ungate_complete = jiffies;

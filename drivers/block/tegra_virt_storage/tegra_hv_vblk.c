@@ -39,6 +39,7 @@
 #include <scsi/sg.h>
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
+#include <linux/version.h>
 #include "tegra_vblk.h"
 
 static int vblk_major;
@@ -220,7 +221,7 @@ static void req_error_handler(struct vblk_dev *vblkdev, struct request *breq)
 	dev_err(vblkdev->device,
 		"Error for request pos %llx type %llx size %x\n",
 		(blk_rq_pos(breq) * (uint64_t)SECTOR_SIZE),
-		req_op(breq),
+		(uint64_t)req_op(breq),
 		blk_rq_bytes(breq));
 
 	blk_end_request_all(breq, -EIO);
@@ -270,7 +271,11 @@ static bool complete_bio_req(struct vblk_dev *vblkdev)
 	vs_req = &vsc_req->vs_req;
 
 	if ((bio_req != NULL) && (status == 0)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+		if (req_op(bio_req) == REQ_OP_DRV_IN) {
+#else
 		if (bio_req->cmd_type == REQ_TYPE_DRV_PRIV) {
+#endif
 			if (req_resp->blkdev_resp.ioctl_resp.status != 0) {
 				dev_err(vblkdev->device,
 					"IOCTL request failed!\n");
@@ -429,18 +434,15 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 	if (bio_req == NULL)
 		goto bio_exit;
 
-	if ((bio_req->cmd_type != REQ_TYPE_FS) &&
-		      (bio_req->cmd_type != REQ_TYPE_DRV_PRIV))	{
-		dev_err(vblkdev->device, "unsupported cmd type %d!\n",
-				bio_req->cmd_type);
-		goto bio_exit;
-	}
-
 	vsc_req->req = bio_req;
 	vs_req = &vsc_req->vs_req;
 
 	vs_req->type = VS_DATA_REQ;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+	if (req_op(bio_req) != REQ_OP_DRV_IN) {
+#else
 	if (bio_req->cmd_type == REQ_TYPE_FS) {
+#endif
 		if (req_op(bio_req) == REQ_OP_READ) {
 			vs_req->blkdev_req.req_op = VS_BLK_READ;
 		} else if (req_op(bio_req) == REQ_OP_WRITE) {
@@ -497,7 +499,7 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 				}
 			}
 		}
-	} else if (bio_req->cmd_type == REQ_TYPE_DRV_PRIV) {
+	} else {
 		if (vblk_prep_ioctl_req(vblkdev,
 			(struct vblk_ioctl_req *)bio_req->special,
 			vsc_req)) {
@@ -623,11 +625,6 @@ static void setup_device(struct vblk_dev *vblkdev)
 	}
 
 	vblkdev->queue->queuedata = vblkdev;
-
-	if (elevator_change(vblkdev->queue, "noop")) {
-		dev_err(vblkdev->device, "(elevator_init) fail\n");
-		return;
-	}
 
 	blk_queue_logical_block_size(vblkdev->queue,
 		vblkdev->config.blk_config.hardblk_size);

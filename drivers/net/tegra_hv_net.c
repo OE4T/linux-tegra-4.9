@@ -30,6 +30,7 @@
 #include <linux/ethtool.h>
 #include <linux/if.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define DRV_NAME "tegra_hv_net"
 #define DRV_VERSION "0.1"
@@ -361,7 +362,11 @@ static void tegra_hv_net_tx_timeout(struct net_device *ndev)
 	netdev_err(ndev, "%s\n", __func__);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
+void
+#else
 static struct rtnl_link_stats64 *
+#endif
 tegra_hv_net_get_stats64(struct net_device *ndev,
 		       struct rtnl_link_stats64 *tot)
 {
@@ -397,7 +402,9 @@ tegra_hv_net_get_stats64(struct net_device *ndev,
 		tot->rx_dropped += rx_drops;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 	return tot;
+#endif
 }
 
 static int tegra_hv_net_set_mac_address(struct net_device *dev, void *p)

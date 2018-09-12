@@ -30,7 +30,13 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/nvhvivc_mempool_ioctl.h>
+#include <linux/version.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,14,0)
 #include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
 
 #include "tegra_hv.h"
 

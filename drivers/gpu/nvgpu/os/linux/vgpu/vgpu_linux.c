@@ -17,6 +17,7 @@
  */
 
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_qos.h>

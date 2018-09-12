@@ -24,9 +24,8 @@
 #include <nvgpu/log.h>
 #include <nvgpu/os_sched.h>
 #include <nvgpu/channel.h>
-
-#include "gk20a.h"
-#include "tsg_gk20a.h"
+#include <nvgpu/tsg.h>
+#include <nvgpu/gk20a.h>
 
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {

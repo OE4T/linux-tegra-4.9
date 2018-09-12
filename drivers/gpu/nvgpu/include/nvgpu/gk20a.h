@@ -66,11 +66,11 @@ struct nvgpu_gpfifo_args;
 #include <nvgpu/nvlink.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/ecc.h>
+#include <nvgpu/tsg.h>
 
 #include "gk20a/clk_gk20a.h"
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
-#include "gk20a/tsg_gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"

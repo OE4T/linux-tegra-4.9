@@ -224,6 +224,7 @@ nvgpu-y += \
 	common/sim_pci.o \
 	common/fifo/channel.o \
 	common/fifo/submit.o \
+	common/fifo/tsg.o \
 	common/ecc.o \
 	common/ce2.o \
 	gk20a/gk20a.o \
@@ -238,7 +239,6 @@ nvgpu-y += \
 	gk20a/fence_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
-	gk20a/tsg_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
 	gm20b/hal_gm20b.o \
 	gm20b/gr_gm20b.o \

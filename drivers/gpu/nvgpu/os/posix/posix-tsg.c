@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/tsg_gk20a.h"
+#include <nvgpu/tsg.h>
 
 void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int __event_id)

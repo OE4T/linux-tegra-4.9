@@ -36,7 +36,6 @@
 #include "vgpu_linux.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "vgpu/clk_vgpu.h"
-#include "gk20a/tsg_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 

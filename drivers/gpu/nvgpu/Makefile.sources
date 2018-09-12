@@ -40,7 +40,7 @@ srcs :=	os/posix/nvgpu.c \
 	os/posix/fuse.c \
 	os/posix/clk_arb.c \
 	os/posix/posix-channel.c \
-	os/posix/tsg.c \
+	os/posix/posix-tsg.c \
 	os/posix/nvlink.c \
 	os/posix/lock.c \
 	os/posix/stubs.c \
@@ -109,6 +109,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/clock_gating/gv100_gating_reglist.c \
 	common/fifo/channel.c \
 	common/fifo/submit.c \
+	common/fifo/tsg.c \
 	common/mc/mc.c \
 	common/mc/mc_gm20b.c \
 	common/mc/mc_gp10b.c  \
@@ -158,7 +159,6 @@ srcs :=	os/posix/nvgpu.c \
 	gk20a/fence_gk20a.c \
 	gk20a/gr_ctx_gk20a_sim.c \
 	gk20a/gr_ctx_gk20a.c \
-	gk20a/tsg_gk20a.c \
 	gm20b/hal_gm20b.c \
 	gm20b/gr_gm20b.c \
 	gm20b/clk_gm20b.c \

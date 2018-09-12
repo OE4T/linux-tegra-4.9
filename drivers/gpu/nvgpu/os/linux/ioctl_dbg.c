@@ -31,12 +31,12 @@
 #include <nvgpu/cond.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/tsg.h>
 
 #include <nvgpu/linux/vm.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
-#include "gk20a/tsg_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "os_linux.h"

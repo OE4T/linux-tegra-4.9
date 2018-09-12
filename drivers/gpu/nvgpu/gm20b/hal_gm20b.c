@@ -28,6 +28,7 @@
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/tsg.h>
 
 #include "common/clock_gating/gm20b_gating_reglist.h"
 #include "common/bus/bus_gm20b.h"
@@ -50,7 +51,6 @@
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
-#include "gk20a/tsg_gk20a.h"
 
 #include "gr_gm20b.h"
 #include "fifo_gm20b.h"

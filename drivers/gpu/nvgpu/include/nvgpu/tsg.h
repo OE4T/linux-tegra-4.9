@@ -26,7 +26,7 @@
 #include <nvgpu/kref.h>
 #include <nvgpu/rwsem.h>
 
-#include "gr_gk20a.h"
+#include "gk20a/gr_gk20a.h"
 
 #define NVGPU_INVALID_TSG_ID (-1)
 

@@ -1,7 +1,7 @@
 /*
  * ISC GPIO driver
  *
- * Copyright (c) 2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2017-2018, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 #include <linux/atomic.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/nospec.h>
 
 #include "isc-gpio-priv.h"
 
@@ -210,6 +211,7 @@ static void isc_gpio_set_value(struct gpio_chip *gc, unsigned off, int val)
 		mutex_unlock(&isc_gpio->mutex);
 		return;
 	}
+	idx = array_index_nospec(idx, 0);
 
 	/* set gpio value based on refcount */
 	ref_cnt = &isc_gpio->gpios[idx].ref_cnt;

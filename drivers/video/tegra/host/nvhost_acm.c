@@ -1008,7 +1008,7 @@ static bool nvhost_module_has_open_channels(struct platform_device *pdev)
 
 	for (idx = 0; idx < nvhost_channel_nb_channels(host); idx++) {
 		ch = host->chlist[idx];
-		if (ch->dev == pdev)
+		if (ch->dev == pdev && !list_empty(&ch->cdma.sync_queue))
 			return true;
 	}
 
@@ -1019,9 +1019,19 @@ static int nvhost_module_prepare_suspend(struct device *dev)
 {
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct platform_device *pdev = to_platform_device(dev);
+	int i;
 
-	if (nvhost_module_has_open_channels(pdev))
+	for (i = 0; i < 10; i++) {
+		if (!nvhost_module_has_open_channels(pdev))
+			break;
+		msleep(1);
+	}
+
+	if (i == 10) {
+		nvhost_err(dev, "device has not quiesced within 10ms");
+		nvhost_debug_dump_device(pdev);
 		return -EBUSY;
+	}
 
 	if (!pdata->can_powergate) {
 		/* If we took an extra reference, drop it now to prevent

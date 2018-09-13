@@ -53,7 +53,6 @@
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 static void gk20a_channel_dump_ref_actions(struct channel_gk20a *c);
 
-static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c);
 static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c);
 
 static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c);
@@ -733,13 +732,20 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 /* allocate private cmd buffer.
    used for inserting commands before/after user submitted buffers. */
-static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
+static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c,
+	u32 num_in_flight)
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm = c->vm;
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	u32 size;
 	int err = 0;
+	bool gpfifo_based = false;
+
+	if (num_in_flight == 0U) {
+		num_in_flight = c->gpfifo.entry_num;
+		gpfifo_based = true;
+	}
 
 	/*
 	 * Compute the amount of priv_cmdbuf space we need. In general the worst
@@ -758,8 +764,12 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	 *
 	 *   (gpfifo entry number * (2 / 3) * (8 + 10) * 4 bytes.
 	 */
-	size = roundup_pow_of_two(c->gpfifo.entry_num *
-				  2 * 18 * sizeof(u32) / 3);
+	size = num_in_flight * 18U * (u32)sizeof(u32);
+	if (gpfifo_based) {
+		size = 2U * size / 3U;
+	}
+
+	size = PAGE_ALIGN(roundup_pow_of_two(size));
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm, size, &q->mem);
 	if (err) {
@@ -1230,7 +1240,8 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
-	err = channel_gk20a_alloc_priv_cmdbuf(c);
+	err = channel_gk20a_alloc_priv_cmdbuf(c,
+				gpfifo_args->num_inflight_jobs);
 	if (err) {
 		goto clean_up_prealloc;
 	}

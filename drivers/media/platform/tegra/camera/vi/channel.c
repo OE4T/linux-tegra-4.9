@@ -2068,7 +2068,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
 	chan->height_align = TEGRA_HEIGHT_ALIGNMENT;
-	chan->size_align = TEGRA_SIZE_ALIGNMENT;
+	chan->size_align = size_align_ctrl_qmenu[TEGRA_SIZE_ALIGNMENT];
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	chan->capture_descr_index = 0;

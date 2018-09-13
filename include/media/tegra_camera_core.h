@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device Driver Core Helpers
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -27,7 +27,7 @@
 /* Height alignment */
 #define TEGRA_HEIGHT_ALIGNMENT	1
 /* Size alignment */
-#define TEGRA_SIZE_ALIGNMENT	1
+#define TEGRA_SIZE_ALIGNMENT	0
 
 /* 1080p resolution as default resolution for test pattern generator */
 #define TEGRA_DEF_WIDTH		1920

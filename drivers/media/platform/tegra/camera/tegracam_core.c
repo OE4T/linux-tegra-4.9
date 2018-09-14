@@ -22,7 +22,7 @@
 /* use semantic versioning convention */
 #define TEGRACAM_MAJOR_VERSION 2
 #define TEGRACAM_MINOR_VERSION 0
-#define TEGRACAM_PATCH_VERSION 0
+#define TEGRACAM_PATCH_VERSION 1
 
 u32 tegracam_version(u8 major, u8 minor, u8 patch)
 {

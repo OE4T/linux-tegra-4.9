@@ -537,6 +537,166 @@ int sensor_common_parse_num_modes(const struct device *dev)
 }
 EXPORT_SYMBOL(sensor_common_parse_num_modes);
 
+static int sensor_common_init_i2c_device_config(
+	struct device *dev, struct device_node *np,
+	struct sensor_cfg *cfg)
+{
+	struct i2c_sensor_cfg *i2c_sensor = &cfg->u.i2c_sensor;
+	struct device_node *node = NULL;
+	struct device_node *parent = NULL;
+	int err = 0;
+	u32 value = 0;
+	bool is_mux_valid = 0;
+
+	of_node_get(np);
+	cfg->type = CAMERA_DEVICE_I2C_SENSOR;
+	err = of_property_read_u32(np, "reg", &value);
+	if (err) {
+		dev_err(dev, "sensor address unavailable\n");
+		return err;
+	}
+
+	/* Reading more devices has to be supported */
+	i2c_sensor->num_devs = 1;
+	i2c_sensor->sd[0].addr = value;
+
+	parent = of_get_parent(np);
+	/* verify the parent is mux or i2c bus */
+	is_mux_valid =
+		of_property_read_bool(parent, "i2c-mux,deselect-on-exit");
+	i2c_sensor->mux.is_mux_valid = is_mux_valid;
+	of_node_put(np);
+
+	if (is_mux_valid) {
+
+		/* at mux port read the mux channel */
+		err = of_property_read_u32(parent, "reg", &value);
+		if (err) {
+			dev_err(dev, "mux channel unavailable\n");
+			return err;
+		}
+		i2c_sensor->mux.mux_channel = value;
+
+		/* move to mux node */
+		node = of_get_parent(parent);
+		err = of_property_read_u32(node, "reg", &value);
+		if (err) {
+			dev_err(dev, "mux address unavailable\n");
+			return err;
+		}
+		i2c_sensor->mux.mux_addr = value;
+		of_node_put(parent);
+
+		/* move to i2c bus node */
+		parent = of_get_parent(node);
+		of_node_put(node);
+	}
+
+	/* read parent which is i2c bus */
+	err = of_property_read_u32_index(parent, "reg", 1, &value);
+	if (err) {
+		dev_err(dev, "i2c bus regbase unavailable\n");
+		return err;
+	}
+	i2c_sensor->bus.reg_base = value;
+
+	err = of_property_read_u32(parent, "clock-frequency", &value);
+	if (err) {
+		dev_err(dev, "bus clock frequency unavailable\n");
+		return err;
+	}
+	i2c_sensor->bus.clk_rate = value;
+
+	of_node_put(parent);
+	/*
+	 * Read any additional flags to configure I2C for any
+	 * special properties of the device like-high-speed mode,
+	 * 10bit addressing etc.,
+	 */
+
+	return 0;
+}
+
+static int sensor_common_init_spi_device_config(
+	struct device *dev, struct device_node *np,
+	struct sensor_cfg *cfg)
+{
+	struct spi_sensor_cfg *spi_sensor = &cfg->u.spi_sensor;
+	struct device_node *parent = NULL;
+	int err = 0;
+	u32 value = 0;
+
+	of_node_get(np);
+	cfg->type = CAMERA_DEVICE_SPI_SENSOR;
+	err = of_property_read_u32(np, "reg", &value);
+	if (err) {
+		dev_err(dev, "sensor address unavailable\n");
+		return err;
+	}
+
+	/* Reading more devices has to be supported */
+	spi_sensor->num_devs = 1;
+	spi_sensor->sd[0].addr = value;
+
+	parent = of_get_parent(np);
+	of_node_put(np);
+	/* TODO: Add logic for spi mux if available */
+
+	/* read parent which is spi bus */
+	err = of_property_read_u32_index(parent, "reg", 1, &value);
+	if (err) {
+		dev_err(dev, "spi bus regbase unavailable\n");
+		return err;
+	}
+	spi_sensor->bus.reg_base = value;
+
+	err = of_property_read_u32(parent, "spi-max-frequency", &value);
+	if (err) {
+		dev_err(dev, "bus clock frequency unavailable\n");
+		return err;
+	}
+	spi_sensor->bus.clk_rate = value;
+
+	of_node_put(parent);
+	/* Read any additional flags to configure SPI */
+
+	return 0;
+}
+
+static int sensor_common_init_device_config(
+	struct device *dev, struct device_node *np,
+	struct sensor_cfg *cfg)
+{
+	struct device_node *parent = NULL;
+	char *tmp;
+	int err = 0;
+
+	if (!np)
+		return -EINVAL;
+
+	parent = of_get_parent(np);
+	if (!parent)
+		return -EINVAL;
+
+	tmp = strnstr(parent->name, "i2c", 4);
+	if (tmp != NULL) {
+		err = sensor_common_init_i2c_device_config(dev, np, cfg);
+		if (err)
+			goto exit;
+	}
+
+	tmp = strnstr(parent->name, "spi", 4);
+	if (tmp != NULL) {
+		err = sensor_common_init_spi_device_config(dev, np, cfg);
+		if (err)
+			goto exit;
+	}
+
+exit:
+	of_node_put(parent);
+	return err;
+}
+
 int sensor_common_init_sensor_properties(
 	struct device *dev, struct device_node *np,
 	struct sensor_properties *sensor)
@@ -548,6 +708,10 @@ int sensor_common_init_sensor_properties(
 
 	if (sensor == NULL)
 		return -EINVAL;
+
+	err = sensor_common_init_device_config(dev, np, &sensor->cfg);
+	if (err)
+		return err;
 
 	/* get number of modes */
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {

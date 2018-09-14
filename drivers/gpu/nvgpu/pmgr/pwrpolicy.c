@@ -22,8 +22,8 @@
 
 #include <nvgpu/bios.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "pwrpolicy.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"

@@ -21,8 +21,8 @@
  */
 
 #include <nvgpu/bios.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_fll.h"
 #include "clk_domain.h"

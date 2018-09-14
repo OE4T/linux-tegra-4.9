@@ -19,7 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "boardobjgrp.h"
 #include "ctrl/ctrlboardobj.h"
 

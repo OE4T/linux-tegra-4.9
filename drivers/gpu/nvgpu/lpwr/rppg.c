@@ -21,8 +21,8 @@
  */
 
 #include <nvgpu/pmu.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gp106/bios_gp106.h"
 #include "pstate/pstate.h"
 #include "lpwr/rppg.h"

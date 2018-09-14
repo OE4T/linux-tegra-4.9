@@ -21,8 +21,8 @@
  */
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "boardobj.h"
 #include "ctrl/ctrlboardobj.h"
 

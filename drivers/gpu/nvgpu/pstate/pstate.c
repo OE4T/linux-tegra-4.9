@@ -23,8 +23,8 @@
  */
 
 #include <nvgpu/bios.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"

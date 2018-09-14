@@ -32,8 +32,8 @@
 #include <nvgpu/list.h>
 #include <nvgpu/clk_arb.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "pstate/pstate.h"
 #include "lpwr/lpwr.h"

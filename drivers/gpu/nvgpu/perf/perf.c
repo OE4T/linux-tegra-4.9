@@ -23,8 +23,8 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/pmu.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "perf.h"
 
 struct perfrpc_pmucmdhandler_params {

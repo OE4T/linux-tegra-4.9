@@ -22,8 +22,8 @@
 
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_prog.h"
 #include "clk_vf_point.h"

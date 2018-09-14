@@ -1,7 +1,7 @@
 /*
  * GP106 FUSE
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GP106_FUSE
-#define _NVGPU_GP106_FUSE
+#ifndef NVGPU_FUSE_GP106_H
+#define NVGPU_FUSE_GP106_H
 
 struct gk20a;
 
@@ -36,4 +36,4 @@ u32 gp106_fuse_read_vin_cal_gain_offset_fuse(struct gk20a *g,
 					     u32 vin_id, s8 *gain,
 					     s8 *offset);
 
-#endif
+#endif /* NVGPU_FUSE_GP106_H */

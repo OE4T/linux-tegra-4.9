@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GV11B_FB
-#define _NVGPU_GV11B_FB
+#ifndef NVGPU_FB_GV11B_H
+#define NVGPU_FB_GV11B_H
 
 #define	NONREPLAY_REG_INDEX		0
 #define	REPLAY_REG_INDEX		1
@@ -79,4 +79,4 @@ void fb_gv11b_write_mmu_fault_status(struct gk20a *g, u32 reg_val);
 int gv11b_fb_mmu_invalidate_replay(struct gk20a *g,
 			 u32 invalidate_replay_val);
 
-#endif
+#endif /* NVGPU_FB_GV11B_H */

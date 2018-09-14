@@ -1,7 +1,7 @@
 /*
  * GM20B FUSE
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GM20B_FUSE
-#define _NVGPU_GM20B_FUSE
+#ifndef NVGPU_FUSE_GM20B_H
+#define NVGPU_FUSE_GM20B_H
 
 #define GCPLEX_CONFIG_VPR_AUTO_FETCH_DISABLE_MASK	((u32)(1 << 0))
 #define GCPLEX_CONFIG_VPR_ENABLED_MASK			((u32)(1 << 1))
@@ -42,4 +42,4 @@ void gm20b_fuse_ctrl_opt_tpc_gpc(struct gk20a *g, u32 gpc, u32 val);
 u32 gm20b_fuse_opt_sec_debug_en(struct gk20a *g);
 u32 gm20b_fuse_opt_priv_sec_en(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_FUSE_GM20B_H */

@@ -1,7 +1,7 @@
 /*
  * GV100 FB
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GV100_FB
-#define _NVGPU_GV100_FB
+#ifndef NVGPU_FB_GV100_H
+#define NVGPU_FB_GV100_H
 
 struct gk20a;
 
@@ -35,4 +35,4 @@ int gv100_fb_init_nvlink(struct gk20a *g);
 int gv100_fb_enable_nvlink(struct gk20a *g);
 size_t gv100_fb_get_vidmem_size(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_FB_GV100_H */

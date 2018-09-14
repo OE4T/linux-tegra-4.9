@@ -1,7 +1,7 @@
 /*
  * GP10B FB
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,11 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GP10B_FB
-#define _NVGPU_GP10B_FB
+#ifndef NVGPU_FB_GP10B_H
+#define NVGPU_FB_GP10B_H
 struct gk20a;
 
 unsigned int gp10b_fb_compression_page_size(struct gk20a *g);
 unsigned int gp10b_fb_compressible_page_size(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_FB_GP10B_H */

@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef BUDDY_ALLOCATOR_PRIV_H
-#define BUDDY_ALLOCATOR_PRIV_H
+#ifndef NVGPU_MM_BUDDY_ALLOCATOR_PRIV_H
+#define NVGPU_MM_BUDDY_ALLOCATOR_PRIV_H
 
 #include <nvgpu/rbtree.h>
 #include <nvgpu/list.h>
@@ -221,4 +221,4 @@ static inline struct nvgpu_allocator *balloc_owner(
 	return a->owner;
 }
 
-#endif
+#endif /* NVGPU_MM_BUDDY_ALLOCATOR_PRIV_H */

@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PRIV_RING_GM20B_H__
-#define __PRIV_RING_GM20B_H__
+#ifndef NVGPU_PRIV_RING_GM20B_H
+#define NVGPU_PRIV_RING_GM20B_H
 
 struct gk20a;
 
@@ -29,4 +29,4 @@ void gm20b_priv_ring_enable(struct gk20a *g);
 void gm20b_priv_set_timeout_settings(struct gk20a *g);
 u32 gm20b_priv_ring_enum_ltc(struct gk20a *g);
 
-#endif /*__PRIV_RING_GM20B_H__*/
+#endif /* NVGPU_PRIV_RING_GM20B_H */

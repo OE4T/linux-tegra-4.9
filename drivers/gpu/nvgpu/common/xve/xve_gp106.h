@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __XVE_GP106_H__
-#define __XVE_GP106_H__
+#ifndef NVGPU_XVE_GP106_H
+#define NVGPU_XVE_GP106_H
 
 #include "gk20a/gk20a.h"
 
@@ -69,4 +69,4 @@ void xve_rearm_msi_gp106(struct gk20a *g);
 void xve_enable_shadow_rom_gp106(struct gk20a *g);
 void xve_disable_shadow_rom_gp106(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_XVE_GP106_H */

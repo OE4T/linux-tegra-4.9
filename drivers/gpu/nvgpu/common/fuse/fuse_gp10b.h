@@ -22,8 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _NVGPU_GP10B_FUSE
-#define _NVGPU_GP10B_FUSE
+#ifndef NVGPU_FUSE_GP10B_H
+#define NVGPU_FUSE_GP10B_H
 
 struct gk20a;
 
@@ -31,4 +31,4 @@ int gp10b_fuse_check_priv_security(struct gk20a *g);
 bool gp10b_fuse_is_opt_ecc_enable(struct gk20a *g);
 bool gp10b_fuse_is_opt_feature_override_disable(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_FUSE_GP10B_H */

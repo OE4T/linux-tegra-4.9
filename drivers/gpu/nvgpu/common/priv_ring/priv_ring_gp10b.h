@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PRIV_RING_GP10B_H__
-#define __PRIV_RING_GP10B_H__
+#ifndef NVGPU_PRIV_RING_GP10B_H
+#define NVGPU_PRIV_RING_GP10B_H
 
 struct gk20a;
 
@@ -30,4 +30,4 @@ void gp10b_priv_ring_isr(struct gk20a *g);
 void gp10b_priv_ring_decode_error_code(struct gk20a *g,
 			u32 error_code);
 
-#endif /*__PRIV_RING_GP10B_H__*/
+#endif /* NVGPU_PRIV_RING_GP10B_H */

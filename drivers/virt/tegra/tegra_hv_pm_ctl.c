@@ -20,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/cdev.h>
 #include <linux/poll.h>
+#include <linux/delay.h>
 
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
@@ -32,6 +33,7 @@
 
 #define DRV_NAME	"tegra_hv_pm_ctl"
 #define CHAR_DEV_COUNT	1
+#define MAX_GUESTS_NUM	8
 
 struct tegra_hv_pm_ctl {
 	struct device *dev;
@@ -43,6 +45,8 @@ struct tegra_hv_pm_ctl {
 	struct cdev cdev;
 	dev_t char_devt;
 	bool char_is_open;
+	u32 wait_for_guests[MAX_GUESTS_NUM];
+	u32 wait_for_guests_size;
 
 	struct mutex mutex_lock;
 	wait_queue_head_t wq;
@@ -50,12 +54,71 @@ struct tegra_hv_pm_ctl {
 
 int (*tegra_hv_pm_ctl_prepare_shutdown)(void);
 
+/* Global driver data */
+static struct tegra_hv_pm_ctl *tegra_hv_pm_ctl_data;
+
 /* Guest ID for state */
 static u32 guest_id;
+
+static int tegra_hv_pm_ctl_get_guest_state(u32 vmid, u32 *state);
+
+/*
+ * For dependency management on System suspend, if there are guests required
+ * to wait and the guests are not in suspended, the privileged guest sends
+ * a guest suspend command to the guests and waits for the guests to be
+ * suspended.
+ */
+static int do_wait_for_guests_suspended(void)
+{
+	bool sent_guest_suspend = false;
+	int i = 0;
+	int ret = 0;
+
+	while (i < tegra_hv_pm_ctl_data->wait_for_guests_size) {
+		u32 vmid = tegra_hv_pm_ctl_data->wait_for_guests[i];
+		u32 state;
+
+		ret = tegra_hv_pm_ctl_get_guest_state(vmid, &state);
+		if (ret < 0)
+			return ret;
+
+		if (state == VM_STATE_SUSPEND) {
+			sent_guest_suspend = false;
+			i++;
+			continue;
+		}
+
+		if (sent_guest_suspend == false) {
+			pr_debug("%s: Send a guest suspend command to guest%u\n",
+				__func__, vmid);
+			ret = tegra_hv_pm_ctl_trigger_guest_suspend(vmid);
+			if (ret < 0)
+				return ret;
+
+			sent_guest_suspend = true;
+		}
+		msleep(10);
+	}
+
+	return 0;
+}
 
 int tegra_hv_pm_ctl_trigger_sys_suspend(void)
 {
 	int ret;
+
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
+
+	ret = do_wait_for_guests_suspended();
+	if (ret < 0) {
+		pr_err("%s: Failed to wait for guests suspended, %d\n",
+			__func__, ret);
+		return ret;
+	}
 
 	ret = hyp_guest_reset(SYS_SUSPEND_INIT_CMD, NULL);
 	if (ret < 0) {
@@ -67,10 +130,15 @@ int tegra_hv_pm_ctl_trigger_sys_suspend(void)
 	return 0;
 }
 
-
 int tegra_hv_pm_ctl_trigger_sys_shutdown(void)
 {
 	int ret;
+
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
 
 	if (tegra_hv_pm_ctl_prepare_shutdown) {
 		ret = tegra_hv_pm_ctl_prepare_shutdown();
@@ -95,6 +163,12 @@ int tegra_hv_pm_ctl_trigger_sys_reboot(void)
 {
 	int ret;
 
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
+
 	ret = hyp_guest_reset(SYS_REBOOT_INIT_CMD, NULL);
 	if (ret < 0) {
 		pr_err("%s: Failed to trigger system reboot, %d\n",
@@ -108,6 +182,12 @@ int tegra_hv_pm_ctl_trigger_sys_reboot(void)
 int tegra_hv_pm_ctl_trigger_guest_suspend(u32 vmid)
 {
 	int ret;
+
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
 
 	ret = hyp_guest_reset(GUEST_SUSPEND_REQ_CMD(vmid), NULL);
 	if (ret < 0) {
@@ -123,6 +203,12 @@ int tegra_hv_pm_ctl_trigger_guest_resume(u32 vmid)
 {
 	int ret;
 
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
+
 	ret = hyp_guest_reset(GUEST_RESUME_INIT_CMD(vmid), NULL);
 	if (ret < 0) {
 		pr_err("%s: Failed to trigger guest%u resume, %d\n",
@@ -133,10 +219,18 @@ int tegra_hv_pm_ctl_trigger_guest_resume(u32 vmid)
 	return 0;
 }
 
-int tegra_hv_pm_ctl_get_guest_state(u32 vmid, u32 *state)
+static int tegra_hv_pm_ctl_get_guest_state(u32 vmid, u32 *state)
 {
 	int ret;
 
+	if (!tegra_hv_pm_ctl_data) {
+		pr_err("%s: tegra_hv_pm_ctl driver is not probed, %d\n",
+			__func__, -ENXIO);
+		return -ENXIO;
+	}
+
+	/* guest state which can be returned:
+	 * VM_STATE_BOOT, VM_STATE_HALT, VM_STATE_SUSPEND, VM_STATE_SHUTDOWN */
 	ret = hyp_read_guest_state(vmid, state);
 	if (ret < 0) {
 		pr_err("%s: Failed to get guest%u state, %d\n",
@@ -492,6 +586,22 @@ static ssize_t guest_state_store(struct device *dev,
 	return count;
 }
 
+static ssize_t wait_for_guests_show(struct device *dev,
+				    struct device_attribute *attr, char *buf)
+{
+	struct tegra_hv_pm_ctl *data = dev_get_drvdata(dev);
+	ssize_t count = 0;
+	int i;
+
+	for (i = 0; i < data->wait_for_guests_size; i++) {
+		count += snprintf(buf + count, PAGE_SIZE - count, "%u ",
+				  data->wait_for_guests[i]);
+	}
+	count += snprintf(buf + count, PAGE_SIZE - count, "\n");
+
+	return count;
+}
+
 static DEVICE_ATTR_RO(ivc_id);
 static DEVICE_ATTR_RO(ivc_frame_size);
 static DEVICE_ATTR_RO(ivc_nframes);
@@ -502,6 +612,7 @@ static DEVICE_ATTR_WO(trigger_sys_reboot);
 static DEVICE_ATTR_WO(trigger_guest_suspend);
 static DEVICE_ATTR_WO(trigger_guest_resume);
 static DEVICE_ATTR_RW(guest_state);
+static DEVICE_ATTR_RO(wait_for_guests);
 
 static struct attribute *tegra_hv_pm_ctl_attributes[] = {
 	&dev_attr_ivc_id.attr,
@@ -514,6 +625,7 @@ static struct attribute *tegra_hv_pm_ctl_attributes[] = {
 	&dev_attr_trigger_guest_suspend.attr,
 	&dev_attr_trigger_guest_resume.attr,
 	&dev_attr_guest_state.attr,
+	&dev_attr_wait_for_guests.attr,
 	NULL
 };
 
@@ -600,6 +712,7 @@ static void tegra_hv_pm_ctl_cleanup(struct tegra_hv_pm_ctl *data)
 static int tegra_hv_pm_ctl_parse_dt(struct tegra_hv_pm_ctl *data)
 {
 	struct device_node *np = data->dev->of_node;
+	int ret;
 
 	if (!np) {
 		dev_err(data->dev, "%s: Failed to find device node\n",
@@ -612,6 +725,13 @@ static int tegra_hv_pm_ctl_parse_dt(struct tegra_hv_pm_ctl *data)
 			__func__, np->full_name);
 		return -EINVAL;
 	}
+
+	/* List of guests to wait before sending a System suspend command for
+	 * dependency management. */
+	ret = of_property_read_variable_u32_array(np, "wait-for-guests",
+				data->wait_for_guests, 1, MAX_GUESTS_NUM);
+	if (ret > 0)
+		data->wait_for_guests_size = ret;
 
 	return 0;
 }
@@ -669,6 +789,8 @@ static int tegra_hv_pm_ctl_probe(struct platform_device *pdev)
 		goto error_sysfs_remove_group;
 	}
 
+	tegra_hv_pm_ctl_data = data;
+
 	dev_info(&pdev->dev, "%s: Probed\n", __func__);
 
 	return 0;
@@ -685,6 +807,7 @@ static int tegra_hv_pm_ctl_remove(struct platform_device *pdev)
 {
 	struct tegra_hv_pm_ctl *data = platform_get_drvdata(pdev);
 
+	tegra_hv_pm_ctl_data = NULL;
 	tegra_hv_pm_ctl_cleanup(data);
 	sysfs_remove_group(&pdev->dev.kobj, &tegra_hv_pm_ctl_attr_group);
 	class_destroy(data->class);

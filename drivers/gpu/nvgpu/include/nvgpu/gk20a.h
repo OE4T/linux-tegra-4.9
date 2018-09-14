@@ -1052,12 +1052,6 @@ struct gpu_ops {
 		void (*dump_secure_fuses)(struct gk20a *g);
 		int (*reset_engine)(struct gk20a *g, bool do_reset);
 		bool (*is_engine_in_reset)(struct gk20a *g);
-		int (*falcon_wait_for_halt)(struct gk20a *g,
-			unsigned int timeout);
-		int (*falcon_clear_halt_interrupt_status)(struct gk20a *g,
-			unsigned int timeout);
-		int (*init_falcon_setup_hw)(struct gk20a *g,
-			void *desc, u32 bl_sz);
 		bool (*is_lazy_bootstrap)(u32 falcon_id);
 		bool (*is_priv_load)(u32 falcon_id);
 		void (*get_wpr)(struct gk20a *g, struct wpr_carveout_info *inf);

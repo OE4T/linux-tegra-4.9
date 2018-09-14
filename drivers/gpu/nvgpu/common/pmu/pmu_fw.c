@@ -1648,17 +1648,6 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 		nvgpu_release_firmware(g, g->acr.pmu_desc);
 	}
 
-	if (g->acr.acr_fw) {
-		nvgpu_release_firmware(g, g->acr.acr_fw);
-	}
-
-	if (g->acr.hsbl_fw) {
-		nvgpu_release_firmware(g, g->acr.hsbl_fw);
-	}
-
-	nvgpu_dma_unmap_free(vm, &g->acr.acr_ucode);
-	nvgpu_dma_unmap_free(vm, &g->acr.hsbl_ucode);
-
 	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
 
 	nvgpu_dma_unmap_free(vm, &pmu->super_surface_buf);

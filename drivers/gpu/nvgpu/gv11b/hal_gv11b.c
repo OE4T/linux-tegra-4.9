@@ -877,17 +877,10 @@ int gv11b_init_hal(struct gk20a *g)
 	if (nvgpu_is_enabled(g, NVGPU_SEC_PRIVSECURITY)) {
 		/* Add in ops from gm20b acr */
 		gops->pmu.prepare_ucode = gp106_prepare_ucode_blob,
-		gops->pmu.pmu_setup_hw_and_bootstrap = gv11b_bootstrap_hs_flcn,
-		gops->pmu.get_wpr = gm20b_wpr_info,
-		gops->pmu.alloc_blob_space = gv11b_alloc_blob_space,
 		gops->pmu.pmu_populate_loader_cfg =
 			gp106_pmu_populate_loader_cfg,
 		gops->pmu.flcn_populate_bl_dmem_desc =
 			gp106_flcn_populate_bl_dmem_desc,
-		gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt,
-		gops->pmu.falcon_clear_halt_interrupt_status =
-			clear_halt_interrupt_status,
-		gops->pmu.init_falcon_setup_hw = gv11b_init_pmu_setup_hw1,
 		gops->pmu.update_lspmu_cmdline_args =
 			gm20b_update_lspmu_cmdline_args;
 		gops->pmu.setup_apertures = gv11b_setup_apertures;
@@ -901,11 +894,9 @@ int gv11b_init_hal(struct gk20a *g)
 	} else {
 		/* Inherit from gk20a */
 		gops->pmu.prepare_ucode = nvgpu_pmu_prepare_ns_ucode_blob,
-		gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1,
 
 		gops->pmu.load_lsfalcon_ucode = NULL;
 		gops->pmu.init_wpr_region = NULL;
-		gops->pmu.pmu_setup_hw_and_bootstrap = gp10b_init_pmu_setup_hw1;
 
 		gops->gr.load_ctxsw_ucode = gr_gk20a_load_ctxsw_ucode;
 	}

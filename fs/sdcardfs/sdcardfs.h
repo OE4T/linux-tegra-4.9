@@ -114,6 +114,8 @@ typedef enum {
 	PERM_ANDROID_PACKAGE,
 	/* This node is "/Android/[data|media|obb]/[package]/cache" */
 	PERM_ANDROID_PACKAGE_CACHE,
+	/* This node is shared "/NVIDIA_SHIELD/" on external storage */
+	PERM_NVIDIA_SDCARD,
 } perm_t;
 
 struct sdcardfs_sb_info;
@@ -443,6 +445,11 @@ static inline int get_mode(struct vfsmount *mnt,
 			visible_mode = visible_mode & ~0006;
 		else
 			visible_mode = visible_mode & ~0007;
+	} else if (data->perm == PERM_NVIDIA_SDCARD) {
+		/* Discard mask for Nvidia_Shield and all dirs and
+		 * files underneath it
+		 */
+		visible_mode = 0777;
 	}
 	owner_mode = info->lower_inode->i_mode & 0700;
 	filtered_mode = visible_mode & (owner_mode | (owner_mode >> 3) | (owner_mode >> 6));

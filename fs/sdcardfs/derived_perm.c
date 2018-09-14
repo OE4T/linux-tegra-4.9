@@ -65,6 +65,7 @@ void get_derived_permission_new(struct dentry *parent, struct dentry *dentry,
 	struct qstr q_obb = QSTR_LITERAL("obb");
 	struct qstr q_media = QSTR_LITERAL("media");
 	struct qstr q_cache = QSTR_LITERAL("cache");
+	struct qstr q_nvidia_shield = QSTR_LITERAL("NVIDIA_SHIELD");
 
 	/* By default, each inode inherits from its parent.
 	 * the properties are maintained on its private fields
@@ -87,6 +88,11 @@ void get_derived_permission_new(struct dentry *parent, struct dentry *dentry,
 	case PERM_ANDROID_PACKAGE_CACHE:
 		set_top(info, parent_info);
 		break;
+	case PERM_NVIDIA_SDCARD:
+		/* Special case for shared shield folder */
+		info->data->perm = PERM_NVIDIA_SDCARD;
+		set_top(info, parent_info);
+		break;
 	case PERM_PRE_ROOT:
 		/* Legacy internal layout places users at top level */
 		info->data->perm = PERM_ROOT;
@@ -102,6 +108,8 @@ void get_derived_permission_new(struct dentry *parent, struct dentry *dentry,
 			/* App-specific directories inside; let anyone traverse */
 			info->data->perm = PERM_ANDROID;
 			info->data->under_android = true;
+		} else if (qstr_case_eq(name, &q_nvidia_shield)) {
+			info->data->perm = PERM_NVIDIA_SDCARD;
 		} else {
 			set_top(info, parent_info);
 		}
@@ -276,7 +284,8 @@ static int descendant_may_need_fixup(struct sdcardfs_inode_data *data,
 static int needs_fixup(perm_t perm)
 {
 	if (perm == PERM_ANDROID_DATA || perm == PERM_ANDROID_OBB
-			|| perm == PERM_ANDROID_MEDIA)
+			|| perm == PERM_ANDROID_MEDIA
+			|| perm == PERM_NVIDIA_SDCARD)
 		return 1;
 	return 0;
 }

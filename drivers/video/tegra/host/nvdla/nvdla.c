@@ -45,6 +45,8 @@
 #include "dla_fw_version.h"
 #include "dla_os_interface.h"
 
+#include "class_ids_t194.h"
+
 static DEFINE_DMA_ATTRS(attrs);
 
 /*
@@ -726,6 +728,14 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
 		tegra_get_sku_id() == 0x9E) {
 		dev_err(dev, "NVDLA IP is disabled in SKU\n");
+		err = -ENODEV;
+		goto err_no_ip;
+	}
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
+		tegra_get_sku_id() == 0x9F &&
+		pdata->class == NV_DLA1_CLASS_ID) {
+		dev_err(dev, "NVDLA1 IP is disabled in SKU\n");
 		err = -ENODEV;
 		goto err_no_ip;
 	}

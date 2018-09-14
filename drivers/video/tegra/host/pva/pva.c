@@ -46,6 +46,8 @@
 #include "pva.h"
 #include "pva_regs.h"
 
+#include "class_ids_t194.h"
+
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
 static struct of_device_id tegra_pva_of_match[] = {
 	{
@@ -689,6 +691,14 @@ static int pva_probe(struct platform_device *pdev)
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
 		tegra_get_sku_id() == 0x9E) {
 		dev_err(dev, "PVA IP is disabled in SKU\n");
+		err = -ENODEV;
+		goto err_no_ip;
+	}
+
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA19 &&
+	    tegra_get_sku_id() == 0x9F &&
+	    pdata->class == NV_PVA1_CLASS_ID) {
+		dev_err(dev, "PVA1 IP is disabled in SKU\n");
 		err = -ENODEV;
 		goto err_no_ip;
 	}

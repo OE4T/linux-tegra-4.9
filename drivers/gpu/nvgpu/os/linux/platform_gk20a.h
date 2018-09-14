@@ -74,7 +74,7 @@ struct gk20a_platform {
 	struct reset_control *reset_control;
 #endif
 	/* valid TPC-MASK */
-	u32 valid_tpc_mask;
+	u32 valid_tpc_mask[MAX_TPC_PG_CONFIGS];
 
 	/* Delay before rail gated */
 	int railgate_delay_init;

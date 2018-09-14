@@ -73,16 +73,6 @@
  */
 #define GR_TPCS_INFO_FOR_MAPREGISTER 6
 
-/*
- * There are 4 TPCs in GV11b ranging from TPC0 to TPC3
- * There are two PES in GV11b each controlling two TPCs
- * PES0 is linked to TPC0 & TPC2
- * PES1 is linked to TPC1 & TPC3
- */
-#define TPC_MASK_FOR_PESID_0   (u32) 0x5
-#define TPC_MASK_FOR_PESID_1   (u32) 0xa
-
-
 bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
 	bool valid = false;
@@ -142,17 +132,6 @@ void gr_gv11b_powergate_tpc(struct gk20a *g)
 	do {
 		tpc_pg_status = g->ops.fuse.fuse_status_opt_tpc_gpc(g, 0);
 	} while (tpc_pg_status != g->tpc_pg_mask);
-
-	gk20a_writel(g, gr_fe_tpc_pesmask_r(), gr_fe_tpc_pesmask_req_send_f() |
-			gr_fe_tpc_pesmask_action_write_f() |
-			gr_fe_tpc_pesmask_pesid_f(0) |
-			gr_fe_tpc_pesmask_gpcid_f(0) |
-			((~g->tpc_pg_mask & (u32) 0xf) & TPC_MASK_FOR_PESID_0));
-	gk20a_writel(g, gr_fe_tpc_pesmask_r(), gr_fe_tpc_pesmask_req_send_f() |
-			gr_fe_tpc_pesmask_action_write_f() |
-			gr_fe_tpc_pesmask_pesid_f(1) |
-			gr_fe_tpc_pesmask_gpcid_f(0) |
-			((~g->tpc_pg_mask & (u32) 0xf) & TPC_MASK_FOR_PESID_1));
 
 	return;
 }

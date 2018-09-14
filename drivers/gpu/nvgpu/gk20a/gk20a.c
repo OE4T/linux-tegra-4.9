@@ -259,9 +259,28 @@ int gk20a_finalize_poweron(struct gk20a *g)
 
 	g->ops.mc.intr_enable(g);
 
+	/*
+	 *  Overwrite can_tpc_powergate to false if the chip is ES fused and
+	 *  already optimized with some TPCs already floorswept
+	 *  via fuse. We will not support TPC-PG in those cases.
+	 */
+
+	if (g->ops.fuse.fuse_status_opt_tpc_gpc(g, 0) != 0x0) {
+		g->can_tpc_powergate = false;
+		g->tpc_pg_mask = 0x0;
+	}
+
+	nvgpu_mutex_acquire(&g->tpc_pg_lock);
+
+	if (g->can_tpc_powergate) {
+		if (g->ops.gr.powergate_tpc != NULL)
+			g->ops.gr.powergate_tpc(g);
+	}
+
 	err = gk20a_enable_gr_hw(g);
 	if (err) {
 		nvgpu_err(g, "failed to enable gr");
+		nvgpu_mutex_release(&g->tpc_pg_lock);
 		goto done;
 	}
 
@@ -271,6 +290,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		}
 		if (err) {
 			nvgpu_err(g, "failed to init pmu ucode");
+			nvgpu_mutex_release(&g->tpc_pg_lock);
 			goto done;
 		}
 	}
@@ -279,6 +299,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		err = gk20a_init_pstate_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init pstates");
+			nvgpu_mutex_release(&g->tpc_pg_lock);
 			goto done;
 		}
 	}
@@ -296,15 +317,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		err = nvgpu_init_pmu_support(g);
 		if (err) {
 			nvgpu_err(g, "failed to init gk20a pmu");
+			nvgpu_mutex_release(&g->tpc_pg_lock);
 			goto done;
-		}
-	}
-
-	nvgpu_mutex_acquire(&g->tpc_pg_lock);
-
-	if (g->can_tpc_powergate) {
-		if (g->ops.gr.powergate_tpc != NULL) {
-			g->ops.gr.powergate_tpc(g);
 		}
 	}
 

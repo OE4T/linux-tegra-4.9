@@ -865,6 +865,18 @@ static ssize_t tpc_pg_mask_read(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "%d\n", g->tpc_pg_mask);
 }
 
+static bool is_tpc_mask_valid(struct gk20a *g, u32 tpc_mask)
+{
+	u32 i;
+	bool valid = false;
+
+	for (i = 0; i < MAX_TPC_PG_CONFIGS; i++) {
+		if (tpc_mask == g->valid_tpc_mask[i])
+			valid = true;
+	}
+	return valid;
+}
+
 static ssize_t tpc_pg_mask_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -896,10 +908,9 @@ static ssize_t tpc_pg_mask_store(struct device *dev,
 		return -ENODEV;
 	}
 
-	if (val == TPC_MASK_FOR_ALL_ACTIVE_TPCs || val == g->valid_tpc_mask) {
+	if (is_tpc_mask_valid(g, (u32)val)) {
 		g->tpc_pg_mask = val;
 	} else {
-
 		nvgpu_err(g, "TPC-PG mask is invalid");
 		nvgpu_mutex_release(&g->tpc_pg_lock);
 		return -EINVAL;

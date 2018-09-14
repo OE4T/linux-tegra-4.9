@@ -274,6 +274,9 @@ struct gk20a_platform {
 
 	/* scaling rate */
 	unsigned long cached_rate;
+
+	/* synchronized access to platform->clk_get_freqs */
+	struct nvgpu_mutex clk_get_freq_lock;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

@@ -1086,6 +1086,10 @@ struct gpu_ops {
 		int (*clk_domain_get_f_points)(struct gk20a *g,
 			u32 clkapidomain, u32 *pfpointscount,
 			u16 *pfreqpointsinmhz);
+		int (*clk_get_round_rate)(struct gk20a *g, u32 api_domain,
+			unsigned long rate_target, unsigned long *rounded_rate);
+		int (*get_clk_range)(struct gk20a *g, u32 api_domain,
+			u16 *min_mhz, u16 *max_mhz);
 		unsigned long (*measure_freq)(struct gk20a *g, u32 api_domain);
 		u32 (*get_rate_cntr)(struct gk20a *g, struct namemap_cfg *c);
 		unsigned long (*get_rate)(struct gk20a *g, u32 api_domain);

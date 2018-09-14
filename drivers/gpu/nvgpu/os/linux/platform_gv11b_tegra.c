@@ -97,6 +97,8 @@ static int gv11b_tegra_probe(struct device *dev)
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
 
+	nvgpu_mutex_init(&platform->clk_get_freq_lock);
+
 	return 0;
 }
 
@@ -108,11 +110,15 @@ static int gv11b_tegra_late_probe(struct device *dev)
 
 static int gv11b_tegra_remove(struct device *dev)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
 	gv11b_tegra_scale_exit(dev);
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	nvgpu_free_nvhost_dev(get_gk20a(dev));
 #endif
+
+	nvgpu_mutex_destroy(&platform->clk_get_freq_lock);
 
 	return 0;
 }

@@ -55,6 +55,9 @@
 static unsigned long
 gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS / GP10B_FREQ_SELECT_STEP];
 
+static bool freq_table_init_complete;
+static int num_supported_freq;
+
 #define TEGRA_GP10B_BW_PER_FREQ 64
 #define TEGRA_DDR4_BW_PER_FREQ 16
 
@@ -166,6 +169,8 @@ static int gp10b_tegra_probe(struct device *dev)
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
 
+	nvgpu_mutex_init(&platform->clk_get_freq_lock);
+
 	return 0;
 }
 
@@ -176,12 +181,16 @@ static int gp10b_tegra_late_probe(struct device *dev)
 
 static int gp10b_tegra_remove(struct device *dev)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
 	/* deinitialise tegra specific scaling quirks */
 	gp10b_tegra_scale_exit(dev);
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	nvgpu_free_nvhost_dev(get_gk20a(dev));
 #endif
+
+	nvgpu_mutex_destroy(&platform->clk_get_freq_lock);
 
 	return 0;
 }
@@ -342,6 +351,18 @@ int gp10b_clk_get_freqs(struct device *dev,
 	int sel_freq_cnt;
 	unsigned long loc_freq_table[GP10B_MAX_SUPPORTED_FREQS];
 
+	nvgpu_mutex_acquire(&platform->clk_get_freq_lock);
+
+	if (freq_table_init_complete) {
+
+		*freqs = gp10b_freq_table;
+		*num_freqs = num_supported_freq;
+
+		nvgpu_mutex_release(&platform->clk_get_freq_lock);
+
+		return 0;
+	}
+
 	max_rate = clk_round_rate(platform->clk[0], (UINT_MAX - 1));
 
 	/*
@@ -392,9 +413,14 @@ int gp10b_clk_get_freqs(struct device *dev,
 	/* Fill freq table */
 	*freqs = gp10b_freq_table;
 	*num_freqs = sel_freq_cnt;
+	num_supported_freq = sel_freq_cnt;
+
+	freq_table_init_complete = true;
 
 	nvgpu_log_info(g, "min rate: %ld max rate: %ld num_of_freq %d\n",
 				gp10b_freq_table[0], max_rate, *num_freqs);
+
+	nvgpu_mutex_release(&platform->clk_get_freq_lock);
 
 	return 0;
 }

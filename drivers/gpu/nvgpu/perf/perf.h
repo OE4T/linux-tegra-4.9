@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _PERF_H_
-#define _PERF_H_
+#ifndef NVGPU_PERF_H
+#define NVGPU_PERF_H
 
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "vfe_equ.h"
@@ -82,4 +82,4 @@ struct perf_pmupstate {
 
 u32 perf_pmu_vfe_load(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_PERF_H */

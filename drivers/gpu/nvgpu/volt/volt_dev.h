@@ -20,9 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-
-#ifndef _VOLTDEV_H_
-#define _VOLTDEV_H_
+#ifndef NVGPU_VOLT_DEV_H
+#define NVGPU_VOLT_DEV_H
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
@@ -75,4 +74,4 @@ struct voltage_device_pwm_entry {
 u32 volt_dev_sw_setup(struct gk20a *g);
 int volt_dev_pmu_setup(struct gk20a *g);
 
-#endif /* _VOLTDEV_H_ */
+#endif /* NVGPU_VOLT_DEV_H */

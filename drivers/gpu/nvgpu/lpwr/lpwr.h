@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -19,8 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _MSCG_H_
-#define _MSCG_H_
+#ifndef NVGPU_LPWR_H
+#define NVGPU_LPWR_H
 
 #define MAX_SWASR_MCLK_FREQ_WITHOUT_WR_TRAINING_MAXWELL_MHZ   540
 
@@ -98,4 +98,4 @@ u32 nvgpu_lpwr_is_mscg_supported(struct gk20a *g, u32 pstate_num);
 u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num);
 u32 nvgpu_lpwr_post_init(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_LPWR_H */

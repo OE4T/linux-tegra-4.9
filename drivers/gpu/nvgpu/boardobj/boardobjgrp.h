@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _BOARDOBJGRP_H_
-#define _BOARDOBJGRP_H_
+#ifndef NVGPU_BOARDOBJGRP_H
+#define NVGPU_BOARDOBJGRP_H
 
 struct boardobjgrp;
 struct gk20a;
@@ -438,4 +438,4 @@ int is_boardobjgrp_pmucmd_id_valid_v0(struct gk20a *g,
 int is_boardobjgrp_pmucmd_id_valid_v1(struct gk20a *g,
 	struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrp_pmu_cmd *cmd);
-#endif
+#endif /* NVGPU_BOARDOBJGRP_H */

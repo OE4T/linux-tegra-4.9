@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _THRMCHANNEL_H_
-#define _THRMCHANNEL_H_
+#ifndef NVGPU_THERM_THRMCHANNEL_H
+#define NVGPU_THERM_THRMCHANNEL_H
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
@@ -48,4 +48,4 @@ struct therm_channel_device {
 
 int therm_channel_sw_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_THERM_THRMCHANNEL_H */

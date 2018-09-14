@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _VOLT_POLICY_H_
-#define _VOLT_POLICY_H_
+#ifndef NVGPU_VOLT_POLICY_H
+#define NVGPU_VOLT_POLICY_H
 
 #define VOLT_POLICY_INDEX_IS_VALID(pvolt, policy_idx)	\
 		(boardobjgrp_idxisvalid(	\
@@ -77,4 +77,4 @@ struct voltage_policy_single_rail_multi_step {
 
 int volt_policy_sw_setup(struct gk20a *g);
 int volt_policy_pmu_setup(struct gk20a *g);
-#endif
+#endif /* NVGPU_VOLT_POLICY_H */

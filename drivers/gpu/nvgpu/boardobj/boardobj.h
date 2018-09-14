@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _BOARDOBJ_H_
-#define _BOARDOBJ_H_
+#ifndef NVGPU_BOARDOBJ_H
+#define NVGPU_BOARDOBJ_H
 
 #include <nvgpu/list.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -101,4 +101,4 @@ boardobj_from_node(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct boardobj, node));
 };
 
-#endif
+#endif /* NVGPU_BOARDOBJ_H */

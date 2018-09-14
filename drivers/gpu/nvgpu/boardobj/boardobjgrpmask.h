@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _BOARDOBJGRPMASK_H_
-#define _BOARDOBJGRPMASK_H_
+#ifndef NVGPU_BOARDOBJGRPMASK_H
+#define NVGPU_BOARDOBJGRPMASK_H
 
 #include "ctrl/ctrlboardobj.h"
 
@@ -116,4 +116,4 @@ bool boardobjgrpmask_issubset(struct boardobjgrpmask *op1,
 	boardobjgrpmask_init(&(pmaske255)->super,                              \
 		CTRL_BOARDOBJGRP_E255_MAX_OBJECTS, (pextmask))
 
-#endif
+#endif /* NVGPU_BOARDOBJGRPMASK_H */

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
 *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _VOLT_H_
-#define _VOLT_H_
+#ifndef NVGPU_VOLT_H
+#define NVGPU_VOLT_H
 
 #include "volt_rail.h"
 #include "volt_dev.h"
@@ -36,4 +36,4 @@ struct obj_volt {
 	struct voltage_policy_metadata volt_policy_metadata;
 };
 
-#endif /* DRIVERS_GPU_NVGPU_VOLT_VOLT_H_ */
+#endif /* NVGPU_VOLT_H */

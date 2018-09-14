@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef _VOLT_PMU_H_
-#define _VOLT_PMU_H_
+#ifndef NVGPU_VOLT_PMU_H
+#define NVGPU_VOLT_PMU_H
 
 u32 volt_pmu_send_load_cmd_to_pmu(struct gk20a *g);
 u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv,
@@ -43,4 +43,4 @@ u32 nvgpu_volt_rail_get_voltage_gv10x(struct gk20a *g,
 u32 nvgpu_volt_send_load_cmd_to_pmu_gv10x(struct gk20a *g);
 
 
-#endif
+#endif /* NVGPU_VOLT_PMU_H */

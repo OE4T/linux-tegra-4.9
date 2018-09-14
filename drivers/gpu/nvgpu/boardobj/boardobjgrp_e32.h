@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _BOARDOBJGRP_E32_H_
-#define _BOARDOBJGRP_E32_H_
+#ifndef NVGPU_BOARDOBJGRP_E32_H
+#define NVGPU_BOARDOBJGRP_E32_H
 
 #include "ctrl/ctrlboardobj.h"
 #include "boardobj.h"
@@ -63,4 +63,4 @@ int boardobjgrpconstruct_e32(struct gk20a *g,
 boardobjgrp_destruct boardobjgrpdestruct_e32;
 boardobjgrp_pmuhdrdatainit  boardobjgrp_pmuhdrdatainit_e32;
 
-#endif
+#endif /* NVGPU_BOARDOBJGRP_E32_H */

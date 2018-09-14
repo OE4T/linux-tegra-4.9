@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _VFE_EQU_H_
-#define _VFE_EQU_H_
+#ifndef NVGPU_PERF_VFE_EQU_H
+#define NVGPU_PERF_VFE_EQU_H
 
 #include "boardobj/boardobjgrp.h"
 #include "perf/vfe_var.h"
@@ -81,4 +81,4 @@ struct vfe_equ_quadratic {
 	u32   coeffs[CTRL_PERF_VFE_EQU_QUADRATIC_COEFF_COUNT];
 };
 
-#endif
+#endif /* NVGPU_PERF_VFE_EQU_H */

@@ -20,8 +20,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef _VFE_VAR_H_
-#define _VFE_VAR_H_
+#ifndef NVGPU_PERF_VFE_VAR_H
+#define NVGPU_PERF_VFE_VAR_H
 
 #include "boardobj/boardobjgrp.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -106,4 +106,4 @@ struct vfe_var_single_sensed_temp {
 	int temp_default;
 };
 
-#endif
+#endif /* NVGPU_PERF_VFE_VAR_H */

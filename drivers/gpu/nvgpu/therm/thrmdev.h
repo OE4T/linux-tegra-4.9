@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _THRMDEV_H_
-#define _THRMDEV_H_
+#ifndef NVGPU_THERM_THRMDEV_H
+#define NVGPU_THERM_THRMDEV_H
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
@@ -55,4 +55,4 @@ struct therm_device_hbm2_combined {
 
 int therm_device_sw_setup(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_THERM_THRMDEV_H */

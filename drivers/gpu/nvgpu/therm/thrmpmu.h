@@ -21,11 +21,11 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _THRMPMU_H_
-#define _THRMPMU_H_
+#ifndef NVGPU_THERM_THRMPMU_H
+#define NVGPU_THERM_THRMPMU_H
 
 int therm_send_pmgr_tables_to_pmu(struct gk20a *g);
 
 u32 therm_configure_therm_alert(struct gk20a *g);
 
-#endif
+#endif /* NVGPU_THERM_THRMPMU_H */

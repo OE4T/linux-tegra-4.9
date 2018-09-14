@@ -21,8 +21,8 @@
 */
 
 
-#ifndef _VOLT_RAIL_H_
-#define _VOLT_RAIL_H_
+#ifndef NVGPU_VOLT_RAIL_H
+#define NVGPU_VOLT_RAIL_H
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
@@ -87,4 +87,4 @@ u8 volt_rail_volt_domain_convert_to_idx(struct gk20a *g, u8 volt_domain);
 
 int volt_rail_sw_setup(struct gk20a *g);
 int volt_rail_pmu_setup(struct gk20a *g);
-#endif
+#endif /* NVGPU_VOLT_RAIL_H */

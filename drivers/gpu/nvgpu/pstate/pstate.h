@@ -21,8 +21,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#ifndef __PSTATE_H__
-#define __PSTATE_H__
+#ifndef NVGPU_PSTATE_H
+#define NVGPU_PSTATE_H
 
 #include "clk/clk.h"
 
@@ -71,4 +71,4 @@ struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g, u32 pstate_num,
 		enum nv_pmu_clk_clkwhich clkwhich);
 struct pstate *pstate_find(struct gk20a *g, u32 num);
 
-#endif /* __PSTATE_H__ */
+#endif /* NVGPU_PSTATE_H */

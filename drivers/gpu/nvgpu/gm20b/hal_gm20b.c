@@ -21,6 +21,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <nvgpu/debug.h>
+#include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
+#include <nvgpu/ptimer.h>
+#include <nvgpu/error_notifier.h>
+#include <nvgpu/gk20a.h>
+#include <nvgpu/channel.h>
 
 #include "common/clock_gating/gm20b_gating_reglist.h"
 #include "common/bus/bus_gm20b.h"
@@ -34,7 +41,6 @@
 #include "common/fuse/fuse_gm20b.h"
 #include "common/mc/mc_gm20b.h"
 
-#include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -55,13 +61,6 @@
 #include "regops_gm20b.h"
 #include "hal_gm20b.h"
 #include "acr_gm20b.h"
-
-#include <nvgpu/debug.h>
-#include <nvgpu/bug.h>
-#include <nvgpu/enabled.h>
-#include <nvgpu/ptimer.h>
-#include <nvgpu/error_notifier.h>
-#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>

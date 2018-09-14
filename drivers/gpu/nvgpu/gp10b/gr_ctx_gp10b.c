@@ -24,7 +24,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "gr_ctx_gp10b.h"
 
 int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name)

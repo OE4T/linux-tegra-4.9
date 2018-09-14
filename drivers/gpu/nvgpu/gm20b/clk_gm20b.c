@@ -22,9 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "clk_gm20b.h"
-
 #include <nvgpu/soc.h>
 #include <nvgpu/fuse.h>
 #include <nvgpu/bug.h>
@@ -33,6 +30,9 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/gk20a.h>
+
+#include "clk_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>

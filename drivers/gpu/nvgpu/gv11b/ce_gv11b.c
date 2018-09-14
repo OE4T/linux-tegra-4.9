@@ -25,8 +25,7 @@
 #include <nvgpu/io.h>
 #include "nvgpu/log.h"
 #include "nvgpu/bitops.h"
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include "gp10b/ce_gp10b.h"
 

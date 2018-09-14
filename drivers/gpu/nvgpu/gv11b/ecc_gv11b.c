@@ -21,8 +21,8 @@
  */
 
 #include <nvgpu/ecc.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gv11b/ecc_gv11b.h"
 
 int gv11b_ecc_init(struct gk20a *g)

@@ -28,8 +28,7 @@
 #include <nvgpu/mm.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include "gp10b/pmu_gp10b.h"
 #include "gp106/pmu_gp106.h"

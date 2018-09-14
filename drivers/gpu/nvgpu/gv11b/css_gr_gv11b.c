@@ -35,9 +35,9 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "css_gr_gv11b.h"
 

@@ -33,8 +33,8 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "acr_gv11b.h"
 #include "pmu_gv11b.h"
 #include "gm20b/mm_gm20b.h"

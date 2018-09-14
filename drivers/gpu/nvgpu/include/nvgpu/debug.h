@@ -25,6 +25,8 @@
 #ifndef NVGPU_DEBUG_H
 #define NVGPU_DEBUG_H
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 struct gpu_ops;
 

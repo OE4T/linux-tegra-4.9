@@ -22,9 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-
-#include "gv11b/subctx_gv11b.h"
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
@@ -35,6 +33,8 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
+
+#include "gv11b/subctx_gv11b.h"
 
 static void gv11b_subctx_commit_valid_mask(struct vm_gk20a *vm,
 				struct nvgpu_mem *inst_block);

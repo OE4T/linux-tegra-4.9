@@ -21,6 +21,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <nvgpu/gk20a.h>
 
 #include "common/bus/bus_gk20a.h"
 #include "common/bus/bus_gp10b.h"
@@ -44,7 +45,6 @@
 #include "common/mc/mc_gp10b.h"
 #include "common/mc/mc_gv11b.h"
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"

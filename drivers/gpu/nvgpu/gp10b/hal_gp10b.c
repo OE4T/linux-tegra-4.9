@@ -21,6 +21,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include <nvgpu/debug.h>
+#include <nvgpu/bug.h>
+#include <nvgpu/enabled.h>
+#include <nvgpu/ptimer.h>
+#include <nvgpu/ctxsw_trace.h>
+#include <nvgpu/error_notifier.h>
+#include <nvgpu/gk20a.h>
+#include <nvgpu/channel.h>
 
 #include "common/bus/bus_gk20a.h"
 #include "common/clock_gating/gp10b_gating_reglist.h"
@@ -40,7 +48,6 @@
 #include "common/mc/mc_gm20b.h"
 #include "common/mc/mc_gp10b.h"
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -71,14 +78,6 @@
 
 #include "gp10b.h"
 #include "hal_gp10b.h"
-
-#include <nvgpu/debug.h>
-#include <nvgpu/bug.h>
-#include <nvgpu/enabled.h>
-#include <nvgpu/ptimer.h>
-#include <nvgpu/ctxsw_trace.h>
-#include <nvgpu/error_notifier.h>
-#include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>

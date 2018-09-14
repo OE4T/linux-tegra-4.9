@@ -23,8 +23,7 @@
  */
 
 #include <nvgpu/sizes.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include "mm_gm20b.h"
 

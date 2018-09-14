@@ -22,11 +22,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "gk20a/fifo_gk20a.h"
-
-#include "fifo_gm20b.h"
-
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
@@ -35,7 +30,12 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
+
+#include "gk20a/fifo_gk20a.h"
+
+#include "fifo_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>

@@ -18,11 +18,11 @@
 
 energy-costs {
 	CPU_COST_DENVER: core-cost0 {
-		busy-cost-data = <1024 0>;
-		idle-cost-data = <0>;
+		busy-cost-data = <1024 1024>;
+		idle-cost-data = <128>;
 	};
 	CPU_COST_A57: core-cost1 {
-		busy-cost-data = <752 0>;
-		idle-cost-data = <0>;
+		busy-cost-data = <752 1024>;
+		idle-cost-data = <128>;
 	};
 };

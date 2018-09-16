@@ -342,6 +342,7 @@
 
 	cpufreq {
 		status = "okay";
+		cpufreq_single_policy;
 	};
 
 	arm64_ras {

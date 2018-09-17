@@ -1179,9 +1179,9 @@ static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	/*
-	 * 500ms second timer.
+	 * 100ms timer.
 	 */
-	nvgpu_timeout_init(vm->mm->g, &timeout, 50, NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(vm->mm->g, &timeout, 100, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) == 1) {
@@ -1189,9 +1189,11 @@ static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
 		}
 		nvgpu_msleep(10);
 	} while (nvgpu_timeout_expired_msg(&timeout,
-			    "sync-unmap failed on 0x%llx") == 0);
+			    "sync-unmap failed on 0x%llx",
+			    mapped_buffer->addr) == 0);
 
-	if (nvgpu_timeout_expired(&timeout)) {
+	if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) != 1 &&
+			nvgpu_timeout_expired(&timeout)) {
 		ret = -ETIMEDOUT;
 	}
 

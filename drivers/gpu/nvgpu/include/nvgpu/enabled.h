@@ -170,10 +170,13 @@ struct gk20a;
 /* Multiple WPR support */
 #define NVGPU_SUPPORT_MULTIPLE_WPR	68
 
+/* SEC2 RTOS support*/
+#define NVGPU_SUPPORT_SEC2_RTOS		69
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			69
+#define NVGPU_MAX_ENABLED_BITS			70
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

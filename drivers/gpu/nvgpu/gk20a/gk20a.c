@@ -93,6 +93,10 @@ int gk20a_prepare_poweroff(struct gk20a *g)
 		ret |= nvgpu_pmu_destroy(g);
 	}
 
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_SEC2_RTOS)) {
+		ret |= nvgpu_sec2_destroy(g);
+	}
+
 	ret |= gk20a_gr_suspend(g);
 	ret |= nvgpu_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
@@ -310,6 +314,14 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		if (err != 0) {
 			nvgpu_err(g, "ACR bootstrap failed");
 			goto done;
+		}
+	}
+
+	if (nvgpu_is_enabled(g, NVGPU_SUPPORT_SEC2_RTOS)) {
+		err = nvgpu_init_sec2_support(g);
+		if (err != 0) {
+			nvgpu_err(g, "failed to init sec2");
+				goto done;
 		}
 	}
 

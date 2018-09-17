@@ -67,6 +67,7 @@ struct nvgpu_gpfifo_args;
 #include <nvgpu/sim.h>
 #include <nvgpu/ecc.h>
 #include <nvgpu/tsg.h>
+#include <nvgpu/sec2.h>
 
 #include "gk20a/clk_gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -1450,6 +1451,7 @@ struct gk20a {
 	struct perf_pmupstate perf_pmu;
 	struct pmgr_pmupstate pmgr_pmu;
 	struct therm_pmupstate therm_pmu;
+	struct nvgpu_sec2 sec2;
 
 #ifdef CONFIG_DEBUG_FS
 	struct railgate_stats pstats;

@@ -440,6 +440,8 @@ int nvgpu_flcn_sw_init(struct gk20a *g, u32 flcn_id)
 	case FALCON_ID_SEC2:
 		flcn = &g->sec2_flcn;
 		flcn->flcn_id = flcn_id;
+		g->sec2.flcn = &g->sec2_flcn;
+		g->sec2.g = g;
 		break;
 	case FALCON_ID_FECS:
 		flcn = &g->fecs_flcn;

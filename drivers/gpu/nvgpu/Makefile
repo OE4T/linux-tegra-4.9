@@ -215,6 +215,7 @@ nvgpu-y += \
 	common/ltc/ltc_gm20b.o \
 	common/ltc/ltc_gp10b.o \
 	common/ltc/ltc_gv11b.o  \
+	common/sec2/sec2.o \
 	common/io_common.o \
 	common/clock_gating/gm20b_gating_reglist.o \
 	common/clock_gating/gp106_gating_reglist.o \

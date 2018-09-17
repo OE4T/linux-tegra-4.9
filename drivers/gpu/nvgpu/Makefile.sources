@@ -100,6 +100,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/pmu/pmu_pg.c \
 	common/pmu/pmu_perfmon.c \
 	common/pmu/pmu_debug.c \
+	common/sec2/sec2.c \
 	common/ptimer/ptimer.c \
 	common/sync/channel_sync.c \
 	common/clock_gating/gm20b_gating_reglist.c \

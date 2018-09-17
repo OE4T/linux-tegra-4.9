@@ -105,8 +105,13 @@
 	/* ISO-SMMU is not available for a VM and hence
 	 * all the properties related to ISO-SMMU are deleted. */
 	iommu@12000000 {
+#if LINUX_VERSION >= 414
+		reg = <0 0x12000000 0 0x800000>,
+		      <0 0x11000000 0 0x800000>;
+#else
 		reg = <0x0 0x12000000 0x0 0x01000000>, /* SMMU0 16MB */
 		      <0x0 0x11000000 0x0 0x01000000>; /* SMMU1 16MB */
+#endif
 		/delete-property/ iso-smmu-id;
 	};
 

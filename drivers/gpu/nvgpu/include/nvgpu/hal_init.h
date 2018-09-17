@@ -22,11 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef NVGPU_GK20A_HAL_H
-#define NVGPU_GK20A_HAL_H
+#ifndef NVGPU_HAL_INIT_H
+#define NVGPU_HAL_INIT_H
 
 struct gk20a;
 
-int gpu_init_hal(struct gk20a *g);
+int nvgpu_init_hal(struct gk20a *g);
+int nvgpu_detect_chip(struct gk20a *g);
 
-#endif /* NVGPU_GK20A_HAL_H */
+#endif /* NVGPU_HAL_INIT_H */

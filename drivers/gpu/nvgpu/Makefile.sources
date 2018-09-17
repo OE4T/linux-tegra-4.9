@@ -68,6 +68,7 @@ srcs :=	os/posix/nvgpu.c \
 	common/fb/fb_gp106.c \
 	common/fb/fb_gv100.c \
 	common/fb/fb_gv11b.c \
+	common/init/hal_init.c \
 	common/xve/xve_gp106.c \
 	common/therm/therm.c \
 	common/therm/therm_gm20b.c \
@@ -157,7 +158,6 @@ srcs :=	os/posix/nvgpu.c \
 	gk20a/fence_gk20a.c \
 	gk20a/gr_ctx_gk20a_sim.c \
 	gk20a/gr_ctx_gk20a.c \
-	gk20a/hal.c \
 	gk20a/tsg_gk20a.c \
 	gm20b/hal_gm20b.c \
 	gm20b/gr_gm20b.c \

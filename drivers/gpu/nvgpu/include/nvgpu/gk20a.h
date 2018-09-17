@@ -1761,5 +1761,4 @@ static inline bool gk20a_platform_has_syncpoints(struct gk20a *g)
 #endif
 }
 
-int gk20a_detect_chip(struct gk20a *g);
 #endif /* GK20A_H */

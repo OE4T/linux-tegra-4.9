@@ -45,7 +45,6 @@
 #include "gk20a.h"
 
 #include "dbg_gpu_gk20a.h"
-#include "hal.h"
 #include "pstate/pstate.h"
 
 void __nvgpu_check_gpu_state(struct gk20a *g)
@@ -63,33 +62,6 @@ void __nvgpu_check_gpu_state(struct gk20a *g)
 void __gk20a_warn_on_no_regs(void)
 {
 	WARN_ONCE(1, "Attempted access to GPU regs after unmapping!");
-}
-
-int gk20a_detect_chip(struct gk20a *g)
-{
-	struct nvgpu_gpu_params *p = &g->params;
-
-	if (p->gpu_arch) {
-		return 0;
-	}
-
-	nvgpu_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
-
-	if ((p->gpu_arch + p->gpu_impl) == NVGPU_GPUID_GV11B) {
-
-		/* overwrite gpu revison for A02  */
-		if (!nvgpu_is_soc_t194_a01(g)) {
-			p->gpu_rev = 0xa2;
-		}
-
-	}
-
-	nvgpu_log_info(g, "arch: %x, impl: %x, rev: %x\n",
-			g->params.gpu_arch,
-			g->params.gpu_impl,
-			g->params.gpu_rev);
-
-	return gpu_init_hal(g);
 }
 
 static void gk20a_mask_interrupts(struct gk20a *g)

@@ -33,6 +33,7 @@
 
 #include <soc/tegra/fuse.h>
 
+#include <nvgpu/hal_init.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
@@ -266,7 +267,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		INIT_WORK(&l->nonstall_fn_work, nvgpu_intr_nonstall_cb);
 	}
 
-	err = gk20a_detect_chip(g);
+	err = nvgpu_detect_chip(g);
 	if (err)
 		goto done;
 

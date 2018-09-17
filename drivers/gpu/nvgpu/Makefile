@@ -203,6 +203,7 @@ nvgpu-y += \
 	common/vbios/bios.o \
 	common/falcon/falcon.o \
 	common/falcon/falcon_queue.o \
+	common/init/hal_init.o \
 	common/pmu/pmu.o \
 	common/pmu/pmu_ipc.o \
 	common/pmu/pmu_fw.o \
@@ -237,7 +238,6 @@ nvgpu-y += \
 	gk20a/fence_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
-	gk20a/hal.o \
 	gk20a/tsg_gk20a.o \
 	gk20a/fecs_trace_gk20a.o \
 	gm20b/hal_gm20b.o \

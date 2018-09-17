@@ -22,8 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a.h"
-#include "hal.h"
+#include <nvgpu/gk20a.h>
+#include <nvgpu/log.h>
+#include <nvgpu/hal_init.h>
+#include <nvgpu/mc.h>
+#include <nvgpu/soc.h>
+
 #include "gm20b/hal_gm20b.h"
 #include "gp10b/hal_gp10b.h"
 #include "gp106/hal_gp106.h"
@@ -33,52 +37,86 @@
 #include "nvgpu_gpuid_next.h"
 #endif
 
-#include <nvgpu/log.h>
-
-int gpu_init_hal(struct gk20a *g)
+int nvgpu_init_hal(struct gk20a *g)
 {
+	int err = 0;
 	u32 ver = g->params.gpu_arch + g->params.gpu_impl;
+
 	switch (ver) {
 	case GK20A_GPUID_GM20B:
+		nvgpu_log_info(g, "gm20b detected");
+		if (gm20b_init_hal(g) != 0) {
+			return -ENODEV;
+		}
+		break;
 	case GK20A_GPUID_GM20B_B:
 		nvgpu_log_info(g, "gm20b detected");
-		if (gm20b_init_hal(g)) {
+		if (gm20b_init_hal(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 	case NVGPU_GPUID_GP10B:
-		if (gp10b_init_hal(g)) {
+		if (gp10b_init_hal(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 	case NVGPU_GPUID_GP104:
+		if (gp106_init_hal(g) != 0) {
+			return -ENODEV;
+		}
+		break;
 	case NVGPU_GPUID_GP106:
-		if (gp106_init_hal(g)) {
+		if (gp106_init_hal(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 	case NVGPU_GPUID_GV11B:
-		if (gv11b_init_hal(g)) {
+		if (gv11b_init_hal(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 	case NVGPU_GPUID_GV100:
-		if (gv100_init_hal(g)) {
+		if (gv100_init_hal(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 #if defined(CONFIG_TEGRA_GPU_NEXT)
 	case NVGPU_GPUID_NEXT:
-		if (NVGPU_NEXT_INIT_HAL(g)) {
+		if (NVGPU_NEXT_INIT_HAL(g) != 0) {
 			return -ENODEV;
 		}
 		break;
 #endif
-
 	default:
 		nvgpu_err(g, "no support for %x", ver);
-		return -ENODEV;
+		err = -ENODEV;
+		break;
 	}
 
-	return 0;
+	return err;
+}
+
+
+int nvgpu_detect_chip(struct gk20a *g)
+{
+	struct nvgpu_gpu_params *p = &g->params;
+
+	if (p->gpu_arch != 0U) {
+		return 0;
+	}
+
+	nvgpu_mc_boot_0(g, &p->gpu_arch, &p->gpu_impl, &p->gpu_rev);
+
+	if ((p->gpu_arch + p->gpu_impl) == (u32)NVGPU_GPUID_GV11B) {
+		/* overwrite gpu revison for A02  */
+		if (!nvgpu_is_soc_t194_a01(g)) {
+			p->gpu_rev = 0xa2;
+		}
+	}
+	nvgpu_log_info(g, "arch: %x, impl: %x, rev: %x\n",
+			g->params.gpu_arch,
+			g->params.gpu_impl,
+			g->params.gpu_rev);
+
+	return nvgpu_init_hal(g);
 }

@@ -215,7 +215,8 @@ static int tegra_nvlink_car_enable(struct tnvlink_dev *tdev)
 
 	/* Reset persistent HW state for this link */
 	reg_val = nvlw_tioctrl_readl(tdev, NVLW_DEBUG_RESET) &
-			~BIT(NVLW_DEBUG_RESET_LINK);
+			~BIT(NVLW_DEBUG_RESET_LINK) &
+			~BIT(NVLW_DEBUG_RESET_COMMON);
 	nvlw_tioctrl_writel(tdev, NVLW_DEBUG_RESET, reg_val);
 	udelay(NVLW_POST_RESET_DELAY_US);
 	reg_val = nvlw_tioctrl_readl(tdev, NVLW_DEBUG_RESET) |

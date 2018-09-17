@@ -37,7 +37,18 @@ unsigned long __nvgpu_posix_ffs(unsigned long word)
 
 unsigned long __nvgpu_posix_fls(unsigned long word)
 {
-	return ((sizeof(unsigned long) * 8UL) - 1UL) - __builtin_clzl(word);
+	unsigned long ret;
+
+	if (word == 0UL) {
+		/* __builtin_clzl() below is undefined for 0, so we have
+		 * to handle that as a special case.
+		 */
+		ret = 0UL;
+	} else {
+		ret = (sizeof(unsigned long) * 8UL) - __builtin_clzl(word);
+	}
+
+	return ret;
 }
 
 static unsigned long __find_next_bit(const unsigned long *addr,

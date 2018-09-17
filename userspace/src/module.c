@@ -102,10 +102,10 @@ static struct unit_module *load_one_module(struct unit_fw *fw,
 
 static int cmp_module_prio(const void *__mod_a, const void *__mod_b)
 {
-	const struct unit_module *mod_a = __mod_a;
-	const struct unit_module *mod_b = __mod_b;
+	const struct unit_module * const *mod_a = __mod_a;
+	const struct unit_module * const *mod_b = __mod_b;
 
-	return mod_a->prio > mod_b->prio;
+	return (*mod_a)->prio > (*mod_b)->prio;
 }
 
 /*

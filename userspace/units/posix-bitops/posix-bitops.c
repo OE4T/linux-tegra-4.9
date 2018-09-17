@@ -110,20 +110,20 @@ static int test_fls(struct unit_module *m, struct gk20a *g, void *args)
 	unsigned long i;
 
 	CHECK_FLS_WORD(single_ulong_maps[0], 0UL);
-	CHECK_FLS_WORD(single_ulong_maps[1], BITS_PER_LONG - 1UL);
-	CHECK_FLS_WORD(single_ulong_maps[2], 31UL);
-	CHECK_FLS_WORD(single_ulong_maps[3], 23UL);
-	CHECK_FLS_WORD(single_ulong_maps[4], 31UL);
-	CHECK_FLS_WORD(single_ulong_maps[5], 15UL);
-	CHECK_FLS_WORD(single_ulong_maps[6], 31UL);
-	CHECK_FLS_WORD(single_ulong_maps[7], 0UL);
-	CHECK_FLS_WORD(single_ulong_maps[8], 31UL);
-	CHECK_FLS_WORD(single_ulong_maps[9], 16UL);
+	CHECK_FLS_WORD(single_ulong_maps[1], BITS_PER_LONG);
+	CHECK_FLS_WORD(single_ulong_maps[2], 32UL);
+	CHECK_FLS_WORD(single_ulong_maps[3], 24UL);
+	CHECK_FLS_WORD(single_ulong_maps[4], 32UL);
+	CHECK_FLS_WORD(single_ulong_maps[5], 16UL);
+	CHECK_FLS_WORD(single_ulong_maps[6], 32UL);
+	CHECK_FLS_WORD(single_ulong_maps[7], 1UL);
+	CHECK_FLS_WORD(single_ulong_maps[8], 32UL);
+	CHECK_FLS_WORD(single_ulong_maps[9], 17UL);
 
 #undef CHECK_FLS_WORD
 
 	for (i = 0; i < BITS_PER_LONG; i++) {
-		if (fls(BIT(i)) != i)
+		if (fls(BIT(i)) != (i+1))
 			unit_return_fail(m, "fls(1 << %lu) != %lu! [%lu]\n",
 					 i, i, fls(BIT(i)));
 	}

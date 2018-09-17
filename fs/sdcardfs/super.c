@@ -160,6 +160,7 @@ static void *sdcardfs_clone_mnt_data(void *data)
 		return NULL;
 	opt->gid = old->gid;
 	opt->mask = old->mask;
+	opt->default_normal = old->default_normal;
 	return opt;
 }
 
@@ -170,6 +171,7 @@ static void sdcardfs_copy_mnt_data(void *data, void *newdata)
 
 	old->gid = new->gid;
 	old->mask = new->mask;
+	old->default_normal = new->default_normal;
 }
 
 /*

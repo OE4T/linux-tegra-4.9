@@ -2496,7 +2496,7 @@ struct ec_err_fmon_desc {
 	uint16_t desc_flags;
 	/** @brief FMON monitored clock id */
 	uint16_t fmon_clk_id;
-	/** @brief FMON faults bitmask */
+	/** @brief Bitmask of @ref bpmp_fmon_faults_flags */
 	uint32_t fmon_faults;
 	/** @brief FMON faults access error */
 	int32_t fmon_access_error;
@@ -2512,7 +2512,7 @@ struct ec_err_vmon_desc {
 	uint16_t desc_flags;
 	/** @brief VMON rail adc id */
 	uint16_t vmon_adc_id;
-	/** @brief VMON faults bitmask */
+	/** @brief Bitmask of @ref bpmp_vmon_faults_flags */
 	uint32_t vmon_faults;
 	/** @brief VMON faults access error */
 	int32_t vmon_access_error;

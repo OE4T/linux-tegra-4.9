@@ -129,18 +129,13 @@ int gk20a_busy(struct gk20a *g)
 			goto fail;
 		}
 	} else {
-		nvgpu_mutex_acquire(&g->poweron_lock);
-		if (!g->power_on) {
-			ret = gk20a_gpu_is_virtual(dev) ?
-				vgpu_pm_finalize_poweron(dev)
-				: gk20a_pm_finalize_poweron(dev);
-			if (ret) {
-				atomic_dec(&g->usage_count.atomic_var);
-				nvgpu_mutex_release(&g->poweron_lock);
-				goto fail;
-			}
+		ret = gk20a_gpu_is_virtual(dev) ?
+			vgpu_pm_finalize_poweron(dev) :
+			gk20a_pm_finalize_poweron(dev);
+		if (ret) {
+			atomic_dec(&g->usage_count.atomic_var);
+			goto fail;
 		}
-		nvgpu_mutex_release(&g->poweron_lock);
 	}
 
 fail:
@@ -240,12 +235,14 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	int err;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
+	nvgpu_mutex_acquire(&g->power_lock);
+
 	if (g->power_on)
-		return 0;
+		goto done;
 
 	trace_gk20a_finalize_poweron(dev_name(dev));
 
@@ -254,13 +251,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		err = platform->busy(dev);
 		if (err < 0) {
 			nvgpu_err(g, "failed to poweron platform dependency");
-			return err;
+			goto done;
 		}
 	}
 
 	err = gk20a_restore_registers(g);
 	if (err)
-		return err;
+		goto done;
 
 	/* Enable interrupt workqueue */
 	if (!l->nonstall_work_queue) {
@@ -271,7 +268,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	err = gk20a_detect_chip(g);
 	if (err)
-		return err;
+		goto done;
 
 	if (g->sim) {
 		if (g->sim->sim_init_late)
@@ -319,7 +316,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	err = gk20a_sched_ctrl_init(g);
 	if (err) {
 		nvgpu_err(g, "failed to init sched control");
-		return err;
+		goto done;
 	}
 
 	g->sw_ready = true;
@@ -328,6 +325,7 @@ done:
 	if (err)
 		g->power_on = false;
 
+	nvgpu_mutex_release(&g->power_lock);
 	return err;
 }
 
@@ -356,13 +354,13 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 #ifdef CONFIG_NVGPU_SUPPORT_CDE
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 #endif
-	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	bool irqs_enabled;
+	int ret = 0;
 
 	nvgpu_log_fn(g, " ");
 
-	nvgpu_mutex_acquire(&g->poweroff_lock);
+	nvgpu_mutex_acquire(&g->power_lock);
 
 	if (!g->power_on)
 		goto done;
@@ -393,7 +391,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	/* Stop CPU from accessing the GPU registers. */
 	gk20a_lockout_registers(g);
 
-	nvgpu_mutex_release(&g->poweroff_lock);
+	nvgpu_mutex_release(&g->power_lock);
 	return 0;
 
 error:
@@ -407,7 +405,7 @@ error:
 
 	gk20a_scale_resume(dev);
 done:
-	nvgpu_mutex_release(&g->poweroff_lock);
+	nvgpu_mutex_release(&g->power_lock);
 
 	return ret;
 }

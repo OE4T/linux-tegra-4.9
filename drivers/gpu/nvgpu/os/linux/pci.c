@@ -330,13 +330,13 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.can_railgate_init	= false,
 	.can_elpg_init = false,
 	.enable_elpg = false,
-	.enable_elcg = true,
+	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
 	.enable_mscg = false,
 	.can_slcg    = true,
 	.can_blcg    = true,
-	.can_elcg    = true,
+	.can_elcg    = false,
 
 	.disable_aspm = true,
 

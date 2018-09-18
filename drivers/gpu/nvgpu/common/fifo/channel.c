@@ -753,16 +753,23 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c,
 	 * Any sync-pt fences will take less memory so we can ignore them for
 	 * now.
 	 *
-	 * A semaphore ACQ (fence-wait) is 8 dwords: semaphore_a, semaphore_b,
+	 * A semaphore ACQ (fence-wait) is 8 words: semaphore_a, semaphore_b,
 	 * semaphore_c, and semaphore_d. A semaphore INCR (fence-get) will be 10
-	 * dwords: all the same as an ACQ plus a non-stalling intr which is
-	 * another 2 dwords.
+	 * words: all the same as an ACQ plus a non-stalling intr which is
+	 * another 2 words.
 	 *
-	 * Lastly the number of gpfifo entries per channel is fixed so at most
-	 * we can use 2/3rds of the gpfifo entries (1 pre-fence entry, one
-	 * userspace entry, and one post-fence entry). Thus the computation is:
+	 * We have two cases to consider: the first is we base the size of the
+	 * priv_cmd_buf on the gpfifo count. Here we multiply by a factor of
+	 * 2/3rds because only at most 2/3rds of the GPFIFO can be used for
+	 * sync commands:
 	 *
-	 *   (gpfifo entry number * (2 / 3) * (8 + 10) * 4 bytes.
+	 *   nr_gpfifos * (2 / 3) * (8 + 10) * 4 bytes
+	 *
+	 * If instead num_in_flight is specified then we will use that to size
+	 * the priv_cmd_buf. The worst case is two sync commands (one ACQ and
+	 * one INCR) per submit so we have a priv_cmd_buf size of:
+	 *
+	 *   num_in_flight * (8 + 10) * 4 bytes
 	 */
 	size = num_in_flight * 18U * (u32)sizeof(u32);
 	if (gpfifo_based) {

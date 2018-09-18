@@ -98,11 +98,11 @@ struct nvgpu_channel_sync {
 
 void channel_sync_semaphore_gen_wait_cmd(struct channel_gk20a *c,
 	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
-	u32 wait_cmd_size, int pos);
+	u32 wait_cmd_size, u32 pos);
 
 int channel_sync_syncpt_gen_wait_cmd(struct channel_gk20a *c,
 		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
-		u32 wait_cmd_size, int pos, bool preallocated);
+		u32 wait_cmd_size, u32 pos, bool preallocated);
 
 void nvgpu_channel_sync_destroy(struct nvgpu_channel_sync *sync,
 	bool set_safe_state);
@@ -110,4 +110,4 @@ struct nvgpu_channel_sync *nvgpu_channel_sync_create(struct channel_gk20a *c,
 	bool user_managed);
 bool nvgpu_channel_sync_needs_os_fence_framework(struct gk20a *g);
 
-#endif /* NVGPU_GK20A_CHANNEL_SYNC_GK20A_H */
+#endif /* NVGPU_CHANNEL_SYNC_H */

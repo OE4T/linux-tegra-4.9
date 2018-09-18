@@ -49,7 +49,7 @@ struct nvgpu_channel_sync_syncpt {
 
 int channel_sync_syncpt_gen_wait_cmd(struct channel_gk20a *c,
 	u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
-	u32 wait_cmd_size, int pos, bool preallocated)
+	u32 wait_cmd_size, u32 pos, bool preallocated)
 {
 	int err = 0;
 	bool is_expired = nvgpu_nvhost_syncpt_is_expired_ext(
@@ -58,7 +58,7 @@ int channel_sync_syncpt_gen_wait_cmd(struct channel_gk20a *c,
 	if (is_expired) {
 		if (preallocated) {
 			nvgpu_memset(c->g, wait_cmd->mem,
-			(wait_cmd->off + (u32)pos * wait_cmd_size) * (u32)sizeof(u32),
+			(wait_cmd->off + pos * wait_cmd_size) * (u32)sizeof(u32),
 				0, wait_cmd_size * (u32)sizeof(u32));
 		}
 	} else {
@@ -73,7 +73,7 @@ int channel_sync_syncpt_gen_wait_cmd(struct channel_gk20a *c,
 		nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
 				id, c->vm->syncpt_ro_map_gpu_va);
 		c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd,
-			(u32)pos * wait_cmd_size, id, thresh,
+			pos * wait_cmd_size, id, thresh,
 			c->vm->syncpt_ro_map_gpu_va);
 	}
 
@@ -257,7 +257,7 @@ static void channel_sync_syncpt_set_safe_state(struct nvgpu_channel_sync *s)
 	nvgpu_nvhost_syncpt_set_safe_state(sp->nvhost_dev, sp->id);
 }
 
-static int syncpt_get_id(struct nvgpu_channel_sync *s)
+static int channel_sync_syncpt_get_id(struct nvgpu_channel_sync *s)
 {
 	struct nvgpu_channel_sync_syncpt *sp =
 		container_of(s, struct nvgpu_channel_sync_syncpt, ops);
@@ -329,7 +329,7 @@ channel_sync_syncpt_create(struct channel_gk20a *c, bool user_managed)
 	sp->ops.incr_user		= channel_sync_syncpt_incr_user;
 	sp->ops.set_min_eq_max		= channel_sync_syncpt_set_min_eq_max;
 	sp->ops.set_safe_state		= channel_sync_syncpt_set_safe_state;
-	sp->ops.syncpt_id		= syncpt_get_id;
+	sp->ops.syncpt_id		= channel_sync_syncpt_get_id;
 	sp->ops.syncpt_address		= channel_sync_syncpt_get_address;
 	sp->ops.destroy			= channel_sync_syncpt_destroy;
 
@@ -390,17 +390,17 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 
 void channel_sync_semaphore_gen_wait_cmd(struct channel_gk20a *c,
 	struct nvgpu_semaphore *sema, struct priv_cmd_entry *wait_cmd,
-	u32 wait_cmd_size, int pos)
+	u32 wait_cmd_size, u32 pos)
 {
 	if (sema == NULL) {
 		/* expired */
 		nvgpu_memset(c->g, wait_cmd->mem,
-			(wait_cmd->off + (u32)pos * wait_cmd_size) * (u32)sizeof(u32),
+			(wait_cmd->off + pos * wait_cmd_size) * (u32)sizeof(u32),
 			0, wait_cmd_size * (u32)sizeof(u32));
 	} else {
 		WARN_ON(!sema->incremented);
 		add_sema_cmd(c->g, c, sema, wait_cmd,
-			(u32)pos * wait_cmd_size, true, false);
+			pos * wait_cmd_size, true, false);
 		nvgpu_semaphore_put(sema);
 	}
 }

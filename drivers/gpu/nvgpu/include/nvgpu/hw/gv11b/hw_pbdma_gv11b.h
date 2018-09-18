@@ -336,10 +336,6 @@ static inline u32 pbdma_config_l2_evict_normal_f(void)
 {
 	return 0x1U;
 }
-static inline u32 pbdma_config_l2_evict_last_f(void)
-{
-	return 0x2U;
-}
 static inline u32 pbdma_config_ce_split_enable_f(void)
 {
 	return 0x0U;

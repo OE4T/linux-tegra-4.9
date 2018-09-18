@@ -256,24 +256,4 @@ static inline u32 mc_enable_pb_sel_f(u32 v, u32 i)
 {
 	return (v & 0x1U) << (0U + i*1U);
 }
-static inline u32 mc_elpg_enable_r(void)
-{
-	return 0x0000020cU;
-}
-static inline u32 mc_elpg_enable_xbar_enabled_f(void)
-{
-	return 0x4U;
-}
-static inline u32 mc_elpg_enable_pfb_enabled_f(void)
-{
-	return 0x100000U;
-}
-static inline u32 mc_elpg_enable_hub_enabled_f(void)
-{
-	return 0x20000000U;
-}
-static inline u32 mc_elpg_enable_l2_enabled_f(void)
-{
-	return 0x8U;
-}
 #endif

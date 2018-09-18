@@ -314,6 +314,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.set_runlist_interleave = vgpu_fifo_set_runlist_interleave,
 		.tsg_set_timeslice = vgpu_tsg_set_timeslice,
 		.tsg_open = vgpu_tsg_open,
+		.tsg_release = vgpu_tsg_release,
 		.force_reset_ch = vgpu_fifo_force_reset_ch,
 		.engine_enum_from_type = gp10b_fifo_engine_enum_from_type,
 		.device_info_data_parse = gp10b_device_info_data_parse,

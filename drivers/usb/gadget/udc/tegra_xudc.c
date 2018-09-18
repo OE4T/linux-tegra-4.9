@@ -1360,8 +1360,8 @@ static unsigned int ep_available_trbs(struct tegra_xudc_ep *ep)
 	if (ep->ring_full)
 		return 0;
 	if (ep->deq_ptr > ep->enq_ptr)
-		return ep->deq_ptr - ep->enq_ptr;
-	return XUDC_TRANSFER_RING_SIZE - (ep->enq_ptr - ep->deq_ptr) - 1;
+		return ep->deq_ptr - ep->enq_ptr - 1;
+	return XUDC_TRANSFER_RING_SIZE - (ep->enq_ptr - ep->deq_ptr) - 2;
 }
 
 static void tegra_xudc_queue_one_trb(struct tegra_xudc_ep *ep,

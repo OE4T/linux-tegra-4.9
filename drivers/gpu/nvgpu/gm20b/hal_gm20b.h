@@ -27,5 +27,5 @@
 struct gk20a;
 
 int gm20b_init_hal(struct gk20a *g);
-int gm20b_get_litter_value(struct gk20a *g, int value);
+u32 gm20b_get_litter_value(struct gk20a *g, int value);
 #endif /* NVGPU_GM20B_HAL_GM20B_H */

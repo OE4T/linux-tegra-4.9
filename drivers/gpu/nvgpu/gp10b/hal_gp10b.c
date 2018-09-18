@@ -88,9 +88,9 @@
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
-int gp10b_get_litter_value(struct gk20a *g, int value)
+u32 gp10b_get_litter_value(struct gk20a *g, int value)
 {
-	int ret = EINVAL;
+	u32 ret = EINVAL;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();

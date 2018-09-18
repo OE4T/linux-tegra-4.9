@@ -1194,7 +1194,7 @@ struct gpu_ops {
 		int (*perfbuffer_disable)(struct gk20a *g);
 	} dbg_session_ops;
 
-	int (*get_litter_value)(struct gk20a *g, int value);
+	u32 (*get_litter_value)(struct gk20a *g, int value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
 
 	struct {

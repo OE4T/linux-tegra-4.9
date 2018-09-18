@@ -71,9 +71,9 @@
 
 #define PRIV_SECURITY_DISABLE 0x01
 
-int gm20b_get_litter_value(struct gk20a *g, int value)
+u32 gm20b_get_litter_value(struct gk20a *g, int value)
 {
-	int ret = EINVAL;
+	u32 ret = EINVAL;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();

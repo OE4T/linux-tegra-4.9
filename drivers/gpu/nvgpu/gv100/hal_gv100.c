@@ -125,9 +125,9 @@
 #include <nvgpu/hw/gv100/hw_pwr_gv100.h>
 #include <nvgpu/hw/gv100/hw_gr_gv100.h>
 
-static int gv100_get_litter_value(struct gk20a *g, int value)
+static u32 gv100_get_litter_value(struct gk20a *g, int value)
 {
-	int ret = EINVAL;
+	u32 ret = EINVAL;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();

@@ -106,9 +106,9 @@
 #include <nvgpu/hw/gp106/hw_gr_gp106.h>
 
 
-static int gp106_get_litter_value(struct gk20a *g, int value)
+static u32 gp106_get_litter_value(struct gk20a *g, int value)
 {
-	int ret = -EINVAL;
+	u32 ret = EINVAL;
 
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:

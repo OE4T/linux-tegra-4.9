@@ -104,9 +104,9 @@
 #include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
-int gv11b_get_litter_value(struct gk20a *g, int value)
+u32 gv11b_get_litter_value(struct gk20a *g, int value)
 {
-	int ret = EINVAL;
+	u32 ret = EINVAL;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();

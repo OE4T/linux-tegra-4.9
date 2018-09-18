@@ -90,7 +90,7 @@
 
 u32 gp10b_get_litter_value(struct gk20a *g, int value)
 {
-	u32 ret = EINVAL;
+	u32 ret = 0;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();

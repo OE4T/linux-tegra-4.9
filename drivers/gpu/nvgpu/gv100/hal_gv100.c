@@ -127,7 +127,7 @@
 
 static u32 gv100_get_litter_value(struct gk20a *g, int value)
 {
-	u32 ret = EINVAL;
+	u32 ret = 0;
 	switch (value) {
 	case GPU_LIT_NUM_GPCS:
 		ret = proj_scal_litter_num_gpcs_v();
@@ -244,6 +244,8 @@ static u32 gv100_get_litter_value(struct gk20a *g, int value)
 		ret = proj_gpc_priv_stride_v();
 		break;
 	default:
+		nvgpu_err(g, "Missing definition %d", value);
+		BUG();
 		break;
 	}
 

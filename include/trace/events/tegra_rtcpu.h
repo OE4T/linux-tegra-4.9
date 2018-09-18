@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2019 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -195,8 +195,8 @@ TRACE_EVENT(rtcpu_dbg_set_loglevel,
  * VI Notify events
  */
 
-extern char *g_trace_vinotify_tag_strs[];
-extern unsigned int g_trace_vinotify_tag_str_count;
+extern const char * const g_trace_vinotify_tag_strs[];
+extern const unsigned int g_trace_vinotify_tag_str_count;
 
 TRACE_EVENT(rtcpu_vinotify_handle_msg,
 	TP_PROTO(u64 tstamp, u8 tag, u32 ch_frame, u32 vi_tstamp, u32 data),
@@ -280,6 +280,50 @@ TRACE_EVENT(rtcpu_vinotify_error,
 		(__entry->ch_frame >> 8) & 0xff,
 		(__entry->ch_frame >> 16) & 0xffff,
 		__entry->vi_tstamp, __entry->data)
+);
+
+/*
+ * NVCSI events
+ */
+
+extern const char * const g_trace_nvcsi_intr_class_strs[];
+extern const unsigned int g_trace_nvcsi_intr_class_str_count;
+
+extern const char * const g_trace_nvcsi_intr_type_strs[];
+extern const unsigned int g_trace_nvcsi_intr_type_str_count;
+
+TRACE_EVENT(rtcpu_nvcsi_intr,
+	TP_PROTO(u64 tstamp, u8 intr_class, u8 intr_type, u32 index,
+		u32 status),
+	TP_ARGS(tstamp, intr_class, intr_type, index, status),
+	TP_STRUCT__entry(
+		__field(u64, tstamp)
+		__field(u8, intr_class)
+		__field(u8, intr_type)
+		__field(u32, index)
+		__field(u32, status)
+	),
+	TP_fast_assign(
+		__entry->tstamp = tstamp;
+		__entry->intr_class = intr_class;
+		__entry->intr_type = intr_type;
+		__entry->index = index;
+		__entry->status = status;
+	),
+	TP_printk(
+		"tstamp:%llu class:%s type:%s phy:%u cil:%u st:%u vc:%u status:0x%08x",
+		__entry->tstamp,
+		(__entry->intr_class < g_trace_nvcsi_intr_class_str_count) ?
+			g_trace_nvcsi_intr_class_strs[__entry->intr_class] :
+			__print_hex(&__entry->intr_class, 1),
+		(__entry->intr_type < g_trace_nvcsi_intr_type_str_count) ?
+			g_trace_nvcsi_intr_type_strs[__entry->intr_type] :
+			__print_hex(&__entry->intr_type, 1),
+		(__entry->index >> 24) & 0xff,
+		(__entry->index >> 16) & 0xff,
+		(__entry->index >> 8) & 0xff,
+		__entry->index & 0xff,
+		__entry->status)
 );
 
 #endif /* _TRACE_TEGRA_RTCPU_H */

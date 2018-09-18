@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -663,7 +663,7 @@ static void rtcpu_trace_dbg_event(struct camrtc_event_struct *event)
 	}
 }
 
-char *g_trace_vinotify_tag_strs[] = {
+const char * const g_trace_vinotify_tag_strs[] = {
 	"FS", "FE",
 	"CSIMUX_FRAME", "CSIMUX_STREAM",
 	"CHANSEL_PXL_SOF", "CHANSEL_PXL_EOF",
@@ -681,7 +681,7 @@ char *g_trace_vinotify_tag_strs[] = {
 	"ISPBUF_FE", "VGP0_DONE",
 	"VGP1_DONE", "FMLITE_DONE",
 };
-unsigned int g_trace_vinotify_tag_str_count =
+const unsigned int g_trace_vinotify_tag_str_count =
 	ARRAY_SIZE(g_trace_vinotify_tag_strs);
 
 #ifndef camrtc_trace_vinotify_event_ts64
@@ -844,6 +844,45 @@ static void rtcpu_trace_isp_event(struct tegra_rtcpu_trace *tracer,
 #endif
 }
 
+const char * const g_trace_nvcsi_intr_class_strs[] = {
+	"GLOBAL",
+	"CORRECTABLE_ERR",
+	"UNCORRECTABLE_ERR",
+};
+const unsigned int g_trace_nvcsi_intr_class_str_count =
+	ARRAY_SIZE(g_trace_nvcsi_intr_class_strs);
+
+const char * const g_trace_nvcsi_intr_type_strs[] = {
+	"SW_DEBUG",
+	"HOST1X",
+	"PHY_INTR", "PHY_INTR0", "PHY_INTR1",
+	"STREAM_NOVC", "STREAM_VC",
+};
+const unsigned int g_trace_nvcsi_intr_type_str_count =
+	ARRAY_SIZE(g_trace_nvcsi_intr_type_strs);
+
+static void rtcpu_trace_nvcsi_event(struct camrtc_event_struct *event)
+{
+	u64 ts_tsc = ((u64)event->data.data32[5] << 32) |
+			(u64)event->data.data32[4];
+
+	switch (event->header.id) {
+	case camrtc_trace_nvcsi_intr:
+		trace_rtcpu_nvcsi_intr(ts_tsc,
+			(event->data.data32[0] & 0xff),
+			(event->data.data32[1] & 0xff),
+			event->data.data32[2],
+			event->data.data32[3]);
+		break;
+	default:
+		trace_rtcpu_unknown(event->header.tstamp,
+			event->header.id,
+			event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
+			event->data.data8);
+		break;
+	}
+}
+
 static void rtcpu_trace_array_event(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_event_struct *event)
 {
@@ -867,6 +906,9 @@ static void rtcpu_trace_array_event(struct tegra_rtcpu_trace *tracer,
 		break;
 	case CAMRTC_EVENT_MODULE_ISP:
 		rtcpu_trace_isp_event(tracer, event);
+		break;
+	case CAMRTC_EVENT_MODULE_NVCSI:
+		rtcpu_trace_nvcsi_event(event);
 		break;
 	default:
 		trace_rtcpu_unknown(event->header.tstamp,

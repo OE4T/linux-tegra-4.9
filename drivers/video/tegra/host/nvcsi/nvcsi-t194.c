@@ -95,7 +95,7 @@ static void nvcsi_deskew_debugfs_remove(struct t194_nvcsi *nvcsi);
 static int nvhost_nvcsi_prod_apply_virt_WAR(struct t194_nvcsi *nvcsi,
 					    unsigned int phy_mode)
 {
-	dev_warn(&nvcsi->pdev->dev,
+	dev_info(&nvcsi->pdev->dev,
 		 "%s: nvcsi prod setting virt WAR active\n",
 		 __func__);
 	return vhost_prod_apply(nvcsi->pdev, phy_mode);
@@ -105,7 +105,7 @@ static int nvhost_nvcsi_cil_sw_reset_virt_WAR(struct platform_device *pdev,
 					      unsigned int lanes,
 					      unsigned int enable)
 {
-	dev_warn(&pdev->dev,
+	dev_info(&pdev->dev,
 		 "%s: nvcsi cil sw reset virt WAR active\n",
 		 __func__);
 	return vhost_cil_sw_reset(pdev, lanes, enable);

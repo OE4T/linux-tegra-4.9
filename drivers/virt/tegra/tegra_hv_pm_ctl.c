@@ -64,11 +64,13 @@ static int tegra_hv_pm_ctl_get_guest_state(u32 vmid, u32 *state);
 
 /*
  * For dependency management on System suspend, if there are guests required
- * to wait and the guests are not in suspended, the privileged guest sends
+ * to wait and the guests are active, the privileged guest sends
  * a guest suspend command to the guests and waits for the guests to be
- * suspended.
+ * suspended or shutsdown. Shutdown is acceptable as the key purpose
+ * of this function is to ensure this VM stays up while VMs dependent on
+ * this VM are up
  */
-static int do_wait_for_guests_suspended(void)
+static int do_wait_for_guests_inactive(void)
 {
 	bool sent_guest_suspend = false;
 	int i = 0;
@@ -82,7 +84,7 @@ static int do_wait_for_guests_suspended(void)
 		if (ret < 0)
 			return ret;
 
-		if (state == VM_STATE_SUSPEND) {
+		if (state == VM_STATE_SUSPEND || state == VM_STATE_SHUTDOWN) {
 			sent_guest_suspend = false;
 			i++;
 			continue;
@@ -113,7 +115,7 @@ int tegra_hv_pm_ctl_trigger_sys_suspend(void)
 		return -ENXIO;
 	}
 
-	ret = do_wait_for_guests_suspended();
+	ret = do_wait_for_guests_inactive();
 	if (ret < 0) {
 		pr_err("%s: Failed to wait for guests suspended, %d\n",
 			__func__, ret);

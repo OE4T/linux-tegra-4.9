@@ -90,7 +90,6 @@ struct tegra_cpufreq_data {
 	struct per_cluster_data pcluster[MAX_CLUSTERS];
 	struct mutex mlock; /* lock protecting cc3 params */
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
-	unsigned long emc_max_rate; /* Hz */
 };
 
 static struct tegra_cpufreq_data tfreq_data;
@@ -1118,10 +1117,6 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 		pr_err("tegra19x-cpufreq: fail to create_workqueue\n");
 		goto err_free_res;
 	}
-
-	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
-	if (cpu_emc_map_ptr)
-		cpu_emc_map_ptr[0].emcfreq = tfreq_data.emc_max_rate / 1000;
 
 	ret = get_ndiv_limits_tbl_from_bpmp();
 	if (ret)

@@ -48,7 +48,7 @@
  * Defines a common Light Secure Falcon identifier.
  */
 #define LSF_FALCON_ID_PMU       (0)
-#define LSF_FALCON_ID_RESERVED  (1)
+#define LSF_FALCON_ID_GSPLITE   (1)
 #define LSF_FALCON_ID_FECS      (2)
 #define LSF_FALCON_ID_GPCCS     (3)
 #define LSF_FALCON_ID_SEC2      (7)

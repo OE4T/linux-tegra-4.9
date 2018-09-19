@@ -252,6 +252,26 @@ static inline u32 pgsp_falcon_nxtctx_r(void)
 {
 	return 0x00110054U;
 }
+static inline u32 pgsp_falcon_nxtctx_ctxptr_f(u32 v)
+{
+	return (v & 0xfffffffU) << 0U;
+}
+static inline u32 pgsp_falcon_nxtctx_ctxtgt_fb_f(void)
+{
+	return 0x0U;
+}
+static inline u32 pgsp_falcon_nxtctx_ctxtgt_sys_coh_f(void)
+{
+	return 0x20000000U;
+}
+static inline u32 pgsp_falcon_nxtctx_ctxtgt_sys_ncoh_f(void)
+{
+	return 0x30000000U;
+}
+static inline u32 pgsp_falcon_nxtctx_ctxvalid_f(u32 v)
+{
+	return (v & 0x1U) << 30U;
+}
 static inline u32 pgsp_falcon_mailbox0_r(void)
 {
 	return 0x00110040U;
@@ -287,6 +307,14 @@ static inline u32 pgsp_falcon_os_r(void)
 static inline u32 pgsp_falcon_engctl_r(void)
 {
 	return 0x001100a4U;
+}
+static inline u32 pgsp_falcon_engctl_switch_context_true_f(void)
+{
+	return 0x8U;
+}
+static inline u32 pgsp_falcon_engctl_switch_context_false_f(void)
+{
+	return 0x0U;
 }
 static inline u32 pgsp_falcon_cpuctl_r(void)
 {

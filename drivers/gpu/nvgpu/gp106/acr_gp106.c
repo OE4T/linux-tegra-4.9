@@ -67,6 +67,7 @@ static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	pmu_ucode_details,
 	fecs_ucode_details,
 	gpccs_ucode_details,
+	sec2_ucode_details,
 };
 
 void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
@@ -385,6 +386,73 @@ free_lsf_desc:
 	nvgpu_kfree(g, lsf_desc);
 rel_sig:
 	nvgpu_release_firmware(g, gpccs_sig);
+	return err;
+}
+
+int sec2_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+{
+	struct nvgpu_firmware *sec2_fw, *sec2_desc, *sec2_sig;
+	struct pmu_ucode_desc_v1 *desc;
+	struct lsf_ucode_desc_v1 *lsf_desc;
+	u32 *ucode_image;
+	int err = 0;
+
+	gp106_dbg_pmu(g, "requesting SEC2 ucode in %s", g->name);
+	sec2_fw = nvgpu_request_firmware(g, LSF_SEC2_UCODE_IMAGE_BIN,
+		NVGPU_REQUEST_FIRMWARE_NO_SOC);
+	if (sec2_fw == NULL) {
+		nvgpu_err(g, "failed to load sec2 ucode!!");
+		return -ENOENT;
+	}
+
+	ucode_image = (u32 *)sec2_fw->data;
+
+	gp106_dbg_pmu(g, "requesting SEC2 ucode desc in %s", g->name);
+	sec2_desc = nvgpu_request_firmware(g, LSF_SEC2_UCODE_DESC_BIN,
+		NVGPU_REQUEST_FIRMWARE_NO_SOC);
+	if (sec2_desc == NULL) {
+		nvgpu_err(g, "failed to load SEC2 ucode desc!!");
+		err = -ENOENT;
+		goto release_img_fw;
+	}
+
+	desc = (struct pmu_ucode_desc_v1 *)sec2_desc->data;
+
+	sec2_sig = nvgpu_request_firmware(g, LSF_SEC2_UCODE_SIG_BIN,
+		NVGPU_REQUEST_FIRMWARE_NO_SOC);
+	if (sec2_sig == NULL) {
+		nvgpu_err(g, "failed to load SEC2 sig!!");
+		err = -ENOENT;
+		goto release_desc;
+	}
+
+	lsf_desc = nvgpu_kzalloc(g, sizeof(struct lsf_ucode_desc_v1));
+	if (lsf_desc == NULL) {
+		err = -ENOMEM;
+		goto release_sig;
+	}
+
+	memcpy(lsf_desc, (void *)sec2_sig->data,
+		min_t(size_t, sizeof(*lsf_desc), sec2_sig->size));
+
+	lsf_desc->falcon_id = LSF_FALCON_ID_SEC2;
+
+	p_img->desc = desc;
+	p_img->data = ucode_image;
+	p_img->data_size = desc->app_start_offset + desc->app_size;
+	p_img->fw_ver = NULL;
+	p_img->header = NULL;
+	p_img->lsf_desc = (struct lsf_ucode_desc_v1 *)lsf_desc;
+
+	gp106_dbg_pmu(g, "requesting SEC2 ucode in %s done", g->name);
+
+	return err;
+release_sig:
+	nvgpu_release_firmware(g, sec2_sig);
+release_desc:
+	nvgpu_release_firmware(g, sec2_desc);
+release_img_fw:
+	nvgpu_release_firmware(g, sec2_fw);
 	return err;
 }
 

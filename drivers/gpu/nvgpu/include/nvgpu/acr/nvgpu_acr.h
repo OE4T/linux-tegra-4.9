@@ -40,6 +40,14 @@ struct nvgpu_acr;
 
 #define HSBIN_ACR_BL_UCODE_IMAGE "pmu_bl.bin"
 #define HSBIN_ACR_UCODE_IMAGE "acr_ucode.bin"
+#define HSBIN_ACR_AHESASC_PROD_UCODE "acr_ahesasc_prod_ucode.bin"
+#define HSBIN_ACR_ASB_PROD_UCODE "acr_asb_prod_ucode.bin"
+#define HSBIN_ACR_AHESASC_DBG_UCODE "acr_ahesasc_dbg_ucode.bin"
+#define HSBIN_ACR_ASB_DBG_UCODE "acr_asb_dbg_ucode.bin"
+
+#define LSF_SEC2_UCODE_IMAGE_BIN "sec2_ucode_image.bin"
+#define LSF_SEC2_UCODE_DESC_BIN "sec2_ucode_desc.bin"
+#define LSF_SEC2_UCODE_SIG_BIN "sec2_sig.bin"
 
 #define MAX_SUPPORTED_LSFM 3 /*PMU, FECS, GPCCS*/
 

@@ -53,6 +53,7 @@ int fecs_ucode_details(struct gk20a *g,
 		struct flcn_ucode_img_v1 *p_img);
 int gpccs_ucode_details(struct gk20a *g,
 		struct flcn_ucode_img_v1 *p_img);
+int sec2_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img);
 int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 	struct flcn_ucode_img_v1 *ucode_image, u32 falcon_id);
 int lsfm_discover_ucode_images(struct gk20a *g,

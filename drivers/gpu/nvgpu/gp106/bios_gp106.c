@@ -229,6 +229,8 @@ int gp106_bios_init(struct gk20a *g)
 				g->bios.vbios_version);
 		err = -EINVAL;
 		goto free_firmware;
+	} else {
+		nvgpu_info(g, "VBIOS version %08x", g->bios.vbios_version);
 	}
 
 	nvgpu_log_fn(g, "done");

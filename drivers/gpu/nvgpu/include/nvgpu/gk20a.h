@@ -583,6 +583,7 @@ struct gpu_ops {
 				 u32 index, u32 state);
 		void (*fault_buf_configure_hw)(struct gk20a *g, u32 index);
 		size_t (*get_vidmem_size)(struct gk20a *g);
+		int (*apply_pdb_cache_war)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
@@ -749,6 +750,8 @@ struct gpu_ops {
 			struct nvgpu_semaphore *s, u64 sema_va,
 			struct priv_cmd_entry *cmd,
 			u32 off, bool acquire, bool wfi);
+		int (*init_pdb_cache_war)(struct gk20a *g);
+		void (*deinit_pdb_cache_war)(struct gk20a *g);
 	} fifo;
 	struct pmu_v {
 		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);
@@ -1647,6 +1650,8 @@ struct gk20a {
 
 	struct nvgpu_list_node boardobj_head;
 	struct nvgpu_list_node boardobjgrp_head;
+
+	struct nvgpu_mem pdb_cache_war_mem;
 };
 
 static inline bool nvgpu_is_timeouts_enabled(struct gk20a *g)

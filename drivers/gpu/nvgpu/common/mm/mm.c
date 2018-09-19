@@ -198,6 +198,10 @@ static void nvgpu_remove_mm_support(struct mm_gk20a *mm)
 	nvgpu_semaphore_sea_destroy(g);
 	nvgpu_vidmem_destroy(g);
 	nvgpu_pd_cache_fini(g);
+
+	if (g->ops.fifo.deinit_pdb_cache_war) {
+		g->ops.fifo.deinit_pdb_cache_war(g);
+	}
 }
 
 /* pmu vm, share channel_vm interfaces */
@@ -501,11 +505,37 @@ static int nvgpu_init_mm_setup_sw(struct gk20a *g)
 	return 0;
 }
 
+static int nvgpu_init_mm_pdb_cache_war(struct gk20a *g)
+{
+	int err;
+
+	if (g->ops.fifo.init_pdb_cache_war) {
+		err = g->ops.fifo.init_pdb_cache_war(g);
+		if (err) {
+			return err;
+		}
+	}
+
+	if (g->ops.fb.apply_pdb_cache_war) {
+		err = g->ops.fb.apply_pdb_cache_war(g);
+		if (err) {
+			return err;
+		}
+	}
+
+	return 0;
+}
+
 int nvgpu_init_mm_support(struct gk20a *g)
 {
 	u32 err;
 
 	err = nvgpu_init_mm_reset_enable_hw(g);
+	if (err) {
+		return err;
+	}
+
+	err = nvgpu_init_mm_pdb_cache_war(g);
 	if (err) {
 		return err;
 	}

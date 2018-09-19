@@ -22,8 +22,7 @@
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/falcon.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /* Dealy depends on memory size and pwr_clk
  * delay = MAX {IMEM_SIZE, DMEM_SIZE} * 64 + 1) / pwr_clk

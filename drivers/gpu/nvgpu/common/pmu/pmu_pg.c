@@ -26,8 +26,7 @@
 #include <nvgpu/barrier.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/utils.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /* state transition :
  * OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF

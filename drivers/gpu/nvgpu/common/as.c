@@ -27,8 +27,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/log2.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /* dumb allocator... */
 static int generate_as_share_id(struct gk20a_as *as)

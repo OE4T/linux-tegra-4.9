@@ -23,8 +23,8 @@
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 struct nvgpu_vm_area *nvgpu_vm_area_find(struct vm_gk20a *vm, u64 addr)

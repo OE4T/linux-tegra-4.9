@@ -28,8 +28,7 @@
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/bug.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 static inline u32 sim_msg_header_size(void)
 {

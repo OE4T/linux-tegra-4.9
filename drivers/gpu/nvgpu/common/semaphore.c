@@ -29,8 +29,8 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/sizes.h>
 #include <nvgpu/channel.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 #define pool_to_gk20a(p) ((p)->sema_sea->gk20a)

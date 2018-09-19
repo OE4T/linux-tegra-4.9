@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,9 +25,8 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-
-#include "gk20a/gk20a.h"
 
 void nvgpu_pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 {

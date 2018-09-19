@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/ltc.h>
 #include <nvgpu/os_sched.h>
@@ -28,7 +29,6 @@
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
 #include <trace/events/gk20a.h>

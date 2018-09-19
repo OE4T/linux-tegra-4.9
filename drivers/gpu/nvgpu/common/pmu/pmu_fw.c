@@ -27,8 +27,7 @@
 #include <nvgpu/firmware.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/utils.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"

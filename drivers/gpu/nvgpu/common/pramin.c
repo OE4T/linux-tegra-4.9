@@ -25,8 +25,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/sizes.h>
 #include <nvgpu/io.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /*
  * This typedef is for functions that get called during the access_batched()

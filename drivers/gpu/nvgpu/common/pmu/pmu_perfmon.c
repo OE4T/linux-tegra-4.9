@@ -25,8 +25,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 {

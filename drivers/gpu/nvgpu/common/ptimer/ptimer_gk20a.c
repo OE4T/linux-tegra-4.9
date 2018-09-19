@@ -22,8 +22,8 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/io.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "ptimer_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_timer_gk20a.h>

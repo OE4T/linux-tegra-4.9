@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 static void nvgpu_ecc_stat_add(struct gk20a *g, struct nvgpu_ecc_stat *stat)
 {

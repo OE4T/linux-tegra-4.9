@@ -22,13 +22,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/hw/gp10b/hw_pri_ringmaster_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_pri_ringstation_sys_gp10b.h>

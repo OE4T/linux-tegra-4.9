@@ -29,8 +29,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/pramin.h>
 #include <nvgpu/enabled.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /*
  * Attempt to find a reserved memory area to determine PTE size for the passed

@@ -23,9 +23,9 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/mm.h>
 #include <nvgpu/io.h>
+#include <nvgpu/gk20a.h>
 
 #include "bus_gv100.h"
-#include "gk20a/gk20a.h"
 
 #include <nvgpu/hw/gv100/hw_bus_gv100.h>
 

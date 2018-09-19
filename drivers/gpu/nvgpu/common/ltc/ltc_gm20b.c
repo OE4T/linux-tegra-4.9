@@ -30,13 +30,12 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_pri_ringmaster_gm20b.h>
-
-#include "gk20a/gk20a.h"
 
 #include "ltc_gm20b.h"
 

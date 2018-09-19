@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <gk20a/gk20a.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/nvlink.h>
 #include <nvgpu/enabled.h>
 

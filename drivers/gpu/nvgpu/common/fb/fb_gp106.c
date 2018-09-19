@@ -20,13 +20,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/io.h>
+#include <nvgpu/timers.h>
+#include <nvgpu/gk20a.h>
 
 #include "fb_gp10b.h"
 #include "fb_gp106.h"
-
-#include <nvgpu/io.h>
-#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>
 

@@ -21,17 +21,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include "gk20a/gk20a.h"
-#include "therm_gv11b.h"
-
 #include <nvgpu/soc.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
-
-#include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
+#include <nvgpu/gk20a.h>
 
 #include "therm_gv11b.h"
+
+#include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 
 int gv11b_init_therm_setup_hw(struct gk20a *g)
 {

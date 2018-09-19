@@ -25,9 +25,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/vidmem.h>
-
-#include "gk20a/gk20a.h"
-
+#include <nvgpu/gk20a.h>
 /*
  * Make sure to use the right coherency aperture if you use this function! This
  * will not add any checks. If you want to simply use the default coherency then

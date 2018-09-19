@@ -21,12 +21,12 @@
  */
 
 #include <nvgpu/types.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/utils.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/ce2_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 

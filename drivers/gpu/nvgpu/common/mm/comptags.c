@@ -23,8 +23,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/bitops.h>
 #include <nvgpu/comptags.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
 			     u32 *offset, u32 len)

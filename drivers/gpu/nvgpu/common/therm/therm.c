@@ -23,8 +23,7 @@
 #include <nvgpu/types.h>
 #include <nvgpu/log.h>
 #include <nvgpu/therm.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 int nvgpu_init_therm_support(struct gk20a *g)
 {

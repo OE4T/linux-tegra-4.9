@@ -25,8 +25,7 @@
 #include <nvgpu/types.h>
 #include <nvgpu/io.h>
 #include <nvgpu/mc.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include "mc_gp10b.h"
 #include "mc_gv100.h"

@@ -13,8 +13,7 @@
 
 #include <nvgpu/io.h>
 #include <nvgpu/types.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 void nvgpu_writel_check(struct gk20a *g, u32 r, u32 v)
 {

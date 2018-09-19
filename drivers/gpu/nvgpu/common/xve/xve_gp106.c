@@ -19,15 +19,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-
-#include "gk20a/gk20a.h"
-#include "gp106/bios_gp106.h"
-
 #include <nvgpu/bug.h>
 #include <nvgpu/xve.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/gk20a.h>
+
+#include "gp106/bios_gp106.h"
 
 #include "xve_gp106.h"
 

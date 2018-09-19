@@ -43,10 +43,10 @@
 #include <nvgpu/os_sched.h>
 #include <nvgpu/log2.h>
 #include <nvgpu/ptimer.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/channel_sync.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 

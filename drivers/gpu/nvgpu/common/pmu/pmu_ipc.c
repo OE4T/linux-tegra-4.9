@@ -27,8 +27,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include <nvgpu/falcon.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 void nvgpu_pmu_seq_init(struct nvgpu_pmu *pmu)
 {

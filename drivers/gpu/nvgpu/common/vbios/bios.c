@@ -22,9 +22,8 @@
 
 #include <nvgpu/bios.h>
 #include <nvgpu/io.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/hw/gp106/hw_gc6_gp106.h>
-
-#include "gk20a/gk20a.h"
 
 #define BIT_HEADER_ID 				0xb8ffU
 #define BIT_HEADER_SIGNATURE 			0x00544942U

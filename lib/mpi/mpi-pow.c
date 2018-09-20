@@ -49,7 +49,6 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 	mpi_size_t tsize = 0;	/* to avoid compiler warning */
 	/* fixme: we should check that the warning is void */
 	int rc = -ENOMEM;
-	bool rp_flag = false;
 
 	esize = exp->nlimbs;
 	msize = mod->nlimbs;
@@ -123,7 +122,6 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 			rp = mpi_alloc_limb_space(size);
 			if (!rp)
 				goto enomem;
-			rp_flag = true;
 			assign_rp = 1;
 		} else {
 			if (mpi_resize(res, size) < 0)
@@ -204,19 +202,15 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 						tsize = 2 * rsize;
 						tspace =
 						    mpi_alloc_limb_space(tsize);
-						if (!tspace) {
-							mpi_free_limb_space(xp);
+						if (!tspace)
 							goto enomem;
-						}
 					} else if (tsize < (2 * rsize)) {
 						mpi_free_limb_space(tspace);
 						tsize = 2 * rsize;
 						tspace =
 						    mpi_alloc_limb_space(tsize);
-						if (!tspace) {
-							mpi_free_limb_space(xp);
+						if (!tspace)
 							goto enomem;
-						}
 					}
 					mpih_sqr_n(xp, rp, rsize, tspace);
 				}
@@ -239,23 +233,13 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 						mpi_limb_t tmp;
 						if (mpihelp_mul
 						    (xp, rp, rsize, bp, bsize,
-						     &tmp) < 0) {
-							tp = rp;
-							rp = xp;
-							xp = tp;
-							mpi_free_limb_space(xp);
+						     &tmp) < 0)
 							goto enomem;
-						}
 					} else {
 						if (mpihelp_mul_karatsuba_case
 						    (xp, rp, rsize, bp, bsize,
-						     &karactx) < 0) {
-							tp = rp;
-							rp = xp;
-							xp = tp;
-							mpi_free_limb_space(xp);
+						     &karactx) < 0)
 							goto enomem;
-						}
 					}
 
 					xsize = rsize + bsize;
@@ -292,10 +276,6 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 		if (mod_shift_cnt) {
 			carry_limb =
 			    mpihelp_lshift(res->d, rp, rsize, mod_shift_cnt);
-			if (rp_flag) {
-				mpi_free_limb_space(rp);
-				rp_flag = false;
-			}
 			rp = res->d;
 			if (carry_limb) {
 				rp[rsize] = carry_limb;
@@ -303,10 +283,6 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 			}
 		} else {
 			MPN_COPY(res->d, rp, rsize);
-			if (rp_flag) {
-				mpi_free_limb_space(rp);
-				rp_flag = false;
-			}
 			rp = res->d;
 		}
 
@@ -321,7 +297,6 @@ int mpi_powm(MPI res, MPI base, MPI exp, MPI mod)
 		MPN_NORMALIZE(rp, rsize);
 
 		mpihelp_release_karatsuba_ctx(&karactx);
-		mpi_free_limb_space(xp);
 	}
 
 	if (negative_result && rsize) {
@@ -350,8 +325,6 @@ enomem:
 		mpi_free_limb_space(xp_marker);
 	if (tspace)
 		mpi_free_limb_space(tspace);
-	if (rp_flag)
-		mpi_free_limb_space(rp);
 	return rc;
 }
 EXPORT_SYMBOL_GPL(mpi_powm);

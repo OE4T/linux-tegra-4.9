@@ -89,7 +89,7 @@
 								TEGRA194_MAIN_GPIO(L, 1)
 								GPIO_ACTIVE_LOW>;
 					vddio-pex-ctl-supply = <&p2888_spmic_sd3>;
-					nvidia,num-lanes = <1>;
+					num-lanes = <1>;
 					phys = <&p2u_11>;
 					phy-names = "pcie-p2u-0";
 					nvidia,mods;

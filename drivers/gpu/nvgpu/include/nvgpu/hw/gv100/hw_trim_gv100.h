@@ -196,4 +196,52 @@ static inline u32 trim_sys_nvl_common_clk_alt_switch_finalsel_onesrcclk_f(void)
 {
 	return 0x3U;
 }
+static inline u32 trim_gpc_bcast_fr_clk_cntr_ncgpcclk_cfg_r(void)
+{
+	return 0x00132a70U;
+}
+static inline u32 trim_gpc_bcast_fr_clk_cntr_ncgpcclk_cfg_source_gpcclk_f(void)
+{
+	return 0x10000000U;
+}
+static inline u32 trim_gpc_bcast_fr_clk_cntr_ncgpcclk_cnt0_r(void)
+{
+	return 0x00132a74U;
+}
+static inline u32 trim_gpc_bcast_fr_clk_cntr_ncgpcclk_cnt1_r(void)
+{
+	return 0x00132a78U;
+}
+static inline u32 trim_sys_nafll_fr_clk_cntr_xbarclk_cfg_r(void)
+{
+	return 0x00136470U;
+}
+static inline u32 trim_sys_nafll_fr_clk_cntr_xbarclk_cfg_source_xbarclk_f(void)
+{
+	return 0x10000000U;
+}
+static inline u32 trim_sys_nafll_fr_clk_cntr_xbarclk_cntr0_r(void)
+{
+	return 0x00136474U;
+}
+static inline u32 trim_sys_nafll_fr_clk_cntr_xbarclk_cntr1_r(void)
+{
+	return 0x00136478U;
+}
+static inline u32 trim_sys_fr_clk_cntr_sysclk_cfg_r(void)
+{
+	return 0x0013762cU;
+}
+static inline u32 trim_sys_fr_clk_cntr_sysclk_cfg_source_sysclk_f(void)
+{
+	return 0x20000000U;
+}
+static inline u32 trim_sys_fr_clk_cntr_sysclk_cntr0_r(void)
+{
+	return 0x00137630U;
+}
+static inline u32 trim_sys_fr_clk_cntr_sysclk_cntr1_r(void)
+{
+	return 0x00137634U;
+}
 #endif

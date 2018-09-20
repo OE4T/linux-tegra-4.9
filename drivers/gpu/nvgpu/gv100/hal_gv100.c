@@ -66,13 +66,11 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 
-#include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
 #include "gp106/sec2_gp106.h"
 #include "gp106/bios_gp106.h"
-#include "gp106/clk_gp106.h"
 #include "gp106/flcn_gp106.h"
 
 #include "gp10b/gr_gp10b.h"
@@ -107,6 +105,7 @@
 #include "gv100/nvlink_gv100.h"
 #include "gv100/regops_gv100.h"
 #include "gv100/perf_gv100.h"
+#include "gv100/clk_gv100.h"
 
 #include <nvgpu/ptimer.h>
 #include <nvgpu/debug.h>
@@ -768,11 +767,11 @@ static const struct gpu_ops gv100_ops = {
 		.secured_pmu_start = gm20b_secured_pmu_start,
 	},
 	.clk = {
-		.init_clk_support = gp106_init_clk_support,
-		.get_crystal_clk_hz = gp106_crystal_clk_hz,
-		.get_rate_cntr = gp106_get_rate_cntr,
-		.measure_freq = gp106_clk_measure_freq,
-		.suspend_clk_support = gp106_suspend_clk_support,
+		.init_clk_support = gv100_init_clk_support,
+		.get_crystal_clk_hz = gv100_crystal_clk_hz,
+		.get_rate_cntr = gv100_get_rate_cntr,
+		.measure_freq = gv100_clk_measure_freq,
+		.suspend_clk_support = gv100_suspend_clk_support,
 		.perf_pmu_vfe_load = gv100_perf_pmu_vfe_load,
 	},
 	.clk_arb = {

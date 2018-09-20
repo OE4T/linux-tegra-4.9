@@ -113,7 +113,8 @@ nvgpu-$(CONFIG_DEBUG_FS) += \
 	os/linux/debug_therm_gp106.o \
 	os/linux/debug_bios.o \
 	os/linux/debug_ltc.o \
-	os/linux/debug_xve.o
+	os/linux/debug_xve.o \
+	os/linux/debug_clk_gv100.o
 
 ifeq ($(CONFIG_NVGPU_TRACK_MEM_USAGE),y)
 nvgpu-$(CONFIG_DEBUG_FS) += \
@@ -363,4 +364,5 @@ nvgpu-y += \
 	therm/thrmchannel.o \
 	therm/thrmpmu.o \
 	lpwr/rppg.o \
-	lpwr/lpwr.o
+	lpwr/lpwr.o \
+	gv100/clk_gv100.o

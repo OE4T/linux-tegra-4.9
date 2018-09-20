@@ -217,4 +217,5 @@ srcs :=	os/posix/nvgpu.c \
 	gv100/hal_gv100.c \
 	gv100/pmu_gv100.c \
 	gv100/perf_gv100.c \
-	gv100/gsp_gv100.c
+	gv100/gsp_gv100.c \
+	gv100/clk_gv100.c

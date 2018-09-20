@@ -1112,7 +1112,7 @@ static int __init tegra194_cpufreq_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
-	read_counters_wq = create_workqueue("read_counters_wq");
+	read_counters_wq = alloc_workqueue("read_counters_wq", __WQ_LEGACY, 1);
 	if (!read_counters_wq) {
 		pr_err("tegra19x-cpufreq: fail to create_workqueue\n");
 		goto err_free_res;

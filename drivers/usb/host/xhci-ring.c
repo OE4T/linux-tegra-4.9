@@ -1647,6 +1647,7 @@ static void handle_port_status(struct xhci_hcd *xhci,
 			set_bit(faked_port_index, &bus_state->resuming_ports);
 			mod_timer(&hcd->rh_timer,
 				  bus_state->resume_done[faked_port_index]);
+			usb_hcd_start_port_resume(&hcd->self, faked_port_index);
 			/* Do the rest in GetPortStatus */
 		}
 	}

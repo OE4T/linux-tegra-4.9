@@ -1,7 +1,7 @@
 /*
  * isc manager.
  *
- * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2018, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -944,6 +944,29 @@ static char *isc_mgr_devnode(struct device *dev, umode_t *mode)
 	return NULL;
 }
 
+static int isc_mgr_suspend(struct device *dev)
+{
+	/* Nothing required for isc-mgr suspend*/
+	return 0;
+}
+
+static int isc_mgr_resume(struct device *dev)
+{
+	struct pwm_device *pwm;
+	/* Reconfigure PWM as done during boot time */
+	pwm = devm_pwm_get(dev, NULL);
+	if (!IS_ERR(pwm))
+		dev_info(dev, "%s Resume successful\n", __func__);
+	return 0;
+}
+
+static const struct dev_pm_ops isc_mgr_pm_ops = {
+	.suspend = isc_mgr_suspend,
+	.resume = isc_mgr_resume,
+	.runtime_suspend = isc_mgr_suspend,
+	.runtime_resume = isc_mgr_resume,
+};
+
 static int isc_mgr_probe(struct platform_device *pdev)
 {
 	int err = 0;
@@ -1142,7 +1165,8 @@ static struct platform_driver isc_mgr_driver = {
 	.driver = {
 		.name = "isc-mgr",
 		.owner = THIS_MODULE,
-		.of_match_table = of_match_ptr(isc_mgr_of_match)
+		.of_match_table = of_match_ptr(isc_mgr_of_match),
+		.pm = &isc_mgr_pm_ops,
 	},
 	.probe = isc_mgr_probe,
 	.remove = isc_mgr_remove,

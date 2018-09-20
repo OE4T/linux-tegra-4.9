@@ -24,6 +24,16 @@
 
 #include "isc-pwm-priv.h"
 
+/*
+ * Below values are configured during suspend.
+ * Invalid values are chosen so that PWM
+ * configuration in resume works fine.
+ * Period is chosen as least non-zero value
+ * and duty-ratio zero.
+ */
+#define PWM_SUSPEND_PERIOD		1
+#define PWM_SUSPEND_DUTY_RATIO		0
+
 static const struct of_device_id isc_pwm_of_match[] = {
 	{ .compatible = "nvidia, isc-pwm", .data = NULL },
 	{},
@@ -194,11 +204,35 @@ static int isc_pwm_remove(struct platform_device *pdev)
 	return pwmchip_remove(&info->chip);
 }
 
+static int isc_pwm_suspend(struct device *dev)
+{
+	int err = 0;
+	struct isc_pwm_info *info = dev_get_drvdata(dev);
+
+	pwm_disable(info->pwm);
+	err = pwm_config(info->pwm, PWM_SUSPEND_DUTY_RATIO, PWM_SUSPEND_PERIOD);
+	return 0;
+}
+
+static int isc_pwm_resume(struct device *dev)
+{
+	/* Do nothing */
+	return 0;
+}
+
+static const struct dev_pm_ops isc_pwm_pm_ops = {
+	.suspend = isc_pwm_suspend,
+	.resume = isc_pwm_resume,
+	.runtime_suspend = isc_pwm_suspend,
+	.runtime_resume = isc_pwm_resume,
+};
+
 static struct platform_driver isc_pwm_driver = {
 	.driver = {
 		.name = "isc-pwm",
 		.owner = THIS_MODULE,
 		.of_match_table = isc_pwm_of_match,
+		.pm = &isc_pwm_pm_ops,
 	},
 	.probe = isc_pwm_probe,
 	.remove = isc_pwm_remove,

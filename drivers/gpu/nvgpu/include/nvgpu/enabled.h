@@ -174,10 +174,13 @@ struct gk20a;
 /* SEC2 RTOS support*/
 #define NVGPU_SUPPORT_SEC2_RTOS		69
 
+/* NVGPU_GPU_IOCTL_GET_GPU_LOAD is available */
+#define NVGPU_SUPPORT_GET_GPU_LOAD	70
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			70
+#define NVGPU_MAX_ENABLED_BITS			71
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

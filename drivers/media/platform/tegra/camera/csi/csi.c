@@ -456,7 +456,6 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 {
 	int i;
 	struct tegra_csi_channel *chan = to_csi_chan(sd);
-	struct tegra_channel *vi_chan = v4l2_get_subdev_hostdata(sd);
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
@@ -467,10 +466,7 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 					ARRAY_SIZE(tegra_csi_tpg_sizes));
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
-		const struct tegra_video_format *format =
-		      tegra_core_get_format_by_code(vi_chan,
-				tegra_csi_tpg_fmts[i].code, 0);
-		if (format && format->fourcc == fse->code)
+		if (tegra_csi_tpg_fmts[i].code == fse->code)
 			break;
 	}
 	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
@@ -520,7 +516,7 @@ static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 	/* One resolution just one framerate */
 	if (fie->index > 0)
 		return -EINVAL;
-	format = tegra_core_get_format_by_fourcc(vi_chan, fie->code);
+	format = tegra_core_get_format_by_code(vi_chan, fie->code, 0);
 	if (!format)
 		return -EINVAL;
 	index = tegra_csi_get_fmtindex(chan, fie->width, fie->height,

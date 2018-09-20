@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device Driver Core Helpers
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -79,6 +79,26 @@ int tegra_core_get_idx_by_code(struct tegra_channel *chan,
 	for (i = offset; i < chan->num_video_formats; ++i) {
 		if (chan->video_formats[i]->code == code)
 			return i;
+	}
+
+	return -1;
+}
+
+/**
+ * tegra_core_get_code_by_fourcc - Retrieve media bus code for fourcc
+ * @fourcc: the format 4CC
+ *
+ * Return: media bus code format information structure corresponding to the
+ * given V4L2 fourcc @fourcc, or -1 if no corresponding format found.
+ */
+int tegra_core_get_code_by_fourcc(struct tegra_channel *chan,
+		unsigned int fourcc, unsigned int offset)
+{
+	unsigned int i;
+
+	for (i = offset; i < chan->num_video_formats; ++i) {
+		if (chan->video_formats[i]->fourcc == fourcc)
+			return chan->video_formats[i]->code;
 	}
 
 	return -1;

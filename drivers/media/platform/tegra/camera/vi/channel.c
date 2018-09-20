@@ -910,11 +910,14 @@ tegra_channel_enum_framesizes(struct file *file, void *fh,
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
-	struct v4l2_subdev_frame_size_enum fse = {
-		.index = sizes->index,
-		.code = sizes->pixel_format,
-	};
+	struct v4l2_subdev_frame_size_enum fse;
 	int ret = 0;
+
+	/* Convert v4l2 pixel format (fourcc) into media bus format code */
+	fse.code = tegra_core_get_code_by_fourcc(chan, sizes->pixel_format, 0);
+	if (fse.code < 0)
+		return -EINVAL;
+	fse.index = sizes->index;
 
 	ret = v4l2_subdev_call(sd, pad, enum_frame_size, NULL, &fse);
 
@@ -934,13 +937,17 @@ tegra_channel_enum_frameintervals(struct file *file, void *fh,
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
-	struct v4l2_subdev_frame_interval_enum fie = {
-		.index = intervals->index,
-		.code = intervals->pixel_format,
-		.width = intervals->width,
-		.height = intervals->height,
-	};
+	struct v4l2_subdev_frame_interval_enum fie;
 	int ret = 0;
+
+	/* Convert v4l2 pixel format (fourcc) into media bus format code */
+	fie.code = tegra_core_get_code_by_fourcc(
+		chan, intervals->pixel_format, 0);
+	if (fie.code < 0)
+		return -EINVAL;
+	fie.index = intervals->index;
+	fie.width = intervals->width;
+	fie.height = intervals->height;
 
 	ret = v4l2_subdev_call(sd, pad, enum_frame_interval, NULL, &fie);
 

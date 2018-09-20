@@ -352,6 +352,8 @@ u32 tegra_core_get_fourcc_by_idx(struct tegra_channel *chan,
 		unsigned int index);
 int tegra_core_get_idx_by_code(struct tegra_channel *chan,
 		unsigned int code, unsigned offset);
+int tegra_core_get_code_by_fourcc(struct tegra_channel *chan,
+		unsigned int fourcc, unsigned int offset);
 const struct tegra_video_format *tegra_core_get_format_by_code(
 		struct tegra_channel *chan,
 		unsigned int code, unsigned offset);

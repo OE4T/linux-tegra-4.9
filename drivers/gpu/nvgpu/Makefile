@@ -176,6 +176,9 @@ nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
 	os/linux/cde_gm20b.o \
 	os/linux/cde_gp10b.o
 
+nvgpu-$(CONFIG_GK20A_RDMA) += \
+        os/linux/nvidia_p2p.o
+
 ifeq ($(CONFIG_DEBUG_FS),y)
 nvgpu-$(CONFIG_NVGPU_SUPPORT_CDE) += \
 	os/linux/debug_cde.o

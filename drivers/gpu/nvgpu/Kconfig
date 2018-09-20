@@ -40,6 +40,13 @@ config GK20A_PM_QOS
 	  Enable support to pass PM_QOS constraints to devfreq based
 	  scaling.
 
+config GK20A_RDMA
+        bool "Support GK20A RDMA"
+        depends on GK20A && MMU_NOTIFIER
+        default n
+        help
+          Say Y here to enable GK20A RDMA features.
+
 config NVGPU_TRACK_MEM_USAGE
         bool "Track the usage of system memory in nvgpu"
 	depends on GK20A

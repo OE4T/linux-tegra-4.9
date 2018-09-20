@@ -3499,6 +3499,11 @@ static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 	if (pcie->is_safety_platform)
 		clk_disable_unprepare(pcie->core_clk_m);
 
+	/* Disable interrupts */
+	disable_irq(pcie->pci.pp.irq);
+	if (IS_ENABLED(CONFIG_PCI_MSI))
+		disable_irq(pcie->pci.pp.msi_irq);
+
 	tegra_pcie_dw_pme_turnoff(pcie);
 
 	reset_control_assert(pcie->core_rst);

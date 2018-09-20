@@ -1313,7 +1313,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 
 	pcie->dev = &pdev->dev;
 
-	ret = of_property_read_u32(np, "nvidia,num-lanes", &pcie->num_lanes);
+	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
 	if (ret < 0) {
 		dev_err(pcie->dev, "fail to read num-lanes: %d\n", ret);
 		return ret;

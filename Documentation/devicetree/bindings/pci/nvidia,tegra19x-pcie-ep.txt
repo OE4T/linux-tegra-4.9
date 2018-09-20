@@ -56,7 +56,7 @@ Required properties:
       0x0 - C0
       0x4 - C4
       0x5 - C5
-- nvidia,num-lanes: Must contain an entry to represent number of lanes
+- num-lanes: Must contain an entry to represent number of lanes
   controller is given to get the link up
 
 Optional properties:

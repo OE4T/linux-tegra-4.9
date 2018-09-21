@@ -20,7 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 #include <nvgpu/clk_arb.h>
 
 #include "clk_arb_gp10b.h"
@@ -407,12 +407,10 @@ void gp10b_clk_arb_cleanup(struct nvgpu_clk_arb *arb)
 	int index;
 
 	nvgpu_kfree(g, arb->gpc2clk_f_points);
-	nvgpu_kfree(g, arb->mclk_f_points);
 
 	for (index = 0; index < 2; index++) {
 		nvgpu_kfree(g,
 			arb->vf_table_pool[index].gpc2clk_points);
-		nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
 	}
 
 	nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);

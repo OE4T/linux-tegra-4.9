@@ -32,28 +32,6 @@ static unsigned int verbose;
 module_param(verbose, int, 0644);
 MODULE_PARM_DESC(verbose, "Set Verbosity level");
 
-#define FE_ERROR				0
-#define FE_NOTICE				1
-#define FE_INFO					2
-#define FE_DEBUG				3
-#define FE_DEBUGREG				4
-
-#define dprintk(__y, __z, format, arg...) do {						\
-	if (__z) {									\
-		if	((verbose > FE_ERROR) && (verbose > __y))			\
-			printk(KERN_ERR "%s: " format "\n", __func__ , ##arg);		\
-		else if	((verbose > FE_NOTICE) && (verbose > __y))			\
-			printk(KERN_NOTICE "%s: " format "\n", __func__ , ##arg);	\
-		else if ((verbose > FE_INFO) && (verbose > __y))			\
-			printk(KERN_INFO "%s: " format "\n", __func__ , ##arg);		\
-		else if ((verbose > FE_DEBUG) && (verbose > __y))			\
-			printk(KERN_DEBUG "%s: " format "\n", __func__ , ##arg);	\
-	} else {									\
-		if (verbose > __y)							\
-			printk(format, ##arg);						\
-	}										\
-} while (0)
-
 #define TDA18272_SETFIELD(mask, bitf, val)						\
 	(mask = (mask & (~(((1 << TDA18272_WIDTH_##bitf) - 1) <<			\
 				  TDA18272_OFFST_##bitf))) | 				\
@@ -62,7 +40,6 @@ MODULE_PARM_DESC(verbose, "Set Verbosity level");
 #define TDA18272_GETFIELD(bitf, val)							\
 	((val >> TDA18272_OFFST_##bitf) & 						\
 	((1 << TDA18272_WIDTH_##bitf) - 1))
-
 
 enum tda18272_lpf {
 	TDA18272_LPF_6MHz	= 0,
@@ -765,22 +742,27 @@ static int tda18272_rd_regs(struct tda18272_state *tda18272, u8 reg, u8 *data, i
 		{ .addr = config->addr, .flags = I2C_M_RD, .buf = data, .len = count }
 	};
 
-	BUG_ON(count >= 255);
+	if (count >= 255) {
+		dev_err(&tda18272->i2c->dev,
+			"I2C read transfer message length error, count: %d\n",
+			count);
+		return -EINVAL;
+	}
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 1);
 
 	ret = i2c_transfer(tda18272->i2c, msg, 2);
-	if (ret != 2) {
-		dprintk(FE_ERROR, 1, "I/O Error");
-		ret = -EREMOTEIO;
-	} else {
-		ret = 0;
-	}
 
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 0);
 
-	return ret;
+	if (ret != 2) {
+		dev_err(&tda18272->i2c->dev, "I2C read transfer error: %d\n",
+			ret);
+		return -EREMOTEIO;
+	}
+
+	return 0;
 }
 
 static int tda18272_wr_regs(struct tda18272_state *tda18272, u8 start, u8 *data, u8 count)
@@ -788,12 +770,25 @@ static int tda18272_wr_regs(struct tda18272_state *tda18272, u8 start, u8 *data,
 	int ret;
 	const struct tda18272_config *config	= tda18272->config;
 	struct dvb_frontend *fe			= tda18272->fe;
+	struct device *dev			= &tda18272->i2c->dev;
 	u8 buf[0x45];
-	struct i2c_msg msg = { .addr = config->addr, .flags = 0, .buf = buf, .len = count + 1 };
+	struct i2c_msg msg = {
+		.addr = config->addr,
+		.flags = 0,
+		.buf = buf,
+		.len = count + 1 };
 
-	BUG_ON(count >= 0x44);
-	BUG_ON(start >= 0x43);
-	BUG_ON(start + count > 0x44);
+	if (start >= 0x43)  {
+		dev_err(dev, "I2C write start position error: %u\n", start);
+		return -EINVAL;
+	}
+
+	if ((count >= 0x44) || (start + count > 0x44)) {
+		dev_err(dev,
+			"I2C write message length error, start: %u count: %u\n",
+			start, count);
+		return -EINVAL;
+	}
 
 	buf[0] = start;
 	memcpy(&buf[1], data, count);
@@ -801,52 +796,48 @@ static int tda18272_wr_regs(struct tda18272_state *tda18272, u8 start, u8 *data,
 		fe->ops.i2c_gate_ctrl(fe, 1);
 
 	ret = i2c_transfer(tda18272->i2c, &msg, 1);
-	if (ret != 1) {
-		dprintk(FE_ERROR, 1, "I/O Error");
-		ret = -EREMOTEIO;
-	} else {
-		ret = 0;
-	}
 
 	if (fe->ops.i2c_gate_ctrl)
 		fe->ops.i2c_gate_ctrl(fe, 0);
 
-	return ret;
+	if (ret != 1) {
+		dev_err(dev, "I2C write transfer error: %d\n", ret);
+		return -EREMOTEIO;
+	}
+
+	return 0;
 }
 
-static int tda18272_wr(struct tda18272_state *tda18272, u8 reg, u8 data)
+static int tda18272_wr(struct tda18272_state *tda18272, u8 reg)
 {
-	return tda18272_wr_regs(tda18272, reg, &data, 1);
+	return tda18272_wr_regs(tda18272, reg, &tda18272->regs[reg], 1);
 }
 
-static int tda18272_rd(struct tda18272_state *tda18272, u8 reg, u8 *data)
+static int tda18272_rd(struct tda18272_state *tda18272, u8 reg)
 {
-	return tda18272_rd_regs(tda18272, reg, data, 1);
+	return tda18272_rd_regs(tda18272, reg, &tda18272->regs[reg], 1);
 }
 
 static int tda18272_cal_wait(struct tda18272_state *tda18272)
 {
 	int ret = 0;
-	u8 xtal_cal, count = 20;
+	u8 xtal_cal, count;
 
-	while (count > 0) {
-		ret = tda18272_rd(tda18272, TDA18272_IRQ_STATUS, &tda18272->regs[TDA18272_IRQ_STATUS]);
-		xtal_cal = TDA18272_GETFIELD(IRQ_STATUS_XTALCAL_STATUS, tda18272->regs[TDA18272_IRQ_STATUS]);
+	for (count = 20; count > 0; count--) {
+		ret = tda18272_rd(tda18272, TDA18272_IRQ_STATUS);
 		if (ret)
 			break;
-
+		/* xtal_cal status ready */
+		xtal_cal = TDA18272_GETFIELD(IRQ_STATUS_XTALCAL_STATUS,
+			tda18272->regs[TDA18272_IRQ_STATUS]);
 		if (xtal_cal)
-			break;
-
+			return 0;
+		/* Otherwise, retry */
 		msleep(5);
-		--count;
-		if (!count) {
-			ret = -1;
-			break;
-		}
 	}
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
-	return ret;
+
+	dev_err(&tda18272->i2c->dev, "ret=%d\n", ret);
+	return -1;
 }
 
 enum tda18272_power {
@@ -860,54 +851,70 @@ static int tda18272_pstate(struct tda18272_state *tda18272, enum tda18272_power 
 {
 	int ret;
 
-	ret = tda18272_rd_regs(tda18272, TDA18272_POWERSTATE_BYTE_2, &tda18272->regs[TDA18272_POWERSTATE_BYTE_2], 15);
+	ret = tda18272_rd_regs(tda18272, TDA18272_POWERSTATE_BYTE_2,
+		&tda18272->regs[TDA18272_POWERSTATE_BYTE_2], 15);
 	if (ret)
 		goto err;
 
 	if (pstate != TDA18272_NORMAL) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0);
-		ret = tda18272_wr(tda18272, TDA18272_REFERENCE, tda18272->regs[TDA18272_REFERENCE]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+			REFERENCE_DIGITAL_CLOCK, 0);
+		ret = tda18272_wr(tda18272, TDA18272_REFERENCE);
 		if (ret)
 			goto err;
 	}
 
 	switch (pstate) {
 	case TDA18272_NORMAL:
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM, 0x00);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_PLL, 0x00);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_LNA, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_PLL, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_LNA, 0x00);
 		break;
 	case TDA18272_STDBY_1:
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM, 0x01);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_PLL, 0x00);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_LNA, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_PLL, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_LNA, 0x00);
 		break;
 	case TDA18272_STDBY_2:
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM, 0x01);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_PLL, 0x01);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_LNA, 0x00);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_PLL, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_LNA, 0x00);
 		break;
 	case TDA18272_STDBY:
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM, 0x01);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_PLL, 0x01);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2], POWERSTATE_BYTE_2_SM_LNA, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_PLL, 0x01);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_POWERSTATE_BYTE_2],
+			POWERSTATE_BYTE_2_SM_LNA, 0x01);
 		break;
 	}
-	ret = tda18272_wr(tda18272, TDA18272_POWERSTATE_BYTE_2, tda18272->regs[TDA18272_POWERSTATE_BYTE_2]);
+	ret = tda18272_wr(tda18272, TDA18272_POWERSTATE_BYTE_2);
 	if (ret)
 		goto err;
 
 	if (pstate == TDA18272_NORMAL) {
 		if (tda18272->ms)
-			TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_XTOUT, 0x03);
+			TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+				REFERENCE_XTOUT, 0x03);
 
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x01);
-		ret = tda18272_wr(tda18272, TDA18272_REFERENCE, tda18272->regs[TDA18272_REFERENCE]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+			REFERENCE_DIGITAL_CLOCK, 0x01);
+		ret = tda18272_wr(tda18272, TDA18272_REFERENCE);
 		if (ret)
 			goto err;
 	}
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
@@ -916,14 +923,21 @@ static int tda18272_wait_irq(struct tda18272_state *tda18272, u32 timeout, u32 s
 	int ret;
 	u8 irq_status;
 	u32 count = timeout / step;
+	struct device *dev = &tda18272->i2c->dev;
 
-	BUG_ON(!count);
+	if (!count) {
+		dev_err(dev, "Empty IRQ wait count\n");
+		ret = -EINVAL;
+		goto err;
+	}
+
 	do {
-		ret = tda18272_rd(tda18272, TDA18272_IRQ_STATUS, &tda18272->regs[TDA18272_IRQ_STATUS]);
+		ret = tda18272_rd(tda18272, TDA18272_IRQ_STATUS);
 		if (ret)
 			break;
 
-		if (TDA18272_GETFIELD(IRQ_STATUS_IRQ_STATUS, tda18272->regs[TDA18272_IRQ_STATUS]))
+		if (TDA18272_GETFIELD(IRQ_STATUS_IRQ_STATUS,
+			tda18272->regs[TDA18272_IRQ_STATUS]))
 			break;
 
 		if (status) {
@@ -934,52 +948,65 @@ static int tda18272_wait_irq(struct tda18272_state *tda18272, u32 timeout, u32 s
 		msleep(step);
 		--count;
 		if (!count) {
+			dev_err(dev, "IRQ status read timeout error\n");
 			ret = -1;
 			break;
 		}
 	} while (count);
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+
+err:
+	dev_dbg(dev, "ret=%d\n", ret);
 	return ret;
 }
 
 static int tda18272_reset(struct tda18272_state *tda18272)
 {
 	int ret;
+	u8 data;
+	struct device *dev = &tda18272->i2c->dev;
 
-	ret = tda18272_rd_regs(tda18272, TDA18272_ID_BYTE_1, tda18272->regs, TDA18272_REGMAPSIZ);
+	ret = tda18272_rd_regs(tda18272, TDA18272_ID_BYTE_1,
+		tda18272->regs, TDA18272_REGMAPSIZ);
 	if (ret)
 		goto err;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_POWER_BYTE_2], POWER_BYTE_2_RSSI_CK_SPEED, 0x00);
-	ret = tda18272_wr(tda18272, TDA18272_POWER_BYTE_2, tda18272->regs[TDA18272_POWER_BYTE_2]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_POWER_BYTE_2],
+		POWER_BYTE_2_RSSI_CK_SPEED, 0x00);
+	ret = tda18272_wr(tda18272, TDA18272_POWER_BYTE_2);
 	if (ret)
 		goto err;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_AGC1_DO_STEP, 0x02);
-	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+		AGC1_BYTE_2_AGC1_DO_STEP, 0x02);
+	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 	if (ret)
 		goto err;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_3], RF_FILTER_BYTE_3_AGC2_DO_STEP, 0x01);
-	ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_3, tda18272->regs[TDA18272_RF_FILTER_BYTE_3]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_3],
+		RF_FILTER_BYTE_3_AGC2_DO_STEP, 0x01);
+	ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_3);
 	if (ret)
 		goto err;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1], AGC1_BYTE_1_AGCs_UP_STEP_ASYM, 0x03);
-	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1, tda18272->regs[TDA18272_AGCK_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1],
+		AGC1_BYTE_1_AGCs_UP_STEP_ASYM, 0x03);
+	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1);
 	if (ret)
 		goto err;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1], AGC5_BYTE_1_AGCs_DO_STEP_ASYM, 0x02);
-	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1, tda18272->regs[TDA18272_AGC5_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1],
+		AGC5_BYTE_1_AGCs_DO_STEP_ASYM, 0x02);
+	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1);
 	if (ret)
 		goto err;
-	ret = tda18272_wr(tda18272, TDA18272_IRQ_CLEAR, 0x9f);
+	data = 0x9f;
+	ret = tda18272_wr_regs(tda18272, TDA18272_IRQ_CLEAR, &data, 1);
 	if (ret)
 		goto err;
 	ret = tda18272_pstate(tda18272, TDA18272_NORMAL);
 	if (ret) {
-		dprintk(FE_ERROR, 1, "Power state switch failed, ret=%d", ret);
+		dev_err(dev, "Power state switch failed, ret=%d\n", ret);
 		goto err;
 	}
 	tda18272->regs[TDA18272_MSM_BYTE_1] = 0x38;
 	tda18272->regs[TDA18272_MSM_BYTE_2] = 0x01;
-	ret = tda18272_wr_regs(tda18272, TDA18272_MSM_BYTE_1, &tda18272->regs[TDA18272_MSM_BYTE_1], 2);
+	ret = tda18272_wr_regs(tda18272, TDA18272_MSM_BYTE_1,
+		&tda18272->regs[TDA18272_MSM_BYTE_1], 2);
 	if (ret)
 		goto err;
 
@@ -987,7 +1014,7 @@ static int tda18272_reset(struct tda18272_state *tda18272)
 	if (ret)
 		goto err;
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(dev, "ret=%d\n", ret);
 	return ret;
 }
 
@@ -997,52 +1024,60 @@ static int tda18272_init(struct dvb_frontend *fe)
 	int ret;
 
 	if (tda18272->mode) {
-		dprintk(FE_DEBUG, 1, "Initializing Master ..");
+		dev_dbg(&tda18272->i2c->dev, "Initializing Master ..\n");
 		ret = tda18272_cal_wait(tda18272);
 		if (ret)
 			goto err;
 	} else {
-		dprintk(FE_DEBUG, 1, "Initializing Slave ..");
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_FLO_MAX_BYTE], FLO_MAX_BYTE_FMAX_LO, 0x00);
-		ret = tda18272_wr(tda18272, TDA18272_FLO_MAX_BYTE, tda18272->regs[TDA18272_FLO_MAX_BYTE]);
+		dev_dbg(&tda18272->i2c->dev, "Initializing Slave ..\n");
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_FLO_MAX_BYTE],
+			FLO_MAX_BYTE_FMAX_LO, 0x00);
+
+		ret = tda18272_wr(tda18272, TDA18272_FLO_MAX_BYTE);
 		if (ret)
 			goto err;
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_CP_CURRENT], CP_CURRENT_N_CP_CURRENT, 0x68);
-		ret = tda18272_wr(tda18272, TDA18272_CP_CURRENT, tda18272->regs[TDA18272_CP_CURRENT]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_CP_CURRENT],
+			CP_CURRENT_N_CP_CURRENT, 0x68);
+		ret = tda18272_wr(tda18272, TDA18272_CP_CURRENT);
 	}
 	ret = tda18272_reset(tda18272);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_FLO_MAX_BYTE], FLO_MAX_BYTE_FMAX_LO, 0x0a);
-	ret = tda18272_wr(tda18272, TDA18272_FLO_MAX_BYTE, tda18272->regs[TDA18272_FLO_MAX_BYTE]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_FLO_MAX_BYTE],
+		FLO_MAX_BYTE_FMAX_LO, 0x0a);
+	ret = tda18272_wr(tda18272, TDA18272_FLO_MAX_BYTE);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1], AGC1_BYTE_1_LT_ENABLE, tda18272->lna_top);
-	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1, tda18272->regs[TDA18272_AGC1_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1],
+		AGC1_BYTE_1_LT_ENABLE, tda18272->lna_top);
+	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_PSM_BYTE_1], PSM_BYTE_1_PSM_AGC1, tda18272->psm_agc);
-	ret = tda18272_wr(tda18272, TDA18272_PSM_BYTE_1, tda18272->regs[TDA18272_PSM_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_PSM_BYTE_1],
+		PSM_BYTE_1_PSM_AGC1, tda18272->psm_agc);
+	ret = tda18272_wr(tda18272, TDA18272_PSM_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1], AGC1_BYTE_1_AGC1_6_15DB, tda18272->agc1);
-	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1, tda18272->regs[TDA18272_AGC1_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1],
+		AGC1_BYTE_1_AGC1_6_15DB, tda18272->agc1);
+	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1);
 	if (ret)
 		goto err;
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
 static int tda18272_clear_irq(struct tda18272_state *tda18272, u8 status)
 {
 	tda18272->regs[TDA18272_IRQ_CLEAR] = status & 0x1f;
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRQ_CLEAR], IRQ_CLEAR_IRQ_CLEAR, 0x80);
-	return tda18272_wr(tda18272, TDA18272_IRQ_CLEAR, tda18272->regs[TDA18272_IRQ_CLEAR]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRQ_CLEAR],
+		IRQ_CLEAR_IRQ_CLEAR, 0x80);
+	return tda18272_wr(tda18272, TDA18272_IRQ_CLEAR);
 }
 
 static int tda18272_set_rf(struct tda18272_state *tda18272, u32 freq)
@@ -1062,13 +1097,15 @@ static int tda18272_set_rf(struct tda18272_state *tda18272, u32 freq)
 	tda18272->regs[TDA18272_RF_FREQUENCY_BYTE_1] = (u8) ((tmp & 0xff0000) >> 16);
 	tda18272->regs[TDA18272_RF_FREQUENCY_BYTE_2] = (u8) ((tmp & 0x00ff00) >>  8);
 	tda18272->regs[TDA18272_RF_FREQUENCY_BYTE_3] = (u8)  (tmp & 0x0000ff);
-	ret = tda18272_wr_regs(tda18272, TDA18272_RF_FREQUENCY_BYTE_1, &tda18272->regs[TDA18272_RF_FREQUENCY_BYTE_1], 3);
+	ret = tda18272_wr_regs(tda18272, TDA18272_RF_FREQUENCY_BYTE_1,
+		&tda18272->regs[TDA18272_RF_FREQUENCY_BYTE_1], 3);
 	if (ret)
 		goto err;
 
 	tda18272->regs[TDA18272_MSM_BYTE_1] = 0x41;
 	tda18272->regs[TDA18272_MSM_BYTE_2] = 0x01;
-	ret = tda18272_wr_regs(tda18272, TDA18272_MSM_BYTE_1, &tda18272->regs[TDA18272_MSM_BYTE_1], 2);
+	ret = tda18272_wr_regs(tda18272, TDA18272_MSM_BYTE_1,
+		&tda18272->regs[TDA18272_MSM_BYTE_1], 2);
 	if (ret)
 		goto err;
 
@@ -1076,7 +1113,7 @@ static int tda18272_set_rf(struct tda18272_state *tda18272, u32 freq)
 	if (ret)
 		goto err;
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
@@ -1093,137 +1130,163 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 
 	const struct tda18272_coeff *coe = tda18272->coe;
 
-	dprintk(FE_DEBUG, 1, "set freq=%d", frequency);
+	dev_dbg(&tda18272->i2c->dev, "set freq=%d\n", frequency);
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1], IF_BYTE_1_LP_FC, coe->lpf); /* LPF */
-	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1, tda18272->regs[TDA18272_IF_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1],
+		IF_BYTE_1_LP_FC, coe->lpf); /* LPF */
+	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1], IF_BYTE_1_LP_FC_OFFSET, coe->lpf_off);
-	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1, tda18272->regs[TDA18272_IF_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1],
+		IF_BYTE_1_LP_FC_OFFSET, coe->lpf_off);
+	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IFAGC], IFAGC_IF_LEVEL, coe->if_gain);
-	ret = tda18272_wr(tda18272, TDA18272_IFAGC, tda18272->regs[TDA18272_IFAGC]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IFAGC],
+		IFAGC_IF_LEVEL, coe->if_gain);
+	ret = tda18272_wr(tda18272, TDA18272_IFAGC);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1], IF_BYTE_1_IF_NOTCH, coe->if_notch);
-	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1, tda18272->regs[TDA18272_IF_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1],
+		IF_BYTE_1_IF_NOTCH, coe->if_notch);
+	ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1);
 	if (ret)
 		goto err;
 
 	if (coe->if_hpf == TDA18272_HPF_DISABLED) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2], IRMIXER_BYTE_2_HI_PASS, 0x0);
-		ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2, tda18272->regs[TDA18272_IRMIXER_BYTE_2]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2],
+			IRMIXER_BYTE_2_HI_PASS, 0x0);
+		ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2);
 		if (ret)
 			goto err;
 	} else {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2], IRMIXER_BYTE_2_HI_PASS, 0x1);
-		ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2, tda18272->regs[TDA18272_IRMIXER_BYTE_2]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2],
+			IRMIXER_BYTE_2_HI_PASS, 0x1);
+		ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2);
 		if (ret)
 			goto err;
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1], IF_BYTE_1_IF_HP_FC, (coe->if_hpf - 1));
-		ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1, tda18272->regs[TDA18272_IF_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_BYTE_1],
+			IF_BYTE_1_IF_HP_FC, (coe->if_hpf - 1));
+		ret = tda18272_wr(tda18272, TDA18272_IF_BYTE_1);
 		if (ret)
 			goto err;
 	}
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2], IRMIXER_BYTE_2_DC_NOTCH, coe->dc_notch);
-	ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2, tda18272->regs[TDA18272_IRMIXER_BYTE_2]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_2],
+		IRMIXER_BYTE_2_DC_NOTCH, coe->dc_notch);
+	ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_2);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1], AGC1_BYTE_1_AGC1_TOP, coe->lna_top);
-	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1, tda18272->regs[TDA18272_AGC1_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_1],
+		AGC1_BYTE_1_AGC1_TOP, coe->lna_top);
+	ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC2_BYTE_1], AGC2_BYTE_1_AGC2_TOP, coe->rfatt_top);
-	ret = tda18272_wr(tda18272, TDA18272_AGC2_BYTE_1, tda18272->regs[TDA18272_AGC2_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC2_BYTE_1],
+		AGC2_BYTE_1_AGC2_TOP, coe->rfatt_top);
+	ret = tda18272_wr(tda18272, TDA18272_AGC2_BYTE_1);
 	if (ret)
 		goto err;
 
 	if (frequency < TDA18272_AGC3_RF_AGC_TOP_FREQ_LIM)
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_AGC3_TOP, coe->loband_rfagc_top);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+			RFAGC_BYTE_1_AGC3_TOP, coe->loband_rfagc_top);
 	else
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_AGC3_TOP, coe->hiband_rfagc_top);
-	ret= tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+			RFAGC_BYTE_1_AGC3_TOP, coe->hiband_rfagc_top);
+	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_1], IRMIXER_BYTE_1_AGC4_TOP, coe->irmix_top);
-	ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_1, tda18272->regs[TDA18272_IRMIXER_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IRMIXER_BYTE_1],
+		IRMIXER_BYTE_1_AGC4_TOP, coe->irmix_top);
+	ret = tda18272_wr(tda18272, TDA18272_IRMIXER_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1], AGC5_BYTE_1_AGC5_TOP, coe->ifagc_top);
-	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1, tda18272->regs[TDA18272_AGC5_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1],
+		AGC5_BYTE_1_AGC5_TOP, coe->ifagc_top);
+	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_PD_RFAGC_ADAPT, coe->agc3_adapt);
-	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+		RFAGC_BYTE_1_PD_RFAGC_ADAPT, coe->agc3_adapt);
+	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_RFAGC_ADAPT_TOP, coe->agc3_adapt_top);
-	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+		RFAGC_BYTE_1_RFAGC_ADAPT_TOP, coe->agc3_adapt_top);
+	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_RF_ATTEN_3DB, coe->att3db);
-	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+		RFAGC_BYTE_1_RF_ATTEN_3DB, coe->att3db);
+	ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1], AGC5_BYTE_1_AGC5_HPF, coe->det_hpf);
-	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1, tda18272->regs[TDA18272_AGC5_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC5_BYTE_1],
+		AGC5_BYTE_1_AGC5_HPF, coe->det_hpf);
+	ret = tda18272_wr(tda18272, TDA18272_AGC5_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1], AGCK_BYTE_1_AGCK_MODE, coe->gsk & 0x03);
-	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1, tda18272->regs[TDA18272_AGCK_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1],
+		AGCK_BYTE_1_AGCK_MODE, coe->gsk & 0x03);
+	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1], AGCK_BYTE_1_AGCK_STEP, (coe->gsk & 0x0c) >> 2);
-	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1, tda18272->regs[TDA18272_AGCK_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_AGCK_BYTE_1],
+		AGCK_BYTE_1_AGCK_STEP, (coe->gsk & 0x0c) >> 2);
+	ret = tda18272_wr(tda18272, TDA18272_AGCK_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_PSM_BYTE_1], PSM_BYTE_1_PSM_STOB, coe->filter);
-	ret = tda18272_wr(tda18272, TDA18272_PSM_BYTE_1, tda18272->regs[TDA18272_PSM_BYTE_1]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_PSM_BYTE_1],
+		PSM_BYTE_1_PSM_STOB, coe->filter);
+	ret = tda18272_wr(tda18272, TDA18272_PSM_BYTE_1);
 	if (ret)
 		goto err;
 
-	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_FREQUENCY], IF_FREQUENCY_IF_FREQ, (coe->if_val - coe->cf_off) / 50000);
-	ret = tda18272_wr(tda18272, TDA18272_IF_FREQUENCY, tda18272->regs[TDA18272_IF_FREQUENCY]);
+	TDA18272_SETFIELD(tda18272->regs[TDA18272_IF_FREQUENCY],
+		IF_FREQUENCY_IF_FREQ, (coe->if_val - coe->cf_off) / 50000);
+	ret = tda18272_wr(tda18272, TDA18272_IF_FREQUENCY);
 	if (ret)
 		goto err;
 
 	if (coe->ltosto_immune && tda18272->mode) {
-		ret = tda18272_rd(tda18272, TDA18272_RF_AGC_GAIN_BYTE_1, &tda18272->regs[TDA18272_RF_AGC_GAIN_BYTE_1]);
-		if (ret)
-			goto err;
-		rffilt_gv = TDA18272_GETFIELD(RF_AGC_GAIN_BYTE_1_RF_FILTER_GAIN, tda18272->regs[TDA18272_RF_AGC_GAIN_BYTE_1]);
-
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1], RF_FILTER_BYTE_1_RF_FILTER_GV, rffilt_gv);
-		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1, tda18272->regs[TDA18272_RF_FILTER_BYTE_1]);
+		ret = tda18272_rd(tda18272, TDA18272_RF_AGC_GAIN_BYTE_1);
 		if (ret)
 			goto err;
 
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1], RF_FILTER_BYTE_1_FORCE_AGC2_GAIN, 0x1);
-		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1, tda18272->regs[TDA18272_RF_FILTER_BYTE_1]);
+		rffilt_gv = TDA18272_GETFIELD(RF_AGC_GAIN_BYTE_1_RF_FILTER_GAIN,
+			tda18272->regs[TDA18272_RF_AGC_GAIN_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1],
+			RF_FILTER_BYTE_1_RF_FILTER_GV, rffilt_gv);
+		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1);
+		if (ret)
+			goto err;
+
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1],
+			RF_FILTER_BYTE_1_FORCE_AGC2_GAIN, 0x1);
+		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1);
 		if (ret)
 			goto err;
 
 		if (rffilt_gv) {
 			do {
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1], RF_FILTER_BYTE_1_RF_FILTER_GV, (rffilt_gv - 1));
-				ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1, tda18272->regs[TDA18272_RF_FILTER_BYTE_1]);
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1],
+					RF_FILTER_BYTE_1_RF_FILTER_GV, (rffilt_gv - 1));
+				ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1);
 				if (ret)
 					goto err;
 
@@ -1231,8 +1294,9 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 				rffilt_gv -= 1;
 			} while (rffilt_gv > 0);
 		}
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_RF_ATTEN_3DB, 0x01);
-		ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+			RFAGC_BYTE_1_RF_ATTEN_3DB, 0x01);
+		ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 		if (ret)
 			goto err;
 	}
@@ -1241,14 +1305,16 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 		goto err;
 
 	if (coe->ltosto_immune && tda18272->mode) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1], RFAGC_BYTE_1_RF_ATTEN_3DB, 0x00);
-		ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1, tda18272->regs[TDA18272_RFAGC_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RFAGC_BYTE_1],
+			RFAGC_BYTE_1_RF_ATTEN_3DB, 0x00);
+		ret = tda18272_wr(tda18272, TDA18272_RFAGC_BYTE_1);
 		if (ret)
 			goto err;
 
 		msleep(50);
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1], RF_FILTER_BYTE_1_FORCE_AGC2_GAIN, 0x1);
-		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1, tda18272->regs[TDA18272_RF_FILTER_BYTE_1]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_RF_FILTER_BYTE_1],
+			RF_FILTER_BYTE_1_FORCE_AGC2_GAIN, 0x1);
+		ret = tda18272_wr(tda18272, TDA18272_RF_FILTER_BYTE_1);
 		if (ret)
 			goto err;
 	}
@@ -1257,43 +1323,55 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 	delta_l = (frequency - (ratio_l * 16000000));
 	delta_h = ((ratio_h * 16000000) - frequency);
 
-	if (frequency < 72000000 ) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x1);
-	} else if (frequency < 104000000 ) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x0);
+	if (frequency < 72000000) {
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+			REFERENCE_DIGITAL_CLOCK, 0x1);
+	} else if (frequency < 104000000) {
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+			REFERENCE_DIGITAL_CLOCK, 0x0);
 	} else if (frequency <= 120000000) {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x1);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+			REFERENCE_DIGITAL_CLOCK, 0x1);
 	} else {
 		if (delta_l <= delta_h) {
 			if (ratio_l & 0x000001)
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x0);
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+					REFERENCE_DIGITAL_CLOCK, 0x0);
 			else
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x1);
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+					REFERENCE_DIGITAL_CLOCK, 0x1);
 		} else {
 			if (ratio_l & 0x000001)
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x1);
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+					REFERENCE_DIGITAL_CLOCK, 0x1);
 			else
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE], REFERENCE_DIGITAL_CLOCK, 0x0);
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_REFERENCE],
+					REFERENCE_DIGITAL_CLOCK, 0x0);
 		}
 	}
-	ret = tda18272_wr(tda18272, TDA18272_REFERENCE, tda18272->regs[TDA18272_REFERENCE]);
+	ret = tda18272_wr(tda18272, TDA18272_REFERENCE);
 	if (ret)
 		goto err;
 
 	if (coe->agc1_freeze) {
-		tda18272_rd(tda18272, TDA18272_AGC1_BYTE_2, &tda18272->regs[TDA18272_AGC1_BYTE_2]);
-		loop_off = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_LOOP_OFF, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+		tda18272_rd(tda18272, TDA18272_AGC1_BYTE_2);
+		loop_off = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_LOOP_OFF,
+			tda18272->regs[TDA18272_AGC1_BYTE_2]);
 		if (!loop_off) {
-			TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_AGC1_LOOP_OFF, 0x1);
-			ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+			TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+				AGC1_BYTE_2_AGC1_LOOP_OFF, 0x1);
+			ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 			if (ret)
 				goto err;
-			TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_FORCE_AGC1_GAIN, 0x01);
-			ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+			TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+				AGC1_BYTE_2_FORCE_AGC1_GAIN, 0x01);
+			ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 			if (ret)
 				goto err;
 		}
-		if (!TDA18272_GETFIELD(AGC1_BYTE_1_AGC1_6_15DB, tda18272->regs[TDA18272_AGC1_BYTE_1])) {
+
+		if (!TDA18272_GETFIELD(AGC1_BYTE_1_AGC1_6_15DB,
+			tda18272->regs[TDA18272_AGC1_BYTE_1])) {
 			agc1 = 0;
 			agc1_steps = 10;
 		} else {
@@ -1308,22 +1386,36 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 			done		+= 1;
 
 			while ((count++) < 40) {
-				ret = tda18272_rd(tda18272, TDA18272_AGC_DET_OUT, &tda18272->regs[TDA18272_AGC_DET_OUT]);
+				ret = tda18272_rd(tda18272, TDA18272_AGC_DET_OUT);
 				if (ret)
 					goto err;
-				steps_down += (TDA18272_GETFIELD(AGC_DET_OUT_DO_AGC1, tda18272->regs[TDA18272_AGC_DET_OUT]) ? 14 : -1 );
-				steps_up += (TDA18272_GETFIELD(AGC_DET_OUT_UP_AGC1, tda18272->regs[TDA18272_AGC_DET_OUT]) ? 1 : -4 );
+				steps_down += (TDA18272_GETFIELD(AGC_DET_OUT_DO_AGC1,
+					tda18272->regs[TDA18272_AGC_DET_OUT]) ? 14 : -1);
+				steps_up += (TDA18272_GETFIELD(AGC_DET_OUT_UP_AGC1,
+					tda18272->regs[TDA18272_AGC_DET_OUT]) ? 1 : -4);
 				msleep(1);
-			} if (steps_up >= 15 && (TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN, tda18272->regs[TDA18272_AGC1_BYTE_2]) != 9)) {
-				g1 = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN, tda18272->regs[TDA18272_AGC1_BYTE_2]) + 1;
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_AGC1_GAIN, g1);
-				ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+			}
+
+			if (steps_up >= 15 &&
+				(TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN,
+				tda18272->regs[TDA18272_AGC1_BYTE_2]) != 9)) {
+
+				g1 = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN,
+					tda18272->regs[TDA18272_AGC1_BYTE_2]) + 1;
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+					AGC1_BYTE_2_AGC1_GAIN, g1);
+				ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 				if (ret)
 					goto err;
-			} else if (steps_down >= 10 && TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN, tda18272->regs[TDA18272_AGC1_BYTE_2]) != agc1) {
-				g1 = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN, tda18272->regs[TDA18272_AGC1_BYTE_2]) - 1;
-				TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_AGC1_GAIN, g1);
-				ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+			} else if (steps_down >= 10 &&
+				TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN,
+					tda18272->regs[TDA18272_AGC1_BYTE_2]) != agc1) {
+
+				g1 = TDA18272_GETFIELD(AGC1_BYTE_2_AGC1_GAIN,
+					tda18272->regs[TDA18272_AGC1_BYTE_2]) - 1;
+				TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+					AGC1_BYTE_2_AGC1_GAIN, g1);
+				ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 				if (ret)
 					goto err;
 			} else {
@@ -1331,18 +1423,20 @@ static int tda18272_set_frequency(struct tda18272_state *tda18272, u32 frequency
 			}
 		}
 	} else {
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_FORCE_AGC1_GAIN, 0x00);
-		ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+			AGC1_BYTE_2_FORCE_AGC1_GAIN, 0x00);
+		ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 		if (ret)
 			goto err;
 
-		TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2], AGC1_BYTE_2_AGC1_LOOP_OFF, 0x00);
-		ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2, tda18272->regs[TDA18272_AGC1_BYTE_2]);
+		TDA18272_SETFIELD(tda18272->regs[TDA18272_AGC1_BYTE_2],
+			AGC1_BYTE_2_AGC1_LOOP_OFF, 0x00);
+		ret = tda18272_wr(tda18272, TDA18272_AGC1_BYTE_2);
 		if (ret)
 			goto err;
 	}
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
@@ -1350,51 +1444,55 @@ static int tda18272_get_status(struct dvb_frontend *fe, u32 *status)
 {
 	struct tda18272_state *tda18272 = fe->tuner_priv;
 	int ret = 0;
+	u8 data;
 
 	*status = 0;
+	data = 0x01;
 
-	ret = tda18272_wr(tda18272, TDA18272_THERMO_BYTE_2, 0x01);
+	ret = tda18272_wr_regs(tda18272, TDA18272_THERMO_BYTE_2, &data, 1);
 	if (ret)
 		goto err;
 
-	ret = tda18272_rd(tda18272, TDA18272_THERMO_BYTE_1, &tda18272->regs[TDA18272_THERMO_BYTE_1]);
+	ret = tda18272_rd(tda18272, TDA18272_THERMO_BYTE_1);
 	if (ret)
 		goto err;
 
-	ret = tda18272_rd_regs(tda18272, TDA18272_POWERSTATE_BYTE_1, &tda18272->regs[TDA18272_POWERSTATE_BYTE_1], 3);
+	ret = tda18272_rd_regs(tda18272, TDA18272_POWERSTATE_BYTE_1,
+		&tda18272->regs[TDA18272_POWERSTATE_BYTE_1], 3);
 	if (ret)
 		goto err;
 
-	if (TDA18272_GETFIELD(POWERSTATE_BYTE_1_LO_LOCK, tda18272->regs[TDA18272_POWERSTATE_BYTE_1])) {
-		dprintk(FE_ERROR, 1, "PLL Locked");
+	if (TDA18272_GETFIELD(POWERSTATE_BYTE_1_LO_LOCK,
+		tda18272->regs[TDA18272_POWERSTATE_BYTE_1])) {
+		dev_err(&tda18272->i2c->dev, "PLL Locked\n");
 		*status |= 0x01;
 	}
 	if ((tda18272->regs[TDA18272_POWERSTATE_BYTE_2] >> 1) == 0)
-		dprintk(FE_ERROR, 1, "Normal MODE");
+		dev_dbg(&tda18272->i2c->dev, "Normal MODE\n");
 	if ((tda18272->regs[TDA18272_POWERSTATE_BYTE_2] >> 1) == 7)
-		dprintk(FE_ERROR, 1, "Standby MODE, LNA=ON, PLL=OFF");
+		dev_dbg(&tda18272->i2c->dev, "Standby MODE, LNA=ON, PLL=OFF\n");
 	if ((tda18272->regs[TDA18272_POWERSTATE_BYTE_2] >> 1) == 6)
-		dprintk(FE_ERROR, 1, "Standby MODE, LNA=ON, PLL=OFF");
+		dev_dbg(&tda18272->i2c->dev, "Standby MODE, LNA=ON, PLL=OFF\n");
 	if ((tda18272->regs[TDA18272_POWERSTATE_BYTE_2] >> 1) == 4)
-		dprintk(FE_ERROR, 1, "Standby MODE, LNA=ON, PLL=ON");
+		dev_dbg(&tda18272->i2c->dev, "Standby MODE, LNA=ON, PLL=ON\n");
 
-	dprintk(FE_ERROR, 1, "Junction Temperature:%d Power level:%d",
+	dev_dbg(&tda18272->i2c->dev, "Junction Temperature:%d Power level:%d\n",
 		tda18272->regs[TDA18272_THERMO_BYTE_1],
 		tda18272->regs[TDA18272_INPUT_POWERLEVEL]);
 
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
-static int tda18272_get_bandwidth(struct dvb_frontend *fe, u32* bandwidth)
+static int tda18272_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
 {
-    struct tda18272_state *tda18272 = fe->tuner_priv;
+	struct tda18272_state *tda18272 = fe->tuner_priv;
 
-    if (fe->ops.info.type == FE_OFDM)
-            *bandwidth = tda18272->bandwidth;
+	if (fe->ops.info.type == FE_OFDM)
+		*bandwidth = tda18272->bandwidth;
 
-    return 0;
+	return 0;
 }
 
 static int tda18272_set_params(struct dvb_frontend *fe)
@@ -1408,9 +1506,13 @@ static int tda18272_set_params(struct dvb_frontend *fe)
 	u32 freq = c->frequency;
 	int ret;
 
-	BUG_ON(!tda18272);
+	if (!tda18272) {
+		dev_err(&tda18272->i2c->dev, "Tuner state not set\n");
+		ret = -EINVAL;
+		goto err;
+	}
 
-	dprintk(FE_DEBUG, 1, "freq=%d, bw=%d", freq, bw);
+	dev_dbg(&tda18272->i2c->dev, "freq=%d, bw=%d\n", freq, bw);
 	switch (delsys) {
 	case SYS_ATSC:
 		coe = coeft + TDA18272_ATSC_6MHz;
@@ -1441,9 +1543,13 @@ static int tda18272_set_params(struct dvb_frontend *fe)
 		coe = coeft + TDA18272_QAM_6MHz;
 		break;
 	}
-	BUG_ON(!coe);
+	if (!coe) {
+		dev_err(&tda18272->i2c->dev, "Tuner coefficients not set\n");
+		ret = -EINVAL;
+		goto err;
+	}
 	tda18272->coe = coe;
-	dprintk(FE_DEBUG, 1, "Loading %s coeffecients...", coe->desc);
+	dev_dbg(&tda18272->i2c->dev, "Loading %s coeffecients...\n", coe->desc);
 	ret = tda18272_set_frequency(tda18272, freq);
 	if (ret)
 		goto err;
@@ -1458,7 +1564,7 @@ static int tda18272_set_params(struct dvb_frontend *fe)
 			tda18272->bandwidth = bw;
 	}
 err:
-	dprintk(FE_DEBUG, 1, "ret=%d", ret);
+	dev_dbg(&tda18272->i2c->dev, "ret=%d\n", ret);
 	return ret;
 }
 
@@ -1474,22 +1580,28 @@ static int tda18272_get_ifreq(struct dvb_frontend *fe, u32 *frequency)
 static int tda18272_release(struct dvb_frontend *fe)
 {
 	struct tda18272_state *tda18272 = fe->tuner_priv;
+	int ret;
 
-	BUG_ON(!tda18272);
+	if (!tda18272) {
+		dev_err(&tda18272->i2c->dev, "Tuner state not set\n");
+		ret = -EINVAL;
+	} else {
+		kfree(tda18272);
+		ret = 0;
+	}
+
 	fe->tuner_priv = NULL;
-	kfree(tda18272);
-	return 0;
+	return ret;
 }
 
 static struct dvb_tuner_ops tda18272_ops = {
 	.info = {
 		.name		= "TDA18272 Silicon Tuner",
-		.frequency_min  =  42000000,
+		.frequency_min  = 42000000,
 		.frequency_max  = 870000000,
 		.frequency_step	= 50000,
 	},
 	.init			= tda18272_init,
-//	.sleep			= tda18272_sleep,
 	.get_status		= tda18272_get_status,
 	.set_params		= tda18272_set_params,
 	.get_bandwidth  = tda18272_get_bandwidth,
@@ -1506,16 +1618,24 @@ struct dvb_frontend *tda18272_attach(struct dvb_frontend *fe,
 				     struct i2c_adapter *i2c,
 				     const struct tda18272_config *config)
 {
-	struct tda18272_state *tda18272;
+	struct tda18272_state *tda18272 = NULL;
+	struct device *dev;
 	u8 major = 0, minor = 0, mode = 0;
 	int id = 0, ret;
 
+	if (!i2c) {
+		pr_err("I2C adapter not found\n");
+		return NULL;
+	}
+	dev = &i2c->dev;
+	if (!config) {
+		dev_err(dev, "TDA18272 config not set\n");
+		return NULL;
+	}
+
 	tda18272 = kzalloc(sizeof (struct tda18272_state), GFP_KERNEL);
 	if (!tda18272)
-		goto err;
-
-	BUG_ON(!i2c);
-	BUG_ON(!config);
+		return NULL;
 
 	tda18272->i2c		= i2c;
 	tda18272->config	= config;
@@ -1524,48 +1644,59 @@ struct dvb_frontend *tda18272_attach(struct dvb_frontend *fe,
 	fe->tuner_priv		= tda18272;
 	fe->ops.tuner_ops	= tda18272_ops;
 
-	ret = tda18272_rd_regs(tda18272, TDA18272_ID_BYTE_1, &tda18272->regs[TDA18272_ID_BYTE_1], 3);
+	ret = tda18272_rd_regs(tda18272, TDA18272_ID_BYTE_1,
+		&tda18272->regs[TDA18272_ID_BYTE_1], 3);
 	if (ret)
 		goto err;
 
-	id    = (TDA18272_GETFIELD(ID_BYTE_1_IDENT, tda18272->regs[TDA18272_ID_BYTE_1]) << 8) |
-		 TDA18272_GETFIELD(ID_BYTE_2_IDENT, tda18272->regs[TDA18272_ID_BYTE_2]);
+	id = (TDA18272_GETFIELD(ID_BYTE_1_IDENT,
+		tda18272->regs[TDA18272_ID_BYTE_1]) << 8) |
+		TDA18272_GETFIELD(ID_BYTE_2_IDENT,
+		tda18272->regs[TDA18272_ID_BYTE_2]);
 
-	major = TDA18272_GETFIELD(ID_BYTE_3_MAJOR_REV, tda18272->regs[TDA18272_ID_BYTE_3]);
-	minor = TDA18272_GETFIELD(ID_BYTE_3_MINOR_REV, tda18272->regs[TDA18272_ID_BYTE_3]);
-	mode  = TDA18272_GETFIELD(ID_BYTE_1_MASTER_SLAVE, tda18272->regs[TDA18272_ID_BYTE_1]);
+	major = TDA18272_GETFIELD(ID_BYTE_3_MAJOR_REV,
+		tda18272->regs[TDA18272_ID_BYTE_3]);
+	minor = TDA18272_GETFIELD(ID_BYTE_3_MINOR_REV,
+		tda18272->regs[TDA18272_ID_BYTE_3]);
+	mode  = TDA18272_GETFIELD(ID_BYTE_1_MASTER_SLAVE,
+		tda18272->regs[TDA18272_ID_BYTE_1]);
 
-	if (id == TDA18272_CHIP_ID) {
-		dprintk(FE_ERROR, 1, "Found TDA%d %s Rev:%d.%d", id, mode ? "Master" : "Slave", major, minor);
-		if ((major != TDA18272_MAJOR_REV) || (minor != TDA18272_MINOR_REV))
-			dprintk(FE_ERROR, 1, "Unknown Version:%d.%d, trying anyway ..", major, minor);
-
-		tda18272->mode	  = mode;
-		if (config->mode == TDA18272_SLAVE && tda18272->mode == 1)
-			dprintk(FE_ERROR, 1, "Config as TDA18272 Slave, but TDA18272 Master found ???");
-
-		if (config->mode == TDA18272_MASTER)
-			tda18272->ms = 1;
-		else
-			tda18272->ms = 0;
-
-		tda18272->lna_top = 0;
-		tda18272->psm_agc = 1;
-		tda18272->agc1    = 0;
-
-		ret = tda18272_init(fe);
-		if (ret) {
-			dprintk(FE_ERROR, 1, "Error Initializing!");
-			goto err1;
-		}
-
-		dprintk(FE_DEBUG, 1, "Done");
-		return tda18272->fe;
+	if (id != TDA18272_CHIP_ID) {
+		dev_err(dev, "TDA18272 not found!, ID=0x%02x exiting..\n", id);
+		goto err;
 	}
+
+	dev_dbg(dev, "Found TDA%d %s Rev:%d.%d\n", id,
+		mode ? "Master" : "Slave", major, minor);
+	if ((major != TDA18272_MAJOR_REV) || (minor != TDA18272_MINOR_REV))
+		dev_err(dev, "Unknown Version:%d.%d, trying anyway ..\n",
+			major, minor);
+
+	tda18272->mode = mode;
+	if (config->mode == TDA18272_SLAVE && tda18272->mode == 1)
+		dev_err(dev,
+			"Config as TDA18272 Slave, but TDA18272 Master found ???\n");
+
+	if (config->mode == TDA18272_MASTER)
+		tda18272->ms = 1;
+	else
+		tda18272->ms = 0;
+
+	tda18272->lna_top = 0;
+	tda18272->psm_agc = 1;
+	tda18272->agc1    = 0;
+
+	ret = tda18272_init(fe);
+	if (ret) {
+		dev_err(dev, "Error Initializing!\n");
+		goto err;
+	}
+
+	dev_dbg(dev, "Done\n");
+	return tda18272->fe;
 err:
-	dprintk(FE_ERROR, 1, "TDA18272 not found!, ID=0x%02x exiting..", id);
-err1:
-	kfree(tda18272);
+	if (tda18272)
+		kfree(tda18272);
 	return NULL;
 }
 EXPORT_SYMBOL(tda18272_attach);

@@ -262,7 +262,11 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 
 	gpu.compression_page_size = g->ops.fb.compression_page_size(g);
 
-	gpu.gpc_mask = (1 << g->gr.gpc_count)-1;
+	if (g->ops.gr.get_gpc_mask) {
+		gpu.gpc_mask = g->ops.gr.get_gpc_mask(g);
+	} else {
+		gpu.gpc_mask = BIT32(g->gr.gpc_count) - 1;
+	}
 
 	gpu.flags = nvgpu_ctrl_ioctl_gpu_characteristics_flags(g);
 

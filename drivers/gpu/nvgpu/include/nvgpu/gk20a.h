@@ -264,6 +264,7 @@ struct gpu_ops {
 				struct gk20a_ctxsw_ucode_segments *segments,
 				u32 reg_offset);
 		int (*load_ctxsw_ucode)(struct gk20a *g);
+		u32 (*get_gpc_mask)(struct gk20a *g);
 		u32 (*get_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		void (*set_gpc_tpc_mask)(struct gk20a *g, u32 gpc_index);
 		int (*alloc_obj_ctx)(struct channel_gk20a  *c,
@@ -1270,6 +1271,7 @@ struct gpu_ops {
 		u32 (*fuse_status_opt_fbio)(struct gk20a *g);
 		u32 (*fuse_status_opt_fbp)(struct gk20a *g);
 		u32 (*fuse_status_opt_rop_l2_fbp)(struct gk20a *g, u32 fbp);
+		u32 (*fuse_status_opt_gpc)(struct gk20a *g);
 		u32 (*fuse_status_opt_tpc_gpc)(struct gk20a *g, u32 gpc);
 		void (*fuse_ctrl_opt_tpc_gpc)(struct gk20a *g, u32 gpc, u32 val);
 		u32 (*fuse_opt_sec_debug_en)(struct gk20a *g);

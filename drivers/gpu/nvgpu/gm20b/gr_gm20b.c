@@ -550,6 +550,23 @@ void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 	    ctxsw_prog_extended_sm_dsm_perf_counter_control_register_stride_v();
 }
 
+u32 gr_gm20b_get_gpc_mask(struct gk20a *g)
+{
+	u32 val;
+	struct gr_gk20a *gr = &g->gr;
+
+	/*
+	 * For register NV_FUSE_STATUS_OPT_GPC a set bit with index i indicates
+	 * corresponding GPC is floorswept
+	 * But for s/w mask a set bit means GPC is enabled and it is disabled
+	 * otherwise
+	 * Hence toggle the bits of register value to get s/w mask
+	 */
+	val = g->ops.fuse.fuse_status_opt_gpc(g);
+
+	return (~val) & (BIT32(gr->max_gpc_count) - 1U);
+}
+
 u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
 	u32 val;

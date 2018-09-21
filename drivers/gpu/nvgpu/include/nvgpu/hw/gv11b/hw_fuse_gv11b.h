@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -56,6 +56,10 @@
 #ifndef _hw_fuse_gv11b_h_
 #define _hw_fuse_gv11b_h_
 
+static inline u32 fuse_status_opt_gpc_r(void)
+{
+	return 0x00021c1cU;
+}
 static inline u32 fuse_status_opt_tpc_gpc_r(u32 i)
 {
 	return 0x00021c38U + i*4U;

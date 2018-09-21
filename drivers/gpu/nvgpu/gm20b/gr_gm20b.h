@@ -83,6 +83,7 @@ void gr_gm20b_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					       u32 *ctrl_register_stride);
 u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
 void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index);
+u32 gr_gm20b_get_gpc_mask(struct gk20a *g);
 void gr_gm20b_load_tpc_mask(struct gk20a *g);
 void gr_gm20b_program_sm_id_numbering(struct gk20a *g,
 					     u32 gpc, u32 tpc, u32 smid);

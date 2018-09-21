@@ -82,7 +82,6 @@ struct tsg_gk20a {
 #define NVGPU_SM_EXCEPTION_TYPE_MASK_NONE		(0x0U)
 #define NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL		(0x1U << 0)
 	u32 sm_exception_mask_type;
-	struct nvgpu_mutex sm_exception_mask_lock;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);
@@ -104,8 +103,6 @@ int gk20a_tsg_alloc_sm_error_states_mem(struct gk20a *g,
 void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
 			u32 sm_id,
 			struct nvgpu_tsg_sm_error_state *sm_error_state);
-int gk20a_tsg_set_sm_exception_type_mask(struct channel_gk20a *ch,
-		u32 exception_mask);
 
 struct gk20a_event_id_data {
 	struct gk20a *g;

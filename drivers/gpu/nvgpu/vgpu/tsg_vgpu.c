@@ -163,26 +163,3 @@ int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 
 	return err;
 }
-
-int vgpu_set_sm_exception_type_mask(struct channel_gk20a *ch,
-		u32 exception_mask)
-{
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_set_sm_exception_type_mask_params *p =
-		&msg.params.set_sm_exception_mask;
-	int err = 0;
-	struct gk20a *g = ch->g;
-
-	nvgpu_log_fn(g, " ");
-
-	msg.cmd = TEGRA_VGPU_CMD_SET_SM_EXCEPTION_TYPE_MASK;
-	msg.handle = vgpu_get_handle(g);
-	p->handle = ch->virt_ctx;
-	p->mask = exception_mask;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	err = err ? err : msg.ret;
-	WARN_ON(err);
-
-	return err;
-}
-

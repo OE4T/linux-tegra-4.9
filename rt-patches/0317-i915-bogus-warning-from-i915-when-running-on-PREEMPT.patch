@@ -1,9 +1,8 @@
-From e6af4d4d9a4f4b567fb9e78c999f07f6d7729843 Mon Sep 17 00:00:00 2001
+From 768bfbbb898d125e358db7645d5f22479c760750 Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Tue, 26 May 2015 10:43:43 -0500
 Subject: [PATCH 317/353] i915: bogus warning from i915 when running on
  PREEMPT_RT
-X-NVConfidentiality: public
 
 The i915 driver has a 'WARN_ON(!in_interrupt())' in the display
 handler, which whines constanly on the RT kernel (since the interrupt
@@ -33,5 +32,5 @@ index c185625..6c9f9c8 100644
  	if (crtc == NULL)
  		return;
 -- 
-2.7.4
+2.1.4
 

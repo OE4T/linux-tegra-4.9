@@ -1,8 +1,7 @@
-From af9b7791e4ee3b8050e3956ce2a2cff8d07842e4 Mon Sep 17 00:00:00 2001
+From 1d507c75184fc3c30e6137fc19a06c3ccc97c2dc Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Apr 2010 16:51:31 +0200
 Subject: [PATCH 216/353] md: raid5: Make raid5_percpu handling RT aware
-X-NVConfidentiality: public
 
 __raid_run_ops() disables preemption with get_cpu() around the access
 to the raid5_percpu variables. That causes scheduling while atomic
@@ -20,7 +19,7 @@ Tested-by: Udo van den Heuvel <udovdh@xs4all.nl>
  2 files changed, 6 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/md/raid5.c b/drivers/md/raid5.c
-index e43b9f8..08b0480 100644
+index 4afc419..d05864f 100644
 --- a/drivers/md/raid5.c
 +++ b/drivers/md/raid5.c
 @@ -1934,8 +1934,9 @@ static void raid_run_ops(struct stripe_head *sh, unsigned long ops_request)
@@ -44,7 +43,7 @@ index e43b9f8..08b0480 100644
  }
  
  static struct stripe_head *alloc_stripe(struct kmem_cache *sc, gfp_t gfp,
-@@ -6419,6 +6421,7 @@ static int raid456_cpu_up_prepare(unsigned int cpu, struct hlist_node *node)
+@@ -6425,6 +6427,7 @@ static int raid456_cpu_up_prepare(unsigned int cpu, struct hlist_node *node)
  		       __func__, cpu);
  		return -ENOMEM;
  	}
@@ -52,7 +51,7 @@ index e43b9f8..08b0480 100644
  	return 0;
  }
  
-@@ -6429,7 +6432,6 @@ static int raid5_alloc_percpu(struct r5conf *conf)
+@@ -6435,7 +6438,6 @@ static int raid5_alloc_percpu(struct r5conf *conf)
  	conf->percpu = alloc_percpu(struct raid5_percpu);
  	if (!conf->percpu)
  		return -ENOMEM;
@@ -73,5 +72,5 @@ index 57ec49f..0739604 100644
  		struct flex_array *scribble;   /* space for constructing buffer
  					      * lists and performing address
 -- 
-2.7.4
+2.1.4
 

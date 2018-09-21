@@ -1,8 +1,7 @@
-From 14f02c1212b440c2181f14c3ea70b4a9047b35df Mon Sep 17 00:00:00 2001
+From 9bd3a90fb537d10d1496e69d610774476c703650 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 26 Sep 2012 16:21:08 +0200
 Subject: [PATCH 290/353] net: Another local_irq_disable/kmalloc headache
-X-NVConfidentiality: public
 
 Replace it by a local lock. Though that's pretty inefficient :(
 
@@ -61,5 +60,5 @@ index 84c731a..9603105 100644
  	if (unlikely(!data))
  		return NULL;
 -- 
-2.7.4
+2.1.4
 

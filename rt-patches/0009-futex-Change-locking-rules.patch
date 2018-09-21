@@ -1,8 +1,7 @@
-From 6fda51f4288e877767b7b1391491cf6e4c4c0e62 Mon Sep 17 00:00:00 2001
+From 4fc249cd8765a7b2aa4b2ffa3dbad74c627a9384 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:52 +0100
 Subject: [PATCH 009/353] futex: Change locking rules
-X-NVConfidentiality: public
 
 Upstream commit 734009e96d1983ad739e5b656e03430b3660c913
 
@@ -373,5 +372,5 @@ index e0736ed..78c7d74 100644
  
  static long futex_wait_restart(struct restart_block *restart);
 -- 
-2.7.4
+2.1.4
 

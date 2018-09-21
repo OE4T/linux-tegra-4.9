@@ -1,8 +1,7 @@
-From 2f996edf7ed9d12316c44afdb530a1f51a4fcea9 Mon Sep 17 00:00:00 2001
+From 1cfd0ddf0b5698d8dce100a85592f42fc13b0351 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
 Date: Mon, 28 Oct 2013 09:36:37 +0100
 Subject: [PATCH 180/353] rtmutex: Add RT aware ww locks
-X-NVConfidentiality: public
 
 lockdep says:
 | --------------------------------------------------------------------------
@@ -414,5 +413,5 @@ index c1a3b9f..c3756e5 100644
 +EXPORT_SYMBOL(ww_mutex_unlock);
  #endif
 -- 
-2.7.4
+2.1.4
 

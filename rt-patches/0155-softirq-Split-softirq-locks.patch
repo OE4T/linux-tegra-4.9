@@ -1,8 +1,7 @@
-From f3c00328d4ec1aacba5ccfc898187cf021c7202a Mon Sep 17 00:00:00 2001
+From b9b5fa5c84df1467ef7cc54a99a36aa3c3358e8e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
 Subject: [PATCH 155/353] softirq: Split softirq locks
-X-NVConfidentiality: public
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -179,7 +178,7 @@ index 2eed4b5..0c734628 100644
  #define in_task()		(!(preempt_count() & \
  				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 433ca81..4f116e8 100644
+index 12c0191..579db41 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2139,6 +2139,8 @@ struct task_struct {
@@ -849,5 +848,5 @@ index 9f8d01c..4931d2c 100644
  	return err;
  }
 -- 
-2.7.4
+2.1.4
 

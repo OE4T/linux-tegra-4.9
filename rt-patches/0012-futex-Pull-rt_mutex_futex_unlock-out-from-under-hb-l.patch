@@ -1,9 +1,8 @@
-From 659c80a568440c09070ff6ccb8fe81c7fa5e75a8 Mon Sep 17 00:00:00 2001
+From a0d56842a8c954da2fcf4d52ac2ba7e385b73086 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
 Subject: [PATCH 012/353] futex: Pull rt_mutex_futex_unlock() out from under
  hb->lock
-X-NVConfidentiality: public
 
 Upstream commit 16ffa12d742534d4ff73e8b3a4e81c1de39196f0
 
@@ -361,5 +360,5 @@ index 13570c6..ffb5f7e 100644
  		/*
  		 * We've already been requeued, but cannot restart by calling
 -- 
-2.7.4
+2.1.4
 

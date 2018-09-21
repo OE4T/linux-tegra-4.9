@@ -1,8 +1,7 @@
-From 91308bbde9892fdf960e73144cf6953200ea4d69 Mon Sep 17 00:00:00 2001
+From 98e988b59cbf185c17ef2e9c349fd18c827dbc23 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
 Subject: [PATCH 195/353] completion: Use simple wait queues
-X-NVConfidentiality: public
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -372,5 +371,5 @@ index 9c2da06..a26906f 100644
  {
  	unsigned long flags;
 -- 
-2.7.4
+2.1.4
 

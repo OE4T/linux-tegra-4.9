@@ -1,8 +1,7 @@
-From baa93b6c6fe1ac3d4db617c64fe0e47792915367 Mon Sep 17 00:00:00 2001
+From 93314244d3dbe908898fb0d27932878ef4073837 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 11:01:51 +0200
 Subject: [PATCH 144/353] stop_machine: Use raw spinlocks
-X-NVConfidentiality: public
 
 Use raw-locks in stomp_machine() to allow locking in irq-off regions.
 
@@ -33,5 +32,5 @@ index ca834ec..6b29525 100644
  		/* cpu stop callbacks must not sleep, make in_atomic() == T */
  		preempt_count_inc();
 -- 
-2.7.4
+2.1.4
 

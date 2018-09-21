@@ -1,8 +1,7 @@
-From d6a97cf80674ffc559d09d4440cc29129177a48e Mon Sep 17 00:00:00 2001
+From 2d5965a0bc14f18ff71a6b821dca74b9800bfaf8 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
 Subject: [PATCH 021/353] rtmutex: Clean up
-X-NVConfidentiality: public
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 
@@ -153,5 +152,5 @@ index dad9229..722e3cf 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.7.4
+2.1.4
 

@@ -1,8 +1,7 @@
-From 29c44c3e436304886ef851420a3fc6b324ba3b07 Mon Sep 17 00:00:00 2001
+From 5b5207d6bc8bab24f7592f214bac439a84540c93 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
 Subject: [PATCH 017/353] futex: Drop hb->lock before enqueueing on the rtmutex
-X-NVConfidentiality: public
 
 Upstream commit 56222b212e8edb1cf51f5dd73ff645809b082b40
 
@@ -212,5 +211,5 @@ index b620aaf..f4c34c4 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+2.1.4
 

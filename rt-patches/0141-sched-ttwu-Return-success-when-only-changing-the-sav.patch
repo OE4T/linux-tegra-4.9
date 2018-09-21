@@ -1,9 +1,8 @@
-From cce11961725f993c539438d59077f4246c0db6ff Mon Sep 17 00:00:00 2001
+From c3fe5333d2af4b5adcae58b335804750717c7806 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 13 Dec 2011 21:42:19 +0100
 Subject: [PATCH 141/353] sched: ttwu: Return success when only changing the
  saved_state value
-X-NVConfidentiality: public
 
 When a task blocks on a rt lock, it saves the current state in
 p->saved_state, so a lock related wake up will not destroy the
@@ -37,5 +36,5 @@ index 2a369bd..54ebede 100644
  		goto out;
  	}
 -- 
-2.7.4
+2.1.4
 

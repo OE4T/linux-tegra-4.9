@@ -1,8 +1,7 @@
-From f9fec39476c4f726a33a5d4d07d8a70f7580fe7a Mon Sep 17 00:00:00 2001
+From bad0fd84fb0d91d39e2585b27f5e2786a6b7b60b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Mar 2013 18:06:20 +0100
 Subject: [PATCH 293/353] net: Add a mutex around devnet_rename_seq
-X-NVConfidentiality: public
 
 On RT write_seqcount_begin() disables preemption and device_rename()
 allocates memory with GFP_KERNEL and grabs later the sysfs_mutex
@@ -109,5 +108,5 @@ index 85d7df9..a6f17c5 100644
  
  /**
 -- 
-2.7.4
+2.1.4
 

@@ -1,9 +1,8 @@
-From 3d8d54f8b33d3990d516758b5881841590f48719 Mon Sep 17 00:00:00 2001
+From 272ac6e94943e001df8cb40750d37732a219d578 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
 Subject: [PATCH 123/353] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
-X-NVConfidentiality: public
 
 In preempt-rt we can not call the callbacks which take sleeping locks
 from the timer interrupt context.
@@ -353,5 +352,5 @@ index 63177be..59fe007 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.7.4
+2.1.4
 

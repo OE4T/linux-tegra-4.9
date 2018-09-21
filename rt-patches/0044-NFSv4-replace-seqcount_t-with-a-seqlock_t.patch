@@ -1,8 +1,7 @@
-From 2d814e6f1265c4bb2fb4458ca0d76d12c69968bd Mon Sep 17 00:00:00 2001
+From b698e8eff3a198cb3a9eb390b2360745003118a6 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
 Subject: [PATCH 044/353] NFSv4: replace seqcount_t with a seqlock_t
-X-NVConfidentiality: public
 
 The raw_write_seqcount_begin() in nfs4_reclaim_open_state() bugs me
 because it maps to preempt_disable() in -RT which I can't have at this
@@ -58,10 +57,10 @@ index 1452177..f43b01d 100644
  };
  
 diff --git a/fs/nfs/nfs4proc.c b/fs/nfs/nfs4proc.c
-index cf5fdc2..12753db 100644
+index e7ca62a..e577b51 100644
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
-@@ -2695,7 +2695,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
+@@ -2702,7 +2702,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
  	unsigned int seq;
  	int ret;
  
@@ -70,7 +69,7 @@ index cf5fdc2..12753db 100644
  
  	ret = _nfs4_proc_open(opendata);
  	if (ret != 0)
-@@ -2733,7 +2733,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
+@@ -2740,7 +2740,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
  
  	if (d_inode(dentry) == state->inode) {
  		nfs_inode_attach_open_context(ctx);
@@ -132,5 +131,5 @@ index 3536913..6592fd03 100644
  }
  
 -- 
-2.7.4
+2.1.4
 

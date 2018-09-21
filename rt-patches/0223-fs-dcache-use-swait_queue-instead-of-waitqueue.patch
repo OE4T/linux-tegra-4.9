@@ -1,8 +1,7 @@
-From 0cb4dcf158c6e8f370b3c8a9c942d7e4af0e15dd Mon Sep 17 00:00:00 2001
+From 5a8dfec15ee2609ea09e2dc4c7dfcbf29bbbd40e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
 Subject: [PATCH 223/353] fs/dcache: use swait_queue instead of waitqueue
-X-NVConfidentiality: public
 
 __d_lookup_done() invokes wake_up_all() while holding a hlist_bl_lock()
 which disables preemption. As a workaround convert it to swait.
@@ -36,10 +35,10 @@ index a27fc87..791aecb 100644
  	cifs_dbg(FYI, "%s: for %s\n", __func__, name->name);
  
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 12fa273..f77b303 100644
+index fc4bb74..18581a9 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
-@@ -2457,21 +2457,24 @@ static inline void end_dir_add(struct inode *dir, unsigned n)
+@@ -2458,21 +2458,24 @@ static inline void end_dir_add(struct inode *dir, unsigned n)
  
  static void d_wait_lookup(struct dentry *dentry)
  {
@@ -75,7 +74,7 @@ index 12fa273..f77b303 100644
  {
  	unsigned int hash = name->hash;
  	struct hlist_bl_head *b = in_lookup_hash(parent, hash);
-@@ -2586,7 +2589,7 @@ void __d_lookup_done(struct dentry *dentry)
+@@ -2587,7 +2590,7 @@ void __d_lookup_done(struct dentry *dentry)
  	hlist_bl_lock(b);
  	dentry->d_flags &= ~DCACHE_PAR_LOOKUP;
  	__hlist_bl_del(&dentry->d_u.d_in_lookup_hash);
@@ -85,10 +84,10 @@ index 12fa273..f77b303 100644
  	hlist_bl_unlock(b);
  	INIT_HLIST_NODE(&dentry->d_u.d_alias);
 diff --git a/fs/fuse/dir.c b/fs/fuse/dir.c
-index 8045366..10f416a 100644
+index 547a324..320ba94 100644
 --- a/fs/fuse/dir.c
 +++ b/fs/fuse/dir.c
-@@ -1237,7 +1237,7 @@ static int fuse_direntplus_link(struct file *file,
+@@ -1238,7 +1238,7 @@ static int fuse_direntplus_link(struct file *file,
  	struct inode *dir = d_inode(parent);
  	struct fuse_conn *fc;
  	struct inode *inode;
@@ -238,5 +237,5 @@ index a26906f..6b7e6d3 100644
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-2.7.4
+2.1.4
 

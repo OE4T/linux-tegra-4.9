@@ -1,8 +1,7 @@
-From c662a4f016035121a5ad76f5cc1d50494aa703c8 Mon Sep 17 00:00:00 2001
+From 66ca7cca4ccda9163812899f167960789e75a38f Mon Sep 17 00:00:00 2001
 From: Luiz Capitulino <lcapitulino@redhat.com>
 Date: Fri, 27 May 2016 15:03:28 +0200
 Subject: [PATCH 103/353] mm: perform lru_add_drain_all() remotely
-X-NVConfidentiality: public
 
 lru_add_drain_all() works by scheduling lru_add_drain_cpu() to run
 on all CPUs that have non-empty LRU pagevecs and then waiting for
@@ -113,5 +112,5 @@ index 796f366..e360916 100644
  	put_online_cpus();
  	mutex_unlock(&lock);
 -- 
-2.7.4
+2.1.4
 

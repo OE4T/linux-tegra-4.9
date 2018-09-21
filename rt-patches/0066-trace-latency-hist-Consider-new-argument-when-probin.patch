@@ -1,9 +1,8 @@
-From 74bc1863e535e2b21f2ec1dc987ce1a21cb51030 Mon Sep 17 00:00:00 2001
+From f284df923db7af610c3b908b33c9d5cdf36459bc Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 5 Jan 2016 10:21:59 +0100
 Subject: [PATCH 066/353] trace/latency-hist: Consider new argument when
  probing the sched_switch tracer
-X-NVConfidentiality: public
 
 The sched_switch tracer has got a new argument. Fix the latency tracer
 accordingly.
@@ -40,5 +39,5 @@ index b6c1d14..7f6ee70 100644
  	unsigned long flags;
  	int cpu = task_cpu(next);
 -- 
-2.7.4
+2.1.4
 

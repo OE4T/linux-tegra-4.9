@@ -1,8 +1,7 @@
-From 555f068c6b9c8b9de60610e6316a2513ccb04a4f Mon Sep 17 00:00:00 2001
+From 3d294785b7c89dd25b6d6704ec519e2965386962 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 12 May 2017 15:46:17 +0200
 Subject: [PATCH 279/353] random: avoid preempt_disable()ed section
-X-NVConfidentiality: public
 
 extract_crng() will use sleeping locks while in a preempt_disable()
 section due to get_cpu_var().
@@ -76,5 +75,5 @@ index 002f686..aba13ed 100644
  }
  #endif
 -- 
-2.7.4
+2.1.4
 

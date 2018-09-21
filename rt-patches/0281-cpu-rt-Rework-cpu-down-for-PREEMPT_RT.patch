@@ -1,8 +1,7 @@
-From 3ca51c5b8d3f44c8981443534e83627030f7e7d9 Mon Sep 17 00:00:00 2001
+From 7205789ae0ec0ad3e9bfa12867fd8e166f23c9b5 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 281/353] cpu/rt: Rework cpu down for PREEMPT_RT
-X-NVConfidentiality: public
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In
@@ -56,7 +55,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index f6fcddf..26a2ebf 100644
+index 43f0136..a4f03e9 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2674,6 +2674,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
@@ -531,5 +530,5 @@ index b732959..bf36fbf 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.7.4
+2.1.4
 

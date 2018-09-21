@@ -1,9 +1,8 @@
-From c774bec0789d3949c06b54c3433d9977c9a319ef Mon Sep 17 00:00:00 2001
+From 9ffc6d8b579dedd0861eea2a025a0e8841b1ff79 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Jun 2017 14:20:37 +0200
 Subject: [PATCH 134/353] sched: Prevent task state corruption by spurious lock
  wakeup
-X-NVConfidentiality: public
 
 Mathias and others reported GDB failures on RT.
 
@@ -81,5 +80,5 @@ index 3aa3a8d..c4436dc 100644
  
  int wake_up_state(struct task_struct *p, unsigned int state)
 -- 
-2.7.4
+2.1.4
 

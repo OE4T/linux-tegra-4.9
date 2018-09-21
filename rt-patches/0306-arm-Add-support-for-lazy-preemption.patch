@@ -1,8 +1,7 @@
-From dc304f3838b2ed07ef946f78c6cb3afda00b0891 Mon Sep 17 00:00:00 2001
+From 3c371f1aab159a4911f6d486614e8b8fe3996b38 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 31 Oct 2012 12:04:11 +0100
 Subject: [PATCH 306/353] arm: Add support for lazy preemption
-X-NVConfidentiality: public
 
 Implement the arm pieces for lazy preempt.
 
@@ -164,5 +163,5 @@ index 7b8f214..96541e0 100644
  		} else {
  			if (unlikely(!user_mode(regs)))
 -- 
-2.7.4
+2.1.4
 

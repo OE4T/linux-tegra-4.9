@@ -1,8 +1,7 @@
-From 023b213cd46766d3720a5c3e4a00bec9c7e82a99 Mon Sep 17 00:00:00 2001
+From 7d1a3aea7dc40b862d6dadc3b9e4f2093b6be337 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:10:04 +0100
 Subject: [PATCH 222/353] net: Use cpu_chill() instead of cpu_relax()
-X-NVConfidentiality: public
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -66,5 +65,5 @@ index 977f698..f3e7a36 100644
  }
  
 -- 
-2.7.4
+2.1.4
 

@@ -1,9 +1,8 @@
-From f99aaced255f3037ff03207e8f8be603e61e5c94 Mon Sep 17 00:00:00 2001
+From 6bea059594823c157a0ced8f627fecb4f915d7b6 Mon Sep 17 00:00:00 2001
 From: Alexandre Belloni <alexandre.belloni@free-electrons.com>
 Date: Thu, 17 Mar 2016 21:09:43 +0100
 Subject: [PATCH 057/353] clockevents/drivers/timer-atmel-pit: fix double
  free_irq
-X-NVConfidentiality: public
 
 clockevents_exchange_device() changes the state from detached to shutdown
 and so at that point the IRQ has not yet been requested.
@@ -49,5 +48,5 @@ index 2c66bb3..9328884 100644
  	data->cnt += data->cycle * PIT_PICNT(pit_read(data->base, AT91_PIT_PIVR));
  	pit_write(data->base, AT91_PIT_MR,
 -- 
-2.7.4
+2.1.4
 

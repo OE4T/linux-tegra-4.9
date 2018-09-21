@@ -1,8 +1,7 @@
-From ef0537dda35d25040913845d43bd5d0f342f14a4 Mon Sep 17 00:00:00 2001
+From 45c96d18f7b950cdf297d5e3c63bca8d11681b4f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
 Subject: [PATCH 294/353] crypto: Convert crypto notifier chain to SRCU
-X-NVConfidentiality: public
 
 The crypto notifier deadlocks on RT. Though this can be a real deadlock
 on mainline as well due to fifo fair rwsems.
@@ -167,10 +166,10 @@ index bbc147c..bc1a848 100644
  
  	return ok;
 diff --git a/crypto/internal.h b/crypto/internal.h
-index 7eefcdb..0ecc7f5 100644
+index 4c35848..7b47812 100644
 --- a/crypto/internal.h
 +++ b/crypto/internal.h
-@@ -47,7 +47,7 @@ struct crypto_larval {
+@@ -52,7 +52,7 @@ struct crypto_larval {
  
  extern struct list_head crypto_alg_list;
  extern struct rw_semaphore crypto_alg_sem;
@@ -179,7 +178,7 @@ index 7eefcdb..0ecc7f5 100644
  
  #ifdef CONFIG_PROC_FS
  void __init crypto_init_proc(void);
-@@ -146,7 +146,7 @@ static inline int crypto_is_moribund(struct crypto_alg *alg)
+@@ -151,7 +151,7 @@ static inline int crypto_is_moribund(struct crypto_alg *alg)
  
  static inline void crypto_notify(unsigned long val, void *v)
  {
@@ -189,5 +188,5 @@ index 7eefcdb..0ecc7f5 100644
  
  #endif	/* _CRYPTO_INTERNAL_H */
 -- 
-2.7.4
+2.1.4
 

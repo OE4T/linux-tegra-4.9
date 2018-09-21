@@ -1,8 +1,7 @@
-From a3aa65a601d12fd2aa6a2eda27a0d438aa4aff1f Mon Sep 17 00:00:00 2001
+From 4b05211930a452decc501f3f572f288dc42038fb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 12 Nov 2011 14:00:48 +0100
 Subject: [PATCH 271/353] scsi/fcoe: Make RT aware.
-X-NVConfidentiality: public
 
 Do not disable preemption while taking sleeping locks. All user look safe
 for migrate_diable() only.
@@ -73,7 +72,7 @@ index 9bd41a3..8e2d436 100644
  }
  
 diff --git a/drivers/scsi/fcoe/fcoe_ctlr.c b/drivers/scsi/fcoe/fcoe_ctlr.c
-index dcf3653..1a1f2e4 100644
+index cc3994d..4e473d1 100644
 --- a/drivers/scsi/fcoe/fcoe_ctlr.c
 +++ b/drivers/scsi/fcoe/fcoe_ctlr.c
 @@ -834,7 +834,7 @@ static unsigned long fcoe_ctlr_age_fcfs(struct fcoe_ctlr *fip)
@@ -112,5 +111,5 @@ index 16ca31a..c398734 100644
  	/* peek cache of free slot */
  	if (pool->left != FC_XID_UNKNOWN) {
 -- 
-2.7.4
+2.1.4
 

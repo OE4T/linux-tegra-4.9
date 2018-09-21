@@ -1,8 +1,7 @@
-From 1e16244434a8c54886bd141f9aa172844cd4198a Mon Sep 17 00:00:00 2001
+From 6cb2e145aa2dd79a521324b84a618b15b649f673 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 3 Jul 2009 08:44:37 -0500
 Subject: [PATCH 101/353] mm: page_alloc: Reduce lock sections further
-X-NVConfidentiality: public
 
 Split out the pages which are to be freed into a separate list and
 call free_pages_bulk() outside of the percpu page allocator locks.
@@ -207,5 +206,5 @@ index b4dd1a0..e251ca9 100644
  
  out:
 -- 
-2.7.4
+2.1.4
 

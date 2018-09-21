@@ -1,8 +1,7 @@
-From f4dbbaf36b6036b4ea9c95ba3e214d32c9e15911 Mon Sep 17 00:00:00 2001
+From b089fedb8083f247d7a26a66aa39df6955e7d654 Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:46:08 -0700
 Subject: [PATCH 029/353] MAINTAINERS: Add FUTEX SUBSYSTEM
-X-NVConfidentiality: public
 
 Upstream commit 59cd42c29618c45cd3c56da43402b14f611888dd
 
@@ -52,5 +51,5 @@ index 5ad4639..ea68126 100644
  M:	Rik Faith <faith@cs.unc.edu>
  L:	linux-scsi@vger.kernel.org
 -- 
-2.7.4
+2.1.4
 

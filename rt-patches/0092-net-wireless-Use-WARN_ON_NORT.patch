@@ -1,8 +1,7 @@
-From 3aeae52a885d0c34b0559a6cff90a5ed72a14e94 Mon Sep 17 00:00:00 2001
+From 83f17de76cb10ce4dd257831472f40649c5b714e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 21 Jul 2011 21:05:33 +0200
 Subject: [PATCH 092/353] net/wireless: Use WARN_ON_NORT()
-X-NVConfidentiality: public
 
 The softirq counter is meaningless on RT, so the check triggers a
 false positive.
@@ -26,5 +25,5 @@ index 474655a..f2a33a4 100644
  	if (WARN_ON(status->band >= NUM_NL80211_BANDS))
  		goto drop;
 -- 
-2.7.4
+2.1.4
 

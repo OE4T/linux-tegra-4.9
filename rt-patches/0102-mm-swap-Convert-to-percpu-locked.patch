@@ -1,8 +1,7 @@
-From 3c3ddd44034eca8096c7133716ebd05cbbdddb82 Mon Sep 17 00:00:00 2001
+From 7a3cb9b174fb04b4397d333eb28016ac2773dadc Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
 Subject: [PATCH 102/353] mm/swap: Convert to percpu locked
-X-NVConfidentiality: public
 
 Replace global locks (get_cpu + local_irq_save) with "local_locks()".
 Currently there is one of for "rotate" and one for "swap".
@@ -198,5 +197,5 @@ index adea901..796f366 100644
  
  static void lru_add_drain_per_cpu(struct work_struct *dummy)
 -- 
-2.7.4
+2.1.4
 

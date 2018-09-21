@@ -1,8 +1,7 @@
-From eb8f3ec7a684fce3962f0607ccb87e283a26bfc0 Mon Sep 17 00:00:00 2001
+From 1da625a653adda91c23f332b130509171a706538 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
 Subject: [PATCH 023/353] sched,tracing: Update trace_sched_pi_setprio()
-X-NVConfidentiality: public
 
 Upstream commit b91473ff6e979c0028f02f90e40c844959c736d8
 
@@ -113,5 +112,5 @@ index 1f4862d..91f414b 100644
  
  	if (oldprio == prio)
 -- 
-2.7.4
+2.1.4
 

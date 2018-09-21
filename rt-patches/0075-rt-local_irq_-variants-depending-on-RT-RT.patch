@@ -1,8 +1,7 @@
-From a6d7c4c6e0fb0eab6113d7a1865ae829791c8f0c Mon Sep 17 00:00:00 2001
+From aded5c7133aa452685d42319113f96c726a8c4b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Jul 2009 22:34:14 +0200
 Subject: [PATCH 075/353] rt: local_irq_* variants depending on RT/!RT
-X-NVConfidentiality: public
 
 Add local_irq_*_(no)rt variant which are mainly used to break
 interrupt disabled sections on PREEMPT_RT or to explicitely disable
@@ -56,5 +55,5 @@ index 5dd1272..f8f27cc 100644
 +
  #endif
 -- 
-2.7.4
+2.1.4
 

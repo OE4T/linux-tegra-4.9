@@ -1,9 +1,8 @@
-From a9d20f8a845401dcbd26985c1d1ea77b1f34e90d Mon Sep 17 00:00:00 2001
+From f2d3d9ce5e2504e4bb7c90b87f6eddf450749fe8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
 Subject: [PATCH 330/353] fs: convert two more BH_Uptodate_Lock related
  bitspinlocks
-X-NVConfidentiality: public
 
 We convert all BH_Uptodate_Lock based bit-spinlocks to use
 bh_uptodate_lock_irqsave() instead. Those two were introduced after the
@@ -66,5 +65,5 @@ index f3acecf..c30dbde 100644
  	if (!busy)
  		end_page_writeback(bvec->bv_page);
 -- 
-2.7.4
+2.1.4
 

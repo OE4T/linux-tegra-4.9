@@ -1,9 +1,8 @@
-From 1cd121c5443e194cc00a76bcea230a6a486df086 Mon Sep 17 00:00:00 2001
+From db9639f9489aa0d9180ea4a88eace481c6cca0b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 7 Jun 2011 09:19:06 +0200
 Subject: [PATCH 136/353] sched: Do not account rcu_preempt_depth on RT in
  might_sleep()
-X-NVConfidentiality: public
 
 RT changes the rcu_preempt_depth semantics, so we cannot check for it
 in might_sleep().
@@ -53,5 +52,5 @@ index c4436dc..282f928 100644
  	return (nested == preempt_offset);
  }
 -- 
-2.7.4
+2.1.4
 

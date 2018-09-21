@@ -1,8 +1,7 @@
-From faf678dfadd85852a1b2d99e09323036f72291e2 Mon Sep 17 00:00:00 2001
+From 216ee8fc661f76f90b000ecdcfa6d7afdde7b446 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
 Subject: [PATCH 305/353] x86: Support for lazy preemption
-X-NVConfidentiality: public
 
 Implement the x86 pieces for lazy preempt.
 
@@ -236,5 +235,5 @@ index c62e015..0cc71257 100644
 +	DEFINE(_PREEMPT_ENABLED, PREEMPT_ENABLED);
  }
 -- 
-2.7.4
+2.1.4
 

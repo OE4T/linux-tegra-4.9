@@ -1,9 +1,8 @@
-From c8d48e1bb671bb60e325d06eaaaf24eaeb0bdf51 Mon Sep 17 00:00:00 2001
+From 5145fc10029e5c49173f21e55aa7806c1e94bb89 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
 Subject: [PATCH 309/353] sched/migrate disable: handle updated task-mask
  mg-dis section
-X-NVConfidentiality: public
 
 If task's cpumask changes while in the task is in a migrate_disable()
 section then we don't react on it after a migrate_enable(). It matters
@@ -23,7 +22,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 54 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 1f04762..c523dde 100644
+index 132f954..c6dcae0 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1716,6 +1716,7 @@ struct task_struct {
@@ -125,5 +124,5 @@ index a6ffa9d..2bcecc4 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-2.7.4
+2.1.4
 

@@ -1,8 +1,7 @@
-From 5e443861bfeeaf5cc0542df802d8f96e3f7867e2 Mon Sep 17 00:00:00 2001
+From edb4965afea647090924863ac646234f8b69fb56 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 18:51:23 +0200
 Subject: [PATCH 150/353] lockdep: Make it RT aware
-X-NVConfidentiality: public
 
 teach lockdep that we don't really do softirqs on -RT.
 
@@ -63,5 +62,5 @@ index 8f02f7d..72af2de 100644
  	if (!debug_locks)
  		print_irqtrace_events(current);
 -- 
-2.7.4
+2.1.4
 

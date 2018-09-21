@@ -1,9 +1,8 @@
-From 3019c5eaca16f841f26d76fb5984b00b02a91318 Mon Sep 17 00:00:00 2001
+From 912ffc6bb09812d488148ef4f8e14fde2b42cf4a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
 Subject: [PATCH 037/353] iommu/vt-d: don't disable preemption while accessing
  deferred_flush()
-X-NVConfidentiality: public
 
 get_cpu() disables preemption and returns the current CPU number. The
 CPU number is later only used once while retrieving the address of the
@@ -27,10 +26,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/iommu/intel-iommu.c b/drivers/iommu/intel-iommu.c
-index 1612d3a..890f7db 100644
+index 2558a38..dad0fe4 100644
 --- a/drivers/iommu/intel-iommu.c
 +++ b/drivers/iommu/intel-iommu.c
-@@ -479,7 +479,7 @@ struct deferred_flush_data {
+@@ -480,7 +480,7 @@ struct deferred_flush_data {
  	struct deferred_flush_table *tables;
  };
  
@@ -39,7 +38,7 @@ index 1612d3a..890f7db 100644
  
  /* bitmap for indexing intel_iommus */
  static int g_num_of_iommus;
-@@ -3720,10 +3720,8 @@ static void add_unmap(struct dmar_domain *dom, unsigned long iova_pfn,
+@@ -3736,10 +3736,8 @@ static void add_unmap(struct dmar_domain *dom, unsigned long iova_pfn,
  	struct intel_iommu *iommu;
  	struct deferred_flush_entry *entry;
  	struct deferred_flush_data *flush_data;
@@ -51,7 +50,7 @@ index 1612d3a..890f7db 100644
  
  	/* Flush all CPUs' entries to avoid deferring too much.  If
  	 * this becomes a bottleneck, can just flush us, and rely on
-@@ -3756,8 +3754,6 @@ static void add_unmap(struct dmar_domain *dom, unsigned long iova_pfn,
+@@ -3772,8 +3770,6 @@ static void add_unmap(struct dmar_domain *dom, unsigned long iova_pfn,
  	}
  	flush_data->size++;
  	spin_unlock_irqrestore(&flush_data->lock, flags);
@@ -61,5 +60,5 @@ index 1612d3a..890f7db 100644
  
  static void intel_unmap(struct device *dev, dma_addr_t dev_addr, size_t size)
 -- 
-2.7.4
+2.1.4
 

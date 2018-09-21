@@ -1,9 +1,8 @@
-From 431ea8b142eeee6bb56434170f2db36c4567697e Mon Sep 17 00:00:00 2001
+From 7c8b1a9ae4403698eb5ecc244ec0489ab8ac39ee Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Tue, 29 Nov 2011 20:18:22 -0500
 Subject: [PATCH 152/353] tasklet: Prevent tasklets from going into infinite
  spin in RT
-X-NVConfidentiality: public
 
 When CONFIG_PREEMPT_RT_FULL is enabled, tasklets run as threads,
 and spinlocks turn are mutexes. But this can cause issues with
@@ -396,5 +395,5 @@ index d257e62..02d1106 100644
  {
  	return local_softirq_pending();
 -- 
-2.7.4
+2.1.4
 

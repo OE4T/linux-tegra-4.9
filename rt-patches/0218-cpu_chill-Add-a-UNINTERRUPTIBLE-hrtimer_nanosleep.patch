@@ -1,8 +1,7 @@
-From 0a5b8e0ef5adae616c8904f717dc924514fad04b Mon Sep 17 00:00:00 2001
+From 3c9481d7db61f48288cbbcc51bdc34e3c2b1d660 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 4 Mar 2014 12:28:32 -0500
 Subject: [PATCH 218/353] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep
-X-NVConfidentiality: public
 
 We hit another bug that was caused by switching cpu_chill() from
 msleep() to hrtimer_nanosleep().
@@ -108,5 +107,5 @@ index e6d9118..4b54fe2 100644
  		current->flags &= ~PF_NOFREEZE;
  }
 -- 
-2.7.4
+2.1.4
 

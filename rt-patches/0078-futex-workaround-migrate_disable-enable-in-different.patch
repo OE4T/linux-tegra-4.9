@@ -1,9 +1,8 @@
-From f8c449a86c9d2d58b47466f79a9b3b9b797e73b0 Mon Sep 17 00:00:00 2001
+From ca2342987808ad3770ab836047a17ea9a369a9c3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
 Subject: [PATCH 078/353] futex: workaround migrate_disable/enable in different
  context
-X-NVConfidentiality: public
 
 migrate_disable()/migrate_enable() takes a different path in atomic() vs
 !atomic() context. These little hacks ensure that we don't underflow / overflow
@@ -62,5 +61,5 @@ index f9addec..c5d0d70 100644
  
  		/*
 -- 
-2.7.4
+2.1.4
 

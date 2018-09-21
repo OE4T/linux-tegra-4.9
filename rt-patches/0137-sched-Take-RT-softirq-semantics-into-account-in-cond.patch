@@ -1,9 +1,8 @@
-From 4668e4e12e3db2592b52fd16fc39ff4bd9fd97f5 Mon Sep 17 00:00:00 2001
+From 9d135b907a9415bce7edff262d6accee25447219 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Jul 2011 09:56:44 +0200
 Subject: [PATCH 137/353] sched: Take RT softirq semantics into account in
  cond_resched()
-X-NVConfidentiality: public
 
 The softirq semantics work different on -RT. There is no SOFTIRQ_MASK in
 the preemption counter which leads to the BUG_ON() statement in
@@ -17,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 6 insertions(+)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index ba8f6bc..433ca81 100644
+index 91af7fd..12c0191 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -3558,12 +3558,16 @@ extern int __cond_resched_lock(spinlock_t *lock);
@@ -58,5 +57,5 @@ index 282f928..2a369bd 100644
  /**
   * yield - yield the current processor to other threads.
 -- 
-2.7.4
+2.1.4
 

@@ -1,8 +1,7 @@
-From 45141b8a6b7f03e521425d9c9fe6226f51a975bf Mon Sep 17 00:00:00 2001
+From c7f581dada1e0f1866ed38c4ff44585a1171c491 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
 Subject: [PATCH 010/353] futex: Cleanup refcounting
-X-NVConfidentiality: public
 
 Upstream commit bf92cf3a5100f5a0d5f9834787b130159397cb22
 
@@ -78,5 +77,5 @@ index 78c7d74..768eb16 100644
  			ret = rt_mutex_start_proxy_lock(&pi_state->pi_mutex,
  							this->rt_waiter,
 -- 
-2.7.4
+2.1.4
 

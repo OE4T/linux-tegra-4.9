@@ -1,8 +1,7 @@
-From 1e3274ea9a4f42de6b1349a18f1eb81d308ac24c Mon Sep 17 00:00:00 2001
+From a9dfd4b39030c287fb82dd98886bfc1c9cb687b4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 177/353] rt: Add the preempt-rt lock replacement APIs
-X-NVConfidentiality: public
 
 Map spinlocks, rwlocks, rw_semaphores and semaphores to the rt_mutex
 based locking functions for preempt-rt.
@@ -629,7 +628,7 @@ index 0000000..e26bd95
 +#endif
 +#endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 4f116e8..55639e2 100644
+index 579db41..fc117dbeb3 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -314,6 +314,11 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -2381,5 +2380,5 @@ index e0963e7..4af5e7f 100644
  	}
  }
 -- 
-2.7.4
+2.1.4
 

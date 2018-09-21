@@ -1,8 +1,7 @@
-From 1ff340ff7485adb799ad7e2bf1763df9ceaadc87 Mon Sep 17 00:00:00 2001
+From 4a391243c151e5ca4f5d06ead352e9d0f81bb786 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 6 Nov 2011 12:26:18 +0100
 Subject: [PATCH 269/353] x86: kvm Require const tsc for RT
-X-NVConfidentiality: public
 
 Non constant TSC is a nightmare on bare metal already, but with
 virtualization it becomes a complete disaster because the workarounds
@@ -33,5 +32,5 @@ index 203d423..06e5c94 100644
  	if (r)
  		goto out_free_percpu;
 -- 
-2.7.4
+2.1.4
 

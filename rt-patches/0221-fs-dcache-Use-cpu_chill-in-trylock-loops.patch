@@ -1,8 +1,7 @@
-From ae66c1f74b700ea2364428c13bee1d1a0e77c409 Mon Sep 17 00:00:00 2001
+From 135d1f6aa99d1c70059fcad166e354f4f93ce2b0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
 Subject: [PATCH 221/353] fs: dcache: Use cpu_chill() in trylock loops
-X-NVConfidentiality: public
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -17,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 20 insertions(+), 6 deletions(-)
 
 diff --git a/fs/autofs4/autofs_i.h b/fs/autofs4/autofs_i.h
-index a1fba42..3796769 100644
+index 42f8633..e4deae2 100644
 --- a/fs/autofs4/autofs_i.h
 +++ b/fs/autofs4/autofs_i.h
-@@ -31,6 +31,7 @@
+@@ -32,6 +32,7 @@
  #include <linux/sched.h>
  #include <linux/mount.h>
  #include <linux/namei.h>
@@ -42,7 +41,7 @@ index d8e6d42..2e689ab 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 17c8c72..12fa273 100644
+index 1fa3ca8..fc4bb74 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -53,7 +52,7 @@ index 17c8c72..12fa273 100644
  #include <linux/slab.h>
  #include <linux/init.h>
  #include <linux/hash.h>
-@@ -786,6 +787,8 @@ static inline bool fast_dput(struct dentry *dentry)
+@@ -787,6 +788,8 @@ static inline bool fast_dput(struct dentry *dentry)
   */
  void dput(struct dentry *dentry)
  {
@@ -62,7 +61,7 @@ index 17c8c72..12fa273 100644
  	if (unlikely(!dentry))
  		return;
  
-@@ -824,9 +827,18 @@ void dput(struct dentry *dentry)
+@@ -825,9 +828,18 @@ void dput(struct dentry *dentry)
  	return;
  
  kill_it:
@@ -84,7 +83,7 @@ index 17c8c72..12fa273 100644
  		goto repeat;
  	}
  }
-@@ -2385,7 +2397,7 @@ void d_delete(struct dentry * dentry)
+@@ -2386,7 +2398,7 @@ void d_delete(struct dentry * dentry)
  	if (dentry->d_lockref.count == 1) {
  		if (!spin_trylock(&inode->i_lock)) {
  			spin_unlock(&dentry->d_lock);
@@ -115,5 +114,5 @@ index c4ca100..86c9fc8 100644
  	}
  	/*
 -- 
-2.7.4
+2.1.4
 

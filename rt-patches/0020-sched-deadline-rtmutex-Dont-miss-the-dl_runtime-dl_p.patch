@@ -1,9 +1,8 @@
-From 33574d9c0a96e57c153e8a996d986b1dfa7cbf1c Mon Sep 17 00:00:00 2001
+From 3812eed5870ca9df3a3fe7c15bda9d863885b35f Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
 Subject: [PATCH 020/353] sched/deadline/rtmutex: Dont miss the
  dl_runtime/dl_period update
-X-NVConfidentiality: public
 
 Upstream commit 85e2d4f992868ad78dc8bb2c077b652fcfb3661a
 
@@ -56,5 +55,5 @@ index 1996128..03a345d 100644
  			goto out_unlock_pi;
  		else
 -- 
-2.7.4
+2.1.4
 

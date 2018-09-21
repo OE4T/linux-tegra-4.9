@@ -24,8 +24,8 @@
 
 #include <nvgpu/pmu.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gv100/perf_gv100.h"
 
 static int pmu_set_boot_clk_runcb_fn(void *arg)

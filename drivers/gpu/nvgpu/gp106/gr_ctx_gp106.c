@@ -1,7 +1,7 @@
 /*
  * GP106 Graphics Context
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,7 +22,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "gr_ctx_gp106.h"
 
 int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name)

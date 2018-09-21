@@ -25,8 +25,8 @@
 #include <nvgpu/mm.h>
 #include <nvgpu/io.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "sec2_gp106.h"
 
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>

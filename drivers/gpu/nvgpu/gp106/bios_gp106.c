@@ -27,8 +27,8 @@
 #include <nvgpu/falcon.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/io.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gp106.h"
 #include "gp106/mclk_gp106.h"

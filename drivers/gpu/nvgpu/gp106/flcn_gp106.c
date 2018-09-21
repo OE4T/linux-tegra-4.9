@@ -19,7 +19,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "gk20a/flcn_gk20a.h"
 #include "gp106/sec2_gp106.h"
 #include "gp106/flcn_gp106.h"

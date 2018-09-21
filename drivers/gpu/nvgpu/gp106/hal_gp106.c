@@ -43,7 +43,6 @@
 #include "common/mc/mc_gm20b.h"
 #include "common/mc/mc_gp10b.h"
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -95,6 +94,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>

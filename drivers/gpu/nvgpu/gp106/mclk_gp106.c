@@ -26,8 +26,8 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/io.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include "os/linux/os_linux.h"

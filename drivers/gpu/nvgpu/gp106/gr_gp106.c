@@ -23,8 +23,8 @@
  */
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"

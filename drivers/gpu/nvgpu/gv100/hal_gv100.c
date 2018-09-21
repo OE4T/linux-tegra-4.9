@@ -50,7 +50,6 @@
 #include "common/mc/mc_gv11b.h"
 #include "common/mc/mc_gv100.h"
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
@@ -115,6 +114,7 @@
 #include <nvgpu/ctxsw_trace.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
 #include <nvgpu/hw/gv100/hw_proj_gv100.h>

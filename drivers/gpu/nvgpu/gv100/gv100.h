@@ -1,7 +1,7 @@
 /*
  * GV100 Graphics
  *
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -25,7 +25,7 @@
 #ifndef GV100_H
 #define GV100_H
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 int gv100_init_gpu_characteristics(struct gk20a *g);
 

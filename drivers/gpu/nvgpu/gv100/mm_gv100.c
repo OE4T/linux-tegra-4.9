@@ -24,8 +24,8 @@
 
 #include <nvgpu/sizes.h>
 #include <nvgpu/io.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gv100/mm_gv100.h"
 
 u32 gv100_mm_get_flush_retries(struct gk20a *g, enum nvgpu_flush_op op)

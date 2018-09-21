@@ -1,0 +1,7 @@
+config TEGRA_KFUSE
+	bool "Tegra kfuse support"
+	default n
+	depends on ARCH_TEGRA
+	help
+	  Enable Tegra kfuse support. The kfuse block stores downstream and
+	  upstream HDCP keys for use by the HDMI module.

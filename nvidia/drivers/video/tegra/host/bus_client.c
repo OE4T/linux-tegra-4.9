@@ -45,7 +45,10 @@
 
 #ifdef CONFIG_EVENTLIB
 #include <linux/keventlib.h>
+static const char nvhost_events_json[] = {
 #include "nvhost_events_json.h"
+};
+static size_t nvhost_events_json_len = sizeof(nvhost_events_json);
 #endif
 
 #include "debug.h"

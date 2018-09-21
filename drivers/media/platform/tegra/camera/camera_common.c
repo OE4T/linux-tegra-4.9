@@ -642,18 +642,43 @@ static int camera_common_evaluate_color_format(struct v4l2_subdev *sd,
 					       int code)
 {
 	struct camera_common_data *s_data = to_camera_common_data(sd->dev);
-	int i;
-	const struct camera_common_colorfmt *sensor_fmt;
+	const size_t common_fmts_size = ARRAY_SIZE(camera_common_color_fmts);
+	struct sensor_image_properties *cur_props;
+	struct sensor_properties *sensor_props;
+	size_t sensor_num_modes;
+	int i, pixelformat;
 
 	if (!s_data)
 		return -EINVAL;
 
-	for (i = 0; ; i++) {
-		sensor_fmt = find_matching_color_fmt(s_data, i);
-		if (sensor_fmt == NULL)
-			return -EINVAL;
-		if (sensor_fmt->code == code)
+	sensor_props = &s_data->sensor_props;
+	sensor_num_modes = sensor_props->num_modes;
+
+	for (i = 0; i < common_fmts_size; i++) {
+		if (camera_common_color_fmts[i].code == code)
 			break;
+	}
+
+	if (i == common_fmts_size) {
+		dev_dbg(s_data->dev,
+			"%s: unsupported color format(%08x) for vi\n"
+			, __func__, code);
+		return -EINVAL;
+	}
+
+	pixelformat = camera_common_color_fmts[i].pix_fmt;
+
+	for (i = 0; i < sensor_num_modes; i++) {
+		cur_props = &sensor_props->sensor_modes[i].image_properties;
+		if (cur_props->pixel_format == pixelformat)
+			return 0;
+	}
+
+	if (i == sensor_num_modes) {
+		dev_dbg(s_data->dev,
+			"%s: unsupported color format(%08x) for sensor\n"
+			, __func__, code);
+		return -EINVAL;
 	}
 
 	return 0;

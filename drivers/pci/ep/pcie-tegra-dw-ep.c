@@ -18,6 +18,7 @@
 #include <linux/reset.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/module.h>
@@ -98,6 +99,11 @@
 
 #define LTR_MSG_REQ				BIT(15)
 #define LTR_MST_NO_SNOOP_SHIFT			16
+
+#define APPL_DEBUG				0xd0
+#define APPL_DEBUG_LTSSM_STATE_MASK		0x1f8
+#define APPL_DEBUG_LTSSM_STATE_SHIFT		3
+#define LTSSM_STATE_PRE_DETECT			0x5
 
 #define APPL_DM_TYPE				0x100
 #define APPL_DM_TYPE_MASK			0xF
@@ -235,6 +241,8 @@
 #define TSA_CONFIG_STATIC0_CSW_PCIE5W_0_SO_DEV_HUBID_HUB2 (2)
 
 #define LTR_MSG_TIMEOUT (100 * 1000)
+#define LTSSM_TIMEOUT 50
+#define PERST_DEBOUNCE_TIME (5 * 1000)
 
 #define EVENT_QUEUE_LEN	(256)
 
@@ -270,7 +278,8 @@
 
 enum ep_event {
 	EP_EVENT_NONE = 0,
-	EP_PEX_RST_DE_ASSERT,
+	EP_PEX_RST_DEASSERT,
+	EP_PEX_RST_ASSERT,
 	EP_PEX_HOT_RST_DONE,
 	EP_PEX_BME_CHANGE,
 	EP_EVENT_EXIT,
@@ -293,21 +302,22 @@ struct margin_cmd {
 	int rxm_payload_check;
 	int rxm_cmd_check;
 };
-
 struct tegra_pcie_dw_ep {
 	struct device *dev;
 	struct resource *appl_res;
 	struct resource	*dbi_res;
 	struct resource	*atu_dma_res;
-	void __iomem		*appl_base;
-	void __iomem		*dbi_base;
-	void __iomem		*atu_dma_base;
-	struct clk		*core_clk;
-	struct reset_control	*core_apb_rst;
-	struct reset_control	*core_rst;
-	int			irq;
-	int			phy_count;
-	struct phy		**phy;
+	void __iomem *appl_base;
+	void __iomem *dbi_base;
+	void __iomem *atu_dma_base;
+	struct clk *core_clk;
+	struct reset_control *core_apb_rst;
+	struct reset_control *core_rst;
+	int irq;
+	int phy_count;
+	int pex_rst_gpio;
+	int ep_state;
+	struct phy **phy;
 	struct task_struct *pcie_ep_task;
 	wait_queue_head_t wq;
 	DECLARE_KFIFO(event_fifo, u32, EVENT_QUEUE_LEN);
@@ -335,6 +345,9 @@ struct tegra_pcie_dw_ep {
 	u32 margin_port_cap;
 	u32 margin_lane_cntrl;
 };
+
+#define EP_STATE_DISABLED	0
+#define EP_STATE_ENABLED	1
 
 static unsigned int pcie_emc_client_id[] = {
 	TEGRA_BWMGR_CLIENT_PCIE,
@@ -390,7 +403,7 @@ static irqreturn_t tegra_pcie_irq_handler(int irq, void *arg)
 		/* clear any stale PEX_RST interrupt */
 		writel(APPL_INTR_STATUS_L0_PEX_RST_INT,
 		       pcie->appl_base + APPL_INTR_STATUS_L0);
-		if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DE_ASSERT)) {
+		if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DEASSERT)) {
 			dev_err(pcie->dev, "EVENT: fifo is full\n");
 			return IRQ_HANDLED;
 		}
@@ -468,6 +481,17 @@ static int uphy_bpmp_pcie_ep_controller_pll_init(u32 id)
 
 	req.cmd = CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT;
 	req.ep_ctrlr_pll_init.ep_controller = id;
+
+	return bpmp_send_uphy_message(&req, sizeof(req), &resp, sizeof(resp));
+}
+
+static int uphy_bpmp_pcie_ep_controller_pll_off(u32 id)
+{
+	struct mrq_uphy_request req;
+	struct mrq_uphy_response resp;
+
+	req.cmd = CMD_UPHY_PCIE_EP_CONTROLLER_PLL_OFF;
+	req.ep_ctrlr_pll_off.ep_controller = id;
 
 	return bpmp_send_uphy_message(&req, sizeof(req), &resp, sizeof(resp));
 }
@@ -550,33 +574,91 @@ static void program_gen3_gen4_eq_presets(struct tegra_pcie_dw_ep *pcie)
 	writel(val, pcie->dbi_base + GEN3_RELATED_OFF);
 }
 
+static void pex_ep_event_pex_rst_assert(struct tegra_pcie_dw_ep *pcie)
+{
+	u32 val = 0;
+	int ret = 0, count = 0;
+
+	if (pcie->ep_state == EP_STATE_DISABLED)
+		return;
+
+	/* disable LTSSM */
+	val = readl(pcie->appl_base + APPL_CTRL);
+	val &= ~APPL_CTRL_LTSSM_EN;
+	writel(val, pcie->appl_base + APPL_CTRL);
+
+	ret = readl_poll_timeout(pcie->appl_base + APPL_DEBUG, val,
+				 ((val & APPL_DEBUG_LTSSM_STATE_MASK) >>
+				 APPL_DEBUG_LTSSM_STATE_SHIFT) ==
+				 LTSSM_STATE_PRE_DETECT,
+				 1, LTSSM_TIMEOUT);
+	if (ret)
+		dev_info(pcie->dev, "Link didn't go to detect state\n");
+
+	reset_control_assert(pcie->core_rst);
+
+	for (count = 0; count < pcie->phy_count; count++)
+		phy_power_off(pcie->phy[count]);
+
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+
+	/*
+	 * If PCIe partition is ungated it will request PLL power ON,
+	 * so PLL sequencer will be in SEQ_ON state. To turn off the
+	 * PLL sequencer, power gate PCIe partition.
+	 */
+	ret = pm_runtime_put_sync(pcie->dev);
+	if (ret < 0)
+		dev_err(pcie->dev, "runtime suspend failed: %d\n", ret);
+
+	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1)) {
+		/* Resets PLL CAL_VALID and RCAL_VALID */
+		ret = uphy_bpmp_pcie_ep_controller_pll_off(pcie->cid);
+		if (ret)
+			dev_err(pcie->dev, "UPHY off failed for PCIe EP:%d\n",
+				ret);
+	}
+
+	pcie->ep_state = EP_STATE_DISABLED;
+	dev_info(pcie->dev, "EP deinit done\n");
+}
+
 static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 {
 	u32 val = 0;
 	int ret = 0;
+
+	if (pcie->ep_state == EP_STATE_ENABLED)
+		return;
+
+	ret = pm_runtime_get_sync(pcie->dev);
+	if (ret < 0) {
+		dev_err(pcie->dev, "runtime resume failed: %d\n", ret);
+		return;
+	}
 
 	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1)) {
 		ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
 		if (ret) {
 			dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n",
 				ret);
-			return;
+			goto pll_fail;
 		}
 	}
 
 	ret = clk_prepare_enable(pcie->core_clk);
 	if (ret) {
 		dev_err(pcie->dev, "Failed to enable core clock\n");
-		return;
+		goto pll_fail;
 	}
 
-	reset_control_assert(pcie->core_apb_rst);
 	reset_control_deassert(pcie->core_apb_rst);
 
 	ret = tegra_pcie_power_on_phy(pcie);
 	if (ret) {
 		dev_err(pcie->dev, "failed to power_on phy\n");
-		return;
+		goto phy_fail;
 	}
 
 	/* clear any stale interrupt statuses */
@@ -647,7 +729,6 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val |= APPL_INTR_EN_L1_0_HOT_RESET_DONE_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0);
 
-	reset_control_assert(pcie->core_rst);
 	reset_control_deassert(pcie->core_rst);
 
 	/* FPGA specific PHY initialization */
@@ -764,6 +845,21 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw_ep *pcie)
 	val = readl(pcie->appl_base + APPL_CTRL);
 	val |= APPL_CTRL_LTSSM_EN;
 	writel(val, pcie->appl_base + APPL_CTRL);
+
+	pcie->ep_state = EP_STATE_ENABLED;
+	dev_info(pcie->dev, "EP init done\n");
+
+	return;
+
+phy_fail:
+	reset_control_assert(pcie->core_apb_rst);
+	clk_disable_unprepare(pcie->core_clk);
+pll_fail:
+	ret = pm_runtime_put_sync(pcie->dev);
+	if (ret < 0)
+		dev_err(pcie->dev, "runtime suspend failed: %d\n", ret);
+
+	return;
 }
 
 static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
@@ -864,9 +960,14 @@ static int pcie_ep_work_thread(void *p)
 		}
 
 		switch (event) {
-		case EP_PEX_RST_DE_ASSERT:
-			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_RST_DE_ASSERT\n");
+		case EP_PEX_RST_DEASSERT:
+			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_RST_DEASSERT\n");
 			pex_ep_event_pex_rst_deassert(pcie);
+			break;
+
+		case EP_PEX_RST_ASSERT:
+			dev_dbg(pcie->dev, "EP_EVENT: EP_PEX_RST_ASSERT\n");
+			pex_ep_event_pex_rst_assert(pcie);
 			break;
 
 		case EP_PEX_HOT_RST_DONE:
@@ -947,10 +1048,20 @@ static irqreturn_t pex_rst_isr(int irq, void *arg)
 {
 	struct tegra_pcie_dw_ep *pcie = arg;
 
-	if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DE_ASSERT)) {
-		dev_err(pcie->dev, "EVENT: fifo is full\n");
-		return IRQ_HANDLED;
+	if (gpio_get_value(pcie->pex_rst_gpio)) {
+		dev_dbg(pcie->dev, "EVENT: EP_PEX_RST_DEASSERT\n");
+		if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_DEASSERT)) {
+			dev_err(pcie->dev, "EVENT: fifo is full\n");
+			return IRQ_HANDLED;
+		}
+	} else {
+		dev_dbg(pcie->dev, "EVENT: EP_PEX_RST_ASSERT\n");
+		if (!kfifo_put(&pcie->event_fifo, EP_PEX_RST_ASSERT)) {
+			dev_err(pcie->dev, "EVENT: fifo is full\n");
+			return IRQ_HANDLED;
+		}
 	}
+
 	wake_up(&pcie->wq);
 	return IRQ_HANDLED;
 }
@@ -1300,10 +1411,10 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	struct phy **phy;
 	struct pinctrl *pin = NULL;
 	struct pinctrl_state *pin_state = NULL;
+	struct gpio_desc *gpiod;
 	char *name;
 	int phy_count;
 	u32 i = 0, val = 0, addr = 0;
-	int pex_rst_gpio;
 	int irq;
 	int ret = 0;
 
@@ -1312,6 +1423,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pcie->dev = &pdev->dev;
+	pcie->ep_state = EP_STATE_DISABLED;
 
 	ret = of_property_read_u32(np, "num-lanes", &pcie->num_lanes);
 	if (ret < 0) {
@@ -1583,29 +1695,42 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 		goto fail_thread;
 	}
 
-	pex_rst_gpio = of_get_named_gpio(np, "nvidia,pex-rst-gpio", 0);
-	if (!gpio_is_valid(pex_rst_gpio)) {
+	pcie->pex_rst_gpio = of_get_named_gpio(np, "nvidia,pex-rst-gpio", 0);
+	if (!gpio_is_valid(pcie->pex_rst_gpio)) {
 		dev_err(pcie->dev, "pex-rst-gpio is missing\n");
-		ret = pex_rst_gpio;
+		ret = pcie->pex_rst_gpio;
 		goto fail_thread;
 	}
-	ret = devm_gpio_request(pcie->dev, pex_rst_gpio, "pex_rst_gpio");
+	ret = devm_gpio_request(pcie->dev, pcie->pex_rst_gpio, "pex_rst_gpio");
 	if (ret < 0) {
 		dev_err(pcie->dev, "pex_rst_gpio request failed\n");
 		goto fail_thread;
 	}
-	ret = gpio_direction_input(pex_rst_gpio);
+	ret = gpio_direction_input(pcie->pex_rst_gpio);
 	if (ret < 0) {
 		dev_err(pcie->dev, "pex_rst_gpio direction input failed\n");
 		goto fail_thread;
 	}
-	irq = gpio_to_irq(pex_rst_gpio);
+	gpiod = gpio_to_desc(pcie->pex_rst_gpio);
+	if (!gpiod) {
+		dev_err(pcie->dev, "Unable to get gpio desc\n");
+		ret = -EINVAL;
+		goto fail_thread;
+	}
+	ret = gpiod_set_debounce(gpiod, PERST_DEBOUNCE_TIME);
+	if (ret < 0) {
+		dev_err(pcie->dev, "Unable to set gpio debounce time\n");
+		goto fail_thread;
+	}
+	irq = gpio_to_irq(pcie->pex_rst_gpio);
 	if (irq < 0) {
 		dev_err(pcie->dev, "Unable to get irq for pex_rst_gpio\n");
+		ret = irq;
 		goto fail_thread;
 	}
 	ret = devm_request_irq(pcie->dev, (unsigned int)irq, pex_rst_isr,
-			       IRQF_TRIGGER_RISING, "pex_rst", (void *)pcie);
+			       IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+			       "pex_rst", (void *)pcie);
 	if (ret < 0) {
 		dev_err(pcie->dev, "Unable to request irq for pex_rst\n");
 		goto fail_thread;
@@ -1624,6 +1749,7 @@ static int tegra_pcie_dw_ep_probe(struct platform_device *pdev)
 	kfree(name);
 
 	platform_set_drvdata(pdev, pcie);
+	pm_runtime_enable(pcie->dev);
 
 	return ret;
 
@@ -1676,12 +1802,35 @@ static const struct of_device_id tegra_pcie_dw_ep_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_pcie_dw_ep_of_match);
 
+/*
+ * Powergate driver registers gate/ungate callback functions to power domain.
+ * PCIe EP driver need to register runtime pm callback functions to gate/ungate
+ * power partition and there is no other work to do in these functions.
+ */
+static int tegra_pcie_dw_ep_runtime_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int tegra_pcie_dw_ep_runtime_resume(struct device *dev)
+{
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_pcie_dw_ep_pm_ops = {
+	.runtime_suspend = tegra_pcie_dw_ep_runtime_suspend,
+	.runtime_resume = tegra_pcie_dw_ep_runtime_resume,
+};
+
 static struct platform_driver tegra_pcie_dw_ep_driver = {
 	.probe		= tegra_pcie_dw_ep_probe,
 	.remove		= tegra_pcie_dw_ep_remove,
 	.driver = {
 		.name	= "tegra-pcie-dw-ep",
 		.of_match_table = tegra_pcie_dw_ep_of_match,
+#ifdef CONFIG_PM
+		.pm = &tegra_pcie_dw_ep_pm_ops,
+#endif
 	},
 };
 

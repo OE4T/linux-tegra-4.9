@@ -3,7 +3,7 @@
  *
  * NVIDIA Tegra Sysfs for BCMDHD driver
  *
- * Copyright (C) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,6 +29,7 @@ const char string_ctrl_pkt[] = "control pkt";
 const char string_resume[] = "resume called";
 const char string_dpc_pkt[] = "dpc called";
 const char dummy_inf[] = "dummy:";
+char wifi_product_value[20] = "";
 int bcmdhd_irq_number;
 atomic_t tegra_downgrade_ac = ATOMIC_INIT(0);
 
@@ -109,6 +110,13 @@ static struct attribute_group tegra_sysfs_group_hostapd = {
 
 /* End Hostapd attributes */
 
+/* Wifi product attributes */
+static DEVICE_ATTR(wifi_product, S_IRUGO | S_IWUSR,
+	tegra_sysfs_wifi_product_show,
+	tegra_sysfs_wifi_product_store);
+
+/* End Wifi product attributes */
+
 int
 tegra_sysfs_register(struct device *dev)
 {
@@ -136,6 +144,14 @@ tegra_sysfs_register(struct device *dev)
 		goto cleanup_rftest;
 	}
 
+	/* used to update clm blob path */
+	err = sysfs_create_file(&dev->kobj, &dev_attr_wifi_product.attr);
+	if (err) {
+		pr_err("%s: failed to create wifi product sysfs file\n",
+			 __func__);
+		goto cleanup_hostapd;
+	}
+
 	/* create debugfs */
 	tegra_debugfs_root = debugfs_create_dir("bcmdhd_histogram", NULL);
 	if (tegra_debugfs_root) {
@@ -155,6 +171,9 @@ tegra_sysfs_register(struct device *dev)
 	tegra_sysfs_histogram_tcpdump_work_start();
 #endif
 	goto exit;
+
+cleanup_hostapd:
+	sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_hostapd);
 
 cleanup_rftest:
 	sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_rf_test);
@@ -185,6 +204,7 @@ tegra_sysfs_unregister(struct device *dev)
 	sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_hostapd);
 	sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_rf_test);
 	sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_histogram);
+	sysfs_remove_file(&dev->kobj, &dev_attr_wifi_product.attr);
 }
 
 int tegra_sysfs_wifi_on;
@@ -332,4 +352,42 @@ tegra_sysfs_hostapd_downgradevotovi_store(struct device *dev,
 	}
 
 	return count;
+}
+
+ssize_t
+tegra_sysfs_wifi_product_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	strncpy(buf, wifi_product_value, strlen(wifi_product_value));
+	return strlen(buf);
+}
+
+ssize_t
+tegra_sysfs_wifi_product_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	if (count > (sizeof(wifi_product_value)-1))
+		return -EINVAL;
+	memset(wifi_product_value, '\0', sizeof(wifi_product_value));
+	strncpy(wifi_product_value, buf, count);
+	return count;
+}
+
+void get_product_blob_path(char *blob_path, char **result)
+{
+	*result = kmalloc(strlen(blob_path) + strlen(wifi_product_value) + 2,
+			GFP_KERNEL);
+	if (*result == NULL) {
+		pr_err("%s : Failed to allocate memory", __func__);
+		return;
+	}
+	memset(*result, '\0', sizeof(char) * (strlen(blob_path)
+		+ strlen(wifi_product_value) + 2));
+	//Copy 5 characters less to remove ".blob" from blob_path
+	strncpy(*result, blob_path, strlen(blob_path) - 5);
+	strcat(*result, "_");
+	strcat(*result, wifi_product_value);
+	strcat(*result, ".blob");
 }

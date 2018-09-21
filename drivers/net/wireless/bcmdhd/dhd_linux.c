@@ -5,7 +5,7 @@
  * Copyright (C) 1999-2015, Broadcom Corporation
  *
  * Portions contributed by Nvidia
- * Copyright (C) 2015-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2018, NVIDIA Corporation. All rights reserved.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -5860,6 +5860,9 @@ int
 dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
 {
 	char *clm_blob_path = NULL;
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+	char *append_result = NULL;
+#endif /*CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA */
 	int len;
 	char *memblock = NULL;
 	int err = BCME_OK;
@@ -5880,6 +5883,19 @@ dhd_apply_default_clm(dhd_pub_t *dhd, char *clm_path)
 
 		if (adapter && adapter->clm_blob_path &&
 			adapter->clm_blob_path[0] != '\0') {
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			if (wifi_product_value[0] != '\0') {
+				get_product_blob_path(
+					(char *)adapter->clm_blob_path,
+					&append_result);
+			}
+			if (append_result && is_file_valid(append_result)) {
+				clm_blob_path = append_result;
+				DHD_ERROR(("clm path based on wifi product value :%s\n",
+					clm_blob_path));
+				goto load_clm_blob;
+			} else
+#endif /*CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA */
 			if (is_file_valid(adapter->clm_blob_path)) {
 				clm_blob_path = (char *) adapter->clm_blob_path;
 				DHD_ERROR(("clm path from dt:%s\n",
@@ -5958,6 +5974,12 @@ exit:
 	if (memblock) {
 		dhd_free_download_buffer(dhd, memblock, MAX_CLM_BUF_SIZE);
 	}
+
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+	if (append_result) {
+		kfree(append_result);
+	}
+#endif /*CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA */
 
 	return err;
 }

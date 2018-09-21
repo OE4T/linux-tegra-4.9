@@ -1516,7 +1516,7 @@ static void nvhdcp_fallback_worker(struct work_struct *work)
 	}
 }
 
-static void nvhdcp_downstream_worker(struct work_struct *work)
+static void nvhdcp1_downstream_worker(struct work_struct *work)
 {
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
@@ -2153,55 +2153,51 @@ err:
 	return;
 }
 
-static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
+static void nvhdcp_downstream_worker(struct work_struct *work)
 {
+	struct tegra_nvhdcp *nvhdcp =
+		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
+
 	u8 hdcp2version = 0;
 	int e;
 	int val;
+
+	nvhdcp->fail_count = 0;
+	e = nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
+	if (e)
+		nvhdcp_err("nvhdcp i2c HDCP22 version read failed\n");
+	/* Do not stop nauthentication if i2c version reads fail as  */
+	/* HDCP 1.x test 1A-04 expects reading HDCP regs */
+	if ((hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) && !g_fallback) {
+		val = HDCP_EESS_ENABLE<<31|
+			HDCP22_EESS_START<<16|
+			HDCP22_EESS_END;
+		tegra_sor_writel_ext(nvhdcp->hdmi->sor,
+			HDMI_VSYNC_WINDOW, val);
+		nvhdcp2_downstream_worker(work);
+		nvhdcp->hdcp22 = HDCP22_PROTOCOL;
+	} else {
+		val = HDCP_EESS_ENABLE<<31|
+			HDCP1X_EESS_START<<16|
+			HDCP1X_EESS_END;
+		tegra_sor_writel_ext(nvhdcp->hdmi->sor, HDMI_VSYNC_WINDOW,
+					val);
+		nvhdcp1_downstream_worker(work);
+		nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
+	}
+}
+
+static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
+{
 	int delay = tegra_edid_get_quirks(nvhdcp->hdmi->edid) &
 			TEGRA_EDID_QUIRK_DELAY_HDCP ? 5000 : 100;
+
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp) &&
 		atomic_read(&nvhdcp->policy) !=
 		TEGRA_DC_HDCP_POLICY_ALWAYS_OFF &&
 		!(tegra_edid_get_quirks(nvhdcp->hdmi->edid) &
 		  TEGRA_EDID_QUIRK_NO_HDCP)) {
-		nvhdcp->fail_count = 0;
-		e = nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
-		if (e)
-			nvhdcp_err("nvhdcp i2c HDCP22 version read failed\n");
-		/* Do not stop nauthentication if i2c version reads fail as  */
-		/* HDCP 1.x test 1A-04 expects reading HDCP regs */
-		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) {
-			if (g_fallback) {
-				val = HDCP_EESS_ENABLE<<31|
-					HDCP1X_EESS_START<<16|
-					HDCP1X_EESS_END;
-				tegra_sor_writel_ext(nvhdcp->hdmi->sor,
-					HDMI_VSYNC_WINDOW, val);
-				INIT_DELAYED_WORK(&nvhdcp->work,
-				nvhdcp_downstream_worker);
-				nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
-			} else {
-				val = HDCP_EESS_ENABLE<<31|
-					HDCP22_EESS_START<<16|
-					HDCP22_EESS_END;
-				tegra_sor_writel_ext(nvhdcp->hdmi->sor,
-					HDMI_VSYNC_WINDOW, val);
-				INIT_DELAYED_WORK(&nvhdcp->work,
-					nvhdcp2_downstream_worker);
-				nvhdcp->hdcp22 = HDCP22_PROTOCOL;
-			}
-		} else {
-			val = HDCP_EESS_ENABLE<<31|
-				HDCP1X_EESS_START<<16|
-				HDCP1X_EESS_END;
-			tegra_sor_writel_ext(nvhdcp->hdmi->sor, HDMI_VSYNC_WINDOW,
-						val);
-			INIT_DELAYED_WORK(&nvhdcp->work,
-				nvhdcp_downstream_worker);
-			nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
-		}
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
 				msecs_to_jiffies(delay));
 	}
@@ -2488,6 +2484,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp->downstream_wq = create_singlethread_workqueue(nvhdcp->name);
 	nvhdcp->fallback_wq = create_singlethread_workqueue(nvhdcp->name);
 
+	INIT_DELAYED_WORK(&nvhdcp->work, nvhdcp_downstream_worker);
 	INIT_DELAYED_WORK(&nvhdcp->fallback_work, nvhdcp_fallback_worker);
 
 	nvhdcp->miscdev.minor = MISC_DYNAMIC_MINOR;

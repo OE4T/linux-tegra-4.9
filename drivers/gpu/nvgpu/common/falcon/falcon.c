@@ -219,6 +219,34 @@ bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn)
 	return status;
 }
 
+int nvgpu_flcn_copy_from_emem(struct nvgpu_falcon *flcn,
+	u32 src, u8 *dst, u32 size, u8 port)
+{
+	struct nvgpu_falcon_engine_dependency_ops *flcn_dops =
+		&flcn->flcn_engine_dep_ops;
+	int status = -EINVAL;
+
+	if (flcn_dops->copy_from_emem != NULL) {
+		status = flcn_dops->copy_from_emem(flcn, src, dst, size, port);
+	}
+
+	return status;
+}
+
+int nvgpu_flcn_copy_to_emem(struct nvgpu_falcon *flcn,
+	u32 dst, u8 *src, u32 size, u8 port)
+{
+	struct nvgpu_falcon_engine_dependency_ops *flcn_dops =
+		&flcn->flcn_engine_dep_ops;
+	int status = -EINVAL;
+
+	if (flcn_dops->copy_to_emem != NULL) {
+		status = flcn_dops->copy_to_emem(flcn, dst, src, size, port);
+	}
+
+	return status;
+}
+
 int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
 	u32 src, u8 *dst, u32 size, u8 port)
 {

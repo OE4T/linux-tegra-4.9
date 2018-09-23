@@ -219,6 +219,10 @@ struct nvgpu_falcon_engine_dependency_ops {
 	int (*queue_tail)(struct gk20a *g, struct nvgpu_falcon_queue *queue,
 		u32 *tail, bool set);
 	void (*msgq_tail)(struct gk20a *g, u32 *tail, bool set);
+	int (*copy_from_emem)(struct nvgpu_falcon *flcn, u32 src, u8 *dst,
+		u32 size, u8 port);
+	int (*copy_to_emem)(struct nvgpu_falcon *flcn, u32 dst, u8 *src,
+		u32 size, u8 port);
 };
 
 struct nvgpu_falcon_ops {
@@ -283,6 +287,10 @@ bool nvgpu_flcn_get_mem_scrubbing_status(struct nvgpu_falcon *flcn);
 int nvgpu_flcn_mem_scrub_wait(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_cpu_halted_status(struct nvgpu_falcon *flcn);
 bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn);
+int nvgpu_flcn_copy_from_emem(struct nvgpu_falcon *flcn,
+	u32 src, u8 *dst, u32 size, u8 port);
+int nvgpu_flcn_copy_to_emem(struct nvgpu_falcon *flcn,
+	u32 dst, u8 *src, u32 size, u8 port);
 int nvgpu_flcn_copy_from_dmem(struct nvgpu_falcon *flcn,
 	u32 src, u8 *dst, u32 size, u8 port);
 int nvgpu_flcn_copy_to_dmem(struct nvgpu_falcon *flcn,

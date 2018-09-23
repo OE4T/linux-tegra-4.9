@@ -27,39 +27,28 @@
 #define CAMRTC_REQ_PING                 0x01U
 /* PM sleep request */
 #define CAMRTC_REQ_PM_SLEEP             0x02U
-
 /* Test request */
 #define CAMRTC_REQ_MODS_TEST            0x03U
-
 /* Set log level */
 #define CAMRTC_REQ_SET_LOGLEVEL         0x04U
 #define CAMRTC_REQ_LOGLEVEL             CAMRTC_REQ_SET_LOGLEVEL
-
 /* Get FreeRTOS state */
 #define CAMRTC_REQ_RTOS_STATE           0x05U
-
 /* Read memory */
 #define CAMRTC_REQ_READ_MEMORY_32BIT    0x06U
 #define CAMRTC_REQ_READ_MEMORY          0x07U
-
-    /* Performance counter */
+/* Performance counter */
 #define CAMRTC_REQ_SET_PERF_COUNTERS    0x08U
 #define CAMRTC_REQ_GET_PERF_COUNTERS    0x09U
-
 #define CAMRTC_REQ_GET_LOGLEVEL         0x0AU
-
 #define CAMRTC_REQ_RUN_TEST             0x0BU
-
 #define CAMRTC_REQ_GET_TASK_STAT        0x0CU
-
 #define CAMRTC_REQ_ENABLE_VI_STAT       0x0DU
 #define CAMRTC_REQ_GET_VI_STAT          0x0EU
-
 #define CAMRTC_REQ_GET_MEM_USAGE        0x0FU
-
 #define CAMRTC_REQ_RUN_MEM_TEST         0x10U
-
-#define CAMRTC_REQUEST_TYPE_MAX         0x11U
+#define CAMRTC_REQ_GET_IRQ_STAT		0x11U
+#define CAMRTC_REQUEST_TYPE_MAX		0x12U
 
 enum camrtc_response {
 	CAMRTC_RESP_PONG = 1,
@@ -83,13 +72,14 @@ enum camrtc_response {
 #define CAMRTC_STATUS_NOT_IMPLEMENTED   3U /* Request not implemented */
 #define CAMRTC_STATUS_INVALID_PARAM     4U /* Invalid parameter */
 
-
 enum {
 	CAMRTC_DBG_FRAME_SIZE = 384U,
 	CAMRTC_DBG_MAX_DATA = 376U,
 	CAMRTC_DBG_READ_MEMORY_COUNT_MAX = 256U,
 	CAMRTC_DBG_MAX_PERF_COUNTERS = 31U,
 	CAMRTC_DBG_TASK_STAT_MAX = 16U,
+	/** Limit for default CAMRTC_DBG_FRAME_SIZE */
+	CAMRTC_DBG_IRQ_STAT_MAX = 11U,
 };
 
 /* This struct is used to query or set the wake timeout for the target.
@@ -260,6 +250,34 @@ struct camrtc_dbg_task_stat {
 	} task[CAMRTC_DBG_TASK_STAT_MAX];
 } __packed;
 
+/*
+ * This structure is used get information on interrupts.
+ *
+ * Fields:
+ *   n_active: number of active interrupts
+ *   total_called: total number of interrupts handled
+ *   total_runtime: total runtime
+ *   n_irq: number of reported interrupts
+ *   irqs: array of reported tasks
+ *     irq_num: irq number
+ *     num_called: times this interrupt has been handled
+ *     runtime: runtime for this interrupt
+ *     name: name of the interrupt (may not be NUL-terminated)
+ */
+struct camrtc_dbg_irq_stat {
+	uint32_t n_active;
+	uint32_t n_irq;
+	uint64_t total_called;
+	uint64_t total_runtime;
+	struct {
+		uint32_t irq_num;
+		char name[12];
+		uint64_t runtime;
+		uint32_t max_runtime;
+		uint32_t num_called;
+	} irqs[CAMRTC_DBG_IRQ_STAT_MAX];
+} __packed;
+
 /* These structure is used to get VI message statistics.
  * Fields:
  *   enable: enable/disable collecting vi message statistics
@@ -345,6 +363,7 @@ struct camrtc_dbg_response {
 		struct camrtc_dbg_task_stat task_stat_data;
 		struct camrtc_dbg_vi_stat vi_stat;
 		struct camrtc_dbg_mem_usage mem_usage;
+		struct camrtc_dbg_irq_stat irq_stat;
 	} data;
 } __packed;
 

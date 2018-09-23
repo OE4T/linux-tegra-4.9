@@ -25,8 +25,8 @@
 #include <nvgpu/pmu.h>
 #include <nvgpu/falcon.h>
 
-/* DMEM-Q specific ops */
-static int flcn_queue_head_dmem(struct nvgpu_falcon *flcn,
+/* common falcon queue ops */
+static int flcn_queue_head(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_queue *queue, u32 *head, bool set)
 {
 	int err = -ENOSYS;
@@ -39,7 +39,7 @@ static int flcn_queue_head_dmem(struct nvgpu_falcon *flcn,
 	return err;
 }
 
-static int flcn_queue_tail_dmem(struct nvgpu_falcon *flcn,
+static int flcn_queue_tail(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_queue *queue, u32 *tail, bool set)
 {
 	int err = -ENOSYS;
@@ -52,7 +52,7 @@ static int flcn_queue_tail_dmem(struct nvgpu_falcon *flcn,
 	return err;
 }
 
-static bool flcn_queue_has_room_dmem(struct nvgpu_falcon *flcn,
+static bool flcn_queue_has_room(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_queue *queue, u32 size, bool *need_rewind)
 {
 	u32 q_head = 0;
@@ -97,6 +97,124 @@ exit:
 	return size <= q_free;
 }
 
+static int flcn_queue_rewind(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue)
+{
+	struct gk20a *g = flcn->g;
+	struct pmu_cmd cmd;
+	int err = 0;
+
+	if (queue->oflag == OFLAG_WRITE) {
+		cmd.hdr.unit_id = PMU_UNIT_REWIND;
+		cmd.hdr.size = (u8)PMU_CMD_HDR_SIZE;
+		err = queue->push(flcn, queue, &cmd, cmd.hdr.size);
+		if (err != 0) {
+			nvgpu_err(g, "flcn-%d queue-%d, rewind request failed",
+				flcn->flcn_id, queue->id);
+			goto exit;
+		} else {
+			nvgpu_pmu_dbg(g, "flcn-%d queue-%d, rewinded",
+			flcn->flcn_id, queue->id);
+		}
+	}
+
+	/* update queue position */
+	queue->position = queue->offset;
+
+	if (queue->oflag == OFLAG_READ) {
+		err = queue->tail(flcn, queue, &queue->position,
+			QUEUE_SET);
+		if (err != 0){
+			nvgpu_err(flcn->g, "flcn-%d queue-%d, position SET failed",
+				flcn->flcn_id, queue->id);
+			goto exit;
+		}
+	}
+
+exit:
+	return err;
+}
+
+/* EMEM-Q specific ops */
+static int flcn_queue_push_emem(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue, void *data, u32 size)
+{
+	int err = 0;
+
+	err = nvgpu_flcn_copy_to_emem(flcn, queue->position, data, size, 0);
+	if (err != 0) {
+		nvgpu_err(flcn->g, "flcn-%d, queue-%d", flcn->flcn_id,
+			queue->id);
+		nvgpu_err(flcn->g, "emem queue write failed");
+		goto exit;
+	}
+
+	queue->position += ALIGN(size, QUEUE_ALIGNMENT);
+
+exit:
+	return err;
+}
+
+static int flcn_queue_pop_emem(struct nvgpu_falcon *flcn,
+	struct nvgpu_falcon_queue *queue, void *data, u32 size,
+	u32 *bytes_read)
+{
+	struct gk20a *g = flcn->g;
+	u32 q_tail = queue->position;
+	u32 q_head = 0;
+	u32 used = 0;
+	int err = 0;
+
+	*bytes_read = 0;
+
+	err = queue->head(flcn, queue, &q_head, QUEUE_GET);
+	if (err != 0) {
+		nvgpu_err(flcn->g, "flcn-%d, queue-%d, head GET failed",
+			flcn->flcn_id, queue->id);
+		goto exit;
+	}
+
+	if (q_head == q_tail) {
+		goto exit;
+	} else if (q_head > q_tail) {
+		used = q_head - q_tail;
+	} else {
+		used = queue->offset + queue->size - q_tail;
+	}
+
+	if (size > used) {
+		nvgpu_warn(g, "queue size smaller than request read");
+		size = used;
+	}
+
+	err = nvgpu_flcn_copy_from_emem(flcn, q_tail, data, size, 0);
+	if (err != 0) {
+		nvgpu_err(g, "flcn-%d, queue-%d", flcn->flcn_id,
+			queue->id);
+		nvgpu_err(flcn->g, "emem queue read failed");
+		goto exit;
+	}
+
+	queue->position += ALIGN(size, QUEUE_ALIGNMENT);
+	*bytes_read = size;
+
+exit:
+	return err;
+}
+
+/* assign EMEM queue type specific ops */
+static void flcn_queue_init_emem_queue(struct nvgpu_falcon *flcn,
+		struct nvgpu_falcon_queue *queue)
+{
+	queue->head = flcn_queue_head;
+	queue->tail = flcn_queue_tail;
+	queue->has_room = flcn_queue_has_room;
+	queue->rewind = flcn_queue_rewind;
+	queue->push = flcn_queue_push_emem;
+	queue->pop = flcn_queue_pop_emem;
+}
+
+/* DMEM-Q specific ops */
 static int flcn_queue_push_dmem(struct nvgpu_falcon *flcn,
 	struct nvgpu_falcon_queue *queue, void *data, u32 size)
 {
@@ -163,54 +281,16 @@ exit:
 	return err;
 }
 
-static int flcn_queue_rewind_dmem(struct nvgpu_falcon *flcn,
-	struct nvgpu_falcon_queue *queue)
-{
-	struct gk20a *g = flcn->g;
-	struct pmu_cmd cmd;
-	int err = 0;
-
-	if (queue->oflag == OFLAG_WRITE) {
-		cmd.hdr.unit_id = PMU_UNIT_REWIND;
-		cmd.hdr.size = (u8)PMU_CMD_HDR_SIZE;
-		err = queue->push(flcn, queue, &cmd, cmd.hdr.size);
-		if (err != 0) {
-			nvgpu_err(g, "flcn-%d queue-%d, rewind request failed",
-				flcn->flcn_id, queue->id);
-			goto exit;
-		} else {
-			nvgpu_pmu_dbg(g, "flcn-%d queue-%d, rewinded",
-			flcn->flcn_id, queue->id);
-		}
-	}
-
-	/* update queue position */
-	queue->position = queue->offset;
-
-	if (queue->oflag == OFLAG_READ) {
-		err = queue->tail(flcn, queue, &queue->position,
-			QUEUE_SET);
-		if (err != 0){
-			nvgpu_err(flcn->g, "flcn-%d queue-%d, position SET failed",
-				flcn->flcn_id, queue->id);
-			goto exit;
-		}
-	}
-
-exit:
-	return err;
-}
-
 /* assign DMEM queue type specific ops */
 static void flcn_queue_init_dmem_queue(struct nvgpu_falcon *flcn,
 		struct nvgpu_falcon_queue *queue)
 {
-	queue->head = flcn_queue_head_dmem;
-	queue->tail = flcn_queue_tail_dmem;
-	queue->has_room = flcn_queue_has_room_dmem;
+	queue->head = flcn_queue_head;
+	queue->tail = flcn_queue_tail;
+	queue->has_room = flcn_queue_has_room;
 	queue->push = flcn_queue_push_dmem;
 	queue->pop = flcn_queue_pop_dmem;
-	queue->rewind = flcn_queue_rewind_dmem;
+	queue->rewind = flcn_queue_rewind;
 }
 
 static int flcn_queue_prepare_write(struct nvgpu_falcon *flcn,
@@ -403,13 +483,21 @@ int nvgpu_flcn_queue_init(struct nvgpu_falcon *flcn,
 		flcn->flcn_id, queue->id, queue->index,
 		queue->offset, queue->size);
 
-	/* init mutex */
-	err = nvgpu_mutex_init(&queue->mutex);
-	if (err != 0) {
+	switch (queue->queue_type) {
+	case QUEUE_TYPE_DMEM:
+		flcn_queue_init_dmem_queue(flcn, queue);
+		break;
+	case QUEUE_TYPE_EMEM:
+		flcn_queue_init_emem_queue(flcn, queue);
+		break;
+	default:
+		err = -EINVAL;
 		goto exit;
+		break;
 	}
 
-	flcn_queue_init_dmem_queue(flcn, queue);
+	/* init mutex */
+	err = nvgpu_mutex_init(&queue->mutex);
 
 exit:
 	if (err != 0) {

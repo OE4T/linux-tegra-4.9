@@ -84,7 +84,7 @@
 #define FALCON_MAILBOX_0	0x0
 #define FALCON_MAILBOX_1	0x1
 #define FALCON_MAILBOX_COUNT 0x02
-#define FALCON_BLOCK_SIZE 0x100
+#define FALCON_BLOCK_SIZE 0x100U
 
 #define GET_IMEM_TAG(IMEM_ADDR) (IMEM_ADDR >> 8)
 
@@ -167,6 +167,10 @@ struct nvgpu_falcon_dma_info {
 struct gk20a;
 struct nvgpu_falcon;
 struct nvgpu_falcon_bl_info;
+
+/* Queue Type */
+#define QUEUE_TYPE_DMEM 0x0U
+#define QUEUE_TYPE_EMEM 0x1U
 
 struct nvgpu_falcon_queue {
 

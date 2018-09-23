@@ -134,6 +134,7 @@ int nvgpu_pmu_queue_init(struct nvgpu_pmu *pmu,
 	queue = &pmu->queue[id];
 	queue->id = id;
 	queue->oflag = oflag;
+	queue->queue_type = QUEUE_TYPE_DMEM;
 	g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params(queue, id, init);
 
 	err = nvgpu_flcn_queue_init(pmu->flcn, queue);

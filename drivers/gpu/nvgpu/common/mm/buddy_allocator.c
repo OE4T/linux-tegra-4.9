@@ -1350,11 +1350,13 @@ int nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *na,
 	 * must be PDE aligned. If big_pages are not enabled then this
 	 * requirement is not necessary.
 	 */
-	base_big_page = base & ((vm->big_page_size << 10U) - 1U);
-	size_big_page = size & ((vm->big_page_size << 10U) - 1U);
-	if (is_gva_space && vm->big_pages &&
-		(base_big_page != 0ULL || size_big_page != 0ULL)) {
-		return -EINVAL;
+	if (is_gva_space) {
+		base_big_page = base & ((vm->big_page_size << 10U) - 1U);
+		size_big_page = size & ((vm->big_page_size << 10U) - 1U);
+		if (vm->big_pages &&
+			(base_big_page != 0ULL || size_big_page != 0ULL)) {
+			return -EINVAL;
+		}
 	}
 
 	a->flags = flags;

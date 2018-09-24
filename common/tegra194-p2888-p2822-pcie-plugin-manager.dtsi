@@ -52,6 +52,14 @@
 						>;
 				};
 			};
+			override@2 {
+				target = <&{/gpio@2200000}>;
+				_overlay_ {
+					pcie-reg-enable {
+						status = "okay";
+					};
+				};
+			};
 		};
 
 		fragment-disable-uphy-rx-idle {

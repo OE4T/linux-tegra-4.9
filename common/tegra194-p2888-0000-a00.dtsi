@@ -79,6 +79,17 @@
 		};
 	};
 
+	gpio@2200000 {
+		pcie-reg-enable {
+			gpio-hog;
+			gpios = <TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH
+				 TEGRA194_MAIN_GPIO(A, 1) GPIO_ACTIVE_LOW>;
+			label = "pcie-3v3-reg", "pcie-12v-reg";
+			output-high;
+			status = "disabled";
+		};
+	};
+
 	pcie@14180000 {
 		status = "okay";
 

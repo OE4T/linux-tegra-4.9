@@ -17,8 +17,8 @@
 #include <linux/platform_device.h>
 
 #include <nvgpu/nvhost.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "vgpu/clk_vgpu.h"
 #include "os/linux/platform_gk20a.h"
 #include "os/linux/os_linux.h"

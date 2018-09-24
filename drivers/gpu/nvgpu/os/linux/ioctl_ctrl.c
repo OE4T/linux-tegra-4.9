@@ -31,6 +31,7 @@
 #include <nvgpu/sizes.h>
 #include <nvgpu/list.h>
 #include <nvgpu/clk_arb.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
 #include "ioctl_ctrl.h"
@@ -38,7 +39,6 @@
 #include "ioctl_as.h"
 #include "ioctl_tsg.h"
 #include "ioctl_channel.h"
-#include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
 #include "platform_gk20a.h"

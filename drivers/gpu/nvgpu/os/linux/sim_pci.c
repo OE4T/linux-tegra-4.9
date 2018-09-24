@@ -26,7 +26,8 @@
 #include <nvgpu/hw_sim_pci.h>
 #include <nvgpu/sim.h>
 #include <nvgpu/io.h>
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "os_linux.h"
 #include "module.h"
 

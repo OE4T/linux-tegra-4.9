@@ -22,11 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "gk20a/gk20a.h"
-#include "cde_gp10b.h"
-
 #include <nvgpu/log.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/gk20a.h>
+
+#include "cde_gp10b.h"
 
 enum gp10b_programs {
 	GP10B_PROG_HPASS              = 0,

@@ -26,11 +26,11 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/vidmem.h>
 #include <nvgpu/utils.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/linux/vm.h>
 #include <nvgpu/linux/nvgpu_mem.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 #include "platform_gk20a.h"

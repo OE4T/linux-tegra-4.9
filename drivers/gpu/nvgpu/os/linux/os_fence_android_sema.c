@@ -20,6 +20,7 @@
 #include <nvgpu/os_fence.h>
 #include <nvgpu/linux/os_fence_android.h>
 #include <nvgpu/semaphore.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/channel_sync.h>
 

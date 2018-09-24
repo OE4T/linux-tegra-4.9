@@ -25,10 +25,10 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/tsg.h>
 
-#include "gk20a/gk20a.h"
 #include "gv11b/fifo_gv11b.h"
 #include "platform_gk20a.h"
 #include "ioctl_tsg.h"

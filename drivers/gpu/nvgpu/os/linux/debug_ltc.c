@@ -14,7 +14,8 @@
 
 #include "debug_ltc.h"
 #include "os_linux.h"
-#include "gk20a/gk20a.h"
+
+#include <nvgpu/gk20a.h>
 
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>

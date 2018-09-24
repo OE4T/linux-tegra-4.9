@@ -29,8 +29,9 @@
 #include <nvgpu/list.h>
 #include <nvgpu/nvgpu_mem.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
+
+struct gk20a;
 
 #define gpu_sema_dbg(g, fmt, args...)		\
 	nvgpu_log(g, gpu_dbg_sema, fmt, ##args)

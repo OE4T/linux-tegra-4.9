@@ -20,10 +20,10 @@
 
 #include <nvgpu/comptags.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/linux/vm.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
 #include "platform_gk20a.h"

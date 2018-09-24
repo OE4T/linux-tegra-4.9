@@ -18,6 +18,7 @@
 #include <nvgpu/debug.h>
 #include <nvgpu/error_notifier.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
 /*
@@ -26,8 +27,6 @@
  * direct dma_buf usage this can be removed.
  */
 #include <nvgpu/linux/vm.h>
-
-#include "gk20a/gk20a.h"
 
 #include "channel.h"
 #include "ioctl_channel.h"

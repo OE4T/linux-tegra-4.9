@@ -25,10 +25,9 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/vidmem.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/linux/dma.h>
-
-#include "gk20a/gk20a.h"
 
 #include "platform_gk20a.h"
 #include "os_linux.h"

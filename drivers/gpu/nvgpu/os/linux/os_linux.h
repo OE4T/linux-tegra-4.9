@@ -21,7 +21,8 @@
 #include <linux/iommu.h>
 #include <linux/hashtable.h>
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
+
 #include "cde.h"
 #include "sched.h"
 

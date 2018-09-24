@@ -25,6 +25,7 @@
 #include <linux/clk.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 
+#include <nvgpu/gk20a.h>
 #include <nvgpu/nvhost.h>
 
 #include <uapi/linux/nvgpu.h>
@@ -32,7 +33,6 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_powergate.h>
 
-#include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "clk.h"
 #include "scale.h"

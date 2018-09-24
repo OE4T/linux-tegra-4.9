@@ -29,12 +29,11 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/os_sched.h>
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/posix/probe.h>
 
 #include "os_posix.h"
-
-#include "gk20a/gk20a.h"
 
 void nvgpu_wait_for_deferred_interrupts(struct gk20a *g)
 {

@@ -23,7 +23,7 @@
 #ifndef __NVGPU_OS_POSIX_H__
 #define __NVGPU_OS_POSIX_H__
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 struct nvgpu_posix_io_callbacks;
 

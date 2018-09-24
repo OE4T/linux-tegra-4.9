@@ -32,13 +32,12 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
 #include <nvgpu/hashtable.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/nvhost.h>
 
 #include "os_linux.h"
 
 #include "clk.h"
-
-#include "gk20a/gk20a.h"
 
 #include "platform_gk20a.h"
 #include "platform_gk20a_tegra.h"

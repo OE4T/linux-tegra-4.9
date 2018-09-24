@@ -19,11 +19,11 @@
 #include <linux/nvhost_ioctl.h>
 #include <linux/of_platform.h>
 
+#include <nvgpu/gk20a.h>
 #include <nvgpu/nvhost.h>
 
 #include "nvhost_priv.h"
 
-#include "gk20a/gk20a.h"
 #include "os_linux.h"
 #include "module.h"
 

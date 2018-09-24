@@ -19,8 +19,7 @@
 #include <linux/device.h>
 
 #include <nvgpu/lock.h>
-
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #define GK20A_CLKS_MAX		4
 

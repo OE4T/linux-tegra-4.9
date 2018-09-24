@@ -28,8 +28,8 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/sizes.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "module.h"
 #include "os_linux.h"

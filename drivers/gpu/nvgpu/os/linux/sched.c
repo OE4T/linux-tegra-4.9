@@ -23,8 +23,8 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/barrier.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "sched.h"
 #include "os_linux.h"

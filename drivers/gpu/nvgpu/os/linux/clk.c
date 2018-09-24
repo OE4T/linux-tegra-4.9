@@ -25,7 +25,7 @@
 #include "os_linux.h"
 #include "platform_gk20a.h"
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #define HZ_TO_MHZ(x) ((x) / 1000000)
 

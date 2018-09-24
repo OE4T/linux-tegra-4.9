@@ -24,11 +24,11 @@
 #include <nvgpu/gmmu.h>
 #include <nvgpu/vm_area.h>
 #include <nvgpu/log2.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 
 #include <nvgpu/linux/vm.h>
 
-#include "gk20a/gk20a.h"
 #include "platform_gk20a.h"
 #include "ioctl_as.h"
 #include "os_linux.h"

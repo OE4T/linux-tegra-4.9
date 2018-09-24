@@ -13,9 +13,9 @@
 
 #include <nvgpu/io.h>
 #include <nvgpu/types.h>
+#include <nvgpu/gk20a.h>
 
 #include "os_linux.h"
-#include "gk20a/gk20a.h"
 
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 

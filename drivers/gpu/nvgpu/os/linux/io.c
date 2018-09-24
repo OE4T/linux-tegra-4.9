@@ -13,9 +13,9 @@
 
 #include <nvgpu/io.h>
 #include <nvgpu/types.h>
+#include <nvgpu/gk20a.h>
 
 #include "os_linux.h"
-#include "gk20a/gk20a.h"
 
 void nvgpu_writel(struct gk20a *g, u32 r, u32 v)
 {

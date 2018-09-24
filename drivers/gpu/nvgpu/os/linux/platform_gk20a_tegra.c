@@ -42,11 +42,11 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/enabled.h>
+#include <nvgpu/gk20a.h>
 #include <nvgpu/nvhost.h>
 
 #include <nvgpu/linux/dma.h>
 
-#include "gk20a/gk20a.h"
 #include "gm20b/clk_gm20b.h"
 
 #include "scale.h"

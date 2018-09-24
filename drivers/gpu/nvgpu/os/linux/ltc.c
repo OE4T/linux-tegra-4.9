@@ -23,8 +23,8 @@
 #include <nvgpu/ltc.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/gk20a.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
 int nvgpu_ltc_alloc_cbc(struct gk20a *g, size_t compbit_backing_size,

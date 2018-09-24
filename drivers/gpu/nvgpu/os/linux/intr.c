@@ -14,7 +14,7 @@
 #include <trace/events/gk20a.h>
 #include <linux/irqreturn.h>
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 #include <nvgpu/atomic.h>
 #include <nvgpu/unit.h>

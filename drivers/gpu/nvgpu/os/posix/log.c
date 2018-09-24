@@ -23,7 +23,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/types.h>
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/gk20a.h>
 
 /*
  * Define a length for log buffers. This is the buffer that the 'fmt, ...' part

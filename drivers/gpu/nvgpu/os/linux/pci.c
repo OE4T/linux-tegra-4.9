@@ -27,9 +27,9 @@
 #include <nvgpu/nvlink.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/sim.h>
+#include <nvgpu/gk20a.h>
 
 #include "nvlink.h"
-#include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "clk/clk_mclk.h"
 #include "module.h"

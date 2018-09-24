@@ -13,6 +13,7 @@
 #include <linux/highmem.h>
 #include <asm/io.h>
 #include <soc/tegra/common.h>
+#include <soc/tegra/pmc.h>
 #include <linux/memblock.h>
 
 /* Before T18x architecture */
@@ -624,32 +625,27 @@ static int __init tegra_get_last_reset_reason(void)
 	/* read PMC_SCRATCH203, if last reset due to pmic watchdog, stored by
 	 * nvtboot
 	 */
-	void __iomem *pmc_base = NULL;
 	u32 val = 0;
 
-	pmc_base = ioremap_wc(TEGRA_PMC_BASE, TEGRA_PMC_SIZE);
-	if (!pmc_base) {
-		pr_err("%s: Failed to map pmc base\n", __func__);
-		goto out;
-	}
+	if (!soc_is_tegra210_n_before())
+		return 0;
 
-	val = readl_relaxed(pmc_base + PMC_SCRATCH203);
+	val = tegra_pmc_readl(PMC_SCRATCH203);
 	if (val & 0x2)
 		/* reset-reason due to pmic watchdog, set val to index of array
 		 * reset_reason so that it points to "pmic watchdog timeout"
 		 */
 		val = 5;
 	else
-		val = readl_relaxed(pmc_base + PMC_RST_STATUS) & 0x7;
+		val = tegra_pmc_readl(PMC_RST_STATUS) & 0x7;
+
 	if (val >= ARRAY_SIZE(reset_reason))
 		pr_info("last reset value is invalid 0x%x\n", val);
 	else {
 		pr_info("%s\n", reset_reason[val]);
 		pr_info("KERNEL: PMC reset status reg: 0x%x\n", val);
 	}
-	iounmap(pmc_base);
 
-out:
 	tegra_get_bl_reset_status();
 	return 0;
 }

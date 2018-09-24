@@ -204,7 +204,7 @@
 			* Digital overlap(Dol) frames
 			*
 			* num_of_ignored_lines = "";
-			* Used for cropping, eg. OB lines
+			* Used for cropping, eg. OB lines + Ignored area of effective pixel lines
 			*
 			* num_of_lines_offset_0 = "";
 			* Used for cropping, vertical blanking in front of short exposure data
@@ -299,7 +299,7 @@
 					pixel_phase = "rggb";
 
 					active_w = "3856";
-					active_h = "4436";
+					active_h = "4448";
 					readout_orientation = "0";
 					line_length = "4208";
 					inherent_gain = "1";
@@ -319,7 +319,7 @@
 					embedded_metadata_height = "1";
 
 					num_of_exposure = "2";
-					num_of_ignored_lines = "8";
+					num_of_ignored_lines = "14";
 					num_of_lines_offset_0 = "50";
 					num_of_ignored_pixels = "4";
 					num_of_left_margin_pixels = "12";
@@ -339,7 +339,7 @@
 					pixel_phase = "rggb";
 
 					active_w = "1936";
-					active_h = "2252";
+					active_h = "2264";
 					readout_orientation = "0";
 					line_length = "4160";
 					inherent_gain = "1";
@@ -360,7 +360,7 @@
 
 					/* WDR related settings */
 					num_of_exposure = "2";
-					num_of_ignored_lines = "8";
+					num_of_ignored_lines = "14";
 					num_of_lines_offset_0 = "38";
 					num_of_ignored_pixels = "4";
 					num_of_left_margin_pixels = "6";
@@ -492,7 +492,7 @@
 			* Digital overlap(Dol) frames
 			*
 			* num_of_ignored_lines = "";
-			* Used for cropping, eg. OB lines
+			* Used for cropping, eg. OB lines + Ignored area of effective pixel lines
 			*
 			* num_of_lines_offset_0 = "";
 			* Used for cropping, vertical blanking in front of short exposure data
@@ -579,7 +579,7 @@
 					pixel_phase = "rggb";
 
 					active_w = "3856";
-					active_h = "4436";
+					active_h = "4448";
 					readout_orientation = "0";
 					line_length = "4208";
 					inherent_gain = "1";
@@ -599,7 +599,7 @@
 					embedded_metadata_height = "1";
 
 					num_of_exposure = "2";
-					num_of_ignored_lines = "8";
+					num_of_ignored_lines = "14";
 					num_of_lines_offset_0 = "50";
 					num_of_ignored_pixels = "4";
 					num_of_left_margin_pixels = "12";
@@ -619,7 +619,7 @@
 					pixel_phase = "rggb";
 
 					active_w = "1936";
-					active_h = "2252";
+					active_h = "2264";
 					readout_orientation = "0";
 					line_length = "4160";
 					inherent_gain = "1";
@@ -640,7 +640,7 @@
 
 					/* WDR related settings */
 					num_of_exposure = "2";
-					num_of_ignored_lines = "8";
+					num_of_ignored_lines = "14";
 					num_of_lines_offset_0 = "38";
 					num_of_ignored_pixels = "4";
 					num_of_left_margin_pixels = "6";

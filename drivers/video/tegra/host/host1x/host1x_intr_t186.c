@@ -40,6 +40,9 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 	struct nvhost_intr *intr = &dev->intr;
 	unsigned long reg;
 	int i, id;
+	struct nvhost_timespec isr_recv;
+
+	nvhost_ktime_get_ts(&isr_recv);
 
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++) {
@@ -62,7 +65,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 			}
 
 			sp = intr->syncpt + sp_id;
-			nvhost_ktime_get_ts(&sp->isr_recv);
+			sp->isr_recv = isr_recv;
 
 			/* handle graphics host syncpoint increments
 			 * immediately

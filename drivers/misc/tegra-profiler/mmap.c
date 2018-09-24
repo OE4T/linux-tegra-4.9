@@ -36,7 +36,7 @@
 #include "comm.h"
 #include "hrt.h"
 
-#define TMP_BUFFER_SIZE			(PATH_MAX + sizeof(u64))
+#define TMP_BUFFER_SIZE			(PATH_MAX)
 #define QUADD_MMAP_TREE_MAX_LEVEL	32
 
 static void
@@ -95,7 +95,7 @@ process_mmap(struct vm_area_struct *vma, struct task_struct *task,
 
 	vm_file = vma->vm_file;
 	if (vm_file) {
-		file_name = file_path(vm_file, buf, PATH_MAX);
+		file_name = file_path(vm_file, buf, buf_size - sizeof(u64));
 		if (IS_ERR(file_name))
 			return;
 
@@ -132,6 +132,7 @@ process_mmap(struct vm_area_struct *vma, struct task_struct *task,
 	}
 
 	length_aligned = ALIGN(length, sizeof(u64));
+	memset(&file_name[length - 1], 0, length_aligned - length + 1);
 
 	sample.pid = task_pid_nr(task);
 	tgid = task_tgid_nr(task);
@@ -148,7 +149,7 @@ void quadd_process_mmap(struct vm_area_struct *vma, struct task_struct *task)
 {
 	char *buf;
 
-	buf = kzalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
+	buf = kmalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
 	if (!buf)
 		return;
 
@@ -174,7 +175,7 @@ static void get_process_vmas(struct task_struct *task)
 
 	down_read(&mm->mmap_sem);
 
-	buf = kzalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
+	buf = kmalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
 	if (!buf)
 		goto out_put_mm;
 
@@ -205,7 +206,7 @@ static void get_all_processes(int is_root_pid)
 	char *buf;
 	struct task_struct *p;
 
-	buf = kzalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
+	buf = kmalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
 	if (!buf)
 		return;
 
@@ -265,4 +266,34 @@ void quadd_get_mmaps(struct quadd_ctx *ctx)
 		get_process_vmas(task);
 
 	put_task_struct(task);
+}
+
+void quadd_get_task_mmaps(struct quadd_ctx *ctx, struct task_struct *task)
+{
+	char *buf;
+	struct mm_struct *mm;
+
+	if (!quadd_mode_is_sampling(ctx))
+		return;
+
+	if (task->flags & PF_KTHREAD)
+		return;
+
+	task_lock(task);
+
+	mm = task->mm;
+	if (!mm)
+		goto out_task_unlock;
+
+	if (down_read_trylock(&mm->mmap_sem)) {
+		buf = kmalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
+		if (buf) {
+			__get_process_vmas(task, mm, buf, TMP_BUFFER_SIZE);
+			kfree(buf);
+		}
+		up_read(&mm->mmap_sem);
+	}
+
+out_task_unlock:
+	task_unlock(task);
 }

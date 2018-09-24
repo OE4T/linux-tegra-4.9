@@ -826,8 +826,10 @@ void __quadd_event_fork(struct task_struct *task)
 		return;
 
 	read_lock(&tasklist_lock);
-	if (quadd_is_inherited(task))
+	if (quadd_is_inherited(task)) {
+		quadd_get_task_mmaps(hrt.quadd_ctx, task);
 		pid_list_add(task_tgid_nr(task));
+	}
 	read_unlock(&tasklist_lock);
 }
 

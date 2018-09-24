@@ -23,5 +23,6 @@ struct quadd_ctx;
 
 void quadd_process_mmap(struct vm_area_struct *vma, struct task_struct *task);
 void quadd_get_mmaps(struct quadd_ctx *ctx);
+void quadd_get_task_mmaps(struct quadd_ctx *ctx, struct task_struct *task);
 
 #endif  /* __QUADD_MMAP_H */

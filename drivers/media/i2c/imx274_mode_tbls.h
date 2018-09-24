@@ -249,7 +249,7 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 
 /* Mode1(DOL): 3840x2160 10 bits 30fps DOL-HDR
  * Active H: LI (4) + Left margin (12) + 3840 = 3856
- * Active V: [OB (8) + 2160 + VBP (50)] * 2 exposures = 4436
+ * Active V: [OB (8) + 2166 + VBP (50)] * 2 exposures = 4448
  */
 static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -334,9 +334,9 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 	{0x30DF, 0x00},
 	{0x30E0, 0x03}, /* VWINPOS: Crop after 6 ignored area rows (VWINPOS * 2) */
 	{0x30E1, 0x00},
-	{0x3130, 0x78}, /* WRITE_VSIZE: 2168 = post-crop size (2160) + OB (8) */
+	{0x3130, 0x7E}, /* WRITE_VSIZE: 2174 = post-crop size (2166) + OB (8) */
 	{0x3131, 0x08},
-	{0x3132, 0xA2}, /* Y_OUT_SIZE: 2210 = post-crop size (2160) + SHR (50) */
+	{0x3132, 0xA8}, /* Y_OUT_SIZE: 2216 = post-crop (2166) + RHS (50) */
 	{0x3133, 0x08},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -364,7 +364,7 @@ static imx274_reg mode_3840X2160_dol_30fps[] = {
 
 /* Mode 3(DOL) : 1920x1080 10 bits 60fps DOL-HDR
  * Active H: LI (4) + Left margin (6) + 1920 + Right margin (6) = 1936
- * Active V: [OB (8) + 1080 + VBP (38)] * 2 exposures = 2252
+ * Active V: [OB (8) + 1086 + VBP (38)] * 2 exposures = 2264
  */
 static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -448,9 +448,9 @@ static imx274_reg mode_1920X1080_dol_60fps[] = {
 	{0x3039, 0x00},
 	{0x303A, 0x18},
 	{0x303B, 0x0F},
-	{0x3130, 0x40}, /* WRITE_VSIZE: 1080 + 8 */
+	{0x3130, 0x46}, /* WRITE_VSIZE: 1094 = post-crop size (1086) + OB (8)*/
 	{0x3131, 0x04},
-	{0x3132, 0x5E}, /* Y_OUT_SIZE: 1080 + 38 */
+	{0x3132, 0x64}, /* Y_OUT_SIZE: 1124 = post-crop (1086) + RHS1 (38)*/
 	{0x3133, 0x04},
 	{0x3342, 0x0A},
 	{0x3343, 0x00},
@@ -691,8 +691,8 @@ static const int imx274_240_fr[] = {
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
 	{{3840, 2160}, imx274_60_fr, 1, 0, IMX274_MODE_3840X2160},
 	{{1920, 1080}, imx274_60_fr, 1, 0, IMX274_MODE_1920X1080},
-	{{3856, 4436}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
-	{{1936, 2252}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
+	{{3856, 4448}, imx274_30_fr, 1, 1, IMX274_MODE_3840X2160_DOL_30FPS},
+	{{1936, 2264}, imx274_60_fr, 1, 1, IMX274_MODE_1920X1080_DOL_60FPS},
 	{{1288, 546}, imx274_240_fr, 1, 0, IMX274_MODE_1288X546},
 };
 #endif  /* __IMX274_I2C_TABLES__ */

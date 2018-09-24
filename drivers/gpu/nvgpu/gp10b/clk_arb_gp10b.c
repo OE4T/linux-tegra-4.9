@@ -105,7 +105,7 @@ int gp10b_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 			&min_mhz, &max_mhz);
 
 		if (ret == 0) {
-			*default_mhz = min_mhz;
+			*default_mhz = max_mhz;
 		}
 		break;
 

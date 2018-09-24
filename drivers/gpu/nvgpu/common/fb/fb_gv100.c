@@ -49,6 +49,9 @@
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */
 #define MEM_UNLOCK_TIMEOUT			3500 /* msec */
 
+#define MEM_UNLOCK_PROD_BIN		"mem_unlock.bin"
+#define MEM_UNLOCK_DBG_BIN		"mem_unlock_dbg.bin"
+
 void gv100_fb_reset(struct gk20a *g)
 {
 	u32 val;
@@ -140,11 +143,16 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 
 	nvgpu_log_info(g, "fb_mmu_vpr_info = 0x%08x",
 			gk20a_readl(g, fb_mmu_vpr_info_r()));
+
 	/*
 	 * mem_unlock.bin should be written to install
 	 * traps even if VPR isn’t actually supported
 	 */
-	mem_unlock_fw = nvgpu_request_firmware(g, "mem_unlock.bin", 0);
+	if (!g->ops.pmu.is_debug_mode_enabled(g)) {
+		mem_unlock_fw = nvgpu_request_firmware(g, MEM_UNLOCK_PROD_BIN, 0);
+	} else {
+		mem_unlock_fw = nvgpu_request_firmware(g, MEM_UNLOCK_DBG_BIN, 0);
+	}
 	if (!mem_unlock_fw) {
 		nvgpu_err(g, "mem unlock ucode get fail");
 		err = -ENOENT;

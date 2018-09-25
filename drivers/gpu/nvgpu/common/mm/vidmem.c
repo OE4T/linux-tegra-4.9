@@ -286,7 +286,7 @@ int nvgpu_vidmem_init(struct mm_gk20a *mm)
 {
 	struct gk20a *g = mm->g;
 	u64 bootstrap_base, base;
-	u64 bootstrap_size = SZ_256M;
+	u64 bootstrap_size = SZ_512M;
 	u64 default_page_size = SZ_64K;
 	size_t size;
 	int err;

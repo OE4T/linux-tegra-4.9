@@ -182,6 +182,9 @@
 #define PCIE_ATU_DEV(x)			(((x) & 0x1f) << 19)
 #define PCIE_ATU_FUNC(x)		(((x) & 0x7) << 16)
 
+#define IO_BASE_IO_DECODE				BIT(0)
+#define IO_BASE_IO_DECODE_BIT8				BIT(8)
+
 #define CFG_PREF_MEM_LIMIT_BASE				0x24
 #define CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE		BIT(0)
 #define CFG_PREF_MEM_LIMIT_BASE_MEM_LIMIT_DECODE	BIT(16)
@@ -2300,6 +2303,10 @@ static int tegra_pcie_dw_host_init(struct pcie_port *pp)
 		tmp |= 19;
 		dw_pcie_write(pci->dbi_base + AUX_CLK_FREQ, 4, tmp);
 	}
+
+	dw_pcie_read(pci->dbi_base + PCI_IO_BASE, 4, &tmp);
+	tmp &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE);
+	dw_pcie_write(pci->dbi_base + PCI_IO_BASE, 4, tmp);
 
 	dw_pcie_read(pci->dbi_base + CFG_PREF_MEM_LIMIT_BASE, 4, &tmp);
 	tmp |= CFG_PREF_MEM_LIMIT_BASE_MEM_DECODE;

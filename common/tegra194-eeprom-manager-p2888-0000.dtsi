@@ -32,6 +32,9 @@
 			eeprom@1 {
 				slave-address = <0x57>;
 			};
+			eeprom@2 {
+				slave-address = <0x52>;
+			};
 		};
 		bus@2 {
 			i2c-bus = <&gen2_i2c>;

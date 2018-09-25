@@ -22,11 +22,17 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <unit/io.h>
 #include <unit/core.h>
 #include <unit/unit.h>
 #include <unit/results.h>
+
+/*
+ * Mutex to ensure core_add_test_record() is thread safe.
+ */
+pthread_mutex_t mutex_results = PTHREAD_MUTEX_INITIALIZER;
 
 static int __init_results(struct unit_fw *fw)
 {
@@ -72,16 +78,22 @@ int core_add_test_record(struct unit_fw *fw,
 			 bool success)
 {
 	struct unit_test_record *tr;
+	int err = 0;
 
+	pthread_mutex_lock(&mutex_results);
 	/*
-	 * Dones nothing if results are already inited.
+	 * Does nothing if results are already inited.
 	 */
-	if (__init_results(fw) != 0)
-		return -1;
+	if (__init_results(fw) != 0) {
+		err = -1;
+		goto done;
+	}
 
 	tr = malloc(sizeof(*tr));
-	if (tr == NULL)
-		return -1;
+	if (tr == NULL) {
+		err = -1;
+		goto done;
+	}
 
 	tr->mod = mod;
 	tr->test = test;
@@ -97,7 +109,9 @@ int core_add_test_record(struct unit_fw *fw,
 	if (success)
 		fw->results->nr_passing += 1;
 
-	return 0;
+done:
+	pthread_mutex_unlock(&mutex_results);
+	return err;
 }
 
 void core_print_test_status(struct unit_fw *fw)

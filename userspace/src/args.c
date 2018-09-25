@@ -36,11 +36,12 @@ static struct option core_opts[] = {
 	{ "no-color",		0, NULL, 'C' },
 
 	{ "unit-load-path",	1, NULL, 'L' },
+	{ "num-threads",	1, NULL, 'j' },
 
 	{ NULL,			0, NULL,  0  }
 };
 
-static const char *core_opts_str = "hvqCL:";
+static const char *core_opts_str = "hvqCL:j:";
 
 void core_print_help(struct unit_fw *fw)
 {
@@ -63,6 +64,8 @@ void core_print_help(struct unit_fw *fw)
 "                         corrupt that file.\n",
 "  -L, --unit-load-path <PATH>\n",
 "                         Path to where the unit test libraries reside.\n",
+"  -j, --num-threads <COUNT>\n",
+"                         Number of threads to use while running all tests.\n",
 "\n",
 "Note: mandatory arguments to long arguments are mandatory for short\n",
 "arguments as well.\n",
@@ -79,6 +82,7 @@ NULL
 static void set_arg_defaults(struct unit_fw_args *args)
 {
 	args->unit_load_path = DEFAULT_ARG_UNIT_LOAD_PATH;
+	args->thread_count = 1;
 }
 
 /*
@@ -120,6 +124,13 @@ int core_parse_args(struct unit_fw *fw, int argc, char **argv)
 			break;
 		case 'L':
 			args->unit_load_path = optarg;
+			break;
+		case 'j':
+			args->thread_count = strtol(optarg, NULL, 10);
+			if (args->thread_count == 0) {
+				core_err(fw, "Invalid number of threads\n");
+				return -1;
+			}
 			break;
 		case '?':
 			args->help = true;

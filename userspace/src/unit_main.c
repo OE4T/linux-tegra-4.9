@@ -72,5 +72,13 @@ int main(int argc, char **argv)
 
 	core_print_test_status(fw);
 
+	if (fw->results->nr_tests == 0) {
+		/* No tests were run */
+		return -1;
+	} else if ((fw->results->nr_tests - fw->results->nr_passing) != 0) {
+		/* Some tests failed */
+		return -1;
+	}
+
 	return 0;
 }

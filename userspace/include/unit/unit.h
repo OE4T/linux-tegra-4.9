@@ -23,6 +23,8 @@
 #ifndef __UNIT_UNIT_H__
 #define __UNIT_UNIT_H__
 
+#include <pthread.h>
+
 struct gk20a;
 
 struct unit_module;
@@ -84,6 +86,8 @@ struct unit_module {
 	 */
 	void				*lib_handle;
 	struct unit_fw			*fw;
+
+	pthread_t thread;
 };
 
 /*

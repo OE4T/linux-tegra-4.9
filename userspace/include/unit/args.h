@@ -42,6 +42,7 @@ struct unit_fw_args {
 	bool		 help;
 	int		 verbose_lvl;
 	bool		 no_color;
+	int		 thread_count;
 
 	const char	*unit_name;
 	const char	*unit_load_path;

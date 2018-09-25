@@ -3458,7 +3458,8 @@ static int ufshcd_verify_dev_init(struct ufs_hba *hba)
 
 	ufshcd_hold(hba, false);
 	mutex_lock(&hba->dev_cmd.lock);
-	for (retries = NOP_OUT_RETRIES; retries > 0; retries--) {
+	for (retries = NOP_OUT_RETRIES; retries > 0 && hba->card_present;
+								retries--) {
 		err = ufshcd_exec_dev_cmd(hba, DEV_CMD_TYPE_NOP,
 					       NOP_OUT_TIMEOUT);
 
@@ -5856,6 +5857,7 @@ static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buf)
 int ufshcd_rescan(struct ufs_hba *hba)
 {
 	int ret = 0;
+	int retry = MAX_HOST_RESET_RETRIES;
 
 	if (hba->card_present) {
 		dev_info(hba->dev, "UFS card inserted\n");
@@ -5907,6 +5909,9 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		ufshcd_disable_intr(hba, hba->intr_mask);
 
 		ufshcd_hba_stop(hba, true);
+
+		while (ufshcd_eh_in_progress(hba) && retry--)
+			msleep(100);
 
 		/* Disable UFS and MPhy clocks */
 		if (hba->vops && hba->vops->set_ufs_mphy_clocks)

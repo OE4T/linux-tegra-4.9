@@ -2323,7 +2323,8 @@ static int tegra_pcie_dw_host_init(struct pcie_port *pp)
 	dw_pcie_read(pci->dbi_base + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, 4,
 		     &tmp);
 	tmp &= ~(AMBA_ERROR_RESPONSE_CRS_MASK << AMBA_ERROR_RESPONSE_CRS_SHIFT);
-	tmp |= AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001;
+	tmp |= (AMBA_ERROR_RESPONSE_CRS_OKAY_FFFF0001 <<
+		AMBA_ERROR_RESPONSE_CRS_SHIFT);
 	dw_pcie_write(pci->dbi_base + PORT_LOGIC_AMBA_ERROR_RESPONSE_DEFAULT, 4,
 		      tmp);
 

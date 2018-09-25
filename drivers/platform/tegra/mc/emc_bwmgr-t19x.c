@@ -673,7 +673,7 @@ struct bwmgr_ops *bwmgr_eff_init_t19x(void)
 {
 	int ch_num = 0;
 	u32 dram, ch, ecc;
-	void *mc_base, *emc_base;
+	void __iomem *mc_base, *emc_base;
 
 	mc_base = ioremap(MC_BASE, 0x00010000);
 	emc_base = ioremap(EMC_BASE, 0x00010000);

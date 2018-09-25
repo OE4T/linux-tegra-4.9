@@ -2581,7 +2581,7 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 			 * "unsupported request"
 			 */
 			ppdev = pci_get_slot(pp->bus, PCI_DEVFN(0, 0));
-			pci_dev_put(pdev);
+			pci_dev_put(ppdev);
 			enable_ltr(ppdev);	/* Enable LTR in parent (RP) */
 
 			if (!pdev)

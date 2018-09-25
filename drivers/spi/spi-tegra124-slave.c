@@ -891,7 +891,7 @@ static int tegra_spi_start_dma_based_transfer(
 		tspi->chip_data->new_features &&
 		(tspi->cur_direction & DATA_DIR_RX)) {
 		val &= ~SPI_RX_TRIG_MASK;
-		val |= SPI_RX_TRIG_16;
+		val |= SPI_RX_TRIG_1;
 	}
 
 	if (tspi->chip_data->intr_mask_reg) {
@@ -940,7 +940,7 @@ static int tegra_spi_start_dma_based_transfer(
 		dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
 		if (tspi->variable_length_transfer &&
 			tspi->chip_data->new_features)
-			dma_sconfig.src_maxburst = 16;
+			dma_sconfig.src_maxburst = 1;
 		else
 			dma_sconfig.src_maxburst = maxburst;
 		dmaengine_slave_config(tspi->rx_dma_chan, &dma_sconfig);

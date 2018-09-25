@@ -89,7 +89,7 @@ struct fixed_point fixed_point_shift_left(
 		error);
 
 	frac_mask = (places >= fp_arg.frac_prec) ? 0 :
-		((((1 << places) - 1) << (fp_arg.frac_prec - places)) &
+		(((((unsigned int)(1 << places)) - 1) << (fp_arg.frac_prec - places)) &
 			fp_arg.frac_mask);
 	frac_shift = (places >= fp_arg.frac_prec) ? 0 :
 		(fp_arg.frac_prec - places);
@@ -123,7 +123,7 @@ struct fixed_point fixed_point_shift_right(
 		fp_arg.frac_prec,
 		error);
 
-	ret_fp.int_part = (places < fp_arg.int_part) ?
+	ret_fp.int_part = (places < fp_arg.int_prec) ?
 		((fp_arg.int_part >> places) & fp_arg.int_mask) : 0;
 	if (fp_arg.int_part & (1 << (fp_arg.int_prec - 1))) { /* sign extend */
 		sign_ext = 1;
@@ -398,12 +398,30 @@ struct fixed_point fixed_point_div(
 	negate_num = negate_num % 2;
 
 	for (i = 0;
-		i < (dividend_arg.int_prec + 2 * dividend_arg.frac_prec);
+		i < (dividend_arg.int_prec + dividend_arg.frac_prec);
 		i++) {
 		struct fixed_point next_dividend_shifted =
 			fixed_point_shift_right(tmp_dividend,
 				dividend_arg.int_prec +
 				dividend_arg.frac_prec - i - 1,
+				error);
+		tmp_accum = fixed_point_shift_left(tmp_accum, 1, error);
+		tmp_accum.frac_part |= (next_dividend_shifted.frac_part & 1);
+
+		ret_fp = fixed_point_shift_left(ret_fp, 1, error);
+		if (fixed_point_loet(tmp_divisor, tmp_accum, error)) {
+			tmp_accum =
+				fixed_point_sub(tmp_accum, tmp_divisor, error);
+			ret_fp.frac_part |= 1;
+		}
+	}
+
+	for (i = 0;
+		i < dividend_arg.frac_prec;
+		i++) {
+		struct fixed_point next_dividend_shifted =
+			fixed_point_shift_left(tmp_dividend,
+				i + 1,
 				error);
 		tmp_accum = fixed_point_shift_left(tmp_accum, 1, error);
 		tmp_accum.frac_part |= (next_dividend_shifted.frac_part & 1);

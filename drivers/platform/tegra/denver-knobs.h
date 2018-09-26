@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,8 +21,6 @@ int smp_call_function_denver(smp_call_func_t func, void *info, int wait);
 
 bool denver_get_bg_allowed(int cpu);
 void denver_set_bg_allowed(int cpu, bool enable);
-
-bool denver_backdoor_enabled(void);
 
 enum denver_pmic_type {
 	UNDEFINED,

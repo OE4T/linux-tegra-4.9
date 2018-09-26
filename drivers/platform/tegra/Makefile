@@ -43,7 +43,6 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_perf_uncore.o
 endif
 obj-$(CONFIG_TEGRA_PTP_NOTIFIER) += ptp-notifier.o
 obj-$(CONFIG_DENVER_CPU) += denver-knobs.o
-obj-$(CONFIG_DENVER_DEBUG)+= denver-hardwood.o
 obj-$(CONFIG_DENVER_MCA) += denver_mca.o
 obj-$(CONFIG_TEGRA_SAFETY_SCE) += tegra-safety.o
 obj-$(CONFIG_TEGRA_HV_XHCI_DEBUG) += tegra-hv-xhci-debug.o

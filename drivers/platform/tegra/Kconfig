@@ -3,12 +3,6 @@ config DENVER_CPU
 	help
 	  Support for NVIDIA Denver CPU
 
-config DENVER_DEBUG
-	bool "Denver Hardware Debug Tools"
-	depends on DENVER_CPU
-	help
-	  This enables drivers that allow debugging the Denver CPU internals.
-
 config DENVER_MCA
 	tristate "Denver Machine Check Handler"
 	depends on DENVER_CPU

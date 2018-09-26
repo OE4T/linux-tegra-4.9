@@ -388,7 +388,7 @@ static void tegra_capture_ivc_worker(struct work_struct *work)
 
 		/* Check if callback function available */
 		if (unlikely(!civc->cb_ctx[id].cb_func)) {
-			dev_info(&chan->dev, "No callback for id %u\n", id);
+			dev_dbg(&chan->dev, "No callback for id %u\n", id);
 			goto skip;
 		}
 

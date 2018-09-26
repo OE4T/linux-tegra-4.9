@@ -1361,8 +1361,50 @@ enum isp5_block_enabled {
 	ISP5BLOCK_ENABLED_LAC1_REGION3 = 1U << 27
 };
 
-struct isp5_program
-{
+/**
+ * ISP overfetch requirements.
+ *
+ * ISP kernel needs access to pixels outside the active area of a tile
+ * to ensure continuous processing across tile borders. The amount of data
+ * needed depends on features enabled and some ISP parameters so this
+ * is program dependent.
+ *
+ * ISP extrapolates values outside image borders, so overfetch is needed only
+ * for borders between tiles.
+ */
+
+struct isp_overfetch {
+	/**
+	 * Number of pixels needed from the left side of tile
+	 */
+	uint8_t left;
+	/**
+	 * Number of pixels needed from the right side of tile
+	 */
+	uint8_t right;
+	/**
+	 * Number of pixels needed from above the tile
+	 */
+	uint8_t top;
+	/**
+	 * Number of pixels needed from below the tile
+	 */
+	uint8_t bottom;
+	/**
+	 * Number of pixels needed by PRU unit from left and right sides of the tile.
+	 * This is needed to adjust tile border locations so that they align correctly
+	 * at demosaic input.
+	 */
+	uint8_t pru_ovf_h;
+	/**
+	 * Alignment requirement for tile width. Minimum alignment is 2 pixels, but
+	 * if CAR is used this must be set to half of LPF kernel width.
+	 */
+	uint8_t alignment;
+	uint8_t _pad1[2];
+};
+
+struct isp5_program {
 	/*
 	 * Settings needed by RCE ISP driver to generate config buffer.
 	 * Content and format of these fields is the same as corresponding
@@ -1426,47 +1468,8 @@ struct isp5_program
 	uint32_t ds1_pixel_incr_h;
 	uint32_t ds2_pixel_incr_h;
 
-	/**
-	 *  Overfetch needed by this ISP program.
-	 *
-	 * ISP kernel needs access to pixels outside the active area of a tile
-	 * to ensure continuous processing across tile borders. The amount of data
-	 * needed depends on features enabled and some ISP parameters so this
-	 * is program dependent.
-	 *
-	 * ISP extrapolates values outside image borders, so overfetch is needed only
-	 * for borders between tiles.
-	 */
-	struct {
-		/**
-		 * Number of pixels needed from the left side of tile
-		 */
-		uint8_t left;
-		/**
-		 * Number of pixels needed from the right side of tile
-		 */
-		uint8_t right;
-		/**
-		 * Number of pixels needed from above the tile
-		 */
-		uint8_t top;
-		/**
-		 * Number of pixels needed from below the tile
-		 */
-		uint8_t bottom;
-		/**
-		 * Number of pixels needed by PRU unit from left and right sides of the tile.
-		 * This is needed to adjust tile border locations so that they align correctly
-		 * at demosaic input.
-		 */
-		uint8_t pru_ovf_h;
-		/**
-		 * Alignment requirement for tile width. Minimum alignment is 2 pixels, but
-		 * if CAR is used this must be set to half of LPF kernel width.
-		 */
-		uint8_t alignment;
-		uint8_t __pad1[2];
-	} overfetch;
+	struct isp_overfetch overfetch;
+
 	uint32_t _pad1[3];
 
 	/**

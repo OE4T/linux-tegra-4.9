@@ -410,6 +410,8 @@ struct camrtc_event_struct {
 	camrtc_trace_isp_id(1)
 #define camrtc_trace_isp_task_end \
 	camrtc_trace_isp_id(2)
+#define	camrtc_trace_isp_falcon_traces_event \
+	camrtc_trace_isp_id(3)
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

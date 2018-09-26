@@ -467,7 +467,14 @@ void nvgpu_ioctl_tsg_release(struct nvgpu_ref *ref)
 int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tsg_private *priv = filp->private_data;
-	struct tsg_gk20a *tsg = priv->tsg;
+	struct tsg_gk20a *tsg;
+
+	if (!priv) {
+		/* open failed, never got a tsg for this file */
+		return 0;
+	}
+
+	tsg = priv->tsg;
 
 	nvgpu_ref_put(&tsg->refcount, nvgpu_ioctl_tsg_release);
 	nvgpu_kfree(tsg->g, priv);

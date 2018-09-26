@@ -186,6 +186,7 @@ enum dw_pcie_as_type {
 
 struct dw_pcie_ep_ops {
 	void	(*ep_init)(struct dw_pcie_ep *ep);
+	void	(*ep_setup)(struct dw_pcie_ep *ep);
 	int	(*raise_irq)(struct dw_pcie_ep *ep, enum pci_epc_irq_type type,
 			     u8 interrupt_num);
 };

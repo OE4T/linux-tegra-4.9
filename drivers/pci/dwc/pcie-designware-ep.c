@@ -332,7 +332,10 @@ int dw_pcie_ep_init(struct dw_pcie_ep *ep)
 
 	ep->epc = epc;
 	epc_set_drvdata(epc, ep);
-	dw_pcie_setup(pci);
+	if (ep->ops->ep_setup)
+		ep->ops->ep_setup(ep);
+	else
+		dw_pcie_setup(pci);
 
 	return 0;
 }

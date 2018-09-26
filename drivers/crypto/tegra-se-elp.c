@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine Elliptic crypto algorithms.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2860,7 +2860,8 @@ static int tegra_se_eddsa_gen_pub_key(struct crypto_akcipher *tfm,
 	struct tegra_se_ecc_point *pk = NULL;
 	int ret = 0;
 
-	secret_hash = devm_kzalloc(ctx->se_dev->dev, SHA512_WORDS, GFP_KERNEL);
+	secret_hash = devm_kzalloc(ctx->se_dev->dev,
+			SHA512_WORDS*WORD_SIZE_BYTES, GFP_KERNEL);
 	if (!secret_hash)
 		return -ENOMEM;
 
@@ -2908,72 +2909,73 @@ free:
 
 static int tegra_se_eddsa_allocate_mem(struct tegra_se_elp_dev *se_dev,
 				       struct tegra_se_eddsa_vars *params,
-				       u32 nwords, u32 num_msg_words)
+				       u32 nbytes, u32 num_msg_bytes)
 {
 	int ret = 0;
 
-	params->r = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->r = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->r)
 		return -ENOMEM;
 
-	params->prefix_msg = devm_kzalloc(se_dev->dev, nwords + num_msg_words,
+	params->prefix_msg = devm_kzalloc(se_dev->dev, nbytes + num_msg_bytes,
 					  GFP_KERNEL);
 	if (!params->prefix_msg) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	params->prefix_msg_hash = devm_kzalloc(se_dev->dev, SHA512_WORDS,
-					       GFP_KERNEL);
+	params->prefix_msg_hash = devm_kzalloc(se_dev->dev,
+			       SHA512_WORDS*WORD_SIZE_BYTES, GFP_KERNEL);
 	if (!params->prefix_msg_hash) {
 		ret = -ENOMEM;
 		goto free_msg;
 	}
 
-	params->RAM_hash = devm_kzalloc(se_dev->dev, SHA512_WORDS, GFP_KERNEL);
+	params->RAM_hash = devm_kzalloc(se_dev->dev,
+				SHA512_WORDS*WORD_SIZE_BYTES, GFP_KERNEL);
 	if (!params->RAM_hash) {
 		ret = -ENOMEM;
 		goto free_msg_hash;
 	}
 
-	params->R = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->R = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->R) {
 		ret = -ENOMEM;
 		goto free_RAM_hash;
 	}
 
-	params->S = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->S = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->S) {
 		ret = -ENOMEM;
 		goto free_R;
 	}
 
-	params->k = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->k = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->k) {
 		ret = -ENOMEM;
 		goto free_S;
 	}
 
-	params->message = devm_kzalloc(se_dev->dev, num_msg_words, GFP_KERNEL);
+	params->message = devm_kzalloc(se_dev->dev, num_msg_bytes, GFP_KERNEL);
 	if (!params->message) {
 		ret = -ENOMEM;
 		goto free_k;
 	}
 
-	params->RAM = devm_kzalloc(se_dev->dev, 2 * nwords + num_msg_words,
+	params->RAM = devm_kzalloc(se_dev->dev, 2 * nbytes + num_msg_bytes,
 				   GFP_KERNEL);
 	if (!params->RAM) {
 		ret = -ENOMEM;
 		goto free_message;
 	}
 
-	params->S8 = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->S8 = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->S8) {
 		ret = -ENOMEM;
 		goto free_RAM;
 	}
 
-	params->k8 = devm_kzalloc(se_dev->dev, nwords, GFP_KERNEL);
+	params->k8 = devm_kzalloc(se_dev->dev, nbytes, GFP_KERNEL);
 	if (!params->k8) {
 		ret = -ENOMEM;
 		goto free_S8;
@@ -3029,13 +3031,13 @@ static int tegra_se_eddsa_sign(struct akcipher_request *req)
 		tegra_se_ecc_get_curve(ctx->curve_id);
 	struct tegra_se_ecc_point *pk = NULL;
 	unsigned int nbytes = curve->nbytes, nwords = ctx->nwords;
-	u32 num_msg_words = req->src_len / 4;
+	u32 num_msg_words = req->src_len / WORD_SIZE_BYTES;
 	int i, j, cnt, ret = 0;
 	u8 *r_ptr, *s_ptr;
 	struct tegra_se_eddsa_vars params;
 
 	ret = tegra_se_eddsa_allocate_mem(ctx->se_dev, &params,
-					  nwords, num_msg_words);
+		  nwords*WORD_SIZE_BYTES, req->src_len);
 	if (ret)
 		return ret;
 
@@ -3144,12 +3146,11 @@ static int tegra_se_eddsa_verify(struct akcipher_request *req)
 	struct tegra_se_ecc_point *lhs = NULL, *rhs = NULL;
 	struct tegra_se_ecc_point *pk = NULL, *rk = NULL;
 	u8 RX0, PX0;
-	u32 num_msg_words = req->src_len / 4;
 	int ret = 0;
 	struct tegra_se_eddsa_vars params;
 
 	ret = tegra_se_eddsa_allocate_mem(ctx->se_dev, &params,
-					  nwords, num_msg_words);
+		  nwords*WORD_SIZE_BYTES, req->src_len);
 	if (ret)
 		return ret;
 

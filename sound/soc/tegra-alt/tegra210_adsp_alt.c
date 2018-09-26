@@ -5715,6 +5715,9 @@ err:
 
 static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
+	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
+
+	netlink_kernel_release(adsp->nl_sk);
 	pm_runtime_disable(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);

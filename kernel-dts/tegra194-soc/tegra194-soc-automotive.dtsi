@@ -264,6 +264,14 @@
 		nvcsi@15a00000 {
 			status = "okay";
 		};
+
+		tsec@15500000 {
+			status = "disabled";
+		};
+
+		tsecb@15100000 {
+			status = "disabled";
+		};
 	};
 
 	psci {

@@ -5713,8 +5713,7 @@ err:
 	return ret;
 }
 
-static int __maybe_unused tegra210_adsp_audio_platform_remove(
-	struct platform_device *pdev)
+static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
@@ -5760,8 +5759,7 @@ static struct platform_driver tegra210_adsp_audio_driver = {
 	},
 	.probe = tegra210_adsp_audio_platform_probe,
 	.shutdown = tegra210_adsp_audio_platform_shutdown,
-	/* TODO enable remove() when the driver is hotpluggable */
-	/* .remove = tegra210_adsp_audio_platform_remove, */
+	.remove = tegra210_adsp_audio_platform_remove,
 };
 module_platform_driver(tegra210_adsp_audio_driver);
 

@@ -876,8 +876,8 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 	unsigned dbc_ms = DIV_ROUND_UP(debounce, 1000);
 
 	tegra_gpio_update(tgi, offset, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x1);
-	tegra_gpio_update(tgi, offset, GPIO_DEB_FUNC_BIT,
-		GPIO_DEB_FUNC_BIT, 0x1);
+	tegra_gpio_update(tgi, offset, GPIO_ENB_CONFIG_REG,
+			  GPIO_DEB_FUNC_BIT, GPIO_DEB_FUNC_BIT);
 
 	/* Update debounce threshold, GPIO controller support maximum
 	 * 255ms debounce

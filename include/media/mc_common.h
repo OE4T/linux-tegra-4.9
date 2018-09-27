@@ -358,12 +358,13 @@ const struct tegra_video_format *tegra_core_get_format_by_code(
 const struct tegra_video_format *tegra_core_get_format_by_fourcc(
 		struct tegra_channel *chan, u32 fourcc);
 void tegra_channel_queued_buf_done(struct tegra_channel *chan,
-					  enum vb2_buffer_state state);
+	enum vb2_buffer_state state, bool multi_queue);
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
 void tegra_channel_ring_buffer(struct tegra_channel *chan,
 			       struct vb2_v4l2_buffer *vb,
 			       struct timespec *ts, int state);
-struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
+struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan,
+	bool requeue);
 struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan);
 int tegra_channel_alloc_buffer_queue(struct tegra_channel *chan,
 					unsigned int num_buffers);

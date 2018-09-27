@@ -361,7 +361,7 @@ static int tegra_channel_kthread_capture_enqueue(void *data)
 		/* wait till kthread stop and dont DeQ buffers */
 		if (err)
 			continue;
-		buf = dequeue_buffer(chan);
+		buf = dequeue_buffer(chan, true);
 		if (!buf)
 			continue;
 		buf->vb2_state = VB2_BUF_STATE_ACTIVE;
@@ -546,7 +546,7 @@ error:
 error_pipeline_start:
 #endif
 	vq->start_streaming_called = 0;
-	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED);
+	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED, false);
 
 	return ret;
 }
@@ -564,7 +564,7 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		/* free all the ring buffers */
 		free_ring_buffers(chan, 0);
 		/* dequeue buffers back to app which are in capture queue */
-		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
+		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR, false);
 	}
 
 	/* CSI channel to be closed before closing VI channel */

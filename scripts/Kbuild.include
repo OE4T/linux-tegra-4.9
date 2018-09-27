@@ -429,3 +429,5 @@ endif
 
 tegra-root-dtstree = $(subst ^$(realpath $(tegra-dtstree)/../..)/,,^$(realpath $(srctree)/arch/arm64/boot/dts))
 tegra-rel-dtstree = $(subst $(the-space),/,$(patsubst %,..,$(subst /, ,$(tegra-root-dtstree))))
+# delete partially updated (i.e. corrupted) files on error
+.DELETE_ON_ERROR:

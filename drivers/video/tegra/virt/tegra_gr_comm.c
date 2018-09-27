@@ -47,7 +47,7 @@ struct gr_comm_ivc_context {
 
 struct gr_comm_mempool_context {
 	struct tegra_hv_ivm_cookie *cookie;
-	void *ptr;
+	void __iomem *ptr;
 };
 
 struct gr_comm_element {

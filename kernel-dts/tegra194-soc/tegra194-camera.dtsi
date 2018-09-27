@@ -42,8 +42,13 @@
 		clock-names = "rce-cpu-nic", "rce-nic";
 
 		nvidia,clock-rates =
-			<115200000 370000000>,
-			<115200000 370000000>;
+			<19200000 370000000>,
+			<19200000 370000000>;
+
+		nvidia,clock-parents =
+			<&bpmp_clks TEGRA194_CLK_CLK_M>,
+			<&bpmp_clks TEGRA194_CLK_NAFLL_RCE>;
+		nvidia,clock-parent-names = "clk-m", "nafll-rce";
 
 		resets = <&bpmp_resets TEGRA194_RESET_RCE_ALL>;
 		reset-names = "rce-all";

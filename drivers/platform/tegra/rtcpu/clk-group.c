@@ -26,6 +26,10 @@ struct camrtc_clk_group {
 	int nclocks;
 	struct clk **clocks;
 	struct {
+		struct clk *slow;
+		struct clk *fast;
+	} parents;
+	struct {
 		u32 slow;
 		u32 fast;
 	} *rates;
@@ -40,6 +44,40 @@ static void camrtc_clk_group_release(struct device *dev, void *res)
 		if (grp->clocks[i])
 			clk_put(grp->clocks[i]);
 	}
+
+	if (grp->parents.slow)
+		clk_put(grp->parents.slow);
+	if (grp->parents.fast)
+		clk_put(grp->parents.fast);
+}
+
+static int camrtc_clk_group_get_parent(
+	struct device_node *np,
+	int index,
+	struct clk **return_clk)
+{
+	struct of_phandle_args clkspec;
+	struct clk *clk;
+	int ret;
+
+	if (index < 0)
+		return -EINVAL;
+
+	ret = of_parse_phandle_with_args(np,
+			"nvidia,clock-parents", "#clock-cells", index,
+			&clkspec);
+	if (ret < 0)
+		return ret;
+
+	clk = of_clk_get_from_provider(&clkspec);
+	of_node_put(clkspec.np);
+
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+
+	*return_clk = clk;
+
+	return 0;
 }
 
 struct camrtc_clk_group *camrtc_clk_group_get(
@@ -49,6 +87,7 @@ struct camrtc_clk_group *camrtc_clk_group_get(
 	struct device_node *np;
 	int nclocks;
 	int nrates;
+	int nparents;
 	int index;
 	int ret;
 
@@ -61,7 +100,14 @@ struct camrtc_clk_group *camrtc_clk_group_get(
 	if (nclocks < 0)
 		return ERR_PTR(-ENOENT);
 
+	/* This has pairs of u32s: slow and fast rate for each clock */
 	nrates = of_property_count_u64_elems(np, "nvidia,clock-rates");
+
+	nparents = of_count_phandle_with_args(np, "nvidia,clock-parents",
+			"#clock-cells");
+	if (nparents > 0 && nparents != 2)
+		dev_warn(dev, "expecting exactly two \"%s\"\n",
+			"nvidia,clock-parents");
 
 	grp = devres_alloc(camrtc_clk_group_release,
 			sizeof(*grp) +
@@ -94,6 +140,16 @@ struct camrtc_clk_group *camrtc_clk_group_get(
 					2 * index, &grp->rates[index].slow);
 		of_property_read_u32_index(np, "nvidia,clock-rates",
 					2 * index + 1, &grp->rates[index].fast);
+	}
+
+	if (nparents == 2) {
+		ret = camrtc_clk_group_get_parent(np, 0, &grp->parents.slow);
+		if (ret < 0)
+			goto error;
+
+		ret = camrtc_clk_group_get_parent(np, 1, &grp->parents.fast);
+		if (ret < 0)
+			goto error;
 	}
 
 	devres_add(dev, grp);
@@ -164,6 +220,12 @@ int camrtc_clk_group_adjust_slow(const struct camrtc_clk_group *grp)
 			clk_set_rate(grp->clocks[index], slow);
 	}
 
+	if (grp->parents.slow != NULL) {
+		for (index = 0; index < grp->nclocks; index++)
+			clk_set_parent(grp->clocks[index],
+				grp->parents.slow);
+	}
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(camrtc_clk_group_adjust_slow);
@@ -174,6 +236,12 @@ int camrtc_clk_group_adjust_fast(const struct camrtc_clk_group *grp)
 
 	if (IS_ERR_OR_NULL(grp))
 		return -ENODEV;
+
+	if (grp->parents.fast != NULL) {
+		for (index = 0; index < grp->nclocks; index++)
+			clk_set_parent(grp->clocks[index],
+				grp->parents.fast);
+	}
 
 	for (index = 0; index < grp->nclocks; index++) {
 		u32 fast = grp->rates[index].fast;

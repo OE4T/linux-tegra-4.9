@@ -158,6 +158,11 @@ move_left:
 	new->pfn_lo = limit_pfn - (size + pad_size) + 1;
 	new->pfn_hi = new->pfn_lo + size - 1;
 
+	if (new->pfn_lo > limit_pfn) {
+		spin_unlock_irqrestore(&iovad->iova_rbtree_lock, flags);
+		return -ENOMEM;
+	}
+
 	/* Insert the new_iova into domain rbtree by holding writer lock */
 	/* Add new node and rebalance tree. */
 	{

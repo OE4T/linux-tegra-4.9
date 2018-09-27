@@ -1222,7 +1222,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	/* TBD: setup engine contexts */
 
-	if (gpfifo_args->num_inflight_jobs) {
+	if (c->deterministic && gpfifo_args->num_inflight_jobs != 0U) {
 		err = channel_gk20a_prealloc_resources(c,
 				gpfifo_args->num_inflight_jobs);
 		if (err) {
@@ -1248,7 +1248,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 clean_up_priv_cmd:
 	channel_gk20a_free_priv_cmdbuf(c);
 clean_up_prealloc:
-	if (gpfifo_args->num_inflight_jobs) {
+	if (c->deterministic && gpfifo_args->num_inflight_jobs != 0U) {
 		channel_gk20a_free_prealloc_resources(c);
 	}
 clean_up_sync:

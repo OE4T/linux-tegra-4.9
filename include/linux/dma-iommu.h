@@ -49,6 +49,10 @@ struct page **iommu_dma_alloc(struct device *dev, size_t size, gfp_t gfp,
 void iommu_dma_free(struct device *dev, struct page **pages, size_t size,
 		dma_addr_t *handle, unsigned long attrs);
 
+dma_addr_t iommu_dma_alloc_iova(struct device *dev, size_t size,
+		dma_addr_t dma_limit);
+void iommu_dma_free_iova(struct device *dev, dma_addr_t iova, size_t size);
+
 int iommu_dma_mmap(struct page **pages, size_t size, struct vm_area_struct *vma);
 
 dma_addr_t iommu_dma_map_page(struct device *dev, struct page *page,

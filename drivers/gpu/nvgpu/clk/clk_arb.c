@@ -1049,6 +1049,20 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 	return err;
 }
 
+unsigned long nvgpu_clk_measure_freq(struct gk20a *g, u32 api_domain)
+{
+	unsigned long freq = 0UL;
+
+	switch (api_domain) {
+	case CTRL_CLK_DOMAIN_GPC2CLK:
+		freq = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPCCLK) * 2UL;
+		break;
+	default:
+		break;
+	}
+	return freq;
+}
+
 int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 		u32 api_domain, u16 *freq_mhz)
 {

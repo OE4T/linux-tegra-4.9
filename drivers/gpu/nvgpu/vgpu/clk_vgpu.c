@@ -22,6 +22,7 @@
 
 #include <nvgpu/vgpu/vgpu.h>
 #include <nvgpu/vgpu/vgpu_ivc.h>
+#include <nvgpu/clk_arb.h>
 
 #include "gk20a/gk20a.h"
 #include "clk_vgpu.h"
@@ -214,6 +215,7 @@ void vgpu_init_clk_support(struct gk20a *g)
 	g->ops.clk.clk_get_round_rate = vgpu_clk_get_round_rate;
 	g->ops.clk.get_clk_range = vgpu_clk_get_range;
 	g->ops.clk.clk_domain_get_f_points = vgpu_clk_get_f_points;
+	g->ops.clk.measure_freq = nvgpu_clk_measure_freq;
 }
 
 int vgpu_clk_get_freqs(struct gk20a *g, unsigned long **freqs_out,

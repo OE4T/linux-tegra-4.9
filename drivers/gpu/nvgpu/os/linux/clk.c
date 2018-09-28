@@ -26,6 +26,7 @@
 #include "platform_gk20a.h"
 
 #include <nvgpu/gk20a.h>
+#include <nvgpu/clk_arb.h>
 
 #define HZ_TO_MHZ(x) ((x) / 1000000)
 
@@ -280,4 +281,5 @@ void nvgpu_linux_init_clk_support(struct gk20a *g)
 	g->ops.clk.clk_domain_get_f_points = nvgpu_linux_clk_get_f_points;
 	g->ops.clk.get_clk_range = nvgpu_clk_get_range;
 	g->ops.clk.clk_get_round_rate = nvgpu_clk_get_round_rate;
+	g->ops.clk.measure_freq = nvgpu_clk_measure_freq;
 }

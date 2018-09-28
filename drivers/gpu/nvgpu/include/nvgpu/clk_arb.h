@@ -369,6 +369,8 @@ void nvgpu_clk_notification_queue_free(struct gk20a *g,
 
 void nvgpu_clk_arb_event_post_event(struct nvgpu_clk_dev *dev);
 
+unsigned long nvgpu_clk_measure_freq(struct gk20a *g, u32 api_domain);
+
 #ifdef CONFIG_DEBUG_FS
 int nvgpu_clk_arb_debugfs_init(struct gk20a *g);
 #endif

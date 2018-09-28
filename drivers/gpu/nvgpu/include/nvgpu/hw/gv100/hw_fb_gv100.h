@@ -152,18 +152,6 @@ static inline u32 fb_mmu_ctrl_pri_fifo_space_v(u32 r)
 {
 	return (r >> 16U) & 0xffU;
 }
-static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_v(u32 r)
-{
-	return (r >> 11U) & 0x1U;
-}
-static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_true_f(void)
-{
-	return 0x800U;
-}
-static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_false_f(void)
-{
-	return 0x0U;
-}
 static inline u32 fb_mmu_ctrl_atomic_capability_mode_f(u32 v)
 {
 	return (v & 0x3U) << 24U;

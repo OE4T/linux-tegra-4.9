@@ -369,7 +369,7 @@ static const struct gpu_ops gp10b_ops = {
 	.fb = {
 		.init_hw = gm20b_fb_init_hw,
 		.init_fs_state = fb_gm20b_init_fs_state,
-		.set_mmu_page_size = gm20b_fb_set_mmu_page_size,
+		.set_mmu_page_size = NULL,
 		.set_use_full_comp_tag_line =
 			gm20b_fb_set_use_full_comp_tag_line,
 		.mmu_ctrl = gm20b_fb_mmu_ctrl,

@@ -92,7 +92,10 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	g->ops.fb.set_mmu_page_size(g);
+	if (g->ops.fb.set_mmu_page_size) {
+		g->ops.fb.set_mmu_page_size(g);
+	}
+
 	if (g->ops.fb.set_use_full_comp_tag_line) {
 		mm->use_full_comp_tag_line =
 			g->ops.fb.set_use_full_comp_tag_line(g);

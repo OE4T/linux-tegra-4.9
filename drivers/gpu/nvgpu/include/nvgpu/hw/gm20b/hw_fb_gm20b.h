@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -63,18 +63,6 @@ static inline u32 fb_fbhub_num_active_ltcs_r(void)
 static inline u32 fb_mmu_ctrl_r(void)
 {
 	return 0x00100c80U;
-}
-static inline u32 fb_mmu_ctrl_vm_pg_size_f(u32 v)
-{
-	return (v & 0x1U) << 0U;
-}
-static inline u32 fb_mmu_ctrl_vm_pg_size_128kb_f(void)
-{
-	return 0x0U;
-}
-static inline u32 fb_mmu_ctrl_vm_pg_size_64kb_f(void)
-{
-	return 0x1U;
 }
 static inline u32 fb_mmu_ctrl_pri_fifo_empty_v(u32 r)
 {

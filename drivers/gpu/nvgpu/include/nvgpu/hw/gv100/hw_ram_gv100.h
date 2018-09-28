@@ -756,10 +756,6 @@ static inline u32 ram_rl_entry_tsg_timeslice_timeout_128_v(void)
 {
 	return 0x00000080U;
 }
-static inline u32 ram_rl_entry_tsg_timeslice_timeout_disable_v(void)
-{
-	return 0x00000000U;
-}
 static inline u32 ram_rl_entry_tsg_length_f(u32 v)
 {
 	return (v & 0xffU) << 0U;

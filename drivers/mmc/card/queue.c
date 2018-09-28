@@ -21,6 +21,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
 #include <linux/sched/rt.h>
+#include <linux/sched.h>
 
 #include "queue.h"
 #include "block.h"
@@ -110,6 +111,16 @@ static int mmc_queue_thread(void *d)
 	struct request_queue *q = mq->queue;
 	struct sched_param scheduler_params = {0};
 
+#ifdef CONFIG_MMCQD_CPU_AFFINITY
+	cpumask_t cpumask;
+	int ret = 0;
+	cpumask_clear(&cpumask);
+	ret = cpumask_parse(CONFIG_MMCQD_CPU_AFFINITY_VALUE, &cpumask);
+	if (!ret)
+		sched_setaffinity(current->pid, &cpumask);
+	else
+		pr_warn("Error in setting mmcqd cpu affinity\n");
+#endif
 	scheduler_params.sched_priority = 1;
 
 	sched_setscheduler(current, SCHED_FIFO, &scheduler_params);

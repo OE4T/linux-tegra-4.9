@@ -448,22 +448,6 @@ static inline u32 fb_mmu_debug_ctrl_debug_disabled_f(void)
 {
 	return 0x0U;
 }
-static inline u32 fb_mmu_vpr_info_r(void)
-{
-	return 0x00100cd0U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_v(u32 r)
-{
-	return (r >> 2U) & 0x1U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
-{
-	return 0x00000000U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
-{
-	return 0x00000001U;
-}
 static inline u32 fb_mmu_priv_level_mask_r(void)
 {
 	return 0x00100cdcU;

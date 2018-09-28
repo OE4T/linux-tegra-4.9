@@ -468,8 +468,11 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
-		if (g->ops.fb.dump_vpr_wpr_info) {
-			g->ops.fb.dump_vpr_wpr_info(g);
+		if (g->ops.fb.dump_vpr_info) {
+			g->ops.fb.dump_vpr_info(g);
+		}
+		if (g->ops.fb.dump_wpr_info) {
+			g->ops.fb.dump_wpr_info(g);
 		}
 		ret = -EBUSY;
 	}

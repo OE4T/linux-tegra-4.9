@@ -206,11 +206,11 @@ u32 gm20b_fb_compression_align_mask(struct gk20a *g)
 	return SZ_64K - 1;
 }
 
-void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
+void gm20b_fb_dump_vpr_info(struct gk20a *g)
 {
 	u32 val;
 
-	/* print vpr and wpr info */
+	/* print vpr info */
 	val = gk20a_readl(g, fb_mmu_vpr_info_r());
 	val &= ~0x3;
 	val |= fb_mmu_vpr_info_index_addr_lo_v();
@@ -220,7 +220,13 @@ void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 		gk20a_readl(g, fb_mmu_vpr_info_r()),
 		gk20a_readl(g, fb_mmu_vpr_info_r()),
 		gk20a_readl(g, fb_mmu_vpr_info_r()));
+}
 
+void gm20b_fb_dump_wpr_info(struct gk20a *g)
+{
+	u32 val;
+
+	/* print wpr info */
 	val = gk20a_readl(g, fb_mmu_wpr_info_r());
 	val &= ~0xf;
 	val |= (fb_mmu_wpr_info_index_allow_read_v());
@@ -232,7 +238,6 @@ void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 		gk20a_readl(g, fb_mmu_wpr_info_r()),
 		gk20a_readl(g, fb_mmu_wpr_info_r()),
 		gk20a_readl(g, fb_mmu_wpr_info_r()));
-
 }
 
 static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,

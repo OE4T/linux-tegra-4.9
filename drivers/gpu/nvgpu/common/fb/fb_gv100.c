@@ -141,9 +141,6 @@ int gv100_fb_memory_unlock(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
-	nvgpu_log_info(g, "fb_mmu_vpr_info = 0x%08x",
-			gk20a_readl(g, fb_mmu_vpr_info_r()));
-
 	/*
 	 * mem_unlock.bin should be written to install
 	 * traps even if VPR isn’t actually supported

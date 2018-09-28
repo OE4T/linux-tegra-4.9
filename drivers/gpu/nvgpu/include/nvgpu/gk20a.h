@@ -549,7 +549,8 @@ struct gpu_ops {
 		 */
 		u32 (*compression_align_mask)(struct gk20a *g);
 
-		void (*dump_vpr_wpr_info)(struct gk20a *g);
+		void (*dump_vpr_info)(struct gk20a *g);
+		void (*dump_wpr_info)(struct gk20a *g);
 		int (*vpr_info_fetch)(struct gk20a *g);
 		void (*read_wpr_info)(struct gk20a *g,
 				struct wpr_carveout_info *inf);

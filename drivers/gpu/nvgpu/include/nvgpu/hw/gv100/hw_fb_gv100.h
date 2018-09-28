@@ -680,58 +680,6 @@ static inline u32 fb_mmu_debug_ctrl_debug_disabled_v(void)
 {
 	return 0x00000000U;
 }
-static inline u32 fb_mmu_vpr_info_r(void)
-{
-	return 0x00100cd0U;
-}
-static inline u32 fb_mmu_vpr_info_index_f(u32 v)
-{
-	return (v & 0x3U) << 0U;
-}
-static inline u32 fb_mmu_vpr_info_index_v(u32 r)
-{
-	return (r >> 0U) & 0x3U;
-}
-static inline u32 fb_mmu_vpr_info_index_m(void)
-{
-	return 0x3U << 0U;
-}
-static inline u32 fb_mmu_vpr_info_index_addr_lo_v(void)
-{
-	return 0x00000000U;
-}
-static inline u32 fb_mmu_vpr_info_index_addr_hi_v(void)
-{
-	return 0x00000001U;
-}
-static inline u32 fb_mmu_vpr_info_index_cya_lo_v(void)
-{
-	return 0x00000002U;
-}
-static inline u32 fb_mmu_vpr_info_index_cya_hi_v(void)
-{
-	return 0x00000003U;
-}
-static inline u32 fb_mmu_vpr_info_cya_lo_in_use_m(void)
-{
-	return 0x1U << 4U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_f(u32 v)
-{
-	return (v & 0x1U) << 2U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_v(u32 r)
-{
-	return (r >> 2U) & 0x1U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
-{
-	return 0x00000000U;
-}
-static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
-{
-	return 0x00000001U;
-}
 static inline u32 fb_niso_cfg1_r(void)
 {
 	return 0x00100c14U;

@@ -307,9 +307,12 @@ static void edid_recheck_state(struct tegra_hpd_data *data)
 	 * when new mointor connected/edid read failed. So state machine
 	 * does not go in loop between STATE_RECHECK_EDID and
 	 * STATE_HPD_RESET.
+	 *
+	 * If EDID changed in suspend, we do not want kernel to enable DC
+	 * during resume. Hence, set dc->reenable_on_resume to false.
 	 */
 	if (data->dc->suspended && !match) {
-		data->dc->enabled = false;
+		data->dc->reenable_on_resume = false;
 		data->hpd_resuming = false;
 
 		tgt_state = STATE_HPD_RESET;

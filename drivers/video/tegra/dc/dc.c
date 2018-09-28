@@ -7008,8 +7008,11 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	mutex_lock(&dc->lock);
 	ret = tegra_dc_io_start(dc);
 
-	if (dc->enabled)
+	if (dc->enabled) {
 		_tegra_dc_disable(dc);
+		dc->enabled = false;
+		dc->reenable_on_resume = true;
+	}
 
 	dc->suspended = true;
 
@@ -7052,7 +7055,6 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	trace_display_resume(dc);
 	dev_info(&ndev->dev, "resume\n");
 
-	mutex_lock(&dc->lock);
 	tegra_dc_syncpt_preset_maxval(dc->ndev, dc->vblank_syncpt);
 
 	/* To pan the fb on resume */
@@ -7064,10 +7066,10 @@ static int tegra_dc_resume(struct platform_device *ndev)
 	if (dc->out_ops && dc->out_ops->resume)
 		dc->out_ops->resume(dc);
 
-	if (dc->enabled) {
-		dc->enabled = false;
+	mutex_lock(&dc->lock);
+	if (!dc->enabled && dc->reenable_on_resume)
 		dc->enabled = _tegra_dc_enable(dc);
-	}
+	dc->reenable_on_resume = false;
 	dc->suspended = false;
 
 	mutex_unlock(&dc->lock);

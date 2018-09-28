@@ -700,11 +700,11 @@ static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
 
 		/*
 		 * In dc resume context DC has to be in disable state if EDID
-		 * is changed, setting dc->enabled to false make sure DC does
-		 * not get enabled.
+		 * is changed, setting dc->reenable_on_resume to false makes
+		 * sure DC does not get enabled.
 		 */
 		if (hdmi->dc->suspended)
-			hdmi->dc->enabled = false;
+			hdmi->dc->reenable_on_resume = false;
 	}
 
 	return ret;

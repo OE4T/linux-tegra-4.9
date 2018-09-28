@@ -480,6 +480,7 @@ struct tegra_dc {
 	bool				suspended;
 	bool				blanked;
 	bool				shutdown;
+	bool				reenable_on_resume;
 
 	/* Some of the setup code could reset display even if
 	 * DC is already by bootloader.  This one-time mark is

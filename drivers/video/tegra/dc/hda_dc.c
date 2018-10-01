@@ -210,6 +210,9 @@ int tegra_hdmi_setup_hda_presence(int dev_id)
 	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 	mutex_unlock(&global_hda_lock);
 
+	if (hda_inst[sor_num].hda_state != HDA_ENABLED)
+		goto err;
+
 	hda = hda_inst[sor_num].hda;
 	if ((hda->sink == TEGRA_DC_OUT_HDMI) &&
 			to_hdmi(hda->client_data)->dvi)
@@ -399,6 +402,9 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 	mutex_unlock(&global_hda_lock);
 
+	if (hda_inst[sor_num].hda_state != HDA_ENABLED)
+		goto err;
+
 	hda = hda_inst[sor_num].hda;
 	if ((hda->sink == TEGRA_DC_OUT_HDMI) && to_hdmi(hda->client_data)->dvi)
 		goto err;
@@ -446,7 +452,11 @@ int tegra_hdmi_audio_null_sample_inject(bool on, int dev_id)
 	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 	mutex_unlock(&global_hda_lock);
 
+	if (hda_inst[sor_num].hda_state != HDA_ENABLED)
+		goto err;
+
 	hda = hda_inst[sor_num].hda;
+
 	tegra_unpowergate_partition(hda->sor->powergate_id);
 	tegra_sor_clk_enable(hda->sor);
 	tegra_dc_io_start(hda->dc);
@@ -466,6 +476,7 @@ int tegra_hdmi_audio_null_sample_inject(bool on, int dev_id)
 	tegra_dc_io_end(hda->dc);
 	tegra_sor_clk_disable(hda->sor);
 	tegra_powergate_partition(hda->sor->powergate_id);
+err:
 	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 	return 0;
 }
@@ -588,6 +599,10 @@ void tegra_hda_enable(void *hda_handle)
 	if (hda->sink == TEGRA_DC_OUT_DP)
 		hda->eld->conn_type = 1; /* For DP, conn_type = 1 */
 
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	hda_inst[sor_num].hda_state = HDA_ENABLED;
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
+
 	tegra_hdmi_setup_hda_presence(hda->dev_id);
 	tegra_hdmi_setup_audio_freq_source(hda->audio_freq, HDA, hda->dev_id);
 }
@@ -610,6 +625,9 @@ void tegra_hda_disable(void *hda_handle)
 	}
 
 	mutex_unlock(&global_hda_lock);
+	mutex_lock(&hda_inst[sor_num].hda_inst_lock);
+	hda_inst[sor_num].hda_state &= HDA_INITIALIZED;
+	mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 }
 
 void tegra_hda_init(struct tegra_dc *dc, void *data)
@@ -684,8 +702,7 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 				mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 				hda->dev_id = tegra_hda_get_dev_id(hda->sor);
 				hda_inst[sor_num].hda = hda;
-				hda_inst[sor_num].initialized =
-					true;
+				hda_inst[sor_num].hda_state = HDA_INITIALIZED;
 				mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 			}
 			mutex_unlock(&global_hda_lock);
@@ -717,12 +734,13 @@ void tegra_hda_destroy(void *hda_handle)
 		kfree(hda->audio_switch_name);
 		kfree(hda);
 		hda = NULL;
-		hda_inst[sor_num].initialized = false;
+		hda_inst[sor_num].hda = NULL;
+		hda_inst[sor_num].hda_state = HDA_UNINITIALIZED;
 		mutex_unlock(&hda_inst[sor_num].hda_inst_lock);
 	}
 
 	for (i = 0; i < tegra_dc_get_numof_dispsors(); i++) {
-		if (hda_inst[i].initialized) {
+		if (hda_inst[i].hda_state & HDA_INITIALIZED) {
 			free_hda_mem = false;
 			break;
 		}

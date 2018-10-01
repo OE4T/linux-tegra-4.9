@@ -18,6 +18,12 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_HDA_DC_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_HDA_DC_H__
 
+enum tegra_dc_hda_state {
+	HDA_UNINITIALIZED = 0,
+	HDA_INITIALIZED,
+	HDA_ENABLED = 3,
+};
+
 struct tegra_dc_hda_data {
 	int dev_id;
 	struct tegra_dc_sor_data *sor;
@@ -38,7 +44,7 @@ struct tegra_dc_hda_data {
 };
 
 struct tegra_hda_inst {
-	bool initialized; /* set to true in tegra_hda_init */
+	enum tegra_dc_hda_state hda_state; /* hda state */
 	struct tegra_dc_hda_data *hda;
 	struct mutex hda_inst_lock;
 };

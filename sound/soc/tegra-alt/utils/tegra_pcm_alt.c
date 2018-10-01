@@ -2,7 +2,7 @@
  * tegra_alt_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -180,6 +180,41 @@ static int tegra_alt_pcm_mmap(struct snd_pcm_substream *substream,
 					runtime->dma_bytes);
 }
 
+static snd_pcm_uframes_t tegra_alt_pcm_pointer
+				(struct snd_pcm_substream *substream)
+{
+
+	unsigned int pos = 0;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	snd_pcm_sframes_t appl_offset, hw_offset;
+	char *appl_ptr;
+
+	pos = snd_dmaengine_pcm_pointer(substream);
+
+	/* In DRAINING state pointer callback comes from dma completion, here
+	 * we want to make sure if if dma completion callback is late we should
+	 * not endup playing stale data.
+	 */
+	if ((runtime->status->state == SNDRV_PCM_STATE_DRAINING) &&
+		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK)) {
+		appl_offset = (snd_pcm_sframes_t)(runtime->control->appl_ptr %
+					runtime->buffer_size);
+		hw_offset = bytes_to_frames(runtime, pos);
+		appl_ptr = runtime->dma_area + frames_to_bytes(runtime,
+					appl_offset);
+		if (hw_offset < appl_offset) {
+			memset(appl_ptr, 0, frames_to_bytes(runtime,
+					runtime->buffer_size - appl_offset));
+			memset(runtime->dma_area, 0, frames_to_bytes(runtime,
+					hw_offset));
+		} else
+			memset(appl_ptr, 0, frames_to_bytes(runtime,
+					hw_offset - appl_offset));
+	}
+
+	return pos;
+}
+
 static struct snd_pcm_ops tegra_alt_pcm_ops = {
 	.open		= tegra_alt_pcm_open,
 	.close		= tegra_alt_pcm_close,
@@ -187,7 +222,7 @@ static struct snd_pcm_ops tegra_alt_pcm_ops = {
 	.hw_params	= tegra_alt_pcm_hw_params,
 	.hw_free	= tegra_alt_pcm_hw_free,
 	.trigger	= snd_dmaengine_pcm_trigger,
-	.pointer	= snd_dmaengine_pcm_pointer,
+	.pointer	= tegra_alt_pcm_pointer,
 	.mmap		= tegra_alt_pcm_mmap,
 };
 

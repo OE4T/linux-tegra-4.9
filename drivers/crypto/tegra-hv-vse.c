@@ -502,7 +502,8 @@ static int tegra_hv_vse_prepare_ivc_linked_list(
 	struct tegra_virtual_se_dev *se_dev, struct scatterlist *sg,
 	u32 total_len, int max_ll_len, int block_size,
 	struct tegra_virtual_se_addr *src_addr,
-	int *num_lists, enum dma_data_direction dir)
+	int *num_lists, enum dma_data_direction dir,
+	unsigned int *num_mapped_sgs)
 {
 	struct scatterlist *src_sg;
 	int err = 0;
@@ -554,6 +555,7 @@ static int tegra_hv_vse_prepare_ivc_linked_list(
 		src_sg = sg_next(src_sg);
 	}
 	*num_lists = i;
+	*num_mapped_sgs = sg_count;
 
 	return 0;
 exit:
@@ -562,6 +564,7 @@ exit:
 		dma_unmap_sg(se_dev->dev, src_sg, 1, dir);
 		src_sg = sg_next(src_sg);
 	}
+	*num_mapped_sgs = 0;
 
 	return err;
 }
@@ -655,6 +658,7 @@ static int tegra_hv_vse_sha_final(struct ahash_request *req)
 	dma_addr_t dst_buf_addr;
 	u32 num_lists;
 	u32 mode;
+	unsigned int num_mapped_sgs = 0;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
@@ -769,7 +773,7 @@ static int tegra_hv_vse_sha_final(struct ahash_request *req)
 		sha_ctx->hashblock_size,
 		ivc_tx->args.sha.src.addr,
 		&num_lists,
-		DMA_TO_DEVICE);
+		DMA_TO_DEVICE, &num_mapped_sgs);
 	if (err) {
 		devm_kfree(se_dev->dev, priv);
 		goto exit;
@@ -811,7 +815,7 @@ static int tegra_hv_vse_sha_final(struct ahash_request *req)
 	mutex_unlock(&se_dev->server_lock);
 	devm_kfree(se_dev->dev, priv);
 	sg = req->src;
-	while (sg) {
+	while (sg && num_mapped_sgs--) {
 		dma_unmap_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
 		sg = sg_next(sg);
 	}
@@ -1803,6 +1807,7 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 	int time_left;
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
+	unsigned int num_mapped_sgs = 0;
 
 	blocks_to_process = req->nbytes / TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
 	/* num of bytes less than block size */
@@ -1862,7 +1867,7 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 			TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
 			ivc_tx->args.aes.op_cmac.src.addr,
 			&num_lists,
-			DMA_TO_DEVICE);
+			DMA_TO_DEVICE, &num_mapped_sgs);
 		if (err)
 			goto exit;
 
@@ -2006,7 +2011,7 @@ unmap_exit:
 		TEGRA_VIRUTAL_SE_AES_CMAC_DIGEST_SIZE, DMA_FROM_DEVICE);
 
 	src_sg = req->src;
-	while (src_sg) {
+	while (src_sg && num_mapped_sgs--) {
 		dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
 		src_sg = sg_next(src_sg);
 	}

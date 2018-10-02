@@ -1241,16 +1241,18 @@ void tegra210_reset_dram_clktree_values(struct emc_table *table)
 	__RESET_CLKTREE(table, 1, 1, 1);
 }
 
-static void update_dll_control(u32 emc_cfg_dig_dll, int channel_mode)
+static void update_dll_control(u32 emc_cfg_dig_dll,
+		int channel_mode, bool updated_state)
 {
 	emc_writel(emc_cfg_dig_dll, EMC_CFG_DIG_DLL);
 	emc_timing_update(channel_mode);
 
 	wait_for_update(EMC_CFG_DIG_DLL, EMC_CFG_DIG_DLL_CFG_DLL_EN,
-			0, REG_EMC);
+			updated_state, REG_EMC);
 	if (channel_mode == DUAL_CHANNEL)
 		wait_for_update(EMC_CFG_DIG_DLL,
-				EMC_CFG_DIG_DLL_CFG_DLL_EN, 0, REG_EMC1);
+				EMC_CFG_DIG_DLL_CFG_DLL_EN,
+				updated_state, REG_EMC1);
 }
 
 void tegra210_dll_disable(int channel_mode)
@@ -1260,7 +1262,7 @@ void tegra210_dll_disable(int channel_mode)
 	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
 	emc_cfg_dig_dll &= ~EMC_CFG_DIG_DLL_CFG_DLL_EN;
 
-	update_dll_control(emc_cfg_dig_dll, channel_mode);
+	update_dll_control(emc_cfg_dig_dll, channel_mode, false);
 }
 
 void tegra210_dll_enable(int channel_mode)
@@ -1270,7 +1272,7 @@ void tegra210_dll_enable(int channel_mode)
 	emc_cfg_dig_dll = emc_readl(EMC_CFG_DIG_DLL);
 	emc_cfg_dig_dll |= EMC_CFG_DIG_DLL_CFG_DLL_EN;
 
-	update_dll_control(emc_cfg_dig_dll, channel_mode);
+	update_dll_control(emc_cfg_dig_dll, channel_mode, true);
 }
 
 void tegra210_emc_timing_invalidate(void)

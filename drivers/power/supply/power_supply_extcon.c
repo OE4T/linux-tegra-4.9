@@ -175,6 +175,13 @@ static struct power_supply_cables psy_cables[] = {
 		.extcon_id = EXTCON_USB_PD,
 		.ac_online = 1,
 	},
+	{
+		.name	= "AC-ADAPTOR",
+		.dt_cable_name = "ac-adaptor",
+		.print_str = "ac/dc power adaptor",
+		.extcon_id = EXTCON_AC_ADAPTOR,
+		.ac_online = 1,
+	},
 };
 
 static enum power_supply_property power_supply_extcon_props[] = {
@@ -419,7 +426,7 @@ static int psy_extcon_probe(struct platform_device *pdev)
 				!strcmp(psy_cable->name, "ACA RID-A"))
 			ext_name = pdata->y_cable_extcon_name;
 		if (!ext_name) {
-			dev_warn(psy_extcon->dev, "No extname for cable %s\n",
+			dev_dbg(psy_extcon->dev, "No extname for cable %s\n",
 						psy_cable->name);
 			continue;
 		}

@@ -95,8 +95,9 @@
 #define EXTCON_USB_ACA_RIDC	71
 #define EXTCON_USB_Y_CABLE	72
 #define EXTCON_USB_PD		73
+#define EXTCON_AC_ADAPTOR	74
 
-#define EXTCON_NUM		74
+#define EXTCON_NUM		75
 
 /*
  * Define the property of supported external connectors.

@@ -1851,6 +1851,122 @@ int tegra_virt_t210ahub_set_regdump(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL(tegra_virt_t210ahub_set_regdump);
 
+//Set mixer fade
+int tegra_virt_t210mixer_set_fade(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err, id;
+	uint32_t rx_id, rx_gain, rx_dur;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_FADE;
+	msg.params.fade_info.id = 0;
+
+	for (id = 0; id < TEGRA210_MIXER_AXBAR_RX_MAX; id++) {
+
+		rx_id = ucontrol->value.integer.value[3 * id];
+		rx_gain = ucontrol->value.integer.value[(3 * id) + 1];
+		rx_dur = ucontrol->value.integer.value[(3 * id) + 2];
+
+		// Checking for end of input data
+		if (rx_id == 0 && rx_gain == 0 && rx_dur == 0)
+			break;
+
+		// Checking for valid rx id
+		if (rx_id <= 0 || rx_id > TEGRA210_MIXER_AXBAR_RX_MAX) {
+			pr_err("Mixer id is out of range\n");
+			return -EINVAL;
+		}
+
+		// Making rx id zero-indexed for audio server
+		rx_id = rx_id - 1;
+
+		msg.params.fade_info.rx_idx |= (1 << rx_id);
+		msg.params.fade_info.gain_level[rx_id] = rx_gain;
+		msg.params.fade_info.duration_n3[rx_id] = rx_dur;
+
+	}
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_set_fade);
+
+// Dummy get fade
+int tegra_virt_t210mixer_get_fade(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_get_fade);
+
+//Get fade status
+int tegra_virt_t210mixer_get_fade_status(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+
+	int err, id;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_GET_FADE_STATUS;
+	msg.params.fade_status.id = 0;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("%s: error on ivc_receive\n", __func__);
+
+	for (id = 0; id < TEGRA210_MIXER_AXBAR_RX_MAX; id++) {
+		ucontrol->value.integer.value[id] =
+			msg.params.fade_status.status[id];
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210mixer_get_fade_status);
+
+//Fade param info
+int tegra_virt_t210mixer_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	if (params->mask == SNDRV_CTL_ELEM_TYPE_INTEGER) {
+		params->num_regs = 30;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 0xffffffff;
+	}
+	uinfo->type = params->mask;
+	uinfo->count = params->num_regs;
+
+	return 0;
+}
+
 MODULE_AUTHOR("Dipesh Gandhi <dipeshg@nvidia.com>");
 MODULE_DESCRIPTION("Tegra Virt ASoC utility code");
 MODULE_LICENSE("GPL");

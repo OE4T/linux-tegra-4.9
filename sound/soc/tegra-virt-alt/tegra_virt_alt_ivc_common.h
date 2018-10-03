@@ -19,6 +19,8 @@
 
 #include <linux/types.h>
 
+#define TEGRA210_MIXER_AXBAR_RX_MAX 10
+
 enum ivc_audio_err_t {
 	NVAUDIO_ERR_OK,
 	NVAUDIO_ERR_SERVER_STATE,
@@ -150,6 +152,8 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_AMIXER_SET_RX_DURATION,
 	NVAUDIO_AMIXER_GET_RX_DURATION,
 	NVAUDIO_AHUB_BLOCK_REGDUMP,
+	NVAUDIO_AMIXER_SET_FADE,
+	NVAUDIO_AMIXER_GET_FADE_STATUS,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -232,20 +236,34 @@ struct nvaudio_ivc_ahub_block {
 	uint32_t	stream_id;
 };
 
+struct nvaudio_ivc_t210_amixer_fade_info {
+	uint32_t	id;
+	uint32_t	rx_idx;
+	uint32_t	gain_level[TEGRA210_MIXER_AXBAR_RX_MAX];
+	uint32_t	duration_n3[TEGRA210_MIXER_AXBAR_RX_MAX];
+};
+
+struct nvaudio_ivc_t210_amixer_fade_status {
+	uint32_t	id;
+	int32_t		status[TEGRA210_MIXER_AXBAR_RX_MAX];
+};
+
 struct nvaudio_ivc_msg {
 	int32_t			channel_id;
 	enum nvaudio_ivc_cmd_t	cmd;
 	union {
-		struct nvaudio_ivc_dmaif_info		dmaif_info;
-		struct nvaudio_ivc_t210_amixer_info	amixer_info;
-		struct nvaudio_ivc_t210_sfc_info	sfc_info;
-		struct nvaudio_ivc_t210_mvc_info	mvc_info;
-		struct nvaudio_ivc_t186_asrc_info	asrc_info;
-		struct nvaudio_ivc_t186_arad_info	arad_info;
-		struct nvaudio_ivc_t210_amx_info	amx_info;
-		struct nvaudio_ivc_t210_i2s_info	i2s_info;
-		struct nvaudio_ivc_xbar_link		xbar_info;
-		struct nvaudio_ivc_ahub_block		ahub_block_info;
+		struct nvaudio_ivc_dmaif_info			dmaif_info;
+		struct nvaudio_ivc_t210_amixer_info		amixer_info;
+		struct nvaudio_ivc_t210_sfc_info		sfc_info;
+		struct nvaudio_ivc_t210_mvc_info		mvc_info;
+		struct nvaudio_ivc_t186_asrc_info		asrc_info;
+		struct nvaudio_ivc_t186_arad_info		arad_info;
+		struct nvaudio_ivc_t210_amx_info		amx_info;
+		struct nvaudio_ivc_t210_i2s_info		i2s_info;
+		struct nvaudio_ivc_xbar_link			xbar_info;
+		struct nvaudio_ivc_ahub_block			ahub_block_info;
+		struct nvaudio_ivc_t210_amixer_fade_info	fade_info;
+		struct nvaudio_ivc_t210_amixer_fade_status	fade_status;
 	} params;
 	bool			ack_required;
 	int32_t			err;

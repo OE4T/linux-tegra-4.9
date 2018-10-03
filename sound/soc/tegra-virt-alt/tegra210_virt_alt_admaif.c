@@ -368,6 +368,8 @@ MIXER_DURATION_CTRL_DECL("RX9 Duration", 0x08),
 MIXER_DURATION_CTRL_DECL("RX10 Duration", 0x09),
 
 MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
+MIXER_SET_FADE("Mixer fade", 0x00),
+MIXER_GET_FADE_STATUS("Mixer fade status", 0x00),
 
 SFC_IN_FREQ_CTRL_DECL("SFC1 input rate", 0x00),
 SFC_IN_FREQ_CTRL_DECL("SFC2 input rate", 0x01),
@@ -490,6 +492,8 @@ MIXER_DURATION_CTRL_DECL("RX9 Duration", 0x08),
 MIXER_DURATION_CTRL_DECL("RX10 Duration", 0x09),
 
 MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
+MIXER_SET_FADE("Mixer fade", 0x00),
+MIXER_GET_FADE_STATUS("Mixer fade status", 0x00),
 
 SFC_IN_FREQ_CTRL_DECL("SFC1 input rate", 0x00),
 SFC_IN_FREQ_CTRL_DECL("SFC2 input rate", 0x01),

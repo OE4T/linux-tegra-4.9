@@ -193,6 +193,29 @@
 	tegra_virt_i2s_get_rate,	\
 	tegra_virt_i2s_set_rate)
 
+
+#define MIXER_SET_FADE(xname, xbase) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
+	.info =  tegra_virt_t210mixer_param_info,	\
+	.name = xname,	\
+	.put = tegra_virt_t210mixer_set_fade,	\
+	.get = tegra_virt_t210mixer_get_fade,	\
+	.private_value =	\
+	((unsigned long)&(struct soc_bytes)	\
+	{.base = xbase, .num_regs = 128,	\
+	.mask = SNDRV_CTL_ELEM_TYPE_INTEGER}) }
+
+#define MIXER_GET_FADE_STATUS(xname, xbase) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
+	.info =  tegra_virt_t210mixer_param_info,	\
+	.access = SNDRV_CTL_ELEM_ACCESS_READ,	\
+	.name = xname,	\
+	.get = tegra_virt_t210mixer_get_fade_status,	\
+	.private_value =	\
+	((unsigned long)&(struct soc_bytes)	\
+	{.base = xbase, .num_regs = 128,	\
+	.mask = SNDRV_CTL_ELEM_TYPE_INTEGER}) }
+
 #define REGDUMP_PACK(id1, id2, id3) \
 	(id1 | (id2 << STREAM_ID_SHIFT_VALUE) | (id3 << REGDUMP_CMD_SHIFT_VALUE))
 #define REGDUMP_CTRL_DECL(ename, id, stream_id, cmd) \
@@ -386,7 +409,18 @@ int tegra_virt_i2s_set_rate(
 int tegra_virt_i2s_get_rate(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
-
+//Mixer fade
+int tegra_virt_t210mixer_get_fade_status(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mixer_set_fade(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mixer_get_fade(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210mixer_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo);
 int tegra_metadata_get_init(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);

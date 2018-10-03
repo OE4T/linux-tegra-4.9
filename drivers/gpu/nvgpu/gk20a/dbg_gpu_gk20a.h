@@ -88,7 +88,7 @@ dbg_session_data_from_dbg_s_entry(struct nvgpu_list_node *node)
 
 struct dbg_session_channel_data {
 	int channel_fd;
-	int chid;
+	u32 chid;
 	struct nvgpu_list_node ch_entry;
 	struct dbg_session_data *session_data;
 	int (*unbind_single_channel)(struct dbg_session_gk20a *dbg_s,

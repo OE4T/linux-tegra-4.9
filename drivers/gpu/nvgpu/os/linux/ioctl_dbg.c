@@ -456,7 +456,7 @@ static int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 			struct dbg_session_channel_data *ch_data)
 {
 	struct gk20a *g = dbg_s->g;
-	int chid;
+	u32 chid;
 	struct dbg_session_data *session_data;
 	struct dbg_profiler_object_data *prof_obj, *tmp_obj;
 	struct dbg_session_channel_data_linux *ch_data_linux;

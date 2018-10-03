@@ -3394,7 +3394,7 @@ u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 		/* add runnable channels bound to this TSG */
 		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
-			if (!test_bit(ch->chid,
+			if (!test_bit((int)ch->chid,
 				      runlist->active_channels)) {
 				continue;
 			}

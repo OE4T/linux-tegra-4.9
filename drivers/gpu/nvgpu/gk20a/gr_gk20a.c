@@ -8067,7 +8067,7 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg,
 		  "curr_gr_chid=%d curr_tsgid=%d, ch->tsgid=%d"
 		  " ch->chid=%d",
-		  (curr_ch != NULL) ? curr_ch->chid : -1,
+		  (curr_ch != NULL) ? curr_ch->chid : U32_MAX,
 		  curr_gr_tsgid,
 		  ch->tsgid,
 		  ch->chid);

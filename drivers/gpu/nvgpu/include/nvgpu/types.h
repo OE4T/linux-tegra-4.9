@@ -65,6 +65,7 @@
  */
 #if !defined(__KERNEL__) && !defined(U8_MAX)
 #define U8_MAX ((u8)255)
+#define U32_MAX		((u32)~0U)
 #endif
 
 #endif /* NVGPU_TYPES_H */

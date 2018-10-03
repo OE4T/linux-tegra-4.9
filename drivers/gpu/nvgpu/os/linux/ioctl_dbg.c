@@ -1713,7 +1713,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		/* TSG: check that another channel in the TSG
 		 * doesn't already have the reservation
 		 */
-		int my_tsgid = my_prof_obj->ch->tsgid;
+		u32 my_tsgid = my_prof_obj->ch->tsgid;
 
 		nvgpu_list_for_each_entry(prof_obj, &g->profiler_objects,
 				dbg_profiler_object_data, prof_obj_entry) {

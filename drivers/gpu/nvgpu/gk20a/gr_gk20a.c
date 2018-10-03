@@ -5559,12 +5559,12 @@ int gk20a_gr_handle_notify_pending(struct gk20a *g,
  *
  * Returned channel must be freed with gk20a_channel_put() */
 static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
-	struct gk20a *g, u32 curr_ctx, int *curr_tsgid)
+	struct gk20a *g, u32 curr_ctx, u32 *curr_tsgid)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct gr_gk20a *gr = &g->gr;
 	u32 chid = -1;
-	int tsgid = NVGPU_INVALID_TSG_ID;
+	u32 tsgid = NVGPU_INVALID_TSG_ID;
 	u32 i;
 	struct channel_gk20a *ret = NULL;
 
@@ -5960,7 +5960,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 	struct channel_gk20a *ch = NULL;
 	struct channel_gk20a *fault_ch = NULL;
-	int tsgid = NVGPU_INVALID_TSG_ID;
+	u32 tsgid = NVGPU_INVALID_TSG_ID;
 	struct tsg_gk20a *tsg = NULL;
 	u32 gr_engine_id;
 	u32 global_esr = 0;
@@ -8044,7 +8044,8 @@ static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
 
 bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 {
-	int curr_gr_ctx, curr_gr_tsgid;
+	int curr_gr_ctx;
+	u32 curr_gr_tsgid;
 	struct gk20a *g = ch->g;
 	struct channel_gk20a *curr_ch;
 	bool ret = false;

@@ -243,7 +243,7 @@ struct channel_gk20a {
 	nvgpu_atomic_t bound;
 
 	int chid;
-	int tsgid;
+	u32 tsgid;
 	pid_t pid;
 	pid_t tgid;
 	struct nvgpu_mutex ioctl_lock;

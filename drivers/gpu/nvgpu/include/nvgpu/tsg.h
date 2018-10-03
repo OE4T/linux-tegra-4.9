@@ -28,7 +28,7 @@
 
 #include "gk20a/gr_gk20a.h"
 
-#define NVGPU_INVALID_TSG_ID (-1)
+#define NVGPU_INVALID_TSG_ID (U32_MAX)
 
 struct channel_gk20a;
 
@@ -68,7 +68,7 @@ struct tsg_gk20a {
 	unsigned int timeslice_scale;
 
 	u32 interleave_level;
-	int tsgid;
+	u32 tsgid;
 
 	u32 runlist_id;
 	pid_t tgid;

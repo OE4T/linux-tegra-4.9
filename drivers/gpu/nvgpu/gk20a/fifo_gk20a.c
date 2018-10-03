@@ -3528,7 +3528,7 @@ int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 				return 0;
 			}
 			if (tsg && ++tsg->num_active_channels) {
-				set_bit(f->channel[chid].tsgid,
+				set_bit((int)f->channel[chid].tsgid,
 					runlist->active_tsgs);
 			}
 		} else {
@@ -3537,7 +3537,7 @@ int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 				return 0;
 			}
 			if (tsg && --tsg->num_active_channels == 0) {
-				clear_bit(f->channel[chid].tsgid,
+				clear_bit((int)f->channel[chid].tsgid,
 					runlist->active_tsgs);
 			}
 		}
@@ -3642,7 +3642,7 @@ static int __locked_fifo_reschedule_preempt_next(struct channel_gk20a *ch,
 	int ret = 0;
 	u32 gr_eng_id = 0;
 	u32 engstat = 0, ctxstat = 0, fecsstat0 = 0, fecsstat1 = 0;
-	s32 preempt_id = -1;
+	u32 preempt_id;
 	u32 preempt_type = 0;
 
 	if (1 != gk20a_fifo_get_engine_ids(

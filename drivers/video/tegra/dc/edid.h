@@ -142,6 +142,9 @@ enum {
 #define TEGRA_EDID_QUIRK_NO_YUV_422	(1 << 3)
 /* TVs that send HPD bounce upto 4 seconds */
 #define TEGRA_EDID_QUIRK_HPD_BOUNCE (1 << 4)
+/* TVs supports only CEA modes */
+#define TEGRA_EDID_QUIRK_ONLY_CEA	(1 << 5)
+
 
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;

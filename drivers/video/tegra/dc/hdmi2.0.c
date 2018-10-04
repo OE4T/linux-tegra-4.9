@@ -357,6 +357,11 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 		(tegra_edid_get_quirks(hdmi->edid) & TEGRA_EDID_QUIRK_NO_YUV))
 		return false;
 
+	if (!(mode->vmode & FB_VMODE_IS_CEA) &&
+		!(mode->flag & FB_MODE_IS_FROM_VAR) &&
+		(tegra_edid_get_quirks(hdmi->edid) & TEGRA_EDID_QUIRK_ONLY_CEA))
+		return false;
+
 	/*
 	 * There are currently many TVs in the market that actually do NOT support
 	 * 4k@60fps 4:4:4 (594 MHz), (especially on the HDCP 2.2 ports), but

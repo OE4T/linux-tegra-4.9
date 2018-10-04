@@ -38,6 +38,8 @@ static const struct hdmi_blacklist {
 	/* Few TVs causing HPD bounce for 1-4 seconds */
 	{ "YMH", 12774,"RX-A1070",  TEGRA_EDID_QUIRK_HPD_BOUNCE },
 	{ "SAM", 3387, "SAMSUNG",   TEGRA_EDID_QUIRK_HPD_BOUNCE },
+	/* WAR for bug 2408317 to skip non-CEA modes */
+	{ "KL@", 18508, "LCD HDTV", TEGRA_EDID_QUIRK_ONLY_CEA   },
 };
 
 u32 tegra_edid_lookup_quirks(const char *manufacturer, u32 model,

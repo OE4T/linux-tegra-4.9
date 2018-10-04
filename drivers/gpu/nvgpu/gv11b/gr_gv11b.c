@@ -4920,14 +4920,17 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 		u32 offset = 0;
 
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCA) {
-			pmm_domain_start = NV_PERF_PMMGPCTPCA_DOMAIN_START;
-			num_domains = NV_PERF_PMMGPC_NUM_DOMAINS;
+			pmm_domain_start = nvgpu_get_litter_value(g,
+				GPU_LIT_PERFMON_PMMGPCTPCA_DOMAIN_START);
+			num_domains = nvgpu_get_litter_value(g,
+				GPU_LIT_PERFMON_PMMGPCTPC_DOMAIN_COUNT);
 			offset = PRI_PMMGS_OFFSET_MASK(addr);
 		} else if (broadcast_flags &
 				PRI_BROADCAST_FLAGS_PMM_GPCGS_GPCTPCB) {
-			pmm_domain_start = NV_PERF_PMMGPCTPCA_DOMAIN_START +
-					   NV_PERF_PMMGPC_NUM_DOMAINS;
-			num_domains = NV_PERF_PMMGPC_NUM_DOMAINS;
+			pmm_domain_start = nvgpu_get_litter_value(g,
+				GPU_LIT_PERFMON_PMMGPCTPCB_DOMAIN_START);
+			num_domains = nvgpu_get_litter_value(g,
+				GPU_LIT_PERFMON_PMMGPCTPC_DOMAIN_COUNT);
 			offset = PRI_PMMGS_OFFSET_MASK(addr);
 		} else if (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_GPCS) {
 			pmm_domain_start = (addr -
@@ -4969,15 +4972,15 @@ int gr_gv11b_create_priv_addr_table(struct gk20a *g,
 		gr_gv11b_split_pmm_fbp_broadcast_address(g,
 			PRI_PMMGS_OFFSET_MASK(addr),
 			priv_addr_table, &t,
-			NV_PERF_PMMFBP_LTC_DOMAIN_START,
-			NV_PERF_PMMFBP_LTC_NUM_DOMAINS);
+			nvgpu_get_litter_value(g, GPU_LIT_PERFMON_PMMFBP_LTC_DOMAIN_START),
+			nvgpu_get_litter_value(g, GPU_LIT_PERFMON_PMMFBP_LTC_DOMAIN_COUNT));
 	} else if ((addr_type == CTXSW_ADDR_TYPE_ROP) &&
 		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPGS_ROP)) {
 		gr_gv11b_split_pmm_fbp_broadcast_address(g,
 			PRI_PMMGS_OFFSET_MASK(addr),
 			priv_addr_table, &t,
-			NV_PERF_PMMFBP_ROP_DOMAIN_START,
-			NV_PERF_PMMFBP_ROP_NUM_DOMAINS);
+			nvgpu_get_litter_value(g, GPU_LIT_PERFMON_PMMFBP_ROP_DOMAIN_START),
+			nvgpu_get_litter_value(g, GPU_LIT_PERFMON_PMMFBP_ROP_DOMAIN_COUNT));
 	} else if ((addr_type == CTXSW_ADDR_TYPE_FBP) &&
 		   (broadcast_flags & PRI_BROADCAST_FLAGS_PMM_FBPS)) {
 		u32 domain_start;

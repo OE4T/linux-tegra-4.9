@@ -41,71 +41,6 @@
 
 #define NVG_CHANNEL_PMIC	0
 
-/* 4 instructions to skip upon undef exception */
-#define CREGS_NR_JUMP_OFFSET 16
-
-enum creg_command {
-	CREG_INDEX = 1,
-	CREG_READ,
-	CREG_WRITE,
-	TRACER_CONTROL
-};
-
-struct denver_creg {
-	unsigned long offset;
-	const char *name;
-};
-
-static struct denver_creg denver_cregs[] = {
-	{0x00000000, "ifu.mcstatinfo"},
-	{0x00000001, "jsr.ret_mcstatinfo"},
-	{0x00000002, "jsr.mts_mcstatinfo"},
-	{0x00000003, "l2i.mcstatinfo"},
-	{0x00000006, "lvb.mcstatinfo3"},
-	{0x00000010, "jsr.pending_traps_set"},
-	{0x00000011, "jsr.int_sw"},
-	{0x0000001e, "dec.pcr_type"},
-	{0x0000001f, "dec.pcr_valid"},
-	{0x00000020, "dec.pcr_match_0"},
-	{0x00000021, "dec.pcr_match_1"},
-	{0x00000022, "dec.pcr_match_2"},
-	{0x00000023, "dec.pcr_match_3"},
-	{0x00000024, "dec.pcr_match_4"},
-	{0x00000025, "dec.pcr_match_5"},
-	{0x00000026, "dec.pcr_match_6"},
-	{0x00000027, "dec.pcr_match_7"},
-	{0x0000002b, "dec.pcr_mask_3"},
-	{0x0000002c, "dec.pcr_mask_4"},
-	{0x0000002d, "dec.pcr_mask_5"},
-	{0x0000002e, "dec.pcr_mask_6"},
-	{0x0000002f, "dec.pcr_mask_7"},
-	{0x00000030, "mm.tom1"},
-	{0x00000031, "mm.tom2"},
-	{0x00000032, "mm.tom3"},
-	{0x00000033, "mm.tom4"},
-	{0x00000034, "mm.bom1"},
-	{0x00000035, "mm.bom2"},
-	{0x00000036, "mm.bom3"},
-	{0x00000037, "mm.bom4"},
-	{0x00000038, "mm.cheese"},
-	{0x00000040, "mm.dmtrr_base0"},
-	{0x00000041, "mm.dmtrr_base1"},
-	{0x00000042, "mm.dmtrr_base2"},
-	{0x00000043, "mm.dmtrr_base3"},
-	{0x00000044, "mm.dmtrr_base4"},
-	{0x00000045, "mm.dmtrr_base5"},
-	{0x00000046, "mm.dmtrr_base6"},
-	{0x00000047, "mm.dmtrr_base7"},
-	{0x00000048, "mm.dmtrr_mask0"},
-	{0x00000049, "mm.dmtrr_mask1"},
-	{0x0000004a, "mm.dmtrr_mask2"},
-	{0x0000004b, "mm.dmtrr_mask3"},
-	{0x0000004c, "mm.dmtrr_mask4"},
-	{0x0000004d, "mm.dmtrr_mask5"},
-	{0x0000004e, "mm.dmtrr_mask6"},
-	{0x0000004f, "mm.dmtrr_mask7"}
-};
-
 int smp_call_function_denver(smp_call_func_t func, void *info, int wait)
 {
 	int cpu;
@@ -182,20 +117,6 @@ void denver_set_bg_allowed(int cpu, bool enable)
 				 (void *) enable, 1);
 }
 
-struct creg_param {
-	u64 offset;
-	u64 val;
-};
-
-#ifdef CONFIG_DEBUG_FS
-#define NR_CREGS (sizeof(denver_cregs) / sizeof(struct denver_creg))
-
-enum tc_input {
-	TC_CLEAR = 0,
-	TC_START,
-	TC_STOP
-};
-
 static const char * const pmic_names[] = {
 	[UNDEFINED] = "none",
 	[AMS_372x] = "AMS 3722/3720",
@@ -206,7 +127,6 @@ static const char * const pmic_names[] = {
 
 static DEFINE_SPINLOCK(nvg_lock);
 
-static struct dentry *denver_debugfs_root;
 
 static int bgallowed_get(void *data, u64 *val)
 {
@@ -227,6 +147,7 @@ static int bgallowed_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(bgallowed_fops, bgallowed_get,
 			bgallowed_set, "%llu\n");
 
+#ifdef CONFIG_DEBUG_FS
 static int __init create_denver_bgallowed(void)
 {
 	int cpu;
@@ -249,131 +170,6 @@ static int __init create_denver_bgallowed(void)
 
 	return 0;
 }
-
-static struct dentry *denver_creg_root;
-
-struct tc_param {
-	enum tc_input in;
-	u64 val;
-};
-
-static void _denver_tracer_control(struct tc_param *param)
-{
-	pr_debug("%s:param->in = %d\n", __func__, param->in);
-	asm volatile (
-	"	sys 0, c11, c0, 1, %1\n"
-	"	sys 0, c11, c0, 0, %2\n"
-	"	sysl %0, 0, c11, c0, 0\n"
-	: "=r" (param->val)
-	: "r" (param->in), "r" (TRACER_CONTROL)
-	);
-	pr_debug("%s:param->val= %llu\n", __func__, param->val);
-}
-
-static int denver_tracer_control(void *data, u64 *val)
-{
-	int ret;
-	struct tc_param param;
-	enum tc_input *in = (enum tc_input *)data;
-
-	param.in = *in;
-
-	ret = smp_call_function_denver((smp_call_func_t) _denver_tracer_control,
-					&param, 1);
-	*val = param.val;
-	return ret;
-}
-
-static void _denver_creg_set(struct creg_param *param)
-{
-	asm volatile (
-	"	sys 0, c11, c0, 1, %0\n"
-	"	sys 0, c11, c0, 0, %1\n"
-	"	sys 0, c11, c0, 1, %2\n"
-	"	sys 0, c11, c0, 0, %3\n"
-	:
-	: "r" (param->offset), "r" (CREG_INDEX),
-	  "r" (param->val), "r" (CREG_WRITE)
-	);
-}
-#endif
-
-static void _denver_creg_get(struct creg_param *param)
-{
-	asm volatile (
-	"	sys 0, c11, c0, 1, %1\n"
-	"	sys 0, c11, c0, 0, %2\n"
-	"	sys 0, c11, c0, 0, %3\n"
-	"	sysl %0, 0, c11, c0, 0\n"
-	: "=r" (param->val)
-	: "r" (param->offset), "r" (CREG_INDEX), "r" (CREG_READ)
-	);
-}
-
-static int denver_creg_get(void *data, u64 *val)
-{
-	struct creg_param param;
-	int ret;
-	struct denver_creg *reg = (struct denver_creg *)data;
-
-	param.offset = reg->offset;
-	ret = smp_call_function_denver((smp_call_func_t) _denver_creg_get,
-				       &param, 1);
-	*val = param.val;
-	return ret;
-}
-
-#ifdef CONFIG_DEBUG_FS
-static int denver_creg_set(void *data, u64 val)
-{
-	struct creg_param param;
-	struct denver_creg *reg = (struct denver_creg *)data;
-
-	pr_debug("CREG: write %s @ 0x%lx =  0x%llx\n",
-			reg->name, reg->offset, val);
-
-	param.offset = reg->offset;
-	param.val = val;
-	return smp_call_function_denver((smp_call_func_t) _denver_creg_set,
-					&param, 1);
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(denver_creg_fops, denver_creg_get,
-			denver_creg_set, "%llu\n");
-
-static int __init create_denver_cregs(void)
-{
-	int i;
-	struct denver_creg *reg;
-	int cpu;
-	struct cpuinfo_arm64 *cpuinfo;
-	int denver_present = false;
-
-	/* Check if any of the present CPUs are Denver */
-	for_each_present_cpu(cpu) {
-		cpuinfo = &per_cpu(cpu_data, cpu);
-		if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == ARM_CPU_IMP_NVIDIA) {
-			denver_present = true;
-			break;
-		}
-	}
-	if (!denver_present)
-		return 0;
-
-	denver_creg_root = debugfs_create_dir(
-			"cregs", denver_debugfs_root);
-
-	for (i = 0; i < NR_CREGS; ++i) {
-		reg = &denver_cregs[i];
-		if (!debugfs_create_file(
-			reg->name, S_IRUGO, denver_creg_root,
-			reg, &denver_creg_fops))
-			return -ENOMEM;
-	}
-
-	return 0;
-}
-
 struct nvmstat {
 	u64 stat0;
 	u64 tot;
@@ -457,48 +253,6 @@ static const struct file_operations inst_stats_fops = {
 	.release	= single_release,
 };
 
-static ssize_t tc_write(struct file *file, const char __user *addr,
-	size_t len, loff_t *pos)
-{
-	int ret = 0;
-	enum tc_input tc_in;
-	u64 val = -1;
-
-	ret = kstrtol_from_user(addr, len, 10, (long *)&tc_in);
-	if (ret < 0)
-		return ret;
-
-	if ((tc_in < TC_CLEAR) || (tc_in > TC_STOP)) {
-		pr_err("%s: Invalid tc_input - %d\n", __func__, tc_in);
-		return -EINVAL;
-	}
-
-	denver_tracer_control(&tc_in, &val);
-	pr_info("TRACER_CONTROL CMD for input = %d - %s\n",
-		tc_in, (val == 0) ? "succeeded" : "failed");
-
-	return len;
-}
-
-static int tc_show(struct seq_file *s, void *data)
-{
-	seq_puts(s, "write 0 to clear, 1 to start, 2 to stop TRACER_CONTROL\n");
-	return 0;
-}
-
-static int tc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, tc_show, inode->i_private);
-}
-
-static const struct file_operations tc_fops = {
-	.open		= tc_open,
-	.read		= seq_read,
-	.write		= tc_write,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
 static int agg_stats_show(struct seq_file *s, void *data)
 {
 	struct nvmstat stat;
@@ -522,21 +276,6 @@ static const struct file_operations agg_stats_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
-
-static int __init create_denver_tracer_control(void)
-{
-	if (!debugfs_create_file("tracer_control",
-				S_IRUGO,
-				denver_debugfs_root,
-				NULL,
-				&tc_fops)) {
-		pr_err("%s: Couldn't create the \"tracer_control\" debugfs node.\n",
-			__func__);
-		return -1;
-	}
-
-	return 0;
-}
 
 static int __init create_denver_nvmstats(void)
 {
@@ -686,66 +425,6 @@ done:
 	return err;
 }
 arch_initcall(denver_pmic_init);
-#endif
-
-static bool backdoor_enabled;
-
-bool denver_backdoor_enabled(void)
-{
-	return backdoor_enabled;
-}
-
-/*
- * Handle the invalid instruction exception caused by Denver
- * backdoor accesses on a system where backdoor is disabled.
- */
-static int undef_handler(struct pt_regs *regs, unsigned int instr)
-{
-	backdoor_enabled = false;
-
-	/*
-	 * Skip all 4 instructions denver_creg_get(). We are here
-	 * because the 1st SYS caused the undef instr exception.
-	 */
-	regs->pc += CREGS_NR_JUMP_OFFSET;
-
-	return 0;
-}
-
-/*
- * We need to handle only the below instruction which is used
- * by a pilot command during init such that no further backdoor
- * will be executed if the pilot trigged an exception.
- *
- *  Instr: sys 0, c11, c0, 1, <x>
- */
-static struct undef_hook undef_backdoor_hook = {
-	.instr_mask	= 0xffffffe0,
-	.instr_val	= 0xd508b020,
-	.pstate_mask	= 0x0,	/* ignore */
-	.pstate_val	= 0x0, /* ignore */
-	.fn		= undef_handler
-};
-
-static void check_backdoor(void)
-{
-	u64 val;
-
-	/* Assume true unless proved otherwise */
-	backdoor_enabled = true;
-
-	/* Install hook */
-	register_undef_hook(&undef_backdoor_hook);
-
-	/* Pilot command. If this returns an error, it is because it didn't
-	   find an online Denver CPU. There cannot be a Denver backdoor without
-	   a Denver CPU */
-	if (denver_creg_get(&denver_cregs[0], &val))
-		 backdoor_enabled = false;
-
-	pr_info("Denver: backdoor interface is %savailable.\n",
-	backdoor_enabled ? "" : "NOT ");
-}
 
 static u32 mts_version;
 
@@ -798,12 +477,6 @@ static int __init denver_knobs_init(void)
 #ifdef CONFIG_DEBUG_FS
 	denver_debugfs_root = debugfs_create_dir("tegra_denver", NULL);
 #endif
-
-	check_backdoor();
-
-	/* BGALLOWED/NVMSTATS don't go through the SYS backdoor
-	 *  interface such that we can always enable them.
-	 */
 #ifdef CONFIG_DEBUG_FS
 	error = create_denver_bgallowed();
 	if (error)
@@ -813,14 +486,6 @@ static int __init denver_knobs_init(void)
 	if (error)
 		return error;
 
-	if (backdoor_enabled) {
-		error = create_denver_cregs();
-		if (error)
-			return error;
-		error = create_denver_tracer_control();
-		if (error)
-			return error;
-	}
 #endif
 
 	/* Cancel the notifier as mts_version should be set now. */

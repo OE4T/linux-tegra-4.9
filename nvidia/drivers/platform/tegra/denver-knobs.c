@@ -127,6 +127,9 @@ static const char * const pmic_names[] = {
 
 static DEFINE_SPINLOCK(nvg_lock);
 
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *denver_debugfs_root;
+#endif
 
 static int bgallowed_get(void *data, u64 *val)
 {
@@ -170,6 +173,8 @@ static int __init create_denver_bgallowed(void)
 
 	return 0;
 }
+#endif
+
 struct nvmstat {
 	u64 stat0;
 	u64 tot;
@@ -277,6 +282,7 @@ static const struct file_operations agg_stats_fops = {
 	.release	= single_release,
 };
 
+#ifdef CONFIG_DEBUG_FS
 static int __init create_denver_nvmstats(void)
 {
 	struct dentry *nvmstats_dir;
@@ -310,6 +316,7 @@ static int __init create_denver_nvmstats(void)
 
 	return 0;
 }
+#endif
 
 static void denver_set_mts_nvgindex(u32 index)
 {

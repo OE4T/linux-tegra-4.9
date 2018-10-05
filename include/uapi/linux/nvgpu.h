@@ -1085,7 +1085,7 @@ struct nvgpu_tsg_read_single_sm_error_state_args {
 #define NVGPU_TSG_IOCTL_BIND_CHANNEL_EX \
 	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 11, struct nvgpu_tsg_bind_channel_ex_args)
 #define NVGPU_TSG_IOCTL_READ_SINGLE_SM_ERROR_STATE \
-	_IOR(NVGPU_TSG_IOCTL_MAGIC, 12, \
+	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 12, \
 			struct nvgpu_tsg_read_single_sm_error_state_args)
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
 		sizeof(struct nvgpu_tsg_bind_channel_ex_args)

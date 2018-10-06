@@ -4,7 +4,7 @@
  * Author:
  *	Colin Cross <ccross@google.com>
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -189,6 +189,9 @@ static void dvfs_rail_stats_update(
 static int dvfs_rail_set_voltage_reg(struct dvfs_rail *rail, int millivolts)
 {
 	int ret;
+
+	if (rail->joint_rail_with_dfll)
+		tegra_dfll_set_external_floor_mv(rail->new_millivolts);
 
 	ret = regulator_set_voltage(rail->reg,
 		millivolts * 1000,

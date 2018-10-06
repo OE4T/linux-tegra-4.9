@@ -1,7 +1,7 @@
 /*
  * clk-dfll.c - Tegra DFLL clock source common code
  *
- * Copyright (C) 2012-2014 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2012-2018 NVIDIA Corporation. All rights reserved.
  *
  * Aleksandr Frid <afrid@nvidia.com>
  * Paul Walmsley <pwalmsley@nvidia.com>
@@ -424,6 +424,9 @@ struct tegra_dfll {
 	/* spinlock protecting register accesses */
 	spinlock_t			lock;
 
+	/* Vmin set from external rail connected to dfll */
+	unsigned int			external_floor_output;
+
 	/* Thermal parameters */
 	unsigned int			thermal_floor_output;
 	unsigned int			thermal_floor_index;
@@ -553,7 +556,8 @@ static u8 dfll_get_output_min(struct tegra_dfll *td)
 
 	tune_min = td->tune_range == DFLL_TUNE_LOW ?
 			td->lut_bottom : td->tune_high_out_min;
-	return max(tune_min, td->thermal_floor_output);
+	return max_t(unsigned int, max(tune_min, td->thermal_floor_output),
+			td->external_floor_output);
 }
 
 static void set_force_out_min(struct tegra_dfll *td)
@@ -1682,6 +1686,7 @@ static void dfll_init_out_if(struct tegra_dfll *td)
 	u32 val;
 	int index, mv;
 
+	td->external_floor_output = 0;
 	td->thermal_floor_output = 0;
 	if (td->soc->thermal_floor_table_size) {
 		index = 0;
@@ -2410,6 +2415,51 @@ static void dfll_unregister_clk(struct tegra_dfll *td)
 	of_clk_del_provider(td->dev->of_node);
 	clk_unregister(td->dfll_clk);
 	td->dfll_clk = NULL;
+}
+
+/*
+ * External floor interface
+ */
+
+/**
+ * tegra_dfll_set_external_floor_mv - get Vmin setting from external
+ * rail, which is physically connected to cpu dfll rail
+ * @external_floor_mv: Vmin requested by connected external rail
+ */
+int tegra_dfll_set_external_floor_mv(int external_floor_mv)
+{
+	unsigned long flags;
+	unsigned int max;
+	u8 new_output;
+
+	if (!tegra_dfll_dev) {
+		pr_err("%s: null tegra dfll dev.\n", __func__);
+		return -EINVAL;
+	}
+
+	max = tegra_dfll_dev->lut_uv[tegra_dfll_dev->lut_max] / 1000;
+	if (external_floor_mv < 0 || external_floor_mv > max) {
+		pr_err("%s: invalid external vmin requested %d\n",
+				__func__, external_floor_mv);
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&tegra_dfll_dev->lock, flags);
+
+	new_output = find_mv_out_cap(tegra_dfll_dev, external_floor_mv);
+	if (tegra_dfll_dev->external_floor_output != new_output) {
+		tegra_dfll_dev->external_floor_output = new_output;
+		if (tegra_dfll_dev->mode == DFLL_CLOSED_LOOP)
+			dfll_request_rate(tegra_dfll_dev,
+					dfll_request_get(tegra_dfll_dev));
+	}
+
+	spin_unlock_irqrestore(&tegra_dfll_dev->lock, flags);
+
+	/* Add delay to ensure new Vmin delivery is finished before return */
+	udelay(2 * DIV_ROUND_UP(1000000, tegra_dfll_dev->sample_rate));
+
+	return 0;
 }
 
 /*
@@ -3266,6 +3316,24 @@ static int fout_mv_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(fout_mv_fops, fout_mv_get, fout_mv_set, "%llu\n");
 
+static int external_floor_mv_get(void *data, u64 *val)
+{
+	struct tegra_dfll *td = data;
+
+	*val = td->lut_uv[td->external_floor_output] / 1000;
+
+	return 0;
+}
+
+static int external_floor_mv_set(void *data, u64 val)
+{
+	tegra_dfll_set_external_floor_mv((int)val);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(external_floor_mv_fops, external_floor_mv_get,
+		external_floor_mv_set, "%llu\n");
+
 static int undershoot_get(void *data, u64 *val)
 {
 	struct tegra_dfll *td = data;
@@ -3570,6 +3638,8 @@ static struct {
 	{ "enable", S_IRUGO | S_IWUSR, &enable_fops },
 	{ "lock", S_IRUGO | S_IWUSR, &lock_fops },
 	{ "force_out_mv", S_IRUGO | S_IWUSR, &fout_mv_fops },
+	{ "external_floor_mv", S_IRUGO | S_IWUSR,
+		&external_floor_mv_fops },
 	{ "pmu_undershoot_gb", S_IRUGO | S_IWUSR, &undershoot_fops },
 	{ "tune_high_mv", S_IRUGO | S_IWUSR, &tune_high_mv_fops },
 	{ "calibr_delay", S_IRUGO | S_IWUSR, &calibr_delay_fops },

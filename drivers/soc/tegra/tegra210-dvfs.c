@@ -2266,6 +2266,9 @@ static int tegra210x_init_dvfs(struct device *dev, bool cpu_lp_init)
 	/* Init rail structures and dependencies */
 	tegra_dvfs_init_rails(vdd_dvfs_rails, dvfs_data->rails_num);
 
+	if (of_property_read_bool(of_chosen, "nvidia,tegra-joint_xpu_rail"))
+		vdd_dvfs_rails[VDD_GPU_INDEX]->joint_rail_with_dfll = true;
+
 	/*
 	 * Initialize matching cpu dvfs entry already found when nominal
 	 * voltage was determined

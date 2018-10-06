@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -107,6 +107,7 @@ struct dvfs_rail {
 
 	bool suspended;
 	bool dfll_mode;
+	bool joint_rail_with_dfll;
 
 	struct rail_alignment alignment;
 	struct rail_stats stats;

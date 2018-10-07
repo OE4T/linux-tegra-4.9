@@ -950,7 +950,7 @@
 				target = <&e3333_csi_in5>;
 				_overlay_ {
 					status = "okay";
-					port-index = <5>;
+					port-index = <6>;
 					bus-width = <2>;
 					remote-endpoint = <&e3333_ov5693_out5>;
 				};

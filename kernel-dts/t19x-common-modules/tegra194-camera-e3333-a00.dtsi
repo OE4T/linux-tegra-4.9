@@ -191,7 +191,7 @@
 					port@0 {
 						reg = <0>;
 						e3333_csi_in5: endpoint@10 {
-							port-index = <5>;
+							port-index = <6>;
 							bus-width = <2>;
 							remote-endpoint = <&e3333_ov5693_out5>;
 						};

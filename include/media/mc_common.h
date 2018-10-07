@@ -400,13 +400,12 @@ struct tegra_csi_fops {
 	int (*csi_power_on)(struct tegra_csi_device *csi);
 	int (*csi_power_off)(struct tegra_csi_device *csi);
 	int (*csi_start_streaming)(struct tegra_csi_channel *chan,
-		enum tegra_csi_port_num port_num);
+		int port_idx);
 	void (*csi_stop_streaming)(struct tegra_csi_channel *chan,
-		enum tegra_csi_port_num port_num);
+		int port_idx);
 	void (*csi_override_format)(struct tegra_csi_channel *chan,
-		enum tegra_csi_port_num port_num);
-	int (*csi_error_recover)(struct tegra_csi_channel *chan,
-		enum tegra_csi_port_num port_num);
+		int port_idx);
+	int (*csi_error_recover)(struct tegra_csi_channel *chan, int port_idx);
 	int (*mipical)(struct tegra_csi_channel *chan);
 	int (*hw_init)(struct tegra_csi_device *csi);
 };

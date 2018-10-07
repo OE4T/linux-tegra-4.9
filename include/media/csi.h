@@ -20,22 +20,14 @@
 #include <media/camera_common.h>
 #include <media/vi2_registers.h>
 #include <media/csi4_registers.h>
-
 #include <linux/platform_device.h>
+
+#include "soc/tegra/camrtc-capture.h"
 
 #define MAX_CSI_BLOCK_LANES 4
 #define NUM_TPG_INSTANCE 6
 
-enum tegra_csi_port_num {
-	PORT_A = 0,
-	PORT_B = 1,
-	PORT_C = 2,
-	PORT_D = 3,
-	PORT_E = 4,
-	PORT_F = 5,
-};
-
-#define csi_port_is_valid(port) (port > PORT_F ? 0 : 1)
+#define csi_port_is_valid(port) (port > NVCSI_PORT_H ? 0 : 1)
 
 enum camera_gang_mode {
 	CAMERA_NO_GANG_MODE = 0,
@@ -60,6 +52,10 @@ struct tegra_csi_port {
 	void __iomem *cil;
 	void __iomem *tpg;
 
+	u32 csi_port;
+	u32 stream_id;
+	u32 virtual_channel_id;
+
 	/* One pair of sink/source pad has one format */
 	struct v4l2_mbus_framefmt format;
 	const struct tegra_video_format *core_format;
@@ -67,8 +63,6 @@ struct tegra_csi_port {
 	unsigned int framerate;
 	unsigned int h_blank;
 	unsigned int v_blank;
-
-	enum tegra_csi_port_num num;
 };
 
 struct tegra_csi_device {
@@ -117,7 +111,6 @@ struct tegra_csi_channel {
 	struct tegra_csi_device *csi;
 	struct tegra_csi_port *ports;
 	unsigned char port[TEGRA_CSI_BLOCKS];
-	unsigned int virtual_channel;
 	struct mutex format_lock;
 	unsigned int numports;
 	unsigned int numlanes;
@@ -146,16 +139,11 @@ u32 read_settle_time_from_dt(struct tegra_csi_channel *chan);
 u64 read_pixel_clk_from_dt(struct tegra_csi_channel *chan);
 void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes);
-void tegra_csi_status(struct tegra_csi_channel *chan,
-			enum tegra_csi_port_num port_num);
-int tegra_csi_error(struct tegra_csi_channel *chan,
-			enum tegra_csi_port_num port_num);
-int tegra_csi_start_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num);
-void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num);
-void tegra_csi_error_recover(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num);
+void tegra_csi_status(struct tegra_csi_channel *chan, int port_idx);
+int tegra_csi_error(struct tegra_csi_channel *chan, int port_idx);
+int tegra_csi_start_streaming(struct tegra_csi_channel *chan, int port_idx);
+void tegra_csi_stop_streaming(struct tegra_csi_channel *chan, int port_idx);
+void tegra_csi_error_recover(struct tegra_csi_channel *chan, int port_idx);
 int tegra_csi_init(struct tegra_csi_device *csi,
 		struct platform_device *pdev);
 int tegra_csi_mipi_calibrate(struct tegra_csi_device *csi,

@@ -36,6 +36,7 @@
 
 #include <asm/barrier.h>
 
+#include "soc/tegra/camrtc-capture.h"
 #include "linux/nvhost_nvcsi_ioctl.h"
 #include "nvcsi/nvcsi.h"
 #include "nvcsi/deskew.h"
@@ -198,14 +199,16 @@ static int tegra_csi_error_recovery(struct tegra_channel *chan,
 {
 	int err = 0;
 	int i = 0;
-	unsigned int csi_port = 0;
+	struct tegra_csi_port *port = &csi_chan->ports[i];
+	const char *rec_err_msg =
+		"%s: failed to recover pt %u st %u vc %u (pg_mode %d)\n";
 
 	for (i = 0; i < chan->valid_ports; i++) {
-		csi_port = csi_chan->ports[i].num;
 		err = csi->fops->csi_error_recover(csi_chan, i);
 		if (err) {
-			dev_err(csi->dev, "%s: failed to recover csi stream %d\n",
-				__func__, csi_port);
+			dev_err(csi->dev, rec_err_msg, __func__,
+				port->csi_port, port->stream_id,
+				port->virtual_channel_id, chan->pg_mode);
 			break;
 		}
 	}
@@ -245,21 +248,19 @@ static int tegra_csi_sync_event(struct v4l2_subdev *subdev,
  * -----------------------------------------------------------------------------
  */
 
-int tegra_csi_start_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num)
+int tegra_csi_start_streaming(struct tegra_csi_channel *chan, int port_idx)
 {
 	struct tegra_csi_device *csi = chan->csi;
 
-	return csi->fops->csi_start_streaming(chan, port_num);
+	return csi->fops->csi_start_streaming(chan, port_idx);
 }
 EXPORT_SYMBOL(tegra_csi_start_streaming);
 
-void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num)
+void tegra_csi_stop_streaming(struct tegra_csi_channel *chan, int port_idx)
 {
 	struct tegra_csi_device *csi = chan->csi;
 
-	csi->fops->csi_stop_streaming(chan, port_num);
+	csi->fops->csi_stop_streaming(chan, port_idx);
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
 
@@ -315,26 +316,32 @@ static void deskew_setup(struct tegra_csi_channel *chan,
 	deskew_enable = sig_props->deskew_initial_enable;
 
 	if (pix_clk_hz >= CLK_HZ_FOR_DESKEW && deskew_enable) {
-		csi_port = chan->ports[0].num;
+		csi_port = chan->ports[0].csi_port;
 		csi_lanes = chan->ports[0].lanes;
 		switch (csi_port) {
-		case 0:
+		case NVCSI_PORT_A:
 			csi_lane_start = NVCSI_PHY_0_NVCSI_CIL_A_IO0;
 			break;
-		case 1:
+		case NVCSI_PORT_B:
 			csi_lane_start = NVCSI_PHY_0_NVCSI_CIL_B_IO0;
 			break;
-		case 2:
+		case NVCSI_PORT_C:
 			csi_lane_start = NVCSI_PHY_1_NVCSI_CIL_A_IO0;
 			break;
-		case 3:
+		case NVCSI_PORT_D:
 			csi_lane_start = NVCSI_PHY_1_NVCSI_CIL_B_IO0;
 			break;
-		case 4:
+		case NVCSI_PORT_E:
 			csi_lane_start = NVCSI_PHY_2_NVCSI_CIL_A_IO0;
 			break;
-		case 5:
+		case NVCSI_PORT_F:
 			csi_lane_start = NVCSI_PHY_2_NVCSI_CIL_B_IO0;
+			break;
+		case NVCSI_PORT_G:
+			csi_lane_start = NVCSI_PHY_3_NVCSI_CIL_A_IO0;
+			break;
+		case NVCSI_PORT_H:
+			csi_lane_start = NVCSI_PHY_3_NVCSI_CIL_B_IO0;
 			break;
 		default:
 			break;
@@ -781,7 +788,7 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 			for (i = 1; value > 0; i++, value -= 4) {
 				int next_port = chan->port[i-1] + 2;
 
-				next_port = (next_port % (PORT_F + 1));
+				next_port = (next_port % (NVCSI_PORT_H + 1));
 				chan->port[i] = next_port;
 			}
 		}
@@ -861,10 +868,10 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		 */
 		chan->port[0] = (chan->id - csi->num_channels)
 				% NUM_TPG_INSTANCE;
-		chan->virtual_channel = (chan->id - csi->num_channels)
-				/ NUM_TPG_INSTANCE;
 		WARN_ON(chan->port[0] > csi->num_tpg_channels);
-		chan->ports[0].num = chan->id - csi->num_channels;
+		chan->ports[0].stream_id = chan->port[0];
+		chan->ports[0].virtual_channel_id
+			= (chan->id - csi->num_channels) / NUM_TPG_INSTANCE;
 		chan->ports->lanes = 2;
 		chan->pads = devm_kzalloc(csi->dev, sizeof(*chan->pads),
 				GFP_KERNEL);
@@ -896,7 +903,9 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		numlanes = numlanes > MAX_CSI_BLOCK_LANES ?
 			MAX_CSI_BLOCK_LANES : numlanes;
 		chan->ports[i].lanes = numlanes;
-		chan->ports[i].num = chan->port[i];
+
+		if (!chan->pg_mode)
+			chan->ports[i].csi_port = chan->port[i];
 	}
 
 	if (!chan->pg_mode) {

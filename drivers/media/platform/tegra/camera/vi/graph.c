@@ -494,8 +494,9 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 				dev_err(&chan->video.dev, "port index error\n");
 			chan->port[0] = value;
 
-			if (value > 6) {
-				dev_err(&chan->video.dev, "port index >6!\n");
+			if (value > NVCSI_PORT_H) {
+				dev_err(&chan->video.dev, "port index >%d!\n",
+					NVCSI_PORT_H);
 				return -EINVAL;
 			}
 
@@ -520,7 +521,7 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			for (i = 1; value > 0; i++, value -= 4) {
 				int next_port = chan->port[i-1] + 2;
 
-				next_port = (next_port % (PORT_F + 1));
+				next_port = (next_port % (NVCSI_PORT_H + 1));
 				chan->port[i] = next_port;
 			}
 		}

@@ -69,14 +69,13 @@ static void tpg_write(struct tegra_csi_port *port,
 	writel(val, port->tpg + addr);
 }
 
-int tegra_csi_error(struct tegra_csi_channel *chan,
-			enum tegra_csi_port_num port_num)
+int tegra_csi_error(struct tegra_csi_channel *chan, int port_idx)
 {
 	struct tegra_csi_port *port;
 	u32 val;
 	int err = 0;
 
-	port = &chan->ports[port_num];
+	port = &chan->ports[port_idx];
 	/*
 	 * only uncorrectable header error and multi-bit
 	 * transmission errors are checked as they cannot be
@@ -97,8 +96,7 @@ int tegra_csi_error(struct tegra_csi_channel *chan,
 	return err;
 }
 
-void tegra_csi_status(struct tegra_csi_channel *chan,
-			enum tegra_csi_port_num port_num)
+void tegra_csi_status(struct tegra_csi_channel *chan, int port_idx)
 {
 	int i;
 	u32 val;
@@ -123,13 +121,14 @@ void tegra_csi_status(struct tegra_csi_channel *chan,
 }
 EXPORT_SYMBOL(tegra_csi_status);
 
-void tegra_csi_error_recover(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num)
+void tegra_csi_error_recover(struct tegra_csi_channel *chan, int port_idx)
 {
-	struct tegra_csi_port *port = &chan->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_idx];
 	const int TPG_B = TEGRA_CSI_TPG_OFFSET + TEGRA_CSI_PORT_OFFSET;
 	const int CIL_B = TEGRA_CSI_CIL_OFFSET + TEGRA_CSI_PORT_OFFSET;
-	const int csi_port = chan->ports[port_num].num;
+	const int csi_port = !chan->pg_mode ?
+		chan->ports[port_idx].csi_port :
+		chan->ports[port_idx].stream_id;
 
 	if (port->lanes == 4) {
 		tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
@@ -227,9 +226,9 @@ static int tpg_clk_disable(struct tegra_csi_device *csi)
 }
 
 static int csi2_tpg_start_streaming(struct tegra_csi_channel *chan,
-			      enum tegra_csi_port_num port_num)
+	int port_idx)
 {
-	struct tegra_csi_port *port = &chan->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_idx];
 
 	tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
 		       ((chan->pg_mode - 1) << PG_MODE_OFFSET) |
@@ -253,10 +252,9 @@ static int csi2_tpg_start_streaming(struct tegra_csi_channel *chan,
 	return 0;
 }
 
-static int csi2_start_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num)
+static int csi2_start_streaming(struct tegra_csi_channel *chan, int port_idx)
 {
-	struct tegra_csi_port *port = &chan->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_idx];
 	struct tegra_csi_device *csi = chan->csi;
 	struct camera_common_data *s_data = chan->s_data;
 	const struct sensor_mode_properties *mode = NULL;
@@ -268,8 +266,8 @@ static int csi2_start_streaming(struct tegra_csi_channel *chan,
 	unsigned int cil_settletime = 0;
 	unsigned int csi_settletime;
 
-	csi_port = chan->ports[port_num].num;
-	csi_lanes = chan->ports[port_num].lanes;
+	csi_port = !chan->pg_mode ? port->csi_port : port->stream_id;
+	csi_lanes = port->lanes;
 
 	/* Attempt to find the cil_settingtime from the device tree */
 	if (s_data) {
@@ -368,7 +366,7 @@ static int csi2_start_streaming(struct tegra_csi_channel *chan,
 		csi_write(chan,
 			TEGRA_CSI_CIL_OFFSET + TEGRA_CSI_CIL_PAD_CONFIG0, 0x0,
 			csi_port >> 1);
-		val = ((csi_port & 0x1) == PORT_A) ?
+		val = ((csi_port & 0x1) == NVCSI_PORT_A) ?
 			CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_NOP
 			: CSI_B_PHY_CIL_ENABLE | CSI_A_PHY_CIL_NOP;
 		csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
@@ -399,7 +397,7 @@ static int csi2_start_streaming(struct tegra_csi_channel *chan,
 
 	if (chan->pg_mode) {
 		tpg_clk_enable(chan->csi);
-		csi2_tpg_start_streaming(chan, port_num);
+		csi2_tpg_start_streaming(chan, port_idx);
 	}
 
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
@@ -408,10 +406,9 @@ static int csi2_start_streaming(struct tegra_csi_channel *chan,
 	return 0;
 }
 
-static void csi2_stop_streaming(struct tegra_csi_channel *chan,
-				enum tegra_csi_port_num port_num)
+static void csi2_stop_streaming(struct tegra_csi_channel *chan, int port_idx)
 {
-	struct tegra_csi_port *port = &chan->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_idx];
 	unsigned int val, csi_port;
 
 
@@ -427,9 +424,9 @@ static void csi2_stop_streaming(struct tegra_csi_channel *chan,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 			CSI_PP_DISABLE);
 	if (!chan->pg_mode) {
-		csi_port = port->num;
+		csi_port = port->csi_port;
 		if (chan->numlanes <= 2) {
-			val = ((csi_port & 0x1) == PORT_A) ?
+			val = ((csi_port & 0x1) == NVCSI_PORT_A) ?
 				CSI_A_PHY_CIL_DISABLE | CSI_B_PHY_CIL_NOP
 				: CSI_B_PHY_CIL_DISABLE | CSI_A_PHY_CIL_NOP;
 			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
@@ -453,7 +450,8 @@ static int csi2_hw_init(struct tegra_csi_device *csi)
 	list_for_each_entry(it, &csi->csi_chans, list) {
 		for (i = 0; i < it->numports; i++) {
 			port = &it->ports[i];
-			csi_port = it->ports[i].num;
+			csi_port = !it->pg_mode ?
+				it->ports[i].csi_port : it->ports[i].stream_id;
 			port->pixel_parser = csi->iomem[csi_port >> 1] +
 				(csi_port % 2) * TEGRA_CSI_PORT_OFFSET;
 			port->cil = port->pixel_parser + TEGRA_CSI_CIL_OFFSET;
@@ -497,18 +495,18 @@ static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 
 	while (num_ports < chan->numports) {
 		port = &chan->ports[num_ports];
-		csi_port = port->num;
-		dev_dbg(csi->dev, "Calibrate csi port %d\n", port->num);
+		csi_port = port->csi_port;
+		dev_dbg(csi->dev, "Calibrate csi port %d\n", csi_port);
 
 		if (chan->numlanes <= 2) {
 			lanes |= CSIA << csi_port;
-			val = ((csi_port & 0x1) == PORT_A) ?
+			val = ((csi_port & 0x1) == NVCSI_PORT_A) ?
 				CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_NOP
 				: CSI_B_PHY_CIL_ENABLE | CSI_A_PHY_CIL_NOP;
 			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
 				csi_port >> 1);
 		} else {
-			lanes |= (CSIA | CSIB) << port->num;
+			lanes |= (CSIA | CSIB) << csi_port;
 			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND,
 				CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_ENABLE,
 				csi_port >> 1);

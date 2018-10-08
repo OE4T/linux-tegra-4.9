@@ -959,6 +959,7 @@ struct tx_ring {
 
 	/* for TSO */
 	u32 default_mss;
+	bool tx_full;
 };
 
 struct eqos_tx_queue {

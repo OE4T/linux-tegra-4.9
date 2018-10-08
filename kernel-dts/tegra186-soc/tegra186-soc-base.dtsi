@@ -382,7 +382,7 @@
 			};
 			gpu_as: gpu {
 				iova-start = <0x0 0x00100000>;
-				iova-size = <0x3 0xFFEFFFFF>;
+				iova-size = <0x3FF 0xFFEFFFFF>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <0>;

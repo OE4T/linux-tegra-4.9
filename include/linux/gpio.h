@@ -143,6 +143,16 @@ static inline int gpio_direction_output(unsigned gpio, int value)
 	return -ENOSYS;
 }
 
+static inline int gpio_timestamp_control(unsigned gpio, int enable)
+{
+	return -ENOSYS;
+}
+
+static inline int gpio_timestamp_read(unsigned gpio, u64 *ts)
+{
+	return -ENOSYS;
+}
+
 static inline int gpio_set_debounce(unsigned gpio, unsigned debounce)
 {
 	return -ENOSYS;

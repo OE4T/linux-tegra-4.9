@@ -2330,6 +2330,61 @@ int gpiod_direction_output(struct gpio_desc *desc, int value)
 EXPORT_SYMBOL_GPL(gpiod_direction_output);
 
 /**
+ * gpiod_timestamp_control - Enable/Disable timstamping for GPIO
+ * @desc:	GPIO for which to Enable/Disable Timestamp
+ * @enable:	Enable/Disable timestamp
+ *
+ * Enable or Disable timestamping feature for given GPIO
+ *
+ * Return 0 in case of success, else an error code.
+ */
+int gpiod_timestamp_control(struct gpio_desc *desc, int enable)
+{
+	struct gpio_chip *chip;
+
+	VALIDATE_DESC(desc);
+	chip = desc->gdev->chip;
+	if (!chip->timestamp_control) {
+		gpiod_warn(desc, "%s: missing timestamp_control operations\n",
+			  __func__);
+		return -ENOTSUPP;
+	}
+
+	return chip->timestamp_control(chip, gpio_chip_hwgpio(desc), enable);
+}
+EXPORT_SYMBOL_GPL(gpiod_timestamp_control);
+
+/**
+ * gpiod_timestamp_read - Read timstamp value for GPIO
+ * @desc:	GPIO to read timestamp value
+ * @ts:		data where to store the timestamp
+ *
+ * Read timestamp value for given GPIO
+ *
+ * Return 0 in case of success, else an error code.
+ */
+int gpiod_timestamp_read(struct gpio_desc *desc, u64 *ts)
+{
+	struct gpio_chip *chip;
+	u64 gpio_ts;
+	int ret;
+
+	VALIDATE_DESC(desc);
+	chip = desc->gdev->chip;
+	if (!chip->timestamp_read) {
+		gpiod_warn(desc, "%s: missing timestamp_read operations\n",
+			  __func__);
+		return -ENOTSUPP;
+	}
+
+	ret = chip->timestamp_read(chip, gpio_chip_hwgpio(desc), &gpio_ts);
+	*ts = gpio_ts;
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(gpiod_timestamp_read);
+
+/**
  * gpiod_set_debounce - sets @debounce time for a @gpio
  * @gpio: the gpio to set debounce time
  * @debounce: debounce time is microseconds

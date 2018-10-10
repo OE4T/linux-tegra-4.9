@@ -64,25 +64,29 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 	[TEGRA_DC_DP_TRAINING_PATTERN_DISABLE] = {
 		.chan_coding = true,
 		.scrambling = true,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_NONE,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_NONE |
+			NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_F,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_NOPATTERN,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_1] = {
 		.chan_coding = true,
 		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP1 |
+			NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING1,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_2] = {
 		.chan_coding = true,
 		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP2 |
+			NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING2,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_3] = {
 		.chan_coding = true,
 		.scrambling = false,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP3 |
+			NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_T,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING3,
 	},
 	[TEGRA_DC_DP_TRAINING_PATTERN_D102] = {
@@ -130,7 +134,8 @@ static const struct tegra_dc_dp_training_pattern training_pattern_table[] = {
 	[TEGRA_DC_DP_TRAINING_PATTERN_4] = {
 		.chan_coding = true,
 		.scrambling = true,
-		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4,
+		.dpcd_val = NV_DPCD_TRAINING_PATTERN_SET_TPS_TP4 |
+			NV_DPCD_TRAINING_PATTERN_SET_SC_DISABLED_F,
 		.sor_reg_val = NV_SOR_DP_TPG_LANE0_PATTERN_TRAINING4,
 	},
 	/*

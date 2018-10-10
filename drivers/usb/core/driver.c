@@ -1371,7 +1371,7 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 	}
 
  done:
-	dev_vdbg(&udev->dev, "%s: status %d\n", __func__, status);
+	dev_info(&udev->dev, "%s: status %d\n", __func__, status);
 	return status;
 }
 

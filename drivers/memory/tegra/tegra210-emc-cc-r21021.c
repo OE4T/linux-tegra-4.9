@@ -130,7 +130,7 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 	u32 mrr_req = 0, mrr_data = 0;
 	u32 temp0_0 = 0, temp0_1 = 0, temp1_0 = 0, temp1_1 = 0;
 	s32 tdel = 0, tmdel = 0, adel = 0;
-	u32 cval;
+	u32 cval = 0;
 	u32 last_timing_rate_mhz = last_timing->rate / 1000;
 	u32 next_timing_rate_mhz = next_timing->rate / 1000;
 	int dvfs_pt1 = type == DVFS_PT1;
@@ -195,8 +195,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 		}
 	}
 
-	cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-		(last_timing_rate_mhz * 2 * temp0_0);
+	if (dvfs_pt1 || periodic_training_update)
+		cval = (1000000 * tegra210_actual_osc_clocks(
+					last_timing->run_clocks)) /
+			(last_timing_rate_mhz * 2 * temp0_0);
 
 	if (dvfs_pt1)
 		__INCREMENT_PTFV(C0D0U0, cval);
@@ -216,8 +218,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 				__MOVAVG_AC(next_timing, C0D0U0);
 	}
 
-	cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-		(last_timing_rate_mhz * 2 * temp0_1);
+	if (dvfs_pt1 || periodic_training_update)
+		cval = (1000000 * tegra210_actual_osc_clocks(
+					last_timing->run_clocks)) /
+			(last_timing_rate_mhz * 2 * temp0_1);
 
 	if (dvfs_pt1)
 		__INCREMENT_PTFV(C0D0U1, cval);
@@ -241,8 +245,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 	}
 
 	if (channel_mode == DUAL_CHANNEL) {
-		cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-			(last_timing_rate_mhz * 2 * temp1_0);
+		if (dvfs_pt1 || periodic_training_update)
+			cval = (1000000 * tegra210_actual_osc_clocks(
+						last_timing->run_clocks)) /
+				(last_timing_rate_mhz * 2 * temp1_0);
 		if (dvfs_pt1)
 			__INCREMENT_PTFV(C1D0U0, cval);
 		else if (dvfs_update)
@@ -264,8 +270,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 					__MOVAVG_AC(next_timing, C1D0U0);
 		}
 
-		cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-			(last_timing_rate_mhz * 2 * temp1_1);
+		if (dvfs_pt1 || periodic_training_update)
+			cval = (1000000 * tegra210_actual_osc_clocks(
+						last_timing->run_clocks)) /
+				(last_timing_rate_mhz * 2 * temp1_1);
 		if (dvfs_pt1)
 			__INCREMENT_PTFV(C1D0U1, cval);
 		else if (dvfs_update)
@@ -349,8 +357,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 		}
 	}
 
-	cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-		(last_timing_rate_mhz * 2 * temp0_0);
+	if (dvfs_pt1 || periodic_training_update)
+		cval = (1000000 * tegra210_actual_osc_clocks(
+					last_timing->run_clocks)) /
+			(last_timing_rate_mhz * 2 * temp0_0);
 
 	if (dvfs_pt1)
 		__INCREMENT_PTFV(C0D1U0, cval);
@@ -372,8 +382,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 				__MOVAVG_AC(next_timing, C0D1U0);
 	}
 
-	cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-		(last_timing_rate_mhz * 2 * temp0_1);
+	if (dvfs_pt1 || periodic_training_update)
+		cval = (1000000 * tegra210_actual_osc_clocks(
+					last_timing->run_clocks)) /
+			(last_timing_rate_mhz * 2 * temp0_1);
 
 	if (dvfs_pt1)
 		__INCREMENT_PTFV(C0D1U1, cval);
@@ -396,8 +408,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 	}
 
 	if (channel_mode == DUAL_CHANNEL) {
-		cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-			(last_timing_rate_mhz * 2 * temp1_0);
+		if (dvfs_pt1 || periodic_training_update)
+			cval = (1000000 * tegra210_actual_osc_clocks(
+						last_timing->run_clocks)) /
+				(last_timing_rate_mhz * 2 * temp1_0);
 
 		if (dvfs_pt1)
 			__INCREMENT_PTFV(C1D1U0, cval);
@@ -419,8 +433,10 @@ static u32 update_clock_tree_delay(struct emc_table *last_timing,
 					__MOVAVG_AC(next_timing, C1D1U0);
 		}
 
-		cval = (1000000 * tegra210_actual_osc_clocks(last_timing->run_clocks)) /
-			(last_timing_rate_mhz * 2 * temp1_1);
+		if (dvfs_pt1 || periodic_training_update)
+			cval = (1000000 * tegra210_actual_osc_clocks(
+						last_timing->run_clocks)) /
+				(last_timing_rate_mhz * 2 * temp1_1);
 
 		if (dvfs_pt1)
 			__INCREMENT_PTFV(C1D1U1, cval);

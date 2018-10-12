@@ -722,6 +722,7 @@ static int hda_tegra_create_sysfs(struct hda_tegra *hda)
 			dev_info(hda->dev, "error in getting switch name"
 				" for hda_pcm_id(%d)\n", apcm->info->device);
 			kobject_put(pcm_dev->kobj);
+			pcm_dev->kobj = NULL;
 			continue;
 		}
 
@@ -760,9 +761,11 @@ static void hda_tegra_remove_sysfs(struct device *dev)
 			sysfs_remove_file(pcm_dev->kobj,
 				&pcm_dev->name_attr.attr);
 			kobject_put(pcm_dev->kobj);
+			pcm_dev->kobj = NULL;
 		}
 	}
 	kobject_put(hda->kobj);
+	hda->kobj = NULL;
 }
 
 static void hda_tegra_probe_work(struct work_struct *work)
@@ -831,14 +834,18 @@ out_free:
 
 static int hda_tegra_remove(struct platform_device *pdev)
 {
-	pm_runtime_disable(&pdev->dev);
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		hda_tegra_runtime_suspend(&pdev->dev);
+	int ret;
 
 	/* remove sysfs files */
 	hda_tegra_remove_sysfs(&pdev->dev);
 
-	return snd_card_free(dev_get_drvdata(&pdev->dev));
+	ret = snd_card_free(dev_get_drvdata(&pdev->dev));
+
+	pm_runtime_disable(&pdev->dev);
+	if (!pm_runtime_status_suspended(&pdev->dev))
+		hda_tegra_runtime_suspend(&pdev->dev);
+
+	return ret;
 }
 
 static void hda_tegra_shutdown(struct platform_device *pdev)

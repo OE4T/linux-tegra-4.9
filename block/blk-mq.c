@@ -942,11 +942,21 @@ void blk_mq_run_hw_queues(struct request_queue *q, bool async)
 }
 EXPORT_SYMBOL(blk_mq_run_hw_queues);
 
+static void __blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx, bool sync)
+{
+	if (sync) {
+		cancel_work_sync(&hctx->run_work);
+		cancel_delayed_work_sync(&hctx->delay_work);
+	} else {
+		cancel_work(&hctx->run_work);
+		cancel_delayed_work(&hctx->delay_work);
+	}
+	set_bit(BLK_MQ_S_STOPPED, &hctx->state);
+}
+
 void blk_mq_stop_hw_queue(struct blk_mq_hw_ctx *hctx)
 {
-	cancel_work(&hctx->run_work);
-	cancel_delayed_work(&hctx->delay_work);
-	set_bit(BLK_MQ_S_STOPPED, &hctx->state);
+	__blk_mq_stop_hw_queue(hctx, false);
 }
 EXPORT_SYMBOL(blk_mq_stop_hw_queue);
 
@@ -1951,6 +1961,7 @@ static void blk_mq_realloc_hw_ctxs(struct blk_mq_tag_set *set,
 		struct blk_mq_hw_ctx *hctx = hctxs[j];
 
 		if (hctx) {
+			__blk_mq_stop_hw_queue(hctx, true);
 			if (hctx->tags) {
 				blk_mq_free_rq_map(set, hctx->tags, j);
 				set->tags[j] = NULL;

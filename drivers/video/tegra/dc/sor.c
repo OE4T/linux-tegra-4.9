@@ -1704,6 +1704,9 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	if (dc->out->vrr) {
 		if (tegra_dc_is_nvdisplay())
 			tegra_nvdisp_set_vrr_mode(dc);
+		else
+			tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
+					DC_CMD_DISPLAY_COMMAND);
 	}
 	else if (dc->frm_lck_info.frame_lock_enable &&
 		((dc->out->type == TEGRA_DC_OUT_HDMI) ||

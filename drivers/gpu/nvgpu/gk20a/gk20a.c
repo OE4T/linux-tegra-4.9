@@ -424,18 +424,6 @@ done:
 	return err;
 }
 
-/*
- * Check if the device can go busy. Basically if the driver is currently
- * in the process of dying then do not let new places make the driver busy.
- */
-int gk20a_can_busy(struct gk20a *g)
-{
-	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
-		return 0;
-	}
-	return 1;
-}
-
 int gk20a_wait_for_idle(struct gk20a *g)
 {
 	int wait_length = 150; /* 3 second overall max wait. */

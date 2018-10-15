@@ -24,6 +24,8 @@
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/reboot.h>
+#include <linux/notifier.h>
 #include <linux/platform/tegra/common.h>
 #include <linux/pci.h>
 
@@ -76,6 +78,14 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
+static int nvgpu_kernel_shutdown_notification(struct notifier_block *nb,
+					unsigned long event, void *unused)
+{
+	struct gk20a *g = container_of(nb, struct gk20a, nvgpu_reboot_nb);
+
+	__nvgpu_set_enabled(g, NVGPU_KERNEL_IS_DYING, true);
+	return NOTIFY_DONE;
+}
 
 struct device_node *nvgpu_get_node(struct gk20a *g)
 {
@@ -98,6 +108,22 @@ void gk20a_busy_noresume(struct gk20a *g)
 	pm_runtime_get_noresume(dev_from_gk20a(g));
 }
 
+/*
+ * Check if the device can go busy.
+ */
+static int nvgpu_can_busy(struct gk20a *g)
+{
+	/* Can't do anything if the system is rebooting/shutting down. */
+	if (nvgpu_is_enabled(g, NVGPU_KERNEL_IS_DYING))
+		return 0;
+
+	/* Can't do anything if the driver is restarting. */
+	if (nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING))
+		return 0;
+
+	return 1;
+}
+
 int gk20a_busy(struct gk20a *g)
 {
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
@@ -111,7 +137,7 @@ int gk20a_busy(struct gk20a *g)
 
 	down_read(&l->busy_lock);
 
-	if (!gk20a_can_busy(g)) {
+	if (!nvgpu_can_busy(g)) {
 		ret = -ENODEV;
 		atomic_dec(&g->usage_count.atomic_var);
 		goto fail;
@@ -158,7 +184,7 @@ void gk20a_idle(struct gk20a *g)
 
 	dev = dev_from_gk20a(g);
 
-	if (!(dev && gk20a_can_busy(g)))
+	if (!(dev && nvgpu_can_busy(g)))
 		return;
 
 	if (pm_runtime_enabled(dev)) {
@@ -1289,6 +1315,12 @@ static int gk20a_probe(struct platform_device *dev)
 		goto return_err;
 	}
 
+	gk20a->nvgpu_reboot_nb.notifier_call =
+		nvgpu_kernel_shutdown_notification;
+	err = register_reboot_notifier(&gk20a->nvgpu_reboot_nb);
+	if (err)
+		goto return_err;
+
 	return 0;
 
 return_err:
@@ -1367,6 +1399,8 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 		return vgpu_remove(pdev);
 
 	err = nvgpu_remove(dev, &nvgpu_class);
+
+	unregister_reboot_notifier(&g->nvgpu_reboot_nb);
 
 	set_gk20a(pdev, NULL);
 

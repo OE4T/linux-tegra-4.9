@@ -49,6 +49,9 @@ struct nvgpu_gpu_ctxsw_trace_filter;
 struct priv_cmd_entry;
 struct nvgpu_gpfifo_args;
 
+#ifdef __KERNEL__
+#include <linux/notifier.h>
+#endif
 #include <nvgpu/lock.h>
 #include <nvgpu/thread.h>
 
@@ -1411,6 +1414,10 @@ struct gk20a {
 	 */
 	unsigned long *enabled_flags;
 
+#ifdef __KERNEL__
+	struct notifier_block nvgpu_reboot_nb;
+#endif
+
 	nvgpu_atomic_t usage_count;
 
 	struct nvgpu_mutex ctxsw_disable_lock;
@@ -1741,7 +1748,6 @@ void gk20a_idle(struct gk20a *g);
 int __gk20a_do_idle(struct gk20a *g, bool force_reset);
 int __gk20a_do_unidle(struct gk20a *g);
 
-int gk20a_can_busy(struct gk20a *g);
 int gk20a_wait_for_idle(struct gk20a *g);
 
 #define NVGPU_GPU_ARCHITECTURE_SHIFT 4

@@ -68,6 +68,8 @@ static inline void _shutdown(struct tegra186_tmr *tmr)
 {
 	__raw_writel(0 << 31, /* EN=0, disable timer */
 		     tmr->reg_base + TMRCR);
+	__raw_writel(1 << 30, /* INTR_CLR */
+		     tmr->reg_base + TMRSR);
 }
 
 static int tegra186_timer_shutdown(struct clock_event_device *evt)
@@ -122,13 +124,26 @@ static irqreturn_t tegra186_timer_isr(int irq, void *dev_id)
 
 static int tegra186_timer_setup(unsigned int cpu)
 {
-
 	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
-
 
 	clockevents_config_and_register(&tmr->evt, tmr->freq,
 					1, /* min */
 					0x1fffffff); /* 29 bits */
+#ifdef CONFIG_SMP
+	if (irq_force_affinity(tmr->evt.irq, cpumask_of(cpu))) {
+		pr_err("%s: cannot set irq %d affinity to CPU%d\n",
+		       __func__, tmr->evt.irq, cpu);
+		BUG();
+	}
+#endif
+	enable_irq(tmr->evt.irq);
+	return 0;
+}
+
+static int tegra186_timer_enable_irq(unsigned int cpu)
+{
+	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
+
 #ifdef CONFIG_SMP
 	if (irq_force_affinity(tmr->evt.irq, cpumask_of(cpu))) {
 		pr_err("%s: cannot set irq %d affinity to CPU%d\n",
@@ -145,6 +160,18 @@ static int tegra186_timer_stop(unsigned int cpu)
 	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
 	_shutdown(tmr);
 	disable_irq_nosync(tmr->evt.irq);
+
+	return 0;
+}
+
+static int tegra186_timer_suspend(void)
+{
+	int cpu = smp_processor_id();
+	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
+
+	_shutdown(tmr);
+	disable_irq_nosync(tmr->evt.irq);
+
 	return 0;
 }
 
@@ -183,9 +210,13 @@ static void tegra186_timer_resume(void)
 		__raw_writel(1 << tmr->tmr_index,   tke->reg_base
 					     + TKEIE + 4 * tmr->tmr_index);
 	}
+
+	cpu = smp_processor_id();
+	tegra186_timer_enable_irq(cpu);
 }
 
 static struct syscore_ops tegra186_timer_syscore_ops = {
+	.suspend = tegra186_timer_suspend,
 	.resume = tegra186_timer_resume,
 };
 

@@ -913,11 +913,12 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			 * fbconsole needs at least one mode in modelist. Add
 			 * the existing fb videomode to modelist since it is
 			 * already programmed as fb mode and variable screen
-			 * info. Mode shall be updated as part of modeset in
-			 * next hotplug.
+			 * info. Notify fbconsole of the new modelist. Mode
+			 * shall be updated as part of modeset in next hotplug.
 			 */
 			fb_add_videomode(&fb_info->mode,
 						&fb_info->info->modelist);
+			fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 		} else {
 			/* For L4T - After the next hotplug, framebuffer console will
 			 * use the old variable screeninfo by default, only video-mode

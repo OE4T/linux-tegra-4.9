@@ -29,3 +29,15 @@ config ARCH_TEGRA_23x_SOC
 	default n
 	help
 	  NVIDIA Tegra Downstream options for 23x family of SoCs
+
+append_menu "Kernel Features"
+
+config TEGRA_EBP
+	bool "Tegra Early Boot Partition"
+	select ARM64_NON_SHARED_TLBI
+	default n
+	help
+	  NVIDIA Tegra single core stripped down configuration
+	  designed for fast boot time.
+
+endmenu

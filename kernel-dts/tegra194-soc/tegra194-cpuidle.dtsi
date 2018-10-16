@@ -37,7 +37,7 @@
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;
-				status = "okay";
+				status = "disabled";
 			};
 			C7: c7 {
 				compatible = "nvidia,tegra194-cpuidle-core";
@@ -59,7 +59,7 @@
 				min-residency-us = <80000>;
 				power = <19>;
 				pmstate = <0x6>;
-				status = "okay";
+				status = "disabled";
 			};
 		};
 

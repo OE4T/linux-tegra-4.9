@@ -93,7 +93,7 @@ static struct nvhost_gating_register __attribute__((__unused__))
 	/* NV_PVIC_TFBIF_MCCIF_FIFOCTRL */
 	{ .addr = 0x00002004, .prod = 0x00000000, .disable = 0x00000000 },
 	/* NV_PVIC_FALCON_CG2 */
-	{ .addr = 0x00001134, .prod = 0x00000000, .disable = 0x0003fffe },
+	{ .addr = 0x00001134, .prod = 0x00010004, .disable = 0x0003fffe },
 	{}
 };
 

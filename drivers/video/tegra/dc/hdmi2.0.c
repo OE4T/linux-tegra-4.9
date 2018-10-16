@@ -123,10 +123,9 @@ tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
 
 /*
  * Calculates the effective SOR link rate based on the DC pclk and the selected
- * output mode:
+ * output mode for native support:
  * - RGB444/YUV444 12bpc requires a 2:3 pclk:orclk ratio
  * - YUV420 8bpc requires a 2:1 pclk:orclk ratio
- * - YUV420 10bpc requires a 8:5 pclk:orclk ratio
  */
 static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
 {
@@ -141,13 +140,6 @@ static inline unsigned long tegra_sor_get_link_rate(struct tegra_dc *dc)
 			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
 			rate = rate >> 1;
 			rate = rate * 3;
-		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
-			rate = rate >> 1;
-		}
-	} else {
-		if (tegra_dc_is_yuv420_10bpc(&dc->mode)) {
-			rate = 5 * rate;
-			rate = rate / 8;
 		} else if (tegra_dc_is_yuv420_8bpc(&dc->mode)) {
 			rate = rate >> 1;
 		}

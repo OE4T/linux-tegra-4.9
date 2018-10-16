@@ -790,6 +790,11 @@ static int tegra_uart_copy_rx_to_tty(struct tegra_uart_port *tup,
 		return -EINVAL;
 	}
 
+	if (!tup->rx_dma_buf_virt) {
+		dev_err(tup->uport.dev, "No rx dma buf virtual address\n");
+		return -EINVAL;
+	}
+
 	if (tup->uport.ignore_status_mask & UART_LSR_DR)
 		return 0;
 
@@ -891,6 +896,11 @@ static int tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 	struct dma_async_tx_descriptor *prev_rx_dma_desc;
 	int rx_level = 0;
 	int ret;
+
+	if (!tup->rx_dma_chan) {
+		dev_err(tup->uport.dev, "No rx dma channel\n");
+		return -EINVAL;
+	}
 
 	/* Deactivate flow control to stop sender */
 	if (tup->rts_active && tup->is_hw_flow_enabled)
@@ -1112,7 +1122,9 @@ static void tegra_uart_hw_deinit(struct tegra_uart_port *tup)
 	unsigned long mcr;
 
 	/* Disable interrupts */
+	spin_lock_irqsave(&tup->uport.lock, flags);
 	tegra_uart_write(tup, 0, UART_IER);
+	spin_unlock_irqrestore(&tup->uport.lock, flags);
 
 	lsr = tegra_uart_read(tup, UART_LSR);
 	if ((lsr & UART_LSR_TEMT) != UART_LSR_TEMT) {
@@ -1428,8 +1440,8 @@ static void tegra_uart_shutdown(struct uart_port *u)
 {
 	struct tegra_uart_port *tup = to_tegra_uport(u);
 
-	tegra_uart_hw_deinit(tup);
 	free_irq(u->irq, tup);
+	tegra_uart_hw_deinit(tup);
 }
 
 static void tegra_uart_enable_ms(struct uart_port *u)

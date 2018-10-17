@@ -412,6 +412,7 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 	unsigned long rate;
 	unsigned int divisor;
 	unsigned long lcr;
+	unsigned long flags;
 	int ret;
 
 	if (tup->current_baud == baud)
@@ -438,6 +439,7 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 		divisor = DIV_ROUND_CLOSEST(rate, baud * 16);
 	}
 
+	spin_lock_irqsave(&tup->uport.lock, flags);
 	lcr = tup->lcr_shadow;
 	lcr |= UART_LCR_DLAB;
 	tegra_uart_write(tup, lcr, UART_LCR);
@@ -450,6 +452,7 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 
 	/* Dummy read to ensure the write is posted */
 	tegra_uart_read(tup, UART_SCR);
+	spin_unlock_irqrestore(&tup->uport.lock, flags);
 
 	tup->current_baud = baud;
 

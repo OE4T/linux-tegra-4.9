@@ -244,6 +244,9 @@ config PGTABLE_LEVELS
 	default 3 if ARM64_16K_PAGES && ARM64_VA_BITS_47
 	default 4 if !ARM64_64K_PAGES && ARM64_VA_BITS_48
 
+config ARM64_NON_SHARED_TLBI
+	def_bool n
+
 source "init/Kconfig"
 
 source "kernel/Kconfig.freezer"

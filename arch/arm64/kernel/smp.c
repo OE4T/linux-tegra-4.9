@@ -137,6 +137,13 @@ static inline int op_cpu_kill(unsigned int cpu)
  */
 static int boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
+	/*
+	 * Force failure if trying to boot secondary CPU while using
+	 * non-shared TLBI
+	 */
+#ifdef CONFIG_ARM64_NON_SHARED_TLBI
+	BUG();
+#endif
 	if (cpu_ops[cpu]->cpu_boot)
 		return cpu_ops[cpu]->cpu_boot(cpu);
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 ARM Ltd.
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -115,6 +115,12 @@ extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
 #define pud_access_permitted(pud, write) \
 	(pte_access_permitted(pud_pte(pud), (write)))
 
+#ifdef CONFIG_ARM64_NON_SHARED_TLBI
+#define __DSB_FOR_PGTABLE()	dsb(nshst)
+#else
+#define __DSB_FOR_PGTABLE()	dsb(ishst)
+#endif
+
 static inline pte_t clear_pte_bit(pte_t pte, pgprot_t prot)
 {
 	pte_val(pte) &= ~pgprot_val(prot);
@@ -199,7 +205,7 @@ static inline void set_pte(pte_t *ptep, pte_t pte)
 	 * or update_mmu_cache() have the necessary barriers.
 	 */
 	if (pte_valid_not_user(pte)) {
-		dsb(ishst);
+		__DSB_FOR_PGTABLE();
 		isb();
 	}
 }
@@ -402,7 +408,7 @@ extern pgprot_t phys_mem_access_prot(struct file *file, unsigned long pfn,
 static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
 	*pmdp = pmd;
-	dsb(ishst);
+	__DSB_FOR_PGTABLE();
 	isb();
 }
 
@@ -458,7 +464,7 @@ static inline pte_t *pmd_page_vaddr(pmd_t pmd)
 static inline void set_pud(pud_t *pudp, pud_t pud)
 {
 	*pudp = pud;
-	dsb(ishst);
+	__DSB_FOR_PGTABLE();
 	isb();
 }
 
@@ -516,7 +522,7 @@ static inline unsigned long pud_page_vaddr(pud_t pud)
 static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 {
 	*pgdp = pgd;
-	dsb(ishst);
+	__DSB_FOR_PGTABLE();
 }
 
 static inline void pgd_clear(pgd_t *pgdp)

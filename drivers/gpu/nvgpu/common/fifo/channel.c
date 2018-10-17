@@ -2291,7 +2291,13 @@ int gk20a_channel_suspend(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (ch != NULL) {
+		if (ch == NULL) {
+			continue;
+		}
+		if (gk20a_channel_check_timedout(ch)) {
+			nvgpu_log_info(g, "do not suspend recovered "
+						"channel %d", chid);
+		} else {
 			nvgpu_log_info(g, "suspend channel %d", chid);
 			/* disable channel */
 			gk20a_disable_channel_tsg(g, ch);
@@ -2304,10 +2310,9 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 			channels_in_use = true;
 
-			active_runlist_ids |= BIT(ch->runlist_id);
-
-			gk20a_channel_put(ch);
+			active_runlist_ids |= (u32) BIT64(ch->runlist_id);
 		}
+		gk20a_channel_put(ch);
 	}
 
 	if (channels_in_use) {
@@ -2317,7 +2322,13 @@ int gk20a_channel_suspend(struct gk20a *g)
 			struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
 			if (ch != NULL) {
-				g->ops.fifo.unbind_channel(ch);
+				if (gk20a_channel_check_timedout(ch)) {
+					nvgpu_log_info(g, "do not unbind "
+							"recovered channel %d",
+							chid);
+				} else {
+					g->ops.fifo.unbind_channel(ch);
+				}
 				gk20a_channel_put(ch);
 			}
 		}
@@ -2339,13 +2350,19 @@ int gk20a_channel_resume(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (ch != NULL) {
+		if (ch == NULL) {
+			continue;
+		}
+		if (gk20a_channel_check_timedout(ch)) {
+			nvgpu_log_info(g, "do not resume recovered "
+						"channel %d", chid);
+		} else {
 			nvgpu_log_info(g, "resume channel %d", chid);
 			g->ops.fifo.bind_channel(ch);
 			channels_in_use = true;
-			active_runlist_ids |= BIT(f->channel[chid].runlist_id);
-			gk20a_channel_put(ch);
+			active_runlist_ids |= (u32) BIT64(ch->runlist_id);
 		}
+		gk20a_channel_put(ch);
 	}
 
 	if (channels_in_use) {

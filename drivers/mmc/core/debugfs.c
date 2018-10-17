@@ -502,6 +502,17 @@ static int mmc_dbg_card_status_get(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_card_status_fops, mmc_dbg_card_status_get,
 		NULL, "%08llx\n");
 
+static int mmc_dbg_card_speed_class_get(void *data, u64 *val)
+{
+		struct mmc_card	*card = data;
+
+			*val = card->speed_class;
+
+				return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(mmc_dbg_card_speed_class_fops,
+				mmc_dbg_card_speed_class_get, NULL, "%llu\n");
+
 static int mmc_get_ext_csd_byte_val(struct mmc_card *card, u64 *val,
 		unsigned int ext_csd_byte)
 {
@@ -702,6 +713,11 @@ void mmc_add_card_debugfs(struct mmc_card *card)
 					&mmc_dbg_ext_csd_device_type_fops))
 			goto err;
 	}
+
+	if (mmc_card_sd(card))
+		if (!debugfs_create_file("speed_class", 0400, root, card,
+					&mmc_dbg_card_speed_class_fops))
+			goto err;
 
 	return;
 

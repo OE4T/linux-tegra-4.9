@@ -2292,7 +2292,8 @@
 	cpufreq {
 		compatible = "nvidia,tegra194-cpufreq";
 		status = "disabled";
-		cpu_emc_map = <1881600 800000>,
+		cpu_emc_map = <2112000  2133000>,
+				<1881600 800000>,
 				<1574400 665000>,
 				<1267200 408000>;
 	};

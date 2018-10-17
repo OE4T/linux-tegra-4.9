@@ -24,16 +24,6 @@
 			};
 		};
 
-		fragment-pcie-c1-rp-galen-DVT-war {
-			ids = ">=2822-0000-400";
-			override@0 {
-				target = <&{/pcie@14100000}>;
-				_overlay_ {
-					nvidia,max-speed = <1>;
-				};
-			};
-		};
-
 		fragment-pcie-p2822-B00 {
 			ids = ">=2822-0000-400";
 			override@0 {

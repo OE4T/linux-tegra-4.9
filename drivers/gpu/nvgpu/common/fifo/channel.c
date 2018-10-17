@@ -1387,6 +1387,11 @@ u32 nvgpu_get_gp_free_count(struct channel_gk20a *c)
 
 static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
+	if (gk20a_channel_check_timedout(ch)) {
+		ch->timeout.running = false;
+		return;
+	}
+
 	ch->timeout.gp_get = ch->g->ops.fifo.userd_gp_get(ch->g, ch);
 	ch->timeout.pb_get = ch->g->ops.fifo.userd_pb_get(ch->g, ch);
 	ch->timeout.running = true;
@@ -1484,16 +1489,16 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (ch == NULL)
-			continue;
-
-		nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-		if (ch->timeout.running) {
-			__gk20a_channel_timeout_start(ch);
+		if (ch != NULL) {
+			if (!gk20a_channel_check_timedout(ch)) {
+				nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+				if (ch->timeout.running) {
+					__gk20a_channel_timeout_start(ch);
+				}
+				nvgpu_raw_spinlock_release(&ch->timeout.lock);
+			}
+			gk20a_channel_put(ch);
 		}
-		nvgpu_raw_spinlock_release(&ch->timeout.lock);
-
-		gk20a_channel_put(ch);
 	}
 }
 
@@ -1516,6 +1521,12 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	u64 new_pb_get;
 
 	nvgpu_log_fn(g, " ");
+
+	if (gk20a_channel_check_timedout(ch)) {
+		/* channel is already recovered */
+		gk20a_channel_timeout_stop(ch);
+		return;
+	}
 
 	/* Get status but keep timer running */
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
@@ -1587,7 +1598,9 @@ static void gk20a_channel_poll_timeouts(struct gk20a *g)
 		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
 		if (ch != NULL) {
-			gk20a_channel_timeout_check(ch);
+			if (!gk20a_channel_check_timedout(ch)) {
+				gk20a_channel_timeout_check(ch);
+			}
 			gk20a_channel_put(ch);
 		}
 	}

@@ -22,7 +22,7 @@ struct gk20a;
 #if defined(CONFIG_DEBUG_FS) && defined(CONFIG_GK20A_CTXSW_TRACE)
 int nvgpu_fecs_trace_init_debugfs(struct gk20a *g);
 #else
-int nvgpu_fecs_trace_init_debugfs(struct gk20a *g)
+static int nvgpu_fecs_trace_init_debugfs(struct gk20a *g)
 {
 	return 0;
 }

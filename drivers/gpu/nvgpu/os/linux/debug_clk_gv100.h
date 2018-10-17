@@ -20,7 +20,7 @@
 #ifdef CONFIG_DEBUG_FS
 int gv100_clk_init_debugfs(struct gk20a *g);
 #else
-inline int gv100_clk_init_debugfs(struct gk20a *g)
+static inline int gv100_clk_init_debugfs(struct gk20a *g)
 {
 	return 0;
 }

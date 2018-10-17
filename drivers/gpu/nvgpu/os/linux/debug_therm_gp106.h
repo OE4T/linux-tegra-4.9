@@ -20,7 +20,7 @@
 #ifdef CONFIG_DEBUG_FS
 int gp106_therm_init_debugfs(struct gk20a *g);
 #else
-inline int gp106_therm_init_debugfs(struct gk20a *g)
+static inline int gp106_therm_init_debugfs(struct gk20a *g)
 {
 	return 0;
 }

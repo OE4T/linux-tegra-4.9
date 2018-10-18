@@ -1449,4 +1449,14 @@
 			};
 		};
 	};
+	ether_qos@2490000 {
+		prod-settings {
+			#prod-cells = <4>;
+			prod {
+				prod = <
+					0 0x00008800 0x80000000 0x00000000              //ETHER_QOS_SDMEMCOMPPADCTRL_0
+					0 0x00008804 0x20000000 0x20000000>;            //ETHER_QOS_AUTO_CAL_CONFIG_0
+			};
+		};
+	};
 };

@@ -187,32 +187,8 @@ static unsigned int get_init_la(
 
 	switch (client_type) {
 	case TEGRA_LA_HUB_READ_CLIENT:
-	{
-		struct fixed_point term1;
-		struct fixed_point term2;
-		struct fixed_point term3;
-
-		term1 = fixed_point_div(
-			FIX_PT(1000, 0, error),
-			FIX_PT(1066, 0x80000000, error) /* 1066.5 */,
-			error);
-		term2 = fixed_point_mult(
-			FIX_PT(1059, 0, error),
-			term1,
-			error);
-		term3 = fixed_point_min(
-			FIX_PT(7650, 0, error),
-			term2,
-			error);
-		ret_la = (unsigned int)
-			fixed_point_to_int(
-				fixed_point_div(
-					term3,
-					FIX_PT(30, 0, error),
-					error),
-				error);
+		ret_la = 33; /*(min((1000/1066.5) * 1059, 7650) / 30)*/
 		break;
-	}
 	case TEGRA_LA_HUB_WRITE_CLIENT:
 		ret_la = 255;
 		break;
@@ -257,32 +233,8 @@ static unsigned int get_init_la(
 		ret_la = 4;
 		break;
 	case TEGRA_LA_GPU_READ_CLIENT:
-	{
-		struct fixed_point term1;
-		struct fixed_point term2;
-		struct fixed_point term3;
-
-		term1 = fixed_point_div(
-			FIX_PT(1000, 0, error),
-			FIX_PT(1066, 0x80000000, error) /* 1066.5 */,
-			error);
-		term2 = fixed_point_mult(
-			FIX_PT(1019, 0, error),
-			term1,
-			error);
-		term3 = fixed_point_min(
-			FIX_PT(7650, 0, error),
-			term2,
-			error);
-		ret_la = (unsigned int)
-			fixed_point_to_int(
-				fixed_point_div(
-					term3,
-					FIX_PT(30, 0, error),
-					error),
-				error);
+		ret_la = 31; /*(min((1000/1066.5) * 1019, 7650) / 30)*/
 		break;
-	}
 	case TEGRA_LA_NUM_CLIENT_TYPES:
 		ret_la = 0;
 		break;
@@ -316,7 +268,6 @@ static void la_client_info_init(
 		strcpy(entry->name, name);
 	}
 	entry->client_type = client_type;
-	entry->init_la = get_init_la(client_type, mc_settings_ptr, error);
 	entry->min_scaling_ratio = 0;
 	entry->la_ref_clk_mhz = 0;
 }

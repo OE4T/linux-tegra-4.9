@@ -208,21 +208,6 @@ int tegra_dc_calc_refresh(const struct tegra_dc_mode *m)
 	return _tegra_dc_calc_refresh(pclk, h_total, v_total);
 }
 
-long tegra_dc_calc_pclk(const struct tegra_dc_mode *m, int refresh)
-{
-	long h_total, v_total;
-	long pclk;
-
-	h_total = m->h_active + m->h_front_porch + m->h_back_porch +
-		m->h_sync_width;
-	v_total = m->v_active + m->v_front_porch + m->v_back_porch +
-		m->v_sync_width;
-
-	pclk = (refresh * h_total * v_total) / 1000;
-
-	return pclk;
-}
-
 /* return in 1000ths of a Hertz */
 int tegra_dc_calc_fb_refresh(const struct fb_videomode *fbmode)
 {

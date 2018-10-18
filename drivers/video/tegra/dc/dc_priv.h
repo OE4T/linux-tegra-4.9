@@ -163,7 +163,6 @@ long tegra_nvdisp_calc_min_bandwidth(struct tegra_dc *dc);
 /* defined in mode.c, used in dc.c, window.c and hdmi2.0.c */
 int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 int tegra_dc_calc_refresh(const struct tegra_dc_mode *m);
-long tegra_dc_calc_pclk(const struct tegra_dc_mode *m, int refresh);
 int tegra_dc_calc_fb_refresh(const struct fb_videomode *fbmode);
 int tegra_dc_update_mode(struct tegra_dc *dc);
 u32 tegra_dc_get_aspect_ratio(struct tegra_dc *dc);

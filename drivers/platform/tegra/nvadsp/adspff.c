@@ -11,6 +11,8 @@
  * more details.
  */
 
+#define pr_fmt(fmt) "adspff: " fmt
+
 #include <linux/fs.h>
 #include <asm/segment.h>
 #include <asm/uaccess.h>
@@ -174,6 +176,13 @@ void adspff_fopen(struct work_struct *work)
 
 	file->wr_offset = 0;
 	file->rd_offset = 0;
+
+	if (!(file->fp)) {
+		kfree(file);
+		file = NULL;
+		pr_err("File not found - %s\n",
+			(const char *) message->msg.payload.fopen_msg.fname);
+	}
 
 	msg_recv->msgq_msg.size = MSGQ_MSG_SIZE(struct fopen_recv_msg_t);
 	msg_recv->msg.payload.fopen_recv_msg.file = (int64_t)file;

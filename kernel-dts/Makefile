@@ -29,6 +29,7 @@ dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-0888-a00-00-base.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-0888-a00-00-e2598.dtb
 
 dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-overlay.dtbo
+dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-as-0888.dtb
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))

@@ -2402,23 +2402,11 @@
 	nvpmodel {
 		compatible = "nvidia,nvpmodel";
 		clocks = <&bpmp_clks TEGRA194_CLK_EMC>,
-				<&bpmp_clks TEGRA194_CLK_DLA0_CORE>,
-				<&bpmp_clks TEGRA194_CLK_DLA1_CORE>,
-				<&bpmp_clks TEGRA194_CLK_DLA0_FALCON>,
-				<&bpmp_clks TEGRA194_CLK_DLA1_FALCON>,
-				<&bpmp_clks TEGRA194_CLK_PVA0_VPS0>,
-				<&bpmp_clks TEGRA194_CLK_PVA0_VPS1>,
-				<&bpmp_clks TEGRA194_CLK_PVA1_VPS0>,
-				<&bpmp_clks TEGRA194_CLK_PVA1_VPS1>,
-				<&bpmp_clks TEGRA194_CLK_PVA0_AXI>,
-				<&bpmp_clks TEGRA194_CLK_PVA1_AXI>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_DLA>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_DLA_FALCON>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_PVA_VPS>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_PVA_CORE>;
-		clock-names = "emc", "dla0_core", "dla1_core", "dla0_falcon", "dla1_falcon",
-				"pva0_vps0", "pva0_vps1","pva1_vps0", "pva1_vps1",
-				"pva0_axi", "pva1_axi", "nafll_dla", "nafll_dla_falcon",
+		clock-names = "emc", "nafll_dla", "nafll_dla_falcon",
 				"nafll_pva_vps", "nafll_pva_core";
 		status = "okay";
 	};

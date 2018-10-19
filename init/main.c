@@ -1030,7 +1030,7 @@ static noinline void __init kernel_init_freeable(void)
 	 * check if there is an early userspace init.  If yes, let it do all
 	 * the work
 	 */
-
+#ifndef CONFIG_DIAG_KERNEL
 	if (!ramdisk_execute_command)
 		ramdisk_execute_command = "/init";
 
@@ -1038,6 +1038,10 @@ static noinline void __init kernel_init_freeable(void)
 		ramdisk_execute_command = NULL;
 		prepare_namespace();
 	}
+#else
+	pr_info("kernel-init: Diag: It's diag image, start diag kernel init.\n");
+	prepare_namespace();
+#endif
 
 	/*
 	 * Ok, we have completed the initial bootup, and

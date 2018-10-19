@@ -622,6 +622,11 @@ static int __init populate_rootfs(void)
 {
 	char *err;
 
+#ifdef CONFIG_DIAG_KERNEL
+	pr_info("Skip init ramfs on Diag image\n");
+	do_skip_initramfs = 0;
+#endif
+
 	if (do_skip_initramfs)
 		return default_rootfs();
 

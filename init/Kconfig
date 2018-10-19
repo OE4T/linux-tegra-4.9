@@ -2280,4 +2280,14 @@ config ASN1
 	  inform it as to what tags are to be expected in a stream and what
 	  functions to call on what tags.
 
+config DIAG_KERNEL
+	bool "Diag kernel"
+	default n
+	help
+	  Mount boot image to /root for diag image booting when the system-as-root
+	  feature is enabled. This config should only be enabled when building Diag
+	  kernel.
+
+	  If unsure, say N.
+
 source "kernel/Kconfig.locks"

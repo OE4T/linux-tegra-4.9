@@ -141,7 +141,7 @@ static int gk20a_tsg_unbind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 	 * Mark the channel timedout since channel unbound from TSG
 	 * has no context of its own so it can't serve any job
 	 */
-	ch->has_timedout = true;
+	gk20a_channel_set_timedout(ch);
 
 out:
 	gk20a_channel_put(ch);

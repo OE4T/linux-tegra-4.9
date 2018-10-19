@@ -212,6 +212,24 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	gk20a_channel_update(ch);
 }
 
+void gk20a_channel_set_timedout(struct channel_gk20a *ch)
+{
+	nvgpu_spinlock_acquire(&ch->ch_timedout_lock);
+	ch->ch_timedout = true;
+	nvgpu_spinlock_release(&ch->ch_timedout_lock);
+}
+
+bool  gk20a_channel_check_timedout(struct channel_gk20a *ch)
+{
+	bool ch_timedout_status;
+
+	nvgpu_spinlock_acquire(&ch->ch_timedout_lock);
+	ch_timedout_status = ch->ch_timedout;
+	nvgpu_spinlock_release(&ch->ch_timedout_lock);
+
+	return ch_timedout_status;
+}
+
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 {
 	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
@@ -223,7 +241,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 	}
 
 	/* make sure new kickoffs are prevented */
-	ch->has_timedout = true;
+	gk20a_channel_set_timedout(ch);
 
 	ch->g->ops.fifo.disable_channel(ch);
 
@@ -425,7 +443,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 		 * Set user managed syncpoint to safe state
 		 * But it's already done if channel has timedout
 		 */
-		if (ch->has_timedout) {
+		if (gk20a_channel_check_timedout(ch)) {
 			nvgpu_channel_sync_destroy(ch->user_sync, false);
 		} else {
 			nvgpu_channel_sync_destroy(ch->user_sync, true);
@@ -711,7 +729,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* set gr host default timeout */
 	ch->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch->timeout_debug_dump = true;
-	ch->has_timedout = false;
+	ch->ch_timedout = false;
 
 	/* init kernel watchdog timeout */
 	ch->timeout.enabled = true;
@@ -2195,6 +2213,8 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
 	nvgpu_cond_init(&c->ref_count_dec_wq);
+
+	nvgpu_spinlock_init(&c->ch_timedout_lock);
 
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	nvgpu_spinlock_init(&c->ref_actions_lock);

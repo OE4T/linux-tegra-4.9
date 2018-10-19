@@ -336,7 +336,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		return -ENODEV;
 	}
 
-	if (c->has_timedout) {
+	if (gk20a_channel_check_timedout(c)) {
 		return -ETIMEDOUT;
 	}
 
@@ -504,7 +504,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
-	if (c->has_timedout) {
+	if (gk20a_channel_check_timedout(c)) {
 		err = -ETIMEDOUT;
 		goto clean_up;
 	}

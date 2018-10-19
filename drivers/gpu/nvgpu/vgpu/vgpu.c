@@ -126,7 +126,7 @@ static void vgpu_channel_abort_cleanup(struct gk20a *g, u32 chid)
 		return;
 	}
 
-	ch->has_timedout = true;
+	gk20a_channel_set_timedout(ch);
 	g->ops.fifo.ch_abort_clean_up(ch);
 	gk20a_channel_put(ch);
 }

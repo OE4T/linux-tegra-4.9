@@ -651,7 +651,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 			if (gk20a_channel_get(ch_tsg)) {
 				g->ops.fifo.set_error_notifier(ch_tsg,
 								err_code);
-				ch_tsg->has_timedout = true;
+				gk20a_channel_set_timedout(ch_tsg);
 				gk20a_channel_put(ch_tsg);
 			}
 		}
@@ -659,7 +659,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
 		g->ops.fifo.set_error_notifier(ch, err_code);
-		ch->has_timedout = true;
+		gk20a_channel_set_timedout(ch);
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;
@@ -685,8 +685,8 @@ static void vgpu_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 		NVGPU_ERR_NOTIFIER_FIFO_ERROR_MMU_ERR_FLT);
 
 	/* mark channel as faulted */
-	ch->has_timedout = true;
-	nvgpu_smp_wmb();
+	gk20a_channel_set_timedout(ch);
+
 	/* unblock pending waits */
 	nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 	nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);

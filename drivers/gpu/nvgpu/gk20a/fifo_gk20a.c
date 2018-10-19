@@ -1484,8 +1484,8 @@ static void gk20a_fifo_set_has_timedout_and_wake_up_wqs(struct gk20a *g,
 {
 	if (refch) {
 		/* mark channel as faulted */
-		refch->has_timedout = true;
-		nvgpu_smp_wmb();
+		gk20a_channel_set_timedout(refch);
+
 		/* unblock pending waits */
 		nvgpu_cond_broadcast_interruptible(&refch->semaphore_wq);
 		nvgpu_cond_broadcast_interruptible(&refch->notifier_wq);
@@ -1568,7 +1568,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, struct tsg_gk20a *tsg, bool preempt)
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		if (gk20a_channel_get(ch)) {
-			ch->has_timedout = true;
+			gk20a_channel_set_timedout(ch);
 			if (ch->g->ops.fifo.ch_abort_clean_up) {
 				ch->g->ops.fifo.ch_abort_clean_up(ch);
 			}
@@ -2181,7 +2181,7 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 
 	/* If one channel in TSG times out, we disable all channels */
 	nvgpu_rwsem_down_write(&tsg->ch_list_lock);
-	tsg_timedout = ch->has_timedout;
+	tsg_timedout = gk20a_channel_check_timedout(ch);
 	nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 
 	/* Disable TSG and examine status before unbinding channel */

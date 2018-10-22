@@ -1938,7 +1938,8 @@ static int tegra_ivc_stop_capture(
 static int tegra210_adsp_send_hv_state_msg(
 					struct tegra210_adsp *adsp,
 					struct tegra210_adsp_app *app,
-					int32_t state)
+					int32_t state,
+					int32_t is_playback)
 {
 	uint32_t src, i;
 	int32_t ret = 0;
@@ -1994,17 +1995,18 @@ static int tegra210_adsp_send_hv_state_msg(
 			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] =
 				capture_admaif_id;
 
-			ret = tegra_ivc_start_capture(adsp, capture_admaif_id, false);
-			if (ret < 0)
-				dev_err(adsp->dev, "%s: start capture failed\n", __func__);
-
-			ret = tegra_ivc_start_playback(adsp, playback_admaif_id, false);
-			if (ret < 0) {
-				dev_err(adsp->dev, "%s: start playback failed\n", __func__);
-
-				ret = tegra_ivc_stop_capture(adsp, capture_admaif_id, false);
+			if (is_playback == SNDRV_PCM_STREAM_PLAYBACK) {
+				ret = tegra_ivc_start_playback(adsp, playback_admaif_id, false);
 				if (ret < 0)
-					dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+					dev_err(adsp->dev, "%s: start playback failed\n", __func__);
+			} else {
+				ret = tegra_ivc_start_capture(adsp, capture_admaif_id, false);
+				if (ret < 0) {
+					dev_err(adsp->dev, "%s: start capture failed\n", __func__);
+					ret = tegra_ivc_stop_playback(adsp, playback_admaif_id, false);
+					if (ret < 0)
+						dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+				}
 			}
 		} else {
 			/* No IO to IO path identified. No hv state msg to be sent */
@@ -2020,17 +2022,21 @@ static int tegra210_adsp_send_hv_state_msg(
 			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE];
 
 		if ((playback_admaif_id != -1) && (capture_admaif_id != -1)) {
-			ret = tegra_ivc_stop_playback(adsp, playback_admaif_id, false);
-			if (ret < 0)
-				dev_err(adsp->dev, "%s: stop playback failed\n", __func__);
-
-			ret = tegra_ivc_stop_capture(adsp, capture_admaif_id, false);
-			if (ret < 0)
-				dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+			if (is_playback == SNDRV_PCM_STREAM_PLAYBACK) {
+				ret = tegra_ivc_stop_playback(adsp, playback_admaif_id, false);
+				if (ret < 0)
+					dev_err(adsp->dev, "%s: stop playback failed\n", __func__);
+			} else {
+				ret = tegra_ivc_stop_capture(adsp, capture_admaif_id, true);
+				if (ret < 0)
+					dev_err(adsp->dev, "%s: stop capture failed\n", __func__);
+			}
 		}
 
-		adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] = -1;
-		adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] = -1;
+		if (is_playback == SNDRV_PCM_STREAM_PLAYBACK) {
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_PLAYBACK] = -1;
+			adsp->apm_to_admaif_map[apm_in_id][SNDRV_PCM_STREAM_CAPTURE] = -1;
+		}
 	}
 
 	return ret;
@@ -3373,6 +3379,14 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 			}
 			if (app->min_adsp_clock)
 				adsp_update_dfs_min_rate(app->min_adsp_clock * 1000);
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+			ret = tegra210_adsp_send_hv_state_msg(adsp,
+				app, nvfx_state_active, SNDRV_PCM_STREAM_PLAYBACK);
+			if (ret < 0)
+				dev_err(adsp->dev, "Failed to send hv state active msg.");
+#endif
+
 			ret = tegra210_adsp_send_state_msg(app, nvfx_state_active,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0)
@@ -3380,7 +3394,7 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 			ret = tegra210_adsp_send_hv_state_msg(adsp,
-				app, nvfx_state_active);
+				app, nvfx_state_active, SNDRV_PCM_STREAM_CAPTURE);
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to send hv state active msg.");
 #endif
@@ -3394,17 +3408,18 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 					__func__, ret);
 				return ret;
 			}
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+			ret = tegra210_adsp_send_hv_state_msg(adsp,
+				app, nvfx_state_inactive, SNDRV_PCM_STREAM_CAPTURE);
+			if (ret < 0)
+				dev_err(adsp->dev, "Failed to send hv state inactive msg.");
+#endif
+
 			ret = tegra210_adsp_send_state_msg(app, nvfx_state_inactive,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to set state inactive.");
-
-#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
-			ret = tegra210_adsp_send_hv_state_msg(adsp,
-				app, nvfx_state_inactive);
-			if (ret < 0)
-				dev_err(adsp->dev, "Failed to send hv state inactive msg.");
-#endif
 
 			ret = tegra210_adsp_send_reset_msg(app,
 				(TEGRA210_ADSP_MSG_FLAG_SEND |
@@ -3413,6 +3428,14 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				dev_err(adsp->dev, "Failed to reset.");
 			if (app->min_adsp_clock)
 				adsp_update_dfs_min_rate(0);
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+			ret = tegra210_adsp_send_hv_state_msg(adsp,
+				app, nvfx_state_inactive, SNDRV_PCM_STREAM_PLAYBACK);
+			if (ret < 0)
+				dev_err(adsp->dev, "Failed to send hv state inactive msg.");
+#endif
+
 			pm_runtime_put(adsp->dev);
 		}
 	}

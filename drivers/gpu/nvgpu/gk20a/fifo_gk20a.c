@@ -2359,29 +2359,13 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 		}
 	}
 
-	/* if at least one channel in the TSG made some progress, reset
-	 * accumulated timeout for all channels in the TSG. In particular,
-	 * this resets timeout for channels that already completed their work
-	 */
-	if (progress) {
-		nvgpu_log_info(g, "progress on tsg=%d ch=%d",
-				tsg->tsgid, ch->chid);
-		gk20a_channel_put(ch);
-		*ms = g->fifo_eng_timeout_us / 1000;
-		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
-				channel_gk20a, ch_entry) {
-			if (gk20a_channel_get(ch)) {
-				ch->timeout_accumulated_ms = *ms;
-				gk20a_channel_put(ch);
-			}
-		}
-	}
-
-	/* if one channel is presumed dead (no progress for too long), then
-	 * fifo recovery is needed. we can't really figure out which channel
-	 * caused the problem, so set timeout error notifier for all channels.
-	 */
 	if (recover) {
+		/*
+		 * if one channel is presumed dead (no progress for too long),
+		 * then fifo recovery is needed. we can't really figure out
+		 * which channel caused the problem, so set timeout error
+		 * notifier for all channels.
+		 */
 		nvgpu_log_info(g, "timeout on tsg=%d ch=%d",
 				tsg->tsgid, ch->chid);
 		*ms = ch->timeout_accumulated_ms;
@@ -2394,6 +2378,24 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 				if (ch->timeout_debug_dump) {
 					*verbose = true;
 				}
+				gk20a_channel_put(ch);
+			}
+		}
+	} else if (progress) {
+		/*
+		 * if at least one channel in the TSG made some progress, reset
+		 * accumulated timeout for all channels in the TSG. In
+		 * particular, this resets timeout for channels that already
+		 * completed their work
+		 */
+		nvgpu_log_info(g, "progress on tsg=%d ch=%d",
+				tsg->tsgid, ch->chid);
+		gk20a_channel_put(ch);
+		*ms = g->fifo_eng_timeout_us / 1000;
+		nvgpu_list_for_each_entry(ch, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
+			if (gk20a_channel_get(ch)) {
+				ch->timeout_accumulated_ms = *ms;
 				gk20a_channel_put(ch);
 			}
 		}

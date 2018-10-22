@@ -2173,6 +2173,15 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 	/* set correct vic if video format is cea defined else set 0 */
 	avi->video_format = tegra_hdmi_find_cea_vic(hdmi);
 
+	/* set aspect ratio to match CEA VIC */
+	if (avi->video_format) {
+		/* Only 4:3 & 16:9 are valid picture aspect ratios for avi_m */
+		if (cea_modes[avi->video_format].flag & FB_FLAG_RATIO_4_3)
+			avi->aspect_ratio = HDMI_AVI_ASPECT_RATIO_4_3;
+		else if (cea_modes[avi->video_format].flag & FB_FLAG_RATIO_16_9)
+			avi->aspect_ratio = HDMI_AVI_ASPECT_RATIO_16_9;
+	}
+
 	avi->pix_rep = HDMI_AVI_NO_PIX_REPEAT;
 	avi->it_content_type = HDMI_AVI_IT_CONTENT_NONE;
 	avi->ycc_quant = tegra_hdmi_get_ycc_quant(hdmi);

@@ -14,28 +14,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ABI_BPMP_ABI_H_
-#define _ABI_BPMP_ABI_H_
+#ifndef ABI_BPMP_ABI_H
+#define ABI_BPMP_ABI_H
 
-#ifdef LK
+#if defined(LK) || defined(BPMP_ABI_HAVE_STDC)
+#include <stddef.h>
 #include <stdint.h>
 #endif
 
-#ifndef __ABI_PACKED
-#define __ABI_PACKED __attribute__((packed))
+#ifndef BPMP_ABI_PACKED
+#ifdef __ABI_PACKED
+#define BPMP_ABI_PACKED __ABI_PACKED
+#else
+#define BPMP_ABI_PACKED __attribute__((packed))
+#endif
 #endif
 
 #ifdef NO_GCC_EXTENSIONS
-#define EMPTY char empty;
-#define EMPTY_ARRAY 1
+#define BPMP_ABI_EMPTY char empty;
+#define BPMP_ABI_EMPTY_ARRAY 1
 #else
-#define EMPTY
-#define EMPTY_ARRAY 0
+#define BPMP_ABI_EMPTY
+#define BPMP_ABI_EMPTY_ARRAY 0
 #endif
 
-#ifndef __UNION_ANON
-#define __UNION_ANON
+#ifndef BPMP_UNION_ANON
+#ifdef __UNION_ANON
+#define BPMP_UNION_ANON __UNION_ANON
+#else
+#define BPMP_UNION_ANON
 #endif
+#endif
+
 /**
  * @file
  */
@@ -93,7 +103,7 @@ struct mrq_request {
 	 * | 0   | should be 1                                |
 	 */
 	uint32_t flags;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Format
@@ -109,7 +119,7 @@ struct mrq_response {
 	int32_t err;
 	/** @brief Reserved for future use */
 	uint32_t flags;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Format
@@ -234,7 +244,7 @@ struct mrq_response {
 struct mrq_ping_request {
 /** @brief Arbitrarily chosen value */
 	uint32_t challenge;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Ping
@@ -248,7 +258,7 @@ struct mrq_ping_request {
 struct mrq_ping_response {
 	/** @brief Response to the MRQ_PING challege */
 	uint32_t reply;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes
@@ -275,7 +285,7 @@ struct mrq_ping_response {
 struct mrq_query_tag_request {
   /** @brief Base address to store the firmware tag */
 	uint32_t addr;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 
 /**
@@ -302,7 +312,7 @@ struct mrq_query_tag_request {
 struct mrq_query_fw_tag_response {
   /** @brief Array to store tag information */
 	uint8_t tag[32];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes
@@ -342,7 +352,7 @@ struct mrq_module_load_request {
 	uint32_t phys_addr; /* (void *) */
 	/** @brief Size in bytes of code to load */
 	uint32_t size;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Module
@@ -353,7 +363,7 @@ struct mrq_module_load_request {
 struct mrq_module_load_response {
 	/** @brief Handle to the loaded module */
 	uint32_t base;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @endcond*/
 
 /**
@@ -381,7 +391,7 @@ struct mrq_module_load_response {
 struct mrq_module_unload_request {
 	/** @brief Handle of the module to unload */
 	uint32_t base;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @endcond*/
 
 /**
@@ -411,7 +421,7 @@ struct mrq_trace_modify_request {
 	uint32_t clr;
 	/** @brief Bit mask of trace events to enable */
 	uint32_t set;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Trace
@@ -425,7 +435,7 @@ struct mrq_trace_modify_request {
 struct mrq_trace_modify_response {
 	/** @brief Bit mask of trace event enable states */
 	uint32_t mask;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes
@@ -465,7 +475,7 @@ struct mrq_write_trace_request {
 	uint32_t area;
 	/** @brief Size in bytes of the output buffer */
 	uint32_t size;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Trace
@@ -482,17 +492,17 @@ struct mrq_write_trace_response {
 	 * drained to the outputbuffer. Value is 0 otherwise.
 	 */
 	uint32_t eof;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct mrq_threaded_ping_request {
 	uint32_t challenge;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct mrq_threaded_ping_response {
 	uint32_t reply;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes
@@ -521,8 +531,8 @@ struct mrq_module_mail_request {
 	 * The length of data[ ] is unknown to the BPMP core firmware
 	 * but it is limited to the size of an IPC message.
 	 */
-	uint8_t data[EMPTY_ARRAY];
-} __ABI_PACKED;
+	uint8_t data[BPMP_ABI_EMPTY_ARRAY];
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Module
@@ -534,8 +544,8 @@ struct mrq_module_mail_response {
 	 * The length of data[ ] is unknown to the BPMP core firmware
 	 * but it is limited to the size of an IPC message.
 	 */
-	uint8_t data[EMPTY_ARRAY];
-} __ABI_PACKED;
+	uint8_t data[BPMP_ABI_EMPTY_ARRAY];
+} BPMP_ABI_PACKED;
 /** @endcond */
 
 /**
@@ -598,7 +608,7 @@ struct cmd_debugfs_fileop_request {
 	uint32_t dataaddr;
 	/** @brief Length in bytes of data buffer */
 	uint32_t datalen;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Debugfs
@@ -609,7 +619,7 @@ struct cmd_debugfs_dumpdir_request {
 	uint32_t dataaddr;
 	/** @brief Length in bytes of data buffer */
 	uint32_t datalen;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Debugfs
@@ -620,7 +630,7 @@ struct cmd_debugfs_fileop_response {
 	uint32_t reserved;
 	/** @brief Number of bytes read from or written to data buffer */
 	uint32_t nbytes;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Debugfs
@@ -631,7 +641,7 @@ struct cmd_debugfs_dumpdir_response {
 	uint32_t reserved;
 	/** @brief Number of bytes read from or written to data buffer */
 	uint32_t nbytes;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Debugfs
@@ -654,8 +664,8 @@ struct mrq_debugfs_request {
 	union {
 		struct cmd_debugfs_fileop_request fop;
 		struct cmd_debugfs_dumpdir_request dumpdir;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Debugfs
@@ -670,8 +680,8 @@ struct mrq_debugfs_response {
 		struct cmd_debugfs_fileop_response fop;
 		/** @brief Response data for CMD_DEBUGFS_DUMPDIR command */
 		struct cmd_debugfs_dumpdir_response dumpdir;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @addtogroup Debugfs
@@ -721,7 +731,7 @@ struct mrq_reset_request {
 	uint32_t cmd;
 	/** @brief Id of the reset to affected */
 	uint32_t reset_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response for MRQ_RESET sub-command CMD_RESET_GET_MAX_ID. When
@@ -731,7 +741,7 @@ struct mrq_reset_request {
 struct cmd_reset_get_max_id_response {
 	/** @brief Max reset id */
 	uint32_t max_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response with MRQ_RESET
@@ -750,8 +760,8 @@ struct cmd_reset_get_max_id_response {
 struct mrq_reset_response {
 	union {
 		struct cmd_reset_get_max_id_response reset_get_max_id;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -809,7 +819,7 @@ struct serial_i2c_request {
 	uint16_t len;
 	/** @brief For write transactions only, #len bytes of data */
 	uint8_t data[];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Trigger one or more i2c transactions
@@ -823,7 +833,7 @@ struct cmd_i2c_xfer_request {
 
 	/** @brief Serialized packed instances of @ref serial_i2c_request*/
 	uint8_t data_buf[TEGRA_I2C_IPC_MAX_IN_BUF_SIZE];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Container for data read from the i2c bus
@@ -837,7 +847,7 @@ struct cmd_i2c_xfer_response {
 	uint32_t data_size;
 	/** @brief I2c read data */
 	uint8_t data_buf[TEGRA_I2C_IPC_MAX_OUT_BUF_SIZE];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Request with #MRQ_I2C
@@ -847,14 +857,14 @@ struct mrq_i2c_request {
 	uint32_t cmd;
 	/** @brief Parameters of the transfer request */
 	struct cmd_i2c_xfer_request xfer;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response to #MRQ_I2C
  */
 struct mrq_i2c_response {
 	struct cmd_i2c_xfer_response xfer;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -896,81 +906,81 @@ enum {
 
 /** @private */
 struct cmd_clk_get_rate_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_get_rate_response {
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_set_rate_request {
 	int32_t unused;
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_set_rate_response {
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_round_rate_request {
 	int32_t unused;
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_round_rate_response {
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_get_parent_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_get_parent_response {
 	uint32_t parent_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_set_parent_request {
 	uint32_t parent_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_set_parent_response {
 	uint32_t parent_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_is_enabled_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_is_enabled_response {
 	int32_t state;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_enable_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_enable_response {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_disable_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_disable_response {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_get_all_info_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_get_all_info_response {
 	uint32_t flags;
@@ -978,25 +988,25 @@ struct cmd_clk_get_all_info_response {
 	uint32_t parents[MRQ_CLK_MAX_PARENTS];
 	uint8_t num_parents;
 	uint8_t name[MRQ_CLK_NAME_MAXLEN];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_get_max_clk_id_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_get_max_clk_id_response {
 	uint32_t max_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_clk_get_fmax_at_vmin_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_clk_get_fmax_at_vmin_response {
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Clocks
@@ -1051,8 +1061,8 @@ struct mrq_clk_request {
 		struct cmd_clk_get_max_clk_id_request clk_get_max_clk_id;
 		/** @private */
 		struct cmd_clk_get_fmax_at_vmin_request clk_get_fmax_at_vmin;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Clocks
@@ -1093,8 +1103,8 @@ struct mrq_clk_response {
 		struct cmd_clk_get_all_info_response clk_get_all_info;
 		struct cmd_clk_get_max_clk_id_response clk_get_max_clk_id;
 		struct cmd_clk_get_fmax_at_vmin_response clk_get_fmax_at_vmin;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -1120,7 +1130,7 @@ struct mrq_clk_response {
 struct mrq_query_abi_request {
 	/** @brief MRQ code to query */
 	uint32_t mrq;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup ABI_info
@@ -1132,7 +1142,7 @@ struct mrq_query_abi_request {
 struct mrq_query_abi_response {
 	/** @brief 0 if queried MRQ is supported. Else, -#BPMP_ENODEV */
 	int32_t status;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes
@@ -1157,7 +1167,7 @@ struct mrq_query_abi_response {
 struct mrq_pg_read_state_request {
 	/** @brief ID of partition */
 	uint32_t partition_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup Powergating
@@ -1172,7 +1182,7 @@ struct mrq_pg_read_state_response {
 	 * * 1 : on
 	 */
 	uint32_t logic_state;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @endcond*/
 /** @} */
 
@@ -1222,7 +1232,7 @@ struct mrq_pg_update_state_request {
 	 *          @ref logic_state == 0x3)
 	 */
 	uint32_t clock_state;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @endcond*/
 
 /**
@@ -1318,25 +1328,25 @@ enum pg_states {
 struct cmd_pg_query_abi_request {
 	/** @ref mrq_pg_cmd */
 	uint32_t type;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_pg_set_state_request {
 	/** @ref pg_states */
 	uint32_t state;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_pg_get_state_response {
 	/** @ref pg_states */
 	uint32_t state;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_pg_get_name_response {
 	uint8_t name[MRQ_PG_NAME_MAXLEN];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_pg_get_max_id_response {
 	uint32_t max_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Request with #MRQ_PG
@@ -1361,8 +1371,8 @@ struct mrq_pg_request {
 	union {
 		struct cmd_pg_query_abi_request query_abi;
 		struct cmd_pg_set_state_request set_state;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response to MRQ_PG
@@ -1384,8 +1394,8 @@ struct mrq_pg_response {
 		struct cmd_pg_get_state_response get_state;
 		struct cmd_pg_get_name_response get_name;
 		struct cmd_pg_get_max_id_response get_max_id;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -1504,7 +1514,7 @@ enum mrq_thermal_bpmp_to_host_cmd {
  */
 struct cmd_thermal_query_abi_request {
 	uint32_t type;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * Host->BPMP request data for request type CMD_THERMAL_GET_TEMP
@@ -1513,7 +1523,7 @@ struct cmd_thermal_query_abi_request {
  */
 struct cmd_thermal_get_temp_request {
 	uint32_t zone;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * BPMP->Host reply data for request CMD_THERMAL_GET_TEMP
@@ -1526,7 +1536,7 @@ struct cmd_thermal_get_temp_request {
  */
 struct cmd_thermal_get_temp_response {
 	int32_t temp;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * Host->BPMP request data for request type CMD_THERMAL_SET_TRIP
@@ -1541,7 +1551,7 @@ struct cmd_thermal_set_trip_request {
 	int32_t low;
 	int32_t high;
 	uint32_t enabled;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * BPMP->Host request data for request type CMD_THERMAL_HOST_TRIP_REACHED
@@ -1550,7 +1560,7 @@ struct cmd_thermal_set_trip_request {
  */
 struct cmd_thermal_host_trip_reached_request {
 	uint32_t zone;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * BPMP->Host reply data for request type CMD_THERMAL_GET_NUM_ZONES
@@ -1560,7 +1570,7 @@ struct cmd_thermal_host_trip_reached_request {
  */
 struct cmd_thermal_get_num_zones_response {
 	uint32_t num;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /*
  * Host->BPMP request data.
@@ -1576,8 +1586,8 @@ struct mrq_thermal_host_to_bpmp_request {
 		struct cmd_thermal_query_abi_request query_abi;
 		struct cmd_thermal_get_temp_request get_temp;
 		struct cmd_thermal_set_trip_request set_trip;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /*
  * BPMP->Host request data.
@@ -1589,8 +1599,8 @@ struct mrq_thermal_bpmp_to_host_request {
 	uint32_t type;
 	union {
 		struct cmd_thermal_host_trip_reached_request host_trip_reached;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /*
  * Data in reply to a Host->BPMP request.
@@ -1598,7 +1608,7 @@ struct mrq_thermal_bpmp_to_host_request {
 union mrq_thermal_bpmp_to_host_response {
 	struct cmd_thermal_get_temp_response get_temp;
 	struct cmd_thermal_get_num_zones_response get_num_zones;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @} */
 
 /**
@@ -1630,7 +1640,7 @@ struct mrq_cpu_vhint_request {
 	uint32_t addr;
 	/** @brief ID of the cluster whose data is requested */
 	uint32_t cluster_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Description of the CPU v/f relation
@@ -1657,7 +1667,7 @@ struct cpu_vhint_data {
 	uint16_t vindex_div;
 	/** reserved for future use */
 	uint16_t reserved[328];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @endcond */
 /** @} */
 
@@ -1750,7 +1760,7 @@ struct emc_dvfs_latency {
 	uint32_t freq;
 	/** @brief EMC DVFS latency in nanoseconds */
 	uint32_t latency;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 #define EMC_DVFS_LATENCY_MAX_SIZE	14
 /**
@@ -1761,7 +1771,7 @@ struct mrq_emc_dvfs_latency_response {
 	uint32_t num_pairs;
 	/** @brief EMC <frequency, latency> information */
 	struct emc_dvfs_latency pairs[EMC_DVFS_LATENCY_MAX_SIZE];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -1786,7 +1796,7 @@ struct mrq_emc_dvfs_latency_response {
 struct mrq_cpu_ndiv_limits_request {
 	/** @brief Enum cluster_id */
 	uint32_t cluster_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response to #MRQ_CPU_NDIV_LIMITS
@@ -1802,7 +1812,7 @@ struct mrq_cpu_ndiv_limits_response {
 	uint16_t ndiv_max;
 	/** @brief Minimum allowed NDIV value */
 	uint16_t ndiv_min;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -1834,7 +1844,7 @@ struct mrq_cpu_ndiv_limits_response {
 struct mrq_cpu_auto_cc3_request {
 	/** @brief Enum cluster_id (logical cluster id, known to CCPLEX s/w) */
 	uint32_t cluster_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @brief Response to #MRQ_CPU_AUTO_CC3
@@ -1848,7 +1858,7 @@ struct mrq_cpu_auto_cc3_response {
 	 * - bit [0] if "1" auto-CC3 is allowed, if "0" auto-CC3 is not allowed
 	 */
 	uint32_t auto_cc3_config;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -1879,7 +1889,7 @@ enum {
 struct mrq_trace_iter_request {
 	/** @brief TRACE_ITER_INIT or TRACE_ITER_CLEAN */
 	uint32_t cmd;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 
@@ -1955,12 +1965,12 @@ enum mrq_ringbuf_console_host_to_bpmp_cmd {
 struct cmd_ringbuf_console_query_abi_req {
 	/** @brief Command identifier to be queried */
 	uint32_t cmd;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_ringbuf_console_query_abi_resp {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -1971,7 +1981,7 @@ struct cmd_ringbuf_console_read_req {
 	 * @brief Number of bytes requested to be read from the BPMP TX buffer
 	 */
 	uint8_t len;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -1982,7 +1992,7 @@ struct cmd_ringbuf_console_read_resp {
 	uint8_t data[MRQ_RINGBUF_CONSOLE_MAX_READ_LEN];
 	/** @brief Number of bytes in cmd_ringbuf_console_read_resp::data */
 	uint8_t len;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -1993,7 +2003,7 @@ struct cmd_ringbuf_console_write_req {
 	uint8_t data[MRQ_RINGBUF_CONSOLE_MAX_WRITE_LEN];
 	/** @brief Number of bytes in cmd_ringbuf_console_write_req::data */
 	uint8_t len;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -2004,12 +2014,12 @@ struct cmd_ringbuf_console_write_resp {
 	uint32_t space_avail;
 	/** @brief Number of bytes that were written to the BPMP RX buffer */
 	uint8_t len;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_ringbuf_console_get_fifo_req {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -2024,7 +2034,7 @@ struct cmd_ringbuf_console_get_fifo_resp {
 	uint64_t bpmp_tx_tail_addr;
 	/** @brief Length of the BPMP TX buffer */
 	uint32_t bpmp_tx_buf_len;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -2044,8 +2054,8 @@ struct mrq_ringbuf_console_host_to_bpmp_request {
 		struct cmd_ringbuf_console_read_req read;
 		struct cmd_ringbuf_console_write_req write;
 		struct cmd_ringbuf_console_get_fifo_req get_fifo;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup RingbufConsole
@@ -2058,7 +2068,7 @@ union mrq_ringbuf_console_bpmp_to_host_response {
 	struct cmd_ringbuf_console_read_resp read;
 	struct cmd_ringbuf_console_write_resp write;
 	struct cmd_ringbuf_console_get_fifo_resp get_fifo;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 /** @} */
 
 /**
@@ -2102,7 +2112,7 @@ struct mrq_strap_request {
 	uint32_t id;
 	/** @brief Desired value for strap (if cmd is #STRAP_SET) */
 	uint32_t value;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @defgroup Strap_Ids Strap Identifiers
@@ -2130,6 +2140,7 @@ enum {
 	CMD_UPHY_PCIE_LANE_MARGIN_STATUS = 2,
 	CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT = 3,
 	CMD_UPHY_PCIE_CONTROLLER_STATE = 4,
+	CMD_UPHY_PCIE_EP_CONTROLLER_PLL_OFF = 5,
 	CMD_UPHY_MAX,
 };
 
@@ -2144,23 +2155,28 @@ struct cmd_uphy_margin_control_request {
 	uint32_t y;
 	/** @brief Set number of bit blocks for each margin section */
 	uint32_t nblks;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_uphy_margin_status_response {
 	/** @brief Number of errors observed */
 	uint32_t status;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_uphy_ep_controller_pll_init_request {
 	/** @brief EP controller number, valid: 0, 4, 5 */
 	uint8_t ep_controller;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_uphy_pcie_controller_state_request {
 	/** @brief PCIE controller number, valid: 0, 1, 2, 3, 4 */
 	uint8_t pcie_controller;
 	uint8_t enable;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
+
+struct cmd_uphy_ep_controller_pll_off_request {
+	/** @brief EP controller number, valid: 0, 4, 5 */
+	uint8_t ep_controller;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup UPHY
@@ -2176,6 +2192,7 @@ struct cmd_uphy_pcie_controller_state_request {
  * |CMD_UPHY_PCIE_LANE_MARGIN_STATUS     |                                        |
  * |CMD_UPHY_PCIE_EP_CONTROLLER_PLL_INIT |cmd_uphy_ep_controller_pll_init_request |
  * |CMD_UPHY_PCIE_CONTROLLER_STATE       |cmd_uphy_pcie_controller_state_request  |
+ * |CMD_UPHY_PCIE_EP_CONTROLLER_PLL_OFF  |cmd_uphy_ep_controller_pll_off_request  |
  *
  */
 
@@ -2189,8 +2206,9 @@ struct mrq_uphy_request {
 		struct cmd_uphy_margin_control_request uphy_set_margin_control;
 		struct cmd_uphy_ep_controller_pll_init_request ep_ctrlr_pll_init;
 		struct cmd_uphy_pcie_controller_state_request controller_state;
-	} __UNION_ANON;
-} __ABI_PACKED;
+		struct cmd_uphy_ep_controller_pll_off_request ep_ctrlr_pll_off;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup UPHY
@@ -2210,8 +2228,8 @@ struct mrq_uphy_request {
 struct mrq_uphy_response {
 	union {
 		struct cmd_uphy_margin_status_response uphy_get_margin_status;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -2261,31 +2279,31 @@ enum {
 struct cmd_fmon_gear_clamp_request {
 	int32_t unused;
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_fmon_gear_clamp_response {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_fmon_gear_free_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_fmon_gear_free_response {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 /** @private */
 struct cmd_fmon_gear_get_request {
-	EMPTY
-} __ABI_PACKED;
+	BPMP_ABI_EMPTY
+} BPMP_ABI_PACKED;
 
 struct cmd_fmon_gear_get_response {
 	int64_t rate;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup FMON
@@ -2318,8 +2336,8 @@ struct mrq_fmon_request {
 		struct cmd_fmon_gear_free_request fmon_gear_free;
 		/** @private */
 		struct cmd_fmon_gear_get_request fmon_gear_get;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup FMON
@@ -2343,8 +2361,8 @@ struct mrq_fmon_response {
 		/** @private */
 		struct cmd_fmon_gear_free_response fmon_gear_free;
 		struct cmd_fmon_gear_get_response fmon_gear_get;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -2500,7 +2518,7 @@ struct ec_err_fmon_desc {
 	uint32_t fmon_faults;
 	/** @brief FMON faults access error */
 	int32_t fmon_access_error;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * |error type                       | vmon_adc_id values        |
@@ -2516,7 +2534,7 @@ struct ec_err_vmon_desc {
 	uint32_t vmon_faults;
 	/** @brief VMON faults access error */
 	int32_t vmon_access_error;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * |error type                       | reg_id values             |
@@ -2530,7 +2548,7 @@ struct ec_err_reg_parity_desc {
 	uint16_t reg_id;
 	/** @brief Register group @ref ec_registers_group */
 	uint16_t reg_group;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * |error type                              | err_source_id values      |
@@ -2550,7 +2568,7 @@ struct ec_err_simple_desc {
 	uint16_t desc_flags;
 	/** @brief Error source id. Id space depends on error type. */
 	uint16_t err_source_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @brief Union of EC error descriptors */
 union ec_err_desc {
@@ -2558,12 +2576,12 @@ union ec_err_desc {
 	struct ec_err_vmon_desc vmon_desc;
 	struct ec_err_reg_parity_desc reg_parity_desc;
 	struct ec_err_simple_desc simple_desc;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 struct cmd_ec_status_get_request {
 	/** @brief HSM error line number that identifies target EC. */
 	uint32_t ec_hsm_id;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** EC status maximum number of descriptors */
 #define EC_ERR_STATUS_DESC_MAX_NUM	4
@@ -2585,7 +2603,7 @@ struct cmd_ec_status_get_response {
 	uint32_t error_desc_num;
 	/** @brief  EC error descriptors */
 	union ec_err_desc error_descs[EC_ERR_STATUS_DESC_MAX_NUM];
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup EC
@@ -2606,8 +2624,8 @@ struct mrq_ec_request {
 
 	union {
 		struct cmd_ec_status_get_request ec_status_get;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /**
  * @ingroup EC
@@ -2625,8 +2643,8 @@ struct mrq_ec_request {
 struct mrq_ec_response {
 	union {
 		struct cmd_ec_status_get_response ec_status_get;
-	} __UNION_ANON;
-} __ABI_PACKED;
+	} BPMP_UNION_ANON;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -2658,7 +2676,7 @@ struct mrq_fbvolt_status_response {
 	uint32_t ready;
 	/** @brief Reserved */
 	uint32_t unused;
-} __ABI_PACKED;
+} BPMP_ABI_PACKED;
 
 /** @} */
 /** @endcond */
@@ -2696,7 +2714,7 @@ struct mrq_fbvolt_status_response {
 /** @brief Out of range */
 #define BPMP_ERANGE	34
 /** @brief Function not implemented */
-#define  BPMP_ENOSYS	38
+#define BPMP_ENOSYS	38
 /** @brief Invalid slot */
 #define BPMP_EBADSLT	57
 

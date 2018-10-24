@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/tegra21_emc_cc_r21012.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -568,6 +568,7 @@ u32 __do_periodic_emc_compensation_r21021(
 	};
 	u32 items = ARRAY_SIZE(list);
 	u32 emc_cfg_update;
+	u32 pd_mask = EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK;
 
 	if (current_timing->periodic_training) {
 		channel_mode = !!(current_timing->burst_regs[EMC_FBIO_CFG7_INDEX] &
@@ -591,11 +592,12 @@ u32 __do_periodic_emc_compensation_r21021(
 		/* Does emc_timing_update() for above changes. */
 		tegra210_dll_disable(channel_mode);
 
-		wait_for_update(EMC_EMC_STATUS,
-				EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK, 0, REG_EMC);
+		if (dram_dev_num == ONE_RANK)
+			pd_mask = 0x10;
+
+		wait_for_update(EMC_EMC_STATUS, pd_mask, 0, REG_EMC);
 		if (channel_mode)
-			wait_for_update(EMC_EMC_STATUS,
-				EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK, 0, REG_EMC1);
+			wait_for_update(EMC_EMC_STATUS, pd_mask, 0, REG_EMC1);
 
 		wait_for_update(EMC_EMC_STATUS,
 				EMC_EMC_STATUS_DRAM_IN_SELF_REFRESH_MASK, 0, REG_EMC);
@@ -864,13 +866,16 @@ void emc_set_clock_r21021(struct emc_table *next_timing,
 	emc_set_shadow_bypass(ASSEMBLY);
 
 	if (next_timing->periodic_training) {
+		u32 pd_mask = EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK;
+
 		tegra210_reset_dram_clktree_values(next_timing);
 
-		wait_for_update(EMC_EMC_STATUS,
-				EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK, 0, REG_EMC);
+		if (dram_dev_num == ONE_RANK)
+			pd_mask = 0x10;
+
+		wait_for_update(EMC_EMC_STATUS, pd_mask, 0, REG_EMC);
 		if (channel_mode)
-			wait_for_update(EMC_EMC_STATUS,
-				EMC_EMC_STATUS_DRAM_IN_POWERDOWN_MASK, 0, REG_EMC1);
+			wait_for_update(EMC_EMC_STATUS, pd_mask, 0, REG_EMC1);
 
 		wait_for_update(EMC_EMC_STATUS,
 				EMC_EMC_STATUS_DRAM_IN_SELF_REFRESH_MASK, 0, REG_EMC);

@@ -119,10 +119,16 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 
 static void vgpu_channel_abort_cleanup(struct gk20a *g, u32 chid)
 {
-	struct channel_gk20a *ch = &g->fifo.channel[chid];
+	struct channel_gk20a *ch = gk20a_channel_get(&g->fifo.channel[chid]);
+
+	if (ch == NULL) {
+		nvgpu_err(g, "invalid channel id %d", chid);
+		return;
+	}
 
 	ch->has_timedout = true;
 	g->ops.fifo.ch_abort_clean_up(ch);
+	gk20a_channel_put(ch);
 }
 
 static void vgpu_set_error_notifier(struct gk20a *g,

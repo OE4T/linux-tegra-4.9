@@ -276,6 +276,7 @@ struct hda_codec {
 
 	unsigned int recv_dec_cap;
 	unsigned int max_pcm_channels;
+	bool comfort_noise;
 
 	/* jack detection */
 	struct snd_array jacktbl;

@@ -2493,6 +2493,16 @@ int snd_hda_hdmi_decode_info(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+int snd_hda_comfort_noise_info(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 1;
+	return 0;
+}
+
 static int snd_hda_max_pcm_ch_get(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_value *ucontrol)
 {
@@ -2508,6 +2518,24 @@ static int snd_hda_hdmi_decode_get(struct snd_kcontrol *kcontrol,
 	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
 
 	ucontrol->value.integer.value[0] = codec->recv_dec_cap;
+	return 0;
+}
+
+static int snd_hda_comfort_noise_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+
+	ucontrol->value.integer.value[0] = codec->comfort_noise;
+	return 0;
+}
+
+static int snd_hda_comfort_noise_put(struct snd_kcontrol *kcontrol,
+				     struct snd_ctl_elem_value *ucontrol)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+
+	codec->comfort_noise = ucontrol->value.integer.value[0];
 	return 0;
 }
 
@@ -2553,6 +2581,13 @@ static struct snd_kcontrol_new dig_mixes[] = {
 		.name = "HDA Maximum PCM Channels",
 		.info = snd_hda_max_pcm_ch_info,
 		.get = snd_hda_max_pcm_ch_get,
+	},
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "HDA Comfort Noise",
+		.info = snd_hda_comfort_noise_info,
+		.get = snd_hda_comfort_noise_get,
+		.put = snd_hda_comfort_noise_put,
 	},
 	{ } /* end */
 };

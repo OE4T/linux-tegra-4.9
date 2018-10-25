@@ -132,10 +132,6 @@ static LIST_HEAD(hub_downgraded_list);
 #define XUSB_HOST_CLKGATE_HYSTERESIS_0		0x1bc
 #define XUSB_HOST_MCCIF_FIFOCTRL_0		0x1dc
 
-#define ARU_CONTEXT_HS_PLS_SUSPEND	3
-#define ARU_CONTEXT_HS_PLS_FS_MODE	6
-#define FPCI_CTX_HS_PLS(hs_pls, pad)	((hs_pls >> (4 * pad)) & 0xf)
-
 #define CSB_PAGE_SELECT_MASK			0x7fffff
 #define CSB_PAGE_SELECT_SHIFT			9
 #define CSB_PAGE_OFFSET_MASK			0x1ff
@@ -514,6 +510,7 @@ struct tegra_xusb {
 	bool suspended;
 	struct tegra_xhci_fpci_context fpci_ctx;
 	struct tegra_xhci_ipfs_context ipfs_ctx;
+	u32 enable_utmi_pad_after_lp0_exit;
 
 	struct xusb_otg_port otg_ports[XUSB_MAX_OTG_PORT_NUM];
 	int otg_port_num;
@@ -3969,17 +3966,13 @@ static void tegra_xhci_disable_phy_sleepwalk(struct tegra_xusb *tegra)
 static void tegra_xhci_program_utmi_power_lp0_exit(
 	struct tegra_xusb *tegra)
 {
-	u8 hs_pls;
 	int i;
 
 	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
 		if (!is_host_mode_phy(tegra, USB2_PHY, i))
 			continue;
 
-		hs_pls = FPCI_CTX_HS_PLS(tegra->fpci_ctx.hs_pls, i);
-
-		if (hs_pls == ARU_CONTEXT_HS_PLS_SUSPEND ||
-			hs_pls == ARU_CONTEXT_HS_PLS_FS_MODE)
+		if (tegra->enable_utmi_pad_after_lp0_exit & BIT(i))
 			tegra_phy_xusb_utmi_pad_power_on(
 					tegra->typed_phys[USB2_PHY][i]);
 		else
@@ -4063,6 +4056,7 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 	struct device *dev = tegra->dev;
 	bool do_wakeup = runtime ? true : device_may_wakeup(dev);
 	unsigned int i, j;
+	u32 portsc;
 	int ret;
 
 	dev_info(dev, "entering ELPG\n");
@@ -4071,6 +4065,15 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 	ret = tegra_xhci_wait_for_ports_enter_u3(tegra);
 	if (ret < 0)
 		goto out;
+
+	for (i = 0; i < xhci->num_usb2_ports; i++) {
+		portsc = readl(xhci->usb2_ports[i]);
+		tegra->enable_utmi_pad_after_lp0_exit &= ~BIT(i);
+
+		if (((portsc & PORT_PLS_MASK) == XDEV_U3) ||
+			((portsc & DEV_SPEED_MASK) == XDEV_FS))
+			tegra->enable_utmi_pad_after_lp0_exit |= BIT(i);
+	}
 
 	ret = xhci_suspend(xhci, do_wakeup);
 

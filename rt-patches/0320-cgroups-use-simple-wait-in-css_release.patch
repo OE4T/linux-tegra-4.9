@@ -1,4 +1,4 @@
-From 58a8cd6f2e3cfc86d61a193e551831df6e5ffc0b Mon Sep 17 00:00:00 2001
+From ab5a318220e02778cd777c89b702046d1236537a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
 Subject: [PATCH 320/353] cgroups: use simple wait in css_release()
@@ -54,10 +54,10 @@ index 9c72b21..80780ec 100644
  
  /*
 diff --git a/kernel/cgroup.c b/kernel/cgroup.c
-index 7ed0d21..c3eb1ff 100644
+index 215c88e..0938b8a 100644
 --- a/kernel/cgroup.c
 +++ b/kernel/cgroup.c
-@@ -5042,10 +5042,10 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
+@@ -5046,10 +5046,10 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
  	queue_work(cgroup_destroy_wq, &css->destroy_work);
  }
  
@@ -70,7 +70,7 @@ index 7ed0d21..c3eb1ff 100644
  	struct cgroup_subsys *ss = css->ss;
  	struct cgroup *cgrp = css->cgroup;
  
-@@ -5090,8 +5090,8 @@ static void css_release(struct percpu_ref *ref)
+@@ -5094,8 +5094,8 @@ static void css_release(struct percpu_ref *ref)
  	struct cgroup_subsys_state *css =
  		container_of(ref, struct cgroup_subsys_state, refcnt);
  
@@ -81,7 +81,7 @@ index 7ed0d21..c3eb1ff 100644
  }
  
  static void init_and_link_css(struct cgroup_subsys_state *css,
-@@ -5755,6 +5755,7 @@ static int __init cgroup_wq_init(void)
+@@ -5759,6 +5759,7 @@ static int __init cgroup_wq_init(void)
  	 */
  	cgroup_destroy_wq = alloc_workqueue("cgroup_destroy", 0, 1);
  	BUG_ON(!cgroup_destroy_wq);
@@ -90,5 +90,5 @@ index 7ed0d21..c3eb1ff 100644
  	/*
  	 * Used to destroy pidlists and separate to serve as flush domain.
 -- 
-2.1.4
+2.7.4
 

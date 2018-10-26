@@ -1,4 +1,4 @@
-From 978f5ba0ef89e2c237ec395d4659ee56a654d8cd Mon Sep 17 00:00:00 2001
+From 71897d6810cf6ac6ef4a663fb5bfe624da903d3e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
 Subject: [PATCH 244/353] irqwork: push most work into softirq context
@@ -195,5 +195,5 @@ index f90e684..8e81884 100644
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
 -- 
-2.1.4
+2.7.4
 

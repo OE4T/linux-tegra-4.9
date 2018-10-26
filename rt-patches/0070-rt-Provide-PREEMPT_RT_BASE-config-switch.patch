@@ -1,4 +1,4 @@
-From 8831aec02eac34a831220720d5ce8085fe73f018 Mon Sep 17 00:00:00 2001
+From 7441ba3ce4ee4ecaef6feaf8e2164ff98331b9ce Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 12:39:57 +0200
 Subject: [PATCH 070/353] rt: Provide PREEMPT_RT_BASE config switch
@@ -55,5 +55,5 @@ index 3f9c974..c669134 100644
  
  config PREEMPT_COUNT
 -- 
-2.1.4
+2.7.4
 

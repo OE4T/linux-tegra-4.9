@@ -1,4 +1,4 @@
-From 9d89ee323bb308195eff0373bf8fd25c4b749e70 Mon Sep 17 00:00:00 2001
+From 95ada7977e9c7776c821ba0f0bab09f847370a42 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 20 Jan 2017 18:10:20 +0100
 Subject: [PATCH 160/353] softirq: wake the timer softirq if needed
@@ -73,5 +73,5 @@ index be66205..b5f185b 100644
  	local_irq_save(flags);
  	if (__this_cpu_read(ksoftirqd) &&
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 9eff7d078519a2c5dff4b3696318ffee54db5489 Mon Sep 17 00:00:00 2001
+From 1d371becb70280f521d540ceb76aa97a96182006 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:12:51 +0200
 Subject: [PATCH 130/353] sched: Limit the number of task migrations per batch
@@ -28,5 +28,5 @@ index d742d93..6e26574 100644
  /*
   * period over which we average the RT time consumption, measured
 -- 
-2.1.4
+2.7.4
 

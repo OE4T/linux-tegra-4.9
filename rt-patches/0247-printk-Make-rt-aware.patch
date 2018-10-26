@@ -1,4 +1,4 @@
-From da6bbcbeb50819e67eb990aaef339be9765b7006 Mon Sep 17 00:00:00 2001
+From 883f32a6e1279cfa0d33d112cf6887dc0f11970d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 19 Sep 2012 14:50:37 +0200
 Subject: [PATCH 247/353] printk: Make rt aware
@@ -96,5 +96,5 @@ index 2e26fbf..320ec3f 100644
  			cond_resched();
  	}
 -- 
-2.1.4
+2.7.4
 

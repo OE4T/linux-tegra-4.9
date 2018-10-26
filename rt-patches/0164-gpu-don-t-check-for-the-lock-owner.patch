@@ -1,4 +1,4 @@
-From 9972fac0e5b01ed346615ec8fc26be4e8875cf33 Mon Sep 17 00:00:00 2001
+From 8dbe1f14e8c157e14a0d78082c4bfe90dec68d06 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 164/353] gpu: don't check for the lock owner.
@@ -36,5 +36,5 @@ index 192b2d3..d5372a2 100644
  #else
  	/* Since UP may be pre-empted, we cannot assume that we own the lock */
 -- 
-2.1.4
+2.7.4
 

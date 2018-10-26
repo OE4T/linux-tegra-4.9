@@ -1,4 +1,4 @@
-From 5d3353d93f64a2b6c63ed8b146c238450358bb0b Mon Sep 17 00:00:00 2001
+From 9a0f274786d74d142f8096259b4cf4df74e0668a Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Sat, 6 Mar 2010 17:47:10 +0100
 Subject: [PATCH 056/353] ARM: AT91: PIT: Remove irq handler when clock event
@@ -152,5 +152,5 @@ index e90ab5b..9e12408 100644
  	if (IS_ERR(sclk)) {
  		pr_err("Unable to get slow clock\n");
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 5b5207d6bc8bab24f7592f214bac439a84540c93 Mon Sep 17 00:00:00 2001
+From b9d24aec7703bbd36f1d630c89d7781bc2ff89db Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
 Subject: [PATCH 017/353] futex: Drop hb->lock before enqueueing on the rtmutex
@@ -211,5 +211,5 @@ index b620aaf..f4c34c4 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.1.4
+2.7.4
 

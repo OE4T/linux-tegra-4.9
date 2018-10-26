@@ -1,4 +1,4 @@
-From abda7819677aa1501b070b2ec2307cd731003fd4 Mon Sep 17 00:00:00 2001
+From 322a3fd81735dff20c6ef99effa53bcfb0377429 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 10 Apr 2017 18:03:36 +0200
 Subject: [PATCH 026/353] futex: Avoid freeing an active timer
@@ -54,5 +54,5 @@ index 04772e6..1a18fab 100644
  
  uaddr_faulted:
 -- 
-2.1.4
+2.7.4
 

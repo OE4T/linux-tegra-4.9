@@ -1,4 +1,4 @@
-From a9dfd4b39030c287fb82dd98886bfc1c9cb687b4 Mon Sep 17 00:00:00 2001
+From f91fd95474dc1ae4810365330daea0bcceb03f9c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 177/353] rt: Add the preempt-rt lock replacement APIs
@@ -395,7 +395,7 @@ index 0000000..49ed2d4
 +#endif
 diff --git a/include/linux/rwlock_types_rt.h b/include/linux/rwlock_types_rt.h
 new file mode 100644
-index 0000000..51b28d77
+index 0000000..51b28d7
 --- /dev/null
 +++ b/include/linux/rwlock_types_rt.h
 @@ -0,0 +1,33 @@
@@ -2380,5 +2380,5 @@ index e0963e7..4af5e7f 100644
  	}
  }
 -- 
-2.1.4
+2.7.4
 

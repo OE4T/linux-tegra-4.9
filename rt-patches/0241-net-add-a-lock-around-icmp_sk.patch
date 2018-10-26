@@ -1,4 +1,4 @@
-From 88ebaded3b67199f1a306d78db600dff9f3f9cc9 Mon Sep 17 00:00:00 2001
+From 2f92b7921deb75c4996c3afd37bd9792391aff83 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:54:09 +0200
 Subject: [PATCH 241/353] net: add a lock around icmp_sk()
@@ -74,5 +74,5 @@ index 42a19fb..0fd1e72 100644
  
  /*
 -- 
-2.1.4
+2.7.4
 

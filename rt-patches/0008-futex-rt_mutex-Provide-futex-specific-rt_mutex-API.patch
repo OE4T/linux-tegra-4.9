@@ -1,4 +1,4 @@
-From fb701505e95ca7c4f7c65549a4947b27aa7f0c85 Mon Sep 17 00:00:00 2001
+From ea09af0ab3b21f8d7a9a59661483d602838765da Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
 Subject: [PATCH 008/353] futex,rt_mutex: Provide futex specific rt_mutex API
@@ -226,5 +226,5 @@ index 50848b4..d4d98c9 100644
  
  #ifdef CONFIG_DEBUG_RT_MUTEXES
 -- 
-2.1.4
+2.7.4
 

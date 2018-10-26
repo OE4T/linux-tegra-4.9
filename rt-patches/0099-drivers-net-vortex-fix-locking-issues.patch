@@ -1,4 +1,4 @@
-From b3bcafbbc87076375fbdee2dd02f9a39978c7d3e Mon Sep 17 00:00:00 2001
+From f5516988717b0a161bca61be410512282c60d8c2 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 3 Jul 2009 08:30:00 -0500
 Subject: [PATCH 099/353] drivers/net: vortex fix locking issues
@@ -53,5 +53,5 @@ index 9133e79..63afb92 100644
  	}
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 7e3d177f5b3de693e5d7f27fbd6e9275b8b01650 Mon Sep 17 00:00:00 2001
+From 5afcc3a327c6a4bd94f1b7aab8a406127adfb72f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
 Subject: [PATCH 022/353] sched/rtmutex: Refactor rt_mutex_setprio()
@@ -398,5 +398,5 @@ index 345a93e..1f4862d 100644
  			queue_flags &= ~DEQUEUE_MOVE;
  	}
 -- 
-2.1.4
+2.7.4
 

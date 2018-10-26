@@ -1,4 +1,4 @@
-From 06b89c3694a632249e7af2f0e469122aec1eaee8 Mon Sep 17 00:00:00 2001
+From a3c1f7b1d62ae04281b6882b8151d68b389661cb Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang@windriver.com>
 Date: Mon, 16 Apr 2012 15:01:56 +0800
 Subject: [PATCH 295/353] lockdep: selftest: Only do hardirq context test for
@@ -57,5 +57,5 @@ index f3a217e..c17fc0b 100644
  	ww_tests();
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 3a681bd2440129f609f4f335b1661955da66e8b7 Mon Sep 17 00:00:00 2001
+From 73bff7456609862aed11f6af8cecae9bb17955e1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:00 +0200
 Subject: [PATCH 181/353] rtmutex: Provide rt_mutex_lock_state()
@@ -115,5 +115,5 @@ index c3756e5..9076a74 100644
   * rt_mutex_timed_lock - lock a rt_mutex interruptible
   *			the timeout structure is provided
 -- 
-2.1.4
+2.7.4
 

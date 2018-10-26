@@ -1,4 +1,4 @@
-From 5a8dfec15ee2609ea09e2dc4c7dfcbf29bbbd40e Mon Sep 17 00:00:00 2001
+From bf901bfcd9365ce6eab90dc0450850741c04687e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
 Subject: [PATCH 223/353] fs/dcache: use swait_queue instead of waitqueue
@@ -22,7 +22,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  11 files changed, 29 insertions(+), 26 deletions(-)
 
 diff --git a/fs/cifs/readdir.c b/fs/cifs/readdir.c
-index a27fc87..791aecb 100644
+index ef24b45..3ce6331 100644
 --- a/fs/cifs/readdir.c
 +++ b/fs/cifs/readdir.c
 @@ -80,7 +80,7 @@ cifs_prime_dcache(struct dentry *parent, struct qstr *name,
@@ -163,10 +163,10 @@ index 0165a95..58990c8 100644
  	status = -EBUSY;
  	spin_lock(&dentry->d_lock);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 0dbac3a..9dec90f 100644
+index 975d935..4266fcd 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
-@@ -1849,7 +1849,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
+@@ -1863,7 +1863,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
  
  	child = d_hash_and_lookup(dir, &qname);
  	if (!child) {
@@ -237,5 +237,5 @@ index a26906f..6b7e6d3 100644
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-2.1.4
+2.7.4
 

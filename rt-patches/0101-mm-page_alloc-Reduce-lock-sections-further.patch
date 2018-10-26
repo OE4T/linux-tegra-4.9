@@ -1,4 +1,4 @@
-From 6cb2e145aa2dd79a521324b84a618b15b649f673 Mon Sep 17 00:00:00 2001
+From 3642f3afb8f591d24d7c3528e8eb8b2c4fc7bf68 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 3 Jul 2009 08:44:37 -0500
 Subject: [PATCH 101/353] mm: page_alloc: Reduce lock sections further
@@ -206,5 +206,5 @@ index b4dd1a0..e251ca9 100644
  
  out:
 -- 
-2.1.4
+2.7.4
 

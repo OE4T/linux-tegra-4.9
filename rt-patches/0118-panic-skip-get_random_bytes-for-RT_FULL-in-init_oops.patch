@@ -1,4 +1,4 @@
-From 80d9239a5f75287e0995e92f1edd837832dee216 Mon Sep 17 00:00:00 2001
+From 6cae39b9199d33d720b2c6344d72add7b0bc5ca9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 118/353] panic: skip get_random_bytes for RT_FULL in
@@ -29,5 +29,5 @@ index dbec387..b67a480 100644
  
  	return 0;
 -- 
-2.1.4
+2.7.4
 

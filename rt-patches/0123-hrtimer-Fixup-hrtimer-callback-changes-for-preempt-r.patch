@@ -1,4 +1,4 @@
-From 272ac6e94943e001df8cb40750d37732a219d578 Mon Sep 17 00:00:00 2001
+From fc99a650dc3bb56fd89b3e4e9244370029af8807 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
 Subject: [PATCH 123/353] hrtimer: Fixup hrtimer callback changes for
@@ -68,7 +68,7 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 06ec3b5..d742d93 100644
+index 06ec3b5e..d742d93 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -359,6 +359,7 @@ static void init_rq_hrtick(struct rq *rq)
@@ -352,5 +352,5 @@ index 63177be..59fe007 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.1.4
+2.7.4
 

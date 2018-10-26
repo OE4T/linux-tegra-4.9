@@ -1,4 +1,4 @@
-From d94f3548e76a2b9aff2303c344ac801f4db4204d Mon Sep 17 00:00:00 2001
+From 9456668a752fff6b4f26ac9b9bd5fc05c9aa7135 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 8 Feb 2016 16:15:28 +0100
 Subject: [PATCH 287/353] rt/locking: Reenable migration accross schedule
@@ -113,5 +113,5 @@ index 6e52bce..78a6c4a 100644
  EXPORT_SYMBOL(rt_spin_lock_nested);
  #endif
 -- 
-2.1.4
+2.7.4
 

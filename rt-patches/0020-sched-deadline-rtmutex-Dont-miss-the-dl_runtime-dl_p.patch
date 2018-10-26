@@ -1,4 +1,4 @@
-From 3812eed5870ca9df3a3fe7c15bda9d863885b35f Mon Sep 17 00:00:00 2001
+From 9049d5712d32a17107a02cb9826fedae2bcdb261 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
 Subject: [PATCH 020/353] sched/deadline/rtmutex: Dont miss the
@@ -55,5 +55,5 @@ index 1996128..03a345d 100644
  			goto out_unlock_pi;
  		else
 -- 
-2.1.4
+2.7.4
 

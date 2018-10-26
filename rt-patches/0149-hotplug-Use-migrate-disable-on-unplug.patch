@@ -1,4 +1,4 @@
-From afdbaed57ac1c5cd08f72cbe2b9803c14ec39f15 Mon Sep 17 00:00:00 2001
+From 8307b80ae653e0e96cd88a2df43f9aa420609830 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
 Subject: [PATCH 149/353] hotplug: Use migrate disable on unplug
@@ -41,5 +41,5 @@ index ee08823..3b026a1 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-2.1.4
+2.7.4
 

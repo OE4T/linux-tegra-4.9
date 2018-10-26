@@ -1,4 +1,4 @@
-From fe026a2b215435f928c597161dbe9e6ef15d74e2 Mon Sep 17 00:00:00 2001
+From 9d98da0f2c258ed0e514f5f658af34b621601b80 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:13 -0500
 Subject: [PATCH 104/353] mm/vmstat: Protect per cpu variables with preempt
@@ -40,7 +40,7 @@ index 6137719..e28c5a4 100644
  
  static inline void count_vm_events(enum vm_event_item item, long delta)
 diff --git a/mm/vmstat.c b/mm/vmstat.c
-index 5f658b6..00f9620 100644
+index 5e6a4d7..20dbbb6 100644
 --- a/mm/vmstat.c
 +++ b/mm/vmstat.c
 @@ -245,6 +245,7 @@ void __mod_zone_page_state(struct zone *zone, enum zone_stat_item item,
@@ -140,5 +140,5 @@ index 5f658b6..00f9620 100644
  
  void __dec_zone_page_state(struct page *page, enum zone_stat_item item)
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From c6ecd53dee01c921facbb835e68b8d1ba246a068 Mon Sep 17 00:00:00 2001
+From 9d65e1dea41100a78d74a9f02f2ca39d3111d451 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
 Subject: [PATCH 119/353] timers: Prepare for full preemption
@@ -29,7 +29,7 @@ index ec86e4e..8e5b680 100644
  #else
  # define del_timer_sync(t)		del_timer(t)
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 72d322d..06ec3b5 100644
+index 72d322d..06ec3b5e 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -539,11 +539,14 @@ void resched_cpu(int cpu)
@@ -163,5 +163,5 @@ index f14e352..a0cb1a2 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From ce1cc5c3956fbaee18cacc00a7de8733e0d35d9d Mon Sep 17 00:00:00 2001
+From 6202142ea7a028cac094a407b4d08ebbf499c483 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 10:51:27 +0200
 Subject: [PATCH 165/353] fs/nfs: turn rmdir_sem into a semaphore
@@ -146,5 +146,5 @@ index 810124b..d54ca43 100644
  #if IS_ENABLED(CONFIG_NFS_V4)
  	struct nfs4_cached_acl	*nfs4_acl;
 -- 
-2.1.4
+2.7.4
 

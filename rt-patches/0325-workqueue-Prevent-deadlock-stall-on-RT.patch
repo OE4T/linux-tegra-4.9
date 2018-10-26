@@ -1,4 +1,4 @@
-From 0da0fe3f9b4fe347438389787c68678f3a904bff Mon Sep 17 00:00:00 2001
+From aba71b4f3831f694d1fa3995029216146de5c22e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 27 Jun 2014 16:24:52 +0200
 Subject: [PATCH 325/353] workqueue: Prevent deadlock/stall on RT
@@ -203,5 +203,5 @@ index b69456e..67eb847 100644
  	wake_up_process(worker->task);
  }
 -- 
-2.1.4
+2.7.4
 

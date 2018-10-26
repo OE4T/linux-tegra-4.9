@@ -1,4 +1,4 @@
-From f8a90c880aa77242bf7768ecd05bbb25e7e0255f Mon Sep 17 00:00:00 2001
+From 35b55738e86055df7c4e5937e44e2104d62253d0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 20:51:03 +0100
 Subject: [PATCH 217/353] rt: Introduce cpu_chill()
@@ -132,5 +132,5 @@ index db90569..e6d9118 100644
   * Functions related to boot-time initialization:
   */
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 974b064a363d3a2d227baa494323d6e387b9f959 Mon Sep 17 00:00:00 2001
+From 8f492ee958f5e193c476788e4ea180aff9a70062 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
 Subject: [PATCH 082/353] ide: Do not disable interrupts for PREEMPT-RT
@@ -182,5 +182,5 @@ index a716693..be0568c 100644
  	ide_set_handler(drive, &task_pio_intr, WAIT_WORSTCASE);
  
 -- 
-2.1.4
+2.7.4
 

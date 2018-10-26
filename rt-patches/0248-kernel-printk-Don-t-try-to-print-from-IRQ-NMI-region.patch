@@ -1,4 +1,4 @@
-From e2d4a8e986fd95cb8da15d2c194fb5036e318a00 Mon Sep 17 00:00:00 2001
+From 34e72e5020dfb1368dc1d56253eaa21b8f380362 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 19 May 2016 17:45:27 +0200
 Subject: [PATCH 248/353] kernel/printk: Don't try to print from IRQ/NMI region
@@ -43,5 +43,5 @@ index 320ec3f..9381910 100644
  	 * console_unblank can no longer be called in interrupt context unless
  	 * oops_in_progress is set to 1..
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 17e959ca8d8ee07f2081f6eb09f85b019bbb853a Mon Sep 17 00:00:00 2001
+From b6ac0626d23fa58b4c530bebc269aa3de3af4963 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
 Subject: [PATCH 236/353] net: move xmit_recursion to per-task variable on -RT
@@ -23,10 +23,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 6e05a76..dcad41b 100644
+index b495762..54ca094 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2464,14 +2464,53 @@ void netdev_freemem(struct net_device *dev);
+@@ -2471,14 +2471,53 @@ void netdev_freemem(struct net_device *dev);
  void synchronize_net(void);
  int init_dummy_netdev(struct net_device *dev);
  
@@ -96,10 +96,10 @@ index c8e05ba..615aab9 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 20b1a02..f0542ce 100644
+index a0818f6..b38be50 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3203,8 +3203,10 @@ static void skb_update_prio(struct sk_buff *skb)
+@@ -3225,8 +3225,10 @@ static void skb_update_prio(struct sk_buff *skb)
  #define skb_update_prio(skb)
  #endif
  
@@ -110,7 +110,7 @@ index 20b1a02..f0542ce 100644
  
  /**
   *	dev_loopback_xmit - loop back @skb
-@@ -3438,8 +3440,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+@@ -3460,8 +3462,7 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
  		int cpu = smp_processor_id(); /* ok because BHs are off */
  
  		if (txq->xmit_lock_owner != cpu) {
@@ -120,7 +120,7 @@ index 20b1a02..f0542ce 100644
  				goto recursion_alert;
  
  			skb = validate_xmit_skb(skb, dev);
-@@ -3449,9 +3450,9 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
+@@ -3471,9 +3472,9 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
  			HARD_TX_LOCK(dev, txq, cpu);
  
  			if (!netif_xmit_stopped(txq)) {
@@ -158,5 +158,5 @@ index c385c55..feb96c2 100644
  	return ret;
  }
 -- 
-2.1.4
+2.7.4
 

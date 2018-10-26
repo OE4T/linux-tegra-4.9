@@ -1,4 +1,4 @@
-From 1165d68e53bd13f4e4fb6ff631b6d4604ae09663 Mon Sep 17 00:00:00 2001
+From f46c70ef9e2d67085168ce94202f6f096eeed171 Mon Sep 17 00:00:00 2001
 From: Priyanka Jain <Priyanka.Jain@freescale.com>
 Date: Thu, 17 May 2012 09:35:11 +0530
 Subject: [PATCH 289/353] net: Remove preemption disabling in netif_rx()
@@ -35,10 +35,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 567c050..85d7df9 100644
+index 4db8870..16acd7c 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3849,7 +3849,7 @@ static int netif_rx_internal(struct sk_buff *skb)
+@@ -3871,7 +3871,7 @@ static int netif_rx_internal(struct sk_buff *skb)
  		struct rps_dev_flow voidflow, *rflow = &voidflow;
  		int cpu;
  
@@ -47,7 +47,7 @@ index 567c050..85d7df9 100644
  		rcu_read_lock();
  
  		cpu = get_rps_cpu(skb->dev, skb, &rflow);
-@@ -3859,13 +3859,13 @@ static int netif_rx_internal(struct sk_buff *skb)
+@@ -3881,13 +3881,13 @@ static int netif_rx_internal(struct sk_buff *skb)
  		ret = enqueue_to_backlog(skb, cpu, &rflow->last_qtail);
  
  		rcu_read_unlock();
@@ -65,5 +65,5 @@ index 567c050..85d7df9 100644
  	return ret;
  }
 -- 
-2.1.4
+2.7.4
 

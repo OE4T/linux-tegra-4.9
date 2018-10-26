@@ -1,4 +1,4 @@
-From 39b8e138096ea15afc959e4fc2c0e28354df416a Mon Sep 17 00:00:00 2001
+From f96b4d17e8352c89277e7d809d1f7a74905da0f9 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Wed, 30 Oct 2013 11:48:33 -0700
 Subject: [PATCH 112/353] mm/memcontrol: Don't call schedule_work_on in
@@ -69,5 +69,5 @@ index c3059ed..c72d46e 100644
  	mutex_unlock(&percpu_charge_mutex);
  }
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From f2d3d9ce5e2504e4bb7c90b87f6eddf450749fe8 Mon Sep 17 00:00:00 2001
+From 906fc13d2d77ca056545302f21cf0f7715fc3f64 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
 Subject: [PATCH 330/353] fs: convert two more BH_Uptodate_Lock related
@@ -65,5 +65,5 @@ index f3acecf..c30dbde 100644
  	if (!busy)
  		end_page_writeback(bvec->bv_page);
 -- 
-2.1.4
+2.7.4
 

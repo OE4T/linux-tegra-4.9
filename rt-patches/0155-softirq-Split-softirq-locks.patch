@@ -1,4 +1,4 @@
-From b9b5fa5c84df1467ef7cc54a99a36aa3c3358e8e Mon Sep 17 00:00:00 2001
+From c809eb186e6a2aa97403837222d835506491da41 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
 Subject: [PATCH 155/353] softirq: Split softirq locks
@@ -830,10 +830,10 @@ index 6a1b656..943d0f77 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 9f8d01c..4931d2c 100644
+index 21a418b..f6a81d0 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -3894,11 +3894,9 @@ int netif_rx_ni(struct sk_buff *skb)
+@@ -3916,11 +3916,9 @@ int netif_rx_ni(struct sk_buff *skb)
  
  	trace_netif_rx_ni_entry(skb);
  
@@ -848,5 +848,5 @@ index 9f8d01c..4931d2c 100644
  	return err;
  }
 -- 
-2.1.4
+2.7.4
 

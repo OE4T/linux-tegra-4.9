@@ -1,4 +1,4 @@
-From 80809f0d5eb530793c7c27c5a7e920365581c938 Mon Sep 17 00:00:00 2001
+From 77fe3a6dde0bc94831c63f90caab0e7d0d5baa3d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
 Subject: [PATCH 054/353] signals: Allow rt tasks to cache one sigqueue struct
@@ -207,5 +207,5 @@ index 145b39c..5fac80c 100644
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 1b6c7e99d680fb16c00348aec7910be6aa8e3fed Mon Sep 17 00:00:00 2001
+From c29d89833ff787d14cab2b5557906136199dc060 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 5 Jun 2016 08:11:13 +0200
 Subject: [PATCH 114/353] mm/memcontrol: mem_cgroup_migrate() - replace another
@@ -31,5 +31,5 @@ index e1aa5ef..e10260c 100644
  
  DEFINE_STATIC_KEY_FALSE(memcg_sockets_enabled_key);
 -- 
-2.1.4
+2.7.4
 

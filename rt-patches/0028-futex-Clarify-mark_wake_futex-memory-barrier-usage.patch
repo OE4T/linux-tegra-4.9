@@ -1,4 +1,4 @@
-From c98c0be0b7a1ab6ff7ef3c361fad311bfd8f52c0 Mon Sep 17 00:00:00 2001
+From a30651e837619c8cc8897db7035fcc2c70a3807e Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:31:38 -0700
 Subject: [PATCH 028/353] futex: Clarify mark_wake_futex memory barrier usage
@@ -39,5 +39,5 @@ index 4c6e487..f9addec 100644
  	smp_store_release(&q->lock_ptr, NULL);
  }
 -- 
-2.1.4
+2.7.4
 

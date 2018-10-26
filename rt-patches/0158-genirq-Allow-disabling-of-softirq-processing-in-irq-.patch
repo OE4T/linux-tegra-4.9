@@ -1,4 +1,4 @@
-From a9e6b8288b4da98af19f08aa65e74c0c2ef85b18 Mon Sep 17 00:00:00 2001
+From 972f624f146f10cb27e53b10c44252871e059d8d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 Jan 2012 13:01:27 +0100
 Subject: [PATCH 158/353] genirq: Allow disabling of softirq processing in irq
@@ -156,5 +156,5 @@ index 7bed42c..62f01b76 100644
  {
  	return current->flags & PF_IN_SOFTIRQ;
 -- 
-2.1.4
+2.7.4
 

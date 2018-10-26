@@ -1,4 +1,4 @@
-From b0b90b3847f599e333487958b08ab2a26f0d3f2c Mon Sep 17 00:00:00 2001
+From 921cd6a87f39ffb1f43ed96eaa5ef5308fb3116e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:57:03 +0200
 Subject: [PATCH 036/353] fs/dcache: init in_lookup_hashtable
@@ -29,5 +29,5 @@ index 183e0ae..1fa3ca8 100644
  	inode_init_early();
  }
 -- 
-2.1.4
+2.7.4
 

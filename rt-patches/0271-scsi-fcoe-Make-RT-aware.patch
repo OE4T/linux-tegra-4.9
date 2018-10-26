@@ -1,4 +1,4 @@
-From 4b05211930a452decc501f3f572f288dc42038fb Mon Sep 17 00:00:00 2001
+From e325d8e9f4d1d153a48fc1629f51cc126f2e5ca7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 12 Nov 2011 14:00:48 +0100
 Subject: [PATCH 271/353] scsi/fcoe: Make RT aware.
@@ -111,5 +111,5 @@ index 16ca31a..c398734 100644
  	/* peek cache of free slot */
  	if (pool->left != FC_XID_UNKNOWN) {
 -- 
-2.1.4
+2.7.4
 

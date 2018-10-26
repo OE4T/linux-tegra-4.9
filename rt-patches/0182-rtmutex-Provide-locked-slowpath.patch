@@ -1,4 +1,4 @@
-From 6f231592d633fcfcd5c1c363645e3e938a015a65 Mon Sep 17 00:00:00 2001
+From 75b117cc5da5fb6eda8269a59acb9a1cfc5de26a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:01 +0200
 Subject: [PATCH 182/353] rtmutex: Provide locked slowpath
@@ -153,5 +153,5 @@ index 32ae70f..64d89d7 100644
  # include "rtmutex-debug.h"
  #else
 -- 
-2.1.4
+2.7.4
 

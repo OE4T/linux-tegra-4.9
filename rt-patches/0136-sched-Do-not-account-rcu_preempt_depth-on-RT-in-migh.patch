@@ -1,4 +1,4 @@
-From db9639f9489aa0d9180ea4a88eace481c6cca0b7 Mon Sep 17 00:00:00 2001
+From 7dd489902e54a5ea36c0e53459207a3c8417beaf Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 7 Jun 2011 09:19:06 +0200
 Subject: [PATCH 136/353] sched: Do not account rcu_preempt_depth on RT in
@@ -52,5 +52,5 @@ index c4436dc..282f928 100644
  	return (nested == preempt_offset);
  }
 -- 
-2.1.4
+2.7.4
 

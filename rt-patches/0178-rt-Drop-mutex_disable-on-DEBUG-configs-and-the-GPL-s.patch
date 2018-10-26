@@ -1,4 +1,4 @@
-From 681aa1b822ce7eeefdb00d90423f22652cf17de4 Mon Sep 17 00:00:00 2001
+From f090a7c289698fe8610beefa9735e4aad533e756 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 10 Feb 2017 18:21:04 +0100
 Subject: [PATCH 178/353] rt: Drop mutex_disable() on !DEBUG configs and the
@@ -35,5 +35,5 @@ index c38a44b..e0284ed 100644
  #ifdef CONFIG_DEBUG_LOCK_ALLOC
  # define mutex_lock_nested(l, s)	_mutex_lock_nested(l, s)
 -- 
-2.1.4
+2.7.4
 

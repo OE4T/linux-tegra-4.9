@@ -1,4 +1,4 @@
-From cc803fe717dfdd595c5a924925cea6d987b60968 Mon Sep 17 00:00:00 2001
+From 54ea553336a451811e22a26655b0895f08349d94 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
 Subject: [PATCH 303/353] sched: Add support for lazy preemption
@@ -368,7 +368,7 @@ index bf36fbf..a6ffa9d 100644
  	 * The idle tasks have their own, simple scheduling class:
  	 */
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index 17a91c8..fe8df82 100644
+index dd00ba0..6128886 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -3948,7 +3948,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
@@ -458,10 +458,10 @@ index a6f837e59..34c6220 100644
  
  /*
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index 5c2ab33..ff0b36b 100644
+index 827ae7b..10b8c80 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -1434,6 +1434,15 @@ extern void init_sched_fair_class(void);
+@@ -1435,6 +1435,15 @@ extern void init_sched_fair_class(void);
  extern void resched_curr(struct rq *rq);
  extern void resched_cpu(int cpu);
  
@@ -612,5 +612,5 @@ index a37003d..8da8d50 100644
  		trace_seq_printf(s, "%x", entry->migrate_disable);
  	else
 -- 
-2.1.4
+2.7.4
 

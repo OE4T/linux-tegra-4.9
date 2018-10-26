@@ -1,4 +1,4 @@
-From ff45d23e42f2a01199bbaca9b3ef09dcbf179cd7 Mon Sep 17 00:00:00 2001
+From d800fafc9f02b1903d406a88a862fe92b25423a8 Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Wed, 14 Feb 2018 23:05:10 +0200
 Subject: [PATCH 351/353] printk: make rt aware (again)
@@ -63,5 +63,5 @@ index e92b3de..5458b40 100644
  		raw_spin_unlock(&logbuf_lock);
  
 -- 
-2.1.4
+2.7.4
 

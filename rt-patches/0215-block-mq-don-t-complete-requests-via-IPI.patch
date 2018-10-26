@@ -1,4 +1,4 @@
-From d491df8805b1b7db9a4c7bf0b08a5bca683c01d8 Mon Sep 17 00:00:00 2001
+From b3d9b435f75d2416dfac99d14f4c6050dff5edbf Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 15:10:08 +0100
 Subject: [PATCH 215/353] block/mq: don't complete requests via IPI
@@ -29,7 +29,7 @@ index 76ee9f8..2f3bdbb 100644
  	rq->q = q;
  	rq->__sector = (sector_t) -1;
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index ca87b6e..1661d3f 100644
+index 29a25ab..25c6919 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -184,6 +184,9 @@ static void blk_mq_rq_ctx_init(struct request_queue *q, struct blk_mq_ctx *ctx,
@@ -110,5 +110,5 @@ index 238261e..a8c760b 100644
  	};
  
 -- 
-2.1.4
+2.7.4
 

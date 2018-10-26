@@ -1,4 +1,4 @@
-From 0365b40f330024f73ad10beea21d571ecd00213e Mon Sep 17 00:00:00 2001
+From c075b7718839ce3801de1cc82ccd741a76b77ece Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
 Subject: [PATCH 219/353] block: blk-mq: Use swait
@@ -80,7 +80,7 @@ index 2f3bdbb..ed5af1a 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 1661d3f..42c232a 100644
+index 25c6919..9835286 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -69,7 +69,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
@@ -124,5 +124,5 @@ index a8c760b..880e5f8 100644
  	struct list_head	all_q_node;
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 6c77f6929d785ba18f13ac5572f7755159d9b813 Mon Sep 17 00:00:00 2001
+From 3aed03d9095e652e1b21b59f0cba398fc35f6237 Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Wed, 18 Dec 2013 17:51:49 +0800
 Subject: [PATCH 189/353] rcutree/rcu_bh_qs: Disable irq while calling
@@ -50,5 +50,5 @@ index b33efec..dc5638f 100644
  #else
  void rcu_bh_qs(void)
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 0328f6fc51f984b0e0b7b9ded096132786e27abd Mon Sep 17 00:00:00 2001
+From f81eeed4062eaa64b8d1b0e3b7218f102c339e0d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
 Subject: [PATCH 179/353] kernel/locking: use an exclusive wait_q for sleepers
@@ -145,5 +145,5 @@ index 4af5e7f..7833a93 100644
  		/*
  		 * wake_up_process() implies a wmb() to pair with the queueing
 -- 
-2.1.4
+2.7.4
 

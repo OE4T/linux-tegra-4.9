@@ -1,4 +1,4 @@
-From 749659db2c616c6f9ec7ef93ab63a1999bbbbcce Mon Sep 17 00:00:00 2001
+From 4712bbff38b06c1aac9332396fa043324cf2f1b9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:34 -0500
 Subject: [PATCH 087/353] mm/scatterlist: Do not disable irqs on RT
@@ -45,5 +45,5 @@ index 004fc70..ccc4699 100644
  }
  EXPORT_SYMBOL(sg_copy_buffer);
 -- 
-2.1.4
+2.7.4
 

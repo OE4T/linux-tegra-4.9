@@ -1,4 +1,4 @@
-From a0d56842a8c954da2fcf4d52ac2ba7e385b73086 Mon Sep 17 00:00:00 2001
+From 5e6223cafc37acd014922043e5bba1702c2b9667 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
 Subject: [PATCH 012/353] futex: Pull rt_mutex_futex_unlock() out from under
@@ -360,5 +360,5 @@ index 13570c6..ffb5f7e 100644
  		/*
  		 * We've already been requeued, but cannot restart by calling
 -- 
-2.1.4
+2.7.4
 

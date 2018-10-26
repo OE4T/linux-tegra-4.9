@@ -1,4 +1,4 @@
-From 3a16759332fefd88c7f1a9a54f3703d10a0b3ede Mon Sep 17 00:00:00 2001
+From ade972db39bb6e3f4782b0a83d21995aad4adbbd Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:59 +0100
 Subject: [PATCH 016/353] futex: Futex_unlock_pi() determinism
@@ -82,5 +82,5 @@ index 60f86cc..928708a 100644
  
  		ret = wake_futex_pi(uaddr, uval, pi_state);
 -- 
-2.1.4
+2.7.4
 

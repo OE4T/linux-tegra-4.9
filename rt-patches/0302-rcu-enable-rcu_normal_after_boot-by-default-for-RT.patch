@@ -1,4 +1,4 @@
-From d3820b4068791c4ed8fea688a123a8d16cc07907 Mon Sep 17 00:00:00 2001
+From 6a5af6df865382a7aaf161406c867274e6dc3a2e Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Wed, 12 Oct 2016 11:21:14 -0500
 Subject: [PATCH 302/353] rcu: enable rcu_normal_after_boot by default for RT
@@ -31,5 +31,5 @@ index 949714f..ee02e1e 100644
  #endif /* #ifndef CONFIG_TINY_RCU */
  
 -- 
-2.1.4
+2.7.4
 

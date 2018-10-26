@@ -1,4 +1,4 @@
-From d90405fa64fdb00f6e15799f1e0e4de777ab2337 Mon Sep 17 00:00:00 2001
+From ce80a747dc9b41b79545869066f6244b68330427 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 24 Jul 2013 15:26:54 +0200
 Subject: [PATCH 224/353] workqueue: Use normal rcu
@@ -355,5 +355,5 @@ index 1961dd4..875bcede 100644
  	return written;
  }
 -- 
-2.1.4
+2.7.4
 

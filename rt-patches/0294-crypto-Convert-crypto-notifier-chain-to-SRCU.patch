@@ -1,4 +1,4 @@
-From 45c96d18f7b950cdf297d5e3c63bca8d11681b4f Mon Sep 17 00:00:00 2001
+From d9d2df0f690fb54eef5f304acda5443c28def01b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
 Subject: [PATCH 294/353] crypto: Convert crypto notifier chain to SRCU
@@ -140,7 +140,7 @@ index 5c098ff..6a47601 100644
  EXPORT_SYMBOL_GPL(crypto_unregister_notifier);
  
 diff --git a/crypto/api.c b/crypto/api.c
-index bbc147c..bc1a848 100644
+index abf53e6..a56b154 100644
 --- a/crypto/api.c
 +++ b/crypto/api.c
 @@ -31,7 +31,7 @@ EXPORT_SYMBOL_GPL(crypto_alg_list);
@@ -188,5 +188,5 @@ index 4c35848..7b47812 100644
  
  #endif	/* _CRYPTO_INTERNAL_H */
 -- 
-2.1.4
+2.7.4
 

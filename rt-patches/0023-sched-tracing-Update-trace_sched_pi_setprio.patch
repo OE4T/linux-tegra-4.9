@@ -1,4 +1,4 @@
-From 1da625a653adda91c23f332b130509171a706538 Mon Sep 17 00:00:00 2001
+From 12cf40e1c1e3b00cb856d5d0dc70cc1552295721 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
 Subject: [PATCH 023/353] sched,tracing: Update trace_sched_pi_setprio()
@@ -112,5 +112,5 @@ index 1f4862d..91f414b 100644
  
  	if (oldprio == prio)
 -- 
-2.1.4
+2.7.4
 

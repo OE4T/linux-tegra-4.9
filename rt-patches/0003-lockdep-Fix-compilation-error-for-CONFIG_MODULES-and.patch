@@ -1,4 +1,4 @@
-From 9243ee16cdb5f96be8cb28b7e41763ece72738e7 Mon Sep 17 00:00:00 2001
+From 9a7bbf348ec735acaddf1675ff4f7bbde24e2e6f Mon Sep 17 00:00:00 2001
 From: Dan Murphy <dmurphy@ti.com>
 Date: Fri, 24 Feb 2017 08:41:49 -0600
 Subject: [PATCH 003/353] lockdep: Fix compilation error for !CONFIG_MODULES
@@ -43,7 +43,7 @@ index 57059d4..85611a5 100644
  {
  	return false;
 diff --git a/kernel/module.c b/kernel/module.c
-index 1ac6c9eb..6a6ed7f 100644
+index e40e5fa..17456c5 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -734,6 +734,11 @@ bool is_module_percpu_address(unsigned long addr)
@@ -59,5 +59,5 @@ index 1ac6c9eb..6a6ed7f 100644
  
  #define MODINFO_ATTR(field)	\
 -- 
-2.1.4
+2.7.4
 

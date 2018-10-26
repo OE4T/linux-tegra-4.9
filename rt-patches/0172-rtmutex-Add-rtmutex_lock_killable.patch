@@ -1,4 +1,4 @@
-From ef12e04973b02b33f3c309da3c0da2e453e4f3d9 Mon Sep 17 00:00:00 2001
+From 3a4c50c9309c7be762021229dde35a7c931ddde7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 9 Jun 2011 11:43:52 +0200
 Subject: [PATCH 172/353] rtmutex: Add rtmutex_lock_killable()
@@ -55,5 +55,5 @@ index eb38fc5..d2eb3db 100644
   *			the timeout structure is provided
   *			by the caller
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 1ee8fd5c0ff47d6c68542eb932131a58d33f6d40 Mon Sep 17 00:00:00 2001
+From 8ed22ab8c1c9a7c3a7835cfacf5541f6d171cd85 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:31:08 +0100
 Subject: [PATCH 132/353] kernel/sched: move stack + kprobe clean up to
@@ -64,5 +64,5 @@ index dc5b545..427cd8b 100644
  	}
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 19f37781dbc3e36c1bcce1885888a4ceac26925b Mon Sep 17 00:00:00 2001
+From af952ce05b2d9641b16e84a79a59096dee7c6496 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
 Subject: [PATCH 121/353] hrtimers: Prepare full preemption
@@ -211,5 +211,5 @@ index 53ba15a..6084618 100644
  	}
  	list_del(&timer->list);
 -- 
-2.1.4
+2.7.4
 

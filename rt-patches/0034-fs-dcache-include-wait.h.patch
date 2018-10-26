@@ -1,4 +1,4 @@
-From e4b26965b149bff922677b0e09269f4ec41d4c88 Mon Sep 17 00:00:00 2001
+From faf3f9f8a9e3590ef224cd6cc6c6c4ed6fc34eea Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 11:55:23 +0200
 Subject: [PATCH 034/353] fs/dcache: include wait.h
@@ -25,5 +25,5 @@ index 014d7f9..d3d3aca 100644
  struct path;
  struct vfsmount;
 -- 
-2.1.4
+2.7.4
 

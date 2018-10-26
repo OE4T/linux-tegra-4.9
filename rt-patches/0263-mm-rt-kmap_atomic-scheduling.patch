@@ -1,4 +1,4 @@
-From 7520f1a6ae25b584c53f513d741c37c7f0c23f1b Mon Sep 17 00:00:00 2001
+From addce737bf20091073dbcbbb33d3b97aa7da664c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 28 Jul 2011 10:43:51 +0200
 Subject: [PATCH 263/353] mm, rt: kmap_atomic scheduling
@@ -302,5 +302,5 @@ index 50b4ca6..77518a3 100644
  unsigned int nr_free_highpages (void)
  {
 -- 
-2.1.4
+2.7.4
 

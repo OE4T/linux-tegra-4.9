@@ -1,4 +1,4 @@
-From fa18613f2499f2783e23a154535c9f8f54697d2b Mon Sep 17 00:00:00 2001
+From 1daca6210e2f06bcad42122bf2c1a5de59edd7ff Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
 Subject: [PATCH 015/353] futex: Rework futex_lock_pi() to use
@@ -271,5 +271,5 @@ index 8e81b17..b620aaf 100644
  
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
 -- 
-2.1.4
+2.7.4
 

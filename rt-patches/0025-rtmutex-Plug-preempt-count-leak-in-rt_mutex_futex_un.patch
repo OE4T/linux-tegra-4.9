@@ -1,4 +1,4 @@
-From 50c16b792c280a068f84489fa117bf89ff50aac2 Mon Sep 17 00:00:00 2001
+From bb23e7395a78339eef763680289410b404ae192e Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 5 Apr 2017 10:08:27 +0200
 Subject: [PATCH 025/353] rtmutex: Plug preempt count leak in
@@ -44,5 +44,5 @@ index a8202c7..ed2755b 100644
  	return true; /* call postunlock() */
  }
 -- 
-2.1.4
+2.7.4
 

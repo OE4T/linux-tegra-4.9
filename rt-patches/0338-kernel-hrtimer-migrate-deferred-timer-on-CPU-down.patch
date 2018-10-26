@@ -1,4 +1,4 @@
-From 252c46ec744b9b8ad429fe55b97e8075a8fbe162 Mon Sep 17 00:00:00 2001
+From 65b357f38f14b9a4b9dd174832f12d1e0b6b1d2f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 18 Aug 2017 10:09:09 +0200
 Subject: [PATCH 338/353] kernel/hrtimer: migrate deferred timer on CPU down
@@ -34,5 +34,5 @@ index 4b54fe2..a5b4e9a 100644
  
  int hrtimers_dead_cpu(unsigned int scpu)
 -- 
-2.1.4
+2.7.4
 

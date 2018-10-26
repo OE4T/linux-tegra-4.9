@@ -1,4 +1,4 @@
-From 72be70f56d5c9a737c31bd59630a2c45ea74fa69 Mon Sep 17 00:00:00 2001
+From 979d10c83a063b030f5cd2d2c30823aa7a46c31d Mon Sep 17 00:00:00 2001
 From: Mikulas Patocka <mpatocka@redhat.com>
 Date: Mon, 13 Nov 2017 12:56:53 -0500
 Subject: [PATCH 331/353] locking/rt-mutex: fix deadlock in device mapper /
@@ -77,5 +77,5 @@ index 78a6c4a..b73cd7c 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

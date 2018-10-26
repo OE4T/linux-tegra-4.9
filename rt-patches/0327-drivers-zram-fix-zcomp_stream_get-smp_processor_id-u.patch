@@ -1,4 +1,4 @@
-From 4595bab4ee2d28c3220bf7df2ed2b81d954e4069 Mon Sep 17 00:00:00 2001
+From 398c464e83e89cdc579352e76fc55eeaa8599967 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 23 Aug 2017 11:57:29 +0200
 Subject: [PATCH 327/353] drivers/zram: fix zcomp_stream_get()
@@ -40,5 +40,5 @@ index fa8329a..8c93ee1 100644
  
  int zcomp_compress(struct zcomp_strm *zstrm,
 -- 
-2.1.4
+2.7.4
 

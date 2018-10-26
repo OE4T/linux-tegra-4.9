@@ -1,4 +1,4 @@
-From 2d5965a0bc14f18ff71a6b821dca74b9800bfaf8 Mon Sep 17 00:00:00 2001
+From 1c78ee99e60bb84b0efc8de64ac964b52c59be1f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
 Subject: [PATCH 021/353] rtmutex: Clean up
@@ -152,5 +152,5 @@ index dad9229..722e3cf 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.1.4
+2.7.4
 

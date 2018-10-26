@@ -1,4 +1,4 @@
-From d42c4e446a7f054c603b69f8aa8d17bea1e2296c Mon Sep 17 00:00:00 2001
+From 85515977598feaa262f3d2e59b8151e960c8f735 Mon Sep 17 00:00:00 2001
 From: Marc Kleine-Budde <mkl@pengutronix.de>
 Date: Wed, 5 Mar 2014 00:49:47 +0100
 Subject: [PATCH 061/353] net: sched: Use msleep() instead of yield()
@@ -58,5 +58,5 @@ index 4718809..2cff9e4 100644
  
  void dev_deactivate(struct net_device *dev)
 -- 
-2.1.4
+2.7.4
 

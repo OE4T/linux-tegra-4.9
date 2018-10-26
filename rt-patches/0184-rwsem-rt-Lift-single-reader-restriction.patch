@@ -1,4 +1,4 @@
-From 2907ca35aea13f6558af60f1cdc494e57ecde941 Mon Sep 17 00:00:00 2001
+From 7c48f090d24cb7f6264f4f7b97c78e5d946d0815 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:02 +0200
 Subject: [PATCH 184/353] rwsem/rt: Lift single reader restriction
@@ -478,7 +478,7 @@ index 665754c..6284e3b1 100644
   * @cnt: the atomic which we are to dec
 diff --git a/kernel/locking/rwsem-rt.c b/kernel/locking/rwsem-rt.c
 new file mode 100644
-index 0000000..4a708ffc
+index 0000000..4a708ff
 --- /dev/null
 +++ b/kernel/locking/rwsem-rt.c
 @@ -0,0 +1,268 @@
@@ -751,5 +751,5 @@ index 0000000..4a708ffc
 +	__up_write_unlock(sem, WRITER_BIAS - 1, flags);
 +}
 -- 
-2.1.4
+2.7.4
 

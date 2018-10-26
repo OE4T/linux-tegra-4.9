@@ -1,4 +1,4 @@
-From 3ca2c67b496471a7b6a9c8761c1f089d3e77ea24 Mon Sep 17 00:00:00 2001
+From be01533d5605ef74842d4ccc5ff91aa74581d551 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
 Subject: [PATCH 116/353] mm/zsmalloc: copy with get_cpu_var() and locking
@@ -198,5 +198,5 @@ index e3eb3d4..99ffe21 100644
  	migrate_read_unlock(zspage);
  	unpin_tag(handle);
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 216ee8fc661f76f90b000ecdcfa6d7afdde7b446 Mon Sep 17 00:00:00 2001
+From 7907b320a055b56c0794966cb0a10a62492438b1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
 Subject: [PATCH 305/353] x86: Support for lazy preemption
@@ -81,11 +81,11 @@ index a76dc73..881774b 100644
  	jz	restore_all
  	call	preempt_schedule_irq
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index a29a8da..3d3c914 100644
+index 5110ded..e638ffa 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -488,7 +488,23 @@ retint_kernel:
- 	bt	$9, EFLAGS(%rsp)		/* were interrupts off? */
+ 	btl	$9, EFLAGS(%rsp)		/* were interrupts off? */
  	jnc	1f
  0:	cmpl	$0, PER_CPU_VAR(__preempt_count)
 +#ifndef CONFIG_PREEMPT_LAZY
@@ -235,5 +235,5 @@ index c62e015..0cc71257 100644
 +	DEFINE(_PREEMPT_ENABLED, PREEMPT_ENABLED);
  }
 -- 
-2.1.4
+2.7.4
 

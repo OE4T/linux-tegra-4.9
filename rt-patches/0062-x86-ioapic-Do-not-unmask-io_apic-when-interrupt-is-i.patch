@@ -1,4 +1,4 @@
-From 9cb6987c3c1d5a483ca7aee04281bc2bd899e8fa Mon Sep 17 00:00:00 2001
+From fb4ae93c1b5554a37de140c7833dd1fb829a312b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:27 -0500
 Subject: [PATCH 062/353] x86/ioapic: Do not unmask io_apic when interrupt is
@@ -28,5 +28,5 @@ index d34629d..1e1309d 100644
  		return true;
  	}
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 09fa76bb521a158a86ead1eeea1250319d4d1499 Mon Sep 17 00:00:00 2001
+From e54bf63f64d1a680987b531690a52ff01314893c Mon Sep 17 00:00:00 2001
 From: abhijit <abhijit@nvidia.com>
 Date: Tue, 24 Apr 2018 11:35:30 +0530
 Subject: [PATCH 353/353] futex: fix crash in exit pi path.
@@ -99,5 +99,5 @@ index 8ab0ddd..c407a21 100644
  
  		rt_mutex_futex_unlock(&pi_state->pi_mutex);
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 0e4880f18f42e85f1d01b759390aa6039a10d0ca Mon Sep 17 00:00:00 2001
+From 813f2301119058d4759f22f26b6fc6d193f900f4 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
 Subject: [PATCH 004/353] lockdep: Fix per-cpu static objects
@@ -96,7 +96,7 @@ index 1a5906c..8364a44 100644
  
  /*
 diff --git a/kernel/module.c b/kernel/module.c
-index 6a6ed7f..3a851cb 100644
+index 17456c5..231e0bf 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -677,8 +677,12 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)
@@ -131,5 +131,5 @@ index a42fb6c..88b57ee 100644
  		}
  	}
 -- 
-2.1.4
+2.7.4
 

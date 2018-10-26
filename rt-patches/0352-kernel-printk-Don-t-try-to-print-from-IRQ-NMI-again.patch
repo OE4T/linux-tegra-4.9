@@ -1,4 +1,4 @@
-From 9325b3981105eeb5a804bdd2f8f24b029ab6e764 Mon Sep 17 00:00:00 2001
+From 863841a3415d58cf9d3f09eeeb272a2210c9a5ad Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Thu, 15 Feb 2018 12:28:18 +0200
 Subject: [PATCH 352/353] kernel/printk: Don't try to print from IRQ/NMI
@@ -35,5 +35,5 @@ index 5458b40..077510b 100644
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
 -- 
-2.1.4
+2.7.4
 

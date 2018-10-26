@@ -1,4 +1,4 @@
-From 6ecb0648c59b70a93351e855738aa31f54524dfb Mon Sep 17 00:00:00 2001
+From 7cc92a584bea82d369d3b3e275cc38c47ca70910 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 090/353] signal/x86: Delay calling signals in atomic
@@ -148,5 +148,5 @@ index f6ac037..e47ffc5 100644
   * Nuke all other threads in the group.
   */
 -- 
-2.1.4
+2.7.4
 

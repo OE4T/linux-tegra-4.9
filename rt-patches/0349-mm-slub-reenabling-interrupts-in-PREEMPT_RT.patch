@@ -1,4 +1,4 @@
-From 2b8cffb3fe5f06e90368c567fbbad0f888530551 Mon Sep 17 00:00:00 2001
+From f492ecb036c50412592f137950cfea9351a3c1e0 Mon Sep 17 00:00:00 2001
 From: dmitry pervushin <dpervushin@nvidia.com>
 Date: Thu, 17 Nov 2016 13:39:25 +0100
 Subject: [PATCH 349/353] mm: slub: reenabling interrupts in PREEMPT_RT
@@ -16,7 +16,7 @@ Reviewed-by: Sumeet Gupta <sumeetg@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/mm/slub.c b/mm/slub.c
-index 4c22f10..bf83bb4 100644
+index e7491c1..f065f03 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
 @@ -1543,7 +1543,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
@@ -29,5 +29,5 @@ index 4c22f10..bf83bb4 100644
  #endif
  	if (enableirqs)
 -- 
-2.1.4
+2.7.4
 

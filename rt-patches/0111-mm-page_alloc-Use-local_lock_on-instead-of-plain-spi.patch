@@ -1,4 +1,4 @@
-From f29e477a1705b1c854e29320259b52f54fd48813 Mon Sep 17 00:00:00 2001
+From 5993d0213ae598719c656971a7886ae813a9aee6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 27 Sep 2012 11:11:46 +0200
 Subject: [PATCH 111/353] mm: page_alloc: Use local_lock_on() instead of plain
@@ -29,5 +29,5 @@ index dc76100..f69e852 100644
  # define cpu_lock_irqsave(cpu, flags)		local_irq_save(flags)
  # define cpu_unlock_irqrestore(cpu, flags)	local_irq_restore(flags)
 -- 
-2.1.4
+2.7.4
 

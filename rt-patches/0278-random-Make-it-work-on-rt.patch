@@ -1,4 +1,4 @@
-From e46a967262bbd56cba45c723da1027d8e314baa8 Mon Sep 17 00:00:00 2001
+From f431e5bf68d7a0f9e4992760a0df19bade8f59d3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Aug 2012 20:38:50 +0200
 Subject: [PATCH 278/353] random: Make it work on rt
@@ -143,5 +143,5 @@ index abd3ae7..42d785a 100644
  	}
  
 -- 
-2.1.4
+2.7.4
 

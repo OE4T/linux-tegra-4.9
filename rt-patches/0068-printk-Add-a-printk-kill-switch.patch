@@ -1,4 +1,4 @@
-From bef403499b07042134cd7e2b298137e2e8a6b60c Mon Sep 17 00:00:00 2001
+From f09b4d90e19544845b2c577d33714eb7ad5fd37b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
 Subject: [PATCH 068/353] printk: Add a printk kill switch
@@ -168,5 +168,5 @@ index 12b8dd6..4c90d2e 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-2.1.4
+2.7.4
 

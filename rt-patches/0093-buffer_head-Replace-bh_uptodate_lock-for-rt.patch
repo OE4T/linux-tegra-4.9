@@ -1,4 +1,4 @@
-From 48f688c0945818aab1f45c633c74c49d036ffd4e Mon Sep 17 00:00:00 2001
+From 83d22b09c2a961c74a8c782dfe8e6dfba2ddc95e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 09:18:52 +0100
 Subject: [PATCH 093/353] buffer_head: Replace bh_uptodate_lock for -rt
@@ -167,5 +167,5 @@ index 4431ea2..87c4ed3 100644
   * macro tricks to expand the set_buffer_foo(), clear_buffer_foo()
   * and buffer_foo() functions.
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From b75eea06c45d1ad4ae6ec3bdf3b89f582b9ec2c5 Mon Sep 17 00:00:00 2001
+From e65e816ecb0e98570a34b6ba5299a6a23e97a0cb Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Fri, 21 Jun 2013 15:07:25 -0400
 Subject: [PATCH 095/353] list_bl: Make list head locking RT safe
@@ -115,5 +115,5 @@ index cb48330..d3af099 100644
  
  static inline bool hlist_bl_is_locked(struct hlist_bl_head *b)
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From cf0a04b64d1035f1e46d5f533b4aa0a9fd5a5b76 Mon Sep 17 00:00:00 2001
+From 46a7ed7ded678ea85da2c225f53a6d74f144a212 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:18:01 +0100
 Subject: [PATCH 157/353] kernel: migrate_disable() do fastpath in atomic &
@@ -35,5 +35,5 @@ index d6d3afb..e0963e7 100644
  		p->migrate_disable_atomic--;
  #endif
 -- 
-2.1.4
+2.7.4
 

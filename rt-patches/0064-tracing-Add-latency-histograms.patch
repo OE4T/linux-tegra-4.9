@@ -1,4 +1,4 @@
-From 8ac99ad1a2c5c72f90b74b7a318089689ceeaf7d Mon Sep 17 00:00:00 2001
+From 82fad35367ab11fc6e6438b68c60ee6b7d27c48e Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
 Subject: [PATCH 064/353] tracing: Add latency histograms
@@ -1844,5 +1844,5 @@ index 03cdff8..0b5947e 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-2.1.4
+2.7.4
 

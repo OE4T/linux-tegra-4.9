@@ -1,4 +1,4 @@
-From 20284d425742a72b457de79b8ee518903327877e Mon Sep 17 00:00:00 2001
+From 02e4bc33f420d732fb12bdc94ad445682f894fbb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Jul 2009 23:06:05 +0200
 Subject: [PATCH 085/353] core: Do not disable interrupts on RT in
@@ -31,5 +31,5 @@ index b069ccb..1a2e88e 100644
  
  struct user_struct *alloc_uid(kuid_t uid)
 -- 
-2.1.4
+2.7.4
 

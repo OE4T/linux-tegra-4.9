@@ -287,3 +287,6 @@ config EZNPS_GIC
 config STM32_EXTI
 	bool
 	select IRQ_DOMAIN
+
+config MINIMAL_GIC_INIT
+	def_bool n

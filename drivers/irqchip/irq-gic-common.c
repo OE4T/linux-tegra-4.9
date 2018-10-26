@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2002 ARM Limited, All Rights Reserved.
+ * Copyright (C) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -112,9 +113,10 @@ void gic_dist_config(void __iomem *base, int gic_irqs,
 	/*
 	 * Set priority on all global interrupts.
 	 */
+#ifndef CONFIG_MINIMAL_GIC_INIT
 	for (i = 32; i < gic_irqs; i += 4)
 		writel_relaxed(GICD_INT_DEF_PRI_X4, base + GIC_DIST_PRI + i);
-
+#endif
 	/*
 	 * Deactivate and disable all SPIs. Leave the PPI and SGIs
 	 * alone as they are in the redistributor registers on GICv3.

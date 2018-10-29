@@ -734,7 +734,7 @@ static int tegra_aon_shub_setup(struct tegra_aon_shub *shub,
 
 		ngpios = of_property_count_u32_elems(cn, "gpios");
 		if (ngpios < 0) {
-			dev_err(dev, "missing <%s> property\n", "gpio");
+			dev_err(dev, "missing <%s> property\n", "gpios");
 			return ngpios;
 		}
 

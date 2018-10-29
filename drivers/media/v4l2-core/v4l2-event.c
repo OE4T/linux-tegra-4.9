@@ -119,6 +119,14 @@ static void __v4l2_event_queue_fh(struct v4l2_fh *fh, const struct v4l2_event *e
 	if (sev == NULL)
 		return;
 
+	/*
+	 * If the event has been added to the fh->subscribed list, but its
+	 * add op has not completed yet elems will be 0, treat this as
+	 * not being subscribed.
+	 */
+	if (!sev->elems)
+		return;
+
 	/* Increase event sequence number on fh. */
 	fh->sequence++;
 
@@ -204,7 +212,6 @@ int v4l2_event_subscribe(struct v4l2_fh *fh,
 	struct v4l2_subscribed_event *sev, *found_ev;
 	unsigned long flags;
 	unsigned i;
-	int ret = 0;
 
 	if (sub->type == V4L2_EVENT_ALL)
 		return -EINVAL;
@@ -222,36 +229,31 @@ int v4l2_event_subscribe(struct v4l2_fh *fh,
 	sev->flags = sub->flags;
 	sev->fh = fh;
 	sev->ops = ops;
-	sev->elems = elems;
-
-	mutex_lock(&fh->subscribe_lock);
 
 	spin_lock_irqsave(&fh->vdev->fh_lock, flags);
 	found_ev = v4l2_event_subscribed(fh, sub->type, sub->id);
+	if (!found_ev)
+		list_add(&sev->list, &fh->subscribed);
 	spin_unlock_irqrestore(&fh->vdev->fh_lock, flags);
 
 	if (found_ev) {
-		/* Already listening */
 		kfree(sev);
-		goto out_unlock;
+		return 0; /* Already listening */
 	}
 
 	if (sev->ops && sev->ops->add) {
-		ret = sev->ops->add(sev, elems);
+		int ret = sev->ops->add(sev, elems);
 		if (ret) {
-			kfree(sev);
-			goto out_unlock;
+			sev->ops = NULL;
+			v4l2_event_unsubscribe(fh, sub);
+			return ret;
 		}
 	}
 
-	spin_lock_irqsave(&fh->vdev->fh_lock, flags);
-	list_add(&sev->list, &fh->subscribed);
-	spin_unlock_irqrestore(&fh->vdev->fh_lock, flags);
+	/* Mark as ready for use */
+	sev->elems = elems;
 
-out_unlock:
-	mutex_unlock(&fh->subscribe_lock);
-
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(v4l2_event_subscribe);
 
@@ -290,8 +292,6 @@ int v4l2_event_unsubscribe(struct v4l2_fh *fh,
 		return 0;
 	}
 
-	mutex_lock(&fh->subscribe_lock);
-
 	spin_lock_irqsave(&fh->vdev->fh_lock, flags);
 
 	sev = v4l2_event_subscribed(fh, sub->type, sub->id);
@@ -308,8 +308,6 @@ int v4l2_event_unsubscribe(struct v4l2_fh *fh,
 
 	if (sev && sev->ops && sev->ops->del)
 		sev->ops->del(sev);
-
-	mutex_unlock(&fh->subscribe_lock);
 
 	kfree(sev);
 

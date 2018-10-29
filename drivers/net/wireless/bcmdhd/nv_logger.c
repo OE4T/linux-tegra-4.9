@@ -73,6 +73,9 @@ void write_log_uninit()
 {
 	pr_info("write_log_uninit\n");
 
+	if (logger_wqueue == NULL)
+		return;
+
 	flush_workqueue(logger_wqueue);
 	destroy_workqueue(logger_wqueue);
 	dhd_log_netlink_deinit();
@@ -270,6 +273,9 @@ void nvlogger_suspend_work()
 void nvlogger_resume_work()
 {
 	pr_info("nvlogger_resume_work\n");
+	if (logger_wqueue == NULL)
+		return;
+
 	enable_file_logging = true;
 }
 
@@ -377,7 +383,8 @@ static ssize_t dhdlog_sysfs_enablelog_store(struct device *dev,
 		dumplogs();
 	} else if (strncmp(buf, "1", 1) == 0 || strncmp(buf, "true", 4) == 0
 		|| strncmp(buf, "yes", 3) == 0) {
-		enable_file_logging = true;
+		if (logger_wqueue != NULL)
+			enable_file_logging = true;
 	}
 
 	return count;

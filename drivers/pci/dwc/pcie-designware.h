@@ -197,12 +197,29 @@ struct dw_pcie_ep {
 	phys_addr_t		phys_base;
 	size_t			addr_size;
 	size_t			page_size;
-	u8			bar_to_atu[6];
-	phys_addr_t		*outbound_addr;
 	unsigned long		ib_window_map;
 	unsigned long		ob_window_map;
 	u32			num_ib_windows;
 	u32			num_ob_windows;
+
+	bool			hw_regs_not_available;
+	struct pci_epf_header	cached_hdr;
+	struct {
+		size_t			size;
+		int			flags;
+		u8			atu_index;
+	}			cached_bars[6];
+	struct {
+		enum pci_barno		bar;
+		dma_addr_t		cpu_addr;
+		enum dw_pcie_as_type	as_type;
+	}			*cached_inbound_atus;
+	struct {
+		phys_addr_t		addr;
+		u64			pci_addr;
+		size_t			size;
+	}			*cached_outbound_atus;
+	u32			cached_msi_flags;
 };
 
 struct dw_pcie_ops {
@@ -251,6 +268,7 @@ int dw_pcie_prog_inbound_atu(struct dw_pcie *pci, int index, int bar,
 void dw_pcie_disable_atu(struct dw_pcie *pci, int index,
 			 enum dw_pcie_region_type type);
 void dw_pcie_setup(struct dw_pcie *pci);
+void dw_pcie_set_regs_available(struct dw_pcie *pci);
 
 static inline void dw_pcie_writel_dbi(struct dw_pcie *pci, u32 reg, u32 val)
 {
@@ -362,6 +380,10 @@ static inline void dw_pcie_ep_linkup(struct dw_pcie_ep *ep)
 static inline int dw_pcie_ep_init(struct dw_pcie_ep *ep)
 {
 	return 0;
+}
+
+static inline void dw_pcie_ep_set_regs_available(struct dw_pcie *pci)
+{
 }
 
 static inline void dw_pcie_ep_exit(struct dw_pcie_ep *ep)

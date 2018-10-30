@@ -1050,6 +1050,8 @@ struct gpu_ops {
 		void (*pmu_init_perfmon_counter)(struct gk20a *g);
 		void (*pmu_pg_idle_counter_config)(struct gk20a *g, u32 pg_engine_id);
 		u32  (*pmu_read_idle_counter)(struct gk20a *g, u32 counter_id);
+		u32  (*pmu_read_idle_intr_status)(struct gk20a *g);
+		void (*pmu_clear_idle_intr_status)(struct gk20a *g);
 		void (*pmu_reset_idle_counter)(struct gk20a *g, u32 counter_id);
 		void (*pmu_dump_elpg_stats)(struct nvgpu_pmu *pmu);
 		void (*pmu_dump_falcon_stats)(struct nvgpu_pmu *pmu);

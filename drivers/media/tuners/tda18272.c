@@ -28,10 +28,6 @@
 #include "tda18272.h"
 #include "tda18272_reg.h"
 
-static unsigned int verbose;
-module_param(verbose, int, 0644);
-MODULE_PARM_DESC(verbose, "Set Verbosity level");
-
 #define __TDA18272_SETFIELD(mask, bitf, val)				\
 	(mask = (mask & (~(((1 << TDA18272_WIDTH_##bitf) - 1) <<	\
 				  TDA18272_OFFST_##bitf))) |		\

@@ -19,6 +19,17 @@
 #include <media/tegra-v4l2-camera.h>
 #include <media/tegracam_core.h>
 
+/* use semantic versioning convention */
+#define TEGRACAM_MAJOR_VERSION 2
+#define TEGRACAM_MINOR_VERSION 0
+#define TEGRACAM_PATCH_VERSION 0
+
+u32 tegracam_version(u8 major, u8 minor, u8 patch)
+{
+	return ((major << 16) | (minor << 8) | patch);
+}
+EXPORT_SYMBOL_GPL(tegracam_version);
+
 struct tegracam_device *to_tegracam_device(struct camera_common_data *data)
 {
 	/* fix this by moving subdev to base struct */
@@ -118,6 +129,13 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	s_data->def_height = s_data->fmt_height =
 		s_data->frmfmt[mode_idx].size.height;
 	s_data->def_clk_freq = signal_props->mclk_freq * 1000;
+
+	/* add version info to identify the right feature set */
+	tc_dev->version = tegracam_version(TEGRACAM_MAJOR_VERSION,
+			TEGRACAM_MINOR_VERSION, TEGRACAM_PATCH_VERSION);
+	dev_info(dev, "tegracam sensor driver:%s_v%d.%d.%d\n",
+			tc_dev->name, TEGRACAM_MAJOR_VERSION,
+			TEGRACAM_MINOR_VERSION, TEGRACAM_PATCH_VERSION);
 
 	return 0;
 }

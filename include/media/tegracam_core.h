@@ -1,7 +1,7 @@
 /**
  * tegracam_core.h - tegra camera framework core utilities
  *
- * Copyright (c) 2017-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 struct tegracam_device {
 	struct camera_common_data	*s_data;
 	struct media_pad		pad;
+	u32 				version;
 	/* variables to be filled by the driver to register */
 	char				name[32];
 	struct i2c_client		*client;
@@ -39,6 +40,7 @@ struct tegracam_device {
 	void	*priv;
 };
 
+u32 tegracam_version(u8 major, u8 minor, u8 patch);
 struct tegracam_device *to_tegracam_device(struct camera_common_data *data);
 
 void tegracam_set_privdata(struct tegracam_device *tc_dev, void *priv);

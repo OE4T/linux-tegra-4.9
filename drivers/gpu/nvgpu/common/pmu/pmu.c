@@ -565,6 +565,7 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	g->pg_gating_cnt += pg_stat_data.gating_cnt;
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
+	g->ops.pmu.pmu_enable_irq(pmu, false);
 	pmu->isr_enabled = false;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 

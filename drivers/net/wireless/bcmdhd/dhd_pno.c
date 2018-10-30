@@ -195,6 +195,42 @@ exit:
 	return err;
 }
 
+bool dhd_is_pno_supported(dhd_pub_t *dhd)
+{
+	dhd_pno_status_info_t *_pno_state;
+
+	if (!dhd || !dhd->pno_state) {
+		DHD_ERROR(("NULL POINTER : %s\n",
+			__FUNCTION__));
+		return FALSE;
+	}
+	_pno_state = PNO_GET_PNOSTATE(dhd);
+	return WLS_SUPPORTED(_pno_state);
+}
+
+int
+dhd_pno_set_mac_oui(dhd_pub_t *dhd, uint8 *oui)
+{
+	int err = BCME_OK;
+	dhd_pno_status_info_t *_pno_state;
+
+	if (!dhd || !dhd->pno_state) {
+		DHD_ERROR(("NULL POINTER : %s\n", __FUNCTION__));
+		return BCME_ERROR;
+	}
+	_pno_state = PNO_GET_PNOSTATE(dhd);
+	if (ETHER_ISMULTI(oui)) {
+		DHD_ERROR(("Expected unicast OUI\n"));
+		err = BCME_ERROR;
+	} else {
+		memcpy(_pno_state->pno_oui, oui, DOT11_OUI_LEN);
+		DHD_PNO(("PNO mac oui to be used - %02x:%02x:%02x\n", _pno_state->pno_oui[0],
+		    _pno_state->pno_oui[1], _pno_state->pno_oui[2]));
+	}
+
+	return err;
+}
+
 static int
 _dhd_pno_set(dhd_pub_t *dhd, const dhd_pno_params_t *pno_params, dhd_pno_mode_t mode)
 {

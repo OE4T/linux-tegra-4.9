@@ -368,6 +368,21 @@ typedef enum gscan_complete_event {
 	WIFI_SCAN_COMPLETE
 } gscan_complete_event_t;
 
+typedef enum {
+	WIFI_SUCCESS = 0,
+	WIFI_ERROR_NONE = 0,
+	WIFI_ERROR_UNKNOWN = -1,
+	WIFI_ERROR_UNINITIALIZED = -2,
+	WIFI_ERROR_NOT_SUPPORTED = -3,
+	WIFI_ERROR_NOT_AVAILABLE = -4,
+	WIFI_ERROR_INVALID_ARGS = -5,
+	WIFI_ERROR_INVALID_REQUEST_ID = -6,
+	WIFI_ERROR_TIMED_OUT = -7,
+	WIFI_ERROR_TOO_MANY_REQUESTS = -8,
+	WIFI_ERROR_OUT_OF_MEMORY = -9,
+	WIFI_ERROR_BUSY = -10,
+} wifi_error;
+
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
 extern int wl_cfgvendor_attach(struct wiphy *wiphy, dhd_pub_t *dhd);
 extern int wl_cfgvendor_detach(struct wiphy *wiphy);

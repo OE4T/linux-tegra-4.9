@@ -452,6 +452,7 @@ typedef union dhd_pno_params {
 #endif /* GSCAN_SUPPORT */
 } dhd_pno_params_t;
 typedef struct dhd_pno_status_info {
+	uint8 pno_oui[DOT11_OUI_LEN];
 	dhd_pub_t *dhd;
 	struct work_struct work;
 	struct mutex pno_mutex;
@@ -516,6 +517,9 @@ extern int dhd_pno_stop_for_hotlist(dhd_pub_t *dhd);
 extern int dhd_pno_event_handler(dhd_pub_t *dhd, wl_event_msg_t *event, void *event_data);
 extern int dhd_pno_init(dhd_pub_t *dhd);
 extern int dhd_pno_deinit(dhd_pub_t *dhd);
+extern bool dhd_is_pno_supported(dhd_pub_t *dhd);
+extern int dhd_dev_pno_set_mac_oui(struct net_device *dev, uint8 *oui);
+extern int dhd_pno_set_mac_oui(dhd_pub_t *dhd, uint8 *oui);
 #ifdef GSCAN_SUPPORT
 extern void * dhd_pno_get_gscan(dhd_pub_t *dhd, dhd_pno_gscan_cmd_cfg_t type, void *info,
                        uint32 *len);

@@ -80,6 +80,31 @@
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
 
+static int wl_cfgvendor_send_cmd_reply(struct wiphy *wiphy,
+	struct net_device *dev, const void  *data, int len)
+{
+	struct sk_buff *skb;
+
+	/* Alloc the SKB for vendor_event */
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, len);
+	if (unlikely(!skb)) {
+		WL_ERR(("skb alloc failed"));
+		return -ENOMEM;
+	}
+
+	/* Push the data to the skb */
+	nla_put_nohdr(skb, len, data);
+
+	return cfg80211_vendor_cmd_reply(skb);
+}
+
+static int wl_cfgvendor_unsupported_feature(struct wiphy *wiphy,
+        struct wireless_dev *wdev, const void  *data, int len)
+{
+	// return unsupported error code
+	return WIFI_ERROR_NOT_SUPPORTED;
+}
+
 static int wl_cfgvendor_set_country(struct wiphy *wiphy,
         struct wireless_dev *wdev, const void  *data, int len)
 {
@@ -158,6 +183,95 @@ exit:
 }
 #endif /* GSCAN_SUPPORT */
 
+static int wl_cfgvendor_get_feature_set(struct wiphy *wiphy,
+	struct wireless_dev *wdev, const void  *data, int len)
+{
+	int err = 0;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	int reply;
+
+	reply = dhd_dev_get_feature_set(bcmcfg_to_prmry_ndev(cfg));
+
+	err =  wl_cfgvendor_send_cmd_reply(wiphy, bcmcfg_to_prmry_ndev(cfg),
+	        &reply, sizeof(int));
+
+	if (unlikely(err))
+		WL_ERR(("Vendor Command reply failed ret:%d \n", err));
+
+	return err;
+}
+
+static int
+wl_cfgvendor_set_pno_mac_oui(struct wiphy *wiphy,
+	struct wireless_dev *wdev, const void  *data, int len)
+{
+	int err = 0;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	int type;
+	uint8 pno_random_mac_oui[DOT11_OUI_LEN];
+
+	type = nla_type(data);
+
+	if (type == ANDR_WIFI_ATTRIBUTE_RANDOM_MAC_OUI) {
+		memcpy(pno_random_mac_oui, nla_data(data), DOT11_OUI_LEN);
+
+		err = dhd_dev_pno_set_mac_oui(bcmcfg_to_prmry_ndev(cfg), pno_random_mac_oui);
+
+		if (unlikely(err))
+			WL_ERR(("Bad OUI, could not set:%d \n", err));
+
+
+	} else {
+		err = -1;
+	}
+
+	return err;
+}
+
+static int wl_cfgvendor_dbg_get_version(struct wiphy *wiphy,
+	struct wireless_dev *wdev, const void *data, int len)
+{
+	int ret = BCME_OK, rem, type;
+	int buf_len = 1024;
+	bool dhd_ver = FALSE;
+	char *buf_ptr;
+	const struct nlattr *iter;
+	gfp_t kflags;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	buf_ptr = kzalloc(buf_len, kflags);
+	if (!buf_ptr) {
+		WL_ERR(("failed to allocate the buffer for version n"));
+		ret = BCME_NOMEM;
+		goto exit;
+	}
+	nla_for_each_attr(iter, data, len, rem) {
+		type = nla_type(iter);
+		switch (type) {
+			case DEBUG_ATTRIBUTE_GET_DRIVER:
+				dhd_ver = TRUE;
+				break;
+			case DEBUG_ATTRIBUTE_GET_FW:
+				dhd_ver = FALSE;
+				break;
+			default:
+				WL_ERR(("Unknown type: %d\n", type));
+				ret = BCME_ERROR;
+				goto exit;
+		}
+	}
+	ret = dhd_os_get_version(bcmcfg_to_prmry_ndev(cfg), dhd_ver, &buf_ptr, buf_len);
+	if (ret < 0) {
+		WL_ERR(("failed to get the version %d\n", ret));
+		goto exit;
+	}
+	ret = wl_cfgvendor_send_cmd_reply(wiphy, bcmcfg_to_prmry_ndev(cfg),
+	        buf_ptr, strlen(buf_ptr));
+exit:
+	kfree(buf_ptr);
+	return ret;
+}
+
 static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 	{
 		{
@@ -166,6 +280,94 @@ static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 		},
 		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.doit = wl_cfgvendor_set_country
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = ANDR_WIFI_SUBCMD_GET_FEATURE_SET
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_get_feature_set
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = ANDR_WIFI_RANDOM_MAC_OUI
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_set_pno_mac_oui
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_VER
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_dbg_get_version
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_RING_STATUS
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_START_LOGGING
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_TRIGGER_MEM_DUMP
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_MEM_DUMP
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_RING_STATUS
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_RING_DATA
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_GET_FEATURE
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = DEBUG_RESET_LOGGING
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_unsupported_feature
 	},
 #ifdef GSCAN_SUPPORT
 	{

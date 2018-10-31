@@ -226,19 +226,31 @@ static void eqos_clock_deinit(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 
-	clk_disable_unprepare(pdata->tx_clk);
-	clk_disable_unprepare(pdata->ptp_ref_clk);
-	clk_disable_unprepare(pdata->rx_clk);
-	clk_disable_unprepare(pdata->axi_clk);
-	clk_disable_unprepare(pdata->axi_cbb_clk);
-	clk_disable_unprepare(pdata->pllrefe_clk);
+	if (!IS_ERR_OR_NULL(pdata->tx_clk))
+		clk_disable_unprepare(pdata->tx_clk);
+	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk))
+		clk_disable_unprepare(pdata->ptp_ref_clk);
+	if (!IS_ERR_OR_NULL(pdata->rx_clk))
+		clk_disable_unprepare(pdata->rx_clk);
+	if (!IS_ERR_OR_NULL(pdata->axi_clk))
+		clk_disable_unprepare(pdata->axi_clk);
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk))
+		clk_disable_unprepare(pdata->axi_cbb_clk);
+	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk))
+		clk_disable_unprepare(pdata->pllrefe_clk);
 
-	devm_clk_put(&pdev->dev, pdata->tx_clk);
-	devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
-	devm_clk_put(&pdev->dev, pdata->rx_clk);
-	devm_clk_put(&pdev->dev, pdata->axi_clk);
-	devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
-	devm_clk_put(&pdev->dev, pdata->pllrefe_clk);
+	if (!IS_ERR_OR_NULL(pdata->tx_clk))
+		devm_clk_put(&pdev->dev, pdata->tx_clk);
+	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk))
+		devm_clk_put(&pdev->dev, pdata->ptp_ref_clk);
+	if (!IS_ERR_OR_NULL(pdata->rx_clk))
+		devm_clk_put(&pdev->dev, pdata->rx_clk);
+	if (!IS_ERR_OR_NULL(pdata->axi_clk))
+		devm_clk_put(&pdev->dev, pdata->axi_clk);
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk))
+		devm_clk_put(&pdev->dev, pdata->axi_cbb_clk);
+	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk))
+		devm_clk_put(&pdev->dev, pdata->pllrefe_clk);
 }
 
 static int eqos_set_ptp_ref_clk(struct eqos_prv_data *pdata,
@@ -277,37 +289,37 @@ int eqos_clock_enable(struct eqos_prv_data *pdata)
 {
 	int ret;
 
-	if (!IS_ERR(pdata->pllrefe_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk)) {
 		ret = clk_prepare_enable(pdata->pllrefe_clk);
 		if (ret < 0)
 			return ret;
 	}
 
-	if (!IS_ERR(pdata->axi_cbb_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk)) {
 		ret = clk_prepare_enable(pdata->axi_cbb_clk);
 		if (ret)
 			goto err_axi_cbb;
 	}
 
-	if (!IS_ERR(pdata->axi_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->axi_clk)) {
 		ret = clk_prepare_enable(pdata->axi_clk);
 		if (ret < 0)
 			goto err_axi;
 	}
 
-	if (!IS_ERR(pdata->rx_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->rx_clk)) {
 		ret = clk_prepare_enable(pdata->rx_clk);
 		if (ret < 0)
 			goto err_rx;
 	}
 
-	if (!IS_ERR(pdata->ptp_ref_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk)) {
 		ret = clk_prepare_enable(pdata->ptp_ref_clk);
 		if (ret < 0)
 			goto err_ptp_ref;
 	}
 
-	if (!IS_ERR(pdata->tx_clk)) {
+	if (!IS_ERR_OR_NULL(pdata->tx_clk)) {
 		ret = clk_prepare_enable(pdata->tx_clk);
 		if (ret < 0)
 			goto err_tx;
@@ -316,19 +328,19 @@ int eqos_clock_enable(struct eqos_prv_data *pdata)
 	return 0;
 
 err_axi_cbb:
-	if (!IS_ERR(pdata->pllrefe_clk))
+	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk))
 		clk_disable_unprepare(pdata->pllrefe_clk);
 err_tx:
-	if (!IS_ERR(pdata->ptp_ref_clk))
+	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk))
 		clk_disable_unprepare(pdata->ptp_ref_clk);
 err_ptp_ref:
-	if (!IS_ERR(pdata->rx_clk))
+	if (!IS_ERR_OR_NULL(pdata->rx_clk))
 		clk_disable_unprepare(pdata->rx_clk);
 err_rx:
-	if (!IS_ERR(pdata->axi_clk))
+	if (!IS_ERR_OR_NULL(pdata->axi_clk))
 		clk_disable_unprepare(pdata->axi_clk);
 err_axi:
-	if (!IS_ERR(pdata->axi_cbb_clk))
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk))
 		clk_disable_unprepare(pdata->axi_cbb_clk);
 
 	return ret;
@@ -336,22 +348,22 @@ err_axi:
 
 void eqos_clock_disable(struct eqos_prv_data *pdata)
 {
-	if (!IS_ERR(pdata->axi_cbb_clk))
+	if (!IS_ERR_OR_NULL(pdata->axi_cbb_clk))
 		clk_disable_unprepare(pdata->axi_cbb_clk);
 
-	if (!IS_ERR(pdata->axi_clk))
+	if (!IS_ERR_OR_NULL(pdata->axi_clk))
 		clk_disable_unprepare(pdata->axi_clk);
 
-	if (!IS_ERR(pdata->rx_clk))
+	if (!IS_ERR_OR_NULL(pdata->rx_clk))
 		clk_disable_unprepare(pdata->rx_clk);
 
-	if (!IS_ERR(pdata->ptp_ref_clk))
+	if (!IS_ERR_OR_NULL(pdata->ptp_ref_clk))
 		clk_disable_unprepare(pdata->ptp_ref_clk);
 
-	if (!IS_ERR(pdata->tx_clk))
+	if (!IS_ERR_OR_NULL(pdata->tx_clk))
 		clk_disable_unprepare(pdata->tx_clk);
 
-	if (!IS_ERR(pdata->pllrefe_clk))
+	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk))
 		clk_disable_unprepare(pdata->pllrefe_clk);
 }
 

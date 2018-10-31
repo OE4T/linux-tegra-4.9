@@ -644,6 +644,13 @@ static int tegra_dc_ext_should_show_background(
 	if (!dc->yuv_bypass || !tegra_dc_is_yuv420_10bpc(&dc->mode))
 		return false;
 
+	/* Bypass for YUV420 10-bit 4k mode expects one or three scaling capable
+	 * windows, depending on chip capabilities. The windows always span
+	 * whole active display area of 2400x2160. dc->mode is already adjusted
+	 * to this dimension. Hence it is only necessary to show a special
+	 * background pattern when display is blank, i.e. all valid windows are
+	 * inactive.
+	 */
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = flip_win->attr.index;
@@ -651,25 +658,11 @@ static int tegra_dc_ext_should_show_background(
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
 			continue;
 
-		if (flip_win->handle[TEGRA_DC_Y] == NULL)
-			continue;
-
-		/* Bypass for YUV420 10-bit 4k mode expects only one or two
-		 * windows, depending on packing scheme. The scheme with two
-		 * windows always spans whole acive display area of 2400x2160.
-		 * dc->mode is already adjusted to this dimension. The scheme
-		 * with single window may span smaller region in 2 pixel
-		 * increments vertically and 5 pixel increments horizontally.
-		 * active area.
-		 */
-		if (flip_win->attr.out_x > 1 ||
-		    flip_win->attr.out_y > 0 ||
-		    flip_win->attr.out_w < dc->mode.h_active-1 ||
-		    flip_win->attr.out_h != dc->mode.v_active)
-			return true;
+		if (flip_win->handle[TEGRA_DC_Y] != NULL)
+			return false;
 	}
 
-	return false;
+	return true;
 }
 
 static int tegra_dc_ext_get_background(struct tegra_dc_ext *ext,
@@ -1202,8 +1195,9 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		}
 	}
 
-	/* YUV packing consumes at most two windows, thus there must have been
-	 * free window which can host background pattern.
+	/* Window with blank background pattern is shown only if all windows
+	 * are inactive, thus there must be free window which can host
+	 * background pattern.
 	 */
 	BUG_ON(show_background);
 

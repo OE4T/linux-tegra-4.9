@@ -660,10 +660,15 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			dc_win->dirty = no_vsync ? 0 : 1;
 			tegra_dc_writel(dc, 0, DC_WIN_WIN_OPTIONS);
 			if (dc->yuv_bypass) {
+				/* Note, that YUV420/10-bit packing does not
+				 * have a simple background color, because the
+				 * bit pattern is not same for each pixel. A
+				 * special background pattern needs to be
+				 * shown instead,
+				 * see tegra_dc_ext_should_show_background().
+				 */
 				if (tegra_dc_is_yuv420_8bpc(&dc->mode))
 					color = RGB_TO_YUV420_8BPC_BLACK_PIX;
-				else if (tegra_dc_is_yuv420_10bpc(&dc->mode))
-					color = RGB_TO_YUV420_10BPC_BLACK_PIX;
 				else if (tegra_dc_is_yuv422_12bpc(&dc->mode))
 					color = RGB_TO_YUV422_10BPC_BLACK_PIX;
 				else if (tegra_dc_is_yuv444_8bpc(&dc->mode))

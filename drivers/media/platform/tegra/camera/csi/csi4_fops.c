@@ -1,7 +1,7 @@
 /*
  * Tegra CSI4 device common APIs
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frankc@nvidia.com>
  *
@@ -574,10 +574,19 @@ static void csi4_override_format(struct tegra_csi_channel *chan, int port_idx)
 
 static int csi4_error_recover(struct tegra_csi_channel *chan, int port_idx)
 {
-	csi4_stop_streaming(chan, port_idx);
-	csi4_start_streaming(chan, port_idx);
+	int err = 0;
+	struct tegra_csi_device *csi = chan->csi;
+	struct tegra_csi_port *port = &chan->ports[0];
 
-	return 0;
+	csi4_stop_streaming(chan, port_idx);
+
+	err = csi4_start_streaming(chan, port_idx);
+	if (err) {
+		dev_err(csi->dev, "failed to restart csi stream %d\n",
+			port->stream_id);
+	}
+
+	return err;
 }
 
 static int csi4_mipi_cal(struct tegra_csi_channel *chan)

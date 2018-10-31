@@ -3,7 +3,7 @@
  *
  * Tegra Media controller common APIs
  *
- * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -182,6 +182,7 @@ struct tegra_channel {
 	unsigned int capture_queue_depth;
 	unsigned int capture_descr_index;
 	unsigned int capture_descr_sequence;
+	unsigned int capture_reqs_enqueued;
 	struct task_struct *kthread_capture_start;
 	struct task_struct *kthread_release;
 	wait_queue_head_t start_wait;
@@ -197,7 +198,6 @@ struct tegra_channel {
 	spinlock_t start_lock;
 	spinlock_t release_lock;
 	spinlock_t dequeue_lock;
-	struct semaphore capture_slots;
 	struct work_struct status_work;
 	struct work_struct error_work;
 
@@ -231,6 +231,7 @@ struct tegra_channel {
 	enum tegra_vi_pg_mode pg_mode;
 	bool bfirst_fstart;
 	enum channel_capture_state capture_state;
+	bool queue_error;
 	spinlock_t capture_state_lock;
 	atomic_t is_streaming;
 	int requested_kbyteps;
@@ -329,6 +330,8 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_channel_cleanup(struct tegra_channel *chan);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
+struct v4l2_subdev *tegra_channel_find_linked_csi_subdev(
+	struct tegra_channel *chan);
 int tegra_vi2_power_on(struct tegra_mc_vi *vi);
 void tegra_vi2_power_off(struct tegra_mc_vi *vi);
 int tegra_vi4_power_on(struct tegra_mc_vi *vi);
@@ -368,6 +371,7 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan,
 	bool requeue);
 struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan);
+int tegra_channel_error_recover(struct tegra_channel *chan, bool queue_error);
 int tegra_channel_alloc_buffer_queue(struct tegra_channel *chan,
 					unsigned int num_buffers);
 void tegra_channel_dealloc_buffer_queue(struct tegra_channel *chan);
@@ -389,6 +393,7 @@ struct tegra_vi_fops {
 	int (*vi_stop_streaming)(struct vb2_queue *vq);
 	int (*vi_setup_queue)(struct tegra_channel *chan,
 			unsigned int *nbuffers);
+	int (*vi_error_recover)(struct tegra_channel *chan, bool queue_error);
 	int (*vi_add_ctrls)(struct tegra_channel *chan);
 	void (*vi_init_video_formats)(struct tegra_channel *chan);
 	long (*vi_default_ioctl)(struct file *file, void *fh,

@@ -355,6 +355,23 @@ static void csi5_stop_streaming(struct tegra_csi_channel *chan, int port_idx)
 	csi5_stream_close(chan, st_id, csi_pt);
 }
 
+static int csi5_error_recover(struct tegra_csi_channel *chan, int port_idx)
+{
+	int err = 0;
+	struct tegra_csi_device *csi = chan->csi;
+	struct tegra_csi_port *port = &chan->ports[0];
+
+	csi5_stop_streaming(chan, port_idx);
+
+	err = csi5_start_streaming(chan, port_idx);
+	if (err) {
+		dev_err(csi->dev, "failed to restart csi stream %d\n",
+			csi5_port_to_stream(port->csi_port));
+	}
+
+	return err;
+}
+
 static int csi5_mipi_cal(struct tegra_csi_channel *chan)
 {
 	unsigned int lanes, num_ports, csi_port, addr;
@@ -458,6 +475,7 @@ struct tegra_csi_fops csi5_fops = {
 	.csi_power_off = csi5_power_off,
 	.csi_start_streaming = csi5_start_streaming,
 	.csi_stop_streaming = csi5_stop_streaming,
+	.csi_error_recover = csi5_error_recover,
 	.mipical = csi5_mipi_cal,
 	.hw_init = csi5_hw_init,
 };

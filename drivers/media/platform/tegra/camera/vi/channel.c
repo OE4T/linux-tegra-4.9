@@ -402,6 +402,7 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 	chan->bfirst_fstart = false;
 	chan->capture_descr_index = 0;
 	chan->capture_descr_sequence = 0;
+	chan->queue_error = false;
 }
 
 void free_ring_buffers(struct tegra_channel *chan, int frames)
@@ -569,6 +570,27 @@ struct tegra_channel_buffer *dequeue_dequeue_buffer(struct tegra_channel *chan)
 done:
 	spin_unlock(&chan->dequeue_lock);
 	return buf;
+}
+
+int tegra_channel_error_recover(struct tegra_channel *chan, bool queue_error)
+{
+	struct tegra_mc_vi *vi = chan->vi;
+	int err = 0;
+
+	if (!(vi->fops && vi->fops->vi_error_recover)) {
+		err = -EIO;
+		goto done;
+	}
+
+	dev_warn(vi->dev, "err_rec: attempting to reset the capture channel\n");
+
+	err = vi->fops->vi_error_recover(chan, queue_error);
+	if (!err)
+		dev_warn(vi->dev,
+			"err_rec: successfully reset the capture channel\n");
+
+done:
+	return err;
 }
 
 /*
@@ -1727,6 +1749,22 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 fail:
 	tegra_channel_free_sensor_properties(chan->subdev_on_csi);
 	return ret;
+}
+
+struct v4l2_subdev *tegra_channel_find_linked_csi_subdev(
+	struct tegra_channel *chan)
+{
+	struct tegra_csi_device *csi = tegra_get_mc_csi();
+	struct tegra_csi_channel *csi_it;
+	int i = 0;
+
+	list_for_each_entry(csi_it, &csi->csi_chans, list) {
+		for (i = 0; i < chan->num_subdevs; i++)
+			if (chan->subdev[i] == &csi_it->subdev)
+				return chan->subdev[i];
+	}
+
+	return NULL;
 }
 
 static int

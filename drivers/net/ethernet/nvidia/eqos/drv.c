@@ -3753,7 +3753,10 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	struct platform_device *pdev = pdata->pdev;
 	int max_frame = (new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
 
-	pr_debug("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
+	if (!netif_running(dev)) {
+		dev_info(&pdev->dev, "network interface is not running\n");
+		return 0;
+	}
 
 #ifdef EQOS_CONFIG_PGTEST
 	dev_err(&pdev->dev, "jumbo frames not supported with PG test\n");
@@ -3778,9 +3781,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev_info(&pdev->dev, "changing MTU from %d to %d\n", dev->mtu, new_mtu);
 
-	mutex_lock(&pdata->hw_change_lock);
-	if (!pdata->hw_stopped)
-		eqos_stop_dev(pdata);
+	eqos_close(dev);
 
 	if (max_frame <= 2048) {
 		pdata->rx_buffer_len = 2048;
@@ -3791,14 +3792,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev->mtu = new_mtu;
 
-	if (!pdata->hw_stopped)
-		eqos_start_dev(pdata);
-
-	mutex_unlock(&pdata->hw_change_lock);
-
-	pr_debug("<--eqos_change_mtu\n");
-
-	return 0;
+	return eqos_open(dev);
 }
 
 #ifdef EQOS_QUEUE_SELECT_ALGO

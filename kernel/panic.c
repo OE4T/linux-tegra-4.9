@@ -25,9 +25,12 @@
 #include <linux/nmi.h>
 #include <linux/console.h>
 #include <linux/bug.h>
+#include <soc/tegra/pmc.h>
 
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
+#define APBDEV_PMC_SCRATCH37_0		0x374
+#define SCRATCH_KERNEL_PANIC_FLAG	BIT(24)
 
 int panic_on_oops = CONFIG_PANIC_ON_OOPS_VALUE;
 static unsigned long tainted_mask;
@@ -131,6 +134,7 @@ void panic(const char *fmt, ...)
 {
 	static char buf[1024];
 	va_list args;
+	u32 pmc_reg_val = 0;
 	long i, i_next = 0;
 	int state = 0;
 	int old_cpu, this_cpu;
@@ -165,6 +169,8 @@ void panic(const char *fmt, ...)
 	if (old_cpu != PANIC_CPU_INVALID && old_cpu != this_cpu)
 		panic_smp_self_stop();
 
+	pmc_reg_val = tegra_pmc_readl(APBDEV_PMC_SCRATCH37_0);
+	tegra_pmc_writel((pmc_reg_val | SCRATCH_KERNEL_PANIC_FLAG), APBDEV_PMC_SCRATCH37_0);
 	console_verbose();
 	bust_spinlocks(1);
 	va_start(args, fmt);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
 #include "dt-bindings/input/input.h"
 #include "tegra194-audio-p2822-0000.dtsi"
 #include "tegra194-p2822-disp.dtsi"
-#include "tegra194-p2822-camera-modules.dtsi"
 
 / {
 	sdhci@3400000 {

@@ -32,6 +32,7 @@ int convert_table_to_blob(struct sensor_blob *pkt,
 			const struct reg_8 table[],
 			u16 wait_ms_addr, u16 end_addr);
 int write_sensor_blob(struct regmap *regmap, struct sensor_blob *blob);
+int tegracam_write_blobs(struct tegracam_ctrl_handler *hdl);
 
 bool is_tvcf_supported(u32 version);
 

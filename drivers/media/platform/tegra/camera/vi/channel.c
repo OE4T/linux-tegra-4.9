@@ -33,6 +33,7 @@
 #include <media/videobuf2-dma-contig.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
+#include <media/tegracam_utils.h>
 #include <media/tegra_camera_platform.h>
 #include <media/v4l2-dv-timings.h>
 #include <media/vi.h>
@@ -800,6 +801,29 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
  * subdevice set/unset operations
  * -----------------------------------------------------------------------------
  */
+int tegra_channel_write_blobs(struct tegra_channel *chan)
+{
+	struct v4l2_subdev *sd = NULL;
+	struct camera_common_data *s_data = NULL;
+
+	/* for TPG, do nothing */
+	if (chan->pg_mode)
+		return 0;
+
+	sd = chan->subdev_on_csi;
+	if (!sd)
+		return -EINVAL;
+
+	s_data = to_camera_common_data(sd->dev);
+	if (!s_data)
+		return -EINVAL;
+
+	if (!is_tvcf_supported(s_data->version))
+		return 0;
+
+	return tegracam_write_blobs(s_data->tegracam_ctrl_hdl);
+}
+
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
 	int num_sd;
@@ -807,7 +831,6 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 	int err = 0;
 	int max_deskew_attempts = 5;
 	int deskew_attempts = 0;
-
 	struct v4l2_subdev *sd;
 
 	if (atomic_read(&chan->is_streaming) == on)
@@ -1437,7 +1460,7 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 
     /* Clear and reinit control handler - Bug 1956853 */
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
-	v4l2_ctrl_handler_init(&chan->ctrl_handler, 0);
+	v4l2_ctrl_handler_init(&chan->ctrl_handler, MAX_CID_CONTROLS);
 
 	/* Initialize the subdev and controls here at first open */
 	sd = chan->subdev[num_sd];

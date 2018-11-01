@@ -365,6 +365,7 @@ const struct tegra_video_format *tegra_core_get_format_by_fourcc(
 void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 	enum vb2_buffer_state state, bool multi_queue);
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
+int tegra_channel_write_blobs(struct tegra_channel *chan);
 void tegra_channel_ring_buffer(struct tegra_channel *chan,
 			       struct vb2_v4l2_buffer *vb,
 			       struct timespec *ts, int state);

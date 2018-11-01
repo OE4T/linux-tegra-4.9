@@ -38,6 +38,10 @@
 #define TEGRA_CAMERA_CID_FRAME_RATE		(TEGRA_CAMERA_CID_BASE+11)
 #define TEGRA_CAMERA_CID_EXPOSURE_SHORT		(TEGRA_CAMERA_CID_BASE+12)
 
+#define TEGRA_CAMERA_CID_SENSOR_CONFIG		(TEGRA_CAMERA_CID_BASE+50)
+#define TEGRA_CAMERA_CID_SENSOR_MODE_BLOB	(TEGRA_CAMERA_CID_BASE+51)
+#define TEGRA_CAMERA_CID_SENSOR_CONTROL_BLOB	(TEGRA_CAMERA_CID_BASE+52)
+
 #define TEGRA_CAMERA_CID_VI_BYPASS_MODE		(TEGRA_CAMERA_CID_BASE+100)
 #define TEGRA_CAMERA_CID_OVERRIDE_ENABLE	(TEGRA_CAMERA_CID_BASE+101)
 #define TEGRA_CAMERA_CID_VI_HEIGHT_ALIGN	(TEGRA_CAMERA_CID_BASE+102)
@@ -58,7 +62,7 @@
 #define TEGRA_CAMERA_CID_SENSOR_MODES		(TEGRA_CAMERA_CID_BASE + 130)
 
 #define MAX_BUFFER_SIZE			32
-#define MAX_CID_CONTROLS		16
+#define MAX_CID_CONTROLS		32
 #define MAX_NUM_SENSOR_MODES		30
 #define OF_MAX_STR_LEN			256
 #define OF_SENSORMODE_PREFIX ("mode")
@@ -162,5 +166,10 @@ struct sensor_mode_properties {
 	(sizeof(struct sensor_dv_timings) / sizeof(__u32))
 #define SENSOR_MODE_PROPERTIES_CID_SIZE \
 	(sizeof(struct sensor_mode_properties) / sizeof(__u32))
-
+#define SENSOR_CONFIG_SIZE \
+	(sizeof(struct sensor_cfg) / sizeof(__u32))
+#define SENSOR_MODE_BLOB_SIZE \
+	(sizeof(struct sensor_blob) / sizeof(__u32))
+#define SENSOR_CTRL_BLOB_SIZE \
+	(sizeof(struct sensor_blob) / sizeof(__u32))
 #endif /* __TEGRA_V4L2_CAMERA__ */

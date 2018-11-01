@@ -538,6 +538,10 @@ static int tegra_channel_capture_frame_single_thread(
 		err = tegra_channel_set_stream(chan, true);
 		if (err < 0)
 			return err;
+
+		err = tegra_channel_write_blobs(chan);
+		if (err < 0)
+			return err;
 	}
 
 	for (i = 0; i < chan->valid_ports; i++) {
@@ -589,6 +593,10 @@ static int tegra_channel_capture_frame_multi_thread(
 
 		chan->capture_version = restart_version;
 		err = tegra_channel_set_stream(chan, true);
+		if (err < 0)
+			return err;
+
+		err = tegra_channel_write_blobs(chan);
 		if (err < 0)
 			return err;
 	}
@@ -949,6 +957,10 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
+
+		ret = tegra_channel_write_blobs(chan);
+		if (ret < 0)
+			goto error_set_stream;
 		return ret;
 	}
 
@@ -1054,8 +1066,10 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	return 0;
 
 error_capture_setup:
-	if (!chan->pg_mode)
+	if (!chan->pg_mode) {
 		tegra_channel_set_stream(chan, false);
+		tegra_channel_write_blobs(chan);
+	}
 error_set_stream:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
@@ -1073,6 +1087,7 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	bool is_streaming = atomic_read(&chan->is_streaming);
 	int i;
+	int err = 0;
 
 	for (i = 0; i < chan->valid_ports; i++) {
 		if (chan->vnc_id[i] == -1)
@@ -1103,6 +1118,11 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 	}
 
 	tegra_channel_set_stream(chan, false);
+
+	err = tegra_channel_write_blobs(chan);
+	if (err < 0)
+		return err;
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 #endif

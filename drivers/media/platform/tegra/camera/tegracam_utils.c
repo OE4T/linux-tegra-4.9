@@ -210,3 +210,38 @@ int write_sensor_blob(struct regmap *regmap, struct sensor_blob *blob)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(write_sensor_blob);
+
+int tegracam_write_blobs(struct tegracam_ctrl_handler *hdl)
+{
+	struct camera_common_data *s_data = hdl->tc_dev->s_data;
+	struct tegracam_sensor_data *sensor_data = &hdl->sensor_data;
+	struct sensor_blob *ctrl_blob = &sensor_data->ctrls_blob;
+	struct sensor_blob *mode_blob = &sensor_data->mode_blob;
+	const struct tegracam_ctrl_ops *ops = hdl->ctrl_ops;
+	int err = 0;
+
+	if (!ops->is_blob_supported)
+		return 0;
+
+	/*
+	 * TODO: Extend this to multiple subdevices
+	 * mode blob commands can be zero for auto control updates
+	 * and stop streaming cases
+	 */
+	if (mode_blob->num_cmds) {
+		err = write_sensor_blob(s_data->regmap, mode_blob);
+		if (err) {
+			dev_err(s_data->dev, "Error writing mode blob\n");
+			return err;
+		}
+	}
+
+	err = write_sensor_blob(s_data->regmap, ctrl_blob);
+	if (err) {
+		dev_err(s_data->dev, "Error writing control blob\n");
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegracam_write_blobs);

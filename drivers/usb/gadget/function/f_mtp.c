@@ -545,16 +545,19 @@ static ssize_t mtp_read(struct file *fp, char __user *buf,
 	int ret = 0;
 	size_t len = 0;
 
-	DBG(cdev, "mtp_read(%zu)\n", count);
+	if (cdev)
+		DBG(cdev, "%s(%zu)\n", __func__, count);
 
 	/* we will block until we're online */
-	DBG(cdev, "mtp_read: waiting for online state\n");
+	if (cdev)
+		DBG(cdev, "%s: waiting for online state\n", __func__);
 	ret = wait_event_interruptible(dev->read_wq,
 		dev->state != STATE_OFFLINE);
 	if (ret < 0) {
 		r = ret;
 		goto done;
 	}
+	cdev = dev->cdev;
 	spin_lock_irq(&dev->lock);
 	if (dev->ep_out->desc) {
 		len = usb_ep_align_maybe(cdev->gadget, dev->ep_out, count);
@@ -614,7 +617,8 @@ done:
 		dev->state = STATE_READY;
 	spin_unlock_irq(&dev->lock);
 
-	DBG(cdev, "mtp_read returning %zd\n", r);
+	if (cdev)
+		DBG(cdev, "%s returning %zd\n", __func__, r);
 	return r;
 }
 

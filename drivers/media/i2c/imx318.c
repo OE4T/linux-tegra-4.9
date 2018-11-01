@@ -27,6 +27,7 @@
 
 #include <media/tegra_v4l2_camera.h>
 #include <media/tegracam_core.h>
+#include <media/tegracam_utils.h>
 #include <media/imx318.h>
 
 #include "../platform/tegra/camera/camera_gpio.h"
@@ -109,68 +110,31 @@ static inline void imx318_get_gain_reg(imx318_reg *regs,
 static int test_mode;
 module_param(test_mode, int, 0644);
 
-static inline int imx318_read_reg(struct camera_common_data *s_data,
-				u16 addr, u8 *val)
-{
-	int err = 0;
-	u32 reg_val = 0;
-
-	err = regmap_read(s_data->regmap, addr, &reg_val);
-	*val = reg_val & 0xFF;
-
-	return err;
-}
-
-static int imx318_write_reg(struct camera_common_data *s_data,
-				u16 addr, u8 val)
-{
-	int err;
-
-	err = regmap_write(s_data->regmap, addr, val);
-	if (err)
-		dev_err(s_data->dev, "%s:i2c write failed, 0x%x = %x\n",
-			__func__, addr, val);
-
-	return err;
-}
-
 static int imx318_write_table(struct imx318 *priv,
+				struct sensor_blob *blob,
 				const imx318_reg table[])
 {
-	return regmap_util_write_table_8(priv->s_data->regmap,
-						table,
-						NULL, 0,
-						IMX318_TABLE_WAIT_MS,
-						IMX318_TABLE_END);
+	return convert_table_to_blob(blob, table,
+				IMX318_TABLE_WAIT_MS, IMX318_TABLE_END);
 }
 
-static int imx318_set_group_hold(struct tegracam_device *tc_dev, bool val)
+static int imx318_set_group_hold_ex(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, bool val)
 {
-	struct camera_common_data *s_data = tc_dev->s_data;
-	struct device *dev = tc_dev->dev;
-	int err;
+	u8 reg_val = val;
 
-	err = imx318_write_reg(s_data,
-				IMX318_GROUP_HOLD_ADDR, val);
-	if (err) {
-		dev_dbg(dev,
-			"%s: Group hold control error\n", __func__);
-		return err;
-	}
-
-	return 0;
+	return prepare_write_cmd(blob, 1, IMX318_GROUP_HOLD_ADDR, &reg_val);
 }
 
-static int imx318_set_gain(struct tegracam_device *tc_dev, s64 val)
+static int imx318_set_gain_ex(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
-	struct device *dev = tc_dev->dev;
+	struct device *dev = s_data->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
-	imx318_reg reg_list[2];
-	int err;
 	s16 gain;
-	int i;
+	u8 gain_arr[2];
 
 	if (val < mode->control_properties.min_gain_val)
 		val = mode->control_properties.min_gain_val;
@@ -187,66 +151,50 @@ static int imx318_set_gain(struct tegracam_device *tc_dev, s64 val)
 	dev_dbg(dev,
 		"%s: gain reg: %d, times: %lld\n", __func__, gain, val);
 
-	imx318_get_gain_reg(reg_list, gain);
-
-	for (i = 0; i < 2; i++) {
-		err = imx318_write_reg(s_data, reg_list[i].addr,
-				reg_list[i].val);
-		if (err) {
-			dev_dbg(dev,
-				"%s:%d GAIN control error\n", __func__, i);
-			return err;
-		}
-	}
-
-	return 0;
+	conv_u16_u8arr(gain, &gain_arr[0]);
+	return prepare_write_cmd(blob, 2, IMX318_GAIN_ADDR_MSB, gain_arr);
 }
 
-static int imx318_set_frame_rate(struct tegracam_device *tc_dev, s64 val)
+static int imx318_set_frame_rate_ex(struct tegracam_device *tc_dev,
+				struct sensor_blob *blob, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
-	imx318_reg reg_list[2];
-	int err;
 	u32 frame_length;
-	int i;
+	u8 fl_arr[2];
+	int err = 0;
 
 	frame_length = (u32)(mode->signal_properties.pixel_clock.val *
 		(u64)mode->control_properties.framerate_factor /
 		mode->image_properties.line_length / val);
 
-	imx318_get_frame_length_regs(reg_list, frame_length);
 	dev_dbg(dev,
 		"%s: val:%d\n", __func__, frame_length);
 
-	for (i = 0; i < 2; i++) {
-		err = imx318_write_reg(s_data, reg_list[i].addr,
-				reg_list[i].val);
-		if (err)
-			dev_dbg(dev,
-				"%s: FRAME_LENGTH control error\n", __func__);
-			return err;
-	}
+	conv_u16_u8arr((u16)frame_length, &fl_arr[0]);
+	err = prepare_write_cmd(blob, 2, IMX318_FRAME_LENGTH_ADDR_MSB, fl_arr);
+	if (err)
+		return err;
 
 	priv->frame_length = frame_length;
+
 	return 0;
 }
 
-static int imx318_set_exposure(struct tegracam_device *tc_dev, s64 val)
+static int imx318_set_exposure_ex(struct tegracam_device *tc_dev,
+				struct sensor_blob *blob, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct imx318 *priv = (struct imx318 *)tc_dev->priv;
 	struct device *dev = tc_dev->dev;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
-	imx318_reg reg_list[3];
-	int err = 0;
 	u32 coarse_time;
+	u8 ct_arr[2];
 	s32 max_coarse_time = priv->frame_length - IMX318_MAX_COARSE_DIFF;
-	int i;
 
 	coarse_time = mode->signal_properties.pixel_clock.val *
 		val / mode->image_properties.line_length /
@@ -259,19 +207,10 @@ static int imx318_set_exposure(struct tegracam_device *tc_dev, s64 val)
 				__func__, max_coarse_time);
 	}
 
-	imx318_get_coarse_time_regs(reg_list, coarse_time);
+	conv_u16_u8arr((u16)coarse_time, &ct_arr[0]);
 
-	for (i = 0; i < 2; i++) {
-		err = imx318_write_reg(s_data, reg_list[i].addr,
-				reg_list[i].val);
-		if (err) {
-			dev_dbg(dev,
-				"%s: COARSE_TIME control error\n", __func__);
-			return err;
-		}
-	}
-
-	return err;
+	return prepare_write_cmd(blob, 2,
+			IMX318_COARSE_INTEG_TIME_ADDR_MSB, ct_arr);
 }
 
 static int imx318_fill_string_ctrl(struct tegracam_device *tc_dev,
@@ -302,13 +241,14 @@ static int imx318_fill_string_ctrl(struct tegracam_device *tc_dev,
 
 static struct tegracam_ctrl_ops imx318_ctrl_ops = {
 	.numctrls = ARRAY_SIZE(ctrl_cid_list),
+	.is_blob_supported = true,
 	.ctrl_cid_list = ctrl_cid_list,
 	.string_ctrl_size = { IMX318_EEPROM_STR_SIZE,
 				IMX318_FUSE_ID_STR_SIZE},
-	.set_gain = imx318_set_gain,
-	.set_exposure = imx318_set_exposure,
-	.set_frame_rate = imx318_set_frame_rate,
-	.set_group_hold = imx318_set_group_hold,
+	.set_gain_ex = imx318_set_gain_ex,
+	.set_exposure_ex = imx318_set_exposure_ex,
+	.set_frame_rate_ex = imx318_set_frame_rate_ex,
+	.set_group_hold_ex = imx318_set_group_hold_ex,
 	.fill_string_ctrl = imx318_fill_string_ctrl,
 };
 
@@ -558,13 +498,18 @@ static int imx318_set_mode(struct tegracam_device *tc_dev)
 {
 	struct imx318 *priv = (struct imx318 *)tegracam_get_privdata(tc_dev);
 	struct camera_common_data *s_data = tc_dev->s_data;
+	struct tegracam_sensor_data *sensor_data =
+				&s_data->tegracam_ctrl_hdl->sensor_data;
+	struct sensor_blob *mode_blob = &sensor_data->mode_blob;
 	int err;
 
-	err = imx318_write_table(priv, mode_table[IMX318_MODE_COMMON]);
+	err = imx318_write_table(priv, mode_blob,
+			mode_table[IMX318_MODE_COMMON]);
 	if (err)
 		return err;
 
-	err = imx318_write_table(priv, mode_table[s_data->mode]);
+	err = imx318_write_table(priv, mode_blob,
+			mode_table[s_data->mode]);
 	if (err)
 		return err;
 
@@ -574,34 +519,40 @@ static int imx318_set_mode(struct tegracam_device *tc_dev)
 static int imx318_start_streaming(struct tegracam_device *tc_dev)
 {
 	struct imx318 *priv = (struct imx318 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct tegracam_sensor_data *sensor_data =
+				&s_data->tegracam_ctrl_hdl->sensor_data;
+	struct sensor_blob *ctrl_blob = &sensor_data->ctrls_blob;
 	int err;
 
-	err = imx318_write_table(priv, mode_table[IMX318_MODE_START_STREAM]);
+	err = imx318_write_table(priv, ctrl_blob,
+			mode_table[IMX318_MODE_START_STREAM]);
 	if (err)
 		return err;
 
-	usleep_range(10000, 10010); /* from tegrashell */
-
-	return 0;
+	return prepare_sleep_cmd(ctrl_blob, 10000);
 }
 
 static int imx318_stop_streaming(struct tegracam_device *tc_dev)
 {
 	struct imx318 *priv = (struct imx318 *)tegracam_get_privdata(tc_dev);
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct tegracam_sensor_data *sensor_data =
+				&s_data->tegracam_ctrl_hdl->sensor_data;
+	struct sensor_blob *ctrl_blob = &sensor_data->ctrls_blob;
 	int err;
 
-	err = imx318_write_table(priv, mode_table[IMX318_MODE_STOP_STREAM]);
+	err = imx318_write_table(priv, ctrl_blob,
+			mode_table[IMX318_MODE_STOP_STREAM]);
 	if (err)
 		return err;
 	/*
 	 * Wait for one frame to make sure sensor is set to
 	 * software standby in V-blank
 	 *
-	 * delay = frame length rows * Tline (10 us)
+	 * delay = frame length rows * Tline (10 us) / 1000
 	 */
-	usleep_range(priv->frame_length * 10, priv->frame_length * 10 + 1000);
-
-	return 0;
+	return prepare_sleep_cmd(ctrl_blob, (priv->frame_length * 10));
 }
 
 static struct camera_common_sensor_ops imx318_common_ops = {
@@ -609,8 +560,6 @@ static struct camera_common_sensor_ops imx318_common_ops = {
 	.frmfmt_table = imx318_frmfmt,
 	.power_on = imx318_power_on,
 	.power_off = imx318_power_off,
-	.write_reg = imx318_write_reg,
-	.read_reg = imx318_read_reg,
 	.parse_dt = imx318_parse_dt,
 	.power_get = imx318_power_get,
 	.power_put = imx318_power_put,

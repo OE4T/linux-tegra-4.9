@@ -179,24 +179,38 @@ struct camera_common_sensor_ops {
 	int (*stop_streaming)(struct tegracam_device *tc_dev);
 };
 
+struct tegracam_sensor_data {
+	struct sensor_blob mode_blob;
+	struct sensor_blob ctrls_blob;
+};
 
 struct tegracam_ctrl_ops {
 	u32 numctrls;
 	u32 string_ctrl_size[TEGRA_CAM_MAX_STRING_CONTROLS];
 	const u32 *ctrl_cid_list;
+	bool is_blob_supported;
 	int (*set_gain)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_exposure)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_exposure_short)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_frame_rate)(struct tegracam_device *tc_dev, s64 val);
 	int (*set_group_hold)(struct tegracam_device *tc_dev, bool val);
 	int (*fill_string_ctrl)(struct tegracam_device *tc_dev,
-		struct v4l2_ctrl *ctrl);
+				struct v4l2_ctrl *ctrl);
+	int (*set_gain_ex)(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, s64 val);
+	int (*set_exposure_ex)(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, s64 val);
+	int (*set_frame_rate_ex)(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, s64 val);
+	int (*set_group_hold_ex)(struct tegracam_device *tc_dev,
+			struct sensor_blob *blob, bool val);
 };
 
 struct tegracam_ctrl_handler {
 	struct v4l2_ctrl_handler	ctrl_handler;
 	const struct tegracam_ctrl_ops	*ctrl_ops;
 	struct tegracam_device          *tc_dev;
+	struct tegracam_sensor_data	sensor_data;
 
 	int				numctrls;
 	struct v4l2_ctrl		*ctrls[MAX_CID_CONTROLS];

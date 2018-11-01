@@ -218,18 +218,17 @@ static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 	return 0;
 }
 
-static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
+static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
+			struct v4l2_ctrl *ctrl)
 {
-	struct tegracam_ctrl_handler *handler =
-		container_of(ctrl->handler,
-			struct tegracam_ctrl_handler, ctrl_handler);
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	struct tegracam_device *tc_dev = handler->tc_dev;
 	struct camera_common_data *s_data = tc_dev->s_data;
 	int err = 0;
 	u32 status = 0;
 
-	if (v4l2_subdev_call(&s_data->subdev, video, g_input_status, &status)) {
+	if (v4l2_subdev_call(&s_data->subdev, video,
+				g_input_status, &status)) {
 		dev_err(s_data->dev, "power status query unsupported\n");
 		return -ENOTTY;
 	}
@@ -256,6 +255,7 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
+		break;
 	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
@@ -264,6 +264,58 @@ static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
 	}
 
 	return err;
+}
+
+static int tegracam_set_ctrls_ex(struct tegracam_ctrl_handler *handler,
+				struct v4l2_ctrl *ctrl)
+{
+	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
+	struct tegracam_device *tc_dev = handler->tc_dev;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	struct tegracam_sensor_data *sensor_data = &handler->sensor_data;
+	struct sensor_blob *blob = &sensor_data->ctrls_blob;
+	int err = 0;
+
+	switch (ctrl->id) {
+	case TEGRA_CAMERA_CID_GAIN:
+		err = ops->set_gain_ex(tc_dev, blob, *ctrl->p_new.p_s64);
+		break;
+	case TEGRA_CAMERA_CID_FRAME_RATE:
+		err = ops->set_frame_rate_ex(tc_dev, blob, *ctrl->p_new.p_s64);
+		break;
+	case TEGRA_CAMERA_CID_EXPOSURE:
+		err = ops->set_exposure_ex(tc_dev, blob, *ctrl->p_new.p_s64);
+		break;
+	case TEGRA_CAMERA_CID_GROUP_HOLD:
+		err = ops->set_group_hold_ex(tc_dev, blob, ctrl->val);
+		break;
+	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
+		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
+		break;
+	case TEGRA_CAMERA_CID_HDR_EN:
+		break;
+	default:
+		pr_err("%s: unknown ctrl id.\n", __func__);
+		return -EINVAL;
+	}
+
+	return err;
+}
+
+
+static int tegracam_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct tegracam_ctrl_handler *handler =
+		container_of(ctrl->handler,
+			struct tegracam_ctrl_handler, ctrl_handler);
+	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
+
+	if (ops->is_blob_supported)
+		return tegracam_set_ctrls_ex(handler, ctrl);
+	else
+		return tegracam_set_ctrls(handler, ctrl);
+
+	return 0;
 }
 
 int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *hdl)

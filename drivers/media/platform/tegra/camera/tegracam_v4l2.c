@@ -1,7 +1,7 @@
 /*
- * tegracam_core - tegra camera framework initialization
+ * tegracam_v4l2 - tegra camera framework for v4l2 support
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/tegracam_core.h>
+#include <media/tegracam_utils.h>
 
 static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -25,10 +26,16 @@ static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct camera_common_sensor_ops *sensor_ops = s_data->ops;
 	struct tegracam_device *tc_dev = to_tegracam_device(s_data);
+	struct tegracam_sensor_data *sensor_data = &s_data->tegracam_ctrl_hdl->sensor_data;
+	struct sensor_blob *ctrl_blob = &sensor_data->ctrls_blob;
+	struct sensor_blob *mode_blob = &sensor_data->mode_blob;
 	int err;
 
 	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
 
+	/* reset control packet at start/stop streaming */
+	memset(ctrl_blob, 0, sizeof(struct sensor_blob));
+	memset(mode_blob, 0, sizeof(struct sensor_blob));
 	if (enable) {
 		err = sensor_ops->set_mode(tc_dev);
 		if (err) {
@@ -51,12 +58,17 @@ static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 			dev_err(&client->dev, "Error turning on streaming\n");
 			return err;
 		}
+		/* add done command for blobs */
+		prepare_done_cmd(mode_blob);
+		prepare_done_cmd(ctrl_blob);
 	} else {
 		err = sensor_ops->stop_streaming(tc_dev);
 		if (err) {
 			dev_err(&client->dev, "Error turning off streaming\n");
 			return err;
 		}
+		/* add done command for blob */
+		prepare_done_cmd(ctrl_blob);
 	}
 
 	return 0;

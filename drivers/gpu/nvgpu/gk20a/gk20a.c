@@ -313,6 +313,7 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		err = g->acr.bootstrap_hs_acr(g, &g->acr, &g->acr.acr);
 		if (err != 0) {
 			nvgpu_err(g, "ACR bootstrap failed");
+			nvgpu_mutex_release(&g->tpc_pg_lock);
 			goto done;
 		}
 	}
@@ -321,7 +322,8 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		err = nvgpu_init_sec2_support(g);
 		if (err != 0) {
 			nvgpu_err(g, "failed to init sec2");
-				goto done;
+			nvgpu_mutex_release(&g->tpc_pg_lock);
+			goto done;
 		}
 	}
 

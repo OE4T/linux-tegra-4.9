@@ -1168,6 +1168,7 @@ err_free_ucode:
 	nvgpu_dma_free(g, &hs_bl->hs_bl_ucode);
 err_done:
 	nvgpu_release_firmware(g, hs_bl_fw);
+	acr_desc->acr_hs_bl.hs_bl_fw = NULL;
 
 	return err;
 }
@@ -1338,7 +1339,7 @@ err_free_ucode_map:
 	nvgpu_dma_unmap_free(vm, acr_ucode_mem);
 err_release_acr_fw:
 	nvgpu_release_firmware(g, acr_fw);
-	acr_fw = NULL;
+	acr_desc->acr_fw = NULL;
 	return status;
 }
 

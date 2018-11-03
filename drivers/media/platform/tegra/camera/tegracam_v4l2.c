@@ -61,6 +61,7 @@ static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 		/* add done command for blobs */
 		prepare_done_cmd(mode_blob);
 		prepare_done_cmd(ctrl_blob);
+		tc_dev->is_streaming = true;
 	} else {
 		err = sensor_ops->stop_streaming(tc_dev);
 		if (err) {
@@ -69,6 +70,7 @@ static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 		}
 		/* add done command for blob */
 		prepare_done_cmd(ctrl_blob);
+		tc_dev->is_streaming = false;
 	}
 
 	return 0;

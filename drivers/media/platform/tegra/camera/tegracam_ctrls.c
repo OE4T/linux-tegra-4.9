@@ -18,6 +18,7 @@
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
+#include <media/tegracam_utils.h>
 
 #define CTRL_U32_MIN 0
 #define CTRL_U32_MAX 0x7FFFFFFF
@@ -266,6 +267,42 @@ static int tegracam_set_ctrls(struct tegracam_ctrl_handler *handler,
 	return err;
 }
 
+static int tegracam_set_grouphold_ex(struct tegracam_device *tc_dev,
+				struct sensor_blob *blob,
+				bool status)
+{
+	const struct tegracam_ctrl_ops *ops = tc_dev->tcctrl_ops;
+	struct camera_common_data *s_data = tc_dev->s_data;
+	int err = 0;
+
+	/*
+	 * when grouphold is set, reset control blob
+	 * set grouphold register using set API
+	 * start packetize commands for delivering the blob
+	 * when grouphold is unset, unset grouphold register
+	 * and write the blob only if sensor is streaming.
+	 */
+	if (status) {
+		memset(blob, 0, sizeof(struct sensor_blob));
+		err = ops->set_group_hold_ex(tc_dev, blob, status);
+		if (err)
+			return err;
+	} else {
+		err = ops->set_group_hold_ex(tc_dev, blob, status);
+		if (err)
+			return err;
+
+		/* TODO: block this write selectively from VI5 */
+		if (tc_dev->is_streaming) {
+			err = write_sensor_blob(s_data->regmap, blob);
+			if (err)
+				return err;
+		}
+	}
+
+	return 0;
+}
+
 static int tegracam_set_ctrls_ex(struct tegracam_ctrl_handler *handler,
 				struct v4l2_ctrl *ctrl)
 {
@@ -287,7 +324,7 @@ static int tegracam_set_ctrls_ex(struct tegracam_ctrl_handler *handler,
 		err = ops->set_exposure_ex(tc_dev, blob, *ctrl->p_new.p_s64);
 		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
-		err = ops->set_group_hold_ex(tc_dev, blob, ctrl->val);
+		err = tegracam_set_grouphold_ex(tc_dev, blob, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
@@ -325,6 +362,9 @@ int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *hdl)
 	struct tegracam_device *tc_dev = hdl->tc_dev;
 	struct device *dev = tc_dev->dev;
 	const struct tegracam_ctrl_ops *ops = hdl->ctrl_ops;
+	struct tegracam_sensor_data *sensor_data = &hdl->sensor_data;
+	struct sensor_blob *blob = &sensor_data->ctrls_blob;
+	bool is_blob_supported = ops->is_blob_supported;
 	int err, result = 0;
 	int i;
 
@@ -343,20 +383,32 @@ int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *hdl)
 	ctrls.controls = &control;
 
 	for (i = 0; i < NUM_OVERRIDE_CTRLS; i++) {
+		s64 val = 0;
 		control.id = tegracam_override_cids[i];
 		result = v4l2_g_ext_ctrls(&hdl->ctrl_handler, &ctrls);
 		if (result == 0) {
+			val = control.value64;
 			switch (control.id) {
 			case TEGRA_CAMERA_CID_GAIN:
-				err = ops->set_gain(tc_dev, control.value64);
+				if (is_blob_supported)
+					err = ops->set_gain_ex(tc_dev,
+								blob, val);
+				else
+					err = ops->set_gain(tc_dev, val);
 				break;
 			case TEGRA_CAMERA_CID_EXPOSURE:
-				err = ops->set_exposure(tc_dev,
-						control.value64);
+				if (is_blob_supported)
+					err = ops->set_exposure_ex(tc_dev,
+								blob, val);
+				else
+					err = ops->set_exposure(tc_dev, val);
 				break;
 			case TEGRA_CAMERA_CID_FRAME_RATE:
-				err = ops->set_frame_rate(tc_dev,
-					control.value64);
+				if (is_blob_supported)
+					err = ops->set_frame_rate_ex(tc_dev,
+								blob, val);
+				else
+					err = ops->set_frame_rate(tc_dev, val);
 				break;
 			default:
 				dev_err(dev, "%s: unsupported override %x\n",

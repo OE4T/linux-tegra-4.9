@@ -25,6 +25,7 @@ struct tegracam_device {
 	struct camera_common_data	*s_data;
 	struct media_pad		pad;
 	u32 				version;
+	bool				is_streaming;
 	/* variables to be filled by the driver to register */
 	char				name[32];
 	struct i2c_client		*client;

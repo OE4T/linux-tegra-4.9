@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -64,10 +64,8 @@ static struct tegra_cpufreq_priv *tfreq_priv;
 static int cpu_freq_notify(struct notifier_block *b,
 			   unsigned long l, void *v)
 {
-	u32 qmin = 0, qmax = UINT_MAX, cpu;
 
-	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
-	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
+	u32 cpu;
 
 	pr_debug("PM QoS %s %lu\n",
 		b == &tfreq_priv->min_freq_notifier ? "min" : "max", l);
@@ -76,8 +74,6 @@ static int cpu_freq_notify(struct notifier_block *b,
 		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 
 		if (policy) {
-			policy->user_policy.min = qmin;
-			policy->user_policy.max = qmax;
 			cpufreq_update_policy(policy->cpu);
 			cpufreq_cpu_put(policy);
 		} else
@@ -85,6 +81,41 @@ static int cpu_freq_notify(struct notifier_block *b,
 	}
 	return NOTIFY_OK;
 }
+
+/* Clipping policy object's min/max to pmqos limits */
+static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	unsigned int qmin = 0;
+	unsigned int qmax = UINT_MAX;
+
+	if (event != CPUFREQ_ADJUST)
+		return NOTIFY_OK;
+
+	qmin = pm_qos_read_min_bound(PM_QOS_CPU_FREQ_BOUNDS);
+	qmax = pm_qos_read_max_bound(PM_QOS_CPU_FREQ_BOUNDS);
+
+	/*
+	 * Clamp pmqos to stay within sysfs upper boundary
+	 * but allow pmqos cap override sysfs min freq settings
+	 */
+	qmin = min(qmin, policy->user_policy.max);
+	qmax = min(qmax, policy->user_policy.max);
+
+	/* Apply pmqos limits on top of existing limits */
+	policy->min = max(policy->min, qmin);
+	policy->max = min(policy->max, qmax);
+
+	if (policy->min > policy->max)
+		policy->min = policy->max;
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block tegra_boundaries_cpufreq_nb = {
+	.notifier_call = tegra_boundaries_policy_notifier,
+};
 
 static void pm_qos_register_notifier(void)
 {
@@ -402,6 +433,9 @@ static int tegra_cpufreq_probe(struct platform_device *pdev)
 
 	pm_qos_register_notifier();
 
+	cpufreq_register_notifier(&tegra_boundaries_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
+
 	dev_info(dev, "probe()...completed\n");
 	return 0;
 err_out:
@@ -412,6 +446,9 @@ err_out:
 static int tegra_cpufreq_remove(struct platform_device *pdev)
 {
 	struct tegra_cpufreq_priv *priv = platform_get_drvdata(pdev);
+
+	cpufreq_unregister_notifier(&tegra_boundaries_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
 
 	disable_cpu_emc_clk();
 

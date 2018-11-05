@@ -739,7 +739,7 @@ static void fiq_debugger_fiq(struct fiq_glue_handler *h,
 {
 	struct fiq_debugger_state *state =
 		container_of(h, struct fiq_debugger_state, handler);
-	unsigned int this_cpu = THREAD_INFO(svc_sp)->cpu;
+	unsigned int this_cpu = smp_processor_id();
 	bool need_irq;
 	static DEFINE_PER_CPU(bool, immediate_dump) = true;
 

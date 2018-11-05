@@ -7122,8 +7122,11 @@ static int suspend_get(char *buffer, struct kernel_param *kp)
 }
 
 static int suspend;
-
+#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 135)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)))
+module_param_call(suspend, (void *)suspend_set, (void *)suspend_get, &suspend, 0644);
+#else
 module_param_call(suspend, suspend_set, suspend_get, &suspend, 0644);
+#endif
 
 #ifndef MODULE
 static int __init parse_disp_params(char *options, struct tegra_dc_mode *mode)

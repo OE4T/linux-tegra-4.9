@@ -1629,6 +1629,7 @@ static const struct dev_pm_ops ufs_tegra_pm_ops = {
 
 static struct platform_driver ufs_tegra_platform = {
 	.probe = ufs_tegra_probe,
+	.shutdown = ufshcd_pltfrm_shutdown,
 	.remove = ufs_tegra_remove,
 	.driver = {
 		.name = "ufs_tegra",

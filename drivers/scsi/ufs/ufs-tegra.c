@@ -1639,5 +1639,6 @@ static struct platform_driver ufs_tegra_platform = {
 	},
 };
 module_platform_driver(ufs_tegra_platform);
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Naveen Kumar Arepalli <naveenk@nvidia.com>");
 MODULE_AUTHOR("Venkata Jagadish <vjagadish@nvidia.com>");

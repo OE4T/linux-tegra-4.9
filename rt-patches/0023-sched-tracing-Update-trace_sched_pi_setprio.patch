@@ -1,4 +1,4 @@
-From 12cf40e1c1e3b00cb856d5d0dc70cc1552295721 Mon Sep 17 00:00:00 2001
+From 8f3eb2837ee70b23fafd9931406152c6ce8964c5 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
 Subject: [PATCH 023/353] sched,tracing: Update trace_sched_pi_setprio()

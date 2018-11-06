@@ -1,4 +1,4 @@
-From 1d371becb70280f521d540ceb76aa97a96182006 Mon Sep 17 00:00:00 2001
+From 6cb19766a18f6e0a1d196304a0a83f467a38a8c1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:12:51 +0200
 Subject: [PATCH 130/353] sched: Limit the number of task migrations per batch

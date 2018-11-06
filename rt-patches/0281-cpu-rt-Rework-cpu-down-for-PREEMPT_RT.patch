@@ -1,4 +1,4 @@
-From 88c5daa41625963cf8c4e62143a9bf4cfe2a4a38 Mon Sep 17 00:00:00 2001
+From 34cc4ec3e35b2da79d82b3733edd39b159074de5 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 281/353] cpu/rt: Rework cpu down for PREEMPT_RT

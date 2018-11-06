@@ -1,4 +1,4 @@
-From 83afbf0a1a151736c86d89a44597194b5aabd453 Mon Sep 17 00:00:00 2001
+From a42a923d3e4996febc99b5189b4e77657e7c49e9 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
 Subject: [PATCH 194/353] work-simple: Simple work queue implemenation

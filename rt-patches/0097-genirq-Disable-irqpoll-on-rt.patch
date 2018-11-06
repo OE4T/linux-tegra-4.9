@@ -1,4 +1,4 @@
-From 317d39ce0a90a6360a94c3dfc1cb66fb1f171ccc Mon Sep 17 00:00:00 2001
+From c7e05f10b115b06f25063ec678324a6f13492bb6 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:57 -0500
 Subject: [PATCH 097/353] genirq: Disable irqpoll on -rt

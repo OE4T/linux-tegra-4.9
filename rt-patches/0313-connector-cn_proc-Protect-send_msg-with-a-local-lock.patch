@@ -1,4 +1,4 @@
-From 55dd46cf672a239f4f4983b6276ec308dde5e453 Mon Sep 17 00:00:00 2001
+From b1c5be205fb0710fea6d39fcfd7656d3d201a043 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:11:54 +0200
 Subject: [PATCH 313/353] connector/cn_proc: Protect send_msg() with a local

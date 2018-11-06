@@ -1,4 +1,4 @@
-From 921cd6a87f39ffb1f43ed96eaa5ef5308fb3116e Mon Sep 17 00:00:00 2001
+From 64dafe6c995e3bcfa8f843e46a86135578b7d6ee Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:57:03 +0200
 Subject: [PATCH 036/353] fs/dcache: init in_lookup_hashtable

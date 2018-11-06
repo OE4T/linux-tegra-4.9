@@ -1,4 +1,4 @@
-From ea17bd3bf0457da65146f2a59da57141e337f1f7 Mon Sep 17 00:00:00 2001
+From 74c5f91ff3f90b372f44adf3147ab478559818bf Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Sun, 16 Oct 2011 18:56:43 +0800
 Subject: [PATCH 146/353] hotplug: sync_unplug: No "\n" in task name

@@ -1,4 +1,4 @@
-From 773d309d8a26c928e6ff5c83fb6d346fda7541c1 Mon Sep 17 00:00:00 2001
+From f8506ec8836aed15f7570df7b07ac0e1beca7225 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 4 Feb 2016 16:38:10 +0100
 Subject: [PATCH 298/353] kernel/perf: mark perf_cpu_context's timer as irqsafe

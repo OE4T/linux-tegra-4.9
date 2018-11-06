@@ -1,4 +1,4 @@
-From 7112f45e45b36fc881b4359a6f3261a536acc343 Mon Sep 17 00:00:00 2001
+From 30ce26d6c8c2ff4e113e25149e770d97577ab45e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:21:56 +0200
 Subject: [PATCH 240/353] net: add back the missing serialization in

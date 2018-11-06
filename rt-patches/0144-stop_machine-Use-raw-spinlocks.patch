@@ -1,4 +1,4 @@
-From a5bf14d50ec8c70e7b25311fe57bfa0c764d4cf4 Mon Sep 17 00:00:00 2001
+From 6e2de378f4742b68f27e662cf31b913ababbe397 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 11:01:51 +0200
 Subject: [PATCH 144/353] stop_machine: Use raw spinlocks

@@ -1,4 +1,4 @@
-From 57978fc614c430b1937b1d1c929cc0cc8b0ef33b Mon Sep 17 00:00:00 2001
+From 77b1f5c915d7c0c8ad28298043890388f9931254 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Jun 2017 14:20:37 +0200
 Subject: [PATCH 134/353] sched: Prevent task state corruption by spurious lock

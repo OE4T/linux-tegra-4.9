@@ -1,4 +1,4 @@
-From 73bff7456609862aed11f6af8cecae9bb17955e1 Mon Sep 17 00:00:00 2001
+From 26ab897073c2cb687792d449b87fe9fe809a0f39 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:00 +0200
 Subject: [PATCH 181/353] rtmutex: Provide rt_mutex_lock_state()

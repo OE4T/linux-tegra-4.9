@@ -1,4 +1,4 @@
-From 42c379cdd85a2fb778139e70b0445194fb4df257 Mon Sep 17 00:00:00 2001
+From b3082a0b99401535228a9ce3ce2a55d1d51731e1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
 Subject: [PATCH 078/353] futex: workaround migrate_disable/enable in different

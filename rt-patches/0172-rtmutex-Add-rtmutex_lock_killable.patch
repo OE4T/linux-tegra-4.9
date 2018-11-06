@@ -1,4 +1,4 @@
-From 3a4c50c9309c7be762021229dde35a7c931ddde7 Mon Sep 17 00:00:00 2001
+From f02d0be4cb65f32e5abb4cdd1a1c51e89cffe07f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 9 Jun 2011 11:43:52 +0200
 Subject: [PATCH 172/353] rtmutex: Add rtmutex_lock_killable()

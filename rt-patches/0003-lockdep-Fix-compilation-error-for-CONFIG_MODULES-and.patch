@@ -1,4 +1,4 @@
-From 9a7bbf348ec735acaddf1675ff4f7bbde24e2e6f Mon Sep 17 00:00:00 2001
+From d677428d33c205b577ae27d8ecb7967bf3eb84d5 Mon Sep 17 00:00:00 2001
 From: Dan Murphy <dmurphy@ti.com>
 Date: Fri, 24 Feb 2017 08:41:49 -0600
 Subject: [PATCH 003/353] lockdep: Fix compilation error for !CONFIG_MODULES

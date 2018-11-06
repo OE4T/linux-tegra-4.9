@@ -1,4 +1,4 @@
-From 1f5b098ce55c619c39a97eeee02f7f68ab1096ac Mon Sep 17 00:00:00 2001
+From 75e356cd095bbe152b4e88d5702045c8c3dbe8de Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 15 Apr 2015 19:00:47 +0200
 Subject: [PATCH 110/353] slub: Disable SLUB_CPU_PARTIAL
@@ -36,7 +36,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 662a374..786230f 100644
+index 7304acf..9ffb1c6 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -1952,7 +1952,7 @@ config SLAB_FREELIST_RANDOM

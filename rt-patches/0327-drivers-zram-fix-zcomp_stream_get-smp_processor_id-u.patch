@@ -1,4 +1,4 @@
-From 398c464e83e89cdc579352e76fc55eeaa8599967 Mon Sep 17 00:00:00 2001
+From 5ffc4a4cc8041cd058ed179964e11d43345bb97f Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 23 Aug 2017 11:57:29 +0200
 Subject: [PATCH 327/353] drivers/zram: fix zcomp_stream_get()

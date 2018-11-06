@@ -1,4 +1,4 @@
-From 389df045e3b608e73e077394b9671f1036c5d7af Mon Sep 17 00:00:00 2001
+From 6d8724916d0778350b4711998c71c6f5cc595ccb Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <wagi@monom.org>
 Date: Tue, 17 Feb 2015 09:37:44 +0100
 Subject: [PATCH 210/353] thermal: Defer thermal wakups to threads

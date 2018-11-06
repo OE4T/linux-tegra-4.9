@@ -1,4 +1,4 @@
-From 64680f6c393cf7f01e13ef944cc72bd52117710b Mon Sep 17 00:00:00 2001
+From 8e27bb2f8cfecd60124db78e01fd008161272b48 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 7 Jun 2013 22:37:06 +0200
 Subject: [PATCH 283/353] kernel/cpu: fix cpu down problem if kthread's cpu is

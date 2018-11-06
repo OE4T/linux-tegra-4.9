@@ -1,4 +1,4 @@
-From 9540fcdc38e5e2b14c6bb5e8d780abb2d9a0214f Mon Sep 17 00:00:00 2001
+From 6aceb06c7c76cd6fbdb16c8cb83703b380cbfc83 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:44:03 -0500
 Subject: [PATCH 107/353] mm: Allow only slub on RT
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 1cbe3c6..662a374 100644
+index 3c7e9c1..7304acf 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -1912,6 +1912,7 @@ choice

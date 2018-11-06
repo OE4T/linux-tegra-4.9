@@ -1,4 +1,4 @@
-From 41f219d90a81d1c90ce01cddfac89c92e4cd744d Mon Sep 17 00:00:00 2001
+From 18cea4f3f7db282bca3f95d7bca36a9edd0f1a7b Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 13:51:17 +0100
 Subject: [PATCH 243/353] net: sysrq via icmp

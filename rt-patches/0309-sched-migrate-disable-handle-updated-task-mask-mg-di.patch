@@ -1,4 +1,4 @@
-From 716d011d62d94c06b2d0552e0a51c477a8ebdc47 Mon Sep 17 00:00:00 2001
+From 4b49ca9731baee0c152b1536ba6ca1f8c7cc0fb2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
 Subject: [PATCH 309/353] sched/migrate disable: handle updated task-mask

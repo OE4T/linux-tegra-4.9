@@ -1,4 +1,4 @@
-From a980a223b579f993014005591f0b7b682236765d Mon Sep 17 00:00:00 2001
+From 0fb508fec30ff53593394af3ef8307373541aa87 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
 Subject: [PATCH 019/353] sched/rtmutex/deadline: Fix a PI crash for deadline

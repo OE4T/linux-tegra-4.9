@@ -1,4 +1,4 @@
-From fa57ac7506cd54fdceaae50a56d3714487129570 Mon Sep 17 00:00:00 2001
+From f512fc44e5eeea14ce9d7da0e6638a9c09d0f502 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sat, 14 Feb 2015 11:01:16 -0500
 Subject: [PATCH 272/353] sas-ata/isci: dont't disable interrupts in qc_issue

@@ -1,4 +1,4 @@
-From f81eeed4062eaa64b8d1b0e3b7218f102c339e0d Mon Sep 17 00:00:00 2001
+From 83fe90706e9afb7e41106153977884bf3fc1acb0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
 Subject: [PATCH 179/353] kernel/locking: use an exclusive wait_q for sleepers
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index fc117dbeb3..724f7a3 100644
+index fc117db..724f7a3 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1046,8 +1046,20 @@ struct wake_q_head {

@@ -1,4 +1,4 @@
-From 83af107fb4be9d3d23f3058d744d92c0e337aa49 Mon Sep 17 00:00:00 2001
+From 52fe89b7d7e07a883820af1f9a8e5c012e044c16 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:08:30 +0200
 Subject: [PATCH 304/353] ftrace: Fix trace header alignment

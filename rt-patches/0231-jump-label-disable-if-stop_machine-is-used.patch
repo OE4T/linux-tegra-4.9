@@ -1,4 +1,4 @@
-From 7ad8f592881f790fbe9c99ea15eba3b539cbea0d Mon Sep 17 00:00:00 2001
+From 53ec52131368843843cea0af78d0a49234886f25 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Jul 2015 17:14:48 +0200
 Subject: [PATCH 231/353] jump-label: disable if stop_machine() is used

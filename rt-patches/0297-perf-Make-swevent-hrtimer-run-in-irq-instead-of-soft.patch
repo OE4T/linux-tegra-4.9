@@ -1,4 +1,4 @@
-From 24cc899e3193c9f7d2279f3eb3725642b95d2347 Mon Sep 17 00:00:00 2001
+From 4da7e5894ea9e4b43574b71d37e869d513acd095 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang@windriver.com>
 Date: Wed, 11 Jul 2012 22:05:21 +0000
 Subject: [PATCH 297/353] perf: Make swevent hrtimer run in irq instead of

@@ -1,4 +1,4 @@
-From f91fd95474dc1ae4810365330daea0bcceb03f9c Mon Sep 17 00:00:00 2001
+From 436c5b9c4c2b0260b8890bbd975cc9108a65acf3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 177/353] rt: Add the preempt-rt lock replacement APIs
@@ -628,7 +628,7 @@ index 0000000..e26bd95
 +#endif
 +#endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 579db41..fc117dbeb3 100644
+index 579db41..fc117db 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -314,6 +314,11 @@ extern char ___assert_task_state[1 - 2*!!(

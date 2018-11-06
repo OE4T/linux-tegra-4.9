@@ -1,4 +1,4 @@
-From e2b914e605ed9a074934a0eb00aafd0f3161ccd0 Mon Sep 17 00:00:00 2001
+From 77cf164b383be16bd6b8138973212d380a3bdacd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 12 May 2017 15:46:17 +0200
 Subject: [PATCH 279/353] random: avoid preempt_disable()ed section

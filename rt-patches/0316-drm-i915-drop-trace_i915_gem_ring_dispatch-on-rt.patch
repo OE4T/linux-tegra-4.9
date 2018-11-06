@@ -1,4 +1,4 @@
-From 368a854565a4865cb8dc91ca6af362bf48afebd2 Mon Sep 17 00:00:00 2001
+From 4d10bfd9a38dc9731265894923b0ac5c7cc97efa Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 25 Apr 2013 18:12:52 +0200
 Subject: [PATCH 316/353] drm/i915: drop trace_i915_gem_ring_dispatch on rt

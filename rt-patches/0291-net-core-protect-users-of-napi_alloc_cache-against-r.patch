@@ -1,4 +1,4 @@
-From d4f7ac149851e20fa2b4306280bb2f15847ac162 Mon Sep 17 00:00:00 2001
+From 6189e766674850bdb2b6618255769a26b6afae77 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 15 Jan 2016 16:33:34 +0100
 Subject: [PATCH 291/353] net/core: protect users of napi_alloc_cache against

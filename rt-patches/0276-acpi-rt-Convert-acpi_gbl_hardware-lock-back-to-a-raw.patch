@@ -1,4 +1,4 @@
-From 1061ed4c0c97d4787547c05c5c4925843f0a519f Mon Sep 17 00:00:00 2001
+From 84f3b5de9127f6da15c414255b7f517e584e1866 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 13 Feb 2013 09:26:05 -0500
 Subject: [PATCH 276/353] acpi/rt: Convert acpi_gbl_hardware lock back to a

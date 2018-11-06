@@ -1,4 +1,4 @@
-From 3a6c57798761e5b3fbb2c4472ba127adfc5ce20e Mon Sep 17 00:00:00 2001
+From 53cf21fdebc410bdcf1f0f209c3684f57527b3da Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Mar 2013 18:06:20 +0100
 Subject: [PATCH 293/353] net: Add a mutex around devnet_rename_seq

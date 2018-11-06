@@ -1,4 +1,4 @@
-From 362d6f97857be7e04c033ef39c97c25e1cf45bea Mon Sep 17 00:00:00 2001
+From c5624ec89752fe679700c1c9f576a97b2601f83e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 May 2010 18:29:35 +0200
 Subject: [PATCH 253/353] ARM: at91: tclib: Default to tclib timer for RT

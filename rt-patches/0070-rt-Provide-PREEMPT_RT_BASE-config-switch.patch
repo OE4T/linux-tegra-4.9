@@ -1,4 +1,4 @@
-From 7441ba3ce4ee4ecaef6feaf8e2164ff98331b9ce Mon Sep 17 00:00:00 2001
+From 2eceefce0a1d9bcc9b4717e74e5c685cab96c633 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 12:39:57 +0200
 Subject: [PATCH 070/353] rt: Provide PREEMPT_RT_BASE config switch

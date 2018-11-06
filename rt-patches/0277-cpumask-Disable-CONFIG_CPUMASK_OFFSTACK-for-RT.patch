@@ -1,4 +1,4 @@
-From 6710429dbaed84ec55b6f0b49dc3166e7b1a104e Mon Sep 17 00:00:00 2001
+From bba817a9f036e26e80bdeb08192d5b4a71e802ef Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
 Subject: [PATCH 277/353] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT

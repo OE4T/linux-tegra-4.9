@@ -1,4 +1,4 @@
-From 6b3b8ee8bc9f55bd319fe4e7142ee64245675196 Mon Sep 17 00:00:00 2001
+From cafe8119855d4d1decfbe956b72f1df2b9a52105 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Fri, 20 Jan 2017 10:13:47 -0600
 Subject: [PATCH 042/353] pinctrl: qcom: Use raw spinlock variants

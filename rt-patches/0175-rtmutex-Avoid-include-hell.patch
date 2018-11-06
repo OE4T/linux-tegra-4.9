@@ -1,4 +1,4 @@
-From b3eff9077dc7770d5c3fda99e28b8cf1dde7dc70 Mon Sep 17 00:00:00 2001
+From 55d58ca956b77708cbae6ae0010033face62ed0b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 20:06:39 +0200
 Subject: [PATCH 175/353] rtmutex: Avoid include hell

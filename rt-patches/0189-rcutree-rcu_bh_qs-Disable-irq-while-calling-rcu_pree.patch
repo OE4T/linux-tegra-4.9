@@ -1,4 +1,4 @@
-From 3aed03d9095e652e1b21b59f0cba398fc35f6237 Mon Sep 17 00:00:00 2001
+From 19646bf80b2d765899ce45aea8c071b1722b5635 Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Wed, 18 Dec 2013 17:51:49 +0800
 Subject: [PATCH 189/353] rcutree/rcu_bh_qs: Disable irq while calling

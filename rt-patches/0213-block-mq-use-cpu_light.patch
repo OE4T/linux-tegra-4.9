@@ -1,4 +1,4 @@
-From ab1396caef1ebffbd3a730da9bffb3cbf3e39c7f Mon Sep 17 00:00:00 2001
+From cf678d30706fe82dd6adbb92bca0d9ca9a47c8af Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 9 Apr 2014 10:37:23 +0200
 Subject: [PATCH 213/353] block: mq: use cpu_light()

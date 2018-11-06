@@ -1,4 +1,4 @@
-From 00ded531d72af4ba92025afa9d499628d1d31e34 Mon Sep 17 00:00:00 2001
+From ace641921c56ea16ca04a0754e4678f72339a3a3 Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <Grygorii.Strashko@linaro.org>
 Date: Tue, 21 Jul 2015 19:43:56 +0300
 Subject: [PATCH 169/353] pid.h: include atomic.h

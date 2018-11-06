@@ -1,4 +1,4 @@
-From 8190f11edb94abe69b1310bea0145aac05a41d87 Mon Sep 17 00:00:00 2001
+From e5f371814ba57da6bc6d49874b74978fbb4a3f3a Mon Sep 17 00:00:00 2001
 From: Alex Shi <alex.shi@linaro.org>
 Date: Thu, 6 Jul 2017 16:47:46 +0800
 Subject: [PATCH 336/353] cpu_pm: replace raw_notifier to atomic_notifier

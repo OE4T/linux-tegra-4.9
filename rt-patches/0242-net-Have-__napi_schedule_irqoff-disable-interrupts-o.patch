@@ -1,4 +1,4 @@
-From a1ffaa349cace63e2323de1d33f759ef855a5d4c Mon Sep 17 00:00:00 2001
+From 5c9a74273ac832b5eff582705bed5fde00a313ae Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 6 Dec 2016 17:50:30 -0500
 Subject: [PATCH 242/353] net: Have __napi_schedule_irqoff() disable interrupts

@@ -1,4 +1,4 @@
-From f09b4d90e19544845b2c577d33714eb7ad5fd37b Mon Sep 17 00:00:00 2001
+From e3d17db3d81d62f0d810ddffa494a9c0a8fb6c33 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
 Subject: [PATCH 068/353] printk: Add a printk kill switch
@@ -134,18 +134,18 @@ index 4691546..e4a74bd 100644
  				   char *brl_options)
  {
 diff --git a/kernel/watchdog_hld.c b/kernel/watchdog_hld.c
-index 12b8dd6..4c90d2e 100644
+index e5709b8..b3bdf40 100644
 --- a/kernel/watchdog_hld.c
 +++ b/kernel/watchdog_hld.c
-@@ -19,6 +19,7 @@
- static DEFINE_PER_CPU(bool, hard_watchdog_warn);
+@@ -21,6 +21,7 @@ static DEFINE_PER_CPU(bool, hard_watchdog_warn);
  static DEFINE_PER_CPU(bool, watchdog_nmi_touch);
  static DEFINE_PER_CPU(struct perf_event *, watchdog_ev);
+ static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
 +static DEFINE_RAW_SPINLOCK(watchdog_output_lock);
  
- /* boot commands */
- /*
-@@ -104,6 +105,13 @@ static void watchdog_overflow_callback(struct perf_event *event,
+ #ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
+ static cpumask_t __read_mostly watchdog_cpus;
+@@ -240,6 +241,13 @@ static void watchdog_overflow_callback(struct perf_event *event,
  		/* only print hardlockups once */
  		if (__this_cpu_read(hard_watchdog_warn) == true)
  			return;
@@ -159,7 +159,7 @@ index 12b8dd6..4c90d2e 100644
  
  		pr_emerg("Watchdog detected hard LOCKUP on cpu %d", this_cpu);
  		print_modules();
-@@ -121,6 +129,7 @@ static void watchdog_overflow_callback(struct perf_event *event,
+@@ -257,6 +265,7 @@ static void watchdog_overflow_callback(struct perf_event *event,
  				!test_and_set_bit(0, &hardlockup_allcpu_dumped))
  			trigger_allbutself_cpu_backtrace();
  

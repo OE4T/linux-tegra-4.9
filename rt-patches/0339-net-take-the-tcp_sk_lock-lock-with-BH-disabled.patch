@@ -1,4 +1,4 @@
-From 87841b0671e937f18e3604d2d05e537e09a2db2f Mon Sep 17 00:00:00 2001
+From d91ac2aad98dfaf8ffb8f039e36d2e770b318474 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
 Subject: [PATCH 339/353] net: take the tcp_sk_lock lock with BH disabled

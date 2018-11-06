@@ -1,4 +1,4 @@
-From b72cdef079287f9d3cc8b1329db116a34387cfbd Mon Sep 17 00:00:00 2001
+From 5f842874e305d3ca81d0718334797e2b53211f1b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Mar 2014 20:19:05 +0100
 Subject: [PATCH 301/353] rcu: make RCU_BOOST default on RT
@@ -14,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index a834e4f..da0a089 100644
+index d89b703..258cb4e 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -515,7 +515,7 @@ config TINY_RCU

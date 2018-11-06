@@ -1,4 +1,4 @@
-From dfd0e6afd7c5d66d56806490ff14aa579068b3fa Mon Sep 17 00:00:00 2001
+From f101c05604cf49a05925d80927768ce11200ef73 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:48 +0100
 Subject: [PATCH 005/353] futex: Cleanup variable names for futex_top_waiter()

@@ -92,6 +92,9 @@
 				/* enable CID_SENSOR_MODE_ID for sensor modes selection */
 				use_sensor_mode_id = "true";
 
+				/* WAR to prevent banding by reducing analog gain. Bug 2229902 */
+				limit_analog_gain = "true";
+
 				/**
 				* ==== Modes ====
 				* A modeX node is required to support v4l2 driver

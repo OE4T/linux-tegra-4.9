@@ -50,6 +50,9 @@
 #define IMX185_GAIN_ADDR					0x3014
 #define IMX185_GROUP_HOLD_ADDR				0x3001
 #define IMX185_SW_RESET_ADDR			0x3003
+#define IMX185_ANALOG_GAIN_LIMIT_ADDR			0x3012
+#define IMX185_ANALOG_GAIN_LIMIT_VALUE			0x0f
+
 
 #define IMX185_FUSE_ID_ADDR	0x3382
 #define IMX185_FUSE_ID_SIZE	6
@@ -597,11 +600,31 @@ static int imx185_set_mode(struct tegracam_device *tc_dev)
 {
 	struct imx185 *priv = (struct imx185 *)tegracam_get_privdata(tc_dev);
 	struct camera_common_data *s_data = tc_dev->s_data;
+	struct device *dev = tc_dev->dev;
+	struct device_node *np = dev->of_node;
+	bool limit_analog_gain = false;
+	const struct of_device_id *match;
 	int err;
+
+	match = of_match_device(imx185_of_match, dev);
+	if (!match) {
+		dev_err(dev, "Failed to find matching dt id\n");
+		return -EINVAL;
+	}
+
+	limit_analog_gain = of_property_read_bool(np, "limit_analog_gain");
 
 	err = imx185_write_table(priv, mode_table[s_data->mode_prop_idx]);
 	if (err)
 		return err;
+
+	if (limit_analog_gain) {
+		err = imx185_write_reg(priv->s_data,
+			IMX185_ANALOG_GAIN_LIMIT_ADDR,
+			IMX185_ANALOG_GAIN_LIMIT_VALUE);
+		if (err)
+			return err;
+	}
 
 	return 0;
 }

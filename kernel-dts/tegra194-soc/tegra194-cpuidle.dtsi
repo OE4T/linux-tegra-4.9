@@ -33,7 +33,7 @@
 				compatible = "nvidia,tegra194-cpuidle-core";
 				state-name = "Virtual core powergate";
 				wakeup-latency-us = <2000>;
-				min-residency-us = <30000>;
+				min-residency-us = <0xffffffff>;
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;
@@ -56,7 +56,7 @@
 			cc6 {
 				state-name = "Cluster powergate";
 				wakeup-latency-us = <5000>;
-				min-residency-us = <80000>;
+				min-residency-us = <0xffffffff>;
 				power = <19>;
 				pmstate = <0x6>;
 				status = "okay";

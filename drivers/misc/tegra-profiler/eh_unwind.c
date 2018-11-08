@@ -25,6 +25,7 @@
 
 #include <linux/tegra_profiler.h>
 
+#include "quadd.h"
 #include "hrt.h"
 #include "tegra.h"
 #include "eh_unwind.h"
@@ -33,7 +34,7 @@
 #include "dwarf_unwind.h"
 #include "disassembler.h"
 
-#define QUADD_EXTABS_SIZE	0x100
+#define QUADD_EXTABS_SIZE	32
 
 #define GET_NR_PAGES(a, l) \
 	((PAGE_ALIGN((a) + (l)) - ((a) & PAGE_MASK)) / PAGE_SIZE)
@@ -50,18 +51,23 @@ enum regs {
 struct regions_data {
 	struct ex_region_info *entries;
 
-	unsigned long curr_nr;
+	unsigned long nr_entries;
 	unsigned long size;
 
+	pid_t pid;
+
 	struct rcu_head rcu;
+
+	struct list_head list;
 };
 
 struct quadd_unwind_ctx {
-	struct regions_data __rcu *rd;
+	struct quadd_ctx *quadd_ctx;
 
-	pid_t pid;
 	unsigned long ex_tables_size;
-	raw_spinlock_t lock;
+
+	struct list_head mm_ex_list;
+	raw_spinlock_t mm_ex_list_lock;
 };
 
 struct unwind_idx {
@@ -90,7 +96,38 @@ struct pin_pages_work {
 	unsigned long vm_start;
 };
 
+struct ex_entry_node {
+	struct list_head list;
+	pid_t pid;
+	unsigned long vm_start;
+	unsigned long vm_end;
+};
+
 static struct quadd_unwind_ctx ctx;
+
+static inline int is_debug_frame(int secid)
+{
+	return (secid == QUADD_SEC_TYPE_DEBUG_FRAME ||
+		secid == QUADD_SEC_TYPE_DEBUG_FRAME_HDR) ? 1 : 0;
+}
+
+unsigned long
+get_ex_sec_address(struct ex_region_info *ri, struct extab_info *ti, int secid)
+{
+	struct quadd_mmap_area *mmap;
+	unsigned long res = ti->addr;
+
+	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
+
+	if (!(is_debug_frame(secid) && !mmap->fi.is_shared))
+		res += ri->vm_start;
+
+	return res;
+}
 
 static inline int
 validate_mmap_addr(struct quadd_mmap_area *mmap,
@@ -142,13 +179,20 @@ ex_addr_to_mmap_addr(unsigned long addr,
 {
 	unsigned long offset;
 	struct extab_info *ti;
+	struct quadd_mmap_area *mmap;
 
-	ti = &ri->ex_sec[sec_type];
+	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
+
+	ti = &mmap->fi.ex_sec[sec_type];
 	if (unlikely(!ti->length))
 		return 0;
 
-	offset = addr - ti->addr;
-	return ti->mmap_offset + offset + (unsigned long)ri->mmap->data;
+	offset = addr - get_ex_sec_address(ri, ti, sec_type);
+	return ti->mmap_offset + offset + (unsigned long)mmap->data;
 }
 
 static inline unsigned long
@@ -158,13 +202,20 @@ mmap_addr_to_ex_addr(unsigned long addr,
 {
 	unsigned long offset;
 	struct extab_info *ti;
+	struct quadd_mmap_area *mmap;
 
-	ti = &ri->ex_sec[sec_type];
+	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
+
+	ti = &mmap->fi.ex_sec[sec_type];
 	if (unlikely(!ti->length))
 		return 0;
 
-	offset = addr - ti->mmap_offset - (unsigned long)ri->mmap->data;
-	return ti->addr + offset;
+	offset = addr - ti->mmap_offset - (unsigned long)mmap->data;
+	return get_ex_sec_address(ri, ti, sec_type) + offset;
 }
 
 static inline u32 __maybe_unused
@@ -207,22 +258,58 @@ mmap_prel31_to_addr(const u32 *ptr, struct ex_region_info *ri,
 	return addr_res;
 }
 
+static struct regions_data *rd_alloc(unsigned long size)
+{
+	struct regions_data *rd;
+
+	rd = kzalloc(sizeof(*rd), GFP_ATOMIC);
+	if (!rd)
+		return ERR_PTR(-ENOMEM);
+
+	rd->entries = kcalloc(size, sizeof(*rd->entries), GFP_ATOMIC);
+	if (!rd->entries) {
+		kfree(rd);
+		return ERR_PTR(-ENOMEM);
+	}
+
+	rd->size = size;
+	rd->nr_entries = 0;
+
+	return rd;
+}
+
+static void rd_free(struct regions_data *rd)
+{
+	if (rd)
+		kfree(rd->entries);
+
+	kfree(rd);
+}
+
+static void mm_ex_list_free_rcu(struct rcu_head *head)
+{
+	struct regions_data *entry =
+		container_of(head, struct regions_data, rcu);
+
+	rd_free(entry);
+}
+
 static int
 add_ex_region(struct regions_data *rd,
 	      struct ex_region_info *new_entry)
 {
 	unsigned int i_min, i_max, mid;
 	struct ex_region_info *array = rd->entries;
-	unsigned long size = rd->curr_nr;
+	unsigned long size = rd->nr_entries;
 
 	if (!array)
-		return 0;
+		return -ENOMEM;
 
 	if (size == 0) {
 		memcpy(&array[0], new_entry, sizeof(*new_entry));
-		return 1;
-	} else if (size == 1 && array[0].vm_start == new_entry->vm_start) {
 		return 0;
+	} else if (size == 1 && array[0].vm_start == new_entry->vm_start) {
+		return -EEXIST;
 	}
 
 	i_min = 0;
@@ -232,10 +319,10 @@ add_ex_region(struct regions_data *rd,
 		memmove(array + 1, array,
 			size * sizeof(*array));
 		memcpy(&array[0], new_entry, sizeof(*new_entry));
-		return 1;
+		return 0;
 	} else if (array[size - 1].vm_start < new_entry->vm_start) {
 		memcpy(&array[size], new_entry, sizeof(*new_entry));
-		return 1;
+		return 0;
 	}
 
 	while (i_min < i_max) {
@@ -248,13 +335,14 @@ add_ex_region(struct regions_data *rd,
 	}
 
 	if (array[i_max].vm_start == new_entry->vm_start)
-		return 0;
+		return -EEXIST;
 
 	memmove(array + i_max + 1,
 		array + i_max,
 		(size - i_max) * sizeof(*array));
 	memcpy(&array[i_max], new_entry, sizeof(*new_entry));
-	return 1;
+
+	return 0;
 }
 
 static int
@@ -263,7 +351,7 @@ remove_ex_region(struct regions_data *rd,
 {
 	unsigned int i_min, i_max, mid;
 	struct ex_region_info *array = rd->entries;
-	unsigned long size = rd->curr_nr;
+	unsigned long size = rd->nr_entries;
 
 	if (!array)
 		return 0;
@@ -334,34 +422,242 @@ __search_ex_region(struct ex_region_info *array,
 }
 
 static long
-search_ex_region(unsigned long key, struct ex_region_info *ri)
+search_ex_region(pid_t pid, unsigned long key, struct ex_region_info *ri)
 {
-	struct regions_data *rd;
+	struct regions_data *entry;
 	struct ex_region_info *ri_p = NULL;
 
 	rcu_read_lock();
-
-	rd = rcu_dereference(ctx.rd);
-	if (!rd)
-		goto out;
-
-	ri_p = __search_ex_region(rd->entries, rd->curr_nr, key);
-	if (ri_p)
-		memcpy(ri, ri_p, sizeof(*ri));
-
-out:
+	list_for_each_entry_rcu(entry, &ctx.mm_ex_list, list) {
+		if (entry->pid == pid) {
+			ri_p = __search_ex_region(entry->entries,
+						  entry->nr_entries, key);
+			if (ri_p)
+				memcpy(ri, ri_p, sizeof(*ri));
+			break;
+		}
+	}
 	rcu_read_unlock();
+
 	return ri_p ? 0 : -ENOENT;
 }
 
+static inline int
+validate_sections(struct quadd_sections *et)
+{
+	int i;
+	unsigned long size = 0;
+
+	if (et->vm_start >= et->vm_end)
+		return -EINVAL;
+
+	for (i = 0; i < QUADD_SEC_TYPE_MAX; i++)
+		size += et->sec[i].length;
+
+	return size < et->vm_end - et->vm_start;
+}
+
+static void
+mmap_ex_entry_del(struct quadd_mmap_area *mmap,
+		  pid_t pid, unsigned long vm_start)
+{
+	struct ex_entry_node *e, *n;
+
+	list_for_each_entry_safe(e, n, &mmap->ex_entries, list) {
+		if (e->pid == pid && e->vm_start == vm_start) {
+			list_del(&e->list);
+			kfree(e);
+			break;
+		}
+	}
+}
+
+static int
+is_overlapped(unsigned long a_start, unsigned long a_end,
+	      unsigned long b_start, unsigned long b_end)
+{
+	return ((a_start >= b_start && a_start < b_end) ||
+		(b_start >= a_start && b_start < a_end));
+}
+
+static int
+remove_overlapped_regions(struct regions_data *rd, struct ex_region_info *ri)
+{
+	long idx_from = -1, idx_to = -1;
+	unsigned long i, start, end, nr, nr_removed = 0;
+	struct ex_region_info *array = rd->entries;
+
+	nr = rd->nr_entries;
+	if (nr == 0)
+		return 0;
+
+	for (i = 0; i < nr; i++) {
+		start = array[i].vm_start;
+		end = array[i].vm_end;
+
+		if (is_overlapped(start, end, ri->vm_start, ri->vm_end)) {
+			idx_from = idx_to = i;
+			for (idx_to = i + 1; idx_to < nr; idx_to++) {
+				start = array[idx_to].vm_start;
+				end = array[idx_to].vm_end;
+				if (!is_overlapped(start, end, ri->vm_start,
+						   ri->vm_end))
+					break;
+			}
+			break;
+		}
+	}
+
+	if (idx_from >= 0) {
+		struct ex_region_info *ri_del;
+		unsigned long nr_copied = nr - idx_to;
+
+		nr_removed = idx_to - idx_from;
+
+		pr_debug("%s: [%u] new: %#lx-%#lx, rm:%#lx-%#lx...%#lx-%#lx\n",
+			__func__, rd->pid, ri->vm_start, ri->vm_end,
+			array[idx_from].vm_start, array[idx_from].vm_end,
+			array[idx_to - 1].vm_start, array[idx_to - 1].vm_end);
+
+		if (nr_copied > 0)
+			memmove(array + idx_from, array + idx_to,
+				nr_copied * sizeof(*array));
+
+		for (i = idx_from; i < idx_to; i++) {
+			ri_del = &array[i];
+			mmap_ex_entry_del(ri_del->mmap, rd->pid,
+					  ri_del->vm_start);
+		}
+
+		rd->nr_entries -= nr_removed;
+	}
+
+	return nr_removed;
+}
+
+static int
+mm_ex_list_add(struct ex_region_info *ri, pid_t pid)
+{
+	int err = 0;
+	struct regions_data *entry, *rd, *rd_old = NULL;
+	unsigned long nr_entries_new;
+
+	raw_spin_lock(&ctx.mm_ex_list_lock);
+
+	list_for_each_entry(entry, &ctx.mm_ex_list, list) {
+		if (entry->pid == pid) {
+			rd_old = entry;
+			break;
+		}
+	}
+
+	nr_entries_new = rd_old ? rd_old->nr_entries + 1 : 1;
+
+	rd = rd_alloc(nr_entries_new);
+	if (IS_ERR(rd)) {
+		err = PTR_ERR(rd);
+		goto out_unlock;
+	}
+
+	if (rd_old) {
+		memcpy(rd->entries, rd_old->entries,
+		       rd_old->nr_entries * sizeof(*rd_old->entries));
+		rd->nr_entries = rd_old->nr_entries;
+		rd->pid = pid;
+		remove_overlapped_regions(rd, ri);
+	}
+
+	err = add_ex_region(rd, ri);
+	if (err < 0)
+		goto out_free;
+
+	rd->nr_entries++;
+
+	rd->pid = pid;
+	INIT_LIST_HEAD(&rd->list);
+
+	if (rd_old) {
+		list_replace_rcu(&rd_old->list, &rd->list);
+		call_rcu(&rd_old->rcu, mm_ex_list_free_rcu);
+	} else {
+		list_add_tail_rcu(&rd->list, &ctx.mm_ex_list);
+	}
+
+	raw_spin_unlock(&ctx.mm_ex_list_lock);
+	return 0;
+
+out_free:
+	rd_free(rd);
+out_unlock:
+	raw_spin_unlock(&ctx.mm_ex_list_lock);
+
+	return err;
+}
+
+static int
+mm_ex_list_del(unsigned long vm_start, pid_t pid)
+{
+	int err = 0, nr_removed;
+	unsigned long nr_entries;
+	struct regions_data *rd_entry, *rd_new;
+	struct ex_region_info ex_entry;
+
+	ex_entry.vm_start = vm_start;
+
+	raw_spin_lock(&ctx.mm_ex_list_lock);
+
+	list_for_each_entry(rd_entry, &ctx.mm_ex_list, list) {
+		if (rd_entry->pid == pid) {
+			nr_entries = rd_entry->nr_entries;
+
+			if (unlikely(nr_entries == 0)) {
+				pr_warn_once("%s: !nr_entries\n", __func__);
+				err = -ENOENT;
+				goto out_unlock;
+			}
+
+			rd_new = rd_alloc(nr_entries);
+			if (IS_ERR(rd_new)) {
+				err = PTR_ERR(rd_new);
+				goto out_unlock;
+			}
+
+			memcpy(rd_new->entries, rd_entry->entries,
+			       nr_entries * sizeof(*rd_entry->entries));
+			rd_new->nr_entries = nr_entries;
+
+			rd_new->pid = pid;
+			INIT_LIST_HEAD(&rd_new->list);
+
+			nr_removed = remove_ex_region(rd_new, &ex_entry);
+			rd_new->nr_entries -= nr_removed;
+
+			if (rd_new->nr_entries > 0) {
+				list_replace_rcu(&rd_entry->list,
+						 &rd_new->list);
+				call_rcu(&rd_entry->rcu, mm_ex_list_free_rcu);
+			} else {
+				rd_free(rd_new);
+				list_del_rcu(&rd_entry->list);
+				call_rcu(&rd_entry->rcu, mm_ex_list_free_rcu);
+			}
+		}
+	}
+
+out_unlock:
+	raw_spin_unlock(&ctx.mm_ex_list_lock);
+
+	return err;
+}
+
 static long
-get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
+get_extabs_ehabi(pid_t pid, unsigned long key, struct ex_region_info *ri)
 {
 	long err = 0;
 	struct extab_info *ti_exidx;
 	struct quadd_mmap_area *mmap;
 
-	err = search_ex_region(key, ri);
+	err = search_ex_region(pid, key, ri);
 	if (err < 0)
 		return err;
 
@@ -374,7 +670,7 @@ get_extabs_ehabi(unsigned long key, struct ex_region_info *ri)
 		goto out;
 	}
 
-	ti_exidx = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
+	ti_exidx = &mmap->fi.ex_sec[QUADD_SEC_TYPE_EXIDX];
 
 	if (ti_exidx->length)
 		atomic_inc(&mmap->ref_count);
@@ -403,13 +699,17 @@ static void put_extabs_ehabi(struct ex_region_info *ri)
 }
 
 long
-quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
+quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri,
+		    struct task_struct *task)
 {
+	pid_t pid;
 	long err = 0;
 	struct extab_info *ti, *ti_hdr;
 	struct quadd_mmap_area *mmap;
 
-	err = search_ex_region(key, ri);
+	pid = task_tgid_nr(task);
+
+	err = search_ex_region(pid, key, ri);
 	if (err < 0)
 		return err;
 
@@ -422,16 +722,16 @@ quadd_get_dw_frames(unsigned long key, struct ex_region_info *ri)
 		goto out;
 	}
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME];
-	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
+	ti = &mmap->fi.ex_sec[QUADD_SEC_TYPE_EH_FRAME];
+	ti_hdr = &mmap->fi.ex_sec[QUADD_SEC_TYPE_EH_FRAME_HDR];
 
 	if (ti->length && ti_hdr->length) {
 		atomic_inc(&mmap->ref_count);
 		goto out;
 	}
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME];
-	ti_hdr = &ri->ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME_HDR];
+	ti = &mmap->fi.ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME];
+	ti_hdr = &mmap->fi.ex_sec[QUADD_SEC_TYPE_DEBUG_FRAME_HDR];
 
 	if (ti->length && ti_hdr->length)
 		atomic_inc(&mmap->ref_count);
@@ -459,252 +759,118 @@ void quadd_put_dw_frames(struct ex_region_info *ri)
 		pr_err_once("%s: error: mmap ref_count\n", __func__);
 }
 
-static struct regions_data *rd_alloc(unsigned long size)
-{
-	struct regions_data *rd;
-
-	rd = kzalloc(sizeof(*rd), GFP_ATOMIC);
-	if (!rd)
-		return NULL;
-
-	rd->entries = kcalloc(size, sizeof(*rd->entries), GFP_ATOMIC);
-	if (!rd->entries) {
-		kfree(rd);
-		return NULL;
-	}
-
-	rd->size = size;
-	rd->curr_nr = 0;
-
-	return rd;
-}
-
-static void rd_free(struct regions_data *rd)
-{
-	if (rd)
-		kfree(rd->entries);
-
-	kfree(rd);
-}
-
-static void rd_free_rcu(struct rcu_head *rh)
-{
-	struct regions_data *rd = container_of(rh, struct regions_data, rcu);
-
-	rd_free(rd);
-}
-
 int quadd_unwind_set_extab(struct quadd_sections *extabs,
 			   struct quadd_mmap_area *mmap)
 {
-	int i, err = 0;
-	unsigned long nr_entries, nr_added, new_size;
+	int i, err;
 	struct ex_region_info ri_entry;
-	struct extab_info *ti;
-	struct regions_data *rd, *rd_new;
-	struct ex_region_info *ex_entry;
+	struct ex_entry_node *mmap_ex_entry;
 
 	if (mmap->type != QUADD_MMAP_TYPE_EXTABS)
 		return -EIO;
 
-	raw_spin_lock(&ctx.lock);
+	err = validate_sections(extabs);
+	if (err < 0)
+		return err;
 
-	rd = rcu_dereference(ctx.rd);
-	if (!rd) {
-		pr_warn("%s: warning: rd\n", __func__);
-		new_size = QUADD_EXTABS_SIZE;
-		nr_entries = 0;
-	} else {
-		new_size = rd->size;
-		nr_entries = rd->curr_nr;
+	if (extabs->user_mmap_start) {
+		mmap->fi.is_shared =
+			(extabs->flags & QUADD_SECTIONS_FLAG_IS_SHARED) != 0;
+
+		for (i = 0; i < QUADD_SEC_TYPE_MAX; i++) {
+			struct quadd_sec_info *si = &extabs->sec[i];
+			struct extab_info *ti = &mmap->fi.ex_sec[i];
+
+			ti->tf_start = 0;
+			ti->tf_end = 0;
+
+			if (!si->addr) {
+				ti->addr = 0;
+				ti->length = 0;
+				ti->mmap_offset = 0;
+
+				continue;
+			}
+
+			ti->addr = si->addr;
+			ti->length = si->length;
+			ti->mmap_offset = si->mmap_offset;
+		}
 	}
-
-	if (nr_entries >= new_size)
-		new_size += new_size >> 1;
-
-	rd_new = rd_alloc(new_size);
-	if (IS_ERR_OR_NULL(rd_new)) {
-		pr_err("%s: error: rd_alloc\n", __func__);
-		err = -ENOMEM;
-		goto error_out;
-	}
-
-	if (rd && nr_entries)
-		memcpy(rd_new->entries, rd->entries,
-		       nr_entries * sizeof(*rd->entries));
-
-	rd_new->curr_nr = nr_entries;
 
 	ri_entry.vm_start = extabs->vm_start;
 	ri_entry.vm_end = extabs->vm_end;
-
+	ri_entry.file_hash = extabs->file_hash;
 	ri_entry.mmap = mmap;
 
-	for (i = 0; i < QUADD_SEC_TYPE_MAX; i++) {
-		struct quadd_sec_info *si = &extabs->sec[i];
-
-		ti = &ri_entry.ex_sec[i];
-
-		ti->tf_start = 0;
-		ti->tf_end = 0;
-
-		if (!si->addr) {
-			ti->addr = 0;
-			ti->length = 0;
-			ti->mmap_offset = 0;
-
-			continue;
-		}
-
-		ti->addr = si->addr;
-		ti->length = si->length;
-		ti->mmap_offset = si->mmap_offset;
-	}
-
-	nr_added = add_ex_region(rd_new, &ri_entry);
-	if (nr_added == 0)
-		goto error_free;
-
-	rd_new->curr_nr += nr_added;
-
-	ex_entry = kzalloc(sizeof(*ex_entry), GFP_ATOMIC);
-	if (!ex_entry) {
+	mmap_ex_entry = kzalloc(sizeof(*mmap_ex_entry), GFP_ATOMIC);
+	if (!mmap_ex_entry) {
 		err = -ENOMEM;
-		goto error_free;
+		goto err_out;
 	}
-	memcpy(ex_entry, &ri_entry, sizeof(*ex_entry));
 
-	INIT_LIST_HEAD(&ex_entry->list);
-	list_add_tail(&ex_entry->list, &mmap->ex_entries);
+	mmap_ex_entry->vm_start = ri_entry.vm_start;
+	mmap_ex_entry->vm_end = ri_entry.vm_end;
+	mmap_ex_entry->pid = extabs->pid;
 
-	rcu_assign_pointer(ctx.rd, rd_new);
+	err = mm_ex_list_add(&ri_entry, extabs->pid);
+	if (err < 0)
+		goto out_ex_entry_free;
 
-	if (rd)
-		call_rcu(&rd->rcu, rd_free_rcu);
+	INIT_LIST_HEAD(&mmap_ex_entry->list);
+	list_add_tail(&mmap_ex_entry->list, &mmap->ex_entries);
 
-	raw_spin_unlock(&ctx.lock);
+	pr_debug("%s: pid: %u: vma: %#lx - %#lx, file_hash: %#x\n",
+		 __func__, extabs->pid, (unsigned long)extabs->vm_start,
+		 (unsigned long)extabs->vm_end, extabs->file_hash);
 
 	return 0;
 
-error_free:
-	rd_free(rd_new);
-error_out:
-	raw_spin_unlock(&ctx.lock);
+out_ex_entry_free:
+	kfree(mmap_ex_entry);
+err_out:
 	return err;
 }
 
 void
-quadd_unwind_set_tail_info(unsigned long vm_start,
+quadd_unwind_set_tail_info(struct ex_region_info *ri,
 			   int secid,
 			   unsigned long tf_start,
-			   unsigned long tf_end)
+			   unsigned long tf_end,
+			   struct task_struct *task)
 {
-	struct ex_region_info *ri;
-	unsigned long nr_entries, size;
-	struct regions_data *rd, *rd_new;
-	struct extab_info *ti;
+	struct quadd_mmap_area *mmap;
 
-	raw_spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.quadd_ctx->mmaps_lock);
 
-	rd = rcu_dereference(ctx.rd);
+	mmap = ri->mmap;
+	mmap->fi.ex_sec[secid].tf_start = tf_start;
+	mmap->fi.ex_sec[secid].tf_end = tf_end;
 
-	if (!rd || rd->curr_nr == 0)
-		goto error_out;
+	pr_debug("%s: pid: %u, secid: %d, tf: %#lx - %#lx\n",
+		 __func__, task_tgid_nr(task), secid, tf_start, tf_end);
 
-	size = rd->size;
-	nr_entries = rd->curr_nr;
-
-	rd_new = rd_alloc(size);
-	if (IS_ERR_OR_NULL(rd_new)) {
-		pr_err_once("%s: error: rd_alloc\n", __func__);
-		goto error_out;
-	}
-
-	memcpy(rd_new->entries, rd->entries,
-	       nr_entries * sizeof(*rd->entries));
-
-	rd_new->curr_nr = nr_entries;
-
-	ri = __search_ex_region(rd_new->entries, nr_entries, vm_start);
-	if (!ri)
-		goto error_free;
-
-	ti = &ri->ex_sec[secid];
-
-	ti->tf_start = tf_start;
-	ti->tf_end = tf_end;
-
-	rcu_assign_pointer(ctx.rd, rd_new);
-
-	call_rcu(&rd->rcu, rd_free_rcu);
-	raw_spin_unlock(&ctx.lock);
-
-	return;
-
-error_free:
-	rd_free(rd_new);
-
-error_out:
-	raw_spin_unlock(&ctx.lock);
-}
-
-static int
-clean_mmap(struct regions_data *rd, struct quadd_mmap_area *mmap, int rm_ext)
-{
-	int nr_removed = 0;
-	struct ex_region_info *entry, *next;
-
-	if (!rd || !mmap)
-		return 0;
-
-	list_for_each_entry_safe(entry, next, &mmap->ex_entries, list) {
-		if (rm_ext)
-			nr_removed += remove_ex_region(rd, entry);
-
-		list_del(&entry->list);
-		kfree(entry);
-	}
-
-	return nr_removed;
+	raw_spin_unlock(&ctx.quadd_ctx->mmaps_lock);
 }
 
 static void
-__quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+clean_mmap(struct quadd_mmap_area *mmap)
 {
-	unsigned long nr_entries, nr_removed, new_size;
-	struct regions_data *rd, *rd_new;
+	struct ex_entry_node *entry, *next;
 
-	if (!mmap)
+	if (atomic_read(&mmap->ref_count)) {
+		pr_warn_once("%s: ref_count != 0\n", __func__);
+		return;
+	}
+
+	if (!mmap || mmap->type != QUADD_MMAP_TYPE_EXTABS)
 		return;
 
-	raw_spin_lock(&ctx.lock);
-
-	rd = rcu_dereference(ctx.rd);
-	if (!rd || !rd->curr_nr)
-		goto error_out;
-
-	nr_entries = rd->curr_nr;
-	new_size = min_t(unsigned long, rd->size, nr_entries);
-
-	rd_new = rd_alloc(new_size);
-	if (IS_ERR_OR_NULL(rd_new)) {
-		pr_err("%s: error: rd_alloc\n", __func__);
-		goto error_out;
+	list_for_each_entry_safe(entry, next, &mmap->ex_entries, list) {
+		mm_ex_list_del(entry->vm_start, entry->pid);
+		list_del(&entry->list);
+		kfree(entry);
 	}
-	rd_new->size = new_size;
-	rd_new->curr_nr = nr_entries;
-
-	memcpy(rd_new->entries, rd->entries,
-		nr_entries * sizeof(*rd->entries));
-
-	nr_removed = clean_mmap(rd_new, mmap, 1);
-	rd_new->curr_nr -= nr_removed;
-
-	rcu_assign_pointer(ctx.rd, rd_new);
-	call_rcu(&rd->rcu, rd_free_rcu);
-
-error_out:
-	raw_spin_unlock(&ctx.lock);
 }
 
 static void mmap_wait_for_close(struct quadd_mmap_area *mmap)
@@ -723,10 +889,10 @@ static void mmap_wait_for_close(struct quadd_mmap_area *mmap)
 		cpu_relax();
 }
 
-void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap)
+void quadd_unwind_clean_mmap(struct quadd_mmap_area *mmap)
 {
 	mmap_wait_for_close(mmap);
-	__quadd_unwind_delete_mmap(mmap);
+	clean_mmap(mmap);
 }
 
 static const struct unwind_idx *
@@ -739,8 +905,7 @@ unwind_find_idx(struct ex_region_info *ri, u32 addr, unsigned long *lowaddr)
 	struct unwind_idx *stop;
 	struct unwind_idx *mid = NULL;
 
-	ti = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
-
+	ti = &ri->mmap->fi.ex_sec[QUADD_SEC_TYPE_EXIDX];
 	length = ti->length / sizeof(*start);
 
 	if (unlikely(!length))
@@ -1063,7 +1228,8 @@ unwind_frame(struct quadd_unw_methods um,
 	     struct ex_region_info *ri,
 	     struct stackframe *frame,
 	     struct vm_area_struct *vma_sp,
-	     int thumbflag)
+	     int thumbflag,
+	     struct task_struct *task)
 {
 	unsigned long high, low, min, max;
 	const struct unwind_idx *idx;
@@ -1208,7 +1374,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 		long err;
 		int nr_added;
 		struct extab_info *ti;
-		unsigned long where = frame->pc;
+		unsigned long addr, where = frame->pc;
 		struct vm_area_struct *vma_pc;
 		struct mm_struct *mm = task->mm;
 
@@ -1224,15 +1390,17 @@ unwind_backtrace(struct quadd_callchain *cc,
 		if (!vma_pc)
 			break;
 
-		ti = &ri->ex_sec[QUADD_SEC_TYPE_EXIDX];
+		ti = &ri->mmap->fi.ex_sec[QUADD_SEC_TYPE_EXIDX];
+		addr = get_ex_sec_address(ri, ti, QUADD_SEC_TYPE_EXIDX);
 
-		if (!is_vma_addr(ti->addr, vma_pc, sizeof(u32))) {
+		if (!is_vma_addr(addr, vma_pc, sizeof(u32))) {
 			if (prev_ri) {
 				put_extabs_ehabi(prev_ri);
 				prev_ri = NULL;
 			}
 
-			err = get_extabs_ehabi(vma_pc->vm_start, &ri_new);
+			err = get_extabs_ehabi(task_tgid_nr(task),
+					       vma_pc->vm_start, &ri_new);
 			if (err) {
 				cc->urc_ut = QUADD_URC_TBL_NOT_EXIST;
 				break;
@@ -1241,7 +1409,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 			prev_ri = ri = &ri_new;
 		}
 
-		err = unwind_frame(cc->um, ri, frame, vma_sp, thumbflag);
+		err = unwind_frame(cc->um, ri, frame, vma_sp, thumbflag, task);
 		if (err < 0) {
 			pr_debug("end unwind, urc: %ld\n", err);
 			cc->urc_ut = -err;
@@ -1336,7 +1504,7 @@ quadd_get_user_cc_arm32_ehabi(struct quadd_event_context *event_ctx,
 	if (!vma_sp)
 		return 0;
 
-	err = get_extabs_ehabi(vma->vm_start, &ri);
+	err = get_extabs_ehabi(task_tgid_nr(task), vma->vm_start, &ri);
 	if (err) {
 		cc->urc_ut = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
@@ -1372,7 +1540,8 @@ quadd_is_ex_entry_exist_arm32_ehabi(struct quadd_event_context *event_ctx,
 	if (!vma)
 		return 0;
 
-	err = get_extabs_ehabi(vma->vm_start, &ri);
+	err = get_extabs_ehabi(task_tgid_nr(event_ctx->task),
+			       vma->vm_start, &ri);
 	if (err)
 		return 0;
 
@@ -1403,81 +1572,42 @@ out:
 int quadd_unwind_start(struct task_struct *task)
 {
 	int err;
-	struct regions_data *rd, *rd_old;
-
-	rd = rd_alloc(QUADD_EXTABS_SIZE);
-	if (IS_ERR_OR_NULL(rd)) {
-		pr_err("%s: error: rd_alloc\n", __func__);
-		return -ENOMEM;
-	}
 
 	err = quadd_dwarf_unwind_start();
-	if (err) {
-		rd_free(rd);
+	if (err < 0)
 		return err;
-	}
-
-	raw_spin_lock(&ctx.lock);
-
-	rd_old = rcu_dereference(ctx.rd);
-	if (rd_old)
-		pr_warn("%s: warning: rd_old\n", __func__);
-
-	rcu_assign_pointer(ctx.rd, rd);
-
-	if (rd_old)
-		call_rcu(&rd_old->rcu, rd_free_rcu);
-
-	ctx.pid = task->tgid;
 
 	ctx.ex_tables_size = 0;
-
-	raw_spin_unlock(&ctx.lock);
 
 	return 0;
 }
 
 void quadd_unwind_stop(void)
 {
-	unsigned long i, nr_entries;
-	struct regions_data *rd;
-	struct quadd_mmap_area *mmap;
+	struct quadd_mmap_area *entry;
 
-	raw_spin_lock(&ctx.lock);
+	raw_spin_lock(&ctx.quadd_ctx->mmaps_lock);
 
-	ctx.pid = 0;
+	list_for_each_entry(entry, &ctx.quadd_ctx->mmap_areas, list)
+		quadd_unwind_clean_mmap(entry);
 
-	rd = rcu_dereference(ctx.rd);
-	if (!rd)
-		goto out;
+	raw_spin_unlock(&ctx.quadd_ctx->mmaps_lock);
 
-	nr_entries = rd->curr_nr;
-
-	for (i = 0; i < nr_entries; i++) {
-		mmap = rd->entries[i].mmap;
-		mmap_wait_for_close(mmap);
-		clean_mmap(rd, mmap, 0);
-	}
-
-	rcu_assign_pointer(ctx.rd, NULL);
-	call_rcu(&rd->rcu, rd_free_rcu);
-
-out:
-	raw_spin_unlock(&ctx.lock);
 	quadd_dwarf_unwind_stop();
 }
 
-int quadd_unwind_init(void)
+int quadd_unwind_init(struct quadd_ctx *quadd_ctx)
 {
 	int err;
+
+	ctx.quadd_ctx = quadd_ctx;
 
 	err = quadd_dwarf_unwind_init();
 	if (err)
 		return err;
 
-	raw_spin_lock_init(&ctx.lock);
-	rcu_assign_pointer(ctx.rd, NULL);
-	ctx.pid = 0;
+	INIT_LIST_HEAD(&ctx.mm_ex_list);
+	raw_spin_lock_init(&ctx.mm_ex_list_lock);
 
 	return 0;
 }

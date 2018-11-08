@@ -229,8 +229,8 @@ is_frame_present(struct ex_region_info *ri, int is_eh)
 {
 	struct extab_info *ti, *ti_hdr;
 
-	ti = &ri->ex_sec[get_secid_frame(is_eh)];
-	ti_hdr = &ri->ex_sec[get_secid_frame_hdr(is_eh)];
+	ti = &ri->mmap->fi.ex_sec[get_secid_frame(is_eh)];
+	ti_hdr = &ri->mmap->fi.ex_sec[get_secid_frame_hdr(is_eh)];
 
 	return (ti->length && ti_hdr->length) ? 1 : 0;
 }
@@ -246,11 +246,15 @@ validate_addr(struct ex_region_info *ri,
 	unsigned long start, end;
 
 	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
 
 	if (atomic_read(&mmap->state) != QUADD_MMAP_STATE_ACTIVE)
 		return 0;
 
-	ti = &ri->ex_sec[st];
+	ti = &mmap->fi.ex_sec[st];
 
 	start = (unsigned long)mmap->data + ti->mmap_offset;
 	end = start + ti->length;
@@ -381,11 +385,24 @@ ex_addr_to_mmap_addr(unsigned long addr,
 {
 	unsigned long offset;
 	struct extab_info *ti;
+	struct quadd_mmap_area *mmap;
 
-	ti = &ri->ex_sec[st];
-	offset = addr - ti->addr;
+	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
 
-	return ti->mmap_offset + offset + (unsigned long)ri->mmap->data;
+	ti = &mmap->fi.ex_sec[st];
+	offset = addr - get_ex_sec_address(ri, ti, st);
+
+	pr_debug("addr: %#lx, data: %p, st: %d, ri vma: %#lx-%#lx\n",
+		addr, mmap->data, st, ri->vm_start, ri->vm_end);
+	pr_debug("ti addr/len/mmap_of:%#lx/%#lx/%#lx, offset:%#lx, res:%#lx\n",
+		ti->addr, ti->length, ti->mmap_offset,
+		offset, ti->mmap_offset + offset + (unsigned long)mmap->data);
+
+	return ti->mmap_offset + offset + (unsigned long)mmap->data;
 }
 
 static inline unsigned long
@@ -394,11 +411,24 @@ mmap_addr_to_ex_addr(unsigned long addr,
 {
 	unsigned long offset;
 	struct extab_info *ti;
+	struct quadd_mmap_area *mmap;
 
-	ti = &ri->ex_sec[st];
-	offset = addr - ti->mmap_offset - (unsigned long)ri->mmap->data;
+	mmap = ri->mmap;
+	if (unlikely(!mmap)) {
+		pr_warn_once("%s: !mmap\n", __func__);
+		return 0;
+	}
 
-	return ti->addr + offset;
+	ti = &mmap->fi.ex_sec[st];
+	offset = addr - ti->mmap_offset - (unsigned long)mmap->data;
+
+	pr_debug("addr: %#lx, data: %p, st: %d, ri vma: %#lx-%#lx\n",
+		addr, mmap->data, st, ri->vm_start, ri->vm_end);
+	pr_debug("ti addr/len/mmap_of:%#lx/%#lx/%#lx, offset:%#lx, res:%#lx\n",
+		ti->addr, ti->length, ti->mmap_offset,
+		offset, get_ex_sec_address(ri, ti, st) + offset);
+
+	return get_ex_sec_address(ri, ti, st) + offset;
 }
 
 static int
@@ -409,11 +439,11 @@ get_section_index_by_address(struct ex_region_info *ri,
 	struct extab_info *ti;
 	unsigned long start, end;
 
-	for (i = 0; i < ARRAY_SIZE(ri->ex_sec); i++) {
-		ti = &ri->ex_sec[i];
+	for (i = 0; i < ARRAY_SIZE(ri->mmap->fi.ex_sec); i++) {
+		ti = &ri->mmap->fi.ex_sec[i];
 
 		if (ti->length > 0) {
-			start = ti->addr;
+			start = get_ex_sec_address(ri, ti, i);
 			end = start + ti->length;
 
 			if (addr >= start && addr < end)
@@ -1470,7 +1500,8 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 	secid_hdr = get_secid_frame_hdr(is_eh);
 
 	if (hdr->version != 1) {
-		pr_warn_once("warning: unknown eh hdr format\n");
+		pr_warn_once("warning: unknown eh hdr format: %u\n",
+			     (unsigned int)hdr->version);
 		return NULL;
 	}
 	p = (unsigned char *)(hdr + 1);
@@ -1504,7 +1535,8 @@ dwarf_get_bs_table(struct ex_region_info *ri,
 		return NULL;
 
 	if (hdr->table_enc != (DW_EH_PE_datarel | DW_EH_PE_sdata4)) {
-		pr_warn_once("warning: unknown eh hdr format\n");
+		pr_warn_once("warning: unknown eh hdr format: %u\n",
+			     (unsigned int)hdr->version);
 		return NULL;
 	}
 
@@ -1533,9 +1565,9 @@ dwarf_decode_fde_cie(struct ex_region_info *ri,
 	struct extab_info *ti;
 
 	secid = get_secid_frame(is_eh);
-	ti = &ri->ex_sec[secid];
+	ti = &ri->mmap->fi.ex_sec[secid];
 
-	addr = ti->addr;
+	addr = get_ex_sec_address(ri, ti, secid);
 
 	frame_start = (unsigned char *)
 		ex_addr_to_mmap_addr(addr, ri, secid);
@@ -1606,7 +1638,8 @@ dwarf_find_fde(struct ex_region_info *ri,
 	       void *data,
 	       unsigned long length,
 	       unsigned long pc,
-	       int is_eh)
+	       int is_eh,
+	       struct task_struct *task)
 {
 	long err;
 	int secid, secid_hdr;
@@ -1619,8 +1652,8 @@ dwarf_find_fde(struct ex_region_info *ri,
 	secid = get_secid_frame(is_eh);
 	secid_hdr = get_secid_frame_hdr(is_eh);
 
-	ti = &ri->ex_sec[secid_hdr];
-	data_base = ti->addr;
+	ti = &ri->mmap->fi.ex_sec[secid_hdr];
+	data_base = get_ex_sec_address(ri, ti, secid_hdr);
 
 	bst = dwarf_get_bs_table(ri, data, length, data_base,
 				 &fde_count, is_eh);
@@ -1636,7 +1669,7 @@ dwarf_find_fde(struct ex_region_info *ri,
 
 	if (pc >= init_loc) {
 		unsigned long start, end;
-		struct extab_info *ti = &ri->ex_sec[secid];
+		struct extab_info *ti = &ri->mmap->fi.ex_sec[secid];
 
 		fde_addr = dw_bst_get_fde_addr(fi, data_base);
 		fde_addr = ex_addr_to_mmap_addr(fde_addr, ri,
@@ -1661,8 +1694,8 @@ dwarf_find_fde(struct ex_region_info *ri,
 			end = start + fde.address_range;
 
 			if (sf && !sf->is_sched)
-				quadd_unwind_set_tail_info(ri->vm_start, secid,
-							   start, end);
+				quadd_unwind_set_tail_info(ri, secid,
+							   start, end, task);
 		}
 
 		pr_debug("pc: %#lx, last bst entry: %#lx - %#lx",
@@ -1683,7 +1716,8 @@ dwarf_find_fde(struct ex_region_info *ri,
 }
 
 static int
-__is_fde_entry_exist(struct ex_region_info *ri, unsigned long addr, int is_eh)
+__is_fde_entry_exist(struct ex_region_info *ri, unsigned long addr,
+		     int is_eh, struct task_struct *task)
 {
 	int secid_hdr;
 	unsigned char *fde_p;
@@ -1693,16 +1727,16 @@ __is_fde_entry_exist(struct ex_region_info *ri, unsigned long addr, int is_eh)
 
 	secid_hdr = get_secid_frame_hdr(is_eh);
 
-	ti = &ri->ex_sec[secid_hdr];
+	ti = &ri->mmap->fi.ex_sec[secid_hdr];
 
-	a = ti->addr;
+	a = get_ex_sec_address(ri, ti, secid_hdr);
 
 	hdr_start = (unsigned char *)
 		ex_addr_to_mmap_addr(a, ri, secid_hdr);
 
 	hdr_len = ti->length;
 
-	fde_p = dwarf_find_fde(ri, NULL, hdr_start, hdr_len, addr, is_eh);
+	fde_p = dwarf_find_fde(ri, NULL, hdr_start, hdr_len, addr, is_eh, task);
 
 	return fde_p ? 1 : 0;
 }
@@ -1711,18 +1745,19 @@ static int
 is_fde_entry_exist(struct ex_region_info *ri,
 		   unsigned long addr,
 		   int *is_eh,
-		   int *is_debug)
+		   int *is_debug,
+		   struct task_struct *task)
 {
 	*is_eh = 0;
 	*is_debug = 0;
 
 	if (is_frame_present(ri, 1)) {
-		if (__is_fde_entry_exist(ri, addr, 1))
+		if (__is_fde_entry_exist(ri, addr, 1, task))
 			*is_eh = 1;
 	}
 
 	if (is_frame_present(ri, 0)) {
-		if (__is_fde_entry_exist(ri, addr, 0))
+		if (__is_fde_entry_exist(ri, addr, 0, task))
 			*is_debug = 1;
 	}
 
@@ -1735,7 +1770,8 @@ dwarf_decode(struct ex_region_info *ri,
 	     struct dw_cie *cie,
 	     struct dw_fde *fde,
 	     unsigned long pc,
-	     int is_eh)
+	     int is_eh,
+	     struct task_struct *task)
 {
 	long err;
 	int secid_hdr;
@@ -1745,9 +1781,9 @@ dwarf_decode(struct ex_region_info *ri,
 	struct extab_info *ti;
 
 	secid_hdr = get_secid_frame_hdr(is_eh);
-	ti = &ri->ex_sec[secid_hdr];
+	ti = &ri->mmap->fi.ex_sec[secid_hdr];
 
-	addr = ti->addr;
+	addr = get_ex_sec_address(ri, ti, secid_hdr);
 
 	hdr_start = (unsigned char *)
 		ex_addr_to_mmap_addr(addr, ri, secid_hdr);
@@ -1757,7 +1793,7 @@ dwarf_decode(struct ex_region_info *ri,
 	pr_debug("eh frame hdr: %p - %p\n",
 		 hdr_start, hdr_start + hdr_len);
 
-	fde_p = dwarf_find_fde(ri, sf, hdr_start, hdr_len, pc, is_eh);
+	fde_p = dwarf_find_fde(ri, sf, hdr_start, hdr_len, pc, is_eh, task);
 	if (!fde_p)
 		return -QUADD_URC_IDX_NOT_FOUND;
 
@@ -1798,7 +1834,8 @@ static long
 unwind_frame(struct ex_region_info *ri,
 	     struct stackframe *sf,
 	     struct vm_area_struct *vma_sp,
-	     int is_eh)
+	     int is_eh,
+	     struct task_struct *task)
 {
 	int i, num_regs;
 	long err;
@@ -1810,7 +1847,7 @@ unwind_frame(struct ex_region_info *ri,
 	struct regs_state *rs, *rs_initial;
 	int mode = sf->mode;
 
-	err = dwarf_decode(ri, sf, &cie, &fde, pc, is_eh);
+	err = dwarf_decode(ri, sf, &cie, &fde, pc, is_eh, task);
 	if (err < 0)
 		return err;
 
@@ -1984,7 +2021,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 				prev_ri = NULL;
 			}
 
-			err = quadd_get_dw_frames(vma_pc->vm_start, &ri_new);
+			err = quadd_get_dw_frames(vma_pc->vm_start,
+						  &ri_new, task);
 			if (err) {
 				cc->urc_dwarf = QUADD_URC_TBL_NOT_EXIST;
 				break;
@@ -1996,7 +2034,8 @@ unwind_backtrace(struct quadd_callchain *cc,
 			prev_ri = ri = &ri_new;
 		}
 
-		if (!is_fde_entry_exist(ri, sf->pc, &__is_eh, &__is_debug)) {
+		if (!is_fde_entry_exist(ri, sf->pc, &__is_eh,
+					&__is_debug, task)) {
 			pr_debug("eh/debug fde entries are not existed\n");
 			cc->urc_dwarf = QUADD_URC_IDX_NOT_FOUND;
 			break;
@@ -2011,12 +2050,12 @@ unwind_backtrace(struct quadd_callchain *cc,
 				is_eh = 1;
 		}
 
-		err = unwind_frame(ri, sf, vma_sp, is_eh);
+		err = unwind_frame(ri, sf, vma_sp, is_eh, task);
 		if (err < 0) {
 			if (__is_eh && __is_debug) {
 				is_eh ^= 1;
 
-				err = unwind_frame(ri, sf, vma_sp, is_eh);
+				err = unwind_frame(ri, sf, vma_sp, is_eh, task);
 				if (err < 0) {
 					cc->urc_dwarf = -err;
 					break;
@@ -2068,7 +2107,8 @@ quadd_is_ex_entry_exist_dwarf(struct quadd_event_context *event_ctx,
 	struct ex_region_info ri;
 	struct vm_area_struct *vma;
 	struct pt_regs *regs = event_ctx->regs;
-	struct mm_struct *mm = event_ctx->task->mm;
+	struct task_struct *task = event_ctx->task;
+	struct mm_struct *mm = task->mm;
 
 	if (!regs || !mm)
 		return 0;
@@ -2077,11 +2117,11 @@ quadd_is_ex_entry_exist_dwarf(struct quadd_event_context *event_ctx,
 	if (!vma)
 		return 0;
 
-	err = quadd_get_dw_frames(vma->vm_start, &ri);
+	err = quadd_get_dw_frames(vma->vm_start, &ri, task);
 	if (err)
 		return 0;
 
-	res = is_fde_entry_exist(&ri, addr, &is_eh, &is_debug);
+	res = is_fde_entry_exist(&ri, addr, &is_eh, &is_debug, task);
 	quadd_put_dw_frames(&ri);
 
 	return res;
@@ -2142,9 +2182,10 @@ quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
 	mode = DW_MODE_ARM32;
 #endif
 
-	pr_debug("%s: pc: %#lx, lr: %#lx\n", __func__, ip, lr);
-	pr_debug("%s: sp: %#lx, fp: %#lx, fp_thumb: %#lx\n",
-		 __func__, sp, fp, fp_thumb);
+	pr_debug("%s: pid: %u, pc: %#lx, lr: %#lx\n",
+		 __func__, task_tgid_nr(task), ip, lr);
+	pr_debug("%s: pid: %u, sp: %#lx, fp: %#lx, fp_thumb: %#lx\n",
+		 __func__, task_tgid_nr(task), sp, fp, fp_thumb);
 
 	sf = &cpu_ctx->sf;
 
@@ -2172,7 +2213,7 @@ quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
 	if (!vma_sp)
 		return 0;
 
-	err = quadd_get_dw_frames(vma->vm_start, &ri);
+	err = quadd_get_dw_frames(vma->vm_start, &ri, task);
 	if (err) {
 		cc->urc_dwarf = QUADD_URC_TBL_NOT_EXIST;
 		return 0;
@@ -2181,7 +2222,8 @@ quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
 	unwind_backtrace(cc, &ri, sf, vma_sp, task);
 	quadd_put_dw_frames(&ri);
 
-	pr_debug("%s: mode: %s, cc->nr: %d --> %d\n", __func__,
+	pr_debug("%s: pid: %u: mode: %s, cc->nr: %d --> %d\n",
+		 __func__, task_tgid_nr(task),
 		 (mode == DW_MODE_ARM32) ? "arm32" : "arm64",
 		 nr_prev, cc->nr);
 

@@ -605,7 +605,7 @@ set_extab(struct quadd_sections *extabs,
 static void
 delete_mmap(struct quadd_mmap_area *mmap)
 {
-	quadd_unwind_delete_mmap(mmap);
+	quadd_unwind_clean_mmap(mmap);
 }
 
 static int
@@ -731,7 +731,7 @@ int quadd_late_init(void)
 		goto out_err_hrt;
 	}
 
-	err = quadd_unwind_init();
+	err = quadd_unwind_init(&ctx);
 	if (err < 0) {
 		pr_err("error: EH unwinding init failed\n");
 		goto out_err_power_clk;

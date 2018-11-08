@@ -58,9 +58,6 @@ struct quadd_comm_ctx {
 	int params_ok;
 
 	struct miscdevice *misc_dev;
-
-	struct list_head mmap_areas;
-	raw_spinlock_t mmaps_lock;
 };
 
 struct comm_cpu_context {
@@ -230,15 +227,26 @@ static struct quadd_comm_data_interface comm_data = {
 	.is_active = is_active,
 };
 
-static struct quadd_mmap_area *
-find_mmap(unsigned long vm_start)
+static struct quadd_mmap_area *find_mmap_by_vma(unsigned long vm_start)
 {
 	struct quadd_mmap_area *entry;
 
-	list_for_each_entry(entry, &comm_ctx.mmap_areas, list) {
+	list_for_each_entry(entry, &comm_ctx.ctx->mmap_areas, list) {
 		struct vm_area_struct *mmap_vma = entry->mmap_vma;
 
 		if (vm_start == mmap_vma->vm_start)
+			return entry;
+	}
+
+	return NULL;
+}
+
+static struct quadd_mmap_area *find_mmap_by_hash(unsigned int hash)
+{
+	struct quadd_mmap_area *entry;
+
+	list_for_each_entry(entry, &comm_ctx.ctx->mmap_areas, list) {
+		if (hash == entry->fi.file_hash)
 			return entry;
 	}
 
@@ -432,7 +440,8 @@ device_ioctl(struct file *file,
 	     unsigned long ioctl_param)
 {
 	int err = 0;
-	unsigned int cpuid;
+	unsigned int cpuid, file_hash;
+	unsigned long mmap_start;
 	struct quadd_mmap_area *mmap;
 	struct quadd_parameters *user_params;
 	struct quadd_pmu_setup_for_cpu *cpu_pmu_params;
@@ -673,26 +682,43 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		pr_debug("%s: user_mmap_start: %#llx, sections vma: %#llx - %#llx\n",
-			 __func__,
-			 (unsigned long long)extabs.user_mmap_start,
-			 (unsigned long long)extabs.vm_start,
-			 (unsigned long long)extabs.vm_end);
+		mmap_start = (unsigned long)extabs.user_mmap_start;
+		file_hash = extabs.file_hash;
 
-		raw_spin_lock(&comm_ctx.mmaps_lock);
-		mmap = find_mmap(extabs.user_mmap_start);
+		pr_debug("%s: mmap_start: %#lx, hash: %#x, sec: %#lx - %#lx\n",
+			 __func__, mmap_start, file_hash,
+			 (unsigned long)extabs.vm_start,
+			 (unsigned long)extabs.vm_end);
+
+		raw_spin_lock(&comm_ctx.ctx->mmaps_lock);
+
+		mmap = mmap_start ? find_mmap_by_vma(mmap_start) :
+			find_mmap_by_hash(file_hash);
 		if (!mmap) {
-			pr_err("%s: error: mmap is not found\n", __func__);
+			pr_err("%s: error: !mmap, start/hash: %#lx/%#x\n",
+			       __func__, mmap_start, file_hash);
 			err = -ENXIO;
-			raw_spin_unlock(&comm_ctx.mmaps_lock);
+			raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
+			goto error_out;
+		}
+
+		if ((mmap_start && mmap->type != QUADD_MMAP_TYPE_NONE) ||
+		    (!mmap_start && mmap->type != QUADD_MMAP_TYPE_EXTABS)) {
+			pr_err("%s: wrong mmap: %d, start/hash: %#lx/%#x\n",
+				__func__, mmap->type, mmap_start, file_hash);
+			err = -ENXIO;
+			raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 			goto error_out;
 		}
 
 		mmap->type = QUADD_MMAP_TYPE_EXTABS;
 		mmap->rb = NULL;
 
+		if (mmap_start)
+			mmap->fi.file_hash = extabs.file_hash;
+
 		err = comm_ctx.control->set_extab(&extabs, mmap);
-		raw_spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 		if (err) {
 			pr_err("error: set_sections_info\n");
 			goto error_out;
@@ -702,24 +728,35 @@ device_ioctl(struct file *file,
 	case IOCTL_SET_MMAP_RB:
 		if (copy_from_user(&mmap_rb, (void __user *)ioctl_param,
 				   sizeof(mmap_rb))) {
-			pr_err("%s: error: mmap_rb failed\n", __func__);
 			err = -EFAULT;
 			goto error_out;
 		}
 
-		raw_spin_lock(&comm_ctx.mmaps_lock);
-		mmap = find_mmap((unsigned long)mmap_rb.vm_start);
-		raw_spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_lock(&comm_ctx.ctx->mmaps_lock);
+
+		mmap = find_mmap_by_vma((unsigned long)mmap_rb.vm_start);
 		if (!mmap) {
-			pr_err("%s: error: mmap is not found\n", __func__);
+			pr_err("set_mmap_rb: mmap is not found, start: %#lx\n",
+			       (unsigned long)mmap_rb.vm_start);
 			err = -ENXIO;
+			raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 			goto error_out;
 		}
+
+		if (mmap->type != QUADD_MMAP_TYPE_NONE) {
+			pr_err("set_mmap_rb: wrong mmap: %d, start: %#lx\n",
+			       mmap->type, mmap->mmap_vma->vm_start);
+			err = -ENXIO;
+			raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
+			goto error_out;
+		}
+
 		mmap->type = QUADD_MMAP_TYPE_RB;
 
 		err = init_mmap_hdr(&mmap_rb, mmap);
+		raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 		if (err) {
-			pr_err("%s: error: init_mmap_hdr\n", __func__);
+			pr_err("set_mmap_rb: error: init_mmap_hdr\n");
 			goto error_out;
 		}
 
@@ -742,7 +779,7 @@ remove_mmap_entry(struct quadd_mmap_area *mmap)
 {
 	struct quadd_mmap_area *entry, *next;
 
-	list_for_each_entry_safe(entry, next, &comm_ctx.mmap_areas, list) {
+	list_for_each_entry_safe(entry, next, &comm_ctx.ctx->mmap_areas, list) {
 		if (entry == mmap) {
 			list_del(&entry->list);
 			break;
@@ -760,18 +797,18 @@ static void mmap_close(struct vm_area_struct *vma)
 {
 	struct quadd_mmap_area *mmap;
 
-	pr_debug("%s: mmap_close: vma: %#lx - %#lx\n",
-		 __func__, vma->vm_start, vma->vm_end);
+	raw_spin_lock(&comm_ctx.ctx->mmaps_lock);
 
-	raw_spin_lock(&comm_ctx.mmaps_lock);
-
-	mmap = find_mmap(vma->vm_start);
+	mmap = find_mmap_by_vma(vma->vm_start);
 	if (!mmap) {
-		pr_err("%s: error: mmap is not found\n", __func__);
+		pr_err("%s: error: mmap is not found: vma: %#lx - %#lx\n",
+			__func__, vma->vm_start, vma->vm_end);
 		goto out;
 	}
 
-	pr_debug("mmap_close: type: %d\n", mmap->type);
+	pr_debug("%s: mmap: %p: type: %d, %#lx - %#lx, data: %p\n",
+		__func__, mmap, mmap->type, mmap->mmap_vma->vm_start,
+		mmap->mmap_vma->vm_end, mmap->data);
 
 	if (mmap->type == QUADD_MMAP_TYPE_EXTABS)
 		comm_ctx.control->delete_mmap(mmap);
@@ -783,7 +820,7 @@ static void mmap_close(struct vm_area_struct *vma)
 	remove_mmap_entry(mmap);
 
 out:
-	raw_spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 
 	if (mmap) {
 		vfree(mmap->data);
@@ -812,11 +849,11 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 		 vma->vm_start, vma->vm_end, vmf->pgoff, vmf->virtual_address);
 #endif
 
-	raw_spin_lock(&comm_ctx.mmaps_lock);
+	raw_spin_lock(&comm_ctx.ctx->mmaps_lock);
 
-	mmap = find_mmap(vma->vm_start);
+	mmap = find_mmap_by_vma(vma->vm_start);
 	if (!mmap) {
-		raw_spin_unlock(&comm_ctx.mmaps_lock);
+		raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 		return VM_FAULT_SIGBUS;
 	}
 
@@ -825,7 +862,7 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	vmf->page = vmalloc_to_page(data + offset);
 	get_page(vmf->page);
 
-	raw_spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 	return 0;
 }
 
@@ -840,9 +877,6 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long vma_size, nr_pages;
 	struct quadd_mmap_area *entry;
-
-	pr_debug("mmap: vma: %#lx - %#lx, pgoff: %#lx\n",
-		 vma->vm_start, vma->vm_end, vma->vm_pgoff);
 
 	if (vma->vm_pgoff != 0)
 		return -EINVAL;
@@ -874,13 +908,12 @@ device_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	entry->type = QUADD_MMAP_TYPE_NONE;
 
-	pr_debug("%s: data: %p - %p (%#lx)\n",
-		 __func__, entry->data, entry->data + nr_pages * PAGE_SIZE,
-		 nr_pages * PAGE_SIZE);
+	pr_debug("%s: mmap: %p, vma: %#lx - %#lx, data: %p\n",
+		 __func__, entry, vma->vm_start, vma->vm_end, entry->data);
 
-	raw_spin_lock(&comm_ctx.mmaps_lock);
-	list_add_tail(&entry->list, &comm_ctx.mmap_areas);
-	raw_spin_unlock(&comm_ctx.mmaps_lock);
+	raw_spin_lock(&comm_ctx.ctx->mmaps_lock);
+	list_add_tail(&entry->list, &comm_ctx.ctx->mmap_areas);
+	raw_spin_unlock(&comm_ctx.ctx->mmaps_lock);
 
 	vma->vm_ops = &mmap_vm_ops;
 	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP;
@@ -930,8 +963,8 @@ static int comm_init(void)
 
 	comm_ctx.nr_users = 0;
 
-	INIT_LIST_HEAD(&comm_ctx.mmap_areas);
-	raw_spin_lock_init(&comm_ctx.mmaps_lock);
+	INIT_LIST_HEAD(&comm_ctx.ctx->mmap_areas);
+	raw_spin_lock_init(&comm_ctx.ctx->mmaps_lock);
 
 	for_each_possible_cpu(cpu_id) {
 		struct comm_cpu_context *cc = &per_cpu(cpu_ctx, cpu_id);

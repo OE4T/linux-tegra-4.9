@@ -17,6 +17,9 @@
 #ifndef __QUADD_H
 #define __QUADD_H
 
+#include <linux/list.h>
+#include <linux/spinlock.h>
+
 #include <linux/tegra_profiler.h>
 
 /* #define QUADD_USE_EMULATE_COUNTERS	1 */
@@ -88,6 +91,9 @@ struct quadd_ctx {
 	unsigned int mode_is_trace_all:1;
 	unsigned int mode_is_sample_tree:1;
 	unsigned int mode_is_trace_tree:1;
+
+	struct list_head mmap_areas;
+	raw_spinlock_t mmaps_lock;
 };
 
 static inline int quadd_mode_is_sampling(struct quadd_ctx *ctx)

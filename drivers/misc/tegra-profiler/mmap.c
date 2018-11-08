@@ -35,18 +35,18 @@
 #include "mmap.h"
 #include "comm.h"
 #include "hrt.h"
+#include "tegra.h"
 
 #define TMP_BUFFER_SIZE			(PATH_MAX)
 #define QUADD_MMAP_TREE_MAX_LEVEL	32
 
 static void
 put_mmap_sample(struct quadd_mmap_data *s, char *filename,
-		size_t length, unsigned long pgoff,
-		int is_file_exists, pid_t __tgid)
+		size_t length, unsigned long pgoff, pid_t __tgid)
 {
-	u64 mmap_ed = 0;
+	int vec_idx = 0;
 	struct quadd_record_data r;
-	struct quadd_iovec vec[4];
+	struct quadd_iovec vec[3];
 	u64 pgoff_val = (u64)pgoff << PAGE_SHIFT;
 	u32 tgid = (u32)__tgid;
 
@@ -57,26 +57,23 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 	r.mmap.time = quadd_get_time();
 	r.mmap.filename_length = length;
 
-	if (is_file_exists)
-		mmap_ed |= QUADD_MMAP_ED_IS_FILE_EXISTS;
+	vec[vec_idx].base = &pgoff_val;
+	vec[vec_idx].len = sizeof(pgoff_val);
+	vec_idx++;
 
-	vec[0].base = &pgoff_val;
-	vec[0].len = sizeof(pgoff_val);
+	vec[vec_idx].base = filename;
+	vec[vec_idx].len = length;
+	vec_idx++;
 
-	vec[1].base = &mmap_ed;
-	vec[1].len = sizeof(mmap_ed);
-
-	vec[2].base = filename;
-	vec[2].len = length;
-
-	vec[3].base = &tgid;
-	vec[3].len = sizeof(tgid);
+	vec[vec_idx].base = &tgid;
+	vec[vec_idx].len = sizeof(tgid);
+	vec_idx++;
 
 	pr_debug("[%d] MMAP: tid: %u,pid: %u,'%s',%#llx-%#llx(%llx,%#llx)\n",
-		 smp_processor_id(), s->pid, tgid, filename,
+		 s->cpu_id, s->pid, tgid, filename,
 		 s->addr, s->addr + s->len, s->len, pgoff_val);
 
-	quadd_put_sample_this_cpu(&r, vec, ARRAY_SIZE(vec));
+	quadd_put_sample_this_cpu(&r, vec, vec_idx);
 }
 
 static void
@@ -84,6 +81,7 @@ process_mmap(struct vm_area_struct *vma, struct task_struct *task,
 	     char *buf, size_t buf_size)
 {
 	pid_t tgid;
+	unsigned int cpu_flags;
 	int is_file_exists;
 	struct file *vm_file;
 	char *file_name;
@@ -136,13 +134,23 @@ process_mmap(struct vm_area_struct *vma, struct task_struct *task,
 
 	sample.pid = task_pid_nr(task);
 	tgid = task_tgid_nr(task);
-	sample.user_mode = 1;
 
 	sample.addr = vma->vm_start;
 	sample.len = vma->vm_end - vma->vm_start;
 
+	sample.flags = 0;
+
+	sample.cpu_id = quadd_get_processor_id(NULL, &cpu_flags);
+	if (cpu_flags & QUADD_CPUMODE_TEGRA_POWER_CLUSTER_LP)
+		sample.flags |= QUADD_MMAP_FLAG_LP_MODE;
+
+	if (is_file_exists)
+		sample.flags |= QUADD_MMAP_FLAG_IS_FILE_EXISTS;
+
+	sample.flags |= QUADD_MMAP_FLAG_USER_MODE;
+
 	put_mmap_sample(&sample, file_name, length_aligned,
-			vma->vm_pgoff, is_file_exists, tgid);
+			vma->vm_pgoff, tgid);
 }
 
 void quadd_process_mmap(struct vm_area_struct *vma, struct task_struct *task)

@@ -18,6 +18,7 @@
 #define __QUADD_COMM_H__
 
 #include <linux/types.h>
+#include "eh_unwind.h"
 
 struct quadd_ctx;
 struct quadd_record_data;
@@ -60,6 +61,8 @@ struct quadd_mmap_area {
 	atomic_t state;
 	atomic_t ref_count;
 	raw_spinlock_t state_lock;
+
+	struct file_ex_region_info fi;
 };
 
 struct quadd_comm_control_interface {

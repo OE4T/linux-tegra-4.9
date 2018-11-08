@@ -428,13 +428,6 @@ get_stack_offset(struct task_struct *task,
 	return vma->vm_end - sp;
 }
 
-static inline void
-validate_um_for_task(struct task_struct *task, struct quadd_unw_methods *um)
-{
-	if (task_tgid_nr(task) != hrt.root_pid)
-		um->ut = um->dwarf = 0;
-}
-
 static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 {
@@ -498,7 +491,6 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;
-		validate_um_for_task(task, &cc->um);
 
 		bt_size = quadd_get_user_callchain(&event_ctx, cc, ctx);
 		if (bt_size > 0) {

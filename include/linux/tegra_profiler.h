@@ -19,8 +19,8 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	44
-#define QUADD_IO_VERSION	25
+#define QUADD_SAMPLES_VERSION	45
+#define QUADD_IO_VERSION	26
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -43,6 +43,7 @@
 #define QUADD_IO_VERSION_SAMPLING_MODE		23
 #define QUADD_IO_VERSION_FORCE_ARCH_TIMER	24
 #define QUADD_IO_VERSION_SAMPLE_ALL_TASKS	25
+#define QUADD_IO_VERSION_EXTABLES_PID		26
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG		17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES		18
@@ -70,6 +71,7 @@
 #define QUADD_SAMPLE_VERSION_SAMPLING_MODE		42
 #define QUADD_SAMPLE_VERSION_SAMPLE_ALL_TASKS		43
 #define QUADD_SAMPLE_VERSION_KTHREAD_TSK_FLAG		44
+#define QUADD_SAMPLE_VERSION_MMAP_CPUID			45
 
 #define QUADD_MMAP_HEADER_VERSION	1
 
@@ -256,16 +258,20 @@ struct quadd_sample_data {
 	u32 events_flags;
 };
 
-#define QUADD_MMAP_ED_IS_FILE_EXISTS	(1 << 0)
+#define QUADD_MMAP_FLAG_LP_MODE		(1 << 0)
+#define QUADD_MMAP_FLAG_USER_MODE	(1 << 1)
+#define QUADD_MMAP_FLAG_IS_FILE_EXISTS	(1 << 2)
 
 struct quadd_mmap_data {
 	u32 pid;
 	u64 time;
 
+	u8 cpu_id;
+	u16 flags;
+
 	u64 addr;
 	u64 len;
 
-	u8 user_mode:1;
 	u16 filename_length;
 };
 
@@ -301,10 +307,10 @@ struct quadd_additional_sample {
 	u16 extra_length;
 };
 
-#define QUADD_SCHED_FLAG_LP_MODE	(1 << 0)
-#define QUADD_SCHED_FLAG_SCHED_IN	(1 << 1)
-#define QUADD_SCHED_FLAG_IS_VPID	(1 << 2)
-#define QUADD_SCHED_FLAG_PF_KTHREAD	(1 << 3)
+#define QUADD_SCHED_FLAG_LP_MODE	(1ULL << 0)
+#define QUADD_SCHED_FLAG_SCHED_IN	(1ULL << 1)
+#define QUADD_SCHED_FLAG_IS_VPID	(1ULL << 2)
+#define QUADD_SCHED_FLAG_PF_KTHREAD	(1ULL << 3)
 
 struct quadd_sched_data {
 	u32 pid;
@@ -349,24 +355,24 @@ struct quadd_debug_data {
 
 #define QUADD_HEADER_MAGIC	0x1122
 
-#define QUADD_HDR_FLAG_BACKTRACE	(1 << 0)
-#define QUADD_HDR_FLAG_USE_FREQ		(1 << 1)
-#define QUADD_HDR_FLAG_POWER_RATE	(1 << 2)
-#define QUADD_HDR_FLAG_DEBUG_SAMPLES	(1 << 3)
-#define QUADD_HDR_FLAG_GET_MMAP		(1 << 4)
-#define QUADD_HDR_FLAG_BT_FP		(1 << 5)
-#define QUADD_HDR_FLAG_BT_UT		(1 << 6)
-#define QUADD_HDR_FLAG_BT_UT_CE		(1 << 7)
-#define QUADD_HDR_FLAG_BT_DWARF		(1 << 8)
-#define QUADD_HDR_FLAG_USE_ARCH_TIMER	(1 << 9)
-#define QUADD_HDR_FLAG_STACK_OFFSET	(1 << 10)
-#define QUADD_HDR_FLAG_HAS_CPUID	(1 << 11)
-#define QUADD_HDR_FLAG_MODE_SAMPLING	(1 << 12)
-#define QUADD_HDR_FLAG_MODE_TRACING	(1 << 13)
-#define QUADD_HDR_FLAG_MODE_SAMPLE_ALL	(1 << 14)
-#define QUADD_HDR_FLAG_MODE_TRACE_ALL	(1 << 15)
-#define QUADD_HDR_FLAG_MODE_SAMPLE_TREE	(1 << 16)
-#define QUADD_HDR_FLAG_MODE_TRACE_TREE	(1 << 17)
+#define QUADD_HDR_FLAG_BACKTRACE	(1ULL << 0)
+#define QUADD_HDR_FLAG_USE_FREQ		(1ULL << 1)
+#define QUADD_HDR_FLAG_POWER_RATE	(1ULL << 2)
+#define QUADD_HDR_FLAG_DEBUG_SAMPLES	(1ULL << 3)
+#define QUADD_HDR_FLAG_GET_MMAP		(1ULL << 4)
+#define QUADD_HDR_FLAG_BT_FP		(1ULL << 5)
+#define QUADD_HDR_FLAG_BT_UT		(1ULL << 6)
+#define QUADD_HDR_FLAG_BT_UT_CE		(1ULL << 7)
+#define QUADD_HDR_FLAG_BT_DWARF		(1ULL << 8)
+#define QUADD_HDR_FLAG_USE_ARCH_TIMER	(1ULL << 9)
+#define QUADD_HDR_FLAG_STACK_OFFSET	(1ULL << 10)
+#define QUADD_HDR_FLAG_HAS_CPUID	(1ULL << 11)
+#define QUADD_HDR_FLAG_MODE_SAMPLING	(1ULL << 12)
+#define QUADD_HDR_FLAG_MODE_TRACING	(1ULL << 13)
+#define QUADD_HDR_FLAG_MODE_SAMPLE_ALL	(1ULL << 14)
+#define QUADD_HDR_FLAG_MODE_TRACE_ALL	(1ULL << 15)
+#define QUADD_HDR_FLAG_MODE_SAMPLE_TREE	(1ULL << 16)
+#define QUADD_HDR_FLAG_MODE_TRACE_TREE	(1ULL << 17)
 
 struct quadd_header_data {
 	u16 magic;
@@ -578,6 +584,8 @@ struct quadd_sec_info {
 	u64 mmap_offset;
 };
 
+#define QUADD_SECTIONS_FLAG_IS_SHARED	(1ULL << 0)
+
 struct quadd_sections {
 	u64 vm_start;
 	u64 vm_end;
@@ -585,8 +593,10 @@ struct quadd_sections {
 	struct quadd_sec_info sec[QUADD_SEC_TYPE_MAX];
 
 	u64 user_mmap_start;
+	u32 file_hash;
 
-	u64 reserved[4];	/* reserved fields for future extensions */
+	u32 pid;
+	u64 flags;
 };
 
 struct quadd_mmap_rb_info {

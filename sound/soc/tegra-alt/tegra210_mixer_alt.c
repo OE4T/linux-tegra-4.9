@@ -181,6 +181,17 @@ static int tegra210_mixer_get_format(struct snd_kcontrol *kcontrol,
 static int tegra210_mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = mc->reg;
+	unsigned int i;
+
+	i = (reg - TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_0) /
+		TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_ADDR_STRIDE;
+	ucontrol->value.integer.value[0] = mixer->gain_value[i];
+
 	return 0;
 }
 

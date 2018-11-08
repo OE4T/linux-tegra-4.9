@@ -1643,6 +1643,18 @@ static int __too_many_isolated(struct pglist_data *pgdat, int file,
 	return isolated > inactive;
 }
 
+static atomic_t enable_congestion = ATOMIC_INIT(0);
+
+void mm_disable_congestion_wait(void)
+{
+	atomic_inc(&enable_congestion);
+}
+
+void mm_enable_congestion_wait(void)
+{
+	atomic_dec(&enable_congestion);
+}
+
 /*
  * A direct reclaimer may isolate SWAP_CLUSTER_MAX pages from the LRU list and
  * then get resheduled. When there are massive number of tasks doing page
@@ -1657,6 +1669,12 @@ static int too_many_isolated(struct pglist_data *pgdat, int file,
 		return 0;
 
 	if (!sane_reclaim(sc))
+		return 0;
+
+	/* IF CMA migration is in progress, disable congestion
+	 * to avoid dead lock in allocating memory for migration.
+	 */
+	if (atomic_read(&enable_congestion))
 		return 0;
 
 	if (unlikely(__too_many_isolated(pgdat, file, sc, 0))) {

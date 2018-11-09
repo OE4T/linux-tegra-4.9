@@ -1,0 +1,12 @@
+* Tegra Hypervisor PM control (tegra_hv_pm_ctl)
+
+Required properties:
+- compatible: Should be "nvidia,tegra-hv-pm-ctl".
+- ivc : IVC channel ID between Guest VM and Sysmgr.
+
+Example:
+	tegra_hv_pm_ctl {
+		compatible = "nvidia,tegra-hv-pm-ctl";
+		status = "okay";
+		ivc = <&tegra_hv 102>;
+	};

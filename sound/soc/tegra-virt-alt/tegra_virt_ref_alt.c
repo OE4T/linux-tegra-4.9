@@ -1,7 +1,7 @@
 /*
  * tegra_virt_ref_alt.c - Tegra reference virtual machine driver
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -189,13 +189,15 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 
 	if (tegra_virt_xbar_register_codec(pdev)) {
 		dev_err(&pdev->dev, "Failed register xbar component\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto undo_register_component;
 	}
 
 	if (of_property_read_u32(pdev->dev.of_node,
 				"admaif_ch_num", &admaif_ch_num)) {
 		dev_err(&pdev->dev, "number of admaif channels is not set\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto undo_register_codec;
 	}
 
 	if (of_property_read_string(pdev->dev.of_node, "cardname", &card->name))
@@ -209,7 +211,8 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 						admaif_ch_list,
 						admaif_ch_num)) {
 			dev_err(&pdev->dev, "admaif_ch_list os not populated\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto undo_register_codec;
 		}
 		for (i = 0; i < admaif_ch_num; i++) {
 			tegra_virt_set_dai_params(
@@ -223,7 +226,8 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
-		return -EINVAL;
+		ret = -EPROBE_DEFER;
+		goto undo_register_codec;
 	}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
 	for (i = 0; i < card->num_rtd; i++) {
@@ -271,6 +275,13 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 	tegra_metadata_setup(pdev, &meta, card);
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_forbid(&pdev->dev);
+
+	return 0;
+
+undo_register_codec:
+	snd_soc_unregister_codec(&pdev->dev);
+undo_register_component:
+	tegra210_virt_admaif_unregister_component(pdev);
 
 	return ret;
 }

@@ -20,3 +20,6 @@ snd-soc-tegra210-virt-alt-admaif-objs := tegra210_virt_alt_admaif.o \
 snd-soc-tegra-virt-t210ref-pcm-objs := tegra_virt_ref_alt.o
 obj-$(CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM) += snd-soc-tegra210-virt-alt-admaif.o
 obj-$(CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM) += snd-soc-tegra-virt-t210ref-pcm.o
+
+snd-soc-tegra210-virt-alt-adsp-objs := tegra210_adsp_virt_alt.o
+obj-$(CONFIG_SND_SOC_TEGRA210_ADSP_VIRT_ALT) += snd-soc-tegra210-virt-alt-adsp.o

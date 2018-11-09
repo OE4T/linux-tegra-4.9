@@ -22,7 +22,7 @@
 /* use semantic versioning convention */
 #define TEGRACAM_MAJOR_VERSION 2
 #define TEGRACAM_MINOR_VERSION 0
-#define TEGRACAM_PATCH_VERSION 1
+#define TEGRACAM_PATCH_VERSION 2
 
 u32 tegracam_version(u8 major, u8 minor, u8 patch)
 {
@@ -133,6 +133,7 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	/* add version info to identify the right feature set */
 	tc_dev->version = tegracam_version(TEGRACAM_MAJOR_VERSION,
 			TEGRACAM_MINOR_VERSION, TEGRACAM_PATCH_VERSION);
+	s_data->version = tc_dev->version;
 	dev_info(dev, "tegracam sensor driver:%s_v%d.%d.%d\n",
 			tc_dev->name, TEGRACAM_MAJOR_VERSION,
 			TEGRACAM_MINOR_VERSION, TEGRACAM_PATCH_VERSION);

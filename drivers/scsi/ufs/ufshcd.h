@@ -594,9 +594,9 @@ struct ufs_hba {
 	struct ufs_desc_size desc_size;
 
 	int latency_hist_enabled;
-	struct io_latency_state io_lat_s;
-	struct rw_semaphore clk_scaling_lock;
 	bool card_present;
+	struct io_latency_state io_lat_read;
+	struct io_latency_state io_lat_write;
 };
 
 /* Returns true if clocks can be gated. Otherwise false */

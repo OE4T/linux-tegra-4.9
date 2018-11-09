@@ -1,4 +1,4 @@
-From 4324af4d3e6fbe3086675cae87de49776f182880 Mon Sep 17 00:00:00 2001
+From e4edce019be2180febe80695741e557eb2c71a0b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 10 Feb 2017 18:21:04 +0100
 Subject: [PATCH 178/353] rt: Drop mutex_disable() on !DEBUG configs and the

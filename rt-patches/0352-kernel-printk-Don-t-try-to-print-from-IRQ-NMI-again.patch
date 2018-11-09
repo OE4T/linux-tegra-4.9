@@ -1,4 +1,4 @@
-From a4325d12f7043b0e6ca18ff544dbc9cef0aa039a Mon Sep 17 00:00:00 2001
+From a2469b4d6547e0e9f952a276f19b2d9cddb1ab61 Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Thu, 15 Feb 2018 12:28:18 +0200
 Subject: [PATCH 352/353] kernel/printk: Don't try to print from IRQ/NMI

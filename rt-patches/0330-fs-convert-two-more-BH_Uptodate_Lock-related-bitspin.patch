@@ -1,4 +1,4 @@
-From c093458d2750be29a693e979a7103bc3aaeae24b Mon Sep 17 00:00:00 2001
+From a207d69e9e96ebbdb16eebea4252c6bbe9a26175 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
 Subject: [PATCH 330/353] fs: convert two more BH_Uptodate_Lock related
@@ -17,10 +17,10 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  2 files changed, 4 insertions(+), 8 deletions(-)
 
 diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index 0094923..37fa06e 100644
+index 0718a86..4ca6cc2 100644
 --- a/fs/ext4/page-io.c
 +++ b/fs/ext4/page-io.c
-@@ -95,8 +95,7 @@ static void ext4_finish_bio(struct bio *bio)
+@@ -94,8 +94,7 @@ static void ext4_finish_bio(struct bio *bio)
  		 * We check all buffers in the page under BH_Uptodate_Lock
  		 * to avoid races with other end io clearing async_write flags
  		 */
@@ -30,7 +30,7 @@ index 0094923..37fa06e 100644
  		do {
  			if (bh_offset(bh) < bio_start ||
  			    bh_offset(bh) + bh->b_size > bio_end) {
-@@ -108,8 +107,7 @@ static void ext4_finish_bio(struct bio *bio)
+@@ -107,8 +106,7 @@ static void ext4_finish_bio(struct bio *bio)
  			if (bio->bi_error)
  				buffer_io_error(bh);
  		} while ((bh = bh->b_this_page) != head);

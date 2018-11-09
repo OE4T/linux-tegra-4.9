@@ -1,4 +1,4 @@
-From f6aa28f4423df62919cc8af0cf3dcc01bc8acb25 Mon Sep 17 00:00:00 2001
+From 5396da7931c81f0b79758501543a330f19f32711 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
 Subject: [PATCH 294/353] crypto: Convert crypto notifier chain to SRCU
@@ -140,10 +140,10 @@ index 5c098ff..6a47601 100644
  EXPORT_SYMBOL_GPL(crypto_unregister_notifier);
  
 diff --git a/crypto/api.c b/crypto/api.c
-index abf53e6..a56b154 100644
+index f12d6b9..7c90409 100644
 --- a/crypto/api.c
 +++ b/crypto/api.c
-@@ -31,7 +31,7 @@ EXPORT_SYMBOL_GPL(crypto_alg_list);
+@@ -32,7 +32,7 @@ EXPORT_SYMBOL_GPL(crypto_alg_list);
  DECLARE_RWSEM(crypto_alg_sem);
  EXPORT_SYMBOL_GPL(crypto_alg_sem);
  
@@ -152,7 +152,7 @@ index abf53e6..a56b154 100644
  EXPORT_SYMBOL_GPL(crypto_chain);
  
  static struct crypto_alg *crypto_larval_wait(struct crypto_alg *alg);
-@@ -236,10 +236,10 @@ int crypto_probing_notify(unsigned long val, void *v)
+@@ -237,10 +237,10 @@ int crypto_probing_notify(unsigned long val, void *v)
  {
  	int ok;
  

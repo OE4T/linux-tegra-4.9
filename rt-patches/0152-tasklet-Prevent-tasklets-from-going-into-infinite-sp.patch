@@ -1,4 +1,4 @@
-From 5aa9a9fe5e76db8328c3d58e4d938a07a1b0aa4d Mon Sep 17 00:00:00 2001
+From 7b304cabab15a556769fa7e8afa4df839a7e442c Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Tue, 29 Nov 2011 20:18:22 -0500
 Subject: [PATCH 152/353] tasklet: Prevent tasklets from going into infinite
@@ -43,10 +43,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 162 insertions(+), 72 deletions(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 59acc26..5819d55 100644
+index 75dcdf8..0aad7ca 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -508,8 +508,9 @@ static inline struct task_struct *this_cpu_ksoftirqd(void)
+@@ -509,8 +509,9 @@ static inline struct task_struct *this_cpu_ksoftirqd(void)
       to be executed on some cpu at least once after this.
     * If the tasklet is already scheduled, but its execution is still not
       started, it will be executed only once.
@@ -58,7 +58,7 @@ index 59acc26..5819d55 100644
     * Tasklet is strictly serialized wrt itself, but not
       wrt another tasklets. If client needs some intertask synchronization,
       he makes it with spinlocks.
-@@ -534,27 +535,36 @@ struct tasklet_struct name = { NULL, 0, ATOMIC_INIT(1), func, data }
+@@ -535,27 +536,36 @@ struct tasklet_struct name = { NULL, 0, ATOMIC_INIT(1), func, data }
  enum
  {
  	TASKLET_STATE_SCHED,	/* Tasklet is scheduled for execution */
@@ -101,7 +101,7 @@ index 59acc26..5819d55 100644
  #define tasklet_unlock_wait(t) do { } while (0)
  #define tasklet_unlock(t) do { } while (0)
  #endif
-@@ -603,12 +613,7 @@ static inline void tasklet_disable(struct tasklet_struct *t)
+@@ -604,12 +614,7 @@ static inline void tasklet_disable(struct tasklet_struct *t)
  	smp_mb();
  }
  

@@ -1,4 +1,4 @@
-From 0d6883443030697e3ff4cb14e0b299d8f383e31a Mon Sep 17 00:00:00 2001
+From c9830e278f40989f0046758734edc24b75778228 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 27 May 2016 15:11:51 +0200
 Subject: [PATCH 080/353] locallock: add local_lock_on()

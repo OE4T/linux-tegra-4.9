@@ -1,4 +1,4 @@
-From a936f5318539295ff07c78880d9c8c9bf652b353 Mon Sep 17 00:00:00 2001
+From 6ed0e9f555a00db03dd028fe395cd7178502191b Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 4 Mar 2014 12:28:32 -0500
 Subject: [PATCH 218/353] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep

@@ -1,4 +1,4 @@
-From 3443a17a69538151c79ac718d5be1b9d77bd9249 Mon Sep 17 00:00:00 2001
+From f5f98350b38ce4a4390cc462fe72e008cc921383 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
 Subject: [PATCH 123/353] hrtimer: Fixup hrtimer callback changes for
@@ -68,10 +68,10 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 06ec3b5..d742d93 100644
+index d8fffe3..64ac7a2 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -359,6 +359,7 @@ static void init_rq_hrtick(struct rq *rq)
+@@ -360,6 +360,7 @@ static void init_rq_hrtick(struct rq *rq)
  
  	hrtimer_init(&rq->hrtick_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
  	rq->hrtick_timer.function = hrtick;
@@ -80,7 +80,7 @@ index 06ec3b5..d742d93 100644
  #else	/* CONFIG_SCHED_HRTICK */
  static inline void hrtick_clear(struct rq *rq)
 diff --git a/kernel/sched/rt.c b/kernel/sched/rt.c
-index d7f46a0..7f0a5a1 100644
+index 5b4c9b4..2dd6324 100644
 --- a/kernel/sched/rt.c
 +++ b/kernel/sched/rt.c
 @@ -49,6 +49,7 @@ void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime)

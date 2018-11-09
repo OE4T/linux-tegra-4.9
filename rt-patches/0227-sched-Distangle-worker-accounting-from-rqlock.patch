@@ -1,4 +1,4 @@
-From b6edb5c38fdd63471af4707231e14e9fdfb97882 Mon Sep 17 00:00:00 2001
+From 2de5b2cc853f4cd416a11bc08ea3b34169709e23 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:03 +0200
 Subject: [PATCH 227/353] sched: Distangle worker accounting from rqlock
@@ -30,10 +30,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 41 insertions(+), 102 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 1cb964b..649530368 100644
+index e61c6d30..b7b61c3 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1742,10 +1742,6 @@ static inline void ttwu_activate(struct rq *rq, struct task_struct *p, int en_fl
+@@ -1745,10 +1745,6 @@ static inline void ttwu_activate(struct rq *rq, struct task_struct *p, int en_fl
  {
  	activate_task(rq, p, en_flags);
  	p->on_rq = TASK_ON_RQ_QUEUED;
@@ -44,7 +44,7 @@ index 1cb964b..649530368 100644
  }
  
  /*
-@@ -2197,58 +2193,6 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+@@ -2200,58 +2196,6 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
  }
  
  /**
@@ -103,7 +103,7 @@ index 1cb964b..649530368 100644
   * wake_up_process - Wake up a specific process
   * @p: The process to be woken up.
   *
-@@ -3676,21 +3620,6 @@ static void __sched notrace __schedule(bool preempt)
+@@ -3598,21 +3542,6 @@ static void __sched notrace __schedule(bool preempt)
  		} else {
  			deactivate_task(rq, prev, DEQUEUE_SLEEP);
  			prev->on_rq = 0;
@@ -125,7 +125,7 @@ index 1cb964b..649530368 100644
  		}
  		switch_count = &prev->nvcsw;
  	}
-@@ -3752,6 +3681,14 @@ static inline void sched_submit_work(struct task_struct *tsk)
+@@ -3678,6 +3607,14 @@ static inline void sched_submit_work(struct task_struct *tsk)
  {
  	if (!tsk->state || tsk_is_pi_blocked(tsk))
  		return;
@@ -140,7 +140,7 @@ index 1cb964b..649530368 100644
  	/*
  	 * If we are going to sleep and we have plugged IO queued,
  	 * make sure to submit it to avoid deadlocks.
-@@ -3760,6 +3697,12 @@ static inline void sched_submit_work(struct task_struct *tsk)
+@@ -3686,6 +3623,12 @@ static inline void sched_submit_work(struct task_struct *tsk)
  		blk_schedule_flush_plug(tsk);
  }
  
@@ -153,7 +153,7 @@ index 1cb964b..649530368 100644
  asmlinkage __visible void __sched schedule(void)
  {
  	struct task_struct *tsk = current;
-@@ -3770,6 +3713,7 @@ asmlinkage __visible void __sched schedule(void)
+@@ -3696,6 +3639,7 @@ asmlinkage __visible void __sched schedule(void)
  		__schedule(false);
  		sched_preempt_enable_no_resched();
  	} while (need_resched());

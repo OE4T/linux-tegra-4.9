@@ -1,4 +1,4 @@
-From 30ce26d6c8c2ff4e113e25149e770d97577ab45e Mon Sep 17 00:00:00 2001
+From 2ecd5cf5c50048e5295d06cae39d42ffe61baea7 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:21:56 +0200
 Subject: [PATCH 240/353] net: add back the missing serialization in
@@ -42,7 +42,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 6 insertions(+)
 
 diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
-index 9fcbde7..21aa142 100644
+index 3738778..5365350 100644
 --- a/net/ipv4/tcp_ipv4.c
 +++ b/net/ipv4/tcp_ipv4.c
 @@ -62,6 +62,7 @@
@@ -53,7 +53,7 @@ index 9fcbde7..21aa142 100644
  
  #include <net/net_namespace.h>
  #include <net/icmp.h>
-@@ -568,6 +569,7 @@ void tcp_v4_send_check(struct sock *sk, struct sk_buff *skb)
+@@ -573,6 +574,7 @@ void tcp_v4_send_check(struct sock *sk, struct sk_buff *skb)
  }
  EXPORT_SYMBOL(tcp_v4_send_check);
  
@@ -61,7 +61,7 @@ index 9fcbde7..21aa142 100644
  /*
   *	This routine will send an RST to the other tcp.
   *
-@@ -696,6 +698,7 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
+@@ -701,6 +703,7 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
  
  	arg.tos = ip_hdr(skb)->tos;
  	arg.uid = sock_net_uid(net, sk && sk_fullsock(sk) ? sk : NULL);
@@ -69,7 +69,7 @@ index 9fcbde7..21aa142 100644
  	local_bh_disable();
  	ip_send_unicast_reply(*this_cpu_ptr(net->ipv4.tcp_sk),
  			      skb, &TCP_SKB_CB(skb)->header.h4.opt,
-@@ -705,6 +708,7 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
+@@ -710,6 +713,7 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
  	__TCP_INC_STATS(net, TCP_MIB_OUTSEGS);
  	__TCP_INC_STATS(net, TCP_MIB_OUTRSTS);
  	local_bh_enable();
@@ -77,7 +77,7 @@ index 9fcbde7..21aa142 100644
  
  #ifdef CONFIG_TCP_MD5SIG
  out:
-@@ -782,6 +786,7 @@ static void tcp_v4_send_ack(const struct sock *sk,
+@@ -787,6 +791,7 @@ static void tcp_v4_send_ack(const struct sock *sk,
  		arg.bound_dev_if = oif;
  	arg.tos = tos;
  	arg.uid = sock_net_uid(net, sk_fullsock(sk) ? sk : NULL);
@@ -85,7 +85,7 @@ index 9fcbde7..21aa142 100644
  	local_bh_disable();
  	ip_send_unicast_reply(*this_cpu_ptr(net->ipv4.tcp_sk),
  			      skb, &TCP_SKB_CB(skb)->header.h4.opt,
-@@ -790,6 +795,7 @@ static void tcp_v4_send_ack(const struct sock *sk,
+@@ -795,6 +800,7 @@ static void tcp_v4_send_ack(const struct sock *sk,
  
  	__TCP_INC_STATS(net, TCP_MIB_OUTSEGS);
  	local_bh_enable();

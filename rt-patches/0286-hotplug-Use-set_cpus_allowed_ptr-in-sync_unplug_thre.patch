@@ -1,4 +1,4 @@
-From f87e6cd1e33f8c24cee5bdc2104df0209841015f Mon Sep 17 00:00:00 2001
+From 14e2f505c29ce7443705b5feea8058650b74b808 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 24 Mar 2015 08:14:49 +0100
 Subject: [PATCH 286/353] hotplug: Use set_cpus_allowed_ptr() in

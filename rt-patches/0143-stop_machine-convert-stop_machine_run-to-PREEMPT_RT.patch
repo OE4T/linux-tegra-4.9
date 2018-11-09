@@ -1,4 +1,4 @@
-From 2ede87bde64b10a7133459899afa5f11ea11456b Mon Sep 17 00:00:00 2001
+From 5bdf8441e95643c9d040f0b225a58730abb33665 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:27 -0500
 Subject: [PATCH 143/353] stop_machine: convert stop_machine_run() to

@@ -1,4 +1,4 @@
-From 05e9497316ad1656d9d2ad2d8a88d0247b40a420 Mon Sep 17 00:00:00 2001
+From 3362dce61aa79aed384d11b7980902b9cf392f6e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:13 -0500
 Subject: [PATCH 104/353] mm/vmstat: Protect per cpu variables with preempt

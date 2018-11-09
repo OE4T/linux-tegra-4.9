@@ -1,4 +1,4 @@
-From 4c48e4c8d1db0117329338533d326a8e615849e0 Mon Sep 17 00:00:00 2001
+From 594300deda3cd8c9a38abaf4d53372e490b71fba Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
 Subject: [PATCH 221/353] fs: dcache: Use cpu_chill() in trylock loops

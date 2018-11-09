@@ -1,4 +1,4 @@
-From ed50c42910ab8782d7ed373e6545470f9cccc821 Mon Sep 17 00:00:00 2001
+From 6c6e27c96cfd3d9d7e594dedecd6ed49c73da0ba Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Sat, 1 Oct 2011 18:58:13 -0700
 Subject: [PATCH 105/353] ARM: Initialize split page table locks for vector
@@ -36,7 +36,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 24 insertions(+)
 
 diff --git a/arch/arm/kernel/process.c b/arch/arm/kernel/process.c
-index c6324b5..664eb7e 100644
+index 38ad8b9..c8dcbd22 100644
 --- a/arch/arm/kernel/process.c
 +++ b/arch/arm/kernel/process.c
 @@ -397,6 +397,30 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)

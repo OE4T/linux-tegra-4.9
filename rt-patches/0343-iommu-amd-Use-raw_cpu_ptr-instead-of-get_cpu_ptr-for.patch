@@ -1,4 +1,4 @@
-From 8b6cad4a4a48a997d83c12396df2cb8937f775cd Mon Sep 17 00:00:00 2001
+From efc6ad6f56172d3d9167e327700c6a752f26b61c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 5 Sep 2017 14:11:41 +0200
 Subject: [PATCH 343/353] iommu/amd: Use raw_cpu_ptr() instead of get_cpu_ptr()

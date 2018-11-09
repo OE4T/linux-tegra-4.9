@@ -1,4 +1,4 @@
-From 9ffbeb79cc441011b065ac7ef577ee60fde92644 Mon Sep 17 00:00:00 2001
+From a20b038387e36404105907b3775b887e7275c594 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 090/353] signal/x86: Delay calling signals in atomic
@@ -78,10 +78,10 @@ index 8af22be..c370fba 100644
  typedef sigset_t compat_sigset_t;
  #endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index c8c19cd..51d44d1 100644
+index 8fd4216..54cadad 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1869,6 +1869,10 @@ struct task_struct {
+@@ -1874,6 +1874,10 @@ struct task_struct {
  	sigset_t blocked, real_blocked;
  	sigset_t saved_sigmask;	/* restored if set_restore_sigmask() was used */
  	struct sigpending pending;

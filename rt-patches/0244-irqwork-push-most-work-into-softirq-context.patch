@@ -1,4 +1,4 @@
-From 08d0066739e4fd453cf1a9406a99bc4034c8c19e Mon Sep 17 00:00:00 2001
+From 191bc1be1b164ef2358d7af158b81421880f745b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
 Subject: [PATCH 244/353] irqwork: push most work into softirq context
@@ -147,10 +147,10 @@ index bcf107c..0ddaf1e 100644
  EXPORT_SYMBOL_GPL(irq_work_run);
  
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 649530368..b732959 100644
+index b7b61c3..224b95a 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -6219,6 +6219,7 @@ static int init_rootdomain(struct root_domain *rd)
+@@ -6148,6 +6148,7 @@ static int init_rootdomain(struct root_domain *rd)
  	rd->rto_cpu = -1;
  	raw_spin_lock_init(&rd->rto_lock);
  	init_irq_work(&rd->rto_push_work, rto_push_irq_work_func);

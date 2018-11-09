@@ -1,4 +1,4 @@
-From 49dcd1b9ace0c3406fe5d6ee54f7203e810c4a1a Mon Sep 17 00:00:00 2001
+From f7ccf54246b77e65c9f3a2a19dbd5e3c1c2c8171 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 16 Dec 2010 14:25:18 +0100
 Subject: [PATCH 207/353] x86: stackprotector: Avoid random pool on rt

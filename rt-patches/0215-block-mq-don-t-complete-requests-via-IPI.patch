@@ -1,4 +1,4 @@
-From 366c9fefc234a7789378efe1569c0e454c94792c Mon Sep 17 00:00:00 2001
+From 9431e7c700a4368935efb065389c4369e2f4d4e8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 15:10:08 +0100
 Subject: [PATCH 215/353] block/mq: don't complete requests via IPI
@@ -15,7 +15,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 25 insertions(+), 1 deletion(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index 76ee9f8..2f3bdbb 100644
+index 14e305d..f06f03a 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -127,6 +127,9 @@ void blk_rq_init(struct request_queue *q, struct request *rq)
@@ -98,7 +98,7 @@ index 00b4043..4498f82 100644
  void blk_mq_start_request(struct request *rq);
  void blk_mq_end_request(struct request *rq, int error);
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index 238261e..a8c760b 100644
+index 657689d..7b18f20 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
 @@ -89,6 +89,7 @@ struct request {

@@ -1,4 +1,4 @@
-From ea19ea64b4372125cf95e4d408019f9565c93aa4 Mon Sep 17 00:00:00 2001
+From 163b74294d98213fd70f0b70bbfd0ad5a0158b7b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
 Subject: [PATCH 195/353] completion: Use simple wait queues
@@ -306,10 +306,10 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index f542ef7..1cb964b 100644
+index 50adeae..e61c6d30 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3504,7 +3504,10 @@ void migrate_disable(void)
+@@ -3426,7 +3426,10 @@ void migrate_disable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -321,7 +321,7 @@ index f542ef7..1cb964b 100644
  #endif
  
  	if (p->migrate_disable) {
-@@ -3531,7 +3534,10 @@ void migrate_enable(void)
+@@ -3453,7 +3456,10 @@ void migrate_enable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG

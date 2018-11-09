@@ -1,4 +1,4 @@
-From 34cc4ec3e35b2da79d82b3733edd39b159074de5 Mon Sep 17 00:00:00 2001
+From 97ca1ab1ac41f474b70be9aa3d44a2734cb468ce Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 281/353] cpu/rt: Rework cpu down for PREEMPT_RT
@@ -55,10 +55,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 43f0136..a4f03e9 100644
+index 2961350a..8ebfcf3 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2674,6 +2674,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
+@@ -2679,6 +2679,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
  
  extern int set_cpus_allowed_ptr(struct task_struct *p,
  				const struct cpumask *new_mask);
@@ -69,7 +69,7 @@ index 43f0136..a4f03e9 100644
  #else
  static inline void do_set_cpus_allowed(struct task_struct *p,
  				      const struct cpumask *new_mask)
-@@ -2686,6 +2690,9 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
+@@ -2691,6 +2695,9 @@ static inline int set_cpus_allowed_ptr(struct task_struct *p,
  		return -EINVAL;
  	return 0;
  }
@@ -441,10 +441,10 @@ index 41cc8ae..87424f1 100644
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index b732959..bf36fbf 100644
+index 224b95a..c8af959 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1168,6 +1168,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
+@@ -1169,6 +1169,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
  		set_curr_task(rq, p);
  }
  

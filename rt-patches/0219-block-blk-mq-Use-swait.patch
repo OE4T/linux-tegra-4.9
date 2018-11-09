@@ -1,4 +1,4 @@
-From eb833eb4f8e7a7e3a748b7f4d89353fb9e937e14 Mon Sep 17 00:00:00 2001
+From 4a59b4d6a6a25617d1bb2da2e89caf0283f24c1e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
 Subject: [PATCH 219/353] block: blk-mq: Use swait
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index 2f3bdbb..ed5af1a 100644
+index f06f03a..55b106f 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -664,9 +664,9 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
@@ -111,7 +111,7 @@ index 25c6919..9835286 100644
  
  bool blk_mq_can_queue(struct blk_mq_hw_ctx *hctx)
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index a8c760b..880e5f8 100644
+index 7b18f20..7fcbaae 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
 @@ -471,7 +471,7 @@ struct request_queue {

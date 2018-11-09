@@ -1,4 +1,4 @@
-From dbe5c94aa1c95932827b083650a2e3bb2a37bf35 Mon Sep 17 00:00:00 2001
+From 9fc859bd71efaae307f2b0033051ed9b54114b4b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Jul 2011 09:56:44 +0200
 Subject: [PATCH 137/353] sched: Take RT softirq semantics into account in
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 6 insertions(+)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 91af7fd..12c0191 100644
+index f72541d..daed623 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -3558,12 +3558,16 @@ extern int __cond_resched_lock(spinlock_t *lock);
+@@ -3563,12 +3563,16 @@ extern int __cond_resched_lock(spinlock_t *lock);
  	__cond_resched_lock(lock);				\
  })
  
@@ -37,10 +37,10 @@ index 91af7fd..12c0191 100644
  static inline void cond_resched_rcu(void)
  {
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 282f928..2a369bd 100644
+index 31d488d..aef6bcd 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -5266,6 +5266,7 @@ int __cond_resched_lock(spinlock_t *lock)
+@@ -5195,6 +5195,7 @@ int __cond_resched_lock(spinlock_t *lock)
  }
  EXPORT_SYMBOL(__cond_resched_lock);
  
@@ -48,7 +48,7 @@ index 282f928..2a369bd 100644
  int __sched __cond_resched_softirq(void)
  {
  	BUG_ON(!in_softirq());
-@@ -5279,6 +5280,7 @@ int __sched __cond_resched_softirq(void)
+@@ -5208,6 +5209,7 @@ int __sched __cond_resched_softirq(void)
  	return 0;
  }
  EXPORT_SYMBOL(__cond_resched_softirq);

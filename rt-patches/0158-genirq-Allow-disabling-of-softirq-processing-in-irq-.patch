@@ -1,4 +1,4 @@
-From 4688c8430c450c7b17e09add40969e2e3b0524e6 Mon Sep 17 00:00:00 2001
+From b979bba4f6b081c129a75fc1a1b3749329c7a336 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 Jan 2012 13:01:27 +0100
 Subject: [PATCH 158/353] genirq: Allow disabling of softirq processing in irq
@@ -20,10 +20,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 38 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 127cfbd..f323a51 100644
+index 94b32e8..807d3f6 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -61,6 +61,7 @@
+@@ -62,6 +62,7 @@
   *                interrupt handler after suspending interrupts. For system
   *                wakeup devices users need to implement wakeup detection in
   *                their interrupt handlers.
@@ -31,7 +31,7 @@ index 127cfbd..f323a51 100644
   */
  #define IRQF_SHARED		0x00000080
  #define IRQF_PROBE_SHARED	0x00000100
-@@ -74,6 +75,7 @@
+@@ -75,6 +76,7 @@
  #define IRQF_NO_THREAD		0x00010000
  #define IRQF_EARLY_RESUME	0x00020000
  #define IRQF_COND_SUSPEND	0x00040000

@@ -1,4 +1,4 @@
-From 9c481b3eff5e0d0240842fe18bbac7d87edf7e85 Mon Sep 17 00:00:00 2001
+From 5566f95e7a155a86b63bcac6932f2bfc11e01363 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 12 Nov 2011 14:00:48 +0100
 Subject: [PATCH 271/353] scsi/fcoe: Make RT aware.

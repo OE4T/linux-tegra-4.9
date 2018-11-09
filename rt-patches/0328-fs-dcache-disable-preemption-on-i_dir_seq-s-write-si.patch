@@ -1,4 +1,4 @@
-From d611121d1290dd6866df9c76d423c91b4a1d18ee Mon Sep 17 00:00:00 2001
+From 77473eb43cfc15c2679accbe57152088bad635e9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 20 Oct 2017 11:29:53 +0200
 Subject: [PATCH 328/353] fs/dcache: disable preemption on i_dir_seq's write
@@ -115,10 +115,10 @@ index 9588780a..9b37abd 100644
  }
  
 diff --git a/include/linux/fs.h b/include/linux/fs.h
-index a619906..f1701be 100644
+index e22a270..7d8f1b8 100644
 --- a/include/linux/fs.h
 +++ b/include/linux/fs.h
-@@ -689,7 +689,7 @@ struct inode {
+@@ -708,7 +708,7 @@ struct inode {
  		struct block_device	*i_bdev;
  		struct cdev		*i_cdev;
  		char			*i_link;

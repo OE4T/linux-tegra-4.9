@@ -1,4 +1,4 @@
-From 8f2a8ae7d6aef075f63c6e688a3c8472f45607e5 Mon Sep 17 00:00:00 2001
+From 089ed959b1ac13e440e0a6cb745fb5bfca7e4de3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
 Subject: [PATCH 197/353] genirq: Do not invoke the affinity callback via a
@@ -33,7 +33,7 @@ index 73c99f2..4130ea2 100644
  
  	/*
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index f323a51..6ea1757 100644
+index 807d3f6..4917b62 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -14,6 +14,7 @@
@@ -44,7 +44,7 @@ index f323a51..6ea1757 100644
  
  #include <linux/atomic.h>
  #include <asm/ptrace.h>
-@@ -218,6 +219,7 @@ extern void resume_device_irqs(void);
+@@ -219,6 +220,7 @@ extern void resume_device_irqs(void);
   * struct irq_affinity_notify - context for notification of IRQ affinity changes
   * @irq:		Interrupt to which notification applies
   * @kref:		Reference count, for internal use
@@ -52,7 +52,7 @@ index f323a51..6ea1757 100644
   * @work:		Work item, for internal use
   * @notify:		Function to be called on change.  This will be
   *			called in process context.
-@@ -229,7 +231,11 @@ extern void resume_device_irqs(void);
+@@ -230,7 +232,11 @@ extern void resume_device_irqs(void);
  struct irq_affinity_notify {
  	unsigned int irq;
  	struct kref kref;

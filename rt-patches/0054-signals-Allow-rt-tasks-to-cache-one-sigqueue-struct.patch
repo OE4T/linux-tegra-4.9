@@ -1,4 +1,4 @@
-From 87e1c275725b3d2a3e9ab0f610936b37a0b7195a Mon Sep 17 00:00:00 2001
+From 4fae8691ceaa1d11d2c3cf7cec567382020f0c9a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
 Subject: [PATCH 054/353] signals: Allow rt tasks to cache one sigqueue struct
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index c92118d..51ad814 100644
+index 4559d0e..6ab5c04 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1858,6 +1858,7 @@ struct task_struct {
+@@ -1863,6 +1863,7 @@ struct task_struct {
  /* signal handlers */
  	struct signal_struct *signal;
  	struct sighand_struct *sighand;
@@ -53,10 +53,10 @@ index dde0e5d..60eea1f 100644
  	spin_unlock(&sighand->siglock);
  
 diff --git a/kernel/fork.c b/kernel/fork.c
-index cfe9142..0f9cc97 100644
+index a200ccc..897a4c6 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -1589,6 +1589,7 @@ static __latent_entropy struct task_struct *copy_process(
+@@ -1594,6 +1594,7 @@ static __latent_entropy struct task_struct *copy_process(
  	spin_lock_init(&p->alloc_lock);
  
  	init_sigpending(&p->pending);

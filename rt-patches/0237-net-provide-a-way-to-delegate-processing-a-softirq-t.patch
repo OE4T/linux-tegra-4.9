@@ -1,4 +1,4 @@
-From e396ab48574ff43b764051ba1627a2b3ce053188 Mon Sep 17 00:00:00 2001
+From 2b60d6173218880501b0a0ef7c2f577095b3ef8b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
 Subject: [PATCH 237/353] net: provide a way to delegate processing a softirq
@@ -20,10 +20,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 6ea1757..480972a 100644
+index 4917b62..6e3c032 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -496,6 +496,14 @@ extern void thread_do_softirq(void);
+@@ -497,6 +497,14 @@ extern void thread_do_softirq(void);
  extern void open_softirq(int nr, void (*action)(struct softirq_action *));
  extern void softirq_init(void);
  extern void __raise_softirq_irqoff(unsigned int nr);

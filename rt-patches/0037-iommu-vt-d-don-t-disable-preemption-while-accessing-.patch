@@ -1,4 +1,4 @@
-From d769305fa5af3e7b61b484aaf6d9508b31ab16db Mon Sep 17 00:00:00 2001
+From 1d06d29f4280fed488cbce38a26a6fc61ce03486 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
 Subject: [PATCH 037/353] iommu/vt-d: don't disable preemption while accessing

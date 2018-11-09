@@ -1,4 +1,4 @@
-From 78339bd2b9477ecf6ef2ed9f1a59195105b05aa6 Mon Sep 17 00:00:00 2001
+From 3678638a15c2cd8e6f449b76e3944b2f467e0fd4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 17 Nov 2017 16:21:00 +0100
 Subject: [PATCH 332/353] md/raid5: do not disable interrupts

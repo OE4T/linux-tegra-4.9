@@ -1,4 +1,4 @@
-From f0a4b313b2d729e6757838963e731692b69ba51e Mon Sep 17 00:00:00 2001
+From 94f8ad53a709dc9b690700f7883def3527ece8cf Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
 Subject: [PATCH 119/353] timers: Prepare for full preemption
@@ -29,10 +29,10 @@ index ec86e4e..8e5b680 100644
  #else
  # define del_timer_sync(t)		del_timer(t)
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 72d322d..06ec3b5 100644
+index e0b1697..d8fffe3 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -539,11 +539,14 @@ void resched_cpu(int cpu)
+@@ -540,11 +540,14 @@ void resched_cpu(int cpu)
   */
  int get_nohz_timer_target(void)
  {
@@ -49,7 +49,7 @@ index 72d322d..06ec3b5 100644
  
  	rcu_read_lock();
  	for_each_domain(cpu, sd) {
-@@ -562,6 +565,8 @@ int get_nohz_timer_target(void)
+@@ -563,6 +566,8 @@ int get_nohz_timer_target(void)
  		cpu = housekeeping_any_cpu();
  unlock:
  	rcu_read_unlock();

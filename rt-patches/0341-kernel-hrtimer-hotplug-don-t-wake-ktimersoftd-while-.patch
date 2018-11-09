@@ -1,4 +1,4 @@
-From 49f8a822d8936e55b398919794f81a10cf1ff1d8 Mon Sep 17 00:00:00 2001
+From 5ee616b484db64b6f95a807660d222877bb7e72a Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
 Subject: [PATCH 341/353] kernel/hrtimer/hotplug: don't wake ktimersoftd while

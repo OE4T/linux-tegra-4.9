@@ -1,4 +1,4 @@
-From 4d8515a605169ca2855532c942f6841db597049a Mon Sep 17 00:00:00 2001
+From 311b343a67d22ebb77d30bd34eb29f437fad5e11 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Thu, 29 Sep 2011 12:24:30 -0500
 Subject: [PATCH 049/353] tracing: Account for preempt off in
@@ -28,10 +28,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 9 insertions(+)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 91f414b..c1952f9 100644
+index 986dec4..83f60bd 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3756,7 +3756,16 @@ asmlinkage __visible void __sched notrace preempt_schedule_notrace(void)
+@@ -3682,7 +3682,16 @@ asmlinkage __visible void __sched notrace preempt_schedule_notrace(void)
  		 * an infinite recursion.
  		 */
  		prev_ctx = exception_enter();

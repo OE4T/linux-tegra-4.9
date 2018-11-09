@@ -1,4 +1,4 @@
-From 5772725b66fffcd174d05e7267316e517374beec Mon Sep 17 00:00:00 2001
+From fa6a2b24ba3cfee04c54ffa568e35189f3a3c0c1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:47:10 +0100
 Subject: [PATCH 126/353] tick/broadcast: Make broadcast hrtimer irqsafe

@@ -1,4 +1,4 @@
-From 72c60d45a9ae6312d3c33d6d94fed0662b88ddd0 Mon Sep 17 00:00:00 2001
+From 7e55a526c8ab49b5d78a1b52d6388e687782e81e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
 Subject: [PATCH 048/353] timekeeping: Split jiffies seqlock
@@ -135,10 +135,10 @@ index 65aafad..065f663 100644
  
  	/*
 diff --git a/kernel/time/timekeeping.c b/kernel/time/timekeeping.c
-index 462b23b..988eedb9 100644
+index 831d3f0..07cfb84 100644
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2388,8 +2388,10 @@ EXPORT_SYMBOL(hardpps);
+@@ -2391,8 +2391,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {

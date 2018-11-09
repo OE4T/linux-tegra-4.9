@@ -1,4 +1,4 @@
-From 19f973224a93c64016084a0265798c2742c4b4e6 Mon Sep 17 00:00:00 2001
+From f72bc18bdada5f7cacbc777247306dec16a2cc66 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 18 Aug 2017 10:09:09 +0200
 Subject: [PATCH 338/353] kernel/hrtimer: migrate deferred timer on CPU down

@@ -1,4 +1,4 @@
-From af59bfa13b05cabd588aa8202f911499b4766658 Mon Sep 17 00:00:00 2001
+From dc0360cb9498f628fc06d76dda65f30a429b0ed8 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 2 Mar 2012 10:36:57 -0500
 Subject: [PATCH 280/353] cpu: Make hotplug.lock a "sleeping" spinlock on RT

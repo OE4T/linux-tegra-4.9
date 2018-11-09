@@ -1,4 +1,4 @@
-From 5fde510981c79f5ed38e82cccc2e188927281555 Mon Sep 17 00:00:00 2001
+From f0f834019604679a58fa176f7da2658a31db1f9c Mon Sep 17 00:00:00 2001
 From: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
 Date: Sun, 25 Oct 2015 18:06:05 -0400
 Subject: [PATCH 065/353] latency_hist: Update sched_wakeup probe

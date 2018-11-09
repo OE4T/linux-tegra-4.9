@@ -1,4 +1,4 @@
-From f3662a46c9bdd8ffaa3ebcd3ff6379e217663d1a Mon Sep 17 00:00:00 2001
+From 79335f8b7a13edfe68086a7c5e237e3f3cbbeb3a Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 28 Jul 2011 10:43:51 +0200
 Subject: [PATCH 263/353] mm, rt: kmap_atomic scheduling
@@ -229,7 +229,7 @@ index b76e9cc..396d5c4 100644
  }
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 615aab9..43f0136 100644
+index 93ae84c..2961350a 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -26,6 +26,7 @@ struct sched_param {
@@ -240,7 +240,7 @@ index 615aab9..43f0136 100644
  
  #include <asm/page.h>
  #include <asm/ptrace.h>
-@@ -2167,6 +2168,12 @@ struct task_struct {
+@@ -2172,6 +2173,12 @@ struct task_struct {
  	int softirq_nestcnt;
  	unsigned int softirqs_raised;
  #endif

@@ -1,4 +1,4 @@
-From 3aa88693e192258ecf3a922785bdd0aacd2ef166 Mon Sep 17 00:00:00 2001
+From 23db3ec5ee650a8a26c6533c1deb105c66a7574d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 6 Jun 2011 12:20:33 +0200
 Subject: [PATCH 131/353] sched: Move mmdrop to RCU on RT
@@ -37,10 +37,10 @@ index 54c704a..e8c44d3 100644
  	/* address of the bounds directory */
  	void __user *bd_addr;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 98565e0..bef5d7d 100644
+index 3ca69a0..1f416c1 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -3094,6 +3094,17 @@ static inline void mmdrop(struct mm_struct *mm)
+@@ -3099,6 +3099,17 @@ static inline void mmdrop(struct mm_struct *mm)
  		__mmdrop(mm);
  }
  
@@ -59,10 +59,10 @@ index 98565e0..bef5d7d 100644
  {
  	struct mm_struct *mm = container_of(work, struct mm_struct, async_put_work);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 2eb6ff8..c308127 100644
+index 2a04c19..b0f2926 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -887,6 +887,19 @@ void __mmdrop(struct mm_struct *mm)
+@@ -890,6 +890,19 @@ void __mmdrop(struct mm_struct *mm)
  }
  EXPORT_SYMBOL_GPL(__mmdrop);
  
@@ -83,10 +83,10 @@ index 2eb6ff8..c308127 100644
  {
  	VM_BUG_ON(atomic_read(&mm->mm_users));
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 6e26574..dc5b545 100644
+index 412542f..4403d29 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2832,8 +2832,12 @@ static struct rq *finish_task_switch(struct task_struct *prev)
+@@ -2840,8 +2840,12 @@ static struct rq *finish_task_switch(struct task_struct *prev)
  	finish_arch_post_lock_switch();
  
  	fire_sched_in_preempt_notifiers(current);
@@ -100,7 +100,7 @@ index 6e26574..dc5b545 100644
  	if (unlikely(prev_state == TASK_DEAD)) {
  		if (prev->sched_class->task_dead)
  			prev->sched_class->task_dead(prev);
-@@ -5761,6 +5765,8 @@ void sched_setnuma(struct task_struct *p, int nid)
+@@ -5690,6 +5694,8 @@ void sched_setnuma(struct task_struct *p, int nid)
  #endif /* CONFIG_NUMA_BALANCING */
  
  #ifdef CONFIG_HOTPLUG_CPU
@@ -109,7 +109,7 @@ index 6e26574..dc5b545 100644
  /*
   * Ensures that the idle task is using init_mm right before its cpu goes
   * offline.
-@@ -5775,7 +5781,12 @@ void idle_task_exit(void)
+@@ -5704,7 +5710,12 @@ void idle_task_exit(void)
  		switch_mm(mm, &init_mm, current);
  		finish_arch_post_lock_switch();
  	}
@@ -123,7 +123,7 @@ index 6e26574..dc5b545 100644
  }
  
  /*
-@@ -7849,6 +7860,10 @@ int sched_cpu_dying(unsigned int cpu)
+@@ -7778,6 +7789,10 @@ int sched_cpu_dying(unsigned int cpu)
  	update_max_interval();
  	nohz_balance_exit_idle(cpu);
  	hrtick_clear(rq);

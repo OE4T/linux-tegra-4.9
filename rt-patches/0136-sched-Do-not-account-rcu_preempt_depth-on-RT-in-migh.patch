@@ -1,4 +1,4 @@
-From cc5feef84f95e1146d6ede512a1bf650ffea1eec Mon Sep 17 00:00:00 2001
+From 676addaeee15552fd0a2fb51eb0df7eb99c6b8da Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 7 Jun 2011 09:19:06 +0200
 Subject: [PATCH 136/353] sched: Do not account rcu_preempt_depth on RT in
@@ -39,10 +39,10 @@ index 01f71e1..00dc4a9 100644
  
  /* Internal to kernel */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index c4436dc..282f928 100644
+index 90779b4..31d488d 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -8152,7 +8152,7 @@ void __init sched_init(void)
+@@ -8081,7 +8081,7 @@ void __init sched_init(void)
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  static inline int preempt_count_equals(int preempt_offset)
  {

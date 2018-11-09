@@ -1,4 +1,4 @@
-From 83fe90706e9afb7e41106153977884bf3fc1acb0 Mon Sep 17 00:00:00 2001
+From 46a37d800dacc1e58c2435a4c182235b667f1eeb Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
 Subject: [PATCH 179/353] kernel/locking: use an exclusive wait_q for sleepers
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index fc117db..724f7a3 100644
+index c703b06..8ca7318 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1046,8 +1046,20 @@ struct wake_q_head {
@@ -69,7 +69,7 @@ index fc117db..724f7a3 100644
  extern void __wake_up_q(struct wake_q_head *head, bool sleeper);
  
  static inline void wake_up_q(struct wake_q_head *head)
-@@ -1916,6 +1928,7 @@ struct task_struct {
+@@ -1921,6 +1933,7 @@ struct task_struct {
  	raw_spinlock_t pi_lock;
  
  	struct wake_q_node wake_q;
@@ -78,10 +78,10 @@ index fc117db..724f7a3 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 4a83602..3366a47 100644
+index 1b4d8fd..519ffc7 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -569,6 +569,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
+@@ -572,6 +572,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  	tsk->splice_pipe = NULL;
  	tsk->task_frag.page = NULL;
  	tsk->wake_q.next = NULL;
@@ -103,10 +103,10 @@ index b99ddf3..c1a3b9f 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 4af5e7f..7833a93 100644
+index 7782270..17fd92e 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -444,9 +444,15 @@ static bool set_nr_if_polling(struct task_struct *p)
+@@ -445,9 +445,15 @@ static bool set_nr_if_polling(struct task_struct *p)
  #endif
  #endif
  
@@ -124,7 +124,7 @@ index 4af5e7f..7833a93 100644
  
  	/*
  	 * Atomically grab the task, if ->wake_q is !nil already it means
-@@ -475,11 +481,17 @@ void __wake_up_q(struct wake_q_head *head, bool sleeper)
+@@ -476,11 +482,17 @@ void __wake_up_q(struct wake_q_head *head, bool sleeper)
  	while (node != WAKE_Q_TAIL) {
  		struct task_struct *task;
  

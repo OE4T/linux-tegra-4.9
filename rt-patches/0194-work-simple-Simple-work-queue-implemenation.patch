@@ -1,4 +1,4 @@
-From a42a923d3e4996febc99b5189b4e77657e7c49e9 Mon Sep 17 00:00:00 2001
+From f33a5506aa5e304b53d979c48da06e2772ac575d Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
 Subject: [PATCH 194/353] work-simple: Simple work queue implemenation
@@ -49,7 +49,7 @@ index 0000000..f175fa9
 +
 +#endif /* _LINUX_SWORK_H */
 diff --git a/kernel/sched/Makefile b/kernel/sched/Makefile
-index b0b1bd1..d3824d8 100644
+index fb49951..9708dd3 100644
 --- a/kernel/sched/Makefile
 +++ b/kernel/sched/Makefile
 @@ -19,7 +19,7 @@ endif

@@ -1,4 +1,4 @@
-From 0de338c2f23ff9db2c126576f9dcac95c242074b Mon Sep 17 00:00:00 2001
+From 003edfa501970920ff70bc51d5a96828a97c317a Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
 Subject: [PATCH 082/353] ide: Do not disable interrupts for PREEMPT-RT

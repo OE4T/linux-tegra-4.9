@@ -1,4 +1,4 @@
-From b65234ae6ccc37d3b85c64f337b9d89357b2bbaf Mon Sep 17 00:00:00 2001
+From c5ed7dcce2ace2ee26ab8a6498e81bc1d3d50725 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
 Subject: [PATCH 223/353] fs/dcache: use swait_queue instead of waitqueue
@@ -163,10 +163,10 @@ index 0165a95..58990c8 100644
  	status = -EBUSY;
  	spin_lock(&dentry->d_lock);
 diff --git a/fs/proc/base.c b/fs/proc/base.c
-index 975d935..4266fcd 100644
+index 2877052..ca9aab4 100644
 --- a/fs/proc/base.c
 +++ b/fs/proc/base.c
-@@ -1863,7 +1863,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
+@@ -1864,7 +1864,7 @@ bool proc_fill_cache(struct file *file, struct dir_context *ctx,
  
  	child = d_hash_and_lookup(dir, &qname);
  	if (!child) {

@@ -1,4 +1,4 @@
-From 436c5b9c4c2b0260b8890bbd975cc9108a65acf3 Mon Sep 17 00:00:00 2001
+From ca99e13f920916d1520a39b23a1a03a5b8fd0f8f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 177/353] rt: Add the preempt-rt lock replacement APIs
@@ -628,7 +628,7 @@ index 0000000..e26bd95
 +#endif
 +#endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 579db41..fc117db 100644
+index d69e34c..c703b06 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -314,6 +314,11 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -2355,10 +2355,10 @@ index 9aa0fcc..76d0b40 100644
 +
 +#endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e0963e7..4af5e7f 100644
+index fffe6d0..7782270 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -468,7 +468,7 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
+@@ -469,7 +469,7 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
  	head->lastp = &node->next;
  }
  
@@ -2367,7 +2367,7 @@ index e0963e7..4af5e7f 100644
  {
  	struct wake_q_node *node = head->first;
  
-@@ -485,7 +485,10 @@ void wake_up_q(struct wake_q_head *head)
+@@ -486,7 +486,10 @@ void wake_up_q(struct wake_q_head *head)
  		 * wake_up_process() implies a wmb() to pair with the queueing
  		 * in wake_q_add() so as not to miss wakeups.
  		 */

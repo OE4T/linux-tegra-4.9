@@ -1,4 +1,4 @@
-From 05c50f6b3791bbb4bd4badf42e12b67ffbaf3156 Mon Sep 17 00:00:00 2001
+From c97f50a45115e276c831487a46a59c00432aa43d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 25 Jun 2011 09:21:04 +0200
 Subject: [PATCH 133/353] sched: Add saved_state for tasks blocked on sleeping
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 33 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index bef5d7d..01fc07d 100644
+index 1f416c1..922b6e7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1641,6 +1641,7 @@ struct task_struct {
@@ -29,7 +29,7 @@ index bef5d7d..01fc07d 100644
  	void *stack;
  	atomic_t usage;
  	unsigned int flags;	/* per process flags, defined below */
-@@ -2886,6 +2887,7 @@ extern void xtime_update(unsigned long ticks);
+@@ -2891,6 +2892,7 @@ extern void xtime_update(unsigned long ticks);
  
  extern int wake_up_state(struct task_struct *tsk, unsigned int state);
  extern int wake_up_process(struct task_struct *tsk);
@@ -38,10 +38,10 @@ index bef5d7d..01fc07d 100644
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 427cd8b..3aa3a8d 100644
+index 4860a2e..6390d48 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2056,8 +2056,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+@@ -2059,8 +2059,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
  	 */
  	smp_mb__before_spinlock();
  	raw_spin_lock_irqsave(&p->pi_lock, flags);
@@ -68,7 +68,7 @@ index 427cd8b..3aa3a8d 100644
  
  	trace_sched_waking(p);
  
-@@ -2219,6 +2236,18 @@ int wake_up_process(struct task_struct *p)
+@@ -2222,6 +2239,18 @@ int wake_up_process(struct task_struct *p)
  }
  EXPORT_SYMBOL(wake_up_process);
  
@@ -88,10 +88,10 @@ index 427cd8b..3aa3a8d 100644
  {
  	return try_to_wake_up(p, state, 0);
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index 582e54f..827ae7b 100644
+index d5a027b..a9f6b93 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -1229,6 +1229,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
+@@ -1221,6 +1221,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
  #define WF_SYNC		0x01		/* waker goes to sleep after wakeup */
  #define WF_FORK		0x02		/* child wakeup after fork */
  #define WF_MIGRATED	0x4		/* internal use, task got migrated */

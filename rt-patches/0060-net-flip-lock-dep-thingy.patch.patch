@@ -1,4 +1,4 @@
-From 371c5503d58da360c685fec1576554d5f88e4fc0 Mon Sep 17 00:00:00 2001
+From 88e9afa975b133c9959d4d9f2e5b2c3d8ed9f661 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
 Subject: [PATCH 060/353] net-flip-lock-dep-thingy.patch

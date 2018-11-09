@@ -1,4 +1,4 @@
-From 824f770a2a242f8dd0250fac1e54983a5a038691 Mon Sep 17 00:00:00 2001
+From d63d9dd6c50b28174d9ab7c1ab1088d9a39f5e4b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:30 -0500
 Subject: [PATCH 055/353] drivers: random: Reduce preempt disabled region

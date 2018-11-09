@@ -1,4 +1,4 @@
-From dc3c722273e08a464f8d253efef1aff01d0d7b02 Mon Sep 17 00:00:00 2001
+From 4031635afdeecb12d5f3ddda0fcbc44f6ba60fb9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
 Subject: [PATCH 305/353] x86: Support for lazy preemption
@@ -81,7 +81,7 @@ index a76dc73..881774b 100644
  	jz	restore_all
  	call	preempt_schedule_irq
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 5110ded..e638ffa 100644
+index f343679..ecb8b2d 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -488,7 +488,23 @@ retint_kernel:
@@ -109,7 +109,7 @@ index 5110ded..e638ffa 100644
  	jmp	0b
  1:
 diff --git a/arch/x86/include/asm/preempt.h b/arch/x86/include/asm/preempt.h
-index 17f2186..11bd1b7 100644
+index 4939f6e..92622d47 100644
 --- a/arch/x86/include/asm/preempt.h
 +++ b/arch/x86/include/asm/preempt.h
 @@ -79,17 +79,46 @@ static __always_inline void __preempt_count_sub(int val)

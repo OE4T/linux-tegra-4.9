@@ -1,4 +1,4 @@
-From 658d83922d554d9c9c33d0f5d2b2643c80e9d5d5 Mon Sep 17 00:00:00 2001
+From 9ae83023c650c543b64c847890921a6b3a02ac00 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
 Subject: [PATCH 069/353] printk: Add "force_early_printk" boot param to help

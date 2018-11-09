@@ -1,4 +1,4 @@
-From ffdb01b03a6b270ced3284f1e74ca4dd5478ac98 Mon Sep 17 00:00:00 2001
+From dbbbcd27bd980513301ac917847f3c948b88d436 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:18:01 +0100
 Subject: [PATCH 157/353] kernel: migrate_disable() do fastpath in atomic &
@@ -13,10 +13,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index d6d3afb..e0963e7 100644
+index 8bd1d35..fffe6d0 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3468,7 +3468,7 @@ void migrate_disable(void)
+@@ -3390,7 +3390,7 @@ void migrate_disable(void)
  {
  	struct task_struct *p = current;
  
@@ -25,7 +25,7 @@ index d6d3afb..e0963e7 100644
  #ifdef CONFIG_SCHED_DEBUG
  		p->migrate_disable_atomic++;
  #endif
-@@ -3495,7 +3495,7 @@ void migrate_enable(void)
+@@ -3417,7 +3417,7 @@ void migrate_enable(void)
  {
  	struct task_struct *p = current;
  

@@ -1,4 +1,4 @@
-From 3aee09dd3015cd344056506492043cf5563bb62f Mon Sep 17 00:00:00 2001
+From 19a4ff2fa4a1e4ea3254123e2c7399bf434cd7e8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 27 Jun 2014 16:24:52 +0200
 Subject: [PATCH 325/353] workqueue: Prevent deadlock/stall on RT
@@ -42,10 +42,10 @@ Cc: Steven Rostedt <rostedt@goodmis.org>
  2 files changed, 52 insertions(+), 15 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 2bcecc4..f75919a 100644
+index d252c77..ec9a8e8 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3842,9 +3842,8 @@ void __noreturn do_task_dead(void)
+@@ -3768,9 +3768,8 @@ void __noreturn do_task_dead(void)
  
  static inline void sched_submit_work(struct task_struct *tsk)
  {
@@ -56,7 +56,7 @@ index 2bcecc4..f75919a 100644
  	/*
  	 * If a worker went to sleep, notify and ask workqueue whether
  	 * it wants to wake up a task to maintain concurrency.
-@@ -3852,6 +3851,10 @@ static inline void sched_submit_work(struct task_struct *tsk)
+@@ -3778,6 +3777,10 @@ static inline void sched_submit_work(struct task_struct *tsk)
  	if (tsk->flags & PF_WQ_WORKER)
  		wq_worker_sleeping(tsk);
  

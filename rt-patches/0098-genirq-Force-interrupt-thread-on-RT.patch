@@ -1,4 +1,4 @@
-From ec1c1d7b8b2a356550809b71ab2004601bae2f21 Mon Sep 17 00:00:00 2001
+From 3f0e441971a0443db572ff4e5ffca9235bada49d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 3 Apr 2011 11:57:29 +0200
 Subject: [PATCH 098/353] genirq: Force interrupt thread on RT
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 3b41621..59acc26 100644
+index d28272d..75dcdf8 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -406,9 +406,13 @@ extern int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
+@@ -407,9 +407,13 @@ extern int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
  				 bool state);
  
  #ifdef CONFIG_IRQ_FORCED_THREADING

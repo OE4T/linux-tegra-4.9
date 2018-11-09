@@ -1,4 +1,4 @@
-From 24679d16202d8b51805b894fad96a6fe581570c0 Mon Sep 17 00:00:00 2001
+From fda1876eceb3d2ac0a35fb136f9187f3adde5fc9 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
 Subject: [PATCH 102/353] mm/swap: Convert to percpu locked
@@ -47,10 +47,10 @@ index af19210..8627c9c 100644
  				cc->last_migrated_pfn = 0;
  			}
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index e251ca9..dc76100 100644
+index 022eea4..6d9b7e2 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -6626,7 +6626,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6638,7 +6638,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {

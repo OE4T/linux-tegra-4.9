@@ -2510,11 +2510,9 @@ skip:
 		console_prev = msg->flags;
 		raw_spin_unlock(&logbuf_lock);
 
-		stop_critical_timings();	/* don't trace print latency */
+		local_irq_restore(flags);
 		call_console_drivers(level, ext_text, ext_len, text, len);
 		call_force_console_drivers(force_text, force_len);
-		start_critical_timings();
-		local_irq_restore(flags);
 
 		if (do_cond_resched)
 			cond_resched();

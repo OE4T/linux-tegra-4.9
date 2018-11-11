@@ -21,7 +21,7 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 #include "nvdumper.h"
-
+#include <linux/version.h>
 #define THREAD_INFO(sp) ((struct thread_info *) \
 		((unsigned long)(sp) & ~(THREAD_SIZE - 1)))
 
@@ -134,10 +134,11 @@ static void nvdumper_save_regs(void *data)
 		pr_info("nvdumper_cpu_data is not initialized!\n");
 		return;
 	}
-
+	#if (KERNEL_VERSION(4, 9, 135) > LINUX_VERSION_CODE)
 	if (current_thread_info())
 		nvdumper_cpu_data[id].current_task =
 				current_thread_info()->task;
+	#endif
 	nvdumper_cpu_data[id].is_online = true;
 
 	__asm__ __volatile__ (
@@ -227,9 +228,10 @@ void nvdumper_crash_setup_regs(void)
 
 void nvdumper_copy_regs(unsigned int id, struct pt_regs *regs, void *svc_sp)
 {
+	#if (KERNEL_VERSION(4, 9, 135) > LINUX_VERSION_CODE)
 	struct thread_info *thread_info = THREAD_INFO(svc_sp);
-
 	nvdumper_cpu_data[id].current_task = thread_info->task;
+	#endif
 	nvdumper_cpu_data[id].is_online = true;
 	memcpy(&nvdumper_cpu_data[id].pt_regs, regs, sizeof(struct pt_regs));
 	save_aar64_sys_regs(&nvdumper_cpu_data[id].aar64_sys_regs);
@@ -244,8 +246,9 @@ void print_cpu_data(int id)
 	pr_info("------------------------------------------------\n");
 	pr_info("CPU%d Status: %s\n", id,
 		nvdumper_cpu_data[id].is_online ? "online" : "offline");
+	#if (KERNEL_VERSION(4, 9, 135) > LINUX_VERSION_CODE)
 	pr_info("current task: %p\n", nvdumper_cpu_data[id].current_task);
-
+	#endif
 	if (nvdumper_cpu_data[id].is_online) {
 		int i;
 

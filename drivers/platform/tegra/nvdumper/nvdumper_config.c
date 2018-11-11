@@ -28,7 +28,7 @@
 #include <linux/workqueue.h>
 #include <linux/hashtable.h>
 #include <soc/tegra/chip-id.h>
-
+#include <linux/version.h>
 /*
  * hack
  */
@@ -159,11 +159,13 @@ const struct config_option nvdumper_config[] = {
 	"thread_struct",
 	(uint64_t)offsetof(struct thread_struct, cpu_context)
 },
+#if (KERNEL_VERSION(4, 9, 135) > LINUX_VERSION_CODE)
 {
 	"on_cpu",
 	"thread_info",
 	(uint64_t)offsetof(struct thread_info, cpu)
 },
+#endif
 {
 	"fp",
 	"cpu_context_save",

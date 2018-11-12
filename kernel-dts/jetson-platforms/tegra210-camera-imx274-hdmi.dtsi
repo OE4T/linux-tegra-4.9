@@ -221,7 +221,7 @@
 				min_framerate = "1.5";
 				max_framerate = "30";
 				min_exp_time = "44";
-				max_exp_time = "666637";
+				max_exp_time = "478696";
 				embedded_metadata_height = "1";
 			};
 			ports {

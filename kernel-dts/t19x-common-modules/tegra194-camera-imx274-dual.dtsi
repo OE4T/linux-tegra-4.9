@@ -248,7 +248,7 @@
 					min_framerate = "1.5";
 					max_framerate = "60";
 					min_exp_time = "44";
-					max_exp_time = "666637";
+					max_exp_time = "478696";
 					exp_time_1h = "6";
 					embedded_metadata_height = "1";
 				};
@@ -528,7 +528,7 @@
 					min_framerate = "1.5";
 					max_framerate = "60";
 					min_exp_time = "44";
-					max_exp_time = "666637";
+					max_exp_time = "478696";
 					exp_time_1h = "6";
 					embedded_metadata_height = "1";
 				};

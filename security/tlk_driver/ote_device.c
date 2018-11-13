@@ -585,6 +585,9 @@ static int tlk_driver_probe(struct platform_device *pdev)
 	struct clk *clk;
 	int ret;
 
+	INIT_LIST_HEAD(&(tlk_dev.used_cmd_list));
+	INIT_LIST_HEAD(&(tlk_dev.free_cmd_list));
+
 	clk = devm_clk_get(&pdev->dev, "nvdec");
 	if (!IS_ERR(clk)) {
 		ret = clk_prepare_enable(clk);
@@ -604,6 +607,12 @@ static int tlk_driver_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, clk);
+
+	ret = te_create_free_cmd_list(&tlk_dev);
+	if (ret != 0) {
+		pr_err("%s: failed to create free_list\n", __func__);
+		goto disable_clk;
+	}
 
 	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
 	if (ret) {
@@ -655,29 +664,4 @@ static struct platform_driver tlk_driver = {
 	}
 };
 
-static int __init tlk_driver_init(void)
-{
-	if (get_tlk_device_node()) {
-		int ret;
-
-		INIT_LIST_HEAD(&(tlk_dev.used_cmd_list));
-		INIT_LIST_HEAD(&(tlk_dev.free_cmd_list));
-
-		ret = te_create_free_cmd_list(&tlk_dev);
-		if (ret != 0) {
-			pr_err("%s: failed to create free_list\n", __func__);
-			return ret;
-		}
-	}
-
-	return platform_driver_register(&tlk_driver);
-}
-
-static void __exit tlk_driver_exit(void)
-{
-	platform_driver_unregister(&tlk_driver);
-}
-
-/* Initialize early so that other device drivers can use it during boot */
-subsys_initcall(tlk_driver_init);
-module_exit(tlk_driver_exit);
+module_platform_driver(tlk_driver);

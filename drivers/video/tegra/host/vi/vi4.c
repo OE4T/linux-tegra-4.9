@@ -56,6 +56,7 @@
 
 /* HW capability, pixels per clock */
 #define NUM_PPC					8
+#define VI_OVERHEAD				10
 
 /* Interrupt handler */
 /* NOTE: VI4 has three interrupt lines. This handler is for the master/error
@@ -362,6 +363,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	vi_info.pdev = pdev;
 	vi_info.hw_type = HWTYPE_VI;
 	vi_info.ppc = NUM_PPC;
+	vi_info.overhead = VI_OVERHEAD;
 	/* 4 uS latency allowed for memory freq switch */
 	vi_info.memory_latency = 4;
 	err = tegra_camera_device_register(&vi_info, vi);

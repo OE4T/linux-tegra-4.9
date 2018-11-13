@@ -953,10 +953,10 @@ int vgpu_init_gr_support(struct gk20a *g)
 
 int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = gk20a_channel_get(&f->channel[info->chid]);
+	struct channel_gk20a *ch = gk20a_channel_from_id(g, info->chid);
 
 	nvgpu_log_fn(g, " ");
+
 	if (!ch)
 		return 0;
 

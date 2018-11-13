@@ -1961,8 +1961,8 @@ static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 
 	chid = g->gr.cilp_preempt_pending_chid;
 
-	ch = gk20a_channel_get(gk20a_fifo_channel_from_chid(g, chid));
-	if (!ch) {
+	ch = gk20a_channel_from_id(g, chid);
+	if (ch == NULL) {
 		return ret;
 	}
 
@@ -2014,9 +2014,8 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 			goto clean_up;
 		}
 
-		ch = gk20a_channel_get(
-				gk20a_fifo_channel_from_chid(g, chid));
-		if (!ch) {
+		ch = gk20a_channel_from_id(g, chid);
+		if (ch == NULL) {
 			goto clean_up;
 		}
 

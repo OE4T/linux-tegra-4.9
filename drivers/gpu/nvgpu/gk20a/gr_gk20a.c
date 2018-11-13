@@ -5581,15 +5581,16 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 		if (gr->chid_tlb[i].curr_ctx == curr_ctx) {
 			chid = gr->chid_tlb[i].chid;
 			tsgid = gr->chid_tlb[i].tsgid;
-			ret = gk20a_channel_get(&f->channel[chid]);
+			ret = gk20a_channel_from_id(g, chid);
 			goto unlock;
 		}
 	}
 
 	/* slow path */
 	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *ch = &f->channel[chid];
-		if (gk20a_channel_get(ch) == NULL) {
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+
+		if (ch == NULL) {
 			continue;
 		}
 

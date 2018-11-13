@@ -626,6 +626,18 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 	WARN_ON(nvgpu_atomic_read(&ch->ref_count) == 0 && ch->referenceable);
 }
 
+struct channel_gk20a *_gk20a_channel_from_id(struct gk20a *g, u32 chid,
+					 const char *caller)
+{
+	nvgpu_log_fn(g, " ");
+
+	if (chid == FIFO_INVAL_CHANNEL_ID) {
+		return NULL;
+	}
+
+	return _gk20a_channel_get(&g->fifo.channel[chid], caller);
+}
+
 void gk20a_channel_close(struct channel_gk20a *ch)
 {
 	gk20a_free_channel(ch, false);
@@ -1450,11 +1462,10 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 	u32 chid;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *ch = &f->channel[chid];
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (gk20a_channel_get(ch) == NULL) {
+		if (ch == NULL)
 			continue;
-		}
 
 		nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 		if (ch->timeout.running) {
@@ -1553,9 +1564,9 @@ static void gk20a_channel_poll_timeouts(struct gk20a *g)
 
 
 	for (chid = 0; chid < g->fifo.num_channels; chid++) {
-		struct channel_gk20a *ch = &g->fifo.channel[chid];
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (gk20a_channel_get(ch)) {
+		if (ch != NULL) {
 			gk20a_channel_timeout_check(ch);
 			gk20a_channel_put(ch);
 		}
@@ -2107,9 +2118,9 @@ void gk20a_channel_deterministic_idle(struct gk20a *g)
 	nvgpu_rwsem_down_write(&g->deterministic_busy);
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *ch = &f->channel[chid];
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (gk20a_channel_get(ch) == NULL) {
+		if (ch == NULL) {
 			continue;
 		}
 
@@ -2145,9 +2156,9 @@ void gk20a_channel_deterministic_unidle(struct gk20a *g)
 	u32 chid;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *ch = &f->channel[chid];
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
 
-		if (gk20a_channel_get(ch) == NULL) {
+		if (ch == NULL) {
 			continue;
 		}
 
@@ -2256,8 +2267,9 @@ int gk20a_channel_suspend(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		struct channel_gk20a *ch = &f->channel[chid];
-		if (gk20a_channel_get(ch) != NULL) {
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+
+		if (ch != NULL) {
 			nvgpu_log_info(g, "suspend channel %d", chid);
 			/* disable channel */
 			gk20a_disable_channel_tsg(g, ch);
@@ -2280,9 +2292,11 @@ int gk20a_channel_suspend(struct gk20a *g)
 		gk20a_fifo_update_runlist_ids(g, active_runlist_ids, ~0, false, true);
 
 		for (chid = 0; chid < f->num_channels; chid++) {
-			if (gk20a_channel_get(&f->channel[chid])) {
-				g->ops.fifo.unbind_channel(&f->channel[chid]);
-				gk20a_channel_put(&f->channel[chid]);
+			struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+
+			if (ch != NULL) {
+				g->ops.fifo.unbind_channel(ch);
+				gk20a_channel_put(ch);
 			}
 		}
 	}
@@ -2301,12 +2315,14 @@ int gk20a_channel_resume(struct gk20a *g)
 	nvgpu_log_fn(g, " ");
 
 	for (chid = 0; chid < f->num_channels; chid++) {
-		if (gk20a_channel_get(&f->channel[chid])) {
+		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+
+		if (ch != NULL) {
 			nvgpu_log_info(g, "resume channel %d", chid);
-			g->ops.fifo.bind_channel(&f->channel[chid]);
+			g->ops.fifo.bind_channel(ch);
 			channels_in_use = true;
 			active_runlist_ids |= BIT(f->channel[chid].runlist_id);
-			gk20a_channel_put(&f->channel[chid]);
+			gk20a_channel_put(ch);
 		}
 	}
 

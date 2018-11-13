@@ -393,6 +393,11 @@ struct channel_gk20a *__must_check _gk20a_channel_get(struct channel_gk20a *ch,
 void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller);
 #define gk20a_channel_put(ch) _gk20a_channel_put(ch, __func__)
 
+/* returns NULL if could not take a ref to the channel */
+struct channel_gk20a *__must_check _gk20a_channel_from_id(struct gk20a *g,
+		u32 chid, const char *caller);
+#define gk20a_channel_from_id(g, chid) _gk20a_channel_from_id(g, chid, __func__)
+
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
 
 /* runlist_id -1 is synonym for ENGINE_GR_GK20A runlist id */

@@ -29,7 +29,7 @@
 		dvdd-pex-pll-supply = <&max77620_ldo1>;
 		hvdd-pex-pll-e-supply = <&max77620_sd3>;
 		vddio-pex-ctl-supply = <&max77620_sd3>;
-		status = "disabled";
+		status = "okay";
 
 		pci@1,0 {
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
@@ -39,6 +39,7 @@
 				<&{/xusb_padctl@7009f000/pads/pcie/lanes/pcie-4}>;
 			phy-names = "pcie-0", "pcie-1", "pcie-2", "pcie-3";
 #endif
+			nvidia,num-lanes = <4>;
 			status = "okay";
 		};
 
@@ -47,6 +48,7 @@
 			phys = <&{/xusb_padctl@7009f000/pads/pcie/lanes/pcie-0}>;
 			phy-names = "pcie-0";
 #endif
+			nvidia,num-lanes = <1>;
 			status = "okay";
 		};
 	};

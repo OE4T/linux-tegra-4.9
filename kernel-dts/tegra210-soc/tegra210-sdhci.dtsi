@@ -52,6 +52,8 @@
 		mmc-hs400-1_8v;
 		nvidia,enable-strobe-mode;
 		mmc-hs400-enhanced-strobe;
+		nvidia,min-tap-delay = <106>;
+		nvidia,max-tap-delay = <185>;
 		pll_source = "pll_p", "pll_c4_out0";
 		resets = <&tegra_car TEGRA210_CLK_SDMMC4>;
 		reset-names = "sdhci";
@@ -91,6 +93,8 @@
                 cd-inverted;
                 wp-inverted;
 		pwrdet-support;
+		nvidia,min-tap-delay = <106>;
+		nvidia,max-tap-delay = <185>;
 		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable", "sdmmc_drv_code", "sdmmc_default_drv_code", "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
 		pinctrl-0 = <&sdmmc3_schmitt_enable_state>;
 		pinctrl-1 = <&sdmmc3_schmitt_disable_state>;
@@ -114,6 +118,8 @@
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		default-drive-type = <1>;
+		nvidia,min-tap-delay = <106>;
+		nvidia,max-tap-delay = <185>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA210_CLK_SDMMC2>;
 		reset-names = "sdhci";
@@ -150,6 +156,8 @@
 		ignore-pm-notify;
                 cd-inverted;
                 wp-inverted;
+		nvidia,min-tap-delay = <106>;
+		nvidia,max-tap-delay = <185>;
 		resets = <&tegra_car TEGRA210_CLK_SDMMC1>;
 		reset-names = "sdhci";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>,

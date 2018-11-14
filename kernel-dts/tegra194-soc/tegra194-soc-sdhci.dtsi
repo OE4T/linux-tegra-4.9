@@ -46,6 +46,8 @@
 		mmc-hs200-1_8v;
 		mmc-hs400-1_8v;
 		mmc-hs400-enhanced-strobe;
+		nvidia,min-tap-delay = <96>;
+		nvidia,max-tap-delay = <139>;
 		nvidia,en-periodic-cflush;
 		nvidia,periodic-cflush-to = <10>;
 		resets = <&bpmp_resets TEGRA194_RESET_SDMMC4>;
@@ -78,6 +80,8 @@
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
 		cd-inverted;
+		nvidia,min-tap-delay = <96>;
+		nvidia,max-tap-delay = <139>;
 		nvidia,vqmmc-always-on;
 		pwrdet-support;
 		pinctrl-names = "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
@@ -117,6 +121,8 @@
 		mmc-hs200-1_8v;
 		nvidia,vqmmc-always-on;
 		cd-inverted;
+		nvidia,min-tap-delay = <96>;
+		nvidia,max-tap-delay = <139>;
 		pwrdet-support;
 		pinctrl-names = "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
 		pinctrl-0 = <&sdmmc1_e_33V_enable>;

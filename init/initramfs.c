@@ -627,8 +627,11 @@ static int __init populate_rootfs(void)
 	do_skip_initramfs = 0;
 #endif
 
-	if (do_skip_initramfs)
+	if (do_skip_initramfs) {
+		if (initrd_start)
+			free_initrd();
 		return default_rootfs();
+	}
 
 	err = unpack_to_rootfs(__initramfs_start, __initramfs_size);
 	if (err)

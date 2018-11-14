@@ -49,6 +49,8 @@
 		only-1-8-v;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
+		nvidia,min-tap-delay = <84>;
+		nvidia,max-tap-delay = <136>;
 		nvidia,is-emmc;
 		nvidia,set-parent-clk;
 		calib-3v3-offsets = <0x0505>;
@@ -89,6 +91,8 @@
 		pinctrl-1 = <&sdmmc3_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
+		nvidia,min-tap-delay = <84>;
+		nvidia,max-tap-delay = <136>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC3>;
 		reset-names = "sdhci";
@@ -128,6 +132,8 @@
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		nvidia,is-emmc;
+		nvidia,min-tap-delay = <84>;
+		nvidia,max-tap-delay = <136>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC2>;
 		reset-names = "sdhci";
@@ -161,6 +167,8 @@
 		pinctrl-1 = <&sdmmc1_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
+		nvidia,min-tap-delay = <84>;
+		nvidia,max-tap-delay = <136>;
 		pll_source = "pll_p";
 		resets = <&tegra_car TEGRA186_RESET_SDMMC1>;
 		reset-names = "sdhci";

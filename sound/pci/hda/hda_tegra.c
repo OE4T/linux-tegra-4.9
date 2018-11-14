@@ -703,11 +703,13 @@ static int hda_tegra_create_sysfs(struct hda_tegra *hda)
 			return -ENOMEM;
 
 		/* attributes for pcm device ID */
+		sysfs_attr_init(&(pcm_dev->pcm_attr.attr));
 		pcm_dev->pcm_attr.attr.name = "pcm_dev_id";
 		pcm_dev->pcm_attr.attr.mode = 0644;
 		pcm_dev->pcm_attr.show = hda_get_pcm_device_id;
 
 		/* attributes for switch name */
+		sysfs_attr_init(&(pcm_dev->name_attr.attr));
 		pcm_dev->name_attr.attr.name = "switch_name";
 		pcm_dev->name_attr.attr.mode = 0644;
 		pcm_dev->name_attr.show = hda_get_pcm_switch_name;

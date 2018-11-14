@@ -487,6 +487,8 @@
 		tap-delay = <9>;
 		trim-delay = <13>;
 		dqs-trim-delay = <40>;
+		nvidia,min-tap-delay = <91>;
+		nvidia,max-tap-delay = <149>;
 		pll_source = "pll_p", "pll_c4_out2";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,
@@ -499,12 +501,16 @@
 	sdhci@700b0400 {
 		tap-delay = <11>;
 		trim-delay = <18>;
+		nvidia,min-tap-delay = <91>;
+		nvidia,max-tap-delay = <149>;
 		status = "disabled";
 	};
 
 	sdhci@700b0200 {
 		tap-delay = <8>;
 		trim-delay = <13>;
+		nvidia,min-tap-delay = <91>;
+		nvidia,max-tap-delay = <149>;
 		status = "disabled";
 	};
 
@@ -512,6 +518,8 @@
 		tap-delay = <11>;
 		trim-delay = <14>;
 		nvidia,cd-wakeup-capable;
+		nvidia,min-tap-delay = <91>;
+		nvidia,max-tap-delay = <149>;
 		nvidia,pmc-wakeup = <&tegra_pmc
 			PMC_WAKE_TYPE_EVENT 35 (PMC_TRIGGER_TYPE_RISING | PMC_TRIGGER_TYPE_FALLING)>;
 		status = "disabled";

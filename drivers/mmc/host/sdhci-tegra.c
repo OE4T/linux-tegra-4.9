@@ -96,6 +96,10 @@
 
 #define SDHCI_TEGRA_VNDR_TUNING_STATUS0		0x1C8
 
+#define SDHCI_TEGRA_VNDR_TUNING_STATUS1		0x1CC
+#define SDHCI_TEGRA_VNDR_TUNING_STATUS1_TAP_MASK	0xFF
+#define SDHCI_TEGRA_VNDR_TUNING_STATUS1_END_TAP_SHIFT	8
+
 #define SDHCI_TEGRA_SDMEM_COMP_PADCTRL		0x1E0
 #define SDHCI_TEGRA_PAD_E_INPUT_OR_E_PWRD_MASK	0x80000000
 #define SDHCI_TEGRA_SDMEMCOMP_PADCTRL_VREF_SEL	0x0000000F
@@ -131,7 +135,7 @@
 #define SET_REQ_TAP	0x0
 #define SET_DDR_TAP	0x1
 #define SET_DEFAULT_TAP	0x2
-
+#define TUNING_WORD_BIT_SIZE 32
 #define SDHOST_LOW_VOLT_MIN	1800000
 
 /* Set min identification clock of 400 KHz */
@@ -233,6 +237,8 @@ struct sdhci_tegra {
 	bool vqmmc_always_on;
 	bool slcg_status;
 	bool en_periodic_calib;
+	unsigned int min_tap_delay;
+	unsigned int max_tap_delay;
 	ktime_t timestamp;
 };
 
@@ -387,14 +393,15 @@ static void tegra_sdhci_dump_vendor_regs(struct sdhci_host *host)
 	u32 trim_delay;
 	u8 i;
 
-	pr_info("======= %s: Tuning windows =======\n", mmc_hostname(host->mmc));
+	pr_debug("======= %s: Tuning windows =======\n",
+				mmc_hostname(host->mmc));
 	reg = sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0);
 	for (i = 0; i <= TUNING_WORD_SEL_MASK; i++) {
 		reg &= ~SDHCI_TUN_CTRL0_TUNING_WORD_SEL_MASK;
 		reg |= i;
 		sdhci_writel(host, reg, SDHCI_VNDR_TUN_CTRL0_0);
 		tuning_status = sdhci_readl(host, SDHCI_TEGRA_VNDR_TUNING_STATUS0);
-		pr_info("%s: tuning window[%d]: %#x\n",
+		pr_debug("%s: tuning window[%d]: %#x\n",
 			mmc_hostname(host->mmc), i, tuning_status);
 	}
 	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
@@ -402,34 +409,36 @@ static void tegra_sdhci_dump_vendor_regs(struct sdhci_host *host)
 	tap_delay &= SDHCI_CLOCK_CTRL_TAP_MASK;
 	trim_delay = reg >> SDHCI_CLOCK_CTRL_TRIM_SHIFT;
 	trim_delay &= SDHCI_CLOCK_CTRL_TRIM_MASK;
-	pr_info("sdhci: Tap value: %u | Trim value: %u\n", tap_delay,
+	pr_debug("sdhci: Tap value: %u | Trim value: %u\n", tap_delay,
 			trim_delay);
-	pr_info("==================================\n");
+	pr_debug("==================================\n");
 
-	pr_info("Vendor clock ctrl: %#x\n",
+	pr_debug("Vendor clock ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL));
-	pr_info("Vendor SysSW ctrl: %#x\n",
+	pr_debug("Vendor SysSW ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL));
-	pr_info("Vendor Err interrupt status : %#x\n",
+	pr_debug("Vendor Err interrupt status : %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_ERR_INTR_STATUS));
-	pr_info("Vendor Cap overrides: %#x\n",
+	pr_debug("Vendor Cap overrides: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CAP_OVERRIDES));
-	pr_info("Vendor Misc ctrl: %#x\n",
+	pr_debug("Vendor Misc ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL));
-	pr_info("Vendor Misc ctrl_1: %#x\n",
+	pr_debug("Vendor Misc ctrl_1: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_1));
-	pr_info("Vendor Misc ctrl_2: %#x\n",
+	pr_debug("Vendor Misc ctrl_2: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_2));
-	pr_info("Vendor IO trim ctrl: %#x\n",
+	pr_debug("Vendor IO trim ctrl: %#x\n",
 		sdhci_readl(host, SDMMC_VNDR_IO_TRIM_CTRL_0));
-	pr_info("Vendor Tuning ctrl: %#x\n",
+	pr_debug("Vendor Tuning ctrl: %#x\n",
 		sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0));
-	pr_info("SDMEM comp padctrl: %#x\n",
+	pr_debug("SDMEM comp padctrl: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_SDMEM_COMP_PADCTRL));
-	pr_info("Autocal config: %#x\n",
+	pr_debug("Autocal config: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_CONFIG));
-	pr_info("Autocal status: %#x\n",
+	pr_debug("Autocal status: %#x\n",
 		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_STATUS));
+	pr_debug("Tuning Status1: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VNDR_TUNING_STATUS1));
 }
 
 static void tegra_sdhci_card_event(struct sdhci_host *host)
@@ -532,18 +541,196 @@ static bool tegra_sdhci_skip_retuning(struct sdhci_host *host)
 	return false;
 }
 
+static void tegra_sdhci_apply_tuning_correction(struct sdhci_host *host,
+		u16 tun_iter, u8 upthres, u8 lowthres, u8 fixed_tap)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	u32 reg, mask = 0x00000001;
+	u8 i, j, edge1;
+	unsigned int tun_word;
+	bool start_fail_def = false;
+	bool start_pass_def = false;
+	bool end_fail_def = false;
+	bool end_pass_def = false;
+	bool first_pass_def = false;
+	bool first_fail_def = false;
+	u8 start_fail = 0;
+	u8 end_fail = 0;
+	u8 start_pass = 0;
+	u8 end_pass = 0;
+	u8 first_fail = 0;
+	u8 first_pass = 0;
+
+	/*Select the first valid window with starting and ending edges defined*/
+	for (i = 0; i <= TUNING_WORD_SEL_MASK; i++) {
+		if (i == (tun_iter/TUNING_WORD_BIT_SIZE))
+			break;
+		j = 0;
+		reg = sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0);
+		reg &= ~TUNING_WORD_SEL_MASK;
+		reg |= i;
+		sdhci_writel(host, reg, SDHCI_VNDR_TUN_CTRL0_0);
+		tun_word = sdhci_readl(host, SDHCI_TEGRA_VNDR_TUNING_STATUS0);
+		while (j <= (TUNING_WORD_BIT_SIZE - 1)) {
+			if (!(tun_word & (mask << j)) && !start_fail_def) {
+				start_fail = i*TUNING_WORD_BIT_SIZE + j;
+				start_fail_def = true;
+				if (!first_fail_def) {
+					first_fail = start_fail;
+					first_fail_def = true;
+				}
+			} else if ((tun_word & (mask << j)) && !start_pass_def
+					&& start_fail_def) {
+				start_pass = i*TUNING_WORD_BIT_SIZE + j;
+				start_pass_def = true;
+				if (!first_pass_def) {
+					first_pass = start_pass;
+					first_pass_def = true;
+				}
+			} else if (!(tun_word & (mask << j)) && start_fail_def
+					&& start_pass_def) {
+				end_pass = i*TUNING_WORD_BIT_SIZE + j - 1;
+				end_pass_def = true;
+			} else if ((tun_word & (mask << j)) && start_pass_def
+				&& start_fail_def && end_pass_def) {
+				end_fail  = i*TUNING_WORD_BIT_SIZE + j - 1;
+				end_fail_def = true;
+				if ((end_pass - start_pass) >= upthres) {
+					start_fail = end_pass + 1;
+					start_pass = end_fail + 1;
+					end_pass_def = false;
+					end_fail_def = false;
+					j++;
+					continue;
+				} else if ((end_pass - start_pass) < lowthres) {
+					start_pass = end_fail + 1;
+					end_pass_def = false;
+					end_fail_def = false;
+					j++;
+					continue;
+				}
+				break;
+			}
+			j++;
+			if ((i*TUNING_WORD_BIT_SIZE + j) == tun_iter - 1)
+				break;
+		}
+		if (start_pass_def && end_pass_def && start_fail_def
+				&& end_fail_def) {
+			tegra_host->tuned_tap_delay = start_pass +
+				(end_pass - start_pass)/2;
+			return;
+		}
+	}
+	/*
+	 * If no edge found, retain tap set by HW tuning
+	 */
+	if (!first_fail_def) {
+		WARN_ON("No edge detected\n");
+		reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+		tegra_host->tuned_tap_delay =
+			((reg >> SDHCI_CLOCK_CTRL_TAP_SHIFT) &
+				SDHCI_CLOCK_CTRL_TAP_MASK);
+	}
+	/*
+	 * Set tap based on fixed value relative to first edge
+	 * if no valid windows found
+	 */
+	if (!end_fail_def && first_fail_def && first_pass_def) {
+		edge1 = first_fail + (first_pass - first_fail)/2;
+		if ((edge1 - 1) > fixed_tap)
+			tegra_host->tuned_tap_delay = edge1 - fixed_tap;
+		else
+			tegra_host->tuned_tap_delay = edge1 + fixed_tap;
+	}
+
+}
+
 static void tegra_sdhci_post_tuning(struct sdhci_host *host)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	u32 reg;
+	u8 start_tap, end_tap, window_width, upperthreshold, lowerthreshold;
+	u8 fixed_tap;
+	u16 num_tun_iter;
+	u32 clk_rate_mhz, period, bestcase, worstcase;
+	u32 avg_tap_delay, min_tap_delay, max_tap_delay;
 
-	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
-	tegra_host->tuned_tap_delay = ((reg >> SDHCI_CLOCK_CTRL_TAP_SHIFT) &
-		SDHCI_CLOCK_CTRL_TAP_MASK);
+	min_tap_delay = tegra_host->min_tap_delay;
+	max_tap_delay = tegra_host->max_tap_delay;
+	if (!min_tap_delay || !max_tap_delay) {
+		pr_info("%s: Tuning correction cannot be applied",
+				mmc_hostname(host->mmc));
+		goto retain_hw_tun_tap;
+	}
+
+	clk_rate_mhz = tegra_host->curr_clk_rate/1000000;
+	period = 1000000/clk_rate_mhz;
+	bestcase = period/min_tap_delay;
+	worstcase = period/max_tap_delay;
+	avg_tap_delay = (period*2)/(min_tap_delay + max_tap_delay);
+	upperthreshold = ((2*worstcase) + bestcase)/2;
+	lowerthreshold = worstcase/4;
+	fixed_tap = avg_tap_delay/2;
+
+	reg = sdhci_readl(host, SDHCI_TEGRA_VNDR_TUNING_STATUS1);
+	start_tap = reg & SDHCI_TEGRA_VNDR_TUNING_STATUS1_TAP_MASK;
+	end_tap = (reg >> SDHCI_TEGRA_VNDR_TUNING_STATUS1_END_TAP_SHIFT) &
+			SDHCI_TEGRA_VNDR_TUNING_STATUS1_TAP_MASK;
+	window_width = end_tap - start_tap;
+
+	num_tun_iter = (sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0) &
+				SDHCI_VNDR_TUN_CTRL0_0_TUN_ITER_MASK) >>
+				SDHCI_TUN_CTRL0_TUNING_ITER_SHIFT;
+
+	switch (num_tun_iter) {
+	case 0:
+		num_tun_iter = 40;
+		break;
+	case 1:
+		num_tun_iter = 64;
+		break;
+	case 2:
+		num_tun_iter = 128;
+		break;
+	case 3:
+		num_tun_iter = 196;
+		break;
+	case 4:
+		num_tun_iter = 256;
+		break;
+	default:
+		WARN_ON("Invalid value of number of tuning iterations");
+	}
+	/*
+	 * Apply tuning correction if partial window is selected by HW tuning
+	 * or window merge is detected
+	 */
+	if ((start_tap == 0) || (end_tap == 254) ||
+	   ((end_tap == 126) && (num_tun_iter == 128)) ||
+	   (end_tap == (num_tun_iter - 1)) ||
+	   (window_width >= upperthreshold)) {
+		tegra_sdhci_dump_vendor_regs(host);
+		pr_info("%s: Applying tuning correction\n",
+				mmc_hostname(host->mmc));
+		tegra_sdhci_apply_tuning_correction(host, num_tun_iter,
+				upperthreshold, lowerthreshold, fixed_tap);
+		pr_info("%s: Tap value after applying correction %u\n",
+			mmc_hostname(host->mmc), tegra_host->tuned_tap_delay);
+	} else {
+retain_hw_tun_tap:
+		reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+		tegra_host->tuned_tap_delay =
+			((reg >> SDHCI_CLOCK_CTRL_TAP_SHIFT) &
+				SDHCI_CLOCK_CTRL_TAP_MASK);
+	}
+	tegra_sdhci_set_tap(host, tegra_host->tuned_tap_delay, SET_REQ_TAP);
 	tegra_host->tuning_status = TUNING_STATUS_DONE;
 
 	pr_info("%s: hw tuning done ...\n", mmc_hostname(host->mmc));
+	tegra_sdhci_dump_vendor_regs(host);
 }
 
 static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,
@@ -1823,6 +2010,10 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	tegra_host->en_periodic_calib = of_property_read_bool(np,
 			"nvidia,en-periodic-calib");
 
+	of_property_read_u32(np, "nvidia,min-tap-delay",
+		&tegra_host->min_tap_delay);
+	of_property_read_u32(np, "nvidia,max-tap-delay",
+		&tegra_host->max_tap_delay);
 	return 0;
 }
 

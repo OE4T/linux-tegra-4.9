@@ -1,7 +1,7 @@
 /*
  * tegracam_core - tegra camera framework initialization
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -81,6 +81,8 @@ int tegracam_device_register(struct tegracam_device *tc_dev)
 	s_data->ops = tc_dev->sensor_ops;
 
 	s_data->pdata = tc_dev->sensor_ops->parse_dt(tc_dev);
+	if (PTR_ERR(s_data->pdata) == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
 	if (!s_data->pdata) {
 		dev_err(dev, "unable to get platform data\n");
 		return -EFAULT;

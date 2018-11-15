@@ -239,7 +239,7 @@ struct gr_gk20a_isr_data {
 	u32 data_lo;
 	u32 data_hi;
 	u32 curr_ctx;
-	u32 chid;
+	struct channel_gk20a *ch;
 	u32 offset;
 	u32 sub_chan;
 	u32 class_num;

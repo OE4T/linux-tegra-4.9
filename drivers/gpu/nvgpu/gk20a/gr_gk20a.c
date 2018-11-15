@@ -5203,29 +5203,31 @@ int gk20a_gr_reset(struct gk20a *g)
 static void gk20a_gr_set_error_notifier(struct gk20a *g,
 		  struct gr_gk20a_isr_data *isr_data, u32 error_notifier)
 {
-	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
 	struct tsg_gk20a *tsg;
 	struct channel_gk20a *ch_tsg;
 
-	if (isr_data->chid != FIFO_INVAL_CHANNEL_ID) {
-		ch = &f->channel[isr_data->chid];
+	ch = isr_data->ch;
 
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			tsg = &g->fifo.tsg[ch->tsgid];
-			nvgpu_rwsem_down_read(&tsg->ch_list_lock);
-			nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
-					channel_gk20a, ch_entry) {
-				if (gk20a_channel_get(ch_tsg)) {
-					g->ops.fifo.set_error_notifier(ch_tsg,
-							 error_notifier);
-					gk20a_channel_put(ch_tsg);
-				}
+	if (ch == NULL) {
+		return;
+	}
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
+		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
+		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
+				channel_gk20a, ch_entry) {
+			if (gk20a_channel_get(ch_tsg)) {
+				g->ops.fifo.set_error_notifier(ch_tsg,
+						 error_notifier);
+				gk20a_channel_put(ch_tsg);
 			}
-			nvgpu_rwsem_up_read(&tsg->ch_list_lock);
-		} else {
-			g->ops.fifo.set_error_notifier(ch, error_notifier);
+
 		}
+		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
+	} else {
+		g->ops.fifo.set_error_notifier(ch, error_notifier);
 	}
 }
 
@@ -5285,6 +5287,8 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 {
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 	int ret = 0;
+	u32 chid = isr_data->ch != NULL ?
+		isr_data->ch->chid : FIFO_INVAL_CHANNEL_ID;
 
 	if (gr_fecs_intr == 0U) {
 		return 0;
@@ -5302,7 +5306,7 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 			gr_fecs_host_int_status_watchdog_active_f()) != 0U) {
 		/* currently, recovery is not initiated */
 		nvgpu_err(g, "fecs watchdog triggered for channel %u, "
-				"cannot ctxsw anymore !!", isr_data->chid);
+				"cannot ctxsw anymore !!", chid);
 		gk20a_fecs_dump_falcon_stats(g);
 	} else if ((gr_fecs_intr &
 		gr_fecs_host_int_status_ctxsw_intr_f(CTXSW_INTR0)) != 0U) {
@@ -5337,6 +5341,8 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 				       struct gr_gk20a_isr_data *isr_data)
 {
 	u32 gr_class_error;
+	u32 chid = isr_data->ch != NULL ?
+		isr_data->ch->chid : FIFO_INVAL_CHANNEL_ID;
 
 	nvgpu_log_fn(g, " ");
 
@@ -5355,7 +5361,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 			gk20a_readl(g, gr_trapped_data_mme_r())),
 		gr_trapped_addr_datahigh_v(isr_data->addr),
 		gr_trapped_addr_priv_v(isr_data->addr),
-		gr_class_error, isr_data->chid);
+		gr_class_error, chid);
 
 	nvgpu_err(g, "trapped data low 0x%08x",
 		gk20a_readl(g, gr_trapped_data_lo_r()));
@@ -5370,6 +5376,9 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 					   struct gr_gk20a_isr_data *isr_data)
 {
+	u32 chid = isr_data->ch != NULL ?
+		isr_data->ch->chid : FIFO_INVAL_CHANNEL_ID;
+
 	nvgpu_log_fn(g, " ");
 
 	gk20a_gr_set_error_notifier(g, isr_data,
@@ -5377,15 +5386,14 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 	nvgpu_err(g,
 		   "firmware method 0x%08x, offset 0x%08x for channel %u",
 		   isr_data->class_num, isr_data->offset,
-		   isr_data->chid);
+		   chid);
 	return -EINVAL;
 }
 
 int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 				     struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	struct channel_gk20a *ch = isr_data->ch;
 	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 	g->ops.fifo.post_event_id(tsg,
@@ -5419,8 +5427,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 int gk20a_gr_handle_notify_pending(struct gk20a *g,
 					  struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
+	struct channel_gk20a *ch = isr_data->ch;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	void *virtual_address;
@@ -5965,6 +5972,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	struct tsg_gk20a *tsg = NULL;
 	u32 gr_engine_id;
 	u32 global_esr = 0;
+	u32 chid;
 
 	nvgpu_log_fn(g, " ");
 	nvgpu_log(g, gpu_dbg_intr, "pgraph intr %08x", gr_intr);
@@ -5997,10 +6005,10 @@ int gk20a_gr_isr(struct gk20a *g)
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
 	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, &tsgid);
-	if (ch) {
-		isr_data.chid = ch->chid;
-	} else {
-		isr_data.chid = FIFO_INVAL_CHANNEL_ID;
+	isr_data.ch = ch;
+	chid = ch != NULL ? ch->chid : FIFO_INVAL_CHANNEL_ID;
+
+	if (ch == NULL) {
 		nvgpu_err(g, "ch id is INVALID 0xffffffff");
 	}
 
@@ -6013,7 +6021,7 @@ int gk20a_gr_isr(struct gk20a *g)
 		"data 0x%08x 0x%08x,"
 		"ctx 0x%08x, offset 0x%08x, "
 		"subchannel 0x%08x, class 0x%08x",
-		isr_data.chid, isr_data.addr,
+		chid, isr_data.addr,
 		isr_data.data_hi, isr_data.data_lo,
 		isr_data.curr_ctx, isr_data.offset,
 		isr_data.sub_chan, isr_data.class_num);
@@ -6190,10 +6198,9 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 					 "GPC exception pending");
 
-			fault_ch = gk20a_fifo_channel_from_chid(g,
-							isr_data.chid);
+			fault_ch = isr_data.ch;
 
-			/*isr_data.chid can be ~0 and fault_ch can be NULL */
+			/* fault_ch can be NULL */
 			/* check if any gpc has an exception */
 			if (gk20a_gr_handle_gpc_exception(g, &post_event,
 					fault_ch, &global_esr) != 0) {

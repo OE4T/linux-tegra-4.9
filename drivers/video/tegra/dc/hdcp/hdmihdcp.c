@@ -2207,11 +2207,10 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 			TEGRA_EDID_QUIRK_DELAY_HDCP ? 5000 : 100;
 
 	nvhdcp->state = STATE_UNAUTHENTICATED;
-	if (nvhdcp_is_plugged(nvhdcp) &&
-		atomic_read(&nvhdcp->policy) !=
-		TEGRA_DC_HDCP_POLICY_ALWAYS_OFF &&
+	if (atomic_read(&nvhdcp->policy) != TEGRA_DC_HDCP_POLICY_ALWAYS_OFF &&
 		!(tegra_edid_get_quirks(nvhdcp->hdmi->edid) &
 		  TEGRA_EDID_QUIRK_NO_HDCP)) {
+		nvhdcp_set_plugged(nvhdcp, true);
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
 				msecs_to_jiffies(delay));
 	}
@@ -2247,12 +2246,10 @@ void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 
 	nvhdcp_debug("hdmi hotplug detected (hpd = %d)\n", hpd);
 
-	if (hpd) {
-		nvhdcp_set_plugged(nvhdcp, true);
+	if (hpd)
 		tegra_nvhdcp_on(nvhdcp);
-	} else {
+	else
 		tegra_nvhdcp_off(nvhdcp);
-	}
 }
 
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol)

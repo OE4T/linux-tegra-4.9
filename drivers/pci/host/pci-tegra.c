@@ -866,26 +866,6 @@ static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index,
 }
 
 #if defined(CONFIG_PCIEASPM)
-static void tegra_pcie_config_l1ss_l12_thtime(void)
-{
-	struct pci_dev *pdev = NULL;
-	u32 data = 0, pos = 0;
-
-	PR_FUNC_LINE;
-	/* program same LTR L1.2 threshold = 55us for all ports */
-	for_each_pci_dev(pdev) {
-		pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
-		if (!pos)
-			continue;
-		pci_read_config_dword(pdev, pos + PCI_L1SS_CTRL1, &data);
-		data |= 0x37 << PCI_L1SS_CTRL1_L12TH_VAL_SHIFT;
-		pci_write_config_dword(pdev, pos + PCI_L1SS_CTRL1, data);
-		pci_read_config_dword(pdev, pos + PCI_L1SS_CTRL1, &data);
-		data |= 0x02 << PCI_L1SS_CTRL1_L12TH_SCALE_SHIFT;
-		pci_write_config_dword(pdev, pos + PCI_L1SS_CTRL1, data);
-	}
-}
-
 static void tegra_pcie_enable_ltr_support(void)
 {
 	struct pci_dev *pdev = NULL;
@@ -999,7 +979,6 @@ static void tegra_pcie_configure_aspm(void)
 		}
 	}
 	/* L1.2 specific common configuration */
-	tegra_pcie_config_l1ss_l12_thtime();
 	tegra_pcie_enable_ltr_support();
 }
 #endif

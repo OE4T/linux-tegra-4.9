@@ -3859,16 +3859,6 @@ u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
 	return pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f();
 }
 
-struct channel_gk20a *gk20a_fifo_channel_from_chid(struct gk20a *g,
-		u32 chid)
-{
-	if (chid != FIFO_INVAL_CHANNEL_ID) {
-		return g->fifo.channel + chid;
-	} else {
-		return NULL;
-	}
-}
-
 static const char * const ccsr_chan_status_str[] = {
 	"idle",
 	"pending",

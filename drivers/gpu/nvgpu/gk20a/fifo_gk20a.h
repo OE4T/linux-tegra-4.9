@@ -293,9 +293,6 @@ void gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 bool gk20a_fifo_error_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 bool gk20a_fifo_error_ch(struct gk20a *g, struct channel_gk20a *refch);
 
-struct channel_gk20a *gk20a_fifo_channel_from_chid(struct gk20a *g,
-		u32 chid);
-
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg);
 int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 				u32 id,

@@ -163,7 +163,6 @@
 				*
 				* min_exp_time = ""; (ceil to integer)
 				* max_exp_time = ""; (ceil to integer)
-				* exp_time_1h = ""; (ceil to integer)
 				* Exposure Time limits for mode (us)
 				*
 				*
@@ -210,7 +209,6 @@
 					max_framerate = "30";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 				};
 				mode1 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_30FPS*/
@@ -243,7 +241,6 @@
 					max_framerate = "30";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 				};
 
@@ -277,7 +274,6 @@
 					max_framerate = "60";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					exp_time_1h = "15";
 					embedded_metadata_height = "1";
 				};
 
@@ -311,7 +307,6 @@
 					max_framerate = "60";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					exp_time_1h = "15";
 					embedded_metadata_height = "1";
 				};
 				mode4 {/*mode IMX185_MODE_1920X1080_CROP_HDR_30FPS*/
@@ -342,9 +337,8 @@
 					max_hdr_ratio = "16";
 					min_framerate = "1.5";
 					max_framerate = "30";
-					min_exp_time = "30";
+					min_exp_time = "2433";
 					max_exp_time = "660000";
-					exp_time_1h = "30";
 					embedded_metadata_height = "1";
 
 					/* WDR related settings */

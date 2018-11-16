@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -211,7 +211,6 @@
 						max_exp_time = "660000"; /* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
-						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
 					mode1 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_30FPS*/
@@ -252,7 +251,6 @@
 						max_exp_time = "660000"; /* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
-						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 					};
 					mode2 {/*mode IMX185_MODE_1920X1080_CROP_60FPS*/
@@ -292,7 +290,6 @@
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
 						default_exp_time = "16667";/* us */
-						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
 					mode3 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_60FPS*/
@@ -332,7 +329,6 @@
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
 						default_exp_time = "16667";/* us */
-						exp_time_1h = "15";
 						embedded_metadata_height = "0";
 					};
 					mode4 {/*mode IMX185_MODE_1920X1080_CROP_HDR_30FPS*/
@@ -372,7 +368,6 @@
 						min_exp_time = "30"; /* us */
 						max_exp_time = "660000"; /* us */
 						default_exp_time = "33334";/* us */
-						exp_time_1h = "30";
 						embedded_metadata_height = "0";
 
 						/* WDR related settings */

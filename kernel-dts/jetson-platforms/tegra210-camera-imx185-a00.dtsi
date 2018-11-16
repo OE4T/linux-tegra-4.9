@@ -365,7 +365,7 @@
 						step_framerate = "1";
 						default_framerate= "30000000";
 						exposure_factor = "1000000";
-						min_exp_time = "30"; /* us */
+						min_exp_time = "2433"; /* us */
 						max_exp_time = "660000"; /* us */
 						default_exp_time = "33334";/* us */
 						embedded_metadata_height = "0";

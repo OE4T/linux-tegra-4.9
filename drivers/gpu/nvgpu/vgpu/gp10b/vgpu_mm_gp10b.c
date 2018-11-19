@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -108,6 +108,10 @@ u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 		goto fail;
 	}
 	sgl = sgt->sgl;
+
+	/* Align size to page size */
+	size = ALIGN(size, page_size);
+
 	while (sgl) {
 		u64 phys_addr;
 		u64 chunk_length;

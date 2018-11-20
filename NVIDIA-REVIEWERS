@@ -341,3 +341,10 @@ L:	sw-mobile-touch@exchange.nvidia.com
 B:	Mobile Driver Touchscreen
 S:	Supported
 F:	drivers/input/touchscreen/*
+
+UDRM
+M:	Yogish Kulkarni <yogishk@nvidia.com>
+L:	sw-libdrm@exchange.nvidia.com
+B:	Mobile_Graphics_DRM
+S:	Supported
+F:	drivers/gpu/drm/tegra_udrm/

@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms and conditions of the GNU General Public License,
@@ -8,14 +8,10 @@
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-subdir-ccflags-y += -Werror
+tegra-udrm-y := tegra_udrm_drv.o
 
-obj-$(CONFIG_NVPMODEL_EMC)      += nvpmodel/
-obj-$(CONFIG_TEGRA_NVLINK)	+= nvlink/
-obj-$(CONFIG_NVPPS)		+= nvpps/
-obj-$(CONFIG_THERMAL)  += thermal/
-obj-$(CONFIG_TRUSTY)		+= trusty/
-obj-$(CONFIG_TEGRA_HV_MANAGER)	+= virt/tegra/
-obj-y	+= gpu/
-
+obj-$(CONFIG_DRM_TEGRA_UDRM) += tegra-udrm.o

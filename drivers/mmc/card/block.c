@@ -1095,9 +1095,9 @@ static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
 			goto out;
 		} else {
 			/* disable host controller command queue engine */
-			host->cmdq_ops->disable(host, true);
 			if (host->ops && host->ops->enable_host_int)
 				host->ops->enable_host_int(host, true);
+			host->cmdq_ops->disable(host, true);
 		}
 	} else {
 		pr_err("%s: No cmdq ops defined !!!\n", __func__);

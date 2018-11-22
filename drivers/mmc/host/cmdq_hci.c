@@ -394,6 +394,7 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 	unsigned long flags;
 
 	spin_lock_irqsave(&cq_host->cmdq_lock, flags);
+	cmdq_clear_set_irqs(cq_host, CQ_INT_ALL, 0x0);
 	if (soft) {
 		cmdq_reg_writel(cq_host, cmdq_reg_readl(
 				    cq_host, CQCFG) & ~(CQ_ENABLE),

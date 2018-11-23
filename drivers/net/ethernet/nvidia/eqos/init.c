@@ -1469,6 +1469,9 @@ static int eqos_suspend_noirq(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct eqos_prv_data *pdata = netdev_priv(ndev);
 
+	if (!netif_running(ndev))
+		return 0;
+
 	if (pdata->suspended) {
 		pr_err("eqos already suspended\n");
 		return -EINVAL;
@@ -1476,20 +1479,19 @@ static int eqos_suspend_noirq(struct device *dev)
 
 	pdata->suspended = 1;
 
-	if (netif_running(ndev)) {
-		if (pdata->phydev) {
-			if (device_may_wakeup(&ndev->dev)) {
-				enable_irq_wake(pdata->phydev->irq);
-			} else {
-				phy_stop(pdata->phydev);
-				if (gpio_is_valid(pdata->phy_reset_gpio))
-					gpio_set_value(pdata->phy_reset_gpio, 0);
-			}
+	if (pdata->phydev) {
+		if (device_may_wakeup(&ndev->dev)) {
+			enable_irq_wake(pdata->phydev->irq);
+		} else {
+			phy_stop(pdata->phydev);
+			if (gpio_is_valid(pdata->phy_reset_gpio))
+				gpio_set_value(pdata->phy_reset_gpio, 0);
 		}
-
-		eqos_stop_dev(pdata);
-		pdata->hw_stopped = true;
 	}
+
+	eqos_stop_dev(pdata);
+
+	pdata->hw_stopped = true;
 
 	/* cancel iso work */
 	cancel_work_sync(&pdata->iso_work);
@@ -1508,6 +1510,9 @@ static int eqos_resume_noirq(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct eqos_prv_data *pdata = netdev_priv(ndev);
 
+	if (!netif_running(ndev))
+		return 0;
+
 	if (!pdata->suspended) {
 		pr_err("eqos already resumed\n");
 		return -EINVAL;
@@ -1519,26 +1524,24 @@ static int eqos_resume_noirq(struct device *dev)
 	/* enable clocks */
 	eqos_clock_enable(pdata);
 
-	if (netif_running(ndev)) {
-		if (device_may_wakeup(&ndev->dev)) {
-			disable_irq_wake(pdata->phydev->irq);
-			eqos_start_dev(pdata);
-		} else {
-			if (gpio_is_valid(pdata->phy_reset_gpio) &&
-			    !gpio_get_value(pdata->phy_reset_gpio)) {
-				/* deassert phy reset */
-				gpio_set_value(pdata->phy_reset_gpio, 1);
-			}
-
-			eqos_start_dev(pdata);
-
-			/* Init the PHY */
-			pdata->phydev->drv->config_init(pdata->phydev);
-			phy_start(pdata->phydev);
+	if (device_may_wakeup(&ndev->dev)) {
+		disable_irq_wake(pdata->phydev->irq);
+		eqos_start_dev(pdata);
+	} else {
+		if (gpio_is_valid(pdata->phy_reset_gpio) &&
+		    !gpio_get_value(pdata->phy_reset_gpio)) {
+			/* deassert phy reset */
+			gpio_set_value(pdata->phy_reset_gpio, 1);
 		}
 
-		netif_tx_start_all_queues(pdata->dev);
+		eqos_start_dev(pdata);
+
+		/* Init the PHY */
+		pdata->phydev->drv->config_init(pdata->phydev);
+		phy_start(pdata->phydev);
 	}
+
+	netif_tx_start_all_queues(pdata->dev);
 
 	pdata->suspended = 0;
 	pdata->hw_stopped = false;

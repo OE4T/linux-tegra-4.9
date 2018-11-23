@@ -1,7 +1,7 @@
 /*
  * tegra_cpc.c - Access CPC storage blocks through i2c bus
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -13,11 +13,11 @@
  * GNU General Public License for more details.
  */
 
-#ifndef _TEGRA_CPC_H
-#define _TEGRA_CPC_H
+#ifndef __UAPI_TEGRA_CPC_H
+#define __UAPI_TEGRA_CPC_H
 
-#include <linux/ioctl.h>
-#include <linux/types.h>
+#include <uapi/linux/ioctl.h>
+#include <uapi/linux/types.h>
 
 enum req_resp_t {
 	CPC_READ_M_COUNT = 0x2,

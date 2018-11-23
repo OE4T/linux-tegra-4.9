@@ -20,6 +20,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/bug.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/os_sched.h>
@@ -149,18 +150,23 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	return 0;
 }
 
+/* The caller must ensure that channel belongs to a tsg */
 int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
-	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
 	int err;
+
+	if (tsg == NULL) {
+		return -EINVAL;
+	}
 
 	err = g->ops.fifo.tsg_unbind_channel(ch);
 	if (err) {
 		nvgpu_err(g, "Channel %d unbind failed, tearing down TSG %d",
 			ch->chid, tsg->tsgid);
 
-		gk20a_fifo_abort_tsg(ch->g, ch->tsgid, true);
+		gk20a_fifo_abort_tsg(ch->g, tsg, true);
 		/* If channel unbind fails, channel is still part of runlist */
 		channel_gk20a_update_runlist(ch, false);
 

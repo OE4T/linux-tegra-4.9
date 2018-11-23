@@ -214,10 +214,12 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 {
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
+
 	nvgpu_log_fn(ch->g, " ");
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		return gk20a_fifo_abort_tsg(ch->g, ch->tsgid, channel_preempt);
+	if (tsg != NULL) {
+		return gk20a_fifo_abort_tsg(ch->g, tsg, channel_preempt);
 	}
 
 	/* make sure new kickoffs are prevented */

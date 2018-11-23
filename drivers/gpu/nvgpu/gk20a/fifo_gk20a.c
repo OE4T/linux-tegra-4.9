@@ -1553,17 +1553,16 @@ void gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 
 }
 
-void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
+void gk20a_fifo_abort_tsg(struct gk20a *g, struct tsg_gk20a *tsg, bool preempt)
 {
-	struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
-	struct channel_gk20a *ch;
+	struct channel_gk20a *ch = NULL;
 
 	nvgpu_log_fn(g, " ");
 
 	g->ops.fifo.disable_tsg(tsg);
 
 	if (preempt) {
-		g->ops.fifo.preempt_tsg(g, tsgid);
+		g->ops.fifo.preempt_tsg(g, tsg->tsgid);
 	}
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
@@ -1809,7 +1808,7 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 									 tsg);
 				}
 				verbose = gk20a_fifo_error_tsg(g, tsg);
-				gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
+				gk20a_fifo_abort_tsg(g, tsg, false);
 			}
 
 			/* put back the ref taken early above */
@@ -1998,7 +1997,7 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose,
 			gk20a_debug_dump(g);
 		}
 
-		gk20a_fifo_abort_tsg(g, tsgid, false);
+		gk20a_fifo_abort_tsg(g, tsg, false);
 	}
 
 	gr_gk20a_enable_ctxsw(g);

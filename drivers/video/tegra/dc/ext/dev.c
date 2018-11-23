@@ -1589,14 +1589,17 @@ static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win)
 	struct tegra_dc_dmabuf *unpin_handles[TEGRA_DC_NUM_PLANES];
 	int nr_unpin = 0;
 
+	mutex_lock(&win->lock);
 	if (win->cur_handle[TEGRA_DC_Y]) {
 		int j;
+
 		for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
 			if (win->cur_handle[j])
 				unpin_handles[nr_unpin++] = win->cur_handle[j];
 		}
 		memset(win->cur_handle, 0, sizeof(win->cur_handle));
 	}
+	mutex_unlock(&win->lock);
 
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 }

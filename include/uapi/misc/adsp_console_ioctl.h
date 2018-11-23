@@ -3,7 +3,7 @@
  *
  * A header file for adsp console driver
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2019, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,9 +16,9 @@
  *
  */
 
-#ifndef ADSP_CNSL_IOCTL_H
-#define ADSP_CNSL_IOCTL_H
-#include <linux/ioctl.h>
+#ifndef __UAPI_ADSP_CNSL_IOCTL_H
+#define __UAPI_ADSP_CNSL_IOCTL_H
+#include <uapi/linux/ioctl.h>
 
 #if !defined(NVADSP_NAME_SZ)
 #define NVADSP_NAME_SZ 128

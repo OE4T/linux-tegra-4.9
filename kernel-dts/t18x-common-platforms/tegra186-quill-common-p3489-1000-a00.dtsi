@@ -108,5 +108,45 @@
 	nvdumper {
 		status = "okay";
 	};
+        pinmux@2430000 {
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinmux_default>;
+
+                pinmux_default: common {
+                        gpio_edp2_pp5 {
+                                nvidia,pins = "gpio_edp2_pp5";
+                                nvidia,pull = <TEGRA_PIN_PULL_UP>;
+                                nvidia,tristate = <TEGRA_PIN_ENABLE>;
+                                nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+                                status = "okay";
+                        };
+
+                        gpio_edp3_pp6 {
+                                nvidia,pins = "gpio_edp3_pp6";
+                                nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+                                nvidia,tristate = <TEGRA_PIN_DISABLE>;
+                                nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+                                status = "okay";
+                        };
+                };
+        };
+        gpio@2200000 {
+                sdmmc-wake-support-input {
+                        gpio-hog;
+                        gpios = <TEGRA_MAIN_GPIO(P, 5) 0>;
+                        input;
+                        label = "sdmmc-wake-input";
+                        status = "disabled";
+                };
+
+                sdmmc-wake-support-output {
+                        gpio-hog;
+                        gpios = <TEGRA_MAIN_GPIO(P, 6) 0>;
+                        output-low;
+                        label = "sdmmc-wake-output";
+                        status = "disabled";
+                };
+        };
+
 };
 

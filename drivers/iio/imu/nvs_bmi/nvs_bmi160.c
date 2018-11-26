@@ -38,18 +38,32 @@
 
 #define BMI_NAME			"bmi160"
 #define BMI_VENDOR			"Bosch"
-#define BMI_DRIVER_VERSION		(7)
+#define BMI_DRIVER_VERSION		(11)
 #define BMI_ACC_VERSION			(1)
 #define BMI_GYR_VERSION			(1)
 #define BMI_HW_DELAY_POR_MS		(10)
+#define BMI_HW_DELAY_DEV_ON_US		(2)
+#define BMI_HW_DELAY_DEV_OFF_US		(450)
 #define BMI_CMD_DELAY_MS		(2)
-#define BMI_CMD_RETRY_N			(5)
+#define BMI_I2C_WR_RD_RETRY_N		(5)
 /* HW registers */
 #define BMI_REG_CHIP_ID			(0x00)
 #define BMI_REG_CHIP_ID_POR		(0xD1)
 #define BMI_REG_ERR_REG			(0x02)
 #define BMI_REG_ERR_REG_drop_cmd_err	(6)
 #define BMI_REG_PMU_STATUS		(0x03)
+#define BMI_REG_PMU_STATUS_MSK_ACC	(0x30)
+#define BMI_REG_PMU_STATUS_MSK_GYR	(0x0C)
+#define BMI_REG_PMU_STATUS_MSK_MAG	(0x03)
+#define BMI_REG_PMU_STATUS_ACC_SUSP	(0 << 4)
+#define BMI_REG_PMU_STATUS_ACC_NORM	(1 << 4)
+#define BMI_REG_PMU_STATUS_ACC_LP	(2 << 4)
+#define BMI_REG_PMU_STATUS_GYR_SUSP	(0 << 2)
+#define BMI_REG_PMU_STATUS_GYR_NORM	(1 << 2)
+#define BMI_REG_PMU_STATUS_GYR_FSU	(3 << 2)
+#define BMI_REG_PMU_STATUS_MAG_SUSP	(0)
+#define BMI_REG_PMU_STATUS_MAG_NORM	(1)
+#define BMI_REG_PMU_STATUS_MAG_LP	(2)
 #define BMI_REG_DATA_0			(0x04)
 #define BMI_REG_DATA_1			(0x05)
 #define BMI_REG_DATA_2			(0x06)
@@ -127,6 +141,12 @@
 #define BMI_REG_IF_CONF			(0x6B)
 #define BMI_REG_PMU_TRIGGER		(0x6C)
 #define BMI_REG_SELF_TEST		(0x6D)
+#define BMI_SELFTEST_ACC_POS		(0x0D)
+#define BMI_SELFTEST_ACC_NEG		(0x09)
+#define BMI_SELFTEST_ACC_DELAY_MS	(50)
+#define BMI_SELFTEST_ACC_LIMIT		(8192)
+#define BMI_SELFTEST_GYR		(0x10)
+#define BMI_SELFTEST_GYR_DELAY_MS	(20)
 #define BMI_REG_NV_CONF			(0x70)
 #define BMI_REG_OFFSET_0		(0x71)
 #define BMI_REG_OFFSET_1		(0x72)
@@ -420,20 +440,23 @@ struct bmi_hw {
 	u8 fifo_hdr_mask;
 	int (*fn_enable)(struct bmi_state *st);
 	int (*fn_batch)(struct bmi_state *st, unsigned int period_us);
+	int (*fn_selftest)(struct bmi_state *st);
 };
 
 static int bmi_acc_enable(struct bmi_state *st);
 static int bmi_acc_batch(struct bmi_state *st, unsigned int period_us);
+static int bmi_acc_selftest(struct bmi_state *st);
 static int bmi_gyr_enable(struct bmi_state *st);
 static int bmi_gyr_batch(struct bmi_state *st, unsigned int period_us);
+static int bmi_gyr_selftest(struct bmi_state *st);
 
 static struct bmi_hw bmi_hws[] = {
 	{
-		{
+		.dis			= {
 			.cmd		= BMI_REG_CMD_ACC_SUSP,
 			.ms_t		= 0,
 		},
-		{
+		.en			= {
 			.cmd		= BMI_REG_CMD_ACC_NORM,
 			.ms_t		= 5,
 		},
@@ -444,13 +467,14 @@ static struct bmi_hw bmi_hws[] = {
 		.fifo_hdr_mask		= 0x04,
 		.fn_enable		= &bmi_acc_enable,
 		.fn_batch		= &bmi_acc_batch,
+		.fn_selftest		= &bmi_acc_selftest,
 	},
 	{
-		{
+		.dis			= {
 			.cmd		= BMI_REG_CMD_GYR_SUSP,
 			.ms_t		= 0,
 		},
-		{
+		.en			= {
 			.cmd		= BMI_REG_CMD_GYR_NORM,
 			.ms_t		= 81,
 		},
@@ -461,6 +485,7 @@ static struct bmi_hw bmi_hws[] = {
 		.fifo_hdr_mask		= 0x08,
 		.fn_enable		= &bmi_gyr_enable,
 		.fn_batch		= &bmi_gyr_batch,
+		.fn_selftest		= &bmi_gyr_selftest,
 	},
 };
 
@@ -494,6 +519,7 @@ struct bmi_state {
 	unsigned int lost_frame_n;	/* frames lost to FIFO overflow */
 	unsigned int hw_n;		/* sensor count */
 	unsigned int hw2ids[BMI_HW_N];	/* sensor id */
+	unsigned int hw_en;		/* for HW access tracking */
 	bool pm_en;			/* pm enable status */
 	bool irq_dis;			/* interrupt host disable flag */
 	bool irq_set_irq_wake;		/* interrupt wake enable status */
@@ -505,6 +531,7 @@ struct bmi_state {
 	s64 ts_lo;			/* timestamp threshold low */
 	s64 ts_hi;			/* timestamp threshold high */
 	s64 ts_odr;			/* timestamp ODR */
+	s64 ts_hw;			/* timestamp HW access */
 	s64 period_ns;			/* global period in ns */
 	u8 int_out_ctrl;		/* user interrupt cfg */
 	u8 int_latch;			/* " */
@@ -549,6 +576,8 @@ static void bmi_err(struct bmi_state *st)
 static int bmi_i2c_rd(struct bmi_state *st, u8 reg, u16 len, u8 *val)
 {
 	struct i2c_msg msg[2];
+	s64 ts;
+	int ret;
 
 	if (st->i2c_addr) {
 		msg[0].addr = st->i2c_addr;
@@ -559,7 +588,25 @@ static int bmi_i2c_rd(struct bmi_state *st, u8 reg, u16 len, u8 *val)
 		msg[1].flags = I2C_M_RD;
 		msg[1].len = len;
 		msg[1].buf = val;
-		if (i2c_transfer(st->i2c->adapter, msg, 2) != 2) {
+		ts = st->ts_hw;
+		if (st->hw_en)
+			ts += (BMI_HW_DELAY_DEV_ON_US * 1000);
+		else
+			ts += (BMI_HW_DELAY_DEV_OFF_US * 1000);
+		ts -= nvs_timestamp();
+		if (ts > 0) {
+			/* HW access timing rules (datasheet 3.2.4) */
+			ts /= 1000;
+			ts++;
+			if (st->sts & NVS_STS_SPEW_MSG)
+				dev_info(&st->i2c->dev,
+					 "%s HW access delay=%lldus\n",
+					 __func__, ts);
+			udelay(ts);
+		}
+		ret = i2c_transfer(st->i2c->adapter, msg, 2);
+		st->ts_hw = nvs_timestamp();
+		if (ret != 2) {
 			bmi_err(st);
 			dev_err(&st->i2c->dev, "%s ERR: 0x%02X\n",
 				__func__, reg);
@@ -573,6 +620,8 @@ static int bmi_i2c_rd(struct bmi_state *st, u8 reg, u16 len, u8 *val)
 static int bmi_i2c_wr(struct bmi_state *st, u8 reg, u8 val)
 {
 	struct i2c_msg msg;
+	int ret;
+	s64 ts;
 	u8 buf[2];
 
 	if (st->i2c_addr) {
@@ -582,7 +631,25 @@ static int bmi_i2c_wr(struct bmi_state *st, u8 reg, u8 val)
 		msg.flags = 0;
 		msg.len = 2;
 		msg.buf = buf;
-		if (i2c_transfer(st->i2c->adapter, &msg, 1) != 1) {
+		ts = st->ts_hw;
+		if (st->hw_en)
+			ts += (BMI_HW_DELAY_DEV_ON_US * 1000);
+		else
+			ts += (BMI_HW_DELAY_DEV_OFF_US * 1000);
+		ts -= nvs_timestamp();
+		if (ts > 0) {
+			/* HW access timing rules (datasheet 3.2.4) */
+			ts /= 1000;
+			ts++;
+			if (st->sts & NVS_STS_SPEW_MSG)
+				dev_info(&st->i2c->dev,
+					 "%s HW access delay=%lldus\n",
+					 __func__, ts);
+			udelay(ts);
+		}
+		ret = i2c_transfer(st->i2c->adapter, &msg, 1);
+		st->ts_hw = nvs_timestamp();
+		if (ret != 1) {
 			bmi_err(st);
 			dev_err(&st->i2c->dev, "%s ERR: 0x%02X=>0x%02X\n",
 				__func__, val, reg);
@@ -597,43 +664,46 @@ static int bmi_i2c_wr(struct bmi_state *st, u8 reg, u8 val)
 	return 0;
 }
 
-static int bmi_cmd_wr(struct bmi_state *st, struct bmi_cmd *cmd)
+static int bmi_i2c_wr_rd(struct bmi_state *st, u8 reg, u8 val)
 {
-	u8 val;
+	u8 val_rd;
 	unsigned int i;
-	unsigned int ms;
 	int ret;
 
-	for (i = 0; i < BMI_CMD_RETRY_N; i++) {
-		ret = bmi_i2c_wr(st, BMI_REG_CMD, cmd->cmd);
+	if (!st->i2c_addr)
+		return 0;
+
+	val_rd = ~val;
+	for (i = 0; i < BMI_I2C_WR_RD_RETRY_N; i++) {
+		ret = bmi_i2c_wr(st, reg, val);
 		if (!ret) {
-			ms = cmd->ms_t;
-			if (!ms)
-				ms = BMI_CMD_DELAY_MS;
-			msleep(ms);
-			ret = bmi_i2c_rd(st, BMI_REG_ERR_REG,
-					 sizeof(val), &val);
-			if (!ret) {
-				val &= (1 << BMI_REG_ERR_REG_drop_cmd_err);
-				if (val) {
-					if (st->sts & NVS_STS_SPEW_MSG)
-						dev_err(&st->i2c->dev,
-							"%s ERR: CMD=0x%02X\n",
-							__func__, cmd->cmd);
-					bmi_err(st);
-					msleep(BMI_CMD_DELAY_MS);
-					ret = -EIO;
-				} else {
-					break;
-				}
-			} else if (st->sts & NVS_STS_SPEW_MSG) {
+			udelay(BMI_HW_DELAY_DEV_ON_US);
+			ret = bmi_i2c_rd(st, reg, 1, &val_rd);
+			if (val == val_rd && !ret)
+				break;
+
+			if (st->sts & NVS_STS_SPEW_MSG)
 				dev_err(&st->i2c->dev,
-					"%s ERR: bmi_i2c_rd(ERR_REG)\n",
-					 __func__);
-			}
+					"%s 0x%02X: wr 0x%02X != rd 0x%02X\n",
+					 __func__, reg, val, val_rd);
 		}
 	}
 
+	return ret;
+}
+
+static int bmi_cmd_wr(struct bmi_state *st, struct bmi_cmd *cmd)
+{
+	unsigned int ms;
+	int ret;
+
+	ret = bmi_i2c_wr(st, BMI_REG_CMD, cmd->cmd);
+	if (!ret) {
+		ms = cmd->ms_t;
+		if (!ms)
+			ms = BMI_CMD_DELAY_MS;
+		msleep(ms);
+	}
 	return ret;
 }
 
@@ -713,8 +783,64 @@ static int bmi_acc_enable(struct bmi_state *st)
 		val = bmi_acc_range[st->snsrs[i].usr_cfg];
 		ret = bmi_i2c_wr(st, BMI_REG_ACC_RANGE, val);
 		ret |= bmi_cmd_wr(st, &bmi_hws[BMI_HW_ACC].en);
+		if (ret) {
+			st->hw_en &= ~(1 << BMI_HW_ACC);
+		} else {
+			ret = bmi_i2c_rd(st, BMI_REG_PMU_STATUS, 1, &val);
+			if (!ret) {
+				val &= BMI_REG_PMU_STATUS_MSK_ACC;
+				if (val == BMI_REG_PMU_STATUS_ACC_NORM)
+					st->hw_en |= (1 << BMI_HW_ACC);
+			}
+		}
 	} else {
 		ret = -EPERM;
+	}
+	return ret;
+}
+
+static int bmi_acc_selftest(struct bmi_state *st)
+{
+	int16_t x_pos;
+	int16_t y_pos;
+	int16_t z_pos;
+	int16_t x_neg;
+	int16_t y_neg;
+	int16_t z_neg;
+	unsigned int i;
+	unsigned int usr_cfg;
+	int ret;
+
+	i = st->hw2ids[BMI_HW_ACC];
+	usr_cfg = st->snsrs[i].usr_cfg;
+	st->snsrs[i].usr_cfg = 2; /* 8g */
+	ret = bmi_acc_enable(st);
+	st->snsrs[i].usr_cfg = usr_cfg;
+	ret |= bmi_i2c_wr(st, BMI_REG_ACC_CONF, 0x2C);
+	/* Enable accel self-test with positive excitation */
+	ret |= bmi_i2c_wr(st, BMI_REG_SELF_TEST, BMI_SELFTEST_ACC_POS);
+	mdelay(BMI_SELFTEST_ACC_DELAY_MS);
+	/* buffer corrupt from self-test so reset buffer index */
+	st->buf_i = 0;
+	ret |= bmi_i2c_rd(st, BMI_REG_DATA_14, 6, st->buf);
+	x_pos = (st->buf[1] << 8) | (st->buf[0]);
+	y_pos = (st->buf[3] << 8) | (st->buf[2]);
+	z_pos = (st->buf[5] << 8) | (st->buf[4]);
+	/* Enable accel self-test with negative excitation */
+	ret |= bmi_i2c_wr(st, BMI_REG_SELF_TEST, BMI_SELFTEST_ACC_NEG);
+	mdelay(BMI_SELFTEST_ACC_DELAY_MS);
+	ret |= bmi_i2c_rd(st, BMI_REG_DATA_14, 6, st->buf);
+	if (ret)
+		return ret;
+
+	x_neg = (st->buf[1] << 8) | (st->buf[0]);
+	y_neg = (st->buf[3] << 8) | (st->buf[2]);
+	z_neg = (st->buf[5] << 8) | (st->buf[4]);
+	if (!((abs(x_neg - x_pos) > BMI_SELFTEST_ACC_LIMIT)
+		&& (abs(y_neg - y_pos) > BMI_SELFTEST_ACC_LIMIT)
+		&& (abs(z_neg - z_pos) > BMI_SELFTEST_ACC_LIMIT))) {
+		/* failure */
+		ret = 1;
 	}
 	return ret;
 }
@@ -763,8 +889,41 @@ static int bmi_gyr_enable(struct bmi_state *st)
 		val = st->snsrs[i].usr_cfg;
 		ret = bmi_i2c_wr(st, BMI_REG_GYR_RANGE, val);
 		ret |= bmi_cmd_wr(st, &bmi_hws[BMI_HW_GYR].en);
+		if (ret) {
+			st->hw_en &= ~(1 << BMI_HW_GYR);
+		} else {
+			ret = bmi_i2c_rd(st, BMI_REG_PMU_STATUS, 1, &val);
+			if (!ret) {
+				val &= BMI_REG_PMU_STATUS_MSK_GYR;
+				if (val == BMI_REG_PMU_STATUS_GYR_NORM)
+					st->hw_en |= (1 << BMI_HW_GYR);
+			}
+		}
 	} else {
 		ret = -EPERM;
+	}
+	return ret;
+}
+
+static int bmi_gyr_selftest(struct bmi_state *st)
+{
+	uint8_t val;
+	unsigned int i;
+	unsigned int usr_cfg;
+	int ret;
+
+	i = st->hw2ids[BMI_HW_ACC];
+	usr_cfg = st->snsrs[i].usr_cfg;
+	st->snsrs[i].usr_cfg = st->snsrs[i].hw->rr_0n;
+	ret = bmi_gyr_enable(st);
+	st->snsrs[i].usr_cfg = usr_cfg;
+	ret |= bmi_i2c_wr(st, BMI_REG_SELF_TEST, BMI_SELFTEST_GYR);
+	mdelay(BMI_SELFTEST_GYR_DELAY_MS);
+	ret |= bmi_i2c_rd(st, BMI_REG_STATUS, 1, &val);
+	if (!ret) {
+		if (!(val & 0x02))
+			/* failure */
+			ret = 1;
 	}
 	return ret;
 }
@@ -820,27 +979,32 @@ static int bmi_pm(struct bmi_state *st, bool en)
 		if (ret > 0)
 			mdelay(BMI_HW_DELAY_POR_MS);
 		ret = bmi_cmd_wr(st, &bmi_cmd_rst_soft);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_MAP_0, st->int_map_0);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_MAP_1, st->int_map_1);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_MAP_2, st->int_map_2);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_MAP_0, st->int_map_0);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_MAP_1, st->int_map_1);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_MAP_2, st->int_map_2);
 		ret |= bmi_cmd_wr(st, &bmi_cmd_rst_int);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_OUT_CTRL, st->int_out_ctrl);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_LATCH, st->int_latch);
-		ret |= bmi_i2c_wr(st, BMI_REG_INT_EN_1, 0x10);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_OUT_CTRL,
+				     st->int_out_ctrl);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_LATCH, st->int_latch);
+		ret |= bmi_i2c_wr_rd(st, BMI_REG_INT_EN_1, 0x10);
 	} else {
 		st->ts = 0;
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(bmi_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(bmi_vregs))) {
 			/* we're fully powered */
-			for (i = 0; i < st->hw_n; i++)
+			for (i = 0; i < st->hw_n; i++) {
 				ret |= bmi_cmd_wr(st, &st->snsrs[i].hw->dis);
+				st->hw_en &= ~(1 << i);
+			}
 		} else if (ret > 0) {
 			/* partially powered so go to full before disables */
 			ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
 					       ARRAY_SIZE(bmi_vregs));
 			mdelay(BMI_HW_DELAY_POR_MS);
-			for (i = 0; i < st->hw_n; i++)
+			for (i = 0; i < st->hw_n; i++) {
 				ret |= bmi_cmd_wr(st, &st->snsrs[i].hw->dis);
+				st->hw_en &= ~(1 << i);
+			}
 		}
 		/* disables put us in low power sleep state in case no vregs */
 		ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
@@ -1022,6 +1186,12 @@ static int bmi_frame_regular(struct bmi_state *st, u16 buf_n)
 	}
 	hdr = st->buf[st->buf_i];
 	st->buf_i++;
+	if (st->ts > st->ts_hw)
+		/* st->ts_hw can be used as ts_now since it's the timestamp of
+		 * the last time the HW was accessed. It's used here to confirm
+		 * that we never go forward in time.
+		 */
+		st->ts = st->ts_hw;
 	for (i = 0; i < BMI_HW_N; i++) {
 		hw = fifo_hw_frame_seqs[i];
 		if (hdr & bmi_hws[hw].fifo_hdr_mask) {
@@ -1220,6 +1390,10 @@ static int bmi_read(struct bmi_state *st)
 				ret = bmi_frame_control(st, buf_n);
 				if (ret < 0)
 					break;
+			} else {
+				/* error - but possible when disabling */
+				st->buf_i = 0; /* exit fifo_n loop */
+				break; /* exit (st->buf_i < buf_n) loop */
 			}
 		}
 
@@ -1328,6 +1502,7 @@ static int bmi_disable(struct bmi_state *st, int snsr_id)
 			disable = false;
 			ret = bmi_cmd_wr(st, &st->snsrs[snsr_id].hw->dis);
 			if (!ret) {
+				st->hw_en &= msk;
 				st->enabled &= msk;
 				if (st->i2c->irq > 0) {
 					val = (st->enabled <<
@@ -1517,6 +1692,7 @@ static int bmi_selftest(void *client, int snsr_id, char *buf)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
 	unsigned int msk_en = st->enabled;
+	unsigned int i;
 	ssize_t t;
 	int ret;
 
@@ -1526,8 +1702,21 @@ static int bmi_selftest(void *client, int snsr_id, char *buf)
 	ret |= bmi_able(st, 0);
 	/* power back up which also reinitializes us */
 	ret |= bmi_pm(st, true);
-	ret |= 0; /* do self-test */
+	/* do self-test(s) */
+	if (snsr_id < 0) {
+		for (i = 0; i < st->hw_n; i++) {
+			if (st->snsrs[i].hw->fn_selftest) {
+				ret |= bmi_cmd_wr(st, &bmi_cmd_rst_soft);
+				ret |= st->snsrs[i].hw->fn_selftest(st);
+			}
+		}
+	} else {
+		i = snsr_id;
+		if (st->snsrs[i].hw->fn_selftest)
+			ret |= st->snsrs[i].hw->fn_selftest(st);
+	}
 	/* restore */
+	bmi_able(st, 0);
 	bmi_able(st, msk_en);
 	if (buf) {
 		if (ret < 0) {

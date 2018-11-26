@@ -183,6 +183,7 @@ struct vs_request {
 struct combo_cmd_t {
 	uint32_t cmd;
 	uint32_t arg;
+	uint32_t write_flag;
 	uint32_t response[4];
 	uint32_t buf_offset;
 	uint32_t data_len;

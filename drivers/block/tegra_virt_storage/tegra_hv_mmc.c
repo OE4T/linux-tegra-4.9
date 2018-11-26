@@ -98,6 +98,7 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 		}
 		combo_cmd->cmd = ic.opcode;
 		combo_cmd->arg = ic.arg;
+		combo_cmd->write_flag = (uint32_t)ic.write_flag;
 		combo_cmd->data_len = (uint32_t)(ic.blksz * ic.blocks);
 		combo_cmd->buf_offset = combo_cmd_size;
 		combo_cmd_size += combo_cmd->data_len;

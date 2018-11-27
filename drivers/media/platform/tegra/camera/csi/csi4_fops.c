@@ -64,23 +64,22 @@ static u32 csi4_phy_read(struct tegra_csi_channel *chan,
 static void csi4_stream_init(struct tegra_csi_channel *chan, int csi_port)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	int phy_num = csi_port >> 1;
 	bool cil_a = (csi_port & 0x1) ? false : true;
 
 	dev_dbg(csi->dev, "%s\n", __func__);
 
 	if (cil_a) {
-		csi4_phy_write(chan, phy_num, CILA_INTR_STATUS, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILA_ERR_INTR_STATUS, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILA_INTR_MASK, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILA_ERR_INTR_MASK, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILA_INTR_STATUS, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILA_ERR_INTR_STATUS, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILA_INTR_MASK, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILA_ERR_INTR_MASK, 0xffffffff);
 	}
 
 	if (!cil_a || (chan->numlanes > 2)) {
-		csi4_phy_write(chan, phy_num, CILB_INTR_STATUS, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILB_ERR_INTR_STATUS, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILB_INTR_MASK, 0xffffffff);
-		csi4_phy_write(chan, phy_num, CILB_ERR_INTR_MASK, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILB_INTR_STATUS, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILB_ERR_INTR_STATUS, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILB_INTR_MASK, 0xffffffff);
+		csi4_stream_write(chan, csi_port, CILB_ERR_INTR_MASK, 0xffffffff);
 	}
 
 	csi4_stream_write(chan, csi_port, INTR_STATUS, 0x3ffff);

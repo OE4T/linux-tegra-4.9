@@ -1169,6 +1169,24 @@
 					status = "okay";
 				};
 			};
+			override@17 {
+				target = <&imx390_cam0>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@18 {
+				target = <&imx390_cam1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@19 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
 		};
 
 		/* dual IMX274 module */
@@ -1759,6 +1777,24 @@
 				target = <&pca9570_a_24>;
 				_overlay_ {
 					status = "okay";
+				};
+			};
+			override@16 {
+				target = <&imx390_cam0>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@17 {
+				target = <&imx390_cam1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@18 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "disabled";
 				};
 			};
 		};

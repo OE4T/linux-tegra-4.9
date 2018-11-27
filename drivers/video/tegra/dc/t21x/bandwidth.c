@@ -928,6 +928,8 @@ long tegra_calc_min_bandwidth(struct tegra_dc *dc)
 			if (!WARN_ONCE(!dc->mode.pclk,
 				"pclk is not set, bandwidth calc cannot work"))
 				pclk = KHZ2PICOS(dc->mode.pclk / 1000);
+			else
+				return 0;
 		}
 	}
 

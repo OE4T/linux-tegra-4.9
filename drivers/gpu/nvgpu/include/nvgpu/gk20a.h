@@ -646,7 +646,7 @@ struct gpu_ops {
 				u32 flags);
 		int (*resetup_ramfc)(struct channel_gk20a *c);
 		int (*preempt_channel)(struct gk20a *g, u32 chid);
-		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
+		int (*preempt_tsg)(struct gk20a *g, struct tsg_gk20a *tsg);
 		int (*enable_tsg)(struct tsg_gk20a *tsg);
 		int (*disable_tsg)(struct tsg_gk20a *tsg);
 		int (*tsg_verify_channel_status)(struct channel_gk20a *ch);

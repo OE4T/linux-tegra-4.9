@@ -471,7 +471,7 @@ int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	return err;
 }
 
-int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+int vgpu_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_tsg_preempt_params *p =
@@ -482,13 +482,13 @@ int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_PREEMPT;
 	msg.handle = vgpu_get_handle(g);
-	p->tsg_id = tsgid;
+	p->tsg_id = tsg->tsgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 
 	if (err) {
 		nvgpu_err(g,
-			"preempt tsg %u failed", tsgid);
+			"preempt tsg %u failed", tsg->tsgid);
 	}
 
 	return err;

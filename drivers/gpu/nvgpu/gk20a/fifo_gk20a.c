@@ -1562,7 +1562,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, struct tsg_gk20a *tsg, bool preempt)
 	g->ops.fifo.disable_tsg(tsg);
 
 	if (preempt) {
-		g->ops.fifo.preempt_tsg(g, tsg->tsgid);
+		g->ops.fifo.preempt_tsg(g, tsg);
 	}
 
 	nvgpu_rwsem_down_read(&tsg->ch_list_lock);
@@ -2194,8 +2194,8 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	/* Disable TSG and examine status before unbinding channel */
 	g->ops.fifo.disable_tsg(tsg);
 
-	err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
-	if (err) {
+	err = g->ops.fifo.preempt_tsg(g, tsg);
+	if (err != 0) {
 		goto fail_enable_tsg;
 	}
 
@@ -3000,7 +3000,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	return ret;
 }
 
-int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+int gk20a_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
@@ -3008,10 +3008,7 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	nvgpu_log_fn(g, "tsgid: %d", tsgid);
-	if (tsgid == FIFO_INVAL_TSG_ID) {
-		return 0;
-	}
+	nvgpu_log_fn(g, "tsgid: %d", tsg->tsgid);
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++) {
@@ -3020,7 +3017,7 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	ret = __locked_fifo_preempt(g, tsgid, true);
+	ret = __locked_fifo_preempt(g, tsg->tsgid, true);
 
 	if (!mutex_ret) {
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
@@ -3033,9 +3030,11 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	if (ret) {
 		if (nvgpu_platform_is_silicon(g)) {
 			nvgpu_err(g, "preempt timed out for tsgid: %u, "
-			"ctxsw timeout will trigger recovery if needed", tsgid);
+			"ctxsw timeout will trigger recovery if needed",
+			tsg->tsgid);
 		} else {
-			gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+			gk20a_fifo_preempt_timeout_rc(g,
+				tsg->tsgid, ID_TYPE_TSG);
 		}
 	}
 
@@ -3045,9 +3044,10 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
 {
 	int err;
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		err = g->ops.fifo.preempt_tsg(ch->g, ch->tsgid);
+	if (tsg != NULL) {
+		err = g->ops.fifo.preempt_tsg(ch->g, tsg);
 	} else {
 		err = g->ops.fifo.preempt_channel(ch->g, ch->chid);
 	}

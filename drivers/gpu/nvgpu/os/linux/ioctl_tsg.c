@@ -699,7 +699,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			return err;
 		}
 		/* preempt TSG */
-		err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
+		err = g->ops.fifo.preempt_tsg(g, tsg);
 		gk20a_idle(g);
 		break;
 		}

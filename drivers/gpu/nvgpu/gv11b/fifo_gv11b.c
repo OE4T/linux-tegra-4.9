@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <nvgpu/bug.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
@@ -803,17 +804,22 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	u32 tsgid;
+	struct tsg_gk20a *tsg = NULL;
 
 	if (chid == FIFO_INVAL_CHANNEL_ID) {
 		return 0;
 	}
 
-	tsgid = f->channel[chid].tsgid;
-	nvgpu_log_info(g, "chid:%d tsgid:%d", chid, tsgid);
+	tsg = tsg_gk20a_from_ch(&f->channel[chid]);
+
+	if (tsg == NULL) {
+		return 0;
+	}
+
+	nvgpu_log_info(g, "chid:%d tsgid:%d", chid, tsg->tsgid);
 
 	/* Preempt tsg. Channel preempt is NOOP */
-	return g->ops.fifo.preempt_tsg(g, tsgid);
+	return g->ops.fifo.preempt_tsg(g, tsg);
 }
 
 /* TSG enable sequence applicable for Volta and onwards */
@@ -837,7 +843,7 @@ int gv11b_fifo_enable_tsg(struct tsg_gk20a *tsg)
 	return 0;
 }
 
-int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+int gv11b_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
@@ -845,12 +851,9 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	u32 mutex_ret = 0;
 	u32 runlist_id;
 
-	nvgpu_log_fn(g, "tsgid: %d", tsgid);
-	if (tsgid == FIFO_INVAL_TSG_ID) {
-		return 0;
-	}
+	nvgpu_log_fn(g, "tsgid: %d", tsg->tsgid);
 
-	runlist_id = f->tsg[tsgid].runlist_id;
+	runlist_id = tsg->runlist_id;
 	nvgpu_log_fn(g, "runlist_id: %d", runlist_id);
 	if (runlist_id == FIFO_INVAL_RUNLIST_ID) {
 		return 0;
@@ -859,27 +862,27 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].runlist_lock);
 
 	/* WAR for Bug 2065990 */
-	gk20a_fifo_disable_tsg_sched(g, &f->tsg[tsgid]);
+	gk20a_fifo_disable_tsg_sched(g, tsg);
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	ret = __locked_fifo_preempt(g, tsgid, true);
+	ret = __locked_fifo_preempt(g, tsg->tsgid, true);
 
 	if (!mutex_ret) {
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 	}
 
 	/* WAR for Bug 2065990 */
-	gk20a_fifo_enable_tsg_sched(g, &f->tsg[tsgid]);
+	gk20a_fifo_enable_tsg_sched(g, tsg);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].runlist_lock);
 
 	if (ret) {
 		if (nvgpu_platform_is_silicon(g)) {
 			nvgpu_err(g, "preempt timed out for tsgid: %u, "
-			"ctxsw timeout will trigger recovery if needed", tsgid);
+			"ctxsw timeout will trigger recovery if needed", tsg->tsgid);
 		} else {
-			gk20a_fifo_preempt_timeout_rc(g, tsgid, true);
+			gk20a_fifo_preempt_timeout_rc(g, tsg->tsgid, true);
 		}
 	}
 

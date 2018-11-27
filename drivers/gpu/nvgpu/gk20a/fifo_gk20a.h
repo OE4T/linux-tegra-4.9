@@ -231,7 +231,7 @@ void gk20a_fifo_isr(struct gk20a *g);
 u32 gk20a_fifo_nonstall_isr(struct gk20a *g);
 
 int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid);
-int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
+int gk20a_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch);
 
 int gk20a_fifo_enable_engine_activity(struct gk20a *g,

@@ -82,7 +82,7 @@ int gv11b_fifo_reschedule_runlist(struct channel_gk20a *ch, bool preempt_next);
 int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		 unsigned int id_type);
 int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid);
-int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid);
+int gv11b_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 int gv11b_fifo_enable_tsg(struct tsg_gk20a *tsg);
 void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,

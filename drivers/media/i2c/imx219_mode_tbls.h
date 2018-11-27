@@ -1,7 +1,7 @@
 /*
  * imx219_tables.h - sensor mode tables for imx219 HDR sensor.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,15 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef IMX219_I2C_TABLES
-#define IMX219_I2C_TABLES
+#ifndef __IMX219_I2C_TABLES__
+#define __IMX219_I2C_TABLES__
 
-#define IMX219_TABLE_WAIT_MS 0
-#define IMX219_TABLE_END 1
-#define IMX219_MAX_RETRIES 3
-#define IMX219_WAIT_MS 3
+#define IMX219_TABLE_WAIT_MS	0
+#define IMX219_TABLE_END	1
 
-static struct reg_8 mode_3280x2464[] = {
+#define imx219_reg struct reg_8
+
+static imx219_reg imx219_start_stream[] = {
+	{0x0100, 0x01},
+	{IMX219_TABLE_WAIT_MS, 3},
+	{IMX219_TABLE_END, 0x00}
+};
+
+static imx219_reg imx219_stop_stream[] = {
+	{0x0100, 0x00},
+	{IMX219_TABLE_END, 0x00}
+};
+
+static imx219_reg imx219_mode_common[] = {
 	{IMX219_TABLE_WAIT_MS, 10},
 	/* software reset */
 	{0x0103, 0x01},
@@ -35,10 +46,16 @@ static struct reg_8 mode_3280x2464[] = {
 	{0x300B, 0xFF},
 	{0x30EB, 0x05},
 	{0x30EB, 0x09},
+	{IMX219_TABLE_END, 0x00}
+};
+
+static imx219_reg imx219_mode_3280x2464[] = {
+	/* global settings */
 	{0x0114, 0x01},
 	{0x0128, 0x00},
 	{0x012A, 0x0C},
 	{0x012B, 0x00},
+	/* Bank A Settings */
 	{0x0160, 0x09},
 	{0x0161, 0xC3},
 	{0x0162, 0x0D},
@@ -61,6 +78,7 @@ static struct reg_8 mode_3280x2464[] = {
 	{0x0175, 0x00},
 	{0x018C, 0x0A},
 	{0x018D, 0x0A},
+	/* clock settings */
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0304, 0x02},
@@ -74,28 +92,16 @@ static struct reg_8 mode_3280x2464[] = {
 	{0x4767, 0x0F},
 	{0x4750, 0x14},
 	{0x47B4, 0x14},
-	/* stream on */
-	{0x0100, 0x01},
-	{IMX219_TABLE_WAIT_MS, IMX219_WAIT_MS},
 	{IMX219_TABLE_END, 0x00}
 };
 
-static struct reg_8 mode_3280x2460[] = {
-	{IMX219_TABLE_WAIT_MS, 10},
-	/* software reset */
-	{0x0103, 0x01},
+static imx219_reg imx219_mode_3280x2460[] = {
 	/* global settings */
-	{0x30EB, 0x05},
-	{0x30EB, 0x0C},
-	{0x300A, 0xFF},
-	{0x300B, 0xFF},
-	{0x30EB, 0x05},
-	{0x30EB, 0x09},
 	{0x0114, 0x03},
 	{0x0128, 0x00},
 	{0x012A, 0x18},
 	{0x012B, 0x00},
-	/* Bank A Settings */
+	/* Bank A settings */
 	{0x0157, 0x00},
 	{0x015A, 0x08},
 	{0x015B, 0x8F},
@@ -121,7 +127,7 @@ static struct reg_8 mode_3280x2460[] = {
 	{0x0175, 0x00},
 	{0x018C, 0x0A},
 	{0x018D, 0x0A},
-	/* Bank B Settings */
+	/* Bank B settings */
 	{0x0257, 0x00},
 	{0x025A, 0x08},
 	{0x025B, 0x8F},
@@ -147,7 +153,7 @@ static struct reg_8 mode_3280x2460[] = {
 	{0x0275, 0x00},
 	{0x028C, 0x0A},
 	{0x028D, 0x0A},
-	/* clock setting */
+	/* clock settings */
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0304, 0x03},
@@ -170,27 +176,16 @@ static struct reg_8 mode_3280x2460[] = {
 	{0x4793, 0x10},
 	{0x4797, 0x0E},
 	{0x479B, 0x0E},
-	/* stream on */
-	{0x0100, 0x01},
-	{IMX219_TABLE_WAIT_MS, IMX219_WAIT_MS},
 	{IMX219_TABLE_END, 0x00}
 };
-static struct reg_8 mode_3280x1846[] = {
-	{IMX219_TABLE_WAIT_MS, 10},
-	/* software reset */
-	{0x0103, 0x01},
+
+static imx219_reg imx219_mode_3280x1846[] = {
 	/* global settings */
-	{0x30EB, 0x05},
-	{0x30EB, 0x0C},
-	{0x300A, 0xFF},
-	{0x300B, 0xFF},
-	{0x30EB, 0x05},
-	{0x30EB, 0x09},
 	{0x0114, 0x03},
 	{0x0128, 0x00},
 	{0x012A, 0x18},
 	{0x012B, 0x00},
-	/* Bank A Settings */
+	/* Bank A settings */
 	{0x0157, 0x00},
 	{0x015A, 0x08},
 	{0x015B, 0x8F},
@@ -216,7 +211,7 @@ static struct reg_8 mode_3280x1846[] = {
 	{0x0175, 0x00},
 	{0x018C, 0x0A},
 	{0x018D, 0x0A},
-	/* Bank B Settings */
+	/* Bank B settings */
 	{0x0257, 0x00},
 	{0x025A, 0x08},
 	{0x025B, 0x8F},
@@ -265,28 +260,16 @@ static struct reg_8 mode_3280x1846[] = {
 	{0x4793, 0x10},
 	{0x4797, 0x0E},
 	{0x479B, 0x0E},
-	/* stream on */
-	{0x0100, 0x01},
-	{IMX219_TABLE_WAIT_MS, IMX219_WAIT_MS},
 	{IMX219_TABLE_END, 0x00}
 };
 
-static struct reg_8 mode_1280x720[] = {
-	{IMX219_TABLE_WAIT_MS, 10},
-	/* software reset */
-	{0x0103, 0x01},
+static imx219_reg imx219_mode_1280x720[] = {
 	/* global settings */
-	{0x30EB, 0x05},
-	{0x30EB, 0x0C},
-	{0x300A, 0xFF},
-	{0x300B, 0xFF},
-	{0x30EB, 0x05},
-	{0x30EB, 0x09},
 	{0x0114, 0x03},
 	{0x0128, 0x00},
 	{0x012A, 0x18},
 	{0x012B, 0x00},
-	/* Bank A Settings */
+	/* Bank A settings */
 	{0x0160, 0x02},
 	{0x0161, 0x8C},
 	{0x0162, 0x0D},
@@ -309,7 +292,7 @@ static struct reg_8 mode_1280x720[] = {
 	{0x0175, 0x03},
 	{0x018C, 0x0A},
 	{0x018D, 0x0A},
-	/* Bank B Settings */
+	/* Bank B settings */
 	{0x0260, 0x02},
 	{0x0261, 0x8C},
 	{0x0262, 0x0D},
@@ -332,7 +315,7 @@ static struct reg_8 mode_1280x720[] = {
 	{0x0275, 0x03},
 	{0x028C, 0x0A},
 	{0x028D, 0x0A},
-	/* clock setting */
+	/* clock settings */
 	{0x0301, 0x05},
 	{0x0303, 0x01},
 	{0x0304, 0x03},
@@ -355,34 +338,45 @@ static struct reg_8 mode_1280x720[] = {
 	{0x4793, 0x10},
 	{0x4797, 0x0E},
 	{0x479B, 0x0E},
-	/* stream on */
-	{0x0100, 0x01},
-	{IMX219_TABLE_WAIT_MS, IMX219_WAIT_MS},
 	{IMX219_TABLE_END, 0x00}
 };
+
 enum {
 	IMX219_MODE_3280x2464,
 	IMX219_MODE_3280x2460,
 	IMX219_MODE_3280x1846,
 	IMX219_MODE_1280x720,
+
+	IMX219_MODE_COMMON,
+	IMX219_START_STREAM,
+	IMX219_STOP_STREAM,
 };
 
-static struct reg_8 *mode_table[] = {
-	[IMX219_MODE_3280x2464] = mode_3280x2464,
-	[IMX219_MODE_3280x2460] = mode_3280x2460,
-	[IMX219_MODE_3280x1846] = mode_3280x1846,
-	[IMX219_MODE_1280x720]  = mode_1280x720,
+static imx219_reg *mode_table[] = {
+	[IMX219_MODE_3280x2464] = imx219_mode_3280x2464,
+	[IMX219_MODE_3280x2460] = imx219_mode_3280x2460,
+	[IMX219_MODE_3280x1846] = imx219_mode_3280x1846,
+	[IMX219_MODE_1280x720]  = imx219_mode_1280x720,
+
+	[IMX219_MODE_COMMON]  = imx219_mode_common,
+	[IMX219_START_STREAM]  = imx219_start_stream,
+	[IMX219_STOP_STREAM]  = imx219_stop_stream,
 };
 
 static const int imx219_21fps[] = {
-	20,
+	21,
 };
 
+/*
+ * WARNING: frmfmt ordering need to match mode definition in
+ * device tree!
+ */
 static const struct camera_common_frmfmt imx219_frmfmt[] = {
 	{{3280, 2464},	imx219_21fps, 1, 0, IMX219_MODE_3280x2464},
+	/* Add modes with no device tree support after below */
 	{{3280, 2460},	imx219_21fps, 1, 0, IMX219_MODE_3280x2460},
 	{{3280, 1846},	imx219_21fps, 1, 0, IMX219_MODE_3280x1846},
 	{{1280, 720},	NULL, 0, 0, IMX219_MODE_1280x720},
 };
 
-#endif
+#endif /* __IMX219_I2C_TABLES__ */

@@ -3135,20 +3135,25 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
 			      unsigned int count)
 {
 	struct uart_port *port = &up->port;
-	unsigned long flags;
 	unsigned int ier;
-	int locked = 1;
+	int locked = 0;
 
 	touch_nmi_watchdog();
 
 	serial8250_rpm_get(up);
 
-	if (port->sysrq)
-		locked = 0;
-	else if (oops_in_progress)
-		locked = spin_trylock_irqsave(&port->lock, flags);
-	else
-		spin_lock_irqsave(&port->lock, flags);
+	if (!port->sysrq) {
+		disable_irq(port->irq);
+		if (oops_in_progress) {
+			locked = spin_trylock(&port->lock);
+		} else if (!in_interrupt()) {
+			spin_lock(&port->lock);
+			locked = 1;
+		} else {
+			/* don't trace print latency when in irq */
+			stop_critical_timings();
+		}
+	}
 
 	/*
 	 *	First save the IER then disable the interrupts
@@ -3186,7 +3191,11 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
 		serial8250_modem_status(up);
 
 	if (locked)
-		spin_unlock_irqrestore(&port->lock, flags);
+		spin_unlock(&port->lock);
+
+	if (!port->sysrq)
+		enable_irq(port->irq);
+
 	serial8250_rpm_put(up);
 }
 

@@ -70,6 +70,10 @@ load/unload.
 - nvidia,clk-en-before-freq-update: Set this flag to enable clock before
   updating clock frequency rate. This is needed for some SDMMC controller
 instances.
+-nvidia,min-tap-delay: Defines minimum tap delay in picoseconds seen on a SOC.
+This value is SOC specific and used to compute lowerthreshold, upperthreshold, fixed_tap values needed for post auto-tuning correction algorithm.
+-nvidia,max-tap-delay: Defines maximum tap delay in picoseconds seen on a SOC.
+This value is SOC specific and used to compute lowerthreshold, upperthreshold, fixed_tap values needed for post auto-tuning correction algorithm.
 
 Example:
 
@@ -94,6 +98,8 @@ Example:
 		nvidia,set-parent-clk;
 		nvidia,enable-hwcq;
 		nvidia,parent_clk_list = <"pll_p", "pll_c4_out0", "pll_p">;
+		nvidia,min-tap-delay = <96>;
+		nvidia,max-tap-delay = <139>;
 		only-1-8-v;
 		status = "okay";
 		fixed-clock-freq = <25500000 25500000 24000000 47000000 24000000 47000000 94000000 204000000 0 0 0>;
@@ -111,5 +117,7 @@ Example:
 		pll_source = "pll_m", "pll_p";
 		default-drive-type = <1>;
 		force-non-removable-rescan;
+		nvidia,min-tap-delay = <96>;
+		nvidia,max-tap-delay = <139>;
 		status = "okay";
 	};

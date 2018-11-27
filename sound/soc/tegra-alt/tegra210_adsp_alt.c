@@ -1571,14 +1571,10 @@ static int tegra210_adsp_compr_pointer(struct snd_compr_stream *cstream,
 			struct snd_compr_tstamp *tstamp)
 {
 	struct tegra210_adsp_compr_rtd *prtd = cstream->runtime->private_data;
-	struct snd_soc_pcm_runtime *rtd = cstream->device->private_data;
-	struct tegra210_adsp *adsp =
-		snd_soc_platform_get_drvdata(rtd->platform);
 	struct tegra210_adsp_app *app = prtd->fe_apm;
 	nvfx_shared_state_t *shared = &app->apm->nvfx_shared_state;
-	uint32_t frames_played = ((shared->output[0].bytes >> 2) *
-		snd_pcm_rate_bit_to_rate(prtd->codec.sample_rate)) /
-		adsp->i2s_rate;
+	uint32_t frames_played =
+		(shared->output[0].bytes >> 1) / prtd->codec.ch_in;
 
 	tstamp->byte_offset = shared->input[0].bytes %
 		cstream->runtime->buffer_size;

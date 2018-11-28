@@ -2820,8 +2820,8 @@ void gk20a_fifo_isr(struct gk20a *g)
 			g->ops.fifo.handle_ctxsw_timeout(g, fifo_intr);
 		}
 
-		if (unlikely(fifo_intr & error_intr_mask)) {
-			clear_intr = fifo_error_isr(g, fifo_intr);
+		if (unlikely((fifo_intr & error_intr_mask) != 0U)) {
+			clear_intr |= fifo_error_isr(g, fifo_intr);
 		}
 
 		nvgpu_mutex_release(&g->fifo.intr.isr.mutex);

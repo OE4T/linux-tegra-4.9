@@ -51,6 +51,9 @@
 
 #define USEC_PER_MIN	(60L * USEC_PER_SEC)
 
+/* Based off of max device tree node name length */
+#define MAX_PROFILE_NAME_LENGTH	31
+
 struct fan_dev_data {
 	int next_state;
 	int active_steps;
@@ -59,6 +62,11 @@ struct fan_dev_data {
 	int *fan_rru;
 	int *fan_rrd;
 	int *fan_state_cap_lookup;
+	int num_profiles;
+	int current_profile;
+	const char **fan_profile_names;
+	int **fan_profile_pwms;
+	int *fan_profile_caps;
 	struct workqueue_struct *workqueue;
 	int fan_temp_control_flag;
 	struct pwm_device *pwm_dev;
@@ -604,6 +612,66 @@ static void fan_tach_work_func(struct work_struct *work)
 			msecs_to_jiffies(fan_data->tach_period));
 }
 
+static ssize_t fan_profile_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
+	int ret;
+
+	if (!fan_data)
+		return -EINVAL;
+	if (fan_data->num_profiles > 0) {
+		ret = sprintf(buf, "%s\n",
+				fan_data->fan_profile_names[fan_data->current_profile]);
+	} else {
+		ret = sprintf(buf, "N/A\n");
+	}
+	return ret;
+}
+
+static ssize_t fan_profile_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fan_dev_data *fan_data = dev_get_drvdata(dev);
+	size_t buf_len;
+	int profile_index = -1;
+	int i;
+
+	if (!fan_data)
+		return -EINVAL;
+
+	buf_len = min(count, (size_t) MAX_PROFILE_NAME_LENGTH);
+	while (buf_len > 0 &&
+			(buf[buf_len - 1] == '\n' || buf[buf_len - 1] == ' '))
+		buf_len--;
+
+	if (buf_len == 0)
+		return -EINVAL;
+
+	for (i = 0; i < fan_data->num_profiles; ++i) {
+		if (!strncmp(fan_data->fan_profile_names[i], buf,
+				max(buf_len, strlen(fan_data->fan_profile_names[i])))) {
+			profile_index = i;
+		}
+	}
+
+	if (profile_index < 0)
+		return -EINVAL;
+
+	mutex_lock(&fan_data->fan_state_lock);
+
+	memcpy(fan_data->fan_pwm, fan_data->fan_profile_pwms[profile_index],
+			sizeof(int) * (fan_data->active_steps));
+	fan_data->fan_state_cap = fan_data->fan_profile_caps[profile_index];
+	fan_data->fan_cap_pwm = fan_data->fan_pwm[fan_data->fan_state_cap];
+	fan_data->current_profile = profile_index;
+
+	mutex_unlock(&fan_data->fan_state_lock);
+
+	return count;
+
+}
+
 /*State cap sysfs fops*/
 static ssize_t fan_state_cap_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -711,8 +779,12 @@ static DEVICE_ATTR(step_time, S_IWUSR | S_IRUGO,
 static DEVICE_ATTR(pwm_rpm_table, S_IRUGO,
 			fan_pwm_rpm_table_show,
 			NULL);
+static DEVICE_ATTR(fan_profile, S_IWUSR | S_IRUGO,
+			fan_profile_show,
+			fan_profile_store);
 
 static struct attribute *pwm_fan_attributes[] = {
+	&dev_attr_fan_profile.attr,
 	&dev_attr_pwm_cap.attr,
 	&dev_attr_state_cap.attr,
 	&dev_attr_pwm_state_map.attr,
@@ -787,6 +859,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	int of_err = 0;
 	struct device_node *node = NULL;
 	struct device_node *data_node = NULL;
+	struct device_node *base_profile_node = NULL;
+	struct device_node *profile_node = NULL;
+	const char *default_profile = NULL;
 	u32 value;
 	int pwm_fan_gpio;
 	int tach_gpio;
@@ -891,6 +966,62 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		value = tach_gpio;
 	}
 
+	/* fan pwm profiles */
+	fan_data->num_profiles = 0;
+	base_profile_node = of_get_child_by_name(node, "profiles");
+	if (base_profile_node) {
+		fan_data->num_profiles = of_get_available_child_count(base_profile_node);
+	}
+	if (fan_data->num_profiles > 0) {
+		of_err |= of_property_read_string(base_profile_node,
+				"default", &default_profile);
+		dev_info(&pdev->dev, "Found %d profiles, default profile is %s\n",
+				fan_data->num_profiles, default_profile);
+		fan_data->fan_profile_names = devm_kzalloc(&pdev->dev,
+				sizeof(const char*) * fan_data->num_profiles, GFP_KERNEL);
+		if (!fan_data->fan_profile_names) {
+			err = -ENOMEM;
+			goto profile_alloc_fail;
+		}
+		fan_data->fan_profile_pwms = devm_kzalloc(&pdev->dev,
+				sizeof(int*) * fan_data->num_profiles, GFP_KERNEL);
+		if (!fan_data->fan_profile_pwms) {
+			err = -ENOMEM;
+			goto profile_alloc_fail;
+		}
+		fan_data->fan_profile_caps = devm_kzalloc(&pdev->dev,
+				sizeof(int) * fan_data->num_profiles, GFP_KERNEL);
+		if (!fan_data->fan_profile_caps) {
+			err = -ENOMEM;
+			goto profile_alloc_fail;
+		}
+		fan_data->current_profile = 0;
+		i = 0;
+		for_each_available_child_of_node (base_profile_node, profile_node) {
+			of_err |= of_property_read_string(profile_node, "name",
+					&fan_data->fan_profile_names[i]);
+			if (default_profile &&
+					!strncmp(default_profile,
+					fan_data->fan_profile_names[i], MAX_PROFILE_NAME_LENGTH)) {
+				fan_data->current_profile = i;
+			}
+			value = 0;
+			of_err |= of_property_read_u32(profile_node, "state_cap", &value);
+			fan_data->fan_profile_caps[i] = (int) value;
+			pwm_data = devm_kzalloc(&pdev->dev,
+					sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
+			if (!pwm_data) {
+				err = -ENOMEM;
+				goto profile_alloc_fail;
+			}
+			of_err |= of_property_read_u32_array(profile_node,
+					"active_pwm", pwm_data,
+					(size_t) fan_data->active_steps);
+			fan_data->fan_profile_pwms[i] = pwm_data;
+			i++;
+		}
+	}
+
 	/* rpm array */
 	rpm_data = devm_kzalloc(&pdev->dev,
 			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
@@ -936,14 +1067,21 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->fan_state_cap_lookup = lookup_data;
 
 	/* pwm array */
+	/* If profiles are in use, use current profile pwm */
 	pwm_data = devm_kzalloc(&pdev->dev,
 			sizeof(int) * (fan_data->active_steps), GFP_KERNEL);
 	if (!pwm_data) {
 		err = -ENOMEM;
 		goto pwm_alloc_fail;
 	}
-	of_err |= of_property_read_u32_array(node, "active_pwm", pwm_data,
-		(size_t) fan_data->active_steps);
+	if (fan_data->num_profiles > 0) {
+		memcpy(pwm_data,
+				fan_data->fan_profile_pwms[fan_data->current_profile],
+				sizeof(int) * (fan_data->active_steps));
+	} else {
+		of_err |= of_property_read_u32_array(node, "active_pwm", pwm_data,
+			(size_t) fan_data->active_steps);
+	}
 	fan_data->fan_pwm = pwm_data;
 
 	if (of_err) {
@@ -961,7 +1099,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 
+	/* Use profile cap if profiles are in use*/
+	if (fan_data->num_profiles > 0) {
+		fan_data->fan_state_cap =
+				fan_data->fan_profile_caps[fan_data->current_profile];
+	}
 	fan_data->fan_cap_pwm = fan_data->fan_pwm[fan_data->fan_state_cap];
+
 	fan_data->precision_multiplier =
 			fan_data->pwm_period / fan_data->fan_pwm_max;
 	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",
@@ -1097,6 +1241,7 @@ pwm_req_fail:
 cdev_register_fail:
 	destroy_workqueue(fan_data->workqueue);
 workqueue_alloc_fail:
+profile_alloc_fail:
 pwm_alloc_fail:
 lookup_alloc_fail:
 rrd_alloc_fail:

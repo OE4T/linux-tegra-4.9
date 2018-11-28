@@ -324,6 +324,7 @@
 			usb2-0 {
 				status = "okay";
 				mode = "otg";
+				nvidia,usb3-port-fake = <3>;
 			};
 			usb2-1 {
 				status = "okay";
@@ -348,18 +349,7 @@
 				<&{/xusb_padctl@7009f000/pads/pcie/lanes/pcie-6}>;
 		phy-names = "usb2-0", "usb2-1", "usb2-2", "usb3-0";
 		#extcon-cells = <1>;
-		nvidia,pmc-wakeup =
-			<&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 39 PMC_TRIGGER_TYPE_HIGH>,
-			<&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 40 PMC_TRIGGER_TYPE_HIGH>,
-			<&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
-			<&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 42 PMC_TRIGGER_TYPE_HIGH>,
-			<&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 44 PMC_TRIGGER_TYPE_HIGH>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	xudc@700d0000 {
@@ -367,7 +357,7 @@
 		phy-names = "usb2";
 		charger-detector = <&tegra_usb_cd>;
 		#extcon-cells = <1>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	tegra_usb_cd: usb_cd {

@@ -114,5 +114,27 @@
 			regulator-max-microvolt = <5000000>;
 			vin-supply = <&p3449_vdd_5v0_sys>;
 		};
+
+		p3449_vdd_usb_hub_en: regulator@9 {
+			compatible = "regulator-fixed-sync";
+			reg = <9>;
+			regulator-name = "vdd-usb-hub-en";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio TEGRA_GPIO(A, 6) 0>;
+			enable-active-low;
+			gpio-open-drain;
+			vin-supply = <&p3449_vdd_1v8>;
+		};
+
+		p3449_vdd_usb_vbus2: regulator@10 {
+			compatible = "regulator-fixed";
+			reg = <10>;
+			regulator-name = "vdd-usb-vbus2";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			vin-supply = <&p3448_vdd_3v3_sys>;
+		};
+
 	};
 };

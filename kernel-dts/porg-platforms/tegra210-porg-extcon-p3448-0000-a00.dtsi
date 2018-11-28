@@ -19,15 +19,22 @@
 			compatible = "extcon-gpio-states";
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
-			extcon-gpio,cable-states = <0x0 0x1
-						    0x1 0x0>;
-			gpios = <&gpio TEGRA_GPIO(CC, 4) 0>;
-			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_NONE>;
+			extcon-gpio,cable-states = <0x3 0x0
+						0x0 0x2
+						0x1 0x2
+						0x1 0x0>;
+			gpios = <&gpio TEGRA_GPIO(CC, 4) 0 &gpio TEGRA_GPIO(Z, 4) 0>;
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_HOST EXTCON_NONE>;
 			wakeup-source;
 			#extcon-cells = <1>;
 			nvidia,pmc-wakeup = <&tegra_pmc
-				PMC_WAKE_TYPE_GPIO 34 PMC_TRIGGER_TYPE_NONE>;
+				PMC_WAKE_TYPE_GPIO 54 PMC_TRIGGER_TYPE_NONE>;
 		};
+	};
+
+	xusb@70090000 {
+		extcon-cables = <&vbus_id_gpio_extcon 1>;
+		extcon-cable-names = "id";
 	};
 
 	xudc@700d0000 {

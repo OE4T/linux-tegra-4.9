@@ -292,13 +292,13 @@
 
 		ports {
 			usb2-0 {
-				vbus-supply = <&battery_reg>;
+				vbus-supply = <&p3449_vdd_usb_vbus>;
 			};
 			usb2-1 {
-				vbus-supply = <&battery_reg>;
+				vbus-supply = <&p3449_vdd_usb_hub_en>;
 			};
 			usb2-2 {
-				vbus-supply = <&battery_reg>;
+				vbus-supply = <&p3449_vdd_usb_vbus2>;
 			};
 		};
 	};

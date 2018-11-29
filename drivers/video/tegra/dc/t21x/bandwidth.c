@@ -121,7 +121,7 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
  *    - la_params.la_fp_to_real(fp_val)
  */
 
-#define T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP			1342000
+#define T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP			2362000
 #define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	54000
 #define T12X_LA_CONS_MEM_EFFICIENCY_FP				500
 #define T12X_LA_ROW_SRT_SZ_BYTES	(64 * (T12X_LA_MC_EMEM_NUM_SLOTS + 1))
@@ -987,9 +987,9 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 		dc->bw_kbps = bw;
 	}
 
-	for_each_set_bit(i, &dc->valid_windows,
-			tegra_dc_get_numof_dispwindows()) {
-		struct tegra_dc_win *w = tegra_dc_get_window(dc, i);
+	for (i = 0; i < n; i++) {
+		struct tegra_dc_win *w = windows[i];
+
 		if ((w->bandwidth != w->new_bandwidth) &&
 			w->new_bandwidth != 0) {
 			err = tegra_dc_check_latency_allowance(dc, w);

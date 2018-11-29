@@ -28,6 +28,7 @@
 #include <linux/nvmap.h>
 #include <linux/vmalloc.h>
 #include <linux/highmem.h>
+#include <linux/mm.h>
 
 #include <asm/io.h>
 #include <asm/memory.h>
@@ -47,6 +48,19 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 unsigned long sys_addr, unsigned long h_stride,
 			 unsigned long sys_stride, unsigned long elem_size,
 			 unsigned long count);
+
+static bool is_allocation_possible(size_t size)
+{
+	struct sysinfo i;
+
+	si_meminfo(&i);
+
+	if (size >> PAGE_SHIFT >= i.totalram) {
+		pr_debug("Requested allocation size is more than system memory");
+		return false;
+	}
+	return true;
+}
 
 /* NOTE: Callers of this utility function must invoke nvmap_handle_put after
  * using the returned nvmap_handle.
@@ -133,6 +147,9 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	handle = nvmap_handle_get_from_fd(op.handle);
 	if (!handle)
 		return -EINVAL;
+
+	if (!is_allocation_possible(handle->size))
+		return -ENOMEM;
 
 	/* user-space handles are aligned to page boundaries, to prevent
 	 * data leakage. */

@@ -882,7 +882,7 @@ int gv11b_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg)
 			nvgpu_err(g, "preempt timed out for tsgid: %u, "
 			"ctxsw timeout will trigger recovery if needed", tsg->tsgid);
 		} else {
-			gk20a_fifo_preempt_timeout_rc(g, tsg->tsgid, true);
+			gk20a_fifo_preempt_timeout_rc_tsg(g, tsg);
 		}
 	}
 

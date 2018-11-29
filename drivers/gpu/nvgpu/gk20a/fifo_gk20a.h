@@ -268,8 +268,8 @@ void gk20a_fifo_recover(struct gk20a *g,
 			bool id_is_known, bool verbose, int rc_type);
 void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose,
 				int rc_type);
-void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose,
-				int rc_type);
+void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
+			 bool verbose, u32 rc_type);
 int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 				u32 err_code, bool verbose);
 void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id);
@@ -390,8 +390,8 @@ u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
 int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 			unsigned int id_type);
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
-void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
-					 unsigned int id_type);
+void gk20a_fifo_preempt_timeout_rc_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
+void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 chid);
 int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,
 			unsigned long timeout, u32 flags);

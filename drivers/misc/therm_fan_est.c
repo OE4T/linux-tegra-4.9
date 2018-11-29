@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_fan_est.c
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,6 +36,8 @@
 #define DEFERRED_RESUME_TIME 3000
 #define THERMAL_GOV_PID "pid_thermal_gov"
 #define DEBUG 0
+/* Based off of max device tree node name length */
+#define MAX_PROFILE_NAME_LENGTH	31
 struct therm_fan_estimator {
 	long cur_temp;
 #if DEBUG
@@ -51,6 +53,12 @@ struct therm_fan_estimator {
 	struct thermal_zone_device *thz;
 	int current_trip_index;
 	const char *cdev_type;
+	rwlock_t state_lock;
+	int num_profiles;
+	int current_profile;
+	const char **fan_profile_names;
+	s32 **fan_profile_trip_temps;
+	s32 **fan_profile_trip_hysteresis;
 	s32 active_trip_temps[MAX_ACTIVE_STATES];
 	s32 active_hysteresis[MAX_ACTIVE_STATES];
 	s32 active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
@@ -59,6 +67,7 @@ struct therm_fan_estimator {
 	int trip_length;
 	const char *name;
 	bool is_pid_gov;
+	bool reset_trip_index;
 };
 
 
@@ -110,10 +119,16 @@ static void therm_fan_est_work_func(struct work_struct *work)
 #else
 	est->cur_temp = est->cur_temp_debug;
 #endif
+	read_lock(&est->state_lock);
 	for (trip_index = 0;
 		trip_index < ((MAX_ACTIVE_STATES << 1) + 1); trip_index++) {
 		if (est->cur_temp < est->active_trip_temps_hyst[trip_index])
 			break;
+	}
+	read_unlock(&est->state_lock);
+	if (est->reset_trip_index) {
+		est->current_trip_index = 0;
+		est->reset_trip_index = 0;
 	}
 	if (est->current_trip_index != (trip_index - 1)) {
 		 if ((trip_index - 1) > est->current_trip_index) {
@@ -192,6 +207,7 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 	struct therm_fan_estimator *est = thz->devdata;
 	int ret = 0;
 
+	read_lock(&est->state_lock);
 	if (trip == 0) {
 		*temp = est->active_trip_temps_hyst[0];
 		goto out;
@@ -217,6 +233,7 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 			*temp = est->active_trip_temps_hyst[trip * 2];
 	}
 out:
+	read_unlock(&est->state_lock);
 	return ret;
 }
 
@@ -225,11 +242,17 @@ static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
+	write_lock(&est->state_lock);
+
 	/*Need trip 0 to remain as it is*/
-	if (((temp - est->active_hysteresis[trip]) < 0) || (trip <= 0))
+	if (((temp - est->active_hysteresis[trip]) < 0) || (trip <= 0)) {
+		write_unlock(&est->state_lock);
 		return -EINVAL;
+	}
 
 	fan_set_trip_temp_hyst(est, trip, est->active_hysteresis[trip], temp);
+
+	write_unlock(&est->state_lock);
 	return 0;
 }
 
@@ -246,12 +269,18 @@ static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
+	write_lock(&est->state_lock);
+
 	/*Need trip 0 to remain as it is*/
-	if ((est->active_trip_temps[trip] - hyst_temp) < 0 || trip <= 0)
+	if ((est->active_trip_temps[trip] - hyst_temp) < 0 || trip <= 0) {
+		write_unlock(&est->state_lock);
 		return -EINVAL;
+	}
 
 	fan_set_trip_temp_hyst(est, trip,
 			hyst_temp, est->active_trip_temps[trip]);
+
+	write_unlock(&est->state_lock);
 	return 0;
 }
 
@@ -259,8 +288,9 @@ static int therm_fan_est_get_trip_hyst(struct thermal_zone_device *thz,
 				int trip, int *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
-
+	read_lock(&est->state_lock);
 	*temp = est->active_hysteresis[trip];
+	read_unlock(&est->state_lock);
 	return 0;
 }
 
@@ -353,6 +383,80 @@ static ssize_t set_offset(struct device *dev,
 	return count;
 }
 
+static ssize_t show_fan_profile(struct device *dev,
+				struct device_attribute *da,
+				char *buf)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	int ret;
+
+	if (!est)
+		return -EINVAL;
+	if (est->num_profiles > 0) {
+		ret = sprintf(buf, "%s\n",
+				est->fan_profile_names[est->current_profile]);
+	} else {
+		ret = sprintf(buf, "N/A\n");
+	}
+	return ret;
+}
+
+static ssize_t set_fan_profile(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	size_t buf_len;
+	int profile_index = -1;
+	int i;
+
+	buf_len = min(count, (size_t) MAX_PROFILE_NAME_LENGTH);
+	while (buf_len > 0 &&
+			(buf[buf_len - 1] == '\n' || buf[buf_len - 1] == ' '))
+		buf_len--;
+
+	if (buf_len == 0)
+		return -EINVAL;
+
+	for (i = 0; i < est->num_profiles; ++i) {
+		if (!strncmp(est->fan_profile_names[i], buf,
+				max(buf_len, strlen(est->fan_profile_names[i])))) {
+			profile_index = i;
+		}
+	}
+
+	if (profile_index < 0)
+		return -EINVAL;
+
+	write_lock(&est->state_lock);
+
+	memcpy(est->active_trip_temps, est->fan_profile_trip_temps[profile_index],
+			sizeof(s32) * MAX_ACTIVE_STATES);
+	memcpy(est->active_hysteresis, est->fan_profile_trip_hysteresis[profile_index],
+			sizeof(s32) * MAX_ACTIVE_STATES);
+
+	/* Update temp_hysts correctly */
+	est->active_trip_temps_hyst[0] = est->active_trip_temps[0];
+	for (i = 1; i < MAX_ACTIVE_STATES; i++)
+		fan_set_trip_temp_hyst(est, i,
+			est->active_hysteresis[i],
+			est->active_trip_temps[i]);
+	est->current_profile = profile_index;
+
+	/* Reset trip because profile has changed trip table */
+	est->reset_trip_index = 1;
+
+	write_unlock(&est->state_lock);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	thermal_zone_device_update(est->thz,
+			THERMAL_EVENT_UNSPECIFIED);
+#else
+	thermal_zone_device_update(est->thz);
+#endif
+
+	return count;
+}
+
 static ssize_t show_temps(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
@@ -397,6 +501,7 @@ static ssize_t set_temps(struct device *dev,
 static struct sensor_device_attribute therm_fan_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
+	SENSOR_ATTR(fan_profile, S_IRUGO | S_IWUSR, show_fan_profile, set_fan_profile, 0),
 #if DEBUG
 	SENSOR_ATTR(temps, S_IRUGO | S_IWUSR, show_temps, set_temps, 0),
 #else
@@ -435,6 +540,9 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	struct thermal_zone_params *tzp;
 	struct device_node *node = NULL;
 	struct device_node *data_node = NULL;
+	struct device_node *base_profile_node = NULL;
+	struct device_node *profile_node = NULL;
+	const char *default_profile = NULL;
 	int child_count = 0;
 	struct device_node *child = NULL;
 	const char *gov_name;
@@ -562,20 +670,102 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 	est_data->polling_period = (long)value;
 
-	of_err |= of_property_read_u32_array(node, "active_trip_temps",
-		est_data->active_trip_temps, (size_t) est_data->trip_length);
-	if (of_err) {
-		pr_err("THERMAL EST: active trip temps failed to parse.\n");
-		err = -ENXIO;
-		goto free_subdevs;
+	/* fan trip temp/hyst profiles */
+	est_data->num_profiles = 0;
+	base_profile_node = of_get_child_by_name(node, "profiles");
+	if (base_profile_node) {
+		est_data->num_profiles = of_get_available_child_count(base_profile_node);
 	}
+	if (est_data->num_profiles > 0) {
+		of_err |= of_property_read_string(base_profile_node,
+				"default", &default_profile);
+		if (of_err) {
+			pr_err("THERMAL EST: missing default fan profile\n");
+			err = -ENXIO;
+			goto free_subdevs;
+		}
+		pr_info("THERMAL EST: Found %d profiles, default profile is %s\n",
+				est_data->num_profiles, default_profile);
+		est_data->fan_profile_names = devm_kzalloc(&pdev->dev,
+				sizeof(const char*) * est_data->num_profiles, GFP_KERNEL);
+		if (!est_data->fan_profile_names) {
+			err = -ENOMEM;
+			goto free_subdevs;
+		}
+		est_data->fan_profile_trip_temps = devm_kzalloc(&pdev->dev,
+				sizeof(s32*) * est_data->num_profiles, GFP_KERNEL);
+		if (!est_data->fan_profile_trip_temps) {
+			err = -ENOMEM;
+			goto free_subdevs;
+		}
+		est_data->fan_profile_trip_hysteresis = devm_kzalloc(&pdev->dev,
+				sizeof(s32*) * est_data->num_profiles, GFP_KERNEL);
+		if (!est_data->fan_profile_trip_hysteresis) {
+			err = -ENOMEM;
+			goto free_subdevs;
+		}
+		est_data->current_profile = 0;
+		i = 0;
+		for_each_available_child_of_node (base_profile_node, profile_node) {
+			of_err |= of_property_read_string(profile_node, "name",
+					&est_data->fan_profile_names[i]);
+			if (default_profile &&
+					!strncmp(default_profile,
+					est_data->fan_profile_names[i], MAX_PROFILE_NAME_LENGTH)) {
+				est_data->current_profile = i;
+			}
+			est_data->fan_profile_trip_temps[i] = devm_kzalloc(&pdev->dev,
+					sizeof(s32) * MAX_ACTIVE_STATES, GFP_KERNEL);
+			if (!est_data->fan_profile_trip_temps[i]) {
+				err = -ENOMEM;
+				goto free_subdevs;
+			}
+			of_err |= of_property_read_u32_array(profile_node,
+					"active_trip_temps", est_data->fan_profile_trip_temps[i],
+					(size_t) est_data->trip_length);
+			if (of_err) {
+				pr_err("THERMAL EST: active trip temps failed to parse.\n");
+				err = -ENXIO;
+				goto free_subdevs;
+			}
+			est_data->fan_profile_trip_hysteresis[i] = devm_kzalloc(&pdev->dev,
+					sizeof(s32) * MAX_ACTIVE_STATES, GFP_KERNEL);
+			if (!est_data->fan_profile_trip_hysteresis[i]) {
+				err = -ENOMEM;
+				goto free_subdevs;
+			}
+			of_err |= of_property_read_u32_array(profile_node,
+					"active_hysteresis", est_data->fan_profile_trip_hysteresis[i],
+					(size_t) est_data->trip_length);
+			if (of_err) {
+				pr_err("THERMAL EST: active hysteresis failed to parse.\n");
+				err = -ENXIO;
+				goto free_subdevs;
+			}
+			i++;
+		}
+		memcpy(est_data->active_trip_temps,
+				est_data->fan_profile_trip_temps[est_data->current_profile],
+				sizeof(s32) * MAX_ACTIVE_STATES);
+		memcpy(est_data->active_hysteresis,
+				est_data->fan_profile_trip_hysteresis[est_data->current_profile],
+				sizeof(s32) * MAX_ACTIVE_STATES);
+	} else {
+		of_err |= of_property_read_u32_array(node, "active_trip_temps",
+			est_data->active_trip_temps, (size_t) est_data->trip_length);
+		if (of_err) {
+			pr_err("THERMAL EST: active trip temps failed to parse.\n");
+			err = -ENXIO;
+			goto free_subdevs;
+		}
 
-	of_err |= of_property_read_u32_array(node, "active_hysteresis",
-		est_data->active_hysteresis, (size_t) est_data->trip_length);
-	if (of_err) {
-		pr_err("THERMAL EST: active hysteresis failed to parse.\n");
-		err = -ENXIO;
-		goto free_subdevs;
+		of_err |= of_property_read_u32_array(node, "active_hysteresis",
+			est_data->active_hysteresis, (size_t) est_data->trip_length);
+		if (of_err) {
+			pr_err("THERMAL EST: active hysteresis failed to parse.\n");
+			err = -ENXIO;
+			goto free_subdevs;
+		}
 	}
 
 	for (i = 0; i < est_data->trip_length; i++)
@@ -647,6 +837,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 	pr_info("THERMAL EST: thz register success.\n");
 
+	rwlock_init(&est_data->state_lock);
+
 	/* workqueue related */
 	est_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
 				    WQ_HIGHPRI | WQ_UNBOUND, 1);
@@ -656,6 +848,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 
 	est_data->current_trip_index = 0;
+	est_data->reset_trip_index = 0;
 	INIT_DELAYED_WORK(&est_data->therm_fan_est_work,
 				therm_fan_est_work_func);
 	queue_delayed_work(est_data->workqueue,

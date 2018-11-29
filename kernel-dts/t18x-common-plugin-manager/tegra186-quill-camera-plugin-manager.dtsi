@@ -48,6 +48,219 @@
 
 	/* camera plugin-manager */
 	plugin-manager {
+		/* IMX390 */
+		fragment-imx390@0 {
+			ids = "LPRD-001";
+			override@0 {
+				target = <&imx390_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&cam_module0>;
+				_overlay_ {
+					status = "okay";
+					badge = "imx390_rear";
+					position = "rear";
+					orientation = "1";
+				};
+			};
+			override@2 {
+				target = <&cam_module0_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx390 30-001b";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@0/imx390_a@1b";
+				};
+			};
+			override@3 {
+				target = <&imx390_cam1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@4 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "okay";
+					badge = "imx390_front";
+					position = "front";
+					orientation = "1";
+				};
+			};
+			override@5 {
+				target = <&cam_module1_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx390 30-001c";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@0/imx390_b@1c";
+				};
+			};
+
+			/* Enable VI ports */
+			override@6 {
+				target = <&vi_base>;
+				_overlay_ {
+					num-channels=<2>;
+				};
+			};
+			override@7 {
+				target = <&vi_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@8 {
+				target = <&vi_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@9 {
+				target = <&imx390_vi_in0>;
+				_overlay_ {
+					status = "okay";
+					vc-id = <0>;
+					port-index = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&imx390_csi_out0>;
+				};
+			};
+			override@10 {
+				target = <&imx390_vi_in1>;
+				_overlay_ {
+					status = "okay";
+					vc-id = <1>;
+					port-index = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&imx390_csi_out1>;
+				};
+			};
+
+			/* Enable CSI ports */
+			override@11{
+				target = <&csi_base>;
+				_overlay_ {
+					num-channels=<2>;
+				};
+			};
+			override@12 {
+				target = <&csi_chan0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@13 {
+				target = <&csi_chan0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@14 {
+				target = <&imx390_csi_in0>;
+				_overlay_ {
+					status = "okay";
+					port-index = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&imx390_imx390_out0>;
+				};
+			};
+			override@15 {
+				target = <&csi_chan0_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@16 {
+				target = <&imx390_csi_out0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@17 {
+				target = <&csi_chan1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@18 {
+				target = <&csi_chan1_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@19 {
+				target = <&imx390_csi_in1>;
+				_overlay_ {
+					status = "okay";
+					port-index = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&imx390_imx390_out1>;
+				};
+			};
+			override@20 {
+				target = <&csi_chan1_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@21 {
+				target = <&imx390_csi_out1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+
+			/* tegra-camera-platform settings */
+			override@22 {
+				target = <&tcp>;
+				_overlay_ {
+					num_csi_lanes = <2>;
+					max_lane_speed = <4000000>;
+					min_bits_per_pixel = <10>;
+					vi_peak_byte_per_pixel = <2>;
+					vi_bw_margin_pct = <25>;
+					isp_peak_byte_per_pixel = <5>;
+					isp_bw_margin_pct = <25>;
+				};
+			};
+			/* pca9546 i2c mux */
+			override@23 {
+				target = <&tca9546_70>;
+				_overlay_ {
+					status = "okay";
+					vcc-pullup-supply = <&battery_reg>;
+				};
+			};
+			override@24 {
+				target = <&max9296_dser>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@25 {
+				target = <&max9295_prim>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@26 {
+				target = <&max9295_ser0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@27 {
+				target = <&max9295_ser1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
 		/* E3326 camera board */
 		fragment-e3326@0 {
 			ids = "3326-*";
@@ -1798,6 +2011,26 @@
 					status = "okay";
 				};
 			};
+
+			/* Disable imx390 nodes for imx185 as they share same imterposer board */
+			override@16 {
+				target = <&imx390_cam0>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@17 {
+				target = <&imx390_cam1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@18 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
 		};
 
 		fragment-imx274@0 {
@@ -1941,6 +2174,26 @@
 				target = <&pca9570_a_24>;
 				_overlay_ {
 					status = "okay";
+				};
+			};
+
+			/* Disable imx390 nodes for imx274 as they share same interposer board */
+			override@17 {
+				target = <&imx390_cam0>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@18 {
+				target = <&imx390_cam1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@19 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "disabled";
 				};
 			};
 		};

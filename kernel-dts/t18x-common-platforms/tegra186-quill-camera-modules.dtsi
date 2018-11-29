@@ -20,6 +20,7 @@
 #include "t18x-common-platforms/tegra186-quill-camera-imx185-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-dual.dtsi"
+#include "t18x-common-platforms/tegra186-quill-camera-imx390-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-vivid.dtsi"
 
 #define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
@@ -273,6 +274,24 @@
 					status = "disabled";
 				};
 				e3331_cam0: imx318_a@10 {
+					status = "disabled";
+				};
+				max9296_dser: max9296@6a {
+					status = "disabled";
+				};
+				max9295_prim: max9295_prim@62 {
+					status = "disabled";
+				};
+				max9295_ser0: max9295_a@40 {
+					status = "disabled";
+				};
+				max9295_ser1: max9295_b@60 {
+					status = "disabled";
+				};
+				imx390_cam0: imx390_a@1b {
+					status = "disabled";
+				};
+				imx390_cam1: imx390_b@1c {
 					status = "disabled";
 				};
 			};

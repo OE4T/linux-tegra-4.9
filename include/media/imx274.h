@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>  /* For IOCTL macros */
 #include <media/nvc.h>
-#include <media/nvc_image.h>
+#include <uapi/media/nvc_image.h>
 
 #define IMX274_IOCTL_SET_MODE			_IOW('o', 1, struct imx274_mode)
 #define IMX274_IOCTL_GET_STATUS		_IOR('o', 2, __u8)

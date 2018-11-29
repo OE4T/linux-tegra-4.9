@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 #define __IMX318_H__
 
 #include <media/nvc.h>
-#include <media/nvc_image.h>
+#include <uapi/media/nvc_image.h>
 
 #define IMX318_IOCTL_SET_MODE               _IOW('o', 1, struct imx318_mode)
 #define IMX318_IOCTL_SET_FRAME_LENGTH       _IOW('o', 2, __u32)

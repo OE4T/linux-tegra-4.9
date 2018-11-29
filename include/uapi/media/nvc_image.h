@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,10 +14,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVC_IMAGE_H__
-#define __NVC_IMAGE_H__
+#ifndef __UAPI_NVC_IMAGE_H__
+#define __UAPI_NVC_IMAGE_H__
 
 #include <linux/ioctl.h>
+#include <linux/types.h>
 
 #define NVC_IMAGER_API_CAPS_VER		2
 #define NVC_IMAGER_API_STATIC_VER	1
@@ -252,4 +253,4 @@ union nvc_imager_flash_control {
 #define NVC_IOCTL_STATIC_RD	_IOWR('o', 109, struct nvc_imager_static_nvc)
 #define NVC_IOCTL_DYNAMIC_RD	_IOWR('o', 110, struct nvc_imager_dnvc)
 
-#endif /* __NVC_IMAGE_H__ */
+#endif /* __UAPI_NVC_IMAGE_H__ */

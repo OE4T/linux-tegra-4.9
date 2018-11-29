@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>  /* For IOCTL macros */
 #include <media/nvc.h>
-#include <media/nvc_image.h>
+#include <uapi/media/nvc_image.h>
 
 #define OV23850_IOCTL_SET_MODE			_IOW('o', 1, \
 	 struct ov23850_mode)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,7 +18,7 @@
 #define __OV5693_H__
 
 #include <media/nvc.h>
-#include <media/nvc_image.h>
+#include <uapi/media/nvc_image.h>
 
 #define OV5693_IOCTL_SET_MODE               _IOW('o', 1, struct ov5693_mode)
 #define OV5693_IOCTL_SET_FRAME_LENGTH       _IOW('o', 2, __u32)

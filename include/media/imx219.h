@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA Corporation.  All rights reserved.
  *
  * NVIDIA Corporation and its licensors retain all intellectual property
  * and proprietary rights in and to this software and related documentation
@@ -13,7 +13,7 @@
 
 #include <linux/ioctl.h>  /* For IOCTL macros */
 #include <media/nvc.h>
-#include <media/nvc_image.h>
+#include <uapi/media/nvc_image.h>
 
 #define IMX219_IOCTL_SET_MODE           _IOW('o', 1, struct imx219_mode)
 #define IMX219_IOCTL_GET_STATUS         _IOR('o', 2, __u8)

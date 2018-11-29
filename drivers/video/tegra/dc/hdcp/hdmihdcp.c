@@ -128,6 +128,7 @@ static u8 g_fallback;
 static uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
 static uint32_t session_id;
 #endif
+static DEFINE_MUTEX(kfuse_lock);
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -741,11 +742,12 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 	u32 tmp;
 	int retries;
 
+	mutex_lock(&kfuse_lock);
 	/* copy load kfuse into buffer - only needed for early Tegra parts */
 	e = tegra_kfuse_read(buf, sizeof(buf));
 	if (e) {
 		nvhdcp_err("Kfuse read failure\n");
-		return e;
+		goto err;
 	}
 
 	/* write the kfuse to HDMI SRAM */
@@ -760,7 +762,8 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 	e = wait_key_ctrl(hdmi, PKEY_LOADED, PKEY_LOADED);
 	if (e) {
 		nvhdcp_err("key reload timeout\n");
-		return -EIO;
+		e = -EIO;
+		goto err;
 	}
 
 	tegra_sor_writel_ext(hdmi->sor, NV_SOR_KEY_SKEY_INDEX, 0);
@@ -776,7 +779,8 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 	} while (--retries);
 	if (!retries) {
 		nvhdcp_err("key SRAM clear timeout\n");
-		return -EIO;
+		e = -EIO;
+		goto err;
 	}
 
 	for (i = 0; i < KFUSE_DATA_SZ / 4; i += 4) {
@@ -804,11 +808,17 @@ static int load_kfuse(struct tegra_hdmi *hdmi)
 		e = wait_key_ctrl(hdmi, 0x10, 0); /* WRITE16 */
 		if (e) {
 			nvhdcp_err("key write timeout\n");
-			return -EIO;
+			e = -EIO;
+			goto err;
 		}
 	}
 
+	mutex_unlock(&kfuse_lock);
 	return 0;
+
+err:
+	mutex_unlock(&kfuse_lock);
+	return e;
 }
 
 /* validate srm signature for hdcp 2.2 */

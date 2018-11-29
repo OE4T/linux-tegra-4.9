@@ -2,7 +2,7 @@
  * tegra_alt_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -72,8 +72,10 @@ static int tegra_alt_pcm_open(struct snd_pcm_substream *substream)
 	snd_soc_set_runtime_hwparams(substream, &tegra_alt_pcm_hardware);
 
 	/* Update buffer size from device tree */
-	if (dmap->buffer_size > substream->runtime->hw.buffer_bytes_max)
+	if (dmap->buffer_size > substream->runtime->hw.buffer_bytes_max) {
 		substream->runtime->hw.buffer_bytes_max = dmap->buffer_size;
+		substream->runtime->hw.period_bytes_max = dmap->buffer_size / 2;
+	}
 
 	/* Ensure period size is multiple of 8 */
 	ret = snd_pcm_hw_constraint_step(substream->runtime, 0,

@@ -230,7 +230,7 @@ int gk20a_init_fifo_setup_hw(struct gk20a *g);
 void gk20a_fifo_isr(struct gk20a *g);
 u32 gk20a_fifo_nonstall_isr(struct gk20a *g);
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid);
+int gk20a_fifo_preempt_channel(struct gk20a *g, struct channel_gk20a *ch);
 int gk20a_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch);
 
@@ -391,7 +391,7 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 			unsigned int id_type);
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
 void gk20a_fifo_preempt_timeout_rc_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
-void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 chid);
+void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, struct channel_gk20a *ch);
 int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries,
 			unsigned long timeout, u32 flags);

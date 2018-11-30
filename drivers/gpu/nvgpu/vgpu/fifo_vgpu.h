@@ -41,7 +41,7 @@ int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 				u32 gpfifo_entries,
 				unsigned long acquire_timeout, u32 flags);
 int vgpu_fifo_init_engine_info(struct fifo_gk20a *f);
-int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid);
+int vgpu_fifo_preempt_channel(struct gk20a *g, struct channel_gk20a *ch);
 int vgpu_fifo_preempt_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
 int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 				u32 chid, bool add, bool wait_for_finish);

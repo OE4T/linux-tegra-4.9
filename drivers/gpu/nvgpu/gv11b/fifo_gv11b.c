@@ -801,22 +801,17 @@ int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 	return ret;
 }
 
-int gv11b_fifo_preempt_channel(struct gk20a *g, u32 chid)
+int gv11b_fifo_preempt_channel(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg = NULL;
 
-	if (chid == FIFO_INVAL_CHANNEL_ID) {
-		return 0;
-	}
-
-	tsg = tsg_gk20a_from_ch(&f->channel[chid]);
+	tsg = tsg_gk20a_from_ch(ch);
 
 	if (tsg == NULL) {
 		return 0;
 	}
 
-	nvgpu_log_info(g, "chid:%d tsgid:%d", chid, tsg->tsgid);
+	nvgpu_log_info(g, "chid:%d tsgid:%d", ch->chid, tsg->tsgid);
 
 	/* Preempt tsg. Channel preempt is NOOP */
 	return g->ops.fifo.preempt_tsg(g, tsg);

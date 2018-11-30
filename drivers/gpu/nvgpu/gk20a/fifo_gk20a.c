@@ -2912,19 +2912,14 @@ void gk20a_fifo_preempt_timeout_rc_tsg(struct gk20a *g, struct tsg_gk20a *tsg)
 	gk20a_fifo_recover_tsg(g, tsg, true, RC_TYPE_PREEMPT_TIMEOUT);
 }
 
-void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 chid)
+void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+	nvgpu_err(g, "preempt channel %d timeout", ch->chid);
 
-	nvgpu_err(g, "preempt channel %d timeout", chid);
-
-	if (ch != NULL) {
-		g->ops.fifo.set_error_notifier(ch,
+	g->ops.fifo.set_error_notifier(ch,
 				NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
-		gk20a_fifo_recover_ch(g, ch, true,
+	gk20a_fifo_recover_ch(g, ch, true,
 					RC_TYPE_PREEMPT_TIMEOUT);
-		gk20a_channel_put(ch);
-	}
 }
 
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
@@ -2945,7 +2940,7 @@ int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	return ret;
 }
 
-int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
+int gk20a_fifo_preempt_channel(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 ret = 0;
@@ -2953,10 +2948,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	u32 mutex_ret = 0;
 	u32 i;
 
-	nvgpu_log_fn(g, "chid: %d", chid);
-	if (chid == FIFO_INVAL_CHANNEL_ID) {
-		return 0;
-	}
+	nvgpu_log_fn(g, "chid: %d", ch->chid);
 
 	/* we have no idea which runlist we are using. lock all */
 	for (i = 0; i < g->fifo.max_runlists; i++) {
@@ -2965,7 +2957,7 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 
 	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	ret = __locked_fifo_preempt(g, chid, false);
+	ret = __locked_fifo_preempt(g, ch->chid, false);
 
 	if (!mutex_ret) {
 		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
@@ -2978,9 +2970,10 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 chid)
 	if (ret) {
 		if (nvgpu_platform_is_silicon(g)) {
 			nvgpu_err(g, "preempt timed out for chid: %u, "
-			"ctxsw timeout will trigger recovery if needed", chid);
+			"ctxsw timeout will trigger recovery if needed",
+			ch->chid);
 		} else {
-			gk20a_fifo_preempt_timeout_rc(g, chid);
+			gk20a_fifo_preempt_timeout_rc(g, ch);
 		}
 	}
 
@@ -3035,7 +3028,7 @@ int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
 	if (tsg != NULL) {
 		err = g->ops.fifo.preempt_tsg(ch->g, tsg);
 	} else {
-		err = g->ops.fifo.preempt_channel(ch->g, ch->chid);
+		err = g->ops.fifo.preempt_channel(ch->g, ch);
 	}
 
 	return err;
@@ -3126,8 +3119,9 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	u32 pbdma_chid = FIFO_INVAL_CHANNEL_ID;
 	u32 engine_chid = FIFO_INVAL_CHANNEL_ID;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
-	u32 mutex_ret;
-	u32 err = 0;
+	int mutex_ret;
+	struct channel_gk20a *ch = NULL;
+	int err = 0;
 
 	nvgpu_log_fn(g, " ");
 
@@ -3155,8 +3149,12 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	}
 
 	if (pbdma_chid != FIFO_INVAL_CHANNEL_ID) {
-		err = g->ops.fifo.preempt_channel(g, pbdma_chid);
-		if (err) {
+		ch = gk20a_channel_from_id(g, pbdma_chid);
+		if (ch != NULL) {
+			err = g->ops.fifo.preempt_channel(g, ch);
+			gk20a_channel_put(ch);
+		}
+		if (err != 0) {
 			goto clean_up;
 		}
 	}
@@ -3173,8 +3171,12 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	}
 
 	if (engine_chid != FIFO_INVAL_ENGINE_ID && engine_chid != pbdma_chid) {
-		err = g->ops.fifo.preempt_channel(g, engine_chid);
-		if (err) {
+		ch = gk20a_channel_from_id(g, engine_chid);
+		if (ch != NULL) {
+			err = g->ops.fifo.preempt_channel(g, ch);
+			gk20a_channel_put(ch);
+		}
+		if (err != 0) {
 			goto clean_up;
 		}
 	}

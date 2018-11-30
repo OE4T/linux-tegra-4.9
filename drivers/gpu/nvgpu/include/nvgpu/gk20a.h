@@ -645,7 +645,7 @@ struct gpu_ops {
 				unsigned long acquire_timeout,
 				u32 flags);
 		int (*resetup_ramfc)(struct channel_gk20a *c);
-		int (*preempt_channel)(struct gk20a *g, u32 chid);
+		int (*preempt_channel)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*preempt_tsg)(struct gk20a *g, struct tsg_gk20a *tsg);
 		int (*enable_tsg)(struct tsg_gk20a *tsg);
 		int (*disable_tsg)(struct tsg_gk20a *tsg);

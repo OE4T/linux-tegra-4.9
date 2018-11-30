@@ -443,10 +443,8 @@ int vgpu_init_fifo_support(struct gk20a *g)
 	return err;
 }
 
-int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
+int vgpu_fifo_preempt_channel(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[chid];
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -464,7 +462,7 @@ int vgpu_fifo_preempt_channel(struct gk20a *g, u32 chid)
 
 	if (err || msg.ret) {
 		nvgpu_err(g,
-			"preempt channel %d failed", chid);
+			"preempt channel %d failed", ch->chid);
 		err = -ENOMEM;
 	}
 

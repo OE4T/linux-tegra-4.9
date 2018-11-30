@@ -625,6 +625,10 @@
 		compatible = "nvidia,dma_test";
 	};
 
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
+
 	mc {
 		#address-cells = <2>;
 		#size-cells = <2>;

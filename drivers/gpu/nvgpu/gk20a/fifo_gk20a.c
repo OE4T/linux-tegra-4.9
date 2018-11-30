@@ -1943,7 +1943,8 @@ static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg)
 	return engines;
 }
 
-void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose, int rc_type)
+void gk20a_fifo_recover_ch(struct gk20a *g, struct channel_gk20a *ch,
+	bool verbose, u32 rc_type)
 {
 	u32 engines;
 
@@ -1952,22 +1953,16 @@ void gk20a_fifo_recover_ch(struct gk20a *g, u32 chid, bool verbose, int rc_type)
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	gr_gk20a_disable_ctxsw(g);
 
-	engines = gk20a_fifo_engines_on_id(g, chid, false);
+	engines = gk20a_fifo_engines_on_id(g, ch->chid, false);
 
 	if (engines) {
-		gk20a_fifo_recover(g, engines, chid, false, true, verbose,
+		gk20a_fifo_recover(g, engines, ch->chid, false, true, verbose,
 					rc_type);
 	} else {
-		struct channel_gk20a *ch = gk20a_channel_from_id(g, chid);
+		gk20a_channel_abort(ch, false);
 
-		if (ch != NULL) {
-			gk20a_channel_abort(ch, false);
-
-			if (gk20a_fifo_error_ch(g, ch)) {
-				gk20a_debug_dump(g);
-			}
-
-			gk20a_channel_put(ch);
+		if (gk20a_fifo_error_ch(g, ch)) {
+			gk20a_debug_dump(g);
 		}
 	}
 
@@ -2148,7 +2143,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 				RC_TYPE_FORCE_RESET);
 	} else {
 		g->ops.fifo.set_error_notifier(ch, err_code);
-		gk20a_fifo_recover_ch(g, ch->chid, verbose,
+		gk20a_fifo_recover_ch(g, ch, verbose,
 				RC_TYPE_FORCE_RESET);
 	}
 
@@ -2711,7 +2706,7 @@ static void gk20a_fifo_pbdma_fault_rc(struct gk20a *g,
 
 		if (ch != NULL) {
 			g->ops.fifo.set_error_notifier(ch, error_notifier);
-			gk20a_fifo_recover_ch(g, id, true, RC_TYPE_PBDMA_FAULT);
+			gk20a_fifo_recover_ch(g, ch, true, RC_TYPE_PBDMA_FAULT);
 			gk20a_channel_put(ch);
 		}
 	} else if (fifo_pbdma_status_id_type_v(status)
@@ -2926,7 +2921,7 @@ void gk20a_fifo_preempt_timeout_rc(struct gk20a *g, u32 chid)
 	if (ch != NULL) {
 		g->ops.fifo.set_error_notifier(ch,
 				NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT);
-		gk20a_fifo_recover_ch(g, chid, true,
+		gk20a_fifo_recover_ch(g, ch, true,
 					RC_TYPE_PREEMPT_TIMEOUT);
 		gk20a_channel_put(ch);
 	}

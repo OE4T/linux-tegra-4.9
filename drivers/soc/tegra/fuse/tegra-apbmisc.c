@@ -233,17 +233,33 @@ void tegra_init_revision(void)
 	}
 	pr_info("tegra-id: opt_subrevision=%x.\n", subrev);
 
-	for (i = 0; i < ARRAY_SIZE(tegra_chip_revisions); i++) {
-		if ((chipid != tegra_chip_revisions[i].chipid) ||
-		    (minor != tegra_chip_revisions[i].minor) ||
-		    (major != tegra_chip_revisions[i].major) ||
-		    (sub_type != tegra_chip_revisions[i].sub_type))
-			continue;
+	if (sub_type) {
+		for (i = 0; i < ARRAY_SIZE(tegra_chip_revisions); i++) {
+			if ((chipid != tegra_chip_revisions[i].chipid) ||
+			    (minor != tegra_chip_revisions[i].minor) ||
+			    (major != tegra_chip_revisions[i].major) ||
+			    (sub_type != tegra_chip_revisions[i].sub_type))
+				continue;
 
-		revision = tegra_chip_revisions[i].revision;
-		id_and_rev = tegra_chip_revisions[i].id_and_rev;
-		break;
+			revision = tegra_chip_revisions[i].revision;
+			id_and_rev = tegra_chip_revisions[i].id_and_rev;
+			break;
+		}
 	}
+
+	if (revision == TEGRA_REVISION_UNKNOWN) {
+		for (i = 0; i < ARRAY_SIZE(tegra_chip_revisions); i++) {
+			if ((chipid != tegra_chip_revisions[i].chipid) ||
+			    (minor != tegra_chip_revisions[i].minor) ||
+			    (major != tegra_chip_revisions[i].major))
+				continue;
+
+			revision = tegra_chip_revisions[i].revision;
+			id_and_rev = tegra_chip_revisions[i].id_and_rev;
+			break;
+		}
+	}
+
 exit:
 	tegra_sku_info.revision = revision;
 	tegra_sku_info.id_and_rev = id_and_rev;

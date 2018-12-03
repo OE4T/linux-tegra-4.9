@@ -34,7 +34,7 @@
 	chosen {
 		nvidia,tegra-porg-sku;
 		stdout-path = "/serial@70006000";
-		bootargs = "androidboot.secureos=tlk kmemleak=on earlycon=uart8250,mmio32,0x70006000";
+		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
 	};
 
 	firmware {

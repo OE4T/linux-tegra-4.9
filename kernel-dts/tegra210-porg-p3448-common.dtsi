@@ -378,9 +378,6 @@
 	};
 
 	chosen {
-		nvidia,tegra-shield-sku;
-		no-tnid-sn;
-		bootargs = "androidboot.secureos=tlk";
 		nvidia,bootloader-xusb-enable;
 		nvidia,bootloader-vbus-enable=<0x1>;
 		fastboot-instructions = "Press X/Y to move highlight\nPress Button A to select\nConnect SHIELD Controller using USB cable. Use USB port near HDMI port for the controller and USB port away for PC connection\n";
@@ -388,11 +385,7 @@
 		nvidia,gpu-disable-power-saving;
 		firmware-blob-partition = "RP4";
 		verified-boot {
-			ui-timeout-ms {
-				yellow-state = <7000>;
-				red-state = <10000>;
-				orange-state = <10000>;
-			};
+			poweroff-on-red-state;
 		};
 	};
 

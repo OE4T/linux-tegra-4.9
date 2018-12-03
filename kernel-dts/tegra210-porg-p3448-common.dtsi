@@ -451,7 +451,7 @@
 	};
 
 	i2c@7000c700 { /* i2c4 */
-		status = "disabled";
+		status = "okay";
 	};
 
 	nvs_dsm {

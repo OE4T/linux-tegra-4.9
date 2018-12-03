@@ -479,4 +479,10 @@
 		cdev-type = "DFLL-floor";
 		#cooling-cells = <2>; /* min followed by max */
 	};
+
+	i2c@7000c000 {
+		tegra_nct72: temp-sensor@4c {
+			status = "disabled";
+		};
+	};
 };

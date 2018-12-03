@@ -55,6 +55,12 @@
 			nvidia,dc-connector = <&sor1>;
 		};
 		sor1 {
+			/* Compared to Jetson-TX1's baseboard (P2597), HDMI TX
+			 * lanes 0 and 2 have been swapped in Porg's baseboard
+			 * (P3448) making it a straight lane mapping between
+			 * SOR1 and the pad.
+			 */
+			nvidia,xbar-ctrl = <0 1 2 3 4>;
 			status = "okay";
 			hdmi-display {
 				status = "okay";

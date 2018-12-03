@@ -174,6 +174,9 @@ enum {
 #define ufshcd_is_ufs_dev_poweroff(h) \
 	((h)->curr_dev_pwr_mode == UFS_POWERDOWN_PWR_MODE)
 
+/*Flag to check if card is UFS card*/
+int is_ufs_card = 1;
+
 static struct ufs_pm_lvl_states ufs_pm_lvl_states[] = {
 	{UFS_ACTIVE_PWR_MODE, UIC_LINK_ACTIVE_STATE},
 	{UFS_ACTIVE_PWR_MODE, UIC_LINK_HIBERN8_STATE},
@@ -2642,9 +2645,7 @@ static int ufshcd_dme_link_startup(struct ufs_hba *hba)
 	uic_cmd.command = UIC_CMD_DME_LINK_STARTUP;
 
 	ret = ufshcd_send_uic_cmd(hba, &uic_cmd);
-	if (ret)
-		dev_err(hba->dev,
-			"dme-link-startup: error code %d\n", ret);
+
 	return ret;
 }
 
@@ -3413,9 +3414,11 @@ link_startup:
 			goto out;
 	} while (ret && retries--);
 
-	if (ret)
+	if (ret) {
 		/* failed to get the link up... retire */
+		is_ufs_card = 0;
 		goto out;
+	}
 
 	if (link_startup_again) {
 		link_startup_again = false;
@@ -3436,8 +3439,6 @@ link_startup:
 
 	ret = ufshcd_make_hba_operational(hba);
 out:
-	if (ret)
-		dev_err(hba->dev, "link startup failed %d\n", ret);
 	return ret;
 }
 
@@ -5860,7 +5861,6 @@ int ufshcd_rescan(struct ufs_hba *hba)
 	int retry = MAX_HOST_RESET_RETRIES;
 
 	if (hba->card_present) {
-		dev_info(hba->dev, "UFS card inserted\n");
 		pm_runtime_get_sync(hba->dev);
 
 		/* Make sure clocks are enabled before accessing controller */
@@ -5923,7 +5923,10 @@ int ufshcd_rescan(struct ufs_hba *hba)
 
 		pm_runtime_put_sync(hba->dev);
 
-		dev_info(hba->dev, "UFS card removed\n");
+		if (is_ufs_card)
+			dev_info(hba->dev, "UFS card removed\n");
+		else
+			is_ufs_card = 1;
 	}
 
 	return ret;

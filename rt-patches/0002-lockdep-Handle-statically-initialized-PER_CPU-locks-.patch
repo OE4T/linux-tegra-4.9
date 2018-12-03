@@ -1,4 +1,4 @@
-From 1d174a25c99830ed53e520ed2ff2495a4bdef11d Mon Sep 17 00:00:00 2001
+From a636460c1f3c1e7a5fa99aeea6e894900bf9758e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
 Subject: [PATCH 002/353] lockdep: Handle statically initialized PER_CPU locks
@@ -69,7 +69,7 @@ index 56939d3..491b3f5 100644
  
  #if !defined(CONFIG_SMP) || !defined(CONFIG_HAVE_SETUP_PER_CPU_AREA)
 diff --git a/kernel/locking/lockdep.c b/kernel/locking/lockdep.c
-index 61a15e5..8f02f7d 100644
+index 26fc428..3896f3e 100644
 --- a/kernel/locking/lockdep.c
 +++ b/kernel/locking/lockdep.c
 @@ -658,6 +658,7 @@ look_up_lock_class(struct lockdep_map *lock, unsigned int subclass)
@@ -278,5 +278,5 @@ index 3794cfc..a42fb6c 100644
   * @addr: the address to be converted to physical address
   *
 -- 
-2.7.4
+2.1.4
 

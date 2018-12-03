@@ -1,4 +1,4 @@
-From d576f1eb1d36b5958a41253c461a8817a9b69199 Mon Sep 17 00:00:00 2001
+From a6b5cecc85953a1c1bd17d7513f5b327039a9db9 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 14 Sep 2011 11:57:04 +0200
 Subject: [PATCH 268/353] ipc/sem: Rework semaphore wakeups
@@ -71,5 +71,5 @@ index 10b94bc..b8360ea 100644
  
  static void unlink_queue(struct sem_array *sma, struct sem_queue *q)
 -- 
-2.7.4
+2.1.4
 

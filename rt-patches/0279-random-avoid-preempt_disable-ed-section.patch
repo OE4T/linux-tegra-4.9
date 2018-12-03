@@ -1,4 +1,4 @@
-From 267f9f1ac686a57607fc4f67e8d5ceafdd8f0919 Mon Sep 17 00:00:00 2001
+From 4a1cfcabea3c978a28e12608f7d9633ab927ed7f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 12 May 2017 15:46:17 +0200
 Subject: [PATCH 279/353] random: avoid preempt_disable()ed section
@@ -75,5 +75,5 @@ index 002f686..aba13ed 100644
  }
  #endif
 -- 
-2.7.4
+2.1.4
 

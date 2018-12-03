@@ -1,4 +1,4 @@
-From a53e8328ef12e15138443e750e727a713e3c0b69 Mon Sep 17 00:00:00 2001
+From a28a909c4b997487aa59535c24b3f77a394712e2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
 Subject: [PATCH 129/353] sched: Move task_struct cleanup to RCU
@@ -85,5 +85,5 @@ index 206afae..2a04c19 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-2.7.4
+2.1.4
 

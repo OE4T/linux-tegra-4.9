@@ -1,4 +1,4 @@
-From 102615a36806726443a543c4552596fcee3dbbfe Mon Sep 17 00:00:00 2001
+From 6e1b265c0df72c50ebaf6254c7d86b7d0bb3702f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:29:20 -0500
 Subject: [PATCH 053/353] posix-timers: Prevent broadcast signals
@@ -12,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+)
 
 diff --git a/kernel/time/posix-timers.c b/kernel/time/posix-timers.c
-index fc7c37a..53ba15a 100644
+index 0e6ed2e..06ef7e4 100644
 --- a/kernel/time/posix-timers.c
 +++ b/kernel/time/posix-timers.c
-@@ -517,6 +517,9 @@ static struct pid *good_sigevent(sigevent_t * event)
+@@ -526,6 +526,9 @@ static struct pid *good_sigevent(sigevent_t * event)
  	case SIGEV_THREAD:
  		if (event->sigev_signo <= 0 || event->sigev_signo > SIGRTMAX)
  			return NULL;
@@ -26,5 +26,5 @@ index fc7c37a..53ba15a 100644
  	case SIGEV_NONE:
  		return task_pid(rtn);
 -- 
-2.7.4
+2.1.4
 

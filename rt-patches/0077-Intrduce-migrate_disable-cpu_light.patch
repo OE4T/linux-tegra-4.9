@@ -1,4 +1,4 @@
-From a52cddd9c80524b92e366aae4bef87fa6068f441 Mon Sep 17 00:00:00 2001
+From f0585e7791e8bf4d43dc448873356d48bcc72b27 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 15:42:38 +0200
 Subject: [PATCH 077/353] Intrduce migrate_disable() + cpu_light()
@@ -294,5 +294,5 @@ index 1afec32..11fa431 100644
  	print_symbol("caller is %s\n", (long)__builtin_return_address(0));
  	dump_stack();
 -- 
-2.7.4
+2.1.4
 

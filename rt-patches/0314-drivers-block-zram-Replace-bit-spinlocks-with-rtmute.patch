@@ -1,4 +1,4 @@
-From 77cbef83f7897a55cd9e1328e3e577de0b441af6 Mon Sep 17 00:00:00 2001
+From ab44d1507064ad677d8bcfc5eb883b8542ac6e1c Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
 Subject: [PATCH 314/353] drivers/block/zram: Replace bit spinlocks with
@@ -179,5 +179,5 @@ index 74fcf10..fd4020c 100644
 +
  #endif
 -- 
-2.7.4
+2.1.4
 

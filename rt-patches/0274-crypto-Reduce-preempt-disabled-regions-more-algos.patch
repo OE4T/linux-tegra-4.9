@@ -1,4 +1,4 @@
-From cf1b2322f43142db196416f5ade875c614126671 Mon Sep 17 00:00:00 2001
+From 934ea2ff08227fc602e8253087f2638270e4b4f1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Feb 2014 17:24:04 +0100
 Subject: [PATCH 274/353] crypto: Reduce preempt disabled regions, more algos
@@ -244,5 +244,5 @@ index 6a85598..3a506ce 100644
  }
  EXPORT_SYMBOL_GPL(glue_xts_crypt_128bit);
 -- 
-2.7.4
+2.1.4
 

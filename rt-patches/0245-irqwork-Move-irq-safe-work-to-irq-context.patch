@@ -1,4 +1,4 @@
-From 5d40222c2d7b8d54753dfcc6eb16440b64802941 Mon Sep 17 00:00:00 2001
+From 8e611195083642d42a297796aeac1de174e76c6a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 15 Nov 2015 18:40:17 +0100
 Subject: [PATCH 245/353] irqwork: Move irq safe work to irq context
@@ -37,7 +37,7 @@ index 0e427a9..2543aab 100644
 +
  #endif /* _LINUX_IRQ_WORK_H */
 diff --git a/kernel/irq_work.c b/kernel/irq_work.c
-index 0ddaf1e..2899ba0d 100644
+index 0ddaf1e..2899ba0 100644
 --- a/kernel/irq_work.c
 +++ b/kernel/irq_work.c
 @@ -200,8 +200,17 @@ void irq_work_tick(void)
@@ -83,5 +83,5 @@ index 8e81884..a4c8276 100644
  	__run_timers(base);
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
 -- 
-2.7.4
+2.1.4
 

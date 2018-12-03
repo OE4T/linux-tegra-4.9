@@ -1,4 +1,4 @@
-From 2089116db1e5fe082da3b4b28b736499546a2f7d Mon Sep 17 00:00:00 2001
+From 00a62975e93d2e93080ebbaaa385710d21519a80 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:39:56 +0200
 Subject: [PATCH 344/353] rt/locking: allow recursive local_trylock()
@@ -40,5 +40,5 @@ index 845c77f..280f884 100644
  #define local_unlock(lvar)			preempt_enable()
  #define local_lock_irq(lvar)			local_irq_disable()
 -- 
-2.7.4
+2.1.4
 

@@ -1,4 +1,4 @@
-From 10798d74766e3f9df4b13a3f94044fd56c5bca7d Mon Sep 17 00:00:00 2001
+From 1535c7fda5f7784415e1e932807b12b772ae1abe Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:02 +0200
 Subject: [PATCH 184/353] rwsem/rt: Lift single reader restriction
@@ -299,7 +299,7 @@ index 5e27fb1..6ff9e80 100644
  obj-$(CONFIG_QUEUED_RWLOCKS) += qrwlock.o
  obj-$(CONFIG_LOCK_TORTURE_TEST) += locktorture.o
 diff --git a/kernel/locking/rt.c b/kernel/locking/rt.c
-index 665754c..6284e3b1 100644
+index 665754c..6284e3b 100644
 --- a/kernel/locking/rt.c
 +++ b/kernel/locking/rt.c
 @@ -306,173 +306,6 @@ void __rt_rwlock_init(rwlock_t *rwlock, char *name, struct lock_class_key *key)
@@ -751,5 +751,5 @@ index 0000000..4a708ff
 +	__up_write_unlock(sem, WRITER_BIAS - 1, flags);
 +}
 -- 
-2.7.4
+2.1.4
 

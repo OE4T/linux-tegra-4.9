@@ -1,4 +1,4 @@
-From dd8c7bf8ccee61f37ad498eda6799720c3b49e57 Mon Sep 17 00:00:00 2001
+From e7f651012ece77cb91780ebd6217997031449f45 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 15:09:23 +0100
 Subject: [PATCH 246/353] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
@@ -72,5 +72,5 @@ index cd1ffa7..8f31f09 100644
  EXPORT_SYMBOL_GPL(snd_pcm_stream_unlock_irqrestore);
  
 -- 
-2.7.4
+2.1.4
 

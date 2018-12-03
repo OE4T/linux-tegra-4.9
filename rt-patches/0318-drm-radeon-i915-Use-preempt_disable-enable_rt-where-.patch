@@ -1,4 +1,4 @@
-From f1e8393e9f82c3d458f21b2d8d43bb6cb1a46fe4 Mon Sep 17 00:00:00 2001
+From be474af184e00aff2b91893dda7e286d36df7975 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 27 Feb 2016 08:09:11 +0100
 Subject: [PATCH 318/353] drm,radeon,i915: Use preempt_disable/enable_rt()
@@ -56,5 +56,5 @@ index ca1caf4..64f4c22 100644
  	/* Decode into vertical and horizontal scanout position. */
  	*vpos = position & 0x1fff;
 -- 
-2.7.4
+2.1.4
 

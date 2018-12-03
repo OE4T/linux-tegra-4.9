@@ -1,4 +1,4 @@
-From 5424d77511d189b6354c96da487d608b7058ecd0 Mon Sep 17 00:00:00 2001
+From 2e37b6ae496cf17e3f56d1d6be4809385d53f250 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 7 Jun 2017 10:12:45 +0200
 Subject: [PATCH 135/353] sched: Remove TASK_ALL
@@ -31,5 +31,5 @@ index 922b6e7..f72541d 100644
  /* get_task_state() */
  #define TASK_REPORT		(TASK_RUNNING | TASK_INTERRUPTIBLE | \
 -- 
-2.7.4
+2.1.4
 

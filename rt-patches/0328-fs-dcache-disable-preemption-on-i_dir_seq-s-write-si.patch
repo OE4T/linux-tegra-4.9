@@ -1,4 +1,4 @@
-From 77473eb43cfc15c2679accbe57152088bad635e9 Mon Sep 17 00:00:00 2001
+From 2c42fc5d29b41caf11902cddf9ea0198b4fa8204 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 20 Oct 2017 11:29:53 +0200
 Subject: [PATCH 328/353] fs/dcache: disable preemption on i_dir_seq's write
@@ -128,5 +128,5 @@ index e22a270..7d8f1b8 100644
  
  	__u32			i_generation;
 -- 
-2.7.4
+2.1.4
 

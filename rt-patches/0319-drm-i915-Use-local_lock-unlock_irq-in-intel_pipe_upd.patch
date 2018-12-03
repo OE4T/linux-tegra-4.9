@@ -1,4 +1,4 @@
-From 6e5ea779f109c33c89c74c91ae65af33beb46303 Mon Sep 17 00:00:00 2001
+From 0afd3fdc32e04ef78090b9277c951027678258ce Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 27 Feb 2016 09:01:42 +0100
 Subject: [PATCH 319/353] drm,i915: Use local_lock/unlock_irq() in
@@ -114,5 +114,5 @@ index 64f4e2e..aebf1e9 100644
  	if (crtc->debug.start_vbl_count &&
  	    crtc->debug.start_vbl_count != end_vbl_count) {
 -- 
-2.7.4
+2.1.4
 

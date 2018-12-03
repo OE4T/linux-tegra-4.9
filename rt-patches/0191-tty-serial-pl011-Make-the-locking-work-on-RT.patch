@@ -1,4 +1,4 @@
-From 309a3645c25c000a2994819d4a96abdf2dd3cfad Mon Sep 17 00:00:00 2001
+From 5f35a10bac464ba5990971e72cc9df159476317e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 8 Jan 2013 21:36:51 +0100
 Subject: [PATCH 191/353] tty/serial/pl011: Make the locking work on RT
@@ -49,5 +49,5 @@ index 41b0dd6..7a5221d 100644
  	clk_disable(uap->clk);
  }
 -- 
-2.7.4
+2.1.4
 

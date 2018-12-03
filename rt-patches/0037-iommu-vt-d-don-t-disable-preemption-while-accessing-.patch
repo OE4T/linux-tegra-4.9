@@ -1,4 +1,4 @@
-From 1d06d29f4280fed488cbce38a26a6fc61ce03486 Mon Sep 17 00:00:00 2001
+From 29f41306141af01fb105b9e2796b5cb3c5b8b59e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
 Subject: [PATCH 037/353] iommu/vt-d: don't disable preemption while accessing
@@ -60,5 +60,5 @@ index 2558a38..dad0fe4 100644
  
  static void intel_unmap(struct device *dev, dma_addr_t dev_addr, size_t size)
 -- 
-2.7.4
+2.1.4
 

@@ -1,4 +1,4 @@
-From 5396da7931c81f0b79758501543a330f19f32711 Mon Sep 17 00:00:00 2001
+From 2767f894e30ffbcbda7d96d8d59b37284b4a2ac5 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
 Subject: [PATCH 294/353] crypto: Convert crypto notifier chain to SRCU
@@ -188,5 +188,5 @@ index 4c35848..7b47812 100644
  
  #endif	/* _CRYPTO_INTERNAL_H */
 -- 
-2.7.4
+2.1.4
 

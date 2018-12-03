@@ -1,4 +1,4 @@
-From f08c8f830944009636bec7b535c3f20ad8186999 Mon Sep 17 00:00:00 2001
+From 8e84d1b3cfa1f82148810e17e42e3caaad1cb1b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:41:35 +0200
 Subject: [PATCH 230/353] debugobjects: Make RT aware
@@ -27,5 +27,5 @@ index 88580e8..0e87155 100644
  	db = get_bucket((unsigned long) addr);
  
 -- 
-2.7.4
+2.1.4
 

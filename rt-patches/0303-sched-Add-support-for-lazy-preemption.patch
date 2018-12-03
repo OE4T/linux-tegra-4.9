@@ -1,4 +1,4 @@
-From 39bb0b91ced8157ef8bebefe0f5d4004ab3f05bc Mon Sep 17 00:00:00 2001
+From a554a2800bdc7259049dcfb5c86f12ac5db09214 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
 Subject: [PATCH 303/353] sched: Add support for lazy preemption
@@ -368,7 +368,7 @@ index c8af959..ddf157c 100644
  	 * The idle tasks have their own, simple scheduling class:
  	 */
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index a6627b9..4cfab79 100644
+index 7161616..e1f43f5 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -3975,7 +3975,7 @@ check_preempt_tick(struct cfs_rq *cfs_rq, struct sched_entity *curr)
@@ -407,7 +407,7 @@ index a6627b9..4cfab79 100644
  }
  
  static __always_inline
-@@ -4951,7 +4951,7 @@ static void hrtick_start_fair(struct rq *rq, struct task_struct *p)
+@@ -4967,7 +4967,7 @@ static void hrtick_start_fair(struct rq *rq, struct task_struct *p)
  
  		if (delta < 0) {
  			if (rq->curr == p)
@@ -416,7 +416,7 @@ index a6627b9..4cfab79 100644
  			return;
  		}
  		hrtick_start(rq, delta);
-@@ -7753,7 +7753,7 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
+@@ -7769,7 +7769,7 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
  	return;
  
  preempt:
@@ -425,7 +425,7 @@ index a6627b9..4cfab79 100644
  	/*
  	 * Only set the backward buddy when the current task is still
  	 * on the rq. This can happen when a wakeup gets interleaved
-@@ -10773,7 +10773,7 @@ static void task_fork_fair(struct task_struct *p)
+@@ -10789,7 +10789,7 @@ static void task_fork_fair(struct task_struct *p)
  		 * 'current' within the tree based on its new key value.
  		 */
  		swap(curr->vruntime, se->vruntime);
@@ -434,7 +434,7 @@ index a6627b9..4cfab79 100644
  	}
  
  	se->vruntime -= cfs_rq->min_vruntime;
-@@ -10797,7 +10797,7 @@ prio_changed_fair(struct rq *rq, struct task_struct *p, int oldprio)
+@@ -10813,7 +10813,7 @@ prio_changed_fair(struct rq *rq, struct task_struct *p, int oldprio)
  	 */
  	if (rq->curr == p) {
  		if (p->prio > oldprio)
@@ -458,10 +458,10 @@ index 24b2ede..bb31820 100644
  
  /*
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index a9f6b93..4778f43 100644
+index 0c6e005..0fd9267 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
-@@ -1427,6 +1427,15 @@ extern void init_sched_fair_class(void);
+@@ -1429,6 +1429,15 @@ extern void init_sched_fair_class(void);
  extern void resched_curr(struct rq *rq);
  extern void resched_cpu(int cpu);
  
@@ -612,5 +612,5 @@ index a37003d..8da8d50 100644
  		trace_seq_printf(s, "%x", entry->migrate_disable);
  	else
 -- 
-2.7.4
+2.1.4
 

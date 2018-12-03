@@ -1,4 +1,4 @@
-From a3381650fc9eecc6e6c057cd86b726c36e55f973 Mon Sep 17 00:00:00 2001
+From 56bb04f98e3b3187fd5cc347d1fa9ebd64e51259 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:08:30 +0200
 Subject: [PATCH 304/353] ftrace: Fix trace header alignment
@@ -64,5 +64,5 @@ index 6cddbf5..7cfd426 100644
  
  static void print_func_help_header_irq_tgid(struct trace_buffer *buf, struct seq_file *m)
 -- 
-2.7.4
+2.1.4
 

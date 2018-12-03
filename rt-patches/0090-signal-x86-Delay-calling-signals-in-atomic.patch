@@ -1,4 +1,4 @@
-From a20b038387e36404105907b3775b887e7275c594 Mon Sep 17 00:00:00 2001
+From 3158bfec04cfd998f3d5b876b65c3b5bd3e37e55 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 090/353] signal/x86: Delay calling signals in atomic
@@ -93,7 +93,7 @@ index 8fd4216..54cadad 100644
  	unsigned long sas_ss_sp;
  	size_t sas_ss_size;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index f6ac037..e47ffc5 100644
+index 3e46462..08b92d4 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
 @@ -1226,8 +1226,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
@@ -148,5 +148,5 @@ index f6ac037..e47ffc5 100644
   * Nuke all other threads in the group.
   */
 -- 
-2.7.4
+2.1.4
 

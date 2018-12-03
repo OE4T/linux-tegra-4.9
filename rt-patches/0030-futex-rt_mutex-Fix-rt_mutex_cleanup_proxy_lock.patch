@@ -1,4 +1,4 @@
-From dbfba8dacc762a50ff6b3dd4677efe9c41297aa6 Mon Sep 17 00:00:00 2001
+From 1bcde485d4502a5cf39be066c052118b5298eb21 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 22 May 2017 13:04:50 -0700
 Subject: [PATCH 030/353] futex,rt_mutex: Fix rt_mutex_cleanup_proxy_lock()
@@ -127,5 +127,5 @@ index ed2755b..4b2126d 100644
  	 * try_to_take_rt_mutex() sets the waiter bit unconditionally. We might
  	 * have to fix that up.
 -- 
-2.7.4
+2.1.4
 

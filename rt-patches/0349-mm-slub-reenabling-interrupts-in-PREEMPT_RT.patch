@@ -1,4 +1,4 @@
-From 2f27e3a1742501cc1680ee421c0aea20d57b38fb Mon Sep 17 00:00:00 2001
+From b11e409fe32eae1fd31aa698554d4cbf3fe8ace5 Mon Sep 17 00:00:00 2001
 From: dmitry pervushin <dpervushin@nvidia.com>
 Date: Thu, 17 Nov 2016 13:39:25 +0100
 Subject: [PATCH 349/353] mm: slub: reenabling interrupts in PREEMPT_RT
@@ -29,5 +29,5 @@ index e7491c1..f065f03 100644
  #endif
  	if (enableirqs)
 -- 
-2.7.4
+2.1.4
 

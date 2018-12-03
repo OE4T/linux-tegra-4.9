@@ -1,4 +1,4 @@
-From eacafce704b00e23338e40b4b19911d74bcac4ca Mon Sep 17 00:00:00 2001
+From 4d48c11aa8a3ffcfeddf0c0bf5cd83563fd7db90 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
 Subject: [PATCH 320/353] cgroups: use simple wait in css_release()
@@ -90,5 +90,5 @@ index 215c88e..0938b8a 100644
  	/*
  	 * Used to destroy pidlists and separate to serve as flush domain.
 -- 
-2.7.4
+2.1.4
 

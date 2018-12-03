@@ -1,4 +1,4 @@
-From 49156ff9e3e4fb6a0eb9cda27645474737b31121 Mon Sep 17 00:00:00 2001
+From 66e649e833ef9f31c789bf9614ac1d8b30819cbb Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <joshc@ni.com>
 Date: Thu, 11 Feb 2016 11:54:00 -0600
 Subject: [PATCH 256/353] genirq: update irq_set_irqchip_state documentation
@@ -27,5 +27,5 @@ index 0c4d417..abd3ae7 100644
   */
  int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
 -- 
-2.7.4
+2.1.4
 

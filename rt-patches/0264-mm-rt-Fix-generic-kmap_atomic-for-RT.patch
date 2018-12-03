@@ -1,4 +1,4 @@
-From 6e64e9bdbb1593041147f4fd4af2e8db92890e5a Mon Sep 17 00:00:00 2001
+From b5ef80b3cfe2d782a9f5dfc96c1b30f7cfc79a89 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 19 Sep 2015 10:15:00 +0200
 Subject: [PATCH 264/353] mm: rt: Fix generic kmap_atomic for RT
@@ -42,5 +42,5 @@ index 396d5c4..2f56829 100644
  
  #define kmap_atomic_pfn(pfn)	kmap_atomic(pfn_to_page(pfn))
 -- 
-2.7.4
+2.1.4
 

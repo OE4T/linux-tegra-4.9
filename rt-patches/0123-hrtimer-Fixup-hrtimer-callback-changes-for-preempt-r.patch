@@ -1,4 +1,4 @@
-From f5f98350b38ce4a4390cc462fe72e008cc921383 Mon Sep 17 00:00:00 2001
+From 8ba930eafd03a11443e24146268a4b600848962c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
 Subject: [PATCH 123/353] hrtimer: Fixup hrtimer callback changes for
@@ -352,5 +352,5 @@ index 395721f..953297f 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.7.4
+2.1.4
 

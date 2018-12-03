@@ -1,4 +1,4 @@
-From 7e55a526c8ab49b5d78a1b52d6388e687782e81e Mon Sep 17 00:00:00 2001
+From 1164dcfd00158a87cab43bd1f2a61b40061b2627 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
 Subject: [PATCH 048/353] timekeeping: Split jiffies seqlock
@@ -166,5 +166,5 @@ index 704f595..763a3e5 100644
  #define CS_NAME_LEN	32
  
 -- 
-2.7.4
+2.1.4
 

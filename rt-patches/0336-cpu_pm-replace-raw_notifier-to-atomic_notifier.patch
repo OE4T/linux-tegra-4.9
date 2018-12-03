@@ -1,4 +1,4 @@
-From cd4e18bf1baaa97a7b90350f4ca1e790b7dd6a9c Mon Sep 17 00:00:00 2001
+From 03b9c30b443d6599569116f88f72313c259048a5 Mon Sep 17 00:00:00 2001
 From: Alex Shi <alex.shi@linaro.org>
 Date: Thu, 6 Jul 2017 16:47:46 +0800
 Subject: [PATCH 336/353] cpu_pm: replace raw_notifier to atomic_notifier
@@ -180,5 +180,5 @@ index b14df91..10f4640 100644
  EXPORT_SYMBOL_GPL(cpu_cluster_pm_exit);
  
 -- 
-2.7.4
+2.1.4
 

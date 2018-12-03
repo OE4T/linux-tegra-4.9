@@ -1,4 +1,4 @@
-From 6c852cfc11f6a6dc91b0639b30d185227dbc720b Mon Sep 17 00:00:00 2001
+From 8429a38531c17c0ac516391c850cdc0f6061dc95 Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <joshc@ni.com>
 Date: Thu, 31 Mar 2016 00:04:25 -0500
 Subject: [PATCH 096/353] list_bl: fixup bogus lockdep warning
@@ -99,5 +99,5 @@ index d3af099..4e50623 100644
  static inline void INIT_HLIST_BL_NODE(struct hlist_bl_node *h)
  {
 -- 
-2.7.4
+2.1.4
 

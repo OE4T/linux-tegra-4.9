@@ -1,4 +1,4 @@
-From fc6d03fb7ace368ec315cbce610bdb05208e50f9 Mon Sep 17 00:00:00 2001
+From 28821b47567dea8f27b735e6d578e70e68ba1111 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 23 Dec 2015 20:57:41 +0100
 Subject: [PATCH 122/353] hrtimer: enfore 64byte alignment
@@ -29,5 +29,5 @@ index b71f4b7..b7c2d54 100644
  /**
   * struct hrtimer_clock_base - the timer base for a specific clock
 -- 
-2.7.4
+2.1.4
 

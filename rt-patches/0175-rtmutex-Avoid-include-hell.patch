@@ -1,4 +1,4 @@
-From d904d4ca9d863cf4b887f36127c9a40186eda41a Mon Sep 17 00:00:00 2001
+From ad7ca09fac5f12910b8db661f13dd56c4ff49c66 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 20:06:39 +0200
 Subject: [PATCH 175/353] rtmutex: Avoid include hell
@@ -25,5 +25,5 @@ index 51dc12e..2ed41c4 100644
  extern int max_lock_depth; /* for sysctl */
  
 -- 
-2.7.4
+2.1.4
 

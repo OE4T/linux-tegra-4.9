@@ -1,4 +1,4 @@
-From db6558b5d676d62f62588aef412140a95e2cbb00 Mon Sep 17 00:00:00 2001
+From cac82111cecdf34fd9df32e28343580b9bec3bb7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 8 Jul 2011 20:25:16 +0200
 Subject: [PATCH 326/353] Add localversion for -RT release
@@ -17,5 +17,5 @@ index 0000000..9a218ca
 @@ -0,0 +1 @@
 +-rt23
 -- 
-2.7.4
+2.1.4
 

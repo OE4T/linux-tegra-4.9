@@ -1,4 +1,4 @@
-From 772e4ee62e0ee0638d466fb09599dbc7b42df32a Mon Sep 17 00:00:00 2001
+From ca0bf8d29f83dd204acb757e4dbca1195ce8b837 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 11:18:08 +0100
 Subject: [PATCH 292/353] net: netfilter: Serialize xt_write_recseq sections on
@@ -78,5 +78,5 @@ index d869ea5..5cafa87 100644
  
  const struct nf_afinfo __rcu *nf_afinfo[NFPROTO_NUMPROTO] __read_mostly;
 -- 
-2.7.4
+2.1.4
 

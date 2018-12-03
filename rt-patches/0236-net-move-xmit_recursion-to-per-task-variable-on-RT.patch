@@ -1,4 +1,4 @@
-From cc78c388493b97d563134529fac980c652d878fa Mon Sep 17 00:00:00 2001
+From 186121e84cd0cc3f35ff43553249a4b8108a86d0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
 Subject: [PATCH 236/353] net: move xmit_recursion to per-task variable on -RT
@@ -96,7 +96,7 @@ index 3950b85..93ae84c 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index a0818f6..b38be50 100644
+index 7e9749e..1b44303 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3225,8 +3225,10 @@ static void skb_update_prio(struct sk_buff *skb)
@@ -158,5 +158,5 @@ index c385c55..feb96c2 100644
  	return ret;
  }
 -- 
-2.7.4
+2.1.4
 

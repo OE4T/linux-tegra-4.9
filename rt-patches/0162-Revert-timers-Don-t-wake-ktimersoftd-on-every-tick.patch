@@ -1,4 +1,4 @@
-From adf398c09f084d002ad992d2f6339c24fc8e6786 Mon Sep 17 00:00:00 2001
+From 81fe6ce3f62d9be79d538afe15c2d2b763d949da Mon Sep 17 00:00:00 2001
 From: Anna-Maria Gleixner <anna-maria@linutronix.de>
 Date: Fri, 26 May 2017 19:16:07 +0200
 Subject: [PATCH 162/353] Revert "timers: Don't wake ktimersoftd on every tick"
@@ -222,5 +222,5 @@ index c1b88e0..f90e684 100644
  }
  
 -- 
-2.7.4
+2.1.4
 

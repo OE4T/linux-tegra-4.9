@@ -1,4 +1,4 @@
-From 86a362b463b590a1559582c08b93871c2112a170 Mon Sep 17 00:00:00 2001
+From 100945c240870cc164ed6f0582224351b18d7223 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 23 Jun 2017 16:22:02 +0200
 Subject: [PATCH 176/353] rbtree: don't include the rcu header
@@ -170,5 +170,5 @@ index 00dc4a9..a5b130e 100644
   * @p: The pointer to read
   *
 -- 
-2.7.4
+2.1.4
 

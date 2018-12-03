@@ -1,4 +1,4 @@
-From 3678638a15c2cd8e6f449b76e3944b2f467e0fd4 Mon Sep 17 00:00:00 2001
+From a9a6ca922507c1fd0ede792b67a259b50623b309 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 17 Nov 2017 16:21:00 +0100
 Subject: [PATCH 332/353] md/raid5: do not disable interrupts
@@ -57,5 +57,5 @@ index d05864f..160c8a0 100644
  
  static inline void remove_hash(struct stripe_head *sh)
 -- 
-2.7.4
+2.1.4
 

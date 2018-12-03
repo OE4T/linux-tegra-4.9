@@ -1,4 +1,4 @@
-From 7b304cabab15a556769fa7e8afa4df839a7e442c Mon Sep 17 00:00:00 2001
+From efcae2c59f80681f540ed620a94c4184430ce335 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Tue, 29 Nov 2011 20:18:22 -0500
 Subject: [PATCH 152/353] tasklet: Prevent tasklets from going into infinite
@@ -395,5 +395,5 @@ index d257e62..02d1106 100644
  {
  	return local_softirq_pending();
 -- 
-2.7.4
+2.1.4
 

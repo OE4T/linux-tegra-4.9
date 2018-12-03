@@ -1,4 +1,4 @@
-From e154b7e828fa310a5ce23e88cffa5532dfaf77a0 Mon Sep 17 00:00:00 2001
+From f6f16c1e3e82d3ae4fc5a1a779ed92bf0025706a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Oct 2016 10:29:11 +0200
 Subject: [PATCH 038/353] x86/apic: get rid of "warning: 'acpi_ioapic_lock'
@@ -45,5 +45,5 @@ index 0a1e8a6..4f7482b 100644
  /* --------------------------------------------------------------------------
                                Boot-time Configuration
 -- 
-2.7.4
+2.1.4
 

@@ -1,4 +1,4 @@
-From f8e7b3d9661ee81df3a2e20f03ad4c8097d9ed6d Mon Sep 17 00:00:00 2001
+From 399b088042f2aa21428aabfe07106ba59ed35369 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 7 Jun 2013 22:37:06 +0200
 Subject: [PATCH 283/353] kernel/cpu: fix cpu down problem if kthread's cpu is
@@ -88,5 +88,5 @@ index 583f6ac..cc5bf9e 100644
  	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
  
 -- 
-2.7.4
+2.1.4
 

@@ -1,4 +1,4 @@
-From bb855f093e97c61a4063c3a8b2f05ba12daf901b Mon Sep 17 00:00:00 2001
+From 54a6f92161d69c8b0d873cdd48aa36966670c14d Mon Sep 17 00:00:00 2001
 From: Luiz Capitulino <lcapitulino@redhat.com>
 Date: Fri, 27 May 2016 15:03:28 +0200
 Subject: [PATCH 103/353] mm: perform lru_add_drain_all() remotely
@@ -112,5 +112,5 @@ index 796f366..e360916 100644
  	put_online_cpus();
  	mutex_unlock(&lock);
 -- 
-2.7.4
+2.1.4
 

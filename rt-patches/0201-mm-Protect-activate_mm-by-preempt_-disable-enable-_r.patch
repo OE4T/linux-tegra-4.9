@@ -1,4 +1,4 @@
-From e69af53ae140ca13bc871c4888ec462307053eb5 Mon Sep 17 00:00:00 2001
+From 2552930ad110f0dbcb88bde940b5c3043b3c0c7c Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Tue, 15 May 2012 13:53:56 +0800
 Subject: [PATCH 201/353] mm: Protect activate_mm() by
@@ -76,5 +76,5 @@ index 6f4d27c..5cd25c7 100644
  #ifdef finish_arch_post_lock_switch
  	finish_arch_post_lock_switch();
 -- 
-2.7.4
+2.1.4
 

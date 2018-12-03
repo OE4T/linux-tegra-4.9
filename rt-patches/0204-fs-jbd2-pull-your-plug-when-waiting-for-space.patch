@@ -1,4 +1,4 @@
-From 6f1bd000c594d173b311f629c0e87866f2d6a9a4 Mon Sep 17 00:00:00 2001
+From c569a613a47b92baf014a2fc7c8762376e75aeca Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 17 Feb 2014 17:30:03 +0100
 Subject: [PATCH 204/353] fs: jbd2: pull your plug when waiting for space
@@ -19,7 +19,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/fs/jbd2/checkpoint.c b/fs/jbd2/checkpoint.c
-index 684996c..6e18a06 100644
+index 4d5a5a4..b95c108 100644
 --- a/fs/jbd2/checkpoint.c
 +++ b/fs/jbd2/checkpoint.c
 @@ -116,6 +116,8 @@ void __jbd2_log_wait_for_space(journal_t *journal)
@@ -32,5 +32,5 @@ index 684996c..6e18a06 100644
  
  		/*
 -- 
-2.7.4
+2.1.4
 

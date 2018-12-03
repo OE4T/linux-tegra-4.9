@@ -1,4 +1,4 @@
-From d63d9dd6c50b28174d9ab7c1ab1088d9a39f5e4b Mon Sep 17 00:00:00 2001
+From c04690535307a144f5ac400e1294c96fbe985c1e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:30 -0500
 Subject: [PATCH 055/353] drivers: random: Reduce preempt disabled region
@@ -33,5 +33,5 @@ index 81b65d0..74300e8 100644
  
  void add_input_randomness(unsigned int type, unsigned int code,
 -- 
-2.7.4
+2.1.4
 

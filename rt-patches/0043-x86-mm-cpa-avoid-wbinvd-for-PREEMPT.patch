@@ -1,4 +1,4 @@
-From 97323b37c1efdec5f29d02af82fee9e6466121e9 Mon Sep 17 00:00:00 2001
+From 64316104f132e36165a6292ea539ab9a474f3a4c Mon Sep 17 00:00:00 2001
 From: John Ogness <john.ogness@linutronix.de>
 Date: Mon, 30 Jan 2017 09:41:21 +0100
 Subject: [PATCH 043/353] x86/mm/cpa: avoid wbinvd() for PREEMPT
@@ -40,5 +40,5 @@ index 1271bc9..83d9fde 100644
  	BUG_ON(irqs_disabled());
  
 -- 
-2.7.4
+2.1.4
 

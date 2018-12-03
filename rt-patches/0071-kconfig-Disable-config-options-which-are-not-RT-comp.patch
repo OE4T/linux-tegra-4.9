@@ -1,4 +1,4 @@
-From 108d57f2f04b9272da063e40b9087bbd63d6bb29 Mon Sep 17 00:00:00 2001
+From 58f7ca147b98be7000b4db18f485f30b65b043fe Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 24 Jul 2011 12:11:43 +0200
 Subject: [PATCH 071/353] kconfig: Disable config options which are not RT
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/Kconfig b/arch/Kconfig
-index 391ecd54..38b14f0 100644
+index 391ecd5..38b14f0 100644
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
 @@ -12,6 +12,7 @@ config OPROFILE
@@ -38,5 +38,5 @@ index dcf860f..c09a965 100644
  	select RADIX_TREE_MULTIORDER
  	help
 -- 
-2.7.4
+2.1.4
 

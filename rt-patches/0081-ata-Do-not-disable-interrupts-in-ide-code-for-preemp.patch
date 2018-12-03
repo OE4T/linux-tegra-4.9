@@ -1,4 +1,4 @@
-From 4610bf13d2068a126d458c6d1b1e290199d26daf Mon Sep 17 00:00:00 2001
+From 1ff55ef5aa0cd8400b407f888ed7c6cb8f0467c6 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Fri, 3 Jul 2009 08:44:29 -0500
 Subject: [PATCH 081/353] ata: Do not disable interrupts in ide code for
@@ -66,5 +66,5 @@ index f9e85ed..fd99ae8 100644
  		buf = page_address(page);
  		consumed = ap->ops->sff_data_xfer(dev,  buf + offset,
 -- 
-2.7.4
+2.1.4
 

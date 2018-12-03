@@ -1,4 +1,4 @@
-From a2469b4d6547e0e9f952a276f19b2d9cddb1ab61 Mon Sep 17 00:00:00 2001
+From 15b9b39ff5c3fc25689f3d30101e9105a039520f Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Thu, 15 Feb 2018 12:28:18 +0200
 Subject: [PATCH 352/353] kernel/printk: Don't try to print from IRQ/NMI
@@ -19,10 +19,10 @@ Signed-off-by: Timo Alho <talho@nvidia.com>
  1 file changed, 5 insertions(+)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 5458b40..077510b 100644
+index dd6b987..0b06a44 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1695,6 +1695,11 @@ static void call_console_drivers(int level,
+@@ -1700,6 +1700,11 @@ static void call_console_drivers(int level,
  	if (!console_drivers)
  		return;
  
@@ -35,5 +35,5 @@ index 5458b40..077510b 100644
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
 -- 
-2.7.4
+2.1.4
 

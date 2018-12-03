@@ -1,4 +1,4 @@
-From 237e115cffa6aa098ebc74d2d8ca659d2ab133c5 Mon Sep 17 00:00:00 2001
+From b7c18b8ca29fb336f414d57abcca1f1c124d39f4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Apr 2010 16:51:31 +0200
 Subject: [PATCH 216/353] md: raid5: Make raid5_percpu handling RT aware
@@ -72,5 +72,5 @@ index 57ec49f..0739604 100644
  		struct flex_array *scribble;   /* space for constructing buffer
  					      * lists and performing address
 -- 
-2.7.4
+2.1.4
 

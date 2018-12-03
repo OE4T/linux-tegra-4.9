@@ -1,4 +1,4 @@
-From 6123fcb073f57c7bdad119c41e21239f9a1b7944 Mon Sep 17 00:00:00 2001
+From 7b9e353f6f15f63edc7ccf2c880a1c25e06cda20 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 15 Jul 2010 10:29:00 +0200
 Subject: [PATCH 059/353] suspend: Prevent might sleep splats
@@ -111,5 +111,5 @@ index 2d0c99b..880c5a2 100644
  	BUG_ON(irqs_disabled());
  
 -- 
-2.7.4
+2.1.4
 

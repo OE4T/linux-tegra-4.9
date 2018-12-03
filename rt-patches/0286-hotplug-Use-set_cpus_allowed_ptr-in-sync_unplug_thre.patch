@@ -1,4 +1,4 @@
-From 14e2f505c29ce7443705b5feea8058650b74b808 Mon Sep 17 00:00:00 2001
+From a23eb0831552234cd3a10b7ccda8835471dd1d18 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 24 Mar 2015 08:14:49 +0100
 Subject: [PATCH 286/353] hotplug: Use set_cpus_allowed_ptr() in
@@ -49,5 +49,5 @@ index bb5cde2..b850886c 100644
  	return 0;
  }
 -- 
-2.7.4
+2.1.4
 

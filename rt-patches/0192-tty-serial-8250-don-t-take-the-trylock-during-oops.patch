@@ -1,4 +1,4 @@
-From 060784f786542eb5d5be08cb5b506ee6ee337886 Mon Sep 17 00:00:00 2001
+From 31921065fec51761bf7ba87d64bfb015daed4b46 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 11 Apr 2016 16:55:02 +0200
 Subject: [PATCH 192/353] tty: serial: 8250: don't take the trylock during oops
@@ -8,27 +8,61 @@ timer) will lead to a lockdep warning on each invocation and as such
 never completes.
 Therefore we skip the trylock in the oops case.
 
+Change-Id: Ie393ba13aabd8b464894c3d6dabd0fd3b1a207e2
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/tty/serial/8250/8250_port.c | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ drivers/tty/serial/8250/8250_port.c | 25 +++++++------------------
+ 1 file changed, 7 insertions(+), 18 deletions(-)
 
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index 5b54439..8205240 100644
+index 88dcb98..8205240 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
-@@ -3143,10 +3143,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+@@ -3135,25 +3135,18 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+ 			      unsigned int count)
+ {
+ 	struct uart_port *port = &up->port;
++	unsigned long flags;
+ 	unsigned int ier;
+-	int locked = 0;
++	int locked = 1;
+ 
+ 	touch_nmi_watchdog();
  
  	serial8250_rpm_get(up);
  
--	if (port->sysrq)
+-	if (!port->sysrq) {
+-		disable_irq(port->irq);
+-		if (oops_in_progress) {
+-			locked = spin_trylock(&port->lock);
+-		} else if (!in_interrupt()) {
+-			spin_lock(&port->lock);
+-			locked = 1;
+-		} else {
+-			/* don't trace print latency when in irq */
+-			stop_critical_timings();
+-		}
+-	}
 +	if (port->sysrq || oops_in_progress)
- 		locked = 0;
--	else if (oops_in_progress)
--		locked = spin_trylock_irqsave(&port->lock, flags);
- 	else
- 		spin_lock_irqsave(&port->lock, flags);
++		locked = 0;
++	else
++		spin_lock_irqsave(&port->lock, flags);
+ 
+ 	/*
+ 	 *	First save the IER then disable the interrupts
+@@ -3191,11 +3184,7 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+ 		serial8250_modem_status(up);
+ 
+ 	if (locked)
+-		spin_unlock(&port->lock);
+-
+-	if (!port->sysrq)
+-		enable_irq(port->irq);
+-
++		spin_unlock_irqrestore(&port->lock, flags);
+ 	serial8250_rpm_put(up);
+ }
  
 -- 
-2.7.4
+2.1.4
 

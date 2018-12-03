@@ -1,4 +1,4 @@
-From 4a59b4d6a6a25617d1bb2da2e89caf0283f24c1e Mon Sep 17 00:00:00 2001
+From d0f0f2d30f95791e4fe653164276a4eb12a0bbbf Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
 Subject: [PATCH 219/353] block: blk-mq: Use swait
@@ -124,5 +124,5 @@ index 7b18f20..7fcbaae 100644
  	struct list_head	all_q_node;
  
 -- 
-2.7.4
+2.1.4
 

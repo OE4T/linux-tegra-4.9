@@ -1,4 +1,4 @@
-From 089ed959b1ac13e440e0a6cb745fb5bfca7e4de3 Mon Sep 17 00:00:00 2001
+From 090a52dd098f1782bfc7c189fdff43aaf9ade7a5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
 Subject: [PATCH 197/353] genirq: Do not invoke the affinity callback via a
@@ -143,5 +143,5 @@ index c4f3e6c..0c4d417 100644
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
 -- 
-2.7.4
+2.1.4
 

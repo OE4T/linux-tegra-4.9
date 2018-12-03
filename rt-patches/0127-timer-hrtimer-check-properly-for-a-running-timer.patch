@@ -1,4 +1,4 @@
-From 360d3066c79e5bad0360fa09b29bc49c816488df Mon Sep 17 00:00:00 2001
+From ef7fd4f16e0e145a1c60dfdf8b996c1a278096a3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 1 Mar 2017 16:30:49 +0100
 Subject: [PATCH 127/353] timer/hrtimer: check properly for a running timer
@@ -35,5 +35,5 @@ index 65d0671..a34e10b 100644
  
  /* Forward a hrtimer so it expires after now: */
 -- 
-2.7.4
+2.1.4
 

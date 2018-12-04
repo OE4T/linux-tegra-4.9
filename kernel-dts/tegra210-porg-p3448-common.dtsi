@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-porg-p3448-common.dtsi
  *
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -149,34 +149,63 @@
 		status = "okay";
 	};
 
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	aconnect@702c0000 {
-#endif
+		adma {
+			status = "okay";
+		};
 
-	adma: adma@702e2000 {
-		dma-channels = <2>;
-	};
+		ahub {
+			i2s@702d1000 {
+				regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
+				vdd-1v8-audio-hv-supply = <&max77620_sd3>;
+				vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
+				fsync-width = <15>;
+				status = "okay";
+			};
 
-	ahub {
-		status = "disabled";
-		i2s@702d1100 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <>;
-			pinctrl-1 = <>;
-			regulator-supplies = "vdd-1v8-spi-hv", "vdd-1v8-spi-hv-bias";
-			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
-			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
-			fsync-width = <0>;
+			i2s@702d1100 {
+				status = "disabled";
+			};
+
+			i2s@702d1200 {
+				regulator-supplies = "vdd-1v8-dmic";
+				vdd-1v8-dmic-supply = <&max77620_sd3>;
+				fsync-width = <15>;
+				status = "okay";
+			};
+
+			i2s@702d1300 {
+				status = "disabled";
+			};
+
+			i2s@702d1400 {
+				status = "disabled";
+			};
+
+			dmic@702d4000 {
+				regulator-supplies = "vdd-1v8-dmic";
+				vdd-1v8-dmic-supply = <&max77620_sd3>;
+				status = "okay";
+			};
+
+			dmic@702d4100 {
+				regulator-supplies = "vdd-1v8-dmic";
+				vdd-1v8-dmic-supply = <&max77620_sd3>;
+				status = "okay";
+			};
+
+			dmic@702d4200 {
+				status = "disabled";
+			};
 		};
 	};
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+
+	hda@70030000 {
+		status = "okay";
 	};
-#endif
 
 	sound_card: sound {
-		status = "disabled";
-
-#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+		status = "okay";
 		compatible = "nvidia,tegra-audio-t210ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t210ref-mobile-rt565x";
 
@@ -195,65 +224,84 @@
 			<&tegra_car TEGRA210_CLK_EXTERN1>;
 		assigned-clock-rates = <368640000>, <36864000>,
 			<36864000>, <12288000>;
-		nvidia,num-codec-link = <1>;
+		nvidia,num-codec-link = <4>;
 
 		nvidia,audio-routing =
-			"y Headphone", 	"y OUT",
-			"y IN",		"y Mic";
+			"x Headphone",	"x OUT",
+			"x IN",		"x Mic",
+			"y Headphone",	"y OUT",
+			"y IN",		"y Mic",
+			"a IN",		"a Mic",
+			"b IN",		"b Mic";
 
 		nvidia,xbar = <&tegra_axbar>;
 
-		/* The codec-dai here is initialized to dummy and will be   */
-		/* replaced with rt565x codec-dai on detecting super-module */
 		nvidia,dai-link-1 {
-			link-name = "rt565x-playback";
-			cpu-dai = <&tegra_i2s2>;
+			link-name = "spdif-dit-0";
+			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&spdif_dit0>;
-			cpu-dai-name = "I2S2";
+			cpu-dai-name = "I2S1";
 			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
-			format = "dsp_a";
+			format = "i2s";
 			bitclock-slave;
 			frame-slave;
-			bitclock-inversion;
+			bitclock-noninversion;
 			frame-noninversion;
 			bit-format = "s16_le";
-			bclk_ratio = <4>;
+			bclk_ratio = <1>;
 			srate = <48000>;
-			num-channel = <1>;
+			num-channel = <2>;
+			ignore_suspend;
+			name-prefix = "x";
+			status = "okay";
+		};
+		nvidia,dai-link-2 {
+			link-name = "spdif-dit-1";
+			cpu-dai = <&tegra_i2s3>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S3";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <1>;
+			srate = <48000>;
+			num-channel = <2>;
 			ignore_suspend;
 			name-prefix = "y";
+			status = "okay";
 		};
-#else
-		compatible = "nvidia,tegra-audio-t210ref-mobile-foster";
-		nvidia,model = "tegra-snd-t210ref-mobile-es755";
-		nvidia,num-codec-link = <1>;
-
-		nvidia,audio-routing =
-			"y Headphone", 	"y OUT",
-			"y IN",		"y Mic";
-
-		nvidia,xbar = <&tegra_axbar>;
-
-		nvidia,dai-link-1 {
-			link-name = "spdif-dit-1";
-			cpu-dai = <&tegra_i2s2>;
-			codec-dai = <&spdif_dit1>;
-			cpu-dai-name = "I2S2";
+		nvidia,dai-link-3 {
+			link-name = "spdif-dit-2";
+			cpu-dai = <&tegra_dmic1>;
+			codec-dai = <&spdif_dit2>;
+			cpu-dai-name = "DMIC1";
 			codec-dai-name = "dit-hifi";
-			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
-			bitclock-inversion;
-			frame-noninversion;
+			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <4>;
-			srate = <8000>;
-			num-channel = <1>;
-			name-prefix = "y";
+			srate = <48000>;
+			ignore_suspend;
+			num-channel = <2>;
+			name-prefix = "a";
+			status = "okay";
 		};
-#endif
+		nvidia,dai-link-4 {
+			link-name = "spdif-dit-3";
+			cpu-dai = <&tegra_dmic2>;
+			codec-dai = <&spdif_dit3>;
+			cpu-dai-name = "DMIC2";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			ignore_suspend;
+			num-channel = <2>;
+			name-prefix = "b";
+			status = "okay";
+		};
 	};
 
 	extcon {

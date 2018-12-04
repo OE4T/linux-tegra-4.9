@@ -5304,10 +5304,18 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 		nvgpu_err(g, "fecs watchdog triggered for channel %u, "
 				"cannot ctxsw anymore !!", isr_data->chid);
 		gk20a_fecs_dump_falcon_stats(g);
+	} else if ((gr_fecs_intr &
+		gr_fecs_host_int_status_ctxsw_intr_f(CTXSW_INTR0)) != 0U) {
+		u32 mailbox_value = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6));
+
+		nvgpu_err(g, "ctxsw intr0 set by ucode, error_code: 0x%08x",
+			  mailbox_value);
+		ret = -1;
 	} else {
 		nvgpu_err(g,
-			"fecs error interrupt 0x%08x for channel %u",
-			gr_fecs_intr, isr_data->chid);
+			"unhandled fecs error interrupt 0x%08x for channel %u",
+			gr_fecs_intr, ch->chid);
+		gk20a_fecs_dump_falcon_stats(g);
 	}
 
 	gk20a_writel(g, gr_fecs_host_int_clear_r(), gr_fecs_intr);

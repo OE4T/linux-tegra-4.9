@@ -1996,7 +1996,9 @@ int gr_gp10b_handle_fecs_error(struct gk20a *g,
 	 * INTR1 (bit 1 of the HOST_INT_STATUS_CTXSW_INTR)
 	 * indicates that a CILP ctxsw save has finished
 	 */
-	if (gr_fecs_intr & gr_fecs_host_int_status_ctxsw_intr_f(2)) {
+
+	if ((gr_fecs_intr &
+		gr_fecs_host_int_status_ctxsw_intr_f(CTXSW_INTR1)) != 0U) {
 		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 				"CILP: ctxsw save completed!\n");
 

@@ -35,6 +35,7 @@ append_menu "Kernel Features"
 config TEGRA_EBP
 	bool "Tegra Early Boot Partition"
 	select ARM64_NON_SHARED_TLBI
+	select MINIMAL_GIC_INIT
 	default n
 	help
 	  NVIDIA Tegra single core stripped down configuration

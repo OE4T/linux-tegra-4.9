@@ -40,5 +40,6 @@ int gk20a_fecs_trace_enable(struct gk20a *g);
 int gk20a_fecs_trace_disable(struct gk20a *g);
 bool gk20a_fecs_trace_is_enabled(struct gk20a *g);
 size_t gk20a_fecs_trace_buffer_size(struct gk20a *g);
+void gk20a_fecs_trace_reset_buffer(struct gk20a *g);
 
 #endif /* NVGPU_GK20A_FECS_TRACE_GK20A_H */

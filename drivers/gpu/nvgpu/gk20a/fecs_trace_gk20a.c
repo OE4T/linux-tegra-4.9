@@ -634,4 +634,12 @@ bool gk20a_fecs_trace_is_enabled(struct gk20a *g)
 
 	return (trace && nvgpu_thread_is_running(&trace->poll_task));
 }
+
+void gk20a_fecs_trace_reset_buffer(struct gk20a *g)
+{
+	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, " ");
+
+	gk20a_fecs_trace_set_read_index(g,
+		gk20a_fecs_trace_get_write_index(g));
+}
 #endif /* CONFIG_GK20A_CTXSW_TRACE */

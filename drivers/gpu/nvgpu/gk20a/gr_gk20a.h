@@ -69,6 +69,8 @@
 #define CTXSW_INTR0				BIT32(0)
 #define CTXSW_INTR1				BIT32(1)
 
+#define MAILBOX_VALUE_TIMESTAMP_BUFFER_FULL	0x26
+
 struct tsg_gk20a;
 struct channel_gk20a;
 struct nvgpu_warpstate;

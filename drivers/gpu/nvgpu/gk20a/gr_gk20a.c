@@ -5308,9 +5308,20 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 		gr_fecs_host_int_status_ctxsw_intr_f(CTXSW_INTR0)) != 0U) {
 		u32 mailbox_value = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6));
 
-		nvgpu_err(g, "ctxsw intr0 set by ucode, error_code: 0x%08x",
+		if (mailbox_value == MAILBOX_VALUE_TIMESTAMP_BUFFER_FULL) {
+			nvgpu_info(g, "ctxsw intr0 set by ucode, "
+					"timestamp buffer full");
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+			gk20a_fecs_trace_reset_buffer(g);
+#else
+			ret = -1;
+#endif
+		} else {
+			nvgpu_err(g,
+			  "ctxsw intr0 set by ucode, error_code: 0x%08x",
 			  mailbox_value);
-		ret = -1;
+			ret = -1;
+		}
 	} else {
 		nvgpu_err(g,
 			"unhandled fecs error interrupt 0x%08x for channel %u",

@@ -1732,6 +1732,55 @@ static const struct spi_device_id *jedec_probe(struct spi_device *spi)
 	return ERR_PTR(-ENODEV);
 }
 
+static int qspi_init(struct qspi *flash)
+{
+	uint8_t regval;
+	int ret;
+	struct spi_device *spi = flash->spi;
+	const struct spi_device_id	*id = spi_get_device_id(spi);
+	struct flash_info *info =  (void *)id->driver_data;
+
+	dev_dbg(&spi->dev, "%s ENTRY\n", __func__);
+	/*
+	 * FIXME: Unlock the flash if locked. It is WAR to unlock the flash
+	 *	  as locked bit is setting unexpectedly
+	 */
+	ret = qspi_read_any_reg(flash, RWAR_SR1NV, &regval);
+	if (ret) {
+		dev_err(&spi->dev,
+			"error: %s RWAR_CR2V read failed: Status: x%x ",
+			__func__, ret);
+		return ret;
+	}
+	if (regval & (SR1NV_WRITE_DIS | SR1NV_BLOCK_PROT)) {
+		regval = regval & ~(SR1NV_WRITE_DIS | SR1NV_BLOCK_PROT);
+		qspi_write_any_reg(flash, RWAR_SR1NV, regval);
+		wait_till_ready(flash, FALSE);
+	}
+	/* Set 512 page size when s25fx512s */
+	if ((info->jedec_id == JEDEC_ID_S25FX512S) && (info->page_size == 512)) {
+		ret = qspi_read_any_reg(flash, RWAR_CR3V, &regval);
+		if (ret) {
+			dev_err(&spi->dev,
+				"error: %s RWAR_CR3V read failed: Status: x%x ",
+				__func__, ret);
+			return ret;
+		}
+		if ((regval & CR3V_512PAGE_SIZE) == 0) {
+			regval = regval | CR3V_512PAGE_SIZE;
+			qspi_write_any_reg(flash, RWAR_CR3V, regval);
+			wait_till_ready(flash, FALSE);
+		}
+	}
+	if (info->jedec_id == JEDEC_ID_MX25U51279G) {
+		max_qpi_set(flash, FALSE);
+		max_enable_4byte(flash);
+	}
+	dev_dbg(&spi->dev, "%s EXIT\n", __func__);
+
+	return 0;
+}
+
 static int qspi_probe(struct spi_device *spi)
 {
 	const struct spi_device_id	*id;
@@ -1742,8 +1791,6 @@ static int qspi_probe(struct spi_device *spi)
 	struct mtd_part_parser_data	ppdata;
 	struct device_node __maybe_unused *np;
 	struct tegra_qspi_device_controller_data *cdata = spi->controller_data;
-	uint8_t regval;
-	int status = PASS;
 	int ret;
 
 	id = spi_get_device_id(spi);
@@ -1863,53 +1910,17 @@ static int qspi_probe(struct spi_device *spi)
 	if (flash->mtd.numeraseregions)
 		for (i = 0; i < flash->mtd.numeraseregions; i++)
 			dev_info(&spi->dev,
-			"mtd.eraseregions[%d] ={.offset = 0x%llx,.erasesize = 0x%.8x (%uKiB),.numblocks = %d}\n",
-			i, (long long)flash->mtd.eraseregions[i].offset,
-			flash->mtd.eraseregions[i].erasesize,
-			flash->mtd.eraseregions[i].erasesize / 1024,
-			flash->mtd.eraseregions[i].numblocks);
+				"mtd.eraseregions[%d] ={.offset = 0x%llx,.erasesize = "
+					"0x%.8x (%uKiB),.numblocks = %d}\n",
+				i,
+				(long long)flash->mtd.eraseregions[i].offset,
+				flash->mtd.eraseregions[i].erasesize,
+				flash->mtd.eraseregions[i].erasesize / 1024,
+				flash->mtd.eraseregions[i].numblocks);
+	ret = qspi_init(flash);
 
-	/*
-	 * FIXME: Unlock the flash if locked. It is WAR to unlock the flash
-	 *	  as locked bit is setting unexpectedly
-	 */
-	status = qspi_read_any_reg(flash, RWAR_SR1NV, &regval);
-	if (status) {
-		dev_err(&spi->dev,
-			"error: %s RWAR_CR2V read failed: Status: x%x ",
-			__func__, status);
-		ret = status;
+	if (ret != 0)
 		goto err_free_flash;
-	}
-
-	if (regval & (SR1NV_WRITE_DIS | SR1NV_BLOCK_PROT)) {
-		regval = regval & ~(SR1NV_WRITE_DIS | SR1NV_BLOCK_PROT);
-		qspi_write_any_reg(flash, RWAR_SR1NV, regval);
-		wait_till_ready(flash, FALSE);
-	}
-
-	/* Set 512 page size when s25fx512s */
-	if ((info->jedec_id == JEDEC_ID_S25FX512S) && (info->page_size == 512)) {
-		status = qspi_read_any_reg(flash, RWAR_CR3V, &regval);
-		if (status) {
-			dev_err(&spi->dev,
-				"error: %s RWAR_CR3V read failed: Status: x%x ",
-				__func__, status);
-			ret =  status;
-			goto err_free_flash;
-		}
-
-		if ((regval & CR3V_512PAGE_SIZE) == 0) {
-			regval = regval | CR3V_512PAGE_SIZE;
-			qspi_write_any_reg(flash, RWAR_CR3V, regval);
-			wait_till_ready(flash, FALSE);
-		}
-	}
-
-	if (info->jedec_id == JEDEC_ID_MX25U51279G) {
-		max_qpi_set(flash, FALSE);
-		max_enable_4byte(flash);
-	}
 
 #ifdef QSPI_BRINGUP_BUILD
 	ret = sysfs_create_group(&spi->dev.kobj, qspi_mtd_groups[0]);
@@ -1944,10 +1955,89 @@ static int qspi_remove(struct spi_device *spi)
 	return 0;
 }
 
+
+#ifdef CONFIG_PM
+static int qspi_suspend(struct device *dev)
+{
+	int ret;
+	uint8_t regval;
+
+	struct qspi	*flash = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "%s ENTRY\n", __func__);
+
+	ret = qspi_read_any_reg(flash, RWAR_CR1V, &regval);
+	if (ret) {
+		dev_err(&flash->spi->dev,
+			"error: %s CR1V read failed: status: %d", __func__, ret);
+		return ret;
+	}
+	flash->rwar_cr1v_value = regval;
+
+
+	ret = qspi_read_any_reg(flash, RWAR_CR2V, &regval);
+	if (ret) {
+		dev_err(&flash->spi->dev,
+			"error: %s CR2V read failed: status: %d", __func__, ret);
+		return ret;
+	}
+
+	flash->rwar_cr2v_value = regval;
+	return ret;
+}
+
+static int qspi_resume(struct device *dev)
+{
+	int ret;
+	struct qspi	*flash = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "%s ENTRY\n", __func__);
+
+	ret = qspi_init(flash);
+
+	if (ret) {
+		dev_err(dev,
+			"error: %s qspi_init failed: Status: %d ",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = qspi_write_any_reg(flash, RWAR_CR1V, flash->rwar_cr1v_value );
+	if (ret) {
+		dev_err(&flash->spi->dev,
+			"error: %s CR1V write failed: status: %d", __func__, ret);
+		return ret;
+	}
+
+	ret = qspi_write_any_reg(flash, RWAR_CR2V, flash->rwar_cr2v_value );
+	if (ret) {
+		dev_err(&flash->spi->dev,
+			"error: %s CR2V write failed: status: %d", __func__, ret);
+		return ret;
+	}
+
+	/* set suspend status to false */
+	flash->suspend_status= false;
+
+	return ret;
+}
+
+#else  /* CONFIG_PM */
+
+#define qspi_suspend NULL
+#define qspi_resume NULL
+
+#endif  /* CONFIG_PM */
+
+static const struct dev_pm_ops qspi_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(qspi_suspend, qspi_resume)
+};
+
 static struct spi_driver qspi_mtd_driver = {
 	.driver = {
 		.name	= "qspi_mtd",
 		.owner	= THIS_MODULE,
+		.pm		= &qspi_pm_ops,
 	},
 	.id_table	= qspi_ids,
 	.probe	= qspi_probe,

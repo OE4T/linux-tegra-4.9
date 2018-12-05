@@ -370,6 +370,9 @@ struct qspi {
 	u8			qspi_bus_width;
 	u8			qspi_bits_per_word;
 #endif
+	u8 suspend_status;  /* Status of suspend */
+	u8 rwar_cr1v_value;
+	u8 rwar_cr2v_value;
 };
 
 /*

@@ -84,6 +84,17 @@
 	};
 
 	i2c@c240000 {
+		bmi160@69 {
+			compatible = "bmi,bmi160";
+			reg = <0x69>;
+			interrupt-parent = <&tegra_aon_gpio>;
+			interrupts = <TEGRA194_AON_GPIO(AA, 2) GPIO_ACTIVE_LOW>;
+			accelerometer_matrix    = [01 00 00 00 01 00 00 00 01];
+			gyroscope_matrix        = [01 00 00 00 01 00 00 00 01];
+			accelerometer_delay_us_min = <1250>;
+			gyroscope_delay_us_min = <1250>;
+			status = "okay";
+		};
 		ucsi_ccg: ucsi_ccg@8 {
 			status = "okay";
 			typec-extcon {

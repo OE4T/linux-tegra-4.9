@@ -48,6 +48,35 @@
         nvidia,pmu-boardid = "3448";
 
 	host1x {
+		/* Camera unit clocks */
+		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN3>,
+						<&tegra_car TEGRA210_CLK_CILE>,
+						<&tegra_car TEGRA210_CLK_CILCD>,
+						<&tegra_car TEGRA210_CLK_CILAB>,
+						<&tegra_car TEGRA210_CLK_VI_I2C>,
+						<&tegra_car TEGRA210_CLK_CLK_OUT_3_MUX>,
+						<&tegra_car TEGRA210_CLK_VI>,
+						<&tegra_car TEGRA210_CLK_ISP>,
+						<&tegra_car TEGRA210_CLK_ISPB>;
+		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_PLL_P>,
+						<&tegra_car TEGRA210_CLK_EXTERN3>,
+						<&tegra_car TEGRA210_CLK_PLL_C>,
+						<&tegra_car TEGRA210_CLK_PLL_C>,
+						<&tegra_car TEGRA210_CLK_ISP>;
+		assigned-clock-rates = <24000000>,
+						<102000000>,
+						<102000000>,
+						<102000000>,
+						<102000000>,
+						<24000000>,
+						<408000000>,
+						<408000000>,
+						<0>;
+
 		/* tegradc.0 */
 		dc@54200000 {
 			status = "okay";

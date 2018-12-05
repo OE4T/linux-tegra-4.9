@@ -35,6 +35,7 @@ int write_sensor_blob(struct regmap *regmap, struct sensor_blob *blob);
 int tegracam_write_blobs(struct tegracam_ctrl_handler *hdl);
 
 bool is_tvcf_supported(u32 version);
+int format_tvcf_version(u32 version, char *buff, size_t size);
 
 void conv_u32_u8arr(u32 val, u8 *buf);
 void conv_u16_u8arr(u16 val, u8 *buf);

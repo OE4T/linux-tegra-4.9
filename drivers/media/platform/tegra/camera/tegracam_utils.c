@@ -28,6 +28,18 @@ bool is_tvcf_supported(u32 version)
 }
 EXPORT_SYMBOL_GPL(is_tvcf_supported);
 
+int format_tvcf_version(u32 version, char *buff, size_t size)
+{
+	if (buff == NULL)
+		return -EINVAL;
+
+	return snprintf(buff, size, "%u.%u.%u",
+			(u8)(version >> 16),
+			(u8)(version >> 8),
+			(u8)(version));
+}
+EXPORT_SYMBOL_GPL(format_tvcf_version);
+
 void conv_u32_u8arr(u32 input, u8 *output)
 {
 	output[0] = (input >> 24) & 0xFF;

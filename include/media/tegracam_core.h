@@ -42,6 +42,7 @@ struct tegracam_device {
 };
 
 u32 tegracam_version(u8 major, u8 minor, u8 patch);
+u32 tegracam_query_version(const char *of_dev_name);
 struct tegracam_device *to_tegracam_device(struct camera_common_data *data);
 
 void tegracam_set_privdata(struct tegracam_device *tc_dev, void *priv);

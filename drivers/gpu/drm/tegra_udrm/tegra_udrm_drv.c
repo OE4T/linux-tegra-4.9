@@ -15,6 +15,8 @@
  */
 
 #include <drm/drmP.h>
+#include <linux/dma-buf.h>
+#include <linux/shmem_fs.h>
 
 #include <uapi/drm/tegra_udrm.h>
 
@@ -46,53 +48,248 @@ struct tegra_udrm_device {
 };
 
 struct tegra_udrm_file {
-	// TODO add storage for eventfd context and idr. idr will be
-	// used to save dmabuf fd => offset mappings.
-	int _reserved;
+	/* eventfd context to signal user space that driver is closing. */
+	struct eventfd_ctx *efd_ctx_close;
+
+	/* eventfd context to signal user space that drop master for this
+	 * drm_file is called.
+	 */
+	struct eventfd_ctx *efd_ctx_drop_master;
+
+	/* Holds list of dmabuf fd and corresponding unique id. Id is used
+	 * to return fake offset in dmabuf mmap ioctl. User space sends this
+	 * offset in mmap(), driver then uses it to find dambuf fd.
+	 */
+	struct idr idr;
+};
+
+struct tegra_udrm_mmap_entry {
+	int dmabuf_fd;
 };
 
 static int tegra_udrm_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	// TODO use offset to find dmabuf fd sotred in tegra_udrm_mmap_
-	// dmabuf_ioctl(). Create CPU mapping using the dmabuf fd.
-	return -ENODEV;
+	struct drm_file *priv = file->private_data;
+	struct tegra_udrm_file *fpriv = priv->driver_priv;
+	struct dma_buf *dmabuf;
+	struct tegra_udrm_mmap_entry *mmap_entry;
+	int ret;
+
+	mmap_entry = idr_find(&fpriv->idr, vma->vm_pgoff);
+
+	if (!mmap_entry)
+		return -EINVAL;
+
+	dmabuf = dma_buf_get(mmap_entry->dmabuf_fd);
+	if (IS_ERR(dmabuf))
+		return -EINVAL;
+
+	/* set the vm_pgoff (used as a fake buffer offset by DRM) to 0
+	 * as we want to map the whole buffer.
+	 */
+	vma->vm_pgoff = 0;
+
+	ret = dmabuf->ops->mmap(dmabuf, vma);
+
+	dma_buf_put(dmabuf);
+
+	return ret;
 }
 
 static int tegra_udrm_dmabuf_mmap_ioctl(struct drm_device *drm,
 	void *data, struct drm_file *file)
 {
-	// TODO store dmabuf fd passed by user-space in link list in file
-	// priv and return offset which user space can use in mmap(2).
-	return -ENODEV;
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct drm_tegra_udrm_dmabuf_mmap *args =
+		(struct drm_tegra_udrm_dmabuf_mmap *)data;
+	struct tegra_udrm_mmap_entry *mmap_entry;
+	int id;
+
+	if (args->fd < 0)
+		return -EINVAL;
+
+	/* Check if set up for mmap for this dmabuf fd has already done. */
+	idr_for_each_entry(&fpriv->idr, mmap_entry, id) {
+		if (args->fd == mmap_entry->dmabuf_fd) {
+			args->offset = (unsigned long)(id) << PAGE_SHIFT;
+			return 0;
+		}
+	}
+
+	mmap_entry = kmalloc(sizeof(*mmap_entry), GFP_KERNEL);
+	if (!mmap_entry)
+		return -ENOMEM;
+
+	mmap_entry->dmabuf_fd = args->fd;
+
+	/* mmap_entry will be freed when user space calls destroy mappings
+	 * ioctl. Driver's preclose function will free all unfreed mmap
+	 * entries before destroying idr.
+	 */
+	id = idr_alloc(&fpriv->idr, mmap_entry, 0, 0 /* INT_MAX */,
+			GFP_KERNEL);
+	if (id < 0) {
+		kfree(mmap_entry);
+		return -ENOMEM;
+	}
+
+	/* We have to return fake offset to use for subsequent mmap by user
+	 * space. Return offset by doing id << PAGE_SHIFT as mmap() does
+	 * offset = offset >> PAGE_SHIFT before sending offset to driver.
+	 *
+	 * Max value of id is INT_MAX, it is unlikely that PAGE_SHIFT is
+	 * more than 31. So we won't overflow offset which is unsigned
+	 * long by doing id << PAGE_SHIFT.
+	 */
+	args->offset = (unsigned long)(id) << PAGE_SHIFT;
+
+	return 0;
 }
 
 static int tegra_udrm_dmabuf_destroy_mappings_ioctl(struct drm_device *drm,
 	void *data, struct drm_file *file)
 {
-	// TODO clear stored dmabuf fds and offsets.
-	return -ENODEV;
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct drm_tegra_udrm_dmabuf_destroy_mappings *args =
+		(struct drm_tegra_udrm_dmabuf_destroy_mappings *)data;
+	struct tegra_udrm_mmap_entry *mmap_entry;
+	int id;
+
+	idr_for_each_entry(&fpriv->idr, mmap_entry, id) {
+		if (args->fd == mmap_entry->dmabuf_fd) {
+			idr_remove(&fpriv->idr, id);
+			kfree(mmap_entry);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
 }
 
 static void tegra_udrm_preclose(struct drm_device *drm, struct drm_file *file)
 {
-	// TODO signal user space using stored eventfd context in
-	// tegra_udrm_set_close_notify_fd_ioctl()
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct tegra_udrm_mmap_entry *mmap_entry;
+	int id;
+
+	idr_for_each_entry(&fpriv->idr, mmap_entry, id) {
+		idr_remove(&fpriv->idr, id);
+		kfree(mmap_entry);
+	}
+
+	idr_destroy(&fpriv->idr);
+
+	if (fpriv->efd_ctx_drop_master) {
+		eventfd_ctx_put(fpriv->efd_ctx_drop_master);
+		eventfd_signal(fpriv->efd_ctx_drop_master, 1);
+		fpriv->efd_ctx_drop_master = NULL;
+	}
+
+	if (fpriv->efd_ctx_close) {
+		// Signal user mode driver to start it's close sequence.
+		eventfd_signal(fpriv->efd_ctx_close, 1);
+		// Release reference to acquired eventfd context as we
+		// are closing.
+		eventfd_ctx_put(fpriv->efd_ctx_close);
+		fpriv->efd_ctx_close = NULL;
+	}
 }
 
 static int tegra_udrm_close_notify_ioctl(struct drm_device *drm,
 	void *data, struct drm_file *file)
 {
-	// TODO create eventfd context for the event fd passed by user-space
-	// and store the context in file priv.
-	return -ENODEV;
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct drm_tegra_udrm_close_notify *args =
+		(struct drm_tegra_udrm_close_notify *)data;
+	int err;
+
+	if (args->clear) {
+		// Releases reference to the previously acquired eventfd
+		// context.
+		if (fpriv->efd_ctx_close) {
+			eventfd_ctx_put(fpriv->efd_ctx_close);
+			fpriv->efd_ctx_close = NULL;
+		}
+		return 0;
+	}
+
+	// Fail if already acquired a reference to the eventfd context.
+	if (fpriv->efd_ctx_close)
+		return -EINVAL;
+
+	fpriv->efd_ctx_close = eventfd_ctx_fdget(args->eventfd);
+	if (IS_ERR(fpriv->efd_ctx_close)) {
+		err = PTR_ERR(fpriv->efd_ctx_close);
+		fpriv->efd_ctx_close = NULL;
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_udrm_drop_master_notify_ioctl(struct drm_device *drm,
+		void *data, struct drm_file *file)
+{
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct drm_tegra_udrm_drop_master_notify *args =
+		(struct drm_tegra_udrm_drop_master_notify *)data;
+	int err;
+
+	if (args->clear) {
+		// Releases reference to the previously acquired eventfd
+		// context.
+		if (fpriv->efd_ctx_drop_master) {
+			eventfd_ctx_put(fpriv->efd_ctx_drop_master);
+			fpriv->efd_ctx_drop_master = NULL;
+		}
+		return 0;
+	}
+
+	// Fail if already acquired a reference to the eventfd context.
+	if (fpriv->efd_ctx_drop_master)
+		return -EINVAL;
+
+	fpriv->efd_ctx_drop_master = eventfd_ctx_fdget(args->eventfd);
+	if (IS_ERR(fpriv->efd_ctx_drop_master)) {
+		err = PTR_ERR(fpriv->efd_ctx_drop_master);
+		fpriv->efd_ctx_drop_master = NULL;
+		return err;
+	}
+
+	return 0;
 }
 
 static int tegra_udrm_send_vblank_event_ioctl(struct drm_device *drm,
 	void *data, struct drm_file *file)
 {
-	// TODO inject event sent by user-space into drm frame work using
-	// drm_send_event().
-	return -ENODEV;
+	struct drm_tegra_udrm_send_vblank_event *args =
+		(struct drm_tegra_udrm_send_vblank_event *)data;
+	struct drm_pending_vblank_event *e;
+	int ret;
+
+	e = kzalloc(sizeof(*e), GFP_KERNEL);
+	if (!e)
+		return -ENOMEM;
+
+	/* make event */
+	e->pipe = 0;
+	e->base.pid = current->pid;
+	e->event.base.type = args->vblank.base.type;
+	e->event.base.length = sizeof(e->event);
+	e->event.user_data = args->vblank.user_data;
+	e->event.sequence = args->vblank.sequence;
+	e->event.tv_sec = args->vblank.tv_sec;
+	e->event.tv_usec = args->vblank.tv_usec;
+
+	ret = drm_event_reserve_init(drm, file, &e->base, &e->event.base);
+	if (ret) {
+		kfree(e);
+		return ret;
+	}
+
+	drm_send_event(drm, &e->base);
+
+	return 0;
 }
 
 static const struct file_operations tegra_udrm_fops = {
@@ -118,6 +315,8 @@ static const struct drm_ioctl_desc tegra_udrm_ioctls[] = {
 		tegra_udrm_close_notify_ioctl, DRM_AUTH),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_SEND_VBLANK_EVENT,
 		tegra_udrm_send_vblank_event_ioctl, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_DROP_MASTER_NOTIFY,
+		tegra_udrm_drop_master_notify_ioctl, DRM_AUTH),
 };
 
 static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)
@@ -130,7 +329,21 @@ static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)
 
 	filp->driver_priv = fpriv;
 
+	fpriv->efd_ctx_close = NULL;
+	fpriv->efd_ctx_drop_master = NULL;
+	idr_init(&fpriv->idr);
+
 	return 0;
+}
+
+static void tegra_udrm_master_drop(struct drm_device *dev,
+		struct drm_file *file_priv)
+{
+	struct tegra_udrm_file *fpriv = file_priv->driver_priv;
+
+	if (fpriv->efd_ctx_drop_master) {
+		eventfd_signal(fpriv->efd_ctx_drop_master, 1);
+	}
 }
 
 static struct drm_driver tegra_udrm_driver = {
@@ -139,6 +352,8 @@ static struct drm_driver tegra_udrm_driver = {
 	.ioctls            = tegra_udrm_ioctls,
 	.num_ioctls        = ARRAY_SIZE(tegra_udrm_ioctls),
 	.fops              = &tegra_udrm_fops,
+
+	.master_drop       = tegra_udrm_master_drop,
 
 	.name   = DRIVER_NAME,
 	.desc   = DRIVER_DESC,

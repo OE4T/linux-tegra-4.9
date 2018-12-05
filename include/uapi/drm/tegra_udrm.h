@@ -27,6 +27,7 @@ extern "C" {
 #define DRM_TEGRA_UDRM_DMABUF_DESTROY_MAPPINGS  0x01
 #define DRM_TEGRA_UDRM_CLOSE_NOTIFY             0x02
 #define DRM_TEGRA_UDRM_SEND_VBLANK_EVENT        0x03
+#define DRM_TEGRA_UDRM_DROP_MASTER_NOTIFY       0x04
 
 struct drm_tegra_udrm_dmabuf_mmap {
 	int fd;
@@ -44,6 +45,11 @@ struct drm_tegra_udrm_close_notify {
 
 struct drm_tegra_udrm_send_vblank_event {
 	struct drm_event_vblank vblank;
+};
+
+struct drm_tegra_udrm_drop_master_notify {
+	int eventfd;
+	int clear;
 };
 
 #define TEGRA_UDRM_IOCTL(dir, name, str) \
@@ -95,6 +101,16 @@ struct drm_tegra_udrm_send_vblank_event {
  */
 #define DRM_IOCTL_TEGRA_UDRM_SEND_VBLANK_EVENT \
 	TEGRA_UDRM_IOCTL(IOW, SEND_VBLANK_EVENT, send_vblank_event)
+
+/* UMD issues this ioctl with eventfd and then does poll() on
+ * eventfd. Driver signals this eventfd from .master_drop method.
+ *
+ * In parameters -
+ *     eventfd: fd created using eventfd().
+ *     clear: When set driver will no longer signal the eventfd.
+ */
+#define DRM_IOCTL_TEGRA_UDRM_DROP_MASTER_NOTIFY \
+	TEGRA_UDRM_IOCTL(IOW, DROP_MASTER_NOTIFY, drop_master_notify)
 
 #if defined(__cplusplus)
 }

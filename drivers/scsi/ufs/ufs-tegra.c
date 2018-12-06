@@ -1309,7 +1309,7 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 		break;
 	case POST_CHANGE:
 		/*POST_CHANGE case is called on success of link start-up*/
-		dev_info(hba->dev, "dme-link-startup Successful\n");
+		dev_info(hba->dev, "UFS card detected - dme-link-startup Successful\n");
 		ufs_tegra_unipro_post_linkup(hba);
 		err = ufs_tegra_mphy_receiver_calibration(ufs_tegra);
 		break;

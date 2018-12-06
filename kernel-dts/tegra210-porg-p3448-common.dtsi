@@ -144,6 +144,7 @@
 		mmc-hs200-1_8v;
 		nvidia,cd-wakeup-capable;
 		no-sdio;
+		uhs-mask = <0x1f>;
 		no-mmc;
 		status = "okay";
 	};

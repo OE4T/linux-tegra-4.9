@@ -10311,6 +10311,8 @@ wl_notify_pfn_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 }
 #endif /* PNO_SUPPORT */
 
+#define MAX_NUM_SCAN_TIMEOUTS 3
+atomic_t num_scan_timeout = ATOMIC_INIT(0);
 static s32
 wl_notify_scan_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 	const wl_event_msg_t *e, void *data)
@@ -10367,6 +10369,7 @@ wl_notify_scan_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 
 scan_done_out:
 	del_timer_sync(&cfg->scan_timeout);
+	atomic_set(&num_scan_timeout, 0);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
@@ -11090,6 +11093,11 @@ static void wl_scan_timeout(unsigned long data)
 {
 	wl_event_msg_t msg;
 	struct bcm_cfg80211 *cfg = (struct bcm_cfg80211 *)data;
+	struct wireless_dev *wdev;
+	struct net_device *ndev;
+	u32 connected;
+	ndev = bcmcfg_to_prmry_ndev(cfg);
+	connected = wl_get_drv_status(cfg, CONNECTED, ndev);
 
 	if (!(cfg->scan_request)) {
 		WL_ERR(("timer expired but no scan request\n"));
@@ -11101,6 +11109,23 @@ static void wl_scan_timeout(unsigned long data)
 	msg.status = hton32(WLC_E_STATUS_TIMEOUT);
 	msg.reason = 0xFFFFFFFF;
 	wl_cfg80211_event(bcmcfg_to_prmry_ndev(cfg), &msg, NULL);
+
+	WL_DBG(("%s: Increment scan timeout count\n", __func__));
+	if (!connected) {
+		atomic_inc(&num_scan_timeout);
+	}
+
+	if (atomic_read(&num_scan_timeout) >= MAX_NUM_SCAN_TIMEOUTS) {
+		atomic_set(&num_scan_timeout, 0);
+		if (cfg) {
+			wdev = (struct wireless_dev *) cfg->wdev;
+			if (wdev) {
+				WL_ERR(("%s: Consecutive scan timeout, reset wifi to recover\n",
+					__func__));
+				wl_cfg80211_hang(wdev->netdev, WLAN_REASON_UNSPECIFIED);
+			}
+		}
+	}
 }
 
 static s32
@@ -11282,8 +11307,10 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	}
 	if (fw_abort && !in_atomic())
 		wl_cfg80211_scan_abort(cfg);
-	if (timer_pending(&cfg->scan_timeout))
+	if (timer_pending(&cfg->scan_timeout)) {
 		del_timer_sync(&cfg->scan_timeout);
+		atomic_set(&num_scan_timeout, 0);
+	}
 #if defined(ESCAN_RESULT_PATCH)
 	if (likely(cfg->scan_request)) {
 		cfg->bss_list = wl_escan_get_buf(cfg, aborted);
@@ -11305,6 +11332,8 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	}
 #endif /* WL_SCHED_SCAN */
 	if (likely(cfg->scan_request)) {
+		WL_DBG(("%s: Scan complete, reset scan timeout count\n", __func__));
+		atomic_set(&num_scan_timeout, 0);
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, aborted)
 #endif

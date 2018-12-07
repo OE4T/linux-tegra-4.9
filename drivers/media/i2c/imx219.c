@@ -33,18 +33,23 @@
 #include "imx219_mode_tbls.h"
 
 /* imx219 - sensor parameter limits */
-#define IMX219_GAIN_SHIFT		8
-#define IMX219_MIN_FRAME_LENGTH		0x09c3
-#define IMX219_MAX_FRAME_LENGTH		0xffff
-#define IMX219_MIN_COARSE_EXPOSURE	0x0001
-#define IMX219_MAX_COARSE_DIFF		0x0004
+#define IMX219_MIN_GAIN				0x0000
+#define IMX219_MAX_GAIN				0x00e8
+#define IMX219_MIN_FRAME_LENGTH			0x09c3
+#define IMX219_MAX_FRAME_LENGTH			0xffff
+#define IMX219_MIN_COARSE_EXPOSURE		0x0001
+#define IMX219_MAX_COARSE_DIFF			0x0004
 
 /* imx219 sensor register address */
-#define IMX219_FRAME_LENGTH_ADDR_MSB	0x0160
-#define IMX219_FRAME_LENGTH_ADDR_LSB	0x0161
-#define IMX219_COARSE_TIME_ADDR_MSB	0x015a
-#define IMX219_COARSE_TIME_ADDR_LSB	0x015b
-#define IMX219_GAIN_ADDR		0x0157
+#define IMX219_MODEL_ID_ADDR_MSB		0x0000
+#define IMX219_MODEL_ID_ADDR_LSB		0x0001
+#define IMX219_GAIN_ADDR			0x0157
+#define IMX219_FRAME_LENGTH_ADDR_MSB		0x0160
+#define IMX219_FRAME_LENGTH_ADDR_LSB		0x0161
+#define IMX219_COARSE_INTEG_TIME_ADDR_MSB	0x015a
+#define IMX219_COARSE_INTEG_TIME_ADDR_LSB	0x015b
+#define IMX219_FINE_INTEG_TIME_ADDR_MSB		0x0388
+#define IMX219_FINE_INTEG_TIME_ADDR_LSB		0x0389
 
 static const struct of_device_id imx219_of_match[] = {
 	{ .compatible = "nvidia,imx219", },
@@ -56,11 +61,13 @@ static const u32 ctrl_cid_list[] = {
 	TEGRA_CAMERA_CID_GAIN,
 	TEGRA_CAMERA_CID_EXPOSURE,
 	TEGRA_CAMERA_CID_FRAME_RATE,
+	TEGRA_CAMERA_CID_SENSOR_MODE_ID,
 };
 
 struct imx219 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
+	u16				fine_integ_time;
 	u32				frame_length;
 	struct camera_common_data	*s_data;
 	struct tegracam_device		*tc_dev;
@@ -82,12 +89,12 @@ static inline void imx219_get_frame_length_regs(imx219_reg *regs,
 	(regs + 1)->val = (frame_length) & 0xff;
 }
 
-static inline void imx219_get_coarse_time_regs(imx219_reg *regs,
+static inline void imx219_get_coarse_integ_time_regs(imx219_reg *regs,
 	u32 coarse_time)
 {
-	regs->addr = IMX219_COARSE_TIME_ADDR_MSB;
+	regs->addr = IMX219_COARSE_INTEG_TIME_ADDR_MSB;
 	regs->val = (coarse_time >> 8) & 0xff;
-	(regs + 1)->addr = IMX219_COARSE_TIME_ADDR_LSB;
+	(regs + 1)->addr = IMX219_COARSE_INTEG_TIME_ADDR_LSB;
 	(regs + 1)->val = (coarse_time) & 0xff;
 }
 
@@ -134,6 +141,28 @@ static int imx219_set_group_hold(struct tegracam_device *tc_dev, bool val)
 	return 0;
 }
 
+static int imx219_get_fine_integ_time(struct imx219 *priv, u16 *fine_time)
+{
+	struct camera_common_data *s_data = priv->s_data;
+	int err = 0;
+	u8 reg_val[2];
+
+	err = imx219_read_reg(s_data, IMX219_FINE_INTEG_TIME_ADDR_MSB,
+		&reg_val[0]);
+	if (err)
+		goto done;
+
+	err = imx219_read_reg(s_data, IMX219_FINE_INTEG_TIME_ADDR_LSB,
+		&reg_val[1]);
+	if (err)
+		goto done;
+
+	*fine_time = (reg_val[0] << 8) | reg_val[1];
+
+done:
+	return err;
+}
+
 static int imx219_set_gain(struct tegracam_device *tc_dev, s64 val)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
@@ -154,10 +183,13 @@ static int imx219_set_gain(struct tegracam_device *tc_dev, s64 val)
 	gain = (s16)((256 * mode->control_properties.gain_factor) / val);
 	gain = 256 - gain;
 
-	if (gain < 0)
-		gain = 0;
+	if (gain < IMX219_MIN_GAIN)
+		gain = IMX219_MAX_GAIN;
+	else if (gain > IMX219_MAX_GAIN)
+		gain = IMX219_MAX_GAIN;
 
-	dev_dbg(dev, "%s: val: %lld [times], gain: %u\n", __func__, val, gain);
+	dev_dbg(dev, "%s: val: %lld (/%d) [times], gain: %u\n",
+		__func__, val, mode->control_properties.gain_factor, gain);
 
 	imx219_get_gain_reg(&gain_reg, (u8)gain);
 	err = imx219_write_reg(s_data, gain_reg.addr, gain_reg.val);
@@ -219,12 +251,16 @@ static int imx219_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	int err = 0;
 	imx219_reg ct_regs[2];
 	const s32 max_coarse_time = priv->frame_length - IMX219_MAX_COARSE_DIFF;
+	const s32 fine_integ_time_factor = priv->fine_integ_time *
+		mode->control_properties.exposure_factor /
+		mode->signal_properties.pixel_clock.val;
 	u32 coarse_time;
 	int i;
 
-	coarse_time = mode->signal_properties.pixel_clock.val *
-		val / mode->image_properties.line_length /
-		mode->control_properties.exposure_factor;
+	coarse_time = (val - fine_integ_time_factor)
+		* mode->signal_properties.pixel_clock.val
+		/ mode->control_properties.exposure_factor
+		/ mode->image_properties.line_length;
 
 	if (coarse_time < IMX219_MIN_COARSE_EXPOSURE)
 		coarse_time = IMX219_MIN_COARSE_EXPOSURE;
@@ -238,7 +274,7 @@ static int imx219_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	dev_dbg(dev, "%s: val: %lld [us], coarse_time: %d [lines]\n",
 		__func__, val, coarse_time);
 
-	imx219_get_coarse_time_regs(ct_regs, coarse_time);
+	imx219_get_coarse_integ_time_regs(ct_regs, coarse_time);
 
 	for (i = 0; i < 2; i++) {
 		err = imx219_write_reg(s_data, ct_regs[i].addr, ct_regs[i].val);
@@ -278,6 +314,9 @@ static int imx219_power_on(struct camera_common_data *s_data)
 		return err;
 	}
 
+	if (unlikely(!(pw->avdd || pw->iovdd || pw->dvdd)))
+		goto skip_power_seqn;
+
 	if (pw->reset_gpio) {
 		if (gpio_cansleep(pw->reset_gpio))
 			gpio_set_value_cansleep(pw->reset_gpio, 0);
@@ -287,23 +326,27 @@ static int imx219_power_on(struct camera_common_data *s_data)
 
 	usleep_range(10, 20);
 
-	if (pw->avdd)
+	if (pw->avdd) {
 		err = regulator_enable(pw->avdd);
-	if (err)
-		goto imx219_avdd_fail;
+		if (err)
+			goto imx219_avdd_fail;
+	}
 
-	if (pw->iovdd)
+	if (pw->iovdd) {
 		err = regulator_enable(pw->iovdd);
-	if (err)
-		goto imx219_iovdd_fail;
+		if (err)
+			goto imx219_iovdd_fail;
+	}
 
-	if (pw->dvdd)
+	if (pw->dvdd) {
 		err = regulator_enable(pw->dvdd);
-	if (err)
-		goto imx219_dvdd_fail;
+		if (err)
+			goto imx219_dvdd_fail;
+	}
 
 	usleep_range(10, 20);
 
+skip_power_seqn:
 	if (pw->reset_gpio) {
 		if (gpio_cansleep(pw->reset_gpio))
 			gpio_set_value_cansleep(pw->reset_gpio, 1);
@@ -373,10 +416,12 @@ static int imx219_power_put(struct tegracam_device *tc_dev)
 {
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct camera_common_power_rail *pw = s_data->power;
-	struct camera_common_pdata *pdata = s_data->pdata;
 
 	if (unlikely(!pw))
 		return -EFAULT;
+
+	if (likely(pw->dvdd))
+		regulator_disable(pw->dvdd);
 
 	if (likely(pw->avdd))
 		regulator_put(pw->avdd);
@@ -384,15 +429,12 @@ static int imx219_power_put(struct tegracam_device *tc_dev)
 	if (likely(pw->iovdd))
 		regulator_put(pw->iovdd);
 
+	pw->dvdd = NULL;
 	pw->avdd = NULL;
 	pw->iovdd = NULL;
 
-	if (pdata && pdata->use_cam_gpio)
-		cam_gpio_deregister(s_data->dev, pw->pwdn_gpio);
-	else {
-		gpio_free(pw->pwdn_gpio);
+	if (likely(pw->reset_gpio))
 		gpio_free(pw->reset_gpio);
-	}
 
 	return 0;
 }
@@ -403,51 +445,60 @@ static int imx219_power_get(struct tegracam_device *tc_dev)
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct camera_common_power_rail *pw = s_data->power;
 	struct camera_common_pdata *pdata = s_data->pdata;
-	const char *mclk_name;
-	const char *parentclk_name;
 	struct clk *parent;
-	int err = 0, ret = 0;
+	int err = 0;
 
 	if (!pdata) {
 		dev_err(dev, "pdata missing\n");
 		return -EFAULT;
 	}
 
-	mclk_name = pdata->mclk_name ?
-			pdata->mclk_name : "cam_mclk1";
-	pw->mclk = devm_clk_get(dev, mclk_name);
-	if (IS_ERR(pw->mclk)) {
-		dev_err(dev, "unable to get clock %s\n", mclk_name);
-		return PTR_ERR(pw->mclk);
-	}
+	/* Sensor MCLK (aka. INCK) */
+	if (pdata->mclk_name) {
+		pw->mclk = devm_clk_get(dev, pdata->mclk_name);
+		if (IS_ERR(pw->mclk)) {
+			dev_err(dev, "unable to get clock %s\n",
+				pdata->mclk_name);
+			return PTR_ERR(pw->mclk);
+		}
 
-	parentclk_name = pdata->parentclk_name;
-	if (parentclk_name) {
-		parent = devm_clk_get(dev, parentclk_name);
-		if (IS_ERR(parent)) {
-			dev_err(dev, "unable to get parent clock %s",
-				parentclk_name);
-		} else
-			clk_set_parent(pw->mclk, parent);
+		if (pdata->parentclk_name) {
+			parent = devm_clk_get(dev, pdata->parentclk_name);
+			if (IS_ERR(parent)) {
+				dev_err(dev, "unable to get parent clock %s",
+					pdata->parentclk_name);
+			} else
+				clk_set_parent(pw->mclk, parent);
+		}
 	}
 
 	/* analog 2.8v */
-	err |= camera_common_regulator_get(dev,
-			&pw->avdd, pdata->regulators.avdd);
+	if (pdata->regulators.avdd)
+		err |= camera_common_regulator_get(dev,
+				&pw->avdd, pdata->regulators.avdd);
 	/* IO 1.8v */
-	err |= camera_common_regulator_get(dev,
-			&pw->iovdd, pdata->regulators.iovdd);
+	if (pdata->regulators.iovdd)
+		err |= camera_common_regulator_get(dev,
+				&pw->iovdd, pdata->regulators.iovdd);
 	/* dig 1.2v */
-	err |= camera_common_regulator_get(dev,
-			&pw->dvdd, pdata->regulators.dvdd);
+	if (pdata->regulators.dvdd)
+		err |= camera_common_regulator_get(dev,
+				&pw->dvdd, pdata->regulators.dvdd);
+	if (err) {
+		dev_err(dev, "%s: unable to get regulator(s)\n", __func__);
+		goto done;
+	}
 
-	if (!err)
-		pw->reset_gpio = pdata->reset_gpio;
+	/* Reset or ENABLE GPIO */
+	pw->reset_gpio = pdata->reset_gpio;
+	err = gpio_request(pw->reset_gpio, "cam_reset_gpio");
+	if (err < 0) {
+		dev_err(dev, "%s: unable to request reset_gpio (%d)\n",
+			__func__, err);
+		goto done;
+	}
 
-	ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
-	if (ret < 0)
-		dev_dbg(dev, "%s can't request reset_gpio %d\n", __func__, ret);
-
+done:
 	pw->state = SWITCH_OFF;
 
 	return err;
@@ -460,8 +511,8 @@ static struct camera_common_pdata *imx219_parse_dt(
 	struct device_node *np = dev->of_node;
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
-	int err;
 	struct camera_common_pdata *ret = NULL;
+	int err = 0;
 	int gpio;
 
 	if (!np)
@@ -478,38 +529,29 @@ static struct camera_common_pdata *imx219_parse_dt(
 	if (!board_priv_pdata)
 		return NULL;
 
-	err = of_property_read_string(np, "mclk",
-				&board_priv_pdata->mclk_name);
-	if (err)
-		dev_err(dev, "mclk not in DT\n");
-
 	gpio = of_get_named_gpio(np, "reset-gpios", 0);
 	if (gpio < 0) {
 		if (gpio == -EPROBE_DEFER)
 			ret = ERR_PTR(-EPROBE_DEFER);
-		dev_err(dev, "reset-gpios not found %d\n", err);
+		dev_err(dev, "reset-gpios not found\n");
 		goto error;
 	}
 	board_priv_pdata->reset_gpio = (unsigned int)gpio;
 
+	err = of_property_read_string(np, "mclk", &board_priv_pdata->mclk_name);
+	if (err)
+		dev_dbg(dev, "mclk name not present, "
+			"assume sensor driven externally\n");
+
 	err = of_property_read_string(np, "avdd-reg",
-			&board_priv_pdata->regulators.avdd);
-	if (err) {
-		dev_err(dev, "avdd-reg not in DT\n");
-		goto error;
-	}
-	err = of_property_read_string(np, "iovdd-reg",
-			&board_priv_pdata->regulators.iovdd);
-	if (err) {
-		dev_err(dev, "iovdd-reg not in DT\n");
-		goto error;
-	}
-	err = of_property_read_string(np, "dvdd-reg",
-			&board_priv_pdata->regulators.dvdd);
-	if (err) {
-		dev_err(dev, "dvdd-reg not in DT\n");
-		goto error;
-	}
+		&board_priv_pdata->regulators.avdd);
+	err |= of_property_read_string(np, "iovdd-reg",
+		&board_priv_pdata->regulators.iovdd);
+	err |= of_property_read_string(np, "dvdd-reg",
+		&board_priv_pdata->regulators.dvdd);
+	if (err)
+		dev_dbg(dev, "avdd, iovdd and/or dvdd reglrs. not present, "
+			"assume sensor powered independently\n");
 
 	board_priv_pdata->has_eeprom =
 		of_property_read_bool(np, "has-eeprom");
@@ -572,34 +614,56 @@ static struct camera_common_sensor_ops imx219_common_ops = {
 static int imx219_board_setup(struct imx219 *priv)
 {
 	struct camera_common_data *s_data = priv->s_data;
+	struct camera_common_pdata *pdata = s_data->pdata;
 	struct device *dev = s_data->dev;
-	u8 reg_val;
+	u8 reg_val[2];
 	int err = 0;
 
-	err = camera_common_mclk_enable(s_data);
-	if (err) {
-		dev_err(dev,
-			"Error %d turning on mclk\n", err);
-		return err;
+	if (pdata->mclk_name) {
+		err = camera_common_mclk_enable(s_data);
+		if (err) {
+			dev_err(dev, "error turning on mclk (%d)\n", err);
+			goto done;
+		}
 	}
 
 	err = imx219_power_on(s_data);
 	if (err) {
-		dev_err(dev,
-			"Error %d during power on sensor\n", err);
-		return err;
+		dev_err(dev, "error during power on sensor (%d)\n", err);
+		goto err_power_on;
 	}
 
-	/* Probe stream enable register */
-	err = imx219_read_reg(s_data, 0x0100, &reg_val);
+	/* Probe sensor model id registers */
+	err = imx219_read_reg(s_data, IMX219_MODEL_ID_ADDR_MSB, &reg_val[0]);
 	if (err) {
-		dev_err(dev, "Error %d during i2c read probe\n", err);
-		return err;
+		dev_err(dev, "%s: error during i2c read probe (%d)\n",
+			__func__, err);
+		goto err_reg_probe;
 	}
+	err = imx219_read_reg(s_data, IMX219_MODEL_ID_ADDR_LSB, &reg_val[1]);
+	if (err) {
+		dev_err(dev, "%s: error during i2c read probe (%d)\n",
+			__func__, err);
+		goto err_reg_probe;
+	}
+	if (!((reg_val[0] == 0x02) && reg_val[1] == 0x19))
+		dev_err(dev, "%s: invalid sensor model id: %x%x\n",
+			__func__, reg_val[0], reg_val[1]);
 
+	/* Sensor fine integration time */
+	err = imx219_get_fine_integ_time(priv, &priv->fine_integ_time);
+	if (err)
+		dev_err(dev, "%s: error querying sensor fine integ. time\n",
+			__func__);
+
+err_reg_probe:
 	imx219_power_off(s_data);
-	camera_common_mclk_disable(s_data);
 
+err_power_on:
+	if (pdata->mclk_name)
+		camera_common_mclk_disable(s_data);
+
+done:
 	return err;
 }
 
@@ -624,8 +688,7 @@ static int imx219_probe(struct i2c_client *client,
 	struct imx219 *priv;
 	int err;
 
-	dev_dbg(dev, "[imx219]: probing v4l2 sensor at addr 0x%0x.\n",
-		client->addr);
+	dev_dbg(dev, "probing v4l2 sensor at addr 0x%0x\n", client->addr);
 
 	if (!IS_ENABLED(CONFIG_OF) || !client->dev.of_node)
 		return -EINVAL;

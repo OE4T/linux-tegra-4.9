@@ -41,7 +41,11 @@ static char tvcf_vers_buff[SKT_TVCF_VERS_BUFF_SIZE];
 static u32 dest_portid;
 
 struct skt_test skt_available_tests[] = {
-	/* No tests yet */
+	{
+		.name = "Sensor DT Test",
+		.description = "Asserts compliance of sensor DT",
+		.run = sensor_verify_dt,
+	},
 };
 
 int skt_runner_num_tests(void)

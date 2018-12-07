@@ -1,5 +1,5 @@
 /*
- * tegracam_tests - tegra camera kernel tests
+ * sensor_dt_test_nodes - sensor device tree test node definitions
  *
  * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -15,12 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TEGRACAM_TESTS_H__
-#define __TEGRACAM_TESTS_H__
 
-/*
- * Tegra Camera Kernel Tests
- */
-int sensor_verify_dt(struct device_node *node, const u32 tvcf_version);
+#ifndef __SENSOR_DT_TEST_NODES_H__
+#define __SENSOR_DT_TEST_NODES_H__
 
-#endif // __TEGRACAM_TESTS_H__
+struct sv_dt_node;
+
+int sv_dt_make_root_node_props(struct sv_dt_node *node);
+int sv_dt_make_modeX_node_props(struct sv_dt_node *node);
+
+#endif // __SENSOR_DT_TEST_NODES_H__

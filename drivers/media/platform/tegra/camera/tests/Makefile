@@ -1,5 +1,7 @@
 #######################################
 # Free-standing Tegra Camera Kernel Tests
+sensor_kernel_tests-y += sensor_dt_test.o
+sensor_kernel_tests-y += sensor_dt_test_nodes.o
 
 #######################################
 # Tegra Camera Kernel Tests Utilities

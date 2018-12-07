@@ -102,6 +102,7 @@ struct tegra_vse_priv_data {
 	void *buf;
 	dma_addr_t buf_addr;
 	struct tegra_vse_rng1_data rng1;
+	int rx_status;
 };
 
 struct tegra_virtual_se_dev {
@@ -126,6 +127,8 @@ struct tegra_virtual_se_dev {
 	atomic_t se_suspended;
 	/* Mutex lock for SE server */
 	struct mutex server_lock;
+	/* Disable a keyslot label as a key */
+	bool disable_keyslot_label;
 };
 
 struct tegra_virtual_se_addr {
@@ -414,6 +417,8 @@ enum tegra_virual_se_aes_iv_type {
 #define AES_KEYTBL_TYPE_KEY 1
 #define AES_KEYTBL_TYPE_OIV 2
 #define AES_KEYTBL_TYPE_UIV 4
+
+#define TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL	"NVSEAES"
 
 #define TEGRA_VIRTUAL_SE_AES_IV_SIZE 16
 #define TEGRA_VIRTUAL_SE_AES_LCTR_SIZE 16
@@ -1333,13 +1338,26 @@ void tegra_hv_vse_prpare_cmd(struct tegra_virtual_se_dev *se_dev,
 	}
 }
 
+static int status_to_errno(int err)
+{
+	switch (err) {
+	case -7:	/* ERR_NOT_VALID */
+		return -EPERM;
+	case -8:	/* ERR_INVALID_ARGS */
+		return -EINVAL;
+	case -24:	/* ERR_NOT_SUPPORTED */
+		return -EOPNOTSUPP;
+	}
+	return err;
+}
+
 static void complete_call_back(void *data)
 {
 	int k;
-	int err = 0;
 	struct ablkcipher_request *req;
 	struct tegra_vse_priv_data *priv =
 		(struct tegra_vse_priv_data *)data;
+	int err = status_to_errno(priv->rx_status);
 	int num_sgs;
 	void *buf;
 
@@ -1608,6 +1626,9 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 		return;
 
 	if (!ctx->is_key_slot_allocated)
+		return;
+
+	if (!se_dev->disable_keyslot_label)
 		return;
 
 	ivc_req_msg =
@@ -2565,9 +2586,30 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 	int err;
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
+	s8 label[VIRTUAL_SE_AES_MAX_KEY_SIZE];
+	s32 slot;
 
 	if (!ctx)
 		return -EINVAL;
+
+	/* format: 'NVSEAES 1234567\0' */
+	if (!se_dev->disable_keyslot_label) {
+		bool is_keyslot_label = strnlen(key, keylen) < keylen &&
+			sscanf(key, "%s %d", label, &slot) == 2 &&
+			!strcmp(label, TEGRA_VIRTUAL_SE_AES_KEYSLOT_LABEL);
+
+		if (is_keyslot_label) {
+			if (slot < 0 || slot > 15) {
+				dev_err(se_dev->dev,
+					"\n Invalid keyslot: %u\n", slot);
+				return -EINVAL;
+			}
+			ctx->keylen = keylen;
+			ctx->aes_keyslot = (u32)slot;
+			ctx->is_key_slot_allocated = true;
+			return 0;
+		}
+	}
 
 	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -3073,8 +3115,11 @@ static int tegra_vse_kthread(void *unused)
 				continue;
 			}
 			se_dev = priv->se_dev;
+
 			switch (priv->cmd) {
 			case VIRTUAL_SE_AES_CRYPTO:
+				priv->rx_status =
+					(s8)ivc_resp_msg->d[0].rx.status;
 				priv->call_back_vse(priv);
 				atomic_sub(1, &se_dev->ivc_count);
 				devm_kfree(se_dev->dev, priv);
@@ -3176,6 +3221,10 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 			goto exit;
 		}
 	}
+
+	if (of_property_read_bool(pdev->dev.of_node, "disable-keyslot-label"))
+		se_dev->disable_keyslot_label = true;
+
 	g_virtual_se_dev[engine_id] = se_dev;
 	mutex_init(&se_dev->mtx);
 

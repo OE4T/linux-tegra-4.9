@@ -3177,7 +3177,7 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	sdhci_disable_card_detection(host);
 
 	mmc_retune_timer_stop(host->mmc);
-	if (host->tuning_mode != SDHCI_TUNING_MODE_3)
+	if (!host->ops->skip_retuning || !host->ops->skip_retuning(host))
 		mmc_retune_needed(host->mmc);
 
 	/*

@@ -183,6 +183,118 @@ exit:
 }
 #endif /* GSCAN_SUPPORT */
 
+#if defined(KEEP_ALIVE)
+static int wl_cfgvendor_start_mkeep_alive(struct wiphy *wiphy, struct wireless_dev *wdev,
+	const void *data, int len)
+{
+	/* max size of IP packet for keep alive */
+	const int MKEEP_ALIVE_IP_PKT_MAX = 256;
+
+	int ret = BCME_OK, rem, type;
+	u8 mkeep_alive_id = 0;
+	u8 *ip_pkt = NULL;
+	u16 ip_pkt_len = 0;
+	u8 src_mac[ETHER_ADDR_LEN];
+	u8 dst_mac[ETHER_ADDR_LEN];
+	u32 period_msec = 0;
+	const struct nlattr *iter;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	dhd_pub_t *dhd_pub = cfg->pub;
+	gfp_t kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	nla_for_each_attr(iter, data, len, rem) {
+		type = nla_type(iter);
+		switch (type) {
+			case MKEEP_ALIVE_ATTRIBUTE_ID:
+				mkeep_alive_id = nla_get_u8(iter);
+				break;
+			case MKEEP_ALIVE_ATTRIBUTE_IP_PKT_LEN:
+				ip_pkt_len = nla_get_u16(iter);
+				if (ip_pkt_len > MKEEP_ALIVE_IP_PKT_MAX) {
+					ret = BCME_BADARG;
+					goto exit;
+				}
+				break;
+			case MKEEP_ALIVE_ATTRIBUTE_IP_PKT:
+				if (!ip_pkt_len) {
+					ret = BCME_BADARG;
+					WL_ERR(("ip packet length is 0\n"));
+					goto exit;
+				}
+				ip_pkt = (u8 *)kzalloc(ip_pkt_len, kflags);
+				if (ip_pkt == NULL) {
+					ret = BCME_NOMEM;
+					WL_ERR(("Failed to allocate mem for ip packet\n"));
+					goto exit;
+				}
+				memcpy(ip_pkt, (u8*)nla_data(iter), ip_pkt_len);
+				break;
+			case MKEEP_ALIVE_ATTRIBUTE_SRC_MAC_ADDR:
+				memcpy(src_mac, nla_data(iter), ETHER_ADDR_LEN);
+				break;
+			case MKEEP_ALIVE_ATTRIBUTE_DST_MAC_ADDR:
+				memcpy(dst_mac, nla_data(iter), ETHER_ADDR_LEN);
+				break;
+			case MKEEP_ALIVE_ATTRIBUTE_PERIOD_MSEC:
+				period_msec = nla_get_u32(iter);
+				break;
+			default:
+				WL_ERR(("Unknown type: %d\n", type));
+				ret = BCME_BADARG;
+				goto exit;
+		}
+	}
+
+	if (ip_pkt == NULL) {
+		ret = BCME_BADARG;
+		WL_ERR(("ip packet is NULL\n"));
+		goto exit;
+	}
+
+	ret = dhd_dev_start_mkeep_alive(dhd_pub, mkeep_alive_id, ip_pkt, ip_pkt_len, src_mac,
+		dst_mac, period_msec);
+	if (ret < 0) {
+		WL_ERR(("start_mkeep_alive is failed ret: %d\n", ret));
+	}
+
+exit:
+	if (ip_pkt) {
+		kfree(ip_pkt);
+	}
+
+	return ret;
+}
+
+static int wl_cfgvendor_stop_mkeep_alive(struct wiphy *wiphy, struct wireless_dev *wdev,
+	const void *data, int len)
+{
+	int ret = BCME_OK, rem, type;
+	u8 mkeep_alive_id = 0;
+	const struct nlattr *iter;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+	dhd_pub_t *dhd_pub = cfg->pub;
+
+	nla_for_each_attr(iter, data, len, rem) {
+		type = nla_type(iter);
+		switch (type) {
+			case MKEEP_ALIVE_ATTRIBUTE_ID:
+				mkeep_alive_id = nla_get_u8(iter);
+				break;
+			default:
+				WL_ERR(("Unknown type: %d\n", type));
+				ret = BCME_BADARG;
+				break;
+		}
+	}
+
+	ret = dhd_dev_stop_mkeep_alive(dhd_pub, mkeep_alive_id);
+	if (ret < 0) {
+		WL_ERR(("stop_mkeep_alive is failed ret: %d\n", ret));
+	}
+
+	return ret;
+}
+#endif /* defined(KEEP_ALIVE) */
+
 static int wl_cfgvendor_get_feature_set(struct wiphy *wiphy,
 	struct wireless_dev *wdev, const void  *data, int len)
 {
@@ -379,7 +491,24 @@ static const struct wiphy_vendor_command wl_vendor_cmds [] = {
 		.doit = wl_cfgvendor_gscan_get_channel_list
 	},
 #endif /* GSCAN_SUPPORT */
-
+#ifdef KEEP_ALIVE
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = WIFI_OFFLOAD_SUBCMD_START_MKEEP_ALIVE
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_start_mkeep_alive
+	},
+	{
+		{
+			.vendor_id = OUI_GOOGLE,
+			.subcmd = WIFI_OFFLOAD_SUBCMD_STOP_MKEEP_ALIVE
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV | WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.doit = wl_cfgvendor_stop_mkeep_alive
+	},
+#endif /* KEEP_ALIVE */
 };
 
 static const struct  nl80211_vendor_cmd_info wl_vendor_events [] = {

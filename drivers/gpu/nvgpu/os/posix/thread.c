@@ -94,3 +94,8 @@ bool nvgpu_thread_is_running(struct nvgpu_thread *thread)
 {
 	return thread->running;
 }
+
+void nvgpu_thread_join(struct nvgpu_thread *thread)
+{
+	(void) pthread_join(thread->thread, NULL);
+}

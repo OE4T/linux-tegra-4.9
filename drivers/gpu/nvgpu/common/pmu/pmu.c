@@ -171,6 +171,8 @@ void nvgpu_kill_task_pg_init(struct gk20a *g)
 			nvgpu_udelay(2);
 		} while (nvgpu_timeout_expired_msg(&timeout,
 			"timeout - waiting PMU state machine thread stop") == 0);
+	} else {
+		nvgpu_thread_join(&pmu->pg_init.state_task);
 	}
 }
 

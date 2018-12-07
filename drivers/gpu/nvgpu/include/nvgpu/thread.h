@@ -80,4 +80,13 @@ bool nvgpu_thread_should_stop(struct nvgpu_thread *thread);
  */
 bool nvgpu_thread_is_running(struct nvgpu_thread *thread);
 
+/**
+ * nvgpu_thread_join - join a thread to reclaim resources
+ * after it has exited
+ *
+ * @thread - thread to join
+ *
+ */
+void nvgpu_thread_join(struct nvgpu_thread *thread);
+
 #endif /* NVGPU_THREAD_H */

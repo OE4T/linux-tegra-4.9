@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,7 @@
 #include <linux/kthread.h>
 
 #include <nvgpu/thread.h>
+#include <nvgpu/timers.h>
 
 int nvgpu_thread_proxy(void *threaddata)
 {
@@ -60,4 +61,10 @@ bool nvgpu_thread_should_stop(struct nvgpu_thread *thread)
 bool nvgpu_thread_is_running(struct nvgpu_thread *thread)
 {
 	return ACCESS_ONCE(thread->running);
+};
+
+void nvgpu_thread_join(struct nvgpu_thread *thread)
+{
+	while (ACCESS_ONCE(thread->running))
+		nvgpu_msleep(10);
 };

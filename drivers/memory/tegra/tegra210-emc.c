@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1948,6 +1948,33 @@ static const struct file_operations emc_usage_table_fops = {
 	.release	= single_release,
 };
 
+static int emc_dvfs_table_show(struct seq_file *s, void *data)
+{
+	int i;
+
+	seq_puts(s, "Table Version Info (Table version, rev, rate):\n");
+	for (i = 0; i < tegra_emc_table_size; i++) {
+		seq_printf(s, "%s\n%d\n%d\n",
+				tegra_emc_table_normal[i].dvfs_ver,
+				tegra_emc_table_normal[i].rev,
+				tegra_emc_table_normal[i].rate);
+	}
+
+	return 0;
+}
+
+static int emc_dvfs_table_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, emc_dvfs_table_show, inode->i_private);
+}
+
+static const struct file_operations emc_dvfs_table_fops = {
+	.open		= emc_dvfs_table_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int dram_temp_get(void *data, u64 *val)
 {
 	int temp = 0;
@@ -2062,6 +2089,10 @@ static int tegra_emc_debug_init(void)
 					&timer_period_training))
 			goto err_out;
 	}
+
+	if (!debugfs_create_file("tables_info", S_IRUGO, emc_debugfs_root,
+				 NULL, &emc_dvfs_table_fops))
+		goto err_out;
 
 	return 0;
 

@@ -13,6 +13,8 @@ obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += capture_common.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += isp/isp_channel.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += isp/capture_isp.o
 
+obj-y += tests/
+
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 
 obj-y += slvs/

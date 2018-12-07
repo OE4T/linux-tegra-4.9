@@ -36,6 +36,13 @@ config VIDEO_TEGRA_VI_TPG
 	  To compile this driver as a module, choose M here:
 	  the module will be called nvhost-vi-tpg.
 
+config VIDEO_CAMERA_SKT
+	depends on VIDEO_CAMERA && OF
+	tristate "Tegra camera sensor kernel tests"
+	default m
+	help
+	  Enables the Tegra camera sensor kernel tests.
+
 config VIDEO_ISC
 	tristate "ISC(Image Sensor Control) device support"
 	depends on I2C && ARCH_TEGRA

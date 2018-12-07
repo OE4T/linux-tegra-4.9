@@ -135,7 +135,7 @@ err_add_epf:
 	return ret;
 }
 
-static void pci_epc_epf_unlink(struct config_item *epc_item,
+static int pci_epc_epf_unlink(struct config_item *epc_item,
 			       struct config_item *epf_item)
 {
 	struct pci_epc *epc;
@@ -150,6 +150,8 @@ static void pci_epc_epf_unlink(struct config_item *epc_item,
 	clear_bit(epf->func_no, &epc_group->function_num_map);
 	pci_epf_unbind(epf);
 	pci_epc_remove_epf(epc, epf);
+
+	return 0;
 }
 
 static struct configfs_item_operations pci_epc_item_ops = {

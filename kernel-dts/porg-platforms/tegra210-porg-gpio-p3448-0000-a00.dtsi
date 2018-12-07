@@ -72,5 +72,12 @@
 			gpio-output-high = <
 				>;
 		};
+
+		rtl8111-default-output-high {
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA_GPIO(X, 3) 0>;
+			label = "rtl8111-out-high-x3";
+		};
 	};
 };

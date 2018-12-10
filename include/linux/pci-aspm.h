@@ -46,6 +46,9 @@ static inline void pcie_aspm_powersave_config_link(struct pci_dev *pdev)
 static inline void pci_disable_link_state(struct pci_dev *pdev, int state)
 {
 }
+static inline void pci_disable_link_state_locked(struct pci_dev *pdev, int state)
+{
+}
 static inline void pcie_no_aspm(void)
 {
 }

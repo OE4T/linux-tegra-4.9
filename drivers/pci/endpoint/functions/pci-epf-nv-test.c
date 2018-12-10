@@ -16,7 +16,7 @@
 #include <linux/pci-epc.h>
 #include <linux/pci-epf.h>
 
-#define BAR0_SIZE SZ_4K
+#define BAR0_SIZE SZ_64K
 
 struct pci_epf_nv_test {
 	struct pci_epf_header header;
@@ -62,7 +62,7 @@ static int pci_epf_nv_test_bind(struct pci_epf *epf)
 		ret = -ENOMEM;
 		goto fail;
 	}
-	dev_info(fdev, "BAR0 RAM phys = 0x%llx\n",
+	dev_info(fdev, "BAR0 RAM phys: 0x%llx\n",
 		 page_to_phys(epfnv->bar0_ram_page));
 
 	epfnv->bar0_iova = iommu_dma_alloc_iova(cdev, BAR0_SIZE,
@@ -73,7 +73,7 @@ static int pci_epf_nv_test_bind(struct pci_epf *epf)
 		goto fail_free_pages;
 	}
 
-	dev_info(fdev, "BAR0 RAM    IOVA: 0x%08llx\n", epfnv->bar0_iova);
+	dev_info(fdev, "BAR0 RAM IOVA: 0x%08llx\n", epfnv->bar0_iova);
 
 	ret = iommu_map(domain, epfnv->bar0_iova,
 			page_to_phys(epfnv->bar0_ram_page),
@@ -89,7 +89,7 @@ static int pci_epf_nv_test_bind(struct pci_epf *epf)
 		ret = -ENOMEM;
 		goto fail_unmap_ram_iova;
 	}
-	dev_info(fdev, "BAR0 RAM virt = 0x%p\n", epfnv->bar0_ram_map);
+	dev_info(fdev, "BAR0 RAM virt: 0x%p\n", epfnv->bar0_ram_map);
 
 	ret = pci_epc_set_bar(epc, BAR_0, epfnv->bar0_iova, BAR0_SIZE,
 			      PCI_BASE_ADDRESS_SPACE_MEMORY |

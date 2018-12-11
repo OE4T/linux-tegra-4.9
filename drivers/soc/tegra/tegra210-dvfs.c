@@ -1465,12 +1465,11 @@ static int init_cpu_dvfs_table(struct cpu_dvfs *fv_dvfs_table,
 static int init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
 {
 	int i, ret;
-	int cpu_lp_speedo_id = tegra_sku_info.cpu_speedo_id;
+	unsigned int cpu_lp_speedo_id = tegra_sku_info.cpu_speedo_id;
 	int cpu_lp_process_id = tegra_sku_info.cpu_process_id;
 	unsigned long max_freq;
 
-	if (cpu_lp_process_id < 1 ||
-		cpu_lp_process_id >= ARRAY_SIZE(cpu_lp_max_freq))
+	if (cpu_lp_speedo_id >= ARRAY_SIZE(cpu_lp_max_freq))
 		max_freq = cpu_lp_max_freq[0];
 	else
 		max_freq = cpu_lp_max_freq[cpu_lp_speedo_id];

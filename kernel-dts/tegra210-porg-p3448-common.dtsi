@@ -411,7 +411,7 @@
 	};
 
 	gpu-dvfs-rework {
-		status = "disabled";
+		status = "okay";
 	};
 
 	pwm-leds {

@@ -49,12 +49,12 @@
 
 			regulators {
 				max77620_sd0: sd0 {
-					regulator-name = "vdd-soc";
+					regulator-name = "vdd-core";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					maxim,fps-power-up-period = <1>;
 					maxim,fps-power-down-period = <6>;
-					regulator-min-microvolt = <850000>;
-					regulator-max-microvolt = <850000>;
+					regulator-min-microvolt = <806000>;
+                                        regulator-max-microvolt = <1170000>;
 					regulator-enable-ramp-delay = <146>;
 					regulator-disable-ramp-delay = <4080>;
 					regulator-ramp-delay = <27500>;
@@ -66,8 +66,8 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					maxim,fps-power-up-period = <5>;
 					maxim,fps-power-down-period = <2>;
-					regulator-min-microvolt = <1100000>;
-					regulator-max-microvolt = <1100000>;
+					regulator-min-microvolt = <1150000>;
+					regulator-max-microvolt = <1150000>;
 					regulator-enable-ramp-delay = <130>;
 					regulator-disable-ramp-delay = <145800>;
 					regulator-ramp-delay = <27500>;
@@ -118,8 +118,8 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					maxim,fps-power-up-period = <0>;
 					maxim,fps-power-down-period = <7>;
-					regulator-min-microvolt = <1000000>;
-					regulator-max-microvolt = <1000000>;
+					regulator-min-microvolt = <1050000>;
+					regulator-max-microvolt = <1050000>;
 					regulator-enable-ramp-delay = <22>;
 					regulator-disable-ramp-delay = <630>;
 					regulator-ramp-delay = <100000>;
@@ -156,8 +156,8 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					maxim,fps-power-up-period = <1>;
 					maxim,fps-power-down-period = <6>;
-					regulator-min-microvolt = <800000>;
-					regulator-max-microvolt = <800000>;
+					regulator-min-microvolt = <850000>;
+					regulator-max-microvolt = <1100000>;
 					regulator-enable-ramp-delay = <22>;
 					regulator-disable-ramp-delay = <610>;
 					regulator-ramp-delay = <100000>;

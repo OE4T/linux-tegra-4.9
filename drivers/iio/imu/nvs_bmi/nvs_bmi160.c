@@ -38,7 +38,7 @@
 
 #define BMI_NAME			"bmi160"
 #define BMI_VENDOR			"Bosch"
-#define BMI_DRIVER_VERSION		(11)
+#define BMI_DRIVER_VERSION		(13)
 #define BMI_ACC_VERSION			(1)
 #define BMI_GYR_VERSION			(1)
 #define BMI_HW_DELAY_POR_MS		(10)
@@ -992,6 +992,7 @@ static int bmi_pm(struct bmi_state *st, bool en)
 		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(bmi_vregs));
 		if ((ret < 0) || (ret == ARRAY_SIZE(bmi_vregs))) {
 			/* we're fully powered */
+			ret = 0;
 			for (i = 0; i < st->hw_n; i++) {
 				ret |= bmi_cmd_wr(st, &st->snsrs[i].hw->dis);
 				st->hw_en &= ~(1 << i);
@@ -1825,8 +1826,11 @@ static int bmi_nvs_read(void *client, int snsr_id, char *buf)
 			      st->int_map_2);
 		t += snprintf(buf + t, PAGE_SIZE - t, "no_irq_no_wake_on=%X\n",
 			      st->no_irq_no_wake_on);
+		t += snprintf(buf + t, PAGE_SIZE - t, "acc_conf=0x%02X\n",
+			      st->acc_conf);
+		t += snprintf(buf + t, PAGE_SIZE - t, "gyr_conf=0x%02X\n",
+			      st->gyr_conf);
 		return t;
-
 
 	case BMI_INF_DBG:
 		st->inf = BMI_INF_VER;
@@ -2074,15 +2078,21 @@ static int bmi_of_dt(struct bmi_state *st, struct device_node *dn)
 	if (dn) {
 		/* driver specific device tree parameters */
 		if (st->i2c->irq > 0) {
-			of_property_read_u8(dn, "int_out_ctrl",
-					    &st->int_out_ctrl);
-			of_property_read_u8(dn, "int_latch", &st->int_latch);
-			of_property_read_u8(dn, "int_map_0", &st->int_map_0);
-			of_property_read_u8(dn, "int_map_1", &st->int_map_1);
-			of_property_read_u8(dn, "int_map_2", &st->int_map_2);
-			of_property_read_u8(dn, "acc_conf", &st->acc_conf);
-			of_property_read_u8(dn, "gyr_conf", &st->gyr_conf);
+			if (!of_property_read_u32(dn, "int_out_ctrl", &tmp))
+				st->int_out_ctrl = tmp;
+			if (!of_property_read_u32(dn, "int_latch", &tmp))
+				st->int_latch = tmp;
+			if (!of_property_read_u32(dn, "int_map_0", &tmp))
+				st->int_map_0 = tmp;
+			if (!of_property_read_u32(dn, "int_map_1", &tmp))
+				st->int_map_1 = tmp;
+			if (!of_property_read_u32(dn, "int_map_2", &tmp))
+				st->int_map_2 = tmp;
 		}
+		if (!of_property_read_u32(dn, "acc_conf", &tmp))
+			st->acc_conf = tmp;
+		if (!of_property_read_u32(dn, "gyr_conf", &tmp))
+			st->gyr_conf = tmp;
 		if (!of_property_read_u32(dn, "no_irq_no_wake_on", &tmp)) {
 			if (tmp)
 				st->no_irq_no_wake_on = true;

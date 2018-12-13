@@ -366,6 +366,7 @@ gk20a_ctrl_ioctl_gpu_characteristics(
 	if (request->gpu_characteristics_buf_size > 0) {
 		size_t write_size = sizeof(gpu);
 
+		nvgpu_speculation_barrier();
 		if (write_size > request->gpu_characteristics_buf_size)
 			write_size = request->gpu_characteristics_buf_size;
 
@@ -556,6 +557,7 @@ static int gk20a_ctrl_get_tpc_masks(struct gk20a *g,
 	if (args->mask_buf_size > 0) {
 		size_t write_size = gpc_tpc_mask_size;
 
+		nvgpu_speculation_barrier();
 		if (write_size > args->mask_buf_size)
 			write_size = args->mask_buf_size;
 
@@ -580,6 +582,7 @@ static int gk20a_ctrl_get_fbp_l2_masks(
 	if (args->mask_buf_size > 0) {
 		size_t write_size = fbp_l2_mask_size;
 
+		nvgpu_speculation_barrier();
 		if (write_size > args->mask_buf_size)
 			write_size = args->mask_buf_size;
 
@@ -1245,6 +1248,7 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 					nvgpu_gpu_convert_clk_domain(clk_info.clk_domain)))
 			return -EINVAL;
 	}
+	nvgpu_speculation_barrier();
 
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
@@ -1264,6 +1268,7 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 				nvgpu_gpu_convert_clk_domain(clk_info.clk_domain), freq_mhz);
 	}
 
+	nvgpu_speculation_barrier();
 	ret = nvgpu_clk_arb_commit_request_fd(g, session, fd);
 	if (ret < 0)
 		return ret;
@@ -1333,6 +1338,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			clk_info.clk_type = args->clk_type;
 		}
 
+		nvgpu_speculation_barrier();
 		switch (clk_info.clk_type) {
 		case NVGPU_GPU_CLK_TYPE_TARGET:
 			err = nvgpu_clk_arb_get_session_target_mhz(session,
@@ -1366,6 +1372,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			return -EFAULT;
 	}
 
+	nvgpu_speculation_barrier();
 	args->num_entries = num_entries;
 
 	return 0;
@@ -1403,6 +1410,7 @@ static int nvgpu_gpu_get_voltage(struct gk20a *g,
 	if (err)
 	    return err;
 
+	nvgpu_speculation_barrier();
 	switch (args->which) {
 	case NVGPU_GPU_VOLTAGE_CORE:
 		err = volt_get_voltage(g, CTRL_VOLT_DOMAIN_LOGIC, &args->voltage);
@@ -1625,6 +1633,7 @@ static int nvgpu_gpu_set_deterministic_opts(struct gk20a *g,
 			break;
 	}
 
+	nvgpu_speculation_barrier();
 	nvgpu_rwsem_up_read(&g->deterministic_busy);
 
 out:
@@ -1668,6 +1677,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		gk20a_idle(g);
 	}
 
+	nvgpu_speculation_barrier();
 	switch (cmd) {
 	case NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE:
 		get_ctx_size_args = (struct nvgpu_gpu_zcull_get_ctx_size_args *)buf;
@@ -1713,6 +1723,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		zbc_val->format = set_table_args->format;
 		zbc_val->type = set_table_args->type;
 
+		nvgpu_speculation_barrier();
 		switch (zbc_val->type) {
 		case GK20A_ZBC_TYPE_COLOR:
 			for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {

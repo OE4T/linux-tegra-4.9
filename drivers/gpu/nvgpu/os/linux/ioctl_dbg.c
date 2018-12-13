@@ -314,6 +314,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 	if (args->sm_error_state_record_size > 0) {
 		size_t write_size = sizeof(*sm_error_state);
 
+		nvgpu_speculation_barrier();
 		if (write_size > args->sm_error_state_record_size)
 			write_size = args->sm_error_state_record_size;
 
@@ -361,6 +362,7 @@ static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
 	nvgpu_log(g, gpu_dbg_gpu_dbg, "Timeouts mode requested : %d",
 			timeout_mode);
 
+	nvgpu_speculation_barrier();
 	switch (timeout_mode) {
 	case NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE:
 		if (dbg_s->is_timeout_disabled == true)
@@ -917,6 +919,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 			ops_offset += num_ops;
 		}
 
+		nvgpu_speculation_barrier();
 		nvgpu_kfree(g, linux_fragment);
 
 		/* enable powergate, if previously disabled */
@@ -1007,6 +1010,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 
 static u32 nvgpu_hwpm_ctxsw_mode_to_common_mode(u32 mode)
 {
+	nvgpu_speculation_barrier();
 	switch (mode){
 	case NVGPU_DBG_GPU_HWPM_CTXSW_MODE_NO_CTXSW:
 		return NVGPU_DBG_HWPM_CTXSW_MODE_NO_CTXSW;
@@ -1153,6 +1157,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 		goto clean_up;
 	}
 
+	nvgpu_speculation_barrier();
 	switch (action) {
 	case NVGPU_DBG_GPU_SUSPEND_ALL_SMS:
 		gr_gk20a_suspend_context(ch);
@@ -1366,6 +1371,7 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
+	nvgpu_speculation_barrier();
 	switch (args->cmd) {
 	case NVGPU_DBG_GPU_EVENTS_CTRL_CMD_ENABLE:
 		gk20a_dbg_gpu_events_enable(dbg_s);
@@ -1536,6 +1542,7 @@ nvgpu_dbg_gpu_ioctl_suspend_resume_contexts(struct dbg_session_gk20a *dbg_s,
 	if (err)
 		return err;
 
+	nvgpu_speculation_barrier();
 	switch (args->action) {
 	case NVGPU_DBG_GPU_SUSPEND_ALL_CONTEXTS:
 		err = g->ops.gr.suspend_contexts(g, dbg_s,
@@ -1627,6 +1634,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 		size -= access_size;
 		offset += access_size;
 	}
+	nvgpu_speculation_barrier();
 
 fail_idle:
 	gk20a_idle(g);
@@ -1899,6 +1907,7 @@ static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
 	struct gk20a *g = dbg_s->g;
 	u32 sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_NONE;
 
+	nvgpu_speculation_barrier();
 	switch (args->exception_type_mask) {
 	case NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK_FATAL:
 		sm_exception_mask_type = NVGPU_SM_EXCEPTION_TYPE_MASK_FATAL;
@@ -1970,6 +1979,7 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	/* protect from threaded user space calls */
 	nvgpu_mutex_acquire(&dbg_s->ioctl_lock);
 
+	nvgpu_speculation_barrier();
 	switch (cmd) {
 	case NVGPU_DBG_GPU_IOCTL_BIND_CHANNEL:
 		err = dbg_bind_channel_gk20a(dbg_s,

@@ -290,6 +290,7 @@ static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
 	if (!args->dmabuf_fd)
 		return -EINVAL;
 
+	nvgpu_speculation_barrier();
 	/* handle the command (most frequent cases first) */
 	switch (args->cmd) {
 	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH:
@@ -874,6 +875,7 @@ clean_up:
  */
 u32 nvgpu_get_common_runlist_level(u32 level)
 {
+	nvgpu_speculation_barrier();
 	switch (level) {
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
 		return NVGPU_FIFO_RUNLIST_INTERLEAVE_LEVEL_LOW;
@@ -982,6 +984,7 @@ u32 nvgpu_get_ioctl_compute_preempt_mode(u32 compute_preempt_mode)
  */
 static u32 nvgpu_get_common_graphics_preempt_mode(u32 graphics_preempt_mode)
 {
+	nvgpu_speculation_barrier();
 	switch (graphics_preempt_mode) {
 	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
 		return NVGPU_PREEMPTION_MODE_GRAPHICS_WFI;
@@ -998,6 +1001,7 @@ static u32 nvgpu_get_common_graphics_preempt_mode(u32 graphics_preempt_mode)
  */
 static u32 nvgpu_get_common_compute_preempt_mode(u32 compute_preempt_mode)
 {
+	nvgpu_speculation_barrier();
 	switch (compute_preempt_mode) {
 	case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
 		return NVGPU_PREEMPTION_MODE_COMPUTE_WFI;
@@ -1121,6 +1125,7 @@ long gk20a_channel_ioctl(struct file *filp,
 	/* this ioctl call keeps a ref to the file which keeps a ref to the
 	 * channel */
 
+	nvgpu_speculation_barrier();
 	switch (cmd) {
 	case NVGPU_IOCTL_CHANNEL_OPEN:
 		err = gk20a_channel_open_ioctl(ch->g,

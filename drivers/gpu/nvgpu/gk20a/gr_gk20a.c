@@ -3018,7 +3018,6 @@ static void gr_gk20a_free_channel_pm_ctx(struct gk20a *g,
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct fifo_gk20a *f = &g->fifo;
 	struct nvgpu_gr_ctx *gr_ctx;
 	struct tsg_gk20a *tsg = NULL;
 	int err = 0;
@@ -3041,11 +3040,11 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 	}
 	c->obj_class = class_num;
 
-	if (!gk20a_is_channel_marked_as_tsg(c)) {
+	tsg = tsg_gk20a_from_ch(c);
+	if (tsg == NULL) {
 		return -EINVAL;
 	}
 
-	tsg = &f->tsg[c->tsgid];
 	gr_ctx = &tsg->gr_ctx;
 
 	if (!nvgpu_mem_is_valid(&gr_ctx->mem)) {
@@ -5213,21 +5212,21 @@ static void gk20a_gr_set_error_notifier(struct gk20a *g,
 		return;
 	}
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
 				channel_gk20a, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
 				g->ops.fifo.set_error_notifier(ch_tsg,
-						 error_notifier);
+					 error_notifier);
 				gk20a_channel_put(ch_tsg);
 			}
 
 		}
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
-		g->ops.fifo.set_error_notifier(ch, error_notifier);
+		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
 	}
 }
 
@@ -5394,12 +5393,21 @@ int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 				     struct gr_gk20a_isr_data *isr_data)
 {
 	struct channel_gk20a *ch = isr_data->ch;
-	struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+	struct tsg_gk20a *tsg;
 
-	g->ops.fifo.post_event_id(tsg,
-		NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+	if (ch == NULL) {
+		return 0;
+	}
 
-	nvgpu_cond_broadcast(&ch->semaphore_wq);
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
+		g->ops.fifo.post_event_id(tsg,
+			NVGPU_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+
+		nvgpu_cond_broadcast(&ch->semaphore_wq);
+	} else {
+		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
+	}
 
 	return 0;
 }
@@ -5434,7 +5442,12 @@ int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	u32 buffer_size;
 	u32 offset;
 	bool exit;
+#endif
+	if (ch == NULL || tsg_gk20a_from_ch(ch) == NULL) {
+		return 0;
+	}
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
 	/* GL will never use payload 0 for cycle state */
 	if ((ch->cyclestate.cyclestate_buffer == NULL) || (isr_data->data_lo == 0))
 		return 0;
@@ -5975,7 +5988,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	u32 chid;
 
 	nvgpu_log_fn(g, " ");
-	nvgpu_log(g, gpu_dbg_intr, "pgraph intr %08x", gr_intr);
+	nvgpu_log(g, gpu_dbg_intr, "pgraph intr 0x%08x", gr_intr);
 
 	if (gr_intr == 0U) {
 		return 0;
@@ -6009,11 +6022,13 @@ int gk20a_gr_isr(struct gk20a *g)
 	chid = ch != NULL ? ch->chid : FIFO_INVAL_CHANNEL_ID;
 
 	if (ch == NULL) {
-		nvgpu_err(g, "ch id is INVALID 0xffffffff");
-	}
-
-	if ((ch != NULL) && gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
+		nvgpu_err(g, "pgraph intr: 0x%08x, chid: INVALID", gr_intr);
+	} else {
+		tsg = tsg_gk20a_from_ch(ch);
+		if (tsg == NULL) {
+			nvgpu_err(g, "pgraph intr: 0x%08x, chid: %d "
+				"not bound to tsg", gr_intr, chid);
+		}
 	}
 
 	nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
@@ -6198,7 +6213,9 @@ int gk20a_gr_isr(struct gk20a *g)
 			nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 					 "GPC exception pending");
 
-			fault_ch = isr_data.ch;
+			if (tsg != NULL) {
+				fault_ch = isr_data.ch;
+			}
 
 			/* fault_ch can be NULL */
 			/* check if any gpc has an exception */
@@ -6225,39 +6242,42 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (need_reset) {
-		if (tsgid != NVGPU_INVALID_TSG_ID) {
+		if (tsg != NULL) {
 			gk20a_fifo_recover(g, gr_engine_id,
 					   tsgid, true, true, true,
 						RC_TYPE_GR_FAULT);
-		} else if (ch) {
-			gk20a_fifo_recover(g, gr_engine_id,
-					   ch->chid, false, true, true,
-						RC_TYPE_GR_FAULT);
 		} else {
+			if (ch != NULL) {
+				nvgpu_err(g, "chid: %d referenceable but not "
+					"bound to tsg", chid);
+			}
 			gk20a_fifo_recover(g, gr_engine_id,
 					   0, false, false, true,
 						RC_TYPE_GR_FAULT);
 		}
 	}
 
-	if ((gr_intr != 0U) && (ch == NULL)) {
-		/* Clear interrupts for unused channel. This is
-		   probably an interrupt during gk20a_free_channel() */
-		nvgpu_err(g,
-			  "unhandled gr interrupt 0x%08x for unreferenceable channel, clearing",
-			  gr_intr);
+	if (gr_intr != 0U) {
+		/* clear unhandled interrupts */
+		if (ch == NULL) {
+			/*
+			 * This is probably an interrupt during
+			 * gk20a_free_channel()
+			 */
+			nvgpu_err(g, "unhandled gr intr 0x%08x for "
+				"unreferenceable channel, clearing",
+				gr_intr);
+		} else {
+			nvgpu_err(g, "unhandled gr intr 0x%08x for chid: %d",
+				gr_intr, chid);
+		}
 		gk20a_writel(g, gr_intr_r(), gr_intr);
-		gr_intr = 0;
 	}
 
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
 		grfifo_ctl | gr_gpfifo_ctl_access_f(1) |
 		gr_gpfifo_ctl_semaphore_access_f(1));
 
-	if (gr_intr) {
-		nvgpu_err(g,
-			   "unhandled gr interrupt 0x%08x", gr_intr);
-	}
 
 	/* Posting of BPT events should be the last thing in this function */
 	if ((global_esr != 0U) && (tsg != NULL)) {

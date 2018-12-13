@@ -457,8 +457,13 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	struct nvgpu_mem *mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(g, ch);
-	pid_t pid;
 	u32 aperture_mask;
+
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg == NULL) {
+		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
+		return -EINVAL;
+	}
 
 	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw,
 			"chid=%d context_ptr=%x inst_block=%llx",
@@ -519,11 +524,7 @@ int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	/* pid (process identifier) in user space, corresponds to tgid (thread
 	 * group id) in kernel space.
 	 */
-	if (gk20a_is_channel_marked_as_tsg(ch))
-		pid = tsg_gk20a_from_ch(ch)->tgid;
-	else
-		pid = ch->tgid;
-	gk20a_fecs_trace_hash_add(g, context_ptr, pid);
+	gk20a_fecs_trace_hash_add(g, context_ptr, tsg->tgid);
 
 	return 0;
 }

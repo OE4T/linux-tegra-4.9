@@ -641,9 +641,8 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 	nvgpu_log_fn(g, " ");
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
-
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
@@ -658,8 +657,7 @@ int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
-		g->ops.fifo.set_error_notifier(ch, err_code);
-		gk20a_channel_set_timedout(ch);
+		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;
@@ -698,9 +696,8 @@ static void vgpu_fifo_set_ctx_mmu_error_ch_tsg(struct gk20a *g,
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *ch_tsg = NULL;
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
-
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
 		nvgpu_rwsem_down_read(&tsg->ch_list_lock);
 
 		nvgpu_list_for_each_entry(ch_tsg, &tsg->ch_list,
@@ -713,7 +710,7 @@ static void vgpu_fifo_set_ctx_mmu_error_ch_tsg(struct gk20a *g,
 
 		nvgpu_rwsem_up_read(&tsg->ch_list_lock);
 	} else {
-		vgpu_fifo_set_ctx_mmu_error_ch(g, ch);
+		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
 	}
 }
 

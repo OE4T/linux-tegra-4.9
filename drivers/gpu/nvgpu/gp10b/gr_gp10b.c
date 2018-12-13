@@ -1691,6 +1691,14 @@ void gr_gp10b_get_access_map(struct gk20a *g,
 static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
+	struct tsg_gk20a *tsg;
+
+	tsg = tsg_gk20a_from_ch(fault_ch);
+	if (tsg == NULL) {
+		nvgpu_err(g, "CILP: chid: %d is not bound to tsg",
+				fault_ch->chid);
+		return -EINVAL;
+	}
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, " ");
 
@@ -1711,18 +1719,11 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: tsgid: 0x%x", fault_ch->tsgid);
+			"CILP: tsgid: 0x%x", tsg->tsgid);
 
-	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
-		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+	gk20a_fifo_issue_preempt(g, tsg->tsgid, true);
+	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP: preempted tsg");
-	} else {
-		gk20a_fifo_issue_preempt(g, fault_ch->chid, false);
-		nvgpu_log(g, gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
-			"CILP: preempted channel");
-	}
-
 	return ret;
 }
 

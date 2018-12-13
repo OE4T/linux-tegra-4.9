@@ -164,28 +164,26 @@ int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct tsg_gk20a *tsg;
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
 		g->ops.fifo.enable_tsg(tsg);
+		return 0;
 	} else {
-		g->ops.fifo.enable_channel(ch);
+		return -EINVAL;
 	}
-
-	return 0;
 }
 
 int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct tsg_gk20a *tsg;
 
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->tsgid];
+	tsg = tsg_gk20a_from_ch(ch);
+	if (tsg != NULL) {
 		g->ops.fifo.disable_tsg(tsg);
+		return 0;
 	} else {
-		g->ops.fifo.disable_channel(ch);
+		return -EINVAL;
 	}
-
-	return 0;
 }
 
 void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
@@ -238,19 +236,8 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 
 	if (tsg != NULL) {
 		return gk20a_fifo_abort_tsg(ch->g, tsg, channel_preempt);
-	}
-
-	/* make sure new kickoffs are prevented */
-	gk20a_channel_set_timedout(ch);
-
-	ch->g->ops.fifo.disable_channel(ch);
-
-	if (channel_preempt) {
-		ch->g->ops.fifo.preempt_channel(ch->g, ch);
-	}
-
-	if (ch->g->ops.fifo.ch_abort_clean_up) {
-		ch->g->ops.fifo.ch_abort_clean_up(ch);
+	} else {
+		nvgpu_err(ch->g, "chid: %d is not bound to tsg", ch->chid);
 	}
 }
 

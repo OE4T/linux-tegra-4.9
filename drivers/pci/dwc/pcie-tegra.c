@@ -3237,8 +3237,8 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 					return gpio;
 
 				f = (flags & OF_GPIO_ACTIVE_LOW) ?
-				    (GPIOF_OUT_INIT_HIGH | GPIOF_ACTIVE_LOW) :
-				     GPIOF_OUT_INIT_LOW;
+				    (GPIOF_OUT_INIT_LOW | GPIOF_ACTIVE_LOW) :
+				     GPIOF_OUT_INIT_HIGH;
 
 				ret = devm_gpio_request_one(pcie->dev, gpio, f,
 							    NULL);

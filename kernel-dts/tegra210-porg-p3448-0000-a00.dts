@@ -73,6 +73,10 @@
 		status = "okay";
 	};
 
+	watchdog@60005100 {
+		status = "okay";
+	};
+
 };
 
 #if LINUX_VERSION >= 414

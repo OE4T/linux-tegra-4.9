@@ -416,6 +416,10 @@
 		};
 	};
 
+	pwm-regulator@0 {
+		regulator-min-microvolt = <710000>;
+	};
+
 	soctherm@0x700E2000 {
 		throttle-cfgs {
 			/delete-node/ oc1;

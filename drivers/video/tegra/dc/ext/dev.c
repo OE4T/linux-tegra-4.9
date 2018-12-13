@@ -608,18 +608,20 @@ static int tegra_dc_ext_set_windowattr(struct tegra_dc_ext *ext,
 			if (vrr && vrr->enable) {
 				struct timespec tm;
 				s64 now_ns = 0;
-				s32 sleep_us = 0;
+				s64 sleep_us = 0;
 				ktime_get_ts(&tm);
 				now_ns = timespec_to_ns(&tm);
-				sleep_us = (s32)div_s64(timestamp_ns -
+				sleep_us = div_s64(timestamp_ns -
 					now_ns, 1000ll);
 
 				if (sleep_us > TEGRA_DC_TS_MAX_DELAY_US)
 					sleep_us = TEGRA_DC_TS_MAX_DELAY_US;
 
-				if (sleep_us > 0)
-					usleep_range(sleep_us, sleep_us +
+				if (sleep_us > 0) {
+					usleep_range((s32)sleep_us,
+						((s32)sleep_us) +
 						TEGRA_DC_TS_SLACK_US);
+				}
 			} else {
 				tegra_dc_config_frame_end_intr(win->dc, true);
 				err = wait_event_interruptible(

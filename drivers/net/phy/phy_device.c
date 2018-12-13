@@ -1702,6 +1702,8 @@ static int phy_probe(struct device *dev)
 	    phy_interrupt_is_valid(phydev))
 		phydev->irq = PHY_POLL;
 
+	phydev->suspended = true;
+
 	mutex_unlock(&phydev->lock);
 
 	return err;

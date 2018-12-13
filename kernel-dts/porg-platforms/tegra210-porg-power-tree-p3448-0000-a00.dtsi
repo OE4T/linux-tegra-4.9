@@ -227,6 +227,7 @@
 	host1x {
 		i2c@546c0000 {
 			bus-pullup-supply = <&battery_reg>;
+			avdd_dsi_csi-supply = <&max77620_sd3>;
 		};
 	};
 

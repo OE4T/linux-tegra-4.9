@@ -1,7 +1,7 @@
 /*
  * max9295.c - max9295 IO Expander driver
  *
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,6 +41,8 @@
 
 #define MAX9295_I2C4_ADDR 0x44
 #define MAX9295_I2C5_ADDR 0x45
+
+#define MAX9295_DEV_ADDR 0x00
 
 #define MAX9295_STREAM_PIPE_UNUSED 0x22
 #define MAX9295_CSI_MODE_1X4 0x00
@@ -106,6 +108,9 @@ struct max9295 {
 	struct regmap *regmap;
 	struct max9295_client_ctx g_client;
 	struct mutex lock;
+	/* primary serializer properties */
+	__u32 def_addr;
+	__u32 pst2_ref;
 };
 
 static struct max9295 *prim_priv__;
@@ -278,15 +283,15 @@ int max9295_setup_control(struct device *dev)
 	u32 i;
 
 	u8 i2c_ovrd[] = {
-		0x6B, 0x10, 0,
-		0x73, 0x11, 0,
-		0x7B, 0x30, 0,
-		0x83, 0x30, 0,
-		0x93, 0x30, 0,
-		0x9B, 0x30, 0,
-		0xA3, 0x30, 0,
-		0xAB, 0x30, 0,
-		0x8B, 0x30, GMSL_SERDES_CSI_LINK_A,
+		0x6B, 0x10,
+		0x73, 0x11,
+		0x7B, 0x30,
+		0x83, 0x30,
+		0x93, 0x30,
+		0x9B, 0x30,
+		0xA3, 0x30,
+		0xAB, 0x30,
+		0x8B, 0x30,
 	};
 
 	u8 addr_offset[] = {
@@ -308,12 +313,16 @@ int max9295_setup_control(struct device *dev)
 
 	/* update address reassingment */
 	max9295_write_reg(&prim_priv__->i2c_client->dev,
-			0x00, (g_ctx->ser_reg << 1));
-	msleep(140);
+			MAX9295_DEV_ADDR, (g_ctx->ser_reg << 1));
 
-	max9295_write_reg(dev, MAX9295_CTRL0_ADDR, 0x31);
+
+	if (g_ctx->serdes_csi_link == GMSL_SERDES_CSI_LINK_A)
+		max9295_write_reg(dev, MAX9295_CTRL0_ADDR, 0x21);
+	else
+		max9295_write_reg(dev, MAX9295_CTRL0_ADDR, 0x22);
+
 	/* delay to settle link */
-	msleep(100);
+	msleep(50);
 
 	for (i = 0; i < ARRAY_SIZE(addr_offset); i += 3) {
 		if ((g_ctx->ser_reg << 1) == addr_offset[i]) {
@@ -328,18 +337,20 @@ int max9295_setup_control(struct device *dev)
 		return -EINVAL;
 	}
 
-	/* delay before accessing sdev */
-	msleep(40);
-	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i += 3) {
+	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i += 2) {
 		/* update address overrides */
 		i2c_ovrd[i+1] += (i < 4) ? offset1 : offset2;
-		if ((i2c_ovrd[i+2]) && (i2c_ovrd[i+2] !=
-					g_ctx->serdes_csi_link))
+
+		/* i2c passthrough2 must be configured once for all devices */
+		if ((i2c_ovrd[i] == 0x8B) && prim_priv__->pst2_ref)
 			continue;
+
 		max9295_write_reg(dev, i2c_ovrd[i], i2c_ovrd[i+1]);
 	}
-	/* delay to settle address overrides */
-	msleep(100);
+
+	/* dev addr pass-through2 ref */
+	prim_priv__->pst2_ref++;
+
 
 	max9295_write_reg(dev, MAX9295_I2C4_ADDR, (g_ctx->sdev_reg << 1));
 	max9295_write_reg(dev, MAX9295_I2C5_ADDR, (g_ctx->sdev_def << 1));
@@ -347,8 +358,6 @@ int max9295_setup_control(struct device *dev)
 	max9295_write_reg(dev, MAX9295_SRC_PWDN_ADDR, MAX9295_PWDN_GPIO);
 	max9295_write_reg(dev, MAX9295_SRC_CTRL_ADDR, MAX9295_RESET_SRC);
 	max9295_write_reg(dev, MAX9295_SRC_OUT_RCLK_ADDR, MAX9295_SRC_RCLK);
-
-	msleep(200);
 
 error:
 	mutex_unlock(&priv->lock);
@@ -368,10 +377,13 @@ int max9295_reset_control(struct device *dev)
 		goto error;
 	}
 
+	prim_priv__->pst2_ref--;
 	priv->g_client.st_done = false;
 
-	max9295_write_reg(dev, MAX9295_CTRL0_ADDR, MAX9295_RESET_ALL);
-	msleep(100);
+	max9295_write_reg(dev, MAX9295_DEV_ADDR, (prim_priv__->def_addr << 1));
+
+	max9295_write_reg(&prim_priv__->i2c_client->dev,
+				MAX9295_CTRL0_ADDR, MAX9295_RESET_ALL);
 
 error:
 	mutex_unlock(&priv->lock);
@@ -470,13 +482,18 @@ static int max9295_probe(struct i2c_client *client,
 	mutex_init(&priv->lock);
 
 	if (of_get_property(node, "is-prim-ser", NULL)) {
-		dev_info(&client->dev, "ser master device\n");
 		if (prim_priv__) {
 			dev_err(&client->dev,
 				"prim-ser already exists\n");
 				return -EEXIST;
 		}
-		dev_info(&client->dev, "prim-ser max9295 set\n");
+
+		err = of_property_read_u32(node, "reg", &priv->def_addr);
+		if (err < 0) {
+			dev_err(&client->dev, "reg not found\n");
+			return -EINVAL;
+		}
+
 		prim_priv__ = priv;
 	}
 
@@ -489,7 +506,11 @@ static int max9295_probe(struct i2c_client *client,
 
 static int max9295_remove(struct i2c_client *client)
 {
+	struct max9295 *priv;
+
 	if (client != NULL) {
+		priv = dev_get_drvdata(&client->dev);
+		mutex_destroy(&priv->lock);
 		i2c_unregister_device(client);
 		client = NULL;
 	}

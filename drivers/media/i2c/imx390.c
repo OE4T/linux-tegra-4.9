@@ -1,7 +1,7 @@
 /*
  * imx390.c - imx390 sensor driver
  *
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,43 +34,60 @@
 #include "imx390_mode_tbls.h"
 
 #define IMX390_DEFAULT_MODE	IMX390_MODE_1920X1080_CROP_30FPS
-#define IMX390_MIN_GAIN         (0)
+#define IMX390_MAX_COARSE_DIFF  (9)
+
+#define IMX390_MIN_GAIN         (10)
 #define IMX390_MAX_GAIN         (30)
-#define IMX390_MAX_GAIN_REG         (100)
+#define IMX390_MAX_GAIN_REG     (100)
 #define IMX390_DEFAULT_GAIN     IMX390_MIN_GAIN
+#define IMX390_GAIN_SHIFT      8
 
-#define IMX390_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
-#define IMX390_MIN_FRAME_LENGTH	(1125)
-#define IMX390_MAX_FRAME_LENGTH	(0x1FFFF)
-#define IMX390_MIN_SHS1_1080P_HDR	(5)
+#define IMX390_DEFAULT_DATAFMT MEDIA_BUS_FMT_SRGGB12_1X12
 
-#define IMX390_MIN_SHS2_1080P_HDR	(82)
-#define IMX390_MAX_SHS2_1080P_HDR	(IMX390_MAX_FRAME_LENGTH - 5)
-#define IMX390_MAX_SHS1_1080P_HDR	(IMX390_MAX_SHS2_1080P_HDR / 16)
+#define IMX390_MIN_FRAME_LENGTH (1125)
+#define IMX390_MAX_FRAME_LENGTH (0x1FFFF)
+#define IMX390_MIN_EXPOSURE_COARSE (1)
+#define IMX390_MAX_EXPOSURE_COARSE \
+	(IMX390_MAX_FRAME_LENGTH-IMX390_MAX_COARSE_DIFF)
+#define IMX390_DEFAULT_FRAME_LENGTH    (1125)
+#define IMX390_DEFAULT_EXPOSURE_COARSE \
+	(IMX390_DEFAULT_FRAME_LENGTH-IMX390_MAX_COARSE_DIFF)
 
-#define IMX390_FRAME_LENGTH_ADDR_MSB		0x200A
-#define IMX390_FRAME_LENGTH_ADDR_MID		0x2009
-#define IMX390_FRAME_LENGTH_ADDR_LSB		0x2008
-#define IMX390_COARSE_TIME_SHS1_ADDR_MSB	0x3022
-#define IMX390_COARSE_TIME_SHS1_ADDR_MID	0x3021
-#define IMX390_COARSE_TIME_SHS1_ADDR_LSB	0x3020
-#define IMX390_COARSE_TIME_SHS2_ADDR_MSB	0x3025
-#define IMX390_COARSE_TIME_SHS2_ADDR_MID	0x3024
-#define IMX390_COARSE_TIME_SHS2_ADDR_LSB	0x3023
-#define IMX390_GAIN_ADDR			0x3014
-#define IMX390_GROUP_HOLD_ADDR			0x0001
-#define IMX390_ANALOG_GAIN_SP1H_ADDR            0x0018
-#define IMX390_ANALOG_GAIN_SP1L_ADDR            0x001A
+#define IMX390_MIN_SHS1_1080P_HDR (5)
+#define IMX390_MIN_SHS2_1080P_HDR    (82)
+#define IMX390_MAX_SHS2_1080P_HDR    (IMX390_MAX_FRAME_LENGTH - 5)
+#define IMX390_MAX_SHS1_1080P_HDR    (IMX390_MAX_SHS2_1080P_HDR / 16)
 
-#define IMX390_DEFAULT_WIDTH	1936
-#define IMX390_DEFAULT_HEIGHT	1100
-#define IMX390_DEFAULT_CLK_FREQ	24000000
+#define IMX390_FRAME_LENGTH_ADDR_MSB    0x200A
+#define IMX390_FRAME_LENGTH_ADDR_MID    0x2009
+#define IMX390_FRAME_LENGTH_ADDR_LSB    0x2008
+
+#define IMX390_COARSE_TIME_SHS1_ADDR_MSB    0x000E
+#define IMX390_COARSE_TIME_SHS1_ADDR_MID    0x000D
+#define IMX390_COARSE_TIME_SHS1_ADDR_LSB    0x000C
+#define IMX390_COARSE_TIME_SHS2_ADDR_MSB    0x0012
+#define IMX390_COARSE_TIME_SHS2_ADDR_MID    0x0011
+#define IMX390_COARSE_TIME_SHS2_ADDR_LSB    0x0010
+
+#define IMX390_GAIN_ADDR    0x3014 /* GAIN ADDR */
+#define IMX390_GROUP_HOLD_ADDR    0x0008 /* REG HOLD */
+#define IMX390_ANALOG_GAIN_SP1H_ADDR    0x0018
+#define IMX390_ANALOG_GAIN_SP1L_ADDR    0x001A
+
+/* default image output width */
+#define IMX390_DEFAULT_WIDTH    1920
+/* default image output height */
+#define IMX390_DEFAULT_HEIGHT    1080
+
+/* default output clk frequency for camera */
+#define IMX390_DEFAULT_CLK_FREQ    24000000
 
 struct imx390 {
 	struct camera_common_power_rail	power;
 	int	numctrls;
 	struct v4l2_ctrl_handler	ctrl_handler;
 	struct i2c_client	*i2c_client;
+	const struct i2c_device_id *id;
 	struct v4l2_subdev	*subdev;
 	struct device		*ser_dev;
 	struct device		*dser_dev;
@@ -104,33 +121,44 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.ops = &imx390_ctrl_ops,
 		.id = TEGRA_CAMERA_CID_GAIN,
 		.name = "Gain",
-		.type = V4L2_CTRL_TYPE_INTEGER64,
+		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = IMX390_MIN_GAIN * FIXED_POINT_SCALING_FACTOR,
-		.max = IMX390_MAX_GAIN * FIXED_POINT_SCALING_FACTOR,
-		.def = IMX390_MAX_GAIN * FIXED_POINT_SCALING_FACTOR,
+		.min = IMX390_MIN_GAIN,
+		.max = IMX390_MAX_GAIN,
+		.def = IMX390_DEFAULT_GAIN,
 		.step = 1,
 	},
 	{
 		.ops = &imx390_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_EXPOSURE,
-		.name = "Exposure",
-		.type = V4L2_CTRL_TYPE_INTEGER64,
+		.id = TEGRA_CAMERA_CID_FRAME_LENGTH,
+		.name = "Frame Length",
+		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = 30 * FIXED_POINT_SCALING_FACTOR / 1000000,
-		.max = 1000000LL * FIXED_POINT_SCALING_FACTOR / 1000000,
-		.def = 30 * FIXED_POINT_SCALING_FACTOR / 1000000,
+		.min = IMX390_MIN_FRAME_LENGTH,
+		.max = IMX390_MAX_FRAME_LENGTH,
+		.def = IMX390_DEFAULT_FRAME_LENGTH,
 		.step = 1,
 	},
 	{
 		.ops = &imx390_ctrl_ops,
-		.id = TEGRA_CAMERA_CID_FRAME_RATE,
-		.name = "Frame Rate",
-		.type = V4L2_CTRL_TYPE_INTEGER64,
+		.id = TEGRA_CAMERA_CID_COARSE_TIME,
+		.name = "Coarse Time",
+		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = 1 * FIXED_POINT_SCALING_FACTOR,
-		.max = 30 * FIXED_POINT_SCALING_FACTOR,
-		.def = 30 * FIXED_POINT_SCALING_FACTOR,
+		.min = IMX390_MIN_EXPOSURE_COARSE,
+		.max = IMX390_MAX_EXPOSURE_COARSE,
+		.def = IMX390_DEFAULT_EXPOSURE_COARSE,
+		.step = 1,
+	},
+	{
+		.ops = &imx390_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_COARSE_TIME_SHORT,
+		.name = "Coarse Time Short",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = IMX390_MIN_EXPOSURE_COARSE,
+		.max = IMX390_MAX_EXPOSURE_COARSE,
+		.def = IMX390_DEFAULT_EXPOSURE_COARSE,
 		.step = 1,
 	},
 	{
@@ -174,7 +202,7 @@ static inline void imx390_get_coarse_time_regs_shs1(imx390_reg *regs,
 				u32 coarse_time)
 {
 	regs->addr = IMX390_COARSE_TIME_SHS1_ADDR_MSB;
-	regs->val = (coarse_time >> 16) & 0x01;
+	regs->val = (coarse_time >> 16) & 0x0f;
 
 	(regs + 1)->addr = IMX390_COARSE_TIME_SHS1_ADDR_MID;
 	(regs + 1)->val = (coarse_time >> 8) & 0xff;
@@ -188,7 +216,7 @@ static inline void imx390_get_coarse_time_regs_shs2(imx390_reg *regs,
 				u32 coarse_time)
 {
 	regs->addr = IMX390_COARSE_TIME_SHS2_ADDR_MSB;
-	regs->val = (coarse_time >> 16) & 0x01;
+	regs->val = (coarse_time >> 16) & 0x0f;
 
 	(regs + 1)->addr = IMX390_COARSE_TIME_SHS2_ADDR_MID;
 	(regs + 1)->val = (coarse_time >> 8) & 0xff;
@@ -238,6 +266,60 @@ static int imx390_write_table(struct imx390 *priv,
 					 IMX390_TABLE_END);
 }
 
+static struct mutex serdes_lock__;
+
+static int imx390_gmsl_serdes_setup(struct imx390 *priv)
+{
+	int err = 0;
+	struct device *dev;
+
+	if (!priv || !priv->ser_dev || !priv->dser_dev || !priv->i2c_client)
+		return -EINVAL;
+
+	dev = &priv->i2c_client->dev;
+
+	mutex_lock(&serdes_lock__);
+
+	/* For now no separate power on required for serializer device */
+	max9296_power_on(priv->dser_dev);
+
+	/* setup serdes addressing and control pipeline */
+	err = max9296_setup_link(priv->dser_dev, &priv->i2c_client->dev);
+	if (err) {
+		dev_err(dev, "gmsl deserializer link config failed\n");
+		goto ret;
+	}
+
+	err = max9295_setup_control(priv->ser_dev);
+	if (err) {
+		dev_err(dev, "gmsl serializer setup failed\n");
+		goto ret;
+	}
+
+	err = max9296_setup_control(priv->dser_dev);
+	if (err) {
+		dev_err(dev, "gmsl deserializer setup failed\n");
+		goto ret;
+	}
+
+ret:
+	mutex_unlock(&serdes_lock__);
+	return err;
+}
+
+static void imx390_gmsl_serdes_reset(struct imx390 *priv)
+{
+	mutex_lock(&serdes_lock__);
+
+	/* reset serdes addressing and control pipeline */
+	max9295_reset_control(priv->ser_dev);
+	max9296_reset_control(priv->dser_dev, &priv->i2c_client->dev);
+
+	max9296_power_off(priv->dser_dev);
+
+	mutex_unlock(&serdes_lock__);
+}
+
 static int imx390_power_on(struct camera_common_data *s_data)
 {
 	int err = 0;
@@ -254,28 +336,8 @@ static int imx390_power_on(struct camera_common_data *s_data)
 		return err;
 	}
 
-	usleep_range(1, 2);
-	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 0);
-
-	usleep_range(30, 50);
-
-	if (pw->dvdd)
-		err = regulator_enable(pw->dvdd);
-
-	usleep_range(30, 50);
-
-	/*exit reset mode: XCLR */
-	if (pw->reset_gpio) {
-		gpio_set_value(pw->reset_gpio, 0);
-		usleep_range(30, 50);
-		gpio_set_value(pw->reset_gpio, 1);
-		usleep_range(30, 50);
-	}
-
-	msleep(20);
-
 	pw->state = SWITCH_ON;
+
 	return 0;
 }
 
@@ -296,14 +358,6 @@ static int imx390_power_off(struct camera_common_data *s_data)
 		return err;
 	}
 
-	/* enter reset mode: XCLR */
-	usleep_range(1, 2);
-	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 0);
-
-	if (pw->dvdd)
-		regulator_disable(pw->dvdd);
-
 power_off_done:
 	pw->state = SWITCH_OFF;
 
@@ -313,7 +367,6 @@ power_off_done:
 static int imx390_power_get(struct imx390 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
-	struct camera_common_pdata *pdata = priv->pdata;
 	const char *mclk_name;
 	const char *parentclk_name;
 	struct clk *parent;
@@ -339,31 +392,24 @@ static int imx390_power_get(struct imx390 *priv)
 			clk_set_parent(pw->mclk, parent);
 	}
 
-	if (!err)
-		pw->reset_gpio = pdata->reset_gpio;
-
-	/* digital 1.2v */
-	if (pdata->regulators.dvdd != NULL)
-		err |= camera_common_regulator_get(&priv->i2c_client->dev,
-				&pw->dvdd, pdata->regulators.dvdd);
-
 	pw->state = SWITCH_OFF;
 
 	return err;
 }
-static int imx390_set_coarse_time(struct imx390 *priv, s64 val);
-static int imx390_set_coarse_time_hdr(struct imx390 *priv, s64 val);
-static int imx390_set_exposure(struct imx390 *priv, s64 val);
-static int imx390_set_gain(struct imx390 *priv, s64 val);
-static int imx390_set_frame_rate(struct imx390 *priv, s64 val);
+
+static int imx390_set_gain(struct imx390 *priv, s32 val);
+static int imx390_set_frame_length(struct imx390 *priv, s32 val);
+
+static int imx390_set_coarse_time(struct imx390 *priv, s32 val);
+static int imx390_set_coarse_time_shr(struct imx390 *priv, s32 val);
+static int imx390_set_coarse_time_hdr(struct imx390 *priv, s32 val);
 
 static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx390 *priv = (struct imx390 *)s_data->priv;
-	struct v4l2_ext_controls ctrls;
-	struct v4l2_ext_control control[3];
+	struct v4l2_control control;
 	int err;
 
 	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
@@ -374,6 +420,7 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 
 		if (err)
 			return err;
+
 		return 0;
 	}
 
@@ -387,37 +434,29 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking gain, */
 		/* frame rate and exposure time    */
-		memset(&ctrls, 0, sizeof(ctrls));
 
-		ctrls.count = 3;
-		ctrls.controls = control;
+		control.id = TEGRA_CAMERA_CID_GAIN;
 
-		control[0].id = TEGRA_CAMERA_CID_GAIN;
-		control[1].id = TEGRA_CAMERA_CID_FRAME_RATE;
-		control[2].id = TEGRA_CAMERA_CID_EXPOSURE;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx390_set_gain(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: error gain override\n", __func__);
 
-		err = v4l2_g_ext_ctrls(&priv->ctrl_handler, &ctrls);
-		if (err == 0) {
-			err |= imx390_set_gain(priv, control[0].value64);
+		control.id = TEGRA_CAMERA_CID_FRAME_LENGTH;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx390_set_frame_length(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: error frame length override\n", __func__);
+
+		control.id = TEGRA_CAMERA_CID_COARSE_TIME;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx390_set_coarse_time(priv, control.value);
 			if (err)
-				dev_err(&client->dev,
-					"%s: error gain override\n", __func__);
-
-			err |= imx390_set_frame_rate(priv, control[1].value64);
-			if (err)
-				dev_err(&client->dev,
-					"%s: error frame length override\n",
+				dev_dbg(&client->dev,
+					"%s: error coarse time override\n",
 					__func__);
-
-			err |= imx390_set_exposure(priv, control[2].value64);
-			if (err)
-				dev_err(&client->dev,
-					"%s: error exposure override\n",
-					__func__);
-		} else {
-			dev_err(&client->dev, "%s: faile to get overrides\n",
-				__func__);
-		}
 	}
 
 	err = imx390_write_table(priv, mode_table[IMX390_MODE_START_STREAM]);
@@ -427,8 +466,10 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 	msleep(20);
 
 	return 0;
+
 exit:
 	dev_err(&client->dev, "%s: error setting stream\n", __func__);
+
 	return err;
 }
 
@@ -527,19 +568,19 @@ fail:
 	return err;
 }
 
-static int imx390_set_gain(struct imx390 *priv, s64 val)
+static int imx390_set_gain(struct imx390 *priv, s32 val)
 {
 	imx390_reg reg;
 	int err;
-	s64 gain64;
+	u16 gain16;
 	u8 gain;
 
 	/* translate value */
-	gain64 = (s64)(val * 10 / FIXED_POINT_SCALING_FACTOR);
-	gain = (u8)(gain64 / 3);
+	gain16 = (u16)(val * 10);
+	gain = (u8)(gain16 / 3);
 
 	dev_dbg(&priv->i2c_client->dev,
-		"%s:  gain reg: %d, db: %lld\n",  __func__, gain, gain64);
+		"%s:  gain reg: %d, db: %d\n",  __func__, gain, gain16);
 
 	if (gain < IMX390_MIN_GAIN)
 		gain = IMX390_MIN_GAIN;
@@ -548,7 +589,8 @@ static int imx390_set_gain(struct imx390 *priv, s64 val)
 
 	reg.val = gain;
 	reg.addr = IMX390_ANALOG_GAIN_SP1H_ADDR;
-	err = imx390_write_reg(priv->s_data, reg.addr, reg.val);
+	err = imx390_write_reg(priv->s_data, reg.addr,
+			 reg.val);
 	if (err)
 		goto fail;
 
@@ -567,33 +609,26 @@ fail:
 	return err;
 }
 
-static int imx390_set_frame_rate(struct imx390 *priv, s64 val)
+static int imx390_set_frame_length(struct imx390 *priv, s32 val)
 {
 	imx390_reg reg_list[3];
 	int err;
-	s64 frame_length;
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
 	int i = 0;
 
-	frame_length = mode->signal_properties.pixel_clock.val *
-		FIXED_POINT_SCALING_FACTOR /
-		mode->image_properties.line_length / val;
+	s32 frame_length = val;
 
 	priv->frame_length = (u32) frame_length;
 	if (priv->frame_length > IMX390_MAX_FRAME_LENGTH)
 		priv->frame_length = IMX390_MAX_FRAME_LENGTH;
 
-	dev_dbg(&priv->i2c_client->dev,
-		"%s: val: %lld, , frame_length: %d\n", __func__,
-		val, priv->frame_length);
+	dev_dbg(&priv->i2c_client->dev, "%s: frame_length: %d\n",
+		__func__, priv->frame_length);
 
 	imx390_get_frame_length_regs(reg_list, priv->frame_length);
 
 	for (i = 0; i < 3; i++) {
 		err = imx390_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
+				reg_list[i].val);
 		if (err)
 			goto fail;
 	}
@@ -602,72 +637,35 @@ static int imx390_set_frame_rate(struct imx390 *priv, s64 val)
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: FRAME_LENGTH control error\n", __func__);
+		"%s: FRAME_LENGTH control error\n", __func__);
 	return err;
 }
 
-static int imx390_set_exposure(struct imx390 *priv, s64 val)
+static int imx390_set_coarse_time_shr(struct imx390 *priv, s32 val)
 {
-	int err;
-	struct v4l2_control control;
-	int hdr_en;
-
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %lld\n", __func__, val);
-
-	/* check hdr enable ctrl */
-	control.id = TEGRA_CAMERA_CID_HDR_EN;
-	err = camera_common_g_ctrl(priv->s_data, &control);
-	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
-		return err;
-	}
-
-	hdr_en = switch_ctrl_qmenu[control.value];
-	if (hdr_en == SWITCH_ON) {
-		err = imx390_set_coarse_time_hdr(priv, val);
-		if (err)
-			dev_dbg(&priv->i2c_client->dev,
-			"%s: error coarse time SHS1 SHS2 override\n", __func__);
-	} else {
-		err = imx390_set_coarse_time(priv, val);
-		if (err)
-			dev_dbg(&priv->i2c_client->dev,
-			"%s: error coarse time SHS1 override\n", __func__);
-	}
-
-	return err;
-}
-
-static int imx390_set_coarse_time(struct imx390 *priv, s64 val)
-{
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx390_reg reg_list[3];
 	int err;
 	u32 coarse_time_shs1;
 	u32 reg_shs1;
 	int i = 0;
 
-	coarse_time_shs1 = mode->signal_properties.pixel_clock.val * val /
-		mode->image_properties.line_length / FIXED_POINT_SCALING_FACTOR;
+	coarse_time_shs1 = val;
 
 	if (priv->frame_length == 0)
 		priv->frame_length = IMX390_MIN_FRAME_LENGTH;
 
+	if (coarse_time_shs1 < IMX390_MIN_SHS1_1080P_HDR)
+		coarse_time_shs1 = IMX390_MIN_SHS1_1080P_HDR;
+	if (coarse_time_shs1 > priv->frame_length - 5)
+		coarse_time_shs1 = priv->frame_length - 5;
 	reg_shs1 = priv->frame_length - coarse_time_shs1 - 1;
 
-	dev_dbg(&priv->i2c_client->dev,
-		 "%s: coarse1:%d, shs1:%d, FL:%d\n", __func__,
-		 coarse_time_shs1, reg_shs1, priv->frame_length);
 
 	imx390_get_coarse_time_regs_shs1(reg_list, reg_shs1);
 
 	for (i = 0; i < 3; i++) {
 		err = imx390_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
+			reg_list[i].val);
 		if (err)
 			goto fail;
 	}
@@ -676,15 +674,12 @@ static int imx390_set_coarse_time(struct imx390 *priv, s64 val)
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: set coarse time error\n", __func__);
+		"%s: set coarse time error\n", __func__);
 	return err;
 }
 
-static int imx390_set_coarse_time_hdr(struct imx390 *priv, s64 val)
+static int imx390_set_coarse_time_hdr(struct imx390 *priv, s32 val)
 {
-	struct camera_common_data *s_data = priv->s_data;
-	const struct sensor_mode_properties *mode =
-		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx390_reg reg_list_shs1[3];
 	imx390_reg reg_list_shs2[3];
 	u32 coarse_time_shs1;
@@ -699,17 +694,22 @@ static int imx390_set_coarse_time_hdr(struct imx390 *priv, s64 val)
 
 	priv->last_wdr_et_val = val;
 
-	/*WDR, update SHS1 as short ET, and SHS2 is 16x of short*/
-	coarse_time_shs1 = mode->signal_properties.pixel_clock.val * val /
-		mode->image_properties.line_length /
-		FIXED_POINT_SCALING_FACTOR / 16;
+	/*
+	 * WDR, update SHS1 as short ET, and SHS2 is 16x of short
+	 * TODO: (coarse_time_shs1 = mode->signal_properties.pixel_clock.val *
+	 * val / mode->image_properties.line_length / 16)
+	 */
+	coarse_time_shs1 = val / 16;
+
 	if (coarse_time_shs1 < IMX390_MIN_SHS1_1080P_HDR)
 		coarse_time_shs1 = IMX390_MIN_SHS1_1080P_HDR;
-	if (coarse_time_shs1 > IMX390_MAX_SHS1_1080P_HDR)
-		coarse_time_shs1 = IMX390_MAX_SHS1_1080P_HDR;
+	if (coarse_time_shs1 > priv->frame_length - 5)
+		coarse_time_shs1 = priv->frame_length - 5;
 
 	coarse_time_shs2 = (coarse_time_shs1 - IMX390_MIN_SHS1_1080P_HDR) * 16 +
-				IMX390_MIN_SHS2_1080P_HDR;
+		IMX390_MIN_SHS2_1080P_HDR;
+	if (coarse_time_shs2 > priv->frame_length - 5)
+		coarse_time_shs2 = priv->frame_length - 5;
 
 	reg_shs1 = priv->frame_length - coarse_time_shs1 - 1;
 	reg_shs2 = priv->frame_length - coarse_time_shs2 - 1;
@@ -720,18 +720,18 @@ static int imx390_set_coarse_time_hdr(struct imx390 *priv, s64 val)
 	dev_dbg(&priv->i2c_client->dev,
 		"%s: coarse1:%d, shs1:%d, coarse2:%d, shs2: %d, FL:%d\n",
 		__func__,
-		 coarse_time_shs1, reg_shs1,
-		 coarse_time_shs2, reg_shs2,
-		 priv->frame_length);
+		coarse_time_shs1, reg_shs1,
+		coarse_time_shs2, reg_shs2,
+		priv->frame_length);
 
 	for (i = 0; i < 3; i++) {
 		err = imx390_write_reg(priv->s_data, reg_list_shs1[i].addr,
-			 reg_list_shs1[i].val);
+			reg_list_shs1[i].val);
 		if (err)
 			goto fail;
 
 		err = imx390_write_reg(priv->s_data, reg_list_shs2[i].addr,
-			 reg_list_shs2[i].val);
+			reg_list_shs2[i].val);
 		if (err)
 			goto fail;
 	}
@@ -740,7 +740,41 @@ static int imx390_set_coarse_time_hdr(struct imx390 *priv, s64 val)
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: set WDR coarse time error\n", __func__);
+		"%s: set WDR coarse time error\n", __func__);
+	return err;
+}
+
+static int imx390_set_coarse_time(struct imx390 *priv, s32 val)
+{
+	int err;
+	struct v4l2_control control;
+	int hdr_en;
+
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: val: %d\n", __func__, val);
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if (hdr_en == SWITCH_ON) {
+		err = imx390_set_coarse_time_hdr(priv, val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+				"%s: error coarse time SHS1 SHS2 override\n",
+				__func__);
+	} else {
+		err = imx390_set_coarse_time_shr(priv, val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+				"%s: error coarse time SHS1 override\n",
+				__func__);
+	}
+
 	return err;
 }
 
@@ -755,12 +789,16 @@ static int imx390_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case TEGRA_CAMERA_CID_GAIN:
-		err = imx390_set_gain(priv, *ctrl->p_new.p_s64);
+		err = imx390_set_gain(priv, ctrl->val);
 		break;
-	case TEGRA_CAMERA_CID_EXPOSURE:
-		err = imx390_set_exposure(priv, *ctrl->p_new.p_s64);
-	case TEGRA_CAMERA_CID_FRAME_RATE:
-		err = imx390_set_frame_rate(priv, *ctrl->p_new.p_s64);
+	case TEGRA_CAMERA_CID_FRAME_LENGTH:
+		err = imx390_set_frame_length(priv, ctrl->val);
+		break;
+	case TEGRA_CAMERA_CID_COARSE_TIME:
+		err = imx390_set_coarse_time(priv, ctrl->val);
+		break;
+	case TEGRA_CAMERA_CID_COARSE_TIME_SHORT:
+		err = imx390_set_coarse_time(priv, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = imx390_set_group_hold(priv, ctrl->val);
@@ -793,7 +831,7 @@ static int imx390_ctrls_init(struct imx390 *priv)
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
 			dev_err(&client->dev, "Failed to init %s ctrl\n",
-				ctrl_config_list[i].name);
+			ctrl_config_list[i].name);
 			continue;
 		}
 
@@ -802,6 +840,7 @@ static int imx390_ctrls_init(struct imx390 *priv)
 			ctrl->p_new.p_char = devm_kzalloc(&client->dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
 		}
+
 		priv->ctrls[i] = ctrl;
 	}
 
@@ -864,17 +903,6 @@ static struct camera_common_pdata *imx390_parse_dt(struct imx390 *priv,
 				      &board_priv_pdata->mclk_name);
 	if (err)
 		dev_err(&client->dev, "mclk not in DT\n");
-
-	board_priv_pdata->reset_gpio =
-			of_get_named_gpio(node, "reset-gpios", 0);
-	if (err) {
-		dev_err(&client->dev,
-			"reset-gpios not found %d\n", err);
-		goto error;
-	}
-
-	of_property_read_string(node, "dvdd-reg",
-			&board_priv_pdata->regulators.dvdd);
 
 	err = of_property_read_u32(node, "reg", &priv->g_ctx.sdev_reg);
 	if (err < 0) {
@@ -1108,6 +1136,7 @@ static int imx390_probe(struct i2c_client *client,
 
 	common_data->ops = &imx390_common_ops;
 	common_data->ctrl_handler = &priv->ctrl_handler;
+	common_data->dev        = &client->dev;
 	common_data->frmfmt = &imx390_frmfmt[0];
 	common_data->colorfmt = camera_common_find_datafmt(
 					  IMX390_DEFAULT_DATAFMT);
@@ -1135,21 +1164,46 @@ static int imx390_probe(struct i2c_client *client,
 	priv->subdev->dev = &client->dev;
 	priv->s_data->dev = &client->dev;
 	priv->last_wdr_et_val = 0;
-
-	/* Pair sensor to serializer dev */
-	max9295_sdev_pair(priv->ser_dev, &priv->g_ctx);
-
-	/* Register sensor to deserializer dev */
-	max9296_sdev_register(priv->dser_dev, &priv->g_ctx);
-
-	/* setup serdes control pipeline */
-	max9296_link_ex(priv->dser_dev, &client->dev);
-	max9295_setup_control(priv->ser_dev);
-	max9296_setup_control(priv->dser_dev);
+	priv->id = id;
 
 	err = imx390_power_get(priv);
 	if (err)
 		return err;
+
+	/* Pair sensor to serializer dev */
+	err = max9295_sdev_pair(priv->ser_dev, &priv->g_ctx);
+	if (err) {
+		dev_err(&client->dev, "gmsl ser pairing failed\n");
+		return err;
+	}
+
+	/* Register sensor to deserializer dev */
+	err = max9296_sdev_register(priv->dser_dev, &priv->g_ctx);
+	if (err) {
+		dev_err(&client->dev, "gmsl deserializer register failed\n");
+		return err;
+	}
+
+	/*
+	 * gmsl serdes setup
+	 *
+	 * Sensor power on/off should be the right place for serdes
+	 * setup/reset. But the problem is, the total required delay
+	 * in serdes setup/reset exceeds the frame wait timeout, looks to
+	 * be related to multiple channel open and close sequence
+	 * issue (#BUG 200477330).
+	 * Once this bug is fixed, these may be moved to power on/off.
+	 * The delays in serdes is as per guidelines and can't be reduced,
+	 * so it is placed in probe/remove, though for that, deserializer
+	 * would be powered on always post boot, until 1.2v is supplied
+	 * to deserializer from CVB.
+	 */
+	err = imx390_gmsl_serdes_setup(priv);
+	if (err) {
+		dev_err(&client->dev,
+			"%s gmsl serdes setup failed\n", __func__);
+		return err;
+	}
 
 	err = camera_common_initialize(common_data, "imx390");
 	if (err) {
@@ -1192,6 +1246,8 @@ static int imx390_remove(struct i2c_client *client)
 	struct camera_common_data *s_data = to_camera_common_data(&client->dev);
 	struct imx390 *priv = (struct imx390 *)s_data->priv;
 
+	imx390_gmsl_serdes_reset(priv);
+
 	v4l2_async_unregister_subdev(priv->subdev);
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	media_entity_cleanup(&priv->subdev->entity);
@@ -1199,9 +1255,6 @@ static int imx390_remove(struct i2c_client *client)
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
 	camera_common_remove_debugfs(s_data);
-
-	max9295_reset_control(priv->ser_dev);
-	max9296_reset_control(priv->dser_dev);
 
 	return 0;
 }
@@ -1224,7 +1277,22 @@ static struct i2c_driver imx390_i2c_driver = {
 	.id_table = imx390_id,
 };
 
-module_i2c_driver(imx390_i2c_driver);
+static int __init imx390_init(void)
+{
+	mutex_init(&serdes_lock__);
+
+	return i2c_add_driver(&imx390_i2c_driver);
+}
+
+static void __exit imx390_exit(void)
+{
+	mutex_destroy(&serdes_lock__);
+
+	i2c_del_driver(&imx390_i2c_driver);
+}
+
+module_init(imx390_init);
+module_exit(imx390_exit);
 
 MODULE_DESCRIPTION("Media Controller driver for Sony IMX390");
 MODULE_AUTHOR("NVIDIA Corporation");

@@ -1,7 +1,7 @@
 /*
  * max9296.c - max9296 IO Expander driver
  *
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,9 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <media/camera_common.h>
 #include <linux/module.h>
 #include <media/max9296.h>
@@ -67,7 +69,7 @@
 #define MAX9296_RESET_ALL 0x80
 
 #define MAX9296_MAX_SOURCES 2
-#define MAX9296_MAX_PIPES 0x4
+#define MAX9296_MAX_PIPES 4
 
 #define MAX9296_PIPE_X 0
 #define MAX9296_PIPE_Y 1
@@ -102,13 +104,16 @@ struct max9296 {
 	struct max9296_source_ctx sources[MAX9296_MAX_SOURCES];
 	struct mutex lock;
 	u32 sdev_ref;
-	bool power_on;
+	bool ctrl_setup_done;
 	bool lane_setup;
-	bool link_ex;
+	bool link_setup;
 	struct pipe_ctx pipe[MAX9296_MAX_PIPES];
 	u8 csi_mode;
 	u8 lane_mp1;
 	u8 lane_mp2;
+	int reset_gpio;
+	int pw_ref;
+	struct regulator *vdd_cam_1v2;
 };
 
 static int max9296_write_reg(struct device *dev,
@@ -131,137 +136,229 @@ static int max9296_write_reg(struct device *dev,
 	return err;
 }
 
-static int max9296_read_reg(struct max9296 *priv,
-	u16 addr, u8* val)
+static int max9296_get_sdev_idx(struct device *dev,
+			struct device *s_dev, int *idx)
 {
-	struct i2c_client *i2c_client = priv->i2c_client;
-	int err;
-	u32 reg_val = 0;
+	struct max9296 *priv = dev_get_drvdata(dev);
+	int i;
+	int err = 0;
 
-	err = regmap_read(priv->regmap, addr, &reg_val);
-	if (err)
-		dev_err(&i2c_client->dev,
-			"%s:i2c read failed, 0x%x = %x\n",
-			__func__, addr, *val);
+	mutex_lock(&priv->lock);
+	for (i = 0; i < priv->num_src; i++) {
+		if (priv->sources[i].g_ctx->s_dev == s_dev)
+			break;
+	}
+	if (i == priv->num_src) {
+		dev_err(dev, "no sdev found\n");
+		err = -EINVAL;
+		goto ret;
+	}
 
-	*val = reg_val & 0xFF;
+	if (idx)
+		*idx = i;
 
+ret:
+	mutex_unlock(&priv->lock);
 	return err;
+}
+
+static void max9296_pipes_reset(struct max9296 *priv)
+{
+	/*
+	 * This is default pipes combination. add more mappings
+	 * for other combinations and requirements.
+	 */
+	struct pipe_ctx pipe_defaults[] = {
+		{MAX9296_PIPE_X, GMSL_CSI_DT_RAW_12,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_Y, GMSL_CSI_DT_RAW_12,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_Z, GMSL_CSI_DT_EMBED,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
+		{MAX9296_PIPE_U, GMSL_CSI_DT_EMBED,
+			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID}
+	};
+
+	/*
+	 * Add DT props for num-streams and stream sequence, and based on that
+	 * set the appropriate pipes defaults.
+	 * For now default it supports "2 RAW12 and 2 EMBED" 1:1 mappings.
+	 */
+	memcpy(priv->pipe, pipe_defaults, sizeof(pipe_defaults));
 }
 
 static void max9296_reset_ctx(struct max9296 *priv)
 {
 	int i;
 
-	priv->power_on = false;
-	priv->link_ex = false;
+	priv->ctrl_setup_done = false;
+	priv->link_setup = false;
 	priv->lane_setup = false;
+	max9296_pipes_reset(priv);
 	for (i = 0; i < priv->num_src; i++)
 		priv->sources[i].st_enabled = false;
 }
 
-int max9296_link_ex(struct device *dev, struct device *s_dev)
+int max9296_power_on(struct device *dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	int err = 0;
+
+	mutex_lock(&priv->lock);
+	if (priv->pw_ref == 0) {
+		usleep_range(1, 2);
+		if (priv->reset_gpio)
+			gpio_set_value(priv->reset_gpio, 0);
+
+		usleep_range(30, 50);
+
+		if (priv->vdd_cam_1v2) {
+			err = regulator_enable(priv->vdd_cam_1v2);
+			if (unlikely(err))
+				goto ret;
+		}
+
+		usleep_range(30, 50);
+
+		/*exit reset mode: XCLR */
+		if (priv->reset_gpio) {
+			gpio_set_value(priv->reset_gpio, 0);
+			usleep_range(30, 50);
+			gpio_set_value(priv->reset_gpio, 1);
+			usleep_range(30, 50);
+		}
+
+		/* delay to settle reset */
+		msleep(20);
+	}
+
+	priv->pw_ref++;
+
+ret:
+	mutex_unlock(&priv->lock);
+
+	return err;
+}
+
+void max9296_power_off(struct device *dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+
+	mutex_lock(&priv->lock);
+	priv->pw_ref--;
+
+	if (priv->pw_ref == 0) {
+		/* enter reset mode: XCLR */
+		usleep_range(1, 2);
+		if (priv->reset_gpio)
+			gpio_set_value(priv->reset_gpio, 0);
+
+		if (priv->vdd_cam_1v2)
+			regulator_disable(priv->vdd_cam_1v2);
+	}
+
+	mutex_unlock(&priv->lock);
+}
+
+int max9296_setup_link(struct device *dev, struct device *s_dev)
 {
 	struct max9296 *priv = dev_get_drvdata(dev);
 	u32 link;
 	int err = 0;
 	int i;
 
-	mutex_lock(&priv->lock);
-	for (i = 0; i < priv->num_src; i++) {
-		if (priv->sources[i].g_ctx->s_dev == s_dev) {
-			if (priv->sources[i].st_enabled)
-				goto ret;
-			break;
-		}
-	}
+	err = max9296_get_sdev_idx(dev, s_dev, &i);
+	if (err)
+		return err;
 
-	if (i == priv->num_src) {
-		dev_err(dev, "sdev not registered\n");
-		err = -EINVAL;
-		goto ret;
-	}
+	mutex_lock(&priv->lock);
 
 	link = priv->sources[i].g_ctx->serdes_csi_link;
 
-	if (!priv->power_on) {
+	if (!priv->ctrl_setup_done) {
 		if (link == GMSL_SERDES_CSI_LINK_A) {
 			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x01);
 			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x21);
-			/* delay to settle link */
-			msleep(100);
 		} else if (link == GMSL_SERDES_CSI_LINK_B) {
 			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x02);
 			max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x22);
-			/* delay to settle link */
-			msleep(100);
 		} else { /* Extend for DES having more than two GMSL links */
 			dev_err(dev, "%s: invalid gmsl link\n", __func__);
 			err = -EINVAL;
 			goto ret;
 		}
-		priv->link_ex = true;
+
+		/* delay to settle link */
+		msleep(100);
+
+		priv->link_setup = true;
 	}
 
 ret:
 	mutex_unlock(&priv->lock);
+
 	return err;
 }
-EXPORT_SYMBOL(max9296_link_ex);
+EXPORT_SYMBOL(max9296_setup_link);
 
 int max9296_setup_control(struct device *dev)
 {
 	struct max9296 *priv = dev_get_drvdata(dev);
 	int err = 0;
 
-	if (!priv->link_ex) {
+	mutex_lock(&priv->lock);
+	if (!priv->link_setup) {
 		dev_err(dev, "%s: invalid state\n", __func__);
 		err = -EINVAL;
 		goto error;
 	}
 
-	if (!priv->power_on) {
+	if (!priv->ctrl_setup_done) {
 		/* Enable splitter mode */
 		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x03);
 		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, 0x23);
+
 		/* delay to settle link */
-		msleep(100);
+		msleep(50);
+
 		max9296_write_reg(dev,
 			MAX9296_PWDN_PHYS_ADDR, MAX9296_ALLPHYS_NOSTDBY);
 
-		priv->power_on = true;
+		priv->ctrl_setup_done = true;
 	}
 
 	priv->sdev_ref++;
 
 error:
 	mutex_unlock(&priv->lock);
+
 	return err;
 }
 EXPORT_SYMBOL(max9296_setup_control);
 
-int max9296_reset_control(struct device *dev)
+int max9296_reset_control(struct device *dev, struct device *s_dev)
 {
 	struct max9296 *priv = dev_get_drvdata(dev);
 	int err = 0;
 
-	if (!priv->sdev_ref) {
-		dev_err(dev, "%s: invalid state\n", __func__);
-		err = -EINVAL;
-		goto error;
+	mutex_lock(&priv->lock);
+	if (!priv->ctrl_setup_done) {
+		dev_dbg(dev, "%s: device is powered off\n", __func__);
+		goto ret;
 	}
 
 	priv->sdev_ref--;
-
 	if (priv->sdev_ref == 0) {
 		max9296_reset_ctx(priv);
 		max9296_write_reg(dev, MAX9296_CTRL0_ADDR, MAX9296_RESET_ALL);
+
 		/* delay to settle reset */
-		msleep(100);
+		msleep(50);
 	}
 
-error:
+ret:
 	mutex_unlock(&priv->lock);
+
 	return err;
 }
 EXPORT_SYMBOL(max9296_reset_control);
@@ -517,26 +614,19 @@ int max9296_setup_streaming(struct device *dev, struct device *s_dev)
 	int i = 0;
 	u16 lane_ctrl_addr;
 
-	mutex_lock(&priv->lock);
-	for (i = 0; i < priv->num_src; i++) {
-		if (priv->sources[i].g_ctx->s_dev == s_dev) {
-			if (priv->sources[i].st_enabled)
-				goto error;
-			break;
-		}
-	}
+	err = max9296_get_sdev_idx(dev, s_dev, &i);
+	if (err)
+		return err;
 
-	if (i == priv->num_src) {
-		dev_err(dev, "sdev not registered\n");
-		err = -EINVAL;
-		goto error;
-	}
+	mutex_lock(&priv->lock);
+	if (priv->sources[i].st_enabled)
+		goto ret;
 
 	g_ctx = priv->sources[i].g_ctx;
 
 	err = max9296_setup_pipeline(dev, g_ctx);
 	if (err)
-		goto error;
+		goto ret;
 
 	/* Derive CSI lane map register */
 	switch(g_ctx->dst_csi_port) {
@@ -557,7 +647,7 @@ int max9296_setup_streaming(struct device *dev, struct device *s_dev)
 	default:
 		dev_err(dev, "%s: invalid gmsl csi port!\n", __func__);
 		err = -EINVAL;
-		goto error;
+		goto ret;
 	};
 
 	/*
@@ -583,7 +673,7 @@ int max9296_setup_streaming(struct device *dev, struct device *s_dev)
 
 	priv->sources[i].st_enabled = true;
 
-error:
+ret:
 	mutex_unlock(&priv->lock);
 	return err;
 }
@@ -639,32 +729,27 @@ static int max9296_parse_dt(struct max9296 *priv,
 	}
 	priv->max_src = value;
 
+	priv->reset_gpio = of_get_named_gpio(node, "reset-gpios", 0);
+	if (priv->reset_gpio < 0) {
+		dev_err(&client->dev, "reset-gpios not found %d\n", err);
+		return err;
+	}
+
+	/* digital 1.2v */
+	if (of_get_property(node, "vdd_cam_1v2-supply", NULL)) {
+		priv->vdd_cam_1v2 = regulator_get(&client->dev, "vdd_cam_1v2");
+		if (IS_ERR(priv->vdd_cam_1v2)) {
+			dev_err(&client->dev,
+				"vdd_cam_1v2 regulator get failed\n");
+			err = PTR_ERR(priv->vdd_cam_1v2);
+			priv->vdd_cam_1v2 = NULL;
+			return err;
+		}
+	} else {
+		priv->vdd_cam_1v2 = NULL;
+	}
+
 	return 0;
-}
-
-static void max9296_pipes_init(struct max9296 *priv)
-{
-	/*
-	 * This is default pipes combination. add more mappings
-	 * for other combinations and requirements.
-	 */
-	struct pipe_ctx pipe_defaults[] = {
-		{MAX9296_PIPE_X, GMSL_CSI_DT_RAW_12,
-			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
-		{MAX9296_PIPE_Y, GMSL_CSI_DT_RAW_12,
-			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
-		{MAX9296_PIPE_Z, GMSL_CSI_DT_EMBED,
-			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID},
-		{MAX9296_PIPE_U, GMSL_CSI_DT_EMBED,
-			MAX9296_CSI_CTRL_1, 0, MAX9296_INVAL_ST_ID}
-	};
-
-	/*
-	 * Add DT props for num-streams and stream sequence, and based on that
-	 * set the appropriate pipes defaults.
-	 * For now default it supports "2 RAW12 and 2 EMBED" 1:1 mappings.
-	 */
-	memcpy(priv->pipe, pipe_defaults, sizeof(pipe_defaults));
 }
 
 static struct regmap_config max9296_regmap_config = {
@@ -678,9 +763,8 @@ static int max9296_probe(struct i2c_client *client,
 {
 	struct max9296 *priv;
 	int err = 0;
-	u8 val = 0;
 
-	dev_info(&client->dev, "[MAX9296]: probing GMSL dserializer\n");
+	dev_info(&client->dev, "[MAX9296]: probing GMSL IO expander\n");
 
 	priv = devm_kzalloc(&client->dev, sizeof(*priv), GFP_KERNEL);
 	priv->i2c_client = client;
@@ -692,9 +776,9 @@ static int max9296_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	priv->power_on = false;
+	priv->ctrl_setup_done = false;
 	priv->lane_setup = false;
-	priv->link_ex = false;
+	priv->link_setup = false;
 
 	err = max9296_parse_dt(priv, client);
 	if (err) {
@@ -702,7 +786,7 @@ static int max9296_probe(struct i2c_client *client,
 		return -EFAULT;
 	}
 
-	max9296_pipes_init(priv);
+	max9296_pipes_reset(priv);
 
 	if (priv->max_src > MAX9296_MAX_SOURCES) {
 		dev_err(&client->dev,
@@ -711,9 +795,6 @@ static int max9296_probe(struct i2c_client *client,
 	}
 
 	mutex_init(&priv->lock);
-
-	max9296_read_reg(priv, 0x0010, &val);
-	dev_info(&client->dev, "max9296 id = 0x%x\n", val);
 
 	dev_set_drvdata(&client->dev, priv);
 
@@ -725,7 +806,11 @@ static int max9296_probe(struct i2c_client *client,
 
 static int max9296_remove(struct i2c_client *client)
 {
+	struct max9296 *priv;
+
 	if (client != NULL) {
+		priv = dev_get_drvdata(&client->dev);
+		mutex_destroy(&priv->lock);
 		i2c_unregister_device(client);
 		client = NULL;
 	}

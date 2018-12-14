@@ -30,6 +30,7 @@
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
 	nvidia,fastboot-usb-vid = <0x0955>;
 	nvidia,fastboot-usb-pid = <0xee1e>;
+	model = "jetson-xavier";
 
 	compatible = "nvidia,jetson-xavier", "nvidia,tegra194";
 

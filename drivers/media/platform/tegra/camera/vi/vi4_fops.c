@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 4 device common APIs
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frank@nvidia.com>
  *
@@ -374,7 +374,7 @@ static int tegra_channel_notify_enable(
 	req.syncpt_ids[1] = chan->syncpt[index][FE_SYNCPT_IDX]; /* ATOMP_FE */
 	req.syncpt_ids[2] = 0xffffffff;
 	req.stream = chan->port[index];
-	req.vc = 0;
+	req.vc = chan->virtual_channel;
 	req.pad = 0;
 
 	err = vi_notify_channel_enable_reports(
@@ -409,7 +409,7 @@ static int tegra_channel_notify_disable(
 	req.syncpt_ids[1] = 0xffffffff;
 	req.syncpt_ids[2] = 0xffffffff;
 	req.stream = chan->port[index];
-	req.vc = 0;
+	req.vc = chan->virtual_channel;
 	req.pad = 0;
 
 	err = vi_notify_channel_reset(
@@ -441,7 +441,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan,
 	u32 data_type = chan->fmtinfo->img_dt;
 	u32 csi_port = chan->port[index];
 	u32 stream = 1U << csi_port;
-	u32 virtual_ch = 1U << 0;
+	u32 virtual_ch = 1U << chan->virtual_channel;
 	u32 vnc_id;
 	int err;
 
@@ -726,7 +726,7 @@ static int tegra_channel_stop_increments(struct tegra_channel *chan)
 			0xffffffff,
 		},
 		.stream = chan->port[0],
-		.vc = 0,
+		.vc = chan->virtual_channel,
 	};
 
 	/* No need to check errors. There's nothing we could do. */

@@ -1001,7 +1001,7 @@ static ssize_t otg_vbus_show(struct device *dev,
 	struct tegra_xusb_padctl *padctl = platform_get_drvdata(pdev);
 	int index = padctl->otg_vbus_usb2_port_base_1[0] - 1;
 
-	if (!index)
+	if (!padctl->otg_vbus_usb2_port_base_1[0])
 		return sprintf(buf, "No UTMI OTG port\n");
 
 	return sprintf(buf, "OTG port %d vbus always-on: %s\n",
@@ -1020,7 +1020,7 @@ static ssize_t otg_vbus_store(struct device *dev,
 	if (kstrtouint(buf, 10, &on))
 		return -EINVAL;
 
-	if (!index) {
+	if (!padctl->otg_vbus_usb2_port_base_1[0]) {
 		dev_err(dev, "No UTMI OTG port\n");
 		return -EINVAL;
 	}

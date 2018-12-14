@@ -45,6 +45,7 @@
 					reg = <0x6a>;
 					csi-mode = "2x4";
 					max-src = <2>;
+					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 				};
 				ser_prim: max9295_prim@62 {
 					compatible = "nvidia,max9295";
@@ -69,7 +70,6 @@
 							<&bpmp_clks TEGRA194_CLK_EXTPERIPH1>;
 					clock-names = "extperiph1", "pllp_grtba";
 					mclk = "extperiph1";
-					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 					nvidia,gmsl-ser-device = <&ser_a>;
 					nvidia,gmsl-dser-device = <&dser>;
 				};
@@ -81,7 +81,6 @@
 							<&bpmp_clks TEGRA194_CLK_EXTPERIPH1>;
 					clock-names = "extperiph1", "pllp_grtba";
 					mclk = "extperiph1";
-					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 					nvidia,gmsl-ser-device = <&ser_b>;
 					nvidia,gmsl-dser-device = <&dser>;
 				};

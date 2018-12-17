@@ -2231,7 +2231,8 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	 * FSM before issuing CMD reset in case of Buffer read ready interrupt
 	 * timeout
 	 */
-	sdhci_writeb(host, 0, SDHCI_TIMEOUT_CONTROL);
+	if (!(host->quirks2 & SDHCI_QUIRK2_NON_STD_TUN_CARD_CLOCK))
+		sdhci_writeb(host, 0, SDHCI_TIMEOUT_CONTROL);
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	ctrl |= SDHCI_CTRL_EXEC_TUNING;
 	if (host->quirks2 & SDHCI_QUIRK2_TUNING_WORK_AROUND)
@@ -2324,6 +2325,7 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 		if (!host->tuning_done) {
 			pr_info(DRIVER_NAME ": Timeout waiting for Buffer Read Ready interrupt during tuning procedure, falling back to fixed sampling clock\n");
+			sdhci_dumpregs(host);
 			ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 			ctrl &= ~SDHCI_CTRL_TUNED_CLK;
 			ctrl &= ~SDHCI_CTRL_EXEC_TUNING;

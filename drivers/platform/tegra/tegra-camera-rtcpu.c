@@ -521,9 +521,6 @@ static int tegra_sce_cam_wait_for_wfi(struct device *dev, long *timeout)
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	long delay_stride = HZ / 50;
 
-	if (rtcpu->pm_base == NULL)
-		return 0;
-
 	/* Poll for WFI assert.*/
 	for (;;) {
 		u32 val = readl(rtcpu->pm_base + TEGRA_PM_PWR_STATUS_0);
@@ -547,13 +544,22 @@ static int tegra_sce_cam_suspend_core(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	long timeout = 2 * rtcpu->cmd.timeout;
+	u32 val;
 	int err;
 
 	err = tegra_camrtc_cmd_pm_suspend(dev, &timeout);
-	if (err)
-		return err;
 
-	return tegra_sce_cam_wait_for_wfi(dev, &timeout);
+	if (rtcpu->pm_base != NULL) {
+		/* Don't bother to check for WFI if core is unresponsive */
+		if (err == 0)
+			err = tegra_sce_cam_wait_for_wfi(dev, &timeout);
+
+		val = readl(rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+		writel(val & ~TEGRA_PM_FWLOADDONE,
+			rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+	}
+
+	return err;
 }
 
 static void tegra_ape_cam_assert_resets(struct device *dev)

@@ -389,10 +389,6 @@
 		};
 	};
 
-	tlk {
-		status = "okay";
-	};
-
 	gpu-dvfs-rework {
 		status = "okay";
 	};
@@ -409,10 +405,18 @@
 		};
 	};
 
-	pwm-regulator@0 {
-		regulator-min-microvolt = <710000>;
-	};
+	pwm_regulators {
+		compatible = "simple-bus";
+		pwm-regulator@0 {
+			regulator-min-microvolt = <708000>;
+			regulator-max-microvolt = <1320000>;
+		};
 
+		pwm-regulator@1 {
+			regulator-min-microvolt = <710000>;
+			regulator-max-microvolt = <1320000>;
+		};
+	};
 	soctherm@0x700E2000 {
 		throttle-cfgs {
 			/delete-node/ oc1;
@@ -471,5 +475,13 @@
 		tegra_nct72: temp-sensor@4c {
 			status = "disabled";
 		};
+	};
+	clock@70110000 {
+                status = "okay";
+                vdd-cpu-supply = <&cpu_ovr_reg>;
+	};
+
+	dvfs {
+                vdd-cpu-supply = <&cpu_ovr_reg>;
 	};
 };

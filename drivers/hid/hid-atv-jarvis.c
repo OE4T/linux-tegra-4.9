@@ -22,6 +22,7 @@
 #include <linux/hardirq.h>
 #include <linux/iio/imu/tsfw_icm20628.h>
 #include <linux/jiffies.h>
+#include <linux/list.h>
 #include <linux/ratelimit.h>
 #include <linux/slab.h>
 #include <linux/time.h>
@@ -184,6 +185,8 @@ struct shdr_device {
 	struct delayed_work hid_miss_war_work;
 	struct mutex hid_miss_war_lock;
 	int hid_miss_war_timeout;
+	u32 last_ljsx, last_ljsy;	/* Last left joystick x, y */
+	u32 last_rjsx, last_rjsy;	/* Last right joystick x, y */
 };
 
 /* counter of how many continous silent timer callback in a row */
@@ -214,6 +217,8 @@ MODULE_PARM_DESC(pcm_devs, "PCM devices # (0-4) for SHIELD Remote driver.");
 module_param_array(pcm_substreams, int, NULL, 0444);
 MODULE_PARM_DESC(pcm_substreams,
 	"PCM substreams # (1-128) for SHIELD Remote driver?");
+
+static void atvr_ts_joystick_missreport_stats_inc(struct hid_device *hdev);
 
 /* Debug feature to save captured raw and decoded audio into buffers
  * and make them available for reading from misc devices.
@@ -1620,6 +1625,14 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
 		button_report_size = TS_HOSTCMD_REPORT_SIZE;
 
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE &&
+	    report->id == button_report_id) {
+		shdr_dev->last_ljsx = (data[10] << 8) | data[9];
+		shdr_dev->last_ljsy = (data[12] << 8) | data[11];
+		shdr_dev->last_rjsx = (data[14] << 8) | data[13];
+		shdr_dev->last_rjsy = (data[16] << 8) | data[15];
+	}
+
 	if ((hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
 				hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY) &&
 	    report->id == PEP_BUTTON_REPORT_ID) {
@@ -1953,6 +1966,15 @@ static void atvr_remove(struct hid_device *hdev)
 		device_remove_file(&hdev->dev, &dev_attr_timeout);
 	}
 
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE && hdev->uniq) {
+		if (shdr_dev->last_ljsx == 0 || shdr_dev->last_ljsx == 0xffff ||
+		    shdr_dev->last_ljsy == 0 || shdr_dev->last_ljsy == 0xffff ||
+		    shdr_dev->last_rjsx == 0 || shdr_dev->last_rjsx == 0xffff ||
+		    shdr_dev->last_rjsy == 0 || shdr_dev->last_rjsy == 0xffff) {
+			atvr_ts_joystick_missreport_stats_inc(hdev);
+		}
+	}
+
 	mutex_lock(&snd_cards_lock);
 	atvr_snd = shdr_card->private_data;
 
@@ -2043,22 +2065,22 @@ static struct hid_driver atvr_driver = {
 };
 
 static int hid_miss_stats;
-static struct mutex hid_miss_stats_lock;
+static struct mutex stats_lock;
 
 static void atvr_hid_miss_stats_inc(void)
 {
-	mutex_lock(&hid_miss_stats_lock);
+	mutex_lock(&stats_lock);
 	hid_miss_stats++;
-	mutex_unlock(&hid_miss_stats_lock);
+	mutex_unlock(&stats_lock);
 }
 
 static ssize_t hid_miss_stats_show(struct device_driver *driver, char *buf)
 {
 	int stats;
 
-	mutex_lock(&hid_miss_stats_lock);
+	mutex_lock(&stats_lock);
 	stats = hid_miss_stats;
-	mutex_unlock(&hid_miss_stats_lock);
+	mutex_unlock(&stats_lock);
 
 	return sprintf(buf, "%d", stats);
 }
@@ -2069,9 +2091,9 @@ static ssize_t hid_miss_stats_store(struct device_driver *driver,
 	int val;
 
 	if (!kstrtoint(buf, 0, &val) && val == 0) {
-		mutex_lock(&hid_miss_stats_lock);
+		mutex_lock(&stats_lock);
 		hid_miss_stats = 0;
-		mutex_unlock(&hid_miss_stats_lock);
+		mutex_unlock(&stats_lock);
 	}
 
 	return count;
@@ -2083,6 +2105,72 @@ static DRIVER_ATTR_RW(hid_miss_stats);
 static DRIVER_ATTR(hid_miss_stats, S_IRUGO | S_IWUSR,
 		   hid_miss_stats_show, hid_miss_stats_store);
 #endif
+
+struct ts_joystick_missreport_stat {
+	char uniq[17];
+	int count;
+	struct list_head list;
+};
+
+static LIST_HEAD(ts_joystick_stats);
+
+static void atvr_ts_joystick_missreport_stats_inc(struct hid_device *hdev)
+{
+	struct ts_joystick_missreport_stat *stat;
+
+	mutex_lock(&stats_lock);
+	list_for_each_entry(stat, &ts_joystick_stats, list) {
+		if (!strcmp(stat->uniq, hdev->uniq)) {
+			stat->count++;
+			mutex_unlock(&stats_lock);
+			return;
+		}
+	}
+
+	stat = kzalloc(sizeof(*stat), GFP_KERNEL);
+	if (stat) {
+		strcpy(stat->uniq, hdev->uniq);
+		stat->count++;
+		list_add_tail(&stat->list, &ts_joystick_stats);
+	}
+	mutex_unlock(&stats_lock);
+}
+
+static ssize_t atvr_show_ts_joystick_stats(struct device_driver *driver,
+					   char *buf)
+{
+	struct ts_joystick_missreport_stat *stat;
+	int count = 0;
+
+	mutex_lock(&stats_lock);
+	list_for_each_entry(stat, &ts_joystick_stats, list) {
+		count += sprintf(buf + count, "%s,%d\n",
+				 stat->uniq, stat->count);
+	}
+	mutex_unlock(&stats_lock);
+
+	return count;
+}
+
+static ssize_t atvr_store_ts_joystick_stats(struct device_driver *driver,
+					     const char *buf, size_t count)
+{
+	struct ts_joystick_missreport_stat *stat;
+	int val;
+
+	if (!kstrtoint(buf, 0, &val) && val == 0) {
+		mutex_lock(&stats_lock);
+		list_for_each_entry(stat, &ts_joystick_stats, list) {
+			stat->count = 0;
+		}
+		mutex_unlock(&stats_lock);
+	}
+
+	return count;
+}
+
+static DRIVER_ATTR(ts_joystick_stats, 0644,
+		   atvr_show_ts_joystick_stats, atvr_store_ts_joystick_stats);
 
 static int atvr_init(void)
 {
@@ -2096,12 +2184,19 @@ static int atvr_init(void)
 		goto err_hid_register;
 	}
 
-	mutex_init(&hid_miss_stats_lock);
+	mutex_init(&stats_lock);
 	ret = driver_create_file(&atvr_driver.driver,
 				 &driver_attr_hid_miss_stats);
 	if (ret) {
 		pr_err("%s: failed to create driver sysfs node\n", __func__);
 		goto err_attr_hid_miss_stats;
+	}
+
+	ret = driver_create_file(&atvr_driver.driver,
+				 &driver_attr_ts_joystick_stats);
+	if (ret) {
+		pr_err("%s: failed to create driver sysfs node\n", __func__);
+		goto err_attr_ts_joystick_stats;
 	}
 
 #if (DEBUG_WITH_MISC_DEVICE == 1)
@@ -2141,9 +2236,11 @@ static int atvr_init(void)
 
 	return ret;
 
+err_attr_ts_joystick_stats:
+	driver_remove_file(&atvr_driver.driver, &driver_attr_hid_miss_stats);
 err_attr_hid_miss_stats:
 	hid_unregister_driver(&atvr_driver);
-	mutex_destroy(&hid_miss_stats_lock);
+	mutex_destroy(&stats_lock);
 err_hid_register:
 	mutex_destroy(&snd_cards_lock);
 	return ret;
@@ -2158,9 +2255,10 @@ static void atvr_exit(void)
 #endif
 
 	driver_remove_file(&atvr_driver.driver, &driver_attr_hid_miss_stats);
+	driver_remove_file(&atvr_driver.driver, &driver_attr_ts_joystick_stats);
 	hid_unregister_driver(&atvr_driver);
 	mutex_destroy(&snd_cards_lock);
-	mutex_destroy(&hid_miss_stats_lock);
+	mutex_destroy(&stats_lock);
 }
 
 module_init(atvr_init);

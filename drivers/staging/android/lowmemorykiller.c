@@ -42,6 +42,7 @@
 #include <linux/rcupdate.h>
 #include <linux/profile.h>
 #include <linux/notifier.h>
+#include <linux/string.h>
 #ifdef CONFIG_TEGRA_NVMAP
 #include <linux/nvmap.h>
 #endif
@@ -64,6 +65,13 @@ static int lowmem_minfree[6] = {
 	4 * 1024,	/* 16MB */
 	16 * 1024,	/* 64MB */
 };
+
+static ulong lowmem_kill_count;
+static ulong lowmem_kill_mbs;
+#define FREED_PROC_DEPTH 10
+#define PROC_NAME_LENGTH 17
+static char *freed_procs[FREED_PROC_DEPTH];
+static char freed_procs_buffer[FREED_PROC_DEPTH * PROC_NAME_LENGTH];
 
 static int lowmem_minfree_size = 4;
 
@@ -194,6 +202,12 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 			     cache_size, cache_limit,
 			     min_score_adj,
 			     free);
+		lowmem_kill_count++;
+		lowmem_kill_mbs += (ulong)
+			(selected_tasksize * (long)(PAGE_SIZE / 1024) / 1024);
+		strncpy(freed_procs[lowmem_kill_count % FREED_PROC_DEPTH],
+			selected->comm,
+			PROC_NAME_LENGTH);
 		lowmem_deathpending_timeout = jiffies + HZ;
 		rem += selected_tasksize;
 	}
@@ -212,7 +226,10 @@ static struct shrinker lowmem_shrinker = {
 
 static int __init lowmem_init(void)
 {
+	int i = 0;
 	register_shrinker(&lowmem_shrinker);
+	for (i = 0; i < FREED_PROC_DEPTH; i++)
+		freed_procs[i] = &freed_procs_buffer[i * PROC_NAME_LENGTH];
 	return 0;
 }
 device_initcall(lowmem_init);
@@ -309,4 +326,7 @@ module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size, 0644);
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 0644);
+module_param_array_named(kill_procs, freed_procs, charp, NULL, 0444);
 module_param_named(debug_level, lowmem_debug_level, uint, 0644);
+module_param_named(kill_count, lowmem_kill_count, ulong, 0444);
+module_param_named(kill_mbs, lowmem_kill_mbs, ulong, 0444);

@@ -150,7 +150,13 @@ enum {
 	nvfx_method_reset = 0,
 	nvfx_method_set_state,
 	nvfx_method_flush,
-
+	nvfx_method_read_params,
+	nvfx_method_error_event,
+	/*
+	 * CPU to ADSP : Used to indicate end of stream
+	 * ADSP to CPU : Used to notify that all input data is consumed
+	 */
+	nvfx_method_set_eos,
 	nvfx_method_external_start = 65536,
 
 	nvfx_method_force32 = 0x7fffffff

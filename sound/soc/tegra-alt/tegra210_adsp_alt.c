@@ -771,7 +771,7 @@ static int tegra210_adsp_send_eos_msg(struct tegra210_adsp_app *app,
 
 	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_eos_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_eos_params_t);
-	apm_msg.msg.call_params.method = nvfx_apm_method_set_eos;
+	apm_msg.msg.call_params.method = nvfx_method_set_eos;
 
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
@@ -1300,7 +1300,7 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 			}
 		}
 		break;
-	case nvfx_apm_method_set_eos:
+	case nvfx_method_set_eos:
 		/* Nothing specific to be done here as DRAIN */
 		/* is implemented in native PCM driver       */
 		break;
@@ -1331,7 +1331,7 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 	case nvfx_apm_method_set_position:
 		snd_compr_fragment_elapsed(prtd->cstream);
 		break;
-	case nvfx_apm_method_set_eos:
+	case nvfx_method_set_eos:
 		if (!prtd->is_draining) {
 			dev_warn(prtd->dev, "EOS reached before drain");
 			break;

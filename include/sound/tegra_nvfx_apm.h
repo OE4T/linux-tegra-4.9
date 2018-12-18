@@ -115,7 +115,7 @@ typedef struct {
 	uint32_t size;
 } apm_notification_params_t;
 
-/* For nvfx_apm_method_set_eos */
+/* For nvfx_method_set_eos */
 typedef struct {
 	nvfx_call_params_t call_params;
 } apm_eos_params_t;

@@ -3282,6 +3282,8 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 	int i;
 	int ret = 0;
 	uint32_t source;
+	struct snd_pcm_runtime *runtime;
+	struct tegra210_adsp_pcm_rtd *prtd = NULL;
 
 	/* Handle only HV environment ADSP FE events */
 	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
@@ -3355,6 +3357,8 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 	} else if (event == SND_SOC_DAPM_POST_PMD) {
 		dev_info(adsp->dev, "disconnect event on APM %d, ADSP-FE %d\n",
 				(i + 1) - APM_IN_START, w->reg);
+		prtd = apm->private_data;
+		runtime = prtd->substream->runtime;
 
 		ret = tegra210_adsp_send_state_msg(apm, nvfx_state_inactive,
 			TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
@@ -3373,6 +3377,13 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 			goto err_put;
 		}
 #endif
+		runtime->status->state = SNDRV_PCM_STATE_DISCONNECTED;
+		if (!(prtd->substream->f_flags & O_NONBLOCK)) {
+			if (IS_MMAP_ACCESS(runtime->access))
+				wake_up(&runtime->sleep);
+			else
+				wake_up(&runtime->tsleep);
+		}
 	} else {
 		pr_err("%s: error. unknown event: %d\n", __func__, event);
 		ret = -1;

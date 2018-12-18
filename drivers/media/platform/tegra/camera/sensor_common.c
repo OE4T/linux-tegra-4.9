@@ -1,7 +1,7 @@
 /*
  * sensor_common.c - utilities for tegra sensor drivers
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -88,6 +88,18 @@ static int sensor_common_parse_signal_props(
 		return err;
 	}
 	signal->pixel_clock.val = val64;
+
+	err = read_property_u64(node, "serdes_pix_clk_hz", &val64);
+	if (err)
+		signal->serdes_pixel_clock.val = 0;
+	else
+		signal->serdes_pixel_clock.val = val64;
+
+	if (signal->serdes_pixel_clock.val != 0ULL &&
+		signal->serdes_pixel_clock.val < signal->pixel_clock.val) {
+		dev_err(dev, "%s: serdes_pix_clk_hz is lower than pix_clk_hz!\n", __func__);
+		return -EINVAL;
+	}
 
 	err = read_property_u32(node, "cil_settletime", &value);
 	if (err)

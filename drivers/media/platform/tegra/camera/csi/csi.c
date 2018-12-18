@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra CSI Device
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -158,7 +158,10 @@ u64 read_pixel_clk_from_dt(struct tegra_csi_channel *chan)
 		mode_idx = chan->s_data->mode_prop_idx;
 		props =  &chan->s_data->sensor_props;
 		sig_props = &props->sensor_modes[mode_idx].signal_properties;
-		pix_clk = sig_props->pixel_clock.val;
+		if (sig_props->serdes_pixel_clock.val != 0ULL)
+			pix_clk = sig_props->serdes_pixel_clock.val;
+		else
+			pix_clk = sig_props->pixel_clock.val;
 	}
 
 	return pix_clk;
@@ -312,7 +315,10 @@ static void deskew_setup(struct tegra_csi_channel *chan,
 	mode_idx = chan->s_data->mode_prop_idx;
 	props =  &chan->s_data->sensor_props;
 	sig_props = &props->sensor_modes[mode_idx].signal_properties;
-	pix_clk_hz = sig_props->pixel_clock.val;
+	if (sig_props->serdes_pixel_clock.val != 0ULL)
+		pix_clk_hz = sig_props->serdes_pixel_clock.val;
+	else
+		pix_clk_hz = sig_props->pixel_clock.val;
 	deskew_enable = sig_props->deskew_initial_enable;
 
 	if (pix_clk_hz >= CLK_HZ_FOR_DESKEW && deskew_enable) {

@@ -126,6 +126,8 @@ struct tegra210_adsp_app {
 	apm_shared_state_t *apm; /* For a plugin it stores parent apm data */
 	struct nvadsp_mbox apm_mbox;
 	struct completion *msg_complete; /* For ADSP ack wait */
+	struct completion *raw_msg_read_complete;
+	struct completion *raw_msg_write_complete;
 	uint32_t reg;
 	uint32_t adma_chan; /* Valid for only ADMA app */
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
@@ -568,6 +570,7 @@ static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
 {
 	int ret = 0;
 	struct tegra210_adsp_app *apm = app;
+	unsigned long flag;
 
 	/* Find parent APM to wait for ACK*/
 	if (!IS_APM_IN(apm->reg)) {
@@ -581,12 +584,15 @@ static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
 			return ret;
 		}
 	}
-	reinit_completion(apm->msg_complete);
 	apm_msg->msg.call_params.method |= NVFX_APM_METHOD_ACK_BIT;
 
+	spin_lock_irqsave(&apm->apm_msg_queue_lock, flag);
 	ret = msgq_queue_message(&app->apm->msgq_recv.msgq, &apm_msg->msgq_msg);
-	if (ret < 0)
+	spin_unlock_irqrestore(&apm->apm_msg_queue_lock, flag);
+	if (ret < 0) {
+		pr_err("%s failed: msgq full\n", __func__);
 		return ret;
+	}
 
 	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_raw_data_ready,
 		NVADSP_MBOX_SMSG, true, 100);
@@ -596,7 +602,7 @@ static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
 	}
 
 	ret = wait_for_completion_interruptible_timeout(
-		apm->msg_complete,
+		apm->raw_msg_write_complete,
 		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
 	if (WARN_ON(ret == 0))
 		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
@@ -853,7 +859,27 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 			return -ENOMEM;
 		}
 
+		app->raw_msg_read_complete = devm_kzalloc(adsp->dev,
+					sizeof(struct completion), GFP_KERNEL);
+
+		if (!app->raw_msg_read_complete) {
+			dev_err(adsp->dev,
+				"Failed to allocate read completion struct.");
+			return -ENOMEM;
+		}
+
+		app->raw_msg_write_complete = devm_kzalloc(adsp->dev,
+					sizeof(struct completion), GFP_KERNEL);
+
+		if (!app->raw_msg_write_complete) {
+			dev_err(adsp->dev,
+				"Failed to allocate read completion struct.");
+			return -ENOMEM;
+		}
 		init_completion(app->msg_complete);
+		init_completion(app->raw_msg_read_complete);
+		init_completion(app->raw_msg_write_complete);
+
 		ret = nvadsp_app_start(app->info);
 		if (ret < 0) {
 			dev_err(adsp->dev, "Failed to start adsp app");
@@ -868,6 +894,8 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		apm_out->adsp = app->adsp;
 		apm_out->apm_mbox = app->apm_mbox;
 		apm_out->msg_complete = app->msg_complete;
+		apm_out->raw_msg_read_complete = app->raw_msg_read_complete;
+		apm_out->raw_msg_write_complete = app->raw_msg_write_complete;
 	} else if (IS_ADMA(app->reg)) {
 		app->adma_chan = find_first_zero_bit(adsp->adma_usage,
 					adsp->adma_ch_cnt);
@@ -1192,7 +1220,7 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 
 		ret = tegra210_adsp_get_raw_data_msg(app->apm, raw_msg);
 		if (ret < 0) {
-			pr_err("Dequeue failed %d.", ret);
+			pr_err("Dequeue failed raw %d.", ret);
 			kfree(raw_msg);
 			break;
 		}
@@ -1200,7 +1228,7 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 				raw_msg->msg.fx_raw_data_params.data,
 				sizeof(app->read_data.data));
 		kfree(raw_msg);
-		complete(app->msg_complete);
+		complete(app->raw_msg_read_complete);
 	}
 	break;
 	default:
@@ -1217,6 +1245,9 @@ static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
 	switch (apm_msg->msg.call_params.method) {
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
+		break;
+	case nvfx_apm_method_raw_ack:
+		complete(app->raw_msg_write_complete);
 		break;
 	case nvfx_apm_method_fx_error_event:
 		tegra210_adsp_nl_send_msg(app->adsp,
@@ -4967,7 +4998,6 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 		while (!IS_APM_IN(src))
 			src = tegra210_adsp_get_source(adsp, src);
 		apm = &adsp->apps[src];
-		reinit_completion(apm->msg_complete);
 		ret = pm_runtime_get_sync(adsp->dev);
 		if (ret < 0) {
 			dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
@@ -4976,8 +5006,14 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 		}
 		ret = tegra210_adsp_send_data_request_msg(app, count,
 				TEGRA210_ADSP_MSG_FLAG_SEND);
+		if (ret < 0) {
+			pm_runtime_put(adsp->dev);
+			dev_err(adsp->dev, "Raw read request dropped\n");
+			ret = -ETIMEDOUT;
+			goto end;
+		}
 		ret = wait_for_completion_interruptible_timeout(
-			apm->msg_complete,
+			apm->raw_msg_read_complete,
 			msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
 		pm_runtime_put(adsp->dev);
 		if (ret <= 0) {
@@ -5431,8 +5467,8 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	uint32_t adsp_switch_count;
 #endif
 	struct netlink_kernel_cfg cfg = {
-        	.input = tegra210_adsp_nl_recv_msg,
-    	};
+		.input = tegra210_adsp_nl_recv_msg,
+	};
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
 

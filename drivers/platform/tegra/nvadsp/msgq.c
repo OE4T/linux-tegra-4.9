@@ -1,7 +1,7 @@
 /*
  * ADSP circular message queue
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,6 +65,7 @@ EXPORT_SYMBOL(msgq_init);
 int32_t msgq_queue_message(msgq_t *msgq, const msgq_message_t *message)
 {
 	int32_t ret = 0;
+
 	if (msgq && message) {
 		int32_t ri = msgq->read_index;
 		int32_t wi = msgq->write_index;
@@ -80,6 +81,9 @@ int32_t msgq_queue_message(msgq_t *msgq, const msgq_message_t *message)
 
 		if (qsize <= msize) {
 			/* don't allow read == write */
+			pr_err("%s failed: msgq ri: %d, wi %d, msg size %d\n",
+				__func__, msgq->read_index,
+				msgq->write_index, message->size);
 			ret = -ENOSPC;
 		} else if (msize < qremainder) {
 			msgq_wmemcpy(first, message, msize);
@@ -135,6 +139,8 @@ int32_t msgq_dequeue_message(msgq_t *msgq, msgq_message_t *message)
 		/* empty queue */
 		if (message)
 			message->size = 0;
+		pr_err("%s failed: msgq ri: %d, wi %d; NO MSG\n",
+			__func__, msgq->read_index, msgq->write_index);
 		ret = -ENOMSG;
 	} else if (!message) {
 		/* no input buffer, discard top message */
@@ -142,6 +148,8 @@ int32_t msgq_dequeue_message(msgq_t *msgq, msgq_message_t *message)
 		msgq->read_index = ri < msgq->size ? ri : ri - msgq->size;
 	} else if (message->size < msg->size) {
 		/* return buffer too small */
+		pr_err("%s failed: msgq ri: %d, wi %d, NO SPACE\n",
+			__func__, msgq->read_index, msgq->write_index);
 		message->size = msg->size;
 		ret = -ENOSPC;
 	} else {

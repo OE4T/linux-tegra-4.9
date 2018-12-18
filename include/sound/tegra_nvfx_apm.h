@@ -80,6 +80,8 @@ enum {
 	nvfx_apm_method_set_priority,
 	/* ADSP to CPU : To send acknowledgement */
 	nvfx_apm_method_ack,
+	nvfx_apm_method_raw_ack,
+	/* CPU to ADSP : To set APM input mode */
 	nvfx_apm_method_set_input_mode,
 	nvfx_apm_method_write_data,
 	nvfx_apm_method_read_data,

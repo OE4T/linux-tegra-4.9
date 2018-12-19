@@ -338,7 +338,7 @@ static int uhid_hid_raw_request(struct hid_device *hid, unsigned char reportnum,
 	}
 }
 
-static int uhid_hid_output_raw(struct hid_device *hid, __u8 *buf, size_t count,
+int uhid_hid_output_raw(struct hid_device *hid, __u8 *buf, size_t count,
 			       unsigned char report_type)
 {
 	struct uhid_device *uhid = hid->driver_data;
@@ -375,6 +375,7 @@ static int uhid_hid_output_raw(struct hid_device *hid, __u8 *buf, size_t count,
 
 	return count;
 }
+EXPORT_SYMBOL_GPL(uhid_hid_output_raw);
 
 static int uhid_hid_output_report(struct hid_device *hid, __u8 *buf,
 				  size_t count)

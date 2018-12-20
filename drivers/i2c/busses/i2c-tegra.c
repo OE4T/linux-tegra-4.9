@@ -2205,7 +2205,7 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 		i2c_dev->hs_master_code = prop;
 
 	if (!i2c_dev->do_polled_io)
-		i2c_dev->disable_dma_mode = of_property_read_bool(np,
+		i2c_dev->disable_dma_mode = !of_property_read_bool(np,
 			"dmas");
 	else
 		i2c_dev->disable_dma_mode = true;

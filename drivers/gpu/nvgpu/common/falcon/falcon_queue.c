@@ -342,8 +342,6 @@ int nvgpu_flcn_queue_push(struct nvgpu_falcon *flcn,
 
 	err = flcn_queue_prepare_write(flcn, queue, size);
 	if (err != 0) {
-		nvgpu_err(flcn->g, "flcn-%d queue-%d, fail to open",
-			flcn->flcn_id, queue->id);
 		goto unlock_mutex;
 	}
 

@@ -32,6 +32,7 @@
 #include "porg-platforms/tegra210-porg-pwm-fan.dtsi"
 #include "porg-platforms/tegra210-porg-camera.dtsi"
 #include <t210-common-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi>
+#include <t210-common-platforms/tegra210-dp.dtsi>
 #include "porg-platforms/tegra210-porg-thermal-fan-est.dtsi"
 #include "porg-platforms/tegra210-porg-keys-p3448-0000-a00.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
@@ -56,6 +57,24 @@
 			nvidia,50hz-ss-war;
 			nvidia,dc-connector = <&sor1>;
 		};
+		dc@54240000 {
+			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,cmu-enable = <1>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,dc-or-node = "/host1x/sor";
+			nvidia,50hz-ss-war;
+			nvidia,dc-connector = <&sor0>;
+		};
+		sor {
+			status = "okay";
+			nvidia,xbar-ctrl = <2 1 0 3 4>;
+			dp-display {
+				status = "okay";
+			};
+		};
 		sor1 {
 			/* Compared to Jetson-TX1's baseboard (P2597), HDMI TX
 			 * lanes 0 and 2 have been swapped in Porg's baseboard
@@ -67,6 +86,12 @@
 			hdmi-display {
 				status = "okay";
 			};
+		};
+		dpaux {
+			status = "okay";
+		};
+		dpaux1 {
+			status = "okay";
 		};
 	};
 

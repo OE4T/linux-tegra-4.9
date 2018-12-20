@@ -242,6 +242,14 @@
 			avdd_hdmi_pll-supply = <&max77620_sd3>;
 			vdd_hdmi_5v0-supply = <&p3449_vdd_hdmi>;
 		};
+		/* tegradc.1 */
+		dc@54240000 {
+			vdd-dp-pwr-supply = <&p3448_avdd_io_edp>;
+			avdd-dp-pll-supply = <&max77620_sd3>;
+			vdd-edp-sec-mode-supply = <&battery_reg>;
+			vdd-dp-pad-supply = <&battery_reg>;
+			vdd_hdmi_5v0-supply = <&p3449_vdd_hdmi>;
+		};
 
 		vi {
 			avdd_dsi_csi-supply = <&max77620_sd3>;

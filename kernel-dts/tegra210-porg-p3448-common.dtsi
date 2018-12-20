@@ -281,7 +281,7 @@
 
 		nvidia,xbar = <&tegra_axbar>;
 
-		nvidia,dai-link-1 {
+		i2s1_dai_link: nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";
 			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&spdif_dit0>;

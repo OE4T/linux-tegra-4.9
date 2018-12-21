@@ -202,7 +202,7 @@ static ssize_t tegra_cec_write(struct file *file, const char __user *buf,
 	if (ret)
 		return ret;
 	else {
-		dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count, tx_buf);
+		pr_debug("CEC out:%*phC", (int)count, tx_buf);
 		return count;
 	}
 }
@@ -231,8 +231,7 @@ static ssize_t tegra_cec_read(struct file *file, char  __user *buffer,
 	if (copy_to_user(buffer, &(cec->rx_buffer), count))
 		return -EFAULT;
 
-	dev_dbg(cec->dev, "%s: %*phC", __func__, (int)count,
-		&(cec->rx_buffer));
+	pr_debug("CEC:%*phC", (int)count, &(cec->rx_buffer));
 	cec->rx_buffer = 0x0;
 	cec->rx_wake = 0;
 	return count;

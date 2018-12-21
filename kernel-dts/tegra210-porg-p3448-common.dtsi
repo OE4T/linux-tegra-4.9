@@ -485,4 +485,10 @@
 	dvfs {
                 vdd-cpu-supply = <&cpu_ovr_reg>;
 	};
+
+	rtc {
+		nvidia,pmc-wakeup = <&tegra_pmc PMC_WAKE_TYPE_EVENT 16
+			PMC_TRIGGER_TYPE_HIGH>;
+	};
+
 };

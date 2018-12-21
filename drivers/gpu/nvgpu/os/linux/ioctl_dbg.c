@@ -42,6 +42,7 @@
 #include "os_linux.h"
 #include "platform_gk20a.h"
 #include "ioctl_dbg.h"
+#include "ioctl_channel.h"
 #include "dmabuf_vidmem.h"
 
 struct dbg_session_gk20a_linux {
@@ -1935,6 +1936,87 @@ static int nvgpu_dbg_gpu_set_sm_exception_type_mask(
 	return err;
 }
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+static int nvgpu_dbg_gpu_cycle_stats(struct dbg_session_gk20a *dbg_s,
+			struct nvgpu_dbg_gpu_cycle_stats_args *args)
+{
+	struct channel_gk20a *ch = NULL;
+	int err;
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (ch == NULL) {
+		return -EINVAL;
+	}
+
+	err = gk20a_busy(ch->g);
+	if (err != 0) {
+		return err;
+	}
+
+	err = gk20a_channel_cycle_stats(ch, args->dmabuf_fd);
+
+	gk20a_idle(ch->g);
+	return err;
+}
+
+static int nvgpu_dbg_gpu_cycle_stats_snapshot(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_cycle_stats_snapshot_args *args)
+{
+	struct channel_gk20a *ch = NULL;
+	int err;
+
+	if (!args->dmabuf_fd) {
+		return -EINVAL;
+	}
+
+	nvgpu_speculation_barrier();
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (ch == NULL) {
+		return -EINVAL;
+	}
+
+	/* is it allowed to handle calls for current GPU? */
+	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT)) {
+		return -ENOSYS;
+	}
+
+	err = gk20a_busy(ch->g);
+	if (err != 0) {
+		return err;
+	}
+
+	/* handle the command (most frequent cases first) */
+	switch (args->cmd) {
+	case NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH:
+		err = gk20a_flush_cycle_stats_snapshot(ch);
+		args->extra = 0;
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH:
+		err = gk20a_attach_cycle_stats_snapshot(ch,
+						args->dmabuf_fd,
+						args->extra,
+						&args->extra);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_DETACH:
+		err = gk20a_channel_free_cycle_stats_snapshot(ch);
+		args->extra = 0;
+		break;
+
+	default:
+		pr_err("cyclestats: unknown command %u\n", args->cmd);
+		err = -EINVAL;
+		break;
+	}
+
+	gk20a_idle(ch->g);
+	return err;
+}
+
+#endif
+
 int gk20a_dbg_gpu_dev_open(struct inode *inode, struct file *filp)
 {
 	struct nvgpu_os_linux *l = container_of(inode->i_cdev,
@@ -2095,6 +2177,18 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		err = nvgpu_dbg_gpu_ioctl_set_mmu_debug_mode(dbg_s,
 		   (struct nvgpu_dbg_gpu_set_ctx_mmu_debug_mode_args *)buf);
 		break;
+
+#ifdef CONFIG_GK20A_CYCLE_STATS
+	case NVGPU_DBG_GPU_IOCTL_CYCLE_STATS:
+		err = nvgpu_dbg_gpu_cycle_stats(dbg_s,
+				(struct nvgpu_dbg_gpu_cycle_stats_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT:
+		err = nvgpu_dbg_gpu_cycle_stats_snapshot(dbg_s,
+				(struct nvgpu_dbg_gpu_cycle_stats_snapshot_args *)buf);
+		break;
+#endif
 
 	default:
 		nvgpu_err(g,

@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -128,8 +128,7 @@ void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch)
 	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
 }
 
-static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
-		       struct nvgpu_cycle_stats_args *args)
+int gk20a_channel_cycle_stats(struct channel_gk20a *ch, int dmabuf_fd)
 {
 	struct dma_buf *dmabuf;
 	void *virtual_address;
@@ -139,10 +138,10 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS))
 		return -ENOSYS;
 
-	if (args->dmabuf_fd && !priv->cyclestate_buffer_handler) {
+	if (dmabuf_fd && !priv->cyclestate_buffer_handler) {
 
 		/* set up new cyclestats buffer */
-		dmabuf = dma_buf_get(args->dmabuf_fd);
+		dmabuf = dma_buf_get(dmabuf_fd);
 		if (IS_ERR(dmabuf))
 			return PTR_ERR(dmabuf);
 		virtual_address = dma_buf_vmap(dmabuf);
@@ -154,12 +153,12 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 		ch->cyclestate.cyclestate_buffer_size = dmabuf->size;
 		return 0;
 
-	} else if (!args->dmabuf_fd && priv->cyclestate_buffer_handler) {
+	} else if (!dmabuf_fd && priv->cyclestate_buffer_handler) {
 		gk20a_channel_free_cycle_stats_buffer(ch);
 		return 0;
 
-	} else if (!args->dmabuf_fd && !priv->cyclestate_buffer_handler) {
-		/* no requst from GL */
+	} else if (!dmabuf_fd && !priv->cyclestate_buffer_handler) {
+		/* no request from GL */
 		return 0;
 
 	} else {
@@ -168,7 +167,7 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 	}
 }
 
-static int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
+int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
 {
 	int ret;
 
@@ -182,7 +181,7 @@ static int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
 	return ret;
 }
 
-static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
+int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
 				u32 dmabuf_fd,
 				u32 perfmon_id_count,
 				u32 *perfmon_id_start)
@@ -1280,7 +1279,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = gk20a_channel_cycle_stats(ch,
-				(struct nvgpu_cycle_stats_args *)buf);
+				((struct nvgpu_cycle_stats_args *)buf)->dmabuf_fd);
 		gk20a_idle(ch->g);
 		break;
 #endif

@@ -1416,6 +1416,31 @@ struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args {
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 23, \
 			struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args)
 
+struct nvgpu_dbg_gpu_cycle_stats_args {
+	__u32 dmabuf_fd;
+	__u32 reserved;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_CYCLE_STATS	\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 24, struct nvgpu_dbg_gpu_cycle_stats_args)
+
+/* cycle stats snapshot buffer support for mode E */
+struct nvgpu_dbg_gpu_cycle_stats_snapshot_args {
+	__u32 cmd;		/* in: command to handle     */
+	__u32 dmabuf_fd;	/* in: dma buffer handler    */
+	__u32 extra;		/* in/out: extra payload e.g.*/
+				/*    counter/start perfmon  */
+	__u32 reserved;
+};
+
+/* valid commands to control cycle stats shared buffer */
+#define NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH   0
+#define NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH  1
+#define NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT_CMD_DETACH  2
+
+#define NVGPU_DBG_GPU_IOCTL_CYCLE_STATS_SNAPSHOT	\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 25, struct nvgpu_dbg_gpu_cycle_stats_snapshot_args)
+
 /* MMU Debug Mode */
 #define NVGPU_DBG_GPU_CTX_MMU_DEBUG_MODE_DISABLED	0
 #define NVGPU_DBG_GPU_CTX_MMU_DEBUG_MODE_ENABLED	1

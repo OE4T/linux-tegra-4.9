@@ -1,7 +1,7 @@
 /*
  * tegra210_adx_alt.h - Definitions for Tegra210 ADX driver
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -138,6 +138,7 @@
 /*
  * Those defines are not in register field.
  */
+#define TEGRA210_ADX_NUM_OUTPUTS		4
 #define TEGRA210_ADX_RAM_DEPTH					16
 #define TEGRA210_ADX_MAP_STREAM_NUMBER_SHIFT	6
 #define TEGRA210_ADX_MAP_WORD_NUMBER_SHIFT		2
@@ -167,8 +168,10 @@ struct tegra210_adx_soc_data {
 
 struct tegra210_adx {
 	struct regmap *regmap;
-	unsigned int map[16];
+	unsigned int map[TEGRA210_ADX_RAM_DEPTH];
 	unsigned int byte_mask[2];
+	int input_channels;
+	int output_channels[TEGRA210_ADX_NUM_OUTPUTS];
 	const struct tegra210_adx_soc_data *soc_data;
 	bool is_shutdown;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2019, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -86,6 +86,9 @@ int nvadsp_os_t18x_init(struct platform_device *pdev)
 
 		/* Write to HWMBOX5 */
 		hwmbox_writel(val, drv_data->chip_data->hwmb.hwmbox5_reg);
+
+		/* Clear HWMBOX0 for ADSP Guest reset handling */
+		hwmbox_writel(0, drv_data->chip_data->hwmb.hwmbox0_reg);
 
 		return 0;
 	}

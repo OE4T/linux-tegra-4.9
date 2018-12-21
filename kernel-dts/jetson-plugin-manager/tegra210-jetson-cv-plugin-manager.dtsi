@@ -223,14 +223,5 @@
 				};
 			};
 		};
-		fragment@5 {
-			ids = ">=2180-1000-000";
-			override@0 {
-				target = <&sdhci3>;
-				_overlay_ {
-					uhs-mask = <0x60>;
-				};
-			};
-		};
 	};
 };

@@ -491,4 +491,7 @@
 			PMC_TRIGGER_TYPE_HIGH>;
 	};
 
+	nvpmodel {
+		status = "okay";
+	};
 };

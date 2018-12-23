@@ -2523,6 +2523,13 @@
 		status = "disabled";
 	};
 
+	nvpmodel {
+		compatible = "nvidia,nvpmodel";
+		clocks = <&tegra_car TEGRA210_CLK_EMC>;
+		clock-names = "emc";
+		status = "disabled";
+	};
+
 	extcon {
 		disp-state {
 			compatible = "extcon-disp-state";

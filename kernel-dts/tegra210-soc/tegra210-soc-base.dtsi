@@ -106,7 +106,7 @@
 				wakeup-latency-us = <130>;
 				min-residency-us = <1000>;
 				idle-state-name = "c7-cpu-powergated";
-				status = "disabled";
+				status = "okay";
 			};
 
 			CC6: cc6 {

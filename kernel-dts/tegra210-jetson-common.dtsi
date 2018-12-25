@@ -61,6 +61,10 @@
 				     PMC_TRIGGER_TYPE_HIGH>;
 	};
 
+	nvpmodel {
+		status = "okay";
+	};
+
 	pmc@7000e400 {
 		nvidia,suspend-mode = <0>;
 		nvidia,cpu-pwr-good-time = <0>;

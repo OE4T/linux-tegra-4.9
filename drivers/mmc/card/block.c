@@ -1076,7 +1076,7 @@ static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
 			       md->disk->disk_name, enable ? "en" : "dis", ret);
 			goto out;
 		} else {
-			pr_info("%s: cmdq mode %sable successful %d\n",
+			pr_debug("%s: cmdq mode %sable successful %d\n",
 			       md->disk->disk_name, enable ? "en" : "dis", ret);
 		}
 

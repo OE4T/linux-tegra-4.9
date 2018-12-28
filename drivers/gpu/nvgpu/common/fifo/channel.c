@@ -326,7 +326,12 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	 */
 	if (!nvgpu_is_enabled(g, NVGPU_DRIVER_IS_DYING)) {
 		/* abort channel and remove from runlist */
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
+		if (tsg_gk20a_from_ch(ch) != NULL) {
+			/* Between tsg is not null and unbind_channel call,
+			 * ioctl cannot be called anymore because user doesn't
+			 * have an open channel fd anymore to use for the unbind
+			 * ioctl.
+			 */
 			err = gk20a_tsg_unbind_channel(ch);
 			if (err) {
 				nvgpu_err(g,
@@ -2264,7 +2269,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	if (err) {
 		goto fail_6;
 	}
-
+	nvgpu_init_list_node(&c->ch_entry);
 	nvgpu_list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
@@ -2403,10 +2408,9 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 				nvgpu_cond_broadcast_interruptible(
 						&c->semaphore_wq);
 				if (post_events) {
-					if (gk20a_is_channel_marked_as_tsg(c)) {
-						struct tsg_gk20a *tsg =
-							&g->fifo.tsg[c->tsgid];
-
+					struct tsg_gk20a *tsg =
+							tsg_gk20a_from_ch(c);
+					if (tsg != NULL) {
 						g->ops.fifo.post_event_id(tsg,
 						    NVGPU_EVENT_ID_BLOCKING_SYNC);
 					}

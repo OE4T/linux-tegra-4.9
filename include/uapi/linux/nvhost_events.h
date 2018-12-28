@@ -1,7 +1,7 @@
 /*
  * Eventlib interface for PVA
  *
- * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -98,12 +98,16 @@ struct nvhost_task_fence {
 	/* Kind (prefence or postfence) */
 	u32 kind;
 
-	/* Type (see nvdev_fence.h) */
-	u32 type;
+	/* Fence-specific type (see nvdev_fence.h) */
+	u32 fence_type;
 
 	/* Valid for NVDEV_FENCE_TYPE_SYNCPT only */
-	u32 syncpoint_index;
-	u32 syncpoint_value;
+	u32 syncpt_id;
+	u32 syncpt_thresh;
+
+	/* The task this fence is associated with */
+	u32 task_syncpt_id;
+	u32 task_syncpt_thresh;
 
 	/* Valid for NVDEV_FENCE_TYPE_SYNC_FD only */
 	u32 sync_fd;

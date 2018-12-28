@@ -134,7 +134,6 @@
 
 	sdhci@700b0000 { /* SDMMC1 for SD card */
 		default-drv-type = <1>;
-		mmc-ocr-mask = <0x0>;
 		cd-gpios = <&gpio TEGRA_GPIO(Z, 1) 0>;
 		sd-uhs-sdr104;
 		sd-uhs-sdr50;

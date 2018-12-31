@@ -1801,8 +1801,6 @@ int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g,
 	gr_ctx->cilp_preempt_pending = true;
 	g->gr.cilp_preempt_pending_chid = fault_ch->chid;
 
-	tsg = &g->fifo.tsg[fault_ch->tsgid];
-
 	g->ops.fifo.post_event_id(tsg,
 				NVGPU_EVENT_ID_CILP_PREEMPTION_STARTED);
 

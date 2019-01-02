@@ -2,7 +2,7 @@
  * drivers/soc/tegra/pmc.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -4560,7 +4560,9 @@ static const unsigned long tegra194_register_map[TEGRA_PMC_MAX_REG] = {
 	_lp_n_pv_(25, sdmmc3-hv, DPD2, 24, E_33V, 6, 1800, 3300, UINT_MAX, true) \
 	_lponly_(26, conn, DPD2, 28, UINT_MAX, false)				\
 	_lp_n_pv_(27, audio-hv, DPD2, 29, E_33V, 1, 1800, 3300, UINT_MAX, true) \
-	_pvonly_(28, ao-hv, E_33V, 0, 1800, 3300, UINT_MAX, true)
+	_pvonly_(28, ao-hv, E_33V, 0, 1800, 3300, UINT_MAX, true)	\
+	_lponly_(29, csig, DPD2, 18, UINT_MAX, false)			\
+	_lponly_(30, csih, DPD2, 19, UINT_MAX, false)
 
 static const struct tegra_pmc_io_pad_soc tegra194_io_pads[] = {
 	TEGRA194_IO_PAD_TABLE(TEGRA186_IO_PAD_LPONLY, TEGRA186_IO_PAD_PVONLY,

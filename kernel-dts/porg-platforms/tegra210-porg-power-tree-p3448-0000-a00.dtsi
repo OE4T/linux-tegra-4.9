@@ -53,7 +53,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					maxim,fps-power-up-period = <1>;
 					maxim,fps-power-down-period = <6>;
-					regulator-min-microvolt = <950000>;
+					regulator-min-microvolt = <1000000>;
                                         regulator-max-microvolt = <1170000>;
 					regulator-enable-ramp-delay = <146>;
 					regulator-disable-ramp-delay = <4080>;

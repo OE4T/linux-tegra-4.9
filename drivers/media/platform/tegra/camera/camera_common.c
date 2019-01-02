@@ -1,7 +1,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -94,6 +94,8 @@ static const char *camera_common_csi_io_pads[] = {
 	"csid",
 	"csie",
 	"csif",
+	"csig",
+	"csih",
 };
 
 static bool camera_common_verify_code(

@@ -1022,6 +1022,10 @@ static void fbcon_init(struct vc_data *vc, int init)
 {
 	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
 	struct fbcon_ops *ops;
+	struct fb_info *cur_fb_info = registered_fb[con2fb_map[fg_console]];
+	struct fbcon_ops *cur_ops = cur_fb_info->fbcon_par;
+	struct fb_var_screeninfo *var;
+
 	struct vc_data **default_mode = vc->vc_display_fg;
 	struct vc_data *svc = *default_mode;
 	struct display *t, *p = &fb_display[vc->vc_num];
@@ -1037,7 +1041,12 @@ static void fbcon_init(struct vc_data *vc, int init)
 	    (info->fix.type == FB_TYPE_TEXT))
 		logo = 0;
 
-	if (var_to_display(p, &info->var, info))
+	if (cur_ops && cur_ops->var.xres && cur_ops->var.yres)
+		var = &cur_ops->var;
+	else
+		var = &info->var;
+
+	if (var_to_display(p, var, info))
 		return;
 
 	if (!info->fbcon_par)

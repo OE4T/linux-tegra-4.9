@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 - 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -165,6 +165,10 @@
 #define OC1_ALARM_COUNT				0x31c
 #define OC1_FILTER				0x320
 #define OC1_STATS				0x3a8
+#define OC2_STATS				0x3ac
+#define OC3_STATS				0x3b0
+#define OC4_STATS				0x3b4
+#define OC5_STATS				0x3b8
 
 #define OC_INTR_STATUS				0x39c
 #define OC_INTR_ENABLE				0x3a0
@@ -315,6 +319,7 @@ struct soctherm_oc_cfg {
 	u32 alarm_filter;
 	u32 mode;
 	bool intr_en;
+	u64 oc_cnt;
 };
 
 struct soctherm_throt_cfg {
@@ -390,6 +395,18 @@ static inline void ccroc_writel(struct tegra_soctherm *ts, u32 value, u32 reg)
 static inline u32 ccroc_readl(struct tegra_soctherm *ts, u32 reg)
 {
 	return readl(ts->ccroc_regs + reg);
+}
+
+/**
+ * clear_oc_counters() - clear the counters of all oc events
+ * @ts: pointer to a struct tegra_soctherm
+ *
+ * No return value.
+ */
+static void clear_oc_counters(struct tegra_soctherm *ts)
+{
+	writel(OC_STATS_CTL_CLR_ALL | OC_STATS_CTL_EN_ALL,
+			(ts->regs + OC_STATS_CTL));
 }
 
 static void enable_tsensor(struct tegra_soctherm *tegra, unsigned int i)
@@ -1002,49 +1019,61 @@ static void soctherm_oc_intr_enable(struct tegra_soctherm *ts,
 /**
  * soctherm_handle_alarm() - Handles soctherm alarms
  * @alarm:		The soctherm throttle id
+ * @tegra_soctherm:	soctherm struct
  *
  * "Handles" over-current alarms (OC1, OC2, OC3, and OC4) by printing
  * a warning or informative message.
  *
  * Return: -EINVAL for @alarm = THROTTLE_OC3, otherwise 0 (success).
  */
-static int soctherm_handle_alarm(enum soctherm_throttle_id alarm)
+static int soctherm_handle_alarm(enum soctherm_throttle_id alarm,
+							struct tegra_soctherm *ts)
 {
-	int rv = -EINVAL;
+	struct soctherm_throt_cfg *throt_cfgs = ts->throt_cfgs;
+	int rv = -EINVAL, val = 0;
 
 	switch (alarm) {
 	case THROTTLE_OC1:
 		pr_debug("soctherm: Successfully handled OC1 alarm\n");
 		/* add OC1 alarm handling code here */
+		val = readl(ts->regs + OC1_STATS);
 		rv = 0;
 		break;
 
 	case THROTTLE_OC2:
 		pr_debug("soctherm: Successfully handled OC2 alarm\n");
 		/* TODO: add OC2 alarm handling code here */
+		val = readl(ts->regs + OC2_STATS);
 		rv = 0;
 		break;
 
 	case THROTTLE_OC3:
 		pr_debug("soctherm: Successfully handled OC3 alarm\n");
 		/* add OC3 alarm handling code here */
+		val = readl(ts->regs + OC3_STATS);
 		rv = 0;
 		break;
 
 	case THROTTLE_OC4:
 		pr_debug("soctherm: Successfully handled OC4 alarm\n");
 		/* TODO: add OC4 alarm handling code here */
+		val = readl(ts->regs + OC4_STATS);
 		rv = 0;
 		break;
 
 	case THROTTLE_OC5:
 		pr_debug("soctherm: Successfully handled OC5 alarm\n");
 		/* TODO: add OC5 alarm handling code here */
+		val = readl(ts->regs + OC5_STATS);
 		rv = 0;
 		break;
 
 	default:
 		break;
+	}
+
+	if ((alarm >= THROTTLE_OC1) && (alarm <= THROTTLE_OC5)) {
+		throt_cfgs[alarm].oc_cfg.oc_cnt += val;
 	}
 
 	if (rv)
@@ -1087,20 +1116,22 @@ static irqreturn_t soctherm_edp_isr_thread(int irq, void *arg)
 		writel(st, ts->regs + OC_INTR_STATUS);
 		st &= ~ex;
 
-		if (oc1 && !soctherm_handle_alarm(THROTTLE_OC1))
+		if (oc1 && !soctherm_handle_alarm(THROTTLE_OC1, ts))
 			soctherm_oc_intr_enable(ts, THROTTLE_OC1, true);
 
-		if (oc2 && !soctherm_handle_alarm(THROTTLE_OC2))
+		if (oc2 && !soctherm_handle_alarm(THROTTLE_OC2, ts))
 			soctherm_oc_intr_enable(ts, THROTTLE_OC2, true);
 
-		if (oc3 && !soctherm_handle_alarm(THROTTLE_OC3))
+		if (oc3 && !soctherm_handle_alarm(THROTTLE_OC3, ts))
 			soctherm_oc_intr_enable(ts, THROTTLE_OC3, true);
 
-		if (oc4 && !soctherm_handle_alarm(THROTTLE_OC4))
+		if (oc4 && !soctherm_handle_alarm(THROTTLE_OC4, ts))
 			soctherm_oc_intr_enable(ts, THROTTLE_OC4, true);
 
-		if (oc5 && !soctherm_handle_alarm(THROTTLE_OC5))
+		if (oc5 && !soctherm_handle_alarm(THROTTLE_OC5, ts))
 			soctherm_oc_intr_enable(ts, THROTTLE_OC5, true);
+
+		clear_oc_counters(ts);
 
 		if (oc1 && soc_irq_cdata.irq_enable & BIT(0))
 			handle_nested_irq(
@@ -2663,6 +2694,37 @@ static void soctherm_init(struct platform_device *pdev)
 	tegra_soctherm_throttle(&pdev->dev);
 }
 
+static ssize_t show_oc_stats_sysfs(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct tegra_soctherm *ts = dev_get_drvdata(dev);
+	struct soctherm_throt_cfg *throt_cfgs = ts->throt_cfgs;
+	int ret = 0;
+
+	if (!ts)
+		return -EINVAL;
+
+	ret = sprintf(buf, "oc1:%llu oc2:%llu oc3:%llu oc4:%llu oc5:%llu\n",
+		throt_cfgs[THROTTLE_OC1].oc_cfg.oc_cnt + readl(ts->regs + OC1_STATS),
+		throt_cfgs[THROTTLE_OC2].oc_cfg.oc_cnt + readl(ts->regs + OC2_STATS),
+		throt_cfgs[THROTTLE_OC3].oc_cfg.oc_cnt + readl(ts->regs + OC3_STATS),
+		throt_cfgs[THROTTLE_OC4].oc_cfg.oc_cnt + readl(ts->regs + OC4_STATS),
+		throt_cfgs[THROTTLE_OC5].oc_cfg.oc_cnt + readl(ts->regs + OC5_STATS));
+
+	return ret;
+}
+
+static DEVICE_ATTR(oc_stats, S_IRUGO, show_oc_stats_sysfs, NULL);
+
+static void soctherm_oc_counter_init(struct platform_device *pdev)
+{
+	struct tegra_soctherm *tegra = platform_get_drvdata(pdev);
+
+	writel(OC_STATS_CTL_EN_ALL, (tegra->regs + OC_STATS_CTL));
+
+	device_create_file(&pdev->dev, &dev_attr_oc_stats);
+}
+
 static const struct of_device_id tegra_soctherm_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_124_SOC
 	{
@@ -2792,6 +2854,7 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 	soctherm_hw_pllx_offsets_parse(pdev);
 	soctherm_init(pdev);
 	soctherm_debug_init(pdev);
+	soctherm_oc_counter_init(pdev);
 
 	for (i = 0; i < soc->num_ttgs; ++i) {
 		struct tegra_thermctl_zone *zone =

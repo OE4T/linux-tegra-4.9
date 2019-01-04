@@ -26,8 +26,8 @@
 #include "porg-platforms/tegra210-porg-power-dvfs-p3448-0000-a00.dtsi"
 
 / {
-	model = "porg";
-	compatible = "nvidia,porg", "nvidia,tegra210";
+	model = "jetson-nano";
+	compatible = "nvidia,jetson-nano", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 	nvidia,fastboot-usb-pid = <0xb442>;
 

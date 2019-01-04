@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -750,6 +750,7 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	mixer->gain_coeff[11] = 0;
 	mixer->gain_coeff[12] = 0x400;
 	mixer->gain_coeff[13] = 0x8000000;
+	dev_set_drvdata(&pdev->dev, mixer);
 
 	for (i = 0; i < TEGRA210_MIXER_AXBAR_RX_MAX; i++)
 		mixer->gain_value[i] = 0x10000;
@@ -808,8 +809,6 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, mixer);
 
 	return 0;
 

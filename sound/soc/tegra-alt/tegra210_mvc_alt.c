@@ -1,7 +1,7 @@
 /*
  * tegra210_mvc_alt.c - Tegra210 MVC driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -674,6 +674,7 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 
 	mvc->soc_data = soc_data;
 	mvc->is_shutdown = false;
+	dev_set_drvdata(&pdev->dev, mvc);
 
 	mvc->poly_n1 = 16;
 	mvc->poly_n2 = 63;
@@ -745,8 +746,6 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, mvc);
 
 	return 0;
 

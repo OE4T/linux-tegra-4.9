@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1135,9 +1135,9 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 
 	admaif->refcnt = 0;
 	admaif->dev = &pdev->dev;
-
 	admaif->soc_data = (struct tegra_admaif_soc_data *)match->data;
 	admaif->is_shutdown = false;
+	dev_set_drvdata(&pdev->dev, admaif);
 
 	admaif->capture_dma_data = devm_kzalloc(&pdev->dev,
 			sizeof(struct tegra_alt_pcm_dma_params) *
@@ -1299,9 +1299,6 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register PCM: %d\n", ret);
 		goto err_unregister_codec;
 	}
-
-	/* Driver data should be set before any reg r/w operation */
-	dev_set_drvdata(&pdev->dev, admaif);
 
 	regmap_update_bits(admaif->regmap,
 			admaif->soc_data->reg_offsets.global_enable, 1, 1);

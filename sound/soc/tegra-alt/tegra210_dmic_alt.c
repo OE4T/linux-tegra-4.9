@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.c - Tegra210 DMIC driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -703,6 +703,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	dmic->soc_data = soc_data;
 	dmic->is_shutdown = false;
 	dmic->prod_name = NULL;
+	dev_set_drvdata(&pdev->dev, dmic);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
@@ -826,8 +827,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	}
 
 err_dap:
-	dev_set_drvdata(&pdev->dev, dmic);
-
 	pdev_bkp[pdev->dev.id] = pdev;
 
 	return 0;

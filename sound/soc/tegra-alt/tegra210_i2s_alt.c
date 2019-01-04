@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s.c - Tegra210 I2S driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1098,6 +1098,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->loopback = 0;
 	i2s->is_shutdown = false;
 	i2s->prod_name = NULL;
+	dev_set_drvdata(&pdev->dev, i2s);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
@@ -1260,8 +1261,6 @@ err_dap:
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, i2s);
 
 	return 0;
 

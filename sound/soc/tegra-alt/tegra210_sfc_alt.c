@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.c - Tegra210 SFC driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -899,6 +899,8 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	/* initialize default output srate */
 	sfc->srate_out = TEGRA210_SFC_FS48;
 
+	dev_set_drvdata(&pdev->dev, sfc);
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -953,8 +955,6 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, sfc);
 
 	return 0;
 

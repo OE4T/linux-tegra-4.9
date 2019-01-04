@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.c - Tegra210 AMX driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -932,6 +932,7 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	amx->is_shutdown = false;
 	memset(amx->map, 0, sizeof(amx->map));
 	memset(amx->byte_mask, 0, sizeof(amx->byte_mask));
+	dev_set_drvdata(&pdev->dev, amx);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -994,8 +995,6 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, amx);
 
 	return 0;
 

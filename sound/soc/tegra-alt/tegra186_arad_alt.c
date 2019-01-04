@@ -1,7 +1,7 @@
 /*
  * tegra186_arad_alt.c - Tegra186 ARAD driver
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -799,9 +799,10 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	arad_dev = &pdev->dev;
 
+	arad_dev = &pdev->dev;
 	arad->soc_data = soc_data;
+	dev_set_drvdata(&pdev->dev, arad);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -862,8 +863,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 			TEGRA186_AHC_ARAD1_CB, &pdev->dev);
 #endif
 #endif
-	dev_set_drvdata(&pdev->dev, arad);
-
 	return 0;
 
 err_suspend:

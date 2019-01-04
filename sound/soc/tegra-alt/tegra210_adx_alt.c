@@ -852,6 +852,7 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 
 	adx->soc_data = soc_data;
 	adx->is_shutdown = false;
+	dev_set_drvdata(&pdev->dev, adx);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -907,8 +908,6 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, adx);
 
 	return 0;
 

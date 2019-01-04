@@ -1,7 +1,7 @@
 /*
  * tegra210_spdif_alt.c - Tegra210 SPDIF driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -479,6 +479,8 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 
 	spdif->soc_data = soc_data;
 	spdif->is_shutdown = false;
+	dev_set_drvdata(&pdev->dev, spdif);
+
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		spdif->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(spdif->clk_pll_a_out0)) {
@@ -604,8 +606,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	}
 
 err_dap:
-	dev_set_drvdata(&pdev->dev, spdif);
-
 	return 0;
 
 err_suspend:

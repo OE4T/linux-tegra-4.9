@@ -34,6 +34,7 @@
 	chosen {
 		nvidia,tegra-porg-sku;
 		stdout-path = "/serial@70006000";
+		nvidia,tegra-always-on-personality;
 		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
 	};
 

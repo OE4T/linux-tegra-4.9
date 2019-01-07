@@ -19,7 +19,8 @@ nvhost-objs = \
 	bus_client.o \
 	chip_support.o \
 	nvhost_vm.o \
-	nvhost_pd.o
+	nvhost_pd.o \
+	interrupt_syncpt.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 obj-$(CONFIG_TEGRA_GRHOST) += host1x/

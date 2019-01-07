@@ -97,6 +97,13 @@ struct nvhost_waitlist {
 	wait_queue_head_t wq;
 };
 
+struct nvhost_waitlist_external_notifier {
+	struct nvhost_master *master;
+	void (*callback)(void *, int);
+	void *private_data;
+	bool reuse;
+};
+
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u32 id;

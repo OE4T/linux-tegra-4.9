@@ -36,12 +36,6 @@
 
 /*** Wait list management ***/
 
-struct nvhost_waitlist_external_notifier {
-	struct nvhost_master *master;
-	void (*callback)(void *, int);
-	void *private_data;
-};
-
 enum waitlist_state {
 	WLS_PENDING,
 	WLS_REMOVED,
@@ -199,7 +193,8 @@ static void action_notify(struct nvhost_waitlist *waiter)
 	notifier->callback(notifier->private_data, waiter->count);
 
 	nvhost_module_idle_mult(master->dev, waiter->count);
-	kfree(notifier);
+	if (!notifier->reuse)
+		kfree(notifier);
 	waiter->data = NULL;
 }
 

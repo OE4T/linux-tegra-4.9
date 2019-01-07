@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+/ {
+	plugin-manager {
+		fragement@0 {
+			ids = ">=3448-0000-100";
+			override@0 {
+				target = <&ina3221x>;
+				_overlay_ {
+					channel@0 {
+						ti,rail-name = "POM_5V_IN";
+					};
+					channel@1 {
+						ti,rail-name = "POM_5V_GPU";
+					};
+				};
+			};
+		};
+
+	};
+};

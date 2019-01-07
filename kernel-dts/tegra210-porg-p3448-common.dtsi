@@ -39,6 +39,7 @@
 #include "porg-platforms/tegra210-porg-cpufreq.dtsi"
 #include "porg-platforms/tegra210-porg-powermon-p3448-0000-a00.dtsi"
 #include "porg-plugin-manager/tegra210-porg-eeprom-manager.dtsi"
+#include "porg-plugin-manager/tegra210-porg-plugin-manager.dtsi"
 #include <tegra210-soc/mods-simple-bus.dtsi>
 
 / {

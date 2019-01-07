@@ -384,6 +384,8 @@
 		nvidia,fastboot_without_usb;
 		nvidia,gpu-disable-power-saving;
 		firmware-blob-partition = "RP4";
+		board-has-eeprom;
+
 		verified-boot {
 			poweroff-on-red-state;
 		};

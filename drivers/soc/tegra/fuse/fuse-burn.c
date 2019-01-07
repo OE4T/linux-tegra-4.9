@@ -634,6 +634,7 @@ static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 		FUSE_BURN_DATA(odm_info, 0x92, 15, 16, 0x19c, true, false),
 		FUSE_BURN_DATA(kek, 0x1e, 0, 128, 0xd0, true, false),
 		FUSE_BURN_DATA(bek, 0x26, 0, 128, 0xe0, true, false),
+		FUSE_BURN_DATA(aid, 0xa5, 2, 32, 0x1f8, false, false),
 		{},
 	},
 };

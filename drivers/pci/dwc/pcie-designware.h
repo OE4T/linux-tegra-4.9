@@ -219,7 +219,7 @@ struct dw_pcie_ep {
 		u64			pci_addr;
 		size_t			size;
 	}			*cached_outbound_atus;
-	u32			cached_msi_flags;
+	u32			cached_msi_ctrl;
 };
 
 struct dw_pcie_ops {

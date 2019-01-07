@@ -255,7 +255,7 @@ static int dw_pcie_ep_get_msi(struct pci_epc *epc)
 	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
 
 	if (ep->hw_regs_not_available)
-		val = ep->cached_msi_flags;
+		val = ep->cached_msi_ctrl;
 	else
 		val = dw_pcie_readw_dbi(pci, MSI_MESSAGE_CONTROL);
 
@@ -273,7 +273,7 @@ static int dw_pcie_ep_set_msi(struct pci_epc *epc, u8 encode_int)
 	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
 
 	val = (encode_int << MSI_CAP_MMC_SHIFT);
-	ep->cached_msi_flags = val;
+	ep->cached_msi_ctrl = val;
 
 	if (ep->hw_regs_not_available)
 		return 0;
@@ -304,7 +304,7 @@ void dw_pcie_set_regs_available(struct dw_pcie *pci)
 			ep->cached_outbound_atus[i].pci_addr,
 			ep->cached_outbound_atus[i].size);
 	dw_pcie_dbi_ro_wr_en(pci);
-	dw_pcie_writew_dbi(pci, PCI_MSI_FLAGS, ep->cached_msi_flags);
+	dw_pcie_writew_dbi(pci, MSI_MESSAGE_CONTROL, ep->cached_msi_ctrl);
 	dw_pcie_dbi_ro_wr_dis(pci);
 }
 

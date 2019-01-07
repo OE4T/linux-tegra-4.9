@@ -1,7 +1,7 @@
 /*
  * ADMA driver for Nvidia's Tegra210 ADMA controller.
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1086,8 +1086,8 @@ static int tegra_adma_runtime_suspend(struct device *dev)
 			ch_reg->config = tdma_ch_read(tdc, ADMA_CH_CONFIG);
 		}
 	}
-
-	clk_disable_unprepare(tdma->ahub_clk);
+	if (tdma->is_virt == false)
+		clk_disable_unprepare(tdma->ahub_clk);
 
 	return 0;
 }
@@ -1098,10 +1098,12 @@ static int tegra_adma_runtime_resume(struct device *dev)
 	struct tegra_adma *tdma = dev_get_drvdata(dev);
 	int ret, i;
 
-	ret = clk_prepare_enable(tdma->ahub_clk);
-	if (ret) {
-		dev_err(dev, "ahub clk_enable failed: %d\n", ret);
-		return ret;
+	if (tdma->is_virt == false) {
+		ret = clk_prepare_enable(tdma->ahub_clk);
+		if (ret) {
+			dev_err(dev, "ahub clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
 
 	if (tdma->is_virt == false) {
@@ -1337,11 +1339,13 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		if (IS_ERR(tdma->shrd_sem_addr))
 			return PTR_ERR(tdma->shrd_sem_addr);
 	}
-
-	tdma->ahub_clk = devm_clk_get(&pdev->dev, "d_audio");
-	if (IS_ERR(tdma->ahub_clk)) {
-		dev_err(&pdev->dev, "Error: Missing ahub controller clock\n");
-		return PTR_ERR(tdma->ahub_clk);
+	if (tdma->is_virt == false) {
+		tdma->ahub_clk = devm_clk_get(&pdev->dev, "d_audio");
+		if (IS_ERR(tdma->ahub_clk)) {
+			dev_err(&pdev->dev,
+				"Error: Missing ahub controller clock\n");
+			return PTR_ERR(tdma->ahub_clk);
+		}
 	}
 
 	spin_lock_init(&tdma->global_lock);

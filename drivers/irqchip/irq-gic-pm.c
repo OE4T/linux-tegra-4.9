@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (C) 2016-2019 NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -86,16 +86,21 @@ static int gic_runtime_resume(struct device *dev)
 	struct gic_chip_pm *gic_chip_pm = dev_get_drvdata(dev);
 	struct gic_chip_data *gic = gic_chip_pm->gic;
 	const struct gic_clk_data *data = gic_chip_pm->data;
+	const struct gic_data *cdata;
 	int ret, i;
 
-	for (i = 0; i < data->num_clocks; i++) {
-		ret = clk_prepare_enable(gic_chip_pm->clk[i]);
-		if (ret) {
-			while (--i >= 0)
-				clk_disable_unprepare(gic_chip_pm->clk[i]);
+	cdata = of_device_get_match_data(dev);
+	if (cdata && !cdata->is_hv) {
+		for (i = 0; i < data->num_clocks; i++) {
+			ret = clk_prepare_enable(gic_chip_pm->clk[i]);
+			if (ret) {
+				while (--i >= 0)
+					clk_disable_unprepare
+						(gic_chip_pm->clk[i]);
 
-			dev_err(dev, " clk_enable failed: %d\n", ret);
-			return ret;
+				dev_err(dev, " clk_enable failed: %d\n", ret);
+				return ret;
+			}
 		}
 	}
 
@@ -119,14 +124,17 @@ static int gic_runtime_suspend(struct device *dev)
 	struct gic_chip_pm *gic_chip_pm = dev_get_drvdata(dev);
 	struct gic_chip_data *gic = gic_chip_pm->gic;
 	const struct gic_clk_data *data = gic_chip_pm->data;
+	const struct gic_data *cdata;
 	int i;
 
 	gic_dist_save(gic);
 	gic_cpu_save(gic);
+	cdata = of_device_get_match_data(dev);
 
-	for (i = 0; i < data->num_clocks; i++)
-		clk_disable_unprepare(gic_chip_pm->clk[i]);
-
+	if (cdata && !cdata->is_hv) {
+		for (i = 0; i < data->num_clocks; i++)
+			clk_disable_unprepare(gic_chip_pm->clk[i]);
+	}
 	return 0;
 }
 
@@ -201,9 +209,11 @@ static int gic_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = gic_get_clocks(dev, gic_chip_pm);
-	if (ret)
-		goto irq_dispose;
+	if (!data->is_hv) {
+		ret = gic_get_clocks(dev, gic_chip_pm);
+		if (ret)
+			goto irq_dispose;
+	}
 
 	pm_runtime_enable(dev);
 
@@ -218,7 +228,8 @@ static int gic_probe(struct platform_device *pdev)
 	pm_runtime_put(dev);
 
 	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-agic") ||
-	of_device_is_compatible(dev->of_node, "nvidia,tegra186-agic"))
+	of_device_is_compatible(dev->of_node, "nvidia,tegra186-agic") ||
+	of_device_is_compatible(dev->of_node, "nvidia,tegra186-agic-hv"))
 		tegra_agic = gic_chip_pm->gic;
 
 	dev_info(dev, "GIC IRQ controller registered\n");
@@ -251,23 +262,32 @@ static const struct gic_clk_data gic400_data = {
 	.clocks = gic400_clocks,
 };
 
+static const struct gic_data agic_t18x_hv_data = {
+	.clk_data = &gic400_data,
+	.supports_routing = true,
+	.num_interfaces = MAX_AGIC_T18x_INTERFACES,
+	.is_hv = true,
+};
 
 static const struct gic_data agic_t18x_data = {
 	.clk_data = &gic400_data,
 	.supports_routing = true,
 	.num_interfaces = MAX_AGIC_T18x_INTERFACES,
+	.is_hv = false,
 };
 
 static const struct gic_data agic_t21x_data = {
 	.clk_data = &gic400_data,
 	.supports_routing = true,
 	.num_interfaces = MAX_AGIC_T210_INTERFACES,
+	.is_hv = false,
 };
 
 
 static const struct of_device_id gic_match[] = {
 	{ .compatible = "nvidia,tegra186-agic",	.data = &agic_t18x_data },
 	{ .compatible = "nvidia,tegra210-agic",	.data = &agic_t21x_data },
+	{ .compatible = "nvidia,tegra186-agic-hv", .data = &agic_t18x_hv_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, gic_match);

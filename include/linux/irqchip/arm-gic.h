@@ -2,7 +2,7 @@
  *  include/linux/irqchip/arm-gic.h
  *
  *  Copyright (C) 2002 ARM Limited, All Rights Reserved.
- *  Copyright (C) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *  Copyright (C) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -117,6 +117,7 @@ struct gic_data {
 	const struct gic_clk_data *clk_data;
 	bool supports_routing;
 	u32 num_interfaces;
+	bool is_hv;
 };
 
 void gic_cascade_irq(unsigned int gic_nr, unsigned int irq);

@@ -1,7 +1,7 @@
 /*
  * Tegra ACONNECT Bus Driver
  *
- * Copyright (C) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file "COPYING" in the main directory of this archive
@@ -17,11 +17,31 @@
 struct tegra_aconnect {
 	struct clk	*ape_clk;
 	struct clk	*apb2ape_clk;
+	const struct tegra_aconnect_soc_data *soc_data;
 };
 
+struct tegra_aconnect_soc_data {
+	bool is_hv;
+};
+
+static const struct tegra_aconnect_soc_data soc_data_tegra = {
+	.is_hv = false,
+};
+
+static const struct tegra_aconnect_soc_data soc_data_tegra_hv = {
+	.is_hv = true,
+};
+
+static const struct of_device_id tegra_aconnect_of_match[] = {
+	{ .compatible = "nvidia,tegra210-aconnect", .data = &soc_data_tegra },
+	{ .compatible = "nvidia,tegra186-aconnect-hv",
+						.data = &soc_data_tegra_hv },
+	{ }
+};
 static int tegra_aconnect_probe(struct platform_device *pdev)
 {
 	struct tegra_aconnect *aconnect;
+	const struct of_device_id *match;
 
 	if (!pdev->dev.of_node)
 		return -EINVAL;
@@ -31,18 +51,26 @@ static int tegra_aconnect_probe(struct platform_device *pdev)
 	if (!aconnect)
 		return -ENOMEM;
 
-	aconnect->ape_clk = devm_clk_get(&pdev->dev, "ape");
-	if (IS_ERR(aconnect->ape_clk)) {
-		dev_err(&pdev->dev, "Can't retrieve ape clock\n");
-		return PTR_ERR(aconnect->ape_clk);
+	match = of_match_device(tegra_aconnect_of_match, &pdev->dev);
+	if (!match) {
+		dev_err(&pdev->dev, "Error: No device match found\n");
+		return -ENODEV;
 	}
 
-	aconnect->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
-	if (IS_ERR(aconnect->apb2ape_clk)) {
-		dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
-		return PTR_ERR(aconnect->apb2ape_clk);
-	}
+	aconnect->soc_data = (struct tegra_aconnect_soc_data *)match->data;
+	if (!aconnect->soc_data->is_hv) {
+		aconnect->ape_clk = devm_clk_get(&pdev->dev, "ape");
+		if (IS_ERR(aconnect->ape_clk)) {
+			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
+			return PTR_ERR(aconnect->ape_clk);
+		}
 
+		aconnect->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
+		if (IS_ERR(aconnect->apb2ape_clk)) {
+			dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
+			return PTR_ERR(aconnect->apb2ape_clk);
+		}
+	}
 	dev_set_drvdata(&pdev->dev, aconnect);
 
 	pm_runtime_enable(&pdev->dev);
@@ -68,17 +96,19 @@ static int tegra_aconnect_runtime_resume(struct device *dev)
 	struct tegra_aconnect *aconnect = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(aconnect->ape_clk);
-	if (ret) {
-		dev_err(dev, "ape clk_enable failed: %d\n", ret);
-		return ret;
-	}
+	if (!aconnect->soc_data->is_hv) {
+		ret = clk_prepare_enable(aconnect->ape_clk);
+		if (ret) {
+			dev_err(dev, "ape clk_enable failed: %d\n", ret);
+			return ret;
+		}
 
-	ret = clk_prepare_enable(aconnect->apb2ape_clk);
-	if (ret) {
-		clk_disable_unprepare(aconnect->ape_clk);
-		dev_err(dev, "apb2ape clk_enable failed: %d\n", ret);
-		return ret;
+		ret = clk_prepare_enable(aconnect->apb2ape_clk);
+		if (ret) {
+			clk_disable_unprepare(aconnect->ape_clk);
+			dev_err(dev, "apb2ape clk_enable failed: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -87,10 +117,10 @@ static int tegra_aconnect_runtime_resume(struct device *dev)
 static int tegra_aconnect_runtime_suspend(struct device *dev)
 {
 	struct tegra_aconnect *aconnect = dev_get_drvdata(dev);
-
-	clk_disable_unprepare(aconnect->ape_clk);
-	clk_disable_unprepare(aconnect->apb2ape_clk);
-
+	if (!aconnect->soc_data->is_hv) {
+		clk_disable_unprepare(aconnect->ape_clk);
+		clk_disable_unprepare(aconnect->apb2ape_clk);
+	}
 	return 0;
 }
 
@@ -111,6 +141,7 @@ static int tegra_aconnect_pm_resume(struct device *dev)
 }
 #endif
 
+
 static const struct dev_pm_ops tegra_aconnect_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra_aconnect_runtime_suspend,
 			tegra_aconnect_runtime_resume, NULL)
@@ -119,10 +150,6 @@ static const struct dev_pm_ops tegra_aconnect_pm_ops = {
 
 };
 
-static const struct of_device_id tegra_aconnect_of_match[] = {
-	{ .compatible = "nvidia,tegra210-aconnect", },
-	{ }
-};
 MODULE_DEVICE_TABLE(of, tegra_aconnect_of_match);
 
 static struct platform_driver tegra_aconnect_driver = {

@@ -1474,6 +1474,25 @@ static void gk20a_channel_timeout_continue(struct channel_gk20a *ch)
 }
 
 /**
+ * Reset the counter of a timeout that is in effect.
+ *
+ * If this channel has an active timeout, act as if something happened on the
+ * channel right now.
+ *
+ * Rewinding a stopped counter is irrelevant; this is a no-op for non-running
+ * timeouts. Stopped timeouts can only be started (which is technically a
+ * rewind too) or continued (where the stop is actually pause).
+ */
+static void gk20a_channel_timeout_rewind(struct channel_gk20a *ch)
+{
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	if (ch->timeout.running) {
+		__gk20a_channel_timeout_start(ch);
+	}
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+}
+
+/**
  * Rewind the timeout on each non-dormant channel.
  *
  * Reschedule the timeout of each active channel for which timeouts are running
@@ -1491,11 +1510,7 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 
 		if (ch != NULL) {
 			if (!gk20a_channel_check_timedout(ch)) {
-				nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-				if (ch->timeout.running) {
-					__gk20a_channel_timeout_start(ch);
-				}
-				nvgpu_raw_spinlock_release(&ch->timeout.lock);
+				gk20a_channel_timeout_rewind(ch);
 			}
 			gk20a_channel_put(ch);
 		}
@@ -1538,28 +1553,23 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	new_pb_get = g->ops.fifo.userd_pb_get(ch->g, ch);
 
 	if (new_gp_get != gp_get || new_pb_get != pb_get) {
-		/* Channel has advanced, rewind timer */
-		gk20a_channel_timeout_stop(ch);
-		gk20a_channel_timeout_start(ch);
-		return;
-	}
-
-	if (nvgpu_timeout_peek_expired(&ch->timeout.timer) == 0) {
+		/* Channel has advanced, timer keeps going but resets */
+		gk20a_channel_timeout_rewind(ch);
+	} else if (nvgpu_timeout_peek_expired(&ch->timeout.timer) == 0) {
 		/* Seems stuck but waiting to time out */
-		return;
+	} else {
+		nvgpu_err(g, "Job on channel %d timed out",
+			  ch->chid);
+
+		/* force reset calls gk20a_debug_dump but not this */
+		if (ch->timeout.debug_dump) {
+			gk20a_gr_debug_dump(g);
+		}
+
+		g->ops.fifo.force_reset_ch(ch,
+			NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT,
+			ch->timeout.debug_dump);
 	}
-
-	nvgpu_err(g, "Job on channel %d timed out",
-		  ch->chid);
-
-	/* force reset calls gk20a_debug_dump but not this */
-	if (ch->timeout.debug_dump) {
-		gk20a_gr_debug_dump(g);
-	}
-
-	g->ops.fifo.force_reset_ch(ch,
-		NVGPU_ERR_NOTIFIER_FIFO_ERROR_IDLE_TIMEOUT,
-		ch->timeout.debug_dump);
 }
 
 /**

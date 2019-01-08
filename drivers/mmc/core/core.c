@@ -1401,6 +1401,7 @@ int mmc_execute_tuning(struct mmc_card *card)
 		return 0;
 	}
 
+	host->skip_host_clkgate = true;
 	if (mmc_card_mmc(card))
 		opcode = MMC_SEND_TUNING_BLOCK_HS200;
 	else
@@ -1413,7 +1414,7 @@ int mmc_execute_tuning(struct mmc_card *card)
 			mmc_hostname(host), err);
 	else
 		mmc_retune_enable(host);
-
+	host->skip_host_clkgate = false;
 	return err;
 }
 

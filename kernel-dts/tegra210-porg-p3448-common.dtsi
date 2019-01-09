@@ -460,7 +460,7 @@
 		compatible = "simple-bus";
 		pwm-regulator@0 {
 			regulator-min-microvolt = <708000>;
-			regulator-max-microvolt = <1320000>;
+			regulator-max-microvolt = <1323400>;
 		};
 
 		pwm-regulator@1 {

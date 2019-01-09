@@ -3,6 +3,10 @@
 # SDIO Basic feature
 #####################
 
+ifeq ($(NV_BUILD_CONFIGURATION_IS_COVERAGE),1)
+GCOV_PROFILE :=y
+endif
+
 DHDCFLAGS += -Wall -Wstrict-prototypes -Dlinux -DLINUX -DBCMDRIVER            \
 	-DBCMDONGLEHOST -DUNRELEASEDCHIP -DBCMDMA32 -DBCMFILEIMAGE            \
 	-DDHDTHREAD -DSHOW_EVENTS -DBCMDBG -DWLP2P                            \

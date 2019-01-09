@@ -32,6 +32,8 @@
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
 			debounce-interval = <30>;
+			nvidia,pmc-wakeup = <&tegra_pmc
+				PMC_WAKE_TYPE_GPIO 24 PMC_TRIGGER_TYPE_NONE>;
 		};
 
 		forcerecovery {

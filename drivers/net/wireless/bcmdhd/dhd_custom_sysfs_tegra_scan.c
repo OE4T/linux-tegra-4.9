@@ -643,6 +643,11 @@ skip_time_check:
 			goto reschedule;
 		}
 	}
+	if (unlikely(err)) {
+			WIFI_SCAN_DEBUG("%s: Scan done\n", __func__);
+			TEGRA_SCAN_DONE(&scan_work->scan_arg.request_and_channels.request, true)
+			skip_cfg80211_scan_done: ;
+	}
 abort_work:
 
 	WIFI_SCAN_DEBUG("%s }\n", __func__);
@@ -1168,6 +1173,10 @@ wifi_scan_request_done(struct cfg80211_scan_request *request)
 	if ((scan_work >= wifi_scan_work_list)
 	 && (scan_work - wifi_scan_work_list < sizeof(wifi_scan_work_list)
 		/ sizeof(wifi_scan_work_list[0]))) {
+		if (!scan_work->original_scan_request) {
+			WIFI_SCAN_DEBUG("%s no original scan request exist\n", __func__);
+			return 0;
+		}
 		WIFI_SCAN_DEBUG("%s: done executing scan work #%d"
 			" (policy %d rule %d)\n",
 			__func__,
@@ -1218,7 +1227,8 @@ wifi_scan_request_done(struct cfg80211_scan_request *request)
 				scan_work);
 			scan_work->original_scan_request = NULL;
 		}
-		if (scan_work->original_scan_request == request) {
+		if (scan_work->original_scan_request == request ||
+			(atomic_read(&wifi_scan_work_rules_active) <= 0)) {
 			WIFI_SCAN_DEBUG("%s: TEGRA_SCAN_DONE:"
 				" scan_work #%d (%p)"
 				" - original scan request done\n",

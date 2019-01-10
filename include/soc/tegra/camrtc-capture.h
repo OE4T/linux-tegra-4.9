@@ -386,7 +386,41 @@ struct capture_status {
 	uint64_t eof_timestamp;
 	uint32_t err_data;
 
-#define CAPTURE_STATUS_FLAG_CHANNEL_IN_ERROR U32_C(1)
+/* Channel encountered uncorrectable error and must be reset */
+#define CAPTURE_STATUS_FLAG_CHANNEL_IN_ERROR			U32_C(1U << 0)
+
+/*
+ * Spurious data was received before frame start.
+ * Can be badly corrupted frame or some random bits.
+ * This error doesn't have effect on captured frame
+ */
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_STREAM_SPURIOUS	U32_C(1U << 1)
+
+/*
+ * Illegal data packet was encountered and dropped by CSIMUX.
+ * This error may have no effect on capture result or trigger other error if
+ * frame got corrupted.
+ */
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_FIFO_BADPKT		U32_C(1U << 2)
+
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_FRAME_FORCE_FE		U32_C(1U << 3)
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_FRAME_ECC_SINGLE_BIT_ERR	U32_C(1U << 4)
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_FRAME				U32_C(1U << 5)
+#define CAPTURE_STATUS_FLAG_ERROR_CSIMUX_FRAME_CSI_FAULT		U32_C(1U << 6)
+
+/*
+ * One or more frames could not be matched and got lost before captured
+ * frame.
+ * This error doesn't have effect on captured frame
+ */
+#define CAPTURE_STATUS_FLAG_ERROR_CHANSEL_NO_MATCH		U32_C(1U << 7)
+
+/* Frame not finished */
+#define CAPTURE_STATUS_FLAG_ERROR_ATOMP_FRAME_TRUNCATED		U32_C(1U << 8)
+
+/* Frame data not written */
+#define CAPTURE_STATUS_FLAG_ERROR_ATOMP_FRAME_TOSSED		U32_C(1U << 9)
+
 	uint32_t flags;
 } __CAPTURE_IVC_ALIGN;
 
@@ -571,6 +605,11 @@ struct event_inject_msg {
 #define NVCSI_VIRTUAL_CHANNEL_14	U32_C(0xE)
 #define NVCSI_VIRTUAL_CHANNEL_15	U32_C(0xF)
 
+/* NVCSI config flag */
+#define NVCSI_CONFIG_FLAG_BRICK		(U32_C(1) << 0)
+#define NVCSI_CONFIG_FLAG_CIL		(U32_C(1) << 1)
+#define NVCSI_CONFIG_FLAG_ERROR		(U32_C(1) << 2)
+
 /* Number of lanes/trios per brick */
 #define NVCSI_BRICK_NUM_LANES	U32_C(4)
 /* Number of override exception data types */
@@ -666,6 +705,102 @@ struct nvcsi_cil_config {
 	uint32_t cil_clock_rate;
 	/* MIPI clock rate for D-Phy. Symbol rate for C-Phy [kHz] */
 	uint32_t mipi_clock_rate;
+	uint32_t __pad32;
+} __CAPTURE_IVC_ALIGN;
+
+/* NVCSI stream novc+vc error flags */
+#define NVCSI_INTR_FLAG_STREAM_NOVC_ERR_PH_ECC_MULTI_BIT	(U32_C(1) << 0)
+#define NVCSI_INTR_FLAG_STREAM_NOVC_ERR_PH_BOTH_CRC		(U32_C(1) << 1)
+#define NVCSI_INTR_FLAG_STREAM_VC_ERR_PPFSM_TIMEOUT		(U32_C(1) << 2)
+#define NVCSI_INTR_FLAG_STREAM_VC_ERR_PH_ECC_SINGLE_BIT		(U32_C(1) << 3)
+#define NVCSI_INTR_FLAG_STREAM_VC_ERR_PD_CRC			(U32_C(1) << 4)
+#define NVCSI_INTR_FLAG_STREAM_VC_ERR_PD_WC_SHORT		(U32_C(1) << 5)
+#define NVCSI_INTR_FLAG_STREAM_VC_ERR_PH_SINGLE_CRC		(U32_C(1) << 6)
+
+/* NVCSI phy/cil intr error flags */
+#define NVCSI_INTR_FLAG_CIL_INTR_DPHY_ERR_CLK_LANE_CTRL		(U32_C(1) << 0)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_SOT_SB		(U32_C(1) << 1)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_SOT_MB		(U32_C(1) << 2)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_CTRL		(U32_C(1) << 3)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_RXFIFO_FULL	(U32_C(1) << 4)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_SOT_SB		(U32_C(1) << 5)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_SOT_MB		(U32_C(1) << 6)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_CTRL		(U32_C(1) << 7)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_RXFIFO_FULL	(U32_C(1) << 8)
+#define NVCSI_INTR_FLAG_CIL_INTR_DPHY_DESKEW_CALIB_ERR_LANE0	(U32_C(1) << 9)
+#define NVCSI_INTR_FLAG_CIL_INTR_DPHY_DESKEW_CALIB_ERR_LANE1	(U32_C(1) << 10)
+#define NVCSI_INTR_FLAG_CIL_INTR_DPHY_DESKEW_CALIB_ERR_CTRL	(U32_C(1) << 11)
+#define NVCSI_INTR_FLAG_CIL_INTR_DPHY_LANE_ALIGN_ERR		(U32_C(1) << 12)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_ESC_MODE_SYNC	(U32_C(1) << 13)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_ESC_MODE_SYNC	(U32_C(1) << 14)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR0_SOT_2LSB_FULL	(U32_C(1) << 15)
+#define NVCSI_INTR_FLAG_CIL_INTR_DATA_LANE_ERR1_SOT_2LSB_FULL	(U32_C(1) << 16)
+
+/* NVCSI phy/cil intr0 flags */
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_ERR_CLK_LANE_CTRL	(U32_C(1) << 0)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_SOT_SB		(U32_C(1) << 1)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_SOT_MB		(U32_C(1) << 2)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_CTRL		(U32_C(1) << 3)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_RXFIFO_FULL	(U32_C(1) << 4)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_SOT_SB		(U32_C(1) << 5)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_SOT_MB		(U32_C(1) << 6)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_CTRL		(U32_C(1) << 7)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_RXFIFO_FULL	(U32_C(1) << 8)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_SOT_2LSB_FULL	(U32_C(1) << 9)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_SOT_2LSB_FULL	(U32_C(1) << 10)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR0_ESC_MODE_SYNC	(U32_C(1) << 19)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DATA_LANE_ERR1_ESC_MODE_SYNC	(U32_C(1) << 20)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_DONE_LANE0	(U32_C(1) << 22)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_DONE_LANE1	(U32_C(1) << 23)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_DONE_CTRL	(U32_C(1) << 24)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_ERR_LANE0	(U32_C(1) << 25)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_ERR_LANE1	(U32_C(1) << 26)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_DESKEW_CALIB_ERR_CTRL	(U32_C(1) << 27)
+#define NVCSI_INTR_FLAG_CIL_INTR0_DPHY_LANE_ALIGN_ERR		(U32_C(1) << 28)
+#define NVCSI_INTR_FLAG_CIL_INTR0_CPHY_CLK_CAL_DONE_TRIO0	(U32_C(1) << 29)
+#define NVCSI_INTR_FLAG_CIL_INTR0_CPHY_CLK_CAL_DONE_TRIO1	(U32_C(1) << 30)
+
+/* NVCSI phy/cil intr1 flags */
+#define NVCSI_INTR_FLAG_CIL_INTR1_DATA_LANE_ESC_CMD_REC0	(U32_C(1) << 0)
+#define NVCSI_INTR_FLAG_CIL_INTR1_DATA_LANE_ESC_DATA_REC0	(U32_C(1) << 1)
+#define NVCSI_INTR_FLAG_CIL_INTR1_DATA_LANE_ESC_CMD_REC1	(U32_C(1) << 2)
+#define NVCSI_INTR_FLAG_CIL_INTR1_DATA_LANE_ESC_DATA_REC1	(U32_C(1) << 3)
+#define NVCSI_INTR_FLAG_CIL_INTR1_REMOTERST_TRIGGER_INT0	(U32_C(1) << 4)
+#define NVCSI_INTR_FLAG_CIL_INTR1_ULPS_TRIGGER_INT0		(U32_C(1) << 5)
+#define NVCSI_INTR_FLAG_CIL_INTR1_LPDT_INT0			(U32_C(1) << 6)
+#define NVCSI_INTR_FLAG_CIL_INTR1_REMOTERST_TRIGGER_INT1	(U32_C(1) << 7)
+#define NVCSI_INTR_FLAG_CIL_INTR1_ULPS_TRIGGER_INT1		(U32_C(1) << 8)
+#define NVCSI_INTR_FLAG_CIL_INTR1_LPDT_INT1			(U32_C(1) << 9)
+#define NVCSI_INTR_FLAG_CIL_INTR1_DPHY_CLK_LANE_ULPM_REQ	(U32_C(1) << 10)
+
+/* NVCSI intr config bit masks */
+#define NVCSI_INTR_CONFIG_MASK_HOST1X		U32_C(0x1)
+#define NVCSI_INTR_CONFIG_MASK_STATUS2VI	U32_C(0xffff)
+#define NVCSI_INTR_CONFIG_MASK_STREAM_NOVC	U32_C(0x3)
+#define NVCSI_INTR_CONFIG_MASK_STREAM_VC	U32_C(0x7c)
+#define NVCSI_INTR_CONFIG_MASK_CIL_INTR		U32_C(0x1ffff)
+#define NVCSI_INTR_CONFIG_MASK_CIL_INTR0	U32_C(0x7fd807ff)
+#define NVCSI_INTR_CONFIG_MASK_CIL_INTR1	U32_C(0x7ff)
+
+/* NVCSI intr config bit shifts */
+#define NVCSI_INTR_CONFIG_SHIFT_STREAM_NOVC	U32_C(0x0)
+#define NVCSI_INTR_CONFIG_SHIFT_STREAM_VC	U32_C(0x2)
+
+struct nvcsi_error_config {
+	/* Mask Host1x timeout intr*/
+	uint32_t host1x_intr_mask;
+	uint32_t host1x_intr_type;
+	/* Mask status2vi NOTIFY reporting */
+	uint32_t status2vi_notify_mask;
+	/* Mask stream intrs */
+	uint32_t stream_intr_mask;
+	uint32_t stream_intr_type;
+	/* Mask cil intrs */
+	uint32_t cil_intr_mask;
+	uint32_t cil_intr_type;
+	/* Mask cil intr0/intr1 intrs */
+	uint32_t cil_intr0_mask;
+	uint32_t cil_intr1_mask;
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
@@ -1114,6 +1249,9 @@ struct stats_surface {
  *                  Width of the rest of tiles is defined by chunk_width_middle
  *                  field
  *
+ * @param surface_configs.mr_image_cfa: MR image CFA combination. Field needed
+ *                  for IspModel to reconstruct NvColorFormat from mr_image_def.
+ *
  * @param surface_configs.mr_image_def: MR image format definition. Field
  *                  format is according to register ISP_MR_IMAGE_DEF_MR.
  *
@@ -1164,6 +1302,7 @@ struct isp_capture_descriptor {
 
 #define CAPTURE_ISP_FLAG_STATUS_REPORT_ENABLE	(U32_C(1) << 0)
 #define CAPTURE_ISP_FLAG_ERROR_REPORT_ENABLE	(U32_C(1) << 1)
+#define CAPTURE_ISP_FLAG_ISP_PROGRAM_BINDING	(U32_C(1) << 2)
 
 	/** 1 MR port, max 3 input surfaces */
 #define ISP_MAX_INPUT_SURFACES (3U)
@@ -1186,7 +1325,8 @@ struct isp_capture_descriptor {
 		 * Dither settings would logically be part of ISP program
 		 */
 		uint32_t image_def;
-		uint32_t _pad0;
+		uint16_t width;
+		uint16_t height;
 	} outputs_mw[ISP_MAX_OUTPUTS];
 
 	/**
@@ -1222,9 +1362,11 @@ struct isp_capture_descriptor {
 		uint16_t chunk_width_middle;
 		/** Width of overfetch area in the beginning of VI chunks */
 		uint16_t chunk_overfetch_width;
-		/** Width of the leftmost ISP tile in al slice */
+		/** Width of the leftmost ISP tile in a slice */
 		uint16_t tile_width_first;
-		uint16_t __pad;
+		/** Input image cfa */
+		uint8_t mr_image_cfa;
+		uint8_t _pad;
 		/** Input image format */
 		uint32_t mr_image_def;
 		/** TODO: should this be exposed to user mode? */
@@ -1272,8 +1414,11 @@ struct isp_capture_descriptor {
 	/** Result record – written by RTCPU */
 	struct capture_isp_status status;
 
+	/* Information regarding the ISP program bound to this capture */
+	uint32_t program_buffer_index;
+
 	/** Pad to aligned size */
-	uint32_t __pad[4];
+	uint32_t __pad[3];
 } __CAPTURE_DESCRIPTOR_ALIGN;
 
 /**
@@ -1453,7 +1598,7 @@ struct isp5_program {
 	uint32_t stats_aidx_flag;
 
 	/**
-	* Size used for the push buffer in bytes.
+	* Size used for the push buffer in 4-byte words.
 	*/
 	uint32_t pushbuffer_size;
 

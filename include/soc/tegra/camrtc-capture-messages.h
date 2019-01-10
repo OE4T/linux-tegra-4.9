@@ -292,15 +292,18 @@ struct CAPTURE_PHY_STREAM_DUMPREGS_RESP_MSG {
 } __CAPTURE_IVC_ALIGN;
 
 /**
- * NvCsi IVC messages
+ * NVCSI IVC messages
  */
 
-/* Set config for an NvCsi stream*/
+/* Set config for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_SET_CONFIG_REQ_MSG {
 	uint32_t stream_id;
 	uint32_t csi_port;
+	uint32_t config_flags;
+	uint32_t __pad32;
 	struct nvcsi_brick_config brick_config;
 	struct nvcsi_cil_config cil_config;
+	struct nvcsi_error_config error_config;
 } __CAPTURE_IVC_ALIGN;
 
 struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
@@ -308,7 +311,7 @@ struct CAPTURE_CSI_STREAM_SET_CONFIG_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* Set DPCM config for an NvCsi stream*/
+/* Set DPCM config for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_SET_PARAM_REQ_MSG {
 	uint32_t stream_id;
 	uint32_t virtual_channel_id;
@@ -326,7 +329,7 @@ struct CAPTURE_CSI_STREAM_SET_PARAM_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* Set TPG config for an NvCsi stream*/
+/* Set TPG config for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_REQ_MSG {
 	union nvcsi_tpg_config tpg_config;
 } __CAPTURE_IVC_ALIGN;
@@ -336,7 +339,7 @@ struct CAPTURE_CSI_STREAM_TPG_SET_CONFIG_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* Start TPG for an NvCsi stream*/
+/* Start TPG for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_TPG_START_REQ_MSG {
 	uint32_t stream_id;
 	uint32_t virtual_channel_id;
@@ -348,7 +351,7 @@ struct CAPTURE_CSI_STREAM_TPG_START_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* Start TPG for an NvCsi stream*/
+/* Start TPG for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_TPG_START_RATE_REQ_MSG {
 	uint32_t stream_id;
 	uint32_t virtual_channel_id;
@@ -361,7 +364,7 @@ struct CAPTURE_CSI_STREAM_TPG_START_RATE_RESP_MSG {
 	uint32_t __pad32;
 } __CAPTURE_IVC_ALIGN;
 
-/* Stop TPG for an NvCsi stream*/
+/* Stop TPG for an NVCSI stream */
 struct CAPTURE_CSI_STREAM_TPG_STOP_REQ_MSG {
 	uint32_t stream_id;
 	uint32_t virtual_channel_id;
@@ -451,6 +454,8 @@ struct CAPTURE_CHANNEL_EI_RESP_MSG {
 #define CAPTURE_ISP_PROGRAM_STATUS_IND		U32_C(0x07)
 
 #define CAPTURE_ISP_RESET_BARRIER_IND		U32_C(0x08)
+
+#define CAPTURE_ISP_EX_STATUS_IND		U32_C(0x09)
 
 /* Message types for test pattern generator */
 /* DEPRECATED - to be removed */
@@ -726,6 +731,19 @@ typedef struct CAPTURE_REQUEST_REQ_MSG CAPTURE_ISP_REQUEST_REQ_MSG;
  */
 typedef struct CAPTURE_STATUS_IND_MSG CAPTURE_ISP_STATUS_IND_MSG;
 
+/** Extended ISP capture status indication.
+ *
+ * The message is sent after the capture status record has been
+ * written into the capture request descriptor.
+ *
+ * @param process_buffer_index	Buffer index identifying ISP process descriptor.
+ * @param program_buffer_index	Buffer index identifying ISP program descriptor.
+ */
+struct CAPTURE_ISP_EX_STATUS_IND_MSG {
+	uint32_t process_buffer_index;
+	uint32_t program_buffer_index;
+} __CAPTURE_IVC_ALIGN;
+
 /**
  * Send new isp_program request on a capture ivc channel.
  *
@@ -815,6 +833,8 @@ struct CAPTURE_MSG {
 
 		CAPTURE_ISP_REQUEST_REQ_MSG capture_isp_request_req;
 		CAPTURE_ISP_STATUS_IND_MSG capture_isp_status_ind;
+		struct CAPTURE_ISP_EX_STATUS_IND_MSG capture_isp_ex_status_ind;
+
 		CAPTURE_ISP_PROGRAM_REQUEST_REQ_MSG
 				capture_isp_program_request_req;
 		CAPTURE_ISP_PROGRAM_STATUS_IND_MSG

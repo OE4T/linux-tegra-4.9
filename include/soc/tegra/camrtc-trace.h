@@ -214,6 +214,7 @@ struct camrtc_event_struct {
 #define CAMRTC_EVENT_MODULE_I2C		U32_C(7)
 #define CAMRTC_EVENT_MODULE_VI		U32_C(8)
 #define CAMRTC_EVENT_MODULE_ISP		U32_C(9)
+#define CAMRTC_EVENT_MODULE_NVCSI	U32_C(10)
 
 // camrtc_trace_event_type_ids
 #define camrtc_trace_type_exception \
@@ -412,6 +413,13 @@ struct camrtc_event_struct {
 	camrtc_trace_isp_id(2)
 #define	camrtc_trace_isp_falcon_traces_event \
 	camrtc_trace_isp_id(3)
+
+// camrtc_trace_nvcsi_ids
+#define camrtc_trace_nvcsi_id(_subid) \
+		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY, \
+			CAMRTC_EVENT_MODULE_NVCSI, (_subid))
+#define camrtc_trace_nvcsi_intr \
+	camrtc_trace_nvcsi_id(1)
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

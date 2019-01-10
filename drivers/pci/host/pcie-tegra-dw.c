@@ -2952,7 +2952,8 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 			kfree(name);
 			if (IS_ERR(phy[i])) {
 				ret = PTR_ERR(phy[i]);
-				dev_err(pcie->dev, "phy_get error: %d\n", ret);
+				if (ret != -EPROBE_DEFER)
+					dev_err(pcie->dev, "phy_get error: %d\n", ret);
 				return ret;
 			}
 		}

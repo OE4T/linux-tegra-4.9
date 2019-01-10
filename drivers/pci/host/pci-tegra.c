@@ -899,6 +899,7 @@ struct dev_ids {
 static const struct pci_device_id aspm_l0s_blacklist[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x4355), 0, 0, 0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x43ef), 0, 0, 0 },
+	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x4354), 0, 0, 0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_NEC, 0x0194), 0, 0, 0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_TOSHIBA, 0x010f), 0, 0, 0 },
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, 0x0953), 0, 0, 0 },

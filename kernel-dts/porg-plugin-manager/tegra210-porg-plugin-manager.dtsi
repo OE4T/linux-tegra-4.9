@@ -27,7 +27,21 @@
 					};
 				};
 			};
-		};
 
+			override@1 {
+				target = <&p3449_vdd_usb_hub_en>;
+				_overlay_ {
+					enable-active-high;
+					delete-target-property = "enable-active-low";
+				};
+			};
+
+			override@2 {
+				target = <&p3449_vdd_usb_hub_en>;
+				_overlay_ {
+					delete-target-property = "gpio-open-drain";
+				};
+			};
+		};
 	};
 };

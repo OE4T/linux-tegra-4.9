@@ -304,6 +304,8 @@ struct tegra_virtual_se_aes_context {
 	u32 op_mode;
 	/* Is key slot */
 	bool is_key_slot_allocated;
+	/* Whether key is a keyslot label */
+	bool is_keyslot_label;
 };
 
 enum tegra_virtual_se_aes_op_mode {
@@ -1628,7 +1630,7 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 	if (!ctx->is_key_slot_allocated)
 		return;
 
-	if (!se_dev->disable_keyslot_label)
+	if (ctx->is_keyslot_label)
 		return;
 
 	ivc_req_msg =
@@ -2607,6 +2609,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 			ctx->keylen = keylen;
 			ctx->aes_keyslot = (u32)slot;
 			ctx->is_key_slot_allocated = true;
+			ctx->is_keyslot_label = true;
 			return tegra_hv_vse_aes_set_keyiv(se_dev, (u8 *)key,
 					keylen, slot, AES_KEYTBL_TYPE_KEY);
 		}

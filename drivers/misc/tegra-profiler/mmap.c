@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/mmap.c
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,6 +45,7 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 		size_t length, unsigned long pgoff, pid_t __tgid)
 {
 	int vec_idx = 0;
+	unsigned long flags;
 	struct quadd_record_data r;
 	struct quadd_iovec vec[3];
 	u64 pgoff_val = (u64)pgoff << PAGE_SHIFT;
@@ -53,6 +54,8 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 	r.record_type = QUADD_RECORD_TYPE_MMAP;
 
 	memcpy(&r.mmap, s, sizeof(*s));
+
+	raw_local_irq_save(flags);
 
 	r.mmap.time = quadd_get_time();
 	r.mmap.filename_length = length;
@@ -74,6 +77,8 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 		 s->addr, s->addr + s->len, s->len, pgoff_val);
 
 	quadd_put_sample_this_cpu(&r, vec, vec_idx);
+
+	raw_local_irq_restore(flags);
 }
 
 static void

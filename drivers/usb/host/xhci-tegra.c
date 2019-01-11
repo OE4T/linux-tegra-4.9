@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -2789,6 +2789,48 @@ static ssize_t downgrade_usb3_store(struct device *dev,
 static DEVICE_ATTR(
 	downgrade_usb3, 0644, downgrade_usb3_show, downgrade_usb3_store);
 
+static void tegra_xusb_host_vbus_power_on(struct tegra_xusb *tegra)
+{
+	u32 i;
+
+	for (i = 0u; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		if (tegra->typed_phys[USB2_PHY][i] == NULL)
+			continue;
+
+		/* skip vbus on for OTG port */
+		if (!is_otg_phy(tegra, USB2_PHY, (int)i)) {
+			u32 port = i;
+
+			if (tegra->soc->is_xhci_vf)
+				port = (u32)tegra->port_to_phy[USB2_PHY][i];
+
+			(void)tegra_xusb_padctl_vbus_power_on(
+				tegra->padctl, port);
+		}
+	}
+}
+
+static void tegra_xusb_host_vbus_power_off(struct tegra_xusb *tegra)
+{
+	u32 i;
+
+	for (i = 0u; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		if (tegra->typed_phys[USB2_PHY][i] == NULL)
+			continue;
+
+		/* skip vbus on for OTG port */
+		if (!is_otg_phy(tegra, USB2_PHY, (int)i)) {
+			u32 port = i;
+
+			if (tegra->soc->is_xhci_vf)
+				port = (u32)tegra->port_to_phy[USB2_PHY][i];
+
+			(void)tegra_xusb_padctl_vbus_power_off(
+				tegra->padctl, port);
+		}
+	}
+}
+
 static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 {
 	struct tegra_xusb *tegra = context;
@@ -2835,6 +2877,8 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 			return;
 		}
 	}
+
+	tegra_xusb_host_vbus_power_on(tegra);
 
 	tegra->hcd = usb_create_hcd(&tegra_xhci_hc_driver, dev, dev_name(dev));
 	if (!tegra->hcd) {
@@ -3666,7 +3710,6 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 
-
 	if (tegra->xhci_err_init && dev != NULL) {
 		sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_errors);
 		tegra->xhci_err_init = false;
@@ -3723,6 +3766,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 
 		fw_log_deinit(tegra);
 	}
+
+	tegra_xusb_host_vbus_power_off(tegra);
 
 	tegra_xusb_phy_disable(tegra);
 	if (!tegra->soc->is_xhci_vf) {
@@ -4109,6 +4154,9 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		}
 	}
 
+	if (!do_wakeup)
+		tegra_xusb_host_vbus_power_off(tegra);
+
 	for (i = 0; i < MAX_PHY_TYPES; i++) {
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			struct phy *phy = tegra->typed_phys[i][j];
@@ -4233,6 +4281,9 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 			goto out;
 		}
 	}
+
+	if (!do_wakeup)
+		tegra_xusb_host_vbus_power_on(tegra);
 
 	if (do_wakeup)
 		tegra_xhci_disable_phy_sleepwalk(tegra);
